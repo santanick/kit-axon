@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KIT AX ON 교육계획안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Serif+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+/* Layout: 단일 컬럼 A4 격식 문서 — 표지 헤더 블록 + 번호 매긴 9개 섹션 + 표 중심 */
+:root{
+  --ink:#1A1C33;            /* 본문 네이비-잉크 */
+  --ink-soft:#4E5273;       /* 보조 텍스트 (네이비 바이어스 그레이) */
+  --faint:#7C809C;          /* 캡션 */
+  --line:#D9DCEA;           /* 괘선 */
+  --line-soft:#E9EBF4;
+  --paper:#FFFFFF;          /* 지면 */
+  --panel:#F6F7FB;          /* 음영 패널 */
+  --panel-2:#EEF0F8;
+  --navy:#1F2045;           /* ATC 네이비 */
+  --mag:#C8236F;            /* ATC 마젠타 */
+  --mag-soft:#FCEBF3;
+  --amber:#B5810F;
+  --amber-soft:#FBF2DC;
+  --head-th:#262A52;        /* 표 헤더 */
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ink:#E9EBF6; --ink-soft:#B6B9D2; --faint:#8E92AE;
+    --line:#3A3E5E; --line-soft:#2C2F49;
+    --paper:#161830; --panel:#1E2039; --panel-2:#262949;
+    --navy:#C9CCEA; --mag:#F17BAC; --mag-soft:#33203099;
+    --amber:#E6B74A; --amber-soft:#3A2F1799;
+    --head-th:#2C2F52;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E9EBF6; --ink-soft:#B6B9D2; --faint:#8E92AE;
+  --line:#3A3E5E; --line-soft:#2C2F49;
+  --paper:#161830; --panel:#1E2039; --panel-2:#262949;
+  --navy:#C9CCEA; --mag:#F17BAC; --mag-soft:#33203099;
+  --amber:#E6B74A; --amber-soft:#3A2F1799;
+  --head-th:#2C2F52;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--panel);
+  color:var(--ink);
+  font-family:"Noto Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  font-size:15px; line-height:1.78;
+  -webkit-font-smoothing:antialiased;
+  font-feature-settings:"tnum";
+}
+.wrap{
+  max-width:880px; margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:28px 56px;
+}
+.sheet{
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:4px;
+  box-shadow:0 1px 3px rgba(20,22,45,.06);
+  padding:clamp(22px,4.6vw,56px);
+}
+
+/* ---------- 표지 헤더 ---------- */
+.cover{border-bottom:3px solid var(--navy);padding-bottom:26px;margin-bottom:34px}
+.org-row{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;margin-bottom:26px}
+.org{min-width:0;flex:1 1 220px}
+.org .lbl{font-size:11px;letter-spacing:.18em;font-weight:700;color:var(--faint);margin-bottom:5px}
+.org .val{font-family:"Noto Serif KR",serif;font-size:17px;font-weight:700;color:var(--ink)}
+.org .sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+.org.right{text-align:right}
+.eyebrow{font-size:11.5px;letter-spacing:.2em;font-weight:700;color:var(--mag);margin-bottom:10px}
+.doc-title{
+  font-family:"Noto Serif KR",serif;font-weight:900;
+  font-size:clamp(27px,5.2vw,40px);line-height:1.22;letter-spacing:-.02em;
+  margin:0 0 14px;text-wrap:balance;color:var(--ink);
+}
+.doc-title .mag{color:var(--mag)}
+.doc-sub{font-size:15px;color:var(--ink-soft);margin:0;max-width:60ch}
+.cover-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.chip{font-size:12px;font-weight:700;border-radius:999px;padding:5px 13px;background:var(--panel-2);color:var(--ink-soft)}
+.chip.na{background:var(--amber-soft);color:var(--amber);border:1px dashed var(--amber)}
+.draft-note{
+  margin-top:18px;font-size:12.5px;line-height:1.7;color:var(--ink-soft);
+  background:var(--panel);border-left:3px solid var(--mag);border-radius:0 6px 6px 0;padding:11px 15px;
+}
+
+/* ---------- 섹션 ---------- */
+section{margin-top:40px}
+section:first-of-type{margin-top:0}
+.sec-head{display:flex;gap:14px;align-items:baseline;border-bottom:1.5px solid var(--navy);padding-bottom:9px;margin-bottom:18px}
+.sec-no{
+  font-family:"Noto Serif KR",serif;font-weight:900;font-size:19px;color:var(--mag);
+  flex:0 0 auto;line-height:1.1;
+}
+.sec-title{font-family:"Noto Serif KR",serif;font-weight:700;font-size:clamp(18px,3.2vw,22px);margin:0;letter-spacing:-.01em;color:var(--ink)}
+h3{font-family:"Noto Sans KR",sans-serif;font-weight:700;font-size:15.5px;margin:22px 0 8px;color:var(--ink)}
+h3 .n{color:var(--mag);font-family:"Noto Serif KR",serif;margin-right:6px}
+p{margin:0 0 12px}
+.lead{color:var(--ink);font-size:15.5px}
+.muted{color:var(--ink-soft)}
+ul.clean{margin:4px 0 14px;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+ul.clean>li{position:relative;padding-left:18px;color:var(--ink);line-height:1.72}
+ul.clean>li::before{content:"";position:absolute;left:2px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--mag)}
+ul.clean>li b{color:var(--ink);font-weight:700}
+.na{color:var(--amber);font-weight:700;background:var(--amber-soft);border-radius:4px;padding:0 5px;white-space:nowrap}
+
+/* ---------- 표 ---------- */
+.tbl-wrap{overflow-x:auto;margin:6px 0 16px;border-radius:6px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;min-width:0;font-size:13.8px;line-height:1.62;background:var(--paper)}
+caption{caption-side:top;text-align:left;font-size:12.5px;color:var(--faint);padding:0 0 7px;font-weight:500}
+th,td{border:1px solid var(--line-soft);padding:9px 12px;vertical-align:top;text-align:left}
+thead th{background:var(--head-th);color:#fff;font-weight:700;font-size:13px;border-color:var(--head-th)}
+tbody th{background:var(--panel);font-weight:700;color:var(--ink);white-space:nowrap}
+.key-tbl tbody th{width:150px}
+tbody tr:nth-child(even) td{background:var(--panel)}
+td b,th b{font-weight:700}
+.num{font-variant-numeric:tabular-nums}
+.c{text-align:center}
+
+/* ---------- 패널 / 콜아웃 ---------- */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:14px;margin:6px 0 14px}
+.card{background:var(--panel);border:1px solid var(--line-soft);border-radius:8px;padding:15px 17px}
+.card .ct{font-weight:700;font-size:14.5px;margin-bottom:6px;color:var(--ink)}
+.card .ct .badge{display:inline-block;font-size:11px;font-weight:700;color:#fff;background:var(--navy);border-radius:4px;padding:1px 7px;margin-right:7px;vertical-align:1px}
+.card .cd{font-size:13.3px;color:var(--ink-soft);line-height:1.68}
+.callout{background:var(--mag-soft);border:1px solid color-mix(in srgb,var(--mag) 28%,transparent);border-radius:8px;padding:14px 17px;margin:8px 0 14px}
+.callout .cl-h{font-weight:700;font-size:13.5px;color:var(--mag);margin-bottom:6px}
+.callout ul.clean>li::before{background:var(--mag)}
+.stage{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:2px 9px;color:#fff;vertical-align:1px;margin-right:6px}
+.s1{background:#C8236F}.s2{background:#3E63B8}.s3{background:#1F2045}
+
+/* ---------- 푸터 ---------- */
+.foot{margin-top:46px;border-top:1.5px solid var(--navy);padding-top:18px;font-size:12.3px;color:var(--ink-soft);line-height:1.74}
+.foot .sign{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-top:14px;font-size:12.5px}
+.foot .sign b{color:var(--ink)}
+
+/* 다운 사다리 설명 줄 */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--ink);margin:4px 0 14px}
+.flow .step{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 11px}
+.flow .arr{color:var(--mag);font-weight:900}
+
+@media (max-width:560px){
+  body{font-size:14px}
+  .org.right{text-align:left}
+  .key-tbl tbody th{width:auto}
+}
+
+/* ---------- 인쇄 (A4) ---------- */
+@media print{
+  @page{size:A4;margin:16mm 15mm}
+  :root{color-scheme:light}
+  body{background:#fff;color:#111;font-size:10.6pt;line-height:1.55}
+  .wrap{max-width:none;padding:0}
+  .sheet{border:0;box-shadow:none;border-radius:0;padding:0}
+  section{margin-top:18pt;break-inside:avoid}
+  .sec-head{break-after:avoid}
+  h3{break-after:avoid}
+  table{font-size:9.3pt}
+  thead th{background:#262A52 !important;color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tbody th{background:#F1F2F7 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .tbl-wrap,.card,.callout{break-inside:avoid}
+  .cover{break-after:avoid}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="sheet">
+
+  <!-- ================= 표지 헤더 ================= -->
+  <header class="cover">
+    <div class="org-row">
+      <div class="org">
+        <div class="lbl">발주기관 (發注機關)</div>
+        <div class="val">경남정보대학교</div>
+        <div class="sub">KIT · Kyungnam College of Information &amp; Technology</div>
+      </div>
+      <div class="org right">
+        <div class="lbl">수행기관 (遂行機關)</div>
+        <div class="val">산타(주) · 디디쌤</div>
+        <div class="sub">디디쌤 온라인 교육 플랫폼 기반</div>
+      </div>
+    </div>
+
+    <div class="eyebrow">EDUCATION PLAN · 교육계획(안)</div>
+    <h1 class="doc-title">경남정보대학교 <span class="mag">KIT AX ON</span><br>온라인 센터 구축·운영 교육계획(안)</h1>
+    <p class="doc-sub">AI 진단 · 영상 튜토리얼 · 온라인 코스웨어 · 디지털 배지 · 디지털북을 하나로 묶은, 재학생 대상 AI 역량 비교과 운영 계획입니다.</p>
+
+    <div class="cover-meta">
+      <span class="chip">온라인 코스 15개</span>
+      <span class="chip">영상 튜토리얼 75편</span>
+      <span class="chip">디지털 배지 3종</span>
+      <span class="chip">디지털북 3권</span>
+      <span class="chip">35개 학과 맞춤</span>
+      <span class="chip na">교육기간·인원·예산 미확정</span>
+    </div>
+
+    <div class="draft-note">
+      본 문서는 <b>교육계획(안)</b>으로, 발주기관과의 협의를 거쳐 세부 수치·일정·예산이 확정됩니다.
+      <span class="na">[미확정]</span> 또는 <b>별도 협의</b>로 표기한 항목은 추정치가 아니며, 확정 시 본문 수치로 대체됩니다.
+    </div>
+  </header>
+
+  <!-- ================= 1. 사업 개요 ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-no">1</span><h2 class="sec-title">사업 개요</h2></div>
+    <div class="tbl-wrap">
+      <table class="key-tbl">
+        <tbody>
+          <tr><th scope="row">사 업 명</th><td>경남정보대학교 <b>KIT AX ON 온라인 센터</b> 구축·운영</td></tr>
+          <tr><th scope="row">발주기관</th><td>경남정보대학교</td></tr>
+          <tr><th scope="row">수행기관</th><td>산타(주) · 디디쌤 (디디쌤 온라인 교육 플랫폼 기반 구축·운영)</td></tr>
+          <tr><th scope="row">교육기간</th><td><span class="na">[미확정]</span> · 2026학년도 2학기 운영을 전제로 하며, 착수일·운영기간은 <b>발주기관 협의 후 확정</b>합니다. (별도 협의)</td></tr>
+          <tr><th scope="row">교육대상</th><td>경남정보대학교 재학생 (전 학년·비전공자 포함) · <b>35개 학과</b> 맞춤 운영</td></tr>
+          <tr><th scope="row">교육인원</th><td><span class="na">[미확정]</span> · 참여 규모는 발주기관 협의 후 확정 (별도 협의)</td></tr>
+          <tr><th scope="row">교육장소</th><td><b>온라인</b>(KIT AX ON 온라인 센터) 중심 · <b>오프라인 거점</b> 병행 — AX ON 센터·하이브 라운지, AI 진단 키오스크 메인 1곳·스팟 4곳</td></tr>
+          <tr><th scope="row">소요예산</th><td><span class="na">[미확정]</span> · 세부 견적은 <b>별도 견적서 참조</b></td></tr>
+          <tr><th scope="row">기반 플랫폼</th><td>디디쌤 온라인 교육 플랫폼 (클래스·배지·공지·커뮤니티 기능 + 코드 블럭 맞춤 구현)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 2. 추진 배경 및 필요성 ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-no">2</span><h2 class="sec-title">추진 배경 및 필요성</h2></div>
+    <ul class="clean">
+      <li><b>AI 전환(AX)의 전면화</b> — 생성형 AI가 전 산업·전 직무로 확산됨에 따라, 전공과 무관하게 재학생 전원이 AI 도구를 실무 수준으로 활용할 수 있는 역량이 요구됩니다.</li>
+      <li><b>비전공자 진입 장벽</b> — "코딩을 몰라도" 시작할 수 있는 단계적·실습 중심의 학습 경로가 필요하며, 학생 스스로 자신의 유형과 첫 과제를 찾을 수 있는 진단 기반 안내가 요구됩니다.</li>
+      <li><b>학습 성과의 가시화</b> — 수강 이력이 흩어지지 않고, 결과물·검수·인증이 하나의 이력으로 축적되어 취업·진학에 활용될 수 있어야 합니다.</li>
+      <li><b>온·오프라인 연계 거점</b> — AX ON 센터(하이브 라운지)와 온라인 센터를 오가며 학습이 끊기지 않는 하이브리드 운영 체계가 필요합니다.</li>
+    </ul>
+    <p class="muted">이에 재학생이 <b>진단 → 학습 → 결과물 → 검수 → 디지털 배지</b>로 이어지는 하나의 동선 안에서 AI 역량을 쌓을 수 있도록, KIT AX ON 온라인 센터를 구축·운영하고자 합니다.</p>
+  </section>
+
+  <!-- ================= 3. 교육 목표 및 기대효과 ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-no">3</span><h2 class="sec-title">교육 목표</h2></div>
+    <div class="grid2">
+      <div class="card"><div class="ct">목표 1 · 전 학과 AI 역량 내재화</div><div class="cd">35개 학과·비전공자를 포함한 재학생이 자신의 학과·유형에 맞춘 AI 도구로 실제 결과물을 만들어 내는 것을 목표로 합니다.</div></div>
+      <div class="card"><div class="ct">목표 2 · 단계적 성장 경로</div><div class="cd">입문(Explorer) → 활용(Builder) → 심화(Master) 3단계로, 학년·학기에 맞춘 비교과 학습 경로를 제공합니다.</div></div>
+      <div class="card"><div class="ct">목표 3 · 성과의 인증</div><div class="cd">결과물 제출·학교 검수를 거쳐 Open Badge 3.0 디지털 배지를 발급하고, 3종 취득 시 KIT AX 인증으로 연계합니다. <span class="na">졸업 역량 인증 연계는 (안)</span></div></div>
+      <div class="card"><div class="ct">목표 4 · 취업·창업 연결</div><div class="cd">활용·심화 단계에서 취업 코스(기업 과제·PBL·인턴십)와 창업 코스(MVP·IR·데모데이)로 분기하여 진로와 연결합니다.</div></div>
+    </div>
+  </section>
+
+  <!-- ================= 4. 교육 운영 방향 ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-no">4</span><h2 class="sec-title">교육 운영 방향</h2></div>
+    <p class="lead">KIT AX ON 온라인 센터를 중심으로, 아래 네 축을 하나의 학습 동선으로 연결하여 운영합니다.</p>
+    <div class="flow">
+      <span class="step">AI 진단</span><span class="arr">→</span>
+      <span class="step">온라인 코스웨어</span><span class="arr">→</span>
+      <span class="step">영상 튜토리얼 따라 하기</span><span class="arr">→</span>
+      <span class="step">결과물·검수</span><span class="arr">→</span>
+      <span class="step">디지털 배지</span>
+    </div>
+    <ul class="clean">
+      <li><b>AI 기반 진단</b> — 학과 맞춤 8문항(학과 맞춤 1 + 학부군 4 + 공통 3, 매회 랜덤 출제, 약 3분) 진단으로 재학생의 <b>PRISM 유형</b>과 첫 코스를 안내합니다.</li>
+      <li><b>온라인 코스웨어</b> — 3단계 × PRISM 5유형 = <b>온라인 코스 15개</b>. 진단 유형에 따라 첫 코스가 열리고, 다른 유형의 콘텐츠도 자유 수강할 수 있습니다.</li>
+      <li><b>영상 튜토리얼</b> — <b>총 75편</b>(코스당 5편)을 라이브러리로 제공하며, 완료 기록은 코스 진도에 반영됩니다. (디디쌤 회원 연동 방식은 구축 단계 확인 항목)</li>
+      <li><b>디지털 배지 · 디지털북</b> — 배지 3종(Explorer·Builder·Master)과 교재 <b>디지털북 3권</b>을 단계와 1:1로 맞추어, 단원마다 영상 튜토리얼로 이어지도록 구성합니다.</li>
+    </ul>
+
+    <h3><span class="n">▸</span> PRISM 5유형</h3>
+    <div class="tbl-wrap">
+      <table>
+        <caption>진단 결과 유형에 따라 첫 코스와 첫 결과물이 달라집니다.</caption>
+        <thead><tr><th>코드</th><th>유형</th><th>대표 결과물 (예시)</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">EYE</th><td>시각·이미지형</td><td>A4 포스터 등 이미지 시안</td></tr>
+          <tr><th scope="row">STORY</th><td>영상·스토리형</td><td>15초 숏폼 영상</td></tr>
+          <tr><th scope="row">PEN</th><td>글·기록형</td><td>글·기록 콘텐츠</td></tr>
+          <tr><th scope="row">MAP</th><td>구조·기획형</td><td>구조·기획 산출물</td></tr>
+          <tr><th scope="row">LENS</th><td>탐색·분석형</td><td>1페이지 리서치 리포트</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 5. 세부 교육 내용 / 커리큘럼 ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-no">5</span><h2 class="sec-title">세부 교육 내용 · 커리큘럼</h2></div>
+    <p class="lead">각 단계는 <b>5개 유형 × 코스 1개(총 5코스)</b>로 구성되며, 코스마다 아래 공통 커리큘럼 순서를 따릅니다.</p>
+    <div class="flow">
+      <span class="step">영상 튜토리얼 5편</span><span class="arr">→</span>
+      <span class="step">온라인 클래스 수료</span><span class="arr">→</span>
+      <span class="step">결과물 과제 1건</span><span class="arr">→</span>
+      <span class="step">학교 검수</span><span class="arr">→</span>
+      <span class="step">배지 발급</span>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>단계별 구성 · 학습량은 영상 편수 / 온라인 클래스 / 과제 건수로 분리 표기하며, 집체(오프라인·라이브)는 그룹별 시간·횟수를 별도 협의합니다.</caption>
+        <thead>
+          <tr><th>단계</th><th>구성 (유형별)</th><th>온라인 학습</th><th>집체 운영</th><th>결과물 과제</th><th>운영 시점(안)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row"><span class="stage s1">1</span>Explorer<br><span class="muted" style="font-weight:400;font-size:12px">입문</span></th>
+            <td>온라인 클래스 5개<br>(유형별 1개)</td>
+            <td>영상 튜토리얼 <b>5편</b> + 온라인 클래스 수료<br><span class="muted" style="font-size:12px">GPT·Claude·Gemini 기초</span></td>
+            <td class="muted">온라인 전용</td>
+            <td>15분 결과물 1건 제출</td>
+            <td class="muted">1학년 1학기·비교과</td>
+          </tr>
+          <tr>
+            <th scope="row"><span class="stage s2">2</span>Builder<br><span class="muted" style="font-weight:400;font-size:12px">활용</span></th>
+            <td>온라인 클래스 5개<br>(유형별 1개)</td>
+            <td>영상 튜토리얼 <b>5편</b> + 온라인 클래스 수료<br><span class="muted" style="font-size:12px">전문 생성 툴·전공 툴 연결</span></td>
+            <td>오프라인 프롬프트 랩 조별 워크숍<br><span class="na">그룹별 N시간 × M회 (별도 협의)</span></td>
+            <td>AI 비서 1건 제출·시연</td>
+            <td class="muted">1학년 2학기~2학년 1학기</td>
+          </tr>
+          <tr>
+            <th scope="row"><span class="stage s3">3</span>Master<br><span class="muted" style="font-weight:400;font-size:12px">심화</span></th>
+            <td>온라인 클래스 5개<br>(유형별 1개)</td>
+            <td>영상 튜토리얼 <b>5편</b> + 온라인 클래스 수료<br><span class="muted" style="font-size:12px">Agent 구축·전공 심화 툴</span></td>
+            <td>기업 멘토 라이브 피드백<br><span class="na">그룹별 N시간 × M회 (별도 협의)</span></td>
+            <td>기업 과제 Agent + 발표 자료</td>
+            <td class="muted">2학년 2학기·캡스톤·PBL</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr><td colspan="6" class="muted" style="font-size:12.3px;background:var(--panel)">합계 — 온라인 코스 <b class="num">15</b>개(3단계 × 5유형), 영상 튜토리얼 <b class="num">75</b>편(코스당 5편), 디지털 배지 <b class="num">3</b>종.</td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <h3><span class="n">▸</span> 취업 · 창업 코스 분기 (Builder · Master)</h3>
+    <div class="grid2">
+      <div class="card"><div class="ct"><span class="badge">취업 코스</span>직무 연계</div><div class="cd">직무 AI 비서 → 기업 과제 Agent · 현장실습 · 인턴십 · 기업 PBL로 이어지는 경로입니다.</div></div>
+      <div class="card"><div class="ct"><span class="badge">창업 코스</span>창업 연계</div><div class="cd">창업 자동화 비서 → MVP + IR · 창업 캡스톤 · 데모데이로 이어지는 경로입니다.</div></div>
+    </div>
+    <p class="muted" style="font-size:13px">※ Explorer는 공통 과정이며, 학과 맞춤 과제는 <b>35개 학과 × STAGE 1~3</b>으로 과제 안내문에 학과별로 기재합니다. 통과 점수 미달 과제는 수료 이수율에 포함되지 않습니다(디디쌤 커리큘럼 규칙). 세부 단원 구성은 학교와 함께 확정합니다.</p>
+  </section>
+
+  <!-- ================= 6. 온라인 센터 구축·운영 방안 ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-no">6</span><h2 class="sec-title">온라인 센터 구축 · 운영 방안</h2></div>
+
+    <h3><span class="n">6-1</span> 구축 방식</h3>
+    <ul class="clean">
+      <li><b>디자인은 코드 블럭, 데이터는 플랫폼</b> — 히어로·학습 동선·유형·혜택·튜토리얼 그리드는 코드 블럭(HTML·CSS)으로 KIT AX ON 디자인을 적용하고, 수강·진도·과제·배지는 디디쌤 플랫폼 기능을 그대로 사용하여 학습 기록·이수율이 관리자 화면에 축적되도록 합니다.</li>
+      <li><b>메뉴(GNB) 8개</b> — 홈 · AI 진단 · 튜토리얼 · 코스웨어 · 배지 · 디지털북 · 공지사항 · 커뮤니티. 접근 권한은 재학생 공개 / 교직원 전용(운영 현황) 비공개로 분리합니다.</li>
+      <li><b>홈 화면 9개 섹션</b> — 학생이 할 일 순서대로(진단 CTA → 학습 동선 → 튜토리얼 → 유형 → 배지 → 코스웨어 → 캠퍼스 → 디지털북 → 공지) 배치합니다.</li>
+      <li><b>브랜딩</b> — 학교 공식 로고와 ATC 디자인 셋(네이비 · 마젠타 · PRISM 5색)을 적용합니다.</li>
+    </ul>
+
+    <h3><span class="n">6-2</span> 학습 관리 · 진단 · 배지 운영</h3>
+    <ul class="clean">
+      <li><b>AI 진단</b> — 스팟 키오스크·웹에서 학과 맞춤 8문항 진단 → 결과 리포트 QR → 결과 페이지 → 유형별 버튼이 해당 Explorer 코스로 연결됩니다.</li>
+      <li><b>디지털 배지</b> — Open Badge 3.0, 배지 디자인 3종 등록. 온라인 클래스 수료 + 영상 튜토리얼 5편 완료 → 결과물 제출 → 학교 담당자 검수(통과) → 운영자 발급. 발급 즉시 알림톡·메일 안내, 마이페이지에서 다운로드·링크·QR 확인. <b>주 1회 일괄 발급(안)</b>.</li>
+      <li><b>공지·알림</b> — 고정 공지·검수 결과는 알림톡·메일로 발송하며, 홈 공지 섹션(고정 2 + 최신 5)과 연동합니다.</li>
+    </ul>
+
+    <h3><span class="n">6-3</span> 홍보·모집 및 강사·운영 지원</h3>
+    <ul class="clean">
+      <li><b>홍보·모집</b> — 센터 오픈 공지, 오픈 기념 챌린지, 워크숍 안내를 공지·커뮤니티·알림톡으로 운영하고, AX ON 센터(하이브 라운지)를 오프라인 접점으로 활용합니다.</li>
+      <li><b>강사·운영 지원</b> — 조별 워크숍 운영자 출석 관리, 기업 멘토 라이브 피드백 연계, 검수·배지 발급 운영을 지원합니다.</li>
+    </ul>
+
+    <div class="callout">
+      <div class="cl-h">구축 단계 확인(협의) 항목 — 미확정</div>
+      <ul class="clean">
+        <li>진단 결과와 디디쌤 회원 계정의 <b>자동 연동</b>(결과 저장·클래스 자동 배정) 가능 여부</li>
+        <li>디지털 배지 플랜 · 생성 가능 배지 수(3종, 코스 15개 연결) · <b>수료 연동 자동 발급</b> 가능 여부</li>
+        <li>코드 블럭의 <b>JS 실행 범위</b> · 모바일 표시 · 영상 튜토리얼 완료 기록의 회원 연동</li>
+        <li>학교 공식 <b>로고 원본</b>(AI·SVG) 수령 · 공지 <b>알림톡 발송 범위</b></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= 7. 추진 일정 ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-no">7</span><h2 class="sec-title">추진 일정 (단계별 로드맵)</h2></div>
+    <p class="muted" style="font-size:13px">구체 날짜는 미확정이므로 착수일 기준 <b>D단위·단계</b>로 표기합니다. 날짜는 발주기관 협의 후 확정합니다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>단계</th><th>기간(안)</th><th>주요 과업</th><th>산출물</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">1. 설계·협의</th><td class="num c">D ~ D+N</td><td>설계도 확정, 로고·브랜딩 자산 수령, 메뉴·권한·커리큘럼 매핑, 구축 확인 항목 협의</td><td>최종 구축 설계서</td></tr>
+          <tr><th scope="row">2. 플랫폼 구축</th><td class="num c">단계 2</td><td>GNB 8개·홈 9개 섹션 코드 블럭 구현, 온라인 클래스 15개·배지 3종·디지털북 3권 세팅</td><td>온라인 센터(기능 완성)</td></tr>
+          <tr><th scope="row">3. 콘텐츠·연동</th><td class="num c">단계 3</td><td>영상 튜토리얼 75편 등록, AI 진단 연결, 검수·배지 발급 플로우 연동 점검</td><td>콘텐츠·진단 연동 완료</td></tr>
+          <tr><th scope="row">4. 오픈·운영</th><td class="num c">단계 4</td><td>센터 오픈·모집, AI 진단 운영, 결과물 검수, 디지털 배지 발급, 워크숍 운영</td><td>운영 개시</td></tr>
+          <tr><th scope="row">5. 운영 지원·보고</th><td class="num c">상시</td><td>학습관리·공지·알림 운영, 1차 검수, 성과 집계 및 결과 보고</td><td>운영·결과 보고서</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:12.3px">※ 시연 포털에 표기된 오픈·검수·워크숍 일자(예: 센터 오픈·Explorer 1차 검수 등)는 모두 <b>(안)</b>으로 제시된 예시이며, 실제 일정은 상기 로드맵에 따라 발주기관 협의 후 확정됩니다.</p>
+  </section>
+
+  <!-- ================= 8. 기대 효과 ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-no">8</span><h2 class="sec-title">기대 효과</h2></div>
+    <div class="grid2">
+      <div class="card"><div class="ct">학생</div><div class="cd">비전공자도 진단 기반으로 자신에게 맞는 AI 도구를 찾아 실제 결과물을 만들고, 디지털 배지로 성과를 이력화합니다.</div></div>
+      <div class="card"><div class="ct">학과·교원</div><div class="cd">35개 학과 맞춤 과제로 전공과 AI를 연결하고, 수강·검수·이수율을 관리자 화면에서 일괄 관리합니다.</div></div>
+      <div class="card"><div class="ct">대학</div><div class="cd">온·오프라인 연계 AX 거점을 확보하고, KIT AX 인증 체계로 재학생 AI 역량을 가시적으로 관리합니다.</div></div>
+      <div class="card"><div class="ct">진로·산학</div><div class="cd">취업 코스(기업 PBL·인턴십)와 창업 코스(MVP·데모데이)로 학습 성과를 진로·산학 연계로 확장합니다.</div></div>
+    </div>
+  </section>
+
+  <!-- ================= 9. 소요 예산 개요 ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-no">9</span><h2 class="sec-title">소요 예산 개요</h2></div>
+    <p class="lead">총 소요예산은 <span class="na">[미확정]</span>이며, 항목별 세부 산정은 <b>별도 견적서를 참조</b>합니다. 아래는 예산 구성 항목의 개요입니다(금액 미표기).</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>항목 개요</th><th>금액</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">플랫폼 구축</th><td>디디쌤 플랫폼 세팅, 코드 블럭 맞춤 디자인(GNB·홈 섹션), 메뉴·권한 구성</td><td class="c na">별도 견적</td></tr>
+          <tr><th scope="row">콘텐츠 구축</th><td>온라인 클래스 15개·영상 튜토리얼 75편 등록, 디지털북 3권, 디지털 배지 3종, AI 진단 연결</td><td class="c na">별도 견적</td></tr>
+          <tr><th scope="row">운영 지원</th><td>학습관리·검수·배지 발급 운영, 공지·알림, 모집·홍보, 워크숍·멘토 운영 지원</td><td class="c na">별도 견적</td></tr>
+          <tr><th scope="row">오프라인 거점</th><td>AX ON 센터·하이브 라운지, AI 진단 키오스크(메인 1·스팟 4) 연계 운영</td><td class="c na">별도 견적</td></tr>
+          <tr><th scope="row">합계</th><td>발주기관 협의 후 확정</td><td class="c na">[미확정]</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 푸터 ================= -->
+  <footer class="foot">
+    <div>본 교육계획(안)은 경남정보대학교 KIT AX ON 온라인 센터 구축 자료(설계도·시연 포털)를 근거로 작성된 초안이며, 세부 수치·일정·예산은 발주기관 협의 후 확정됩니다.</div>
+    <div class="sign">
+      <span>작성 : <b>산타(주) · 디디쌤</b></span>
+      <span>작성일 : <b class="num">2026-10-27</b></span>
+    </div>
+  </footer>
+
+</div>
+</div>
+</body>
+</html>
