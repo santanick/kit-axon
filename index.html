@@ -99,12 +99,15 @@ body{word-break:keep-all;overflow-wrap:break-word}
   .rm-card{padding:20px !important}
   .rm-note{display:block !important;line-height:1.6}
   .rm-note svg{vertical-align:-4px;margin-right:4px}
-  .rm-row{flex-wrap:wrap;row-gap:8px;min-height:0 !important}
-  .rm-row>span:not(.pill){flex:1 1 0 !important}
-  .br-row>span:not(.num):not(.tag){flex:1 1 calc(100% - 70px) !important}
-  .rm-row>.pill{margin-left:80px}
-  .br-row{flex-wrap:wrap;row-gap:6px}
-  .br-row>.tag{margin-left:56px}
+  .rm-row{display:grid !important;grid-template-columns:56px minmax(0,1fr);column-gap:14px !important;row-gap:8px;align-items:center;min-height:0 !important;padding:16px !important}
+  .rm-row>svg{grid-row:1 / span 2;width:56px !important;height:66px !important}
+  .rm-row>span{min-width:0 !important;width:auto !important}
+  .rm-row>.pill{grid-column:2;justify-self:start;margin:0 !important}
+  .br-row{display:grid !important;grid-template-columns:42px minmax(0,1fr);column-gap:12px !important;row-gap:6px;align-items:center}
+  .br-row>.num{grid-row:1 / span 2}
+  .br-row>span{min-width:0 !important}
+  .br-row>.tag{grid-column:2;justify-self:start;margin:0 !important}
+  .hero-stats{display:grid !important;grid-template-columns:1fr 1fr;gap:24px 16px !important;margin-top:40px !important}
   .nrow{flex-wrap:wrap;row-gap:6px;column-gap:10px !important;padding:14px 16px !important}
   .nrow .ntitle{flex:1 1 100% !important;order:9;white-space:normal !important;overflow:visible !important;line-height:1.45}
   .seg{flex-wrap:wrap}
@@ -145,22 +148,6 @@ body{word-break:keep-all;overflow-wrap:break-word}
   </div>
 </header>
 
-<!-- NEXT MISSION BAR -->
-<div style="background: var(--ink); color: #fff;">
-  <div class="wrap" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; min-height: 60px; padding-top: 8px; padding-bottom: 8px;">
-    <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; min-width: 0;">
-      <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .08em; color: var(--pinkhi);">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4.5"></circle><circle cx="12" cy="12" r="1" fill="currentColor"></circle></svg>NEXT MISSION
-      </span>
-      <span style="font-size: 15px; font-weight: 700;">{{next.title}}</span>
-      <span style="font-size: 13px; color: #A9ABC8;">{{next.sub}}</span>
-    </div>
-    <button class="btn btn-sm" style="background: #fff; color: var(--ink);" onClick="{{ next.go }}">{{next.btn}}
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
-    </button>
-  </div>
-</div>
-
 <main style="flex: 1 1 auto;">
 
 <!-- ================= HOME ================= -->
@@ -188,7 +175,7 @@ body{word-break:keep-all;overflow-wrap:break-word}
           </button>
           <button class="btn btn-glass btn-lg" onClick="{{ goLibrary }}">튜토리얼 75개 둘러보기</button>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 36px; margin-top: 52px;">
+        <div class="hero-stats" style="display: flex; flex-wrap: wrap; gap: 36px; margin-top: 52px;">
           <div><div class="num" style="font-size: 36px; font-weight: 700;">3<span style="font-size: 18px; color: #A9ABC8;">분</span></div><div style="font-size: 13px; color: #A9ABC8;">AI 인바디 진단</div></div>
           <div><div class="num" style="font-size: 36px; font-weight: 700;">75<span style="font-size: 18px; color: #A9ABC8;">편</span></div><div style="font-size: 13px; color: #A9ABC8;">영상 튜토리얼 · 15개 코스</div></div>
           <div><div class="num" style="font-size: 36px; font-weight: 700;">35<span style="font-size: 18px; color: #A9ABC8;">개</span></div><div style="font-size: 13px; color: #A9ABC8;">학과 맞춤 과제</div></div>
@@ -229,12 +216,12 @@ body{word-break:keep-all;overflow-wrap:break-word}
           </sc-for>
         </div>
       </div>
-      <button onClick="{{ homeNotice.open }}" style="margin-top: 12px; width: 100%; display: flex; align-items: center; gap: 12px; background: #fff; border: 0; box-shadow: inset 0 0 0 1px var(--line); border-radius: 16px; min-height: 56px; padding: 8px 18px; text-align: left;">
+      <button class="nrow" onClick="{{ homeNotice.open }}" style="margin-top: 12px; width: 100%; display: flex; align-items: center; gap: 12px; background: #fff; border: 0; box-shadow: inset 0 0 0 1px var(--line); border-radius: 16px; min-height: 56px; padding: 8px 18px; text-align: left;">
         <span class="tag" style="background: var(--ink); color: #fff;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path></svg>공지
         </span>
         <span class="tag" style="{{homeNotice.catStyle}}">{{homeNotice.cat}}</span>
-        <span style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{homeNotice.title}}</span>
+        <span class="ntitle" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{homeNotice.title}}</span>
         <span class="num" style="font-size: 13px; color: var(--muted); white-space: nowrap;">{{homeNotice.date}}</span>
         <span style="font-size: 13px; font-weight: 700; color: var(--mag); white-space: nowrap;">전체 공지 →</span>
       </button>
@@ -250,7 +237,7 @@ body{word-break:keep-all;overflow-wrap:break-word}
           <span class="eyebrow">How it works</span>
           <h2 class="h2">뭘 할지 고민하지 마세요.<br>이 순서대로 하면 됩니다.</h2>
         </div>
-        <p class="lead" style="max-width: 420px;">상단의 <b style="color: var(--ink);">NEXT MISSION</b>이 지금 할 일을 항상 알려 줍니다. 모든 단계는 이 사이트 안에서 이어집니다.</p>
+        <p class="lead" style="max-width: 420px;">아래 4단계를 차례로 따라가면 됩니다. 모든 단계는 이 사이트 안에서 이어집니다.</p>
       </div>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(250px,100%), 1fr)); gap: 16px;">
         <sc-for list="{{stations}}" as="f" hint-placeholder-count="4">
@@ -1932,13 +1919,13 @@ const NCATS = [
 const NCAT_TINT = { '공지': '#ECECF4', '배지·인증': '#FCE8F1', '디지털북': '#E3F5EC', '특강·워크숍': '#E8EEF9', '이벤트': '#FDEDE5', '취업·창업': '#EFE9F8', '시스템': '#EFEDE6' };
 const NOTICES = [
   { id: 'n01', pin: true, cat: '공지', date: '2026.11.02', title: 'KIT AX ON 온라인 센터 오픈 — 이렇게 시작하세요',
-    body: ['KIT AX ON 온라인 센터가 문을 열었습니다. 경남정보대학교 재학생이라면 누구나 이용할 수 있습니다.', '① 3분 AI 진단(8문항)으로 내 PRISM 유형을 확인합니다. ② 진단 결과에 맞는 Explorer 코스가 열립니다. ③ 영상 튜토리얼 5개를 보고 15분씩 따라 하며 결과물을 만듭니다. ④ 온라인 클래스를 수료하고 결과물을 제출하면 학교 검수 후 디지털 배지가 발급됩니다.', '화면 상단의 NEXT MISSION 바가 지금 할 일을 항상 알려 줍니다. 캠퍼스 키오스크에서 진단한 경우 결과 화면의 QR을 찍으면 이 사이트의 내 코스로 이어집니다.'],
+    body: ['KIT AX ON 온라인 센터가 문을 열었습니다. 경남정보대학교 재학생이라면 누구나 이용할 수 있습니다.', '① 3분 AI 진단(8문항)으로 내 PRISM 유형을 확인합니다. ② 진단 결과에 맞는 Explorer 코스가 열립니다. ③ 영상 튜토리얼 5개를 보고 15분씩 따라 하며 결과물을 만듭니다. ④ 온라인 클래스를 수료하고 결과물을 제출하면 학교 검수 후 디지털 배지가 발급됩니다.', '코스 화면에서 지금 할 레슨을 바로 이어서 할 수 있습니다. 캠퍼스 키오스크에서 진단한 경우 결과 화면의 QR을 찍으면 이 사이트의 내 코스로 이어집니다.'],
     info: [['대상', '경남정보대학교 재학생 전체'], ['시작', '3분 AI 진단 → Explorer 코스'], ['문의', 'AX ON 센터(하이브 라운지)']], files: ['KIT AX ON 이용 가이드.pdf'], act: { label: '3분 AI 진단 시작', to: 'diag' } },
   { id: 'n02', pin: true, cat: '배지·인증', date: '2026.11.02', title: '디지털 배지 발급 절차와 기준 안내',
     body: ['디지털 배지는 Explorer · Builder · Master 3단계로 발급됩니다. 각 단계는 온라인 클래스(필수) 수료와 영상 튜토리얼 5개 완료가 먼저입니다.', '두 조건을 채우면 결과물 제출 버튼이 열립니다. 제출 후에는 학교 담당자가 결과물을 검수하고, 승인되면 배지가 발급됩니다. 검수 전에는 제출물을 수정할 수 있고, 발급 후에는 수정 · 취소할 수 없습니다.', '배지 3종을 모두 받으면 KIT AX 인증 대상이 됩니다(졸업 역량 인증 · 비교과 마일리지 연계(안)).'],
     info: [['조건', '클래스 수료 + 튜토리얼 5개 → 결과물 제출'], ['발급', '학교 검수 승인 후 · Open Badge 3.0'], ['알림', '알림톡 · 메일(안)']], files: [], act: { label: '배지 지갑 보기', to: 'badges' } },
   { id: 'n03', pin: false, cat: '배지·인증', date: '2026.11.20', title: 'Explorer 배지 1차 검수 일정 안내(안)',
-    body: ['11월 30일(월)까지 제출한 Explorer 결과물은 12월 첫째 주에 1차 검수합니다(안).', '검수 결과는 코스 화면의 STEP 4와 NEXT MISSION 바에 표시되고, 승인되면 배지가 바로 발급됩니다. 보완이 필요하면 의견과 함께 반려되며 다시 제출할 수 있습니다.'],
+    body: ['11월 30일(월)까지 제출한 Explorer 결과물은 12월 첫째 주에 1차 검수합니다(안).', '검수 결과는 코스 화면의 STEP 4에 표시되고, 승인되면 배지가 바로 발급됩니다. 보완이 필요하면 의견과 함께 반려되며 다시 제출할 수 있습니다.'],
     info: [['제출 마감', '2026.11.30(월)(안)'], ['검수', '2026.12.01 ~ 12.05(안)']], files: [], act: { label: '내 코스로 이동', to: 'course' } },
   { id: 'n04', pin: false, cat: '취업·창업', date: '2026.11.18', title: '창업 코스 · 데모데이 연계 안내(안)',
     body: ['창업 코스 Master 단계에서는 실사용자 테스트가 가능한 MVP와 IR 피치덱을 만듭니다.', '우수 결과물은 교내 창업지원 프로그램 · 창업동아리 · 데모데이와 연계할 예정입니다. 세부 일정은 학교와 확정 후 공지합니다.'],
