@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KIT AX ON 구축 설계도</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;color-scheme:light;background:#F5F6FA;font-family:'Noto Sans KR',system-ui,sans-serif;color:#1F2045}
+a{color:#1F2045}a:hover{color:#C8236F}
+*{box-sizing:border-box}
+</style>
+</head><body>
+<div style="max-width: 1360px; margin: 0 auto; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));"><a href="index.html" style="font-weight: 700; font-size: 14px;">← KIT AX ON 온라인 센터로</a></div>
+
+<div style="max-width: 1360px; margin: 0 auto; padding: 48px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 28px;">
+
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: flex-end;">
+    <div>
+      <div style="font-size: 12px; font-weight: 900; letter-spacing: .14em; color: #C8236F;">BUILD BLUEPRINT · 디디쌤 기반</div>
+      <h1 style="font-size: 36px; margin: 8px 0 8px; letter-spacing: -0.03em; font-weight: 900;">KIT AX ON 온라인 센터 구축 설계도</h1>
+      <p style="margin: 0; font-size: 16px; color: #5A5F7A; line-height: 1.7; max-width: 860px;">시연 사이트의 모든 화면을 디디쌤 홈페이지 디자인 섹션 · 코드 블럭 · 클래스 · 디지털 배지 기능으로 구현하는 설계입니다. 기준: 디디쌤 이용 가이드(didisam.gitbook.io/guide-new-ver).</p>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <span style="background: #1F2045; color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 700;">플랫폼 기능 그대로</span>
+      <span style="background: #FFF5CC; color: #5C4500; border: 1px dashed #C9A100; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 700;">코드 블럭으로 맞춤 구현</span>
+      <span style="background: #FEF2F9; color: #A91C5D; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 700;">구축 단계 확인 필요</span>
+    </div>
+  </div>
+
+  <!-- ROW 1: GNB + HOME SECTIONS -->
+  <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch;">
+    <div style="flex: 1 1 380px; min-width: 0; background: #fff; border-radius: 20px; border: 1px solid #E6E8F0; padding: 24px;">
+      <div style="font-size: 13px; font-weight: 900; color: #8A8FA8; margin-bottom: 6px;">① 메뉴(GNB) 구조</div>
+      <div style="font-size: 20px; font-weight: 900; margin-bottom: 14px;">상위 메뉴 8개(홈 · AI 진단 · 튜토리얼 · 코스웨어 · 배지 · 디지털북 · 공지사항 · 커뮤니티) · 학교 로고 + GNB 색 지정</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.6;">
+        <div style="display: flex; gap: 10px;"><b style="flex: 0 0 92px;">홈</b><span>'홈' 메뉴 + 섹션 7개 조합(오른쪽)</span></div>
+        <div style="display: flex; gap: 10px;"><b style="flex: 0 0 92px;">AI 진단</b><span>커스텀 상위 메뉴 · 코드 블럭으로 AI 인바디 웹 진단 연결</span></div>
+        <div style="display: flex; gap: 10px;"><b style="flex: 0 0 92px;">코스웨어</b><span>기본 '클래스' 메뉴 이름 변경 · 온라인 클래스 15개(3단계 × PRISM 5유형)</span></div>
+        <div style="display: flex; gap: 10px;"><b style="flex: 0 0 92px;">튜토리얼</b><span>커스텀 메뉴 · 튜토리얼 라이브러리 1페이지(코드 블럭: 75개 카드 · 검색 · 유형/배지/완료 필터 · 정렬 · 실행 패널) · 영상은 YouTube 링크 · 완료 기록은 코스 진도와 공유(디디쌤 회원 연동은 확인 항목)</span></div>
+        <div style="display: flex; gap: 10px;"><b style="flex: 0 0 92px;">배지</b><span>커스텀 메뉴 · 배지 안내 + 마이페이지 배지 이동 경로</span></div>
+        <div style="display: flex; gap: 10px;"><b style="flex: 0 0 92px;">디지털북</b><span>커스텀 메뉴 · 소개 · 개념도(코스 ↔ BOOK ↔ 배지) · 3권 구성 · 뷰어 미리보기 · 발간 일정(코드 블럭 + 이미지 블록) · 본문은 전자책 뷰어(LXP · 포털 연동)로 진도율 · 단원 평가 기록</span></div>
+        <div style="display: flex; gap: 10px;"><b style="flex: 0 0 92px;">공지사항</b><span>디디쌤 기본 '공지사항' 메뉴(고정 공지 · 분류 · 검색 · 첨부) + 코드 블럭(다가오는 일정 · FAQ) · 고정 공지와 검수 결과는 알림톡 · 메일 발송 · 홈에는 공지사항 섹션(최신 글) + 로드맵 아래 한 줄 공지</span></div>
+        <div style="display: flex; gap: 10px;"><b style="flex: 0 0 92px;">커뮤니티</b><span>기본 커뮤니티(SNS형) · 우수작 갤러리 · 질문</span></div>
+      </div>
+      <div style="margin-top: 14px; font-size: 13px; color: #5A5F7A; background: #F5F6FA; border-radius: 12px; padding: 12px; line-height: 1.6;">메뉴별 접근 권한: 재학생 지정 회원 공개 · 교직원 전용 하위 메뉴(운영 현황)는 비공개 설정</div>
+    </div>
+
+    <div style="flex: 2 1 640px; min-width: 0; background: #fff; border-radius: 20px; border: 1px solid #E6E8F0; padding: 24px;">
+      <div style="font-size: 13px; font-weight: 900; color: #8A8FA8; margin-bottom: 6px;">② 홈 화면 = 디디쌤 섹션 9개</div>
+      <div style="font-size: 20px; font-weight: 900; margin-bottom: 14px;">위에서 아래로, 학생이 할 일 순서대로</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px;">
+        <div style="border-radius: 14px; padding: 14px; background: #FFF9E0; border: 1px dashed #C9A100;"><div style="font-size: 12px; font-weight: 900; color: #5C4500;">1 · 코드 블럭</div><div style="font-weight: 900; margin: 4px 0;">히어로 + 배지 로드맵</div><div style="font-size: 13px; color: #5A5F7A;">진단 CTA · 수치 · 배지 3단계</div></div>
+        <div style="border-radius: 14px; padding: 14px; background: #FFF9E0; border: 1px dashed #C9A100;"><div style="font-size: 12px; font-weight: 900; color: #5C4500;">2 · 코드 블럭</div><div style="font-weight: 900; margin: 4px 0;">4단계 학습 동선</div><div style="font-size: 13px; color: #5A5F7A;">진단 → 코스 → 따라 하기 → 배지</div></div>
+        <div style="border-radius: 14px; padding: 14px; background: #EEF0F7;"><div style="font-size: 12px; font-weight: 900; color: #3B3F5C;">3 · 동영상 블록 + 코드 블럭</div><div style="font-weight: 900; margin: 4px 0;">튜토리얼 그리드</div><div style="font-size: 13px; color: #5A5F7A;">동영상 블록 최대 4개 → 나머지는 코드 블럭 썸네일 그리드</div></div>
+        <div style="border-radius: 14px; padding: 14px; background: #FFF9E0; border: 1px dashed #C9A100;"><div style="font-size: 12px; font-weight: 900; color: #5C4500;">4 · 코드 블럭</div><div style="font-weight: 900; margin: 4px 0;">PRISM 5유형</div><div style="font-size: 13px; color: #5A5F7A;">유형 카드 + 진단 버튼</div></div>
+        <div style="border-radius: 14px; padding: 14px; background: #FFF9E0; border: 1px dashed #C9A100;"><div style="font-size: 12px; font-weight: 900; color: #5C4500;">5 · 코드 블럭</div><div style="font-weight: 900; margin: 4px 0;">배지 혜택</div><div style="font-size: 13px; color: #5A5F7A;">동기부여 4가지</div></div>
+        <div style="border-radius: 14px; padding: 14px; background: #EEF0F7;"><div style="font-size: 12px; font-weight: 900; color: #3B3F5C;">6 · 클래스 블록</div><div style="font-weight: 900; margin: 4px 0;">코스웨어 15개</div><div style="font-size: 13px; color: #5A5F7A;">클래스 블록 최대 12개 → 15개 매트릭스는 코드 블럭, 클래스 블록은 내 유형 3개만</div></div>
+        <div style="border-radius: 14px; padding: 14px; background: #EEF0F7;"><div style="font-size: 12px; font-weight: 900; color: #3B3F5C;">7 · 이미지 + 지도/연락처</div><div style="font-weight: 900; margin: 4px 0;">AX ON 캠퍼스 5곳</div><div style="font-size: 13px; color: #5A5F7A;">거점 사진 · 하이브 라운지 위치</div></div>
+        <div style="border-radius: 14px; padding: 14px; background: #EEF0F7;"><div style="font-size: 12px; font-weight: 900; color: #3B3F5C;">8 · 이미지 블록 + 코드 블럭</div><div style="font-weight: 900; margin: 4px 0;">디지털북 3권</div><div style="font-size: 13px; color: #5A5F7A;">표지 3권 · 단계 연결 · '디지털북' 메뉴로 이동</div></div>
+        <div style="border-radius: 14px; padding: 14px; background: #EEF0F7;"><div style="font-size: 12px; font-weight: 900; color: #3B3F5C;">9 · 공지사항 블록</div><div style="font-weight: 900; margin: 4px 0;">놓치면 안 되는 소식</div><div style="font-size: 13px; color: #5A5F7A;">고정 공지 2 + 최신 글 5(디디쌤 기본 블록)</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: CLASS STRUCTURE -->
+  <div style="background: #fff; border-radius: 20px; border: 1px solid #E6E8F0; padding: 24px;">
+    <div style="font-size: 13px; font-weight: 900; color: #8A8FA8; margin-bottom: 6px;">③ 코스웨어 = 디디쌤 온라인 클래스 15개 (3단계 × 5유형 × 영상 튜토리얼 5 = 75편)</div>
+    <div style="font-size: 20px; font-weight: 900; margin-bottom: 16px;">단계 × 유형마다 클래스 1개 · 커리큘럼 '영상 튜토리얼 5 → 온라인 클래스 수료 → 결과물 과제 → 학교 검수 → 배지'</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px;">
+      <div style="border-radius: 16px; overflow: hidden; border: 1px solid #E6E8F0;">
+        <div style="background: #C8236F; color: #fff; padding: 14px 18px;"><div style="font-size: 12px; font-weight: 700;">BADGE 1 · 클래스 5개 · 입문</div><div style="font-size: 19px; font-weight: 900;">Explorer · EYE / STORY / PEN / MAP / LENS</div></div>
+        <div style="padding: 16px 18px; font-size: 14px; line-height: 1.75;">
+          <div><b>강의(동영상) × 5</b> · 제안서 Level 1 툴(유형별 5종) 입문 튜토리얼, YouTube 링크 + 구간 퀴즈(OX)</div>
+          <div><b>온라인 클래스</b> · 유형 기본 과정 필수(#56 · #27 · #97 · #81 · #93) + 선택 · 공통 권장</div>
+          <div><b>과제 × 1</b> · 15분 결과물 제출 → 학교 검수(통과 = 승인)</div>
+          <div><b>설문 × 1</b> · 만족도(기본 양식)</div>
+        </div>
+      </div>
+      <div style="border-radius: 16px; overflow: hidden; border: 1px solid #E6E8F0;">
+        <div style="background: #3E63B8; color: #fff; padding: 14px 18px;"><div style="font-size: 12px; font-weight: 700;">BADGE 2 · 클래스 5개 · 활용</div><div style="font-size: 19px; font-weight: 900;">Builder · 유형별 AI 비서 + 전공 툴 입문</div></div>
+        <div style="padding: 16px 18px; font-size: 14px; line-height: 1.75;">
+          <div><b>강의(동영상) × 5</b> · n8n · Claude MCP · Gemini Workspace + 전공 툴 입문(Firefly · Figma · SketchUp · Flow · ElevenLabs · DaVinci · Fusion · AutoCAD · Flux 등)</div>
+          <div><b>강의(동영상) × 2~3</b> · #79 · #82(필수) · #59(권장)</div>
+          <div><b>강의(오프라인)</b> · 프롬프트 랩 조별 워크숍 · 운영자 출석 체크</div>
+          <div><b>과제 × 1</b> · AI 비서 1건 제출 · 시연</div>
+        </div>
+      </div>
+      <div style="border-radius: 16px; overflow: hidden; border: 1px solid #E6E8F0;">
+        <div style="background: #1F2045; color: #fff; padding: 14px 18px;"><div style="font-size: 12px; font-weight: 700;">BADGE 3 · 클래스 5개 · 심화</div><div style="font-size: 19px; font-weight: 900;">Master · 유형별 Agent + 전공 실무 툴</div></div>
+        <div style="padding: 16px 18px; font-size: 14px; line-height: 1.75;">
+          <div><b>강의(동영상) × 5</b> · Claude Code · Cursor · n8n Agent · GPTs · Gems + 전공 심화(D5 · CLO 3D · Meshy · Lovable · Pix4D · KiCad · Hugging Face 등)</div>
+          <div><b>강의(동영상) × 2</b> · #16 · #65(필수)</div>
+          <div><b>강의(라이브)</b> · 기업 멘토 피드백(Zoom · Meet 링크)</div>
+          <div><b>과제 × 1</b> · 기업 과제 Agent + 발표 자료 · 기업 평가</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top: 14px; font-size: 13px; color: #5A5F7A; line-height: 1.7;"><b>취업 · 창업 코스</b>: Explorer는 공통, Builder · Master 클래스는 '취업 코스'(직무 AI 비서 → 기업 과제 Agent · 현장실습 · 인턴십 · 기업 PBL)와 '창업 코스'(창업 자동화 비서 → MVP + IR · 창업 캡스톤 · 데모데이)로 과제 안내문 · 권장 과정(#99 · #89 / #77 · #7)을 나눔 — 회원 그룹(취업 · 창업)별 메뉴 이동 경로로 연결, 트랙 변경 시 그룹만 교체(확인 항목). 학과 맞춤 과제(35개 학과 × STAGE 1~3)는 과제 안내문에 학과별로 기재 · 통과 점수 미달 과제는 수료 이수율에 포함되지 않음(디디쌤 커리큘럼 규칙).</div>
+  </div>
+
+  <!-- ROW 3: DIAG + BADGE + CODE BLOCK -->
+  <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch;">
+    <div style="flex: 1 1 400px; min-width: 0; background: #fff; border-radius: 20px; border: 1px solid #E6E8F0; padding: 24px;">
+      <div style="font-size: 13px; font-weight: 900; color: #8A8FA8; margin-bottom: 6px;">④ AI 인바디 진단 → 내 코스 연결</div>
+      <div style="font-size: 20px; font-weight: 900; margin-bottom: 14px;">진단 결과 유형이 곧 '첫 클래스 링크'</div>
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 1.6;">
+        <div style="display: flex; gap: 12px;"><span style="flex: 0 0 28px; height: 28px; border-radius: 50%; background: #C8236F; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 900;">1</span><span>스팟 키오스크 · 웹(AI 진단 메뉴 코드 블럭)에서 8문항 진단</span></div>
+        <div style="display: flex; gap: 12px;"><span style="flex: 0 0 28px; height: 28px; border-radius: 50%; background: #C8236F; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 900;">2</span><span>결과 리포트 QR → 디디쌤 사이트 결과 페이지</span></div>
+        <div style="display: flex; gap: 12px;"><span style="flex: 0 0 28px; height: 28px; border-radius: 50%; background: #C8236F; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 900;">3</span><span>유형별 버튼이 해당 Explorer 클래스로 이동(메뉴 이동 경로)</span></div>
+        <div style="display: flex; gap: 12px;"><span style="flex: 0 0 28px; height: 28px; border-radius: 50%; background: #C8236F; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 900;">4</span><span>수강 신청 → 커리큘럼 순서대로 학습</span></div>
+      </div>
+      <div style="margin-top: 14px; font-size: 13px; color: #A91C5D; background: #FEF2F9; border-radius: 12px; padding: 12px; line-height: 1.6;">구축 단계 확인: 진단 결과와 디디쌤 회원 계정의 자동 연동(결과 저장 · 클래스 자동 배정) 방식</div>
+    </div>
+
+    <div style="flex: 1 1 400px; min-width: 0; background: #fff; border-radius: 20px; border: 1px solid #E6E8F0; padding: 24px;">
+      <div style="font-size: 13px; font-weight: 900; color: #8A8FA8; margin-bottom: 6px;">⑤ 디지털 배지 운영</div>
+      <div style="font-size: 20px; font-weight: 900; margin-bottom: 14px;">Open Badge 3.0 · 학교 검수 승인 후 발급</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.6;">
+        <div>· 배지 디자인 3종(Explorer · Builder · Master) 등록 → 클래스별 배지 생성(Explorer 디자인은 5개 유형 클래스에 공통 사용)</div>
+        <div>· 조건: 온라인 클래스 수료 + 영상 튜토리얼 5개 완료 → 결과물 과제 제출 → 학교 담당자 검수(과제 통과 처리) → 운영자가 대상 수강생을 선택해 발급(가이드 기준 수동 발급)</div>
+        <div>· 발급 즉시 알림톡 · 메일 안내 → 마이페이지에서 다운로드 · 링크 복사 · QR 확인</div>
+        <div>· 발급 후 수정 · 취소 불가 → 주 1회 일괄 발급 운영(안)</div>
+      </div>
+      <div style="margin-top: 14px; font-size: 13px; color: #A91C5D; background: #FEF2F9; border-radius: 12px; padding: 12px; line-height: 1.6;">구축 단계 확인: 디지털 배지 플랜 · 생성 가능 배지 수(3종, 클래스 15개 연결) · 수료 연동 자동 발급 가능 여부</div>
+    </div>
+
+    <div style="flex: 1 1 400px; min-width: 0; background: #fff; border-radius: 20px; border: 1px solid #E6E8F0; padding: 24px;">
+      <div style="font-size: 13px; font-weight: 900; color: #8A8FA8; margin-bottom: 6px;">⑥ 코드 블럭 활용 원칙</div>
+      <div style="font-size: 20px; font-weight: 900; margin-bottom: 14px;">디자인은 자유롭게, 데이터는 플랫폼에</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.6;">
+        <div>· 히어로 · 동선 · 유형 · 혜택 · 튜토리얼 그리드는 코드 블럭(HTML · CSS)으로 KIT AX ON 디자인 적용</div>
+        <div>· 수강 · 진도 · 과제 · 배지는 디디쌤 클래스 · 배지 기능 그대로 사용 → 학습 기록 · 이수율이 관리자 화면에 남음</div>
+        <div>· YouTube 튜토리얼은 커리큘럼 '동영상' 항목에 링크로 등록 · 홈에는 썸네일 + 링크</div>
+        <div>· 학교 로고 · ATC 디자인 셋(네이비 · 마젠타 · PRISM 5색) 적용</div>
+      </div>
+      <div style="margin-top: 14px; font-size: 13px; color: #A91C5D; background: #FEF2F9; border-radius: 12px; padding: 12px; line-height: 1.6;">구축 단계 확인: 코드 블럭의 JS 실행 범위(가이드에 지원 형식 미기재) · 모바일 표시 · 디지털북 전자책 뷰어의 진도율 · Level 평가를 디디쌤 학습 기록에 연동하는 방식 · 학교 공식 로고 원본(AI · SVG) 수령 · 공지 알림톡 발송 범위</div>
+    </div>
+  </div>
+</div>
+
+</body></html>
