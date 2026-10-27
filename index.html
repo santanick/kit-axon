@@ -95,6 +95,7 @@ img{display:block}
 
 /* mobile optimization v11 */
 body{word-break:keep-all;overflow-wrap:break-word}
+@media (max-width:960px){.crs-aside{position:static !important;top:auto !important}}
 @media (max-width:600px){
   .rm-card{padding:20px !important}
   .rm-note{display:block !important;line-height:1.6}
@@ -1012,7 +1013,7 @@ body{word-break:keep-all;overflow-wrap:break-word}
 
           <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start;">
             <!-- curriculum sidebar -->
-            <aside class="card" style="flex: 1 1 290px; min-width: 0; padding: 14px; position: sticky; top: 92px;" aria-label="커리큘럼">
+            <aside class="card crs-aside" style="flex: 1 1 290px; min-width: 0; padding: 14px; position: sticky; top: 92px;" aria-label="커리큘럼">
               <div style="font-size: 13px; font-weight: 800; padding: 8px 12px 10px; color: var(--muted);">커리큘럼 · {{lessonCount}}개 레슨</div>
               <sc-for list="{{lessons}}" as="ls" hint-placeholder-count="8">
                 <sc-if value="{{ls.head}}" hint-placeholder-val="{{ false }}">
@@ -1027,7 +1028,7 @@ body{word-break:keep-all;overflow-wrap:break-word}
             </aside>
 
             <!-- lesson view -->
-            <div style="flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 18px;">
+            <div id="lesson-view" style="flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 96px;">
 
               <!-- TUTORIAL LESSON (theater) -->
               <sc-if value="{{isTut}}" hint-placeholder-val="{{ true }}">
@@ -1118,8 +1119,9 @@ body{word-break:keep-all;overflow-wrap:break-word}
                   <sc-if value="{{subLocked}}" hint-placeholder-val="{{ false }}">
                     <div style="display: flex; gap: 12px; align-items: center; background: var(--soft); border-radius: 14px; padding: 16px; font-size: 15px;">
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5D6078" stroke-width="2" aria-hidden="true" style="flex: 0 0 22px;"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
-                      <span>{{subGate}}</span>
+                      <span style="flex: 1 1 auto; min-width: 0;">{{subGate}}</span>
                     </div>
+                    <button class="btn btn-sm" style="align-self: flex-start; background: var(--ink); color: #fff;" onClick="{{ gateGo }}">{{gateBtn}} →</button>
                   </sc-if>
                   <sc-if value="{{notSubmitted}}" hint-placeholder-val="{{ true }}">
                     <label for="subText" style="font-weight: 700; font-size: 15px;">결과물 공유 링크 또는 설명</label>
@@ -1169,6 +1171,7 @@ body{word-break:keep-all;overflow-wrap:break-word}
                           <button class="btn btn-dark btn-sm" onClick="{{ approve }}">시연용 · 학교 담당자 검수 승인</button>
                         </sc-if>
                         <sc-if value="{{reviewNone}}" hint-placeholder-val="{{ true }}">
+                          <button class="btn btn-dark btn-sm" onClick="{{ goSubmit }}">결과물 제출하러 가기 →</button>
                           <button class="btn-ghost" onClick="{{ demoFill }}">시연용 · 이 코스 빠르게 완료 + 제출</button>
                         </sc-if>
                       </div>
@@ -2048,6 +2051,7 @@ class Component extends DCLogic {
     if (typeof window !== 'undefined' && window.scrollTo) window.scrollTo(0, 0);
   }
 
+  focusLesson() { if (typeof window === 'undefined') return; if (window.innerWidth < 960) this.scrollToId('lesson-view'); else if (window.scrollTo) window.scrollTo(0, 0); }
   scrollToId(id) { if (typeof document === 'undefined') return; setTimeout(function () { var el = document.getElementById(id); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80); }
   openBook(k, read) { this.setState({ book: k, bch: 0 }); this.go('book'); if (read) this.scrollToId('book-reader'); }
   goTo(to) {
@@ -2238,7 +2242,7 @@ class Component extends DCLogic {
       return { title: title, meta: meta, head: head, headLabel: headLabel, hasThumb: !!th, thumb: th, mark: done ? '✓' : String(i + 1),
         dot: done ? 'background: var(--ok); color: #fff;' : (act ? 'background: ' + LV.fill + '; color: #fff;' : 'background: var(--soft); color: var(--muted);'),
         style: act ? 'background: ' + LV.tint + '; box-shadow: inset 0 0 0 1.5px ' + LV.fill + ';' : '',
-        go: function () { self.setLv(n, { li: i }); } };
+        go: function () { self.setLv(n, { li: i }); self.focusLesson(); } };
     });
     var cur = { no: 1, name: '', mission: '', vid: '', thumb: '', vtitle: '', channel: '', steps: [], stepDone: 0, result: '', state: '', stateStyle: '', cta: '' };
     if (curItem && curItem.kind === 'tut') {
@@ -2362,15 +2366,17 @@ class Component extends DCLogic {
       lvlPct: stt.pct, lvlBar: 'width: ' + Math.max(stt.pct, 2) + '%;', tutDone: stt.tutDone, tutTotal: tutTotal, clsReqDone: stt.reqDone, clsReqTotal: stt.reqTotal, subLabel: L.badge ? '검수 승인' : (rv === 'pending' ? '검수 대기' : (stt.sub ? '제출' : '미제출')),
       lessons: lessons, lessonCount: list.length, cur: cur,
       isTut: !!curItem && curItem.kind === 'tut', isCls: !!curItem && curItem.kind === 'cls', isSub: !!curItem && curItem.kind === 'sub', isBadge: !!curItem && curItem.kind === 'badge',
-      completeTut: function () { if (!curItem || curItem.kind !== 'tut') return; self.markDone(curItem.id, true); self.setLv(n, { li: Math.min(li + 1, list.length - 1) }); if (typeof window !== 'undefined' && window.scrollTo) window.scrollTo(0, 0); },
-      prevLesson: function () { self.setLv(n, { li: Math.max(0, li - 1) }); },
-      nextLesson: function () { self.setLv(n, { li: Math.min(list.length - 1, li + 1) }); },
+      completeTut: function () { if (!curItem || curItem.kind !== 'tut') return; self.markDone(curItem.id, true); self.setLv(n, { li: Math.min(li + 1, list.length - 1) }); self.focusLesson(); },
+      prevLesson: function () { self.setLv(n, { li: Math.max(0, li - 1) }); self.focusLesson(); },
+      nextLesson: function () { self.setLv(n, { li: Math.min(list.length - 1, li + 1) }); self.focusLesson(); },
       classes: classes, reqRows: reqRows,
       mission: missionByLv[n], missionHint: hintByLv[n],
       subLocked: !L.sub && !stt.canSubmit, subTitleNow: subTitleOf(n), subGate: '영상 튜토리얼 ' + stt.tutDone + '/' + stt.tutTotal + ' · 필수 클래스 ' + stt.reqDone + '/' + stt.reqTotal + ' — 모두 마치면 제출할 수 있어요.',
-      notSubmitted: !L.sub && stt.canSubmit, submitted: !!L.sub, draft: L.draft, subText: L.sub, subAt: L.subAt, subMsg: L.msg,
+      notSubmitted: !L.sub, subReady: !L.sub && stt.canSubmit,
+      gateBtn: stt.tutDone < stt.tutTotal ? '남은 튜토리얼 이어 하기' : '온라인 클래스 수강하기', gateGo: function () { self.setLv(n, { li: self.firstOpenLesson(n) }); self.focusLesson(); },
+      goSubmit: function () { self.setLv(n, { li: list.length - 2 }); self.focusLesson(); }, submitted: !!L.sub, draft: L.draft, subText: L.sub, subAt: L.subAt, subMsg: L.msg,
       onDraft: function (e) { self.setLv(n, { draft: e.target.value, msg: '' }); },
-      submit: function () { var tx = (s.lv[n].draft || '').trim(); if (tx.length < 2) { self.setLv(n, { msg: '결과물 링크나 설명을 입력해 주세요.' }); return; } self.setLv(n, { sub: tx, subAt: today(), msg: '', review: 'pending' }); },
+      submit: function () { if (!stt.canSubmit) { self.setLv(n, { msg: '먼저 남은 단계를 마쳐 주세요 · 튜토리얼 ' + stt.tutDone + '/' + stt.tutTotal + ' · 필수 클래스 ' + stt.reqDone + '/' + stt.reqTotal }); return; } var tx = (s.lv[n].draft || '').trim(); if (tx.length < 2) { self.setLv(n, { msg: '결과물 링크나 설명을 입력해 주세요.' }); return; } self.setLv(n, { sub: tx, subAt: today(), msg: '', review: 'pending' }); },
       unsubmit: function () { if (s.lv[n].badge) return; self.setLv(n, { draft: s.lv[n].sub, sub: '', subAt: '', review: '' }); },
       canEditSub: !!L.sub && !L.badge,
       badgeNotYet: !L.badge, badgeEarned: L.badge, badgeAt: L.badgeAt, badgeId: L.badgeId, reviewAt: L.reviewAt,
@@ -2409,4 +2415,3 @@ class Component extends DCLogic {
 
 mountDC(Component, document.getElementById('tpl'), document.getElementById('app'), ['home','diag','lib','course','badges','book','notice']);
 </script>
-</body></html>
