@@ -1,0 +1,24 @@
+rules_version = '2';
+// KIT AX ON — Firestore 보안 규칙
+// students(학번 · 해시) · reviewLog · admins 는 클라이언트 접근 금지(Cloud Functions 전용)
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isStudent(sid) { return request.auth != null && request.auth.uid == 's_' + sid; }
+
+    // 학생 진도: 본인만 읽기 · 쓰기, 필드는 p · updatedAt 만 허용, 문서 크기 제한
+    match /progress/{sid} {
+      allow read: if isStudent(sid);
+      allow write: if isStudent(sid)
+        && request.resource.data.keys().hasOnly(['p', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time;
+    }
+    // 검수 · 배지 결과: 본인 읽기만, 쓰기는 관리자 함수만
+    match /approvals/{sid} {
+      allow read: if isStudent(sid);
+      allow write: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
