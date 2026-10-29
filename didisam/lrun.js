@@ -8,7 +8,7 @@ const nl = s => esc(s).replace(/\n/g, '<br>');
 const ytOK = id => /^[\w-]{11}$/.test(id || '');
 const nowISO = () => new Date().toISOString();
 const Q = new URLSearchParams(location.search);
-const LR = { mode: 'demo', tid: Q.get('t') || '', site: null, me: null, lp: { tut: {}, cls: {}, diag: {} }, mine: { badges: [], cls: {} }, timer: 0, err: '' };
+const LR = { mode: 'demo', tid: Q.get('t') || '', site: null, me: null, lp: { tut: {}, cls: {}, diag: {}, book: {} }, mine: { badges: [], cls: {}, bk: {} }, timer: 0, err: '' };
 
 function toast(msg, kind = '') { const t = document.createElement('div'); t.className = 'ltoast ' + kind; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100); }
 const api = async (method, url, body) => { const r = await fetch(url, { method, credentials: 'same-origin', headers: { 'x-didisam': '1', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined }); const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.message || `오류 ${r.status}`); e.status = r.status; throw e; } return j; };
@@ -16,8 +16,10 @@ const api = async (method, url, body) => { const r = await fetch(url, { method, 
 /* ── 데이터 포트 ── */
 const demoRoom = () => { try { const reg = JSON.parse(localStorage.getItem('didisam.rooms') || 'null'); const tid = LR.tid || (reg && reg.cur) || ''; LR.tid = tid; return tid ? JSON.parse(localStorage.getItem('didisam.room.' + tid) || 'null') : null; } catch (e) { return null; } };
 const demoLPKey = () => 'didisam.room.' + LR.tid + '.lp';
-const mineFrom = (doc, sid) => { const m = (doc.members || []).find(x => x && (x.sid === sid || x.name === sid)); if (!m) return { badges: [], cls: {} };
-  return { badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))),
+const mineFrom = (doc, sid) => { const own = (o, k) => o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k);
+  const bk = Object.fromEntries(Object.entries(doc.bkgrades || {}).filter(([, M]) => own(M, sid)).slice(0, 200).map(([id, M]) => [id, Object.fromEntries(Object.entries(M[sid] || {}).slice(0, 200).map(([k, g]) => [k, { score: g && g.score != null && g.score !== '' ? +g.score : null, fb: String((g && g.fb) || '').slice(0, 500) }]))]));
+  const m = (doc.members || []).find(x => x && (x.sid === sid || x.name === sid)); if (!m) return { badges: [], cls: {}, bk };
+  return { bk, badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))),
     cls: Object.fromEntries((doc.classes || []).filter(c => c.prog && c.prog[m.id]).map(c => { const g = c.prog[m.id]; const thr = (c.criteria && c.criteria.threshold) || 80; return [c.id, { p: Math.round(+g.p || 0), st: g.assign || 'none', fb: String(g.fb || '').slice(0, 1000), score: g.score ?? null, done: (+g.p || 0) >= thr }]; })) }; };
 const demoMine = st => (!st || !LR.me) ? { badges: [], cls: {} } : mineFrom(st, LR.me.sid);
 const SESS = 'didisam.learner.' ;

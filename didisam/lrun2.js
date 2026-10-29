@@ -1,7 +1,7 @@
 /* 디디쌤 스튜디오 v10 — 학습자 화면: 셸 · 라우터 · 튜토리얼 · 과정 · 진단 · 로그인 · 마이페이지 · 플레이어 */
 'use strict';
 let PLAYER = null;
-const route = () => { const h = decodeURIComponent(location.hash.slice(1) || 'home').replace(/[)\]}>.,;:!?'"’”\s]+.*$/, '').replace(/[^\x00-\x7F].*$/, '') || 'home'; const [a, b] = h.split('/'); return { a, b }; };
+const route = () => { const h = decodeURIComponent(location.hash.slice(1) || 'home').replace(/[)\]}>.,;:!?'"’”\s]+.*$/, '').replace(/[^\x00-\x7F].*$/, '') || 'home'; const [a, ...r] = h.split('/'); return { a, b: r[0], rest: r.join('/') }; };
 const pageOf = id => SITE().pages.find(p => p.id === id);
 
 function shell(inner, cur) {
@@ -73,15 +73,16 @@ function viewMy() {
 
 /* ── 렌더 ── */
 function lrender() {
-  if (PLAYER && PLAYER.stop) PLAYER.stop(); PLAYER = null;
+  if (PLAYER && PLAYER.stop) PLAYER.stop(); PLAYER = null; if (typeof bkStop === 'function') bkStop();
   const app = $('#lapp'); if (!SITE()) { app.innerHTML = `<div class="lerr"><b>학습자 사이트</b><p>${esc(LR.err || '불러오는 중…')}</p></div>`; return; }
   const { a, b } = route(); let inner, cur = a;
   if (a === 't') { inner = viewTut(b); cur = 'tutorials'; } else if (a === 'c') { inner = viewCourse(b, route().b && decodeURIComponent(location.hash.slice(1)).split('/')[2]); cur = 'courses'; }
-  else if (a === 'dg') { inner = viewDiag(b); cur = 'diag'; } else if (a === 'cert') { inner = viewCert(b); cur = 'my'; } else if (a === 'badge') { inner = viewBadgeCert(b); cur = 'my'; } else if (a === 'login') { inner = LR.me ? viewMy() : viewLogin(b); } else inner = viewPage(a);
+  else if (a === 'dg') { inner = viewDiag(b); cur = 'diag'; } else if (a === 'cert') { inner = viewCert(b); cur = 'my'; } else if (a === 'badge') { inner = viewBadgeCert(b); cur = 'my'; } else if (a === 'bk' && typeof viewBook === 'function') { const n = decodeURIComponent(location.hash.slice(1)).split('/')[2]; inner = viewBook(b, n ? Math.max(0, (parseInt(n, 10) || 1) - 1) : null); cur = 'books'; } else if (a === 'bkcert' && typeof viewBookCert === 'function') { inner = viewBookCert(b); cur = 'my'; }
+  else if (a === 'login') { inner = LR.me ? viewMy() : viewLogin(route().rest); } else inner = viewPage(a);
   document.body.className = 'look-' + (SITE().look || 'clean') + (LR.mode === 'preview' ? ' pv' : '');
   app.innerHTML = shell(inner, cur); document.title = `${SITE().org.name} · 학습`;
   const y = $('#yt'); if (y) PLAYER = ytMount(y);
-  if (!location.hash.includes('/')) window.scrollTo(0, 0);
+  if (!location.hash.includes('/')) window.scrollTo(0, 0); if (typeof bkMount === 'function') bkMount();
 }
 
 /* ── YouTube 플레이어(실제 재생 구간만 누적) ── */
