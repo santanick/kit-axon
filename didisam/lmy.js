@@ -28,7 +28,7 @@ function myStats() {
 const MYR = {
   profile(st) { const S2 = SITE(); const ty = S2.types.find(x => x.k === st.myType); const lv = S2.levels[st.level] || {};
     return `<div class="myp"><span class="ava" style="--c:${esc(ty ? ty.color : lv.color || '#4b3cff')}">${esc(ty ? ty.k.slice(0, 2) : String(LR.me.sid).slice(-2))}</span>
-      <div class="mpi"><b>${esc(LR.me.sid)}</b><small>${esc(LR.me.dept || '')}</small><div class="chips2">${ty ? `<span class="tg" style="--c:${esc(ty.color)}">${esc(ty.name)} · ${esc(ty.k)}</span>` : `<a class="tg" href="#dg/${esc((diagFirst() || {}).id || '')}">진단 전</a>`}<span class="tg" style="--c:${esc(lv.color || '#4b3cff')}">LEVEL ${st.level + 1} · ${esc(lv.name || '')}</span></div></div>
+      <div class="mpi"><b>${esc(LR.me.sid)}</b><small>${esc(LR.me.dept || '')}</small><div class="chips2">${ty ? `<span class="tg" style="--c:${esc(ty.color)}">${esc(ty.name)} · ${esc(ty.k)}</span>` : `<a class="tg" style="--c:#E6337A" href="#dg/${esc((diagFirst() || {}).id || '')}">진단 전</a>`}<span class="tg" style="--c:${esc(lv.color || '#4b3cff')}">LEVEL ${st.level + 1} · ${esc(lv.name || '')}</span></div></div>
       <div class="mpn">${[[LR.mine.badges.length, '배지'], [st.courses.length, '과정'], [st.tuts.filter(x => (x.r.steps || []).filter(Boolean).length >= 3).length, '튜토리얼 완료'], [st.streak + '일', '연속 학습']].map(([n, l]) => `<div><b>${esc(String(n))}</b><small>${l}</small></div>`).join('')}</div>
       <button class="lbtn sm ghost" data-lact="logout">로그아웃</button></div>`; },
   next(st) { const S2 = SITE(); const A = [];

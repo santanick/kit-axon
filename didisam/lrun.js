@@ -32,8 +32,11 @@ LR.api = {
       try { LR.site = (await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/site`)).site; } catch (e) { LR.err = e.status === 404 ? '아직 게시되지 않은 학습자 사이트입니다.' : e.message; return; }
       try { const me = await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/me`); LR.me = me.me; LR.lp = me.lp || LR.lp; LR.mine = me.mine || LR.mine; } catch (e) { }
     } else if (LR.mode === 'demo') {
-      const st = demoRoom(); if (!st) { LR.err = '이 브라우저에 기관 데이터가 없습니다. 어드민에서 기관을 만든 뒤 학습자 사이트를 게시하세요.'; return; }
-      LR.site = st.lsite && st.lsite.pub; LR._codes = st.codes || []; if (!LR.site) { LR.err = '아직 게시되지 않았습니다. 어드민 › 운영 › 학습자 사이트에서 [게시]를 누르세요.'; return; }
+      const st = demoRoom(); LR.site = st && st.lsite && st.lsite.pub; LR._codes = (st && st.codes) || [];
+      if (!LR.site) { /* 이 브라우저에 게시본이 없으면(다른 기기 · 처음 방문) 체험용 샘플 사이트로 */
+        try { const r = await fetch('learner-demo.json', { cache: 'no-cache' }); const j = r.ok ? await r.json() : null; if (j && j.pages) { LR.site = j; LR.sample = j.demo || null; LR.tid = 'sample'; LR._codes = j.demo ? [{ sid: j.demo.sid, code: j.demo.code, dept: j.demo.dept }] : []; } } catch (e) { }
+        if (!LR.site) { LR.err = '아직 게시되지 않았습니다. 어드민 › 운영 › 학습자 사이트에서 [게시]를 누르세요.'; return; }
+      }
     }
     try { const s = JSON.parse(sessionStorage.getItem(SESS + LR.tid) || 'null'); if (s && LR.mode !== 'live') LR.me = s; } catch (e) { }
     if (LR.me && LR.mode !== 'live') { try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[LR.me.sid] || {}) }; } catch (e) { } if (LR.mode === 'demo') LR.mine = demoMine(demoRoom()); }

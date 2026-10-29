@@ -9,7 +9,7 @@ function shell(inner, cur) {
   const nav = S2.pages.filter(p => p.id !== 'my').map(p => `<a href="#${esc(p.id)}" class="${cur === p.id ? 'on' : ''}">${esc(p.name)}</a>`).join('');
   return `<header class="lh"><div class="in"><a class="brand" href="#home"><span class="lg">${esc(short)}</span><span><b>${esc(S2.org.name)}</b><small>온라인 학습</small></span></a><button class="mnu" data-lact="menu" aria-label="메뉴">≡</button>
     <nav class="ln">${nav}</nav><div class="acct">${LR.me ? `<a class="lbtn sm ghost" href="#my">${esc(LR.me.sid)}</a>` : `<a class="lbtn sm pri" href="#login">로그인</a>`}</div></div></header>
-    ${LR.mode === 'preview' ? '<div class="pvbar">미리보기 · 초안</div>' : ''}<main id="lm">${inner}</main>
+    ${LR.mode === 'preview' ? '<div class="pvbar">미리보기 · 초안</div>' : ''}${LR.sample ? `<div class="pvbar">체험용 샘플 사이트 · 체험 계정 ${esc(LR.sample.sid)} / ${esc(LR.sample.code)} · 기록은 이 기기에만 저장됩니다</div>` : ''}<main id="lm">${inner}</main>
     <footer class="lf"><div class="in"><b>${esc(S2.org.name)}</b><small>학습자 정보는 ${S2.org.type === 'univ' ? '학번 · 학과만' : '번호 · 소속만'} 저장합니다 · Powered by 디디쌤</small></div></footer>`;
 }
 function needLogin(back) { return `<section class="sec"><div class="in narrow"><h2>로그인이 필요합니다</h2><p class="lead">이 화면은 로그인한 ${esc(SITE().terms.learner || '학습자')}만 볼 수 있습니다.</p>${btn('로그인', '#login/' + encodeURIComponent(back || ''))}</div></section>`; }
@@ -59,7 +59,7 @@ function viewDiag(id) {
 function viewLogin(back) {
   return `<section class="sec"><div class="in narrow"><h1>로그인</h1><p class="lead">${SITE().org.type === 'univ' ? '학번' : '학습자 번호'}와 기관에서 받은 접근코드를 입력하세요.</p>
     <form id="li" data-back="${esc(back || 'my')}"><label class="fl">${SITE().org.type === 'univ' ? '학번' : '번호'}<input name="sid" inputmode="numeric" autocomplete="username" required maxlength="20"></label><label class="fl">접근코드<input name="code" autocomplete="current-password" required maxlength="12"></label><p class="err" id="liErr" role="alert"></p><button class="lbtn pri" type="submit">로그인</button></form>
-    ${LR.mode === 'preview' ? '<p class="mini">미리보기에서는 어드민의 접근코드로 로그인해 볼 수 있으며 기록은 저장되지 않습니다.</p>' : ''}</div></section>`;
+    ${LR.mode === 'preview' ? '<p class="mini">미리보기에서는 어드민의 접근코드로 로그인해 볼 수 있으며 기록은 저장되지 않습니다.</p>' : ''}${LR.sample ? `<p class="mini">체험 계정: ${esc(LR.sample.sid)} / ${esc(LR.sample.code)} <button type="button" class="lbtn sm ghost" data-lact="demofill">자동 입력</button></p>` : ''}</div></section>`;
 }
 function viewMy() {
   if (!LR.me) return needLogin('my');
@@ -103,6 +103,7 @@ document.addEventListener('click', async e => { const el = e.target.closest('[da
   if (k === 'logout') { await LR.api.logout(); location.hash = '#home'; lrender(); }
   if (k === 'redo') { LR.redo = true; lrender(); LR.redo = false; }
   if (k === 'wdone' && PLAYER) PLAYER.mark();
+  if (k === 'demofill' && LR.sample) { const f = $('#li'); f.sid.value = LR.sample.sid; f.code.value = LR.sample.code; }
   if (!LR.me) return;
   if (k === 'msn') { const t = LR.lp.tut[el.dataset.v] = LR.lp.tut[el.dataset.v] || { w: 0, steps: [], mission: '' }; t.mission = $('#msn').value.trim().slice(0, 2000); t.at = nowISO(); LR.api.save(); toast(t.mission ? '미션을 제출했습니다. 운영자 검수 후 배지로 이어집니다.' : '내용을 입력하세요.', t.mission ? 'ok' : 'warn'); }
   if (k === 'asg') { const c = LR.lp.cls[el.dataset.c] = LR.lp.cls[el.dataset.c] || { items: {} }; const txt = $('#asg').value.trim(); if (!txt) { toast('제출 내용을 입력하세요.', 'warn'); return; } c.sub = { text: txt.slice(0, 4000), at: nowISO() }; c.items[el.dataset.i] = { ...(c.items[el.dataset.i] || {}), done: true }; LR.api.save(); toast('과제를 제출했습니다.', 'ok'); lrender(); }
