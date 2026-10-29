@@ -26,13 +26,15 @@ const save = () => Store.set(S);
 
 /* ───────── 기관 유형 ───────── */
 const TYPES = {
-  corp: { name: '기업', icon: '🏢', desc: '임직원 직무·법정의무교육, 부서별 이수 관리', ex: '사내 아카데미 · HRD팀' },
-  univ: { name: '대학', icon: '🎓', desc: '교과·비교과 운영, 학과별 학습 현황, 디지털 배지', ex: '대학 교수학습센터 · 사업단' },
-  k12: { name: '학원 (초중고)', icon: '✏️', desc: '반·출결·보호자·청구서 중심의 오프라인+온라인 보강', ex: '보습 · 입시 · 어학원', group: 'academy' },
-  adult: { name: '학원 (성인)', icon: '💼', desc: '강좌 판매·모집·매출 중심의 온라인 클래스', ex: '자격증 · 실무 · 취미', group: 'academy' },
-  lifelong: { name: '평생교육원', icon: '🌱', desc: '강좌 개설·학습자 모집, 학습비 반환·수료 기록', ex: '대학 부설 · 지자체 · 원격 평생교육시설' },
-  voc: { name: '직업훈련원', icon: '🛠️', desc: '훈련과정·출결·HRD-Net 보고, 부정훈련 모니터링', ex: '국민내일배움카드 · 사업주훈련' }
+  corp: { name: '기업', icon: 'corp', desc: '임직원 직무·법정의무교육, 부서별 이수 관리', ex: '사내 아카데미 · HRD팀' },
+  univ: { name: '대학', icon: 'univ', desc: '교과·비교과 운영, 학과별 학습 현황, 디지털 배지', ex: '대학 교수학습센터 · 사업단' },
+  k12: { name: '학원 (초중고)', icon: 'k12', desc: '반·출결·보호자·청구서 중심의 오프라인+온라인 보강', ex: '보습 · 입시 · 어학원', group: 'academy' },
+  adult: { name: '학원 (성인)', icon: 'adult', desc: '강좌 판매·모집·매출 중심의 온라인 클래스', ex: '자격증 · 실무 · 취미', group: 'academy' },
+  lifelong: { name: '평생교육원', icon: 'lifelong', desc: '강좌 개설·학습자 모집, 학습비 반환·수료 기록', ex: '대학 부설 · 지자체 · 원격 평생교육시설' },
+  voc: { name: '직업훈련원', icon: 'voc', desc: '훈련과정·출결·HRD-Net 보고, 부정훈련 모니터링', ex: '국민내일배움카드 · 사업주훈련' }
 };
+const TICON = {corp: '<path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M2 21h20M8 8h3M8 12h3M8 16h3"/>',univ: '<path d="M2 9l10-5 10 5-10 5L2 9z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6"/>',academy: '<path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/>',k12: '<path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/>',adult: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"/>',lifelong: '<path d="M12 21v-9M12 12c0-4 3-7 8-7 0 5-3 8-8 7zM12 15c0-3-2.5-5-7-5 0 4 2.5 6 7 5z"/>',voc: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4 2.5-2.5z"/>'};
+const ticon = k => `<svg class="tsvg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TICON[k] || ''}</svg>`;
 /* 유형별 용어: 같은 기능을 그 현장의 말로 부른다 */
 const TERMS = {
   corp: { learner: '임직원', cls: '교육과정', group: '부서', teacher: '사내강사', done: '이수', site: '사내 교육포털', fee: '교육비' },
@@ -153,7 +155,7 @@ function sidebar() {
     if (d.owner && S.me.role !== 'owner') continue;
     if (S.me.role === 'teacher' && ['settings', 'site', 'sales', 'billing', 'plan', 'admins', 'org'].includes(m.id)) continue;
     if (d.grp !== last && S.ui.groupHeads) { out += `<div class="ng">${esc(d.grp)}</div>`; last = d.grp; }
-    out += `<button class="ni ${CUR === m.id ? 'on' : ''}" data-act="go" data-v="${m.id}" ${CUR === m.id ? 'aria-current="page"' : ''}><i aria-hidden="true">${d.icon}</i><span>${esc(mlabel(m.id))}</span>${d.badge ? `<em>${d.badge}</em>` : ''}</button>`;
+    out += `<button class="ni ${CUR === m.id ? 'on' : ''}" data-act="go" data-v="${m.id}" ${CUR === m.id ? 'aria-current="page"' : ''}><i aria-hidden="true">${d.icon}\uFE0E</i><span>${esc(mlabel(m.id))}</span>${d.badge ? `<em>${d.badge}</em>` : ''}</button>`;
   }
   return out;
 }
@@ -165,7 +167,7 @@ function render() {
   <header class="top">
     <button class="hamb" data-act="nav" aria-label="메뉴 열기">☰</button>
     <div class="brand"><span class="logo">D</span><b>디디쌤</b><span class="studio">스튜디오</span></div>
-    <div class="orgsel"><b>${esc(S.org.name)}</b>${tag(ty.icon + ' ' + ty.name, 'g')}</div>
+    <div class="orgsel"><b>${esc(S.org.name)}</b>${tag(ty.name, 'g')}</div>
     <button class="cmdk" data-act="cmd"><span>✦ AI SAM에게 업무 지시</span><kbd>Ctrl K</kbd></button>
     <div class="topr">
       <select id="roleSel" aria-label="보기 권한" title="권한별 화면 미리보기">
@@ -191,9 +193,9 @@ let SU = { step: 1, type: '', name: '', email: '', acad: '' };
 function renderSignup() {
   document.body.className = document.body.className.replace(/\bmode-\w+/g, '') + ' mode-signup';
   const cards = ['corp', 'univ', 'academy', 'lifelong', 'voc'].map(k => {
-    const ty = k === 'academy' ? { name: '학원', icon: '📚', desc: '초중고 보습·입시 / 성인 자격증·실무 학원', ex: '선택 후 세부 유형을 고릅니다' } : TYPES[k];
+    const ty = k === 'academy' ? { name: '학원', icon: 'academy', desc: '초중고 보습·입시 / 성인 자격증·실무 학원', ex: '선택 후 세부 유형을 고릅니다' } : TYPES[k];
     const sel = SU.type === k || (k === 'academy' && TYPES[SU.type]?.group === 'academy');
-    return `<button class="tcard ${sel ? 'on' : ''}" data-act="su-type" data-v="${k}" aria-pressed="${sel}"><span class="ti">${ty.icon}</span><b>${esc(ty.name)}</b><p>${esc(ty.desc)}</p><small>${esc(ty.ex)}</small></button>`;
+    return `<button class="tcard ${sel ? 'on' : ''}" data-act="su-type" data-v="${k}" aria-pressed="${sel}"><span class="ti">${ticon(ty.icon)}</span><b>${esc(ty.name)}</b><p>${esc(ty.desc)}</p><small>${esc(ty.ex)}</small></button>`;
   }).join('');
   const isAcad = SU.type === 'academy' || TYPES[SU.type]?.group === 'academy';
   const ready = SU.type && SU.type !== 'academy';
@@ -215,7 +217,7 @@ function renderSignup() {
       ${isAcad ? `<div class="fl"><span>학원 세부 유형</span><div class="seg">
         <button type="button" class="${SU.type === 'k12' ? 'on' : ''}" data-act="su-type" data-v="k12">초중고 (반 · 출결 · 보호자 · 청구서)</button>
         <button type="button" class="${SU.type === 'adult' ? 'on' : ''}" data-act="su-type" data-v="adult">성인 (강좌 판매 · 모집 · 매출)</button></div></div>` : ''}
-      ${ready ? `<div class="pv"><b>${TYPES[SU.type].icon} ${esc(TYPES[SU.type].name)} 어드민 미리보기</b>
+      ${ready ? `<div class="pv"><b>${esc(TYPES[SU.type].name)} 어드민 미리보기</b>
         <p>${esc(TERMS[SU.type].learner)} · ${esc(TERMS[SU.type].cls)} · ${esc(TERMS[SU.type].group)} 용어로 표시됩니다. 꺼진 메뉴 ${PRESET[SU.type].off.length}개는 설정 › 메뉴 설정에서 켤 수 있습니다.</p>
         <ol>${pv.map(i => `<li>${esc(presetLabel(SU.type, i))}</li>`).join('')}</ol></div>` : ''}
       <button class="btn pri lg" type="submit" ${ready ? '' : 'disabled'}>최적화된 어드민 만들기</button>
