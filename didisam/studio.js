@@ -47,8 +47,8 @@ function aivEditor(it) {
 document.addEventListener('input', e => { const el = e.target; if (!ED || el.dataset.sc == null) return; const s = ED.it.ai.scenes[+el.dataset.sc]; if (el.dataset.f === 'pts') s.pts = el.value.split('\n').map(x => x.trim()).filter(Boolean).slice(0, 6); else s[el.dataset.f] = el.value; });
 ACT['aiv-gen'] = () => { const it = ED.it; const mins = +(it.aiMins || 5); it.ai = { scenes: AI.lecture(it.aiTopic || it.title, mins), mins, voice: it.aiVoice || 'f', style: it.aiStyle || 'slide' }; S.ai.usage++; edRender(); toast(`${it.ai.scenes.length}장면 대본과 슬라이드를 만들었습니다.`, 'ok'); };
 ACT['aiv-del'] = el => { ED.it.ai.scenes.splice(+el.dataset.v, 1); edRender(); };
-ACT['aiv-play'] = () => aiPlayer(ED.it.title, ED.it.ai.scenes, ED.it.aiVoice || ED.it.ai.voice);
-ACT['aiv-rec'] = () => aiRecord(ED.it.title, ED.it.ai.scenes);
+ACT['aiv-play'] = () => aiPlayer(ED.it.title, ED.it.ai.scenes, ED.it.aiVoice || ED.it.ai.voice, ED.it.subs?.tracks);
+ACT['aiv-rec'] = () => { const l = ED.it.subs?.burn; aiRecord(ED.it.title, ED.it.ai.scenes, l ? ED.it.subs.tracks[l] : null); };
 ACT['aiv-doc'] = () => { const c = ED.c, it = ED.it; c.curriculum.push({ id: uid('it'), type: 'doc', title: `${lecTopic(it.title)} 강의자료`, week: it.week, topic: lecTopic(it.title), doc: AI.material(it.title, c, it.ai.scenes) }); save(); toast('같은 대본으로 강의자료를 만들어 커리큘럼에 추가했습니다.', 'ok'); };
 
 /* 강의자료 편집기 */
@@ -101,25 +101,28 @@ function drawSlide(g, s, i, n, title, cap, prog) {
 }
 const sentences = s => String(s || '').split(/(?<=[.!?。])\s+/).filter(Boolean);
 function overlay(title, body) { const w = document.createElement('div'); w.className = 'mwrap top2'; w.innerHTML = `<div class="modal wide" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mh"><b>${esc(title)}</b><button class="x" data-x="1" aria-label="닫기">${ic('x', 18)}</button></div><div class="mb">${body}</div></div>`; document.body.appendChild(w); return w; }
-function aiPlayer(title, scenes, voice) {
-  if (!scenes?.length) return; const w = overlay(`재생 — ${title}`, `<canvas class="aicv" width="1280" height="720" aria-label="AI 강의 슬라이드"></canvas><div class="bar2 pctl"><button class="btn sm" data-p="prev">이전</button><button class="btn sm ink" data-p="play">일시정지</button><button class="btn sm" data-p="next">다음</button><label class="ckl"><input type="checkbox" data-p="mute" ${'speechSynthesis' in window ? '' : 'checked disabled'}> 소리 끔</label><span class="mini" data-p="st"></span></div>`);
+const sentIndex = (scenes, i, k) => scenes.slice(0, i).reduce((a, s) => a + Math.max(1, sentences(s.say).length), 0) + k;
+function aiPlayer(title, scenes, voice, tracks) {
+  if (!scenes?.length) return; tracks = tracks || {}; const TL = Object.keys(tracks).filter(l => (tracks[l] || []).length);
+  const w = overlay(`재생 — ${title}`, `<canvas class="aicv" width="1280" height="720" aria-label="AI 강의 슬라이드"></canvas><div class="bar2 pctl"><button class="btn sm" data-p="prev">이전</button><button class="btn sm ink" data-p="play">일시정지</button><button class="btn sm" data-p="next">다음</button><label class="ckl"><input type="checkbox" data-p="mute" ${'speechSynthesis' in window ? '' : 'checked disabled'}> 소리 끔</label>${TL.length ? `<select data-p="lang" aria-label="자막 언어"><option value="">자막: 원문</option>${TL.map(l => `<option value="${l}">자막: ${esc(langName(l))}</option>`).join('')}</select>` : ''}<span class="mini" data-p="st"></span></div>`);
+  const capLang = () => w.querySelector('[data-p=lang]')?.value || '';
   const g = w.querySelector('canvas').getContext('2d'); let i = 0, k = 0, on = true, tm = null, alive = true; const syn = window.speechSynthesis;
   const muted = () => w.querySelector('[data-p=mute]').checked;
   const stop = () => { clearTimeout(tm); try { syn && syn.cancel(); } catch (e) { } };
-  let tok = 0; const step = () => { if (!alive) return; stop(); const my = ++tok; const s = scenes[i]; const ss = sentences(s.say); const cap = ss[k] || ''; drawSlide(g, s, i, scenes.length, title, cap, (i + (k + 1) / Math.max(1, ss.length)) / scenes.length); w.querySelector('[data-p=st]').textContent = `${i + 1} / ${scenes.length} 장면`;
+  let tok = 0; const step = () => { if (!alive) return; stop(); const my = ++tok; const s = scenes[i]; const ss = sentences(s.say); const cl = capLang(); const cap = (cl && tracks[cl]?.[sentIndex(scenes, i, k)]?.t) || ss[k] || ''; drawSlide(g, s, i, scenes.length, title, cap, (i + (k + 1) / Math.max(1, ss.length)) / scenes.length); w.querySelector('[data-p=st]').textContent = `${i + 1} / ${scenes.length} 장면`;
     if (!on) return; const nx = () => { if (++k >= ss.length) { k = 0; i++; } if (i >= scenes.length) { on = false; i = scenes.length - 1; w.querySelector('[data-p=play]').textContent = '처음부터'; return; } step(); };
-    if (syn && !muted() && cap) { const u = new SpeechSynthesisUtterance(cap); u.lang = 'ko-KR'; u.rate = 1.05; const vs = syn.getVoices().filter(v => /ko/i.test(v.lang)); const pv = vs.find(v => voice === 'm' ? /male|남|Minsu|InJoon/i.test(v.name) && !/female/i.test(v.name) : /female|여|Yuna|SunHi|Heami/i.test(v.name)) || vs[0]; if (pv) u.voice = pv; let fired = false; const once = () => { if (fired || !alive || !on || my !== tok) return; fired = true; nx(); }; u.onend = once; u.onerror = once; syn.speak(u); tm = setTimeout(() => { try { syn.cancel(); } catch (e) { } once(); }, secsFor(cap) * 1000 + 6000); }
+    if (syn && !muted() && cap) { const u = new SpeechSynthesisUtterance(cap); u.lang = (LANG_TTS[cl] || 'ko-KR'); u.rate = 1.05; const vs = syn.getVoices().filter(v => v.lang.toLowerCase().startsWith((LANG_TTS[cl] || 'ko-KR').slice(0, 2).toLowerCase())); const pv = vs.find(v => voice === 'm' ? /male|남|Minsu|InJoon/i.test(v.name) && !/female/i.test(v.name) : /female|여|Yuna|SunHi|Heami/i.test(v.name)) || vs[0]; if (pv) u.voice = pv; let fired = false; const once = () => { if (fired || !alive || !on || my !== tok) return; fired = true; nx(); }; u.onend = once; u.onerror = once; syn.speak(u); tm = setTimeout(() => { try { syn.cancel(); } catch (e) { } once(); }, secsFor(cap) * 1000 + 6000); }
     else tm = setTimeout(nx, Math.max(1.6, secsFor(cap)) * 1000); };
   w.addEventListener('click', e => { const p = e.target.closest('[data-p]')?.dataset.p; if (e.target.closest('[data-x]') || e.target === w) { alive = false; stop(); w.remove(); return; }
     if (p === 'prev') { i = Math.max(0, i - 1); k = 0; step(); } if (p === 'next') { i = Math.min(scenes.length - 1, i + 1); k = 0; step(); }
     if (p === 'play') { if (!on && i === scenes.length - 1) { i = 0; k = 0; } on = !on; e.target.textContent = on ? '일시정지' : '재생'; step(); } });
-  w.querySelector('[data-p=mute]').addEventListener('change', step); step();
+  w.querySelector('[data-p=mute]').addEventListener('change', step); w.querySelector('[data-p=lang]')?.addEventListener('change', step); step();
 }
-function aiRecord(title, scenes) {
+function aiRecord(title, scenes, track) {
   const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 720;
   if (!cv.captureStream || !window.MediaRecorder) { toast('이 브라우저는 영상 파일 만들기를 지원하지 않습니다. Chrome · Edge에서 시도하세요.', 'warn'); return; }
   const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m)) || '';
-  const plan = scenes.flatMap((s, i) => { const ss = sentences(s.say); return (ss.length ? ss : ['']).map((c, k) => ({ i, c, d: secsFor(c), f: (i + (k + 1) / Math.max(1, ss.length)) / scenes.length })); });
+  const plan = scenes.flatMap((s, i) => { const ss = sentences(s.say); return (ss.length ? ss : ['']).map((c, k) => ({ i, c: (track && track[sentIndex(scenes, i, k)]?.t) || c, d: secsFor(c), f: (i + (k + 1) / Math.max(1, ss.length)) / scenes.length })); });
   const total = plan.reduce((a, p) => a + p.d, 0);
   const w = overlay(`영상 파일 만들기 — ${title}`, `<p class="mini">장면을 실제 재생 시간대로 그리며 녹화합니다(약 ${Math.ceil(total / 60)}분). 창을 닫으면 취소됩니다.</p>${bar(0)}<p class="mini" data-r="st">준비 중…</p><div data-r="out"></div>`);
   const g = cv.getContext('2d'); const rec = new MediaRecorder(cv.captureStream(30), mime ? { mimeType: mime, videoBitsPerSecond: 2_500_000 } : undefined); const chunks = []; let cancel = false, el = 0, j = 0, tick;
@@ -201,7 +204,7 @@ ACT['dg-assign'] = el => {
 
 /* ═════════ ③ AI SAM 상시 패널 + 대화로 메뉴 채우기(흐름) ═════════ */
 const DOCK = { get: () => { try { return localStorage.getItem('didisam.dock') === '1'; } catch (e) { return false; } }, set: v => { try { localStorage.setItem('didisam.dock', v ? '1' : '0'); } catch (e) { } } };
-const FILLQ = () => { const U = S.org.type === 'univ'; return { class: U ? '생성형 AI 활용 15주 교과목 설계하고 AI 강의 영상 · 강의자료까지 만들어줘' : `업무 자동화 기초 6차시 ${t('cls')} 만들고 퀴즈 · 과제 · 강의자료까지 채워줘`, diag: 'AI 활용 수준 진단 만들고 결과별 러닝 저니까지 설계해줘', journey: '진단 결과별 러닝 저니 설계해줘', assess: '보고서 과제 루브릭 만들어줘', board: '이번 달 운영 공지 써줘', badge: '수료 배지 만들어줘', auto: '매주 금요일 주간 보고서 보내는 자동화 만들어줘', site: '홈페이지를 신뢰감 있는 분위기로 만들어줘', library: 'AI 활용 기초 AI 강의 영상 만들어줘', book: 'AI 활용 기초 교재 만들어줘', message: `전체 ${t('learner')}에게 학습 안내 메시지 보내줘`, groups: `새 ${t('group')} 만들어줘` }; };
+const FILLQ = () => { const U = S.org.type === 'univ'; return { class: U ? '생성형 AI 활용 15주 교과목 설계하고 AI 강의 영상 · 강의자료까지 만들어줘' : `업무 자동화 기초 6차시 ${t('cls')} 만들고 퀴즈 · 과제 · 강의자료까지 채워줘`, diag: 'AI 활용 수준 진단 만들고 결과별 러닝 저니까지 설계해줘', journey: '진단 결과별 러닝 저니 설계해줘', assess: '보고서 과제 루브릭 만들어줘', board: '이번 달 운영 공지 써줘', badge: '수료 배지 만들어줘', auto: '매주 금요일 주간 보고서 보내는 자동화 만들어줘', site: '홈페이지 블루 톤에 신뢰감 있게, 후기 섹션 추가해줘', calendar: '모든 수업 · 마감 일정을 구글 캘린더로 보내고 AI 튜터 코칭 켜줘', library: 'AI 활용 기초 AI 강의 영상 만들어줘', book: 'AI 활용 기초 교재 만들어줘', message: `전체 ${t('learner')}에게 학습 안내 메시지 보내줘`, groups: `새 ${t('group')} 만들어줘` }; };
 { const open = ACT['chat-open'], close = ACT['chat-close'];
   ACT['chat-open'] = el => { const had = $('#drawer'); open(el); DOCK.set(1); const d = $('#drawer'); if (d && !had) { d.querySelector('.dh .x').insertAdjacentHTML('beforebegin', `<button class="btn sm" data-act="fill-here">${ic('spark', 12)} 이 화면 채우기</button>`); } };
   ACT['chat-close'] = el => { if (el) DOCK.set(0); close(el); };
