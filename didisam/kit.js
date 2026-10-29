@@ -8,8 +8,8 @@ function medal(b, w = 56) {
 }
 /* 선 차트(SVG, 라이브러리 없음) */
 function lineChart(labels, series, h = 200) {
-  const W = 560, P = 34, max = Math.max(1, ...series.flatMap(s => s.v)) * 1.15; const x = i => P + i * (W - P - 10) / Math.max(1, labels.length - 1), y = v => h - 24 - v / max * (h - 44);
-  const grid = [0, .5, 1].map(f => `<line x1="${P}" x2="${W - 10}" y1="${y(max * f / 1.15)}" y2="${y(max * f / 1.15)}" class="gl"/><text x="${P - 6}" y="${y(max * f / 1.15) + 4}" text-anchor="end" class="gt">${Math.round(max * f / 1.15)}</text>`).join('');
+  const W = 560, P = 34, max = Math.max(1, ...series.flatMap(s => s.v)) * 1.15; const x = i => P + i * (W - P - 30) / Math.max(1, labels.length - 1), y = v => h - 24 - v / max * (h - 44);
+  const grid = [0, .5, 1].map(f => `<line x1="${P}" x2="${W - 30}" y1="${y(max * f / 1.15)}" y2="${y(max * f / 1.15)}" class="gl"/><text x="${P - 6}" y="${y(max * f / 1.15) + 4}" text-anchor="end" class="gt">${Math.round(max * f / 1.15)}</text>`).join('');
   return `<svg viewBox="0 0 ${W} ${h}" class="chart" role="img" aria-label="${esc(series.map(s => s.n).join(' · '))} 추이">${grid}${labels.map((l, i) => `<text x="${x(i)}" y="${h - 6}" text-anchor="middle" class="gt">${esc(l)}</text>`).join('')}${series.map(s => `<polyline fill="none" stroke="${s.c}" stroke-width="2.4" points="${s.v.map((v, i) => `${x(i)},${y(v)}`).join(' ')}"/>${s.v.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="${i === s.v.length - 1 ? 4 : 2.5}" fill="${s.c}"><title>${esc(labels[i])} ${esc(s.n)} ${v}</title></circle>`).join('')}`).join('')}</svg>
   <div class="legend">${series.map(s => `<span><i style="background:${s.c}"></i>${esc(s.n)}</span>`).join('')}</div>`;
 }

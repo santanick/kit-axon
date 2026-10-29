@@ -314,3 +314,13 @@ main.ws-home{background:linear-gradient(180deg,var(--paper) 0,#fff 420px)}
 .dsplit .dpaper{height:100%}
 .dfoot{margin-top:10px}.dfoot b.warn,.warn{color:var(--warn)}
 @media (max-width:860px){.dtop{grid-template-columns:1fr 1fr}.dtop input{grid-column:1/-1}.dsplit{grid-template-columns:1fr;height:auto}.dsplit textarea{height:260px}.dsplit .dpaper{height:auto;max-height:360px}.dsearch{max-width:none}}
+/* v6.1 — QA 반영 */
+.wkh select{flex:0 0 30px;width:30px;height:28px;padding:0;text-align:center;text-align-last:center;appearance:none;-webkit-appearance:none;color:var(--ink);cursor:pointer;font-size:16px}
+.wkh select option{font-size:14px;font-weight:600}
+.subtabs{margin:-6px 0 14px}.subtabs .seg2{background:transparent;padding:0;gap:6px;flex-wrap:wrap}.subtabs .seg2 button{box-shadow:inset 0 0 0 1.5px var(--line);border-radius:99px;padding:6px 14px;font-size:13px}.subtabs .seg2 button.on{background:var(--ink);color:#fff;box-shadow:none}
+.meter{height:10px;border-radius:99px;background:var(--soft);overflow:hidden;margin:8px 0}.meter i{display:block;height:100%;background:var(--ink)}.meter i.hi{background:var(--bad)}
+.stbar{background:var(--badl);color:var(--bad);border-radius:14px;padding:10px 14px;margin-bottom:14px;font-weight:600;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.railopts{display:none}
+button[aria-disabled=true],button:disabled{opacity:.35;cursor:not-allowed}
+@media (min-width:861px){body:not(.drawer-open) #main{padding-right:64px}}
+@media (max-width:640px){.railopts{display:flex;flex-direction:column;gap:8px;padding:12px;border-top:1px solid var(--line);margin-top:8px}.railopts select{width:100%;max-width:none;height:40px}.topr #langSel,.topr #roleSel{display:none}}

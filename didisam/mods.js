@@ -406,7 +406,9 @@ VIEWS.settings = () => { const tb = UI.settings || 'menu'; const st = S.settings
   if (tb === 'terms') b = `<label class="fl">이용약관(학습비 · 수강료 반환 기준 포함) <button class="btn sm ai" data-act="ai-terms">✦ 유형별 초안</button><textarea rows="6" data-chg="terms" data-k="tos">${esc(st.terms.tos)}</textarea></label><label class="fl">개인정보 처리방침<textarea rows="5" data-chg="terms" data-k="privacy">${esc(st.terms.privacy)}</textarea></label><p class="mini">AI 초안은 참고용이며 게시 전 법률 검토가 필요합니다.</p>`;
   if (tb === 'cover') b = coverage();
   if (tb === 'data') b = `<p class="mini">데모 데이터는 이 브라우저의 저장소에만 있습니다. 실제 운영 모드에서는 Firebase(서울 리전) 서버에 저장되며, 대학 유형은 학번 · 학과만 저장하고 학교 SSO로 연계합니다.</p><button class="btn" data-act="data-export">전체 데이터 JSON 내보내기</button>`;
-  return tabs('settings', T, tb) + b; };
+  const SG = [['운영 설정', ['menu', 'rules', 'type']], ['연동 · 언어', ['integr', 'lang']], ['홈페이지 · 상담', ['home', 'popup', 'consult', 'terms']], ['계정 · 데이터', ['plan', 'service', 'cover', 'data']]].map(([n, ids]) => [n, ids.filter(id => T.some(x => x[0] === id))]).filter(g => g[1].length);
+  const g = SG.find(x => x[1].includes(tb)) || SG[0];
+  return tabs('settings', SG.map(([n, ids]) => [ids[0], n]), g[1][0]) + (g[1].length > 1 ? `<div class="subtabs">${tabs('settings', T.filter(x => g[1].includes(x[0])), tb)}</div>` : '') + b; };
 ACT.st = el => { S.settings[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; save(); toast('저장했습니다.', 'ok'); };
 ACT.seo = el => { S.settings.seo[el.dataset.k] = el.value; save(); };
 ACT.footer = el => { S.settings.footer[el.dataset.k] = el.value; save(); };
