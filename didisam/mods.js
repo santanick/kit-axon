@@ -91,7 +91,7 @@ function classDetail(c) {
     <label>교육 시간(시간)<input type="number" min="0" value="${c.hours}" data-chg="cls-set" data-c="${c.id}" data-k="hours"></label>
     <label>담당 ${esc(t('teacher'))}<input value="${esc(c.teacher)}" data-chg="cls-set" data-c="${c.id}" data-k="teacher" maxlength="30"></label>
     <div class="danger"><button class="btn sm red" data-act="cls-del" data-v="${c.id}">${esc(t('cls'))} 삭제</button><small>수강생이나 구독자가 있으면 삭제할 수 없습니다.</small></div></div>`;
-  return `<button class="link back" data-act="cls-back">← ${esc(t('cls'))} 목록</button>` + head(c.name, `${esc(KIND[c.kind] + (c.sub ? ' · ' + c.sub : ''))} · ${c.start} ~ ${c.end} · ${esc(c.teacher)}`, `${tag(c.status, c.status === '운영중' ? 'g' : '')}`) +
+  return `<button class="link back" data-act="cls-back">← ${esc(t('cls'))} 목록</button>` + headD(c.name, `${esc(KIND[c.kind] + (c.sub ? ' · ' + c.sub : ''))} · ${c.start} ~ ${c.end} · ${esc(c.teacher)}`, `${tag(c.status, c.status === '운영중' ? 'g' : '')}`) +
     `<section class="grid g4">${kpi('수강 인원', c.learners.length + '명')}${kpi('평균 진도', pct(avgP(c)))}${kpi(t('done') + ' 인원', doneN(c) + '명', '', 'g')}${kpi('채점 대기', Object.values(c.prog).filter(p => p.assign === 'submitted').length + '건')}</section>` + tabs('clsT', T, tb) + body;
 }
 ACT['crit'] = el => { const c = C(el.dataset.c); c.criteria[el.dataset.k] = +el.value; el.nextElementSibling.textContent = el.value + (el.dataset.k === 'threshold' ? '점' : '%'); const s = c.criteria.video + c.criteria.exam + c.criteria.assign; if (s !== 100 && el.dataset.k !== 'threshold') toast(`비율 합계 ${s}% — 100%로 맞춰 주세요.`, 'warn'); save(); };
@@ -288,7 +288,7 @@ function memberDetail(m) {
     : tb === 'cls' ? table([t('cls'), '진도', '상태'], cls.map(c => [esc(c.name), pct(c.prog[m.id]?.p), c.prog[m.id]?.p >= c.criteria.threshold ? tag(t('done'), 'g') : '수강 중']))
     : tb === 'pay' ? table(['일시', '항목', '금액', '상태'], S.pays.filter(p => p.who === m.id).map(p => [p.at, esc(p.item), won(p.amount), esc(p.status)]), '결제 내역이 없습니다.')
     : table(['게시판', '제목', '작성일'], S.posts.filter(p => p.who === m.id).map(p => [esc(p.board), esc(p.title), p.at]), '작성한 글이 없습니다.');
-  return `<button class="link back" data-act="mem-back">← ${esc(t('learner'))} 목록</button>` + head(m.name, `${esc(m.email)} · ${tag(m.grade)}`, `<button class="btn ai" data-act="ai-report" data-v="${m.id}">✦ 학습 리포트</button>`) + tabs('memT', [['info', '기본 정보'], ['cls', t('cls')], ['pay', '결제'], ['post', '작성글']], tb) + body;
+  return `<button class="link back" data-act="mem-back">← ${esc(t('learner'))} 목록</button>` + headD(m.name, `${esc(m.email)} · ${tag(m.grade)}`, `<button class="btn ai" data-act="ai-report" data-v="${m.id}">✦ 학습 리포트</button>`) + tabs('memT', [['info', '기본 정보'], ['cls', t('cls')], ['pay', '결제'], ['post', '작성글']], tb) + body;
 }
 ACT['mem-set'] = el => { const m = M(el.dataset.v); m[el.dataset.k] = el.value; save(); toast('저장했습니다.', 'ok'); };
 ACT['mem-del'] = el => { S.members = S.members.filter(m => m.id !== el.dataset.v); S.classes.forEach(c => { c.learners = c.learners.filter(x => x !== el.dataset.v); delete c.prog[el.dataset.v]; }); UI.mem = null; logAudit('회원 삭제'); save(); render(); };
@@ -392,11 +392,11 @@ ACT.plan = el => { S.org.plan = el.dataset.v; logAudit('요금제 변경 — ' +
 
 /* ═════════ 설정 ═════════ */
 VIEWS.settings = () => { const tb = UI.settings || 'menu'; const st = S.settings;
-  const T = [['menu', '메뉴 설정'], ['type', '기관 유형'], ['service', '서비스 설정'], ['home', '홈페이지 설정'], ['popup', '팝업'], ['consult', '상담 설정'], ['terms', '약관'], ['cover', '기능 맵'], ['data', '데이터']];
+  const T = [['menu', '메뉴 구성'], ['rules', '학습 규칙 · AI 튜터'], ['type', '기관 유형'], ...(S.me.role === 'owner' ? [['plan', '플랜 · 결제']] : []), ['service', '서비스 설정'], ['home', '홈페이지 설정'], ['popup', '팝업'], ['consult', '상담 설정'], ['terms', '약관'], ['cover', '기능 맵'], ['data', '데이터']];
   let b = '';
-  if (tb === 'menu') b = `<p class="mini">필요 없는 메뉴는 끄고, 끌어서(또는 ↑↓) 순서를 바꾸세요. 바꾼 순서는 바로 왼쪽 메뉴에 반영됩니다. 홈 · 설정은 끌 수 없습니다.</p>
-    <div class="bar2"><label class="ckl"><input type="checkbox" data-chg="grpHeads" ${S.ui.groupHeads ? 'checked' : ''}> 메뉴 그룹 제목 표시</label><button class="btn sm" data-act="menu-reset">${esc(TYPES[S.org.type].name)} 추천 구성으로 되돌리기</button></div>
-    <ul class="medit" id="medit">${S.menu.map((m, i) => { const d = MENU[m.id]; const foreign = d.only && d.only !== S.org.type; return `<li draggable="true" data-i="${i}" class="${m.on ? '' : 'off'}"><span class="hdl" aria-hidden="true">⋮⋮</span><i>${d.icon}\uFE0E</i><b>${esc(mlabel(m.id))}</b>${d.only ? tag(TYPES[d.only].name + ' 전용', foreign ? '' : 'g') : ''}${d.owner ? tag('정운영자') : ''}<small>${esc(d.grp)}</small><span class="sp"></span><button class="btn sm ghost" data-act="menu-mv" data-v="${i}" data-d="-1" aria-label="위로">↑</button><button class="btn sm ghost" data-act="menu-mv" data-v="${i}" data-d="1" aria-label="아래로">↓</button><label class="sw" title="${d.lock ? '끌 수 없는 메뉴' : '켜기/끄기'}"><input type="checkbox" ${m.on ? 'checked' : ''} ${d.lock ? 'disabled' : ''} data-chg="menu-on" data-v="${i}" aria-label="${esc(mlabel(m.id))} 켜기"><span></span></label></li>`; }).join('')}</ul>`;
+  if (tb === 'menu') b = navEditor();
+  if (tb === 'rules') b = VIEWS.progress();
+  if (tb === 'plan') b = VIEWS.plan();
   if (tb === 'type') b = `<p class="mini">유형을 바꾸면 추천 메뉴 구성 · 순서 · 용어가 그 유형에 맞게 바뀝니다. 데이터는 그대로 유지됩니다.</p><div class="tgrid">${Object.entries(TYPES).map(([k, v]) => `<button class="tcard ${S.org.type === k ? 'on' : ''}" data-act="type-chg" data-v="${k}"><span class="ti">${ticon(v.icon)}</span><b>${esc(v.name)}</b><p>${esc(v.desc)}</p><small>${esc(TERMS[k].learner)} · ${esc(TERMS[k].cls)} · ${esc(TERMS[k].group)}</small></button>`).join('')}</div><div class="danger"><button class="btn sm red" data-act="reset-all">기관 초기화(데모 데이터 삭제 후 가입 화면으로)</button></div>`;
   if (tb === 'service') b = `<div class="form2"><label>홈페이지 공개 유형<select data-chg="st" data-k="siteOpen"><option value="public" ${st.siteOpen === 'public' ? 'selected' : ''}>누구나 둘러보고 가입</option><option value="private" ${st.siteOpen === 'private' ? 'selected' : ''}>운영자가 초대한 회원만</option></select></label><label>가입 설정<select data-chg="st" data-k="join">${['자동 수락', '운영자 수락', '운영자 초대만'].map(v => `<option ${st.join === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label><label>재생 속도 최소<select data-chg="st" data-k="speedMin">${[0.5, 0.75, 1].map(v => `<option ${st.speedMin == v ? 'selected' : ''}>${v}</option>`).join('')}</select></label><label>재생 속도 최대<select data-chg="st" data-k="speedMax">${[1.25, 1.5, 2].map(v => `<option ${st.speedMax == v ? 'selected' : ''}>${v}</option>`).join('')}</select></label><label>수강후기 작성 조건<select data-chg="st" data-k="reviewCond">${['누구나', '수강 중', '진도 50% 이상', '수료 시', '작성 불가'].map(v => `<option ${st.reviewCond === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label><label class="ckl"><input type="checkbox" data-chg="st" data-k="marketing" ${st.marketing ? 'checked' : ''}> 마케팅 수신 동의 받기</label><label class="ckl"><input type="checkbox" data-chg="st" data-k="nudge" ${st.nudge ? 'checked' : ''}> 수강 독려 메시지 사용</label></div><p class="mini">홈페이지 이름 · 주소는 개설 후 한 번만 바꿀 수 있습니다. 현재 주소: ${esc(S.org.domain)}</p>`;
   if (tb === 'home') b = `<div class="form2"><label>SEO 제목(30자)<input maxlength="30" value="${esc(st.seo.title)}" data-chg="seo" data-k="title"></label><label>SEO 설명(160자)<input maxlength="160" value="${esc(st.seo.desc)}" data-chg="seo" data-k="desc"></label><label>키워드(20개 이내, 쉼표)<input value="${esc(st.seo.kw)}" data-chg="seo" data-k="kw"></label><label>픽셀 코드(측정 ID만)<input value="${esc(st.pixel)}" data-chg="st" data-k="pixel" maxlength="40" placeholder="예: G-XXXXXXX"></label></div><button class="btn sm ai" data-act="ai-seo">✦ AI SEO 제안</button><div class="card"><div class="ch"><b>도메인</b></div><div class="row"><span>디디쌤 도메인</span><code>${esc(S.org.domain)}</code></div><p class="mini">가비아 · 카페24 · NHN 도메인 포워딩 가이드에 따라 연결합니다. 적용까지 2~3일 걸립니다(유료 옵션).</p></div><div class="card"><div class="ch"><b>푸터 · 사업자 정보</b><small>PG 심사 · 통신판매업 표시 필수 6종</small></div><div class="form2">${[['company', '상호'], ['ceo', '대표자'], ['biz', '사업자등록번호'], ['mail', '통신판매업 신고번호'], ['addr', '주소'], ['tel', '연락처'], ['reg', S.org.type === 'k12' || S.org.type === 'adult' ? '학원설립 · 운영 등록번호' : S.org.type === 'voc' ? '훈련기관 인정번호' : S.org.type === 'lifelong' ? '평생교육시설 신고번호' : '기타 등록번호']].map(([k, l]) => `<label>${esc(l)}<input maxlength="60" value="${esc(st.footer[k])}" data-chg="footer" data-k="${k}"></label>`).join('')}</div></div>`;
@@ -405,26 +405,15 @@ VIEWS.settings = () => { const tb = UI.settings || 'menu'; const st = S.settings
   if (tb === 'terms') b = `<label class="fl">이용약관(학습비 · 수강료 반환 기준 포함) <button class="btn sm ai" data-act="ai-terms">✦ 유형별 초안</button><textarea rows="6" data-chg="terms" data-k="tos">${esc(st.terms.tos)}</textarea></label><label class="fl">개인정보 처리방침<textarea rows="5" data-chg="terms" data-k="privacy">${esc(st.terms.privacy)}</textarea></label><p class="mini">AI 초안은 참고용이며 게시 전 법률 검토가 필요합니다.</p>`;
   if (tb === 'cover') b = coverage();
   if (tb === 'data') b = `<p class="mini">데모 데이터는 이 브라우저의 저장소에만 있습니다. 실제 운영 모드에서는 Firebase(서울 리전) 서버에 저장되며, 대학 유형은 학번 · 학과만 저장하고 학교 SSO로 연계합니다.</p><button class="btn" data-act="data-export">전체 데이터 JSON 내보내기</button>`;
-  return head('설정', '메뉴 구성 · 기관 유형 · 서비스 · 홈페이지 · 팝업 · 상담 · 약관') + tabs('settings', T, tb) + b; };
+  return tabs('settings', T, tb) + b; };
 ACT.st = el => { S.settings[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; save(); toast('저장했습니다.', 'ok'); };
 ACT.seo = el => { S.settings.seo[el.dataset.k] = el.value; save(); };
 ACT.footer = el => { S.settings.footer[el.dataset.k] = el.value; save(); };
 ACT.terms = el => { S.settings.terms[el.dataset.k] = el.value; save(); };
-ACT.grpHeads = el => { S.ui.groupHeads = el.checked; save(); render(); };
-ACT['menu-on'] = el => { S.menu[+el.dataset.v].on = el.checked; save(); render(); };
-ACT['menu-mv'] = el => { const i = +el.dataset.v, j = i + +el.dataset.d; if (j < 0 || j >= S.menu.length) return; [S.menu[i], S.menu[j]] = [S.menu[j], S.menu[i]]; save(); render(); };
-ACT['menu-reset'] = () => { S.menu = presetMenu(S.org.type); save(); render(); toast('추천 구성으로 되돌렸습니다.', 'ok'); };
-ACT['type-chg'] = el => { const k = el.dataset.v; if (k === S.org.type) return; modal('기관 유형 변경', `<p><b>${esc(TYPES[k].name)}</b> 유형으로 바꾸면 메뉴 구성 · 순서 · 용어가 바뀝니다. 데이터는 유지됩니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '변경', kind: 'pri', run: () => { S.org.type = k; S.menu = presetMenu(k); S.autos = [...S.autos.filter(a => a.custom), ...defaultAutos(k)]; logAudit('기관 유형 변경 — ' + TYPES[k].name); save(); render(); } }]); };
+ACT['type-chg'] = el => { const k = el.dataset.v; if (k === S.org.type) return; modal('기관 유형 변경', `<p><b>${esc(TYPES[k].name)}</b> 유형으로 바꾸면 메뉴 구성 · 순서 · 용어가 바뀝니다. 데이터는 유지됩니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '변경', kind: 'pri', run: () => { S.org.type = k; S.nav = presetNav(k); S.autos = [...S.autos.filter(a => a.custom), ...defaultAutos(k)]; logAudit('기관 유형 변경 — ' + TYPES[k].name); save(); render(); } }]); };
 ACT['reset-all'] = () => modal('기관 초기화', '<p>이 브라우저에 저장된 데모 데이터를 모두 지우고 가입 화면으로 돌아갑니다.</p>', [{ id: 'c', label: '취소' }, { id: 'ok', label: '초기화', kind: 'red', run: () => { Store.clear(); S = null; SU = { step: 1, type: '', name: '', email: '' }; history.replaceState(null, '', location.pathname); render(); } }]);
 ACT['popup-new'] = () => modal('팝업 추가', `<label class="fl">제목<input name="t" maxlength="40"></label><div class="form2"><label>시작<input type="date" name="s" value="${today()}"></label><label>종료<input type="date" name="e" value="${addDays(today(), 14)}"></label></div>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '추가', kind: 'pri', run: w => { if (!fv(w, 't')) return false; S.settings.popups.push({ t: fv(w, 't'), s: fv(w, 's'), e: fv(w, 'e') }); save(); render(); } }]);
 ACT['data-export'] = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' })); a.download = `didisam_demo_${today()}.json`; a.click(); };
-/* 메뉴 드래그 정렬 */
-AFTER.push(() => { const ul = $('#medit'); if (!ul) return; let from = -1;
-  ul.addEventListener('dragstart', e => { const li = e.target.closest('li'); from = +li.dataset.i; li.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; });
-  ul.addEventListener('dragover', e => { e.preventDefault(); const li = e.target.closest('li'); $$('li', ul).forEach(x => x.classList.toggle('over', x === li)); });
-  ul.addEventListener('drop', e => { e.preventDefault(); const li = e.target.closest('li'); if (!li || from < 0) return; const to = +li.dataset.i; const [it] = S.menu.splice(from, 1); S.menu.splice(to, 0, it); save(); render(); });
-  ul.addEventListener('dragend', () => $$('li', ul).forEach(x => x.classList.remove('drag', 'over'))); });
-
 /* 디디쌤 가이드 대비 기능 맵 — 누락 점검용 */
 const COVER = [
   ['홈 대시보드: 오늘의 할 일 · 온보딩 · 수료율 추이 · 장기 미접속 · Top10 · 엑셀', 'dash', 'features/dashboard.md'],
@@ -448,7 +437,7 @@ const COVER = [
   ['팀 관리(반 · 부서 · 학과) · 팀 단위 권한 · 메시지', 'groups', 'features/member/team.md'],
   ['보호자 연결 · 연결 상태 · 운영자 연결 요청', 'parents', 'features/member/parents.md'],
   ['운영자: 정운영자 · 부운영자 · 강사 · 권한 회수 · 위임 · 메뉴별 권한', 'admins', 'features/member/administrator.md'],
-  ['AI SAM: 교육 목표 · 썸네일 · 커리큘럼 · 영상 추천 · 스크립트/요약 · 퀴즈 · 교재 썸네일', 'aisam', 'features/ai-sam.md'],
+  ['AI SAM: 교육 목표 · 썸네일 · 커리큘럼 · 영상 추천 · 스크립트/요약 · 퀴즈 · 교재 썸네일', 'home', 'features/ai-sam.md'],
   ['메시지: 앱 푸시 + 이메일 · 대상 5종 · 이미지 · 발송 내역 · 알림톡 자동 발송', 'message', 'features/message.md'],
   ['매출: 토스 / 디디쌤 연결 PG · 결제 내역 · 환불 승인/거절(사유 필수) · 부분 환불', 'sales', 'features/sales.md'],
   ['청구서: 항목 8종 · 마감일 · 미납 알림 · 현장 납부처리', 'billing', 'features/sales.md'],
@@ -459,9 +448,18 @@ const COVER = [
   ['홈페이지 설정: SEO · 도메인 · 픽셀 / 팝업(4개) / 상담 설정 / 약관', 'settings', 'features/set-up.md'],
   ['기관 관리: 기관 지정 · 목록 · 상세(수료 · 취업)', 'org', 'features/lms.md'],
   ['플랜: 스탠다드 · 프리미엄 · 엔터프라이즈 · 부가 옵션', 'plan', 'features/plan.md'],
+  ['[KIT] 목표선 KPI · 학습 퍼널 · 주차별 추이 · 그룹별 현황', 'dash', ''],
+  ['[KIT] 평가: 루브릭 · 통과/재제출/미통과 · 오래 기다린 순', 'assess', ''],
+  ['[KIT] 배지: 자동 발급 3방식 · 수동(사유) · 해제(사유) · 특별 배지 · 발급 대장 · 메달', 'badge', ''],
+  ['[KIT] 러닝 저니 · 열림 조건 · 코스 매트릭스', 'journey', ''],
+  ['[KIT] AI 진단(대학) · 유형 분포', 'diag', ''],
+  ['[KIT] 콘텐츠 편성 · YouTube 등록 · 이탈률', 'library', ''],
+  ['[KIT] 진도 규칙(시청률 · 실제 재생 구간 · 순차) · AI 학습 튜터 설정 · 사용량', 'progress', ''],
+  ['[KIT] 공지 · 알림함 발송 · 읽음률', 'board', ''],
+  ['[KIT] 학번 등록 · 접근코드 발급(대학) · 일괄 등록 · 승인', 'enroll', ''],
   ['[신규] 기관 유형별 메뉴 프리셋 · 용어 치환 · 메뉴 켜기/끄기 · 순서 변경', 'settings', ''],
   ['[신규] 업무 자동화: 트리거 → 조건 → 실행 · 승인 · 실행 로그', 'auto', ''],
   ['[신규] AI 홈페이지 빌더: 프롬프트 → 섹션 생성 · 편집 · 미리보기 · 게시', 'site', ''],
   ['[신규] 기업 법정의무교육 · 대학 학사/비교과 · 평생교육원 학습비/신고 · 직업훈련원 HRD-Net', 'compliance', '']
 ];
-function coverage() { return `<p class="mini">디디쌤 가이드(196쪽) 기능이 이 어드민의 어느 메뉴에 있는지 보여 줍니다. 꺼진 메뉴도 기능은 남아 있습니다.</p>` + table(['기능', '메뉴', '상태', '가이드'], COVER.map(([f, id, g]) => [esc(f), esc(mlabel(id)), menuOn(id) ? tag('켜짐', 'g') : tag('꺼짐'), g ? guideRef(g) : tag('신규', 'g')])); }
+function coverage() { return `<p class="mini">디디쌤 가이드(196쪽) 기능이 이 어드민의 어느 메뉴에 있는지 보여 줍니다. 꺼진 메뉴도 기능은 남아 있습니다.</p>` + table(['기능', '메뉴', '상태', '가이드'], COVER.map(([f, id, g]) => [esc(f), esc(MENU[id] || WS[id] ? mlabel(id) : '설정'), (!MENU[id] || menuOn(id)) ? tag('켜짐', 'g') : tag('꺼짐'), g ? guideRef(g) : tag('신규', 'g')])); }

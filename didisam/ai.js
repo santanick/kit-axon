@@ -54,42 +54,18 @@ const EX = {
   lifelong: ['학습비 반환 신청 기한 확인해줘', '30시간 미만 강좌 찾아줘', '바리스타 과정 모집 공지 써줘', '사전 수강신청 10명 미만 강좌 알리는 자동화 만들어줘'],
   voc: ['출석률 80% 미만 훈련생에게 경고 보내줘', '이번 주 HRD-Net 보고 자료 만들어줘', '웹개발 과정 퀴즈 5문항 만들어줘', '매일 부정훈련 의심 건을 담당자에게 알리는 자동화 만들어줘']
 };
-VIEWS.aisam = () => {
-  const H = S.ai.history.slice(0, 12);
-  return head('AI SAM', 'AI가 선생님 옆에서 함께 일합니다 — 지시하면 계획을 보여 주고, 승인하면 실행합니다', `<span class="mini">이번 달 AI 사용 ${S.ai.usage}회</span>`) +
-    `<div class="card cmdcard"><form id="samForm" class="samf"><span>✦</span><input id="samIn" maxlength="200" placeholder="예: ${esc(EX[S.org.type][0])}" aria-label="AI SAM 업무 지시" autocomplete="off"><button class="btn pri">계획 보기</button></form>
-      <div class="chips">${EX[S.org.type].map(x => `<button class="chip" data-act="sam-ex" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>
-      <div id="samOut"></div></div>
-    <h2 class="h2">AI 도구 <small>디디쌤 AI SAM 기본 7종 + 업무용 확장 8종</small></h2>
-    <div class="tools">${TOOLS.map(([id, n, d, k]) => `<button class="tool" data-act="tool" data-v="${id}"><b>${esc(n)}</b><small>${esc(d)}</small>${k === 'plus' ? tag('확장', 'g') : tag('기본')}</button>`).join('')}</div>
-    <h2 class="h2">최근 실행</h2>${table(['시각', '지시', '결과'], H.map(h => [esc(h.at), esc(h.q), esc(h.r)]), '아직 실행한 지시가 없습니다.')}
-    <p class="mini">데모 모드는 브라우저 안 규칙으로 응답합니다. 실제 운영에서는 서버에서 Claude(Haiku 5.5 기본, 복잡한 작업은 Sonnet 5.5)를 호출하고, 개인정보는 이름 대신 내부 ID로 전달합니다. AI가 만든 결과는 항상 운영자가 확인한 뒤 실행됩니다.</p>`;
-};
-ACT['sam-ex'] = el => { $('#samIn').value = el.dataset.v; plan(el.dataset.v); };
-AFTER.push(cur => { const f = $('#samForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); const q = $('#samIn').value.trim(); if (q) plan(q); }); if (cur === 'aisam' && UI.samQ) { $('#samIn').value = UI.samQ; plan(UI.samQ); UI.samQ = ''; } });
-ACT.cmd = () => { modal('AI SAM에게 업무 지시', `<form id="cmdF" class="samf"><span>✦</span><input id="cmdIn" maxlength="200" placeholder="${esc(EX[S.org.type][0])}" autocomplete="off"></form><div class="chips">${EX[S.org.type].map(x => `<button type="button" class="chip" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div><p class="mini">메뉴 이동도 됩니다: "청구서 열어줘", "설정"</p>`, [{ id: 'c', label: '닫기' }]);
-  const run = q => { closeModal(); const hit = Object.keys(MENU).find(id => q.replace(/\s/g, '').includes(mlabel(id).replace(/\s/g, '')) && /열어|가자|이동|$/.test(q) && q.length < 14); if (hit && menuOn(hit)) { go(hit); return; } UI.samQ = q; go('aisam'); };
-  $('#cmdF').addEventListener('submit', e => { e.preventDefault(); const q = $('#cmdIn').value.trim(); q && run(q); }); $$('#modal .chip').forEach(b => b.addEventListener('click', () => run(b.dataset.v))); };
-
 /* 자연어 지시 → 실행 계획 */
-function plan(q) {
-  const out = $('#samOut'); const P = interpret(q);
-  out.innerHTML = `<div class="splan"><div class="ph2">✦ <b>${esc(P.title)}</b></div><ol>${P.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>${P.preview || ''}<div class="bar2">${P.run ? `<button class="btn pri" id="planGo">${esc(P.cta || '승인하고 실행')}</button>` : ''}${P.go ? `<button class="btn" data-act="go" data-v="${P.go}">${esc(mlabel(P.go))} 열기</button>` : ''}<button class="btn ghost" id="planX">취소</button></div></div>`;
-  $('#planX').onclick = () => out.innerHTML = '';
-  const b = $('#planGo'); if (b) b.onclick = () => { const r = P.run(); S.ai.usage++; S.ai.history.unshift({ at: nowStr(), q, r }); logAudit('AI SAM 실행 — ' + q.slice(0, 40)); save(); toast(r, 'ok'); render(); };
-  if (!P.run) { S.ai.history.unshift({ at: nowStr(), q, r: P.title }); S.ai.usage++; save(); }
-}
-const num = (q, d) => { const m = q.match(/(\d+)\s*%/); return m ? +m[1] : d; };
+const qnum = (q, d) => { const m = q.match(/(\d+)\s*%/); return m ? +m[1] : d; };
 function interpret(q) {
   const has = (...w) => w.some(x => q.includes(x));
-  const low = () => S.classes.flatMap(c => Object.entries(c.prog).filter(([, p]) => p.p < num(q, 30)).map(([id]) => id));
+  const low = () => S.classes.flatMap(c => Object.entries(c.prog).filter(([, p]) => p.p < qnum(q, 30)).map(([id]) => id));
   if (has('자동화', '매주', '매일', '마다')) { const r = recipeFromText(q); return { title: `자동화 레시피 초안 — ${r.name}`, steps: [`트리거: ${trigLabel(r.trigger)}`, `조건: ${r.cond}`, ...r.actions.map(a => '실행: ' + ACTION[a]), r.approve ? '실행 전 운영자 승인' : '자동 실행'], cta: '자동화로 저장', run: () => { S.autos.unshift(r); return `자동화 「${r.name}」를 저장했습니다.`; }, go: 'auto' }; }
   if (has('독려', '미이수', '마감 안내', '경고')) {
     let ids, label;
     if (has('미이수', '법정')) { ids = [...new Set(legalUndone().map(x => x.id))]; label = '법정교육 미이수자'; }
     else if (has('출석', '80')) { ids = [...new Set(lowAtt().map(x => x.id))]; label = '출석률 80% 미만'; }
     else if (has('미접속', '접속')) { ids = S.members.filter(m => m.last <= addDays(today(), -30)).map(m => m.id); label = '30일 이상 미접속'; }
-    else { ids = [...new Set(low())]; label = `진도 ${num(q, 30)}% 미만`; }
+    else { ids = [...new Set(low())]; label = `진도 ${qnum(q, 30)}% 미만`; }
     const m = AI.msg(has('경고') ? '출석률 관리 안내' : has('미이수', '법정') ? '법정의무교육 이수 마감 안내' : '학습 독려 안내');
     return { title: `${label} ${ids.length}명에게 안내 발송`, steps: [`대상 추출: ${label} → ${ids.length}명`, '메시지 초안 작성(아래 미리보기)', '앱 푸시 + 이메일 발송', '발송 내역 · 감사 로그 기록'], preview: `<div class="pvmsg"><b>${esc(m.title)}</b><p>${esc(m.body).replace(/\n/g, '<br>')}</p><small>대상: ${ids.slice(0, 8).map(mn).join(', ')}${ids.length > 8 ? ` 외 ${ids.length - 8}명` : ''}</small></div>`, run: () => { S.msgs.unshift({ id: uid('ms'), at: nowStr(), to: label, title: m.title, ch: '앱 푸시 + 이메일', n: ids.length }); if (has('미이수', '법정')) S.nudged = true; return `${ids.length}명에게 발송했습니다(데모).`; } };
   }
@@ -123,7 +99,7 @@ ACT.tool = el => { const id = el.dataset.v; const cs = S.classes; const csel = `
   const ask = (title, form, fn) => modal(title, form, [{ id: 'c', label: '취소' }, { id: 'ok', label: '✦ 생성', kind: 'pri', run: w => { const r = fn(w); S.ai.usage++; save(); setTimeout(() => r && show(title, r.html, r.extra || [])); } }]);
   if (id === 'goal') ask('교육 목표 · 주요 내용', `<label class="fl">${esc(t('cls'))}명<input name="n" maxlength="40"></label><label class="fl">교육 대상자<input name="t" maxlength="40"></label>`, w => ({ html: esc(AI.goal(fv(w, 'n') || '새 과정', fv(w, 't'))).replace(/\n/g, '<br>') }));
   if (id === 'thumb') ask('썸네일 키워드 추천', `<label class="fl">${esc(t('cls'))} · 교재명<input name="n"></label>`, w => ({ html: `<b>${esc(AI.thumb(fv(w, 'n')))}</b><br><small>이미지 사이트 검색어로 쓰세요. 저작권 확인은 운영자 책임입니다.</small>` }));
-  if (id === 'curr') ask('커리큘럼 구성', `<label class="fl">${esc(t('cls'))}명<input name="n"></label>`, w => { UI.samQ = (fv(w, 'n') || '새 과정') + ' 커리큘럼 만들어줘'; setTimeout(() => go('aisam')); return null; });
+  if (id === 'curr') ask('커리큘럼 구성', `<label class="fl">${esc(t('cls'))}명<input name="n"></label>`, w => { setTimeout(() => chatSend((fv(w, 'n') || '새 과정') + ' 커리큘럼 만들어줘')); return null; });
   if (id === 'video') ask('강의 영상 추천', `<label class="fl">강의 제목<input name="n"></label>`, w => { const n = fv(w, 'n') || '강의'; return { html: ['기초 개념 설명', '실무 예제', '10분 요약'].map(s => `▶ <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(n + ' ' + s)}" target="_blank" rel="noopener">${esc(n + ' ' + s)}</a>`).join('<br>') + '<br><small>저작권 · 이용 조건 확인은 운영자 책임입니다.</small>' }; });
   if (id === 'script') ask('강의 스크립트 · 요약', `<label class="fl">강의 제목<input name="n"></label>`, w => { const r = AI.script(fv(w, 'n') || '강의'); return { html: `<b>스크립트</b><br>${esc(r.script)}<br><br><b>요약</b><br>${esc(r.summary).replace(/\n/g, '<br>')}<br><small>YouTube · Vimeo 영상은 자막이 있는 경우에만 생성됩니다.</small>` }; });
   if (id === 'quiz') ask('퀴즈 생성', `<label class="fl">강의 · 주제<input name="n"></label><div class="form2"><label>난이도<select name="l"><option>쉬움</option><option selected>보통</option><option>어려움</option></select></label><label>유형<select name="k"><option>객관식</option><option>OX</option></select></label><label>문항 수<input name="q" type="number" min="1" max="30" value="5"></label></div>`, w => { const Q = AI.quiz(fv(w, 'n') || '핵심 개념', clamp(+fv(w, 'q') || 5, 1, 30), fv(w, 'l'), fv(w, 'k')); return { html: Q.map(x => `<p><b>${esc(x.q)}</b><br>${x.opts.map((o, i) => `${i + 1}) ${esc(o)}`).join(' · ')} <small>정답 ${esc(x.a)}</small></p>`).join('') }; });
@@ -133,7 +109,7 @@ ACT.tool = el => { const id = el.dataset.v; const cs = S.classes; const csel = `
   if (id === 'msg') ask('안내 메시지 작성', `<label class="fl">목적<select name="p"><option>이번 주 학습 안내</option><option>과제 마감 안내</option><option>개강 안내</option><option>휴강 · 일정 변경 안내</option><option>수료 축하 · 후기 요청</option></select></label>`, w => { const m = AI.msg(fv(w, 'p')); UI.msgDraftT = m.title; UI.msgDraft = m.body; return { html: esc(m.body).replace(/\n/g, '<br>'), extra: [{ id: 'use', label: '메시지에 넣기', kind: 'pri', run: () => setTimeout(() => go('message')) }] }; });
   if (id === 'report') ask('학습 리포트', `<label class="fl">대상<select name="m">${S.members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></label>`, w => ({ html: esc(AI.report(M(fv(w, 'm')))).replace(/\n/g, '<br>') }));
   if (id === 'risk') { const R = S.members.map(m => { const ps = S.classes.filter(c => c.prog[m.id]).map(c => c.prog[m.id]); const p = avgOf(ps.map(x => x.p)), a = avgOf(ps.map(x => x.att)); const away = (Date.now() - new Date(m.last)) / 864e5; const s = Math.round(clamp((100 - p) * .5 + (100 - a) * .3 + Math.min(away, 60) * .5, 0, 100)); return { m, s, p, away: Math.round(away) }; }).sort((a, b) => b.s - a.s).slice(0, 10);
-    show('이탈 위험 예측 Top 10', table(['이름', '위험 점수', '평균 진도', '미접속'], R.map(r => [esc(r.m.name), r.s >= 60 ? tag(r.s, 'r') : r.s >= 40 ? tag(r.s, 'y') : r.s, pct(r.p), r.away + '일'])) + '<small>점수 = 진도 50% · 출석 30% · 미접속 일수 20% 가중(설명 가능한 규칙). 실제 운영에서는 학습 로그로 보정합니다.</small>', [{ id: 'a', label: '상위 위험군 독려 자동화', kind: 'pri', run: () => { UI.samQ = '진도 30% 미만 학생에게 독려 메시지 보내줘'; setTimeout(() => go('aisam')); } }]); }
+    show('이탈 위험 예측 Top 10', table(['이름', '위험 점수', '평균 진도', '미접속'], R.map(r => [esc(r.m.name), r.s >= 60 ? tag(r.s, 'r') : r.s >= 40 ? tag(r.s, 'y') : r.s, pct(r.p), r.away + '일'])) + '<small>점수 = 진도 50% · 출석 30% · 미접속 일수 20% 가중(설명 가능한 규칙). 실제 운영에서는 학습 로그로 보정합니다.</small>', [{ id: 'a', label: '상위 위험군 독려 자동화', kind: 'pri', run: () => { setTimeout(() => chatSend('진도 30% 미만 학생에게 독려 메시지 보내줘')); } }]); }
   if (id === 'seo') ACT['ai-seo']();
   if (id === 'terms') ACT['ai-terms']();
   if (id === 'site') go('site');
