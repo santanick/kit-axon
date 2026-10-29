@@ -2,6 +2,7 @@
  * 저장 원칙: 학번 · 학과 · 학습 기록만 저장. 접근코드 · 비밀번호는 원문 없이 해시만 저장.
  */
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
@@ -22,13 +23,26 @@ const LOCK_MAX = 8, LOCK_MS = 15 * 60 * 1000;
 function newCode() { const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; const r = crypto.randomBytes(8); let s = ''; for (let i = 0; i < 8; i++) { s += A[r[i] % A.length]; if (i === 3) s += '-'; } return s; }
 const codeHash = (sid, code) => sha('code:' + sid + ':' + norm(code));
 
-async function requireAdmin(req) {
+/* 관리자 권한: admins/{이메일} = { role: owner | admin | dept | grader, depts: [] } */
+async function adminInfo(req) {
   const email = req.auth && req.auth.token && req.auth.token.email;
   if (!email || !req.auth.token.email_verified) throw new HttpsError('permission-denied', '관리자 로그인이 필요합니다.');
   const d = await db.doc('admins/' + email.toLowerCase()).get();
   if (!d.exists) throw new HttpsError('permission-denied', '관리자로 등록되지 않은 계정입니다.');
-  return email;
+  const a = d.data() || {}; return { email: email.toLowerCase(), role: a.role || 'admin', depts: a.depts || [] };
 }
+async function requireAdmin(req, roles) {
+  const a = await adminInfo(req);
+  if (roles && !roles.includes(a.role)) throw new HttpsError('permission-denied', '이 작업 권한이 없습니다(' + a.role + ').');
+  return a.email;
+}
+const EDIT = ['owner', 'admin'], GRADE = ['owner', 'admin', 'dept', 'grader'], DEPT = ['owner', 'admin', 'dept'];
+async function inScope(req, sid) { const a = await adminInfo(req); if (a.role !== 'dept') return a; const st = await db.doc('students/' + sid).get(); if (!st.exists || !a.depts.includes(st.data().dept)) throw new HttpsError('permission-denied', '담당 학과 학습자가 아닙니다.'); return a; }
+const stampKST = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' ').replace(/-/g, '.');
+const badgeNo = (sid, n) => 'KIT-AX-' + String(n).toUpperCase() + '-' + String(sid).slice(-4) + crypto.randomInt(10, 99);
+async function audit(by, action, target, detail) { await db.collection('auditLog').add({ by, action, target: String(target || ''), detail: String(detail || '').slice(0, 300), at: Date.now() }); }
+async function bump(sid, patch) { await db.doc('approvals/' + sid).set(Object.assign({}, patch, { rev: admin.firestore.FieldValue.increment(1), updatedAt: Date.now() }), { merge: true }); }
+async function catalog() { const [d, q] = await Promise.all([db.doc('catalog/main').get(), db.doc('catalogPrivate/main').get()]); return Object.assign({}, d.exists ? d.data() : {}, q.exists ? q.data() : {}); }
 async function guard(ref, st) {
   if (st.lockUntil && st.lockUntil > Date.now()) throw new HttpsError('resource-exhausted', '시도 횟수를 넘었습니다. 15분 뒤 다시 시도해 주세요.');
 }
@@ -67,10 +81,10 @@ exports.studentLogin = onCall(async (req) => {
 });
 
 /* 관리자 */
-exports.whoAmI = onCall(async (req) => { try { await requireAdmin(req); return { admin: true }; } catch (e) { return { admin: false }; } });
+exports.whoAmI = onCall(async (req) => { try { const a = await adminInfo(req); return { admin: true, role: a.role, depts: a.depts }; } catch (e) { return { admin: false }; } });
 
 exports.registerStudents = onCall(async (req) => {
-  const by = await requireAdmin(req);
+  const by = await requireAdmin(req, DEPT);
   const rows = (req.data && req.data.rows) || []; if (rows.length > 3000) throw new HttpsError('invalid-argument', '한 번에 3,000명까지 등록할 수 있습니다.');
   const results = []; let batch = db.batch(), n = 0;
   for (const r of rows) {
@@ -82,41 +96,135 @@ exports.registerStudents = onCall(async (req) => {
     results.push({ sid: r.sid, dept: r.dept, code });
     if (++n % 400 === 0) { await batch.commit(); batch = db.batch(); }
   }
-  await batch.commit();
+  await batch.commit(); await audit(by, '학번 등록', results.filter((x) => x.code).length + '명');
   return { results };
 });
 
 exports.reissueCode = onCall(async (req) => {
-  await requireAdmin(req); const sid = req.data && req.data.sid;
+  const sid = req.data && req.data.sid; const a = await inScope(req, sid);
   const ref = db.doc('students/' + sid); if (!(await ref.get()).exists) throw new HttpsError('not-found', '없는 학번입니다.');
   const code = newCode();
   await ref.update({ status: 'invited', codeHash: codeHash(sid, code), pwHash: admin.firestore.FieldValue.delete(), salt: admin.firestore.FieldValue.delete(), invitedAt: Date.now(), fails: 0, lockUntil: 0 });
   try { await admin.auth().revokeRefreshTokens('s_' + sid); } catch (e) {}
-  return { code };
+  await audit(a.email, '접근코드 재발급', sid); return { code };
 });
 
-exports.reviewSubmission = onCall(async (req) => {
-  const by = await requireAdmin(req); const { sid, n, decision, note } = req.data || {};
-  if (![1, 2, 3].includes(n)) throw new HttpsError('invalid-argument', '단계 오류');
+/* 과제 평가: decision = pass | return | fail. 배지 발급 방식(auto-pass · manual)은 catalog 설정을 따름 */
+exports.gradeSubmission = onCall(async (req) => {
+  const { sid, n, grade } = req.data || {}; const a = await inScope(req, sid);
+  if (!GRADE.includes(a.role)) throw new HttpsError('permission-denied', '평가 권한이 없습니다.');
+  if (![1, 2, 3].includes(n) || !grade) throw new HttpsError('invalid-argument', '단계 오류');
   const p = await db.doc('progress/' + sid).get(); const L = p.exists && p.data().p && p.data().p.lv && p.data().p.lv[n];
   if (!L || !L.sub) throw new HttpsError('failed-precondition', '제출 기록이 없습니다.');
-  const t = new Date(Date.now() + 9 * 3600e3); const stamp = t.toISOString().slice(0, 16).replace('T', ' ').replace(/-/g, '.');
-  const lv = decision === 'approve'
-    ? { review: 'approved', reviewAt: stamp, badge: true, badgeAt: stamp, badgeId: 'KIT-AX-' + n + '-' + String(sid).slice(-4) + crypto.randomInt(10, 99), reviewNote: '' }
-    : { review: 'returned', reviewAt: stamp, badge: false, reviewNote: String(note || '').slice(0, 300) };
-  await db.doc('approvals/' + sid).set({ lv: { [n]: lv }, updatedAt: Date.now() }, { merge: true });
-  await db.collection('reviewLog').add({ sid, n, decision, note: lv.reviewNote || '', by, at: Date.now() });
-  return { lv };
+  const B = ((await catalog()).badges || {})[n] || {}; const st = stampKST();
+  const base = { score: Number(grade.total) || 0, scores: (grade.scores || []).slice(0, 12).map(Number), feedback: String(grade.feedback || '').slice(0, 1000), reviewAt: st, gradedBy: a.email, subAt: L.subAt || '' };
+  let lv;
+  if (grade.decision === 'pass') lv = (B.mode === 'manual' || B.active === false) ? Object.assign(base, { review: 'passed', badge: false }) : Object.assign(base, { review: 'approved', badge: true, badgeAt: st, badgeId: badgeNo(sid, n), issueMode: 'auto-pass', revoked: false, reviewNote: '' });
+  else if (grade.decision === 'return') lv = Object.assign(base, { review: 'returned', badge: false, reviewNote: base.feedback });
+  else lv = Object.assign(base, { review: 'failed', badge: false, reviewNote: base.feedback });
+  await bump(sid, { lv: { [n]: lv } });
+  if (lv.badge) await db.collection('badgeLog').add({ sid, n, action: 'issue', mode: 'auto-pass', by: a.email, at: Date.now(), badgeId: lv.badgeId });
+  await audit(a.email, '과제 평가', sid + ' · ' + n + '단계', grade.decision + ' ' + base.score + '점'); return { lv };
+});
+exports.reviewSubmission = exports.gradeSubmission; // 이전 버전 호환
+
+/* 배지 수동 발급 · 해제 — n: 1~3(단계 배지) 또는 특별 배지 id */
+exports.issueBadge = onCall(async (req) => {
+  const { sid, n, reason } = req.data || {}; const a = await inScope(req, sid);
+  if (!DEPT.includes(a.role)) throw new HttpsError('permission-denied', '발급 권한이 없습니다.');
+  if (!(await db.doc('students/' + sid).get()).exists) throw new HttpsError('not-found', '없는 학번입니다.');
+  const ap = (await db.doc('approvals/' + sid).get()).data() || {}; const st = stampKST(); const id = badgeNo(sid, n);
+  let out;
+  if ([1, 2, 3].includes(Number(n))) { if (((ap.lv || {})[n] || {}).badge) throw new HttpsError('already-exists', '이미 발급된 배지입니다.'); out = { review: 'approved', badge: true, badgeAt: st, badgeId: id, issueMode: 'manual', manualReason: String(reason || '').slice(0, 300), revoked: false }; await bump(sid, { lv: { [n]: out } }); }
+  else { const X = (ap.xb || {})[n]; if (X && !X.revoked) throw new HttpsError('already-exists', '이미 발급된 배지입니다.'); out = { badge: true, at: Date.now(), badgeId: id, reason: String(reason || '').slice(0, 300), by: a.email, revoked: false }; await bump(sid, { xb: { [n]: out } }); }
+  await db.collection('badgeLog').add({ sid, n: String(n), action: 'issue', mode: 'manual', by: a.email, at: Date.now(), badgeId: id, reason: reason || '' });
+  await audit(a.email, '배지 수동 발급', sid + ' · ' + n, reason); return { lv: out };
+});
+exports.revokeBadge = onCall(async (req) => {
+  const { sid, n, reason } = req.data || {}; const a = await inScope(req, sid);
+  if (!EDIT.includes(a.role)) throw new HttpsError('permission-denied', '배지 해제는 운영자만 할 수 있습니다.');
+  const ap = (await db.doc('approvals/' + sid).get()).data() || {}; const lvl = [1, 2, 3].includes(Number(n));
+  const cur = lvl ? (ap.lv || {})[n] : (ap.xb || {})[n]; if (!cur || !cur.badge) throw new HttpsError('not-found', '발급된 배지가 없습니다.');
+  const patch = lvl ? { badge: false, revoked: true, revokeReason: String(reason || '').slice(0, 300), revokedAt: stampKST(), review: 'revoked' } : { revoked: true, revokeReason: String(reason || '').slice(0, 300) };
+  await bump(sid, lvl ? { lv: { [n]: patch } } : { xb: { [n]: patch } });
+  await db.collection('badgeLog').add({ sid, n: String(n), action: 'revoke', by: a.email, at: Date.now(), badgeId: cur.badgeId || '', reason: reason || '' });
+  await audit(a.email, '배지 해제', sid + ' · ' + n, reason); return { lv: patch };
 });
 
-/* 학습자 목록 (운영 초기 1만 명 규모 — 관리자 화면 진입 시 1회 조회) */
+/* 자동 발급(제출 즉시): 학생이 제출하면 catalog 설정이 auto-complete 인 단계는 서버가 배지 기록 */
+exports.onProgressWrite = onDocumentWritten('progress/{sid}', async (ev) => {
+  const sid = ev.params.sid, after = ev.data && ev.data.after && ev.data.after.data(); if (!after || !after.p) return;
+  const before = (ev.data.before && ev.data.before.data() && ev.data.before.data().p) || {};
+  const cat = await catalog(); const ap = (await db.doc('approvals/' + sid).get()).data() || {};
+  for (const n of [1, 2, 3]) {
+    const L = (after.p.lv || {})[n] || {}, P = (before.lv || {})[n] || {}, A = (ap.lv || {})[n] || {}, B = (cat.badges || {})[n] || {};
+    if (!L.sub || L.subAt === P.subAt && P.sub) continue; // 새 제출만
+    if (B.mode !== 'auto-complete' || B.active === false || A.badge) continue;
+    const id = badgeNo(sid, n); await bump(sid, { lv: { [n]: { review: 'approved', badge: true, badgeAt: stampKST(), badgeId: id, issueMode: 'auto-complete', subAt: L.subAt || '' } } });
+    await db.collection('badgeLog').add({ sid, n, action: 'issue', mode: 'auto-complete', by: 'system', at: Date.now(), badgeId: id });
+  }
+});
+
+/* 진도 관리: 관리자가 progress 문서를 직접 고치고 approvals.rev 를 올림 */
+exports.adminGetProgress = onCall(async (req) => {
+  const sid = req.data && req.data.sid; await inScope(req, sid);
+  const [p, a] = await Promise.all([db.doc('progress/' + sid).get(), db.doc('approvals/' + sid).get()]);
+  const P = (p.exists && p.data().p) || { done: {}, steps: {}, lv: {}, watch: {} }; const A = (a.exists && a.data()) || {};
+  return { p: P };
+});
+exports.adminSetProgress = onCall(async (req) => {
+  const { sid, label, p } = req.data || {}; const a = await inScope(req, sid);
+  if (!DEPT.includes(a.role)) throw new HttpsError('permission-denied', '진도 관리 권한이 없습니다.');
+  if (!p || typeof p !== 'object') throw new HttpsError('invalid-argument', '진도 데이터 오류');
+  delete p.xb; delete p.adminRev;
+  await db.doc('progress/' + sid).set({ p, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  await bump(sid, {}); // rev 증가 → 학생 화면이 다음 포커스 때 서버 진도를 다시 불러옴
+  await audit(a.email, '진도 관리', sid, label); return { p };
+});
+
+/* 코스웨어 · 배지 · 공지 · 그룹 · 운영자 설정 */
+exports.saveCatalog = onCall({ memory: '512MiB' }, async (req) => {
+  const by = await requireAdmin(req, EDIT); const c = (req.data && req.data.catalog) || {};
+  if (JSON.stringify(c).length > 900000) throw new HttpsError('invalid-argument', '설정 크기가 너무 큽니다(영상 썸네일 수를 줄여 주세요).');
+  // 공개 문서(catalog/main)에는 학습자 화면에 필요한 값만, 운영자 · 그룹(학번 목록)은 비공개 문서로 분리
+  const priv = { operators: c.operators || [], groups: c.groups || [] }; const pub = Object.assign({}, c); delete pub.operators; delete pub.groups;
+  await db.doc('catalog/main').set(pub); await db.doc('catalogPrivate/main').set(priv);
+  // 운영자 목록을 권한 문서(admins)와 맞춤
+  const ops = c.operators || []; const cur = await db.collection('admins').get(); const keep = new Set(ops.map((o) => String(o.email).toLowerCase()));
+  const b = db.batch(); ops.forEach((o) => b.set(db.doc('admins/' + String(o.email).toLowerCase()), { role: o.role, depts: o.depts || [] }, { merge: true }));
+  cur.forEach((d) => { if (!keep.has(d.id) && (d.data() || {}).role !== 'owner') b.delete(d.ref); }); await b.commit();
+  await audit(by, '설정 변경', (req.data && req.data.what) || '코스웨어'); return { ok: true };
+});
+
+exports.adminGetCatalog = onCall(async (req) => { await requireAdmin(req); return { catalog: await catalog() }; });
+
+/* 사이트 알림함 (연락처 미저장 — 로그인한 학생 화면에만 표시) */
+exports.sendMessage = onCall(async (req) => {
+  const a = await adminInfo(req); if (!DEPT.includes(a.role)) throw new HttpsError('permission-denied', '발송 권한이 없습니다.');
+  const m = (req.data && req.data.message) || {}; const t = m.target || {};
+  if (a.role === 'dept' && !(t.type === 'dept' && a.depts.includes(t.value))) throw new HttpsError('permission-denied', '담당 학과에만 보낼 수 있습니다.');
+  const doc = { title: String(m.title || '').slice(0, 120), body: String(m.body || '').slice(0, 3000), target: { type: t.type, value: Array.isArray(t.value) ? t.value.slice(0, 5000).map(String) : String(t.value || ''), label: String(t.label || '') }, by: a.email, at: Date.now() };
+  const ref = await db.collection('messages').add(doc); await audit(a.email, '알림 발송', doc.target.label, doc.title); return { message: Object.assign({ id: ref.id }, doc) };
+});
+exports.myMessages = onCall(async (req) => {
+  const sid = req.auth && req.auth.token && req.auth.token.sid; if (!sid) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
+  const dept = req.auth.token.dept || ''; const groups = ((await catalog()).groups || []).filter((g) => (g.sids || []).includes(String(sid))).map((g) => g.id);
+  const q = await db.collection('messages').orderBy('at', 'desc').limit(200).get();
+  return { messages: q.docs.map((d) => Object.assign({ id: d.id }, d.data())).filter((m) => { const t = m.target || {}; return t.type === 'all' || (t.type === 'dept' && t.value === dept) || (t.type === 'group' && groups.includes(t.value)) || (t.type === 'sids' && (t.value || []).includes(String(sid))); }).slice(0, 30) };
+});
+exports.adminListMessages = onCall(async (req) => { await requireAdmin(req); const q = await db.collection('messages').orderBy('at', 'desc').limit(100).get(); return { messages: q.docs.map((d) => Object.assign({ id: d.id }, d.data())) }; });
+exports.deleteMessage = onCall(async (req) => { const by = await requireAdmin(req, EDIT); await db.doc('messages/' + req.data.id).delete(); await audit(by, '알림 삭제', req.data.id); return { ok: true }; });
+exports.adminBadgeLog = onCall(async (req) => { await requireAdmin(req); const q = await db.collection('badgeLog').orderBy('at', 'desc').limit(1000).get(); return { log: q.docs.map((d) => d.data()) }; });
+exports.adminAuditLog = onCall(async (req) => { await requireAdmin(req, EDIT); const q = await db.collection('auditLog').orderBy('at', 'desc').limit(500).get(); return { log: q.docs.map((d) => d.data()) }; });
+
+/* 학습자 목록 (운영 초기 1만 명 규모 — 관리자 화면 진입 시 1회 조회, 학과 담당자는 담당 학과만) */
 exports.adminListStudents = onCall({ memory: '1GiB', timeoutSeconds: 120 }, async (req) => {
-  await requireAdmin(req);
+  const a = await adminInfo(req);
   const [st, pr, ap] = await Promise.all([db.collection('students').select('sid', 'dept', 'status', 'invitedAt', 'activatedAt', 'lastSeen').get(), db.collection('progress').get(), db.collection('approvals').get()]);
-  const P = {}, A = {}; pr.forEach((d) => { P[d.id] = d.data(); }); ap.forEach((d) => { A[d.id] = d.data().lv || {}; });
-  const students = st.docs.map((d) => {
-    const s = d.data(), pp = P[d.id] || {}, prog = pp.p || null;
-    if (prog) { prog.lv = prog.lv || {}; [1, 2, 3].forEach((n) => { const a = A[d.id] && A[d.id][n]; const L = prog.lv[n] || {}; prog.lv[n] = a ? Object.assign({}, L, a, a.review === 'returned' ? { sub: '' } : {}) : Object.assign({}, L, { badge: false, review: L.review === 'approved' ? 'pending' : L.review }); }); }
+  const P = {}, A = {}; pr.forEach((d) => { P[d.id] = d.data(); }); ap.forEach((d) => { A[d.id] = d.data() || {}; });
+  const students = st.docs.filter((d) => a.role !== 'dept' || a.depts.includes(d.data().dept)).map((d) => {
+    const s = d.data(), pp = P[d.id] || {}, prog = pp.p || null, AA = A[d.id] || {}, AL = AA.lv || {};
+    if (prog) { prog.lv = prog.lv || {}; [1, 2, 3].forEach((n) => { const x = AL[n]; const L = prog.lv[n] || {}; prog.lv[n] = x ? Object.assign({}, L, x, x.review === 'returned' && !(L.subAt && x.subAt && L.subAt !== x.subAt) ? { sub: '' } : {}) : Object.assign({}, L, { badge: false, review: L.sub ? 'pending' : '' }); }); prog.xb = AA.xb || {}; }
     const upd = pp.updatedAt && pp.updatedAt.toMillis ? pp.updatedAt.toMillis() : 0;
     return { sid: d.id, dept: s.dept, status: s.status, invitedAt: s.invitedAt || 0, activatedAt: s.activatedAt || 0, lastSeen: Math.max(s.lastSeen || 0, upd), progress: prog };
   });

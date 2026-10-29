@@ -6,16 +6,17 @@
 | 항목 | 내용 |
 |---|---|
 | 학생 로그인 | 학번 + 접근코드 → 비밀번호 설정(최초 1회) → 학번 + 비밀번호. Cloud Functions가 확인 후 Firebase 커스텀 토큰 발급 |
-| 관리자 로그인 | Google 로그인. Firestore `admins/{이메일}` 문서가 있는 계정만 허용 |
-| 저장 데이터 | `students/{학번}`: 학과 · 상태 · 코드/비밀번호 해시(scrypt) / `progress/{학번}`: 학습 기록 / `approvals/{학번}`: 검수 · 배지(관리자만 쓰기) / `reviewLog`: 검수 이력 |
+| 관리자 로그인 | Google 로그인. Firestore `admins/{이메일}` 문서가 있는 계정만 허용. 권한 `owner` · `admin`(전체) / `dept`(담당 학과만) / `grader`(과제 평가만) — 관리자 페이지 [운영자]에서 추가하면 `admins`에 자동 반영 |
+| 저장 데이터 | `students/{학번}`: 학과 · 상태 · 코드/비밀번호 해시(scrypt) / `progress/{학번}`: 학습 기록 · 시청 구간 / `approvals/{학번}`: 평가 · 배지 · 특별 배지(관리자 함수만 쓰기) / `catalog/main`: 코스웨어 · 공지 · 배지 정의 · 진도 기준(공개 읽기) / `catalogPrivate/main`: 운영자 · 그룹 / `messages`: 사이트 알림함 / `badgeLog` · `auditLog`: 발급 대장 · 활동 로그 / Storage `vod/`: 자체 VOD |
 | 개인정보 | 이름 · 연락처 · 이메일 미저장(관리자 Google 이메일만 권한 확인용) |
+| 배지 | 발급 방식: 자동(평가 통과 시) · 자동(제출 즉시, `onProgressWrite` 트리거) · 수동. 해제 시 사유와 함께 발급 대장에 기록. 디디쌤 기본 배지는 수동 발급 · 취소 불가라 이 서버에서 별도 처리 |
 | AI 행정 비서 | `adminAssistant` 함수 → Claude API. 집계 지표 · 학번 단위 기록만 전달 |
 | 보안 | 접근코드 · 비밀번호 8회 실패 시 15분 잠금, 학생은 본인 진도만 읽기 · 쓰기, 배지는 서버만 기록 |
 
 ## 전환 순서 (약 30분)
 1. Firebase 콘솔에서 프로젝트 생성 → **Blaze 요금제**(Cloud Functions 사용 조건, 이 규모에서는 무료 사용량 안팎 예상).
 2. Authentication → 로그인 방법 → **Google** 사용 설정, 승인된 도메인에 `santanick.github.io`(이후 학교 · 산타 도메인) 추가.
-3. Firestore 데이터베이스 생성(리전 `asia-northeast3` 서울).
+3. Firestore 데이터베이스 생성(리전 `asia-northeast3` 서울) · Storage 버킷 생성(VOD 업로드용, 같은 리전).
 4. 프로젝트 설정 → 웹 앱 추가 → 구성 값을 `config.js`의 `firebase`에 입력.
 5. IAM에서 Cloud Functions 서비스 계정에 **서비스 계정 토큰 생성자** 역할 부여(커스텀 토큰 서명용).
 6. 배포:
@@ -23,9 +24,9 @@
    npm i -g firebase-tools && firebase login
    cd server && firebase use <프로젝트ID>
    firebase functions:secrets:set ANTHROPIC_API_KEY
-   (cd functions && npm i) && firebase deploy --only functions,firestore:rules
+   (cd functions && npm i) && firebase deploy --only functions,firestore,storage
    ```
-7. Firestore에 `admins/{담당 선생님 Google 이메일(소문자)}` 문서 생성(필드 아무거나, 예: `role: "teacher"`).
+7. Firestore에 최초 관리자 1명만 직접 생성: `admins/{Google 이메일(소문자)}` = `{ role: "owner" }`. 이후 운영자는 관리자 페이지 [운영자 · 로그]에서 추가합니다.
 8. 관리자 페이지 → 학번 등록 · 접근코드 → CSV 업로드 → 접근코드 CSV를 학과로 전달.
 
 ## 규모 기준

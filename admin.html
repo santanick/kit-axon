@@ -32,7 +32,12 @@ button{cursor:pointer}
 .brand{display:flex;align-items:center;gap:12px;font-weight:800}
 .brand img{height:22px}
 .brand .sep{width:1px;height:26px;background:var(--line)}
-.tabs{display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;flex:1 1 auto}
+.tabs{display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;flex:1 1 auto;align-items:center}
+.tgrp{font-size:11px;font-weight:800;color:#8B8DA3;letter-spacing:.08em;padding:0 6px 0 12px;white-space:nowrap}
+@media (min-width:1180px){#app{display:grid;grid-template-columns:232px minmax(0,1fr);grid-template-rows:auto 1fr}#app>.top{grid-column:1 / -1}.topin{max-width:none}.top .tabs{display:none}#side{display:flex!important}main{max-width:1320px;width:100%;margin:0}}
+#side{display:none;flex-direction:column;gap:2px;padding:18px 12px 120px;border-right:1px solid var(--line);position:sticky;top:61px;height:calc(100dvh - 61px);overflow:auto}
+#side .tab{justify-content:space-between;width:100%;text-align:left}
+#side .tgrp{padding:16px 10px 6px}
 .tabs::-webkit-scrollbar{display:none}
 .tab{border:0;background:transparent;height:40px;padding:0 14px;border-radius:12px;font-weight:700;white-space:nowrap;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
 .tab[aria-selected=true]{background:var(--ink);color:#fff}
@@ -134,6 +139,15 @@ textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-rad
   .lcard{padding:28px}
   .rv{grid-template-columns:1fr}
 }
+.seg2{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--soft);border-radius:12px;padding:4px}.seg2 button{border:0;background:none;height:34px;padding:0 12px;border-radius:9px;font-weight:700;font-size:13.5px;color:var(--muted)}.seg2 button[aria-pressed=true]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(21,23,59,.12)}
+.fl{display:flex;flex-direction:column;gap:6px;font-size:13.5px;font-weight:700;margin-bottom:10px}.fl .inp,.fl select,.fl textarea{font-weight:400}textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:12px;padding:10px 12px;background:#fff;resize:vertical}
+input[type=color]{width:100%;height:40px;border:0;border-radius:10px;padding:0;background:none}
+.tg{display:inline-flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;margin:6px 0}.tg input{position:absolute;opacity:0;width:1px;height:1px}.tg span{width:40px;height:24px;border-radius:999px;background:var(--line);position:relative;flex:0 0 40px;transition:background .15s}.tg span:after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}.tg input:checked+span{background:var(--ok)}.tg input:checked+span:after{left:19px}.tg input:focus-visible+span{outline:2px solid var(--mag);outline-offset:2px}
+.crow{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.mx th,.mx td{text-align:center}.cc{border:0;background:var(--soft);border-radius:10px;height:36px;min-width:64px;font-weight:800}.cc.on{background:var(--ink);color:#fff}
+.jh{display:flex;gap:12px;align-items:center;margin-bottom:10px}.jsteps{margin:0;padding-left:20px;font-size:14px;line-height:1.5}.jsteps li{padding:4px 0}.jsteps span{display:block;font-size:12.5px;color:var(--muted)}
+.bdp{flex:0 0 auto}
+@media (max-width:640px){.crow .btn.sm{padding:0 9px}.seg2{width:100%}.seg2 button{flex:1}}
 </style>
 </head>
 <body>
@@ -153,14 +167,24 @@ textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-rad
   <header class="top"><div class="topin">
     <div class="brand"><img src="kit_logo.png" alt="KIT" onerror="this.style.display='none'"><span class="sep"></span><span>AX <span style="color:var(--mag)">ON</span> 관리자</span></div>
     <nav class="tabs" role="tablist" aria-label="관리자 메뉴">
+      <span class="tgrp">운영</span>
       <button class="tab" data-tab="dash" role="tab">대시보드</button>
-      <button class="tab" data-tab="learners" role="tab">학습자</button>
-      <button class="tab" data-tab="review" role="tab">검수 대기 <span class="cnt num" id="rvcnt">0</span></button>
-      <button class="tab" data-tab="enroll" role="tab">학번 등록 · 접근코드</button>
-      <button class="tab" data-tab="guide" role="tab">운영 안내</button>
+      <button class="tab" data-tab="learners" role="tab">학습자 · 진도</button>
+      <button class="tab" data-tab="assess" role="tab">과제 · 평가 <span class="cnt num" id="rvcnt">0</span></button>
+      <button class="tab" data-tab="badges" role="tab">배지 발급 · 관리</button>
+      <span class="tgrp">학습 설계</span>
+      <button class="tab" data-tab="course" role="tab">코스 · 러닝 저니</button>
+      <button class="tab" data-tab="cms" role="tab">콘텐츠(VOD) · 편성</button>
+      <button class="tab" data-tab="progress" role="tab">진도 기준 · 시청 분석</button>
+      <span class="tgrp">소통</span>
+      <button class="tab" data-tab="board" role="tab">게시판 · 알림</button>
+      <span class="tgrp">회원 · 설정</span>
+      <button class="tab" data-tab="enroll" role="tab">학번 등록 · 그룹</button>
+      <button class="tab" data-tab="ops" role="tab">운영자 · 로그 · 안내</button>
     </nav>
     <div class="who"><span id="who"></span><button class="btn ghost sm" id="logout">로그아웃</button></div>
   </div></header>
+  <aside id="side" aria-label="관리자 메뉴"></aside>
   <main>
     <div id="modebar" class="bar" style="margin-bottom:10px"></div>
 
@@ -204,20 +228,16 @@ textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-rad
       <div class="card" style="padding:8px 12px 14px"><div class="tw" id="lTable"></div><div class="pager" id="lPager"></div></div>
     </section>
 
-    <!-- REVIEW -->
-    <section data-view="review" class="hide">
-      <div class="bar"><h2>검수 대기</h2>
-        <select id="rLv" aria-label="단계"><option value="">전체 단계</option><option value="1">Explorer</option><option value="2">Builder</option><option value="3">Master</option></select>
-        <select id="rDept" aria-label="학과"></select>
-        <button class="btn ok" id="rAll" disabled>선택 승인</button>
-      </div>
-      <p class="sub" style="color:var(--muted);margin:-8px 0 14px">제출물을 확인하고 승인하면 디지털 배지가 발급됩니다. 반려하면 사유와 함께 학생이 다시 제출할 수 있습니다.</p>
-      <div id="rList" class="grid"></div>
-    </section>
+    <section data-view="assess" class="hide"></section>
+    <section data-view="badges" class="hide"></section>
+    <section data-view="course" class="hide"></section>
+    <section data-view="cms" class="hide"></section>
+    <section data-view="progress" class="hide"></section>
+    <section data-view="board" class="hide"></section>
 
     <!-- ENROLL -->
     <section data-view="enroll" class="hide">
-      <div class="bar"><h2>학번 등록 · 접근코드 발급</h2></div>
+      <div class="bar"><h2>학번 등록 · 접근코드 · 그룹</h2></div>
       <div class="grid two">
         <div class="card">
           <h3>1. 학번 명단 넣기</h3>
@@ -235,12 +255,14 @@ textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-rad
           <div id="enrollOut"><div class="note" style="margin:0">아직 발급한 코드가 없습니다.</div></div>
         </div>
       </div>
+      <div id="groupBox" style="margin-top:14px"></div>
       <div class="card" style="margin-top:14px"><h3>학생 안내 문구 (복사해 공지에 사용)</h3>
         <div class="subtext" id="noticeTpl"></div><button class="btn ghost sm" id="copyTpl">문구 복사</button></div>
     </section>
 
+    <section data-view="ops" class="hide"><div id="opsMain"></div>
     <!-- GUIDE -->
-    <section data-view="guide" class="hide">
+    <div id="guideBox">
       <div class="bar"><h2>운영 안내</h2></div>
       <div class="grid two">
         <div class="card"><h3>로그인 · 개인정보 원칙</h3><ul style="line-height:1.9;padding-left:18px;margin:0">
@@ -255,6 +277,7 @@ textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-rad
           <li>운영 모드에서 대시보드 지표는 서버가 집계해 전달합니다.</li>
           <li>AI 행정 비서는 집계 지표와 학번 단위 기록만 사용합니다(개인정보 없음).</li></ul></div>
       </div>
+    </div>
     </section>
   </main>
   <button class="fab" id="fab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" aria-hidden="true"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg><span>AI 행정 비서</span></button>
@@ -270,47 +293,72 @@ textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-rad
 <script src="config.js"></script>
 <script>/* KIT AX ON — 데이터 계층 (KITDB)
  * 저장 원칙: 학번 · 학과 · 학습 기록만 저장합니다. 이름 · 연락처 · 이메일 등 개인정보는 저장하지 않습니다.
- * 모드: window.KIT_CONFIG.firebase 가 비어 있으면 '시연 모드'(이 브라우저 localStorage),
- *       채워져 있으면 '운영 모드'(Firebase Auth + Firestore + Cloud Functions).
+ * 모드: window.KIT_CONFIG.firebase 가 비어 있으면 '시연 모드'(이 브라우저 localStorage · IndexedDB),
+ *       채워져 있으면 '운영 모드'(Firebase Auth + Firestore + Storage + Cloud Functions).
  */
 (function () {
   var CFG = window.KIT_CONFIG || {};
   var LIVE = !!(CFG.firebase && CFG.firebase.apiKey);
-  var KEY = 'kitaxon-db-v1', SKEY = 'kitaxon-session-v1', AKEY = 'kitaxon-admin-v1';
+  var KEY = 'kitaxon-db-v1', SKEY = 'kitaxon-session-v1', AKEY = 'kitaxon-admin-v1', CKEY = 'kitaxon-catalog-v1', MKEY = 'kitaxon-msg-v1', LKEY = 'kitaxon-audit-v1';
 
   function now() { return Date.now(); }
   function enc(s) { return new TextEncoder().encode(s); }
-  async function sha256(s) {
-    var b = await crypto.subtle.digest('SHA-256', enc(s));
-    return Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
-  }
+  async function sha256(s) { var b = await crypto.subtle.digest('SHA-256', enc(s)); return Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join(''); }
   function rand(n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
-  function newCode() { // 혼동 문자(0 O 1 I L) 제외 8자리, XXXX-XXXX
-    var A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', r = rand(8), s = '';
-    for (var i = 0; i < 8; i++) { s += A[r[i] % A.length]; if (i === 3) s += '-'; }
-    return s;
-  }
+  function uid(p) { return (p || 'id') + '_' + Array.from(rand(5)).map(function (x) { return x.toString(36); }).join('').slice(0, 8); }
+  function newCode() { var A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', r = rand(8), s = ''; for (var i = 0; i < 8; i++) { s += A[r[i] % A.length]; if (i === 3) s += '-'; } return s; }
   function normCode(c) { return String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
   function validSid(sid) { return /^\d{6,12}$/.test(String(sid || '')); }
   function pwRule(pw) { return typeof pw === 'string' && pw.length >= 8 && /[A-Za-z]/.test(pw) && /\d/.test(pw); }
   function err(code, msg) { var e = new Error(msg); e.code = code; return e; }
+  function stamp(t) { var d = new Date(t || now()); var p = function (x) { return (x < 10 ? '0' : '') + x; }; return d.getFullYear() + '.' + p(d.getMonth() + 1) + '.' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+  function jget(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
+  function jset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 
-  /* ---------------- 시연 모드 (localStorage) ---------------- */
-  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch (e) { return null; } }
-  function save(db) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+  /* 기본 운영 설정(카탈로그) — 사이트 기본 콘텐츠 위에 덮어쓰는 값만 저장 */
+  function defaultCatalog() {
+    return {
+      v: 1, updatedAt: 0,
+      settings: { watchThr: 80, requireWatch: true, autoDoneOnWatch: true, seqLessons: false, levelUnlock: 'badge', resubmit: true, certAuto: true, certName: 'KIT AX 인증', badgeIssuer: '경남정보대학교 KIT AX ON' },
+      badges: {
+        1: { mode: 'auto-pass', expiry: 0, active: true, desc: 'ChatGPT · Claude · Gemini로 내 유형의 첫 결과물을 만들고 학교 검수를 통과했습니다.', criteria: '영상 튜토리얼 5개 시청 완료 + 필수 온라인 클래스 수료 + 15분 결과물 제출 → 평가 통과' },
+        2: { mode: 'auto-pass', expiry: 0, active: true, desc: '툴을 연결해 전공 · 진로 업무를 돕는 나만의 AI 비서를 만들었습니다.', criteria: '영상 튜토리얼 5개 시청 완료 + 필수 클래스 수료 + AI 비서 결과물 제출 → 평가 통과' },
+        3: { mode: 'auto-pass', expiry: 0, active: true, desc: '희망 업종의 AI Agent로 기업 · 창업 과제를 해결했습니다.', criteria: '영상 튜토리얼 5개 시청 완료 + 필수 클래스 수료 + Agent 결과물 제출 · 발표 → 평가 통과' }
+      },
+      assign: {
+        1: { title: '', guide: '튜토리얼 5개로 만든 결과물의 공유 링크와 만든 과정(사용한 AI · 프롬프트 요약)을 제출합니다.', pass: 70, rubric: [{ name: '과제 요건 충족', pts: 40 }, { name: '결과물 완성도', pts: 30 }, { name: 'AI 활용의 적절성', pts: 20 }, { name: '설명 · 출처 표기', pts: 10 }] },
+        2: { title: '', guide: '폼 · 시트 · 메일 등 2개 이상 도구를 연결한 AI 비서의 흐름도와 실행 화면 링크를 제출합니다.', pass: 70, rubric: [{ name: '자동화 흐름 설계', pts: 35 }, { name: '실제 작동', pts: 35 }, { name: '전공 · 진로 연계', pts: 20 }, { name: '설명 · 문서화', pts: 10 }] },
+        3: { title: '', guide: '기업 · 창업 과제를 해결하는 AI Agent 데모 링크와 발표 자료를 제출합니다.', pass: 70, rubric: [{ name: '문제 정의', pts: 25 }, { name: 'Agent 구현', pts: 35 }, { name: '현장 검증 · 효과', pts: 25 }, { name: '발표 · 문서', pts: 15 }] }
+      },
+      tuts: {}, order: {}, videos: [], notices: null, groups: [], badgesX: [],
+      operators: [{ email: 'teacher@kit.ac.kr', role: 'owner', depts: [] }]
+    };
+  }
+  function mergeCat(c) { var d = defaultCatalog(); if (!c) return d; var o = Object.assign({}, d, c); o.settings = Object.assign({}, d.settings, c.settings || {}); o.badges = Object.assign({}, d.badges, c.badges || {}); o.assign = Object.assign({}, d.assign, c.assign || {}); return o; }
+
+  /* VOD 저장(시연: IndexedDB) */
+  var idbP = null;
+  function idb() { if (idbP) return idbP; idbP = new Promise(function (res, rej) { var r = indexedDB.open('kitaxon-vod', 1); r.onupgradeneeded = function () { r.result.createObjectStore('v'); }; r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); return idbP; }
+  function idbDo(mode, fn) { return idb().then(function (d) { return new Promise(function (res, rej) { var t = d.transaction('v', mode), s = t.objectStore('v'), q = fn(s); t.oncomplete = function () { res(q && q.result); }; t.onerror = function () { rej(t.error); }; }); }); }
+  var urlCache = {};
+
+  /* ---------------- 시연 모드 ---------------- */
+  function load() { return jget(KEY, null); }
+  function save(db) { jset(KEY, db); }
   async function demoDB() {
     var db = load();
     if (!db) {
-      db = { students: {}, reviews: [], seededAt: now() };
-      // 시연용 학번 3개 (접근코드 KIT-DEMO). 실제 운영에서는 관리자가 학번 명단을 등록할 때 학생별 코드가 발급됩니다.
+      db = { students: {}, badgeLog: [], seededAt: now() };
       var seed = [['20260001', 'AI컴퓨터과'], ['20260002', '간호학과'], ['20260003', 'AI시각디자인학과']];
-      for (var i = 0; i < seed.length; i++) {
-        db.students[seed[i][0]] = { sid: seed[i][0], dept: seed[i][1], status: 'invited', codeHash: await sha256('code:' + seed[i][0] + ':' + normCode('KIT-DEMO')), invitedAt: now(), demo: true };
-      }
+      for (var i = 0; i < seed.length; i++) db.students[seed[i][0]] = { sid: seed[i][0], dept: seed[i][1], status: 'invited', codeHash: await sha256('code:' + seed[i][0] + ':' + normCode('KIT-DEMO')), invitedAt: now(), demo: true };
       save(db);
     }
+    db.badgeLog = db.badgeLog || [];
     return db;
   }
+  function audit(action, target, detail) { var a = jget(AKEY, null), L = jget(LKEY, []); L.unshift({ at: now(), by: a ? a.email : 'system', action: action, target: target || '', detail: detail || '' }); if (L.length > 500) L.length = 500; jset(LKEY, L); }
+  function badgeId(n, sid) { return 'KIT-AX-' + n + '-' + String(sid).slice(-4) + '-' + Array.from(rand(2)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join('').toUpperCase(); }
+  function issueInto(L, n, sid, mode, by) { var t = stamp(); L.review = 'approved'; L.reviewAt = L.reviewAt || t; L.badge = true; L.badgeAt = t; L.badgeId = badgeId(n, sid); L.issueMode = mode; L.issuedBy = by; L.revoked = false; L.revokeReason = ''; return L; }
   var Demo = {
     mode: 'demo',
     async activate(sid, code, pw) {
@@ -321,36 +369,53 @@ textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-rad
       if (!pwRule(pw)) throw err('weak', '비밀번호는 영문과 숫자를 섞어 8자 이상으로 정해 주세요.');
       var salt = Array.from(rand(8)).join('.');
       st.salt = salt; st.pwHash = await sha256('pw:' + salt + ':' + pw); st.status = 'active'; st.activatedAt = now(); st.lastSeen = now(); delete st.codeHash;
-      save(db); localStorage.setItem(SKEY, JSON.stringify({ sid: sid, dept: st.dept, at: now() }));
+      save(db); jset(SKEY, { sid: sid, dept: st.dept, at: now() });
       return { sid: sid, dept: st.dept };
     },
     async login(sid, pw) {
       var db = await demoDB(); var st = db.students[sid];
       if (!st || st.status !== 'active') throw err('not-active', '처음 이용하는 학번이면 [처음 이용] 탭에서 접근코드로 비밀번호를 먼저 설정해 주세요.');
       if (await sha256('pw:' + st.salt + ':' + pw) !== st.pwHash) throw err('bad-pw', '비밀번호가 맞지 않습니다.');
-      st.lastSeen = now(); save(db); localStorage.setItem(SKEY, JSON.stringify({ sid: sid, dept: st.dept, at: now() }));
+      st.lastSeen = now(); save(db); jset(SKEY, { sid: sid, dept: st.dept, at: now() });
       return { sid: sid, dept: st.dept };
     },
     async logout() { localStorage.removeItem(SKEY); },
-    async current() { try { var s = JSON.parse(localStorage.getItem(SKEY)); if (!s) return null; var db = await demoDB(); return db.students[s.sid] && db.students[s.sid].status === 'active' ? { sid: s.sid, dept: db.students[s.sid].dept } : null; } catch (e) { return null; } },
+    async current() { var s = jget(SKEY, null); if (!s) return null; var db = await demoDB(); return db.students[s.sid] && db.students[s.sid].status === 'active' ? { sid: s.sid, dept: db.students[s.sid].dept } : null; },
     async loadProgress(sid) { var db = await demoDB(); var st = db.students[sid]; return st ? (st.progress || null) : null; },
     async saveProgress(sid, progress) {
       var db = load(); if (!db || !db.students[sid]) return;
-      var st = db.students[sid]; var prev = st.progress || {};
-      // 학교 검수(승인 · 반려) 결과는 관리자만 바꿀 수 있다 → 학생 저장 시 관리자 결정값을 보존
+      var st = db.students[sid]; var prev = st.progress || {}; var cat = mergeCat(jget(CKEY, null));
       var lv = progress.lv || {}; var plv = prev.lv || {};
+      // 검수 · 평가 · 배지 결과는 관리자 기록을 우선(학생 저장으로 덮어쓰지 않음)
+      var OWN = ['review', 'reviewAt', 'badge', 'badgeAt', 'badgeId', 'score', 'scores', 'feedback', 'reviewNote', 'revoked', 'revokeReason', 'revokedAt', 'issueMode', 'issuedBy'];
       [1, 2, 3].forEach(function (n) {
-        if (plv[n] && plv[n].review === 'approved' && lv[n]) { lv[n].review = 'approved'; lv[n].badge = true; lv[n].badgeAt = plv[n].badgeAt; lv[n].badgeId = plv[n].badgeId; lv[n].reviewAt = plv[n].reviewAt; }
+        var P = plv[n] || {}, L = lv[n]; if (!L) return;
+        var resub = P.review === 'returned' && L.sub && L.subAt !== P.subAt; // 반려 후 재제출
+        if (P.review && P.review !== 'pending' && !resub) { OWN.forEach(function (k) { if (P[k] !== undefined) L[k] = P[k]; else delete L[k]; }); if (P.review === 'returned') L.sub = ''; }
+        if (resub) { L.review = 'pending'; L.badge = false; }
+        var B = cat.badges[n] || {};
+        if (L.sub && L.review === 'pending' && B.mode === 'auto-complete' && B.active !== false && !L.badge) { issueInto(L, n, sid, 'auto-complete', 'system'); db.badgeLog.push({ sid: sid, n: n, action: 'issue', mode: 'auto-complete', by: 'system', at: now(), badgeId: L.badgeId }); }
       });
+      progress.adminRev = prev.adminRev || 0; progress.xb = prev.xb || {};
       st.progress = progress; st.lastSeen = now();
       st.days = st.days || []; var d = new Date().toISOString().slice(0, 10); if (st.days[st.days.length - 1] !== d) { st.days.push(d); if (st.days.length > 120) st.days.shift(); }
       save(db);
     },
+    /* 카탈로그 · 콘텐츠 */
+    async getCatalog() { return mergeCat(jget(CKEY, null)); },
+    async saveCatalog(c, what) { c.updatedAt = now(); if (!jset(CKEY, c)) throw err('quota', '브라우저 저장 공간이 부족합니다.'); audit('설정 저장', what || '운영 설정'); return c; },
+    async vodPut(file, onProgress) { var id = uid('vod'); await idbDo('readwrite', function (s) { return s.put(file, id); }); if (onProgress) onProgress(100); return { id: id, url: '' }; },
+    async vodUrl(id) { if (urlCache[id]) return urlCache[id]; var b = await idbDo('readonly', function (s) { return s.get(id); }); if (!b) return ''; urlCache[id] = URL.createObjectURL(b); return urlCache[id]; },
+    async vodDelete(id) { await idbDo('readwrite', function (s) { return s.delete(id); }); },
+    /* 학생 알림함 */
+    async myMessages(sid, dept) { var cat = mergeCat(jget(CKEY, null)); var gs = (cat.groups || []).filter(function (g) { return (g.sids || []).indexOf(sid) >= 0; }).map(function (g) { return g.id; }); return jget(MKEY, []).filter(function (m) { var t = m.target || {}; return t.type === 'all' || (t.type === 'dept' && t.value === dept) || (t.type === 'group' && gs.indexOf(t.value) >= 0) || (t.type === 'sids' && (t.value || []).indexOf(sid) >= 0); }); },
     /* ---- 관리자 ---- */
-    async adminSignIn() { var a = { email: 'teacher@kit.ac.kr', name: '담당 선생님(시연)', at: now() }; localStorage.setItem(AKEY, JSON.stringify(a)); return a; },
-    async adminCurrent() { try { return JSON.parse(localStorage.getItem(AKEY)); } catch (e) { return null; } },
+    async adminSignIn() { var a = { email: 'teacher@kit.ac.kr', name: '담당 선생님(시연)', at: now() }; jset(AKEY, a); audit('로그인', a.email); return a; },
+    async adminCurrent() { return jget(AKEY, null); },
     async adminSignOut() { localStorage.removeItem(AKEY); },
     async listStudents() { var db = await demoDB(); return Object.keys(db.students).map(function (k) { return db.students[k]; }); },
+    async badgeLog() { var db = await demoDB(); return db.badgeLog.slice().reverse(); },
+    async auditLog() { return jget(LKEY, []); },
     async registerStudents(rows) {
       var db = await demoDB(); var out = [];
       for (var i = 0; i < rows.length; i++) {
@@ -361,21 +426,52 @@ textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-rad
         db.students[r.sid] = Object.assign({}, ex || {}, { sid: r.sid, dept: r.dept, status: 'invited', codeHash: await sha256('code:' + r.sid + ':' + normCode(code)), invitedAt: now() });
         out.push({ sid: r.sid, dept: r.dept, code: code });
       }
-      save(db); return out;
+      save(db); audit('학번 등록', out.filter(function (x) { return x.code; }).length + '명'); return out;
     },
-    async reissueCode(sid) { // 비밀번호 분실 시: 기존 비밀번호를 지우고 새 접근코드 발급(진도는 유지)
+    async reissueCode(sid) {
       var db = await demoDB(); var st = db.students[sid]; if (!st) throw err('not-found', '없는 학번');
       var code = newCode(); st.codeHash = await sha256('code:' + sid + ':' + normCode(code)); st.status = 'invited'; delete st.pwHash; delete st.salt; st.invitedAt = now();
-      save(db); return code;
+      save(db); audit('접근코드 재발급', sid); return code;
     },
-    async review(sid, n, decision, note) {
-      var db = await demoDB(); var st = db.students[sid]; if (!st || !st.progress) throw err('not-found', '제출 기록이 없습니다.');
-      var L = st.progress.lv[n]; var t = new Date(); var p = function (x) { return (x < 10 ? '0' : '') + x; };
-      var stamp = t.getFullYear() + '.' + p(t.getMonth() + 1) + '.' + p(t.getDate()) + ' ' + p(t.getHours()) + ':' + p(t.getMinutes());
-      if (decision === 'approve') { L.review = 'approved'; L.reviewAt = stamp; L.badge = true; L.badgeAt = stamp; L.badgeId = 'KIT-AX-' + n + '-' + String(sid).slice(-4) + Math.floor(10 + Math.random() * 89); }
-      else { L.review = 'returned'; L.reviewAt = stamp; L.reviewNote = note || ''; L.sub = ''; L.draft = L.draft || ''; }
-      db.reviews.push({ sid: sid, n: n, decision: decision, note: note || '', at: now() }); save(db); return L;
+    /* 과제 평가: decision = 'pass' | 'return' | 'fail' */
+    async grade(sid, n, g) {
+      var db = await demoDB(); var st = db.students[sid]; if (!st || !st.progress || !st.progress.lv || !st.progress.lv[n]) throw err('not-found', '제출 기록이 없습니다.');
+      var L = st.progress.lv[n], cat = mergeCat(jget(CKEY, null)), B = cat.badges[n] || {}, by = (jget(AKEY, {}) || {}).email || 'admin';
+      L.score = g.total; L.scores = g.scores || []; L.feedback = g.feedback || ''; L.reviewAt = stamp(); L.gradedBy = by;
+      if (g.decision === 'pass') {
+        if (B.mode === 'manual' || B.active === false) { L.review = 'passed'; }
+        else { issueInto(L, n, sid, 'auto-pass', by); db.badgeLog.push({ sid: sid, n: n, action: 'issue', mode: 'auto-pass', by: by, at: now(), badgeId: L.badgeId }); }
+      } else if (g.decision === 'return') { L.review = 'returned'; L.reviewNote = g.feedback || ''; L.sub = ''; }
+      else { L.review = 'failed'; L.reviewNote = g.feedback || ''; }
+      st.progress.adminRev = (st.progress.adminRev || 0) + 1; save(db); audit('과제 평가', sid + ' · ' + n + '단계', g.decision + ' ' + g.total + '점'); return L;
     },
+    async review(sid, n, decision, note) { return this.grade(sid, n, { decision: decision === 'approve' ? 'pass' : 'return', total: decision === 'approve' ? 100 : 0, feedback: note }); },
+    async issueBadge(sid, n, reason) {
+      var db = await demoDB(); var st = db.students[sid]; if (!st) throw err('not-found', '없는 학번'); var by = (jget(AKEY, {}) || {}).email || 'admin';
+      st.progress = st.progress || { lv: {} }; st.progress.lv = st.progress.lv || {};
+      if (!/^[123]$/.test(String(n))) { var X = st.progress.xb = st.progress.xb || {}; if (X[n] && !X[n].revoked) throw err('already', '이미 발급된 배지입니다.'); X[n] = { badge: true, at: now(), badgeId: 'KIT-AX-' + String(n).toUpperCase() + '-' + String(sid).slice(-4), reason: reason || '', by: by }; st.progress.adminRev = (st.progress.adminRev || 0) + 1; db.badgeLog.push({ sid: sid, n: n, action: 'issue', mode: 'manual', by: by, at: now(), badgeId: X[n].badgeId, reason: reason || '' }); save(db); audit('배지 수동 발급', sid + ' · ' + n, reason); return X[n]; }
+      var L = st.progress.lv[n] = Object.assign({ cls: {}, sub: '' }, st.progress.lv[n] || {});
+      if (L.badge) throw err('already', '이미 발급된 배지입니다.');
+      issueInto(L, n, sid, 'manual', by); L.manualReason = reason || '';
+      st.progress.adminRev = (st.progress.adminRev || 0) + 1; db.badgeLog.push({ sid: sid, n: n, action: 'issue', mode: 'manual', by: by, at: now(), badgeId: L.badgeId, reason: reason || '' }); save(db); audit('배지 수동 발급', sid + ' · ' + n + '단계', reason); return L;
+    },
+    async revokeBadge(sid, n, reason) {
+      var db = await demoDB(); var st = db.students[sid];
+      if (st && !/^[123]$/.test(String(n))) { var X = ((st.progress || {}).xb || {})[n]; if (!X || X.revoked) throw err('not-found', '발급된 배지가 없습니다.'); X.revoked = true; X.revokeReason = reason || ''; st.progress.adminRev = (st.progress.adminRev || 0) + 1; db.badgeLog.push({ sid: sid, n: n, action: 'revoke', by: (jget(AKEY, {}) || {}).email || 'admin', at: now(), badgeId: X.badgeId, reason: reason || '' }); save(db); audit('배지 해제', sid + ' · ' + n, reason); return X; }
+      var L = st && st.progress && st.progress.lv && st.progress.lv[n]; if (!L || !L.badge) throw err('not-found', '발급된 배지가 없습니다.'); var by = (jget(AKEY, {}) || {}).email || 'admin';
+      db.badgeLog.push({ sid: sid, n: n, action: 'revoke', by: by, at: now(), badgeId: L.badgeId, reason: reason || '' });
+      L.badge = false; L.revoked = true; L.revokeReason = reason || ''; L.revokedAt = stamp(); L.review = 'revoked';
+      st.progress.adminRev = (st.progress.adminRev || 0) + 1; save(db); audit('배지 해제', sid + ' · ' + n + '단계', reason); return L;
+    },
+    /* 진도 관리: fn(progress) 로 학습 기록을 고침 */
+    async adminEditProgress(sid, label, fn) {
+      var db = await demoDB(); var st = db.students[sid]; if (!st) throw err('not-found', '없는 학번');
+      st.progress = st.progress || { done: {}, steps: {}, lv: { 1: { cls: {} }, 2: { cls: {} }, 3: { cls: {} } }, watch: {} };
+      fn(st.progress); st.progress.adminRev = (st.progress.adminRev || 0) + 1; save(db); audit('진도 관리', sid, label); return st.progress;
+    },
+    async sendMessage(m) { var L = jget(MKEY, []); m.id = uid('msg'); m.at = now(); m.by = (jget(AKEY, {}) || {}).email || 'admin'; L.unshift(m); jset(MKEY, L); audit('알림 발송', (m.target || {}).label || '', m.title); return m; },
+    async listMessages() { return jget(MKEY, []); },
+    async deleteMessage(id) { jset(MKEY, jget(MKEY, []).filter(function (m) { return m.id !== id; })); audit('알림 삭제', id); },
     async askAssistant() { throw err('demo', 'demo'); }
   };
 
@@ -384,9 +480,9 @@ textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-rad
   async function fire() {
     if (fb) return fb;
     var V = '10.12.4', B = 'https://www.gstatic.com/firebasejs/' + V + '/';
-    var app = await import(B + 'firebase-app.js'), auth = await import(B + 'firebase-auth.js'), fs = await import(B + 'firebase-firestore.js'), fn = await import(B + 'firebase-functions.js');
+    var app = await import(B + 'firebase-app.js'), auth = await import(B + 'firebase-auth.js'), fs = await import(B + 'firebase-firestore.js'), fn = await import(B + 'firebase-functions.js'), stg = await import(B + 'firebase-storage.js');
     var a = app.initializeApp(CFG.firebase);
-    fb = { auth: auth, fs: fs, fn: fn, A: auth.getAuth(a), D: fs.getFirestore(a), F: fn.getFunctions(a, CFG.region || 'asia-northeast3') };
+    fb = { auth: auth, fs: fs, fn: fn, stg: stg, A: auth.getAuth(a), D: fs.getFirestore(a), F: fn.getFunctions(a, CFG.region || 'asia-northeast3'), S: stg.getStorage(a) };
     return fb;
   }
   function call(name, data) { return fire().then(function (f) { return f.fn.httpsCallable(f.F, name)(data); }).then(function (r) { return r.data; }); }
@@ -400,28 +496,41 @@ textarea{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-rad
     async current() { var f = await fire(); var u = await waitUser(f); if (!u || !u.uid.startsWith('s_')) return null; var t = await u.getIdTokenResult(); return { sid: u.uid.slice(2), dept: t.claims.dept || '' }; },
     async loadProgress(sid) {
       var f = await fire(); var d = await f.fs.getDoc(f.fs.doc(f.D, 'progress', sid)); var p = d.exists() ? d.data().p : null;
-      // 배지 · 검수 결과의 원본은 approvals(관리자만 쓰기) — 학생 기록 위에 덮어씀
-      var a = await f.fs.getDoc(f.fs.doc(f.D, 'approvals', sid));
-      if (p && a.exists()) { var lv = (a.data() || {}).lv || {}; p.lv = p.lv || {}; Object.keys(lv).forEach(function (n) { p.lv[n] = Object.assign({}, p.lv[n] || {}, lv[n], lv[n].review === 'returned' ? { sub: '' } : {}); }); }
-      if (p && p.lv) [1, 2, 3].forEach(function (n) { var L = p.lv[n]; if (L && L.badge && !(a.exists() && a.data().lv && a.data().lv[n] && a.data().lv[n].badge)) { L.badge = false; if (L.review === 'approved') L.review = L.sub ? 'pending' : ''; } });
+      var a = await f.fs.getDoc(f.fs.doc(f.D, 'approvals', sid)); var A = a.exists() ? (a.data() || {}) : {};
+      if (p) { p.lv = p.lv || {}; var lv = A.lv || {}; [1, 2, 3].forEach(function (n) { var L = p.lv[n] = p.lv[n] || {}; var X = lv[n]; if (X) { Object.assign(L, X); if (X.review === 'returned' && !(L.subAt && X.subAt && L.subAt !== X.subAt)) L.sub = ''; } else { L.badge = false; if (L.review && L.review !== 'pending') L.review = L.sub ? 'pending' : ''; } }); p.xb = A.xb || {}; p.adminRev = A.rev || 0; }
       return p;
     },
     async saveProgress(sid, p) { var f = await fire(); await f.fs.setDoc(f.fs.doc(f.D, 'progress', sid), { p: p, updatedAt: f.fs.serverTimestamp() }, { merge: true }); },
-    async adminSignIn() { var f = await fire(); var pr = new f.auth.GoogleAuthProvider(); if (CFG.adminDomain) pr.setCustomParameters({ hd: CFG.adminDomain }); var r = await f.auth.signInWithPopup(f.A, pr); var ok = await call('whoAmI', {}); if (!ok.admin) { await f.auth.signOut(f.A); throw err('denied', '관리자로 등록되지 않은 Google 계정입니다. 산타 운영팀에 등록을 요청해 주세요.'); } return { email: r.user.email, name: r.user.displayName }; },
+    async getCatalog() { var f = await fire(); var u = await waitUser(f); if (u && !u.uid.startsWith('s_')) { try { return mergeCat((await call('adminGetCatalog', {})).catalog); } catch (e) {} } var d = await f.fs.getDoc(f.fs.doc(f.D, 'catalog', 'main')); return mergeCat(d.exists() ? d.data() : null); },
+    async saveCatalog(c, what) { c.updatedAt = now(); await call('saveCatalog', { catalog: c, what: what || '' }); return c; },
+    async vodPut(file, onProgress) { var f = await fire(); var id = uid('vod'); var ref = f.stg.ref(f.S, 'vod/' + id); var task = f.stg.uploadBytesResumable(ref, file, { contentType: file.type }); await new Promise(function (res, rej) { task.on('state_changed', function (s) { if (onProgress) onProgress(Math.round(s.bytesTransferred / s.totalBytes * 100)); }, rej, res); }); return { id: id, url: await f.stg.getDownloadURL(ref) }; },
+    async vodUrl(id, url) { if (url) return url; var f = await fire(); return f.stg.getDownloadURL(f.stg.ref(f.S, 'vod/' + id)); },
+    async vodDelete(id) { var f = await fire(); await f.stg.deleteObject(f.stg.ref(f.S, 'vod/' + id)); },
+    async myMessages() { return (await call('myMessages', {})).messages; },
+    async adminSignIn() { var f = await fire(); var pr = new f.auth.GoogleAuthProvider(); if (CFG.adminDomain) pr.setCustomParameters({ hd: CFG.adminDomain }); var r = await f.auth.signInWithPopup(f.A, pr); var ok = await call('whoAmI', {}); if (!ok.admin) { await f.auth.signOut(f.A); throw err('denied', '관리자로 등록되지 않은 Google 계정입니다. 산타 운영팀에 등록을 요청해 주세요.'); } return { email: r.user.email, name: r.user.displayName, role: ok.role }; },
     async adminCurrent() { var f = await fire(); var u = await waitUser(f); if (!u || u.uid.startsWith('s_')) return null; return { email: u.email, name: u.displayName }; },
     async adminSignOut() { var f = await fire(); await f.auth.signOut(f.A); },
     async listStudents() { return (await call('adminListStudents', {})).students; },
+    async badgeLog() { return (await call('adminBadgeLog', {})).log; },
+    async auditLog() { return (await call('adminAuditLog', {})).log; },
     async registerStudents(rows) { return (await call('registerStudents', { rows: rows })).results; },
     async reissueCode(sid) { return (await call('reissueCode', { sid: sid })).code; },
-    async review(sid, n, decision, note) { return (await call('reviewSubmission', { sid: sid, n: n, decision: decision, note: note || '' })).lv; },
+    async grade(sid, n, g) { return (await call('gradeSubmission', { sid: sid, n: n, grade: g })).lv; },
+    async review(sid, n, decision, note) { return this.grade(sid, n, { decision: decision === 'approve' ? 'pass' : 'return', total: decision === 'approve' ? 100 : 0, feedback: note }); },
+    async issueBadge(sid, n, reason) { return (await call('issueBadge', { sid: sid, n: n, reason: reason || '' })).lv; },
+    async revokeBadge(sid, n, reason) { return (await call('revokeBadge', { sid: sid, n: n, reason: reason || '' })).lv; },
+    async adminEditProgress(sid, label, fn) { var cur = (await call('adminGetProgress', { sid: sid })).p || { done: {}, steps: {}, lv: {}, watch: {} }; fn(cur); return (await call('adminSetProgress', { sid: sid, label: label, p: cur })).p; },
+    async sendMessage(m) { return (await call('sendMessage', { message: m })).message; },
+    async listMessages() { return (await call('adminListMessages', {})).messages; },
+    async deleteMessage(id) { await call('deleteMessage', { id: id }); },
     async askAssistant(question, context) { return (await call('adminAssistant', { question: question, context: context })).answer; }
   };
 
   window.KITDB = LIVE ? Live : Demo;
-  window.KITDB.util = { normCode: normCode, validSid: validSid, pwRule: pwRule };
+  window.KITDB.util = { normCode: normCode, validSid: validSid, pwRule: pwRule, stamp: stamp, uid: uid, defaultCatalog: defaultCatalog, mergeCat: mergeCat };
 })();
 </script>
-<script>window.KIT_META={"types":{"EYE":{"ko":"시각·이미지형","color":"#E63295"},"STORY":{"ko":"영상·스토리형","color":"#7D5CB5"},"PEN":{"ko":"글·기록형","color":"#4C77C5"},"MAP":{"ko":"구조·기획형","color":"#3BA875"},"LENS":{"ko":"탐색·분석형","color":"#E8622A"}},"tuts":{"E1-1":{"tool":"ChatGPT 이미지","type":"EYE","lv":1},"E1-2":{"tool":"Gemini 나노바나나","type":"EYE","lv":1},"E1-3":{"tool":"Gemini (AI Studio)","type":"EYE","lv":1},"E1-4":{"tool":"Claude 디자인","type":"EYE","lv":1},"E1-5":{"tool":"ChatGPT 카드뉴스","type":"EYE","lv":1},"E2-1":{"tool":"Canva AI","type":"EYE","lv":2},"E2-2":{"tool":"Adobe Firefly","type":"EYE","lv":2},"E2-3":{"tool":"Figma","type":"EYE","lv":2},"E2-4":{"tool":"SketchUp","type":"EYE","lv":2},"E2-5":{"tool":"n8n","type":"EYE","lv":2},"E3-1":{"tool":"D5 Render","type":"EYE","lv":3},"E3-2":{"tool":"CLO 3D","type":"EYE","lv":3},"E3-3":{"tool":"Meshy·Tripo","type":"EYE","lv":3},"E3-4":{"tool":"YouCam","type":"EYE","lv":3},"E3-5":{"tool":"GPTs","type":"EYE","lv":3},"S1-1":{"tool":"ChatGPT","type":"STORY","lv":1},"S1-2":{"tool":"Gemini Veo","type":"STORY","lv":1},"S1-3":{"tool":"Claude 스토리","type":"STORY","lv":1},"S1-4":{"tool":"Gemini 나노바나나 콘티","type":"STORY","lv":1},"S1-5":{"tool":"NotebookLM 동영상 개요","type":"STORY","lv":1},"S2-1":{"tool":"Kling","type":"STORY","lv":2},"S2-2":{"tool":"Suno","type":"STORY","lv":2},"S2-3":{"tool":"CapCut","type":"STORY","lv":2},"S2-4":{"tool":"Google Flow","type":"STORY","lv":2},"S2-5":{"tool":"n8n","type":"STORY","lv":2},"S3-1":{"tool":"AI 단편영화","type":"STORY","lv":3},"S3-2":{"tool":"DaVinci 컬러","type":"STORY","lv":3},"S3-3":{"tool":"ElevenLabs 심화","type":"STORY","lv":3},"S3-4":{"tool":"n8n AI Agent","type":"STORY","lv":3},"S3-5":{"tool":"Gemini Gems","type":"STORY","lv":3},"P1-1":{"tool":"Claude","type":"PEN","lv":1},"P1-2":{"tool":"NotebookLM","type":"PEN","lv":1},"P1-3":{"tool":"ChatGPT","type":"PEN","lv":1},"P1-4":{"tool":"ChatGPT 프로젝트","type":"PEN","lv":1},"P1-5":{"tool":"Gemini","type":"PEN","lv":1},"P2-1":{"tool":"NotebookLM 심화","type":"PEN","lv":2},"P2-2":{"tool":"Claude MCP","type":"PEN","lv":2},"P2-3":{"tool":"Claude 프로젝트","type":"PEN","lv":2},"P2-4":{"tool":"Gemini Workspace","type":"PEN","lv":2},"P2-5":{"tool":"n8n","type":"PEN","lv":2},"P3-1":{"tool":"Claude Code","type":"PEN","lv":3},"P3-2":{"tool":"n8n RAG","type":"PEN","lv":3},"P3-3":{"tool":"GPTs","type":"PEN","lv":3},"P3-4":{"tool":"Gemini Gems","type":"PEN","lv":3},"P3-5":{"tool":"Claude Skills","type":"PEN","lv":3},"M1-1":{"tool":"Claude 아티팩트","type":"MAP","lv":1},"M1-2":{"tool":"Claude","type":"MAP","lv":1},"M1-3":{"tool":"ChatGPT","type":"MAP","lv":1},"M1-4":{"tool":"Gemini 캔버스","type":"MAP","lv":1},"M1-5":{"tool":"NotebookLM 마인드맵","type":"MAP","lv":1},"M2-1":{"tool":"n8n","type":"MAP","lv":2},"M2-2":{"tool":"Gamma","type":"MAP","lv":2},"M2-3":{"tool":"Claude MCP 실무","type":"MAP","lv":2},"M2-4":{"tool":"Autodesk Fusion","type":"MAP","lv":2},"M2-5":{"tool":"AutoCAD","type":"MAP","lv":2},"M3-1":{"tool":"n8n AI Agent","type":"MAP","lv":3},"M3-2":{"tool":"Lovable","type":"MAP","lv":3},"M3-3":{"tool":"Fusion 생성형 설계","type":"MAP","lv":3},"M3-4":{"tool":"Pix4D","type":"MAP","lv":3},"M3-5":{"tool":"GPTs 업무 에이전트","type":"MAP","lv":3},"L1-1":{"tool":"ChatGPT 딥리서치","type":"LENS","lv":1},"L1-2":{"tool":"ChatGPT 데이터 분석","type":"LENS","lv":1},"L1-3":{"tool":"Gemini 딥리서치","type":"LENS","lv":1},"L1-4":{"tool":"Claude 분석","type":"LENS","lv":1},"L1-5":{"tool":"Gemini (AI Studio)","type":"LENS","lv":1},"L2-1":{"tool":"Perplexity","type":"LENS","lv":2},"L2-2":{"tool":"NotebookLM 논문","type":"LENS","lv":2},"L2-3":{"tool":"n8n 데이터 수집","type":"LENS","lv":2},"L2-4":{"tool":"Claude MCP 분석","type":"LENS","lv":2},"L2-5":{"tool":"Flux","type":"LENS","lv":2},"L3-1":{"tool":"Cursor","type":"LENS","lv":3},"L3-2":{"tool":"Claude Code","type":"LENS","lv":3},"L3-3":{"tool":"Hugging Face","type":"LENS","lv":3},"L3-4":{"tool":"KiCad","type":"LENS","lv":3},"L3-5":{"tool":"n8n AI Agent 분석","type":"LENS","lv":3}},"depts":[{"name":"AI시각디자인학과","type":"EYE","s1":"브랜드 키비주얼 · 포스터 3안","s2":"브리프 입력 → 시안 생성 → 피드백 반영 디자인 에이전트","s3":"지역 기업 브랜딩 PBL · 캡스톤"},{"name":"인테리어디자인과","type":"EYE","s1":"공간 무드보드 · 콘셉트 렌더","s2":"고객 요구 → 자재 · 컬러 제안 시안 에이전트","s3":"인테리어 업체 현장실습"},{"name":"환경조경디자인과","type":"EYE","s1":"조경 계획 이미지 · 식재 콘셉트","s2":"대상지 정보 → 식재 계획 초안 에이전트","s3":"조경 설계사무소 PBL"},{"name":"신발패션과","type":"EYE","s1":"신발 디자인 시안 · 룩북","s2":"트렌드 수집 → 디자인 변형안 생성 에이전트","s3":"신발 브랜드 신제품 기획 PBL"},{"name":"헤어디자인과","type":"EYE","s1":"헤어스타일 시뮬레이션 카드","s2":"고객 상담 → 스타일 추천 · 예약 안내 에이전트","s3":"헤어숍 인턴십 · 고객관리 과제"},{"name":"글로벌K뷰티학과","type":"EYE","s1":"메이크업 룩 카드뉴스(다국어)","s2":"피부 상담 → 제품 · 루틴 추천 에이전트(다국어)","s3":"K-뷰티 기업 해외 마케팅 PBL"},{"name":"K뷰티스타일리스트과","type":"EYE","s1":"스타일링 룩북 · 무드보드","s2":"촬영 콘셉트 → 스타일링 시트 생성 에이전트","s3":"촬영 · 방송 현장실습"},{"name":"미디어영상과","type":"STORY","s1":"AI 숏폼 · 뮤직비디오 15초","s2":"기획 → 스크립트 → 편집 컷 리스트 자동화 에이전트","s3":"영상 제작사 현장실습 · 캡스톤 작품"},{"name":"디지털문예창작과","type":"STORY","s1":"웹소설 플롯 · 표지 · 북트레일러","s2":"세계관 설정 → 회차 플롯 초안 에이전트","s3":"웹콘텐츠 공모 연계 PBL"},{"name":"호텔관광과","type":"STORY","s1":"관광 코스 홍보 숏폼","s2":"고객 요청 → 맞춤 일정 · 안내문 에이전트(다국어)","s3":"호텔 · 여행사 인턴십"},{"name":"유아교육과","type":"STORY","s1":"AI 그림 동화 · 동요","s2":"놀이 주제 → 활동 계획안 · 가정통신문 에이전트","s3":"어린이집 교육실습 연계"},{"name":"호텔제과제빵과","type":"STORY","s1":"신메뉴 홍보 숏폼 · 패키지 이미지","s2":"신메뉴 기획 → 원가 · 홍보 문구 에이전트","s3":"베이커리 브랜드 PBL"},{"name":"간호학과","type":"PEN","s1":"환자 교육 자료 · 간호 기록 연습","s2":"가이드라인 Q&A · 인계 요약 에이전트(가상 데이터)","s3":"임상실습 연계 사례 보고 캡스톤"},{"name":"병원의료행정과","type":"PEN","s1":"원무 안내문 · 청구 용어 정리","s2":"문의 응대 · 서류 안내 에이전트","s3":"병원 원무과 현장실습"},{"name":"사회복지학과","type":"PEN","s1":"사례 기록 · 프로그램 계획서 초안","s2":"상담 기록 요약 · 자원 연계 추천 에이전트(가상)","s3":"복지관 현장실습 · 프로그램 PBL"},{"name":"작업치료과","type":"PEN","s1":"치료 계획서 · 보호자 안내문","s2":"평가 결과 → 가정 프로그램 안내 에이전트(가상)","s3":"재활기관 임상실습 연계"},{"name":"경찰행정학과","type":"PEN","s1":"법령 · 판례 요약, 보고서","s2":"민원 유형 분류 · 응답 초안 에이전트","s3":"공공기관 현장실습"},{"name":"국방산업학과","type":"PEN","s1":"브리핑 보고서 · 규정 요약","s2":"일일 보고 · 점검 일지 자동화 에이전트","s3":"방산 기업 연계 과제"},{"name":"자율전공학과","type":"PEN","s1":"전공 탐색 리포트 · 진로 포트폴리오","s2":"진로 탐색 코치 에이전트","s3":"희망 전공 PBL 참여"},{"name":"기계과","type":"MAP","s1":"가공 공정도 · 작업 표준서","s2":"작업일지 · 설비 점검 기록 자동화 에이전트","s3":"제조 기업 현장실습 · 공정 개선 PBL"},{"name":"전기과","type":"MAP","s1":"결선 · 점검 절차 다이어그램","s2":"전기 안전점검 체크리스트 · 보고 에이전트","s3":"전기공사 · 발전 기업 인턴십"},{"name":"전기수소자동차과","type":"MAP","s1":"정비 절차 플로우 · 고장진단 트리","s2":"증상 입력 → 정비 매뉴얼 안내 에이전트","s3":"정비 · 부품 기업 현장실습"},{"name":"토목환경과","type":"MAP","s1":"시공 계획 · 공정표","s2":"공정 일보 · 안전 점검 자동화 에이전트","s3":"건설사 현장실습"},{"name":"소방안전관리과","type":"MAP","s1":"소방 점검표 · 피난 계획","s2":"점검 결과 → 보고서 자동 생성 에이전트","s3":"소방 안전관리 업체 PBL"},{"name":"경영학과","type":"MAP","s1":"사업계획 슬라이드 · 시장 분석","s2":"매출 · 재고 리포트 자동화 에이전트","s3":"지역 기업 경영 개선 PBL"},{"name":"AI창업학과","type":"MAP","s1":"린캔버스 · IR 피치덱","s2":"고객 응대 · 마케팅 자동화 MVP 에이전트","s3":"창업 캡스톤 · MVP 출시"},{"name":"호텔외식조리학과","type":"MAP","s1":"메뉴 기획 · 레시피 공정표","s2":"발주 · 원가 · 재고 관리 에이전트","s3":"호텔 · 외식기업 인턴십"},{"name":"AI컴퓨터과","type":"LENS","s1":"기술 리서치 · 코드 리뷰 리포트","s2":"바이브 코딩으로 업무용 에이전트 서비스 구축","s3":"SW 기업 인턴십 · 서비스 캡스톤"},{"name":"반도체전자과","type":"LENS","s1":"공정 · 소자 기술 동향 리포트","s2":"측정 데이터 → 불량 분석 리포트 에이전트","s3":"반도체 기업 현장실습 · PBL"},{"name":"화공에너지공학과","type":"LENS","s1":"이차전지 · 에너지 동향 리포트","s2":"실험 데이터 정리 · 분석 에이전트","s3":"이차전지 · 화학 기업 PBL"},{"name":"임상병리과","type":"LENS","s1":"검사 항목 근거 요약","s2":"검사 결과 해석 학습 보조 에이전트(가상)","s3":"병원 검사실 임상실습 연계"},{"name":"물리치료과","type":"LENS","s1":"근거 기반 운동 프로그램 리서치","s2":"평가 → 운동 처방 초안 에이전트(가상)","s3":"병원 · 재활센터 임상실습"},{"name":"치위생과","type":"LENS","s1":"구강보건 교육 자료 · 논문 요약","s2":"환자 교육 · 예약 리마인드 에이전트(가상)","s3":"치과 임상실습 연계"},{"name":"반려동물학과","type":"LENS","s1":"질환 · 영양 정보 리서치","s2":"보호자 상담 · 케어 가이드 에이전트","s3":"동물병원 · 펫 기업 현장실습"},{"name":"스포츠재활트레이닝과","type":"LENS","s1":"운동 데이터 분석 리포트","s2":"측정 기록 → 트레이닝 계획 에이전트","s3":"스포츠센터 · 구단 인턴십"}]};</script>
+<script>window.KIT_META={"types":{"EYE":{"ko":"시각·이미지형","color":"#E63295"},"STORY":{"ko":"영상·스토리형","color":"#7D5CB5"},"PEN":{"ko":"글·기록형","color":"#4C77C5"},"MAP":{"ko":"구조·기획형","color":"#3BA875"},"LENS":{"ko":"탐색·분석형","color":"#E8622A"}},"tuts":{"E1-1":{"tool":"ChatGPT 이미지","type":"EYE","lv":1,"vid":"zUptjCwe1Ug","title":"챗GPT로 디자인 이미지 만드는 법, 딱 5단계면 끝! | ChatGPT 이미지 생성AI 강의 (무료 버전 기준) #ChatGPT #imageAI","channel":"모아AI","mission":"학과 프로젝트 키비주얼 3안 완성","steps":["ChatGPT에서 이미지 만들기를 선택하고 주제·스타일·비율을 입력합니다","같은 대화에서 색감·구도를 바꿔 달라고 요청해 키비주얼을 수정합니다","선택 영역 편집으로 세부를 고친 뒤 3가지 안을 비교해 저장합니다"]},"E1-2":{"tool":"Gemini 나노바나나","type":"EYE","lv":1,"vid":"rhFO2dQctD4","title":"이미지 생성 AI 나노바나나2 사용법 / 초보자를 위한 15분 마스터 강의","channel":"동테크","mission":"나노바나나로 학과 주제 이미지 시안 2종 완성","steps":["Gemini 앱에서 이미지 만들기(나노바나나)를 선택하고 학과 주제와 분위기를 입력합니다","같은 대화에서 색감 · 구도 · 배경을 한 가지씩 바꿔 달라고 요청합니다","마음에 드는 2안을 골라 원본과 비교해 저장합니다"]},"E1-3":{"tool":"Gemini (AI Studio)","type":"EYE","lv":1,"vid":"fRnn4eJEr6c","title":"무료로 누구나 쉽게 이미지, 동영상 생성하기 _ 구글 AI 스튜디오 속 Nano Banana, Imagen, Veo2 활용법","channel":"신교수의 한장강의","mission":"원본 이미지 기반 배경·스타일 변형 시안 3종 완성","steps":["Google AI Studio에서 Nano Banana 이미지 모델을 선택합니다","원본 이미지를 업로드한 뒤 배경 교체를 텍스트로 지시합니다","같은 이미지에 스타일 변형을 반복 요청해 시안을 비교·저장합니다"]},"E1-4":{"tool":"Claude 디자인","type":"EYE","lv":1,"vid":"Fc5vIXHxsrY","title":"클로드 디자인 초보자 가이드 | 15분만에 기본 마스터하기","channel":"그린코끼리 AI","mission":"Claude로 학과 행사 A4 포스터 시안 1장 완성","steps":["Claude에 행사 · 과제 포스터의 목적 · 문구 · 색을 적어 시안을 요청합니다","미리보기 화면에서 레이아웃 · 글자 크기를 대화로 수정합니다","완성 시안을 이미지 · PDF로 저장하고 공유 링크를 만듭니다"]},"E1-5":{"tool":"ChatGPT 카드뉴스","type":"EYE","lv":1,"vid":"XUVjZhGrPUg","title":"챗GPT로 카드뉴스 10분 만에 끝내는 방법","channel":"김엔퍼 kimnper","mission":"학과 소개 카드뉴스 5장 완성","steps":["ChatGPT에 카드뉴스 주제 · 대상 · 장수를 정해 장별 문구를 먼저 받습니다","장마다 같은 스타일로 이미지를 생성하도록 요청합니다","5장을 순서대로 저장해 SNS용 카드뉴스로 묶습니다"]},"E2-1":{"tool":"Canva AI","type":"EYE","lv":2,"vid":"ZOoc1o6TEkA","title":"캔바 AI 사용법/캔바에 이런 놀랄만한 AI가 숨어있는줄 몰랐죠?/캔바 매직의 모든 것","channel":"해라쌤","mission":"LLM 결과물을 결합한 포스터 + SNS 이미지 세트 완성","steps":["ChatGPT · Claude로 쓴 문구와 나노바나나 이미지를 준비합니다","Canva Magic Design으로 A4 포스터 · SNS 템플릿을 만들고 소재를 배치합니다","브랜드 키트(색 · 글꼴)를 저장해 같은 디자인을 여러 크기로 변환합니다"]},"E2-2":{"tool":"Adobe Firefly","type":"EYE","lv":2,"vid":"wjcbNt2DPf8","title":"[2026 최신] 어도비 파이어플라이 하나로 끝! 이미지/비디오/벡터/사운드 생성부터 편집까지 실전 압축 강의 (템플릿 참고부터 SVG 변환까지) adobe firefly","channel":"아공키공","mission":"상업적 이용이 가능한 Firefly 이미지 시안 세트 완성","steps":["Firefly 웹에서 텍스트로 이미지 생성을 열고 프롬프트를 입력합니다","구성 참조·스타일 참조를 지정해 브랜드 톤에 맞게 결과를 조정합니다","생성형 채우기로 세부를 수정하고 시안 세트를 다운로드합니다"]},"E2-3":{"tool":"Figma","type":"EYE","lv":2,"vid":"0hJtK_IBnrQ","title":"Figma Make 사용법 | 디자인을 AI로 구현하고 웹사이트까지 만들기 - 피그마 강좌 1-6","channel":"디자인베이스","mission":"앱·웹 화면 시안 2~3장 완성","steps":["Figma에 가입한 뒤 Figma Make 파일을 새로 만듭니다","화면 목적과 구성 요소를 프롬프트로 입력해 UI 시안을 생성합니다","생성된 화면을 수정 요청으로 다듬고 웹 미리보기로 확인합니다"]},"E2-4":{"tool":"SketchUp","type":"EYE","lv":2,"vid":"u1joehszjgw","title":"스케치업 기초 강의 - 1강 화면 설정, 벽체 올리기","channel":"인테리어101","mission":"실내 공간 3D 모델 1개 완성","steps":["SketchUp을 실행해 템플릿 단위와 화면 도구 모음을 설정합니다","선 도구로 평면을 그리고 밀기/끌기로 벽체를 올립니다","문·창 개구부를 만들고 장면을 저장해 공간 모델을 완성합니다"]},"E2-5":{"tool":"n8n","type":"EYE","lv":2,"vid":"x7fYUvU34_k","title":"n8n 으로 AI 이미지 생성 부터 편집 , 다운로드 까지 모두 자동화 해봤습니다. #n8n #자동화 #ai #","channel":"jisungs","mission":"브리프 입력→시안 이미지 자동 생성·저장 워크플로 1개 완성","steps":["n8n에서 새 워크플로를 만들고 Form Trigger로 디자인 브리프를 받습니다","OpenAI 노드에 브리프를 연결해 이미지 생성·편집을 자동 실행합니다","생성 결과를 Google Drive 노드로 저장해 시안 폴더를 만듭니다"]},"E3-1":{"tool":"D5 Render","type":"EYE","lv":3,"vid":"5TNQw-IlhzM","title":"D5 3.0 + AI 기능 총정리!","channel":"feeel.d - 필디","mission":"공간 렌더 이미지 2컷과 30초 워크스루 영상 완성","steps":["SketchUp 모델을 D5 Render로 불러와 재질과 조명을 설정합니다","AI 분위기 매칭·AI 재질 기능으로 렌더 품질을 높입니다","카메라 키프레임으로 워크스루 영상을 만들고 이미지와 함께 출력합니다"]},"E3-2":{"tool":"CLO 3D","type":"EYE","lv":3,"vid":"fQLitqASLVk","title":"Basic Workflow | The Complete Workflow for Creating Garments in CLO (Korean | 한국어)","channel":"CLO","mission":"3D 가상 샘플 1벌과 룩북 이미지 3컷 완성","steps":["CLO에서 아바타를 불러오고 2D 패턴 창에서 패턴을 그립니다","재봉 도구로 패턴을 연결하고 시뮬레이션으로 착장을 확인합니다","원단·컬러웨이를 지정해 렌더링하고 룩북 이미지를 저장합니다"]},"E3-3":{"tool":"Meshy·Tripo","type":"EYE","lv":3,"vid":"DR8r-qon3ac","title":"이미지 한장이면 3D 모델링이 뚝딱! Tripo AI와 Meshy AI. (합성용, 3D프린터용)","channel":"에디터 몽키","mission":"이미지 기반 3D 프린팅용 목업 모델 1개 완성","steps":["Tripo 또는 Meshy에서 Image to 3D를 열고 제품 이미지를 올립니다","생성된 모델의 텍스처와 형태를 확인하고 리메시로 정리합니다","STL 형식으로 내보내 슬라이서에서 3D 프린팅용 목업을 점검합니다"]},"E3-4":{"tool":"YouCam","type":"EYE","lv":3,"vid":"WFAWSeWEfwg","title":"YouCam Makeup: AR Makeup Tryout","channel":"Perfect Corp | Beauty Tech AI & AR","mission":"고객 맞춤 AR 메이크업·헤어 스타일 상담 카드 1장 완성","steps":["YouCam Makeup 앱을 설치하고 카메라로 실시간 AR 메이크업을 실행합니다","립·아이·헤어 컬러를 바꿔 가며 고객 얼굴형에 맞는 룩을 비교합니다","전후 비교 이미지를 저장해 스타일 상담 카드로 정리합니다"]},"E3-5":{"tool":"GPTs","type":"EYE","lv":3,"vid":"2rXMpBZwAQs","title":"나만의 GPTs 만들기｜결국 내 입맛에 맞는 AI는 내가 만들어야 했다","channel":"진서의 루트진 : ROOTJIN","mission":"브리프 작성·피드백을 반영하는 디자인 에이전트 GPT 1개 완성","steps":["ChatGPT의 GPT 만들기에서 구성 탭을 열고 이름과 지침을 작성합니다","지식에 디자인 가이드 파일을 올리고 피드백 기준을 지침에 넣습니다","미리보기로 브리프를 테스트하고 응답을 보며 지침을 수정합니다"]},"S1-1":{"tool":"ChatGPT","type":"STORY","lv":1,"vid":"H5fNpm9AQWU","title":"첫 3초에 넘겨지는 AI 쇼츠 대본, 조건 4줄로 바꾼 챗GPT 프롬프트 5개 (후킹·대본·말투·엔딩·제목)","channel":"AI 꿀팁 저장소","mission":"학과 주제 15초 숏폼 대본과 컷별 콘티 1세트","steps":["ChatGPT에 주제·타깃·길이 조건을 넣어 후킹 문장을 뽑습니다.","15초 분량으로 장면별 대사와 자막 문구를 대본으로 정리합니다.","대본을 컷 번호·화면·소리 표 형식의 콘티로 변환합니다."]},"S1-2":{"tool":"Gemini Veo","type":"STORY","lv":1,"vid":"dWwwgBxCQvY","title":"구글 제미나이 최신 기능 _ 동영상 생성 Veo 3.1 누구나 알기쉽게 사용하는 방법 알려드립니다 (How to use Google Gemini Veo 3.1)","channel":"IB 96","mission":"대본 장면을 영상으로 만든 8초 컷 2개","steps":["Gemini 앱에서 동영상 만들기(Veo)를 선택합니다","ChatGPT로 쓴 대본의 첫 장면을 장소 · 인물 · 카메라 움직임으로 묘사해 입력합니다","8초 컷을 2~3개 만들고 가장 좋은 컷을 내려받습니다"]},"S1-3":{"tool":"Claude 스토리","type":"STORY","lv":1,"vid":"HFRsEo5m0yE","title":"챗GPT·클로드 무료로 긴 스토리 AI 글쓰기 | 활용법과 차이 정리","channel":"생활D지털 가이드","mission":"1분 홍보 영상 스토리 + 장면 콘티 표","steps":["Claude에 주제 · 대상 · 길이를 주고 이야기 구조(도입 · 전개 · 반전)를 요청합니다","장면별 대사 · 내레이션을 쓰게 하고 어색한 부분을 대화로 고칩니다","완성 스토리를 장면 번호가 붙은 콘티 표로 정리합니다"]},"S1-4":{"tool":"Gemini 나노바나나 콘티","type":"STORY","lv":1,"vid":"zHkJ_ppVZ5o","title":"구글 제미나이 나노바나나: 전문가를 위한 AI 캐릭터 일관성 및 스토리 장면 생성 완벽 가이드","channel":"김에듀 AI강사","mission":"캐릭터가 일관된 4컷 스토리보드","steps":["Gemini 나노바나나로 주인공 캐릭터 기준 이미지를 만듭니다","같은 캐릭터로 장면 3~4개를 이어서 생성해 일관성을 유지합니다","장면 이미지를 콘티 순서대로 배치해 스토리보드로 저장합니다"]},"S1-5":{"tool":"NotebookLM 동영상 개요","type":"STORY","lv":1,"vid":"dCu0PChBH_k","title":"노트북LM의 최신 기능! 동영상개요를 소개합니다.","channel":"차세이CHASEYi","mission":"학과 주제 해설 영상 1편 + 숏폼 기획 메모","steps":["NotebookLM에 학과 수업 자료 · 기사 등 소스를 올립니다","스튜디오에서 동영상 개요를 만들고 길이 · 초점을 지정합니다","생성 영상을 확인하고 핵심 장면을 숏폼 기획에 활용합니다"]},"S2-1":{"tool":"Kling","type":"STORY","lv":2,"vid":"4f1kEWcc50g","title":"2026년 클링 AI 입문자를 위한 필수 영상(튜토리얼)","channel":"동테크","mission":"콘티 이미지를 움직이는 영상 컷 3개","steps":["Gemini 나노바나나로 만든 장면 이미지를 Kling에 올립니다","카메라 움직임 · 분위기를 프롬프트로 지정해 이미지 투 비디오를 생성합니다","컷별 결과를 비교해 숏폼에 쓸 컷을 내려받습니다"]},"S2-2":{"tool":"Suno","type":"STORY","lv":2,"vid":"L74hk3jmhPE","title":"SUNO (수노) '7분 핵심요약' 초보자를 위한 음악 제작 AI 사용법 #01","channel":"찍봇","mission":"숏폼용 15초 배경음 1곡","steps":["Suno에 가입하고 Create 화면에서 곡 생성 방식을 고릅니다.","장르·분위기를 스타일 프롬프트로 넣고 Instrumental로 생성합니다.","생성곡 중 15초 구간을 골라 배경음으로 내려받습니다."]},"S2-3":{"tool":"CapCut","type":"STORY","lv":2,"vid":"7EIoSvBpRKo","title":"캡컷(CAPCUT) PC버전 초보자가 꼭 알아야 할 기능 5가지 사용법","channel":"무궁화쌤","mission":"자동 자막이 들어간 15초 숏폼 완성본","steps":["Kling · Veo 컷과 Suno 배경음을 CapCut 타임라인에 배치합니다","자동 캡션으로 한국어 자막을 생성하고 오탈자를 수정합니다","9:16 비율로 맞춘 뒤 15초 숏폼을 내보내기 합니다"]},"S2-4":{"tool":"Google Flow","type":"STORY","lv":2,"vid":"7h9iTUEmqtk","title":"AI 이미지, 영상 생성! 구글 플로우 (flow) 활용법, Veo 3.1, Omni 모델, 캐릭터 일관성 유지","channel":"디지털거북이","mission":"장면이 연속되는 1분 AI 트레일러","steps":["Google Flow에서 새 프로젝트를 만들고 Veo 3.1 모델을 선택합니다.","인물 이미지를 재료로 등록해 캐릭터 일관성을 유지한 장면을 생성합니다.","Scenebuilder에서 장면을 이어 붙여 1분 트레일러로 확장합니다."]},"S2-5":{"tool":"n8n","type":"STORY","lv":2,"vid":"mL69JfdMdBc","title":"n8n에서 YouTube Shorts 자동화 만들기","channel":"밖에 나온 집돌이","mission":"기획 입력부터 쇼츠 업로드까지 자동화 흐름 1개","steps":["n8n에서 새 워크플로를 만들고 기획 입력용 트리거를 설정합니다.","AI 노드로 제목·설명을 생성하고 영상 파일을 연결합니다.","YouTube 노드를 연결해 Shorts 업로드를 자동 실행합니다."]},"S3-1":{"tool":"AI 단편영화","type":"STORY","lv":3,"vid":"VoAr06QtgiY","title":"[AI튜토리얼] AI 영화, 이 순서대로 만들면 됩니다 | 메카닉 영화 단편 '제로' 제작기","channel":"AInspire","mission":"학과 주제 3~5분 AI 단편영화(또는 뮤직비디오)","steps":["시나리오와 샷 리스트를 먼저 정리해 장면 구성을 설계합니다.","이미지 생성으로 캐릭터·배경을 고정한 뒤 영상 컷을 생성합니다.","음악·효과음·편집을 더해 3~5분 단편으로 완성합니다."]},"S3-2":{"tool":"DaVinci 컬러","type":"STORY","lv":3,"vid":"M3gvqLwaCJQ","title":"LUT없이 컬러그레이딩하는 방법! 다빈치 리졸브 색보정 워크플로우","channel":"반디필름 BandiFilm","mission":"시네마틱 룩을 적용한 컬러그레이딩 완성본","steps":["Color 페이지에서 노드를 추가해 보정 순서를 구성합니다.","컬러 휠과 커브로 노출·화이트밸런스를 먼저 맞춥니다.","LUT 없이 톤과 색감을 조정해 시네마틱 룩을 완성합니다."]},"S3-3":{"tool":"ElevenLabs 심화","type":"STORY","lv":3,"vid":"ZpfVVXq0pD8","title":"내 목소리를 억양까지 복제한다고? 일레븐랩스 고급 보이스 클로닝 실전 내 목소리 학습하기","channel":"아공키공","mission":"내 목소리 기반 다국어 더빙 영상","steps":["Voices에서 Voice Clone을 선택해 녹음 샘플을 올립니다.","복제한 목소리로 대본을 생성해 억양과 발음을 점검합니다.","Dubbing으로 영상을 영어·일본어 등 다국어 버전으로 변환합니다."]},"S3-4":{"tool":"n8n AI Agent","type":"STORY","lv":3,"vid":"rjQe5Jz6Gns","title":"AI 자동화 SNS 영상 제작 | AI 자동화 Agent n8n 실전 가이드 7","channel":"조피디 연구소 JoPD LAB","mission":"주제 입력 시 SNS 영상을 만드는 콘텐츠 제작 에이전트","steps":["n8n에서 AI Agent 노드에 콘텐츠 기획 역할과 도구를 연결합니다.","대본·이미지·영상 생성 API를 순서대로 호출하도록 구성합니다.","완성 영상을 SNS 채널에 게시하는 단계까지 자동화합니다."]},"S3-5":{"tool":"Gemini Gems","type":"STORY","lv":3,"vid":"xaGifBaEHk0","title":"1시간 컷! 구글 AI 삼각편대(NotebookLM+Gems+Gemini)로 '나만의 AI 전담 작가' 구축하기","channel":"cocojuan코코쥬안","mission":"세계관 기반 회차 플롯을 쓰는 작가 에이전트","steps":["NotebookLM에 세계관·인물 설정 자료를 모아 정리합니다.","Gems에 작가 역할과 플롯 작성 규칙을 지침으로 입력합니다.","Gem으로 회차별 플롯을 생성하고 설정 충돌을 점검합니다."]},"P1-1":{"tool":"Claude","type":"PEN","lv":1,"vid":"vbqR91k-mVg","title":"클로드(Claude) 사용법 A to Z｜가입부터 업무 활용법까지 20분 총정리!","channel":"온선 [온라인 선생님]","mission":"전공 자료 1건을 요약하고 과제 초안 1쪽을 완성합니다.","steps":["Claude에 가입한 뒤 새 채팅에서 과제 자료 파일을 첨부합니다.","자료의 핵심 내용을 학과 보고서 형식으로 요약하도록 요청합니다.","요약을 바탕으로 과제 초안을 작성하고 후속 질문으로 다듬습니다."]},"P1-2":{"tool":"NotebookLM","type":"PEN","lv":1,"vid":"XtlRPSTS1uY","title":"노트북LM 사용법, 10분 만에 완전정복 가능한 초보자 필수 기능 총정리 #notebooklm #노트북LM","channel":"모아AI","mission":"수업 자료 기반 출처 인용 요약과 오디오 개요 1편을 만듭니다.","steps":["새 노트북을 만들고 수업 자료 PDF·웹 링크를 소스로 추가합니다.","채팅에서 질문해 인용 번호가 달린 출처 기반 요약을 확인합니다.","스튜디오 패널에서 오디오 개요를 생성해 핵심 내용을 들어 봅니다."]},"P1-3":{"tool":"ChatGPT","type":"PEN","lv":1,"vid":"c18rBKgwDas","title":"초보자를 위한 챗GPT 사용법 기본완성 강의 (무료 전자책 포함)","channel":"일끝내는 Endwork","mission":"전공 주제 에세이 또는 보고서 초안 1편을 작성합니다.","steps":["ChatGPT에 과제 주제·분량·독자를 담은 역할 프롬프트를 입력합니다.","개요를 먼저 받은 뒤 단락별로 에세이·보고서 초안을 생성합니다.","캔버스에서 문장을 수정하고 어조·길이 조정으로 완성도를 높입니다."]},"P1-4":{"tool":"ChatGPT 프로젝트","type":"PEN","lv":1,"vid":"eP2tKbfR0KU","title":"대화 파일 지침 한번에 묶는 ChatGPT 프로젝트 기능 완전정복","channel":"AI 일잘러","mission":"학과 과제 전용 ChatGPT 프로젝트 + 보고서 초안","steps":["ChatGPT에서 새 프로젝트를 만들고 학과 과제 이름을 붙입니다","과제 안내문 · 참고 파일을 올리고 '항상 지킬 지침'(문체 · 분량)을 적습니다","프로젝트 안에서 보고서 초안 · 수정 대화를 이어 갑니다"]},"P1-5":{"tool":"Gemini","type":"PEN","lv":1,"vid":"2Qx1fCAeYfI","title":"제미나이 '캔버스(Canvas)' 기능으로 3시간짜리 문서 작업을 30분으로 확! 줄이는 방법!","channel":"온선 [온라인 선생님]","mission":"학과 행사 안내문 또는 실습 기록 문서 1건을 완성합니다.","steps":["Gemini 입력창에서 캔버스를 선택하고 문서 작성 목적을 입력합니다.","생성된 캔버스 문서에서 문단을 선택해 부분 수정을 요청합니다.","길이·어조 조정 기능으로 다듬은 뒤 Google Docs로 내보냅니다."]},"P2-1":{"tool":"NotebookLM 심화","type":"PEN","lv":2,"vid":"ceOa8fKs9Zo","title":"구글 노트북LM 완벽 가이드 (2026 최신판): 실무 활용부터 업무 자동화까지 총정리!","channel":"온선 [온라인 선생님]","mission":"전공 직무 자료 기반 Q&A 지식베이스 노트북을 구축합니다.","steps":["직무 매뉴얼·규정 등 자료를 하나의 노트북에 소스로 모읍니다.","맞춤 설정으로 답변 역할을 지정하고 직무 질문에 답하게 합니다.","보고서·마인드맵 등 스튜디오 기능으로 지식베이스 문서를 만듭니다."]},"P2-2":{"tool":"Claude MCP","type":"PEN","lv":2,"vid":"fkqXQOjj8cA","title":"MCP써야 진짜 Claude다! 500% 활용 튜토리얼 (개념부터 활용까지)","channel":"시민개발자 구씨","mission":"커넥터를 연결해 자료 조회부터 문서 저장까지 자동화합니다.","steps":["Claude 설정의 커넥터 메뉴에서 Google Drive MCP를 연결합니다.","연결된 도구에서 자료를 불러와 문서 작성을 요청합니다.","완성된 문서를 커넥터로 다시 저장하는 흐름을 점검합니다."]},"P2-3":{"tool":"Claude 프로젝트","type":"PEN","lv":2,"vid":"g5-A4wgrhEc","title":"클로드 프로젝트 이 영상 하나면 됩니다 | 요즘 일잘러의 클로드 프로젝트 실전 사용법","channel":"백프롬","mission":"학과 과제에 반복 사용할 문서 템플릿 프로젝트를 만듭니다.","steps":["Claude에서 새 프로젝트를 만들고 지침에 문서 양식 규칙을 입력합니다.","프로젝트 지식에 기존 양식·예시 문서를 업로드합니다.","대화 중 생성된 아티팩트를 반복 문서 템플릿으로 다듬어 저장합니다."]},"P2-4":{"tool":"Gemini Workspace","type":"PEN","lv":2,"vid":"tMMBgm7d_5k","title":"일잘러를 위한 제미나이, 구글 워크스페이스 활용법","channel":"일잘러를 위한 챗GPT 강사 강성희","mission":"Gmail·Docs에서 Gemini로 메일 회신과 문서 초안을 완성합니다.","steps":["Gmail 사이드 패널에서 Gemini로 받은 메일 스레드를 요약합니다.","도움받아 작성하기 기능으로 회신 메일 초안을 생성합니다.","Google Docs에서 Gemini로 문서 초안을 만들고 다듬습니다."]},"P2-5":{"tool":"n8n","type":"PEN","lv":2,"vid":"okPqEZcUvu0","title":"아직도 메일 직접 쓰세요? 직장인 99%가 모르는 AI 자동화 (with.n8n)","channel":"데이브의 개발 생활 | AI 소모임 대표 채널","mission":"받은 메일·기록을 자동 요약해 전달하는 n8n 흐름을 만듭니다.","steps":["n8n에서 새 워크플로우를 만들고 Gmail 트리거 노드를 연결합니다.","AI 노드에 요약 프롬프트를 넣어 받은 메일 내용을 정리합니다.","요약 결과를 메일·문서로 보내는 노드를 연결하고 실행합니다."]},"P3-1":{"tool":"Claude Code","type":"PEN","lv":3,"vid":"C6xlOsQFyOQ","title":"코딩 1도 모르는 직장인을 위한 Claude Code 시작 가이드","channel":"일잘러 장피엠","mission":"폴더 속 문서를 일괄 요약·정리하는 문서 처리 Agent를 만듭니다.","steps":["Claude Code를 설치하고 과제 자료 폴더에서 터미널로 실행합니다.","자연어로 여러 문서를 읽고 요약·변환하는 작업을 지시합니다.","반복 작업 절차를 CLAUDE.md에 정리해 문서 처리 Agent로 완성합니다."]},"P3-2":{"tool":"n8n RAG","type":"PEN","lv":3,"vid":"N6Ual_n9SaQ","title":"문서만 넣으면 AI가 대신 답한다?! 15분만에 n8n으로 RAG Agent 만들기","channel":"시민개발자 구씨","mission":"학과 가이드라인 문서 기반 Q&A 에이전트를 구축합니다.","steps":["n8n에서 가이드라인 문서를 불러와 벡터 스토어에 저장합니다.","AI Agent 노드에 벡터 스토어 검색 도구를 연결합니다.","채팅 트리거로 질문해 문서 근거 기반 답변을 확인합니다."]},"P3-3":{"tool":"GPTs","type":"PEN","lv":3,"vid":"7eNIGVwj6Zw","title":"실전 사례로 배우는 GPTs 제작 노하우","channel":"한 걸음 HRD","mission":"민원 · 안내 응대 GPT 1개 + 테스트 기록","steps":["직무에서 반복되는 질문 · 안내 업무 하나를 골라 GPT의 역할 · 지침을 씁니다","규정 · 안내 문서를 지식으로 올리고 대화 시작 문구를 설정합니다","예상 질문 10개로 테스트해 답변 오류를 지침에 반영합니다"]},"P3-4":{"tool":"Gemini Gems","type":"PEN","lv":3,"vid":"l1cA25ZZfRI","title":"작업 시간이 2시간 빨라집니다. 제미나이 젬스(Gems)로 나만의 AI 템플릿 만들어 무한 재사용하기","channel":"수석연구원 주AI","mission":"기록을 정해진 양식으로 요약하는 Gem을 완성합니다.","steps":["Gemini의 Gem 관리자에서 새 Gem을 만들고 요약 지침을 입력합니다.","지식 영역에 기록 양식·예시 파일을 추가합니다.","회의·실습 기록을 넣어 정해진 형식으로 요약되는지 확인합니다."]},"P3-5":{"tool":"Claude Skills","type":"PEN","lv":3,"vid":"jv6eVs-sKyk","title":"아직도 클로드 에이전트 안하세요? — Skill 2.0 완전 정복 | 스킬 만들기 | 오후다섯씨","channel":"오후다섯씨","mission":"전공 직무 절차를 담은 Claude 스킬 패키지를 만듭니다.","steps":["Claude 설정의 기능 메뉴에서 스킬을 활성화하고 기본 스킬을 확인합니다.","skill-creator로 직무 절차를 담은 SKILL.md 스킬을 생성합니다.","스킬 파일을 업로드해 실제 과제에 적용하고 결과를 점검합니다."]},"M1-1":{"tool":"Claude 아티팩트","type":"MAP","lv":1,"vid":"gabVScc2Zs4","title":"클로드 AI의 아티팩트로 문서, 차트, 다이어그램을 만드는 놀라운 기능","channel":"IB 96","mission":"학과 실습 절차 순서도 1장","steps":["Claude에 업무 절차나 공정을 단계별로 설명합니다","아티팩트로 순서도 · 다이어그램을 만들어 달라고 요청합니다","빠진 단계 · 분기를 대화로 보완하고 이미지로 저장합니다"]},"M1-2":{"tool":"Claude","type":"MAP","lv":1,"vid":"WCgHcAjiY1s","title":"2026 클로드(Claude) 사용법 30분 총정리 — 무료로 시작해서 업무 자동화까지 (초보자 필수)","channel":"AI 겸임교수 이종범","mission":"목차·목표·일정이 담긴 기획서 초안 1부","steps":["Claude 무료 계정으로 새 채팅을 열고 과제 배경을 입력합니다.","파일 첨부로 참고 자료를 올리고 기획서 목차를 요청합니다.","아티팩트로 생성된 초안을 항목별로 다듬어 저장합니다."]},"M1-3":{"tool":"ChatGPT","type":"MAP","lv":1,"vid":"Lr30qDcMcJE","title":"챗GPT 초보자가이드 2026 | 이 영상 하나로 끝내세요.","channel":"그린코끼리 AI","mission":"작업 공정표와 점검 체크리스트 1세트","steps":["ChatGPT에 작업 범위와 기간을 입력해 공정 단계를 뽑습니다.","단계별 담당·기간을 표 형식으로 정리하도록 요청합니다.","표를 엑셀 파일로 내려받고 점검 체크리스트를 덧붙입니다."]},"M1-4":{"tool":"Gemini 캔버스","type":"MAP","lv":1,"vid":"tED-NEa58PA","title":"이게 된다고..?? 제미나이로 자료 조사부터 PPT 제작까지! 제미나이 캔버스 활용법","channel":"김이솝의 AI 가이드","mission":"기획서 1부 + 발표 슬라이드 6장","steps":["Gemini에서 캔버스를 켜고 기획 주제의 자료 조사를 요청합니다","조사 결과로 기획서 초안을 만들고 문단을 직접 다듬습니다","같은 캔버스에서 발표용 슬라이드로 변환해 내보냅니다"]},"M1-5":{"tool":"NotebookLM 마인드맵","type":"MAP","lv":1,"vid":"JMu4aC771UM","title":"제미나이 노트북 왕초보 탈출하기 | 노트북LM 새 이름, 자료 넣기부터 오디오·퀴즈·마인드맵까지","channel":"윤자동","mission":"작업 절차를 정리한 마인드맵 1장","steps":["NotebookLM에 매뉴얼·교재 PDF를 소스로 추가합니다.","스튜디오 패널에서 마인드맵을 생성해 절차를 확인합니다.","노드를 펼쳐 단계별 요약을 확인하고 이미지로 저장합니다."]},"M2-1":{"tool":"n8n","type":"MAP","lv":2,"vid":"BxOl6wDrCVo","title":"(1부) n8n 자동화 시작하기 : 워크플로우 기초부터 잡기","channel":"에이아이밋 AIMIT","mission":"폼 제출 → 시트 저장 → 알림 발송 워크플로 1개","steps":["n8n에서 Form Trigger 노드로 신청 폼을 만듭니다.","Google Sheets 노드로 폼 응답을 시트에 행으로 추가합니다.","Gmail 노드를 연결해 제출 시 알림 메일을 발송합니다."]},"M2-2":{"tool":"Gamma","type":"MAP","lv":2,"vid":"Y4buT2Kin0E","title":"Gamma(감마) 사용법 총정리😁 파워포인트 안~~녕! 더 편한 감마가 온다.","channel":"슈퍼휴먼X","mission":"기획서를 발표용 Gamma 슬라이드 10장으로 완성","steps":["Claude · Gemini로 만든 기획서 초안을 Gamma에 붙여 넣습니다","카드별 구성을 발표 흐름에 맞게 재배치하고 테마를 적용합니다","웹 링크 · PDF로 공유해 피드백을 받습니다"]},"M2-3":{"tool":"Claude MCP 실무","type":"MAP","lv":2,"vid":"r7wRZ7-M1aQ","title":"업무시간 70% 단축 실전 노하우! 클로드 스킬 완벽 가이드: MCP 연동으로 업무 자동화 구축하는 법 (PPT·보고서·Excel)","channel":"QJC 퀀텀점프클럽","mission":"MCP 연동으로 자동 작성한 업무 보고서 1부","steps":["Claude 데스크톱 설정에서 MCP 커넥터를 연결합니다.","연결된 파일·데이터를 불러와 보고서 구조를 요청합니다.","스킬로 보고서 양식을 저장해 반복 작성에 활용합니다."]},"M2-4":{"tool":"Autodesk Fusion","type":"MAP","lv":2,"vid":"UHl0qZjzYFM","title":"퓨전 쌩 기초 1시간 완성 | Fusion 3D 모델링 | 다은쌤","channel":"메이커 다은쌤","mission":"치수가 반영된 부품 3D 모델 1개","steps":["Fusion에서 스케치를 만들고 치수 구속으로 형상을 잡습니다.","돌출·회전·모깎기 명령으로 부품을 3D로 완성합니다.","재질을 지정한 뒤 STL 또는 F3D 파일로 내보냅니다."]},"M2-5":{"tool":"AutoCAD","type":"MAP","lv":2,"vid":"yqG0pzgLDEo","title":"1시간으로 완성하는 AutoCAD 기초 강의 (통합본)","channel":"브릴위즈","mission":"치수가 기입된 평면 또는 결선 도면 1장","steps":["AutoCAD에서 도면층을 만들고 선 종류·색상을 지정합니다.","LINE·OFFSET·TRIM 명령으로 평면 윤곽을 그립니다.","DIMLINEAR로 치수를 넣고 PDF로 플롯합니다."]},"M3-1":{"tool":"n8n AI Agent","type":"MAP","lv":3,"vid":"VlsgHC5xkPA","title":"코딩없이 가능한 AI 에이전트! 초보자용 n8n 실전 튜토리얼","channel":"시민개발자 구씨","mission":"점검 결과를 받아 보고서를 보내는 업무 Agent","steps":["n8n에 AI Agent 노드를 추가하고 채팅 모델을 연결합니다.","시트 조회·메일 발송 도구를 Agent에 툴로 등록합니다.","점검 데이터를 받아 보고서를 쓰는 프롬프트를 설정합니다."]},"M3-2":{"tool":"Lovable","type":"MAP","lv":3,"vid":"qoFFrrUhXCU","title":"초보자를 위한 Lovable 사용법 가이드 | 제작부터 배포까지","channel":"그린코끼리 AI","mission":"배포 링크가 있는 웹앱 MVP 1개","steps":["Lovable 첫 화면에서 만들 웹앱 기능을 프롬프트로 입력합니다.","미리보기를 확인하며 채팅으로 화면과 기능을 수정합니다.","Publish 버튼으로 배포하고 공유 링크를 생성합니다."]},"M3-3":{"tool":"Fusion 생성형 설계","type":"MAP","lv":3,"vid":"H72C5JpX4uc","title":"AI 제너레이티브 디자인 예제 (퓨전360-AI기능활용 휴대폰 거치대 만들기 )","channel":"울산기술직업전문학교","mission":"하중 조건을 만족하는 경량화 설계안 1개","steps":["Generative Design 작업공간에서 보존·장애물 형상을 지정합니다.","하중·구속 조건과 재질, 제조 방식을 설정합니다.","생성된 결과를 비교해 무게가 가장 낮은 설계안을 고릅니다."]},"M3-4":{"tool":"Pix4D","type":"MAP","lv":3,"vid":"TqoAN5MbaM4","title":"PIX4D mapper사용법 2시간 완전정복 (1.설치부터 기본 사용법까지) Mastering PIX4D mapper in 2 hours.","channel":"정교수의 드론강의 - 드론매핑 전문 채널","mission":"드론 사진으로 만든 3D 지형 모델 1개","steps":["PIX4Dmapper에서 새 프로젝트를 만들고 드론 사진을 불러옵니다.","좌표계와 처리 옵션 템플릿을 선택해 처리를 실행합니다.","생성된 점군·메시로 3D 지형 모델과 정사영상을 확인합니다."]},"M3-5":{"tool":"GPTs 업무 에이전트","type":"MAP","lv":3,"vid":"ZUt5-TTXLX0","title":"GPT에서 구글, 네이버, 유튜브 동시에 연동하기 | GPTs Action 활용법","channel":"10X AI Club","mission":"외부 API를 호출하는 기업 과제용 GPT Agent 1개","steps":["GPT 편집기 구성 탭에서 지침과 지식 파일을 등록합니다.","작업 만들기에서 외부 API 스키마를 붙여 넣어 Action을 연결합니다.","미리보기로 Action 호출을 시험하고 링크로 공유합니다."]},"L1-1":{"tool":"ChatGPT 딥리서치","type":"LENS","lv":1,"vid":"BTJJZ5E_w0c","title":"챗GPT에서 가장 대박인 '딥리서치' 기능, 어떻게 활용하면 좋을지 전부 공개합니다! (feat. 프롬프트)","channel":"오은환의 하이라이트","mission":"학과 주제 1페이지 리서치 리포트(출처 포함)","steps":["ChatGPT에서 심층 리서치를 켜고 조사 주제 · 범위 · 기간을 적습니다","AI가 묻는 확인 질문에 답해 조사 방향을 좁힙니다","보고서 출처를 확인하고 핵심만 1페이지로 정리합니다"]},"L1-2":{"tool":"ChatGPT 데이터 분석","type":"LENS","lv":1,"vid":"0YiNzpFRqNQ","title":"챗GPT 데이터분석 왕초보 완벽 가이드 | 공공데이터 넣으면 분석·시각화 한번에(엑셀·코딩 몰라도 OK)","channel":"김용성 교수의 AI 클래스","mission":"공공데이터 차트 2개와 3줄 해석 완성","steps":["공공데이터포털에서 전공 관련 CSV·엑셀 파일을 내려받습니다.","챗GPT에 파일을 업로드하고 요약 통계와 차트 생성을 요청합니다.","생성된 차트를 보고 추세와 시사점을 3줄 해석으로 정리합니다."]},"L1-3":{"tool":"Gemini 딥리서치","type":"LENS","lv":1,"vid":"m2xBzXUDVpI","title":"[5분 제미나이] 6강. 딥 리서치(Deep Research)로 심층 분석 | 산업 트렌드·시장 조사 자동화와 인포그래픽 만들기","channel":"한빛미디어","mission":"출처가 명시된 전공 산업 동향 리포트 완성","steps":["제미나이에서 딥 리서치를 선택하고 산업 동향 조사 주제를 입력합니다.","제안된 연구 계획을 검토·수정한 뒤 리서치를 시작합니다.","완성된 보고서의 출처를 검증하고 인포그래픽으로 변환해 정리합니다."]},"L1-4":{"tool":"Claude 분석","type":"LENS","lv":1,"vid":"Tp-MDtzbH98","title":"Claude Artifacts로 엑셀 매출 데이터 대시보드 만들기 | 실습 전과정 20분","channel":"패스트캠퍼스","mission":"Claude 아티팩트로 데이터 분석 대시보드 1개 완성","steps":["클로드에 엑셀·CSV 데이터를 첨부하고 주요 지표 분석을 요청합니다.","아티팩트 기능으로 차트가 포함된 대시보드 화면을 생성합니다.","대화로 필터·차트 종류를 수정해 과제용 대시보드를 완성합니다."]},"L1-5":{"tool":"Gemini (AI Studio)","type":"LENS","lv":1,"vid":"irw2SOuu_UI","title":"제미나이 3.1 제대로 쓰는 법! 구글 AI 스튜디오 플레이그라운드 활용 가이드","channel":"GPT PARK의 AI팩트","mission":"Gemini로 전공 자료 분석 요약본 완성","steps":["구글 계정으로 AI 스튜디오에 접속해 플레이그라운드를 엽니다.","모델을 Gemini로 선택하고 전공 자료 파일을 업로드해 분석을 요청합니다.","시스템 지시문으로 요약 형식을 지정해 핵심 요약본을 완성합니다."]},"L2-1":{"tool":"Perplexity","type":"LENS","lv":2,"vid":"cxOZtuQjhw4","title":"🚨밤새가 된 이유? 퍼플렉시티 딥 리서치로 보고서 10분 완성","channel":"직장인 납득이의 AI 생존기","mission":"출처 교차검증 표 + 보완된 리서치 리포트","steps":["ChatGPT · Gemini 딥리서치 결과의 핵심 주장 3개를 고릅니다","Perplexity 딥 리서치로 같은 주제를 조사해 출처를 교차 확인합니다","출처가 엇갈리는 부분을 표로 정리해 리포트에 반영합니다"]},"L2-2":{"tool":"NotebookLM 논문","type":"LENS","lv":2,"vid":"T6CsdmTepZA","title":"대학원 입학하자마자 가장 먼저 사용해야 할 AI, 노트북LM 활용방법 시연","channel":"논문쓸결심 with workgrit","mission":"논문 3편 비교 요약표 1장 완성","steps":["노트북LM에서 새 노트북을 만들고 관련 논문 PDF 2~3편을 소스로 추가합니다.","채팅으로 각 논문의 연구 방법·결과 차이를 비교해 달라고 질문합니다.","답변의 인용 표시를 확인하고 메모로 저장해 비교 요약표를 만듭니다."]},"L2-3":{"tool":"n8n 데이터 수집","type":"LENS","lv":2,"vid":"s2xEN9h9fbM","title":"N8N으로 구글 스프레드시트 자동화하기 | 구글 API 연동부터 ChatGPT 활용까지 완벽 가이드","channel":"일하는 ai","mission":"웹 데이터가 자동으로 쌓이는 구글 시트 완성","steps":["n8n에서 새 워크플로를 만들고 구글 API 자격 증명을 연결합니다.","HTTP Request 노드로 웹 데이터를 가져와 필요한 항목만 정리합니다.","Google Sheets 노드로 결과를 시트에 자동으로 누적 저장합니다."]},"L2-4":{"tool":"Claude MCP 분석","type":"LENS","lv":2,"vid":"MNwO1AHunfk","title":"클로드 MCP 사용법 총정리 | 로그인 없이 붙는 서버부터 노션·캔바 연결까지","channel":"AI 르빌더","mission":"MCP로 외부 데이터를 연결한 분석 결과 1건 완성","steps":["클로드 설정의 커넥터 메뉴에서 MCP 서버 연결 방법을 확인합니다.","노션 등 데이터가 있는 서비스를 MCP로 연결하고 권한을 승인합니다.","연결된 데이터를 불러와 분석을 요청하고 결과를 정리합니다."]},"L2-5":{"tool":"Flux","type":"LENS","lv":2,"vid":"do40huur8fE","title":"미쳤습니다. PCB 하드웨어 개발도 AI로 완전히 달라지고 있습니다. [EDA 언박싱]","channel":"그라운드 임베디드","mission":"Flux Copilot으로 AI 보조 회로도와 PCB 배치 완성","steps":["Flux에 가입한 뒤 새 프로젝트를 만들고 Copilot 창을 엽니다.","Copilot에 LED 회로 등 설계 요구사항을 입력해 회로도를 생성합니다.","Auto Layout 기능으로 PCB 배치·배선을 실행하고 결과를 검토합니다."]},"L3-1":{"tool":"Cursor","type":"LENS","lv":3,"vid":"CF4Fb9vkrik","title":"AI 코딩 끝판왕 커서 AI 사용법 - 설치부터 상세하게 (비개발자 모두 주목!)","channel":"챗과장","mission":"커서로 학과 업무용 웹서비스 1개 완성","steps":["커서를 설치하고 새 폴더를 열어 프로젝트를 시작합니다.","채팅 창에 업무용 웹서비스 요구사항을 적어 코드 생성을 요청합니다.","브라우저에서 실행 결과를 확인하고 오류를 채팅으로 수정합니다."]},"L3-2":{"tool":"Claude Code","type":"LENS","lv":3,"vid":"1_bRmkUvjHA","title":"Claude Code 왕초보 입문 튜토리얼 23가지 팁 | 클로드코드 설치 사용법 50분 강의 완전정복 2026 가이드","channel":"AI싱크클럽","mission":"클로드 코드로 데이터 분석 Agent 1개 완성","steps":["터미널에 클로드 코드를 설치하고 프로젝트 폴더에서 실행합니다.","CLAUDE.md에 분석 목적과 데이터 규칙을 작성해 작업 기준을 정합니다.","데이터 파일을 지정해 분석 스크립트와 리포트 생성을 요청합니다."]},"L3-3":{"tool":"Hugging Face","type":"LENS","lv":3,"vid":"OsbRSq6_oeM","title":"허깅 페이스 완벽 가이드: 누구나 AI 전문가가 되는 법 / 코딩 몰라도 OK! 허깅 페이스에서 나만의 AI 앱 만들기 / 구글, 메타 최신 AI를 공짜로? 오픈소스 AI 혁명","channel":"Beyond Words | Montreal","mission":"허깅페이스 Spaces에 모델 탑재 데모 1개 공개","steps":["허깅페이스에 가입하고 Models 메뉴에서 전공에 맞는 모델을 검색합니다.","모델 카드와 Inference 위젯으로 입력·출력 결과를 테스트합니다.","Spaces에서 새 앱을 만들어 모델을 탑재한 데모를 공개합니다."]},"L3-4":{"tool":"KiCad","type":"LENS","lv":3,"vid":"LHFgzNLYgkY","title":"Kicad로 PCB 설계부터 주문까지! A-Z 완벽 가이드 (회로도 파일 제공)","channel":"렙티튜드","mission":"센서 보드 PCB 거버 파일 완성","steps":["키캐드에서 새 프로젝트를 만들고 회로도 편집기로 센서 회로를 그립니다.","부품마다 풋프린트를 지정한 뒤 PCB 편집기로 배치하고 배선합니다.","DRC로 오류를 검사하고 거버 파일을 출력해 주문을 준비합니다."]},"L3-5":{"tool":"n8n AI Agent 분석","type":"LENS","lv":3,"vid":"TvH3EriH5e0","title":"데이터만 넣으면 끝?! AI가 숫자 분석·리포트까지! SQL RAG 에이전트 완전정복","channel":"시민개발자 구씨","mission":"데이터 분석 리포트를 자동 생성하는 n8n Agent 완성","steps":["n8n에 데이터베이스를 연결하고 AI Agent 노드를 추가합니다.","SQL 도구를 Agent에 연결해 자연어 질문으로 데이터를 조회하게 합니다.","분석 결과를 리포트 형식으로 정리해 자동 전달하도록 구성합니다."]}},"depts":[{"name":"AI시각디자인학과","type":"EYE","s1":"브랜드 키비주얼 · 포스터 3안","s2":"브리프 입력 → 시안 생성 → 피드백 반영 디자인 에이전트","s3":"지역 기업 브랜딩 PBL · 캡스톤"},{"name":"인테리어디자인과","type":"EYE","s1":"공간 무드보드 · 콘셉트 렌더","s2":"고객 요구 → 자재 · 컬러 제안 시안 에이전트","s3":"인테리어 업체 현장실습"},{"name":"환경조경디자인과","type":"EYE","s1":"조경 계획 이미지 · 식재 콘셉트","s2":"대상지 정보 → 식재 계획 초안 에이전트","s3":"조경 설계사무소 PBL"},{"name":"신발패션과","type":"EYE","s1":"신발 디자인 시안 · 룩북","s2":"트렌드 수집 → 디자인 변형안 생성 에이전트","s3":"신발 브랜드 신제품 기획 PBL"},{"name":"헤어디자인과","type":"EYE","s1":"헤어스타일 시뮬레이션 카드","s2":"고객 상담 → 스타일 추천 · 예약 안내 에이전트","s3":"헤어숍 인턴십 · 고객관리 과제"},{"name":"글로벌K뷰티학과","type":"EYE","s1":"메이크업 룩 카드뉴스(다국어)","s2":"피부 상담 → 제품 · 루틴 추천 에이전트(다국어)","s3":"K-뷰티 기업 해외 마케팅 PBL"},{"name":"K뷰티스타일리스트과","type":"EYE","s1":"스타일링 룩북 · 무드보드","s2":"촬영 콘셉트 → 스타일링 시트 생성 에이전트","s3":"촬영 · 방송 현장실습"},{"name":"미디어영상과","type":"STORY","s1":"AI 숏폼 · 뮤직비디오 15초","s2":"기획 → 스크립트 → 편집 컷 리스트 자동화 에이전트","s3":"영상 제작사 현장실습 · 캡스톤 작품"},{"name":"디지털문예창작과","type":"STORY","s1":"웹소설 플롯 · 표지 · 북트레일러","s2":"세계관 설정 → 회차 플롯 초안 에이전트","s3":"웹콘텐츠 공모 연계 PBL"},{"name":"호텔관광과","type":"STORY","s1":"관광 코스 홍보 숏폼","s2":"고객 요청 → 맞춤 일정 · 안내문 에이전트(다국어)","s3":"호텔 · 여행사 인턴십"},{"name":"유아교육과","type":"STORY","s1":"AI 그림 동화 · 동요","s2":"놀이 주제 → 활동 계획안 · 가정통신문 에이전트","s3":"어린이집 교육실습 연계"},{"name":"호텔제과제빵과","type":"STORY","s1":"신메뉴 홍보 숏폼 · 패키지 이미지","s2":"신메뉴 기획 → 원가 · 홍보 문구 에이전트","s3":"베이커리 브랜드 PBL"},{"name":"간호학과","type":"PEN","s1":"환자 교육 자료 · 간호 기록 연습","s2":"가이드라인 Q&A · 인계 요약 에이전트(가상 데이터)","s3":"임상실습 연계 사례 보고 캡스톤"},{"name":"병원의료행정과","type":"PEN","s1":"원무 안내문 · 청구 용어 정리","s2":"문의 응대 · 서류 안내 에이전트","s3":"병원 원무과 현장실습"},{"name":"사회복지학과","type":"PEN","s1":"사례 기록 · 프로그램 계획서 초안","s2":"상담 기록 요약 · 자원 연계 추천 에이전트(가상)","s3":"복지관 현장실습 · 프로그램 PBL"},{"name":"작업치료과","type":"PEN","s1":"치료 계획서 · 보호자 안내문","s2":"평가 결과 → 가정 프로그램 안내 에이전트(가상)","s3":"재활기관 임상실습 연계"},{"name":"경찰행정학과","type":"PEN","s1":"법령 · 판례 요약, 보고서","s2":"민원 유형 분류 · 응답 초안 에이전트","s3":"공공기관 현장실습"},{"name":"국방산업학과","type":"PEN","s1":"브리핑 보고서 · 규정 요약","s2":"일일 보고 · 점검 일지 자동화 에이전트","s3":"방산 기업 연계 과제"},{"name":"자율전공학과","type":"PEN","s1":"전공 탐색 리포트 · 진로 포트폴리오","s2":"진로 탐색 코치 에이전트","s3":"희망 전공 PBL 참여"},{"name":"기계과","type":"MAP","s1":"가공 공정도 · 작업 표준서","s2":"작업일지 · 설비 점검 기록 자동화 에이전트","s3":"제조 기업 현장실습 · 공정 개선 PBL"},{"name":"전기과","type":"MAP","s1":"결선 · 점검 절차 다이어그램","s2":"전기 안전점검 체크리스트 · 보고 에이전트","s3":"전기공사 · 발전 기업 인턴십"},{"name":"전기수소자동차과","type":"MAP","s1":"정비 절차 플로우 · 고장진단 트리","s2":"증상 입력 → 정비 매뉴얼 안내 에이전트","s3":"정비 · 부품 기업 현장실습"},{"name":"토목환경과","type":"MAP","s1":"시공 계획 · 공정표","s2":"공정 일보 · 안전 점검 자동화 에이전트","s3":"건설사 현장실습"},{"name":"소방안전관리과","type":"MAP","s1":"소방 점검표 · 피난 계획","s2":"점검 결과 → 보고서 자동 생성 에이전트","s3":"소방 안전관리 업체 PBL"},{"name":"경영학과","type":"MAP","s1":"사업계획 슬라이드 · 시장 분석","s2":"매출 · 재고 리포트 자동화 에이전트","s3":"지역 기업 경영 개선 PBL"},{"name":"AI창업학과","type":"MAP","s1":"린캔버스 · IR 피치덱","s2":"고객 응대 · 마케팅 자동화 MVP 에이전트","s3":"창업 캡스톤 · MVP 출시"},{"name":"호텔외식조리학과","type":"MAP","s1":"메뉴 기획 · 레시피 공정표","s2":"발주 · 원가 · 재고 관리 에이전트","s3":"호텔 · 외식기업 인턴십"},{"name":"AI컴퓨터과","type":"LENS","s1":"기술 리서치 · 코드 리뷰 리포트","s2":"바이브 코딩으로 업무용 에이전트 서비스 구축","s3":"SW 기업 인턴십 · 서비스 캡스톤"},{"name":"반도체전자과","type":"LENS","s1":"공정 · 소자 기술 동향 리포트","s2":"측정 데이터 → 불량 분석 리포트 에이전트","s3":"반도체 기업 현장실습 · PBL"},{"name":"화공에너지공학과","type":"LENS","s1":"이차전지 · 에너지 동향 리포트","s2":"실험 데이터 정리 · 분석 에이전트","s3":"이차전지 · 화학 기업 PBL"},{"name":"임상병리과","type":"LENS","s1":"검사 항목 근거 요약","s2":"검사 결과 해석 학습 보조 에이전트(가상)","s3":"병원 검사실 임상실습 연계"},{"name":"물리치료과","type":"LENS","s1":"근거 기반 운동 프로그램 리서치","s2":"평가 → 운동 처방 초안 에이전트(가상)","s3":"병원 · 재활센터 임상실습"},{"name":"치위생과","type":"LENS","s1":"구강보건 교육 자료 · 논문 요약","s2":"환자 교육 · 예약 리마인드 에이전트(가상)","s3":"치과 임상실습 연계"},{"name":"반려동물학과","type":"LENS","s1":"질환 · 영양 정보 리서치","s2":"보호자 상담 · 케어 가이드 에이전트","s3":"동물병원 · 펫 기업 현장실습"},{"name":"스포츠재활트레이닝과","type":"LENS","s1":"운동 데이터 분석 리포트","s2":"측정 기록 → 트레이닝 계획 에이전트","s3":"스포츠센터 · 구단 인턴십"}],"levels":{"1":{"name":"KIT AI Explorer","short":"EXPLORER","fill":"#D6246E","ring":"#F7A8CC","rib":"#8E1449","subTitle":"15분 결과물 제출","goal":"ChatGPT · Claude · Gemini로 내 유형의 첫 결과물을 만듭니다."},"2":{"name":"KIT AI Builder","short":"BUILDER","fill":"#3E63B8","ring":"#A9C0EE","rib":"#22397A","subTitle":"AI 비서 1건 제출 · 시연","goal":"전문 생성 툴 · 전공 툴을 더하고 툴을 연결해 내 일을 대신해 주는 AI 비서를 만듭니다."},"3":{"name":"KIT AI Master","short":"MASTER","fill":"#15173B","ring":"#F2B544","rib":"#C98B12","subTitle":"기업 과제 Agent 제출 · 발표","goal":"희망 업종의 AI Agent와 전공 실무 툴로 기업의 실제 과제를 해결합니다."}},"notices":[{"id":"n01","pin":true,"cat":"공지","date":"2026.11.02","title":"KIT AX ON 온라인 센터 오픈 — 이렇게 시작하세요","body":["KIT AX ON 온라인 센터가 문을 열었습니다. 경남정보대학교 재학생이라면 누구나 이용할 수 있습니다.","① 3분 AI 진단(8문항)으로 내 PRISM 유형을 확인합니다. ② 진단 결과에 맞는 Explorer 코스가 열립니다. ③ 영상 튜토리얼 5개를 보고 15분씩 따라 하며 결과물을 만듭니다. ④ 온라인 클래스를 수료하고 결과물을 제출하면 학교 검수 후 디지털 배지가 발급됩니다.","코스 화면에서 지금 할 레슨을 바로 이어서 할 수 있습니다. 캠퍼스 키오스크에서 진단한 경우 결과 화면의 QR을 찍으면 이 사이트의 내 코스로 이어집니다."],"info":[["대상","경남정보대학교 재학생 전체"],["시작","3분 AI 진단 → Explorer 코스"],["문의","AX ON 센터(하이브 라운지)"]],"files":["KIT AX ON 이용 가이드.pdf"],"act":{"label":"3분 AI 진단 시작","to":"diag"}},{"id":"n02","pin":true,"cat":"배지·인증","date":"2026.11.02","title":"디지털 배지 발급 절차와 기준 안내","body":["디지털 배지는 Explorer · Builder · Master 3단계로 발급됩니다. 각 단계는 온라인 클래스(필수) 수료와 영상 튜토리얼 5개 완료가 먼저입니다.","두 조건을 채우면 결과물 제출 버튼이 열립니다. 제출 후에는 학교 담당자가 결과물을 검수하고, 승인되면 배지가 발급됩니다. 검수 전에는 제출물을 수정할 수 있고, 발급 후에는 수정 · 취소할 수 없습니다.","배지 3종을 모두 받으면 KIT AX 인증 대상이 됩니다(졸업 역량 인증 · 비교과 마일리지 연계(안))."],"info":[["조건","클래스 수료 + 튜토리얼 5개 → 결과물 제출"],["발급","학교 검수 승인 후 · Open Badge 3.0"],["알림","알림톡 · 메일(안)"]],"files":[],"act":{"label":"배지 지갑 보기","to":"badges"}},{"id":"n03","pin":false,"cat":"배지·인증","date":"2026.11.20","title":"Explorer 배지 1차 검수 일정 안내(안)","body":["11월 30일(월)까지 제출한 Explorer 결과물은 12월 첫째 주에 1차 검수합니다(안).","검수 결과는 코스 화면의 STEP 4에 표시되고, 승인되면 배지가 바로 발급됩니다. 보완이 필요하면 의견과 함께 반려되며 다시 제출할 수 있습니다."],"info":[["제출 마감","2026.11.30(월)(안)"],["검수","2026.12.01 ~ 12.05(안)"]],"files":[],"act":{"label":"내 코스로 이동","to":"course"}},{"id":"n04","pin":false,"cat":"취업·창업","date":"2026.11.18","title":"창업 코스 · 데모데이 연계 안내(안)","body":["창업 코스 Master 단계에서는 실사용자 테스트가 가능한 MVP와 IR 피치덱을 만듭니다.","우수 결과물은 교내 창업지원 프로그램 · 창업동아리 · 데모데이와 연계할 예정입니다. 세부 일정은 학교와 확정 후 공지합니다."],"info":[],"files":[],"act":{"label":"창업 추천 튜토리얼","to":"lib-startup"}},{"id":"n05","pin":false,"cat":"취업·창업","date":"2026.11.18","title":"취업 코스 · 기업 PBL 과제 공개 일정(안)","body":["취업 코스 Master 단계에서는 협약 기업의 실제 과제를 AI Agent로 해결합니다.","과제는 학부군별로 공개되며, 우수 팀은 현장실습 · 기업 맞춤 인턴십과 연계합니다. 기업명은 협약 후 표기합니다."],"info":[],"files":[],"act":{"label":"취업 추천 튜토리얼","to":"lib-job"}},{"id":"n06","pin":false,"cat":"디지털북","date":"2026.11.16","title":"BOOK 1 · AI Explorer 디지털북 공개","body":["KIT AI Training Book 첫 권인 BOOK 1 · AI Explorer를 공개합니다. 웹 뷰어로 바로 읽을 수 있습니다.","단원마다 QR로 영상 튜토리얼에 연결되며, PDF로 내려받을 수도 있습니다."],"info":[["구성","5단원 · 단원 평가 · Level 평가"],["형식","웹 뷰어 · PDF"]],"files":["BOOK1_AI_Explorer_미리보기.pdf"],"act":{"label":"BOOK 1 읽어 보기","to":"book"}},{"id":"n07","pin":false,"cat":"특강·워크숍","date":"2026.11.12","title":"[하이브 라운지] Builder 워크숍 — n8n으로 나만의 AI 비서 만들기(안)","body":["Explorer 코스를 진행 중이거나 마친 학생을 대상으로 Builder 맛보기 워크숍을 엽니다. 조별로 n8n 워크플로우를 함께 만들어 봅니다.","참석하면 Builder 코스의 오프라인 강의 출석으로 인정됩니다(안). 일시와 정원은 확정 후 다시 안내합니다."],"info":[["장소","AX ON 센터 · 하이브 라운지"],["일시","2026.11.26(목) 15:00(안)"]],"files":[],"act":{"label":"n8n 튜토리얼 보기","to":"lib"}},{"id":"n08","pin":false,"cat":"이벤트","date":"2026.11.09","title":"AX ON 오픈 기념 ‘15분 첫 AI 작품’ 챌린지","body":["Explorer 코스에서 만든 첫 결과물을 제출하면 챌린지에 자동으로 참여합니다.","우수작은 AX ON 센터 갤러리 월에 전시하고 커뮤니티에 소개합니다. 시상 내용은 학교 확정 후 안내합니다."],"info":[["기간","2026.11.09 ~ 12.11(안)"],["참여","Explorer 결과물 제출"]],"files":[],"act":{"label":"내 코스로 이동","to":"course"}},{"id":"n09","pin":false,"cat":"시스템","date":"2026.11.05","title":"튜토리얼 영상 재생 · 완료 기록 안내","body":["튜토리얼 영상은 YouTube 새 탭에서 재생됩니다. 영상을 본 뒤 이 사이트로 돌아와 3단계 체크리스트를 따라 하고 ‘완료’를 눌러야 진도에 반영됩니다.","튜토리얼 라이브러리에서 완료한 기록은 코스 진도와 하나로 공유됩니다."],"info":[],"files":[],"act":{"label":"튜토리얼 라이브러리","to":"lib"}},{"id":"n10","pin":false,"cat":"공지","date":"2026.11.04","title":"AI 진단 키오스크 위치 안내 — 메인 1곳 · 스팟 4곳","body":["AI 진단 키오스크는 AX ON 센터(하이브 라운지)와 IT빌딩 · 미래관 · 50주년기념관 · 센텀캠퍼스 스팟에 있습니다.","키오스크 진단 결과의 QR을 찍으면 이 사이트의 내 코스로 바로 연결됩니다. 운영 시간은 학교 확정 후 안내합니다."],"info":[["메인","하이브 라운지(분수대 앞)"],["스팟","IT빌딩 · 미래관 · 50주년기념관 · 센텀캠퍼스"]],"files":[],"act":{"label":"웹으로 진단하기","to":"diag"}}],"ncats":["공지","배지·인증","디지털북","특강·워크숍","이벤트","취업·창업","시스템"],"cls":{"common":[{"id":"c1","no":"#1","title":"[첫걸음] 일상부터 업무까지: ChatGPT와 친해지기","time":"21시간","req":false},{"id":"c61","no":"#61","title":"한 번에 끝내는 제미나이 올인원: 워크스페이스 · 나노바나나 · Veo&Flow · Canvas","time":"2시간 38분","req":false},{"id":"c97","no":"#97","title":"처음부터 차근차근 배우는 클로드 AI 실전 활용법","time":"6시간 49분","req":false},{"id":"c74","no":"#74","title":"AI 시대의 올바른 판단을 위한 AI 윤리와 리터러시","time":"1시간 53분","req":false}],"lv":{"2":[{"id":"c79","no":"#79","title":"n8n으로 쉽게 완성하는 나만의 AI 워크플로우","time":"2시간 10분","req":true},{"id":"c82","no":"#82","title":"Claude MCP로 끝내는 업무 자동화","time":"2시간 47분","req":true},{"id":"c59","no":"#59","title":"제미나이로 끝내는 구글 워크스페이스 업무 자동화","time":"4시간 23분","req":false}],"3":[{"id":"c16","no":"#16","title":"클로드 코드를 활용한 AI Agent 구축","time":"2026 신규","req":true},{"id":"c65","no":"#65","title":"AI 에이전트 스킬 업: 입문에서 실전까지","time":"4시간 19분","req":true}]},"types":{"EYE":[{"id":"c56","no":"#56","title":"나노바나나와 Canva AI로 생성형 디자인 마스터하기","time":"8시간 46분"},{"id":"c61","no":"#61","title":"한 번에 끝내는 제미나이 올인원: 워크스페이스 · 나노바나나 · Veo&Flow · Canvas","time":"2시간 38분"}],"STORY":[{"id":"c23","no":"#23","title":"챗GPT로 인싸 크리에이터 되는 법","time":"11시간"},{"id":"c61","no":"#61","title":"한 번에 끝내는 제미나이 올인원: 워크스페이스 · 나노바나나 · Veo&Flow · Canvas","time":"2시간 38분"}],"PEN":[{"id":"c97","no":"#97","title":"처음부터 차근차근 배우는 클로드 AI 실전 활용법","time":"6시간 49분"},{"id":"c76","no":"#76","title":"노코드 RAG 끝판왕, 노트북LM으로 지식관리 마스터하기","time":"선택 과정"}],"MAP":[{"id":"c104","no":"#104","title":"ChatGPT와 함께하는 엑셀, PPT, 그리고 AI 도구 활용법","time":"1시간 31분"},{"id":"c21","no":"#21","title":"프롬프트 엔지니어링 A to Z","time":"11시간"}],"LENS":[{"id":"c96","no":"#96","title":"ChatGPT를 활용한 자료 분석과 딥리서치 보고서","time":"9시간 18분"},{"id":"c85","no":"#85","title":"다양한 실습 파일로 배우는 ChatGPT 실전 데이터 분석","time":"선택 과정"}]}},"tracks":{"job":{"ko":"취업 코스","cls2":{"id":"c99","no":"#99","title":"회사가 원하는 효율적인 AI 활용 - 회의 준비부터 기록까지","time":"권장 · 2차년도 콘텐츠","req":false},"cls3":{"id":"c89","no":"#89","title":"직무별 AI 대응 전략","time":"권장 · 2차년도 콘텐츠","req":false}},"startup":{"ko":"창업 코스","cls2":{"id":"c77","no":"#77","title":"Next Level 기획자_AI 서비스 기획의 기술","time":"권장 · 2차년도 콘텐츠","req":false},"cls3":{"id":"c7","no":"#7","title":"[왕초보] 비개발자도 할 수 있는 바이브 코딩 웹 개발","time":"권장 · 3차년도 콘텐츠","req":false}}}};</script>
 <script>
 (function () {
 var DB = window.KITDB, M = window.KIT_META;
@@ -429,7 +538,7 @@ var DEPTS = M.depts, TUTN = M.tuts, TYPES = M.types;
 var TORDER = ['EYE', 'PEN', 'LENS', 'STORY', 'MAP']; // 색 구분 검증을 통과한 고정 순서
 var LVN = { 1: 'Explorer', 2: 'Builder', 3: 'Master' };
 var DAY = 864e5, NOW = Date.now();
-var ALL = [], REAL = [], SYN = [], useSyn = true, admin = null;
+var ALL = [], REAL = [], SYN = [], useSyn = true, admin = null, CAT = null, ROLE = { role: 'owner', depts: [] };
 var $ = function (s, r) { return (r || document).querySelector(s); };
 var $$ = function (s, r) { return Array.from((r || document).querySelectorAll(s)); };
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -445,9 +554,9 @@ function dl(name, rows) { var csv = '﻿' + rows.map(function (r) { return r.map
 function normReal(s) {
   var p = s.progress || {}, sm = p.summary || {}, lv = p.lv || {}, L = {};
   [1, 2, 3].forEach(function (n) { var a = sm[n] || {}, b = lv[n] || {};
-    L[n] = { pct: a.pct || 0, tutDone: a.tutDone || 0, tutTotal: a.tutTotal || 5, reqDone: a.reqDone || 0, reqTotal: a.reqTotal || 1, sub: !!b.sub, subText: b.sub || '', subAt: parseStamp(b.subAt), review: b.review || '', badge: !!b.badge, badgeAt: parseStamp(b.badgeAt), badgeId: b.badgeId || '', reviewNote: b.reviewNote || '' }; });
+    L[n] = { pct: a.pct || 0, tutDone: a.tutDone || 0, tutTotal: a.tutTotal || 5, reqDone: a.reqDone || 0, reqTotal: a.reqTotal || 1, sub: !!b.sub, subText: b.sub || '', subAt: parseStamp(b.subAt), review: b.review || '', badge: !!b.badge, badgeAt: parseStamp(b.badgeAt), badgeId: b.badgeId || '', reviewNote: b.reviewNote || '', score: b.score, scores: b.scores || [], feedback: b.feedback || '', revoked: !!b.revoked, revokeReason: b.revokeReason || '', issueMode: b.issueMode || '', cls: b.cls || {} }; });
   var done = Object.keys(p.done || {}).filter(function (k) { return p.done[k]; });
-  return { sid: s.sid, dept: s.dept, status: s.status, invitedAt: s.invitedAt || 0, activatedAt: s.activatedAt || 0, lastSeen: s.lastSeen || 0, type: p.type || '', track: p.track || '', done: done, L: L, syn: false };
+  return { sid: s.sid, dept: s.dept, status: s.status, invitedAt: s.invitedAt || 0, activatedAt: s.activatedAt || 0, lastSeen: s.lastSeen || 0, type: p.type || '', track: p.track || '', done: done, L: L, watch: p.watch || {}, syn: false };
 }
 function derive(r) {
   r.badges = [1, 2, 3].filter(function (n) { return r.L[n].badge; }).length;
@@ -455,6 +564,7 @@ function derive(r) {
   r.curPct = r.L[r.level].pct;
   r.totalPct = Math.round((r.L[1].pct + r.L[2].pct + r.L[3].pct) / 3);
   r.pending = [1, 2, 3].filter(function (n) { return r.L[n].review === 'pending' && r.L[n].sub && !r.L[n].badge; });
+  r.passedWait = [1, 2, 3].filter(function (n) { return r.L[n].review === 'passed' && !r.L[n].badge; });
   r.idle = r.status === 'active' && r.lastSeen && (NOW - r.lastSeen) > 14 * DAY;
   r.year = String(r.sid).slice(0, 4);
   return r;
@@ -468,7 +578,7 @@ function genSynthetic() {
     var x = R() * ws, di = 0; while (x > w[di] && di < w.length - 1) { x -= w[di]; di++; }
     var d = DEPTS[di], yr = years[Math.min(3, Math.floor(Math.pow(R(), 0.7) * 4))]; seq[yr] = (seq[yr] || 0) + 1;
     var sid = yr + String(di + 10).padStart(2, '0') + String(seq[yr]).padStart(4, '0');
-    var r = { sid: sid, dept: d.name, status: 'invited', invitedAt: start - DAY * 2, activatedAt: 0, lastSeen: 0, type: '', track: '', done: [], L: {}, syn: true };
+    var r = { sid: sid, dept: d.name, status: 'invited', invitedAt: start - DAY * 2, activatedAt: 0, lastSeen: 0, type: '', track: '', done: [], L: {}, watch: {}, syn: true };
     [1, 2, 3].forEach(function (n) { r.L[n] = { pct: 0, tutDone: 0, tutTotal: 5, reqDone: 0, reqTotal: n === 1 ? 1 : 2, sub: false, subText: '', subAt: 0, review: '', badge: false, badgeAt: 0, badgeId: '' }; });
     var actP = 0.5 + (d.type === 'LENS' ? 0.12 : 0) + (yr === '2026' ? 0.12 : 0) - (yr === '2023' ? 0.15 : 0);
     if (R() < actP) {
@@ -481,7 +591,8 @@ function genSynthetic() {
         var t = r.activatedAt;
         for (var n = 1; n <= 3; n++) {
           var L = r.L[n], k = Math.min(5, Math.floor(Math.pow(R(), n === 1 ? 0.42 : 0.7) * 6.2));
-          L.tutDone = k; for (var j = 1; j <= k; j++) r.done.push(TC[r.type] + n + '-' + j);
+          L.tutDone = k; for (var j = 1; j <= k; j++) { r.done.push(TC[r.type] + n + '-' + j); r.watch[TC[r.type] + n + '-' + j] = { pct: 80 + Math.floor(R() * 21), dur: 600 + Math.floor(R() * 600) }; }
+          if (k < 5) r.watch[TC[r.type] + n + '-' + (k + 1)] = { pct: 5 + Math.floor(R() * 70), dur: 600 + Math.floor(R() * 600) };
           L.reqDone = k === 5 && R() < 0.78 ? L.reqTotal : (R() < 0.3 ? Math.min(L.reqTotal - 1, 1) : 0);
           var full = k === 5 && L.reqDone === L.reqTotal;
           if (full && R() < 0.8) {
@@ -489,9 +600,9 @@ function genSynthetic() {
             L.subText = '[' + LVN[n] + '] ' + (n === 1 ? d.s1 : n === 2 ? d.s2 : d.s3) + ' — 공유 링크 https://drive.example/' + sid.slice(-5) + n;
             var q = R();
             var old = L.subAt < NOW - 9 * DAY;
-            if ((old && q < 0.93) || (!old && q < 0.35)) { L.review = 'approved'; L.badge = true; L.badgeAt = Math.min(NOW - DAY / 3, L.subAt + (1 + R() * 4) * DAY); L.badgeId = 'KIT-AX-' + n + '-' + sid.slice(-4); t = L.badgeAt; }
+            if ((old && q < 0.93) || (!old && q < 0.35)) { L.review = 'approved'; L.badge = true; L.badgeAt = Math.min(NOW - DAY / 3, L.subAt + (1 + R() * 4) * DAY); L.badgeId = 'KIT-AX-' + n + '-' + sid.slice(-4); L.issueMode = 'auto-pass'; L.score = 70 + Math.floor(R() * 31); t = L.badgeAt; }
             else if (!old && q < 0.95) L.review = 'pending';
-            else { L.review = 'returned'; L.sub = false; L.reviewNote = '결과물 링크 접근 권한 확인 필요'; }
+            else { L.review = 'returned'; L.sub = false; L.reviewNote = '결과물 링크 접근 권한 확인 필요'; L.score = 40 + Math.floor(R() * 25); }
           }
           L.pct = Math.round((L.tutDone + L.reqDone / L.reqTotal + (L.sub ? 1 : 0) + (L.badge ? 1 : 0)) / 8 * 100);
           if (!L.badge) break;
@@ -507,6 +618,7 @@ async function reload() {
   REAL = list.map(function (s) { return derive(normReal(s)); });
   if (DB.mode === 'demo' && !SYN.length) SYN = genSynthetic();
   ALL = (useSyn && DB.mode === 'demo') ? REAL.concat(SYN) : REAL;
+  if (ROLE.role === 'dept' && ROLE.depts.length) ALL = ALL.filter(function (r) { return ROLE.depts.indexOf(r.dept) >= 0; });
   renderAll();
 }
 function scope() {
@@ -671,22 +783,6 @@ async function decide(r, n, d, note) {
   if (r.syn) { var L = r.L[n]; if (d === 'approve') { L.review = 'approved'; L.badge = true; L.badgeAt = Date.now(); L.badgeId = 'KIT-AX-' + n + '-' + String(r.sid).slice(-4); } else { L.review = 'returned'; L.sub = false; L.reviewNote = note || ''; } derive(r); toast(d === 'approve' ? '승인했습니다 (가상 데이터 · 새로고침 시 초기화)' : '반려했습니다 (가상 데이터)'); renderAll(); if ($('#detail').classList.contains('on')) openDetail(r.sid); return; }
   try { await DB.review(r.sid, n, d === 'approve' ? 'approve' : 'return', note); toast(d === 'approve' ? '승인 · 배지 발급 완료 — 학생 화면에 반영됩니다' : '반려했습니다 — 학생이 다시 제출할 수 있습니다'); await reload(); if ($('#detail').classList.contains('on')) openDetail(r.sid); } catch (e) { toast(e.message || '처리하지 못했습니다'); }
 }
-/* ---------- 검수 ---------- */
-var sel = new Set();
-function pendItems() { var lv = $('#rLv').value, d = $('#rDept').value, out = []; ALL.forEach(function (r) { r.pending.forEach(function (n) { if ((!lv || +lv === n) && (!d || r.dept === d)) out.push({ r: r, n: n }); }); }); out.sort(function (a, b) { return (a.r.syn - b.r.syn) || (a.r.L[a.n].subAt - b.r.L[b.n].subAt); }); return out; }
-function renderReview() {
-  var items = pendItems(); var shown = items.slice(0, 60);
-  $('#rList').innerHTML = shown.length ? shown.map(function (x) { var L = x.r.L[x.n], key = x.r.sid + ':' + x.n, age = Math.floor((NOW - L.subAt) / DAY);
-    return '<div class="card rv"><input type="checkbox" data-k="' + key + '" ' + (sel.has(key) ? 'checked' : '') + ' aria-label="선택" style="width:20px;height:20px;margin-top:3px"><div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><b class="num">' + x.r.sid + '</b><span>' + esc(x.r.dept) + '</span><span class="pill p-mag">' + LVN[x.n] + '</span>' + (x.r.syn ? '<span class="pill synth">가상</span>' : '<span class="pill p-ok">실제</span>') + '<span class="pill ' + (age >= 7 ? 'p-bad' : 'p-no') + '">제출 ' + age + '일 전</span></div><div class="subtext" style="margin:0">' + esc(L.subText) + '</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ok sm" data-a="' + key + '">승인</button><button class="btn ghost sm" data-r="' + key + '">반려</button><button class="btn ghost sm" data-o="' + x.r.sid + '">상세</button></div></div>'; }).join('') + (items.length > 60 ? '<p style="color:var(--muted);font-size:13px">오래된 순으로 60건 표시 · 전체 ' + fmt(items.length) + '건</p>' : '')
-    : '<div class="card" style="text-align:center;color:var(--muted);padding:40px">검수 대기 중인 제출물이 없습니다.</div>';
-  $('#rAll').disabled = !sel.size; $('#rAll').textContent = '선택 승인' + (sel.size ? ' (' + sel.size + ')' : '');
-  function rk(k) { var p = k.split(':'); return { r: find(p[0]), n: +p[1] }; }
-  $$('[data-k]', $('#rList')).forEach(function (c) { c.onchange = function () { c.checked ? sel.add(c.getAttribute('data-k')) : sel.delete(c.getAttribute('data-k')); $('#rAll').disabled = !sel.size; $('#rAll').textContent = '선택 승인' + (sel.size ? ' (' + sel.size + ')' : ''); }; });
-  $$('[data-a]', $('#rList')).forEach(function (b) { b.onclick = function () { var x = rk(b.getAttribute('data-a')); decide(x.r, x.n, 'approve'); }; });
-  $$('[data-r]', $('#rList')).forEach(function (b) { b.onclick = function () { var x = rk(b.getAttribute('data-r')); var why = prompt('반려 사유', '결과물 링크 접근 권한을 확인해 주세요.'); if (why !== null) decide(x.r, x.n, 'return', why); }; });
-  $$('[data-o]', $('#rList')).forEach(function (b) { b.onclick = function () { openDetail(b.getAttribute('data-o')); }; });
-}
-$('#rAll').onclick = async function () { var keys = Array.from(sel); sel.clear(); for (var i = 0; i < keys.length; i++) { var p = keys[i].split(':'), r = find(p[0]); if (r) { if (r.syn) { var L = r.L[+p[1]]; L.review = 'approved'; L.badge = true; L.badgeAt = Date.now(); derive(r); } else await DB.review(r.sid, +p[1], 'approve'); } } toast(keys.length + '건 승인했습니다'); await reload(); };
 /* ---------- 학번 등록 ---------- */
 var DN = DEPTS.map(function (d) { return d.name; });
 function matchDept(s) { s = String(s || '').replace(/\s/g, ''); if (DN.indexOf(s) >= 0) return s; var c = DN.filter(function (n) { return n.indexOf(s) >= 0 || s.indexOf(n.replace(/(학과|과)$/, '')) >= 0; }); return c.length === 1 ? c[0] : ''; }
@@ -726,7 +822,7 @@ function answerLocal(q) {
   if (/검수|승인|대기|제출물/.test(t)) {
     var it = []; rows.forEach(function (r) { r.pending.forEach(function (n) { if (!dm || r.dept === dm) it.push({ r: r, n: n, t: r.L[n].subAt }); }); }); it.sort(function (a, b) { return a.t - b.t; });
     var lvC = [0, 0, 0, 0]; it.forEach(function (x) { lvC[x.n]++; }); var old7 = it.filter(function (x) { return NOW - x.t > 7 * DAY; }).length;
-    return { h: '검수 대기 <b>' + fmt(it.length) + '건</b> (Explorer ' + lvC[1] + ' · Builder ' + lvC[2] + ' · Master ' + lvC[3] + ')\n7일 이상 지난 제출 <b>' + old7 + '건</b> — 먼저 처리하기를 권합니다.\n' + tbl(['학번', '학과', '단계', '제출'], it.slice(0, 8).map(function (x) { return [x.r.sid, esc(x.r.dept), LVN[x.n], Math.floor((NOW - x.t) / DAY) + '일 전']; })), acts: [{ label: '검수 화면으로', fn: function () { closeDr(); if (dm) $('#rDept').value = dm; go('review'); } }] };
+    return { h: '검수 대기 <b>' + fmt(it.length) + '건</b> (Explorer ' + lvC[1] + ' · Builder ' + lvC[2] + ' · Master ' + lvC[3] + ')\n7일 이상 지난 제출 <b>' + old7 + '건</b> — 먼저 처리하기를 권합니다.\n' + tbl(['학번', '학과', '단계', '제출'], it.slice(0, 8).map(function (x) { return [x.r.sid, esc(x.r.dept), LVN[x.n], Math.floor((NOW - x.t) / DAY) + '일 전']; })), acts: [{ label: '검수 화면으로', fn: function () { closeDr(); go('assess'); } }] };
   }
   if (/보고서|보고|리포트|주간|월간/.test(t)) {
     var w = LAST.week || { act: [0], badge: [0] }, wa = w.act[w.act.length - 1], wb = w.badge[w.badge.length - 1], pa = w.act[w.act.length - 2] || 0;
@@ -768,36 +864,403 @@ $$('[data-close]').forEach(function (b) { b.onclick = closeDr; });
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDr(); });
 var cur = 'dash';
 function go(t) { cur = t; $$('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === t); }); $$('[data-view]').forEach(function (s) { s.classList.toggle('hide', s.getAttribute('data-view') !== t); }); try { history.replaceState(null, '', '#' + t); } catch (e) {} renderView(); window.scrollTo(0, 0); }
+$('#side').innerHTML = $('.top .tabs').innerHTML.replace(/id="rvcnt"/, 'id="rvcnt2"');
 $$('.tab').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-tab')); }; });
-function renderView() { if (cur === 'dash') renderDash(); if (cur === 'learners') renderLearners(); if (cur === 'review') renderReview(); }
-function renderAll() { var n = ALL.reduce(function (a, r) { return a + r.pending.length; }, 0); $('#rvcnt').textContent = n > 999 ? '999+' : n; renderModebar(); renderView(); }
+var TABS = $$('.top .tab').map(function (b) { return b.getAttribute('data-tab'); });
+function renderView() { if (cur === 'dash') renderDash(); if (cur === 'learners') renderLearners(); if (EXT[cur]) EXT[cur](); }
+function renderAll() { var n = ALL.reduce(function (a, r) { return a + r.pending.length; }, 0); $('#rvcnt').textContent = n > 999 ? '999+' : n; $('#rvcnt2').textContent = $('#rvcnt').textContent; renderModebar(); renderView(); }
 function opts(sel, first, list) { sel.innerHTML = '<option value="">' + first + '</option>' + list.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join(''); }
 function renderModebar() {
   var real = REAL.length;
   $('#modebar').innerHTML = DB.mode === 'demo'
     ? '<span class="chip synth">시연 모드</span><span style="font-size:13px;color:var(--muted)">실제 등록 ' + fmt(real) + '명(이 브라우저) ' + (useSyn ? '+ 가상 10,000명' : '') + '</span><label style="font-size:13px;display:inline-flex;gap:6px;align-items:center;margin-left:auto"><input type="checkbox" id="synT" ' + (useSyn ? 'checked' : '') + '> 가상 1만 명 데이터 포함</label>'
     : '<span class="chip" style="background:var(--okl);color:var(--ok)">운영 모드</span><span style="font-size:13px;color:var(--muted)">등록 ' + fmt(real) + '명 · 서버 실시간</span>';
-  var s = $('#synT'); if (s) s.onchange = function () { useSyn = s.checked; ALL = useSyn ? REAL.concat(SYN) : REAL; renderAll(); };
+  var s = $('#synT'); if (s) s.onchange = function () { useSyn = s.checked; reload(); };
 }
 function exportKpi() { var k = kpi(scope()), rows = [['지표', '값'], ['기준일', dfull(NOW)], ['등록 학생', k.reg], ['가입 학생', k.act], ['가입률(%)', pct(k.act, k.reg)], ['주간 활성', k.wau], ['AI 진단 완료', k.diag], ['평균 진도율(%)', k.avgPct], ['배지 발급(합계)', k.badgeTotal], ['Explorer 배지', k.b[1]], ['Builder 배지', k.b[2]], ['Master 배지', k.b[3]], ['배지 보유율(%)', pct(k.badgeHolders, k.reg)], ['검수 대기', k.pending], ['14일 미접속', k.idle], [], ['학과', '등록', '가입률(%)', '평균 진도(%)', '배지', '검수 대기', '14일 미접속']]; deptRows(scope()).forEach(function (d) { rows.push([d.dept, d.reg, d.actR, d.avg, d.badge, d.pending, d.idle]); }); dl('KIT_AXON_KPI_' + dfull(NOW) + '.csv', rows); }
 $('#exportKpi').onclick = exportKpi;
 $('#exportL').onclick = function () { dl('KIT_AXON_학습자_' + dfull(NOW) + '.csv', [['학번', '학과', '상태', '유형', '코스', '현재 단계', '단계 진도(%)', '전체 진도(%)', '튜토리얼 완료', '배지 수', '검수 대기', '가입일', '최근 접속', '데이터']].concat(lFilter().map(function (r) { return [r.sid, r.dept, r.status === 'active' ? '가입' : '미가입', r.type, r.track === 'startup' ? '창업' : r.track === 'job' ? '취업' : '', r.status === 'active' ? LVN[r.level] : '', r.curPct, r.totalPct, r.done.length, r.badges, r.pending.length, dfull(r.activatedAt), dfull(r.lastSeen), r.syn ? '가상' : '실제']; }))); };
 ['#q', '#lDept', '#lStat'].forEach(function (s) { $(s).addEventListener('input', function () { page = 0; renderLearners(); }); });
 ['#fDept', '#fYear'].forEach(function (s) { $(s).addEventListener('input', renderDash); });
-['#rLv', '#rDept'].forEach(function (s) { $(s).addEventListener('input', renderReview); });
 $('#saveT').onclick = function () { var t = { act: +$('#tAct').value || 0, badge: +$('#tBadge').value || 0, pct: +$('#tPct').value || 0 }; try { localStorage.setItem('kitaxon-targets', JSON.stringify(t)); } catch (e) {} toast('KPI 목표를 저장했습니다'); renderDash(); };
 $('#logout').onclick = async function () { await DB.adminSignOut(); location.reload(); };
 
 async function start() {
-  opts($('#fDept'), '전체 학과', DN); opts($('#lDept'), '전체 학과', DN); opts($('#rDept'), '전체 학과', DN); opts($('#fYear'), '전체 입학년도', ['2023', '2024', '2025', '2026']);
+  opts($('#fDept'), '전체 학과', DN); opts($('#lDept'), '전체 학과', DN); opts($('#fYear'), '전체 입학년도', ['2023', '2024', '2025', '2026']);
   var T = targets(); $('#tAct').value = T.act; $('#tBadge').value = T.badge; $('#tPct').value = T.pct;
   $('#noticeTpl').textContent = noticeTpl();
   $('#botMode').textContent = DB.mode === 'live' ? 'Claude 연결' : '시연 · 규칙 기반'; $('#botMode').className = 'chip ' + (DB.mode === 'live' ? '' : 'synth');
   $('#who').textContent = admin.email;
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
+  CAT = await DB.getCatalog(); applyRole();
   await reload();
-  var h = (location.hash || '').slice(1); go(['dash', 'learners', 'review', 'enroll', 'guide'].indexOf(h) >= 0 ? h : 'dash');
+  var h = (location.hash || '').slice(1); go(TABS.indexOf(h) >= 0 ? h : 'dash');
 }
+var EXT = {};
+/* ===== KIT AX ON 관리자 확장: 과제 평가 · 배지 · 진도 · 코스/러닝 저니 · CMS · 게시판 · 그룹 · 운영자 ===== */
+var LESSONS = 4;
+var MODE_LABEL = { 'auto-pass': '자동 · 평가 통과 시', 'auto-complete': '자동 · 제출 즉시(검수 생략)', manual: '수동 발급' };
+var ROLE_LABEL = { owner: '최고 관리자', admin: '운영자', dept: '학과 담당자', grader: '평가 담당' };
+var ROLE_TABS = { grader: ['assess', 'learners'], dept: ['dash', 'learners', 'assess', 'badges', 'board'] };
+var REV_LABEL = { pending: ['평가 대기', 'p-wait'], passed: ['통과 · 발급 대기', 'p-ok'], approved: ['통과 · 배지 발급', 'p-ok'], returned: ['재제출 요청', 'p-bad'], failed: ['미통과', 'p-bad'], revoked: ['배지 해제', 'p-bad'] };
+var ACT_TO = [['', '없음'], ['diag', 'AI 진단'], ['course', '내 코스'], ['lib', '튜토리얼 라이브러리'], ['lib-job', '취업 추천 튜토리얼'], ['lib-startup', '창업 추천 튜토리얼'], ['badges', '배지 지갑'], ['book', '디지털북'], ['notice', '공지사항']];
+function saveCat(what) { return DB.saveCatalog(CAT, what).then(function (c) { CAT = c; toast('저장했습니다 — 학습자 사이트에 바로 반영됩니다'); }).catch(function (e) { toast(e.message || '저장하지 못했습니다'); }); }
+function canEdit() { return ROLE.role === 'owner' || ROLE.role === 'admin'; }
+function applyRole() {
+  var me = (CAT.operators || []).find(function (o) { return o.email.toLowerCase() === String(admin.email || '').toLowerCase(); });
+  ROLE = me ? { role: me.role, depts: me.depts || [] } : (DB.mode === 'demo' ? { role: 'owner', depts: [] } : { role: 'admin', depts: [] });
+  var allow = ROLE_TABS[ROLE.role];
+  $$('.tab').forEach(function (b) { b.classList.toggle('hide', !!allow && allow.indexOf(b.getAttribute('data-tab')) < 0); });
+  $('#who').textContent = admin.email + ' · ' + ROLE_LABEL[ROLE.role] + (ROLE.role === 'dept' ? '(' + ROLE.depts.join(', ') + ')' : '');
+}
+function bdef(n) { if (/^[123]$/.test(String(n))) return Object.assign({ key: String(n), id: String(n), lv: +n }, M.levels[n], CAT.badges[n]); var x = (CAT.badgesX || []).find(function (b) { return b.id === n; }); return x ? Object.assign({ key: '★' }, x) : { name: n, key: '?', short: '', fill: '#999', ring: '#ccc', rib: '#666' }; }
+function allBadgeIds() { return ['1', '2', '3'].concat((CAT.badgesX || []).map(function (b) { return b.id; })); }
+function medal(d, w) { w = w || 64; return '<svg viewBox="0 0 120 140" width="' + w + '" height="' + Math.round(w * 140 / 120) + '" aria-hidden="true" style="flex:0 0 ' + w + 'px"><path d="M40 92 L30 134 L46 126 L56 138 L62 100Z" fill="' + esc(d.rib) + '"/><path d="M80 92 L90 134 L74 126 L64 138 L58 100Z" fill="' + esc(d.rib) + '"/><polygon points="60,4 108,31 108,87 60,114 12,87 12,31" fill="' + esc(d.fill) + '" stroke="' + esc(d.ring) + '" stroke-width="6" stroke-linejoin="round"/><polygon points="60,20 94,39.5 94,78.5 60,98 26,78.5 26,39.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.5"/><text x="60" y="47" text-anchor="middle" font-size="8.5" font-weight="700" letter-spacing="1.6" fill="#fff" font-family="Space Grotesk,sans-serif">KIT AI</text><text x="60" y="80" text-anchor="middle" font-size="34" font-weight="700" fill="#fff" font-family="Space Grotesk,sans-serif">' + esc(d.key) + '</text><text x="60" y="93" text-anchor="middle" font-size="7.5" font-weight="700" letter-spacing="1.2" fill="#fff" font-family="Space Grotesk,sans-serif">' + esc(d.short || '') + '</text></svg>'; }
+function subtabs(id, items, curk, onpick) { return '<div class="seg2" id="' + id + '">' + items.map(function (it) { return '<button data-k="' + it[0] + '" aria-pressed="' + (curk === it[0]) + '">' + it[1] + '</button>'; }).join('') + '</div>'; }
+function bindSub(id, fn) { $$('#' + id + ' button').forEach(function (b) { b.onclick = function () { fn(b.getAttribute('data-k')); }; }); }
+function tog(id, on, label) { return '<label class="tg"><input type="checkbox" id="' + id + '" ' + (on ? 'checked' : '') + '><span></span>' + label + '</label>'; }
+function sidsFrom(text) { return (String(text || '').match(/\d{6,12}/g) || []).filter(function (x, i, a) { return a.indexOf(x) === i; }); }
+function clsFor(r, n) { if (n === 1) { var t = M.cls.types[r.type] || []; var seen = {}; return t.map(function (c, i) { return Object.assign({}, c, { req: i === 0 }); }).concat(M.cls.common).filter(function (c) { if (seen[c.id]) return false; seen[c.id] = 1; return true; }); } var tr = M.tracks[r.track || 'job'] || {}; return (M.cls.lv[n] || []).concat([n === 2 ? tr.cls2 : tr.cls3].filter(Boolean)); }
+var _nr = normReal; normReal = function (s) { var r = _nr(s); var p = s.progress || {}; r.xb = p.xb || {}; [1, 2, 3].forEach(function (n) { var b = (p.lv || {})[n] || {}; r.L[n].cls = b.cls || {}; }); return r; };
+
+var _dv = derive; derive = function (r) { r.xb = r.xb || {}; r.watch = r.watch || {}; [1, 2, 3].forEach(function (n) { r.L[n].cls = r.L[n].cls || {}; }); return _dv(r); };
+/* 공통 편집 함수: 실제 학습자는 서버 · 저장소, 가상 학습자는 화면 메모리 */
+async function editProg(r, label, fn, memFn) {
+  if (r.syn) { memFn(r); derive(r); toast(label + ' (가상 데이터 · 새로고침 시 초기화)'); renderAll(); return; }
+  await DB.adminEditProgress(r.sid, label, fn); toast(label + ' — 학생 화면에 반영됩니다'); await reload();
+}
+function memL(r, n) { return r.L[n]; }
+
+/* ================= 1. 과제 · 평가 ================= */
+var asTab = 'wait', asSel = new Set(), asLv = '', asDept = '';
+function gradeItems(state) { var out = []; ALL.forEach(function (r) { [1, 2, 3].forEach(function (n) { var L = r.L[n]; if ((!asLv || +asLv === n) && (!asDept || r.dept === asDept)) { if (state === 'wait' && r.pending.indexOf(n) >= 0) out.push({ r: r, n: n }); if (state === 'done' && L.review && L.review !== 'pending' && (L.score != null || L.review !== 'approved')) out.push({ r: r, n: n }); } }); }); out.sort(function (a, b) { return (a.r.syn - b.r.syn) || (state === 'wait' ? a.r.L[a.n].subAt - b.r.L[b.n].subAt : (b.r.L[b.n].badgeAt || b.r.L[b.n].subAt) - (a.r.L[a.n].badgeAt || a.r.L[a.n].subAt)); }); return out; }
+EXT.assess = function () {
+  var el = $('[data-view="assess"]'), wait = gradeItems('wait');
+  var h = '<div class="bar"><h2>과제 제출 · 평가</h2>' + subtabs('asT', [['wait', '평가 대기 ' + fmt(wait.length)], ['done', '평가 완료'], ['set', '과제 · 평가 기준 설정']], asTab) + '</div>';
+  if (asTab === 'set') { el.innerHTML = h + assignSettings(); bindSub('asT', function (k) { asTab = k; EXT.assess(); }); bindAssignSettings(); return; }
+  h += '<div class="bar"><select id="asLv"><option value="">전체 단계</option><option value="1">Explorer</option><option value="2">Builder</option><option value="3">Master</option></select><select id="asDept"><option value="">전체 학과</option>' + DN.map(function (d) { return '<option>' + esc(d) + '</option>'; }).join('') + '</select>' + (asTab === 'wait' ? '<button class="btn ok" id="asBulk" ' + (asSel.size ? '' : 'disabled') + '>선택 일괄 통과(' + asSel.size + ')</button>' : '<button class="btn ghost" id="asCsv">평가 결과 CSV</button>') + '</div>';
+  var items = gradeItems(asTab), shown = items.slice(0, 60);
+  h += '<div class="grid">' + (shown.length ? shown.map(function (x) { var L = x.r.L[x.n], key = x.r.sid + ':' + x.n, age = Math.floor((NOW - L.subAt) / DAY), rv = REV_LABEL[L.badge ? 'approved' : L.review] || ['—', 'p-no'];
+    return '<div class="card rv">' + (asTab === 'wait' ? '<input type="checkbox" data-k="' + key + '" ' + (asSel.has(key) ? 'checked' : '') + ' aria-label="선택" style="width:20px;height:20px;margin-top:3px">' : '<span></span>') + '<div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><b class="num">' + x.r.sid + '</b><span>' + esc(x.r.dept) + '</span><span class="pill p-mag">' + LVN[x.n] + ' · ' + esc(bdef(x.n).subTitle || '') + '</span>' + (x.r.syn ? '<span class="pill synth">가상</span>' : '<span class="pill p-ok">실제</span>') + (asTab === 'wait' ? '<span class="pill ' + (age >= 7 ? 'p-bad' : 'p-no') + '">제출 ' + age + '일 전</span>' : '<span class="pill ' + rv[1] + '">' + rv[0] + '</span>' + (L.score != null ? '<b class="num">' + L.score + '점</b>' : '')) + '</div>' + (L.subText ? '<div class="subtext" style="margin:0">' + esc(L.subText) + '</div>' : '') + (L.feedback || L.reviewNote ? '<div style="font-size:13px;color:var(--muted);margin-top:6px">피드백: ' + esc(L.feedback || L.reviewNote) + '</div>' : '') + '</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-g="' + key + '">' + (asTab === 'wait' ? '평가하기' : '다시 평가') + '</button><button class="btn ghost sm" data-o="' + x.r.sid + '">상세</button></div></div>'; }).join('') + (items.length > 60 ? '<p style="color:var(--muted);font-size:13px">60건 표시 · 전체 ' + fmt(items.length) + '건</p>' : '') : '<div class="card" style="text-align:center;color:var(--muted);padding:40px">' + (asTab === 'wait' ? '평가 대기 중인 제출물이 없습니다.' : '평가한 제출물이 없습니다.') + '</div>') + '</div>';
+  el.innerHTML = h; $('#asLv').value = asLv; $('#asDept').value = asDept;
+  bindSub('asT', function (k) { asTab = k; asSel.clear(); EXT.assess(); });
+  $('#asLv').onchange = function () { asLv = this.value; EXT.assess(); }; $('#asDept').onchange = function () { asDept = this.value; EXT.assess(); };
+  $$('[data-k]', el).forEach(function (c) { if (c.tagName !== 'INPUT') return; c.onchange = function () { c.checked ? asSel.add(c.getAttribute('data-k')) : asSel.delete(c.getAttribute('data-k')); var b = $('#asBulk'); b.disabled = !asSel.size; b.textContent = '선택 일괄 통과(' + asSel.size + ')'; }; });
+  $$('[data-g]', el).forEach(function (b) { b.onclick = function () { var p = b.getAttribute('data-g').split(':'); openGrade(find(p[0]), +p[1]); }; });
+  $$('[data-o]', el).forEach(function (b) { b.onclick = function () { openDetail(b.getAttribute('data-o')); }; });
+  if ($('#asBulk')) $('#asBulk').onclick = async function () { var keys = Array.from(asSel); if (!confirm(keys.length + '건을 통과(기준별 만점) 처리할까요? 배지 발급 방식에 따라 자동 발급됩니다.')) return; asSel.clear(); for (var i = 0; i < keys.length; i++) { var p = keys[i].split(':'), r = find(p[0]), n = +p[1]; var A = CAT.assign[n]; await doGrade(r, n, { decision: 'pass', total: 100, scores: A.rubric.map(function (x) { return x.pts; }), feedback: '' }, true); } toast(keys.length + '건 통과 처리했습니다'); await reload(); };
+  if ($('#asCsv')) $('#asCsv').onclick = function () { dl('KIT_AXON_과제평가_' + dfull(NOW) + '.csv', [['학번', '학과', '단계', '결과', '점수', '피드백', '제출']].concat(items.map(function (x) { var L = x.r.L[x.n]; return [x.r.sid, x.r.dept, LVN[x.n], (REV_LABEL[L.badge ? 'approved' : L.review] || [''])[0], L.score == null ? '' : L.score, L.feedback || L.reviewNote || '', L.subText]; }))); };
+};
+function openGrade(r, n) {
+  var L = r.L[n], A = CAT.assign[n], B = bdef(n), prev = L.scores || [];
+  $('#dTitle').textContent = '과제 평가 · ' + r.sid;
+  $('#dBody').innerHTML = '<dl class="kv"><dt>학번 · 학과</dt><dd>' + r.sid + ' · ' + esc(r.dept) + '</dd><dt>과제</dt><dd>' + LVN[n] + ' · ' + esc(A.title || B.subTitle) + '</dd><dt>제출</dt><dd class="num">' + dfull(L.subAt) + '</dd></dl>' +
+    '<div class="subtext">' + esc(L.subText || '(제출 내용 없음)') + '</div><p style="font-size:13px;color:var(--muted)">' + esc(A.guide) + '</p>' +
+    '<h4 style="margin:16px 0 8px">평가 기준(루브릭)</h4>' + A.rubric.map(function (c, i) { return '<div class="hbar" style="grid-template-columns:1fr 90px 46px"><span>' + esc(c.name) + '</span><input class="inp num gs" type="number" min="0" max="' + c.pts + '" value="' + (prev[i] != null ? prev[i] : '') + '" data-max="' + c.pts + '" aria-label="' + esc(c.name) + ' 점수"><span class="v">/ ' + c.pts + '</span></div>'; }).join('') +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0;font-size:16px"><span>합계 <b class="num" id="gTot">0</b>점 · 통과 ' + A.pass + '점</span><button class="btn ghost sm" id="gFull">기준별 만점</button></div>' +
+    '<label style="font-weight:700;font-size:14px">학생에게 보낼 피드백</label><textarea id="gFb" rows="4" placeholder="잘한 점과 보완할 점을 적어 주세요.">' + esc(L.feedback || '') + '</textarea>' +
+    '<div class="note" style="margin:12px 0">통과 시 배지: <b>' + esc(B.name) + '</b> · 발급 방식 <b>' + MODE_LABEL[B.mode] + '</b>' + (B.mode === 'manual' ? ' → [배지 발급 · 관리 › 발급 대기]에서 발급' : ' → 통과와 동시에 발급') + '</div>' +
+    '<div class="bar" style="margin:0"><button class="btn ok" id="gPass">통과</button><button class="btn ghost" id="gRet">재제출 요청</button><button class="btn ghost" id="gFail" style="color:var(--bad)">미통과(종료)</button></div>';
+  openDr('#detail');
+  function tot() { var t = 0; $$('.gs').forEach(function (i) { var v = Math.max(0, Math.min(+i.getAttribute('data-max'), +i.value || 0)); t += v; }); $('#gTot').textContent = t; return t; }
+  $$('.gs').forEach(function (i) { i.oninput = tot; }); tot();
+  $('#gFull').onclick = function () { $$('.gs').forEach(function (i) { i.value = i.getAttribute('data-max'); }); tot(); };
+  function go2(dec) { var t = tot(); if (dec === 'pass' && t < A.pass && !confirm('합계 ' + t + '점으로 통과 기준(' + A.pass + '점)보다 낮습니다. 그래도 통과 처리할까요?')) return; if (dec !== 'pass' && !$('#gFb').value.trim()) { toast('재제출 · 미통과는 피드백을 적어 주세요'); return; } doGrade(r, n, { decision: dec, total: t, scores: $$('.gs').map(function (i) { return +i.value || 0; }), feedback: $('#gFb').value.trim() }).then(function () { closeDr(); }); }
+  $('#gPass').onclick = function () { go2('pass'); }; $('#gRet').onclick = function () { go2('return'); }; $('#gFail').onclick = function () { go2('fail'); };
+}
+async function doGrade(r, n, g, quiet) {
+  if (r.syn) { var L = r.L[n], B = bdef(n); L.score = g.total; L.scores = g.scores; L.feedback = g.feedback; if (g.decision === 'pass') { if (B.mode === 'manual') L.review = 'passed'; else { L.review = 'approved'; L.badge = true; L.badgeAt = Date.now(); L.badgeId = 'KIT-AX-' + n + '-' + String(r.sid).slice(-4); L.issueMode = 'auto-pass'; } } else if (g.decision === 'return') { L.review = 'returned'; L.sub = false; L.reviewNote = g.feedback; } else { L.review = 'failed'; L.reviewNote = g.feedback; } derive(r); if (!quiet) { toast('평가했습니다 (가상 데이터)'); renderAll(); } return; }
+  try { await DB.grade(r.sid, n, g); if (!quiet) { toast(g.decision === 'pass' ? '통과 처리 — ' + (bdef(n).mode === 'manual' ? '배지 발급 대기로 이동' : '배지 자동 발급') : '평가 결과를 학생에게 전달했습니다'); await reload(); } } catch (e) { toast(e.message || '평가하지 못했습니다'); }
+}
+function assignSettings() {
+  return '<div class="grid two">' + [1, 2, 3].map(function (n) { var A = CAT.assign[n]; var sum = A.rubric.reduce(function (a, c) { return a + (+c.pts || 0); }, 0);
+    return '<div class="card" data-as="' + n + '"><h3>' + LVN[n] + ' 과제</h3><p class="sub">학생 코스의 STEP 3 과제 안내와 평가 화면에 그대로 쓰입니다.</p>' +
+      '<label class="fl">과제 제목<input class="inp" data-f="title" value="' + esc(A.title || M.levels[n].subTitle) + '"></label><label class="fl">안내문<textarea data-f="guide" rows="3">' + esc(A.guide) + '</textarea></label>' +
+      '<div class="fl">평가 기준(합계 100점) <b class="num" style="color:' + (sum === 100 ? 'var(--ok)' : 'var(--bad)') + '">' + sum + '점</b></div>' + A.rubric.map(function (c, i) { return '<div style="display:grid;grid-template-columns:1fr 80px 36px;gap:6px;margin-bottom:6px"><input class="inp" data-rn="' + i + '" value="' + esc(c.name) + '" aria-label="기준 이름"><input class="inp num" type="number" data-rp="' + i + '" value="' + c.pts + '" aria-label="배점"><button class="btn ghost sm" data-rx="' + i + '" aria-label="기준 삭제">×</button></div>'; }).join('') +
+      '<button class="btn ghost sm" data-radd>기준 추가</button><label class="fl" style="margin-top:12px">통과 점수<input class="inp num" type="number" data-f="pass" min="0" max="100" value="' + A.pass + '" style="width:100px"></label></div>'; }).join('') + '</div>' +
+    '<div class="card" style="margin-top:14px"><h3>공통 규칙</h3>' + tog('stResub', CAT.settings.resubmit, '재제출 요청 시 학생이 다시 제출할 수 있음') + '<div class="bar" style="margin:14px 0 0"><button class="btn mag" id="asSave">과제 · 평가 기준 저장</button></div></div>';
+}
+function bindAssignSettings() {
+  function pull() { $$('[data-as]').forEach(function (c) { var n = c.getAttribute('data-as'), A = CAT.assign[n]; A.title = $('[data-f="title"]', c).value.trim(); A.guide = $('[data-f="guide"]', c).value.trim(); A.pass = +$('[data-f="pass"]', c).value || 0; A.rubric = $$('[data-rn]', c).map(function (i) { var k = i.getAttribute('data-rn'); return { name: i.value.trim(), pts: +$('[data-rp="' + k + '"]', c).value || 0 }; }); }); CAT.settings.resubmit = $('#stResub').checked; }
+  $$('[data-radd]').forEach(function (b) { b.onclick = function () { pull(); CAT.assign[b.closest('[data-as]').getAttribute('data-as')].rubric.push({ name: '새 기준', pts: 0 }); EXT.assess(); }; });
+  $$('[data-rx]').forEach(function (b) { b.onclick = function () { pull(); CAT.assign[b.closest('[data-as]').getAttribute('data-as')].rubric.splice(+b.getAttribute('data-rx'), 1); EXT.assess(); }; });
+  $$('[data-rp]').forEach(function (i) { i.oninput = function () { pull(); }; });
+  $('#asSave').onclick = function () { pull(); var bad = [1, 2, 3].filter(function (n) { return CAT.assign[n].rubric.reduce(function (a, c) { return a + c.pts; }, 0) !== 100; }); if (bad.length && !confirm(bad.map(function (n) { return LVN[n]; }).join(', ') + ' 평가 기준 합계가 100점이 아닙니다. 그대로 저장할까요?')) return; saveCat('과제 · 평가 기준').then(EXT.assess); };
+}
+
+/* ================= 2. 배지 발급 · 관리 ================= */
+var bTab = 'list', bF = { id: '', st: '', mode: '', dept: '' };
+function issuedList() { var out = []; ALL.forEach(function (r) { [1, 2, 3].forEach(function (n) { var L = r.L[n]; if (L.badge || L.revoked) out.push({ r: r, id: String(n), badgeId: L.badgeId, at: L.badgeAt, mode: L.issueMode || 'auto-pass', revoked: !L.badge && L.revoked, reason: L.revokeReason }); }); Object.keys(r.xb || {}).forEach(function (k) { var x = r.xb[k]; out.push({ r: r, id: k, badgeId: x.badgeId, at: x.at, mode: 'manual', revoked: !!x.revoked, reason: x.revokeReason || x.reason }); }); }); return out.sort(function (a, b) { return (b.at || 0) - (a.at || 0); }); }
+EXT.badges = function () {
+  var el = $('[data-view="badges"]'), waitN = ALL.reduce(function (a, r) { return a + r.passedWait.length; }, 0);
+  var h = '<div class="bar"><h2>배지 발급 · 관리</h2>' + subtabs('bT', [['list', '발급 현황'], ['wait', '발급 대기 ' + fmt(waitN)], ['issue', '수동 발급'], ['def', '배지 생성 · 설정']], bTab) + '</div>';
+  if (bTab === 'def') { el.innerHTML = h + badgeDefs(); bindSub('bT', function (k) { bTab = k; EXT.badges(); }); bindBadgeDefs(); return; }
+  if (bTab === 'issue') { el.innerHTML = h + manualIssue(); bindSub('bT', function (k) { bTab = k; EXT.badges(); }); bindManualIssue(); return; }
+  if (bTab === 'wait') {
+    var w = []; ALL.forEach(function (r) { r.passedWait.forEach(function (n) { w.push({ r: r, n: n }); }); });
+    h += '<p class="sub" style="color:var(--muted);margin:-6px 0 12px">발급 방식이 \'수동 발급\'인 배지는 평가 통과 후 여기서 발급합니다.</p><div class="bar"><button class="btn ok" id="wAll" ' + (w.length ? '' : 'disabled') + '>전체 발급(' + w.length + ')</button></div><div class="card" style="padding:8px 12px"><div class="tw"><table><thead><tr><th>학번</th><th>학과</th><th>배지</th><th class="r">점수</th><th>통과일</th><th></th></tr></thead><tbody>' + (w.length ? w.map(function (x) { var L = x.r.L[x.n]; return '<tr><td class="num"><b>' + x.r.sid + '</b></td><td>' + esc(x.r.dept) + '</td><td>' + esc(bdef(x.n).name) + '</td><td class="r num">' + (L.score == null ? '—' : L.score) + '</td><td class="num">' + esc(L.reviewAt || '') + '</td><td><button class="btn ok sm" data-wi="' + x.r.sid + ':' + x.n + '">발급</button></td></tr>'; }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">발급 대기 없음</td></tr>') + '</tbody></table></div></div>';
+    el.innerHTML = h; bindSub('bT', function (k) { bTab = k; EXT.badges(); });
+    $$('[data-wi]', el).forEach(function (b) { b.onclick = function () { var p = b.getAttribute('data-wi').split(':'); issue(find(p[0]), p[1], '평가 통과 후 수동 발급'); }; });
+    if ($('#wAll')) $('#wAll').onclick = async function () { if (!confirm(w.length + '명에게 배지를 발급할까요?')) return; for (var i = 0; i < w.length; i++) await issue(w[i].r, String(w[i].n), '평가 통과 후 일괄 발급', true); toast(w.length + '건 발급했습니다'); await reload(); };
+    return;
+  }
+  var L = issuedList(), stats = {}; L.forEach(function (x) { if (!x.revoked) stats[x.id] = (stats[x.id] || 0) + 1; });
+  var f = L.filter(function (x) { return (!bF.id || x.id === bF.id) && (!bF.dept || x.r.dept === bF.dept) && (!bF.mode || (bF.mode === 'manual' ? x.mode === 'manual' : x.mode !== 'manual')) && (!bF.st || (bF.st === 'rev' ? x.revoked : !x.revoked)); });
+  h += '<div class="grid kpis" style="margin-bottom:14px">' + allBadgeIds().map(function (id) { var d = bdef(id); return '<div class="card" style="display:flex;gap:14px;align-items:center">' + medal(d, 48) + '<div><div style="font-weight:800">' + esc(d.name) + '</div><div class="num" style="font-size:24px;font-weight:700">' + fmt(stats[id] || 0) + '<small style="font-size:13px;color:var(--muted)"> 개 유효</small></div><div style="font-size:12px;color:var(--muted)">' + (d.active === false ? '발급 중지' : MODE_LABEL[d.mode] || '수동 발급') + '</div></div></div>'; }).join('') + '</div>';
+  h += '<div class="bar"><select id="bfId"><option value="">전체 배지</option>' + allBadgeIds().map(function (id) { return '<option value="' + id + '">' + esc(bdef(id).name) + '</option>'; }).join('') + '</select><select id="bfSt"><option value="">전체 상태</option><option value="ok">유효</option><option value="rev">해제</option></select><select id="bfMode"><option value="">전체 방식</option><option value="auto">자동</option><option value="manual">수동</option></select><select id="bfDept"><option value="">전체 학과</option>' + DN.map(function (d) { return '<option>' + esc(d) + '</option>'; }).join('') + '</select><button class="btn ghost" id="bCsv">발급 대장 CSV</button></div>';
+  var sh = f.slice(0, 100);
+  h += '<div class="card" style="padding:8px 12px"><div class="tw"><table><thead><tr><th>학번</th><th>학과</th><th>배지</th><th>발급 번호</th><th>발급일</th><th>방식</th><th>상태</th><th></th></tr></thead><tbody>' + (sh.length ? sh.map(function (x) { return '<tr><td class="num"><b>' + x.r.sid + '</b>' + (x.r.syn ? '' : ' <span class="pill p-mag">실제</span>') + '</td><td>' + esc(x.r.dept) + '</td><td>' + esc(bdef(x.id).name) + '</td><td class="num">' + esc(x.badgeId || '') + '</td><td class="num">' + dfull(typeof x.at === 'number' ? x.at : parseStamp(x.at)) + '</td><td>' + (x.mode === 'manual' ? '수동' : '자동') + '</td><td>' + (x.revoked ? '<span class="pill p-bad" title="' + esc(x.reason || '') + '">해제</span>' : '<span class="pill p-ok">유효</span>') + '</td><td>' + (x.revoked ? '' : '<button class="btn ghost sm" data-rv="' + x.r.sid + ':' + x.id + '" style="color:var(--bad)">해제</button>') + '</td></tr>'; }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">발급 기록이 없습니다.</td></tr>') + '</tbody></table></div><div class="pager">' + fmt(f.length) + '건' + (f.length > 100 ? ' · 최근 100건 표시(전체는 CSV)' : '') + '</div></div>';
+  el.innerHTML = h; bindSub('bT', function (k) { bTab = k; EXT.badges(); });
+  $('#bfId').value = bF.id; $('#bfSt').value = bF.st; $('#bfMode').value = bF.mode; $('#bfDept').value = bF.dept;
+  [['#bfId', 'id'], ['#bfSt', 'st'], ['#bfMode', 'mode'], ['#bfDept', 'dept']].forEach(function (p) { $(p[0]).onchange = function () { bF[p[1]] = this.value; EXT.badges(); }; });
+  $('#bCsv').onclick = function () { dl('KIT_AXON_배지발급대장_' + dfull(NOW) + '.csv', [['학번', '학과', '배지', '발급번호', '발급일', '방식', '상태', '해제 사유']].concat(f.map(function (x) { return [x.r.sid, x.r.dept, bdef(x.id).name, x.badgeId, dfull(typeof x.at === 'number' ? x.at : parseStamp(x.at)), x.mode === 'manual' ? '수동' : '자동', x.revoked ? '해제' : '유효', x.reason || '']; }))); };
+  $$('[data-rv]', el).forEach(function (b) { b.onclick = function () { var p = b.getAttribute('data-rv').split(':'); revoke(find(p[0]), p[1]); }; });
+};
+async function issue(r, id, reason, quiet) {
+  if (r.syn) { if (/^[123]$/.test(id)) { var L = r.L[id]; L.badge = true; L.review = 'approved'; L.badgeAt = Date.now(); L.badgeId = 'KIT-AX-' + id + '-' + String(r.sid).slice(-4); L.issueMode = 'manual'; L.revoked = false; } else { r.xb[id] = { badge: true, at: Date.now(), badgeId: 'KIT-AX-' + id.toUpperCase() + '-' + String(r.sid).slice(-4) }; } derive(r); if (!quiet) { toast('발급했습니다 (가상 데이터)'); renderAll(); } return; }
+  try { await DB.issueBadge(r.sid, id, reason); if (!quiet) { toast(bdef(id).name + ' 배지를 발급했습니다'); await reload(); } } catch (e) { toast(e.message || '발급하지 못했습니다'); }
+}
+async function revoke(r, id) {
+  var why = prompt('배지 해제 사유(학생 화면과 발급 대장에 남습니다)', '부정 제출 확인'); if (why === null) return; if (!why.trim()) { toast('해제 사유를 적어 주세요'); return; }
+  if (r.syn) { if (/^[123]$/.test(id)) { var L = r.L[id]; L.badge = false; L.revoked = true; L.revokeReason = why; L.review = 'revoked'; } else { r.xb[id].revoked = true; r.xb[id].revokeReason = why; } derive(r); toast('해제했습니다 (가상 데이터)'); renderAll(); return; }
+  try { await DB.revokeBadge(r.sid, id, why); toast('배지를 해제했습니다'); await reload(); } catch (e) { toast(e.message || '해제하지 못했습니다'); }
+}
+function badgeDefs() {
+  var S = CAT.settings;
+  return '<div class="note" style="margin:0 0 14px">디디쌤 기본 배지는 <b>수동 발급만</b> 지원하고 발급 후 <b>취소할 수 없습니다</b>(디디쌤 가이드 기준). 이 관리자에서는 자동 발급 · 해제를 서버에서 처리하고 발급 대장을 따로 남깁니다. Open Badge 3.0 인증서 연동은 구축 단계 확인 항목입니다.</div><div class="grid two">' +
+    allBadgeIds().map(function (id) { var d = bdef(id), lv = /^[123]$/.test(id);
+      return '<div class="card" data-bd="' + id + '"><div style="display:flex;gap:16px;align-items:flex-start"><div class="bdp">' + medal(d, 88) + '</div><div style="flex:1;min-width:0"><h3>' + (lv ? 'STAGE ' + id + ' 배지' : '특별 배지') + '</h3><p class="sub">' + (lv ? '코스 ' + LVN[id] + ' 수료 배지' : '챌린지 · 워크숍 등 운영자가 직접 발급') + '</p></div></div>' +
+        '<label class="fl">배지 이름<input class="inp" data-b="name" value="' + esc(d.name) + '"></label><label class="fl">메달 문구(영문 대문자)<input class="inp" data-b="short" value="' + esc(d.short || '') + '" maxlength="12"></label><label class="fl">설명(배지 상세 · 공유 화면)<textarea data-b="desc" rows="2">' + esc(d.desc || '') + '</textarea></label><label class="fl">발급 기준<textarea data-b="criteria" rows="2">' + esc(d.criteria || '') + '</textarea></label>' +
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><label class="fl">채움<input type="color" data-b="fill" value="' + esc(d.fill) + '"></label><label class="fl">테두리<input type="color" data-b="ring" value="' + esc(d.ring) + '"></label><label class="fl">리본<input type="color" data-b="rib" value="' + esc(d.rib) + '"></label></div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label class="fl">발급 방식<select data-b="mode"' + (lv ? '' : ' disabled') + '>' + Object.keys(MODE_LABEL).map(function (k) { return '<option value="' + k + '"' + ((d.mode || 'manual') === k ? ' selected' : '') + '>' + MODE_LABEL[k] + '</option>'; }).join('') + '</select></label><label class="fl">유효 기간(개월, 0 = 무기한)<input class="inp num" type="number" min="0" data-b="expiry" value="' + (d.expiry || 0) + '"></label></div>' +
+        tog('ba' + id, d.active !== false, '발급 사용') + (lv ? '' : ' <button class="btn ghost sm" data-bdel="' + id + '" style="color:var(--bad);margin-left:8px">배지 삭제</button>') + '</div>'; }).join('') +
+    '</div><div class="card" style="margin-top:14px"><h3>새 배지 만들기</h3><p class="sub">챌린지 우수작 · 워크숍 참여 · 멘토 활동 등 단계 배지 외 배지를 만들고 수동 발급합니다.</p><div class="bar" style="margin:0"><input class="inp" id="nbName" placeholder="예) 첫 AI 작품 챌린지 우수상" style="flex:1;min-width:220px"><button class="btn" id="nbAdd">배지 만들기</button></div></div>' +
+    '<div class="card" style="margin-top:14px"><h3>' + esc(S.certName) + '(수료 인증)</h3>' + tog('stCert', S.certAuto, 'STAGE 1~3 배지를 모두 받으면 자동 인증') + '<label class="fl" style="margin-top:10px">인증 이름<input class="inp" id="stCertName" value="' + esc(S.certName) + '"></label><label class="fl">발급 기관 표기<input class="inp" id="stIssuer" value="' + esc(S.badgeIssuer) + '"></label><div class="bar" style="margin:14px 0 0"><button class="btn mag" id="bdSave">배지 설정 저장</button></div></div>';
+}
+function bindBadgeDefs() {
+  function pull() { $$('[data-bd]').forEach(function (c) { var id = c.getAttribute('data-bd'), o = {}; $$('[data-b]', c).forEach(function (i) { o[i.getAttribute('data-b')] = i.type === 'number' ? (+i.value || 0) : i.value; }); o.active = $('#ba' + id).checked; if (/^[123]$/.test(id)) CAT.badges[id] = Object.assign({}, CAT.badges[id], o); else { var x = CAT.badgesX.find(function (b) { return b.id === id; }); Object.assign(x, o, { mode: 'manual' }); } }); CAT.settings.certAuto = $('#stCert').checked; CAT.settings.certName = $('#stCertName').value.trim() || 'KIT AX 인증'; CAT.settings.badgeIssuer = $('#stIssuer').value.trim(); }
+  $$('[data-bd] input, [data-bd] select, [data-bd] textarea').forEach(function (i) { i.addEventListener('input', function () { var c = i.closest('[data-bd]'), id = c.getAttribute('data-bd'); var d = Object.assign(bdef(id), {}); $$('[data-b]', c).forEach(function (x) { d[x.getAttribute('data-b')] = x.value; }); $('.bdp', c).innerHTML = medal(d, 88); }); });
+  $('#nbAdd').onclick = function () { var nm = $('#nbName').value.trim(); if (!nm) { toast('배지 이름을 적어 주세요'); return; } pull(); CAT.badgesX = CAT.badgesX || []; CAT.badgesX.push({ id: 'x' + Date.now().toString(36), name: nm, short: 'SPECIAL', fill: '#3BA875', ring: '#BDE8D2', rib: '#1E7A4C', desc: '', criteria: '운영자 수동 발급', mode: 'manual', expiry: 0, active: true }); saveCat('배지 생성 · ' + nm).then(EXT.badges); };
+  $$('[data-bdel]').forEach(function (b) { b.onclick = function () { var id = b.getAttribute('data-bdel'); if (issuedList().some(function (x) { return x.id === id && !x.revoked; })) { toast('발급된 기록이 있는 배지는 삭제할 수 없습니다. \'발급 사용\'을 꺼 주세요.'); return; } if (!confirm('배지를 삭제할까요?')) return; pull(); CAT.badgesX = CAT.badgesX.filter(function (x) { return x.id !== id; }); saveCat('배지 삭제').then(EXT.badges); }; });
+  $('#bdSave').onclick = function () { pull(); saveCat('배지 설정').then(EXT.badges); };
+}
+function manualIssue() {
+  return '<div class="grid two"><div class="card"><h3>1. 배지 선택</h3><select id="miB" style="width:100%">' + allBadgeIds().filter(function (id) { return bdef(id).active !== false; }).map(function (id) { return '<option value="' + id + '">' + esc(bdef(id).name) + '</option>'; }).join('') + '</select><div id="miPrev" style="margin-top:14px"></div></div>' +
+    '<div class="card"><h3>2. 대상</h3>' + subtabs('miT', [['sids', '학번 입력'], ['group', '그룹'], ['dept', '학과']], 'sids') + '<div id="miBox" style="margin-top:10px"><textarea id="miS" rows="5" placeholder="학번을 줄바꿈 · 쉼표로 붙여 넣으세요"></textarea></div><label class="fl" style="margin-top:10px">발급 사유(발급 대장에 기록)<input class="inp" id="miR" placeholder="예) 11월 챌린지 우수작 선정"></label><div class="bar" style="margin:12px 0 0"><span id="miN" style="font-size:13px;color:var(--muted)"></span><button class="btn mag" id="miGo" style="margin-left:auto">발급</button></div></div></div>';
+}
+function bindManualIssue() {
+  var mode = 'sids';
+  function targets() { if (mode === 'sids') return sidsFrom($('#miS').value).map(find).filter(Boolean); if (mode === 'group') { var g = (CAT.groups || []).find(function (x) { return x.id === $('#miG').value; }); return g ? g.sids.map(find).filter(Boolean) : []; } return ALL.filter(function (r) { return r.dept === $('#miD').value && r.status === 'active'; }); }
+  function upd() { var d = bdef($('#miB').value); $('#miPrev').innerHTML = '<div style="display:flex;gap:14px;align-items:center">' + medal(d, 70) + '<div><b>' + esc(d.name) + '</b><div style="font-size:13px;color:var(--muted)">' + esc(d.criteria || '') + '</div></div></div>'; var t = targets(); $('#miN').textContent = '대상 ' + t.length + '명'; }
+  bindSub('miT', function (k) { mode = k; $$('#miT button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-k') === k); }); $('#miBox').innerHTML = k === 'sids' ? '<textarea id="miS" rows="5" placeholder="학번을 줄바꿈 · 쉼표로 붙여 넣으세요"></textarea>' : k === 'group' ? '<select id="miG" style="width:100%">' + (CAT.groups || []).map(function (g) { return '<option value="' + g.id + '">' + esc(g.name) + ' (' + g.sids.length + '명)</option>'; }).join('') + '</select>' : '<select id="miD" style="width:100%">' + DN.map(function (d) { return '<option>' + esc(d) + '</option>'; }).join('') + '</select>'; $$('#miBox textarea, #miBox select').forEach(function (i) { i.oninput = upd; i.onchange = upd; }); upd(); });
+  $('#miS').oninput = upd; $('#miB').onchange = upd; upd();
+  $('#miGo').onclick = async function () { var id = $('#miB').value, t = targets(), reason = $('#miR').value.trim(); if (!t.length) { toast('대상이 없습니다'); return; } if (!reason) { toast('발급 사유를 적어 주세요'); return; } var skip = t.filter(function (r) { return /^[123]$/.test(id) ? r.L[id].badge : (r.xb[id] && !r.xb[id].revoked); }); if (!confirm(bdef(id).name + ' 배지를 ' + (t.length - skip.length) + '명에게 발급할까요?' + (skip.length ? '\n(이미 보유 ' + skip.length + '명 제외)' : ''))) return; var c = 0; for (var i = 0; i < t.length; i++) { if (skip.indexOf(t[i]) >= 0) continue; await issue(t[i], id, reason, true); c++; } toast(c + '명에게 발급했습니다'); await reload(); };
+}
+
+/* ================= 3. 학습자 상세 + 진도 관리 ================= */
+openDetail = function (sid) {
+  var r = find(sid); if (!r) return; var S = CAT.settings;
+  $('#dTitle').textContent = '학번 ' + r.sid;
+  var groups = (CAT.groups || []).filter(function (g) { return g.sids.indexOf(String(r.sid)) >= 0; }).map(function (g) { return g.name; });
+  var h = (r.syn ? '<div class="note demo" style="margin:0 0 14px">시연용 가상 학습자입니다. 진도 · 평가 · 배지 변경은 화면에서만 반영됩니다.</div>' : '') +
+    '<dl class="kv"><dt>학과</dt><dd>' + esc(r.dept) + '</dd><dt>상태</dt><dd>' + stPill(r) + '</dd><dt>진단 유형</dt><dd>' + (r.type ? r.type + ' · ' + TYPES[r.type].ko : '미진단') + '</dd><dt>코스</dt><dd>' + (r.track === 'startup' ? '창업 코스' : r.track === 'job' ? '취업 코스' : '—') + '</dd><dt>그룹</dt><dd>' + (groups.length ? esc(groups.join(', ')) : '—') + '</dd><dt>가입 · 최근 접속</dt><dd class="num">' + dfull(r.activatedAt) + ' · ' + dfull(r.lastSeen) + '</dd><dt>전체 진도</dt><dd class="num">' + r.totalPct + '% · 튜토리얼 ' + r.done.length + '개</dd></dl>';
+  var TC = { EYE: 'E', STORY: 'S', PEN: 'P', MAP: 'M', LENS: 'L' };
+  [1, 2, 3].forEach(function (n) { var L = r.L[n], rv = REV_LABEL[L.badge ? 'approved' : L.review];
+    var tuts = r.type ? Object.keys(TUTN).filter(function (id) { var t = TUTN[id]; return t.lv === n && t.type === r.type && !(CAT.tuts[id] || {}).hidden; }) : [];
+    h += '<div class="lvbox"><h4>' + LVN[n] + ' · 진도 ' + L.pct + '%' + (rv ? '<span class="pill ' + rv[1] + '">' + rv[0] + (L.score != null ? ' · ' + L.score + '점' : '') + '</span>' : '') + '</h4>';
+    if (tuts.length) h += '<table style="font-size:13px"><thead><tr><th>튜토리얼</th><th class="r">시청</th><th>완료</th><th></th></tr></thead><tbody>' + tuts.map(function (id) { var w = (r.watch || {})[id] || {}, dn = r.done.indexOf(id) >= 0; return '<tr><td>' + id + ' ' + esc((TUTN[id] || {}).tool || '') + '</td><td class="r num" style="color:' + ((w.pct || 0) >= S.watchThr ? 'var(--ok)' : 'var(--muted)') + '">' + (w.pct || 0) + '%</td><td>' + (dn ? '<span class="pill p-ok">완료</span>' : '<span class="pill p-no">미완료</span>') + '</td><td>' + (dn ? '<button class="btn ghost sm" data-ud="' + id + '">완료 취소</button>' : '<button class="btn ghost sm" data-dn="' + id + '">완료 처리</button>') + '</td></tr>'; }).join('') + '</tbody></table>';
+    else h += '<div style="font-size:13px;color:var(--muted)">' + (r.type ? '튜토리얼 없음' : 'AI 진단 전이라 코스가 아직 없습니다.') + '</div>';
+    if (r.type) { var cl = clsFor(r, n); h += '<div style="margin-top:10px;font-size:13px">' + cl.map(function (c) { var p = (L.cls || {})[c.id] || 0; return '<div style="display:flex;gap:8px;align-items:center;padding:4px 0"><span style="flex:1;min-width:0">' + esc(c.no) + ' ' + esc(c.title) + (c.req ? ' <b style="color:var(--mag)">필수</b>' : '') + '</span><span class="num">' + p + '/' + LESSONS + '</span>' + (p < LESSONS ? '<button class="btn ghost sm" data-cl="' + n + ':' + c.id + '">수료 처리</button>' : '') + '</div>'; }).join('') + '</div>'; }
+    if (L.subText) h += '<div class="subtext">' + esc(L.subText) + '</div>';
+    h += '<div class="bar" style="margin:10px 0 0">' + (r.pending.indexOf(n) >= 0 || L.sub ? '<button class="btn sm" data-gr="' + n + '">' + (L.review && L.review !== 'pending' ? '다시 평가' : '과제 평가') + '</button>' : '') + (L.badge ? '<button class="btn ghost sm" data-bx="' + n + '" style="color:var(--bad)">배지 해제</button>' : '<button class="btn ok sm" data-bi="' + n + '">배지 수동 발급</button>') + '<button class="btn ghost sm" data-rs="' + n + '">이 단계 진도 초기화</button></div></div>';
+  });
+  var xb = Object.keys(r.xb || {}); if (xb.length) h += '<div class="lvbox"><h4>특별 배지</h4>' + xb.map(function (k) { var x = r.xb[k]; return '<div style="display:flex;justify-content:space-between;padding:4px 0">' + esc(bdef(k).name) + (x.revoked ? ' <span class="pill p-bad">해제</span>' : ' <button class="btn ghost sm" data-bx="' + k + '" style="color:var(--bad)">해제</button>') + '</div>'; }).join('') + '</div>';
+  h += '<div class="lvbox"><h4>계정 관리</h4><p style="font-size:13.5px;color:var(--muted);margin:0 0 10px">비밀번호 분실 시 새 접근코드를 발급합니다. 기존 비밀번호는 무효가 되고, 학습 기록은 유지됩니다.</p><button class="btn ghost sm" id="reissue">접근코드 재발급</button><div id="reissueOut" style="margin-top:10px"></div></div>';
+  $('#dBody').innerHTML = h; openDr('#detail');
+  var B = $('#dBody');
+  $$('[data-dn]', B).forEach(function (b) { b.onclick = function () { var id = b.getAttribute('data-dn'); editProg(r, '튜토리얼 완료 처리 ' + id, function (p) { p.done = p.done || {}; p.done[id] = true; p.steps = p.steps || {}; p.steps[id] = [true, true, true]; p.watch = p.watch || {}; p.watch[id] = Object.assign({}, p.watch[id] || {}, { pct: Math.max(S.watchThr, (p.watch[id] || {}).pct || 0), admin: true }); }, function (x) { if (x.done.indexOf(id) < 0) x.done.push(id); x.watch[id] = { pct: 100 }; var L = x.L[+id.charAt(1)]; L.tutDone = Math.min(5, L.tutDone + 1); }).then(function () { openDetail(sid); }); }; });
+  $$('[data-ud]', B).forEach(function (b) { b.onclick = function () { var id = b.getAttribute('data-ud'); editProg(r, '튜토리얼 완료 취소 ' + id, function (p) { if (p.done) delete p.done[id]; }, function (x) { x.done = x.done.filter(function (d) { return d !== id; }); var L = x.L[+id.charAt(1)]; L.tutDone = Math.max(0, L.tutDone - 1); }).then(function () { openDetail(sid); }); }; });
+  $$('[data-cl]', B).forEach(function (b) { b.onclick = function () { var p2 = b.getAttribute('data-cl').split(':'), n = +p2[0], cid = p2[1]; editProg(r, '클래스 수료 처리 ' + cid, function (p) { p.lv = p.lv || {}; p.lv[n] = p.lv[n] || {}; p.lv[n].cls = p.lv[n].cls || {}; p.lv[n].cls[cid] = LESSONS; }, function (x) { x.L[n].cls[cid] = LESSONS; x.L[n].reqDone = Math.min(x.L[n].reqTotal, x.L[n].reqDone + 1); }).then(function () { openDetail(sid); }); }; });
+  $$('[data-rs]', B).forEach(function (b) { b.onclick = function () { var n = +b.getAttribute('data-rs'); if (!confirm(LVN[n] + ' 단계의 튜토리얼 완료 · 시청 · 클래스 진도를 초기화할까요? (제출 · 배지 기록은 유지)')) return; editProg(r, LVN[n] + ' 진도 초기화', function (p) { Object.keys(p.done || {}).forEach(function (k) { if (+k.charAt(1) === n) delete p.done[k]; }); Object.keys(p.watch || {}).forEach(function (k) { if (+k.charAt(1) === n) delete p.watch[k]; }); if (p.lv && p.lv[n]) p.lv[n].cls = {}; }, function (x) { x.done = x.done.filter(function (k) { return +k.charAt(1) !== n; }); x.L[n].tutDone = 0; x.L[n].reqDone = 0; x.L[n].cls = {}; }).then(function () { openDetail(sid); }); }; });
+  $$('[data-gr]', B).forEach(function (b) { b.onclick = function () { openGrade(r, +b.getAttribute('data-gr')); }; });
+  $$('[data-bi]', B).forEach(function (b) { b.onclick = function () { var why = prompt('수동 발급 사유(발급 대장에 기록)', '오프라인 실습으로 조건 충족 확인'); if (why) issue(r, b.getAttribute('data-bi'), why).then(function () { openDetail(sid); }); }; });
+  $$('[data-bx]', B).forEach(function (b) { b.onclick = function () { revoke(r, b.getAttribute('data-bx')).then(function () { openDetail(sid); }); }; });
+  $('#reissue').onclick = async function () { if (r.syn) { $('#reissueOut').innerHTML = '<div class="note" style="margin:0">가상 학습자는 재발급할 수 없습니다.</div>'; return; } if (!confirm('학번 ' + r.sid + '의 접근코드를 재발급할까요? 기존 비밀번호는 더 이상 쓸 수 없습니다.')) return; var c = await DB.reissueCode(r.sid); $('#reissueOut').innerHTML = '<div class="subtext num" style="font-size:20px;font-weight:700">' + esc(c) + '</div><div style="font-size:12.5px;color:var(--muted)">이 코드는 지금 한 번만 표시됩니다.</div>'; await reload(); };
+};
+
+/* ================= 4. 진도 기준 · 시청 분석 ================= */
+var pgLv = '', pgType = '';
+EXT.progress = function () {
+  var el = $('[data-view="progress"]'), S = CAT.settings;
+  var stats = {}; ALL.forEach(function (r) { Object.keys(r.watch || {}).forEach(function (id) { var w = r.watch[id], s = stats[id] || (stats[id] = { n: 0, sum: 0, thr: 0, low: 0, done: 0 }); s.n++; s.sum += w.pct || 0; if ((w.pct || 0) >= S.watchThr) s.thr++; if ((w.pct || 0) < 30) s.low++; }); r.done.forEach(function (id) { (stats[id] || (stats[id] = { n: 0, sum: 0, thr: 0, low: 0, done: 0 })).done++; }); });
+  var ids = Object.keys(TUTN).filter(function (id) { var t = TUTN[id]; return (!pgLv || t.lv === +pgLv) && (!pgType || t.type === pgType); });
+  var rows = ids.map(function (id) { var s = stats[id] || { n: 0, sum: 0, thr: 0, low: 0, done: 0 }; return { id: id, t: TUTN[id], n: s.n, avg: s.n ? Math.round(s.sum / s.n) : 0, thr: s.thr, done: s.done, drop: s.n ? Math.round(s.low / s.n * 100) : 0 }; }).sort(function (a, b) { return b.drop - a.drop || a.avg - b.avg; });
+  el.innerHTML = '<div class="bar"><h2>진도 기준 · 시청 분석</h2></div><div class="grid two"><div class="card"><h3>진도 인정 기준</h3><p class="sub">학생 학습 플레이어(YouTube · VOD)는 실제 재생한 구간만 기록합니다(건너뛴 구간 · 2배속 초과 제외).</p>' +
+    '<label class="fl">튜토리얼 완료 기준 시청률 <b class="num" id="thrV">' + S.watchThr + '%</b><input type="range" id="stThr" min="50" max="100" step="5" value="' + S.watchThr + '"></label>' +
+    tog('stReq', S.requireWatch, '기준 시청률을 채워야 \'완료\' 가능') + '<br>' + tog('stAuto', S.autoDoneOnWatch, '기준 도달 시 자동 완료 처리') + '<br>' + tog('stSeq', S.seqLessons, '순차 학습(앞 튜토리얼 완료 후 다음 튜토리얼)') +
+    '<label class="fl" style="margin-top:10px">다음 단계(Builder · Master) 열림 조건<select id="stUnlock"><option value="badge">이전 단계 배지 발급 후</option><option value="submit">이전 단계 과제 제출 후</option><option value="free">처음부터 모두 열림</option></select></label><div class="bar" style="margin:12px 0 0"><button class="btn mag" id="pgSave">기준 저장</button></div></div>' +
+    '<div class="card"><h3>일괄 진도 처리</h3><p class="sub">오프라인 실습 · 워크숍 참여 등을 진도로 인정할 때 씁니다(학습 기록에 \'관리자 처리\'로 남음).</p><label class="fl">튜토리얼<select id="bpT">' + Object.keys(TUTN).map(function (id) { return '<option value="' + id + '">' + id + ' · ' + esc(TUTN[id].tool) + '</option>'; }).join('') + '</select></label><label class="fl">대상 학번<textarea id="bpS" rows="4" placeholder="학번을 붙여 넣으세요"></textarea></label><div class="bar" style="margin:0"><button class="btn" id="bpGo">완료 처리</button></div></div></div>' +
+    '<div class="card" style="margin-top:14px"><h3>튜토리얼별 시청 분석</h3><p class="sub">이탈률 = 시청을 시작했지만 30% 미만에서 멈춘 비율 · 이탈률 높은 순</p><div class="bar"><select id="pgLv"><option value="">전체 단계</option><option value="1">Explorer</option><option value="2">Builder</option><option value="3">Master</option></select><select id="pgType"><option value="">전체 유형</option>' + TORDER.map(function (t) { return '<option>' + t + '</option>'; }).join('') + '</select><button class="btn ghost" id="pgCsv">CSV</button></div><div class="tw" style="max-height:520px"><table><thead><tr><th>칸</th><th>튜토리얼</th><th class="r">시청 시작</th><th class="r">평균 시청률</th><th class="r">기준 도달</th><th class="r">완료</th><th class="r">이탈률</th></tr></thead><tbody>' +
+    rows.map(function (x) { return '<tr><td class="num">' + x.id + '</td><td>' + esc(x.t.tool) + '</td><td class="r num">' + fmt(x.n) + '</td><td class="r num"><span class="mini" style="width:' + Math.round(x.avg * 0.6) + 'px;background:' + (x.avg >= S.watchThr ? '#16804D' : '#15173B') + '"></span>' + x.avg + '%</td><td class="r num">' + fmt(x.thr) + '</td><td class="r num">' + fmt(x.done) + '</td><td class="r num" style="color:' + (x.drop >= 30 ? 'var(--bad)' : 'inherit') + '">' + x.drop + '%</td></tr>'; }).join('') + '</tbody></table></div></div>';
+  $('#stUnlock').value = S.levelUnlock; $('#pgLv').value = pgLv; $('#pgType').value = pgType;
+  $('#stThr').oninput = function () { $('#thrV').textContent = this.value + '%'; };
+  $('#pgLv').onchange = function () { pgLv = this.value; EXT.progress(); }; $('#pgType').onchange = function () { pgType = this.value; EXT.progress(); };
+  $('#pgSave').onclick = function () { Object.assign(CAT.settings, { watchThr: +$('#stThr').value, requireWatch: $('#stReq').checked, autoDoneOnWatch: $('#stAuto').checked, seqLessons: $('#stSeq').checked, levelUnlock: $('#stUnlock').value }); saveCat('진도 인정 기준').then(EXT.progress); };
+  $('#pgCsv').onclick = function () { dl('KIT_AXON_시청분석_' + dfull(NOW) + '.csv', [['칸', '튜토리얼', '시청 시작', '평균 시청률', '기준 도달', '완료', '이탈률']].concat(rows.map(function (x) { return [x.id, x.t.tool, x.n, x.avg, x.thr, x.done, x.drop]; }))); };
+  $('#bpGo').onclick = async function () { var id = $('#bpT').value, t = sidsFrom($('#bpS').value).map(find).filter(Boolean); if (!t.length) { toast('대상 학번이 없습니다'); return; } if (!confirm(t.length + '명의 ' + id + ' 튜토리얼을 완료 처리할까요?')) return; for (var i = 0; i < t.length; i++) { var r = t[i]; if (r.syn) { if (r.done.indexOf(id) < 0) r.done.push(id); r.watch[id] = { pct: 100 }; derive(r); } else await DB.adminEditProgress(r.sid, '일괄 완료 처리 ' + id, function (p) { p.done = p.done || {}; p.done[id] = true; p.watch = p.watch || {}; p.watch[id] = { pct: 100, admin: true }; }); } toast(t.length + '명 완료 처리했습니다'); await reload(); };
+};
+
+/* ================= 5. 코스 · 러닝 저니 ================= */
+var crs = '1-EYE';
+function tutView(id) { var b = TUTN[id] || {}, o = (CAT.tuts || {})[id] || {}; return Object.assign({ id: id }, b, o); }
+function courseIds(key) { var p = key.split('-'), lv = +p[0], ty = p[1]; var ids = Object.keys(TUTN).concat(Object.keys(CAT.tuts || {})).filter(function (id, i, a) { return a.indexOf(id) === i; }).filter(function (id) { var t = tutView(id); return t.lv === lv && t.type === ty && !t.hidden; }); var o = (CAT.order || {})[key] || []; return ids.sort(function (a, b) { var ia = o.indexOf(a), ib = o.indexOf(b); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || (a < b ? -1 : 1); }); }
+EXT.course = function () {
+  var el = $('[data-view="course"]'), S = CAT.settings;
+  var j = [1, 2, 3].map(function (n) { var A = CAT.assign[n], B = bdef(n); return '<div class="card jr"><div class="jh">' + medal(B, 44) + '<div><b>' + esc(B.name) + '</b><div style="font-size:12.5px;color:var(--muted)">' + (n === 1 ? '진단 직후 열림' : { badge: '이전 단계 배지 발급 후 열림', submit: '이전 단계 제출 후 열림', free: '처음부터 열림' }[S.levelUnlock]) + '</div></div></div><ol class="jsteps"><li>영상 튜토리얼 5개 <span>시청 ' + S.watchThr + '%' + (S.requireWatch ? ' 이상 시 완료' : ' 권장') + (S.seqLessons ? ' · 순차' : '') + '</span></li><li>온라인 클래스 <span>필수 과정 수료</span></li><li>' + esc(A.title || B.subTitle) + ' <span>통과 ' + A.pass + '점 · 루브릭 ' + A.rubric.length + '개</span></li><li>배지 발급 <span>' + MODE_LABEL[B.mode] + '</span></li></ol></div>'; }).join('');
+  var mx = '<div class="tw"><table class="mx"><thead><tr><th></th>' + TORDER.map(function (t) { return '<th>' + t + ' · ' + TYPES[t].ko + '</th>'; }).join('') + '</tr></thead><tbody>' + [1, 2, 3].map(function (n) { return '<tr><th>' + LVN[n] + '</th>' + TORDER.map(function (t) { var k = n + '-' + t, c = courseIds(k).length; return '<td><button class="cc' + (k === crs ? ' on' : '') + '" data-c="' + k + '">' + c + '편' + (c !== 5 ? ' <b style="color:var(--bad)">!</b>' : '') + '</button></td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+  var ids = courseIds(crs), p = crs.split('-');
+  var list = ids.map(function (id, i) { var t = tutView(id), vod = !!t.vod; return '<div class="crow"><span class="num" style="font-weight:800;width:26px">' + (i + 1) + '</span><img src="' + (vod ? ((CAT.videos || []).find(function (v) { return v.id === t.vod; }) || {}).thumb || '' : 'https://i.ytimg.com/vi/' + esc(t.vid) + '/default.jpg') + '" alt="" style="width:64px;height:36px;object-fit:cover;border-radius:6px;background:#15173B" onerror="this.style.visibility=\'hidden\'"><div style="flex:1;min-width:0"><b>' + esc(id) + ' · ' + esc(t.tool) + '</b>' + (vod ? ' <span class="pill p-mag">VOD</span>' : ' <span class="pill p-no">YouTube</span>') + '<div style="font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(t.mission || '') + '</div></div><button class="btn ghost sm" data-up="' + i + '" ' + (i ? '' : 'disabled') + ' aria-label="위로">↑</button><button class="btn ghost sm" data-dw="' + i + '" ' + (i < ids.length - 1 ? '' : 'disabled') + ' aria-label="아래로">↓</button><button class="btn ghost sm" data-ed="' + id + '">편집</button><button class="btn ghost sm" data-hd="' + id + '" style="color:var(--bad)">제외</button></div>'; }).join('');
+  var hidden = Object.keys(CAT.tuts || {}).filter(function (id) { var t = tutView(id); return t.hidden && t.lv === +p[0] && t.type === p[1]; });
+  var _seen = {}, cl = (+p[0] === 1 ? (M.cls.types[p[1]] || []).map(function (c, i) { return Object.assign({}, c, { req: i === 0 }); }).concat(M.cls.common) : (M.cls.lv[+p[0]] || [])).filter(function (c) { if (_seen[c.id]) return false; _seen[c.id] = 1; return true; });
+  el.innerHTML = '<div class="bar"><h2>코스 · 러닝 저니</h2></div><h3 style="margin:0 0 10px">러닝 저니(학생이 밟는 순서)</h3><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))">' + j + '</div><p style="font-size:13px;color:var(--muted)">열림 조건 · 시청 기준 · 순차 학습은 [진도 기준], 과제 · 통과 점수는 [과제 · 평가 › 설정], 배지 발급 방식은 [배지 › 설정]에서 바꿉니다.</p>' +
+    '<h3 style="margin:22px 0 10px">코스 편성(3단계 × 5유형 = 15개 코스)</h3><div class="card" style="padding:10px">' + mx + '</div>' +
+    '<div class="grid two" style="margin-top:14px"><div class="card"><h3>' + LVN[p[0]] + ' · ' + p[1] + ' 코스 튜토리얼 (' + ids.length + '편)</h3><p class="sub">순서를 바꾸면 학생 코스 커리큘럼 순서가 바뀝니다. 코스마다 5편을 권장합니다.</p>' + list + '<div class="bar" style="margin:12px 0 0"><button class="btn" id="tNew">튜토리얼 추가</button>' + (hidden.length ? '<select id="tRestore"><option value="">제외한 튜토리얼 복원…</option>' + hidden.map(function (id) { return '<option value="' + id + '">' + id + ' · ' + esc(tutView(id).tool) + '</option>'; }).join('') + '</select>' : '') + '</div></div>' +
+    '<div class="card"><h3>연결 온라인 클래스</h3><p class="sub">AI 콘텐츠 보유 리스트 기준(디디쌤 클래스로 운영). 클래스 자체의 개설 · 수강 기간은 디디쌤 클래스 관리에서 설정합니다.</p>' + cl.map(function (c) { return '<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="num" style="width:40px">' + esc(c.no) + '</span><span style="flex:1">' + esc(c.title) + '</span><span class="pill ' + (c.req ? 'p-mag' : 'p-no') + '">' + (c.req ? '필수' : '권장') + '</span></div>'; }).join('') + (+p[0] > 1 ? '<p style="font-size:12.5px;color:var(--muted)">+ 취업/창업 트랙별 권장 클래스 1개</p>' : '') + '</div></div>';
+  $$('[data-c]', el).forEach(function (b) { b.onclick = function () { crs = b.getAttribute('data-c'); EXT.course(); }; });
+  function setOrder(a) { CAT.order = CAT.order || {}; CAT.order[crs] = a; saveCat('코스 순서 ' + crs).then(EXT.course); }
+  $$('[data-up]', el).forEach(function (b) { b.onclick = function () { var i = +b.getAttribute('data-up'), a = ids.slice(); a.splice(i - 1, 0, a.splice(i, 1)[0]); setOrder(a); }; });
+  $$('[data-dw]', el).forEach(function (b) { b.onclick = function () { var i = +b.getAttribute('data-dw'), a = ids.slice(); a.splice(i + 1, 0, a.splice(i, 1)[0]); setOrder(a); }; });
+  $$('[data-hd]', el).forEach(function (b) { b.onclick = function () { var id = b.getAttribute('data-hd'); if (!confirm(id + ' 튜토리얼을 이 코스에서 제외할까요? (학습 기록은 유지, 언제든 복원 가능)')) return; CAT.tuts[id] = Object.assign({}, CAT.tuts[id], { hidden: true }); saveCat('튜토리얼 제외 ' + id).then(EXT.course); }; });
+  if ($('#tRestore')) $('#tRestore').onchange = function () { var id = this.value; if (!id) return; CAT.tuts[id].hidden = false; saveCat('튜토리얼 복원 ' + id).then(EXT.course); };
+  $$('[data-ed]', el).forEach(function (b) { b.onclick = function () { editTut(b.getAttribute('data-ed')); }; });
+  $('#tNew').onclick = function () { var c = { EYE: 'E', STORY: 'S', PEN: 'P', MAP: 'M', LENS: 'L' }[p[1]], k = 6; while (TUTN[c + p[0] + '-' + k] || CAT.tuts[c + p[0] + '-' + k]) k++; editTut(c + p[0] + '-' + k, { lv: +p[0], type: p[1], tool: '', title: '', channel: '', vid: '', mission: '', steps: ['', '', ''] }); };
+};
+function ytId(s) { s = String(s || '').trim(); var m = /(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/.exec(s); return m ? m[1] : (/^[\w-]{11}$/.test(s) ? s : ''); }
+function editTut(id, fresh) {
+  var t = fresh || tutView(id), vids = CAT.videos || [];
+  $('#dTitle').textContent = (fresh ? '새 튜토리얼 · ' : '튜토리얼 편집 · ') + id;
+  $('#dBody').innerHTML = '<label class="fl">툴 이름<input class="inp" id="tTool" value="' + esc(t.tool) + '"></label><label class="fl">영상 소스<select id="tSrc"><option value="yt">YouTube 링크</option><option value="vod">VOD(콘텐츠 라이브러리)</option></select></label>' +
+    '<div id="tYt"><label class="fl">YouTube 주소 또는 영상 ID<input class="inp" id="tVid" value="' + esc(t.vod ? '' : t.vid || '') + '" placeholder="https://www.youtube.com/watch?v=..."></label></div><div id="tVod" class="hide"><label class="fl">라이브러리 영상<select id="tVodSel">' + (vids.length ? vids.map(function (v) { return '<option value="' + v.id + '"' + (t.vod === v.id ? ' selected' : '') + '>' + esc(v.title) + ' (' + (v.kind === 'vod' ? 'VOD' : 'YouTube') + ')</option>'; }).join('') : '<option value="">라이브러리에 영상이 없습니다 — [콘텐츠(VOD)]에서 먼저 올려 주세요</option>') + '</select></label></div>' +
+    '<label class="fl">영상 제목<input class="inp" id="tTitle" value="' + esc(t.title || '') + '"></label><label class="fl">채널 · 제작<input class="inp" id="tCh" value="' + esc(t.channel || '') + '"></label><label class="fl">15분 미션(결과물)<input class="inp" id="tMis" value="' + esc(t.mission || '') + '"></label>' + [0, 1, 2].map(function (i) { return '<label class="fl">따라 하기 ' + (i + 1) + '단계<input class="inp" data-st="' + i + '" value="' + esc((t.steps || [])[i] || '') + '"></label>'; }).join('') +
+    '<div class="bar" style="margin:14px 0 0"><button class="btn mag" id="tSave">저장</button>' + (fresh ? '' : '<button class="btn ghost" id="tReset">기본값으로</button>') + '</div>';
+  openDr('#detail');
+  var src = t.vod ? 'vod' : 'yt'; $('#tSrc').value = src;
+  function sw() { var v = $('#tSrc').value; $('#tYt').classList.toggle('hide', v !== 'yt'); $('#tVod').classList.toggle('hide', v !== 'vod'); } $('#tSrc').onchange = sw; sw();
+  $('#tSave').onclick = function () {
+    var o = { lv: t.lv, type: t.type, tool: $('#tTool').value.trim(), title: $('#tTitle').value.trim(), channel: $('#tCh').value.trim(), mission: $('#tMis').value.trim(), steps: $$('[data-st]').map(function (i) { return i.value.trim(); }) };
+    if ($('#tSrc').value === 'yt') { var v = ytId($('#tVid').value); if (!v) { toast('YouTube 주소를 확인해 주세요'); return; } o.vid = v; o.vod = ''; } else { var sel = $('#tVodSel').value; if (!sel) { toast('라이브러리 영상을 선택해 주세요'); return; } var V = vids.find(function (x) { return x.id === sel; }); if (V.kind === 'youtube') { o.vid = V.ytid; o.vod = ''; } else { o.vod = sel; o.vid = ''; } }
+    if (!o.tool) { toast('툴 이름을 적어 주세요'); return; }
+    CAT.tuts[id] = Object.assign({}, CAT.tuts[id], o, { hidden: false }); if (!TUTN[id]) TUTN[id] = { tool: o.tool, type: o.type, lv: o.lv };
+    if (fresh) { CAT.order = CAT.order || {}; var k = o.lv + '-' + o.type; CAT.order[k] = courseIds(k).filter(function (x) { return x !== id; }).concat([id]); }
+    saveCat('튜토리얼 ' + id).then(function () { closeDr(); EXT.course(); });
+  };
+  if ($('#tReset')) $('#tReset').onclick = function () { if (!confirm('이 튜토리얼을 기본 편성으로 되돌릴까요?')) return; delete CAT.tuts[id]; saveCat('튜토리얼 기본값 ' + id).then(function () { closeDr(); EXT.course(); }); };
+}
+
+/* ================= 6. 콘텐츠(VOD) · 편성 (CMS) ================= */
+var cmsQ = '';
+function usedBy(vid) { return Object.keys(CAT.tuts || {}).filter(function (id) { var o = CAT.tuts[id]; return !o.hidden && (o.vod === vid || ((CAT.videos || []).find(function (v) { return v.id === vid && v.kind === 'youtube' && v.ytid === o.vid; }))); }); }
+function fmtDur(s) { s = Math.round(s || 0); return s ? Math.floor(s / 60) + '분 ' + (s % 60) + '초' : '—'; }
+EXT.cms = function () {
+  var el = $('[data-view="cms"]'), vids = (CAT.videos || []).filter(function (v) { return !cmsQ || (v.title + ' ' + (v.folder || '')).toLowerCase().indexOf(cmsQ.toLowerCase()) >= 0; });
+  var base = Object.keys(TUTN).length;
+  el.innerHTML = '<div class="bar"><h2>콘텐츠(VOD) · 과정 편성</h2></div><div class="grid two"><div class="card"><h3>VOD 업로드</h3><p class="sub">자체 제작 튜토리얼 · 특강 녹화본을 올립니다. ' + (DB.mode === 'demo' ? '<b>시연 모드</b>: 이 브라우저에만 저장(파일당 500MB 이하).' : '운영: 서버 저장소(파일당 4GB · 2시간 이하, 디디쌤 영상 라이브러리 기준).') + '</p><label class="fl">영상 파일(mp4 · webm · mov)<input type="file" id="vFile" accept="video/*"></label><label class="fl">제목<input class="inp" id="vTitle" placeholder="예) [KIT] Gemini 나노바나나 실습"></label><label class="fl">폴더 · 태그<input class="inp" id="vFolder" placeholder="예) Explorer / EYE"></label><div class="bar" style="margin:0"><button class="btn mag" id="vUp">업로드</button><span id="vProg" style="font-size:13px;color:var(--muted)"></span></div></div>' +
+    '<div class="card"><h3>YouTube 영상 등록</h3><p class="sub">공개 강의 영상을 라이브러리에 등록해 여러 코스에 재사용합니다.</p><label class="fl">YouTube 주소<input class="inp" id="yUrl" placeholder="https://www.youtube.com/watch?v=..."></label><label class="fl">제목(비우면 자동 조회 시도)<input class="inp" id="yTitle"></label><label class="fl">폴더 · 태그<input class="inp" id="yFolder"></label><button class="btn" id="yAdd">등록</button></div></div>' +
+    '<div class="card" style="margin-top:14px"><div class="bar"><h3 style="margin:0 auto 0 0">영상 라이브러리 (' + fmt((CAT.videos || []).length) + ')</h3><input class="inp" id="cmsQ" placeholder="제목 · 폴더 검색" value="' + esc(cmsQ) + '"></div><div class="tw"><table><thead><tr><th>영상</th><th>종류</th><th>길이</th><th>폴더</th><th>적용 튜토리얼</th><th>등록</th><th></th></tr></thead><tbody>' +
+    (vids.length ? vids.map(function (v) { var u = usedBy(v.id); return '<tr><td><div style="display:flex;gap:10px;align-items:center"><img src="' + esc(v.thumb || (v.ytid ? 'https://i.ytimg.com/vi/' + v.ytid + '/default.jpg' : '')) + '" alt="" style="width:72px;height:40px;object-fit:cover;border-radius:6px;background:#15173B" onerror="this.style.visibility=\'hidden\'"><b style="white-space:normal">' + esc(v.title) + '</b></div></td><td>' + (v.kind === 'vod' ? '<span class="pill p-mag">VOD</span>' : '<span class="pill p-no">YouTube</span>') + '</td><td class="num">' + fmtDur(v.dur) + '</td><td>' + esc(v.folder || '') + '</td><td>' + (u.length ? u.map(esc).join(', ') : '<span style="color:var(--muted)">미편성</span>') + '</td><td class="num">' + dfull(v.at) + '</td><td style="white-space:nowrap"><button class="btn ghost sm" data-pv="' + v.id + '">미리보기</button> <button class="btn sm" data-as="' + v.id + '">편성</button> <button class="btn ghost sm" data-dv="' + v.id + '" style="color:var(--bad)">삭제</button></td></tr>'; }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">등록한 영상이 없습니다. 기본 편성 튜토리얼 ' + base + '편은 YouTube 공개 강의로 연결돼 있습니다.</td></tr>') + '</tbody></table></div></div>';
+  $('#cmsQ').oninput = function () { cmsQ = this.value; clearTimeout(window.__cq); window.__cq = setTimeout(EXT.cms, 300); };
+  $('#vUp').onclick = async function () {
+    var f = $('#vFile').files[0]; if (!f) { toast('영상 파일을 선택해 주세요'); return; } if (DB.mode === 'demo' && f.size > 500 * 1048576) { toast('시연 모드에서는 500MB 이하만 올릴 수 있습니다'); return; }
+    var meta = await probe(f); if (meta.dur > 7200) { toast('2시간 이하 영상만 올릴 수 있습니다'); return; }
+    this.disabled = true; $('#vProg').textContent = '업로드 중…';
+    try { var r = await DB.vodPut(f, function (p) { $('#vProg').textContent = '업로드 ' + p + '%'; }); CAT.videos = CAT.videos || []; CAT.videos.unshift({ id: r.id, kind: 'vod', url: r.url || '', title: $('#vTitle').value.trim() || f.name.replace(/\.[^.]+$/, ''), folder: $('#vFolder').value.trim(), dur: meta.dur, size: f.size, thumb: meta.thumb, at: Date.now() }); await saveCat('VOD 업로드'); EXT.cms(); } catch (e) { toast(e.message || '업로드하지 못했습니다'); } finally { this.disabled = false; }
+  };
+  $('#yAdd').onclick = async function () { var id = ytId($('#yUrl').value); if (!id) { toast('YouTube 주소를 확인해 주세요'); return; } var title = $('#yTitle').value.trim(); if (!title) { try { var j = await (await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id))).json(); title = j.title; } catch (e) { title = 'YouTube ' + id; } } CAT.videos = CAT.videos || []; CAT.videos.unshift({ id: 'yt_' + id, kind: 'youtube', ytid: id, title: title, folder: $('#yFolder').value.trim(), dur: 0, at: Date.now() }); saveCat('YouTube 영상 등록').then(EXT.cms); };
+  $$('[data-pv]', el).forEach(function (b) { b.onclick = function () { preview((CAT.videos || []).find(function (v) { return v.id === b.getAttribute('data-pv'); })); }; });
+  $$('[data-dv]', el).forEach(function (b) { b.onclick = async function () { var id = b.getAttribute('data-dv'), u = usedBy(id); if (u.length) { toast('편성된 영상은 삭제할 수 없습니다(' + u.join(', ') + '). 먼저 편성을 바꿔 주세요.'); return; } if (!confirm('영상을 삭제할까요?')) return; var v = CAT.videos.find(function (x) { return x.id === id; }); if (v.kind === 'vod') { try { await DB.vodDelete(id); } catch (e) {} } CAT.videos = CAT.videos.filter(function (x) { return x.id !== id; }); saveCat('영상 삭제').then(EXT.cms); }; });
+  $$('[data-as]', el).forEach(function (b) { b.onclick = function () { assignVideo(b.getAttribute('data-as')); }; });
+};
+function probe(f) { return new Promise(function (res) { var v = document.createElement('video'); v.preload = 'metadata'; v.muted = true; v.src = URL.createObjectURL(f); var done = function (d, th) { URL.revokeObjectURL(v.src); res({ dur: Math.round(d || 0), thumb: th || '' }); }; v.onloadedmetadata = function () { try { v.currentTime = Math.min(1, (v.duration || 2) / 2); } catch (e) { done(v.duration); } }; v.onseeked = function () { try { var c = document.createElement('canvas'); c.width = 320; c.height = Math.round(320 * (v.videoHeight || 9) / (v.videoWidth || 16)); c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); done(v.duration, c.toDataURL('image/jpeg', 0.7)); } catch (e) { done(v.duration); } }; v.onerror = function () { done(0); }; setTimeout(function () { done(v.duration || 0); }, 8000); }); }
+async function preview(v) {
+  if (!v) return; $('#dTitle').textContent = '미리보기 · ' + v.title;
+  var src = v.kind === 'vod' ? await DB.vodUrl(v.id, v.url) : '';
+  $('#dBody').innerHTML = v.kind === 'vod' ? (src ? '<video controls playsinline src="' + esc(src) + '" style="width:100%;border-radius:12px;background:#000"></video>' : '<div class="note">이 브라우저에 영상 파일이 없습니다(시연 모드는 업로드한 브라우저에만 저장).</div>') : '<div style="position:relative;aspect-ratio:16/9"><iframe src="https://www.youtube.com/embed/' + esc(v.ytid) + '" style="position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:12px" allowfullscreen></iframe></div>';
+  openDr('#detail');
+}
+function assignVideo(vid) {
+  var v = (CAT.videos || []).find(function (x) { return x.id === vid; });
+  $('#dTitle').textContent = '과정 편성 · ' + v.title;
+  $('#dBody').innerHTML = '<p style="color:var(--muted);font-size:14px;margin-top:0">이 영상을 어느 튜토리얼에 쓸지 고릅니다. 기존 영상을 바꾸거나, 코스에 새 튜토리얼로 추가할 수 있습니다.</p><label class="fl">코스<select id="avC">' + [1, 2, 3].map(function (n) { return TORDER.map(function (t) { return '<option value="' + n + '-' + t + '">' + LVN[n] + ' · ' + t + '</option>'; }).join(''); }).join('') + '</select></label><label class="fl">편성 방법<select id="avT"></select></label><button class="btn mag" id="avGo">편성</button>';
+  openDr('#detail');
+  function fill() { var k = $('#avC').value; $('#avT').innerHTML = '<option value="__new">새 튜토리얼로 추가</option>' + courseIds(k).map(function (id) { return '<option value="' + id + '">' + id + ' · ' + esc(tutView(id).tool) + ' 영상 교체</option>'; }).join(''); }
+  $('#avC').onchange = fill; fill();
+  $('#avGo').onclick = function () { var k = $('#avC').value.split('-'), tid = $('#avT').value; var patch = v.kind === 'vod' ? { vod: v.id, vid: '' } : { vid: v.ytid, vod: '' };
+    if (tid === '__new') { var c = { EYE: 'E', STORY: 'S', PEN: 'P', MAP: 'M', LENS: 'L' }[k[1]], i = 6; while (TUTN[c + k[0] + '-' + i] || CAT.tuts[c + k[0] + '-' + i]) i++; return editTut(c + k[0] + '-' + i, Object.assign({ lv: +k[0], type: k[1], tool: '', title: v.title, channel: 'KIT AX ON', mission: '', steps: ['', '', ''] }, patch)); }
+    CAT.tuts[tid] = Object.assign({}, CAT.tuts[tid], patch, { title: v.title }); saveCat('과정 편성 ' + tid).then(function () { closeDr(); EXT.cms(); }); };
+}
+
+/* ================= 7. 게시판 · 알림 ================= */
+var bdTab = 'notice';
+function notices() { if (!Array.isArray(CAT.notices)) CAT.notices = JSON.parse(JSON.stringify(M.notices)); return CAT.notices; }
+EXT.board = async function () {
+  var el = $('[data-view="board"]');
+  var h = '<div class="bar"><h2>게시판 · 알림</h2>' + subtabs('bdT', [['notice', '공지사항 관리'], ['msg', '학습자 알림 발송']], bdTab) + '</div>';
+  if (bdTab === 'notice') {
+    var L = notices().slice().sort(function (a, b) { return (b.pin - a.pin) || (a.date < b.date ? 1 : -1); });
+    h += '<div class="bar"><button class="btn mag" id="nNew">새 공지</button><a class="btn ghost" href="index.html#notice" target="_blank" rel="noopener">학습자 화면에서 보기</a></div><div class="card" style="padding:8px 12px"><div class="tw"><table><thead><tr><th></th><th>분류</th><th>제목</th><th>날짜</th><th>상태</th><th></th></tr></thead><tbody>' + L.map(function (n) { return '<tr><td>' + (n.pin ? '<span class="pill p-mag">고정</span>' : '') + '</td><td>' + esc(n.cat) + '</td><td style="white-space:normal"><b>' + esc(n.title) + '</b></td><td class="num">' + esc(n.date) + '</td><td>' + (n.published === false ? '<span class="pill p-no">임시 저장</span>' : '<span class="pill p-ok">게시</span>') + '</td><td style="white-space:nowrap"><button class="btn ghost sm" data-ne="' + n.id + '">수정</button> <button class="btn ghost sm" data-nd="' + n.id + '" style="color:var(--bad)">삭제</button></td></tr>'; }).join('') + '</tbody></table></div></div>';
+    el.innerHTML = h; bindSub('bdT', function (k) { bdTab = k; EXT.board(); });
+    $('#nNew').onclick = function () { editNotice(null); };
+    $$('[data-ne]', el).forEach(function (b) { b.onclick = function () { editNotice(b.getAttribute('data-ne')); }; });
+    $$('[data-nd]', el).forEach(function (b) { b.onclick = function () { if (!confirm('공지를 삭제할까요?')) return; CAT.notices = notices().filter(function (n) { return n.id !== b.getAttribute('data-nd'); }); saveCat('공지 삭제').then(EXT.board); }; });
+    return;
+  }
+  var ms = await DB.listMessages();
+  h += '<div class="note" style="margin:0 0 14px">연락처를 저장하지 않으므로 알림은 학습자 사이트 <b>알림함</b>(로그인 후 계정 메뉴)으로 전달됩니다. 카카오 알림톡 · 메일 발송은 학교 시스템 또는 SSO 연동 후 검토합니다.</div><div class="grid two"><div class="card"><h3>알림 보내기</h3><label class="fl">대상<select id="mT"><option value="all">전체 학습자</option><option value="dept">학과</option><option value="group">그룹</option><option value="sids">학번 지정</option></select></label><div id="mV"></div><label class="fl">제목<input class="inp" id="mTi"></label><label class="fl">내용<textarea id="mB" rows="5"></textarea></label><button class="btn mag" id="mGo">보내기</button></div>' +
+    '<div class="card"><h3>보낸 알림</h3>' + (ms.length ? ms.map(function (m) { return '<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(m.title) + '</b><button class="btn ghost sm" data-md="' + m.id + '">삭제</button></div><div style="font-size:13px;color:var(--muted)">' + esc((m.target || {}).label || '') + ' · ' + KITDB.util.stamp(m.at) + '</div><div style="font-size:14px;white-space:pre-wrap;margin-top:4px">' + esc(m.body) + '</div></div>'; }).join('') : '<p style="color:var(--muted)">보낸 알림이 없습니다.</p>') + '</div></div>';
+  el.innerHTML = h; bindSub('bdT', function (k) { bdTab = k; EXT.board(); });
+  function vbox() { var t = $('#mT').value; $('#mV').innerHTML = t === 'dept' ? '<label class="fl">학과<select id="mVal">' + (ROLE.role === 'dept' ? ROLE.depts : DN).map(function (d) { return '<option>' + esc(d) + '</option>'; }).join('') + '</select></label>' : t === 'group' ? '<label class="fl">그룹<select id="mVal">' + (CAT.groups || []).map(function (g) { return '<option value="' + g.id + '">' + esc(g.name) + '</option>'; }).join('') + '</select></label>' : t === 'sids' ? '<label class="fl">학번<textarea id="mVal" rows="3"></textarea></label>' : ''; }
+  $('#mT').onchange = vbox; vbox();
+  $('#mGo').onclick = async function () { var t = $('#mT').value, v = $('#mVal') ? $('#mVal').value : ''; if (ROLE.role === 'dept' && t === 'all') { toast('학과 담당자는 담당 학과에만 보낼 수 있습니다'); return; } var tg = { type: t, value: t === 'sids' ? sidsFrom(v) : v }; tg.label = t === 'all' ? '전체 학습자' : t === 'dept' ? v : t === 'group' ? ((CAT.groups || []).find(function (g) { return g.id === v; }) || {}).name : '학번 ' + tg.value.length + '명'; if (!$('#mTi').value.trim() || !$('#mB').value.trim()) { toast('제목과 내용을 적어 주세요'); return; } if (!confirm(tg.label + '에게 알림을 보낼까요?')) return; await DB.sendMessage({ title: $('#mTi').value.trim(), body: $('#mB').value.trim(), target: tg }); toast('보냈습니다 — 학습자 알림함에 표시됩니다'); EXT.board(); };
+  $$('[data-md]', el).forEach(function (b) { b.onclick = async function () { await DB.deleteMessage(b.getAttribute('data-md')); EXT.board(); }; });
+};
+function editNotice(id) {
+  var L = notices(), n = id ? L.find(function (x) { return x.id === id; }) : { id: 'n' + Date.now().toString(36), pin: false, cat: M.ncats[0], date: dfull(Date.now()), title: '', body: [''], info: [], files: [], act: null, published: true };
+  $('#dTitle').textContent = id ? '공지 수정' : '새 공지';
+  $('#dBody').innerHTML = '<label class="fl">분류<select id="nC">' + M.ncats.map(function (c) { return '<option' + (c === n.cat ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></label><label class="fl">제목<input class="inp" id="nT" value="' + esc(n.title) + '"></label><label class="fl">게시일(YYYY.MM.DD)<input class="inp num" id="nD" value="' + esc(n.date) + '"></label>' +
+    '<label class="fl">본문(빈 줄로 문단 구분)<textarea id="nB" rows="7">' + esc((n.body || []).join('\n\n')) + '</textarea></label><label class="fl">핵심 정보 표(한 줄에 "항목: 내용")<textarea id="nI" rows="3">' + esc((n.info || []).map(function (r) { return r[0] + ': ' + r[1]; }).join('\n')) + '</textarea></label><label class="fl">첨부 파일 이름(한 줄에 하나)<textarea id="nF" rows="2">' + esc((n.files || []).join('\n')) + '</textarea></label>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label class="fl">바로가기 버튼 문구<input class="inp" id="nAL" value="' + esc(n.act ? n.act.label : '') + '"></label><label class="fl">이동 화면<select id="nAT">' + ACT_TO.map(function (a) { return '<option value="' + a[0] + '"' + ((n.act && n.act.to) === a[0] ? ' selected' : '') + '>' + a[1] + '</option>'; }).join('') + '</select></label></div>' + tog('nP', n.pin, '상단 고정') + ' ' + tog('nPub', n.published !== false, '게시(끄면 임시 저장)') +
+    '<div class="bar" style="margin:14px 0 0"><button class="btn mag" id="nSave">저장</button></div>';
+  openDr('#detail');
+  $('#nSave').onclick = function () { var t = $('#nT').value.trim(); if (!t) { toast('제목을 적어 주세요'); return; } if (!/^\d{4}\.\d{2}\.\d{2}$/.test($('#nD').value.trim())) { toast('게시일은 2026.11.02 형식으로 적어 주세요'); return; }
+    var o = { id: n.id, cat: $('#nC').value, title: t, date: $('#nD').value.trim(), body: $('#nB').value.split(/\n\s*\n/).map(function (s) { return s.trim(); }).filter(Boolean), info: $('#nI').value.split('\n').map(function (l) { var i = l.indexOf(':'); return i > 0 ? [l.slice(0, i).trim(), l.slice(i + 1).trim()] : null; }).filter(Boolean), files: $('#nF').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean), act: $('#nAT').value && $('#nAL').value.trim() ? { label: $('#nAL').value.trim(), to: $('#nAT').value } : null, pin: $('#nP').checked, published: $('#nPub').checked };
+    if (!o.act) delete o.act;
+    var L2 = notices(), i = L2.findIndex(function (x) { return x.id === n.id; }); if (i >= 0) L2[i] = o; else L2.push(o); saveCat('공지 ' + (i >= 0 ? '수정' : '등록') + ' · ' + t).then(function () { closeDr(); EXT.board(); }); };
+}
+
+/* ================= 8. 학번 등록 · 그룹 ================= */
+function renderGroups() {
+  var G = CAT.groups || [];
+  $('#groupBox').innerHTML = '<div class="card"><h3>그룹(팀) 관리</h3><p class="sub">반 · 동아리 · 워크숍 참가자처럼 학번을 묶어 알림 발송 · 배지 수동 발급 대상으로 씁니다(디디쌤 팀 관리와 같은 방식).</p><div class="grid two"><div><label class="fl">그룹 이름<input class="inp" id="gN" placeholder="예) 11월 n8n 워크숍 참가자"></label><label class="fl">구성<select id="gM"><option value="sids">학번 붙여 넣기</option><option value="rule">조건(학과 · 입학년도 · 상태)</option></select></label><div id="gBox"></div><button class="btn mag" id="gAdd" style="margin-top:8px">그룹 만들기</button></div><div>' + (G.length ? G.map(function (g) { return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><b style="flex:1">' + esc(g.name) + '</b><span class="num">' + g.sids.length + '명</span><button class="btn ghost sm" data-gc="' + g.id + '">학번 CSV</button><button class="btn ghost sm" data-gd="' + g.id + '" style="color:var(--bad)">삭제</button></div>'; }).join('') : '<p style="color:var(--muted)">만든 그룹이 없습니다.</p>') + '</div></div></div>';
+  function gb() { $('#gBox').innerHTML = $('#gM').value === 'sids' ? '<label class="fl">학번<textarea id="gS" rows="4"></textarea></label>' : '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"><label class="fl">학과<select id="gD"><option value="">전체</option>' + DN.map(function (d) { return '<option>' + esc(d) + '</option>'; }).join('') + '</select></label><label class="fl">입학년도<select id="gY"><option value="">전체</option><option>2023</option><option>2024</option><option>2025</option><option>2026</option></select></label><label class="fl">상태<select id="gSt"><option value="">전체</option><option value="active">가입</option><option value="invited">미가입</option><option value="idle">14일 미접속</option></select></label></div>'; }
+  $('#gM').onchange = gb; gb();
+  $('#gAdd').onclick = function () { var nm = $('#gN').value.trim(); if (!nm) { toast('그룹 이름을 적어 주세요'); return; } var sids = $('#gM').value === 'sids' ? sidsFrom($('#gS').value) : ALL.filter(function (r) { var st = $('#gSt').value; return (!$('#gD').value || r.dept === $('#gD').value) && (!$('#gY').value || r.year === $('#gY').value) && (!st || (st === 'idle' ? r.idle : r.status === st)); }).map(function (r) { return String(r.sid); }); if (!sids.length) { toast('대상이 없습니다'); return; } CAT.groups = G.concat([{ id: 'g' + Date.now().toString(36), name: nm, sids: sids, at: Date.now() }]); saveCat('그룹 생성 · ' + nm).then(renderGroups); };
+  $$('[data-gd]').forEach(function (b) { b.onclick = function () { if (!confirm('그룹을 삭제할까요?')) return; CAT.groups = G.filter(function (g) { return g.id !== b.getAttribute('data-gd'); }); saveCat('그룹 삭제').then(renderGroups); }; });
+  $$('[data-gc]').forEach(function (b) { b.onclick = function () { var g = G.find(function (x) { return x.id === b.getAttribute('data-gc'); }); dl('그룹_' + g.name + '.csv', [['학번', '학과']].concat(g.sids.map(function (s) { var r = find(s); return [s, r ? r.dept : '']; }))); }; });
+}
+EXT.enroll = renderGroups;
+
+/* ================= 9. 운영자 · 로그 ================= */
+EXT.ops = async function () {
+  var O = CAT.operators || [], logs = await DB.auditLog();
+  $('#opsMain').innerHTML = '<div class="bar"><h2>운영자 · 활동 로그</h2></div><div class="grid two"><div class="card"><h3>운영자 관리</h3><p class="sub">Google 계정 이메일로 등록합니다. 학과 담당자는 지정 학과 학습자만 보고, 평가 담당은 과제 평가만 합니다(디디쌤 정운영자 · 부운영자 · 강사 구분과 대응).</p>' +
+    O.map(function (o, i) { return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap"><b style="flex:1;min-width:160px">' + esc(o.email) + '</b><span class="pill p-mag">' + ROLE_LABEL[o.role] + '</span>' + (o.depts && o.depts.length ? '<span style="font-size:12.5px;color:var(--muted)">' + esc(o.depts.join(', ')) + '</span>' : '') + (canEdit() && o.role !== 'owner' ? '<button class="btn ghost sm" data-od="' + i + '" style="color:var(--bad)">삭제</button>' : '') + '</div>'; }).join('') +
+    (canEdit() ? '<div style="margin-top:12px"><label class="fl">이메일<input class="inp" id="oE" type="email" placeholder="teacher@kit.ac.kr"></label><label class="fl">권한<select id="oR"><option value="admin">운영자(전체)</option><option value="dept">학과 담당자</option><option value="grader">평가 담당</option></select></label><label class="fl">담당 학과(학과 담당자, Ctrl/⌘로 여러 개)<select id="oD" multiple size="5">' + DN.map(function (d) { return '<option>' + esc(d) + '</option>'; }).join('') + '</select></label><button class="btn mag" id="oAdd">운영자 추가</button></div>' : '') + '</div>' +
+    '<div class="card"><h3>활동 로그</h3><p class="sub">로그인 · 학번 등록 · 평가 · 배지 발급/해제 · 진도 처리 · 설정 변경을 남깁니다.</p><div class="tw" style="max-height:460px"><table><thead><tr><th>시각</th><th>담당자</th><th>작업</th><th>대상</th></tr></thead><tbody>' + (logs.length ? logs.slice(0, 200).map(function (l) { return '<tr><td class="num">' + KITDB.util.stamp(l.at) + '</td><td>' + esc(l.by) + '</td><td>' + esc(l.action) + '</td><td style="white-space:normal">' + esc(l.target) + (l.detail ? ' · ' + esc(l.detail) : '') + '</td></tr>'; }).join('') : '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">기록 없음</td></tr>') + '</tbody></table></div><button class="btn ghost sm" id="lCsv" style="margin-top:10px">로그 CSV</button></div></div>';
+  $$('[data-od]').forEach(function (b) { b.onclick = function () { CAT.operators.splice(+b.getAttribute('data-od'), 1); saveCat('운영자 삭제').then(EXT.ops); }; });
+  if ($('#oAdd')) $('#oAdd').onclick = function () { var e = $('#oE').value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { toast('이메일을 확인해 주세요'); return; } var r = $('#oR').value, d = Array.from($('#oD').selectedOptions).map(function (o) { return o.value; }); if (r === 'dept' && !d.length) { toast('담당 학과를 골라 주세요'); return; } CAT.operators = O.filter(function (o) { return o.email !== e; }).concat([{ email: e, role: r, depts: r === 'dept' ? d : [] }]); saveCat('운영자 추가 · ' + e).then(EXT.ops); };
+  $('#lCsv').onclick = function () { dl('KIT_AXON_활동로그_' + dfull(NOW) + '.csv', [['시각', '담당자', '작업', '대상', '내용']].concat(logs.map(function (l) { return [KITDB.util.stamp(l.at), l.by, l.action, l.target, l.detail || '']; }))); };
+};
+
 (async function boot() {
   $('#lnote').innerHTML = DB.mode === 'demo' ? '<b>시연 모드</b>입니다. 버튼을 누르면 시연용 관리자 계정으로 들어갑니다. 운영 모드에서는 학교가 등록한 Google 계정만 로그인할 수 있습니다.' : '학교 · 산타 운영팀이 등록한 Google 계정만 로그인할 수 있습니다. 학생 개인정보는 저장하지 않습니다.';
   if (DB.mode === 'demo') $('#lnote').classList.add('demo');

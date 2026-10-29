@@ -1614,47 +1614,72 @@ body{word-break:keep-all;overflow-wrap:break-word}
 <script>
 /* KIT AX ON — 데이터 계층 (KITDB)
  * 저장 원칙: 학번 · 학과 · 학습 기록만 저장합니다. 이름 · 연락처 · 이메일 등 개인정보는 저장하지 않습니다.
- * 모드: window.KIT_CONFIG.firebase 가 비어 있으면 '시연 모드'(이 브라우저 localStorage),
- *       채워져 있으면 '운영 모드'(Firebase Auth + Firestore + Cloud Functions).
+ * 모드: window.KIT_CONFIG.firebase 가 비어 있으면 '시연 모드'(이 브라우저 localStorage · IndexedDB),
+ *       채워져 있으면 '운영 모드'(Firebase Auth + Firestore + Storage + Cloud Functions).
  */
 (function () {
   var CFG = window.KIT_CONFIG || {};
   var LIVE = !!(CFG.firebase && CFG.firebase.apiKey);
-  var KEY = 'kitaxon-db-v1', SKEY = 'kitaxon-session-v1', AKEY = 'kitaxon-admin-v1';
+  var KEY = 'kitaxon-db-v1', SKEY = 'kitaxon-session-v1', AKEY = 'kitaxon-admin-v1', CKEY = 'kitaxon-catalog-v1', MKEY = 'kitaxon-msg-v1', LKEY = 'kitaxon-audit-v1';
 
   function now() { return Date.now(); }
   function enc(s) { return new TextEncoder().encode(s); }
-  async function sha256(s) {
-    var b = await crypto.subtle.digest('SHA-256', enc(s));
-    return Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
-  }
+  async function sha256(s) { var b = await crypto.subtle.digest('SHA-256', enc(s)); return Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join(''); }
   function rand(n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
-  function newCode() { // 혼동 문자(0 O 1 I L) 제외 8자리, XXXX-XXXX
-    var A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', r = rand(8), s = '';
-    for (var i = 0; i < 8; i++) { s += A[r[i] % A.length]; if (i === 3) s += '-'; }
-    return s;
-  }
+  function uid(p) { return (p || 'id') + '_' + Array.from(rand(5)).map(function (x) { return x.toString(36); }).join('').slice(0, 8); }
+  function newCode() { var A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', r = rand(8), s = ''; for (var i = 0; i < 8; i++) { s += A[r[i] % A.length]; if (i === 3) s += '-'; } return s; }
   function normCode(c) { return String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
   function validSid(sid) { return /^\d{6,12}$/.test(String(sid || '')); }
   function pwRule(pw) { return typeof pw === 'string' && pw.length >= 8 && /[A-Za-z]/.test(pw) && /\d/.test(pw); }
   function err(code, msg) { var e = new Error(msg); e.code = code; return e; }
+  function stamp(t) { var d = new Date(t || now()); var p = function (x) { return (x < 10 ? '0' : '') + x; }; return d.getFullYear() + '.' + p(d.getMonth() + 1) + '.' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+  function jget(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
+  function jset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 
-  /* ---------------- 시연 모드 (localStorage) ---------------- */
-  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch (e) { return null; } }
-  function save(db) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+  /* 기본 운영 설정(카탈로그) — 사이트 기본 콘텐츠 위에 덮어쓰는 값만 저장 */
+  function defaultCatalog() {
+    return {
+      v: 1, updatedAt: 0,
+      settings: { watchThr: 80, requireWatch: true, autoDoneOnWatch: true, seqLessons: false, levelUnlock: 'badge', resubmit: true, certAuto: true, certName: 'KIT AX 인증', badgeIssuer: '경남정보대학교 KIT AX ON' },
+      badges: {
+        1: { mode: 'auto-pass', expiry: 0, active: true, desc: 'ChatGPT · Claude · Gemini로 내 유형의 첫 결과물을 만들고 학교 검수를 통과했습니다.', criteria: '영상 튜토리얼 5개 시청 완료 + 필수 온라인 클래스 수료 + 15분 결과물 제출 → 평가 통과' },
+        2: { mode: 'auto-pass', expiry: 0, active: true, desc: '툴을 연결해 전공 · 진로 업무를 돕는 나만의 AI 비서를 만들었습니다.', criteria: '영상 튜토리얼 5개 시청 완료 + 필수 클래스 수료 + AI 비서 결과물 제출 → 평가 통과' },
+        3: { mode: 'auto-pass', expiry: 0, active: true, desc: '희망 업종의 AI Agent로 기업 · 창업 과제를 해결했습니다.', criteria: '영상 튜토리얼 5개 시청 완료 + 필수 클래스 수료 + Agent 결과물 제출 · 발표 → 평가 통과' }
+      },
+      assign: {
+        1: { title: '', guide: '튜토리얼 5개로 만든 결과물의 공유 링크와 만든 과정(사용한 AI · 프롬프트 요약)을 제출합니다.', pass: 70, rubric: [{ name: '과제 요건 충족', pts: 40 }, { name: '결과물 완성도', pts: 30 }, { name: 'AI 활용의 적절성', pts: 20 }, { name: '설명 · 출처 표기', pts: 10 }] },
+        2: { title: '', guide: '폼 · 시트 · 메일 등 2개 이상 도구를 연결한 AI 비서의 흐름도와 실행 화면 링크를 제출합니다.', pass: 70, rubric: [{ name: '자동화 흐름 설계', pts: 35 }, { name: '실제 작동', pts: 35 }, { name: '전공 · 진로 연계', pts: 20 }, { name: '설명 · 문서화', pts: 10 }] },
+        3: { title: '', guide: '기업 · 창업 과제를 해결하는 AI Agent 데모 링크와 발표 자료를 제출합니다.', pass: 70, rubric: [{ name: '문제 정의', pts: 25 }, { name: 'Agent 구현', pts: 35 }, { name: '현장 검증 · 효과', pts: 25 }, { name: '발표 · 문서', pts: 15 }] }
+      },
+      tuts: {}, order: {}, videos: [], notices: null, groups: [], badgesX: [],
+      operators: [{ email: 'teacher@kit.ac.kr', role: 'owner', depts: [] }]
+    };
+  }
+  function mergeCat(c) { var d = defaultCatalog(); if (!c) return d; var o = Object.assign({}, d, c); o.settings = Object.assign({}, d.settings, c.settings || {}); o.badges = Object.assign({}, d.badges, c.badges || {}); o.assign = Object.assign({}, d.assign, c.assign || {}); return o; }
+
+  /* VOD 저장(시연: IndexedDB) */
+  var idbP = null;
+  function idb() { if (idbP) return idbP; idbP = new Promise(function (res, rej) { var r = indexedDB.open('kitaxon-vod', 1); r.onupgradeneeded = function () { r.result.createObjectStore('v'); }; r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); return idbP; }
+  function idbDo(mode, fn) { return idb().then(function (d) { return new Promise(function (res, rej) { var t = d.transaction('v', mode), s = t.objectStore('v'), q = fn(s); t.oncomplete = function () { res(q && q.result); }; t.onerror = function () { rej(t.error); }; }); }); }
+  var urlCache = {};
+
+  /* ---------------- 시연 모드 ---------------- */
+  function load() { return jget(KEY, null); }
+  function save(db) { jset(KEY, db); }
   async function demoDB() {
     var db = load();
     if (!db) {
-      db = { students: {}, reviews: [], seededAt: now() };
-      // 시연용 학번 3개 (접근코드 KIT-DEMO). 실제 운영에서는 관리자가 학번 명단을 등록할 때 학생별 코드가 발급됩니다.
+      db = { students: {}, badgeLog: [], seededAt: now() };
       var seed = [['20260001', 'AI컴퓨터과'], ['20260002', '간호학과'], ['20260003', 'AI시각디자인학과']];
-      for (var i = 0; i < seed.length; i++) {
-        db.students[seed[i][0]] = { sid: seed[i][0], dept: seed[i][1], status: 'invited', codeHash: await sha256('code:' + seed[i][0] + ':' + normCode('KIT-DEMO')), invitedAt: now(), demo: true };
-      }
+      for (var i = 0; i < seed.length; i++) db.students[seed[i][0]] = { sid: seed[i][0], dept: seed[i][1], status: 'invited', codeHash: await sha256('code:' + seed[i][0] + ':' + normCode('KIT-DEMO')), invitedAt: now(), demo: true };
       save(db);
     }
+    db.badgeLog = db.badgeLog || [];
     return db;
   }
+  function audit(action, target, detail) { var a = jget(AKEY, null), L = jget(LKEY, []); L.unshift({ at: now(), by: a ? a.email : 'system', action: action, target: target || '', detail: detail || '' }); if (L.length > 500) L.length = 500; jset(LKEY, L); }
+  function badgeId(n, sid) { return 'KIT-AX-' + n + '-' + String(sid).slice(-4) + '-' + Array.from(rand(2)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join('').toUpperCase(); }
+  function issueInto(L, n, sid, mode, by) { var t = stamp(); L.review = 'approved'; L.reviewAt = L.reviewAt || t; L.badge = true; L.badgeAt = t; L.badgeId = badgeId(n, sid); L.issueMode = mode; L.issuedBy = by; L.revoked = false; L.revokeReason = ''; return L; }
   var Demo = {
     mode: 'demo',
     async activate(sid, code, pw) {
@@ -1665,36 +1690,53 @@ body{word-break:keep-all;overflow-wrap:break-word}
       if (!pwRule(pw)) throw err('weak', '비밀번호는 영문과 숫자를 섞어 8자 이상으로 정해 주세요.');
       var salt = Array.from(rand(8)).join('.');
       st.salt = salt; st.pwHash = await sha256('pw:' + salt + ':' + pw); st.status = 'active'; st.activatedAt = now(); st.lastSeen = now(); delete st.codeHash;
-      save(db); localStorage.setItem(SKEY, JSON.stringify({ sid: sid, dept: st.dept, at: now() }));
+      save(db); jset(SKEY, { sid: sid, dept: st.dept, at: now() });
       return { sid: sid, dept: st.dept };
     },
     async login(sid, pw) {
       var db = await demoDB(); var st = db.students[sid];
       if (!st || st.status !== 'active') throw err('not-active', '처음 이용하는 학번이면 [처음 이용] 탭에서 접근코드로 비밀번호를 먼저 설정해 주세요.');
       if (await sha256('pw:' + st.salt + ':' + pw) !== st.pwHash) throw err('bad-pw', '비밀번호가 맞지 않습니다.');
-      st.lastSeen = now(); save(db); localStorage.setItem(SKEY, JSON.stringify({ sid: sid, dept: st.dept, at: now() }));
+      st.lastSeen = now(); save(db); jset(SKEY, { sid: sid, dept: st.dept, at: now() });
       return { sid: sid, dept: st.dept };
     },
     async logout() { localStorage.removeItem(SKEY); },
-    async current() { try { var s = JSON.parse(localStorage.getItem(SKEY)); if (!s) return null; var db = await demoDB(); return db.students[s.sid] && db.students[s.sid].status === 'active' ? { sid: s.sid, dept: db.students[s.sid].dept } : null; } catch (e) { return null; } },
+    async current() { var s = jget(SKEY, null); if (!s) return null; var db = await demoDB(); return db.students[s.sid] && db.students[s.sid].status === 'active' ? { sid: s.sid, dept: db.students[s.sid].dept } : null; },
     async loadProgress(sid) { var db = await demoDB(); var st = db.students[sid]; return st ? (st.progress || null) : null; },
     async saveProgress(sid, progress) {
       var db = load(); if (!db || !db.students[sid]) return;
-      var st = db.students[sid]; var prev = st.progress || {};
-      // 학교 검수(승인 · 반려) 결과는 관리자만 바꿀 수 있다 → 학생 저장 시 관리자 결정값을 보존
+      var st = db.students[sid]; var prev = st.progress || {}; var cat = mergeCat(jget(CKEY, null));
       var lv = progress.lv || {}; var plv = prev.lv || {};
+      // 검수 · 평가 · 배지 결과는 관리자 기록을 우선(학생 저장으로 덮어쓰지 않음)
+      var OWN = ['review', 'reviewAt', 'badge', 'badgeAt', 'badgeId', 'score', 'scores', 'feedback', 'reviewNote', 'revoked', 'revokeReason', 'revokedAt', 'issueMode', 'issuedBy'];
       [1, 2, 3].forEach(function (n) {
-        if (plv[n] && plv[n].review === 'approved' && lv[n]) { lv[n].review = 'approved'; lv[n].badge = true; lv[n].badgeAt = plv[n].badgeAt; lv[n].badgeId = plv[n].badgeId; lv[n].reviewAt = plv[n].reviewAt; }
+        var P = plv[n] || {}, L = lv[n]; if (!L) return;
+        var resub = P.review === 'returned' && L.sub && L.subAt !== P.subAt; // 반려 후 재제출
+        if (P.review && P.review !== 'pending' && !resub) { OWN.forEach(function (k) { if (P[k] !== undefined) L[k] = P[k]; else delete L[k]; }); if (P.review === 'returned') L.sub = ''; }
+        if (resub) { L.review = 'pending'; L.badge = false; }
+        var B = cat.badges[n] || {};
+        if (L.sub && L.review === 'pending' && B.mode === 'auto-complete' && B.active !== false && !L.badge) { issueInto(L, n, sid, 'auto-complete', 'system'); db.badgeLog.push({ sid: sid, n: n, action: 'issue', mode: 'auto-complete', by: 'system', at: now(), badgeId: L.badgeId }); }
       });
+      progress.adminRev = prev.adminRev || 0; progress.xb = prev.xb || {};
       st.progress = progress; st.lastSeen = now();
       st.days = st.days || []; var d = new Date().toISOString().slice(0, 10); if (st.days[st.days.length - 1] !== d) { st.days.push(d); if (st.days.length > 120) st.days.shift(); }
       save(db);
     },
+    /* 카탈로그 · 콘텐츠 */
+    async getCatalog() { return mergeCat(jget(CKEY, null)); },
+    async saveCatalog(c, what) { c.updatedAt = now(); if (!jset(CKEY, c)) throw err('quota', '브라우저 저장 공간이 부족합니다.'); audit('설정 저장', what || '운영 설정'); return c; },
+    async vodPut(file, onProgress) { var id = uid('vod'); await idbDo('readwrite', function (s) { return s.put(file, id); }); if (onProgress) onProgress(100); return { id: id, url: '' }; },
+    async vodUrl(id) { if (urlCache[id]) return urlCache[id]; var b = await idbDo('readonly', function (s) { return s.get(id); }); if (!b) return ''; urlCache[id] = URL.createObjectURL(b); return urlCache[id]; },
+    async vodDelete(id) { await idbDo('readwrite', function (s) { return s.delete(id); }); },
+    /* 학생 알림함 */
+    async myMessages(sid, dept) { var cat = mergeCat(jget(CKEY, null)); var gs = (cat.groups || []).filter(function (g) { return (g.sids || []).indexOf(sid) >= 0; }).map(function (g) { return g.id; }); return jget(MKEY, []).filter(function (m) { var t = m.target || {}; return t.type === 'all' || (t.type === 'dept' && t.value === dept) || (t.type === 'group' && gs.indexOf(t.value) >= 0) || (t.type === 'sids' && (t.value || []).indexOf(sid) >= 0); }); },
     /* ---- 관리자 ---- */
-    async adminSignIn() { var a = { email: 'teacher@kit.ac.kr', name: '담당 선생님(시연)', at: now() }; localStorage.setItem(AKEY, JSON.stringify(a)); return a; },
-    async adminCurrent() { try { return JSON.parse(localStorage.getItem(AKEY)); } catch (e) { return null; } },
+    async adminSignIn() { var a = { email: 'teacher@kit.ac.kr', name: '담당 선생님(시연)', at: now() }; jset(AKEY, a); audit('로그인', a.email); return a; },
+    async adminCurrent() { return jget(AKEY, null); },
     async adminSignOut() { localStorage.removeItem(AKEY); },
     async listStudents() { var db = await demoDB(); return Object.keys(db.students).map(function (k) { return db.students[k]; }); },
+    async badgeLog() { var db = await demoDB(); return db.badgeLog.slice().reverse(); },
+    async auditLog() { return jget(LKEY, []); },
     async registerStudents(rows) {
       var db = await demoDB(); var out = [];
       for (var i = 0; i < rows.length; i++) {
@@ -1705,21 +1747,52 @@ body{word-break:keep-all;overflow-wrap:break-word}
         db.students[r.sid] = Object.assign({}, ex || {}, { sid: r.sid, dept: r.dept, status: 'invited', codeHash: await sha256('code:' + r.sid + ':' + normCode(code)), invitedAt: now() });
         out.push({ sid: r.sid, dept: r.dept, code: code });
       }
-      save(db); return out;
+      save(db); audit('학번 등록', out.filter(function (x) { return x.code; }).length + '명'); return out;
     },
-    async reissueCode(sid) { // 비밀번호 분실 시: 기존 비밀번호를 지우고 새 접근코드 발급(진도는 유지)
+    async reissueCode(sid) {
       var db = await demoDB(); var st = db.students[sid]; if (!st) throw err('not-found', '없는 학번');
       var code = newCode(); st.codeHash = await sha256('code:' + sid + ':' + normCode(code)); st.status = 'invited'; delete st.pwHash; delete st.salt; st.invitedAt = now();
-      save(db); return code;
+      save(db); audit('접근코드 재발급', sid); return code;
     },
-    async review(sid, n, decision, note) {
-      var db = await demoDB(); var st = db.students[sid]; if (!st || !st.progress) throw err('not-found', '제출 기록이 없습니다.');
-      var L = st.progress.lv[n]; var t = new Date(); var p = function (x) { return (x < 10 ? '0' : '') + x; };
-      var stamp = t.getFullYear() + '.' + p(t.getMonth() + 1) + '.' + p(t.getDate()) + ' ' + p(t.getHours()) + ':' + p(t.getMinutes());
-      if (decision === 'approve') { L.review = 'approved'; L.reviewAt = stamp; L.badge = true; L.badgeAt = stamp; L.badgeId = 'KIT-AX-' + n + '-' + String(sid).slice(-4) + Math.floor(10 + Math.random() * 89); }
-      else { L.review = 'returned'; L.reviewAt = stamp; L.reviewNote = note || ''; L.sub = ''; L.draft = L.draft || ''; }
-      db.reviews.push({ sid: sid, n: n, decision: decision, note: note || '', at: now() }); save(db); return L;
+    /* 과제 평가: decision = 'pass' | 'return' | 'fail' */
+    async grade(sid, n, g) {
+      var db = await demoDB(); var st = db.students[sid]; if (!st || !st.progress || !st.progress.lv || !st.progress.lv[n]) throw err('not-found', '제출 기록이 없습니다.');
+      var L = st.progress.lv[n], cat = mergeCat(jget(CKEY, null)), B = cat.badges[n] || {}, by = (jget(AKEY, {}) || {}).email || 'admin';
+      L.score = g.total; L.scores = g.scores || []; L.feedback = g.feedback || ''; L.reviewAt = stamp(); L.gradedBy = by;
+      if (g.decision === 'pass') {
+        if (B.mode === 'manual' || B.active === false) { L.review = 'passed'; }
+        else { issueInto(L, n, sid, 'auto-pass', by); db.badgeLog.push({ sid: sid, n: n, action: 'issue', mode: 'auto-pass', by: by, at: now(), badgeId: L.badgeId }); }
+      } else if (g.decision === 'return') { L.review = 'returned'; L.reviewNote = g.feedback || ''; L.sub = ''; }
+      else { L.review = 'failed'; L.reviewNote = g.feedback || ''; }
+      st.progress.adminRev = (st.progress.adminRev || 0) + 1; save(db); audit('과제 평가', sid + ' · ' + n + '단계', g.decision + ' ' + g.total + '점'); return L;
     },
+    async review(sid, n, decision, note) { return this.grade(sid, n, { decision: decision === 'approve' ? 'pass' : 'return', total: decision === 'approve' ? 100 : 0, feedback: note }); },
+    async issueBadge(sid, n, reason) {
+      var db = await demoDB(); var st = db.students[sid]; if (!st) throw err('not-found', '없는 학번'); var by = (jget(AKEY, {}) || {}).email || 'admin';
+      st.progress = st.progress || { lv: {} }; st.progress.lv = st.progress.lv || {};
+      if (!/^[123]$/.test(String(n))) { var X = st.progress.xb = st.progress.xb || {}; if (X[n] && !X[n].revoked) throw err('already', '이미 발급된 배지입니다.'); X[n] = { badge: true, at: now(), badgeId: 'KIT-AX-' + String(n).toUpperCase() + '-' + String(sid).slice(-4), reason: reason || '', by: by }; st.progress.adminRev = (st.progress.adminRev || 0) + 1; db.badgeLog.push({ sid: sid, n: n, action: 'issue', mode: 'manual', by: by, at: now(), badgeId: X[n].badgeId, reason: reason || '' }); save(db); audit('배지 수동 발급', sid + ' · ' + n, reason); return X[n]; }
+      var L = st.progress.lv[n] = Object.assign({ cls: {}, sub: '' }, st.progress.lv[n] || {});
+      if (L.badge) throw err('already', '이미 발급된 배지입니다.');
+      issueInto(L, n, sid, 'manual', by); L.manualReason = reason || '';
+      st.progress.adminRev = (st.progress.adminRev || 0) + 1; db.badgeLog.push({ sid: sid, n: n, action: 'issue', mode: 'manual', by: by, at: now(), badgeId: L.badgeId, reason: reason || '' }); save(db); audit('배지 수동 발급', sid + ' · ' + n + '단계', reason); return L;
+    },
+    async revokeBadge(sid, n, reason) {
+      var db = await demoDB(); var st = db.students[sid];
+      if (st && !/^[123]$/.test(String(n))) { var X = ((st.progress || {}).xb || {})[n]; if (!X || X.revoked) throw err('not-found', '발급된 배지가 없습니다.'); X.revoked = true; X.revokeReason = reason || ''; st.progress.adminRev = (st.progress.adminRev || 0) + 1; db.badgeLog.push({ sid: sid, n: n, action: 'revoke', by: (jget(AKEY, {}) || {}).email || 'admin', at: now(), badgeId: X.badgeId, reason: reason || '' }); save(db); audit('배지 해제', sid + ' · ' + n, reason); return X; }
+      var L = st && st.progress && st.progress.lv && st.progress.lv[n]; if (!L || !L.badge) throw err('not-found', '발급된 배지가 없습니다.'); var by = (jget(AKEY, {}) || {}).email || 'admin';
+      db.badgeLog.push({ sid: sid, n: n, action: 'revoke', by: by, at: now(), badgeId: L.badgeId, reason: reason || '' });
+      L.badge = false; L.revoked = true; L.revokeReason = reason || ''; L.revokedAt = stamp(); L.review = 'revoked';
+      st.progress.adminRev = (st.progress.adminRev || 0) + 1; save(db); audit('배지 해제', sid + ' · ' + n + '단계', reason); return L;
+    },
+    /* 진도 관리: fn(progress) 로 학습 기록을 고침 */
+    async adminEditProgress(sid, label, fn) {
+      var db = await demoDB(); var st = db.students[sid]; if (!st) throw err('not-found', '없는 학번');
+      st.progress = st.progress || { done: {}, steps: {}, lv: { 1: { cls: {} }, 2: { cls: {} }, 3: { cls: {} } }, watch: {} };
+      fn(st.progress); st.progress.adminRev = (st.progress.adminRev || 0) + 1; save(db); audit('진도 관리', sid, label); return st.progress;
+    },
+    async sendMessage(m) { var L = jget(MKEY, []); m.id = uid('msg'); m.at = now(); m.by = (jget(AKEY, {}) || {}).email || 'admin'; L.unshift(m); jset(MKEY, L); audit('알림 발송', (m.target || {}).label || '', m.title); return m; },
+    async listMessages() { return jget(MKEY, []); },
+    async deleteMessage(id) { jset(MKEY, jget(MKEY, []).filter(function (m) { return m.id !== id; })); audit('알림 삭제', id); },
     async askAssistant() { throw err('demo', 'demo'); }
   };
 
@@ -1728,9 +1801,9 @@ body{word-break:keep-all;overflow-wrap:break-word}
   async function fire() {
     if (fb) return fb;
     var V = '10.12.4', B = 'https://www.gstatic.com/firebasejs/' + V + '/';
-    var app = await import(B + 'firebase-app.js'), auth = await import(B + 'firebase-auth.js'), fs = await import(B + 'firebase-firestore.js'), fn = await import(B + 'firebase-functions.js');
+    var app = await import(B + 'firebase-app.js'), auth = await import(B + 'firebase-auth.js'), fs = await import(B + 'firebase-firestore.js'), fn = await import(B + 'firebase-functions.js'), stg = await import(B + 'firebase-storage.js');
     var a = app.initializeApp(CFG.firebase);
-    fb = { auth: auth, fs: fs, fn: fn, A: auth.getAuth(a), D: fs.getFirestore(a), F: fn.getFunctions(a, CFG.region || 'asia-northeast3') };
+    fb = { auth: auth, fs: fs, fn: fn, stg: stg, A: auth.getAuth(a), D: fs.getFirestore(a), F: fn.getFunctions(a, CFG.region || 'asia-northeast3'), S: stg.getStorage(a) };
     return fb;
   }
   function call(name, data) { return fire().then(function (f) { return f.fn.httpsCallable(f.F, name)(data); }).then(function (r) { return r.data; }); }
@@ -1744,25 +1817,38 @@ body{word-break:keep-all;overflow-wrap:break-word}
     async current() { var f = await fire(); var u = await waitUser(f); if (!u || !u.uid.startsWith('s_')) return null; var t = await u.getIdTokenResult(); return { sid: u.uid.slice(2), dept: t.claims.dept || '' }; },
     async loadProgress(sid) {
       var f = await fire(); var d = await f.fs.getDoc(f.fs.doc(f.D, 'progress', sid)); var p = d.exists() ? d.data().p : null;
-      // 배지 · 검수 결과의 원본은 approvals(관리자만 쓰기) — 학생 기록 위에 덮어씀
-      var a = await f.fs.getDoc(f.fs.doc(f.D, 'approvals', sid));
-      if (p && a.exists()) { var lv = (a.data() || {}).lv || {}; p.lv = p.lv || {}; Object.keys(lv).forEach(function (n) { p.lv[n] = Object.assign({}, p.lv[n] || {}, lv[n], lv[n].review === 'returned' ? { sub: '' } : {}); }); }
-      if (p && p.lv) [1, 2, 3].forEach(function (n) { var L = p.lv[n]; if (L && L.badge && !(a.exists() && a.data().lv && a.data().lv[n] && a.data().lv[n].badge)) { L.badge = false; if (L.review === 'approved') L.review = L.sub ? 'pending' : ''; } });
+      var a = await f.fs.getDoc(f.fs.doc(f.D, 'approvals', sid)); var A = a.exists() ? (a.data() || {}) : {};
+      if (p) { p.lv = p.lv || {}; var lv = A.lv || {}; [1, 2, 3].forEach(function (n) { var L = p.lv[n] = p.lv[n] || {}; var X = lv[n]; if (X) { Object.assign(L, X); if (X.review === 'returned' && !(L.subAt && X.subAt && L.subAt !== X.subAt)) L.sub = ''; } else { L.badge = false; if (L.review && L.review !== 'pending') L.review = L.sub ? 'pending' : ''; } }); p.xb = A.xb || {}; p.adminRev = A.rev || 0; }
       return p;
     },
     async saveProgress(sid, p) { var f = await fire(); await f.fs.setDoc(f.fs.doc(f.D, 'progress', sid), { p: p, updatedAt: f.fs.serverTimestamp() }, { merge: true }); },
-    async adminSignIn() { var f = await fire(); var pr = new f.auth.GoogleAuthProvider(); if (CFG.adminDomain) pr.setCustomParameters({ hd: CFG.adminDomain }); var r = await f.auth.signInWithPopup(f.A, pr); var ok = await call('whoAmI', {}); if (!ok.admin) { await f.auth.signOut(f.A); throw err('denied', '관리자로 등록되지 않은 Google 계정입니다. 산타 운영팀에 등록을 요청해 주세요.'); } return { email: r.user.email, name: r.user.displayName }; },
+    async getCatalog() { var f = await fire(); var u = await waitUser(f); if (u && !u.uid.startsWith('s_')) { try { return mergeCat((await call('adminGetCatalog', {})).catalog); } catch (e) {} } var d = await f.fs.getDoc(f.fs.doc(f.D, 'catalog', 'main')); return mergeCat(d.exists() ? d.data() : null); },
+    async saveCatalog(c, what) { c.updatedAt = now(); await call('saveCatalog', { catalog: c, what: what || '' }); return c; },
+    async vodPut(file, onProgress) { var f = await fire(); var id = uid('vod'); var ref = f.stg.ref(f.S, 'vod/' + id); var task = f.stg.uploadBytesResumable(ref, file, { contentType: file.type }); await new Promise(function (res, rej) { task.on('state_changed', function (s) { if (onProgress) onProgress(Math.round(s.bytesTransferred / s.totalBytes * 100)); }, rej, res); }); return { id: id, url: await f.stg.getDownloadURL(ref) }; },
+    async vodUrl(id, url) { if (url) return url; var f = await fire(); return f.stg.getDownloadURL(f.stg.ref(f.S, 'vod/' + id)); },
+    async vodDelete(id) { var f = await fire(); await f.stg.deleteObject(f.stg.ref(f.S, 'vod/' + id)); },
+    async myMessages() { return (await call('myMessages', {})).messages; },
+    async adminSignIn() { var f = await fire(); var pr = new f.auth.GoogleAuthProvider(); if (CFG.adminDomain) pr.setCustomParameters({ hd: CFG.adminDomain }); var r = await f.auth.signInWithPopup(f.A, pr); var ok = await call('whoAmI', {}); if (!ok.admin) { await f.auth.signOut(f.A); throw err('denied', '관리자로 등록되지 않은 Google 계정입니다. 산타 운영팀에 등록을 요청해 주세요.'); } return { email: r.user.email, name: r.user.displayName, role: ok.role }; },
     async adminCurrent() { var f = await fire(); var u = await waitUser(f); if (!u || u.uid.startsWith('s_')) return null; return { email: u.email, name: u.displayName }; },
     async adminSignOut() { var f = await fire(); await f.auth.signOut(f.A); },
     async listStudents() { return (await call('adminListStudents', {})).students; },
+    async badgeLog() { return (await call('adminBadgeLog', {})).log; },
+    async auditLog() { return (await call('adminAuditLog', {})).log; },
     async registerStudents(rows) { return (await call('registerStudents', { rows: rows })).results; },
     async reissueCode(sid) { return (await call('reissueCode', { sid: sid })).code; },
-    async review(sid, n, decision, note) { return (await call('reviewSubmission', { sid: sid, n: n, decision: decision, note: note || '' })).lv; },
+    async grade(sid, n, g) { return (await call('gradeSubmission', { sid: sid, n: n, grade: g })).lv; },
+    async review(sid, n, decision, note) { return this.grade(sid, n, { decision: decision === 'approve' ? 'pass' : 'return', total: decision === 'approve' ? 100 : 0, feedback: note }); },
+    async issueBadge(sid, n, reason) { return (await call('issueBadge', { sid: sid, n: n, reason: reason || '' })).lv; },
+    async revokeBadge(sid, n, reason) { return (await call('revokeBadge', { sid: sid, n: n, reason: reason || '' })).lv; },
+    async adminEditProgress(sid, label, fn) { var cur = (await call('adminGetProgress', { sid: sid })).p || { done: {}, steps: {}, lv: {}, watch: {} }; fn(cur); return (await call('adminSetProgress', { sid: sid, label: label, p: cur })).p; },
+    async sendMessage(m) { return (await call('sendMessage', { message: m })).message; },
+    async listMessages() { return (await call('adminListMessages', {})).messages; },
+    async deleteMessage(id) { await call('deleteMessage', { id: id }); },
     async askAssistant(question, context) { return (await call('adminAssistant', { question: question, context: context })).answer; }
   };
 
   window.KITDB = LIVE ? Live : Demo;
-  window.KITDB.util = { normCode: normCode, validSid: validSid, pwRule: pwRule };
+  window.KITDB.util = { normCode: normCode, validSid: validSid, pwRule: pwRule, stamp: stamp, uid: uid, defaultCatalog: defaultCatalog, mergeCat: mergeCat };
 })();
 
 </script>
@@ -2574,7 +2660,7 @@ class Component extends DCLogic {
 /* KIT AX ON — 학습자 로그인 · 진도 동기화 (Component 정의 직후, mountDC 이전에 실행) */
 (function () {
   var DB = window.KITDB, session = null, ready = false, pendingGo = null, saveT = null;
-  var KEYS = ['type', 'scores', 'track', 'done', 'steps', 'lv', 'answers', 'cur'];
+  var KEYS = ['type', 'scores', 'track', 'done', 'steps', 'lv', 'answers', 'cur', 'watch', 'adminRev', 'xb'];
   var GATED = { diag: 1, result: 1, course: 1, badges: 1 };
   var P = Component.prototype;
 
@@ -2592,6 +2678,7 @@ class Component extends DCLogic {
     return _go.call(this, screen, cur);
   };
   function comp() { return window.__kit; }
+  window.__kitSession = function () { return session; };
 
   /* 진도 저장: 상태가 바뀔 때마다 1.2초 뒤 한 번 저장 */
   window.__kitOnState = function () {
@@ -2665,7 +2752,7 @@ class Component extends DCLogic {
   function v(id) { return (ov.querySelector('#' + id).value || '').trim(); }
   async function run(form, fn) {
     var b = form.querySelector('.kx-btn'), er = form.querySelector('.kx-err'); b.disabled = true; er.textContent = '';
-    try { session = await fn(); await applyProgress(); close(); var g = pendingGo; pendingGo = null; if (g) comp().go(g[0], g[1]); else comp().setState({}); }
+    try { session = await fn(); await applyProgress(); if (window.__kitOnSession) window.__kitOnSession(session); close(); var g = pendingGo; pendingGo = null; if (g) comp().go(g[0], g[1]); else comp().setState({}); }
     catch (e) { er.textContent = e.message || '로그인하지 못했습니다.'; }
     finally { b.disabled = false; }
   }
@@ -2673,7 +2760,7 @@ class Component extends DCLogic {
     close();
     ov = el('<div class="kx-ov" role="dialog" aria-modal="true"><div class="kx-box"><button class="kx-x" aria-label="닫기" data-x>×</button>' +
       '<h2>내 계정</h2><p class="kx-sub">학번 <b>' + esc(session.sid) + '</b> · ' + esc(session.dept) + '</p>' +
-      '<div class="kx-note" style="margin-top:0">진단 결과 · 튜토리얼 완료 · 클래스 진도 · 과제 제출이 자동 저장돼요. 배지 승인은 학교 담당자가 검수 후 처리합니다.</div>' +
+      '<div class="kx-note" style="margin-top:0">진단 결과 · 영상 시청 · 튜토리얼 완료 · 클래스 진도 · 과제 제출이 자동 저장돼요. 배지는 학교 담당자의 과제 평가 후 발급됩니다.</div>' + (window.__kitAccountExtra ? window.__kitAccountExtra() : '') +
       '<button class="kx-btn" data-out>로그아웃</button></div></div>');
     document.body.appendChild(ov);
     ov.querySelector('[data-x]').onclick = close; ov.onclick = function (e) { if (e.target === ov) close(); };
@@ -2684,18 +2771,150 @@ class Component extends DCLogic {
   /* 시작: 저장된 세션 복원 → 진도 불러오기 */
   window.__kitBoot = async function () {
     var c = comp();
+    if (window.__kitPreBoot) { try { await window.__kitPreBoot(); } catch (e) {} }
     try { session = await DB.current(); } catch (e) { session = null; }
-    if (session) { await applyProgress(); }
+    if (session) { await applyProgress(); if (window.__kitOnSession) window.__kitOnSession(session); }
     if (!session && GATED[c.state.screen]) { pendingGo = [c.state.screen, c.state.cur]; c.state = Object.assign({}, c.state, { screen: 'home' }); c.setState({}); openLogin('AI 진단 · 코스웨어 · 배지 기록은 로그인 후 이용할 수 있어요.'); }
     else c.setState({});
     // 다른 탭(관리자 검수 등)에서 바뀐 기록 반영
     window.addEventListener('focus', async function () {
       if (!session || !ready) return; var p = await DB.loadProgress(session.sid); if (!p || !p.lv) return;
-      var c = comp(); var lv = Object.assign({}, c.state.lv), ch = false;
-      [1, 2, 3].forEach(function (n) { var a = p.lv[n] || {}, b = lv[n] || {}; if ((a.review === 'approved' || a.review === 'returned') && a.review !== b.review) { lv[n] = Object.assign({}, b, { review: a.review, reviewAt: a.reviewAt, badge: !!a.badge, badgeAt: a.badgeAt || '', badgeId: a.badgeId || '', sub: a.review === 'returned' ? '' : b.sub, reviewNote: a.reviewNote || '' }); ch = true; } });
+      var c = comp();
+      if ((p.adminRev || 0) > (c.state.adminRev || 0)) { await applyProgress(); if (window.__kitOnSession) window.__kitOnSession(session); return; } // 관리자가 진도 · 배지를 고친 경우 전체 반영
+      var lv = Object.assign({}, c.state.lv), ch = false, R = { approved: 1, returned: 1, passed: 1, failed: 1, revoked: 1 };
+      [1, 2, 3].forEach(function (n) { var a = p.lv[n] || {}, b = lv[n] || {}; if (R[a.review] && a.review !== b.review) { lv[n] = Object.assign({}, b, { review: a.review, reviewAt: a.reviewAt, badge: !!a.badge, badgeAt: a.badgeAt || '', badgeId: a.badgeId || '', sub: a.review === 'returned' ? '' : b.sub, reviewNote: a.reviewNote || '', score: a.score, feedback: a.feedback || '', revokeReason: a.revokeReason || '' }); ch = true; } });
       if (ch) c.setState({ lv: lv });
+      if (window.__kitOnSession) window.__kitOnSession(session);
     });
   };
+})();
+
+/* KIT AX ON — 관리자 설정 반영 · 학습 플레이어(시청 진도) · 과제 기준 · 알림함 (auth.js 다음에 실행) */
+(function () {
+  var DB = window.KITDB, P = Component.prototype, CAT = null, S = KITDB.util.defaultCatalog().settings, MSGS = [], block = false;
+  var BASE = { levels: {}, tuts: {}, notices: NOTICES.slice() };
+  [1, 2, 3].forEach(function (n) { BASE.levels[n] = Object.assign({}, LEVELS[n]); });
+  TUTS.forEach(function (t) { BASE.tuts[t.id] = Object.assign({}, t); });
+  function comp() { return window.__kit; }
+  function sess() { return window.__kitSession ? window.__kitSession() : null; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var VOD_THUMB = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270"><rect width="480" height="270" fill="#15173B"/><circle cx="240" cy="135" r="38" fill="#D6246E"/><path d="M228 115v40l34-20z" fill="#fff"/><text x="240" y="226" font-family="sans-serif" font-size="18" font-weight="700" fill="#C9CBE2" text-anchor="middle">KIT AX ON VOD</text></svg>');
+
+  /* ---------- 관리자 설정(카탈로그) 반영 ---------- */
+  function applyCatalog(cat) {
+    CAT = cat; S = cat.settings;
+    // 배지 이름 · 색
+    [1, 2, 3].forEach(function (n) { var b = cat.badges[n] || {}, L = LEVELS[n], B0 = BASE.levels[n]; ['name', 'short', 'fill', 'ring', 'rib'].forEach(function (k) { L[k] = b[k] || B0[k]; }); L.subTitle = (cat.assign[n] && cat.assign[n].title) || B0.subTitle; });
+    // 튜토리얼(콘텐츠 편성)
+    var list = [];
+    Object.keys(BASE.tuts).forEach(function (id) { TUT_BY[id] = Object.assign(TUT_BY[id] || {}, BASE.tuts[id]); });
+    Object.keys(cat.tuts || {}).forEach(function (id) { var o = cat.tuts[id]; var t = TUT_BY[id] = Object.assign(TUT_BY[id] || { id: id, steps: ['', '', ''] }, o, { id: id }); if (o.vod) { t.vid = 'vod-' + o.vod; t.thumb = o.thumb || VOD_THUMB; } else if (o.vid && (!BASE.tuts[id] || o.vid !== BASE.tuts[id].vid)) t.thumb = 'https://i.ytimg.com/vi/' + o.vid + '/hqdefault.jpg'; });
+    Object.keys(TUT_BY).forEach(function (id) { if (!TUT_BY[id].hidden) list.push(TUT_BY[id]); });
+    var ord = cat.order || {};
+    list.sort(function (a, b) { if (a.lv !== b.lv) return a.lv - b.lv; var ta = 'EYE STORY PEN MAP LENS'.indexOf(a.type), tb = 'EYE STORY PEN MAP LENS'.indexOf(b.type); if (ta !== tb) return ta - tb; var o = ord[a.lv + '-' + a.type] || []; var ia = o.indexOf(a.id), ib = o.indexOf(b.id); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || (a.id < b.id ? -1 : 1); });
+    TUTS.splice.apply(TUTS, [0, TUTS.length].concat(list));
+    // 공지(게시판 관리)
+    if (Array.isArray(cat.notices)) { var pub = cat.notices.filter(function (n) { return n.published !== false; }); NOTICES.splice.apply(NOTICES, [0, NOTICES.length].concat(pub)); }
+  }
+  window.__kitPreBoot = async function () { try { applyCatalog(await DB.getCatalog()); } catch (e) {} };
+
+  /* ---------- 과제 안내 · 평가 결과 · 알림 표시 ---------- */
+  var _rv = P.renderVals;
+  P.renderVals = function () {
+    var v = _rv.call(this), s = this.state, n = s.cur || 1, A = CAT && CAT.assign[n], L = (s.lv || {})[n] || {};
+    if (A) { if (A.title) v.subTitleNow = A.title; v.missionHint = (A.guide || v.missionHint) + ' 평가 기준: ' + (A.rubric || []).map(function (r) { return r.name + ' ' + r.pts + '점'; }).join(' · ') + ' (통과 ' + A.pass + '점)'; }
+    if (L.review === 'returned' && !L.sub) v.subMsg = '재제출 요청' + (L.score != null ? ' · ' + L.score + '점' : '') + (L.reviewNote ? ' — ' + L.reviewNote : '');
+    if (sess()) { var unread = unreadCount(); if (unread) v.authLabel = v.authLabel + ' · 알림 ' + unread; }
+    return v;
+  };
+  function readSet() { try { return JSON.parse(localStorage.getItem('kitaxon-read-' + (sess() || {}).sid) || '[]'); } catch (e) { return []; } }
+  function unreadCount() { var r = readSet(); return MSGS.filter(function (m) { return r.indexOf(m.id) < 0; }).length; }
+  window.__kitOnSession = async function (se) { try { MSGS = se ? await DB.myMessages(se.sid, se.dept) : []; } catch (e) { MSGS = []; } comp().setState({}); };
+  var RV = { pending: ['검수 대기', '#8A5A00'], passed: ['평가 통과 · 배지 발급 대기', '#16804D'], approved: ['배지 발급', '#16804D'], returned: ['재제출 요청', '#B3121B'], failed: ['미통과', '#B3121B'], revoked: ['배지 해제', '#B3121B'] };
+  window.__kitAccountExtra = function () {
+    var s = comp().state, h = '';
+    [1, 2, 3].forEach(function (n) { var L = (s.lv || {})[n] || {}; var st = L.badge ? 'approved' : L.review; if (!st || !RV[st]) return;
+      h += '<div style="border-radius:12px;box-shadow:inset 0 0 0 1.5px var(--line);padding:12px 14px;margin-top:10px;font-size:14px"><b>' + esc(LEVELS[n].name) + '</b> <span style="color:' + RV[st][1] + ';font-weight:800">' + RV[st][0] + '</span>' + (L.score != null ? ' · <b>' + L.score + '점</b>' : '') + (L.badgeId && L.badge ? '<div style="color:var(--muted);font-size:12.5px">발급 번호 ' + esc(L.badgeId) + ' · ' + esc(L.badgeAt || '') + '</div>' : '') + (L.feedback || L.reviewNote || L.revokeReason ? '<div style="margin-top:6px;color:#3B3F5C">' + esc(L.feedback || L.reviewNote || L.revokeReason) + '</div>' : '') + '</div>'; });
+    Object.keys(s.xb || {}).forEach(function (k) { var x = s.xb[k], d = ((CAT || {}).badgesX || []).find(function (b) { return b.id === k; }) || { name: '특별 배지' }; h += '<div style="border-radius:12px;box-shadow:inset 0 0 0 1.5px var(--line);padding:12px 14px;margin-top:10px;font-size:14px"><b>' + esc(d.name) + '</b> <span style="color:' + (x.revoked ? '#B3121B' : '#16804D') + ';font-weight:800">' + (x.revoked ? '배지 해제' : '특별 배지 발급') + '</span><div style="color:var(--muted);font-size:12.5px">' + esc(x.badgeId || '') + (x.reason && !x.revoked ? ' · ' + esc(x.reason) : '') + (x.revoked && x.revokeReason ? ' · ' + esc(x.revokeReason) : '') + '</div></div>'; });
+    var r = readSet(); var ms = MSGS.slice(0, 8);
+    h += '<h3 style="margin:18px 0 6px;font-size:16px">알림함</h3>' + (ms.length ? ms.map(function (m) { var nw = r.indexOf(m.id) < 0; return '<div style="padding:10px 0;border-bottom:1px solid var(--line);font-size:14px">' + (nw ? '<span style="color:var(--mag);font-weight:800">NEW </span>' : '') + '<b>' + esc(m.title) + '</b><div style="color:#3B3F5C;margin-top:4px;white-space:pre-wrap">' + esc(m.body) + '</div><div style="color:var(--muted);font-size:12px;margin-top:4px">' + KITDB.util.stamp(m.at) + '</div></div>'; }).join('') : '<p style="color:var(--muted);font-size:14px;margin:0">새 알림이 없어요.</p>');
+    try { localStorage.setItem('kitaxon-read-' + (sess() || {}).sid, JSON.stringify(MSGS.map(function (m) { return m.id; }))); } catch (e) {} setTimeout(function () { comp().setState({}); }, 0);
+    return h;
+  };
+
+  /* ---------- 학습 규칙: 시청 기준 완료 · 순차 학습 · 단계 열림 ---------- */
+  var _md = P.markDone;
+  P.markDone = function (id, val) {
+    if (val && S.requireWatch && TUT_BY[id]) { var w = (this.state.watch || {})[id]; var pct = w ? w.pct : 0; if (pct < S.watchThr) { block = true; setTimeout(function () { block = false; }, 0); toast('영상을 ' + S.watchThr + '% 이상 시청하면 완료할 수 있어요 (현재 ' + pct + '%)'); openPlayer(id); return; } }
+    return _md.call(this, id, val);
+  };
+  var _sl = P.setLv;
+  P.setLv = function (n, patch) {
+    if (block && patch && Object.keys(patch).length === 1 && 'li' in patch) return;
+    if (S.seqLessons && patch && typeof patch.li === 'number') { var list = this.lessonList(n), it = list[patch.li]; if (it && it.kind === 'tut') { var f = this.firstOpenLesson(n); if (patch.li > f && list[f] && list[f].kind === 'tut') { toast('앞 튜토리얼을 먼저 완료해 주세요. 지금 할 레슨으로 이동했어요.'); patch = Object.assign({}, patch, { li: f }); } } }
+    return _sl.call(this, n, patch);
+  };
+  var _un = P.unlocked;
+  P.unlocked = function (n) { var s = this.state; if (!s.type) return false; if (n === 1 || S.levelUnlock === 'free') return true; if (S.levelUnlock === 'submit') return !!(s.lv[n - 1].sub || s.lv[n - 1].badge); return _un.call(this, n); };
+
+  /* ---------- 학습 플레이어 (YouTube · VOD) — 실제 재생 구간만 진도로 기록 ---------- */
+  var css = '.kxp-ov{position:fixed;inset:0;z-index:120;background:rgba(12,13,36,.82);display:flex;align-items:center;justify-content:center;padding:16px}' +
+    '.kxp{width:min(980px,100%);background:#0C0D24;color:#fff;border-radius:22px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5)}' +
+    '.kxp-h{display:flex;gap:12px;align-items:center;padding:14px 18px}.kxp-h b{flex:1;font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.kxp-v{position:relative;aspect-ratio:16/9;background:#000}.kxp-v>*,.kxp-v iframe,.kxp-v video{position:absolute;inset:0;width:100%;height:100%;border:0}' +
+    '.kxp-f{padding:14px 18px 18px;font-size:14px;color:#C9CBE2}.kxp-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.14);margin:8px 0;position:relative;overflow:visible}.kxp-bar i{display:block;height:100%;border-radius:999px;background:#D6246E}.kxp-bar s{position:absolute;top:-4px;width:2px;height:16px;background:#fff}' +
+    '.kxp-x{border:0;background:rgba(255,255,255,.12);color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer}.kxp a{color:#fff}' +
+    '.kx-toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#0C0D24;color:#fff;border-radius:14px;padding:12px 16px;font-size:14px;z-index:200;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:calc(100% - 32px)}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  function toast(t) { var d = document.createElement('div'); d.className = 'kx-toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3200); }
+  window.__kitToast = toast;
+  var ytP = null;
+  function loadYT() { if (ytP) return ytP; ytP = new Promise(function (res) { if (window.YT && window.YT.Player) return res(); window.onYouTubeIframeAPIReady = function () { res(); }; var s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s); }); return ytP; }
+  function ranges(set) { var a = Array.from(set).sort(function (x, y) { return x - y; }), out = []; a.forEach(function (x) { var l = out[out.length - 1]; if (l && x === l[1] + 1) l[1] = x; else out.push([x, x]); }); return out; }
+  function unr(r) { var s = new Set(); (r || []).forEach(function (p) { for (var i = p[0]; i <= p[1]; i++) s.add(i); }); return s; }
+  var cur = null;
+  function openPlayer(key) {
+    closePlayer();
+    var t = TUT_BY[key] || TUTS.find(function (x) { return x.vid === key; }); if (!t) return;
+    var c = comp(), w = (c.state.watch || {})[t.id] || {}, seen = unr(w.r), dur = w.dur || 0, isVod = String(t.vid).indexOf('vod-') === 0, logged = !!sess();
+    var ov = document.createElement('div'); ov.className = 'kxp-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', t.tool + ' 학습 플레이어');
+    ov.innerHTML = '<div class="kxp"><div class="kxp-h"><b>' + esc(t.tool) + ' · ' + esc(t.title || '') + '</b><button class="kxp-x" aria-label="닫기">×</button></div><div class="kxp-v"><div id="kxp-slot"></div></div>' +
+      '<div class="kxp-f"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span>시청 진도 <b class="num" id="kxp-pct" style="color:#fff">0%</b> · 완료 기준 ' + S.watchThr + '%</span><span id="kxp-st"></span></div><div class="kxp-bar"><i id="kxp-bi" style="width:0"></i><s style="left:' + S.watchThr + '%"></s></div>' +
+      '<div style="font-size:12.5px">실제로 재생한 구간만 진도로 기록돼요(건너뛴 구간 · 2배속 초과 제외). ' + (logged ? '' : '<b style="color:#FF7DB6">로그인하면 시청 기록이 저장돼요.</b> ') + (isVod ? '' : '<a href="https://www.youtube.com/watch?v=' + esc(t.vid) + '" target="_blank" rel="noopener">YouTube에서 열기</a>(진도 미반영)') + '</div></div></div>';
+    document.body.appendChild(ov);
+    cur = { ov: ov, t: t, seen: seen, dur: dur, timer: null, last: 0 };
+    ov.querySelector('.kxp-x').onclick = closePlayer; ov.onclick = function (e) { if (e.target === ov) closePlayer(); };
+    paint();
+    if (isVod) {
+      var vid = t.vid.slice(4), meta = ((CAT && CAT.videos) || []).find(function (x) { return x.id === vid; }) || {};
+      DB.vodUrl(vid, meta.url).then(function (u) { if (!cur) return; if (!u) { ov.querySelector('#kxp-slot').outerHTML = '<div style="display:flex;align-items:center;justify-content:center;color:#C9CBE2;padding:20px;text-align:center">영상 파일을 찾을 수 없어요. 담당자에게 문의해 주세요.</div>'; return; }
+        var v = document.createElement('video'); v.controls = true; v.playsInline = true; v.src = u; v.setAttribute('controlsList', 'nodownload'); ov.querySelector('#kxp-slot').replaceWith(v); cur.v = v;
+        v.addEventListener('loadedmetadata', function () { cur.dur = Math.floor(v.duration) || cur.dur; paint(); });
+        v.addEventListener('timeupdate', function () { if (!v.paused && v.playbackRate <= 2) mark(Math.floor(v.currentTime)); });
+        v.addEventListener('ended', function () { save(true); });
+      });
+    } else {
+      loadYT().then(function () { if (!cur) return; cur.yt = new YT.Player('kxp-slot', { videoId: t.vid, playerVars: { rel: 0, playsinline: 1, modestbranding: 1 }, events: { onReady: function () { cur.dur = Math.floor(cur.yt.getDuration()) || cur.dur; paint(); } } });
+        cur.timer = setInterval(function () { try { var y = cur.yt; if (y && y.getPlayerState && y.getPlayerState() === 1 && y.getPlaybackRate() <= 2) { if (!cur.dur) cur.dur = Math.floor(y.getDuration()); mark(Math.floor(y.getCurrentTime())); } } catch (e) {} }, 1000);
+      });
+    }
+  }
+  function pct() { return cur && cur.dur ? Math.min(100, Math.round(cur.seen.size / cur.dur * 100)) : 0; }
+  function paint() { if (!cur) return; var p = pct(); var e = cur.ov.querySelector('#kxp-pct'); if (e) e.textContent = p + '%'; var b = cur.ov.querySelector('#kxp-bi'); if (b) b.style.width = p + '%'; var s = cur.ov.querySelector('#kxp-st'); if (s) s.textContent = comp().state.done[cur.t.id] ? '튜토리얼 완료' : (p >= S.watchThr ? '완료 기준 충족' : ''); }
+  function mark(sec) { if (!cur || sec < 0) return; if (cur.dur && sec > cur.dur) return; cur.seen.add(sec); paint(); if (Date.now() - cur.last > 5000) save(); }
+  function save(force) {
+    if (!cur || !sess()) return; cur.last = Date.now(); var c = comp(), id = cur.t.id, p = pct();
+    var w = Object.assign({}, c.state.watch || {}); w[id] = { pct: p, sec: cur.seen.size, dur: cur.dur, r: ranges(cur.seen), at: Date.now() }; c.setState({ watch: w });
+    if (p >= S.watchThr && S.autoDoneOnWatch && !c.state.done[id]) { _md.call(c, id, true); toast('시청 완료 — 튜토리얼 완료로 기록했어요'); paint(); }
+  }
+  function closePlayer() { if (!cur) return; save(true); clearInterval(cur.timer); try { if (cur.yt && cur.yt.destroy) cur.yt.destroy(); } catch (e) {} if (cur.v) cur.v.pause(); cur.ov.remove(); cur = null; }
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && cur) closePlayer(); });
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href*="youtube.com/watch?v="]'); if (!a || a.closest('.kxp')) return;
+    var m = /[?&]v=([^&#]+)/.exec(a.getAttribute('href')); if (!m) return; var vid = decodeURIComponent(m[1]); var t = TUTS.find(function (x) { return x.vid === vid; }) || Object.keys(TUT_BY).map(function (k) { return TUT_BY[k]; }).find(function (x) { return x.vid === vid; });
+    if (!t) return; e.preventDefault(); e.stopPropagation(); openPlayer(t.id);
+  }, true);
+  window.__kitOpenPlayer = openPlayer;
 })();
 
 mountDC(Component, document.getElementById('tpl'), document.getElementById('app'), ['home','diag','lib','course','badges','book','notice']);

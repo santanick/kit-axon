@@ -1,0 +1,13 @@
+rules_version = '2';
+// VOD: 관리자(Google 로그인 · admin 커스텀 클레임 없이 admins 문서로 확인)만 업로드, 재생은 공개 URL(토큰 포함)
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /vod/{id} {
+      allow read: if true;
+      allow write: if request.auth != null && !request.auth.uid.matches('s_.*')
+        && firestore.exists(/databases/(default)/documents/admins/$(request.auth.token.email.lower()))
+        && (request.resource == null || (request.resource.size < 4 * 1024 * 1024 * 1024 && request.resource.contentType.matches('video/.*')));
+    }
+    match /{all=**} { allow read, write: if false; }
+  }
+}
