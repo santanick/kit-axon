@@ -222,3 +222,29 @@ main.ws-home{background:linear-gradient(180deg,var(--paper) 0,#fff 420px)}
 .mwrap.top2{z-index:65}
 .form1 .ch>.tag:last-child{margin-left:auto}
 @media (max-width:860px){.opts,.lv3{grid-template-columns:1fr}.rgr{grid-template-columns:1fr}.dsr{grid-template-columns:44px 1fr}.dsr span:last-child{grid-column:1/-1}}
+/* v4: AI 영상 · 강의자료 · 러닝 저니 · 흐름 · 상시 패널 */
+.aiv .form2{grid-template-columns:repeat(4,minmax(0,1fr))}
+.scns{display:flex;flex-direction:column;gap:10px;margin:10px 0}.scn{background:var(--paper);border-radius:14px;padding:10px 12px}
+.scn .qh input{flex:1;min-width:0;font-weight:700}.scg{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:6px}.scg label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+.aicv{width:100%;aspect-ratio:16/9;height:auto;border-radius:14px;background:var(--paper);display:block;box-shadow:0 0 0 1px var(--line)}
+.pctl{margin-top:12px}
+.pjc{margin:10px 0}.pjc .ch .seg2{margin:0}.pjsteps{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:8px 0}
+.pjs{flex:1 1 200px;min-width:0;background:var(--paper);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.pjs .qh input{flex:1;min-width:0;font-weight:700}.pjs .jn{font:700 11px 'Space Grotesk',sans-serif;color:#fff;background:var(--ink);border-radius:99px;padding:3px 8px;white-space:nowrap}
+.pja{display:flex;align-items:center;color:var(--mag)}
+.pjflow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}.pjst{display:flex;flex-direction:column;background:var(--paper);border-radius:12px;padding:8px 12px;min-width:0}
+.pjst em{font:700 10.5px 'Space Grotesk',sans-serif;color:var(--mag);font-style:normal}.pjst b{font-size:13.5px}.pjst small{font-size:12px;color:var(--muted)}
+.pjflow.mini{margin-top:0}.pjflow.mini .pjst{padding:6px 10px}.pjrow{display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--soft)}
+.flow{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}.flow li{display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:8px 10px;box-shadow:0 0 0 1px var(--line)}
+.flow li div{flex:1;min-width:0;display:flex;flex-direction:column}.flow li small{color:var(--muted);font-size:12.5px}
+.flow .fn{flex:none;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:700 12px 'Space Grotesk',sans-serif}.flow.done .fn{background:#16804D}.flow .fn.no{background:#B3121B}
+.flow .fm{font-style:normal;font-size:11.5px;color:var(--mag);background:var(--magl);border-radius:99px;padding:2px 8px;white-space:nowrap}
+.drawer .dh [data-act=fill-here]{margin-left:auto}.drawer .dh .x{margin-left:6px}
+@media (min-width:861px){.aifab{top:50%;bottom:auto;right:0;transform:translateY(-50%);flex-direction:column;writing-mode:vertical-rl;border-radius:16px 0 0 16px;padding:18px 12px;gap:10px;font-size:14px;letter-spacing:.04em}.aifab svg{transform:rotate(90deg)}}
+@media (min-width:1180px){.drawer{top:62px;width:420px;box-shadow:-1px 0 0 var(--line)}body.drawer-open .shell{margin-right:420px}}
+@media (max-width:860px){.aiv .form2{grid-template-columns:1fr 1fr}.scg{grid-template-columns:1fr}.pjrow{grid-template-columns:1fr}.pja{transform:rotate(90deg)}.pjsteps{flex-direction:column}}
+.pjs .qh,.scn .qh{display:flex;align-items:center;gap:8px}.pjs .qh .sp,.scn .qh .sp{display:none}.pjs .qh input,.scn .qh input{flex:1 1 auto;width:auto;min-width:0}
+.pjc .ch{flex-wrap:wrap;gap:8px}.pjs .chips2{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.pjs .chips2 select{max-width:100%;min-width:0}
+.bub .flow{width:100%}.bub .flow li{width:100%;box-sizing:border-box}
+@media (max-width:860px){.pjsteps .pja{display:none}.pjs{flex:none;width:100%}.pjc .ch .seg2{width:100%}.stepper span{font-size:11.5px;padding:8px 4px}}
+.modal,.modal .mb{min-width:0}.modal .mb{overflow-x:hidden}
