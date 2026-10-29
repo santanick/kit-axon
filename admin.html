@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="ko">
 <head>
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<style>html.fr{display:none}</style><script>if (window.top !== window.self) { document.documentElement.className += ' fr'; try { window.top.location = window.self.location.href; } catch (e) {} }</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
@@ -479,7 +482,7 @@ input[type=color]{width:100%;height:40px;border:0;border-radius:10px;padding:0;b
   var fb = null;
   async function fire() {
     if (fb) return fb;
-    var V = '10.12.4', B = 'https://www.gstatic.com/firebasejs/' + V + '/';
+    var V = '13.1.0', B = 'https://www.gstatic.com/firebasejs/' + V + '/';
     var app = await import(B + 'firebase-app.js'), auth = await import(B + 'firebase-auth.js'), fs = await import(B + 'firebase-firestore.js'), fn = await import(B + 'firebase-functions.js'), stg = await import(B + 'firebase-storage.js');
     var a = app.initializeApp(CFG.firebase);
     fb = { auth: auth, fs: fs, fn: fn, stg: stg, A: auth.getAuth(a), D: fs.getFirestore(a), F: fn.getFunctions(a, CFG.region || 'asia-northeast3'), S: stg.getStorage(a) };
@@ -548,10 +551,26 @@ function dstr(ms) { if (!ms) return '—'; var d = new Date(ms); return (d.getMo
 function dfull(ms) { if (!ms) return '—'; var d = new Date(ms); var p = function (x) { return (x < 10 ? '0' : '') + x; }; return d.getFullYear() + '.' + p(d.getMonth() + 1) + '.' + p(d.getDate()); }
 function parseStamp(s) { if (!s) return 0; if (typeof s === 'number') return s; var m = /^(\d{4})\.(\d{2})\.(\d{2})(?: (\d{2}):(\d{2}))?/.exec(s); return m ? new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)).getTime() : 0; }
 function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 2600); }
-function dl(name, rows) { var csv = '﻿' + rows.map(function (r) { return r.map(function (c) { c = String(c == null ? '' : c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }).join('\n'); var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = name; a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000); }
+function dl(name, rows) { var csv = '﻿' + rows.map(function (r) { return r.map(function (c) { c = String(c == null ? '' : c); if (/^[=+\-@\t\r]/.test(c)) c = "'" + c; return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }).join('\n'); var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = name; a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000); }
 
 /* ---------- 레코드 정규화 ---------- */
+/* 보안: 학생이 저장하는 진도 값은 화면에 넣기 전에 형식 검증(관리자 화면 XSS 차단) */
+var TYPESET = { EYE: 1, PEN: 1, LENS: 1, STORY: 1, MAP: 1 }, TID = /^[ESPML][123]-\d{1,2}$/, KEYOK = /^[\w-]{1,40}$/, REVOK = { pending: 1, passed: 1, approved: 1, returned: 1, failed: 1, revoked: 1 };
+function num(v, max) { v = Number(v); return isFinite(v) ? Math.max(0, Math.min(max == null ? 1e12 : max, Math.round(v))) : 0; }
+function cleanProg(p) {
+  if (!p || typeof p !== 'object') return {};
+  var o = { type: TYPESET[p.type] ? p.type : '', track: p.track === 'startup' || p.track === 'job' ? p.track : '', done: {}, watch: {}, summary: {}, lv: {}, xb: {} };
+  Object.keys(p.done || {}).forEach(function (k) { if (TID.test(k) && p.done[k]) o.done[k] = true; });
+  Object.keys(p.watch || {}).forEach(function (k) { var w = p.watch[k] || {}; if (TID.test(k)) o.watch[k] = { pct: num(w.pct, 100), dur: num(w.dur), sec: num(w.sec) }; });
+  [1, 2, 3].forEach(function (n) { var a = (p.summary || {})[n] || {}, b = (p.lv || {})[n] || {}, cls = {};
+    o.summary[n] = { pct: num(a.pct, 100), tutDone: num(a.tutDone, 99), tutTotal: num(a.tutTotal, 99) || 5, reqDone: num(a.reqDone, 99), reqTotal: num(a.reqTotal, 99) || 1 };
+    Object.keys(b.cls || {}).forEach(function (k) { if (KEYOK.test(k)) cls[k] = num(b.cls[k], 99); });
+    o.lv[n] = { sub: typeof b.sub === 'string' ? b.sub.slice(0, 5000) : (b.sub ? '제출' : ''), subAt: typeof b.subAt === 'string' || typeof b.subAt === 'number' ? b.subAt : '', review: REVOK[b.review] ? b.review : '', badge: !!b.badge, badgeAt: b.badgeAt, badgeId: String(b.badgeId || '').slice(0, 60), reviewNote: String(b.reviewNote || '').slice(0, 1000), score: b.score == null ? undefined : num(b.score, 100), scores: (Array.isArray(b.scores) ? b.scores : []).slice(0, 12).map(function (x) { return num(x, 100); }), feedback: String(b.feedback || '').slice(0, 1000), revoked: !!b.revoked, revokeReason: String(b.revokeReason || '').slice(0, 300), issueMode: String(b.issueMode || '').slice(0, 20), cls: cls }; });
+  Object.keys(p.xb || {}).forEach(function (k) { var x = p.xb[k] || {}; if (KEYOK.test(k)) o.xb[k] = { badge: !!x.badge, at: x.at, badgeId: String(x.badgeId || '').slice(0, 60), reason: String(x.reason || '').slice(0, 300), revoked: !!x.revoked, revokeReason: String(x.revokeReason || '').slice(0, 300) }; });
+  return o;
+}
 function normReal(s) {
+  s = Object.assign({}, s, { sid: String(s.sid || '').replace(/\D/g, '').slice(0, 12), progress: cleanProg(s.progress) });
   var p = s.progress || {}, sm = p.summary || {}, lv = p.lv || {}, L = {};
   [1, 2, 3].forEach(function (n) { var a = sm[n] || {}, b = lv[n] || {};
     L[n] = { pct: a.pct || 0, tutDone: a.tutDone || 0, tutTotal: a.tutTotal || 5, reqDone: a.reqDone || 0, reqTotal: a.reqTotal || 1, sub: !!b.sub, subText: b.sub || '', subAt: parseStamp(b.subAt), review: b.review || '', badge: !!b.badge, badgeAt: parseStamp(b.badgeAt), badgeId: b.badgeId || '', reviewNote: b.reviewNote || '', score: b.score, scores: b.scores || [], feedback: b.feedback || '', revoked: !!b.revoked, revokeReason: b.revokeReason || '', issueMode: b.issueMode || '', cls: b.cls || {} }; });
@@ -921,7 +940,7 @@ function bindSub(id, fn) { $$('#' + id + ' button').forEach(function (b) { b.onc
 function tog(id, on, label) { return '<label class="tg"><input type="checkbox" id="' + id + '" ' + (on ? 'checked' : '') + '><span></span>' + label + '</label>'; }
 function sidsFrom(text) { return (String(text || '').match(/\d{6,12}/g) || []).filter(function (x, i, a) { return a.indexOf(x) === i; }); }
 function clsFor(r, n) { if (n === 1) { var t = M.cls.types[r.type] || []; var seen = {}; return t.map(function (c, i) { return Object.assign({}, c, { req: i === 0 }); }).concat(M.cls.common).filter(function (c) { if (seen[c.id]) return false; seen[c.id] = 1; return true; }); } var tr = M.tracks[r.track || 'job'] || {}; return (M.cls.lv[n] || []).concat([n === 2 ? tr.cls2 : tr.cls3].filter(Boolean)); }
-var _nr = normReal; normReal = function (s) { var r = _nr(s); var p = s.progress || {}; r.xb = p.xb || {}; [1, 2, 3].forEach(function (n) { var b = (p.lv || {})[n] || {}; r.L[n].cls = b.cls || {}; }); return r; };
+var _nr = normReal; normReal = function (s) { var r = _nr(s); var p = cleanProg(s.progress); r.xb = p.xb || {}; [1, 2, 3].forEach(function (n) { var b = (p.lv || {})[n] || {}; r.L[n].cls = b.cls || {}; }); return r; };
 
 var _dv = derive; derive = function (r) { r.xb = r.xb || {}; r.watch = r.watch || {}; [1, 2, 3].forEach(function (n) { r.L[n].cls = r.L[n].cls || {}; }); return _dv(r); };
 /* 공통 편집 함수: 실제 학습자는 서버 · 저장소, 가상 학습자는 화면 메모리 */
@@ -1074,7 +1093,7 @@ openDetail = function (sid) {
     if (L.subText) h += '<div class="subtext">' + esc(L.subText) + '</div>';
     h += '<div class="bar" style="margin:10px 0 0">' + (r.pending.indexOf(n) >= 0 || L.sub ? '<button class="btn sm" data-gr="' + n + '">' + (L.review && L.review !== 'pending' ? '다시 평가' : '과제 평가') + '</button>' : '') + (L.badge ? '<button class="btn ghost sm" data-bx="' + n + '" style="color:var(--bad)">배지 해제</button>' : '<button class="btn ok sm" data-bi="' + n + '">배지 수동 발급</button>') + '<button class="btn ghost sm" data-rs="' + n + '">이 단계 진도 초기화</button></div></div>';
   });
-  var xb = Object.keys(r.xb || {}); if (xb.length) h += '<div class="lvbox"><h4>특별 배지</h4>' + xb.map(function (k) { var x = r.xb[k]; return '<div style="display:flex;justify-content:space-between;padding:4px 0">' + esc(bdef(k).name) + (x.revoked ? ' <span class="pill p-bad">해제</span>' : ' <button class="btn ghost sm" data-bx="' + k + '" style="color:var(--bad)">해제</button>') + '</div>'; }).join('') + '</div>';
+  var xb = Object.keys(r.xb || {}); if (xb.length) h += '<div class="lvbox"><h4>특별 배지</h4>' + xb.map(function (k) { var x = r.xb[k]; return '<div style="display:flex;justify-content:space-between;padding:4px 0">' + esc(bdef(k).name) + (x.revoked ? ' <span class="pill p-bad">해제</span>' : ' <button class="btn ghost sm" data-bx="' + esc(k) + '" style="color:var(--bad)">해제</button>') + '</div>'; }).join('') + '</div>';
   h += '<div class="lvbox"><h4>계정 관리</h4><p style="font-size:13.5px;color:var(--muted);margin:0 0 10px">비밀번호 분실 시 새 접근코드를 발급합니다. 기존 비밀번호는 무효가 되고, 학습 기록은 유지됩니다.</p><button class="btn ghost sm" id="reissue">접근코드 재발급</button><div id="reissueOut" style="margin-top:10px"></div></div>';
   $('#dBody').innerHTML = h; openDr('#detail');
   var B = $('#dBody');
@@ -1119,7 +1138,7 @@ EXT.course = function () {
   var j = [1, 2, 3].map(function (n) { var A = CAT.assign[n], B = bdef(n); return '<div class="card jr"><div class="jh">' + medal(B, 44) + '<div><b>' + esc(B.name) + '</b><div style="font-size:12.5px;color:var(--muted)">' + (n === 1 ? '진단 직후 열림' : { badge: '이전 단계 배지 발급 후 열림', submit: '이전 단계 제출 후 열림', free: '처음부터 열림' }[S.levelUnlock]) + '</div></div></div><ol class="jsteps"><li>영상 튜토리얼 5개 <span>시청 ' + S.watchThr + '%' + (S.requireWatch ? ' 이상 시 완료' : ' 권장') + (S.seqLessons ? ' · 순차' : '') + '</span></li><li>온라인 클래스 <span>필수 과정 수료</span></li><li>' + esc(A.title || B.subTitle) + ' <span>통과 ' + A.pass + '점 · 루브릭 ' + A.rubric.length + '개</span></li><li>배지 발급 <span>' + MODE_LABEL[B.mode] + '</span></li></ol></div>'; }).join('');
   var mx = '<div class="tw"><table class="mx"><thead><tr><th></th>' + TORDER.map(function (t) { return '<th>' + t + ' · ' + TYPES[t].ko + '</th>'; }).join('') + '</tr></thead><tbody>' + [1, 2, 3].map(function (n) { return '<tr><th>' + LVN[n] + '</th>' + TORDER.map(function (t) { var k = n + '-' + t, c = courseIds(k).length; return '<td><button class="cc' + (k === crs ? ' on' : '') + '" data-c="' + k + '">' + c + '편' + (c !== 5 ? ' <b style="color:var(--bad)">!</b>' : '') + '</button></td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
   var ids = courseIds(crs), p = crs.split('-');
-  var list = ids.map(function (id, i) { var t = tutView(id), vod = !!t.vod; return '<div class="crow"><span class="num" style="font-weight:800;width:26px">' + (i + 1) + '</span><img src="' + (vod ? ((CAT.videos || []).find(function (v) { return v.id === t.vod; }) || {}).thumb || '' : 'https://i.ytimg.com/vi/' + esc(t.vid) + '/default.jpg') + '" alt="" style="width:64px;height:36px;object-fit:cover;border-radius:6px;background:#15173B" onerror="this.style.visibility=\'hidden\'"><div style="flex:1;min-width:0"><b>' + esc(id) + ' · ' + esc(t.tool) + '</b>' + (vod ? ' <span class="pill p-mag">VOD</span>' : ' <span class="pill p-no">YouTube</span>') + '<div style="font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(t.mission || '') + '</div></div><button class="btn ghost sm" data-up="' + i + '" ' + (i ? '' : 'disabled') + ' aria-label="위로">↑</button><button class="btn ghost sm" data-dw="' + i + '" ' + (i < ids.length - 1 ? '' : 'disabled') + ' aria-label="아래로">↓</button><button class="btn ghost sm" data-ed="' + id + '">편집</button><button class="btn ghost sm" data-hd="' + id + '" style="color:var(--bad)">제외</button></div>'; }).join('');
+  var list = ids.map(function (id, i) { var t = tutView(id), vod = !!t.vod; return '<div class="crow"><span class="num" style="font-weight:800;width:26px">' + (i + 1) + '</span><img src="' + esc(vod ? ((CAT.videos || []).find(function (v) { return v.id === t.vod; }) || {}).thumb || '' : 'https://i.ytimg.com/vi/' + t.vid + '/default.jpg') + '" alt="" style="width:64px;height:36px;object-fit:cover;border-radius:6px;background:#15173B" onerror="this.style.visibility=\'hidden\'"><div style="flex:1;min-width:0"><b>' + esc(id) + ' · ' + esc(t.tool) + '</b>' + (vod ? ' <span class="pill p-mag">VOD</span>' : ' <span class="pill p-no">YouTube</span>') + '<div style="font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(t.mission || '') + '</div></div><button class="btn ghost sm" data-up="' + i + '" ' + (i ? '' : 'disabled') + ' aria-label="위로">↑</button><button class="btn ghost sm" data-dw="' + i + '" ' + (i < ids.length - 1 ? '' : 'disabled') + ' aria-label="아래로">↓</button><button class="btn ghost sm" data-ed="' + id + '">편집</button><button class="btn ghost sm" data-hd="' + id + '" style="color:var(--bad)">제외</button></div>'; }).join('');
   var hidden = Object.keys(CAT.tuts || {}).filter(function (id) { var t = tutView(id); return t.hidden && t.lv === +p[0] && t.type === p[1]; });
   var _seen = {}, cl = (+p[0] === 1 ? (M.cls.types[p[1]] || []).map(function (c, i) { return Object.assign({}, c, { req: i === 0 }); }).concat(M.cls.common) : (M.cls.lv[+p[0]] || [])).filter(function (c) { if (_seen[c.id]) return false; _seen[c.id] = 1; return true; });
   el.innerHTML = '<div class="bar"><h2>코스 · 러닝 저니</h2></div><h3 style="margin:0 0 10px">러닝 저니(학생이 밟는 순서)</h3><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))">' + j + '</div><p style="font-size:13px;color:var(--muted)">열림 조건 · 시청 기준 · 순차 학습은 [진도 기준], 과제 · 통과 점수는 [과제 · 평가 › 설정], 배지 발급 방식은 [배지 › 설정]에서 바꿉니다.</p>' +

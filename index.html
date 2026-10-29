@@ -1609,7 +1609,7 @@ body{word-break:keep-all;overflow-wrap:break-word}
 
 </div>
 </template>
-<script src="https://cdn.jsdelivr.net/npm/morphdom@2.7.4/dist/morphdom-umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/morphdom@2.7.8/dist/morphdom-umd.min.js" integrity="sha384-H9LbLjNYOs1B0xEiev/dWN+wPEUa21jl7OhKSNLbyKgwDD91VLJGCgvFUE2WvmTa" crossorigin="anonymous"></script>
 <script src="config.js"></script>
 <script>
 /* KIT AX ON — 데이터 계층 (KITDB)
@@ -1800,7 +1800,7 @@ body{word-break:keep-all;overflow-wrap:break-word}
   var fb = null;
   async function fire() {
     if (fb) return fb;
-    var V = '10.12.4', B = 'https://www.gstatic.com/firebasejs/' + V + '/';
+    var V = '13.1.0', B = 'https://www.gstatic.com/firebasejs/' + V + '/';
     var app = await import(B + 'firebase-app.js'), auth = await import(B + 'firebase-auth.js'), fs = await import(B + 'firebase-firestore.js'), fn = await import(B + 'firebase-functions.js'), stg = await import(B + 'firebase-storage.js');
     var a = app.initializeApp(CFG.firebase);
     fb = { auth: auth, fs: fs, fn: fn, stg: stg, A: auth.getAuth(a), D: fs.getFirestore(a), F: fn.getFunctions(a, CFG.region || 'asia-northeast3'), S: stg.getStorage(a) };

@@ -10,6 +10,7 @@ service cloud.firestore {
       allow read: if isStudent(sid);
       allow write: if isStudent(sid)
         && request.resource.data.keys().hasOnly(['p', 'updatedAt'])
+        && request.resource.data.p is map
         && request.resource.data.updatedAt == request.time;
     }
     // 평가 · 배지 · 관리자 진도 처리 결과: 본인 읽기만

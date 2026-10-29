@@ -5,23 +5,25 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const { defineSecret } = require('firebase-functions/params');
-const admin = require('firebase-admin');
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 const crypto = require('crypto');
 
-admin.initializeApp();
+initializeApp();
 setGlobalOptions({ region: 'asia-northeast3', maxInstances: 20 });
-const db = admin.firestore();
+const db = getFirestore();
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const norm = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const validSid = (s) => /^\d{6,12}$/.test(String(s || ''));
-const pwOk = (p) => typeof p === 'string' && p.length >= 8 && /[A-Za-z]/.test(p) && /\d/.test(p);
+const pwOk = (p) => typeof p === 'string' && p.length >= 8 && p.length <= 128 && /[A-Za-z]/.test(p) && /\d/.test(p);
 const eq = (a, b) => a && b && a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 const pwHash = (pw, salt) => crypto.scryptSync(pw, salt, 32, { N: 16384, r: 8, p: 1 }).toString('hex');
 const LOCK_MAX = 8, LOCK_MS = 15 * 60 * 1000;
 function newCode() { const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; const r = crypto.randomBytes(8); let s = ''; for (let i = 0; i < 8; i++) { s += A[r[i] % A.length]; if (i === 3) s += '-'; } return s; }
-const codeHash = (sid, code) => sha('code:' + sid + ':' + norm(code));
+const codeHash = (sid, code) => crypto.scryptSync(norm(code), 'kitaxon-code:' + sid, 32, { N: 16384, r: 8, p: 1 }).toString('hex'); // 느린 해시: DB 유출 시 접근코드 역산 방지
 
 /* 관리자 권한: admins/{이메일} = { role: owner | admin | dept | grader, depts: [] } */
 async function adminInfo(req) {
@@ -37,11 +39,11 @@ async function requireAdmin(req, roles) {
   return a.email;
 }
 const EDIT = ['owner', 'admin'], GRADE = ['owner', 'admin', 'dept', 'grader'], DEPT = ['owner', 'admin', 'dept'];
-async function inScope(req, sid) { const a = await adminInfo(req); if (a.role !== 'dept') return a; const st = await db.doc('students/' + sid).get(); if (!st.exists || !a.depts.includes(st.data().dept)) throw new HttpsError('permission-denied', '담당 학과 학습자가 아닙니다.'); return a; }
+async function inScope(req, sid) { if (!validSid(sid)) throw new HttpsError('invalid-argument', '학번 형식 오류'); const a = await adminInfo(req); if (a.role !== 'dept') return a; const st = await db.doc('students/' + sid).get(); if (!st.exists || !a.depts.includes(st.data().dept)) throw new HttpsError('permission-denied', '담당 학과 학습자가 아닙니다.'); return a; }
 const stampKST = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' ').replace(/-/g, '.');
 const badgeNo = (sid, n) => 'KIT-AX-' + String(n).toUpperCase() + '-' + String(sid).slice(-4) + crypto.randomInt(10, 99);
 async function audit(by, action, target, detail) { await db.collection('auditLog').add({ by, action, target: String(target || ''), detail: String(detail || '').slice(0, 300), at: Date.now() }); }
-async function bump(sid, patch) { await db.doc('approvals/' + sid).set(Object.assign({}, patch, { rev: admin.firestore.FieldValue.increment(1), updatedAt: Date.now() }), { merge: true }); }
+async function bump(sid, patch) { await db.doc('approvals/' + sid).set(Object.assign({}, patch, { rev: FieldValue.increment(1), updatedAt: Date.now() }), { merge: true }); }
 async function catalog() { const [d, q] = await Promise.all([db.doc('catalog/main').get(), db.doc('catalogPrivate/main').get()]); return Object.assign({}, d.exists ? d.data() : {}, q.exists ? q.data() : {}); }
 async function guard(ref, st) {
   if (st.lockUntil && st.lockUntil > Date.now()) throw new HttpsError('resource-exhausted', '시도 횟수를 넘었습니다. 15분 뒤 다시 시도해 주세요.');
@@ -51,20 +53,19 @@ async function fail(ref, st, msg) {
   await ref.update(n >= LOCK_MAX ? { fails: 0, lockUntil: Date.now() + LOCK_MS } : { fails: n });
   throw new HttpsError('unauthenticated', msg);
 }
-async function token(sid, dept) { return admin.auth().createCustomToken('s_' + sid, { role: 'student', sid, dept }); }
+async function token(sid, dept) { return getAuth().createCustomToken('s_' + sid, { role: 'student', sid, dept }); }
 
 /* 학생: 학번 + 접근코드 → 비밀번호 설정 */
 exports.activateStudent = onCall(async (req) => {
   const { sid, code, password } = req.data || {};
   if (!validSid(sid)) throw new HttpsError('invalid-argument', '학번 형식을 확인해 주세요.');
   const ref = db.doc('students/' + sid); const snap = await ref.get();
-  if (!snap.exists) throw new HttpsError('not-found', '등록되지 않은 학번입니다. 학과 사무실에 등록을 요청해 주세요.');
+  if (!snap.exists) throw new HttpsError('unauthenticated', '학번 또는 접근코드가 맞지 않습니다.');
   const st = snap.data(); await guard(ref, st);
-  if (st.status === 'active') throw new HttpsError('already-exists', '이미 비밀번호를 설정한 학번입니다. 로그인해 주세요.');
-  if (!eq(codeHash(sid, code), st.codeHash)) await fail(ref, st, '접근코드가 맞지 않습니다.');
+  if (st.status === 'active' || !st.codeHash || !eq(codeHash(sid, code), st.codeHash)) await fail(ref, st, '학번 또는 접근코드가 맞지 않습니다.');
   if (!pwOk(password)) throw new HttpsError('invalid-argument', '비밀번호는 영문과 숫자를 섞어 8자 이상으로 정해 주세요.');
   const salt = crypto.randomBytes(16).toString('hex');
-  await ref.update({ status: 'active', pwHash: pwHash(password, salt), salt, activatedAt: Date.now(), lastSeen: Date.now(), codeHash: admin.firestore.FieldValue.delete(), fails: 0, lockUntil: 0 });
+  await ref.update({ status: 'active', pwHash: pwHash(password, salt), salt, activatedAt: Date.now(), lastSeen: Date.now(), codeHash: FieldValue.delete(), fails: 0, lockUntil: 0 });
   return { token: await token(sid, st.dept), dept: st.dept };
 });
 
@@ -73,9 +74,9 @@ exports.studentLogin = onCall(async (req) => {
   const { sid, password } = req.data || {};
   if (!validSid(sid)) throw new HttpsError('invalid-argument', '학번 형식을 확인해 주세요.');
   const ref = db.doc('students/' + sid); const snap = await ref.get();
-  if (!snap.exists || snap.data().status !== 'active') throw new HttpsError('failed-precondition', '처음 이용하는 학번이면 [처음 이용]에서 접근코드로 비밀번호를 먼저 설정해 주세요.');
+  if (!snap.exists || snap.data().status !== 'active') throw new HttpsError('unauthenticated', '학번 또는 비밀번호가 맞지 않습니다. 처음 이용하는 학번이면 [처음 이용]에서 접근코드로 비밀번호를 먼저 설정해 주세요.');
   const st = snap.data(); await guard(ref, st);
-  if (!eq(pwHash(String(password || ''), st.salt), st.pwHash)) await fail(ref, st, '비밀번호가 맞지 않습니다.');
+  if (!eq(pwHash(String(password || ''), st.salt), st.pwHash)) await fail(ref, st, '학번 또는 비밀번호가 맞지 않습니다. 처음 이용하는 학번이면 [처음 이용]에서 접근코드로 비밀번호를 먼저 설정해 주세요.');
   await ref.update({ lastSeen: Date.now(), fails: 0 });
   return { token: await token(sid, st.dept), dept: st.dept };
 });
@@ -83,12 +84,13 @@ exports.studentLogin = onCall(async (req) => {
 /* 관리자 */
 exports.whoAmI = onCall(async (req) => { try { const a = await adminInfo(req); return { admin: true, role: a.role, depts: a.depts }; } catch (e) { return { admin: false }; } });
 
-exports.registerStudents = onCall(async (req) => {
-  const by = await requireAdmin(req, DEPT);
+exports.registerStudents = onCall({ memory: '1GiB', timeoutSeconds: 540 }, async (req) => {
+  const me = await adminInfo(req); if (!DEPT.includes(me.role)) throw new HttpsError('permission-denied', '학번 등록 권한이 없습니다.'); const by = me.email;
   const rows = (req.data && req.data.rows) || []; if (rows.length > 3000) throw new HttpsError('invalid-argument', '한 번에 3,000명까지 등록할 수 있습니다.');
   const results = []; let batch = db.batch(), n = 0;
   for (const r of rows) {
     if (!validSid(r.sid) || !r.dept) { results.push({ sid: r.sid, dept: r.dept, error: '형식 오류' }); continue; }
+    if (me.role === 'dept' && !me.depts.includes(r.dept)) { results.push({ sid: r.sid, dept: r.dept, error: '담당 학과가 아님' }); continue; }
     const ref = db.doc('students/' + r.sid); const ex = await ref.get();
     if (ex.exists && ex.data().status === 'active') { results.push({ sid: r.sid, dept: ex.data().dept, error: '이미 활성화됨(코드 재발급은 학습자 상세에서)' }); continue; }
     const code = newCode();
@@ -101,11 +103,12 @@ exports.registerStudents = onCall(async (req) => {
 });
 
 exports.reissueCode = onCall(async (req) => {
-  const sid = req.data && req.data.sid; const a = await inScope(req, sid);
+  const sid = req.data && req.data.sid; if (!validSid(sid)) throw new HttpsError('invalid-argument', '학번 형식 오류'); const a = await inScope(req, sid);
+  if (!DEPT.includes(a.role)) throw new HttpsError('permission-denied', '접근코드 재발급 권한이 없습니다.');
   const ref = db.doc('students/' + sid); if (!(await ref.get()).exists) throw new HttpsError('not-found', '없는 학번입니다.');
   const code = newCode();
-  await ref.update({ status: 'invited', codeHash: codeHash(sid, code), pwHash: admin.firestore.FieldValue.delete(), salt: admin.firestore.FieldValue.delete(), invitedAt: Date.now(), fails: 0, lockUntil: 0 });
-  try { await admin.auth().revokeRefreshTokens('s_' + sid); } catch (e) {}
+  await ref.update({ status: 'invited', codeHash: codeHash(sid, code), pwHash: FieldValue.delete(), salt: FieldValue.delete(), invitedAt: Date.now(), fails: 0, lockUntil: 0 });
+  try { await getAuth().revokeRefreshTokens('s_' + sid); } catch (e) {}
   await audit(a.email, '접근코드 재발급', sid); return { code };
 });
 
@@ -130,7 +133,7 @@ exports.reviewSubmission = exports.gradeSubmission; // 이전 버전 호환
 
 /* 배지 수동 발급 · 해제 — n: 1~3(단계 배지) 또는 특별 배지 id */
 exports.issueBadge = onCall(async (req) => {
-  const { sid, n, reason } = req.data || {}; const a = await inScope(req, sid);
+  const { sid, n, reason } = req.data || {}; if (!/^[\w-]{1,40}$/.test(String(n))) throw new HttpsError('invalid-argument', '배지 id 오류'); const a = await inScope(req, sid);
   if (!DEPT.includes(a.role)) throw new HttpsError('permission-denied', '발급 권한이 없습니다.');
   if (!(await db.doc('students/' + sid).get()).exists) throw new HttpsError('not-found', '없는 학번입니다.');
   const ap = (await db.doc('approvals/' + sid).get()).data() || {}; const st = stampKST(); const id = badgeNo(sid, n);
@@ -141,7 +144,7 @@ exports.issueBadge = onCall(async (req) => {
   await audit(a.email, '배지 수동 발급', sid + ' · ' + n, reason); return { lv: out };
 });
 exports.revokeBadge = onCall(async (req) => {
-  const { sid, n, reason } = req.data || {}; const a = await inScope(req, sid);
+  const { sid, n, reason } = req.data || {}; if (!/^[\w-]{1,40}$/.test(String(n))) throw new HttpsError('invalid-argument', '배지 id 오류'); const a = await inScope(req, sid);
   if (!EDIT.includes(a.role)) throw new HttpsError('permission-denied', '배지 해제는 운영자만 할 수 있습니다.');
   const ap = (await db.doc('approvals/' + sid).get()).data() || {}; const lvl = [1, 2, 3].includes(Number(n));
   const cur = lvl ? (ap.lv || {})[n] : (ap.xb || {})[n]; if (!cur || !cur.badge) throw new HttpsError('not-found', '발급된 배지가 없습니다.');
@@ -177,7 +180,7 @@ exports.adminSetProgress = onCall(async (req) => {
   if (!DEPT.includes(a.role)) throw new HttpsError('permission-denied', '진도 관리 권한이 없습니다.');
   if (!p || typeof p !== 'object') throw new HttpsError('invalid-argument', '진도 데이터 오류');
   delete p.xb; delete p.adminRev;
-  await db.doc('progress/' + sid).set({ p, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  await db.doc('progress/' + sid).set({ p, updatedAt: FieldValue.serverTimestamp() });
   await bump(sid, {}); // rev 증가 → 학생 화면이 다음 포커스 때 서버 진도를 다시 불러옴
   await audit(a.email, '진도 관리', sid, label); return { p };
 });
@@ -187,7 +190,13 @@ exports.saveCatalog = onCall({ memory: '512MiB' }, async (req) => {
   const by = await requireAdmin(req, EDIT); const c = (req.data && req.data.catalog) || {};
   if (JSON.stringify(c).length > 900000) throw new HttpsError('invalid-argument', '설정 크기가 너무 큽니다(영상 썸네일 수를 줄여 주세요).');
   // 공개 문서(catalog/main)에는 학습자 화면에 필요한 값만, 운영자 · 그룹(학번 목록)은 비공개 문서로 분리
-  const priv = { operators: c.operators || [], groups: c.groups || [] }; const pub = Object.assign({}, c); delete pub.operators; delete pub.groups;
+  const prevOps = (((await db.doc('catalogPrivate/main').get()).data() || {}).operators) || [];
+  const opKey = (L) => JSON.stringify((L || []).map((o) => [String(o.email).toLowerCase(), o.role, (o.depts || []).slice().sort()]).sort());
+  const me = await adminInfo(req);
+  if (opKey(c.operators) !== opKey(prevOps) && me.role !== 'owner' && prevOps.length) throw new HttpsError('permission-denied', '운영자 권한 변경은 최고 관리자만 할 수 있습니다.');
+  const ROLES = ['owner', 'admin', 'dept', 'grader'];
+  c.operators = (c.operators || []).filter((o) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(o.email)) && ROLES.includes(o.role)).slice(0, 200);
+  const priv = { operators: c.operators, groups: (c.groups || []).slice(0, 500) }; const pub = Object.assign({}, c); delete pub.operators; delete pub.groups;
   await db.doc('catalog/main').set(pub); await db.doc('catalogPrivate/main').set(priv);
   // 운영자 목록을 권한 문서(admins)와 맞춤
   const ops = c.operators || []; const cur = await db.collection('admins').get(); const keep = new Set(ops.map((o) => String(o.email).toLowerCase()));
@@ -213,7 +222,7 @@ exports.myMessages = onCall(async (req) => {
   return { messages: q.docs.map((d) => Object.assign({ id: d.id }, d.data())).filter((m) => { const t = m.target || {}; return t.type === 'all' || (t.type === 'dept' && t.value === dept) || (t.type === 'group' && groups.includes(t.value)) || (t.type === 'sids' && (t.value || []).includes(String(sid))); }).slice(0, 30) };
 });
 exports.adminListMessages = onCall(async (req) => { await requireAdmin(req); const q = await db.collection('messages').orderBy('at', 'desc').limit(100).get(); return { messages: q.docs.map((d) => Object.assign({ id: d.id }, d.data())) }; });
-exports.deleteMessage = onCall(async (req) => { const by = await requireAdmin(req, EDIT); await db.doc('messages/' + req.data.id).delete(); await audit(by, '알림 삭제', req.data.id); return { ok: true }; });
+exports.deleteMessage = onCall(async (req) => { const by = await requireAdmin(req, EDIT); const id = String((req.data || {}).id || ''); if (!/^[A-Za-z0-9]{1,40}$/.test(id)) throw new HttpsError('invalid-argument', 'id 오류'); await db.doc('messages/' + id).delete(); await audit(by, '알림 삭제', req.data.id); return { ok: true }; });
 exports.adminBadgeLog = onCall(async (req) => { await requireAdmin(req); const q = await db.collection('badgeLog').orderBy('at', 'desc').limit(1000).get(); return { log: q.docs.map((d) => d.data()) }; });
 exports.adminAuditLog = onCall(async (req) => { await requireAdmin(req, EDIT); const q = await db.collection('auditLog').orderBy('at', 'desc').limit(500).get(); return { log: q.docs.map((d) => d.data()) }; });
 
