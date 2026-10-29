@@ -34,9 +34,9 @@ jobs:
         run: cd service/server && npm ci --no-fund && npm audit --omit=dev --audit-level=high
       - name: 문법 검사
         run: for f in service/server/*.js didisam/*.js; do node --check "$f"; done
-      - name: API 테스트(가입 · 저장 · 기관 분리 · RLS · AI 정책)
+      - name: API 테스트(가입 · 저장 · 기관 분리 · RLS · AI 정책 · 학습자)
         env: { DATABASE_URL: 'postgresql://didisam:ci-only-pw@localhost:5432/didisam' }
-        run: node --test service/test/api.test.js
+        run: node --test service/test/api.test.js service/test/learner.test.js
 
   deploy:
     needs: test

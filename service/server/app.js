@@ -59,6 +59,11 @@ const SEC_HEADERS = {
 };
 const CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'";
 
+const LCOOKIE = '__Host-dd_lsid';
+const LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: https://i.ytimg.com; frame-src https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'self'";
+const LP_MAX = 256 * 1024;
+const TID_RE = /^tn_[a-z0-9]{8,16}$/; const SID_RE = /^[A-Za-z0-9_-]{4,20}$/;
+
 function createApp({ pool, env = process.env, publicDir, log = console }) {
   const secure = env.COOKIE_SECURE !== '0';
   const cookieName = secure ? COOKIE : 'dd_sid'; // __Host- 접두어는 Secure 필수
@@ -93,6 +98,62 @@ function createApp({ pool, env = process.env, publicDir, log = console }) {
   const need = async req => { const a = await auth(req); if (!a) throw new HttpErr(401, '로그인이 필요합니다.', 'auth'); return a; };
   const audit = (c, tid, actor, action, detail) => c.query('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, actor, action, detail ? JSON.stringify(detail) : null]);
   const meOut = a => ({ user: { email: a.email, role: a.role }, tenant: { tid: a.tid, name: a.name, type: a.type, mode: a.mode } });
+
+  /* ── 학습자(v10) ── */
+  const pepper = env.SESSION_PEPPER || env.SIGNUP_CODE || 'didisam-learner';
+  const codeFp = (tid, sid, code) => crypto.createHmac('sha256', pepper).update(`${tid}|${sid}|${String(code).toUpperCase()}`).digest('hex');
+  const lcookieName = secure ? LCOOKIE : 'dd_lsid';
+  /* 어드민이 발급한 접근코드(S.codes)를 학습자 로그인 표로 동기화 — 바뀐 코드만 scrypt로 다시 해시 */
+  async function syncLearners(c, tid, codes) {
+    if (!Array.isArray(codes)) return;
+    const cur = new Map((await c.query('select sid, code_fp from learners where tenant_id = $1', [tid])).rows.map(r => [r.sid, r.code_fp]));
+    const keep = new Set(); let n = 0;
+    for (const x of codes.slice(0, 5000)) {
+      const sid = String(x && x.sid || ''); const code = String(x && x.code || ''); if (!SID_RE.test(sid) || code.length < 4 || code.length > 20) continue; keep.add(sid);
+      const fp = codeFp(tid, sid, code); if (cur.get(sid) === fp) continue;
+      if (++n > 300) break; // 한 번 저장에 최대 300건(나머지는 다음 저장 때)
+      await c.query('insert into learners (tenant_id, sid, dept, code_fp, code_hash) values ($1, $2, $3, $4, $5) on conflict (tenant_id, sid) do update set dept = excluded.dept, code_fp = excluded.code_fp, code_hash = excluded.code_hash', [tid, sid, String(x.dept || '').slice(0, 40), fp, await hashPw(code.toUpperCase())]);
+    }
+    const gone = [...cur.keys()].filter(sid => !keep.has(sid));
+    if (gone.length) { await c.query('delete from learners where tenant_id = $1 and sid = any($2)', [tid, gone]); await pool.query('delete from learner_sessions where tenant_id = $1 and sid = any($2)', [tid, gone]); }
+  }
+  async function lauth(req, tid) {
+    const t = cookies(req)[lcookieName]; if (!t || t.length > 100) return null;
+    const { rows } = await pool.query('select tenant_id, sid from learner_sessions where id = $1 and expires_at > now()', [sha(t)]);
+    return rows[0] && rows[0].tenant_id === tid ? rows[0] : null;
+  }
+  /* 학습자 본인 데이터만: 배지 · 과정 진도(어드민 상태에서 학번으로 찾음) */
+  function mineOf(doc, sid) {
+    const m = (doc.members || []).find(x => x && (x.sid === sid || x.name === sid)); if (!m) return { badges: [], cls: {} };
+    return { badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))), cls: Object.fromEntries((doc.classes || []).filter(c => c.prog && c.prog[m.id]).map(c => [c.id, Math.round(+c.prog[m.id].p || 0)])) };
+  }
+  const cleanLP = lp => { const o = { tut: {}, cls: {}, diag: {}, at: new Date().toISOString() }; if (!lp || typeof lp !== 'object') return o; for (const k of ['tut', 'cls', 'diag']) if (lp[k] && typeof lp[k] === 'object' && !Array.isArray(lp[k])) o[k] = Object.fromEntries(Object.entries(lp[k]).filter(([id]) => /^[\w-]{1,40}$/.test(id)).slice(0, 500)); return o; };
+  async function pubRoute(req, res, m) {
+    const [, tid, act] = m; if (!TID_RE.test(tid)) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
+    const key = `${req.method} ${act}`;
+    if (key === 'GET site') {
+      const site = await inTenant(pool, tid, async c => (await c.query("select doc->'lsite'->'pub' pub from tenant_state where tenant_id = $1", [tid])).rows[0]);
+      if (!site || !site.pub) throw new HttpErr(404, '아직 게시되지 않은 학습자 사이트입니다.', 'unpublished');
+      return { site: site.pub };
+    }
+    if (key === 'POST login') {
+      const b = await readBody(req, 2048); const sid = String(b.sid || '').trim(); const code = String(b.code || '').trim().toUpperCase();
+      limit('ll:' + ip(req), 40, 600e3); limit(`lls:${tid}:${sid}`, 8, 600e3);
+      const L = SID_RE.test(sid) ? await inTenant(pool, tid, async c => (await c.query('select sid, dept, code_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]) : null;
+      const ok = await checkPw(code, L ? L.code_hash : DUMMY);
+      if (!L || !ok) throw new HttpErr(401, '번호 또는 접근코드가 올바르지 않습니다.', 'login');
+      const token = crypto.randomBytes(32).toString('base64url');
+      await pool.query('insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval \'30 days\')', [sha(token), tid, sid]);
+      res.setHeader('set-cookie', `${lcookieName}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${30 * 86400}${secure ? '; Secure' : ''}`);
+      return inTenant(pool, tid, async c => { await c.query('update learners set last_login = now() where tenant_id = $1 and sid = $2', [tid, sid]); const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: L.dept }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid) : { badges: [], cls: {} } }; });
+    }
+    const s = await lauth(req, tid); if (!s) throw new HttpErr(401, '로그인이 필요합니다.', 'auth');
+    if (key === 'GET me') return inTenant(pool, tid, async c => { const L = (await c.query('select dept from learners where tenant_id = $1 and sid = $2', [tid, s.sid])).rows[0]; const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, s.sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid: s.sid, dept: L ? L.dept : '' }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, s.sid) : { badges: [], cls: {} } }; });
+    if (key === 'PUT progress') { const b = await readBody(req, LP_MAX); const lp = cleanLP(b.lp); const j = JSON.stringify(lp); if (j.length > LP_MAX) throw new HttpErr(413, '학습 기록이 너무 큽니다.', 'too_large');
+      await inTenant(pool, tid, c => c.query('insert into learner_progress (tenant_id, sid, lp, bytes) values ($1, $2, $3, $4) on conflict (tenant_id, sid) do update set lp = excluded.lp, bytes = excluded.bytes, updated_at = now()', [tid, s.sid, j, j.length])); return { ok: true }; }
+    if (key === 'POST logout') { const t = cookies(req)[lcookieName]; await pool.query('delete from learner_sessions where id = $1', [sha(t)]); res.setHeader('set-cookie', `${lcookieName}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure ? '; Secure' : ''}`); return { ok: true }; }
+    throw new HttpErr(404, '없는 주소입니다.', 'not_found');
+  }
 
   /* ── API ── */
   const routes = {
@@ -156,10 +217,12 @@ function createApp({ pool, env = process.env, publicDir, log = console }) {
         if (rev === 0) {
           const r = await c.query('insert into tenant_state (tenant_id, doc, rev, bytes) values ($1, $2, 1, $3) on conflict (tenant_id) do nothing returning rev', [a.tid, s, s.length]);
           if (!r.rowCount) throw new HttpErr(409, '다른 곳에서 먼저 저장했습니다.', 'conflict');
+          await syncLearners(c, a.tid, doc.codes);
           return { rev: 1 };
         }
         const r = await c.query('update tenant_state set doc = $2, rev = rev + 1, bytes = $3, updated_at = now() where tenant_id = $1 and rev = $4 returning rev', [a.tid, s, s.length, rev]);
         if (!r.rowCount) throw new HttpErr(409, '다른 창이나 운영자가 먼저 저장했습니다. 최신 내용을 불러옵니다.', 'conflict');
+        await syncLearners(c, a.tid, doc.codes);
         const m = doc.org.room.mode; if (m && m !== a.mode) await pool.query('update tenants set mode = $2, name = $3 where id = $1', [a.tid, String(m).slice(0, 20), String(doc.org.name || a.name).slice(0, 30)]);
         return { rev: r.rows[0].rev };
       });
@@ -197,6 +260,10 @@ function createApp({ pool, env = process.env, publicDir, log = console }) {
       const a = await need(req);
       return inTenant(pool, a.tid, async c => { const { rows } = await c.query("select day::text, calls, tin::int, tout::int from ai_usage where tenant_id = $1 and day > current_date - 31 order by day desc", [a.tid]); return { daily: aiDaily, days: rows }; });
     },
+    'GET /api/learners/progress': async req => {
+      const a = await need(req);
+      return inTenant(pool, a.tid, async c => ({ lp: Object.fromEntries((await c.query('select sid, lp from learner_progress where tenant_id = $1 order by updated_at desc limit 5000', [a.tid])).rows.map(r => [r.sid, r.lp])) }));
+    },
     'GET /api/audit': async req => {
       const a = await need(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 볼 수 있습니다.', 'role');
       return inTenant(pool, a.tid, async c => ({ rows: (await c.query('select at, actor, action, detail from audit_log where tenant_id = $1 order by at desc limit 200', [a.tid])).rows }));
@@ -223,7 +290,8 @@ function createApp({ pool, env = process.env, publicDir, log = console }) {
       if (e || !st.isFile()) { if (!path.extname(p) && !p.startsWith('/api')) return send(res, 302, null, { location: p + '/' }); return send(res, 404, 'not found', { 'content-type': 'text/plain; charset=utf-8' }); }
       const ext = path.extname(f).toLowerCase(); const isHtml = ext === '.html';
       const h = { ...SEC_HEADERS, 'content-type': MIME[ext] || 'application/octet-stream', 'content-length': st.size, 'cache-control': isHtml ? 'no-cache' : 'public, max-age=300' };
-      if (isHtml) h['content-security-policy'] = CSP;
+      if (isHtml) h['content-security-policy'] = path.basename(f) === 'learner.html' ? LCSP : CSP;
+      if (path.basename(f) === 'learner.html') h['x-frame-options'] = 'SAMEORIGIN';
       if (secure) h['strict-transport-security'] = 'max-age=31536000; includeSubDomains';
       res.writeHead(200, h); if (req.method === 'HEAD') return res.end();
       fs.createReadStream(f).pipe(res);
@@ -234,7 +302,8 @@ function createApp({ pool, env = process.env, publicDir, log = console }) {
     const url = new URL(req.url, 'http://x'); const key = `${req.method} ${url.pathname}`;
     try {
       if (url.pathname.startsWith('/api/')) {
-        const fn = routes[key]; if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout)$/);
+        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key]; if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처
           if (req.headers['x-didisam'] !== '1') throw new HttpErr(403, '허용되지 않은 요청입니다.', 'csrf');

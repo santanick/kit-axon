@@ -78,7 +78,41 @@ const MIGRATIONS = [
      end if; end $$;
    grant usage on schema public to didisam_tenant;
    grant select, insert, update, delete on tenant_state, ai_usage, audit_log to didisam_tenant;
-   grant usage on sequence audit_log_id_seq to didisam_tenant;`
+   grant usage on sequence audit_log_id_seq to didisam_tenant;`,
+  /* 4 — 학습자(v10): 학번(번호) + 접근코드 해시 · 학습자 세션 · 학습 활동. 이름 · 연락처는 받지 않는다. */
+  `create table if not exists learners (
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null check (sid ~ '^[A-Za-z0-9_-]{4,20}$'),
+     dept text not null default '',
+     code_fp text not null,
+     code_hash text not null,
+     created_at timestamptz not null default now(),
+     last_login timestamptz,
+     primary key (tenant_id, sid)
+   );
+   create table if not exists learner_sessions (
+     id text primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null,
+     expires_at timestamptz not null
+   );
+   create index if not exists lsess_exp on learner_sessions (expires_at);
+   create table if not exists learner_progress (
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null,
+     lp jsonb not null,
+     bytes integer not null default 0,
+     updated_at timestamptz not null default now(),
+     primary key (tenant_id, sid)
+   );
+   do $$ declare t text; begin
+     foreach t in array array['learners','learner_progress'] loop
+       execute format('alter table %I enable row level security', t);
+       execute format('alter table %I force row level security', t);
+       execute format('drop policy if exists tenant_iso on %I', t);
+       execute format($p$create policy tenant_iso on %I using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true))$p$, t);
+     end loop; end $$;
+   grant select, insert, update, delete on learners, learner_progress to didisam_tenant;`
 ];
 
 async function migrate(pool) {
