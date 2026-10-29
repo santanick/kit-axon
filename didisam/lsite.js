@@ -51,6 +51,7 @@ const LS_SEC = {
   text: { n: '텍스트', d: '제목 + 본문' },
   faq: { n: '자주 묻는 질문', d: '질문 | 답 목록' }
 };
+const LS_MYB = [['profile', '프로필 · 유형'], ['next', '다음 할 일'], ['roadmap', '수준 로드맵'], ['badges', '배지 지갑'], ['courses', '내 과정 · 피드백 · 수료증'], ['tuts', '튜토리얼 기록'], ['diag', '진단 기록'], ['streak', '학습 달력'], ['notices', '내 과정 공지'], ['data', '내 기록 내려받기']];
 const LS_PAGES = [['home', '홈', '공개'], ['diag', '진단', '공개'], ['tutorials', '튜토리얼', '공개'], ['courses', '코스웨어', '공개'], ['badges', '배지', '공개'], ['books', '디지털북', '공개'], ['notice', '공지사항', '공개'], ['my', '마이페이지', '로그인']];
 const lsT = () => S.org.type;
 const lsSec = (type, data = {}) => ({ id: uid('ls'), type, on: true, data });
@@ -87,13 +88,13 @@ function lsDefault(ty) {
     badges: [lsSec('badges', { eyebrow: 'DIGITAL BADGES', title: '디지털 배지', sub: 'Open Badge 형식으로 발급되어 링크로 공유할 수 있습니다.' }), lsSec('faq', { title: '배지 FAQ', items: [{ q: '배지는 어떻게 받나요?', a: '코스 과제를 제출하면 운영자 검수 후 자동 발급됩니다.' }, { q: '어디에 쓸 수 있나요?', a: '이력서 · 포트폴리오에 링크로 첨부할 수 있습니다.' }] })],
     books: [lsSec('books', { eyebrow: 'DIGITAL BOOK', title: '읽고, 따라 하고, 평가까지.', sub: '디지털북은 코스와 배지를 잇는 교재입니다.' })],
     notice: [lsSec('notices', { title: '공지사항', n: 30 })],
-    my: [lsSec('progress', { title: '나의 학습' })]
+    my: []
   };
   const levels = (LS_LEVELS[ty] || LS_LEVELS.corp).map(([name, diff, color, goal], i) => ({ k: i, name: univ ? `${S.org.name.replace(/(대학교|대학)$/, '')} AI ${name}`.trim() : name, short: name.toUpperCase(), diff, color, goal }));
   const types = (LS_TYPES[ty] || LS_TYPES.corp).map(([k, name, color, d]) => ({ k, name, color, d }));
   const tracks = (LS_TRACKS[ty] || LS_TRACKS.corp).map(([name, eyebrow, color, desc, steps, cta]) => ({ id: uid('tr'), name, eyebrow, color, desc, steps, cta }));
   const dbooks = levels.map((l, i) => ({ id: uid('bk'), title: `${l.name} 디지털북`, level: i, units: types.map(x => `${x.name} 실습`), url: '', color: l.color }));
-  return { v: 1, look: univ ? 'kit' : 'clean', brand: { short: (S.org.name.match(/[A-Za-z]+/) || [''])[0].slice(0, 6) || S.org.name.slice(0, 4) }, pages: LS_PAGES.map(([id, name, access]) => ({ id, name, on: !(id === 'books' && !univ), access, sections: P[id] })), levels, types, tracks, dbooks, grid: {}, pub: null, pubAt: '' };
+  return { v: 1, look: univ ? 'kit' : 'clean', brand: { short: (S.org.name.match(/[A-Za-z]+/) || [''])[0].slice(0, 6) || S.org.name.slice(0, 4) }, pages: LS_PAGES.map(([id, name, access]) => ({ id, name, on: !(id === 'books' && !univ), access, sections: P[id] })), levels, types, tracks, dbooks, grid: {}, my: { blocks: LS_MYB.map(([k]) => [k, true]) }, pub: null, pubAt: '' };
 }
 function lsSeedTuts(ty) {
   if (ty === 'univ' && typeof LSEED_UNIV_TUTS !== 'undefined') return LSEED_UNIV_TUTS.map(t => ({ id: 'tu' + t.id, title: t.title, ch: t.ch, tool: t.tool, level: t.lv - 1, type: t.type, yt: t.vid, steps: t.steps.slice(0, 3), mission: t.mission, badge: '', on: true, at: today() }));
@@ -106,6 +107,7 @@ function lsEnsure() {
   if (!S) return;
   if (!S.lsite || !S.lsite.pages) { S.lsite = lsDefault(lsT()); S.lsite.grid = lsGridAuto(); }
   if (!Array.isArray(S.tuts)) S.tuts = lsSeedTuts(lsT());
+  if (!S.lsite.my) S.lsite.my = { blocks: LS_MYB.map(([k]) => [k, true]) };
 }
 /* 메뉴: 학습 › 튜토리얼, 운영 › 학습자 사이트, AI 진단은 모든 유형에서 켤 수 있게 */
 MENU.tutorial = { label: '튜토리얼', ws: 'learn' };
@@ -120,11 +122,11 @@ function navAdd(id, on) { const w = MENU[id].ws; S.nav.tabs[w] = S.nav.tabs[w] |
 function lsSnapshot() {
   lsEnsure(); const L = S.lsite;
   const items = c => (c.curriculum || []).slice(0, 60).map(it => ({ id: it.id, type: it.type, title: it.title, week: it.week || 0, yt: (it.yt && it.yt.id) || (typeof ytId === 'function' ? ytId(it.url || '') : '') || '', time: it.time || 0, desc: (it.desc || '').slice(0, 600), qs: (it.qs || []).slice(0, 30).map(q => ({ t: q.t, q: q.q, opts: q.opts || [], a: q.a, pts: q.pts })) }));
-  const cls = S.classes.filter(c => c.status !== '종료').map(c => ({ id: c.id, name: c.name, level: c.level || 0, ctype: c.ctype || '', start: c.start, end: c.end, hours: c.hours || 0, desc: (c.desc || '').slice(0, 400), items: items(c) }));
+  const cls = S.classes.filter(c => c.status !== '종료').map(c => ({ id: c.id, name: c.name, level: c.level || 0, ctype: c.ctype || '', start: c.start, end: c.end, hours: c.hours || 0, thr: (c.criteria && c.criteria.threshold) || 80, desc: (c.desc || '').slice(0, 400), items: items(c) }));
   const notices = [...(S.notices || []).map(n => ({ title: n.title, at: n.at, pin: !!n.pin, body: (n.body || '').slice(0, 2000) })), ...S.classes.flatMap(c => (c.notices || []).map(n => ({ title: n.title, at: n.at, pin: !!n.pin, cls: c.name, body: (n.body || '').slice(0, 2000) })))].sort((a, b) => (b.pin - a.pin) || String(b.at).localeCompare(String(a.at))).slice(0, 40);
   const diags = (S.diags || []).filter(d => d.status !== '종료' && d.items && d.items.length).map(d => ({ id: d.id, name: d.name, mode: d.mode, items: d.items.map(q => ({ q: q.q, dim: q.dim, opts: q.opts || [], a: q.a, pts: q.pts, t: q.t })), outs: d.outs.map(o => ({ k: o.k, l: o.l, min: o.min || 0, rec: o.rec || '' })) }));
   const badges = (S.badges || []).filter(b => !b.special).map(b => ({ id: b.id || b.key, key: b.key, name: b.name, level: b.level ?? Math.max(0, (+b.key || 1) - 1), desc: b.desc || b.crit || '', fill: b.fill || '#4b3cff', ring: b.ring || '#ddd', cls: b.cls || '' }));
-  return { v: 1, at: nowStr(), org: { name: S.org.name, type: S.org.type, short: L.brand.short || '' }, look: L.look, pages: L.pages.filter(p => p.on).map(p => ({ id: p.id, name: p.name, access: p.access, sections: p.sections.filter(s => s.on).map(s => ({ type: s.type, data: s.data })) })), levels: L.levels, types: L.types, tracks: L.tracks, dbooks: L.dbooks, grid: L.grid, tuts: (S.tuts || []).filter(t => t.on), classes: cls, diags, badges, notices, terms: { learner: t('learner'), cls: t('cls') } };
+  return { v: 1, at: nowStr(), org: { name: S.org.name, type: S.org.type, short: L.brand.short || '' }, look: L.look, pages: L.pages.filter(p => p.on).map(p => ({ id: p.id, name: p.name, access: p.access, sections: p.sections.filter(s => s.on).map(s => ({ type: s.type, data: s.data })) })), levels: L.levels, types: L.types, tracks: L.tracks, dbooks: L.dbooks, grid: L.grid, tuts: (S.tuts || []).filter(t => t.on), my: L.my || null, classes: cls, diags, badges, notices, terms: { learner: t('learner'), cls: t('cls') } };
 }
 
 /* ── 학습자 활동(LP) → 어드민 데이터 반영 ── */

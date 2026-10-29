@@ -125,9 +125,10 @@ function createApp({ pool, env = process.env, publicDir, log = console }) {
   /* 학습자 본인 데이터만: 배지 · 과정 진도(어드민 상태에서 학번으로 찾음) */
   function mineOf(doc, sid) {
     const m = (doc.members || []).find(x => x && (x.sid === sid || x.name === sid)); if (!m) return { badges: [], cls: {} };
-    return { badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))), cls: Object.fromEntries((doc.classes || []).filter(c => c.prog && c.prog[m.id]).map(c => [c.id, Math.round(+c.prog[m.id].p || 0)])) };
+    return { badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))),
+      cls: Object.fromEntries((doc.classes || []).filter(c => c.prog && c.prog[m.id]).map(c => { const g = c.prog[m.id]; const thr = (c.criteria && c.criteria.threshold) || 80; return [c.id, { p: Math.round(+g.p || 0), st: g.assign || 'none', fb: String(g.fb || '').slice(0, 1000), score: g.score ?? null, done: (+g.p || 0) >= thr }]; })) };
   }
-  const cleanLP = lp => { const o = { tut: {}, cls: {}, diag: {}, at: new Date().toISOString() }; if (!lp || typeof lp !== 'object') return o; for (const k of ['tut', 'cls', 'diag']) if (lp[k] && typeof lp[k] === 'object' && !Array.isArray(lp[k])) o[k] = Object.fromEntries(Object.entries(lp[k]).filter(([id]) => /^[\w-]{1,40}$/.test(id)).slice(0, 500)); return o; };
+  const cleanLP = lp => { const o = { tut: {}, cls: {}, diag: {}, at: new Date().toISOString() }; if (!lp || typeof lp !== 'object') return o; for (const k of ['tut', 'cls', 'diag']) if (lp[k] && typeof lp[k] === 'object' && !Array.isArray(lp[k])) o[k] = Object.fromEntries(Object.entries(lp[k]).filter(([id]) => /^[\w-]{1,40}$/.test(id)).slice(0, 500)); if (lp.days && typeof lp.days === 'object') o.days = Object.fromEntries(Object.entries(lp.days).filter(([d, n]) => /^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(+n)).slice(-370).map(([d, n]) => [d, Math.min(999, Math.max(0, Math.round(+n)))])); return o; };
   async function pubRoute(req, res, m) {
     const [, tid, act] = m; if (!TID_RE.test(tid)) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
     const key = `${req.method} ${act}`;

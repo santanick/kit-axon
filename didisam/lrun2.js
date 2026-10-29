@@ -77,7 +77,7 @@ function lrender() {
   const app = $('#lapp'); if (!SITE()) { app.innerHTML = `<div class="lerr"><b>학습자 사이트</b><p>${esc(LR.err || '불러오는 중…')}</p></div>`; return; }
   const { a, b } = route(); let inner, cur = a;
   if (a === 't') { inner = viewTut(b); cur = 'tutorials'; } else if (a === 'c') { inner = viewCourse(b, route().b && decodeURIComponent(location.hash.slice(1)).split('/')[2]); cur = 'courses'; }
-  else if (a === 'dg') { inner = viewDiag(b); cur = 'diag'; } else if (a === 'login') { inner = LR.me ? viewMy() : viewLogin(b); } else inner = viewPage(a);
+  else if (a === 'dg') { inner = viewDiag(b); cur = 'diag'; } else if (a === 'cert') { inner = viewCert(b); cur = 'my'; } else if (a === 'badge') { inner = viewBadgeCert(b); cur = 'my'; } else if (a === 'login') { inner = LR.me ? viewMy() : viewLogin(b); } else inner = viewPage(a);
   document.body.className = 'look-' + (SITE().look || 'clean') + (LR.mode === 'preview' ? ' pv' : '');
   app.innerHTML = shell(inner, cur); document.title = `${SITE().org.name} · 학습`;
   const y = $('#yt'); if (y) PLAYER = ytMount(y);
@@ -120,4 +120,4 @@ document.addEventListener('submit', async e => { const f = e.target; e.preventDe
 });
 window.addEventListener('hashchange', () => { document.body.classList.remove('mopen'); lrender(); });
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data === 'didisam:reload' && LR.mode === 'preview') { try { LR.site = window.parent.lsSnapshot(); } catch (x) { } lrender(); } });
-(async () => { $('#lapp').innerHTML = '<div class="lerr"><p>불러오는 중…</p></div>'; await LR.api.load(); lrender(); })();
+/* 시작은 lboot.js(모든 스크립트 로드 뒤) */

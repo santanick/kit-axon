@@ -27,12 +27,12 @@ test('학습자 사이트 API', async t => {
     const s = await call('X', 'GET', `/api/pub/${A.tid}/site`); assert.equal(s.j.site.org.name, 'A'); assert.ok(!JSON.stringify(s.j).includes('ABC234'));
     assert.equal((await call('L', 'POST', `/api/pub/${A.tid}/login`, { sid: '20260001', code: 'WRONG1' })).status, 401);
     const ok = await call('L', 'POST', `/api/pub/${A.tid}/login`, { sid: '20260001', code: 'abc234' });
-    assert.equal(ok.j.me.dept, '컴공'); assert.equal(ok.j.mine.badges.length, 1); assert.equal(ok.j.mine.cls.c0, 40);
+    assert.equal(ok.j.me.dept, '컴공'); assert.equal(ok.j.mine.badges.length, 1); assert.equal(ok.j.mine.cls.c0.p, 40);
   });
   await t.test('학습 기록 저장 · 정리', async () => {
-    const lp = { tut: { tu1: { w: 0.9, steps: [true, true, true], mission: 'x' } }, cls: {}, diag: { dg0: { out: 'MAP' } }, evil: { a: 1 } };
+    const lp = { tut: { tu1: { w: 0.9, steps: [true, true, true], mission: 'x' } }, cls: {}, diag: { dg0: { out: 'MAP' } }, days: { '2026-10-29': 3, 'bad': 1 }, evil: { a: 1 } };
     assert.equal((await call('L', 'PUT', `/api/pub/${A.tid}/progress`, { lp })).j.ok, true);
-    const me = await call('L', 'GET', `/api/pub/${A.tid}/me`); assert.equal(me.j.lp.diag.dg0.out, 'MAP'); assert.equal(me.j.lp.evil, undefined);
+    const me = await call('L', 'GET', `/api/pub/${A.tid}/me`); assert.equal(me.j.lp.diag.dg0.out, 'MAP'); assert.equal(me.j.lp.evil, undefined); assert.deepEqual(me.j.lp.days, { '2026-10-29': 3 }); assert.equal(me.j.mine.cls.c0.p, 40);
   });
   await t.test('기관 분리: A 학습자 세션으로 B 접근 불가', async () => {
     await call('B', 'PUT', '/api/state', { doc: doc('B', [{ sid: '20260001', dept: '경영', code: 'ZZZ999' }], { org: { name: 'B' } }), rev: 0 });
