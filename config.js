@@ -5,5 +5,6 @@
 window.KIT_CONFIG = {
   firebase: null, // 예: { apiKey: '...', authDomain: '...firebaseapp.com', projectId: '...', appId: '...' }
   region: 'asia-northeast3', // Cloud Functions 리전(서울)
-  adminDomain: '' // 관리자 Google 계정 도메인 제한(선택), 예: 'kit.ac.kr'
+  adminDomain: '', // 관리자 Google 계정 도메인 제한(선택), 예: 'kit.ac.kr'
+  vodBase: '' // 자체 VOD 전송망(CDN) 주소(선택), 예: 'https://dxxxx.cloudfront.net/' — 비우면 Firebase Storage에서 직접 재생
 };

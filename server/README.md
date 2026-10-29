@@ -35,3 +35,16 @@
 - 등록 1만 명 · 활성 약 1천 명. 진도 저장은 변경 1.2초 후 1회(디바운스).
 - `adminListStudents`는 관리자 화면 진입 시 1회 전체 조회(1만 명 ≈ 문서 2~3만 건 읽기). 관리자 접속이 잦아지면 일 단위 집계 문서(`stats/daily`)를 만드는 예약 함수로 바꿉니다.
 - 학교 SSO 연동 시 `studentLogin` 대신 SSO 결과(학번)로 커스텀 토큰을 발급하면 나머지 구조는 그대로 사용합니다.
+
+## 비용 최적화 구성(2026-10 기준, 활성 1천 명 · 환율 1,400원)
+| 영역 | 구성 | 월 예상 |
+|---|---|---|
+| 사이트 | GitHub Pages(정적 파일, 서버 없음) — 대역폭 월 100GB 권장 한도 초과 시 Firebase Hosting | 0원 |
+| 로그인 · DB · 서버 함수 | Firebase Auth(월 5만 명 무료) · Firestore 서울 · Cloud Functions(Node 22, 쓸 때만 실행) | 약 1만 원 이하 |
+| 영상 | 튜토리얼은 YouTube 임베드(전송비 0). 자체 VOD는 Storage 원본 + `config.js`의 `vodBase`에 CDN 주소(예: CloudFront, 매월 1TB 무료) | 저장 수백 원 · 전송 약 0원 |
+| AI 튜터 | 기본 Claude Haiku 5.5(관리자에서 Sonnet 선택), 고정 지침 프롬프트 캐싱, 하루 질문 수 제한 | 약 4만 원(하루 3회) |
+| AI 행정 비서 | Sonnet 5.5, 교직원만 | 약 3만 원 |
+
+- 시청 기록 저장 주기: 30초 + 완료 기준 도달 즉시(DB 쓰기 약 1/6).
+- 예산 알림: Google Cloud 결제 예산(월 10만 원) · Anthropic 콘솔 월 사용 한도를 운영 전환 시 함께 설정.
+- CloudFront 연결: 원본(오리진)을 VOD 버킷으로 두고 `vod/{id}` 경로를 그대로 전달 → 배포 주소를 `vodBase`에 입력.
