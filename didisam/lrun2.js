@@ -3,73 +3,83 @@
 let PLAYER = null;
 const route = () => { const h = decodeURIComponent(location.hash.slice(1) || 'home').replace(/[)\]}>.,;:!?'"’”\s]+.*$/, '').replace(/[^\x00-\x7F].*$/, '') || 'home'; const [a, ...r] = h.split('/'); return { a, b: r[0], rest: r.join('/') }; };
 const pageOf = id => SITE().pages.find(p => p.id === id);
+const PG_DESC = { diag: ['DIAGNOSIS', '5분 진단으로 나에게 맞는 코스와 첫 결과물을 찾습니다.'], tutorials: ['TUTORIALS', '영상을 보고 3단계를 따라 하면 결과물이 남습니다.'], courses: ['COURSEWARE', '수준과 유형별 코스를 골라 영상 · 퀴즈 · 과제로 이어갑니다.'], badges: ['DIGITAL BADGES', "배지 하나가 '해 봤다'는 증거가 됩니다."], books: ['DIGITAL BOOK', '읽고 · 보고 · 풀고 · 쓰며 평가까지 한 권으로.'], notice: ['NOTICE', '학습 일정과 소식을 확인하세요.'] };
+const TAB_IC = { home: 'home', diag: 'target', tutorials: 'video', courses: 'grid', badges: 'award', books: 'book', notice: 'bell', my: 'user' };
 
 function shell(inner, cur) {
-  const S2 = SITE(); const short = S2.org.short || S2.org.name.slice(0, 4);
-  const nav = S2.pages.filter(p => p.id !== 'my').map(p => `<a href="#${esc(p.id)}" class="${cur === p.id ? 'on' : ''}">${esc(p.name)}</a>`).join('');
-  return `<header class="lh"><div class="in"><a class="brand" href="#home"><span class="lg">${esc(short)}</span><span><b>${esc(S2.org.name)}</b><small>온라인 학습</small></span></a><button class="mnu" data-lact="menu" aria-label="메뉴">≡</button>
-    <nav class="ln">${nav}</nav><div class="acct">${LR.me ? `<a class="lbtn sm ghost" href="#my">${esc(LR.me.sid)}</a>` : `<a class="lbtn sm pri" href="#login">로그인</a>`}</div></div></header>
+  const S2 = SITE(); const short = S2.org.short || S2.org.name.slice(0, 4); const P = S2.pages.filter(p => p.id !== 'my');
+  const nav = P.map(p => `<a href="#${esc(p.id)}" class="${cur === p.id ? 'on' : ''}">${esc(p.name)}</a>`).join('');
+  const tabs = ['home', 'tutorials', 'courses', 'books', 'diag'].filter(id => P.some(p => p.id === id)).slice(0, 4);
+  const tabbar = `<nav class="tabbar" aria-label="빠른 이동">${tabs.map(id => `<a href="#${id}" class="${cur === id ? 'on' : ''}">${ico(TAB_IC[id], 20)}<span>${esc((pageOf(id) || {}).name || id)}</span></a>`).join('')}<a href="${LR.me ? '#my' : '#login'}" class="${cur === 'my' ? 'on' : ''}">${ico('user', 20)}<span>${LR.me ? '마이' : '로그인'}</span></a></nav>`;
+  return `<header class="lh"><div class="in"><a class="brand" href="#home"><span class="lg">${esc(short)}</span><span class="bn"><b>${esc(S2.org.name)}</b><small>온라인 학습 센터</small></span></a>
+    <nav class="ln" aria-label="주 메뉴">${nav}</nav><div class="acct">${LR.me ? `<a class="me ${cur === 'my' ? 'on' : ''}" href="#my"><span class="av">${esc(String(LR.me.sid).slice(-2))}</span><span class="sid">${esc(LR.me.sid)}</span></a>` : `<a class="lbtn pri sm" href="#login">${ico('user', 15)}로그인</a>`}</div>
+    <button class="mnu" data-lact="menu" aria-label="메뉴 열기">${ico('menu', 22)}</button></div></header>
     ${LR.mode === 'preview' ? '<div class="pvbar">미리보기 · 초안</div>' : ''}${LR.sample ? `<div class="pvbar">체험용 샘플 사이트 · 체험 계정 ${esc(LR.sample.sid)} / ${esc(LR.sample.code)} · 기록은 이 기기에만 저장됩니다</div>` : ''}<main id="lm">${inner}</main>
-    <footer class="lf"><div class="in"><b>${esc(S2.org.name)}</b><small>학습자 정보는 ${S2.org.type === 'univ' ? '학번 · 학과만' : '번호 · 소속만'} 저장합니다 · Powered by 디디쌤</small></div></footer>`;
+    <footer class="lf"><div class="in"><div><span class="lg">${esc(short)}</span><b>${esc(S2.org.name)}</b><small>학습자 정보는 ${S2.org.type === 'univ' ? '학번 · 학과만' : '번호 · 소속만'} 저장합니다. 이름 · 연락처 · 이메일은 받지 않습니다.</small></div><small>Powered by 디디쌤</small></div></footer>${tabbar}`;
 }
-function needLogin(back) { return `<section class="sec"><div class="in narrow"><h2>로그인이 필요합니다</h2><p class="lead">이 화면은 로그인한 ${esc(SITE().terms.learner || '학습자')}만 볼 수 있습니다.</p>${btn('로그인', '#login/' + encodeURIComponent(back || ''))}</div></section>`; }
+function needLogin(back) { return `<section class="sec"><div class="in narrow"><div class="gate">${ico('lock', 28)}<h2>로그인이 필요합니다</h2><p class="lead">이 화면은 로그인한 ${esc(SITE().terms.learner || '학습자')}만 볼 수 있습니다. 기록 · 진도 · 배지가 저장됩니다.</p>${btn('로그인하기', '#login/' + encodeURIComponent(back || ''), 'pri', 'arrow')}</div></div></section>`; }
 
 function viewPage(id) {
   const p = pageOf(id) || pageOf('home') || SITE().pages[0]; if (!p) return '<p class="empty">페이지가 없습니다.</p>';
   if (p.access === '로그인' && !LR.me) return needLogin(p.id);
   const inner = p.sections.map(s => { try { return (SECR[s.type] || (() => ''))(s.data || {}); } catch (e) { console.error(e); return ''; } }).join('');
-  return (p.id !== 'home' && !p.sections.some(s => s.type === 'hero') ? `<section class="sub"><div class="in"><h1>${esc(p.name)}</h1></div></section>` : '') + inner + (p.id === 'my' ? viewMy() : '');
+  const D = PG_DESC[p.id] || ['', ''];
+  return (p.id !== 'home' && p.id !== 'my' && !p.sections.some(s => s.type === 'hero') ? `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › ${esc(p.name)}</p><h1>${esc(p.name)}</h1>${D[1] ? `<p>${esc(D[1])}</p>` : ''}</div></section>` : '') + inner + (p.id === 'my' ? viewMy() : '');
 }
 function viewTut(id) {
-  const t = SITE().tuts.find(x => x.id === id); if (!t) return '<section class="sec"><div class="in"><p class="empty">튜토리얼을 찾지 못했습니다.</p></div></section>';
-  const r = LR.lp.tut[t.id] || { w: 0, steps: [], mission: '' };
-  return `<section class="sec tut"><div class="in"><p class="crumb"><a href="#tutorials">튜토리얼</a> › ${esc(tyOf(t.type).name)} · ${esc(lvOf(t.level).name)}</p><h1>${esc(t.title)}</h1>${t.ch ? `<p class="mini">${esc(t.ch)}${t.tool ? ' · ' + esc(t.tool) : ''}</p>` : ''}
-    <div class="tw2"><div class="vid">${ytOK(t.yt) ? `<div id="yt" data-yt="${esc(t.yt)}" data-kind="tut" data-id="${esc(t.id)}"></div>` : '<div class="novid">영상 준비 중</div>'}<div class="wbar"><i style="width:${Math.round((r.w || 0) * 100)}%"></i></div><small class="mini" id="wtxt">시청 ${Math.round((r.w || 0) * 100)}%</small></div>
-    <div class="follow"><b>따라 할 3단계</b>${t.steps.map((s, i) => `<label class="fs"><input type="checkbox" data-lchg="step" data-v="${i}" ${r.steps && r.steps[i] ? 'checked' : ''} ${LR.me ? '' : 'disabled'}><span><em>${i + 1}</em>${esc(s)}</span></label>`).join('')}
-      <div class="mission"><b>미션</b><p>${esc(t.mission)}</p>${LR.me ? `<textarea id="msn" rows="4" maxlength="2000" placeholder="결과물 링크 · 설명을 적어 제출하세요">${esc(r.mission || '')}</textarea><button class="lbtn pri" data-lact="msn" data-v="${esc(t.id)}">${r.mission ? '다시 제출' : '제출'}</button>` : btn('로그인하고 기록하기', '#login/' + encodeURIComponent('t/' + t.id))}</div></div></div></div></section>`;
+  const S2 = SITE(); const t = S2.tuts.find(x => x.id === id); if (!t) return '<section class="sec"><div class="in"><p class="empty">튜토리얼을 찾지 못했습니다.</p></div></section>';
+  const r = LR.lp.tut[t.id] || { w: 0, steps: [], mission: '' }; const n3 = (r.steps || []).filter(Boolean).length; const ty = tyOf(t.type);
+  const rel = S2.tuts.filter(x => x.id !== t.id && (x.type === t.type || x.level === t.level)).slice(0, 4);
+  const stage = !LR.me ? 0 : r.mission ? 3 : n3 >= 3 ? 2 : 1;
+  return `<section class="tutv"><div class="in"><p class="crumb"><a href="#tutorials">튜토리얼</a> › ${esc(ty.name)} · ${esc(lvOf(t.level).name)}</p>
+    <div class="tvh"><div><span class="tg" style="--c:${esc(ty.color)}">${esc(ty.k)} · ${esc(ty.name)}</span><h1>${esc(t.title)}</h1><p class="mini">${esc([t.ch, t.tool].filter(Boolean).join(' · '))}</p></div>
+      <ol class="flow">${['영상 보기', '3단계 따라 하기', '미션 제출'].map((s, i) => `<li class="${i < stage ? 'done' : i === stage || (!LR.me && i === 0) ? 'now' : ''}"><span>${i < stage ? ico('check', 13) : i + 1}</span>${s}</li>`).join('')}</ol></div>
+    <div class="tw2"><div class="vid"><div class="vbox">${ytOK(t.yt) ? `<div id="yt" data-yt="${esc(t.yt)}" data-kind="tut" data-id="${esc(t.id)}"></div>` : '<div class="novid">영상 준비 중</div>'}</div><div class="wbar"><i style="width:${Math.round((r.w || 0) * 100)}%"></i></div><small class="mini" id="wtxt">시청 ${Math.round((r.w || 0) * 100)}%</small></div>
+    <aside class="follow"><p class="fh">STEP 2 · 따라 할 3단계 <b>${n3}/3</b></p>${t.steps.map((s, i) => `<label class="fs"><input type="checkbox" data-lchg="step" data-v="${i}" ${r.steps && r.steps[i] ? 'checked' : ''} ${LR.me ? '' : 'disabled'}><span><em>${i + 1}</em>${esc(s)}</span></label>`).join('')}
+      <div class="mission"><p class="fh">STEP 3 · 미션 제출</p><b>${esc(t.mission)}</b>${LR.me ? `<textarea id="msn" rows="4" maxlength="2000" placeholder="결과물 링크 · 만든 과정 한 줄 설명">${esc(r.mission || '')}</textarea><button class="lbtn pri blk" data-lact="msn" data-v="${esc(t.id)}">${r.mission ? '다시 제출' : '미션 제출하기'}</button>${r.mission ? '<small class="mini">제출 완료 · 운영자 검수 후 배지로 이어집니다.</small>' : ''}` : `<p class="mini">로그인하면 체크 · 미션 제출이 기록되어 배지로 이어집니다.</p>${btn('로그인하고 기록하기', '#login/' + encodeURIComponent('t/' + t.id), 'pri blk')}`}</div></aside></div>
+    ${rel.length ? `<div class="rel"><h3>이어서 해 볼 튜토리얼</h3><div class="tgrid">${rel.map(x => `<a class="tcard" href="#t/${esc(x.id)}">${thumb(x.yt)}<div class="tci"><span class="tg" style="--c:${esc(tyOf(x.type).color)}">${esc(tyOf(x.type).name)}</span><b>${esc(x.title)}</b><small>${esc(x.tool || '')}</small><span class="go">${tutDone(x) ? ico('check', 14) + ' 완료' : '3단계 따라 하기 ' + ico('arrow', 13)}</span></div></a>`).join('')}</div></div>` : ''}</div></section>`;
 }
+const ITN = { video: '영상', doc: '강의자료', quiz: '퀴즈', exam: '시험', assign: '과제', survey: '설문', live: '라이브', offline: '오프라인' };
+const ITI = { video: 'video', doc: 'book', quiz: 'edit', exam: 'edit', assign: 'brief', survey: 'star', live: 'video', offline: 'pin' };
 function viewCourse(id, itemId) {
-  const c = SITE().classes.find(x => x.id === id); if (!c) return '<section class="sec"><div class="in"><p class="empty">과정을 찾지 못했습니다.</p></div></section>';
+  const S2 = SITE(); const c = S2.classes.find(x => x.id === id); if (!c) return '<section class="sec"><div class="in"><p class="empty">과정을 찾지 못했습니다.</p></div></section>';
   if (!LR.me) return needLogin('c/' + id);
-  const r = LR.lp.cls[c.id] || { items: {} }; const done = Object.values(r.items || {}).filter(x => x && x.done).length; const it = c.items.find(x => x.id === itemId) || c.items.find(x => !(r.items[x.id] || {}).done) || c.items[0];
-  const ITN = { video: '영상', doc: '강의자료', quiz: '퀴즈', exam: '시험', assign: '과제', survey: '설문', live: '라이브', offline: '오프라인' };
+  const r = LR.lp.cls[c.id] || { items: {} }; r.items = r.items || {}; const m = (LR.mine.cls || {})[c.id] || {}; const done = c.items.filter(x => (r.items[x.id] || {}).done).length; const p = Math.max(Math.round(done / Math.max(1, c.items.length) * 100), m.p || 0);
+  const it = c.items.find(x => x.id === itemId) || c.items.find(x => !(r.items[x.id] || {}).done) || c.items[0]; const k = it ? c.items.indexOf(it) : -1; const prev = c.items[k - 1], nx = c.items[k + 1];
+  const ty = S2.types.find(x => x.k === c.ctype); const G = []; c.items.forEach(x => { const w = x.week || 0; let g = G.find(y => y.w === w); if (!g) G.push(g = { w, items: [] }); g.items.push(x); });
   let main = '<p class="empty">항목이 없습니다.</p>';
-  if (it) {
-    const st = r.items[it.id] || {};
-    if (it.type === 'video') main = ytOK(it.yt) ? `<div id="yt" data-yt="${esc(it.yt)}" data-kind="cls" data-id="${esc(c.id)}" data-item="${esc(it.id)}"></div><div class="wbar"><i style="width:${Math.round((st.w || 0) * 100)}%"></i></div><small class="mini" id="wtxt">시청 ${Math.round((st.w || 0) * 100)}% · 80% 이상 보면 완료</small>` : `<div class="novid">영상 준비 중</div>`;
-    else if (it.type === 'quiz' || it.type === 'exam') main = `<form id="qz" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${it.qs.map((q, k) => `<fieldset class="q"><legend>${k + 1}. ${esc(q.q)}</legend>${q.t === 'mc' || q.t === 'ox' ? (q.t === 'ox' ? ['O', 'X'] : q.opts).map((o, j) => `<label><input type="radio" name="q${k}" value="${q.t === 'ox' ? esc(o) : j}"> ${esc(o)}</label>`).join('') : `<textarea name="q${k}" rows="2" maxlength="1000"></textarea>`}</fieldset>`).join('') || '<p>문항이 없습니다.</p>'}<button class="lbtn pri" type="submit">제출</button>${st.score != null ? `<p class="mini">최근 점수 ${st.score}점</p>` : ''}</form>`;
-    else if (it.type === 'assign') main = `<div class="body">${nl(it.desc || '과제 안내를 확인하고 제출하세요.')}</div><textarea id="asg" rows="6" maxlength="4000" placeholder="제출 내용 · 결과물 링크">${esc((r.sub && r.sub.text) || '')}</textarea><button class="lbtn pri" data-lact="asg" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${r.sub ? '다시 제출' : '제출'}</button>`;
-    else main = `<div class="body">${nl(it.desc || `${ITN[it.type] || '항목'} 안내를 확인하세요.`)}</div><button class="lbtn ${st.done ? 'ghost' : 'pri'}" data-lact="done" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${st.done ? '완료됨' : '완료로 표시'}</button>`;
-  }
-  return `<section class="sec crs"><div class="in"><p class="crumb"><a href="#courses">코스웨어</a> › ${esc(lvOf(c.level).name)}</p><h1>${esc(c.name)}</h1><p class="mini">${esc(c.start || '')} ~ ${esc(c.end || '')} · ${done}/${c.items.length} 완료</p><div class="wbar"><i style="width:${Math.round(done / Math.max(1, c.items.length) * 100)}%"></i></div>
-    <div class="cw2"><ol class="items">${c.items.map(x => `<li class="${x.id === (it && it.id) ? 'on' : ''} ${(r.items[x.id] || {}).done ? 'done' : ''}"><a href="#c/${esc(c.id)}/${esc(x.id)}"><em>${esc(ITN[x.type] || x.type)}</em>${x.week ? `<small>${x.week}주</small>` : ''}<span>${esc(x.title)}</span></a></li>`).join('')}</ol>
-    <div class="imain">${it ? `<h3>${esc(it.title)}</h3>` : ''}${main}</div></div></div></section>`;
+  if (it) { const st = r.items[it.id] || {};
+    if (it.type === 'video') main = ytOK(it.yt) ? `<div class="vbox"><div id="yt" data-yt="${esc(it.yt)}" data-kind="cls" data-id="${esc(c.id)}" data-item="${esc(it.id)}"></div></div><div class="wbar"><i style="width:${Math.round((st.w || 0) * 100)}%"></i></div><small class="mini" id="wtxt">시청 ${Math.round((st.w || 0) * 100)}% · 80% 이상 보면 완료</small>` : `<div class="novid">${ico('video', 28)}<span>영상 준비 중</span></div><button class="lbtn ${st.done ? 'ghost' : 'pri'}" data-lact="done" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${st.done ? '완료됨' : '확인했어요'}</button>`;
+    else if (it.type === 'quiz' || it.type === 'exam') main = `${st.score != null ? `<div class="qres"><b>${st.score}</b><small>점 · 최근 응시</small></div>` : `<p class="mini">${it.qs.length}문항${it.time ? ` · ${it.time}분` : ''} · 제출하면 바로 채점됩니다.</p>`}<form id="qz" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${it.qs.map((q, k2) => `<fieldset class="q"><legend><span>${k2 + 1}</span>${esc(String(q.q).replace(/^\d+\.\s*/, ''))}</legend>${q.t === 'mc' || q.t === 'ox' ? `<div class="opts">${(q.t === 'ox' ? ['O', 'X'] : q.opts).map((o, j) => `<label><input type="radio" name="q${k2}" value="${q.t === 'ox' ? esc(o) : j}"><span>${esc(o)}</span></label>`).join('')}</div>` : `<textarea name="q${k2}" rows="3" maxlength="1000" placeholder="답을 입력하세요"></textarea>`}</fieldset>`).join('') || '<p>문항이 없습니다.</p>'}<button class="lbtn pri" type="submit">${st.score != null ? '다시 제출' : '제출하고 채점'}</button></form>`;
+    else if (it.type === 'assign') main = `<div class="body">${nl(it.desc || '과제 안내를 확인하고 제출하세요.')}</div>${m.st && m.st !== 'none' ? `<p class="fbk ${esc(m.st)}"><b>${esc({ submitted: '검수 대기', graded: '검수 완료', returned: '재제출 요청', failed: '미통과' }[m.st] || '')}</b>${m.fb ? ' ' + esc(m.fb) : ''}</p>` : ''}<textarea id="asg" rows="6" maxlength="4000" placeholder="제출 내용 · 결과물 링크">${esc((r.sub && r.sub.text) || '')}</textarea><button class="lbtn pri" data-lact="asg" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${r.sub ? '다시 제출' : '과제 제출'}</button>`;
+    else main = `<div class="body">${nl(it.desc || `${ITN[it.type] || '항목'} 안내를 확인하세요.`)}</div><button class="lbtn ${st.done ? 'ghost' : 'pri'}" data-lact="done" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${st.done ? '완료됨' : '완료로 표시'}</button>`; }
+  return `<section class="crsh" style="--c:${esc(ty ? ty.color : lvOf(c.level).color)}"><div class="in"><p class="crumb"><a href="#courses">코스웨어</a> › ${esc(lvOf(c.level).name)}</p><div class="crhg"><div><div class="chips2"><span class="tg">${esc(lvOf(c.level).name)}</span>${ty ? `<span class="tg">${esc(ty.k)} · ${esc(ty.name)}</span>` : ''}${m.st && m.st !== 'none' ? `<span class="tg">${esc({ submitted: '검수 대기', graded: '검수 완료', returned: '재제출 요청', failed: '미통과' }[m.st] || '')}</span>` : ''}</div><h1>${esc(c.name)}</h1><p class="mini">${esc(c.start || '')} ~ ${esc(c.end || '')}${c.hours ? ` · ${c.hours}시간` : ''} · 수료 기준 진도 ${c.thr || 80}%</p></div>
+      <div class="ring" style="--p:${p}"><b>${p}<small>%</small></b><span>${done}/${c.items.length} 완료</span></div></div>${p >= (c.thr || 80) ? `<a class="lbtn sm wht" href="#cert/${esc(c.id)}">${ico('award', 15)} 수료증 보기</a>` : ''}</div></section>
+    <section class="crsb"><div class="in cw2"><aside class="cur"><button class="curt" data-lact="curt">${ico('grid', 16)} 목차 <b>${done}/${c.items.length}</b>${ico('down', 16)}</button><ol class="items">${G.map(g => `<li class="wk"><p>${g.w ? `${g.w}${c.weekly === false ? '차시' : '주차'}` : '항목'}<small>${g.items.filter(x => (r.items[x.id] || {}).done).length}/${g.items.length}</small></p><ol>${g.items.map(x => `<li class="${x.id === (it && it.id) ? 'on' : ''} ${(r.items[x.id] || {}).done ? 'done' : ''}"><a href="#c/${esc(c.id)}/${esc(x.id)}"><i>${(r.items[x.id] || {}).done ? ico('check', 13) : ico(ITI[x.type] || 'spark', 13)}</i><span>${esc(x.title)}</span><em>${esc(ITN[x.type] || x.type)}</em></a></li>`).join('')}</ol></li>`).join('')}</ol></aside>
+    <div class="imain">${it ? `<div class="ih"><span class="tg">${ico(ITI[it.type] || 'spark', 13)} ${esc(ITN[it.type] || it.type)}${it.week ? ` · ${it.week}주차` : ''}</span><small>${k + 1} / ${c.items.length}</small></div><h2>${esc(it.title)}</h2>` : ''}${main}
+      <div class="inav">${prev ? `<a class="lbtn ghost" href="#c/${esc(c.id)}/${esc(prev.id)}">← 이전</a>` : '<span></span>'}${nx ? `<a class="lbtn dark" href="#c/${esc(c.id)}/${esc(nx.id)}">다음 · ${esc(nx.title.slice(0, 18))} →</a>` : `<a class="lbtn dark" href="#my">마이페이지로 →</a>`}</div></div></div></section>`;
 }
 function viewDiag(id) {
   const d = diagFirst(id); if (!d) return '<section class="sec"><div class="in"><p class="empty">진행 중인 진단이 없습니다.</p></div></section>';
   const res = LR.lp.diag[d.id];
-  if (res && !LR.redo) { const o = d.outs.find(x => x.k === res.out) || {}; const rec = SITE().classes.find(c => c.id === o.rec); const ty = SITE().types.find(x => x.k === res.out);
-    return `<section class="sec"><div class="in narrow"><p class="eb">RESULT</p><h1>${esc(o.l || res.out)}${ty ? ` <small>${esc(ty.k)}</small>` : ''}</h1>${res.score != null ? `<p class="lead">점수 ${res.score}점</p>` : ''}${ty ? `<p class="lead">${esc(ty.d || '')}</p>` : ''}
-      <div class="cta">${rec ? btn(`추천 과정 · ${rec.name}`, '#c/' + rec.id) : btn('코스웨어 보기', '#courses')}${btn('추천 튜토리얼', '#tutorials', 'ghost')}<button class="lbtn ghost" data-lact="redo">다시 진단</button></div>${LR.me ? '' : '<p class="mini">로그인하면 결과가 저장되어 추천 과정이 열립니다.</p>'}</div></section>`; }
-  const scale = ['전혀 아니다', '아니다', '보통', '그렇다', '매우 그렇다'];
-  return `<section class="sec"><div class="in narrow"><p class="eb">DIAGNOSIS</p><h1>${esc(d.name)}</h1><p class="lead">${d.items.length}문항 · 약 ${Math.max(3, Math.round(d.items.length / 2))}분</p>
-    <form id="dg" data-v="${esc(d.id)}">${d.items.map((q, k) => `<fieldset class="q"><legend>${k + 1}. ${esc(q.q)}</legend>${d.mode === 'type' ? `<div class="lik">${scale.map((s, j) => `<label><input type="radio" name="q${k}" value="${j + 1}" required><span>${s}</span></label>`).join('')}</div>` : (q.opts || []).map((o, j) => `<label><input type="radio" name="q${k}" value="${j}" required> ${esc(o)}</label>`).join('')}</fieldset>`).join('')}
-    <button class="lbtn pri" type="submit">결과 보기</button></form></div></section>`;
+  if (res && !LR.redo) { const o = d.outs.find(x => x.k === res.out) || {}; const rec = SITE().classes.find(c => c.id === o.rec); const ty = SITE().types.find(x => x.k === res.out); const T = SITE().tuts.filter(t => t.type === res.out).slice(0, 3);
+    return `<section class="dres" style="--c:${esc(ty ? ty.color : '#4b3cff')}"><div class="in narrow"><p class="eb">MY RESULT</p><div class="drc"><b>${esc(ty ? ty.k : res.out)}</b><div><h1>${esc(o.l || (ty && ty.name) || res.out)}</h1>${ty && ty.d ? `<p>${esc(ty.d)}</p>` : ''}${res.score != null ? `<p>점수 ${res.score}점</p>` : ''}</div></div>
+      <div class="drn"><h3>이제 이렇게 시작하세요</h3><a class="nx2" href="${rec ? '#c/' + esc(rec.id) : '#courses'}"><span>1</span><div><b>${rec ? `추천 코스 · ${esc(rec.name)}` : '코스웨어에서 내 코스 고르기'}</b><small>${rec ? `${rec.items.length}개 항목 · 영상 · 퀴즈 · 과제` : '수준 × 유형 표에서 고릅니다'}</small></div>${ico('arrow', 18)}</a>${T.map((t, i) => `<a class="nx2" href="#t/${esc(t.id)}"><span>${i + 2}</span><div><b>${esc(t.title)}</b><small>튜토리얼 · ${esc(t.mission || '3단계 따라 하기')}</small></div>${ico('arrow', 18)}</a>`).join('')}</div>
+      <div class="cta">${btn('마이페이지에서 보기', LR.me ? '#my' : '#login/my', 'pri')}<button class="lbtn ghost" data-lact="redo">다시 진단</button></div>${LR.me ? '' : '<p class="mini">로그인하면 결과가 저장되어 추천 코스가 마이페이지에 열립니다.</p>'}</div></section>`; }
+  const scale = ['전혀 아니다', '아니다', '보통', '그렇다', '매우 그렇다']; const n = d.items.length;
+  return `<section class="dgv"><div class="in narrow"><p class="eb">DIAGNOSIS</p><h1>${esc(d.name)}</h1><p class="lead">${n}문항 · 약 ${Math.max(3, Math.round(n / 2))}분 · 정답은 없습니다. 지금 나와 가까운 쪽을 고르세요.</p>
+    <div class="dgp"><div class="wbar"><i id="dgbar" style="width:0%"></i></div><small id="dgn">0 / ${n}</small></div>
+    <form id="dg" data-v="${esc(d.id)}">${d.items.map((q, k) => `<fieldset class="q ${k ? 'later' : ''}" data-k="${k}"><legend><span>${k + 1}</span>${esc(q.q)}</legend>${d.mode === 'type' ? `<div class="lik">${scale.map((s, j) => `<label><input type="radio" name="q${k}" value="${j + 1}" required><span>${s}</span></label>`).join('')}</div>` : `<div class="opts">${(q.opts || []).map((o, j) => `<label><input type="radio" name="q${k}" value="${j}" required><span>${esc(o)}</span></label>`).join('')}</div>`}</fieldset>`).join('')}
+    <button class="lbtn pri blk later" id="dgsub" type="submit">결과 보기 ${ico('arrow', 16)}</button></form></div></section>`;
 }
 function viewLogin(back) {
-  return `<section class="sec"><div class="in narrow"><h1>로그인</h1><p class="lead">${SITE().org.type === 'univ' ? '학번' : '학습자 번호'}와 기관에서 받은 접근코드를 입력하세요.</p>
-    <form id="li" data-back="${esc(back || 'my')}"><label class="fl">${SITE().org.type === 'univ' ? '학번' : '번호'}<input name="sid" inputmode="numeric" autocomplete="username" required maxlength="20"></label><label class="fl">접근코드<input name="code" autocomplete="current-password" required maxlength="12"></label><p class="err" id="liErr" role="alert"></p><button class="lbtn pri" type="submit">로그인</button></form>
-    ${LR.mode === 'preview' ? '<p class="mini">미리보기에서는 어드민의 접근코드로 로그인해 볼 수 있으며 기록은 저장되지 않습니다.</p>' : ''}${LR.sample ? `<p class="mini">체험 계정: ${esc(LR.sample.sid)} / ${esc(LR.sample.code)} <button type="button" class="lbtn sm ghost" data-lact="demofill">자동 입력</button></p>` : ''}</div></section>`;
+  const u = SITE().org.type === 'univ';
+  return `<section class="login"><div class="in"><div class="lgw"><div class="lgl"><p class="eb">WELCOME</p><h1>${esc(SITE().org.name)}<br>온라인 학습 센터</h1><ul>${[['target', '진단 결과와 추천 코스가 저장됩니다'], ['video', '영상 · 튜토리얼 진도가 이어집니다'], ['award', '과제 검수 후 디지털 배지가 발급됩니다']].map(([i, t]) => `<li>${ico(i, 18)}${t}</li>`).join('')}</ul><small>${u ? '학번 · 학과' : '번호 · 소속'}과 학습 기록만 저장합니다. 이름 · 연락처 · 이메일은 받지 않습니다.</small></div>
+    <div class="lgr"><h2>로그인</h2><p class="mini">${u ? '학번' : '학습자 번호'}와 기관에서 받은 접근코드를 입력하세요.</p>
+    <form id="li" data-back="${esc(back || 'my')}"><label class="fl">${u ? '학번' : '번호'}<input name="sid" inputmode="numeric" autocomplete="username" required maxlength="20" placeholder="${u ? '예: 20260001' : ''}"></label><label class="fl">접근코드<input name="code" autocomplete="current-password" required maxlength="12" placeholder="기관에서 받은 코드"></label><p class="err" id="liErr" role="alert"></p><button class="lbtn pri blk" type="submit">로그인 ${ico('arrow', 16)}</button></form>
+    ${LR.sample ? `<div class="demo"><span>체험 계정 <b>${esc(LR.sample.sid)}</b> / <b>${esc(LR.sample.code)}</b></span><button type="button" class="lbtn sm ghost" data-lact="demofill">자동 입력</button></div>` : ''}${LR.mode === 'preview' ? '<p class="mini">미리보기에서는 어드민의 접근코드로 로그인해 볼 수 있으며 기록은 저장되지 않습니다.</p>' : ''}<p class="mini">접근코드를 모르면 ${u ? '학과 사무실 · 담당 선생님' : '담당자'}에게 발급을 요청하세요.</p></div></div></div></section>`;
 }
-function viewMy() {
-  if (!LR.me) return needLogin('my');
-  const tdone = SITE().tuts.filter(tutDone); const dres = Object.entries(LR.lp.diag || {}); const cls = Object.entries(LR.lp.cls || {});
-  return `<section class="sec"><div class="in"><div class="my"><div class="card2"><b>${esc(LR.me.sid)}</b><small>${esc(LR.me.dept || '')}</small><button class="lbtn sm ghost" data-lact="logout">로그아웃</button></div>
-    <div class="card2"><b>배지 ${LR.mine.badges.length}개</b>${LR.mine.badges.map(b => `<small>${esc(b.name)} · ${esc(b.at || '')}</small>`).join('') || '<small>아직 없습니다</small>'}</div>
-    <div class="card2"><b>진단</b>${dres.map(([k, r]) => `<small>${esc((SITE().diags.find(d => d.id === k) || {}).name || k)} · ${esc(r.out)}${r.score != null ? ` ${r.score}점` : ''}</small>`).join('') || '<small>아직 없습니다</small>'}</div>
-    <div class="card2"><b>튜토리얼 ${tdone.length}/${SITE().tuts.length}</b>${tdone.slice(0, 5).map(t => `<small>${esc(t.title)}</small>`).join('')}</div>
-    <div class="card2 wide"><b>내 과정</b>${cls.map(([cid, r]) => { const c = SITE().classes.find(x => x.id === cid); if (!c) return ''; const d = Object.values(r.items || {}).filter(x => x && x.done).length; return `<a href="#c/${esc(cid)}">${esc(c.name)} · ${d}/${c.items.length}</a>`; }).join('') || '<small>코스웨어에서 과정을 시작하세요</small>'}</div></div></div></section>`;
-}
+function viewMy() { return needLogin('my'); }
 
 /* ── 렌더 ── */
 function lrender() {
@@ -120,6 +130,12 @@ document.addEventListener('submit', async e => { const f = e.target; e.preventDe
   if (f.id === 'qz') { const c = SITE().classes.find(x => x.id === f.dataset.c); const it = c.items.find(x => x.id === f.dataset.i); let sc = 0, tot = 0; it.qs.forEach((q, k) => { const p = +q.pts || 1; tot += p; const v = (f.querySelector(`[name=q${k}]:checked`) || f.querySelector(`[name=q${k}]`) || {}).value; if (q.t === 'mc' ? String(v) === String(q.a) : q.t === 'ox' ? String(v).toUpperCase() === String(q.a).toUpperCase() : !!(v && String(v).trim())) sc += p; });
     const score = Math.round(sc / Math.max(1, tot) * 100); const r = LR.lp.cls[c.id] = LR.lp.cls[c.id] || { items: {} }; r.items[it.id] = { ...(r.items[it.id] || {}), done: true, score }; LR.api.save(); toast(`${score}점입니다.`, 'ok'); lrender(); }
 });
-window.addEventListener('hashchange', () => { document.body.classList.remove('mopen'); lrender(); });
+window.addEventListener('hashchange', () => { document.body.classList.remove('mopen', 'curopen'); lrender(); });
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data === 'didisam:reload' && LR.mode === 'preview') { try { LR.site = window.parent.lsSnapshot(); } catch (x) { } lrender(); } });
+/* v11: 모바일 목차 · 진단 한 문항씩 열기 */
+document.addEventListener('click', e => { const el = e.target.closest('[data-lact="curt"]'); if (el) { e.preventDefault(); document.body.classList.toggle('curopen'); } });
+document.addEventListener('change', e => { const f = e.target.closest('#dg'); if (!f) return; const Fs = [...f.querySelectorAll('fieldset')]; const k = +e.target.closest('fieldset').dataset.k; const ans = Fs.filter(x => x.querySelector('input:checked')).length;
+  const bar = document.getElementById('dgbar'); if (bar) bar.style.width = Math.round(ans / Fs.length * 100) + '%'; const n = document.getElementById('dgn'); if (n) n.textContent = `${ans} / ${Fs.length}`;
+  const nx = Fs[k + 1]; e.target.closest('fieldset').classList.add('answered'); if (nx && nx.classList.contains('later')) { nx.classList.remove('later'); setTimeout(() => nx.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120); }
+  if (ans >= Fs.length) { const b = document.getElementById('dgsub'); if (b) { b.classList.remove('later'); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); } } });
 /* 시작은 lboot.js(모든 스크립트 로드 뒤) */
