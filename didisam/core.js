@@ -254,6 +254,7 @@ function createOrg(type, name) {
   RNG = 7 + Object.keys(TYPES).indexOf(type) * 13;
   S = { v: 2, org: { name, type, created: today(), domain: (name.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'myschool') + '.didisam.com', plan: 'premium' }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type), audit: [], runs: [], ai: { usage: 0 }, chat: [] };
   Object.assign(S, seed(type));
+  if (typeof postSeed === 'function') postSeed(type);
   logAudit(`기관 생성 — 유형 ${TYPES[type].name}`); save(); CUR = { ws: 'home', tab: '' };
   $('#app').innerHTML = `<div class="gen"><div class="spin"></div><b>${esc(TYPES[type].name)} 맞춤 어드민을 준비하고 있습니다</b><p>메뉴 구성 · 용어 · 자동화 레시피 · 샘플 데이터</p></div>`;
   setTimeout(() => { render(); }, 800);
@@ -340,6 +341,7 @@ document.addEventListener('keydown', e => {
 function boot() {
   S = Store.get();
   if (S && (!S.org || !TYPES[S.org.type] || !S.nav)) S = null;
+  if (S && typeof upgradeState === 'function') upgradeState();
   if (S) { const [w, tb] = location.hash.slice(1).split('/'); CUR = resolve(tb || w || 'home'); }
   render();
 }

@@ -18,8 +18,8 @@ function BRIEF() {
   return L.slice(0, 4);
 }
 const EXQ = {
-  corp: ['영업1팀 이번 달 이수 현황 요약해줘', '가입률 낮은 부서 3곳', '신규 입사자 온보딩 커리큘럼 만들어줘', '매주 금요일 부서장에게 이수 리포트 보내는 자동화 만들어줘'],
-  univ: ['이번 주 운영 현황 요약', '가입률 낮은 학과 5곳', '20261003 학생 상황', '매주 월요일 위험군을 지도교수에게 알리는 자동화 만들어줘'],
+  corp: ['신규 입사자 온보딩 6차시 과정 설계해줘', '가입률 낮은 부서 3곳', '보고서 작성 과제 루브릭 만들어줘', '매주 금요일 부서장에게 이수 리포트 보내는 자동화 만들어줘'],
+  univ: ['생성형 AI 실무 활용 15주 과정 설계해줘', '대기 과제 AI 평가해줘', '가입률 낮은 학과 5곳', 'AI 진단 새로 만들어줘'],
   k12: ['중2-A반 이번 주 출결 요약해줘', '결석한 원생에게 보강 영상 배정하는 자동화 만들어줘', '겨울방학 특강 공지 써줘', '이번 달 매출 요약해줘'],
   adult: ['이번 달 매출 요약해줘', '엑셀 실무 마스터 커리큘럼 다시 짜줘', '수료한 수강생에게 후기 요청 보내는 자동화 만들어줘', '가입률 낮은 기수'],
   lifelong: ['30시간 미만 강좌 찾아줘', '바리스타 과정 모집 공지 써줘', '사전 수강신청 10명 미만 강좌 알리는 자동화 만들어줘', '이번 주 운영 현황 요약'],
@@ -59,6 +59,7 @@ function aiBody(m) {
     h += `<div class="mact">${live ? `<button class="btn sm ink" data-act="plan-ok" data-v="${m.plan}">${esc(m.cta || '승인하고 실행')}</button><button class="btn sm ghost" data-act="plan-no" data-v="${m.plan}">취소</button>` : m.state === 'done' ? tag('실행 완료', 'g') : m.state === 'cancel' ? tag('취소함') : tag('만료됨 — 다시 요청해 주세요')}</div>`;
   }
   if (m.go) h += `<div class="mact"><button class="btn sm" data-act="go" data-v="${esc(m.go)}">${esc(mlabel(m.go))} 열기 ${ic('arrow', 14)}</button></div>`;
+  if (m.btn) h += `<div class="mact"><button class="btn sm ink" data-act="${esc(m.btn.act)}" data-v="${esc(m.btn.v || '')}">${ic('spark', 14)} ${esc(m.btn.label)}</button></div>`;
   if (m.copy) h += `<div class="mact"><button class="btn sm" data-act="chat-copy" data-v="${S.chat.indexOf(m)}">복사</button></div>`;
   return h;
 }
@@ -119,7 +120,7 @@ function answer(q) {
     return { title: '검수 대기', text: `검수 대기 ${P.length}건, 가장 오래된 제출은 ${P.length ? daysAgo(P[0].c.prog[P[0].id].subAt) : 0}일 전입니다. 루브릭 기준 AI 채점 초안을 만들어 둘까요?`, html: table(['제출일', '대기', '이름', t('cls')], P.slice(0, 8).map(({ c, id }) => [c.prog[id].subAt.slice(5), daysAgo(c.prog[id].subAt) + '일', mn(id), esc(c.name)])), plan: P.length ? pid : '', state: 'pending', cta: 'AI 채점 초안 만들기', go: 'assess' };
   }
   // 4) 주간 보고서
-  if (/(주간|이번\s*주).*(보고|리포트)|보고서/.test(q)) {
+  if (/(주간|이번\s*주).*(보고|리포트)|보고서/.test(q) && !/루브릭|과제|설계/.test(q)) {
     const L = S.members; const rep = `[${S.org.name}] 주간 운영 보고 (${today()})\n· 등록 ${L.length}명 · 가입률 ${pct(L.filter(m => m.grade === '정회원').length / L.length * 100)} · 주간 활성 ${L.filter(m => daysAgo(m.last) <= 7).length}명\n· 평균 진도 ${pct(avgOf(S.classes.flatMap(c => Object.values(c.prog).map(p => p.p))))} · ${t('done')} ${L.filter(m => S.classes.some(c => c.prog[m.id]?.p >= c.criteria.threshold)).length}명 · 배지 보유 ${L.filter(m => hasBadge(m.id)).length}명\n· 검수 대기 ${pend().length}건 · 14일 미접속 ${L.filter(m => daysAgo(m.last) >= 14).length}명\n· 이번 주 자동화 실행 ${S.runs.length}회\n다음 주 제안: 미접속자 독려, 검수 대기 3일 이내 처리, 가입률 낮은 ${t('group')} 집중 안내`;
     return { text: '이번 주 보고서 초안입니다. 복사해서 바로 쓰실 수 있습니다.', html: `<pre class="rep">${esc(rep)}</pre>`, copy: rep, go: 'dash' };
   }
@@ -140,7 +141,12 @@ function answer(q) {
   if (/배지/.test(q) && /(현황|요약|몇)/.test(q)) { const R = S.badges.map(b => [esc(b.name), b.issued.filter(i => i.st === '유효').length, b.issued.filter(i => i.at >= addDays(today(), -7)).length]); return { text: '배지 발급 현황입니다.', html: table(['배지', '유효', '최근 7일'], R), go: 'badge' }; }
   // 8) 14일 미접속(숫자 일수 지원)
   if (/미접속/.test(q)) { const d = +(q.match(/(\d+)\s*일/) || [])[1] || 14; const L = S.members.filter(m => daysAgo(m.last) >= d); const msg = AI.msg('학습 복귀 안내'); const pid = uid('p'); PLANS[pid] = { run: () => { S.msgs.unshift({ id: uid('ms'), at: nowStr(), to: `${d}일 미접속`, title: msg.title, ch: '앱 푸시 + 이메일', n: L.length }); return `${L.length}명에게 발송했습니다(데모).`; }, go: 'message' }; return { title: '미접속 독려', text: `${d}일 이상 접속하지 않은 ${t('learner')}은 ${L.length}명입니다. 아래 메시지로 독려할까요?`, html: `<div class="pvmsg"><b>${esc(msg.title)}</b><p>${esc(msg.body).replace(/\n/g, '<br>')}</p><small>대상: ${L.slice(0, 8).map(m => esc(m.name)).join(', ')}${L.length > 8 ? ` 외 ${L.length - 8}명` : ''}</small></div>`, plan: L.length ? pid : '', state: 'pending', cta: `${L.length}명에게 보내기` }; }
-  // 9) 기존 해석기(독려 · 미납 · 승인 · 채점 · 답변 · 커리큘럼 · 퀴즈 · 공지 · 홈페이지 · HRD · 환불 · 자동화 · 요약)
+  // 9) 과정 설계 · 루브릭 · AI 평가 · 진단 만들기
+  if (/(설계|강의\s*계획|주차별|15주)/.test(q)) { const tp = q.replace(/(과정|교과목|강좌|과목)?\s*(AI로|으로|로)?\s*(설계|강의\s*계획서?|주차별|15주|편성|만들어|해\s*줘|줘|짜\s*줘|해주세요)/g, ' ').replace(/\s+/g, ' ').trim(); return { text: `「${tp || '새 과정'}」 과정을 설계하겠습니다. 주차 수 · 대상 · 옵션(YouTube 영상 자동 추천 · 퀴즈 · 과제 · 시험)을 확인해 주세요.`, btn: { act: 'ai-design', v: tp, label: 'AI 과정 설계 열기' } }; }
+  if (/루브릭/.test(q)) { const nm = q.replace(/루브릭|만들어|줘|생성|해/g, '').trim() || '과제'; const rb = AI.rubric(nm); const pid = uid('p'); PLANS[pid] = { run: () => { S.rubrics.push(rb); UI.asF = 'rubric'; return `「${rb.name}」을(를) 루브릭 라이브러리에 저장했습니다.`; }, go: 'assess' }; return { title: '루브릭', text: `「${rb.name}」 초안입니다. 저장할까요?`, html: rubricTable(rb), plan: pid, state: 'pending', cta: '루브릭 저장' }; }
+  if (/(AI\s*평가|AI로\s*채점|채점\s*해)/i.test(q)) { const P = pend(); const pid = uid('p'); PLANS[pid] = { run: () => { P.forEach(({ c, id }) => aiEval(c, id)); return `${P.length}건 AI 평가를 마쳤습니다. 평가 화면에서 확정하세요.`; }, go: 'assess' }; return { title: 'AI 평가', text: `채점 대기 ${P.length}건을 루브릭 기준으로 AI 평가합니다. 기준별 점수와 근거가 붙고, 확정은 운영자가 합니다.`, plan: P.length ? pid : '', state: 'pending', cta: 'AI 평가 실행' }; }
+  if (/진단/.test(q) && /(만들|생성|새로|설계)/.test(q)) return { text: '진단을 만들겠습니다. AI로 문항을 생성하거나 자료(PDF · 텍스트)를 올려 만들 수 있습니다.', btn: { act: 'dg-new', label: '새 진단 만들기' } };
+  // 10) 기존 해석기(독려 · 미납 · 승인 · 채점 · 답변 · 커리큘럼 · 퀴즈 · 공지 · 홈페이지 · HRD · 환불 · 자동화 · 요약)
   const P = interpret(q);
   if (/이렇게 이해했습니다/.test(P.title)) return { text: '죄송합니다, 정확히 이해하지 못했습니다. 이런 식으로 말씀해 주세요.', steps: EXQ[S.org.type] };
   if (P.run) { const pid = uid('p'); PLANS[pid] = { run: P.run, go: P.go }; return { title: P.title, text: P.title + '. 아래 계획으로 진행할까요?', steps: P.steps, html: P.preview || '', plan: pid, state: 'pending', cta: P.cta }; }
