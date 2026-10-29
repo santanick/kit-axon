@@ -1,2 +1,4 @@
 node_modules/
 *.bak
+service/server/node_modules/
+service/public/

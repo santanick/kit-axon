@@ -25,13 +25,13 @@ VIEWS.dash = () => {
   const diagDone = L.filter(m => m.diag).length; const isU = S.org.type === 'univ';
   const started = L.filter(m => S.classes.some(c => c.prog[m.id]?.p > 0)).length, submitted = L.filter(m => S.classes.some(c => ['submitted', 'graded', 'returned'].includes(c.prog[m.id]?.assign))).length, done = L.filter(m => S.classes.some(c => c.prog[m.id]?.p >= c.criteria.threshold)).length;
   const gap = (v, g) => v >= g ? `<span class="okt">목표 ${g}% 달성</span>` : `<span class="wt">목표까지 ${Math.round(g - v)}%p · 목표 ${g}%</span>`;
-  const jr = joined / n * 100, ar = act7 / Math.max(1, joined) * 100, br = withB / Math.max(1, joined) * 100;
-  return `<div class="ph"><div class="phl"><p>${tag('데모 데이터', 'y')} ${esc(TYPES[S.org.type].name)} · ${today()}</p></div><div class="phr"><button class="btn" data-act="kpi-csv">KPI 보고서 CSV</button><button class="btn ink" data-act="chat-q" data-v="주간 보고서 만들어 줘">${ic('spark', 16)} 주간 보고서</button></div></div>
+  const jr = joined / Math.max(1, n) * 100, ar = act7 / Math.max(1, joined) * 100, br = withB / Math.max(1, joined) * 100;
+  return `<div class="ph"><div class="phl"><p>${typeof LIVE === 'undefined' ? tag('데모 데이터', 'y') : ''} ${esc(TYPES[S.org.type].name)} · ${today()}</p></div><div class="phr"><button class="btn" data-act="kpi-csv">KPI 보고서 CSV</button><button class="btn ink" data-act="chat-q" data-v="주간 보고서 만들어 줘">${ic('spark', 16)} 주간 보고서</button></div></div>
   <section class="kpis">
     ${kpi('등록 ' + t('learner'), num(n), `정회원 ${joined} · 준회원 ${L.filter(m => m.grade === '준회원').length} · 대기 ${L.filter(m => m.grade === '승인 대기').length}`, '', '명')}
     ${kpi('가입(활성화)율', Math.round(jr), gap(jr, G.join), '', '%', { v: jr, goal: G.join })}
     ${kpi('주간 활성', num(act7), `최근 7일 접속 · 가입자의 ${pct(ar)}`, '', '명')}
-    ${isU ? kpi('AI 진단 완료율', Math.round(diagDone / n * 100), `${diagDone}명 완료`, '', '%') : kpi(t('done') + ' 인원', num(done), `수료 기준 충족`, '', '명')}
+    ${isU ? kpi('AI 진단 완료율', Math.round(diagDone / Math.max(1, n) * 100), `${diagDone}명 완료`, '', '%') : kpi(t('done') + ' 인원', num(done), `수료 기준 충족`, '', '명')}
     ${kpi('평균 진도율', Math.round(avg), gap(avg, G.progress), '', '%', { v: avg, goal: G.progress })}
     ${kpi('배지 보유율', Math.round(br), gap(br, G.badge), '', '%', { v: br, goal: G.badge })}
     ${kpi('검수 대기', P.length, P.length ? `가장 오래된 제출 ${oldest}일 전` : '대기 없음', P.length ? 'mg' : '', '건')}

@@ -1,0 +1,10 @@
+{
+  "name": "didisam-studio-server",
+  "version": "9.0.0",
+  "private": true,
+  "description": "디디쌤 스튜디오 운영 서버 — 정적 화면 + API (기관별 RLS 격리 · 서버 AI 게이트웨이)",
+  "main": "index.js",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node index.js" },
+  "dependencies": { "pg": "^8.23.1" }
+}

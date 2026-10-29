@@ -386,3 +386,9 @@ button[aria-disabled=true],button:disabled{opacity:.35;cursor:not-allowed}
 td code{font-family:'Space Grotesk',monospace;font-size:12.5px;word-break:break-all}
 @media (max-width:1180px){.drm{grid-template-columns:repeat(2,minmax(0,1fr))}.drid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.drm,.drx{grid-template-columns:1fr}.drid{grid-template-columns:1fr 1fr}}
+/* v9 운영 서비스(live.js) */
+.lvf{display:grid;gap:10px;margin:14px 0 4px}.lverr{color:var(--red,#d33);font-size:13px;min-height:1em;margin:6px 0}
+.lvsw{margin:14px 0 0;font-size:13px;color:var(--mute,#667)}.linkb{background:none;border:0;padding:0;color:var(--brand,#4b3cff);font-weight:700;cursor:pointer;text-decoration:underline}
+.lvacct{display:flex;align-items:center;gap:6px;margin-top:8px;min-width:0}.lvacct small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute,#667)}
+.livebar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:90;background:#15173b;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;max-width:calc(100vw - 32px)}.livebar.bad{background:#b42318}
+.note.bad{color:#b42318}
