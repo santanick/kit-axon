@@ -178,7 +178,7 @@ input[type=color]{width:100%;height:40px;border:0;border-radius:10px;padding:0;b
       <span class="tgrp">학습 설계</span>
       <button class="tab" data-tab="course" role="tab">코스 · 러닝 저니</button>
       <button class="tab" data-tab="cms" role="tab">콘텐츠(VOD) · 편성</button>
-      <button class="tab" data-tab="progress" role="tab">진도 기준 · 시청 분석</button>
+      <button class="tab" data-tab="progress" role="tab">진도 · AI 튜터</button>
       <span class="tgrp">소통</span>
       <button class="tab" data-tab="board" role="tab">게시판 · 알림</button>
       <span class="tgrp">회원 · 설정</span>
@@ -322,7 +322,8 @@ input[type=color]{width:100%;height:40px;border:0;border-radius:10px;padding:0;b
   function defaultCatalog() {
     return {
       v: 1, updatedAt: 0,
-      settings: { watchThr: 80, requireWatch: true, autoDoneOnWatch: true, seqLessons: false, levelUnlock: 'badge', resubmit: true, certAuto: true, certName: 'KIT AX 인증', badgeIssuer: '경남정보대학교 KIT AX ON' },
+      settings: { watchThr: 80, requireWatch: true, autoDoneOnWatch: true, seqLessons: false, levelUnlock: 'badge', resubmit: true, certAuto: true, certName: 'KIT AX 인증', badgeIssuer: '경남정보대학교 KIT AX ON',
+        tutor: { enabled: true, name: 'AX ON 튜터', daily: 30, help: 'hint', loginOnly: false, guide: '' } },
       badges: {
         1: { mode: 'auto-pass', expiry: 0, active: true, desc: 'ChatGPT · Claude · Gemini로 내 유형의 첫 결과물을 만들고 학교 검수를 통과했습니다.', criteria: '영상 튜토리얼 5개 시청 완료 + 필수 온라인 클래스 수료 + 15분 결과물 제출 → 평가 통과' },
         2: { mode: 'auto-pass', expiry: 0, active: true, desc: '툴을 연결해 전공 · 진로 업무를 돕는 나만의 AI 비서를 만들었습니다.', criteria: '영상 튜토리얼 5개 시청 완료 + 필수 클래스 수료 + AI 비서 결과물 제출 → 평가 통과' },
@@ -337,7 +338,7 @@ input[type=color]{width:100%;height:40px;border:0;border-radius:10px;padding:0;b
       operators: [{ email: 'teacher@kit.ac.kr', role: 'owner', depts: [] }]
     };
   }
-  function mergeCat(c) { var d = defaultCatalog(); if (!c) return d; var o = Object.assign({}, d, c); o.settings = Object.assign({}, d.settings, c.settings || {}); o.badges = Object.assign({}, d.badges, c.badges || {}); o.assign = Object.assign({}, d.assign, c.assign || {}); return o; }
+  function mergeCat(c) { var d = defaultCatalog(); if (!c) return d; var o = Object.assign({}, d, c); o.settings = Object.assign({}, d.settings, c.settings || {}); o.settings.tutor = Object.assign({}, d.settings.tutor, (c.settings || {}).tutor || {}); o.badges = Object.assign({}, d.badges, c.badges || {}); o.assign = Object.assign({}, d.assign, c.assign || {}); return o; }
 
   /* VOD 저장(시연: IndexedDB) */
   var idbP = null;
@@ -472,6 +473,9 @@ input[type=color]{width:100%;height:40px;border:0;border-radius:10px;padding:0;b
       st.progress = st.progress || { done: {}, steps: {}, lv: { 1: { cls: {} }, 2: { cls: {} }, 3: { cls: {} } }, watch: {} };
       fn(st.progress); st.progress.adminRev = (st.progress.adminRev || 0) + 1; save(db); audit('진도 관리', sid, label); return st.progress;
     },
+    /* AI 튜터: 시연 모드는 브라우저 안 규칙 응답(null 반환 → tutor.js 로컬 응답), 사용량만 집계 */
+    async tutorAsk() { var k = 'kitaxon-tutor-usage', u = jget(k, {}), d = new Date().toISOString().slice(0, 10); u[d] = (u[d] || 0) + 1; jset(k, u); return null; },
+    async tutorUsage() { return jget('kitaxon-tutor-usage', {}); },
     async sendMessage(m) { var L = jget(MKEY, []); m.id = uid('msg'); m.at = now(); m.by = (jget(AKEY, {}) || {}).email || 'admin'; L.unshift(m); jset(MKEY, L); audit('알림 발송', (m.target || {}).label || '', m.title); return m; },
     async listMessages() { return jget(MKEY, []); },
     async deleteMessage(id) { jset(MKEY, jget(MKEY, []).filter(function (m) { return m.id !== id; })); audit('알림 삭제', id); },
@@ -523,6 +527,8 @@ input[type=color]{width:100%;height:40px;border:0;border-radius:10px;padding:0;b
     async issueBadge(sid, n, reason) { return (await call('issueBadge', { sid: sid, n: n, reason: reason || '' })).lv; },
     async revokeBadge(sid, n, reason) { return (await call('revokeBadge', { sid: sid, n: n, reason: reason || '' })).lv; },
     async adminEditProgress(sid, label, fn) { var cur = (await call('adminGetProgress', { sid: sid })).p || { done: {}, steps: {}, lv: {}, watch: {} }; fn(cur); return (await call('adminSetProgress', { sid: sid, label: label, p: cur })).p; },
+    async tutorAsk(messages, ctx) { return (await call('studentTutor', { messages: messages, ctx: ctx })).answer; },
+    async tutorUsage() { return (await call('adminTutorUsage', {})).usage; },
     async sendMessage(m) { return (await call('sendMessage', { message: m })).message; },
     async listMessages() { return (await call('adminListMessages', {})).messages; },
     async deleteMessage(id) { await call('deleteMessage', { id: id }); },
@@ -1114,13 +1120,14 @@ EXT.progress = function () {
   var stats = {}; ALL.forEach(function (r) { Object.keys(r.watch || {}).forEach(function (id) { var w = r.watch[id], s = stats[id] || (stats[id] = { n: 0, sum: 0, thr: 0, low: 0, done: 0 }); s.n++; s.sum += w.pct || 0; if ((w.pct || 0) >= S.watchThr) s.thr++; if ((w.pct || 0) < 30) s.low++; }); r.done.forEach(function (id) { (stats[id] || (stats[id] = { n: 0, sum: 0, thr: 0, low: 0, done: 0 })).done++; }); });
   var ids = Object.keys(TUTN).filter(function (id) { var t = TUTN[id]; return (!pgLv || t.lv === +pgLv) && (!pgType || t.type === pgType); });
   var rows = ids.map(function (id) { var s = stats[id] || { n: 0, sum: 0, thr: 0, low: 0, done: 0 }; return { id: id, t: TUTN[id], n: s.n, avg: s.n ? Math.round(s.sum / s.n) : 0, thr: s.thr, done: s.done, drop: s.n ? Math.round(s.low / s.n * 100) : 0 }; }).sort(function (a, b) { return b.drop - a.drop || a.avg - b.avg; });
-  el.innerHTML = '<div class="bar"><h2>진도 기준 · 시청 분석</h2></div><div class="grid two"><div class="card"><h3>진도 인정 기준</h3><p class="sub">학생 학습 플레이어(YouTube · VOD)는 실제 재생한 구간만 기록합니다(건너뛴 구간 · 2배속 초과 제외).</p>' +
+  el.innerHTML = '<div class="bar"><h2>진도 기준 · 시청 분석 · AI 튜터</h2></div><div class="grid two"><div class="card"><h3>진도 인정 기준</h3><p class="sub">학생 학습 플레이어(YouTube · VOD)는 실제 재생한 구간만 기록합니다(건너뛴 구간 · 2배속 초과 제외).</p>' +
     '<label class="fl">튜토리얼 완료 기준 시청률 <b class="num" id="thrV">' + S.watchThr + '%</b><input type="range" id="stThr" min="50" max="100" step="5" value="' + S.watchThr + '"></label>' +
     tog('stReq', S.requireWatch, '기준 시청률을 채워야 \'완료\' 가능') + '<br>' + tog('stAuto', S.autoDoneOnWatch, '기준 도달 시 자동 완료 처리') + '<br>' + tog('stSeq', S.seqLessons, '순차 학습(앞 튜토리얼 완료 후 다음 튜토리얼)') +
     '<label class="fl" style="margin-top:10px">다음 단계(Builder · Master) 열림 조건<select id="stUnlock"><option value="badge">이전 단계 배지 발급 후</option><option value="submit">이전 단계 과제 제출 후</option><option value="free">처음부터 모두 열림</option></select></label><div class="bar" style="margin:12px 0 0"><button class="btn mag" id="pgSave">기준 저장</button></div></div>' +
     '<div class="card"><h3>일괄 진도 처리</h3><p class="sub">오프라인 실습 · 워크숍 참여 등을 진도로 인정할 때 씁니다(학습 기록에 \'관리자 처리\'로 남음).</p><label class="fl">튜토리얼<select id="bpT">' + Object.keys(TUTN).map(function (id) { return '<option value="' + id + '">' + id + ' · ' + esc(TUTN[id].tool) + '</option>'; }).join('') + '</select></label><label class="fl">대상 학번<textarea id="bpS" rows="4" placeholder="학번을 붙여 넣으세요"></textarea></label><div class="bar" style="margin:0"><button class="btn" id="bpGo">완료 처리</button></div></div></div>' +
     '<div class="card" style="margin-top:14px"><h3>튜토리얼별 시청 분석</h3><p class="sub">이탈률 = 시청을 시작했지만 30% 미만에서 멈춘 비율 · 이탈률 높은 순</p><div class="bar"><select id="pgLv"><option value="">전체 단계</option><option value="1">Explorer</option><option value="2">Builder</option><option value="3">Master</option></select><select id="pgType"><option value="">전체 유형</option>' + TORDER.map(function (t) { return '<option>' + t + '</option>'; }).join('') + '</select><button class="btn ghost" id="pgCsv">CSV</button></div><div class="tw" style="max-height:520px"><table><thead><tr><th>칸</th><th>튜토리얼</th><th class="r">시청 시작</th><th class="r">평균 시청률</th><th class="r">기준 도달</th><th class="r">완료</th><th class="r">이탈률</th></tr></thead><tbody>' +
     rows.map(function (x) { return '<tr><td class="num">' + x.id + '</td><td>' + esc(x.t.tool) + '</td><td class="r num">' + fmt(x.n) + '</td><td class="r num"><span class="mini" style="width:' + Math.round(x.avg * 0.6) + 'px;background:' + (x.avg >= S.watchThr ? '#16804D' : '#15173B') + '"></span>' + x.avg + '%</td><td class="r num">' + fmt(x.thr) + '</td><td class="r num">' + fmt(x.done) + '</td><td class="r num" style="color:' + (x.drop >= 30 ? 'var(--bad)' : 'inherit') + '">' + x.drop + '%</td></tr>'; }).join('') + '</tbody></table></div></div>';
+  tutorCard(el);
   $('#stUnlock').value = S.levelUnlock; $('#pgLv').value = pgLv; $('#pgType').value = pgType;
   $('#stThr').oninput = function () { $('#thrV').textContent = this.value + '%'; };
   $('#pgLv').onchange = function () { pgLv = this.value; EXT.progress(); }; $('#pgType').onchange = function () { pgType = this.value; EXT.progress(); };
@@ -1128,6 +1135,26 @@ EXT.progress = function () {
   $('#pgCsv').onclick = function () { dl('KIT_AXON_시청분석_' + dfull(NOW) + '.csv', [['칸', '튜토리얼', '시청 시작', '평균 시청률', '기준 도달', '완료', '이탈률']].concat(rows.map(function (x) { return [x.id, x.t.tool, x.n, x.avg, x.thr, x.done, x.drop]; }))); };
   $('#bpGo').onclick = async function () { var id = $('#bpT').value, t = sidsFrom($('#bpS').value).map(find).filter(Boolean); if (!t.length) { toast('대상 학번이 없습니다'); return; } if (!confirm(t.length + '명의 ' + id + ' 튜토리얼을 완료 처리할까요?')) return; for (var i = 0; i < t.length; i++) { var r = t[i]; if (r.syn) { if (r.done.indexOf(id) < 0) r.done.push(id); r.watch[id] = { pct: 100 }; derive(r); } else await DB.adminEditProgress(r.sid, '일괄 완료 처리 ' + id, function (p) { p.done = p.done || {}; p.done[id] = true; p.watch = p.watch || {}; p.watch[id] = { pct: 100, admin: true }; }); } toast(t.length + '명 완료 처리했습니다'); await reload(); };
 };
+
+/* AI 학습 튜터 설정 · 사용량 */
+async function tutorCard(el) {
+  var T = Object.assign({ enabled: true, name: 'AX ON 튜터', daily: 30, help: 'hint', loginOnly: false, guide: '' }, CAT.settings.tutor || {});
+  var u = {}; try { u = await DB.tutorUsage() || {}; } catch (e) {}
+  var days = []; for (var i = 6; i >= 0; i--) { var d = new Date(Date.now() - i * DAY).toISOString().slice(0, 10); days.push([d.slice(5).replace('-', '.'), u[d] || 0]); }
+  var mx = Math.max(1, Math.max.apply(null, days.map(function (x) { return x[1]; })));
+  var c = document.createElement('div'); c.className = 'card'; c.style.marginTop = '14px';
+  c.innerHTML = '<h3>AI 학습 튜터</h3><p class="sub">학생 사이트 오른쪽 아래 버튼. 지금 보는 레슨 · 과제 기준 · 진도를 알고 답합니다. 운영 모드는 Claude가 답하고(서버에서 질문 수 제한), 대화 내용은 저장하지 않고 질문 수만 집계합니다.</p><div class="grid two"><div>' +
+    tog('tuOn', T.enabled, '튜터 사용') + '<br>' + tog('tuLogin', T.loginOnly, '로그인한 학생만 사용') +
+    '<label class="fl" style="margin-top:10px">튜터 이름<input class="inp" id="tuName" value="' + esc(T.name) + '" maxlength="20"></label>' +
+    '<label class="fl">학생 1명 하루 질문 수<input class="inp num" type="number" id="tuDaily" min="5" max="200" value="' + T.daily + '" style="width:110px"></label>' +
+    '<label class="fl">과제 도움 범위<select id="tuHelp"><option value="hint">힌트 · 단계 안내만(초안 피드백 없음)</option><option value="feedback">초안을 평가 기준으로 피드백(대신 작성은 금지)</option></select></label>' +
+    '<label class="fl">튜터에게 줄 추가 지침(선택)<textarea id="tuGuide" rows="3" maxlength="600" placeholder="예) 답은 5문장 이내, 학교 상담센터 안내 문구 포함">' + esc(T.guide) + '</textarea></label><button class="btn mag" id="tuSave">튜터 설정 저장</button></div>' +
+    '<div><div class="fl">최근 7일 질문 수</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:130px">' + days.map(function (x) { return '<div style="text-align:center;font-size:12px"><div class="num" style="font-weight:700">' + x[1] + '</div><div style="height:' + Math.round(x[1] / mx * 90) + 'px;min-height:2px;background:#4C77C5;border-radius:6px 6px 0 0" title="' + x[0] + ' ' + x[1] + '회"></div><div style="color:var(--muted)">' + x[0] + '</div></div>'; }).join('') + '</div>' +
+    '<p style="font-size:12.5px;color:var(--muted)">' + (DB.mode === 'demo' ? '시연 모드: 이 브라우저의 질문 수입니다.' : '전체 학생 질문 수(내용 미저장).') + '</p><div class="note" style="margin:8px 0 0">튜터 원칙: 과제를 대신 써 주지 않음 · 개인정보를 묻지 않음 · 고민 · 위기 상황은 학교 상담센터로 안내 · 툴 화면은 바뀔 수 있음을 알림</div></div></div>';
+  el.appendChild(c);
+  $('#tuHelp').value = T.help;
+  $('#tuSave').onclick = function () { CAT.settings.tutor = { enabled: $('#tuOn').checked, loginOnly: $('#tuLogin').checked, name: $('#tuName').value.trim() || 'AX ON 튜터', daily: Math.max(5, Math.min(200, +$('#tuDaily').value || 30)), help: $('#tuHelp').value, guide: $('#tuGuide').value.trim().slice(0, 600) }; saveCat('AI 튜터 설정').then(EXT.progress); };
+}
 
 /* ================= 5. 코스 · 러닝 저니 ================= */
 var crs = '1-EYE';

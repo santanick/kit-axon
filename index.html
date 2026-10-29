@@ -1640,7 +1640,8 @@ body{word-break:keep-all;overflow-wrap:break-word}
   function defaultCatalog() {
     return {
       v: 1, updatedAt: 0,
-      settings: { watchThr: 80, requireWatch: true, autoDoneOnWatch: true, seqLessons: false, levelUnlock: 'badge', resubmit: true, certAuto: true, certName: 'KIT AX 인증', badgeIssuer: '경남정보대학교 KIT AX ON' },
+      settings: { watchThr: 80, requireWatch: true, autoDoneOnWatch: true, seqLessons: false, levelUnlock: 'badge', resubmit: true, certAuto: true, certName: 'KIT AX 인증', badgeIssuer: '경남정보대학교 KIT AX ON',
+        tutor: { enabled: true, name: 'AX ON 튜터', daily: 30, help: 'hint', loginOnly: false, guide: '' } },
       badges: {
         1: { mode: 'auto-pass', expiry: 0, active: true, desc: 'ChatGPT · Claude · Gemini로 내 유형의 첫 결과물을 만들고 학교 검수를 통과했습니다.', criteria: '영상 튜토리얼 5개 시청 완료 + 필수 온라인 클래스 수료 + 15분 결과물 제출 → 평가 통과' },
         2: { mode: 'auto-pass', expiry: 0, active: true, desc: '툴을 연결해 전공 · 진로 업무를 돕는 나만의 AI 비서를 만들었습니다.', criteria: '영상 튜토리얼 5개 시청 완료 + 필수 클래스 수료 + AI 비서 결과물 제출 → 평가 통과' },
@@ -1655,7 +1656,7 @@ body{word-break:keep-all;overflow-wrap:break-word}
       operators: [{ email: 'teacher@kit.ac.kr', role: 'owner', depts: [] }]
     };
   }
-  function mergeCat(c) { var d = defaultCatalog(); if (!c) return d; var o = Object.assign({}, d, c); o.settings = Object.assign({}, d.settings, c.settings || {}); o.badges = Object.assign({}, d.badges, c.badges || {}); o.assign = Object.assign({}, d.assign, c.assign || {}); return o; }
+  function mergeCat(c) { var d = defaultCatalog(); if (!c) return d; var o = Object.assign({}, d, c); o.settings = Object.assign({}, d.settings, c.settings || {}); o.settings.tutor = Object.assign({}, d.settings.tutor, (c.settings || {}).tutor || {}); o.badges = Object.assign({}, d.badges, c.badges || {}); o.assign = Object.assign({}, d.assign, c.assign || {}); return o; }
 
   /* VOD 저장(시연: IndexedDB) */
   var idbP = null;
@@ -1790,6 +1791,9 @@ body{word-break:keep-all;overflow-wrap:break-word}
       st.progress = st.progress || { done: {}, steps: {}, lv: { 1: { cls: {} }, 2: { cls: {} }, 3: { cls: {} } }, watch: {} };
       fn(st.progress); st.progress.adminRev = (st.progress.adminRev || 0) + 1; save(db); audit('진도 관리', sid, label); return st.progress;
     },
+    /* AI 튜터: 시연 모드는 브라우저 안 규칙 응답(null 반환 → tutor.js 로컬 응답), 사용량만 집계 */
+    async tutorAsk() { var k = 'kitaxon-tutor-usage', u = jget(k, {}), d = new Date().toISOString().slice(0, 10); u[d] = (u[d] || 0) + 1; jset(k, u); return null; },
+    async tutorUsage() { return jget('kitaxon-tutor-usage', {}); },
     async sendMessage(m) { var L = jget(MKEY, []); m.id = uid('msg'); m.at = now(); m.by = (jget(AKEY, {}) || {}).email || 'admin'; L.unshift(m); jset(MKEY, L); audit('알림 발송', (m.target || {}).label || '', m.title); return m; },
     async listMessages() { return jget(MKEY, []); },
     async deleteMessage(id) { jset(MKEY, jget(MKEY, []).filter(function (m) { return m.id !== id; })); audit('알림 삭제', id); },
@@ -1841,6 +1845,8 @@ body{word-break:keep-all;overflow-wrap:break-word}
     async issueBadge(sid, n, reason) { return (await call('issueBadge', { sid: sid, n: n, reason: reason || '' })).lv; },
     async revokeBadge(sid, n, reason) { return (await call('revokeBadge', { sid: sid, n: n, reason: reason || '' })).lv; },
     async adminEditProgress(sid, label, fn) { var cur = (await call('adminGetProgress', { sid: sid })).p || { done: {}, steps: {}, lv: {}, watch: {} }; fn(cur); return (await call('adminSetProgress', { sid: sid, label: label, p: cur })).p; },
+    async tutorAsk(messages, ctx) { return (await call('studentTutor', { messages: messages, ctx: ctx })).answer; },
+    async tutorUsage() { return (await call('adminTutorUsage', {})).usage; },
     async sendMessage(m) { return (await call('sendMessage', { message: m })).message; },
     async listMessages() { return (await call('adminListMessages', {})).messages; },
     async deleteMessage(id) { await call('deleteMessage', { id: id }); },
@@ -2802,7 +2808,7 @@ class Component extends DCLogic {
 
   /* ---------- 관리자 설정(카탈로그) 반영 ---------- */
   function applyCatalog(cat) {
-    CAT = cat; S = cat.settings;
+    CAT = cat; S = cat.settings; window.__kitCat = cat;
     // 배지 이름 · 색
     [1, 2, 3].forEach(function (n) { var b = cat.badges[n] || {}, L = LEVELS[n], B0 = BASE.levels[n]; ['name', 'short', 'fill', 'ring', 'rib'].forEach(function (k) { L[k] = b[k] || B0[k]; }); L.subTitle = (cat.assign[n] && cat.assign[n].title) || B0.subTitle; });
     // 튜토리얼(콘텐츠 편성)
@@ -2875,7 +2881,7 @@ class Component extends DCLogic {
   var cur = null;
   function openPlayer(key) {
     closePlayer();
-    var t = TUT_BY[key] || TUTS.find(function (x) { return x.vid === key; }); if (!t) return;
+    var t = TUT_BY[key] || TUTS.find(function (x) { return x.vid === key; }); if (!t) return; window.__kitPlayerTut = t.id;
     var c = comp(), w = (c.state.watch || {})[t.id] || {}, seen = unr(w.r), dur = w.dur || 0, isVod = String(t.vid).indexOf('vod-') === 0, logged = !!sess();
     var ov = document.createElement('div'); ov.className = 'kxp-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', t.tool + ' 학습 플레이어');
     ov.innerHTML = '<div class="kxp"><div class="kxp-h"><b>' + esc(t.tool) + ' · ' + esc(t.title || '') + '</b><button class="kxp-x" aria-label="닫기">×</button></div><div class="kxp-v"><div id="kxp-slot"></div></div>' +
@@ -2907,7 +2913,7 @@ class Component extends DCLogic {
     var w = Object.assign({}, c.state.watch || {}); w[id] = { pct: p, sec: cur.seen.size, dur: cur.dur, r: ranges(cur.seen), at: Date.now() }; c.setState({ watch: w });
     if (p >= S.watchThr && S.autoDoneOnWatch && !c.state.done[id]) { _md.call(c, id, true); toast('시청 완료 — 튜토리얼 완료로 기록했어요'); paint(); }
   }
-  function closePlayer() { if (!cur) return; save(true); clearInterval(cur.timer); try { if (cur.yt && cur.yt.destroy) cur.yt.destroy(); } catch (e) {} if (cur.v) cur.v.pause(); cur.ov.remove(); cur = null; }
+  function closePlayer() { if (!cur) return; save(true); clearInterval(cur.timer); try { if (cur.yt && cur.yt.destroy) cur.yt.destroy(); } catch (e) {} if (cur.v) cur.v.pause(); cur.ov.remove(); cur = null; window.__kitPlayerTut = null; }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && cur) closePlayer(); });
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[href*="youtube.com/watch?v="]'); if (!a || a.closest('.kxp')) return;
@@ -2915,6 +2921,145 @@ class Component extends DCLogic {
     if (!t) return; e.preventDefault(); e.stopPropagation(); openPlayer(t.id);
   }, true);
   window.__kitOpenPlayer = openPlayer;
+})();
+
+/* KIT AX ON — AI 학습 튜터 (learn.js 다음에 실행)
+ * 지금 보고 있는 레슨 · 튜토리얼 · 과제 기준 · 내 진도를 알고 답하는 학습 도우미.
+ * 운영 모드: 서버 함수 studentTutor → Claude API(질문 수 제한 · 대화 내용 미저장)
+ * 시연 모드: 브라우저 안 규칙 응답(사이트 데이터 기반)
+ * 원칙: 과제 결과물을 대신 써 주지 않고 힌트 · 단계 · 점검으로 돕는다. */
+(function () {
+  var DB = window.KITDB;
+  function comp() { return window.__kit; }
+  function sess() { return window.__kitSession ? window.__kitSession() : null; }
+  function cfg() { var c = window.__kitCat; return Object.assign({ enabled: true, name: 'AX ON 튜터', daily: 30, help: 'hint', loginOnly: false, guide: '' }, c && c.settings && c.settings.tutor || {}); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  /* 답변 서식: 이스케이프 후 굵게 · 줄바꿈 · 목록만 허용(HTML 주입 차단) */
+  function fmt(t) { return esc(t).replace(/\*\*([^*\n]{1,80})\*\*/g, '<b>$1</b>').replace(/`([^`\n]{1,200})`/g, '<code>$1</code>').replace(/\n/g, '<br>'); }
+  var LVN = { 1: 'Explorer', 2: 'Builder', 3: 'Master' };
+  var KIND = { cls: '온라인 클래스', sub: '결과물 제출', badge: '학교 평가 · 배지' };
+
+  /* ---------- 지금 화면 맥락 ---------- */
+  function context() {
+    var c = comp(); if (!c) return {}; var s = c.state, cat = window.__kitCat || {};
+    var o = { screen: s.screen, type: s.type, typeKo: s.type && TYPES[s.type] ? TYPES[s.type].ko : '', output: s.type && TYPES[s.type] ? TYPES[s.type].output : '', track: s.track || '', loggedIn: !!sess() };
+    var tid = window.__kitPlayerTut || null, n = s.cur || 1;
+    if (!tid && s.screen === 'course' && c.lessonList) { var list = c.lessonList(n), li = (s.lv[n] || {}).li || 0, it = list[li] || {}; o.lesson = it.kind; if (it.kind === 'tut') tid = it.id; o.step = li + 1; o.steps = list.length; }
+    if (!tid && s.screen === 'lib' && s.run) tid = s.run;
+    o.level = n; o.levelName = LVN[n];
+    if (tid && TUT_BY[tid]) { var t = TUT_BY[tid]; o.tut = { id: tid, tool: t.tool, title: t.title || '', mission: t.mission || '', steps: (t.steps || []).slice(0, 3), stepDone: ((s.steps || {})[tid] || []).filter(Boolean).length, done: !!(s.done || {})[tid], watch: ((s.watch || {})[tid] || {}).pct || 0 }; }
+    if (c.status && s.type) { var st = c.status(n); o.status = { tutDone: st.tutDone, tutTotal: st.tutTotal, reqDone: st.reqDone, reqTotal: st.reqTotal, sub: st.sub, canSubmit: st.canSubmit, review: (s.lv[n] || {}).review || '', badge: !!(s.lv[n] || {}).badge, score: (s.lv[n] || {}).score }; }
+    var A = (cat.assign || {})[n]; if (A) o.assign = { title: A.title || '', guide: A.guide || '', pass: A.pass, rubric: (A.rubric || []).map(function (r) { return r.name + ' ' + r.pts + '점'; }) };
+    var draft = (s.lv[n] || {}).draft; if (draft) o.draft = String(draft).slice(0, 1500);
+    o.watchThr = (cat.settings || {}).watchThr || 80;
+    return o;
+  }
+  function where(o) {
+    if (o.tut) return o.tut.id + ' ' + o.tut.tool + (o.lesson ? ' · ' + o.levelName + ' STEP ' + o.step : '');
+    if (o.lesson && KIND[o.lesson]) return o.levelName + ' · ' + KIND[o.lesson];
+    return { home: '홈', diag: 'AI 진단', lib: '튜토리얼 라이브러리', course: '내 코스', badges: '배지', book: '디지털북', notice: '공지사항' }[o.screen] || '사이트';
+  }
+
+  /* ---------- 시연 모드 규칙 응답 ---------- */
+  function nextAction(o) {
+    var c = comp(), s = c.state;
+    if (!s.type) return '먼저 **AI 진단(3분)**으로 내 유형을 찾아요. 위 메뉴 [AI 진단]을 누르면 학과 맞춤 8문항이 나와요.';
+    var st = o.status || {};
+    if (st.badge) return LVN[o.level] + ' 배지를 이미 받았어요. 다음 단계 코스로 넘어가 보세요.';
+    if (st.review === 'pending') return '결과물이 **학교 평가 대기** 중이에요. 기다리는 동안 다른 유형 튜토리얼을 라이브러리에서 해 보는 것도 좋아요.';
+    if (st.review === 'returned') return '선생님이 **재제출**을 요청했어요. 계정 메뉴의 평가 결과에서 피드백을 확인하고, 결과물 제출 레슨에서 고쳐서 다시 내 주세요.';
+    if (st.tutDone < st.tutTotal) { var list = c.lessonList(o.level), f = c.firstOpenLesson(o.level), it = list[f] || {}; var t = it.kind === 'tut' ? TUT_BY[it.id] : null; return '영상 튜토리얼 ' + st.tutDone + '/' + st.tutTotal + '개 완료했어요. 다음은 ' + (t ? '**' + it.id + ' ' + t.tool + '** 튜토리얼' : '남은 튜토리얼') + '이에요. 영상을 ' + o.watchThr + '% 이상 보고 따라 하기 3단계를 체크하면 완료돼요.'; }
+    if (st.reqDone < st.reqTotal) return '튜토리얼은 다 끝났어요. 이제 **필수 온라인 클래스**(' + st.reqDone + '/' + st.reqTotal + ')를 수료하면 결과물 제출이 열려요.';
+    if (!st.sub) return '제출 조건을 모두 채웠어요. **결과물 제출** 레슨에서 ' + (o.assign ? '「' + o.assign.title + '」' : '과제') + '를 내 주세요. 통과 점수는 ' + (o.assign ? o.assign.pass : 70) + '점이에요.';
+    return '지금 단계에서 할 일을 모두 했어요.';
+  }
+  function promptFor(o) {
+    var t = o.tut; var goal = String((t && t.mission) || (o.assign && o.assign.title) || (o.type ? TYPES[o.type].output + ' 만들기' : '내 전공 과제 초안 만들기')).replace(/[.。]\s*$/, '');
+    var role = { EYE: '시각 디자이너', STORY: '영상 기획자', PEN: '전문 에디터', MAP: '기획 컨설턴트', LENS: '리서치 애널리스트' }[o.type] || '전문가';
+    return '이렇게 **역할 · 목표 · 조건 · 형식** 네 칸으로 써 보세요.\n\n`너는 ' + role + '야. 목표: ' + goal + '. 대상: (누가 볼지). 조건: (분량 · 톤 · 꼭 들어갈 내용 3가지). 형식: (표 · 목록 · 이미지 비율 등)으로 만들어 줘. 먼저 질문이 있으면 물어봐.`\n\n결과가 마음에 안 들면 "더 짧게", "대상을 고등학생으로", "예시 2개 더"처럼 **한 가지씩** 고쳐 달라고 하면 좋아요.';
+  }
+  function stuck(o) {
+    var t = o.tut; if (!t) return '어느 부분에서 막혔는지 알려 주세요. 지금 화면: ' + where(o) + '.';
+    var k = Math.min(t.stepDone, 2), step = t.steps[k] || '';
+    return '**' + t.tool + '** ' + (k + 1) + '단계에서 막혔나요?\n\n지금 단계: ' + step + '\n\n확인해 볼 것:\n1. 로그인 · 무료 사용 한도를 확인해요(한도면 다른 계정이나 내일 다시).\n2. 영상에서 그 단계 시작 부분으로 돌아가 화면 메뉴 이름이 같은지 봐요(툴 화면은 자주 바뀌어요).\n3. 결과가 이상하면 프롬프트에 **조건 1개**를 더 넣어 다시 요청해요.\n\n어떤 화면이 보이는지, 오류 문구가 있으면 그대로 적어 주면 더 정확히 도와줄게요.';
+  }
+  function checkDraft(o) {
+    if (!o.assign) return '과제 기준을 불러오지 못했어요. 결과물 제출 레슨을 열고 다시 물어봐 주세요.';
+    var d = o.draft || '', tips = [];
+    if (!d) return '결과물 제출 레슨의 입력창에 초안을 쓰고 다시 "점검해 줘"라고 하면 기준에 맞춰 봐 줄게요.\n\n평가 기준: ' + o.assign.rubric.join(' · ') + ' (통과 ' + o.assign.pass + '점)';
+    if (d.length < 80) tips.push('설명이 짧아요. 무엇을 · 어떤 AI 툴로 · 어떻게 만들었는지 3줄 이상 적어 보세요.');
+    if (!/https?:\/\//.test(d)) tips.push('결과물 **공유 링크**가 없어요. 이미지 · 문서 · 영상 링크를 꼭 붙여요.');
+    if (!/(chatgpt|claude|gemini|gpt|canva|n8n|cursor|프롬프트|AI)/i.test(d)) tips.push('사용한 **AI 툴과 프롬프트**를 적으면 \'도구 활용\' 기준에서 점수를 받기 쉬워요.');
+    if (!/(전공|학과|현장|고객|업무|직무)/.test(d)) tips.push('내 **전공 · 진로와 어떻게 연결**되는지 한 줄 넣어 보세요.');
+    return '초안을 평가 기준(' + o.assign.rubric.join(' · ') + ')으로 봤어요.\n\n' + (tips.length ? tips.map(function (x, i) { return (i + 1) + '. ' + x; }).join('\n') : '기준에 맞게 잘 정리됐어요. 링크가 열리는지만 마지막으로 확인해요.') + '\n\n※ 점수는 학교 선생님이 평가해요. 튜터는 대신 써 주지 않고 점검만 도와요.';
+  }
+  function local(q, o) {
+    q = String(q || '');
+    if (/(대신|다\s*써|작성해\s*줘|만들어\s*줘|답\s*알려|정답)/.test(q)) return '과제 결과물을 대신 만들어 주면 배지 의미가 없어져서, 저는 **함께 만드는 방법**을 도와줄게요.\n\n' + promptFor(o);
+    if (/(다음|뭐\s*해|뭘\s*해|무엇을|순서|어떻게\s*시작)/.test(q)) return nextAction(o);
+    if (/(막혀|막혔|모르겠|안\s*돼|안돼|오류|에러|안\s*나와|실패)/.test(q)) return stuck(o);
+    if (/(프롬프트|예시|어떻게\s*물어|질문\s*법)/.test(q)) return promptFor(o);
+    if (/(점검|검토|피드백|과제|제출|평가|루브릭|점수)/.test(q)) return checkDraft(o);
+    if (/(배지|진도|얼마나|몇\s*개)/.test(q)) { var st = o.status; return st ? LVN[o.level] + ' 진행: 튜토리얼 ' + st.tutDone + '/' + st.tutTotal + ' · 필수 클래스 ' + st.reqDone + '/' + st.reqTotal + ' · 제출 ' + (st.sub ? '완료' : '전') + (st.badge ? ' · 배지 발급 완료' : '') + '\n\n' + nextAction(o) : nextAction(o); }
+    if (/(시청|영상|완료가\s*안|체크)/.test(q)) return '튜토리얼은 영상을 **' + o.watchThr + '% 이상 실제로 재생**해야 완료돼요(건너뛴 구간 · 2배속 초과는 빠져요).' + (o.tut ? ' 지금 ' + o.tut.id + '는 ' + o.tut.watch + '% 봤어요.' : '');
+    if (o.tut) return '지금 **' + o.tut.id + ' ' + o.tut.tool + '**를 하고 있어요.\n\n15분 미션: ' + o.tut.mission + '\n따라 하기: ' + o.tut.steps.map(function (x, i) { return (i + 1) + ') ' + x; }).join(' ') + '\n\n아래 버튼으로 "막혔어요", "프롬프트 예시"를 눌러 보세요.';
+    return '저는 KIT AX ON 학습 튜터예요. 지금 할 일, 막힌 단계, 프롬프트 쓰는 법, 결과물 점검을 도와줄 수 있어요.\n\n' + nextAction(o);
+  }
+
+  /* ---------- 화면 ---------- */
+  var css = '.kxt-fab{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:125;height:52px;padding:0 18px 0 14px;border:0;border-radius:999px;background:#15173B;color:#fff;font:inherit;font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px rgba(12,13,36,.35);cursor:pointer}' +
+    '.kxt-fab i{width:26px;height:26px;border-radius:50%;background:#D6246E;display:grid;place-items:center}.kxt-fab:focus-visible{outline:3px solid #D6246E;outline-offset:3px}' +
+    '.kxt{position:fixed;right:18px;bottom:84px;z-index:126;width:min(400px,calc(100vw - 24px));height:min(620px,calc(100dvh - 120px));background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(12,13,36,.35);display:flex;flex-direction:column;overflow:hidden;color:#15173B}' +
+    '.kxt-h{background:#15173B;color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}.kxt-h b{font-size:16px}.kxt-h small{display:block;font-size:12px;opacity:.75;font-weight:500;margin-top:2px}.kxt-x{margin-left:auto;border:0;background:rgba(255,255,255,.14);color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer}' +
+    '.kxt-ctx{font-size:12.5px;padding:8px 16px;background:#F7F6F2;border-bottom:1px solid #E7E4DC;color:#5D6078;word-break:keep-all}.kxt-ctx b{color:#15173B}' +
+    '.kxt-b{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;word-break:keep-all;overflow-wrap:break-word}' +
+    '.kxt-m{max-width:88%;padding:10px 13px;border-radius:16px;font-size:14.5px;line-height:1.55}.kxt-m.u{align-self:flex-end;background:#D6246E;color:#fff;border-bottom-right-radius:4px}.kxt-m.a{align-self:flex-start;background:#F1EFE9;border-bottom-left-radius:4px}.kxt-m code{font-family:inherit;background:#fff;border-radius:6px;padding:1px 5px;font-size:13px;display:inline-block;white-space:pre-wrap}.kxt-m .src{display:block;font-size:11.5px;color:#8B8AA3;margin-top:6px}' +
+    '.kxt-chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 8px}.kxt-chips button{border:0;background:#FCE8F1;color:#B01A59;font:inherit;font-size:13px;font-weight:700;border-radius:999px;padding:7px 11px;cursor:pointer}' +
+    '.kxt-f{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid #E7E4DC}.kxt-f textarea{flex:1;resize:none;border:0;box-shadow:inset 0 0 0 1.5px #E7E4DC;border-radius:14px;padding:10px 12px;font:inherit;font-size:16px;height:46px;max-height:120px}.kxt-f textarea:focus{outline:none;box-shadow:inset 0 0 0 2px #D6246E}.kxt-f button{border:0;background:#15173B;color:#fff;border-radius:14px;padding:0 16px;font:inherit;font-weight:800;cursor:pointer}' +
+    '.kxt-note{font-size:11.5px;color:#8B8AA3;text-align:center;padding:0 12px 6px}' +
+    '@media (max-width:600px){.kxt{right:0;left:0;bottom:0;width:100%;height:min(86dvh,640px);border-radius:22px 22px 0 0}.kxt-fab{height:48px;font-size:14px}}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  var fab, box, hist = [], busy = false;
+  function ensureFab() {
+    var C = cfg(); if (!C.enabled) { if (fab) fab.remove(); fab = null; return; }
+    if (fab) { fab.querySelector('span').textContent = C.name; return; }
+    fab = document.createElement('button'); fab.className = 'kxt-fab'; fab.type = 'button'; fab.setAttribute('aria-haspopup', 'dialog');
+    fab.innerHTML = '<i aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v3M5.6 6.6l2 2M18.4 6.6l-2 2M4 13h3M17 13h3"/><circle cx="12" cy="14" r="4"/></svg></i><span></span>';
+    fab.querySelector('span').textContent = C.name; fab.onclick = open; document.body.appendChild(fab);
+  }
+  function add(role, text, src) { hist.push({ role: role, content: text }); if (hist.length > 20) hist = hist.slice(-20); if (!box) return; var b = box.querySelector('.kxt-b'); var d = document.createElement('div'); d.className = 'kxt-m ' + (role === 'user' ? 'u' : 'a'); d.innerHTML = role === 'user' ? esc(text) : fmt(text) + (src ? '<span class="src">' + esc(src) + '</span>' : ''); b.appendChild(d); b.scrollTop = b.scrollHeight; return d; }
+  function refreshCtx() { if (!box) return; var o = context(); box.querySelector('.kxt-ctx').innerHTML = '지금 보는 곳: <b>' + esc(where(o)) + '</b>' + (o.typeKo ? ' · 내 유형 ' + esc(o.type) + '(' + esc(o.typeKo) + ')' : ''); }
+  function open() {
+    if (box) { box.remove(); box = null; return; }
+    var C = cfg();
+    box = document.createElement('div'); box.className = 'kxt'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', C.name);
+    box.innerHTML = '<div class="kxt-h"><div><b></b><small>지금 보는 레슨에 맞춰 도와줘요</small></div><button class="kxt-x" aria-label="닫기">×</button></div><div class="kxt-ctx"></div><div class="kxt-b" aria-live="polite"></div><div class="kxt-chips">' + ['지금 뭐 해야 해요?', '막혔어요', '프롬프트 예시', '과제 점검해 줘', '배지까지 얼마나?'].map(function (q) { return '<button type="button">' + q + '</button>'; }).join('') + '</div><form class="kxt-f"><textarea maxlength="500" rows="1" placeholder="궁금한 걸 물어보세요" aria-label="튜터에게 질문"></textarea><button>보내기</button></form><div class="kxt-note">대화 내용은 저장하지 않아요 · 과제를 대신 써 주지 않고 함께 풀어요</div>';
+    box.querySelector('.kxt-h b').textContent = C.name;
+    document.body.appendChild(box);
+    box.querySelector('.kxt-x').onclick = open;
+    box.querySelectorAll('.kxt-chips button').forEach(function (b) { b.onclick = function () { ask(b.textContent); }; });
+    var ta = box.querySelector('textarea');
+    box.querySelector('form').onsubmit = function (e) { e.preventDefault(); var v = ta.value.trim(); if (!v) return; ta.value = ''; ask(v); };
+    ta.onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); box.querySelector('form').requestSubmit(); } };
+    refreshCtx();
+    var b = box.querySelector('.kxt-b'); hist.forEach(function (m) { var d = document.createElement('div'); d.className = 'kxt-m ' + (m.role === 'user' ? 'u' : 'a'); d.innerHTML = m.role === 'user' ? esc(m.content) : fmt(m.content); b.appendChild(d); });
+    if (!hist.length) add('assistant', '안녕하세요, ' + C.name + '예요. 지금 보는 레슨에 맞춰 다음 할 일, 막힌 단계, 프롬프트 쓰는 법, 과제 점검을 도와줄게요.');
+    setTimeout(function () { ta.focus(); }, 50);
+  }
+  function quota() { var C = cfg(), k = 'kitaxon-tutor-day', d = new Date().toISOString().slice(0, 10), q; try { q = JSON.parse(localStorage.getItem(k)) || {}; } catch (e) { q = {}; } if (q.d !== d) q = { d: d, n: 0 }; return { left: C.daily - q.n, use: function () { q.n++; try { localStorage.setItem(k, JSON.stringify(q)); } catch (e) {} } }; }
+  async function ask(q) {
+    if (busy || !box) return; var C = cfg(), o = context();
+    if (C.loginOnly && !sess()) { add('assistant', '튜터는 로그인 후 쓸 수 있어요. 오른쪽 위 [로그인]에서 학번으로 들어와 주세요.'); return; }
+    var qt = quota(); if (qt.left <= 0) { add('assistant', '오늘 질문 ' + C.daily + '회를 모두 썼어요. 내일 다시 물어봐 주세요.'); return; }
+    refreshCtx(); add('user', q); var msgs = hist.slice(-8).map(function (m) { return { role: m.role, content: String(m.content).slice(0, 1500) }; }); busy = true; var wait = add('assistant', '생각 중이에요…');
+    var ans = null, src = '';
+    try { ans = await DB.tutorAsk(msgs, Object.assign(o, { help: C.help })); } catch (e) { ans = null; src = e.message ? '서버 응답 오류 · 기본 안내로 답했어요' : ''; }
+    if (!ans) { ans = local(q, o); src = src || (DB.mode === 'demo' ? '시연 모드 응답 · 운영 시 Claude가 답해요' : '기본 안내'); }
+    qt.use(); hist.pop(); wait.remove(); add('assistant', ans, src); busy = false;
+  }
+  window.__kitTutor = { open: open, ask: ask, context: context, local: local };
+  var _boot = window.__kitOnSession; window.__kitOnSession = function (se) { var r = _boot ? _boot.apply(this, arguments) : null; ensureFab(); return r; };
+  var tries = 0; (function wait() { if (window.__kit || tries++ > 50) ensureFab(); else setTimeout(wait, 200); })();
 })();
 
 mountDC(Component, document.getElementById('tpl'), document.getElementById('app'), ['home','diag','lib','course','badges','book','notice']);
