@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>페이지를 찾는 중 · KIT AX ON / 디디쌤 스튜디오</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo',sans-serif;background:#F6F7FB;color:#15173B;display:grid;place-items:center;min-height:100vh;padding:24px;box-sizing:border-box;word-break:keep-all}
+.box{max-width:420px;text-align:center}h1{font-size:22px;margin:0 0 10px}p{color:#6B6F8E;line-height:1.6;margin:0 0 18px}
+a{display:block;margin:8px 0;padding:14px 16px;border-radius:14px;background:#fff;color:#15173B;text-decoration:none;font-weight:700;box-shadow:0 0 0 1px #E6E7F0}a.pri{background:#E6337A;color:#fff;box-shadow:none}
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <h1>주소를 확인하고 있습니다</h1>
+  <p>잠시만 기다려 주세요.</p>
+</div>
+<script>
+/* GitHub Pages 404 — 메신저 · 문서에서 주소 뒤 괄호 · 조사 · 마침표가 함께 붙어 열린 경우를 바로잡는다 */
+(function () {
+  var base = '/kit-axon/';
+  var p = decodeURIComponent(location.pathname);
+  var fixed = p;
+  var m = p.match(/^(.*?\.(?:html|json|js|css|png))(.+)$/);           // learner.html)를 → learner.html
+  if (m) fixed = m[1];
+  else fixed = p.replace(/[)\]}>.,;:!?'"’”]+.*$/, '').replace(/[^\x00-\x7F].*$/, ''); // 끝의 문장부호 · 한글 제거
+  if (fixed !== p && fixed.indexOf(base) === 0 && fixed.length > base.length - 1) { location.replace(fixed + location.search + location.hash); return; }
+  var B = document.getElementById('box');
+  B.innerHTML = '<h1>페이지를 찾을 수 없습니다</h1><p>주소가 바뀌었거나 일부가 잘렸을 수 있습니다. 아래에서 이동하세요.</p>' +
+    '<a class="pri" href="' + base + 'didisam/learner.html">학습자 화면(체험)</a>' +
+    '<a href="' + base + 'didisam/">디디쌤 스튜디오 어드민</a>' +
+    '<a href="' + base + '">KIT AX ON 온라인 센터</a>';
+})();
+</script>
+</body>
+</html>
