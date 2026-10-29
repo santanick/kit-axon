@@ -1,7 +1,7 @@
 /* 디디쌤 스튜디오 v10 — 학습자 화면: 셸 · 라우터 · 튜토리얼 · 과정 · 진단 · 로그인 · 마이페이지 · 플레이어 */
 'use strict';
 let PLAYER = null;
-const route = () => { const h = decodeURIComponent(location.hash.slice(1) || 'home'); const [a, b] = h.split('/'); return { a, b }; };
+const route = () => { const h = decodeURIComponent(location.hash.slice(1) || 'home').replace(/[)\]}>.,;:!?'"’”\s]+.*$/, '').replace(/[^\x00-\x7F].*$/, '') || 'home'; const [a, b] = h.split('/'); return { a, b }; };
 const pageOf = id => SITE().pages.find(p => p.id === id);
 
 function shell(inner, cur) {
