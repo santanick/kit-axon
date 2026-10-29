@@ -391,7 +391,7 @@ ACT.plan = el => { S.org.plan = el.dataset.v; logAudit('요금제 변경 — ' +
 
 /* ═════════ 설정 ═════════ */
 VIEWS.settings = () => { const tb = UI.settings || 'menu'; const st = S.settings;
-  const T = [['menu', '메뉴 구성'], ['rules', '학습 규칙 · AI 튜터'], ['integr', '연동'], ['lang', '언어'], ['type', '기관 유형'], ...(S.me.role === 'owner' ? [['plan', '플랜 · 결제']] : []), ['service', '서비스 설정'], ['home', '홈페이지 설정'], ['popup', '팝업'], ['consult', '상담 설정'], ['terms', '약관'], ['cover', '기능 맵'], ['data', '데이터']];
+  const T = [['menu', '메뉴 구성'], ['rules', '학습 규칙 · AI 튜터'], ['integr', '연동'], ['lang', '언어'], ['type', '기관 유형'], ...(S.me.role === 'owner' ? [['plan', '플랜 · 결제']] : []), ['service', '서비스 설정'], ['home', '홈페이지 설정'], ['popup', '팝업'], ['consult', '상담 설정'], ['terms', '약관'], ['cover', '기능 맵'], ...(S.me.role === 'owner' ? [['room', '데이터룸 · 배포']] : []), ['data', '데이터']];
   let b = '';
   if (tb === 'menu') b = navEditor();
   if (tb === 'rules') b = VIEWS.progress();
@@ -405,8 +405,8 @@ VIEWS.settings = () => { const tb = UI.settings || 'menu'; const st = S.settings
   if (tb === 'consult') b = `<div class="form2"><label class="ckl"><input type="checkbox" data-chg="st" data-k="consultKeys" ${st.consultKeys ? 'checked' : ''}> 채널톡 연동(클라이언트 키 · 시크릿 키는 서버에만 저장)</label><label class="ckl"><input type="checkbox" data-chg="st" data-k="kakao" ${st.kakao ? 'checked' : ''}> 카카오 비즈니스 채널 연동</label></div><p class="mini">연동 해제는 디디쌤 고객센터에 요청합니다. 카테고리는 상위 &gt; 하위 2단 구조입니다.</p>`;
   if (tb === 'terms') b = `<label class="fl">이용약관(학습비 · 수강료 반환 기준 포함) <button class="btn sm ai" data-act="ai-terms">✦ 유형별 초안</button><textarea rows="6" data-chg="terms" data-k="tos">${esc(st.terms.tos)}</textarea></label><label class="fl">개인정보 처리방침<textarea rows="5" data-chg="terms" data-k="privacy">${esc(st.terms.privacy)}</textarea></label><p class="mini">AI 초안은 참고용이며 게시 전 법률 검토가 필요합니다.</p>`;
   if (tb === 'cover') b = coverage();
-  if (tb === 'data') b = `<p class="mini">데모 데이터는 이 브라우저의 저장소에만 있습니다. 실제 운영 모드에서는 Firebase(서울 리전) 서버에 저장되며, 대학 유형은 학번 · 학과만 저장하고 학교 SSO로 연계합니다.</p><button class="btn" data-act="data-export">전체 데이터 JSON 내보내기</button>`;
-  const SG = [['운영 설정', ['menu', 'rules', 'type']], ['연동 · 언어', ['integr', 'lang']], ['홈페이지 · 상담', ['home', 'popup', 'consult', 'terms']], ['계정 · 데이터', ['plan', 'service', 'cover', 'data']]].map(([n, ids]) => [n, ids.filter(id => T.some(x => x[0] === id))]).filter(g => g[1].length);
+  if (tb === 'data') b = `<p class="mini">데모 데이터는 이 브라우저의 저장소에만 있습니다. 기관마다 데이터룸이 분리되어 있고, 운영 모드에서는 설정 › 계정 · 데이터 › 데이터룸 · 배포에서 고른 배포 모델(공유 SaaS · 전용 클라우드 · 고객 클라우드 · 설치형)의 데이터룸에 저장됩니다. 대학 유형은 학번 · 학과만 저장하고 학교 SSO로 연계합니다.</p><button class="btn" data-act="data-export">전체 데이터 JSON 내보내기</button>`;
+  const SG = [['운영 설정', ['menu', 'rules', 'type']], ['연동 · 언어', ['integr', 'lang']], ['홈페이지 · 상담', ['home', 'popup', 'consult', 'terms']], ['계정 · 데이터', ['plan', 'service', 'cover', 'room', 'data']]].map(([n, ids]) => [n, ids.filter(id => T.some(x => x[0] === id))]).filter(g => g[1].length);
   const g = SG.find(x => x[1].includes(tb)) || SG[0];
   return tabs('settings', SG.map(([n, ids]) => [ids[0], n]), g[1][0]) + (g[1].length > 1 ? `<div class="subtabs">${tabs('settings', T.filter(x => g[1].includes(x[0])), tb)}</div>` : '') + b; };
 ACT.st = el => { S.settings[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; save(); toast('저장했습니다.', 'ok'); };

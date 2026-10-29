@@ -1,0 +1,42 @@
+# 디디쌤 스튜디오 테넌트 구성 예시 — 고객 클라우드(BYOC) · 대학
+# 실제 파일은 스튜디오 설정 › 계정 · 데이터 › 데이터룸 · 배포 › 「설치 구성 파일(YAML) 내려받기」로 받습니다.
+# <...>는 기관이 채울 값입니다. 비밀값(키 · 비밀번호)은 이 파일에 쓰지 않고 비밀값 저장소에만 둡니다.
+apiVersion: didisam.com/v1
+kind: Tenant
+tenant:
+  id: tn_8k2m4q1z
+  name: "○○대학교"
+  type: univ               # corp | univ | k12 | adult | lifelong | voc
+  privacy: student-id-only # 대학: 학번 · 학과만 저장
+deploy:
+  mode: byoc               # saas | dedicated | byoc | onprem
+  cloud: gcp               # gcp | aws | azure | ncp | ktc | nhn | onprem
+  region: asia-northeast3
+  domain: lms.<기관 도메인>
+  operator: customer-or-delegated
+data:
+  database: { engine: postgresql, version: "16", isolation: database-per-tenant, name: "didisam_tn_8k2m4q1z" }
+  objectStorage: { engine: gcs, bucket: "didisam-tn-8k2m4q1z" }
+  encryption: { atRest: aes-256, keyManagement: cmek, keyRef: "<기관 KMS 키 리소스 ID>", perTenantDataKey: true }
+  backup: { policy: daily90, location: same-region }
+  residency: KR
+auth:
+  mode: saml
+  metadataUrl: "<기관 IdP 메타데이터 URL>"
+ai:
+  route: vertex            # anthropic | vertex | bedrock | local | off
+  model: claude-haiku-5-5
+  endpoint: vertex-ai:asia-northeast3   # 모델 리전 가용성 확인
+  secretRef: "ai-credentials"
+  dailyLimitPerAdmin: 200
+  sendPersonalData: false
+egress:
+  ai: true
+  youtube: true
+  gcal: false
+  naver: false
+  tr: true
+  notify: false
+audit:
+  sink: cloud-logging
+  retentionDays: 365

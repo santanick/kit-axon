@@ -1,0 +1,60 @@
+# 디디쌤 스튜디오 Helm 값 — 전용 클라우드 · 고객 클라우드(GKE · EKS · AKS · NKS 등) · 설치형(Kubernetes)
+# helm install didisam ./chart -f values.yaml --set-file tenant=./tenant.yaml
+# 기관 하나 = 네임스페이스 하나(공유 클러스터를 쓰더라도 네임스페이스 · DB · 버킷 · 키를 나눈다).
+tenant: ""                      # --set-file로 tenant.yaml 내용을 넣는다
+namespace: didisam-tn-8k2m4q1z
+
+image:
+  registry: registry.didisam.com   # 폐쇄망은 기관 내부 레지스트리로 미러링
+  web: studio-web
+  api: studio-api
+  tag: "8.0.0"
+  pullSecret: didisam-registry
+
+replicas: { web: 2, api: 2, worker: 1 }
+resources:
+  api: { requests: { cpu: "500m", memory: 1Gi }, limits: { cpu: "2", memory: 2Gi } }
+
+ingress:
+  className: nginx
+  host: lms.example.ac.kr
+  tlsSecret: didisam-tls
+
+database:                         # 관리형 DB(Cloud SQL · RDS · NCP DB) 또는 기관 PostgreSQL
+  external: true
+  host: <DB 주소>
+  name: didisam_tn_8k2m4q1z
+  secretRef: didisam-db           # 사용자 · 비밀번호
+
+objectStorage:
+  engine: gcs                     # gcs | s3 | azure-blob | s3-compatible | minio
+  bucket: didisam-tn-8k2m4q1z
+  secretRef: didisam-storage      # 워크로드 ID(권장) 또는 키
+
+encryption:
+  kms: cmek                       # didisam | cmek | hsm
+  keyRef: <KMS 키 리소스 ID>
+
+auth:
+  mode: saml                      # oidc | saml | ldap
+  secretRef: didisam-sso
+
+ai:
+  route: vertex                   # anthropic | vertex | bedrock | local | off
+  secretRef: ai-credentials
+
+networkPolicy:
+  egress:                         # tenant.yaml egress와 같은 값 — 허용한 대상만 연다
+    ai: true
+    youtube: true
+    gcal: false
+    naver: false
+    tr: true
+    notify: false
+  allowDomains:                   # 허용 시 열리는 도메인(참고)
+    ai: ["*.aiplatform.googleapis.com"]
+    youtube: ["www.googleapis.com", "*.youtube.com", "i.ytimg.com"]
+
+backup:
+  schedule: "0 3 * * *"
+  retentionDays: 90

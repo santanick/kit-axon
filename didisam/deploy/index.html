@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net; img-src 'self' data:">
+<title>데이터룸 · 설치 가이드 — 디디쌤 스튜디오</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<style>
+:root{--ink:#15173B;--paper:#F7F6F2;--line:#E7E4DC;--muted:#5D6078;--mag:#D6246E;--magl:#FCE8F1;--soft:#EFEDE6;--ok:#16804D;--okl:#E3F4EA;--warn:#8A5A00;--warnl:#FFF3D6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15.5px/1.7 'Pretendard Variable',Pretendard,system-ui,sans-serif;word-break:keep-all;overflow-wrap:break-word}
+main{max-width:1040px;margin:0 auto;padding:48px 20px 80px}
+.eb{font-size:12px;letter-spacing:.14em;font-weight:800;color:var(--mag);text-transform:uppercase}
+h1{font-size:clamp(28px,4.4vw,42px);line-height:1.25;margin:8px 0 12px;letter-spacing:-.02em}
+h2{font-size:24px;margin:52px 0 10px;letter-spacing:-.01em}
+h3{font-size:17px;margin:22px 0 6px}
+p.lead{font-size:17px;color:var(--muted);max-width:760px}
+.card{background:#fff;border-radius:20px;box-shadow:0 0 0 1px var(--line);padding:22px;margin:14px 0;min-width:0}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.g4 .card{margin:0}.g4 b{font-size:17px;display:block;margin-bottom:4px}.g4 small{display:block;color:var(--muted);font-size:13px;line-height:1.55;margin-top:4px}.g4 em{font-style:normal;font-weight:700;color:var(--ink)}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;background:var(--soft);color:var(--muted)}.tag.mg{background:var(--magl);color:var(--mag)}.tag.g{background:var(--okl);color:var(--ok)}
+.tw{overflow-x:auto;background:#fff;border-radius:16px;box-shadow:0 0 0 1px var(--line)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:720px}
+th,td{padding:11px 14px;text-align:left;vertical-align:top;border-top:1px solid var(--soft)}
+th{font-size:12.5px;color:var(--muted);font-weight:700;border-top:0;background:#fbfaf7}
+td b{white-space:nowrap}
+code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--soft);padding:1px 6px;border-radius:6px}
+pre{background:#0C0D24;color:#e7e6ff;border-radius:14px;padding:16px;overflow-x:auto;font-size:13px;line-height:1.55}
+ol,ul{padding-left:20px}li{margin:4px 0}
+.arch{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.arch div{background:var(--paper);border-radius:14px;padding:12px 14px;font-size:14px}.arch b{display:block}
+.note{background:var(--warnl);color:var(--warn);border-radius:14px;padding:12px 16px;font-size:14px}
+.files a{color:var(--ink);font-weight:700}
+footer{margin-top:60px;color:var(--muted);font-size:13px}
+@media(max-width:860px){.g4{grid-template-columns:1fr 1fr}.arch{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.g4,.arch{grid-template-columns:1fr}main{padding:32px 16px 60px}}
+</style>
+</head>
+<body>
+<main>
+<p class="eb">Didisam Studio · Data room &amp; Deployment</p>
+<h1>기관 하나, 데이터룸 하나.<br>네 가지 방식으로 설치합니다.</h1>
+<p class="lead">디디쌤 스튜디오는 고객 기관마다 데이터룸을 따로 둡니다. 데이터 · 파일 · 암호화 키 · AI 사용량 · 감사 로그 · 백업이 기관 단위로 분리되고, 기관의 보안 요건에 맞춰 공유 SaaS부터 기관 서버 설치형까지 같은 프로그램으로 배포합니다.</p>
+
+<h2>1. 배포 모델 4종</h2>
+<div class="g4">
+  <div class="card"><span class="tag">A</span><b>공유 SaaS</b><small><em>대상</em> 학원 · 평생교육원 · 소규모 기관</small><small><em>데이터</em> 디디쌤 클라우드(서울 리전)</small><small><em>격리</em> 기관별 DB 스키마 + 행 수준 보안 + 기관별 암호화 키 + 파일 경로 분리</small><small><em>설치</em> 관리 콘솔에서 테넌트 생성(즉시)</small></div>
+  <div class="card"><span class="tag">B</span><b>전용 클라우드</b><small><em>대상</em> 대학 · 중견기업</small><small><em>데이터</em> 디디쌤 클라우드 안 기관 전용 프로젝트 · DB · 버킷</small><small><em>격리</em> 전용 DB 인스턴스 · 전용 VPC · 전용 키</small><small><em>설치</em> Terraform으로 전용 환경 생성 + Helm 배포</small></div>
+  <div class="card"><span class="tag mg">C</span><b>고객 클라우드</b><small><em>대상</em> 대기업 · 공공기관(CSAP 인증 클라우드)</small><small><em>데이터</em> 기관 소유 클라우드 계정(GCP · AWS · Azure · NCP · KT Cloud · NHN Cloud)</small><small><em>격리</em> 디디쌤 인프라와 물리 분리 · 고객 관리 키(CMEK)</small><small><em>설치</em> 기관 계정에 Terraform + Helm · 디디쌤 위임 운영 또는 기관 직접 운영</small></div>
+  <div class="card"><span class="tag mg">D</span><b>설치형</b><small><em>대상</em> 공공 · 국방 · 금융 · 망분리 기관</small><small><em>데이터</em> 기관 전산실 서버</small><small><em>격리</em> 기관 망 안에서만 동작 · 외부 통신 기본 차단</small><small><em>설치</em> Docker Compose 또는 Kubernetes · 오프라인 업데이트 번들</small></div>
+</div>
+
+<h2>2. 한 코드, 네 가지 설치 — 이식형 스택</h2>
+<p>Firebase처럼 특정 클라우드에만 있는 서비스는 고객 클라우드 · 설치형에 옮길 수 없습니다. 그래서 운영 서버는 어디서나 돌아가는 표준 구성으로 만들고, 클라우드마다 관리형 서비스로 바꿔 끼웁니다. 화면 코드는 바뀌지 않고 <b>데이터 포트</b>(브라우저 저장소 ↔ API)만 바뀝니다.</p>
+<div class="card"><div class="arch">
+  <div><b>웹</b>스튜디오 화면(정적 파일) · Nginx</div>
+  <div><b>API · 워커</b>Node.js 22 컨테이너 — 자동화 · 코칭 · 자막 · 보고</div>
+  <div><b>DB</b>PostgreSQL 16 — Cloud SQL · RDS · NCP DB · 기관 DB</div>
+  <div><b>파일</b>S3 호환 — GCS · S3 · Object Storage · MinIO</div>
+  <div><b>로그인</b>Keycloak 브로커 — 디디쌤 계정 · OIDC · SAML · LDAP/AD</div>
+  <div><b>AI 게이트웨이</b>Claude API · Vertex AI · Bedrock · 기관 내부 LLM · 끔</div>
+</div></div>
+
+<h2>3. 무엇을 어떻게 분리하나</h2>
+<div class="tw"><table>
+<tr><th>항목</th><th>공유 SaaS</th><th>전용 · 고객 클라우드 · 설치형</th><th>검증</th></tr>
+<tr><td><b>기관 식별</b></td><td>도메인 → 테넌트 ID, 로그인 토큰에 테넌트 클레임</td><td>환경 자체가 기관 하나(테넌트 ID 고정)</td><td>토큰과 도메인의 테넌트가 다르면 거절</td></tr>
+<tr><td><b>데이터베이스</b></td><td>기관별 스키마 + 행 수준 보안(<code>tenant_id</code>) · 연결마다 <code>SET app.tenant</code></td><td>기관 전용 DB 인스턴스</td><td>교차 조회 자동 테스트(기관 A 토큰으로 B 요청 → 404)</td></tr>
+<tr><td><b>파일 · 영상 · 문서</b></td><td>기관별 경로 + 기관 키 암호화 · 서명 URL(짧은 만료)</td><td>기관 전용 버킷 · 공개 접근 차단</td><td>다른 기관 경로 서명 거부</td></tr>
+<tr><td><b>암호화 키</b></td><td>기관별 데이터 키(봉투 암호화), 마스터 키는 KMS</td><td>고객 관리 키(CMEK) · HSM</td><td>키 폐기 = 백업까지 복구 불가(암호화 삭제)</td></tr>
+<tr><td><b>AI</b></td><td>기관별 키 · 하루 한도 · 사용량, 이름 · 학번 미전송</td><td>기관 계정의 Vertex AI · Bedrock 또는 내부 LLM</td><td>요청 로그에 개인정보 0건</td></tr>
+<tr><td><b>캐시 · 작업 큐</b></td><td>키 접두어 <code>tn_…:</code></td><td>전용 인스턴스</td><td>접두어 없는 키 거부</td></tr>
+<tr><td><b>감사 로그</b></td><td>기관별 저장 · 위변조 방지</td><td>기관 클라우드 로깅 · SIEM(syslog)</td><td>관리자 열람 기록 포함</td></tr>
+<tr><td><b>백업 · 복구 · 파기</b></td><td>기관 단위 백업 · 기관 단위 복구</td><td>기관 정책(보관 기간 · 위치)</td><td>파기 확인서 발급</td></tr>
+</table></div>
+
+<h2>4. 설치 절차</h2>
+<div class="card">
+<h3>공통 — 테넌트 구성 파일</h3>
+<ol><li>스튜디오 설정 › 계정 · 데이터 › <b>데이터룸 · 배포</b>에서 배포 모델과 세부 구성(클라우드 · 리전 · AI 경로 · 로그인 · 키 · 외부 연결)을 고릅니다.</li><li>「설치 구성 파일(YAML) 내려받기」로 <code>didisam-tenant-&lt;테넌트 ID&gt;.yaml</code>을 받습니다(<a href="tenant.example.yaml">예시</a>).</li><li><code>&lt;...&gt;</code> 값(도메인 · SSO · KMS 키)을 기관과 함께 채웁니다. 비밀값은 파일에 쓰지 않고 비밀값 저장소에 둡니다.</li></ol>
+<h3>A 공유 SaaS</h3><ol><li>디디쌤 관리 콘솔에서 구성 파일로 테넌트를 만듭니다(스키마 · 데이터 키 · 저장 경로 · 하위 도메인 자동 생성).</li><li>운영자 계정을 초대하고 개인정보 처리 위탁 계약을 맺습니다.</li></ol>
+<h3>B 전용 클라우드 · C 고객 클라우드</h3><ol><li><a href="terraform/gcp/main.tf">Terraform</a>으로 KMS 키 · DB · 버킷 · 서비스 계정을 만듭니다(C는 기관 계정에서, 디디쌤에는 배포 · 모니터링 권한만 위임).</li><li>Kubernetes(GKE · EKS · AKS · NKS)에 <a href="helm/values.yaml">Helm 값</a>으로 배포합니다. 기관 하나 = 네임스페이스 하나.</li><li>SSO 메타데이터 연결 → AI 경로 확인(Vertex AI · Bedrock은 기관 계정에서 Claude 모델 사용 승인과 리전 가용성 확인) → 교차 접근 · 복구 점검 후 개통.</li></ol>
+<h3>D 설치형</h3><ol><li>오프라인 번들(컨테이너 이미지 tar + 서명 + 체크섬)을 기관 반입 절차로 들여와 <code>docker load</code>로 올립니다.</li><li><a href="onprem/docker-compose.yml">docker-compose.yml</a> · <a href="onprem/env.example">env.example(.env로 복사)</a> · 구성 파일을 두고 <code>docker compose up -d</code>(대규모는 Helm). 내부 네트워크는 외부 인터넷이 차단된 상태로 시작합니다.</li><li>LDAP/AD 또는 SAML 연결, 내부 LLM 주소(없으면 AI 끔) 입력, 기관 SIEM으로 감사 로그 전송.</li><li>업데이트는 분기별 오프라인 번들로 반입 · 적용합니다(원격 접속 없는 운영 가능).</li></ol>
+<p class="note">서버 사양(초기 추정): 설치형 소규모(동시 접속 300명) — 8 vCPU · 32GB · SSD 500GB 1대 / 중규모(동시 2,000명) — 앱 2대(8 vCPU · 16GB) + DB 1대(8 vCPU · 32GB) + 저장소. 내부 LLM은 GPU 서버가 별도로 필요합니다. 영상 용량에 따라 저장소를 늘립니다.</p>
+</div>
+
+<h2>5. 공공기관 · 기업 확인 사항</h2>
+<div class="card"><ul>
+<li><b>공공기관 클라우드</b>: 클라우드 보안인증(CSAP)을 받은 클라우드 · 서비스인지 기관 요건을 먼저 확인합니다(고객 클라우드 모델로 기관이 지정한 공공 클라우드에 설치).</li>
+<li><b>망분리 · 폐쇄망</b>: 설치형으로 설치하고 외부 연결은 모두 끈 상태에서 시작합니다. 외부 AI를 쓸 수 없으면 내부 LLM 또는 AI 끔(규칙 엔진)으로 운영합니다.</li>
+<li><b>보안성 검토 · 개인정보 영향평가</b>: 기관 절차에 맞춰 구성도 · 데이터 흐름도 · 수집 항목표를 제출합니다. 대학은 학번 · 학과만 저장합니다.</li>
+<li><b>데이터 국외 이전</b>: 모든 모델의 기본 리전은 국내입니다. AI 경로가 국외 리전을 쓰는 경우 기관 동의와 고지가 필요합니다(Vertex AI · Bedrock의 국내 리전 가용성 확인).</li>
+<li><b>계약 종료</b>: 데이터룸 전체 내보내기(JSON · 파일) → 기관 확인 → 키 폐기로 파기 → 파기 확인서.</li>
+</ul></div>
+
+<h2>6. 지금 상태</h2>
+<div class="card"><ul>
+<li><span class="tag g">완료</span> 데모에서 기관별 데이터룸 분리(브라우저 저장소를 기관 키로 분리 · 기관 전환 · 기관별 Claude 키 · 파기), 배포 모델 선택과 외부 연결 차단 실제 적용, 설치 구성 파일 생성.</li>
+<li><span class="tag g">완료</span> 참조 설치 키트: 구성 파일 예시 · Terraform(GCP) · Helm 값 · 설치형 Docker Compose.</li>
+<li><span class="tag">다음</span> 이식형 API 서버(데이터 포트 · 행 수준 보안 · 봉투 암호화 · AI 게이트웨이) 구현, AWS · NCP용 Terraform, Helm 차트 본체, 오프라인 번들 빌드 파이프라인.</li>
+</ul>
+<p class="files">파일: <a href="tenant.example.yaml">tenant.example.yaml</a> · <a href="terraform/gcp/main.tf">terraform/gcp/main.tf</a> · <a href="helm/values.yaml">helm/values.yaml</a> · <a href="onprem/docker-compose.yml">onprem/docker-compose.yml</a> · <a href="onprem/env.example">onprem/env.example</a></p></div>
+<footer>디디쌤 스튜디오 · 산타(주) — 참조 구성이며 기관별 설치 전에 보안 요건에 맞춰 검토합니다.</footer>
+</main>
+</body>
+</html>

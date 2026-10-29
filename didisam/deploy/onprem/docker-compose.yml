@@ -1,0 +1,70 @@
+# 디디쌤 스튜디오 — 설치형(기관 서버 · 폐쇄망) 참조 구성
+# 사용: tenant.yaml과 .env(env.example 복사)를 같은 폴더에 두고 `docker compose up -d`
+# 이미지는 디디쌤이 제공하는 오프라인 번들(이미지 tar + 서명 + 체크섬)을 `docker load`로 반입합니다.
+# 기본값은 외부 통신 차단(internal 네트워크). 외부 연결은 tenant.yaml의 egress에서 허용한 것만 프록시로 엽니다.
+name: didisam
+
+x-tenant: &tenant
+  TENANT_FILE: /etc/didisam/tenant.yaml
+  DATABASE_URL: postgresql://didisam:${DB_PASSWORD}@db:5432/didisam_${TENANT_ID}
+  S3_ENDPOINT: http://storage:9000
+  S3_BUCKET: didisam-${TENANT_ID}
+  S3_ACCESS_KEY: ${STORAGE_USER}
+  S3_SECRET_KEY: ${STORAGE_PASSWORD}
+  OIDC_ISSUER: http://auth:8080/realms/didisam
+  REDIS_URL: redis://cache:6379/0
+  DATA_KEY_FILE: /run/secrets/tenant_kek   # 기관 마스터 키(HSM 연동 시 PKCS#11로 대체)
+  AI_ROUTE: ${AI_ROUTE:-local}             # local | off (폐쇄망)
+  AI_ENDPOINT: ${AI_ENDPOINT:-http://llm.internal:8000/v1}
+
+services:
+  web:            # 스튜디오 화면(정적 파일) + 리버스 프록시
+    image: registry.didisam.com/studio-web:${VERSION}
+    ports: ["443:8443"]
+    volumes: ["./certs:/etc/nginx/certs:ro"]
+    depends_on: [api]
+    networks: [edge, internal]
+  api:            # 이식형 API 서버(Node.js 22) — 화면의 데이터 포트가 호출
+    image: registry.didisam.com/studio-api:${VERSION}
+    environment: *tenant
+    volumes: ["./tenant.yaml:/etc/didisam/tenant.yaml:ro"]
+    secrets: [tenant_kek]
+    depends_on: [db, storage, auth, cache]
+    networks: [internal]
+  worker:         # 자동화 레시피 · 일정 코칭 · 자막 처리 · 보고 생성
+    image: registry.didisam.com/studio-api:${VERSION}
+    command: ["node", "worker.js"]
+    environment: *tenant
+    volumes: ["./tenant.yaml:/etc/didisam/tenant.yaml:ro"]
+    secrets: [tenant_kek]
+    depends_on: [db, cache]
+    networks: [internal]
+  db:
+    image: postgres:16
+    environment: { POSTGRES_USER: didisam, POSTGRES_PASSWORD: "${DB_PASSWORD}", POSTGRES_DB: "didisam_${TENANT_ID}" }
+    volumes: ["db:/var/lib/postgresql/data"]
+    networks: [internal]
+  storage:        # S3 호환 파일 저장소(기관 NAS · 기존 오브젝트 스토리지로 대체 가능)
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment: { MINIO_ROOT_USER: "${STORAGE_USER}", MINIO_ROOT_PASSWORD: "${STORAGE_PASSWORD}" }
+    volumes: ["files:/data"]
+    networks: [internal]
+  auth:           # 로그인 브로커 — 기관 LDAP/AD · SAML · OIDC 연동
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start", "--optimized"]
+    environment: { KC_DB: postgres, KC_DB_URL: "jdbc:postgresql://db:5432/keycloak", KC_DB_USERNAME: didisam, KC_DB_PASSWORD: "${DB_PASSWORD}", KC_HOSTNAME: "${DOMAIN}", KC_PROXY_HEADERS: xforwarded }
+    depends_on: [db]
+    networks: [internal]
+  cache:
+    image: redis:7-alpine
+    networks: [internal]
+
+secrets:
+  tenant_kek: { file: ./secrets/tenant_kek }
+
+volumes: { db: {}, files: {} }
+
+networks:
+  edge: {}
+  internal: { internal: true }   # 외부 인터넷 차단
