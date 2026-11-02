@@ -43,7 +43,7 @@ ACT['ob-step'] = el => { const s = bStep(el.dataset.v); if (!s) return; if (bDon
 ACT['ob-go'] = el => { const s = bStep(el.dataset.v); if (!s) return; S.bld.cur = s.id; bMenuOn(s.view); save(); if (innerWidth <= 860) document.body.classList.add('b-pv'); go(s.view); };
 ACT['ob-done'] = el => { const id = el.dataset.v; const c = bCur(); if (c && c.id === id) { bAdvance(); return; } S.bld.steps[id].done = true; S.bld.seen[id] = 1; save(); render(); };
 { const base = renderThreads; renderThreads = (...a) => { const r = base(...a); obMount(); return r; }; }
-AFTER.push(() => obMount());
+AFTER.push(() => { obMount(); const cb = $('.bhdl b'); if (cb && CUR.ws === 'home') cb.textContent = '오늘의 운영'; }); /* bCrumb는 const라 DOM으로 */
 /* 대화창을 새로 열 때(클래식 서랍)도 카드를 붙인다 */
 { const base = ACT['chat-open']; ACT['chat-open'] = el => { base(el); obMount(); }; }
 { const base = ACT['bld-step']; ACT['bld-step'] = el => { base(el); obMount(); }; }
