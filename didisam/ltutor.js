@@ -224,3 +224,20 @@ document.addEventListener('keydown', e => { if (e.target.id === 'ltq' && e.key =
   try { const as = Q.get('as'); if (LR.mode === 'preview' && as && !LR.me) { const c = (LR._codes || []).find(x => x.sid === as); if (c) { LR.me = { sid: c.sid, dept: c.dept || '' }; try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[c.sid] || {}) }; } catch (e) { } } }
     if (LR.mode === 'preview' && LR.me) { const P = window.parent; if (P && P.S) LR.mine = mineFrom(P.S, LR.me.sid); } } catch (e) { console.error(e); } }; }
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data === 'didisam:reload' && LR.mode === 'preview' && LR.me) { try { LR.mine = mineFrom(window.parent.S, LR.me.sid); } catch (x) { } lrender(); } });
+/* v14.1 — 교수 답변 · 피드백 · 배지를 새로고침 없이: 운영 30초 + 창 복귀, 데모 storage 이벤트 */
+const LSYNC = { fp: '', busy: false };
+async function lsyncMine(force) {
+  if (!LR.me || LSYNC.busy || (document.hidden && !force)) return; LSYNC.busy = true;
+  try { let m = null;
+    if (LR.mode === 'live') { try { m = (await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/me`)).mine; } catch (e) { return; } }
+    else if (LR.mode === 'demo') m = demoMine(demoRoom());
+    else if (LR.mode === 'preview') { const P = window.parent; if (P && P.S) m = mineFrom(P.S, LR.me.sid); }
+    if (!m) return; const fp = JSON.stringify(m); if (!LSYNC.fp) LSYNC.fp = JSON.stringify(LR.mine || {}); if (fp === LSYNC.fp) return;
+    const nq = (Array.isArray(m.qa) ? m.qa.length : 0) - ltQA().length; LSYNC.fp = fp; LR.mine = m;
+    const a = document.activeElement; if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && a.value) return; lrender();
+    if (nq > 0) toast(`교수님 답변 ${nq}건이 도착했습니다.`, 'ok');
+  } catch (e) { console.error(e); } finally { LSYNC.busy = false; } }
+setInterval(() => lsyncMine(), 30000);
+window.addEventListener('focus', () => lsyncMine(true));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) lsyncMine(true); });
+window.addEventListener('storage', e => { if (LR.mode === 'demo' && e.key && e.key === 'didisam.room.' + LR.tid) lsyncMine(true); });
