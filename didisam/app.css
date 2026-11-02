@@ -399,7 +399,7 @@ td code{font-family:'Space Grotesk',monospace;font-size:12.5px;word-break:break-
 .lsnum{width:22px;height:22px;border-radius:50%;background:var(--paper,#F6F7FB);display:grid;place-items:center;font-size:11px;font-weight:700;flex-shrink:0}
 .lssec .lsrow{border-bottom:1px solid var(--line,#E6E7F0);border-radius:0}.lssec .bar2 select{flex:1;min-width:0}
 .lsframe{border:1px solid var(--line,#E6E7F0);border-radius:14px;overflow:hidden;background:#fff;margin:0 auto}.lsframe iframe{width:100%;height:640px;border:0;display:block}.lsframe.mo{max-width:390px}
-.sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:middle}
+span.sw:not(:has(input)){display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:middle}
 .lsgrid select{width:100%;min-width:110px}.tuth{width:96px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:block}.tuth.none{background:var(--paper,#F6F7FB)}
 @media (max-width:1180px){.lsb{grid-template-columns:200px minmax(0,1fr)}.lspv{grid-column:1/-1}}
 @media (max-width:640px){.lsb{grid-template-columns:1fr}.lsframe iframe{height:520px}}
