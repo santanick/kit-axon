@@ -127,7 +127,101 @@ const MIGRATIONS = [
      calls integer not null default 0,
      revoked_at timestamptz
    );
-   create index if not exists api_keys_tenant on api_keys (tenant_id);`
+   create index if not exists api_keys_tenant on api_keys (tenant_id);`,
+  /* 6 — v23 개인정보 분리(데이터 최소화): 신원(PII)은 pii 스키마에만, 학습 쪽은 가명 learner_id(uuid) + 닉네임만.
+        pii 값은 앱에서 AES-256-GCM으로 암호화(키 PII_KEY · DB에 없음), 조회용은 HMAC 블라인드 인덱스.
+        역할 분리: didisam_tenant(학습 · 운영 데이터)는 pii 스키마 권한이 없고, didisam_pii는 pii 스키마만 쓴다. */
+  `create schema if not exists pii;
+   revoke all on schema pii from public;
+   create table if not exists learner_accounts (
+     tenant_id text not null references tenants(id) on delete cascade,
+     learner_id uuid not null default gen_random_uuid(),
+     kind text not null default 'learner' check (kind in ('learner','parent')),
+     login text not null check (login in ('email','kakao','naver','google','apple','univ')),
+     nickname text not null check (length(nickname) between 1 and 20),
+     student_no text check (student_no is null or student_no ~ '^[0-9]{6,10}$'),
+     dept text not null default '' check (length(dept) <= 40),
+     status text not null default 'active' check (status in ('active','guardian_pending','withdrawn')),
+     minor boolean not null default false,
+     idv_ok boolean not null default false,
+     mkt boolean not null default false,
+     created_at timestamptz not null default now(),
+     withdrawn_at timestamptz,
+     primary key (tenant_id, learner_id)
+   );
+   create unique index if not exists lacc_stuno on learner_accounts (tenant_id, student_no) where student_no is not null;
+   alter table learner_accounts enable row level security;
+   alter table learner_accounts force row level security;
+   drop policy if exists tenant_iso on learner_accounts;
+   create policy tenant_iso on learner_accounts using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert, update, delete on learner_accounts to didisam_tenant;
+
+   create table if not exists pii.identity (
+     id uuid primary key default gen_random_uuid(),
+     tid text not null references public.tenants(id) on delete cascade,
+     learner_id uuid not null,
+     provider text not null check (provider in ('email','kakao','naver','google','apple','univ')),
+     provider_sub_hash text,
+     email_bidx text,
+     email_enc text,
+     email_mask text,
+     phone_enc text,
+     name_enc text,
+     pw_hash text,
+     consent jsonb not null default '{}',
+     created_at timestamptz not null default now(),
+     deleted_at timestamptz,
+     unique (tid, learner_id)
+   );
+   create unique index if not exists pii_sub_uq on pii.identity (tid, provider, provider_sub_hash) where provider_sub_hash is not null;
+   create unique index if not exists pii_email_uq on pii.identity (tid, email_bidx) where email_bidx is not null;
+   create table if not exists pii.otp (
+     tid text not null references public.tenants(id) on delete cascade,
+     bidx text not null,
+     purpose text not null check (purpose in ('signup','login','find')),
+     code_hash text not null,
+     tries integer not null default 0,
+     expires_at timestamptz not null,
+     primary key (tid, bidx, purpose)
+   );
+   create table if not exists pii.guardian (
+     id uuid primary key default gen_random_uuid(),
+     tid text not null references public.tenants(id) on delete cascade,
+     learner_id uuid not null,
+     contact_enc text not null,
+     token_hash text not null unique,
+     status text not null default 'pending' check (status in ('pending','ok')),
+     created_at timestamptz not null default now(),
+     expires_at timestamptz not null,
+     confirmed_at timestamptz
+   );
+   create table if not exists pii.access_log (
+     id bigserial primary key,
+     tid text not null references public.tenants(id) on delete cascade,
+     at timestamptz not null default now(),
+     actor text not null,
+     action text not null,
+     learner_id uuid,
+     purpose text,
+     fields text[] not null default '{}'
+   );
+   create index if not exists pii_log_tid_at on pii.access_log (tid, at desc);
+   do $$ declare t text; begin
+     if not exists (select 1 from pg_roles where rolname = 'didisam_pii') then create role didisam_pii nologin nobypassrls; end if;
+     if not exists (select 1 from pg_auth_members m join pg_roles r on r.oid = m.roleid join pg_roles u on u.oid = m.member where r.rolname = 'didisam_pii' and u.rolname = current_user and m.set_option) then
+       execute format('grant didisam_pii to %I with set true, inherit false', current_user);
+     end if;
+     foreach t in array array['identity','otp','guardian','access_log'] loop
+       execute format('alter table pii.%I enable row level security', t);
+       execute format('alter table pii.%I force row level security', t);
+       execute format('drop policy if exists tenant_iso on pii.%I', t);
+       execute format($p$create policy tenant_iso on pii.%I using (tid = current_setting('app.tenant', true)) with check (tid = current_setting('app.tenant', true))$p$, t);
+     end loop; end $$;
+   revoke all on all tables in schema pii from didisam_tenant;
+   grant usage on schema pii to didisam_pii;
+   grant select, insert, update, delete on pii.identity, pii.otp, pii.guardian to didisam_pii;
+   grant select, insert on pii.access_log to didisam_pii;
+   grant usage on sequence pii.access_log_id_seq to didisam_pii;`
 ];
 
 async function migrate(pool) {

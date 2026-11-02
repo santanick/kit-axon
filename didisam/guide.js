@@ -157,7 +157,7 @@ function gdCenter(cat) { const L = gdList(); const cats = ['전체', ...new Set(
     <div class="gdgrid">${L.filter(g => c === '전체' || g.cat === c).map(card).join('')}</div></div>`, [{ id: 'c', label: '닫기' }], true); }
 ACT['guides'] = () => gdCenter(); ACT['gd-cat'] = el => gdCenter(el.dataset.v);
 /* ── 진입점: 홈 알약 · 계정 메뉴 · 대화 ── */
-AFTER.push(() => { if (!S || !S.org) return; const hm = $('.hmeta'); if (hm && !hm.querySelector('[data-act="guides"]')) { const L = gdList(); const n = L.filter(g => !GD().fin[g.id]).length; hm.insertAdjacentHTML('beforeend', `<button class="pill gdpill" data-act="guides">${ic('book', 14)} 가이드 ${n}</button>`); }
+AFTER.push(() => { if (!S || !S.org) return; const hm = $('.hmeta'); if (hm && !hm.querySelector('[data-act="guides"]')) { const L = gdList(); const n = L.filter(g => !GD().fin[g.id]).length; hm.insertAdjacentHTML('beforeend', `<button class="pill gdpill" data-act="guides">${ic("book", 14)} 기능별 따라 하기 ${n}개</button>`); }
   const ap = $('.acp'); if (ap && !ap.querySelector('[data-act="guides"]')) ap.insertAdjacentHTML('beforeend', `<hr><button type="button" role="menuitem" data-act="guides">${ic('book', 15)} 가이드 센터 — 따라 하기</button>`);
   const bh = $('.bch'); if (bh && !bh.querySelector('[data-act="guides"]')) { const nw = bh.querySelector('[data-act="chat-new"], [data-act="bld-clear"]'); const btn = `<button class="gdbtn" data-act="guides" title="가이드 센터">${ic('book', 14)} 가이드</button>`; nw ? nw.insertAdjacentHTML('beforebegin', btn) : bh.insertAdjacentHTML('beforeend', btn); }
   setTimeout(() => { gdCheck(); gdSpot(); }, 80); });

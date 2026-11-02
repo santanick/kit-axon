@@ -1,6 +1,6 @@
 /* v22 sales2 — 레거시 디디쌤 가이드 기능 보완(W4 판매 · 결제 · 교재, 운영자 화면)
    - ACT.pg 충돌 수정: kit.js의 진도 규칙(data-chg="pg" + data-k)과 매출 PG 선택(data-v)을 데이터 속성으로 나눠 처리
-   - 매출 관리: PG 선택 · 디디쌤 연결 PG 정산정보 · 토스 가입(신청 → 상점 ID → 심사중/승인/반려) · 결제/환불/청구서 납부 내역 · 월별/연도별 통계 · 환불 승인/거절/부분 환불
+   - 매출 관리: PG(토스페이먼츠 단일, v23에서 디디쌤 연결 PG 제외) · 토스 가입(신청 → 상점 ID → 심사중/승인/반려) · 결제/환불/청구서 납부 내역 · 월별/연도별 통계 · 환불 승인/거절/부분 환불
    - 청구서: 4단계(청구서명 → 청구항목 → 청구 대상 → 발송 설정), 개별 대상 · 대상별 항목 · 보호자 동시 발송 · 클래스/교재 연결(납부 시 수강 권한) · 알림톡 [납부하러 가기]
    - 교재/교구: PDF 메타 · 수정 · 다운로드 횟수/기간 · 권한(수강생 관리) · 실물 전달 체크 · 결제 요청사항
    - 학습자 → 운영자: LPX[type] 처리기(enroll · pay · vacct-paid · pay-cancel · refund-req · refund-cancel · bill-pay · sub-cancel · book-dl · book-ship · book-free)
@@ -30,6 +30,8 @@
     if (!st.toss) { st.toss = { status: '미가입', stage: 0, bizNo: '', ceo: '', store: '', phone: '', email: '', mid: '', at: '', reason: '', weeks: 4, checks: {} };
       if (demo && st.pg === 'toss') Object.assign(st.toss, { status: '승인', stage: TOSS_STAGES.length, mid: 'didisam_demo01', at: addDays(today(), -40), done: addDays(today(), -12) }); }
     st.pgInfo.tossMid = st.toss.mid || st.pgInfo.tossMid || '';
+    /* v23 대표님(2026-11-03): '매출 부분에는 디디쌤 연결 PG(나이스페이먼츠) 부분은 빼줘' — 토스페이먼츠만 사용. 예전 nice 상태는 토스로 옮기거나 미연결로 둔다. */
+    if (st.pg === 'nice') { if (demo && st.toss.status === '미가입') Object.assign(st.toss, { status: '승인', stage: TOSS_STAGES.length, mid: 'didisam_demo01', at: addDays(today(), -40), done: addDays(today(), -12) }); st.pg = st.toss.status === '미가입' ? 'none' : 'toss'; }
     if (S.org.empty && st.pg !== 'none' && st.toss.status === '미가입' && st.pgInfo.status === '미등록') st.pg = 'none';
     S.pays.forEach(p => {
       if (!p.itemType) p.itemType = 'class';
@@ -69,8 +71,8 @@
   const tossOK = () => ST().pg === 'toss' && ST().toss.status === '승인';
   const tossPend = () => ['신청', '심사중'].includes(ST().toss.status);
   const niceOK = () => ST().pgInfo.status === '승인';
-  /* 학습자 결제에 실제로 쓰이는 PG: 토스 승인 → 토스, 토스 심사 중 → 디디쌤 PG로 대체, 디디쌤 PG 정산정보 등록 → 나이스 */
-  const payPG = () => tossOK() ? 'toss' : (ST().pg === 'toss' && tossPend()) ? 'nice' : (ST().pg === 'nice' && niceOK()) ? 'nice' : 'none';
+  /* 학습자 결제에 쓰이는 PG: 토스 승인 → 토스, 그 외 → 결제 준비 중(v23) */
+  const payPG = () => tossOK() ? 'toss' : 'none'; /* v23: 토스 승인 전에는 '결제 준비 중' */
   window.sl2PayPG = payPG; window.sl2TossOK = tossOK;
   const PGN = { toss: '토스페이먼츠', nice: '디디쌤 연결 PG(나이스페이먼츠)', none: '미연결' };
 
@@ -119,7 +121,7 @@
   ACT['pg-sel'] = el => pgSelect(el);
   function pgSelect(el) { sl2Ensure(); const v = el.dataset.v;
     if (v === 'toss') { if (ST().toss.status === '승인') { ST().pg = 'toss'; logAudit('PG 변경 — 토스페이먼츠'); save(); render(); toast('토스페이먼츠 PG를 사용합니다.', 'ok'); } else tossFlow(); return; }
-    if (v === 'nice') { if (niceOK()) { ST().pg = 'nice'; logAudit('PG 변경 — 디디쌤 연결 PG'); save(); render(); toast('디디쌤 연결 PG를 사용합니다. 청구서 · 구독 · 부분 환불은 쓸 수 없습니다.', 'ok'); } else pgInfoForm(true); return; }
+    if (v === 'nice') { tossFlow(); return; }
     if (v === 'none') { ST().pg = 'none'; save(); render(); }
   }
 
@@ -149,7 +151,7 @@
       logAudit(join ? '디디쌤 연결 PG 가입(정산정보 입력)' : '정산정보 수정'); save(); render(); toast(join ? '정산정보를 등록했습니다. 이제 유료 클래스 · 교재를 판매할 수 있습니다.' : '정산 계좌 정보를 수정했습니다.', 'ok'); } }], true);
     w.querySelectorAll('[data-pik]').forEach(b => b.addEventListener('click', () => { w.querySelector('[name=kind]').value = b.dataset.pik; w.querySelectorAll('[data-pik]').forEach(x => x.classList.toggle('on', x === b)); w.querySelectorAll('.sl2-pik').forEach(p => { p.hidden = p.dataset.k !== b.dataset.pik; }); }));
   }
-  ACT['sl2-pginfo'] = () => pgInfoForm(false);
+  ACT['sl2-pginfo'] = () => tossFlow(); /* v23: 디디쌤 연결 PG 정산정보 입력 폐지 */
 
   /* ── 토스페이먼츠 PG 가입 흐름 ── */
   const footOK = () => { const f = ST().footer || {}; const miss = [['company', '상호명'], ['ceo', '대표자명'], ['biz', '사업자등록번호'], ['addr', '사업장 주소'], ['tel', '유선번호'], ['reg', '통신판매업 신고번호']].filter(([k]) => !String(f[k] || '').trim()).map(x => x[1]);
@@ -160,7 +162,7 @@
     go('sales');
   }
   function tossIntro() { const T2 = ST().toss; const fo = footOK();
-    modal('토스페이먼츠 PG 가입', `<p>토스페이먼츠에 가입하면 수익일 기준 2~3일 안에 직접 정산받고, 청구서 · 구독 클래스 · 부분 환불을 쓸 수 있습니다. 온보딩은 최대 ${T2.weeks || 4}주 걸립니다. 지금 바로 판매해야 한다면 디디쌤 연결 PG를 먼저 쓰세요.</p>
+    modal('토스페이먼츠 PG 가입', `<p>토스페이먼츠에 가입하면 수익일 기준 2~3일 안에 직접 정산받고, 청구서 · 구독 클래스 · 부분 환불을 쓸 수 있습니다. 온보딩은 최대 ${T2.weeks || 4}주 걸립니다. 심사 기간에도 유료 ${esc(t('cls'))} · 교재를 미리 만들어 둘 수 있으며, 승인 즉시 결제가 열립니다.</p>
       ${T2.status === '반려' ? `<div class="warn">이전 신청이 반려되었습니다: ${esc(T2.reason || '사유 미기재')}. 내용을 고쳐 다시 신청하세요.</div>` : ''}
       <h4 class="sl2-h">신청에 필요한 것</h4><div class="chk one">${['사업자등록번호(없으면 토스 화면에서 [바로신청])', '대표자명 · 상호명', '휴대폰 번호 · 이메일 주소', '신청자 추가 정보(영문 이름 · 거주지 주소 · 직무)', '위임장(대리인이 신청하는 경우)', '기타 추가 서류(별도 요청 시)'].map(x => `<label><input type="checkbox"> ${esc(x)}</label>`).join('')}</div>
       <h4 class="sl2-h">홈페이지 푸터 필수 정보 ${fo.miss.length ? tag(fo.miss.length + '개 누락', 'r') : tag('완료', 'g')}</h4><p class="mini">${fo.miss.length ? `누락: ${esc(fo.miss.join(' · '))} — 누락되면 카드사 심사가 거절될 수 있습니다. ` : ''}${fo.telOK ? '' : '유선번호 형식(070 · 0505 · 대표번호 · 080 · 휴대폰)을 확인하세요. '}통신판매업 신고번호가 없으면 국민카드 심사가 제외됩니다(간이과세자 · 비영리 · 공공기관 · 직전연도 거래 50건 미만은 신고 면제). 신고가 필요하면 토스페이먼츠의 '통신판매업 바로 신청'(구매안전서비스 확인증 → 정부24, 등록면허세 12,000~45,000원)을 이용하세요. <a href="#" data-act="go" data-v="settings">설정 › 푸터 입력</a></p>`,
@@ -187,7 +189,7 @@
     w.querySelectorAll('[data-cp]').forEach(b => b.addEventListener('click', () => { try { navigator.clipboard.writeText(b.dataset.cp); } catch (e) { } toast('복사했습니다.', 'ok'); }));
   }
   function tossMid() { const T2 = ST().toss;
-    modal('토스 상점 ID 등록', `<p class="mini">토스페이먼츠 신청이 끝나면 발급되는 상점 ID(MID)를 입력하세요. 등록하면 심사(2~${T2.weeks || 4}주)가 시작되고, 심사 중 결제는 디디쌤 PG로 처리됩니다.</p><label class="fl">토스 상점 ID<input name="mid" maxlength="40" placeholder="예: didisam_abc123" value="${esc(T2.mid || '')}"></label>`,
+    modal('토스 상점 ID 등록', `<p class="mini">토스페이먼츠 신청이 끝나면 발급되는 상점 ID(MID)를 입력하세요. 등록하면 심사(2~${T2.weeks || 4}주)가 시작되며, 승인되면 학습자 결제가 바로 열립니다.</p><label class="fl">토스 상점 ID<input name="mid" maxlength="40" placeholder="예: didisam_abc123" value="${esc(T2.mid || '')}"></label>`,
       [{ id: 'c', label: '나중에' }, { id: 'ok', label: '등록하기', kind: 'pri', run: w => { const mid = fv(w, 'mid'); if (!/^[A-Za-z0-9_-]{4,40}$/.test(mid)) { toast('상점 ID는 영문 · 숫자 · _ · - 4~40자입니다.', 'warn'); return false; }
         Object.assign(T2, { mid, status: '심사중', stage: 0, reqAt: today() }); ST().pgInfo.tossMid = mid; ST().pg = 'toss'; logAudit('토스 상점 ID 등록 — 심사 시작'); save(); render(); toast('상점 ID를 등록했습니다. 심사 결과는 담당자가 연락드립니다.', 'ok'); } }]);
   }
@@ -199,7 +201,7 @@
   ACT['sl2-toss-check'] = () => { const T2 = ST().toss; /* 운영: GET /api/pg/toss/status?mid= */ if (T2.status !== '심사중') return; T2.stage = Math.min(TOSS_STAGES.length - 1, (T2.stage || 0) + 1); T2.checkAt = today(); save(); render(); toast(`진행 상황: ${TOSS_STAGES[T2.stage]} 단계입니다.`, 'ok'); };
   ACT['sl2-toss-ok'] = () => { const T2 = ST().toss; Object.assign(T2, { status: '승인', stage: TOSS_STAGES.length, done: today() }); ST().pg = 'toss'; S.classes.forEach(c => { if (c.tossTemp) { c.tossTemp = false; c.status = '종료'; } }); logAudit('토스페이먼츠 온보딩 완료(디디쌤 승인)'); save(); render(); toast('토스 온보딩이 완료되었습니다. 청구서 · 구독 · 부분 환불을 쓸 수 있습니다.', 'ok'); };
   ACT['sl2-toss-no'] = () => modal('토스 심사 반려(데모)', `<label class="fl">반려 사유<textarea name="r" rows="3">푸터에 통신판매업 신고번호가 없습니다.</textarea></label>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '반려 처리', kind: 'red', run: w => { const T2 = ST().toss; T2.status = '반려'; T2.reason = fv(w, 'r') || '사유 미기재'; logAudit('토스 심사 반려'); save(); render(); } }]);
-  ACT['sl2-toss-back'] = () => { if (!confirm('PG 선택 화면으로 돌아갑니다. 토스 신청 정보는 남겨 둡니다.')) return; if (niceOK()) ST().pg = 'nice'; else ST().pg = 'none'; save(); render(); };
+  ACT['sl2-toss-back'] = () => { if (!confirm('PG 선택 화면으로 돌아갑니다. 토스 신청 정보는 남겨 둡니다.')) return; ST().pg = 'none'; save(); render(); };
 
   /* 심사 중: 임시 클래스 수정 · 삭제 금지, 푸터 변경 금지 */
   const lockMsg = '토스페이먼츠 심사 중에는 심사용 임시 클래스와 푸터 사업자 정보를 바꿀 수 없습니다.';
@@ -214,13 +216,13 @@
     const card = (k, n, a, b, stt) => `<button class="card pgc ${pg === k ? 'on' : ''}" data-act="pg-sel" data-v="${k}" aria-pressed="${pg === k}"><b>${n}</b><span>${a}</span><small>${b}</small><span class="sl2-st">${stt}</span></button>`;
     const tSt = T2.status === '승인' ? tag('승인 · 사용 가능', 'g') : T2.status === '심사중' ? tag('심사중', 'y') : T2.status === '신청' ? tag('신청 · 상점 ID 대기', 'y') : T2.status === '반려' ? tag('반려', 'r') : tag('미가입');
     const nSt = I.status === '승인' ? tag('정산정보 등록', 'g') : I.status === '반려' ? tag('반려', 'r') : tag('정산정보 미등록');
-    let out = `<div class="grid g2">${card('toss', '토스페이먼츠', '직접 계약 · 수익일 기준 2~3일 정산 · 청구서 · 구독 · 부분 환불', `온보딩 최대 ${T2.weeks || 4}주 · 상점 ID 등록 · 푸터 사업자 정보 6종 필수`, tSt + (pg === 'toss' && T2.status === '승인' ? ' ' + tag('사용 중', 'g') : ''))}${card('nice', '디디쌤 연결 PG(나이스페이먼츠)', '바로 시작 · 정산정보만 입력 · 디디쌤이 대신 정산(최대 1개월)', '청구서 · 구독 불가 · 전액 환불만', nSt + (pg === 'nice' ? ' ' + tag('사용 중', 'g') : ''))}</div>`;
+    let out = `<div class="grid">${card('toss', '토스페이먼츠', '직접 계약 · 수익일 기준 2~3일 정산 · 청구서 · 구독 · 부분 환불', `온보딩 최대 ${T2.weeks || 4}주 · 상점 ID 등록 · 푸터 사업자 정보 6종 필수`, tSt + (pg === 'toss' && T2.status === '승인' ? ' ' + tag('사용 중', 'g') : ''))}</div>`;
     if (pg === 'toss' && tossPend()) {
       const eta = T2.reqAt ? addDays(T2.reqAt, (T2.weeks || 4) * 7) : '';
       out += `<div class="card sl2-tst"><div class="ch"><b>토스페이먼츠 심사 진행</b>${tSt}${T2.mid ? `<small>상점 ID ${esc(T2.mid)}</small>` : ''}</div>
         <ol class="sl2-step">${TOSS_STAGES.map((s, i) => `<li class="${T2.status === '심사중' && i < (T2.stage || 0) ? 'done' : T2.status === '심사중' && i === (T2.stage || 0) ? 'cur' : ''}">${esc(s)}</li>`).join('')}</ol>
-        <div class="warn">심사 중 제한: 유료 ${esc(t('cls'))} · 교재는 만들 수 있지만 결제는 <b>디디쌤 PG로 대체 처리</b>됩니다${niceOK() ? '' : '(정산받으려면 디디쌤 연결 PG 정산정보를 입력하세요)'}. 청구서 발송 · 구독 판매 · 부분 환불은 승인 후 쓸 수 있습니다. 심사용 임시 ${esc(t('cls'))}와 홈페이지 푸터 사업자 정보는 수정 · 삭제하지 마세요.${eta ? ` 예상 완료: ${eta} 이전.` : ''}</div>
-        <div class="sl2-row">${T2.status === '신청' ? '<button class="btn pri" data-act="sl2-toss-mid">상점 ID 등록하기</button>' : '<button class="btn" data-act="sl2-toss-check">조회하기</button>'}${niceOK() ? '' : '<button class="btn" data-act="sl2-pginfo">디디쌤 PG 정산정보 입력</button>'}<button class="btn ghost" data-act="sl2-toss-back">PG 선택 화면으로</button><span class="sl2-demo">데모: <button class="btn sm" data-act="sl2-toss-ok">승인 처리</button><button class="btn sm ghost" data-act="sl2-toss-no">반려 처리</button></span></div></div>`;
+        <div class="warn">심사 중 제한: 유료 ${esc(t('cls'))} · 교재는 만들 수 있지만 결제는 <b>승인 후 열립니다</b>(학습자 화면에는 '결제 준비 중'으로 표시). 청구서 발송 · 구독 판매 · 부분 환불은 승인 후 쓸 수 있습니다. 심사용 임시 ${esc(t('cls'))}와 홈페이지 푸터 사업자 정보는 수정 · 삭제하지 마세요.${eta ? ` 예상 완료: ${eta} 이전.` : ''}</div>
+        <div class="sl2-row">${T2.status === '신청' ? '<button class="btn pri" data-act="sl2-toss-mid">상점 ID 등록하기</button>' : '<button class="btn" data-act="sl2-toss-check">조회하기</button>'}<button class="btn ghost" data-act="sl2-toss-back">PG 선택 화면으로</button><span class="sl2-demo">데모: <button class="btn sm" data-act="sl2-toss-ok">승인 처리</button><button class="btn sm ghost" data-act="sl2-toss-no">반려 처리</button></span></div></div>`;
     } else if (T2.status === '반려') out += `<div class="warn">토스 심사 반려: ${esc(T2.reason || '')} <button class="btn sm" data-act="sl2-toss">다시 신청</button></div>`;
     if (payPG() === 'none') out += `<div class="warn">아직 결제를 받을 PG가 없습니다. 유료 ${esc(t('cls'))} · 교재는 학습자 화면에서 '결제 준비 중'으로 보입니다.</div>`;
     out += `<p class="mini sl2-fee">결제 수수료: PG사 수수료만 부과되며 디디쌤 수수료는 없습니다. PG 수수료는 매출 구간 등에 따라 차등될 수 있습니다 — 채널톡으로 문의하세요. 결제 수단: 신용카드 · 계좌이체 · 간편결제 · 가상계좌${tossOK() ? ' · 해외카드(VISA · Master)' : ''}.</p>`;
@@ -244,10 +246,10 @@
       body = `<div class="sl2-bar"><input type="search" placeholder="결제자 · 항목 · 상태 검색" value="${esc(q)}" data-chg="sl2-q" aria-label="결제 내역 검색"><select data-chg="sl2-ty" aria-label="유형"><option value="">전체 유형</option>${[['class', t('cls')], ['book', '교재/교구'], ['sub', '구독']].map(([k, l]) => `<option value="${k}" ${ty === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${S.subs.length ? `<button class="btn sm" data-act="sl2-subrun" title="정기 결제일이 된 구독을 결제합니다">정기 결제 실행(데모)</button>` : ''}</div>` +
         table(['결제일', '결제자', '유형', '항목', '금액', '수단', '상태', ''], L.slice(0, 80).map(p => [p.at + (p.refund && p.refund.at ? `<br><small class="mini">환불 신청 ${esc(p.refund.at)}</small>` : ''), mn(p.who), itTag(p), esc(p.item), won(p.amount), esc(p.method || ''), tag(p.refund ? rfState(p) : p.status, p.refund && p.refund.state === '신청' ? 'y' : stTone(p.status)), (p.refund && p.refund.state === '신청' ? `<button class="btn sm" data-act="rf" data-v="${p.id}" data-ok="1">승인</button><button class="btn sm ghost" data-act="rf" data-v="${p.id}">거절</button>` : '') + `<button class="btn sm ghost" data-act="sl2-payd" data-v="${p.id}">상세</button>`]), '결제 내역이 없습니다.');
     } else if (tb === 'refund') { const L = filt(S.pays.filter(p => p.refund)).sort((a, b) => (b.refund.state === '신청') - (a.refund.state === '신청') || String(b.refund.at).localeCompare(String(a.refund.at)));
-      body = table(['신청일', '결제자', '항목', '결제액', '환불액', '사유', '상태', ''], L.map(p => [esc(p.refund.at), mn(p.who), esc(p.item), won(p.amount), p.refund.state === '승인' ? won(p.refund.amount) : '—', esc(p.refund.reason || '') + (p.refund.note ? `<br><small class="mini">거절 사유: ${esc(p.refund.note)}</small>` : ''), tag(rfState(p), p.refund.state === '신청' ? 'y' : p.refund.state === '거절' ? 'r' : 'g'), p.refund.state === '신청' ? `<button class="btn sm" data-act="rf" data-v="${p.id}" data-ok="1">승인</button><button class="btn sm ghost" data-act="rf" data-v="${p.id}">거절</button>` : '']), '환불 내역이 없습니다.') + `<p class="mini">환불은 ${esc(t('learner'))}의 신청 후 운영자가 승인해야 완료됩니다. 거절할 때는 사유를 꼭 입력하세요. 거절한 건은 다시 환불하기 어렵습니다. ${tossOK() ? '토스페이먼츠는 부분 환불이 가능합니다.' : '디디쌤 연결 PG는 전액 환불만 가능합니다.'}</p>`;
+      body = table(['신청일', '결제자', '항목', '결제액', '환불액', '사유', '상태', ''], L.map(p => [esc(p.refund.at), mn(p.who), esc(p.item), won(p.amount), p.refund.state === '승인' ? won(p.refund.amount) : '—', esc(p.refund.reason || '') + (p.refund.note ? `<br><small class="mini">거절 사유: ${esc(p.refund.note)}</small>` : ''), tag(rfState(p), p.refund.state === '신청' ? 'y' : p.refund.state === '거절' ? 'r' : 'g'), p.refund.state === '신청' ? `<button class="btn sm" data-act="rf" data-v="${p.id}" data-ok="1">승인</button><button class="btn sm ghost" data-act="rf" data-v="${p.id}">거절</button>` : '']), '환불 내역이 없습니다.') + `<p class="mini">환불은 ${esc(t('learner'))}의 신청 후 운영자가 승인해야 완료됩니다. 거절할 때는 사유를 꼭 입력하세요. 거절한 건은 다시 환불하기 어렵습니다. 토스페이먼츠는 부분 환불이 가능합니다.</p>`;
     } else if (tb === 'bill') body = billBody(true);
     else body = statsView();
-    return head('매출 관리', `PG 선택 · 결제/환불 내역 · 청구서 납부 내역 · 월별/연도별 통계 ${guideRef('features/sales.md')}`, `${ST().pg === 'nice' || niceOK() ? '<button class="btn" data-act="sl2-pginfo">정산정보 설정</button>' : ''}<button class="btn" data-act="sales-xls">내려받기</button>`) + pgPanel() +
+    return head('매출 관리', `PG 선택 · 결제/환불 내역 · 청구서 납부 내역 · 월별/연도별 통계 ${guideRef('features/sales.md')}`, `<button class="btn" data-act="sales-xls">내려받기</button>`) + pgPanel() +
       `<section class="grid g3">${kpi('총 매출', won(gross), '결제 + 청구서 현장 납부', 'g')}${kpi('환불액', won(refund), S.pays.filter(p => p.refund && p.refund.state === '승인').length + '건', 'r')}${kpi('환불 요청', reqs.length + '건', reqs.length ? '승인 또는 거절이 필요합니다' : '', reqs.length ? 'y' : '')}</section>` +
       tabs('slTab', [['pay', '결제 내역'], ['refund', `환불 내역${reqs.length ? ` (${reqs.length})` : ''}`], ['bill', '청구서 납부 내역'], ['stat', '월별 · 연도별 통계']], tb) + body +
       `<div class="card sl2-tj"><div><b>토스페이먼츠 PG 가입</b><small>${ST().toss.status === '승인' ? `가입 완료 · 상점 ID ${esc(ST().toss.mid)}` : `온보딩 최대 ${ST().toss.weeks || 4}주 · 청구서 · 구독 · 부분 환불을 쓰려면 필요합니다.`}</small></div>${ST().toss.status === '승인' ? tag('승인', 'g') : `<button class="btn" data-act="sl2-toss">토스페이먼츠 PG 가입</button>`}</div>`;
@@ -267,7 +269,7 @@
     const W = refundWarn(p);
     if (el.dataset.ok) { const part = tossOK();
       modal('환불 승인', `<p class="mini">${mn(p.who)} · ${esc(p.item)} · 결제 ${won(p.amount)} · 신청 ${esc(p.refund.at)}<br>사유: ${esc(p.refund.reason || '—')}</p>${W.map(x => `<div class="warn">${esc(x)}</div>`).join('')}
-        <label class="fl">환불 금액${part ? '(토스페이먼츠 — 부분 환불 가능)' : '(디디쌤 연결 PG — 전액만 가능)'}<input name="a" type="number" min="1" max="${p.amount}" value="${p.amount}" ${part ? '' : 'readonly'}></label>${part ? `<label class="ckl"><input type="checkbox" name="keep"> 부분 환불 후에도 수강 · 이용 권한 유지</label>` : ''}<p class="mini">승인하면 카드 결제 취소 · 금액 반환이 진행됩니다(영업일 기준 며칠 걸릴 수 있음).</p>`,
+        <label class="fl">환불 금액${part ? '(토스페이먼츠 — 부분 환불 가능)' : '(전액 환불)'}<input name="a" type="number" min="1" max="${p.amount}" value="${p.amount}" ${part ? '' : 'readonly'}></label>${part ? `<label class="ckl"><input type="checkbox" name="keep"> 부분 환불 후에도 수강 · 이용 권한 유지</label>` : ''}<p class="mini">승인하면 카드 결제 취소 · 금액 반환이 진행됩니다(영업일 기준 며칠 걸릴 수 있음).</p>`,
         [{ id: 'c', label: '취소' }, { id: 'ok', label: '승인', kind: 'pri', run: w => { const a = Math.round(+fv(w, 'a')); if (!(a >= 1 && a <= p.amount)) { toast(`1원 ~ ${won(p.amount)} 사이로 입력하세요.`, 'warn'); return false; } if (!part && a !== p.amount) { toast('디디쌤 연결 PG는 전액 환불만 가능합니다.', 'warn'); return false; }
           /* 운영: POST /api/pg/<pg>/cancel { paymentKey, cancelAmount } */
           p.refund = { ...p.refund, amount: a, state: '승인', done: today() }; p.status = a < p.amount ? '부분 환불' : '환불 완료';
@@ -291,7 +293,7 @@
   const billTotal = b => sum(b.items, i => i[1]);
   const batches = () => { const G = {}; S.bills.forEach(b => { (G[b.batch] = G[b.batch] || []).push(b); }); return Object.values(G).sort((a, b) => String(b[0].sentAt || b[0].due).localeCompare(String(a[0].sentAt || a[0].due))); };
   function billBody(inSales) { sl2Ensure(); const B = batches();
-    const lock = !tossOK() ? `<div class="warn">${ST().pg === 'toss' && tossPend() ? '토스페이먼츠 심사 중에는 청구서를 발송할 수 없습니다. 승인 후 이용하세요.' : '청구서는 토스페이먼츠 PG에서만 쓸 수 있습니다(디디쌤 연결 PG는 청구서 불가).'} ${inSales ? '' : '<a href="#" data-act="go" data-v="sales">매출 관리에서 PG 설정</a>'}</div>` : '';
+    const lock = !tossOK() ? `<div class="warn">${ST().pg === 'toss' && tossPend() ? '토스페이먼츠 심사 중에는 청구서를 발송할 수 없습니다. 승인 후 이용하세요.' : '청구서는 토스페이먼츠 PG 승인 후 쓸 수 있습니다.'} ${inSales ? '' : '<a href="#" data-act="go" data-v="sales">매출 관리에서 PG 설정</a>'}</div>` : '';
     return lock + (inSales ? `<div class="sl2-row" style="margin-bottom:12px"><button class="btn pri" data-act="bill-new" ${tossOK() ? '' : 'disabled title="토스페이먼츠 승인 필요"'}>+ 청구서 만들기</button></div>` : '') + `<section class="grid g3">${kpi('수납액', won(sum(S.bills.filter(b => b.status !== '미납'), billTotal)), S.bills.filter(b => b.status !== '미납').length + '건', 'g')}${kpi('현장 납부', S.bills.filter(b => b.status === '현장 납부').length + '건')}${kpi('미납', S.bills.filter(b => b.status === '미납').length + '건', won(sum(S.bills.filter(b => b.status === '미납'), billTotal)), 'r')}</section>` +
       table(['청구서명', '청구 항목', '대상', '발송 상태', '납부 마감', '수납 / 미납', ''], B.map(L => { const b = L[0]; const paid = L.filter(x => x.status !== '미납').length; const its = [...new Set(L.flatMap(x => x.items.map(i => i[0])))];
         return [`<b>${esc(b.title)}</b>`, esc(its.join(', ')), L.length + '명' + (L.some(x => (x.to || []).some(y => y.parent)) ? ' ' + tag('보호자 포함', 'b') : ''), tag(b.sent ? '발송 완료' : '미발송', b.sent ? 'g' : '') + `<br><small class="mini">${esc(b.notify || '')}</small>`, esc(b.due), `${paid} / <b class="${L.length - paid ? 'sl2-r' : ''}">${L.length - paid}</b>`, `<button class="btn sm" data-act="sl2-bill" data-v="${esc(b.batch)}">상세</button>`]; }), '청구서가 없습니다.');

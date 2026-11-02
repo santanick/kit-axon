@@ -53,6 +53,11 @@
     Object.entries(R.enr).forEach(([cid, e]) => { if (e.status === 'excluded' && e.hold) e.status = 'hold'; if (e.hold) e.status = 'hold'; });
     return R;
   }
+  /* v23 lux.js(쉬운 학습자 화면)용 읽기 전용 도우미: 내 수강 상태 · 판매가 */
+  window.shMine = () => { try { return mine(); } catch (e) { return null; } };
+  window.shState = id => { try { const sh = SHOP(); const c = sh && sh.classes.find(x => x.id === id); return c ? enrState(c, mine()) : 'none'; } catch (e) { return 'none'; } };
+  window.shPrice = id => { const sh = SHOP(); const c = sh && sh.classes.find(x => x.id === id); return c ? priceOf(c) : 0; };
+  window.shInfo = () => SHOP();
   const visible = (x, R) => { const o = x.open || '전체'; if (o === '전체') return true; if (o === '비공개') return false; const m = R && R.m; return !!(m && (x.openTo || []).some(v => v === m.id || v === m.team || v === m.group)); };
   const enrState = (c, R) => { const e = R.enr[c.id]; if (!e) return 'none'; if (e.status === 'hold' || e.hold) return 'hold'; if (e.status !== 'active') return 'none'; if (e.end && e.end < today()) return 'ended'; return 'active'; };
   function recruitState(c) { const R = c.recruit; const t = today();
@@ -136,9 +141,9 @@
       <fieldset class="shp-mth"><legend>결제 수단</legend>${methods.map(([v, l], i) => `<label><input type="radio" name="m" value="${v}" ${i === 0 ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</fieldset>
       <details class="shp-pol"><summary>환불 규정 보기</summary><p class="mini">${sh.policy && sh.policy.text ? nl(sh.policy.text) : '환불은 홈페이지 운영 정책에 따라 승인 여부와 금액이 정해집니다.'}<br>${kind === 'book' ? (x.kind === '전자책' ? '전자책: 결제일로부터 7일 이내 신청 가능, 한 번이라도 내려받으면 환불할 수 없습니다.' : '실물 교재/교구: 결제일로부터 7일 이내 신청 가능, 이미 전달받았다면 환불할 수 없습니다.') : '환불을 신청하면 즉시 수강할 수 없고, 운영자 승인 후 환불이 완료됩니다.'}</p></details>
       <label class="shp-agree"><input type="checkbox" name="agree" required> 주문 내용과 환불 규정을 확인했으며 결제에 동의합니다.</label></div>
-      <aside class="shp-side"><dl class="shp-sum"><dt>상품 금액</dt><dd>${won(x.price)}</dd>${disc ? `<dt>할인</dt><dd>-${won(disc)}</dd>` : ''}<dt>결제 금액</dt><dd><b>${won(f)}</b>${sub ? '/월' : ''}</dd></dl><button class="lbtn pri blk" type="submit">${won(f)} 결제하기</button><p class="mini">결제 대행: ${esc(sh.pg.name || '')}${sh.pg.pending ? ' (토스페이먼츠 심사 중 — 디디쌤 PG로 처리)' : ''}</p><a class="mini" href="${back}">취소하고 돌아가기</a></aside></form>`, `<a href="${back}">${esc(x.name)}</a> › 결제`); }
+      <aside class="shp-side"><dl class="shp-sum"><dt>상품 금액</dt><dd>${won(x.price)}</dd>${disc ? `<dt>할인</dt><dd>-${won(disc)}</dd>` : ''}<dt>결제 금액</dt><dd><b>${won(f)}</b>${sub ? '/월' : ''}</dd></dl><button class="lbtn pri blk" type="submit">${won(f)} 결제하기</button><p class="mini">결제 대행: ${esc(sh.pg.name || '')}</p><a class="mini" href="${back}">취소하고 돌아가기</a></aside></form>`, `<a href="${back}">${esc(x.name)}</a> › 결제`); }
   function pgWindow(title, amount, done, onFail) { const sh = SHOP() || { pg: {} };
-    shModal(`${sh.pg.use === 'toss' ? '토스페이먼츠' : '나이스페이먼츠'} 결제창(데모)`, `<p><b>${esc(title)}</b></p><p class="shp-amt">${won(amount)}</p><p class="mini">실제 운영에서는 PG사 결제창(팝업)이 열립니다. <!-- 운영: TossPayments.requestPayment / 나이스 결제창 --> 데모에서는 승인 결과를 고릅니다.</p>`,
+    shModal(`토스페이먼츠 결제창(데모)`, `<p><b>${esc(title)}</b></p><p class="shp-amt">${won(amount)}</p><p class="mini">실제 운영에서는 PG사 결제창(팝업)이 열립니다. <!-- 운영: TossPayments.requestPayment / 나이스 결제창 --> 데모에서는 승인 결과를 고릅니다.</p>`,
       [{ label: '결제 실패 테스트', run: () => { setTimeout(() => (onFail || payFail)(), 0); } }, { label: '결제 승인', kind: 'pri', run: () => { setTimeout(done, 0); } }]); }
   function payFail() { shModal('결제가 완료되지 않았습니다', `<p class="mini">다음을 먼저 확인해 주세요.</p><ul class="shp-chk"><li>팝업 차단 해제 — 결제창은 팝업으로 열립니다.</li><li>크롬(Chrome) 브라우저 권장</li><li>방문 기록 · 쿠키(캐시) 삭제 후 다시 시도</li><li>카드 한도 초과 · 잔액 부족 여부</li><li>카드 유효기간 만료 여부</li><li>법인카드는 개인 결제 제한 여부</li><li>해외 카드는 국내 결제 모듈에서 결제가 어려울 수 있습니다${(SHOP() || { pg: {} }).pg.intl ? '(이 홈페이지는 VISA · Master 해외카드 결제를 지원합니다)' : ''}.</li></ul><p class="mini">해결되지 않으면 홈페이지 운영자에게 오류 내용을 알려 주세요.</p>`, [{ label: '닫기', kind: 'pri' }]); }
 

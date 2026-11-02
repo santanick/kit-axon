@@ -111,12 +111,12 @@ function lsEnsure() {
 }
 /* 메뉴: 학습 › 튜토리얼, 운영 › 학습자 사이트, AI 진단은 모든 유형에서 켤 수 있게 */
 MENU.tutorial = { label: '튜토리얼', ws: 'learn' };
-MENU.lsite = { label: '학습자 사이트', ws: 'ops' };
+MENU.lsite = { label: '학습자 사이트', ws: 'ops' }; /* v23: 메뉴에는 나오지 않고 go('lsite')는 통합 화면(site)의 학습 페이지 탭으로 이동(sitemerge.js) */
 delete MENU.diag.only;
-Object.keys(PRESET).forEach(ty => { const P = PRESET[ty]; ['tutorial', 'lsite'].forEach(id => { if (!P.on.includes(id)) P.on.push(id); }); if (!P.on.includes('diag') && !P.off.includes('diag')) P.off.push('diag'); });
+Object.keys(PRESET).forEach(ty => { const P = PRESET[ty]; ['tutorial'].forEach(id => /* v23: 학습자 사이트는 '홈페이지 · 학습 사이트'(site) 하나로 통합 */ { if (!P.on.includes(id)) P.on.push(id); }); if (!P.on.includes('diag') && !P.off.includes('diag')) P.off.push('diag'); });
 function navAdd(id, on) { const w = MENU[id].ws; S.nav.tabs[w] = S.nav.tabs[w] || []; if (!S.nav.tabs[w].some(t => t.id === id)) S.nav.tabs[w].push({ id, on }); }
 { const base = postSeed; postSeed = (...a) => { const r = base(...a); S.lsite = null; S.tuts = null; lsEnsure(); return r; }; }
-{ const base = upgradeState; upgradeState = (...a) => { const r = base(...a); if (S) { lsEnsure(); navAdd('tutorial', true); navAdd('lsite', true); navAdd('diag', lsT() === 'univ'); lpApply(); } return r; }; }
+{ const base = upgradeState; upgradeState = (...a) => { const r = base(...a); if (S) { lsEnsure(); navAdd('tutorial', true); navAdd('diag', lsT() === 'univ'); lpApply(); } return r; }; }
 
 /* ── 게시본(학습자 화면이 읽는 공개 데이터) — 개인정보 · 접근코드 · 내부 메모 제외 ── */
 function lsSnapshot() {

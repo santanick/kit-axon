@@ -442,7 +442,7 @@ const COVER = [
   ['운영자: 정운영자 · 부운영자 · 강사 · 권한 회수 · 위임 · 메뉴별 권한', 'admins', 'features/member/administrator.md'],
   ['AI SAM: 교육 목표 · 썸네일 · 커리큘럼 · 영상 추천 · 스크립트/요약 · 퀴즈 · 교재 썸네일', 'home', 'features/ai-sam.md'],
   ['메시지: 앱 푸시 + 이메일 · 대상 5종 · 이미지 · 발송 내역 · 알림톡 자동 발송', 'message', 'features/message.md'],
-  ['매출: 토스 / 디디쌤 연결 PG · 결제 내역 · 환불 승인/거절(사유 필수) · 부분 환불', 'sales', 'features/sales.md'],
+  ['매출: 토스페이먼츠 · 결제 내역 · 환불 승인/거절(사유 필수) · 부분 환불', 'sales', 'features/sales.md'],
   ['청구서: 항목 8종 · 마감일 · 미납 알림 · 현장 납부처리', 'billing', 'features/sales.md'],
   ['상담: 채널톡 전화/채팅 · 대면 상담 녹음 → 텍스트 · 통계 · AI 요약', 'consult', 'features/consulting.md'],
   ['홈페이지 디자인: 브랜드 컬러 · 상단 메뉴 · 섹션 12종 · 푸터 · 접근 권한', 'site', 'features/homepage-design.md'],

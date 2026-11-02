@@ -38,7 +38,7 @@ LR.api = {
       const st = demoRoom(); LR.site = st && st.lsite && st.lsite.pub; LR._codes = (st && st.codes) || [];
       if (!LR.site) { /* 이 브라우저에 게시본이 없으면(다른 기기 · 처음 방문) 체험용 샘플 사이트로 */
         try { const r = await fetch('learner-demo.json', { cache: 'no-cache' }); const j = r.ok ? await r.json() : null; if (j && j.pages) { LR.site = j; LR.sample = j.demo || null; LR.tid = 'sample'; LR._codes = j.demo ? [{ sid: j.demo.sid, code: j.demo.code, dept: j.demo.dept }] : []; } } catch (e) { }
-        if (!LR.site) { LR.err = '아직 게시되지 않았습니다. 어드민 › 운영 › 학습자 사이트에서 [게시]를 누르세요.'; return; }
+        if (!LR.site) { LR.err = '아직 게시되지 않았습니다. 스튜디오 › 운영 › 홈페이지 · 학습 사이트에서 [게시하기]를 누르세요.'; return; }
       }
     }
     try { const s = JSON.parse(sessionStorage.getItem(SESS + LR.tid) || 'null'); if (s && LR.mode !== 'live') LR.me = s; } catch (e) { }

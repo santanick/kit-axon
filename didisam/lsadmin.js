@@ -87,7 +87,7 @@ ACT['ls-grid'] = el => { const L = LSV(); const [lv, ty] = el.dataset.v.split(':
 ACT['ls-gauto'] = () => { LSV().grid = lsGridAuto(); save(); render(); toast('과정 수준 · 순서로 표를 채웠습니다.', 'ok'); };
 ACT['ls-brand'] = el => { LSV().brand.short = el.value.trim().slice(0, 8); save(); };
 ACT['ls-look'] = el => { LSV().look = el.value; save(); render(); };
-ACT['ls-pub'] = () => { const L = LSV(); L.pub = lsSnapshot(); L.pubAt = nowStr(); logAudit('학습자 사이트 게시'); save(); render(); toast('학습자 사이트를 게시했습니다.', 'ok'); };
+ACT['ls-pub'] = () => { const L = LSV(); L.pub = lsSnapshot(); L.pubAt = nowStr(); logAudit('학습자 사이트 게시'); save(); render(); toast('홈페이지 · 학습 사이트를 게시했습니다.', 'ok'); };
 ACT['ls-lpsync'] = async () => { if (typeof LIVE !== 'undefined') { try { window.__LP = (await api('GET', '/api/learners/progress')).lp || {}; } catch (e) { toast(e.message, 'bad'); return; } } const n = lpApply(); save(); render(); toast(`학습자 활동 ${n}건을 회원 · 과정 · 진단에 반영했습니다.`, 'ok'); };
 
 /* ── 학습 › 튜토리얼 ── */
@@ -121,7 +121,7 @@ ACT['tu-ai'] = () => { const w = $('#modal'); const st = tuAutoSteps(w.querySele
 
 /* ── 대화 · 기능 맵 · 언어팩 · 상단 바로가기 ── */
 { const base = answer; answer = q => { const s = String(q || '');
-    if (/학습자\s*(사이트|화면|페이지|뷰)/.test(s) && !/(보내|발송)/.test(s)) { if (/게시/.test(s)) { ACT['ls-pub'](); return { text: '학습자 사이트를 게시했습니다. 운영 › 학습자 사이트 › 게시 · 활동에서 주소를 확인하세요.', go: 'lsite' }; } UI.lsT = 'build'; return { text: '운영 › 학습자 사이트에서 페이지 · 섹션을 조립하고 미리보기로 확인할 수 있습니다. 바꾼 뒤 [게시]하면 학습자에게 보입니다.', go: 'lsite' }; }
+    if (/학습자\s*(사이트|화면|페이지|뷰)/.test(s) && !/(보내|발송)/.test(s)) { if (/게시/.test(s)) { ACT['ls-pub'](); return { text: '홈페이지 · 학습 사이트를 게시했습니다. 운영 › 홈페이지 · 학습 사이트 › 학습 페이지 › 게시 · 활동에서 주소를 확인하세요.', go: 'lsite' }; } UI.lsT = 'build'; return { text: '운영 › 홈페이지 · 학습 사이트 › 학습 페이지 탭에서 페이지 · 섹션을 조립하고 미리보기로 확인할 수 있습니다. 바꾼 뒤 [게시]하면 학습자에게 보입니다.', go: 'lsite' }; }
     if (/튜토리얼/.test(s) && /(추가|만들|등록|관리)/.test(s)) return { text: '학습 › 튜토리얼에서 YouTube 영상 + 따라 할 3단계 + 미션을 등록합니다.', go: 'tutorial' };
     return base(q); }; }
 COVER.push(['[신규] 학습자 사이트 빌더: 페이지 · 섹션 · 미리보기 · 게시', 'lsite', ''], ['[신규] 튜토리얼: 영상 + 3단계 + 미션', 'tutorial', '']);

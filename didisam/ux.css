@@ -1,0 +1,68 @@
+/* 디디쌤 스튜디오 v23 — 쉬운 화면(ux.js) */
+.ux-on .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* 포커스 · 대비 */
+.ux-on :is(button,a,select,input,textarea,summary):focus-visible{outline:3px solid #4C77C5;outline-offset:2px;border-radius:10px}
+.ux-on .mini,.ux-on small{color:#4E5169}
+/* 머리 */
+.ux-on .bhd{align-items:flex-start;gap:12px;margin-bottom:6px}
+.ux-on .bhdl b{font-size:22px;line-height:1.3}
+.uxdesc{margin:2px 0 0;font-size:14px;color:var(--muted);line-height:1.5}
+.ux-on .bhd .btn.ai,.ux-on .bhd [data-act=chat-q]{white-space:nowrap}
+.uxfind{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:99px;background:#fff;color:var(--ink);font:600 13px inherit;cursor:pointer}
+.uxfind:hover{background:var(--soft)}
+.uxacs{display:flex;flex-direction:column;gap:8px;padding:6px 4px}
+.uxacs label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
+.uxacs select{width:100%;max-width:none!important;height:36px;display:block!important}
+/* 위쪽 탭: 4개 + 더 보기 */
+.ux-on .wtabs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin:10px 0 18px}
+.uxhd{margin-top:4px!important;display:inline-flex!important;width:auto!important}
+details.uxmore{position:relative;display:inline-block}
+details.uxmore>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:10px;font-weight:700;font-size:14px;color:var(--muted);user-select:none}
+details.uxmore>summary::-webkit-details-marker{display:none}
+details.uxmore>summary::after{content:'';width:7px;height:7px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg) translateY(-2px);margin-left:2px}
+details.uxmore[open]>summary,details.uxmore>summary:hover{background:#fff;color:var(--ink)}
+details.uxmore>summary em{font:700 11px var(--num);font-style:normal;background:var(--soft);color:var(--ink);border-radius:99px;padding:0 7px}
+.uxpop{position:absolute;z-index:40;top:calc(100% + 6px);left:0;min-width:200px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(21,23,59,.14);padding:6px;display:flex;flex-direction:column;gap:2px}
+.uxpop>button,.uxpop>a{display:flex!important;align-items:center;gap:8px;width:100%;justify-content:flex-start;text-align:left;border:0!important;background:none!important;box-shadow:none!important;color:var(--ink)!important;height:auto!important;min-height:40px;padding:8px 12px!important;border-radius:10px!important;font-weight:600!important;font-size:14px!important;cursor:pointer}
+.uxpop>button:hover,.uxpop>a:hover{background:var(--soft)!important}
+.uxpop>button.on{background:var(--magl)!important;color:var(--magd)!important}
+.uxdots>summary{width:40px;padding:0!important;justify-content:center;border:1px solid var(--line);background:#fff}
+.uxdots>summary::after{display:none}
+.uxdots .uxpop{left:auto;right:0}
+.ux-on .phr{align-items:center}
+/* 빈 화면 */
+.uxempty{display:flex;flex-direction:column;align-items:center;gap:14px;padding:44px 20px!important;text-align:center}
+.uxecta{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+/* 홈: 오늘 할 일 */
+.uxtodo{margin:22px 0 18px}
+.uxtodo h2{font-size:18px;margin:0 0 10px;display:flex;align-items:baseline;gap:8px}.uxtodo h2 small{font:600 13px var(--num);color:var(--muted)}
+.uxtodo ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.uxt{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.uxt.g{border-color:#D9CCF5;background:linear-gradient(90deg,#F6F1FF,#fff 60%)}
+.uxtn{font:700 26px/1 var(--num);color:var(--mag);text-align:center}.uxtn small{font-size:13px;color:var(--muted);margin-left:1px}
+.uxt.g .uxtn{color:#5B3FC4}
+.uxt b{display:block;font-size:15px}.uxt div small{display:block;font-size:13px;line-height:1.45}
+.uxnone{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin:0;color:var(--muted)}
+.ux-on .hero2 h1{font-size:30px}
+.ux-on .toolsbox{opacity:.92}
+/* 메뉴 찾기 */
+.uxq{width:100%;height:44px;border:1px solid var(--line);border-radius:12px;padding:0 14px;font:inherit;margin-bottom:10px}
+.uxfl{display:flex;flex-direction:column;gap:2px;max-height:52vh;overflow:auto}
+.uxfl button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:0;background:none;padding:9px 12px;border-radius:10px;cursor:pointer;color:var(--ink);font:inherit}
+.uxfl button:hover,.uxfl button:focus-visible{background:var(--soft)}
+.uxfl small{color:var(--muted);font-size:12.5px}
+/* 차분하게: 테두리 · 그림자 줄이기 */
+.ux-on .bview .card{box-shadow:none}
+/* 휴대폰 */
+@media (max-width:860px){
+  .uxfind span{display:none}.uxfind{width:36px;padding:0;justify-content:center}
+  .ux-on .bhdl b{font-size:19px}
+  .ux-on .bhd{flex-wrap:wrap}
+  .uxt{grid-template-columns:48px minmax(0,1fr);gap:10px}.uxt .btn{grid-column:1/-1;width:100%;justify-content:center}
+  .uxtn{font-size:21px}
+  .ux-on .hero2 h1{font-size:24px}
+  .ux-on .bch{flex-wrap:wrap;row-gap:6px}
+  .ux-on .bcanvas{max-width:100vw;overflow-x:hidden}
+  .ux-on .wtabs{overflow:visible}
+  .uxpop{max-width:calc(100vw - 32px)}
+}

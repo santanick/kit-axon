@@ -1,0 +1,22 @@
+/* v23 — 하나의 공개 사이트: 홈페이지 메뉴 · 섹션 · 푸터 · 챗봇(learner.html) */
+.smhost{display:block}
+.smmi{position:relative;display:flex;align-items:center}
+.smmi>a .smcar{font-style:normal;font-size:10px;opacity:.6;margin-left:3px}
+.smdd{display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:180px;background:#fff;border-radius:14px;box-shadow:0 14px 34px rgba(15,20,40,.16);padding:6px;z-index:45;flex-direction:column;gap:2px}
+.smmi:hover .smdd,.smmi:focus-within .smdd{display:flex}
+.smdd a{border-radius:10px!important;white-space:nowrap}
+.smlk{font-style:normal;font-size:10px;padding:1px 6px;border-radius:99px;background:#FFF3D6;color:#8A5A00;margin-left:4px}
+.smlogo{max-height:38px;max-width:180px;display:block;object-fit:contain}
+.lh.smgh{background:var(--smbg)}
+.lh.smdk .brand,.lh.smdk .bn b{color:#fff}
+.lf.smf{padding:0;background:transparent;border:0}
+.lf.smf .smpriv{max-width:1180px;margin:0 auto;padding:10px 28px 18px;font-size:12px;color:#888}
+.smchat{position:fixed;right:20px;bottom:20px;z-index:60;display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:99px;border:0;font:inherit;font-weight:800;font-size:14px;text-decoration:none;cursor:pointer;box-shadow:0 10px 28px rgba(0,0,0,.2)}
+.smchat.l{right:auto;left:20px}.smchat.k{background:#FEE500;color:#191919}.smchat.c{background:#15173B;color:#fff}
+@media (max-width:900px){
+  .smmi{flex-direction:column;align-items:stretch}
+  .smdd{display:flex;position:static;box-shadow:none;padding:0 0 0 14px;min-width:0;background:transparent}
+  body:not(.mopen) .smdd{display:none}
+  .smchat{bottom:84px;padding:11px 14px}.smchat span{display:none}
+}
+@media print{.smchat{display:none!important}}
