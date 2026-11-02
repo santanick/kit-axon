@@ -6,6 +6,7 @@
    대화 내용은 저장하지 않는다(맡긴 계획 · 넘긴 질문만 학습 기록에 남김). 과제를 대신 써 주지 않는다. */
 'use strict';
 Object.assign(ICP, { send: 'M5 12h14M13 6l6 6-6 6', chat: 'M4 5h16v11H8l-4 4z', cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', up: 'M12 19V5M6 11l6-6 6 6' });
+const LTK = () => 'didisam.lt.open.' + (LR.tid || 'x');
 const LT = { open: false, msgs: [], busy: false, ai: null, nudged: false, q: {} };
 const TCFG = () => ({ enabled: true, name: 'AI 튜터', daily: 20, help: 'feedback', loginOnly: false, guide: '', ...((SITE() && SITE().tutor) || {}) });
 const ltDayKey = () => 'didisam.lt.' + (LR.tid || 'x') + '.' + ((LR.me && LR.me.sid) || 'guest') + '.' + kstDay();
@@ -140,7 +141,7 @@ function ltRender() {
   if (!R) { R = document.createElement('div'); R.id = 'ltut'; R.className = 'lt'; document.body.appendChild(R); }
   const A = LR.me ? ltTodo() : []; const qa = ltQA().filter(x => !LT.q['seen' + x.id]).length; const badge = A.length + qa;
   const left = Math.max(0, (+C.daily || 20) - ltUsed());
-  R.innerHTML = `<button type="button" class="lt-fab ${LT.open ? 'hide' : ''}" data-tact="open" aria-label="${esc(C.name)} 열기"><span class="lt-orb" aria-hidden="true"></span><span class="lt-ft"><b>${esc(C.name)}</b><small>${LR.me ? (badge ? `오늘 할 일 ${badge}` : '무엇이든 물어보세요') : '로그인하면 맞춤 코칭'}</small></span>${badge ? `<em>${badge}</em>` : ''}</button>
+  R.innerHTML = `<button type="button" class="lt-fab ${LT.open ? 'hide' : ''} ${LR.me ? '' : 'guest'}" data-tact="${LR.me ? 'open' : 'login'}" aria-label="${esc(C.name)} 열기"><span class="lt-orb" aria-hidden="true"></span><span class="lt-ft"><b>${esc(C.name)}</b><small>${LR.me ? (badge ? `오늘 할 일 ${badge}` : '무엇이든 물어보세요') : '로그인하면 시작'}</small></span>${badge ? `<em>${badge}</em>` : ''}</button>
   ${!LT.open && LT.nudge ? `<div class="lt-nudge" role="status"><b>${esc(LT.nudge)}</b><button type="button" data-tact="open">열기</button><button type="button" class="x" data-tact="nudge-x" aria-label="닫기">${ico('x', 14)}</button></div>` : ''}
   <section class="lt-panel ${LT.open ? 'on' : ''}" role="dialog" aria-label="${esc(C.name)}" ${LT.open ? '' : 'hidden'}>
     <header class="lt-hd"><span class="lt-orb" aria-hidden="true"></span><div><b>${esc(C.name)}</b><small>${LR.me ? '내 학습 기록에 맞춰 도와 드려요' : '로그인 전 · 일반 안내'}</small></div><button type="button" class="lt-x" data-tact="close" aria-label="닫기">${ico('x', 18)}</button></header>
@@ -151,9 +152,11 @@ function ltRender() {
     <small class="lt-note">대화 내용은 저장하지 않아요 · 과제를 대신 써 주지 않고 함께 풀어요 · 오늘 ${left}회 남음</small>
   </section>`;
   const th = R.querySelector('.lt-th'); if (th) th.scrollTop = th.scrollHeight;
+  document.body.classList.toggle('lt-dock', !!(LT.open && LR.me && innerWidth >= 1100));
 }
 function ltOpen() {
-  LT.open = true; LT.nudge = ''; document.body.classList.add('lt-on');
+  if (!LR.me) { location.hash = '#login'; return; }
+  LT.open = true; try { sessionStorage.setItem(LTK(), '1'); } catch (e) { } LT.nudge = ''; document.body.classList.add('lt-on');
   if (!LT.msgs.length || LT.who !== ((LR.me && LR.me.sid) || '')) { LT.who = (LR.me && LR.me.sid) || ''; const b = ltBrief(); LT.msgs = [{ t: b.t, h: b.h, sys: 1 }]; ltQA().forEach(x => { LT.q['seen' + x.id] = 1; }); }
   ltRender(); setTimeout(() => $('#ltq') && $('#ltq').focus(), 30);
 }
@@ -179,7 +182,8 @@ document.addEventListener('click', e => { const el = e.target.closest('[data-tac
   if (k === 'go') { if (innerWidth <= 600) { LT.open = false; document.body.classList.remove('lt-on'); setTimeout(ltRender, 0); } return; }
   e.preventDefault();
   if (k === 'open') ltOpen();
-  if (k === 'close') { LT.open = false; document.body.classList.remove('lt-on'); ltRender(); $('.lt-fab') && $('.lt-fab').focus(); }
+  if (k === 'login') { location.hash = '#login'; }
+  if (k === 'close') { try { sessionStorage.setItem(LTK(), '0'); } catch (e) { } LT.open = false; document.body.classList.remove('lt-on'); ltRender(); $('.lt-fab') && $('.lt-fab').focus(); }
   if (k === 'nudge-x') { LT.nudge = ''; ltRender(); }
   if (k === 'q') ltAsk(el.dataset.v);
   if (k === 'esc') ltAsk(el.dataset.v, { esc: true });
@@ -197,7 +201,12 @@ document.addEventListener('submit', e => { const f = e.target;
 document.addEventListener('keydown', e => { if (e.target.id === 'ltq' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#ltf').requestSubmit(); } if (e.key === 'Escape' && LT.open) { LT.open = false; document.body.classList.remove('lt-on'); ltRender(); } });
 
 /* ── 렌더 연결: 화면이 바뀌면 맥락 줄 · 칩 갱신, 로그인 후 첫 화면에 한 번 알림 ── */
-{ const base = lrender; lrender = () => { base(); try { if (LR.me && !LT.nudged && TCFG().enabled) { LT.nudged = true; const n = ltTodo().length + ltQA().length; if (n && !LT.open) LT.nudge = `${TCFG().name}: 오늘 할 일 ${n}가지를 정리해 두었어요`; } ltRender(); } catch (e) { console.error(e); } }; }
+{ const base = lrender; lrender = () => { base(); try {
+    if (!LR.me) { if (LT.who) { LT.open = false; LT.msgs = []; LT.who = ''; LT.auto = false; } document.body.classList.remove('lt-on', 'lt-dock'); }
+    else if (TCFG().enabled && !LT.open) { let st = null; try { st = sessionStorage.getItem(LTK()); } catch (e) { }
+      /* 로그인 후: 마이페이지에서 튜터가 먼저 말을 건다(PC는 오른쪽에 고정), 이후 모든 화면에서 열린 상태 유지 */
+      if (st === '1' || (!LT.auto && st !== '0' && route().a === 'my' && innerWidth >= 1100)) { LT.auto = true; LT.nudged = true; ltOpen(); return; } }
+    if (LR.me && !LT.nudged && TCFG().enabled) { LT.nudged = true; const n = ltTodo().length + ltQA().length; if (n && !LT.open) LT.nudge = `${TCFG().name}: 오늘 할 일 ${n}가지를 정리해 두었어요`; } ltRender(); } catch (e) { console.error(e); } }; }
 
 /* ── 마이페이지: 'AI 튜터 코칭' 카드(맡긴 계획 · 선생님 답변 · 맡기기 버튼) ── */
 { const base = MYR.next; MYR.next = st => { let card = '';
@@ -211,6 +220,7 @@ document.addEventListener('keydown', e => { if (e.target.id === 'ltq' && e.key =
 
 /* ── 스튜디오 미리보기: 체험 학습자로 바로 보기(?preview=1&as=<학번>) — 기록은 저장하지 않음 ── */
 { const base = LR.api.load; LR.api.load = async (...a) => { await base(...a);
+  try { if (LR.mode === 'demo' && !LR.sample) { const d = (LR._codes || []).find(x => x && x.demo); if (d) LR.sample = { sid: d.sid, code: d.code, own: true }; } } catch (e) { }
   try { const as = Q.get('as'); if (LR.mode === 'preview' && as && !LR.me) { const c = (LR._codes || []).find(x => x.sid === as); if (c) { LR.me = { sid: c.sid, dept: c.dept || '' }; try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[c.sid] || {}) }; } catch (e) { } } }
     if (LR.mode === 'preview' && LR.me) { const P = window.parent; if (P && P.S) LR.mine = mineFrom(P.S, LR.me.sid); } } catch (e) { console.error(e); } }; }
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data === 'didisam:reload' && LR.mode === 'preview' && LR.me) { try { LR.mine = mineFrom(window.parent.S, LR.me.sid); } catch (x) { } lrender(); } });

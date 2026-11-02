@@ -14,7 +14,7 @@ function shell(inner, cur) {
   return `<header class="lh"><div class="in"><a class="brand" href="#home"><span class="lg">${esc(short)}</span><span class="bn"><b>${esc(S2.org.name)}</b><small>온라인 학습 센터</small></span></a>
     <nav class="ln" aria-label="주 메뉴">${nav}</nav><div class="acct">${LR.me ? `<a class="me ${cur === 'my' ? 'on' : ''}" href="#my"><span class="av">${esc(String(LR.me.sid).slice(-2))}</span><span class="sid">${esc(LR.me.sid)}</span></a>` : `<a class="lbtn pri sm" href="#login">${ico('user', 15)}로그인</a>`}</div>
     <button class="mnu" data-lact="menu" aria-label="메뉴 열기">${ico('menu', 22)}</button></div></header>
-    ${LR.mode === 'preview' ? '<div class="pvbar">미리보기 · 초안</div>' : ''}${LR.sample ? `<div class="pvbar">체험용 샘플 사이트 · 체험 계정 ${esc(LR.sample.sid)} / ${esc(LR.sample.code)} · 기록은 이 기기에만 저장됩니다</div>` : ''}<main id="lm">${inner}</main>
+    ${LR.mode === 'preview' ? '<div class="pvbar">미리보기 · 초안</div>' : ''}${LR.sample ? `<div class="pvbar">${LR.sample.own ? '데모' : '체험용 샘플 사이트'} · 체험 계정 ${esc(LR.sample.sid)} / ${esc(LR.sample.code)} · 기록은 이 기기에만 저장됩니다</div>` : ''}<main id="lm">${inner}</main>
     <footer class="lf"><div class="in"><div><span class="lg">${esc(short)}</span><b>${esc(S2.org.name)}</b><small>학습자 정보는 ${S2.org.type === 'univ' ? '학번 · 학과만' : '번호 · 소속만'} 저장합니다. 이름 · 연락처 · 이메일은 받지 않습니다.</small></div><small>Powered by 디디쌤</small></div></footer>${tabbar}`;
 }
 function needLogin(back) { return `<section class="sec"><div class="in narrow"><div class="gate">${ico('lock', 28)}<h2>로그인이 필요합니다</h2><p class="lead">이 화면은 로그인한 ${esc(SITE().terms.learner || '학습자')}만 볼 수 있습니다. 기록 · 진도 · 배지가 저장됩니다.</p>${btn('로그인하기', '#login/' + encodeURIComponent(back || ''), 'pri', 'arrow')}</div></div></section>`; }
