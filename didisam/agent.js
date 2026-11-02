@@ -6,7 +6,7 @@
 const AG_TOOLS = [
   { name: 'get_overview', description: '기관 운영 현황: 역할별(세팅 · 운영 · 리포트) 할 일과 건수, 학습자 수 · 평균 진도 · 이수율 · 채점 대기 · 미답변 질문 · 미접속 · 법정교육 미이수, 소속별 · 과정별 집계. 답하기 전에 먼저 부르세요.', input_schema: { type: 'object', properties: {} } },
   { name: 'list_courses', description: '과정 목록(상태 · 수강 인원 · 평균 진도 · 이수 인원 · 채점 대기 · 기간 · 법정의무 여부).', input_schema: { type: 'object', properties: { status: { type: 'string', description: '운영중 · 준비중 · 종료(생략 시 전체)' } } } },
-  { name: 'list_learners_at_risk', description: '진도가 낮거나 오래 접속하지 않은 학습자(번호 · 소속 · 과정 · 진도 · 마지막 접속). 이름은 없습니다.', input_schema: { type: 'object', properties: { max_progress: { type: 'integer', description: '이 진도(%) 미만(기본 30)' }, inactive_days: { type: 'integer', description: '이 일수 이상 미접속(선택)' }, course: { type: 'string', description: '과정 이름 일부(선택)' }, group: { type: 'string', description: '소속 이름(선택)' } } } },
+  { name: 'list_learners_at_risk', description: '진도가 낮은 학습자의 수강 건(번호 · 소속 · 과정 · 진도 · 미접속일). 한 사람이 여러 과정이면 여러 건입니다 — 사람 수는 인원, 수강 건수는 건수로 구분해 답하세요. inactive_days를 주면 두 조건을 모두 만족(그리고)하는 건만 돌려줍니다. 이름은 없습니다.', input_schema: { type: 'object', properties: { max_progress: { type: 'integer', description: '이 진도(%) 미만(기본 30)' }, inactive_days: { type: 'integer', description: '이 일수 이상 미접속(선택)' }, course: { type: 'string', description: '과정 이름 일부(선택)' }, group: { type: 'string', description: '소속 이름(선택)' } } } },
   { name: 'list_open_questions', description: '답변하지 않은 학습자 질문(질문함 · 게시판).', input_schema: { type: 'object', properties: {} } },
   { name: 'run_studio_command', description: '스튜디오에서 실행 · 생성 · 변경 · 발송할 일을 계획 카드로 만듭니다(운영자가 승인해야 실행). command에는 한 가지 일만 담은 짧은 한국어 지시문을 넣습니다. 예: "진도 30% 미만 학습자에게 독려 메시지 보내줘", "생성형 AI 활용 8주 과정 설계해줘", "채점 대기 과제 AI로 1차 채점해줘", "미답변 질문에 답변 초안 만들어줘", "법정교육 미이수자에게 마감 안내 보내줘", "매주 금요일 부서장에게 이수 리포트 보내는 자동화 만들어줘", "교육 결과 보고서 문서 만들어줘", "이번 주 운영 안내 공지 써줘". 여러 일이면 여러 번 부르세요.', input_schema: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'] } },
   { name: 'open_screen', description: '미리보기 화면을 특정 기능 화면으로 엽니다. screen: home · dash(현황) · class(과정) · assess(평가) · members(학습자) · enroll(수강) · community(질문 · 게시판) · message(메시지) · auto(자동화) · compliance(법정의무교육) · docs(문서) · lsite(학습자 사이트) · settings', input_schema: { type: 'object', properties: { screen: { type: 'string' } }, required: ['screen'] } },
@@ -22,8 +22,8 @@ function agRun(name, x, ctx) { x = x || {};
     return C.slice(0, 40).map(c => { const ids = c.learners || []; const P = ids.map(id => +((c.prog || {})[id] || {}).p || 0); const thr = (c.criteria && c.criteria.threshold) || 80; return { 과정: c.name, 상태: c.status, 수강: ids.length, 평균진도: P.length ? Math.round(P.reduce((a, b) => a + b, 0) / P.length) : 0, 이수: P.filter(p => p >= thr).length, 채점대기: ids.filter(id => ((c.prog || {})[id] || {}).assign === 'submitted').length, 기간: `${c.start}~${c.end}`, 법정의무: !!c.legal }; }); }
   if (name === 'list_learners_at_risk') { const mx = +x.max_progress || 30; const days = +x.inactive_days || 0; const out = [];
     (S.classes || []).filter(c => c.status === '운영중' && (!x.course || c.name.includes(x.course))).forEach(c => (c.learners || []).forEach(id => { const m = (S.members || []).find(y => y.id === id); if (!m) return; const p = +((c.prog || {})[id] || {}).p || 0; const g = agGrp(m); if (x.group && g !== x.group) return; const off = daysAgo(m.last);
-      if (p < mx || (days && off >= days)) out.push({ 번호: agSid(m), 소속: g, 과정: c.name, 진도: p, 미접속일: off }); }));
-    return { 건수: out.length, 목록: out.sort((a, b) => a.진도 - b.진도).slice(0, 40) }; }
+      if (p < mx && (!days || off >= days)) out.push({ 번호: agSid(m), 소속: g, 과정: c.name, 진도: p, 미접속일: off }); }));
+    return { 인원: new Set(out.map(o => o.번호)).size, 건수: out.length, 조건: `진도 ${mx}% 미만${days ? ` 그리고 ${days}일 이상 미접속` : ''}`, 소속별인원: Object.fromEntries(Object.entries(out.reduce((a, o) => { (a[o.소속] = a[o.소속] || new Set()).add(o.번호); return a; }, {})).map(([k, v]) => [k, v.size])), 목록: out.sort((a, b) => a.진도 - b.진도).slice(0, 40) }; }
   if (name === 'list_open_questions') { const Q = (typeof tqEnsure === 'function' ? tqEnsure() : []).filter(q => q.st !== 'answered').map(q => ({ 출처: q.src || '질문함', 과정: q.cls, 질문: q.q }));
     const P = (S.posts || []).filter(p => p.kind === '질문' && !p.replies).map(p => ({ 출처: p.board || '게시판', 질문: p.title }));
     return { 건수: Q.length + P.length, 목록: [...Q, ...P].slice(0, 30) }; }
@@ -43,7 +43,8 @@ AI SAM은 세 가지 역할로 돕습니다: ① ${T ? '강의 준비(설계 · 
 2. 실행 · 생성 · 발송 · 변경이 필요한 일은 run_studio_command로 계획 카드를 만듭니다. 한 번에 한 가지 일만 담고, 여러 일이면 순서대로 여러 번 부릅니다. 카드는 사용자가 '승인하고 실행'을 눌러야 실행되므로 "보냈습니다 · 만들었습니다"라고 단정하지 말고 "승인하시면 실행됩니다"라고 말합니다.
 3. 결과를 보여 줄 화면이 있으면 open_screen을 한 번 부릅니다. 처음 해 보는 일을 물으면 start_guide를 제안하거나 시작합니다.
 4. 공지 · 안내문 · 요약 같은 글쓰기는 직접 씁니다(필요하면 run_studio_command로 등록 카드를 함께 만듭니다).
-5. 지난 대화는 참고용입니다. 마지막 사용자 지시에만 답하고, 지난 요청 · 미완료 작업은 사용자가 다시 꺼내지 않으면 언급하지 않습니다.
+5. 지난 대화는 참고용입니다. 마지막 사용자 지시에만 답하고, 지난 요청 · 미완료 작업 · 지난 답변의 정정은 사용자가 다시 꺼내지 않으면 언급하지 않습니다. '[실행 계획 카드 생성됨]'은 실제로 만들어진 카드입니다.
+6. 숫자는 단위를 지킵니다: 사람은 '명'(인원), 수강 건은 '건'(건수).
 최종 답변: 한국어 합니다체로 짧게. ① 확인한 사실(숫자 포함) ② 만든 계획 카드와 승인 안내 ③ 다음에 하면 좋은 일 한 가지. 목록은 '- '로, 강조는 **…**만. 학습자 이름 · 연락처는 다루지 않습니다(번호 · 소속만).`; };
 const AG = { base: null };
 { const prev = chatSend; AG.base = typeof answer === 'function' ? q => answer(q) : null;
@@ -51,7 +52,7 @@ const AG = { base: null };
     if (!(typeof CL !== 'undefined' && CL.on('chat'))) return prev(q);
     if (CUR.ws !== 'home' && !$('#drawer') && !document.body.classList.contains('mode-bld')) ACT['chat-open'] && ACT['chat-open']();
     /* v18.1 지난 대화는 직전 2왕복만 짧게(600자) 참고용으로 — 지난 요청을 새 답에 끌어오지 않게 하고 입력 토큰도 줄임 */
-    const hist = S.chat.filter(m => !m.typing && (m.md || m.text) && !m.plan).slice(-4).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: String(m.md || m.text || '').slice(0, 600) }));
+    const hist = S.chat.filter(m => !m.typing && (m.md || m.text)).slice(-5).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.plan ? `[실행 계획 카드 생성됨: ${String(m.title || m.text || '').slice(0, 120)}]` : String(m.md || m.text || '').slice(0, 600) }));
     S.chat.push({ role: 'user', text: q }); const ph = { role: 'ai', typing: true, via: CL.label() }; S.chat.push(ph); renderThreads();
     const msgs = []; [...hist, { role: 'user', content: q }].forEach(m => { const l = msgs[msgs.length - 1]; if (l && l.role === m.role && typeof l.content === 'string') l.content += '\n' + m.content; else msgs.push({ ...m }); }); while (msgs.length && msgs[0].role !== 'user') msgs.shift();
     const ctx = { cards: [], nav: '', after: [], used: [] }; let tok = 0, model = '', text = '';
