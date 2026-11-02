@@ -338,6 +338,7 @@ button[aria-disabled=true],button:disabled{opacity:.35;cursor:not-allowed}
 .chd{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--soft);background:linear-gradient(180deg,#fff,#FCFBF8)}.chd b{display:block;font-size:15.5px}.chd small{color:var(--muted);font-size:12.5px}
 .eng{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border:0;border-radius:99px;padding:6px 11px;background:var(--soft);color:var(--muted);cursor:pointer;white-space:nowrap}.eng.on{background:#E9F7EF;color:#16804D;cursor:default}.eng i{width:7px;height:7px;border-radius:50%;background:#16A35A;box-shadow:0 0 0 0 rgba(22,163,90,.5);animation:pulse 2s infinite}@keyframes pulse{70%{box-shadow:0 0 0 7px rgba(22,163,90,0)}100%{box-shadow:0 0 0 0 rgba(22,163,90,0)}}
 .msel{width:auto;margin:0;padding:5px 26px 5px 10px;font-size:12px;border-radius:99px;font-weight:700}
+.eng.msw{padding:2px 4px 2px 10px;cursor:pointer}.eng.msw .msel{border:0;background-color:transparent;color:inherit;padding:3px 22px 3px 2px;box-shadow:none}.dheng .eng.msw .msel{color:#B7F0CF}
 .thread{padding:22px 20px;gap:18px;background:radial-gradient(rgba(21,23,59,.035) 1px,transparent 1px) 0 0/18px 18px}
 .msg{animation:msgIn .28s cubic-bezier(.2,.8,.2,1) both}@keyframes msgIn{from{opacity:0;transform:translateY(8px)}}
 .msg .av{width:32px;height:32px;border-radius:11px;background:radial-gradient(circle at 30% 25%,#FF8FC0 0,transparent 45%),linear-gradient(135deg,#D6246E,#8B3DFF);box-shadow:0 6px 14px -6px rgba(214,36,110,.6)}
@@ -363,7 +364,7 @@ button[aria-disabled=true],button:disabled{opacity:.35;cursor:not-allowed}
 .drawer .thread{background:#FAF9F6 radial-gradient(rgba(21,23,59,.04) 1px,transparent 1px) 0 0/18px 18px}
 .drawer .tempty2 .tsug{grid-template-columns:1fr}
 .clc .ch{gap:8px;align-items:center}.clc .chips2{margin:10px 0}
-@media (max-width:640px){.tsug{grid-template-columns:1fr}.chd .msel{display:none}.chd small{display:none}}
+@media (max-width:640px){.tsug{grid-template-columns:1fr}.chd .msel:not(.eng .msel){display:none}.chd small{display:none}}
 .drawer .dh>div:not(.dheng){flex:1;min-width:0}.drawer .dh [data-act=fill-here]{margin-left:0;padding:6px 10px;font-size:12px}.drawer .dh .x{flex:none}
 .cnote span+span::before{content:'·';margin:0 6px;color:var(--line)}
 .chd{position:relative;z-index:1}

@@ -6,7 +6,9 @@
 const CLM = [['claude-haiku-5-5', 'Claude Haiku 5.5', '빠르고 경제적 · 기본'], ['claude-sonnet-5-5', 'Claude Sonnet 5.5', '균형 · 문서 · 설계'], ['claude-opus-5-5', 'Claude Opus 5.5', '최고 품질 · 복잡한 분석']];
 const CL = {
   K: 'didisam.claude',
-  get() { try { return { model: CLM[1][0], chat: true, docs: true, site: true, calls: 0, tin: 0, tout: 0, ...JSON.parse(localStorage.getItem(this.K) || '{}') }; } catch (e) { return { model: CLM[0][0], chat: true, docs: true, site: true, calls: 0, tin: 0, tout: 0 }; } },
+  /* v18.1 기본 모델 Haiku(빠르고 경제적). 예전 기본값(Sonnet)으로 저장된 브라우저는 한 번만 Haiku로 옮기고(mv 2), 이후 사용자가 고른 모델은 유지 */
+  get() { const d = { model: CLM[0][0], chat: true, docs: true, site: true, calls: 0, tin: 0, tout: 0, mv: 2 };
+    try { const s = JSON.parse(localStorage.getItem(this.K) || '{}'); if (s.model && s.mv !== 2) { s.model = CLM[0][0]; s.mv = 2; try { localStorage.setItem(this.K, JSON.stringify(s)); } catch (e) {} } return { ...d, ...s }; } catch (e) { return d; } },
   set(p) { try { localStorage.setItem(this.K, JSON.stringify({ ...this.get(), ...p })); } catch (e) { toast('브라우저 저장 공간에 저장하지 못했습니다.', 'warn'); } },
   on(f = 'chat') { const c = this.get(); return !!c.key && c[f] !== false; },
   label(m) { return (CLM.find(x => x[0] === (m || this.get().model)) || CLM[0])[1]; },
@@ -14,7 +16,7 @@ const CL = {
     const c = this.get(); if (!c.key) throw new Error('키 없음');
     const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 60000);
     try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ac.signal, headers: { 'content-type': 'application/json', 'x-api-key': c.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: c.model, max_tokens: max, system, messages, ...(tools ? { tools } : {}) }) });
+      const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ac.signal, headers: { 'content-type': 'application/json', 'x-api-key': c.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: c.model, max_tokens: max, ...(system ? { system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] } : {}), messages, ...(tools && tools.length ? { tools: tools.map((t, i, a) => i === a.length - 1 ? { ...t, cache_control: { type: 'ephemeral' } } : t) } : {}) }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(r.status === 401 ? 'API 키가 올바르지 않습니다' : r.status === 404 ? `모델(${c.model})을 쓸 수 없습니다` : r.status === 429 ? '요청이 많아 잠시 후 다시 시도해 주세요' : (j.error?.message || `오류 ${r.status}`));
       const u = j.usage || {}; this.set({ calls: c.calls + 1, tin: c.tin + (u.input_tokens || 0), tout: c.tout + (u.output_tokens || 0), last: nowStr() });
@@ -96,9 +98,9 @@ function claudeCard() { const c = CL.get();
     <label class="fl">모델<select id="clModel" data-chg="cl-model">${CLM.map(([id, n, dd]) => `<option value="${id}" ${c.model === id ? 'selected' : ''}>${n} — ${dd}</option>`).join('')}</select></label></div>
     <div class="chips2">${[['chat', 'AI SAM 대화'], ['docs', '문서 AI 수정'], ['site', '홈페이지 AI 수정']].map(([k, l]) => `<label class="ckl"><input type="checkbox" data-chg="cl-use" data-v="${k}" ${c[k] !== false ? 'checked' : ''}> ${l}</label>`).join('')}</div>
     <div class="bar2"><button class="btn ink sm" data-act="cl-save">${ic('check', 14)} 저장 · 연결 테스트</button>${c.key ? `<button class="btn sm ghost" data-act="cl-off">연결 해제</button>` : ''}<small class="mini">호출 ${c.calls || 0}회 · 입력 ${(c.tin || 0).toLocaleString()} · 출력 ${(c.tout || 0).toLocaleString()} tokens${c.last ? ' · 최근 ' + esc(c.last) : ''}</small></div>
-    <p class="mini">데모: 키는 이 브라우저에만 저장되고(내보내기 · 백업 JSON에 포함되지 않음) 브라우저에서 Anthropic API를 직접 호출합니다. 운영 모드는 키를 서버 함수로 옮깁니다. 이름 · 연락처는 보내지 않고 집계 · 과정명 · 문서 본문만 보냅니다. 실행이 필요한 지시는 항상 계획 카드 → 승인 후 실행됩니다. 요금은 Anthropic 콘솔에서 확인하세요.</p></div>`; }
+    <p class="mini">데모: 키는 이 브라우저에만 저장되고(내보내기 · 백업 JSON에 포함되지 않음) 브라우저에서 Anthropic API를 직접 호출합니다. 운영 모드는 키를 서버 함수로 옮깁니다. 이름 · 연락처는 보내지 않고 집계 · 과정명 · 문서 본문만 보냅니다. 기본 모델은 Haiku(빠르고 경제적)이며, 여기나 AI SAM 대화창 머리의 모델 선택에서 언제든 Sonnet · Opus로 바꿀 수 있습니다. 반복되는 지시문은 캐시되어 비용이 줄어듭니다. 실행이 필요한 지시는 항상 계획 카드 → 승인 후 실행됩니다. 요금은 Anthropic 콘솔에서 확인하세요.</p></div>`; }
 { const base = integrView; integrView = () => claudeCard() + base(); }
-ACT['cl-model'] = el => { CL.set({ model: el.value }); toast(`${CL.label(el.value)}로 바꿨습니다.`, 'ok'); $$('[data-chg=cl-model]').forEach(s => s.value = el.value); $$('.eng.on').forEach(e => e.lastChild.textContent = CL.label()); };
+ACT['cl-model'] = el => { CL.set({ model: el.value }); toast(`${CL.label(el.value)}로 바꿨습니다.`, 'ok'); $$('[data-chg=cl-model]').forEach(s => s.value = el.value); $$('.eng.on:not(.msw)').forEach(e => e.lastChild.textContent = CL.label()); };
 ACT['cl-use'] = el => { CL.set({ [el.dataset.v]: el.checked }); };
 ACT['cl-off'] = () => { CL.set({ key: '' }); render(); toast('Claude 연결을 해제했습니다. 규칙 엔진으로 동작합니다.'); };
 ACT['cl-save'] = async el => { const k = $('#clKey')?.value.trim(); if (k) { if (!/^sk-ant-[\w-]{10,}$/.test(k)) { toast('Anthropic API 키 형식(sk-ant-…)이 아닙니다.', 'warn'); return; } CL.set({ key: k }); }
@@ -106,6 +108,7 @@ ACT['cl-save'] = async el => { const k = $('#clKey')?.value.trim(); if (k) { if 
   try { const r = await CL.call({ system: '한 단어로만 답하세요.', messages: [{ role: 'user', content: '연결 확인: "확인"이라고 답하세요.' }], max: 16 }); toast(`${CL.label(r.model)} 연결 확인 — 응답 「${r.text.slice(0, 20)}」`, 'ok'); } catch (e) { toast(`연결 실패: ${e.message}`, 'bad'); }
   render(); };
 /* 대화창 머리: 엔진 · 모델 표시 */
-function clBadge() { const c = CL.get(); return c.key && c.chat !== false ? `<span class="eng on"><i></i>${esc(CL.label())}</span><select class="msel" data-chg="cl-model" aria-label="AI 모델">${CLM.map(([id, n]) => `<option value="${id}" ${c.model === id ? 'selected' : ''}>${n.replace('Claude ', '')}</option>`).join('')}</select>` : `<button class="eng" data-act="cl-setup">${ic('spark', 12)} Claude 연결하기</button>`; }
+/* v18.1 연결 표시 + 모델 고르기를 한 알약으로 합침(중복 표시로 머리글이 좁아져 'AI SAM'이 세로로 꺾이던 문제) */
+function clBadge() { const c = CL.get(); return c.key && c.chat !== false ? `<label class="eng on msw" title="AI 모델 바꾸기 — Haiku 경제적 · Sonnet 균형 · Opus 최고 품질"><i></i><select class="msel" data-chg="cl-model" aria-label="AI 모델">${CLM.map(([id, n]) => `<option value="${id}" ${c.model === id ? 'selected' : ''}>${n.replace('Claude ', '')}</option>`).join('')}</select></label>` : `<button class="eng" data-act="cl-setup">${ic('spark', 12)} Claude 연결하기</button>`; }
 ACT['cl-setup'] = () => { UI.settings = 'integr'; go('settings'); };
 Object.assign(DICT, { 'Claude AI 연결': 'Claude AI connection|Claude AI 接続|Claude AI 连接|Claude AI 連接|Kết nối Claude AI|เชื่อมต่อ Claude AI|Koneksi Claude AI|Conexión Claude AI|Connexion Claude AI' });

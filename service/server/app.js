@@ -10,6 +10,12 @@ const { createMcp } = require('./mcp');
 
 const TYPES = ['corp', 'univ', 'public', 'k12', 'adult', 'lifelong', 'voc'];
 const MODELS = ['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5'];
+/* v18.1 프롬프트 캐시: 매 호출 반복되는 지시문 · 도구 정의 끝에 cache_control → 반복 입력 비용 약 90% 절감 */
+function aiCache(b) {
+  const sys = typeof b.system === 'string' && b.system ? [{ type: 'text', text: b.system.slice(0, 60000), cache_control: { type: 'ephemeral' } }] : undefined;
+  const tools = Array.isArray(b.tools) && b.tools.length ? b.tools.slice(0, 16).map((t, i, a) => i === a.length - 1 ? { ...t, cache_control: { type: 'ephemeral' } } : t) : undefined;
+  return { ...(sys ? { system: sys } : {}), messages: b.messages, ...(tools ? { tools } : {}) };
+}
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.yaml': 'text/plain; charset=utf-8', '.yml': 'text/plain; charset=utf-8', '.tf': 'text/plain; charset=utf-8', '.example': 'text/plain; charset=utf-8', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.mjs': 'text/javascript; charset=utf-8' };
 const SESSION_DAYS = 14;
 const STATE_MAX = 8 * 1024 * 1024;      // 기관 상태 최대 8MB(JSON)
@@ -302,7 +308,7 @@ ${here}`;
       const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 90000);
       let r, j;
       try {
-        r = await fetch(aiUrl, { method: 'POST', signal: ac.signal, headers: { 'content-type': 'application/json', 'x-api-key': aiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: max, system: typeof b.system === 'string' ? b.system.slice(0, 60000) : undefined, messages: b.messages, ...(Array.isArray(b.tools) ? { tools: b.tools.slice(0, 16) } : {}) }) });
+        r = await fetch(aiUrl, { method: 'POST', signal: ac.signal, headers: { 'content-type': 'application/json', 'x-api-key': aiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: max, ...aiCache(b) }) });
         j = await r.json().catch(() => ({}));
       } catch (e) { throw new HttpErr(502, e.name === 'AbortError' ? 'AI 응답 시간이 초과되었습니다.' : 'AI 서버에 연결하지 못했습니다.', 'ai_net'); } finally { clearTimeout(to); }
       if (!r.ok) { log.warn && log.warn('ai upstream', r.status, j && j.error && j.error.type); throw new HttpErr(r.status === 429 ? 429 : 502, r.status === 429 ? 'AI 요청이 많아 잠시 후 다시 시도하세요.' : r.status === 404 ? `모델(${model})을 쓸 수 없습니다.` : 'AI 서버 오류입니다.', 'ai_upstream'); }
