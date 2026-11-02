@@ -131,7 +131,7 @@ function laJoinState(tok, inv) { if (!LA.j || LA.j.tok !== tok) LA.j = { tok, in
 function laConsentHTML(J, U) { const k = J.keep || {}; const ck = n => k[n] ? 'checked' : '';
   return `<fieldset class="la-terms"><legend class="sr">약관 동의</legend><label class="ckl all"><input type="checkbox" data-ac="jall" ${k.tos && k.privacy && (U || k.mkt) ? 'checked' : ''}> <b>전체 동의</b> <small>(선택 항목 포함)</small></label>
     <label class="ckl"><input type="checkbox" name="tos" ${ck('tos')}> [필수] 이용약관 동의</label><details><summary>전문 보기</summary><pre>${esc(laCfg().tos || '이용약관은 기관 홈페이지 하단에서 확인할 수 있습니다.')}</pre></details>
-    <label class="ckl"><input type="checkbox" name="privacy" ${ck('privacy')}> [필수] 개인정보 수집 · 이용 동의</label><details open><summary>받는 항목 · 목적 · 보유 기간</summary>${laPolicyHTML(U, true)}</details>
+    <label class="ckl"><input type="checkbox" name="privacy" ${ck('privacy')}> [필수] 개인정보 수집 · 이용 동의</label><details><summary>받는 항목: 로그인 수단(이메일 또는 SNS 식별값) · 닉네임 / 목적: 회원 식별 · 학습 서비스 / 보유: 탈퇴 시 파기 <u>자세히</u></summary>${laPolicyHTML(U, true)}</details>
     ${U ? '' : `<label class="ckl"><input type="checkbox" name="mkt" ${ck('mkt')}> [선택] 마케팅 정보 수신 동의 <small>— 동의하지 않아도 가입할 수 있습니다</small></label>`}</fieldset>`; }
 function laJoin(r) { const cfg = laCfg(); const tok = (r.b || '').replace(/[^\w-]/g, ''); const U = laUniv();
   if (LR.me && !(LA.j && LA.j.done)) return laSec('이미 로그인했습니다', `<div class="cta">${btn('마이페이지', '#my', 'pri')}</div>`);
