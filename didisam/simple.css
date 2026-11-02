@@ -33,3 +33,6 @@ body.sm-on .brail .sp{flex:1}body.sm-on .bprog{cursor:pointer}
 @media (max-width:1180px){.smgrid{grid-template-columns:1fr}.smkpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.smnext{flex-direction:column;align-items:flex-start}.smb{justify-content:flex-start}.smlist.full li{grid-template-columns:40px minmax(0,1fr)}.smlist.full li .smb{grid-column:1/-1;padding-left:48px}.smnext .btn,.smlist .btn{min-height:40px}}
 body.sm-on .bcanvas.ws-home .bhd .btn.ink{display:none}
+/* v18 에이전트 */
+.agused{margin:6px 0 0;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.agl{border:0;background:var(--magl);color:var(--magd);font:inherit;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;cursor:pointer}

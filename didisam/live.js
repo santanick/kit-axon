@@ -60,7 +60,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
     try {
       const j = await api('POST', '/api/ai/messages', { model: c.model, system, messages, tools, max });
       const u = j.usage || {}; CL.set({ calls: (c.calls || 0) + 1, tin: (c.tin || 0) + (u.input_tokens || 0), tout: (c.tout || 0) + (u.output_tokens || 0), last: nowStr() });
-      return { text: (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim(), tools: (j.content || []).filter(b => b.type === 'tool_use'), usage: u, model: j.model || c.model };
+      return { text: (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim(), tools: (j.content || []).filter(b => b.type === 'tool_use'), content: j.content || [], stop: j.stop_reason, usage: u, model: j.model || c.model };
     } catch (e) { if (e instanceof TypeError) throw new Error('네트워크에 연결하지 못했습니다'); throw e; }
   };
 }

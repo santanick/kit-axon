@@ -302,7 +302,7 @@ ${here}`;
       const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 90000);
       let r, j;
       try {
-        r = await fetch(aiUrl, { method: 'POST', signal: ac.signal, headers: { 'content-type': 'application/json', 'x-api-key': aiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: max, system: typeof b.system === 'string' ? b.system.slice(0, 60000) : undefined, messages: b.messages, ...(Array.isArray(b.tools) ? { tools: b.tools.slice(0, 4) } : {}) }) });
+        r = await fetch(aiUrl, { method: 'POST', signal: ac.signal, headers: { 'content-type': 'application/json', 'x-api-key': aiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: max, system: typeof b.system === 'string' ? b.system.slice(0, 60000) : undefined, messages: b.messages, ...(Array.isArray(b.tools) ? { tools: b.tools.slice(0, 16) } : {}) }) });
         j = await r.json().catch(() => ({}));
       } catch (e) { throw new HttpErr(502, e.name === 'AbortError' ? 'AI 응답 시간이 초과되었습니다.' : 'AI 서버에 연결하지 못했습니다.', 'ai_net'); } finally { clearTimeout(to); }
       if (!r.ok) { log.warn && log.warn('ai upstream', r.status, j && j.error && j.error.type); throw new HttpErr(r.status === 429 ? 429 : 502, r.status === 429 ? 'AI 요청이 많아 잠시 후 다시 시도하세요.' : r.status === 404 ? `모델(${model})을 쓸 수 없습니다.` : 'AI 서버 오류입니다.', 'ai_upstream'); }

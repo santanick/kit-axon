@@ -6,7 +6,7 @@
 const CLM = [['claude-haiku-5-5', 'Claude Haiku 5.5', '빠르고 경제적 · 기본'], ['claude-sonnet-5-5', 'Claude Sonnet 5.5', '균형 · 문서 · 설계'], ['claude-opus-5-5', 'Claude Opus 5.5', '최고 품질 · 복잡한 분석']];
 const CL = {
   K: 'didisam.claude',
-  get() { try { return { model: CLM[0][0], chat: true, docs: true, site: true, calls: 0, tin: 0, tout: 0, ...JSON.parse(localStorage.getItem(this.K) || '{}') }; } catch (e) { return { model: CLM[0][0], chat: true, docs: true, site: true, calls: 0, tin: 0, tout: 0 }; } },
+  get() { try { return { model: CLM[1][0], chat: true, docs: true, site: true, calls: 0, tin: 0, tout: 0, ...JSON.parse(localStorage.getItem(this.K) || '{}') }; } catch (e) { return { model: CLM[0][0], chat: true, docs: true, site: true, calls: 0, tin: 0, tout: 0 }; } },
   set(p) { try { localStorage.setItem(this.K, JSON.stringify({ ...this.get(), ...p })); } catch (e) { toast('브라우저 저장 공간에 저장하지 못했습니다.', 'warn'); } },
   on(f = 'chat') { const c = this.get(); return !!c.key && c[f] !== false; },
   label(m) { return (CLM.find(x => x[0] === (m || this.get().model)) || CLM[0])[1]; },
@@ -18,7 +18,7 @@ const CL = {
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(r.status === 401 ? 'API 키가 올바르지 않습니다' : r.status === 404 ? `모델(${c.model})을 쓸 수 없습니다` : r.status === 429 ? '요청이 많아 잠시 후 다시 시도해 주세요' : (j.error?.message || `오류 ${r.status}`));
       const u = j.usage || {}; this.set({ calls: c.calls + 1, tin: c.tin + (u.input_tokens || 0), tout: c.tout + (u.output_tokens || 0), last: nowStr() });
-      return { text: (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim(), tools: (j.content || []).filter(b => b.type === 'tool_use'), usage: u, model: j.model || c.model };
+      return { text: (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim(), tools: (j.content || []).filter(b => b.type === 'tool_use'), content: j.content || [], stop: j.stop_reason, usage: u, model: j.model || c.model };
     } catch (e) { if (e.name === 'AbortError') throw new Error('응답 시간이 초과되었습니다'); if (e instanceof TypeError) throw new Error('네트워크에 연결하지 못했습니다'); throw e; } finally { clearTimeout(to); }
   }
 };
