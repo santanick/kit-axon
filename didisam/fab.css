@@ -1,0 +1,34 @@
+/* 디디쌤 스튜디오 v19 — AI SAM 플로팅 위젯(채널톡형) */
+#fabBtn{position:fixed;right:24px;bottom:24px;z-index:57;height:56px;min-width:56px;padding:0 22px 0 16px;border:0;border-radius:99px;display:flex;align-items:center;justify-content:center;gap:8px;color:#fff;font-weight:800;font-size:14.5px;letter-spacing:-.01em;background:linear-gradient(135deg,#15173B 0%,#5B2BD9 62%,#E5007E 100%);box-shadow:0 14px 34px -8px rgba(21,23,59,.55);cursor:pointer;transition:transform .15s,box-shadow .15s}
+#fabBtn:hover{transform:translateY(-2px);box-shadow:0 18px 40px -8px rgba(91,43,217,.6)}
+#fabBtn:focus-visible{outline:3px solid #E5007E;outline-offset:3px}
+body.fab-open #fabBtn{width:56px;padding:0}
+#fabBtn .fabdot{position:absolute;top:6px;right:8px;width:10px;height:10px;border-radius:50%;background:#2ED47A;box-shadow:0 0 0 2px #fff}
+/* 빌드 화면: 대화 열을 빼고 캔버스를 넓게, 대화는 화면 위 카드로 */
+.fab-on .bx{grid-template-columns:76px minmax(0,1fr)}
+.fab-on .bchat{position:fixed;right:24px;bottom:92px;z-index:56;width:410px;height:min(680px,calc(100vh - 170px));height:min(680px,calc(100dvh - 170px));border:1px solid var(--line);border-radius:22px;box-shadow:0 30px 70px -18px rgba(12,13,36,.35);overflow:hidden;transform-origin:bottom right;animation:fabIn .18s ease-out}
+.fab-on:not(.fab-open) .bchat{display:none}
+.fab-l .bchat{width:min(780px,calc(100vw - 140px));height:calc(100vh - 62px - 112px);height:calc(100dvh - 62px - 112px)}
+@keyframes fabIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.fab-on .bchat,#fabBtn{animation:none;transition:none}}
+/* 머리: 1줄 제목 + 창 버튼, 2줄 모델 · 가이드 · 새 대화 */
+.fab-on .bch{flex-wrap:wrap;row-gap:8px;padding:12px 12px 10px 16px;background:linear-gradient(180deg,#F7F4FF,#fff)}
+.fab-on .bch .orb{display:none}
+.fab-on .bch>div{flex:1 0 calc(100% - 130px)}
+.fab-on .bch small{max-width:none}
+.fab-on .bch .fabc{order:0}
+.fab-on .bch>*:not(div):not(.fabc){order:2}
+.fabc{display:flex;gap:2px;flex:none;align-items:center}
+.fbi{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:10px;background:transparent;color:var(--muted);cursor:pointer}
+.fbi:hover{background:var(--soft);color:var(--ink)}
+.fbi:focus-visible{outline:2px solid var(--mag);outline-offset:1px}
+.drawer .dh .fbi{color:rgba(255,255,255,.8)}.drawer .dh .fbi:hover{background:rgba(255,255,255,.12);color:#fff}
+/* 클래식 화면: 오른쪽 서랍도 같은 위젯 모양 */
+.fab-on .drawer{top:auto;bottom:92px;right:24px;width:410px;height:min(680px,calc(100vh - 170px));border-radius:22px;border:1px solid var(--line);box-shadow:0 30px 70px -18px rgba(12,13,36,.35);overflow:hidden;animation:fabIn .18s ease-out}
+.fab-on.fab-l .drawer{width:min(780px,calc(100vw - 140px));height:calc(100vh - 62px - 112px)}
+body.fab-on.drawer-open .shell{margin-right:0}
+/* 따라하기 바 · 알림은 넓어진 캔버스 가운데로 */
+@media (min-width:861px){body.mode-bld.fab-on .gdbar{left:calc(50% + 38px);width:min(600px,calc(100vw - 260px))}}
+body.fab-open #toasts{bottom:96px}
+@media (min-width:861px){body.mode-bld.fab-open .gdbar{left:calc((100vw - 434px) / 2 + 38px);width:min(560px,calc(100vw - 560px))}}
+body.fab-on .top{z-index:58} /* 계정 메뉴 등 머리 드롭다운이 위젯 위로 */
