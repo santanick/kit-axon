@@ -18,7 +18,8 @@ const BLD_STEPS = [
 const bName = s => typeof s.n === 'function' ? s.n() : s.n;
 const bStep = id => BLD_STEPS.find(s => s.id === id);
 const bFits = s => !s.only || s.only === S.org.type;
-const bOn = () => !!(S && S.org && S.bld && S.bld.on !== false);
+/* v19.1 화면 하나로: 클래식 화면을 없애고 AI SAM 화면(레일 + 캔버스 + 떠 있는 AI SAM)만 쓴다(대표님 '따로 있어야 돼? 복잡성만 높아') */
+const bOn = () => !!(S && S.org);
 const bList = () => BLD_STEPS.filter(s => bFits(s) && (s.req || S.bld.steps[s.id]?.on));
 function bMenuOn(view) { if (!MENU[view]) return; navAdd(view, true); const x = (S.nav.tabs[MENU[view].ws] || []).find(t => t.id === view); if (x) x.on = true; }
 function bCounts() { let bk = 0; try { lsEnsure(); bk = bkL().length; } catch (e) { } return { cls: S.classes.length, bk, dg: (S.diags || []).length, au: S.autos.length, dc: (S.docs || []).length, mb: S.members.length, bd: S.badges.length }; }
@@ -169,7 +170,7 @@ function bComposer() {
   <header class="top">
     <div class="brand"><span class="logo">D</span><b>${esc(S.org.name)}</b><span class="sub">스튜디오</span></div>
     <div class="bprog" title="운영 준비 ${dn}/${L.length}"><span>운영 준비</span><span class="bpbar"><i style="width:${Math.round(dn / Math.max(1, L.length) * 100)}%"></i></span><b>${dn}/${L.length}</b></div>
-    <div class="topr"><button class="btn sm ghost bclassic" data-act="bld-off" title="메뉴 중심 화면으로">클래식 화면</button><select id="roleSel" aria-label="권한별 화면 보기"><option value="owner" ${S.me.role === 'owner' ? 'selected' : ''}>정운영자 화면</option><option value="sub" ${S.me.role === 'sub' ? 'selected' : ''}>부운영자 화면</option><option value="teacher" ${S.me.role === 'teacher' ? 'selected' : ''}>${esc(t('teacher'))} 화면</option></select></div>
+    <div class="topr"><select id="roleSel" aria-label="권한별 화면 보기"><option value="owner" ${S.me.role === 'owner' ? 'selected' : ''}>정운영자 화면</option><option value="sub" ${S.me.role === 'sub' ? 'selected' : ''}>부운영자 화면</option><option value="teacher" ${S.me.role === 'teacher' ? 'selected' : ''}>${esc(t('teacher'))} 화면</option></select></div>
   </header>
   <div class="bmseg" role="tablist" aria-label="화면 전환"><button role="tab" type="button" data-act="bld-pane" data-v="chat" aria-selected="${!document.body.classList.contains('b-pv')}">대화</button><button role="tab" type="button" data-act="bld-pane" data-v="pv" aria-selected="${document.body.classList.contains('b-pv')}">미리보기${UI.bnew ? `<em>${UI.bnew}</em>` : ''}</button></div>
   <div class="bx">
@@ -202,8 +203,6 @@ AFTER.push(() => {
   S.chat.push({ role: 'ai', text: `「${bName(s)}」 단계를 마쳤습니다. 미리보기 화면에 반영되었습니다.${n ? `\n다음은 「${bName(n)}」입니다. ${bStep(n.id).d}.` : '\n모든 빌드 단계를 마쳤습니다. 이제 운영을 시작하실 수 있습니다.'}`, html: n ? `<div class="bqs"><button type="button" class="chip done" data-act="bld-step" data-v="${n.id}">「${esc(bName(n))}」 시작하기</button></div>` : '' });
   if (n) S.bld.cur = n.id; S.chat = S.chat.slice(-60); save(); setTimeout(() => { renderThreads(); const st = $('.bsteps'); if (st) st.outerHTML = bStrip(); const p = $('.bprog'); if (p) { const L = bList(), dn = L.filter(x => bDone(x.id)).length; p.querySelector('i').style.width = Math.round(dn / L.length * 100) + '%'; p.querySelector('b').textContent = `${dn}/${L.length}`; } }, 0);
 });
-/* 클래식 화면에서는 상단에 'AI 빌드 화면' 버튼 */
-AFTER.push(() => { if (!S || !S.org || bOn() || $('#bldOn')) return; const top = $('.topr'); top && top.insertAdjacentHTML('afterbegin', `<button id="bldOn" class="btn sm ai" data-act="bld-on">${ic('spark', 14)} AI 빌드 화면</button>`); });
 
 /* ── 동작 ── */
 ACT['bld-step'] = el => { const s = bStep(el.dataset.v); if (!s) return; if (!s.req && !S.bld.steps[s.id]?.on) { S.bld.steps[s.id].on = true; } closeModal(); if (innerWidth <= 860) document.body.classList.add('b-pv'); bOpenStep(s.id, S.bld.cur !== s.id || !S.chat.some(m => m.bld === s.id)); };
@@ -213,8 +212,7 @@ ACT['bld-tog'] = el => { const s = bStep(el.dataset.v); if (!s || s.req) return;
 ACT['bld-cfg'] = () => modal('빌드 단계 구성', `<p class="mini">필수 단계(기관 구성 · 과정 빌드 · ${esc(t('learner'))} 등록)는 항상 포함됩니다. 선택 단계는 기관에 필요한 것만 켜세요. 끈 단계의 메뉴와 데이터는 그대로 남습니다.</p>${bCfgList()}`, [{ id: 'c', label: '닫기', kind: 'pri' }]);
 ACT['bld-name'] = el => { const v = el.value.trim().slice(0, 30); if (!v) return; S.org.name = v; logAudit('기관명 변경 — ' + v); save(); render(); toast('기관명을 바꿨습니다.', 'ok'); };
 ACT['bld-pane'] = el => { const pv = el.dataset.v === 'pv'; document.body.classList.toggle('b-pv', pv); if (pv) UI.bnew = 0; render(); };
-ACT['bld-off'] = () => { S.bld.on = false; save(); logAudit('클래식 화면으로 전환'); render(); toast('메뉴 중심 클래식 화면입니다. 상단 「AI 빌드 화면」으로 돌아올 수 있습니다.'); };
-ACT['bld-on'] = () => { bEnsure(); S.bld.on = true; save(); render(); };
+ACT['bld-on'] = () => { bEnsure(); S.bld.on = true; save(); render(); }; ACT['bld-off'] = ACT['bld-on']; /* 옛 버튼이 남아 있어도 같은 화면 */
 ACT['bld-clear'] = () => { S.chat = []; const c = bCur(); if (c && !bAllDone()) S.chat.push(bGuideMsg(c.id)); save(); render(); };
 /* 다른 기관으로 바꾸거나 새로 만들 때도 빌드 모드로 시작 */
 { const base = createOrg; createOrg = (...a) => { base(...a); try { if (S && S.org) { delete S.bld; bInit(); } } catch (e) { console.error(e); } }; }
