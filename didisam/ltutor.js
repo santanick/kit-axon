@@ -1,0 +1,216 @@
+/* 디디쌤 스튜디오 v13 — 학습자 AI 튜터(학습자 포털 · 마이페이지)
+   내 학습 기록(진단 유형 · 과정 진도 · 과제 피드백 · 튜토리얼 · 배지 · 학습 달력)을 바탕으로
+   ① 오늘 할 일 브리핑 ② 맡기기(이번 주 학습 계획 · 복습 퀴즈 · 마감 알림) ③ 코칭(피드백 해설 · 다음 단계)
+   ④ 질문 답(지금 보는 레슨 맥락 · 힌트 → 스스로 풀기) ⑤ 선생님께 질문 넘기기(교수자 AI 조교로 전달)를 한다.
+   운영(live): 서버 /api/pub/<tid>/tutor(Claude, 서버가 학습 맥락을 직접 구성 · 학습자별 일일 한도) → 실패 시 규칙 엔진.
+   대화 내용은 저장하지 않는다(맡긴 계획 · 넘긴 질문만 학습 기록에 남김). 과제를 대신 써 주지 않는다. */
+'use strict';
+Object.assign(ICP, { send: 'M5 12h14M13 6l6 6-6 6', chat: 'M4 5h16v11H8l-4 4z', cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', up: 'M12 19V5M6 11l6-6 6 6' });
+const LT = { open: false, msgs: [], busy: false, ai: null, nudged: false, q: {} };
+const TCFG = () => ({ enabled: true, name: 'AI 튜터', daily: 20, help: 'feedback', loginOnly: false, guide: '', ...((SITE() && SITE().tutor) || {}) });
+const ltDayKey = () => 'didisam.lt.' + (LR.tid || 'x') + '.' + ((LR.me && LR.me.sid) || 'guest') + '.' + kstDay();
+const ltUsed = () => { try { return +sessionStorage.getItem(ltDayKey()) || 0; } catch (e) { return 0; } };
+const ltUse = () => { try { sessionStorage.setItem(ltDayKey(), String(ltUsed() + 1)); } catch (e) { } };
+const ltTutor = () => { LR.lp.tutor = LR.lp.tutor && typeof LR.lp.tutor === 'object' ? LR.lp.tutor : {}; const T = LR.lp.tutor; T.plan = Array.isArray(T.plan) ? T.plan : []; T.ask = Array.isArray(T.ask) ? T.ask : []; return T; };
+const ltQA = () => (LR.mine && Array.isArray(LR.mine.qa) ? LR.mine.qa : []);
+
+/* ── 지금 보는 곳 · 내 학습 상태 ── */
+function ltWhere() {
+  const r = route(); const S2 = SITE();
+  if (r.a === 'c') { const c = S2.classes.find(x => x.id === r.b); const iid = decodeURIComponent(location.hash.slice(1)).split('/')[2]; const it = c && (c.items.find(x => x.id === iid) || null); return { k: 'cls', c, it, label: c ? `${c.name}${it ? ' › ' + it.title : ''}` : '코스' }; }
+  if (r.a === 't') { const t = S2.tuts.find(x => x.id === r.b); return { k: 'tut', t, label: t ? `튜토리얼 › ${t.title}` : '튜토리얼' }; }
+  if (r.a === 'bk') { const b = (S2.dbooks || []).find(x => x.id === r.b); return { k: 'book', b, label: b ? `디지털북 › ${b.title}` : '디지털북' }; }
+  if (r.a === 'dg') return { k: 'diag', label: '진단' };
+  const p = (S2.pages || []).find(x => x.id === r.a); return { k: r.a === 'my' ? 'my' : 'page', label: r.a === 'my' ? '마이페이지' : (p ? p.name : '홈') };
+}
+function ltTodo() {
+  if (!LR.me) return [];
+  const st = myStats(); const M = meNow(); const A = []; const add = (h, d, href, k = '') => { if (!A.some(a => a.href === href)) A.push({ h, d, href, k }); };
+  st.courses.filter(x => x.st === 'returned').forEach(x => add(`재제출 · ${x.c.name}`, x.fb ? '피드백: ' + x.fb.slice(0, 60) : '피드백을 확인하고 다시 제출하세요.', `#c/${x.c.id}`, 'warn'));
+  if (M.next) add(M.next.h, M.next.d, M.next.href, M.next.warn ? 'warn' : '');
+  st.courses.filter(x => !x.done && x.next).slice(0, 2).forEach(x => add(`이어서 학습 · ${x.c.name}`, `${x.next.title} · 진도 ${x.p}%`, `#c/${x.c.id}/${x.next.id}`));
+  st.tuts.filter(x => (x.r.steps || []).filter(Boolean).length >= 3 && !x.r.mission).slice(0, 1).forEach(x => add(`미션 제출 · ${x.t.title}`, x.t.mission || '결과물을 제출하면 배지로 이어집니다.', `#t/${x.t.id}`));
+  const soon = st.courses.filter(x => !x.done && x.c.end && (Date.parse(x.c.end) - Date.now()) / 864e5 <= 14 && Date.parse(x.c.end) > Date.now()).slice(0, 1);
+  soon.forEach(x => add(`마감 임박 · ${x.c.name}`, `${x.c.end} 종료 · 남은 진도 ${100 - x.p}%`, `#c/${x.c.id}`, 'warn'));
+  return A.slice(0, 5);
+}
+function ltCtxLine() {
+  const w = ltWhere(); if (!LR.me) return `지금 보는 곳: ${w.label} · 로그인 전`;
+  const st = myStats(); const ty = st.myType ? tyOf(st.myType) : null;
+  return `지금 보는 곳: ${w.label} · ${ty ? `내 유형 ${st.myType}` : '진단 전'} · 평균 진도 ${st.avg}% · 연속 ${st.streak}일`;
+}
+function ltChips() {
+  const w = ltWhere(); const C = [];
+  if (!LR.me) return ['어떻게 시작하면 돼요?', '진단은 뭐예요?', '로그인은 어떻게 해요?'];
+  if (w.k === 'cls' && w.it) C.push('이 레슨 핵심만 정리해줘', '이 내용으로 확인 문제 내줘');
+  else if (w.k === 'tut') C.push('3단계 따라 하는 방법 알려줘', '미션 어떻게 쓰면 돼?');
+  C.push('오늘 뭐 하면 돼?', '이번 주 학습 계획 짜줘');
+  if (myStats().courses.some(x => x.fb)) C.push('과제 피드백 해설해줘'); else C.push('복습 퀴즈 내줘');
+  C.push('내 학습 리포트 보여줘');
+  return [...new Set(C)].slice(0, 5);
+}
+
+/* ── 응답 카드 ── */
+const ltLinks = A => `<div class="lt-acts">${A.map(a => `<a class="lt-act ${a.k || ''}" href="${esc(a.href)}" data-tact="go"><b>${esc(a.h)}</b><small>${esc(a.d || '')}</small>${ico('arrow', 15)}</a>`).join('')}</div>`;
+const ltBtns = L => `<div class="lt-qs">${L.map(([l, q, k]) => `<button type="button" class="lt-chip ${k || ''}" data-tact="${k === 'esc' ? 'esc' : 'q'}" data-v="${esc(q || l)}">${esc(l)}</button>`).join('')}</div>`;
+function ltBrief() {
+  const C = TCFG();
+  if (!LR.me) return { t: `안녕하세요, ${C.name}입니다.\n로그인하면 내 진단 결과 · 진도 · 과제 피드백을 바탕으로 오늘 할 일을 정리하고, 학습 계획과 복습까지 맡아 드립니다.`, h: `<div class="lt-acts"><a class="lt-act" href="#login" data-tact="go"><b>로그인하기</b><small>${SITE().org.type === 'univ' ? '학번' : '번호'} + 접근코드</small>${ico('arrow', 15)}</a>${diagFirst() ? `<a class="lt-act" href="#dg/${esc(diagFirst().id)}" data-tact="go"><b>3분 진단 먼저 해 보기</b><small>나에게 맞는 과정이 열립니다</small>${ico('arrow', 15)}</a>` : ''}</div>` };
+  const A = ltTodo(); const st = myStats(); const qa = ltQA().filter(x => !LT.q['seen' + x.id]);
+  const lines = [`${LR.me.sid}님, 내 학습 기록을 보고 ${A.length ? `오늘 할 일 ${A.length}가지를 정리했습니다.` : '오늘 급한 일은 없습니다.'}`];
+  if (st.streak >= 2) lines.push(`${st.streak}일 연속 학습 중입니다. 오늘도 이어 가 볼까요?`); else if (st.active) lines.push('오늘 10분만 해도 연속 학습이 시작됩니다.');
+  if (qa.length) lines.push(`선생님 답변 ${qa.length}건이 도착했습니다.`);
+  return { t: lines.join('\n'), h: (qa.length ? `<div class="lt-qa">${qa.slice(0, 2).map(x => `<div><small>선생님 답변 · ${esc(x.cls || '')}</small><b>Q. ${esc(x.q)}</b><p>${nl(x.a)}</p></div>`).join('')}</div>` : '') + (A.length ? ltLinks(A) : '') + ltBtns([['이번 주 학습 계획 맡기기', '이번 주 학습 계획 짜줘'], ['복습 퀴즈', '복습 퀴즈 내줘'], ...(st.courses.some(x => x.fb) ? [['피드백 해설', '과제 피드백 해설해줘']] : [])]) };
+}
+function ltPlan() {
+  const st = myStats(); const S2 = SITE(); const T = [];
+  st.courses.filter(x => x.st === 'returned').forEach(x => T.push({ t: `「${x.c.name}」 피드백 반영해 재제출`, m: 30, h: `#c/${x.c.id}` }));
+  st.courses.filter(x => !x.done).forEach(x => { const r = (LR.lp.cls[x.c.id] || { items: {} }).items || {}; x.c.items.filter(i => !(r[i.id] || {}).done).slice(0, 3).forEach(i => T.push({ t: `${x.c.name} · ${i.title}`, m: i.type === 'video' ? Math.max(10, Math.round((i.time || 600) / 60)) : i.type === 'quiz' ? 15 : 25, h: `#c/${x.c.id}/${i.id}` })); });
+  st.tuts.filter(x => (x.r.steps || []).filter(Boolean).length < 3).slice(0, 2).forEach(x => T.push({ t: `튜토리얼 이어 하기 · ${x.t.title}`, m: 20, h: `#t/${x.t.id}` }));
+  if (T.length < 4) { const done = new Set(st.tuts.map(x => x.t.id)); S2.tuts.filter(t => !done.has(t.id) && (!st.myType || t.type === st.myType)).slice(0, 4 - T.length).forEach(t => T.push({ t: `추천 튜토리얼 · ${t.title}`, m: 20, h: `#t/${t.id}` })); }
+  const days = []; const wk = ['일', '월', '화', '수', '목', '금', '토']; for (let i = 0, d = new Date(); days.length < 5 && i < 9; i++, d = new Date(d.getTime() + 864e5)) { if (d.getDay() === 0 || d.getDay() === 6) continue; days.push(`${d.getMonth() + 1}/${d.getDate()}(${wk[d.getDay()]})`); }
+  const P = []; T.slice(0, 10).forEach((x, i) => P.push({ d: days[Math.min(days.length - 1, Math.floor(i / 2))], t: x.t, m: x.m, h: x.h }));
+  return P;
+}
+const ltPlanHTML = (P, saved) => `<div class="lt-plan">${[...new Set(P.map(x => x.d))].map(d => `<div class="lt-pd"><b>${esc(d)}</b>${P.filter(x => x.d === d).map(x => `<a href="${esc(x.h)}" data-tact="go"><span>${esc(x.t)}</span><small>${x.m}분</small></a>`).join('')}</div>`).join('')}</div>${saved ? '' : `<div class="lt-qs"><button type="button" class="lt-chip pri" data-tact="plan-save">이 계획으로 맡기기</button><button type="button" class="lt-chip" data-tact="q" data-v="계획 더 가볍게 짜줘">더 가볍게</button></div>`}`;
+function ltQuiz(scope) {
+  const S2 = SITE(); const w = ltWhere(); const st = LR.me ? myStats() : null;
+  let pool = []; const take = c => c.items.filter(i => i.type === 'quiz' && i.qs && i.qs.length).forEach(i => i.qs.filter(q => q.t === 'mc' || q.t === 'ox').forEach(q => pool.push({ ...q, from: `${c.name} · ${i.title}` })));
+  if (scope === 'here' && w.k === 'cls' && w.c) take(w.c); if (!pool.length && st) st.courses.forEach(x => take(x.c)); if (!pool.length) S2.classes.slice(0, 3).forEach(take);
+  const seen = new Set(); pool = pool.map(q => ({ ...q, q: String(q.q || '').replace(/^\s*\d+[.)]\s*/, '') })).filter(q => q.q && !seen.has(q.q) && seen.add(q.q)); pool = pool.sort((a, b) => (a.q.length * 7 % 13) - (b.q.length * 7 % 13)).slice(0, 3); return pool;
+}
+const ltQuizHTML = (Z, qid) => Z.length ? `<form class="lt-quiz" data-qid="${qid}">${Z.map((q, k) => `<fieldset><legend>${k + 1}. ${esc(q.q)}<small>${esc(q.from)}</small></legend>${(q.t === 'ox' ? ['O', 'X'] : q.opts).map((o, j) => `<label><input type="radio" name="z${k}" value="${q.t === 'ox' ? o : j}"><span>${esc(o)}</span></label>`).join('')}</fieldset>`).join('')}<button type="submit" class="lt-chip pri">채점하기</button></form>` : '<p class="lt-mini">아직 퀴즈가 있는 과정이 없습니다. 과정을 시작하면 그 내용으로 복습 문제를 내 드립니다.</p>';
+function ltSplit(s, n = 3) { return String(s || '').split(/(?<=[.!?。])\s+|\n+/).map(x => x.trim()).filter(x => x.length > 4).slice(0, n); }
+
+/* ── 규칙 엔진(시연 · 운영 실패 시) ── */
+function ltRule(q) {
+  const s = String(q || '').trim(); const C = TCFG(); const w = ltWhere();
+  if (/(대신|대필).{0,8}(써|작성|해\s*줘|만들)|정답\s*(만\s*)?(알려|줘)|답\s*만\s*(알려|줘)|베껴/.test(s)) return { t: '과제나 시험 답을 대신 써 드리지는 않습니다. 대신 스스로 완성할 수 있게 같이 풀어 보겠습니다.\n1) 과제가 요구하는 것을 한 문장으로 적어 보세요.\n2) 내 생각을 3줄로 써 보세요(맞고 틀림은 신경 쓰지 않아도 됩니다).\n3) 근거나 예시를 하나 붙이세요.\n쓴 내용을 붙여 주시면 평가 기준에 맞춰 무엇을 보완하면 좋은지 짚어 드리겠습니다.', h: ltBtns([['선생님께 질문 넘기기', s, 'esc']]) };
+  if (!LR.me) {
+    if (/진단/.test(s)) return { t: '진단은 몇 문항으로 내 AI 활용 유형과 수준을 알려 주는 짧은 테스트입니다. 결과에 맞춰 코스와 튜토리얼이 추천됩니다.', h: diagFirst() ? ltLinks([{ h: '진단 시작', d: `${diagFirst().items.length}문항`, href: '#dg/' + diagFirst().id }]) : '' };
+    if (/로그인|접근\s*코드|계정/.test(s)) return { t: `${SITE().org.type === 'univ' ? '학번' : '번호'}과 접근코드로 로그인합니다. 접근코드는 담당 선생님이나 운영 사무실에서 받으실 수 있습니다.`, h: ltLinks([{ h: '로그인하기', d: '', href: '#login' }]) };
+    return ltBrief();
+  }
+  if (/(선생님|교수님|강사님|담당자).{0,10}(물어|질문|전달|넘겨|문의)|질문\s*넘겨/.test(s)) return { esc: true };
+  if (/(오늘|지금).{0,6}(뭐|무엇|할\s*일)|할\s*일|브리핑|뭐부터/.test(s)) return ltBrief();
+  if (/(계획|스케줄|플랜|일정).{0,6}(짜|세워|만들|맡)|가볍게/.test(s)) { const light = /가볍게|줄여|적게/.test(s); let P = ltPlan(); if (light) P = P.filter((x, i) => i % 2 === 0); LT.plan = P; return { t: P.length ? `이번 주 평일 ${[...new Set(P.map(x => x.d))].length}일 계획입니다. 재제출 → 진행 중인 과정 → 추천 순서로, 하루 ${light ? '1' : '2'}개 · 약 ${Math.round(P.reduce((a, x) => a + x.m, 0) / Math.max(1, new Set(P.map(x => x.d)).size))}분씩 배치했습니다.` : '지금 남은 학습이 없습니다. 다음 수준 튜토리얼로 계획을 세워 볼까요?', h: P.length ? ltPlanHTML(P) : '' }; }
+  if (/(퀴즈|복습|확인\s*문제|문제\s*내|테스트)/.test(s)) { const Z = ltQuiz(/이\s*(내용|레슨|강의)/.test(s) ? 'here' : ''); const id = 'z' + Date.now().toString(36); LT.q[id] = Z; return { t: Z.length ? `수강 중인 과정에서 ${Z.length}문제를 골랐습니다. 풀고 [채점하기]를 누르세요. 틀린 문제는 해설과 다시 볼 레슨을 알려 드립니다.` : '', h: ltQuizHTML(Z, id) }; }
+  if (/(피드백|재제출|점수|채점|왜\s*(틀|감점)|평가)/.test(s)) { const L = myStats().courses.filter(x => x.fb || x.st === 'returned');
+    if (!L.length) return { t: '아직 받은 과제 피드백이 없습니다. 과제를 제출하면 선생님 피드백이 오고, 제가 무엇을 보완하면 되는지 풀어서 설명해 드립니다.' };
+    const x = L.find(y => y.st === 'returned') || L[0]; const pts = ltSplit(x.fb, 3);
+    return { t: `「${x.c.name}」 과제 피드백을 풀어 보았습니다.${x.score != null ? ` 점수 ${x.score}점.` : ''}${x.st === 'returned' ? ' 재제출 요청이 있습니다.' : ''}`, h: `<div class="lt-fb"><small>선생님 피드백 원문</small><p>${nl(x.fb || '(피드백 없음)')}</p></div><ol class="lt-ol">${(pts.length ? pts : ['요구사항을 다시 읽고 빠진 항목 찾기']).map(p => `<li><b>${esc(p)}</b><small>→ 내 제출물에서 이 부분이 어디에 해당하는지 표시해 보세요.</small></li>`).join('')}</ol><p class="lt-mini">고친 초안을 붙여 주시면 ${C.help === 'hint' ? '힌트로' : '평가 기준에 맞춰'} 다시 봐 드립니다. 답을 대신 쓰지는 않습니다.</p>${ltLinks([{ h: '과제 다시 보기', d: x.c.name, href: `#c/${x.c.id}`, k: x.st === 'returned' ? 'warn' : '' }])}` }; }
+  if (/(리포트|진도|현황|얼마나|성적|통계|분석)/.test(s)) { const st = myStats(); const S2 = SITE(); const nb = S2.badges.find(b => (b.level ?? 0) === st.level);
+    return { t: `학습 리포트입니다. 평균 진도 ${st.avg}% · 연속 학습 ${st.streak}일 · 배지 ${LR.mine.badges.length}개${st.myType ? ` · 유형 ${st.myType}(${tyOf(st.myType).name})` : ''}.${nb ? `\n다음 배지 「${nb.name}」까지 이 수준 튜토리얼을 마치면 됩니다.` : ''}`, h: `<div class="lt-rep">${st.courses.map(x => `<div><span>${esc(x.c.name)}</span><i style="--p:${x.p}%"></i><b>${x.p}%</b></div>`).join('') || '<p class="lt-mini">수강 중인 과정이 없습니다.</p>'}</div>${ltBtns([['이번 주 계획 맡기기', '이번 주 학습 계획 짜줘'], ['약한 부분 복습', '복습 퀴즈 내줘']])}` }; }
+  if (/(추천|뭐\s*(들|볼)|다음\s*(과정|코스)|내\s*유형|수준)/.test(s)) { const st = myStats(); const S2 = SITE(); const done = new Set(st.tuts.filter(x => (x.r.steps || []).filter(Boolean).length >= 3).map(x => x.t.id)); const R = S2.tuts.filter(t => !done.has(t.id) && (!st.myType || t.type === st.myType)).slice(0, 3);
+    return { t: st.myType ? `${st.myType}(${tyOf(st.myType).name}) 유형에 맞춰 골랐습니다.` : '진단 전이라 많이 듣는 순서로 골랐습니다. 진단을 하면 더 정확해집니다.', h: ltLinks(R.map(t => ({ h: t.title, d: `${tyOf(t.type).name} · ${lvOf(t.level).name}`, href: '#t/' + t.id }))) }; }
+  if (/(마감|알림|언제까지|기한)/.test(s)) { const L = myStats().courses.filter(x => !x.done && x.c.end).sort((a, b) => a.c.end.localeCompare(b.c.end));
+    return { t: L.length ? `마감이 가까운 순서입니다. 계획을 맡기시면 마감 전에 끝나도록 배치해 드립니다.` : '진행 중인 마감이 없습니다.', h: L.length ? `<div class="lt-rep">${L.slice(0, 4).map(x => `<div><span>${esc(x.c.name)}</span><small>${esc(x.c.end)} 종료</small><b>${x.p}%</b></div>`).join('')}</div>${ltBtns([['마감 맞춰 계획 짜기', '이번 주 학습 계획 짜줘']])}` : '' }; }
+  if (w.k === 'cls' && w.it && /(정리|요약|핵심|설명|이해|모르|어려|뭐야|무슨)/.test(s)) { const it = w.it; const pts = ltSplit(it.desc, 3);
+    return { t: `「${it.title}」을 정리했습니다.`, h: `<ol class="lt-ol">${(pts.length ? pts : [`이 레슨의 목표: ${it.title}`, '영상(자료)을 보며 낯선 용어 2개를 적어 보세요.', '내 업무 · 전공에 쓸 수 있는 예를 하나 떠올려 보세요.']).map(p => `<li><b>${esc(p)}</b></li>`).join('')}</ol><p class="lt-mini">스스로 확인: 이 레슨에서 가장 중요한 한 가지를 한 문장으로 말하면 무엇일까요? 답을 적어 주시면 맞는지 봐 드립니다.</p>${ltBtns([['확인 문제 내줘', '이 내용으로 확인 문제 내줘'], ['선생님께 질문 넘기기', s, 'esc']])}` }; }
+  if (w.k === 'tut' && w.t && /(단계|따라|미션|어떻게)/.test(s)) { const t = w.t;
+    return { t: `「${t.title}」은 영상을 보고 3단계를 따라 한 뒤 미션 결과물을 제출하면 됩니다.`, h: `<ol class="lt-ol">${(t.steps || []).slice(0, 3).map(x => `<li><b>${esc(typeof x === 'string' ? x : (x.t || x.title || ''))}</b></li>`).join('')}</ol>${t.mission ? `<p class="lt-mini">미션: ${esc(t.mission)}<br>미션은 '무엇을 했는지 · 결과 · 느낀 점'을 2~3줄로 쓰면 충분합니다.</p>` : ''}` }; }
+  return { t: `좋은 질문입니다. 바로 답을 드리기보다 같이 풀어 보겠습니다.\n1) 지금 막힌 부분이 개념인지, 실습 방법인지 알려 주세요.\n2) 지금까지 시도한 것을 한 줄로 적어 주세요.\n${w.k === 'cls' && w.it ? `「${w.it.title}」 내용과 연결해 힌트를 드리겠습니다.` : '보고 있는 레슨을 열고 물어보시면 그 내용에 맞춰 답합니다.'}`, h: ltBtns([['선생님께 질문 넘기기', s, 'esc'], ['오늘 할 일', '오늘 뭐 하면 돼?']]) };
+}
+
+/* ── 운영: 서버 튜터(Claude) ── */
+async function ltAI(q) {
+  if (LR.mode !== 'live' || !LR.me) return null;
+  if (LT.ai === null) { try { const r = await fetch('/api/config', { credentials: 'same-origin' }); const j = r.ok ? await r.json() : {}; LT.ai = !!j.ai; } catch (e) { LT.ai = false; } }
+  if (!LT.ai) return null; const w = ltWhere();
+  const hist = LT.msgs.filter(m => m.t && !m.sys).slice(-6).map(m => ({ r: m.me ? 'u' : 'a', t: String(m.t).slice(0, 800) }));
+  const r = await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/tutor`, { q: String(q).slice(0, 800), where: { k: w.k, c: w.c && w.c.id, it: w.it && w.it.id, t: w.t && w.t.id }, hist });
+  return { t: r.text, src: r.model };
+}
+
+/* ── 질문 넘기기(교수자 AI 조교로) ── */
+function ltEscalate(q) {
+  const w = ltWhere(); const T = ltTutor(); const st = myStats(); const cls = (w.c && w.c.name) || (st.courses[0] && st.courses[0].c.name) || '';
+  const x = { id: 'q' + Date.now().toString(36), q: String(q || '').slice(0, 400), cls, cid: (w.c && w.c.id) || (st.courses[0] && st.courses[0].c.id) || '', where: w.label.slice(0, 80), at: nowISO() };
+  if (!x.q) return { t: '넘길 질문을 먼저 적어 주세요.' };
+  T.ask = [x, ...T.ask].slice(0, 30); LR.api.save();
+  try { if (LR.mode === 'preview' && window.parent !== window && window.parent.tqAdd) window.parent.tqAdd({ ...x, sid: LR.me.sid }); } catch (e) { }
+  return { t: `「${x.q.slice(0, 40)}${x.q.length > 40 ? '…' : ''}」 질문을 ${cls ? `「${cls}」 ` : ''}담당 선생님께 넘겼습니다.\n선생님의 AI 조교가 답변 초안을 준비하고, 선생님이 확인한 답변이 오면 여기와 마이페이지에 표시됩니다.` };
+}
+
+/* ── 화면 ── */
+function ltMsgHTML(m) { return `<div class="lt-m ${m.me ? 'u' : ''}">${m.me ? '' : '<span class="lt-orb sm" aria-hidden="true"></span>'}<div class="lt-b">${m.t ? `<p>${nl(m.t)}</p>` : ''}${m.h || ''}${!m.me && m.src ? `<small class="lt-src"><i></i>${esc(m.src)}</small>` : ''}</div></div>`; }
+function ltRender() {
+  if (!SITE()) return; const C = TCFG(); let R = $('#ltut');
+  if (!C.enabled) { if (R) R.remove(); return; }
+  if (!R) { R = document.createElement('div'); R.id = 'ltut'; R.className = 'lt'; document.body.appendChild(R); }
+  const A = LR.me ? ltTodo() : []; const qa = ltQA().filter(x => !LT.q['seen' + x.id]).length; const badge = A.length + qa;
+  const left = Math.max(0, (+C.daily || 20) - ltUsed());
+  R.innerHTML = `<button type="button" class="lt-fab ${LT.open ? 'hide' : ''}" data-tact="open" aria-label="${esc(C.name)} 열기"><span class="lt-orb" aria-hidden="true"></span><span class="lt-ft"><b>${esc(C.name)}</b><small>${LR.me ? (badge ? `오늘 할 일 ${badge}` : '무엇이든 물어보세요') : '로그인하면 맞춤 코칭'}</small></span>${badge ? `<em>${badge}</em>` : ''}</button>
+  ${!LT.open && LT.nudge ? `<div class="lt-nudge" role="status"><b>${esc(LT.nudge)}</b><button type="button" data-tact="open">열기</button><button type="button" class="x" data-tact="nudge-x" aria-label="닫기">${ico('x', 14)}</button></div>` : ''}
+  <section class="lt-panel ${LT.open ? 'on' : ''}" role="dialog" aria-label="${esc(C.name)}" ${LT.open ? '' : 'hidden'}>
+    <header class="lt-hd"><span class="lt-orb" aria-hidden="true"></span><div><b>${esc(C.name)}</b><small>${LR.me ? '내 학습 기록에 맞춰 도와 드려요' : '로그인 전 · 일반 안내'}</small></div><button type="button" class="lt-x" data-tact="close" aria-label="닫기">${ico('x', 18)}</button></header>
+    <div class="lt-ctx">${esc(ltCtxLine())}</div>
+    <div class="lt-th" aria-live="polite">${LT.msgs.map(ltMsgHTML).join('')}${LT.busy ? '<div class="lt-m"><span class="lt-orb sm"></span><div class="lt-b"><span class="lt-dots"><i></i><i></i><i></i></span></div></div>' : ''}</div>
+    <div class="lt-chips">${ltChips().map(x => `<button type="button" class="lt-chip" data-tact="q" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+    <form class="lt-in" id="ltf"><label for="ltq" class="sr">${esc(C.name)}에게 질문</label><textarea id="ltq" rows="1" maxlength="800" placeholder="${LR.me ? '궁금한 것 · 맡길 일을 적어 주세요' : '무엇이든 물어보세요'}"></textarea><button type="submit" aria-label="보내기" ${LT.busy ? 'disabled' : ''}>${ico('send', 18)}</button></form>
+    <small class="lt-note">대화 내용은 저장하지 않아요 · 과제를 대신 써 주지 않고 함께 풀어요 · 오늘 ${left}회 남음</small>
+  </section>`;
+  const th = R.querySelector('.lt-th'); if (th) th.scrollTop = th.scrollHeight;
+}
+function ltOpen() {
+  LT.open = true; LT.nudge = ''; document.body.classList.add('lt-on');
+  if (!LT.msgs.length || LT.who !== ((LR.me && LR.me.sid) || '')) { LT.who = (LR.me && LR.me.sid) || ''; const b = ltBrief(); LT.msgs = [{ t: b.t, h: b.h, sys: 1 }]; ltQA().forEach(x => { LT.q['seen' + x.id] = 1; }); }
+  ltRender(); setTimeout(() => $('#ltq') && $('#ltq').focus(), 30);
+}
+async function ltAsk(q, opts = {}) {
+  q = String(q || '').trim(); if (!q || LT.busy) return; const C = TCFG();
+  if (!LT.open) ltOpen();
+  if (C.loginOnly && !LR.me) { LT.msgs.push({ me: 1, t: q }, { t: '로그인한 뒤에 쓸 수 있습니다.', h: ltLinks([{ h: '로그인하기', d: '', href: '#login' }]) }); ltRender(); return; }
+  if (ltUsed() >= (+C.daily || 20)) { LT.msgs.push({ me: 1, t: q }, { t: `오늘 질문 한도(${C.daily}회)를 모두 썼습니다. 내일 다시 이어 가거나, 급한 질문은 선생님께 넘겨 주세요.`, h: ltBtns([['선생님께 질문 넘기기', q, 'esc']]) }); ltRender(); return; }
+  LT.msgs.push({ me: 1, t: q }); LT.msgs = LT.msgs.slice(-30); ltUse();
+  if (opts.esc) { const r = ltEscalate(q); LT.msgs.push({ ...r, src: '질문 전달' }); ltRender(); return; }
+  let r = ltRule(q); if (r.esc) { const last = [...LT.msgs].reverse().find(m => m.me && !/(선생님|교수님|강사님).{0,10}(물어|질문|전달|넘겨)/.test(m.t)); r = ltEscalate(last ? last.t : q); LT.msgs.push({ ...r, src: '질문 전달' }); ltRender(); return; }
+  const actionish = /(계획|스케줄|퀴즈|복습|문제\s*내|리포트|진도|현황|할\s*일|브리핑|마감|추천|대신|정답)/.test(q);
+  if (!actionish && LR.mode === 'live' && LR.me) {
+    LT.busy = true; ltRender();
+    try { const a = await ltAI(q); if (a && a.t) r = { t: a.t, h: ltBtns([['선생님께 질문 넘기기', q, 'esc']]), src: `Claude · ${String(a.src || '').replace('claude-', '')}` }; } catch (e) { r = { ...r, src: `규칙 엔진 · ${e.message}` }; }
+    LT.busy = false;
+  }
+  LT.msgs.push({ src: r.src || (LR.mode === 'live' ? '규칙 엔진' : '시연 응답 · 규칙 엔진'), ...r }); LT.msgs = LT.msgs.slice(-30); ltRender();
+}
+
+/* ── 이벤트 ── */
+document.addEventListener('click', e => { const el = e.target.closest('[data-tact]'); if (!el) return; const k = el.dataset.tact;
+  if (k === 'go') { if (innerWidth <= 600) { LT.open = false; document.body.classList.remove('lt-on'); setTimeout(ltRender, 0); } return; }
+  e.preventDefault();
+  if (k === 'open') ltOpen();
+  if (k === 'close') { LT.open = false; document.body.classList.remove('lt-on'); ltRender(); $('.lt-fab') && $('.lt-fab').focus(); }
+  if (k === 'nudge-x') { LT.nudge = ''; ltRender(); }
+  if (k === 'q') ltAsk(el.dataset.v);
+  if (k === 'esc') ltAsk(el.dataset.v, { esc: true });
+  if (k === 'mq') { ltOpen(); ltAsk(el.dataset.v); }
+  if (k === 'plan-save' && LR.me && LT.plan) { const T = ltTutor(); T.plan = LT.plan.slice(0, 14).map(x => ({ d: x.d, t: x.t.slice(0, 80), m: x.m, h: x.h })); T.planAt = nowISO(); LR.api.save(); LT.msgs.push({ t: `계획을 맡았습니다. 마이페이지 「AI 튜터 코칭」에 저장했고, 날마다 할 일을 여기서 알려 드리겠습니다.${LR.mode === 'preview' ? '\n(미리보기에서는 기록이 저장되지 않습니다)' : ''}`, src: '맡기기' }); ltRender(); if (route().a === 'my') lrender(); }
+  if (k === 'plan-clear' && LR.me) { ltTutor().plan = []; LR.api.save(); lrender(); }
+});
+document.addEventListener('submit', e => { const f = e.target;
+  if (f.id === 'ltf') { e.preventDefault(); const v = f.querySelector('textarea').value; f.querySelector('textarea').value = ''; ltAsk(v); }
+  if (f.classList.contains('lt-quiz')) { e.preventDefault(); const Z = LT.q[f.dataset.qid] || []; let ok = 0; const R = Z.map((q, k) => { const v = (f.querySelector(`[name=z${k}]:checked`) || {}).value; const right = q.t === 'ox' ? String(v || '').toUpperCase() === String(q.a).toUpperCase() : String(v) === String(q.a); if (right) ok++; return { q, right, ans: q.t === 'ox' ? q.a : (q.opts || [])[+q.a] }; });
+    const zr = `<div class="lt-zr"><b>${ok} / ${Z.length} 정답</b>${R.map((x, k) => `<div class="${x.right ? 'ok' : 'no'}"><span>${x.right ? '정답' : '오답'}</span><p>${k + 1}. ${esc(x.q.q)}<small>정답: ${esc(x.ans)} · ${esc(x.q.from)}</small></p></div>`).join('')}</div>`;
+    const mm = LT.msgs.find(m => m.h && m.h.includes(`data-qid="${f.dataset.qid}"`)); if (mm) mm.h = zr; else f.outerHTML = zr;
+    LT.msgs.push({ t: ok === Z.length ? '모두 맞혔습니다. 다음 레슨으로 넘어가도 좋습니다.' : `${Z.length - ok}문제를 다시 보면 좋겠습니다. 위에 표시한 레슨을 한 번 더 보고, 헷갈리는 부분을 물어보세요.`, h: ltBtns([['다른 문제 더', '복습 퀴즈 내줘'], ['오늘 할 일', '오늘 뭐 하면 돼?']]), src: '복습 퀴즈' }); ltRender(); }
+});
+document.addEventListener('keydown', e => { if (e.target.id === 'ltq' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#ltf').requestSubmit(); } if (e.key === 'Escape' && LT.open) { LT.open = false; document.body.classList.remove('lt-on'); ltRender(); } });
+
+/* ── 렌더 연결: 화면이 바뀌면 맥락 줄 · 칩 갱신, 로그인 후 첫 화면에 한 번 알림 ── */
+{ const base = lrender; lrender = () => { base(); try { if (LR.me && !LT.nudged && TCFG().enabled) { LT.nudged = true; const n = ltTodo().length + ltQA().length; if (n && !LT.open) LT.nudge = `${TCFG().name}: 오늘 할 일 ${n}가지를 정리해 두었어요`; } ltRender(); } catch (e) { console.error(e); } }; }
+
+/* ── 마이페이지: 'AI 튜터 코칭' 카드(맡긴 계획 · 선생님 답변 · 맡기기 버튼) ── */
+{ const base = MYR.next; MYR.next = st => { let card = '';
+  try { if (TCFG().enabled) { const T = ltTutor(); const A = ltTodo(); const qa = ltQA(); const C = TCFG(); const fb = st.courses.some(x => x.fb);
+    const line = A.length ? `오늘 할 일 ${A.length}가지 중 「${A[0].h}」부터 하면 좋겠습니다.` : '오늘 급한 일은 없습니다. 다음 수준 튜토리얼에 도전해 볼까요?';
+    card = `<div class="mycard wide lt-coach" id="m-tutor"><div class="lt-ch"><span class="lt-orb" aria-hidden="true"></span><div><small>${esc(C.name)} 코칭</small><b>${esc(line)}</b><span>평균 진도 ${st.avg}% · 연속 ${st.streak}일 · 배지 ${LR.mine.badges.length}개${st.myType ? ' · 유형 ' + esc(st.myType) : ''}</span></div></div>
+      <div class="lt-qs">${[['이번 주 계획 맡기기', '이번 주 학습 계획 짜줘'], ['복습 퀴즈', '복습 퀴즈 내줘'], ...(fb ? [['피드백 해설', '과제 피드백 해설해줘']] : []), ['내 학습 리포트', '내 학습 리포트 보여줘']].map(([l, q]) => `<button type="button" class="lt-chip" data-tact="mq" data-v="${esc(q)}">${ico('spark', 13)} ${esc(l)}</button>`).join('')}</div>
+      ${T.plan.length ? `<div class="lt-saved"><div class="lt-sh"><b>맡긴 이번 주 계획</b><button type="button" class="lt-link" data-tact="plan-clear">지우기</button></div>${ltPlanHTML(T.plan, true)}</div>` : ''}
+      ${qa.length || T.ask.length ? `<div class="lt-saved"><div class="lt-sh"><b>선생님께 넘긴 질문</b><small>${qa.length}건 답변 · ${Math.max(0, T.ask.length - qa.length)}건 대기</small></div>${qa.slice(0, 3).map(x => `<div class="lt-qa1"><b>Q. ${esc(x.q)}</b><p>${nl(x.a)}</p><small>${esc(x.cls || '')} · ${esc(String(x.at || '').slice(0, 10))}</small></div>`).join('')}${T.ask.filter(a => !qa.some(x => x.id === a.id)).slice(0, 3).map(a => `<div class="lt-qa1 wait"><b>Q. ${esc(a.q)}</b><small>답변 대기 · ${esc(a.cls || '')}</small></div>`).join('')}</div>` : ''}</div>`; } } catch (e) { console.error(e); }
+  return card + base(st); }; }
+
+/* ── 스튜디오 미리보기: 체험 학습자로 바로 보기(?preview=1&as=<학번>) — 기록은 저장하지 않음 ── */
+{ const base = LR.api.load; LR.api.load = async (...a) => { await base(...a);
+  try { const as = Q.get('as'); if (LR.mode === 'preview' && as && !LR.me) { const c = (LR._codes || []).find(x => x.sid === as); if (c) { LR.me = { sid: c.sid, dept: c.dept || '' }; try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[c.sid] || {}) }; } catch (e) { } } }
+    if (LR.mode === 'preview' && LR.me) { const P = window.parent; if (P && P.S) LR.mine = mineFrom(P.S, LR.me.sid); } } catch (e) { console.error(e); } }; }
+window.addEventListener('message', e => { if (e.origin === location.origin && e.data === 'didisam:reload' && LR.mode === 'preview' && LR.me) { try { LR.mine = mineFrom(window.parent.S, LR.me.sid); } catch (x) { } lrender(); } });

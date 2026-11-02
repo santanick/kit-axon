@@ -1,0 +1,34 @@
+/* 디디쌤 스튜디오 v13 — 역할별 AI SAM(시나리오 전환 · 교수자 AI 조교 · 학습자 AI 튜터 미리보기) */
+.scn{display:flex;gap:3px;padding:3px;border-radius:13px;background:var(--soft);flex:none}
+.scn button{border:0;background:transparent;border-radius:10px;padding:5px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;color:var(--muted);font-family:inherit}
+.scn button b{font-size:13px;color:inherit}.scn button small{font:700 10.5px var(--num);letter-spacing:.02em;color:inherit;opacity:.8}
+.scn button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(21,23,59,.12)}.scn button.on small{color:var(--mag);opacity:1}
+.mode-bld .top .scn{margin-left:14px}
+/* 교수자 */
+.tsteps .bst i{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tcl{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:12px}
+.tcc{margin:0}.tcm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;font-size:12.5px;color:var(--muted)}.tcm b{font:700 18px var(--num);color:var(--ink);margin-right:2px}.tcm .r b{color:var(--bad)}
+.tbar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden;margin:12px 0}.tbar i{display:block;height:100%;border-radius:99px;background:var(--ink)}
+.tq{display:block;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tqd{display:flex;flex-direction:column;gap:8px}.tqd>div{padding:10px 12px;border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--line)}.tqd small{font-size:11.5px;color:var(--muted)}.tqd b{display:block;font-size:13.5px;margin:2px 0}.tqd p{margin:0;font-size:13px;color:var(--ink2,#2B2E5A)}
+.trep{display:flex;flex-direction:column;gap:8px}.trep>div{padding:9px 12px;border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--line)}.trep b{display:block;font-size:13.5px}.trep span{font-size:12.5px;color:var(--muted)}
+/* 학습자 미리보기 */
+.lxv{display:grid;grid-template-columns:340px minmax(0,1fr);height:calc(100vh - 62px);height:calc(100dvh - 62px)}
+.lxs{background:#fff;border-right:1px solid var(--line);overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.lxh{display:flex;gap:10px;align-items:center}.lxh b{display:block;font-size:16px}.lxh small{display:block;font-size:12px;color:var(--muted)}
+.lxs .mini{margin:0}.lxs .fl{margin:0}.lxs .btn.blk{width:100%;justify-content:center}
+.lxseg{align-self:stretch;display:flex}.lxseg button{flex:1}
+.lxc{margin:0;padding:14px;background:var(--paper);box-shadow:none}
+.lxl{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}.lxl b{font-size:13px}.lxl small{display:block;font-size:12px;color:var(--muted)}
+.lxc .bdl{grid-template-columns:84px minmax(0,1fr);margin:0 0 10px;font-size:12.5px}
+.lxf{background:var(--paper) radial-gradient(rgba(21,23,59,.05) 1px,transparent 1px) 0 0/18px 18px;padding:18px;overflow:auto;display:flex;justify-content:center;min-width:0}
+.lxdev{width:100%;height:100%;border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px var(--line),0 24px 60px -30px rgba(21,23,59,.4);transition:width .3s}
+.lxdev.mo{width:390px;max-width:100%;height:min(844px,100%);border-radius:34px;box-shadow:0 0 0 8px #15173B,0 30px 70px -30px rgba(21,23,59,.6)}
+.lxdev iframe{width:100%;height:100%;border:0;display:block}
+@media (max-width:1180px){.mode-bld .top .scn button small{display:none}.lxv{grid-template-columns:300px minmax(0,1fr)}}
+@media (max-width:860px){
+  .mode-bld .top .scn{margin-left:auto}.mode-bld .top .brand .sub{display:none}
+  .lxv{display:block;height:auto}.lxs{border-right:0;border-bottom:1px solid var(--line)}.lxf{padding:12px;height:calc(100dvh - 62px)}.lxdev.mo{border-radius:18px;box-shadow:0 0 0 1px var(--line)}
+}
+@media (max-width:640px){.mode-bld .top .bprog,.mode-bld .top #lsGo,.mode-bld .top .topr select{display:none}.mode-bld .top .brand{min-width:0;flex:1}.mode-bld .top .brand b{min-width:0;max-width:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mode-bld .top .scn{margin-left:6px}.mode-bld .top .topr{margin-left:0}}
+@media (max-width:520px){.scn button{padding:5px 8px}.scn button b{font-size:12px}}

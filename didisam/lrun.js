@@ -18,8 +18,9 @@ const demoRoom = () => { try { const reg = JSON.parse(localStorage.getItem('didi
 const demoLPKey = () => 'didisam.room.' + LR.tid + '.lp';
 const mineFrom = (doc, sid) => { const own = (o, k) => o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k);
   const bk = Object.fromEntries(Object.entries(doc.bkgrades || {}).filter(([, M]) => own(M, sid)).slice(0, 200).map(([id, M]) => [id, Object.fromEntries(Object.entries(M[sid] || {}).slice(0, 200).map(([k, g]) => [k, { score: g && g.score != null && g.score !== '' ? +g.score : null, fb: String((g && g.fb) || '').slice(0, 500) }]))]));
-  const m = (doc.members || []).find(x => x && (x.sid === sid || x.name === sid)); if (!m) return { badges: [], cls: {}, bk };
-  return { bk, badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))),
+  const qa = (Array.isArray(doc.tq) ? doc.tq : []).filter(x => x && x.sid === sid && x.st === 'answered' && x.a).slice(0, 30).map(x => ({ id: String(x.id || ''), q: String(x.q || '').slice(0, 400), a: String(x.a || '').slice(0, 2000), cls: String(x.cls || '').slice(0, 60), at: String(x.aAt || x.at || '').slice(0, 25) }));
+  const m = (doc.members || []).find(x => x && (x.sid === sid || x.name === sid)); if (!m) return { badges: [], cls: {}, bk, qa };
+  return { bk, qa, badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))),
     cls: Object.fromEntries((doc.classes || []).filter(c => c.prog && c.prog[m.id]).map(c => { const g = c.prog[m.id]; const thr = (c.criteria && c.criteria.threshold) || 80; return [c.id, { p: Math.round(+g.p || 0), st: g.assign || 'none', fb: String(g.fb || '').slice(0, 1000), score: g.score ?? null, done: (+g.p || 0) >= thr }]; })) }; };
 const demoMine = st => (!st || !LR.me) ? { badges: [], cls: {} } : mineFrom(st, LR.me.sid);
 const SESS = 'didisam.learner.' ;
