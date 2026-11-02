@@ -6,8 +6,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { inTenant } = require('./db');
+const { createMcp } = require('./mcp');
 
-const TYPES = ['corp', 'univ', 'k12', 'adult', 'lifelong', 'voc'];
+const TYPES = ['corp', 'univ', 'public', 'k12', 'adult', 'lifelong', 'voc'];
 const MODELS = ['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5'];
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.yaml': 'text/plain; charset=utf-8', '.yml': 'text/plain; charset=utf-8', '.tf': 'text/plain; charset=utf-8', '.example': 'text/plain; charset=utf-8', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.mjs': 'text/javascript; charset=utf-8' };
 const SESSION_DAYS = 14;
@@ -203,8 +204,14 @@ ${here}`;
     return { text: (j.content || []).filter(x => x.type === 'text').map(x => x.text).join('\n').trim().slice(0, 4000), model: j.model || model };
   }
 
+  /* ── 외부 AI 연결(MCP) · API 키(v16) ── */
+  const mcp = createMcp({ pool, HttpErr, readBody, limit, audit, pepper });
+
   /* ── API ── */
   const routes = {
+    'GET /api/keys': async req => mcp.listKeys(await need(req)),
+    'POST /api/keys': async req => mcp.createKey(await need(req), req),
+    'POST /api/keys/revoke': async req => mcp.revokeKey(await need(req), req),
     'GET /api/health': async () => { await pool.query('select 1'); return { ok: true }; },
     'GET /api/config': async () => ({ live: true, signup: allowSignup, signupCode: !!signupCode, ai: !!aiKey, models: MODELS, aiDaily }),
 
@@ -349,6 +356,7 @@ ${here}`;
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x'); const key = `${req.method} ${url.pathname}`;
     try {
+      if (url.pathname === '/mcp') return await mcp.handle(req, res, send);
       if (url.pathname.startsWith('/api/')) {
         const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor)$/);
         const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key]; if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');

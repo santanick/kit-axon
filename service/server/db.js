@@ -112,7 +112,22 @@ const MIGRATIONS = [
        execute format('drop policy if exists tenant_iso on %I', t);
        execute format($p$create policy tenant_iso on %I using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true))$p$, t);
      end loop; end $$;
-   grant select, insert, update, delete on learners, learner_progress to didisam_tenant;`
+   grant select, insert, update, delete on learners, learner_progress to didisam_tenant;`,
+  /* 5 — 외부 AI 연결(v16 MCP): 기관 API 키. 평문은 저장하지 않고 HMAC 지문만. 인증 표라 세션처럼 RLS 밖에서 코드로 기관을 거른다. */
+  `create table if not exists api_keys (
+     id text primary key check (id ~ '^k_[a-f0-9]{12}$'),
+     tenant_id text not null references tenants(id) on delete cascade,
+     name text not null check (length(name) between 1 and 40),
+     prefix text not null,
+     hash text not null unique,
+     scope text not null default 'read' check (scope in ('read','write')),
+     created_by text not null default '',
+     created_at timestamptz not null default now(),
+     last_used timestamptz,
+     calls integer not null default 0,
+     revoked_at timestamptz
+   );
+   create index if not exists api_keys_tenant on api_keys (tenant_id);`
 ];
 
 async function migrate(pool) {
