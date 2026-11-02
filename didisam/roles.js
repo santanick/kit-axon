@@ -168,7 +168,7 @@ function lxDemo() {
   let code = S.codes.find(x => x.demo); if (code) return code;
   const id = c.learners.find(i => c.prog[i] && c.prog[i].p >= 25 && c.prog[i].p <= 70) || c.learners[0]; const m = M(id); if (!m) return null;
   const sid = m.sid || (m.extra || {}).학번 || ('2026' + String(9000 + S.codes.length)); m.sid = sid; m.extra = { ...(m.extra || {}), 학번: (m.extra || {}).학번 || sid };
-  const g = c.prog[id]; g.assign = 'returned'; g.score = 62; g.fb = '요구사항 2번(활용 사례 비교)이 빠졌습니다. 사례 2개를 표로 비교하고, 내 전공에 적용할 점을 한 줄 덧붙여 다시 제출하세요.';
+  const g = c.prog[id]; g.assign = 'returned'; g.score = 62; g.fb = `요구사항 2번(활용 사례 비교)이 빠졌습니다. 사례 2개를 표로 비교하고, 내 ${S.org.type === 'univ' ? '전공' : ['corp', 'public'].includes(S.org.type) ? '직무' : '실무'}에 적용할 점을 한 줄 덧붙여 다시 제출하세요.`;
   code = { sid, dept: (S.groups.find(x => x.id === m.group) || {}).name || '', code: 'DEMO' + String(Math.floor(1000 + Math.random() * 8999)), at: today(), demo: true }; S.codes.push(code); logAudit('체험 학습자 접근코드 발급(데모)'); save(); return code;
 }
 function asRole(r) {

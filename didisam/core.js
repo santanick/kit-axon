@@ -221,7 +221,7 @@ const AFTER = []; function afterRender() { AFTER.forEach(f => { try { f(CUR); } 
 let SU = { type: '', name: '', email: '' };
 function renderSignup() {
   document.body.className = document.body.className.replace(/\bmode-\w+/g, '') + ' mode-signup';
-  const cards = ['corp', 'univ', 'academy', 'lifelong', 'voc'].map(k => {
+  const cards = ['univ', 'public', 'corp', 'academy', 'lifelong', 'voc'].map(k => {
     const ty = k === 'academy' ? { name: '학원', icon: 'academy', desc: '초중고 보습 · 입시 / 성인 자격증 · 실무', ex: '선택 후 세부 유형을 고릅니다' } : TYPES[k];
     const sel = SU.type === k || (k === 'academy' && TYPES[SU.type]?.group === 'academy');
     return `<button type="button" class="tcard ${sel ? 'on' : ''}" data-act="su-type" data-v="${k}" aria-pressed="${sel}"><span class="ti">${ticon(ty.icon)}</span><b>${esc(ty.name)}</b><p>${esc(ty.desc)}</p></button>`;

@@ -58,7 +58,7 @@ function ltBrief() {
   const C = TCFG();
   if (!LR.me) return { t: `안녕하세요, ${C.name}입니다.\n로그인하면 내 진단 결과 · 진도 · 과제 피드백을 바탕으로 오늘 할 일을 정리하고, 학습 계획과 복습까지 맡아 드립니다.`, h: `<div class="lt-acts"><a class="lt-act" href="#login" data-tact="go"><b>로그인하기</b><small>${SITE().org.type === 'univ' ? '학번' : '번호'} + 접근코드</small>${ico('arrow', 15)}</a>${diagFirst() ? `<a class="lt-act" href="#dg/${esc(diagFirst().id)}" data-tact="go"><b>3분 진단 먼저 해 보기</b><small>나에게 맞는 과정이 열립니다</small>${ico('arrow', 15)}</a>` : ''}</div>` };
   const A = ltTodo(); const st = myStats(); const qa = ltQA().filter(x => !LT.q['seen' + x.id]);
-  const lines = [`${LR.me.sid}님, 내 학습 기록을 보고 ${A.length ? `오늘 할 일 ${A.length}가지를 정리했습니다.` : '오늘 급한 일은 없습니다.'}`];
+  const lines = [`${lCall()}님, 내 학습 기록을 보고 ${A.length ? `오늘 할 일 ${A.length}가지를 정리했습니다.` : '오늘 급한 일은 없습니다.'}`];
   if (st.streak >= 2) lines.push(`${st.streak}일 연속 학습 중입니다. 오늘도 이어 가 볼까요?`); else if (st.active) lines.push('오늘 10분만 해도 연속 학습이 시작됩니다.');
   if (qa.length) lines.push(`선생님 답변 ${qa.length}건이 도착했습니다.`);
   return { t: lines.join('\n'), h: (qa.length ? `<div class="lt-qa">${qa.slice(0, 2).map(x => `<div><small>선생님 답변 · ${esc(x.cls || '')}</small><b>Q. ${esc(x.q)}</b><p>${nl(x.a)}</p></div>`).join('')}</div>` : '') + (A.length ? ltLinks(A) : '') + ltBtns([['이번 주 학습 계획 맡기기', '이번 주 학습 계획 짜줘'], ['복습 퀴즈', '복습 퀴즈 내줘'], ...(st.courses.some(x => x.fb) ? [['피드백 해설', '과제 피드백 해설해줘']] : [])]) };
@@ -89,7 +89,7 @@ function ltRule(q) {
   if (/(대신|대필).{0,8}(써|작성|해\s*줘|만들)|정답\s*(만\s*)?(알려|줘)|답\s*만\s*(알려|줘)|베껴/.test(s)) return { t: '과제나 시험 답을 대신 써 드리지는 않습니다. 대신 스스로 완성할 수 있게 같이 풀어 보겠습니다.\n1) 과제가 요구하는 것을 한 문장으로 적어 보세요.\n2) 내 생각을 3줄로 써 보세요(맞고 틀림은 신경 쓰지 않아도 됩니다).\n3) 근거나 예시를 하나 붙이세요.\n쓴 내용을 붙여 주시면 평가 기준에 맞춰 무엇을 보완하면 좋은지 짚어 드리겠습니다.', h: ltBtns([['선생님께 질문 넘기기', s, 'esc']]) };
   if (!LR.me) {
     if (/진단/.test(s)) return { t: '진단은 몇 문항으로 내 AI 활용 유형과 수준을 알려 주는 짧은 테스트입니다. 결과에 맞춰 코스와 튜토리얼이 추천됩니다.', h: diagFirst() ? ltLinks([{ h: '진단 시작', d: `${diagFirst().items.length}문항`, href: '#dg/' + diagFirst().id }]) : '' };
-    if (/로그인|접근\s*코드|계정/.test(s)) return { t: `${SITE().org.type === 'univ' ? '학번' : '번호'}과 접근코드로 로그인합니다. 접근코드는 담당 선생님이나 운영 사무실에서 받으실 수 있습니다.`, h: ltLinks([{ h: '로그인하기', d: '', href: '#login' }]) };
+    if (/로그인|접근\s*코드|계정/.test(s)) return { t: `${lIdLabel()}${lJ(lIdLabel(), '과', '와')} 접근코드로 로그인합니다. 접근코드는 담당 선생님이나 운영 사무실에서 받으실 수 있습니다.`, h: ltLinks([{ h: '로그인하기', d: '', href: '#login' }]) };
     return ltBrief();
   }
   if (/(선생님|교수님|강사님|담당자).{0,10}(물어|질문|전달|넘겨|문의)|질문\s*넘겨/.test(s)) return { esc: true };
@@ -235,7 +235,7 @@ async function lsyncMine(force) {
     if (!m) return; const fp = JSON.stringify(m); if (!LSYNC.fp) LSYNC.fp = JSON.stringify(LR.mine || {}); if (fp === LSYNC.fp) return;
     const nq = (Array.isArray(m.qa) ? m.qa.length : 0) - ltQA().length; LSYNC.fp = fp; LR.mine = m;
     const a = document.activeElement; if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && a.value) return; lrender();
-    if (nq > 0) toast(`교수님 답변 ${nq}건이 도착했습니다.`, 'ok');
+    if (nq > 0) toast(`${lTerm("teacher")}님 답변 ${nq}건이 도착했습니다.`, 'ok');
   } catch (e) { console.error(e); } finally { LSYNC.busy = false; } }
 setInterval(() => lsyncMine(), 30000);
 window.addEventListener('focus', () => lsyncMine(true));

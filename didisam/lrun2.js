@@ -75,8 +75,8 @@ function viewDiag(id) {
 function viewLogin(back) {
   const u = SITE().org.type === 'univ';
   return `<section class="login"><div class="in"><div class="lgw"><div class="lgl"><p class="eb">WELCOME</p><h1>${esc(SITE().org.name)}<br>온라인 학습 센터</h1><ul>${[['target', '진단 결과와 추천 코스가 저장됩니다'], ['video', '영상 · 튜토리얼 진도가 이어집니다'], ['award', '과제 검수 후 디지털 배지가 발급됩니다']].map(([i, t]) => `<li>${ico(i, 18)}${t}</li>`).join('')}</ul><small>${u ? '학번 · 학과' : '번호 · 소속'}과 학습 기록만 저장합니다. 이름 · 연락처 · 이메일은 받지 않습니다.</small></div>
-    <div class="lgr"><h2>로그인</h2><p class="mini">${u ? '학번' : '학습자 번호'}와 기관에서 받은 접근코드를 입력하세요.</p>
-    <form id="li" data-back="${esc(back || 'my')}"><label class="fl">${u ? '학번' : '번호'}<input name="sid" inputmode="numeric" autocomplete="username" required maxlength="20" placeholder="${u ? '예: 20260001' : ''}"></label><label class="fl">접근코드<input name="code" autocomplete="current-password" required maxlength="12" placeholder="기관에서 받은 코드"></label><p class="err" id="liErr" role="alert"></p><button class="lbtn pri blk" type="submit">로그인 ${ico('arrow', 16)}</button></form>
+    <div class="lgr"><h2>로그인</h2><p class="mini">${lIdLabel()}${lJ(lIdLabel(), '과', '와')} 기관에서 받은 접근코드를 입력하세요.</p>
+    <form id="li" data-back="${esc(back || 'my')}"><label class="fl">${lIdLabel()}<input name="sid" inputmode="numeric" autocomplete="username" required maxlength="20" placeholder="${u ? '예: 20260001' : ''}"></label><label class="fl">접근코드<input name="code" autocomplete="current-password" required maxlength="12" placeholder="기관에서 받은 코드"></label><p class="err" id="liErr" role="alert"></p><button class="lbtn pri blk" type="submit">로그인 ${ico('arrow', 16)}</button></form>
     ${LR.sample ? `<div class="demo"><span>체험 계정 <b>${esc(LR.sample.sid)}</b> / <b>${esc(LR.sample.code)}</b></span><button type="button" class="lbtn sm ghost" data-lact="demofill">자동 입력</button></div>` : ''}${LR.mode === 'preview' ? '<p class="mini">미리보기에서는 어드민의 접근코드로 로그인해 볼 수 있으며 기록은 저장되지 않습니다.</p>' : ''}<p class="mini">접근코드를 모르면 ${u ? '학과 사무실 · 담당 선생님' : '담당자'}에게 발급을 요청하세요.</p></div></div></div></section>`;
 }
 function viewMy() { return needLogin('my'); }
