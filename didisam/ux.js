@@ -60,7 +60,7 @@ const UX_MIN = { org: 1, course: 5, site: 3, people: 2, pg: 3 };
   set('course', { n: () => `${t('cls')} 만들기`, d: '커리큘럼 · 영상 · 퀴즈 · 과제', req: true });
   set('site', { n: '사이트 게시', d: '홈페이지 · 학습 사이트를 꾸미고 게시', def: () => true });
   set('people', { n: () => `${t('learner')} 초대`, d: '초대 링크 · 명단 한 번에 등록', req: true });
-  set('pg', { n: '결제 연결', d: '결제 서비스(PG) · 정산 계좌 · 청구서', def: ty => UX_PAID.includes(ty) });
+  set('pg', { n: '결제 연결', d: '토스페이먼츠 가입 신청(심사 중에도 강좌 준비 가능)', def: ty => UX_PAID.includes(ty) });
   BLD_STEPS.forEach(s => { if (!UX_ESS.includes(s.id)) { try { delete s.def; } catch (e) { } s.def = () => false; } });
   const order = s => { const i = UX_ESS.indexOf(s.id); return i < 0 ? 10 : i; };
   const sorted = [...BLD_STEPS].sort((a, b) => order(a) - order(b)); BLD_STEPS.length = 0; sorted.forEach(s => BLD_STEPS.push(s));
@@ -219,3 +219,9 @@ const uxInvLink = () => { try { const iv = mbInvite('student', '', 'sub'); retur
     if (u) { ctx.cards.push({ title: '초대 링크', text: `${t('learner')} 초대 링크입니다. 문자 · 카카오톡 · 공지에 붙여 보내면 받은 사람이 간편가입 후 바로 수강할 수 있습니다.\n${u}`, act: x.command, copy: u }); uxPeopleDone(); return { ok: true, 결과: `초대 링크를 대화창에 보여 주었습니다: ${u}` }; } }
   return base(name, x, ctx); }; }
 ACT['ux-copy'] = el => { const v = el.dataset.v || ''; (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => toast('복사했습니다.', 'ok'), () => toast('복사하지 못했습니다. 길게 눌러 복사하세요.', 'warn')); uxPeopleDone(); };
+
+/* v23.1 실측: 결제 연결은 토스 심사(최대 4주)를 기다리는 단계 — 가입을 신청(신청 · 심사중 · 승인)하면 시작 가이드에서는 완료로 본다. '나중에 할게'는 건너뛰기. */
+AFTER.push(() => { try { const st = S && S.bld && S.bld.steps.pg; const T = S.settings && S.settings.toss; if (st && !st.done && T && ['신청', '심사중', '승인'].includes(T.status)) { st.done = true; save(); if (typeof obMount === 'function') obMount(); } } catch (e) { } });
+{ const base = chatSend; chatSend = (q, ...r) => { const s = String(q || '').trim();
+  if (/^결제\s*연결은?\s*나중에/.test(s) && S && S.bld && S.bld.steps.pg) { S.bld.steps.pg.on = false; S.chat.push({ role: 'user', text: s }, { role: 'ai', text: '결제 연결은 나중에 하도록 시작 가이드에서 뺐습니다. 무료 강좌는 지금 바로 운영할 수 있고, 유료 판매는 매출 › 토스페이먼츠 가입에서 언제든 시작하면 됩니다.' }); save(); renderThreads(); try { obMount(); } catch (e) { } return Promise.resolve(); }
+  return base(q, ...r); }; }

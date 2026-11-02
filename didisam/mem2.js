@@ -308,7 +308,7 @@ ACT['mb-orgdel'] = el => { const o = S.orgs.find(x => x.id === el.dataset.v); if
 const MB_STEPS = [
   { after: 'site', id: 'mkt', n: '마케팅 세팅', d: '검색 노출(SEO) · 네이버 플레이스 · 픽셀', view: 'site', types: ['k12', 'adult', 'lifelong'] },
   { after: 'course', id: 'recruit', n: () => `${t('learner')} 모집`, d: '사전 수강신청 · 모집 기간 · 팝업', view: 'class', types: ['adult', 'public', 'lifelong'] },
-  { after: 'course', id: 'pg', n: '매출 · 청구 세팅', d: 'PG 연결 · 정산정보 · 청구서', view: 'sales', types: ['k12', 'adult', 'lifelong', 'voc'] },
+  { after: 'course', id: 'pg', n: '매출 · 청구 세팅', d: '토스페이먼츠 가입 신청 · 청구서', view: 'sales', types: ['k12', 'adult', 'lifelong', 'voc'] },
   { after: 'pg', id: 'consult', n: '상담 연동', d: '채널톡 · 카카오 채널 · 상담 카테고리', view: 'consult', types: ['k12', 'adult'] },
   { after: 'people', id: 'team', n: () => `${t('group')} 등록`, d: () => `${t('group')} 만들기 · ${t('learner')} 배정`, view: 'groups', types: ['corp', 'public', 'voc', 'k12'] },
   { after: 'people', id: 'admins', n: () => `운영자 · ${t('teacher')}`, d: () => `부운영자 · ${t('teacher')} 지정 · 담당 ${t('cls')}`, view: 'admins', types: ['k12', 'adult', 'corp', 'public', 'lifelong', 'voc', 'univ'] },
@@ -319,11 +319,11 @@ MB_STEPS.forEach(x => { if (BLD_STEPS.some(s => s.id === x.id)) return; const s 
   Object.defineProperty(s, 'only', { get: () => (typeof S !== 'undefined' && S && S.org && x.types.includes(S.org.type)) ? S.org.type : '-none-', enumerable: true });
   if (typeof x.d === 'function') Object.defineProperty(s, 'd', { get: x.d, enumerable: true });
   const i = BLD_STEPS.findIndex(y => y.id === x.after); BLD_STEPS.splice(i < 0 ? BLD_STEPS.length : i + 1, 0, s); });
-{ const base = bQ; bQ = id => ({ mkt: ['홈페이지 SEO 제목 · 설명 만들어줘'], recruit: [`${t('cls')} 모집 기간이랑 얼리버드 설정할게`], pg: ['PG 연결하고 정산정보 입력할게', '이번 달 청구서 만들어줘'], consult: ['채널톡 연동할게'], team: [`${t('group')} 3개 만들어줘`], admins: [`${t('teacher')} 추가하고 담당 ${t('cls')} 지정할게`], parents: ['보호자 연결 요청 보내줘'], comm: ['수강생 전체에 공지 메시지 보내줘'] })[id] || base(id); }
+{ const base = bQ; bQ = id => ({ mkt: ['홈페이지 SEO 제목 · 설명 만들어줘'], recruit: [`${t('cls')} 모집 기간이랑 얼리버드 설정할게`], pg: ['토스페이먼츠 결제 연결 도와줘', '결제 연결은 나중에 할게'], consult: ['채널톡 연동할게'], team: [`${t('group')} 3개 만들어줘`], admins: [`${t('teacher')} 추가하고 담당 ${t('cls')} 지정할게`], parents: ['보호자 연결 요청 보내줘'], comm: ['수강생 전체에 공지 메시지 보내줘'] })[id] || base(id); }
 { const base = bGuideText; bGuideText = id => ({
   mkt: '포털 검색에 홈페이지가 노출되도록 SEO 제목 · 설명 · 키워드와 네이버 플레이스 · 픽셀 코드를 설정합니다. 홈페이지 › 설정에서 입력하거나 "SEO 제안해줘"라고 말씀하세요.',
   recruit: `사전 수강신청(모집 기간 · 인원 · 얼리버드 할인)과 팝업으로 ${t('learner')}을 모읍니다. ${t('cls')} 설정의 판매 · 모집에서 정합니다.`,
-  pg: '유료 클래스 · 교재를 팔거나 청구서로 수강료를 받으려면 PG(디디쌤 연결 또는 토스페이먼츠)와 정산정보를 등록합니다. 학원은 청구서를 보호자에게도 보낼 수 있습니다.',
+  pg: '유료 클래스 · 교재를 팔려면 토스페이먼츠 가입을 신청합니다. 신청하면 이 단계는 끝나고, 심사(최대 4주)가 끝나는 날 학습자 결제가 자동으로 열립니다. 그전까지 학습자 화면에는 \'결제 준비 중\'으로 보입니다.',
   consult: '채널톡 · 카카오 비즈니스 채널을 연동하면 상담 내용이 스튜디오에 모이고 AI가 요약합니다. 상담 카테고리는 상위 > 하위 2단계입니다.',
   team: `${t('group')}을 만들고 ${t('learner')}을 배정하면 ${t('group')} 단위로 수강 권한 · 메시지를 보낼 수 있습니다. 이름은 중복될 수 없습니다.`,
   admins: `부운영자(매출 제외) · ${t('teacher')}(담당 ${t('cls')}만)를 기존 회원에서 검색해 지정하고, ${t('teacher')}에게 담당 ${t('cls')}을 정해 주세요. 지정은 정운영자만 할 수 있습니다.`,
