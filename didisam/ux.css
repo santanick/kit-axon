@@ -66,3 +66,13 @@ details.uxmore>summary em{font:700 11px var(--num);font-style:normal;background:
   .ux-on .wtabs{overflow:visible}
   .uxpop{max-width:calc(100vw - 32px)}
 }
+/* v23.1 실측(대표님 노트북 세로 608px): 시작 가이드 카드가 AI SAM 창을 다 차지해 입력창이 잘려 보이지 않던 문제
+   → 입력창은 줄어들지 않게, 가이드 카드는 창 높이의 일부만 쓰고 안에서 스크롤, 낮은 화면에서는 보조 줄을 숨긴다. */
+.bchat .composer,#drawer .composer{flex:none}
+.bchat .thread,#drawer .thread{min-height:48px}
+.bchat .obd,#drawer .obd{flex:0 1 auto;min-height:52px;max-height:min(46%,340px);overflow:auto;overscroll-behavior:contain}
+@media (max-height:760px){
+  .bchat .composer .cnote,#drawer .composer .cnote{display:none}
+  .bchat .composer .chips,#drawer .composer .chips{max-height:34px;overflow:hidden}
+  .bchat .obd,#drawer .obd{max-height:40%}
+}

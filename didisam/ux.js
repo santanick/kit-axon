@@ -207,3 +207,15 @@ AFTER.push(() => {
 });
 { const base = renderThreads; renderThreads = (...a) => { const r = base(...a); try { uxWords(document.querySelector('.bchat')); } catch (e) { } return r; }; }
 COVER.push(['[개선] 쉬운 화면: 메뉴 7개 · 화면마다 주 버튼 하나 · 탭 4개 · 오늘 할 일 · 시작 가이드 필수 단계만', 'home', '']);
+/* v23.1 실측: 대화를 시작하면 시작 가이드 카드를 접어 답 · 실행 계획 카드가 보이게 한다(머리를 누르면 다시 펼침). */
+{ const base = chatSend; chatSend = (q, ...r) => { if (String(q || '').trim() && S && S.bld && !UI.obc) { UI.obc = true; try { obMount(); } catch (e) { } } return base(q, ...r); }; }
+/* v23.1 실측: '수강생 초대' 단계 — 학원 · 성인 교육은 수강생이 직접 가입하므로, 초대 링크를 복사 · 공유하면 단계 완료.
+   AI SAM에 '초대 링크 만들어줘'라고 하면 링크를 대화창에 바로 보여 주고(복사 버튼) 단계를 마친다. */
+const uxPeopleDone = () => { try { if (S.bld && S.bld.steps.people && !S.bld.steps.people.done) { S.bld.steps.people.done = true; save(); if (typeof obMount === 'function') obMount(); } } catch (e) { } };
+['mb-invcopy', 'mb-invshare'].forEach(k => { const b = ACT[k]; if (b) ACT[k] = (...a) => { const r = b(...a); uxPeopleDone(); return r; }; });
+const uxInvLink = () => { try { const iv = mbInvite('student', '', 'sub'); return mbInvURL(iv); } catch (e) { return ''; } };
+{ const base = agRun; agRun = (name, x, ctx) => {
+  if (name === 'run_studio_command' && /초대\s*(링크|주소|url)|가입\s*(링크|주소)/i.test(String((x || {}).command || '')) && typeof mbInvite === 'function') { const u = uxInvLink();
+    if (u) { ctx.cards.push({ title: '초대 링크', text: `${t('learner')} 초대 링크입니다. 문자 · 카카오톡 · 공지에 붙여 보내면 받은 사람이 간편가입 후 바로 수강할 수 있습니다.\n${u}`, act: x.command, copy: u }); uxPeopleDone(); return { ok: true, 결과: `초대 링크를 대화창에 보여 주었습니다: ${u}` }; } }
+  return base(name, x, ctx); }; }
+ACT['ux-copy'] = el => { const v = el.dataset.v || ''; (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => toast('복사했습니다.', 'ok'), () => toast('복사하지 못했습니다. 길게 눌러 복사하세요.', 'warn')); uxPeopleDone(); };
