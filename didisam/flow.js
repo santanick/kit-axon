@@ -18,7 +18,7 @@ const BLD_STEPS = [
 const bName = s => typeof s.n === 'function' ? s.n() : s.n;
 const bStep = id => BLD_STEPS.find(s => s.id === id);
 const bFits = s => !s.only || s.only === S.org.type;
-/* v19.1 화면 하나로: 클래식 화면을 없애고 AI SAM 화면(레일 + 캔버스 + 떠 있는 AI SAM)만 쓴다(대표님 '따로 있어야 돼? 복잡성만 높아') */
+/* v20 화면 틀(왼쪽 레일 + 넓은 화면 + 떠 있는 AI SAM)은 하나. 내용은 클래식 메뉴 · 홈, 시작 세팅은 AI SAM 대화창의 '시작 가이드'(onboard.js) */
 const bOn = () => !!(S && S.org);
 const bList = () => BLD_STEPS.filter(s => bFits(s) && (s.req || S.bld.steps[s.id]?.on));
 function bMenuOn(view) { if (!MENU[view]) return; navAdd(view, true); const x = (S.nav.tabs[MENU[view].ws] || []).find(t => t.id === view); if (x) x.on = true; }
@@ -57,12 +57,12 @@ function bQ(id) {
 function bGuideText(id) {
   const U = S.org.type === 'univ';
   return ({
-    org: '메뉴를 찾아다니지 않아도 되도록, 운영 시작까지 하나씩 같이 만들겠습니다.\n미리보기 화면에서 기관 정보와 만들 단계를 확인하세요. 필요 없는 선택 단계(예: 디지털북)는 끄거나 "디지털북 단계 빼줘"라고 말씀하시면 됩니다.',
-    site: '미리보기에 홈페이지 빌더가 열렸습니다. 원하는 분위기와 강조할 내용을 말씀하시면 템플릿 · 문구를 만들어 바로 보여 드립니다. 고칠 곳도 말로 지시하시고, 마음에 들면 "홈페이지 게시해줘"라고 하세요.',
+    org: '메뉴를 찾아다니지 않아도 되도록, 운영 시작까지 하나씩 같이 만들겠습니다.\n화면에서 기관 정보와 만들 단계를 확인하세요. 필요 없는 선택 단계(예: 디지털북)는 끄거나 "디지털북 단계 빼줘"라고 말씀하시면 됩니다.',
+    site: '화면에 홈페이지 빌더가 열렸습니다. 원하는 분위기와 강조할 내용을 말씀하시면 템플릿 · 문구를 만들어 바로 보여 드립니다. 고칠 곳도 말로 지시하시고, 마음에 들면 "홈페이지 게시해줘"라고 하세요.',
     course: '첫 과정을 만듭니다. 주제 · 주차 수 · 대상을 말씀하시면 커리큘럼 · 영상 · 퀴즈 · 과제까지 채운 초안을 보여 드립니다. 만든 뒤에도 "3주차 영상 바꿔줘"처럼 말로 고치면 됩니다.',
     book: '디지털북은 선택 단계입니다. 방금 만든 과정을 책으로 바꾸거나, 주제로 새 책 초안을 만들 수 있습니다. 필요 없으면 "디지털북 단계 빼줘"라고 하세요.',
     diag: 'AI 진단 문항과 결과별 러닝 저니를 만듭니다. 진단 결과에 따라 학생마다 다른 과정이 추천됩니다.',
-    lsite: `${t('learner')}이 보게 될 학습자 사이트입니다. 미리보기에서 페이지 · 섹션을 확인하고 "학습자 사이트 게시해줘"로 공개하세요.`,
+    lsite: `${t('learner')}이 보게 될 학습자 사이트입니다. 화면에서 페이지 · 섹션을 확인하고 "학습자 사이트 게시해줘"로 공개하세요.`,
     people: `${t('learner')} 명단(CSV)을 올리거나 초대 링크로 등록합니다.${U ? ' 대학은 학번 · 학과만 저장하고 이름 · 연락처는 받지 않습니다.' : ''}`,
     badge: '수료 기준과 디지털 배지를 정합니다. 기준을 채우면 배지가 자동으로 발급됩니다.',
     auto: '반복 업무를 자동화 레시피로 만듭니다. 실행은 항상 운영자 승인 뒤에 처리됩니다.',
@@ -84,7 +84,7 @@ function bOpenStep(id, announce = true) {
 function bAdvance() {
   const c = bCur(); if (c) S.bld.steps[c.id].done = true; if (c) S.bld.seen[c.id] = 1;
   const n = c ? bNextOf(c.id) : null; save();
-  if (!n) { S.chat.push({ role: 'ai', text: '모든 빌드 단계를 마쳤습니다. 이제 운영을 시작하실 수 있습니다.\n미리보기 화면은 오늘 확인할 일(브리핑)로 바뀝니다. 이후에도 무엇이든 말로 지시하시면 됩니다.' }); S.bld.cur = ''; save(); CUR = { ws: 'home', tab: '' }; render(); renderThreads(); return null; }
+  if (!n) { S.chat.push({ role: 'ai', text: '모든 빌드 단계를 마쳤습니다. 이제 운영을 시작하실 수 있습니다.\n첫 화면에서 오늘 확인할 일을 보실 수 있습니다. 이후에도 무엇이든 말로 지시하시면 됩니다.' }); S.bld.cur = ''; save(); CUR = { ws: 'home', tab: '' }; render(); renderThreads(); return null; }
   bOpenStep(n.id); return n;
 }
 
@@ -95,7 +95,7 @@ const bFp = () => { let bk = 0; try { bk = bkL().length; } catch (e) { } return 
   if (bOn()) {
     if (/^(다음(\s*단계)?(로|으로)?)(\s*(가자|가줘|넘어가(자|줘)?|진행(해\s*줘)?|해\s*줘))?[.!]?$/.test(s) || /(확정|완료|끝났|됐).{0,12}다음\s*단계|다음\s*단계\s*(로|으로)?\s*(가|넘어|진행)/.test(s)) {
       const c = bCur(); if (c) { S.bld.steps[c.id].done = true; S.bld.seen[c.id] = 1; } const n = c ? bNextOf(c.id) : null;
-      if (!n) { S.bld.cur = ''; save(); return { text: '모든 빌드 단계를 마쳤습니다. 이제 운영을 시작하실 수 있습니다. 미리보기 화면은 오늘 확인할 일(브리핑)로 바뀝니다.', nav: 'home' }; }
+      if (!n) { S.bld.cur = ''; save(); return { text: '모든 빌드 단계를 마쳤습니다. 이제 운영을 시작하실 수 있습니다. 첫 화면에서 오늘 확인할 일을 보실 수 있습니다.', nav: 'home' }; }
       S.bld.cur = n.id; bMenuOn(n.view); save(); const g = bGuideMsg(n.id); delete g.role; return { ...g, nav: n.view };
     }
     if (/(단계|스텝)/.test(s)) {
@@ -110,17 +110,17 @@ const bFp = () => { let bk = 0; try { bk = bkL().length; } catch (e) { } return 
     const fromCls = /(과정|교과목|강좌|방금)/.test(s) && S.classes.length; const c = fromCls ? S.classes[0] : null;
     const tp = (s.match(/「([^」]{2,40})」/) || [])[1] || s.replace(/디지털\s*북[\s\S]*$/, '').replace(/[「」"']/g, '').trim() || 'AI 리터러시';
     const n = clamp(+(s.match(/(\d+)\s*단원/) || [])[1] || 3, 1, 8); const pid = uid('p');
-    PLANS[pid] = { run: () => { lsEnsure(); const b = c ? bkFromCourse(c) : bkAIDraft(tp, n, {}); bkL().push(b); S.ai.usage++; logAudit(`디지털북 생성(AI SAM) — ${b.title}`); UI.bkId = b.id; UI.bkCh = 0; UI.bkT = 'edit'; return `「${b.title}」 ${b.chs.length}단원을 만들었습니다. 미리보기에서 블록을 확인하고, 고칠 곳은 블록을 눌러 바꾸세요.`; }, go: 'dbook' };
+    PLANS[pid] = { run: () => { lsEnsure(); const b = c ? bkFromCourse(c) : bkAIDraft(tp, n, {}); bkL().push(b); S.ai.usage++; logAudit(`디지털북 생성(AI SAM) — ${b.title}`); UI.bkId = b.id; UI.bkCh = 0; UI.bkT = 'edit'; return `「${b.title}」 ${b.chs.length}단원을 만들었습니다. 화면에서 블록을 확인하고, 고칠 곳은 블록을 눌러 바꾸세요.`; }, go: 'dbook' };
     return { title: '디지털북', text: c ? `「${c.name}」 과정을 디지털북으로 바꾸겠습니다. 장(없으면 주차)으로 단원을 나누고 영상 · 퀴즈 · 과제를 연결합니다.` : `「${tp}」 디지털북 ${n}단원 초안을 만들겠습니다. 단원마다 설명 · 핵심 박스 · 펼쳐보기 · 확인 문제를 넣습니다.`, steps: c ? ['과정 항목을 단원으로 묶기', '읽을거리 · 핵심 정리 채우기', '영상 · 퀴즈 · 과제 연결', '디지털북 편집기에서 확인'] : ['단원 구성', '설명 · 핵심 박스 · 펼쳐보기 · 확인 문제', '디지털북 편집기에서 확인'], plan: pid, state: 'pending', cta: '디지털북 만들기' };
   }
   if (/자동화/.test(s) && /(매주|매일|매월|마다)/.test(s) && !/(단계|스텝)/.test(s)) { const P = interpret(s); if (P.run) { const pid = uid('p'); PLANS[pid] = { run: P.run, go: P.go || 'auto' }; return { title: P.title, text: P.title + '. 아래 계획으로 진행할까요?', steps: P.steps, html: P.preview || '', plan: pid, state: 'pending', cta: P.cta || '자동화 만들기' }; } }
-  if (/홈페이지/.test(s) && /(게시|공개|오픈)/.test(s) && !/학습자/.test(s)) { if (!S.site) return { text: '아직 홈페이지가 없습니다. 먼저 원하는 분위기를 말씀해 주시면 만들어 드리겠습니다.', nav: 'site' }; ACT['site-pub'](); return { text: `홈페이지를 게시했습니다 — ${S.org.domain} (데모). 미리보기에서 확인하세요.`, nav: 'site' }; }
+  if (/홈페이지/.test(s) && /(게시|공개|오픈)/.test(s) && !/학습자/.test(s)) { if (!S.site) return { text: '아직 홈페이지가 없습니다. 먼저 원하는 분위기를 말씀해 주시면 만들어 드리겠습니다.', nav: 'site' }; ACT['site-pub'](); return { text: `홈페이지를 게시했습니다 — ${S.org.domain} (데모). 화면에서 확인하세요.`, nav: 'site' }; }
   if (/배지/.test(s) && /(만들|추가|생성)/.test(s)) {
     const c = S.classes[0]; const nm = ((s.match(/「([^」]{1,20})」/) || [])[1] || (/수료/.test(s) ? '수료' : '새 배지')).slice(0, 20); const pid = uid('p');
     PLANS[pid] = { run: () => { S.badges.unshift({ id: uid('bd'), name: nm, key: String(S.badges.length + 1), cls: c?.id || '', method: 'pass', special: false, fill: '#15173B', ring: '#0C0D24', rib: '#D6246E', issued: [] }); bMenuOn('badge'); logAudit(`배지 생성(AI SAM) — ${nm}`); return `「${nm}」 배지를 만들었습니다. 「${c ? c.name : '과정'}」 수료 기준을 채우면 자동 발급됩니다.`; }, go: 'badge' };
     return { title: '배지', text: `「${nm}」 배지를 만들까요? ${c ? `「${c.name}」 과정의 수료 기준(진도 ${c.criteria.threshold}%)을 채우면 자동 발급됩니다.` : ''}`, plan: pid, state: 'pending', cta: '배지 만들기' };
   }
-  if (/(학습자|학생|임직원|원생|수강생|훈련생|명단|회원)/.test(s) && /(등록|명단|초대|올릴|업로드)/.test(s) && !/(보내|발송|독려|승인|사이트)/.test(s)) { bMenuOn('enroll'); return { text: `${t('learner')} 등록 화면을 미리보기에 열었습니다. 명단 파일(CSV)을 올리거나 초대 링크를 보내 등록합니다.${S.org.type === 'univ' ? ' 대학은 학번 · 학과만 저장하고 이름 · 연락처는 받지 않습니다.' : ''}`, nav: 'enroll' }; }
+  if (/(학습자|학생|임직원|원생|수강생|훈련생|명단|회원)/.test(s) && /(등록|명단|초대|올릴|업로드)/.test(s) && !/(보내|발송|독려|승인|사이트)/.test(s)) { bMenuOn('enroll'); return { text: `${t('learner')} 등록 화면을 화면에 열었습니다. 명단 파일(CSV)을 올리거나 초대 링크를 보내 등록합니다.${S.org.type === 'univ' ? ' 대학은 학번 · 학과만 저장하고 이름 · 연락처는 받지 않습니다.' : ''}`, nav: 'enroll' }; }
   return base(q);
 };
   answer = q => { if (!bOn()) return core(q); const fp = bFp(); const r = core(q); if (r) { if (r.go && !r.nav && !r.plan) r.nav = r.go; if (!r.nav && bFp() !== fp) r.nav = bKey(); if (r.nav) { UI.bpend = r.nav; UI.bsoft = bFp() === fp; } } return r; }; }
@@ -176,7 +176,7 @@ function bComposer() {
   <div class="bx">
     <nav class="brail" aria-label="작업 공간">${rail()}<button class="ri ${w === 'settings' ? 'on' : ''}" data-act="go" data-v="settings">${ic('gear')}<span>설정</span></button></nav>
     <section class="bchat" aria-label="AI SAM 대화">
-      <div class="bch"><span class="orb">${ic('spark', 18)}</span><div><b>AI SAM</b><small>${esc(S.org.name)} 빌드 · 운영 비서</small></div><span class="sp"></span>${typeof clBadge === 'function' ? clBadge() : ''}<button class="btn sm ghost" data-act="bld-clear" title="대화 지우기">새 대화</button></div>
+      <div class="bch"><span class="orb">${ic('spark', 18)}</span><div><b>AI SAM</b><small>${esc(S.org.name)} 운영 비서</small></div><span class="sp"></span>${typeof clBadge === 'function' ? clBadge() : ''}<button class="btn sm ghost" data-act="bld-clear" title="대화 지우기">새 대화</button></div>
       <div class="thread" aria-live="polite">${threadHTML()}</div>${bComposer()}
     </section>
     <main id="main" tabindex="-1" class="bcanvas ws-${w}">
@@ -200,7 +200,7 @@ AFTER.push(() => {
   if (!bOn()) return; const th = $('.bchat .thread'); if (th) th.scrollTop = th.scrollHeight;
   const fresh = bList().filter(s => bDone(s.id) && !S.bld.seen[s.id]); if (!fresh.length) return;
   fresh.forEach(s => { S.bld.seen[s.id] = 1; }); const s = fresh[fresh.length - 1]; const n = bNextOf(s.id);
-  S.chat.push({ role: 'ai', text: `「${bName(s)}」 단계를 마쳤습니다. 미리보기 화면에 반영되었습니다.${n ? `\n다음은 「${bName(n)}」입니다. ${bStep(n.id).d}.` : '\n모든 빌드 단계를 마쳤습니다. 이제 운영을 시작하실 수 있습니다.'}`, html: n ? `<div class="bqs"><button type="button" class="chip done" data-act="bld-step" data-v="${n.id}">「${esc(bName(n))}」 시작하기</button></div>` : '' });
+  S.chat.push({ role: 'ai', text: `「${bName(s)}」 단계를 마쳤습니다. 화면에 반영되었습니다.${n ? `\n다음은 「${bName(n)}」입니다. ${bStep(n.id).d}.` : '\n모든 빌드 단계를 마쳤습니다. 이제 운영을 시작하실 수 있습니다.'}`, html: n ? `<div class="bqs"><button type="button" class="chip done" data-act="bld-step" data-v="${n.id}">「${esc(bName(n))}」 시작하기</button></div>` : '' });
   if (n) S.bld.cur = n.id; S.chat = S.chat.slice(-60); save(); setTimeout(() => { renderThreads(); const st = $('.bsteps'); if (st) st.outerHTML = bStrip(); const p = $('.bprog'); if (p) { const L = bList(), dn = L.filter(x => bDone(x.id)).length; p.querySelector('i').style.width = Math.round(dn / L.length * 100) + '%'; p.querySelector('b').textContent = `${dn}/${L.length}`; } }, 0);
 });
 

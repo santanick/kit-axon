@@ -1,0 +1,30 @@
+/* 디디쌤 스튜디오 v20 — 클래식 내용 + AI SAM 시작 가이드 */
+/* 화면: 홈의 대화 칸 · 빌드 흔적은 숨김(대화는 떠 있는 AI SAM) */
+.mode-bld .bview .chatwrap{display:none}
+.mode-bld .bhdl small{display:none}
+.mode-bld .bhd [data-act=bld-next]{display:none}
+.bprog[data-act]{cursor:pointer;border-radius:99px;padding:4px 10px;margin-right:-10px}.bprog[data-act]:hover{background:var(--soft)}
+/* 시작 가이드 카드(대화창 맨 위) */
+.obd{flex:none;margin:10px 12px 0;border-radius:16px;background:#fff;box-shadow:0 0 0 1px #E6DDFB,0 8px 22px -14px rgba(91,43,217,.45);overflow:hidden}
+.obd.fin{box-shadow:0 0 0 1px #BFE8CF}
+.obh{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;background:linear-gradient(90deg,#F6F1FF,#FFF4FA);cursor:pointer;text-align:left;color:var(--ink)}
+.obd.fin .obh{background:#EEFAF2}
+.obh>svg:last-child{flex:none;transition:transform .2s;color:var(--muted)}.obd.on .obh>svg:last-child{transform:rotate(180deg)}
+.obi{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:9px;color:#fff;background:linear-gradient(135deg,#5B2BD9,#E5007E)}
+.obd.fin .obi{background:#16A35A}
+.obt{flex:1;min-width:0}.obt b{display:block;font-size:13.5px}.obt small{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.obp{flex:none;font:700 12.5px var(--num,inherit);color:var(--ink)}
+.obbar{flex:none;width:56px;height:6px;border-radius:99px;background:#ECE6F8;overflow:hidden}.obbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#5B2BD9,#E5007E)}
+.obd.fin .obbar i{background:#16A35A}
+.obs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 0}
+.ob1{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:99px;padding:4px 10px 4px 4px;font-size:12px;font-weight:700;background:var(--soft);color:var(--muted);cursor:pointer}
+.ob1 i{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#fff;font:700 10.5px/1 inherit;font-style:normal;color:var(--muted)}
+.ob1 em{font-style:normal;font-weight:600;font-size:10.5px;opacity:.7;margin-left:2px}
+.ob1.ok{background:#EAF7EF;color:#16804D}.ob1.ok i{background:#16A35A;color:#fff}
+.ob1.cur{background:var(--ink);color:#fff}.ob1.cur i{background:#E5007E;color:#fff}
+.ob1:hover{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.obc{padding:10px 12px 12px}.obc b{display:block;font-size:14px;margin-bottom:2px}.obc p{margin:0 0 10px;font-size:12.5px;line-height:1.55;color:var(--muted)}
+.obbtn{display:flex;flex-wrap:wrap;gap:6px}.obbtn .btn{padding:6px 10px}
+.bchat .obd+.thread,#drawer .obd+.thread{padding-top:12px}
+@media (max-width:860px){.obd{margin:8px 10px 0}.obbar{display:none}}
+.pill.obpill{background:linear-gradient(90deg,#F6F1FF,#FFF0F7);color:#5B2BD9;box-shadow:inset 0 0 0 1px #E2D6FB}

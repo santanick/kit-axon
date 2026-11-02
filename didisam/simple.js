@@ -15,7 +15,8 @@ const SM_MODES = {
     { k: 'report', s: '성과', ic: 'chart', n: '성과 · 학습관리', d: '진도 · 이수 · 성적과 다음 개선점을 봅니다' }]
 };
 const smRole = () => (typeof scn === 'function' && scn() === 'teacher') ? 'teacher' : 'admin';
-const smOn = () => !!(S && S.org && (S.ui || {}).simple !== false);
+/* v20: 3역할 홈은 기본 끔(대표님 '지금 화면이 더 어려워 — 클래식 살려줘'). S.ui.simple === true일 때만 */
+const smOn = () => !!(S && S.org && (S.ui || {}).simple === true);
 /* 측정 */
 function smCls() { return smRole() === 'teacher' ? tCls() : (S.classes || []); }
 function smStat() { const C = smCls(); const run = C.filter(c => c.status === '운영중'); const P = run.flatMap(c => (c.learners || []).map(id => +((c.prog || {})[id] || {}).p || 0));
