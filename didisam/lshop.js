@@ -4,7 +4,7 @@
    학습자 동작은 lpxPush(type, data)로 운영자 큐에 남긴다(운영: PG 승인 결과 서버 검증 후 기록). */
 'use strict';
 (() => {
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }; /* v22 현지 날짜(자정~09시 KST에 전날로 찍히던 문제) */
   const addD = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
   const addM = (d, n) => { const t = new Date(d); t.setMonth(t.getMonth() + n); return t.toISOString().slice(0, 10); };
   const won = n => (Number(n) || 0).toLocaleString('ko-KR') + '원';

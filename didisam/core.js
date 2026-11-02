@@ -8,7 +8,7 @@ const won = n => (Number(n) || 0).toLocaleString('ko-KR') + '원';
 const pct = n => Math.round(Number(n) || 0) + '%';
 const num = n => (Number(n) || 0).toLocaleString('ko-KR');
 const uid = (p = 'x') => p + Math.random().toString(36).slice(2, 9);
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }; /* v22 현지 날짜(자정~09시 KST에 전날로 찍히던 문제) */
 const addDays = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
 const daysAgo = d => Math.max(0, Math.round((Date.now() - new Date(d)) / 864e5));
 const nowStr = () => new Date().toLocaleString('ko-KR', { hour12: false });

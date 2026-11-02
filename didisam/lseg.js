@@ -10,7 +10,7 @@ function lHas(ch, ro) { const c = (ch || '').charCodeAt(0); if (c >= 0xAC00 && c
 const lJ = (w, a, b) => lHas(String(w).slice(-1), a === '으로') ? a : b;
 function lIdLabel() { return L_ID[lTy()] || '번호'; }
 const lGuard = () => { try { return lTy() === 'k12' && sessionStorage.getItem('didisam.lg.' + (LR.tid || 'x')) === '1'; } catch (e) { return false; } };
-function lCall() { if (!LR.me) return ''; if (lGuard()) return `${LR.me.sid} ${lTerm('learner')} 보호자`; if (lTy() === 'univ') return String(LR.me.sid); return `${LR.me.dept ? LR.me.dept + ' ' : ''}${lTerm('learner')}`; }
+function lCall() { if (!LR.me) return ''; if (lGuard()) return `${LR.me.sid} ${lTerm('learner')} 보호자`; if (lTy() === 'univ') return String(LR.me.sid); if (LR.me.nick) return `${LR.me.nick}님`; return `${LR.me.dept ? LR.me.dept + ' ' : ''}${lTerm('learner')}`; }
 const lPage = id => ((SITE() && SITE().pages) || []).find(p => p.id === id);
 
 /* 필수(법정)교육: 기한 · 남은 진도 */
