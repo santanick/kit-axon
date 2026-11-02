@@ -1,1 +1,29 @@
-/* v22 cls3 */
+/* v22 cls3 — 회차 · 구독 · 출결 */
+.w2seg{margin:6px 0 12px}.w2seg em{font:700 11px var(--num);font-style:normal;background:var(--soft);color:var(--muted);border-radius:99px;padding:1px 6px;margin-left:2px}
+.w2sum{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}.w2sum .bar2{margin:0}
+.w2in{width:100%;min-width:90px;border:1px solid var(--line);border-radius:9px;padding:6px 8px;font:inherit;font-size:13px;background:#fff}.w2in.t{min-width:86px;width:96px}
+.w2mx table th button{display:flex;flex-direction:column;align-items:center;font-weight:800;gap:0;white-space:nowrap}.w2mx th small{font-weight:600;color:var(--muted);font-size:10.5px}
+.w2mx td,.w2mx th{text-align:center;padding:6px 4px}.w2mx td:first-child,.w2mx th:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:1}
+.w2cal{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fff;margin:8px 0}.w2ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.w2cg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.w2wd{text-align:center;font-size:12px;font-weight:800;color:var(--muted);padding:4px 0}
+.w2cd{min-height:64px;border-radius:10px;background:var(--paper);padding:4px;display:flex;flex-direction:column;gap:3px;min-width:0}.w2cd.off{background:transparent}.w2cd.today{box-shadow:inset 0 0 0 2px var(--mag)}
+.w2dn{border:0;background:none;font:700 12px var(--num);text-align:left;cursor:pointer;color:var(--ink);padding:0}.w2dn:disabled{cursor:default}.w2dn:not(:disabled):hover{color:var(--mag)}
+.w2chip{border:0;border-radius:7px;background:var(--magl);color:var(--magd);font-size:11px;font-weight:800;padding:3px 4px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+button.w2cd.pick{border:0;min-height:44px;align-items:center;justify-content:center;font:700 13px var(--num);cursor:pointer}button.w2cd.pick.has{background:var(--mag);color:#fff}button.w2cd.pick:hover{box-shadow:inset 0 0 0 2px var(--mag)}
+.w2kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px;margin-bottom:12px}.w2kp div{background:var(--paper);border-radius:12px;padding:8px 10px}.w2kp small{display:block;color:var(--muted);font-size:12px}.w2kp b{font:800 18px var(--num)}
+.w2btns{white-space:nowrap}.w2btns .btn{margin:1px}
+.w2set{margin-top:14px}.w2set .form2{margin-top:6px}.w2rc{display:flex;align-items:center;gap:6px}.w2rc input{width:64px}.w2n{width:64px;display:inline-block}
+.w2days{display:flex;flex-wrap:wrap;gap:6px}.w2days label{display:inline-flex}.w2days input{position:absolute;opacity:0;width:1px;height:1px}.w2days span{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;box-shadow:inset 0 0 0 1.5px var(--line);font-weight:800;cursor:pointer;background:#fff}.w2days input:checked+span{background:var(--ink);color:#fff;box-shadow:none}.w2days input:focus-visible+span{outline:2px solid var(--mag);outline-offset:2px}
+.w2wz{margin-top:10px;display:flex;flex-direction:column;gap:8px}.w2wz .tw{max-height:300px;overflow:auto}
+.w2subc{margin-top:14px}.w2subc td .btn{margin:1px}
+/* 출결패드 키오스크 */
+.w2k{position:fixed;inset:0;z-index:90;background:var(--night);color:#fff;display:flex;align-items:stretch;justify-content:center;overflow:auto}
+.w2kin{width:min(560px,100%);display:flex;flex-direction:column;padding:18px 16px 24px;gap:14px}.w2kh{display:flex;align-items:center;gap:12px}.w2kh>div{flex:1;display:flex;flex-direction:column}.w2kh small{opacity:.7}
+.w2km{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:transparent;color:#fff}.w2kf{opacity:.65;text-align:center;color:#fff;font-size:12.5px;margin:0}
+.w2kx{border:0;border-radius:12px;background:rgba(255,255,255,.12);color:#fff;padding:8px 12px;font-weight:700;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.w2kq{font-size:20px;font-weight:800;text-align:center;margin:0}.w2kout{display:flex;gap:14px}.w2kout i{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.6);display:grid;place-items:center;font-style:normal;font-size:12px}
+.w2kpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:min(360px,100%)}.w2kpad button{height:68px;border:0;border-radius:18px;background:rgba(255,255,255,.1);color:#fff;font:700 26px var(--num);cursor:pointer}.w2kpad button:active{background:var(--mag)}.w2kpad button[data-k="C"],.w2kpad button[data-k="⏎"]{font-size:17px}.w2kpad button[data-k="⏎"]{background:var(--mag)}
+.w2kl{display:flex;flex-direction:column;gap:10px;width:100%}.w2kl button{border:0;border-radius:16px;background:#fff;color:var(--ink);padding:16px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px}.w2kl button b{font-size:18px}.w2kl button small{color:var(--muted)}
+.w2kback{border:0;background:none;color:#fff;opacity:.75;text-decoration:underline;cursor:pointer;font-weight:700}.w2kmsg{opacity:.75;text-align:center}
+.w2kdone{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;font-size:20px;background:rgba(22,128,77,.25);border-radius:22px;padding:28px 20px;width:100%}.w2kdone.bad{background:rgba(179,18,27,.3)}
+@media (max-width:640px){.w2cd{min-height:50px}.w2chip{font-size:10px}.w2kpad button{height:58px}}

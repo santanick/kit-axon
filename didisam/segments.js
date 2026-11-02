@@ -29,7 +29,7 @@ LS_TYPES.public = [['ADM', '행정 · 기획', '#1D4ED8', '문서 · 보고'], [
 LS_TRACKS.public = [['공직 기본 트랙', 'BASIC TRACK', '#1D4ED8', '법정의무교육과 신규 임용자 기본교육을 기한 안에 마칩니다.', ['기본 · 법정의무교육', '실무 · 직무 기본', '수료 · 실적 반영'], '교육과정 보기'], ['AI 행정 트랙', 'AX TRACK', '#7C3AED', '생성형 AI로 문서 · 민원 · 데이터 업무를 바꿉니다.', ['기본 · AI 이해', '실무 · 내 업무 적용', '전문 · 부서 확산'], '트랙 시작하기']];
 ALLT.push('public'); DTPL.forEach(d => { if ((d.types.includes('corp') || d.types.includes('lifelong')) && !d.types.includes('public')) d.types.push('public'); });
 TPL.forEach(x => { if (x && Array.isArray(x.types) && x.types.includes('corp') && !x.types.includes('public')) x.types.push('public'); });
-{ const base = postSeed; postSeed = (...a) => { const r = base(...a); try { if (S.org.type === 'public' && S.site && Array.isArray(S.site.menus)) S.site.menus.forEach(m => { if (/교재|게시판/.test(m[0])) m[1] = false; }); } catch (e) { } return r; }; }
+{ const base = postSeed; postSeed = (...a) => { const r = base(...a); try { if (S.org.type === 'public' && S.site && Array.isArray(S.site.menus)) S.site.menus.forEach(m => { if (Array.isArray(m)) { if (/교재|게시판/.test(m[0])) m[1] = false; } else if (m && /교재|게시판/.test(m.l || '')) m.on = false; }); /* v22 메뉴가 객체 형식이라 숨김이 적용되지 않던 문제 */ } catch (e) { } return r; }; }
 { const base = BRIEF; BRIEF = () => { const L = base(); if (S.org.type === 'public') { L.unshift({ k: 'legal', label: '법정의무교육 미이수', n: new Set(legalUndone().map(x => x.id)).size, q: '법정의무교육 미이수자에게 마감 안내 보내줘', unit: '명' }); return L.slice(0, 4); } return L; }; }
 { const base = lsHeroText; lsHeroText = ty => ty === 'public' ? ['교육포털', '공직 역량을\n키우는\n15분 학습', `${S.org.name} 교육생을 위한 법정의무 · 직무 · AI 행정 교육. 수강부터 수료증까지 한 곳에서 관리합니다.`] : base(ty); }
 
