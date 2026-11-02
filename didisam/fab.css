@@ -32,3 +32,4 @@ body.fab-on.drawer-open .shell{margin-right:0}
 body.fab-open #toasts{bottom:96px}
 @media (min-width:861px){body.mode-bld.fab-open .gdbar{left:calc((100vw - 434px) / 2 + 38px);width:min(560px,calc(100vw - 560px))}}
 body.fab-on .top{z-index:58} /* 계정 메뉴 등 머리 드롭다운이 위젯 위로 */
+#fabBtn .fabn{position:absolute;top:-6px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:#E5007E;color:#fff;font:800 12px/22px inherit;font-style:normal;box-shadow:0 0 0 2px #fff;animation:fabPing 1.2s ease-out 2}@keyframes fabPing{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}

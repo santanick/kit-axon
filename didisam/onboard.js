@@ -33,7 +33,7 @@ function obMount() {
   document.querySelectorAll('.bchat, #drawer').forEach(p => { const o = p.querySelector('.obd'); if (!html) { o && o.remove(); return; } if (o) o.outerHTML = html; else p.querySelector('.thread')?.insertAdjacentHTML('beforebegin', html); });
   const pr = $('.bprog'); if (pr && !pr.dataset.act) { pr.dataset.act = 'ob-show'; pr.setAttribute('role', 'button'); pr.tabIndex = 0; pr.title = '시작 가이드 열기'; }
   /* 시작 가이드가 남아 있으면 처음 한 번 대화창을 연다 */
-  if (S && S.bld && !bAllDone() && !UI.obAuto && typeof fabOn === 'function' && fabOn()) { UI.obAuto = 1; setTimeout(() => fabOpen(false), 400); }
+  if (S && S.bld && !bAllDone() && !S.bld.obAuto && typeof fabOn === 'function' && fabOn()) { S.bld.obAuto = 1; save(); setTimeout(() => fabOpen(false), 400); } /* 기관마다 처음 한 번만 */
 }
 ACT['ob-tog'] = () => { UI.obc = !UI.obc; obMount(); };
 ACT['ob-show'] = () => { UI.obc = false; if (S.bld) S.bld.obHide = false; typeof fabOpen === 'function' ? fabOpen(false) : ACT['chat-open'](); obMount(); };

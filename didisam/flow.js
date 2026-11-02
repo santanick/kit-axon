@@ -199,7 +199,7 @@ function bFlash(key, soft) { if (!soft) UI.bhl = { key, t: Date.now() }; if (inn
 AFTER.push(() => {
   if (!bOn()) return; const th = $('.bchat .thread'); if (th) th.scrollTop = th.scrollHeight;
   const fresh = bList().filter(s => bDone(s.id) && !S.bld.seen[s.id]); if (!fresh.length) return;
-  fresh.forEach(s => { S.bld.seen[s.id] = 1; }); const s = fresh[fresh.length - 1]; const n = bNextOf(s.id);
+  fresh.forEach(s => { S.bld.seen[s.id] = 1; }); const s = fresh[fresh.length - 1]; const n = bList().find(x => !bDone(x.id)) || null; /* v21 다음 = 순서상 아직 안 끝난 첫 단계 */
   S.chat.push({ role: 'ai', text: `「${bName(s)}」 단계를 마쳤습니다. 화면에 반영되었습니다.${n ? `\n다음은 「${bName(n)}」입니다. ${bStep(n.id).d}.` : '\n모든 빌드 단계를 마쳤습니다. 이제 운영을 시작하실 수 있습니다.'}`, html: n ? `<div class="bqs"><button type="button" class="chip done" data-act="bld-step" data-v="${n.id}">「${esc(bName(n))}」 시작하기</button></div>` : '' });
   if (n) S.bld.cur = n.id; S.chat = S.chat.slice(-60); save(); setTimeout(() => { renderThreads(); const st = $('.bsteps'); if (st) st.outerHTML = bStrip(); const p = $('.bprog'); if (p) { const L = bList(), dn = L.filter(x => bDone(x.id)).length; p.querySelector('i').style.width = Math.round(dn / L.length * 100) + '%'; p.querySelector('b').textContent = `${dn}/${L.length}`; } }, 0);
 });

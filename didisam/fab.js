@@ -22,7 +22,8 @@ function fabSync() { const f = FAB.get(), on = fabOn(), open = on && fabIsOpen()
   else { if (!b) { document.body.insertAdjacentHTML('beforeend', '<button type="button" id="fabBtn" data-act="fab-toggle"></button>'); b = $('#fabBtn'); }
     b.setAttribute('aria-expanded', String(open)); b.setAttribute('aria-label', open ? 'AI SAM 닫기' : 'AI SAM 열기'); b.title = open ? '닫기 (Esc)' : 'AI SAM 열기 (Ctrl+K)';
     const busy = typeof S !== 'undefined' && S.chat && S.chat.some(m => m.typing);
-    b.innerHTML = open ? ic('x', 22) : `${ic('spark', 22)}<span>AI SAM</span>${busy ? '<i class="fabdot"></i>' : ''}`; }
+    if (open) UI.fabNew = 0;
+    b.innerHTML = open ? ic('x', 22) : `${ic('spark', 22)}<span>AI SAM</span>${UI.fabNew ? `<em class="fabn">${UI.fabNew}</em>` : busy ? '<i class="fabdot"></i>' : ''}`; }
   /* 대화창 머리 버튼 */
   document.querySelectorAll('.bch, #drawer .dh').forEach(h => { let c = h.querySelector('.fabc'); if (!c) { h.insertAdjacentHTML('beforeend', '<span class="fabc"></span>'); c = h.querySelector('.fabc'); }
     const inDrawer = h.classList.contains('dh');
@@ -40,13 +41,11 @@ ACT['fab-close'] = () => fabClose();
 ACT['fab-size'] = () => { FAB.set({ size: FAB.get().size === 'l' ? 's' : 'l' }); const th = $('.bchat .thread'); if (th) th.scrollTop = th.scrollHeight; };
 ACT['fab-mode'] = el => { const v = el.dataset.v === 'dock' ? 'dock' : 'float'; FAB.set({ mode: v, open: true }); toast(v === 'dock' ? 'AI SAM을 왼쪽에 고정했습니다. 머리의 띄우기 버튼으로 되돌릴 수 있습니다.' : 'AI SAM을 화면 위에 띄웠습니다. 오른쪽 아래 버튼으로 열고 닫습니다.', 'ok'); };
 /* 대화창을 여는 기존 경로를 위젯으로 */
-{ const base = ACT['chat-open']; ACT['chat-open'] = el => { if (fabOn() && fabBld()) { fabOpen(); return; } base(el); fabSync(); }; }
+/* v21 대표님 '어떤 걸 클릭할 때마다 AI SAM이 열려 불편' → 대화창은 사람이 연 경우(버튼 · Ctrl+K · 대화창 열기 버튼 클릭)에만 연다.
+   화면 이동 · 맡기기 · 단계 진행 같은 프로그램 호출(el 없음)은 열지 않고, 답이 오면 버튼에 새 답 표시 + 알림 */
+{ const base = ACT['chat-open']; ACT['chat-open'] = el => { if (fabOn() && fabBld()) { if (el && el.nodeType === 1) fabOpen(); return; } base(el); fabSync(); }; }
 { const base = ACT['chat-close']; ACT['chat-close'] = el => { base(el); fabSync(); }; }
-{ const base = chatSend; chatSend = async q => { if (fabOn() && String(q || '').trim()) fabOpen(false); const p = base(q); setTimeout(fabSync, 50); try { return await p; } finally { fabSync(); } }; }
-{ const base = ACT.go; if (base) ACT.go = el => { const r = base(el); if (fabOn() && el && el.dataset && el.dataset.v === 'home' && el.closest && el.closest('.brail, .rail')) fabOpen(); return r; }; }
-{ const base = ACT['sm-mode']; if (base) ACT['sm-mode'] = el => { const r = base(el); if (fabOn() && el && el.dataset && !el.dataset.v) fabOpen(); return r; }; }
-/* 할 일 카드의 'AI SAM에게 맡기기'(세팅 단계 안내처럼 chatSend를 거치지 않는 경로 포함) → 대화창 열기. '직접 하기'는 화면만 */
-if (typeof smDo === 'function') { const base = smDo; smDo = (x, how) => { const r = base(x, how); if (how !== 'go' && x) setTimeout(() => fabOpen(false), 30); return r; }; }
+{ const base = chatSend; chatSend = async q => { const was = fabOn() && fabIsOpen(); const p = base(q); setTimeout(fabSync, 50); try { return await p; } finally { if (fabOn() && !was && !fabIsOpen() && String(q || '').trim()) { UI.fabNew = (UI.fabNew || 0) + 1; toast('AI SAM이 답했습니다 — 오른쪽 아래 AI SAM을 눌러 확인하세요.', 'ok'); } fabSync(); } }; }
 AFTER.push(() => fabSync());
 addEventListener('resize', () => fabSync());
 addEventListener('keydown', e => { if (!fabOn()) return;

@@ -28,3 +28,6 @@
 .bchat .obd+.thread,#drawer .obd+.thread{padding-top:12px}
 @media (max-width:860px){.obd{margin:8px 10px 0}.obbar{display:none}}
 .pill.obpill{background:linear-gradient(90deg,#F6F1FF,#FFF0F7);color:#5B2BD9;box-shadow:inset 0 0 0 1px #E2D6FB}
+.suempty{display:flex;gap:10px;align-items:flex-start;margin:4px 0 14px;padding:12px 14px;border-radius:14px;background:#F7F4FF;box-shadow:inset 0 0 0 1px #E2D6FB;cursor:pointer}
+.suempty input{margin-top:3px;width:18px;height:18px;accent-color:#5B2BD9;flex:none}
+.suempty b{display:block;font-size:14px}.suempty small{display:block;font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:2px}
