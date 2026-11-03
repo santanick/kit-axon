@@ -70,3 +70,7 @@ section.crsh.l26hide{display:none}
 @media (max-width:960px){.lc26w{grid-template-columns:minmax(0,1fr)}.lc26side{position:static;order:-1;flex-direction:row;overflow-x:auto;gap:8px;padding-bottom:4px}.lc26sh{display:none}.lc26c{flex:0 0 200px}}
 @media (max-width:520px){.lc26r{grid-template-columns:32px minmax(0,1fr);padding:14px!important}.lc26av{width:32px;height:32px;font-size:13px}.lc26t b{white-space:normal}.lc26kt button{padding:8px 12px}}
 .lcsec:has(.lc26side) .lcbar select[data-k=cls]{display:none}
+.l26side .lcact{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}.l26side .lcact .lbtn{margin-left:0}.l26side #lcN .lcact .lbtn{order:-1}
+.l26side .lcnc{display:flex;gap:6px;align-items:center}.l26side .lcnc input{flex:1;min-width:0;width:auto}
+.l26side .lcnc .lbtn{flex:none}
+.cw2.l26>.l26side{padding-bottom:96px}
