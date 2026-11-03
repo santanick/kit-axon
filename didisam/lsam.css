@@ -76,3 +76,5 @@ body.lg-guard #ltut .lt-panel.on{display:flex!important}
 #ltut .lt-panel.on{animation:none}#ltut .lt-panel.anim{animation:ltin .22s ease-out}
 #ltut .lt-th .lt-m{animation:none}#ltut .lt-th .lt-m.new{animation:ltin .25s ease-out}
 @media (prefers-reduced-motion:reduce){#ltut .lt-panel.anim,#ltut .lt-th .lt-m.new{animation:none}}
+/* v25.1 잔여 QA: 휴대폰에서 화면 맨 아래 작은 버튼이 AI 버튼 · 아래 탭 뒤로 숨던 문제 — 본문 끝에 여백을 둔다. */
+@media (max-width:860px){ #lm{padding-bottom:calc(140px + env(safe-area-inset-bottom))!important} }

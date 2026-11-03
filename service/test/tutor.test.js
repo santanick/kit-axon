@@ -24,7 +24,7 @@ test('학습자 AI 튜터 API', async t => {
   await call('A', 'PUT', '/api/state', { doc: doc({ enabled: true, name: '쌤튜터', daily: 2, help: 'feedback', model: 'haiku' }, [{ id: 'q1', sid: '20260001', q: '퀴즈 3번 해설', a: '개념 적용 문항입니다', st: 'answered', cls: 'AI 리터러시' }, { id: 'q2', sid: '20260002', q: '남의 질문', a: '남의 답', st: 'answered' }, { id: 'q3', sid: '20260001', q: '대기 질문', st: 'open' }]), rev: 0 });
 
   await t.test('v23.4 로그인 전(방문자)도 튜터 사용 — 사이트 정보만, 개인 기록 없음', async () => {
-    const r = await call('X', 'POST', `/api/pub/${A.tid}/tutor`, { q: '어떤 강좌가 있어요?' }); assert.equal(r.status, 200);
+    const r = await call('X', 'POST', `/api/pub/${A.tid}/tutor`, { q: '어떤 강좌가 있어요?', where: { scr: 'shop', name: '강좌 목록' } }); assert.equal(r.status, 200); assert.match(seen[seen.length - 1].system, /지금 보는 화면: 강좌 목록/);
     const sys = seen[seen.length - 1].system; const body = JSON.stringify(seen[seen.length - 1]);
     assert.match(sys, /로그인하지 않은 방문자/); assert.match(sys, /AI 리터러시/); assert.ok(!/진도 45%/.test(sys)); assert.ok(!body.includes('사례 2개를 표로')); assert.ok(!body.includes('ABC234'));
     assert.equal(seen[seen.length - 1].max_tokens, 500); });

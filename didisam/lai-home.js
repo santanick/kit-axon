@@ -51,7 +51,10 @@
   const moreHTML = () => `<section class="lai-more" aria-label="내 학습 비서 도구"><div class="in lai-w">${todoHTML()}<div class="lai-two">${connHTML()}${autoHTML()}</div></div></section>`;
 
   function mount() { const lm = document.getElementById('lm'); if (!lm || lm.querySelector('.lai')) return;
-    lm.insertAdjacentHTML('afterbegin', heroHTML()); document.body.classList.add('lai-on');
+    /* v25.1 잔여 QA: 방문자에게는 기관 홈페이지 첫 화면(히어로)을 먼저 보여 주고 AI 학습 비서는 그 바로 아래에 둔다(로그인하면 비서가 맨 위). */
+    let placed = false; if (!LR.me && LR.mode !== 'preview') { try { const host = lm.querySelector('.smhost[data-smk=home]'); const sr = host && host.shadowRoot; const smr = sr && sr.querySelector('.smr'); const kids = smr ? [...smr.children] : [];
+      if (kids.length > 1) { const h2 = document.createElement('div'); h2.className = 'smhost lai-split'; h2.dataset.ok = '1'; host.after(h2); const sr2 = h2.attachShadow({ mode: 'open' }); const st = sr.querySelector('style'); sr2.innerHTML = (st ? st.outerHTML : '') + `<div class="${smr.className}"></div>`; const box = sr2.querySelector('.smr'); kids.slice(1).forEach(k => box.appendChild(k)); host.insertAdjacentHTML('afterend', heroHTML()); placed = true; } if (!placed) { const hero = lm.querySelector(':scope > .hero'); if (hero) { hero.insertAdjacentHTML('afterend', heroHTML()); placed = true; } } } catch (e) { console.error('lai split', e); } }
+    if (!placed) lm.insertAdjacentHTML('afterbegin', heroHTML()); document.body.classList.add('lai-on');
     if (LR.me) { const after = lm.querySelector('.lux-cont') || lm.querySelector('.lai'); after.insertAdjacentHTML('afterend', moreHTML()); } }
   function sync() { const box = document.querySelector('.lai-res'); if (!box) return; const h = threadHTML(); box.hidden = !h; const th = box.querySelector('.lai-th'); th.innerHTML = h; th.scrollTop = th.scrollHeight; }
   function remount() { document.querySelectorAll('#lm .lai-more').forEach(x => x.remove()); const lm = document.getElementById('lm'); if (!lm || !LR.me) return; const after = lm.querySelector('.lux-cont') || lm.querySelector('.lai'); if (after) after.insertAdjacentHTML('afterend', moreHTML()); }

@@ -64,6 +64,7 @@
     if (c.saleEnd && c.saleEnd <= t) return { ok: false, label: '판매 종료' };
     if (R && R.on) { if (R.from && t < R.from) return { ok: false, label: `모집 예정 · ${R.from}부터` }; if (R.to && t > R.to) return { ok: false, label: '모집 마감' }; if (R.cap && (c.n || 0) >= +R.cap) return { ok: false, label: `정원 마감(${R.cap}명)` }; return { ok: true, label: `모집 중${R.to ? ` · ${R.to}까지` : ''}${R.cap ? ` · 잔여 ${Math.max(0, R.cap - (c.n || 0))}석` : ''}` }; }
     const P = c.period; if (P && P.mode !== 'days' && P.end && P.end < t) return { ok: false, label: '수강 기간 종료' };
+    try { const sh = SHOP(); if (sh && sh.pg && sh.pg.use === 'none' && priceOf(c) > 0) return { ok: true, label: '결제 준비 중', pend: true }; } catch (e) { } /* v25.1: 결제 미연결 유료 강좌에 '수강 신청 가능'이 함께 뜨던 문제 */
     return { ok: true, label: '수강 신청 가능' }; }
   const periodTxt = c => { const P = c.period; if (!P) return ''; return P.mode === 'days' ? `수강 신청 후 ${P.days}일` : `${P.start || ''} ~ ${P.end || ''}`; };
   const priceHTML = x => { const f = priceOf(x); if (!+x.price) return '<b class="shp-free">무료</b>'; return f < x.price ? `<s>${won(x.price)}</s> <b>${won(f)}</b>${x.kind === 'sub' ? '<small>/월</small>' : ''}` : `<b>${won(f)}</b>${x.kind === 'sub' ? '<small>/월</small>' : ''}`; };

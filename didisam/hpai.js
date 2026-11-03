@@ -527,6 +527,15 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
   /* ── 빈 스튜디오: 다른 기관의 예시 문구 대신 우리 기관 기본 문구 ── */
   if (typeof emptyOut === 'function') { const base = emptyOut; emptyOut = (...a) => { const r = base(...a); try { if (S.site) { const ns = hpMake(hpLocal(''), S.site, { by: '기본 설계' }); ns.blank = true; delete ns.ai; ns.published = false; S.site = ns; save(); } } catch (e) { console.error('hpai empty', e); } return r; }; }
 
+  /* v25.1 잔여 QA: 샘플 · 예전 기관의 홈페이지 첫 화면이 템플릿 예시 문구('PARTNER ACADEMY · 파트너 아카데미와 함께')로 남아 기관과 맞지 않던 문제
+     — 사용자가 고치지 않은(템플릿과 같은) 첫 화면 문구만 우리 기관 기본 문구로 한 번 바꾼다. 고친 문구는 건드리지 않는다. */
+  AFTER.unshift(() => { try { if (!S || !S.site || S.site.v251 || !Array.isArray(S.site.sections)) return; S.site.v251 = 1;
+    const tp = (typeof TPL !== 'undefined' ? TPL : []).find(t => t.id === S.site.tpl); const def = tp && tp.build ? (tp.build() || []).find(x => x.type === 'banner') : null;
+    const bn = S.site.sections.find(x => x.type === 'banner'); const SAMPLE = /파트너 아카데미|한진세이버|나이스평가정보|다산콜재단|PARTNER ACADEMY/;
+    if (!bn || !bn.data || !((def && def.data && bn.data.title === def.data.title) || SAMPLE.test([bn.data.eyebrow, bn.data.title, bn.data.sub].join(' ')))) { save(); return; }
+    const ns = hpMake(hpLocal(''), S.site, { by: '기본 설계' }); const nb = (ns.sections || []).find(x => x.type === 'banner'); if (!nb || !nb.data) { save(); return; }
+    ['eyebrow', 'title', 'sub', 'cta', 'cta2'].forEach(k => { if (nb.data[k] !== undefined) bn.data[k] = nb.data[k]; }); save(); } catch (e) { console.error('hpai v251', e); } });
+
   /* ── 4) 시작 가이드: 사이트 게시 단계 → 「AI로 홈페이지 만들기」 ── */
   if (typeof BLD_STEPS !== 'undefined') { const st = BLD_STEPS.find(s => s.id === 'site'); if (st) { try { st.d = '「AI로 홈페이지 만들기」로 만들고 한 번에 게시'; } catch (e) { } } }
   if (typeof bQ === 'function') { const base = bQ; bQ = id => id === 'site' || id === 'lsite' ? ['AI로 홈페이지 만들어줘', '홈페이지 게시해줘'] : base(id); }

@@ -275,11 +275,11 @@
   }
   function footHTML(s) {
     const ft = S.settings.footer || {}; const f = s.foot; const pg = S.settings.pg === 'toss';
-    const parts = [`상호 ${esc(ft.company || S.org.name)}`, f.showCeo ? `대표 ${esc(ft.ceo || '—')}` : '', f.showBiz ? `사업자등록번호 ${esc(ft.biz || '—')}` : '', `통신판매업 ${esc(ft.mail || '—')}`].filter(Boolean).join(' · ');
+    const parts = [`상호 ${esc(ft.company || S.org.name)}`, f.showCeo && ft.ceo ? `대표 ${esc(ft.ceo)}` : '', f.showBiz && ft.biz ? `사업자등록번호 ${esc(ft.biz)}` : '', ft.mail ? `통신판매업 ${esc(ft.mail)}` : ''].filter(Boolean).join(' · '); /* v25.1: 빈 칸은 '—' · '미입력' 대신 생략 */
     /* 운영: 토스페이먼츠 가맹점 에스크로 가입 확인 페이지(MID 기준) */
     const esc2 = pg ? `<a class="s2esc" href="https://www.tosspayments.com/" target="_blank" rel="noopener" title="구매안전(에스크로) 서비스 가입 확인"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z" fill="currentColor" opacity=".25"/><path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" fill="none"/></svg>토스페이먼츠 구매안전(에스크로) 서비스 가입 확인</a>` : '';
     const sty = [f.bg ? `background:${f.bg}` : '', f.bg ? `color:${dark(f.bg) ? 'rgba(255,255,255,.75)' : '#4A4F5C'}` : '', `text-align:${f.align}`].filter(Boolean).join(';');
-    return `<footer class="gf s2ft al-${esc(f.align)}${f.bg && !dark(f.bg) ? ' lt' : ''}" style="${esc(sty)}"><div class="wrap"><div><b>${esc(S.org.name)}</b><p>${parts}</p>${ft.reg ? `<p>${esc(FOOT_REG())} ${esc(ft.reg)}</p>` : ''}<p>${esc(ft.addr || '주소 미입력')} · ${esc(ft.tel || '연락처 미입력')}</p><p>©Copyright ${esc(S.org.name)} All rights reserved · Powered by 디디쌤</p>${esc2}</div><div class="fl2"><a href="#p-terms">서비스 이용약관</a><a href="#p-privacy">개인정보 처리방침</a></div></div></footer>`;
+    return `<footer class="gf s2ft al-${esc(f.align)}${f.bg && !dark(f.bg) ? ' lt' : ''}" style="${esc(sty)}"><div class="wrap"><div><b>${esc(S.org.name)}</b><p>${parts}</p>${ft.reg ? `<p>${esc(FOOT_REG())} ${esc(ft.reg)}</p>` : ''}${ft.addr || ft.tel ? `<p>${[ft.addr, ft.tel].filter(Boolean).map(esc).join(' · ')}</p>` : ''}<p>©Copyright ${esc(S.org.name)} All rights reserved · Powered by 디디쌤</p>${esc2}</div><div class="fl2"><a href="#p-terms">서비스 이용약관</a><a href="#p-privacy">개인정보 처리방침</a></div></div></footer>`;
   }
   function chatHTML(full) {
     const c = S.settings.chatbot; if (!c || c.type === 'none') return '';

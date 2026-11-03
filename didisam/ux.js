@@ -230,3 +230,11 @@ AFTER.unshift(() => { try { const st = S && S.bld && S.bld.steps.pg; const T = S
 AFTER.unshift(() => { try { const tu = S && S.settings && S.settings.tutor; if (tu && !tu.v234) { tu.v234 = 1; tu.loginOnly = false; if (tu.guestDaily == null) tu.guestDaily = 10; save(); } } catch (e) { } });
 /* v25 QA: 노트북 낮은 화면(세로 760px 이하)에서는 시작 가이드 카드를 처음부터 한 줄로 접어 대화 · 화면 도움 카드가 보이게 한다(머리를 누르면 펼침). */
 try { if (innerHeight <= 760 && typeof UI === 'object' && UI.obc === undefined) UI.obc = true; } catch (e) { }
+/* v25.1 대표님(2026-11-03): '더 보기가 클릭이 안 되는데?' — 탭 줄(.btabs)이 가로 스크롤(overflow:auto)이라 펼친 목록이 그 안에서 잘려 보이지 않았다.
+   열릴 때 목록을 화면 기준(fixed)으로 띄우고, 스크롤 · 크기 변경 때 닫는다. 화면 아래가 모자라면 위로 연다. */
+document.addEventListener('toggle', e => { const d = e.target; if (!(d instanceof HTMLDetailsElement) || !d.classList.contains('uxmore')) return; const pop = d.querySelector(':scope > .uxpop'); if (!pop) return;
+  if (!d.open) { pop.style.cssText = ''; return; }
+  const r = d.querySelector('summary').getBoundingClientRect(); pop.style.position = 'fixed'; pop.style.zIndex = '59'; pop.style.right = 'auto'; pop.style.bottom = 'auto';
+  const w = Math.max(200, pop.offsetWidth); let left = Math.min(r.left, innerWidth - w - 8); left = Math.max(8, left); pop.style.left = left + 'px';
+  const h = pop.offsetHeight; const below = r.bottom + 6; pop.style.top = (below + h > innerHeight - 8 && r.top - h - 6 > 8 ? r.top - h - 6 : below) + 'px'; pop.style.maxHeight = (innerHeight - 24) + 'px'; pop.style.overflow = 'auto'; }, true);
+['scroll', 'resize'].forEach(ev => addEventListener(ev, e => { if (e.type === 'scroll' && e.target && e.target.closest && e.target.closest('.uxpop')) return; document.querySelectorAll('details.uxmore[open]').forEach(d => d.removeAttribute('open')); }, true));
