@@ -50,6 +50,11 @@ function a2lQna(c, it) { const mine = (LR.lp.a2q || []).filter(x => x.cls === c.
 function a2lExam(c, it) {
   const rec = a2lPeek(c.id, it.id); const can = a2lCan(it, rec); const running = A2L.run && A2L.run.item === it.id;
   let h = a2lExamInfo(it, rec) + a2lResult(it, rec);
+  /* v26.6 피그마 강의 화면 › 시험/시작 전: 마감 전/마감됨 표시 · '응시 전에 반드시 확인' 안내 상자 */
+  { const R2 = it.rules || {}; const end = R2.to ? new Date(R2.to) : null; const over = end && !isNaN(end) && end < new Date();
+    if (end && !isNaN(end)) h = `<p class="a2ldl"><span class="tg ${over ? '' : 'g'}">${over ? '마감됨' : '마감 전'}</span></p>` + h;
+    if (!running && can.ok && (it.qs || []).length) { const B = [it.time ? `시험 시간은 ${it.time}분이며, 시작한 뒤 화면을 나가도 시간은 계속 흐릅니다. 시간이 끝나면 그때까지 쓴 답으로 자동 제출됩니다.` : '', can.left != null ? `응시 기회가 ${can.left}번 남았습니다.` : '', R2.pass && R2.pass.on ? `통과 점수는 ${R2.pass.v}점입니다.` : '', '궁금한 점은 아래 1:1 질문으로 남기면 담당자가 답합니다.'].filter(Boolean);
+      h += `<div class="a2lchk"><b>시험 응시 전에 반드시 확인해 주세요.</b><ul>${B.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`; } }
   if (running) h += a2lExamForm(c, it);
   else if (can.ok) h += (it.type === 'exam' || it.time) && (it.qs || []).length ? `<div class="a2lgo"><p class="mini">${(it.qs || []).length}문항${it.time ? ` · ${it.time}분` : ''}${can.left != null ? ` · 남은 응시 ${can.left}회` : ''}. 시작하면 ${it.time ? '시간이 흐르고, 시간이 끝나면 자동으로 제출됩니다.' : '바로 풀 수 있습니다.'}</p><button type="button" class="lbtn pri" data-a2="start" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${(rec.tries || []).length ? '다시 응시하기' : '응시 시작'}</button></div>` : a2lExamForm(c, it);
   else h += `<p class="a2lwhy">${esc(can.why)}</p>`;
@@ -75,10 +80,11 @@ function a2lSurvey(c, it) {
   if (rec.sv) return `<div class="a2ldone">${ico('check', 22)}<b>${esc(it.doneMsg || '설문에 참여해 주셔서 감사합니다.')}</b><small>${esc(a2lDT(rec.sv.at).slice(0, 16))} 응답 완료</small></div>`;
   const f = a2lT(R.from), to = a2lEnd(R.to); const now = Date.now();
   const info = a2lInfo([['응시 기간', R.from || R.to ? esc(`${R.from || '지금'} ~ ${R.to || '제한 없음'}`) : ''], ['예상 소요 시간', it.mins ? `약 ${it.mins}분` : ''], ['문항', Q.length ? `${Q.length}문항 · <span class="a2req">*</span> 필수` : '']]);
-  if (f && now < f) return info + `<p class="a2lwhy">설문 기간 전입니다. ${esc(R.from)}부터 참여할 수 있습니다.</p>`;
-  if (to && now > to) return info + '<p class="a2lwhy">설문 기간이 끝났습니다.</p>';
+  const dtag = to ? `<p class="a2ldl"><span class="tg ${now > to ? '' : 'g'}">${now > to ? '마감됨' : '마감 전'}</span></p>` : '';
+  if (f && now < f) return dtag + info + `<p class="a2lwhy">설문 기간 전입니다. ${esc(R.from)}부터 참여할 수 있습니다.</p>`;
+  if (to && now > to) return dtag + info + '<p class="a2lwhy">설문 기간이 끝났습니다.</p>';
   if (!Q.length || !Q[0].t) return null;
-  return info + `<form id="a2sv" class="a2lsv" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${Q.map((q, k) => `<fieldset class="q" data-k="${k}" data-t="${esc(q.t)}" data-max="${+q.max || 0}"><legend><span>${k + 1}</span>${esc(q.q)}${q.req ? ' <b class="a2req" aria-label="필수">*</b>' : ''}${q.t === 'multiN' ? ` <small class="mini">최대 ${q.max}개</small>` : q.t === 'multi' ? ' <small class="mini">여러 개 선택</small>' : ''}</legend>
+  return dtag + info + `<form id="a2sv" class="a2lsv" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${Q.map((q, k) => `<fieldset class="q" data-k="${k}" data-t="${esc(q.t)}" data-max="${+q.max || 0}"><legend><span>${k + 1}</span>${esc(q.q)}${q.req ? ' <b class="a2req" aria-label="필수">*</b>' : ''}${q.t === 'multiN' ? ` <small class="mini">최대 ${q.max}개</small>` : q.t === 'multi' ? ' <small class="mini">여러 개 선택</small>' : ''}</legend>
     ${q.t === 'text' ? `<textarea name="s${k}" rows="3" maxlength="2000" placeholder="자유롭게 적어 주세요"></textarea>` : `<div class="opts">${q.opts.map((o, j) => `<label><input type="${q.t === 'single' ? 'radio' : 'checkbox'}" name="s${k}" value="${j}"><span>${esc(o)}</span></label>`).join('')}${q.etc ? `<label class="a2etc"><input type="${q.t === 'single' ? 'radio' : 'checkbox'}" name="s${k}" value="etc"><span>기타(직접 입력)</span><input type="text" name="e${k}" maxlength="200" aria-label="기타 직접 입력"></label>` : ''}</div>`}</fieldset>`).join('')}<button class="lbtn pri" type="submit">설문 제출</button></form>`;
 }
 

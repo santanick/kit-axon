@@ -205,3 +205,15 @@ input[type=search]::placeholder,input::placeholder,textarea::placeholder{color:v
 .cm26q{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 10px}.cm26q .grow{flex:1}
 .cm26k{display:inline-flex;align-items:center;gap:6px;border:1px solid #EAEBEB;background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;color:#4C4D4D;cursor:pointer}.cm26k b{color:#5C74F6}.cm26k.on{border-color:#5C74F6;background:#EAEDFF}
 .cm26t{font-size:15px;margin:0}
+/* v26.6 설정 › 팝업 설정(피그마 Studio › 설정 › 팝업 설정) */
+.pp26h{display:flex;align-items:center;gap:8px;margin:4px 0 10px}.pp26h .grow{flex:1}
+.pp26l{list-style:none;margin:0;padding:0;border:1px solid #EAEBEB;border-radius:8px;background:#fff}.pp26l li{display:flex;align-items:center;gap:14px;padding:12px 16px;border-top:1px solid #EAEBEB;flex-wrap:wrap}.pp26l li:first-child{border-top:0}.pp26l li.off b{color:#AAABAB}
+.pp26l small{color:#808181;min-width:46px}.pp26l b{flex:1;min-width:140px}.pp26o{display:flex;flex-direction:column;line-height:1}.pp26o .link{padding:0 4px;font-size:12px}
+.pp26t{display:inline-flex;align-items:center;gap:6px;font-size:13px}.pp26t input{accent-color:#5C74F6}.pp26a{display:flex;gap:4px}
+.pp26pv{display:flex;gap:14px;flex-wrap:wrap}.pp26c{width:240px;border:1px solid #EAEBEB;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;gap:6px;padding-bottom:10px}.pp26c img,.pp26ph{width:100%;height:240px;object-fit:cover;background:#F1F2F2;display:grid;place-items:center;color:#AAABAB}.pp26c b,.pp26c p,.pp26c small{padding:0 12px;margin:0}.pp26c small{color:#808181;font-size:12px}
+/* v26.6 설정 › 약관 설정 */
+.tr26h{display:flex;align-items:center;gap:8px;margin:4px 0 12px}.tr26h .grow{flex:1}.tr26p button{border-radius:999px!important}
+.tr26n{background:#FBFCFC;border:1px solid #EAEBEB;border-radius:8px;padding:14px 18px;margin-bottom:14px}.tr26n b{font-size:14px}.tr26n ul{margin:6px 0 0;padding-left:18px;color:#6C6C6C;font-size:13px;line-height:1.7}
+.tr26b .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.tr26v{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#4C4D4D}.tr26v select{height:34px;border:1px solid #C8C9C9;border-radius:4px;padding:0 8px}
+.tr26b textarea{width:100%;min-height:320px}.tr26ro{border:1px solid #EAEBEB;border-radius:8px;padding:16px;background:#FBFCFC;max-height:420px;overflow:auto;font-size:13.5px;line-height:1.7}
+.tr26f{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:8px}.tr26f label{display:inline-flex;align-items:center;gap:6px;font-size:13px}

@@ -47,3 +47,7 @@
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', st) : st(); })();
 /* v26.5 게시판 목록 검색(피그마 User Page › 게시판 왼쪽 목록) */
 document.addEventListener('input', e => { if (!e.target.classList || !e.target.classList.contains('lc26bq')) return; const q = e.target.value.trim().toLowerCase(); e.target.parentElement.querySelectorAll('nav a').forEach(a => { a.hidden = !!q && !a.dataset.n.includes(q); }); });
+/* v26.6 마이페이지 결제 내역: 기간 · 검색 */
+(() => { const f = () => { const p = +((document.getElementById('py26p') || {}).value || 0), q = ((document.getElementById('py26q') || {}).value || '').trim().toLowerCase(); const lim = p ? (() => { const d = new Date(); d.setMonth(d.getMonth() - p); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : ''; let n = 0;
+    document.querySelectorAll('.py26t a.py26r').forEach(r => { const ok = (!lim || r.dataset.at >= lim) && (!q || r.dataset.q.includes(q)); r.hidden = !ok; if (ok) n++; }); const c = document.getElementById('py26c'); if (c) c.textContent = n + '건'; };
+  document.addEventListener('input', e => { if (e.target.id === 'py26q') f(); }); document.addEventListener('change', e => { if (e.target.id === 'py26p') f(); }); })();

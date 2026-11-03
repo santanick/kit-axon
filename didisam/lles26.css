@@ -91,3 +91,13 @@ section.crsh.l26hide{display:none}
 @media (max-width:860px){.lc26w.bd,.lc26w.bd.one{grid-template-columns:minmax(0,1fr)}.lc26bd{position:static}.lc26bd nav{flex-direction:row;overflow-x:auto}.lc26bd nav a{flex:none}}
 .lcsec:has(.lc26w.bd) .lctabs:first-child>a:not([href="#comm/mine"]){display:none}
 .lcsec:has(.lc26w.bd) .lcbar .lbtn.pri{display:none}
+/* 시험 시작 전 안내(v26.6, 피그마 강의 화면 › 시험) */
+.a2ldl{margin:0 0 8px}.a2lchk{background:#fff;border:1px solid var(--g300);border-radius:8px;padding:14px 18px;margin:12px 0}.a2lchk b{font-size:14.5px}.a2lchk ul{margin:6px 0 0;padding-left:18px;color:var(--g700);font-size:13.5px;line-height:1.7}
+/* 마이페이지 결제 내역(v26.6) */
+.py26bar{display:flex;gap:8px;align-items:center;margin:4px 0 10px;flex-wrap:wrap}.py26bar select,.py26bar input{height:40px;border:1px solid var(--g300);border-radius:4px;padding:0 10px;background:#fff;font:inherit;font-size:14px}.py26bar input{flex:1;min-width:200px}
+.py26t{border:1px solid var(--g300);border-radius:8px;background:#fff;overflow:hidden}
+.py26r{display:grid;grid-template-columns:130px 100px minmax(0,1fr) 100px 90px 110px 80px;gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--g200,#EEF0F1);color:var(--g900);text-decoration:none;font-size:14px}.py26r:hover{background:var(--g50,#FAFBFB)}
+.py26hd{border-top:0;background:var(--g100);color:var(--g700);font-weight:700;font-size:13px}.py26hd:hover{background:var(--g100)}
+.py26r small{display:block;color:var(--g500);font-size:12px}.py26r b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}.py26no{text-decoration:underline;color:var(--g700);font-size:13px}.py26d{color:var(--pri);font-size:13px;font-weight:600}
+@media (max-width:860px){.py26hd{display:none}.py26r{grid-template-columns:1fr auto;grid-auto-flow:row}.py26r>span:nth-child(1),.py26r>span:nth-child(5),.py26r>span:nth-child(7){display:none}.py26r>span:nth-child(3){grid-column:1/-1;order:-1}}
+@media (min-width:1280px){.cw2.l26>.l26side{padding-right:72px}.l26side .lctabs{margin-right:-72px;padding-right:72px}}
