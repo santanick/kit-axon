@@ -8,6 +8,7 @@ const crypto = require('node:crypto');
 const { inTenant } = require('./db');
 const { createMcp } = require('./mcp');
 const { createPii } = require('./pii');
+const { benchmark } = require('./bench');
 
 const TYPES = ['corp', 'univ', 'public', 'k12', 'adult', 'lifelong', 'voc'];
 const MODELS = ['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5'];
@@ -72,7 +73,7 @@ const LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com http
 const LP_MAX = 256 * 1024;
 const TID_RE = /^tn_[a-z0-9]{8,16}$/; const SID_RE = /^[A-Za-z0-9_-]{4,20}$/;
 
-function createApp({ pool, env = process.env, publicDir, log = console }) {
+function createApp({ pool, env = process.env, publicDir, log = console, benchOpts = {} }) {
   const secure = env.COOKIE_SECURE !== '0';
   const cookieName = secure ? COOKIE : 'dd_sid'; // __Host- 접두어는 Secure 필수
   const aiKey = /^sk-ant-/.test(env.ANTHROPIC_API_KEY || '') ? env.ANTHROPIC_API_KEY.trim() : ''; // 'none' 등 자리표시는 꺼짐
@@ -341,6 +342,13 @@ ${here}`;
       await inTenant(pool, a.tid, c => c.query('update ai_usage set tin = tin + $3, tout = tout + $4 where tenant_id = $1 and day = $2', [a.tid, today(), u.input_tokens || 0, u.output_tokens || 0]));
       void pol;
       return { content: j.content || [], usage: u, model: j.model || model, stop_reason: j.stop_reason };
+    },
+    /* v24 홈페이지 벤치마크: 운영자 세션만 · https만 · 내부 주소 차단(SSRF) · 2MB · 10초 · 구조만 돌려줌 */
+    'POST /api/site/benchmark': async req => {
+      const a = await need(req); limit(`bench:${a.tid}`, 20, 10 * 60000);
+      const b = await readBody(req, 4096); if (typeof b.url !== 'string' || !b.url) throw new HttpErr(400, '읽을 주소를 넣어 주세요.', 'bad_url');
+      try { const out = await benchmark(b.url, benchOpts); log.info && log.info('bench', a.tid, new URL(out.url).host); return out; }
+      catch (e) { if (e && e.status) throw new HttpErr(e.status, e.message, e.code); throw new HttpErr(502, '사이트를 읽지 못했습니다.', 'fetch'); }
     },
     'GET /api/ai/usage': async req => {
       const a = await need(req);

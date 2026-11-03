@@ -150,7 +150,7 @@ function uxEmpty(keep) {
 }
 function uxTop() {
   const top = document.querySelector('.top'); if (!top) return;
-  const p = top.querySelector('.bprog'); if (p) { const s = p.querySelector('span'); if (s) s.textContent = '시작 가이드'; if (S.bld && bAllDone()) p.hidden = true; }
+  const p = top.querySelector('.bprog'); if (p && !(typeof scn === 'function' && scn() === 'teacher')) { const s = p.querySelector('span'); if (s) s.textContent = '시작 가이드'; if (S.bld) { const L = bList(), dn = L.filter(x => bDone(x.id)).length, bb = p.querySelector('b'), ii = p.querySelector('i'); if (bb) bb.textContent = `${dn}/${L.length}`; if (ii) ii.style.width = Math.round(dn / Math.max(1, L.length) * 100) + '%'; } /* v24: 머리 숫자가 렌더 뒤 자동 완료(결제 · 초대)를 놓쳐 카드와 달랐던 문제 */ if (S.bld && bAllDone()) p.hidden = true; }
   const ap = top.querySelector('.acp');
   if (ap && !ap.querySelector('.uxacs')) {
     ap.insertAdjacentHTML('afterbegin', `<div class="uxacs"><small>보기 설정</small></div><hr>`); const box = ap.querySelector('.uxacs');
@@ -221,7 +221,7 @@ const uxInvLink = () => { try { const iv = mbInvite('student', '', 'sub'); retur
 ACT['ux-copy'] = el => { const v = el.dataset.v || ''; (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => toast('복사했습니다.', 'ok'), () => toast('복사하지 못했습니다. 길게 눌러 복사하세요.', 'warn')); uxPeopleDone(); };
 
 /* v23.1 실측: 결제 연결은 토스 심사(최대 4주)를 기다리는 단계 — 가입을 신청(신청 · 심사중 · 승인)하면 시작 가이드에서는 완료로 본다. '나중에 할게'는 건너뛰기. */
-AFTER.push(() => { try { const st = S && S.bld && S.bld.steps.pg; const T = S.settings && S.settings.toss; if (st && !st.done && T && ['신청', '심사중', '승인'].includes(T.status)) { st.done = true; save(); if (typeof obMount === 'function') obMount(); } } catch (e) { } });
+AFTER.unshift(() => { try { const st = S && S.bld && S.bld.steps.pg; const T = S.settings && S.settings.toss; if (st && !st.done && T && ['신청', '심사중', '승인'].includes(T.status)) { st.done = true; save(); if (typeof obMount === 'function') obMount(); } } catch (e) { } });
 { const base = chatSend; chatSend = (q, ...r) => { const s = String(q || '').trim();
   if (/^결제\s*연결은?\s*나중에/.test(s) && S && S.bld && S.bld.steps.pg) { S.bld.steps.pg.on = false; S.chat.push({ role: 'user', text: s }, { role: 'ai', text: '결제 연결은 나중에 하도록 시작 가이드에서 뺐습니다. 무료 강좌는 지금 바로 운영할 수 있고, 유료 판매는 매출 › 토스페이먼츠 가입에서 언제든 시작하면 됩니다.' }); save(); renderThreads(); try { obMount(); } catch (e) { } return Promise.resolve(); }
   return base(q, ...r); }; }

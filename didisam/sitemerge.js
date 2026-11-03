@@ -90,7 +90,7 @@
       if (key.startsWith('m-')) { const id = key.slice(2); const m = s0.menus.find(x => x.id === id) || s0.menus.find(x => id.startsWith(x.id + '-')); return m ? menuHref(m) : '#hp/' + key; }
       return '#hp/' + key;
     };
-    function linkOf(v) { v = String(v || ''); if (v.startsWith('page:')) return keyHref(v.slice(5)); if (v.startsWith('cls:')) return '#class/' + v.slice(4); if (v.startsWith('url:') && /^https?:\/\//.test(v.slice(4))) return v.slice(4); return '#home'; }
+    function linkOf(v) { v = String(v || ''); if (v.startsWith('learn:')) { const r = v.slice(6); return ['home', 'shop', 'comm', 'notice', 'textbooks', 'my', 'courses'].includes(r) ? '#' + r : '#home'; } /* v24 학습 페이지 연결 */ if (v.startsWith('page:')) return keyHref(v.slice(5)); if (v.startsWith('cls:')) return '#class/' + v.slice(4); if (v.startsWith('url:') && /^https?:\/\//.test(v.slice(4))) return v.slice(4); return '#home'; }
     const fix = html => String(html || '').replace(/href="#p-([^"]*)"/g, (_, k) => `href="${esc(keyHref(k))}"`);
     const pages = {}; let home = '';
     const re = /<main class="s2pg" id="p-([^"]+)">/g; let mm; const idx = [];
@@ -103,7 +103,7 @@
     const fs = h.lastIndexOf('<footer class="gf'), fe = h.lastIndexOf('</footer>');
     const foot = fs >= 0 && fe > fs ? fix(h.slice(fs, fe + 9)) : '';
     const menus = s0.menus.filter(m => m.on !== false).map(m => ({ id: m.id, kind: m.kind, l: m.l, access: m.access || '공개', hide: !!m.hide, allow: allowOf(m), href: menuHref(m),
-      subs: m.kind === 'custom' && m.subOn ? (m.subs || []).filter(sb => sb.on !== false).map(sb => ({ id: sb.id, l: sb.l, access: sb.access || '공개', hide: !!sb.hide, allow: allowOf(sb), href: sb.link ? linkOf(sb.link) : '#hp/s-' + m.id + '-' + sb.id })) : [] }));
+      subs: m.subOn && Array.isArray(m.subs) ? m.subs.filter(sb => sb.on !== false).map(sb => ({ id: sb.id, l: sb.l, access: sb.access || '공개', hide: !!sb.hide, allow: allowOf(sb), href: sb.link ? linkOf(sb.link) : '#hp/s-' + m.id + '-' + sb.id })) : [] }));
     const st = S.settings || {}; const seo = st.seo || {}; const cb = st.chatbot || {}; const g = s0.gnb || {};
     const dark = c => { try { return /^#[0-9a-f]{6}$/i.test(c) && lum(c) < .35; } catch (e) { return false; } };
     return { v: 1, at: nowStr(), name: S.org.name, look: typeof lookOf === 'function' ? lookOf(s0) : 'campus', color: s0.color || '', css: shadowCSS(css), home, pages, foot, menus,

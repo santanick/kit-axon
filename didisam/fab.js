@@ -45,7 +45,7 @@ ACT['fab-mode'] = el => { const v = el.dataset.v === 'dock' ? 'dock' : 'float'; 
    화면 이동 · 맡기기 · 단계 진행 같은 프로그램 호출(el 없음)은 열지 않고, 답이 오면 버튼에 새 답 표시 + 알림 */
 { const base = ACT['chat-open']; ACT['chat-open'] = el => { if (fabOn() && fabBld()) { if (el && el.nodeType === 1) fabOpen(); return; } base(el); fabSync(); }; }
 { const base = ACT['chat-close']; ACT['chat-close'] = el => { base(el); fabSync(); }; }
-{ const base = chatSend; chatSend = async q => { const was = fabOn() && fabIsOpen(); const p = base(q); setTimeout(fabSync, 50); try { return await p; } finally { if (fabOn() && !was && !fabIsOpen() && String(q || '').trim()) { UI.fabNew = (UI.fabNew || 0) + 1; toast('AI SAM이 답했습니다 — 오른쪽 아래 AI SAM을 눌러 확인하세요.', 'ok'); } fabSync(); } }; }
+{ const base = chatSend; chatSend = async q => { const was = fabOn() && fabIsOpen(); const p = base(q); setTimeout(fabSync, 50); try { return await p; } finally { if (fabOn() && !was && !fabIsOpen() && String(q || '').trim() && !document.body.classList.contains('aih-on')) { /* v24: 홈 'AI 비서' 화면에서는 답이 화면에 바로 보이므로 알림 없음 */ UI.fabNew = (UI.fabNew || 0) + 1; toast('AI SAM이 답했습니다 — 오른쪽 아래 AI SAM을 눌러 확인하세요.', 'ok'); } fabSync(); } }; }
 AFTER.push(() => fabSync());
 addEventListener('resize', () => fabSync());
 addEventListener('keydown', e => { if (!fabOn()) return;

@@ -200,7 +200,9 @@ function ltOpen() {
 }
 async function ltAsk(q, opts = {}) {
   q = String(q || '').trim(); if (!q || LT.busy) return; const C = TCFG();
-  if (!LT.open) ltOpen();
+  /* v24: 홈의 '내 AI 학습 비서' 화면에서 물으면 떠 있는 창을 열지 않고 화면 안에 답한다(lai-home.js) */
+  const page = !LT.open && !!document.querySelector('.lai-th');
+  if (page) { const w = (LR.me && LR.me.sid) || ''; if (LT.who !== w) { LT.who = w; LT.msgs = []; } } else if (!LT.open) ltOpen();
   if (C.loginOnly && !LR.me) { LT.msgs.push({ me: 1, t: q }, { t: '로그인한 뒤에 쓸 수 있습니다.', h: ltLinks([{ h: '로그인하기', d: '', href: '#login' }]) }); ltRender(); return; }
   const lim = LR.me ? (+C.daily || 20) : (+C.guestDaily || 10); if (ltUsed() >= lim) { LT.msgs.push({ me: 1, t: q }, { t: LR.me ? `오늘 질문 한도(${lim}회)를 모두 썼습니다. 내일 다시 이어 가거나, 급한 질문은 선생님께 넘겨 주세요.` : `방문자 질문 한도(${lim}회)를 모두 썼습니다. 무료 가입 후 로그인하면 계속 물어볼 수 있습니다.`, h: ltBtns([['선생님께 질문 넘기기', q, 'esc']]) }); ltRender(); return; }
   LT.msgs.push({ me: 1, t: q }); LT.msgs = LT.msgs.slice(-30); ltUse();

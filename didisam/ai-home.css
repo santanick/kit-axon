@@ -1,0 +1,92 @@
+/* 디디쌤 스튜디오 v24 — 역할별 AI 비서 홈(ai-home.js 짝) */
+/* 홈은 화면 자체가 비서: 떠 있는 AI SAM 버튼 · 위젯 · 화면 머리는 숨김(다른 화면에서는 그대로) */
+body.aih-on #fabBtn{display:none!important}
+body.aih-on.fab-on .bchat{display:none}
+body.aih-on .bhd{display:none}
+body.aih-on .bview{padding-top:0}
+.aih{max-width:820px;margin:0 auto;padding:4px 0 56px;display:flex;flex-direction:column;gap:28px}
+.aih .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.aih .sp{flex:1}
+/* 인사 + 입력창 */
+.aih-hero{text-align:center;padding:30px 0 0;display:flex;flex-direction:column;align-items:center}
+.aih-orb{width:52px;height:52px;border-radius:18px;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 30% 25%,#FF8FC0 0,transparent 45%),linear-gradient(135deg,#D6246E,#8B3DFF);box-shadow:0 14px 30px -14px rgba(139,61,255,.75);margin-bottom:16px}
+.aih-t .aih-orb{background:radial-gradient(circle at 30% 25%,#9FD4FF 0,transparent 45%),linear-gradient(135deg,#2E6BD6,#5B3FC4)}
+.aih-ey{margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:600}
+.aih-hero h1{margin:0 0 22px;font-size:30px;line-height:1.3;letter-spacing:-.03em;font-weight:800}
+.aih-hero h1 em{font-style:normal;background:linear-gradient(90deg,#D6246E,#8B3DFF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.aih-t .aih-hero h1 em{background:linear-gradient(90deg,#2E6BD6,#5B3FC4);-webkit-background-clip:text;background-clip:text}
+.composer.aih-comp{width:100%;padding:0;background:none;border:0}
+.aih-comp .cbox{padding:10px 10px 10px 22px;border-radius:24px;box-shadow:0 0 0 1.5px var(--line),0 18px 40px -24px rgba(21,23,59,.45)}
+.aih-comp .cbox:focus-within{box-shadow:0 0 0 2px #8B3DFF,0 18px 40px -24px rgba(21,23,59,.45)}
+.aih-comp textarea:focus-visible{outline:0!important}
+.aih-t .aih-comp .send{background:linear-gradient(135deg,#2E6BD6,#5B3FC4);box-shadow:0 8px 18px -8px rgba(46,107,214,.8)}
+.aih-comp textarea{font-size:16.5px;padding:12px 0;min-height:48px}
+.aih-comp .send{width:48px;height:48px;border-radius:16px}
+.aih-chips{align-self:stretch;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:16px}
+.aih-chips .chip{padding:9px 14px;font-size:13.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#fff}
+.aih-chips .chip::before{content:'✦ ';color:var(--mag)}
+.aih-t .aih-chips .chip::before{color:#2E6BD6}
+.aih-note{margin:14px 0 0;font-size:12.5px;color:#5D6078}
+/* 최근 대화 */
+.aih-res{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px 18px}
+.aih-rh{display:flex;align-items:center;gap:8px;margin-bottom:10px}.aih-rh b{display:inline-flex;align-items:center;gap:6px;font-size:14px}
+.aih-th{display:flex;flex-direction:column;gap:12px}
+.aih-th .msg .bub{max-width:min(680px,92%)}
+.aih-th .mcard{display:block;margin-top:10px}
+.aih-lk{border:0;background:none;color:var(--muted);font:600 13px inherit;cursor:pointer;padding:6px 8px;border-radius:8px}
+.aih-lk:hover{background:var(--soft);color:var(--ink)}
+/* 시작 가이드(홈 안) */
+.aih-guide .obd{margin:0;border-radius:20px}
+.aih-guide .obd .obs{max-height:none}
+/* 공통 섹션 */
+.aih-sec{min-width:0}
+.aih-sh{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.aih-sh h2{margin:0;font-size:17px;display:flex;align-items:baseline;gap:8px}.aih-sh h2 small{font:600 12.5px var(--num);color:var(--muted)}
+.aih .uxtodo{margin:0}
+.aih .uxtodo ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.aih-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+/* Connect */
+.aih-cn{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.aih-cc{position:relative;padding-right:22px!important;display:flex;align-items:center;gap:10px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 12px;cursor:pointer;color:var(--ink);font:inherit;min-width:0}
+.aih-cc:hover{border-color:#bdb7a8}
+.aih-lg{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:none;font:700 13px var(--num);color:#fff;background:var(--c,#666)}
+.aih-cc:not(.on) .aih-lg{filter:saturate(.35);opacity:.8}
+.aih-cm{min-width:0;display:flex;flex-direction:column}.aih-cm b{font-size:13.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.aih-cm small{font-size:12px;color:#5D6078;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aih-dot{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:#CFCAbd}
+.aih-cc.on .aih-dot{background:#16A35A;box-shadow:0 0 0 3px #E3F4EA}.aih-cc.chk .aih-dot{background:#D99A00}
+.aih-cc.on small{color:#16804D;font-weight:600}
+.aih-cc.soon{border-style:dashed}
+/* 자동화 · 강의 목록 */
+.aih-al{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.aih-ar,.aih-tp,.aih-cr{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 12px}
+.aih-ar>div,.aih-tp>div,.aih-cr>div{flex:1;min-width:0}
+.aih-ar b,.aih-tp b,.aih-cr b{display:block;font-size:13.5px;line-height:1.35}
+.aih-ar small,.aih-tp small,.aih-cr small{display:block;font-size:12px;color:#5D6078;line-height:1.45}
+.aih-ar.off{opacity:.72}
+.aih-ai{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:#F3EEFF;color:#5B3FC4;flex:none}
+.aih-al.tp .aih-tp{background:var(--paper);border-style:dashed}
+.aih-sub{margin:12px 0 8px;font-size:12.5px;color:#5D6078}
+.aih-more{margin:8px 2px 0;font-size:12.5px;color:#5D6078}
+.aih-pb{display:block;height:5px;border-radius:9px;background:var(--soft);margin-top:6px;overflow:hidden;max-width:260px}.aih-pb i{display:block;height:100%;background:#5B3FC4;border-radius:inherit}
+.aih-steps{margin:8px 0;padding-left:20px;font-size:14px;line-height:1.6}.aih-steps li{margin:4px 0}
+/* 전체 메뉴 */
+.aih-menu{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-top:18px;border-top:1px solid var(--line)}
+.aih-menu>span{font-size:12.5px;font-weight:700;color:#5D6078;margin-right:4px}
+.aih-menu button{display:inline-flex;align-items:center;gap:6px;border:0;background:none;color:var(--ink);font:600 13px inherit;padding:7px 10px;border-radius:10px;cursor:pointer}
+.aih-menu button:hover{background:var(--soft)}
+/* 넓은 화면에서 탭은 가운데 */
+body.aih-on .uxhd{display:flex!important;width:max-content!important;margin:4px auto 0!important}
+/* 휴대폰 */
+@media (max-width:860px){
+  body.aih-on .bmseg{display:none!important}
+  .aih{gap:22px;padding-bottom:40px}
+  .aih-hero{padding-top:14px}
+  .aih-hero h1{font-size:23px;margin-bottom:16px}
+  .aih-orb{width:44px;height:44px;border-radius:15px;margin-bottom:12px}
+  .aih-two{grid-template-columns:minmax(0,1fr)}
+  .aih-chips{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:-2px;padding:2px;-webkit-mask:linear-gradient(90deg,#000 90%,transparent)}
+  .aih-chips::-webkit-scrollbar{display:none}
+  .aih-chips .chip{flex:none}
+  .aih-comp .cbox{padding-left:16px}
+  .aih-cr{flex-wrap:wrap}.aih-cr .btn{width:100%;justify-content:center}
+}

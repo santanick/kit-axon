@@ -20,3 +20,12 @@
   .smchat{bottom:84px;padding:11px 14px}.smchat span{display:none}
 }
 @media print{.smchat{display:none!important}}
+/* v24 하위 메뉴: 휴대폰 메뉴 시트 아코디언(lhpedit.js) */
+.lux-shl .lhp-acc{grid-column:1/-1;border-radius:12px;background:var(--paper,#F7F6F2)}
+.lux-shl .lhp-acc>summary{display:flex;align-items:center;justify-content:space-between;min-height:46px;padding:10px 14px;font-size:15px;font-weight:700;cursor:pointer;list-style:none;border-radius:12px}
+.lux-shl .lhp-acc>summary::-webkit-details-marker{display:none}
+.lux-shl .lhp-acc>summary::after{content:'▾';font-size:12px;opacity:.6;transition:transform .15s}.lux-shl .lhp-acc[open]>summary::after{transform:rotate(180deg)}
+.lux-shl .lhp-acc>summary:focus-visible{outline:3px solid color-mix(in srgb,#4b3cff 60%,transparent);outline-offset:2px}
+.lhp-accb{display:flex;flex-direction:column;gap:4px;padding:0 8px 8px}
+.lux-shl .lhp-accb a{background:#fff;min-height:42px;font-size:14px;font-weight:600}
+.lux-shl .lhp-accb a.lhp-all{font-weight:700}
