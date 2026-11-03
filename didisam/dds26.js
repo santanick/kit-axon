@@ -2,7 +2,7 @@
    - 클래스 상세 머리: '수강생 화면 보기'(학습자 사이트의 이 클래스 페이지를 새 창으로) · '공유하기'(클래스 주소 복사, 무료 클래스도) · 카테고리 표시(미지정이면 '카테고리 미지정' → 누르면 설정 탭)
    - 클래스 상세 수강생 표 아래: '수료율 집계 일시'(마지막 계산 시각) */
 'use strict';
-Object.assign(IC, { info: IC.info || '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>', folder: IC.folder || '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', eye: IC.eye || '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', link: IC.link || '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>' });
+Object.assign(IC, { download: IC.download || '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>', award: IC.award || '<circle cx="12" cy="9" r="6"/><path d="M8.5 14 7 22l5-3 5 3-1.5-8"/>', info: IC.info || '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>', folder: IC.folder || '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', eye: IC.eye || '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', link: IC.link || '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>' });
 const d26ClsURL = c => (typeof c2PayLink === 'function' ? c2PayLink(c) : `learner.html#class/${c.id}`);
 const d26CatName = id => { const L = S.cats || []; const out = []; let x = L.find(k => k.id === id); while (x) { out.unshift(x.name); x = x.parent ? L.find(k => k.id === x.parent) : null; } return out.join(' › '); };
 AFTER.push(cur => {
@@ -54,3 +54,23 @@ AFTER.push(cur => { try {
 ACT['d26-ym'] = el => { const v = +el.dataset.v; if (!v) UI.d26ym = today().slice(0, 7); else { const d = new Date((UI.d26ym || today().slice(0, 7)) + '-01'); d.setMonth(d.getMonth() + v); UI.d26ym = d.toISOString().slice(0, 7); } render(); };
 /* v26.2 메시지 내용 글자 수 */
 document.addEventListener('input', e => { if (e.target.id === 'msgB') { const c = document.getElementById('msgBc'); if (c) c.textContent = e.target.value.length + '/2000'; } });
+/* v26.2 디지털 배지 머리(피그마 Studio › 디지털 배지 관리): [+ 배지 생성하기] · [배지 발급하기] */
+ACT['bd26-go'] = el => { UI.bdT = el.dataset.v; render(); };
+AFTER.push(() => { try { if (!CUR || CUR.tab !== 'badge') return; const phr = document.querySelector('#main .ph .phr'); if (!phr || phr.querySelector('[data-act=bd26-go]')) return;
+  phr.insertAdjacentHTML('beforeend', `<button type="button" class="btn" data-act="bd26-go" data-v="set">${ic('plus', 15)} 배지 생성하기</button><button type="button" class="btn pri" data-act="bd26-go" data-v="manual">${ic('award', 15)} 배지 발급하기</button>`); } catch (e) { console.error(e); } });
+/* v26.2 상담 머리(피그마 Studio › 상담 목록): [채널톡 이동] */
+AFTER.push(() => { try { if (!CUR || CUR.tab !== 'consult') return; const phr = document.querySelector('#main .ph .phr'); if (!phr || phr.querySelector('.cs26ch')) return; const on = S.settings && S.settings.consultKeys;
+  const ref = phr.querySelector('[data-act*="cs-start"], .btn.dark, .btn.pri'); const h = `<a class="btn cs26ch ${on ? '' : 'off'}" href="https://desk.channel.io/" target="_blank" rel="noopener" ${on ? '' : 'aria-disabled="true" title="설정 탭에서 채널톡을 연동하면 열 수 있습니다"'}>${ic('chat', 15)} 채널톡 이동</a>`;
+  ref ? ref.insertAdjacentHTML('beforebegin', h) : phr.insertAdjacentHTML('beforeend', h); } catch (e) { console.error(e); } });
+document.addEventListener('click', e => { const a = e.target.closest('a.cs26ch.off'); if (a) { e.preventDefault(); if (typeof toast === 'function') toast('설정 탭에서 채널톡을 먼저 연동하세요.', 'warn'); } }, true);
+/* v26.2 교재/교구 관리 규칙(피그마 Studio › 교재/교구 › 운영 정책): 삭제 · 공개/비공개 */
+const bk26Active = b => { const d = (b.dl && +b.dl.days) || 30; const t0 = today(); return (b.grants || []).filter(g => !g.off && (typeof addDays === 'function' ? addDays(g.at, d) : g.at) >= t0); };
+ACT['bk26-del'] = el => { const b = S.books.find(x => x.id === el.dataset.v); if (!b) return; const eb = b.kind === '전자책';
+  if (eb && bk26Active(b).length) { modal('삭제할 수 없습니다', `<p>아직 다운로드 기간이 남은 ${esc(t('learner'))}이 있습니다. 모든 ${esc(t('learner'))}의 다운로드 기간 마감 후 삭제할 수 있습니다.</p>`, [{ id: 'ok', label: '확인', kind: 'pri' }]); return; }
+  if (!eb && ((b.grants || []).some(g => !g.off) || (b.ship || []).length)) { modal('삭제할 수 없습니다', `<p>이 교재를 결제/신청한 ${esc(t('learner'))}이 있어 삭제가 불가능합니다. 비공개로 전환하면 새로 판매되지 않습니다.</p>`, [{ id: 'ok', label: '확인', kind: 'pri' }]); return; }
+  modal('교재 삭제', `<p>「${esc(b.name)}」을(를) 삭제합니다. 삭제하면 되돌릴 수 없습니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '삭제', kind: 'red', run: () => { S.books = S.books.filter(x => x !== b); logAudit('교재 삭제 — ' + b.name); save(); render(); toast('교재를 삭제했습니다.', 'ok'); } }]); };
+ACT['bk26-open'] = el => { const b = S.books.find(x => x.id === el.dataset.v); if (!b) return; const eb = b.kind === '전자책';
+  if (b.open === '비공개') { b.open = '공개'; logAudit('교재 공개 — ' + b.name); save(); render(); toast('교재 상태를 공개로 전환하였습니다.', 'ok'); return; }
+  b.open = '비공개'; logAudit('교재 비공개 — ' + b.name); save(); render(); toast(eb ? '교재 상태를 비공개로 전환하였습니다. 다운로드 기간이 남아 있는 수강생은 계속해서 교재를 다운받을 수 있습니다.' : '교재 상태를 비공개로 전환하였습니다. 전달 완료되지 않은 수강생들은 교재 내용을 확인할 수 있습니다.', 'ok'); };
+AFTER.push(() => { try { if (!CUR || CUR.tab !== 'book' || !Array.isArray(S.books)) return; document.querySelectorAll('#main [data-act="sl2-bked"]').forEach(btn => { if (btn.parentElement.querySelector('[data-act="bk26-del"]')) return; const b = S.books.find(x => x.id === btn.dataset.v); if (!b) return;
+  btn.insertAdjacentHTML('afterend', `<button class="btn sm ghost" data-act="bk26-open" data-v="${esc(b.id)}">${b.open === '비공개' ? '공개로 전환' : '비공개'}</button><button class="btn sm redl" data-act="bk26-del" data-v="${esc(b.id)}">삭제</button>`); }); } catch (e) { console.error(e); } });
