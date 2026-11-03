@@ -217,3 +217,13 @@ input[type=search]::placeholder,input::placeholder,textarea::placeholder{color:v
 .tr26b .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.tr26v{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#4C4D4D}.tr26v select{height:34px;border:1px solid #C8C9C9;border-radius:4px;padding:0 8px}
 .tr26b textarea{width:100%;min-height:320px}.tr26ro{border:1px solid #EAEBEB;border-radius:8px;padding:16px;background:#FBFCFC;max-height:420px;overflow:auto;font-size:13.5px;line-height:1.7}
 .tr26f{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:8px}.tr26f label{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+/* v26.7 메시지 발송 내역(피그마 Studio › 메시지 › 메시지 발송 내역) */
+.cm26h .cm26hh{display:flex;flex-direction:column;gap:2px;margin-bottom:12px}.cm26h .cm26hh b{font-size:18px}.cm26h .cm26hh small{color:var(--g700)}
+.cm26hb{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}.cm26hs{display:flex;align-items:center;gap:8px}.cm26hs .bar2{margin:0}
+.cm26adv{border:0;background:none;color:var(--g700);font:inherit;font-size:13px;cursor:pointer;padding:6px}.cm26adv.on{color:var(--s400)}
+.cm26ap{border:1px solid var(--g300);border-radius:8px;padding:12px 16px;margin-bottom:12px;display:grid;gap:10px;background:#fff}
+.cm26ar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.cm26ar>span{min-width:64px;font-size:13px;color:var(--g800)}.cm26ar input[type=date]{border:1px solid var(--g400);border-radius:4px;padding:6px 8px;font:inherit}
+.cm26chip{display:inline-block;border:1px solid var(--g300);border-radius:999px;padding:2px 10px;font-size:12px;white-space:nowrap;background:#fff}
+.cm26go2{width:28px;height:28px;border-radius:50%;border:1px solid var(--g300);background:#fff;cursor:pointer;font-size:16px;line-height:1}.cm26go2:hover{border-color:var(--s400);color:var(--s400)}
+.cm26d{display:grid;gap:10px}.cm26dt{font-size:16px}.cm26dr{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:start;font-size:14px}.cm26dr>span{color:var(--g700)}.cm26d hr{border:0;border-top:1px solid var(--g300);margin:4px 0}
+.cm26rc b em{font-style:normal;color:var(--gr500,#00C53B)}.cm26rc>div{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding:10px;border:1px solid var(--g300);border-radius:8px;background:var(--g50)}
