@@ -162,7 +162,8 @@ VIEWS.progress = () => {
     <label class="rng2"><span><b>1인 하루 질문 수</b><small>비용 조절</small></span><input type="range" min="5" max="50" step="5" value="${tu.daily}" data-chg="tu" data-k="daily"><em>${tu.daily}회</em></label>
     <label class="fl">도움 범위<select data-chg="tu" data-k="help"><option value="hint" ${tu.help === 'hint' ? 'selected' : ''}>힌트만</option><option value="feedback" ${tu.help === 'feedback' ? 'selected' : ''}>초안을 평가 기준으로 피드백</option></select></label>
     <label class="fl">모델<select data-chg="tu" data-k="model"><option value="haiku" ${tu.model === 'haiku' ? 'selected' : ''}>빠르고 저렴(Haiku 5.5, 기본)</option><option value="sonnet" ${tu.model === 'sonnet' ? 'selected' : ''}>깊이 있는 답변(Sonnet 5.5)</option></select></label>
-    ${sw('loginOnly', '로그인한 ' + t('learner') + '만', tu, '비로그인 방문자에게는 숨김')}
+    <label class="rng2"><span><b>방문자(로그인 전) 질문 수</b><small>브라우저당 하루 · 강좌 · 수강 · 가입 안내</small></span><input type="range" min="0" max="30" step="5" value="${tu.guestDaily ?? 10}" data-chg="tu" data-k="guestDaily"><em>${tu.guestDaily ?? 10}회</em></label>
+    ${sw('loginOnly', '로그인한 ' + t('learner') + '만', tu, '켜면 방문자는 질문할 수 없습니다(기본 꺼짐 — 로그인 전부터 강좌 · 가입 안내)')}
     <div class="ch"><b>최근 7일 질문 수</b><small>대화 내용은 저장하지 않고 횟수만 집계</small></div><div class="spark">${S.tutorUsage.map(u => `<div><i style="height:${u.n / mx * 100}%"></i><small>${esc(u.d)}</small><b>${u.n}</b></div>`).join('')}</div>
     <p class="mini">과제 결과물을 대신 써 주지 않습니다. 위기 상황은 상담 기관 안내, 개인정보 질문은 거절합니다.</p></div></section>`;
 };

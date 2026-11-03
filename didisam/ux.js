@@ -225,3 +225,6 @@ AFTER.push(() => { try { const st = S && S.bld && S.bld.steps.pg; const T = S.se
 { const base = chatSend; chatSend = (q, ...r) => { const s = String(q || '').trim();
   if (/^결제\s*연결은?\s*나중에/.test(s) && S && S.bld && S.bld.steps.pg) { S.bld.steps.pg.on = false; S.chat.push({ role: 'user', text: s }, { role: 'ai', text: '결제 연결은 나중에 하도록 시작 가이드에서 뺐습니다. 무료 강좌는 지금 바로 운영할 수 있고, 유료 판매는 매출 › 토스페이먼츠 가입에서 언제든 시작하면 됩니다.' }); save(); renderThreads(); try { obMount(); } catch (e) { } return Promise.resolve(); }
   return base(q, ...r); }; }
+
+/* v23.4 대표님: '학습자 AI 튜터는 로그인하기 전부터 작동해야 돼' — 예전 기본값(로그인한 학습자만)을 한 번만 끈다. */
+AFTER.unshift(() => { try { const tu = S && S.settings && S.settings.tutor; if (tu && !tu.v234) { tu.v234 = 1; tu.loginOnly = false; if (tu.guestDaily == null) tu.guestDaily = 10; save(); } } catch (e) { } });

@@ -310,7 +310,7 @@ function seed(type) {
     autos: defaultAutos(type), site: null,
     settings: { join: type === 'corp' ? '운영자 초대만' : '자동 수락', siteOpen: type === 'corp' ? 'private' : 'public', marketing: true, extraQ: type === 'corp' ? ['부서', '직급'] : type === 'univ' ? ['학번', '학과'] : [], speedMin: 0.5, speedMax: 2, reviewCond: '수료 시', nudge: true, popups: [], seo: { title: '', desc: '', kw: '' }, pixel: '', terms: { tos: '', privacy: '' }, consultKeys: false, kakao: false, pg: type === 'k12' ? 'toss' : ['adult', 'lifelong'].includes(type) ? 'nice' : 'none', certInfo: { rep: '', org: '' }, footer: { company: '', ceo: '', biz: '', mail: '', addr: '', tel: '', reg: '' },
       progress: { watchThr: 80, realOnly: true, seq: true, autoDone: true, levelUnlock: true, resubmit: 2 },
-      tutor: { enabled: true, name: 'AX 튜터', daily: 20, help: 'feedback', loginOnly: true, guide: '', model: 'haiku' },
+      tutor: { enabled: true, name: 'AX 튜터', daily: 20, guestDaily: 10, help: 'feedback', loginOnly: false, guide: '', model: 'haiku' },
       goals: { join: 60, active: 50, progress: 40, badge: 30 } },
     tutorUsage: Array.from({ length: 7 }, (_, i) => ({ d: addDays(today(), i - 6).slice(5), n: Math.round(30 + rnd() * 90) })),
     codes: [], hrd: { reports: [] }
