@@ -2,7 +2,7 @@
    DDS: 학습자 · 마이페이지 · 사용자 대상 화면은 브랜드 Green #00C53B(기관이 고른 테마 색이 있으면 그 색), 글꼴 Pretendard 하나,
    버튼 6 · 카드 8, 회색 Gray 스케일, 그림자는 낮은 dp. 화면 구성 · 동작은 그대로 두고 겉모습만 바꾼다. */
 :root{--ink:#2A2B2B;--night:#1F2020;--ink2:#4C4D4D;--mute:#6C6C6C;--line:#EAEBEB;--line2:#F1F2F2;--paper:#F6F7F7;--pri:#00C53B;--pri2:#5C74F6;--ok:#009C09;--r:8px;
-  --sh:0 1px 2px rgba(42,43,43,.05),0 4px 14px rgba(42,43,43,.08);--sg:"Pretendard Variable",Pretendard,sans-serif;--g50:#FBFCFC;--g100:#F6F7F7;--g200:#F1F2F2;--g300:#EAEBEB;--g600:#808181;--g700:#6C6C6C;--g800:#4C4D4D;--g900:#2A2B2B}
+  --sh:0 1px 2px rgba(42,43,43,.05),0 4px 14px rgba(42,43,43,.08);--sg:"Pretendard Variable",Pretendard,sans-serif;--g50:#FBFCFC;--g100:#F6F7F7;--g200:#F1F2F2;--g300:#EAEBEB;--g400:#C8C9C9;--g500:#AAABAB;--g600:#808181;--g700:#6C6C6C;--g800:#4C4D4D;--g900:#2A2B2B}
 body{font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;letter-spacing:-.01em;color:var(--ink);font-variant-numeric:tabular-nums}
 .eb{font-family:inherit;letter-spacing:.06em}
 .lbtn{border-radius:6px;font-weight:700}

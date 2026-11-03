@@ -1,0 +1,43 @@
+/* 디디쌤 학습자 v26.1 — 로그인 · 간편가입 · 계정 찾기(피그마 My Page › 회원가입 & 로그인 벤치마크) */
+body.la26 #lm{background:#fff}
+body.la26 section.login .lgw{display:block;max-width:440px;margin:0 auto;box-shadow:none;border:0;background:transparent}
+body.la26 section.login .lgl{display:none}
+body.la26 section.login .lgr{padding:8px 0 40px;background:transparent}
+body.la26 section.la .in.narrow{max-width:440px}
+body.la26 section.login,body.la26 section.la{padding:56px 0 72px;background:#fff}
+.l26logo{display:inline-grid;place-items:center;min-width:44px;height:44px;padding:0 8px;border-radius:10px;background:var(--pri);color:#fff;font-weight:800;font-size:17px;letter-spacing:-.02em;margin-bottom:22px}
+body.la26 .lgr>h2,body.la26 section.la .in.narrow>h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px;color:var(--g900)}
+.l26sub{margin:0 0 26px;color:var(--g700);font-size:15px;font-weight:600}
+/* SNS: 흰 바탕 둥근 버튼 + 브랜드 아이콘 */
+body.la26 .la-soc{gap:10px;margin:8px 0 6px}
+body.la26 .la-sb,body.la26 .la-sb.kakao,body.la26 .la-sb.naver,body.la26 .la-sb.google,body.la26 .la-sb.apple{display:flex;align-items:center;justify-content:center;gap:10px;height:52px;padding:0 18px;border-radius:999px;background:#fff!important;color:var(--g900)!important;box-shadow:inset 0 0 0 1px var(--g300)!important;border:0;font-weight:600;font-size:15px;position:relative}
+body.la26 .la-sb:hover{box-shadow:inset 0 0 0 1px var(--g500)!important;background:var(--g50)!important}
+.l26i{display:inline-grid;place-items:center;width:22px;height:22px;flex:none}
+body.la26 .la-or{margin:18px 0 14px;color:var(--g500);font-size:13px}
+body.la26 .la-or::before,body.la26 .la-or::after{background:var(--g300)}
+/* 입력 · 버튼 */
+body.la26 section.login .fl,body.la26 section.la .fl{font-size:14px;font-weight:600;color:var(--g800)}
+body.la26 section.login input:not([type=checkbox]):not([type=radio]),body.la26 section.la input:not([type=checkbox]):not([type=radio]),body.la26 section.la select{height:48px;border-radius:4px;border:1px solid var(--g400);box-shadow:none;background:#fff;padding:0 14px;font-size:15px}
+body.la26 section.login input:focus,body.la26 section.la input:focus{border-color:var(--g900);outline:0}
+body.la26 section.login input:disabled,body.la26 section.la input:disabled,body.la26 section.la input[readonly]{background:var(--g100);color:var(--g600)}
+body.la26 section.login .lbtn.pri.blk,body.la26 section.la .lbtn.pri.blk{height:52px;border-radius:4px;background:var(--g900);font-size:16px}
+body.la26 section.login .lbtn.pri.blk:hover,body.la26 section.la .lbtn.pri.blk:hover{background:#000;filter:none}
+body.la26 section.login .lbtn.pri.blk:disabled,body.la26 section.la .lbtn.pri.blk:disabled{background:var(--g300);color:#fff}
+body.la26 .la-vbox .lbtn,body.la26 .la-row .lbtn{height:48px;border-radius:4px;background:var(--g900);color:#fff;padding:0 16px}
+body.la26 .la-seg>button,body.la26 .la-seg>label{border-radius:999px}
+body.la26 .la-links{text-align:center;margin-top:18px;color:var(--g600)}
+body.la26 .la-links a{color:var(--g800);font-weight:600;text-decoration:none}
+body.la26 .la-code{border-top:1px solid var(--g300)}
+/* 동의 상자 · 만 14세 */
+body.la26 section.la .la-cons,body.la26 section.la .la-age{border-radius:8px;border-color:var(--g300)}
+@media (max-width:640px){body.la26 section.login,body.la26 section.la{padding:28px 0 56px}body.la26 .lgr>h2,body.la26 section.la .in.narrow>h1{font-size:24px}}
+/* 클래스 상세(피그마 User Page › 클래스 상세) */
+.shp-tabs{display:flex;gap:26px;border-bottom:1px solid var(--g300);margin:26px 0 8px;position:sticky;top:68px;background:var(--paper,#fff);z-index:3}
+.shp-tabs a{padding:12px 2px;color:var(--g600);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px;font-size:15px}
+.shp-tabs a.on,.shp-tabs a:hover{background:transparent!important;box-shadow:none!important;border-radius:0!important;color:var(--g900);border-bottom-color:var(--g900);font-weight:800}
+.shp-box{background:var(--g100)!important;border:0!important;border-radius:8px!important;box-shadow:none!important;padding:14px 18px!important}
+.shp-sname{font-size:18px;line-height:1.4;font-weight:800;margin:0 0 10px;color:var(--g900)}
+.shp-side .lbtn.pri.blk{border-radius:4px;height:50px}
+.shp-share{margin-top:8px;border-radius:4px!important;height:44px}
+.shp-meta{border-top:1px solid var(--g300);padding-top:10px}
+@media (max-width:860px){.shp-tabs{top:56px;gap:18px;overflow-x:auto}}
