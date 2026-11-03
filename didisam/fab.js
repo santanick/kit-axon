@@ -13,10 +13,12 @@ const FABI = { big: 'M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7', small: 'M4 14h6v6
 const fabSvg = (k, s = 16) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${FABI[k]}"/></svg>`;
 const fabWide = () => innerWidth > 860;
 const fabBld = () => document.body.classList.contains('mode-bld');
-const fabOn = () => fabWide() && FAB.get().mode === 'float' && !!(typeof S !== 'undefined' && S && S.org) && !document.body.classList.contains('mode-learner');
+/* v25.2 대표님(2026-11-03) '모바일에서는 AI SAM 챗봇이 없자나?' → 휴대폰(빌드 화면)도 같은 떠 있는 버튼, 대화창은 전체 화면 시트(고정 모드 없음) */
+const fabOn = () => (fabWide() ? FAB.get().mode === 'float' : fabBld()) && !!(typeof S !== 'undefined' && S && S.org) && !document.body.classList.contains('mode-learner');
 const fabIsOpen = () => fabBld() ? FAB.get().open : !!$('#drawer');
 function fabSync() { const f = FAB.get(), on = fabOn(), open = on && fabIsOpen(), B = document.body.classList;
-  B.toggle('fab-on', on); B.toggle('fab-open', open); B.toggle('fab-l', on && f.size === 'l');
+  B.toggle('fab-on', on); B.toggle('fab-open', open); B.toggle('fab-l', on && f.size === 'l' && fabWide()); B.toggle('fab-m', on && !fabWide());
+  if (on && !fabWide()) { UI.uxPane = 'pv'; if (!B.contains('b-pv')) B.add('b-pv'); }
   let b = $('#fabBtn');
   if (!on) b && b.remove();
   else { if (!b) { document.body.insertAdjacentHTML('beforeend', '<button type="button" id="fabBtn" data-act="fab-toggle"></button>'); b = $('#fabBtn'); }
@@ -27,6 +29,7 @@ function fabSync() { const f = FAB.get(), on = fabOn(), open = on && fabIsOpen()
   /* 대화창 머리 버튼 */
   document.querySelectorAll('.bch, #drawer .dh').forEach(h => { let c = h.querySelector('.fabc'); if (!c) { h.insertAdjacentHTML('beforeend', '<span class="fabc"></span>'); c = h.querySelector('.fabc'); }
     const inDrawer = h.classList.contains('dh');
+    if (on && !fabWide()) { c.innerHTML = inDrawer ? '' : `<button type="button" class="fbi fbx" data-act="fab-close" title="닫기" aria-label="AI SAM 닫기">${ic('x', 20)}</button>`; return; }
     c.innerHTML = on ? `<button type="button" class="fbi" data-act="fab-size" title="${f.size === 'l' ? '작게 보기' : '크게 보기'}" aria-label="${f.size === 'l' ? '작게 보기' : '크게 보기'}">${fabSvg(f.size === 'l' ? 'small' : 'big')}</button>${fabBld() ? `<button type="button" class="fbi" data-act="fab-mode" data-v="dock" title="왼쪽에 고정" aria-label="왼쪽에 고정">${fabSvg('dock')}</button>` : ''}${inDrawer ? '' : `<button type="button" class="fbi" data-act="fab-close" title="닫기 (Esc)" aria-label="닫기">${ic('x', 16)}</button>`}`
       : (fabWide() && fabBld() ? `<button type="button" class="fbi" data-act="fab-mode" data-v="float" title="화면 위에 띄우기" aria-label="화면 위에 띄우기">${fabSvg('float')}</button>` : ''); });
 }
@@ -51,3 +54,7 @@ addEventListener('resize', () => fabSync());
 addEventListener('keydown', e => { if (!fabOn()) return;
   if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); fabIsOpen() ? fabClose() : fabOpen(); }
   else if (e.key === 'Escape' && fabBld() && FAB.get().open && !$('.mwrap')) fabClose(); });
+/* v25.2 휴대폰: 예전 '대화' 탭으로 가던 경로(화면 전환 클래스 제거)는 화면을 유지하고, 대화는 떠 있는 버튼으로만 연다. 새로고침 때 시트를 펼친 채 시작하지 않는다. */
+if (innerWidth <= 860 && FAB.get().open) { try { localStorage.setItem(FAB.K, JSON.stringify({ ...FAB.get(), open: false })); } catch (e) { } }
+new MutationObserver(() => { const B = document.body.classList; if (B.contains('fab-m') && !B.contains('b-pv') && fabOn()) B.add('b-pv'); }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+ACT['bld-pane'] && (() => { const base = ACT['bld-pane']; ACT['bld-pane'] = el => { if (fabOn() && !fabWide()) { el && el.dataset && el.dataset.v === 'chat' ? fabOpen() : fabClose(); return; } base(el); }; })();

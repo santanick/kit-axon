@@ -33,3 +33,16 @@ body.fab-open #toasts{bottom:96px}
 @media (min-width:861px){body.mode-bld.fab-open .gdbar{left:calc((100vw - 434px) / 2 + 38px);width:min(560px,calc(100vw - 560px))}}
 body.fab-on .top{z-index:58} /* 계정 메뉴 등 머리 드롭다운이 위젯 위로 */
 #fabBtn .fabn{position:absolute;top:-6px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:#E5007E;color:#fff;font:800 12px/22px inherit;font-style:normal;box-shadow:0 0 0 2px #fff;animation:fabPing 1.2s ease-out 2}@keyframes fabPing{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+/* v25.2 휴대폰: 떠 있는 AI SAM 버튼 + 전체 화면 대화 시트('대화 | 화면' 전환 탭 대신) */
+@media (max-width:860px){
+  body.fab-m .bmseg{display:none!important}
+  body.fab-m #fabBtn{right:14px;bottom:calc(14px + env(safe-area-inset-bottom));height:52px;min-width:52px;padding:0 16px 0 12px;font-size:13.5px}
+  body.fab-m.fab-open #fabBtn{display:none}
+  body.fab-m.b-pv .bchat{display:none}
+  body.fab-m.fab-open.b-pv .bchat{display:flex;position:fixed;inset:0;z-index:59;width:auto;height:100vh;height:100dvh;border:0;border-radius:0;box-shadow:none;padding-bottom:env(safe-area-inset-bottom);animation:fabUp .2s ease-out}
+  body.fab-m.fab-open{overflow:hidden}
+  body.fab-m .bch .fbx{width:40px;height:40px;color:var(--ink)}
+  body.fab-m .bcanvas{padding-bottom:96px}
+  body.fab-m #toasts{bottom:80px}
+}
+@keyframes fabUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
