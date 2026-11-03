@@ -27,13 +27,13 @@
   function threadHTML() { const M = (LT.msgs || []).filter(m => !m.sys); return M.map(ltMsgHTML).join('') + (LT.busy ? '<div class="lt-m"><span class="lt-orb sm" aria-hidden="true"></span><div class="lt-b"><span class="lt-dots"><i></i><i></i><i></i></span></div></div>' : ''); }
   function heroHTML() {
     const C = TCFG(); const me = LR.me; const who = me ? (typeof lCall === 'function' ? lCall() : (me.nick || me.sid) + '님') : '';
-    const chips = (typeof ltChips === 'function' ? ltChips() : []).slice(0, 4); const th = threadHTML();
+    const chips = (typeof LSAM === 'object' ? LSAM.screen().chips.filter(c => !c.kind).map(c => [c.l, c.q]) : (typeof ltChips === 'function' ? ltChips() : []).map(x => [x, x])).slice(0, 4); const th = threadHTML();
     return `<section class="lai" aria-labelledby="laiH"><div class="in lai-w">
       <span class="lai-orb" aria-hidden="true">${ico('sparkle', 22)}</span>
-      <p class="lai-ey">내 AI 학습 비서 · ${esc(C.name)}</p>
+      <p class="lai-ey">${esc(C.name)} · 내 AI 학습 비서</p>
       <h1 id="laiH">${me ? `${esc(who)}, 오늘은<br><em>무엇을 함께 해 볼까요?</em>` : `궁금한 것을<br><em>무엇이든 물어보세요</em>`}</h1>
       <form class="lai-f" id="laiF"><label for="laiQ" class="sr">${esc(C.name)}에게 질문</label><textarea id="laiQ" rows="1" maxlength="800" placeholder="${me ? '예: 이번 주 학습 계획 짜줘' : '예: 어떤 강좌가 있어요?'}"></textarea><button type="submit" aria-label="보내기">${ico('send', 18)}</button></form>
-      <div class="lai-chips" role="list" aria-label="추천 질문">${chips.map(x => `<button type="button" role="listitem" class="lt-chip" data-tact="q" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+      <div class="lai-chips" role="list" aria-label="추천 질문">${chips.map(([l, q]) => `<button type="button" role="listitem" class="lt-chip" data-tact="q" data-v="${esc(q)}">${esc(l)}</button>`).join('')}</div>
       <p class="lai-note">${me ? '과제를 대신 써 주지 않고 함께 풀어요 · 대화 내용은 저장하지 않아요' : '로그인 없이 강좌 · 수강 방법 · 가격을 안내해 드려요. <a href="#login">로그인</a>하면 이어서 학습 · 학습 리마인더도 쓸 수 있어요.'}</p>
       <div class="lai-res" ${th ? '' : 'hidden'}><div class="lai-rh"><b>${esc(C.name)}의 답</b><button type="button" class="lai-lk" data-lai="clear">지우기</button></div><div class="lai-th" aria-live="polite">${th}</div></div>
     </div></section>`;

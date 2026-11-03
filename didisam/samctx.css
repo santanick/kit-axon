@@ -1,0 +1,26 @@
+/* 디디쌤 스튜디오 v25 — 화면을 아는 AI SAM(화면 맥락 카드 · 버튼 힌트) */
+.scx{flex:none;margin:8px 12px 0;border-radius:14px;background:#fff;box-shadow:0 0 0 1px #E6DDFB;overflow:hidden}
+.scxh{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border:0;background:#FBF9FF;cursor:pointer;text-align:left;color:var(--ink)}
+.scxh:hover{background:#F4EFFF}.scxh:focus-visible{outline:2px solid #5B2BD9;outline-offset:-2px}
+.scxi{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;color:#fff;background:linear-gradient(135deg,#5B2BD9,#E5007E)}
+.scxt{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.scxt b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.scxt small{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.scxv{flex:none;color:var(--muted);transition:transform .2s;transform:rotate(180deg)}.scx.off .scxv{transform:none}
+.scxc{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px 10px}
+.scxchip{font-size:12px;padding:5px 10px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.scxchip::before{content:'✦ ';color:#E5007E}
+.bchat .scx+.thread,#drawer .scx+.thread{padding-top:10px}
+/* 낮은 화면: 칩은 한 줄로 밀어 보기(입력창이 가려지지 않게) */
+@media (max-height:760px){.scxc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding:6px 10px 8px}.scxchip{flex:none;max-width:none}}
+@media (max-width:860px){.scx{margin:8px 10px 0}}
+/* 오른쪽 아래 버튼: 열지 않고 '이 화면 도움 n' */
+#fabBtn .scxbt{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1}
+#fabBtn .scxbt small{font-size:11px;font-weight:700;opacity:.85;margin-top:2px;letter-spacing:0}
+.scxc{max-height:76px;overflow-y:auto}
+.obd.on+.scx .scxc{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none;scrollbar-width:thin}.obd.on+.scx .scxchip{flex:none;max-width:none}
+#fabBtn .scxbt small{color:#fff;opacity:.9;white-space:nowrap}
+body:not(.fab-open) #fabBtn:has(.scxbt){padding-right:20px}
+/* 낮은 화면: 이 화면 칩이 있으면 입력창 위 예시 줄은 숨겨 대화 칸을 확보 */
+@media (max-height:760px){.bchat:has(.scx:not(.off)) .bcomp .chips{display:none}.scxh{padding:5px 10px}.scxt small{display:none}.scx{margin-top:6px}}
+/* 휴대폰 대화창 머리: 버튼이 'AI SAM' 이름을 덮던 문제 → 이름 줄을 먼저, 버튼은 다음 줄 */
+@media (max-width:860px){.bch>div{flex:1 1 auto;min-width:120px}}
+/* 떠 있는 버튼이 표 맨 아래 줄 버튼(채점 · 상세 등)을 가리지 않게 화면 끝에 여백 */
+body.fab-on:not(.aih-on) .bview{padding-bottom:96px}

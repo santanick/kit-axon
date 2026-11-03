@@ -41,7 +41,7 @@
     if (!x) return `<section class="lux-cont"><div class="in"><div class="lux-cc empty"><div><p class="lux-ey">${esc(LR.me.nick || '')}님, 반갑습니다</p><h2>첫 강좌를 골라 보세요</h2><p class="lux-sub">강좌를 신청하면 이 자리에서 바로 이어서 학습할 수 있습니다.</p></div><a class="lbtn pri" href="${browseHref()}">강좌 둘러보기 ${ico('arrow', 16)}</a></div></div></section>`;
     const rest = L.filter(y => y !== x).slice(0, 3);
     return `<section class="lux-cont${compact ? ' sm' : ''}"><div class="in"><div class="lux-cc"><div class="lux-cm"><p class="lux-ey">${x.started ? '이어서 학습하기' : '바로 시작하기'}</p><h2>${esc(x.c.name)}</h2><p class="lux-sub">${x.nx ? `다음 강의 · ${esc(x.nx.title)}${ITN[x.nx.type] ? ` <span class="lux-ty">${esc(ITN[x.nx.type])}</span>` : ''}` : ''}</p>
-      <div class="lux-bar" role="progressbar" aria-valuenow="${x.p}" aria-valuemin="0" aria-valuemax="100" aria-label="진도"><i style="width:${x.p}%"></i></div><small class="lux-pc">진도 ${x.p}% · ${x.done}/${x.n} 완료${x.p >= (x.c.thr || 80) ? ' · 수료 기준 달성' : ''}</small></div>
+      <div class="lux-bar" role="progressbar" aria-valuenow="${x.p}" aria-valuemin="0" aria-valuemax="100" aria-label="진도"><i style="width:${x.p}%"></i></div><small class="lux-pc">진도 ${x.p}%${Math.round(x.done / Math.max(1, x.n) * 100) === x.p ? ` · ${x.done}/${x.n} 완료` : ''}${x.p >= (x.c.thr || 80) ? ' · 수료 기준 달성' : ''}</small></div>
       <a class="lbtn pri lux-go" href="${nextHref(x)}">${x.p >= 100 ? '다시 보기' : x.started ? '이어서 학습하기' : '학습 시작하기'} ${ico('arrow', 16)}</a></div>
       ${rest.length ? `<ul class="lux-ol">${rest.map(y => `<li><a href="${nextHref(y)}"><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>${y.p}%</small>${ico('arrow', 14)}</a></li>`).join('')}</ul>` : ''}</div></section>`; }
 
@@ -82,7 +82,7 @@
       ${LR.me ? `<p class="lux-who"><b>${esc(LR.me.nick || LR.me.sid)}</b>님</p>` : `<div class="lux-shc"><a class="lbtn pri blk" href="#join">무료 가입</a><a class="lbtn ghost blk" href="#login">로그인</a></div>`}
       <p class="lux-shg">둘러보기</p><nav class="lux-shl">${links.join('')}</nav>
       ${mine.length ? `<p class="lux-shg">내 학습</p><nav class="lux-shl">${mine.map(([h, l]) => `<a href="${h}">${l}</a>`).join('')}</nav>` : ''}
-      ${T || LR.me ? `<p class="lux-shg">도움</p><nav class="lux-shl">${T ? `<button type="button" data-tact="${LR.me ? 'open' : 'login'}" data-lux="close">${esc(T)}에게 묻기</button>` : ''}${LR.me ? '<button type="button" data-lact="logout" data-lux="close">로그아웃</button>' : ''}</nav>` : ''}</div>`;
+      ${T || LR.me ? `<p class="lux-shg">도움</p><nav class="lux-shl">${T ? `<button type="button" data-tact="open" data-lux="close">${esc(T)}에게 묻기 · 내 AI 학습 비서</button>` : ''}${LR.me ? '<button type="button" data-lact="logout" data-lux="close">로그아웃</button>' : ''}</nav>` : ''}</div>`;
     document.body.appendChild(w); document.body.classList.add('luxsheet'); const b = document.querySelector('[data-lux="menu"]'); if (b) b.setAttribute('aria-expanded', 'true'); const f = w.querySelector('.lux-sh button, .lux-sh a'); if (f) f.focus(); }
   function sheetClose() { const w = document.getElementById('luxSheet'); if (w) w.remove(); document.body.classList.remove('luxsheet'); const b = document.querySelector('[data-lux="menu"]'); if (b) b.setAttribute('aria-expanded', 'false'); }
   window.luxSheet = sheetOpen;
@@ -91,6 +91,8 @@
   function hpFix() { const sh = (typeof shInfo === 'function' && shInfo()) || { classes: [] }; const go = browseHref();
     document.querySelectorAll('.smhost').forEach(host => { const r = host.shadowRoot; if (!r || r.querySelector('style[data-lux]')) return; const st = document.createElement('style'); st.dataset.lux = '1'; st.textContent = '.cc{position:relative}.luxcc{position:absolute;inset:0;border-radius:inherit;z-index:2}.luxcc:focus-visible{outline:3px solid #4b3cff;outline-offset:2px}.cc:hover{transform:translateY(-2px);transition:transform .15s}'; r.appendChild(st);
       r.querySelectorAll('a[href="#"], a[href=""]').forEach(a => a.setAttribute('href', go));
+      /* v25: 운영자가 아직 채우지 않은 견본 칸('주소를 입력하세요' 등)은 공개 화면에서 숨김(스튜디오 미리보기에서는 그대로 보여 고치게) */
+      if (LR.mode !== 'preview') r.querySelectorAll('*').forEach(el => { if (el.childElementCount || el.dataset.luxPh) return; const t = (el.textContent || '').trim(); if (!/^.{1,14}(을|를) 입력하세요\.?$/.test(t)) return; el.dataset.luxPh = '1'; el.style.display = 'none'; const pv = el.previousElementSibling; if (pv && !pv.childElementCount && pv.textContent.trim().length <= 10) pv.style.display = 'none'; });
       r.querySelectorAll('article.cc').forEach(card => { if (card.querySelector('.luxcc')) return; const nm = ((card.querySelector('h3') || {}).textContent || '').trim(); const c = (sh.classes || []).find(x => x.name === nm) || (SITE().classes || []).find(x => x.name === nm); if (!c) return;
         const a = document.createElement('a'); a.className = 'luxcc'; a.href = (sh.classes || []).some(x => x.id === c.id) ? '#class/' + c.id : '#c/' + c.id; a.setAttribute('aria-label', `${nm} 자세히 보기`); card.appendChild(a); }); }); }
 
@@ -140,7 +142,7 @@
     const keep = lm.querySelector('.lux-wide .lbtn.pri'); if (keep) [...lm.querySelectorAll('.mypage .lbtn.pri, .mypage .lbtn:not(.ghost):not(.sm):not(.wht)')].filter(b => b !== keep && !b.closest('.lux-wide, form, .lux-tabs')).forEach(b => { b.classList.remove('pri', 'dark'); b.classList.add('ghost'); }); }
   function myListHTML() { const L = myCourses(); const x = L.find(y => y.p < 100) || L[0];
     if (!L.length) return `<div class="mh"><h3>수강 중인 강좌</h3></div><p class="mini">아직 수강 중인 강좌가 없습니다.</p><a class="lbtn pri sm" href="${browseHref()}">강좌 둘러보기</a>`;
-    return `<div class="mh"><h3>수강 중인 강좌 <small>${L.length}개</small></h3></div><ul class="lux-ml">${L.map(y => `<li><div><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>진도 ${y.p}% · ${y.done}/${y.n}${y.nx && y.p < 100 ? ` · 다음 ${esc(y.nx.title)}` : ''}</small></div><span class="lux-mla">${y.p >= (y.c.thr || 80) ? `<a class="lbtn ghost sm" href="#cert/${esc(y.c.id)}">수료증</a>` : ''}<a class="lbtn ${y === x ? 'pri' : 'ghost'} sm" href="${nextHref(y)}">${y.p >= 100 ? '다시 보기' : y.started ? '이어서' : '시작'}</a></span></li>`).join('')}</ul>`; }
+    return `<div class="mh"><h3>수강 중인 강좌 <small>${L.length}개</small></h3></div><ul class="lux-ml">${L.map(y => `<li><div><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>진도 ${y.p}%${Math.round(y.done / Math.max(1, y.n) * 100) === y.p ? ` · ${y.done}/${y.n}` : ''}${y.nx && y.p < 100 ? ` · 다음 ${esc(y.nx.title)}` : ''}</small></div><span class="lux-mla">${y.p >= (y.c.thr || 80) ? `<a class="lbtn ghost sm" href="#cert/${esc(y.c.id)}">수료증</a>` : ''}<a class="lbtn ${y === x ? 'pri' : 'ghost'} sm" href="${nextHref(y)}">${y.p >= 100 ? '다시 보기' : y.started ? '이어서' : '시작'}</a></span></li>`).join('')}</ul>`; }
   function setTab(k) { const lm = document.getElementById('lm'); if (!lm) return; lm.dataset.luxtab = k; ss.set(TABK(), k); lm.querySelectorAll('[data-lux-tab]').forEach(b => { const on = b.dataset.luxTab === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); }
 
   /* ── 튜터: 사람이 열 때만 ── */

@@ -12,8 +12,8 @@ function myStats() {
   const S2 = SITE(); const lp = LR.lp; const mine = LR.mine;
   const clsIds = [...new Set([...Object.keys(lp.cls || {}), ...Object.keys(mine.cls || {})])].filter(id => S2.classes.some(c => c.id === id));
   const courses = clsIds.map(id => { const c = S2.classes.find(x => x.id === id); const r = (lp.cls || {})[id] || { items: {} }; const m = (mine.cls || {})[id] || {};
-    const doneN = Object.values(r.items || {}).filter(x => x && x.done).length; const pLocal = Math.round(doneN / Math.max(1, c.items.length) * 100); const p = Math.max(pLocal, m.p || 0);
-    const next = c.items.find(x => !((r.items || {})[x.id] || {}).done); return { c, p, doneN, next, st: m.st || (r.sub ? 'submitted' : 'none'), fb: m.fb || '', score: m.score, done: m.done || p >= (c.thr || 80) }; });
+    const LI = c.items.filter(x => x.type !== 'chapter'); const L0 = LI.length ? LI : c.items; const doneN = L0.filter(x => ((r.items || {})[x.id] || {}).done).length; const pLocal = Math.round(doneN / Math.max(1, L0.length) * 100); const p = Math.max(pLocal, m.p || 0);
+    const next = L0.find(x => !((r.items || {})[x.id] || {}).done); return { c, p, doneN, next, st: m.st || (r.sub ? 'submitted' : 'none'), fb: m.fb || '', score: m.score, done: m.done || p >= (c.thr || 80) }; });
   const tuts = S2.tuts.map(t => ({ t, r: (lp.tut || {})[t.id] })).filter(x => x.r);
   const diag = Object.entries(lp.diag || {}).map(([id, r]) => ({ d: (S2.diags || []).find(x => x.id === id), r })).filter(x => x.d);
   const myType = diag.length ? diag.sort((a, b) => String(b.r.at || '').localeCompare(String(a.r.at || '')))[0].r.out : '';

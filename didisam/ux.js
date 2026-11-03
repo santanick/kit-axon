@@ -228,3 +228,5 @@ AFTER.unshift(() => { try { const st = S && S.bld && S.bld.steps.pg; const T = S
 
 /* v23.4 대표님: '학습자 AI 튜터는 로그인하기 전부터 작동해야 돼' — 예전 기본값(로그인한 학습자만)을 한 번만 끈다. */
 AFTER.unshift(() => { try { const tu = S && S.settings && S.settings.tutor; if (tu && !tu.v234) { tu.v234 = 1; tu.loginOnly = false; if (tu.guestDaily == null) tu.guestDaily = 10; save(); } } catch (e) { } });
+/* v25 QA: 노트북 낮은 화면(세로 760px 이하)에서는 시작 가이드 카드를 처음부터 한 줄로 접어 대화 · 화면 도움 카드가 보이게 한다(머리를 누르면 펼침). */
+try { if (innerHeight <= 760 && typeof UI === 'object' && UI.obc === undefined) UI.obc = true; } catch (e) { }

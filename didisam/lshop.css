@@ -57,5 +57,5 @@
 .shp-m{background:#fff;border-radius:22px;width:100%;max-width:480px;max-height:90vh;overflow:auto;box-shadow:0 30px 60px -20px rgba(0,0,0,.4)}
 .shp-mh{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line2)}.shp-x{border:0;background:none;cursor:pointer;color:var(--ink)}
 .shp-mb{padding:18px 20px}.shp-mf{display:flex;justify-content:flex-end;gap:8px;padding:0 20px 18px;flex-wrap:wrap}
-@media (max-width:860px){.shp-det,.shp-pay{grid-template-columns:1fr}.shp-side{position:static}.shp-box{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:860px){.shp-det,.shp-pay{grid-template-columns:minmax(0,1fr)}.shp-side{position:static}.shp-box{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:520px){.shp-item{flex-direction:column;align-items:flex-start}.shp-item .shp-th{width:100%}.shp-dl{grid-template-columns:90px 1fr}.shp-grid{grid-template-columns:1fr}}

@@ -1,0 +1,78 @@
+/* 디디쌤 학습자 화면 v25 — 내 AI 학습 비서 대화창(관리자 AI SAM 위젯과 같은 모양) + 지금 화면 카드 */
+/* 버튼: 오른쪽 아래 알약(그라데이션 · 반짝 아이콘 · 이름) */
+#ltut .lt-fab{position:fixed;right:24px;bottom:calc(24px + var(--lt-b,0px));z-index:57;display:flex;align-items:center;gap:8px;height:56px;min-width:56px;padding:0 20px 0 16px;border:0;border-radius:99px;color:#fff;font:inherit;font-weight:800;font-size:14.5px;letter-spacing:-.01em;background:linear-gradient(135deg,#15173B 0%,#5B2BD9 62%,#E5007E 100%);box-shadow:0 14px 34px -8px rgba(21,23,59,.55);cursor:pointer;transition:transform .15s,box-shadow .15s,bottom .15s;width:auto}
+#ltut .lt-fab:hover{transform:translateY(-2px);box-shadow:0 18px 40px -8px rgba(91,43,217,.6)}
+#ltut .lt-fab:focus-visible{outline:3px solid #E5007E;outline-offset:3px}
+#ltut .lt-fab.hide,body.luxsheet #ltut .lt-fab{display:none}
+#ltut .lt-fab .lt-fi{display:grid;place-items:center;flex:none}
+#ltut .lt-fab .lt-ft{position:static;width:auto;height:auto;overflow:visible;clip:auto}
+#ltut .lt-fab .lt-ft b{font-size:14.5px;line-height:1;white-space:nowrap}
+#ltut .lt-fab em{top:-6px;right:-4px;min-width:22px;height:22px;line-height:22px;background:#E5007E;font:800 12px/22px inherit;font-style:normal}
+#ltut .lt-fab.guest{background:linear-gradient(135deg,#15173B 0%,#5B2BD9 62%,#E5007E 100%);color:#fff}
+/* 화면이 바뀌면 잠깐 보이는 작은 안내(창은 열지 않음) */
+.lt-hint{position:fixed;right:24px;bottom:calc(90px + var(--lt-b,0px));z-index:57;max-width:min(320px,calc(100vw - 48px));padding:7px 12px;border-radius:12px 12px 4px 12px;background:#fff;color:var(--ink);font-size:12.5px;font-weight:600;box-shadow:0 0 0 1px var(--line),0 12px 28px -16px rgba(21,23,59,.5);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:lthint 4.5s ease forwards}
+.lt-hint .ic{color:#E5007E;vertical-align:-1px}
+@keyframes lthint{0%{opacity:0;transform:translateY(6px)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.lt-hint{animation:none}#ltut .lt-fab{transition:none}}
+.lt-nudge{bottom:calc(92px + var(--lt-b,0px))}
+/* 대화창 */
+#ltut .lt-panel{position:fixed;right:24px;bottom:24px;top:auto;left:auto;z-index:70;width:410px;height:min(680px,calc(100vh - 96px));height:min(680px,calc(100dvh - 96px));display:flex;flex-direction:column;background:#FBFAF7;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 30px 70px -18px rgba(12,13,36,.35);transform-origin:bottom right}
+#ltut .lt-panel[hidden]{display:none}
+#ltut .lt-panel.big{width:min(780px,calc(100vw - 48px));height:calc(100vh - 96px);height:calc(100dvh - 96px)} /* 머리(계정 · 알림)는 가리지 않음 */
+#ltut .lt-hd{flex:none;display:flex;align-items:center;gap:10px;padding:12px 10px 12px 16px;background:linear-gradient(180deg,#F7F4FF,#fff);color:var(--ink);border-bottom:1px solid var(--line2,#eee)}
+#ltut .lt-hd>div{flex:1;min-width:0}
+#ltut .lt-hd b{display:block;font-size:15.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ltut .lt-hd small{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden}
+#ltut .lt-orb{width:34px;height:34px;border-radius:12px}
+.lt-pill{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:99px;background:#F1EFEA;color:#5D6078;font-size:11px;font-weight:700;line-height:18px}
+.lt-pill i{width:6px;height:6px;border-radius:50%;background:#B8B3A6}.lt-pill.on{background:#EAF7EF;color:#16804D}.lt-pill.on i{background:#16A34A}
+#ltut .lt-hb{flex:none;width:34px;height:34px;border:0;border-radius:10px;background:transparent;color:var(--mute);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+#ltut .lt-hb:hover{background:var(--paper);color:var(--ink)}
+#ltut .lt-hb:focus-visible{outline:2px solid #E5007E;outline-offset:1px}
+/* 지금 화면 카드 */
+.lt-sc{flex:none;padding:10px 14px 10px;background:#fff;border-bottom:1px solid var(--line2,#eee)}
+.lt-sc p{margin:0;display:flex;align-items:baseline;gap:6px;min-width:0;font-size:12.5px;line-height:1.4}
+.lt-sc p span{flex:none;font-size:11px;font-weight:800;color:#E5007E;letter-spacing:.02em}
+.lt-sc p b{min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt-sc p small{flex:none;color:var(--mute);font-size:11.5px}.lt-sc p small::before{content:'— '}
+.lt-scc{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.lt-scc .lt-chip{flex:none}.lt-scc .lt-chip::before{content:'✦';color:#E5007E;font-size:11px}
+.lt-scc .lt-chip.esc::before{content:'↗'}.lt-scc .lt-chip.go::before{content:'→'}
+a.lt-chip{text-decoration:none}
+.lt-sc.cmp .lt-scc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;-webkit-mask-image:linear-gradient(90deg,#000 86%,transparent);mask-image:linear-gradient(90deg,#000 86%,transparent)}
+.lt-sc.cmp .lt-scc::-webkit-scrollbar{display:none}
+#ltut .lt-th{flex:1 1 auto;min-height:80px}
+#ltut .lt-in{flex:none;flex-wrap:wrap}
+.lt-escb{flex-basis:100%;margin:0 0 2px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:10px;background:#FFF4E5;color:#8A5A00;font-size:12.5px;font-weight:700}
+.lt-escb button{border:0;background:transparent;color:#8A5A00;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer}
+#ltut .lt-note{flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 낮은 화면(노트북 608px 등): 입력창이 늘 보이게 */
+@media (max-height:760px){
+  .lt-scc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 86%,transparent);mask-image:linear-gradient(90deg,#000 86%,transparent)}.lt-scc::-webkit-scrollbar{display:none}
+  #ltut .lt-hd{padding-top:8px;padding-bottom:8px}.lt-sc{padding-top:8px;padding-bottom:8px}.lt-scc{margin-top:6px}
+  #ltut .lt-th{padding-top:10px;padding-bottom:10px;gap:10px}
+}
+@media (max-height:620px){#ltut .lt-note{display:none}#ltut .lt-in{padding-bottom:10px}}
+/* 수업 화면: 내용을 덜 가리게 작은 동그라미 */
+body[data-luxr=c] #ltut .lt-fab{width:56px;padding:0;justify-content:center}
+body[data-luxr=c] #ltut .lt-fab .lt-ft{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* 보호자 보기에서도 비서는 쓸 수 있음(제출 · 응시만 막힘) */
+body.lg-guard #ltut .lt-fab:not(.hide){display:flex!important}
+body.lg-guard #ltut .lt-panel.on{display:flex!important}
+/* 휴대폰 · 태블릿: 동그란 버튼(아래 탭 위) */
+@media (max-width:900px){
+  #ltut .lt-fab{right:14px;bottom:calc(12px + var(--lt-b,72px));width:52px;height:52px;min-width:52px;padding:0;justify-content:center}
+  #ltut .lt-fab .lt-ft{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .lt-hint{right:14px;bottom:calc(72px + var(--lt-b,72px));max-width:calc(100vw - 28px)}
+}
+@media (max-width:600px){
+  #ltut .lt-panel,#ltut .lt-panel.big{inset:0;width:auto;height:100vh;height:100dvh;max-height:none;border:0;border-radius:0;padding-bottom:env(safe-area-inset-bottom)}
+  #ltut .lt-hd{padding-top:calc(10px + env(safe-area-inset-top))}
+  #ltut .lt-bigb{display:none}
+  .lt-hint{display:none}
+}
+@media print{#ltut,.lt-hint{display:none!important}}
+/* 다시 그릴 때 깜빡임 없게: 새로 연 창 · 새 말풍선만 움직임 */
+#ltut .lt-panel.on{animation:none}#ltut .lt-panel.anim{animation:ltin .22s ease-out}
+#ltut .lt-th .lt-m{animation:none}#ltut .lt-th .lt-m.new{animation:ltin .25s ease-out}
+@media (prefers-reduced-motion:reduce){#ltut .lt-panel.anim,#ltut .lt-th .lt-m.new{animation:none}}

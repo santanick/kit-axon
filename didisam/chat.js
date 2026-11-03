@@ -109,7 +109,7 @@ function answer(q) {
   }
   // 2) 그룹별 가입률
   if (/가입률/.test(q) || (/(낮은|저조)/.test(q) && /(학과|부서|반|기수|훈련반|그룹)/.test(q))) {
-    const n = +(q.match(/(\d+)\s*(곳|개)/) || [])[1] || 5;
+    const n = +(q.match(/(\d+)\s*(곳|개)/) || [])[1] || 5; if (!(S.groups || []).length) return { text: `아직 ${t('group')}이(가) 없습니다. ${t('learner')} 화면에서 ${t('group')}을(를) 만들면 ${t('group')}별 가입률을 볼 수 있습니다.` };
     const R = S.groups.map(g => { const ms = S.members.filter(m => m.group === g.id); return { g, n: ms.length, j: ms.filter(m => m.grade === '정회원').length / Math.max(1, ms.length) * 100, p: avgOf(S.classes.flatMap(c => ms.filter(m => c.prog[m.id]).map(m => c.prog[m.id].p))) }; }).sort((a, b) => a.j - b.j).slice(0, n);
     return { text: `가입률이 낮은 ${t('group')} ${R.length}곳입니다. 가장 낮은 곳은 ${R[0].g.name}(${pct(R[0].j)})입니다.`, html: table([t('group'), '인원', '가입률', '평균 진도'], R.map(r => [esc(r.g.name), r.n, pct(r.j), pct(r.p)])), go: 'dash' };
   }
