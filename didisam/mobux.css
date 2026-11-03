@@ -4,7 +4,7 @@
   table.mcard{display:block;width:100%!important;min-width:0!important;border-collapse:separate}
   table.mcard>thead{display:none}
   table.mcard>tbody{display:flex;flex-direction:column;gap:10px}
-  table.mcard>tbody>tr{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px 12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff}
+  table.mcard>tbody>tr{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px 12px;padding:14px;border:1px solid var(--line);border-radius:8px;background:#fff}
   table.mcard>tbody>tr>td{display:block;border:0!important;padding:0!important;width:auto!important;min-width:0;max-width:100%;text-align:left!important;white-space:normal}
   table.mcard>tbody>tr>td.mcck{flex:none;order:0;padding-top:2px!important}
   table.mcard>tbody>tr>td.mcck input{width:20px;height:20px}

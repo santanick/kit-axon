@@ -1,5 +1,5 @@
 /* v22 assess2 — 평가 · 수료(W3) */
-.a2sec{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 0;background:#fff;display:grid;gap:8px}
+.a2sec{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:12px 0;background:#fff;display:grid;gap:8px}
 .a2h{font-weight:700;font-size:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
 .a2h .mini{font-weight:400}
 .a2rad{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
@@ -17,7 +17,7 @@
 .a2o{display:grid;grid-template-columns:24px 1fr auto;gap:6px;align-items:center}
 .a2o span{font-size:12px;color:var(--muted);text-align:center}
 .a2req{display:inline-flex;gap:4px;align-items:center;font-size:12px;margin-left:6px}
-.a2cue{border:1px dashed var(--line);border-radius:12px;padding:10px;display:grid;gap:8px}
+.a2cue{border:1px dashed var(--line);border-radius:6px;padding:10px;display:grid;gap:8px}
 .a2cue .qh{flex-wrap:wrap}
 .a2cue input[type=range]{flex:1;min-width:120px}
 .a2t{display:inline-flex;gap:6px;align-items:center;font-size:13px}
@@ -26,7 +26,7 @@
 .a2conv{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .a2rowx{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;margin-left:6px}
 .a2crit{display:grid;gap:6px;margin:8px 0;max-height:360px;overflow:auto}
-.a2cr{display:grid;grid-template-columns:1fr minmax(90px,160px) 46px;gap:8px;align-items:center;padding:6px 8px;border-radius:10px;background:var(--soft)}
+.a2cr{display:grid;grid-template-columns:1fr minmax(90px,160px) 46px;gap:8px;align-items:center;padding:6px 8px;border-radius:6px;background:var(--soft)}
 .a2cr:not(.on){grid-template-columns:1fr;opacity:.85}
 .a2cr label{display:flex;gap:6px;align-items:center;font-size:13px;min-width:0}
 .a2cr b{text-align:right;font-family:var(--num)}
@@ -39,7 +39,7 @@
 .a2txt{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13px}
 .a2qa .ch{flex-wrap:wrap;gap:6px}
 .a2qa textarea{flex:1;min-width:200px}
-.a2ans{background:var(--okl);border-radius:10px;padding:8px 10px;margin:6px 0}
+.a2ans{background:var(--okl);border-radius:6px;padding:8px 10px;margin:6px 0}
 .a2ans p{margin:4px 0 0}
 .a2sub{margin:10px 0}
 .a2hist{margin:6px 0;padding-left:18px;font-size:12px;color:var(--muted)}

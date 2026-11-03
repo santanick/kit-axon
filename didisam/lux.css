@@ -5,9 +5,9 @@
 .lux-mb{display:inline-flex;align-items:center;gap:4px;border:0;background:none;font:inherit;font-weight:600;font-size:14px;color:var(--ink2);padding:8px 14px;border-radius:999px;cursor:pointer;white-space:nowrap}
 .lux-mb i{font-style:normal;font-size:11px;transition:transform .15s}.lux-mb:hover{background:#fff;color:var(--ink)}.lux-mb.on{background:var(--ink);color:#fff}
 .lux-more.open .lux-mb i{transform:rotate(180deg)}
-.lux-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:200px;flex-direction:column;gap:2px;background:#fff;border-radius:16px;padding:8px;box-shadow:0 0 0 1px var(--line),0 22px 44px -22px rgba(21,23,59,.45);z-index:45}
+.lux-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:200px;flex-direction:column;gap:2px;background:#fff;border-radius:8px;padding:8px;box-shadow:0 0 0 1px var(--line),0 22px 44px -22px rgba(42,43,43,.45);z-index:45}
 .lux-more.open .lux-dd{display:flex}
-.lux-dd a{display:block;padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600;color:var(--ink2);text-decoration:none;white-space:nowrap}
+.lux-dd a{display:block;padding:10px 14px;border-radius:6px;font-size:14px;font-weight:600;color:var(--ink2);text-decoration:none;white-space:nowrap}
 .lux-dd a:hover,.lux-dd a:focus-visible{background:var(--paper);color:var(--ink)}.lux-dd a.on{background:var(--ink);color:#fff}
 .lux-dd .smmi{display:flex;flex-direction:column}.lux-dd .smmi>a{font-weight:700}.lux-dd .smcar{display:none}
 .lux-more .lux-dd .smdd{display:flex!important;flex-direction:column;position:static;box-shadow:none;padding:0 0 0 10px;background:none;min-width:0;opacity:1;visibility:visible;transform:none}
@@ -19,24 +19,24 @@
 
 /* ── 이어서 학습하기 ── */
 .lux-cont{padding:28px 0 6px}
-.lux-cc{display:flex;align-items:center;gap:24px;background:linear-gradient(120deg,var(--ink) 0%,#2B2E5A 100%);color:#fff;border-radius:24px;padding:26px 28px;box-shadow:0 22px 44px -26px rgba(12,13,36,.7)}
+.lux-cc{display:flex;align-items:center;gap:24px;background:linear-gradient(120deg,var(--ink) 0%,#4C4D4D 100%);color:#fff;border-radius:12px;padding:26px 28px;box-shadow:0 22px 44px -26px rgba(31,32,32,.7)}
 .lux-cc .lux-cm{flex:1;min-width:0}.lux-cc h2{margin:0 0 4px;font-size:clamp(20px,2.4vw,26px);line-height:1.3;color:#fff}
 .lux-ey{margin:0 0 6px;font-size:13px;font-weight:700;color:#C9C6FF;letter-spacing:.02em}
 .lux-sub{margin:0 0 12px;color:#DCDAF3;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lux-ty{display:inline-block;margin-left:4px;font-size:11px;font-weight:700;background:rgba(255,255,255,.14);padding:2px 8px;border-radius:999px}
-.lux-bar{height:8px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden;max-width:520px}.lux-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8B7BFF,#E6337A)}
+.lux-bar{height:8px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden;max-width:520px}.lux-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8B7BFF,var(--pri))}
 .lux-pc{display:block;margin-top:6px;color:#DCDAF3;font-size:12.5px}
 .lux-cc .lux-go{flex-shrink:0;background:#fff;color:var(--ink);box-shadow:none;padding:15px 26px;font-size:16px}
 .lux-cc .lux-go:hover{box-shadow:0 10px 24px -12px rgba(255,255,255,.6)}
-.lux-cc.empty{background:#fff;color:var(--ink);box-shadow:var(--sh);border:1px solid var(--line)}.lux-cc.empty h2{color:var(--ink)}.lux-cc.empty .lux-ey{color:var(--pri2,#4b3cff)}.lux-cc.empty .lux-sub{color:var(--mute);white-space:normal}.lux-cc.empty>div{flex:1}
+.lux-cc.empty{background:#fff;color:var(--ink);box-shadow:var(--sh);border:1px solid var(--line)}.lux-cc.empty h2{color:var(--ink)}.lux-cc.empty .lux-ey{color:var(--pri2,var(--pri))}.lux-cc.empty .lux-sub{color:var(--mute);white-space:normal}.lux-cc.empty>div{flex:1}
 .lux-ol{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
-.lux-ol a{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 14px;text-decoration:none;color:var(--ink);font-size:14px}
+.lux-ol a{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:11px 14px;text-decoration:none;color:var(--ink);font-size:14px}
 .lux-ol a:hover{border-color:var(--ink)}.lux-ol b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.lux-ol small{color:var(--mute);font-weight:700;width:36px;text-align:right}
-.lux-mbar{display:block;width:64px;height:6px;border-radius:99px;background:var(--line2);overflow:hidden;flex-shrink:0}.lux-mbar i{display:block;height:100%;background:var(--pri2,#4b3cff)}
+.lux-mbar{display:block;width:64px;height:6px;border-radius:99px;background:var(--line2);overflow:hidden;flex-shrink:0}.lux-mbar i{display:block;height:100%;background:var(--pri2,var(--pri))}
 
 /* ── 강좌 상세: 신청 안내 ── */
 .lux-li{margin:4px 0 0;text-align:center;font-size:13px;color:var(--mute)}.lux-li a{color:var(--ink);font-weight:700}
-.lux-intent{display:flex;align-items:center;gap:8px;margin:0 0 14px;padding:12px 14px;border-radius:14px;background:#EEF0FF;color:#2A2A7A;font-size:14px;font-weight:600;line-height:1.5}
+.lux-intent{display:flex;align-items:center;gap:8px;margin:0 0 14px;padding:12px 14px;border-radius:8px;background:#EEF0FF;color:#2A2A7A;font-size:14px;font-weight:600;line-height:1.5}
 
 /* ── 내 학습: 학습 · 결제 · 계정 ── */
 .lux-tabs{display:inline-flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px;margin:0 0 18px}
@@ -46,19 +46,19 @@
 #lm[data-luxtab=pay] .myhero ~ .sec:not(.mypage):not([data-lux-g]),#lm[data-luxtab=acct] .myhero ~ .sec:not(.mypage):not([data-lux-g]){display:none}
 .mycard.lux-wide{grid-column:1/-1}
 .lux-ml{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.lux-ml li{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;background:#fff}
+.lux-ml li{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--line2);border-radius:8px;background:#fff}
 .lux-ml li>div{flex:1;min-width:0;display:grid;gap:4px}.lux-ml b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lux-ml .lux-mbar{width:100%;max-width:340px}.lux-ml small{color:var(--mute);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lux-mla{display:flex;gap:6px;flex-shrink:0}
 .lux-acct .shp-list a{display:flex;align-items:center;justify-content:space-between}
 
 /* ── 휴대폰 ── */
-.lux-sheet{position:fixed;inset:0;z-index:80;background:rgba(12,13,36,.42);display:flex;align-items:flex-end}
-.lux-sh{width:100%;max-height:86vh;overflow:auto;background:#fff;border-radius:22px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -20px 40px -20px rgba(0,0,0,.35);animation:luxup .2s ease-out}
+.lux-sheet{position:fixed;inset:0;z-index:80;background:rgba(31,32,32,.42);display:flex;align-items:flex-end}
+.lux-sh{width:100%;max-height:86vh;overflow:auto;background:#fff;border-radius:12px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -20px 40px -20px rgba(0,0,0,.35);animation:luxup .2s ease-out}
 @keyframes luxup{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
 .lux-shh{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px}.lux-shh b{font-size:16px}.lux-shh button{border:0;background:var(--paper);border-radius:50%;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
 .lux-shg{margin:14px 4px 4px;font-size:12px;font-weight:700;color:var(--mute)}
 .lux-shl{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.lux-shl a,.lux-shl button{display:flex;align-items:center;min-height:46px;padding:10px 14px;border-radius:12px;background:var(--paper);color:var(--ink);text-decoration:none;font:inherit;font-size:15px;font-weight:600;border:0;text-align:left;cursor:pointer}
+.lux-shl a,.lux-shl button{display:flex;align-items:center;min-height:46px;padding:10px 14px;border-radius:6px;background:var(--paper);color:var(--ink);text-decoration:none;font:inherit;font-size:15px;font-weight:600;border:0;text-align:left;cursor:pointer}
 .lux-shc{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 2px}
 .lux-sh .lux-who{border:0;padding:4px 4px 0;margin:0}
 body.luxsheet{overflow:hidden}
@@ -68,19 +68,19 @@ body.luxsheet{overflow:hidden}
   .lh .in{gap:10px;height:60px}.lh .bn b{max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}.lh .bn small{display:none}
   .lh .acct .me{padding:3px 12px 3px 3px}.lh .acct .me .sid{font-size:13px}
   .tabbar.lux-bn{z-index:35;padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
-  .tabbar.lux-bn a,.tabbar.lux-bn button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;font-size:11px;font-weight:700;color:#5D6078;text-decoration:none;padding:6px 0;min-height:48px;justify-content:center;background:none;border:0;cursor:pointer;border-radius:12px}
-  .tabbar.lux-bn a.on{color:var(--pri2,#4b3cff)}
+  .tabbar.lux-bn a,.tabbar.lux-bn button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;font-size:11px;font-weight:700;color:#6C6C6C;text-decoration:none;padding:6px 0;min-height:48px;justify-content:center;background:none;border:0;cursor:pointer;border-radius:6px}
+  .tabbar.lux-bn a.on{color:var(--pri2,var(--pri))}
   body{padding-bottom:72px}
   /* AX 튜터: 작은 동그라미 · 아래 탭 위 · 입력 화면에서는 숨김 */
   .lt-fab{right:12px;bottom:calc(78px + env(safe-area-inset-bottom));padding:5px;width:50px;height:50px;justify-content:center}
   .lt-fab .lt-ft{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.lt-fab .lt-orb{width:40px;height:40px}
   .lt-nudge{display:none!important}
   body[data-luxr=join] .lt-fab,body[data-luxr=login] .lt-fab,body[data-luxr=pay] .lt-fab,body[data-luxr=acct] .lt-fab,body.luxsheet .lt-fab{display:none}
-  .lux-cont{padding:16px 0 4px}.lux-cc{flex-direction:column;align-items:stretch;gap:14px;padding:20px;border-radius:20px}.lux-cc .lux-go{justify-content:center}.lux-sub{white-space:normal}
+  .lux-cont{padding:16px 0 4px}.lux-cc{flex-direction:column;align-items:stretch;gap:14px;padding:20px;border-radius:12px}.lux-cc .lux-go{justify-content:center}.lux-sub{white-space:normal}
   .lux-tabs{display:flex}.lux-tabs button{flex:1;padding:9px 0}
   .lux-ml li{flex-wrap:wrap}.lux-mla{width:100%;justify-content:flex-end}
   /* 강좌 상세: 가격 · 신청 버튼을 화면 아래에 고정 */
-  body[data-luxr=class] .shp-side{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom));top:auto;z-index:20;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 14px;border-radius:18px;box-shadow:0 -10px 30px -18px rgba(21,23,59,.45)}
+  body[data-luxr=class] .shp-side{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom));top:auto;z-index:20;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 14px;border-radius:12px;box-shadow:0 -10px 30px -18px rgba(42,43,43,.45)}
   body[data-luxr=class] .shp-side .shp-meta,body[data-luxr=class] .shp-side>small{display:none}
   body[data-luxr=class] .shp-side .shp-pr{flex:1 1 auto}body[data-luxr=class] .shp-side .shp-pr.big b{font-size:20px}
   body[data-luxr=class] .shp-side .lbtn.blk{width:auto;flex:1 1 170px}body[data-luxr=class] .shp-side .lux-li{flex-basis:100%;margin:0}
@@ -89,7 +89,7 @@ body.luxsheet{overflow:hidden}
 }
 @media (max-width:420px){.lux-shl{grid-template-columns:1fr}}
 /* 공통: 초점 · 터치 영역 */
-.lux-mb:focus-visible,.lux-tabs button:focus-visible,.lux-shl a:focus-visible,.lux-shl button:focus-visible,.tabbar.lux-bn a:focus-visible,.tabbar.lux-bn button:focus-visible{outline:3px solid color-mix(in srgb,#4b3cff 60%,transparent);outline-offset:2px}
+.lux-mb:focus-visible,.lux-tabs button:focus-visible,.lux-shl a:focus-visible,.lux-shl button:focus-visible,.tabbar.lux-bn a:focus-visible,.tabbar.lux-bn button:focus-visible{outline:3px solid color-mix(in srgb,var(--pri) 60%,transparent);outline-offset:2px}
 .crsb .imain .ih .tg{text-transform:none}
 @media print{.lux-cont,.lux-tabs,.lux-sheet{display:none!important}}
 /* 이어서 학습하기 다음에 오는 진도 섹션은 겹치지 않게 */

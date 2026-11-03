@@ -117,7 +117,7 @@ const bFp = () => { let bk = 0; try { bk = bkL().length; } catch (e) { } return 
   if (/홈페이지/.test(s) && /(게시|공개|오픈)/.test(s) && !/학습자/.test(s)) { if (!S.site) return { text: '아직 홈페이지가 없습니다. 먼저 원하는 분위기를 말씀해 주시면 만들어 드리겠습니다.', nav: 'site' }; ACT['site-pub'](); return { text: `홈페이지를 게시했습니다 — ${S.org.domain} (데모). 화면에서 확인하세요.`, nav: 'site' }; }
   if (/배지/.test(s) && /(만들|추가|생성)/.test(s)) {
     const c = S.classes[0]; const nm = ((s.match(/「([^」]{1,20})」/) || [])[1] || (/수료/.test(s) ? '수료' : '새 배지')).slice(0, 20); const pid = uid('p');
-    PLANS[pid] = { run: () => { S.badges.unshift({ id: uid('bd'), name: nm, key: String(S.badges.length + 1), cls: c?.id || '', method: 'pass', special: false, fill: '#15173B', ring: '#0C0D24', rib: '#D6246E', issued: [] }); bMenuOn('badge'); logAudit(`배지 생성(AI SAM) — ${nm}`); return `「${nm}」 배지를 만들었습니다. 「${c ? c.name : '과정'}」 수료 기준을 채우면 자동 발급됩니다.`; }, go: 'badge' };
+    PLANS[pid] = { run: () => { S.badges.unshift({ id: uid('bd'), name: nm, key: String(S.badges.length + 1), cls: c?.id || '', method: 'pass', special: false, fill: '#2A2B2B', ring: '#1F2020', rib: '#5C74F6', issued: [] }); bMenuOn('badge'); logAudit(`배지 생성(AI SAM) — ${nm}`); return `「${nm}」 배지를 만들었습니다. 「${c ? c.name : '과정'}」 수료 기준을 채우면 자동 발급됩니다.`; }, go: 'badge' };
     return { title: '배지', text: `「${nm}」 배지를 만들까요? ${c ? `「${c.name}」 과정의 수료 기준(진도 ${c.criteria.threshold}%)을 채우면 자동 발급됩니다.` : ''}`, plan: pid, state: 'pending', cta: '배지 만들기' };
   }
   if (/(학습자|학생|임직원|원생|수강생|훈련생|명단|회원)/.test(s) && /(등록|명단|초대|올릴|업로드)/.test(s) && !/(보내|발송|독려|승인|사이트)/.test(s)) { bMenuOn('enroll'); return { text: `${t('learner')} 등록 화면을 화면에 열었습니다. 명단 파일(CSV)을 올리거나 초대 링크를 보내 등록합니다.${S.org.type === 'univ' ? ' 대학은 학번 · 학과만 저장하고 이름 · 연락처는 받지 않습니다.' : ''}`, nav: 'enroll' }; }

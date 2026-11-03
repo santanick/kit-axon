@@ -17,7 +17,7 @@ const HERO = {
 const TONES = { 신뢰: { r: '6px', f: 700 }, 따뜻: { r: '20px', f: 600 }, 모던: { r: '0px', f: 800 }, 친근: { r: '16px', f: 600 } };
 function SITEGEN(prompt = '') {
   const ty = S.org.type, h = HERO[ty]; const tone = Object.keys(TONES).find(k => prompt.includes(k)) || '신뢰';
-  const color = /파랑|블루|blue/i.test(prompt) ? '#2563EB' : /보라|퍼플/.test(prompt) ? '#7C3AED' : /주황|오렌지/.test(prompt) ? '#EA580C' : /네이비|남색/.test(prompt) ? '#1E3A8A' : '#00C53B';
+  const color = /파랑|블루|blue/i.test(prompt) ? '#2563EB' : /보라|퍼플/.test(prompt) ? '#5C74F6' : /주황|오렌지/.test(prompt) ? '#EA580C' : /네이비|남색/.test(prompt) ? '#1E3A8A' : '#00C53B';
   const focus = (prompt.match(/([가-힣A-Za-z0-9 ]{2,20})\s*(을|를)?\s*(강조|중심|위주)/) || [])[1];
   const S2 = (type, data) => ({ id: uid('s'), type, data });
   const secs = [

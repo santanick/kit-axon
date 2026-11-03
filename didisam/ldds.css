@@ -1,0 +1,35 @@
+/* 디디쌤 학습자 · 고객 홈페이지 v26 — DDS 적용 층(마지막에 읽는다)
+   DDS: 학습자 · 마이페이지 · 사용자 대상 화면은 브랜드 Green #00C53B(기관이 고른 테마 색이 있으면 그 색), 글꼴 Pretendard 하나,
+   버튼 6 · 카드 8, 회색 Gray 스케일, 그림자는 낮은 dp. 화면 구성 · 동작은 그대로 두고 겉모습만 바꾼다. */
+:root{--ink:#2A2B2B;--night:#1F2020;--ink2:#4C4D4D;--mute:#6C6C6C;--line:#EAEBEB;--line2:#F1F2F2;--paper:#F6F7F7;--pri:#00C53B;--pri2:#5C74F6;--ok:#009C09;--r:8px;
+  --sh:0 1px 2px rgba(42,43,43,.05),0 4px 14px rgba(42,43,43,.08);--sg:"Pretendard Variable",Pretendard,sans-serif;--g50:#FBFCFC;--g100:#F6F7F7;--g200:#F1F2F2;--g300:#EAEBEB;--g600:#808181;--g700:#6C6C6C;--g800:#4C4D4D;--g900:#2A2B2B}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;letter-spacing:-.01em;color:var(--ink);font-variant-numeric:tabular-nums}
+.eb{font-family:inherit;letter-spacing:.06em}
+.lbtn{border-radius:6px;font-weight:700}
+.lbtn:hover{transform:none;box-shadow:none;filter:brightness(.95)}
+.lbtn.ghost{box-shadow:inset 0 0 0 1px var(--g300)}
+.lbtn.ghost:hover{background:var(--g100);filter:none}
+.lbtn.dark{background:var(--g800)}
+.look-clean .hero{background:radial-gradient(900px 520px at 78% -10%,rgba(92,116,246,.22),transparent 60%),#1F2020}
+.hero .lead{color:#D5D6D6}
+.look-kit .bkhero .lead,.look-kit .bkhero .crumb,.look-kit .bkhero .bkpg small{color:#D5D6D6}
+input[type=checkbox],input[type=radio]{accent-color:var(--pri)}
+/* 마이페이지 홈 보강(피그마): 상태 요약 줄 · 최근 목록 카드 */
+.my26-stat{display:flex;padding:0!important;overflow:hidden}
+.my26-stat a{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;padding:18px 8px;color:var(--g800);text-decoration:none;font-size:14.5px;min-width:0}
+.my26-stat a+a{border-left:1px solid var(--g300)}
+.my26-stat b{color:var(--pri);font-size:19px;font-weight:800}
+.my26-stat a:hover{background:var(--g50)}
+.my26-list .mh{display:flex;align-items:baseline;gap:10px;justify-content:space-between}
+.my26-list .mh.sub{margin-top:14px}
+.my26-more{font-size:13px;color:var(--g700);text-decoration:none}
+.my26-list ul{list-style:none;margin:8px 0 0;padding:0;border:1px solid var(--g300);border-radius:8px}
+.my26-list li{display:flex;align-items:center;gap:10px;padding:12px 14px;min-width:0}
+.my26-list li+li{border-top:1px solid var(--g200)}
+.my26-list li>a{flex:1;min-width:0;display:flex;align-items:center;gap:8px;color:var(--ink);text-decoration:none;overflow:hidden}
+.my26-list li small{flex:none;color:var(--g600);font-size:12.5px}
+.my26-list em{flex:none;font-style:normal;font-size:12px;font-weight:700;border:1px solid var(--g300);border-radius:99px;padding:1px 8px;color:var(--g700)}
+.my26-list em.my26-q{color:var(--pri);border-color:color-mix(in srgb,var(--pri) 40%,#fff)}
+.my26-path{flex:none;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.my26-body{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--g700)}
+@media (max-width:640px){.my26-stat{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))}.my26-stat a{flex-direction:column;gap:2px;padding:12px 4px;font-size:12.5px}.my26-stat a+a{border-left:0}.my26-path{max-width:45%}}

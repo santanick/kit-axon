@@ -1,5 +1,5 @@
 /* v23 sitemerge — 홈페이지 · 학습 사이트 통합 편집 화면 */
-.sgm-bar{background:#fff;border:1px solid var(--line,#E9EAEE);border-radius:16px;padding:16px 18px;display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.sgm-bar{background:#fff;border:1px solid var(--line,#E9EAEE);border-radius:8px;padding:16px 18px;display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
 .sgm-bar .sgm-bl{flex:1 1 320px;min-width:0}.sgm-bar .sgm-bl b{font-size:16px;margin-right:8px}.sgm-bar .sgm-bl p{margin:6px 0 0}
 .sgm-bar .sgm-br{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}.sgm-bar .sgm-hsel{margin:0;min-width:240px}
 .sgm-in>.ph .phl p{display:none}

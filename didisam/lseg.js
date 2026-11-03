@@ -22,7 +22,7 @@ function lLegal() { if (!LR.me || !['corp', 'public'].includes(lTy())) return []
   return [...H, ...A.filter(a => !H.some(h => h.href === a.href))]; }; }
 
 /* 히어로: 영상 썸네일이 없으면 과정 카드로 채움 */
-{ const base = SECR.hero; SECR.hero = d => { const h = base(d); if (!h.includes('class="mempty"')) return h; const C2 = SITE().classes.slice(0, 9); if (!C2.length) return h; const lv = i => (SITE().levels[i] || {}).color || '#4b3cff';
+{ const base = SECR.hero; SECR.hero = d => { const h = base(d); if (!h.includes('class="mempty"')) return h; const C2 = SITE().classes.slice(0, 9); if (!C2.length) return h; const lv = i => (SITE().levels[i] || {}).color || '#5C74F6';
   const col = k => C2.filter((_, i) => i % 3 === k).map(c => `<a class="mo mcard" href="#c/${esc(c.id)}" style="--c:${esc(lv(c.level || 0))}"><i>${esc((SITE().levels[c.level || 0] || {}).name || '')}</i><b>${esc(c.name)}</b><small>${c.hours ? c.hours + '시간 · ' : ''}${c.legal ? '필수교육' : esc(lTerm('cls'))}</small></a>`).join('');
   return h.replace(/<div class="mempty">[\s\S]*?<\/div>/, [0, 1, 2].map(k => `<div class="mcol c${k}">${col(k)}</div>`).join('')); }; }
 

@@ -80,7 +80,7 @@ ACT['mem-q'] = () => { mbEnsure(); const A = S.settings.acct; const U = mbUniv()
 UI.mbSel = UI.mbSel || [];
 function mbFiltered() { const f = UI.memF || 'all', q = (UI.memQ || '').toLowerCase(), A = UI.mbAdv || {}; const T = mbTeacher();
   const mine = T ? new Set(S.classes.filter(c => T.classes.includes(c.id) || (c.teachers || []).includes(T.id)).flatMap(c => c.learners || [])) : null;
-  return S.members.filter(m => (f === 'all' || m.grade === f) && (!mine || (m.grade === '정회원' && mine.has(m.id)))
+  return S.members.filter(m => (f === 'all' || m.grade === f) && (!mine || (m.grade === '정회원' && mine.has(m.id))) && (A.wd || !m.withdrawn) /* v26 피그마 '탈퇴회원 보기': 기본은 숨김 */
     && (!q || [m.name, m.nick, m.email, m.phone, m.sid, ...Object.values(m.extra || {}).map(v => typeof v === 'string' ? v : '')].join(' ').toLowerCase().includes(q))
     && (!A.cls || (C(A.cls)?.learners || []).includes(m.id)) && (!A.from || (m.joined || '') >= A.from) && (!A.to || (m.joined || '') <= A.to)
     && (!A.team || m.group === A.team) && (!A.login || ((m.acct && m.acct.login) || 'email') === A.login)
@@ -95,7 +95,7 @@ function mbList() { const U = mbUniv(); const f = UI.memF || 'all'; const L = mb
     <label>가입일 시작<input type="date" data-chg="mb-advset" data-k="from" value="${esc(A.from || '')}"></label><label>가입일 끝<input type="date" data-chg="mb-advset" data-k="to" value="${esc(A.to || '')}"></label>
     <label>${esc(t('group'))}<select data-chg="mb-advset" data-k="team"><option value="">전체</option>${S.groups.map(g => `<option value="${g.id}" ${A.team === g.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
     ${U ? '' : `<label>가입 수단<select data-chg="mb-advset" data-k="login"><option value="">전체</option>${Object.entries(MB_LOGIN).map(([k, l]) => `<option value="${k}" ${A.login === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`}
-    <label>추가정보 질문<select data-chg="mb-advset" data-k="q"><option value="">선택 안 함</option>${S.settings.acct.extraQ.map(x => `<option ${A.q === x.q ? 'selected' : ''}>${esc(x.q)}</option>`).join('')}</select></label><label>추가정보 값(포함)<input data-chg="mb-advset" data-k="v" value="${esc(A.v || '')}" maxlength="40"></label></div></div>` : '';
+    <label>추가정보 질문<select data-chg="mb-advset" data-k="q"><option value="">선택 안 함</option>${S.settings.acct.extraQ.map(x => `<option ${A.q === x.q ? 'selected' : ''}>${esc(x.q)}</option>`).join('')}</select></label><label>추가정보 값(포함)<input data-chg="mb-advset" data-k="v" value="${esc(A.v || '')}" maxlength="40"></label><label class="ckl mb-wd"><input type="checkbox" data-chg="mb-advwd" ${A.wd ? 'checked' : ''}> 탈퇴 회원 보기 <small class="mini">${S.members.filter(m => m.withdrawn).length}명 · 개인정보 삭제 · 학습 기록만 보관</small></label></div></div>` : '';
   const bulk = sel.length && !T ? `<div class="mb-bulk"><b>${sel.length}명 선택</b>${f === '승인 대기' || sel.some(id => ['승인 대기', '거절'].includes(M(id)?.grade)) ? '<button class="btn sm pri" data-act="mb-ok">승인</button><button class="btn sm" data-act="mb-no">거절</button>' : ''}<button class="btn sm" data-act="mb-msg">메시지 보내기</button>${U ? '' : '<button class="btn sm" data-act="mb-vreq">본인인증 안내</button>'}<button class="btn sm" data-act="mb-team">${esc(t('group'))} 지정</button><button class="btn sm red" data-act="mb-del">회원 삭제</button><button class="btn sm ghost" data-act="mb-selclr">선택 해제</button></div>` : '';
   const ck = m => `<input type="checkbox" data-chg="mb-sel" data-v="${m.id}" ${sel.includes(m.id) ? 'checked' : ''} aria-label="선택">`;
   const gtag = m => tag(m.grade, m.grade === '정회원' ? 'g' : m.grade === '준회원' ? '' : m.grade === '거절' ? 'r' : 'y');
@@ -114,6 +114,7 @@ ACT['mb-selall'] = el => { UI.mbSel = el.checked ? mbFiltered().map(m => m.id) :
 ACT['mb-selclr'] = () => { UI.mbSel = []; render(); };
 ACT['mb-adv'] = () => { UI.mbAdvOpen = !UI.mbAdvOpen; render(); };
 ACT['mb-advset'] = el => { UI.mbAdv = { ...(UI.mbAdv || {}), [el.dataset.k]: el.value }; render(); };
+ACT['mb-advwd'] = el => { UI.mbAdv = { ...(UI.mbAdv || {}), wd: el.checked }; render(); };
 ACT['mb-advclr'] = () => { UI.mbAdv = {}; render(); };
 const mbTargets = el => el && el.dataset.v ? [el.dataset.v] : el && el.dataset.all ? S.members.filter(m => m.grade === '준회원').map(m => m.id) : UI.mbSel.slice();
 function mbApprove(ids) { let n = 0; ids.forEach(id => { const m = M(id); if (!m || !['승인 대기', '거절'].includes(m.grade)) return; m.grade = '정회원'; delete m.reject; n++; mbInbox(m.id, '가입이 승인되었습니다', `${S.org.name} 홈페이지를 이용할 수 있습니다.`, { href: '#my' }); }); return n; }

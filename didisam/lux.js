@@ -89,7 +89,7 @@
 
   /* ── 홈페이지 섹션(Shadow DOM): 빈 링크 · 강좌 카드 연결 ── */
   function hpFix() { const sh = (typeof shInfo === 'function' && shInfo()) || { classes: [] }; const go = browseHref();
-    document.querySelectorAll('.smhost').forEach(host => { const r = host.shadowRoot; if (!r || r.querySelector('style[data-lux]')) return; const st = document.createElement('style'); st.dataset.lux = '1'; st.textContent = '.cc{position:relative}.luxcc{position:absolute;inset:0;border-radius:inherit;z-index:2}.luxcc:focus-visible{outline:3px solid #4b3cff;outline-offset:2px}.cc:hover{transform:translateY(-2px);transition:transform .15s}'; r.appendChild(st);
+    document.querySelectorAll('.smhost').forEach(host => { const r = host.shadowRoot; if (!r || r.querySelector('style[data-lux]')) return; const st = document.createElement('style'); st.dataset.lux = '1'; st.textContent = '.cc{position:relative}.luxcc{position:absolute;inset:0;border-radius:inherit;z-index:2}.luxcc:focus-visible{outline:3px solid #5C74F6;outline-offset:2px}.cc:hover{transform:translateY(-2px);transition:transform .15s}'; r.appendChild(st);
       r.querySelectorAll('a[href="#"], a[href=""]').forEach(a => a.setAttribute('href', go));
       /* v25: 운영자가 아직 채우지 않은 견본 칸('주소를 입력하세요' 등)은 공개 화면에서 숨김(스튜디오 미리보기에서는 그대로 보여 고치게) */
       if (LR.mode !== 'preview') r.querySelectorAll('*').forEach(el => { if (el.childElementCount || el.dataset.luxPh) return; const t = (el.textContent || '').trim(); if (!/^.{1,14}(을|를) 입력하세요\.?$/.test(t)) return; el.dataset.luxPh = '1'; el.style.display = 'none'; const pv = el.previousElementSibling; if (pv && !pv.childElementCount && pv.textContent.trim().length <= 10) pv.style.display = 'none'; });

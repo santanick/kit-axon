@@ -1,0 +1,119 @@
+/* 디디쌤 스튜디오 v26 — DDS(Didisam Design System) 적용 층(마지막에 읽는다)
+   대표님(2026-11-03): '피그마의 디자인 시스템 · 스튜디오 · 고객 홈페이지를 확인하고, 지금 UI/UX는 유지한 채 디자인 시스템과 톤&매너, 아이콘 박스와 아이템 구성을 업그레이드'
+   기준(DDS Foundation): Pretendard 한 글꼴 · Studio 포인트 Indigo #5C74F6(900 #1E30A0 ~ 50 #EAEDFF) · 브랜드 Green #00C53B(학습자 · 마이페이지)
+   · Gray #2A2B2B ~ #FBFCFC · Semantic(Info #109BF1 · Warning #FF9800 · Error #FF1A2D · Success #54D62C · Link #1A4CFF)
+   · Shape: 버튼 · 입력 4 · 카드 · 표 8 · Elevation dp(카드 1~2 · 메뉴 16 · 대화 상자 24) · 아이콘은 가는 선(1.6) 회색, 선택은 진하게 */
+:root{
+  --g900:#2A2B2B;--g800:#4C4D4D;--g700:#6C6C6C;--g600:#808181;--g500:#AAABAB;--g400:#C8C9C9;--g300:#EAEBEB;--g200:#F1F2F2;--g100:#F6F7F7;--g50:#FBFCFC;
+  --s900:#1E30A0;--s800:#2E40B3;--s700:#364AC2;--s600:#4257D7;--s500:#5065E8;--s400:#5C74F6;--s300:#7D90F9;--s200:#A5B0FA;--s100:#CACFFC;--s50:#EAEDFF;
+  --b900:#007200;--b700:#00A224;--b500:#00C53B;--b100:#C5EEC7;--b50:#E7F8E8;
+  --info:#109BF1;--infol:#E3F3FC;--link:#1A4CFF;
+  --ink:var(--g900);--night:#1F2020;--mag:var(--s400);--magd:var(--s600);--magl:var(--s50);
+  --paper:var(--g100);--line:var(--g300);--muted:var(--g700);--soft:var(--g200);
+  --ok:#009C09;--okl:var(--b50);--warn:#EF6D00;--warnl:#FFF3E0;--bad:#DE0027;--badl:#FFEAEE;--blue:var(--info);
+  --r:8px;--num:"Pretendard Variable",Pretendard,sans-serif;
+  --e1:0 1px 2px rgba(42,43,43,.06),0 1px 3px rgba(42,43,43,.08);--e4:0 2px 8px rgba(42,43,43,.08);--e8:0 4px 14px rgba(42,43,43,.10);--e16:0 8px 28px rgba(42,43,43,.14);--e24:0 16px 48px rgba(42,43,43,.20);
+}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;letter-spacing:-.01em;color:var(--g900);font-variant-numeric:tabular-nums}
+h1,h2,h3{letter-spacing:-.02em}
+
+/* 머리 · 레일(SNB) */
+.top{background:#fff;backdrop-filter:none;border-bottom:1px solid var(--g300)}
+.logo{border-radius:8px;background:var(--g900)}
+.av{border-radius:50%;background:var(--s400)}
+.ri{color:var(--g800);font-weight:600}
+.ri:hover{background:var(--g100);color:var(--g900)}
+.ri.on{background:var(--g200);color:var(--g900);font-weight:800}
+.ri.on .ic{color:var(--g900);stroke-width:2.1}
+.ri em{background:var(--bad);font-family:inherit}
+.brail{background:#fff;border-right:1px solid var(--g300)}
+.brail .ri{color:var(--g700)}
+.brail .ri.on{background:var(--g200);color:var(--g900)}
+.ic{stroke-width:1.7}
+
+/* 화면 바탕 · 카드 · 표 */
+.bcanvas{background:var(--g50)}
+.card,.kpi,.tw{border-radius:8px;box-shadow:none;border:1px solid var(--g300)}
+.card .tw,.mcard .tw{border:0}
+.kpi .val{font-family:inherit;font-weight:800;letter-spacing:-.02em}
+.kpi.mg .val{color:var(--s400)}
+.empty{border-radius:8px;background:#fff;border:1px dashed var(--g400);color:var(--g700)}
+.tw{padding:0}
+.tw table{border-collapse:separate;border-spacing:0}
+.tw thead th,table thead th{background:var(--g100);color:var(--g700);font-weight:600;font-size:13px;border-bottom:1px solid var(--g300);padding:13px 14px}
+.tw thead th:first-child{border-top-left-radius:8px}.tw thead th:last-child{border-top-right-radius:8px}
+.tw td{padding:14px;border-bottom:1px solid var(--g200)}
+.tw tbody tr:last-child td{border-bottom:0}
+.tw tbody tr:hover td{background:var(--g50)}
+.tw tbody tr:has(input[type=checkbox]:checked) td{background:#F3F5FF}
+input[type=checkbox],input[type=radio]{accent-color:var(--s400)}
+
+/* 버튼(DDS: 모서리 4 · 진회색 주 버튼 · Indigo 강조 · 외곽선) */
+.btn{border-radius:4px;box-shadow:inset 0 0 0 1px var(--g400);color:var(--g900);font-weight:600}
+.btn:hover{box-shadow:inset 0 0 0 1px var(--g600);background:var(--g50)}
+.btn.ink,.btn.pri{background:var(--g800);color:#fff;box-shadow:none}
+.btn.ink:hover,.btn.pri:hover{background:var(--g900)}
+.btn.ai{background:#fff;color:var(--s400);box-shadow:inset 0 0 0 1px var(--s400)}
+.btn.ai:hover{background:var(--s50)}
+.btn.acc,.btn.blue{background:var(--s400);color:#fff;box-shadow:none}
+.btn.red{background:var(--bad)}
+.btn.redl{color:var(--bad);box-shadow:inset 0 0 0 1px #F69397}
+.btn.ghost{box-shadow:none}
+.btn.ghost:hover{background:var(--g100)}
+.btn.sm{border-radius:4px}
+.send{border-radius:8px;background:var(--s400);box-shadow:none}
+.send:hover{background:var(--s600)}
+
+/* 입력(모서리 4 · 1px 테두리 · 초점 Indigo) */
+.fl input,.fl select,.fl textarea,.form2 input,.form2 select,.qi,.bar2 input[type=search],.bar2 select,.bci input,.bci select,.jstep select,.jh input,.rub input{border-radius:4px;box-shadow:inset 0 0 0 1px var(--g400)}
+.fl input:focus,.fl textarea:focus,.fl select:focus,.form2 input:focus,.bar2 input[type=search]:focus{box-shadow:inset 0 0 0 1.5px var(--s400);outline:0}
+input[type=search]::placeholder,input::placeholder,textarea::placeholder{color:var(--g500)}
+
+/* 태그 · 칩 · 세그먼트 탭 */
+.tag{border-radius:4px;background:var(--g200);color:var(--g800);font-weight:600;padding:3px 8px}
+.tag.g{background:var(--b50);color:var(--ok)}
+.tag.y{background:var(--warnl);color:var(--warn)}
+.tag.r{background:var(--badl);color:var(--bad)}
+.tag.b{background:var(--s50);color:var(--s600)}
+.chip{box-shadow:inset 0 0 0 1px var(--g300);font-weight:600;color:var(--g800)}
+.chip:hover{box-shadow:inset 0 0 0 1px var(--s300);color:var(--s600)}
+.chip.on{background:var(--g800)}
+.seg2{background:transparent;padding:0;border-bottom:1px solid var(--g300);border-radius:0;gap:18px}
+.seg2 button{border-radius:0;padding:10px 2px;color:var(--g600);font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px}
+.seg2 button.on{background:transparent;box-shadow:none;color:var(--g900);font-weight:800;border-bottom-color:var(--g900)}
+
+/* 대화 상자 · 펼침 메뉴 · 알림(Elevation 24 · 16) */
+.modal{border-radius:8px;box-shadow:var(--e24)}
+.mwrap{background:rgba(31,32,32,.5)}
+.uxpop{border-radius:8px;box-shadow:var(--e16);border-color:var(--g300)}
+#toasts .toast,.toast{border-radius:8px}
+
+/* 아이콘 박스: 가는 선 아이콘 + 회색 · Indigo 연한 바탕의 8px 상자 */
+.tcard .ti,.tsug i{border-radius:8px;background:var(--s50);color:var(--s400)}
+.cn-logo,.aih-lg{border-radius:8px}
+.orb,.aih-orb,.msg .av{background:linear-gradient(135deg,var(--s300),var(--s600));box-shadow:none;border-radius:8px}
+.uxtn{font-family:inherit;color:var(--s400)}
+
+/* 진행 막대 */
+.bar{background:var(--g200);border-radius:99px}
+.bar>i,.bar>span,.bar>b{background:var(--s400);border-radius:99px}
+
+/* AI SAM 버튼 · 위젯 */
+#fabBtn{background:var(--s400);box-shadow:var(--e16)}
+#fabBtn:hover{background:var(--s600);box-shadow:var(--e24)}
+.fab-on .bchat{border-radius:8px;box-shadow:var(--e24);border-color:var(--g300)}
+.fab-on .bch{background:#fff;border-bottom:1px solid var(--g300)}
+/* 탭 줄(DDS Tab: 밑줄형 · 항목 사이 넉넉한 간격) */
+.seg2.wtabs,.ux-on .wtabs,.wtabs{gap:22px}
+.wtabs>button{padding:10px 2px}
+.wtabs .uxtabmore>summary{padding:10px 2px;color:var(--g600);font-weight:600}
+/* 수강 기간 선택(피그마 '라디오 버튼 수정'): 버튼 묶음 대신 라디오 모양 */
+.c2per>.seg{display:flex;gap:22px;background:none;padding:6px 0;box-shadow:none}
+.c2per>.seg button{display:inline-flex;align-items:center;gap:8px;background:none!important;box-shadow:none!important;padding:4px 0;color:var(--g800);font-weight:600}
+.c2per>.seg button::before{content:'';width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--g400);background:#fff;flex:none}
+.c2per>.seg button.on{color:var(--g900)}
+.c2per>.seg button.on::before{box-shadow:inset 0 0 0 5px var(--s400)}
+/* 클래스 상세 보강 */
+.d26-cat{color:var(--g700)}
+.d26-agg{margin:6px 2px 14px}
+.mb-wd{grid-column:1/-1}

@@ -72,10 +72,10 @@ ACT['doc-add'] = () => { ED.it.doc.secs.push({ h: '새 절', body: '', pts: [] }
 function materialHTML(it, cname) {
   const D = it.doc, e = esc; const fmt = it.fmt || 'hand';
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(it.title)}</title><style>
-body{font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#15173B;max-width:820px;margin:0 auto;padding:40px 28px;line-height:1.7;word-break:keep-all}
-header{border-bottom:3px solid #15173B;padding-bottom:14px;margin-bottom:24px}header small{color:#5D6078}h1{font-size:28px;margin:6px 0 0}
-h2{font-size:19px;margin:28px 0 8px;padding-left:10px;border-left:5px solid #D6246E}.box{background:#F7F6F2;border-radius:14px;padding:14px 18px}
-ul{padding-left:20px}.lines{border-bottom:1px solid #ccc;height:28px}footer{margin-top:40px;color:#5D6078;font-size:12px}@media print{body{padding:0}}</style></head><body>
+body{font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#2A2B2B;max-width:820px;margin:0 auto;padding:40px 28px;line-height:1.7;word-break:keep-all}
+header{border-bottom:3px solid #2A2B2B;padding-bottom:14px;margin-bottom:24px}header small{color:#6C6C6C}h1{font-size:28px;margin:6px 0 0}
+h2{font-size:19px;margin:28px 0 8px;padding-left:10px;border-left:5px solid #5C74F6}.box{background:#F6F7F7;border-radius:14px;padding:14px 18px}
+ul{padding-left:20px}.lines{border-bottom:1px solid #ccc;height:28px}footer{margin-top:40px;color:#6C6C6C;font-size:12px}@media print{body{padding:0}}</style></head><body>
 <header><small>${e(S.org.name)} · ${e(cname || D.course || '')} · ${{ hand: '강의 교안', work: '실습 워크시트', slide: '슬라이드 자료' }[fmt]}</small><h1>${e(it.title)}</h1></header>
 <section class="box"><b>학습 목표</b><ul>${D.goals.map(g => `<li>${e(g)}</li>`).join('')}</ul></section>
 ${D.secs.map((s, i) => `<h2>${i + 1}. ${e(s.h)}</h2>${fmt === 'slide' ? '' : `<p>${e(s.body)}</p>`}<ul>${s.pts.map(p => `<li>${e(p)}</li>`).join('')}</ul>${fmt === 'work' ? '<div class="lines"></div><div class="lines"></div>' : ''}`).join('')}
@@ -91,13 +91,13 @@ ACT['doc-play'] = () => { const D = ED.it.doc; aiPlayer(ED.it.title, [{ h: '학�
 function wrapLines(g, text, maxW, maxLines) { const out = []; let line = ''; for (const ch of String(text || '')) { if (g.measureText(line + ch).width > maxW && line) { out.push(line); line = ch.trim() ? ch : ''; if (out.length === maxLines) break; } else line += ch; } if (out.length < maxLines && line) out.push(line); else if (out.length === maxLines && line) out[maxLines - 1] = out[maxLines - 1].replace(/.$/, '…'); return out; }
 function drawSlide(g, s, i, n, title, cap, prog) {
   const W = 1280, H = 720, F = 'Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
-  g.fillStyle = '#F7F6F2'; g.fillRect(0, 0, W, H); g.fillStyle = '#15173B'; g.fillRect(0, 0, W, 76);
+  g.fillStyle = '#F6F7F7'; g.fillRect(0, 0, W, H); g.fillStyle = '#2A2B2B'; g.fillRect(0, 0, W, 76);
   g.fillStyle = '#fff'; g.font = `600 24px ${F}`; g.textBaseline = 'middle'; g.fillText(S.org.name, 48, 38); g.textAlign = 'right'; g.fillText(`${i + 1} / ${n}`, W - 48, 38); g.textAlign = 'left';
-  g.fillStyle = '#5D6078'; g.font = `500 24px ${F}`; g.fillText(wrapLines(g, title, W - 160, 1)[0] || '', 80, 128);
-  g.fillStyle = '#D6246E'; g.fillRect(48, 160, 8, 62); g.fillStyle = '#15173B'; g.font = `800 52px ${F}`; g.fillText(wrapLines(g, s.h, W - 160, 1)[0] || '', 80, 192);
-  let y = 290; g.font = `500 34px ${F}`; (s.pts || []).slice(0, 5).forEach(p => { g.fillStyle = '#D6246E'; g.beginPath(); g.arc(92, y, 7, 0, 7); g.fill(); g.fillStyle = '#15173B'; wrapLines(g, p, W - 220, 2).forEach((l, j) => g.fillText(l, 116, y + j * 44)); y += 74; });
-  if (cap) { g.fillStyle = 'rgba(12,13,36,.86)'; g.fillRect(0, H - 128, W, 128); g.fillStyle = '#fff'; g.font = `500 28px ${F}`; wrapLines(g, cap, W - 120, 2).forEach((l, j) => g.fillText(l, 60, H - 86 + j * 40)); }
-  g.fillStyle = '#E7E4DC'; g.fillRect(0, H - 6, W, 6); g.fillStyle = '#D6246E'; g.fillRect(0, H - 6, W * clamp(prog || 0, 0, 1), 6);
+  g.fillStyle = '#6C6C6C'; g.font = `500 24px ${F}`; g.fillText(wrapLines(g, title, W - 160, 1)[0] || '', 80, 128);
+  g.fillStyle = '#5C74F6'; g.fillRect(48, 160, 8, 62); g.fillStyle = '#2A2B2B'; g.font = `800 52px ${F}`; g.fillText(wrapLines(g, s.h, W - 160, 1)[0] || '', 80, 192);
+  let y = 290; g.font = `500 34px ${F}`; (s.pts || []).slice(0, 5).forEach(p => { g.fillStyle = '#5C74F6'; g.beginPath(); g.arc(92, y, 7, 0, 7); g.fill(); g.fillStyle = '#2A2B2B'; wrapLines(g, p, W - 220, 2).forEach((l, j) => g.fillText(l, 116, y + j * 44)); y += 74; });
+  if (cap) { g.fillStyle = 'rgba(31,32,32,.86)'; g.fillRect(0, H - 128, W, 128); g.fillStyle = '#fff'; g.font = `500 28px ${F}`; wrapLines(g, cap, W - 120, 2).forEach((l, j) => g.fillText(l, 60, H - 86 + j * 40)); }
+  g.fillStyle = '#EAEBEB'; g.fillRect(0, H - 6, W, 6); g.fillStyle = '#5C74F6'; g.fillRect(0, H - 6, W * clamp(prog || 0, 0, 1), 6);
 }
 const sentences = s => String(s || '').split(/(?<=[.!?。])\s+/).filter(Boolean);
 function overlay(title, body) { const w = document.createElement('div'); w.className = 'mwrap top2'; w.innerHTML = `<div class="modal wide" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mh"><b>${esc(title)}</b><button class="x" data-x="1" aria-label="닫기">${ic('x', 18)}</button></div><div class="mb">${body}</div></div>`; document.body.appendChild(w); return w; }

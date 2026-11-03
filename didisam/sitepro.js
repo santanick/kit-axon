@@ -15,7 +15,7 @@ const LOOKS = {
   campus: { n: '사업단 · 일정표형', ref: '부산창업공유대학 · 동아대 RISE' }
 };
 /* ── 색 도우미 ── */
-function hx(h) { h = String(h || '#15173B').replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function hx(h) { h = String(h || '#2A2B2B').replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
 function mixc(a, b, w) { const A = hx(a), B = hx(b); return '#' + A.map((v, i) => Math.round(v * (1 - w) + B[i] * w).toString(16).padStart(2, '0')).join(''); }
 function rgba(h, a) { const [r, g, b] = hx(h); return `rgba(${r},${g},${b},${a})`; }
 
@@ -170,7 +170,7 @@ const ICO = ['M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5
 const svgI = (i, s = 22) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICO[i % ICO.length]}"/></svg>`;
 const SPZ = ['#E63295', '#7D5CB5', '#E8622A', '#4C77C5', '#3BA875'];
 function thumbArt(title, i, col, look, date) {
-  const pal = look === 'senior' ? ['#2F4FD8', '#4A90F0', '#F06A7A', '#8B5CF6'] : look === 'navyGlow' ? ['#0A1628', '#13254A', '#1B2E5C', '#0F1F3D'] : [col, mixc(col, '#000', .35), mixc(col, '#7C3AED', .45), mixc(col, '#0EA5E9', .45)];
+  const pal = look === 'senior' ? ['#2F4FD8', '#4A90F0', '#F06A7A', '#8B5CF6'] : look === 'navyGlow' ? ['#0A1628', '#13254A', '#1B2E5C', '#0F1F3D'] : [col, mixc(col, '#000', .35), mixc(col, '#5C74F6', .45), mixc(col, '#0EA5E9', .45)];
   const bg = pal[i % pal.length]; const t = String(title || '').slice(0, 28);
   return `<div class="th" style="background:linear-gradient(135deg,${bg},${mixc(bg, look === 'navyGlow' ? col : '#fff', look === 'navyGlow' ? .35 : .28)})">${date ? `<span class="dt">${esc(date)}</span>` : ''}<i class="o1"></i><i class="o2"></i><b>${esc(t)}</b><small>${look === 'senior' ? `[${i + 1}차시]` : 'ONLINE'}</small></div>`;
 }
@@ -178,7 +178,7 @@ function proSec(x, i, s, lk) {
   const d = x.data || {}; const col = s.color;
   switch (x.type) {
     case 'banner': return heroHTML(d, s, lk);
-    case 'slideBanner': return `<section class="sec tight"><div class="wrap"><div class="promo">${(d.slides || []).slice(0, 4).map((t, k) => `<div class="pc" style="--pc:${[col, mixc(col, '#000', .3), mixc(col, '#fff', .2), mixc(col, '#7C3AED', .4)][k % 4]}"><small>${esc(d.title || 'NEWS')}</small><b>${esc(t)}</b><span>자세히 보기 →</span></div>`).join('')}</div></div></section>`;
+    case 'slideBanner': return `<section class="sec tight"><div class="wrap"><div class="promo">${(d.slides || []).slice(0, 4).map((t, k) => `<div class="pc" style="--pc:${[col, mixc(col, '#000', .3), mixc(col, '#fff', .2), mixc(col, '#5C74F6', .4)][k % 4]}"><small>${esc(d.title || 'NEWS')}</small><b>${esc(t)}</b><span>자세히 보기 →</span></div>`).join('')}</div></div></section>`;
     case 'text': return textHTML(d, s, lk, i);
     case 'image': return `<section class="sec"><div class="wrap">${SEH(d)}<div class="ph" role="img" aria-label="${esc(d.alt || d.title || '')}"><span>${esc(d.alt || '이미지')}</span><small>운영 시 실제 사진으로 교체</small></div></div></section>`;
     case 'slideImage': return `<section class="sec"><div class="wrap">${SEH(d)}<div class="gal">${Array.from({ length: Math.min(6, +d.count || 3) }, (_, k) => `<div class="ph sm" style="--g:${k}"><span>사진 ${k + 1}</span></div>`).join('')}</div></div></section>`;
@@ -225,7 +225,7 @@ function textHTML(d, s, lk, i) {
   return `<section class="sec"><div class="wrap">${SEH({ ...d, sub: '' }, '')}<p class="lead">${esc(typeof d.body === 'string' ? d.body : '')}</p>${cols.length ? `<div class="fc n${Math.min(cols.length, 6)}">${cols.map(([a, b], k) => `<div class="f"><i>${svgI(k)}</i><b>${esc(a)}</b><p>${esc(b)}</p></div>`).join('')}</div>` : ''}</div></section>`;
 }
 function proCSS(s, lk) {
-  const c = s.color || '#15173B'; const on = lum(c) > .45 ? '#14161F' : '#fff'; const tone = { 신뢰: 14, 따뜻: 22, 모던: 10, 친근: 20 }[s.tone] ?? 16;
+  const c = s.color || '#2A2B2B'; const on = lum(c) > .45 ? '#14161F' : '#fff'; const tone = { 신뢰: 14, 따뜻: 22, 모던: 10, 친근: 20 }[s.tone] ?? 16;
   const dk = mixc(c, '#000', .55), lt = mixc(c, '#fff', .9), lt2 = mixc(c, '#fff', .8), navy = mixc('#0A1628', c, .12);
   const big = lk === 'senior';
   const base = `:root{--c:${c};--on:${on};--dk:${dk};--lt:${lt};--lt2:${lt2};--r:${tone}px;--ink:#14161F;--mu:#6B7280;--ln:#E9EAEE;--bg2:#F6F7FA}
