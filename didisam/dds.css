@@ -194,3 +194,14 @@ input[type=search]::placeholder,input::placeholder,textarea::placeholder{color:v
 .cs26ti{display:inline-flex;align-items:center;gap:6px}.cs26ic{font-size:13px;filter:grayscale(1)}
 .cs26ing{color:#FF9800;font-size:12.5px;font-weight:600}
 .cs26ch.off{opacity:.55}
+/* v26.4 콘텐츠 라이브러리(피그마 Studio › 콘텐츠 라이브러리) */
+.lb26bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:8px 0 10px}.lb26tools{display:flex;align-items:center;gap:8px}.lb26tools input{height:36px;border:1px solid #C8C9C9;border-radius:4px;padding:0 10px;min-width:220px}
+.lb26tools .seg2 button{padding:6px 8px}
+.lb26i{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;margin-right:10px;vertical-align:middle;flex:none}.lb26i.k-video{background:#EAEDFF;color:#5C74F6}.lb26i.k-eval{background:#E7F8E8;color:#009C09}.lb26i.k-doc{background:#FFF4E5;color:#E08600}
+.lb26g{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}.lb26c{display:flex;flex-direction:column;gap:6px;padding:16px!important}.lb26c b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lb26c small{color:#6C6C6C}.lb26a{display:flex;gap:6px;margin-top:6px}
+/* v26.4 플랜 · 결제 내역 */
+.pl26{display:flex!important;align-items:center;gap:40px;flex-wrap:wrap;padding:18px 24px!important;margin-bottom:16px}.pl26c{display:flex;flex-direction:column;gap:4px}.pl26c small{color:#808181}.pl26c b{font-size:16px}.pl26a{margin-left:auto}
+/* v26.4 커뮤니티 관리 빠른 필터 */
+.cm26q{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 10px}.cm26q .grow{flex:1}
+.cm26k{display:inline-flex;align-items:center;gap:6px;border:1px solid #EAEBEB;background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;color:#4C4D4D;cursor:pointer}.cm26k b{color:#5C74F6}.cm26k.on{border-color:#5C74F6;background:#EAEDFF}
+.cm26t{font-size:15px;margin:0}
