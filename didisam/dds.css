@@ -141,3 +141,27 @@ input[type=search]::placeholder,input::placeholder,textarea::placeholder{color:v
 .d26-mk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:14px;text-align:center}.d26-mk>div+div{border-left:1px solid var(--g300)}
 .d26-mk small{display:block;color:var(--g700);font-size:13px}.d26-mk b{display:block;font-size:22px;margin-top:4px}.d26-mk b.up{color:var(--ok)}.d26-mk b.dn{color:var(--bad)}
 @media (max-width:640px){.d26-mk{grid-template-columns:1fr;gap:10px}.d26-mk>div+div{border-left:0;border-top:1px solid var(--g300);padding-top:10px}}
+/* v26.2 메시지 발송(피그마 Studio › 메시지 › 메시지 발송): 왼쪽 메시지 카드 · 오른쪽 발송 대상 */
+.cm26{display:grid;grid-template-columns:minmax(0,460px) minmax(0,1fr);gap:20px;align-items:start;margin-bottom:20px}
+.cm26w{border-radius:24px!important;padding:24px 26px!important;box-shadow:0 2px 12px rgba(42,43,43,.06)}
+.cm26w .ch,.cm26t .ch{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cm26ta{position:relative}.cm26ta textarea{min-height:220px;resize:vertical;padding-bottom:26px}
+.cm26n{position:absolute;right:12px;bottom:10px;font-size:12px;color:var(--g500,#8A8D8F)}
+.cm26drop{display:flex;align-items:center;justify-content:center;gap:6px;height:96px;margin-top:6px;border:1px dashed var(--g400,#C5C8CA);border-radius:8px;color:#5C74F6;font-weight:700;cursor:pointer;position:relative;background:#fff}
+.cm26drop:hover{background:#F5F7FF}.cm26drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.cm26drop:focus-within{outline:2px solid #5C74F6;outline-offset:2px}
+.cm26send{width:100%;height:48px;justify-content:center;margin-top:6px;background:#2A2B2B!important;border-color:#2A2B2B!important;color:#fff!important}
+.cm26send:hover{background:#111!important}
+.cm26t{background:var(--g50,#F7F8F8)!important;min-height:100%;display:flex;flex-direction:column;gap:10px}
+.cm26r button{min-width:72px}
+.cm26cnt{margin:6px 0 0;padding-bottom:10px;border-bottom:1px solid var(--g300,#DDE0E2);font-weight:700}.cm26cnt b{color:#5C74F6}
+.cm26empty{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--g600,#6F7375);padding:36px 0;margin:0}
+.cm26who{margin-top:auto;display:flex;align-items:center;gap:16px;padding-top:14px;border-top:1px solid var(--g300,#DDE0E2)}.cm26who b{margin-right:auto}
+.cm26b{margin-bottom:20px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:960px){.cm26{grid-template-columns:minmax(0,1fr)}.cm26w{border-radius:12px!important}}
+.cm26r{display:flex;gap:18px;border:0!important;background:transparent!important;padding:0!important;margin:4px 0 10px}
+.cm26r button{display:inline-flex;align-items:center;gap:6px;min-width:0;padding:4px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;color:var(--g800,#3E4142);font-weight:600}
+.cm26r button::before{content:'';width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--g400,#C5C8CA);background:#fff;flex:none}
+.cm26r button.on{color:#2A2B2B}.cm26r button.on::before{box-shadow:inset 0 0 0 5px #5C74F6}
+.cm26r button.on::after{display:none}

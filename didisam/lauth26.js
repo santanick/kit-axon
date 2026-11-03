@@ -25,6 +25,8 @@
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', start) : start();
   addEventListener('hashchange', () => setTimeout(enhance, 30));
 })();
+/* 결제하기(v26.2): 동의 체크하면 빨간 안내를 숨긴다 */
+document.addEventListener('change', e => { if (e.target.name === 'agree' && e.target.closest('#shpPay')) { const er = e.target.closest('#shpPay').querySelector('.p26err'); if (er && e.target.checked) er.hidden = true; } });
 /* 클래스 상세(피그마 User Page › 클래스 상세): 공유하기 · 안내 탭 이동 */
 document.addEventListener('click', e => {
   const sh = e.target.closest('[data-l26share]'); if (sh) { e.preventDefault(); const u = location.href.split('#')[0] + '#class/' + sh.dataset.l26share;

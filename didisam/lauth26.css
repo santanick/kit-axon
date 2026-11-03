@@ -41,3 +41,27 @@ body.la26 section.la .la-cons,body.la26 section.la .la-age{border-radius:8px;bor
 .shp-share{margin-top:8px;border-radius:4px!important;height:44px}
 .shp-meta{border-top:1px solid var(--g300);padding-top:10px}
 @media (max-width:860px){.shp-tabs{top:56px;gap:18px;overflow-x:auto}}
+/* 결제하기(v26.2, 피그마 User Page › 결제하기): 가운데 한 장의 카드 */
+.shp-pay.p26{display:block;max-width:640px;margin:0 auto}
+.p26c{background:#fff;border:1px solid var(--g300);border-radius:8px;padding:28px 32px 32px}
+.p26h{font-size:17px;font-weight:800;color:var(--g900);margin:28px 0 12px;letter-spacing:-.01em}
+.p26h:first-child{margin-top:0}
+.p26 .shp-item{border:0;background:var(--g100);border-radius:8px;margin:0}
+.p26amt{border-top:1px solid var(--g300);border-bottom:1px solid var(--g300);padding:14px 0;gap:10px 0}
+.p26amt dt{color:var(--g700)}.p26amt dd{color:var(--g900);font-weight:600}
+.p26amt .tot{padding-top:10px;border-top:1px dashed var(--g300);color:var(--g900);font-weight:800}
+.p26amt dd.tot b{font-size:20px;color:var(--g900)}
+.p26m{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border:0;padding:0;background:transparent;margin:0}
+.p26t{position:relative;display:flex!important;flex-direction:column;align-items:flex-start!important;gap:2px!important;min-height:64px;padding:12px 14px;border:1px solid var(--g300);border-radius:8px;background:#fff;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.p26t input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.p26t b{font-size:15px;color:var(--g900)}.p26t small{font-size:12.5px;color:var(--g600)}
+.p26t:hover{border-color:var(--g500)}
+.p26t:has(input:checked){border-color:var(--pri);box-shadow:inset 0 0 0 1px var(--pri);background:color-mix(in srgb,var(--pri) 6%,#fff)}
+.p26t:has(input:focus-visible){outline:2px solid var(--pri);outline-offset:2px}
+.p26n{margin:0;padding:14px 16px 14px 32px;background:var(--g100);border-radius:8px;color:var(--g700);font-size:13.5px;line-height:1.65}
+.p26a{margin-top:18px}
+.p26err{margin:6px 0 0 24px;color:#E5484D;font-size:13px;font-weight:600}
+.p26btn{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:24px}
+.p26btn .lbtn{height:52px;border-radius:4px;font-size:16px;justify-content:center;display:flex;align-items:center}
+.p26btn .lbtn.ghost{background:#fff;color:var(--pri);box-shadow:inset 0 0 0 1px var(--pri);border:0}
+@media (max-width:520px){.p26c{padding:20px 16px 24px;border-radius:0;border-left:0;border-right:0}.p26m{grid-template-columns:1fr}}

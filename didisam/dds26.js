@@ -2,7 +2,7 @@
    - 클래스 상세 머리: '수강생 화면 보기'(학습자 사이트의 이 클래스 페이지를 새 창으로) · '공유하기'(클래스 주소 복사, 무료 클래스도) · 카테고리 표시(미지정이면 '카테고리 미지정' → 누르면 설정 탭)
    - 클래스 상세 수강생 표 아래: '수료율 집계 일시'(마지막 계산 시각) */
 'use strict';
-Object.assign(IC, { folder: IC.folder || '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', eye: IC.eye || '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', link: IC.link || '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>' });
+Object.assign(IC, { info: IC.info || '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>', folder: IC.folder || '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', eye: IC.eye || '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', link: IC.link || '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>' });
 const d26ClsURL = c => (typeof c2PayLink === 'function' ? c2PayLink(c) : `learner.html#class/${c.id}`);
 const d26CatName = id => { const L = S.cats || []; const out = []; let x = L.find(k => k.id === id); while (x) { out.unshift(x.name); x = x.parent ? L.find(k => k.id === x.parent) : null; } return out.join(' › '); };
 AFTER.push(cur => {
@@ -52,3 +52,5 @@ AFTER.push(cur => { try {
     <div class="d26-mk"><div><small>월 매출액</small><b>${won(M.s)}</b></div><div><small>월 환불 금액</small><b>${won(M.r)}</b></div><div><small>전월 대비(순매출)</small><b class="${M.diff >= 0 ? 'up' : 'dn'}">${M.diff >= 0 ? '▲' : '▼'} ${won(Math.abs(M.diff))}</b></div></div></section>`);
 } catch (e) { console.error(e); } });
 ACT['d26-ym'] = el => { const v = +el.dataset.v; if (!v) UI.d26ym = today().slice(0, 7); else { const d = new Date((UI.d26ym || today().slice(0, 7)) + '-01'); d.setMonth(d.getMonth() + v); UI.d26ym = d.toISOString().slice(0, 7); } render(); };
+/* v26.2 메시지 내용 글자 수 */
+document.addEventListener('input', e => { if (e.target.id === 'msgB') { const c = document.getElementById('msgBc'); if (c) c.textContent = e.target.value.length + '/2000'; } });

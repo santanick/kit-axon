@@ -136,14 +136,25 @@
     const sub = kind === 'sub'; const phys = kind === 'book' && x.kind !== '전자책'; const req = phys && x.req && x.req.on;
     const methods = sub ? [['신용카드', '신용카드 · 체크카드(정기결제 등록)']] : [['신용카드', '신용카드 · 체크카드'], ['계좌이체', '실시간 계좌이체'], ['간편결제', '간편결제(토스페이 · 카카오페이 · 네이버페이)'], ['가상계좌', '가상계좌(기한 안에 입금)'], ...(sh.pg.intl ? [['해외카드', '해외카드(VISA · Master)']] : [])];
     const disc = (+x.price || 0) - f;
-    return sec('결제하기', `<form id="shpPay" class="shp-pay" data-kind="${esc(kind)}" data-id="${esc(id)}"><div class="shp-main">
+    /* v26.2 — 피그마 User Page › 결제하기 벤치마크: 가운데 한 장의 카드(주문 상품 · 결제 금액 · 결제 방식 타일 · 유의사항 · 동의 · 취소/결제하기) */
+    const MD = { 신용카드: '신용카드 · 체크카드', 계좌이체: '실시간 계좌이체', 간편결제: '간편결제', 가상계좌: '가상계좌', 해외카드: '해외카드' };
+    const MS = { 신용카드: sub ? '정기결제 카드 등록' : '모든 국내 카드', 계좌이체: '내 계좌에서 바로', 간편결제: '토스페이 · 카카오페이 · 네이버페이', 가상계좌: '기한 안에 입금', 해외카드: 'VISA · Master' };
+    const pol = (sh.policy && sh.policy.text ? String(sh.policy.text).split(/\n+/).map(s => s.replace(/^[-·*•]\s*/, '').trim()).filter(Boolean) : ['환불은 홈페이지 운영 정책에 따라 승인 여부와 금액이 정해집니다.']).concat([kind === 'book' ? (x.kind === '전자책' ? '전자책은 결제일로부터 7일 이내 신청할 수 있고, 한 번이라도 내려받으면 환불할 수 없습니다.' : '실물 교재/교구는 결제일로부터 7일 이내 신청할 수 있고, 이미 전달받았다면 환불할 수 없습니다.') : '환불을 신청하면 즉시 수강할 수 없고, 운영자 승인 후 환불이 완료됩니다.', `결제는 ${sh.pg.name || 'PG사'} 결제창에서 안전하게 진행됩니다.`]);
+    return sec('결제하기', `<form id="shpPay" class="shp-pay p26" novalidate data-kind="${esc(kind)}" data-id="${esc(id)}"><div class="p26c">
+      <h2 class="p26h">주문 상품</h2>
       <div class="shp-item">${thumb(x)}<div><small>${kind === 'book' ? esc(x.kind) : esc(KIND[x.kind] || '클래스')}</small><b>${esc(x.name)}</b>${kind !== 'book' && periodTxt(x) ? `<small>수강 기간: ${esc(periodTxt(x))}</small>` : ''}${kind === 'book' && x.kind === '전자책' ? `<small>결제 후 ${(x.dl && x.dl.days) || 30}일 동안 내려받을 수 있습니다.</small>` : ''}</div></div>
       ${req ? `<label class="fl">${esc(x.req.q || '배송지 · 요청사항')}${x.req.must ? ' (필수)' : ''}<textarea name="ship" rows="3" maxlength="300" ${x.req.must ? 'required' : ''} placeholder="예: 부산광역시 해운대구 ○○로 12, 101동 1001호 / 문 앞에 놓아 주세요"></textarea></label>` : ''}
       ${sub ? `<label class="fl">구독 시작일(비우면 결제 즉시 시작)<input type="date" name="start" min="${today()}"></label><p class="mini">결제 수단을 등록하면 매월 같은 날 ${won(f)}이 자동 결제됩니다. 구독을 취소하면 남은 기간은 수강할 수 있고 다음 달부터 결제되지 않습니다. 결제가 실패하면 재시도 기간 동안 수강 권한이 유지되고, 끝내 실패하면 자동 만료됩니다.</p>` : ''}
-      <fieldset class="shp-mth"><legend>결제 수단</legend>${methods.map(([v, l], i) => `<label><input type="radio" name="m" value="${v}" ${i === 0 ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</fieldset>
-      <details class="shp-pol"><summary>환불 규정 보기</summary><p class="mini">${sh.policy && sh.policy.text ? nl(sh.policy.text) : '환불은 홈페이지 운영 정책에 따라 승인 여부와 금액이 정해집니다.'}<br>${kind === 'book' ? (x.kind === '전자책' ? '전자책: 결제일로부터 7일 이내 신청 가능, 한 번이라도 내려받으면 환불할 수 없습니다.' : '실물 교재/교구: 결제일로부터 7일 이내 신청 가능, 이미 전달받았다면 환불할 수 없습니다.') : '환불을 신청하면 즉시 수강할 수 없고, 운영자 승인 후 환불이 완료됩니다.'}</p></details>
-      <label class="shp-agree"><input type="checkbox" name="agree" required> 주문 내용과 환불 규정을 확인했으며 결제에 동의합니다.</label></div>
-      <aside class="shp-side"><dl class="shp-sum"><dt>상품 금액</dt><dd>${won(x.price)}</dd>${disc ? `<dt>할인</dt><dd>-${won(disc)}</dd>` : ''}<dt>결제 금액</dt><dd><b>${won(f)}</b>${sub ? '/월' : ''}</dd></dl><button class="lbtn pri blk" type="submit">${won(f)} 결제하기</button><p class="mini">결제 대행: ${esc(sh.pg.name || '')}</p><a class="mini" href="${back}">취소하고 돌아가기</a></aside></form>`, `<a href="${back}">${esc(x.name)}</a> › 결제`); }
+      <h2 class="p26h">결제 금액</h2>
+      <dl class="shp-sum p26amt"><dt>상품 금액</dt><dd>${won(x.price)}</dd><dt>할인 금액</dt><dd>${disc ? '-' + won(disc) : '0원'}</dd><dt class="tot">최종 결제 금액</dt><dd class="tot"><b>${won(f)}</b>${sub ? '/월' : ''}</dd></dl>
+      <h2 class="p26h" id="p26mh">결제 방식</h2>
+      <div class="shp-mth p26m" role="radiogroup" aria-labelledby="p26mh">${methods.map(([v], i) => `<label class="p26t"><input type="radio" name="m" value="${v}" ${i === 0 ? 'checked' : ''}><b>${esc(MD[v] || v)}</b><small>${esc(MS[v] || '')}</small></label>`).join('')}</div>
+      <h2 class="p26h">유의사항</h2>
+      <ul class="p26n">${pol.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+      <label class="shp-agree p26a"><input type="checkbox" name="agree"> 주문 내용을 확인하였으며, 약관에 동의합니다.</label>
+      <p class="p26err" role="alert" hidden>결제를 진행하려면 주문 내용 확인 및 약관 동의에 체크해 주세요.</p>
+      <div class="p26btn"><a class="lbtn ghost" href="${back}">취소</a><button class="lbtn pri" type="submit">${won(f)} 결제하기</button></div>
+    </div></form>`, `<a href="${back}">${esc(x.name)}</a> › 결제`); }
   function pgWindow(title, amount, done, onFail) { const sh = SHOP() || { pg: {} };
     shModal(`토스페이먼츠 결제창(데모)`, `<p><b>${esc(title)}</b></p><p class="shp-amt">${won(amount)}</p><p class="mini">실제 운영에서는 PG사 결제창(팝업)이 열립니다. <!-- 운영: TossPayments.requestPayment / 나이스 결제창 --> 데모에서는 승인 결과를 고릅니다.</p>`,
       [{ label: '결제 실패 테스트', run: () => { setTimeout(() => (onFail || payFail)(), 0); } }, { label: '결제 승인', kind: 'pri', run: () => { setTimeout(done, 0); } }]); }
@@ -213,7 +224,7 @@
   const vacct = () => ({ bank: ['우리은행', '신한은행', 'KB국민은행'][Math.floor(Math.random() * 3)], no: '5' + String(Math.floor(Math.random() * 1e12)).padStart(12, '0').replace(/(\d{3})(\d{6})(\d{3})/, '$1-$2-$3'), until: addD(today(), 3) });
   document.addEventListener('submit', e => { const f = e.target; if (f.id !== 'shpPay') return; e.preventDefault(); e.stopImmediatePropagation(); if (pv()) return;
     const kind = f.dataset.kind, id = f.dataset.id; const sh = SHOP(); const x = kind === 'book' ? sh.books.find(b => b.id === id) : sh.classes.find(c => c.id === id); if (!x) return;
-    if (!f.agree.checked) { toast('결제 동의에 체크하세요.', 'warn'); return; }
+    if (!f.agree.checked) { const er = f.querySelector('.p26err'); if (er) { er.hidden = false; f.agree.focus(); } else toast('결제 동의에 체크하세요.', 'warn'); return; }
     const ship = f.ship ? f.ship.value.trim() : ''; if (f.ship && x.req && x.req.must && !ship) { toast('배송지 · 요청사항을 입력하세요.', 'warn'); f.ship.focus(); return; }
     const method = (f.querySelector('[name=m]:checked') || {}).value || '신용카드'; const amount = priceOf(x); const payId = rid('pay'); const itemType = kind === 'book' ? 'book' : kind === 'sub' ? 'sub' : 'class';
     const data = { payId, itemType, ref: id, item: x.name, amount, method, ship, start: f.start ? f.start.value : '', subId: kind === 'sub' ? rid('sb') : '' };
