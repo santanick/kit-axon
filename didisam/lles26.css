@@ -81,3 +81,13 @@ section.crsh.l26hide{display:none}
 .nlist.n26 details.nt>summary>b{grid-column:3}.nlist.n26 details.nt>summary>time{grid-column:5;text-align:center}.nlist.n26 details.nt>summary>.tcat{grid-column:2}.nlist.n26 details.nt>summary>em{grid-column:4}
 @media (max-width:640px){.n26head{display:none}.nlist.n26 details.nt>summary{grid-template-columns:auto minmax(0,1fr) auto}.nlist.n26 .n26no{display:none}.nlist.n26 details.nt>summary>b{grid-column:2}.nlist.n26 details.nt>summary>time{grid-column:1/-1;text-align:left}.nlist.n26 details.nt>summary>.tcat{grid-column:1}.nlist.n26 details.nt>summary>em{grid-column:3}.n26bar input{min-width:0;flex:1}}
 .lcqz{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}.lcqz a{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 8px;padding:12px 14px;border:1px solid var(--g300);border-radius:8px;text-decoration:none;color:var(--g900);background:#fff}.lcqz a:hover{border-color:var(--pri)}.lcqz small{grid-column:2;color:var(--g600);font-size:12.5px}
+/* 게시판(v26.5, 피그마 User Page › 게시판): 왼쪽 게시판 목록 · 글쓰기 · 내가 쓴 글 보기 */
+.lc26w.bd{grid-template-columns:220px minmax(0,1fr) 260px}.lc26w.bd.one{grid-template-columns:220px minmax(0,1fr)}
+.lc26bd{position:sticky;top:90px;display:flex;flex-direction:column;gap:10px}.lc26bd .lbtn{height:44px;border-radius:4px;justify-content:center}
+.lc26bq{height:40px;border:1px solid var(--g300);border-radius:4px;padding:0 12px;background:#fff;font:inherit;font-size:14px}
+.lc26bd nav{display:flex;flex-direction:column;background:#fff;border:1px solid var(--g300);border-radius:8px;padding:6px}.lc26bd nav a{padding:10px 12px;border-radius:6px;color:var(--g800);text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lc26bd nav a:hover{background:var(--g100)}.lc26bd nav a.on{background:color-mix(in srgb,var(--pri) 10%,#fff);color:var(--pri);font-weight:700}
+.lc26my{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--g700);margin-right:10px}
+@media (max-width:1100px){.lc26w.bd,.lc26w.bd.one{grid-template-columns:200px minmax(0,1fr)}.lc26w.bd .lc26side{grid-column:1/-1}}
+@media (max-width:860px){.lc26w.bd,.lc26w.bd.one{grid-template-columns:minmax(0,1fr)}.lc26bd{position:static}.lc26bd nav{flex-direction:row;overflow-x:auto}.lc26bd nav a{flex:none}}
+.lcsec:has(.lc26w.bd) .lctabs:first-child>a:not([href="#comm/mine"]){display:none}
+.lcsec:has(.lc26w.bd) .lcbar .lbtn.pri{display:none}

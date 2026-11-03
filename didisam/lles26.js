@@ -45,3 +45,5 @@
   document.addEventListener('input', e => { if (e.target.id !== 'n26q') return; const q = e.target.value.trim().toLowerCase(); let n = 0; document.querySelectorAll('#lm .nlist.n26 > details.nt').forEach(d => { const ok = !q || d.querySelector('summary').textContent.toLowerCase().includes(q); d.hidden = !ok; if (ok) n++; }); const c = document.getElementById('n26c'); if (c) c.textContent = n; });
   const mo = new MutationObserver(() => { try { run(); } catch (e) { } }); const st = () => { mo.observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); run(); };
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', st) : st(); })();
+/* v26.5 게시판 목록 검색(피그마 User Page › 게시판 왼쪽 목록) */
+document.addEventListener('input', e => { if (!e.target.classList || !e.target.classList.contains('lc26bq')) return; const q = e.target.value.trim().toLowerCase(); e.target.parentElement.querySelectorAll('nav a').forEach(a => { a.hidden = !!q && !a.dataset.n.includes(q); }); });
