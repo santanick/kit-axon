@@ -131,7 +131,10 @@ window.lcReviewsHTML = cid => `<div class="lcpanel" data-c="${esc(cid)}"><h3>수
 window.lcCommHTML = cid => `<div class="lcpanel"><h3>커뮤니티</h3>${lcClsComm(cid)}</div>`;
 window.lcNoticeHTML = cid => `<div class="lcpanel"><h3>공지</h3>${lcNoticePanel(cid, '')}</div>`;
 function lcPanel(cid, iid, vid) { const tab = LCM.ctab || 'note'; const nN = (SITE().notices || []).filter(n => n.clsId === cid).length;
-  const T = [['note', '학습노트'], ['notice', '공지' + (nN ? ' ' + nN : '')], ['comm', '커뮤니티'], ['review', '수강후기']];
+  const QZ = ((lcCls(cid) || {}).items || []).filter(x => x.type === 'quiz' || x.type === 'exam');
+  const T = [['note', '학습노트'], ...(QZ.length ? [['quiz', '퀴즈 ' + QZ.length]] : []), ['notice', '공지' + (nN ? ' ' + nN : '')], ['comm', '커뮤니티'], ['review', '수강후기']];
+  if (tab === 'quiz') { const R = (LR.lp.cls || {})[cid] || { items: {} }; const qb = `<ul class="lcqz">${QZ.map(x => { const st = (R.items || {})[x.id] || {}; return `<li><a href="#c/${esc(cid)}/${esc(x.id)}"><span class="lck ${x.type === 'exam' ? 'q' : ''}">${x.type === 'exam' ? '시험' : '퀴즈'}</span><b>${esc(x.title)}</b><small>${st.score != null ? `${st.score}점 · 응시 완료` : '미응시'}</small></a></li>`; }).join('')}</ul><p class="mini">퀴즈를 누르면 바로 풀 수 있고, 제출하면 즉시 채점됩니다.</p>`;
+    return `<div class="lcpanel" id="lcPanel" data-c="${esc(cid)}" data-i="${esc(iid)}" data-vid="${vid ? 1 : ''}"><div class="lctabs sm">${T.map(([k, l]) => `<button type="button" class="${tab === k ? 'on' : ''}" data-lc="ctab" data-v="${k}">${esc(l)}</button>`).join('')}</div><div class="lcpb">${qb}</div></div>`; }
   const body = tab === 'notice' ? lcNoticePanel(cid, iid) : tab === 'comm' ? lcClsComm(cid) : tab === 'review' ? lcReviewPanel(cid) : lcNotePanel(cid, iid, vid);
   return `<div class="lcpanel" id="lcPanel" data-c="${esc(cid)}" data-i="${esc(iid)}" data-vid="${vid ? 1 : ''}"><div class="lctabs sm">${T.map(([k, l]) => `<button type="button" class="${tab === k ? 'on' : ''}" data-lc="ctab" data-v="${k}">${esc(l)}</button>`).join('')}</div><div class="lcpb">${body}</div></div>`; }
 const lcPanelRefresh = () => { const p = $('#lcPanel'); if (p) p.outerHTML = lcPanel(p.dataset.c, p.dataset.i, !!p.dataset.vid); };

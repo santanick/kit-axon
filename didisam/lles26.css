@@ -74,3 +74,10 @@ section.crsh.l26hide{display:none}
 .l26side .lcnc{display:flex;gap:6px;align-items:center}.l26side .lcnc input{flex:1;min-width:0;width:auto}
 .l26side .lcnc .lbtn{flex:none}
 .cw2.l26>.l26side{padding-bottom:96px}
+/* 공지사항 목록(v26.4) */
+.n26bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;flex-wrap:wrap}.n26bar b{font-size:15px}.n26bar input{height:40px;border:1px solid var(--g300);border-radius:4px;padding:0 12px;min-width:260px;background:#fff}
+.n26head{display:grid;grid-template-columns:64px minmax(0,1fr) 120px;gap:12px;padding:10px 16px;background:#fff;border:1px solid var(--g300);border-bottom:0;border-radius:8px 8px 0 0;color:var(--g700);font-size:13px;font-weight:700}.n26head span:first-child,.n26head span:last-child{text-align:center}
+.nlist.n26 details.nt>summary{display:grid!important;grid-template-columns:64px auto minmax(0,1fr) auto 120px;align-items:center;gap:8px 12px}.nlist.n26 .n26no{text-align:center;color:var(--g600);font-size:13px}
+.nlist.n26 details.nt>summary>b{grid-column:3}.nlist.n26 details.nt>summary>time{grid-column:5;text-align:center}.nlist.n26 details.nt>summary>.tcat{grid-column:2}.nlist.n26 details.nt>summary>em{grid-column:4}
+@media (max-width:640px){.n26head{display:none}.nlist.n26 details.nt>summary{grid-template-columns:auto minmax(0,1fr) auto}.nlist.n26 .n26no{display:none}.nlist.n26 details.nt>summary>b{grid-column:2}.nlist.n26 details.nt>summary>time{grid-column:1/-1;text-align:left}.nlist.n26 details.nt>summary>.tcat{grid-column:1}.nlist.n26 details.nt>summary>em{grid-column:3}.n26bar input{min-width:0;flex:1}}
+.lcqz{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}.lcqz a{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 8px;padding:12px 14px;border:1px solid var(--g300);border-radius:8px;text-decoration:none;color:var(--g900);background:#fff}.lcqz a:hover{border-color:var(--pri)}.lcqz small{grid-column:2;color:var(--g600);font-size:12.5px}

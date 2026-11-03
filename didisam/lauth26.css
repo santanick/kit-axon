@@ -65,3 +65,8 @@ body.la26 section.la .la-cons,body.la26 section.la .la-age{border-radius:8px;bor
 .p26btn .lbtn{height:52px;border-radius:4px;font-size:16px;justify-content:center;display:flex;align-items:center}
 .p26btn .lbtn.ghost{background:#fff;color:var(--pri);box-shadow:inset 0 0 0 1px var(--pri);border:0}
 @media (max-width:520px){.p26c{padding:20px 16px 24px;border-radius:0;border-left:0;border-right:0}.p26m{grid-template-columns:1fr}}
+/* 교재/교구 상세(v26.4, 피그마 User Page › 교재/교구 상세) */
+.tb26n{background:#fff;border:1px solid var(--g300);border-radius:8px;padding:16px 20px;margin:18px 0 8px}.tb26n b{font-size:15px;color:var(--g900)}.tb26n ul{margin:8px 0 0;padding-left:18px;color:var(--g700);font-size:14px;line-height:1.7}
+.tb26h{font-size:20px;font-weight:800;margin:32px 0 12px;padding-bottom:12px;border-bottom:1px solid var(--g300)}
+.tb26a{display:flex;flex-direction:column;gap:14px}.tb26p{display:flex;gap:14px;align-items:flex-start}.tb26p b{font-size:15px}.tb26p p{margin:6px 0 0;color:var(--g700);font-size:14px;line-height:1.7}
+.tb26av{flex:none;width:56px;height:56px;border-radius:50%;background:var(--g200,#E9EBEC);display:grid;place-items:center;font-weight:800;color:var(--g700);font-size:18px}

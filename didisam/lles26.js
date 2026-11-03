@@ -38,3 +38,10 @@
   const start = () => { mo.observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); enhance(); };
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', start) : start();
 })();
+/* v26.4 공지사항(피그마 User Page › 공지사항): 총 N건 · 제목 검색 · 표 머리(번호 · 제목 · 작성일) · 번호 */
+(() => { const run = () => { if (!/^#notice/.test(location.hash)) return; const L = document.querySelector('#lm .nlist:not([data-n26])'); if (!L) return; L.dataset.n26 = 1; L.classList.add('n26');
+    const rows = [...L.querySelectorAll(':scope > details.nt')]; rows.forEach((d, i) => { const s = d.querySelector('summary'); if (s && !s.querySelector('.n26no')) s.insertAdjacentHTML('afterbegin', `<span class="n26no">${rows.length - i}</span>`); });
+    L.insertAdjacentHTML('beforebegin', `<div class="n26bar"><b>총 <span id="n26c">${rows.length}</span>건</b><input type="search" id="n26q" placeholder="제목, 클래스/강의명 검색" aria-label="공지 검색"></div><div class="n26head" aria-hidden="true"><span>번호</span><span>제목</span><span>작성일</span></div>`); };
+  document.addEventListener('input', e => { if (e.target.id !== 'n26q') return; const q = e.target.value.trim().toLowerCase(); let n = 0; document.querySelectorAll('#lm .nlist.n26 > details.nt').forEach(d => { const ok = !q || d.querySelector('summary').textContent.toLowerCase().includes(q); d.hidden = !ok; if (ok) n++; }); const c = document.getElementById('n26c'); if (c) c.textContent = n; });
+  const mo = new MutationObserver(() => { try { run(); } catch (e) { } }); const st = () => { mo.observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); run(); };
+  document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', st) : st(); })();
