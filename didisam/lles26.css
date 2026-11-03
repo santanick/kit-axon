@@ -101,3 +101,6 @@ section.crsh.l26hide{display:none}
 .py26r small{display:block;color:var(--g500);font-size:12px}.py26r b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}.py26no{text-decoration:underline;color:var(--g700);font-size:13px}.py26d{color:var(--pri);font-size:13px;font-weight:600}
 @media (max-width:860px){.py26hd{display:none}.py26r{grid-template-columns:1fr auto;grid-auto-flow:row}.py26r>span:nth-child(1),.py26r>span:nth-child(5),.py26r>span:nth-child(7){display:none}.py26r>span:nth-child(3){grid-column:1/-1;order:-1}}
 @media (min-width:1280px){.cw2.l26>.l26side{padding-right:72px}.l26side .lctabs{margin-right:-72px;padding-right:72px}}
+/* v26.8 오른쪽 패널 탭이 두 줄로 꺾이지 않게 — 한 줄 유지, 넘치면 가로로 밀기 */
+.l26side #lcPanel .lctabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:14px}.l26side #lcPanel .lctabs::-webkit-scrollbar{display:none}
+.l26side #lcPanel .lctabs button{white-space:nowrap;flex:none;padding-left:8px;padding-right:8px}

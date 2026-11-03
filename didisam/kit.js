@@ -33,13 +33,13 @@ VIEWS.dash = () => {
     ${kpi('주간 활성', num(act7), `최근 7일 접속 · 가입자의 ${pct(ar)}`, '', '명')}
     ${isU ? kpi('AI 진단 완료율', Math.round(diagDone / Math.max(1, n) * 100), `${diagDone}명 완료`, '', '%') : kpi(t('done') + ' 인원', num(done), `수료 기준 충족`, '', '명')}
     ${kpi('평균 진도율', Math.round(avg), gap(avg, G.progress), '', '%', { v: avg, goal: G.progress })}
-    ${kpi('배지 보유율', Math.round(br), gap(br, G.badge), '', '%', { v: br, goal: G.badge })}
+    ${menuOn('badge') ? kpi('배지 보유율', Math.round(br), gap(br, G.badge), '', '%', { v: br, goal: G.badge }) : kpi('등록 대비 ' + t('done') + ' 비율', Math.round(n ? done / n * 100 : 0), `${t('done')} ${num(done)}명 / 등록 ${num(n)}명`, '', '%')}
     ${kpi('검수 대기', P.length, P.length ? `가장 오래된 제출 ${oldest}일 전` : '대기 없음', P.length ? 'mg' : '', '건')}
     ${kpi('14일 이상 미접속', away14, `<a href="#" data-act="chat-q" data-v="14일 미접속 ${esc(t('learner'))}에게 독려 메시지 보내줘">AI로 독려하기</a>`, '', '명')}
   </section>
   <section class="g2c">
-    <div class="card"><div class="ch"><b>주차별 신규 가입 · 배지 발급</b><small>최근 8주 · 단위: 명</small></div>${lineChart(S.weeks.map(w => w.w), [{ n: '신규 가입', c: '#4C77C5', v: S.weeks.map(w => w.join) }, { n: '배지 발급', c: '#5C74F6', v: S.weeks.map(w => w.badge) }])}</div>
-    <div class="card"><div class="ch"><b>학습 퍼널</b><small>등록 대비 각 단계 도달 인원</small></div>${funnel([['등록', n], ['가입(활성화)', joined], ...(isU ? [['AI 진단 완료', diagDone]] : []), ['학습 시작', started], ['과제 제출', submitted], [t('done'), done], ['배지 보유', withB]])}</div>
+    <div class="card"><div class="ch"><b>주차별 신규 가입${menuOn('badge') ? ' · 배지 발급' : ''}</b><small>최근 8주 · 단위: 명</small></div>${lineChart(S.weeks.map(w => w.w), [{ n: '신규 가입', c: '#4C77C5', v: S.weeks.map(w => w.join) }].concat(menuOn('badge') ? [{ n: '배지 발급', c: '#5C74F6', v: S.weeks.map(w => w.badge) }] : []))}</div>
+    <div class="card"><div class="ch"><b>학습 퍼널</b><small>등록 대비 각 단계 도달 인원</small></div>${funnel([['등록', n], ['가입(활성화)', joined], ...(isU ? [['AI 진단 완료', diagDone]] : []), ['학습 시작', started], ['과제 제출', submitted], [t('done'), done], ...(menuOn('badge') ? [['배지 보유', withB]] : [])])}</div>
   </section>
   <section class="g2c">
     <div class="card"><div class="ch"><b>${esc(t('group'))}별 현황</b><small>가입률 낮은 순</small></div>${table([t('group'), '인원', '가입률', '평균 진도', t('done')], S.groups.map(g => { const ms = L.filter(m => m.group === g.id); const j = ms.filter(m => m.grade === '정회원').length / Math.max(1, ms.length) * 100; const ps = S.classes.flatMap(c => ms.filter(m => c.prog[m.id]).map(m => c.prog[m.id].p)); return { g, ms, j, p: avgOf(ps), d: ms.filter(m => S.classes.some(c => c.prog[m.id]?.p >= c.criteria.threshold)).length }; }).sort((a, b) => a.j - b.j).map(r => [`<b>${esc(r.g.name)}</b>`, r.ms.length, `${bar(r.j)} ${pct(r.j)}`, pct(r.p), r.d + '명']))}</div>

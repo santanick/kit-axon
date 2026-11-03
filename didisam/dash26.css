@@ -37,3 +37,5 @@
 @media (max-width:1180px){.d26{grid-template-columns:1fr}.d26-left{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}}
 @media (max-width:860px){.d26-left{display:block}.d26-kg{grid-template-columns:repeat(2,minmax(0,1fr))}.d26-row,.d26-two{grid-template-columns:1fr}.d26-calw{grid-template-columns:1fr}}
 .d26-cap{display:block;color:var(--g600);font-size:12px;font-weight:700;margin-bottom:4px}
+/* v26.8 휴대폰: 전체 운영 현황을 먼저, 추이 그래프는 가로로 밀어 보기 */
+@media (max-width:860px){.d26{display:flex;flex-direction:column}.d26-main{order:-1}.d26-trend{overflow-x:auto}.d26-trend svg{min-width:480px}}
