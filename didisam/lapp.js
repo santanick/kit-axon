@@ -73,7 +73,7 @@
     const brief = me && typeof ltBrief === 'function' ? ltBrief() : null; const first = me ? `${esc(who())}, ${hiTime()}\n${esc(P ? P.hi : '')}` : '';
     const instBox = !standalone() && ls.get('instx') !== '1' ? `<div class="ap-inst" role="note">${ico('install', 18)}<span><b>홈 화면에 앱으로 설치</b><small>${IOS ? '공유 버튼 → 「홈 화면에 추가」' : '한 번 누르면 앱처럼 바로 열려요'}</small></span><button type="button" class="ap-ib2" data-ap="install">설치</button><button type="button" class="ap-ix" data-ap="inst-x" aria-label="설치 안내 닫기">${ico('x', 16)}</button></div>` : '';
     return `<div class="ap-home ${me ? '' : 'guest'}" style="--pc:${P ? P.c : 'var(--pri)'}">
-      <header class="ap-top"><button type="button" class="ap-me" data-ap="tsheet" aria-label="${esc(tName())} — 선생님 설정">${av(P)}<span><b>${esc(tName())}</b><small><i class="ap-on"></i>${me ? `${esc(P ? P.t : '내 AI 학습 비서')} · 함께 공부 중` : '로그인 없이 물어볼 수 있어요'}</small></span></button>
+      <header class="ap-top"><button type="button" class="ap-me" data-ap="tsheet" aria-label="${esc(tName())} — 선생님 설정">${av(P)}<span><b>${esc(tName())}</b><small>${aiPill()}${me ? `${esc(P ? P.t : '내 AI 학습 비서')}` : '로그인 없이 물어볼 수 있어요'}</small></span></button>
         ${me ? `<a class="ap-ib" href="#inbox" aria-label="알림">${ico('bell', 21)}</a>` : ''}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
       <div class="ap-scroll" id="apScroll">
         <section class="ap-hero">${av(P, true)}<h1>${me ? `${esc(who())},<br>오늘은 무엇을 함께 할까요?` : `나만의 AI 선생님과<br>공부를 시작해 보세요`}</h1>${statHTML()}</section>
@@ -120,9 +120,35 @@
       <h2 class="ap-h2">전체 학습 기록</h2></div></section>`; }
 
   /* ── 선생님 설정 시트 ── */
+  /* v27.2 Claude 연결 상태 — 이름 아래에 늘 보이게(데모: 이 브라우저 키 · 운영: 서버 키) */
+  const KEYK = () => 'didisam.room.' + (LR.tid || '') + '.claude';
+  const aiSt = () => { try { return typeof ltStatus === 'function' ? ltStatus() : { on: 0, t: '기본 안내' }; } catch (e) { return { on: 0, t: '기본 안내' }; } };
+  function aiPill() { const s = aiSt(); return `<em class="ap-ai${s.on ? ' on' : ''}" data-ap-ai="${s.on ? 1 : 0}"><i></i>${esc(s.t)}</em>`; }
+  const AIM = [['claude-haiku-5-5', 'Haiku 5.5', '빠르고 경제적'], ['claude-sonnet-5-5', 'Sonnet 5.5', '균형'], ['claude-opus-5-5', 'Opus 5.5', '최고 품질']];
+  function aiDlg() { closeSheet(); if (LR.mode === 'live') return toast('운영 모드에서는 기관 서버가 Claude를 연결합니다.', 'ok');
+    let c = null; try { c = JSON.parse(localStorage.getItem(KEYK()) || 'null'); } catch (e) { } const on = !!(c && c.key); const m = (c && c.model) || AIM[0][0];
+    const d = document.createElement('dialog'); d.className = 'ap-dlg ap-aid'; d.setAttribute('aria-labelledby', 'apAiT');
+    d.innerHTML = `<form id="apAiF" method="dialog"><h2 id="apAiT">Claude 연결 <small>체험용</small></h2>
+      <p class="mini">${on ? `지금 <b>${esc(aiSt().t)}</b>로 답하고 있어요. 키는 이 기기 브라우저에만 저장되고 화면에 다시 보이지 않습니다.` : '키를 넣으면 선생님이 Claude로 답합니다. 키는 이 기기 브라우저에만 저장되고, 운영 시에는 기관 서버가 키를 보관합니다.'}</p>
+      <label class="ap-fl">API 키<input type="password" name="k" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${on ? '바꿀 때만 입력' : 'sk-ant-…'}"></label>
+      <fieldset class="ap-ms"><legend>모델</legend>${AIM.map(x => `<label><input type="radio" name="m" value="${x[0]}" ${x[0] === m ? 'checked' : ''}><b>${x[1]}</b><small>${x[2]}</small></label>`).join('')}</fieldset>
+      <p class="ap-aimsg" role="status" aria-live="polite"></p>
+      <div class="ap-dr">${on ? '<button type="button" class="ap-lk" data-ap="ai-off">연결 해제</button>' : ''}<button type="button" class="ap-lk" data-ap="dlg-x">닫기</button><button type="submit" class="ap-go sm">${on ? '저장' : '연결하기'}</button></div></form>`;
+    document.body.appendChild(d); try { d.showModal(); } catch (e) { d.setAttribute('open', ''); } d.addEventListener('close', () => d.remove()); const i = d.querySelector('[name=k]'); i && i.focus(); }
+  async function aiSave(f) { const msg = f.querySelector('.ap-aimsg'); const b = f.querySelector('[type=submit]'); let c = null; try { c = JSON.parse(localStorage.getItem(KEYK()) || 'null'); } catch (e) { }
+    const k = (f.querySelector('[name=k]').value || '').trim(); const m = (f.querySelector('[name=m]:checked') || {}).value || AIM[0][0]; const key = k || (c && c.key);
+    if (!key) { msg.textContent = 'API 키를 입력해 주세요.'; msg.className = 'ap-aimsg bad'; return; }
+    if (!/^sk-ant-/.test(key)) { msg.textContent = 'Anthropic API 키는 sk-ant- 로 시작합니다.'; msg.className = 'ap-aimsg bad'; return; }
+    b.disabled = true; msg.className = 'ap-aimsg'; msg.textContent = '연결을 확인하는 중…';
+    try { const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: m, max_tokens: 8, messages: [{ role: 'user', content: 'ping' }] }) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(r.status === 401 ? 'API 키가 올바르지 않습니다.' : r.status === 404 ? '이 키로는 고른 모델을 쓸 수 없습니다.' : r.status === 429 ? '요청이 많습니다. 잠시 후 다시 눌러 주세요.' : ((j.error && j.error.message) || '오류 ' + r.status)); }
+    } catch (e) { b.disabled = false; msg.className = 'ap-aimsg bad'; msg.textContent = e instanceof TypeError ? '네트워크에 연결하지 못했습니다.' : e.message; return; }
+    try { localStorage.setItem(KEYK(), JSON.stringify({ ...(c || {}), key, model: m, chat: true, docs: true, site: true })); } catch (e) { }
+    f.closest('dialog').close(); lrender(); toast(`Claude 연결 완료 · ${aiSt().t}. 이제 질문해 보세요.`, 'ok'); }
+
   function tsheet() { const P = persona(); closeSheet(); const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
     w.innerHTML = `<div class="ap-sh" role="dialog" aria-modal="true" aria-labelledby="apShT">${av(P, true)}<h2 id="apShT">${esc(tName())}</h2><p>${esc(P ? `${P.t} · ${P.d}` : '내 AI 학습 비서')}</p>
-      <nav>${LR.me ? `<button type="button" data-ap="pick">${ico('sparkle', 18)}선생님 바꾸기 · 이름 바꾸기</button>` : ''}${LR.me ? `<a href="#connect" data-ap="sheet-x">${ico('cal', 18)}캘린더 · 알림 연결</a>` : ''}<button type="button" data-ap="install">${ico('install', 18)}${standalone() ? '앱으로 실행 중' : '홈 화면에 앱으로 설치'}</button><button type="button" data-ap="classic">${ico('grid', 18)}기존 화면으로 보기</button><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
+      <nav>${LR.me ? `<button type="button" data-ap="pick">${ico('sparkle', 18)}선생님 바꾸기 · 이름 바꾸기</button>` : ''}${LR.me ? `<a href="#connect" data-ap="sheet-x">${ico('cal', 18)}캘린더 · 알림 연결</a>` : ''}${LR.mode !== 'live' ? `<button type="button" data-ap="ai">${ico('sparkle', 18)}Claude 연결 <small class="ap-shs">${esc(aiSt().t)}</small></button>` : ''}<button type="button" data-ap="install">${ico('install', 18)}${standalone() ? '앱으로 실행 중' : '홈 화면에 앱으로 설치'}</button><button type="button" data-ap="classic">${ico('grid', 18)}기존 화면으로 보기</button><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
     document.body.appendChild(w); const f = w.querySelector('nav button'); f && f.focus(); }
   function closeSheet() { const w = document.getElementById('apSheet'); if (w) w.remove(); }
 
@@ -170,6 +196,8 @@
   document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-ap]'); if (!el) return; const k = el.dataset.ap; if (el.tagName === 'A' && k === 'sheet-x') { closeSheet(); return; } e.preventDefault();
     if (k === 'back') { if (history.length > 1) history.back(); else location.hash = '#home'; return; }
     if (k === 'tsheet') return tsheet();
+    if (k === 'ai') return aiDlg();
+    if (k === 'ai-off') { try { localStorage.removeItem(KEYK()); } catch (e) { } const d = el.closest('dialog'); d && d.close(); lrender(); toast('Claude 연결을 해제했습니다. 기본 안내로 답합니다.', 'ok'); return; }
     if (k === 'sheet-x') return closeSheet();
     if (k === 'pick') { closeSheet(); AP.pick = true; AP.sel = null; AP.nm = ''; if (route().a !== 'home') location.hash = '#home'; else lrender(); return; }
     if (k === 'pick-x') { AP.pick = false; AP.sel = null; AP.nm = ''; lrender(); return; }
@@ -192,6 +220,7 @@
   document.addEventListener('submit', e => { const f = e.target;
     if (f.id === 'apPickF') { e.preventDefault(); const k = (f.querySelector('[name=pk]:checked') || {}).value || 'warm'; const B = PERS.find(x => x.k === k) || PERS[0]; const n = (f.querySelector('[name=nm]').value || '').replace(/[<>]/g, '').trim().slice(0, 12) || B.n;
       tutorRec().persona = { k, n, at: new Date().toISOString() }; LR.api.save(); AP.pick = false; AP.sel = null; AP.nm = ''; LT.msgs = []; lrender(); toast(`${jw(n)} 함께 시작합니다.`, 'ok'); return; }
+    if (f.id === 'apAiF') { e.preventDefault(); aiSave(f); return; }
     if (f.id === 'apF') { e.preventDefault(); const ta = f.querySelector('textarea'); const v = ta.value; ta.value = ''; ta.style.height = ''; ltAsk(v); } });
   document.addEventListener('keydown', e => { if (e.target.id === 'apQ' && e.key === 'Enter' && !e.shiftKey && !e.isComposing && !('ontouchstart' in window)) { e.preventDefault(); e.target.form.requestSubmit(); }
     if (e.key === 'Escape' && document.getElementById('apSheet')) closeSheet(); });

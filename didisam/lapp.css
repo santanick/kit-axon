@@ -135,3 +135,15 @@ body.ap-homeon .ltoast{bottom:calc(var(--ap-nav) + var(--ap-sb) + 150px)!importa
 body.lapp section.myh[hidden]{display:none!important}
 .ap-pg .lai-more .in>.lai-sec{display:none}
 body.lapp .ap-my+section.myh+section.sec,body.lapp .ap-my~section.sec.mypage:first-of-type{padding-top:8px}
+
+/* v27.2 Claude 연결 상태 · 체험용 키 */
+.ap-ai{flex:none;display:inline-flex;align-items:center;gap:5px;font:700 11.5px/1 var(--sg);font-style:normal;padding:4px 8px;border-radius:99px;background:#F1F2F6;color:#5B6072}.ap-ai i{width:6px;height:6px;border-radius:50%;background:#A3A8B8}
+.ap-ai.on{background:#E8F8EE;color:#13804A}.ap-ai.on i{background:#22C55E;box-shadow:0 0 0 3px #22C55E2e}
+.ap-shs{margin-left:auto;font:600 12px/1 var(--sg);color:var(--ap-mute)}
+.ap-aid h2 small{font:600 12px/1 var(--sg);color:var(--ap-mute);margin-left:6px}
+.ap-fl{display:flex;flex-direction:column;gap:6px;font:700 13px/1.3 var(--sg);margin:12px 0}.ap-fl input{font:500 15px/1.4 var(--sg);padding:11px 12px;border:1.5px solid #DADDE6;border-radius:12px;min-height:44px}
+.ap-ms{border:0;padding:0;margin:0 0 8px;display:grid;gap:6px}.ap-ms legend{font:700 13px/1.3 var(--sg);margin-bottom:6px}
+.ap-ms label{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid #E4E6EE;border-radius:12px;min-height:44px;cursor:pointer}.ap-ms label:has(input:checked){border-color:var(--ap-c,#5C74F6);background:#F6F7FF}.ap-ms small{margin-left:auto;color:var(--ap-mute);font-size:12.5px}
+.ap-aimsg{min-height:20px;margin:4px 0;font-size:13px;color:var(--ap-mute)}.ap-aimsg.bad{color:#C2410C}
+.ap-dr{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}.ap-dr .ap-go.sm{width:auto;padding:0 20px;min-height:44px}
+.ap-dr .ap-lk{display:inline-block;margin:0}
