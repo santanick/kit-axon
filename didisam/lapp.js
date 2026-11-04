@@ -169,7 +169,7 @@
 
   /* ── 선생님 설정 시트 ── */
   /* v27.2 Claude 연결 상태 — 이름 아래에 늘 보이게(데모: 이 브라우저 키 · 운영: 서버 키) */
-  const KEYK = () => 'didisam.room.' + (LR.tid || '') + '.claude';
+  const KEYK = () => 'didisam.app.claude.' + (LR.tid || ''); /* v25 운영자 키와 분리 — 학습자 체험 키는 덮어쓰지 않는다 */
   const aiSt = () => { try { return typeof ltStatus === 'function' ? ltStatus() : { on: 0, t: '기본 안내' }; } catch (e) { return { on: 0, t: '기본 안내' }; } };
   function aiPill() { const s = aiSt(); return `<em class="ap-ai${s.on ? ' on' : ''}" data-ap-ai="${s.on ? 1 : 0}"><i></i>${esc(s.t)}</em>`; }
   const AIM = [['claude-haiku-5-5', 'Haiku 5.5', '빠르고 경제적'], ['claude-sonnet-5-5', 'Sonnet 5.5', '균형'], ['claude-opus-5-5', 'Opus 5.5', '최고 품질']];

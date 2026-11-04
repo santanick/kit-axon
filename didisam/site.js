@@ -78,11 +78,14 @@ ACT['site-edit'] = el => { const i = +el.dataset.v, x = site().sections[i], d = 
   modal(`${SEC[k].n} 편집`, body, [{ id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { ['title', 'sub', 'cta', 'body', 'url', 'addr', 'tel', 'hours', 'alt', 'html', 'layout', 'sec'].forEach(f => { if (w.querySelector(`[name=${f}]`)) d[f] = fv(w, f); }); if (w.querySelector('[name=slides]')) d.slides = fv(w, 'slides').split('\n').filter(Boolean).slice(0, 4); if (w.querySelector('[name=ids]')) { const ids = $$('[name=ids]:checked', w).map(x => x.value); d.ids = ids.slice(0, d.layout === 'slide' ? 12 : 4); if (ids.length > d.ids.length) toast(`최대 ${d.ids.length}개까지 표시됩니다.`, 'warn'); } save(); render(); } }]); };
 ACT['site-footer'] = () => { UI.settings = 'home'; go('settings'); };
 ACT['site-pub'] = () => { const s = site(); s.published = true; s.at = nowStr(); logAudit('홈페이지 게시'); save(); render(); toast(`게시했습니다 — ${S.org.domain} (데모)`, 'ok'); };
-ACT['site-open'] = () => { const u = URL.createObjectURL(new Blob([siteHTML(site(), true)], { type: 'text/html' })); window.open(u, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(u), 60000); };
+/* v25 미리보기 격리: 운영자 스크립트(마케팅 태그 · 코드 블럭)가 스튜디오 출처의 저장소(키 · 개인정보)를 읽지 못하게, 같은 출처 권한 없는 sandbox iframe 안에서 연다 */
+const sbxWrap = h => `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src 'self' blob: data:; style-src 'unsafe-inline'"><title>미리보기(격리)</title><style>html,body{margin:0;height:100%}iframe{border:0;width:100%;height:100%}</style><iframe sandbox="allow-scripts allow-popups allow-forms" srcdoc="${String(h).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"></iframe>`;
+window.sbxWrap = sbxWrap;
+ACT['site-open'] = () => { const u = URL.createObjectURL(new Blob([sbxWrap(siteHTML(site(), true))], { type: 'text/html' })); window.open(u, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(u), 60000); };
 ACT['site-export'] = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([siteHTML(site(), true)], { type: 'text/html' })); a.download = `${S.org.name}_homepage.html`; a.click(); };
 
 /* 코드 블럭 정리: 스크립트 · 이벤트 속성 · javascript: 링크 제거 */
-function cleanHTML(h) { const d = new DOMParser().parseFromString(`<div>${h || ''}</div>`, 'text/html'); d.querySelectorAll('script,iframe,object,embed,link,meta,style,form').forEach(n => n.remove()); d.querySelectorAll('*').forEach(n => [...n.attributes].forEach(a => { if (/^on/i.test(a.name) || /^\s*javascript:/i.test(a.value) || a.name === 'srcdoc') n.removeAttribute(a.name); })); return d.body.firstChild.innerHTML; }
+function cleanHTML(h) { return safeHTML(h, { code: true }); } /* v25 허용 목록 정화기(safehtml.js)로 교체 */
 function lum(hex) { const n = parseInt(hex.slice(1), 16); const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; }
 function siteHTML(s, full) {
   const tone = TONES[s.tone] || TONES.신뢰; const on = lum(s.color) > .35 ? '#1a1a1a' : '#fff'; const ft = S.settings.footer;

@@ -40,9 +40,9 @@ const RG = {
   async text(f) { const n = f.name.toLowerCase();
     if (/\.(txt|md|csv|tsv|json)$/.test(n) || /^text\//.test(f.type)) return await f.text();
     if (/\.html?$/.test(n)) { const d = new DOMParser().parseFromString(await f.text(), 'text/html'); return d.body ? d.body.innerText || d.body.textContent : ''; }
-    if (/\.pdf$/.test(n)) { const pj = await this.lib('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib'); pj.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      const doc = await pj.getDocument({ data: await f.arrayBuffer() }).promise; let out = ''; for (let i = 1; i <= Math.min(doc.numPages, 200); i++) { const pg = await doc.getPage(i); const c = await pg.getTextContent(); out += `\n\n[${i}쪽]\n` + c.items.map(x => x.str).join(' '); } return out; }
-    if (/\.docx$/.test(n)) { const m = await this.lib('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js', 'mammoth'); const r = await m.extractRawText({ arrayBuffer: await f.arrayBuffer() }); return r.value; }
+    if (/\.pdf$/.test(n)) { const pj = await this.lib('vendor/pdf.min.js', 'pdfjsLib'); pj.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js'; /* v25 외부 CDN 대신 같은 출처 사본(CSP script-src 'self') */
+      const doc = await pj.getDocument({ data: await f.arrayBuffer(), isEvalSupported: false }).promise; let out = ''; for (let i = 1; i <= Math.min(doc.numPages, 200); i++) { const pg = await doc.getPage(i); const c = await pg.getTextContent(); out += `\n\n[${i}쪽]\n` + c.items.map(x => x.str).join(' '); } return out; }
+    if (/\.docx$/.test(n)) { const m = await this.lib('vendor/mammoth.browser.min.js', 'mammoth'); const r = await m.extractRawText({ arrayBuffer: await f.arrayBuffer() }); return r.value; }
     throw new Error('지원하지 않는 형식입니다(txt · md · csv · json · html · pdf · docx)'); },
   async add(files) { const D = this.docs(); const msgs = [];
     for (const f of files) {
@@ -99,7 +99,8 @@ async function rgAsk(sys, msgs) { let web = true, res;
   const done = o => { delete ph.typing; Object.assign(ph, o, { rg: src }); S.ai.usage++; S.chat = S.chat.slice(-60); save(); renderThreads(); };
   const fallback = note => done({ text: src.length ? `첨부 문서에서 질문과 가장 가까운 내용입니다.\n${src.slice(0, 3).map(s => `[${s.n}] ${s.name} · 조각 ${s.part}\n${s.t.slice(0, 220)}${s.t.length > 220 ? '…' : ''}`).join('\n\n')}` : '첨부 문서에서 이 질문과 맞는 내용을 찾지 못했습니다.', note });
   if (!on) return setTimeout(() => fallback('Claude가 연결되지 않아 문서에서 찾은 내용만 보여 드립니다. 설정 › 연동에서 Claude를 연결하면 문서를 바탕으로 웹 검색 · 분석까지 해서 답합니다.'), 300);
-  const ctx = src.length ? src.map(s => `<source id="${s.n}" doc="${s.name}" part="${s.part}" kind="${s.k}">\n${s.t}\n</source>`).join('\n') : '(관련 발췌 없음)';
+  const at = v => String(v == null ? '' : v).replace(/[<>"&\r\n]/g, ' ').slice(0, 120); const body = v => String(v || '').replace(/<\/?\s*(?:sources?|system|instructions?)\b[^>]*>/gi, '[태그 제거]'); /* v25 문서 속 태그로 경계를 깨는 인젝션 차단 */
+  const ctx = src.length ? src.map(s => `<source id="${at(s.n)}" doc="${at(s.name)}" part="${at(s.part)}" kind="${at(s.k)}">\n${body(s.t)}\n</source>`).join('\n') : '(관련 발췌 없음)';
   const hist = S.chat.filter(m => m !== ph && !m.typing && (m.text || m.md)).slice(-7, -1).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: String(m.md || m.text || '').slice(0, 1200) }));
   const msgs = []; [...hist, { role: 'user', content: `<sources>\n${ctx}\n</sources>\n\n질문: ${q}` }].forEach(m => { const l = msgs[msgs.length - 1]; if (l && l.role === m.role) l.content += '\n' + m.content; else msgs.push({ ...m }); }); while (msgs.length && msgs[0].role !== 'user') msgs.shift();
   rgAsk(w => rgSys(w), msgs).then(({ res, web }) => { const P = rgParse(res);

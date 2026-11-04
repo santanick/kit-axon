@@ -119,7 +119,7 @@ function ltRule(q) {
 const ltHist = () => { const H = LT.msgs.filter(m => m.t && !m.sys); if (H.length && H[H.length - 1].me) H.pop(); return H.slice(-6); }; /* 지금 질문은 따로 붙이므로 기록에서 뺀다 */
 const ltMk = s => (typeof ltMask === 'function' ? ltMask(s) : String(s || ''));
 async function ltAIDemo(q) {
-  let c = null; try { c = JSON.parse(localStorage.getItem('didisam.room.' + (LR.tid || '') + '.claude') || 'null'); } catch (e) { }
+  let c = ltKey();
   if (!c || !c.key || c.chat === false) return null;
   const w = ltWhere(); const T = TCFG(); const S2 = SITE(); const hint = T.help === 'hint';
   if (!LR.me) return ltAIGuest(q, c, w, T, S2);
@@ -157,6 +157,10 @@ async function ltAIGuest(q, c, w, T, S2) {
   const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(r.status === 401 ? 'API 키 오류' : (j.error && j.error.message) || '오류 ' + r.status);
   return { t: (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim(), src: j.model || c.model };
 }
+/* v25 키 분리: 학습자가 앱에서 넣은 체험 키(didisam.app.claude.<tid>)를 먼저 쓰고, 데모에서만 운영자 키로 대체한다.
+   운영(live)에서는 브라우저에 키를 두지 않는다(서버가 보관) — 남아 있는 키는 시작할 때 지운다. */
+function ltKey() { const rd = k => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v && v.key ? v : null; } catch (e) { return null; } };
+  if (LR.mode === 'live') return null; return rd('didisam.app.claude.' + (LR.tid || '')) || rd('didisam.room.' + (LR.tid || '') + '.claude'); }
 async function ltAI(q) {
   if (LR.mode !== 'live') return ltAIDemo(q);
   if (LT.ai === null) { try { const r = await fetch('/api/config', { credentials: 'same-origin' }); const j = r.ok ? await r.json() : {}; LT.ai = !!j.ai; } catch (e) { LT.ai = false; } }
@@ -182,7 +186,7 @@ function ltMsgHTML(m) { return `<div class="lt-m ${m.me ? 'u' : ''}">${m.me ? ''
    이름은 기관 튜터 이름 + '내 AI 학습 비서', 화면이 바뀌면 '지금 화면' 칩만 바뀌고 창은 사람이 열 때만 열린다 */
 function ltStatus() {
   if (LR.mode === 'live') return LT.ai ? { on: 1, t: 'Claude 연결' } : { on: 0, t: '기본 안내' };
-  let c = null; try { c = JSON.parse(localStorage.getItem('didisam.room.' + (LR.tid || '') + '.claude') || 'null'); } catch (e) { }
+  let c = ltKey();
   if (c && c.key && c.chat !== false) { const m = String(c.model || 'haiku'); return { on: 1, t: 'Claude ' + (/opus/.test(m) ? 'Opus' : /sonnet/.test(m) ? 'Sonnet' : 'Haiku') }; }
   return { on: 0, t: '기본 안내' };
 }

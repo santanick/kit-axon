@@ -15,6 +15,7 @@ const api = async (method, url, body) => {
 
 /* ── 부팅 전에 세션 · 상태를 불러온다(boot.js가 __preboot를 기다림) ── */
 window.__preboot = (async () => {
+  try { Object.keys(localStorage).filter(k => /^didisam\.(?:claude$|app\.claude\.|room\..*\.claude$)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) { } /* v25 운영: 브라우저에 AI 키를 남기지 않음(서버 게이트웨이만 사용) */
   try { LIVE.cfg = await api('GET', '/api/config'); } catch (e) { LIVE.cfg = { live: true, signup: false, ai: false, models: [] }; LIVE.err = '서버에 연결하지 못했습니다.'; }
   try { const me = await api('GET', '/api/me'); LIVE.user = me.user; LIVE.tenant = me.tenant; } catch (e) { return; }
   try { const st = await api('GET', '/api/state'); LIVE.doc = st.doc; LIVE.rev = st.rev; } catch (e) { LIVE.err = e.message; }

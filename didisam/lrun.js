@@ -29,7 +29,7 @@ LR.api = {
     if (Q.get('preview') === '1') {
       try { const P = window.parent; if (P !== window && P.lsSnapshot) { LR.mode = 'preview'; LR.tid = P.DREG && P.DREG.cur(); LR.site = P.lsSnapshot(); LR._codes = (P.S && P.S.codes) || []; } } catch (e) { }
     }
-    if (!LR.site) { try { const c = await fetch('/api/config', { credentials: 'same-origin' }); const j = c.ok ? await c.json() : null; if (j && j.live) LR.mode = 'live'; } catch (e) { } }
+    if (!LR.site) { try { const c = await fetch('/api/config', { credentials: 'same-origin' }); const j = c.ok ? await c.json() : null; if (j && j.live) { LR.mode = 'live'; try { Object.keys(localStorage).filter(k => /^didisam\.(?:claude$|app\.claude\.|room\..*\.claude$)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) { } } /* v25 운영에서는 브라우저에 AI 키를 남기지 않는다 */ } catch (e) { } }
     if (LR.mode === 'live') {
       if (!LR.tid) { LR.err = '학습자 사이트 주소에 기관 정보(t=)가 없습니다.'; return; }
       try { LR.site = (await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/site`)).site; } catch (e) { LR.err = e.status === 404 ? '아직 게시되지 않은 학습자 사이트입니다.' : e.message; return; }

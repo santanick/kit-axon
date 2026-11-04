@@ -122,7 +122,7 @@ function presetNav(type) {
   return { ws: [...P.ws], tabs };
 }
 const menuOn = id => !!S.nav.tabs[MENU[id]?.ws]?.find(x => x.id === id && x.on);
-const wsTabs = w => (S.nav.tabs[w] || []).filter(x => x.on && MENU[x.id] && !(MENU[x.id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && ['site', 'sales', 'billing', 'admins', 'org', 'auto'].includes(x.id))).map(x => x.id);
+const wsTabs = w => (S.nav.tabs[w] || []).filter(x => x.on && MENU[x.id] && !(MENU[x.id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(x.id))).map(x => x.id);
 
 /* ───────── 공용 UI ───────── */
 function toast(msg, kind = '') { const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; $('#toasts').appendChild(el); setTimeout(() => el.classList.add('out'), 2600); setTimeout(() => el.remove(), 3000); }
@@ -164,9 +164,11 @@ function resolve(id) {
   if (MENU[id]) return { ws: MENU[id].ws, tab: id };
   return { ws: 'home', tab: '' };
 }
+const TEACH_NO = ['site', 'sales', 'billing', 'admins', 'org', 'auto'];
 function go(id, keep) {
   let r = resolve(id);
   if (r.tab && MENU[r.tab]?.owner && S.me.role !== 'owner') { toast('정운영자만 볼 수 있는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; }
+  if (S.me.role === 'teacher' && (TEACH_NO.includes(r.tab) || TEACH_NO.includes(r.ws))) { toast('교수자 권한으로는 열 수 없는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; } /* v25 메뉴 숨김뿐 아니라 직접 이동도 막음 */
   if (r.tab && !menuOn(r.tab)) { toast(`'${mlabel(r.tab)}' 탭은 꺼져 있습니다. 설정에서 켤 수 있습니다.`, 'warn'); r = resolve(r.ws); }
   CUR = r; if (r.tab) UI['tab_' + r.ws] = r.tab;
   try { history.replaceState(null, '', '#' + r.ws + (r.tab ? '/' + r.tab : '')); } catch (e) { }

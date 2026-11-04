@@ -64,7 +64,7 @@
   window.s2pages = s2pages;
 
   /* ── 링크(메뉴 이동 경로 · 버튼) ── */
-  const linkHref = v => !v ? '#' : v.startsWith('learn:') ? '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice' }[v.slice(6)] || 'home') : v.startsWith('page:') ? '#p-' + v.slice(5) : v.startsWith('cls:') ? '#p-c-' + v.slice(4) : v.startsWith('url:') ? v.slice(4) : '#';
+  const linkHref = v => !v ? '#' : v.startsWith('learn:') ? '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice' }[v.slice(6)] || 'home') : v.startsWith('page:') ? '#p-' + v.slice(5) : v.startsWith('cls:') ? '#p-c-' + v.slice(4) : v.startsWith('url:') ? (typeof safeURL === 'function' ? safeURL(v.slice(4)) : '#') : '#'; /* v25 url: 링크도 http(s) · mailto · tel만 */
   const linkAttr = v => `href="${esc(linkHref(v))}"${v && v.startsWith('url:') ? ' target="_blank" rel="noopener"' : ''}`;
   const pubCls = () => S.classes.filter(c => c.open === '전체' || c.open == null);
   function linkSel(nm, val, kind = 'name') {
@@ -215,7 +215,7 @@
       case 'code': {
         if (!d.allowScript) return `<section class="sec"><div class="wrap">${d.showTitle && d.title ? `<h2>${esc(d.title)}</h2>` : ''}${cleanHTML(d.html)}</div></section>`;
         const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Pretendard,system-ui,sans-serif}</style></head><body>${s2full ? (d.html || '') : cleanHTML(d.html)}</body></html>`;
-        return `<section class="sec"><div class="wrap">${d.showTitle && d.title ? `<h2>${esc(d.title)}</h2>` : ''}${s2full ? '' : '<p class="s2cnote">스크립트는 게시된 홈페이지 · 내보낸 HTML에서 실행됩니다(스튜디오 보안 정책상 미리보기에서는 실행되지 않음).</p>'}<iframe class="s2code" title="${esc(d.title || '코드 블럭')}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" srcdoc="${esc(doc)}" style="height:${Math.min(2000, Math.max(60, +d.h || 320))}px"></iframe></div></section>`;
+        return `<section class="sec"><div class="wrap">${d.showTitle && d.title ? `<h2>${esc(d.title)}</h2>` : ''}${s2full ? '' : '<p class="s2cnote">스크립트는 게시된 홈페이지 · 내보낸 HTML에서 실행됩니다(스튜디오 보안 정책상 미리보기에서는 실행되지 않음).</p>'}<iframe class="s2code" title="${esc(d.title || '코드 블럭')}" sandbox="allow-scripts allow-popups allow-forms" srcdoc="${esc(doc)}" style="height:${Math.min(2000, Math.max(60, +d.h || 320))}px"></iframe></div></section>`;
       }
       case 'catBrowse': {
         let L = pubCls(); if ((d.cats || []).length) L = L.filter(c => d.cats.includes(c.cat) || (S.cats || []).some(x => x.id === c.cat && d.cats.includes(x.parent)));

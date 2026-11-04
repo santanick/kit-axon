@@ -15,4 +15,6 @@ fs.writeFileSync(p, h);
 /* 학습자 화면: 운영에서는 튜터도 서버 경유 → 브라우저의 Anthropic 직접 호출 허용을 뺀다 */
 const lp = path.join(dst, 'learner.html'); if (fs.existsSync(lp)) fs.writeFileSync(lp, fs.readFileSync(lp, 'utf8').replace(/ https:\/\/api\.anthropic\.com/g, ''));
 if (!fs.existsSync(path.join(dst, 'live.js'))) throw new Error('live.js 없음');
+for (const f of ['aiguard.js', 'safehtml.js']) if (!fs.existsSync(path.join(dst, f))) throw new Error(f + ' 없음(v25 보안 가드)');
+fs.rmSync(path.join(dst, 'native'), { recursive: true, force: true }); /* 앱 포장 설정은 서버에 올리지 않음 */
 console.log('public 준비:', dst);

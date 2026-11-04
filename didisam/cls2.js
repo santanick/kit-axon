@@ -127,12 +127,7 @@ function c2ReadImg(file, maxKB, cb) {
 }
 
 /* 리치 텍스트(교육 목표 · 주요 내용) — 정화 후 저장 */
-function c2Clean(html) {
-  const d = new DOMParser().parseFromString(`<div>${html || ''}</div>`, 'text/html'); const root = d.body.firstChild;
-  root.querySelectorAll('script,style,iframe,object,embed,form,input,button,textarea,select,link,meta,base,svg,math').forEach(x => x.remove());
-  root.querySelectorAll('*').forEach(el => { [...el.attributes].forEach(a => { const n = a.name.toLowerCase(), v = a.value.trim().toLowerCase(); if (n.startsWith('on') || n === 'style' && /expression|url\(/.test(v) || ['href', 'src', 'xlink:href', 'action', 'formaction'].includes(n) && (/^\s*(javascript|vbscript):/.test(v) || (n === 'src' && v.startsWith('data:') && !/^data:image\/(png|jpe?g|gif|webp)/.test(v))) || !['href', 'src', 'alt', 'title', 'colspan', 'rowspan', 'style', 'target', 'rel'].includes(n)) el.removeAttribute(a.name); }); if (el.tagName === 'A') { el.setAttribute('rel', 'noopener'); el.setAttribute('target', '_blank'); } });
-  return root.innerHTML.slice(0, 60000);
-}
+function c2Clean(html) { return safeHTML(html).slice(0, 60000); } /* v25 허용 목록 정화기(safehtml.js) */
 const c2Text = html => { const d = new DOMParser().parseFromString(`<div>${html || ''}</div>`, 'text/html'); return (d.body.textContent || '').replace(/\s+/g, ' ').trim(); };
 function c2Rte(id, html) {
   return `<div class="c2rte" data-rte="${id}"><div class="c2rtb" role="toolbar" aria-label="서식">

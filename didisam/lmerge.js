@@ -71,7 +71,7 @@
   /* Shadow DOM에 홈페이지 HTML 넣기 */
   function mount(root) { const H = HP(); if (!H) return; (root || document).querySelectorAll('.smhost:not([data-ok])').forEach(el => { el.dataset.ok = '1'; const k = el.dataset.smk;
     const html = k === 'home' ? H.home : k === 'foot' ? H.foot : ((H.pages[k] || {}).html || '');
-    const sr = el.shadowRoot || el.attachShadow({ mode: 'open' }); sr.innerHTML = `<style>${H.css}.smr{background:transparent;min-height:0}</style><div class="smr lk-${esc(H.look || 'campus')}">${html}</div>`; }); }
+    const sr = el.shadowRoot || el.attachShadow({ mode: 'open' }); sr.innerHTML = `<style>${safeCSS(H.css)}.smr{background:transparent;min-height:0}</style><div class="smr lk-${esc(H.look || 'campus')}">${safeHTML(html, { data: true, code: true })}</div>`; /* v25 게시본도 다시 정화(서버 API로 직접 넣은 HTML 대비) */ }); }
   window.lmMount = mount;
   { let q = 0; new MutationObserver(() => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { mount(); } catch (e) { } }); }).observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); }
 
