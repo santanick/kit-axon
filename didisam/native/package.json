@@ -1,0 +1,24 @@
+{
+  "name": "didisam-learner-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "디디쌤 학습자 앱(나만의 AI 선생님) — iOS · Android 포장(Capacitor). 화면은 웹(learner.html?app=1)과 같다.",
+  "scripts": {
+    "add:ios": "npx cap add ios",
+    "add:android": "npx cap add android",
+    "sync": "npx cap sync",
+    "open:ios": "npx cap open ios",
+    "open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/core": "6.1.2",
+    "@capacitor/ios": "6.1.2",
+    "@capacitor/android": "6.1.2",
+    "@capacitor/push-notifications": "6.0.2",
+    "@capacitor/status-bar": "6.0.1",
+    "@capacitor/splash-screen": "6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "6.1.2"
+  }
+}

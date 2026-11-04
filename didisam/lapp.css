@@ -1,0 +1,115 @@
+/* 디디쌤 학습자 앱 v27 — 나만의 AI 선생님(lapp.js). iOS · Android 공통: 노치 · 홈 표시줄(safe-area) · 100dvh · 16px 입력(확대 방지) */
+body.lapp{--ap-bg:#F7F8FC;--ap-ink:#1F2340;--ap-mute:#6B7085;--ap-line:#E6E8F0;--ap-sb:env(safe-area-inset-bottom,0px);--ap-st:env(safe-area-inset-top,0px);--ap-nav:64px;background:var(--ap-bg);-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+body.lapp header.lh,body.lapp footer.lf,body.lapp nav.tabbar,body.lapp .pvbar,body.lapp .lt-fab,body.lapp .lt-hint{display:none!important}
+body.lapp #lm{padding-bottom:calc(var(--ap-nav) + var(--ap-sb) + 16px);min-height:100dvh}
+body.lapp input,body.lapp textarea,body.lapp select{font-size:16px}
+body.lapp .sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* 아바타(선생님) */
+.ap-av{--pc:var(--pri);flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 30% 25%,#fff 0,color-mix(in srgb,var(--pc) 22%,#fff) 45%,color-mix(in srgb,var(--pc) 55%,#fff) 100%);box-shadow:0 0 0 2px #fff,0 6px 16px -6px color-mix(in srgb,var(--pc) 70%,transparent);position:relative;color:var(--pc)}
+.ap-av i{font-style:normal;font-size:19px;line-height:1}
+.ap-av.big{width:84px;height:84px;margin:0 auto}.ap-av.big i{font-size:42px}
+.ap-av.big::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:2px solid color-mix(in srgb,var(--pc) 35%,transparent);animation:apPulse 2.8s ease-out infinite}
+@keyframes apPulse{0%{transform:scale(.92);opacity:.9}100%{transform:scale(1.22);opacity:0}}
+@media (prefers-reduced-motion:reduce){.ap-av.big::after{animation:none}}
+
+/* 앱 머리(다른 화면) */
+.ap-bar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:6px;padding:calc(8px + var(--ap-st)) 10px 8px;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--ap-line)}
+.ap-tt{flex:1;min-width:0;font:700 17px/1.2 var(--sg);color:var(--ap-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ap-ib{flex:none;width:44px;height:44px;border:0;background:none;border-radius:12px;display:grid;place-items:center;color:var(--ap-ink);cursor:pointer;text-decoration:none}
+.ap-ib:active,.ap-ib:hover{background:#EEF0F7}
+.ap-call{display:flex;align-items:center;gap:8px;border:1px solid var(--ap-line);background:#fff;border-radius:999px;padding:4px 14px 4px 4px;font:600 14px/1 var(--sg);color:var(--ap-ink);cursor:pointer;min-height:44px}
+.ap-call .ap-av{width:32px;height:32px}.ap-call .ap-av i{font-size:16px}
+
+/* 아래 탭 */
+.ap-nav{position:fixed;left:0;right:0;bottom:0;z-index:45;display:flex;justify-content:space-around;padding:6px 6px calc(6px + var(--ap-sb));background:rgba(255,255,255,.95);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-top:1px solid var(--ap-line)}
+.ap-nav a{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;min-height:48px;border-radius:12px;color:#8A8FA3;text-decoration:none;font:600 11px/1.1 var(--sg)}
+.ap-nav a span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ap-nav a.on{color:var(--pri)}.ap-nav a.on svg{stroke-width:2.3}
+@media (min-width:900px){.ap-nav{left:50%;right:auto;transform:translateX(-50%);bottom:16px;width:560px;border:1px solid var(--ap-line);border-radius:22px;box-shadow:0 14px 40px -18px rgba(31,35,64,.35);padding:6px}}
+
+/* 첫 화면: 선생님과의 대화 */
+body.ap-homeon #lm{padding-bottom:0}
+.ap-home{--pc:var(--pri);display:flex;flex-direction:column;height:100dvh;max-width:760px;margin:0 auto;background:radial-gradient(120% 60% at 50% -10%,color-mix(in srgb,var(--pc) 14%,#fff) 0,var(--ap-bg) 60%)}
+.ap-top{flex:none;display:flex;align-items:center;gap:4px;padding:calc(10px + var(--ap-st)) 10px 6px 12px}
+.ap-me{flex:1;min-width:0;display:flex;align-items:center;gap:10px;border:0;background:none;padding:4px;border-radius:14px;text-align:left;cursor:pointer;color:var(--ap-ink)}
+.ap-me span{display:flex;flex-direction:column;min-width:0}.ap-me b{font:700 16px/1.25 var(--sg)}.ap-me small{font:500 12px/1.3 var(--sg);color:var(--ap-mute);display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-on{flex:none;width:7px;height:7px;border-radius:50%;background:#22C55E;box-shadow:0 0 0 3px #22C55E2e}
+.ap-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px 12px;scroll-behavior:smooth}
+.ap-hero{text-align:center;padding:18px 0 14px}
+.ap-hero h1{margin:18px 0 8px;font:800 clamp(22px,5.6vw,28px)/1.32 var(--sg);letter-spacing:-.02em;color:var(--ap-ink)}
+.ap-st{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:0}.ap-st span{font:500 12.5px/1 var(--sg);color:var(--ap-mute);background:#fff;border:1px solid var(--ap-line);border-radius:999px;padding:7px 11px}.ap-st b{color:var(--ap-ink)}
+.ap-inst{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--ap-line);border-radius:16px;padding:10px 8px 10px 14px;margin:6px 0 12px;color:var(--pc)}
+.ap-inst span{flex:1;display:flex;flex-direction:column;gap:2px;color:var(--ap-ink)}.ap-inst b{font:700 14px/1.3 var(--sg)}.ap-inst small{font:500 12px/1.3 var(--sg);color:var(--ap-mute)}
+.ap-ib2{border:0;background:var(--pc);color:#fff;font:700 13px/1 var(--sg);border-radius:999px;padding:10px 14px;cursor:pointer;min-height:40px}
+.ap-ix{border:0;background:none;color:var(--ap-mute);width:36px;height:36px;border-radius:10px;cursor:pointer;display:grid;place-items:center}
+.ap-cards{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:4px -16px 14px;padding:2px 16px 6px;scrollbar-width:none}.ap-cards::-webkit-scrollbar{display:none}
+.ap-cd{flex:0 0 78%;max-width:300px;scroll-snap-align:start;position:relative;display:flex;flex-direction:column;gap:5px;padding:14px 40px 14px 14px;border-radius:18px;background:#fff;border:1px solid var(--ap-line);text-decoration:none;color:var(--ap-ink);box-shadow:0 8px 20px -16px rgba(31,35,64,.4)}
+.ap-cd.first{background:linear-gradient(140deg,var(--pc),color-mix(in srgb,var(--pc) 70%,#1F2340));color:#fff;border-color:transparent}
+.ap-cd small{font:700 11px/1 var(--sg);letter-spacing:.04em;color:var(--pc)}.ap-cd.first small{color:#ffffffd0}.ap-cd.warn small{color:#DE6A00}
+.ap-cd b{font:700 15px/1.35 var(--sg);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ap-cd span{font:500 12.5px/1.4 var(--sg);color:var(--ap-mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ap-cd.first span{color:#ffffffcc}
+.ap-cd i{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--pc) 12%,#fff);color:var(--pc)}.ap-cd.first i{background:#ffffff2e;color:#fff}
+/* 대화 말풍선(ltutor 말풍선 재사용) */
+.ap-th{display:flex;flex-direction:column;gap:12px}
+.ap-th .lt-m{display:flex;gap:9px;align-items:flex-start;max-width:100%}
+.ap-th .lt-m.u{justify-content:flex-end}
+.ap-th .lt-b{min-width:0;max-width:calc(100% - 46px);background:#fff;border:1px solid var(--ap-line);border-radius:6px 18px 18px 18px;padding:11px 14px;font:500 15px/1.6 var(--sg);color:var(--ap-ink);box-shadow:0 6px 18px -16px rgba(31,35,64,.5);overflow-wrap:anywhere}
+.ap-th .lt-m.u .lt-b{background:var(--pc);color:#fff;border-color:transparent;border-radius:18px 6px 18px 18px}
+.ap-th .lt-b p{margin:0 0 6px}.ap-th .lt-b p:last-child{margin:0}
+.ap-th .lt-b .lt-acts,.ap-th .lt-b .lt-qs{margin-top:8px}
+.ap-th .lt-src{display:block;margin-top:6px;font:500 11px/1.3 var(--sg);color:#9A9FB2}
+.ap-gb{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+/* 입력 */
+.ap-comp{flex:none;padding:8px 12px calc(10px + var(--ap-nav) + var(--ap-sb));background:linear-gradient(to top,var(--ap-bg) 70%,transparent)}
+.ap-chips{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}.ap-chips::-webkit-scrollbar{display:none}
+.ap-chip{flex:none;border:1px solid color-mix(in srgb,var(--pc) 30%,var(--ap-line));background:#fff;color:var(--ap-ink);border-radius:999px;padding:9px 14px;font:600 13.5px/1 var(--sg);cursor:pointer;min-height:38px;white-space:nowrap}
+.ap-chip:active{background:color-mix(in srgb,var(--pc) 10%,#fff)}
+.ap-box{display:flex;align-items:flex-end;gap:6px;background:#fff;border:1.5px solid var(--ap-line);border-radius:26px;padding:6px 6px 6px 16px;box-shadow:0 12px 30px -20px rgba(31,35,64,.45)}
+.ap-box:focus-within{border-color:var(--pc);box-shadow:0 0 0 4px color-mix(in srgb,var(--pc) 16%,transparent),0 12px 30px -20px rgba(31,35,64,.45)}
+.ap-box textarea{flex:1;border:0;outline:0;resize:none;background:none;font:500 16px/1.5 var(--sg);color:var(--ap-ink);padding:8px 0;max-height:132px}
+.ap-mic,.ap-send{flex:none;width:42px;height:42px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer}
+.ap-mic{background:#F1F2F7;color:var(--ap-ink)}.ap-mic.on{background:#FF4D4F;color:#fff;animation:apRec 1.2s ease-in-out infinite}
+@keyframes apRec{50%{box-shadow:0 0 0 8px #FF4D4F33}}
+.ap-send{background:var(--pc);color:#fff}
+.ap-note{display:block;text-align:center;margin-top:6px;font:500 11.5px/1.3 var(--sg);color:#9A9FB2}
+
+/* 선생님 고르기 */
+body.ap-pickon #lm{padding-bottom:24px}
+.ap-pick{min-height:100dvh;display:flex;align-items:flex-start;justify-content:center;padding:calc(28px + var(--ap-st)) 16px calc(24px + var(--ap-sb));background:radial-gradient(120% 50% at 50% -10%,#EEF0FF 0,var(--ap-bg) 60%)}
+.ap-pw{width:100%;max-width:480px}
+.ap-ph{text-align:center}
+.ap-ey{margin:22px 0 6px;font:700 12px/1.3 var(--sg);color:var(--ap-mute);letter-spacing:.02em}
+.ap-ph h1{margin:0 0 10px;font:800 clamp(22px,6vw,28px)/1.32 var(--sg);letter-spacing:-.02em;color:var(--ap-ink)}
+.ap-lead{margin:0 auto 20px;max-width:380px;font:500 14.5px/1.6 var(--sg);color:var(--ap-mute)}
+.ap-pl{border:0;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:10px}
+.ap-pc{position:relative;display:flex;gap:12px;align-items:center;background:#fff;border:1.5px solid var(--ap-line);border-radius:18px;padding:14px;cursor:pointer}
+.ap-pc input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.ap-pc.on{border-color:var(--pc);background:color-mix(in srgb,var(--pc) 6%,#fff);box-shadow:0 0 0 3px color-mix(in srgb,var(--pc) 16%,transparent)}
+.ap-pc:has(input:focus-visible){outline:2px solid var(--pc);outline-offset:2px}
+.ap-pc span{display:flex;flex-direction:column;gap:3px;min-width:0}.ap-pc b{font:700 16px/1.3 var(--sg);color:var(--ap-ink)}.ap-pc small{font:500 13px/1.4 var(--sg);color:var(--ap-mute)}.ap-pc em{font:500 12.5px/1.4 var(--sg);font-style:normal;color:var(--pc)}
+.ap-nm{display:flex;flex-direction:column;gap:6px;font:700 13px/1 var(--sg);color:var(--ap-ink);margin-bottom:16px}
+.ap-nm input{height:50px;border:1.5px solid var(--ap-line);border-radius:14px;padding:0 14px;font:600 16px/1 var(--sg);background:#fff;color:var(--ap-ink)}
+.ap-nm input:focus{outline:0;border-color:var(--pri)}
+.ap-go{--pc:var(--pri);display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:54px;border:0;border-radius:16px;background:var(--pc);color:#fff;font:700 16px/1 var(--sg);cursor:pointer;text-decoration:none}
+.ap-go.sm{width:auto;min-height:42px;padding:0 18px;font-size:14px;border-radius:999px;background:var(--pc,var(--pri))}
+.ap-go.ghost{background:#fff;color:var(--ap-ink);border:1px solid var(--ap-line)}
+.ap-lk{display:block;margin:12px auto 0;border:0;background:none;font:600 14px/1 var(--sg);color:var(--ap-mute);padding:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+/* 선생님 설정 시트 · 설치 안내 */
+.ap-sheet{position:fixed;inset:0;z-index:300;background:rgba(20,22,40,.42);display:flex;align-items:flex-end;justify-content:center}
+.ap-sh{width:100%;max-width:520px;background:#fff;border-radius:24px 24px 0 0;padding:28px 18px calc(18px + var(--ap-sb));text-align:center;animation:apUp .22s ease-out}
+@keyframes apUp{from{transform:translateY(24px);opacity:.4}}
+.ap-sh h2{margin:16px 0 4px;font:800 20px/1.3 var(--sg);color:var(--ap-ink)}.ap-sh p{margin:0 0 16px;font:500 13.5px/1.5 var(--sg);color:var(--ap-mute)}
+.ap-sh nav{display:flex;flex-direction:column;gap:6px}
+.ap-sh nav button{display:flex;align-items:center;gap:10px;min-height:52px;border:1px solid var(--ap-line);background:#fff;border-radius:14px;padding:0 16px;font:600 15px/1 var(--sg);color:var(--ap-ink);cursor:pointer;text-align:left}
+.ap-sh nav button:last-child{justify-content:center;border:0;color:var(--ap-mute)}
+.ap-dlg{border:0;border-radius:20px;padding:22px;max-width:min(420px,calc(100vw - 32px));font:500 14.5px/1.6 var(--sg);color:var(--ap-ink)}
+.ap-dlg::backdrop{background:rgba(20,22,40,.42)}.ap-dlg h2{margin:0 0 10px;font:800 18px/1.3 var(--sg)}.ap-dlg ol{padding-left:20px;margin:0 0 10px}.ap-dlg .mini{color:var(--ap-mute);font-size:13px}
+.ap-back{max-width:var(--max);margin:12px auto 0;padding:0 16px}.ap-back button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:10px 16px;font:600 14px/1 var(--sg);color:var(--ink);cursor:pointer}
+
+/* 다른 화면 안의 떠 있는 튜터 창: 앱 아래 탭 위로 */
+body.lapp #ltut .lt-panel{bottom:calc(var(--ap-nav) + var(--ap-sb) + 10px)}
+@media (max-width:600px){body.lapp #ltut .lt-panel{bottom:0;top:0;height:auto;padding-top:var(--ap-st);z-index:60}}
+body.lapp .ltoast{bottom:calc(var(--ap-nav) + var(--ap-sb) + 16px)!important}
+body.ap-homeon .ltoast{bottom:calc(var(--ap-nav) + var(--ap-sb) + 150px)!important}

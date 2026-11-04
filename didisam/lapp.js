@@ -1,0 +1,161 @@
+/* 디디쌤 학습자 앱 v27 — '나만의 AI 선생님' 앱 화면(iOS · Android 공통 PWA, 앱스토어 포장은 native/ Capacitor)
+   대표님(2026-11-04): '학습자 앱은 완전히 AI 학습 비서처럼 UI UX를 구성해서 … 나만의 AI 선생님의 느낌이 강하게' · '기존 학습자 사이트를 통째로 교체' · '학습자가 직접 고르는 선생님' · 'iOS와 안드로이드 모두 대응'
+   - 로그인한 학습자: 머리 · 바닥 · 아래 탭을 앱 화면으로 바꾼다. 첫 화면 = 선생님과의 대화(인사 · 오늘의 미션 카드 · 대화 · 추천 칩 · 입력창 · 음성 입력)
+   - 처음 들어오면 선생님 고르기(다정한 코치 · 꼼꼼한 멘토 · 차분한 조력자 + 이름 바꾸기) → LR.lp.tutor.persona(학습 기록에만, 개인정보 아님)
+   - 다른 화면(강의 · 결제 · 커뮤니티 · 회원정보 …)은 기존 화면 그대로, 앱 머리(뒤로 · 제목 · 선생님 부르기)와 아래 탭 안에서 연다 — 기능 · 데이터 · 테스트 동등성 유지
+   - 방문자: 브라우저에서는 기관 홈페이지(스튜디오에서 만든 고객 홈페이지)를 그대로, 설치한 앱(standalone) · ?app=1에서는 앱 첫 화면(로그인 · 가입 · 로그인 없이 묻기)
+   - 대답 엔진은 ltutor.js 그대로(규칙 엔진 → Claude, 과제 대신 쓰지 않음, 대화 내용 저장 안 함). 선생님 이름 · 말투는 TCFG()에 합쳐 Claude 지시에 들어간다
+   - [기존 화면으로 보기]로 언제든 예전 화면(접근성 · 선호), 앱 화면으로 돌아오기도 한 번에
+   learner.html에서 lles26.js 다음, lboot.js 바로 앞. */
+'use strict';
+(() => {
+  const K = 'didisam.app.';
+  const ls = { get: k => { try { return localStorage.getItem(K + k); } catch (e) { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(K + k) : localStorage.setItem(K + k, v); } catch (e) { } } };
+  const standalone = () => { try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { return false; } };
+  const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  /* 설치한 앱은 시작 주소에 기관 번호가 없으므로 마지막 기관을 기억해 둔다 */
+  if (!LR.tid && (Q.get('app') === '1' || standalone())) { const t = ls.get('tid'); if (t) LR.tid = t; }
+  const appOn = () => { try { return !!SITE() && LR.mode !== 'preview' && ls.get('classic') !== '1' && (!!LR.me || standalone() || Q.get('app') === '1'); } catch (e) { return false; } };
+  window.lappOn = appOn;
+
+  Object.assign(ICP, { mic: 'M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM5 11a7 7 0 0014 0M12 18v3', back: 'M15 5l-7 7 7 7', dots: 'M5 12h.01M12 12h.01M19 12h.01', install: 'M12 3v12M7 10l5 5 5-5M5 21h14', sparkle: ICP.sparkle || 'M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z', book2: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19V5', compass: 'M12 21a9 9 0 100-18 9 9 0 000 18zM15.5 8.5l-2 5-5 2 2-5z' });
+
+  /* ── 선생님(학습자가 고름) ── */
+  const PERS = [
+    { k: 'warm', n: '하루쌤', t: '다정한 코치', d: '작은 진전도 칭찬하며 꾸준히 이끌어 줘요', e: '🌤️', c: '#FF7A45', tone: '다정하고 따뜻하게, 작은 진전도 구체적으로 칭찬하고 격려하며 다음 한 걸음을 제안합니다.', hi: '오늘도 같이 해 봐요! 제가 옆에서 챙길게요.' },
+    { k: 'strict', n: '정쌤', t: '꼼꼼한 멘토', d: '목표 · 마감을 챙기고 정확하게 짚어 줘요', e: '📐', c: '#5C74F6', tone: '핵심을 정확하고 간결하게 짚고, 목표 · 마감 · 다음 행동을 분명하게 제시합니다. 군더더기 없이 말합니다.', hi: '오늘 목표부터 정하고 시작하겠습니다.' },
+    { k: 'calm', n: '온쌤', t: '차분한 조력자', d: '이해될 때까지 쉬운 말로 천천히 풀어 줘요', e: '🌿', c: '#12A37A', tone: '차분하고 쉬운 말로, 예시를 들어 한 단계씩 천천히 설명하고 이해했는지 확인합니다.', hi: '천천히 해도 괜찮아요. 하나씩 같이 풀어 봐요.' }
+  ];
+  const tutorRec = () => (typeof ltTutor === 'function' ? ltTutor() : ((LR.lp.tutor = LR.lp.tutor || {}), LR.lp.tutor));
+  const persona = () => { if (!LR.me || !LR.lp) return null; const T = LR.lp.tutor; const p = T && T.persona; if (!p || !p.k) return null; const B = PERS.find(x => x.k === p.k) || PERS[0]; return { ...B, n: String(p.n || B.n).slice(0, 12) }; };
+  window.ltPersona = persona;
+  const AP = { pick: false, sel: null, nm: '', inst: null, rec: null };
+
+  /* ── 공통 조각 ── */
+  const jw = n => (typeof lJ === 'function' ? n + lJ(n, '과', '와') : n + '과');
+  const av = (P, big) => `<span class="ap-av ${big ? 'big' : ''}" style="--pc:${P ? P.c : 'var(--pri)'}" aria-hidden="true"><i>${P ? P.e : ico('sparkle', big ? 30 : 18)}</i></span>`;
+  const tName = () => (persona() || {}).n || TCFG().name;
+  const hiTime = () => { const h = new Date().getHours(); return h < 5 ? '늦은 밤까지 수고 많아요.' : h < 11 ? '좋은 아침이에요.' : h < 14 ? '점심은 드셨어요?' : h < 18 ? '좋은 오후예요.' : '오늘 하루 수고 많았어요.'; };
+  const who = () => (typeof lCall === 'function' ? lCall() : ((LR.me && (LR.me.nick || LR.me.sid)) || '') + '님');
+  const hasComm = () => (SITE().pages || []).some(p => p.id === 'comm') || typeof lcCommHTML === 'function';
+  const browse = () => ((SITE().pages || []).some(p => p.id === 'shop') || typeof viewShop === 'function') ? '#shop' : (SITE().pages || []).some(p => p.id === 'courses') ? '#courses' : '#home';
+  const SEC = { home: 'home', my: 'learn', c: 'learn', t: 'learn', bk: 'learn', dg: 'learn', cert: 'learn', badge: 'learn', mybooks: 'learn', shop: 'find', class: 'find', courses: 'find', tutorials: 'find', textbooks: 'find', tb: 'find', books: 'find', pay: 'find', payok: 'find', comm: 'comm', post: 'comm', write: 'comm', notice: 'comm', acct: 'me', inbox: 'me', mypay: 'me', payd: 'me', msg: 'me', family: 'me', login: 'me', join: 'me' };
+  function navHTML() { const s = SEC[route().a] || '';
+    const it = [['home', '#home', 'sparkle', tName()], ['learn', LR.me ? '#my' : '#login/my', 'book2', '내 강의'], ['find', browse(), 'compass', '둘러보기'], ...(hasComm() ? [['comm', '#comm', 'msg', '커뮤니티']] : [['comm', '#notice', 'bell', '공지']]), ['me', LR.me ? '#acct' : '#login', 'user', LR.me ? '나' : '로그인']];
+    return `<nav class="ap-nav" aria-label="앱 메뉴">${it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span></a>`).join('')}</nav>`; }
+  const TITLE = { my: '내 강의', c: '강의', t: '튜토리얼', bk: '디지털북', dg: '진단', cert: '수료증', badge: '배지', mybooks: '내 교재/교구', shop: '둘러보기', class: '클래스', courses: '코스', tutorials: '튜토리얼', textbooks: '교재/교구', tb: '교재/교구', books: '디지털북', pay: '결제하기', payok: '결제 완료', comm: '커뮤니티', post: '게시글', write: '글쓰기', notice: '공지사항', acct: '나', inbox: '알림', mypay: '결제 · 환불 내역', payd: '결제 상세', msg: '메시지', family: '가족', login: '로그인', join: '간편가입', find: '계정 찾기', privacy: '개인정보 처리방침' };
+  function barHTML() { const a = route().a; const P = persona(); const pg = (SITE().pages || []).find(p => p.id === a);
+    const t = TITLE[a] || (pg && pg.name) || ((document.querySelector('#lm h1, #lm h2') || {}).textContent || '').trim().slice(0, 18) || SITE().org.name;
+    return `<header class="ap-bar"><button type="button" class="ap-ib" data-ap="back" aria-label="뒤로">${ico('back', 22)}</button><b class="ap-tt">${esc(t)}</b><button type="button" class="ap-call" data-tact="open" aria-label="${esc(tName())}에게 물어보기">${av(P)}<span>물어보기</span></button></header>`; }
+
+  /* ── 선생님 고르기(처음 한 번 · 언제든 바꾸기) ── */
+  function pickHTML() { const cur = persona(); const sel = AP.sel || (cur && cur.k) || 'warm'; const B = PERS.find(x => x.k === sel); const nm = AP.nm || (cur && cur.k === sel ? cur.n : B.n);
+    return `<section class="ap-pick" aria-labelledby="apPickT"><div class="ap-pw">
+      <div class="ap-ph">${av(B, true)}<p class="ap-ey">${esc(SITE().org.name)} · 나만의 AI 선생님</p><h1 id="apPickT">${cur ? '선생님을 바꿔 볼까요?' : `${esc(who())}, 함께 공부할<br>AI 선생님을 골라 주세요`}</h1><p class="ap-lead">내 진도 · 과제 · 마감을 기억하고 매일 먼저 챙겨 주는 선생님이에요. 나중에 언제든 바꿀 수 있어요.</p></div>
+      <form id="apPickF"><fieldset class="ap-pl"><legend class="sr">선생님 스타일</legend>${PERS.map(p => `<label class="ap-pc ${p.k === sel ? 'on' : ''}" style="--pc:${p.c}"><input type="radio" name="pk" value="${p.k}" ${p.k === sel ? 'checked' : ''}>${av(p)}<span><b>${esc(p.t)}</b><small>${esc(p.d)}</small><em>“${esc(p.hi)}”</em></span></label>`).join('')}</fieldset>
+      <label class="ap-nm">선생님 이름<input name="nm" maxlength="12" value="${esc(nm)}" autocomplete="off" required></label>
+      <button type="submit" class="ap-go" style="--pc:${B.c}">${esc(jw(nm || B.n))} 시작하기</button>
+      ${cur ? '<button type="button" class="ap-lk" data-ap="pick-x">그대로 둘게요</button>' : '<button type="button" class="ap-lk" data-ap="pick-skip">기본 선생님으로 시작</button>'}</form></div></section>`; }
+
+  /* ── 첫 화면: 선생님과의 대화 ── */
+  function cardsHTML() { if (!LR.me) return ''; const A = typeof ltTodo === 'function' ? ltTodo() : []; if (!A.length) return '';
+    return `<div class="ap-cards" role="list" aria-label="오늘의 미션">${A.map((a, i) => `<a role="listitem" class="ap-cd ${a.k === 'warn' ? 'warn' : ''} ${i === 0 ? 'first' : ''}" href="${esc(a.href)}"><small>${i === 0 ? '지금 할 일' : a.k === 'warn' ? '먼저 챙기기' : '오늘의 미션'}</small><b>${esc(a.h)}</b><span>${esc(a.d || '')}</span><i>${ico('arrow', 16)}</i></a>`).join('')}</div>`; }
+  function statHTML() { if (!LR.me || typeof myStats !== 'function') return ''; const st = myStats();
+    return `<p class="ap-st"><span><b>${st.streak}</b>일 연속</span><span>평균 진도 <b>${st.avg}%</b></span><span>배지 <b>${((LR.mine && LR.mine.badges) || []).length}</b>개</span></p>`; }
+  function threadHTML() { const M = (LT.msgs || []).filter(m => !m.sys);
+    return M.map(ltMsgHTML).join('').replace(/<span class="lt-orb sm" aria-hidden="true"><\/span>/g, av(persona())) + (LT.busy ? `<div class="lt-m">${av(persona())}<div class="lt-b"><span class="lt-dots"><i></i><i></i><i></i></span></div></div>` : ''); }
+  function chipsHTML() { let C = [];
+    try { C = (typeof LSAM === 'object' ? LSAM.screen().chips.filter(c => !c.kind).map(c => [c.l, c.q]) : ltChips().map(x => [x, x])); } catch (e) { C = []; }
+    if (LR.me) C = [['오늘 뭐 하면 돼?', '오늘 뭐 하면 돼?'], ['이번 주 계획 짜줘', '이번 주 학습 계획 짜줘'], ['복습 퀴즈 내줘', '복습 퀴즈 내줘'], ...C, ['내 학습 리포트', '내 학습 리포트 보여줘']];
+    const seen = new Set(); C = C.filter(([l]) => !seen.has(l) && seen.add(l)).slice(0, 6);
+    return `<div class="ap-chips" role="list" aria-label="추천 질문">${C.map(([l, q]) => `<button type="button" role="listitem" class="ap-chip" data-tact="q" data-v="${esc(q)}">${esc(l)}</button>`).join('')}</div>`; }
+  function homeHTML() { const P = persona(); const me = LR.me; const C = TCFG();
+    const brief = me && typeof ltBrief === 'function' ? ltBrief() : null; const first = me ? `${esc(who())}, ${hiTime()}\n${esc(P ? P.hi : '')}` : '';
+    const instBox = !standalone() && ls.get('instx') !== '1' ? `<div class="ap-inst" role="note">${ico('install', 18)}<span><b>홈 화면에 앱으로 설치</b><small>${IOS ? '공유 버튼 → 「홈 화면에 추가」' : '한 번 누르면 앱처럼 바로 열려요'}</small></span><button type="button" class="ap-ib2" data-ap="install">설치</button><button type="button" class="ap-ix" data-ap="inst-x" aria-label="설치 안내 닫기">${ico('x', 16)}</button></div>` : '';
+    return `<div class="ap-home ${me ? '' : 'guest'}" style="--pc:${P ? P.c : 'var(--pri)'}">
+      <header class="ap-top"><button type="button" class="ap-me" data-ap="tsheet" aria-label="${esc(tName())} — 선생님 설정">${av(P)}<span><b>${esc(tName())}</b><small><i class="ap-on"></i>${me ? `${esc(P ? P.t : '내 AI 학습 비서')} · 함께 공부 중` : '로그인 없이 물어볼 수 있어요'}</small></span></button>
+        ${me ? `<a class="ap-ib" href="#inbox" aria-label="알림">${ico('bell', 21)}</a>` : ''}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
+      <div class="ap-scroll" id="apScroll">
+        <section class="ap-hero">${av(P, true)}<h1>${me ? `${esc(who())},<br>오늘은 무엇을 함께 할까요?` : `나만의 AI 선생님과<br>공부를 시작해 보세요`}</h1>${statHTML()}</section>
+        ${instBox}${cardsHTML()}
+        <div class="ap-th lai-th" aria-live="polite" aria-label="${esc(tName())}와의 대화">
+          ${me ? `<div class="lt-m ap-hi">${av(P)}<div class="lt-b"><p>${nl(first)}</p>${brief ? `<p>${nl(brief.t)}</p>${brief.h || ''}` : ''}</div></div>` : `<div class="lt-m ap-hi">${av(null)}<div class="lt-b"><p>안녕하세요, ${esc(SITE().org.name)}의 ${esc(C.name)}입니다.\n강좌 · 수강 방법 · 가격을 바로 물어보세요. 로그인하면 내 진도와 과제에 맞춰 나만의 선생님이 매일 챙겨 드려요.</p><div class="ap-gb"><a class="ap-go sm" href="#login">로그인</a>${SITE().org.type === 'univ' ? '' : '<a class="ap-go sm ghost" href="#join">30초 간편가입</a>'}</div></div></div>`}
+          ${threadHTML()}</div></div>
+      <form class="ap-comp" id="apF">${chipsHTML()}<div class="ap-box"><label for="apQ" class="sr">${esc(tName())}에게 말하기</label><textarea id="apQ" rows="1" maxlength="800" placeholder="${me ? '무엇이든 말해 보세요' : '무엇이든 물어보세요'}"></textarea>
+        ${(window.SpeechRecognition || window.webkitSpeechRecognition) ? `<button type="button" class="ap-mic" data-ap="mic" aria-label="말로 묻기">${ico('mic', 20)}</button>` : ''}<button type="submit" class="ap-send" aria-label="보내기">${ico('up', 20)}</button></div>
+        <small class="ap-note">${me ? '과제를 대신 써 주지 않고 함께 풀어요 · 대화 내용은 저장하지 않아요' : '개인정보는 적지 마세요'}</small></form></div>`; }
+
+  /* ── 선생님 설정 시트 ── */
+  function tsheet() { const P = persona(); closeSheet(); const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
+    w.innerHTML = `<div class="ap-sh" role="dialog" aria-modal="true" aria-labelledby="apShT">${av(P, true)}<h2 id="apShT">${esc(tName())}</h2><p>${esc(P ? `${P.t} · ${P.d}` : '내 AI 학습 비서')}</p>
+      <nav>${LR.me ? `<button type="button" data-ap="pick">${ico('sparkle', 18)}선생님 바꾸기 · 이름 바꾸기</button>` : ''}<button type="button" data-ap="install">${ico('install', 18)}${standalone() ? '앱으로 실행 중' : '홈 화면에 앱으로 설치'}</button><button type="button" data-ap="classic">${ico('grid', 18)}기존 화면으로 보기</button><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
+    document.body.appendChild(w); const f = w.querySelector('nav button'); f && f.focus(); }
+  function closeSheet() { const w = document.getElementById('apSheet'); if (w) w.remove(); }
+
+  /* ── 설치(Android: 설치 창 · iOS: 공유 → 홈 화면에 추가) ── */
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); AP.inst = e; });
+  addEventListener('appinstalled', () => { ls.set('instx', '1'); toast('앱을 설치했습니다. 홈 화면에서 바로 여세요.', 'ok'); });
+  async function install() { closeSheet();
+    if (standalone()) return toast('이미 앱으로 실행 중입니다.', 'ok');
+    if (AP.inst) { AP.inst.prompt(); try { const r = await AP.inst.userChoice; if (r.outcome === 'accepted') ls.set('instx', '1'); } catch (e) { } AP.inst = null; return; }
+    const d = document.createElement('dialog'); d.className = 'ap-dlg'; d.setAttribute('aria-labelledby', 'apDlgT');
+    d.innerHTML = IOS ? `<h2 id="apDlgT">iPhone · iPad에 설치</h2><ol><li>Safari 아래(또는 위)의 <b>공유</b> 버튼을 누릅니다.</li><li><b>「홈 화면에 추가」</b>를 고릅니다.</li><li>오른쪽 위 <b>추가</b>를 누르면 홈 화면에 ${esc(SITE().org.name)} 앱이 생깁니다.</li></ol><p class="mini">Safari에서만 설치할 수 있어요. 카카오톡 · 다른 앱 안에서 열었다면 「Safari로 열기」를 먼저 눌러 주세요.</p><button type="button" class="ap-go" data-ap="dlg-x">확인</button>`
+      : `<h2 id="apDlgT">안드로이드에 설치</h2><ol><li>Chrome 오른쪽 위 <b>⋮</b> 메뉴를 누릅니다.</li><li><b>「앱 설치」</b> 또는 <b>「홈 화면에 추가」</b>를 고릅니다.</li></ol><p class="mini">삼성 인터넷은 아래 메뉴 → 「현재 페이지 추가」 → 「홈 화면」입니다.</p><button type="button" class="ap-go" data-ap="dlg-x">확인</button>`;
+    document.body.appendChild(d); try { d.showModal(); } catch (e) { d.setAttribute('open', ''); } d.addEventListener('close', () => d.remove()); }
+
+  /* ── 음성으로 묻기(지원하는 브라우저만: Android Chrome · iOS Safari 14.5+) ── */
+  function mic(btn) { const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return;
+    if (AP.rec) { try { AP.rec.stop(); } catch (e) { } return; }
+    const r = new SR(); r.lang = 'ko-KR'; r.interimResults = true; r.maxAlternatives = 1; AP.rec = r; btn.classList.add('on'); btn.setAttribute('aria-label', '듣는 중 — 누르면 멈춤');
+    const q = document.getElementById('apQ'); let fin = '';
+    r.onresult = e => { let t = ''; for (const x of e.results) { t += x[0].transcript; if (x.isFinal) fin = t; } if (q) q.value = t; };
+    r.onerror = () => toast('음성을 알아듣지 못했습니다. 마이크 권한을 확인해 주세요.');
+    r.onend = () => { AP.rec = null; btn.classList.remove('on'); btn.setAttribute('aria-label', '말로 묻기'); if (fin.trim()) { q.value = ''; ltAsk(fin.trim()); } };
+    try { r.start(); } catch (e) { AP.rec = null; btn.classList.remove('on'); } }
+
+  /* ── 그리기 ── */
+  function sync() { const th = document.querySelector('.ap-home .ap-th'); if (!th) return; th.querySelectorAll(':scope > .lt-m:not(.ap-hi)').forEach(x => x.remove()); th.insertAdjacentHTML('beforeend', threadHTML()); const sc = document.getElementById('apScroll'); if (sc && (LT.busy || (LT.msgs || []).some(m => m.me))) sc.scrollTop = sc.scrollHeight; }
+  function apply() {
+    const on = appOn(); document.body.classList.toggle('lapp', on); document.body.classList.remove('ap-homeon', 'ap-pickon');
+    try { if (LR.tid && (on || LR.me)) ls.set('tid', LR.tid); } catch (e) { }
+    const lm = document.getElementById('lm'); const app = document.getElementById('lapp'); if (!lm || !app) return;
+    if (!on) { if (LR.me && route().a === 'home' && ls.get('classic') === '1' && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
+    const a = route().a; const needPick = LR.me && (!persona() || AP.pick) && a === 'home';
+    if (needPick) { lm.innerHTML = pickHTML(); document.body.classList.add('ap-pickon'); }
+    else if (a === 'home') { if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } lm.innerHTML = homeHTML(); document.body.classList.add('ap-homeon'); const sc = document.getElementById('apScroll'); if (sc && (LT.msgs || []).some(m => !m.sys)) sc.scrollTop = sc.scrollHeight; }
+    else if (!app.querySelector('.ap-bar')) app.insertAdjacentHTML('afterbegin', barHTML());
+    if (!app.querySelector('.ap-nav') && !needPick) app.insertAdjacentHTML('beforeend', navHTML());
+  }
+  { const base = lrender; lrender = (...x) => { base(...x); try { apply(); if (document.body.classList.contains('ap-homeon')) ltRender(); } catch (e) { console.error('lapp', e); } }; }
+  { const base = ltRender; ltRender = (...x) => { const r = base(...x); try { sync(); } catch (e) { } return r; }; }
+
+  /* ── 이벤트 ── */
+  document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-ap]'); if (!el) return; const k = el.dataset.ap; e.preventDefault();
+    if (k === 'back') { if (history.length > 1) history.back(); else location.hash = '#home'; return; }
+    if (k === 'tsheet') return tsheet();
+    if (k === 'sheet-x') return closeSheet();
+    if (k === 'pick') { closeSheet(); AP.pick = true; AP.sel = null; AP.nm = ''; if (route().a !== 'home') location.hash = '#home'; else lrender(); return; }
+    if (k === 'pick-x') { AP.pick = false; AP.sel = null; AP.nm = ''; lrender(); return; }
+    if (k === 'pick-skip') { tutorRec().persona = { k: 'warm', n: (TCFG().orgName || TCFG().name || '').replace(/^AI 튜터$/, '') || PERS[0].n, at: new Date().toISOString() }; LR.api.save(); lrender(); return; }
+    if (k === 'install') return install();
+    if (k === 'inst-x') { ls.set('instx', '1'); const b = el.closest('.ap-inst'); b && b.remove(); return; }
+    if (k === 'dlg-x') { const d = el.closest('dialog'); d && d.close(); return; }
+    if (k === 'classic') { closeSheet(); ls.set('classic', '1'); toast('기존 화면으로 바꿨습니다. 홈 위쪽에서 언제든 앱 화면으로 돌아올 수 있어요.', 'ok'); lrender(); return; }
+    if (k === 'modern') { ls.set('classic', null); lrender(); return; }
+    if (k === 'mic') return mic(el);
+  });
+  document.addEventListener('change', e => { const f = e.target.form; if (!f || f.id !== 'apPickF' || e.target.name !== 'pk') return; const nm = f.querySelector('[name=nm]'); const prev = PERS.find(x => x.k === AP.sel) || null;
+    AP.sel = e.target.value; const B = PERS.find(x => x.k === AP.sel); if (!nm.value.trim() || (prev && nm.value === prev.n) || PERS.some(x => x.n === nm.value)) AP.nm = B.n; else AP.nm = nm.value; lrender(); setTimeout(() => { const r = document.querySelector(`#apPickF input[value="${AP.sel}"]`); r && r.focus(); }, 0); });
+  document.addEventListener('input', e => { if (e.target.name === 'nm' && e.target.form && e.target.form.id === 'apPickF') { AP.nm = e.target.value; const b = e.target.form.querySelector('.ap-go'); if (b) b.textContent = `${jw(e.target.value.trim() || '선생님')} 시작하기`; }
+    if (e.target.id === 'apQ') { e.target.style.height = 'auto'; e.target.style.height = Math.min(132, e.target.scrollHeight) + 'px'; } });
+  document.addEventListener('submit', e => { const f = e.target;
+    if (f.id === 'apPickF') { e.preventDefault(); const k = (f.querySelector('[name=pk]:checked') || {}).value || 'warm'; const B = PERS.find(x => x.k === k) || PERS[0]; const n = (f.querySelector('[name=nm]').value || '').replace(/[<>]/g, '').trim().slice(0, 12) || B.n;
+      tutorRec().persona = { k, n, at: new Date().toISOString() }; LR.api.save(); AP.pick = false; AP.sel = null; AP.nm = ''; LT.msgs = []; lrender(); toast(`${jw(n)} 함께 시작합니다.`, 'ok'); return; }
+    if (f.id === 'apF') { e.preventDefault(); const ta = f.querySelector('textarea'); const v = ta.value; ta.value = ''; ta.style.height = ''; ltAsk(v); } });
+  document.addEventListener('keydown', e => { if (e.target.id === 'apQ' && e.key === 'Enter' && !e.shiftKey && !e.isComposing && !('ontouchstart' in window)) { e.preventDefault(); e.target.form.requestSubmit(); }
+    if (e.key === 'Escape' && document.getElementById('apSheet')) closeSheet(); });
+  document.addEventListener('click', e => { if (e.target.id === 'apSheet') closeSheet(); });
+
+  /* ── 오프라인 · 설치용 서비스 워커(https · localhost에서만) ── */
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) && !Q.get('nosw')) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
+})();

@@ -1,0 +1,17 @@
+{
+  "appId": "com.didisam.learner",
+  "appName": "AI 선생님",
+  "webDir": "www",
+  "server": {
+    "url": "https://santanick.github.io/kit-axon/didisam/learner.html?app=1",
+    "cleartext": false,
+    "allowNavigation": ["santanick.github.io", "*.didisam.com", "www.youtube-nocookie.com", "api.anthropic.com"]
+  },
+  "ios": { "contentInset": "never", "limitsNavigationsToAppBoundDomains": false },
+  "android": { "allowMixedContent": false },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 800, "backgroundColor": "#F7F8FC" },
+    "StatusBar": { "style": "LIGHT", "overlaysWebView": true },
+    "PushNotifications": { "presentationOptions": ["badge", "sound", "alert"] }
+  }
+}
