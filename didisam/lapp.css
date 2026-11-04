@@ -147,3 +147,13 @@ body.lapp .ap-my+section.myh+section.sec,body.lapp .ap-my~section.sec.mypage:fir
 .ap-aimsg{min-height:20px;margin:4px 0;font-size:13px;color:var(--ap-mute)}.ap-aimsg.bad{color:#C2410C}
 .ap-dr{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}.ap-dr .ap-go.sm{width:auto;padding:0 20px;min-height:44px}
 .ap-dr .ap-lk{display:inline-block;margin:0}
+
+/* v27.3 알림 · 메시지 숫자 · 보호자 홈 */
+.ap-ib,.ap-nav a{position:relative}.ap-bd{position:absolute;top:6px;right:5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#FF1A2D;color:#fff;font:700 10.5px/17px var(--sg);font-style:normal;text-align:center;box-shadow:0 0 0 2px #fff}
+.ap-nav a .ap-bd{top:2px;right:calc(50% - 22px)}
+.ap-par .ap-pscroll{overflow-y:auto;padding-bottom:calc(88px + env(safe-area-inset-bottom))}.ap-par .ap-sub{margin:6px 0 0;color:var(--ap-mute);font:500 14px/1.5 var(--sg)}
+.ap-pg4{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 16px 8px}
+.ap-pt{position:relative;display:flex;flex-direction:column;gap:4px;padding:14px;border:1px solid #EAEBEB;border-radius:16px;background:#fff;color:var(--ap-ink);text-decoration:none;min-height:96px}.ap-pt svg{color:var(--pri)}.ap-pt b{font:700 15px/1.3 var(--sg)}.ap-pt small{font:500 12.5px/1.35 var(--sg);color:var(--ap-mute)}.ap-pt .ap-bd{top:10px;right:10px}
+.ap-pfam section{padding-top:4px}.ap-pfam .in{padding-left:16px;padding-right:16px}
+.ap-kids{padding:8px 16px 16px}.ap-kids h2{font:800 16px/1.3 var(--sg);margin:6px 0 10px}.ap-kids h2 small{color:var(--ap-mute);font-weight:600;margin-left:4px}
+.ap-kid{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #EAEBEB;border-radius:16px;background:#fff;color:var(--ap-ink);text-decoration:none;margin-bottom:8px;min-height:64px}.ap-kid span{flex:1;display:flex;flex-direction:column}.ap-kid b{font:700 15px/1.3 var(--sg)}.ap-kid small{font:500 12.5px/1.4 var(--sg);color:var(--ap-mute)}.ap-kid.none{border-style:dashed}.ap-kid.none svg:first-child{color:var(--pri)}

@@ -38,15 +38,32 @@
   const hiTime = () => { const h = new Date().getHours(); return h < 5 ? '늦은 밤까지 수고 많아요.' : h < 11 ? '좋은 아침이에요.' : h < 14 ? '점심은 드셨어요?' : h < 18 ? '좋은 오후예요.' : '오늘 하루 수고 많았어요.'; };
   const who = () => (typeof lCall === 'function' ? lCall() : ((LR.me && (LR.me.nick || LR.me.sid)) || '') + '님');
   const hasComm = () => (SITE().pages || []).some(p => p.id === 'comm') || typeof lcCommHTML === 'function';
-  const browse = () => ((SITE().pages || []).some(p => p.id === 'shop') || typeof viewShop === 'function') ? '#shop' : (SITE().pages || []).some(p => p.id === 'courses') ? '#courses' : '#home';
+  const browse = () => document.querySelector('header.lh a[href="#shop"]') ? '#shop' : ((SITE().pages || []).some(p => p.id === 'shop') || typeof viewShop === 'function') ? '#shop' : (SITE().pages || []).some(p => p.id === 'courses') ? '#courses' : '#home';
   const SEC = { home: 'home', my: 'learn', c: 'learn', t: 'learn', bk: 'learn', dg: 'learn', cert: 'learn', badge: 'learn', mybooks: 'learn', shop: 'find', class: 'find', courses: 'find', tutorials: 'find', textbooks: 'find', tb: 'find', books: 'find', pay: 'find', payok: 'find', comm: 'comm', post: 'comm', write: 'comm', notice: 'comm', acct: 'me', connect: 'me', inbox: 'me', mypay: 'me', payd: 'me', msg: 'me', family: 'me', login: 'me', join: 'me' };
-  function navHTML() { const s = SEC[route().a] || '';
+  /* v27.3 보호자 계정 — 학습자용 선생님 고르기 · 미션 대신 자녀 관리 중심(레거시 앱: 홈에서 연결된 자녀 클래스 · 메시지 · 청구서) */
+  const isPar = () => !!(LR.me && LR.me.kind === 'parent');
+  const SECP = { home: 'home', family: 'kids', msg: 'msg', mypay: 'pay', payd: 'pay', bill: 'pay', pay: 'pay', acct: 'me', inbox: 'me', notice: 'home', comm: 'home', post: 'home' };
+  const cnt = () => { let m = 0, n = 0; try { m = typeof lcInbox === 'function' ? lcInbox().filter(x => !x.read).length : 0; } catch (e) { } try { n = typeof laItems === 'function' ? laItems().L.filter(x => !x.read).length : 0; } catch (e) { } return { m, n }; };
+  const bdg = k => k ? `<i class="ap-bd">${k > 99 ? '99+' : k}</i>` : '';
+  const topIcons = () => { const c = cnt(); return `<a class="ap-ib" href="#msg" aria-label="메시지${c.m ? ` · 안 읽은 메시지 ${c.m}개` : ''}">${ico('chat', 21)}${bdg(c.m)}</a><a class="ap-ib" href="#inbox" aria-label="알림${c.n ? ` · 새 알림 ${c.n}개` : ''}">${ico('bell', 21)}${bdg(c.n)}</a>`; };
+  function kidsHTML() { let r = {}, pa = null; try { r = laRoom() || {}; pa = laPacct(); } catch (e) { }
+    const PR = (r.parents || []).filter(p => pa && p.acct === pa.id); const K = PR.filter(p => p.status === '연결 완료'); const W = PR.filter(p => p.status === '연결 요청').length;
+    const nm = id => { const m = (r.members || []).find(x => x.id === id); return m ? (m.nick || m.name || '자녀') : '자녀'; };
+    return `<section class="ap-kids"><h2>연결된 자녀 <small>${K.length}명</small></h2>${K.length ? K.map(k => `<a class="ap-kid" href="#family">${av(null)}<span><b>${esc(nm(k.child))}</b><small>${esc(k.rel || '자녀')} · 출결 · 수강 현황 보기</small></span>${ico('arrow', 16)}</a>`).join('') : `<a class="ap-kid none" href="#family">${ico('link', 20)}<span><b>자녀와 연결하기</b><small>${W ? `확인할 연결 요청 ${W}건` : '자녀의 가족 연결 코드로 요청하세요'}</small></span>${ico('arrow', 16)}</a>`}</section>`; }
+  function parHomeHTML() { const c = cnt(); const org = SITE().org.name; const tile = (h, i, t, d, k) => `<a class="ap-pt" href="${h}">${ico(i, 22)}<b>${esc(t)}</b><small>${esc(d)}</small>${bdg(k)}</a>`;
+    return `<div class="ap-home ap-par"><header class="ap-top"><button type="button" class="ap-me" data-ap="tsheet" aria-label="앱 설정">${av(null)}<span><b>${esc(org)}</b><small>보호자 계정 · ${esc(LR.me.nick || '')}</small></span></button>${topIcons()}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
+      <div class="ap-scroll ap-pscroll"><section class="ap-hero">${av(null, true)}<h1>${esc(who())},<br>자녀의 학습을 함께 챙겨요</h1><p class="ap-sub">출결 · 수업 소식 · 청구서를 한곳에서 확인하세요.</p></section>
+      <nav class="ap-pg4" aria-label="보호자 바로가기">${tile('#family', 'user', '자녀 관리', '출결 · 수강 현황', 0)}${tile('#msg', 'chat', '메시지', c.m ? `안 읽은 메시지 ${c.m}개` : '기관 · 강사 소식', c.m)}${tile('#mypay/bill', 'layers', '청구서 · 결제', '결제 대기 · 내역', 0)}${tile('#notice', 'bell', '공지사항', '전체 · 클래스 공지', 0)}</nav>
+      ${kidsHTML()}</div></div>`; }
+  function navHTML() { const s = (isPar() ? SECP : SEC)[route().a] || '';
+    if (isPar()) { const c = cnt(); const it = [['home', '#home', 'home', '홈'], ['kids', '#family', 'user', '자녀'], ['msg', '#msg', 'chat', '메시지'], ['pay', '#mypay/bill', 'layers', '결제'], ['me', '#acct', 'grid', '나']];
+      return `<nav class="ap-nav" aria-label="앱 메뉴">${it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span>${k === 'msg' ? bdg(c.m) : ''}</a>`).join('')}</nav>`; }
     const it = [['home', '#home', 'sparkle', tName()], ['learn', LR.me ? '#my' : '#login/my', 'book2', '내 강의'], ['find', browse(), 'compass', '둘러보기'], ...(hasComm() ? [['comm', '#comm', 'msg', '커뮤니티']] : [['comm', '#notice', 'bell', '공지']]), ['me', LR.me ? '#acct' : '#login', 'user', LR.me ? '나' : '로그인']];
     return `<nav class="ap-nav" aria-label="앱 메뉴">${it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span></a>`).join('')}</nav>`; }
   const TITLE = { my: '내 강의', c: '강의', t: '튜토리얼', bk: '디지털북', dg: '진단', cert: '수료증', badge: '배지', mybooks: '내 교재/교구', shop: '둘러보기', class: '클래스', courses: '코스', tutorials: '튜토리얼', textbooks: '교재/교구', tb: '교재/교구', books: '디지털북', pay: '결제하기', payok: '결제 완료', comm: '커뮤니티', post: '게시글', write: '글쓰기', notice: '공지사항', acct: '나', connect: '연결 · 알림', inbox: '알림', mypay: '결제 · 환불 내역', payd: '결제 상세', msg: '메시지', family: '가족', login: '로그인', join: '간편가입', find: '계정 찾기', privacy: '개인정보 처리방침' };
   function barHTML() { const a = route().a; const P = persona(); const pg = (SITE().pages || []).find(p => p.id === a);
     const t = TITLE[a] || (pg && pg.name) || ((document.querySelector('#lm h1, #lm h2') || {}).textContent || '').trim().slice(0, 18) || SITE().org.name;
-    return `<header class="ap-bar"><button type="button" class="ap-ib" data-ap="back" aria-label="뒤로">${ico('back', 22)}</button><b class="ap-tt">${esc(t)}</b><button type="button" class="ap-call" data-tact="open" aria-label="${esc(tName())}에게 물어보기">${av(P)}<span>물어보기</span></button></header>`; }
+    return `<header class="ap-bar"><button type="button" class="ap-ib" data-ap="back" aria-label="뒤로">${ico('back', 22)}</button><b class="ap-tt">${esc(t)}</b>${isPar() ? '<span class="ap-ib" aria-hidden="true"></span>' : `<button type="button" class="ap-call" data-tact="open" aria-label="${esc(tName())}에게 물어보기">${av(P)}<span>물어보기</span></button>`}</header>`; }
 
   /* ── 선생님 고르기(처음 한 번 · 언제든 바꾸기) ── */
   function pickHTML() { const cur = persona(); const sel = AP.sel || (cur && cur.k) || 'warm'; const B = PERS.find(x => x.k === sel); const nm = AP.nm || (cur && cur.k === sel ? cur.n : B.n);
@@ -74,7 +91,7 @@
     const instBox = !standalone() && ls.get('instx') !== '1' ? `<div class="ap-inst" role="note">${ico('install', 18)}<span><b>홈 화면에 앱으로 설치</b><small>${IOS ? '공유 버튼 → 「홈 화면에 추가」' : '한 번 누르면 앱처럼 바로 열려요'}</small></span><button type="button" class="ap-ib2" data-ap="install">설치</button><button type="button" class="ap-ix" data-ap="inst-x" aria-label="설치 안내 닫기">${ico('x', 16)}</button></div>` : '';
     return `<div class="ap-home ${me ? '' : 'guest'}" style="--pc:${P ? P.c : 'var(--pri)'}">
       <header class="ap-top"><button type="button" class="ap-me" data-ap="tsheet" aria-label="${esc(tName())} — 선생님 설정">${av(P)}<span><b>${esc(tName())}</b><small>${aiPill()}${me ? `${esc(P ? P.t : '내 AI 학습 비서')}` : '로그인 없이 물어볼 수 있어요'}</small></span></button>
-        ${me ? `<a class="ap-ib" href="#inbox" aria-label="알림">${ico('bell', 21)}</a>` : ''}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
+        ${me ? topIcons() : ''}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
       <div class="ap-scroll" id="apScroll">
         <section class="ap-hero">${av(P, true)}<h1>${me ? `${esc(who())},<br>오늘은 무엇을 함께 할까요?` : `나만의 AI 선생님과<br>공부를 시작해 보세요`}</h1>${statHTML()}</section>
         ${instBox}${cardsHTML()}${me ? connRow() : ''}
@@ -147,8 +164,8 @@
     f.closest('dialog').close(); lrender(); toast(`Claude 연결 완료 · ${aiSt().t}. 이제 질문해 보세요.`, 'ok'); }
 
   function tsheet() { const P = persona(); closeSheet(); const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
-    w.innerHTML = `<div class="ap-sh" role="dialog" aria-modal="true" aria-labelledby="apShT">${av(P, true)}<h2 id="apShT">${esc(tName())}</h2><p>${esc(P ? `${P.t} · ${P.d}` : '내 AI 학습 비서')}</p>
-      <nav>${LR.me ? `<button type="button" data-ap="pick">${ico('sparkle', 18)}선생님 바꾸기 · 이름 바꾸기</button>` : ''}${LR.me ? `<a href="#connect" data-ap="sheet-x">${ico('cal', 18)}캘린더 · 알림 연결</a>` : ''}${LR.mode !== 'live' ? `<button type="button" data-ap="ai">${ico('sparkle', 18)}Claude 연결 <small class="ap-shs">${esc(aiSt().t)}</small></button>` : ''}<button type="button" data-ap="install">${ico('install', 18)}${standalone() ? '앱으로 실행 중' : '홈 화면에 앱으로 설치'}</button><button type="button" data-ap="classic">${ico('grid', 18)}기존 화면으로 보기</button><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
+    w.innerHTML = `<div class="ap-sh" role="dialog" aria-modal="true" aria-labelledby="apShT">${av(P, true)}<h2 id="apShT">${esc(isPar() ? SITE().org.name : tName())}</h2><p>${esc(isPar() ? '보호자 계정' : P ? `${P.t} · ${P.d}` : '내 AI 학습 비서')}</p>
+      <nav>${LR.me && !isPar() ? `<button type="button" data-ap="pick">${ico('sparkle', 18)}선생님 바꾸기 · 이름 바꾸기</button>` : ''}${LR.me && !isPar() ? `<a href="#connect" data-ap="sheet-x">${ico('cal', 18)}캘린더 · 알림 연결</a>` : ''}${LR.mode !== 'live' && !isPar() ? `<button type="button" data-ap="ai">${ico('sparkle', 18)}Claude 연결 <small class="ap-shs">${esc(aiSt().t)}</small></button>` : ''}<button type="button" data-ap="install">${ico('install', 18)}${standalone() ? '앱으로 실행 중' : '홈 화면에 앱으로 설치'}</button><button type="button" data-ap="classic">${ico('grid', 18)}기존 화면으로 보기</button><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
     document.body.appendChild(w); const f = w.querySelector('nav button'); f && f.focus(); }
   function closeSheet() { const w = document.getElementById('apSheet'); if (w) w.remove(); }
 
@@ -180,13 +197,14 @@
     try { if (LR.tid && (on || LR.me)) ls.set('tid', LR.tid); } catch (e) { }
     const lm = document.getElementById('lm'); const app = document.getElementById('lapp'); if (!lm || !app) return;
     if (!on) { if (LR.me && route().a === 'home' && ls.get('classic') === '1' && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
-    const a = route().a; const needPick = LR.me && (!persona() || AP.pick) && a === 'home';
+    const a = route().a; const needPick = LR.me && !isPar() && (!persona() || AP.pick) && a === 'home';
     if (needPick) { lm.innerHTML = pickHTML(); document.body.classList.add('ap-pickon'); }
     else if (a === 'connect' && LR.me) { lm.innerHTML = connectHTML(); }
+    else if (a === 'home' && isPar()) { lm.innerHTML = parHomeHTML(); }
     else if (a === 'home') { if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } lm.innerHTML = homeHTML(); document.body.classList.add('ap-homeon'); const sc = document.getElementById('apScroll'); if (sc && (LT.msgs || []).some(m => !m.sys)) sc.scrollTop = sc.scrollHeight; }
     if (a === 'my' && LR.me && !lm.querySelector('.ap-my')) { const h = lm.querySelector('section.myh'); if (h) h.hidden = true; lm.insertAdjacentHTML('afterbegin', myTopHTML()); }
     if (a !== 'home' && !needPick && !app.querySelector('.ap-bar')) app.insertAdjacentHTML('afterbegin', barHTML());
-    if (LR.me && !needPick) dailyNudge();
+    if (LR.me && !needPick && !isPar()) dailyNudge();
     if (!app.querySelector('.ap-nav') && !needPick) app.insertAdjacentHTML('beforeend', navHTML());
   }
   { const base = lrender; lrender = (...x) => { base(...x); try { apply(); if (document.body.classList.contains('ap-homeon')) ltRender(); } catch (e) { console.error('lapp', e); } }; }
