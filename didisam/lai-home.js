@@ -50,6 +50,7 @@
     return `<div class="lai-sec"><div class="lai-sh"><h2>내 자동화 <small>${L.filter(a => a.on).length ? `${L.filter(a => a.on).length}개 켜짐` : '학습 리마인더'}</small></h2></div><ul class="lai-l">${rows.join('')}${tp.join('')}</ul><p class="lai-sub">데모에서는 설정만 저장합니다. 실제 알림은 운영 서버가 보냅니다.</p></div>`; }
   const moreHTML = () => `<section class="lai-more" aria-label="내 학습 비서 도구"><div class="in lai-w">${todoHTML()}<div class="lai-two">${connHTML()}${autoHTML()}</div></div></section>`;
 
+  window.laiMore = () => moreHTML(); /* v27.1 학습자 앱 '연결 · 알림' 화면(#connect)이 같은 카드를 쓴다 */
   function mount() { const lm = document.getElementById('lm'); if (!lm || lm.querySelector('.lai')) return;
     /* v25.1 잔여 QA: 방문자에게는 기관 홈페이지 첫 화면(히어로)을 먼저 보여 주고 AI 학습 비서는 그 바로 아래에 둔다(로그인하면 비서가 맨 위). */
     let placed = false; if (!LR.me && LR.mode !== 'preview') { try { const host = lm.querySelector('.smhost[data-smk=home]'); const sr = host && host.shadowRoot; const smr = sr && sr.querySelector('.smr'); const kids = smr ? [...smr.children] : [];
@@ -57,16 +58,22 @@
     if (!placed) lm.insertAdjacentHTML('afterbegin', heroHTML()); document.body.classList.add('lai-on');
     if (LR.me) { const after = lm.querySelector('.lux-cont') || lm.querySelector('.lai'); after.insertAdjacentHTML('afterend', moreHTML()); } }
   function sync() { const box = document.querySelector('.lai-res'); if (!box) return; const h = threadHTML(); box.hidden = !h; const th = box.querySelector('.lai-th'); th.innerHTML = h; th.scrollTop = th.scrollHeight; }
-  function remount() { document.querySelectorAll('#lm .lai-more').forEach(x => x.remove()); const lm = document.getElementById('lm'); if (!lm || !LR.me) return; const after = lm.querySelector('.lux-cont') || lm.querySelector('.lai'); if (after) after.insertAdjacentHTML('afterend', moreHTML()); }
+  function remount() { document.querySelectorAll('#lm .lai-more').forEach(x => x.remove()); const lm = document.getElementById('lm'); if (!lm || !LR.me) return; const after = lm.querySelector('.lux-cont') || lm.querySelector('.lai') || lm.querySelector('.ap-conn-a'); if (after) after.insertAdjacentHTML('afterend', moreHTML()); }
 
   { const base = lrender; lrender = (...a) => { document.body.classList.remove('lai-on'); base(...a); try { if (on()) { mount(); if (LT.nudge) { LT.nudge = ''; ltRender(); } } } catch (e) { console.error('lai', e); } }; }
   { const base = ltRender; ltRender = (...a) => { const r = base(...a); try { sync(); } catch (e) { } return r; }; }
 
   /* ── Google Calendar 연결(데모) · 학습 일정 파일(.ics) ── */
+  /* v27.1 캘린더에 리마인더 + 수강 마감일(3일 전 알림) + AI 선생님과 짠 이번 주 계획까지 넣는다(iPhone · 안드로이드 · Google · Outlook 캘린더 공통 .ics) */
   function ics() { const L = autos().filter(a => a.on); const pad = n => String(n).padStart(2, '0'); const d = new Date(); const day = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
-    const ev = L.filter(a => a.k !== 'deadline').map(a => { const tm = String(a.t || (a.k === 'weekly' ? '20:00' : '21:00')).replace(':', '') + '00'; const T = TPL.find(x => x.k === a.k);
-      return ['BEGIN:VEVENT', `UID:${a.id}@didisam`, `DTSTAMP:${day}T000000`, `DTSTART:${day}T${tm}`, 'DURATION:PT10M', a.k === 'weekly' ? 'RRULE:FREQ=WEEKLY;BYDAY=SU' : 'RRULE:FREQ=DAILY', `SUMMARY:${T.n} · ${SITE().org.name}`, 'BEGIN:VALARM', 'TRIGGER:-PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:학습 리마인더', 'END:VALARM', 'END:VEVENT'].join('\r\n'); });
-    return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//DIDISAM//learner//KO', ...ev, 'END:VCALENDAR'].join('\r\n'); }
+    const tx = v => String(v || '').replace(/\\/g, '\\\\').replace(/[,;]/g, m => '\\' + m).replace(/\r?\n/g, '\\n').slice(0, 150); const org = SITE().org.name; const ev = [];
+    L.filter(a => a.k !== 'deadline').forEach(a => { const tm = String(a.t || (a.k === 'weekly' ? '20:00' : '21:00')).replace(':', '') + '00'; const T = TPL.find(x => x.k === a.k);
+      ev.push(['BEGIN:VEVENT', `UID:${a.id}@didisam`, `DTSTAMP:${day}T000000`, `DTSTART:${day}T${tm}`, 'DURATION:PT10M', a.k === 'weekly' ? 'RRULE:FREQ=WEEKLY;BYDAY=SU' : 'RRULE:FREQ=DAILY', `SUMMARY:${tx(T.n + ' · ' + org)}`, 'BEGIN:VALARM', 'TRIGGER:-PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:학습 리마인더', 'END:VALARM', 'END:VEVENT'].join('\r\n')); });
+    try { const st = typeof myStats === 'function' ? myStats() : null; (st ? st.courses : []).filter(x => !x.done && /^\d{4}-\d{2}-\d{2}$/.test(String(x.c.end || ''))).forEach(x => { const e = x.c.end.replace(/-/g, '');
+      ev.push(['BEGIN:VEVENT', `UID:end-${x.c.id}@didisam`, `DTSTAMP:${day}T000000`, `DTSTART;VALUE=DATE:${e}`, `SUMMARY:${tx('수강 마감 · ' + x.c.name)}`, `DESCRIPTION:${tx(org + ' · 남은 진도 ' + (100 - x.p) + '%')}`, 'BEGIN:VALARM', 'TRIGGER:-P3D', 'ACTION:DISPLAY', 'DESCRIPTION:수강 마감 3일 전', 'END:VALARM', 'END:VEVENT'].join('\r\n')); }); } catch (e) { }
+    try { const P = ((LR.lp.tutor || {}).plan || []); const y = d.getFullYear(); P.forEach((x, i) => { const m = String(x.d || '').match(/(\d{1,2})\/(\d{1,2})/); if (!m) return; const ds = `${y}${pad(+m[1])}${pad(+m[2])}`; const st = `T${pad(19 + (i % 2))}0000`;
+      ev.push(['BEGIN:VEVENT', `UID:plan-${ds}-${i}@didisam`, `DTSTAMP:${day}T000000`, `DTSTART:${ds}${st}`, `DURATION:PT${Math.max(10, +x.m || 20)}M`, `SUMMARY:${tx(x.t)}`, `DESCRIPTION:${tx('AI 선생님과 짠 학습 계획 · ' + org)}`, 'BEGIN:VALARM', 'TRIGGER:-PT10M', 'ACTION:DISPLAY', 'DESCRIPTION:학습 계획', 'END:VALARM', 'END:VEVENT'].join('\r\n')); }); } catch (e) { }
+    return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//DIDISAM//learner//KO', `X-WR-CALNAME:${tx(org + ' 학습')}`, ...ev, 'END:VCALENDAR'].join('\r\n'); }
   function dlg(title, body, btns) { let d = document.getElementById('laiDlg'); if (d) d.remove(); d = document.createElement('dialog'); d.id = 'laiDlg'; d.className = 'lai-dlg'; d.setAttribute('aria-labelledby', 'laiDlgT');
     d.innerHTML = `<h2 id="laiDlgT">${esc(title)}</h2>${body}<div class="lai-db">${btns}</div>`; document.body.appendChild(d); try { d.showModal(); } catch (e) { d.setAttribute('open', ''); } d.addEventListener('close', () => d.remove()); return d; }
   function gcalDlg() { const g = gcalOn();
