@@ -110,7 +110,7 @@ async function laLogin(f) { laFresh(); const U = laUniv(); const id = String(f.e
   const pwEl = f.elements.pw; const acc = laFind(id);
   if (pwEl) { if (!acc || !acc.pw) throw new Error(acc && !acc.pw ? '비밀번호를 설정하지 않은 계정입니다. 이메일 인증번호로 로그인하세요.' : bad); if (acc.pw !== laPw(acc.pwKey, pwEl.value)) throw new Error(bad); return laAfterAuth(acc, back); }
   const s = LA.lv || {}; if (!s.code) throw new Error('먼저 인증번호를 받으세요.'); if (s.email !== id) throw new Error('인증번호를 받은 이메일과 다릅니다.'); if (String(f.elements.vcode && f.elements.vcode.value || '').trim() !== s.code) throw new Error('인증번호가 올바르지 않습니다.');
-  if (!acc) throw new Error('이 이메일로 가입한 계정이 없습니다. 회원가입을 진행하세요.'); LA.lv = null; return laAfterAuth(acc, back); }
+  if (!acc) throw new Error('이 이메일로 가입한 계정이 없습니다. 위의 [30초 간편가입]으로 바로 가입할 수 있어요.'); LA.lv = null; return laAfterAuth(acc, back); }
 function laAfterAuth(acc, back) {
   if (acc.status === 'guardian_pending') throw new Error('보호자 동의를 기다리고 있습니다. 보호자에게 보낸 동의 링크를 확인해 주세요.');
   if (acc.grade === '승인 대기') { LA.pend = acc.sid; location.hash = '#pending'; return; }

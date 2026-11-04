@@ -70,3 +70,4 @@ body.la26 section.la .la-cons,body.la26 section.la .la-age{border-radius:8px;bor
 .tb26h{font-size:20px;font-weight:800;margin:32px 0 12px;padding-bottom:12px;border-bottom:1px solid var(--g300)}
 .tb26a{display:flex;flex-direction:column;gap:14px}.tb26p{display:flex;gap:14px;align-items:flex-start}.tb26p b{font-size:15px}.tb26p p{margin:6px 0 0;color:var(--g700);font-size:14px;line-height:1.7}
 .tb26av{flex:none;width:56px;height:56px;border-radius:50%;background:var(--g200,#E9EBEC);display:grid;place-items:center;font-weight:800;color:var(--g700);font-size:18px}
+.l26new{margin:-6px 0 18px;padding:10px 12px;border-radius:8px;background:var(--g100,#F6F7F7);font-size:14px;color:var(--g800,#4C4D4D)}.l26new a{color:var(--pri);font-weight:700}

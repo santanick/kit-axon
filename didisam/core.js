@@ -240,10 +240,10 @@ function renderSignup() {
     <form class="su-r" id="suForm" autocomplete="off">
       <h2>어떤 기관인가요?</h2>
       <div class="tgrid">${cards}</div>
-      ${isAcad ? `<div class="seg2 full"><button type="button" class="${SU.type === 'k12' ? 'on' : ''}" data-act="su-type" data-v="k12">초중고 · 반 · 보호자 · 청구서</button><button type="button" class="${SU.type === 'adult' ? 'on' : ''}" data-act="su-type" data-v="adult">성인 · 강좌 판매 · 매출</button></div>` : ''}
+      ${isAcad ? `<p class="su-q">어떤 학원인가요? <small>고르면 메뉴와 용어가 맞춰집니다</small></p><div class="seg2 full"><button type="button" class="${SU.type === 'k12' ? 'on' : ''}" data-act="su-type" data-v="k12">초중고 · 반 · 보호자 · 청구서</button><button type="button" class="${SU.type === 'adult' ? 'on' : ''}" data-act="su-type" data-v="adult">성인 · 강좌 판매 · 매출</button></div>` : ''}
       <label class="fl">기관명<input name="name" maxlength="30" required placeholder="예: 산타 아카데미" value="${esc(SU.name)}"></label>
       ${ready ? `<div class="pv"><b>${esc(TYPES[SU.type].name)} 맞춤 구성</b><p>${['learn', 'people', 'talk', 'ops'].map(w => `<span>${esc(w === 'people' ? TERMS[SU.type].learner : lab(WS[w]))} <small>${PRESET[SU.type].on.filter(i => MENU[i].ws === w).length}</small></span>`).join('')}</p><small>${esc(TERMS[SU.type].learner)} · ${esc(TERMS[SU.type].cls)} · ${esc(TERMS[SU.type].group)} 용어로 표시됩니다.</small></div>` : ''}
-      <button class="btn pri lg" type="submit" ${ready ? '' : 'disabled'}>시작하기</button>
+      <button class="btn pri lg" type="submit" ${ready ? '' : 'disabled'}>시작하기</button>${ready ? '' : `<p class="su-hint">${isAcad ? '학원 종류(초중고 · 성인)를 고르면' : '기관 유형을 고르면'} 시작할 수 있습니다.</p>`}<p class="su-who">강사 · 직원이신가요? 운영자에게 받은 초대 링크로 들어오세요. 수강생이신가요? 다니는 기관의 홈페이지에서 로그인하세요.</p>
     </form>
   </div>`;
   const f = $('#suForm');
