@@ -1,0 +1,74 @@
+'use strict';
+/* 묶음 N(MOOC · 비학위) 대조 테스트 — 사용: node test/lms-n.js http://127.0.0.1:8231 http://127.0.0.1:8232 [DB_URL]
+   응답마다 uuid · 시각 · 이메일 · 수료증 번호를 순번 토큰으로 바꿔 비교한다(lms-k.js lib). */
+const lib = require('./lms-k.js');
+
+async function scenario(base, db, tag) {
+  const O = await lib.org(base, db, 'n' + tag); const R = {}; const C = (m, p, o = {}) => lib.call(base, m, '/api/lms/n/' + p, o);
+  const ow = { cookie: O.ck.owner }, su = { cookie: O.ck.sub }, te = { cookie: O.ck.teacher };
+  const rec = async (k, pr, expect) => { R[k] = await pr; R[k].expect = expect; return R[k]; };
+  await rec('noauth', C('GET', 'search'), 401);
+  await rec('badTitle', C('POST', 'course/save', { ...te, body: { title: '' } }), 400);
+  const c1 = await rec('tSave', C('POST', 'course/save', { ...te, body: { title: '파이썬 기초', summary: '처음 배우는 파이썬', tags: ['파이썬', '코딩'], category: 'IT', level: 'basic', areas: ['프로그래밍'], options: { cert: true }, rule: { min_progress: 80, min_activity: 2, pass_score: 60, fail_line: 40 } } }), 200);
+  const cid = c1.j && c1.j.course_id;
+  await rec('tCertTpl', C('POST', 'course/save', { ...te, body: { course_id: cid, title: '파이썬 기초', cert_tpl: { title: 'x' } } }), 403);
+  await rec('ownerOnly', C('POST', 'course/save', { ...su, body: { title: '데이터 분석 심화', tags: ['데이터'], level: 'adv', areas: ['통계'], price: 50000, approval_mode: 'manual' } }), 200);
+  const c2 = R.ownerOnly.j.course_id;
+  await rec('teacherOther', C('POST', 'cohort/save', { ...te, body: { course_id: c2 } }), 403);
+  await rec('submit', C('POST', 'course/submit', { ...te, body: { course_id: cid } }), 200);
+  await rec('tLocked', C('POST', 'course/save', { ...te, body: { course_id: cid, title: '바꿈' } }), 409);
+  await rec('tDecide', C('POST', 'course/decide', { ...te, body: { course_id: cid, approve: true } }), 403);
+  await rec('rejectNoReason', C('POST', 'course/decide', { ...ow, body: { course_id: cid, approve: false } }), 400);
+  await rec('approve', C('POST', 'course/decide', { ...ow, body: { course_id: cid, approve: true } }), 200);
+  await rec('submit2', C('POST', 'course/submit', { ...su, body: { course_id: c2 } }), 200);
+  await rec('approve2', C('POST', 'course/decide', { ...ow, body: { course_id: c2, approve: true } }), 200);
+  await rec('cohort', C('POST', 'cohort/save', { ...te, body: { course_id: cid, starts_on: '2026-11-10', ends_on: '2026-12-20', capacity: 3 } }), 200);
+  await rec('cohortBad', C('POST', 'cohort/save', { ...te, body: { course_id: cid, starts_on: '2026-12-10', ends_on: '2026-11-20' } }), 400);
+  const h1 = R.cohort.j.cohorts[0].cohort_id;
+  const co2 = await rec('cohort2', C('POST', 'cohort/save', { ...ow, body: { course_id: c2, capacity: 0 } }), 200); const h2 = co2.j.cohorts[0].cohort_id;
+  await rec('search', C('GET', 'search?q=파이&level=basic', ow), 200);
+  await rec('searchTag', C('GET', 'search?tag=데이터', ow), 200);
+  await rec('searchFree', C('GET', 'search?free=1', ow), 200);
+  await rec('suggest', C('GET', 'suggest?q=파', ow), 200);
+  await rec('e1', C('POST', 'enroll', { ...ow, body: { cohort_id: h1, member_no: '20261001' } }), 200);
+  await rec('e1dup', C('POST', 'enroll', { ...ow, body: { cohort_id: h1, member_no: '20261001' } }), 409);
+  await rec('e2', C('POST', 'enroll', { ...ow, body: { cohort_id: h1, member_no: '20261002' } }), 200);
+  await rec('e3', C('POST', 'enroll', { ...ow, body: { cohort_id: h1, member_no: '20261003' } }), 200);
+  await rec('eFull', C('POST', 'enroll', { ...ow, body: { cohort_id: h1, member_no: '20261004' } }), 409);
+  await rec('paid', C('POST', 'enroll', { ...ow, body: { cohort_id: h2, member_no: '20261004' } }), 200);
+  await rec('decideUnpaid', C('POST', 'enroll/decide', { ...ow, body: { cohort_id: h2, members: ['20261004'], approve: true } }), 200);
+  await rec('pay', C('POST', 'pay/confirm', { ...ow, body: { cohort_id: h2, member_no: '20261004' } }), 200);
+  await rec('decide', C('POST', 'enroll/decide', { ...ow, body: { cohort_id: h2, members: ['20261004'], approve: true } }), 200);
+  await rec('cancelPaid', C('POST', 'enroll/cancel', { ...ow, body: { cohort_id: h2, member_no: '20261004' } }), 200);
+  await rec('prog1', C('POST', 'progress', { ...te, body: { cohort_id: h1, member_no: '20261001', progress: 95, activity: 3, score: 88, items: { 중간: 80, 기말: 90 } } }), 200);
+  await rec('prog2', C('POST', 'progress', { ...te, body: { cohort_id: h1, member_no: '20261002', progress: 90, activity: 3, score: 70, items: { 중간: 30, 기말: 95 } } }), 200);
+  await rec('prog3', C('POST', 'progress', { ...te, body: { cohort_id: h1, member_no: '20261003', progress: 50, activity: 1, score: 90 } }), 200);
+  await rec('progBad', C('POST', 'progress', { ...te, body: { cohort_id: h1, member_no: '20261003', progress: 150 } }), 400);
+  await rec('tComplete', C('POST', 'complete', { ...te, body: { cohort_id: h1 } }), 403);
+  await rec('complete', C('POST', 'complete', { ...ow, body: { cohort_id: h1 } }), 200);
+  await rec('cert', C('GET', 'certificate?cohort_id=' + h1 + '&member_no=20261001', ow), 200);
+  await rec('certNo', C('GET', 'certificate?cohort_id=' + h1 + '&member_no=20261002', ow), 409);
+  await rec('wish', C('POST', 'wish', { ...ow, body: { member_no: '20261005', course_id: cid } }), 200);
+  await rec('bm', C('POST', 'wish', { ...ow, body: { member_no: '20261005', course_id: c2, kind: 'bookmark' } }), 200);
+  await rec('my', C('GET', 'mypage?member_no=20261001', ow), 200);
+  await rec('my5', C('GET', 'mypage?member_no=20261005', ow), 200);
+  await rec('recNone', C('GET', 'recommend?member_no=20261005', ow), 200);
+  const items = [{ q: '1+1', options: ['1', '2'], answer: 1, area: '수리' }, { q: 'print는?', options: ['출력', '입력'], answer: 0, area: '프로그래밍' }, { q: '평균은?', options: ['합/개수', '최댓값'], answer: 0, area: '통계' }];
+  await rec('diagBad', C('POST', 'diag/save', { ...ow, body: { title: '진단', items: [{ q: 'x', options: ['a'], answer: 0, area: 'z' }] } }), 400);
+  const dg = await rec('diag', C('POST', 'diag/save', { ...ow, body: { title: '기초학력 진단', kind: 'basic', items } }), 200);
+  await rec('diags', C('GET', 'diags', ow), 200);
+  await rec('take', C('POST', 'diag/take', { ...ow, body: { test_id: dg.j.test_id, member_no: '20261005', answers: [1, 1, 1] } }), 200);
+  await rec('rec', C('GET', 'recommend?member_no=20261005', ow), 200);
+  const pg = lib.pg(); const c = new pg.Client({ connectionString: db }); await c.connect(); await c.query('begin'); await c.query("select set_config('app.tenant', $1, true)", [O.tid]);
+  await c.query("insert into lms_course (tenant_id, course_code, name, credits, unit_code, category) values ($1,'BUS1001','경영학원론',3,'BUS','major')", [O.tid]); await c.query('commit'); await c.end();
+  await rec('convert', C('POST', 'convert', { ...te, body: { course_code: 'BUS1001' } }), 200);
+  await rec('convertDup', C('POST', 'convert', { ...te, body: { course_code: 'BUS1001' } }), 409);
+  await rec('all', C('GET', 'search?all=1&sort=title', ow), 200);
+  await rec('allTeacher', C('GET', 'search?all=1&sort=title', te), 200);
+  return R;
+}
+module.exports = scenario;
+if (require.main === module) (async () => {
+  const [A, B, DB] = [process.argv[2] || 'http://127.0.0.1:8231', process.argv[3] && process.argv[3] !== '-' ? process.argv[3] : null, process.argv[4] || 'postgres://didisam@127.0.0.1:5544/ddw4'];
+  await lib.compare('N', scenario, A, B, DB); lib.done('lms-n');
+})().catch(e => { console.error(e); process.exit(2); });
