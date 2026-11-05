@@ -1,0 +1,41 @@
+/* v30 학사 LMS 묶음 O(AI) 화면 */
+.lo-grid{display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:12px;align-items:start}
+.lo-grid>*{min-width:0}
+@media (max-width:860px){.lo-grid{grid-template-columns:1fr}}
+.lo-list{display:flex;flex-direction:column;gap:6px}
+.lo-it{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:var(--r);background:#fff;padding:8px 10px;cursor:pointer;color:var(--ink)}
+.lo-it.on{border-color:var(--mag);background:var(--magl)}
+.lo-it small{display:block;color:var(--muted);margin-top:2px}
+.lo-msgs{display:flex;flex-direction:column;gap:8px;max-height:520px;overflow:auto;padding:4px}
+.lo-msg{border-radius:var(--r);padding:10px 12px;background:var(--soft);white-space:pre-wrap;word-break:break-word}
+.lo-msg.user{background:var(--magl);align-self:flex-end;max-width:85%}
+.lo-msg.assistant{background:#fff;border:1px solid var(--line);max-width:95%}
+.lo-msg .lo-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--muted)}
+.lo-cite{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:12px;padding:1px 8px;background:var(--g50);color:var(--g800)}
+.lo-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end}
+.lo-form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--g800);min-width:0}
+.lo-form input,.lo-form select,.lo-form textarea,.lo-ta{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r);padding:7px 9px;font:inherit;background:#fff;color:var(--ink)}
+.lo-ta{min-height:96px;resize:vertical}
+.lo-langs{display:flex;flex-wrap:wrap;gap:6px}
+.lo-langs label{flex-direction:row;align-items:center;gap:4px;border:1px solid var(--line);border-radius:14px;padding:2px 8px}
+.lo-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lo-tv{width:100%;border-collapse:collapse;table-layout:fixed}
+.lo-tv td{vertical-align:top;border-top:1px solid var(--line);padding:8px;word-break:break-word}
+.lo-tv .h{font-weight:700;font-size:15px}
+.lo-tv .li::before{content:"• ";color:var(--muted)}
+.lo-tv .row{font-family:ui-monospace,monospace;font-size:12.5px}
+.lo-out{white-space:pre-wrap;background:var(--g50);border:1px solid var(--line);border-radius:var(--r);padding:10px;max-height:360px;overflow:auto;word-break:break-word}
+.lo-qr{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.lo-qr svg{width:168px;height:168px;background:#fff;border:1px solid var(--line);border-radius:var(--r);flex:none}
+.lo-qr code{word-break:break-all;font-size:12px}
+.lo-line{display:grid;grid-template-columns:40px 1fr auto;gap:8px;align-items:center;border-top:1px solid var(--line);padding:6px 0}
+.lo-line input{min-width:0}
+.lo-cap{position:fixed;inset:0;z-index:9999;background:#111;color:#fff;display:flex;flex-direction:column;padding:16px;overflow:auto}
+.lo-cap header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.lo-cap header b{flex:1;min-width:120px}
+.lo-cap select,.lo-cap button{font:inherit;border-radius:6px;border:1px solid #555;background:#222;color:#fff;padding:4px 8px}
+.lo-cap p{margin:0 0 10px;line-height:1.5}
+.lo-cap p small{display:block;color:#9fb0ff}
+.lo-bar{height:8px;border-radius:4px;background:var(--soft);overflow:hidden}
+.lo-bar i{display:block;height:100%;background:var(--mag)}
+.lo-bar.warn i{background:var(--warn)}.lo-bar.over i{background:var(--bad)}
