@@ -22,7 +22,7 @@
     lms_role: '학사 관리 권한이 없습니다.', lms_scope: '담당 단과대학 범위 밖의 항목입니다.', term_id: '학기 코드는 2026-1 · 2026-2 · 2026-S · 2026-W 형식으로 입력하세요.', lms_name: '이름을 1~60자로 입력하세요.',
     lms_date: '시작일 · 종료일(YYYY-MM-DD)을 확인하세요.', unit_code: '조직 코드는 영문 · 숫자 2~20자입니다.', unit_kind: '조직 구분을 고르세요.', course_code: '학수번호는 영문 · 숫자 4~20자입니다.', credits: '학점은 0~30 사이 숫자입니다.',
     category: '교과 구분을 고르세요.', section_no: '분반 번호는 숫자 1~3자리입니다.', lms_mode: '수업 방식을 고르세요.', capacity: '정원은 0~9999 사이 정수입니다.', class_id: '연결할 강의실 번호가 올바르지 않습니다.',
-    member_no: '학번(사번) 형식이 올바르지 않습니다.', person_kind: '구성원 구분을 고르세요.', person_status: '학적 상태를 고르세요.', grade_year: '학년은 1~6 사이 숫자입니다.', student_no: '학생 학번은 숫자 6~10자리입니다.',
+    member_no: '학번(사번) 형식이 올바르지 않습니다.', person_kind: '구성원 구분을 고르세요.', person_status: '학적 상태를 고르세요.', grade_year: '학년은 1~6 사이 숫자입니다.', lms_stu: '학생 학번은 숫자 6~10자리입니다.',
     staff_role: '담당 역할을 고르세요.', staff_kind: '교수 · 공동교수는 교수 구성원만 지정할 수 있습니다.', enr_kind: '수강 구분(정규 · 청강)을 고르세요.', req_kind: '신청 구분(조교 · 청강)을 고르세요.', import_kind: '올릴 데이터 종류를 고르세요.',
     csv: 'CSV 내용이 없습니다.', csv_head: '첫 줄(머리글)에 필수 열이 없습니다. 양식을 내려받아 확인하세요.', csv_rows: '한 번에 5,000행까지 올릴 수 있습니다.', lms_list: '학번 목록을 확인하세요(한 번에 5,000명까지).',
     merge: '합반할 분반을 확인하세요(같은 학기 · 대표 분반 제외 · 이미 합반된 분반 제외).', unmerge: '합반된 분반이 아닙니다.', sync_rep: '다른 분반에 합반된 분반은 동기화의 기준이 될 수 없습니다.', sync_class: '대표 분반에 강의실이 연결되어 있지 않습니다.',
@@ -268,7 +268,7 @@
     persons(b) { const x = ctx(); adminOnly(x); const q = T(b.q); const kind = T(b.kind); const qq = /^[A-Za-z0-9]{0,20}$/.test(q) ? q : '';
       return { rows: ens().persons.filter(p => { const u = unitOf(p.unit_code); return (!x.units || (p.unit_code && x.units.includes(p.unit_code)) || (u && x.units.includes(u.parent_code))) && p.member_no.startsWith(qq) && (!has(MAP.kind, kind) || p.kind === MAP.kind[kind]); }).sort((a, b2) => cmp(a.member_no, b2.member_no)).slice(0, 200) }; },
     person(b) { const x = ctx(); adminOnly(x); const m = T(b.member_no), kind = T(b.kind) || 'student', st = T(b.status) || 'active', unit = T(b.unit_code); const gy = b.grade_year == null || b.grade_year === '' ? null : Number(b.grade_year);
-      if (!RE.mno.test(m)) fail('member_no'); if (!has(MAP.kind, kind)) fail('person_kind'); if (MAP.kind[kind] === 'student' && !RE.stu.test(m)) fail('student_no'); if (!has(MAP.status, st)) fail('person_status'); if (gy !== null && !(Number.isInteger(gy) && gy >= 1 && gy <= 6)) fail('grade_year');
+      if (!RE.mno.test(m)) fail('member_no'); if (!has(MAP.kind, kind)) fail('person_kind'); if (MAP.kind[kind] === 'student' && !RE.stu.test(m)) fail('lms_stu'); if (!has(MAP.status, st)) fail('person_status'); if (gy !== null && !(Number.isInteger(gy) && gy >= 1 && gy <= 6)) fail('grade_year');
       let u = null; if (unit) { if (!RE.unit.test(unit)) fail('unit_code'); u = unitOf(unit); if (!u) fail('unit'); } if (!inUnits(x, u ? u.unit_code : null, u ? u.parent_code : null)) fail('lms_scope');
       const A = ens(); if (A.persons.some(p => p.member_no === m)) fail('person_dup'); A.persons.push({ member_no: m, kind: MAP.kind[kind], unit_code: unit || null, status: MAP.status[st], grade_year: gy, source: 'manual' }); return { ok: true }; },
     import(b) { const x = ctx(); adminOnly(x); const kind = T(b.kind); if (!['person', 'section', 'enrollment'].includes(kind)) fail('import_kind'); const A = ens();
