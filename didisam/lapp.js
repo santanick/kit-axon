@@ -56,7 +56,8 @@
   SCN.univ_lms = { learn: '이번 학기 강의', find: '비교과', sub: me => `학번 ${me.sid || ''} · 출석 · 과제 · 시험 · 성적을 함께 챙겨요`, chips: [['오늘 출석', '오늘 출석해야 할 수업 알려줘'], ['과제 · 시험 마감', '이번 주 과제 · 시험 마감 정리해줘'], ['학습 분량 점검', '이번 주 온라인 강의 중 덜 들은 차시 알려줘']], d: '교과 수업 · 스마트 출석 · 성적 · 학사 연동' };
   const oTy = () => (SITE() && SITE().org && SITE().org.type) || 'adult';
   const oEd = () => (SITE() && SITE().org && SITE().org.ed) || '';
-  const scn = () => (oTy() === 'univ' && oEd() === 'lms' ? SCN.univ_lms : SCN[oTy()]) || SCN.adult;
+  const scnExt = () => { for (const f of window.LSCN_PICK || []) { try { const x = f(oTy(), oEd()); if (x) return x; } catch (e) { console.error(e); } } return null; };
+  const scn = () => scnExt() || (oTy() === 'univ' && oEd() === 'lms' ? SCN.univ_lms : SCN[oTy()]) || SCN.adult;
   const legalN = () => { try { return typeof lLegal === 'function' ? lLegal().length : 0; } catch (e) { return 0; } };
   const orgs = () => { try { return JSON.parse(ls.get('orgs') || '[]').filter(o => o && o.tid); } catch (e) { return []; } };
   function orgSave() { if (!SITE() || !LR.tid || LR.mode === 'preview') return; const L = orgs(); const o = { tid: LR.tid, name: String(SITE().org.name || '').slice(0, 40), type: oTy(), me: !!LR.me, at: Date.now() };
