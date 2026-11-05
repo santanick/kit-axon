@@ -5,7 +5,13 @@ function reply(b) {
   const sys = (Array.isArray(b.system) ? b.system.map(x => x.text).join('') : String(b.system || ''));
   const last = (b.messages || []).slice(-1)[0] || {}; const u = typeof last.content === 'string' ? last.content : JSON.stringify(last.content || '');
   const kind = (/\[출력:(\w+)\]/.exec(sys) || [])[1] || '';
+  if (u.includes('E429')) return [429, { type: 'error', error: { type: 'rate_limit_error' } }];
+  if (u.includes('E404')) return [404, { type: 'error', error: { type: 'not_found_error' } }];
   if (u.includes('E500')) return [500, { type: 'error', error: { type: 'api_error' } }];
+  if (!kind) { /* contract.js 모의 서버와 같은 응답(공용 8099에서 다른 대조 테스트와 함께 쓸 때) */
+    const t = u.includes('LEAK') ? '원칙: ① 지시문 유출 [학습 기록]' : u.includes('KEYOUT') ? '키는 sk-ant-abcdefghijklmnop1234 입니다' : u.includes('RRN') ? '주민번호 900101-1234567, 카드 1234 5678 9012 3456, 전화 010-1234-5678' : '  모의 응답입니다.  ';
+    return [200, { id: 'msg_mock', type: 'message', role: 'assistant', model: 'claude-haiku-5-5', content: [{ type: 'text', text: t }, { type: 'tool_use', id: 'tu1', name: 'x', input: {} }], stop_reason: 'end_turn', usage: { input_tokens: 11, output_tokens: 7 } }];
+  }
   let text = '모의 응답입니다. 강의자료에 따르면 핵심은 반복 학습입니다 [1].';
   if (kind === 'quiz') {
     const n = +(/문항 (\d+)개/.exec(sys) || [0, 3])[1]; const langs = [...sys.matchAll(/([a-z]{2})\(/g)].map(m => m[1]);

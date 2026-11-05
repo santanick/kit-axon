@@ -318,7 +318,7 @@ module.exports = ctx => {
       }
     },
     openai_compat: { /* 학내 자체 LLM(OpenAI 호환 /v1/chat/completions) — 서버 허용 목록(LLM_SELFHOST_HOSTS)에 있는 주소만 호출 */
-      ready: p => { let h = ''; try { h = new URL(p.endpoint_url).host.toLowerCase(); } catch (e) { } if (!h || !selfHosts.includes(h)) throw E(503, '학내 LLM 서버 연동 후 동작합니다(서버 허용 목록에 주소 등록 필요).', 'provider_pending'); },
+      ready: p => { const hm = /^https?:\/\/([^\s/?#]+)/i.exec(p.endpoint_url || ''); const h = hm ? hm[1].toLowerCase() : ''; if (!h || !selfHosts.includes(h)) throw E(503, '학내 LLM 서버 연동 후 동작합니다(서버 허용 목록에 주소 등록 필요).', 'provider_pending'); },
       call: async (p, model, sys, msgs, temperature, max, signal) => {
         const r = await fetch(p.endpoint_url, { method: 'POST', signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model, temperature, max_tokens: max, messages: [{ role: 'system', content: sys }, ...msgs] }) });
         const j = await r.json().catch(() => ({}));
@@ -396,7 +396,7 @@ module.exports = ctx => {
       const model = S(b.model, 80).trim();
       if (kind === 'anthropic' ? !MODELS.includes(model) : !/^[\w.:/-]{1,80}$/.test(model)) throw E(400, '모델 이름이 올바르지 않습니다.', 'model');
       let url = null;
-      if (kind === 'openai_compat') { url = S(b.endpoint_url, 300).trim(); let ok = false; try { const u = new URL(url); ok = (u.protocol === 'https:' || u.protocol === 'http:') && !!u.host; } catch (e) { } if (!ok) throw E(400, '엔드포인트 주소가 올바르지 않습니다.', 'endpoint'); }
+      if (kind === 'openai_compat') { url = S(b.endpoint_url, 300).trim(); if (!/^https?:\/\/[^\s/?#]+(?:[/?#]\S*)?$/i.test(url)) throw E(400, '엔드포인트 주소가 올바르지 않습니다.', 'endpoint'); }
       const p = { tid: a.tid, id, kind, name, endpoint_url: url, model, enabled: b.enabled !== false };
       return T(a, async c => { const r = notFound(await run(c, id ? 'prov_upd' : 'prov_add', p), '제공자를 찾을 수 없습니다.', 'provider'); await audit(c, a.tid, a.email, 'lms.o.provider', { kind, name, model }); return { provider: r }; });
     },
