@@ -1,0 +1,20 @@
+/* v30 학사 LMS 묶음 E · F · H 공용 스타일(디자인 토큰: dds.css 변수) */
+.efh-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.efh-lab{display:inline-flex;gap:6px;align-items:center;font-weight:600}
+.efh-lab select{max-width:min(320px,70vw)}
+.efh-acts{display:inline-flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.efh-form .full{grid-column:1/-1}
+.efh-body{white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:inherit}
+.efh-rub{border:1px solid var(--line);border-radius:8px;padding:6px 10px;display:flex;flex-wrap:wrap;gap:8px}
+.efh-ta{width:100%;box-sizing:border-box}
+.efh-fb{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+.efh-q{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
+.efh-q label{display:block;margin:4px 0}
+.efh-hist{display:flex;align-items:flex-end;gap:4px;height:120px;padding:8px 0}
+.efh-hist div{flex:1;background:var(--soft);border-radius:4px 4px 0 0;position:relative;min-height:2px}
+.efh-hist div i{position:absolute;bottom:0;left:0;right:0;background:var(--pri, #3b82f6);border-radius:4px 4px 0 0}
+.efh-hist small{display:block;text-align:center;font-size:11px;color:var(--muted)}
+.efh-timer{font-weight:700;font-variant-numeric:tabular-nums}
+.efh-wrap{overflow-x:auto;max-width:100%}
+.efh-wrap table{min-width:560px}
+@media (max-width:600px){.efh-acts{margin-left:0}.efh-lab select{max-width:60vw}}
