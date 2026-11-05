@@ -2,10 +2,10 @@ package egovframework.didisam.state.service.impl;
 
 import java.util.List;
 import java.util.Map;
-import org.apache.ibatis.annotations.Mapper;
+import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 import org.apache.ibatis.annotations.Param;
 
-@Mapper
+@EgovMapper
 public interface StateMapper {
     Map<String, Object> selectState(@Param("tid") String tid);
     Integer insertState(@Param("tid") String tid, @Param("doc") String doc, @Param("bytes") int bytes);

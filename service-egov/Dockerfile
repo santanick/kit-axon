@@ -15,9 +15,9 @@ RUN cd service && node build-public.js ../didisam public
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
-COPY --from=build /src/target/didisam-egov.jar app.jar
+COPY --from=build /src/target/didisam-egov.war app.war
 COPY --from=pub /w/service/public ./public
 ENV PUBLIC_DIR=/app/public PORT=8080
 USER 1000
 EXPOSE 8080
-CMD ["java", "-jar", "app.jar"]
+CMD ["java", "-jar", "app.war"]

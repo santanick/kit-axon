@@ -1,10 +1,10 @@
 package egovframework.didisam.auth.service.impl;
 
 import java.util.Map;
-import org.apache.ibatis.annotations.Mapper;
+import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 import org.apache.ibatis.annotations.Param;
 
-@Mapper
+@EgovMapper
 public interface AuthMapper {
     int ping();
     int countEmail(@Param("email") String email);

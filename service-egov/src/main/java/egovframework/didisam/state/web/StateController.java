@@ -15,8 +15,8 @@ public class StateController {
     private final AuthService authService; private final StateService stateService;
     public StateController(AuthService authService, StateService stateService) { this.authService = authService; this.stateService = stateService; }
 
-    @GetMapping public Map<String, Object> get(HttpServletRequest req) { return stateService.get(authService.need(req)); }
-    @PutMapping public Map<String, Object> put(@RequestBody(required = false) byte[] body, HttpServletRequest req) {
+    @GetMapping public Map<String, Object> get(HttpServletRequest req) throws Exception { return stateService.get(authService.need(req)); }
+    @PutMapping public Map<String, Object> put(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception {
         Map<String, Object> a = authService.need(req);
         return stateService.put(a, DdWeb.readBody(body, StateServiceImpl.STATE_MAX + 4096));
     }

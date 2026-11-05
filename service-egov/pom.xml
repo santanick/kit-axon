@@ -17,9 +17,11 @@
   <artifactId>didisam-egov</artifactId>
   <version>29.1.0</version>
   <name>didisam-egov</name>
+  <!-- war: java -jar 실행과 외장 WAS(Tomcat · JEUS 등) 배포를 모두 지원, JSP 화면 포함 -->
+  <packaging>war</packaging>
   <properties>
     <java.version>17</java.version>
-    <egovframe.version>5.0.0</egovframe.version>
+    <egovframe.version>5.0.2</egovframe.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
@@ -27,6 +29,10 @@
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-jdbc</artifactId></dependency>
     <dependency><groupId>org.mybatis.spring.boot</groupId><artifactId>mybatis-spring-boot-starter</artifactId><version>3.0.5</version></dependency>
     <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-tomcat</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.apache.tomcat.embed</groupId><artifactId>tomcat-embed-jasper</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>jakarta.servlet.jsp.jstl</groupId><artifactId>jakarta.servlet.jsp.jstl-api</artifactId></dependency>
+    <dependency><groupId>org.glassfish.web</groupId><artifactId>jakarta.servlet.jsp.jstl</artifactId></dependency>
     <dependency><groupId>org.bouncycastle</groupId><artifactId>bcprov-jdk18on</artifactId><version>1.81</version></dependency>
   </dependencies>
   <build>
@@ -42,9 +48,12 @@
         <repository><id>egovframe</id><url>https://maven.egovframe.go.kr/maven/</url></repository>
       </repositories>
       <dependencies>
-        <dependency><groupId>org.egovframe.rte</groupId><artifactId>org.egovframe.rte.fdl.cmmn</artifactId><version>${egovframe.version}</version></dependency>
-        <dependency><groupId>org.egovframe.rte</groupId><artifactId>org.egovframe.rte.ptl.mvc</artifactId><version>${egovframe.version}</version></dependency>
-        <dependency><groupId>org.egovframe.rte</groupId><artifactId>org.egovframe.rte.psl.dataaccess</artifactId><version>${egovframe.version}</version></dependency>
+        <!-- 실제 표준프레임워크 실행환경(artifactId는 5.x 규칙: egovframe-rte-*) -->
+        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-fdl-cmmn</artifactId><version>${egovframe.version}</version></dependency>
+        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-fdl-property</artifactId><version>${egovframe.version}</version></dependency>
+        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-fdl-idgnr</artifactId><version>${egovframe.version}</version></dependency>
+        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-psl-dataaccess</artifactId><version>${egovframe.version}</version></dependency>
+        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-ptl-mvc</artifactId><version>${egovframe.version}</version></dependency>
       </dependencies>
       <build>
         <plugins>

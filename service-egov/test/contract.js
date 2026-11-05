@@ -93,6 +93,13 @@ async function scenario(base, tag) {
   ok(stale.st === 409 && stale.j.error === 'conflict', '서버 간 낙관적 잠금(rev 2로 Node 저장 → 409)');
   ok(nRead.st === 200, 'Node 조회(Java 가입 기관)');
 
+  /* ③ Java 전용: JSP 진입 화면(서버 렌더링) · 표준프레임워크 업무 예외 문구 */
+  const jx = await call(B, 'POST', '/api/signup', { body: { email: `jsp_${Date.now()}@example.com`, password: 'Contract2026x', orgName: '<b>대학</b>', type: 'univ' } });
+  const jm = await fetch(B + '/egov/main.do', { headers: { cookie: jx.ck } }); const jt = await jm.text();
+  ok(jm.status === 200 && jt.includes('&lt;b&gt;대학&lt;/b&gt;') && !jt.includes('<b>대학</b>'), 'JSP 진입 화면: 로그인 기관 표시 + HTML 이스케이프');
+  ok((jm.headers.get('content-security-policy') || '').startsWith("default-src 'self'"), 'JSP 진입 화면: CSP');
+  const jn = await (await fetch(B + '/egov/main.do')).text();
+  ok(jn.includes('로그인이 필요합니다'), 'JSP 진입 화면: 비로그인 안내');
   console.log(`대조 테스트: 통과 ${pass} / 실패 ${fail}`);
   if (fail) { console.log(errs.map(e => ' ✗ ' + e).join('\n')); process.exit(1); }
 })().catch(e => { console.error(e); process.exit(1); });

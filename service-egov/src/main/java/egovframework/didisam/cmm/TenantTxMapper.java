@@ -1,9 +1,9 @@
 package egovframework.didisam.cmm;
 
-import org.apache.ibatis.annotations.Mapper;
+import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 import org.apache.ibatis.annotations.Param;
 
-@Mapper
+@EgovMapper
 public interface TenantTxMapper {
     void setTenantRole();
     String setTenant(@Param("tid") String tid);

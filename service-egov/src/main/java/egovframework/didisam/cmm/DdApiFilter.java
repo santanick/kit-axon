@@ -58,7 +58,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         } else {
             if (!"GET".equals(m) && !"HEAD".equals(m)) { res.setStatus(405); res.getWriter().write("method"); return; }
             boolean learner = path.endsWith("/learner.html");
-            if (path.endsWith("/") || path.endsWith(".html")) {
+            if (path.endsWith("/") || path.endsWith(".html") || path.endsWith(".do")) {
                 res.setHeader("content-security-policy", learner ? LCSP : CSP);
                 res.setHeader("cache-control", "no-cache");
                 if (learner) res.setHeader("x-frame-options", "SAMEORIGIN");
