@@ -23,6 +23,8 @@
     <java.version>17</java.version>
     <egovframe.version>5.0.2</egovframe.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- 표준프레임워크 실행환경 호환 shim 소스 위치. -Pegov에서는 비워서 실제 RTE만 쓴다 -->
+    <shim.dir>src/shim/java</shim.dir>
   </properties>
   <dependencies>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
@@ -39,6 +41,11 @@
     <finalName>didisam-egov</finalName>
     <plugins>
       <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId><artifactId>build-helper-maven-plugin</artifactId>
+        <executions><execution><id>shim</id><phase>generate-sources</phase><goals><goal>add-source</goal></goals>
+          <configuration><sources><source>${shim.dir}</source></sources></configuration></execution></executions>
+      </plugin>
     </plugins>
   </build>
   <profiles>
@@ -48,21 +55,15 @@
         <repository><id>egovframe</id><url>https://maven.egovframe.go.kr/maven/</url></repository>
       </repositories>
       <dependencies>
-        <!-- 실제 표준프레임워크 실행환경(artifactId는 5.x 규칙: egovframe-rte-*) -->
-        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-fdl-cmmn</artifactId><version>${egovframe.version}</version></dependency>
-        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-fdl-property</artifactId><version>${egovframe.version}</version></dependency>
-        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-fdl-idgnr</artifactId><version>${egovframe.version}</version></dependency>
-        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-psl-dataaccess</artifactId><version>${egovframe.version}</version></dependency>
-        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-ptl-mvc</artifactId><version>${egovframe.version}</version></dependency>
+        <!-- 실제 표준프레임워크 실행환경(artifactId는 5.x 규칙: egovframe-rte-*).
+             RTE가 끌어오는 log4j-slf4j2-impl은 Spring Boot 기본 로깅(log4j-to-slf4j)과 충돌해 기동이 실패하므로 제외(2026-11-05 실제 RTE 기동 확인) -->
+        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-fdl-cmmn</artifactId><version>${egovframe.version}</version><exclusions><exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-slf4j2-impl</artifactId></exclusion></exclusions></dependency>
+        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-fdl-property</artifactId><version>${egovframe.version}</version><exclusions><exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-slf4j2-impl</artifactId></exclusion></exclusions></dependency>
+        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-fdl-idgnr</artifactId><version>${egovframe.version}</version><exclusions><exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-slf4j2-impl</artifactId></exclusion></exclusions></dependency>
+        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-psl-dataaccess</artifactId><version>${egovframe.version}</version><exclusions><exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-slf4j2-impl</artifactId></exclusion></exclusions></dependency>
+        <dependency><groupId>org.egovframe.rte</groupId><artifactId>egovframe-rte-ptl-mvc</artifactId><version>${egovframe.version}</version><exclusions><exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-slf4j2-impl</artifactId></exclusion></exclusions></dependency>
       </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId>
-            <configuration><excludes><exclude>org/egovframe/**</exclude></excludes></configuration>
-          </plugin>
-        </plugins>
-      </build>
+      <properties><shim.dir>src/shim/none</shim.dir></properties>
     </profile>
   </profiles>
 </project>

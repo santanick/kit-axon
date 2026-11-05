@@ -1,4 +1,4 @@
-# 디디쌤 운영 서버 — 전자정부 표준프레임워크 에디션 (시범 이식 v29.2)
+# 디디쌤 운영 서버 — 전자정부 표준프레임워크 에디션 (시범 이식 v29.3)
 
 대학 학사 LMS · 공공기관 사업처럼 **전자정부 표준프레임워크 · Java** 적용을 요구하는 RFP(예: 전남대 기술적용계획표 「적용」)에 대응하기 위한 서버 에디션이다.
 Node 서버(`service/server`)와 **같은 `/api` 규격 · 같은 PostgreSQL 스키마 · 같은 화면(public/)** 을 쓴다. 화면은 한 줄도 바꾸지 않는다.
@@ -33,7 +33,9 @@ node test/contract.js http://127.0.0.1:<node> http://127.0.0.1:<java>   # 같은
 node test/ui.js http://127.0.0.1:<java>                                  # 기존 스튜디오 화면이 Java 서버에 그대로 붙는지
 ```
 
-**「적용」 판정 전 필수 확인(미완료)**: `-Pegov` 빌드는 maven.egovframe.go.kr 접속이 되는 환경에서 실행해 실제 RTE 5.0.2로 기동 · 대조 테스트를 다시 통과해야 한다. shim과 실제 RTE의 차이(예: 실제 `EgovAbstractServiceImpl`은 `messageSource` · `leaveaTrace` 빈을 주입받는다)를 여기서 잡는다.
+**실제 실행환경 확인(완료, 2026-11-05)**: 대표님 Mac(국내망)에서 `-Pegov` 빌드 → war에 `egovframe-rte-*-5.0.2.jar` 8종 포함 · shim 0건 확인. 첫 기동에서 RTE가 끌어오는 `log4j-slf4j2-impl`이 Spring Boot 로깅(`log4j-to-slf4j`)과 충돌해 실패 → pom에서 제외. 제외를 반영한 실제 RTE war로 대조 372항목 · UI 확인 모두 통과.
+- shim은 `src/shim/java`(기본 빌드만 build-helper로 추가). 컴파일러 excludes 방식은 javac가 sourcepath에서 shim을 암묵 컴파일해 실제 빌드에 섞이므로 쓰지 않는다.
+- 클라우드 작업 환경 · 연결 VM에서는 maven.egovframe.go.kr가 「Request Blocked」(400) — 국내망 PC에서 `scripts/verify-egov.sh` 실행.
 
 2026-11-05 v29.2 결과(기본 빌드): 대조 372항목 통과 · 0 실패(JSP 진입 화면 · 이스케이프 · CSP 포함), UI 확인 통과.
 
