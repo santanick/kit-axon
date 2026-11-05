@@ -65,6 +65,14 @@ async function scenario(base, db, tag) {
   await rec('convertDup', C('POST', 'convert', { ...te, body: { course_code: 'BUS1001' } }), 409);
   await rec('all', C('GET', 'search?all=1&sort=title', ow), 200);
   await rec('allTeacher', C('GET', 'search?all=1&sort=title', te), 200);
+  const L6 = { cookie: await lib.learner(db, O.tid, '20261006') };
+  await rec('lSearchAll', C('GET', 'search?all=1', L6), 200);
+  await rec('lDraft', C('GET', 'course?course_id=' + R.convert.j.course_id, L6), 404);
+  await rec('lCourse', C('GET', 'course?course_id=' + c2, L6), 200);
+  await rec('lEnroll', C('POST', 'enroll', { ...L6, body: { cohort_id: h2, member_no: '20261001' } }), 200);
+  await rec('lWish', C('POST', 'wish', { ...L6, body: { course_id: cid } }), 200);
+  await rec('lMy', C('GET', 'mypage', L6), 200);
+  await rec('lDecide', C('POST', 'enroll/decide', { ...L6, body: { cohort_id: h2, members: ['20261006'], approve: true } }), 401);
   return R;
 }
 module.exports = scenario;

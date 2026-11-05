@@ -7,5 +7,6 @@ import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 @EgovMapper
 public interface LmsCallMapper {
     String call(@Param("pfx") String pfx, @Param("op") String op, @Param("actor") String actor, @Param("args") String args);
+    java.util.Map<String, Object> selectLearner(@Param("id") String id);
     void insertAudit(@Param("tid") String tid, @Param("actor") String actor, @Param("action") String action, @Param("detail") String detail);
 }

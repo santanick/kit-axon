@@ -37,14 +37,22 @@ const lib = {
     await c.query('commit'); await c.end();
     return { tid, ck, sec, em };
   },
+  /* 학습자 포털 세션(dd_lsid) — 학번 = lms_person.member_no. 포털 로그인과 같은 형태로 learner_sessions에 직접 넣는다 */
+  async learner(db, tid, sid) {
+    const crypto = require('node:crypto'); const t = crypto.randomBytes(32).toString('base64url');
+    const { Client } = lib.pg(); const c = new Client({ connectionString: db }); await c.connect();
+    await c.query("insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval '1 day')", [crypto.createHash('sha256').update(t).digest('hex'), tid, sid]); await c.end();
+    return 'dd_lsid=' + t;
+  },
   /* 비교용 정규화: uuid · 시각 · 이메일 · 기관 아이디를 순번 토큰으로 */
   norm(v, M = new Map()) {
     const tok = (s, k) => { if (!M.has(s)) M.set(s, k + M.size); return M.get(s); };
     const f = x => {
       if (typeof x === 'string') return x.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, s => tok(s, 'U'))
-        .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)/g, 'T').replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/g, 'T').replace(/[\w.+-]+@example\.com/g, 'E').replace(/tn_[a-z0-9]{8,16}/g, 'TID').replace(/(Q|N)-\d{4}-\d{4,}/g, '$1-NO');
+        .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)/g, 'T').replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/g, 'T').replace(/\d{4}\.\d{2}\.\d{2}( \d{2}:\d{2})?/g, 'D').replace(/[\w.+-]+@example\.com/g, 'E').replace(/tn_[a-z0-9]{8,16}/g, 'TID').replace(/(Q|N)-\d{4}-\d{4,}/g, '$1-NO');
       if (Array.isArray(x)) return x.map(f);
-      if (x && typeof x === 'object') { const o = {}; for (const k of Object.keys(x).sort()) o[k] = f(x[k]); return o; }
+      if (x && typeof x === 'object') { const U = /^[0-9a-f]{8}-[0-9a-f]{4}-/; const ks = Object.keys(x); if (ks.length && ks.every(k => U.test(k))) ks.sort((a, b) => JSON.stringify(x[a]).localeCompare(JSON.stringify(x[b])));
+        const o = {}; for (const k of ks.map(k => [f(k), k]).sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)) o[k[0]] = f(x[k[1]]); return o; }
       return x;
     };
     return f(v);
@@ -113,6 +121,18 @@ async function scenario(base, db, tag) {
   await rec('evalPublic', C('POST', 'eval/public', { ...ow, body: { survey_id: ev.j.survey_id, prof_public: true } }), 200);
   await rec('evalTeacherStats2', C('GET', 'stats?survey_id=' + ev.j.survey_id, te), 200);
   await rec('list', C('GET', 'surveys', ow), 200);
+  /* 학습자 본인 세션: member_no는 세션 학번으로 고정(남의 학번을 보내도 무시) */
+  const L2 = { cookie: await lib.learner(db, O.tid, '20261002') };
+  await rec('lPending', C('GET', 'pending?member_no=20261001', L2), 200);
+  await rec('lGate', C('GET', 'gate?step=grade&scope=section&ref=' + O.sec, L2), 200);
+  await rec('lSurvey', C('GET', 'survey?survey_id=' + ev.j.survey_id, L2), 200);
+  await rec('lClosed', C('GET', 'survey?survey_id=' + sid, L2), 404);
+  const eq = (R.lSurvey.j.questions || []).filter(x => x.type === 'likert5').map(x => x.qid);
+  await rec('lRespond', C('POST', 'respond', { ...L2, body: { survey_id: ev.j.survey_id, member_no: '20261001', answers: Object.fromEntries(eq.map(x => [x, 4])) } }), 200);
+  await rec('lGate2', C('GET', 'gate?step=grade&scope=section&ref=' + O.sec, L2), 200);
+  await rec('lStats', C('GET', 'stats?survey_id=' + ev.j.survey_id, L2), 401);
+  await rec('lNoSession', C('GET', 'pending', { cookie: 'dd_lsid=bogus' }), 401);
+  await rec('evalStats', C('GET', 'stats?survey_id=' + ev.j.survey_id, ow), 200);
   return R;
 }
 

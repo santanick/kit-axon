@@ -19,16 +19,16 @@ public class LmsKServiceImpl extends EgovAbstractServiceImpl implements LmsKServ
     /** Node service/server/lms/mod-k.js ROUTES와 같은 표(scratchpad genjava.py로 생성) */
     public static final List<LmsCall.Route> ROUTES = List.of(
         r("GET", "surveys", "survey_list", "ost"),
-        r("GET", "survey", "survey_get", "ost"),
+        r("GET", "survey", "survey_get", "ostL"),
         w("POST", "survey/save", "survey_save", "ost"),
         w("POST", "survey/open", "survey_open", "ost"),
         w("POST", "survey/close", "survey_close", "ost"),
         w("POST", "survey/delete", "survey_delete", "os"),
         w("POST", "survey/copy", "survey_copy", "ost"),
-        w("POST", "respond", "respond", "ost"),
+        w("POST", "respond", "respond", "ostL"),
         w("POST", "import", "import", "os"),
-        r("GET", "pending", "pending", "ost"),
-        r("GET", "gate", "gate", "ost"),
+        r("GET", "pending", "pending", "ostL"),
+        r("GET", "gate", "gate", "ostL"),
         r("GET", "stats", "stats", "ost"),
         r("GET", "export", "export", "ost"),
         w("POST", "remind", "remind_run", "os"),
@@ -39,6 +39,6 @@ public class LmsKServiceImpl extends EgovAbstractServiceImpl implements LmsKServ
     @Override public JsonNode handle(String method, String name, HttpServletRequest req, byte[] body) throws Exception {
         LmsCall.Route rt = LmsCall.find(ROUTES, method, name);
         if (rt == null) throw new DdException(404, "없는 주소입니다.", "not_found");
-        return call.run("k", rt, auth.need(req), req, body);
+        return call.run("k", rt, auth.auth(req), req, body);
     }
 }
