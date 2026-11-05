@@ -74,12 +74,12 @@
     const d = D(); if (d.sections.length) return { section_id: d.sections[0].section_id, sessions: d.sessions.length, students: regular(d.sections[0].section_id).length, rule: 0, beacons: 0 };
     const sec = { section_id: W3.uid(), term_id: '2026-2', course_code: 'DEMO1001', section_no: '01', title: '데이터와 인공지능 기초 (01분반)', mode: 'hyflex' }; d.sections.push(sec);
     const base = Date.parse('2026-09-07T00:00:00Z'); /* 09:00 KST */
-    for (let w = 1; w <= 15; w++) for (const seq of (w === 10 ? [1, 2] : [1])) { const t = base + (w - 1) * 7 * 864e5 + (seq - 1) * 90 * 6e4; d.sessions.push({ session_id: W3.uid(), section_id: sec.section_id, week_no: w, seq, kind: 'class', starts_at: W3.ts(t), ends_at: W3.ts(t + 75 * 6e4), open_at: W3.ts(t), close_at: W3.ts(t + 7 * 864e5), room: '공학관 301', required_sec: 0, extra_study_sec: 0 }); }
+    for (let w = 1; w <= 15; w++) for (const seq of (w === 10 ? [1, 2] : [1])) { const t = base + (w - 1) * 7 * 864e5 + (seq - 1) * 90 * 6e4; d.sessions.push({ session_id: W3.uid(), section_id: sec.section_id, week_no: w, seq, kind: [3, 7, 12].includes(w) ? 'online' : 'class', starts_at: W3.ts(t), ends_at: W3.ts(t + 75 * 6e4), open_at: W3.ts(t), close_at: W3.ts(t + 7 * 864e5), room: '공학관 301', required_sec: 0, extra_study_sec: 0 }); }
     for (let i = 1; i <= 9; i++) d.persons.push({ person_id: W3.uid(), member_no: String(20269000 + i), unit_code: ['CSE', 'BIZ', 'EDU'][i % 3], grade_year: 1 + i % 4, ekind: i === 9 ? 'audit' : 'regular', secs: [sec.section_id] });
     d.beacons.push({ beacon_id: 'NFC-ENG301', kind: 'nfc', room: '공학관 301', active: true }, { beacon_id: 'BLE-ENG301', kind: 'ble', room: '공학관 301', active: true });
     /* 지난 주차 출결 · 학습 데모(결정적) */
     const reg = regular(sec.section_id); const M = ['code', 'qr', 'nfc', 'ble', 'photo'];
-    secSessions(sec.section_id).filter(s => Date.parse(s.starts_at) < now()).forEach(s => reg.forEach((p, j) => { const r = (s.week_no * 7 + j * 13) % 23; const st = j === 6 ? (r < 9 ? 'absent' : r < 13 ? 'late' : 'present') : r === 0 ? 'absent' : r < 3 ? 'late' : r === 3 ? 'excused' : 'present';
+    secSessions(sec.section_id).filter(s => Date.parse(s.starts_at) < now() && s.kind !== 'online').forEach(s => reg.forEach((p, j) => { const r = (s.week_no * 7 + j * 13) % 23; const st = j === 6 ? (r < 9 ? 'absent' : r < 13 ? 'late' : 'present') : r === 0 ? 'absent' : r < 3 ? 'late' : r === 3 ? 'excused' : 'present';
       d.att[attK(s.session_id, p.person_id)] = { status: st, method: st === 'excused' ? 'manual' : M[(s.week_no + j) % 5], evidence: { at: s.starts_at }, reason: st === 'excused' ? '병결(진단서 제출)' : null }; }));
     if (typeof W3.seedI === 'function') W3.seedI(sec.section_id);
     if (typeof W3.seedJ === 'function') W3.seedJ(sec.section_id);
