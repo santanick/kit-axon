@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.didisam.state.service.impl.StateMapper">
+  <select id="selectState" resultType="map">
+    select doc::text as doc, rev, to_char(updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as at from tenant_state where tenant_id = #{tid}
+  </select>
+  <select id="insertState" resultType="int" flushCache="true" useCache="false">
+    insert into tenant_state (tenant_id, doc, rev, bytes) values (#{tid}, cast(#{doc} as jsonb), 1, #{bytes}) on conflict (tenant_id) do nothing returning rev
+  </select>
+  <select id="updateState" resultType="int" flushCache="true" useCache="false">
+    update tenant_state set doc = cast(#{doc} as jsonb), rev = rev + 1, bytes = #{bytes}, updated_at = now() where tenant_id = #{tid} and rev = #{rev} returning rev
+  </select>
+  <select id="selectLearnerFps" resultType="map">select sid, code_fp from learners where tenant_id = #{tid}</select>
+  <insert id="upsertLearner">
+    insert into learners (tenant_id, sid, dept, code_fp, code_hash) values (#{tid}, #{sid}, #{dept}, #{fp}, #{hash})
+    on conflict (tenant_id, sid) do update set dept = excluded.dept, code_fp = excluded.code_fp, code_hash = excluded.code_hash
+  </insert>
+  <delete id="deleteLearners">
+    delete from learners where tenant_id = #{tid} and sid in <foreach collection="sids" item="s" open="(" separator="," close=")">#{s}</foreach>
+  </delete>
+  <delete id="deleteLearnerSessions">
+    delete from learner_sessions where tenant_id = #{tid} and sid in <foreach collection="sids" item="s" open="(" separator="," close=")">#{s}</foreach>
+  </delete>
+  <update id="updateTenantMode">update tenants set mode = #{mode}, name = #{name} where id = #{tid}</update>
+</mapper>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.didisam.auth.service.impl.AuthMapper">
+  <select id="ping" resultType="int">select 1</select>
+  <select id="countEmail" resultType="int">select count(*) from users where lower(email) = #{email}</select>
+  <insert id="insertTenant">insert into tenants (id, name, type) values (#{id}, #{name}, #{type})</insert>
+  <select id="insertUser" resultType="string" flushCache="true" useCache="false">
+    insert into users (tenant_id, email, pw, role) values (#{tid}, #{email}, #{pw}, #{role}) returning id::text
+  </select>
+  <select id="selectUserByEmail" resultType="map">select id::text as id, tenant_id, pw from users where lower(email) = #{email}</select>
+  <insert id="insertSession">
+    insert into sessions (id, user_id, tenant_id, expires_at) values (#{id}, cast(#{uid} as uuid), #{tid}, now() + make_interval(hours => #{hours}))
+  </insert>
+  <select id="selectAuth" resultType="map">
+    select s.id sid, u.id::text uid, u.email, u.role, t.id tid, t.name, t.type, t.mode,
+           (s.expires_at &lt; now() + make_interval(hours => #{slideH})) slide
+      from sessions s join users u on u.id = s.user_id join tenants t on t.id = s.tenant_id
+     where s.id = #{sid} and s.expires_at &gt; now() and s.created_at &gt; now() - make_interval(days => #{days})
+  </select>
+  <update id="slideSession">
+    update sessions set expires_at = least(created_at + make_interval(days => #{days}), now() + make_interval(hours => #{idleH})) where id = #{sid}
+  </update>
+  <update id="updateLastLogin">update users set last_login = now() where id = cast(#{uid} as uuid)</update>
+  <delete id="deleteExpiredSessions">delete from sessions where user_id = cast(#{uid} as uuid) and expires_at &lt; now()</delete>
+  <delete id="deleteSession">delete from sessions where id = #{sid}</delete>
+  <select id="selectMe" resultType="map">
+    select t.id tid, t.name, t.type, t.mode, #{email}::text email, u.role from tenants t join users u on u.tenant_id = t.id where u.id = cast(#{uid} as uuid)
+  </select>
+</mapper>
