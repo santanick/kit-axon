@@ -84,6 +84,7 @@ async function scenario(base, tag, mine) {
   await P('search', 'POST', '/api/lms/o/rag/search', { q: '제2정규형 부분 함수 종속', top_k: 3 });
   await P('searchMember', 'POST', '/api/lms/o/rag/search', { q: '휴강 공지', member_no: '20261234', top_k: 5 });
   await P('searchScope', 'POST', '/api/lms/o/rag/search', { q: '정규화', member_no: '20261234', section_id: s2 });
+  await G('sections', '/api/lms/o/sections');
   await G('scope', '/api/lms/o/my/scope?member_no=20261234');
   await G('scopeNo', '/api/lms/o/my/scope?member_no=99999999');
   await P('thrBad', 'POST', '/api/lms/o/qa/thread', { temperature: 3 });
@@ -158,9 +159,12 @@ async function scenario(base, tag, mine) {
 }
 
 const VOL = new Set(['avg_ms', 'p95_ms', 'share_token', 'code', 'owner', 'created_by', 'reviewer', 'confirmed_by', 'day', 'month', 'scope']);
+/* 식별자(uuid)는 응답마다 처음 나온 순서로 다시 번호 매김 — 공용 DB에서도 같은 관계만 비교 */
+let IDS = new Map();
+function normR(v) { IDS = new Map(); return norm(v); }
 function norm(v, k) {
   if (k && VOL.has(k)) return v == null ? v : '<v>';
-  if (typeof v === 'string') { if (/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(v)) return '<uuid>'; if (/^\d{4}-\d{2}-\d{2}T\d{2}:/.test(v)) return '<ts>'; if (/^tn_/.test(v)) return '<tid>'; return v; }
+  if (typeof v === 'string') { if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) { if (!IDS.has(v)) IDS.set(v, '<id' + (IDS.size + 1) + '>'); return IDS.get(v); } if (/^\d{4}-\d{2}-\d{2}T\d{2}:/.test(v)) return '<ts>'; if (/^tn_/.test(v)) return '<tid>'; return v; }
   if (Array.isArray(v)) return v.map(x => norm(x));
   if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map(x => [x, norm(v[x], x)]));
   return v;
@@ -185,6 +189,7 @@ function norm(v, k) {
   ok(X.search.st === 200 && X.search.j.hits[0] && X.search.j.hits[0].name === '정규화.txt' && X.search.j.hits[0].score > 0, '벡터 검색: 관련 문서 1순위');
   ok(X.searchMember.j.hits.some(h => h.name === '전체공지.txt'), '학번 범위: 기관 공통 자료 포함');
   ok(X.searchScope.st === 403, '수강하지 않는 분반 질문 차단');
+  ok(X.sections.j.sections.length === 2 && X.sections.j.sections[0].students === 2, '분반 목록');
   ok(X.scope.j.scope.sections.length === 1 && X.scopeNo.st === 404, '수강 범위 조회');
   ok(X.thrBad.st === 400 && X.ask1.st === 200 && X.ask1.j.answer.cites.length > 0 && X.ask1.j.ai && X.ask1.j.ai.usage.input_tokens === 11, 'Q&A: RAG 출처 · 사용량');
   ok(X.ask2.j.faq && X.ask2.j.ai === null && X.ask2.j.answer.content === '과제는 금요일까지 제출합니다.', 'FAQ 유사 질문 → FAQ 답(LLM 호출 없음)');
@@ -219,7 +224,7 @@ function norm(v, k) {
     for (const k of Object.keys(RA)) {
       cmp++; const a = RA[k], b = RB[k];
       if (!b) { ok(false, `${k}: Java 결과 없음`); continue; }
-      const na = JSON.stringify(norm(a.j)), nb = JSON.stringify(norm(b.j));
+      const na = JSON.stringify(normR(a.j)), nb = JSON.stringify(normR(b.j));
       ok(a.st === b.st && na === nb, `${k}: Node ${a.st} ${na.slice(0, 300)}\n   Java ${b.st} ${nb.slice(0, 300)}`);
     }
   }

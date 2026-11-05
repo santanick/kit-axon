@@ -80,6 +80,7 @@ const Q = {
   faq_del: "with d as (delete from lms_o_faq where tenant_id = :tid and faq_id = cast(:id as uuid) returning 1) select to_jsonb(count(*)::int) j from d",
 
   scope: "select jsonb_build_object('member_no', p.member_no, 'kind', p.kind, 'unit_code', p.unit_code, 'status', p.status, 'sections', coalesce((select jsonb_agg(jsonb_build_object('section_id', s.section_id, 'title', s.title, 'course_code', s.course_code, 'term_id', s.term_id, 'section_no', s.section_no) order by s.term_id, s.course_code, s.section_no) from lms_section s where s.tenant_id = p.tenant_id and (exists (select 1 from lms_enrollment e where e.tenant_id = s.tenant_id and e.section_id = s.section_id and e.person_id = p.person_id and e.status = 'enrolled') or exists (select 1 from lms_section_staff f where f.tenant_id = s.tenant_id and f.section_id = s.section_id and f.person_id = p.person_id))), '[]'::jsonb)) j from lms_person p where p.tenant_id = :tid and p.member_no = cast(:member_no as text)",
+  sections: "select coalesce(jsonb_agg(jsonb_build_object('section_id', s.section_id, 'title', s.title, 'course_code', s.course_code, 'term_id', s.term_id, 'section_no', s.section_no, 'students', (select count(*)::int from lms_enrollment e where e.tenant_id = s.tenant_id and e.section_id = s.section_id and e.status = 'enrolled')) order by s.term_id desc, s.course_code, s.section_no), '[]'::jsonb) j from (select * from lms_section where tenant_id = :tid and status <> 'archived' order by term_id desc, course_code, section_no limit 300) s",
   thr_list: AGG(THR_J, 't.updated_at, t.thread_id from lms_o_thread t where t.tenant_id = :tid and (t.owner = cast(:email as text) or t.share_token is not null) and (cast(:section_id as uuid) is null or t.section_id = cast(:section_id as uuid)) order by t.updated_at desc limit 100', 'x.updated_at desc, x.thread_id'),
   thr_add: "insert into lms_o_thread (tenant_id, title, owner, section_id, member_no, temperature, top_k) values (:tid, cast(:title as text), cast(:email as text), cast(:section_id as uuid), cast(:member_no as text), cast(:temperature as real), cast(:top_k as int)) returning to_jsonb(thread_id) j",
   thr_get: `select ${THR_J} j from lms_o_thread t where t.tenant_id = :tid and t.thread_id = cast(:id as uuid)`,
@@ -483,6 +484,7 @@ module.exports = ctx => {
       const sec = secOf(b);
       return T(a, async c => { const secs = await scopeOf(a, c, mno, sec); return { hits: await run(c, 'search', { tid: a.tid, tf: pgArr(embedCounts(q)), k, secs: secs ? JSON.stringify(secs) : null }), scope: secs }; });
     },
+    'GET /api/lms/o/sections': async req => { const a = await need(req); return T(a, async c => ({ sections: await run(c, 'sections', { tid: a.tid }) })); },
     'GET /api/lms/o/my/scope': async req => {
       const a = await need(req); const m = qs(req).get('member_no') || ''; if (!MNO.test(m)) throw E(400, '학번 형식이 올바르지 않습니다.', 'member_no');
       return T(a, async c => ({ scope: notFound(await run(c, 'scope', { tid: a.tid, member_no: m }), '학번을 찾을 수 없습니다.', 'member') }));
