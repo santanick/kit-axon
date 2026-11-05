@@ -112,4 +112,4 @@ async function scenario(base, tag) {
     [R.banks2.j && R.banks2.j.banks.length === 1, '교과목 공유 은행이 다른 분반에 보임']);
   return { R, P };
 }
-run('묶음 F 대조', scenario, A, B, ['retry']).catch(e => { console.error(e); process.exit(1); });
+run('묶음 F 대조', scenario, A, B, ['retry', 'questionsAfter']).catch(e => { console.error(e); process.exit(1); });

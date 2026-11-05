@@ -169,7 +169,7 @@ declare b uuid := lms_x_uuid(a->>'bank', '문제은행');
 begin
   perform lms_x_staff(ctx);
   if not exists (select 1 from lms_qbank where bank_id = b) then perform lms_x_err(404, 'bank', '없는 문제은행입니다.'); end if;
-  return jsonb_build_object('questions', coalesce((select jsonb_agg(lms_f_q_json(q) order by q.created_at, q.q_id) from lms_question q where q.bank_id = b and not q.deleted
+  return jsonb_build_object('questions', coalesce((select jsonb_agg(lms_f_q_json(q) order by q.created_at, q.stem, q.q_id) from lms_question q where q.bank_id = b and not q.deleted
     and (nullif(a->>'difficulty', '') is null or q.difficulty = a->>'difficulty')), '[]'));
 end $$;
 create or replace function lms_f_q_save(ctx jsonb, a jsonb) returns jsonb language plpgsql as $$
@@ -391,7 +391,7 @@ begin
   into best from b;
   return jsonb_build_object('exam', lms_f_exam_json(x), 'summary', best,
     'questions', coalesce((select jsonb_agg(jsonb_build_object('q_id', q.q_id, 'stem', left(q.stem, 80), 'kind', q.kind, 'difficulty', q.difficulty,
-        'n', s.n, 'correct', s.c, 'rate', case when s.n > 0 then lms_x_n(100.0 * s.c / s.n) end) order by s.first_seen)
+        'n', s.n, 'correct', s.c, 'rate', case when s.n > 0 then lms_x_n(100.0 * s.c / s.n) end) order by s.first_seen, q.created_at, q.stem)
       from (select (i->>'q')::uuid qid, count(m.v) filter (where m.v->>'ok' is not null) n, count(*) filter (where m.v->>'ok' = 'true') c, min(t.started_at) first_seen
             from lms_exam_attempt t cross join jsonb_array_elements(t.items) i left join lateral (select t.marks->(i->>'q') v) m on true
             where t.exam_id = x.exam_id and t.status <> 'in_progress' group by 1) s join lms_question q on q.q_id = s.qid), '[]'),

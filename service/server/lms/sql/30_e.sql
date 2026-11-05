@@ -442,7 +442,7 @@ declare r lms_assignment; out jsonb := '[]'; s record; f record; tot bigint := 0
 begin
   perform lms_x_staff(ctx); r := lms_e_asg(lms_x_uuid(a->>'asg', '과제'));
   for s in select x.*, coalesce(p.member_no, t.name, 'unknown') who from lms_submission x left join lms_person p on p.person_id = x.person_id and x.team_id is null
-           left join lms_asg_team t on t.team_id = x.team_id where x.asg_id = r.asg_id and x.status <> 'draft' order by 2 loop
+           left join lms_asg_team t on t.team_id = x.team_id where x.asg_id = r.asg_id and x.status <> 'draft' order by who, x.sub_id loop
     if s.body <> '' then out := out || jsonb_build_object('path', s.who || '/본문.txt', 'b64', translate(encode(convert_to(s.body, 'UTF8'), 'base64'), E'\n', '')); end if;
     for f in select lf.* from jsonb_array_elements_text(s.files) v join lms_file lf on lf.file_id::text = v loop
       tot := tot + f.size; if tot > 20 * 1024 * 1024 then perform lms_x_err(413, 'too_large', '내려받을 파일이 20MB를 넘습니다. 제출물을 나눠 받으세요.'); end if;
@@ -555,7 +555,7 @@ begin
   return jsonb_build_object('engine', jsonb_build_object('name', 'stub-local', 'connected', false,
       'note', '모사 검색 엔진 미연결 — 강좌 내 제출물 상호 비교(데모 어댑터) 결과입니다. 연동 후 동작: 외부 표절 검사 엔진에 제출물을 보내고 결과를 이 형식으로 받습니다.'),
     'results', coalesce((select jsonb_agg(jsonb_build_object('sub_id', s.sub_id, 'owner', coalesce(p.member_no, t.name), 'engine', pr.engine, 'status', pr.status,
-        'similarity', lms_x_n(pr.similarity), 'matches', pr.matches, 'finished_at', lms_x_ts(pr.finished_at)) order by pr.similarity desc nulls last, 2)
+        'similarity', lms_x_n(pr.similarity), 'matches', pr.matches, 'finished_at', lms_x_ts(pr.finished_at)) order by pr.similarity desc nulls last, coalesce(p.member_no, t.name))
       from lms_submission s join lms_plag_result pr on pr.sub_id = s.sub_id left join lms_person p on p.person_id = s.person_id and s.team_id is null
       left join lms_asg_team t on t.team_id = s.team_id where s.asg_id = r.asg_id), '[]'));
 end $$;

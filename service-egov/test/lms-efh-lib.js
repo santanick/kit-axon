@@ -48,14 +48,22 @@ async function setup(base, tag) {
 }
 async function setSql(tid, sql, args = []) { return db(async c => { await c.query("select set_config('app.tenant', $1, false)", [tid]); return c.query(sql, args); }); }
 
-/* 정규화: uuid는 처음 나온 순서 번호, 시각은 'T', 기관 id는 'TID' */
+/* 정규화: uuid는 처음 나온 순서 번호(U0…), 시각은 'T', 기관 id는 'TID', 일련번호(qid · mid · id)는 'N'.
+   uuid를 키로 쓰는 객체(문항별 답안 · 채점)는 키 순서가 uuid 값에 달려 있으므로 [키, 값] 목록을 값 기준으로 정렬해 비교한 */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 function norm(v) {
-  const map = new Map();
-  const s = JSON.stringify(v === undefined ? null : v)
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, u => { if (!map.has(u)) map.set(u, 'U' + map.size); return map.get(u); })
-    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, 'T').replace(/tn_[a-z0-9]{8,16}/g, 'TID')
-    .replace(/efh_[nj]_\d+_[a-z0-9]+@example\.com/g, 'EMAIL');
-  return s;
+  const map = new Map(); const U = u => { if (!map.has(u)) map.set(u, 'U' + map.size); return map.get(u); };
+  const walk = x => {
+    if (Array.isArray(x)) return x.map(walk);
+    if (x && typeof x === 'object') {
+      const ks = Object.keys(x);
+      if (ks.length && ks.every(k => UUID.test(k))) return ks.map(k => JSON.stringify(walk(x[k]))).sort();
+      const o = {}; for (const k of ks) o[k] = ['qid', 'mid', 'id'].includes(k) && typeof x[k] === 'number' ? 'N' : walk(x[k]); return o;
+    }
+    if (typeof x === 'string') { if (UUID.test(x)) return U(x); return x.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, U).replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, 'T').replace(/tn_[a-z0-9]{8,16}/g, 'TID').replace(/efh_[nj]_\d+_[a-z0-9]+@example\.com/g, 'EMAIL'); }
+    return x;
+  };
+  return JSON.stringify(walk(v === undefined ? null : v));
 }
 function report(name, pass, fail, errs) {
   console.log(`${name}: ${pass + fail}항목 중 ${pass} 통과 · ${fail} 실패`);
