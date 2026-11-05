@@ -35,6 +35,20 @@ public class DdWeb {
         res.setHeader("set-cookie", p.cookieName + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" + (p.secure ? "; Secure" : ""));
     }
 
+    /* ── 학습자 포털 세션(30일) ── */
+    public static final int LSESSION_DAYS = 30;
+    public String lsidToken(HttpServletRequest req) {
+        Cookie[] cs = req.getCookies(); if (cs == null) return null;
+        for (Cookie c : cs) if (p.lcookieName.equals(c.getName())) return c.getValue();
+        return null;
+    }
+    public void setLsid(HttpServletResponse res, String token) {
+        res.setHeader("set-cookie", p.lcookieName + "=" + token + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=" + (LSESSION_DAYS * 86400) + (p.secure ? "; Secure" : ""));
+    }
+    public void clearLsid(HttpServletResponse res) {
+        res.setHeader("set-cookie", p.lcookieName + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" + (p.secure ? "; Secure" : ""));
+    }
+
     public static final ObjectMapper JSON = new ObjectMapper();
     /** Node readBody와 같음: 크기 초과 413, 빈 본문 {}, 깨진 JSON 400 */
     public static JsonNode readBody(byte[] body, int max) {

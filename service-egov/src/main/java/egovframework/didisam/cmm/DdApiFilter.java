@@ -20,10 +20,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 @Order(1)
 public class DdApiFilter extends OncePerRequestFilter {
-    /** 이번 시범 이식 범위(로그인 · 기관 · 상태). 나머지 /api는 2단계 이식 대상 */
+    /** 등록된 /api 경로(Node app.js routes와 같음 — 1단계 + 2단계) */
     public static final Set<String> ROUTES = Set.of(
         "GET /api/health", "GET /api/config", "POST /api/signup", "POST /api/login", "POST /api/logout",
-        "GET /api/me", "GET /api/state", "PUT /api/state");
+        "GET /api/me", "GET /api/state", "PUT /api/state",
+        "GET /api/keys", "POST /api/keys", "POST /api/keys/revoke",
+        "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage",
+        "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log",
+        "GET /api/audit", "POST /api/tenant/delete");
+    /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */
+    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify)\\z");
     static final Map<String, String> SEC = Map.of(
         "x-content-type-options", "nosniff",
         "referrer-policy", "strict-origin-when-cross-origin",
@@ -46,7 +52,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         String path = req.getRequestURI(); String m = req.getMethod();
         if (path.startsWith("/api/")) {
             res.setHeader("cache-control", "no-store");
-            if (!ROUTES.contains(m + " " + path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
+            if (!ROUTES.contains(m + " " + path) && !PUB.matcher(path).matches()) { json(res, 404, "not_found", "없는 주소입니다."); return; }
             if (!"GET".equals(m)) {
                 if (!"1".equals(req.getHeader("x-didisam"))) { json(res, 403, "csrf", "허용되지 않은 요청입니다."); return; }
                 String o = req.getHeader("origin");
@@ -55,6 +61,8 @@ public class DdApiFilter extends OncePerRequestFilter {
                     if (!oh.equals(req.getHeader("host"))) { json(res, 403, "origin", "허용되지 않은 출처입니다."); return; }
                 }
             }
+        } else if ("/mcp".equals(path)) {
+            res.setHeader("cache-control", "no-store"); // MCP: 메서드 · 키 검사는 McpController(Node mcp.handle과 같은 순서)
         } else {
             if (!"GET".equals(m) && !"HEAD".equals(m)) { res.setStatus(405); res.getWriter().write("method"); return; }
             boolean learner = path.endsWith("/learner.html");

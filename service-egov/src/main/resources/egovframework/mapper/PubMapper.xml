@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 학습자 포털(/api/pub/{tid}/…) — 기관 범위(inTenant) 쿼리와 학습자 세션(plain) -->
+<mapper namespace="egovframework.didisam.pub.service.impl.PubMapper">
+  <select id="selectSitePub" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub')::text pub from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectLearner" resultType="java.util.LinkedHashMap">select sid, dept, code_hash from learners where tenant_id = #{tid} and sid = #{sid}</select>
+  <select id="selectLearnerDept" resultType="java.util.LinkedHashMap">select dept from learners where tenant_id = #{tid} and sid = #{sid}</select>
+  <update id="touchLearner">update learners set last_login = now() where tenant_id = #{tid} and sid = #{sid}</update>
+  <select id="selectLp" resultType="java.util.LinkedHashMap">select lp::text lp from learner_progress where tenant_id = #{tid} and sid = #{sid}</select>
+  <select id="selectDoc" resultType="java.util.LinkedHashMap">select doc::text doc from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectMeExtra" resultType="java.util.LinkedHashMap">
+    select kind, login, nickname, student_no, dept, status, minor, idv_ok from learner_accounts where tenant_id = #{tid} and learner_id = cast(#{sid} as uuid)
+  </select>
+  <insert id="upsertProgress">
+    insert into learner_progress (tenant_id, sid, lp, bytes) values (#{tid}, #{sid}, cast(#{lp} as jsonb), #{bytes})
+    on conflict (tenant_id, sid) do update set lp = excluded.lp, bytes = excluded.bytes, updated_at = now()
+  </insert>
+  <select id="selectTutorCtx" resultType="java.util.LinkedHashMap">
+    select (doc->'settings'->'tutor')::text tu, (doc->'org'->'room')::text room, doc->'org'->>'type' type, (doc->'lsite'->'pub')::text pub,
+           (doc->'members')::text members, (doc->'classes')::text classes, (doc->'badges')::text badges, (doc->'tq')::text tq, (doc->'bkgrades')::text bkgrades
+      from tenant_state where tenant_id = #{tid}
+  </select>
+  <select id="incUsage" resultType="int" flushCache="true" useCache="false">
+    insert into ai_usage (tenant_id, day, calls) values (#{tid}, cast(#{day} as date), 1) on conflict (tenant_id, day) do update set calls = ai_usage.calls + 1 returning calls
+  </select>
+  <update id="addTokens">update ai_usage set tin = tin + #{tin}, tout = tout + #{tout} where tenant_id = #{tid} and day = cast(#{day} as date)</update>
+  <!-- plain -->
+  <insert id="insertLearnerSession">insert into learner_sessions (id, tenant_id, sid, expires_at) values (#{id}, #{tid}, #{sid}, now() + interval '30 days')</insert>
+  <select id="selectLearnerSession" resultType="java.util.LinkedHashMap">select tenant_id, sid from learner_sessions where id = #{id} and expires_at &gt; now()</select>
+  <delete id="deleteLearnerSession">delete from learner_sessions where id = #{id}</delete>
+</mapper>

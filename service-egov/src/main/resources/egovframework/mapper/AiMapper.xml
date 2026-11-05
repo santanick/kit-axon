@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- AI 게이트웨이 — 모두 기관 범위(inTenant) -->
+<mapper namespace="egovframework.didisam.ai.service.impl.AiMapper">
+  <select id="selectRoom" resultType="string">select (doc->'org'->'room')::text room from tenant_state where tenant_id = #{tid}</select>
+  <select id="incUsage" resultType="int" flushCache="true" useCache="false">
+    insert into ai_usage (tenant_id, day, calls) values (#{tid}, cast(#{day} as date), 1) on conflict (tenant_id, day) do update set calls = ai_usage.calls + 1 returning calls
+  </select>
+  <update id="addTokens">update ai_usage set tin = tin + #{tin}, tout = tout + #{tout} where tenant_id = #{tid} and day = cast(#{day} as date)</update>
+  <select id="selectUsage" resultType="java.util.LinkedHashMap">
+    select day::text, calls, tin::int, tout::int from ai_usage where tenant_id = #{tid} and day &gt; current_date - 31 order by day desc
+  </select>
+</mapper>

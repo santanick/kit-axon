@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 학습자 간편가입 · 개인정보 분리(Node pii.js와 같은 SQL).
+     L(…) = didisam_tenant 역할(learner_accounts · tenant_state · audit_log), P(…) = didisam_pii 역할(pii 스키마만), plain = 로그인 계정(learner_sessions · tenants) -->
+<mapper namespace="egovframework.didisam.pii.service.impl.PiiMapper">
+  <sql id="iso">'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'</sql>
+
+  <!-- ── L: 학습 · 운영 데이터 ── -->
+  <select id="selectOrg" resultType="java.util.LinkedHashMap">
+    select doc->'org'->>'type' type, (doc->'settings'->'acct')::text acct from tenant_state where tenant_id = #{tid}
+  </select>
+  <select id="insertAccount" resultType="string" flushCache="true" useCache="false">
+    insert into learner_accounts (tenant_id, kind, login, nickname, student_no, dept, status, minor, mkt)
+    values (#{tid}, 'learner', #{login}, #{nick}, #{stu}, #{dept}, #{st}, #{minor}, #{mkt}) returning learner_id::text
+  </select>
+  <update id="withdrawRefused">
+    update learner_accounts set status = 'withdrawn', nickname = '탈퇴 회원', withdrawn_at = now() where tenant_id = #{tid} and learner_id = cast(#{lid} as uuid)
+  </update>
+  <update id="activateGuardian">
+    update learner_accounts set status = 'active' where tenant_id = #{tid} and learner_id = cast(#{lid} as uuid) and status = 'guardian_pending'
+  </update>
+  <select id="selectStatus" resultType="string">select status from learner_accounts where tenant_id = #{tid} and learner_id = cast(#{lid} as uuid)</select>
+  <select id="selectAcct" resultType="java.util.LinkedHashMap">
+    select learner_id::text learner_id, kind, login, nickname, student_no, dept, status, minor, idv_ok, mkt from learner_accounts where tenant_id = #{tid} and learner_id::text = #{sid}
+  </select>
+  <update id="withdraw">
+    update learner_accounts set status = 'withdrawn', nickname = '탈퇴 회원', student_no = null, dept = '', mkt = false, withdrawn_at = now() where tenant_id = #{tid} and learner_id = cast(#{lid} as uuid)
+  </update>
+  <update id="setIdv">update learner_accounts set idv_ok = true where tenant_id = #{tid} and learner_id = cast(#{lid} as uuid)</update>
+  <select id="selectAccounts" resultType="java.util.LinkedHashMap">
+    select learner_id::text learner_id, kind, login, nickname, student_no, dept, status, minor, idv_ok,
+           to_char(created_at at time zone 'UTC', <include refid="iso"/>) created_at
+      from learner_accounts where tenant_id = #{tid} and status &lt;&gt; 'withdrawn' order by learner_accounts.created_at desc limit 5000
+  </select>
+  <update id="purgeWithdraw">
+    update learner_accounts set status = 'withdrawn', nickname = '탈퇴 회원', withdrawn_at = now() where tenant_id = #{tid} and learner_id = cast(#{lid} as uuid) and status = 'guardian_pending'
+  </update>
+
+  <!-- ── P: 신원(pii 스키마) ── -->
+  <insert id="upsertOtp">
+    insert into pii.otp (tid, bidx, purpose, code_hash, tries, expires_at) values (#{tid}, #{b}, #{purpose}, #{hash}, 0, now() + interval '10 minutes')
+    on conflict (tid, bidx, purpose) do update set code_hash = excluded.code_hash, tries = 0, expires_at = excluded.expires_at
+  </insert>
+  <select id="selectOtp" resultType="java.util.LinkedHashMap">
+    select code_hash, tries, (extract(epoch from expires_at) * 1000)::bigint exp_ms from pii.otp where tid = #{tid} and bidx = #{b} and purpose = #{purpose}
+  </select>
+  <update id="incOtp">update pii.otp set tries = tries + 1 where tid = #{tid} and bidx = #{b} and purpose = #{purpose}</update>
+  <delete id="deleteOtp">delete from pii.otp where tid = #{tid} and bidx = #{b} and purpose = #{purpose}</delete>
+  <delete id="deleteOtpAll">delete from pii.otp where tid = #{tid} and bidx = #{b}</delete>
+  <delete id="deleteOtpExpired">delete from pii.otp where tid = #{tid} and expires_at &lt; now()</delete>
+  <insert id="insertIdentity">
+    insert into pii.identity (tid, learner_id, provider, provider_sub_hash, email_bidx, email_enc, email_mask, pw_hash, consent)
+    values (#{tid}, cast(#{lid} as uuid), #{provider}, #{sub}, #{ebidx}, #{eenc}, #{emask}, #{pw}, cast(#{consent} as jsonb))
+  </insert>
+  <insert id="insertGuardian">
+    insert into pii.guardian (tid, learner_id, contact_enc, token_hash, expires_at) values (#{tid}, cast(#{lid} as uuid), #{contact}, #{th}, now() + interval '7 days')
+  </insert>
+  <insert id="insertLog">
+    insert into pii.access_log (tid, actor, action, learner_id, purpose, fields) values (#{tid}, #{actor}, #{action}, cast(#{lid} as uuid), #{purpose}, string_to_array(#{fields}, ','))
+  </insert>
+  <select id="selectGuardianPending" resultType="java.util.LinkedHashMap">
+    select id::text id, learner_id::text learner_id from pii.guardian where tid = #{tid} and token_hash = #{th} and status = 'pending' and expires_at &gt; now()
+  </select>
+  <delete id="deleteGuardianById">delete from pii.guardian where id = cast(#{id} as uuid)</delete>
+  <delete id="deleteGuardianOf">delete from pii.guardian where tid = #{tid} and learner_id = cast(#{lid} as uuid)</delete>
+  <delete id="deleteIdentity">delete from pii.identity where tid = #{tid} and learner_id = cast(#{lid} as uuid)</delete>
+  <update id="guardianOk">update pii.guardian set status = 'ok', confirmed_at = now() where id = cast(#{id} as uuid)</update>
+  <select id="selectByEmail" resultType="java.util.LinkedHashMap">select learner_id::text learner_id, pw_hash from pii.identity where tid = #{tid} and email_bidx = #{e}</select>
+  <select id="selectBySub" resultType="string">select learner_id::text from pii.identity where tid = #{tid} and provider = #{prov} and provider_sub_hash = #{sub}</select>
+  <select id="selectUniv" resultType="java.util.LinkedHashMap">select learner_id::text learner_id, pw_hash from pii.identity where tid = #{tid} and provider = 'univ' and provider_sub_hash = #{sub}</select>
+  <select id="selectMine" resultType="java.util.LinkedHashMap">
+    select learner_id::text learner_id, provider, email_enc, phone_enc, name_enc, consent::text consent, to_char(created_at at time zone 'UTC', <include refid="iso"/>) created_at
+      from pii.identity where tid = #{tid} and learner_id::text = #{sid}
+  </select>
+  <!-- f는 서비스에서 name · phone 중 하나로만 허용한 값 -->
+  <select id="updateField" resultType="string" flushCache="true" useCache="false">
+    update pii.identity set ${f}_enc = #{v} where tid = #{tid} and learner_id::text = #{sid} returning learner_id::text
+  </select>
+  <select id="selectEmailBidx" resultType="java.util.LinkedHashMap">select email_bidx from pii.identity where tid = #{tid} and learner_id = cast(#{lid} as uuid)</select>
+  <select id="selectMasks" resultType="java.util.LinkedHashMap">select learner_id::text learner_id, email_mask from pii.identity where tid = #{tid}</select>
+  <!-- f는 서비스에서 name · email · phone 중 하나로만 허용한 값 -->
+  <select id="selectField" resultType="java.util.LinkedHashMap">select ${f}_enc v from pii.identity where tid = #{tid} and learner_id = cast(#{lid} as uuid)</select>
+  <select id="selectLogs" resultType="java.util.LinkedHashMap">
+    select to_char(l.at at time zone 'UTC', <include refid="iso"/>) at, l.actor, l.action, l.learner_id::text learner_id, l.purpose, array_to_json(l.fields)::text fields
+      from pii.access_log l where l.tid = #{tid} order by l.at desc, l.id desc limit 300
+  </select>
+  <select id="purgeGuardians" resultType="string" flushCache="true" useCache="false">
+    delete from pii.guardian where tid = #{tid} and status = 'pending' and expires_at &lt; now() returning learner_id::text
+  </select>
+
+  <!-- ── plain: 학습자 세션 · 기관 목록 ── -->
+  <insert id="insertLearnerSession">
+    insert into learner_sessions (id, tenant_id, sid, expires_at) values (#{id}, #{tid}, #{sid}, now() + interval '30 days')
+  </insert>
+  <delete id="deleteLearnerSessionsOf">delete from learner_sessions where tenant_id = #{tid} and sid = #{sid}</delete>
+  <select id="selectTenantIds" resultType="string">select id from tenants</select>
+  <delete id="deleteExpiredSessions">delete from sessions where expires_at &lt; now()</delete>
+  <delete id="deleteExpiredLearnerSessions">delete from learner_sessions where expires_at &lt; now()</delete>
+</mapper>

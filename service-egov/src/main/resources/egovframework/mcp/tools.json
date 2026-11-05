@@ -1,0 +1,168 @@
+[
+ {
+  "name": "get_overview",
+  "scope": "read",
+  "description": "기관 운영 현황 요약: 학습자 수 · 운영 과정 · 평균 진도 · 채점 대기 · 미답변 질문 · 법정의무교육 미이수.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {}
+  }
+ },
+ {
+  "name": "list_courses",
+  "scope": "read",
+  "description": "과정(교과목 · 교육과정 · 강좌) 목록과 수강 인원 · 평균 진도 · 이수 인원.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "status": {
+     "type": "string",
+     "description": "운영중 · 준비중 · 종료 중 하나(생략하면 전체)"
+    }
+   }
+  }
+ },
+ {
+  "name": "get_course",
+  "scope": "read",
+  "description": "과정 하나의 커리큘럼(항목 유형 · 제목 · 주차) · 평가 기준 · 공지 · 진도 통계.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "course_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "course_id"
+   ]
+  }
+ },
+ {
+  "name": "list_learners",
+  "scope": "read",
+  "description": "학습자 목록(번호 · 소속 · 등급 · 최근 접속). 이름 · 이메일 · 연락처는 제공하지 않습니다.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "group": {
+     "type": "string",
+     "description": "소속(학과 · 부서 · 반) 이름으로 거르기"
+    },
+    "limit": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 500
+    }
+   }
+  }
+ },
+ {
+  "name": "get_learner_progress",
+  "scope": "read",
+  "description": "학습자 한 명(번호)의 과정별 진도 · 시험 점수 · 과제 상태.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "learner_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "learner_id"
+   ]
+  }
+ },
+ {
+  "name": "list_questions",
+  "scope": "read",
+  "description": "학습자 질문함(AI 튜터 · 게시판에서 넘어온 질문)과 답변 상태.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "status": {
+     "type": "string",
+     "enum": [
+      "open",
+      "answered",
+      "all"
+     ]
+    }
+   }
+  }
+ },
+ {
+  "name": "answer_question",
+  "scope": "write",
+  "description": "질문함의 질문에 답변을 등록합니다(학습자 포털 · AI 튜터에 바로 표시).",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "question_id": {
+     "type": "string"
+    },
+    "answer": {
+     "type": "string",
+     "maxLength": 2000
+    }
+   },
+   "required": [
+    "question_id",
+    "answer"
+   ]
+  }
+ },
+ {
+  "name": "post_notice",
+  "scope": "write",
+  "description": "공지를 등록합니다(과정 공지 또는 기관 전체 공지).",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "title": {
+     "type": "string",
+     "maxLength": 80
+    },
+    "body": {
+     "type": "string",
+     "maxLength": 2000
+    },
+    "course_id": {
+     "type": "string",
+     "description": "생략하면 기관 전체 공지"
+    }
+   },
+   "required": [
+    "title"
+   ]
+  }
+ },
+ {
+  "name": "create_course_draft",
+  "scope": "write",
+  "description": "새 과정 초안(준비중)을 만듭니다. 주차별 제목을 주면 커리큘럼 챕터로 넣습니다. 공개 · 수강생 배정은 스튜디오에서 승인합니다.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "name": {
+     "type": "string",
+     "maxLength": 60
+    },
+    "goal": {
+     "type": "string",
+     "maxLength": 300
+    },
+    "weeks": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "maxItems": 30
+    }
+   },
+   "required": [
+    "name"
+   ]
+  }
+ }
+]

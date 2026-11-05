@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 외부 AI 연결(MCP) · 기관 API 키 — api_keys는 인증 표라 RLS 밖(plain)에서 코드로 기관을 거른다(Node mcp.js와 같음) -->
+<mapper namespace="egovframework.didisam.mcp.service.impl.McpMapper">
+  <sql id="iso">'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'</sql>
+  <select id="selectKeys" resultType="java.util.LinkedHashMap">
+    select id, name, prefix, scope, created_by,
+           to_char(created_at at time zone 'UTC', <include refid="iso"/>) created_at,
+           to_char(last_used at time zone 'UTC', <include refid="iso"/>) last_used,
+           calls,
+           to_char(revoked_at at time zone 'UTC', <include refid="iso"/>) revoked_at
+      from api_keys where tenant_id = #{tid} order by api_keys.created_at desc limit 50
+  </select>
+  <select id="countActiveKeys" resultType="int">select count(*)::int n from api_keys where tenant_id = #{tid} and revoked_at is null</select>
+  <insert id="insertKey">
+    insert into api_keys (id, tenant_id, name, prefix, hash, scope, created_by) values (#{id}, #{tid}, #{name}, #{prefix}, #{hash}, #{scope}, #{by})
+  </insert>
+  <update id="revokeKey">update api_keys set revoked_at = now() where tenant_id = #{tid} and id = #{id} and revoked_at is null</update>
+  <select id="selectKeyAuth" resultType="java.util.LinkedHashMap">
+    select k.id, k.tenant_id tid, k.name, k.scope, t.name org, t.type from api_keys k join tenants t on t.id = k.tenant_id where k.hash = #{hash} and k.revoked_at is null
+  </select>
+  <update id="touchKey">update api_keys set last_used = now(), calls = calls + 1 where id = #{id}</update>
+  <select id="selectDoc" resultType="java.util.LinkedHashMap">select doc::text doc, rev from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectDocForUpdate" resultType="java.util.LinkedHashMap">select doc::text doc, rev from tenant_state where tenant_id = #{tid} for update</select>
+  <update id="updateDoc">update tenant_state set doc = cast(#{doc} as jsonb), rev = rev + 1, bytes = #{bytes}, updated_at = now() where tenant_id = #{tid}</update>
+</mapper>

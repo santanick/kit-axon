@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 기관 운영: 감사 기록 · 학습 진도 모아 보기(inTenant) · 기관 파기(plain, cascade) -->
+<mapper namespace="egovframework.didisam.tenant.service.impl.TenantMapper">
+  <select id="selectAudit" resultType="java.util.LinkedHashMap">
+    select to_char(a.at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at, a.actor, a.action, a.detail::text detail
+      from audit_log a where a.tenant_id = #{tid} order by a.at desc limit 200
+  </select>
+  <select id="selectProgress" resultType="java.util.LinkedHashMap">
+    select sid, lp::text lp from learner_progress where tenant_id = #{tid} order by updated_at desc limit 5000
+  </select>
+  <select id="selectPw" resultType="string">select pw from users where id = cast(#{uid} as uuid)</select>
+  <delete id="deleteTenant">delete from tenants where id = #{tid}</delete>
+</mapper>

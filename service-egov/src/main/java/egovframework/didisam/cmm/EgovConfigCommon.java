@@ -50,6 +50,18 @@ public class EgovConfigCommon {
         m.put("rate.signup.max", "10"); m.put("rate.signup.winMs", "3600000");
         m.put("rate.loginIp.max", "30"); m.put("rate.loginEmail.max", "8"); m.put("rate.login.winMs", "600000");
         m.put("learner.syncMax", "300"); m.put("learner.codesMax", "5000");
+        /* 2단계(Node app.js · mcp.js · pii.js와 같은 값) */
+        m.put("body.keyMax", "2048"); m.put("body.keyRevokeMax", "1024"); m.put("body.mcpMax", String.valueOf(256 * 1024));
+        m.put("body.aiMax", String.valueOf(600 * 1024)); m.put("body.benchMax", "4096"); m.put("body.tutorMax", String.valueOf(16 * 1024));
+        m.put("body.piiMax", "2048"); m.put("body.lsignupMax", "8192");
+        m.put("mcp.maxKeys", "20"); m.put("rate.mcp.max", "120"); m.put("rate.mcp.winMs", "60000");
+        m.put("rate.aim.max", "40"); m.put("rate.aim.winMs", "60000");
+        m.put("rate.bench.max", "20"); m.put("rate.bench.winMs", "600000");
+        m.put("ai.studioTimeoutMs", "90000"); m.put("ai.tutorTimeoutMs", "60000");
+        m.put("rate.day.winMs", "86400000"); m.put("rate.inj.max", "5");
+        m.put("rate.ll.max", "40"); m.put("rate.ll.winMs", "600000"); m.put("rate.lls.max", "8"); m.put("rate.lle.max", "8"); m.put("rate.llu.max", "8");
+        m.put("rate.otp.max", "20"); m.put("rate.otp.winMs", "600000"); m.put("rate.otpEmail.max", "5");
+        m.put("rate.lsu.max", "20"); m.put("rate.lsu.winMs", "3600000"); m.put("rate.lg.max", "20"); m.put("rate.lg.winMs", "600000");
         p.setProperties(m);
         return p;
     }
