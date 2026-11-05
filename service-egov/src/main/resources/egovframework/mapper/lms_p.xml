@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.didisam.lms.p.service.impl.LmsPMapper">
+  <select id="call" resultType="string" flushCache="true" useCache="false">select lms_p(#{op}, cast(#{me} as jsonb), cast(#{q} as jsonb))::text</select>
+  <select id="selectPw" resultType="string">select pw from users where id = cast(#{uid} as uuid)</select>
+  <select id="selectLearner" resultType="map" flushCache="true" useCache="false">select tenant_id as tid, sid from learner_sessions where id = #{hash} and expires_at &gt; now()</select>
+</mapper>

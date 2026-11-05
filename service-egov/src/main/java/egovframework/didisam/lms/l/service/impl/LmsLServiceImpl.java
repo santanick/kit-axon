@@ -16,7 +16,7 @@ public class LmsLServiceImpl extends EgovAbstractServiceImpl implements LmsLServ
     public LmsLServiceImpl(LmsLMapper mapper, LmsDispatch d) { this.mapper = mapper; this.d = d; }
 
     @Override public ResponseEntity<String> run(String op, String method, byte[] body, HttpServletRequest req) throws Exception {
-        String out = d.run(mapper::call, op, method, body, req, null, LmsDispatch.BODY_MAX);
+        String out = d.run(mapper::call, op, method, body, req, null, LmsDispatch.BODY_MAX, 2); // 학습자 포털 세션도 받는다(학생 DM · 알림 · 개인 일정)
         if ("cal.ics".equals(op)) return ResponseEntity.ok().header("content-type", "text/calendar; charset=utf-8")
             .header("content-disposition", "attachment; filename=\"didisam-calendar.ics\"").body(DdWeb.JSON.readTree(out).get("ics").asText());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(out);

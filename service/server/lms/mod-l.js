@@ -8,5 +8,7 @@ const ROUTES = [
   ['GET', 'noti.rules'], ['POST', 'noti.rule_save'], ['POST', 'noti.rule_del'], ['POST', 'noti.quiet'], ['POST', 'noti.fire'], ['POST', 'noti.scan'],
   ['GET', 'noti.inbox'], ['GET', 'noti.outbox'], ['POST', 'noti.ack']
 ];
+/* 모든 L 경로는 학습자 포털 세션도 받는다(학생 DM · 알림 · 개인 일정). 관리 동작은 SQL에서 역할로 막는다 */
+ROUTES.forEach(r => { r[2] = { ...(r[2] || {}), learner: 'any' }; });
 module.exports = ctx => build(ctx, 'l', 'lms_l', ROUTES);
 module.exports.ROUTES = ROUTES;

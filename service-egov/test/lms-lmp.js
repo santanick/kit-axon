@@ -40,7 +40,7 @@ const UU = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/g;
 const TS = /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(\+09:00|Z)\b/g;
 function normalizer() {
   const um = new Map(); const nm = new Map();
-  const s = v => String(v).replace(UU, x => { if (!um.has(x)) um.set(x, 'U' + (um.size + 1)); return um.get(x); }).replace(TS, 'T').replace(/tn_[a-z0-9]{8,16}/g, 'TID').replace(/[\w.+-]+@example\.com/g, 'EMAIL').replace(/(DTSTART|DTEND|DTSTAMP)(;VALUE=DATE)?:\d{8}(T\d{6}Z)?/g, '$1:D');
+  const s = v => String(v).replace(UU, x => { if (!um.has(x)) um.set(x, 'U' + (um.size + 1)); return um.get(x); }).replace(TS, 'T').replace(/tn_[a-z0-9]{8,16}/g, 'TID').replace(/[\w.+-]+@example\.com/g, 'EMAIL').replace(/^[A-Za-z0-9_-]{43}$/, 'TOKEN').replace(/(DTSTART|DTEND|DTSTAMP)(;VALUE=DATE)?:\d{8}(T\d{6}Z)?/g, '$1:D');
   const go = (v, k) => {
     if (v === null || v === undefined) return v;
     if (Array.isArray(v)) return v.map(x => go(x, k));
