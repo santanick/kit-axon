@@ -54,8 +54,9 @@ function normalizer() {
 /* 응답 R(이름 → 응답) 두 벌을 비교 — shapeOnly: 값 대신 형태만(프로세스 지표 등) */
 const shape = v => v === null ? 'null' : Array.isArray(v) ? '[' + (v.length ? shape(v[0]) : '') + ']' : typeof v === 'object' ? '{' + Object.keys(v).sort().map(k => k + ':' + shape(v[k])).join(',') + '}' : typeof v;
 function compare(RA, RB, shapeOnly = []) {
-  let pass = 0, fail = 0; const errs = []; const na = normalizer(), nb = normalizer();
+  let pass = 0, fail = 0; const errs = [];
   for (const k of Object.keys(RA)) {
+    const na = normalizer(), nb = normalizer(); /* 응답마다 새로 번호(공유 시퀀스 · DB 상태와 무관) */
     const a = RA[k], b = RB[k]; if (!b) { fail++; errs.push(k + ': Java 응답 없음'); continue; }
     const ja = shapeOnly.includes(k) ? shape(a.j) : JSON.stringify(na(a.j)), jb = shapeOnly.includes(k) ? shape(b.j) : JSON.stringify(nb(b.j));
     if (a.st === b.st && ja === jb && a.ct === b.ct) pass++; else { fail++; errs.push(`${k}: Node ${a.st} ${a.ct} ${ja.slice(0, 300)}\n      Java ${b.st} ${b.ct} ${jb.slice(0, 300)}`); }
