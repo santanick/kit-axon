@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 학사 LMS 묶음 K · N · Q 공통 호출(업무 규칙은 DB 함수 lms_k_call → lms_{묶음}_{op}) -->
+<mapper namespace="egovframework.didisam.lms.k.service.impl.LmsCallMapper">
+  <select id="call" resultType="string">select lms_k_call(#{pfx}, #{op}, cast(#{actor} as jsonb), cast(#{args} as jsonb))::text</select>
+  <insert id="insertAudit">insert into audit_log (tenant_id, actor, action, detail) values (#{tid}, #{actor}, #{action}, cast(#{detail} as jsonb))</insert>
+</mapper>
