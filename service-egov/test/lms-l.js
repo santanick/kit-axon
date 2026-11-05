@@ -1,0 +1,78 @@
+'use strict';
+/* v30 묶음 L 대조 테스트 — 통합 달력 · iCal · D-1 미이수 알림 · DM(읽음 · 그룹 · 첨부 · 일괄) · 알림 규칙 · 방해금지 · 발송 대기열
+   사용: DATABASE_URL=postgres://didisam@127.0.0.1:5544/ddw5 node test/lms-l.js http://127.0.0.1:8241 http://127.0.0.1:8242 */
+const { call, signup, extraUser, seedAcademic, main } = require('./lms-lmp');
+async function scenario(base, tag) {
+  const R = {}; const o = await signup(base, tag); const ck = o.ck; const X = await seedAcademic(o.tid);
+  const tea = await extraUser(o.tid, 'teacher');
+  const G = (k, p) => call(base, 'GET', p, { cookie: ck }).then(r => (R[k] = r));
+  const P = (k, p, body, c = ck) => call(base, 'POST', p, { cookie: c, body }).then(r => (R[k] = r));
+  R.noAuth = await call(base, 'GET', '/api/lms/l/cal/list');
+  R.csrf = await call(base, 'POST', '/api/lms/l/cal/add', { cookie: ck, body: {}, csrf: false });
+  await P('addBadScope', '/api/lms/l/cal/add', { scope: 'x', title: 'a', starts_at: '2026-11-10' });
+  await P('addBadTs', '/api/lms/l/cal/add', { scope: 'personal', title: 'a', starts_at: '11/10' });
+  await P('addNoTitle', '/api/lms/l/cal/add', { scope: 'personal', starts_at: '2026-11-10' });
+  await P('addArr', '/api/lms/l/cal/add', [1]);
+  await P('addTeaAcad', '/api/lms/l/cal/add', { scope: 'academic', title: '학사', starts_at: '2026-11-10' }, tea.ck);
+  await P('addAcad', '/api/lms/l/cal/add', { scope: 'academic', title: '중간고사 기간, 1차', kind: 'exam', starts_at: '2026-11-16', all_day: true });
+  await P('addCourse', '/api/lms/l/cal/add', { scope: 'course', section_id: X.sec[0], title: '과제 1 마감', kind: 'deadline', starts_at: new Date(Date.now() + 30 * 3600e3).toISOString() });
+  await P('addCourseBad', '/api/lms/l/cal/add', { scope: 'course', section_id: '00000000-0000-0000-0000-000000000000', title: 'x', starts_at: '2026-11-10' });
+  await P('addTodo', '/api/lms/l/cal/add', { scope: 'personal', title: '보고서 초안', kind: 'todo', starts_at: '2026-11-20T09:00', ends_at: '2026-11-20T10:00' });
+  await P('addEndBefore', '/api/lms/l/cal/add', { scope: 'personal', title: 'x', starts_at: '2026-11-20T09:00', ends_at: '2026-11-19T10:00' });
+  await P('done', '/api/lms/l/cal/done', { id: R.addTodo.j.item.id, done: true });
+  const from = new Date(Date.now() - 5 * 864e5).toISOString().slice(0, 10), to = new Date(Date.now() + 40 * 864e5).toISOString().slice(0, 10);
+  await G('list', `/api/lms/l/cal/list?from=${from}&to=${to}`);
+  await G('listAcad', `/api/lms/l/cal/list?from=${from}&to=${to}&scope=academic`);
+  await G('listTea', `/api/lms/l/cal/list?from=${from}&to=${to}&scope=personal`);
+  await G('listRange', '/api/lms/l/cal/list?from=2026-01-01&to=2027-12-31');
+  await G('ics', `/api/lms/l/cal/ics?from=${from}&to=${to}`);
+  await P('d1Tea', '/api/lms/l/cal/d1', {}, tea.ck);
+  await P('d1', '/api/lms/l/cal/d1', {});
+  await P('d1again', '/api/lms/l/cal/d1', {});
+  await P('del', '/api/lms/l/cal/del', { id: R.addTodo.j.item.id });
+  await P('delAgain', '/api/lms/l/cal/del', { id: R.addTodo.j.item.id });
+  /* DM */
+  await P('openBad', '/api/lms/l/dm/open', { members: ['p:99999999'] });
+  await P('openTwo', '/api/lms/l/dm/open', { kind: 'direct', members: ['p:20261001', 'p:20261002'] });
+  await P('open', '/api/lms/l/dm/open', { kind: 'direct', members: ['p:20261001'] });
+  await P('openAgain', '/api/lms/l/dm/open', { kind: 'direct', members: ['p:20261001'] });
+  await P('group', '/api/lms/l/dm/open', { kind: 'group', title: '1조 프로젝트', members: ['p:20261001', 'p:20261002', 'p:20261003'] });
+  const rid = R.group.j.id;
+  await P('sendEmpty', '/api/lms/l/dm/send', { room_id: rid, body: '' });
+  await P('send', '/api/lms/l/dm/send', { room_id: rid, body: '회의는 목요일 3시입니다.' });
+  await P('sendAtt', '/api/lms/l/dm/send', { room_id: rid, body: '', attachments: [{ name: '회의록.pdf', size: 20480, mime: 'application/pdf' }, { name: '사진.png', size: 1000, mime: 'image/png' }, { name: '음성.m4a', size: 3000, mime: 'audio/mp4' }] });
+  await P('sendBig', '/api/lms/l/dm/send', { room_id: rid, attachments: [{ name: 'big.mp4', size: 200 * 1048576, mime: 'video/mp4' }] });
+  await P('sendNotMember', '/api/lms/l/dm/send', { room_id: rid, body: 'x' }, tea.ck);
+  await G('msgs', `/api/lms/l/dm/msgs?room_id=${rid}`);
+  await G('rooms', '/api/lms/l/dm/rooms');
+  await P('read', '/api/lms/l/dm/read', { room_id: rid });
+  await P('bcTea', '/api/lms/l/dm/broadcast', { section_id: X.sec[0], title: '휴강 안내', body: '이번 주 수업은 휴강합니다.', push: true }, tea.ck);
+  await P('bcNone', '/api/lms/l/dm/broadcast', { body: 'x' });
+  await P('bcMembers', '/api/lms/l/dm/broadcast', { members: ['p:20261005', 'p:20261006', 'p:nobody'], body: '설문 참여 부탁드립니다.' });
+  /* 알림 규칙 · 방해금지 */
+  await P('ruleBad', '/api/lms/l/noti/rule_save', { event: 'x', channels: ['push'] });
+  await P('ruleBadCh', '/api/lms/l/noti/rule_save', { event: 'qna_new', channels: ['fax'] });
+  await P('ruleHours', '/api/lms/l/noti/rule_save', { event: 'due_before', channels: ['push'], params: { hours: 999 } });
+  await P('ruleDue', '/api/lms/l/noti/rule_save', { event: 'due_before', channels: ['push', 'inapp'], params: { hours: 48 } });
+  await P('ruleRes', '/api/lms/l/noti/rule_save', { event: 'resource_new', section_id: X.sec[0], channels: ['inapp', 'kakao'] });
+  await P('ruleAn', '/api/lms/l/noti/rule_save', { event: 'analytics', channels: ['email'], params: { metric: 'absent_count', op: '>=', value: 2 } });
+  await P('ruleUpd', '/api/lms/l/noti/rule_save', { id: R.ruleRes.j.id, event: 'resource_new', section_id: X.sec[0], channels: ['inapp', 'sms'], enabled: true });
+  await P('quietBad', '/api/lms/l/noti/quiet', { starts: '25:00', ends: '07:00' });
+  await P('quietOff', '/api/lms/l/noti/quiet', { starts: '03:00', ends: '03:00' });
+  await G('rules', '/api/lms/l/noti/rules');
+  await P('fire', '/api/lms/l/noti/fire', { event: 'resource_new', section_id: X.sec[0], title: '3주차 강의자료', body: 'PDF 1개' });
+  await P('scan', '/api/lms/l/noti/scan', {});
+  await P('scanAgain', '/api/lms/l/noti/scan', {});
+  await P('quietAll', '/api/lms/l/noti/quiet', { starts: '00:00', ends: '23:59' });
+  await P('fireQuiet', '/api/lms/l/noti/fire', { event: 'resource_new', section_id: X.sec[0], title: '4주차 강의자료' });
+  await G('outbox', '/api/lms/l/noti/outbox');
+  await G('outboxQ', '/api/lms/l/noti/outbox?status=held_quiet');
+  await G('inbox', '/api/lms/l/noti/inbox');
+  const ids = (R.outbox.j.items || []).filter(x => x.status === 'queued').map(x => x.id);
+  await P('ackBad', '/api/lms/l/noti/ack', { status: 'x', ids });
+  await P('ack', '/api/lms/l/noti/ack', { status: 'sent', ids });
+  await P('ruleDel', '/api/lms/l/noti/rule_del', { id: R.ruleAn.j.id });
+  await P('outboxTea', '/api/lms/l/noti/ack', { status: 'sent', ids: [] }, tea.ck);
+  return R;
+}
+main('묶음 L', scenario, { noAuth: 401, csrf: 403, addBadScope: 400, addBadTs: 400, addNoTitle: 400, addArr: 400, addTeaAcad: 403, addAcad: 200, addCourse: 200, addCourseBad: 404, addEndBefore: 400, list: 200, ics: 200, d1Tea: 403, d1: 200, delAgain: 404, openBad: 404, openTwo: 400, open: 200, group: 200, sendEmpty: 400, sendAtt: 200, sendBig: 400, sendNotMember: 404, msgs: 200, bcTea: 200, bcNone: 400, ruleBad: 400, ruleBadCh: 400, ruleHours: 400, ruleDue: 200, quietBad: 400, fire: 200, scan: 200, outbox: 200, ackBad: 400, ack: 200, outboxTea: 403 });
