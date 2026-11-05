@@ -224,6 +224,9 @@ const MIGRATIONS = [
    grant usage on sequence pii.access_log_id_seq to didisam_pii;`
 ];
 
+/* v30 학사 LMS 묶음 스키마(lms/sql/*.sql)를 기본 마이그레이션 뒤에 잇는다 */
+MIGRATIONS.push(...require('./lms').sqlMigrations());
+
 async function migrate(pool) {
   const c = await pool.connect();
   try {
