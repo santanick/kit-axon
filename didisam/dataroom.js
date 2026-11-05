@@ -74,7 +74,7 @@ Store.clear = () => { const tid = DREG.cur(); if (tid) DREG.drop(tid); };
 Object.defineProperty(CL, 'K', { get: () => roomKey(DREG.cur() || 'none') + '.claude' });
 
 /* 새 기관 = 새 데이터룸 */
-{ const base = createOrg; createOrg = (type, name) => { const tid = newTid(); DREG.use(tid); base(type, name); }; }
+{ const base = createOrg; createOrg = (type, name, ed) => { const tid = newTid(); DREG.use(tid); base(type, name, ed); }; }
 { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); if (S && S.org && (!S.org.room || !S.org.room.tid)) { S.org.room = roomDefault(DREG.cur() || newTid()); save(); } return r; }; }
 
 /* ── 데이터룸 정책을 실제로 적용(외부 연결 차단 · AI 경로) ── */

@@ -42,7 +42,7 @@ function uxNavFix(N) {
     const O = ['home', 'dash', 'learn', 'people', 'talk', 'web', 'ops']; const oi = w => { const i = O.indexOf(w); return i < 0 ? 50 : i; }; N.ws.sort((a, b) => oi(a) - oi(b)); } /* 모든 기관 같은 순서: 홈 · 강좌 · 학습자 · 소통 · 사이트 · 운영 */
   return N;
 }
-{ const base = presetNav; presetNav = type => { MENU.site.ws = 'ops'; let n; try { n = base(type); } finally { MENU.site.ws = 'web'; } return uxNavFix(n); }; }
+{ const base = presetNav; presetNav = (type, ed) => { MENU.site.ws = 'ops'; let n; try { n = base(type, ed); } finally { MENU.site.ws = 'web'; } return uxNavFix(n); }; }
 /* 레일: '현황'은 홈 안 탭으로(레일에서 빼고 홈에 불을 켬) */
 rail = () => {
   const badge = w => { if (w === 'learn') { const n = typeof pend === 'function' ? pend().length : 0; return n ? `<em>${n}</em>` : ''; } if (w === 'home') { const n = briefCount(); return n ? `<em class="mg">${n}</em>` : ''; } return ''; };

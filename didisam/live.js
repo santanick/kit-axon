@@ -118,8 +118,8 @@ function liveEmpty() {
   (S.docs || []).forEach(d => { d.cls = ''; d.sent = []; });
   S.tutorUsage = Array.isArray(S.tutorUsage) ? [] : S.tutorUsage;
 }
-{ const base = createOrg; createOrg = async (type, name) => {
-    if (LIVE.user) return base(type, name);
+{ const base = createOrg; createOrg = async (type, name, ed) => {
+    if (LIVE.user) return base(type, name, ed);
     const f = $('#suForm'); const err = $('#suErr'); const btn = f && f.querySelector('button[type=submit]');
     if (!f || !f.email) return;
     if (!f.reportValidity()) return;
@@ -128,7 +128,7 @@ function liveEmpty() {
       const r = await api('POST', '/api/signup', { email: f.email.value.trim(), password: f.password.value, code: f.code ? f.code.value.trim() : '', orgName: name, type });
       LIVE.user = r.user; LIVE.tenant = r.tenant; LIVE.rev = 0; LIVE.doc = null;
     } catch (x) { err.textContent = x.message; btn.disabled = false; if (x.code === 'exists') { LV.view = 'login'; setTimeout(render, 1600); } return; }
-    base(type, name);
+    base(type, name, ed);
     if (!LV.sample) { liveEmpty(); logAudit('샘플 없이 시작'); }
     S.me.name = '관리자'; save();
   };

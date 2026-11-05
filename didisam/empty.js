@@ -19,10 +19,10 @@ function emptyOut() {
 { const base = renderSignup; renderSignup = (...a) => { base(...a); const f = $('#suForm'); const btn = f && f.querySelector('button[type=submit]'); if (!btn || $('#suEmpty')) return;
   btn.insertAdjacentHTML('beforebegin', `<label class="suempty"><input type="checkbox" id="suEmpty" ${emptyPref() ? 'checked' : ''}><span><b>빈 스튜디오로 시작</b><small>샘플 데이터 없이, AI SAM 시작 가이드를 따라 처음부터 채웁니다. 끄면 예시 데이터가 들어간 상태로 둘러볼 수 있습니다.</small></span></label>`);
   $('#suEmpty').addEventListener('change', e => { try { localStorage.setItem(EMPTY_K, e.target.checked ? '1' : '0'); } catch (x) { } }); }; }
-{ const base = createOrg; createOrg = (type, name) => {
+{ const base = createOrg; createOrg = (type, name, ed) => {
   const box = $('#suEmpty'); const empty = box ? box.checked : emptyPref();
   let prev = null; try { prev = CL.get(); } catch (e) { }
-  base(type, name);
+  base(type, name, ed);
   try { if (empty) emptyOut(); } catch (e) { console.error(e); }
   try { if (prev && prev.key && !CL.get().key) CL.set({ key: prev.key, model: prev.model, chat: prev.chat, docs: prev.docs, site: prev.site }); } catch (e) { }
 }; }

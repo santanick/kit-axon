@@ -116,8 +116,10 @@ const PRESET = {
   lifelong: { ws: ['home', 'dash', 'learn', 'people', 'ops', 'talk'], on: ['class', 'attend', 'assess', 'cert', 'library', 'members', 'enroll', 'groups', 'admins', 'board', 'message', 'consult', 'community', 'lifelong', 'sales', 'auto', 'site', 'org'], off: ['journey', 'badge', 'book', 'parents', 'billing'] },
   voc: { ws: ['home', 'dash', 'learn', 'people', 'ops', 'talk'], on: ['class', 'attend', 'assess', 'cert', 'library', 'members', 'enroll', 'groups', 'admins', 'board', 'message', 'consult', 'community', 'hrd', 'auto', 'sales', 'site', 'org'], off: ['journey', 'badge', 'book', 'parents', 'billing'] }
 };
-function presetNav(type) {
-  const P = PRESET[type]; const tabs = {}; P.ws.forEach(w => tabs[w] = []);
+function presetNav(type, ed) {
+  /* v29 대학은 도입 형태(에디션)로 나뉜다 — lite: 사업단 · 센터, lms: 학사 LMS(전교생 메인) */
+  if (ed === undefined && type === 'univ' && S && S.org && S.org.type === 'univ') ed = S.org.ed;
+  const P = PRESET[type === 'univ' && ed === 'lms' && PRESET.univ_lms ? 'univ_lms' : type]; const tabs = {}; P.ws.forEach(w => tabs[w] = []);
   P.on.forEach(id => tabs[MENU[id].ws].push({ id, on: true })); P.off.forEach(id => tabs[MENU[id].ws].push({ id, on: false }));
   return { ws: [...P.ws], tabs };
 }
@@ -229,7 +231,9 @@ function renderSignup() {
     return `<button type="button" class="tcard ${sel ? 'on' : ''}" data-act="su-type" data-v="${k}" aria-pressed="${sel}"><span class="ti">${ticon(ty.icon)}</span><b>${esc(ty.name)}</b><p>${esc(ty.desc)}</p></button>`;
   }).join('');
   const isAcad = SU.type === 'academy' || TYPES[SU.type]?.group === 'academy';
-  const ready = SU.type && SU.type !== 'academy';
+  const isUni = SU.type === 'univ';
+  const ready = SU.type && SU.type !== 'academy' && (!isUni || !!SU.ed);
+  const pk = isUni && SU.ed === 'lms' && PRESET.univ_lms ? 'univ_lms' : SU.type;
   $('#app').innerHTML = `
   <div class="su">
     <div class="su-l">
@@ -243,18 +247,19 @@ function renderSignup() {
       <h2>어떤 기관인가요?</h2>
       <div class="tgrid">${cards}</div>
       ${isAcad ? `<p class="su-q">어떤 학원인가요? <small>고르면 메뉴와 용어가 맞춰집니다</small></p><div class="seg2 full"><button type="button" class="${SU.type === 'k12' ? 'on' : ''}" data-act="su-type" data-v="k12">초중고 · 반 · 보호자 · 청구서</button><button type="button" class="${SU.type === 'adult' ? 'on' : ''}" data-act="su-type" data-v="adult">성인 · 강좌 판매 · 매출</button></div>` : ''}
+      ${isUni ? `<p class="su-q">어떻게 도입하나요? <small>도입 형태에 따라 메뉴 · 연동 범위가 달라집니다</small></p><div class="seg2 full"><button type="button" class="${SU.ed === 'lite' ? 'on' : ''}" data-act="su-ed" data-v="lite">사업단 · 센터 · 비교과(빠른 도입)</button><button type="button" class="${SU.ed === 'lms' ? 'on' : ''}" data-act="su-ed" data-v="lms">학사 LMS · 전교생 교과(학사 연동)</button></div>` : ''}
       <label class="fl">기관명<input name="name" maxlength="30" required placeholder="예: 산타 아카데미" value="${esc(SU.name)}"></label>
-      ${ready ? `<div class="pv"><b>${esc(TYPES[SU.type].name)} 맞춤 구성</b><p>${['learn', 'people', 'talk', 'ops'].map(w => `<span>${esc(w === 'people' ? TERMS[SU.type].learner : lab(WS[w]))} <small>${PRESET[SU.type].on.filter(i => MENU[i].ws === w).length}</small></span>`).join('')}</p><small>${esc(TERMS[SU.type].learner)} · ${esc(TERMS[SU.type].cls)} · ${esc(TERMS[SU.type].group)} 용어로 표시됩니다.</small></div>` : ''}
-      <button class="btn pri lg" type="submit" ${ready ? '' : 'disabled'}>시작하기</button>${ready ? '' : `<p class="su-hint">${isAcad ? '학원 종류(초중고 · 성인)를 고르면' : '기관 유형을 고르면'} 시작할 수 있습니다.</p>`}<p class="su-who">강사 · 직원이신가요? 운영자에게 받은 초대 링크로 들어오세요. 수강생이신가요? 다니는 기관의 홈페이지에서 로그인하세요.</p>
+      ${ready ? `<div class="pv"><b>${esc(isUni ? '대학 · ' + (SU.ed === 'lms' ? '학사 LMS' : '사업단 · 센터') : TYPES[SU.type].name)} 맞춤 구성</b><p>${['learn', 'people', 'talk', 'ops'].map(w => `<span>${esc(w === 'people' ? TERMS[SU.type].learner : lab(WS[w]))} <small>${PRESET[pk].on.filter(i => MENU[i].ws === w).length}</small></span>`).join('')}</p><small>${esc(TERMS[SU.type].learner)} · ${esc(TERMS[SU.type].cls)} · ${esc(TERMS[SU.type].group)} 용어로 표시됩니다.</small></div>` : ''}
+      <button class="btn pri lg" type="submit" ${ready ? '' : 'disabled'}>시작하기</button>${ready ? '' : `<p class="su-hint">${isAcad ? '학원 종류(초중고 · 성인)를 고르면' : isUni ? '도입 형태(사업단 · 센터 / 학사 LMS)를 고르면' : '기관 유형을 고르면'} 시작할 수 있습니다.</p>`}<p class="su-who">강사 · 직원이신가요? 운영자에게 받은 초대 링크로 들어오세요. 수강생이신가요? 다니는 기관의 홈페이지에서 로그인하세요.</p>
     </form>
   </div>`;
   const f = $('#suForm');
   f.addEventListener('input', () => { SU.name = f.name.value; });
-  f.addEventListener('submit', e => { e.preventDefault(); SU.name = f.name.value.trim(); if (!SU.name) { f.name.focus(); return; } createOrg(SU.type, SU.name); });
+  f.addEventListener('submit', e => { e.preventDefault(); SU.name = f.name.value.trim(); if (!SU.name) { f.name.focus(); return; } createOrg(SU.type, SU.name, SU.type === 'univ' ? SU.ed : undefined); });
 }
-function createOrg(type, name) {
+function createOrg(type, name, ed) {
   RNG = 7 + Object.keys(TYPES).indexOf(type) * 13;
-  S = { v: 2, org: { name, type, created: today(), domain: (name.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'myschool') + '.didisam.com', plan: 'premium' }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type), audit: [], runs: [], ai: { usage: 0 }, chat: [] };
+  S = { v: 2, org: { name, type, created: today(), domain: (name.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'myschool') + '.didisam.com', plan: 'premium', ...(type === 'univ' ? { ed: ed === 'lms' ? 'lms' : 'lite' } : {}) }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type, type === 'univ' ? (ed === 'lms' ? 'lms' : 'lite') : undefined), audit: [], runs: [], ai: { usage: 0 }, chat: [] };
   Object.assign(S, seed(type));
   if (typeof postSeed === 'function') postSeed(type);
   logAudit(`기관 생성 — 유형 ${TYPES[type].name}`); save(); CUR = { ws: 'home', tab: '' };
@@ -330,7 +335,8 @@ ACT.go = el => go(el.dataset.v);
 ACT.nav = () => document.body.classList.toggle('nav-open');
 ACT['modal-close'] = () => closeModal();
 ACT.tab = el => { UI[el.dataset.key] = el.dataset.v; render(); };
-ACT['su-type'] = el => { SU.type = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; renderSignup(); };
+ACT['su-ed'] = el => { SU.ed = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; renderSignup(); };
+ACT['su-type'] = el => { if (el.dataset.v !== SU.type) SU.ed = el.dataset.v === 'univ' ? 'lite' : ''; SU.type = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; renderSignup(); };
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; const f = ACT[el.dataset.act]; if (f) { e.preventDefault(); f(el, e); } });
 document.addEventListener('change', e => {
   if (e.target.id === 'roleSel') { S.me.role = e.target.value; save(); toast(`${roleName(S.me.role)} 권한으로 보는 화면입니다.`); go(CUR.tab || CUR.ws); return; }

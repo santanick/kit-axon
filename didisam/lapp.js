@@ -52,8 +52,11 @@
     lifelong: { learn: '내 강좌', find: '강좌 신청', sub: () => '강좌 신청 · 출석 · 수료를 함께 챙겨요', chips: [['신청할 강좌', '지금 신청할 수 있는 강좌 알려줘'], ['수료 조건', '수료 조건 알려줘'], ['이번 주 일정', '이번 주 수업 일정 알려줘']], d: '강좌 신청 · 출석 · 수료 기록' },
     voc: { learn: '내 훈련', find: '훈련과정', sub: () => '출석 · 훈련 일지 · 수료 기준을 함께 챙겨요', chips: [['출석 확인', '오늘 출석 현황 알려줘'], ['수료 기준', '훈련 수료 기준 알려줘'], ['훈련 일지', '훈련 일지 쓰는 법 알려줘']], d: '훈련과정 · 출결 · 수료' }
   };
+  /* v29 대학 학사 LMS(전교생 메인)는 수업 · 출석 · 과제 · 시험 · 성적 중심 시나리오 */
+  SCN.univ_lms = { learn: '이번 학기 강의', find: '비교과', sub: me => `학번 ${me.sid || ''} · 출석 · 과제 · 시험 · 성적을 함께 챙겨요`, chips: [['오늘 출석', '오늘 출석해야 할 수업 알려줘'], ['과제 · 시험 마감', '이번 주 과제 · 시험 마감 정리해줘'], ['학습 분량 점검', '이번 주 온라인 강의 중 덜 들은 차시 알려줘']], d: '교과 수업 · 스마트 출석 · 성적 · 학사 연동' };
   const oTy = () => (SITE() && SITE().org && SITE().org.type) || 'adult';
-  const scn = () => SCN[oTy()] || SCN.adult;
+  const oEd = () => (SITE() && SITE().org && SITE().org.ed) || '';
+  const scn = () => (oTy() === 'univ' && oEd() === 'lms' ? SCN.univ_lms : SCN[oTy()]) || SCN.adult;
   const legalN = () => { try { return typeof lLegal === 'function' ? lLegal().length : 0; } catch (e) { return 0; } };
   const orgs = () => { try { return JSON.parse(ls.get('orgs') || '[]').filter(o => o && o.tid); } catch (e) { return []; } };
   function orgSave() { if (!SITE() || !LR.tid || LR.mode === 'preview') return; const L = orgs(); const o = { tid: LR.tid, name: String(SITE().org.name || '').slice(0, 40), type: oTy(), me: !!LR.me, at: Date.now() };

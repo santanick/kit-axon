@@ -1,0 +1,10 @@
+/* v29 대학 학사 LMS 에디션 */
+.ul-ck{display:flex;gap:8px;align-items:center;font-size:13.5px;margin:6px 0;line-height:1.4}
+.ul-ck input{flex:none}
+.ul-ck.in{display:inline-flex;margin:4px 14px 4px 0}
+.ul-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.ul-langs{display:flex;flex-wrap:wrap}
+.rfp-st{display:inline-block;min-width:64px;text-align:center}
+.rfp-bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--paper,#f1f3f7);margin:6px 0 2px}
+.rfp-bar i{display:block;height:100%}
+@media (max-width:720px){.ul-cols{grid-template-columns:1fr}}
