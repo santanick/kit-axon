@@ -290,7 +290,7 @@ const SQL = {
     select case when not exists (select 1 from sec) then '{"err":"not_found"}' else coalesce((select json_agg(x order by x.last_at desc, x.member_no, x.kind) from (
       select p.member_no, p.unit_code, al.title content_title, al.week_no, al.k kind, count(*)::int n, lms_ts(max(al.at)) last_at from al join lms_person p on p.person_id = al.person_id
       group by p.member_no, p.unit_code, al.title, al.week_no, al.k limit 500) x), '[]')::text end`,
-  log: `select coalesce(json_agg(json_build_object('member_no', p.member_no, 'before', l.before, 'after', l.after, 'reason', l.reason, 'actor', l.actor, 'at', lms_ts(l.at)) order by l.id desc), '[]')::text
+  log: `select coalesce(json_agg(json_build_object('member_no', p.member_no, 'before', l.before, 'after', l.after, 'reason', l.reason, 'actor', l.actor, 'at', lms_ts(l.at)) order by l.at desc, p.member_no), '[]')::text
     from lms_attendance_log l join lms_person p on p.person_id = l.person_id where l.session_id = cast(#{session_id} as uuid)`
 };
 
