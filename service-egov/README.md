@@ -57,7 +57,7 @@ node test/ui.js http://127.0.0.1:<java>                                  # 기�
 - 서버 간 호환: Node가 암호화한 이메일 · 휴대폰을 Java가 복호화 · 반대 방향도 확인, Java가 발급한 인증번호로 Node에서 가입 → Java에서 그 계정으로 로그인(블라인드 인덱스 · 인증번호 해시 · scrypt), 학습자 세션 쿠키 교차 사용, Node 발급 API 키로 Java MCP 호출(같은 결과 · 호출 수 반영).
 - 벤치마크 SSRF 판정 · HTML 추출은 별도로 Node `bench.js`와 직접 대조(HTML 4종 · 주소 48종 — IPv4 숫자 표기(0x · 8진 · 정수) · IPv4 대응 IPv6 · 문서용 · 6to4 · NAT64 · 링크로컬 · 계정 정보 · 포트 · IDN · 점 세그먼트 · 퍼센트 인코딩) — 모두 같은 결과. 실제 외부 사이트 읽기(TLS 고정 연결)는 이 작업 환경에서 외부 직접 연결이 막혀 확인하지 못했다(대조는 오류 경로까지).
 - 개인정보 보존 기간 정리(만료 보호자 동의 · 인증번호): 만료 행을 넣고 Java만 띄워 정리 결과(탈퇴 처리 · 신원 삭제 · 열람 기록 system/guardian_expired) 확인.
-- 실제 표준프레임워크 RTE 빌드(-Pegov)로는 2단계를 아직 확인하지 않았다(새 RTE 클래스는 쓰지 않음 — 1단계와 같은 EgovAbstractServiceImpl · EgovPropertyService · EgovMapper만 사용). 국내망 PC에서 `scripts/verify-egov.sh`로 확인한다.
+- **2단계 실제 RTE 확인(완료, 2026-11-06)**: 대표님 Mac에서 `-Pegov` 빌드(RTE 5.0.2 8종 · shim 0건 · pom의 log4j-slf4j2-impl 제외만으로 기동 성공) → 그 war로 대조 2,788항목 · UI 확인 모두 통과.
 
 2단계 이식에서 Node와 일부러 다르게 둔 점(보안상 더 엄격하거나 JS 오류 경로):
 - 벤치마크: `::a.b.c.d`(IPv4 호환 IPv6, 폐기 형식)도 내부 IPv4로 판정한다(Node는 통과). DNS 결과가 여러 개일 때 첫 주소 선택은 OS/JVM 순서를 따른다.
