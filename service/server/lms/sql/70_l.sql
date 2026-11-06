@@ -256,12 +256,13 @@ begin
 
   -- ── DM ──
   elsif op = 'dm.rooms' then
-    select coalesce(jsonb_agg(x order by x->>'last_at' desc nulls last), '[]') into arr from (
+    select coalesce(jsonb_agg(x order by lid desc nulls last, x->>'title'), '[]') into arr from (
       select jsonb_build_object('id', rm.room_id, 'kind', rm.kind, 'title', rm.title,
         'members', (select jsonb_agg(m2.principal order by m2.principal) from lms_dm_member m2 where m2.tenant_id = tid and m2.room_id = rm.room_id),
         'unread', (select count(*) from lms_dm_message g where g.tenant_id = tid and g.room_id = rm.room_id and g.id > m.last_read_id and g.sender <> my)::int,
         'last', (select g.body from lms_dm_message g where g.tenant_id = tid and g.room_id = rm.room_id order by g.id desc limit 1),
-        'last_at', (select lmsx_ts(g.created_at) from lms_dm_message g where g.tenant_id = tid and g.room_id = rm.room_id order by g.id desc limit 1)) x
+        'last_at', (select lmsx_ts(g.created_at) from lms_dm_message g where g.tenant_id = tid and g.room_id = rm.room_id order by g.id desc limit 1)) x,
+        (select max(g.id) from lms_dm_message g where g.tenant_id = tid and g.room_id = rm.room_id) lid
       from lms_dm_room rm join lms_dm_member m on m.tenant_id = rm.tenant_id and m.room_id = rm.room_id and m.principal = my
       where rm.tenant_id = tid) z;
     return jsonb_build_object('me', my, 'items', arr);
