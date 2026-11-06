@@ -115,8 +115,11 @@
     const t = UI.w3iT || 'player'; if (t !== 'player' && P.st) endPlay(true);
     UI.w3iC = UI.w3iC && C.find(c => c.content_id === UI.w3iC) ? UI.w3iC : C[0]?.content_id;
     const csel = `<select data-chg="w3i-c" aria-label="콘텐츠">${C.map(c => `<option value="${esc(c.content_id)}" ${c.content_id === UI.w3iC ? 'selected' : ''}>${c.week_no}주 ${c.seq}차 · ${esc(c.title)} (${mmss(c.duration_sec)})</option>`).join('')}</select>`;
-    return head('동영상 · 진도', `${esc(sec.title)} · 콘텐츠 ${C.length}개 · 재생 서버(CDN) · 트랜스코딩은 연동 후 동작`, `${W3.secPick()} ${W3.mode()}`)
-      + tabs('w3iT', [['player', '플레이어'], ['prog', '진도 현황'], ['subs', '자막'], ['quiz', '영상 퀴즈'], ['load', '학습분량 점검'], ['hist', '학습 이력']], t)
+    /* 2단계(UX): 탭 6개 → 4개 + 더보기(학습분량 점검 · 학습 이력), 연동 안내는 한 줄 작은 글로 */
+    const TB = [['player', '플레이어'], ['prog', '진도 현황'], ['quiz', '영상 퀴즈'], ['subs', '자막'], ['load', '학습분량 점검'], ['hist', '학습 이력']];
+    const tb4 = window.LMSX && typeof LMSX.tabs4 === 'function' ? LMSX.tabs4('w3iT', TB, t) : tabs('w3iT', TB, t);
+    return head('동영상 · 진도', `${esc(sec.title)} · 영상 ${C.length}개를 주차별로 재생하고 진도를 확인합니다. <small class="w3-mini">영상 서버 연결 · 화질 변환은 연동 후 동작</small>`, `${W3.secPick()} ${W3.mode()}`)
+      + tb4
       + ({ player: iPlayer, prog: iProg, subs: iSubs, quiz: iQuiz, load: iLoad, hist: iHist }[t])(sec, C, csel);
   };
   ACT['w3i-c'] = el => { if (P.st) endPlay(true); UI.w3iC = el.value; render(); };

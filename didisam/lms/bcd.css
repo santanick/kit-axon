@@ -28,3 +28,27 @@
 .lmsx-diff ins{background:var(--okl);text-decoration:none}.lmsx-diff del{background:var(--badl)}
 .lmsx-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 @media (max-width:760px){.lmsx-grid2{grid-template-columns:minmax(0,1fr)}.lmsb-hb{grid-template-columns:80px minmax(0,1fr) 30px}.lmsx-pick select{max-width:100%}.lmsx-pick{width:100%}.lmsx-pick label{flex:1 1 140px}.lmsb-att{margin-left:0}.lmsx-post.reply{margin-left:10px}}
+/* 2단계(UX) — 탭 4개 + 더보기 · 지금 할 일 · 다른 신분으로 보기 · 행 ⋯ */
+.lmsx-tabrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.lmsb-tabs{overflow:visible}
+.lmsx-tabrow .seg2{flex-wrap:wrap}
+.lmsx-todo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 14px;margin:0 0 12px;border-radius:10px;background:var(--soft,#f6f6f4);font-size:14px}
+.lmsx-todo>span{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+details.lmsx-asmore>summary{height:34px;font-size:13px;border:1px solid var(--line,#ddd);background:var(--card,#fff)}
+details.lmsx-asmore.on>summary{color:var(--magd,#a3134d);border-color:var(--mag,#c2185b)}
+.uxpop.lmsx-aspop{min-width:260px;padding:12px;gap:8px}
+.lmsx-aspop label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700}
+.lmsx-aspop .lmsx-asrow{display:flex;gap:6px}.lmsx-aspop .lmsx-asrow input{flex:1;min-width:0}
+.lmsx-aspop p{margin:0}
+.lmsx-note{margin:8px 0 0;font-size:12px}
+details.lmsb-rmore>summary,details.lmsb-addmore>summary{height:30px;padding:0 8px}
+details.lmsb-rmore>summary::after{display:none}
+.lmsb-acts{align-items:center}
+.lmsb-week.cur{border-color:var(--mag,#c2185b);box-shadow:0 0 0 2px var(--magl,#fde4ef)}
+@media (max-width:760px){.lmsx-pick details.lmsx-asmore{flex:1 1 140px}.lmsx-pick details.lmsx-asmore>summary{width:100%;justify-content:space-between}}
+details.lmsb-week>summary{cursor:pointer;list-style:none}
+details.lmsb-week>summary::-webkit-details-marker{display:none}
+details.lmsb-week>summary::before{content:'';flex:none;width:7px;height:7px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(-45deg);margin-right:4px;transition:transform .15s}
+details.lmsb-week[open]>summary::before{transform:rotate(45deg)}
+details.lmsb-week:not([open]){padding-top:10px;padding-bottom:10px}details.lmsb-week:not([open])>summary{margin:0}
+.lmsb-wkact{display:flex;justify-content:flex-end;margin:-4px 0 6px}
