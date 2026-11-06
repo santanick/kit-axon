@@ -120,7 +120,7 @@ async function scenario(base, db, tag) {
     form: [{ id: 'cv', type: 'file', label: '이력서', required: true }], sessions: [{ title: '1회' }] } }), 200);
   const fpid = fp.j.program_id; await tr('fSub', fpid, 'submit', ow, 200); await tr('fApp', fpid, 'approve', ow, 200); await tr('fOpen', fpid, 'open', ow, 200);
   const lf = await up(L5, '이력서.pdf', 'application/pdf', Buffer.from('%PDF-1.4 cv').toString('base64'));
-  await rec('fOtherFile', C('POST', 'apply', { ...L5, body: { program_id: fpid, answers: { cv: fa.file_id.replace(/.$/, 'f') } } }), 400);
+  await rec('fOtherFile', C('POST', 'apply', { ...L5, body: { program_id: fpid, answers: { cv: fa.file_id.replace(/.$/, c => c === 'f' ? '0' : 'f') } } }), 400);
   await rec('fApply', C('POST', 'apply', { ...L5, body: { program_id: fpid, answers: { cv: lf.file_id } } }), 200);
   await rec('fLCover', C('GET', 'file?program_id=' + fpid + '&file_id=' + fc.file_id, L5), 200);
   await rec('fLOwn', C('GET', 'file?program_id=' + fpid + '&file_id=' + lf.file_id, L5), 200);
