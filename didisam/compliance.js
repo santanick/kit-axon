@@ -44,7 +44,7 @@
   const hoursOf = s => (Math.round((+s || 0) / 360) / 10).toLocaleString('ko-KR') + '시간';
   const STL = { ok: '충족', set: '설정 필요', dev: '개발 필요', link: '연동 대기', org: '기관 준비', done: '증빙 완료' }; const statTag = s => (s in STL ? tag(STL[s], { ok: 'g', done: 'g', set: 'r', dev: 'r' }[s] || 'y') : '');
 
-  /* ── 요건 점검표 — 근거: 사업주 직업능력개발훈련 지원규정 별표 1(고시 제2026-48호) · 국민내일배움카드 운영규정(제2026-39호) · 평생교육법 시행규칙 제17조 ── */
+  /* ── 요건 점검표 — 근거: 사업주 직업능력개발훈련 지원규정 별표 1(고시 제2026-69호) · 국민내일배움카드 운영규정(제2026-39호) · 평생교육법 시행규칙 제17조 ── */
   const modCfg = () => (typeof LIVE !== 'undefined' && LIVE.cfg && LIVE.cfg.module) || '';
   function reqList() {
     const P = cplP(); const on = !!P.on; const cls = S.classes.filter(c => c.status !== '종료'); const allEval = cls.flatMap(evalItems);
@@ -82,6 +82,7 @@
       U('관리자 모듈', 'c39', '39~40. 훈련 현황 · 베낀 답안 · 평가 결과 · 첨삭 확인', 'ok'), U('관리자 모듈', 'c41', '41. 수강내역별 IP · 본인인증 이력 조회', on ? 'ok' : 'set'), U('관리자 모듈', 'c42', '42. 설문 결과', 'ok'), U('관리자 모듈', 'c43', '43. 학습 독려(SMS · 이메일)', 'link', '독려 대상과 초안은 구현했습니다. 실제 발송은 문자 · 이메일 제공사 연동이 필요합니다.'),
       U('홈페이지', 'c46', '46. 학습관리시스템 전용 홈페이지', siteOn ? 'ok' : 'set', '학습자 사이트를 게시합니다.'), U('홈페이지', 'c47', '47. 훈련생 · 관리자 · 교강사 모듈 구분 접속', modCfg() ? 'org' : 'set', modCfg() ? `이 서비스는 ${modCfg()} 모듈로 실행 중입니다. 3개 서비스 구성의 인정 여부는 심사기관에 확인합니다.` : '배포 스크립트(service/deploy-moel.sh)로 3개 서비스를 배포해야 합니다. 현재 화면은 통합 실행 또는 데모입니다.'),
       U('시스템 연계', 'c45', '45 · 51~56. API 데이터셋(회원 · 로그인 · 과정 · 수업 · 수강 · 성적)', 'link', '데이터 연계 탭에서 형식을 점검합니다. 공단 API 키 · 매뉴얼로 전송을 연결합니다.'), U('시스템 연계', 'c48', '48. 단말정보수집시스템(FDS)', 'link', '공단 모듈 적용이 필요합니다.'), U('시스템 연계', 'c49', '49~50. mOTP · 휴대폰 본인인증 이력 전송', 'link'), U('시스템 연계', 'c57', '57~59. 혼합훈련 콘텐츠 데이터셋', 'link', '혼합훈련 운영 시 적용합니다.'), U('시스템 연계', 'cc', 'HRD-Net 과정 ID · 심사과정코드 등록', hasCodes ? 'ok' : 'set', '차시 · 평가 탭에서 입력합니다.'),
+      A('평가 · 진도', 'e-hours', '인터넷원격 · 스마트훈련 과정 분량 4시간 이상', '지원규정 제6조', cls.length && cls.every(c => videoItems(c).reduce((s, i) => s + recSecs(i), 0) >= 4 * 3600) ? 'ok' : 'set', cls.length ? '차시 · 평가 탭의 인정 학습시간 합계로 확인합니다.' : '과정을 등록한 뒤 확인합니다.'), A('평가 · 진도', 'e-pre', '사전심사 적합 과정 · 평가 문항 · 시간으로 운영', '별표 1', 'org', '심사 결과와 실제 게시 내용을 대조해 증빙합니다.'),
       A('평가 · 진도', 'e-srv', '시험 문항 · 정답 서버 보관, 서버 채점', '별표 1 ②④', on ? 'ok' : 'set', '설정 변경 후 게시해야 적용됩니다.'), A('평가 · 진도', 'e-bank', '문제은행 3배수 이상 · 무작위 출제', '별표 1 ②④', allEval.length && allEval.every(i => i.cplN && bankOK(i, 3)) ? 'ok' : 'set', '차시 · 평가 탭에서 출제 수를 정합니다.'), A('평가 · 진도', 'e-rate', '수료: 진도율 80% · 평가 기준 점수', '지원규정 제11조', +P.rate >= 80 ? 'ok' : 'set'), A('평가 · 진도', 'e-day', '1일 학습시간 8시간 이하', '지원규정 제11조', +P.dayMax > 0 && +P.dayMax <= 8 ? 'ok' : 'set'),
       A('전산시스템', 's-iso', '타 기관과 데이터 · 권한 · 스토리지 분리', C2, iso === 'saas' ? 'org' : 'ok', iso === 'saas' ? '고시 제2026-22호: 물리 서버를 공유하면 멀티테넌시 보안 구조가 필요합니다. 같은 별표의 공동 사용 금지 문구와 함께 적용 범위를 심사기관에 확인합니다.' : '전용 배포로 구성됩니다.'), A('전산시스템', 's-server', self ? 'Web · DB · 동영상 · 백업 서버, 임차 계약서' : '독립 Web · DB · 동영상 · 백업, 병렬 구성', C2, 'org', self ? '' : 'CPU 2.0GHz 4코어, 메모리 Web · 동영상 8GB · DB 16GB, 각 200GB, RAID(0 단일 제외), 백업 2TB. 클라우드도 동일합니다(고시 제2026-22호).'), A('전산시스템', 's-backup', '1일 백업 · 5일 보관 · 3시간 복원', C2, 'org'), A('전산시스템', 's-sec', '방화벽 + Web 방화벽 또는 IPS + DB 암호화, 보안서버 100M', C2, 'org'), A('전산시스템', 's-keep', '훈련 정보 보존 · 활동 로그 원본 보관', C2, on ? 'ok' : 'set', `정책 ${+P.retainY || 5}년 보관`), A('전산시스템', 's-net', '전용선 100M · 공인 또는 클라우드 DNS · 콘텐츠 프로토콜', C2, 'org'), A('전산시스템', 's-help', 'HelpDesk · 사이트 모니터링 시스템', C2, 'org')
     ];
@@ -95,7 +96,7 @@
     if (!self) R.push(
       A('전산시스템', 's-ups', 'UPS 30KVA · 30분(클라우드 · IDC 동일, 고시 제2026-22호)', C2, 'org', '증빙: IDC · 클라우드 계약서와 SLA 또는 가용성 자료(2026 자료집).'),
       A('2026 심사 기준', 'd-content', '신규기관: 콘텐츠 등록심사 적합 1개 이상', '2026 자료집', 'org', '2026년 신청 기한은 6월 30일이었습니다. 다음 연도 일정을 확인합니다.'),
-      A('전산시스템', 's-dbms', 'DB 동시 학습자 20명 이상 처리 · 스트리밍 동시 50명', C2, 'org'), A('시설 · 인력', 'f-room', '전용면적 66㎡ 이상 사무실', '별표 1 ⑤', 'org'), A('시설 · 인력', 'f-admin', '시스템 관리자 1명 이상', '별표 1 ⑤', 'org'), A('시설 · 인력', 'f-staff', '상시 근로자 4명 이상(고용보험 가입)', '별표 1 ⑤', 'org'), A('시설 · 인력', 'f-teacher', '교사 1인당 월평균 훈련생 500명 이내', '별표 1 ①', 'org'),
+      A('전산시스템', 's-dbms', 'DB 동시 학습자 20명 이상 처리 · 스트리밍 동시 50명', C2, 'org', '사업주 규정 별표 1은 DBMS 동시접속 권한 20개 이상으로 표기합니다. 둘 다 증빙합니다.'), A('시설 · 인력', 'f-room', '전용면적 66㎡ 이상 사무실', '별표 1 ⑤', 'org'), A('시설 · 인력', 'f-admin', '시스템 관리자 1명 이상', '별표 1 ⑤', 'org'), A('시설 · 인력', 'f-staff', '상시 근로자 4명 이상(고용보험 가입)', '별표 1 ⑤', 'org'), A('시설 · 인력', 'f-teacher', '교사 1인당 월평균 훈련생 500명 이내', '별표 1 ①', 'org'),
       A('내일배움카드', 'n-att', '출결관리시스템 · 비대면 QR 출결', '내일배움 제34조', 'ok', '실제 출결 단말 연계는 별도입니다.'), A('내일배움카드', 'n-late', '지각 · 조퇴 · 외출 3회 = 결석 1일', '내일배움 제34조', 'ok'), A('내일배움카드', 'n-req', '출석입력 요청대장 · 지문 동의 기록', '내일배움 제34조', 'ok'), A('내일배움카드', 'n-hrd', 'HRD-Net 실시신고 · 명단 · 수료 보고', '내일배움 제32조 · 제38조', 'link', '현재는 보고 파일을 내려받아 입력합니다.'));
     return R;
   }
@@ -105,7 +106,11 @@
 
   window.cplReqList = () => reqList().map(r => ({ group: r.group, label: r.label, basis: r.basis, note: r.note, st: STL[reqStat(r)] }));
   /* ── 화면 ── */
-  const SETGO = { c28: 'item', 'e-bank': 'item', 'cc': 'item', c46: 'site', c47: 'acct', c12: 'acct', 'd-bio': 'acct' };
+  /* 별표 1: 문제은행 3배수. 게시 버튼에서 미달을 먼저 알린다(규정상 게시 차단 의무는 아니므로 운영자가 결정) */
+  const bankShort = () => { const P = cplP(); if (!P.on || !/^moel-/.test(String(P.profile || ''))) return []; return S.classes.filter(c => c.status !== '종료').flatMap(c => evalItems(c).filter(i => !bankOK(i, 3) || !(+i.cplN > 0)).map(i => ({ c, i, q: (i.qs || []).length, n: +i.cplN || 0 }))); };
+  window.cplBankShort = bankShort;
+  setTimeout(() => { const base = ACT['ls-pub']; if (!base) return; ACT['ls-pub'] = (el, ...r) => { const L = bankShort(); if (!L.length) return base(el, ...r); if (!el || !el.dataset) { toast(`문제은행 3배수 미달 평가가 ${L.length}개 있습니다. 차시 · 평가 탭을 확인해 주십시오.`, 'warn'); return base(el, ...r); } modal('문제은행 3배수 미달', `<p>별표 1은 문항을 3배수 이상 확보하도록 정합니다. 아래 평가를 보완한 뒤 게시하시길 권합니다.</p>${table(['과정', '평가', '보유 문항', '출제 수', '필요 문항'], L.slice(0, 30).map(x => [esc(x.c.name), esc(x.i.title || x.i.id), x.q, x.n || '미설정', x.n ? x.n * 3 : '출제 수 입력 필요']))}`, [{ id: 'c', label: '보완하러 가기', run: () => { UI.cpl = 'item'; go('cpl'); } }, { id: 'ok', label: '그대로 게시', kind: 'pri', run: () => { base(el, ...r); } }]); }; }, 0);
+  const SETGO = { c28: 'item', 'e-bank': 'item', 'e-hours': 'item', 'cc': 'item', c46: 'site', c47: 'acct', c12: 'acct', 'd-bio': 'acct' };
   ACT['cpl-go'] = el => { if (el.dataset.v === 'site') { go('site'); return; } UI.cpl = el.dataset.v; render(); };
   function viewCheck() {
     const L = reqList(); const cnt = k => L.filter(r => reqStat(r) === k).length; const G = [...new Set(L.map(r => r.group))]; const P = cplP();
