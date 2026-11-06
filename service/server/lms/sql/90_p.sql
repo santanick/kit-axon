@@ -105,6 +105,82 @@ create or replace function lms_p_kocw(tid text, term text, org text) returns tex
       where s.tenant_id = tid and (term = '' or s.term_id = term) and not s.hidden)
   ) as text) $$;
 
+-- ── 파일 저장소 단일화(묶음 E lms_file을 원본으로) ──
+-- 묶음 B의 lms_b_file(file-put · D 첨부)은 lms_file 위의 뷰 + INSTEAD OF INSERT로 바꾼다 → B · D API · 대조 테스트는 그대로, 바이트는 한 곳에만 저장
+alter table lms_file add column if not exists section_id uuid;
+alter table lms_file add column if not exists source text not null default 'e';
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'lms_file_section_fk') then
+    alter table lms_file add constraint lms_file_section_fk foreign key (tenant_id, section_id) references lms_section (tenant_id, section_id) on delete cascade;
+  end if;
+  if exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = current_schema() and c.relname = 'lms_b_file' and c.relkind = 'r') then
+    alter table lms_b_file no force row level security; alter table lms_file no force row level security;   -- 소유자 이관(기관 전체) 동안만
+    insert into lms_file (tenant_id, file_id, owner_kind, owner_ref, name, mime, size, sha256, data, created_at, section_id, source)
+      select tenant_id, file_id, 'staff', 'section:' || section_id, name, mime, size, encode(sha256(data), 'hex'), data, created_at, section_id, 'b' from lms_b_file on conflict do nothing;
+    alter table lms_file force row level security;
+    drop table lms_b_file;
+  end if;
+end $$;
+create or replace view lms_b_file with (security_invoker = true) as
+  select tenant_id, file_id, section_id, name, mime, size, data, created_at from lms_file where section_id is not null;
+create or replace function lms_b_file_ins() returns trigger language plpgsql as $$
+begin
+  insert into lms_file (tenant_id, file_id, owner_kind, owner_ref, name, mime, size, sha256, data, created_at, section_id, source)
+  values (new.tenant_id, coalesce(new.file_id, gen_random_uuid()), 'staff', 'section:' || new.section_id, new.name, new.mime, new.size, encode(sha256(new.data), 'hex'), new.data, coalesce(new.created_at, now()), new.section_id, 'b')
+  returning file_id, created_at into new.file_id, new.created_at;
+  return new;
+end $$;
+drop trigger if exists lms_b_file_ins on lms_b_file;
+create trigger lms_b_file_ins instead of insert on lms_b_file for each row execute function lms_b_file_ins();
+grant select, insert on lms_b_file to didisam_tenant;
+
+-- 업로드 유형 정책(P 업로더 · L DM 첨부 공통): 실행 파일 차단, 허용 형식만
+create or replace function lmsx_file_ok(nm text, mm text) returns text language sql immutable as $$
+  select case when nm ~* '\.(exe|bat|cmd|com|scr|js|vbs|ps1|sh|msi|jar|dll|apk|app)$' then '실행 파일은 올릴 수 없습니다.'
+              when coalesce(mm, '') !~* '^(image/|audio/|video/|text/|application/(pdf|zip|x-zip-compressed|gzip|x-gzip|x-tar|json|xml|octet-stream|msword|vnd\.|haansoft|x-hwp|hwp))' then '허용하지 않는 파일 형식입니다(' || coalesce(mm, '') || ').'
+              else null end $$;
+-- 내 파일(lms_file)인지: 운영자 uid 또는 학습자 person_id
+create or replace function lmsx_my_file(me jsonb, fid uuid) returns lms_file language sql stable as $$
+  select f.* from lms_file f where f.tenant_id = current_setting('app.tenant', true) and f.file_id = fid and f.section_id is null and (
+    (coalesce(me->>'learner', '') = '' and f.owner_kind = 'staff' and f.owner_ref = me->>'uid') or
+    (coalesce(me->>'learner', '') <> '' and f.owner_kind = 'learner' and f.owner_ref = (select person_id::text from lms_person p where p.tenant_id = f.tenant_id and p.member_no = me->>'learner'))) $$;
+alter table lms_upload add column if not exists chunks jsonb not null default '[]';
+
+-- ── 무들 이관 매핑: 과제 → 묶음 E lms_assignment, 게시물 → 묶음 D 게시판(lms_d_post · answer · comment) ──
+create or replace function lms_p_mig_asg(sec uuid, x jsonb, prev text) returns uuid language plpgsql as $$
+declare id uuid;
+begin
+  if prev is not null and exists (select 1 from lms_assignment where tenant_id = current_setting('app.tenant', true) and asg_id = prev::uuid) then return prev::uuid; end if;
+  insert into lms_assignment (tenant_id, section_id, title, body, due_at, max_score, status)
+  values (current_setting('app.tenant', true), sec, left(coalesce(nullif(x->>'name', ''), '이관 과제'), 200), left(coalesce(x->>'intro', ''), 20000),
+          case when coalesce(x->>'duedate', '') ~ '^[1-9]\d{8,10}$' then to_timestamp((x->>'duedate')::bigint) end,
+          case when coalesce(x->>'grade', '') ~ '^\d{1,5}(\.\d+)?$' and (x->>'grade')::numeric > 0 then least((x->>'grade')::numeric, 99999) else 100 end, 'published')
+  returning asg_id into id;
+  return id;
+end $$;
+-- 게시판 종류: 이름으로 추정(공지 · Q&A · 그 밖은 자료실)
+create or replace function lms_p_mig_board_kind(nm text) returns text language sql immutable as $$
+  select case when nm ~* '(공지|news|announce)' then 'notice' when nm ~* '(질의|질문|q\s*&\s*a|qna|문의)' then 'qna' else 'archive' end $$;
+-- 게시물 하나: 최상위 글 → lms_d_post, 답글 → Q&A면 lms_d_answer, 아니면 lms_d_comment(뿌리 글에 붙임). 반환 {ref, root}
+create or replace function lms_p_mig_post(sec uuid, kind text, p jsonb, author text, root uuid) returns jsonb language plpgsql as $$
+declare tid text := current_setting('app.tenant', true); pid uuid; id uuid; lbl text := coalesce(author, '이관 사용자'); at timestamptz;
+begin
+  if author is not null then select person_id into pid from lms_person where tenant_id = tid and member_no = author; end if;
+  at := case when coalesce(p->>'created', '') ~ '^[1-9]\d{8,10}$' then to_timestamp((p->>'created')::bigint) else now() end;
+  if root is null then
+    insert into lms_d_post (tenant_id, board_id, section_id, kind, category, title, body, author_pid, author_label, created_at, updated_at)
+    values (tid, lmsd_board(sec, kind), sec, kind, '', left(coalesce(nullif(p->>'subject', ''), '(제목 없음)'), 200), left(coalesce(p->>'message', ''), 20000), pid, lbl, at, at) returning post_id into id;
+    return jsonb_build_object('table', 'lms_d_post', 'ref', id, 'root', id);
+  elsif kind = 'qna' then
+    insert into lms_d_answer (tenant_id, post_id, author_pid, author_label, body, created_at) values (tid, root, pid, lbl, left(coalesce(p->>'message', ''), 20000), at) returning answer_id into id;
+    update lms_d_post set status = 'answered' where tenant_id = tid and post_id = root and status = 'open';
+    return jsonb_build_object('table', 'lms_d_answer', 'ref', id, 'root', root);
+  else
+    insert into lms_d_comment (tenant_id, post_id, author_pid, author_label, body, created_at) values (tid, root, pid, lbl, left(coalesce(p->>'message', ''), 20000), at) returning comment_id into id;
+    return jsonb_build_object('table', 'lms_d_comment', 'ref', id, 'root', root);
+  end if;
+end $$;
+
 create or replace function lms_p(op text, me jsonb, q jsonb) returns jsonb language plpgsql as $$
 declare
   tid text := current_setting('app.tenant', true);
@@ -112,69 +188,12 @@ declare
   adm boolean := coalesce(me->>'role', '') in ('owner', 'sub');
   tea boolean := coalesce(me->>'role', '') in ('owner', 'sub', 'teacher');
   v_id uuid; v_txt text; k text; r record; s2 record; arr jsonb; out jsonb; n int; n2 int; g lms_admin_guard; f timestamptz; t timestamptz; mem text[]; run bigint;
-  sec uuid; term text; pid uuid; umap jsonb := '{}'; rep jsonb; iss jsonb := '[]';
+  sec uuid; term text; pid uuid; umap jsonb := '{}'; rep jsonb; mp jsonb; iss jsonb := '[]';
 begin
-  -- ── 학습자(앱) 출석: 학습자 세션만 ──
-  if op = 'att.checkin' then
-    if coalesce(me->>'learner', '') = '' then perform lmsx_err(403, 'role', '학습자 앱에서만 출석할 수 있습니다.'); end if;
-    select person_id into pid from lms_person where tenant_id = tid and member_no = me->>'learner';
-    if not found then perform lmsx_err(404, 'not_found', '학사에 등록되지 않은 학번입니다.'); end if;
-    arr := case when jsonb_typeof(q->'items') = 'array' then q->'items' else jsonb_build_array(q) end;
-    if jsonb_array_length(arr) > 50 then perform lmsx_err(400, 'bad_input', '오프라인 출석은 한 번에 50건까지 보냅니다.'); end if;
-    out := '[]';
-    for r in select x from jsonb_array_elements(arr) x loop
-      v_id := lmsx_uuid(r.x, 'session_id'); v_txt := upper(lmsx_txt(r.x, 'code', 12, true));
-      f := lmsx_tsq(r.x, 'offline_at');
-      select s.*, ac.code_hash, ac.expires_at ac_exp, coalesce(ar.late_after_min, 10) late_min,
-             exists (select 1 from lms_enrollment e where e.tenant_id = s.tenant_id and e.section_id = s.section_id and e.person_id = pid and e.status = 'enrolled') enrolled
-        into s2 from lms_session s left join lms_attendance_code ac on ac.tenant_id = s.tenant_id and ac.session_id = s.session_id
-        left join lms_attendance_rule ar on ar.tenant_id = s.tenant_id and ar.section_id = s.section_id
-       where s.tenant_id = tid and s.session_id = v_id;
-      if not found then k := 'no_session';
-      elsif not s2.enrolled then k := 'not_enrolled';
-      elsif s2.code_hash is null or s2.code_hash <> encode(sha256(convert_to(tid || '|' || v_id || '|' || v_txt, 'UTF8')), 'hex') then k := 'bad_code';
-      elsif coalesce(f, now()) > s2.ac_exp or (f is not null and f < s2.ac_exp - interval '3 hours') or (f is not null and f > now()) then k := 'expired';
-      else
-        k := case when s2.starts_at is not null and coalesce(f, now()) > s2.starts_at + make_interval(mins => s2.late_min) then 'late' else 'present' end;
-        insert into lms_attendance (tenant_id, session_id, person_id, status, method, evidence, decided_at)
-        values (tid, v_id, pid, k, 'code', jsonb_build_object('ip', lmsx_ip(me->>'ip'), 'offline', f is not null, 'client_at', lmsx_ts(f), 'via', 'app'), coalesce(f, now()))
-        on conflict (tenant_id, session_id, person_id) do update set status = case when lms_attendance.status = 'present' then 'present' else excluded.status end, method = 'code', evidence = excluded.evidence, decided_at = excluded.decided_at
-        where lms_attendance.method <> 'manual';
-      end if;
-      out := out || jsonb_build_array(jsonb_build_object('session_id', v_id, 'result', k));
-    end loop;
-    if jsonb_typeof(q->'items') is distinct from 'array' then
-      k := out->0->>'result';
-      if k = 'no_session' then return jsonb_build_object('_status', 404, 'error', 'not_found', 'message', '없는 수업 차시입니다.'); end if;
-      if k = 'not_enrolled' then return jsonb_build_object('_status', 403, 'error', 'not_enrolled', 'message', '이 분반의 수강생이 아닙니다.'); end if;
-      if k = 'bad_code' then return jsonb_build_object('_status', 400, 'error', 'bad_code', 'message', '출석 코드가 올바르지 않습니다.'); end if;
-      if k = 'expired' then return jsonb_build_object('_status', 410, 'error', 'expired', 'message', '출석 코드 유효 시간이 지났습니다.'); end if;
-      return jsonb_build_object('ok', true, 'status', k);
-    end if;
-    return jsonb_build_object('ok', true, 'items', out);
-  end if;
+  -- 앱 출석은 묶음 G(/api/lms/g/checkin · code · qr)가 원본이다. P의 /att/checkin은 학습자 세션으로 G 검증을 그대로 부르는 얇은 경로(mod-p.js · Java LmsGLearnerCheckin)
   if coalesce(me->>'learner', '') <> '' then perform lmsx_err(403, 'role', '권한이 없습니다.'); end if;
 
-  if op = 'att.open' then
-    if not tea then perform lmsx_err(403, 'role', '교수자 · 운영자만 출석 코드를 열 수 있습니다.'); end if;
-    v_id := lmsx_uuid(q, 'session_id');
-    if not exists (select 1 from lms_session where tenant_id = tid and session_id = v_id) then perform lmsx_err(404, 'not_found', '없는 수업 차시입니다.'); end if;
-    n := lmsx_int(q, 'minutes', 10, 1, 180);
-    v_txt := lpad((floor(random() * 1000000))::int::text, 6, '0');
-    insert into lms_attendance_code (tenant_id, session_id, code_hash, expires_at) values (tid, v_id, encode(sha256(convert_to(tid || '|' || v_id || '|' || v_txt, 'UTF8')), 'hex'), now() + make_interval(mins => n))
-    on conflict (tenant_id, session_id) do update set code_hash = excluded.code_hash, expires_at = excluded.expires_at;
-    perform lmsx_audit(me, 'lms.att.open', jsonb_build_object('session_id', v_id, 'minutes', n));
-    return jsonb_build_object('ok', true, 'code', v_txt, 'expires_at', lmsx_ts(now() + make_interval(mins => n)), 'qr', 'didisam-att:' || v_id || ':' || v_txt);
-
-  elsif op = 'att.board' then
-    if not tea then perform lmsx_err(403, 'role', '교수자 · 운영자만 볼 수 있습니다.'); end if;
-    v_id := lmsx_uuid(q, 'session_id');
-    select jsonb_build_object('present', count(*) filter (where a.status = 'present'), 'late', count(*) filter (where a.status = 'late'), 'absent', count(*) filter (where a.status = 'absent'), 'offline', count(*) filter (where (a.evidence->>'offline')::boolean)) into out
-      from lms_attendance a where a.tenant_id = tid and a.session_id = v_id;
-    return out || jsonb_build_object('enrolled', (select count(*) from lms_enrollment e join lms_session s on s.tenant_id = e.tenant_id and s.section_id = e.section_id where e.tenant_id = tid and s.session_id = v_id and e.status = 'enrolled')::int);
-
-  -- ── 언어 · 접근성 ──
-  elsif op = 'pref.get' then
+  if op = 'pref.get' then
     select jsonb_build_object('lang', lang, 'a11y', a11y) into out from lms_p_pref where tenant_id = tid and principal = my;
     return coalesce(out, jsonb_build_object('lang', 'ko', 'a11y', '{}'::jsonb));
   elsif op = 'pref.save' then
@@ -198,18 +217,33 @@ begin
 
   -- ── 업로드 · 에디터 ──
   elsif op = 'upload.add' then
-    v_txt := lmsx_txt(q, 'name', 200, true);
-    if coalesce(q->>'size', '') !~ '^\d{1,13}$' then perform lmsx_err(400, 'bad_input', '파일 크기가 올바르지 않습니다.'); end if;
-    if (q->>'size')::bigint > 5368709120 then perform lmsx_err(413, 'too_large', '파일은 5GB까지 올릴 수 있습니다.'); end if;
+    -- 바이트는 묶음 E 파일 저장소(lms_file, POST /api/lms/e/file · 조각당 2MB)에 먼저 올리고, 여기서는 조각 목록을 한 파일로 묶는다(최대 50조각 = 100MB)
+    v_txt := lmsx_txt(q, 'name', 200, true); k := coalesce(nullif(lmsx_txt(q, 'mime', 100), ''), 'application/octet-stream');
+    if lmsx_file_ok(v_txt, k) is not null then perform lmsx_err(400, 'file_type', lmsx_file_ok(v_txt, k)); end if;
+    if jsonb_typeof(q->'file_ids') is distinct from 'array' or jsonb_array_length(q->'file_ids') = 0 then perform lmsx_err(400, 'bad_input', '파일 조각(file_ids)을 먼저 올리세요.'); end if;
+    if jsonb_array_length(q->'file_ids') > 50 then perform lmsx_err(413, 'too_large', '파일은 100MB(조각 50개)까지 올릴 수 있습니다.'); end if;
     if coalesce(q->>'sha256', '') <> '' and q->>'sha256' !~ '^[0-9a-f]{64}$' then perform lmsx_err(400, 'bad_input', 'sha256 값이 올바르지 않습니다.'); end if;
+    out := '[]'; n := 0; n2 := 0;
+    for r in select v, o from jsonb_array_elements_text(q->'file_ids') with ordinality z(v, o) loop
+      if r.v !~* '^[0-9a-f-]{36}$' then perform lmsx_err(400, 'bad_input', '파일 조각 id가 올바르지 않습니다.'); end if;
+      if (lmsx_my_file(me, r.v::uuid)).file_id is null then perform lmsx_err(400, 'file', '올린 파일 조각을 찾을 수 없습니다(본인이 올린 조각만 묶을 수 있습니다).'); end if;
+      out := out || to_jsonb(r.v); n := n + (select size from lms_file where tenant_id = tid and file_id = r.v::uuid);
+    end loop;
+    if coalesce(q->>'size', '') <> '' and (q->>'size') ~ '^\d{1,13}$' and (q->>'size')::bigint <> n then perform lmsx_err(400, 'size_mismatch', '올린 조각 크기 합계(' || n || ')가 파일 크기와 다릅니다.'); end if;
+    if jsonb_array_length(out) = 1 and coalesce(q->>'sha256', '') <> '' and (select sha256 from lms_file where tenant_id = tid and file_id = (out->>0)::uuid) <> q->>'sha256' then perform lmsx_err(400, 'sha_mismatch', '파일 무결성(SHA-256)이 맞지 않습니다.'); end if;
     arr := coalesce(q->'entries', '[]'); if jsonb_typeof(arr) <> 'array' then perform lmsx_err(400, 'bad_input', 'entries 형식이 올바르지 않습니다.'); end if;
     select coalesce(jsonb_agg(jsonb_build_object('name', left(coalesce(e->>'name', ''), 300), 'size', coalesce(nullif(e->>'size', '')::bigint, 0))), '[]') into arr from (select e from jsonb_array_elements(arr) e limit 2000) z;
-    insert into lms_upload (tenant_id, owner, name, size, mime, sha256, entries, storage_key) values (tid, my, v_txt, (q->>'size')::bigint, lmsx_txt(q, 'mime', 100), nullif(q->>'sha256', ''), arr, null) returning upload_id into v_id;
-    return jsonb_build_object('ok', true, 'id', v_id, 'entries', jsonb_array_length(arr), 'storage', '연동 후 저장(학내 CDN · 스토리지)');
+    insert into lms_upload (tenant_id, owner, name, size, mime, sha256, entries, storage_key, chunks) values (tid, my, v_txt, n, k, nullif(q->>'sha256', ''), arr, 'lms_file:' || (out->>0), out) returning upload_id into v_id;
+    return jsonb_build_object('ok', true, 'id', v_id, 'size', n, 'chunks', jsonb_array_length(out), 'entries', jsonb_array_length(arr), 'storage', 'lms_file');
   elsif op = 'upload.recent' then
-    select coalesce(jsonb_agg(jsonb_build_object('id', upload_id, 'name', name, 'size', size, 'mime', mime, 'sha256', sha256, 'entries', jsonb_array_length(entries), 'at', lmsx_ts(created_at)) order by created_at desc, name), '[]') into arr
+    select coalesce(jsonb_agg(jsonb_build_object('id', upload_id, 'name', name, 'size', size, 'mime', mime, 'sha256', sha256, 'entries', jsonb_array_length(entries), 'chunks', jsonb_array_length(chunks), 'at', lmsx_ts(created_at)) order by created_at desc, name), '[]') into arr
       from (select * from lms_upload where tenant_id = tid and owner = my order by created_at desc limit 20) u;
     return jsonb_build_object('items', arr);
+  elsif op = 'upload.get' then
+    -- 내려받기: 조각 id 목록(조각 내용은 GET /api/lms/e/file?id= 로 받아 이어 붙인다)
+    select * into r from lms_upload where tenant_id = tid and upload_id = lmsx_uuid(q, 'id') and (owner = my or adm);
+    if not found then perform lmsx_err(404, 'not_found', '없는 파일입니다.'); end if;
+    return jsonb_build_object('id', r.upload_id, 'name', r.name, 'size', r.size, 'mime', r.mime, 'sha256', r.sha256, 'chunks', r.chunks);
   elsif op = 'draft.save' then
     k := lmsx_txt(q, 'doc_key', 80, true); v_txt := coalesce(q->>'body', '');
     if length(v_txt) > 200000 then perform lmsx_err(413, 'too_large', '임시저장은 20만 자까지입니다.'); end if;
@@ -377,21 +411,37 @@ begin
       n := n + 1;
     end loop;
     rep := rep || jsonb_build_object('enrolments', jsonb_build_object('source', jsonb_array_length(coalesce(q->'enrolments', '[]')), 'imported', n, 'skipped', n2));
-    n := 0; n2 := 0;
-    for r in select f2, p from jsonb_array_elements(coalesce(q->'forums', '[]')) f2, jsonb_array_elements(coalesce(f2->'posts', '[]')) p loop
-      insert into lms_mig_object (tenant_id, run_id, kind, src_id, title, payload) values (tid, run, 'post', coalesce(r.p->>'id', md5(r.p::text)), left(coalesce(r.p->>'subject', ''), 200),
-        jsonb_build_object('forum', r.f2->>'name', 'author', umap->>(r.p->>'userid'), 'message', left(coalesce(r.p->>'message', ''), 20000), 'created', r.p->>'created', 'parent', r.p->>'parent')) on conflict do nothing;
+    -- 게시물 → 묶음 D 게시판. 최상위 글을 먼저, 답글은 뿌리 글에 붙인다. 다시 이관하면 이전 매핑을 재사용(중복 생성 없음)
+    perform lmsd_ensure(sec);
+    n := 0; n2 := 0; out := '{}';
+    for r in select f2, p, lms_p_mig_board_kind(coalesce(f2->>'name', '')) bk from jsonb_array_elements(coalesce(q->'forums', '[]')) f2, jsonb_array_elements(coalesce(f2->'posts', '[]')) p
+             order by (coalesce(p->>'parent', '0') in ('', '0')) desc, coalesce(nullif(p->>'created', ''), '0')::bigint, p->>'id' loop
+      k := coalesce(r.p->>'id', md5(r.p::text));
+      select o.payload->'map' into mp from lms_mig_object o join lms_mig_run mr on mr.tenant_id = o.tenant_id and mr.run_id = o.run_id
+       where o.tenant_id = tid and mr.section_id = sec and o.kind = 'post' and o.src_id = k and o.payload ? 'map' order by o.run_id desc limit 1;
+      if mp is null then
+        mp := lms_p_mig_post(sec, r.bk, r.p, umap->>(r.p->>'userid'), case when coalesce(r.p->>'parent', '0') in ('', '0') then null else (out->>(r.p->>'parent'))::uuid end);
+      end if;
+      out := out || jsonb_build_object(k, mp->>'root');
+      insert into lms_mig_object (tenant_id, run_id, kind, src_id, title, payload) values (tid, run, 'post', k, left(coalesce(r.p->>'subject', ''), 200),
+        jsonb_build_object('forum', r.f2->>'name', 'board_kind', r.bk, 'author', umap->>(r.p->>'userid'), 'parent', r.p->>'parent', 'map', mp)) on conflict do nothing;
+      mp := null;
       if umap->>(r.p->>'userid') is null then n2 := n2 + 1; end if; n := n + 1;
     end loop;
-    if n2 > 0 then iss := iss || jsonb_build_array(jsonb_build_object('kind', 'post', 'issue', '작성자 학번 없음 ' || n2 || '건 — 작성자 비움으로 이관')); end if;
-    rep := rep || jsonb_build_object('posts', jsonb_build_object('source', n, 'imported', (select count(*) from lms_mig_object where tenant_id = tid and run_id = run and kind = 'post')::int, 'no_author', n2),
+    if n2 > 0 then iss := iss || jsonb_build_array(jsonb_build_object('kind', 'post', 'issue', '작성자 학번 없음 ' || n2 || '건 — 작성자 「이관 사용자」로 이관')); end if;
+    rep := rep || jsonb_build_object('posts', jsonb_build_object('source', n, 'imported', (select count(*) from lms_mig_object where tenant_id = tid and run_id = run and kind = 'post' and payload->'map'->>'ref' is not null)::int, 'no_author', n2, 'to', 'lms_d_post · lms_d_answer · lms_d_comment'),
                                      'forums', jsonb_array_length(coalesce(q->'forums', '[]')));
+    -- 과제 → 묶음 E lms_assignment
     n := 0;
-    for r in select x from jsonb_array_elements(coalesce(q->'assignments', '[]')) x loop
-      insert into lms_mig_object (tenant_id, run_id, kind, src_id, title, payload) values (tid, run, 'assignment', coalesce(r.x->>'id', md5(r.x::text)), left(coalesce(r.x->>'name', ''), 200),
-        jsonb_build_object('intro', left(coalesce(r.x->>'intro', ''), 20000), 'duedate', r.x->>'duedate', 'grade', r.x->>'grade')) on conflict do nothing; n := n + 1;
+    for r in select x from jsonb_array_elements(coalesce(q->'assignments', '[]')) x order by x->>'id' loop
+      k := coalesce(r.x->>'id', md5(r.x::text));
+      v_txt := (select o.payload->>'asg_id' from lms_mig_object o join lms_mig_run mr on mr.tenant_id = o.tenant_id and mr.run_id = o.run_id
+                 where o.tenant_id = tid and mr.section_id = sec and o.kind = 'assignment' and o.src_id = k and o.payload ? 'asg_id' order by o.run_id desc limit 1);
+      v_id := lms_p_mig_asg(sec, r.x, v_txt);
+      insert into lms_mig_object (tenant_id, run_id, kind, src_id, title, payload) values (tid, run, 'assignment', k, left(coalesce(r.x->>'name', ''), 200),
+        jsonb_build_object('asg_id', v_id, 'duedate', r.x->>'duedate', 'grade', r.x->>'grade')) on conflict do nothing; n := n + 1;
     end loop;
-    rep := rep || jsonb_build_object('assignments', jsonb_build_object('source', n, 'imported', (select count(*) from lms_mig_object where tenant_id = tid and run_id = run and kind = 'assignment')::int));
+    rep := rep || jsonb_build_object('assignments', jsonb_build_object('source', n, 'imported', (select count(*) from lms_mig_object o join lms_assignment ga on ga.tenant_id = o.tenant_id and ga.asg_id = (o.payload->>'asg_id')::uuid where o.tenant_id = tid and o.run_id = run and o.kind = 'assignment')::int, 'to', 'lms_assignment'));
     n := 0; n2 := 0;
     for r in select x from jsonb_array_elements(coalesce(q->'resources', '[]')) x loop
       k := case when coalesce(r.x->>'mimetype', '') like 'video/%' then 'video' else 'resource' end; if k = 'video' then n2 := n2 + 1; end if;
@@ -401,7 +451,8 @@ begin
     rep := rep || jsonb_build_object('resources', jsonb_build_object('source', n, 'imported', (select count(*) from lms_mig_object where tenant_id = tid and run_id = run and kind in ('resource', 'video'))::int, 'videos', n2));
     rep := jsonb_build_object('course', jsonb_build_object('course_code', v_txt, 'term_id', term, 'section_id', sec, 'title', left(coalesce(nullif(out->>'fullname', ''), v_txt), 120)), 'counts', rep, 'issues', iss,
       'verify', jsonb_build_object('enrolled_in_db', (select count(*) from lms_enrollment where tenant_id = tid and section_id = sec)::int, 'staff_in_db', (select count(*) from lms_section_staff where tenant_id = tid and section_id = sec)::int,
-                                   'objects_in_db', (select count(*) from lms_mig_object where tenant_id = tid and run_id = run)::int),
+                                   'objects_in_db', (select count(*) from lms_mig_object where tenant_id = tid and run_id = run)::int,
+                                   'board_posts_in_db', (select count(*) from lms_d_post where tenant_id = tid and section_id = sec and deleted_at is null)::int, 'assignments_in_db', (select count(*) from lms_assignment where tenant_id = tid and section_id = sec)::int),
       'ok', jsonb_array_length(iss) = 0);
     update lms_mig_run set report = rep where tenant_id = tid and run_id = run;
     perform lmsx_audit(me, 'lms.mig.import', jsonb_build_object('run_id', run, 'course', v_txt));

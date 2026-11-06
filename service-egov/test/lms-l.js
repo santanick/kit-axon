@@ -40,8 +40,13 @@ async function scenario(base, tag) {
   const rid = R.group.j.id;
   await P('sendEmpty', '/api/lms/l/dm/send', { room_id: rid, body: '' });
   await P('send', '/api/lms/l/dm/send', { room_id: rid, body: '회의는 목요일 3시입니다.' });
-  await P('sendAtt', '/api/lms/l/dm/send', { room_id: rid, body: '', attachments: [{ name: '회의록.pdf', size: 20480, mime: 'application/pdf' }, { name: '사진.png', size: 1000, mime: 'image/png' }, { name: '음성.m4a', size: 3000, mime: 'audio/mp4' }] });
-  await P('sendBig', '/api/lms/l/dm/send', { room_id: rid, attachments: [{ name: 'big.mp4', size: 200 * 1048576, mime: 'video/mp4' }] });
+  /* 첨부: 바이트는 파일 저장소(lms_file, 묶음 E POST /api/lms/e/file)에 올리고 file_id로 붙인다 */
+  const putF = (name, mime, txt, c = ck) => call(base, 'POST', '/api/lms/e/file', { cookie: c, body: { name, mime, b64: Buffer.from(txt).toString('base64') } }).then(r => r.j && r.j.file_id);
+  const f1 = await putF('회의록.pdf', 'application/pdf', '%PDF-1.4 회의록'), f2 = await putF('사진.png', 'image/png', 'PNGDATA'), f3 = await putF('음성.m4a', 'audio/mp4', 'M4A'), fx = await putF('run.exe', 'application/octet-stream', 'MZ'), ft = await putF('교수자.txt', 'text/plain', 'teacher', tea.ck);
+  await P('sendMeta', '/api/lms/l/dm/send', { room_id: rid, attachments: [{ name: 'x.pdf', size: 1, mime: 'application/pdf' }] });
+  await P('sendAtt', '/api/lms/l/dm/send', { room_id: rid, body: '', attachments: [{ file_id: f1 }, { file_id: f2 }, { file_id: f3 }] });
+  await P('sendExe', '/api/lms/l/dm/send', { room_id: rid, attachments: [{ file_id: fx }] });
+  await P('sendBig', '/api/lms/l/dm/send', { room_id: rid, attachments: [{ file_id: ft }] });
   await P('sendNotMember', '/api/lms/l/dm/send', { room_id: rid, body: 'x' }, tea.ck);
   await G('msgs', `/api/lms/l/dm/msgs?room_id=${rid}`);
   await G('rooms', '/api/lms/l/dm/rooms');
@@ -55,6 +60,8 @@ async function scenario(base, tag) {
   R.stuSend = await call(base, 'POST', '/api/lms/l/dm/send', { cookie: stu, body: { room_id: rid, body: '학생입니다. 확인했습니다.' } });
   R.stuOpen = await call(base, 'POST', '/api/lms/l/dm/open', { cookie: stu, body: { kind: 'direct', members: ['p:P2026001'] } });
   R.stuMsgs = await call(base, 'GET', `/api/lms/l/dm/msgs?room_id=${rid}`, { cookie: stu });
+  R.stuFile = await call(base, 'GET', `/api/lms/l/dm/file?room_id=${rid}&file_id=${f1}`, { cookie: stu });
+  R.stuFileNo = await call(base, 'GET', `/api/lms/l/dm/file?room_id=${rid}&file_id=${ft}`, { cookie: stu });
   R.stuInbox = await call(base, 'GET', '/api/lms/l/noti/inbox', { cookie: stu });
   R.stuCal = await call(base, 'POST', '/api/lms/l/cal/add', { cookie: stu, body: { scope: 'personal', title: '스터디', starts_at: '2026-11-20T19:00' } });
   R.stuAcad = await call(base, 'POST', '/api/lms/l/cal/add', { cookie: stu, body: { scope: 'academic', title: 'x', starts_at: '2026-11-20' } });
@@ -88,4 +95,4 @@ async function scenario(base, tag) {
   await P('outboxTea', '/api/lms/l/noti/ack', { status: 'sent', ids: [] }, tea.ck);
   return R;
 }
-main('묶음 L', scenario, { noAuth: 401, csrf: 403, addBadScope: 400, addBadTs: 400, addNoTitle: 400, addArr: 400, addTeaAcad: 403, addAcad: 200, addCourse: 200, addCourseBad: 404, addEndBefore: 400, list: 200, ics: 200, d1Tea: 403, d1: 200, delAgain: 404, openBad: 404, openTwo: 400, open: 200, group: 200, sendEmpty: 400, sendAtt: 200, sendBig: 400, sendNotMember: 404, msgs: 200, bcTea: 200, bcNone: 400, ruleBad: 400, ruleBadCh: 400, ruleHours: 400, ruleDue: 200, quietBad: 400, fire: 200, scan: 200, outbox: 200, ackBad: 400, ack: 200, outboxTea: 403, stuRooms: 200, stuSend: 200, stuOpen: 200, stuMsgs: 200, stuInbox: 200, stuCal: 200, stuAcad: 403, stuBc: 403, stuOutbox: 403, stuRule: 200 });
+main('묶음 L', scenario, { noAuth: 401, csrf: 403, addBadScope: 400, addBadTs: 400, addNoTitle: 400, addArr: 400, addTeaAcad: 403, addAcad: 200, addCourse: 200, addCourseBad: 404, addEndBefore: 400, list: 200, ics: 200, d1Tea: 403, d1: 200, delAgain: 404, openBad: 404, openTwo: 400, open: 200, group: 200, sendEmpty: 400, sendMeta: 400, sendAtt: 200, sendExe: 400, sendBig: 400, sendNotMember: 404, msgs: 200, bcTea: 200, bcNone: 400, ruleBad: 400, ruleBadCh: 400, ruleHours: 400, ruleDue: 200, quietBad: 400, fire: 200, scan: 200, outbox: 200, ackBad: 400, ack: 200, outboxTea: 403, stuRooms: 200, stuFile: 200, stuFileNo: 404, stuSend: 200, stuOpen: 200, stuMsgs: 200, stuInbox: 200, stuCal: 200, stuAcad: 403, stuBc: 403, stuOutbox: 403, stuRule: 200 });
