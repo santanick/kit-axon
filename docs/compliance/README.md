@@ -50,7 +50,7 @@
 - 임시 비밀번호: 발급 계정은 비밀번호를 바꾸기 전까지 `/api/me`, `/api/password` 외 API를 쓸 수 없습니다.
 
 ## 기관 문서 개인정보 암호화(v31.1)
-- 대상: `members`의 name · nick · email · phone · extra, `parents`의 name · phone, `codes`의 code, `admins`의 name · email(v31.6), `consults`의 title · summary · text · note · memo · transcript(v31.6), `msgs`의 to · title · body(v31.6), `crmLeads` · `crmHist` · `members[].crm` · `classes[].crmDay`(학원 CRM, v31.8), `inbox` · `chat`(v31.10).
+- 대상: `members`의 name · nick · email · phone · extra, `parents`의 name · phone, `codes`의 code, `admins`의 name · email(v31.6), `consults`의 title · summary · text · note · memo · transcript(v31.6), `msgs`의 to · title · body(v31.6), `crmLeads` · `crmHist` · `members[].crm` · `classes[].crmDay`(학원 CRM, v31.8), `inbox` · `chat`(v32.1).
 - 방식: 저장 직전 AES-256-GCM(`PII_KEY`), 읽은 직후 복호화. 값 앞에 `enc1:`이 붙습니다. `PII_KEY`가 없으면 평문으로 저장하며, 운영 서버는 키가 없으면 시작하지 않습니다.
 - 기존 평문: Node 서버 시작 시 전환합니다. Java만 운영하면 다음 저장 때 전환됩니다.
 - `PII_KEY`를 잃으면 대상 항목을 복구할 수 없습니다. 키는 비밀 관리 서비스와 별도 안전한 장소에 백업합니다.
