@@ -19,6 +19,6 @@ public class AiController {
     }
     @GetMapping("/ai/usage") public Map<String, Object> usage(HttpServletRequest req) throws Exception { return aiService.usage(authService.need(req)); }
     @PostMapping("/site/benchmark") public Map<String, Object> benchmark(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception {
-        return benchService.benchmark(authService.need(req), body);
+        return benchService.benchmark(authService.needStaff(req), body);
     }
 }

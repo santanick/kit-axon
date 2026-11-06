@@ -1,0 +1,54 @@
+'use strict';
+/* v31 모듈 분리 · 교강사 범위 · 심사자 · IP 제한 */
+const test = require('node:test'); const assert = require('node:assert/strict'); const fs = require('node:fs'); const os = require('node:os'); const path = require('node:path');
+const { poolFrom, migrate, inTenant } = require('../server/db'); const { createStateCrypto } = require('../server/statecrypt'); const { piiKeys } = require('../server/pii'); const { createApp } = require('../server/app'); const { scenario } = require('./module-scenario'); const M = require('../server/modules');
+
+test('IP 허용 규칙', () => {
+  assert.ok(M.ipAllowed([], '1.2.3.4')); assert.ok(M.ipAllowed(['1.2.3.4'], '1.2.3.4')); assert.ok(M.ipAllowed(['1.2.3.4'], '::ffff:1.2.3.4')); assert.ok(!M.ipAllowed(['1.2.3.4'], '1.2.3.5'));
+  assert.ok(M.ipAllowed(['10.0.0.0/8'], '10.9.8.7')); assert.ok(!M.ipAllowed(['10.0.0.0/8'], '11.0.0.1')); assert.ok(M.ipAllowed(['192.168.1.128/25'], '192.168.1.200')); assert.ok(!M.ipAllowed(['192.168.1.128/25'], '192.168.1.5')); assert.ok(M.ipAllowed(['2001:db8::1'], '2001:DB8::1')); assert.ok(!M.ipAllowed(['bad/99'], '1.2.3.4'));
+  assert.throws(() => M.moduleOf({ MODULE: 'x' }));
+});
+
+test('환급 에디션 배포 명령', () => {
+  const { execFileSync, spawnSync } = require('node:child_process'); const sh = path.join(__dirname, '..', 'deploy-moel.sh');
+  const out = execFileSync('bash', [sh, 'p1'], { env: { ...process.env, DRY_RUN: '1', ADMIN_IPS: '1.2.3.4,10.0.0.0/8', IMAGE: 'img:1', LEARNER_TID: 'tn_a' }, encoding: 'utf8' });
+  for (const s of ['didisam-moel-learner', 'didisam-moel-tutor', 'didisam-moel-admin', 'MODULE=learner', 'MODULE=tutor', 'MODULE=admin', 'LEARNER_TID=tn_a', 'PII_KEY=didisam-pii-key', 'SESSION_PEPPER=didisam-session-pepper']) assert.ok(out.includes(s), s); assert.ok(/ADMIN_IPS=1\.2\.3\.4,10\.0\.0\.0\/8|ADMIN_IPS=1\.2\.3\.4\\,10\.0\.0\.0\/8/.test(out), out);
+  assert.notEqual(spawnSync('bash', [sh, 'p1'], { env: { ...process.env, DRY_RUN: '1', IMAGE: 'img:1', ADMIN_IPS: '' } }).status, 0);
+});
+
+test('모듈 분리', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mod-')); fs.mkdirSync(path.join(dir, 'deploy'));
+  for (const f of ['index.html', 'learner.html', 'deploy/index.html', 'compliance.js']) fs.writeFileSync(path.join(dir, f), 'x'); fs.writeFileSync(path.join(dir, 'tutor.html'), '<meta name="dd-module" content="tutor">');
+  const pool = poolFrom(process.env); await migrate(pool); const base = { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', TRUST_PROXY_HOPS: '0', LEARNER_TID: 'tn_demo', PII_KEY: 'a'.repeat(64) }; const U = {}; const apps = [];
+  for (const [k, env] of Object.entries({ all: {}, admin: { MODULE: 'admin' }, tutor: { MODULE: 'tutor' }, learner: { MODULE: 'learner' }, blocked: { MODULE: 'admin', ADMIN_IPS: '10.0.0.1,172.16.0.0/12' }, strict: { IDV_DEV: '1', IDV_ENFORCE: '1' } })) { const app = createApp({ pool, env: { ...base, ...env }, log: {}, publicDir: dir }); await new Promise(ok => app.listen(0, ok)); apps.push(app); U[k] = `http://127.0.0.1:${app.address().port}`; }
+  try {
+    const raw = tid => inTenant(pool, tid, async c => (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0].doc); const sql = (tid, q, args) => inTenant(pool, tid, c => c.query(q, args)); const R = await scenario(U, { raw, sql, adm: (q, args) => pool.query(q, args) });
+    assert.equal(R.put0, 200); assert.equal(R.staff, 200); assert.ok(R.tempPwOk); assert.equal(R.staffDup.error, 'exists'); assert.equal(R.staffRole.error, 'staff_role'); assert.equal(R.staffMail.error, 'email'); assert.equal(R.subTemp.error, 'pw_temp'); assert.equal(R.subDenied.error, 'role'); assert.equal(R.tempMe, true); assert.equal(R.tempState.error, 'pw_temp'); assert.equal(R.tempChange, 200); assert.ok(R.tempAfter); assert.deepEqual(R.staffList, ['owner', 'sub', 'teacher']);
+    assert.deepEqual(R.ownerOnTutor, { s: 403, e: 'module', m: '이 주소로 로그인할 수 없는 계정입니다.' }); assert.deepEqual(R.teacherOnAdmin, { s: 403, e: 'module' }); assert.deepEqual(R.teacherOnTutor, { s: 200, role: 'teacher' });
+    assert.deepEqual(R.view, { classes: ['c1'], members: ['m1'], admins: 1, codes: [], settings: { nested: { ok: 1 }, keep: 1 }, sales: [], billing: { a: null } });
+    assert.equal(R.tutorPut, 200); assert.deepEqual(R.after, { org: 'M', cplOn: true, classes: [['c1', '담당', 1, { m1: { p: 50 } }], ['c2', '다른', 1, {}]], members: 2, codes: 2 }); assert.equal(R.tutorStale, 409);
+    assert.ok(Object.values(R.tutorBlocked).every(s => s === 404), JSON.stringify(R.tutorBlocked));
+    assert.deepEqual(R.teacherRole['/api/keys'], [403, 'teacher']); assert.deepEqual(R.teacherRole['/api/audit'], [403, 'teacher']); assert.deepEqual(R.teacherRole['/api/learners/accounts'], [403, 'teacher']); assert.deepEqual(R.teacherRole['/api/staff'], [403, 'role']);
+    assert.ok(Object.values(R.learnerBlocked).every(s => s === 404), JSON.stringify(R.learnerBlocked));
+    assert.deepEqual(R.cfg, { learner: 'learner', learnerSignup: false, tutor: 'tutor', adminSignup: true, all: true }); assert.deepEqual(R.learnerLogin, [200, 200]);
+    assert.deepEqual(R.review, [200, 403, 'reviewer', '심사자로 지정된 계정이 아닙니다.']); assert.deepEqual(R.reviewLog, [['review', '00', 0, 'c1']]); assert.equal(R.tutorSummary, 0); assert.equal(R.tutorLogsOther, 0);
+    assert.deepEqual(R.pages.tutorRoot, [200, true]); assert.equal(R.pages.tutorIndex[0], 404); assert.equal(R.pages.tutorLearner[0], 404); assert.deepEqual(R.pages.tutorPage, [200, true]); assert.equal(R.pages.tutorAsset, 200); assert.deepEqual(R.pages.adminRoot, [200, false]); assert.equal(R.pages.adminTutor[0], 404); assert.equal(R.pages.adminLearner[0], 404); assert.equal(R.pages.adminDeploy[0], 404); assert.deepEqual(R.pages.learnerRoot, [302, '/learner.html?t=tn_demo']); assert.equal(R.pages.learnerIndex[0], 404); assert.equal(R.pages.learnerPage, 200); assert.equal(R.pages.allIndex, 200);
+    assert.deepEqual(R.ip, { root: 403, me: 'ip', login: 403, health: 200 });
+    assert.equal(R.pwBad, 'login'); assert.equal(R.pwWeak, 'password'); assert.equal(R.pwOk, 200); assert.deepEqual(R.afterPw, [401, 200, 200]); assert.equal(R.removeOwner, 'staff_missing'); assert.equal(R.remove, 200); assert.deepEqual(R.afterRemove, [401, 401]);
+    assert.equal(R.encPut, 200); assert.equal(R.encGet.m.name, 'S0003'); assert.equal(R.encGet.m.phone, '010-1111-2222'); assert.deepEqual(R.encGet.m.extra, { 생년월일: '900101', 학번: 'H100' }); assert.equal(R.encGet.p.phone, '010-3333-4444'); assert.equal(R.encGet.c.code, 'ABC999');
+    assert.deepEqual(R.encRaw, { name: true, nick: true, email: true, phone: true, extra: true, parent: true, code: true, id: 'm3', leak: false }); assert.equal(R.encLogin, 200); assert.deepEqual(R.encMine, ['c3']); assert.deepEqual(R.encMcp, { ok: true, enc: false });
+    assert.deepEqual(R.tqView, ['q1']); assert.deepEqual(R.afterTq, [['q1', 'S0001', '담당 질문', 'c1', 'answered', '답변'], ['q2', 'S0002', '다른 질문', 'c2', 'open', null], ['q3', 'S0001', '새 질문', 'c1', 'open', null]]);
+    assert.equal(R.pwcBad, 'login'); assert.equal(R.pwcWeak, 'pw_rule'); assert.equal(R.pwcOk, 200); assert.deepEqual(R.pwcLogin, [401, 200]); assert.equal(R.pwSet, true); assert.equal(R.thirdNo, 'consent_third');
+    assert.ok(R.afterDrop); assert.equal(R.gfMe.groupFirst, true); assert.equal(R.gfBeat, 'group_first'); assert.deepEqual(R.gfWeak, ['pw_rule', 'pw_rule', 'pw_rule', 'pw_rule']); assert.equal(R.gfSet, 200); assert.equal(R.gfBeatOk, 200); assert.equal(R.gfOldCode, 401); assert.equal(R.gfCase, 401); assert.deepEqual(R.gfNew, [200, true]);
+    assert.deepEqual(R.dropMe, ['c5']); assert.equal(R.dropBeat, 'dropped'); assert.equal(R.dropExam, 'dropped'); assert.equal(R.g7first, true); assert.deepEqual(R.examCopy, [['c5', 'e5', 0, 'S0005', 'S0006', true]]); assert.equal(R.examThr, 80); assert.deepEqual(R.reissue, [200, true]);
+    assert.equal(R.ePut, 200); assert.equal(R.encMore, true); assert.deepEqual(R.encMoreOpen, ['mail', '상담 본문', '메시지 본문']);
+    assert.equal(R.seq1, 'seq_locked'); assert.equal(R.seq2, 200); assert.equal(R.seq3, 'seq_locked'); assert.equal(R.exQuiz, 'exam_quiz'); assert.equal(R.seq4, 200); assert.deepEqual(R.exRate, [403, 'exam_rate', '진도율 100% 이상이어야 평가에 응시할 수 있습니다.']);
+    assert.deepEqual(R.comp0, [{ cls: 'k1', sid: 'E0001', rate: 50, score: null, done: false, items: { v1: 35, v2: 5 }, scores: {} }, { cls: 'k1', sid: 'E0002', rate: 0, score: null, done: false, items: {}, scores: {} }]); assert.equal(R.exOk, 200); assert.deepEqual(R.comp1, [{ cls: 'k1', sid: 'E0001', rate: 100, score: 100, done: true, items: { v1: 35, v2: 65 }, scores: { e1: 100 } }, { cls: 'k1', sid: 'E0002', rate: 0, score: null, done: false, items: {}, scores: {} }]); assert.deepEqual(R.compOwner, [['c1', 'S0001'], ['c2', 'S0002']]); assert.deepEqual(R.compTeacher, [['c1', 'S0001']]);
+    assert.deepEqual(R.idv, ['idv_required', 200, 'idv_required', 200, 200, 'idv_required', 200, 'exam_closed']); assert.equal(R.idvOff, 200); assert.deepEqual(R.idle, [200, 401, 401]);
+    /* 기존 평문 문서 전환과 잘못된 키 */
+    const K = piiKeys({ PII_KEY: 'a'.repeat(64) }); class E extends Error { constructor(s, m, c) { super(m); this.status = s; this.code = c; } } const crypt = createStateCrypto(K, E); const sfx = Date.now().toString(36); const pl = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE' }, log: {} }); await new Promise(ok => pl.listen(0, ok)); apps.push(pl); const PU = `http://127.0.0.1:${pl.address().port}`; const r0 = await fetch(PU + '/api/signup', { method: 'POST', headers: { 'x-didisam': '1', 'content-type': 'application/json' }, body: JSON.stringify({ email: `pl${sfx}@a.kr`, password: 'Passw0rd-aaa', orgName: 'P', type: 'voc', code: 'C0DE' }) }); const ck = r0.headers.get('set-cookie').split(';')[0]; const ptid = (await r0.json()).tenant.tid;
+    await fetch(PU + '/api/state', { method: 'PUT', headers: { 'x-didisam': '1', 'content-type': 'application/json', cookie: ck }, body: JSON.stringify({ doc: { org: { name: 'P', type: 'voc' }, members: [{ id: 'm', name: '평문', phone: '010-9', extra: { a: 1 } }] }, rev: 0 }) });
+    assert.equal((await raw(ptid)).members[0].name, '평문'); assert.ok(crypt.unsealed(await raw(ptid))); const n = await crypt.sealAll(pool, inTenant); assert.ok(n >= 1); const sealed = await raw(ptid); assert.ok(sealed.members[0].name.startsWith('enc1:')); assert.ok(!crypt.unsealed(sealed)); assert.equal(crypt.open(sealed, ptid).members[0].name, '평문'); assert.deepEqual(crypt.open(sealed, ptid).members[0].extra, { a: 1 });
+    assert.throws(() => crypt.open(sealed, 'other-tenant'), e => e.code === 'state_key'); const bad = createStateCrypto(piiKeys({ PII_KEY: 'b'.repeat(64) }), E); assert.throws(() => bad.open(sealed, ptid), e => e.code === 'state_key'); const none = createStateCrypto(null, E); assert.throws(() => none.open(sealed, ptid), e => e.code === 'state_key');
+  } finally { apps.forEach(a => a.close()); await pool.end(); }
+});

@@ -1,12 +1,15 @@
 'use strict';
 const path = require('node:path');
-const { poolFrom, migrate } = require('./db');
+const { poolFrom, migrate, inTenant } = require('./db');
+const { createStateCrypto } = require('./statecrypt');
+const { piiKeys } = require('./pii');
 const { createApp } = require('./app');
 
 (async () => {
   if (!process.env.DATABASE_URL) { console.error('DATABASE_URL이 필요합니다.'); process.exit(1); }
   const pool = poolFrom(process.env);
   await migrate(pool);
+  { const K = piiKeys(process.env); if (K) { const n = await createStateCrypto(K, class extends Error { constructor(s, m, c) { super(m); this.code = c; } }).sealAll(pool, inTenant); if (n) console.log(JSON.stringify({ severity: 'INFO', message: `기관 문서 개인정보 암호화 전환: ${n}개` })); } }
   const tick = () => { pool.query('delete from sessions where expires_at < now()').catch(() => {}); pool.query('delete from learner_sessions where expires_at < now()').catch(() => {}); app.piiPurge().catch(() => {}); };
   const app = createApp({ pool, publicDir: process.env.PUBLIC_DIR || path.join(__dirname, '..', 'public') });
   setInterval(tick, 3600e3).unref();

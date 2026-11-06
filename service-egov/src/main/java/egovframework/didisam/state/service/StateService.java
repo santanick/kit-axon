@@ -7,4 +7,6 @@ import java.util.Map;
 public interface StateService {
     Map<String, Object> get(Map<String, Object> a) throws Exception;
     Map<String, Object> put(Map<String, Object> a, JsonNode b) throws Exception;
+    /** 교강사 담당 범위(배정 과정 · 수강생) */
+    egovframework.didisam.cmm.DdModule.Scope scope(Map<String, Object> a) throws Exception;
 }

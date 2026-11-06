@@ -12,6 +12,9 @@ h = h.replace(BOOT, m => '<script src="live.js' + (m.match(/\?v=[^"]*/) || [''])
 h = h.replace(/ https:\/\/api\.anthropic\.com/g, '').replace("form-action 'none'", "form-action 'self'");
 h = h.replace(/<meta name="description" content="[^"]*">/, '<meta name="description" content="디디쌤 스튜디오 — AI 우선 교육 운영 어드민. 기관별 데이터룸 분리.">');
 fs.writeFileSync(p, h);
+/* v31 교강사 전용 화면: 어드민 화면을 교강사 모듈로 표시한다 */
+if (!h.includes('<meta name="viewport"')) throw new Error('viewport 태그를 찾지 못했습니다');
+fs.writeFileSync(path.join(dst, 'tutor.html'), h.replace('<meta name="viewport"', '<meta name="dd-module" content="tutor">\n<meta name="viewport"').replace(/<title>[^<]*<\/title>/, '<title>디디쌤 교강사</title>'));
 /* 학습자 화면: 운영에서는 튜터도 서버 경유 → 브라우저의 Anthropic 직접 호출 허용을 뺀다 */
 const lp = path.join(dst, 'learner.html'); if (fs.existsSync(lp)) fs.writeFileSync(lp, fs.readFileSync(lp, 'utf8').replace(/ https:\/\/api\.anthropic\.com/g, ''));
 if (!fs.existsSync(path.join(dst, 'live.js'))) throw new Error('live.js 없음');

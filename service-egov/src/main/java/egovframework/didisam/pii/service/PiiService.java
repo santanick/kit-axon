@@ -10,6 +10,9 @@ import java.util.Map;
  * 학습 데이터는 가명 learner_id + 닉네임만, 신원(이메일 · SNS 식별자 · 휴대폰 · 이름 · 비밀번호 해시 · 동의)은 pii 스키마에 AES-256-GCM으로.
  */
 public interface PiiService {
+    /** 학습자 본인 비밀번호 변경 */
+    void changePw(String tid, String lid, String cur, String pw) throws Exception;
+    boolean hasPw(String tid, String lid) throws Exception;
     /* 공개(세션 없음) */
     Map<String, Object> otp(HttpServletRequest req, byte[] body, String tid) throws Exception;
     Map<String, Object> signup(HttpServletRequest req, HttpServletResponse res, byte[] body, String tid) throws Exception;

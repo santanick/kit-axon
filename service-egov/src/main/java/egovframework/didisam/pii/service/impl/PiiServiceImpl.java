@@ -35,7 +35,8 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
 
     @Resource(name = "propertiesService") private EgovPropertyService props;
     private final PiiMapper mapper; private final PiiTx ptx; private final TenantTxMapper txm; private final DdPiiCrypto K; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl;
-    public PiiServiceImpl(PiiMapper mapper, PiiTx ptx, TenantTxMapper txm, DdPiiCrypto K, DdProps p, DdWeb web, DdRateLimiter rl) {
+    private final egovframework.didisam.cpl.service.CplService cpl;
+    public PiiServiceImpl(PiiMapper mapper, PiiTx ptx, TenantTxMapper txm, DdPiiCrypto K, DdProps p, DdWeb web, DdRateLimiter rl, egovframework.didisam.cpl.service.CplService cpl) { this.cpl = cpl;
         this.mapper = mapper; this.ptx = ptx; this.txm = txm; this.K = K; this.p = p; this.web = web; this.rl = rl;
     }
 
@@ -58,6 +59,11 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         mapper.insertLog(tid, cut(String.valueOf(actor), 80), action, lid, purpose, String.join(",", fields));
     }
     record Org(String type, JsonNode mode, boolean under14, JsonNode social, boolean idvOn, String idvReason) {}
+    @Override public boolean hasPw(String tid, String lid) throws Exception { return Boolean.TRUE.equals(ptx.run(tid, r -> r.P(() -> mapper.selectIdentityPw(tid, lid) != null))); }
+    @Override public void changePw(String tid, String lid, String cur, String pw) throws Exception {
+        ptx.run(tid, r -> r.P(() -> { if (mapper.countIdentity(tid, lid) == 0) throw processException("dd.401.login.pw"); String h = mapper.selectIdentityPw(tid, lid); if (h != null && !DdCrypto.checkPw(cur, h)) throw processException("dd.401.login.pw"); mapper.updateIdentityPw(tid, lid, DdCrypto.hashPw(pw)); plog(tid, "self", "pw_change", lid, "self", List.of()); return null; }));
+    }
+    private boolean strictPw(String tid) { Map<String, Object> r = mapper.selectOrg(tid); if (r == null || r.get("cpl") == null) return false; JsonNode c = parse((String) r.get("cpl")); return c != null && truthy(get(c, "on")) && sOr(get(c, "profile")).startsWith("moel-"); }
     private Org orgOf(String tid) {
         Map<String, Object> r = mapper.selectOrg(tid); String type = r == null || r.get("type") == null ? "" : (String) r.get("type");
         JsonNode acct = r == null || r.get("acct") == null ? null : parse((String) r.get("acct"));
@@ -87,6 +93,8 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
 
     @Override public void newLearnerSession(HttpServletResponse res, String tid, String sid) throws Exception {
         String token = DdCrypto.newToken(); mapper.insertLearnerSession(DdCrypto.sha(token), tid, sid); web.setLsid(res, token);
+        org.springframework.web.context.request.RequestAttributes ra = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        if (ra instanceof org.springframework.web.context.request.ServletRequestAttributes sa) cpl.afterLogin(sa.getRequest(), tid, sid, DdCrypto.sha(token));
     }
 
     /* ── 공개(세션 없음) ── */
@@ -110,6 +118,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         if (!truthy(get(consent, "tos")) || !truthy(get(consent, "privacy"))) throw processException("dd.400.consent");
         String[] out = ptx.run(tid, r -> {
             Org org = r.L(() -> orgOf(tid)); boolean univ = "univ".equals(org.type());
+            if (r.L(() -> strictPw(tid)) && !truthy(get(consent, "third"))) throw processException("dd.400.consent_third");
             if (strictEq(org.mode(), "code") && !univ) throw processException("dd.403.mode.code");
             if (strictEq(org.mode(), "invite")) throw processException("dd.403.mode.invite");
             String nick = trim(sOr(get(b, "nickname"))); String login = via, sub = null, email = "", stu = null, dept = "";
@@ -118,7 +127,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
                 stu = trim(sOr(get(b, "student_no"))); dept = cut(trim(sOr(get(b, "dept"))), 40);
                 if (!STU_RE.matcher(stu).matches()) throw processException("dd.400.student_no");
                 if (dept.isEmpty()) throw processException("dd.400.dept");
-                if (sOr(get(b, "pw")).length() < 8) throw processException("dd.400.pw");
+                if (sOr(get(b, "pw")).length() < 8) throw processException("dd.400.pw"); if (r.L(() -> strictPw(tid)) && !egovframework.didisam.cmm.DdModule.pwRule(sOr(get(b, "pw")))) throw processException("dd.400.pw_rule");
                 sub = bidx(tid, "univ", stu); if (nick.isEmpty()) nick = slice(stu, -4, stu.length()) + "학번";
             } else if ("email".equals(via)) {
                 email = trim(sOr(get(b, "email"))).toLowerCase(Locale.ROOT); if (!MAIL_RE.matcher(email).matches()) throw processException("dd.400.email");
@@ -137,13 +146,13 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
                 if (!ph.isEmpty()) gContact = ph;
             }
             String pw = null; JsonNode pwN = get(b, "pw");
-            if (truthy(pwN)) { String ps = str(pwN); if (ps.length() >= 8 && ps.length() <= 64) pw = DdCrypto.hashPw(ps); else throw processException("dd.400.pw.range"); }
+            if (truthy(pwN)) { String ps = str(pwN); if (r.L(() -> strictPw(tid)) && !egovframework.didisam.cmm.DdModule.pwRule(ps)) throw processException("dd.400.pw_rule"); if (ps.length() >= 8 && ps.length() <= 64) pw = DdCrypto.hashPw(ps); else throw processException("dd.400.pw.range"); }
             String st = minor ? "guardian_pending" : "active";
             String acctLogin = univ ? "univ" : login; String fstu = stu, fdept = dept, fnick = nick; boolean fminor = minor;
             String lid;
             try { lid = r.L(() -> mapper.insertAccount(tid, acctLogin, fnick, fstu, fdept, st, fminor, truthy(get(consent, "mkt")))); }
             catch (DuplicateKeyException e) { throw processException("dd.409.exists.stuno"); }
-            ObjectNode cons = F.objectNode(); cons.put("tos", true); cons.put("privacy", true); cons.put("mkt", truthy(get(consent, "mkt")));
+            ObjectNode cons = F.objectNode(); cons.put("tos", true); cons.put("privacy", true); if (truthy(get(consent, "third"))) cons.put("third", true); cons.put("mkt", truthy(get(consent, "mkt")));
             cons.put("ver", cut(str(or(get(consent, "ver"), t("v23"))), 20)); cons.put("at", isoNow());
             String fsub = sub, femail = email, fpw = pw;
             try {

@@ -52,6 +52,14 @@ if ! exists gcloud secrets describe didisam-anthropic-key; then
   read -rsp "Anthropic API 키(sk-ant-…, 없으면 Enter — AI 없이 시작하고 나중에 추가): " AK; echo
   printf '%s' "${AK:-none}" | gcloud secrets create didisam-anthropic-key --data-file=- --replication-policy user-managed --locations "$REGION"; unset AK
 fi
+# 운영 서버 필수 비밀값(32자 이상). PII_KEY를 잃으면 암호화된 회원 정보를 복구할 수 없으므로 별도로 백업한다.
+if ! exists gcloud secrets describe didisam-session-pepper; then
+  openssl rand -hex 32 | tr -d '\n' | gcloud secrets create didisam-session-pepper --data-file=- --replication-policy user-managed --locations "$REGION"
+fi
+if ! exists gcloud secrets describe didisam-pii-key; then
+  openssl rand -hex 32 | tr -d '\n' | gcloud secrets create didisam-pii-key --data-file=- --replication-policy user-managed --locations "$REGION"
+  echo "didisam-pii-key를 만들었습니다. 키를 잃으면 회원 정보를 복구할 수 없으니 별도 백업 절차를 마련해 주십시오."
+fi
 if ! exists gcloud secrets describe didisam-signup-code; then
   CODE="SANTA-$(openssl rand -hex 3 | tr a-f A-F)"
   printf '%s' "$CODE" | gcloud secrets create didisam-signup-code --data-file=- --replication-policy user-managed --locations "$REGION"
@@ -63,7 +71,7 @@ exists gcloud iam service-accounts describe "$RUN_SA@$PROJECT.iam.gserviceaccoun
 exists gcloud iam service-accounts describe "$DEPLOY_SA@$PROJECT.iam.gserviceaccount.com" || gcloud iam service-accounts create "$DEPLOY_SA" --display-name "디디쌤 스튜디오 배포(GitHub)"
 RUN="$RUN_SA@$PROJECT.iam.gserviceaccount.com"; DEP="$DEPLOY_SA@$PROJECT.iam.gserviceaccount.com"
 gcloud projects add-iam-policy-binding "$PROJECT" --member "serviceAccount:$RUN" --role roles/cloudsql.client --condition=None >/dev/null
-for s in didisam-db-url didisam-anthropic-key didisam-signup-code; do
+for s in didisam-db-url didisam-anthropic-key didisam-signup-code didisam-session-pepper didisam-pii-key; do
   gcloud secrets add-iam-policy-binding "$s" --member "serviceAccount:$RUN" --role roles/secretmanager.secretAccessor >/dev/null
 done
 gcloud projects add-iam-policy-binding "$PROJECT" --member "serviceAccount:$DEP" --role roles/run.admin --condition=None >/dev/null

@@ -11,7 +11,7 @@ const SQL = path.join(__dirname, 'sql');
 
 function sqlMigrations() {
   if (!fs.existsSync(SQL)) return [];
-  return fs.readdirSync(SQL).filter(f => /^\d{2}_[a-z0-9_]+\.sql$/.test(f)).sort().map(f => fs.readFileSync(path.join(SQL, f), 'utf8'));
+  return fs.readdirSync(SQL).filter(f => /^\d{2}_[a-z0-9_]+\.sql$/.test(f)).sort().map(f => [f, fs.readFileSync(path.join(SQL, f), 'utf8')]);
 }
 
 function loadRoutes(ctx) {

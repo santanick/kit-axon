@@ -1,0 +1,39 @@
+package egovframework.didisam.cpl.service.impl;
+
+import java.util.List;
+import java.util.Map;
+import org.apache.ibatis.annotations.Param;
+import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
+
+@EgovMapper
+public interface CplMapper {
+    Map<String, Object> selectPolicy(@Param("tid") String tid);
+    int countAttendToday(@Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls);
+    Double selectBeatElapsed(@Param("tid") String tid, @Param("sid") String sid);
+    Map<String, Object> selectExamClass(@Param("tid") String tid, @Param("cls") String cls);
+    Map<String, Object> selectOpenExam(@Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls, @Param("item") String item);
+    int expireExam(@Param("id") String id);
+    List<Integer> selectExamScores(@Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls, @Param("item") String item);
+    void insertExam(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls, @Param("item") String item, @Param("order") String order, @Param("ends") Long ends);
+    Map<String, Object> selectExamAttempt(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
+    int submitExam(@Param("id") String id, @Param("answers") String answers, @Param("score") int score, @Param("pass") Boolean pass, @Param("late") boolean late);
+    List<Map<String, Object>> selectExams(@Param("tid") String tid);
+    List<Map<String, Object>> selectExamAnswers(@Param("tid") String tid);
+    List<Map<String, Object>> selectItemSecs(@Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls);
+    List<Map<String, Object>> selectAllSecs(@Param("tid") String tid);
+    List<Map<String, Object>> selectBest(@Param("tid") String tid);
+    String selectMembers(@Param("tid") String tid);
+    String selectLpJson(@Param("tid") String tid, @Param("sid") String sid);
+    Integer selectIdv(@Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls, @Param("cd") String cd, @Param("mode") String mode);
+    String selectClasses(@Param("tid") String tid);
+    Map<String, Object> selectLearnerPw(@Param("tid") String tid, @Param("sid") String sid);
+    Integer selectDropped(@Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls);
+    Integer selectRecentPhone(@Param("tid") String tid, @Param("sid") String sid);
+    void updateLearnerPw(@Param("tid") String tid, @Param("sid") String sid, @Param("hash") String hash);
+    List<String> selectTodayItems(@Param("tid") String tid, @Param("sid") String sid);
+    long selectToday(@Param("tid") String tid, @Param("sid") String sid);
+    void insertLog(@Param("tid") String tid, @Param("sid") String sid, @Param("kind") String kind, @Param("cls") String cls, @Param("item") String item, @Param("secs") int secs, @Param("ip") String ip, @Param("ua") String ua, @Param("evalCd") String evalCd, @Param("chasi") Integer chasi);
+    List<Map<String, Object>> selectSummary(@Param("tid") String tid);
+    List<Map<String, Object>> selectLogs(@Param("tid") String tid, @Param("sid") String sid, @Param("n") int n);
+    int deleteOtherSessions(@Param("tid") String tid, @Param("sid") String sid, @Param("keep") String keep);
+}

@@ -1,0 +1,10 @@
+{
+  "univ-lms": {
+    "name": "대학 메인 LMS(전남대 e클래스2.0 RFP 기준)",
+    "paths": ["didisam/scn-univ-lms.js", "didisam/scn-univ-lms.css", "didisam/lscn-univ-lms.js", "didisam/ulms.js", "didisam/rfpmap.js", "service/lms-domain/", "tests/ui/scn-univ-lms.js", "docs/parallel/univ-lms.md"]
+  },
+  "univ-lite": {
+    "name": "사업단·공유대학·ATC 라이트 도입",
+    "paths": ["didisam/scn-univ-lite.js", "didisam/scn-univ-lite.css", "didisam/lscn-univ-lite.js", "tests/ui/scn-univ-lite.js", "docs/parallel/univ-lite.md"]
+  }
+}

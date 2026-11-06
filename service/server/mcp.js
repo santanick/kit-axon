@@ -11,7 +11,7 @@ const PROTO = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const KEY_RE = /^dds_[A-Za-z0-9_-]{40}$/;
 const MAX_KEYS = 20;
 
-function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, version = '16.0' }) {
+function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, version = '16.0' }) {
   const fp = key => crypto.createHmac('sha256', 'mcp|' + pepper).update(key).digest('hex');
 
   /* ── 키 관리(스튜디오 세션 · 정운영자) ── */
@@ -113,9 +113,10 @@ function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, version = '1
       const out = await inTenant(pool, a.tid, async c => {
         const r = (await c.query('select doc, rev from tenant_state where tenant_id = $1' + (T.write ? ' for update' : ''), [a.tid])).rows[0];
         if (!r) throw new Error('아직 스튜디오 데이터가 없습니다. 스튜디오에서 기관 구성을 먼저 저장하세요.');
+        r.doc = crypt.open(r.doc, a.tid);
         const room = (r.doc.org && r.doc.org.room) || {}; if (room.egress && room.egress.mcp === false) throw new Error('이 기관의 데이터룸 정책에서 외부 AI 연결(MCP)이 꺼져 있습니다.');
         if (!T.write) return T.run(r.doc, a, x);
-        const res2 = T.write(r.doc, a, x); const s = JSON.stringify(r.doc);
+        const res2 = T.write(r.doc, a, x); const s = JSON.stringify(crypt.seal(r.doc, a.tid));
         await c.query('update tenant_state set doc = $2, rev = rev + 1, bytes = $3, updated_at = now() where tenant_id = $1', [a.tid, s, s.length]);
         await audit(c, a.tid, 'mcp:' + a.name, 'mcp.' + T.name, { key: a.id, args: Object.fromEntries(Object.entries(x).map(([k, v]) => [k, S(v).slice(0, 80)])) });
         return res2;

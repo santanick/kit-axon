@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 규정 준수 활동 로그 — 기관 범위(inTenant) 쿼리. deleteOtherSessions만 세션 표(plain) -->
+<mapper namespace="egovframework.didisam.cpl.service.impl.CplMapper">
+  <select id="selectPolicy" resultType="java.util.LinkedHashMap">select (doc->'org'->'cpl')::text p from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectToday" resultType="long">select coalesce(sum(secs), 0) from cpl_log where tenant_id = #{tid} and sid = #{sid} and kind = 'beat' and day = (now() at time zone 'Asia/Seoul')::date</select>
+  <select id="countAttendToday" resultType="int">select count(*)::int from cpl_log where tenant_id = #{tid} and sid = #{sid} and kind = 'attend' and cls = #{cls} and day = (now() at time zone 'Asia/Seoul')::date</select>
+  <select id="selectBeatElapsed" resultType="java.lang.Double">select extract(epoch from now() - max(at))::float8 from cpl_log where tenant_id = #{tid} and sid = #{sid} and kind = 'beat'</select>
+  <select id="selectExamClass" resultType="java.util.LinkedHashMap">select x::text c, (doc->'org'->'cpl')::text p from tenant_state, jsonb_array_elements(doc->'classes') x where tenant_id = #{tid} and x->>'id' = #{cls} limit 1</select>
+  <select id="selectOpenExam" resultType="java.util.LinkedHashMap">select id, qorder::text qorder, (extract(epoch from ends_at) * 1000)::bigint ends_ms from cpl_exam where tenant_id = #{tid} and sid = #{sid} and cls = #{cls} and item = #{item} and submitted_at is null order by started_at desc limit 1</select>
+  <update id="expireExam">update cpl_exam set submitted_at = now(), score = 0, pass = false, late = true where id = #{id}</update>
+  <select id="selectExamScores" resultType="java.lang.Integer">select coalesce(score, 0) from cpl_exam where tenant_id = #{tid} and sid = #{sid} and cls = #{cls} and item = #{item} and submitted_at is not null</select>
+  <insert id="insertExam">insert into cpl_exam (id, tenant_id, sid, cls, item, qorder, ends_at) values (#{id}, #{tid}, #{sid}, #{cls}, #{item}, cast(#{order} as jsonb), case when cast(#{ends} as bigint) is null then null else to_timestamp(cast(#{ends} as bigint) / 1000.0) end)</insert>
+  <select id="selectExamAttempt" resultType="java.util.LinkedHashMap">select id, cls, item, qorder::text qorder, (extract(epoch from ends_at) * 1000)::bigint ends_ms from cpl_exam where id = #{id} and tenant_id = #{tid} and sid = #{sid} and submitted_at is null</select>
+  <update id="submitExam">update cpl_exam set submitted_at = now(), answers = cast(#{answers} as jsonb), score = #{score}, pass = #{pass}, late = #{late} where id = #{id}</update>
+  <select id="selectItemSecs" resultType="java.util.LinkedHashMap">select item, coalesce(sum(secs), 0)::int s from cpl_log where tenant_id = #{tid} and sid = #{sid} and cls = #{cls} and kind = 'beat' group by item</select>
+  <select id="selectAllSecs" resultType="java.util.LinkedHashMap">select sid, cls, item, coalesce(sum(secs), 0)::int s from cpl_log where tenant_id = #{tid} and kind = 'beat' group by sid, cls, item order by sid, cls, item</select>
+  <select id="selectBest" resultType="java.util.LinkedHashMap">select sid, cls, item, max(score)::int s from cpl_exam where tenant_id = #{tid} and submitted_at is not null group by sid, cls, item</select>
+  <select id="selectMembers" resultType="java.lang.String">select (doc->'members')::text from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectLpJson" resultType="java.lang.String">select lp::text from learner_progress where tenant_id = #{tid} and sid = #{sid}</select>
+  <select id="selectIdv" resultType="java.lang.Integer">select 1 from cpl_log where tenant_id = #{tid} and sid = #{sid} and cls = #{cls} and kind in ('verify-phone', 'verify-motp', 'review') and eval_cd = #{cd}
+    <if test="mode == 'day'"> and day = (now() at time zone 'Asia/Seoul')::date</if><if test="mode == 'hour'"> and at &gt; now() - interval '60 minutes'</if> limit 1</select>
+  <select id="selectExamAnswers" resultType="java.util.LinkedHashMap">select sid, cls, item, answers::text answers from cpl_exam where tenant_id = #{tid} and submitted_at is not null order by sid, id limit 5000</select>
+  <select id="selectClasses" resultType="java.lang.String">select (doc->'classes')::text from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectLearnerPw" resultType="java.util.LinkedHashMap">select sid, pw_hash from learners where tenant_id = #{tid} and sid = #{sid}</select>
+  <select id="selectDropped" resultType="java.lang.Integer">select 1 from tenant_state, jsonb_array_elements(doc->'members') m, jsonb_array_elements(doc->'classes') x where tenant_id = #{tid} and m->>'sid' = #{sid} and x->>'id' = #{cls} and jsonb_exists(x->'drop', m->>'id') limit 1</select>
+  <select id="selectRecentPhone" resultType="java.lang.Integer">select 1 from cpl_log where tenant_id = #{tid} and sid = #{sid} and kind in ('verify-phone', 'review') and at &gt; now() - interval '15 minutes' limit 1</select>
+  <update id="updateLearnerPw">update learners set pw_hash = #{hash} where tenant_id = #{tid} and sid = #{sid}</update>
+  <select id="selectExams" resultType="java.util.LinkedHashMap">select sid, cls, item, score, pass, late, to_char(submitted_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from cpl_exam where tenant_id = #{tid} and submitted_at is not null order by submitted_at desc limit 2000</select>
+  <select id="selectTodayItems" resultType="java.lang.String">select distinct item from cpl_log where tenant_id = #{tid} and sid = #{sid} and kind = 'beat' and day = (now() at time zone 'Asia/Seoul')::date</select>
+  <insert id="insertLog">insert into cpl_log (tenant_id, sid, kind, cls, item, secs, ip, ua, eval_cd, chasi) values (#{tid}, #{sid}, #{kind}, #{cls}, #{item}, #{secs}, #{ip}, #{ua}, #{evalCd}, #{chasi})</insert>
+  <select id="selectSummary" resultType="java.util.LinkedHashMap">
+    select sid, coalesce(sum(secs) filter (where kind = 'beat'), 0)::int secs,
+      coalesce(sum(secs) filter (where kind = 'beat' and day = (now() at time zone 'Asia/Seoul')::date), 0)::int today,
+      count(distinct ip)::int ips, to_char(max(at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') last, (count(*) filter (where kind like 'verify-%'))::int verified
+    from cpl_log where tenant_id = #{tid} group by sid order by max(at) desc limit 1000
+  </select>
+  <select id="selectLogs" resultType="java.util.LinkedHashMap">
+    select id::text id, sid, kind, cls, item, secs, ip, ua, eval_cd, chasi, to_char(at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at
+    from cpl_log where tenant_id = #{tid} and (#{sid} = '' or sid = #{sid}) order by cpl_log.id desc limit #{n}
+  </select>
+  <delete id="deleteOtherSessions">delete from learner_sessions where tenant_id = #{tid} and sid = #{sid} and id &lt;&gt; #{keep}</delete>
+</mapper>

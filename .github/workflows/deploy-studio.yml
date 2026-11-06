@@ -36,7 +36,7 @@ jobs:
         run: for f in service/server/*.js didisam/*.js; do node --check "$f"; done
       - name: API 테스트(가입 · 저장 · 기관 분리 · RLS · AI 정책 · 학습자)
         env: { DATABASE_URL: 'postgresql://didisam:ci-only-pw@localhost:5432/didisam' }
-        run: node --test service/test/api.test.js service/test/learner.test.js service/test/tutor.test.js service/test/mcp.test.js
+        run: node --test service/test/api.test.js service/test/learner.test.js service/test/tutor.test.js service/test/mcp.test.js service/test/compliance.test.js
 
   deploy:
     needs: test
@@ -64,7 +64,7 @@ jobs:
             --project "${{ vars.GCP_PROJECT }}" --region "$REGION" --image "$IMAGE" \
             --service-account "${{ vars.RUN_SA }}" \
             --add-cloudsql-instances "${{ vars.SQL_INSTANCE }}" \
-            --set-secrets "DATABASE_URL=didisam-db-url:latest,ANTHROPIC_API_KEY=didisam-anthropic-key:latest,SIGNUP_CODE=didisam-signup-code:latest" \
+            --set-secrets "DATABASE_URL=didisam-db-url:latest,ANTHROPIC_API_KEY=didisam-anthropic-key:latest,SIGNUP_CODE=didisam-signup-code:latest,SESSION_PEPPER=didisam-session-pepper:latest,PII_KEY=didisam-pii-key:latest" \
             --set-env-vars "DB_POOL=5,AI_DAILY_CALLS=400" \
             --ingress internal-and-cloud-load-balancing --allow-unauthenticated \
             --cpu 1 --memory 512Mi --min-instances 0 --max-instances 4 --concurrency 60 --timeout 120 \

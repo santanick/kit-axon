@@ -7,7 +7,8 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { inTenant } = require('./db');
 const { createMcp } = require('./mcp');
-const { createPii } = require('./pii');
+const { createPii, piiKeys } = require('./pii');
+const { createCompliance } = require('./compliance');
 const { benchmark } = require('./bench');
 const G = require('./aiguard');
 
@@ -22,6 +23,8 @@ function aiCache(b) {
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.yaml': 'text/plain; charset=utf-8', '.yml': 'text/plain; charset=utf-8', '.tf': 'text/plain; charset=utf-8', '.example': 'text/plain; charset=utf-8', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.mjs': 'text/javascript; charset=utf-8' };
 const SESSION_DAYS = 14;
 const STATE_MAX = 8 * 1024 * 1024;      // 기관 상태 최대 8MB(JSON)
+const M = require('./modules');
+const { createStateCrypto } = require('./statecrypt');
 const COOKIE = '__Host-dd_sid';
 
 /* ── 도우미 ── */
@@ -85,7 +88,9 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   if (env.NODE_ENV === 'production') { const miss = ['SESSION_PEPPER', 'PII_KEY'].filter(k => !String(env[k] || '').trim() || String(env[k]).trim().length < 32); if (miss.length) throw new Error(`운영 필수 비밀값이 없거나 짧습니다(32자 이상): ${miss.join(', ')}`); if (!secure) throw new Error('운영에서는 COOKIE_SECURE=0을 쓸 수 없습니다.'); }
   const hops = Math.max(0, Math.min(5, Number(env.TRUST_PROXY_HOPS == null ? 1 : env.TRUST_PROXY_HOPS)));
   const idleH = Math.max(1, Math.min(24 * 14, Number(env.SESSION_IDLE_H || 12)));
-  const cookieName = secure ? COOKIE : 'dd_sid'; // __Host- 접두어는 Secure 필수
+  const crypt = createStateCrypto(piiKeys(env), HttpErr);
+  const mod = M.moduleOf(env); const adminIps = M.parseIps(env.ADMIN_IPS); const learnerTid = String(env.LEARNER_TID || '').trim();
+  const cookieName = (secure ? COOKIE : 'dd_sid') + (mod ? '_' + mod : ''); // __Host- 접두어는 Secure 필수
   const aiKey = /^sk-ant-/.test(env.ANTHROPIC_API_KEY || '') ? env.ANTHROPIC_API_KEY.trim() : ''; // 'none' 등 자리표시는 꺼짐
   const aiUrl = env.ANTHROPIC_URL || 'https://api.anthropic.com/v1/messages';
   const aiDaily = Number(env.AI_DAILY_CALLS || 400);
@@ -112,14 +117,19 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   }
   async function auth(req) {
     const t = cookies(req)[cookieName]; if (!t || t.length > 100) return null;
-    const { rows } = await pool.query(`select s.id sid, u.id uid, u.email, u.role, t.id tid, t.name, t.type, t.mode, (s.expires_at < now() + $2::interval) slide from sessions s join users u on u.id = s.user_id join tenants t on t.id = s.tenant_id where s.id = $1 and s.expires_at > now() and s.created_at > now() - $3::interval`, [sha(t), `${Math.max(0, idleH - 1)} hours`, `${SESSION_DAYS} days`]);
+    const { rows } = await pool.query(`select s.id sid, u.id uid, u.email, u.role, u.pw_temp, t.id tid, t.name, t.type, t.mode, (s.expires_at < now() + $2::interval) slide from sessions s join users u on u.id = s.user_id join tenants t on t.id = s.tenant_id where s.id = $1 and s.expires_at > now() and s.created_at > now() - $3::interval`, [sha(t), `${Math.max(0, idleH - 1)} hours`, `${SESSION_DAYS} days`]);
     /* v25 유휴 만료: 쓰는 동안만 연장(최대 SESSION_DAYS), idleH시간 동안 안 쓰면 다시 로그인 */
     if (rows[0] && rows[0].slide) await pool.query('update sessions set expires_at = least(created_at + $2::interval, now() + $3::interval) where id = $1', [rows[0].sid, `${SESSION_DAYS} days`, `${idleH} hours`]);
+    if (rows[0] && mod && !M.roleAllowed(mod, rows[0].role)) return null;
     return rows[0] || null;
   }
-  const need = async req => { const a = await auth(req); if (!a) throw new HttpErr(401, '로그인이 필요합니다.', 'auth'); return a; };
+  const need = async req => { const a = await auth(req); if (!a) throw new HttpErr(401, '로그인이 필요합니다.', 'auth'); if (a.pw_temp && !['/api/me', '/api/password'].includes(new URL(req.url, 'http://x').pathname)) throw new HttpErr(403, '임시 비밀번호를 먼저 변경해 주십시오.', 'pw_temp'); return a; };
+  const needOwner = async req => { const a = await need(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 볼 수 있습니다.', 'role'); return a; };
+  const needStaff = async req => { const a = await need(req); if (a.role === 'teacher') throw new HttpErr(403, '교강사 권한으로 사용할 수 없습니다.', 'teacher'); return a; };
+  const stateDoc = a => inTenant(pool, a.tid, async c => { const { rows } = await c.query('select doc, rev from tenant_state where tenant_id = $1', [a.tid]); return rows[0] || null; });
+  const tScope = async a => { const r = await stateDoc(a); return M.scope(r ? crypt.open(r.doc, a.tid) : null, a.email); };
   const audit = (c, tid, actor, action, detail) => c.query('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, actor, action, detail ? JSON.stringify(detail) : null]);
-  const meOut = a => ({ user: { email: a.email, role: a.role }, tenant: { tid: a.tid, name: a.name, type: a.type, mode: a.mode } });
+  const meOut = a => ({ user: { email: a.email, role: a.role, ...(a.pw_temp ? { pwTemp: true } : {}) }, tenant: { tid: a.tid, name: a.name, type: a.type, mode: a.mode } });
 
   /* ── 학습자(v10) ── */
   const pepper = env.SESSION_PEPPER || env.SIGNUP_CODE || 'didisam-learner';
@@ -134,36 +144,45 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
       const sid = String(x && x.sid || ''); const code = String(x && x.code || ''); if (!SID_RE.test(sid) || code.length < 4 || code.length > 20) continue; keep.add(sid);
       const fp = codeFp(tid, sid, code); if (cur.get(sid) === fp) continue;
       if (++n > 300) break; // 한 번 저장에 최대 300건(나머지는 다음 저장 때)
-      await c.query('insert into learners (tenant_id, sid, dept, code_fp, code_hash) values ($1, $2, $3, $4, $5) on conflict (tenant_id, sid) do update set dept = excluded.dept, code_fp = excluded.code_fp, code_hash = excluded.code_hash', [tid, sid, String(x.dept || '').slice(0, 40), fp, await hashPw(code.toUpperCase())]);
+      await c.query('insert into learners (tenant_id, sid, dept, code_fp, code_hash) values ($1, $2, $3, $4, $5) on conflict (tenant_id, sid) do update set dept = excluded.dept, code_fp = excluded.code_fp, code_hash = excluded.code_hash, pw_hash = null', [tid, sid, String(x.dept || '').slice(0, 40), fp, await hashPw(code.toUpperCase())]);
     }
     const gone = [...cur.keys()].filter(sid => !keep.has(sid));
     if (gone.length) { await c.query('delete from learners where tenant_id = $1 and sid = any($2)', [tid, gone]); await pool.query('delete from learner_sessions where tenant_id = $1 and sid = any($2)', [tid, gone]); }
   }
   async function lauth(req, tid) {
     const t = cookies(req)[lcookieName]; if (!t || t.length > 100) return null;
-    const { rows } = await pool.query('select tenant_id, sid from learner_sessions where id = $1 and expires_at > now()', [sha(t)]);
-    return rows[0] && rows[0].tenant_id === tid ? rows[0] : null;
+    const { rows } = await pool.query('select tenant_id, sid, extract(epoch from now() - last_at) idle from learner_sessions where id = $1 and expires_at > now()', [sha(t)]);
+    const s = rows[0] && rows[0].tenant_id === tid ? rows[0] : null; if (!s || +s.idle < 60) return s;
+    /* 무활동 자동 로그아웃: 규정 준수 정책의 시간을 서버에서도 적용한다 */
+    const h = await inTenant(pool, tid, async c => { const P = (await c.query("select doc->'org'->'cpl' p from tenant_state where tenant_id = $1", [tid])).rows[0]; return P && P.p && P.p.on ? +P.p.idleH || 0 : 0; });
+    if (h > 0 && +s.idle >= h * 3600) { await pool.query('delete from learner_sessions where id = $1', [sha(t)]); return null; }
+    await pool.query('update learner_sessions set last_at = now() where id = $1', [sha(t)]); return s;
   }
   /* 학습자 본인 데이터만: 배지 · 과정 진도(어드민 상태에서 학번으로 찾음) */
-  function mineOf(doc, sid) {
+  function mineOf(doc, sid, tid) {
     const own = (o, k) => o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k);
     const bk = Object.fromEntries(Object.entries(doc.bkgrades || {}).filter(([, M]) => own(M, sid)).slice(0, 200).map(([id, M]) => [id, Object.fromEntries(Object.entries(M[sid] || {}).slice(0, 200).map(([k, g]) => [k, { score: g && g.score != null && g.score !== '' ? +g.score : null, fb: String((g && g.fb) || '').slice(0, 500) }]))]));
     const qa = (Array.isArray(doc.tq) ? doc.tq : []).filter(x => x && x.sid === sid && x.st === 'answered' && x.a).slice(0, 30).map(x => ({ id: String(x.id || ''), q: String(x.q || '').slice(0, 400), a: String(x.a || '').slice(0, 2000), cls: String(x.cls || '').slice(0, 60), at: String(x.aAt || x.at || '').slice(0, 25) }));
-    const m = (doc.members || []).find(x => x && (x.sid === sid || x.name === sid)); if (!m) return { badges: [], cls: {}, bk, qa };
+    const m = (doc.members || []).find(x => x && (x.sid === sid || crypt.memberName(x, tid) === sid)); if (!m) return { badges: [], cls: {}, bk, qa };
     return { bk, qa, badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))),
       cls: Object.fromEntries((doc.classes || []).filter(c => c.prog && c.prog[m.id]).map(c => { const g = c.prog[m.id]; const thr = (c.criteria && c.criteria.threshold) || 80; return [c.id, { p: Math.round(+g.p || 0), st: g.assign || 'none', fb: String(g.fb || '').slice(0, 1000), score: g.score ?? null, done: (+g.p || 0) >= thr }]; })) };
   }
   const cleanLP = lp => { const o = { tut: {}, cls: {}, diag: {}, at: new Date().toISOString() }; if (!lp || typeof lp !== 'object') return o; for (const k of ['tut', 'cls', 'diag', 'book']) if (lp[k] && typeof lp[k] === 'object' && !Array.isArray(lp[k])) o[k] = Object.fromEntries(Object.entries(lp[k]).filter(([id]) => /^[\w-]{1,40}$/.test(id)).slice(0, 500)); if (lp.days && typeof lp.days === 'object') o.days = Object.fromEntries(Object.entries(lp.days).filter(([d, n]) => /^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(+n)).slice(-370).map(([d, n]) => [d, Math.min(999, Math.max(0, Math.round(+n)))]));
     const T = lp.tutor; if (T && typeof T === 'object') { const str = (v, n) => String(v == null ? '' : v).slice(0, n); const plan = (Array.isArray(T.plan) ? T.plan : []).slice(0, 14).filter(x => x && typeof x === 'object').map(x => ({ d: str(x.d, 20), t: str(x.t, 80), m: Math.min(240, Math.max(0, Math.round(+x.m || 0))), h: /^#[\w/%-]{0,120}$/.test(String(x.h || '')) ? String(x.h) : '' })); const ask = (Array.isArray(T.ask) ? T.ask : []).slice(0, 30).filter(x => x && typeof x === 'object' && /^[\w-]{1,24}$/.test(String(x.id || ''))).map(x => ({ id: String(x.id), q: str(x.q, 400), cls: str(x.cls, 60), cid: /^[\w-]{1,40}$/.test(String(x.cid || '')) ? String(x.cid) : '', where: str(x.where, 80), at: str(x.at, 30) })); o.tutor = { plan, ask, planAt: str(T.planAt, 30) }; }
     return o; };
+  const cplAfterLogin = (req, tid, sid, keep) => cpl.afterLogin(req, tid, sid, keep);
   async function newLearnerSession(res, tid, sid) {
     const token = crypto.randomBytes(32).toString('base64url');
     await pool.query('insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval \'30 days\')', [sha(token), tid, sid]);
     res.setHeader('set-cookie', `${lcookieName}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${30 * 86400}${secure ? '; Secure' : ''}`);
+    if (res.req) await cplAfterLogin(res.req, tid, sid, sha(token));
   }
   /* v23 간편가입 · 개인정보 분리(pii.js) — 학습 경로는 가명 learner_id만 쓴다 */
   const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession });
-  const learnerOut = (c, tid, sid) => (async () => { const acc = await pii.meExtra(c, tid, sid); const L = acc ? null : (await c.query('select dept from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: acc ? acc.dept : L ? L.dept : '', ...(acc ? { acct: acc } : {}) }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid) : { badges: [], cls: {} } }; })();
+  const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env });
+  /* 단체가입 최초 로그인 · 중도탈락 표시 */
+  const meFlags = async (c, tid, sid, doc) => { const P = doc && doc.org && doc.org.cpl; if (!P || !P.on) return {}; const o = {}; { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (L && !L.pw_hash && P.groupFirst) o.groupFirst = true; if (L && L.pw_hash) o.pwSet = true; } const m = (doc.members || []).find(x => x && x.sid === sid); if (m) { const D = (doc.classes || []).filter(x => x && x.drop && x.drop[m.id]).map(x => x.id); if (D.length) o.dropped = D; } return o; };
+  const learnerOut = (c, tid, sid) => (async () => { const acc = await pii.meExtra(c, tid, sid); const L = acc ? null : (await c.query('select dept from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: acc ? acc.dept : L ? L.dept : '', ...(acc ? { acct: acc } : {}), ...(acc && (await pii.hasPw(tid, sid)) ? { pwSet: true } : {}), ...(await meFlags(c, tid, sid, d && d.doc)) }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid, tid) : { badges: [], cls: {} } }; })();
   async function pubRoute(req, res, m) {
     const [, tid, act] = m; if (!TID_RE.test(tid)) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
     const key = `${req.method} ${act}`;
@@ -178,13 +197,14 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
       if (b.via) { const lid = await pii.login(req, res, tid, b); return inTenant(pool, tid, c => learnerOut(c, tid, lid)); }
       const sid = String(b.sid || '').trim(); const code = String(b.code || '').trim().toUpperCase();
       limit('ll:' + ip(req), 40, 600e3); limit(`lls:${tid}:${sid}`, 8, 600e3);
-      const L = SID_RE.test(sid) ? await inTenant(pool, tid, async c => (await c.query('select sid, dept, code_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]) : null;
-      const ok = await checkPw(code, L ? L.code_hash : DUMMY);
+      const L = SID_RE.test(sid) ? await inTenant(pool, tid, async c => (await c.query('select sid, dept, code_hash, pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]) : null;
+      const ok = L && L.pw_hash ? await checkPw(String(b.code || '').trim(), L.pw_hash) : await checkPw(code, L ? L.code_hash : DUMMY);
       if (!L || !ok) throw new HttpErr(401, '번호 또는 접근코드가 올바르지 않습니다.', 'login');
       const token = crypto.randomBytes(32).toString('base64url');
       await pool.query('insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval \'30 days\')', [sha(token), tid, sid]);
+      await cplAfterLogin(req, tid, sid, sha(token));
       res.setHeader('set-cookie', `${lcookieName}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${30 * 86400}${secure ? '; Secure' : ''}`);
-      return inTenant(pool, tid, async c => { await c.query('update learners set last_login = now() where tenant_id = $1 and sid = $2', [tid, sid]); const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: L.dept }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid) : { badges: [], cls: {} } }; });
+      return inTenant(pool, tid, async c => { await c.query('update learners set last_login = now() where tenant_id = $1 and sid = $2', [tid, sid]); const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: L.dept, ...(await meFlags(c, tid, sid, d && d.doc)) }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid, tid) : { badges: [], cls: {} } }; });
     }
     const s = await lauth(req, tid);
     if (!s && key === 'POST tutor') return tutorRoute(req, tid, null, ip(req)); /* v23.4 방문자(로그인 전) 튜터 */
@@ -193,6 +213,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (key === 'GET me') return inTenant(pool, tid, c => learnerOut(c, tid, s.sid));
     if (key === 'PUT progress') { const b = await readBody(req, LP_MAX); const lp = cleanLP(b.lp); const j = JSON.stringify(lp); if (j.length > LP_MAX) throw new HttpErr(413, '학습 기록이 너무 큽니다.', 'too_large');
       await inTenant(pool, tid, c => c.query('insert into learner_progress (tenant_id, sid, lp, bytes) values ($1, $2, $3, $4) on conflict (tenant_id, sid) do update set lp = excluded.lp, bytes = excluded.bytes, updated_at = now()', [tid, s.sid, j, j.length])); return { ok: true }; }
+    if (key === 'POST cpl') return cpl.route(req, tid, s.sid);
     if (key === 'POST tutor') return tutorRoute(req, tid, s.sid);
     if (key === 'POST logout') { const t = cookies(req)[lcookieName]; await pool.query('delete from learner_sessions where id = $1', [sha(t)]); res.setHeader('set-cookie', `${lcookieName}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure ? '; Secure' : ''}`); return { ok: true }; }
     throw new HttpErr(404, '없는 주소입니다.', 'not_found');
@@ -216,7 +237,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
       if (u.rows[0].calls > aiDaily) throw new HttpErr(429, `오늘 기관 AI 사용 한도(${aiDaily}회)를 넘었습니다.`, 'quota');
       if (guest) return { tu, type: d.type, pub: d.pub || {}, lp: {}, mine: { cls: {}, badges: [] } };
       const lp = ((await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0] || {}).lp || {};
-      return { tu, type: d.type, pub: d.pub || {}, lp, mine: mineOf({ members: d.members, classes: d.classes, badges: d.badges, tq: d.tq, bkgrades: d.bkgrades }, sid) };
+      return { tu, type: d.type, pub: d.pub || {}, lp, mine: mineOf({ members: d.members, classes: d.classes, badges: d.badges, tq: d.tq, bkgrades: d.bkgrades }, sid, tid) };
     });
     const P = ctx.pub; const L = (P.classes || []); const types = P.types || [];
     const mineCls = Object.entries(ctx.mine.cls || {}).map(([id, g]) => { const k = L.find(x => x.id === id); return k ? `${k.name}: 진도 ${g.p}%${g.done ? '(이수)' : ''}${g.st && g.st !== 'none' ? ` · 과제 ${g.st}` : ''}${g.score != null ? ` · ${g.score}점` : ''}${g.fb ? ` · 피드백 "${String(g.fb).slice(0, 300)}"` : ''}` : ''; }).filter(Boolean).slice(0, 12);
@@ -258,15 +279,15 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   }
 
   /* ── 외부 AI 연결(MCP) · API 키(v16) ── */
-  const mcp = createMcp({ pool, HttpErr, readBody, limit, audit, pepper });
+  const mcp = createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt });
 
   /* ── API ── */
   const routes = {
-    'GET /api/keys': async req => mcp.listKeys(await need(req)),
-    'POST /api/keys': async req => mcp.createKey(await need(req), req),
-    'POST /api/keys/revoke': async req => mcp.revokeKey(await need(req), req),
+    'GET /api/keys': async req => mcp.listKeys(await needStaff(req)),
+    'POST /api/keys': async req => mcp.createKey(await needStaff(req), req),
+    'POST /api/keys/revoke': async req => mcp.revokeKey(await needStaff(req), req),
     'GET /api/health': async () => { await pool.query('select 1'); return { ok: true }; },
-    'GET /api/config': async () => ({ live: true, signup: allowSignup, signupCode: !!signupCode, ai: !!aiKey, models: MODELS, aiDaily }),
+    'GET /api/config': async () => ({ live: true, ...(mod ? { module: mod } : {}), signup: allowSignup && (!mod || mod === 'admin'), signupCode: !!signupCode, ai: !!aiKey, models: MODELS, aiDaily }),
 
     'POST /api/signup': async (req, res) => {
       if (!allowSignup) throw new HttpErr(403, '지금은 새 기관 가입을 받지 않습니다.', 'signup_off');
@@ -296,31 +317,58 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     'POST /api/login': async (req, res) => {
       const b = await readBody(req, 4096); const email = String(b.email || '').trim().toLowerCase();
       limit('li:' + ip(req), 30, 600e3); limit('le:' + email, 8, 600e3);
-      const { rows } = await pool.query('select id, tenant_id, pw from users where lower(email) = $1', [email]);
+      const { rows } = await pool.query('select id, tenant_id, pw, role from users where lower(email) = $1', [email]);
       const u = rows[0]; const ok = await checkPw(String(b.password || ''), u ? u.pw : DUMMY);
       if (!u || !ok) { if (u) await inTenant(pool, u.tenant_id, c => audit(c, u.tenant_id, email, 'login.fail', { ip: ip(req).replace(/[\d]+$/, 'x') })).catch(() => {}); throw new HttpErr(401, '이메일 또는 비밀번호가 올바르지 않습니다.', 'login'); }
+      if (mod && !M.roleAllowed(mod, u.role)) throw new HttpErr(403, '이 주소로 로그인할 수 없는 계정입니다.', 'module');
       await pool.query('update users set last_login = now() where id = $1', [u.id]);
       await pool.query('delete from sessions where user_id = $1 and expires_at < now()', [u.id]);
       await newSession(res, u.id, u.tenant_id);
       await inTenant(pool, u.tenant_id, c => audit(c, u.tenant_id, email, 'login', null));
-      const a = await pool.query('select t.id tid, t.name, t.type, t.mode, $2::text email, u.role from tenants t join users u on u.tenant_id = t.id where u.id = $1', [u.id, email]);
+      const a = await pool.query('select t.id tid, t.name, t.type, t.mode, $2::text email, u.role, u.pw_temp from tenants t join users u on u.tenant_id = t.id where u.id = $1', [u.id, email]);
       return meOut(a.rows[0]);
     },
     'POST /api/logout': async (req, res) => { const t = cookies(req)[cookieName]; if (t) await pool.query('delete from sessions where id = $1', [sha(t)]); clearSid(res); return { ok: true }; },
     'GET /api/me': async req => meOut(await need(req)),
+    'POST /api/password': async req => {
+      const a = await need(req); limit('pw:' + a.uid, 8, 600e3); const b = await readBody(req, 4096);
+      const { rows } = await pool.query('select pw from users where id = $1', [a.uid]);
+      if (!rows[0] || !(await checkPw(String(b.current || ''), rows[0].pw))) throw new HttpErr(401, '비밀번호가 올바르지 않습니다.', 'login');
+      if (!pwOk(b.next)) throw new HttpErr(400, '비밀번호는 10자 이상, 영문과 숫자를 함께 쓰세요.', 'password');
+      await pool.query('update users set pw = $2, pw_temp = false where id = $1', [a.uid, await hashPw(b.next)]);
+      await pool.query('delete from sessions where user_id = $1 and id <> $2', [a.uid, a.sid]);
+      await inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'password.change', null)); return { ok: true };
+    },
+    'GET /api/staff': async req => { const a = await needOwner(req); const { rows } = await pool.query(`select email, role, to_char(last_login at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') last_login from users where tenant_id = $1 order by email`, [a.tid]); return { rows }; },
+    'POST /api/staff': async req => {
+      const a = await needOwner(req); limit('staff:' + a.tid, 30, 3600e3); const b = await readBody(req, 4096); const email = String(b.email || '').trim().toLowerCase(); const role = String(b.role || '');
+      if (!emailOk(email)) throw new HttpErr(400, '이메일 형식을 확인하세요.', 'email');
+      if (!['teacher', 'sub'].includes(role)) throw new HttpErr(400, '권한이 올바르지 않습니다.', 'staff_role');
+      const password = 'Dd' + crypto.randomBytes(12).toString('base64url').replace(/[-_]/g, 'x') + '7';
+      const pw = await hashPw(password);
+      try { await pool.query('insert into users (tenant_id, email, pw, role, pw_temp) values ($1, $2, $3, $4, true)', [a.tid, email, pw, role]); } catch (e) { if (e && e.code === '23505') throw new HttpErr(409, '이미 가입된 이메일입니다. 로그인하세요.', 'exists'); throw e; }
+      await inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'staff.create', { email, role })); return { email, role, password };
+    },
+    'POST /api/staff/remove': async req => {
+      const a = await needOwner(req); const b = await readBody(req, 4096); const email = String(b.email || '').trim().toLowerCase();
+      const r = await pool.query("delete from users where tenant_id = $1 and lower(email) = $2 and role <> 'owner' returning id", [a.tid, email]);
+      if (!r.rowCount) throw new HttpErr(404, '대상 계정이 없습니다.', 'staff_missing');
+      await inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'staff.remove', { email })); return { ok: true };
+    },
 
     'GET /api/state': async req => {
       const a = await need(req);
-      return inTenant(pool, a.tid, async c => { const { rows } = await c.query('select doc, rev, updated_at from tenant_state where tenant_id = $1', [a.tid]); return rows[0] ? { doc: rows[0].doc, rev: rows[0].rev, at: rows[0].updated_at } : { doc: null, rev: 0 }; });
+      return inTenant(pool, a.tid, async c => { const { rows } = await c.query('select doc, rev, updated_at from tenant_state where tenant_id = $1', [a.tid]); if (rows[0]) rows[0].doc = crypt.open(rows[0].doc, a.tid); if (rows[0] && a.role === 'teacher') rows[0].doc = M.teacherView(rows[0].doc, a.email); return rows[0] ? { doc: rows[0].doc, rev: rows[0].rev, at: rows[0].updated_at } : { doc: null, rev: 0 }; });
     },
     'PUT /api/state': async req => {
       const a = await need(req);
       const b = await readBody(req, STATE_MAX + 4096);
-      const doc = b.doc; const rev = Number(b.rev || 0);
+      let doc = b.doc; const rev = Number(b.rev || 0);
       if (!doc || typeof doc !== 'object' || !doc.org) throw new HttpErr(400, '상태 형식이 올바르지 않습니다.', 'state');
+      if (a.role === 'teacher') { const cur = await stateDoc(a); if (!cur || cur.rev !== rev) throw new HttpErr(409, '다른 창이나 운영자가 먼저 저장했습니다. 최신 내용을 불러옵니다.', 'conflict'); doc = M.teacherMerge(crypt.open(cur.doc, a.tid), doc, a.email); }
       if (doc.org.room && doc.org.room.tid && doc.org.room.tid !== a.tid) throw new HttpErr(403, '다른 기관의 데이터는 저장할 수 없습니다.', 'tenant');
       doc.org.room = { ...(doc.org.room || {}), tid: a.tid };
-      const s = JSON.stringify(doc); if (s.length > STATE_MAX) throw new HttpErr(413, '데이터가 8MB를 넘었습니다. 오래된 기록을 정리하세요.', 'too_large');
+      if (JSON.stringify(doc).length > STATE_MAX) throw new HttpErr(413, '데이터가 8MB를 넘었습니다. 오래된 기록을 정리하세요.', 'too_large'); const s = JSON.stringify(crypt.seal(doc, a.tid));
       return inTenant(pool, a.tid, async c => {
         if (rev === 0) {
           const r = await c.query('insert into tenant_state (tenant_id, doc, rev, bytes) values ($1, $2, 1, $3) on conflict (tenant_id) do nothing returning rev', [a.tid, s, s.length]);
@@ -371,7 +419,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     },
     /* v24 홈페이지 벤치마크: 운영자 세션만 · https만 · 내부 주소 차단(SSRF) · 2MB · 10초 · 구조만 돌려줌 */
     'POST /api/site/benchmark': async req => {
-      const a = await need(req); limit(`bench:${a.tid}`, 20, 10 * 60000);
+      const a = await needStaff(req); limit(`bench:${a.tid}`, 20, 10 * 60000);
       const b = await readBody(req, 4096); if (typeof b.url !== 'string' || !b.url) throw new HttpErr(400, '읽을 주소를 넣어 주세요.', 'bad_url');
       try { const out = await benchmark(b.url, benchOpts); log.info && log.info('bench', a.tid, new URL(out.url).host); return out; }
       catch (e) { if (e && e.status) throw new HttpErr(e.status, e.message, e.code); throw new HttpErr(502, '사이트를 읽지 못했습니다.', 'fetch'); }
@@ -381,15 +429,20 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       return inTenant(pool, a.tid, async c => { const { rows } = await c.query("select day::text, calls, tin::int, tout::int from ai_usage where tenant_id = $1 and day > current_date - 31 order by day desc", [a.tid]); return { daily: aiDaily, days: rows }; });
     },
     'GET /api/learners/progress': async req => {
-      const a = await need(req);
-      return inTenant(pool, a.tid, async c => ({ lp: Object.fromEntries((await c.query('select sid, lp from learner_progress where tenant_id = $1 order by updated_at desc limit 5000', [a.tid])).rows.map(r => [r.sid, r.lp])) }));
+      const a = await need(req); const sc = a.role === 'teacher' ? await tScope(a) : null;
+      return inTenant(pool, a.tid, async c => ({ lp: Object.fromEntries((await c.query('select sid, lp from learner_progress where tenant_id = $1 order by updated_at desc limit 5000', [a.tid])).rows.filter(r => !sc || sc.sids.has(String(r.sid))).map(r => [r.sid, r.lp])) }));
     },
     /* v23: 학습자 계정 목록(닉네임 + 가린 이메일만) · 목적이 있는 개인정보 열람(정운영자 · 기록) · 열람 기록 */
-    'GET /api/learners/accounts': async req => pii.adminList(await need(req)),
-    'POST /api/learners/pii': async req => pii.adminPii(await need(req), req),
-    'GET /api/learners/pii-log': async req => pii.adminLog(await need(req)),
+    'GET /api/learners/accounts': async req => pii.adminList(await needStaff(req)),
+    'POST /api/learners/pii': async req => pii.adminPii(await needStaff(req), req),
+    'GET /api/learners/pii-log': async req => pii.adminLog(await needStaff(req)),
+    'GET /api/cpl/summary': async req => { const a = await need(req); const o = await cpl.summary(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.sids.has(String(r.sid))); } return o; },
+    'GET /api/cpl/exams': async req => { const a = await need(req); const o = await cpl.exams(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.classes.has(String(r.cls)) && s.sids.has(String(r.sid))); } return o; },
+    'GET /api/cpl/exam-copy': async req => { const a = await need(req); const o = await cpl.examCopy(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.classes.has(String(r.cls)) && s.sids.has(String(r.a)) && s.sids.has(String(r.b))); } return o; },
+    'GET /api/cpl/completion': async req => { const a = await need(req); const o = await cpl.completion(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.classes.has(String(r.cls)) && s.sids.has(String(r.sid))); } return o; },
+    'GET /api/cpl/logs': async req => { const a = await need(req); const o = await cpl.logs(a, new URL(req.url, 'http://x')); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.sids.has(String(r.sid))); } return o; },
     'GET /api/audit': async req => {
-      const a = await need(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 볼 수 있습니다.', 'role');
+      const a = await needStaff(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 볼 수 있습니다.', 'role');
       return inTenant(pool, a.tid, async c => ({ rows: (await c.query('select at, actor, action, detail from audit_log where tenant_id = $1 order by at desc limit 200', [a.tid])).rows }));
     },
     'POST /api/tenant/delete': async (req, res) => {
@@ -409,7 +462,9 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   /* ── 정적 파일 ── */
   function serveStatic(req, res, pathname) {
     if (!pubRoot) return send(res, 404, { error: 'not_found' });
-    let p = decodeURIComponent(pathname); if (p.endsWith('/')) p += 'index.html';
+    if (mod && !M.staticAllowed(mod, pathname)) return send(res, 404, 'not found', { 'content-type': 'text/plain; charset=utf-8' });
+    if (mod === 'learner' && pathname === '/') return send(res, 302, null, { location: '/learner.html' + (learnerTid ? '?t=' + encodeURIComponent(learnerTid) : '') });
+    let p = decodeURIComponent(pathname); if (mod && p === '/') p = '/' + M.PAGE[mod]; if (p.endsWith('/')) p += 'index.html';
     const f = path.resolve(pubRoot, '.' + p);
     if (!f.startsWith(pubRoot + path.sep) && f !== pubRoot) return send(res, 403, 'forbidden');
     fs.stat(f, (e, st) => {
@@ -427,9 +482,11 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   const srv = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x'); const key = `${req.method} ${url.pathname}`;
     try {
-      if (url.pathname === '/mcp') return await mcp.handle(req, res, send);
+      if (mod === 'admin' && key !== 'GET /api/health' && !M.ipAllowed(adminIps, ip(req))) return send(res, 403, { error: 'ip', message: '허용되지 않은 접속 위치입니다.' });
+      if (url.pathname === '/mcp') { if (!M.mcpAllowed(mod)) return send(res, 404, { error: 'not_found', message: '없는 주소입니다.' }); return await mcp.handle(req, res, send); }
+      if (url.pathname.startsWith('/api/') && !M.apiAllowed(mod, req.method, url.pathname)) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
       if (url.pathname.startsWith('/api/')) {
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify)$/);
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl)$/);
         const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key]; if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처

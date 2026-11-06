@@ -51,7 +51,7 @@ public class LmsAServiceImpl extends EgovAbstractServiceImpl implements LmsAServ
     public LmsAServiceImpl(LmsAMapper m, TenantTx tx, TenantTxMapper txm, AuthService auth, DdRateLimiter rl) { this.m = m; this.tx = tx; this.txm = txm; this.auth = auth; this.rl = rl; }
 
     /* ── 도우미 ── */
-    private Exception err(String code) { return processException("dd." + ST.get(code) + "." + code); }
+    private Exception err(String code) { return processException("dd." + ST.get(code) + "." + code + ("staff_role".equals(code) ? ".lms" : "")); }
     static String T(JsonNode b, String k) { return Js.trim(Js.sOr(Js.get(b, k))); }
     static String T(JsonNode v) { return Js.trim(Js.sOr(v)); }
     static boolean mt(Pattern p, String s) { return s != null && p.matcher(s).matches(); }

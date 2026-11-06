@@ -221,11 +221,60 @@ const MIGRATIONS = [
    grant usage on schema pii to didisam_pii;
    grant select, insert, update, delete on pii.identity, pii.otp, pii.guardian to didisam_pii;
    grant select, insert on pii.access_log to didisam_pii;
-   grant usage on sequence pii.access_log_id_seq to didisam_pii;`
+   grant usage on sequence pii.access_log_id_seq to didisam_pii;`,
+  /* 7 — v30 규정 준수: 훈련생 활동 원본 로그(로그인 · 차시별 학습시간 · 본인확인 · IP). 기관 삭제 시 함께 삭제 */
+  `create table if not exists cpl_log (
+     id bigserial primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null,
+     kind text not null check (kind in ('login','beat','attend','verify-phone','verify-motp')),
+     cls text, item text,
+     secs integer not null default 0 check (secs >= 0),
+     ip text, ua text,
+     day date not null default ((now() at time zone 'Asia/Seoul')::date),
+     at timestamptz not null default now()
+   );
+   create index if not exists cpl_log_sid on cpl_log (tenant_id, sid, day);
+   alter table cpl_log enable row level security;
+   alter table cpl_log force row level security;
+   drop policy if exists tenant_iso on cpl_log;
+   create policy tenant_iso on cpl_log using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert on cpl_log to didisam_tenant;
+   grant usage, select on sequence cpl_log_id_seq to didisam_tenant;`,
+  /* 8 — v30.1 서버 출제 · 채점: 응시별 출제 문항 · 답안 · 점수 원본 */
+  `create table if not exists cpl_exam (
+     id text primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null, cls text not null, item text not null,
+     qorder jsonb not null, answers jsonb,
+     started_at timestamptz not null default now(), ends_at timestamptz, submitted_at timestamptz,
+     score integer, pass boolean, late boolean not null default false
+   );
+   create index if not exists cpl_exam_sid on cpl_exam (tenant_id, sid, cls, item);
+   alter table cpl_exam enable row level security;
+   alter table cpl_exam force row level security;
+   drop policy if exists tenant_iso on cpl_exam;
+   create policy tenant_iso on cpl_exam using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert, update on cpl_exam to didisam_tenant;`,
+  /* 9 — v30.2 공단 체크리스트: 본인인증 평가코드 · 차시(00 입과 · 01 진도 · 02 시험 · 03 과제 · 04 진행평가) */
+  `alter table cpl_log add column if not exists eval_cd text;
+   alter table cpl_log add column if not exists chasi integer;`,
+  /* 10 — v31 심사자 계정: 본인인증 면제 기록 */
+  `alter table cpl_log drop constraint if exists cpl_log_kind_check;
+   alter table cpl_log add constraint cpl_log_kind_check check (kind in ('login','beat','attend','verify-phone','verify-motp','review'));`,
+  /* 11 — v31.1 임시 비밀번호 */
+  `alter table users add column if not exists pw_temp boolean not null default false;`,
+  /* 12 — v31.2 단체가입 최초 로그인: 훈련생이 정한 비밀번호, 접근코드를 재발급하면 지운다 */
+  `alter table learners add column if not exists pw_hash text;
+   alter table cpl_log drop constraint if exists cpl_log_kind_check;
+   alter table cpl_log add constraint cpl_log_kind_check check (kind in ('login','beat','attend','verify-phone','verify-motp','review','group-pw'));`,
+  /* 13 — v31.6 무활동 세션 만료: 마지막 활동 시각 */
+  `alter table learner_sessions add column if not exists last_at timestamptz not null default now();`,
 ];
 
-/* v30 학사 LMS 묶음 스키마(lms/sql/*.sql)를 기본 마이그레이션 뒤에 잇는다 */
-MIGRATIONS.push(...require('./lms').sqlMigrations());
+/* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).
+   기본 MIGRATIONS 배열 끝에 새 항목을 더해도 LMS 파일 적용 기록이 밀리지 않는다. */
+const LMS_SQL = require('./lms').sqlMigrations();
 
 async function migrate(pool) {
   const c = await pool.connect();
@@ -236,6 +285,14 @@ async function migrate(pool) {
     for (let i = rows[0].v; i < MIGRATIONS.length; i++) {
       await c.query('begin');
       try { await c.query(MIGRATIONS[i]); await c.query('insert into schema_version (v) values ($1)', [i + 1]); await c.query('commit'); }
+      catch (e) { await c.query('rollback'); throw e; }
+    }
+    await c.query('create table if not exists lms_schema (name text primary key, at timestamptz not null default now())');
+    const done = new Set((await c.query('select name from lms_schema')).rows.map(r => r.name));
+    for (const [name, sql] of LMS_SQL) {
+      if (done.has(name)) continue;
+      await c.query('begin');
+      try { await c.query(sql); await c.query('insert into lms_schema (name) values ($1)', [name]); await c.query('commit'); }
       catch (e) { await c.query('rollback'); throw e; }
     }
   } finally { await c.query('select pg_advisory_unlock(820820)').catch(() => {}); c.release(); }
