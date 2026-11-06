@@ -27,7 +27,7 @@ const E = {
   person_kind: [400, '구성원 구분을 고르세요.'],
   person_status: [400, '학적 상태를 고르세요.'],
   grade_year: [400, '학년은 1~6 사이 숫자입니다.'],
-  student_no: [400, '학생 학번은 숫자 6~10자리입니다.'],
+  lms_stu: [400, '학생 학번은 숫자 6~10자리입니다.'],
   staff_role: [400, '담당 역할을 고르세요.'],
   staff_kind: [400, '교수 · 공동교수는 교수 구성원만 지정할 수 있습니다.'],
   enr_kind: [400, '수강 구분(정규 · 청강)을 고르세요.'],
@@ -424,7 +424,7 @@ function createLms({ pool, inTenant, need, HttpErr, readBody, limit, audit }) {
     'POST /api/lms/a/person': async req => { const b = await body(req); return run(req, async (c, x) => {
       adminOnly(x); const m = T(b.member_no); const kind = T(b.kind) || 'student'; const st = T(b.status) || 'active'; const unit = T(b.unit_code);
       const gy = b.grade_year == null || b.grade_year === '' ? null : Number(b.grade_year);
-      if (!RE.mno.test(m)) throw err('member_no'); if (!has(MAP.kind, kind)) throw err('person_kind'); if (MAP.kind[kind] === 'student' && !RE.stu.test(m)) throw err('student_no');
+      if (!RE.mno.test(m)) throw err('member_no'); if (!has(MAP.kind, kind)) throw err('person_kind'); if (MAP.kind[kind] === 'student' && !RE.stu.test(m)) throw err('lms_stu');
       if (!has(MAP.status, st)) throw err('person_status'); if (gy !== null && !(Number.isInteger(gy) && gy >= 1 && gy <= 6)) throw err('grade_year');
       let u = null; if (unit) { if (!RE.unit.test(unit)) throw err('unit_code'); u = await unitRow(c, unit); if (!u) throw err('unit'); }
       if (!inUnits(x, u ? u.unit_code : null, u ? u.parent_code : null)) throw err('lms_scope');
