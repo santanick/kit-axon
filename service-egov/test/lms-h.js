@@ -59,6 +59,13 @@ async function scenario(base, tag) {
   await G('board2', '/api/lms/h/board?section=' + S.sec);
   await call(base, 'GET', '/api/lms/h/board?section=' + S.sec, { cookie: L[STU[0]] }).then(r => (R.learnerBoard = r));
 
+  const U = S.U; const AS = (k, ck, m, p, body) => call(base, m, p, { cookie: ck, body }).then(r => (R[k] = r));
+  await AS('scProfBoard', U.prof, 'GET', '/api/lms/h/board?section=' + S.sec);
+  await AS('scProfBoard2', U.prof, 'GET', '/api/lms/h/board?section=' + S.sec2);
+  await AS('scProfItem2', U.prof, 'POST', '/api/lms/h/item-save', { section_id: S.sec2, name: 'x', category: 'other' });
+  await AS('scProfQueue', U.prof, 'GET', '/api/lms/h/queue');
+  await AS('scProfAck', U.prof, 'POST', '/api/lms/h/queue-ack', { qids: [1], ok: true });
+  await AS('scGraderScores', U.ta, 'POST', '/api/lms/h/scores', { item_id: it.midterm, rows: [{ member_no: STU[0], score: 95 }] });
   const b1 = R.board1.j || {}; const tot = m => (b1.rows || []).find(r => r.member_no === m) || {};
   P.push([R.board0.st === 200, '빈 보드'], [R.syl.j && R.syl.j.applied === 5, '수업계획서 비율 5개 등록'], [R.sylNone.st === 400, '계획서 없음 400'],
     [R.sc_midterm.j && R.sc_midterm.j.saved === 5 && R.sc_midterm.j.skipped.length === 3, '점수 일괄(청강 · 미수강 · 범위 밖 건너뜀)'],
@@ -74,7 +81,8 @@ async function scenario(base, tag) {
     [R.myConfirmed.j && R.myConfirmed.j.confirmed === true && R.myConfirmed.j.letter === 'A+', '확정 후 학생 열람'],
     [R.changeNoReason.st === 400, '정정 사유 필수'], [R.history.j && R.history.j.history.length === 6, '변경 이력 6건'],
     [R.queue2.j && R.queue2.j.counts.sent === 2 && R.queue2.j.counts.error === 1, '학사 대기열 전송 · 오류 반영'],
-    [R.learnerBoard.st === 401 || R.learnerBoard.st === 403, '학습자 교수 보드 차단']);
+    [R.learnerBoard.st === 401 || R.learnerBoard.st === 403, '학습자 교수 보드 차단'],
+    [R.scProfBoard.st === 200 && R.scProfBoard2.st === 403 && R.scProfItem2.st === 403, '교수: 담당 분반만'], [R.scProfQueue.j && R.scProfQueue.j.queue.length === R.queue2.j.queue.length, '교수: 담당 분반 대기열'], [R.scProfAck.st === 403, '교수: 대기열 완료 처리 403'], [R.scGraderScores.st === 200, '조교: 점수 입력']);
   return { R, P };
 }
 run('묶음 H 대조', scenario, A, B).catch(e => { console.error(e); process.exit(1); });

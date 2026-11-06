@@ -94,6 +94,23 @@ async function scenario(base, tag) {
     if (s.j.questions.length !== 5) n5 = false;
     await call(base, 'POST', '/api/lms/f/submit', { cookie: L[STU[4]], body: { attempt_id: s.j.attempt.attempt_id } });
   }
+  /* 교수 범위 · 시험 IP 보존 */
+  const U = S.U; const AS = (k, ck, m, p, body) => call(base, m, p, { cookie: ck, body }).then(r => (R[k] = r));
+  await AS('scProfBanks', U.prof, 'GET', '/api/lms/f/banks?section=' + S.sec);
+  await AS('scProfBanks2', U.prof, 'GET', '/api/lms/f/banks?section=' + S.sec2);
+  await AS('scProfAtt', U.prof, 'GET', '/api/lms/f/attempts?exam=' + ex);
+  await AS('scProfQ', U.prof, 'POST', '/api/lms/f/q-save', { bank_id: bk, kind: 'tf', stem: '교수 문항', answer: 't' });
+  await AS('scTenantBankT', U.prof, 'POST', '/api/lms/f/bank-save', { name: '공용', scope: 'tenant' });
+  await AS('scNoLinkAtt', U.tnl, 'GET', '/api/lms/f/attempts?exam=' + ex);
+  await AS('ipSet0', U.prof, 'POST', '/api/lms/f/settings', { exam_ip_keep_days: 400 });
+  await Po('ipSetBad', '/api/lms/f/settings', { exam_ip_keep_days: 99999 });
+  await Po('ipSet', '/api/lms/f/settings', { exam_ip_keep_days: 400 });
+  await G('ipGet', '/api/lms/f/settings');
+  await setSql(S.tid, "update lms_term set ends_on = '2026-01-31', starts_on = '2025-09-01' where term_id = '2026-2'");
+  await G('ipKept', '/api/lms/f/attempts?exam=' + ex);
+  await Po('ipSet2', '/api/lms/f/settings', { exam_ip_keep_days: 0 });
+  await G('ipMasked', '/api/lms/f/attempts?exam=' + ex);
+  await Po('ipMaskRun', '/api/lms/f/ip-mask', {});
   await Po('qDel', '/api/lms/f/q-delete', { q_id: qid[1] });
   await G('questionsAfter', '/api/lms/f/questions?bank=' + bk);
 
@@ -109,7 +126,10 @@ async function scenario(base, tag) {
     [R.attempts.j && R.attempts.j.attempts[0].ip_start === '127.0.0.1', 'IP 기록(정규화)'],
     [n5 && orders.size >= 2, '응시마다 문항 · 보기 순서 다름'], [!leak, '무작위 시험 정답 · 해설 미노출'],
     [R.board.j && R.board.j.rows.length === 5, '성적 반영(정규만)'], [R.copy.j && R.copy.j.copied === 2, '문항 이관 2개'],
-    [R.banks2.j && R.banks2.j.banks.length === 1, '교과목 공유 은행이 다른 분반에 보임']);
+    [R.banks2.j && R.banks2.j.banks.length === 1, '교과목 공유 은행이 다른 분반에 보임'],
+    [R.scProfBanks.st === 200 && R.scProfAtt.st === 200 && R.scProfQ.st === 200, '교수: 담당 분반 은행 · 응시 · 문항'], [R.scProfBanks2.st === 403, '교수: 남의 분반 403'], [R.scTenantBankT.st === 403, '교수: 기관 공용 은행 생성 403'], [R.scNoLinkAtt.st === 403, '연결 없는 교수 403'],
+    [R.ipSet0.st === 403 && R.ipSetBad.st === 400 && R.ipGet.j.exam_ip_keep_days === 400, 'IP 보존 일수 설정(운영자만)'], [R.ipKept.j.attempts[0].ip_start === '127.0.0.1', '보존 기간 안: 전체 IP'],
+    [R.ipMasked.j.attempts.every(t => t.ip_start === '127.0.0.*' && t.ip_log.every(e => /\*$/.test(e.ip))), '학기 종료 후: 앞 세 자리만'], [R.ipMaskRun.j && R.ipMaskRun.j.masked >= 1, '기관 전체 가림 실행']);
   return { R, P };
 }
 run('묶음 F 대조', scenario, A, B, ['retry', 'questionsAfter']).catch(e => { console.error(e); process.exit(1); });

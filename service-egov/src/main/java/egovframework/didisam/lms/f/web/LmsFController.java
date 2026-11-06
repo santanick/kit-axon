@@ -31,4 +31,7 @@ public class LmsFController {
     @PostMapping("/submit") public JsonNode postSubmit(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST submit", req, body); }
     @GetMapping("/result") public JsonNode getResult(HttpServletRequest req) throws Exception { return svc.call("GET result", req, null); }
     @PostMapping("/retry") public JsonNode postRetry(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST retry", req, body); }
+    @GetMapping("/settings") public JsonNode getSettings(HttpServletRequest req) throws Exception { return svc.call("GET settings", req, null); }
+    @PostMapping("/settings") public JsonNode postSettings(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST settings", req, body); }
+    @PostMapping("/ip-mask") public JsonNode postIpMask(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST ip-mask", req, body); }
 }
