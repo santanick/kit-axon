@@ -1,0 +1,23 @@
+'use strict';
+/* v31 관리자 · 교강사 모듈 화면. 사용: ADMIN=http://127.0.0.1:8101 TUTOR=http://127.0.0.1:8102 node tests/ui/module-live.js */
+const { chromium } = require('playwright'); const A = process.env.ADMIN, T = process.env.TUTOR;
+let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; console.error('✗', m); } };
+(async () => {
+  const br = await chromium.launch(); const c0 = await br.newContext(); const email = `own${Date.now()}@example.com`; const teach = `t${Date.now()}@example.com`;
+  const su = await c0.request.post(A + '/api/signup', { headers: { 'x-didisam': '1', origin: A }, data: { email, password: 'Contract2026x', orgName: '환급', type: 'voc', code: 'C0DE' } }); ok(su.status() === 200, '가입 ' + su.status());
+  const a = await c0.newPage(); const errs = []; a.on('pageerror', e => errs.push('A ' + e.message)); await a.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await a.goto(A + '/', { waitUntil: 'load' }); await a.waitForTimeout(400);
+  await a.evaluate(async () => { await createOrg('voc', '환급'); }); await a.waitForTimeout(300);
+  const seed = await a.evaluate(() => { S.me.role = 'owner'; S.org.cpl = S.org.cpl || {}; const base = { kind: 'period', sub: '', legal: false, status: '진행중', price: 0, start: today(), end: today(), learners: [], prog: {}, curriculum: [] }; S.classes = [{ ...base, id: 'c1', name: '담당' }, { ...base, id: 'c2', name: '다른' }]; UI.cpl = 'acct'; go('cpl'); return { n: S.classes.length, cls: S.classes[0] && S.classes[0].id, other: S.classes[1] && S.classes[1].id, html: document.body.innerText.includes('교강사 계정') }; }); ok(seed.n >= 2, '샘플 과정 ' + seed.n); ok(seed.html, '계정 · 모듈 탭');
+  await a.click('[data-act="cpl-staff-new"]'); await a.fill('.modal input[name=n]', '김교강'); await a.fill('.modal input[name=e]', teach); await a.click('.modal button:has-text("발급")'); await a.waitForSelector('.modal code', { timeout: 5000 }); const pw = await a.textContent('.modal code'); ok(pw.length >= 10, '임시 비밀번호 표시'); await a.click('.modal button:has-text("닫기")'); await a.waitForTimeout(300);
+  await a.evaluate(cid => { const x = S.admins.find(z => z.role === 'teacher' && z.name === '김교강'); x.classes = [cid]; save(); }, seed.cls); await a.waitForTimeout(1500);
+  const c1 = await br.newContext(); const t = await c1.newPage(); t.on('pageerror', e => errs.push('T ' + e.message)); await t.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await t.goto(T + '/', { waitUntil: 'load' }); await t.waitForSelector('#liForm'); ok(!(await t.$('[data-act="lv-signup"]')), '교강사 화면에 기관 가입 없음'); ok((await t.title()).includes('교강사'), '교강사 화면 제목');
+  await t.fill('#liForm input[name=email]', email); await t.fill('#liForm input[name=password]', 'Contract2026x'); await t.click('#liForm button[type=submit]'); await t.waitForTimeout(500); ok((await t.textContent('body')).includes('로그인할 수 없는'), '운영자 계정 거부');
+  await t.fill('#liForm input[name=email]', teach); await t.fill('#liForm input[name=password]', pw); await t.click('#liForm button[type=submit]'); await t.waitForFunction(() => typeof S !== 'undefined' && S && S.me && S.me.role === 'teacher', null, { timeout: 8000 }); await t.waitForTimeout(400);
+  const v = await t.evaluate(() => ({ role: S.me.role, cls: S.classes.map(c => c.id), mem: S.members.length, rs: !!document.getElementById('roleSel'), pw: !!document.querySelector('[data-act="live-pw"]'), side: document.querySelector('.side') ? document.querySelector('.side').innerText : '' }));
+  ok(v.role === 'teacher', '교강사 권한'); ok(v.cls.length === 1 && v.cls[0] === seed.cls, '담당 과정만 ' + v.cls.join()); ok(!v.rs, '권한 전환 없음');
+  for (const w of ['home', 'classes', 'cpl']) { await t.evaluate(x => { try { go(x); } catch (e) { window.__e = e.message; } }, w); await t.waitForTimeout(150); } const ne = await t.evaluate(() => window.__e); ok(!ne, '교강사 화면 이동 ' + ne); await t.evaluate(() => go('classes')); await t.waitForTimeout(150); ok(await t.$('[data-act="live-pw"]'), '비밀번호 변경 버튼'); if (process.env.SHOT) await t.screenshot({ path: process.env.SHOT }); ok(!(await t.$('#roleSel')), '이동 후에도 권한 전환 없음');
+  await t.evaluate(cid => { const c = S.classes.find(x => x.id === cid); c.prog = c.prog || {}; c.__mark = 'graded'; c.name = '변조'; S.org.name = '변조'; save(); }, seed.cls); await t.waitForTimeout(1500);
+  const st = await (await c0.request.get(A + '/api/state')).json(); const c = st.doc.classes.find(x => x.id === seed.cls); ok(c.__mark === 'graded', '교강사 변경 반영'); ok(c.name !== '변조' && st.doc.org.name === '환급', '교강사 변조 차단');
+  ok(!errs.length, '화면 오류 ' + errs.slice(0, 3).join(' / '));
+  await br.close(); console.log(`pass ${pass} fail ${fail}`); process.exit(fail ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(2); });

@@ -1,0 +1,38 @@
+# 디디쌤 환급 에디션 전용 배포 예시. 기관마다 별도 프로젝트 · DB · 스토리지를 사용합니다.
+# <...>는 기관이 채울 값입니다. 비밀값은 이 파일에 쓰지 않고 비밀값 저장소에만 둡니다.
+# 인정 여부는 심사 전에 직업능력심사평가원과 한국산업인력공단에 확인합니다.
+apiVersion: didisam.com/v1
+kind: MoelEdition
+tenant:
+  id: <기관 ID>
+  name: "<훈련기관명>"
+  type: voc
+image: <디디쌤 서버 이미지>
+common:
+  env:
+    NODE_ENV: production
+    TRUST_PROXY_HOPS: "1"
+    SIGNUP: "off"              # 최초 정운영자 생성 후 끕니다
+  secrets: [DATABASE_URL, SESSION_PEPPER, PII_KEY]
+services:
+  learner:
+    domain: lms.<기관 도메인>
+    env: { MODULE: learner, LEARNER_TID: <기관 ID> }
+    instances: { min: 2 }
+  tutor:
+    domain: tutor.<기관 도메인>
+    env: { MODULE: tutor }
+    instances: { min: 2 }
+  admin:
+    domain: admin.<기관 도메인>
+    env: { MODULE: admin, ADMIN_IPS: "<기관 사무실 IP 또는 대역>" }
+    instances: { min: 2 }
+# 고시 제2026-22호 별표 1 최소 사양. 클라우드도 같은 기준을 적용합니다.
+servers:
+  web:   { count: 2, cpu: "2.0GHz x 4 core", memory: 8GB,  storage: 200GB, raid: "RAID 0 단일 구성 제외" }
+  video: { count: 2, cpu: "2.0GHz x 4 core", memory: 8GB,  storage: 200GB, note: "CDN 계약에 전용 장비 1대 이상 명시 시 대체 가능" }
+  db:    { count: 2, mode: "Active-Standby 또는 Active-Active Cluster", cpu: "2.0GHz x 4 core", memory: 16GB, storage: 200GB, concurrentLearners: 20 }
+  backup: { storage: 2TB, schedule: daily, retainDays: 5, restoreHours: 3 }
+network: { line: 100M, streamingConcurrent: 50, dns: "공인 DNS 또는 클라우드 DNS", zones: [external, dmz, internal] }
+security: { firewall: true, wafOrIps: true, dbEncryption: true, ups: "30KVA 30분, IDC · 클라우드 증빙 포함" }
+operations: { helpDesk: true, siteMonitoring: true, webLogRetention: true, lmsAdmin: "훈련기관 소속 담당자 지정" }

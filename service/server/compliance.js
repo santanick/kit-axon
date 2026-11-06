@@ -37,6 +37,10 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = 
         }
         return { today: s, max, over: !!max && s >= max }; });
     }
+    if (kind === 'review-skip') {
+      limit(`cplv:${tid}:${sid}`, 60, 600e3); const evalCd = ['00', '01', '02', '03', '04'].includes(String(b.evalCd)) ? String(b.evalCd) : null; const chasi = Number.isInteger(+b.chasi) && +b.chasi >= 0 && +b.chasi < 1000 ? +b.chasi : null; const cls = KEY_RE.test(String(b.cls || '')) ? String(b.cls) : null;
+      return inTenant(pool, tid, async c => { const P = await policy(c, tid); const L = P && P.on && Array.isArray(P.reviewers) ? P.reviewers.map(String) : []; if (!L.includes(String(sid))) throw new HttpErr(403, '심사자로 지정된 계정이 아닙니다.', 'reviewer'); await rec(c, tid, sid, 'review', { cls, evalCd, chasi, ip: ip(req) }); return { ok: true }; });
+    }
     if (kind === 'verify-start' || kind === 'verify-confirm') {
       const method = String(b.method || ''); if (!['phone', 'motp'].includes(method)) throw new HttpErr(400, '본인확인 방식이 올바르지 않습니다.', 'method');
       limit(`cplv:${tid}:${sid}`, 10, 600e3);

@@ -35,12 +35,13 @@ async function liveFlush() {
   if (LIVE.saving || !LIVE.dirty || !LIVE.tenant || !S) return; LIVE.saving = true; LIVE.dirty = false;
   try { const r = await api('PUT', '/api/state', { doc: S, rev: LIVE.rev }); LIVE.rev = r.rev; STQ.fail = false; liveBar(''); }
   catch (e) {
-    if (e.status === 409) { try { const st = await api('GET', '/api/state'); LIVE.rev = st.rev; if (st.doc) { S = st.doc; upgradeState(); } toast(e.message, 'warn'); render(); } catch (x) { } }
+    if (e.status === 409) { try { const st = await api('GET', '/api/state'); LIVE.rev = st.rev; if (st.doc) { S = liveMe(st.doc); upgradeState(); } toast(e.message, 'warn'); render(); } catch (x) { } }
     else if (e.status === 401) { liveBar('로그인이 만료되었습니다. 새로고침 후 다시 로그인하세요. 마지막 변경은 저장되지 않았습니다.', 'bad'); }
     else { LIVE.dirty = true; STQ.fail = true; liveBar(`저장하지 못했습니다 — ${e.message} 잠시 후 다시 시도합니다.`, 'bad'); clearTimeout(LIVE.timer); LIVE.timer = setTimeout(liveFlush, 5000); }
   } finally { LIVE.saving = false; if (LIVE.dirty) { clearTimeout(LIVE.timer); LIVE.timer = setTimeout(liveFlush, 400); } }
 }
-Store.get = () => { const d = LIVE.doc; if (!d || !LIVE.tenant) return null; if (d.org && d.org.room && d.org.room.tid && d.org.room.tid !== LIVE.tenant.tid) return null; return d; };
+const liveMe = d => { if (d && LIVE.user) { const a = (d.admins || []).find(x => x && String(x.email || '').toLowerCase() === String(LIVE.user.email).toLowerCase()); d.me = { ...(d.me || {}), role: LIVE.user.role, email: LIVE.user.email, ...(a && a.name ? { name: a.name } : {}) }; } return d; }; /* v31 권한은 서버 세션 기준 */
+Store.get = () => { const d = LIVE.doc; if (!d || !LIVE.tenant) return null; if (d.org && d.org.room && d.org.room.tid && d.org.room.tid !== LIVE.tenant.tid) return null; return liveMe(d); };
 Store.clear = () => {};
 Store.set = v => {
   if (!v || !LIVE.tenant) return;
@@ -146,9 +147,11 @@ ACT['reset-all'] = () => {
     } }]);
 };
 ACT['live-logout'] = async () => { await liveFlush(); try { await api('POST', '/api/logout'); } catch (e) { } location.replace(location.pathname); };
+ACT['live-pw'] = () => modal('비밀번호 변경', `<label class="fl">현재 비밀번호<input name="cur" type="password" autocomplete="current-password"></label><label class="fl">새 비밀번호<input name="next" type="password" autocomplete="new-password" placeholder="10자 이상, 영문과 숫자"></label>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '변경', kind: 'pri', run: w => { api('POST', '/api/password', { current: fv(w, 'cur'), next: fv(w, 'next') }).then(() => toast('비밀번호를 변경했습니다.')).catch(e => toast(e.message, 'warn')); } }]);
 AFTER.push(cur => {
   if (!LIVE.user) return;
-  const foot = $('.side .rfoot'); if (foot && !$('#liveAcct')) foot.insertAdjacentHTML('beforeend', `<div id="liveAcct" class="lvacct"><small title="${esc(LIVE.user.email)}">${esc(LIVE.user.email)}</small><button class="btn sm ghost" data-act="live-logout">로그아웃</button></div>`);
+  const foot = $('.side .rfoot') || $('.top .topr') || $('header.top'); if (foot && !$('#liveAcct')) foot.insertAdjacentHTML('beforeend', `<div id="liveAcct" class="lvacct"><small title="${esc(LIVE.user.email)}">${esc(LIVE.user.email)}</small><button class="btn sm ghost" data-act="live-pw">비밀번호 변경</button><button class="btn sm ghost" data-act="live-logout">로그아웃</button></div>`);
+  if (LIVE.user.role !== 'owner' || (LIVE.cfg && LIVE.cfg.module)) { const rs = $('#roleSel'); if (rs) rs.remove(); }
   if (cur.ws === 'settings' && UI.settings === 'room') {
     const b = $('[data-act="dr-new"]'); const card = b && b.closest('.card');
     if (card) card.outerHTML = `<div class="card"><div class="ch"><b>운영 서비스 계정</b><small>이 데이터룸은 서버(공유 SaaS · 서울 리전)에 있습니다</small></div><p>로그인 계정 <b>${esc(LIVE.user.email)}</b> · 테넌트 <code>${esc(LIVE.tenant.tid)}</code>. 기관 데이터는 서버 DB에서 행 수준 보안으로 격리되고, 저장할 때마다 버전(rev ${LIVE.rev})이 올라갑니다. 다른 기관은 별도 계정으로 가입 · 로그인합니다.</p></div>`;

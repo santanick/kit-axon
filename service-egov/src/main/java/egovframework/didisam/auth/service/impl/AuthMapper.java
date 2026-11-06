@@ -17,5 +17,10 @@ public interface AuthMapper {
     void updateLastLogin(@Param("uid") String uid);
     void deleteExpiredSessions(@Param("uid") String uid);
     void deleteSession(@Param("sid") String sid);
+    String selectPw(@Param("uid") String uid);
+    void updatePw(@Param("uid") String uid, @Param("pw") String pw);
+    void deleteOtherSessions(@Param("uid") String uid, @Param("sid") String sid);
+    java.util.List<Map<String, Object>> selectStaff(@Param("tid") String tid);
+    int deleteStaff(@Param("tid") String tid, @Param("email") String email);
     Map<String, Object> selectMe(@Param("uid") String uid, @Param("email") String email);
 }
