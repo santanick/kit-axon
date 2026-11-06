@@ -1,6 +1,6 @@
 /* 디디쌤 학습자 앱 서비스 워커 v27 — 설치(iOS · Android) · 오프라인 첫 화면.
    네트워크 우선(배포 즉시 새 버전), 실패할 때만 저장본. API · 외부 도메인 · POST는 건드리지 않는다. */
-const C = 'didisam-app-v31.2';
+const C = 'didisam-app-v31.3';
 const SHELL = ['learner.html', 'learner.css', 'lapp.css', 'lapp.js', 'manifest.webmanifest', 'app-icon-192.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(SHELL)).catch(() => { })); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(K => Promise.all(K.filter(k => k.startsWith('didisam-app-') && k !== C).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

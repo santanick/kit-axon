@@ -9,6 +9,13 @@ test('IP 허용 규칙', () => {
   assert.throws(() => M.moduleOf({ MODULE: 'x' }));
 });
 
+test('환급 에디션 배포 명령', () => {
+  const { execFileSync, spawnSync } = require('node:child_process'); const sh = path.join(__dirname, '..', 'deploy-moel.sh');
+  const out = execFileSync('bash', [sh, 'p1'], { env: { ...process.env, DRY_RUN: '1', ADMIN_IPS: '1.2.3.4,10.0.0.0/8', IMAGE: 'img:1', LEARNER_TID: 'tn_a' }, encoding: 'utf8' });
+  for (const s of ['didisam-moel-learner', 'didisam-moel-tutor', 'didisam-moel-admin', 'MODULE=learner', 'MODULE=tutor', 'MODULE=admin', 'LEARNER_TID=tn_a', 'PII_KEY=didisam-pii-key', 'SESSION_PEPPER=didisam-session-pepper']) assert.ok(out.includes(s), s); assert.ok(/ADMIN_IPS=1\.2\.3\.4,10\.0\.0\.0\/8|ADMIN_IPS=1\.2\.3\.4\\,10\.0\.0\.0\/8/.test(out), out);
+  assert.notEqual(spawnSync('bash', [sh, 'p1'], { env: { ...process.env, DRY_RUN: '1', IMAGE: 'img:1', ADMIN_IPS: '' } }).status, 0);
+});
+
 test('모듈 분리', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mod-')); fs.mkdirSync(path.join(dir, 'deploy'));
   for (const f of ['index.html', 'learner.html', 'deploy/index.html', 'compliance.js']) fs.writeFileSync(path.join(dir, f), 'x'); fs.writeFileSync(path.join(dir, 'tutor.html'), '<meta name="dd-module" content="tutor">');

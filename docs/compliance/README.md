@@ -46,7 +46,7 @@
 - 심사자: 지정한 훈련생 아이디의 본인인증 면제, 면제 기록(`cpl_log.kind = review`), 공단 데이터셋 제외. 다른 학습 제한은 그대로 적용합니다.
 - 회원 정보: 생년월일 · 성별 입력 항목, HRD-Net CSV 대조(파일 미저장).
 - 공단 전송 현황: 건수와 내려받기 기록만 표시합니다. 실제 전송 · 자동 전송 · 수동 재전송은 API 키 확보 후 구현합니다.
-- 배포: `didisam/deploy/moel-edition.example.yaml`.
+- 배포: `service/deploy-moel.sh`(3개 서비스), 사양 예시 `didisam/deploy/moel-edition.example.yaml`. 운영 비밀값 `SESSION_PEPPER`, `PII_KEY`는 `service/setup-gcp.sh`가 만듭니다. 실제 GCP 프로젝트에서 실행 검증은 아직 하지 않았습니다.
 - 임시 비밀번호: 발급 계정은 비밀번호를 바꾸기 전까지 `/api/me`, `/api/password` 외 API를 쓸 수 없습니다.
 
 ## 기관 문서 개인정보 암호화(v31.1)
