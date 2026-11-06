@@ -13,7 +13,7 @@ import java.util.List;
 import org.egovframe.rte.fdl.cmmn.EgovAbstractServiceImpl;
 import org.springframework.stereotype.Service;
 
-/** 묶음 Q — 비교과(성장마루 내재화: 상태 흐름 · 신청 승인 4종 · 팀 · 양식 · 역량 · 이수 · 설문 · 예산 · CQI · 학생 화면). 업무 규칙은 DB 함수 lms_q_*(Node mod-q.js와 같은 함수) */
+/** 묶음 Q — 비교과(성장마루 내재화: 상태 흐름 · 신청 승인 4종 · 팀 · 양식 · 역량 · 이수 · 설문 · 예산 · CQI · 파일 · 학생 화면). 업무 규칙은 DB 함수 lms_q_*(Node mod-q.js와 같은 함수) */
 @Service("lmsQService")
 public class LmsQServiceImpl extends EgovAbstractServiceImpl implements LmsQService {
     /** Node service/server/lms/mod-q.js ROUTES와 같은 표(scratchpad genjava.py로 생성) */
@@ -55,6 +55,7 @@ public class LmsQServiceImpl extends EgovAbstractServiceImpl implements LmsQServ
         w("POST", "cqi/request", "cqi_request", "os"),
         w("POST", "cqi/decide", "cqi_decide", "o"),
         r("GET", "cqi/doc", "cqi_doc", "ost"),
+        r("GET", "file", "file", "ostL"),
         r("GET", "student/programs", "student_programs", "ostL"),
         w("POST", "wish", "wish", "ostL"),
         r("GET", "student/me", "student_me", "ostL"),

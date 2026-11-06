@@ -40,6 +40,7 @@ const ROUTES = [
   ['POST', 'cqi/request', 'cqi_request', 'os', 'w'],
   ['POST', 'cqi/decide', 'cqi_decide', 'o', 'w'],
   ['GET', 'cqi/doc', 'cqi_doc', 'ost'],
+  ['GET', 'file', 'file', 'ostL'],
   ['GET', 'student/programs', 'student_programs', 'ostL'],
   ['POST', 'wish', 'wish', 'ostL', 'w'],
   ['GET', 'student/me', 'student_me', 'ostL'],
