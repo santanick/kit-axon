@@ -244,31 +244,34 @@
   VIEWS.lmsq = () => {
     const U = QS(); const tb = UI.lmsqT || 'list';
     if (U.list === null) { U.list = []; setTimeout(loadList); }
-    const top = head('비교과(성장마루)', '비교과 프로그램을 7가지 절차(신규 → 승인 → 접수 → 운영 → 마감처리 → 마감 → CQI)로 운영합니다. 승인 · 마감 승인 · CQI 승인은 교육혁신본부(정운영자)가 일괄 처리하고, 접수 · 운영 · 마감은 프로그램 개설 · 운영자가 관리합니다.',
-      isOp() ? `<button class="btn pri" data-act="lmsq-new">프로그램 추가</button><button class="btn" data-act="lmsq-clone">기존 프로그램 불러오기</button>` : '') +
-      tabs('lmsqT', [['list', '프로그램 관리'], ['detail', '프로그램 상세'], ['stu', '학생 화면'], ['group', '그룹']], tb);
+    const by = U.by || {}; const own = S.me.role === 'owner';
+    const top = head('비교과(성장마루)', `비교과 프로그램을 등록하고, 승인 → 접수 → 운영 → 이수 · 마감까지 진행합니다. 프로그램을 누르면 다음 할 일이 보입니다. ${LW4.demoTag()}`,
+      isOp() ? LW4.more(LW4.mi('lmsq-clone', '기존 프로그램 불러와 만들기') + LW4.mi('tab', '그룹 관리', { key: 'lmsqT', v: 'group' }) + LW4.mi('tab', '학생 화면 미리보기', { key: 'lmsqT', v: 'stu' })) + `<button class="btn pri" data-act="lmsq-new">새 프로그램</button>` : '') +
+      LW4.todo([{ n: by.approving || 0, t: own ? '건 승인처리중 — 승인할 차례' : '건 승인처리중', btn: LW4.go('lmsq-fs', own ? '승인하기' : '보기', { v: 'approving' }) }, { n: by.recruiting || 0, t: '건 접수중', btn: LW4.go('lmsq-fs', '신청자 보기', { v: 'recruiting' }) }, { n: by.running || 0, t: '건 운영중', btn: LW4.go('lmsq-fs', '출석 · 이수', { v: 'running' }) }, { n: (by.completing || 0) + (by.closing || 0), t: '건 마감 처리 중', btn: LW4.go('lmsq-fs', '마감하기', { v: (by.closing ? 'closing' : 'completing') }) }, { n: by.draft || 0, t: '건 임시저장', btn: LW4.go('lmsq-fs', '이어서 작성', { v: 'draft' }) }], '처리할 프로그램이 없습니다. 「새 프로그램」으로 등록하세요.') +
+      LW4.tabs('lmsqT', [['list', '프로그램 목록'], ...(U.P ? [['detail', '프로그램 상세']] : []), ['stu', '학생 화면 미리보기'], ['group', '그룹 관리']], tb, U.P ? 2 : 1);
     if (tb === 'list') return top + listView(U);
-    if (tb === 'detail') return top + (U.P ? detailView(U) : '<div class="empty">프로그램 관리에서 프로그램을 고르세요.</div>');
+    if (tb === 'detail') return top + (U.P ? detailView(U) : listView(U));
     if (tb === 'stu') { if (U.sp === null) { U.sp = []; setTimeout(loadStu); } return top + stuView(U); }
     return top + `<div class="lw-bar"><input id="lmsqGn" placeholder="새 그룹 이름" aria-label="그룹 이름">${isOp() ? '<button class="btn" data-act="lmsq-gadd">그룹 추가</button>' : ''}</div>` + table(['그룹', '프로그램 수'], U.groups.map(g => [esc(g.name), g.n + '개']), '그룹이 없습니다.');
   };
   function listView(U) {
     const own = S.me.role === 'owner';
-    return `<div class="lw-bar" role="group" aria-label="상태 필터"><button class="btn sm ${!U.fs ? 'pri' : ''}" data-act="lmsq-fs" data-v="">전체 ${Object.values(U.by).reduce((a, b) => a + b, 0)}</button>${ST.map(s => `<button class="btn sm ${U.fs === s ? 'pri' : ''}" data-act="lmsq-fs" data-v="${s}">${STN[s]} ${U.by[s] || 0}</button>`).join('')}</div>
-      <div class="lw-bar"><input type="search" placeholder="프로그램명 · 태그" value="${esc(U.q || '')}" data-chg="lmsq-q" aria-label="프로그램 검색"><select data-chg="lmsq-fg" aria-label="그룹"><option value="">모든 그룹</option>${U.groups.map(g => `<option value="${esc(g.group_id)}" ${U.fg === g.group_id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
-      <small class="lw-muted">선택 ${U.sel.length}건</small>${own ? `<button class="btn sm" data-act="lmsq-bulk" data-a="approve">선택 일괄 승인</button><button class="btn sm" data-act="lmsq-bulk" data-a="close">선택 마감 승인</button>` : ''}${isOp() ? `<button class="btn sm" data-act="lmsq-bulkcqi">선택 CQI 일괄 작성</button><button class="btn sm" data-act="lmsq-bulksv">선택 설문결과 일괄 다운로드</button>` : ''}</div>` +
-      table(['', '그룹', '프로그램', '상태', '신청 · 승인 · 대기', '운영자', ''], U.list.map(p => [`<input type="checkbox" data-chg="lmsq-sel" data-id="${esc(p.program_id)}" ${U.sel.includes(p.program_id) ? 'checked' : ''} aria-label="선택">`, esc(p.group_name || '-'),
-        `<b>${esc(p.title)}</b>${p.certified ? ' <span class="lw-pill">우수 인증</span>' : ''}<br><small class="lw-muted">${p.kind === 'team' ? '팀' : '개인'} · ${esc(AM[p.approval_mode])} · 마일리지 ${p.mileage_max}</small>`, LW4.st(STN[p.status], STT[p.status]),
-        `${p.counts.applied + p.counts.approved + p.counts.waiting} · ${p.counts.approved} · ${p.counts.waiting}`, esc(p.operator_email || '-'), `<button class="btn sm" data-act="lmsq-open" data-id="${esc(p.program_id)}">열기</button>`]), '프로그램이 없습니다.');
+    const tot = Object.values(U.by).reduce((a, b) => a + b, 0);
+    const bulk = (own ? LW4.mi('lmsq-bulk', '선택 일괄 승인', { a: 'approve' }) + LW4.mi('lmsq-bulk', '선택 마감 승인', { a: 'close' }) : '') + (isOp() ? LW4.mi('lmsq-bulkcqi', '선택 CQI 일괄 작성') + LW4.mi('lmsq-bulksv', '선택 설문결과 일괄 내려받기') : '');
+    return `<div class="lw-bar"><select data-chg="lmsq-fs2" aria-label="상태"><option value="">모든 상태 ${tot}</option>${ST.map(s => `<option value="${s}" ${U.fs === s ? 'selected' : ''}>${STN[s]} ${U.by[s] || 0}</option>`).join('')}</select><input type="search" placeholder="프로그램명 · 태그" value="${esc(U.q || '')}" data-chg="lmsq-q" aria-label="프로그램 검색"><select data-chg="lmsq-fg" aria-label="그룹"><option value="">모든 그룹</option>${U.groups.map(g => `<option value="${esc(g.group_id)}" ${U.fg === g.group_id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
+      ${bulk ? LW4.more(bulk, `선택 ${U.sel.length}건 처리`, 'lw-bulk') : ''}</div>` +
+      table(['', '프로그램', '상태', '신청 · 승인 · 대기', ''], U.list.map(p => [`<input type="checkbox" data-chg="lmsq-sel" data-id="${esc(p.program_id)}" ${U.sel.includes(p.program_id) ? 'checked' : ''} aria-label="선택">`,
+        `<b>${esc(p.title)}</b>${p.certified ? ' <span class="lw-pill">우수 인증</span>' : ''}<small class="lw-sub">${esc(p.group_name || '그룹 없음')} · ${p.kind === 'team' ? '팀' : '개인'} · ${esc(AM[p.approval_mode])} · 운영자 ${esc(p.operator_email || '-')}</small>`, LW4.st(STN[p.status], STT[p.status]),
+        `${p.counts.applied + p.counts.approved + p.counts.waiting} · ${p.counts.approved} · ${p.counts.waiting}`, `<button class="btn sm" data-act="lmsq-open" data-id="${esc(p.program_id)}">열기</button>`]), U.fs ? '이 상태의 프로그램이 없습니다.' : '프로그램이 없습니다. 「새 프로그램」으로 등록하세요.');
   }
   function detailView(U) {
     const P = U.P; const own = S.me.role === 'owner'; const sub = U.sub;
-    const acts = Object.entries(ACTS).filter(([, v]) => v[1] === P.status && (v[2] ? own : isOp())).map(([k, v]) => `<button class="btn sm ${['reject', 'reopen'].includes(k) ? 'red' : 'pri'}" data-act="lmsq-tr" data-a="${k}">${v[0]}</button>`).join('');
+    const acts = Object.entries(ACTS).filter(([, v]) => v[1] === P.status && (v[2] ? own : isOp())).map(([k, v], i) => `<button class="btn sm ${['reject', 'reopen'].includes(k) ? 'red' : i === 0 ? 'pri' : ''}" data-act="lmsq-tr" data-a="${k}">${v[0]}</button>`).join('');
     const top = `<div class="card"><div class="ch"><b>${esc(P.title)}</b><small>${esc(P.group_name || '그룹 없음')} · ${P.kind === 'team' ? `팀(${P.team_min}~${P.team_max}명)` : '개인'} · ${esc(AM[P.approval_mode])} · 운영자 ${esc(P.operator_email || '-')}</small></div>${flow(P.status)}
-      <div class="lw-acts">${acts}${isOp() && P.status !== 'closed' ? `<button class="btn sm" data-act="lmsq-edit">${['draft', 'approving', 'ready'].includes(P.status) ? '등록 정보 수정(4단계)' : '기본 정보 수정'}</button>` : ''}<button class="btn sm" data-act="lmsq-plan" data-f="doc">운영계획서(워드)</button><button class="btn sm" data-act="lmsq-plan" data-f="html">인쇄</button>
-      ${own ? `<button class="btn sm" data-act="lmsq-cert">${P.certified ? '인증 해제' : '우수 인증 · 추천인'}</button><button class="btn sm" data-act="lmsq-op">운영자 변경</button>` : ''}<button class="btn sm" data-act="lmsq-asuser">해당 사용자로 보기</button></div>
+      <div class="lw-acts">${acts}${LW4.more((isOp() && P.status !== 'closed' ? LW4.mi('lmsq-edit', ['draft', 'approving', 'ready'].includes(P.status) ? '등록 정보 수정(4단계)' : '기본 정보 수정') : '') + LW4.mi('lmsq-plan', '운영계획서 내려받기(워드)', { f: 'doc' }) + LW4.mi('lmsq-plan', '운영계획서 인쇄', { f: 'html' }) +
+        (own ? LW4.mi('lmsq-cert', P.certified ? '우수 인증 해제' : '우수 인증 · 추천인') + LW4.mi('lmsq-op', '운영자 변경') : '') + LW4.mi('lmsq-asuser', '해당 학생 화면으로 보기'))}</div>
       ${P.status === 'closed' ? '<p class="lw-note">마감된 프로그램입니다. 신청 · 출석 · 이수 · 지출은 고칠 수 없습니다.</p>' : ''}</div>`;
-    const tabsH = tabs('lmsqSub', [['info', '기본 정보'], ['apps', '신청자'], ['att', '출석 · 이수'], ['survey', '설문 · 후기'], ['bud', '예산 · 지출'], ['cqi', 'CQI'], ['hist', '검토 내역']], sub).replace(/data-act="tab"/g, 'data-act="lmsq-sub"');
+    const tabsH = LW4.tabs('lmsqSub', [['info', '기본 정보'], ['apps', '신청자'], ['att', '출석 · 이수'], ['survey', '설문 · 후기'], ['bud', '예산 · 지출'], ['cqi', '개선 보고(CQI)'], ['hist', '검토 내역']], sub, 4, 'lmsq-sub');
     let b = '';
     if (sub === 'info') b = `<div class="lw-two"><div class="card">${P.cover_url && P.cover_url.startsWith('file:') ? `<img class="lw-coverimg" data-qcov="${esc(P.program_id)}|${esc(P.cover_url.slice(5))}" alt="표지 이미지">` : `<div class="lw-cov">${esc(P.tags.map(t => '#' + t).join(' ') || '비교과')}</div>`}
         ${P.attachments.length ? `<p>첨부: ${P.attachments.map(x => `<button class="btn sm" data-act="lmsq-fdl" data-id="${esc(x.file_id)}">${esc(x.name)}</button>`).join(' ')}</p>` : ''}<p>${esc(P.summary)}</p>${P.video_url ? `<p><a href="${esc(P.video_url)}" target="_blank" rel="noopener">소개 영상</a></p>` : ''}
@@ -285,7 +288,7 @@
         <div class="card"><div class="ch"><b>프로그램 후기</b><small>평균 ${U.rv && U.rv.avg != null ? U.rv.avg : '-'}점</small></div>${((U.rv || {}).items || []).map(r => `<p>${'★'.repeat(r.rating)} ${esc(r.body)} <small class="lw-muted">${esc(r.member_no)}</small></p>`).join('') || '<small class="lw-muted">후기가 없습니다.</small>'}</div>`;
     else if (sub === 'bud') { const B = U.bud || { items: [], expenses: [], sessions: [], total: 0, spent: 0 };
       b = `<div class="kpis">${kpi('예산', won(B.total) + '원')}${kpi('집행', won(B.spent) + '원')}${kpi('집행률', (B.total ? Math.round(100 * B.spent / B.total) : 0) + '%')}</div>` + B.items.map(i => LW4.hbar(i.item, i.amount ? 100 * i.spent / i.amount : 0, `${won(i.spent)} / ${won(i.amount)}`)).join('') +
-        `<div class="lw-bar">${isOp() && ['running', 'completing', 'closing'].includes(P.status) ? '<button class="btn sm pri" data-act="lmsq-exp">지출 내역 추가</button>' : '<small class="lw-muted">지출 내역은 운영 · 마감 단계에서 관리합니다.</small>'}${isOp() ? '<button class="btn sm" data-act="lmsq-expdoc" data-f="doc">지출품의서(워드)</button><button class="btn sm" data-act="lmsq-expdoc" data-f="html">지출품의서 인쇄</button>' : ''}</div>` +
+        `<div class="lw-bar">${isOp() && ['running', 'completing', 'closing'].includes(P.status) ? '<button class="btn sm lw-go" data-act="lmsq-exp">지출 내역 추가</button>' : '<small class="lw-muted">지출 내역은 운영 · 마감 단계에서 관리합니다.</small>'}${isOp() ? LW4.more(LW4.mi('lmsq-expdoc', '지출품의서 내려받기(워드)', { f: 'doc' }) + LW4.mi('lmsq-expdoc', '지출품의서 인쇄', { f: 'html' })) : ''}</div>` +
         table(['일자', '항목', '거래처', '내용', '금액', ''], B.expenses.map(e => [e.spent_on || '-', esc(e.item), esc(e.vendor), esc(e.memo), won(e.amount), isOp() && P.status !== 'closed' ? `<button class="btn sm red" data-act="lmsq-expdel" data-id="${esc(e.expense_id)}">삭제</button>` : '']), '지출 내역이 없습니다.') +
         `<details><summary>주제별 예산</summary>${table(['회차', '주제', '예산'], B.sessions.map(s => [String(s.seq), esc(s.title), won(s.budget)]))}</details>`; }
     else if (sub === 'cqi') { const C = U.cqi; const ct = (C && C.content) || {};
@@ -299,10 +302,10 @@
   function appsView(U) {
     const A = (U.apps || {}).items || []; const P = U.P; const op = isOp() && P.status !== 'closed';
     return `<div class="lw-bar"><select data-chg="lmsq-af" aria-label="상태"><option value="">모든 상태</option>${Object.entries(APS).map(([k, v]) => `<option value="${k}" ${U.af === k ? 'selected' : ''}>${v[0]}</option>`).join('')}</select><select data-chg="lmsq-au" aria-label="학과"><option value="">모든 학과</option>${Object.entries(LW4.UNITS).map(([k, v]) => `<option value="${k}" ${U.au === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
-      <input type="search" placeholder="학번" value="${esc(U.aq || '')}" data-chg="lmsq-aq" aria-label="학번 검색">${op ? `<button class="btn sm" data-act="lmsq-addone">신청자 추가</button><button class="btn sm" data-act="lmsq-bulkadd">학번 일괄 등록</button>` : ''}${isOp() ? `<button class="btn sm" data-act="lmsq-appcsv">명단 다운로드</button><button class="btn sm" data-act="lmsq-sms">문자 발송</button>` : ''}</div>
-      ${op ? `<div class="lw-bar"><small class="lw-muted">선택한 신청자를</small>${['approved', 'rejected', 'waiting', 'cancelled'].map(s => `<button class="btn sm" data-act="lmsq-ast" data-s="${s}">${APS[s][0]}</button>`).join('')}</div>` : ''}` +
-      table(['', '학번', '학과 · 학년', '상태', '팀', '주제', '신청일시', ''], A.map(a => [op ? `<input type="checkbox" class="lmsqAs" value="${esc(a.member_no)}" aria-label="선택">` : '', esc(a.member_no), `${esc(LW4.UNITS[a.unit_code] || a.unit_code || '외부')} ${a.grade_year ? a.grade_year + '학년' : ''}`,
-        LW4.st(APS[a.status][0] + (a.wait_no ? ' ' + a.wait_no + '번' : ''), APS[a.status][1]), a.team_name ? `${esc(a.team_name)}(${a.team_role === 'leader' ? '팀장' : a.team_role === 'tutor' ? '튜터' : '팀원'})` : '-', String(a.sessions.length), LW4.fmt(a.applied_at),
+      <input type="search" placeholder="학번" value="${esc(U.aq || '')}" data-chg="lmsq-aq" aria-label="학번 검색">${op ? LW4.more(['approved', 'rejected', 'waiting', 'cancelled'].map(s => LW4.mi('lmsq-ast', `선택한 신청자 ${APS[s][0]}`, { s })).join(''), '선택한 신청자 처리', 'lw-bulk') : ''}
+      ${isOp() ? LW4.more((op ? LW4.mi('lmsq-addone', '신청자 추가') + LW4.mi('lmsq-bulkadd', '학번 일괄 등록') : '') + LW4.mi('lmsq-appcsv', '명단 내려받기') + LW4.mi('lmsq-sms', '문자 발송')) : ''}</div>` +
+      table(['', '학번', '상태', '신청일시', ''], A.map(a => [op ? `<input type="checkbox" class="lmsqAs" value="${esc(a.member_no)}" aria-label="선택">` : '', `<b>${esc(a.member_no)}</b><small class="lw-sub">${esc(LW4.UNITS[a.unit_code] || a.unit_code || '외부')} ${a.grade_year ? a.grade_year + '학년' : ''} · 주제 ${a.sessions.length}개</small>`,
+        LW4.st(APS[a.status][0] + (a.wait_no ? ' ' + a.wait_no + '번' : ''), APS[a.status][1]) + (a.team_name ? `<small class="lw-sub">${esc(a.team_name)}(${a.team_role === 'leader' ? '팀장' : a.team_role === 'tutor' ? '튜터' : '팀원'})</small>` : ''), LW4.fmt(a.applied_at),
         isOp() ? `<button class="btn sm" data-act="lmsq-appview" data-no="${esc(a.member_no)}">신청서</button>` : '']), '신청자가 없습니다.');
   }
   function attView(U) {
@@ -404,7 +407,8 @@
     else if (f.type === 'file') { if (els[0].files && els[0].files[0]) o[f.id] = (await LW4.upload(els[0].files[0])).file_id; else if (els[0].dataset.cur) o[f.id] = els[0].dataset.cur; } else if (els[0].value) o[f.id] = els[0].value; } return o; }
 
   ACT['lmsq-sub'] = el => { const U = QS(); U.sub = el.dataset.v; loadP(); };
-  ACT['lmsq-fs'] = el => { QS().fs = el.dataset.v; loadList(); };
+  ACT['lmsq-fs'] = el => { QS().fs = el.dataset.v; UI.lmsqT = 'list'; loadList(); };
+  ACT['lmsq-fs2'] = el => { QS().fs = el.value; loadList(); };
   ACT['lmsq-q'] = el => { QS().q = el.value; loadList(); };
   ACT['lmsq-fg'] = el => { QS().fg = el.value; loadList(); };
   ACT['lmsq-sel'] = el => { const U = QS(); U.sel = el.checked ? [...new Set([...U.sel, el.dataset.id])] : U.sel.filter(x => x !== el.dataset.id); render(); };
