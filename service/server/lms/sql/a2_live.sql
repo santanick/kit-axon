@@ -190,6 +190,7 @@ declare p lms_live_peer;
 begin
   select * into p from lms_live_peer where peer_id = lms_x_uuid(a->>'peer_id', '연결') and room_id = lms_x_uuid(a->>'room_id', '실시간 수업');
   if p.peer_id is null or p.owner <> lms_lv_owner(ctx) then perform lms_x_err(404, 'peer', '연결 정보를 찾을 수 없습니다. 다시 입장하세요.'); end if;
+  if exists (select 1 from lms_live_room r where r.room_id = p.room_id and r.status = 'ended') then perform lms_x_err(409, 'ended', '수업이 끝났습니다. 참여해 주셔서 감사합니다.'); end if;
   if p.state = 'replaced' then perform lms_x_err(409, 'replaced', '다른 기기 · 창에서 같은 학번으로 입장해 이 화면의 연결을 끊었습니다(중복 접속 차단).'); end if;
   if p.state = 'left' then perform lms_x_err(409, 'left', '연결이 끊겼습니다. 다시 입장하세요.'); end if;
   return p;

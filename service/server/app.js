@@ -69,13 +69,12 @@ const SEC_HEADERS = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'x-frame-options': 'DENY',
-  'permissions-policy': 'camera=(), geolocation=(), microphone=(self), payment=(), usb=(), serial=(), bluetooth=(), hid=(), display-capture=(), interest-cohort=()',
+  'permissions-policy': 'camera=(self), geolocation=(self), microphone=(self), payment=(), usb=(), serial=(), bluetooth=(), hid=(), display-capture=(self), interest-cohort=()',
   'cross-origin-opener-policy': 'same-origin',
   'cross-origin-resource-policy': 'same-origin',
   'x-permitted-cross-domain-policies': 'none',
   'origin-agent-cluster': '?1'
 };
-const LIVE_PP = 'camera=(self), geolocation=(), microphone=(self), payment=(), usb=(), serial=(), bluetooth=(), hid=(), display-capture=(self), interest-cohort=()';
 const CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'";
 
 const LCOOKIE = '__Host-dd_lsid';
@@ -474,7 +473,6 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       const h = { ...SEC_HEADERS, 'content-type': MIME[ext] || 'application/octet-stream', 'content-length': st.size, 'cache-control': isHtml ? 'no-cache' : 'public, max-age=300' };
       if (isHtml) h['content-security-policy'] = path.basename(f) === 'learner.html' ? LCSP : CSP;
       if (path.basename(f) === 'learner.html') h['x-frame-options'] = 'SAMEORIGIN';
-      if (path.basename(f) === 'liveclass.html') h['permissions-policy'] = LIVE_PP; // x2 실시간 수업: 카메라 · 마이크 · 화면 공유는 이 화면에서만
       if (secure) h['strict-transport-security'] = 'max-age=31536000; includeSubDomains';
       res.writeHead(200, h); if (req.method === 'HEAD') return res.end();
       fs.createReadStream(f).pipe(res);

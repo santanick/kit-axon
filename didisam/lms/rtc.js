@@ -41,7 +41,7 @@
     const t = UI.lvT || 'rooms'; const U = window.LMP && LMP.ux;
     const V = [['rooms', '수업'], ['att', '출석'], ['rec', '녹화'], ['cap', '실시간 자막']], M = [['stats', '자막 이용 현황'], ['set', '연결 설정']];
     const R = load('rooms', '/api/lms/live/rooms'); const rooms = R && R.rooms || [];
-    const liveR = rooms.filter(r => r.status === 'live'), next = rooms.filter(r => r.status === 'ready');
+    const liveR = rooms.filter(r => r.status === 'live'), next = rooms.filter(r => r.status === 'ready').sort((x, y) => (x.mode === 'link') - (y.mode === 'link'));
     const todo = `<div class="card"><div class="ch"><b>지금 할 일</b></div><div class="lvs-now">${liveR.length ? `<span>진행 중 <b>${liveR.length}</b>개 수업 · 접속 ${liveR.reduce((a, r) => a + r.online, 0)}명</span><button class="btn pri" data-act="lvs-open" data-id="${esc(liveR[0].room_id)}">수업 화면 열기</button>`
       : next.length ? `<span>시작 전 수업 <b>${next.length}</b>개 — 「${esc(next[0].title)}」</span><button class="btn pri" data-act="lvs-open" data-id="${esc(next[0].room_id)}">수업 화면 열기</button>` : `<span>예정된 실시간 수업이 없습니다.</span><button class="btn pri" data-act="lvs-new">새 실시간 수업</button>`}</div>
       <p class="lvs-limit">${esc(LV.LIMIT)}</p></div>`;

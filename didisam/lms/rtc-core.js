@@ -63,10 +63,10 @@
   const idbGet = async k => { const x = await idb(); return new Promise((ok, no) => { const q = x.transaction('parts').objectStore('parts').get(k); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); }); };
 
   async function DEMO(method, path, body) {
-    const u = new URL(path, 'http://x'); const q = u.searchParams; const k = method + ' ' + u.pathname.replace('/api/lms/live/', ''); const b = body || {}; const d = db(); const me = window.LV.demoMe || { kind: 'staff' };
+    chan(); const u = new URL(path, 'http://x'); const q = u.searchParams; const k = method + ' ' + u.pathname.replace('/api/lms/live/', ''); const b = body || {}; const d = db(); const me = window.LV.demoMe || { kind: 'staff' };
     const R = id => { const r = d.rooms.find(x => x.room_id === id || x.code === id); if (!r) err(404, '실시간 수업을 찾을 수 없습니다.', 'room'); return r; };
     const C = id => { const c = d.caps.find(x => x.room_id === id); if (!c) err(404, '자막방을 찾을 수 없습니다.', 'room'); return c; };
-    const P = () => { const p = d.peers.find(x => x.peer_id === b.peer_id); if (!p) err(404, '연결 정보를 찾을 수 없습니다. 다시 입장하세요.', 'peer'); if (p.state === 'replaced') err(409, '다른 기기 · 창에서 같은 학번으로 입장해 이 화면의 연결을 끊었습니다(중복 접속 차단).', 'replaced'); if (p.state !== 'on') err(409, '연결이 끊겼습니다. 다시 입장하세요.', 'left'); return p; };
+    const P = () => { const p = d.peers.find(x => x.peer_id === b.peer_id); if (!p) err(404, '연결 정보를 찾을 수 없습니다. 다시 입장하세요.', 'peer'); if ((d.rooms.find(x => x.room_id === p.room_id) || {}).status === 'ended') err(409, '수업이 끝났습니다. 참여해 주셔서 감사합니다.', 'ended'); if (p.state === 'replaced') err(409, '다른 기기 · 창에서 같은 학번으로 입장해 이 화면의 연결을 끊었습니다(중복 접속 차단).', 'replaced'); if (p.state !== 'on') err(409, '연결이 끊겼습니다. 다시 입장하세요.', 'left'); return p; };
     const evt = (rid, e) => { const L = d.evts[rid] = d.evts[rid] || []; e.id = (d.seq = (d.seq || 10) + 1); e.at = now(); L.push(e); return e; };
     const fin = v => { save(d); return JSON.parse(JSON.stringify(v)); };
     d.peers.forEach(p => { if (p.state === 'on' && Date.now() - p.seen > 30e3) p.state = 'left'; });

@@ -29,7 +29,7 @@
     const host = !!H.room; const demo = LV.mode() === 'demo';
     root.innerHTML = `<div class="lv-card lv-center lv-lobby"><h1>${host ? '실시간 수업 진행' : '실시간 수업 입장'}</h1>
       <p class="lv-mini">카메라 · 마이크는 이 브라우저가 권한을 물어봅니다. 허용하지 않아도 보기 · 채팅 · 질문으로 참여할 수 있습니다.</p>
-      ${!host && demo ? `<label class="lv-f">학번(데모)<select id="lvSid">${['20261001', '20261002', '20261003', '20261004', '20261005', '20261006'].map(x => `<option>${x}</option>`).join('')}</select></label>` : ''}
+      ${!host && demo ? `<label class="lv-f">학번(데모)<select id="lvSid">${['20261001', '20261002', '20261003', '20261004', '20261005', '20261006'].map(x => `<option ${x === st.sid ? 'selected' : ''}>${x}</option>`).join('')}</select></label>` : ''}
       <video id="lvPrev" class="lv-prev" playsinline muted autoplay hidden></video>
       <div class="lv-row"><label class="lv-ck"><input type="checkbox" id="lvUseCam" ${host ? 'checked' : ''}> 카메라 켜기</label><label class="lv-ck"><input type="checkbox" id="lvUseMic" ${host ? 'checked' : ''}> 마이크 켜기</label></div>
       ${err && err.code === 'rec_consent' ? `<div class="lv-warn"><b>녹화 안내</b><p>이 수업은 교수자 화면 · 음성이 녹화되어 강의자료로 올라갈 수 있습니다. 학생의 카메라 영상은 녹화하지 않습니다. 녹화본은 기관이 정한 보존 기간이 지나면 자동으로 파기되고, 누가 열람했는지 기록됩니다.</p><label class="lv-ck"><input type="checkbox" id="lvConsent"> 위 내용을 확인했고 동의합니다.</label></div>` : ''}
@@ -47,7 +47,7 @@
   }
   async function enter(host) {
     const btn = $('#lvGo'); btn.disabled = true;
-    if (LV.mode() === 'demo') LV.demoMe = host ? { kind: 'staff' } : { kind: 'learner', sid: ($('#lvSid') || {}).value || '20261001' };
+    if (LV.mode() === 'demo') { st.sid = ($('#lvSid') || {}).value || '20261001'; LV.demoMe = host ? { kind: 'staff' } : { kind: 'learner', sid: st.sid }; }
     const c = $('#lvConsent');
     let j; try { j = await api('POST', '/api/lms/live/join', { [host ? 'room_id' : 'code']: host ? H.room : H.join, consent_rec: !!(c && c.checked), device: /Mobi/.test(navigator.userAgent) ? 'mobile' : 'pc' }); }
     catch (e) { return lobby(e); }
@@ -101,7 +101,7 @@
   const TOOL = {
     mic: () => { st.mic.enabled = !st.mic.enabled; tools(); }, cam: () => { st.cam.enabled = !st.cam.enabled; tools(); },
     start: async () => { try { const j = await api('POST', '/api/lms/live/room-state', { room_id: st.room.room_id, status: 'live' }); st.room = { ...st.room, ...j.room }; toast('수업을 시작했습니다. 지금부터 접속 시간으로 출석을 셉니다.', 'ok'); tools(); status(); } catch (e) { toast(e.message, 'warn'); } },
-    end: async () => { if (!confirm('수업을 마칠까요? 접속 시간으로 출석이 기록되고 모든 연결이 끊깁니다.')) return; try { if (st.rec) await recStop(false); if (st.stt) await capStop(); const j = await api('POST', '/api/lms/live/room-state', { room_id: st.room.room_id, status: 'ended' }); st.ended = true; stop(); const a = j.attendance;
+    end: async () => { if (!confirm('수업을 마칠까요? 접속 시간으로 출석이 기록되고 모든 연결이 끊깁니다.')) return; try { if (st.rec) await recStop(false); if (st.stt || st.capRoom) await capStop(); const j = await api('POST', '/api/lms/live/room-state', { room_id: st.room.room_id, status: 'ended' }); st.ended = true; stop(); const a = j.attendance;
       root.innerHTML = `<div class="lv-card lv-center"><h1>수업을 마쳤습니다</h1><p>출석 ${a.present} · 지각 ${a.late} · 결석 ${a.absent}${a.session ? ` — 출결에 ${a.written}명 기록${a.kept ? `(다른 방식으로 이미 정해진 ${a.kept}명은 그대로)` : ''}` : ' — 차시가 연결되지 않아 출결에는 기록하지 않았습니다'}</p><p class="lv-mini">스튜디오 「실시간 수업 › 출석」에서 자세히 보고 내려받을 수 있습니다.</p></div>`; } catch (e) { toast(e.message, 'warn'); } },
     share: async () => { if (st.scr) { st.scr.stop(); st.scr = null; st.setSrc(); tools(); return; }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) return toast('이 기기 · 브라우저는 화면 공유를 지원하지 않습니다(휴대폰은 카메라로 진행하세요).', 'warn');
@@ -146,7 +146,7 @@
   }
 
   /* ═════════ 신호 · 연결 ═════════ */
-  function loop() { clearTimeout(st.timer); const tick = async () => { if (st.ended) return; try { await poll(); } catch (e) { if (e.code === 'replaced' || e.code === 'left' || e.code === 'peer') { st.ended = true; stop(); root.innerHTML = `<div class="lv-card lv-center"><h1>연결이 끊겼습니다</h1><p>${E(e.message)}</p><button class="lv-btn pri" data-reload>다시 입장</button></div>`; return; } }
+  function loop() { clearTimeout(st.timer); const tick = async () => { if (st.ended) return; try { await poll(); } catch (e) { if (e.code === 'ended') { st.ended = true; stop(); if (st.role !== 'host') root.innerHTML = `<div class="lv-card lv-center"><h1>수업이 끝났습니다</h1><p>참여해 주셔서 감사합니다. 출석은 접속 시간으로 자동 기록됩니다.</p></div>`; return; } if (e.code === 'replaced' || e.code === 'left' || e.code === 'peer') { st.ended = true; stop(); root.innerHTML = `<div class="lv-card lv-center"><h1>연결이 끊겼습니다</h1><p>${E(e.message)}</p><button class="lv-btn pri" data-reload>다시 입장</button></div>`; return; } }
     st.timer = setTimeout(tick, [...st.pcs.values()].some(x => x.pc.connectionState !== 'connected') ? 800 : 1500); }; tick(); }
   async function poll() {
     const j = await api('POST', '/api/lms/live/poll', { room_id: st.room.room_id, peer_id: st.peer.peer_id, since: st.since, esince: st.esince });
