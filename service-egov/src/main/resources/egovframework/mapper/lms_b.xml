@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 학사 LMS 묶음 B — 업무 규칙 · 응답 JSON은 SQL 함수 lms_b_api(Node와 같은 함수) -->
+<mapper namespace="egovframework.didisam.lms.b.service.impl.LmsBMapper">
+  <select id="api" resultType="string" flushCache="true" useCache="false">
+    select lms_b_api(#{op}, cast(#{args} as jsonb), cast(#{actor} as jsonb))::text
+  </select>
+  <select id="apiM" resultType="string" flushCache="true" useCache="false">
+    select lms_bm_api(#{op}, cast(#{args} as jsonb), cast(#{actor} as jsonb))::text
+  </select>
+  <select id="selectLearner" resultType="map">
+    select s.tenant_id as tid, s.sid, t.type from learner_sessions s join tenants t on t.id = s.tenant_id where s.id = #{hash} and s.expires_at &gt; now()
+  </select>
+</mapper>

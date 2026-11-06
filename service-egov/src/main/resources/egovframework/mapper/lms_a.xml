@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v30 묶음 A 학사 LMS(강좌 · 분반) — Node service/server/lms/mod-a.js 와 같은 SQL. 응답 JSON은 SQL이 만든다(두 서버 같은 바이트).
+     plain 표시가 없는 문장은 모두 TenantTx.inTenant 안(didisam_tenant 역할 + app.tenant RLS)에서만 부른다. -->
+<mapper namespace="egovframework.didisam.lms.a.service.impl.LmsAMapper">
+  <sql id="scopeC">(cast(#{units,jdbcType=VARCHAR} as text) is null or c.unit_code = any(string_to_array(#{units,jdbcType=VARCHAR}, ',')) or exists (select 1 from lms_org_unit u where u.unit_code = c.unit_code and u.parent_code = any(string_to_array(#{units,jdbcType=VARCHAR}, ','))))</sql>
+  <sql id="staffS">(cast(#{mno,jdbcType=VARCHAR} as text) is null or exists (select 1 from lms_section_staff st join lms_person p on p.tenant_id = st.tenant_id and p.person_id = st.person_id where st.section_id = s.section_id and p.member_no = #{mno,jdbcType=VARCHAR} and st.status = 'active'))</sql>
+
+  <!-- ── 권한 맥락 · 공통 조회 ── -->
+  <select id="selectLink" resultType="java.util.LinkedHashMap">select array_to_string(units, ',') units, cardinality(units) n, member_no from lms_user_link where tenant_id = #{tid} and user_id = cast(#{uid} as uuid)</select>
+  <select id="selectUnit" resultType="java.util.LinkedHashMap">select unit_code, parent_code, kind from lms_org_unit where unit_code = #{code}</select>
+  <select id="selectSection" resultType="java.util.LinkedHashMap">select s.section_id::text section_id, s.term_id, s.course_code, s.section_no, s.title, s.rep_section_id::text rep_section_id, s.hidden, s.class_id, s.status, c.unit_code, u.parent_code from lms_section s join lms_course c on c.tenant_id = s.tenant_id and c.course_code = s.course_code left join lms_org_unit u on u.tenant_id = c.tenant_id and u.unit_code = c.unit_code where s.section_id = cast(#{id} as uuid)</select>
+  <select id="selectCanStaff" resultType="int"><![CDATA[select count(*) from lms_section_staff st join lms_person p on p.tenant_id = st.tenant_id and p.person_id = st.person_id where st.section_id = cast(#{sid} as uuid) and p.member_no = #{mno} and st.status = 'active' and st.role in ('professor','co_professor')]]></select>
+  <select id="selectPerson" resultType="java.util.LinkedHashMap">select person_id::text person_id, member_no, kind, unit_code from lms_person where member_no = #{mno}</select>
+
+  <!-- ── 개요 ── -->
+  <select id="selectOverview" resultType="string"><![CDATA[select json_build_object(
+  'terms', coalesce((select json_agg(json_build_object('term_id', t.term_id, 'name', t.name, 'starts_on', t.starts_on::text, 'ends_on', t.ends_on::text, 'is_operating', t.is_operating) order by t.term_id desc) from lms_term t), '[]'::json),
+  'units', coalesce((select json_agg(json_build_object('unit_code', u.unit_code, 'name', u.name, 'kind', u.kind, 'parent_code', u.parent_code) order by u.kind, u.unit_code) from lms_org_unit u), '[]'::json),
+  'courses', coalesce((select json_agg(json_build_object('course_code', c.course_code, 'name', c.name, 'credits', c.credits::float8, 'unit_code', c.unit_code, 'category', c.category) order by c.course_code) from lms_course c where ]]><include refid="scopeC"/><![CDATA[ and (cast(#{mno,jdbcType=VARCHAR} as text) is null or exists (select 1 from lms_section s where s.course_code = c.course_code and ]]><include refid="staffS"/><![CDATA[))), '[]'::json),
+  'sections', coalesce((select json_agg(json_build_object('section_id', s.section_id, 'term_id', s.term_id, 'course_code', s.course_code, 'course_name', c.name, 'unit_code', c.unit_code, 'section_no', s.section_no, 'title', s.title, 'mode', s.mode, 'capacity', s.capacity, 'schedule', s.schedule, 'rep_section_id', s.rep_section_id, 'hidden', s.hidden, 'class_id', s.class_id, 'status', s.status, 'source', s.source,
+      'staff', coalesce((select json_agg(json_build_object('member_no', p.member_no, 'role', st.role, 'status', st.status, 'source', st.source) order by st.role, p.member_no) from lms_section_staff st join lms_person p on p.tenant_id = st.tenant_id and p.person_id = st.person_id where st.section_id = s.section_id), '[]'::json),
+      'enrolled', (select count(*) from lms_enrollment e where e.section_id = s.section_id and e.status = 'enrolled' and e.kind = 'regular')::int,
+      'audit', (select count(*) from lms_enrollment e where e.section_id = s.section_id and e.status = 'enrolled' and e.kind = 'audit')::int,
+      'pending', ((select count(*) from lms_enrollment e where e.section_id = s.section_id and e.status = 'pending') + (select count(*) from lms_section_staff st where st.section_id = s.section_id and st.status = 'pending'))::int
+    ) order by s.term_id desc, s.course_code, s.section_no) from lms_section s join lms_course c on c.tenant_id = s.tenant_id and c.course_code = s.course_code where ]]><include refid="scopeC"/> and <include refid="staffS"/><![CDATA[), '[]'::json),
+  'requests', coalesce((select json_agg(json_build_object('section_id', r.section_id, 'member_no', r.member_no, 'unit_code', r.unit_code, 'kind', r.kind, 'at', lms_ts(r.at)) order by r.at, r.member_no) from (
+      select st.section_id, p.member_no, p.unit_code, 'ta'::text kind, st.requested_at at from lms_section_staff st join lms_person p on p.tenant_id = st.tenant_id and p.person_id = st.person_id where st.status = 'pending'
+      union all select e.section_id, p.member_no, p.unit_code, 'audit'::text, e.enrolled_at from lms_enrollment e join lms_person p on p.tenant_id = e.tenant_id and p.person_id = e.person_id where e.status = 'pending'
+    ) r join lms_section s on s.section_id = r.section_id join lms_course c on c.tenant_id = s.tenant_id and c.course_code = s.course_code where ]]><include refid="scopeC"/> and <include refid="staffS"/><![CDATA[), '[]'::json),
+  'runs', coalesce((select json_agg(json_build_object('run_id', x.run_id, 'term_id', x.term_id, 'scope', x.scope, 'trigger', x.trigger, 'at', lms_ts(x.started_at), 'counts', x.counts, 'errors_n', jsonb_array_length(x.errors)) order by x.run_id desc) from (select * from lms_sis_sync_run where cast(#{mno,jdbcType=VARCHAR} as text) is null order by run_id desc limit 20) x), '[]'::json),
+  'persons', (select json_build_object('total', count(*), 'manual', count(*) filter (where source = 'manual')) from lms_person)
+)::text j]]></select>
+  <select id="selectLinks" resultType="java.util.LinkedHashMap">select user_id::text uid, array_to_string(units, ',') units, cardinality(units) n, member_no from lms_user_link order by updated_at</select>
+  <!-- plain(역할 없이): 운영자 계정 이메일 -->
+  <select id="selectUsersIn" resultType="java.util.LinkedHashMap">select id::text id, email, role from users where tenant_id = #{tid} and id = any(string_to_array(#{ids}, ',')::uuid[])</select>
+
+  <!-- ── 학기 · 조직 · 교과목 ── -->
+  <update id="updateTermsOff"><![CDATA[update lms_term set is_operating = false where term_id <> #{id}]]></update>
+  <insert id="upsertTerm">insert into lms_term (tenant_id, term_id, name, starts_on, ends_on, is_operating, is_syncing) values (#{tid}, #{id}, #{name}, cast(#{s} as date), cast(#{e} as date), #{op}, #{op}) on conflict (tenant_id, term_id) do update set name = excluded.name, starts_on = excluded.starts_on, ends_on = excluded.ends_on, is_operating = excluded.is_operating, is_syncing = excluded.is_syncing</insert>
+  <select id="existsTerm" resultType="int">select count(*) from lms_term where term_id = #{id}</select>
+  <select id="existsSectionInTerm" resultType="int">select count(*) from (select 1 from lms_section where term_id = #{id} limit 1) x</select>
+  <delete id="deleteTerm">delete from lms_term where term_id = #{id}</delete>
+  <insert id="upsertUnit">insert into lms_org_unit (tenant_id, unit_code, name, kind, parent_code) values (#{tid}, #{code}, #{name}, #{kind}, #{par,jdbcType=VARCHAR}) on conflict (tenant_id, unit_code) do update set name = excluded.name, kind = excluded.kind, parent_code = excluded.parent_code</insert>
+  <select id="existsUnitRefs" resultType="int">select count(*) from (select 1 from lms_org_unit where parent_code = #{code} union all select 1 from lms_course where unit_code = #{code} union all select 1 from lms_person where unit_code = #{code} limit 1) x</select>
+  <delete id="deleteUnit">delete from lms_org_unit where unit_code = #{code}</delete>
+  <select id="selectCoursePrev" resultType="java.util.LinkedHashMap">select c.name, c.unit_code, u.parent_code from lms_course c left join lms_org_unit u on u.tenant_id = c.tenant_id and u.unit_code = c.unit_code where c.course_code = #{code}</select>
+  <insert id="upsertCourse">insert into lms_course (tenant_id, course_code, name, credits, unit_code, category) values (#{tid}, #{code}, #{name}, #{cr,jdbcType=DOUBLE}, #{unit,jdbcType=VARCHAR}, #{cat,jdbcType=VARCHAR}) on conflict (tenant_id, course_code) do update set name = excluded.name, credits = excluded.credits, unit_code = excluded.unit_code, category = excluded.category</insert>
+  <select id="existsSectionOfCourse" resultType="int">select count(*) from (select 1 from lms_section where course_code = #{code} limit 1) x</select>
+  <delete id="deleteCourse">delete from lms_course where course_code = #{code}</delete>
+
+  <!-- ── 분반 ── -->
+  <update id="updateSection">update lms_section set title = #{title}, mode = #{mode}, capacity = #{cap,jdbcType=INTEGER}, schedule = case when #{hasSch} then cast(#{sch} as jsonb) else schedule end, class_id = #{cls,jdbcType=VARCHAR}, status = #{status} where section_id = cast(#{id} as uuid)</update>
+  <select id="existsSectionDup" resultType="int">select count(*) from lms_section where term_id = #{term} and course_code = #{code} and section_no = #{no}</select>
+  <select id="insertSection" resultType="string" flushCache="true" useCache="false">insert into lms_section (tenant_id, term_id, course_code, section_no, title, mode, capacity, schedule, class_id, status, source) values (#{tid}, #{term}, #{code}, #{no}, #{title}, #{mode}, #{cap,jdbcType=INTEGER}, cast(#{sch} as jsonb), #{cls,jdbcType=VARCHAR}, #{status}, 'manual') returning section_id::text</select>
+  <select id="existsRepOf" resultType="int">select count(*) from (select 1 from lms_section where rep_section_id = cast(#{id} as uuid) limit 1) x</select>
+  <select id="existsActiveEnr" resultType="int"><![CDATA[select count(*) from (select 1 from lms_enrollment where section_id = cast(#{id} as uuid) and status <> 'dropped' limit 1) x]]></select>
+  <delete id="deleteEnrOfSection">delete from lms_enrollment where section_id = cast(#{id} as uuid)</delete>
+  <delete id="deleteSection">delete from lms_section where section_id = cast(#{id} as uuid)</delete>
+
+  <!-- ── 담당 · 수강 ── -->
+  <select id="existsStaff" resultType="int">select count(*) from lms_section_staff where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid) and role = #{role}</select>
+  <insert id="insertStaff">insert into lms_section_staff (tenant_id, section_id, person_id, role, source, status, approved_by, approved_at) values (#{tid}, cast(#{sid} as uuid), cast(#{pid} as uuid), #{role}, 'manual', 'active', cast(#{uid} as uuid), now())</insert>
+  <delete id="deleteStaff">delete from lms_section_staff where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid) and role = #{role}</delete>
+  <select id="selectEnr" resultType="string"><![CDATA[select coalesce(json_agg(json_build_object('member_no', p.member_no, 'person_kind', p.kind, 'unit_code', p.unit_code, 'status', p.status, 'kind', e.kind, 'enr_status', e.status, 'source', e.source, 'section_no', s.section_no, 'at', lms_ts(e.enrolled_at)) order by p.member_no, s.section_no), '[]'::json)::text j
+  from lms_enrollment e join lms_person p on p.tenant_id = e.tenant_id and p.person_id = e.person_id join lms_section s on s.tenant_id = e.tenant_id and s.section_id = e.section_id
+  where (e.section_id = cast(#{sid} as uuid) or s.rep_section_id = cast(#{sid} as uuid)) and e.status <> 'dropped' and (cast(#{grading} as boolean) is false or (e.kind = 'regular' and e.status = 'enrolled'))]]></select>
+  <select id="selectPersonsIn" resultType="java.util.LinkedHashMap">select member_no, person_id::text person_id from lms_person where member_no = any(string_to_array(#{csv}, ','))</select>
+  <select id="selectEnrStatus" resultType="java.util.LinkedHashMap">select person_id::text person_id, status from lms_enrollment where section_id = cast(#{sid} as uuid)</select>
+  <update id="updateEnrReactivate">update lms_enrollment set status = 'enrolled', kind = #{kind}, source = 'manual', dropped_at = null, enrolled_at = now(), decided_at = now() where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid)</update>
+  <insert id="insertEnr">insert into lms_enrollment (tenant_id, section_id, person_id, kind, status, source, decided_at) values (#{tid}, cast(#{sid} as uuid), cast(#{pid} as uuid), #{kind}, 'enrolled', 'manual', now())</insert>
+  <update id="updateDrop"><![CDATA[update lms_enrollment set status = 'dropped', dropped_at = now() where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid) and status <> 'dropped']]></update>
+
+  <!-- ── 구성원 ── -->
+  <select id="selectPersons" resultType="string"><![CDATA[select coalesce(json_agg(json_build_object('member_no', x.member_no, 'kind', x.kind, 'unit_code', x.unit_code, 'status', x.status, 'grade_year', x.grade_year, 'source', x.source) order by x.member_no), '[]'::json)::text j from (
+  select p.* from lms_person p left join lms_org_unit u on u.tenant_id = p.tenant_id and u.unit_code = p.unit_code
+  where (cast(#{units,jdbcType=VARCHAR} as text) is null or p.unit_code = any(string_to_array(#{units,jdbcType=VARCHAR}, ',')) or u.parent_code = any(string_to_array(#{units,jdbcType=VARCHAR}, ','))) and p.member_no like cast(#{q} as text) || '%' and (cast(#{kind} as text) = '' or p.kind = #{kind}) order by p.member_no limit 200) x]]></select>
+  <select id="existsPerson" resultType="int">select count(*) from lms_person where member_no = #{mno}</select>
+  <insert id="insertPerson">insert into lms_person (tenant_id, member_no, kind, unit_code, status, grade_year, source) values (#{tid}, #{mno}, #{kind}, #{unit,jdbcType=VARCHAR}, #{status}, #{gy,jdbcType=SMALLINT}, 'manual') on conflict (tenant_id, member_no) do nothing</insert>
+
+  <!-- ── 학사 CSV ── -->
+  <select id="selectUnitsAll" resultType="java.util.LinkedHashMap">select unit_code, parent_code from lms_org_unit</select>
+  <select id="selectMemberNos" resultType="string">select member_no from lms_person</select>
+  <select id="selectPersonsAll" resultType="java.util.LinkedHashMap">select member_no, person_id::text person_id from lms_person</select>
+  <select id="selectCoursesAll" resultType="java.util.LinkedHashMap">select course_code, unit_code from lms_course</select>
+  <select id="selectSecsTerm" resultType="java.util.LinkedHashMap">select s.course_code, s.section_no, s.section_id::text section_id, c.unit_code from lms_section s join lms_course c on c.tenant_id = s.tenant_id and c.course_code = s.course_code where s.term_id = #{term}</select>
+  <select id="selectEnrKeysTerm" resultType="string"><![CDATA[select e.section_id::text || '|' || e.person_id::text k from lms_enrollment e join lms_section s on s.tenant_id = e.tenant_id and s.section_id = e.section_id where s.term_id = #{term} and e.status <> 'dropped']]></select>
+  <insert id="upsertCourseImp">insert into lms_course (tenant_id, course_code, name, credits, unit_code, category, synced_at) values (#{tid}, #{code}, #{name}, #{cr,jdbcType=DOUBLE}, #{unit,jdbcType=VARCHAR}, #{cat,jdbcType=VARCHAR}, now()) on conflict (tenant_id, course_code) do update set name = excluded.name, credits = coalesce(excluded.credits, lms_course.credits), unit_code = coalesce(excluded.unit_code, lms_course.unit_code), category = coalesce(excluded.category, lms_course.category), synced_at = now()</insert>
+  <insert id="insertSectionImp">insert into lms_section (tenant_id, term_id, course_code, section_no, title, mode, capacity, source, synced_at) values (#{tid}, #{term}, #{code}, #{no}, #{title}, #{mode}, #{cap,jdbcType=INTEGER}, 'sis', now()) on conflict (tenant_id, term_id, course_code, section_no) do nothing</insert>
+  <insert id="upsertEnrImp">insert into lms_enrollment (tenant_id, section_id, person_id, kind, status, source, synced_at) values (#{tid}, cast(#{sid} as uuid), cast(#{pid} as uuid), #{kind}, 'enrolled', 'sis', now()) on conflict (tenant_id, section_id, person_id) do update set status = 'enrolled', kind = excluded.kind, dropped_at = null, synced_at = now()</insert>
+  <select id="insertRun" resultType="int" flushCache="true" useCache="false">insert into lms_sis_sync_run (tenant_id, term_id, scope, trigger, finished_at, counts, errors) values (#{tid}, #{term,jdbcType=VARCHAR}, #{scope}, 'manual', now(), cast(#{counts} as jsonb), cast(#{errors} as jsonb)) returning run_id::int</select>
+
+  <!-- ── 분반 동기화 · 합반 ── -->
+  <select id="selectSiblings" resultType="java.util.LinkedHashMap"><![CDATA[select section_id::text section_id, section_no, class_id from lms_section where term_id = #{term} and course_code = #{code} and section_id <> cast(#{sid} as uuid) and rep_section_id is null order by section_no]]></select>
+  <select id="selectDocForUpdate" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select doc::text doc, rev from tenant_state where tenant_id = #{tid} for update</select>
+  <select id="selectHist" resultType="java.util.LinkedHashMap">select distinct on (dst_section, object_type, object_id) dst_section::text d, object_type t, object_id o, action a from lms_section_sync where dst_section = any(string_to_array(#{csv}, ',')::uuid[]) order by dst_section, object_type, object_id, id desc</select>
+  <insert id="insertSync">insert into lms_section_sync (tenant_id, src_section, dst_section, object_type, object_id, action, by_person) values (#{tid}, cast(#{src} as uuid), cast(#{dst} as uuid), #{type}, #{oid}, #{action}, cast(#{uid} as uuid))</insert>
+  <select id="updateDoc" resultType="int" flushCache="true" useCache="false">update tenant_state set doc = cast(#{doc} as jsonb), rev = rev + 1, bytes = #{bytes}, updated_at = now() where tenant_id = #{tid} returning rev</select>
+  <select id="selectSyncHist" resultType="string"><![CDATA[select coalesce(json_agg(json_build_object('at', lms_ts(x.at), 'src_section', x.src_section, 'dst_section', x.dst_section, 'dst_no', x.section_no, 'object_type', x.object_type, 'object_id', x.object_id, 'action', x.action) order by x.id desc), '[]'::json)::text j
+  from (select y.*, s.section_no from lms_section_sync y left join lms_section s on s.tenant_id = y.tenant_id and s.section_id = y.dst_section where y.src_section = cast(#{sid} as uuid) or y.dst_section = cast(#{sid} as uuid) order by y.id desc limit 200) x]]></select>
+  <update id="updateMerge">update lms_section set rep_section_id = cast(#{rep} as uuid), hidden = true where section_id = cast(#{sid} as uuid)</update>
+  <update id="updateUnmerge">update lms_section set rep_section_id = null, hidden = false where section_id = cast(#{sid} as uuid)</update>
+
+  <!-- ── 조교 · 청강 신청 ── -->
+  <select id="existsTa" resultType="int">select count(*) from lms_section_staff where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid) and role = 'ta'</select>
+  <insert id="insertTaPending">insert into lms_section_staff (tenant_id, section_id, person_id, role, source, status, requested_at) values (#{tid}, cast(#{sid} as uuid), cast(#{pid} as uuid), 'ta', #{source}, 'pending', now())</insert>
+  <select id="selectEnrRow" resultType="string">select status from lms_enrollment where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid)</select>
+  <update id="updateEnrAuditPending">update lms_enrollment set kind = 'audit', status = 'pending', source = #{source}, enrolled_at = now(), dropped_at = null where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid)</update>
+  <insert id="insertEnrAuditPending">insert into lms_enrollment (tenant_id, section_id, person_id, kind, status, source) values (#{tid}, cast(#{sid} as uuid), cast(#{pid} as uuid), 'audit', 'pending', #{source})</insert>
+  <update id="approveTa">update lms_section_staff set status = 'active', approved_by = cast(#{uid} as uuid), approved_at = now() where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid) and role = 'ta' and status = 'pending'</update>
+  <delete id="deleteTaPending">delete from lms_section_staff where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid) and role = 'ta' and status = 'pending'</delete>
+  <update id="approveAudit">update lms_enrollment set status = 'enrolled', decided_at = now() where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid) and status = 'pending'</update>
+  <delete id="deleteAuditPending">delete from lms_enrollment where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid) and status = 'pending'</delete>
+
+  <!-- ── 단과대학 범위 · 교수 연결 ── -->
+  <select id="selectUserIdByEmail" resultType="string">select id::text from users where lower(email) = #{email} and tenant_id = #{tid}</select>
+  <select id="countUnitsIn" resultType="int">select count(*) from lms_org_unit where unit_code = any(string_to_array(#{csv}, ','))</select>
+  <delete id="deleteLink">delete from lms_user_link where user_id = cast(#{uid} as uuid)</delete>
+  <insert id="upsertLink">insert into lms_user_link (tenant_id, user_id, units, member_no, updated_at) values (#{tid}, cast(#{uid} as uuid), string_to_array(#{units}, ','), #{mno,jdbcType=VARCHAR}, now()) on conflict (tenant_id, user_id) do update set units = excluded.units, member_no = excluded.member_no, updated_at = now()</insert>
+
+  <!-- ── 학습자(내 분반) — 세션 · 기관 유형은 plain ── -->
+  <select id="selectLearnerSession" resultType="java.util.LinkedHashMap">select tenant_id, sid from learner_sessions where id = #{hash} and expires_at &gt; now()</select>
+  <select id="selectTenantType" resultType="string">select type from tenants where id = #{tid}</select>
+  <select id="selectAccountStudentNo" resultType="string">select student_no from learner_accounts where learner_id = cast(#{lid} as uuid)</select>
+  <select id="selectPub" resultType="string"><![CDATA[select json_build_object(
+  'sections', coalesce((select json_agg(z.o order by z.term_id desc, z.course_code, z.section_no) from (
+      select distinct on (v.section_id) v.term_id, v.course_code, v.section_no, json_build_object('section_id', v.section_id, 'term_id', v.term_id, 'course_code', v.course_code, 'course_name', c.name, 'section_no', v.section_no, 'title', v.title, 'mode', v.mode, 'schedule', v.schedule, 'class_id', v.class_id, 'kind', m.kind, 'via', case when m.section_id <> v.section_id then m.section_no end) o
+      from (select e.section_id, e.kind, s0.section_no, coalesce(s0.rep_section_id, s0.section_id) shown from lms_enrollment e join lms_section s0 on s0.tenant_id = e.tenant_id and s0.section_id = e.section_id where e.person_id = cast(#{pid} as uuid) and e.status = 'enrolled'
+            union all select st.section_id, 'ta', s0.section_no, coalesce(s0.rep_section_id, s0.section_id) from lms_section_staff st join lms_section s0 on s0.tenant_id = st.tenant_id and s0.section_id = st.section_id where st.person_id = cast(#{pid} as uuid) and st.status = 'active') m
+      join lms_section v on v.section_id = m.shown join lms_course c on c.tenant_id = v.tenant_id and c.course_code = v.course_code where v.status in ('open', 'closed') order by v.section_id, m.kind desc) z), '[]'::json),
+  'requests', coalesce((select json_agg(json_build_object('section_id', r.section_id, 'kind', r.kind, 'at', lms_ts(r.at)) order by r.at) from (
+      select st.section_id, 'ta'::text kind, st.requested_at at from lms_section_staff st where st.person_id = cast(#{pid} as uuid) and st.status = 'pending'
+      union all select e.section_id, 'audit', e.enrolled_at from lms_enrollment e where e.person_id = cast(#{pid} as uuid) and e.status = 'pending') r), '[]'::json),
+  'open', coalesce((select json_agg(json_build_object('section_id', s.section_id, 'term_id', s.term_id, 'course_code', s.course_code, 'course_name', c.name, 'section_no', s.section_no, 'title', s.title, 'mode', s.mode) order by s.course_code, s.section_no) from (
+      select s1.* from lms_section s1 join lms_term t on t.tenant_id = s1.tenant_id and t.term_id = s1.term_id where t.is_operating and s1.status = 'open' and not s1.hidden and s1.rep_section_id is null
+        and not exists (select 1 from lms_enrollment e where e.section_id = s1.section_id and e.person_id = cast(#{pid} as uuid) and e.status <> 'dropped') order by s1.course_code, s1.section_no limit 100) s join lms_course c on c.tenant_id = s.tenant_id and c.course_code = s.course_code), '[]'::json)
+)::text j]]></select>
+  <select id="selectOpenSection" resultType="string">select s.section_id::text from lms_section s join lms_term t on t.tenant_id = s.tenant_id and t.term_id = s.term_id where s.section_id = cast(#{sid} as uuid) and t.is_operating and s.status = 'open' and not s.hidden and s.rep_section_id is null</select>
+  <update id="cancelAudit">update lms_enrollment set status = 'dropped', dropped_at = now() where section_id = cast(#{sid} as uuid) and person_id = cast(#{pid} as uuid) and kind = 'audit' and status in ('pending','enrolled')</update>
+</mapper>

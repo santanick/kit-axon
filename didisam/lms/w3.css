@@ -1,0 +1,42 @@
+/* v30 학사 LMS 묶음 G · I · J 공용 스타일(dds.css 토큰) */
+.w3-btns{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.w3-grid table{font-size:12.5px}
+.w3-grid th,.w3-grid td{padding:4px 5px;text-align:center;white-space:nowrap}
+.w3-grid th.on{background:var(--magl);color:var(--magd)}
+.w3-grid .stick{position:sticky;left:0;background:var(--paper,#fff);z-index:1;text-align:left}
+.w3-c{border:0;background:transparent;font:inherit;min-width:26px;min-height:26px;border-radius:6px;cursor:pointer;color:var(--muted)}
+.w3-c:hover,.w3-c:focus-visible{background:var(--soft);outline:2px solid var(--mag)}
+.w3-c.st-present{color:var(--ok);font-weight:700}.w3-c.st-late{color:var(--warn);font-weight:700}.w3-c.st-absent{color:var(--bad);font-weight:700;background:var(--badl)}.w3-c.st-excused{color:var(--info);font-weight:700}.w3-c.st-h{color:var(--g500)}
+.w3-live{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin:14px 0}
+.w3-code{display:flex;flex-direction:column;gap:4px}
+.w3-code b{font:700 44px/1 var(--num);letter-spacing:.12em;color:var(--ink)}
+.w3-code small,.w3-qrbox small{color:var(--muted);font-size:12px}
+.w3-qrbox{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.w3-qrbox canvas{border:1px solid var(--line);border-radius:var(--r);max-width:100%;height:auto}
+.w3-kiosk{max-width:560px}
+.w3-res{margin-top:10px;padding:10px 12px;border-radius:var(--r);font-weight:600}
+.w3-res.ok{background:var(--okl);color:var(--ok)}.w3-res.bad{background:var(--badl);color:var(--bad)}
+/* 플레이어(I) */
+.w3-player{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px}
+.w3-vid{position:relative;background:#111;border-radius:var(--r);overflow:hidden;aspect-ratio:16/9}
+.w3-vid video{width:100%;height:100%;display:block}
+.w3-vid .w3-sim{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:600 15px/1.5 sans-serif;text-align:center;padding:12px}
+.w3-cap{position:absolute;left:0;right:0;bottom:44px;text-align:center;color:#fff;text-shadow:0 1px 3px #000;font-size:15px;padding:0 10px;pointer-events:none}
+.w3-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.w3-seg{position:relative;height:10px;background:var(--soft);border-radius:5px;margin:8px 0;overflow:hidden}
+.w3-seg i{position:absolute;top:0;bottom:0;background:var(--mag)}
+.w3-seg em{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--warn)}
+.w3-tr{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:var(--r);padding:4px}
+.w3-tr button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:6px 8px;border-radius:6px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+.w3-tr button.on{background:var(--magl);color:var(--magd);font-weight:600}
+.w3-tr button small{color:var(--muted);margin-right:6px;font-family:var(--num)}
+.w3-quiz{position:absolute;inset:0;background:rgba(20,20,20,.86);color:#fff;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:18px}
+.w3-quiz button{background:#fff;color:var(--ink);border:0;border-radius:6px;padding:8px 10px;text-align:left;font:inherit;cursor:pointer}
+.w3-sub textarea{width:100%;min-height:120px;font:12px/1.5 ui-monospace,monospace}
+/* 분석(J) */
+.w3-chart{width:100%;height:auto;max-height:240px}
+.w3-chart text{font-size:11px;fill:var(--muted)}
+.w3-lvl-danger{color:var(--bad);font-weight:700}.w3-lvl-warn{color:var(--warn);font-weight:700}.w3-lvl-ok{color:var(--ok)}
+.w3-stu{border:2px dashed var(--mag);border-radius:var(--r);padding:12px;background:var(--magl)}
+.w3-fb{white-space:pre-wrap;font-size:13.5px;line-height:1.6}
+@media (max-width:720px){.w3-player{grid-template-columns:1fr}.w3-code b{font-size:36px}}

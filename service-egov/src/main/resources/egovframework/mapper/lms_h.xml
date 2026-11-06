@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v30 묶음 H: 업무 함수(sql/55_h.sql)를 부른다. 함수 이름은 고정 라우트 표에서만(${fn}) -->
+<mapper namespace="egovframework.didisam.lms.h.service.impl.LmsHMapper">
+  <select id="call" resultType="string" flushCache="true" useCache="false">select ${fn}(cast(#{ctx} as jsonb), cast(#{a} as jsonb))::text</select>
+  <select id="selectLearnerSession" resultType="map">select tenant_id, sid from learner_sessions where id = #{id} and expires_at &gt; now()</select>
+</mapper>

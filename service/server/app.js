@@ -456,6 +456,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       clearSid(res); return { ok: true };
     }
   };
+  /* v30 학사 LMS 묶음 라우트(lms/mod-*.js) — 핵심 라우트와 이름이 겹치면 기동을 멈춘다 */
+  for (const [k, fn] of Object.entries(require('./lms').loadRoutes({ pool, inTenant, need, readBody, HttpErr, audit, today, limit, log }))) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
 
   /* ── 정적 파일 ── */
   function serveStatic(req, res, pathname) {
