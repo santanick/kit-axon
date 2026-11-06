@@ -5,7 +5,7 @@ import egovframework.didisam.lms.q.service.LmsQService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
-/** /api/lms/q/** — 비교과(성장마루 내재화: 상태 흐름 · 신청 승인 4종 · 팀 · 양식 · 역량 · 이수 · 설문 · 예산 · CQI · 학생 화면) */
+/** /api/lms/q/** — 비교과(성장마루 내재화: 상태 흐름 · 신청 승인 4종 · 팀 · 양식 · 역량 · 이수 · 설문 · 예산 · CQI · 파일 · 학생 화면) */
 @RestController
 @RequestMapping("/api/lms/q")
 public class LmsQController {
@@ -48,6 +48,7 @@ public class LmsQController {
     @PostMapping("/cqi/request") public JsonNode post_cqi_request(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.handle("POST", "cqi/request", req, body); }
     @PostMapping("/cqi/decide") public JsonNode post_cqi_decide(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.handle("POST", "cqi/decide", req, body); }
     @GetMapping("/cqi/doc") public JsonNode get_cqi_doc(HttpServletRequest req) throws Exception { return svc.handle("GET", "cqi/doc", req, null); }
+    @GetMapping("/file") public JsonNode get_file(HttpServletRequest req) throws Exception { return svc.handle("GET", "file", req, null); }
     @GetMapping("/student/programs") public JsonNode get_student_programs(HttpServletRequest req) throws Exception { return svc.handle("GET", "student/programs", req, null); }
     @PostMapping("/wish") public JsonNode post_wish(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.handle("POST", "wish", req, body); }
     @GetMapping("/student/me") public JsonNode get_student_me(HttpServletRequest req) throws Exception { return svc.handle("GET", "student/me", req, null); }
