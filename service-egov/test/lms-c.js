@@ -1,10 +1,10 @@
 'use strict';
 /* v30 묶음 C 대조 테스트 — 학습활동(토론 · 위키 · 팀 · 동료 평가 · 대화방 · 설문 · 사전 과제/질문 · 수업 평가).
    사용: DATABASE_URL=postgres://didisam@127.0.0.1:5544/<db> node test/lms-c.js http://127.0.0.1:<node> [http://127.0.0.1:<java>] */
-const { call, setup, run } = require('./lms-b.js');
+const { call, setup, run, db } = require('./lms-b.js');
 
 async function scenario(base, tag) {
-  const R = {}; const { ck, s2 } = await setup(base, tag);
+  const R = {}; const { ck, s2, tid } = await setup(base, tag);
   const G = (p, as) => call(base, 'GET', `/api/lms/c/${p}${as ? (p.includes('?') ? '&' : '?') + 'as=' + as : ''}`, { cookie: ck });
   const P = (p, body) => call(base, 'POST', `/api/lms/c/${p}`, { cookie: ck, body });
   const S = s2;
@@ -26,6 +26,16 @@ async function scenario(base, tag) {
   R.taskSt = await P('task-status', { as: m1[0], task: R.task.j.id, team: t1, status: 'done', note: '완료' });
   R.taskStOther = await P('task-status', { as: m2[0], task: R.taskAll.j.id, team: t1, status: 'doing' });
   R.taskStWrong = await P('task-status', { as: m1[0], task: R.task.j.id, team: t2, status: 'doing' });
+  /* E 과제와 연결한 팀 과제: 팀원 제출로 진행 상태 자동 */
+  const asg = await db(async c => { await c.query('begin'); await c.query('set local role didisam_tenant'); await c.query("select set_config('app.tenant', $1, true)", [tid]);
+    const a = (await c.query("insert into lms_assignment (tenant_id, section_id, title, status) values ($1, $2, '팀 보고서', 'published') returning asg_id", [tid, S])).rows[0].asg_id; await c.query('commit'); return a; });
+  R.taskRef = await P('task-save', { section: S, title: '보고서 제출(연동)', ref_asg: asg });
+  R.taskRefBad = await P('task-save', { section: S, title: 'x', ref_asg: '00000000-0000-4000-8000-000000000000' });
+  await db(async c => { await c.query('begin'); await c.query('set local role didisam_tenant'); await c.query("select set_config('app.tenant', $1, true)", [tid]);
+    for (const no of m1) { const pid = (await c.query('select person_id from lms_person where member_no = $1', [no])).rows[0].person_id; await c.query("insert into lms_submission (tenant_id, asg_id, owner_key, person_id, status, submitted_at) values ($1, $2, 'p:' || $3::text, $3::uuid, 'submitted', now())", [tid, asg, pid]); }
+    const pid2 = (await c.query('select person_id from lms_person where member_no = $1', [m2[0]])).rows[0].person_id; await c.query("insert into lms_submission (tenant_id, asg_id, owner_key, person_id, status) values ($1, $2, 'p:' || $3::text, $3::uuid, 'submitted')", [tid, asg, pid2]);
+    await c.query('commit'); });
+  R.teamsRef = await G(`teams?section=${S}`);
   R.progress = await G(`progress?section=${S}`);
   /* 토론 */
   R.fSingle = await P('forum-save', { section: S, kind: 'single', layout: 'thread', title: '자료구조 선택 토론', prompt: '배열과 리스트 중 무엇이 좋은가?' });
@@ -119,7 +129,7 @@ async function scenario(base, tag) {
   R.rvDel = await P('review-del', { id: R.rv.j.id });
   return R;
 }
-const EXP = { noAuth: 401, nf: 404, teamAuto: 200, teams: 200, teamStu: 403, teamSave: 200, teamMember: 200, teamMemberBad: 404, teamsStu: 200, task: 200, taskAll: 200, taskSt: 200, taskStOther: 403, taskStWrong: 403, progress: 200,
+const EXP = { noAuth: 401, nf: 404, teamAuto: 200, teams: 200, teamStu: 403, teamSave: 200, teamMember: 200, teamMemberBad: 404, teamsStu: 200, task: 200, taskAll: 200, taskSt: 200, taskStOther: 403, taskStWrong: 403, progress: 200, taskRef: 200, taskRefBad: 400, teamsRef: 200,
   fSingle: 200, fFree: 200, fTeam: 200, fBad: 400, topic: 200, stuTop: 403, stuReply: 200, anonPost: 200, forumsStu: 200, otherTeam: 403, forumAnon: 200, forumProf: 200, postEditOther: 403, postEdit: 200, postDelMgr: 200, forumAfter: 200,
   wiki: 200, wiki2: 200, wikiConflict: 409, wikiRevert: 200, wikiPage: 200, wikiTeam: 200, wikiTeamOther: 403, wikis: 200,
   rv: 200, rvBad: 400, allocFew: 409, sub20261001: 200, sub20261002: 200, sub20261003: 200, sub20261004: 200, subProf: 400, alloc: 200, rvStu: 200, scoreOther: 403, scoreBad: 400, rvSummary: 200, rvRecv: 200, manual: 200, reviews: 200,

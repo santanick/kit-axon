@@ -1,0 +1,14 @@
+/* v30 학사 LMS 묶음 B · C · D — 학습자 앱 화면(learner.css 변수 --pri · --mut 사용) */
+.lmsxl{max-width:960px;margin:0 auto;padding:16px;box-sizing:border-box}
+.lmsxl-h h1{font-size:24px;margin:6px 0 10px;overflow-wrap:anywhere}
+.lmsxl-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}.lmsxl-tabs a{padding:7px 14px;border-radius:999px;background:rgba(0,0,0,.05);text-decoration:none;color:inherit;font-weight:700;font-size:14px}.lmsxl-tabs a.on{background:var(--pri,#5065E8);color:#fff}.lmsxl-tabs.sub a{font-size:13px;padding:5px 11px}
+.lmsxl-card{background:#fff;border-radius:14px;box-shadow:0 0 0 1px rgba(0,0,0,.08);padding:16px;margin-bottom:14px;min-width:0;overflow-wrap:anywhere}.lmsxl-card h2{font-size:17px;margin:0 0 8px}.lmsxl-card h2 small,.lmsxl-card h3 small{font-weight:400;color:var(--mut,#666);font-size:13px}.lmsxl-card h3{font-size:15px;margin:12px 0 4px}
+.lmsx-ul{list-style:none;padding:0;margin:6px 0;display:grid;gap:8px}.lmsx-ul li{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.lmsx-ul small{color:var(--mut,#666)}
+.lx-kind{font-size:11.5px;font-weight:700;border-radius:99px;padding:2px 8px;background:rgba(80,101,232,.12);color:var(--pri,#5065E8)}.lx-label{font-weight:700}.lx-locked{opacity:.7}
+.lx-lock{color:#b55;font-size:12.5px}.lx-ok{color:#0a8a2a;font-size:12.5px;font-weight:700}.lx-warn{color:#c96a00;font-size:12.5px}
+.lmsxl-bar{height:8px;border-radius:4px;background:rgba(0,0,0,.08);overflow:hidden}.lmsxl-bar i{display:block;height:100%;background:var(--pri,#5065E8)}
+.lmsxl-post{border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:10px;margin:8px 0;min-width:0}.lmsxl-post.re{margin-left:16px;background:rgba(0,0,0,.02)}.lmsxl-post p{white-space:pre-wrap;margin:6px 0}
+.lmsxl textarea,.lmsxl input:not([type=checkbox]){width:100%;box-sizing:border-box;border:1px solid rgba(0,0,0,.15);border-radius:10px;padding:10px;font:inherit;margin:6px 0}.lmsxl input[type=number]{width:80px}
+.lmsxl-demo{background:rgba(239,109,0,.08);padding:8px 12px;border-radius:10px}
+.lmsxl-dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}.lmsxl-dlgin{background:#fff;border-radius:16px;max-width:760px;width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:18px;box-sizing:border-box}.lmsxl-dlgb{margin:10px 0;overflow-wrap:anywhere}.lmsxl-dlgb img{max-width:100%}
+@media (max-width:600px){.lmsxl{padding:12px}.lmsxl-h h1{font-size:20px}.lmsxl-post.re{margin-left:8px}}

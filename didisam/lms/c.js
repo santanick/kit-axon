@@ -154,7 +154,7 @@
   let OVC = null, CUR = {};
   async function viewC() {
     if (!X.sec) return X.head('학습활동', '강의실이 없습니다.', []) + '<div class="empty">강의실(분반)이 없습니다.</div>';
-    OVC = await X.call('b', 'overview', { section: X.sec }); const me = OVC.me; const tb = UI.lmscT || 'forum'; const man = me.can['activity.manage'];
+    OVC = await X.call('b', 'overview', { section: X.sec }); const me = OVC.me; const vis = X.subTabs(TABS); const tb = vis.some(t => t[0] === UI.lmscT) ? UI.lmscT : (vis[0] || ['none'])[0]; const man = me.can['activity.manage'];
     const top = X.head('학습활동', `토론 · 위키 · 팀 프로젝트 · 동료 평가 · 대화방 · 설문 · 플립러닝 — 내 역할 <b>${esc(me.role_name)}</b>`, [...OVC.staff.map(s => ({ no: s.no, role: ({ co_professor: 'professor' })[s.role] || s.role })), ...OVC.roster.map(r => ({ no: r.no, role: 'student' }))]);
     let b = '';
     if (tb === 'forum') {
@@ -183,7 +183,7 @@
         <div class="lmsx-grid2">${T.teams.map(t => `<div class="lmsx-post"><div class="lmsx-meta"><b>${esc(t.name)}</b>${tag(t.set)}${T.mine.includes(t.id) ? tag('우리 팀', 'g') : ''}${T.manage ? `<button class="btn sm ghost" data-act="lmsc-team-add" data-id="${esc(t.id)}">+ 팀원</button><button class="btn sm ghost redl" data-act="lmsc-team-del" data-id="${esc(t.id)}">삭제</button>` : ''}</div><p class="mini">${t.members.map(m => `${esc(m.no)}${m.leader ? '(팀장)' : ''} ${esc(m.unit || '')}${T.manage ? ` <a href="#" data-act="lmsc-team-rm" data-id="${esc(t.id)}" data-no="${esc(m.no)}" aria-label="빼기">×</a>` : ''}`).join(' · ') || '팀원 없음'}</p></div>`).join('') || '<div class="empty">팀이 없습니다.</div>'}</div>
         ${T.unassigned.length ? `<p class="mini">미배정: ${T.unassigned.map(esc).join(', ')}</p>` : ''}</div>
         <div class="card"><div class="ch"><b>팀 과제</b><small>전체 팀 또는 특정 팀 한정</small>${T.manage ? '<button class="btn sm pri" data-act="lmsc-task-new">+ 팀 과제</button>' : ''}</div>
-        ${table(['과제', '대상', '마감', ...T.teams.filter(t => !T.mine.length || T.manage || T.mine.includes(t.id)).map(t => t.name), ''], T.tasks.map(k => [esc(k.title), k.team_id ? esc((T.teams.find(t => t.id === k.team_id) || {}).name || '') : '전체 팀', fmt(k.due_at),
+        ${table(['과제', '대상', '마감', ...T.teams.filter(t => !T.mine.length || T.manage || T.mine.includes(t.id)).map(t => t.name), ''], T.tasks.map(k => [esc(k.title) + (k.ref_asg ? ` ${tag('과제 연동: ' + (k.ref_title || ''), 'mg')}` : ''), k.team_id ? esc((T.teams.find(t => t.id === k.team_id) || {}).name || '') : '전체 팀', fmt(k.due_at),
           ...T.teams.filter(t => !T.mine.length || T.manage || T.mine.includes(t.id)).map(t => (!k.team_id || k.team_id === t.id) ? `<select data-chg="lmsc-task-st" data-task="${esc(k.id)}" data-team="${esc(t.id)}" ${T.manage || T.mine.includes(t.id) ? '' : 'disabled'}>${Object.entries(ST).map(([s, l]) => `<option value="${s}" ${((k.status[t.id] || {}).status || 'todo') === s ? 'selected' : ''}>${l}</option>`).join('')}</select>` : '—'),
           T.manage ? `<button class="btn sm ghost redl" data-act="lmsc-task-del" data-id="${esc(k.id)}">삭제</button>` : '']), '팀 과제가 없습니다.')}</div>
         <div class="card"><div class="ch"><b>팀 진행 현황</b><small>과제 완료율 · 팀 토론 글 · 팀 위키 편집</small>${T.manage ? '<button class="btn sm" data-act="lmsc-team-forum">팀별 토론방 만들기</button>' : ''}</div>${table(['팀', '팀원', '과제 완료', '진행률', '토론 글', '위키 편집'], Pg.teams.map(t => [esc(t.name), t.members.length, `${t.done}/${t.tasks}`, bar(t.tasks ? t.done / t.tasks * 100 : 0) + ' ' + pct(t.tasks ? t.done / t.tasks * 100 : 0), t.posts, t.wiki_edits]), '팀이 없습니다.')}</div>`;
@@ -221,7 +221,7 @@
           ${me.role === 'student' ? `${k.mine && k.mine.graded && (k.mine.score != null || k.mine.feedback) ? `<p>${k.mine.score != null ? `점수 <b>${k.mine.score}</b> · ` : ''}${esc(k.mine.feedback || '')}</p>` : k.mine && k.mine.graded ? '<p class="mini">평가 완료 — 결과 공지 후 점수를 볼 수 있습니다.</p>' : ''}<div class="lmsx-new"><textarea data-lmsc-pre="${esc(k.id)}" rows="2" placeholder="${k.kind === 'question' ? '질문을 남기세요' : '제출 내용'}">${esc(k.mine ? k.mine.body : '')}</textarea><button class="btn sm pri" data-act="lmsc-pre-sub" data-id="${esc(k.id)}" ${k.mine && k.mine.graded ? 'disabled' : ''}>${k.mine ? '다시 제출' : '제출'}</button></div>` : ''}
           ${(k.subs_list || []).length ? table(P.grade ? ['학번', '내용', '점수', k.kind === 'question' ? '답변' : '의견', ''] : ['', '질문', '답변'], k.subs_list.map(s => P.grade ? [esc(s.no), esc(s.body), `<input type="number" min="0" style="width:70px" data-lmsc-gs="${esc(k.id)}|${esc(s.no)}" value="${s.score ?? ''}">`, `<input data-lmsc-gf="${esc(k.id)}|${esc(s.no)}" value="${esc(s.feedback || '')}" placeholder="${k.kind === 'question' ? '답변' : '의견'}">`, `<button class="btn sm" data-act="lmsc-pre-grade" data-id="${esc(k.id)}" data-no="${esc(s.no)}">저장</button>`] : ['익명', esc(s.body), esc(s.feedback || '')])) : ''}</div>`).join('') || '<div class="empty">없습니다.</div>'}</div>`;
     }
-    return top + `<div class="lmsb-tabs">${tabs('lmscT', TABS, tb)}</div>` + b;
+    return top + `<div class="lmsb-tabs">${tabs('lmscT', X.subTabs(TABS), tb)}</div>` + b;
   }
   X.mount('lmsc', viewC);
   const R = (op, args, msg) => X.run('c', op, args, msg).then(r => { if (r) X.refresh(); return r; });
@@ -251,8 +251,10 @@
   ACT['lmsc-team-rm'] = el => R('team-member', { team: el.dataset.id, no: el.dataset.no, remove: true }, '팀에서 뺐습니다.');
   ACT['lmsc-team-del'] = el => { if (confirm('팀과 팀 토론방 · 위키 · 과제를 지울까요?')) R('team-del', { id: el.dataset.id }, '지웠습니다.'); };
   ACT['lmsc-team-forum'] = () => R('forum-save', { section: X.sec, title: '팀 토론방', team_mode: 'each', kind: 'free', layout: 'thread' }).then(r => r && toast(`팀별 토론방 ${r.count}개를 만들었습니다.`, 'ok'));
-  ACT['lmsc-task-new'] = async () => { const T = await X.call('c', 'teams', { section: X.sec }); modal('팀 과제', `<label>제목<input name="t"></label><label>내용<textarea name="b" rows="3"></textarea></label><div class="form2"><label>대상<select name="tm"><option value="">모든 팀</option>${T.teams.map(t => `<option value="${esc(t.id)}">${esc(t.name)} 한정</option>`).join('')}</select></label><label>마감<input type="datetime-local" name="d"></label></div>`,
-    [{ id: 'ok', label: '만들기', kind: 'pri', run: m => { R('task-save', { section: X.sec, title: fv(m, 't'), body: fv(m, 'b'), team_id: fv(m, 'tm') || null, due_at: dtIso(fv(m, 'd')) }, '팀 과제를 만들었습니다.'); } }]); };
+  ACT['lmsc-task-new'] = async () => { const T = await X.call('c', 'teams', { section: X.sec }); let E = { assignments: [] }; try { E = await X.call('b', 'ext-list', { section: X.sec }); } catch (e) { }
+    modal('팀 과제', `<label>제목<input name="t"></label><label>내용<textarea name="b" rows="3"></textarea></label><div class="form2"><label>대상<select name="tm"><option value="">모든 팀</option>${T.teams.map(t => `<option value="${esc(t.id)}">${esc(t.name)} 한정</option>`).join('')}</select></label><label>마감<input type="datetime-local" name="d"></label>
+      <label>과제(묶음 E) 연결<select name="ra"><option value="">연결 안 함(수동 진행 상태)</option>${E.assignments.map(g => `<option value="${esc(g.id)}">${esc(g.title)}</option>`).join('')}</select></label></div><p class="mini">과제를 연결하면 팀원 제출 현황으로 진행 상태(할 일 · 진행 중 · 완료)가 자동으로 바뀝니다.</p>`,
+    [{ id: 'ok', label: '만들기', kind: 'pri', run: m => { R('task-save', { section: X.sec, title: fv(m, 't'), body: fv(m, 'b'), team_id: fv(m, 'tm') || null, due_at: dtIso(fv(m, 'd')), ref_asg: fv(m, 'ra') || null }, '팀 과제를 만들었습니다.'); } }]); };
   ACT['lmsc-task-del'] = el => R('task-del', { id: el.dataset.id }, '지웠습니다.');
   ACT['lmsc-task-st'] = el => R('task-status', { task: el.dataset.task, team: el.dataset.team, status: el.value }, '진행 상태를 바꿨습니다.');
   ACT['lmsc-rv-new'] = () => modal('동료 평가 만들기', `<label>제목<input name="t"></label><label>안내<textarea name="b" rows="2"></textarea></label><div class="form2"><label>1인당 평가 수<input name="n" type="number" value="2" min="1" max="10"></label><label>배정<select name="m"><option value="auto">자동</option><option value="manual">수동</option></select></label></div>

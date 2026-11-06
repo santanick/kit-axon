@@ -3,6 +3,8 @@ package egovframework.didisam.lms.b.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import egovframework.didisam.auth.service.AuthService;
+import egovframework.didisam.cmm.DdCrypto;
 import egovframework.didisam.cmm.DdException;
 import egovframework.didisam.cmm.DdWeb;
 import egovframework.didisam.cmm.TenantTx;
@@ -28,8 +30,21 @@ public class LmsBcdCore {
         public static Route post(int max) { return new Route("POST", max, false); }
         public static Route post(int max, boolean adm) { return new Route("POST", max, adm); }
     }
-    private final TenantTx tx; private final TenantTxMapper txm;
-    public LmsBcdCore(TenantTx tx, TenantTxMapper txm) { this.tx = tx; this.txm = txm; }
+    private final TenantTx tx; private final TenantTxMapper txm; private final AuthService auth; private final LmsBMapper bm; private final DdWeb web;
+    public LmsBcdCore(TenantTx tx, TenantTxMapper txm, AuthService auth, LmsBMapper bm, DdWeb web) { this.tx = tx; this.txm = txm; this.auth = auth; this.bm = bm; this.web = web; }
+
+    /** 신원: 스튜디오 세션 → 없으면 학습자 포털 세션(dd_lsid → 학번, SQL lmsb_actor가 학번으로 고정). 둘 다 없으면 401 */
+    public Map<String, Object> who(HttpServletRequest req) throws Exception {
+        Map<String, Object> a = auth.auth(req);
+        if (a != null) return a;
+        String t = web.lsidToken(req);
+        if (t == null || t.isEmpty() || t.length() > 100) throw new DdException(401, "로그인이 필요합니다.", "auth");
+        Map<String, Object> s = tx.plain(() -> bm.selectLearner(DdCrypto.sha(t)));
+        if (s == null) throw new DdException(401, "로그인이 필요합니다.", "auth");
+        Map<String, Object> o = new java.util.LinkedHashMap<>();
+        o.put("tid", s.get("tid")); o.put("type", s.get("type")); o.put("role", "learner"); o.put("learner", s.get("sid"));
+        return o;
+    }
 
     public JsonNode handle(Map<String, Object> a, String bundle, String op, Route rt, HttpServletRequest req, byte[] body, BiFunction<String, String[], String> api) throws Exception {
         if (!"univ".equals(a.get("type"))) throw new DdException(403, "학사 LMS(대학) 기관에서만 쓸 수 있습니다.", "lms_edition");
@@ -42,7 +57,10 @@ public class LmsBcdCore {
             args.setAll((ObjectNode) b);
         }
         ObjectNode actor = JsonNodeFactory.instance.objectNode();
-        actor.put("uid", String.valueOf(a.get("uid"))); actor.put("email", String.valueOf(a.get("email"))); actor.put("role", String.valueOf(a.get("role")));
+        boolean learner = a.get("learner") != null;
+        if (learner) { actor.put("kind", "learner"); actor.put("sid", String.valueOf(a.get("learner"))); }
+        else { actor.put("uid", String.valueOf(a.get("uid"))); actor.put("email", String.valueOf(a.get("email"))); actor.put("role", String.valueOf(a.get("role"))); }
+        String by = learner ? "learner:" + a.get("learner") : String.valueOf(a.get("email"));
         String tid = (String) a.get("tid");
         try {
             return tx.inTenant(tid, () -> {
@@ -54,7 +72,7 @@ public class LmsBcdCore {
                     JsonNode rid = r != null && r.isObject() ? r.get("id") : null; JsonNode aid = args.get("id");
                     d.set("id", truthy(rid) ? rid : truthy(aid) ? aid : null);
                     JsonNode as = args.get("as"); d.set("as", truthy(as) ? as : null);
-                    txm.insertAudit(tid, String.valueOf(a.get("email")), "lms." + bundle + "." + op, d.toString());
+                    txm.insertAudit(tid, by, "lms." + bundle + "." + op, d.toString());
                 }
                 return r;
             });

@@ -15,6 +15,7 @@ public class LmsBServiceImpl extends EgovAbstractServiceImpl implements LmsBServ
     static final Map<String, Route> ROUTES = Map.ofEntries(
         Map.entry("sections", Route.get()),
         Map.entry("templates", Route.get()),
+        Map.entry("ext-list", Route.get()),
         Map.entry("library", Route.get()),
         Map.entry("perms", Route.get()),
         Map.entry("file", Route.get()),
@@ -64,9 +65,9 @@ public class LmsBServiceImpl extends EgovAbstractServiceImpl implements LmsBServ
     private final LmsBMapper mapper; private final LmsBcdCore core;
     public LmsBServiceImpl(LmsBMapper mapper, LmsBcdCore core) { this.mapper = mapper; this.core = core; }
 
-    @Override public Object call(Map<String, Object> a, String op, HttpServletRequest req, byte[] body) throws Exception {
+    @Override public Object call(String op, HttpServletRequest req, byte[] body) throws Exception {
         Route rt = ROUTES.get(op);
         if (rt == null || !rt.method().equals(req.getMethod())) throw new DdException(404, "없는 주소입니다.", "not_found");
-        return core.handle(a, "b", op, rt, req, body, (o, x) -> mapper.api(o, x[0], x[1]));
+        return core.handle(core.who(req), "b", op, rt, req, body, (o, x) -> mapper.api(o, x[0], x[1]));
     }
 }
