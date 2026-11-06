@@ -4,7 +4,7 @@ const { build } = require('./lmp-core');
 const ROUTES = [
   ['GET', 'cal.list'], ['POST', 'cal.add'], ['POST', 'cal.done'], ['POST', 'cal.del'], ['POST', 'cal.d1'],
   ['GET', 'cal.ics', { post: (r, res) => { res.setHeader('content-type', 'text/calendar; charset=utf-8'); res.setHeader('content-disposition', 'attachment; filename="didisam-calendar.ics"'); return r.ics; } }],
-  ['GET', 'dm.rooms'], ['POST', 'dm.open'], ['POST', 'dm.send'], ['GET', 'dm.msgs'], ['POST', 'dm.read'], ['POST', 'dm.broadcast'],
+  ['GET', 'dm.rooms'], ['POST', 'dm.open'], ['POST', 'dm.send'], ['GET', 'dm.msgs'], ['GET', 'dm.file'], ['POST', 'dm.read'], ['POST', 'dm.broadcast'],
   ['GET', 'noti.rules'], ['POST', 'noti.rule_save'], ['POST', 'noti.rule_del'], ['POST', 'noti.quiet'], ['POST', 'noti.fire'], ['POST', 'noti.scan'],
   ['GET', 'noti.inbox'], ['GET', 'noti.outbox'], ['POST', 'noti.ack']
 ];

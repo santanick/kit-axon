@@ -65,6 +65,13 @@ public class LmsDispatch extends EgovAbstractServiceImpl {
         }
         return out;
     }
+    /** 학습자 포털 세션(dd_lsid) → {tid, sid}. 없으면 401 */
+    public Map<String, Object> learnerOf(HttpServletRequest req) throws Exception {
+        String t = web.lsidToken(req);
+        Map<String, Object> r = t == null || t.length() > 100 ? null : tx.plain(() -> pm.selectLearner(DdCrypto.sha(t)));
+        if (r == null) throw new DdException(401, "로그인이 필요합니다.", "auth");
+        return r;
+    }
     public static Exception map(Exception e) {
         for (Throwable t = e; t != null; t = t.getCause()) {
             if (t instanceof PSQLException p) {
