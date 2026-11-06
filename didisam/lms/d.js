@@ -70,8 +70,9 @@
   async function viewD() {
     if (!X.sec) return X.head('강의 게시판', '강의실이 없습니다.', []) + '<div class="empty">강의실(분반)이 없습니다.</div>';
     const OV = await X.call('b', 'overview', { section: X.sec }); const Bs = await X.call('d', 'boards', { section: X.sec }); const me = Bs.me;
-    const tb = UI.lmsdT || 'notice'; const top = X.head('강의 게시판', `공지 · Q&A · 자료실 · 1:1 상담 — 내 역할 <b>${esc(X.ROLE_N[me.role])}</b>`, [...OV.staff.map(s => ({ no: s.no, role: ({ co_professor: 'professor' })[s.role] || s.role })), ...OV.roster.map(r => ({ no: r.no, role: 'student' }))]);
-    const tabsL = [...Bs.boards.map(b => [b.kind, `${b.name}${b.unread ? ` (${b.unread})` : ''}`]), ...(me.manage ? [['outbox', '발송 대기열']] : [])];
+    const top = X.head('강의 게시판', `공지 · Q&A · 자료실 · 1:1 상담 — 내 역할 <b>${esc(X.ROLE_N[me.role])}</b>`, [...OV.staff.map(s => ({ no: s.no, role: ({ co_professor: 'professor' })[s.role] || s.role })), ...OV.roster.map(r => ({ no: r.no, role: 'student' }))]);
+    const tabsL = [...X.subTabs(Bs.boards.map(b => [b.kind, `${b.name}${b.unread ? ` (${b.unread})` : ''}`])), ...(me.manage ? [['outbox', '발송 대기열']] : [])];
+    const tb = tabsL.some(t => t[0] === UI.lmsdT) ? UI.lmsdT : (tabsL[0] || ['none'])[0];
     let b = '';
     if (tb === 'outbox') { const O = await X.call('d', 'outbox', { section: X.sec }); b = `<div class="card"><div class="ch"><b>SMS · 메일 발송 대기열</b><small>${esc(O.note)}</small></div>${table(['때', '채널', '제목', '대상', '상태'], O.items.map(o => [fmt(o.created_at), o.channel === 'sms' ? 'SMS' : '메일', esc(o.title), o.targets + '명', tag(o.status === 'queued' ? '연동 후 발송' : o.status, 'y')]), '대기 중인 발송이 없습니다.')}</div>`; }
     else {

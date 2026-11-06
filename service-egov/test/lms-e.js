@@ -94,6 +94,21 @@ async function scenario(base, tag) {
   await Po('delDraft', '/api/lms/e/delete', { asg_id: R.saveDraftA.j.assignment.asg_id });
   await call(base, 'GET', '/api/lms/e/list?section=' + S.sec, { cookie: L[STU[0]] }).then(r => (R.learnerOnStaff = r));
 
+  /* 교수 담당 분반 범위(교수 · 조교 · 부운영자 단과대학 · 연결 없는 교수) */
+  const U = S.U; const AS = (k, ck, m, p, body) => call(base, m, p, { cookie: ck, body }).then(r => (R[k] = r));
+  await AS('scProfSecs', U.prof, 'GET', '/api/lms/e/sections');
+  await AS('scProfList', U.prof, 'GET', '/api/lms/e/list?section=' + S.sec);
+  await AS('scProfList2', U.prof, 'GET', '/api/lms/e/list?section=' + S.sec2);
+  await AS('scProfSave2', U.prof, 'POST', '/api/lms/e/save', { section_id: S.sec2, title: '남의 분반 과제' });
+  await AS('scProfSave', U.prof, 'POST', '/api/lms/e/save', { section_id: S.sec, title: '교수 과제', status: 'published' });
+  await AS('scTaStatus', U.ta, 'GET', '/api/lms/e/status?asg=' + asg);
+  await AS('scProfSub', U.prof, 'GET', '/api/lms/e/sub?id=' + subs[STU[0]]);
+  await AS('scSubE', U.subE, 'GET', '/api/lms/e/list?section=' + S.sec2);
+  await AS('scSubM', U.subM, 'GET', '/api/lms/e/list?section=' + S.sec);
+  await AS('scSubMSecs', U.subM, 'GET', '/api/lms/e/sections');
+  await AS('scNoLink', U.tnl, 'GET', '/api/lms/e/list?section=' + S.sec);
+  await AS('scNoLinkSecs', U.tnl, 'GET', '/api/lms/e/sections');
+  await AS('scTplTeacher', U.prof, 'POST', '/api/lms/e/rubric-save', { is_template: true, name: 'x', criteria: [{ name: 'a', levels: [{ label: 'a', score: 1 }] }] });
   const st = R.status.j || {}; const brd = R.board.j || {};
   P.push([R.noAuth.st === 401, '로그인 없이 401'], [R.csrf.st === 403, 'CSRF 403'], [R.save1.st === 200, '과제 저장'],
     [R.draft1.st === 200 && R.draft1.j.submission.version === 1, '초안 버전 1'], [R.draft2.j && R.draft2.j.submission.version === 2, '초안 자동 저장 버전 2'],
@@ -108,7 +123,7 @@ async function scenario(base, tag) {
     [R.bundle.j && R.bundle.j.files.some(f => /\/report\.txt$/.test(f.path)), '일괄 다운로드 경로'],
     [brd.rows && brd.rows.length === 5 && brd.auditors === 1, '성적 보드 청강 제외'],
     [R.teamConflict.st === 409, '팀 동시 편집 충돌'], [R.teamVers.j && R.teamVers.j.versions.length === 2, '팀 버전 2개'], [R.teamsAfter.st === 409, '작성 시작 후 재편성 409'],
-    [R.lateClosed.st === 409, '마감 후 409'], [R.delHas.st === 409, '제출 있는 과제 삭제 409'], [R.learnerOnStaff.st === 401 || R.learnerOnStaff.st === 403, '학습자가 교수 API 401/403']);
+    [R.lateClosed.st === 409, '마감 후 409'], [R.scProfSecs.j && R.scProfSecs.j.sections.length === 1, '교수: 담당 분반 1개만 보임'], [R.scProfList.st === 200 && R.scTaStatus.st === 200 && R.scProfSub.st === 200, '교수 · 조교: 담당 분반 접근'], [R.scProfList2.st === 403 && R.scProfSave2.st === 403 && R.scProfList2.j.error === 'lms_role', '교수: 남의 분반 403'], [R.scProfSave.st === 200, '교수: 담당 분반 과제 생성'], [R.scSubE.st === 200 && R.scSubM.st === 403 && R.scSubM.j.error === 'lms_scope', '부운영자 단과대학 범위'], [R.scSubMSecs.j && R.scSubMSecs.j.sections.length === 0, '범위 밖 부운영자 분반 0'], [R.scNoLink.st === 403 && R.scNoLinkSecs.j.sections.length === 0, '연결 없는 교수 403'], [R.scTplTeacher.st === 403, '교수: 운영자 템플릿 403'], [R.delHas.st === 409, '제출 있는 과제 삭제 409'], [R.learnerOnStaff.st === 401 || R.learnerOnStaff.st === 403, '학습자가 교수 API 401/403']);
   for (const k of ['fileOwn', 'fileStaff', 'bundle']) if (R[k].j && R[k].j.b64) R[k].j.b64 = R[k].j.b64.length;
   return { R, P };
 }

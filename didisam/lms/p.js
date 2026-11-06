@@ -7,7 +7,7 @@
 (function () {
   'use strict';
   const LMP = window.LMP; if (!LMP) return;
-  LMP.GETS = LMP.GETS || {}; LMP.GETS.p = ['pref.get', 'cls.langs', 'upload.recent', 'draft.get', 'portal', 'att.board', 'kocw', 'admin.status', 'pii.stats', 'crypto.status', 'perf.list', 'mig.runs', 'mig.videos'];
+  LMP.GETS = LMP.GETS || {}; LMP.GETS.p = ['pref.get', 'cls.langs', 'upload.recent', 'upload.get', 'draft.get', 'portal', 'att.board', 'kocw', 'admin.status', 'pii.stats', 'crypto.status', 'perf.list', 'mig.runs', 'mig.videos'];
   const need = (v, m) => { if (!v) throw new Error(m); };
   const LG = [['ko', '한국어'], ['en', 'English'], ['ja', '日本語'], ['zh', '中文']];
   const LGMAP = { ko: 'ko', en: 'en', ja: 'ja', zh: 'zh-CN' };
@@ -61,8 +61,9 @@
     'pref.save': q => { need(['ko', 'en', 'ja', 'zh'].includes(q.lang || 'ko'), '언어는 한국어 · 영어 · 일본어 · 중국어 중에서 고릅니다.'); const a = { hc: !!(q.a11y || {}).hc, lg: !!(q.a11y || {}).lg, rm: !!(q.a11y || {}).rm }; ens().pref = { lang: q.lang || 'ko', a11y: a }; return { ok: true, lang: q.lang || 'ko', a11y: a }; },
     'cls.langs': () => ({ items: DEMO_CLS().map(c => ({ section_id: c.id, title: c.name, lang: ens().clsLang[c.id] || 'ko' })) }),
     'cls.lang': q => { need(['ko', 'en', 'ja', 'zh'].includes(q.lang), '언어는 한국어 · 영어 · 일본어 · 중국어 중에서 고릅니다.'); ens().clsLang[q.section_id] = q.lang; return { ok: true, section_id: q.section_id, lang: q.lang }; },
-    'upload.add': q => { need(q.name, 'name 값을 입력하세요.'); need(+q.size <= 5368709120, '파일은 5GB까지 올릴 수 있습니다.'); const u = { id: LMP.uuid(), name: q.name, size: +q.size, mime: q.mime || '', sha256: q.sha256 || null, entries: (q.entries || []).length, at: LMP.nowIso() }; ens().uploads.unshift(u); ens().uploads = ens().uploads.slice(0, 20); return { ok: true, id: u.id, entries: u.entries, storage: '연동 후 저장(학내 CDN · 스토리지)' }; },
-    'upload.recent': () => ({ items: ens().uploads }),
+    'upload.add': q => { need(q.name, 'name 값을 입력하세요.'); need(!LMP.fileOk(q.name, q.mime), LMP.fileOk(q.name, q.mime)); need((q.file_ids || []).length, '파일 조각(file_ids)을 먼저 올리세요.'); need(q.file_ids.length <= 50, '파일은 100MB(조각 50개)까지 올릴 수 있습니다.'); const u = { id: LMP.uuid(), name: q.name, size: +q.size, mime: q.mime || '', sha256: q.sha256 || null, entries: (q.entries || []).length, chunks: q.file_ids, at: LMP.nowIso() }; ens().uploads.unshift(u); ens().uploads = ens().uploads.slice(0, 20); return { ok: true, id: u.id, size: u.size, chunks: q.file_ids.length, entries: u.entries, storage: 'lms_file' }; },
+    'upload.get': q => { const u = ens().uploads.find(x => x.id === q.id); need(u, '없는 파일입니다.'); return { id: u.id, name: u.name, size: u.size, mime: u.mime, sha256: u.sha256, chunks: u.chunks || [] }; },
+    'upload.recent': () => ({ items: ens().uploads.map(u => ({ ...u, chunks: (u.chunks || []).length })) }),
     'draft.save': q => { need(q.doc_key, 'doc_key 값을 입력하세요.'); ens().drafts[q.doc_key] = { doc_key: q.doc_key, body: q.body || '', at: LMP.nowIso() }; return { ok: true, doc_key: q.doc_key, chars: (q.body || '').length }; },
     'draft.get': q => ({ draft: ens().drafts[q.doc_key] || null }),
     'widget.save': q => { need((q.layout || []).every(w => WID[w]), '없는 위젯입니다.'); ens().layout = q.layout; return { ok: true, layout: q.layout }; },
@@ -70,10 +71,6 @@
       due: ((Ll && Ll.ev) || []).filter(e => ['deadline', 'exam', 'todo'].includes(e.kind) && !e.done && new Date(e.starts_at) >= new Date()).slice(0, 6).map(e => ({ title: e.title, at: e.starts_at, kind: e.kind })),
       dm_unread: ((Ll && Ll.rooms) || []).reduce((a, r) => a + r.msgs.filter(m => m.id > r.read && !String(m.sender).startsWith('u:')).length, 0), inbox: ((Ll && Ll.inbox) || []).slice(0, 5),
       attendance: { total: 120, ok: 111, absent: 9 }, advisees: ['20261001', '20261004', '20261007'].map((m, i) => ({ member_no: m, unit_code: 'CSE', absent: 3 - i })) }; },
-    'att.open': q => { need(LMP.isAdm() || S.me.role === 'teacher', '교수자 · 운영자만 출석 코드를 열 수 있습니다.'); const code = String(Math.floor(Math.random() * 1e6)).padStart(6, '0'); ens().att[q.session_id] = { code, exp: Date.now() + (+q.minutes || 10) * 6e4, n: 0 }; return { ok: true, code, expires_at: LMP.iso(ens().att[q.session_id].exp), qr: `didisam-att:${q.session_id}:${code}` }; },
-    'att.board': q => { const a = ens().att[q.session_id] || { n: 0 }; return { present: a.n, late: 0, absent: 0, offline: a.off || 0, enrolled: 30 }; },
-    'att.checkin': q => { const items = q.items || [q]; const out = items.map(x => { const a = ens().att[x.session_id]; const k = !a ? 'no_session' : a.code !== String(x.code) ? 'bad_code' : Date.now() > a.exp ? 'expired' : 'present'; if (k === 'present') { a.n++; if (x.offline_at) a.off = (a.off || 0) + 1; } return { session_id: x.session_id, result: k }; });
-      if (!q.items) { const k = out[0].result; need(k !== 'bad_code', '출석 코드가 올바르지 않습니다.'); need(k !== 'no_session', '없는 수업 차시입니다(먼저 출석 코드를 여세요).'); need(k !== 'expired', '출석 코드 유효 시간이 지났습니다.'); return { ok: true, status: k }; } return { ok: true, items: out }; },
     'kocw': () => ({ xml: demoKocw(), courses: (S.classes || []).length }),
     'admin.login': q => { need(LMP.isAdm(), '관리자 계정만 관리자 모드로 들어갈 수 있습니다.'); const G = ens().guard; if (G.locked > Date.now()) throw new Error(`비밀번호를 5회 틀려 ${new Date(G.locked).toTimeString().slice(0, 5)}까지 잠겼습니다.`);
       if (String(q.password || '').length < 10) { G.fails++; if (G.fails >= 5) { G.locked = Date.now() + 6e5; G.fails = 0; throw new Error('비밀번호를 5회 틀려 10분 동안 잠겼습니다.'); } throw new Error(`비밀번호가 올바르지 않습니다(${G.fails}/5). 데모: 10자 이상이면 통과`); }
@@ -168,10 +165,10 @@
         <p class="mini">「본문 바로가기」 링크는 Tab 키를 처음 누르면 나타납니다. 모든 버튼은 키보드로 쓸 수 있고, 표에는 머리글, 입력 칸에는 라벨, 상태 변화는 화면낭독기 알림(aria-live)으로 전합니다.</p></div>
         <div class="card"><div class="ch"><b>점검 항목</b><small>KWCAG 2.2 · W3C 검증 · 브라우저 3종(Chrome · Edge · Safari)</small></div>${[['대체 텍스트 · 아이콘 라벨', '적용'], ['키보드 접근 · 포커스 표시', '적용'], ['색 대비 4.5:1(고대비 모드 7:1)', '적용'], ['화면 확대 200%에서 가로 넘침 없음(390px)', '적용'], ['동영상 자막(AI 자동 자막)', '적용'], ['W3C 마크업 검증 · 인증 심사', '구축 시 심사(연동 제외)']].map(([k, v]) => `<div class="row"><span>${k}</span>${tag(v, v === '적용' ? '' : 'y')}</div>`).join('')}</div>`; }
     if (tb === 'upload') { const r = LMP.load('p:up', 'p', 'upload.recent', {}); const u = UI.lmspUp;
-      b = `<div class="card"><div class="ch"><b>파일 올리기</b><small>끌어다 놓기 · 여러 파일 · zip은 내용 목록을 미리 봅니다 · 5GB까지</small></div><div class="lmp-drop" id="lmspDrop" tabindex="0" role="button" aria-label="파일을 끌어다 놓거나 눌러서 고르기">여기에 파일을 끌어다 놓거나 <label class="btn sm">파일 고르기<input type="file" id="lmspFile" multiple hidden></label></div>
+      b = `<div class="card"><div class="ch"><b>파일 올리기</b><small>끌어다 놓기 · 여러 파일 · zip은 내용 목록을 미리 봅니다 · 100MB까지</small></div><div class="lmp-drop" id="lmspDrop" tabindex="0" role="button" aria-label="파일을 끌어다 놓거나 눌러서 고르기">여기에 파일을 끌어다 놓거나 <label class="btn sm">파일 고르기<input type="file" id="lmspFile" multiple hidden></label></div>
         ${u ? `<div class="card" aria-live="polite"><div class="ch"><b>${esc(u.name)}</b><small>${fmtB(u.size)} · ${u.done ? '완료' : '처리 중'}</small></div><div class="lmp-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${u.pct}"><i style="width:${u.pct}%"></i></div><p class="mini">${u.pct}% · 무결성 SHA-256 ${esc(u.sha ? u.sha.slice(0, 16) + '…' : '계산 중')}</p>${u.entries ? `<p class="mini"><b>zip 내용 ${u.entries.length}개</b></p>${table(['파일', '크기'], u.entries.slice(0, 15).map(e => [esc(e.name), fmtB(e.size)]))}${u.preview ? `<pre class="lmp-pre">${esc(u.preview)}</pre>` : ''}` : ''}</div>` : ''}
-        <p class="mini">파일 본문 저장은 학내 CDN · 스토리지와 연동 후 동작합니다. 지금은 이름 · 크기 · 해시 · zip 목록만 기록합니다. 클라우드 드라이브 연동은 제외 범위입니다.</p></div>
-        <div class="card"><div class="ch"><b>최근 파일</b></div>${table(['이름', '크기', '종류', 'zip 항목', '올린 시각'], ((r && r.items) || []).map(x => [esc(x.name), fmtB(x.size), esc(x.mime || ''), x.entries || '—', esc(LMP.ts(x.at))]), '최근 파일이 없습니다.')}</div>`; }
+        <p class="mini">파일 본문은 기관 파일 저장소(lms_file, 2MB 조각 · 기관별 행 수준 보안)에 저장합니다. 실행 파일은 막고, 문서 · 이미지 · 음성 · 동영상 · 압축 파일만 100MB까지 올립니다. 객체 저장소(CDN) 이전과 클라우드 드라이브는 연동 지점입니다.</p></div>
+        <div class="card"><div class="ch"><b>최근 파일</b></div>${table(['이름', '크기', '종류', '조각', 'zip 항목', '올린 시각', ''], ((r && r.items) || []).map(x => [esc(x.name), fmtB(x.size), esc(x.mime || ''), x.chunks || '—', x.entries || '—', esc(LMP.ts(x.at)), `<button class="btn sm" data-act="lmsp-dl" data-id="${esc(x.id)}">내려받기</button>`]), '최근 파일이 없습니다.')}</div>`; }
     if (tb === 'editor') { const v = UI.lmspEd != null ? UI.lmspEd : '이차방정식의 근: $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$\n\n$$\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$$\n\n에너지: $E = mc^2$, 각도 $\\theta \\le \\pi$';
       b = `<div class="grid g2"><div class="card"><div class="ch"><b>스마트 에디터</b><small>$…$ 인라인 · $$…$$ 블록 수식(LaTeX) · 이미지 · 동영상은 업로드 탭</small></div><div class="bar2"><button class="btn sm" data-act="lmsp-ins" data-v="$\\frac{a}{b}$">분수</button><button class="btn sm" data-act="lmsp-ins" data-v="$\\sqrt{x}$">√</button><button class="btn sm" data-act="lmsp-ins" data-v="$x^{2}$">x²</button><button class="btn sm" data-act="lmsp-ins" data-v="$\\sum_{i=1}^{n}$">∑</button><button class="btn sm" data-act="lmsp-ins" data-v="$\\int_{a}^{b}$">∫</button></div>
         <textarea id="lmspEd" rows="10" aria-label="본문(LaTeX 수식 사용 가능)" style="width:100%">${esc(v)}</textarea><div class="bar2"><button class="btn sm pri" data-act="lmsp-draft">임시저장</button><button class="btn sm" data-act="lmsp-load">불러오기</button><span class="mini" id="lmspDraftMsg">${esc(UI.lmspDraftMsg || '30초마다 자동 임시저장')}</span></div></div>
@@ -196,7 +193,7 @@
       b = `<div class="card"><div class="ch"><b>무들(Moodle) 백업 이관</b><small>SFR-008 · DAR-003 · 004 · .mbz(tar.gz) — 강좌 · 교수/학습자(학번만) · 수강 · 게시물 · 과제 · 자료</small></div><div class="bar2"><label class="btn">백업 파일(.mbz) 고르기<input type="file" id="lmspMbz" accept=".mbz,.tar.gz,.tgz" hidden></label><input id="lmspMigTerm" placeholder="학기(비우면 MIG-연도)" aria-label="이관 학기">${pv ? '<button class="btn pri" data-act="lmsp-migrun">이관 실행</button>' : ''}</div>
         ${pv ? `<div class="card"><div class="ch"><b>미리보기 — ${esc(pv.course.fullname)}</b><small>${esc(pv.file)}</small></div>${[['사용자', pv.users.length + `명 (학번 없음 ${pv.users.filter(u => !(u.idnumber || u.username)).length}명)`], ['수강 · 교수', pv.enrolments.length + '건'], ['게시판 · 게시물', pv.forums.length + '개 · ' + pv.forums.reduce((a, f) => a + f.posts.length, 0) + '건'], ['과제', pv.assignments.length + '개'], ['자료 · 동영상', pv.resources.length + '개 · ' + pv.resources.filter(x => /^video\//.test(x.mimetype)).length + '개']].map(([k, x]) => `<div class="row"><span>${k}</span><b>${x}</b></div>`).join('')}<p class="mini">이름 · 이메일은 읽지 않고 버립니다.</p></div>` : ''}
         <p class="mini">서버 도구: <code>node service/server/lms/tools/moodle-mbz.js post backup.mbz &lt;서버&gt; &lt;세션 쿠키&gt;</code> — 대용량 백업은 서버 도구를 쓰세요.</p></div>` +
-        ((r && r.items) || []).slice(0, 5).map(x => { const c = x.report.counts || {}; return `<div class="card"><div class="ch"><b>검증 리포트 #${x.run_id} · ${esc((x.report.course || {}).title || '')}</b><small>${esc(LMP.ts(x.at))} · ${esc(x.file)}</small>${x.report.ok ? tag('일치') : tag('확인 필요', 'y')}</div>${table(['항목', '원본', '이관', '제외 · 비고'], [['사용자', c.users && c.users.source, c.users && c.users.imported, c.users && c.users.skipped], ['수강 · 교수', c.enrolments && c.enrolments.source, c.enrolments && c.enrolments.imported, c.enrolments && c.enrolments.skipped], ['게시물', c.posts && c.posts.source, c.posts && c.posts.imported, c.posts && c.posts.no_author ? '작성자 없음 ' + c.posts.no_author : ''], ['과제', c.assignments && c.assignments.source, c.assignments && c.assignments.imported, ''], ['자료(동영상)', c.resources && c.resources.source, c.resources && c.resources.imported, c.resources && c.resources.videos ? '동영상 ' + c.resources.videos : '']].map(rw => rw.map(z => esc(z == null ? '—' : z))))}${(x.report.issues || []).map(i => `<p class="mini">⚠ ${esc(i.issue)}</p>`).join('')}<p class="mini">DB 재확인: 수강 ${esc((x.report.verify || {}).enrolled_in_db)}건 · 이관 객체 ${esc((x.report.verify || {}).objects_in_db)}건</p></div>`; }).join('') +
+        ((r && r.items) || []).slice(0, 5).map(x => { const c = x.report.counts || {}; return `<div class="card"><div class="ch"><b>검증 리포트 #${x.run_id} · ${esc((x.report.course || {}).title || '')}</b><small>${esc(LMP.ts(x.at))} · ${esc(x.file)}</small>${x.report.ok ? tag('일치') : tag('확인 필요', 'y')}</div>${table(['항목', '원본', '이관', '제외 · 비고'], [['사용자', c.users && c.users.source, c.users && c.users.imported, c.users && c.users.skipped], ['수강 · 교수', c.enrolments && c.enrolments.source, c.enrolments && c.enrolments.imported, c.enrolments && c.enrolments.skipped], ['게시물', c.posts && c.posts.source, c.posts && c.posts.imported, c.posts && c.posts.no_author ? '작성자 없음 ' + c.posts.no_author : ''], ['과제', c.assignments && c.assignments.source, c.assignments && c.assignments.imported, ''], ['자료(동영상)', c.resources && c.resources.source, c.resources && c.resources.imported, c.resources && c.resources.videos ? '동영상 ' + c.resources.videos : '']].map(rw => rw.map(z => esc(z == null ? '—' : z))))}${(x.report.issues || []).map(i => `<p class="mini">⚠ ${esc(i.issue)}</p>`).join('')}<p class="mini">DB 재확인: 수강 ${esc((x.report.verify || {}).enrolled_in_db)}건 · 강의 게시판 글 ${esc((x.report.verify || {}).board_posts_in_db ?? '—')}건(묶음 D) · 과제 ${esc((x.report.verify || {}).assignments_in_db ?? '—')}건(묶음 E) · 이관 기록 ${esc((x.report.verify || {}).objects_in_db)}건</p></div>`; }).join('') +
         (v && (v.items || []).length ? `<div class="card"><div class="ch"><b>동영상 이관 목록</b><small>${esc(v.note || '')}</small></div>${table(['이관', '제목', '파일', '크기'], v.items.map(x => ['#' + x.run_id, esc(x.title), esc(x.filename), fmtB(+x.filesize || 0)]))}</div>` : ''); }
     if (tb === 'manual') b = `<div class="card" lang="en"><div class="ch"><b>DiDiSam LMS — Administrator Quick Manual</b><small>English</small></div>
       <p><b>1. Calendar.</b> <i>Talk › Unified calendar</i> shows academic, course and personal events. Use <i>iCal export</i> to subscribe from phone, Outlook or Google Calendar.</p>
@@ -212,16 +209,32 @@
   ACT['lmsp-cl'] = el => LMP.run('p', 'cls.lang', { section_id: el.dataset.id, lang: el.value }, '강의실 언어를 저장했습니다.', 'p:cls');
   ACT['lmsp-a11y'] = el => { const o = a11y(); o[el.dataset.k] = el.checked; try { localStorage.setItem(A11Y_KEY, JSON.stringify(o)); } catch (e) { } applyA11y(o); LMP.run('p', 'pref.save', { lang: curLang().replace('zh-CN', 'zh').replace(/^(?!ko|en|ja|zh).*/, 'ko'), a11y: o }, null, 'p:pref'); render(); };
   /* 업로드 */
+  /* 파일 저장소(단일): 묶음 E lms_file — POST /api/lms/e/file(조각 2MB · base64). 데모 모드는 브라우저 메모리에 보관 */
+  const CHUNK = 2 * 1024 * 1024, MAXF = 100 * 1024 * 1024;
+  const BAD_EXT = /\.(exe|bat|cmd|com|scr|js|vbs|ps1|sh|msi|jar|dll|apk|app)$/i;
+  const OK_MIME = /^(image\/|audio\/|video\/|text\/|application\/(pdf|zip|x-zip-compressed|gzip|x-gzip|x-tar|json|xml|octet-stream|msword|vnd\.|haansoft|x-hwp|hwp))/i;
+  LMP.fileOk = (name, mime) => BAD_EXT.test(name) ? '실행 파일은 올릴 수 없습니다.' : !OK_MIME.test(mime || 'application/octet-stream') ? `허용하지 않는 파일 형식입니다(${mime}).` : null;
+  const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+  LMP.BLOBS = LMP.BLOBS || {};
+  LMP.putBlob = async (blob, name, mime) => { if (!LMP.live()) { const id = LMP.uuid(); LMP.BLOBS[id] = blob; return { file_id: id, name, mime, size: blob.size }; } return api('POST', '/api/lms/e/file', { name, mime, b64: b64(new Uint8Array(await blob.arrayBuffer())) }); };
+  LMP.getBlob = async (id, mime) => { if (!LMP.live()) return LMP.BLOBS[id] || new Blob([]); const r = await api('GET', '/api/lms/e/file?id=' + encodeURIComponent(id)); const bin = atob(r.b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: mime || r.mime }); };
+  LMP.saveBlob = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); };
   async function handleFiles(files) {
     for (const f of [...files].slice(0, 10)) {
+      const mime = f.type || 'application/octet-stream'; const bad = LMP.fileOk(f.name, mime);
+      if (bad) { toast(`${f.name}: ${bad}`, 'warn'); continue; } if (f.size > MAXF) { toast(`${f.name}: 파일은 100MB까지 올릴 수 있습니다.`, 'warn'); continue; } if (!f.size) { toast(`${f.name}: 빈 파일입니다.`, 'warn'); continue; }
       const u = UI.lmspUp = { name: f.name, size: f.size, pct: 0, done: false }; render();
       if (/\.zip$/i.test(f.name)) { try { u.entries = await zipList(f); const t = u.entries.find(e => /\.(txt|md|csv|json|c|py|js|html)$/i.test(e.name)); if (t) u.preview = await zipPreview(f, t).catch(() => null); } catch (e) { toast('zip 목록을 읽지 못했습니다: ' + e.message, 'warn'); } }
-      const CH = 4 * 1048576; const parts = []; for (let o = 0; o < f.size; o += CH) { parts.push(new Uint8Array(await f.slice(o, o + CH).arrayBuffer())); u.pct = Math.min(99, Math.round((o + CH) / f.size * 100)); const bar = $('.lmp-prog i'); if (bar) bar.style.width = u.pct + '%'; await new Promise(r => setTimeout(r, 0)); }
-      if (f.size <= 256 * 1048576 && crypto.subtle) { const all = new Uint8Array(f.size); let o = 0; parts.forEach(p => { all.set(p, o); o += p.length; }); u.sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', all))].map(x => x.toString(16).padStart(2, '0')).join(''); }
+      const ids = []; const n = Math.ceil(f.size / CHUNK);
+      try {
+        for (let k = 0; k < n; k++) { const r = await LMP.putBlob(f.slice(k * CHUNK, (k + 1) * CHUNK), n > 1 ? `${f.name}.part${k + 1}` : f.name, mime); ids.push(r.file_id); u.pct = Math.min(99, Math.round((k + 1) / n * 100)); const bar = $('.lmp-prog i'); if (bar) bar.style.width = u.pct + '%'; const pb = $('.lmp-prog'); if (pb) pb.setAttribute('aria-valuenow', u.pct); }
+      } catch (e) { toast(`${f.name}: 올리지 못했습니다 — ${e.message}`, 'warn'); UI.lmspUp = null; render(); continue; }
+      if (f.size <= 64 * 1048576 && crypto.subtle) u.sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', await f.arrayBuffer()))].map(x => x.toString(16).padStart(2, '0')).join('');
       u.pct = 100; u.done = true;
-      await LMP.run('p', 'upload.add', { name: f.name, size: f.size, mime: f.type || '', sha256: u.sha || '', entries: (u.entries || []).map(e => ({ name: e.name, size: e.size })) }, `${f.name} 업로드를 기록했습니다(본문 저장은 연동 후).`, 'p:up');
+      await LMP.run('p', 'upload.add', { name: f.name, size: f.size, mime, sha256: n === 1 ? (u.sha || '') : '', file_ids: ids, entries: (u.entries || []).map(e => ({ name: e.name, size: e.size })) }, `${f.name}을(를) 파일 저장소에 올렸습니다(조각 ${n}개).`, 'p:up');
     }
   }
+  ACT['lmsp-dl'] = async el => { try { const r = await LMP.call('p', 'upload.get', { id: el.dataset.id }); const parts = []; for (const id of r.chunks) parts.push(await LMP.getBlob(id, r.mime)); LMP.saveBlob(new Blob(parts, { type: r.mime }), r.name); } catch (e) { toast(e.message, 'warn'); } };
   LMP.handleFiles = handleFiles;
   document.addEventListener('dragover', e => { const d = e.target.closest && e.target.closest('#lmspDrop'); if (d) { e.preventDefault(); d.classList.add('over'); } });
   document.addEventListener('dragleave', e => { const d = e.target.closest && e.target.closest('#lmspDrop'); if (d) d.classList.remove('over'); });
@@ -275,32 +288,68 @@
   ACT['lmsp-wtg'] = el => { const L = lay(); const k = el.dataset.k; UI.lmspLay = el.checked ? [...new Set([...L, k])] : L.filter(x => x !== k); render(); };
   ACT['lmsp-wmv'] = el => { const L = lay(); const i = L.indexOf(el.dataset.k); const j = i + (+el.dataset.d); if (i < 0 || j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; render(); };
 
-  /* ═════════ 앱 출석(PWA · SFR-009 · 069 · 088) ═════════ */
+  /* ═════════ 앱 출석(PWA · SFR-009 · 069 · 088) — 출석 규칙 · 인증번호 · 회전 QR의 원본은 묶음 G(/api/lms/g/*) ═════════
+     교수자: G 코드 발급 · QR(G 부호기 W3.drawQR, rotate_sec마다 /g/qr 갱신) · 출석부(G roster)
+     학생: 카메라 QR 스캔(BarcodeDetector, 없으면 인증번호 직접 입력) → 운영: P /att/checkin(학습자 세션 → G checkin) · 데모: G 데모 checkin(학번 입력)
+     오프라인: 출석부에 모았다가 연결되면 items[]로 한 번에 보낸다 */
   const QK = 'didisam.lms.attq';
   const qGet = () => { try { return JSON.parse(localStorage.getItem(QK) || '[]'); } catch (e) { return []; } };
   const qSet = v => { try { localStorage.setItem(QK, JSON.stringify(v.slice(0, 50))); } catch (e) { } };
+  const W3ok = () => typeof window.W3 === 'object' && W3.call;
+  const G = (k, m, p, b) => (W3ok() ? W3.get(k, m, p, b) : undefined);
+  let qrT = 0, scanStream = null, scanT = 0;
+  const stopQR = () => { if (qrT) { clearInterval(qrT); qrT = 0; } };
+  const stopScan = () => { if (scanT) { clearInterval(scanT); scanT = 0; } if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; } };
+  AFTER.push(cur => { if (cur.tab !== 'lmsp-app') { stopQR(); stopScan(); } else { const c = $('#lmspQR'); if (c && UI.lmspOpen && W3ok() && W3.drawQR) W3.drawQR(c, UI.lmspOpen.qr); } });
   VIEWS['lmsp-app'] = LMP.guard(() => {
-    const d = LMP.load('p:portal', 'p', 'portal', {}); const today = (d && d.today) || []; const sel = UI.lmspSes || (today[0] || {}).session_id; const op = UI.lmspOpen && UI.lmspOpen.session_id === sel ? UI.lmspOpen : null;
-    const bd = sel && (LMP.isAdm() || S.me.role === 'teacher') ? LMP.load('p:board:' + sel, 'p', 'att.board', { session_id: sel }) : null; const Q = qGet();
-    const ndef = 'NDEFReader' in window, ble = !!(navigator.bluetooth);
-    return head('앱 출석', '교수자가 출석 코드를 열면 학생이 학습자 앱(PWA)에서 코드 · QR로 출석합니다. 네트워크가 끊기면 오프라인 출석부에 모았다가 연결되면 보냅니다.') +
-      `<div class="grid g2"><div class="card"><div class="ch"><b>교수자 · 출석 코드 열기</b></div>${today.length ? `<label class="fl">오늘 차시<select data-chg="lmsp-ses" aria-label="오늘 차시">${today.map(x => `<option value="${esc(x.session_id)}" ${x.session_id === sel ? 'selected' : ''}>${esc(x.title)} · ${esc(LMP.ts(x.at).slice(11))}</option>`).join('')}</select></label>
-        <button class="btn pri" data-act="lmsp-open">출석 코드 열기(10분)</button>${op ? `<div class="lmp-code" aria-live="polite" aria-label="출석 코드 ${op.code.split('').join(' ')}">${esc(op.code)}</div><p class="mini" style="text-align:center">${esc(LMP.ts(op.expires_at))}까지 · QR 값 <code>${esc(op.qr)}</code></p>` : ''}
-        ${bd ? `<div class="kpis">${kpi('출석', bd.present + '명')}${kpi('지각', bd.late + '명')}${kpi('오프라인 동기화', bd.offline + '건')}${kpi('수강', bd.enrolled + '명')}</div>` : ''}` : '<div class="empty">오늘 수업 차시가 없습니다.</div>'}</div>
-      <div class="card" style="max-width:420px"><div class="ch"><b>학생 앱 화면</b><small>${LMP.live() ? '학습자 포털 로그인 세션으로 출석' : '데모'}</small></div><label class="fl">출석 코드(6자리)<input id="lmspCode" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" placeholder="000000"></label>
+    if (!W3ok()) return head('앱 출석') + '<div class="warn">출결(묶음 G) 화면 모듈이 없습니다.</div>';
+    const secs = G('p:g:secs', 'GET', '/api/lms/g/sections', {}); const L = Array.isArray(secs) ? secs : [];
+    const sec = UI.lmspSec && L.find(x => x.section_id === UI.lmspSec) ? UI.lmspSec : (L[0] || {}).section_id;
+    const ses = sec ? G('p:g:ses:' + sec, 'GET', '/api/lms/g/sessions', { section_id: sec }) : null; const SL = Array.isArray(ses) ? ses : [];
+    const nowT = Date.now(); const near = SL.slice().sort((a, b) => Math.abs(Date.parse(a.starts_at) - nowT) - Math.abs(Date.parse(b.starts_at) - nowT))[0];
+    const sid = UI.lmspSes && SL.find(x => x.session_id === UI.lmspSes) ? UI.lmspSes : (near || {}).session_id;
+    const op = UI.lmspOpen && UI.lmspOpen.session_id === sid ? UI.lmspOpen : null; const Q = qGet(); const staff = LMP.isAdm() || S.me.role === 'teacher';
+    const ros = sec && staff ? G('p:g:ros:' + sec, 'GET', '/api/lms/g/roster', { section_id: sec }) : null;
+    const scan = 'BarcodeDetector' in window; const ndef = 'NDEFReader' in window, ble = !!navigator.bluetooth;
+    const rs = ros && !ros.__err ? ((ros.sessions || []).find(x => x.session_id === sid) || null) : null;
+    return head('앱 출석', '교수자가 출석 코드 · QR을 열면 학생이 학습자 앱(PWA)에서 QR을 찍거나 인증번호로 출석합니다. 출석 규칙 · 코드 · 기록은 출결 모듈(묶음 G)과 같습니다.') +
+      (!L.length ? `<div class="card"><div class="empty">출석할 분반이 없습니다.${LMP.isAdm() && !LMP.live() ? ' <button class="btn sm" data-act="lmsp-gseed">출결 데모 분반 만들기</button>' : ''}</div></div>` :
+      `<div class="bar2"><select data-chg="lmsp-sec" aria-label="분반">${L.map(x => `<option value="${esc(x.section_id)}" ${x.section_id === sec ? 'selected' : ''}>${esc(x.title)}</option>`).join('')}</select><select data-chg="lmsp-ses" aria-label="차시">${SL.map(x => `<option value="${esc(x.session_id)}" ${x.session_id === sid ? 'selected' : ''}>${x.week_no}주 ${x.seq}차시 · ${esc(LMP.ts(x.starts_at))}</option>`).join('')}</select></div>
+      <div class="grid g2">${staff ? `<div class="card"><div class="ch"><b>교수자 · 출석 코드 · QR</b><small>QR은 ${op ? op.rotate_sec : 15}초마다 바뀝니다(캡처 공유 방지)</small></div><button class="btn pri" data-act="lmsp-open">출석 코드 · QR 열기(3분)</button>
+        ${op ? `<div class="lmp-code" aria-live="polite" aria-label="인증번호 ${op.code.split('').join(' ')}">${esc(op.code)}</div><div style="text-align:center"><canvas id="lmspQR" width="220" height="220" role="img" aria-label="출석 QR"></canvas></div><p class="mini" style="text-align:center">${esc(LMP.ts(op.expires_at))}까지</p>` : ''}
+        ${rs ? `<div class="kpis">${kpi('출석', (rs.present || 0) + '명')}${kpi('지각', (rs.late || 0) + '명')}${kpi('결석', (rs.absent || 0) + '명')}${kpi('공결', (rs.excused || 0) + '명')}</div>` : ''}</div>` : ''}
+      <div class="card" style="max-width:440px"><div class="ch"><b>학생 앱 화면</b><small>${LMP.live() ? '학습자 포털 로그인 세션으로 출석' : '데모(학번 입력)'}</small></div>
+        ${LMP.live() ? '' : `<label class="fl">데모 학번<input id="lmspMno" value="${esc(UI.lmspMno || '20269001')}" maxlength="20"></label>`}
+        <div class="bar2">${scan ? '<button class="btn" data-act="lmsp-scan">📷 QR 찍기</button>' : '<span class="mini">이 브라우저는 QR 인식(BarcodeDetector)을 지원하지 않아 인증번호로 출석합니다.</span>'}</div>
+        <video id="lmspCam" playsinline muted style="width:100%;max-height:240px;display:${UI.lmspScanning ? 'block' : 'none'};border-radius:8px" aria-label="QR 촬영 화면"></video>
+        <label class="fl">인증번호(6자리)<input id="lmspCode" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" placeholder="000000"></label>
         <div class="bar2"><button class="btn pri" data-act="lmsp-ck">출석하기</button><button class="btn sm" data-act="lmsp-ckoff">오프라인으로 저장</button></div>
+        ${UI.lmspCkMsg ? `<p class="mini" role="status">${esc(UI.lmspCkMsg)}</p>` : ''}
         <div class="row"><span>오프라인 출석부</span><span>${Q.length}건 ${Q.length ? '<button class="btn sm" data-act="lmsp-sync">지금 보내기</button>' : ''}</span></div>
-        <div class="row"><span>NFC 태그 · BLE 비콘</span><span class="mini">${ndef ? 'NFC 지원 기기' : 'NFC 미지원'} · ${ble ? 'BLE 지원' : 'BLE 미지원'} — 비콘 장비 연동 후 동작</span></div>
+        <div class="row"><span>NFC 태그 · BLE 비콘</span><span class="mini">${ndef ? 'NFC 지원 기기' : 'NFC 미지원'} · ${ble ? 'BLE 지원' : 'BLE 미지원'} — 출결 화면(묶음 G) 태그 · 비콘 등록 후 동작</span></div>
         <div class="row"><span>푸시 수신</span><span class="mini">${'Notification' in window ? `알림 권한: ${Notification.permission}` : '미지원'} — 알림함 · 대기열(묶음 L)</span></div>
-        <div class="row"><span>앱 포장(스토어)</span><span class="mini">PWA manifest · didisam/native 설정 — 스토어 등록은 연동 제외</span></div></div></div>`;
+        <div class="row"><span>앱 포장(스토어)</span><span class="mini">PWA manifest · didisam/native 설정 — 스토어 등록은 연동 제외</span></div></div></div>`);
   });
-  ACT['lmsp-ses'] = el => { UI.lmspSes = el.value; render(); };
-  ACT['lmsp-open'] = async () => { const d = LMP.cache['p:portal'] && LMP.cache['p:portal'].v; const sel = UI.lmspSes || ((d && d.today && d.today[0]) || {}).session_id; const r = await LMP.run('p', 'att.open', { session_id: sel, minutes: 10 }, '출석 코드를 열었습니다.', 'p:board'); if (r) { UI.lmspOpen = { ...r, session_id: sel }; render(); } };
-  const curSes = () => { const d = LMP.cache['p:portal'] && LMP.cache['p:portal'].v; return UI.lmspSes || ((d && d.today && d.today[0]) || {}).session_id; };
-  ACT['lmsp-ck'] = async () => { const code = ($('#lmspCode') || {}).value || ''; const sid = curSes(); if (!navigator.onLine) { qSet([...qGet(), { session_id: sid, code, offline_at: new Date().toISOString() }]); toast('오프라인입니다. 출석부에 저장했다가 연결되면 보냅니다.', 'warn'); render(); return; }
-    await LMP.run('p', 'att.checkin', { session_id: sid, code }, r => r.status === 'late' ? '지각으로 출석했습니다.' : '출석했습니다.', 'p:board'); };
+  ACT['lmsp-gseed'] = async () => { await W3.act(() => W3.call('POST', '/api/lms/g/seed', {}), '출결 데모 분반을 만들었습니다.'); W3.drop('p:g:'); render(); };
+  ACT['lmsp-sec'] = el => { UI.lmspSec = el.value; UI.lmspSes = null; UI.lmspOpen = null; stopQR(); render(); };
+  ACT['lmsp-ses'] = el => { UI.lmspSes = el.value; UI.lmspOpen = null; stopQR(); render(); };
+  const curSes = () => { const sel = $('[data-chg=lmsp-ses]'); return sel ? sel.value : UI.lmspSes; };
+  ACT['lmsp-open'] = async () => { const sid = curSes(); if (!sid) return; const r = await W3.act(() => W3.call('POST', '/api/lms/g/code', { session_id: sid, ttl_sec: 180, rotate_sec: 15 }), '출석 코드 · QR을 열었습니다.'); if (!r) return;
+    UI.lmspOpen = { ...r, session_id: sid }; stopQR(); render();
+    qrT = setInterval(async () => { try { const q = await W3.call('GET', '/api/lms/g/qr', { session_id: sid }); if (UI.lmspOpen && UI.lmspOpen.session_id === sid) { UI.lmspOpen.qr = q.qr; const c = $('#lmspQR'); if (c && W3.drawQR) W3.drawQR(c, q.qr); } } catch (e) { stopQR(); } }, (r.rotate_sec || 15) * 1000); };
+  /* 학생 출석: 운영 = P /att/checkin(학습자 세션 → G), 데모 = G 데모 checkin(학번) */
+  const doCheckin = async b => { if (LMP.live()) return LMP.call('p', 'att.checkin', b); const mno = ($('#lmspMno') || {}).value || UI.lmspMno || ''; UI.lmspMno = mno; return W3.call('POST', '/api/lms/g/checkin', { ...b, member_no: mno, method: b.qr ? 'qr' : 'code' }); };
+  const ckMsg = r => r.status === 'late' ? '지각으로 출석했습니다.' : '출석했습니다.';
+  const submit = async b => { try { const r = await doCheckin(b); UI.lmspCkMsg = ckMsg(r); toast(UI.lmspCkMsg, 'ok'); W3.drop('p:g:ros'); } catch (e) { UI.lmspCkMsg = e.message; toast(e.message, 'warn'); } render(); };
+  ACT['lmsp-ck'] = async () => { const code = ($('#lmspCode') || {}).value || ''; const sid = curSes(); if (!navigator.onLine) { qSet([...qGet(), { session_id: sid, code, offline_at: new Date().toISOString() }]); toast('오프라인입니다. 출석부에 저장했다가 연결되면 보냅니다.', 'warn'); render(); return; } await submit({ session_id: sid, code }); };
   ACT['lmsp-ckoff'] = () => { qSet([...qGet(), { session_id: curSes(), code: ($('#lmspCode') || {}).value || '', offline_at: new Date().toISOString() }]); toast('오프라인 출석부에 저장했습니다.', 'ok'); render(); };
-  const sync = async () => { const Q = qGet(); if (!Q.length) return; try { const r = await LMP.call('p', 'att.checkin', { items: Q }); qSet([]); const ok = r.items.filter(x => x.result === 'present' || x.result === 'late').length; toast(`오프라인 출석 ${Q.length}건 전송 — 인정 ${ok}건`, ok ? 'ok' : 'warn'); LMP.drop('p:board'); render(); } catch (e) { toast(e.message, 'warn'); } };
+  ACT['lmsp-scan'] = async () => {
+    if (!('BarcodeDetector' in window)) return toast('QR 인식을 지원하지 않는 브라우저입니다. 인증번호를 입력하세요.', 'warn');
+    try { const det = new BarcodeDetector({ formats: ['qr_code'] }); scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); UI.lmspScanning = 1; render(); const v = $('#lmspCam'); v.srcObject = scanStream; await v.play();
+      scanT = setInterval(async () => { try { const c = await det.detect(v); const t = c && c[0] && c[0].rawValue; if (t && /^DDATT1\./.test(t)) { stopScan(); UI.lmspScanning = 0; const sid = t.split('.')[1]; await submit({ session_id: sid, qr: t, method: 'qr' }); } } catch (e) { } }, 400);
+    } catch (e) { stopScan(); UI.lmspScanning = 0; render(); toast('카메라를 열 수 없습니다. 인증번호로 출석하세요. (' + e.message + ')', 'warn'); } };
+  const sync = async () => { const Q = qGet(); if (!Q.length) return; try { let ok = 0; if (LMP.live()) { const r = await LMP.call('p', 'att.checkin', { items: Q }); ok = r.items.filter(x => x.ok).length; } else { for (const x of Q) { try { await doCheckin(x); ok++; } catch (e) { } } }
+    qSet([]); toast(`오프라인 출석 ${Q.length}건 전송 — 인정 ${ok}건`, ok ? 'ok' : 'warn'); W3.drop('p:g:ros'); render(); } catch (e) { toast(e.message, 'warn'); } };
   ACT['lmsp-sync'] = sync; window.addEventListener('online', sync);
 
   /* 강의실 언어 표시(기존 강의실 화면 감싸기) */

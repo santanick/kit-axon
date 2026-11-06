@@ -34,6 +34,9 @@ public class LmsFServiceImpl extends EgovAbstractServiceImpl implements LmsFServ
         R.put("POST submit", new LmsEfhGateway.Route("lms_f_submit", "learner", 262144));
         R.put("GET result", new LmsEfhGateway.Route("lms_f_result", "learner", 65536));
         R.put("POST retry", new LmsEfhGateway.Route("lms_f_retry", "learner", 65536));
+        R.put("GET settings", new LmsEfhGateway.Route("lms_f_settings", "staff", 65536));
+        R.put("POST settings", new LmsEfhGateway.Route("lms_f_settings_save", "staff", 4096));
+        R.put("POST ip-mask", new LmsEfhGateway.Route("lms_f_ip_mask", "staff", 4096));
     }
     private final LmsEfhGateway gw; private final LmsFMapper mapper;
     public LmsFServiceImpl(LmsEfhGateway gw, LmsFMapper mapper) { this.gw = gw; this.mapper = mapper; }

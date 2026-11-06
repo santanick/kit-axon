@@ -110,6 +110,23 @@ async function scenario(base, db, tag) {
   await rec('boardList', C('GET', 'board?program_id=' + pid, ow), 200);
   await rec('list', C('GET', 'programs', ow), 200);
   const L5 = { cookie: await lib.learner(db, O.tid, '20261005') };
+  /* 실제 파일 저장(묶음 E 업로드 API · lms_file) — 표지 · 첨부 · 증빙 · 신청서 파일 항목 */
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const up = async (who, name, mime, b64) => (await lib.call(base, 'POST', '/api/lms/e/file', { ...who, body: { name, mime, b64 } })).j;
+  const fc = await up(ow, 'cover.png', 'image/png', png); const fa = await up(ow, '안내.pdf', 'application/pdf', Buffer.from('%PDF-1.4 demo').toString('base64'));
+  await rec('fBadCover', C('POST', 'program/save', { ...ow, body: { title: '파일 프로그램', cover_url: 'file:' + fa.file_id } }), 400);
+  await rec('fBadAttach', C('POST', 'program/save', { ...ow, body: { title: '파일 프로그램', attachments: [{ file_id: '00000000-0000-4000-8000-000000000000', name: 'x' }] } }), 400);
+  const fp = await rec('fSave', C('POST', 'program/save', { ...ow, body: { ...base0, title: '파일 프로그램', capacity: 10, approval_mode: 'auto', cover_url: 'file:' + fc.file_id, attachments: [{ file_id: fa.file_id, name: '안내.pdf' }], evidence: [{ file_id: fa.file_id, name: '근거.pdf' }],
+    form: [{ id: 'cv', type: 'file', label: '이력서', required: true }], sessions: [{ title: '1회' }] } }), 200);
+  const fpid = fp.j.program_id; await tr('fSub', fpid, 'submit', ow, 200); await tr('fApp', fpid, 'approve', ow, 200); await tr('fOpen', fpid, 'open', ow, 200);
+  const lf = await up(L5, '이력서.pdf', 'application/pdf', Buffer.from('%PDF-1.4 cv').toString('base64'));
+  await rec('fOtherFile', C('POST', 'apply', { ...L5, body: { program_id: fpid, answers: { cv: fa.file_id.replace(/.$/, 'f') } } }), 400);
+  await rec('fApply', C('POST', 'apply', { ...L5, body: { program_id: fpid, answers: { cv: lf.file_id } } }), 200);
+  await rec('fLCover', C('GET', 'file?program_id=' + fpid + '&file_id=' + fc.file_id, L5), 200);
+  await rec('fLOwn', C('GET', 'file?program_id=' + fpid + '&file_id=' + lf.file_id, L5), 200);
+  await rec('fLEvidence', C('GET', 'file?program_id=' + fpid + '&file_id=' + fa.file_id + '&x=1', L5), 200);
+  await rec('fOpCv', C('GET', 'file?program_id=' + fpid + '&file_id=' + lf.file_id, su), 200);
+  await rec('fNone', C('GET', 'file?program_id=' + fpid + '&file_id=' + fc.file_id.replace(/^./, 'a'), ow), 404);
   await rec('lApplyTeam', C('POST', 'apply', { ...L5, body: { program_id: tp, member_no: '20261001', answers: ans, team: { mode: 'join', name: '알파', password: 'pw1234' } } }), 409);
   await rec('lPrograms', C('GET', 'student/programs', L5), 200);
   await rec('lMe', C('GET', 'student/me', L5), 200);

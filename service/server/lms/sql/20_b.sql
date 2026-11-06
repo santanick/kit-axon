@@ -173,6 +173,12 @@ end $$;
 create or replace function lmsb_actor(sec uuid, p jsonb, x jsonb) returns jsonb language plpgsql as $$
 declare no text := nullif(btrim(coalesce(p->>'as', '')), ''); pr record; r text;
 begin
+  -- 학습자 포털 세션: 학번(또는 간편가입 계정의 학번)으로 고정 — as로 다른 사람이 될 수 없다
+  if x->>'kind' = 'learner' then
+    no := coalesce((select member_no from lms_person where tenant_id = lmsb_tid() and member_no = x->>'sid'),
+      (select la.student_no from learner_accounts la where la.tenant_id = lmsb_tid() and lmsb_uuid(x->>'sid') is not null and la.learner_id = lmsb_uuid(x->>'sid')));
+    if no is null then perform lmsb_err(403, 'person', '학사 정보에 등록된 학번이 아닙니다. 학교 학사 담당 부서에 문의하세요.'); end if;
+  end if;
   if no is null then
     return jsonb_build_object('pid', null, 'no', null, 'role', case when x->>'role' = 'teacher' then 'professor' else 'admin' end,
       'label', case x->>'role' when 'owner' then '정운영자' when 'sub' then '부운영자' else '교수자' end, 'uid', x->>'uid');
@@ -613,7 +619,9 @@ begin
     if p ? 'share' and p->>'share' not in ('private','shared') then perform lmsb_err(400, 'input', '공유 범위가 올바르지 않습니다.'); end if;
     if p->>'share' = 'shared' then perform lmsb_need(a, 'resource.share'); end if;
     if id is null then
-      if v not in ('file','url','page','folder','label','video','scorm','html5') then perform lmsb_err(400, 'input', '자원 유형이 올바르지 않습니다.'); end if;
+      if v not in ('file','url','page','folder','label','video','scorm','html5','assign','exam') then perform lmsb_err(400, 'input', '자원 유형이 올바르지 않습니다.'); end if;
+      if v = 'assign' and not exists (select 1 from lms_assignment g where g.tenant_id = tid and g.section_id = sec and g.asg_id = lmsb_uuid(d->>'ref')) then perform lmsb_err(400, 'input', '이 강의실의 과제를 고르세요.'); end if;
+      if v = 'exam' and not exists (select 1 from lms_exam g where g.tenant_id = tid and g.section_id = sec and g.exam_id = lmsb_uuid(d->>'ref')) then perform lmsb_err(400, 'input', '이 강의실의 시험을 고르세요.'); end if;
       insert into lms_b_resource (tenant_id, section_id, session_id, kind, title, body, visible, sort, completion, access, share, owner_label)
       values (tid, sec, id2, v, lmsb_t(p, 'title', 200, true, '제목'), d, lmsb_bool(p, 'visible', true), lmsb_i(p, 'sort', -1000, 100000, coalesce((select max(sort) + 1 from lms_b_resource where tenant_id = tid and section_id = sec and session_id is not distinct from id2), 0)),
         case when jsonb_typeof(p->'completion') = 'object' then p->'completion' else '{}' end, case when jsonb_typeof(p->'access') = 'object' then p->'access' else '{}' end, coalesce(nullif(p->>'share', ''), 'private'), a->>'label')
@@ -627,7 +635,13 @@ begin
       if not found then perform lmsb_err(409, 'deleted', '휴지통에 있는 자원은 먼저 복구하세요.'); end if;
     end if;
     insert into lms_b_res_ver (tenant_id, res_id, ver, snap, by_label) select tid, z.res_id, z.ver, lmsb_res_json(z), a->>'label' from lms_b_resource z where z.tenant_id = tid and z.res_id = id;
+    perform lmsb_ext_res(id); -- 과제 · 시험 자원: 이미 있는 제출 · 응시 결과를 바로 반영
     return (select lmsb_res_json(z) from lms_b_resource z where z.tenant_id = tid and z.res_id = id);
+  elsif op = 'ext-list' then
+    -- 연결할 과제(E) · 시험(F) 목록
+    perform lmsb_need(a, 'resource.edit');
+    return jsonb_build_object('assignments', coalesce((select jsonb_agg(jsonb_build_object('id', g.asg_id, 'title', g.title, 'kind', g.kind, 'status', g.status, 'due_at', g.due_at, 'max_score', g.max_score) order by g.created_at) from lms_assignment g where g.tenant_id = tid and g.section_id = sec), '[]'),
+      'exams', coalesce((select jsonb_agg(jsonb_build_object('id', g.exam_id, 'title', g.title, 'status', g.status, 'close_at', g.close_at, 'score_policy', g.score_policy) order by g.created_at) from lms_exam g where g.tenant_id = tid and g.section_id = sec), '[]'));
   elsif op = 'res-del' then
     perform lmsb_need(a, 'resource.edit');
     update lms_b_resource set deleted_at = now(), deleted_by = a->>'label' where tenant_id = tid and res_id = id and deleted_at is null;
@@ -676,9 +690,11 @@ begin
     perform lmsb_need(a, 'course.view');
     if a->>'pid' is null then return jsonb_build_object('ok', true, 'preview', true); end if;
     if a->>'role' = 'student' and not coalesce((select c.open from lmsb_access(sec, (a->>'pid')::uuid) c where c.res_id = id), false) then perform lmsb_err(403, 'locked', '아직 열리지 않은 자원입니다.'); end if;
-    select z.completion into d from lms_b_resource z where z.tenant_id = tid and z.res_id = id;
-    insert into lms_b_progress (tenant_id, res_id, person_id, status, score, time_sec, views) values (tid, id, (a->>'pid')::uuid, 'in_progress', lmsb_i(p, 'score', 0, 100000, null), lmsb_i(p, 'time_sec', 0, 864000, 0), 1)
-      on conflict (tenant_id, res_id, person_id) do update set views = lms_b_progress.views + 1, time_sec = lms_b_progress.time_sec + excluded.time_sec, score = coalesce(excluded.score, lms_b_progress.score), updated_at = now();
+    select z.completion, z.kind into r from lms_b_resource z where z.tenant_id = tid and z.res_id = id; d := r.completion;
+    -- 과제 · 시험 · SCORM 점수는 연동(트리거 · cmi)으로만 들어온다: 열람 기록만 남긴다
+    if r.kind in ('assign','exam','scorm') then return jsonb_build_object('ok', true, 'status', (select g.status from lms_b_progress g where g.tenant_id = tid and g.res_id = id and g.person_id = (a->>'pid')::uuid), 'linked', true); end if;
+    insert into lms_b_progress (tenant_id, res_id, person_id, status, score, time_sec, views) values (tid, id, (a->>'pid')::uuid, 'in_progress', null, lmsb_i(p, 'time_sec', 0, 864000, 0), 1)
+      on conflict (tenant_id, res_id, person_id) do update set views = lms_b_progress.views + 1, time_sec = lms_b_progress.time_sec + excluded.time_sec, updated_at = now();
     update lms_b_progress g set status = case
         when g.status in ('completed','passed') then g.status
         when d->>'type' = 'time' and g.time_sec >= coalesce((d->>'sec')::int, 0) then 'completed'

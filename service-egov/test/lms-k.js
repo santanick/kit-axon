@@ -16,15 +16,17 @@ const lib = {
   pg() { for (const d of PGDIR) { try { return require(d); } catch { } } throw new Error('pg 모듈 없음'); },
   /* 기관 하나 + 정운영자 · 부운영자 · 교수자 세션, 학사 구성원 시드 */
   async org(base, dbUrl, tag) {
-    const em = `w4_${tag}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@example.com`; const pw = 'Contract2026x';
-    const su = await lib.call(base, 'POST', '/api/signup', { body: { email: em, password: pw, orgName: '대조 대학교', type: 'univ' } });
-    if (su.st !== 200) throw new Error('signup ' + su.st + ' ' + JSON.stringify(su.j));
-    const me = await lib.call(base, 'GET', '/api/me', { cookie: su.ck }); const tid = me.j.tenant.tid;
+    /* 기관 · 계정 · 세션을 DB에 바로 만든다(가입 API는 IP당 시간 10회 제한 — 통합 회귀에서 429가 나므로 쓰지 않는다) */
+    const crypto = require('node:crypto'); const sfx = crypto.randomBytes(5).toString('hex');
+    const tid = 'tn_' + sfx + 'w4'; const em = `w4_${tag}_${Date.now()}_${sfx}@example.com`;
     const { Client } = lib.pg(); const c = new Client({ connectionString: dbUrl }); await c.connect();
-    const ck = { owner: su.ck };
-    for (const role of ['sub', 'teacher']) {
-      const e2 = role + '_' + em; await c.query("insert into users (tenant_id, email, pw, role) select tenant_id, $2, pw, $3 from users where lower(email) = lower($1)", [em, e2, role]);
-      ck[role] = (await lib.call(base, 'POST', '/api/login', { body: { email: e2, password: pw } })).ck;
+    await c.query("insert into tenants (id, name, type, mode) values ($1, '대조 대학교', 'univ', 'saas')", [tid]);
+    const ck = {};
+    for (const role of ['owner', 'sub', 'teacher']) {
+      const e2 = role === 'owner' ? em : role + '_' + em; const t = crypto.randomBytes(32).toString('base64url');
+      const uid = (await c.query("insert into users (tenant_id, email, pw, role) values ($1, $2, 'scrypt$x$y', $3) returning id", [tid, e2, role])).rows[0].id;
+      await c.query("insert into sessions (id, user_id, tenant_id, expires_at) values ($1, $2, $3, now() + interval '2 hours')", [crypto.createHash('sha256').update(t).digest('hex'), uid, tid]);
+      ck[role] = 'dd_sid=' + t;
     }
     await c.query('begin'); await c.query("select set_config('app.tenant', $1, true)", [tid]);
     await c.query("insert into lms_org_unit (tenant_id, unit_code, name, parent_code, kind) values ($1,'ENG','공과대학',null,'college'),($1,'CSE','컴퓨터공학과','ENG','dept'),($1,'BUS','경영학과',null,'dept')", [tid]);

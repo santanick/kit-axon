@@ -23,10 +23,23 @@ async function scenario(base, tag) {
   await P('clsLangBad', '/api/lms/p/cls/lang', { section_id: X.sec[1], lang: 'xx' });
   await G('clsLangs', '/api/lms/p/cls/langs');
   /* 업로드 · 에디터 */
-  await P('upBad', '/api/lms/p/upload/add', { name: 'a.zip', size: 'big' });
-  await P('upBig', '/api/lms/p/upload/add', { name: 'a.mp4', size: 6e9 });
-  await P('up', '/api/lms/p/upload/add', { name: '과제묶음.zip', size: 20480, mime: 'application/zip', sha256: 'a'.repeat(64), entries: [{ name: 'src/main.c', size: 1200 }, { name: 'README.md', size: 300 }] });
+  /* 업로드: 바이트는 lms_file(묶음 E POST /api/lms/e/file, 조각 2MB)에 올리고 P가 조각을 한 파일로 묶는다 */
+  const crypto = require('node:crypto');
+  const putF = (name, mime, buf, c = ck) => call(base, 'POST', '/api/lms/e/file', { cookie: c, body: { name, mime, b64: buf.toString('base64') } }).then(r => r.j && r.j.file_id);
+  const zipA = Buffer.alloc(2 * 1024 * 1024, 7), zipB = Buffer.from('PK tail part');
+  const c1 = await putF('과제묶음.zip.part1', 'application/zip', zipA), c2 = await putF('과제묶음.zip.part2', 'application/zip', zipB);
+  const one = Buffer.from('강의 노트 본문'); const c3 = await putF('노트.txt', 'text/plain', one); const cT = await putF('t.txt', 'text/plain', one, tea.ck);
+  await P('upNoChunks', '/api/lms/p/upload/add', { name: 'a.zip', size: 10 });
+  await P('upExe', '/api/lms/p/upload/add', { name: 'setup.exe', mime: 'application/octet-stream', file_ids: [c3] });
+  await P('upType', '/api/lms/p/upload/add', { name: 'a.bin', mime: 'application/x-msdownload', file_ids: [c3] });
+  await P('upNotMine', '/api/lms/p/upload/add', { name: 't.txt', mime: 'text/plain', file_ids: [cT] });
+  await P('upSize', '/api/lms/p/upload/add', { name: '과제묶음.zip', mime: 'application/zip', size: 5, file_ids: [c1, c2] });
+  await P('upSha', '/api/lms/p/upload/add', { name: '노트.txt', mime: 'text/plain', sha256: 'a'.repeat(64), file_ids: [c3] });
+  await P('up', '/api/lms/p/upload/add', { name: '과제묶음.zip', size: zipA.length + zipB.length, mime: 'application/zip', file_ids: [c1, c2], entries: [{ name: 'src/main.c', size: 1200 }, { name: 'README.md', size: 300 }] });
+  await P('up1', '/api/lms/p/upload/add', { name: '노트.txt', size: one.length, mime: 'text/plain', sha256: crypto.createHash('sha256').update(one).digest('hex'), file_ids: [c3] });
   await G('upRecent', '/api/lms/p/upload/recent');
+  await G('upGet', `/api/lms/p/upload/get?id=${R.up.j && R.up.j.id}`);
+  R.upChunk = await call(base, 'GET', `/api/lms/e/file?id=${c2}`, { cookie: ck });
   await P('draft', '/api/lms/p/draft/save', { doc_key: 'notice:new', body: '수식 $E=mc^2$ 와 $$\\frac{a}{b}$$' });
   await G('draftGet', '/api/lms/p/draft/get?doc_key=notice:new');
   await G('draftNone', '/api/lms/p/draft/get?doc_key=none');
@@ -34,19 +47,18 @@ async function scenario(base, tag) {
   await P('widgetBad', '/api/lms/p/widget/save', { layout: ['hack'] });
   await P('widget', '/api/lms/p/widget/save', { layout: ['due', 'courses', 'advisees'] });
   await G('portal', '/api/lms/p/portal');
-  /* 앱 출석 */
-  await P('openTea', '/api/lms/p/att/open', { session_id: X.ses[1], minutes: 5 }, tea.ck);
-  await P('openNo', '/api/lms/p/att/open', { session_id: '00000000-0000-0000-0000-000000000000' });
-  await P('open', '/api/lms/p/att/open', { session_id: X.ses[2], minutes: 10 });
+  /* 앱 출석 — 코드 · QR 원본은 묶음 G. 학생은 학습자 세션으로 P /att/checkin → G checkin */
+  await P('openTea', '/api/lms/g/code', { session_id: X.ses[2] }, tea.ck);
+  await P('open', '/api/lms/g/code', { session_id: X.ses[2] });
   const code = R.open.j.code;
   R.ckOp = await call(base, 'POST', '/api/lms/p/att/checkin', { cookie: ck, body: { session_id: X.ses[2], code } });
   await P('ckBad', '/api/lms/p/att/checkin', { session_id: X.ses[2], code: '000000' === code ? '111111' : '000000' }, lck);
   await P('ckNotEnr', '/api/lms/p/att/checkin', { session_id: X.ses[2], code }, lck5);
   await P('ckNoPerson', '/api/lms/p/att/checkin', { session_id: X.ses[2], code }, lckNo);
   await P('ck', '/api/lms/p/att/checkin', { session_id: X.ses[2], code }, lck);
-  await P('ckOffline', '/api/lms/p/att/checkin', { items: [{ session_id: X.ses[2], code, offline_at: new Date(Date.now() - 60e3).toISOString() }, { session_id: X.ses[1], code }, { session_id: X.ses[2], code, offline_at: '2020-01-01T00:00:00Z' }] }, lck);
-  await G('board', `/api/lms/p/att/board?session_id=${X.ses[2]}`);
-  await G('boardTea', `/api/lms/p/att/board?session_id=${X.ses[2]}`, tea.ck);
+  await P('ckDup', '/api/lms/p/att/checkin', { session_id: X.ses[2], code }, lck);
+  await P('ckOffline', '/api/lms/p/att/checkin', { items: [{ session_id: X.ses[2], code, offline_at: new Date(Date.now() - 60e3).toISOString() }, { session_id: X.ses[1], code }, 'x'] }, lck);
+  await G('roster', `/api/lms/g/roster?section_id=${X.sec[0]}`);
   /* KOCW */
   await G('kocwTea', '/api/lms/p/kocw', tea.ck);
   await G('kocw', '/api/lms/p/kocw?term_id=2026-2');
@@ -86,11 +98,12 @@ async function scenario(base, tag) {
   await P('mig', '/api/lms/p/mig/import', payload);
   await P('migAgain', '/api/lms/p/mig/import', payload);
   await G('migRuns', '/api/lms/p/mig/runs');
+  R.boards = await call(base, 'GET', `/api/lms/d/boards?section=${R.mig.j && R.mig.j.report && R.mig.j.report.course.section_id}`, { cookie: ck });
   await G('migVideos', '/api/lms/p/mig/videos');
   await P('seed', '/api/lms/p/demo/seed', {});
   return R;
 }
-main('묶음 P', scenario, { noAuth: 401, csrf: 403, pref0: 200, prefBad: 400, pref: 200, clsLang: 200, clsLangBad: 400, upBad: 400, upBig: 413, up: 200, draft: 200, widgetBad: 400, widget: 200, portal: 200,
-  openTea: 200, openNo: 404, open: 200, ckOp: 401, ckBad: 400, ckNotEnr: 403, ckNoPerson: 404, ck: 200, ckOffline: 200, board: 200, kocwTea: 403, kocw: 200,
+main('묶음 P', scenario, { noAuth: 401, csrf: 403, pref0: 200, prefBad: 400, pref: 200, clsLang: 200, clsLangBad: 400, upNoChunks: 400, upExe: 400, upType: 400, upNotMine: 400, upSize: 400, upSha: 400, up: 200, up1: 200, upGet: 200, upChunk: 200, draft: 200, widgetBad: 400, widget: 200, portal: 200,
+  openTea: 200, open: 200, ckOp: 401, ckBad: 400, ckNotEnr: 403, ckNoPerson: 403, ck: 200, ckDup: 409, ckOffline: 200, roster: 200, kocwTea: 403, kocw: 200,
   admTea: 403, admFail1: 401, admFail2: 401, adm: 200, admStatus: 200, admConc: 409, admForce: 200, admOut: 200, lock4: 401, lock5: 423, lock6: 423, lockStatus: 200,
-  piiBad: 400, piiOther: 400, piiField: 400, piiNo: 404, pii1: 200, pii2: 200, piiStats: 200, piiStatsTea: 403, crypto: 200, classBad: 400, classSave: 200, perfBad: 400, perf: 200, migBad: 400, migTea: 403, mig: 200, migAgain: 200, migRuns: 200, seed: 200 }, ['open', 'openTea']);
+  piiBad: 400, piiOther: 400, piiField: 400, piiNo: 404, pii1: 200, pii2: 200, piiStats: 200, piiStatsTea: 403, crypto: 200, classBad: 400, classSave: 200, perfBad: 400, perf: 200, migBad: 400, migTea: 403, mig: 200, migAgain: 200, migRuns: 200, boards: 200, seed: 200 }, ['open', 'openTea', 'roster']);

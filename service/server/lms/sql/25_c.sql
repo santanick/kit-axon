@@ -279,7 +279,8 @@ begin
       'teams', coalesce((select jsonb_agg(lmsc_team_json(t) order by t.set_name, t.name) from lms_c_team t where t.tenant_id = tid and t.section_id = sec), '[]'),
       'unassigned', case when lmsb_mgr(a) then coalesce((select jsonb_agg(p2.member_no order by p2.member_no) from lms_enrollment e join lms_person p2 on p2.tenant_id = e.tenant_id and p2.person_id = e.person_id where e.tenant_id = tid and e.section_id = sec and e.status = 'enrolled'
         and not exists (select 1 from lms_c_team_member m join lms_c_team t on t.tenant_id = m.tenant_id and t.team_id = m.team_id where m.tenant_id = tid and t.section_id = sec and m.person_id = e.person_id)), '[]') else '[]' end,
-      'tasks', coalesce((select jsonb_agg(jsonb_build_object('id', k.task_id, 'title', k.title, 'body', k.body, 'due_at', k.due_at, 'team_id', k.team_id,
+      'tasks', coalesce((select jsonb_agg(jsonb_build_object('id', k.task_id, 'title', k.title, 'body', k.body, 'due_at', k.due_at, 'team_id', k.team_id, 'ref_asg', k.ref_asg,
+          'ref_title', (select g.title from lms_assignment g where g.tenant_id = tid and g.asg_id = k.ref_asg),
           'status', coalesce((select jsonb_object_agg(s.team_id::text, jsonb_build_object('status', s.status, 'note', s.note, 'by', s.by_label, 'at', s.at)) from lms_c_task_status s where s.tenant_id = tid and s.task_id = k.task_id), '{}')) order by k.due_at nulls last, k.created_at)
         from lms_c_task k where k.tenant_id = tid and k.section_id = sec and (mt is null or k.team_id is null or k.team_id = any(mt))), '[]'));
   elsif op = 'team-save' then
@@ -313,8 +314,11 @@ begin
   elsif op = 'task-save' then
     perform lmsb_need(a, 'activity.manage');
     id2 := lmsb_uuid(p->>'team_id'); if id2 is not null and not exists (select 1 from lms_c_team t where t.tenant_id = tid and t.section_id = sec and t.team_id = id2) then perform lmsb_err(400, 'input', '팀이 이 강의실에 없습니다.'); end if;
-    if lmsb_uuid(p->>'id') is not null then update lms_c_task set title = lmsb_t(p, 'title', 200, true, '제목'), body = lmsb_t(p, 'body', 8000), due_at = lmsb_tstz(p, 'due_at'), team_id = id2 where tenant_id = tid and task_id = id; return jsonb_build_object('ok', true, 'id', id); end if;
-    insert into lms_c_task (tenant_id, section_id, team_id, title, body, due_at) values (tid, sec, id2, lmsb_t(p, 'title', 200, true, '제목'), lmsb_t(p, 'body', 8000), lmsb_tstz(p, 'due_at')) returning task_id into id;
+    -- E 과제와 연결하면 팀원 제출 현황으로 진행 상태가 자동으로 바뀐다
+    if lmsb_uuid(p->>'ref_asg') is not null and not exists (select 1 from lms_assignment g where g.tenant_id = tid and g.section_id = sec and g.asg_id = lmsb_uuid(p->>'ref_asg')) then perform lmsb_err(400, 'input', '이 강의실의 과제를 고르세요.'); end if;
+    if lmsb_uuid(p->>'id') is not null then update lms_c_task set title = lmsb_t(p, 'title', 200, true, '제목'), body = lmsb_t(p, 'body', 8000), due_at = lmsb_tstz(p, 'due_at'), team_id = id2, ref_asg = lmsb_uuid(p->>'ref_asg') where tenant_id = tid and task_id = id;
+    else insert into lms_c_task (tenant_id, section_id, team_id, title, body, due_at, ref_asg) values (tid, sec, id2, lmsb_t(p, 'title', 200, true, '제목'), lmsb_t(p, 'body', 8000), lmsb_tstz(p, 'due_at'), lmsb_uuid(p->>'ref_asg')) returning task_id into id; end if;
+    perform lmsc_task_sync(id);
     return jsonb_build_object('ok', true, 'id', id);
   elsif op = 'task-del' then
     perform lmsb_need(a, 'activity.manage'); delete from lms_c_task where tenant_id = tid and task_id = id; return jsonb_build_object('ok', true);

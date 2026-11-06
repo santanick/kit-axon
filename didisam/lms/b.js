@@ -101,10 +101,23 @@
   X.mount = (id, fn) => { X.views[id] = fn; VIEWS[id] = () => { setTimeout(() => X.fill(id), 0); return `<div id="lmsxRoot" data-v="${id}"><div class="empty">불러오는 중입니다…</div></div>`; }; };
   X.fill = async id => {
     const root = $('#lmsxRoot'); if (!root || root.dataset.v !== id) return;
-    try { if (!X.sections) await X.loadSections(); if (!X.sec || !X.sections.some(s => s.id === X.sec)) X.sec = X.sections[0] ? X.sections[0].id : ''; const h = await X.views[id](); const r2 = $('#lmsxRoot'); if (r2 && r2.dataset.v === id) r2.innerHTML = h; }
+    try { if (!X.sections) await X.loadSections(); if (!X.sec || !X.sections.some(s => s.id === X.sec)) X.sec = X.sections[0] ? X.sections[0].id : ''; await X.loadMenu(); const h = await X.views[id](); const r2 = $('#lmsxRoot'); if (r2 && r2.dataset.v === id) r2.innerHTML = h; X.applyMenu(); }
     catch (e) { const r2 = $('#lmsxRoot'); if (r2) r2.innerHTML = `<div class="warn">${esc(e.message || '불러오지 못했습니다.')}</div>`; console.warn(e); }
   };
   X.refresh = () => { const r = $('#lmsxRoot'); if (r) X.fill(r.dataset.v); };
+  /* ── 강의실 메뉴 모듈 · 개인 맞춤 메뉴 적용(묶음 메뉴 MENU id + 학습활동 · 게시판 세부 모듈) ──
+     강의실 메뉴에서 끈 모듈과 내가 숨긴 메뉴는 탭에서 빠지고, 직접 이동(go)도 막는다. 「강의실 구성」(lmsb)은 설정 화면이라 숨기지 않는다. */
+  X.SUBMODS = [['forum', '토론'], ['wiki', '위키'], ['team', '팀 프로젝트'], ['review', '동료 평가'], ['chat', '대화방'], ['poll', '간편 설문'], ['pretask', '사전 과제 · 질문'], ['eval', '수업 평가'], ['notice', '공지'], ['qna', 'Q&A'], ['archive', '자료실'], ['counsel', '1:1 상담']];
+  X.modules = () => [...Object.keys(MENU).filter(id => /^lms/.test(id) && id !== 'lmsb').map(id => [id, mlabel(id)]), ...X.SUBMODS];
+  X.menuState = { sec: null, modules: [], pref: { hidden: [], order: [] } };
+  X.loadMenu = async () => { if (!X.sec) { X.menuState = { sec: null, modules: [], pref: { hidden: [], order: [] } }; return; } try { const m = await X.call('b', 'menu', { section: X.sec }); X.menuState = { sec: X.sec, as: X.as || '', modules: m.modules || [], pref: m.pref || { hidden: [], order: [] } }; } catch (e) { X.menuState = { sec: X.sec, modules: [], pref: { hidden: [], order: [] } }; } };
+  X.hidden = id => { const M = X.menuState; if (!M.sec || id === 'lmsb') return false; return M.modules.some(m => m.id === id && m.on === false) || (M.pref.hidden || []).includes(id); };
+  X.applyMenu = () => { try { if (typeof ULMS !== 'function' || !ULMS()) return; const bar = $('#main .wtabs'); if (!bar) return;
+    bar.querySelectorAll('[data-act="go"][data-v]').forEach(b => { b.hidden = X.hidden(b.dataset.v); });
+    const ord = X.menuState.pref.order || []; if (ord.length) [...bar.querySelectorAll('[data-act="go"][data-v]')].sort((a, b) => { const i = ord.indexOf(a.dataset.v), j = ord.indexOf(b.dataset.v); return (i < 0 ? 999 : i) - (j < 0 ? 999 : j); }).forEach(b => bar.appendChild(b)); } catch (e) { console.warn(e); } };
+  AFTER.push(() => X.applyMenu());
+  { const g0 = go; go = function (id, keep) { try { if (typeof ULMS === 'function' && ULMS() && MENU[id] && X.hidden(id)) { toast(`이 강의실에서 숨긴 메뉴입니다(${mlabel(id)}). 강의실 구성 › 역할 · 메뉴에서 켤 수 있습니다.`, 'warn'); return; } } catch (e) { } return g0(id, keep); }; } // eslint-disable-line no-global-assign
+  X.subTabs = list => list.filter(([k]) => !X.hidden(k));
   /* CSS */
   if (!document.querySelector('link[data-lmsx]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/bcd.css?v=30.0'; l.dataset.lmsx = '1'; document.head.appendChild(l); }
 
@@ -232,11 +245,12 @@
     if (!L.sessions.some(s => s.id === args.id && s.sec === sec)) fail(404, 'session', '차시를 찾을 수 없습니다.');
     L.res.filter(r => r.session_id === args.id && !r.deleted_at).forEach(r => { r.deleted_at = nowIso(); r.deleted_by = a.label; r.session_id = null; }); L.sessions.forEach(s => { s.prereq = (s.prereq || []).filter(p => p !== args.id); });
     L.sessions = L.sessions.filter(s => s.id !== args.id); hist(sec, 'session', args.id, 'delete', null, a); return { ok: true }; };
-  const KINDS = ['file', 'url', 'page', 'folder', 'label', 'video', 'scorm', 'html5'];
+  const KINDS = ['file', 'url', 'page', 'folder', 'label', 'video', 'scorm', 'html5', 'assign', 'exam'];
   D['res-save'] = args => { const L = db(); let r = args.id ? resOf(args.id) : null; const sec = r ? r.sec : X.secOf(args.section).id; const a = X.actor(sec, args); X.need(a, 'resource.edit');
     const sid = args.session_id || null; if (sid && !L.sessions.some(s => s.sec === sec && s.id === sid)) fail(400, 'input', '차시가 이 강의실에 없습니다.');
     const body = args.body && typeof args.body === 'object' ? args.body : {}; const kind = r ? r.kind : args.kind;
     if (kind === 'url' && 'body' in args && !/^https?:\/\//i.test(body.url || '')) fail(400, 'input', 'URL은 http:// 또는 https://로 시작해야 합니다.');
+    if (!r && ['assign', 'exam'].includes(kind)) fail(400, 'input', kind === 'assign' ? '이 강의실의 과제를 고르세요.' : '이 강의실의 시험을 고르세요.');
     if (args.share && !['private', 'shared'].includes(args.share)) fail(400, 'input', '공유 범위가 올바르지 않습니다.'); if (args.share === 'shared') X.need(a, 'resource.share');
     if (!r) { if (!KINDS.includes(kind)) fail(400, 'input', '자원 유형이 올바르지 않습니다.');
       r = { id: nid(), sec, session_id: sid, kind, title: str(args.title, 200, true, '제목'), body, visible: args.visible !== false, sort: int(args.sort, -1000, 100000, Math.max(-1, ...L.res.filter(x => x.sec === sec && x.session_id === sid).map(x => x.sort)) + 1, 'sort'), ver: 1, completion: args.completion || {}, access: args.access || {}, share: args.share || 'private', origin_id: null, owner: a.label, created: nowIso() + Math.random(), updated_at: nowIso(), deleted_at: null }; L.res.push(r); }
@@ -249,14 +263,16 @@
   D['res-versions'] = args => { const r = resOf(args.id); const a = X.actor(r.sec, args); X.need(a, 'resource.edit'); return { versions: db().vers.filter(v => v.res === r.id).sort((x, y) => y.ver - x.ver).map(v => ({ ver: v.ver, by: v.by, at: v.at, snap: v.snap })) }; };
   D['res-revert'] = args => { const r = resOf(args.id); const a = X.actor(r.sec, args); X.need(a, 'resource.edit'); const v = db().vers.find(x => x.res === r.id && x.ver === +args.ver); if (!v) fail(404, 'ver', '그 버전이 없습니다.'); if (r.deleted_at) fail(409, 'deleted', '휴지통에 있는 자원은 먼저 복구하세요.');
     Object.assign(r, { title: v.snap.title, body: clone(v.snap.body), completion: clone(v.snap.completion), access: clone(v.snap.access), visible: v.snap.visible, ver: r.ver + 1, updated_at: nowIso() }); db().vers.push({ res: r.id, ver: r.ver, snap: resJ(r), by: a.label, at: nowIso() }); hist(r.sec, 'resource', r.id, 'revert', { to: v.ver }, a); return resJ(r); };
+  D['ext-list'] = args => { const sec = X.secOf(args.section).id; X.need(X.actor(sec, args), 'resource.edit'); return { assignments: [], exams: [] }; }; // 데모: 과제(E) · 시험(F) 데모 데이터는 별도 강의실 체계라 연결은 운영 모드에서
   D.library = args => { const a = X.actor(null, args); X.need(a, 'resource.edit'); return { items: db().res.filter(r => r.share === 'shared' && !r.deleted_at && !['scorm', 'html5'].includes(r.kind)).map(r => { const s = X.secOf(r.sec); return { ...resJ(r), section: s.title, section_id: s.id, term: s.term }; }) }; };
   D['res-reuse'] = args => { const sec = X.secOf(args.section).id; const a = X.actor(sec, args); X.need(a, 'resource.edit'); const src = db().res.find(r => r.id === args.src && !r.deleted_at && (r.share === 'shared' || r.sec === sec)); if (!src) fail(404, 'resource', '공유된 자원이 아니거나 없습니다.');
     const sid = args.session_id || null; if (sid && !db().sessions.some(s => s.sec === sec && s.id === sid)) fail(400, 'input', '차시가 이 강의실에 없습니다.');
     const r = { ...clone(src), id: nid(), sec, session_id: sid, visible: true, share: 'private', origin_id: src.id, owner: a.label, ver: 1, sort: 0, access: {}, created: nowIso() + Math.random(), updated_at: nowIso() }; db().res.push(r); db().vers.push({ res: r.id, ver: 1, snap: resJ(r), by: a.label, at: nowIso() }); return resJ(r); };
   D['progress-mark'] = args => { const r = resOf(args.resource); const a = X.actor(r.sec, args); X.need(a, 'course.view'); if (!a.pid) return { ok: true, preview: true };
     if (a.role === 'student' && !(access(r.sec, a.pid)[r.id] || {}).open) fail(403, 'locked', '아직 열리지 않은 자원입니다.');
+    if (['assign', 'exam', 'scorm'].includes(r.kind)) { const g0 = progOf(r.id, a.pid); return { ok: true, status: g0 ? g0.st : null, linked: true }; }
     let g = progOf(r.id, a.pid); if (!g) db().prog.push(g = { res: r.id, pid: a.pid, st: 'in_progress', sc: null, t: 0, views: 0 }); else g.views++; if (!g.views) g.views = 1;
-    g.t += +args.time_sec || 0; if (args.score != null && args.score !== '') g.sc = +args.score; const c = r.completion || {};
+    g.t += +args.time_sec || 0; const c = r.completion || {};
     if (!done(g)) g.st = c.type === 'time' ? (g.t >= (+c.sec || 0) ? 'completed' : g.st) : c.type === 'score' ? (g.sc != null ? (g.sc >= (+c.score || 0) ? 'passed' : 'failed') : g.st) : (!c.type || c.type === 'view') ? 'completed' : g.st;
     return { ok: true, status: g.st, score: g.sc, time_sec: g.t, views: g.views }; };
   D.progress = args => { const sec = X.secOf(args.section).id; const a = X.actor(sec, args); X.need(a, 'grade'); const s = X.secOf(sec); const L = db();
@@ -351,7 +367,7 @@
   D['menu-set'] = args => { const sec = X.secOf(args.section).id; const a = X.actor(sec, args); X.need(a, 'menu.edit'); if (!Array.isArray(args.modules) || args.modules.length > 40 || args.modules.some(q => !/^[a-z0-9_-]{1,30}$/.test(q.id || ''))) fail(400, 'input', '메뉴 모듈 형식을 확인하세요.');
     const o = db().opt[sec] = db().opt[sec] || { sequential: false, adaptive: [], menu: [] }; o.menu = args.modules.map(q => ({ id: q.id, on: q.on !== false })); return { ok: true }; };
   D['menu-pref'] = args => { const sec = X.secOf(args.section).id; const a = X.actor(sec, args); X.need(a, 'course.view'); const f = v => (Array.isArray(v) ? v : []).filter(q => /^[a-z0-9_-]{1,30}$/.test(q)); db().menuPref[sec + '|' + X.who(a)] = { hidden: f(args.hidden), order: f(args.order) }; return { ok: true }; };
-  X.gets('b', ['sections', 'templates', 'library', 'perms', 'file', 'overview', 'timeline', 'progress', 'next', 'backups', 'backup-get', 'trash', 'res-versions', 'menu', 'scorm', 'scorm-file', 'scorm-report']);
+  X.gets('b', ['ext-list', 'sections', 'templates', 'library', 'perms', 'file', 'overview', 'timeline', 'progress', 'next', 'backups', 'backup-get', 'trash', 'res-versions', 'menu', 'scorm', 'scorm-file', 'scorm-report']);
 
   /* ══════════ ZIP 풀기(브라우저) · 매니페스트 읽기 ══════════ */
   async function unzip(buf) {
@@ -416,112 +432,20 @@
   }
   X.uploadPackage = uploadPackage;
 
-  /* ══════════ SCORM 런타임(RTE) — 1.2 API · 2004 API_1484_11 ══════════ */
-  const E12 = { 0: 'No error', 101: 'General exception', 201: 'Invalid argument error', 202: 'Element cannot have children', 203: 'Element not an array - cannot have count', 301: 'Not initialized', 401: 'Not implemented error', 402: 'Invalid set value, element is a keyword', 403: 'Element is read only', 404: 'Element is write only', 405: 'Incorrect data type' };
-  const E04 = { 0: 'No Error', 101: 'General Exception', 102: 'General Initialization Failure', 103: 'Already Initialized', 104: 'Content Instance Terminated', 111: 'General Termination Failure', 112: 'Termination Before Initialization', 113: 'Termination After Termination', 122: 'Retrieve Data Before Initialization', 123: 'Retrieve Data After Termination', 132: 'Store Data Before Initialization', 133: 'Store Data After Termination', 142: 'Commit Before Initialization', 143: 'Commit After Termination', 201: 'General Argument Error', 301: 'General Get Failure', 351: 'General Set Failure', 391: 'General Commit Failure', 401: 'Undefined Data Model Element', 402: 'Unimplemented Data Model Element', 403: 'Data Model Element Value Not Initialized', 404: 'Data Model Element Is Read Only', 405: 'Data Model Element Is Write Only', 406: 'Data Model Element Type Mismatch', 407: 'Data Model Element Value Out Of Range', 408: 'Data Model Dependency Not Established' };
-  const dec = v => /^-?\d+(\.\d+)?$/.test(String(v));
-  const ts12 = v => /^\d{2,4}:\d{2}:\d{2}(\.\d{1,2})?$/.test(v);
-  const ts04 = v => /^P(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+(\.\d{1,2})?S)?)?$/.test(v);
-  const vocab = l => v => l.includes(v);
-  /* 요소 규칙: [접근(r/w/rw), 검사 함수, 범위 오류 여부] — n은 배열 순번 */
-  const M12 = {
-    'cmi.core.student_id': ['r'], 'cmi.core.student_name': ['r'], 'cmi.core.lesson_location': ['rw', v => v.length <= 255], 'cmi.core.credit': ['r'], 'cmi.core.entry': ['r'], 'cmi.core.total_time': ['r'], 'cmi.core.lesson_mode': ['r'],
-    'cmi.core.lesson_status': ['rw', vocab(['passed', 'completed', 'failed', 'incomplete', 'browsed', 'not attempted'])], 'cmi.core.exit': ['w', vocab(['time-out', 'suspend', 'logout', ''])], 'cmi.core.session_time': ['w', ts12],
-    'cmi.core.score.raw': ['rw', v => v === '' || (dec(v) && +v >= 0 && +v <= 100)], 'cmi.core.score.min': ['rw', v => v === '' || (dec(v) && +v >= 0 && +v <= 100)], 'cmi.core.score.max': ['rw', v => v === '' || (dec(v) && +v >= 0 && +v <= 100)],
-    'cmi.suspend_data': ['rw', v => v.length <= 4096], 'cmi.launch_data': ['r'], 'cmi.comments': ['rw', v => v.length <= 4096], 'cmi.comments_from_lms': ['r'], 'cmi.student_data.mastery_score': ['r'], 'cmi.student_data.max_time_allowed': ['r'], 'cmi.student_data.time_limit_action': ['r'],
-    'cmi.student_preference.audio': ['rw', v => dec(v) && +v >= -1 && +v <= 100], 'cmi.student_preference.language': ['rw', v => v.length <= 255], 'cmi.student_preference.speed': ['rw', v => dec(v) && +v >= -100 && +v <= 100], 'cmi.student_preference.text': ['rw', vocab(['-1', '0', '1'])],
-    'cmi.objectives.n.id': ['rw', v => v.length <= 255 && v !== ''], 'cmi.objectives.n.score.raw': ['rw', v => v === '' || (dec(v) && +v >= 0 && +v <= 100)], 'cmi.objectives.n.score.min': ['rw', v => v === '' || dec(v)], 'cmi.objectives.n.score.max': ['rw', v => v === '' || dec(v)],
-    'cmi.objectives.n.status': ['rw', vocab(['passed', 'completed', 'failed', 'incomplete', 'browsed', 'not attempted'])],
-    'cmi.interactions.n.id': ['w', v => v.length <= 255 && v !== ''], 'cmi.interactions.n.objectives.n.id': ['w', v => v.length <= 255], 'cmi.interactions.n.time': ['w', v => /^\d{2}:\d{2}:\d{2}(\.\d{1,2})?$/.test(v)], 'cmi.interactions.n.type': ['w', vocab(['true-false', 'choice', 'fill-in', 'matching', 'performance', 'sequencing', 'likert', 'numeric'])],
-    'cmi.interactions.n.correct_responses.n.pattern': ['w', v => v.length <= 255], 'cmi.interactions.n.weighting': ['w', dec], 'cmi.interactions.n.student_response': ['w', v => v.length <= 255], 'cmi.interactions.n.result': ['w', v => ['correct', 'wrong', 'unanticipated', 'neutral'].includes(v) || dec(v)], 'cmi.interactions.n.latency': ['w', ts12]
-  };
-  const KIDS12 = { 'cmi.core._children': 'student_id,student_name,lesson_location,credit,lesson_status,entry,score,total_time,lesson_mode,exit,session_time', 'cmi.core.score._children': 'raw,min,max', 'cmi.objectives._children': 'id,score,status', 'cmi.student_data._children': 'mastery_score,max_time_allowed,time_limit_action', 'cmi.student_preference._children': 'audio,language,speed,text', 'cmi.interactions._children': 'id,objectives,time,type,correct_responses,weighting,student_response,result,latency', 'cmi._version': '3.4' };
-  const M04 = {
-    'cmi._version': ['r'], 'cmi.learner_id': ['r'], 'cmi.learner_name': ['r'], 'cmi.credit': ['r'], 'cmi.entry': ['r'], 'cmi.mode': ['r'], 'cmi.total_time': ['r'], 'cmi.launch_data': ['r'], 'cmi.completion_threshold': ['r'], 'cmi.scaled_passing_score': ['r'], 'cmi.max_time_allowed': ['r'], 'cmi.time_limit_action': ['r'],
-    'cmi.location': ['rw', v => v.length <= 1000], 'cmi.suspend_data': ['rw', v => v.length <= 64000], 'cmi.completion_status': ['rw', vocab(['completed', 'incomplete', 'not attempted', 'unknown'])], 'cmi.success_status': ['rw', vocab(['passed', 'failed', 'unknown'])],
-    'cmi.exit': ['w', vocab(['time-out', 'suspend', 'logout', 'normal', ''])], 'cmi.session_time': ['w', ts04], 'cmi.progress_measure': ['rw', v => dec(v), v => +v >= 0 && +v <= 1],
-    'cmi.score.scaled': ['rw', dec, v => +v >= -1 && +v <= 1], 'cmi.score.raw': ['rw', dec], 'cmi.score.min': ['rw', dec], 'cmi.score.max': ['rw', dec],
-    'cmi.learner_preference.audio_level': ['rw', dec, v => +v >= 0], 'cmi.learner_preference.language': ['rw', v => v.length <= 250], 'cmi.learner_preference.delivery_speed': ['rw', dec, v => +v >= 0], 'cmi.learner_preference.audio_captioning': ['rw', vocab(['-1', '0', '1'])],
-    'cmi.comments_from_learner.n.comment': ['rw', v => v.length <= 4000], 'cmi.comments_from_learner.n.location': ['rw', v => v.length <= 250], 'cmi.comments_from_learner.n.timestamp': ['rw', v => /^\d{4}(-\d{2}(-\d{2}(T\d{2}(:\d{2}(:\d{2}(\.\d{1,2})?)?)?)?)?)?/.test(v)],
-    'cmi.objectives.n.id': ['rw', v => v.length <= 4000 && v !== ''], 'cmi.objectives.n.score.scaled': ['rw', dec, v => +v >= -1 && +v <= 1], 'cmi.objectives.n.score.raw': ['rw', dec], 'cmi.objectives.n.score.min': ['rw', dec], 'cmi.objectives.n.score.max': ['rw', dec],
-    'cmi.objectives.n.success_status': ['rw', vocab(['passed', 'failed', 'unknown'])], 'cmi.objectives.n.completion_status': ['rw', vocab(['completed', 'incomplete', 'not attempted', 'unknown'])], 'cmi.objectives.n.progress_measure': ['rw', dec, v => +v >= 0 && +v <= 1], 'cmi.objectives.n.description': ['rw', v => v.length <= 250],
-    'cmi.interactions.n.id': ['rw', v => v.length <= 4000 && v !== ''], 'cmi.interactions.n.type': ['rw', vocab(['true-false', 'choice', 'fill-in', 'long-fill-in', 'likert', 'matching', 'performance', 'sequencing', 'numeric', 'other'])], 'cmi.interactions.n.objectives.n.id': ['rw', v => v.length <= 4000],
-    'cmi.interactions.n.timestamp': ['rw', v => /^\d{4}/.test(v)], 'cmi.interactions.n.correct_responses.n.pattern': ['rw', v => v.length <= 4000], 'cmi.interactions.n.weighting': ['rw', dec], 'cmi.interactions.n.learner_response': ['rw', v => v.length <= 4000],
-    'cmi.interactions.n.result': ['rw', v => ['correct', 'incorrect', 'unanticipated', 'neutral'].includes(v) || dec(v)], 'cmi.interactions.n.latency': ['rw', ts04], 'cmi.interactions.n.description': ['rw', v => v.length <= 250],
-    'adl.nav.request': ['rw', v => /^(continue|previous|choice|jump|exit|exitAll|abandon|abandonAll|suspendAll|_none_|\{target=[^}]+\}(choice|jump))$/.test(v)]
-  };
-  const KIDS04 = { 'cmi.score._children': 'scaled,raw,min,max', 'cmi.objectives._children': 'id,score,success_status,completion_status,progress_measure,description', 'cmi.interactions._children': 'id,type,objectives,timestamp,correct_responses,weighting,learner_response,result,latency,description', 'cmi.learner_preference._children': 'audio_level,language,delivery_speed,audio_captioning', 'cmi.comments_from_learner._children': 'comment,location,timestamp', 'cmi.comments_from_lms._children': 'comment,location,timestamp' };
-  const pat = el => el.replace(/\.\d+(?=\.|$)/g, '.n');
-  function makeRTE(ver, sco, att, me, hooks) {
-    const v12 = ver === '1.2'; const prev = (att || {}).cmi || {}; const cmi = { ...prev }; let state = 0, last = 0, dirty = false;
-    const idN = me.no || 'preview';
-    if (v12) { Object.assign(cmi, { 'cmi.core.student_id': idN, 'cmi.core.student_name': idN, 'cmi.core.credit': me.no ? 'credit' : 'no-credit', 'cmi.core.lesson_mode': me.no ? 'normal' : 'browse', 'cmi.launch_data': sco.launch_data || '', 'cmi.student_data.mastery_score': sco.mastery || '' });
-      if (!prev['cmi.core.lesson_status']) cmi['cmi.core.lesson_status'] = 'not attempted'; if (!('cmi.core.entry' in prev)) cmi['cmi.core.entry'] = 'ab-initio'; if (!prev['cmi.core.total_time']) cmi['cmi.core.total_time'] = '0000:00:00.00'; }
-    else { Object.assign(cmi, { 'cmi._version': '1.0', 'cmi.learner_id': idN, 'cmi.learner_name': idN, 'cmi.credit': me.no ? 'credit' : 'no-credit', 'cmi.mode': me.no ? 'normal' : 'browse', 'cmi.launch_data': sco.launch_data || '' });
-      if (!prev['cmi.completion_status']) cmi['cmi.completion_status'] = 'unknown'; if (!prev['cmi.success_status']) cmi['cmi.success_status'] = 'unknown'; cmi['cmi.entry'] = prev['cmi.exit'] === 'suspend' ? 'resume' : prev['cmi.total_time'] ? '' : 'ab-initio'; if (!prev['cmi.total_time']) cmi['cmi.total_time'] = 'PT0H0M0S'; delete cmi['cmi.exit']; }
-    const M = v12 ? M12 : M04, K = v12 ? KIDS12 : KIDS04; const log = [];
-    const count = base => { let n = 0; while (Object.keys(cmi).some(k => k.startsWith(`${base}.${n}.`))) n++; return n; };
-    const ret = (code, val) => { last = code; return val; };
-    function get(el) {
-      el = String(el ?? '');
-      if (v12 ? state !== 1 : state !== 1) return ret(v12 ? 301 : state === 0 ? 122 : 123, '');
-      if (!el) return ret(v12 ? 201 : 301, '');
-      if (K[el] !== undefined) return ret(0, K[el]);
-      if (/\._children$/.test(el)) return ret(v12 ? 202 : 301, '');
-      if (/\._count$/.test(el)) { const base = el.replace(/\._count$/, ''); if (/^(cmi\.objectives|cmi\.interactions|cmi\.comments_from_learner|cmi\.comments_from_lms|cmi\.interactions\.\d+\.objectives|cmi\.interactions\.\d+\.correct_responses)$/.test(base)) return ret(0, String(count(base))); return ret(v12 ? 203 : 301, ''); }
-      const rule = M[pat(el)]; if (!rule) return ret(v12 ? 201 : 401, '');
-      if (rule[0] === 'w') return ret(v12 ? 404 : 405, '');
-      if (!(el in cmi)) return ret(v12 ? 0 : 403, '');
-      return ret(0, String(cmi[el]));
-    }
-    function set(el, val) {
-      el = String(el ?? ''); val = val == null ? '' : String(val);
-      if (state !== 1) return ret(v12 ? 301 : state === 0 ? 132 : 133, 'false');
-      if (/\._(children|count|version)$/.test(el)) return ret(v12 ? 402 : 404, 'false');
-      const rule = M[pat(el)]; if (!rule) return ret(v12 ? 201 : 401, 'false');
-      if (rule[0] === 'r') return ret(v12 ? 403 : 404, 'false');
-      /* 배열 순번은 0부터 차례로(건너뛰기 금지) */
-      const m = /^(cmi\.(?:objectives|interactions|comments_from_learner))\.(\d+)\./.exec(el); if (m && +m[2] > count(m[1])) return ret(v12 ? 201 : 351, 'false');
-      if (!v12 && m && !/\.id$/.test(el) && !(`${m[1]}.${m[2]}.id` in cmi) && m[1] !== 'cmi.comments_from_learner') return ret(408, 'false');
-      if (rule[1] && !rule[1](val)) return ret(v12 ? 405 : 406, 'false');
-      if (rule[2] && !rule[2](val)) return ret(407, 'false');
-      cmi[el] = val; dirty = true; log.push([el, val]); return ret(0, 'true');
-    }
-    const payload = () => Object.fromEntries(Object.entries(cmi).filter(([k]) => { const r = M[pat(k)]; return r && r[0] !== 'r'; }).concat(v12 ? [] : [['cmi.exit', cmi['cmi.exit'] || '']]).filter(([k, v]) => v !== undefined));
-    async function push(finish) {
-      const body = payload(); if (v12 && cmi['cmi.core.lesson_status'] === 'not attempted' && finish) body['cmi.core.lesson_status'] = 'completed';
-      if (v12 && finish && sco.mastery && body['cmi.core.score.raw'] !== undefined && body['cmi.core.score.raw'] !== '' && ['completed', 'incomplete', 'browsed'].includes(body['cmi.core.lesson_status'])) body['cmi.core.lesson_status'] = +body['cmi.core.score.raw'] >= +sco.mastery ? 'passed' : 'failed';
-      try { const r = await X.call('b', 'scorm-commit', { resource: hooks.res, sco: sco.id, cmi: body, finish }); dirty = false; hooks.onCommit && hooks.onCommit(r, finish); return true; } catch (e) { hooks.onError && hooks.onError(e); return false; }
-    }
-    const api12 = {
-      LMSInitialize: a => { if (String(a ?? '') !== '') return ret(201, 'false'); if (state === 1) return ret(101, 'false'); state = 1; return ret(0, 'true'); },
-      LMSFinish: a => { if (String(a ?? '') !== '') return ret(201, 'false'); if (state !== 1) return ret(301, 'false'); state = 2; push(true); return ret(0, 'true'); },
-      LMSGetValue: get, LMSSetValue: set,
-      LMSCommit: a => { if (String(a ?? '') !== '') return ret(201, 'false'); if (state !== 1) return ret(301, 'false'); push(false); return ret(0, 'true'); },
-      LMSGetLastError: () => String(last), LMSGetErrorString: c => E12[+c] || '', LMSGetDiagnostic: c => E12[c === '' || c == null ? last : +c] || ''
-    };
-    const api04 = {
-      Initialize: a => { if (String(a ?? '') !== '') return ret(201, 'false'); if (state === 1) return ret(103, 'false'); if (state === 2) return ret(104, 'false'); state = 1; return ret(0, 'true'); },
-      Terminate: a => { if (String(a ?? '') !== '') return ret(201, 'false'); if (state === 0) return ret(112, 'false'); if (state === 2) return ret(113, 'false'); state = 2; push(true); return ret(0, 'true'); },
-      GetValue: get, SetValue: set,
-      Commit: a => { if (String(a ?? '') !== '') return ret(201, 'false'); if (state === 0) return ret(142, 'false'); if (state === 2) return ret(143, 'false'); push(false); return ret(0, 'true'); },
-      GetLastError: () => String(last), GetErrorString: c => E04[+c] || '', GetDiagnostic: c => E04[c === '' || c == null ? last : +c] || ''
-    };
-    return { api: v12 ? api12 : api04, cmi, log, state: () => state, dirty: () => dirty, push, abandon: () => { if (state === 1) { state = 2; return push(true); } } };
-  }
-  X.makeRTE = makeRTE;
+  /* SCORM 런타임은 lms/bcd-rte.js(학습자 앱과 공용) — 처음 재생할 때 불러온다 */
+  X.loadRTE = () => window.LMSRTE ? Promise.resolve() : (X._rteP = X._rteP || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'lms/bcd-rte.js?v=30.1'; sc.onload = ok; sc.onerror = () => no(new Error('SCORM 런타임을 불러오지 못했습니다.')); document.head.appendChild(sc); }));
   /* 플레이어: 위쪽 창(window)에 API를 붙이고 iframe으로 SCO를 연다 */
   let curRTE = null;
   async function play(resId) {
     let info; try { info = await X.call('b', 'scorm', { resource: resId }); } catch (e) { return X.err(e); }
-    try { await pkgSW(); } catch (e) { return toast(e.message, 'warn'); }
+    try { await pkgSW(); await X.loadRTE(); } catch (e) { return toast(e.message, 'warn'); }
     const scos = info.manifest.scos || []; let idx = 0;
     const w = modal(`${info.title} — ${info.version === 'none' ? '비표준 HTML5' : 'SCORM ' + info.version}`, `<div class="lmsb-player"><div class="lmsb-ptop"><select data-lmsb-sco>${scos.map((s, i) => `<option value="${i}">${esc(s.title || s.id)}</option>`).join('')}</select><span class="mini" data-lmsb-pst></span></div><iframe data-lmsb-frame title="학습 콘텐츠" class="lmsb-frame"></iframe><p class="mini">학습 기록(cmi)은 ${LIVE_ON() ? '서버' : '이 브라우저(데모)'}에 저장되고 진도 · 이수 조건에 바로 반영됩니다. 신분: ${esc(info.me.no || '운영자 미리보기(기록은 미리보기로 남음)')}</p></div>`, [{ id: 'close', label: '닫기', run: () => { stop(); } }], true);
     const frame = w.querySelector('[data-lmsb-frame]'); const pst = w.querySelector('[data-lmsb-pst]');
     const stop = () => { if (curRTE) { curRTE.abandon(); curRTE = null; } delete window.API; delete window.API_1484_11; setTimeout(() => X.refresh(), 400); };
     w.querySelector('.mh .x').addEventListener('click', stop, { once: true });
     const open = i => { if (curRTE) curRTE.abandon(); const sco = scos[i];
-      curRTE = makeRTE(info.version === '2004' ? '2004' : '1.2', sco, (info.att || {})[sco.id], info.me, { res: resId, onCommit: (r, fin) => { pst.textContent = `저장됨 · 상태 ${r.status || '—'}${r.score != null ? ' · 점수 ' + r.score : ''} · 누적 ${r.total_time || ''}`; if (fin) (info.att = info.att || {})[sco.id] = { cmi: { ...curRTE.cmi } }; }, onError: e => { pst.textContent = '저장 실패: ' + e.message; } });
+      curRTE = LMSRTE.make(info.version === '2004' ? '2004' : '1.2', sco, (info.att || {})[sco.id], info.me, { res: resId, commit: b => X.call('b', 'scorm-commit', b), onCommit: (r, fin) => { pst.textContent = `저장됨 · 상태 ${r.status || '—'}${r.score != null ? ' · 점수 ' + r.score : ''} · 누적 ${r.total_time || ''}`; if (fin) (info.att = info.att || {})[sco.id] = { cmi: { ...curRTE.cmi } }; }, onError: e => { pst.textContent = '저장 실패: ' + e.message; } });
       delete window.API; delete window.API_1484_11; if (info.version === '2004') window.API_1484_11 = curRTE.api; else window.API = curRTE.api; window.__lmsbRTE = curRTE;
       if (info.version === 'none') X.call('b', 'progress-mark', { resource: resId }).catch(() => {});
       frame.src = `lms/bpkg/${info.pkg_id}/${sco.href}`; };
@@ -531,12 +455,11 @@
 
   /* ══════════ 화면 ══════════ */
   X.menu('lmsb', '강의실 구성', 'learn');
-  const KN = { file: '파일', url: 'URL', page: '웹페이지', folder: '폴더', label: '표지', video: '영상', scorm: 'SCORM(표준)', html5: 'HTML5(비표준)' };
+  const KN = { file: '파일', url: 'URL', page: '웹페이지', folder: '폴더', label: '표지', video: '영상', scorm: 'SCORM(표준)', html5: 'HTML5(비표준)', assign: '과제 연결', exam: '시험 연결' };
   const SKN = { class: '대면', online: '온라인', live: '실시간', exam: '시험', holiday: '휴강' };
   const LVN = { basic: '기초', standard: '표준', advanced: '심화' };
   const PN = { 'course.view': '강의실 보기', 'structure.edit': '주차 · 차시 편집', 'resource.edit': '자원 편집', 'resource.share': '자원 공유', backup: '백업 · 복구', trash: '휴지통', 'menu.edit': '메뉴 구성', 'perm.manage': '권한 관리', 'activity.manage': '학습활동 운영', 'activity.join': '학습활동 참여', grade: '채점 · 진도 조회', 'board.manage': '게시판 관리', 'board.write': '게시판 쓰기' };
-  const MODS = [['lmsb', '강의실 구성'], ['forum', '토론'], ['wiki', '위키'], ['team', '팀 프로젝트'], ['review', '동료 평가'], ['chat', '대화방'], ['poll', '간편 설문'], ['pretask', '사전 과제 · 질문'], ['notice', '공지'], ['qna', 'Q&A'], ['archive', '자료실'], ['counsel', '1:1 상담']];
-  X.MODS = MODS;
+  const MODS = { get list() { return X.modules(); } };
   const TABS = [['build', '구성'], ['timeline', '타임라인'], ['enroll', '등록 현황'], ['path', '학습 경로'], ['tpl', '템플릿 · 복사'], ['backup', '백업 · 복구'], ['trash', '휴지통 · 버전'], ['lib', '공유 자료'], ['role', '역할 · 메뉴'], ['scorm', 'SCORM']];
   let OV = null;
   const stIcon = r => r.open === false ? tag('잠김', 'r') : r.done ? tag(r.status === 'passed' ? '합격' : '완료', 'g') : r.status === 'failed' ? tag('미달', 'y') : r.status ? tag('진행 중', 'y') : '';
@@ -619,10 +542,10 @@
       b = `<div class="card"><div class="ch"><b>교수자 간 공유 자료</b><small>자원 편집에서 「공유」로 둔 자료 — 내 강의실로 복사해 재사용합니다(비공유 자료는 보이지 않음)</small></div>${table(['자원', '유형', '강의실', '올린 사람', ''], Lb.items.map(r => [esc(r.title), esc(KN[r.kind]), `${esc(r.term)} · ${esc(r.section)}`, esc(r.owner || ''), r.section_id === X.sec ? tag('이 강의실') : `<button class="btn sm" data-act="lmsb-reuse" data-id="${esc(r.id)}">내 강의실로 재사용</button>`]), '공유된 자료가 없습니다.')}</div>`;
     }
     if (tb === 'role') {
-      const P = await X.call('b', 'perms', {}); const Mn = await X.call('b', 'menu', { section: X.sec }); const mods = Mn.modules.length ? Mn.modules : MODS.map(([id]) => ({ id, on: true }));
+      const P = await X.call('b', 'perms', {}); const Mn = await X.call('b', 'menu', { section: X.sec }); const mods = MODS.list.map(([id]) => ({ id, on: !Mn.modules.some(m => m.id === id && m.on === false) }));
       b = `<div class="card"><div class="ch"><b>역할 · 권한</b><small>교수 · 조교 · 교직원 · 채점자 · 학생 — 기관 전체에 적용${P.can_edit && ['owner', 'sub'].includes(S.me.role) ? '' : ' (정 · 부운영자만 변경)'}</small></div><div class="tw"><table class="lmsb-perm"><thead><tr><th>권한</th>${P.roles.map(r => `<th>${esc(ROLE_N[r])}</th>`).join('')}</tr></thead><tbody>${P.perms.map(p => `<tr><td>${esc(PN[p] || p)}</td>${P.roles.map(r => `<td><input type="checkbox" aria-label="${esc(ROLE_N[r] + ' ' + (PN[p] || p))}" data-chg="lmsb-perm" data-r="${r}" data-p="${p}" ${P.grid[r][p] ? 'checked' : ''} ${P.can_edit && ['owner', 'sub'].includes(S.me.role) && !X.as ? '' : 'disabled'}></td>`).join('')}</tr>`).join('')}</tbody></table></div></div>
-        <div class="card"><div class="ch"><b>강의실 메뉴 모듈</b><small>이 강의실에서 쓸 메뉴를 켜고 끕니다</small></div><div class="lmsb-cks">${mods.map(m => `<label class="ul-ck"><input type="checkbox" data-lmsb-mod="${esc(m.id)}" ${m.on ? 'checked' : ''} ${Mn.can_edit ? '' : 'disabled'}> ${esc((MODS.find(x => x[0] === m.id) || [0, m.id])[1])}</label>`).join('')}</div>${Mn.can_edit ? '<button class="btn sm pri" data-act="lmsb-menu-save">메뉴 저장</button>' : ''}</div>
-        <div class="card"><div class="ch"><b>나의 맞춤 메뉴</b><small>숨길 메뉴 · 순서(쉼표로 나열)</small></div><div class="lmsb-cks">${mods.filter(m => m.on).map(m => `<label class="ul-ck"><input type="checkbox" data-lmsb-hide="${esc(m.id)}" ${Mn.pref.hidden.includes(m.id) ? 'checked' : ''}> ${esc((MODS.find(x => x[0] === m.id) || [0, m.id])[1])} 숨기기</label>`).join('')}</div><div class="bar2"><input data-lmsb-ord value="${esc(Mn.pref.order.join(','))}" placeholder="예: notice,forum,lmsb"><button class="btn sm" data-act="lmsb-pref-save">맞춤 메뉴 저장</button></div></div>`;
+        <div class="card"><div class="ch"><b>강의실 메뉴 모듈</b><small>이 강의실에서 쓸 메뉴(과제 · 시험 · 출결 · 동영상 · 학습활동 · 게시판 등)를 켜고 끕니다 — 끈 메뉴는 탭에서 빠지고 이동도 막힙니다</small></div><div class="lmsb-cks">${mods.map(m => `<label class="ul-ck"><input type="checkbox" data-lmsb-mod="${esc(m.id)}" ${m.on ? 'checked' : ''} ${Mn.can_edit ? '' : 'disabled'}> ${esc((MODS.list.find(x => x[0] === m.id) || [0, m.id])[1])}</label>`).join('')}</div>${Mn.can_edit ? '<button class="btn sm pri" data-act="lmsb-menu-save">메뉴 저장</button>' : ''}</div>
+        <div class="card"><div class="ch"><b>나의 맞춤 메뉴</b><small>숨길 메뉴 · 순서(쉼표로 나열)</small></div><div class="lmsb-cks">${mods.filter(m => m.on).map(m => `<label class="ul-ck"><input type="checkbox" data-lmsb-hide="${esc(m.id)}" ${Mn.pref.hidden.includes(m.id) ? 'checked' : ''}> ${esc((MODS.list.find(x => x[0] === m.id) || [0, m.id])[1])} 숨기기</label>`).join('')}</div><div class="bar2"><input data-lmsb-ord value="${esc(Mn.pref.order.join(','))}" placeholder="예: notice,forum,lmsb"><button class="btn sm" data-act="lmsb-pref-save">맞춤 메뉴 저장</button></div></div>`;
     }
     if (tb === 'scorm') {
       const pk = allRes().filter(r => ['scorm', 'html5'].includes(r.kind));
@@ -648,10 +571,14 @@
       <label>선수 차시(먼저 마쳐야 하는 차시)</label><div class="lmsb-cks">${others.map(o => `<label class="ul-ck"><input type="checkbox" name="pre" value="${esc(o.id)}" ${(s.prereq || []).includes(o.id) ? 'checked' : ''}> ${o.week_no}-${o.seq} ${esc(o.title || '')}</label>`).join('') || '<span class="mini">다른 차시가 없습니다.</span>'}</div>
       <p class="mini">출결 연계: 이 차시의 출석(인증번호 · 온라인 진도 등, 묶음 G)이 같은 차시로 기록됩니다.</p>`,
       [...(s.id ? [{ id: 'del', label: '차시 삭제', kind: 'redl', run: () => { X.run('b', 'session-del', { section: X.sec, id: s.id }, '차시를 삭제했습니다(자원은 휴지통).').then(r => r && X.refresh()); } }] : []), { id: 'ok', label: '저장', kind: 'pri', run: m => { X.run('b', 'session-save', { section: X.sec, id: s.id || undefined, week_no: fv(m, 'wn'), seq: fv(m, 'sq'), title: fv(m, 't'), kind: fv(m, 'k'), open_at: fv(m, 'oa'), close_at: fv(m, 'ca'), required_sec: (+fv(m, 'rq') || 0) * 60, prereq: $$('[name=pre]:checked', m).map(x => x.value) }, '저장했습니다.').then(r => r && X.refresh()); } }], true); };
-  function resForm(r, sesId) {
+  function resForm(r, sesId, ext) {
+    ext = ext || { assignments: [], exams: [] };
     r = r || { kind: 'page', title: '', body: {}, visible: true, share: 'private', completion: {}, access: {}, session_id: sesId || '' }; const A = r.access || {}; const C = r.completion || {}; const others = allRes().filter(x => x.id !== r.id && x.kind !== 'label');
     return `<div class="form2"><label>유형<select name="kind" ${r.id ? 'disabled' : ''} data-chg="lmsb-kind">${Object.entries(KN).filter(([k]) => r.id || !['scorm', 'html5'].includes(k)).map(([k, v]) => `<option value="${k}" ${r.kind === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label><label>제목<input name="title" maxlength="200" value="${esc(r.title)}"></label><label>차시<select name="sid">${sesOpts(r.session_id)}</select></label><label>공유<select name="share"><option value="private" ${r.share !== 'shared' ? 'selected' : ''}>비공유(내 강의실)</option><option value="shared" ${r.share === 'shared' ? 'selected' : ''}>교수자 간 공유</option></select></label></div>
-      <div class="lmsb-kf" data-k="url page video label file folder">
+      <div class="lmsb-kf" data-k="url page video label file folder assign exam">
+        <label data-k="assign">연결할 과제(묶음 E)<select name="ref_a">${ext.assignments.map(g => `<option value="${esc(g.id)}" ${(r.body || {}).ref === g.id ? 'selected' : ''}>${esc(g.title)} · ${g.kind === 'team' ? '팀' : '개인'} · 만점 ${g.max_score}</option>`).join('') || '<option value="">이 강의실 과제가 없습니다</option>'}</select></label>
+        <label data-k="exam">연결할 시험(묶음 F)<select name="ref_e">${ext.exams.map(g => `<option value="${esc(g.id)}" ${(r.body || {}).ref === g.id ? 'selected' : ''}>${esc(g.title)} · ${g.score_policy === 'last' ? '마지막' : '최고'} 점수</option>`).join('') || '<option value="">이 강의실 시험이 없습니다</option>'}</select></label>
+        <p class="mini" data-k="assign exam">제출 · 채점 · 응시 결과가 자동으로 진도 · 이수 조건(점수 이상) · 점수 조건 · 적응형 규칙에 들어갑니다.</p>
         <label data-k="url video">주소(URL)<input name="url" value="${esc((r.body || {}).url || '')}" placeholder="https://"></label>
         <label data-k="page">웹페이지 내용(HTML)<textarea name="html" rows="5">${esc((r.body || {}).html || '')}</textarea></label>
         <label data-k="label">표지 문구<textarea name="text" rows="2">${esc((r.body || {}).text || '')}</textarea></label>
@@ -670,6 +597,7 @@
   async function readFiles(inp) { const out = []; for (const f of [...(inp && inp.files || [])]) { const b64 = X.b64of(new Uint8Array(await f.arrayBuffer())); out.push(await X.call('b', 'file-put', { section: X.sec, name: f.name, mime: f.type || 'application/octet-stream', b64 })); } return out; }
   async function saveRes(m, r) {
     const kind = r ? r.kind : fv(m, 'kind'); const body = r ? { ...(r.body || {}) } : {};
+    if (kind === 'assign') body.ref = fv(m, 'ref_a'); if (kind === 'exam') body.ref = fv(m, 'ref_e');
     if (['url', 'video'].includes(kind)) body.url = fv(m, 'url'); if (kind === 'page') body.html = m.querySelector('[name=html]').value; if (kind === 'label') body.text = fv(m, 'text');
     if (['file', 'folder'].includes(kind)) { const up = await readFiles(m.querySelector('[name=files]')); if (kind === 'file' && up[0]) Object.assign(body, { file_id: up[0].id, name: up[0].name, size: up[0].size, mime: up[0].mime }); if (kind === 'folder' && up.length) body.files = [...(body.files || []), ...up.map(u => ({ file_id: u.id, name: u.name, size: u.size, mime: u.mime }))]; if (!r && !up.length) throw new Error('파일을 고르세요.'); }
     const ct = fv(m, 'ct'); const cv = +fv(m, 'cv') || 0; const completion = ct ? { type: ct, ...(ct === 'time' ? { sec: cv } : ct === 'score' ? { score: cv } : {}) } : {};
@@ -677,7 +605,8 @@
     if (fv(m, 'from')) access.from = toIso(fv(m, 'from')); if (fv(m, 'until')) access.until = toIso(fv(m, 'until')); if (fv(m, 'msr')) access.min_score = { res: fv(m, 'msr'), score: +fv(m, 'msc') || 0 };
     return X.call('b', 'res-save', { ...(r ? { id: r.id } : { section: X.sec, kind }), title: fv(m, 'title'), session_id: fv(m, 'sid') || null, body, visible: fv(m, 'vis'), share: fv(m, 'share'), completion, access });
   }
-  const resModal = (r, sid) => { const m = modal(r ? '학습자원 편집' : '학습자원 추가', resForm(r, sid), [{ id: 'ok', label: '저장', kind: 'pri', run: mm => { saveRes(mm, r).then(() => { closeModal(); done2('저장했습니다.'); }).catch(X.err); return false; } }], true); kindVis(m); };
+  const resModal = async (r, sid) => { let ext = { assignments: [], exams: [] }; try { ext = await X.call('b', 'ext-list', { section: X.sec }); } catch (e) { }
+    const m = modal(r ? '학습자원 편집' : '학습자원 추가', resForm(r, sid, ext), [{ id: 'ok', label: '저장', kind: 'pri', run: mm => { saveRes(mm, r).then(() => { closeModal(); done2('저장했습니다.'); }).catch(X.err); return false; } }], true); kindVis(m); };
   ACT['lmsb-res-new'] = el => resModal(null, el.dataset.s);
   ACT['lmsb-res-edit'] = el => resModal(allRes().find(x => x.id === el.dataset.id));
   ACT['lmsb-res-del'] = el => { if (!confirm('이 자원을 휴지통으로 보낼까요? 휴지통에서 복구할 수 있습니다.')) return; X.run('b', 'res-del', { id: el.dataset.id }, '휴지통으로 보냈습니다.').then(r => r && X.refresh()); };
@@ -693,11 +622,13 @@
     if (r.kind === 'video') h = B.url ? `<video class="lmsb-video" controls src="${esc(B.url)}"></video><p class="mini">영상 플레이어(구간 학습시간 · 배속 · 이어보기)는 묶음 I가 담당합니다.</p>` : '<div class="empty">영상 주소가 없습니다.</div>';
     if (r.kind === 'file') h = `<button class="btn" data-act="lmsb-dl" data-f="${esc(B.file_id)}">${esc(B.name || '파일')} 내려받기</button>`;
     if (r.kind === 'folder') h = (B.files || []).map(f => `<div class="row"><span>${esc(f.name)} <small class="mini">${Math.ceil((f.size || 0) / 1024)}KB</small></span><button class="btn sm" data-act="lmsb-dl" data-f="${esc(f.file_id)}">내려받기</button></div>`).join('') || '<div class="empty">파일이 없습니다.</div>';
+    if (['assign', 'exam'].includes(r.kind)) { const go2 = r.kind === 'assign' ? 'lmse' : 'lmsf';
+      modal(r.title, `<p>${r.kind === 'assign' ? '과제' : '시험'}는 ${r.kind === 'assign' ? '과제' : '시험 · 문제은행'} 메뉴에서 ${r.kind === 'assign' ? '제출' : '응시'}합니다. 결과(제출 · 채점 점수)는 자동으로 이 자원의 진도 · 이수 조건에 반영됩니다.</p><p class="mini">현재: ${r.status ? esc(({ completed: '완료', passed: '합격', failed: '미달', in_progress: '진행 중' })[r.status] || r.status) : '기록 없음'}${r.score != null ? ' · ' + r.score + '점' : ''}</p>`,
+        [{ id: 'go', label: r.kind === 'assign' ? '과제로 가기' : '시험으로 가기', kind: 'pri', run: () => { if (MENU[go2] && menuOn(go2)) go(go2); else toast('해당 메뉴가 꺼져 있습니다.', 'warn'); } }]); return; }
     const C = r.completion || {}; const t0 = Date.now();
-    modal(r.title, h + (C.type === 'score' ? `<div class="bar2"><input type="number" data-lmsb-score min="0" placeholder="점수"><button class="btn sm" data-act="lmsb-score" data-id="${esc(r.id)}">점수 기록</button><span class="mini">평가 연동 전 수동 기록(시험 · 과제 점수는 묶음 E · F 연동 후 자동)</span></div>` : ''), [{ id: 'ok', label: '학습 마침', kind: 'pri', run: () => { mark({ time_sec: Math.round((Date.now() - t0) / 1000) }).then(() => X.refresh()); } }], true);
+    modal(r.title, h, [{ id: 'ok', label: '학습 마침', kind: 'pri', run: () => { mark({ time_sec: Math.round((Date.now() - t0) / 1000) }).then(() => X.refresh()); } }], true);
     if (C.type !== 'time') mark({});
   };
-  ACT['lmsb-score'] = el => { const v = ($('[data-lmsb-score]') || {}).value; X.run('b', 'progress-mark', { resource: el.dataset.id, score: v }, '점수를 기록했습니다.'); };
   ACT['lmsb-dl'] = async el => { const f = await X.run('b', 'file', { id: el.dataset.f }); if (!f) return; const bin = atob(f.b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([u], { type: f.mime })); a.download = f.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
   X.download = id => ACT['lmsb-dl']({ dataset: { f: id } });
   ACT['lmsb-pkg'] = () => { modal('콘텐츠 패키지 올리기', `<p class="mini">SCORM 1.2 · 2004 zip(imsmanifest.xml 포함) 또는 비표준 HTML5 zip(index.html)을 고르세요. 브라우저에서 압축을 풀어 매니페스트를 읽습니다.</p><label>zip 파일<input type="file" name="zip" accept=".zip,application/zip"></label><div class="form2"><label>제목(비우면 매니페스트 제목)<input name="t" maxlength="200"></label><label>차시<select name="sid">${sesOpts('')}</select></label></div><p class="mini" data-lmsb-pkgst></p>`,
@@ -732,6 +663,6 @@
   ACT['lmsb-purge'] = el => { if (confirm('영구 삭제하면 되돌릴 수 없습니다. 계속할까요?')) X.run('b', 'res-purge', { id: el.dataset.id }, '영구 삭제했습니다.').then(r => r && X.refresh()); };
   ACT['lmsb-reuse'] = el => X.run('b', 'res-reuse', { section: X.sec, src: el.dataset.id }, '내 강의실(공통 자료)로 복사했습니다.').then(r => r && X.refresh());
   ACT['lmsb-perm'] = el => X.run('b', 'perm-set', { role: el.dataset.r, perm: el.dataset.p, allowed: el.checked }, '권한을 바꿨습니다.').then(r => { if (!r) el.checked = !el.checked; });
-  ACT['lmsb-menu-save'] = () => X.run('b', 'menu-set', { section: X.sec, modules: $$('[data-lmsb-mod]').map(x => ({ id: x.dataset.lmsbMod, on: x.checked })) }, '강의실 메뉴를 저장했습니다.').then(r => r && X.refresh());
-  ACT['lmsb-pref-save'] = () => X.run('b', 'menu-pref', { section: X.sec, hidden: $$('[data-lmsb-hide]:checked').map(x => x.dataset.lmsbHide), order: (($('[data-lmsb-ord]') || {}).value || '').split(',').map(s => s.trim()).filter(Boolean) }, '맞춤 메뉴를 저장했습니다.').then(r => r && X.refresh());
+  ACT['lmsb-menu-save'] = () => X.run('b', 'menu-set', { section: X.sec, modules: $$('[data-lmsb-mod]').map(x => ({ id: x.dataset.lmsbMod, on: x.checked })) }, '강의실 메뉴를 저장했습니다.').then(r => r && X.loadMenu().then(() => render()));
+  ACT['lmsb-pref-save'] = () => X.run('b', 'menu-pref', { section: X.sec, hidden: $$('[data-lmsb-hide]:checked').map(x => x.dataset.lmsbHide), order: (($('[data-lmsb-ord]') || {}).value || '').split(',').map(s => s.trim()).filter(Boolean) }, '맞춤 메뉴를 저장했습니다.').then(r => r && X.loadMenu().then(() => render()));
 })();

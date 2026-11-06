@@ -7,4 +7,6 @@ import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 @EgovMapper
 public interface LmsBMapper {
     String api(@Param("op") String op, @Param("args") String args, @Param("actor") String actor);
+    /** 학습자 포털 세션(기관 역할 밖에서 조회) */
+    java.util.Map<String, Object> selectLearner(@Param("hash") String hash);
 }

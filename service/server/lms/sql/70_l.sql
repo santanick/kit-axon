@@ -167,7 +167,7 @@ declare
   tid text := current_setting('app.tenant', true);
   my text := case when coalesce(me->>'learner', '') <> '' then 'p:' || (me->>'learner') else 'u:' || coalesce(me->>'uid', '') end; -- 학습자 앱 세션이면 학번 주체
   adm boolean := coalesce(me->>'role', '') in ('owner', 'sub');
-  ev lms_cal_event; f timestamptz; t timestamptz; v_id uuid; v_txt text; r record; arr jsonb; n int; n2 int; out jsonb; k text; mem text[];
+  ev lms_cal_event; fl lms_file; f timestamptz; t timestamptz; v_id uuid; v_txt text; r record; arr jsonb; n int; n2 int; out jsonb; k text; mem text[];
 begin
   if op = 'cal.list' then
     f := coalesce(lmsx_tsq(q, 'from'), date_trunc('month', now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul');
@@ -293,12 +293,19 @@ begin
     if not exists (select 1 from lms_dm_member where tenant_id = tid and room_id = v_id and principal = my) then perform lmsx_err(404, 'not_found', '참여하지 않은 대화방입니다.'); end if;
     if op = 'dm.send' then
       v_txt := lmsx_txt(q, 'body', 2000);
+      -- 첨부: 바이트는 파일 저장소(lms_file, POST /api/lms/e/file)에 먼저 올리고 file_id만 보낸다. 본인이 올린 파일 · 허용 형식만
       arr := coalesce(q->'attachments', '[]');
       if jsonb_typeof(arr) <> 'array' or jsonb_array_length(arr) > 10 then perform lmsx_err(400, 'bad_input', '첨부는 10개까지입니다.'); end if;
-      select coalesce(jsonb_agg(jsonb_build_object('name', left(coalesce(a->>'name', ''), 120), 'size', greatest(0, least(coalesce((a->>'size')::bigint, 0), 1073741824)),
-        'mime', left(coalesce(a->>'mime', ''), 80), 'kind', case when a->>'mime' like 'image/%' then 'image' when a->>'mime' like 'audio/%' then 'voice' else 'file' end)), '[]')
-        into arr from jsonb_array_elements(arr) a;
-      if exists (select 1 from jsonb_array_elements(arr) a where (a->>'name') = '' or (a->>'size')::bigint > 104857600) then perform lmsx_err(400, 'bad_input', '첨부 파일 이름이 없거나 100MB를 넘습니다.'); end if;
+      out := '[]';
+      for r in select a from jsonb_array_elements(arr) a loop
+        if coalesce(r.a->>'file_id', '') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then perform lmsx_err(400, 'file', '첨부 파일을 먼저 올리세요(file_id).'); end if;
+        select * into fl from lmsx_my_file(me, (r.a->>'file_id')::uuid);
+        if fl.file_id is null then perform lmsx_err(400, 'file', '첨부 파일을 찾을 수 없습니다(본인이 올린 파일만 첨부할 수 있습니다).'); end if;
+        if lmsx_file_ok(fl.name, fl.mime) is not null then perform lmsx_err(400, 'file_type', lmsx_file_ok(fl.name, fl.mime)); end if;
+        out := out || jsonb_build_array(jsonb_build_object('file_id', fl.file_id, 'name', fl.name, 'size', fl.size, 'mime', fl.mime,
+          'kind', case when fl.mime like 'image/%' then 'image' when fl.mime like 'audio/%' then 'voice' else 'file' end));
+      end loop;
+      arr := out;
       if v_txt = '' and jsonb_array_length(arr) = 0 then perform lmsx_err(400, 'bad_input', '보낼 내용을 입력하세요.'); end if;
       insert into lms_dm_message (tenant_id, room_id, sender, body, attachments, lang) values (tid, v_id, my, v_txt, arr, coalesce(nullif(lmsx_txt(q, 'lang', 10), ''), 'ko')) returning id into n;
       update lms_dm_member set last_read_id = n where tenant_id = tid and room_id = v_id and principal = my;
@@ -315,6 +322,16 @@ begin
       select jsonb_build_object('id', room_id, 'kind', kind, 'title', title) into out from lms_dm_room where tenant_id = tid and room_id = v_id;
       return jsonb_build_object('room', out, 'members', (select count(*) from lms_dm_member where tenant_id = tid and room_id = v_id)::int, 'items', arr);
     end if;
+
+  elsif op = 'dm.file' then
+    -- 대화방 첨부 내려받기: 그 방 참여자만, 그 방 메시지에 붙은 파일만
+    v_id := lmsx_uuid(q, 'room_id');
+    if not exists (select 1 from lms_dm_member where tenant_id = tid and room_id = v_id and principal = my) then perform lmsx_err(404, 'not_found', '참여하지 않은 대화방입니다.'); end if;
+    v_txt := lmsx_uuid(q, 'file_id')::text;
+    if not exists (select 1 from lms_dm_message g, jsonb_array_elements(g.attachments) a where g.tenant_id = tid and g.room_id = v_id and a->>'file_id' = v_txt) then perform lmsx_err(404, 'not_found', '이 대화방의 첨부 파일이 아닙니다.'); end if;
+    select * into fl from lms_file where tenant_id = tid and file_id = v_txt::uuid;
+    if fl.file_id is null then perform lmsx_err(404, 'not_found', '파일이 지워졌습니다.'); end if;
+    return jsonb_build_object('file_id', fl.file_id, 'name', fl.name, 'mime', fl.mime, 'size', fl.size, 'sha256', fl.sha256, 'b64', translate(encode(fl.data, 'base64'), E'\n', ''));
 
   elsif op = 'dm.broadcast' then
     if not adm and coalesce(me->>'role', '') <> 'teacher' then perform lmsx_err(403, 'role', '일괄 발송은 운영자 · 교수자만 할 수 있습니다.'); end if;

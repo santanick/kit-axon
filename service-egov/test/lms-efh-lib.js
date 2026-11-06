@@ -34,6 +34,19 @@ async function setup(base, tag) {
     await c.query("insert into lms_course (tenant_id, course_code, name, credits, category) values ($1, 'CSE2001', '자료구조', 3, 'major')", [tid]);
     const sec = (await c.query(`insert into lms_section (tenant_id, term_id, course_code, section_no, title, syllabus) values ($1, '2026-2', 'CSE2001', '01', '자료구조 01분반', '{"eval":{"midterm":30,"final":30,"assignment":20,"quiz":10,"attendance":10}}') returning section_id::text`, [tid])).rows[0].section_id;
     const sec2 = (await c.query(`insert into lms_section (tenant_id, term_id, course_code, section_no, title) values ($1, '2026-2', 'CSE2001', '02', '자료구조 02분반') returning section_id::text`, [tid])).rows[0].section_id;
+    /* 조직 · 교과목 학과 · 담당 교원(교수 · 조교) */
+    await c.query("insert into lms_org_unit (tenant_id, unit_code, name, kind) values ($1, 'ENG', '공과대학', 'college'), ($1, 'SCI', '자연과학대학', 'college')", [tid]);
+    await c.query("insert into lms_org_unit (tenant_id, unit_code, name, parent_code, kind) values ($1, 'CSE', '컴퓨터공학과', 'ENG', 'dept'), ($1, 'MTH', '수학과', 'SCI', 'dept')", [tid]);
+    await c.query("update lms_course set unit_code = 'CSE' where course_code = 'CSE2001'");
+    const prof = (await c.query("insert into lms_person (tenant_id, member_no, kind, unit_code) values ($1, 'P1001', 'professor', 'CSE') returning person_id::text", [tid])).rows[0].person_id;
+    const ta = (await c.query("insert into lms_person (tenant_id, member_no, kind, unit_code) values ($1, '20265555', 'student', 'CSE') returning person_id::text", [tid])).rows[0].person_id;
+    await c.query("insert into lms_section_staff (tenant_id, section_id, person_id, role, source) values ($1, $2, $3, 'professor', 'sis'), ($1, $2, $4, 'ta', 'manual')", [tid, sec, prof, ta]);
+    const U = {};
+    for (const [k, role, units, m] of [['prof', 'teacher', [], 'P1001'], ['ta', 'teacher', [], '20265555'], ['subE', 'sub', ['ENG'], null], ['subM', 'sub', ['MTH'], null], ['tnl', 'teacher', null, null]]) {
+      const u = (await c.query("insert into users (tenant_id, email, pw, role) values ($1, $2, 'scrypt$x$y', $3) returning id", [tid, `efh_${tag}_${k}_${Date.now()}@example.com`, role])).rows[0].id;
+      if (units) await c.query('insert into lms_user_link (tenant_id, user_id, units, member_no) values ($1, $2, $3, $4)', [tid, u, units, m]);
+      const t = crypto.randomBytes(32).toString('base64url'); await c.query("insert into sessions (id, user_id, tenant_id, expires_at) values ($1, $2, $3, now() + interval '2 hour')", [h(t), u, tid]); U[k] = 'dd_sid=' + t;
+    }
     const P = {};
     for (const m of [...STU, AUD]) {
       P[m] = (await c.query("insert into lms_person (tenant_id, member_no, kind, unit_code, grade_year) values ($1, $2, 'student', 'CSE', 2) returning person_id::text", [tid, m])).rows[0].person_id;
@@ -42,7 +55,7 @@ async function setup(base, tag) {
     await c.query("insert into lms_person (tenant_id, member_no, kind, unit_code) values ($1, '20267777', 'student', 'MTH')", [tid]); // 미수강
     const L = {};
     for (const m of [...STU, AUD, '20267777', '20268888']) { const t = crypto.randomBytes(32).toString('base64url'); await c.query("insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval '2 hour')", [h(t), tid, m]); L[m] = 'dd_lsid=' + t; }
-    return { sec, sec2, P, L };
+    return { sec, sec2, P, L, U };
   });
   return { ck: su.ck, tid, ...X };
 }
@@ -60,7 +73,7 @@ function norm(v) {
       if (ks.length && ks.every(k => UUID.test(k))) return ks.map(k => JSON.stringify(walk(x[k]))).sort();
       const o = {}; for (const k of ks) o[k] = ['qid', 'mid', 'id'].includes(k) && typeof x[k] === 'number' ? 'N' : walk(x[k]); return o;
     }
-    if (typeof x === 'string') { if (UUID.test(x)) return U(x); return x.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, U).replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, 'T').replace(/tn_[a-z0-9]{8,16}/g, 'TID').replace(/efh_[nj]_\d+_[a-z0-9]+@example\.com/g, 'EMAIL'); }
+    if (typeof x === 'string') { if (UUID.test(x)) return U(x); return x.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, U).replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, 'T').replace(/tn_[a-z0-9]{8,16}/g, 'TID').replace(/efh_[nj]_[a-z0-9_]+@example\.com/g, 'EMAIL'); }
     return x;
   };
   return JSON.stringify(walk(v === undefined ? null : v));
