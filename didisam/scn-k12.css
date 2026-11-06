@@ -11,7 +11,7 @@
 .k-num{width:76px}
 .k-att{display:grid;gap:14px;grid-template-columns:280px minmax(0,1fr);align-items:start}
 .k-attc td input:not([type=checkbox]){width:100%;min-width:82px;box-sizing:border-box}
-.k-st{display:inline-flex;gap:2px;flex-wrap:nowrap}
+.k-st{display:inline-flex;gap:2px;flex-wrap:wrap}
 .k-st button{border:1px solid var(--line,#ddd);background:transparent;color:inherit;border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;white-space:nowrap}
 .k-st button.on{background:var(--ink,#222);color:#fff;border-color:var(--ink,#222)}
 .k-st button.on.r{background:#d92d20;border-color:#d92d20}
@@ -35,3 +35,4 @@
 .k-dl{display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px 12px;margin:0 0 14px}.k-dl dt{color:var(--muted);font-size:13px}.k-dl dd{margin:0}
 .k-r{color:#d92d20}.k-sel{align-items:center}.k-date input[type=date]{width:auto}.k-sum{margin-bottom:14px}
 @media (max-width:900px){.k-split.has .k-card{order:-1}}
+@media (max-width:860px){.k-attc table.mcard>tbody>tr>td[data-l]{flex:1 1 100%}.k-st{display:flex;width:100%;gap:6px}.k-st button{flex:1 1 0;padding:9px 0;font-size:13.5px}}

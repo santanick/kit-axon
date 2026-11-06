@@ -105,6 +105,9 @@ const MIME = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html
   ok(await G(() => { UI.crmId = null; go('crmbill'); const L = scxChips('crmbill'); return L.length === 4 && L.every(x => x.run && x.run()); }), 'AI 수납 칩 4개 동작');
   ok(await G(id => { UI.crmId = id; go('crmstu'); const L = scxChips('crmstu'); UI.crmId = null; return !L.some(x => /샘플/.test(x.l)) && L.length >= 3; }, nm.id), 'AI 칩 이름에 원생 이름 없음');
   ok(await G(() => { const s = S.me.role; S.me.role = 'teacher'; const a = chatSendTest('미납 원생 보여줘'); S.me.role = s; return a; function chatSendTest(q) { const n = S.chat.length; const r = (window.k12Probe || (() => null))(q); return !r; } }), 'AI 강사 수납 차단');
+  ok(await G(() => { go('board'); return document.querySelector('.bcanvas, #main, body').innerText.length > 150; }), '샘플 수업이 있어도 공지 화면 정상');
+  ok(!(await sam(`${nm.n} 1만원 현금 수납`, false)).text.includes('현금로'), '조사 표기');
+  ok(await G(() => { UI.obc = false; chatSend('미납 원생 보여줘'); return UI.obc === true; }), 'AI 명령을 보내면 시작 가이드를 접음');
   /* 샘플 삭제 */
   await G(() => ACT['crm-sample-del']()); await wait(50); ok(await G(() => !S.classes.some(c => /샘플/.test(c.name)) && !S.members.some(m => /샘플/.test(m.name))), '샘플 삭제');
   /* 저장 후 복원 */
