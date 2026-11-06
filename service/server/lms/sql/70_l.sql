@@ -165,7 +165,7 @@ create or replace function lms_l_ics_ts(t timestamptz) returns text language sql
 create or replace function lms_l(op text, me jsonb, q jsonb) returns jsonb language plpgsql as $$
 declare
   tid text := current_setting('app.tenant', true);
-  my text := 'u:' || coalesce(me->>'uid', '');
+  my text := case when coalesce(me->>'learner', '') <> '' then 'p:' || (me->>'learner') else 'u:' || coalesce(me->>'uid', '') end; -- 학습자 앱 세션이면 학번 주체
   adm boolean := coalesce(me->>'role', '') in ('owner', 'sub');
   ev lms_cal_event; f timestamptz; t timestamptz; v_id uuid; v_txt text; r record; arr jsonb; n int; n2 int; out jsonb; k text; mem text[];
 begin

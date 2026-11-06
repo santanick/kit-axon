@@ -1,7 +1,7 @@
 'use strict';
 /* v30 묶음 L 대조 테스트 — 통합 달력 · iCal · D-1 미이수 알림 · DM(읽음 · 그룹 · 첨부 · 일괄) · 알림 규칙 · 방해금지 · 발송 대기열
    사용: DATABASE_URL=postgres://didisam@127.0.0.1:5544/ddw5 node test/lms-l.js http://127.0.0.1:8241 http://127.0.0.1:8242 */
-const { call, signup, extraUser, seedAcademic, main } = require('./lms-lmp');
+const { call, signup, extraUser, learnerCookie, seedAcademic, main } = require('./lms-lmp');
 async function scenario(base, tag) {
   const R = {}; const o = await signup(base, tag); const ck = o.ck; const X = await seedAcademic(o.tid);
   const tea = await extraUser(o.tid, 'teacher');
@@ -49,6 +49,19 @@ async function scenario(base, tag) {
   await P('bcTea', '/api/lms/l/dm/broadcast', { section_id: X.sec[0], title: '휴강 안내', body: '이번 주 수업은 휴강합니다.', push: true }, tea.ck);
   await P('bcNone', '/api/lms/l/dm/broadcast', { body: 'x' });
   await P('bcMembers', '/api/lms/l/dm/broadcast', { members: ['p:20261005', 'p:20261006', 'p:nobody'], body: '설문 참여 부탁드립니다.' });
+  /* 학생(학습자 포털 세션) — DM · 알림 · 개인 일정 */
+  const stu = await learnerCookie(o.tid, '20261001');
+  R.stuRooms = await call(base, 'GET', '/api/lms/l/dm/rooms', { cookie: stu });
+  R.stuSend = await call(base, 'POST', '/api/lms/l/dm/send', { cookie: stu, body: { room_id: rid, body: '학생입니다. 확인했습니다.' } });
+  R.stuOpen = await call(base, 'POST', '/api/lms/l/dm/open', { cookie: stu, body: { kind: 'direct', members: ['p:P2026001'] } });
+  R.stuMsgs = await call(base, 'GET', `/api/lms/l/dm/msgs?room_id=${rid}`, { cookie: stu });
+  R.stuInbox = await call(base, 'GET', '/api/lms/l/noti/inbox', { cookie: stu });
+  R.stuCal = await call(base, 'POST', '/api/lms/l/cal/add', { cookie: stu, body: { scope: 'personal', title: '스터디', starts_at: '2026-11-20T19:00' } });
+  R.stuAcad = await call(base, 'POST', '/api/lms/l/cal/add', { cookie: stu, body: { scope: 'academic', title: 'x', starts_at: '2026-11-20' } });
+  R.stuBc = await call(base, 'POST', '/api/lms/l/dm/broadcast', { cookie: stu, body: { members: ['p:20261002'], body: 'x' } });
+  R.stuOutbox = await call(base, 'GET', '/api/lms/l/noti/outbox', { cookie: stu });
+  R.stuRule = await call(base, 'POST', '/api/lms/l/noti/rule_save', { cookie: stu, body: { event: 'due_before', channels: ['push'], params: { hours: 12 } } });
+  await G('msgsAfterStu', `/api/lms/l/dm/msgs?room_id=${rid}`);
   /* 알림 규칙 · 방해금지 */
   await P('ruleBad', '/api/lms/l/noti/rule_save', { event: 'x', channels: ['push'] });
   await P('ruleBadCh', '/api/lms/l/noti/rule_save', { event: 'qna_new', channels: ['fax'] });
@@ -75,4 +88,4 @@ async function scenario(base, tag) {
   await P('outboxTea', '/api/lms/l/noti/ack', { status: 'sent', ids: [] }, tea.ck);
   return R;
 }
-main('묶음 L', scenario, { noAuth: 401, csrf: 403, addBadScope: 400, addBadTs: 400, addNoTitle: 400, addArr: 400, addTeaAcad: 403, addAcad: 200, addCourse: 200, addCourseBad: 404, addEndBefore: 400, list: 200, ics: 200, d1Tea: 403, d1: 200, delAgain: 404, openBad: 404, openTwo: 400, open: 200, group: 200, sendEmpty: 400, sendAtt: 200, sendBig: 400, sendNotMember: 404, msgs: 200, bcTea: 200, bcNone: 400, ruleBad: 400, ruleBadCh: 400, ruleHours: 400, ruleDue: 200, quietBad: 400, fire: 200, scan: 200, outbox: 200, ackBad: 400, ack: 200, outboxTea: 403 });
+main('묶음 L', scenario, { noAuth: 401, csrf: 403, addBadScope: 400, addBadTs: 400, addNoTitle: 400, addArr: 400, addTeaAcad: 403, addAcad: 200, addCourse: 200, addCourseBad: 404, addEndBefore: 400, list: 200, ics: 200, d1Tea: 403, d1: 200, delAgain: 404, openBad: 404, openTwo: 400, open: 200, group: 200, sendEmpty: 400, sendAtt: 200, sendBig: 400, sendNotMember: 404, msgs: 200, bcTea: 200, bcNone: 400, ruleBad: 400, ruleBadCh: 400, ruleHours: 400, ruleDue: 200, quietBad: 400, fire: 200, scan: 200, outbox: 200, ackBad: 400, ack: 200, outboxTea: 403, stuRooms: 200, stuSend: 200, stuOpen: 200, stuMsgs: 200, stuInbox: 200, stuCal: 200, stuAcad: 403, stuBc: 403, stuOutbox: 403, stuRule: 200 });

@@ -13,8 +13,11 @@
   LMP.call = async (b, op, q = {}, get) => {
     if (LMP.live()) {
       const isGet = get || /^(cal\.list|cal\.ics|dm\.rooms|dm\.msgs|noti\.rules|noti\.inbox|noti\.outbox)$/.test(op) && b === 'l' || (LMP.GETS && LMP.GETS[b] && LMP.GETS[b].includes(op));
-      if (isGet) { const u = LMP.path(b, op) + '?' + new URLSearchParams(Object.entries(q).filter(([, v]) => v != null && v !== '').map(([k, v]) => [k, String(v)])); return api('GET', u); }
-      return api('POST', LMP.path(b, op), q);
+      const u = isGet ? LMP.path(b, op) + '?' + new URLSearchParams(Object.entries(q).filter(([, v]) => v != null && v !== '').map(([k, v]) => [k, String(v)])) : LMP.path(b, op);
+      const xh = LMP.hdr && LMP.hdr(b, op);
+      if (!xh) return isGet ? api('GET', u) : api('POST', u, q);
+      const r = await fetch(u, { method: isGet ? 'GET' : 'POST', credentials: 'same-origin', headers: { 'x-didisam': '1', ...xh, ...(isGet ? {} : { 'content-type': 'application/json' }) }, body: isGet ? undefined : JSON.stringify(q) });
+      const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.message || `오류 ${r.status}`); e.status = r.status; e.code = j.error; throw e; } return j;
     }
     const f = LMP.demo[b] && LMP.demo[b][op]; if (!f) throw new Error('데모에서 지원하지 않는 동작입니다.');
     const r = f(q); save(); return JSON.parse(JSON.stringify(r));
