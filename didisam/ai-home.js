@@ -24,7 +24,7 @@ function aihChips() {
   const out = []; const add = (l, q) => { if (out.length < 5 && q && !out.some(x => x[1] === q)) out.push([l, q]); };
   if (aihTeacher()) { const c = typeof tCur === 'function' ? tCur() : null; const n = c ? `「${c.name}」 ` : '';
     add(`${t('learner')} 질문 답변`, '학생 질문 답변 초안 만들어줘'); add('과제 채점', '채점 대기 과제 AI로 1차 채점해줘'); add('진도 독려', '진도 미달 학생에게 독려 메시지 보내줘');
-    add('강의 자료 만들기', `${n}3주차 강의자료 만들어줘`); add('내 강의 현황', '오늘 할 일 브리핑해줘'); return out; }
+    add('강의 자료 만들기', `${n}3차시 강의자료 만들어줘`); add('내 강의 현황', '오늘 할 일 브리핑해줘'); return out; }
   try { if (S.bld && !bAllDone()) { const c = bCur(); const q = c && typeof obQ === 'function' ? obQ(c.id) : ''; if (q) add(`${bName(c)}`, q); } } catch (e) { }
   try { BRIEF().filter(b => b.n > 0).forEach(b => add(`${b.label} ${b.n}${b.unit}`, b.q)); } catch (e) { }
   ((typeof EXQ !== 'undefined' && EXQ[S.org.type]) || []).forEach(q => add(q, q));
@@ -56,7 +56,7 @@ function aihConnHTML() {
 /* 교수자 Connect: 내 계정 단위(데모) — Calendar · Drive · Slack · Zoom */
 const AIH_TC = {
   gcal: { n: 'Google Calendar', lg: 'G', col: '#1A73E8', use: '수업 · 상담 일정', svc: 'google', sub: 'calendar', steps: ['[연결하기]를 누르고 학교 · 기관 Google 계정을 고릅니다.', '동의 화면에서 「캘린더 일정 만들기」 권한만 허용합니다.', '이제 "다음 주 보강 일정 잡아줘"처럼 말하면 AI 조교가 일정 초안을 만들고, 승인하면 캘린더에 넣습니다.'] },
-  gdrive: { n: 'Google Drive', lg: 'D', col: '#0F9D58', use: '강의 자료 가져오기 · 저장', svc: 'google', sub: 'drive', steps: ['[연결하기]를 누르고 Google 계정을 고릅니다.', '디디쌤이 만든 파일과 직접 고른 파일만 쓸 수 있게 허용합니다(전체 드라이브 권한은 요청하지 않습니다).', '"Drive의 3주차 PPT로 퀴즈 만들어줘"처럼 지시합니다.'] },
+  gdrive: { n: 'Google Drive', lg: 'D', col: '#0F9D58', use: '강의 자료 가져오기 · 저장', svc: 'google', sub: 'drive', steps: ['[연결하기]를 누르고 Google 계정을 고릅니다.', '디디쌤이 만든 파일과 직접 고른 파일만 쓸 수 있게 허용합니다(전체 드라이브 권한은 요청하지 않습니다).', '"Drive의 3차시 PPT로 퀴즈 만들어줘"처럼 지시합니다.'] },
   slack: { n: 'Slack', lg: 'S', col: '#4A154B', use: '과제 제출 · 질문 알림', svc: 'slack', steps: ['기관 운영자가 Slack을 연결해 두었다면 바로 씁니다.', '아니면 [연결하기]로 내 워크스페이스의 알림 채널(예: #내강의)을 고릅니다.', '내 자동화에서 「과제 제출 → 알림」을 켜면 이 채널로 알려 드립니다.'] },
   zoom: { n: 'Zoom', lg: 'Z', col: '#2D8CFF', use: '실시간 수업 링크', soon: true, steps: ['Zoom 연결은 준비 중입니다.', '지금은 강의 항목(라이브)에 Zoom 회의 링크를 붙여 넣어 쓰세요. 학습자 화면에 [입장] 버튼으로 보입니다.'] }
 };
@@ -122,7 +122,7 @@ function aihHomeHTML() {
   <section class="aih-hero" aria-labelledby="aihH"><span class="aih-orb" aria-hidden="true">${ic('spark', 22)}</span>
     <p class="aih-ey">${esc(aihDate())} · ${esc(S.org.name)} · ${T ? `${t('teacher')} 비서` : '운영 비서'} ${esc(nm)}</p>
     <h1 id="aihH">안녕하세요, ${esc(aihWho())}.<br><em>무엇을 도와드릴까요?</em></h1>
-    <form class="composer aih-comp" data-where="home"><div class="cbox"><label for="aihQ" class="sr">${esc(nm)}에게 지시</label><textarea id="aihQ" rows="1" maxlength="300" placeholder="${T ? '예: 3주차 퀴즈 5문항 만들어줘' : `예: ${esc(((typeof EXQ !== 'undefined' && EXQ[S.org.type]) || ['이번 주 운영 현황 요약해줘'])[0])}`}"></textarea><button class="send" type="submit" aria-label="보내기">${ic('send', 18)}</button></div></form>
+    <form class="composer aih-comp" data-where="home"><div class="cbox"><label for="aihQ" class="sr">${esc(nm)}에게 지시</label><textarea id="aihQ" rows="1" maxlength="300" placeholder="${T ? '예: 3차시 퀴즈 5문항 만들어줘' : `예: ${esc(((typeof EXQ !== 'undefined' && EXQ[S.org.type]) || ['이번 주 운영 현황 요약해줘'])[0])}`}"></textarea><button class="send" type="submit" aria-label="보내기">${ic('send', 18)}</button></div></form>
     <div class="aih-chips" role="list" aria-label="추천 일">${chips.map(([l, q]) => `<button type="button" role="listitem" class="chip" data-act="chat-q" data-v="${esc(q)}">${esc(l)}</button>`).join('')}</div>
     <p class="aih-note">${typeof CL !== 'undefined' && CL.on && CL.on('chat') ? `${esc(CL.label())} 연결됨 · ` : ''}실행하는 일은 계획을 먼저 보여 드리고, 승인하신 뒤에 처리합니다.</p>
   </section>

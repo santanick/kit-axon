@@ -65,7 +65,7 @@
     modal('학생 입장 링크 · QR', `<div class="lvs-qr">${LV.qr(u)}<div><p class="mini">학생은 학습자 사이트에 로그인한 상태에서 이 링크 · QR로 들어옵니다. 휴대폰은 카메라로 QR을 찍으면 됩니다.</p><code>${esc(u)}</code></div></div>`, [{ id: 'c', label: '닫기' }, { id: 'cp', label: '링크 복사', kind: 'pri', run: () => { navigator.clipboard && navigator.clipboard.writeText(u).then(() => toast('링크를 복사했습니다.', 'ok')); } }]); };
   function roomForm(r) {
     const live = LIVEM(); const sec = r ? r.section_id : (sections()[0] || {}).section_id;
-    return `<label class="fl">수업 제목<input name="t" maxlength="80" value="${esc(r ? r.title : '')}" placeholder="자료구조 3주차 실시간 수업"></label>
+    return `<label class="fl">수업 제목<input name="t" maxlength="80" value="${esc(r ? r.title : '')}" placeholder="자료구조 3차시 실시간 수업"></label>
       ${r ? '' : `<label class="fl">분반${secSel('sec', sec)}</label>`}
       <label class="fl">진행 방식<select name="m">${Object.entries(MODE).map(([k, v]) => `<option value="${k}" ${(r ? r.mode : 'mesh') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <p class="mini">소그룹: 최대 6명이 서로 보고 말합니다 · 방송: 교수자 1명이 학생 여럿에게 보냅니다(직접 연결 한도, 그 이상은 SFU 연동 후) · 외부 링크: 학교가 쓰는 Zoom · Teams 주소로 안내만 합니다.</p>
@@ -149,7 +149,7 @@
   ACT['lvs-cssave'] = el => { const src = document.getElementById('lvsCsSrc').value; const langs = [...new Set([src, ...[...document.querySelectorAll('.lvsCsL:checked')].map(x => x.value)])]; if (langs.length > 4) return toast('자막 언어는 말하는 언어를 포함해 4개까지입니다.', 'warn');
     act(() => api('POST', '/api/lms/live/cap-setting', { section_id: el.dataset.id, enabled: document.getElementById('lvsCsOn').checked, src_lang: src, langs, visibility: document.getElementById('lvsCsVis').value }), '강의별 자막 설정을 저장했습니다.'); };
   ACT['lvs-capsel'] = el => { C.cap = el.dataset.id; render(); };
-  ACT['lvs-capnew'] = () => modal('새 자막방', `<label class="fl">제목<input name="t" maxlength="80" placeholder="자료구조 3주차 대면 수업"></label><label class="fl">분반${secSel('sec', UI.lvCs)}</label><p class="mini">말하는 언어 · 자막 언어 · 공개 범위는 「강의별 자막 설정」을 따릅니다.</p>`,
+  ACT['lvs-capnew'] = () => modal('새 자막방', `<label class="fl">제목<input name="t" maxlength="80" placeholder="자료구조 3차시 대면 수업"></label><label class="fl">분반${secSel('sec', UI.lvCs)}</label><p class="mini">말하는 언어 · 자막 언어 · 공개 범위는 「강의별 자막 설정」을 따릅니다.</p>`,
     [{ id: 'c', label: '취소' }, { id: 'ok', label: '만들기', kind: 'pri', run: w => { if (!fv(w, 't')) { toast('제목을 입력하세요.', 'warn'); return false; } act(async () => { const j = await api('POST', '/api/lms/live/cap-room', { title: fv(w, 't'), section_id: fv(w, 'sec') || undefined }); C.cap = j.room.room_id; return j; }, '자막방을 열었습니다. 「받아쓰기 시작」을 누르세요.'); } }]);
   ACT['lvs-capture'] = el => open('capture=' + encodeURIComponent(el.dataset.id));
   ACT['lvs-capview'] = el => open('cap=' + encodeURIComponent(el.dataset.code));

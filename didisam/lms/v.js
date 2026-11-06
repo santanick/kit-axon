@@ -1,5 +1,5 @@
 /* v32 강의 영상 관리 — 자체 CMS · 스트리밍 · 강의 녹화 · AI 자동자막(ECR-002 · SFR-062 · ECR-003 · SFR-073)
-   운영: /api/lms/v/... (서버가 ffmpeg로 HLS 360p · 720p 변환 → 서명 · 만료 재생 주소 → 묶음 I 플레이어 · 진도 · 자동출석, 묶음 B 주차 · 차시 자원에 자동 배치)
+   운영: /api/lms/v/... (서버가 ffmpeg로 HLS 360p · 720p 변환 → 서명 · 만료 재생 주소 → 묶음 I 플레이어 · 진도 · 자동출석, 묶음 B 차시 자원에 자동 배치)
    데모(서버 없음): 같은 경로를 W3.LOCAL이 흉내 낸다 — 올린 · 녹화한 영상은 이 브라우저에서만 재생(변환 · 자막은 몇 초 뒤 끝난 것으로 표시).
    화면: 지금 할 일 + 탭 4개(영상 · 녹화하기 · 자막 · 전송 설정), 주 버튼 「영상 올리기」. 메뉴는 「수업 › 강의실」 안(LMSNAV.G에 끼운다 — nav.js는 고치지 않음). */
 (function () {
@@ -56,12 +56,12 @@
     const ses = d.sessions.filter(s => s.section_id === sec.section_id && s.kind === 'online').sort((a, b) => a.week_no - b.week_no);
     const t0 = now() - 3 * 864e5; const R = [{ name: '360p', height: 360, kbps: 800 }, { name: '720p', height: 720, kbps: 2500 }];
     const base = { kind: 'upload', status: 'ready', progress: 100, src_mime: 'video/mp4', chunks: 1, renditions: R, has_audio: true, width: 1280, height: 720, access: 'enrolled', domains: [], url_ver: 1, retain_until: new Date(now() + 365 * 864e5).toISOString().slice(0, 10), jobs: [] };
-    const a = Object.assign({}, base, { media_id: W3.uid(), title: '3주차 온라인 강의 — 데이터 시각화', src_name: 'week3.mp4', src_size: 412 * 1048576, duration_sec: 1520, created_at: W3.ts(t0), ready_at: W3.ts(t0 + 9e5), stt_lang: 'ko',
+    const a = Object.assign({}, base, { media_id: W3.uid(), title: '3차시 온라인 강의 — 데이터 시각화', src_name: 'week3.mp4', src_size: 412 * 1048576, duration_sec: 1520, created_at: W3.ts(t0), ready_at: W3.ts(t0 + 9e5), stt_lang: 'ko',
       job: { job_id: W3.uid(), kind: 'stt', status: 'done', progress: 100, step: '완료', lang: 'ko', engine: 'whisper', error: null, attempts: 1, created_at: W3.ts(t0 + 9e5), finished_at: W3.ts(t0 + 12e5) } });
     const b = Object.assign({}, base, { media_id: W3.uid(), title: '실습 화면 녹화 — 파이썬 설치', kind: 'record', src_name: '녹화.webm', src_mime: 'video/webm', src_size: 96 * 1048576, duration_sec: 640, created_at: W3.ts(t0 + 864e5), ready_at: W3.ts(t0 + 864e5 + 3e5), stt_lang: 'ko',
       consent: { at: W3.ts(t0 + 864e5), by: '교수자', ver: 'rec-v1', items: ['screen', 'mic'] }, job: { job_id: W3.uid(), kind: 'transcode', status: 'done', progress: 100, step: '완료', lang: null, engine: 'ffmpeg', error: null, attempts: 1, created_at: W3.ts(t0 + 864e5), finished_at: W3.ts(t0 + 864e5 + 3e5) } });
     d.media.push(a, b);
-    const ko = [['안녕하세요. 3주차 온라인 강의를 시작하겠습니다.', 0.5, 4], ['오늘은 데이터를 그림으로 나타내는 시각화를 배웁니다.', 4.5, 9], ['먼저 막대그래프와 선그래프의 차이를 살펴보겠습니다.', 9.5, 15], ['막대그래프는 항목끼리 크기를 비교할 때 씁니다.', 15.5, 20], ['선그래프는 시간에 따른 변화를 볼 때 알맞습니다.', 20.5, 26]].map(([t, s, e]) => ({ s, e, t }));
+    const ko = [['안녕하세요. 3차시 온라인 강의를 시작하겠습니다.', 0.5, 4], ['오늘은 데이터를 그림으로 나타내는 시각화를 배웁니다.', 4.5, 9], ['먼저 막대그래프와 선그래프의 차이를 살펴보겠습니다.', 9.5, 15], ['막대그래프는 항목끼리 크기를 비교할 때 씁니다.', 15.5, 20], ['선그래프는 시간에 따른 변화를 볼 때 알맞습니다.', 20.5, 26]].map(([t, s, e]) => ({ s, e, t }));
     d.mcaps[a.media_id + '|ko'] = { cues: ko, source: 'stt', engine: 'whisper', status: 'published', updated_at: W3.ts(t0 + 12e5), published_at: W3.ts(t0 + 13e5) };
     d.mcaps[a.media_id + '|en'] = { cues: [{ s: 0.5, e: 4, t: "Hello. Let's begin the week 3 online lecture." }, { s: 4.5, e: 9, t: 'Today we learn data visualization.' }], source: 'translate', engine: 'claude', status: 'draft', updated_at: W3.ts(t0 + 14e5), published_at: null };
     if (ses[0]) placeDo(a, ses[0].session_id, a.title);
@@ -151,7 +151,7 @@
     const TB = [['list', '영상'], ['rec', '녹화하기'], ['cap', '자막'], ['set', '전송 설정']];
     const tb = window.LMSX && LMSX.tabs4 ? LMSX.tabs4('lmsvT', TB, t) : tabs('lmsvT', TB, t);
     const body = { list: vList, rec: vRec, cap: vCap, set: vSet }[t] || vList;
-    return `<div data-lmsv-root>${head('강의 영상 관리', '강의 영상을 올리거나 바로 녹화하면 학교 서버가 스트리밍용으로 변환하고, 고른 주차 · 차시에 놓습니다. 진도와 자동출석은 「동영상 · 진도」와 같이 계산됩니다.', `<button class="btn pri" data-act="lmsv-up">영상 올리기</button> ${W3.mode()}`)}
+    return `<div data-lmsv-root>${head('강의 영상 관리', '강의 영상을 올리거나 바로 녹화하면 학교 서버가 스트리밍용으로 변환하고, 고른 차시에 놓습니다. 진도와 자동출석은 「동영상 · 진도」와 같이 계산됩니다.', `<button class="btn pri" data-act="lmsv-up">영상 올리기</button> ${W3.mode()}`)}
       ${window.LMSX && LMSX.todo ? LMSX.todo(esc(todo), tbtn) : `<p class="mini">${esc(todo)}</p>`}
       <div class="kpis">${kpi('재생 가능', c.ready + '개')}${kpi('변환 중', c.working + '개', '', c.working ? 'warn' : '')}${kpi('자막 미게시', c.no_caption + '개', '', c.no_caption ? 'warn' : '')}${kpi('차시 미배치', c.unplaced + '개')}</div>
       ${tb}${body(sec, it, Lst)}</div>`;

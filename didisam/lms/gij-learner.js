@@ -2,7 +2,7 @@
    ① 출석하기: 인증번호 · QR(카메라 BarcodeDetector, 안 되면 직접 입력) · 사진(위치 제공 동의 후 위치 · 일시만) · NFC(Web NFC) · 비콘(앱 연동 지점), 본인 재인증 표시
    ② 내 출결 · 진도: 분반별 출석 · 지각 · 결석 · 공결, 차시별 상태, 강의 영상 진도율
    ③ 강의 영상: 이어보기 · 1.0~2.0배속 · 자막(언어 선택 · 대본) · 영상 중간 퀴즈 · 10초 하트비트(동시 재생 차단)
-   ④ 성찰일지: 주차별 작성 · 교수 코멘트 확인
+   ④ 성찰일지: 차시별 작성 · 교수 코멘트 확인
    운영: 학습자 포털 세션(dd_lsid)으로 G · I · J API를 부른다 — 학번은 서버가 세션에서 정한다(본문 member_no는 무시).
      GET  /api/lms/g/my                → {member_no, found, sections:[{section_id, title, rule:{methods, require_identity, …}, sessions:[{session_id, week_no, seq, kind, starts_at, room, status, method, open}], sum}]}
      POST /api/lms/g/checkin           {session_id, method: code|qr|nfc|ble|photo, code?, qr?, tag_id?, lat?, lng?, taken_at?, idv?} → {session_id, member_no, status, method, evidence}
@@ -87,9 +87,9 @@
     let L = live() ? ST.refl[sid] : demoRefl(sid); if (live() && L == null && !ST.busy['r' + sid]) { ST.busy['r' + sid] = 1; api('GET', '/api/lms/j/reflections?section_id=' + encodeURIComponent(sid)).then(r => { ST.refl[sid] = r; }).catch(() => { ST.refl[sid] = []; }).finally(() => { delete ST.busy['r' + sid]; re(); }); }
     const wk = Math.min(15, Math.max(1, Math.ceil((Date.now() - Date.parse('2026-09-07')) / 6048e5)));
     return `${g.sections.length > 1 ? `<label class="gij-f">분반<select data-lch="gij-rsec">${g.sections.map(x => `<option value="${E(x.section_id)}" ${x.section_id === sid ? 'selected' : ''}>${E(x.title)}</option>`).join('')}</select></label>` : ''}
-      <div class="gij-2"><label class="gij-f">주차<input type="number" id="gijRw" min="1" max="20" value="${wk}"></label><label class="gij-f">이번 주 느낌<select id="gijRm"><option value="5">매우 좋음</option><option value="4">좋음</option><option value="3" selected>보통</option><option value="2">어려움</option><option value="1">매우 어려움</option></select></label></div>
+      <div class="gij-2"><label class="gij-f">차시<input type="number" id="gijRw" min="1" max="20" value="${wk}"></label><label class="gij-f">이번 주 느낌<select id="gijRm"><option value="5">매우 좋음</option><option value="4">좋음</option><option value="3" selected>보통</option><option value="2">어려움</option><option value="1">매우 어려움</option></select></label></div>
       <textarea id="gijRb" rows="4" maxlength="4000" placeholder="배운 것 · 어려웠던 것 · 다음 주 계획" aria-label="성찰일지"></textarea><button class="lbtn sm" data-lact="gij-refl">저장</button>
-      ${(L || []).map(r => `<div class="gij-rf"><b>${r.week_no}주차</b> <small>${E(fmt(r.created_at))}</small><p>${E(r.body)}</p>${r.comment ? `<p class="gij-cm"><b>교수 코멘트</b> ${E(r.comment)}</p>` : ''}</div>`).join('')}`;
+      ${(L || []).map(r => `<div class="gij-rf"><b>${r.week_no}차시</b> <small>${E(fmt(r.created_at))}</small><p>${E(r.body)}</p>${r.comment ? `<p class="gij-cm"><b>교수 코멘트</b> ${E(r.comment)}</p>` : ''}</div>`).join('')}`;
   }
   function card() {
     const g = G(), i = I(); const head = '<div class="myhead"><h2>출석 · 강의 · 성찰</h2></div>';

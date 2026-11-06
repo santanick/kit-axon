@@ -38,7 +38,7 @@ VIEWS.dash = () => {
     ${kpi('14일 이상 미접속', away14, `<a href="#" data-act="chat-q" data-v="14일 미접속 ${esc(t('learner'))}에게 독려 메시지 보내줘">AI로 독려하기</a>`, '', '명')}
   </section>
   <section class="g2c">
-    <div class="card"><div class="ch"><b>주차별 신규 가입${menuOn('badge') ? ' · 배지 발급' : ''}</b><small>최근 8주 · 단위: 명</small></div>${lineChart(S.weeks.map(w => w.w), [{ n: '신규 가입', c: '#4C77C5', v: S.weeks.map(w => w.join) }].concat(menuOn('badge') ? [{ n: '배지 발급', c: '#5C74F6', v: S.weeks.map(w => w.badge) }] : []))}</div>
+    <div class="card"><div class="ch"><b>차시별 신규 가입${menuOn('badge') ? ' · 배지 발급' : ''}</b><small>최근 8주 · 단위: 명</small></div>${lineChart(S.weeks.map(w => w.w), [{ n: '신규 가입', c: '#4C77C5', v: S.weeks.map(w => w.join) }].concat(menuOn('badge') ? [{ n: '배지 발급', c: '#5C74F6', v: S.weeks.map(w => w.badge) }] : []))}</div>
     <div class="card"><div class="ch"><b>학습 퍼널</b><small>등록 대비 각 단계 도달 인원</small></div>${funnel([['등록', n], ['가입(활성화)', joined], ...(isU ? [['AI 진단 완료', diagDone]] : []), ['학습 시작', started], ['과제 제출', submitted], [t('done'), done], ...(menuOn('badge') ? [['배지 보유', withB]] : [])])}</div>
   </section>
   <section class="g2c">

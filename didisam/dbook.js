@@ -27,12 +27,12 @@ function bkAIDraft(topic, n = 3, o = {}) {
   b.chs = Array.from({ length: n }, (_, k) => { const sec = S[k % S.length]; return bkAIChapter(tp, `${sec.h}${k >= S.length ? ' 심화' : ''}`, k, k === n - 1, sec); });
   b.chs[0].blocks.unshift(bkB('key', { tone: 'tip', title: '학습 목표', body: M.goals.slice(0, 4).map(g => '- ' + g).join('\n') })); return bkNorm(b);
 }
-/* 과정 → 디지털북: '장' 항목(없으면 주차, 그것도 없으면 4개씩)으로 단원을 나누고, 강의자료는 본문으로 옮기고 영상 · 퀴즈 · 시험 · 과제 · 설문은 연결한다 */
+/* 과정 → 디지털북: '장' 항목(없으면 차시, 그것도 없으면 4개씩)으로 단원을 나누고, 강의자료는 본문으로 옮기고 영상 · 퀴즈 · 시험 · 과제 · 설문은 연결한다 */
 function bkFromCourse(c, o = {}) {
   const items = c.curriculum || []; const hasCh = items.some(x => x.type === 'chapter'); const hasWk = !hasCh && items.some(x => x.week); const G = []; let cur = null;
   items.forEach((it, i) => {
     if (it.type === 'chapter') { cur = { title: clean(it.title) || `${G.length + 1}장`, items: [] }; G.push(cur); return; }
-    if (!cur || (hasWk && (it.week || 0) !== cur.week) || (!hasCh && !hasWk && cur.items.length >= 4)) { const w = it.week || 0; cur = { week: w, title: hasWk ? `${w}${c.weekly === false ? '차시' : '주차'}${(c.weekPlan || [])[w - 1]?.title ? ' · ' + c.weekPlan[w - 1].title : ''}` : `${G.length + 1}장`, items: [] }; G.push(cur); }
+    if (!cur || (hasWk && (it.week || 0) !== cur.week) || (!hasCh && !hasWk && cur.items.length >= 4)) { const w = it.week || 0; cur = { week: w, title: hasWk ? `${w}${c.weekly === false ? '차시' : '차시'}${(c.weekPlan || [])[w - 1]?.title ? ' · ' + c.weekPlan[w - 1].title : ''}` : `${G.length + 1}장`, items: [] }; G.push(cur); }
     cur.items.push(it); void i; });
   const { fill, ...oo } = o; void fill; const b = bkNew(`${clean(c.name)} 디지털북`, { level: c.level || 0, cls: c.id, desc: String(c.goal || c.desc || `「${clean(c.name)}」 과정을 책으로 읽고, 영상 · 퀴즈 · 시험 · 과제까지 이 안에서 진행합니다.`).slice(0, 300), ...oo });
   b.chs = G.filter(g => g.items.length).slice(0, BK_MAX_CH).map(g => { const bl = [bkB('text', { body: `# ${g.title}\n이 단원에서는 아래 활동을 차례로 진행합니다.\n${g.items.map(x => '- ' + clean(x.title)).join('\n')}` })];
@@ -157,7 +157,7 @@ ACT['bk-back'] = () => { UI.bkId = null; render(); };
 ACT['bk-ch'] = el => { UI.bkCh = +el.dataset.v; render(); };
 ACT['bk-new'] = () => { const b = bkNorm(bkNew('새 디지털북')); b.chs = [{ id: uid('ch'), title: '1단원', blocks: [bkB('text', { body: '# 1단원\n여기에 내용을 입력하세요.' })] }]; bkNorm(b); bkL().push(b); logAudit(`디지털북 추가 — ${b.title}`); save(); bkOpen(b.id); ACT['bk-set']({ dataset: { v: b.id } }); };
 ACT['bk-fromcls'] = () => { const CS = S.classes.filter(c => (c.curriculum || []).length); if (!CS.length) { toast(`먼저 ${t('cls')}을(를) 만들어 주세요.`, 'warn'); return; }
-  modal('과정으로 디지털북 만들기', `<p class="mini">과정의 '장'(없으면 주차)으로 단원을 나눕니다. 강의자료는 본문 · 핵심 카드 · 실습 체크로 옮기고, 영상 · 퀴즈 · 시험 · 과제 · 설문은 연결합니다 — 학습자가 책에서 풀면 과정 진도 · 점수에도 그대로 기록됩니다.</p>
+  modal('과정으로 디지털북 만들기', `<p class="mini">과정의 '장'(없으면 차시)으로 단원을 나눕니다. 강의자료는 본문 · 핵심 카드 · 실습 체크로 옮기고, 영상 · 퀴즈 · 시험 · 과제 · 설문은 연결합니다 — 학습자가 책에서 풀면 과정 진도 · 점수에도 그대로 기록됩니다.</p>
     <div class="chk one">${CS.map((c, i) => `<label><input type="radio" name="c" value="${c.id}" ${i ? '' : 'checked'}> <b>${esc(c.name)}</b> <small class="mini">${c.curriculum.length}항목 · ${c.curriculum.filter(x => ['video', 'quiz', 'exam', 'assign'].includes(x.type)).length}개 연결</small></label>`).join('')}</div>`,
     [{ id: 'x', label: '취소' }, { id: 'ok', label: '만들기', kind: 'pri', run: w => { const c = C(fv(w, 'c') || (w.querySelector('[name=c]:checked') || {}).value); if (!c) return false; const b = bkFromCourse(c); bkL().push(b); logAudit(`디지털북 생성(과정) — ${b.title}`); save(); bkOpen(b.id); toast(`「${b.title}」 ${b.chs.length}단원을 만들었습니다. 미리보기로 확인한 뒤 게시하세요.`, 'ok'); } }], true); };
 ACT['bk-ai'] = () => modal('AI 초안으로 디지털북 만들기', `<label class="fl">주제<input name="t" maxlength="60" placeholder="예: 생성형 AI로 보고서 쓰기" required></label><div class="form2"><label class="fl">단원 수<input name="n" type="number" min="1" max="8" value="3"></label><label class="fl">수준<select name="lv">${LSV().levels.map((l, i) => `<option value="${i}">${esc(l.name)}</option>`).join('')}</select></label></div><p class="mini">단원마다 설명 · 핵심 박스 · 펼쳐보기 카드 · 확인 문제를 넣고, 순서 맞추기 · 따라 하기 · 서술을 섞습니다. 만든 뒤 블록을 고치세요.</p>`,

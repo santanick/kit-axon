@@ -37,7 +37,7 @@ function tDraft(x) {
 
 /* ── 교수자 파이프라인: 과정 설계 → 콘텐츠 개발 → 강의 개설 → 강의 운영 → 성과 · 개선 ── */
 const TST = [
-  { id: 'design', n: '과정 설계', d: '학습 목표 · 주차 구성 · 평가 계획', done: c => (c.curriculum || []).filter(i => i.type !== 'chapter').length >= 3, st: c => `${(c.curriculum || []).filter(i => i.type !== 'chapter').length}개 항목` },
+  { id: 'design', n: '과정 설계', d: '학습 목표 · 차시 구성 · 평가 계획', done: c => (c.curriculum || []).filter(i => i.type !== 'chapter').length >= 3, st: c => `${(c.curriculum || []).filter(i => i.type !== 'chapter').length}개 항목` },
   { id: 'develop', n: '콘텐츠 개발', d: '영상 · 강의자료 · 퀴즈 · 과제 루브릭', done: c => (c.curriculum || []).length > 0 && !tMiss(c), st: c => tMiss(c) ? `빈 항목 ${tMiss(c)}` : tVid(c) ? `영상 확인 ${tVid(c)}` : '준비 완료' },
   { id: 'open', n: '강의 개설', d: '공개 범위 · 기간 · 수강생 · 개강 공지', done: c => c.status === '운영중' && c.learners.length > 0 && c.open !== '비공개', st: c => c.status === '운영중' ? `수강 ${c.learners.length}명` : c.status },
   { id: 'operate', n: '강의 운영', d: '질문 답변 · 채점 · 진도 독려', done: c => c.status === '운영중' && Date.parse(c.end) < Date.now() && !tPend(c) && !tQs(c).length, st: c => c.status === '운영중' ? `채점 ${tPend(c)} · 질문 ${tQs(c).length}` : '개설 후' },
@@ -46,15 +46,15 @@ const TST = [
 const tStageOf = c => (TST.find(s => !s.done(c)) || TST[TST.length - 1]);
 const tQ = (sid, c) => { const n = c ? `「${c.name}」 ` : ''; return ({
   design: [(typeof FILLQ === 'function' && FILLQ().class) || 'AI 리터러시 15주 교과목 설계해줘', '데이터 분석 기초 8주 과정 설계해줘'],
-  develop: [`${n}빈 항목 AI로 채워줘`, `${n}3주차 강의자료 만들어줘`],
+  develop: [`${n}빈 항목 AI로 채워줘`, `${n}3차시 강의자료 만들어줘`],
   open: [`${n}강의 개설해줘`, `${n}개강 공지 올려줘`],
   operate: ['학생 질문 답변 초안 만들어줘', '채점 대기 과제 AI로 1차 채점해줘', '진도 미달 학생에게 독려 메시지 보내줘'],
   report: [`${n}성과 리포트와 개선점 정리해줘`]
 })[sid] || []; };
 function tGuide(sid, c, first) {
   const s = TST.find(x => x.id === sid); const i = TST.indexOf(s);
-  const txt = { design: '주제 · 주차 · 대상만 말씀하시면 학습 목표 · 주차 구성 · 평가 계획(퀴즈 · 과제 · 시험)까지 초안을 만듭니다. 기존 강의는 미리보기 화면의 커리큘럼에서 바로 고치셔도 됩니다.',
-    develop: `비어 있는 항목${c ? ` ${tMiss(c)}개` : ''}을 채웁니다. YouTube 영상 추천 · AI 강의 영상 · 강의자료 · 퀴즈 · 과제 루브릭을 만들고, 고칠 항목은 "3주차 영상 바꿔줘"처럼 말씀하세요.`,
+  const txt = { design: '주제 · 차시 · 대상만 말씀하시면 학습 목표 · 차시 구성 · 평가 계획(퀴즈 · 과제 · 시험)까지 초안을 만듭니다. 기존 강의는 미리보기 화면의 커리큘럼에서 바로 고치셔도 됩니다.',
+    develop: `비어 있는 항목${c ? ` ${tMiss(c)}개` : ''}을 채웁니다. YouTube 영상 추천 · AI 강의 영상 · 강의자료 · 퀴즈 · 과제 루브릭을 만들고, 고칠 항목은 "3차시 영상 바꿔줘"처럼 말씀하세요.`,
     open: '공개 범위 · 수강 기간을 정하고 수강생을 연결한 뒤 개강 공지를 올립니다. 개설하면 학습자 포털에 강의가 열리고 학생 AI 튜터가 이 강의를 기준으로 안내합니다.',
     operate: '학생 AI 튜터가 넘긴 질문, 채점 대기 과제, 진도가 늦은 학생을 모아 두었습니다. 답변 · 채점 · 메시지 초안은 제가 만들고, 보내기와 확정은 교수님이 승인하시면 처리합니다.',
     report: '이수율 · 성적 분포 · 질문 주제 · 진도 이탈 구간을 정리하고 다음 학기 개선점을 제안합니다.' }[sid];
@@ -80,7 +80,7 @@ function tHome() {
     <ol class="tdots">${TST.map(x => `<li class="${x.done(k) ? 'ok' : x.id === s.id ? 'on' : ''}"><i></i><span>${esc(x.n)}</span></li>`).join('')}</ol>
     <div class="tcm"><span><b>${k.learners.length}</b>명 수강</span><span><b>${av}</b>% 평균 진도</span><span><b>${tMiss(k)}</b>개 빈 항목</span><span class="${tQs(k).length ? 'r' : ''}"><b>${tQs(k).length}</b>건 질문</span></div>
     <div class="bar2"><button class="btn sm ink" data-act="tst-open" data-c="${k.id}" data-v="${s.id}">${esc(s.n)} 이어서 ${ic('arrow', 13)}</button></div></div>`; }).join('')}
-    <button type="button" class="card tnew" data-act="tst-new">${ic('spark', 22)}<b>새 강의 설계</b><small>주제 · 주차 · 대상만 말하면 AI 조교가 초안을 만듭니다</small></button></div>`;
+    <button type="button" class="card tnew" data-act="tst-new">${ic('spark', 22)}<b>새 강의 설계</b><small>주제 · 차시 · 대상만 말하면 AI 조교가 초안을 만듭니다</small></button></div>`;
 }
 function tQTable(Q) { const U = S.org.type === 'univ'; return table([U ? '학번' : t('learner'), '질문', '출처', '상태', ''], Q.slice(0, 12).map(x => [tWho(x), `<span class="tq">${esc(x.q)}</span>`, x.src === 'AI 튜터' ? tag('AI 튜터', 'mg') : tag(x.src || '게시판'), x.st === 'answered' ? tag('답변함', 'g') : x.draft ? tag('초안', 'y') : tag('답변 대기', 'y'), x.st === 'answered' ? '' : `<button class="btn sm" data-act="tq-open" data-v="${esc(x.id)}">${ic('spark', 13)} 답변</button>`])); }
 function tOperate(c) {
@@ -126,14 +126,14 @@ ACT['tc-sel'] = el => { UI.tc = el.value; UI.tst = ''; const c = C(el.value); if
   const one = L.find(c => s.includes(c.name)) || null; const c = one || tCur(); const ids = new Set((one ? [one] : L).map(k => k.id));
   if (/^(다음(\s*단계)?(로|으로)?)(\s*(가자|가줘|진행(해\s*줘)?|해\s*줘))?[.!]?$/.test(s)) { if (!c) return { text: '먼저 강의를 만들어 주세요.' }; const i = TST.findIndex(x => x.id === (UI.tst || tStageOf(c).id)); const n = TST[Math.min(TST.length - 1, i + 1)]; setTimeout(() => tOpen(c.id, n.id, false), 0); const g = tGuide(n.id, c); delete g.role; return g; }
   if (/(오늘|지금).{0,6}(할\s*일|뭐)|브리핑/.test(s)) { UI.tst = ''; const g = tGreet(); delete g.role; return { ...g, nav: 'home' }; }
-  if (/(빈\s*항목|콘텐츠|영상|자료).{0,12}(채워|만들|개발|생성)/.test(s) && !/\d+\s*주차/.test(s) && c) { const n = tMiss(c); if (!n) return { text: `「${c.name}」은 빈 항목이 없습니다. 다음은 강의 개설입니다.`, html: `<div class="bqs"><button type="button" class="chip done" data-act="tst-open" data-c="${c.id}" data-v="open">강의 개설로</button></div>` };
+  if (/(빈\s*항목|콘텐츠|영상|자료).{0,12}(채워|만들|개발|생성)/.test(s) && !/\d+\s*(?:주차|차시)/.test(s) && c) { const n = tMiss(c); if (!n) return { text: `「${c.name}」은 빈 항목이 없습니다. 다음은 강의 개설입니다.`, html: `<div class="bqs"><button type="button" class="chip done" data-act="tst-open" data-c="${c.id}" data-v="open">강의 개설로</button></div>` };
     const pid = uid('p'); PLANS[pid] = { run: () => { ACT['ai-fill']({ dataset: { v: c.id } }); logAudit(`AI 조교 콘텐츠 개발 — ${c.name}`); UI.cls = c.id; UI.clsT = c.kind === 'episode' ? 'episodes' : 'curriculum'; UI.tc = c.id; UI.tst = 'develop'; return `「${c.name}」 빈 항목을 채웠습니다.${tVid(c) ? ` 영상 ${tVid(c)}개는 YouTube 검색어까지 준비했으니 후보를 골라 연결해 주세요(설정 › 연동에 YouTube 키를 넣으면 자동 연결).` : ''} 커리큘럼에서 확인하고, 바꿀 항목은 눌러서 고치거나 말씀해 주세요.`; }, go: 'class' };
-    return { title: '콘텐츠 개발', text: `「${c.name}」의 빈 항목 ${n}개를 채울까요?`, steps: ['영상: 주제에 맞는 YouTube 후보 연결(저작권 확인 필요)', '강의자료: 절 구성 · 요점 · 실습 활동', '퀴즈: 주차별 확인 문항', '과제: 평가 루브릭'], plan: pid, state: 'pending', cta: `빈 항목 ${n}개 채우기` }; }
+    return { title: '콘텐츠 개발', text: `「${c.name}」의 빈 항목 ${n}개를 채울까요?`, steps: ['영상: 주제에 맞는 YouTube 후보 연결(저작권 확인 필요)', '강의자료: 절 구성 · 요점 · 실습 활동', '퀴즈: 차시별 확인 문항', '과제: 평가 루브릭'], plan: pid, state: 'pending', cta: `빈 항목 ${n}개 채우기` }; }
   if (/(개설|개강|오픈|공개)/.test(s) && !/공지/.test(s) && c) { const pid = uid('p'); const g = S.groups.find(x => x.id === c.group) || S.groups[0];
     PLANS[pid] = { run: () => { c.status = '운영중'; if (c.open === '비공개') c.open = '전체'; if (!c.learners.length) { S.members.filter(m => m.grade === '정회원').slice(0, 20).forEach(m => { c.learners.push(m.id); c.prog[m.id] = { p: 0, exam: null, assign: 'none', att: 0 }; }); } (c.notices = c.notices || []).unshift({ id: uid('n'), title: `${c.name} 개강 안내`, at: today(), pin: true }); logAudit(`강의 개설 — ${c.name}`); UI.cls = c.id; UI.clsT = 'learners'; UI.tst = 'open'; return `「${c.name}」을 개설했습니다. 수강 ${c.learners.length}명 · 개강 공지 게시. 학습자 포털에서 바로 보이고, 학생 AI 튜터가 이 강의를 기준으로 안내합니다.`; }, go: 'class' };
     return { title: '강의 개설', text: `「${c.name}」을 개설할까요?`, steps: [`공개 범위: ${c.open === '비공개' ? '전체' : c.open} · 기간 ${c.start} ~ ${c.end}`, c.learners.length ? `수강생 ${c.learners.length}명 유지` : `수강생 연결(${g ? g.name : '정회원'} 기준)`, '개강 공지 게시(상단 고정)', '학습자 포털 · 학생 AI 튜터에 반영'], plan: pid, state: 'pending', cta: '강의 개설하기' }; }
   if (/공지/.test(s) && /(올려|게시|작성|써)/.test(s) && c) { const pid = uid('p'); const ttl = /개강/.test(s) ? `${c.name} 개강 안내` : `${c.name} 안내`; PLANS[pid] = { run: () => { (c.notices = c.notices || []).unshift({ id: uid('n'), title: ttl, at: today(), pin: true }); logAudit(`공지 — ${ttl}`); UI.cls = c.id; UI.clsT = 'notice'; return `「${ttl}」 공지를 올렸습니다.`; }, go: 'class' };
-    return { title: '공지', text: `「${ttl}」 공지를 올릴까요?`, html: `<div class="pvmsg"><b>${esc(ttl)}</b><p>${esc(c.name)} 강의가 ${esc(c.start)}에 시작합니다. 첫 주에는 오리엔테이션 영상과 1주차 퀴즈를 마쳐 주세요. 궁금한 점은 학습 화면의 AI 튜터에게 물어보거나 질문을 남겨 주세요.</p></div>`, plan: pid, state: 'pending', cta: '공지 올리기' }; }
+    return { title: '공지', text: `「${ttl}」 공지를 올릴까요?`, html: `<div class="pvmsg"><b>${esc(ttl)}</b><p>${esc(c.name)} 강의가 ${esc(c.start)}에 시작합니다. 첫 주에는 오리엔테이션 영상과 1차시 퀴즈를 마쳐 주세요. 궁금한 점은 학습 화면의 AI 튜터에게 물어보거나 질문을 남겨 주세요.</p></div>`, plan: pid, state: 'pending', cta: '공지 올리기' }; }
   if (/채점/.test(s)) { const P = pend().filter(x => ids.has(x.c.id)); if (!P.length) return { text: '담당 강의에 채점 대기 과제가 없습니다.' };
     const pid = uid('p'); PLANS[pid] = { run: () => { P.forEach(x => { x.c.prog[x.id].draft = AI.gradeDraft(x.c, x.id); }); logAudit(`AI 조교 채점 초안 ${P.length}건`); UI.tst = 'operate'; return `채점 초안 ${P.length}건을 만들었습니다. 평가 화면에서 초안을 확인하고 [채점]으로 확정하세요. 최종 판정은 ${t('teacher')}님이 합니다.`; }, go: 'assess' };
     return { title: '채점 초안', text: `채점 대기 ${P.length}건에 루브릭(요구사항 40 · 정확성 30 · 완성도 20 · 형식 10)을 적용해 초안을 만들까요?`, steps: ['제출물 · 루브릭 대조', '점수 · 피드백 초안', '평가 화면에 초안 표시', `${t('teacher')} 확인 후 확정 · 배지 자동 발급`], plan: pid, state: 'pending', cta: `초안 ${P.length}건 만들기` }; }
@@ -146,7 +146,7 @@ ACT['tc-sel'] = el => { UI.tc = el.value; UI.tst = ''; const c = C(el.value); if
     PLANS[pid] = { run: () => { S.msgs.unshift({ id: uid('ms'), at: nowStr(), to: `${one ? one.name : `담당 ${t('cls')}`} 진도 미달 ${R.length}명`, title: ttl, ch: '앱 푸시 + 이메일', n: R.length }); logAudit(`AI 조교 독려 메시지 ${R.length}명`); return `독려 메시지를 ${R.length}명에게 보냈습니다. 학생 AI 튜터도 다음 접속 때 오늘 할 일로 안내합니다.`; }, go: 'message' };
     return { title: '독려 메시지', text: `진도 40% 미만 ${R.length}명에게 보낼 메시지 초안입니다.`, html: `<div class="pvmsg"><b>${esc(ttl)}</b><p>${esc(body)}</p></div>`, steps: [`대상: ${[...new Set(R.map(x => x.c.name))].join(' · ')} 진도 40% 미만 ${R.length}명`, '앱 푸시 + 이메일', '발송 내역 기록'], plan: pid, state: 'pending', cta: `${R.length}명에게 보내기` }; }
   if (/(성과|개선|리포트|보고)/.test(s) && c) { const v = Object.values(c.prog); const low = v.filter(p => p.p < 40).length; const qn = tqEnsure().filter(x => x.cls === c.name || x.cid === c.id).length;
-    c.rep = [['초반 이탈 줄이기', `진도 40% 미만 ${low}명 — 1~2주차 영상을 10분 이내로 나누고, 1주차 퀴즈를 쉬운 문항으로 시작합니다.`], ['자주 묻는 질문을 자료에 반영', `학생 질문 ${qn}건 중 과제 형식 · 영상 재생 문의가 많습니다 — 과제 안내문에 예시 답안 구조를 넣습니다.`], ['과제 루브릭 공개', '재제출 사유 대부분이 요구사항 누락입니다 — 루브릭을 과제 화면에 미리 보여 줍니다.'], ['AI 튜터 활용 안내', '튜터 질문이 많은 주차에 복습 퀴즈를 추가해 스스로 점검하게 합니다.']]; logAudit(`성과 · 개선 리포트 — ${c.name}`); save(); UI.tc = c.id; UI.tst = 'report';
+    c.rep = [['초반 이탈 줄이기', `진도 40% 미만 ${low}명 — 1~2차시 영상을 10분 이내로 나누고, 1차시 퀴즈를 쉬운 문항으로 시작합니다.`], ['자주 묻는 질문을 자료에 반영', `학생 질문 ${qn}건 중 과제 형식 · 영상 재생 문의가 많습니다 — 과제 안내문에 예시 답안 구조를 넣습니다.`], ['과제 루브릭 공개', '재제출 사유 대부분이 요구사항 누락입니다 — 루브릭을 과제 화면에 미리 보여 줍니다.'], ['AI 튜터 활용 안내', '튜터 질문이 많은 차시에 복습 퀴즈를 추가해 스스로 점검하게 합니다.']]; logAudit(`성과 · 개선 리포트 — ${c.name}`); save(); UI.tc = c.id; UI.tst = 'report';
     return { title: '성과 · 개선', text: `「${c.name}」 성과 리포트를 정리했습니다. 수강 ${c.learners.length}명 · 평균 진도 ${Math.round(avgP(c))}% · 이수 ${v.filter(p => p.p >= c.criteria.threshold).length}명.`, html: `<div class="trep">${c.rep.map(x => `<div><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join('')}</div>`, nav: 'home' }; }
   return base(q);
 }; }
@@ -194,7 +194,7 @@ function doorHTML() {
   const card = (k, ic2, title, who, flow, btn, act, note = '') => `<div class="dcard d-${k}"><span class="dic">${ic(ic2, 22)}</span><small>${esc(who)}</small><b>${esc(title)}</b><ol>${flow.map(x => `<li>${esc(x)}</li>`).join('')}</ol><button class="btn ${k === 'learner' ? 'ink' : 'pri'} blk" data-act="${act}">${esc(btn)} ${ic('arrow', 14)}</button>${note ? `<p class="mini">${note}</p>` : ''}</div>`;
   return `<div class="door"><header class="dhead"><span class="logo">D</span><div><small>${esc(S.org.name)}</small><b>어떤 계정으로 들어가시나요?</b><p>디디쌤은 역할마다 화면과 AI가 다릅니다. 같은 기관 데이터로 이어져 있어, 학생이 넘긴 질문은 교수자에게, 교수자의 답변은 학생에게 전달됩니다.</p></div>${CUR && S.me ? '<button class="x" data-act="door-x" aria-label="닫기">' + ic('x', 18) + '</button>' : ''}</header>
   <div class="dgrid">${card('admin', 'gear', '운영 스튜디오', '운영자 · 정운영자 계정', ['AI SAM과 기관 구성', '홈페이지 · 과정 · 학습자 사이트 빌드', '학습자 등록 · 자동화 · 운영 현황'], '운영자로 로그인', 'as-admin')}
-  ${card('teacher', 'book', '교수 스튜디오', `${t('teacher')} 계정${me ? ' · ' + me.name : ''}`, ['과정 설계 — 학습 목표 · 주차 · 평가', '콘텐츠 개발 — 영상 · 자료 · 퀴즈 · 과제', '강의 개설 → 강의 운영(AI 조교) → 성과 · 개선'], `${t('teacher')}로 로그인`, 'as-teacher')}
+  ${card('teacher', 'book', '교수 스튜디오', `${t('teacher')} 계정${me ? ' · ' + me.name : ''}`, ['과정 설계 — 학습 목표 · 차시 · 평가', '콘텐츠 개발 — 영상 · 자료 · 퀴즈 · 과제', '강의 개설 → 강의 운영(AI 조교) → 성과 · 개선'], `${t('teacher')}로 로그인`, 'as-teacher')}
   ${card('learner', 'users', '학습자 포털', `${L} 계정 · ${S.org.type === 'univ' ? '학번 + 접근코드' : '간편가입(SNS · 이메일)'}`, ['포털 홈에서 로그인', '마이페이지 — AI 튜터가 오늘 할 일 정리', '로그인 이후 모든 화면에서 AI 튜터 동행'], '학습자 포털 열기(새 창)', 'lp-open', code ? `체험 학번 <b>${esc(code.sid)}</b> · 접근코드 <b>${esc(code.code)}</b>` : `체험 ${esc(L)} 계정을 자동으로 만들어 드립니다.`)}</div></div>`;
 }
 { const base = render; render = () => { if (S && S.org && UI.door) { document.body.className = document.body.className.replace(/\bmode-\w+/g, '').trim() + ' mode-door'; $('#app').innerHTML = doorHTML(); afterRender(); return; } document.body.classList.remove('mode-door'); return base(); }; }

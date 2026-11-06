@@ -67,7 +67,7 @@ ACT['cls-back'] = () => { UI.cls = null; render(); };
 ACT['cls-copy'] = el => { const c = C(el.dataset.v); const n = JSON.parse(JSON.stringify(c)); n.id = uid('c'); n.name = c.name + ' (복사)'; n.learners = []; n.prog = {}; n.status = '준비중'; S.classes.push(n); logAudit(`${t('cls')} 복사 — ${c.name}`); save(); toast('복사본을 만들었습니다. 지정 회원 공개로 바꾼 뒤 결제 링크를 보낼 수 있습니다.', 'ok'); render(); };
 function classDetail(c) {
   const tb = UI.clsT || 'learners'; const ep = c.kind === 'episode';
-  const T = [['learners', t('learner')], [ep ? 'episodes' : 'curriculum', ep ? '회차' : c.weekly ? '주차별 강의' : '커리큘럼'], ...(ep ? [] : [['eval', '평가']]), ['notice', '공지사항'], ['set', '설정']];
+  const T = [['learners', t('learner')], [ep ? 'episodes' : 'curriculum', ep ? '회차' : c.weekly ? '차시별 강의' : '커리큘럼'], ...(ep ? [] : [['eval', '평가']]), ['notice', '공지사항'], ['set', '설정']];
   let body = '';
   if (tb === 'learners') body = `<div class="bar2"><button class="btn sm" data-act="cls-grant" data-v="${c.id}">수강 권한 부여</button><button class="btn sm" data-act="cls-extend" data-v="${c.id}" ${c.kind === 'sub' ? 'disabled title="구독 클래스는 연장 대신 회차로 관리합니다"' : ''}>수강 기간 연장</button><button class="btn sm" data-act="cls-dl" data-v="${c.id}">수강현황 내려받기</button><button class="btn sm ghost" data-act="auto-run-id" data-v="nudge-low">진도 30% 미만 독려</button></div>` +
     table(['', '이름', t('group'), '진도', '시험', '과제', ep ? '출석률' : t('done'), ''], c.learners.map(id => { const p = c.prog[id] || { p: 0 }; return [`<input type="checkbox" class="ck" value="${id}" aria-label="선택">`, mn(id), gn(M(id)?.group), bar(p.p, p.p < 30 ? 'r' : '') + ' ' + pct(p.p), p.exam ?? '—', { none: '미제출', submitted: tag('채점 대기', 'y'), graded: tag('채점 완료', 'g') }[p.assign] || '—', ep ? pct(p.att) : (p.p >= c.criteria.threshold ? tag(t('done'), 'g') : '—'), `<button class="btn sm ghost" data-act="cls-revoke" data-c="${c.id}" data-v="${id}">권한 제외</button>`]; }), '수강생이 없습니다. 수강 권한을 부여하세요.');
@@ -480,7 +480,7 @@ const COVER = [
   ['홈페이지 설정: SEO · 도메인 · 픽셀 / 팝업(4개) / 상담 설정 / 약관', 'settings', 'features/set-up.md'],
   ['기관 관리: 기관 지정 · 목록 · 상세(수료 · 취업)', 'org', 'features/lms.md'],
   ['플랜: 스탠다드 · 프리미엄 · 엔터프라이즈 · 부가 옵션', 'plan', 'features/plan.md'],
-  ['[KIT] 목표선 KPI · 학습 퍼널 · 주차별 추이 · 그룹별 현황', 'dash', ''],
+  ['[KIT] 목표선 KPI · 학습 퍼널 · 차시별 추이 · 그룹별 현황', 'dash', ''],
   ['[KIT] 평가: 루브릭 · 통과/재제출/미통과 · 오래 기다린 순', 'assess', ''],
   ['[KIT] 배지: 자동 발급 3방식 · 수동(사유) · 해제(사유) · 특별 배지 · 발급 대장 · 메달', 'badge', ''],
   ['[KIT] 러닝 저니 · 열림 조건 · 코스 매트릭스', 'journey', ''],

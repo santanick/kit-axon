@@ -48,7 +48,7 @@
     status: { active: '재학', leave: '휴학', graduated: '졸업', expelled: '제적', withdrawn: '자퇴', retired: '퇴직' }, cat: { major: '전공', general: '교양', elective: '일반선택', extracurricular: '비교과', open: '공개', exchange: '학점교류' },
     role: { professor: '교수', co_professor: '공동교수', ta: '조교', grader: '채점자', staff: '직원' }, ukind: { univ: '대학본부', college: '단과대학', dept: '학과', major: '전공', office: '부서' },
     enr: { regular: '정규', audit: '청강' }, sec: { draft: '준비', open: '운영', closed: '종료', archived: '보관' }, imp: { person: '구성원(비학사 사용자)', section: '교과목 · 분반', enrollment: '수강' },
-    act: { copied: '복제', updated: '갱신', deleted: '삭제', excluded: '제외(분반에서 수정 · 삭제)' }, obj: { notice: '공지', material: '자료', week: '주차', assignment: '과제', discussion: '토론', exam: '시험' }
+    act: { copied: '복제', updated: '갱신', deleted: '삭제', excluded: '제외(분반에서 수정 · 삭제)' }, obj: { notice: '공지', material: '자료', week: '차시', assignment: '과제', discussion: '토론', exam: '시험' }
   };
   const has = (m, k) => Object.prototype.hasOwnProperty.call(m, k);
   const RE = { term: /^\d{4}-(1|2|S|W)$/, unit: /^[A-Za-z0-9_-]{2,20}$/, course: /^[A-Za-z0-9-]{4,20}$/, secno: /^\d{1,3}$/, mno: /^[A-Za-z0-9]{4,20}$/, stu: /^\d{6,10}$/, cls: /^[A-Za-z0-9_-]{1,40}$/, date: /^\d{4}-\d{2}-\d{2}$/ };
@@ -442,7 +442,7 @@
     $$('#modal .mf [data-mact="addstaff"], #modal .mf [data-mact="link"]').forEach(x => x.remove()); };
   ACT['lmsa-staff-del'] = el => { closeModal(); act('staff-delete', { section_id: el.dataset.s, member_no: el.dataset.m, role: el.dataset.r }, '담당자를 뺐습니다.'); };
   ACT['lmsa-sync'] = el => { const ov = OV(); const s = (ov.sections || []).find(y => y.section_id === el.dataset.v); if (!s) return; const sib = (ov.sections || []).filter(y => y.term_id === s.term_id && y.course_code === s.course_code && y !== s && !y.rep_section_id);
-    modal('분반 동기화', `<p><b>${esc(s.course_name)} ${esc(s.section_no)}분반</b>(대표)의 공지 · 자료 · 주차 학습 · 과제 · 토론 · 시험을 ${sib.map(y => esc(y.section_no) + '분반').join(' · ')}에 반영합니다.</p><p class="mini">분반에서 따로 고치거나 지운 항목은 「제외」로 기록하고 덮어쓰지 않습니다. 대표 분반에서 지운 항목은 분반에서도 지웁니다(분반에서 고치지 않은 경우).</p>`,
+    modal('분반 동기화', `<p><b>${esc(s.course_name)} ${esc(s.section_no)}분반</b>(대표)의 공지 · 자료 · 차시 학습 · 과제 · 토론 · 시험을 ${sib.map(y => esc(y.section_no) + '분반').join(' · ')}에 반영합니다.</p><p class="mini">분반에서 따로 고치거나 지운 항목은 「제외」로 기록하고 덮어쓰지 않습니다. 대표 분반에서 지운 항목은 분반에서도 지웁니다(분반에서 고치지 않은 경우).</p>`,
       [{ id: 'c', label: '취소' }, { id: 'ok', label: '동기화', kind: 'pri', run: () => { act('sync', { section_id: s.section_id }, r => `${r.sections}개 분반 — 복제 ${r.copied} · 갱신 ${r.updated} · 삭제 ${r.deleted} · 제외 ${r.excluded}${r.noclass ? ` · 강의실 미연결 ${r.noclass}` : ''}`, { doc: true, after: r => { AC.lastSync = r; } }); } }]); };
   ACT['lmsa-hist'] = async el => { let r; try { r = await X('sync-history', { section_id: el.dataset.v }, true); } catch (e) { return toast(e.message, 'warn'); } const ov = OV();
     modal('분반 동기화 이력', table(['시각', '대상 분반', '항목', '원본 번호', '결과'], (r.rows || []).map(h => [esc(new Date(h.at).toLocaleString('ko-KR', { hour12: false })), esc((h.dst_no || '') + '분반'), esc(L.obj[h.object_type] || h.object_type), `<code>${esc(h.object_id)}</code>`, h.action === 'excluded' ? tag(L.act.excluded, 'y') : tag(L.act[h.action] || h.action)]), '아직 동기화 기록이 없습니다.') + `<p class="mini">${esc(secName(ov, el.dataset.v))} 기준 · 최근 200건</p>`, [{ id: 'c', label: '닫기' }], true); };

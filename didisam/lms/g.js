@@ -1,6 +1,6 @@
 /* v30 학사 LMS 묶음 G — 출결 관리(SFR-010 · 016 · 031 · 033 · 048 · 068 · 088)
    인증번호 · 회전 QR · NFC · BLE · 사진(위치 · 일시만) 출석, 본인 재인증 호출 지점, 교수 수동 출결(출석 · 지각 · 결석 · 공결 + 사유 · 증빙),
-   휴강 · 보강, 장애 시 일괄 조정, 연강 자동 복사, 온라인 출석 인정(진도율 · 주차 기간) + 오프라인 통합, 청강생 제외, 학교 양식 CSV · 인쇄, 비정상 학습행동.
+   휴강 · 보강, 장애 시 일괄 조정, 연강 자동 복사, 온라인 출석 인정(진도율 · 차시 기간) + 오프라인 통합, 청강생 제외, 학교 양식 CSV · 인쇄, 비정상 학습행동.
    운영(서버) 모드: /api/lms/g/... 호출. 데모 모드: 같은 경로를 브라우저 안 W3.LOCAL이 흉내 낸다(S.lms.w3).
    W3(공용 호출 · 데모 저장소)는 묶음 I · J 화면도 같이 쓴다. */
 (function () {
@@ -77,7 +77,7 @@
     for (let w = 1; w <= 15; w++) for (const seq of (w === 10 ? [1, 2] : [1])) { const t = base + (w - 1) * 7 * 864e5 + (seq - 1) * 90 * 6e4; d.sessions.push({ session_id: W3.uid(), section_id: sec.section_id, week_no: w, seq, kind: [3, 7, 12].includes(w) ? 'online' : 'class', starts_at: W3.ts(t), ends_at: W3.ts(t + 75 * 6e4), open_at: W3.ts(t), close_at: W3.ts(t + 7 * 864e5), room: '공학관 301', required_sec: 0, extra_study_sec: 0 }); }
     for (let i = 1; i <= 9; i++) d.persons.push({ person_id: W3.uid(), member_no: String(20269000 + i), unit_code: ['CSE', 'BIZ', 'EDU'][i % 3], grade_year: 1 + i % 4, ekind: i === 9 ? 'audit' : 'regular', secs: [sec.section_id] });
     d.beacons.push({ beacon_id: 'NFC-ENG301', kind: 'nfc', room: '공학관 301', active: true }, { beacon_id: 'BLE-ENG301', kind: 'ble', room: '공학관 301', active: true });
-    /* 지난 주차 출결 · 학습 데모(결정적) */
+    /* 지난 차시 출결 · 학습 데모(결정적) */
     const reg = regular(sec.section_id); const M = ['code', 'qr', 'nfc', 'ble', 'photo'];
     secSessions(sec.section_id).filter(s => Date.parse(s.starts_at) < now() && s.kind !== 'online').forEach(s => reg.forEach((p, j) => { const r = (s.week_no * 7 + j * 13) % 23; const st = j === 6 ? (r < 9 ? 'absent' : r < 13 ? 'late' : 'present') : r === 0 ? 'absent' : r < 3 ? 'late' : r === 3 ? 'excused' : 'present';
       d.att[attK(s.session_id, p.person_id)] = { status: st, method: st === 'excused' ? 'manual' : M[(s.week_no + j) % 5], evidence: { at: s.starts_at }, reason: st === 'excused' ? '병결(진단서 제출)' : null }; }));
@@ -232,7 +232,7 @@
     const secRows = SL.map(s => { const Q = s.section_id === sec.section_id ? R : W3.get('roster:' + s.section_id, 'GET', '/api/lms/g/roster', { section_id: s.section_id }); const ok = Q && !Q.__err;
       const t2 = ok ? Q.students.reduce((a, x) => { const u = x.sum; a.p += u.present + u.late + u.excused; a.past += u.past; a.risk += u.past && (u.absent + u.unrecorded + Math.floor(u.late / 3)) >= Math.ceil(u.past / 4) ? 1 : 0; return a; }, { p: 0, past: 0, risk: 0 }) : null;
       return [`<b>${esc(s.title)}</b>`, ok ? Q.students.length + '명' : '…', t2 ? (t2.past ? Math.round(100 * t2.p / t2.past) : 100) + '%' : '…', t2 ? (t2.risk ? tag(t2.risk + '명', 'r') : '0') : '…', s.section_id === sec.section_id ? tag('보는 중', 'g') : `<button class="btn sm" data-act="w3g-secgo" data-v="${esc(s.section_id)}">열기</button>`]; });
-    const secCard = `<div class="card"><div class="ch"><b>분반별 출석</b><small>${esc(sec.term_id)} 학기</small><span class="efh-acts">${dots([mi('w3g-online', '온라인 출석 반영(진도율 · 주차 기간)'), mi('w3g-csv', '학교 양식 엑셀(CSV) 내려받기'), mi('w3g-print', '출석부 인쇄'), mi('w3g-full', UI.w3gFull ? '학기 전체 출석부 닫기' : '학기 전체 출석부 보기')], '분반 출석 다른 작업')}</span></div>${table(['분반', '수강생', '평균 출석률', '결석 1/4 이상', ''], secRows)}</div>`;
+    const secCard = `<div class="card"><div class="ch"><b>분반별 출석</b><small>${esc(sec.term_id)} 학기</small><span class="efh-acts">${dots([mi('w3g-online', '온라인 출석 반영(진도율 · 차시 기간)'), mi('w3g-csv', '학교 양식 엑셀(CSV) 내려받기'), mi('w3g-print', '출석부 인쇄'), mi('w3g-full', UI.w3gFull ? '학기 전체 출석부 닫기' : '학기 전체 출석부 보기')], '분반 출석 다른 작업')}</span></div>${table(['분반', '수강생', '평균 출석률', '결석 1/4 이상', ''], secRows)}</div>`;
     /* 차시 고르기 */
     const recent = past.slice(-4).reverse();
     const sel = `<select data-chg="w3g-ses" aria-label="차시 선택"><option value="">다른 차시 고르기 (${ss.length}개)</option>${ss.map(s => `<option value="${esc(s.session_id)}">${s.week_no}주 ${s.seq}차 · ${W3.fmt(s.starts_at)}${s.kind === 'holiday' ? ' (휴강)' : ''}${s.makeup_of ? ' (보강)' : ''}</option>`).join('')}</select>`;
@@ -365,9 +365,9 @@
     const c = k => A.filter(a => a.kind === k).reduce((n, a) => n + a.n, 0);
     return `<div class="kpis">${kpi('진도 체크 전 배속', c('speed_before_check') + '건')}${kpi('건너뛰기', c('skip') + '건')}${kpi('다중 접속 · 동시 재생', c('concurrent') + '건', '', c('concurrent') ? 'warn' : '')}</div>
       <div class="card"><div class="ch"><b>비정상 학습행동</b><small>재생 로그(동영상 · 진도) 기준 · 출석 인정 전 교수 확인용</small><button class="btn sm" data-act="w3g-anom-csv">CSV</button></div>
-      ${table(['학번', '학과', '주차', '콘텐츠', '유형', '횟수', '최근'], A.map(a => [esc(a.member_no), esc(a.unit_code || ''), a.week_no + '주', esc(a.content_title), tag(KN[a.kind] || a.kind, a.kind === 'concurrent' ? 'r' : 'y'), a.n, esc(W3.fmt(a.last_at))]), '감지된 비정상 학습행동이 없습니다.')}</div>`;
+      ${table(['학번', '학과', '차시', '콘텐츠', '유형', '횟수', '최근'], A.map(a => [esc(a.member_no), esc(a.unit_code || ''), a.week_no + '주', esc(a.content_title), tag(KN[a.kind] || a.kind, a.kind === 'concurrent' ? 'r' : 'y'), a.n, esc(W3.fmt(a.last_at))]), '감지된 비정상 학습행동이 없습니다.')}</div>`;
   }
-  ACT['w3g-anom-csv'] = () => { const A = W3.cache['anom:' + UI.w3sec] || []; downloadCSV(`비정상학습행동_${today()}.csv`, ['학번', '학과', '주차', '콘텐츠', '유형', '횟수', '최근'], A.map(a => [a.member_no, a.unit_code || '', a.week_no, a.content_title, KN[a.kind] || a.kind, a.n, a.last_at])); };
+  ACT['w3g-anom-csv'] = () => { const A = W3.cache['anom:' + UI.w3sec] || []; downloadCSV(`비정상학습행동_${today()}.csv`, ['학번', '학과', '차시', '콘텐츠', '유형', '횟수', '최근'], A.map(a => [a.member_no, a.unit_code || '', a.week_no, a.content_title, KN[a.kind] || a.kind, a.n, a.last_at])); };
   /* ═════════ x3 · SFR-016 대리출석 방지: 분반별 출석 전 본인 확인(패스키 · 인증 앱 · 이메일 어댑터) ═════════
      운영: /api/lms/g/idv-rule · idv-report(서버 트리거가 학생 출석마다 확인 표를 소비). 데모: S.lms.w3.idvRule · 학생 등록 현황은 예시 값. */
   const IDVM = [['none', '확인 안 함'], ['webauthn', '패스키(지문 · 얼굴 인식)'], ['totp', '인증 앱 6자리'], ['any', '패스키 또는 인증 앱'], ['email', '이메일 인증번호(메일 게이트웨이 연동 후)']];

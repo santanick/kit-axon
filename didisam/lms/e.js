@@ -193,7 +193,7 @@
     const P = demoStudents(sec); const now = Date.now(), DAY = 864e5; const iso = t => new Date(t).toISOString(); const hp = (p, k) => hsh(p.member_no + '|' + sec + '|' + k);
     /* 과제 3개: 마감 지난 보고서(채점 대기 다수) · 이번 주 마감 계획서 · 비공개 기말 보고서 */
     const mkA = v => { const g = { asg_id: rid(), section_id: sec, body: '', kind: 'individual', submit_types: ['file', 'text'], max_files: 3, open_at: iso(now - 14 * DAY), late_until: null, late_penalty_pct: 0, max_score: 100, rubric_id: null, plag_on: false, status: 'published', ...v }; X.asg.push(g); gradeLink(sec, 'asg:' + g.asg_id, 'assignment', g.title, g.max_score); return g; };
-    const a1 = mkA({ title: '1주차 보고서 — 수업 개념 사례 조사', body: '수업에서 다룬 개념을 실제 사례 하나에 적용해 2쪽 이내로 정리합니다.', due_at: iso(now - 3 * DAY), late_until: iso(now - DAY), late_penalty_pct: 10, rubric_id: 'rub_tpl1', plag_on: true });
+    const a1 = mkA({ title: '1차시 보고서 — 수업 개념 사례 조사', body: '수업에서 다룬 개념을 실제 사례 하나에 적용해 2쪽 이내로 정리합니다.', due_at: iso(now - 3 * DAY), late_until: iso(now - DAY), late_penalty_pct: 10, rubric_id: 'rub_tpl1', plag_on: true });
     const a2 = mkA({ title: '중간 프로젝트 계획서', body: '팀 프로젝트 주제 · 역할 · 일정을 1쪽으로 제출합니다.', due_at: iso(now + 4 * DAY) });
     mkA({ title: '기말 보고서', body: '학기 프로젝트 결과 보고서(5쪽 이내).', due_at: iso(now + 40 * DAY), status: 'draft' });
     const sub = (g, p, v) => { const s = { sub_id: rid(), asg_id: g.asg_id, owner_key: 'p:' + p.person_id, person_id: p.person_id, team_id: null, files: [], ...v }; X.subs.push(s); X.vers.push({ sub_id: s.sub_id, ver: s.version, by: p.member_no, at: s.saved_at, body: s.body, files: [] }); return s; };
