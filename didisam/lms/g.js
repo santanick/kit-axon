@@ -207,7 +207,7 @@
     const t = UI.w3gT || 'board'; if (t !== 'live') stopQR();
     const T4 = window.EFH ? EFH.tabs4 : (k, a, c, m) => tabs(k, [...a, ...(m || [])], c);
     const top = head('출결 관리', `${esc(sec.title)} · ${esc(sec.term_id)} · 수업 방식 ${esc({ hyflex: '하이플렉스', blended: '블렌디드', online: '온라인', offline: '대면' }[sec.mode] || sec.mode)}`, `${W3.secPick()} ${W3.mode()}`)
-      + T4('w3gT', [['board', '출석부'], ['live', '출석 진행(인증번호 · QR)'], ['anom', '비정상 학습행동']], t, [['check', '학생 출석 화면(미리보기)'], ['rule', '출석 규칙 · 장비']]);
+      + T4('w3gT', [['board', '출석부'], ['live', '출석 진행(인증번호 · QR)'], ['anom', '비정상 학습행동']], t, [['check', '학생 출석 화면(미리보기)'], ['rule', '출석 규칙 · 본인 확인 · 장비']]);
     const body = { board: gBoard, live: gLive, check: gCheck, rule: gRule, anom: gAnom }[t](sec);
     return top + body;
   };
@@ -323,6 +323,7 @@
       <label class="fl">학번<input id="w3mno" maxlength="20" value="${esc(UI.w3gMno || '20269001')}"></label>
       <div class="seg2" role="tablist">${ms.map(([k, l]) => `<button role="tab" aria-selected="${k === m}" class="${k === m ? 'on' : ''}" data-act="w3g-m" data-v="${k}">${l}</button>`).join('')}</div>
       ${extra || ''}
+      ${(m => m !== 'none' ? `<p class="mini">이 분반은 출석 전 본인 확인(${esc((IDVM.find(x => x[0] === m) || [, m])[1])})이 필요합니다. 학생은 본인 기기에서 확인한 뒤 출석합니다.</p>${W3.live() ? '' : '<label class="ul-ck"><input type="checkbox" id="w3idvd"> 데모: 학생 기기에서 본인 확인을 마친 것으로 표시</label>'}` : '')(W3.live() ? 'none' : idvOf(sec.section_id))}
       ${R.require_identity ? `<label class="ul-ck"><input type="checkbox" id="w3idv"> 본인 재인증 완료(SSO 재인증 호출 — 연동 후 동작, 데모는 확인 표시)</label>` : ''}
       <button class="btn pri" data-act="w3g-go">출석하기</button>
       ${r ? `<div class="w3-res ${r.ok ? 'ok' : 'bad'}" role="status">${r.ok ? `${esc(ST[r.status][0])} 처리되었습니다 · ${esc(MTH[r.method])} · ${esc(W3.fmt(r.evidence.at))}` : esc(r.msg)}</div>` : ''}</div>`;
@@ -336,7 +337,7 @@
     const b = { session_id: UI.w3gL, member_no: mno, method: m };
     if (m === 'code') b.code = v; if (m === 'qr') b.qr = v; if (m === 'nfc' || m === 'ble') b.tag_id = v;
     if (m === 'photo') { const la = $('#w3lat')?.value.trim(), lo = $('#w3lng')?.value.trim(); if (la) b.lat = +la; if (lo) b.lng = +lo; const f = $('#w3ph')?.files?.[0]; b.taken_at = new Date(f && f.lastModified ? f.lastModified : Date.now()).toISOString(); }
-    if ($('#w3idv')?.checked) b.idv = 'sso-reauth-pending';
+    if ($('#w3idv')?.checked) b.idv = 'sso-reauth-pending'; if ($('#w3idvd')?.checked) b.idv_demo = 1;
     try { const r = await W3.call('POST', '/api/lms/g/checkin', b); UI.w3gR = { ok: 1, ...r }; W3.drop('roster:'); } catch (e) { UI.w3gR = { ok: 0, msg: e.message }; }
     render();
   };
@@ -346,7 +347,7 @@
     if (R.__err) return `<div class="empty">${esc(R.__err)}</div>`;
     const ck = (k, l) => `<label class="ul-ck"><input type="checkbox" name="m_${k}" ${R.methods.includes(k) ? 'checked' : ''}> ${esc(l)}</label>`;
     const bk = (k, l) => `<label class="ul-ck"><input type="checkbox" name="${k}" ${R[k] ? 'checked' : ''}> ${esc(l)}</label>`;
-    return `<div class="card" id="w3rule"><div class="ch"><b>분반 출석 규칙</b><small>SFR-010 · 016 · 068</small></div><div class="ul-cols"><div><p class="mini"><b>허용 방식</b></p>${ck('code', '인증번호')}${ck('qr', '회전 QR')}${ck('nfc', 'NFC 태그')}${ck('ble', 'BLE 비콘')}${ck('photo', '사진(위치 · 일시)')}${ck('online', '온라인(진도율)')}${ck('manual', '교수 수동')}</div>
+    return gIdv(sec) + `<div class="card" id="w3rule"><div class="ch"><b>분반 출석 규칙</b><small>SFR-010 · 016 · 068</small></div><div class="ul-cols"><div><p class="mini"><b>허용 방식</b></p>${ck('code', '인증번호')}${ck('qr', '회전 QR')}${ck('nfc', 'NFC 태그')}${ck('ble', 'BLE 비콘')}${ck('photo', '사진(위치 · 일시)')}${ck('online', '온라인(진도율)')}${ck('manual', '교수 수동')}</div>
       <div><div class="form2"><label>지각 기준(분)<input type="number" name="late" min="0" max="120" value="${R.late_after_min}"></label><label>출석 마감(분)<input type="number" name="abs" min="0" max="240" value="${R.absent_after_min}"></label><label>온라인 인정 진도율(%)<input type="number" name="pct" min="10" max="100" value="${R.online_min_pct}"></label></div>
       ${bk('require_identity', '출석 전 본인 재인증(SSO 재인증 — 연동 후 동작)')}${bk('block_concurrent', '여러 기기 · 창 동시 재생 차단')}${bk('hyflex_online', '하이플렉스: 대면 차시도 온라인 진도 기준 충족 시 출석 인정')}</div></div>
       <button class="btn pri" data-act="w3g-rule">규칙 저장</button></div>
@@ -367,4 +368,31 @@
       ${table(['학번', '학과', '주차', '콘텐츠', '유형', '횟수', '최근'], A.map(a => [esc(a.member_no), esc(a.unit_code || ''), a.week_no + '주', esc(a.content_title), tag(KN[a.kind] || a.kind, a.kind === 'concurrent' ? 'r' : 'y'), a.n, esc(W3.fmt(a.last_at))]), '감지된 비정상 학습행동이 없습니다.')}</div>`;
   }
   ACT['w3g-anom-csv'] = () => { const A = W3.cache['anom:' + UI.w3sec] || []; downloadCSV(`비정상학습행동_${today()}.csv`, ['학번', '학과', '주차', '콘텐츠', '유형', '횟수', '최근'], A.map(a => [a.member_no, a.unit_code || '', a.week_no, a.content_title, KN[a.kind] || a.kind, a.n, a.last_at])); };
+  /* ═════════ x3 · SFR-016 대리출석 방지: 분반별 출석 전 본인 확인(패스키 · 인증 앱 · 이메일 어댑터) ═════════
+     운영: /api/lms/g/idv-rule · idv-report(서버 트리거가 학생 출석마다 확인 표를 소비). 데모: S.lms.w3.idvRule · 학생 등록 현황은 예시 값. */
+  const IDVM = [['none', '확인 안 함'], ['webauthn', '패스키(지문 · 얼굴 인식)'], ['totp', '인증 앱 6자리'], ['any', '패스키 또는 인증 앱'], ['email', '이메일 인증번호(메일 게이트웨이 연동 후)']];
+  const IDVN = 'none webauthn totp any email'.split(' ');
+  ERRM.idv_needed = '출석 전 본인 확인(패스키 · 인증 앱)이 필요합니다.';
+  const idvOf = sid => { const d = D(); d.idvRule = d.idvRule || {}; return d.idvRule[sid] || 'none'; };
+  L['GET /api/lms/g/idv-rule'] = b => { if (!secOf(b.section_id)) throw W3.err('not_found'); return { section_id: b.section_id, method: idvOf(b.section_id), methods: IDVM, note: '학생이 출석 직전 본인 기기로 확인합니다. 생체 정보는 학생 기기 밖으로 나오지 않고, 서버에는 공개키만 저장합니다. 문자(SMS) 인증은 학교 문자 게이트웨이 연동 후 동작합니다.' }; };
+  L['POST /api/lms/g/idv-rule'] = b => { if (!secOf(b.section_id)) throw W3.err('not_found'); if (!IDVN.includes(b.method)) throw W3.err('bad_input'); const d = D(); d.idvRule = d.idvRule || {}; d.idvRule[b.section_id] = b.method; return L['GET /api/lms/g/idv-rule'](b); };
+  L['GET /api/lms/g/idv-report'] = b => { if (!secOf(b.section_id)) throw W3.err('not_found'); const h = s => { let x = 2166136261; for (const c of String(s)) x = Math.imul(x ^ c.charCodeAt(0), 16777619) >>> 0; return x; };
+    const P = D().persons.filter(p => (p.secs || []).includes(b.section_id) && p.ekind !== 'audit').sort((p, q) => p.member_no < q.member_no ? -1 : 1);
+    const st = P.map(p => { const v = h(p.member_no + b.section_id) % 100; const pk = v < 62 ? 1 + v % 2 : 0; const tt = v >= 50 && v < 85; const n = Object.entries(D().att).filter(([k, a]) => k.endsWith('|' + p.person_id) && a.evidence && ['webauthn', 'totp', 'email'].includes(a.evidence.idv)).length;
+      return { member_no: p.member_no, passkeys: pk, totp: tt, checkins: n, last_method: n ? 'webauthn' : null }; });
+    return { section_id: b.section_id, method: idvOf(b.section_id), students: st, demo: true, summary: { n: st.length, passkey: st.filter(x => x.passkeys).length, totp: st.filter(x => x.totp).length, none: st.filter(x => !x.passkeys && !x.totp).length } }; };
+  { const base = L['POST /api/lms/g/checkin']; L['POST /api/lms/g/checkin'] = b => { const s = sesOf(b.session_id); const m = s ? idvOf(s.section_id) : 'none';
+      if (m !== 'none' && ['code', 'qr', 'nfc', 'ble', 'photo'].includes(b.method) && !b.idv_demo) { const e = W3.err('idv_needed'); e.message = { webauthn: '출석 전 패스키(지문 · 얼굴 인식)로 본인 확인을 하세요.', totp: '출석 전 인증 앱의 6자리 번호로 본인 확인을 하세요.', email: '출석 전 이메일 인증번호로 본인 확인을 하세요.' }[m] || '출석 전 본인 확인(패스키 또는 인증 앱)을 하세요.'; throw e; }
+      const r = base(b); if (m !== 'none' && b.idv_demo) { r.evidence.idv = m === 'any' ? 'webauthn' : m; const k = Object.keys(D().att).find(x => x.startsWith(b.session_id + '|') && D().att[x].evidence.at === r.evidence.at); if (k) D().att[k].evidence.idv = r.evidence.idv; } return r; }; }
+  function gIdv(sec) {
+    const R = W3.get('idvrule:' + sec.section_id, 'GET', '/api/lms/g/idv-rule', { section_id: sec.section_id }); const P = W3.get('idvrep:' + sec.section_id, 'GET', '/api/lms/g/idv-report', { section_id: sec.section_id });
+    if (R === undefined || P === undefined) return W3.loading; if (R.__err) return `<div class="empty">${esc(R.__err)}</div>`; const m = P.summary || { n: 0, passkey: 0, totp: 0, none: 0 };
+    return `<div class="card" id="w3idv"><div class="ch"><b>대리출석 방지 — 출석 전 본인 확인</b><small>SFR-016 · 원격수업 운영지침</small></div><p class="mini">${esc(R.note)}</p>
+      <div class="bar2"><label class="efh-lab">이 분반 확인 방식 <select id="w3idvm" aria-label="본인 확인 방식">${R.methods.map(([k, l]) => `<option value="${k}" ${R.method === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label><button class="btn sm pri" data-act="w3g-idv">저장</button></div>
+      <div class="kpis">${kpi('수강생', m.n)}${kpi('패스키 등록', m.passkey)}${kpi('인증 앱 등록', m.totp)}${kpi('확인 수단 없음', m.none, '', m.none && R.method !== 'none' ? 'warn' : '')}</div>
+      ${P.demo ? '<p class="mini">데모: 학생 등록 현황은 예시 값입니다.</p>' : ''}
+      <details class="efh-set"><summary>학생별 등록 현황 ${m.n}명</summary>${table(['학번', '패스키', '인증 앱', '확인 출석'], (P.students || []).map(x => [esc(x.member_no), x.passkeys ? tag(x.passkeys + '개', 'g') : '-', x.totp ? tag('등록', 'g') : '-', String(x.checkins)]), '수강생이 없습니다.')}</details></div>`;
+  }
+  ACT['w3g-idv'] = () => W3.act(() => W3.call('POST', '/api/lms/g/idv-rule', { section_id: UI.w3sec, method: $('#w3idvm').value }), '본인 확인 방식을 저장했습니다.').then(r => { if (r) { W3.drop('idvrule:'); W3.drop('idvrep:'); render(); } });
+
 })();

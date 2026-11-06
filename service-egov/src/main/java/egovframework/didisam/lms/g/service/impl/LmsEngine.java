@@ -126,7 +126,10 @@ public class LmsEngine {
             for (JsonNode st : r.get("stmts")) {
                 Function<Map<String, Object>, String> fn = stmts.get(st.asText());
                 if (fn == null) throw new IllegalStateException("SQL 없음: " + st.asText());
-                String raw = fn.apply(P);
+                String raw;
+                /* x3: 트리거 업무 오류(raise … detail 'dd:상태:코드', 예: 출석 본인 확인 428 idv_needed) → DdException(Node mod-g.js와 같음) */
+                try { raw = fn.apply(P); }
+                catch (RuntimeException e) { throw ddMap(e); }
                 o = raw == null ? null : parse(raw);
                 if (o != null && o.isObject() && truthy(o.get("err"))) throw bad(err, str(o.get("err")), null);
                 if (o != null && o.isObject()) { JsonNode oo = o; oo.fieldNames().forEachRemaining(k -> { JsonNode v = oo.get(k); if (v.isTextual() && !P.containsKey("$" + k)) P.put("$" + k, v.textValue()); }); }
@@ -139,5 +142,17 @@ public class LmsEngine {
             tx.audit(tid, (String) a.get("email"), r.get("audit").asText(), stringify(det));
         }
         return out;
+    }
+
+    static final Pattern DD = Pattern.compile("^dd:(\\d{3}):([a-z_]+)$");
+    static RuntimeException ddMap(RuntimeException e) {
+        for (Throwable x = e; x != null; x = x.getCause()) {
+            if (x instanceof org.postgresql.util.PSQLException pe && pe.getServerErrorMessage() != null) {
+                String d = pe.getServerErrorMessage().getDetail(); java.util.regex.Matcher m = d == null ? null : DD.matcher(d);
+                if (m != null && m.matches()) return new DdException(Integer.parseInt(m.group(1)), pe.getServerErrorMessage().getMessage(), m.group(2));
+                break;
+            }
+        }
+        return e;
     }
 }

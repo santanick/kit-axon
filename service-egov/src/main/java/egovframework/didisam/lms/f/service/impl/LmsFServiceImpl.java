@@ -37,6 +37,21 @@ public class LmsFServiceImpl extends EgovAbstractServiceImpl implements LmsFServ
         R.put("GET settings", new LmsEfhGateway.Route("lms_f_settings", "staff", 65536));
         R.put("POST settings", new LmsEfhGateway.Route("lms_f_settings_save", "staff", 4096));
         R.put("POST ip-mask", new LmsEfhGateway.Route("lms_f_ip_mask", "staff", 4096));
+        /* x3 · SFR-089 웹 시험 감독(sql/a3_integrity.sql) — Node mod-f.js와 같은 표 */
+        R.put("GET proctor", new LmsEfhGateway.Route("lms_f_proctor", "learner", 65536));
+        R.put("POST proctor-begin", new LmsEfhGateway.Route("lms_f_proctor_begin", "learner", 8192));
+        R.put("POST proctor-event", new LmsEfhGateway.Route("lms_f_proctor_event", "learner", 65536));
+        R.put("POST proctor-snap", new LmsEfhGateway.Route("lms_f_proctor_snap", "learner", 300000));
+        R.put("GET proctor-cfg", new LmsEfhGateway.Route("lms_f_proctor_cfg", "staff", 65536));
+        R.put("POST proctor-cfg", new LmsEfhGateway.Route("lms_f_proctor_cfg_save", "staff", 4096));
+        R.put("GET proctor-review", new LmsEfhGateway.Route("lms_f_proctor_review", "staff", 65536));
+        R.put("GET proctor-timeline", new LmsEfhGateway.Route("lms_f_proctor_timeline", "staff", 65536));
+        R.put("GET proctor-photo", new LmsEfhGateway.Route("lms_f_proctor_photo", "staff", 65536));
+        R.put("POST proctor-decide", new LmsEfhGateway.Route("lms_f_proctor_decide", "staff", 4096));
+        R.put("GET proctor-views", new LmsEfhGateway.Route("lms_f_proctor_views", "staff", 65536));
+        R.put("GET proctor-settings", new LmsEfhGateway.Route("lms_f_proctor_settings", "staff", 65536));
+        R.put("POST proctor-settings", new LmsEfhGateway.Route("lms_f_proctor_settings_save", "staff", 4096));
+        R.put("POST proctor-purge", new LmsEfhGateway.Route("lms_f_proctor_purge", "staff", 4096));
     }
     private final LmsEfhGateway gw; private final LmsFMapper mapper;
     public LmsFServiceImpl(LmsEfhGateway gw, LmsFMapper mapper) { this.gw = gw; this.mapper = mapper; }

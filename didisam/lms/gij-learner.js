@@ -40,6 +40,9 @@
   const load = (k, path, demo) => { if (!live()) return demo(); if (ST[k] == null && !ST.busy[k]) { ST.busy[k] = 1; api('GET', path).then(r => { ST[k] = r; }).catch(e => { ST.err = e.message; ST[k] = { found: false, sections: [], err: e.message }; }).finally(() => { delete ST.busy[k]; re(); }); } return ST[k]; };
   const G = () => load('g', '/api/lms/g/my', demoG); const I = () => load('i', '/api/lms/i/my', demoI);
 
+  /* x3: 분반 본인 확인 규칙(운영: /api/lms/g/idv의 rules · 데모: 기관 데이터룸 S.lms.w3.idvRule) */
+  function idvRule(secId) { if (live()) { if (ST.idv == null && !ST.busy.idv) { ST.busy.idv = 1; api('GET', '/api/lms/g/idv').then(r => { ST.idv = r; }).catch(() => { ST.idv = { rules: [] }; }).finally(() => { delete ST.busy.idv; re(); }); } const r = ST.idv && ST.idv.rules.find(x => x.section_id === secId); return r ? r.method : 'none'; }
+    const W = room(); return (W && W.idvRule && W.idvRule[secId]) || 'none'; }
   /* ── ① 출석하기 ── */
   function cAtt(g) {
     const open = g.sections.flatMap(s => s.sessions.filter(x => x.open && !x.status).map(x => ({ ...x, sec: s })));
@@ -56,6 +59,7 @@
       ble: `<button class="lbtn sm" data-lact="gij-ble">${window.DidisamApp && window.DidisamApp.scanBeacon ? '강의실 비콘 찾기' : '비콘 찾기 — 앱 · 비콘 장비 연동 후 동작'}</button><label class="gij-f">비콘 ID<input id="gijTag" maxlength="64"></label>` }[ST.m];
     return `<label class="gij-f">수업<select id="gijSes" data-lch="gij-ses">${open.map(x => `<option value="${E(x.session_id)}" ${x.session_id === cur.session_id ? 'selected' : ''}>${E(x.sec.title)} · ${x.week_no}주 ${x.seq}차 · ${E(fmt(x.starts_at))} · ${E(x.room || '')}</option>`).join('')}</select></label>
       <div class="gij-seg" role="tablist">${ms.map(([k, l]) => `<button role="tab" aria-selected="${k === ST.m}" class="${k === ST.m ? 'on' : ''}" data-lact="gij-m" data-v="${k}">${l}</button>`).join('')}</div>${box || ''}
+      ${(m => m !== 'none' ? `<p class="mini gij-idv">이 수업은 출석 전 <b>${E(IDV.ML[m] || m)}</b>으로 본인 확인을 합니다(대리출석 방지). [출석하기]를 누르면 확인 창이 열립니다. <button class="lbtn sm ghost" data-lact="gij-idvm">본인 확인 수단 관리</button></p>` : '')(idvRule(cur.sec.section_id))}
       ${cur.sec.rule.require_identity ? `<label class="gij-ck"><input type="checkbox" id="gijIdv"> 본인 재인증을 마쳤습니다(학교 SSO 재인증 — 연동 후 자동 처리)</label>` : ''}
       <button class="lbtn" data-lact="gij-go">출석하기</button>${res}`;
   }
@@ -97,6 +101,105 @@
   }
   { const base = viewMy; viewMy = function (...a) { const h = base.apply(this, a); if (!on()) return h; try { const c = card(); return h.includes('<div class="mygrid">') ? h.replace('<div class="mygrid">', '<div class="mygrid">' + c) : c + h; } catch (e) { console.error('gij my', e); return h; } }; } // eslint-disable-line no-global-assign
 
+  /* ═════════ x3 · SFR-016 대리출석 방지: 본인 확인 창(window.DDIDV) — 출석 직전 · 시험 시작 전 ═════════
+     패스키(WebAuthn: 지문 · 얼굴 인식 · 기기 PIN, 서버에는 공개키만) · 인증 앱(TOTP 6자리) · 이메일 인증번호(학교 메일 게이트웨이 연동 후 발송).
+     문자(SMS)는 학교 문자 게이트웨이 연동 후 동작. 데모: 패스키는 이 브라우저의 실제 패스키 창을 띄워 보고(안 되면 '데모 통과'), 인증 앱 번호는 이 브라우저가 직접 계산해 확인한다. */
+  const IDV = (() => {
+    const b2u = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const u2b = s => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((String(s).length + 3) % 4)), c => c.charCodeAt(0));
+    const ML = { webauthn: '패스키(지문 · 얼굴 인식)', totp: '인증 앱 6자리', any: '패스키 또는 인증 앱', email: '이메일 인증번호' };
+    const PU = { checkin: '출석 전', exam: '시험 시작 전' };
+    const I = { st: null, req: null, msg: '', busy: false, secret: null, otpauth: null, mailSent: false, done: null };
+    const devName = () => { const u = navigator.userAgent; return /iphone|ipad/i.test(u) ? 'iPhone · iPad' : /android/i.test(u) ? 'Android 휴대폰' : /mac/i.test(u) ? 'Mac' : /windows/i.test(u) ? 'Windows PC' : '내 기기'; };
+    /* 데모 저장(이 브라우저에만): 등록한 패스키 · 인증 앱 비밀키 · 발급한 확인 표 */
+    const dk = () => 'dd_demo_idv_' + String(LR.me && LR.me.sid || '');
+    const dGet = () => { try { return JSON.parse(localStorage.getItem(dk()) || '{}'); } catch (e) { return {}; } };
+    const dSet = v => { try { localStorage.setItem(dk(), JSON.stringify(v)); } catch (e) { } };
+    const tickets = [];
+    const issue = (purpose, ref, method) => { const t = { ticket: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), purpose, ref, method, at: Date.now(), used: false }; tickets.push(t); return t.ticket; };
+    function take(purpose, ref, rule) { const t = tickets.find(x => !x.used && x.purpose === purpose && x.ref === ref && Date.now() - x.at < 6e5 && (rule === 'any' || x.method === rule)); if (!t) return false; t.used = true; return true; }
+    async function totpAt(secret, step) {
+      const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = 0, v = 0; const out = []; for (const ch of secret) { v = (v << 5) | A.indexOf(ch); bits += 5; if (bits >= 8) { out.push((v >>> (bits - 8)) & 255); bits -= 8; } }
+      const k = await crypto.subtle.importKey('raw', new Uint8Array(out), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']); const c = new DataView(new ArrayBuffer(8)); c.setUint32(4, step);
+      const h = new Uint8Array(await crypto.subtle.sign('HMAC', k, c.buffer)); const o = h[19] & 15; return String((((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3]) % 1e6).padStart(6, '0');
+    }
+    const live = () => LR.mode === 'live';
+    async function status() { if (live()) return api('GET', '/api/lms/g/idv'); const d = dGet(); return { passkeys: d.passkeys || [], totp: { enrolled: !!d.secret, confirmed: !!d.totpOk } }; }
+    async function refresh() { try { I.st = await status(); } catch (e) { I.msg = e.message; } draw(); }
+    const allow = m => !I.req || I.req.method === 'any' ? true : I.req.method === m;
+    function html() {
+      const s = I.st; const R = I.req; const pk = 'PublicKeyCredential' in window; const n = s ? s.passkeys.length : 0;
+      const head = `<header><b>본인 확인</b><button class="lbtn sm ghost" data-ddidv="close" aria-label="닫기">닫기</button></header>`;
+      if (!s) return head + '<p class="mini">불러오는 중입니다.</p>';
+      const sec = [];
+      if (R) sec.push(`<p class="mini">${PU[R.purpose] || ''} ${ML[R.method] || ''}으로 본인임을 확인합니다. 대리출석 · 대리응시를 막기 위한 절차입니다.</p>`);
+      else sec.push('<p class="mini">출석 · 시험 전에 쓸 본인 확인 수단을 관리합니다.</p>');
+      if (allow('webauthn')) sec.push(`<section><h4>패스키(지문 · 얼굴 인식 · 기기 PIN)</h4><p class="mini">생체 정보는 이 기기 밖으로 나가지 않고, 학교 서버에는 공개키만 저장됩니다. 등록된 패스키 ${n}개${n ? ': ' + s.passkeys.map(p => esc(p.label || '내 기기')).join(', ') : ''}.</p>
+        ${pk ? '' : '<p class="mini ddidv-w">이 브라우저는 패스키를 지원하지 않습니다. 최신 크롬 · 엣지 · 사파리를 쓰거나 인증 앱을 쓰세요.</p>'}
+        <div class="efl-acts">${R && n ? `<button class="lbtn sm" data-ddidv="wa">패스키로 확인</button>` : ''}<button class="lbtn sm ${R && n ? 'ghost' : ''}" data-ddidv="wareg">${n ? '이 기기도 등록' : '이 기기를 패스키로 등록'}</button>${!R && n ? s.passkeys.map(p => `<button class="lbtn sm ghost" data-ddidv="wadel" data-v="${esc(p.cred_id)}">${esc(p.label || '내 기기')} 지우기</button>`).join('') : ''}${!live() && R ? '<button class="lbtn sm ghost" data-ddidv="wademo">데모: 확인된 것으로 처리</button>' : ''}</div></section>`);
+      if (allow('totp')) sec.push(`<section><h4>인증 앱(6자리 번호)</h4>${!s.totp.confirmed ? (I.secret ? `<p class="mini">구글 · 마이크로소프트 인증 앱 등에 아래 키를 추가한 뒤, 앱에 보이는 6자리를 넣으세요.</p><p class="ddidv-key">${esc(I.secret.replace(/(.{4})/g, '$1 ').trim())}</p><p class="mini"><a href="${esc(I.otpauth)}">휴대폰에서 인증 앱으로 열기</a></p>
+          <div class="ddidv-row"><input id="ddidvT" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="인증 앱 번호"><button class="lbtn sm" data-ddidv="totpok">등록 확인</button>${!live() ? '<button class="lbtn sm ghost" data-ddidv="totpfill">데모: 지금 번호 채우기</button>' : ''}</div>` : `<p class="mini">휴대폰 인증 앱에 학교 계정을 추가합니다.</p><button class="lbtn sm" data-ddidv="totpnew">인증 앱 등록</button>`)
+        : R ? `<div class="ddidv-row"><input id="ddidvT" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="인증 앱 번호" placeholder="6자리"><button class="lbtn sm" data-ddidv="totp">번호로 확인</button>${!live() ? '<button class="lbtn sm ghost" data-ddidv="totpfill">데모: 지금 번호 채우기</button>' : ''}</div>` : `<p class="mini">등록됨 · <button class="lbtn sm ghost" data-ddidv="totpreset">다시 등록</button></p>`}</section>`);
+      if (R && allow('email')) sec.push(`<section><h4>이메일 인증번호</h4><p class="mini">학교 메일로 6자리를 보냅니다(학교 메일 게이트웨이 연동 후 발송).</p><div class="ddidv-row">${I.mailSent ? `<input id="ddidvM" inputmode="numeric" maxlength="6" aria-label="이메일 인증번호"><button class="lbtn sm" data-ddidv="mailok">확인</button>` : '<button class="lbtn sm" data-ddidv="mail">인증번호 받기</button>'}</div></section>`);
+      if (R) sec.push('<p class="mini">문자(SMS) 인증은 학교 문자 게이트웨이 연동 후 동작합니다.</p>');
+      return head + sec.join('') + (I.msg ? `<p class="mini ddidv-w" role="alert">${esc(I.msg)}</p>` : '');
+    }
+    function draw() { let w = document.getElementById('ddidv'); if (!I.open) { if (w) w.remove(); return; } if (!w) { w = document.createElement('div'); w.id = 'ddidv'; w.className = 'ddidv'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', '본인 확인'); document.body.appendChild(w); }
+      w.innerHTML = `<div class="ddidv-in">${html()}</div>`; }
+    function finish(ticket) { const f = I.done; I.open = false; I.done = null; draw(); if (f) f(ticket || null); }
+    async function run(fn) { if (I.busy) return; I.busy = true; I.msg = ''; try { await fn(); } catch (e) { I.msg = e && e.name === 'NotAllowedError' ? '기기 확인이 취소되었거나 시간이 지났습니다. 다시 시도하세요.' : (e.message || String(e)); } finally { I.busy = false; draw(); } }
+    async function waReg() {
+      if (!('PublicKeyCredential' in window)) throw new Error('이 브라우저는 패스키를 지원하지 않습니다.');
+      if (!live()) { const ch = crypto.getRandomValues(new Uint8Array(32)); let id = 'demo-' + Date.now();
+        try { const c = await navigator.credentials.create({ publicKey: { challenge: ch, rp: { name: '디디쌤(데모)' }, user: { id: new TextEncoder().encode('demo|' + LR.me.sid), name: String(LR.me.sid), displayName: '학번 ' + LR.me.sid }, pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }], authenticatorSelection: { userVerification: 'required' }, timeout: 60000, attestation: 'none' } }); id = b2u(c.rawId); }
+        catch (e) { if (e && e.name === 'NotAllowedError') throw e; toast('데모: 이 기기에서 패스키를 만들 수 없어 가상 패스키로 등록합니다.', 'bad'); }
+        const d = dGet(); d.passkeys = [...(d.passkeys || []), { cred_id: id, label: devName(), created_at: new Date().toISOString() }]; dSet(d); toast('패스키를 등록했습니다(데모).'); return refresh(); }
+      const o = await api('POST', '/api/lms/g/wa-options', { purpose: 'register' });
+      const c = await navigator.credentials.create({ publicKey: { challenge: u2b(o.challenge), rp: { id: o.rp_id, name: o.rp_name }, user: { id: u2b(o.user.id), name: o.user.name, displayName: o.user.display_name }, pubKeyCredParams: o.algs.map(alg => ({ type: 'public-key', alg })),
+        authenticatorSelection: { userVerification: 'required', residentKey: 'preferred' }, timeout: o.timeout_ms, attestation: 'none', excludeCredentials: (o.exclude || []).map(id => ({ type: 'public-key', id: u2b(id) })) } });
+      const R = c.response; const pk = R.getPublicKey && R.getPublicKey(); if (!pk || !R.getAuthenticatorData) throw new Error('이 브라우저는 패스키 공개키를 꺼내 주지 않습니다. 최신 브라우저로 다시 시도하세요.');
+      await api('POST', '/api/lms/g/wa-register', { ch_id: o.ch_id, client_data_json: b2u(R.clientDataJSON), authenticator_data: b2u(R.getAuthenticatorData()), public_key: b2u(pk), alg: R.getPublicKeyAlgorithm(), cred_id: b2u(c.rawId), label: devName() });
+      toast('패스키를 등록했습니다.'); await refresh();
+    }
+    async function waVerify() { const R = I.req;
+      if (!live()) { const d = dGet(); const ids = (d.passkeys || []).map(p => p.cred_id).filter(id => !/^demo-/.test(id));
+        if (ids.length && 'PublicKeyCredential' in window) { try { await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: ids.map(id => ({ type: 'public-key', id: u2b(id) })), userVerification: 'required', timeout: 60000 } }); } catch (e) { if (e && e.name === 'NotAllowedError') throw e; } }
+        toast('본인 확인을 마쳤습니다(데모).'); return finish(issue(R.purpose, R.ref, 'webauthn')); }
+      const o = await api('POST', '/api/lms/g/wa-options', { purpose: R.purpose, ref: R.ref });
+      const a = await navigator.credentials.get({ publicKey: { challenge: u2b(o.challenge), rpId: o.rp_id, allowCredentials: (o.allow || []).map(id => ({ type: 'public-key', id: u2b(id) })), userVerification: 'required', timeout: o.timeout_ms } });
+      const t = await api('POST', '/api/lms/g/wa-verify', { ch_id: o.ch_id, cred_id: b2u(a.rawId), client_data_json: b2u(a.response.clientDataJSON), authenticator_data: b2u(a.response.authenticatorData), signature: b2u(a.response.signature) });
+      toast('본인 확인을 마쳤습니다.'); finish(t.ticket);
+    }
+    async function totpNew(reset) { if (!live()) { const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; const r = crypto.getRandomValues(new Uint8Array(32)); const sec = [...r].map(x => A[x % 32]).join(''); const d = dGet(); d.secret = sec; d.totpOk = false; d.step = 0; dSet(d); I.secret = sec; I.otpauth = `otpauth://totp/${encodeURIComponent('디디쌤:' + LR.me.sid)}?secret=${sec}&issuer=${encodeURIComponent('디디쌤')}&digits=6&period=30`; return refresh(); }
+      const r = await api('POST', '/api/lms/g/totp-new', reset ? { reset: true } : {}); I.secret = r.secret; I.otpauth = r.otpauth; await refresh(); }
+    async function totpCheck(enroll) { const code = (document.getElementById('ddidvT') || {}).value?.trim() || ''; const R = I.req;
+      if (!live()) { const d = dGet(); const st = Math.floor(Date.now() / 30000); let ok = false; for (const x of [st - 1, st, st + 1]) if (x > (d.step || 0) && await totpAt(d.secret || '', x) === code) { d.step = x; ok = true; break; }
+        if (!ok) throw new Error('번호가 맞지 않거나 이미 쓴 번호입니다. 인증 앱의 새 번호를 넣으세요.'); d.totpOk = true; dSet(d); if (enroll) { I.secret = null; toast('인증 앱을 등록했습니다(데모).'); return refresh(); } toast('본인 확인을 마쳤습니다(데모).'); return finish(issue(R.purpose, R.ref, 'totp')); }
+      const r = await api('POST', '/api/lms/g/totp-verify', enroll ? { code } : { purpose: R.purpose, ref: R.ref, code }); if (r.ok === false) throw new Error(r.message);
+      if (enroll) { I.secret = null; toast('인증 앱을 등록했습니다.'); return refresh(); } toast('본인 확인을 마쳤습니다.'); finish(r.ticket); }
+    async function totpFill() { const d = dGet(); const s = I.secret || d.secret; if (!s) return; const v = await totpAt(s, Math.floor(Date.now() / 30000)); const el = document.getElementById('ddidvT'); if (el) el.value = v; }
+    async function mail() { const R = I.req; if (!live()) { const c = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1e6).padStart(6, '0'); I.demoMail = c; I.mailSent = true; toast(`데모: 인증번호 ${c} (운영에서는 학교 메일로 발송됩니다)`); return; }
+      await api('POST', '/api/lms/g/email-code', { purpose: R.purpose, ref: R.ref }); I.mailSent = true; toast('인증번호 요청을 등록했습니다. 학교 메일을 확인하세요.'); }
+    async function mailOk() { const R = I.req; const code = (document.getElementById('ddidvM') || {}).value?.trim() || '';
+      if (!live()) { if (code !== I.demoMail) throw new Error('인증번호가 맞지 않습니다.'); return finish(issue(R.purpose, R.ref, 'email')); }
+      const r = await api('POST', '/api/lms/g/email-verify', { purpose: R.purpose, ref: R.ref, code }); if (r.ok === false) throw new Error(r.message); finish(r.ticket); }
+    document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-ddidv]'); if (!el) return; e.preventDefault(); const a = el.dataset.ddidv;
+      if (a === 'close') return finish(null);
+      if (a === 'wareg') run(waReg); if (a === 'wa') run(waVerify); if (a === 'wademo') { toast('데모: 본인 확인을 통과한 것으로 처리합니다.'); finish(issue(I.req.purpose, I.req.ref, I.req.method === 'any' ? 'webauthn' : I.req.method)); }
+      if (a === 'wadel') run(async () => { if (live()) await api('POST', '/api/lms/g/wa-delete', { cred_id: el.dataset.v }); else { const d = dGet(); d.passkeys = (d.passkeys || []).filter(p => p.cred_id !== el.dataset.v); dSet(d); } await refresh(); });
+      if (a === 'totpnew') run(() => totpNew(false)); if (a === 'totpreset') run(() => totpNew(true)); if (a === 'totpok') run(() => totpCheck(true)); if (a === 'totp') run(() => totpCheck(false)); if (a === 'totpfill') totpFill();
+      if (a === 'mail') run(mail); if (a === 'mailok') run(mailOk); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && I.open) finish(null); });
+    try { if (!document.getElementById('ddidvCss')) { const s = document.createElement('style'); s.id = 'ddidvCss'; s.textContent = '.ddidv{position:fixed;inset:0;z-index:60;background:rgba(17,24,39,.55);display:flex;align-items:center;justify-content:center;padding:16px}.ddidv-in{background:var(--bg,#fff);color:var(--ink,#111827);border-radius:12px;max-width:460px;width:100%;max-height:90vh;overflow:auto;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}.ddidv-in header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.ddidv-in section{border-top:1px solid var(--line,#e5e7eb);padding:10px 0}.ddidv-in h4{margin:0 0 4px;font-size:14px}.ddidv-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.ddidv-row input{width:120px;font-size:18px;letter-spacing:2px;padding:6px}.ddidv-key{font-family:monospace;font-size:15px;word-break:break-all;background:var(--soft,#f3f4f6);padding:6px;border-radius:6px}.ddidv-w{color:#b45309}'; document.head.appendChild(s); } } catch (e) { }
+    return {
+      /* 확인 창을 열고 표(ticket)를 돌려준다(취소하면 null) */
+      ensure(purpose, ref, method) { return new Promise(ok => { Object.assign(I, { open: true, req: { purpose, ref, method: method || 'any' }, msg: '', secret: null, mailSent: false, done: ok, st: null }); draw(); refresh(); }); },
+      manage() { Object.assign(I, { open: true, req: null, msg: '', secret: null, done: null, st: null }); draw(); refresh(); },
+      take, ML
+    };
+  })();
+  window.DDIDV = IDV;
+
   /* ── 동작 ── */
   const $1 = s => document.querySelector(s);
   async function checkin() {
@@ -104,6 +207,8 @@
     if (ST.m === 'code') b.code = ($1('#gijCode') || {}).value?.trim(); if (ST.m === 'qr') b.qr = ($1('#gijQr') || {}).value?.trim(); if (ST.m === 'nfc' || ST.m === 'ble') b.tag_id = ($1('#gijTag') || {}).value?.trim();
     if (ST.m === 'photo') { if (!$1('#gijGeoOk')?.checked) { ST.res = { ok: 0, msg: '위치 정보 제공에 동의해야 사진 출석을 할 수 있습니다.' }; re(); return; } const la = $1('#gijLat')?.value.trim(), lo = $1('#gijLng')?.value.trim(); if (la) b.lat = +la; if (lo) b.lng = +lo; const f = $1('#gijPh')?.files?.[0]; b.taken_at = new Date(f && f.lastModified ? f.lastModified : Date.now()).toISOString(); }
     if ($1('#gijIdv')?.checked) b.idv = 'sso-reauth-pending';
+    { const sec = (G().sections || []).find(x => x.sessions.some(z => z.session_id === ST.ses)); const m = sec ? idvRule(sec.section_id) : 'none';
+      if (m !== 'none') { const t = await IDV.ensure('checkin', ST.ses, m); if (!t) { ST.res = { ok: 0, msg: '본인 확인을 마치지 않아 출석하지 않았습니다.' }; re(); return; } if (live()) b.idv = t; else IDV.take('checkin', ST.ses, m); } }
     if (!live()) { ST.res = { ok: 1, msg: '데모 화면입니다. 운영 서버에 연결되면 이 내용으로 출석이 기록됩니다.' }; re(); return; }
     try { const r = await api('POST', '/api/lms/g/checkin', b); ST.res = { ok: 1, msg: `${ST_N[r.status]} 처리되었습니다 · ${fmt(r.evidence && r.evidence.at)}` }; ST.g = null; } catch (e) { ST.res = { ok: 0, msg: e.message }; }
     re();
@@ -152,6 +257,7 @@
     if (a === 'gij-tab') { if (ST.play && el.dataset.v !== 'vid') closePlay(); ST.tab = el.dataset.v; ST.res = null; re(); }
     else if (a === 'gij-m') { ST.m = el.dataset.v; ST.res = null; re(); }
     else if (a === 'gij-go') checkin();
+    else if (a === 'gij-idvm') IDV.manage();
     else if (a === 'gij-scan') scanQR();
     else if (a === 'gij-geo') { if (!$1('#gijGeoOk')?.checked) { T('먼저 위치 정보 제공에 동의하세요.', 'bad'); return; } if (!navigator.geolocation) { T('이 기기는 위치를 제공하지 않습니다. 직접 입력하세요.', 'bad'); return; }
       navigator.geolocation.getCurrentPosition(p => { ST.geo = { lat: Math.round(p.coords.latitude * 1e5) / 1e5, lng: Math.round(p.coords.longitude * 1e5) / 1e5 }; re(); }, () => T('위치를 가져오지 못했습니다(권한 · 기기 정책). 직접 입력하세요.', 'bad'), { timeout: 8000 }); }

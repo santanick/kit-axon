@@ -34,4 +34,19 @@ public class LmsFController {
     @GetMapping("/settings") public JsonNode getSettings(HttpServletRequest req) throws Exception { return svc.call("GET settings", req, null); }
     @PostMapping("/settings") public JsonNode postSettings(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST settings", req, body); }
     @PostMapping("/ip-mask") public JsonNode postIpMask(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST ip-mask", req, body); }
+    /* x3 · SFR-089 웹 시험 감독 */
+    @GetMapping("/proctor") public JsonNode getProctor(HttpServletRequest req) throws Exception { return svc.call("GET proctor", req, null); }
+    @PostMapping("/proctor-begin") public JsonNode postProctorBegin(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST proctor-begin", req, body); }
+    @PostMapping("/proctor-event") public JsonNode postProctorEvent(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST proctor-event", req, body); }
+    @PostMapping("/proctor-snap") public JsonNode postProctorSnap(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST proctor-snap", req, body); }
+    @GetMapping("/proctor-cfg") public JsonNode getProctorCfg(HttpServletRequest req) throws Exception { return svc.call("GET proctor-cfg", req, null); }
+    @PostMapping("/proctor-cfg") public JsonNode postProctorCfg(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST proctor-cfg", req, body); }
+    @GetMapping("/proctor-review") public JsonNode getProctorReview(HttpServletRequest req) throws Exception { return svc.call("GET proctor-review", req, null); }
+    @GetMapping("/proctor-timeline") public JsonNode getProctorTimeline(HttpServletRequest req) throws Exception { return svc.call("GET proctor-timeline", req, null); }
+    @GetMapping("/proctor-photo") public JsonNode getProctorPhoto(HttpServletRequest req) throws Exception { return svc.call("GET proctor-photo", req, null); }
+    @PostMapping("/proctor-decide") public JsonNode postProctorDecide(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST proctor-decide", req, body); }
+    @GetMapping("/proctor-views") public JsonNode getProctorViews(HttpServletRequest req) throws Exception { return svc.call("GET proctor-views", req, null); }
+    @GetMapping("/proctor-settings") public JsonNode getProctorSettings(HttpServletRequest req) throws Exception { return svc.call("GET proctor-settings", req, null); }
+    @PostMapping("/proctor-settings") public JsonNode postProctorSettings(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST proctor-settings", req, body); }
+    @PostMapping("/proctor-purge") public JsonNode postProctorPurge(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST proctor-purge", req, body); }
 }
