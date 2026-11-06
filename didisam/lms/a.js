@@ -7,7 +7,7 @@
   'use strict';
   if (typeof MENU !== 'object' || typeof VIEWS !== 'object') return;
   const ON = () => !!(S && S.org && S.org.type === 'univ' && S.org.ed === 'lms');
-  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/a.css?v=30.0'; document.head.appendChild(l); } catch (e) { }
+  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/a.css?v=31.8'; document.head.appendChild(l); } catch (e) { }
 
   /* ── 메뉴 · 프리셋 ── */
   MENU.lmsa = { label: '강좌 · 분반', ws: 'learn', only: 'univ' };

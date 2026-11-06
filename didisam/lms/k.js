@@ -4,7 +4,7 @@
    운영(서버) 모드: /api/lms/k/* 호출. 데모 모드: S.lms.k 상태 + 같은 규칙의 브라우저 엔진. 공용 도우미 LW4는 묶음 N · Q도 쓴다. */
 (function () {
   'use strict';
-  if (!document.querySelector('link[data-lw4]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/k.css?v=30.0'; l.dataset.lw4 = '1'; document.head.appendChild(l); }
+  if (!document.querySelector('link[data-lw4]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/k.css?v=31.8'; l.dataset.lw4 = '1'; document.head.appendChild(l); }
 
   /* ── 공용 도우미(K · N · Q) ── */
   const LW4 = window.LW4 = window.LW4 || { demo: {} };

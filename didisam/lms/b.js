@@ -138,7 +138,7 @@
   /* 「지금 할 일」 한 줄(화면 맨 위) */
   X.todo = (text, btn) => `<div class="lmsx-todo"><span>${ic('spark', 16)} ${text}</span>${btn || ''}</div>`;
   /* CSS */
-  if (!document.querySelector('link[data-lmsx]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/bcd.css?v=30.0'; l.dataset.lmsx = '1'; document.head.appendChild(l); }
+  if (!document.querySelector('link[data-lmsx]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/bcd.css?v=31.8'; l.dataset.lmsx = '1'; document.head.appendChild(l); }
 
   /* 메뉴: 학사 LMS 프리셋 + 기존 기관 상태에도 탭을 넣는다 */
   X.menu = (id, label, ws) => {

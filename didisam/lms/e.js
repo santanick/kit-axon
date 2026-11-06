@@ -92,7 +92,7 @@
     const cs = cen.reduce((a, b) => a + b.length, 0); const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cs), ...u32(off), ...u16(0)]);
     const all = [...parts, ...cen, end]; const out = new Uint8Array(all.reduce((a, b) => a + b.length, 0)); let p = 0; for (const x of all) { out.set(x, p); p += x.length; } return out;
   }
-  function css() { if (document.getElementById('efhCss')) return; const l = document.createElement('link'); l.id = 'efhCss'; l.rel = 'stylesheet'; l.href = 'lms/e.css?v=30.1'; document.head.appendChild(l); }
+  function css() { if (document.getElementById('efhCss')) return; const l = document.createElement('link'); l.id = 'efhCss'; l.rel = 'stylesheet'; l.href = 'lms/e.css?v=31.8'; document.head.appendChild(l); }
   const peek = k => C[k] && C[k].ok;
   window.EFH = { peek, ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, sections, secPick, demoStudents, demoSections, rid, r2, fmt, ERR, nowIso, toB64, dl, b64bytes, zip, css, s0, demoTag, todo, dots, tabs4, mi };
 

@@ -46,7 +46,7 @@
     AFTER.push(up);
   };
   LMP.guard = (view) => () => (window.ULMS && ULMS() ? view() : `<div class="empty">대학 학사 LMS 에디션에서 쓰는 화면입니다. 설정 › 기관 유형에서 학사 LMS를 고르세요.</div>`);
-  (function css() { if (document.querySelector('link[data-lmp]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/l.css?v=30.0'; l.dataset.lmp = '1'; document.head.appendChild(l); })();
+  (function css() { if (document.querySelector('link[data-lmp]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/l.css?v=31.8'; l.dataset.lmp = '1'; document.head.appendChild(l); })();
 
   /* ── 데모 상태 ── */
   const ME = () => 'u:demo-' + ((S && S.me && S.me.role) || 'owner');

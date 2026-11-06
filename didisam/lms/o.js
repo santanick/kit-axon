@@ -15,7 +15,7 @@
   const RISK = { risk: ['주의', 'bad'], watch: ['관찰', 'y'], ok: ['양호', 'ok'] };
   const O = { c: {}, thread: null, room: null, gen: null, view: null, last: null };
   window.LMSO = O;
-  (function css() { if (document.querySelector('link[data-lmso]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/o.css?v=30.0'; l.dataset.lmso = '1'; document.head.appendChild(l); })();
+  (function css() { if (document.querySelector('link[data-lmso]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/o.css?v=31.8'; l.dataset.lmso = '1'; document.head.appendChild(l); })();
 
   /* ── 메뉴 · 프리셋 ── */
   MENU.lmso = { label: 'AI 학습 지원', ws: 'learn', only: 'univ' };
