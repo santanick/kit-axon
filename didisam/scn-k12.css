@@ -36,3 +36,4 @@
 .k-r{color:#d92d20}.k-sel{align-items:center}.k-date input[type=date]{width:auto}.k-sum{margin-bottom:14px}
 @media (max-width:900px){.k-split.has .k-card{order:-1}}
 @media (max-width:860px){.k-attc table.mcard>tbody>tr>td[data-l]{flex:1 1 100%}.k-st{display:flex;width:100%;gap:6px}.k-st button{flex:1 1 0;padding:9px 0;font-size:13.5px}}
+.k-tg{border:0;padding:0;margin:8px 0;display:flex;flex-wrap:wrap;gap:4px 12px}.k-tg legend{margin-bottom:4px}
