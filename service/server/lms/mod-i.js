@@ -41,7 +41,7 @@ const SQL = {
         'resume_pos', np.last_pos, 'segments', coalesce((select segments from old), '[]'::jsonb), 'watched_sec', coalesce((select watched_sec from old), 0), 'pct', coalesce((select pct from old), 0),
         'rates', '[1,1.25,1.5,1.75,2]'::json, 'block_concurrent', (select blk from r), 'beat_sec', 10, 'device', np.device, 'ended_stale', (select count(*) from stale))::text from np, c) end`,
   beatCheck: `with pl as (select pl.*, exists (select 1 from lms_play x where x.person_id = pl.person_id and x.play_id <> pl.play_id and x.ended_at is null and x.started_at > pl.started_at) newer from lms_play pl where play_id = cast(#{play_id} as uuid))
-    select case when not exists (select 1 from pl) then '{"err":"not_found"}' when (select ended_at from pl) is not null or (select newer from pl) then '{"err":"play_over"}'
+    select case when not exists (select 1 from pl) or (#{_me} is not null and (select person_id from pl) is distinct from (select person_id from lms_person where member_no = #{_me})) then '{"err":"not_found"}' when (select ended_at from pl) is not null or (select newer from pl) then '{"err":"play_over"}'
       when cast(#{rate} as numeric) < 1 or cast(#{rate} as numeric) > 2 then '{"err":"bad_rate"}' else '{}' end`,
   /* 재생 로그: 배속 변경 · 10초 넘는 이동(건너뛰기 · 되감기) */
   beatEvents: `with pl as (select * from lms_play where play_id = cast(#{play_id} as uuid)),
@@ -67,7 +67,7 @@ const SQL = {
       from agg where content_id = (select content_id from pl) and person_id = (select person_id from pl) returning lms_progress.*),
     upl as (update lms_play set last_beat_at = now(), last_pos = (select ps from x), rate_x100 = round((select rt from x) * 100)::int, watched_sec = watched_sec + greatest(0, (select e - f from cr)) where play_id = (select play_id from pl) returning 1)
     select json_build_object('play_id', (select play_id from pl), 'credited', greatest(0, (select e - f from cr)), 'watched_sec', up.watched_sec, 'pct', up.pct, 'segments', up.segments, 'completed', up.completed_at is not null, 'beat', (select count(*) from upl))::text from up`,
-  playEnd: `with pl as (update lms_play set ended_at = now(), last_pos = coalesce(cast(#{pos} as int), last_pos) where play_id = cast(#{play_id} as uuid) and ended_at is null returning *),
+  playEnd: `with pl as (update lms_play set ended_at = now(), last_pos = coalesce(cast(#{pos} as int), last_pos) where play_id = cast(#{play_id} as uuid) and ended_at is null and (#{_me} is null or person_id = (select person_id from lms_person where member_no = #{_me})) returning *),
     ev as (insert into lms_play_event (tenant_id, play_id, content_id, person_id, kind, pos) select current_setting('app.tenant'), pl.play_id, pl.content_id, pl.person_id, 'end', pl.last_pos from pl returning 1)
     select coalesce((select json_build_object('play_id', play_id, 'watched_sec', watched_sec, 'last_pos', last_pos, 'ended', true)::text from pl), '{"err":"play_over"}')`,
 
@@ -115,7 +115,7 @@ const SQL = {
     gi as (insert into lms_grade_item (tenant_id, section_id, category, name, weight_pct, max_score, source_ref) select current_setting('app.tenant'), c.section_id, 'quiz', '영상 퀴즈', 0, 100, 'lms_i:video_quiz' from c, v
       where v.r = 'ok' and not exists (select 1 from lms_grade_item g where g.section_id = c.section_id and g.source_ref = 'lms_i:video_quiz') returning 1)
     select case when (select r from v) <> 'ok' then json_build_object('err', (select r from v))::text else (select json_build_object('quiz_id', quiz_id, 'content_id', content_id, 'at_sec', at_sec, 'question', question, 'options', options, 'answer', answer, 'points', points, 'grade_item_created', (select count(*) from gi))::text from q) end`,
-  quizzes: `select case when not exists (select 1 from lms_content where content_id = cast(#{content_id} as uuid)) then '{"err":"not_found"}' else coalesce((select json_agg(json_build_object('quiz_id', q.quiz_id, 'at_sec', q.at_sec, 'question', q.question, 'options', q.options, 'answer', q.answer, 'points', q.points,
+  quizzes: `select case when not exists (select 1 from lms_content where content_id = cast(#{content_id} as uuid)) then '{"err":"not_found"}' else coalesce((select json_agg(json_build_object('quiz_id', q.quiz_id, 'at_sec', q.at_sec, 'question', q.question, 'options', q.options, 'answer', case when #{_me} is null or exists (select 1 from lms_video_quiz_answer a join lms_person pe on pe.person_id = a.person_id where a.quiz_id = q.quiz_id and pe.member_no = #{_me}) then q.answer end, 'points', q.points,
       'mine', (select json_build_object('choice', a.choice, 'correct', a.correct) from lms_video_quiz_answer a join lms_person pe on pe.person_id = a.person_id where a.quiz_id = q.quiz_id and pe.member_no = #{member_no}),
       'answered', (select count(*) from lms_video_quiz_answer a where a.quiz_id = q.quiz_id), 'correct_rate', (select coalesce(round(100.0 * count(*) filter (where correct) / nullif(count(*), 0))::int, 0) from lms_video_quiz_answer a where a.quiz_id = q.quiz_id)) order by q.at_sec, q.question)
     from lms_video_quiz q where q.content_id = cast(#{content_id} as uuid)), '[]')::text end`,
@@ -153,6 +153,16 @@ const SQL = {
       'activities', coalesce((select json_agg(json_build_object('member_no', pe.member_no, 'kind', ac.kind, 'ref', ac.ref, 'device', ac.device, 'ip_masked', ac.ip_masked, 'at', lms_ts(ac.at)) order by ac.at desc, pe.member_no, ac.kind) from ac join lms_person pe on pe.person_id = ac.person_id), '[]'),
       'events', coalesce((select json_object_agg(kind, n) from (select e.kind, count(*) n from lms_play_event e join lms_content c on c.content_id = e.content_id join lms_session s on s.session_id = c.session_id join sec on s.section_id = sec.section_id
         where #{member_no} is null or e.person_id = (select person_id from who) group by e.kind order by e.kind) z), '{}'))::text end`,
+  /* 학습자 「내 강의 영상 · 진도」 */
+  my: `with me as (select person_id from lms_person where member_no = #{member_no}),
+    en as (select e.section_id from lms_enrollment e, me where e.person_id = me.person_id and e.status = 'enrolled')
+    select json_build_object('member_no', #{member_no}, 'found', exists (select 1 from me), 'sections', coalesce((select json_agg(json_build_object('section_id', s.section_id, 'title', s.title, 'term_id', s.term_id,
+      'contents', (select coalesce(json_agg(json_build_object('content_id', c.content_id, 'week_no', ss.week_no, 'seq', ss.seq, 'title', c.title, 'duration_sec', c.duration_sec, 'open_at', lms_ts(ss.open_at), 'close_at', lms_ts(ss.close_at),
+          'pct', coalesce(pg.pct, 0), 'watched_sec', coalesce(pg.watched_sec, 0), 'last_pos', coalesce(pg.last_pos, 0), 'completed', pg.completed_at is not null,
+          'subtitles', (select coalesce(json_agg(sb.lang order by sb.lang), '[]') from lms_subtitle sb where sb.content_id = c.content_id), 'quizzes', (select count(*) from lms_video_quiz q where q.content_id = c.content_id)) order by ss.week_no, ss.seq, c.title), '[]')
+        from lms_content c join lms_session ss on ss.session_id = c.session_id left join lms_progress pg on pg.content_id = c.content_id and pg.person_id = (select person_id from me) where ss.section_id = s.section_id),
+      'avg_pct', (select coalesce(round(avg(coalesce(pg.pct, 0)))::int, 0) from lms_content c join lms_session ss on ss.session_id = c.session_id left join lms_progress pg on pg.content_id = c.content_id and pg.person_id = (select person_id from me) where ss.section_id = s.section_id))
+      order by s.term_id desc, s.course_code, s.section_no) from en join lms_section s on s.section_id = en.section_id), '[]'))::text`,
   activity: `with c as (select section_id from lms_section where section_id = cast(#{section_id} as uuid)), p as ${ENR},
     ins as (insert into lms_activity (tenant_id, section_id, person_id, kind, ref, device, ip_masked) select current_setting('app.tenant'), c.section_id, p.person_id, #{kind}, #{ref}, ${DEV}, ${IPM} from c, p returning *)
     select case when not exists (select 1 from c) then '{"err":"not_found"}' when not exists (select 1 from ins) then '{"err":"not_enrolled"}' else (select json_build_object('kind', kind, 'ref', ref, 'device', device, 'ip_masked', ip_masked, 'at', lms_ts(at))::text from ins) end`
@@ -162,19 +172,20 @@ const SPEC = [
   { m: 'POST', p: '/api/lms/i/seed', params: [['section_id', 'uuid', 1]], stmts: ['seed'], audit: 'lms.i.seed' },
   { m: 'GET', p: '/api/lms/i/contents', params: [['section_id', 'uuid', 1]], stmts: ['contents'] },
   { m: 'POST', p: '/api/lms/i/content', params: [['session_id', 'uuid', 1], ['title', 'text', 1, 120], ['duration_sec', 'int', 1, 1, 36000], ['src', 'text', 0, 500], ['check_at_sec', 'int', 0, 0, 36000]], stmts: ['contentAdd'], audit: 'lms.i.content' },
-  { m: 'POST', p: '/api/lms/i/play/start', limit: ['lmsi-ps', 120, 60000], params: [['content_id', 'uuid', 1], ['member_no', 'mno', 1]], stmts: ['playStart'] },
-  { m: 'POST', p: '/api/lms/i/play/beat', limit: ['lmsi-pb', 600, 60000], params: [['play_id', 'uuid', 1], ['from', 'int', 1, 0, 36000], ['pos', 'int', 1, 0, 36000], ['rate', 'num', 1, 0.0625, 16]], stmts: ['beatCheck', 'beatEvents', 'beatSave'] },
-  { m: 'POST', p: '/api/lms/i/play/end', params: [['play_id', 'uuid', 1], ['pos', 'int', 0, 0, 36000]], stmts: ['playEnd'] },
+  { m: 'POST', p: '/api/lms/i/play/start', who: 'any', limit: ['lmsi-ps', 120, 60000], params: [['content_id', 'uuid', 1], ['member_no', 'mno', 1]], stmts: ['playStart'] },
+  { m: 'POST', p: '/api/lms/i/play/beat', who: 'any', limit: ['lmsi-pb', 600, 60000], params: [['play_id', 'uuid', 1], ['from', 'int', 1, 0, 36000], ['pos', 'int', 1, 0, 36000], ['rate', 'num', 1, 0.0625, 16]], stmts: ['beatCheck', 'beatEvents', 'beatSave'] },
+  { m: 'POST', p: '/api/lms/i/play/end', who: 'any', params: [['play_id', 'uuid', 1], ['pos', 'int', 0, 0, 36000]], stmts: ['playEnd'] },
   { m: 'GET', p: '/api/lms/i/progress', params: [['section_id', 'uuid', 1]], stmts: ['progress'] },
   { m: 'POST', p: '/api/lms/i/subtitle', max: 400000, params: [['content_id', 'uuid', 1], ['lang', 'enum', 1, ['ko', 'en', 'ja', 'zh', 'vi', 'uz', 'mn', 'ru', 'es', 'fr', 'de', 'id', 'th', 'ne']], ['format', 'enum', 1, ['vtt', 'srt']], ['text', 'text', 1, 300000]], stmts: ['subParse'], audit: 'lms.i.subtitle' },
   { m: 'POST', p: '/api/lms/i/subtitle/cues', max: 400000, params: [['content_id', 'uuid', 1], ['lang', 'enum', 1, ['ko', 'en', 'ja', 'zh', 'vi', 'uz', 'mn', 'ru', 'es', 'fr', 'de', 'id', 'th', 'ne']], ['cues', 'json', 1, 350000]], stmts: ['subCues'], audit: 'lms.i.subtitle' },
-  { m: 'GET', p: '/api/lms/i/subtitles', params: [['content_id', 'uuid', 1]], stmts: ['subs'] },
+  { m: 'GET', p: '/api/lms/i/subtitles', who: 'any', params: [['content_id', 'uuid', 1]], stmts: ['subs'] },
   { m: 'POST', p: '/api/lms/i/quiz', params: [['content_id', 'uuid', 1], ['at_sec', 'int', 1, 0, 36000], ['question', 'text', 1, 300], ['options', 'json', 1, 2000], ['answer', 'int', 1, 0, 5], ['points', 'int', 0, 1, 10, 1]], stmts: ['quizAdd'], audit: 'lms.i.quiz' },
-  { m: 'GET', p: '/api/lms/i/quizzes', params: [['content_id', 'uuid', 1], ['member_no', 'mno']], stmts: ['quizzes'] },
-  { m: 'POST', p: '/api/lms/i/quiz/answer', params: [['quiz_id', 'uuid', 1], ['member_no', 'mno', 1], ['choice', 'int', 1, 0, 5]], stmts: ['quizAnswer'] },
+  { m: 'GET', p: '/api/lms/i/quizzes', who: 'any', params: [['content_id', 'uuid', 1], ['member_no', 'mno']], stmts: ['quizzes'] },
+  { m: 'POST', p: '/api/lms/i/quiz/answer', who: 'any', params: [['quiz_id', 'uuid', 1], ['member_no', 'mno', 1], ['choice', 'int', 1, 0, 5]], stmts: ['quizAnswer'] },
   { m: 'GET', p: '/api/lms/i/workload', params: [['section_id', 'uuid', 1]], stmts: ['workload'] },
   { m: 'GET', p: '/api/lms/i/history', params: [['section_id', 'uuid', 1], ['member_no', 'mno']], stmts: ['history'] },
-  { m: 'POST', p: '/api/lms/i/activity', limit: ['lmsi-ac', 300, 60000], params: [['section_id', 'uuid', 1], ['member_no', 'mno', 1], ['kind', 'enum', 1, ['view_notice', 'view_material', 'download', 'submit_assignment', 'post', 'comment', 'quiz', 'exam', 'live_join', 'page']], ['ref', 'text', 0, 200]], stmts: ['activity'] }
+  { m: 'GET', p: '/api/lms/i/my', who: 'any', params: [['member_no', 'mno', 1]], stmts: ['my'] },
+  { m: 'POST', p: '/api/lms/i/activity', who: 'any', limit: ['lmsi-ac', 300, 60000], params: [['section_id', 'uuid', 1], ['member_no', 'mno', 1], ['kind', 'enum', 1, ['view_notice', 'view_material', 'download', 'submit_assignment', 'post', 'comment', 'quiz', 'exam', 'live_join', 'page']], ['ref', 'text', 0, 200]], stmts: ['activity'] }
 ];
 
 module.exports = ctx => engine(ctx, SPEC, SQL);

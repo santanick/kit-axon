@@ -2,7 +2,21 @@
 /* v30 학사 LMS 묶음 G — 출결(인증번호 · 회전 QR · NFC · BLE · 사진 · 수동 · 온라인 인정 · 휴보강 · 장애 조정 · 연강 복사 · 학교 양식 · 비정상 학습행동)
    구조: 경로마다 선언(SPEC) — 권한 · 입력 검증 · SQL 문 이름 · 감사 · 제한. SQL은 응답 JSON까지 만들어 돌려준다(Node · Java가 같은 문장을 실행 → 같은 JSON).
    Java(전자정부 표준프레임워크) 쪽 lms_g.xml 매퍼는 이 파일의 SQL과 글자 그대로 같아야 한다(service-egov/test/lms-g.js가 확인).
-   SQL 자리표시 #{이름}은 모두 문자열로 넘기고 SQL 안에서 cast(... as 형식)한다. */
+   SQL 자리표시 #{이름}은 모두 문자열로 넘기고 SQL 안에서 cast(... as 형식)한다.
+
+   ── 학생 출석 API 규격(학습자 앱 · 모바일 앱 공용) ──
+   인증: 학습자 포털 세션 쿠키(__Host-dd_lsid · 개발 dd_lsid). 학번은 세션(learner_sessions.sid = lms_person.member_no)으로 정해지고 본문 member_no는 무시한다.
+         운영자 · 교수자 세션으로 부르면 member_no(필수)로 「이 사용자로 보기 · 대리 처리」. 변경 요청은 헤더 x-didisam: 1 필요(CSRF).
+   GET  /api/lms/g/my → { member_no, found, sections:[{ section_id, title, term_id, mode, kind(regular|audit),
+          rule:{ methods[], require_identity, late_after_min, absent_after_min },
+          sessions:[{ session_id, week_no, seq, kind, starts_at, room, status(present|late|absent|excused|null), method, reason, open(지금 출석 가능) }],
+          sum:{ present, late, absent, excused, past } }] }
+   POST /api/lms/g/checkin { session_id(uuid), method: 'code'|'qr'|'nfc'|'ble'|'photo', code?(6자리), qr?(DDATT1.…), tag_id?(NFC · 비콘 ID),
+          lat?(-90~90), lng?(-180~180), taken_at?(ISO), idv?(SSO 재인증 토큰 — 연동 전에는 표시만) }
+        200 { session_id, member_no, status: 'present'|'late', method, evidence:{ at, ip(끝자리 가림), device, room?, tag?, lat?, lng?, taken_at?, idv? } }
+        오류 { error, message }: 400 required · bad_input · bad_code · bad_qr · bad_tag · need_geo / 401 auth / 403 not_enrolled · audit · method_off · room_mismatch
+             409 holiday · no_time · not_open(시작 10분 전부터) · closed(absent_after_min 경과) · dup(차시당 1회) · no_code / 410 expired / 428 idv_required / 429 rate
+   QR 내용은 GET /api/lms/g/qr(교수 화면, rotate_sec마다 바뀜)의 qr 값 그대로 — 현재 · 직전 주기만 인정한다. */
 
 /* ── 공용 실행기(묶음 G · I · J가 같이 쓴다) ── */
 const ERR = {
@@ -33,6 +47,14 @@ function engine(ctx, SPEC, SQL) {
   for (const [k, s] of Object.entries(SQL)) { const names = []; const text = s.replace(/#\{(\w+)\}/g, (m, n) => { let i = names.indexOf(n); if (i < 0) { names.push(n); i = names.length - 1; } return `($${i + 1}::text)`; }); compiled[k] = { text, names }; }
   const hops = Math.max(0, Math.min(5, Number(process.env.TRUST_PROXY_HOPS == null ? 1 : process.env.TRUST_PROXY_HOPS)));
   const ipOf = req => { const L = String(req.headers['x-forwarded-for'] || '').split(',').map(x => x.trim()).filter(Boolean); const v = (hops && L.length >= hops ? L[L.length - hops] : '') || String(req.socket.remoteAddress || ''); return v.replace(/^::ffff:/, ''); };
+  /* 학습자 포털 세션(efh_lib.js와 같은 방식) */
+  const lcookie = process.env.COOKIE_SECURE !== '0' ? '__Host-dd_lsid' : 'dd_lsid';
+  const cookieOf = (req, n) => { for (const x of String(req.headers.cookie || '').split(';')) { const i = x.indexOf('='); if (i > 0 && x.slice(0, i).trim() === n) return decodeURIComponent(x.slice(i + 1).trim()); } return null; };
+  async function learner(req) {
+    const t = cookieOf(req, lcookie); if (!t || t.length > 100) return null;
+    const { rows } = await pool.query('select tenant_id, sid from learner_sessions where id = $1 and expires_at > now()', [require('node:crypto').createHash('sha256').update(t).digest('hex')]);
+    return rows[0] || null;
+  }
   /* 입력 하나 검증 — Java LmsEngine.param과 같은 규칙 */
   function param(src, isQuery, [name, type, req, a, b, def]) {
     let v = src[name];
@@ -55,12 +77,15 @@ function engine(ctx, SPEC, SQL) {
   const routes = {};
   for (const r of SPEC) {
     routes[`${r.m} ${r.p}`] = async (req) => {
-      const a = await need(req);
+      /* who: 'any' = 운영자 · 교수자 세션 또는 학습자 포털 세션(dd_lsid → learner_sessions.sid = lms_person.member_no). 운영자가 학번을 주면 「이 사용자로 보기」 */
+      let a; let me = null;
+      try { a = await need(req); } catch (e) { if (r.who !== 'any' || !(e instanceof HttpErr) || e.status !== 401) throw e; const s = await learner(req); if (!s) throw e; me = s.sid; a = { tid: s.tenant_id, uid: 'learner:' + s.sid, email: 'learner:' + s.sid, role: 'learner' }; }
       if (r.roles === 'staff' && !['owner', 'sub'].includes(a.role)) throw bad('role');
       const isQ = r.m === 'GET';
       const src = isQ ? Object.fromEntries(new URL(req.url, 'http://x').searchParams) : await readBody(req, r.max || 16384);
       if (!isQ && (typeof src !== 'object' || Array.isArray(src) || src === null)) throw bad('bad_input', 'body');
-      const P = { _actor: a.email, _role: a.role, _ip: ipOf(req), _ua: String(req.headers['user-agent'] || '').slice(0, 200) || null };
+      if (me !== null) { if ((r.params || []).some(d => d[0] === 'member_no')) src.member_no = me; if ((r.params || []).some(d => d[0] === 'view')) src.view = 'student'; }
+      const P = { _actor: a.email, _role: a.role, _me: me, _ip: ipOf(req), _ua: String(req.headers['user-agent'] || '').slice(0, 200) || null };
       for (const d of r.params || []) P[d[0]] = param(src, isQ, d);
       if (r.limit) limit(`${r.limit[0]}:${a.uid}`, r.limit[1], r.limit[2]);
       return inTenant(pool, a.tid, async c => {
@@ -290,6 +315,18 @@ const SQL = {
     select case when not exists (select 1 from sec) then '{"err":"not_found"}' else coalesce((select json_agg(x order by x.last_at desc, x.member_no, x.kind) from (
       select p.member_no, p.unit_code, al.title content_title, al.week_no, al.k kind, count(*)::int n, lms_ts(max(al.at)) last_at from al join lms_person p on p.person_id = al.person_id
       group by p.member_no, p.unit_code, al.title, al.week_no, al.k limit 500) x), '[]')::text end`,
+  /* 학습자 「내 출결」: 수강 분반 · 출석 규칙 · 차시별 내 출결 · 지금 출석 가능한 차시(open) */
+  my: `with me as (select person_id from lms_person where member_no = #{member_no}),
+    en as (select e.section_id, e.kind from lms_enrollment e, me where e.person_id = me.person_id and e.status = 'enrolled')
+    select json_build_object('member_no', #{member_no}, 'found', exists (select 1 from me), 'sections', coalesce((select json_agg(json_build_object('section_id', s.section_id, 'title', s.title, 'term_id', s.term_id, 'mode', s.mode, 'kind', en.kind,
+      'rule', (select json_build_object('methods', coalesce(to_json(r.methods), '["code","qr","nfc","ble","photo","online","manual"]'::json), 'require_identity', coalesce(r.require_identity, false), 'late_after_min', coalesce(r.late_after_min, 10), 'absent_after_min', coalesce(r.absent_after_min, 30))
+        from (select 1) k left join lms_attendance_rule r on r.section_id = s.section_id),
+      'sessions', (select coalesce(json_agg(json_build_object('session_id', ss.session_id, 'week_no', ss.week_no, 'seq', ss.seq, 'kind', ss.kind, 'starts_at', lms_ts(ss.starts_at), 'room', ss.room, 'status', a.status, 'method', a.method, 'reason', a.reason,
+          'open', ss.kind <> 'holiday' and ss.starts_at is not null and now() between ss.starts_at - interval '10 minutes' and ss.starts_at + make_interval(mins => coalesce(r2.absent_after_min, 30))) order by ss.week_no, ss.seq), '[]')
+        from lms_session ss left join lms_attendance a on a.session_id = ss.session_id and a.person_id = (select person_id from me) left join lms_attendance_rule r2 on r2.section_id = ss.section_id where ss.section_id = s.section_id),
+      'sum', (select json_build_object('present', count(*) filter (where a.status = 'present'), 'late', count(*) filter (where a.status = 'late'), 'absent', count(*) filter (where a.status = 'absent'), 'excused', count(*) filter (where a.status = 'excused'),
+          'past', count(*) filter (where ss.kind <> 'holiday' and ss.starts_at <= now())) from lms_session ss left join lms_attendance a on a.session_id = ss.session_id and a.person_id = (select person_id from me) where ss.section_id = s.section_id))
+      order by s.term_id desc, s.course_code, s.section_no) from en join lms_section s on s.section_id = en.section_id), '[]'))::text`,
   log: `select coalesce(json_agg(json_build_object('member_no', p.member_no, 'before', l.before, 'after', l.after, 'reason', l.reason, 'actor', l.actor, 'at', lms_ts(l.at)) order by l.at desc, p.member_no), '[]')::text
     from lms_attendance_log l join lms_person p on p.person_id = l.person_id where l.session_id = cast(#{session_id} as uuid)`
 };
@@ -305,7 +342,7 @@ const SPEC = [
   { m: 'POST', p: '/api/lms/g/rule', params: [['section_id', 'uuid', 1], ['methods', 'json', 0, 400], ['late_after_min', 'int', 0, 0, 120], ['absent_after_min', 'int', 0, 0, 240], ['online_min_pct', 'int', 0, 10, 100], ['require_identity', 'bool'], ['block_concurrent', 'bool'], ['hyflex_online', 'bool']], stmts: ['ruleCheck', 'ruleSet'], audit: 'lms.g.rule' },
   { m: 'POST', p: '/api/lms/g/code', params: [['session_id', 'uuid', 1], ['ttl_sec', 'int', 0, 30, 900, 180], ['rotate_sec', 'int', 0, 10, 60, 15]], stmts: ['codeIssue'], audit: 'lms.g.code' },
   { m: 'GET', p: '/api/lms/g/qr', params: [['session_id', 'uuid', 1]], stmts: ['qr'] },
-  { m: 'POST', p: '/api/lms/g/checkin', limit: ['lmsg-ck', 60, 60000], params: [['session_id', 'uuid', 1], ['member_no', 'mno', 1], ['method', 'enum', 1, ['code', 'qr', 'nfc', 'ble', 'photo']], ['code', 'text', 0, 12], ['qr', 'text', 0, 200], ['tag_id', 'text', 0, 64], ['lat', 'num', 0, -90, 90], ['lng', 'num', 0, -180, 180], ['taken_at', 'ts'], ['idv', 'text', 0, 200]], stmts: ['checkin'], audit: 'lms.g.checkin' },
+  { m: 'POST', p: '/api/lms/g/checkin', who: 'any', limit: ['lmsg-ck', 60, 60000], params: [['session_id', 'uuid', 1], ['member_no', 'mno', 1], ['method', 'enum', 1, ['code', 'qr', 'nfc', 'ble', 'photo']], ['code', 'text', 0, 12], ['qr', 'text', 0, 200], ['tag_id', 'text', 0, 64], ['lat', 'num', 0, -90, 90], ['lng', 'num', 0, -180, 180], ['taken_at', 'ts'], ['idv', 'text', 0, 200]], stmts: ['checkin'], audit: 'lms.g.checkin' },
   { m: 'POST', p: '/api/lms/g/mark', params: [['session_id', 'uuid', 1], ['member_no', 'mno', 1], ['status', 'enum', 1, ST], ['reason', 'text', 0, 300], ['evidence_ref', 'text', 0, 200]], stmts: ['mark'], audit: 'lms.g.mark' },
   { m: 'POST', p: '/api/lms/g/adjust', params: [['session_id', 'uuid', 1], ['from', 'enum', 1, ['absent', 'late']], ['to', 'enum', 1, ['present', 'late', 'excused']], ['reason', 'text', 1, 300]], stmts: ['adjust'], audit: 'lms.g.adjust' },
   { m: 'POST', p: '/api/lms/g/copy', params: [['session_id', 'uuid', 1]], stmts: ['copy'], audit: 'lms.g.copy' },
@@ -315,6 +352,7 @@ const SPEC = [
   { m: 'GET', p: '/api/lms/g/beacons', stmts: ['beacons'] },
   { m: 'POST', p: '/api/lms/g/beacon', roles: 'staff', params: [['beacon_id', 'text', 1, 64], ['kind', 'enum', 1, ['nfc', 'ble']], ['room', 'text', 1, 60], ['active', 'bool', 0, 0, 0, 'true']], stmts: ['beaconSet'], audit: 'lms.g.beacon' },
   { m: 'GET', p: '/api/lms/g/anomalies', params: [['section_id', 'uuid', 1]], stmts: ['anomalies'] },
+  { m: 'GET', p: '/api/lms/g/my', who: 'any', params: [['member_no', 'mno', 1]], stmts: ['my'] },
   { m: 'GET', p: '/api/lms/g/log', params: [['session_id', 'uuid', 1]], stmts: ['log'] }
 ];
 

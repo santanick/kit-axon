@@ -24,5 +24,6 @@ public class LmsIController {
     @PostMapping("/api/lms/i/quiz/answer") public Object postQuizAnswer(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST /api/lms/i/quiz/answer", req, body); }
     @GetMapping("/api/lms/i/workload") public Object getWorkload(HttpServletRequest req) throws Exception { return svc.call("GET /api/lms/i/workload", req, null); }
     @GetMapping("/api/lms/i/history") public Object getHistory(HttpServletRequest req) throws Exception { return svc.call("GET /api/lms/i/history", req, null); }
+    @GetMapping("/api/lms/i/my") public Object getMy(HttpServletRequest req) throws Exception { return svc.call("GET /api/lms/i/my", req, null); }
     @PostMapping("/api/lms/i/activity") public Object postActivity(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST /api/lms/i/activity", req, body); }
 }

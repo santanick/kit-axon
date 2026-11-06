@@ -6,7 +6,11 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import egovframework.didisam.cmm.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+import org.egovframe.rte.fdl.cmmn.exception.EgovBizException;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 import static egovframework.didisam.cmm.Js.*;
@@ -25,8 +29,17 @@ public class LmsEngine {
     static final Pattern INT = Pattern.compile("^-?\\d{1,9}$");
     static final Pattern NUM = Pattern.compile("^-?\\d{1,9}(\\.\\d{1,9})?$");
 
-    private final TenantTx tx; private final DdWeb web; private final DdRateLimiter rl;
-    public LmsEngine(TenantTx tx, DdWeb web, DdRateLimiter rl) { this.tx = tx; this.web = web; this.rl = rl; }
+    private final TenantTx tx; private final DdWeb web; private final DdRateLimiter rl; private final LmsAuthMapper auth;
+    public LmsEngine(TenantTx tx, DdWeb web, DdRateLimiter rl, LmsAuthMapper auth) { this.tx = tx; this.web = web; this.rl = rl; this.auth = auth; }
+
+    /** 학습자 포털 세션(dd_lsid → learner_sessions) — Node engine learner()와 같음 */
+    Map<String, Object> learner(HttpServletRequest req) throws Exception {
+        String t = web.lsidToken(req); if (t == null || t.length() > 100) return null;
+        byte[] h = MessageDigest.getInstance("SHA-256").digest(t.getBytes(StandardCharsets.UTF_8));
+        StringBuilder b = new StringBuilder(); for (byte x : h) b.append(String.format("%02x", x));
+        String id = b.toString();
+        return tx.plain(() -> auth.learnerSession(id));
+    }
 
     /** 선언 JSON {err: {코드: [상태, 문구]}, routes: [{m, p, roles, max, params: [[이름, 형식, 필수, a, b, 기본]], stmts, audit, limit}]} → 경로 표 */
     public static Map<String, JsonNode> routes(JsonNode spec) {
@@ -80,15 +93,27 @@ public class LmsEngine {
         }
     }
 
-    public JsonNode run(JsonNode spec, JsonNode r, Map<String, Object> a, HttpServletRequest req, byte[] body, Map<String, Function<Map<String, Object>, String>> stmts) throws Exception {
+    public JsonNode run(JsonNode spec, JsonNode r, Callable<Map<String, Object>> need, HttpServletRequest req, byte[] body, Map<String, Function<Map<String, Object>, String>> stmts) throws Exception {
         JsonNode err = spec.get("err");
+        /* who: 'any' = 운영자 세션 또는 학습자 포털 세션. 학습자면 학번(member_no)은 본인 것으로 고정 · 보고서는 학생 화면 */
+        Map<String, Object> a; String me = null;
+        try { a = need.call(); }
+        catch (EgovBizException e) {
+            if (!"any".equals(r.path("who").asText()) || !"dd.401.auth".equals(e.getMessageKey())) throw e;
+            Map<String, Object> s = learner(req); if (s == null) throw e;
+            me = String.valueOf(s.get("sid")); a = new HashMap<>(); a.put("tid", s.get("tenant_id")); a.put("uid", "learner:" + me); a.put("email", "learner:" + me); a.put("role", "learner");
+        }
         if ("staff".equals(r.path("roles").asText()) && !List.of("owner", "sub").contains(String.valueOf(a.get("role")))) throw bad(err, "role", null);
         boolean isQ = "GET".equals(r.get("m").asText());
         JsonNode src;
         if (isQ) { ObjectNode q = F.objectNode(); req.getParameterMap().forEach((k, vs) -> { if (vs.length > 0) q.set(k, TextNode.valueOf(vs[vs.length - 1])); }); src = q; }
         else { src = DdWeb.readBody(body, r.has("max") ? r.get("max").asInt() : 16384); if (!src.isObject()) throw bad(err, "bad_input", "body"); }
+        if (me != null) {
+            boolean hasM = false, hasV = false; for (JsonNode d : arr(r.get("params"))) { hasM |= "member_no".equals(d.get(0).asText()); hasV |= "view".equals(d.get(0).asText()); }
+            if (hasM) ((ObjectNode) src).put("member_no", me); if (hasV) ((ObjectNode) src).put("view", "student");
+        }
         Map<String, Object> P = new HashMap<>();
-        P.put("_actor", a.get("email")); P.put("_role", a.get("role"));
+        P.put("_actor", a.get("email")); P.put("_role", a.get("role")); P.put("_me", me);
         P.put("_ip", web.ip(req).replaceFirst("^::ffff:", ""));
         String ua = req.getHeader("user-agent"); ua = cut(ua == null ? "" : ua, 200); P.put("_ua", ua.isEmpty() ? null : ua);
         List<JsonNode> params = arr(r.get("params"));

@@ -33,5 +33,6 @@ public interface LmsGMapper {
     List<String> beacons(Map<String, Object> p);
     List<String> beaconSet(Map<String, Object> p);
     List<String> anomalies(Map<String, Object> p);
+    List<String> my(Map<String, Object> p);
     List<String> log(Map<String, Object> p);
 }

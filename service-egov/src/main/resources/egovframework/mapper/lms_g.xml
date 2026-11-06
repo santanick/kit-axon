@@ -188,6 +188,17 @@
     select case when not exists (select 1 from sec) then '{"err":"not_found"}' else coalesce((select json_agg(x order by x.last_at desc, x.member_no, x.kind) from (
       select p.member_no, p.unit_code, al.title content_title, al.week_no, al.k kind, count(*)::int n, lms_ts(max(al.at)) last_at from al join lms_person p on p.person_id = al.person_id
       group by p.member_no, p.unit_code, al.title, al.week_no, al.k limit 500) x), '[]')::text end]]></select>
+  <select id="my" parameterType="map" resultType="string" flushCache="true" useCache="false"><![CDATA[with me as (select person_id from lms_person where member_no = #{member_no,jdbcType=VARCHAR}),
+    en as (select e.section_id, e.kind from lms_enrollment e, me where e.person_id = me.person_id and e.status = 'enrolled')
+    select json_build_object('member_no', #{member_no,jdbcType=VARCHAR}, 'found', exists (select 1 from me), 'sections', coalesce((select json_agg(json_build_object('section_id', s.section_id, 'title', s.title, 'term_id', s.term_id, 'mode', s.mode, 'kind', en.kind,
+      'rule', (select json_build_object('methods', coalesce(to_json(r.methods), '["code","qr","nfc","ble","photo","online","manual"]'::json), 'require_identity', coalesce(r.require_identity, false), 'late_after_min', coalesce(r.late_after_min, 10), 'absent_after_min', coalesce(r.absent_after_min, 30))
+        from (select 1) k left join lms_attendance_rule r on r.section_id = s.section_id),
+      'sessions', (select coalesce(json_agg(json_build_object('session_id', ss.session_id, 'week_no', ss.week_no, 'seq', ss.seq, 'kind', ss.kind, 'starts_at', lms_ts(ss.starts_at), 'room', ss.room, 'status', a.status, 'method', a.method, 'reason', a.reason,
+          'open', ss.kind <> 'holiday' and ss.starts_at is not null and now() between ss.starts_at - interval '10 minutes' and ss.starts_at + make_interval(mins => coalesce(r2.absent_after_min, 30))) order by ss.week_no, ss.seq), '[]')
+        from lms_session ss left join lms_attendance a on a.session_id = ss.session_id and a.person_id = (select person_id from me) left join lms_attendance_rule r2 on r2.section_id = ss.section_id where ss.section_id = s.section_id),
+      'sum', (select json_build_object('present', count(*) filter (where a.status = 'present'), 'late', count(*) filter (where a.status = 'late'), 'absent', count(*) filter (where a.status = 'absent'), 'excused', count(*) filter (where a.status = 'excused'),
+          'past', count(*) filter (where ss.kind <> 'holiday' and ss.starts_at <= now())) from lms_session ss left join lms_attendance a on a.session_id = ss.session_id and a.person_id = (select person_id from me) where ss.section_id = s.section_id))
+      order by s.term_id desc, s.course_code, s.section_no) from en join lms_section s on s.section_id = en.section_id), '[]'))::text]]></select>
   <select id="log" parameterType="map" resultType="string" flushCache="true" useCache="false"><![CDATA[select coalesce(json_agg(json_build_object('member_no', p.member_no, 'before', l.before, 'after', l.after, 'reason', l.reason, 'actor', l.actor, 'at', lms_ts(l.at)) order by l.at desc, p.member_no), '[]')::text
     from lms_attendance_log l join lms_person p on p.person_id = l.person_id where l.session_id = cast(#{session_id,jdbcType=VARCHAR} as uuid)]]></select>
 </mapper>

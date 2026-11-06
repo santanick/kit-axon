@@ -64,13 +64,28 @@ async function scenario(base, tag) {
   R.workload = await call('GET', '/api/lms/i/workload?section_id=' + sec, { cookie: ck });
   R.act = await call('POST', '/api/lms/i/activity', { cookie: ck, body: { section_id: sec, member_no: '20269001', kind: 'download', ref: '1주차 강의자료.pdf' } });
   R.actBad = await call('POST', '/api/lms/i/activity', { cookie: ck, body: { section_id: sec, member_no: '20269001', kind: 'hack' } });
+  /* 학습자 포털 세션 */
+  const tid = await L.tidOf(base, ck); const lk = await L.learnerCookie(tid, '20269003');
+  R.lMy = await call('GET', '/api/lms/i/my', { cookie: lk });
+  R.lMyStaff = await call('GET', '/api/lms/i/my?member_no=20269003', { cookie: ck });
+  R.lStart = await call('POST', '/api/lms/i/play/start', { cookie: lk, body: { content_id: cid, member_no: '20269001' } });
+  R.lBeat = await call('POST', '/api/lms/i/play/beat', { cookie: lk, body: { play_id: R.lStart.j.play_id, from: 0, pos: 2, rate: 1 } });
+  const other = await call('POST', '/api/lms/i/play/start', { cookie: ck, body: { content_id: c1, member_no: '20269004' } });
+  R.lBeatOther = await call('POST', '/api/lms/i/play/beat', { cookie: lk, body: { play_id: other.j.play_id, from: 0, pos: 2, rate: 1 } });
+  R.lEndOther = await call('POST', '/api/lms/i/play/end', { cookie: lk, body: { play_id: other.j.play_id } });
+  R.lQuiz = await call('GET', '/api/lms/i/quizzes?content_id=' + cid, { cookie: lk });
+  R.lAns = await call('POST', '/api/lms/i/quiz/answer', { cookie: lk, body: { quiz_id: R.quiz.j.quiz_id, choice: 1 } });
+  R.lQuiz2 = await call('GET', '/api/lms/i/quizzes?content_id=' + cid, { cookie: lk });
+  R.lEnd = await call('POST', '/api/lms/i/play/end', { cookie: lk, body: { play_id: R.lStart.j.play_id, pos: 2 } });
+  R.lSubs = await call('GET', '/api/lms/i/subtitles?content_id=' + cid, { cookie: lk });
+  R.lProg = await call('GET', '/api/lms/i/progress?section_id=' + sec, { cookie: lk });
   R.history = await call('GET', '/api/lms/i/history?section_id=' + sec + '&member_no=20269001', { cookie: ck });
   R.historyAll = await call('GET', '/api/lms/i/history?section_id=' + sec, { cookie: ck });
   return R;
 }
 const EXPECT = { noAuth: 401, seed: 200, contents: 200, addBad: 400, add: 200, startNe: 403, start: 200, block: 200, beat1: 200, beatCap: 200, beatRate: 400, beatSpeed: 200, beatSkip: 200, beatBad: 400, end: 200, beatOver: 409, endOver: 409,
   resume: 200, s2end: 200, progress: 200, online: 200, roster: 200, anom: 200, vtt: 200, srt: 200, subBad: 400, subLang: 400, cues: 200, cuesBad: 400, cuesObj: 400, subs: 200, quiz: 200, quiz2: 200, quizBad: 400, quizChoice: 400,
-  ans1: 200, ans2: 200, ansDup: 409, quizzes: 200, workload: 200, act: 200, actBad: 400, history: 200, historyAll: 200 };
+  ans1: 200, ans2: 200, ansDup: 409, quizzes: 200, workload: 200, act: 200, actBad: 400, history: 200, historyAll: 200, lMy: 200, lMyStaff: 200, lStart: 200, lBeat: 200, lBeatOther: 404, lEndOther: 409, lQuiz: 200, lAns: 200, lQuiz2: 200, lEnd: 200, lSubs: 200, lProg: 401 };
 function checks(R, ok) {
   ok(R.seed.j && R.seed.j.created === 15 && R.seed2.j.created === 0, '주차 영상 15개 · 재실행 0');
   ok(R.block.j && R.block.j.blocked === true, '동시 재생 차단');
@@ -85,6 +100,9 @@ function checks(R, ok) {
   ok(R.subs.j && R.subs.j.find(s => s.lang === 'ko').cues[0].t === '수정된 첫 줄', '자막 편집 정렬');
   ok(R.ans1.j && R.ans1.j.correct === true && R.ans2.j.correct === false && R.ans2.j.score === 66.67, '퀴즈 성적 반영 ' + JSON.stringify(R.ans2.j));
   ok(R.workload.j && R.workload.j.sessions.find(s => s.week_no === 3).short === false && R.workload0.j.short_count > 0, '학습분량 점검');
+  ok(R.lMy.j && R.lMy.j.found && JSON.stringify(R.lMy.j) === JSON.stringify(R.lMyStaff.j) && R.lMy.j.sections[0].contents.length === 16, '내 강의 영상 = 이 사용자로 보기');
+  ok(R.lBeat.j && R.lBeat.j.credited === 2 && R.lAns.j && R.lAns.j.correct === true, '학습자 재생 · 퀴즈(학번 고정)');
+  ok(R.lQuiz.j && R.lQuiz.j.every(q => q.answer === null) && R.lQuiz2.j.find(q => q.mine).answer === 1, '학습자에게 정답 숨김(응답 후 공개)');
   ok(R.history.j && R.history.j.plays.length >= 2 && R.history.j.plays[0].ip_masked.endsWith('*') && R.history.j.activities.length === 1, '학습 이력');
 }
 L.run({ name: 'I', A, B, scenario, EXPECT, checks, bundle: 'i' });

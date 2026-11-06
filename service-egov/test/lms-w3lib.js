@@ -55,4 +55,10 @@ async function run({ name, A, B, scenario, EXPECT, checks, bundle }) {
   console.log(`lms-${bundle} 대조: ${pass} 통과 / ${fail} 실패 (검사 ${pass + fail})`); errs.slice(0, 40).forEach(e => console.log(' ✗ ' + e));
   process.exit(fail ? 1 : 0);
 }
-module.exports = { caller, signup, norm, run };
+/* 학습자 포털 세션 쿠키(dd_lsid) — DB에 직접 만든다(SSO 없이 학습자 로그인과 같은 상태) */
+let pg; try { pg = require('pg'); } catch { pg = require(path.join(__dirname, '../../service/server/node_modules/pg')); }
+const crypto = require('node:crypto');
+async function db(fn) { const c = new pg.Client({ connectionString: process.env.DATABASE_URL || 'postgres://didisam@127.0.0.1:5544/ddw3' }); await c.connect(); try { return await fn(c); } finally { await c.end(); } }
+async function tidOf(base, ck) { const r = await fetch(base + '/api/me', { headers: { cookie: ck } }); return (await r.json()).tenant.tid; }
+async function learnerCookie(tid, sid) { const t = crypto.randomBytes(32).toString('base64url'); await db(c => c.query("insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval '1 hour')", [crypto.createHash('sha256').update(t).digest('hex'), tid, sid])); return 'dd_lsid=' + t; }
+module.exports = { caller, signup, norm, run, db, tidOf, learnerCookie };

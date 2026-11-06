@@ -24,5 +24,6 @@ public interface LmsIMapper {
     List<String> quizAnswer(Map<String, Object> p);
     List<String> workload(Map<String, Object> p);
     List<String> history(Map<String, Object> p);
+    List<String> my(Map<String, Object> p);
     List<String> activity(Map<String, Object> p);
 }

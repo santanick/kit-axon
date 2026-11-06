@@ -1,0 +1,34 @@
+/* v30 학사 LMS 묶음 G · I · J 학습자 앱 카드(ldds 토큰 사용, 없으면 기본값) */
+#gijMy .gij-seg{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+#gijMy .gij-seg button{border:1px solid var(--line,#ddd);background:transparent;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;min-height:36px}
+#gijMy .gij-seg button.on{background:var(--ink,#222);color:#fff;border-color:var(--ink,#222)}
+#gijMy .gij-f{display:flex;flex-direction:column;gap:4px;font-size:13px;margin:8px 0}
+#gijMy .gij-f input,#gijMy .gij-f select,#gijMy textarea{font:inherit;padding:8px 10px;border:1px solid var(--line,#ccc);border-radius:8px;min-height:40px;width:100%;box-sizing:border-box}
+#gijMy #gijCode{font-size:24px;letter-spacing:.3em;text-align:center}
+#gijMy .gij-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#gijMy .gij-ck{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:8px 0;line-height:1.5}
+#gijMy .gij-res{padding:10px 12px;border-radius:8px;font-weight:600;margin-top:10px}
+#gijMy .gij-res.ok{background:#E7F8E8;color:#007200}#gijMy .gij-res.bad{background:#FFEAEE;color:#B00020}
+#gijMy .gij-cam{width:100%;max-height:260px;border-radius:8px;background:#000;margin:8px 0}
+#gijMy .gij-sec{border-top:1px solid var(--line,#eee);padding:10px 0}
+#gijMy .gij-kp{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin:6px 0}
+#gijMy .gij-cells{display:flex;flex-wrap:wrap;gap:4px}
+#gijMy .gij-cells i{font-style:normal;width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;background:#F1F2F2;color:#808181}
+#gijMy .gij-cells i.st-present{background:#E7F8E8;color:#007200}#gijMy .gij-cells i.st-late{background:#FFF3E0;color:#B85400}#gijMy .gij-cells i.st-absent{background:#FFEAEE;color:#B00020}#gijMy .gij-cells i.st-excused{background:#E3F3FC;color:#0B6FB0}
+#gijMy .gij-ul{list-style:none;padding:0;margin:6px 0;display:grid;gap:8px}
+#gijMy .gij-ul li{display:grid;grid-template-columns:1fr 80px auto;gap:8px;align-items:center;font-size:13px}
+#gijMy .gij-ul small{color:var(--mut,#666)}
+#gijMy .gij-bar{height:6px;background:#EAEBEB;border-radius:3px;overflow:hidden}#gijMy .gij-bar i{display:block;height:100%;background:var(--ink,#4257D7)}
+#gijMy .gij-scr{position:relative;aspect-ratio:16/9;background:#111;color:#fff;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center;font-size:14px}
+#gijMy .gij-scr video{width:100%;height:100%}
+#gijMy .gij-capt{position:absolute;left:0;right:0;bottom:10px;text-shadow:0 1px 3px #000;padding:0 8px;font-size:15px}
+#gijMy .gij-quiz{position:absolute;inset:0;background:rgba(20,20,20,.9);display:flex;flex-direction:column;justify-content:center;gap:8px;padding:14px}
+#gijMy .gij-quiz button{background:#fff;color:#222;border:0;border-radius:6px;padding:10px;text-align:left;font:inherit;cursor:pointer}
+#gijMy #gijPos{width:100%;margin:8px 0}
+#gijMy .gij-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#gijMy .gij-tr{max-height:200px;overflow:auto;border:1px solid var(--line,#eee);border-radius:8px;margin-top:8px}
+#gijMy .gij-tr button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:6px 8px;font:inherit;font-size:13px;cursor:pointer}
+#gijMy .gij-tr button.on{background:#EAEDFF;font-weight:600}
+#gijMy .gij-rf{border-top:1px solid var(--line,#eee);padding:8px 0;font-size:13px}
+#gijMy .gij-rf p{margin:4px 0;white-space:pre-wrap}#gijMy .gij-cm{color:#2E40B3}
+@media (max-width:480px){#gijMy .gij-ul li{grid-template-columns:1fr auto}#gijMy .gij-ul .gij-bar{grid-column:1/-1;order:3}}

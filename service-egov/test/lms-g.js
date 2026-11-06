@@ -75,6 +75,20 @@ async function scenario(base, tag) {
   R.beacon = await call('POST', '/api/lms/g/beacon', { cookie: ck, body: { beacon_id: 'BLE-HUM101', kind: 'ble', room: '인문관 101' } });
   R.beaconBad = await call('POST', '/api/lms/g/beacon', { cookie: ck, body: { beacon_id: 'X1', kind: 'wifi', room: 'a' } });
   R.anomalies = await call('GET', '/api/lms/g/anomalies?section_id=' + sec, { cookie: ck });
+  /* 학습자 포털 세션: 본인 학번으로 고정(다른 학번을 보내도 본인), 운영 전용 경로는 401 */
+  const tid = await L.tidOf(base, ck); const lk = await L.learnerCookie(tid, '20269006'); const lk9 = await L.learnerCookie(tid, '20269009');
+  R.lMy = await call('GET', '/api/lms/g/my', { cookie: lk });
+  R.lMyStaff = await call('GET', '/api/lms/g/my?member_no=20269006', { cookie: ck });
+  R.lMyNo = await call('GET', '/api/lms/g/my');
+  R.lCode = await call('POST', '/api/lms/g/code', { cookie: lk, body: { session_id: S(1) } });
+  R.lRoster = await call('GET', '/api/lms/g/roster?section_id=' + sec, { cookie: lk });
+  R.code6 = await call('POST', '/api/lms/g/code', { cookie: ck, body: { session_id: S(6) } });
+  await call('POST', '/api/lms/g/session', { cookie: ck, body: { session_id: S(6), starts_at: ago(1) } });
+  await call('POST', '/api/lms/g/rule', { cookie: ck, body: { section_id: sec, methods: ['code', 'qr', 'photo', 'manual', 'online'], require_identity: false } });
+  R.lCheck = await call('POST', '/api/lms/g/checkin', { cookie: lk, body: { session_id: S(6), member_no: '20269001', method: 'code', code: R.code6.j.code } });
+  R.lCheckDup = await call('POST', '/api/lms/g/checkin', { cookie: lk, body: { session_id: S(6), method: 'code', code: R.code6.j.code } });
+  R.lAudit = await call('POST', '/api/lms/g/checkin', { cookie: lk9, body: { session_id: S(6), method: 'code', code: R.code6.j.code } });
+  R.lMy2 = await call('GET', '/api/lms/g/my', { cookie: lk });
   R.rosterNf = await call('GET', '/api/lms/g/roster?section_id=00000000-0000-0000-0000-000000000000', { cookie: ck });
   return R;
 }
@@ -82,7 +96,7 @@ async function scenario(base, tag) {
 const EXPECT = { noAuth: 401, csrf: 403, seed: 200, sessNo: 400, sessBad: 400, set1: 200, setBad: 400, setNf: 404, codeTtl: 400, code: 200, ciWrong: 400, ciCode: 200, ciDup: 409, ciAudit: 403, ciNone: 403, ciMethod: 400,
   qr: 200, ciQrBad: 400, ciQr: 200, ciTagBad: 400, ciNfc: 200, ciGeo0: 400, ciGeoBad: 400, ciPhoto: 200, ciLate: 200, ciClosed: 409, ciNotOpen: 409, ruleSet: 200, ruleBad: 400, ciIdv: 428, ciIdvOk: 200, ciNfcOff: 403,
   markNoReason: 400, markEx: 200, markAudit: 403, markBad: 400, adjust: 200, adjustNoReason: 400, log: 200, copy: 200, copyNone: 404, holiday: 200, codeHoliday: 409, makeup: 200, online: 200, roster: 200, export: 200,
-  beacons: 200, beacon: 200, beaconBad: 400, anomalies: 200, rosterNf: 404 };
+  beacons: 200, beacon: 200, beaconBad: 400, anomalies: 200, rosterNf: 404, lMy: 200, lMyStaff: 200, lMyNo: 401, lCode: 401, lRoster: 401, code6: 200, lCheck: 200, lCheckDup: 409, lAudit: 403, lMy2: 200 };
 function checks(R, ok) {
   ok(R.ciCode.j && R.ciCode.j.status === 'present' && R.ciCode.j.method === 'code', 'code → present');
   ok(R.ciLate.j && R.ciLate.j.status === 'late', '15분 지각');
@@ -94,6 +108,9 @@ function checks(R, ok) {
   ok(R.roster.j && R.roster.j.students.length === 8 && R.roster.j.audit_excluded === 1, '청강생 제외 8명');
   ok(R.export.j && R.export.j.rows.length === 8 && R.export.j.rows[0][2] === '○' && R.export.j.columns.length === R.export.j.rows[0].length, '출석부 양식');
   ok(R.makeup.j && R.makeup.j.seq === 2 && R.makeup.j.makeup_of, '보강 차시');
+  ok(R.lCheck.j && R.lCheck.j.member_no === '20269006' && R.lCheck.j.status === 'present', '학습자 본인 출석(학번 고정)');
+  ok(R.lMy.j && R.lMy.j.found && R.lMy.j.sections.length === 1 && JSON.stringify(R.lMy.j) === JSON.stringify(R.lMyStaff.j), '내 출결 = 운영자 「이 사용자로 보기」');
+  ok(R.lMy2.j && R.lMy2.j.sections[0].sessions.find(x => x.week_no === 6).status === 'present', '내 출결 반영');
   ok(/^\d{6}$/.test(R.code.j.code) && /^DDATT1\./.test(R.qr.j.qr), '코드 · QR 형식');
 }
 

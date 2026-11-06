@@ -123,10 +123,10 @@ const SPEC = [
   { m: 'POST', p: '/api/lms/j/feedback', params: [['section_id', 'uuid', 1], ['member_no', 'mno'], ['audience', 'enum', 1, AUD]], stmts: ['feedback'], audit: 'lms.j.feedback' },
   { m: 'POST', p: '/api/lms/j/feedback/save', params: [['section_id', 'uuid', 1], ['member_no', 'mno'], ['audience', 'enum', 1, AUD], ['body', 'text', 1, 4000], ['source', 'enum', 1, ['ai', 'edited']]], stmts: ['feedbackSave'], audit: 'lms.j.feedback' },
   { m: 'GET', p: '/api/lms/j/feedbacks', params: [['section_id', 'uuid', 1], ['member_no', 'mno']], stmts: ['feedbacks'] },
-  { m: 'POST', p: '/api/lms/j/reflection', params: [['section_id', 'uuid', 1], ['member_no', 'mno', 1], ['week_no', 'int', 1, 1, 20], ['body', 'text', 1, 4000], ['mood', 'int', 0, 1, 5]], stmts: ['reflAdd'], audit: 'lms.j.reflection' },
-  { m: 'GET', p: '/api/lms/j/reflections', params: [['section_id', 'uuid', 1], ['member_no', 'mno']], stmts: ['reflList'] },
+  { m: 'POST', p: '/api/lms/j/reflection', who: 'any', params: [['section_id', 'uuid', 1], ['member_no', 'mno', 1], ['week_no', 'int', 1, 1, 20], ['body', 'text', 1, 4000], ['mood', 'int', 0, 1, 5]], stmts: ['reflAdd'], audit: 'lms.j.reflection' },
+  { m: 'GET', p: '/api/lms/j/reflections', who: 'any', params: [['section_id', 'uuid', 1], ['member_no', 'mno']], stmts: ['reflList'] },
   { m: 'POST', p: '/api/lms/j/reflection/comment', params: [['id', 'uuid', 1], ['comment', 'text', 1, 1000]], stmts: ['reflComment'], audit: 'lms.j.reflection.comment' },
-  { m: 'GET', p: '/api/lms/j/report', params: [['section_id', 'uuid', 1], ['member_no', 'mno', 1], ['view', 'enum', 0, AUD, 0, 'professor']], stmts: ['report'] }
+  { m: 'GET', p: '/api/lms/j/report', who: 'any', params: [['section_id', 'uuid', 1], ['member_no', 'mno', 1], ['view', 'enum', 0, AUD, 0, 'professor']], stmts: ['report'] }
 ];
 
 module.exports = ctx => engine(ctx, SPEC, SQL);

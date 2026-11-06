@@ -28,5 +28,6 @@ public class LmsGController {
     @GetMapping("/api/lms/g/beacons") public Object getBeacons(HttpServletRequest req) throws Exception { return svc.call("GET /api/lms/g/beacons", req, null); }
     @PostMapping("/api/lms/g/beacon") public Object postBeacon(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return svc.call("POST /api/lms/g/beacon", req, body); }
     @GetMapping("/api/lms/g/anomalies") public Object getAnomalies(HttpServletRequest req) throws Exception { return svc.call("GET /api/lms/g/anomalies", req, null); }
+    @GetMapping("/api/lms/g/my") public Object getMy(HttpServletRequest req) throws Exception { return svc.call("GET /api/lms/g/my", req, null); }
     @GetMapping("/api/lms/g/log") public Object getLog(HttpServletRequest req) throws Exception { return svc.call("GET /api/lms/g/log", req, null); }
 }
