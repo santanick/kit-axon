@@ -45,7 +45,7 @@ jobs:
           for i in $(seq 1 90); do curl -sf localhost:8090/api/health && exit 0; sleep 1; done
           tail -40 /tmp/java.log; exit 1
       - name: 운영 모드 전 구간
-        env: { DATABASE_URL: 'postgresql://didisam:ci-only-pw@localhost:5432/didisam', COOKIE_SECURE: '0', TRUST_PROXY_HOPS: '0', SIGNUP_CODE: C0DE, SESSION_PEPPER: ci-only, PORT: '8091', PII_KEY: 0000000000000000000000000000000000000000000000000000000000000000 }
+        env: { DATABASE_URL: 'postgresql://didisam:ci-only-pw@localhost:5432/didisam', COOKIE_SECURE: '0', TRUST_PROXY_HOPS: '0', SIGNUP_CODE: C0DE, PII_DEV_OTP: '1', SESSION_PEPPER: ci-only, PORT: '8091', PII_KEY: '0000000000000000000000000000000000000000000000000000000000000000' }
         run: |
           node service/build-public.js didisam service/public
           (cd service && node server/index.js &) 
