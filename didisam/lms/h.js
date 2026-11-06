@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   if (!window.EFH) return;
-  const { ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, secPick, demoStudents, rid, r2, fmt, ERR, nowIso, css, mno, peek } = EFH;
+  const { ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, secPick, demoStudents, rid, r2, fmt, ERR, nowIso, css, mno, peek, todo, dots, tabs4, mi } = EFH;
   const CAT = { midterm: '중간고사', final: '기말고사', assignment: '과제', quiz: '퀴즈', attendance: '출석', participation: '참여', project: '프로젝트', other: '기타' };
   const SCALE = { abc: '절대평가(A+~F)', relative: '상대평가', score: '점수', pct: '백분율', pass: 'P/NP' };
   const CUT0 = [['A+', 95], ['A0', 90], ['B+', 85], ['B0', 80], ['C+', 75], ['C0', 70], ['D+', 65], ['D0', 60], ['F', 0]];
@@ -71,27 +71,41 @@
   VIEWS.grade = () => { if (!ON()) return base ? base() : ''; css(); return gradeView() + (base ? `<details class="card efh-old"><summary>간편 성적 보기(이전 데모 화면)</summary>${base()}</details>` : ''); };
   function gradeView() {
     const P = secPick('lmshSec', 'lmsh-sec'); const tab = UI.lmshT || 'board';
-    let h = head('성적', '수업계획서 평가 비율로 항목 점수를 환산하고, 등급 방식(절대 · 상대 · P/NP) · 평균 조정 · 비공개를 정해 확정합니다. 확정 성적은 학사 전송 대기 목록에 쌓입니다(학사 전송은 연동 후 동작). 청강생은 산출에서 제외합니다.') + P.html;
+    let h = head('성적', '평가 항목 점수를 수업계획서 비율로 환산해 등급을 내고, 확정해 학사로 보냅니다(학사 전송은 연동 후 동작). 청강생은 산출에서 제외합니다.') + P.html;
     if (!P.sec) return h; const sec = P.sec.section_id;
-    h += tabs('lmshT', [['board', '종합 평가 보드'], ['items', '평가 항목 · 점수 입력'], ['policy', '등급 · 조정 · 공개'], ['confirm', '확정 · 이력 · 학사 전송'], ['msg', '학생 선택 · 안내']], tab);
-    const r = load('lmsh:b:' + sec, () => call('GET', '/api/lms/h/board', { section: sec })); if (!r) return h + wait(); if (r.err) return h + errBox(r.err); const B = r.ok;
+    const r = load('lmsh:b:' + sec, () => call('GET', '/api/lms/h/board', { section: sec })); if (r && r.ok) h += todoH(r.ok);
+    h += tabs4('lmshT', [['board', '종합 평가 보드'], ['items', '평가 항목 · 점수 입력'], ['confirm', '확정 · 학사 전송']], tab, [['policy', '등급 방식 · 조정 · 공개'], ['msg', '조건으로 학생 골라 안내']]);
+    if (!r) return h + wait(); if (r.err) return h + errBox(r.err); const B = r.ok;
     if (tab === 'items') return h + itemsView(B); if (tab === 'policy') return h + policyView(B); if (tab === 'confirm') return h + confirmView(B); if (tab === 'msg') return h + msgView(B);
-    const mx = Math.max(1, ...B.hist.map(x => x.n));
-    return h + `<div class="kpis">${kpi('정규 수강생', B.stats.n)}${kpi('평균', B.stats.mean ?? '-')}${kpi('표준편차', B.stats.sd ?? '-')}${kpi('비율 합계', B.weight_sum + '%', B.weight_sum === 100 ? '' : '100%가 되어야 확정', B.weight_sum === 100 ? '' : 'warn')}${kpi('상태', B.policy.status === 'confirmed' ? '확정' : '미확정')}</div>
-      <div class="card"><div class="ch"><b>성적 분포</b><small>${esc(SCALE[B.policy.scale])}${B.policy.adjust.mode !== 'none' ? ` · 평균 조정(${B.policy.adjust.mode === 'shift' ? '가산' : '비례'} → ${B.policy.adjust.target}, 조정 전 평균 ${B.stats.mean_raw})` : ''}${B.policy.hidden ? ' · 학생에게 비공개' : ''}</small></div>
+    const mx = Math.max(1, ...B.hist.map(x => x.n)); const op = UI.lmshRow;
+    const row = x => `<tr class="efh-row${op === x.member_no ? ' on' : ''}" data-act="lmsh-row" data-v="${esc(x.member_no)}" tabindex="0" title="눌러서 항목별 점수 보기"><td><b>${esc(x.member_no)}</b><small class="efh-sub2">${esc(x.unit_code || '')}${x.missing ? ` · 미입력 ${x.missing}` : ''}</small></td><td><b>${x.total}</b>${x.total !== x.raw ? `<small class="efh-sub2">조정 전 ${x.raw}</small>` : ''}</td><td>${x.letter ? tag(x.letter, /^F|NP/.test(x.letter) ? 'r' : '') : '-'}</td><td>${x.rank}</td><td>${x.final ? `${esc(x.final.letter || String(x.final.total))}${x.final.sent_at ? ' ✓' : ''}` : '<span class="muted">-</span>'}</td></tr>`
+      + (op === x.member_no ? `<tr class="efh-det"><td colspan="5">${B.items.map(i => `<span class="efh-kv"><small>${esc(i.name)} ${i.weight_pct}%</small><b>${x.scores[i.item_id] == null ? '-' : x.scores[i.item_id]}</b><small>/ ${i.max_score}</small></span>`).join('')}</td></tr>` : '');
+    return h + `<div class="kpis">${kpi('정규 수강생', B.stats.n)}${kpi('평균', B.stats.mean ?? '-')}${kpi('비율 합계', B.weight_sum + '%', B.weight_sum === 100 ? '' : '100%가 되어야 확정', B.weight_sum === 100 ? '' : 'warn')}${kpi('상태', B.policy.status === 'confirmed' ? '확정' : '미확정')}</div>
+      <div class="card"><div class="ch"><b>성적 분포</b><small>${esc(SCALE[B.policy.scale])}${B.policy.adjust.mode !== 'none' ? ` · 평균 조정(${B.policy.adjust.mode === 'shift' ? '가산' : '비례'} → ${B.policy.adjust.target}, 조정 전 평균 ${B.stats.mean_raw})` : ''}${B.policy.hidden ? ' · 학생에게 비공개' : ''} · 표준편차 ${B.stats.sd ?? '-'}</small></div>
         <div class="efh-hist" role="img" aria-label="총점 분포">${B.hist.map(x => `<div title="${x.from}~${x.to}: ${x.n}명"><i style="height:${100 * x.n / mx}%"></i></div>`).join('')}</div><div class="efh-hist" style="height:auto">${B.hist.map(x => `<small style="flex:1">${x.from}</small>`).join('')}</div>
         <p>${B.dist.map(d => tag(`${d.letter} ${d.n}명`, /^F|NP/.test(d.letter) ? 'r' : '')).join(' ')}</p></div>
-      <div class="card efh-wrap"><div class="ch"><b>종합 평가 보드</b><small>청강 ${B.auditors}명 제외 · 과제 · 시험 점수는 자동 반영</small><span class="efh-acts"><button class="btn sm" data-act="lmsh-xls">엑셀(CSV) 내려받기</button></span></div>
-        ${table(['학번', '학과', ...B.items.map(i => `${i.name}(${i.weight_pct}%)`), '환산', '조정', '등급', '순위', '확정'], B.rows.map(x => [esc(x.member_no), esc(x.unit_code || ''), ...B.items.map(i => x.scores[i.item_id] == null ? '<span class="muted">-</span>' : String(x.scores[i.item_id])), String(x.raw), `<b>${x.total}</b>`, x.letter ? tag(x.letter, /^F|NP/.test(x.letter) ? 'r' : '') : '-', String(x.rank), x.final ? `${x.final.letter || x.final.total}${x.final.sent_at ? ' ✓' : ''}` : '']), '정규 수강생이 없습니다.')}</div>`;
+      <div class="card"><div class="ch"><b>종합 평가 보드</b><small>청강 ${B.auditors}명 제외 · 과제 · 시험 점수는 자동 반영 · 행을 누르면 항목별 점수</small><span class="efh-acts">${dots([mi('lmsh-xls', '엑셀(CSV) 내려받기')], '성적표 다른 작업')}</span></div>
+        ${B.rows.length ? `<div class="tw nomcard"><table class="efh-board"><thead><tr><th>학번</th><th>총점</th><th>등급</th><th>순위</th><th>확정</th></tr></thead><tbody>${B.rows.map(row).join('')}</tbody></table></div>` : '<div class="empty">정규 수강생이 없습니다.</div>'}</div>`;
+  }
+  ACT['lmsh-row'] = el => { UI.lmshRow = UI.lmshRow === el.dataset.v ? null : el.dataset.v; render(); };
+  /* 지금 할 일: 비율 합계 → 미입력 점수 → 확정 → 학사 전송 순 */
+  function todoH(B) {
+    const cur = UI.lmshT || 'board'; const go = (t, l) => cur === t ? '' : `<button class="btn sm${cur === 'board' ? ' pri' : ''}" data-act="tab" data-key="lmshT" data-v="${t}">${l}</button>`;
+    const miss = B.rows.reduce((s, r) => s + r.missing, 0);
+    if (B.weight_sum !== 100 && B.weight_sum !== 0) return todo(`평가 비율 합계가 <b>${B.weight_sum}%</b>입니다. 100%로 맞춰야 확정할 수 있습니다.`, go('items', '비율 맞추기'));
+    if (!B.items.length) return todo('평가 항목이 없습니다. 수업계획서 비율을 불러와 시작하세요.', go('items', '평가 항목 만들기'));
+    if (miss) return todo(`점수 미입력 <b>${miss}건</b> (학생 ${B.rows.filter(r => r.missing).length}명) · 평균 ${B.stats.mean == null ? '-' : Math.round(B.stats.mean * 10) / 10}`, go('items', '점수 입력'));
+    if (B.policy.status !== 'confirmed') return todo(`모든 점수가 들어왔습니다 · 평균 ${B.stats.mean ?? '-'} · 아직 확정 전`, go('confirm', '성적 확정하기'));
+    return todo(`성적 확정 완료(${fmt(B.policy.confirmed_at)}) · 정정은 「확정 · 학사 전송」에서 사유와 함께 남깁니다`);
   }
   ACT['lmsh-sec'] = el => { UI.lmshSec = el.value; render(); };
   const B0 = () => peek('lmsh:b:' + UI.lmshSec);
   ACT['lmsh-xls'] = () => { const B = B0(); if (!B) return; downloadCSV(`성적_${today()}.csv`, ['학번', '학과', ...B.items.map(i => i.name), '환산', '조정 총점', '등급', '순위'], B.rows.map(x => [x.member_no, x.unit_code || '', ...B.items.map(i => x.scores[i.item_id] ?? ''), x.raw, x.total, x.letter || '', x.rank])); };
   function itemsView(B) {
-    return `<div class="card"><div class="ch"><b>평가 항목 · 카테고리</b><small>비율 합계 ${B.weight_sum}% — 과제 · 시험은 만들면 자동으로 항목이 생깁니다(비율 0%로 시작)</small><span class="efh-acts"><button class="btn sm" data-act="lmsh-syl">수업계획서 비율 불러오기</button><button class="btn sm pri" data-act="lmsh-item" data-v="">항목 추가</button></span></div>
-      ${table(['카테고리', '항목', '비율(%)', '만점', '연결', ''], B.items.map(i => [tag(CAT[i.category] || i.category), esc(i.name), `<input type="number" min="0" max="100" step="1" value="${i.weight_pct}" data-chg="lmsh-w" data-v="${esc(i.item_id)}" aria-label="${esc(i.name)} 비율" style="width:80px">`, String(i.max_score), i.source_ref ? tag(i.source_ref.startsWith('asg:') ? '과제 자동' : '시험 자동') : '직접 입력',
+    return `<div class="card"><div class="ch"><b>평가 항목 · 카테고리</b><small>비율 합계 ${B.weight_sum}% — 과제 · 시험은 만들면 자동으로 항목이 생깁니다(비율 0%로 시작)</small><span class="efh-acts"><button class="btn sm" data-act="lmsh-syl">수업계획서 비율 불러오기</button><button class="btn sm" data-act="lmsh-item" data-v="">항목 추가</button></span></div>
+      ${table(['항목', '비율(%)', '만점', ''], B.items.map(i => [`<b>${esc(i.name)}</b><small class="efh-sub2">${esc(CAT[i.category] || i.category)} · ${i.source_ref ? (i.source_ref.startsWith('asg:') ? '과제 자동' : '시험 자동') : '직접 입력'}</small>`, `<input type="number" min="0" max="100" step="1" value="${i.weight_pct}" data-chg="lmsh-w" data-v="${esc(i.item_id)}" aria-label="${esc(i.name)} 비율" style="width:80px">`, String(i.max_score),
         `<button class="btn sm" data-act="lmsh-input" data-v="${esc(i.item_id)}">점수 입력</button> <button class="btn sm" data-act="lmsh-item" data-v="${esc(i.item_id)}">편집</button>`]), '평가 항목이 없습니다. 「수업계획서 비율 불러오기」를 누르세요.')}</div>
-      <div class="card"><div class="ch"><b>엑셀(CSV) 업로드</b><small>첫 줄: 학번, 항목 이름… (내려받은 성적 파일을 고쳐 올려도 됩니다)</small></div><input type="file" accept=".csv,text/csv" data-chg="lmsh-csv" aria-label="CSV 파일"><textarea id="lmshCsv" rows="4" class="efh-ta" placeholder="학번,중간고사,기말고사&#10;20261001,95,92"></textarea><div class="efh-acts"><button class="btn sm pri" data-act="lmsh-up">올리기</button></div></div>`;
+      <details class="card efh-set"><summary>엑셀(CSV)로 점수 한꺼번에 올리기</summary><div class="ch"><b>엑셀(CSV) 업로드</b><small>첫 줄: 학번, 항목 이름… (내려받은 성적 파일을 고쳐 올려도 됩니다)</small></div><input type="file" accept=".csv,text/csv" data-chg="lmsh-csv" aria-label="CSV 파일"><textarea id="lmshCsv" rows="4" class="efh-ta" placeholder="학번,중간고사,기말고사&#10;20261001,95,92"></textarea><div class="efh-acts"><button class="btn sm pri" data-act="lmsh-up">올리기</button></div></details>`;
   }
   ACT['lmsh-w'] = el => { const B = B0(); const i = B && B.items.find(x => x.item_id === el.dataset.v); if (i) run(() => call('POST', '/api/lms/h/item-save', { ...i, weight_pct: el.value }), '', 'lmsh:'); };
   ACT['lmsh-syl'] = () => run(() => call('POST', '/api/lms/h/from-syllabus', { section_id: UI.lmshSec }), '수업계획서 평가 비율을 등록했습니다.', 'lmsh:');

@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   if (!window.EFH) return;
-  const { ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, secPick, demoStudents, rid, r2, fmt, ERR, nowIso, toB64, css, gradeLink, gradePut, mno } = EFH;
+  const { ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, secPick, demoStudents, rid, r2, fmt, ERR, nowIso, toB64, css, gradeLink, gradePut, mno, todo, dots, tabs4, mi } = EFH;
   const DIFF = { easy: '쉬움', mid: '보통', hard: '어려움' }; const KIND = { single: '객관식(단일)', multi: '객관식(복수)', tf: '참/거짓', short: '단답형', numeric: '숫자형', essay: '서술형' };
   const shuffle = a => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
 
@@ -15,7 +15,7 @@
   const qJ = q => ({ ...q, correct_rate: q.attempts_n ? r2(100 * q.correct_n / q.attempts_n) : null });
   const bankJ = b => { const L = st().qs.filter(q => q.bank_id === b.bank_id && !q.deleted); return { ...b, count: L.length, easy: L.filter(q => q.difficulty === 'easy').length, mid: L.filter(q => q.difficulty === 'mid').length, hard: L.filter(q => q.difficulty === 'hard').length }; };
   const bankOk = (b, sec) => b.scope === 'tenant' || (b.scope === 'section' && b.section_id === sec) || (b.scope === 'course' && b.course_key === courseKey(sec));
-  const courseKey = sec => { const c = (S.classes || []).find(x => x.id === sec); return c ? c.name.replace(/\s*\d+분반$/, '') : sec; };
+  const courseKey = sec => { const c = (S.classes || []).find(x => x.id === sec); if (c) return c.name.replace(/\s*\d+분반$/, ''); const a = EFH.aSec && EFH.aSec(sec); return a ? a.course_code : sec; };
   const ids = v => v == null ? [] : (Array.isArray(v) ? v : [v]).map(String).sort();
   const norm = t => String(t ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
   function correct(q, ans) { if (ans == null) return false; if (/single|multi|tf/.test(q.kind)) return JSON.stringify([...new Set(ids(ans))]) === JSON.stringify(ids(q.answer)); if (q.kind === 'short') return q.answer.some(x => norm(x) === norm(ans)); if (q.kind === 'numeric') return Math.abs(+ans - q.answer.value) <= (q.answer.tol || 0); return null; }
@@ -103,21 +103,32 @@
   }
   VIEWS.lmsf = () => {
     if (!ON()) return '<div class="empty">대학(학사 LMS) 기관에서 쓰는 화면입니다.</div>'; css();
-    const P = secPick('lmsfSec', 'lmsf-sec'); const tab = UI.lmsfT || 'bank';
-    let h = head('시험 · 문제은행', '문항 · 보기 · 난이도별 무작위 출제, 시간 · 횟수 제한과 IP 기록, 자동 · 서술형 채점과 통계를 다룹니다. 운영 서버에서는 시간 · 횟수 · IP 제한과 채점을 서버가 처리합니다.') + P.html;
+    const P = secPick('lmsfSec', 'lmsf-sec'); const tab = UI.lmsfT || 'exam';
+    let h = head('시험 · 문제은행', '문제은행에서 무작위로 출제하고, 응시 기록 · 서술형 채점 · 결과 통계를 봅니다. 시간 · 횟수 · IP 제한과 자동 채점은 운영 서버가 처리합니다.', P.sec ? `<button class="btn" data-act="lmsf-exam" data-v="">새 시험</button>` : '') + P.html;
     if (!P.sec) return h;
-    h += tabs('lmsfT', [['bank', '문제은행'], ['exam', '시험'], ['stats', '결과 · 통계'], ...(LIVE_ON() ? [] : [['take', '학생 응시 미리보기']])], tab);
     const sec = P.sec.section_id;
-    if (tab === 'exam') return h + examView(sec); if (tab === 'stats') return h + statsView(sec); if (tab === 'take') return h + takeView(sec);
+    const er = load('lmsf:ex:' + sec, () => call('GET', '/api/lms/f/exams', { section: sec })); if (er && er.ok) h += todoF(er.ok.exams);
+    h += tabs4('lmsfT', [['exam', '시험 · 채점'], ['bank', '문제은행'], ['stats', '결과 · 통계'], ...(LIVE_ON() ? [] : [['take', '학생 응시 미리보기']])], tab);
+    if (tab === 'exam') return h + examView(sec) + setCard(); if (tab === 'stats') return h + statsView(sec); if (tab === 'take') return h + takeView(sec);
     const br = load('lmsf:banks:' + sec, () => call('GET', '/api/lms/f/banks', { section: sec })); if (!br) return h + wait(); if (br.err) return h + errBox(br.err);
     const B = br.ok.banks; const bk = B.find(b => b.bank_id === UI.lmsfB) || B[0]; if (bk) UI.lmsfB = bk.bank_id;
     h += `<div class="card"><div class="ch"><b>문제은행</b><small>분반 전용 · 교과목 공유(같은 교과목 다른 분반에서 재사용) · 기관 공용</small><span class="efh-acts"><button class="btn sm" data-act="lmsf-bank">새 문제은행</button></span></div>
-      ${table(['이름', '범위', '문항', '쉬움 · 보통 · 어려움', ''], B.map(b => [`<b>${esc(b.name)}</b>`, tag({ section: '분반', course: '교과목 공유', tenant: '기관 공용' }[b.scope]), String(b.count), `${b.easy} · ${b.mid} · ${b.hard}`, `<button class="btn sm" data-act="lmsf-bsel" data-v="${esc(b.bank_id)}">${bk && bk.bank_id === b.bank_id ? '보는 중' : '열기'}</button>`]), '문제은행이 없습니다. 「새 문제은행」으로 만드세요.')}</div>`;
+      ${table(['이름', '범위', '문항', '쉬움 · 보통 · 어려움', ''], B.map(b => [`<b>${esc(b.name)}</b>`, tag({ section: '분반', course: '교과목 공유', tenant: '기관 공용' }[b.scope]), String(b.count), `${b.easy} · ${b.mid} · ${b.hard}`, bk && bk.bank_id === b.bank_id ? tag('보는 중', 'g') : `<button class="btn sm" data-act="lmsf-bsel" data-v="${esc(b.bank_id)}">열기</button>`]), '문제은행이 없습니다. 「새 문제은행」으로 만드세요.')}</div>`;
     if (!bk) return h;
     const qr = load('lmsf:q:' + bk.bank_id, () => call('GET', '/api/lms/f/questions', { bank: bk.bank_id })); if (!qr) return h + wait(); if (qr.err) return h + errBox(qr.err);
-    return h + `<div class="card"><div class="ch"><b>${esc(bk.name)} 문항</b><span class="efh-acts"><button class="btn sm" data-act="lmsf-classify" data-v="${esc(bk.bank_id)}">난이도 자동 분류</button><button class="btn sm" data-act="lmsf-copy" data-v="${esc(bk.bank_id)}">선택 문항 이관 · 복사</button><button class="btn sm pri" data-act="lmsf-q" data-v="">문항 추가</button></span></div>
-      ${table(['', '유형', '문항', '배점', '난이도', '정답률', '첨부', ''], qr.ok.questions.map(q => [`<input type="checkbox" class="lmsf-ck" value="${esc(q.q_id)}" aria-label="선택">`, esc(KIND[q.kind]), esc(q.stem.slice(0, 60)), String(q.points), tag(DIFF[q.difficulty] + (q.diff_auto ? '(자동)' : ''), q.difficulty === 'hard' ? 'r' : q.difficulty === 'easy' ? 'g' : ''), q.correct_rate == null ? '-' : q.correct_rate + '% (' + q.attempts_n + ')', q.media.length ? tag(q.media.map(m => m.type === 'video' ? '영상' : '이미지').join(' · ')) : '', `<button class="btn sm" data-act="lmsf-q" data-v="${esc(q.q_id)}">편집</button> <button class="btn sm" data-act="lmsf-qdel" data-v="${esc(q.q_id)}">삭제</button>`]), '문항이 없습니다.')}</div>`;
+    return h + `<div class="card"><div class="ch"><b>${esc(bk.name)} 문항 ${qr.ok.questions.length}개</b><span class="efh-acts"><button class="btn sm" data-act="lmsf-q" data-v="">문항 추가</button>${dots([mi('lmsf-classify', '난이도 자동 분류(정답률 기준)', bk.bank_id), mi('lmsf-copy', '선택 문항 이관 · 복사', bk.bank_id)], '문항 다른 작업')}</span></div>
+      ${table(['', '문항', '난이도', '정답률', ''], qr.ok.questions.map(q => [`<input type="checkbox" class="lmsf-ck" value="${esc(q.q_id)}" aria-label="선택">`, `${esc(q.stem.slice(0, 60))}<small class="efh-sub2">${esc(KIND[q.kind])} · ${q.points}점${q.media.length ? ' · ' + q.media.map(m => m.type === 'video' ? '영상' : '이미지').join(' · ') : ''}</small>`, tag(DIFF[q.difficulty] + (q.diff_auto ? '(자동)' : ''), q.difficulty === 'hard' ? 'r' : q.difficulty === 'easy' ? 'g' : ''), q.correct_rate == null ? '-' : q.correct_rate + '% (' + q.attempts_n + ')', `<button class="btn sm" data-act="lmsf-q" data-v="${esc(q.q_id)}">편집</button>`]), '문항이 없습니다.')}</div>`;
   };
+  /* 지금 할 일: 서술형 채점 대기 · 진행 중 시험 */
+  function todoF(L) {
+    const pend = L.filter(x => x.pending > 0).sort((a, b) => b.pending - a.pending); const tot = pend.reduce((s, x) => s + x.pending, 0);
+    const live = L.filter(x => x.status === 'published' && (!x.open_at || Date.parse(x.open_at) <= Date.now()) && (!x.close_at || Date.parse(x.close_at) > Date.now()));
+    const lv = live.length ? ` · 응시 중인 시험 <b>${esc(live[0].title)}</b>${live.length > 1 ? ` 외 ${live.length - 1}개` : ''} (마감 ${fmt(live[0].close_at)})` : '';
+    if (tot) return todo(`서술형 채점 대기 <b>${tot}건</b>${lv}`, `<button class="btn sm pri" data-act="lmsf-start-mark" data-v="${esc(pend[0].exam_id)}">채점 시작</button>`);
+    if (!L.length) return todo('이 분반에 아직 시험이 없습니다.', `<button class="btn sm pri" data-act="lmsf-exam" data-v="">새 시험 만들기</button>`);
+    return todo(`채점할 응시가 없습니다${lv}`, live.length ? `<button class="btn sm pri" data-act="lmsf-start-mark" data-v="${esc(live[0].exam_id)}">응시 현황 보기</button>` : '');
+  }
+  ACT['lmsf-start-mark'] = el => { UI.lmsfX = el.dataset.v; UI.lmsfT = 'exam'; drop('lmsf:att:'); render(); };
   ACT['lmsf-sec'] = el => { UI.lmsfSec = el.value; UI.lmsfB = null; UI.lmsfX = null; render(); };
   ACT['lmsf-bsel'] = el => { UI.lmsfB = el.dataset.v; render(); };
   ACT['lmsf-bank'] = () => modal('새 문제은행', `<div class="form2"><label class="full">이름<input name="n"></label><label>공유 범위<select name="s"><option value="section">이 분반 전용</option><option value="course">교과목 공유(분반 간 재사용)</option><option value="tenant">기관 공용(운영자)</option></select></label></div>`,
@@ -130,7 +141,7 @@
       <label class="full">정답 — 객관식은 보기 번호(1, 3), 참/거짓은 참 · 거짓, 단답형은 쉼표로 여러 답, 숫자형은 값±허용오차<input name="a" value="${esc(q && /single|multi/.test(q.kind) ? q.answer.map(x => String(q.choices.findIndex(c => c.id === x) + 1)).join(', ') : q && q.kind === 'tf' ? (q.answer[0] === 't' ? '참' : '거짓') : ans)}"></label>
       <label>배점<input type="number" name="p" min="0" value="${q ? q.points : 1}"></label><label class="full">해설(오답 피드백)<textarea name="e" rows="2">${esc(q ? q.explanation : '')}</textarea></label>
       <label>이미지 첨부<input type="file" name="img" accept="image/*"></label><label>영상 주소(https)<input name="v" placeholder="https://…" value="${esc(q ? (q.media.find(m => m.type === 'video') || {}).url || '' : '')}"></label></div>`,
-      [{ id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { (async () => {
+      [...(q ? [{ id: 'd', label: '문항 삭제', run: () => { run(() => call('POST', '/api/lms/f/q-delete', { q_id: q.q_id }), '문항을 지웠습니다.', 'lmsf:'); } }] : []), { id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { (async () => {
         const k = fv(w, 'k'); const lines = fv(w, 'c').split('\n').map(s => s.trim()).filter(Boolean); const choices = lines.map((t, i) => ({ id: 'c' + (i + 1), text: t })); const raw = fv(w, 'a');
         let answer = raw; if (/single|multi/.test(k)) answer = raw.split(/[\s,]+/).filter(Boolean).map(n => 'c' + n); else if (k === 'tf') answer = /참|t|o/i.test(raw) ? 't' : 'f'; else if (k === 'short') answer = raw.split(',').map(s => s.trim()).filter(Boolean); else if (k === 'numeric') { const [v, t] = raw.split('±'); answer = { value: +v, tol: +t || 0 }; }
         const media = q ? q.media.filter(m => m.type === 'image') : []; const f = w.querySelector('[name=img]').files[0]; if (f) { const up = await call('POST', '/api/lms/e/file', { name: f.name, mime: f.type || 'image/png', b64: await toB64(f) }); media.push({ type: 'image', file_id: up.file_id }); } if (fv(w, 'v')) media.push({ type: 'video', url: fv(w, 'v') });
@@ -145,12 +156,14 @@
 
   function examView(sec) {
     const r = load('lmsf:ex:' + sec, () => call('GET', '/api/lms/f/exams', { section: sec })); if (!r) return wait(); if (r.err) return errBox(r.err);
-    return `<div class="card"><div class="ch"><b>시험</b><small>프록터링(화면 · 웹캠 감독)은 연동 지점 — 연동 후 동작</small><span class="efh-acts"><button class="btn sm pri" data-act="lmsf-exam" data-v="">새 시험</button></span></div>
-      ${table(['시험', '기간', '제한', '출제', '응시', '채점 대기', '상태', ''], r.ok.exams.map(x => [`<b>${esc(x.title)}</b>`, `${fmt(x.open_at)} ~ ${fmt(x.close_at)}`, `${x.time_limit_min}분 · ${x.max_attempts}회${x.ip_allow.length ? ' · IP 제한' : ''}${x.need_precheck ? ' · 사전 점검' : ''}`, `${x.fixed.length ? '고정 ' + x.fixed.length : ''}${x.rules.length ? ' 무작위 ' + x.rules.reduce((s, y) => s + +y.n, 0) : ''}${x.shuffle_q ? ' · 순서 섞기' : ''}`, String(x.attempts), x.pending ? tag(String(x.pending), 'y') : '0', tag({ draft: '비공개', published: '공개', closed: '마감' }[x.status], x.status === 'published' ? 'g' : ''),
-        `<button class="btn sm" data-act="lmsf-exam" data-v="${esc(x.exam_id)}">편집</button> <button class="btn sm" data-act="lmsf-att" data-v="${esc(x.exam_id)}">응시 · 채점</button>`]), '시험이 없습니다.')}</div>` + ipCard() + attView();
+    return `<div class="card"><div class="ch"><b>시험</b><small>화면 · 웹캠 감독(프록터링)은 연동 후 동작</small></div>
+      ${table(['시험', '기간', '응시', '채점 대기', ''], r.ok.exams.map(x => [`<b>${esc(x.title)}</b> ${x.status === 'published' ? '' : tag({ draft: '비공개', closed: '마감' }[x.status] || x.status)}<small class="efh-sub2">${x.time_limit_min}분 · ${x.max_attempts}회${x.ip_allow.length ? ' · IP 제한' : ''}${x.need_precheck ? ' · 사전 점검' : ''}${x.fixed.length ? ' · 고정 ' + x.fixed.length + '문항' : ''}${x.rules.length ? ' · 무작위 ' + x.rules.reduce((s, y) => s + +y.n, 0) + '문항' : ''}</small>`, `${fmt(x.open_at)} ~ ${fmt(x.close_at)}`, String(x.attempts), x.pending ? tag(String(x.pending), 'y') : '0',
+        `<button class="btn sm" data-act="lmsf-att" data-v="${esc(x.exam_id)}">${UI.lmsfX === x.exam_id ? '보는 중' : '응시 · 채점'}</button>`]), '시험이 없습니다. 「새 시험」으로 만드세요.')}</div>` + attView();
   }
-  function ipCard() { const r = load('lmsf:ipset', () => call('GET', '/api/lms/f/settings')); if (!r || !r.ok) return ''; const admin = !S.me || S.me.role !== 'teacher';
-    return `<div class="card"><div class="ch"><b>시험 IP 보존</b><small>${esc(r.ok.note)}</small></div><p>학기 종료 후 <b>${r.ok.exam_ip_keep_days}일</b> 지나면 가림${admin ? ` <input type="number" min="0" max="3650" id="lmsfIpKeep" value="${r.ok.exam_ip_keep_days}" aria-label="보존 일수" style="width:90px"> <button class="btn sm" data-act="lmsf-ipkeep">저장</button>` : ''}</p></div>`; }
+  /* 설정(접기): 시험 IP 보존 기간 */
+  function setCard() { const r = load('lmsf:ipset', () => call('GET', '/api/lms/f/settings')); if (!r || !r.ok) return ''; const admin = !S.me || S.me.role !== 'teacher';
+    return `<details class="card efh-set"${UI.lmsfSetO ? ' open' : ''}><summary data-act="lmsf-seto">설정 · 시험 IP 보존 기간 <small class="muted">학기 종료 후 ${r.ok.exam_ip_keep_days}일 지나면 가림</small></summary><p class="efh-note">${esc(r.ok.note)}</p><p>학기 종료 후 <b>${r.ok.exam_ip_keep_days}일</b> 지나면 가림${admin ? ` <input type="number" min="0" max="3650" id="lmsfIpKeep" value="${r.ok.exam_ip_keep_days}" aria-label="보존 일수" style="width:90px"> <button class="btn sm" data-act="lmsf-ipkeep">저장</button>` : ''}</p></details>`; }
+  ACT['lmsf-seto'] = (el, e) => { UI.lmsfSetO = !el.parentElement.open; el.parentElement.open = UI.lmsfSetO; };
   ACT['lmsf-ipkeep'] = () => run(() => call('POST', '/api/lms/f/settings', { exam_ip_keep_days: +document.getElementById('lmsfIpKeep').value }), '시험 IP 보존 기간을 저장했습니다.', 'lmsf:ipset');
   ACT['lmsf-exam'] = el => {
     const sec = UI.lmsfSec; const ex = (C2('lmsf:ex:' + sec) || { exams: [] }).exams.find(x => x.exam_id === el.dataset.v); const B = (C2('lmsf:banks:' + sec) || { banks: [] }).banks; if (!C2('lmsf:banks:' + sec)) load('lmsf:banks:' + sec, () => call('GET', '/api/lms/f/banks', { section: sec }));
@@ -169,7 +182,8 @@
   ACT['lmsf-att'] = el => { UI.lmsfX = el.dataset.v; drop('lmsf:att:'); render(); };
   function attView() {
     if (!UI.lmsfX) return ''; const r = load('lmsf:att:' + UI.lmsfX, () => call('GET', '/api/lms/f/attempts', { exam: UI.lmsfX })); if (!r) return wait(); if (r.err) return errBox(r.err);
-    return `<div class="card"><div class="ch"><b>${esc(r.ok.exam.title)} — 응시 기록</b><small>시작 IP · 마지막 IP · 변경 기록(부정행위 확인용)</small></div>${table(['학번', '회차', '상태', '점수', '제출', 'IP', ''], r.ok.attempts.map(t => [esc(t.member_no) + (t.enroll === 'audit' ? ' ' + tag('청강', 'y') : ''), String(t.no), tag({ in_progress: '응시 중', submitted: '채점 대기', graded: '채점 완료' }[t.status], t.status === 'submitted' ? 'y' : t.status === 'graded' ? 'g' : ''), t.score == null ? (t.auto_score == null ? '-' : `자동 ${t.auto_score} / ${t.max_score}`) : `${t.score} / ${t.max_score}`, fmt(t.submitted_at), esc(t.ip_start || '') + (t.ip_changed ? ' ' + tag('IP 변경', 'r') : ''), t.status !== 'in_progress' ? `<button class="btn sm" data-act="lmsf-mark" data-v="${esc(t.attempt_id)}">채점</button>` : '']), '응시 기록이 없습니다.')}</div>`;
+    const P0 = r.ok.attempts.filter(t => t.status === 'submitted').length;
+    return `<div class="card"><div class="ch"><b>${esc(r.ok.exam.title)} — 응시 기록</b><small>채점 대기 ${P0}건 · 시작 IP와 IP 변경 표시(부정행위 확인용)</small><span class="efh-acts"><button class="btn sm" data-act="lmsf-exam" data-v="${esc(r.ok.exam.exam_id)}">시험 설정 편집</button></span></div>${table(['학번', '상태', '점수', 'IP', ''], r.ok.attempts.slice().sort((a, b) => (a.status === 'submitted' ? 0 : 1) - (b.status === 'submitted' ? 0 : 1) || (a.member_no < b.member_no ? -1 : 1)).map(t => [`<b>${esc(t.member_no)}</b>${t.enroll === 'audit' ? ' ' + tag('청강', 'y') : ''}<small class="efh-sub2">${t.no}회차 · ${fmt(t.submitted_at)}</small>`, tag({ in_progress: '응시 중', submitted: '채점 대기', graded: '채점 완료' }[t.status], t.status === 'submitted' ? 'y' : t.status === 'graded' ? 'g' : ''), t.score == null ? (t.auto_score == null ? '-' : `자동 ${t.auto_score} / ${t.max_score}`) : `${t.score} / ${t.max_score}`, esc(t.ip_start || '') + (t.ip_changed ? ' ' + tag('IP 변경', 'r') : ''), t.status !== 'in_progress' ? `<button class="btn sm" data-act="lmsf-mark" data-v="${esc(t.attempt_id)}">${t.status === 'submitted' ? '채점' : '보기'}</button>` : '']), '응시 기록이 없습니다.')}</div>`;
   }
   ACT['lmsf-mark'] = async el => { const r = await run(() => call('GET', '/api/lms/f/attempt', { id: el.dataset.v })); if (!r) return; const t = r.attempt;
     const showAns = (q, v) => v == null ? '<span class="muted">무응답</span>' : esc(/single|multi|tf/.test(q.kind) ? [].concat(v).map(id => (q.choices.find(c => c.id === id) || {}).text || id).join(', ') : String(v));
@@ -185,7 +199,7 @@
     return pick + `<div class="kpis">${kpi('응시(정규)', m.n)}${kpi('평균(%)', m.mean ?? '-')}${kpi('표준편차', m.sd ?? '-')}${kpi('최저 · 최고', m.n ? `${m.min} · ${m.max}` : '-')}${kpi('중앙값', m.median ?? '-')}</div>
       <div class="card"><div class="ch"><b>성적 분포</b><small>백분율 10점 구간 · 청강생 제외</small></div><div class="efh-hist" role="img" aria-label="성적 분포">${m.hist.map(x => `<div title="${x.from}~${x.to}: ${x.n}명"><i style="height:${100 * x.n / mx}%"></i></div>`).join('')}</div><div class="efh-hist" style="height:auto">${m.hist.map(x => `<small style="flex:1">${x.from}</small>`).join('')}</div></div>
       <div class="card"><div class="ch"><b>문항 분석</b></div>${table(['문항', '유형', '난이도', '채점 수', '정답률'], s.ok.questions.map(q => [esc(q.stem), esc(KIND[q.kind]), esc(DIFF[q.difficulty]), String(q.n), q.rate == null ? '-' : bar(q.rate) + ' ' + q.rate + '%']))}</div>
-      <div class="card efh-wrap">${table(['학번', '구분', '회차', '상태', '점수', '%', 'IP'], s.ok.rows.map(x => [esc(x.member_no), x.enroll === 'audit' ? tag('청강', 'y') : '정규', String(x.no), esc(x.status), x.score == null ? '-' : `${x.score}/${x.max_score}`, x.pct == null ? '-' : String(x.pct), esc(x.ip_start || '') + (x.ip_changed ? ' ⚠' : '')]))}</div>`;
+      <div class="card efh-wrap">${table(['학번', '점수', '%', 'IP'], s.ok.rows.map(x => [`<b>${esc(x.member_no)}</b>${x.enroll === 'audit' ? ' ' + tag('청강', 'y') : ''}<small class="efh-sub2">${x.no}회차 · ${esc({ in_progress: '응시 중', submitted: '채점 대기', graded: '채점 완료' }[x.status] || x.status)}</small>`, x.score == null ? '-' : `${x.score}/${x.max_score}`, x.pct == null ? '-' : String(x.pct), esc(x.ip_start || '') + (x.ip_changed ? ' ' + tag('IP 변경', 'r') : '')]))}</div>`;
   }
   ACT['lmsf-spick'] = el => { UI.lmsfS = el.value; render(); };
   ACT['lmsf-xls'] = () => { const s = C2('lmsf:stat:' + UI.lmsfS); if (!s) return; downloadCSV(`시험결과_${s.exam.title}_${today()}.csv`, ['학번', '학과', '구분', '회차', '상태', '점수', '만점', '백분율', '제출', '시작 IP', 'IP 변경'], s.rows.map(x => [x.member_no, x.unit_code || '', x.enroll === 'audit' ? '청강' : '정규', x.no, x.status, x.score ?? '', x.max_score ?? '', x.pct ?? '', x.submitted_at || '', x.ip_start || '', x.ip_changed ? 'Y' : ''])); };

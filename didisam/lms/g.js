@@ -47,7 +47,7 @@
       UI.w3sec = UI.w3sec && L.find(s => s.section_id === UI.w3sec) ? UI.w3sec : L[0].section_id; return L.find(s => s.section_id === UI.w3sec);
     },
     secPick() { const L = W3.cache.sections || []; return L.length > 1 ? `<select data-chg="w3-sec" aria-label="분반 선택">${L.map(s => `<option value="${esc(s.section_id)}" ${s.section_id === UI.w3sec ? 'selected' : ''}>${esc(s.title)}</option>`).join('')}</select>` : ''; },
-    mode() { return W3.live() ? tag('운영 서버', 'g') : tag('데모 동작 · 브라우저 저장', 'y'); },
+    mode() { return W3.live() ? tag('운영 서버', 'g') : '<small class="efh-demo" title="서버 없이 이 브라우저에만 저장됩니다">데모: 브라우저에만 저장</small>'; },
     fmt(t) { if (!t) return '—'; const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; },
     css(name) { if (!document.querySelector(`link[data-w3css="${name}"]`)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = `lms/${name}.css?v=30.0`; l.dataset.w3css = name; document.head.appendChild(l); } }
   };
@@ -202,32 +202,67 @@
   const stopQR = () => { if (qrTimer) { clearInterval(qrTimer); qrTimer = 0; } };
 
   VIEWS.lmsg = () => {
-    W3.css('w3'); if (!ULMS_()) return '<div class="empty">대학(학사 LMS) 에디션에서 쓰는 화면입니다.</div>';
+    W3.css('w3'); if (window.EFH) EFH.css(); if (!ULMS_()) return '<div class="empty">대학(학사 LMS) 에디션에서 쓰는 화면입니다.</div>';
     const sec = W3.section(); if (sec === undefined) return W3.loading; if (sec.__err) return `<div class="empty">${esc(sec.__err)}</div>`;
     const t = UI.w3gT || 'board'; if (t !== 'live') stopQR();
+    const T4 = window.EFH ? EFH.tabs4 : (k, a, c, m) => tabs(k, [...a, ...(m || [])], c);
     const top = head('출결 관리', `${esc(sec.title)} · ${esc(sec.term_id)} · 수업 방식 ${esc({ hyflex: '하이플렉스', blended: '블렌디드', online: '온라인', offline: '대면' }[sec.mode] || sec.mode)}`, `${W3.secPick()} ${W3.mode()}`)
-      + tabs('w3gT', [['board', '출석부'], ['live', '출석 진행(코드 · QR)'], ['check', '학생 출석'], ['rule', '규칙 · 장비'], ['anom', '비정상 학습행동']], t);
+      + T4('w3gT', [['board', '출석부'], ['live', '출석 진행(인증번호 · QR)'], ['anom', '비정상 학습행동']], t, [['check', '학생 출석 화면(미리보기)'], ['rule', '출석 규칙 · 장비']]);
     const body = { board: gBoard, live: gLive, check: gCheck, rule: gRule, anom: gAnom }[t](sec);
     return top + body;
   };
 
+  /* u2: 출석부 = 지금 할 일 + 분반 목록 + 차시 고르기 → 고른 차시의 출석부만. 학기 전체 표는 「⋯ › 학기 전체 출석부」 */
+  const kd = t => new Date(Date.parse(t) + 9 * 36e5).toISOString().slice(0, 10);
+  function sesCount(R, i) { const c = { present: 0, late: 0, absent: 0, excused: 0, none: 0 }; R.students.forEach(st => { const v = st.cells[i]; c[v || 'none']++; }); return c; }
   function gBoard(sec) {
     const R = W3.get('roster:' + sec.section_id, 'GET', '/api/lms/g/roster', { section_id: sec.section_id }); if (R === undefined) return W3.loading; if (R.__err) return `<div class="empty">${esc(R.__err)}</div>`;
-    const ss = R.sessions; const cur = UI.w3gS && ss.find(s => s.session_id === UI.w3gS) ? UI.w3gS : (ss.filter(s => Date.parse(s.starts_at) <= Date.now()).pop() || ss[0] || {}).session_id; UI.w3gS = cur;
-    const sel = `<select data-chg="w3g-ses" aria-label="차시 선택">${ss.map(s => `<option value="${esc(s.session_id)}" ${s.session_id === cur ? 'selected' : ''}>${s.week_no}주 ${s.seq}차 · ${W3.fmt(s.starts_at)}${s.kind === 'holiday' ? ' (휴강)' : ''}${s.makeup_of ? ' (보강)' : ''}</option>`).join('')}</select>`;
+    const ss = R.sessions; const past = ss.map((s, i) => ({ s, i })).filter(x => x.s.kind !== 'holiday' && Date.parse(x.s.starts_at) <= Date.now());
+    const cur = UI.w3gS && ss.find(s => s.session_id === UI.w3gS) ? UI.w3gS : ((past[past.length - 1] || {}).s || ss[0] || {}).session_id; UI.w3gS = cur;
     const tot = R.students.reduce((a, s) => { const u = s.sum; a.p += u.present + u.late + u.excused; a.past += u.past; a.risk += u.past && (u.absent + u.unrecorded + Math.floor(u.late / 3)) >= Math.ceil(u.past / 4) ? 1 : 0; return a; }, { p: 0, past: 0, risk: 0 });
+    const today = kd(new Date().toISOString()); const tod = ss.filter(s => s.kind !== 'holiday' && kd(s.starts_at) === today);
+    const last = past[past.length - 1]; const sus = last ? R.students.filter(st => !st.cells[last.i] || st.cells[last.i] === 'absent') : [];
+    UI.w3gSus = { session_id: last ? last.s.session_id : null, label: last ? `${last.s.week_no}주 ${last.s.seq}차` : '', list: sus.map(x => x.member_no) };
+    const todoH = (tod.length ? `오늘 수업 <b>${tod.length}개</b>` : last ? `최근 수업 <b>${last.s.week_no}주 ${last.s.seq}차</b>(${esc(W3.fmt(last.s.starts_at))})` : '아직 지난 수업이 없습니다') + (last ? ` · 결석 의심 <b>${sus.length}명</b>` : '') + (tot.risk ? ` · 결석 1/4 이상 ${tot.risk}명` : '');
+    const todoC = window.EFH ? EFH.todo(todoH, sus.length ? `<button class="btn sm pri" data-act="w3g-notify">결석 알림 보내기</button>` : '') : '';
     const head2 = `<div class="kpis">${kpi('수강생', R.students.length + '명', `청강생 ${R.audit_excluded}명 출석 대상 제외`)}${kpi('평균 출석률', (tot.past ? Math.round(100 * tot.p / tot.past) : 100) + '%', '출석 · 지각 · 공결 인정')}${kpi('결석 1/4 이상', tot.risk + '명', '학칙상 F 처리 주의', tot.risk ? 'warn' : '')}${kpi('차시', ss.length + '개', `휴강 ${ss.filter(s => s.kind === 'holiday').length} · 보강 ${ss.filter(s => s.makeup_of).length}`)}</div>`;
-    const tools = `<div class="card w3-tools"><div class="ch"><b>차시 작업</b>${sel}</div><div class="w3-btns">
-      <button class="btn sm" data-act="w3g-online">온라인 출석 반영(진도율 · 주차 기간)</button><button class="btn sm" data-act="w3g-adjust">장애 시 일괄 조정</button><button class="btn sm" data-act="w3g-copy">연강 차시로 복사</button>
-      <button class="btn sm" data-act="w3g-holiday">휴강 지정</button><button class="btn sm" data-act="w3g-makeup">보강 차시 만들기</button><button class="btn sm" data-act="w3g-log">변경 이력</button>
-      <button class="btn sm pri" data-act="w3g-csv">학교 양식 CSV</button><button class="btn sm" data-act="w3g-print">인쇄</button></div>
-      <p class="mini">셀을 누르면 출석 · 지각 · 결석 · 공결(사유 · 증빙)로 바꿀 수 있습니다. 오프라인 · 수동 기록이 있으면 온라인 반영보다 우선합니다. 학사 출석 전송은 학사 연동 후 동작합니다.</p></div>`;
-    const cell = (st, m, s, mno) => `<button class="w3-c ${st ? 'st-' + st : s.kind === 'holiday' ? 'st-h' : ''}" data-act="w3g-cell" data-s="${esc(s.session_id)}" data-m="${esc(mno)}" title="${s.week_no}주 ${s.seq}차 · ${st ? ST[st][0] + ' · ' + (MTH[m] || m) : s.kind === 'holiday' ? '휴강' : '미기록'}">${st ? ST[st][2] : s.kind === 'holiday' ? '휴' : '·'}</button>`;
-    const grid = `<div class="card"><div class="ch"><b>통합 출석부</b><small>○ 출석 · △ 지각 · × 결석 · ◎ 공결 · 휴 휴강 · 지각 3회 = 결석 1회</small></div><div class="tw w3-grid"><table><thead><tr><th class="stick">학번</th><th>학과</th>${ss.map(s => `<th class="${s.session_id === cur ? 'on' : ''}">${s.week_no}-${s.seq}</th>`).join('')}<th>출석률</th></tr></thead><tbody>
-      ${R.students.map(st => { const u = st.sum; const rate = u.past ? Math.round(100 * (u.present + u.late + u.excused) / u.past) : 100; return `<tr><td class="stick"><b>${esc(st.member_no)}</b></td><td>${esc(st.unit_code || '')}</td>${st.cells.map((c, i) => `<td>${cell(c, st.methods[i], ss[i], st.member_no)}</td>`).join('')}<td>${tag(rate + '%', rate < 75 ? 'r' : rate < 90 ? 'y' : 'g')}</td></tr>`; }).join('')}</tbody></table></div></div>`;
-    return head2 + tools + grid;
+    const dots = window.EFH ? EFH.dots : () => ''; const mi = window.EFH ? EFH.mi : () => '';
+    /* 분반 목록(학기 기준) */
+    const SL = (W3.cache.sections || [sec]).slice(0, 12); /* 분반이 많으면 앞 12개만(나머지는 위 분반 선택으로) */
+    const secRows = SL.map(s => { const Q = s.section_id === sec.section_id ? R : W3.get('roster:' + s.section_id, 'GET', '/api/lms/g/roster', { section_id: s.section_id }); const ok = Q && !Q.__err;
+      const t2 = ok ? Q.students.reduce((a, x) => { const u = x.sum; a.p += u.present + u.late + u.excused; a.past += u.past; a.risk += u.past && (u.absent + u.unrecorded + Math.floor(u.late / 3)) >= Math.ceil(u.past / 4) ? 1 : 0; return a; }, { p: 0, past: 0, risk: 0 }) : null;
+      return [`<b>${esc(s.title)}</b>`, ok ? Q.students.length + '명' : '…', t2 ? (t2.past ? Math.round(100 * t2.p / t2.past) : 100) + '%' : '…', t2 ? (t2.risk ? tag(t2.risk + '명', 'r') : '0') : '…', s.section_id === sec.section_id ? tag('보는 중', 'g') : `<button class="btn sm" data-act="w3g-secgo" data-v="${esc(s.section_id)}">열기</button>`]; });
+    const secCard = `<div class="card"><div class="ch"><b>분반별 출석</b><small>${esc(sec.term_id)} 학기</small><span class="efh-acts">${dots([mi('w3g-online', '온라인 출석 반영(진도율 · 주차 기간)'), mi('w3g-csv', '학교 양식 엑셀(CSV) 내려받기'), mi('w3g-print', '출석부 인쇄'), mi('w3g-full', UI.w3gFull ? '학기 전체 출석부 닫기' : '학기 전체 출석부 보기')], '분반 출석 다른 작업')}</span></div>${table(['분반', '수강생', '평균 출석률', '결석 1/4 이상', ''], secRows)}</div>`;
+    /* 차시 고르기 */
+    const recent = past.slice(-4).reverse();
+    const sel = `<select data-chg="w3g-ses" aria-label="차시 선택"><option value="">다른 차시 고르기 (${ss.length}개)</option>${ss.map(s => `<option value="${esc(s.session_id)}">${s.week_no}주 ${s.seq}차 · ${W3.fmt(s.starts_at)}${s.kind === 'holiday' ? ' (휴강)' : ''}${s.makeup_of ? ' (보강)' : ''}</option>`).join('')}</select>`;
+    const pickCard = `<div class="card"><div class="ch"><b>통합 출석부 — 차시를 고르세요</b><small>대면 · 온라인 출석이 한 표에 모입니다</small><span class="efh-acts">${sel}</span></div>
+      ${table(['차시', '출석', '결석 · 미기록', ''], recent.map(({ s, i }) => { const c = sesCount(R, i); return [`<b>${s.week_no}주 ${s.seq}차</b><small class="efh-sub2">${esc(W3.fmt(s.starts_at))} · ${esc(s.room || '')}${s.makeup_of ? ' · 보강' : ''}</small>`, `${c.present + c.late + c.excused}명${c.late ? ` <small>(지각 ${c.late})</small>` : ''}`, c.absent + c.none ? tag((c.absent + c.none) + '명', 'r') : '0', `<button class="btn sm" data-act="w3g-open" data-v="${esc(s.session_id)}">${UI.w3gOpen && cur === s.session_id ? '보는 중' : '출석부 열기'}</button>`]; }), '지난 차시가 없습니다. 「다른 차시 고르기」에서 고르세요.')}</div>`;
+    /* 고른 차시의 출석부 */
+    let one = '';
+    if (UI.w3gOpen) { const i = ss.findIndex(s => s.session_id === cur); const s = ss[i];
+      if (s) one = `<div class="card"><div class="ch"><b>${s.week_no}주 ${s.seq}차 출석부</b><small>${esc(W3.fmt(s.starts_at))} · ${esc(s.room || '')}${s.kind === 'holiday' ? ' · 휴강' : ''} · 상태를 누르면 출석 · 지각 · 결석 · 공결로 바꿉니다</small><span class="efh-acts"><button class="btn sm" data-act="w3g-close">닫기</button>${dots([mi('w3g-adjust', '장애 시 일괄 조정'), mi('w3g-copy', '연강 차시로 복사'), mi('w3g-holiday', '휴강 지정'), mi('w3g-makeup', '보강 차시 만들기'), mi('w3g-log', '변경 이력')], '이 차시 다른 작업')}</span></div>
+        <div class="tw nomcard"><table class="w3-one"><thead><tr><th>학번</th><th>상태</th><th>방식</th><th>누적 출석률</th></tr></thead><tbody>${R.students.map(st => { const u = st.sum; const rate = u.past ? Math.round(100 * (u.present + u.late + u.excused) / u.past) : 100; const c = st.cells[i], m = st.methods[i];
+          return `<tr><td><b>${esc(st.member_no)}</b><small class="efh-sub2">${esc(st.unit_code || '')}</small></td><td><button class="w3-c w3-c2 ${c ? 'st-' + c : s.kind === 'holiday' ? 'st-h' : ''}" data-act="w3g-cell" data-s="${esc(s.session_id)}" data-m="${esc(st.member_no)}">${c ? ST[c][0] : s.kind === 'holiday' ? '휴강' : '미기록'}</button></td><td><small>${c ? esc(MTH[m] || m || '') : ''}</small></td><td>${tag(rate + '%', rate < 75 ? 'r' : rate < 90 ? 'y' : 'g')}</td></tr>`; }).join('')}</tbody></table></div>
+        <p class="mini">오프라인 · 수동 기록이 있으면 온라인 반영보다 우선합니다. 학사 출석 전송은 학사 연동 후 동작합니다.</p></div>`; }
+    return todoC + head2 + secCard + pickCard + one + (UI.w3gFull ? gFull(R, cur) : '');
   }
-  ACT['w3g-ses'] = el => { UI.w3gS = el.value; render(); };
+  /* 학기 전체 출석부(예전 표 — ⋯ 메뉴에서 열기) */
+  function gFull(R, cur) { const ss = R.sessions;
+    const cell = (st, m, s, mno) => `<button class="w3-c ${st ? 'st-' + st : s.kind === 'holiday' ? 'st-h' : ''}" data-act="w3g-cell" data-s="${esc(s.session_id)}" data-m="${esc(mno)}" title="${s.week_no}주 ${s.seq}차 · ${st ? ST[st][0] + ' · ' + (MTH[m] || m) : s.kind === 'holiday' ? '휴강' : '미기록'}">${st ? ST[st][2] : s.kind === 'holiday' ? '휴' : '·'}</button>`;
+    return `<div class="card"><div class="ch"><b>학기 전체 출석부</b><small>○ 출석 · △ 지각 · × 결석 · ◎ 공결 · 휴 휴강 · 지각 3회 = 결석 1회</small><span class="efh-acts"><button class="btn sm" data-act="w3g-full">닫기</button></span></div><div class="tw w3-grid nomcard"><table><thead><tr><th class="stick">학번</th><th>학과</th>${ss.map(s => `<th class="${s.session_id === cur ? 'on' : ''}">${s.week_no}-${s.seq}</th>`).join('')}<th>출석률</th></tr></thead><tbody>
+      ${R.students.map(st => { const u = st.sum; const rate = u.past ? Math.round(100 * (u.present + u.late + u.excused) / u.past) : 100; return `<tr><td class="stick"><b>${esc(st.member_no)}</b></td><td>${esc(st.unit_code || '')}</td>${st.cells.map((c, i) => `<td>${cell(c, st.methods[i], ss[i], st.member_no)}</td>`).join('')}<td>${tag(rate + '%', rate < 75 ? 'r' : rate < 90 ? 'y' : 'g')}</td></tr>`; }).join('')}</tbody></table></div></div>`; }
+  ACT['w3g-ses'] = el => { if (!el.value) return; UI.w3gS = el.value; UI.w3gOpen = 1; render(); };
+  ACT['w3g-open'] = el => { UI.w3gS = el.dataset.v; UI.w3gOpen = 1; render(); };
+  ACT['w3g-close'] = () => { UI.w3gOpen = 0; render(); };
+  ACT['w3g-full'] = () => { UI.w3gFull = !UI.w3gFull; render(); };
+  ACT['w3g-secgo'] = el => { UI.w3sec = el.dataset.v; UI.w3gOpen = 0; W3.drop('roster:'); render(); };
+  ACT['w3g-notify'] = () => { const T = UI.w3gSus || { list: [] }; if (!T.list.length) return toast('결석 의심 학생이 없습니다.');
+    const msg = `[${T.label} 출결 안내] 출석이 확인되지 않았습니다. 사유가 있으면 증빙과 함께 교수자에게 알려 주세요. 결석이 수업의 1/4을 넘으면 학점 취득이 어려울 수 있습니다.`;
+    modal(`결석 알림 — ${T.label} · ${T.list.length}명`, `<p class="mini">받는 학생(학번): ${esc(T.list.join(', '))}</p><label class="fl">알림 내용<textarea name="tx" rows="4" maxlength="500">${esc(msg)}</textarea></label><p class="mini">${W3.live() ? '실제 발송은 문자 · 앱 알림 연동 후 동작합니다. 지금은 학번 목록을 복사해 「메시지」에서 보낼 수 있습니다.' : '데모: 보낼 목록은 이 브라우저에만 저장합니다. 실제 발송은 문자 · 앱 알림 연동 후 동작합니다.'}</p>`,
+      [{ id: 'c', label: '취소' }, { id: 'ok', label: W3.live() ? '학번 목록 복사' : '알림 보내기', kind: 'pri', run: w => {
+        if (W3.live()) { try { navigator.clipboard.writeText(T.list.join('\n')); toast(`학번 ${T.list.length}개를 복사했습니다.`, 'ok'); } catch (e) { toast('복사하지 못했습니다.', 'warn'); } return; }
+        const d = D(); d.notices = d.notices || []; d.notices.unshift({ at: W3.ts(now()), session_id: T.session_id, targets: T.list.slice(), body: fv(w, 'tx') }); save(); toast(`${T.list.length}명에게 보낼 결석 알림을 대기열에 넣었습니다(연동 후 발송).`, 'ok'); } }]); };
   const reload = () => { W3.drop('roster:'); W3.drop('anom:'); W3.drop('sessions:'); render(); };
   ACT['w3g-cell'] = el => {
     const sid = el.dataset.s, mno = el.dataset.m;
