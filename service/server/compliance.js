@@ -6,7 +6,8 @@
    - 본인확인: 실제 제공사(휴대폰 · 공단 MOTP)는 계약 · 규격 확정 뒤 어댑터로 붙인다. 미연동이면 501 provider_missing */
 const crypto = require('node:crypto');
 
-function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = {} }) {
+const { pwRule } = require('./pwrule');
+function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, env = {} }) {
   const KEY_RE = /^[\w-]{1,60}$/;
   /* 시험 답안 포함 요청이 있어 본문 상한을 넉넉히 둔다 */
   const dev = env.IDV_DEV === '1'; const pending = new Map();
@@ -22,8 +23,15 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = 
     if (P && P.on && P.single) await pool.query('delete from learner_sessions where tenant_id = $1 and sid = $2 and id <> $3', [tid, sid, keepHash]);
   }
 
+  /* 단체가입 최초 로그인 · 중도탈락: 학습 활동 전에 서버가 확인한다 */
+  async function guard(tid, sid, cls) { await inTenant(pool, tid, async c => { const P = await policy(c, tid); if (!P || !P.on) return; if (P.groupFirst) { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (L && !L.pw_hash) throw new HttpErr(403, '최초 로그인 본인인증과 비밀번호 변경을 먼저 진행해 주십시오.', 'group_first'); } const D = (await c.query("select 1 from tenant_state, jsonb_array_elements(doc->'members') m, jsonb_array_elements(doc->'classes') x where tenant_id = $1 and m->>'sid' = $2 and x->>'id' = $3 and jsonb_exists(x->'drop', m->>'id') limit 1", [tid, sid, cls])).rows[0]; if (D) throw new HttpErr(403, '중도탈락 처리된 과정입니다. 훈련기관에 문의해 주십시오.', 'dropped'); }); }
   async function route(req, tid, sid) {
     const b = await readBody(req, 128 * 1024); const kind = String(b.kind || '');
+    if (['beat', 'attend', 'exam-start'].includes(kind)) await guard(tid, sid, String(b.cls || ''));
+    if (kind === 'group-pw') {
+      limit(`cplv:${tid}:${sid}`, 10, 600e3); const pw = String(b.pw || ''); if (!pwRule(pw)) throw new HttpErr(400, '비밀번호는 영문 · 숫자 · 특수문자 중 2종 10자 이상 또는 3종 8자 이상입니다.', 'pw_rule');
+      return inTenant(pool, tid, async c => { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (!L) throw new HttpErr(403, '단체가입 계정이 아닙니다.', 'group_none'); if (dev) { const v = (await c.query("select 1 from cpl_log where tenant_id = $1 and sid = $2 and kind in ('verify-phone', 'review') and at > now() - interval '15 minutes' limit 1", [tid, sid])).rows[0]; if (!v) throw new HttpErr(403, '휴대폰 본인인증을 먼저 진행해 주십시오.', 'group_verify'); } await c.query('update learners set pw_hash = $3 where tenant_id = $1 and sid = $2', [tid, sid, await hashPw(pw)]); await rec(c, tid, sid, 'group-pw', { ip: ip(req) }); return { ok: true }; });
+    }
     if (kind === 'beat') {
       limit(`cplb:${tid}:${sid}`, 40, 60e3);
       const secs = Math.floor(+b.secs); if (!(secs >= 1 && secs <= 60)) throw new HttpErr(400, '학습시간 값이 올바르지 않습니다.', 'secs');
@@ -88,6 +96,10 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = 
       const score = Math.round(sc / Math.max(1, tot) * 100); const pass = R.pass && R.pass.on ? score >= +R.pass.v : +P.pass > 0 ? score >= +P.pass : null;
       await c.query('update cpl_exam set submitted_at = now(), answers = $1, score = $2, pass = $3, late = $4 where id = $5', [JSON.stringify(clean), score, pass, late, r.id]);
       const clsEnd = parseT((await classOf(c, tid, r.cls)).end, true); const moel = /^moel-/.test(String(P.profile || '')); const hideRes = R.show === 'never' || R.show === 'end' || (moel && !(clsEnd && Date.now() > clsEnd + 7 * 864e5)); return { score, pass, late, res: hideRes ? [] : res }; }); }
+  /* 서술형 답안 베낀 답안 검사: 유사도는 화면의 과제 검사와 같은 3-gram */
+  const grams = t => { const x = String(t).replace(/\s+/g, ''); const G = new Set(); for (let i = 0; i + 3 <= x.length; i++) G.add(x.slice(i, i + 3)); return G; };
+  const simil = (a, b) => { const A = grams(a), B = grams(b); if (!A.size || !B.size) return 0; let n = 0; A.forEach(g => { if (B.has(g)) n++; }); return Math.round(n / (A.size + B.size - n) * 100); };
+  const examCopy = a => inTenant(pool, a.tid, async c => { const P = (await policy(c, a.tid)) || {}; const thr = +P.copyThr || 80; const CL = (await c.query("select doc->'classes' x from tenant_state where tenant_id = $1", [a.tid])).rows[0]; const classes = CL && Array.isArray(CL.x) ? CL.x : []; const rows = (await c.query('select sid, cls, item, answers from cpl_exam where tenant_id = $1 and submitted_at is not null order by sid, id limit 5000', [a.tid])).rows; const G = {}; for (const r of rows) { const cl = classes.find(x => x && x.id === r.cls); const it = cl && (cl.curriculum || []).find(x => x && x.id === r.item); const Q = (it && it.qs) || []; for (const [k, v] of Object.entries(r.answers || {})) { if (!Q[+k] || Q[+k].t !== 'essay') continue; const t = String(v == null ? '' : v); if (t.trim().length < 30) continue; ((G[`${r.cls}|${r.item}|${k}`] = G[`${r.cls}|${r.item}|${k}`] || [])).push({ sid: r.sid, t }); } } const out = []; for (const key of Object.keys(G).sort()) { const [cls, item, q] = key.split('|'); const L = G[key]; for (let i = 0; i < L.length && i < 500; i++) for (let j = i + 1; j < L.length && j < 500; j++) { if (L[i].sid === L[j].sid) continue; const s = simil(L[i].t, L[j].t); if (s >= thr) out.push({ cls, item, q: +q, a: L[i].sid, b: L[j].sid, s }); } } out.sort((x, y) => y.s - x.s || (x.cls + x.item + x.q + x.a + x.b < y.cls + y.item + y.q + y.a + y.b ? -1 : 1)); return { rows: out.slice(0, 100), thr }; });
   const exams = a => inTenant(pool, a.tid, async c => ({ rows: (await c.query(`select sid, cls, item, score, pass, late, to_char(submitted_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from cpl_exam where tenant_id = $1 and submitted_at is not null order by submitted_at desc limit 2000`, [a.tid])).rows }));
 
   /* 어드민: 훈련생별 집계 · 원본 로그 */
@@ -97,6 +109,6 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = 
       from cpl_log where tenant_id = $1 group by sid order by max(at) desc limit 1000`, [a.tid])).rows }));
   const logs = (a, url) => { const sid = url.searchParams.get('sid') || ''; const n = Math.min(2000, Math.max(1, +url.searchParams.get('limit') || 200));
     return inTenant(pool, a.tid, async c => ({ rows: (await c.query(`select id::text, sid, kind, cls, item, secs, ip, ua, eval_cd, chasi, to_char(at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from cpl_log where tenant_id = $1 and ($2 = '' or sid = $2) order by cpl_log.id desc limit $3`, [a.tid, sid, n])).rows })); };
-  return { afterLogin, route, summary, logs, exams };
+  return { afterLogin, route, summary, logs, exams, examCopy };
 }
 module.exports = { createCompliance };

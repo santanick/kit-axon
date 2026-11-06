@@ -91,17 +91,17 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     private Object login(HttpServletRequest req, HttpServletResponse res, String tid, byte[] body) throws Exception {
         JsonNode b = DdWeb.readBody(body, props.getInt("body.piiMax"));
         if (truthy(get(b, "via"))) { String lid = pii.login(req, res, tid, b); return tx.inTenant(tid, () -> learnerOut(tid, lid)); }
-        String sid = trim(sOr(get(b, "sid"))); String code = trim(sOr(get(b, "code"))).toUpperCase(Locale.ROOT);
+        String sid = trim(sOr(get(b, "sid"))); String codeRaw = trim(sOr(get(b, "code"))); String code = codeRaw.toUpperCase(Locale.ROOT);
         rl.limit("ll:" + web.ip(req), props.getInt("rate.ll.max"), props.getLong("rate.ll.winMs"));
         rl.limit("lls:" + tid + ":" + sid, props.getInt("rate.lls.max"), props.getLong("rate.ll.winMs"));
         Map<String, Object> L = SID_RE.matcher(sid).matches() ? tx.inTenant(tid, () -> mapper.selectLearner(tid, sid)) : null;
-        boolean ok = DdCrypto.checkPw(code, L != null ? (String) L.get("code_hash") : DdCrypto.DUMMY);
+        boolean ok = L != null && L.get("pw_hash") != null ? DdCrypto.checkPw(codeRaw, (String) L.get("pw_hash")) : DdCrypto.checkPw(code, L != null ? (String) L.get("code_hash") : DdCrypto.DUMMY);
         if (L == null || !ok) throw processException("dd.401.login.code");
         pii.newLearnerSession(res, tid, sid);
         return tx.inTenant(tid, () -> {
             mapper.touchLearner(tid, sid);
             Map<String, Object> lp = mapper.selectLp(tid, sid), d = mapper.selectDoc(tid);
-            Map<String, Object> me = new LinkedHashMap<>(); me.put("sid", sid); me.put("dept", L.get("dept"));
+            Map<String, Object> me = new LinkedHashMap<>(); me.put("sid", sid); me.put("dept", L.get("dept")); meFlags(me, sid, mapper.selectLearnerDept(tid, sid), d);
             Map<String, Object> o = new LinkedHashMap<>(); o.put("me", me); o.put("lp", lp == null ? null : parse((String) lp.get("lp")));
             o.put("mine", d == null ? emptyMine() : mineOf(parse((String) d.get("doc")), sid, tid)); return o;
         });
@@ -109,6 +109,13 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     static ObjectNode emptyMine() { ObjectNode o = F.objectNode(); o.putArray("badges"); o.putObject("cls"); return o; }
 
     /** 학습자 응답(me · lp · mine) — 기관 범위 트랜잭션 안에서 호출 */
+    /** 단체가입 최초 로그인 · 중도탈락 표시 */
+    private void meFlags(Map<String, Object> me, String sid, Map<String, Object> learner, Map<String, Object> d) {
+        if (d == null) return; JsonNode doc = parse((String) d.get("doc")); JsonNode org = get(doc, "org"); JsonNode P = org == null ? null : get(org, "cpl"); if (!truthy(P) || !truthy(get(P, "on"))) return;
+        if (truthy(get(P, "groupFirst")) && learner != null && learner.get("pw_hash") == null) me.put("groupFirst", true);
+        JsonNode m = null; for (JsonNode x : arr(or(get(doc, "members"), F.arrayNode()))) if (truthy(x) && strictEq(get(x, "sid"), sid)) { m = x; break; } if (m == null) return; String mid = sOr(get(m, "id")); List<String> D = new ArrayList<>();
+        for (JsonNode c : arr(or(get(doc, "classes"), F.arrayNode()))) { JsonNode dr = truthy(c) ? get(c, "drop") : null; if (dr != null && dr.isObject() && truthy(dr.get(mid))) D.add(sOr(get(c, "id"))); } if (!D.isEmpty()) me.put("dropped", D);
+    }
     private Map<String, Object> learnerOut(String tid, String sid) throws Exception {
         Map<String, Object> acc = null;
         if (UUIDISH.matcher(sid).matches()) {
@@ -119,6 +126,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         Map<String, Object> lp = mapper.selectLp(tid, sid), d = mapper.selectDoc(tid);
         Map<String, Object> me = new LinkedHashMap<>(); me.put("sid", sid); me.put("dept", acc != null ? acc.get("dept") : Lr != null ? Lr.get("dept") : "");
         if (acc != null) me.put("acct", acc);
+        meFlags(me, sid, Lr, d);
         Map<String, Object> o = new LinkedHashMap<>(); o.put("me", me); o.put("lp", lp == null ? null : parse((String) lp.get("lp")));
         o.put("mine", d == null ? emptyMine() : mineOf(parse((String) d.get("doc")), sid, tid)); return o;
     }

@@ -18,6 +18,7 @@ const PHONE_RE = /^01\d-?\d{3,4}-?\d{4}$/;
 const PURPOSES = { cert: '수료증 발급', refund: '결제 · 환불 처리', alimtalk: '알림톡 수신', legal: '법령상 요청' };
 const IDV_REASONS = { refund: '고용보험 환급 과정', adult: '성인 인증 콘텐츠', credit: '학점 인정' };
 
+const { pwRule } = require('./pwrule');
 function piiKeys(env) {
   const raw = String(env.PII_KEY || '').trim(); if (!raw) return null;
   const k = /^[0-9a-f]{64}$/i.test(raw) ? Buffer.from(raw, 'hex') : Buffer.from(raw, 'base64');
@@ -50,8 +51,8 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
   }
   const plog = (P, tid, actor, action, lid, purpose, fields) => P('insert into pii.access_log (tid, actor, action, learner_id, purpose, fields) values ($1, $2, $3, $4, $5, $6)', [tid, String(actor).slice(0, 80), action, lid || null, purpose || null, fields || []]);
   async function orgOf(L, tid) {
-    const d = (await L("select doc->'org'->>'type' type, doc->'settings'->'acct' acct from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
-    const a = d.acct || {}; return { type: d.type || '', mode: a.mode || 'open', under14: !!a.under14, social: Array.isArray(a.social) ? a.social : PROVIDERS, idv: a.idv && a.idv.on ? { on: true, reason: String(a.idv.reason || '') } : { on: false } };
+    const d = (await L("select doc->'org'->>'type' type, doc->'settings'->'acct' acct, doc->'org'->'cpl' cpl from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
+    const a = d.acct || {}; return { strictPw: !!(d.cpl && d.cpl.on && /^moel-/.test(String(d.cpl.profile || ''))), type: d.type || '', mode: a.mode || 'open', under14: !!a.under14, social: Array.isArray(a.social) ? a.social : PROVIDERS, idv: a.idv && a.idv.on ? { on: true, reason: String(a.idv.reason || '') } : { on: false } };
   }
 
   /* SNS 식별자 → 해시. 운영: 공급자 토큰을 서버에서 검증해 sub(회원 번호)를 받는다.
@@ -95,7 +96,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       if (univ) { if (via !== 'univ') throw new HttpErr(400, '대학 계정은 학번으로 가입합니다.', 'via');
         stu = String(b.student_no || '').trim(); dept = String(b.dept || '').trim().slice(0, 40);
         if (!STU_RE.test(stu)) throw new HttpErr(400, '학번은 숫자 6~10자리입니다.', 'student_no'); if (!dept) throw new HttpErr(400, '학과를 입력하세요.', 'dept');
-        if (String(b.pw || '').length < 8) throw new HttpErr(400, '비밀번호는 8자 이상입니다.', 'pw'); sub = bidx(tid, 'univ', stu); if (!nick) nick = stu.slice(-4) + '학번'; }
+        if (String(b.pw || '').length < 8) throw new HttpErr(400, '비밀번호는 8자 이상입니다.', 'pw'); if (org.strictPw && !pwRule(b.pw)) throw new HttpErr(400, '비밀번호는 영문 · 숫자 · 특수문자 중 2종 10자 이상 또는 3종 8자 이상입니다.', 'pw_rule'); sub = bidx(tid, 'univ', stu); if (!nick) nick = stu.slice(-4) + '학번'; }
       else if (via === 'email') { email = String(b.email || '').trim().toLowerCase(); if (!MAIL_RE.test(email)) throw new HttpErr(400, '이메일 형식을 확인하세요.', 'email'); await useOtp(P, tid, bidx(tid, 'email', email), 'signup', b.code); }
       else if (via === 'sns') { const s = await snsSub(b); if (!org.social.includes(s.prov)) throw new HttpErr(403, '이 기관에서 쓰지 않는 로그인 방식입니다.', 'provider'); login = s.prov; sub = bidx(tid, 'sub:' + s.prov, s.sub); }
       else throw new HttpErr(400, '가입 방법을 고르세요.', 'via');
@@ -104,6 +105,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       if (minor) { if (!org.under14) throw new HttpErr(403, '이 기관은 만 14세 이상만 가입할 수 있습니다.', 'age');
         gContact = String((b.guardian && b.guardian.contact) || '').trim(); const ph = normPhone(gContact);
         if (!MAIL_RE.test(gContact) && !PHONE_RE.test(ph || '-')) throw new HttpErr(400, '보호자 이메일 또는 휴대폰 번호를 입력하세요.', 'guardian'); if (ph) gContact = ph; }
+      if (org.strictPw && b.pw && !pwRule(b.pw)) throw new HttpErr(400, '비밀번호는 영문 · 숫자 · 특수문자 중 2종 10자 이상 또는 3종 8자 이상입니다.', 'pw_rule');
       const pw = b.pw ? (String(b.pw).length >= 8 && String(b.pw).length <= 64 ? await hashPw(String(b.pw)) : (() => { throw new HttpErr(400, '비밀번호는 8~64자입니다.', 'pw'); })()) : null;
       const st = minor ? 'guardian_pending' : 'active';
       let lid;
