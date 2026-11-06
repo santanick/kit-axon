@@ -3,8 +3,8 @@
    값: enc1:v1.{iv}.{tag}.{암호문}(AES-256-GCM, PII_KEY), AAD = {tid}|state|{묶음}|{id}|{항목}. Java: cmm/DdStateCrypto.java */
 const crypto = require('node:crypto');
 const PFX = 'enc1:';
-const SET = { members: ['name', 'nick', 'email', 'phone'], parents: ['name', 'phone'], codes: ['code'], admins: ['name', 'email'], consults: ['title', 'summary', 'text', 'note', 'memo', 'transcript'], msgs: ['to', 'title', 'body'] };
-const JSON_FIELDS = { members: ['extra'] };
+const SET = { members: ['name', 'nick', 'email', 'phone'], parents: ['name', 'phone'], codes: ['code'], admins: ['name', 'email'], consults: ['title', 'summary', 'text', 'note', 'memo', 'transcript'], msgs: ['to', 'title', 'body'], crmLeads: ['name', 'school', 'pname', 'pphone', 'memo'], crmHist: ['memo'], classes: [] };
+const JSON_FIELDS = { members: ['extra', 'crm'], classes: ['crmDay', 'k12Exams', 'makeups'] };
 const idOf = (kind, x) => String((kind === 'codes' ? x.sid : x.id) == null ? '' : (kind === 'codes' ? x.sid : x.id));
 
 function createStateCrypto(K, HttpErr) {

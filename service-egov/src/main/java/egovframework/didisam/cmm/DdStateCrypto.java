@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 @Service("ddStateCrypto")
 public class DdStateCrypto extends EgovAbstractServiceImpl {
     static final String PFX = "enc1:";
-    static final Map<String, List<String>> SET = Map.of("members", List.of("name", "nick", "email", "phone"), "parents", List.of("name", "phone"), "codes", List.of("code"), "admins", List.of("name", "email"), "consults", List.of("title", "summary", "text", "note", "memo", "transcript"), "msgs", List.of("to", "title", "body"));
+    static final Map<String, List<String>> SET = Map.of("members", List.of("name", "nick", "email", "phone"), "parents", List.of("name", "phone"), "codes", List.of("code"), "admins", List.of("name", "email"), "consults", List.of("title", "summary", "text", "note", "memo", "transcript"), "msgs", List.of("to", "title", "body"), "crmLeads", List.of("name", "school", "pname", "pphone", "memo"), "crmHist", List.of("memo"), "classes", List.of());
+    static final Map<String, List<String>> JSON_FIELDS = Map.of("members", List.of("extra", "crm"), "classes", List.of("crmDay", "k12Exams", "makeups"));
     private final DdPiiCrypto c;
     public DdStateCrypto(DdPiiCrypto c) { this.c = c; }
 
@@ -24,7 +25,7 @@ public class DdStateCrypto extends EgovAbstractServiceImpl {
         for (String kind : SET.keySet()) { JsonNode arr = out.get(kind); if (arr == null || !arr.isArray()) continue;
             for (JsonNode n : (ArrayNode) arr) { if (!n.isObject()) continue; ObjectNode x = (ObjectNode) n;
                 for (String f : SET.get(kind)) { JsonNode v = x.get(f); if (v != null && v.isTextual() && !v.asText().isEmpty()) x.put(f, PFX + c.enc(v.asText(), aad(tid, kind, x, f))); }
-                if ("members".equals(kind)) { JsonNode e = x.get("extra"); if (e != null && (e.isObject() || e.isArray()) && !e.isEmpty()) x.put("extra", PFX + c.enc(e.toString(), aad(tid, kind, x, "extra"))); }
+                for (String jf : JSON_FIELDS.getOrDefault(kind, List.of())) { JsonNode e = x.get(jf); if (e != null && (e.isObject() || e.isArray()) && !e.isEmpty()) x.put(jf, PFX + c.enc(e.toString(), aad(tid, kind, x, jf))); }
             } }
         return out;
     }
@@ -33,7 +34,7 @@ public class DdStateCrypto extends EgovAbstractServiceImpl {
         for (String kind : SET.keySet()) { JsonNode arr = out.get(kind); if (arr == null || !arr.isArray()) continue;
             for (JsonNode n : (ArrayNode) arr) { if (!n.isObject()) continue; ObjectNode x = (ObjectNode) n;
                 for (String f : SET.get(kind)) { JsonNode v = x.get(f); if (v != null && v.isTextual() && v.asText().startsWith(PFX)) x.put(f, dec(v.asText(), aad(tid, kind, x, f))); }
-                if ("members".equals(kind)) { JsonNode e = x.get("extra"); if (e != null && e.isTextual() && e.asText().startsWith(PFX)) x.set("extra", DdWeb.JSON.readTree(dec(e.asText(), aad(tid, kind, x, "extra")))); }
+                for (String jf : JSON_FIELDS.getOrDefault(kind, List.of())) { JsonNode e = x.get(jf); if (e != null && e.isTextual() && e.asText().startsWith(PFX)) x.set(jf, DdWeb.JSON.readTree(dec(e.asText(), aad(tid, kind, x, jf)))); }
             } }
         return out;
     }
