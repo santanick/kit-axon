@@ -32,7 +32,7 @@ public class LmsGLearnerCheckin {
         if (x.has("code")) b.set("code", x.get("code")); if (x.has("qr")) b.set("qr", x.get("qr"));
         JsonNode ta = x.hasNonNull("offline_at") && !(x.get("offline_at").isTextual() && x.get("offline_at").asText().isEmpty()) ? x.get("offline_at") : x.get("taken_at");
         if (ta != null) b.set("taken_at", ta);
-        return engine.run(LmsGServiceImpl.SPEC, route, who, req, b.toString().getBytes(StandardCharsets.UTF_8), stmts);
+        return engine.run(LmsGServiceImpl.SPEC, route, () -> who, req, b.toString().getBytes(StandardCharsets.UTF_8), stmts);
     }
     public JsonNode run(Map<String, Object> learner, HttpServletRequest req, byte[] body) throws Exception {
         String sid = String.valueOf(learner.get("sid"));

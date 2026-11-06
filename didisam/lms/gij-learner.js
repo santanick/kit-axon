@@ -43,7 +43,8 @@
   /* ── ① 출석하기 ── */
   function cAtt(g) {
     const open = g.sections.flatMap(s => s.sessions.filter(x => x.open && !x.status).map(x => ({ ...x, sec: s })));
-    if (!open.length) return `<p class="mini">지금 출석할 수 있는 수업이 없습니다. 수업 시작 10분 전부터 출석할 수 있습니다.</p>`;
+    const res = ST.res ? `<p class="gij-res ${ST.res.ok ? 'ok' : 'bad'}" role="status">${E(ST.res.msg)}</p>` : '';
+    if (!open.length) return `${res}<p class="mini">지금 출석할 수 있는 수업이 없습니다. 수업 시작 10분 전부터 출석할 수 있습니다.</p>`;
     const cur = open.find(x => x.session_id === ST.ses) || open[0]; ST.ses = cur.session_id; const ms = MTH.filter(([k]) => cur.sec.rule.methods.includes(k)); if (!ms.some(([k]) => k === ST.m)) ST.m = (ms[0] || ['code'])[0];
     const bd = 'BarcodeDetector' in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
     const box = { code: `<label class="gij-f">교수님이 알려 준 인증번호 6자리<input id="gijCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label>`,
@@ -56,7 +57,7 @@
     return `<label class="gij-f">수업<select id="gijSes" data-lch="gij-ses">${open.map(x => `<option value="${E(x.session_id)}" ${x.session_id === cur.session_id ? 'selected' : ''}>${E(x.sec.title)} · ${x.week_no}주 ${x.seq}차 · ${E(fmt(x.starts_at))} · ${E(x.room || '')}</option>`).join('')}</select></label>
       <div class="gij-seg" role="tablist">${ms.map(([k, l]) => `<button role="tab" aria-selected="${k === ST.m}" class="${k === ST.m ? 'on' : ''}" data-lact="gij-m" data-v="${k}">${l}</button>`).join('')}</div>${box || ''}
       ${cur.sec.rule.require_identity ? `<label class="gij-ck"><input type="checkbox" id="gijIdv"> 본인 재인증을 마쳤습니다(학교 SSO 재인증 — 연동 후 자동 처리)</label>` : ''}
-      <button class="lbtn" data-lact="gij-go">출석하기</button>${ST.res ? `<p class="gij-res ${ST.res.ok ? 'ok' : 'bad'}" role="status">${E(ST.res.msg)}</p>` : ''}`;
+      <button class="lbtn" data-lact="gij-go">출석하기</button>${res}`;
   }
   /* ── ② 내 출결 · 진도 ── */
   function cMine(g, i) {
