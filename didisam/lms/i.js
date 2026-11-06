@@ -127,13 +127,14 @@
   /* ── 플레이어 ── */
   function iPlayer(sec, C, csel) {
     const c = C.find(x => x.content_id === UI.w3iC) || {}; const s = P.st && P.st.content_id === c.content_id ? P.st : null;
-    const real = s && (P.blob || /^(https?:|blob:)/.test(s.src || ''));
+    const med = s && !P.blob && window.DDMEDIA && DDMEDIA.playable(s.src); /* v32 학교 서버 스트리밍(media:키, lms/media-play.js) */
+    const real = s && (P.blob || /^(https?:|blob:)/.test(s.src || '') || med);
     setTimeout(paint, 0);
     return `<div class="card"><div class="ch"><b>HTML5 플레이어</b>${csel}</div>
       <div class="form2"><label>학번(학생 화면으로 재생)<input id="w3imno" maxlength="20" value="${esc(UI.w3iMno || '20269001')}"></label><label>내 컴퓨터 영상으로 미리보기<input type="file" id="w3ifile" accept="video/*" data-chg="w3i-file"></label></div>
       ${P.msg ? `<div class="w3-res bad" role="alert">${esc(P.msg)}</div>` : ''}
       <div class="w3-player"><div>
-        <div class="w3-vid">${real ? `<video id="w3v" src="${esc(P.blob || s.src)}" playsinline preload="metadata"></video>` : `<div class="w3-sim" id="w3sim">${s ? '가상 영상(시간만 흐름) — 실제 영상은 CDN 연동 후 재생됩니다' : '「재생 시작」을 누르면 서버에 재생 세션을 엽니다(이어보기 · 동시 재생 확인)'}</div>`}
+        <div class="w3-vid">${real ? (med ? `<video id="w3v" data-media="${esc(s.src)}" playsinline preload="metadata"></video>` : `<video id="w3v" src="${esc(P.blob || s.src)}" playsinline preload="metadata"></video>`) : `<div class="w3-sim" id="w3sim">${s ? '가상 영상(시간만 흐름) — 실제 영상은 CDN 연동 후 재생됩니다' : '「재생 시작」을 누르면 서버에 재생 세션을 엽니다(이어보기 · 동시 재생 확인)'}</div>`}
           <div class="w3-cap" id="w3cap" aria-live="polite"></div>${P.quiz ? quizBox(P.quiz) : ''}</div>
         <div class="w3-seg" id="w3seg" aria-hidden="true"></div>
         <input type="range" id="w3pos" min="0" max="${c.duration_sec || 1}" value="${Math.floor(P.pos)}" data-chg="w3i-seek" aria-label="재생 위치" style="width:100%" ${s ? '' : 'disabled'}>
