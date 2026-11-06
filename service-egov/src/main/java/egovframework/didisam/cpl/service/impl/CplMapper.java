@@ -18,8 +18,9 @@ public interface CplMapper {
     Map<String, Object> selectExamAttempt(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
     int submitExam(@Param("id") String id, @Param("answers") String answers, @Param("score") int score, @Param("pass") Boolean pass, @Param("late") boolean late);
     List<Map<String, Object>> selectExams(@Param("tid") String tid);
+    List<String> selectTodayItems(@Param("tid") String tid, @Param("sid") String sid);
     long selectToday(@Param("tid") String tid, @Param("sid") String sid);
-    void insertLog(@Param("tid") String tid, @Param("sid") String sid, @Param("kind") String kind, @Param("cls") String cls, @Param("item") String item, @Param("secs") int secs, @Param("ip") String ip, @Param("ua") String ua);
+    void insertLog(@Param("tid") String tid, @Param("sid") String sid, @Param("kind") String kind, @Param("cls") String cls, @Param("item") String item, @Param("secs") int secs, @Param("ip") String ip, @Param("ua") String ua, @Param("evalCd") String evalCd, @Param("chasi") Integer chasi);
     List<Map<String, Object>> selectSummary(@Param("tid") String tid);
     List<Map<String, Object>> selectLogs(@Param("tid") String tid, @Param("sid") String sid, @Param("n") int n);
     int deleteOtherSessions(@Param("tid") String tid, @Param("sid") String sid, @Param("keep") String keep);
