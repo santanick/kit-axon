@@ -24,18 +24,26 @@ public class LmsCall {
     private static final Map<Character, String> ROLE = Map.of('o', "owner", 's', "sub", 't', "teacher");
     private static final Pattern DD = Pattern.compile("^DD\\|(\\d{3})\\|([a-z_]+)\\|([\\s\\S]*)$");
 
-    private final LmsCallMapper mapper; private final TenantTx tx;
-    public LmsCall(LmsCallMapper mapper, TenantTx tx) { this.mapper = mapper; this.tx = tx; }
+    private final LmsCallMapper mapper; private final TenantTx tx; private final DdWeb web;
+    public LmsCall(LmsCallMapper mapper, TenantTx tx, DdWeb web) { this.mapper = mapper; this.tx = tx; this.web = web; }
 
     public static Route find(List<Route> routes, String method, String name) {
         for (Route x : routes) if (x.method().equals(method) && x.name().equals(name)) return x;
         return null;
     }
 
+    /** a = 운영자 · 교수자 세션(없으면 null). 경로 권한에 L이 있으면 학습자 포털 세션(dd_lsid → learner_sessions.sid = 학번)으로 대신한다(Node mod-k.js bind와 같음) */
     public JsonNode run(String pfx, Route rt, Map<String, Object> a, HttpServletRequest req, byte[] body) throws Exception {
-        String role = String.valueOf(a.get("role"));
-        boolean okRole = false; for (char c : rt.roles().toCharArray()) if (role.equals(ROLE.get(c))) okRole = true;
-        if (!okRole) throw new DdException(403, "이 작업을 할 권한이 없습니다.", "role");
+        Map<String, Object> ls = null;
+        if (a == null) {
+            if (!rt.roles().contains("L")) throw new DdException(401, "로그인이 필요합니다.", "auth");
+            String t = web.lsidToken(req);
+            if (t != null && !t.isEmpty() && t.length() <= 100) { final String h = egovframework.didisam.cmm.DdCrypto.sha(t); ls = tx.plain(() -> mapper.selectLearner(h)); }
+            if (ls == null) throw new DdException(401, "로그인이 필요합니다.", "auth");
+        }
+        String role = a == null ? "learner" : String.valueOf(a.get("role"));
+        if (a != null) { boolean okRole = false; for (char c : rt.roles().toCharArray()) if (role.equals(ROLE.get(c))) okRole = true;
+            if (!okRole) throw new DdException(403, "이 작업을 할 권한이 없습니다.", "role"); }
         JsonNode args;
         if ("GET".equals(rt.method())) {
             ObjectNode o = DdWeb.JSON.createObjectNode();
@@ -51,8 +59,11 @@ public class LmsCall {
             args = DdWeb.readBody(body, 2 * 1024 * 1024);
             if (!args.isObject()) throw new DdException(400, "형식이 올바르지 않습니다.", "bad_json");
         }
-        ObjectNode actor = DdWeb.JSON.createObjectNode(); actor.put("role", role); actor.put("email", String.valueOf(a.get("email")));
-        String tid = (String) a.get("tid"); String email = String.valueOf(a.get("email"));
+        String tid = a != null ? (String) a.get("tid") : (String) ls.get("tenant_id");
+        String sid = ls != null ? (String) ls.get("sid") : null;
+        String email = a != null ? String.valueOf(a.get("email")) : "learner:" + sid;
+        ObjectNode actor = DdWeb.JSON.createObjectNode(); actor.put("role", role); actor.put("email", email); if (sid != null) actor.put("member_no", sid);
+        if (sid != null) { ObjectNode o = (ObjectNode) args; o.put("member_no", sid); o.remove("by_operator"); o.remove("all"); }
         final JsonNode fargs = args;
         try {
             return tx.inTenant(tid, () -> {

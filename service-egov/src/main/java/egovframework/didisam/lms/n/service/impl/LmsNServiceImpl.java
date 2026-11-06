@@ -18,34 +18,34 @@ import org.springframework.stereotype.Service;
 public class LmsNServiceImpl extends EgovAbstractServiceImpl implements LmsNService {
     /** Node service/server/lms/mod-n.js ROUTES와 같은 표(scratchpad genjava.py로 생성) */
     public static final List<LmsCall.Route> ROUTES = List.of(
-        r("GET", "search", "search", "ost"),
-        r("GET", "suggest", "suggest", "ost"),
-        r("GET", "course", "course_get", "ost"),
+        r("GET", "search", "search", "ostL"),
+        r("GET", "suggest", "suggest", "ostL"),
+        r("GET", "course", "course_get", "ostL"),
         w("POST", "course/save", "course_save", "ost"),
         w("POST", "course/submit", "course_submit", "ost"),
         w("POST", "course/decide", "course_decide", "os"),
         w("POST", "course/close", "course_close", "os"),
         w("POST", "convert", "convert", "ost"),
         w("POST", "cohort/save", "cohort_save", "ost"),
-        w("POST", "enroll", "enroll", "ost"),
-        w("POST", "enroll/cancel", "enroll_cancel", "ost"),
+        w("POST", "enroll", "enroll", "ostL"),
+        w("POST", "enroll/cancel", "enroll_cancel", "ostL"),
         w("POST", "pay/confirm", "pay_confirm", "os"),
         w("POST", "enroll/decide", "enroll_decide", "os"),
         r("GET", "enrolls", "enrolls", "ost"),
         w("POST", "progress", "progress", "ost"),
         w("POST", "complete", "complete", "os"),
-        r("GET", "certificate", "certificate", "ost"),
-        w("POST", "wish", "wish", "ost"),
-        r("GET", "mypage", "mypage", "ost"),
+        r("GET", "certificate", "certificate", "ostL"),
+        w("POST", "wish", "wish", "ostL"),
+        r("GET", "mypage", "mypage", "ostL"),
         w("POST", "diag/save", "diag_save", "os"),
-        r("GET", "diags", "diags", "ost"),
-        w("POST", "diag/take", "diag_take", "ost"),
-        r("GET", "recommend", "recommend", "ost"));
+        r("GET", "diags", "diags", "ostL"),
+        w("POST", "diag/take", "diag_take", "ostL"),
+        r("GET", "recommend", "recommend", "ostL"));
     private final AuthService auth; private final LmsCall call;
     public LmsNServiceImpl(AuthService auth, LmsCall call) { this.auth = auth; this.call = call; }
     @Override public JsonNode handle(String method, String name, HttpServletRequest req, byte[] body) throws Exception {
         LmsCall.Route rt = LmsCall.find(ROUTES, method, name);
         if (rt == null) throw new DdException(404, "없는 주소입니다.", "not_found");
-        return call.run("n", rt, auth.need(req), req, body);
+        return call.run("n", rt, auth.auth(req), req, body);
     }
 }
