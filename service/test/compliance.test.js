@@ -31,7 +31,9 @@ test('규정 준수 API', async t => {
     const beat = secs => call('L2', 'POST', `/api/pub/${tid}/cpl`, { kind: 'beat', cls: 'c1', item: 'i1', secs });
     assert.equal((await beat(0)).status, 400); assert.equal((await beat(61)).status, 400);
     const r = await beat(30); assert.equal(r.status, 200); assert.equal(r.j.today, 30); assert.equal(r.j.max, 3600); assert.equal(r.j.over, false);
-    await pool.query("insert into cpl_log (tenant_id, sid, kind, cls, item, secs) values ($1, 'T0001', 'beat', 'c1', 'i1', 3560)", [tid]);
+    const r1b = await beat(60); assert.ok(r1b.j.today <= 30 + 6, '실제 경과 시간보다 많이 적립하지 않음: ' + r1b.j.today);
+    const had = r1b.j.today; await pool.query("insert into cpl_log (tenant_id, sid, kind, cls, item, secs, at) values ($1, 'T0001', 'beat', 'c1', 'i1', $2, now() - interval '5 minutes')", [tid, 3560 - had + 30]);
+    await pool.query("update cpl_log set at = now() - interval '5 minutes' where tenant_id = $1 and kind = 'beat'", [tid]);
     const r2 = await beat(60); assert.equal(r2.j.today, 3600, '제한을 넘겨 적립하지 않음'); assert.equal(r2.j.over, true);
     const r3 = await beat(60); assert.equal(r3.j.today, 3600); assert.equal(r3.j.over, true);
   });
@@ -45,6 +47,21 @@ test('규정 준수 API', async t => {
     assert.equal((await att('NOPE')).status, 400); assert.equal((await att('QR1234')).status, 200); assert.equal((await att('QR1234')).status, 200);
     const n = (await pool.query("select count(*)::int n from cpl_log where tenant_id = $1 and kind = 'attend'", [tid])).rows[0].n; assert.equal(n, 1);
     await put({ on: true, single: true, dayMax: 1, attend: { cls: 'c1', code: 'OLD999', exp: Date.now() - 1000 } }); assert.equal((await att('OLD999')).status, 400);
+  });
+  await t.test('서버 채점: 정답 비공개 · 무작위 출제 · 재응시 · 위조 차단', async () => {
+    const qs = Array.from({ length: 6 }, (_, i) => ({ t: 'mc', q: 'Q' + i, opts: ['a', 'b'], a: 0, pts: 10 }));
+    const D = { ...doc({ on: true, single: true, pass: 60 }), classes: [{ id: 'cx', name: 'X', curriculum: [{ id: 'e1', type: 'exam', time: 30, cplN: 2, qs, rules: { retry: { mode: 'count', v: 2 }, pass: { on: true, v: 60 } } }, { id: 'e2', type: 'exam', time: 1, qs }, { id: 'v1', type: 'video' }] }] };
+    const r0 = await call('A', 'PUT', '/api/state', { doc: D, rev }); assert.equal(r0.status, 200); rev = r0.j.rev; const px = `/api/pub/${tid}/cpl`;
+    const s = await call('L2', 'POST', px, { kind: 'exam-start', cls: 'cx', item: 'e1' }); assert.equal(s.status, 200, JSON.stringify(s.j)); assert.equal(s.j.qs.length, 2); assert.ok(s.j.qs.every(q => !('a' in q)), '정답 미전송'); assert.ok(s.j.end > Date.now());
+    const again = await call('L2', 'POST', px, { kind: 'exam-start', cls: 'cx', item: 'e1' }); assert.equal(again.j.attempt, s.j.attempt, '재시작해도 같은 응시'); assert.equal(again.j.end, s.j.end, '시간 초기화 없음');
+    assert.equal((await call('L2', 'POST', px, { kind: 'exam-start', cls: 'cx', item: 'v1' })).status, 400); assert.equal((await call('L2', 'POST', px, { kind: 'exam-start', cls: 'nope', item: 'e1' })).status, 400);
+    const wrong = {}; s.j.qs.forEach(q => { wrong[q.i] = '1'; }); const w = await call('L2', 'POST', px, { kind: 'exam-submit', attempt: s.j.attempt, ans: wrong }); assert.equal(w.j.score, 0); assert.equal(w.j.pass, false); assert.ok(w.j.res.every(x => !('a' in x)));
+    assert.equal((await call('L2', 'POST', px, { kind: 'exam-submit', attempt: s.j.attempt, ans: wrong })).status, 400, '중복 제출 차단');
+    const s2 = await call('L2', 'POST', px, { kind: 'exam-start', cls: 'cx', item: 'e1' }); const good = {}; s2.j.qs.forEach(q => { good[q.i] = '0'; }); const g = await call('L2', 'POST', px, { kind: 'exam-submit', attempt: s2.j.attempt, ans: good }); assert.equal(g.j.score, 100); assert.equal(g.j.pass, true);
+    assert.equal((await call('L2', 'POST', px, { kind: 'exam-start', cls: 'cx', item: 'e1' })).status, 400, '재응시 한도');
+    const s3 = await call('L2', 'POST', px, { kind: 'exam-start', cls: 'cx', item: 'e2' }); await pool.query("update cpl_exam set ends_at = now() - interval '5 minutes' where id = $1", [s3.j.attempt]); const g3 = {}; s3.j.qs.forEach(q => { g3[q.i] = '0'; }); const late = await call('L2', 'POST', px, { kind: 'exam-submit', attempt: s3.j.attempt, ans: g3 }); assert.equal(late.j.late, true); assert.equal(late.j.score, 0, '시간 초과 답안 무효');
+    const ex = await call('A', 'GET', '/api/cpl/exams'); assert.equal(ex.status, 200); assert.ok(ex.j.rows.some(x => x.item === 'e1' && x.score === 100)); assert.equal((await call('anon', 'GET', '/api/cpl/exams')).status, 401);
+    await put({ on: true, single: true, dayMax: 1 });
   });
   await t.test('운영자: 집계 · 로그 조회, 로그인 필요', async () => {
     const s = await call('A', 'GET', '/api/cpl/summary'); assert.equal(s.status, 200); const row = s.j.rows.find(x => x.sid === 'T0001'); assert.ok(row && row.secs >= 3600); assert.ok(row.ips >= 1);

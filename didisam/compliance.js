@@ -28,13 +28,13 @@
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org) { cplEnsure(); navAdd('cpl', ['voc', 'lifelong', 'corp'].includes(S.org.type)); } } catch (e) { console.error(e); } return r; }; }
 
   /* 학습자 게시본: 정책 · 차시 기준을 함께 싣는다 */
-  { const base = lsSnapshot; lsSnapshot = (...a) => { const pub = base(...a); try { pub.cpl = cplPublic(); (pub.classes || []).forEach(c => { const src = C(c.id); (c.items || []).forEach(it => { const x = src && (src.curriculum || []).find(y => y.id === it.id); if (x) { if (x.cplN) it.cplN = +x.cplN; it.cplSec = recSecs(x); } }); }); } catch (e) { console.error(e); } return pub; }; }
+  { const base = lsSnapshot; lsSnapshot = (...a) => { const pub = base(...a); try { pub.cpl = cplPublic(); (pub.classes || []).forEach(c => { const src = C(c.id); (c.items || []).forEach(it => { const x = src && (src.curriculum || []).find(y => y.id === it.id); if (x) { if (x.cplN) it.cplN = +x.cplN; it.cplSec = recSecs(x); } /* 서버 채점: 시험 문항 · 정답은 게시본에 싣지 않고 응시 시작 때 서버가 내려 준다 */ if (it.type === 'exam' && pub.cpl.on && MOEL()) { const n = (x && +x.cplN) || (it.qs || []).length; it.srv = 1; it.qs = Array.from({ length: n }, () => ({ t: 'ph', q: '', opts: [] })); } }); }); } catch (e) { console.error(e); } return pub; }; }
   /* 설치 구성에 규정 준수 정책을 함께 내보낸다(비밀값 없음) */
   { const base = tenantYAML; tenantYAML = (...a) => { const P = cplP(); return base(...a).replace(/\n*$/, '\n') + `compliance:\n  on: ${!!P.on}\n  profile: ${P.profile}\n  singleSession: ${!!P.single}\n  dayMaxHours: ${+P.dayMax || 0}\n  retainYears: ${+P.retainY || 5}\n`; }; }
 
   /* ── 학습 기준 도우미 ── */
   function recSecs(it) { if (+it.cplMin > 0) return it.cplMin * 60; const d = it.yt && it.yt.dur; if (typeof d === 'number' && d > 0) return d; if (typeof d === 'string' && /^\d+:\d{2}(:\d{2})?$/.test(d)) { const p = d.split(':').map(Number); return p.reduce((a, x) => a * 60 + x, 0); } if (+it.dur > 0) return +it.dur; return 600; }
-  const evalItems = c => (c.curriculum || []).filter(i => ['exam', 'quiz'].includes(i.type));
+  const evalItems = c => (c.curriculum || []).filter(i => i.type === 'exam');
   const videoItems = c => (c.curriculum || []).filter(i => i.type === 'video');
   const bankOK = (it, x) => { const n = +it.cplN || (it.qs || []).length; return n > 0 && (it.qs || []).length >= n * x; };
   const sidOf = id => { const m = S.members.find(x => x.id === id); return m ? String(m.sid || m.name) : id; };
@@ -79,6 +79,7 @@
       A('관리자 모듈', 'a-copy', '베낀 답안 기준 · 확인 기능', '별표 1 ②', on ? 'ok' : 'set'),
       A('관리자 모듈', 'a-emon', '공단 원격훈련 자동모니터링시스템 연계', '지원규정 제6조 · 별표 1 ②', 'link', '전송 항목 규격을 공단에서 확보해야 합니다.'),
       A('교사 모듈', 't-fb', '시험 · 과제 첨삭, 첨삭 일정 조회', '별표 1 ②', 'ok'),
+      A('평가 · 진도', 'e-srv', '시험 문항 · 정답 서버 보관, 서버 채점 · 시간 제한', '별표 1 ②④', on ? 'ok' : 'set', '설정 변경 후 게시해야 적용됩니다.'),
       A('평가 · 진도', 'e-bank', '문제은행 3배수 이상', '별표 1 ④', allEval.length && allEval.every(i => bankOK(i, 3)) ? 'ok' : 'set'),
       A('평가 · 진도', 'e-item', '차시별 인정 학습시간 50% 이상 진도 인정', '별표 1 ④', +P.itemMin >= 50 ? 'ok' : 'set'),
       A('평가 · 진도', 'e-rate', '수료 진도율 80% 이상', '지원규정 제11조 · 내일배움 제38조', +P.rate >= 80 ? 'ok' : 'set'),
@@ -136,6 +137,7 @@
   function monRows() { const SUM = S.cpl.sum; const live = UIcpl.live; const get = sid => (live ? live.find(x => x.sid === sid) : SUM[sid]) || {}; return S.classes.filter(c => c.status !== '종료').flatMap(c => (c.learners || []).map(id => { const sid = sidOf(id), r = get(sid), g = (c.prog || {})[id] || {}; return { c, id, sid, p: Math.round(+g.p || 0), secs: +r.secs || 0, today: +r.today || 0, ips: +r.ips || 0, last: r.last || '', verified: +r.verified || 0 }; })); }
   const UIcpl = { live: null, loading: false };
   function viewMon() {
+    syncExams();
     if (LIVEON() && !UIcpl.live && !UIcpl.loading) { UIcpl.loading = true; api('GET', '/api/cpl/summary').then(x => { UIcpl.live = x.rows || []; UIcpl.loading = false; render(); }).catch(e => { UIcpl.loading = false; toast(e.message || '활동 기록을 불러오지 못했습니다.', 'bad'); }); }
     const P = cplP(); const Rw = monRows(); const low = Rw.filter(r => r.p < (+P.rate || 80)); const multi = Rw.filter(r => r.ips > 1);
     return `<div class="kpis">${kpi('훈련생', new Set(Rw.map(r => r.sid)).size)}${kpi('수료 기준 미달', low.length, `진도 ${+P.rate || 80}% 미만`, low.length ? 'r' : '')}${kpi('여러 IP 접속', multi.length, '확인 대상', multi.length ? 'y' : '')}</div>
@@ -172,8 +174,10 @@
   function reportRows() { const P = cplP(); const card = P.profile === 'moel-entrust'; return S.classes.filter(c => c.status !== '종료').map(c => { const st = c.start || ''; const en = c.end || ''; return { c, notify: st ? addDays2(st, -1) : '', finish: en ? addDays2(en, card ? 10 : 30) : '', evals: evalItems(c).length, done: (c.learners || []).filter(id => cplDone(c, id)).length, n: (c.learners || []).length }; }); }
   function cplDone(c, id) { const P = cplP(); const g = (c.prog || {})[id] || {}; return (+g.p || 0) >= (+P.rate || 80) && (!evalItems(c).length || g.exam == null || +g.exam >= (+P.pass || 0)); }
   window.cplDone = cplDone;
+  /* 운영: 서버 채점 결과를 운영자 화면 점수에 반영(최고 점수) */
+  function syncExams() { if (!LIVEON() || UIcpl.exAt) return; UIcpl.exAt = Date.now(); api('GET', '/api/cpl/exams').then(x => { let n = 0; (x.rows || []).forEach(r => { const c = C(r.cls); const m = S.members.find(y => String(y.sid || y.name) === r.sid); const g = c && m && c.prog && c.prog[m.id]; if (g && (g.exam == null || +r.score > +g.exam)) { g.exam = +r.score; n++; } }); if (n) { save(); render(); } }).catch(() => { UIcpl.exAt = 0; }); }
   function viewRep() {
-    const P = cplP(); const R = reportRows(); const d0 = today(); const soon = d => d && d >= d0 && d <= addDays2(d0, 7);
+    syncExams(); const P = cplP(); const R = reportRows(); const d0 = today(); const soon = d => d && d >= d0 && d <= addDays2(d0, 7);
     return `<div class="warn">HRD-Net 실제 전송은 고용노동부 · 공단 연계 승인 후 사용합니다. 지금은 보고 파일을 내려받아 입력합니다.</div><div class="bar2"><button class="btn sm" data-act="cpl-rep-csv">수료 보고 파일 내려받기</button><button class="btn sm" data-act="go" data-v="hrd">HRD-Net 보고 화면</button></div>
       <div class="card"><div class="ch"><b>보고 기한</b><small>${P.profile === 'moel-entrust' ? '실시신고 = 개시 전일, 수료 보고 = 종료 후 10일' : '수료 보고 = 종료 후 30일'}</small></div>${table(['과정', ...(P.profile === 'moel-entrust' ? ['실시신고 · 명단'] : []), '수료 보고', '수료 예상', '평가'], R.map(r => [esc(r.c.name), ...(P.profile === 'moel-entrust' ? [soon(r.notify) ? tag(r.notify, 'y') : esc(r.notify || '일정 없음')] : []), soon(r.finish) ? tag(r.finish, 'y') : esc(r.finish || '일정 없음'), `${r.done}/${r.n}명`, r.evals ? r.evals + '개' : tag(P.monthEval ? '평가 없음' : '—', P.monthEval ? 'r' : '')]), '운영 중인 과정이 없습니다.')}</div>`;
   }
@@ -220,6 +224,7 @@
   LPX['cpl-login'] = x => { lsum(x.who).last = x.at; };
   LPX['cpl-verify'] = x => { const r = lsum(x.who); r.verified++; r.last = x.at; };
   LPX['cpl-review'] = () => { };
+  LPX['cpl-exam'] = x => { const d = x.data || {}; const c = C(d.cls); const m = S.members.find(y => String(y.sid || y.name) === x.who); const g = c && m && (c.prog = c.prog || {}, c.prog[m.id] = c.prog[m.id] || {}); if (g && (g.exam == null || +d.score > +g.exam)) g.exam = +d.score; };
   LPX['cpl-att'] = x => { const d = x.data || {}; const c = C(d.cls); const q = S.cpl.att[d.cls]; if (!c || !q || q.code !== d.code || q.exp < Date.parse(x.at)) return; const m = S.members.find(y => String(y.sid || y.name) === x.who); if (!m) return; q.seen = q.seen || {}; if (q.seen[m.id]) return; q.seen[m.id] = 1; c.att = c.att || {}; const n = Object.keys(c.att).filter(k => k.startsWith(m.id + ':')).length; c.att[`${m.id}:${n}`] = '출석'; logAudit(`QR 출석: ${x.who}`); };
   /* 대화: 조회 */
   { const base = answer; answer = (q, ...r) => { if (/(인가|규정 준수|점검표|심사 준비)/.test(q) && !/(만들|발송|보내)/.test(q) && S.org.cpl) { const L = reqList(); const n = L.filter(x => reqStat(x) === 'set').length; return { text: `${PROFILES[cplP().profile].n} 기준 요건 ${L.length}개 중 설정이 필요한 항목은 ${n}개입니다. 점검표에서 확인할 수 있습니다.`, go: 'cpl' }; } return base(q, ...r); }; }
