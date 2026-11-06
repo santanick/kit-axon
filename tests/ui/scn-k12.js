@@ -108,6 +108,57 @@ const MIME = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html
   ok(await G(() => { go('board'); return document.querySelector('.bcanvas, #main, body').innerText.length > 150; }), '샘플 수업이 있어도 공지 화면 정상');
   ok(!(await sam(`${nm.n} 1만원 현금 수납`, false)).text.includes('현금로'), '조사 표기');
   ok(await G(() => { UI.obc = false; chatSend('미납 원생 보여줘'); return UI.obc === true; }), 'AI 명령을 보내면 시작 가이드를 접음');
+  /* v32.2 반 설정 · 1회당 수강료 · 정원 */
+  const K = await G(() => { const L = S.classes.filter(c => c.status !== '종료' && W2.units(c).some(u => u.date === today())).sort((x, y) => y.learners.length - x.learners.length); const A = L[0], B = S.classes.find(c => c !== A && c.learners.some(id => !A.learners.includes(id))) || S.classes.find(c => c !== A); return { a: A.id, b: B.id, an: A.learners.length, bx: B.learners.find(id => !A.learners.includes(id)) }; });
+  await G(a => ACT['crm-cls-cfg']({ dataset: { v: a } }), K.a); await wait(60);
+  await p.fill('#modal [name=sj]', '수학'); await p.fill('#modal [name=cp]', String(K.an - 1)); await p.selectOption('#modal [name=fe]', 'per'); await p.fill('#modal [name=pe]', '30000'); await mclick('저장');
+  ok(K.an >= 2 && await p.locator('#modal').count() === 1, `정원은 현재 수강생보다 작게 못 함 ${K.an}`);
+  await p.fill('#modal [name=cp]', String(K.an)); await p.check('#modal [name=tg][value="중2"]'); await p.check('#modal [name=nd]'); await p.check('#modal [name=nb]'); await p.check('#modal [name=nc]'); await mclick('저장');
+  ok(await G(a => { const x = C(a).k12; return x.fee === 'per' && x.per === 30000 && x.subj === '수학' && x.cap > 0 && x.tg.join() === '중2' && x.nDaily && x.nAbs && x.nCls && x.nAtt; }, K.a), '반 설정 저장');
+  ok(await G(a => { const ym = (() => { const d = new Date(); d.setMonth(d.getMonth() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })(); const c = C(a); const n = W2.units(c).filter(u => u.date.startsWith(ym)).length; UI.crmBM = ym; UI.crmBS = new Set([a]); ACT['crm-gen'](); const b = S.bills.find(x => x.cls === a && x.month === ym); return n > 0 && b && /회당/.test(b.items[0][0]) && b.items[0][1] === 30000 * n; }, K.a), '1회당 수강료는 그달 수업 횟수로 청구');
+  await G(([a, w]) => ACT['crm-one']({ dataset: { w, v: 'enroll' } }), [K.a, K.bx]); await wait(60); await p.selectOption('#modal [name=c]', K.a); await mclick('등록');
+  ok(await p.locator('#modal').count() === 1 && await G(([a, w]) => !C(a).learners.includes(w), [K.a, K.bx]), '정원이 차면 반 등록을 막음'); await G(() => closeModal());
+  ok(await G(a => { const c = C(a); c.k12.nAtt = false; const u = W2.units(c).find(x => x.date === today()); const n0 = S.msgs.length; W2.set(c, u.id, c.learners[0], '지각'); const quiet = S.msgs.length === n0; c.k12.nAtt = true; return quiet; }, K.a), '출결 알림을 끈 반은 조용히 기록');
+  /* 수업 알림 · 미등원 알림 */
+  ok(await G(a => { const c = C(a); const u = W2.units(c).find(x => x.date === today()); u.from = u.from || '16:00'; if (c.crmDay && c.crmDay[u.id]) c.crmDay[u.id].closed = false; const mid = c.learners[1]; W2.set(c, u.id, mid, '', 'admin', true); delete ((c.crmDay || {})[u.id] || {}).auto; const n1 = k12Auto('00:00'); const cls = S.msgs.filter(m => m.title === '수업 알림').length; const n2 = k12Auto('23:59'); const abs = S.msgs.filter(m => m.title === '미등원 알림'); const n3 = k12Auto('23:59'); return n1 > 0 && cls > 0 && n2 >= 1 && abs.length === n2 && n3 === 0 && W2.get(c, u.id, c.learners[0]) !== undefined; }, K.a), '수업 알림 · 미등원 알림은 한 번만');
+  /* 데일리 리포트 */
+  await G(a => { const c = C(a); const u = W2.units(c).find(x => x.date === today()); const d = c.crmDay[u.id] = c.crmDay[u.id] || {}; d.prog = '3단원'; d.hw = '익힘책 20쪽'; d.rows = d.rows || {}; d.rows[c.learners[0]] = { ...(d.rows[c.learners[0]] || {}), hw: true, memo: '내부메모비밀' }; UI.crmD = today(); go('crmatt'); }, K.a); await wait(100);
+  await p.locator('.k-attc', { hasText: await G(a => C(a).name, K.a) }).first().locator('[data-act="crm-daily"]').click(); await wait(60); await mclick('보내기');
+  ok(await G(() => { const L = S.msgs.filter(m => m.title === '데일리 리포트'); return L.length >= 2 && L.some(m => /3단원/.test(m.body) && /제출/.test(m.body)) && !L.some(m => /내부메모비밀/.test(m.body)); }), '데일리 리포트(개별 메모 제외)');
+  r = await sam('오늘 데일리 리포트 보내줘', false); ok(r.plan && !r.text.includes(nm.n), 'AI 데일리 리포트 계획');
+  ok(await G(() => scxChips('crmatt').some(x => /데일리/.test(x.l))), 'AI 출석부 칩에 데일리 리포트');
+  /* 현금영수증 · 영수증 · 선납 · 납입 확인서 */
+  await G(id => { UI.crmId = id; UI.crmT = 'sum'; UI.crmSub = 'info'; go('crmstu'); }, nm.id); await wait(80);
+  if (!(await p.locator('#crmInfo').count())) { await p.locator('[data-act="crm-sub"]').first().click(); await wait(60); }
+  await p.selectOption('#crmInfo [name=cr]', '소득공제'); await p.fill('#crmInfo [name=crn]', '12'); await p.click('[data-act="crm-info-save"]'); await wait(50);
+  ok(await G(id => !M(id).crm.cr, nm.id), '현금영수증 번호 검증');
+  await p.fill('#crmInfo [name=crn]', '010-1234-5678'); await p.click('[data-act="crm-info-save"]'); await wait(50);
+  ok(await G(id => M(id).crm.cr === '소득공제' && M(id).crm.crn === '010-1234-5678', nm.id), '현금영수증 정보 저장');
+  const pb = await G(id => { const b = S.bills.find(x => billWhoT(x).includes(id) && x.status !== '취소' && (x.items || []).reduce((a, i) => a + i[1], 0) > (x.paid || []).reduce((a, i) => a + i.amt, 0)); function billWhoT(b) { return b.who ? [b.who] : (b.to || []).map(t => t.who); } return b && b.id; }, nm.id);
+  await G(() => { UI.crmBT = 'list'; UI.crmBF = { m: '', st: '', q: '' }; go('crmbill'); }); await wait(60); await p.click(`[data-act="crm-pay"][data-v="${pb}"]`); await wait(50);
+  ok(await p.locator('#modal', { hasText: '현금영수증(소득공제)' }).count() === 1, '수납 창에 현금영수증 안내'); await p.selectOption('#modal [name=m]', '현금'); await mclick('수납');
+  ok(await G(b => { const x = S.bills.find(y => y.id === b); return x.paid[x.paid.length - 1].cr === '소득공제'; }, pb), '현금 수납에 현금영수증 표시');
+  await p.click(`[data-act="crm-pay-hist"][data-v="${pb}"]`); await wait(50); const pop = ctx.waitForEvent('page', { timeout: 3000 }).catch(() => null); await p.locator('#modal [data-act="crm-rcpt"]').last().click(); const pw = await pop;
+  ok(await G(() => /영수증 번호/.test(window.__k12Print || '') && /010\*+5678/.test(window.__k12Print) && !/1234-5678/.test(window.__k12Print)), '영수증(번호 가림)'); if (pw) await pw.close(); await G(() => closeModal());
+  ok(await G(id => { const ym = (() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })(); window.__ym6 = ym; return true; }, nm.id));
+  await G(id => { S.classes.filter(c => c.learners.includes(id)).forEach(c => { c.price = c.price || 200000; if (c.k12) c.k12.fee = 'month'; }); ACT['crm-prepay']({ dataset: { v: id } }); }, nm.id); await wait(60); await p.fill('#modal [name=m]', await G(() => window.__ym6)); await p.selectOption('#modal [name=n]', '3'); await p.fill('#modal [name=dc]', '5000'); await p.selectOption('#modal [name=me]', '카드'); await mclick('선납 처리');
+  ok(await G(id => { const L = S.bills.filter(b => b.who === id && / \(선납\)$/.test(b.title)); return L.length === 3 && L.every(b => b.status === '납부 완료' && b.items.some(i => i[0] === '선납 할인' && i[1] === -5000) && b.paid[0].method === '카드'); }, nm.id), '여러 달 선납(달마다 청구 · 수납)');
+  r = await sam(`${nm.n} 3개월 선납`, false); ok(r.plan || /수업 이름/.test(r.text), 'AI 선납');
+  await G(id => ACT['crm-ycert']({ dataset: { v: id } }), nm.id); await wait(50); await p.selectOption('#modal [name=y]', await G(() => today().slice(0, 4))); const pop2 = ctx.waitForEvent('page', { timeout: 3000 }).catch(() => null); await mclick('확인서 열기'); const pw2 = await pop2;
+  ok(await G(() => /교육비 납입 확인서/.test(window.__k12Print || '') && /합계/.test(window.__k12Print)), '교육비 납입 확인서'); if (pw2) await pw2.close();
+  /* 상담 보호자 공유 */
+  await G(id => ACT['crm-cs-new']({ dataset: { v: id } }), nm.id); await wait(50); await p.fill('#modal [name=t]', '공유상담내용입니다'); await p.check('#modal [name=sh]'); await mclick('저장');
+  await G(id => ACT['crm-cs-new']({ dataset: { v: id } }), nm.id); await wait(50); await p.fill('#modal [name=t]', '비공유상담내용'); await mclick('저장');
+  ok(await G(() => S.consults[0].share !== true && S.consults[1].share === true), '상담 보호자 공유 표시');
+  /* 보호자 화면: 학습자 앱 자녀 관리 */
+  await G(a => { const c = C(a); (c.k12Exams = c.k12Exams || []).push({ id: 'gx', name: '보호자확인평가', kind: '단원평가', date: today(), max: 100, scores: { [c.learners[0]]: { v: 88 }, [c.learners[1]]: { v: 70 } } }); save(); }, K.a); await wait(400);
+  const kid = await G(a => C(a).learners[0], K.a); const p2 = await ctx.newPage(); p2.on('pageerror', e => errs.push('learner ' + e.message)); await p2.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await p2.goto(B + '/learner.html'); await p2.waitForTimeout(500);
+  const gv = await p2.evaluate(id => { const reg = JSON.parse(localStorage.getItem('didisam.rooms') || 'null'); const r = JSON.parse(localStorage.getItem('didisam.room.' + reg.cur) || 'null'); if (!r) return { err: 'no room' }; const h = laKid(r, id); return { h, ok: typeof lk12Kid === 'function' }; }, kid);
+  ok(gv.ok && /학원 시험 성적/.test(gv.h) && /보호자확인평가/.test(gv.h) && /88점/.test(gv.h) && /반 평균 79/.test(gv.h) && !/등 \//.test(gv.h), '보호자 화면: 성적(석차 제외)');
+  ok(/3단원/.test(gv.h) && /익힘책/.test(gv.h) && !/내부메모비밀/.test(gv.h), '보호자 화면: 진도 · 과제(개별 메모 제외)');
+  const gv2 = await p2.evaluate(id => { const reg = JSON.parse(localStorage.getItem('didisam.rooms')); const r = JSON.parse(localStorage.getItem('didisam.room.' + reg.cur)); return laKid(r, id); }, nm.id);
+  ok(/공유상담내용입니다/.test(gv2) && !/비공유상담내용/.test(gv2), '보호자 화면: 공유 상담만');
+  ok(await p2.evaluate(id => { const reg = JSON.parse(localStorage.getItem('didisam.rooms')); const r = JSON.parse(localStorage.getItem('didisam.room.' + reg.cur)); r.org.type = 'adult'; return !/학원 시험 성적/.test(laKid(r, id)); }, kid), '다른 유형은 보호자 학원 기록 없음'); await p2.close();
   /* 샘플 삭제 */
   await G(() => ACT['crm-sample-del']()); await wait(50); ok(await G(() => !S.classes.some(c => /샘플/.test(c.name)) && !S.members.some(m => /샘플/.test(m.name))), '샘플 삭제');
   /* 저장 후 복원 */
