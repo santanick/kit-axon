@@ -45,7 +45,7 @@ function teacherView(doc, email) {
   if (!doc || typeof doc !== 'object') return doc; const sc = scope(doc, email); const out = {};
   for (const k of Object.keys(doc)) { const v = doc[k]; out[k] = VIEW_KEEP.has(k) ? v : shape(v); }
   out.classes = (Array.isArray(doc.classes) ? doc.classes : []).filter(c => c && sc.classes.has(String(c.id)));
-  out.members = (Array.isArray(doc.members) ? doc.members : []).filter(m => m && sc.ids.has(String(m.id)));
+  out.members = (Array.isArray(doc.members) ? doc.members : []).filter(m => m && sc.ids.has(String(m.id))).map(m => m.crm && typeof m.crm === 'object' ? { ...m, crm: { st: m.crm.st } } : m); /* 원생 CRM 정보는 재원 상태만 넘긴다 */
   out.admins = (Array.isArray(doc.admins) ? doc.admins : []).filter(x => x && String(x.email || '').toLowerCase() === String(email).toLowerCase());
   if (Array.isArray(doc.tq)) out.tq = doc.tq.filter(x => x && (sc.sids.has(String(x.sid)) || sc.classes.has(String(x.cls))));
   SCRUB.forEach(k => { if (doc[k]) out[k] = scrub(doc[k]); }); return out;

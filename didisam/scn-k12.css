@@ -1,0 +1,33 @@
+/* 시나리오 k12 — 학원 운영 CRM */
+.k-split{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);align-items:start}
+.k-split.has{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+.k-center{justify-content:center;margin-top:12px}
+.k-warn{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.k-card .seg2{flex-wrap:wrap;margin-bottom:14px}
+.k-grid{display:grid;gap:0 12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.k-h{display:flex;align-items:center;gap:8px;margin:18px 0 8px;font-size:14px}
+.k-on{font-weight:800;text-decoration:underline}
+.k-p{margin:0 0 6px}
+.k-num{width:76px}
+.k-att{display:grid;gap:14px;grid-template-columns:280px minmax(0,1fr);align-items:start}
+.k-attc td input:not([type=checkbox]){width:100%;min-width:82px;box-sizing:border-box}
+.k-st{display:inline-flex;gap:2px;flex-wrap:nowrap}
+.k-st button{border:1px solid var(--line,#ddd);background:transparent;color:inherit;border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;white-space:nowrap}
+.k-st button.on{background:var(--ink,#222);color:#fff;border-color:var(--ink,#222)}
+.k-st button.on.r{background:#d92d20;border-color:#d92d20}
+.k-st button.on.y{background:#b54708;border-color:#b54708}
+.k-st button.on.g{background:#067647;border-color:#067647}
+.k-calh{display:flex;align-items:center;gap:6px;margin-bottom:8px}.k-calh b{flex:1;text-align:center;font-size:14px}
+.k-calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center}
+.k-calg em{font-style:normal;font-size:11px;color:var(--muted)}
+.k-calg button{position:relative;border:0;background:transparent;color:inherit;padding:7px 0;border-radius:6px;cursor:pointer;font-size:13px}
+.k-calg button i{position:absolute;left:50%;bottom:2px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor}
+.k-calg button.td{font-weight:800}
+.k-calg button.on{background:var(--ink,#222);color:#fff}
+.k-tt{display:grid;gap:8px;grid-template-columns:repeat(7,minmax(0,1fr))}.k-tt .card{margin:0;padding:10px}
+.k-bars{display:flex;align-items:flex-end;gap:6px;height:110px;margin-bottom:14px}
+.k-bar{flex:1;max-width:40px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.k-bar i{display:block;width:100%;min-height:2px;background:var(--ink,#222);border-radius:4px 4px 0 0}.k-bar small{font-size:11px;color:var(--muted)}
+@media (max-width:900px){.k-split.has,.k-att{grid-template-columns:minmax(0,1fr)}.k-tt{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.k-grid{grid-template-columns:minmax(0,1fr)}}
+.linkb{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer;text-align:left}

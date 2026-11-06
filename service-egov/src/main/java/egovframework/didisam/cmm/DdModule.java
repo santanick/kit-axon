@@ -87,7 +87,7 @@ public final class DdModule {
         if (doc == null || !doc.isObject()) return doc; Scope sc = scope(doc, email); ObjectNode out = DdWeb.JSON.createObjectNode();
         doc.fields().forEachRemaining(e -> { JsonNode v = e.getValue(); out.set(e.getKey(), VIEW_KEEP.contains(e.getKey()) ? v : shape(v)); });
         out.set("classes", filter(doc.get("classes"), x -> sc.classes.contains(txt(x, "id"))));
-        out.set("members", filter(doc.get("members"), x -> sc.ids.contains(txt(x, "id"))));
+        ArrayNode mems = filter(doc.get("members"), x -> sc.ids.contains(txt(x, "id"))); ArrayNode memsOut = DdWeb.JSON.createArrayNode(); for (JsonNode m : mems) { JsonNode cr = m.get("crm"); if (cr != null && cr.isObject()) { ObjectNode c2 = m.deepCopy(); ObjectNode cs = DdWeb.JSON.createObjectNode(); if (cr.has("st")) cs.set("st", cr.get("st")); c2.set("crm", cs); memsOut.add(c2); } else memsOut.add(m); } out.set("members", memsOut); /* 원생 CRM 정보는 재원 상태만 넘긴다 */
         out.set("admins", filter(doc.get("admins"), x -> sameMail(x, email)));
         if (doc.get("tq") != null && doc.get("tq").isArray()) out.set("tq", filter(doc.get("tq"), x -> sc.sids.contains(txt(x, "sid")) || sc.classes.contains(txt(x, "cls"))));
         for (String k : SCRUB) if (doc.get(k) != null && !doc.get(k).isNull()) out.set(k, scrub(doc.get(k))); return out;
