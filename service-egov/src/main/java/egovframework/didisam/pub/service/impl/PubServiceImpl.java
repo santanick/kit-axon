@@ -35,9 +35,9 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     static final String TAG = "learner_message";
 
     @Resource(name = "propertiesService") private EgovPropertyService props;
-    private final PubMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final PiiService pii; private final DdAiClient ai;
-    public PubServiceImpl(PubMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, PiiService pii, DdAiClient ai) {
-        this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.pii = pii; this.ai = ai;
+    private final PubMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final PiiService pii; private final DdAiClient ai; private final egovframework.didisam.cpl.service.CplService cpl;
+    public PubServiceImpl(PubMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, PiiService pii, DdAiClient ai, egovframework.didisam.cpl.service.CplService cpl) {
+        this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.pii = pii; this.ai = ai; this.cpl = cpl;
     }
 
     @Override public Object route(HttpServletRequest req, HttpServletResponse res, String tid, String act, byte[] body) throws Exception {
@@ -64,6 +64,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             case "GET pii": case "PUT pii": return pii.myPii(req, body, tid, sid);
             case "POST withdraw": return pii.withdraw(body, tid, sid);
             case "POST verify": return pii.verify(body, tid, sid);
+            case "POST cpl": return cpl.route(req, body, tid, sid);
             case "GET me": return tx.inTenant(tid, () -> learnerOut(tid, sid));
             case "PUT progress": {
                 JsonNode b = DdWeb.readBody(body, LP_MAX); ObjectNode lp = cleanLP(get(b, "lp")); String j = stringify(lp);

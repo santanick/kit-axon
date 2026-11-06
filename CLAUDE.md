@@ -4,7 +4,7 @@
 
 ## 원칙
 - 코드는 하나입니다. 기관별로 저장소·폴더를 복제하지 않고, 공통 코어 위에 시나리오를 얹습니다.
-- `main`에 직접 push하지 않습니다. `main`에 들어가면 운영 서버(Cloud Run)와 데모 사이트(GitHub Pages)에 곧바로 반영됩니다.
+- `main`에 직접 push하지 않습니다. `main`에 들어가면 데모 사이트(GitHub Pages)에 곧바로 반영되고, GCP 배포 변수가 설정된 경우 운영 서버(Cloud Run)에도 배포됩니다.
 - 채팅방끼리는 서로의 작업을 볼 수 없습니다. 공유할 내용은 이 문서와 `docs/parallel/`, PR 설명에 남깁니다.
 
 ## 채팅방 역할
@@ -45,3 +45,7 @@
 3. `docs/parallel/rooms.md`의 시작 지시문을 복사해 새 채팅방을 시작합니다.
 
 빈 파일과 태그를 먼저 `main`에 넣어 두면, 시나리오 채팅방끼리 `index.html`에서 충돌하지 않습니다.
+
+## 규정 준수 기능
+- 직업훈련원 · 기업 · 평생교육원의 인가 대응 기능은 `didisam/compliance.js`, `didisam/lcompliance.js`, `service/server/compliance.js`, `service-egov/.../cpl/`에 있습니다.
+- 근거 규정과 미연동 항목은 `docs/compliance/README.md`를 따릅니다. 규정 수치를 바꾸면 이 문서와 테스트를 함께 수정합니다.

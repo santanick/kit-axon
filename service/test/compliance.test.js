@@ -1,0 +1,63 @@
+'use strict';
+/* v30 규정 준수 API — 활동 로그 · 1일 제한 · 동시접속 방지 · 본인확인 미연동 · 기관 분리 */
+const test = require('node:test'); const assert = require('node:assert/strict');
+const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app');
+
+test('규정 준수 API', async t => {
+  const pool = poolFrom(process.env); await migrate(pool);
+  const app = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE' }, log: {} });
+  await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
+  const jar = {}; const call = async (who, method, path, body) => {
+    const r = await fetch(U + path, { method, headers: { 'x-didisam': '1', ...(body ? { 'content-type': 'application/json' } : {}), ...(jar[who] ? { cookie: jar[who] } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    const c = r.headers.get('set-cookie'); if (c) jar[who] = c.split(';')[0];
+    return { status: r.status, j: await r.json().catch(() => ({})) };
+  };
+  const sfx = Date.now().toString(36);
+  const su = await call('A', 'POST', '/api/signup', { email: `ca${sfx}@a.kr`, password: 'Passw0rd-aaa', orgName: 'A', type: 'voc', code: 'C0DE' });
+  const tid = su.j.tenant && su.j.tenant.tid; assert.ok(tid, JSON.stringify(su.j));
+  const doc = cpl => ({ org: { name: 'A', type: 'voc', room: { mode: 'saas' }, cpl }, codes: [{ sid: 'T0001', dept: '1반', code: 'ABC234' }], members: [{ id: 'm1', sid: 'T0001', name: 'T0001' }], classes: [], lsite: { pub: { org: { name: 'A', type: 'voc' }, classes: [], tuts: [] } } });
+  let rev = (await call('A', 'GET', '/api/state')).j.rev || 0;
+  const put = async cpl => { const r = await call('A', 'PUT', '/api/state', { doc: doc(cpl), rev }); assert.equal(r.status, 200, JSON.stringify(r.j)); rev = r.j.rev; };
+  await put({ on: true, single: true, dayMax: 1 });
+  const login = who => call(who, 'POST', `/api/pub/${tid}/login`, { sid: 'T0001', code: 'ABC234' });
+
+  await t.test('동시접속: 새 로그인이 이전 세션을 끊는다', async () => {
+    assert.equal((await login('L1')).status, 200); assert.equal((await call('L1', 'GET', `/api/pub/${tid}/me`)).status, 200);
+    assert.equal((await login('L2')).status, 200);
+    assert.equal((await call('L1', 'GET', `/api/pub/${tid}/me`)).status, 401);
+    assert.equal((await call('L2', 'GET', `/api/pub/${tid}/me`)).status, 200);
+  });
+  await t.test('학습시간: 서버 합산 · 값 검증 · 1일 제한', async () => {
+    const beat = secs => call('L2', 'POST', `/api/pub/${tid}/cpl`, { kind: 'beat', cls: 'c1', item: 'i1', secs });
+    assert.equal((await beat(0)).status, 400); assert.equal((await beat(61)).status, 400);
+    const r = await beat(30); assert.equal(r.status, 200); assert.equal(r.j.today, 30); assert.equal(r.j.max, 3600); assert.equal(r.j.over, false);
+    await pool.query("insert into cpl_log (tenant_id, sid, kind, cls, item, secs) values ($1, 'T0001', 'beat', 'c1', 'i1', 3560)", [tid]);
+    const r2 = await beat(60); assert.equal(r2.j.today, 3600, '제한을 넘겨 적립하지 않음'); assert.equal(r2.j.over, true);
+    const r3 = await beat(60); assert.equal(r3.j.today, 3600); assert.equal(r3.j.over, true);
+  });
+  await t.test('본인확인: 제공사 미연동이면 501', async () => {
+    const r = await call('L2', 'POST', `/api/pub/${tid}/cpl`, { kind: 'verify-start', method: 'motp' });
+    assert.equal(r.status, 501); assert.equal(r.j.code || r.j.error, 'provider_missing');
+  });
+  await t.test('QR 출결: 코드 검증 · 만료 · 중복 없음', async () => {
+    await put({ on: true, single: true, dayMax: 1, attend: { cls: 'c1', code: 'QR1234', exp: Date.now() + 60000 } });
+    const att = code => call('L2', 'POST', `/api/pub/${tid}/cpl`, { kind: 'attend', cls: 'c1', code });
+    assert.equal((await att('NOPE')).status, 400); assert.equal((await att('QR1234')).status, 200); assert.equal((await att('QR1234')).status, 200);
+    const n = (await pool.query("select count(*)::int n from cpl_log where tenant_id = $1 and kind = 'attend'", [tid])).rows[0].n; assert.equal(n, 1);
+    await put({ on: true, single: true, dayMax: 1, attend: { cls: 'c1', code: 'OLD999', exp: Date.now() - 1000 } }); assert.equal((await att('OLD999')).status, 400);
+  });
+  await t.test('운영자: 집계 · 로그 조회, 로그인 필요', async () => {
+    const s = await call('A', 'GET', '/api/cpl/summary'); assert.equal(s.status, 200); const row = s.j.rows.find(x => x.sid === 'T0001'); assert.ok(row && row.secs >= 3600); assert.ok(row.ips >= 1);
+    const l = await call('A', 'GET', '/api/cpl/logs?sid=T0001&limit=5'); assert.equal(l.status, 200); assert.ok(l.j.rows.length >= 1); assert.ok('ip' in l.j.rows[0]);
+    assert.equal((await call('anon', 'GET', '/api/cpl/summary')).status, 401);
+  });
+  await t.test('기관 분리: 다른 기관에 보이지 않음', async () => {
+    await call('B', 'POST', '/api/signup', { email: `cb${sfx}@b.kr`, password: 'Passw0rd-bbb', orgName: 'B', type: 'voc', code: 'C0DE' });
+    const s = await call('B', 'GET', '/api/cpl/summary'); assert.equal(s.status, 200); assert.equal(s.j.rows.length, 0);
+  });
+  await t.test('정책이 꺼진 기관은 활동을 기록하지 않음', async () => {
+    await put({ on: false }); const r = await call('L2', 'POST', `/api/pub/${tid}/cpl`, { kind: 'beat', cls: 'c1', item: 'i2', secs: 10 }); assert.equal(r.status, 200); assert.equal(r.j.max, 0);
+    const n = (await pool.query("select count(*)::int n from cpl_log where tenant_id = $1 and item = 'i2'", [tid])).rows[0].n; assert.equal(n, 0);
+  });
+  await new Promise(ok => app.close(ok)); await pool.end();
+});
