@@ -26,6 +26,8 @@
   <update id="addTokens">update ai_usage set tin = tin + #{tin}, tout = tout + #{tout} where tenant_id = #{tid} and day = cast(#{day} as date)</update>
   <!-- plain -->
   <insert id="insertLearnerSession">insert into learner_sessions (id, tenant_id, sid, expires_at) values (#{id}, #{tid}, #{sid}, now() + interval '30 days')</insert>
-  <select id="selectLearnerSession" resultType="java.util.LinkedHashMap">select tenant_id, sid from learner_sessions where id = #{id} and expires_at &gt; now()</select>
+  <select id="selectLearnerSession" resultType="java.util.LinkedHashMap">select tenant_id, sid, extract(epoch from now() - last_at)::float8 idle from learner_sessions where id = #{id} and expires_at &gt; now()</select>
+  <select id="selectIdleH" resultType="java.lang.String">select doc->'org'->'cpl'->>'idleH' from tenant_state where tenant_id = #{tid} and (doc->'org'->'cpl'->>'on')::boolean</select>
+  <update id="touchLearnerSession">update learner_sessions set last_at = now() where id = #{id}</update>
   <delete id="deleteLearnerSession">delete from learner_sessions where id = #{id}</delete>
 </mapper>

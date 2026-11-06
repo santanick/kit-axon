@@ -16,13 +16,15 @@ public class DdProps {
     public final boolean devOtp, devOauth, devIdv;
     /** v31 환급 에디션: 모듈(learner|tutor|admin, 비면 통합), 관리자 접속 허용 IP, 학습자 첫 화면의 기관 */
     public final String module, learnerTid; public final java.util.List<String> adminIps;
+    /** 본인인증 이력 서버 강제(제공사 연동 후 켠다) */
+    public final boolean idvEnforce;
     public DdProps(@Value("${COOKIE_SECURE:1}") String cs, @Value("${TRUST_PROXY_HOPS:1}") int hops, @Value("${SESSION_IDLE_H:12}") int idle,
                    @Value("${SIGNUP_CODE:}") String code, @Value("${SIGNUP:on}") String signup, @Value("${SESSION_PEPPER:}") String pepper,
                    @Value("${AI_DAILY_CALLS:400}") int aiDaily, @Value("${ANTHROPIC_API_KEY:}") String aiKey, @Value("${NODE_ENV:}") String env,
                    @Value("${ANTHROPIC_URL:}") String aiUrl, @Value("${PII_KEY:}") String piiKey,
                    @Value("${PII_DEV_OTP:}") String devOtp, @Value("${OAUTH_DEV:}") String devOauth, @Value("${IDV_DEV:}") String devIdv,
-                   @Value("${MODULE:}") String module, @Value("${ADMIN_IPS:}") String adminIps, @Value("${LEARNER_TID:}") String learnerTid) {
-        this.module = module.trim(); if (!this.module.isEmpty() && !DdModule.PAGE.containsKey(this.module)) throw new IllegalStateException("MODULE은 learner, tutor, admin 중 하나여야 합니다.");
+                   @Value("${IDV_ENFORCE:}") String idvEnforce, @Value("${MODULE:}") String module, @Value("${ADMIN_IPS:}") String adminIps, @Value("${LEARNER_TID:}") String learnerTid) {
+        this.idvEnforce = "1".equals(idvEnforce); this.module = module.trim(); if (!this.module.isEmpty() && !DdModule.PAGE.containsKey(this.module)) throw new IllegalStateException("MODULE은 learner, tutor, admin 중 하나여야 합니다.");
         this.adminIps = DdModule.parseIps(adminIps); this.learnerTid = learnerTid.trim();
         this.secure = !"0".equals(cs);
         this.hops = Math.max(0, Math.min(5, hops));

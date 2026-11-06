@@ -3,7 +3,7 @@
    값: enc1:v1.{iv}.{tag}.{암호문}(AES-256-GCM, PII_KEY), AAD = {tid}|state|{묶음}|{id}|{항목}. Java: cmm/DdStateCrypto.java */
 const crypto = require('node:crypto');
 const PFX = 'enc1:';
-const SET = { members: ['name', 'nick', 'email', 'phone'], parents: ['name', 'phone'], codes: ['code'] };
+const SET = { members: ['name', 'nick', 'email', 'phone'], parents: ['name', 'phone'], codes: ['code'], admins: ['name', 'email'], consults: ['title', 'summary', 'text', 'note', 'memo', 'transcript'], msgs: ['to', 'title', 'body'] };
 const JSON_FIELDS = { members: ['extra'] };
 const idOf = (kind, x) => String((kind === 'codes' ? x.sid : x.id) == null ? '' : (kind === 'codes' ? x.sid : x.id));
 
@@ -18,7 +18,7 @@ function createStateCrypto(K, HttpErr) {
   const memberName = (m, tid) => typeof m.name === 'string' && m.name.startsWith(PFX) ? dec(m.name, aadOf(tid, 'members', m, 'name')) : m.name;
   const unsealed = doc => { for (const kind of Object.keys(SET)) for (const x of Array.isArray(doc && doc[kind]) ? doc[kind] : []) { if (!x || typeof x !== 'object') continue; for (const f of SET[kind]) if (typeof x[f] === 'string' && x[f] !== '' && !x[f].startsWith(PFX)) return true; for (const f of JSON_FIELDS[kind] || []) if (x[f] && typeof x[f] === 'object' && !['{}', '[]'].includes(JSON.stringify(x[f]))) return true; } return false; };
   /* 기존 평문 문서를 한 번에 전환한다. rev는 그대로 둔다 */
-  async function sealAll(pool, inTenant) { if (!K) return 0; let n = 0; const { rows } = await pool.query('select id from tenants'); for (const { id } of rows) { const done = await inTenant(pool, id, async c => { const r = (await c.query('select doc from tenant_state where tenant_id = $1 for update', [id])).rows[0]; if (!r || !unsealed(r.doc)) return 0; const s = JSON.stringify(seal(open(r.doc, id), id)); await c.query('update tenant_state set doc = $2, bytes = $3 where tenant_id = $1', [id, s, s.length]); return 1; }); n += done; } return n; }
+  async function sealAll(pool, inTenant) { if (!K) return 0; let n = 0; const { rows } = await pool.query('select id from tenants'); for (const { id } of rows) { /* 키가 맞지 않는 기관 하나 때문에 나머지 전환을 멈추지 않는다. 그 기관은 읽을 때 503으로 드러난다 */ const done = await inTenant(pool, id, async c => { const r = (await c.query('select doc from tenant_state where tenant_id = $1 for update', [id])).rows[0]; if (!r || !unsealed(r.doc)) return 0; const s = JSON.stringify(seal(open(r.doc, id), id)); await c.query('update tenant_state set doc = $2, bytes = $3 where tenant_id = $1', [id, s, s.length]); return 1; }).catch(e => { if (e.code !== 'state_key') throw e; console.warn('state seal skipped', id); return 0; }); n += done; } return n; }
   return { seal, open, memberName, unsealed, sealAll };
 }
 module.exports = { createStateCrypto, PFX };

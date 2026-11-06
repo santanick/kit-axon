@@ -8,6 +8,8 @@ import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 public interface PubMapper {
     Map<String, Object> selectSitePub(@Param("tid") String tid);
     Map<String, Object> selectLearner(@Param("tid") String tid, @Param("sid") String sid);
+    String selectIdleH(@Param("tid") String tid);
+    void touchLearnerSession(@Param("id") String id);
     Map<String, Object> selectLearnerDept(@Param("tid") String tid, @Param("sid") String sid);
     int touchLearner(@Param("tid") String tid, @Param("sid") String sid);
     Map<String, Object> selectLp(@Param("tid") String tid, @Param("sid") String sid);

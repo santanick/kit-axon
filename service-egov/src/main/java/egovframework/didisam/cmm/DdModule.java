@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 public final class DdModule {
     private DdModule() { }
     public static final Map<String, String> PAGE = Map.of("learner", "learner.html", "tutor", "tutor.html", "admin", "index.html");
-    static final Set<String> TUTOR_API = Set.of("GET /api/health", "GET /api/config", "POST /api/login", "POST /api/logout", "POST /api/password", "GET /api/me", "GET /api/state", "PUT /api/state", "POST /api/ai/messages", "GET /api/ai/usage", "GET /api/learners/progress", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy");
+    static final Set<String> TUTOR_API = Set.of("GET /api/health", "GET /api/config", "POST /api/login", "POST /api/logout", "POST /api/password", "GET /api/me", "GET /api/state", "PUT /api/state", "POST /api/ai/messages", "GET /api/ai/usage", "GET /api/learners/progress", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion");
     static final Set<String> VIEW_KEEP = Set.of("org", "classes", "members", "admins", "me", "nav", "settings", "site", "lsite", "guides", "bld", "rubrics", "tuts", "weeks");
     static final List<String> SCRUB = List.of("settings", "site", "lsite");
     /** 화면이 읽는 구조만 남기고 값은 지운다 */

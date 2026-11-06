@@ -7,6 +7,7 @@ import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 
 @EgovMapper
 public interface PiiMapper {
+    int countIdentity(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("lid") String lid);
     String selectIdentityPw(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("lid") String lid);
     void updateIdentityPw(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("lid") String lid, @org.apache.ibatis.annotations.Param("hash") String hash);
     /* L */

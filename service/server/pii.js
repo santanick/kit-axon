@@ -164,7 +164,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
   async function meExtra(c, tid, sid) { if (!/^[0-9a-f-]{36}$/.test(sid)) return null; const a = (await c.query('select kind, login, nickname, student_no, dept, status, minor, idv_ok from learner_accounts where tenant_id = $1 and learner_id = $2', [tid, sid])).rows[0]; return a ? { nickname: a.nickname, kind: a.kind, login: a.login, student_no: a.student_no, dept: a.dept, minor: a.minor, idv_ok: a.idv_ok, status: a.status } : null; }
 
   const isAccount = sid => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(sid));
-  const changePw = (tid, lid, cur, pw) => tx(tid, async ({ P }) => { const r = (await P('select pw_hash from pii.identity where tid = $1 and learner_id = $2', [tid, lid])).rows[0]; if (!r || !r.pw_hash || !(await checkPw(cur, r.pw_hash))) throw new HttpErr(401, '비밀번호가 올바르지 않습니다.', 'login'); await P('update pii.identity set pw_hash = $3 where tid = $1 and learner_id = $2', [tid, lid, await hashPw(pw)]); await plog(P, tid, 'self', 'pw_change', lid, 'self', []); });
+  const changePw = (tid, lid, cur, pw) => tx(tid, async ({ P }) => { const r = (await P('select pw_hash from pii.identity where tid = $1 and learner_id = $2', [tid, lid])).rows[0]; if (!r || (r.pw_hash && !(await checkPw(cur, r.pw_hash)))) throw new HttpErr(401, '비밀번호가 올바르지 않습니다.', 'login'); await P('update pii.identity set pw_hash = $3 where tid = $1 and learner_id = $2', [tid, lid, await hashPw(pw)]); await plog(P, tid, 'self', 'pw_change', lid, 'self', []); });
   async function myPii(req, res, tid, s) {
     if (req.method === 'GET') return tx(tid, async ({ P }) => { const r = (await P('select learner_id, provider, email_enc, phone_enc, name_enc, consent, created_at from pii.identity where tid = $1 and learner_id::text = $2', [tid, s.sid])).rows[0]; if (!r) throw new HttpErr(404, '계정 정보가 없습니다.', 'none');
       await plog(P, tid, 'self', 'view', r.learner_id, 'self_access', ['email', 'phone', 'name']);
@@ -240,7 +240,8 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
     return n;
   }
 
-  return { isAccount, changePw, pubOpen: { 'POST otp': otp, 'POST signup': signup, 'POST guardian': guardian }, pubAuth: { 'GET pii': myPii, 'PUT pii': myPii, 'POST withdraw': withdraw, 'POST verify': verify }, login, meExtra, adminList, adminPii, adminLog, purge, maskEmail };
+  const hasPw = (tid, lid) => tx(tid, async ({ P }) => !!((await P('select pw_hash from pii.identity where tid = $1 and learner_id = $2', [tid, lid])).rows[0] || {}).pw_hash);
+  return { isAccount, changePw, hasPw, pubOpen: { 'POST otp': otp, 'POST signup': signup, 'POST guardian': guardian }, pubAuth: { 'GET pii': myPii, 'PUT pii': myPii, 'POST withdraw': withdraw, 'POST verify': verify }, login, meExtra, adminList, adminPii, adminLog, purge, maskEmail };
 }
 
 module.exports = { createPii, piiKeys, maskEmail };

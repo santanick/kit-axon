@@ -30,7 +30,7 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
 
     @Override public DdModule.Scope scope(Map<String, Object> a) throws Exception {
         String tid = (String) a.get("tid"); Map<String, Object> r = tx.inTenant(tid, () -> mapper.selectState(tid));
-        return DdModule.scope(r == null ? null : DdWeb.JSON.readTree((String) r.get("doc")), (String) a.get("email"));
+        return DdModule.scope(r == null ? null : crypt.open(DdWeb.JSON.readTree((String) r.get("doc")), tid), (String) a.get("email"));
     }
 
     @Override public Map<String, Object> put(Map<String, Object> a, JsonNode b) throws Exception {

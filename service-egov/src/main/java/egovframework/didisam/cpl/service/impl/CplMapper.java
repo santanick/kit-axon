@@ -19,6 +19,12 @@ public interface CplMapper {
     int submitExam(@Param("id") String id, @Param("answers") String answers, @Param("score") int score, @Param("pass") Boolean pass, @Param("late") boolean late);
     List<Map<String, Object>> selectExams(@Param("tid") String tid);
     List<Map<String, Object>> selectExamAnswers(@Param("tid") String tid);
+    List<Map<String, Object>> selectItemSecs(@Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls);
+    List<Map<String, Object>> selectAllSecs(@Param("tid") String tid);
+    List<Map<String, Object>> selectBest(@Param("tid") String tid);
+    String selectMembers(@Param("tid") String tid);
+    String selectLpJson(@Param("tid") String tid, @Param("sid") String sid);
+    Integer selectIdv(@Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls, @Param("cd") String cd, @Param("mode") String mode);
     String selectClasses(@Param("tid") String tid);
     Map<String, Object> selectLearnerPw(@Param("tid") String tid, @Param("sid") String sid);
     Integer selectDropped(@Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls);

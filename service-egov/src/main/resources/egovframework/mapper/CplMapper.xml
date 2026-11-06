@@ -13,6 +13,13 @@
   <insert id="insertExam">insert into cpl_exam (id, tenant_id, sid, cls, item, qorder, ends_at) values (#{id}, #{tid}, #{sid}, #{cls}, #{item}, cast(#{order} as jsonb), case when cast(#{ends} as bigint) is null then null else to_timestamp(cast(#{ends} as bigint) / 1000.0) end)</insert>
   <select id="selectExamAttempt" resultType="java.util.LinkedHashMap">select id, cls, item, qorder::text qorder, (extract(epoch from ends_at) * 1000)::bigint ends_ms from cpl_exam where id = #{id} and tenant_id = #{tid} and sid = #{sid} and submitted_at is null</select>
   <update id="submitExam">update cpl_exam set submitted_at = now(), answers = cast(#{answers} as jsonb), score = #{score}, pass = #{pass}, late = #{late} where id = #{id}</update>
+  <select id="selectItemSecs" resultType="java.util.LinkedHashMap">select item, coalesce(sum(secs), 0)::int s from cpl_log where tenant_id = #{tid} and sid = #{sid} and cls = #{cls} and kind = 'beat' group by item</select>
+  <select id="selectAllSecs" resultType="java.util.LinkedHashMap">select sid, cls, item, coalesce(sum(secs), 0)::int s from cpl_log where tenant_id = #{tid} and kind = 'beat' group by sid, cls, item order by sid, cls, item</select>
+  <select id="selectBest" resultType="java.util.LinkedHashMap">select sid, cls, item, max(score)::int s from cpl_exam where tenant_id = #{tid} and submitted_at is not null group by sid, cls, item</select>
+  <select id="selectMembers" resultType="java.lang.String">select (doc->'members')::text from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectLpJson" resultType="java.lang.String">select lp::text from learner_progress where tenant_id = #{tid} and sid = #{sid}</select>
+  <select id="selectIdv" resultType="java.lang.Integer">select 1 from cpl_log where tenant_id = #{tid} and sid = #{sid} and cls = #{cls} and kind in ('verify-phone', 'verify-motp', 'review') and eval_cd = #{cd}
+    <if test="mode == 'day'"> and day = (now() at time zone 'Asia/Seoul')::date</if><if test="mode == 'hour'"> and at &gt; now() - interval '60 minutes'</if> limit 1</select>
   <select id="selectExamAnswers" resultType="java.util.LinkedHashMap">select sid, cls, item, answers::text answers from cpl_exam where tenant_id = #{tid} and submitted_at is not null order by sid, id limit 5000</select>
   <select id="selectClasses" resultType="java.lang.String">select (doc->'classes')::text from tenant_state where tenant_id = #{tid}</select>
   <select id="selectLearnerPw" resultType="java.util.LinkedHashMap">select sid, pw_hash from learners where tenant_id = #{tid} and sid = #{sid}</select>

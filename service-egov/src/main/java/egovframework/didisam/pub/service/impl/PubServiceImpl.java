@@ -84,8 +84,11 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
 
     private Map<String, Object> lauth(HttpServletRequest req, String tid) {
         String t = web.lsidToken(req); if (t == null || t.isEmpty() || t.length() > 100) return null;
-        Map<String, Object> r = mapper.selectLearnerSession(DdCrypto.sha(t));
-        return r != null && tid.equals(r.get("tenant_id")) ? r : null;
+        String id = DdCrypto.sha(t); Map<String, Object> r = mapper.selectLearnerSession(id);
+        if (r == null || !tid.equals(r.get("tenant_id"))) return null; double idle = r.get("idle") == null ? 0 : ((Number) r.get("idle")).doubleValue(); if (idle < 60) return r;
+        /* 무활동 자동 로그아웃: 규정 준수 정책의 시간을 서버에서도 적용한다 */
+        String hs; try { hs = tx.inTenant(tid, () -> mapper.selectIdleH(tid)); } catch (Exception e) { throw new IllegalStateException(e); } double h = 0; try { h = hs == null ? 0 : Double.parseDouble(hs); } catch (NumberFormatException e) { h = 0; }
+        if (h > 0 && idle >= h * 3600) { mapper.deleteLearnerSession(id); return null; } mapper.touchLearnerSession(id); return r;
     }
 
     private Object login(HttpServletRequest req, HttpServletResponse res, String tid, byte[] body) throws Exception {
@@ -125,7 +128,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         Map<String, Object> Lr = acc != null ? null : mapper.selectLearnerDept(tid, sid);
         Map<String, Object> lp = mapper.selectLp(tid, sid), d = mapper.selectDoc(tid);
         Map<String, Object> me = new LinkedHashMap<>(); me.put("sid", sid); me.put("dept", acc != null ? acc.get("dept") : Lr != null ? Lr.get("dept") : "");
-        if (acc != null) me.put("acct", acc);
+        if (acc != null) { me.put("acct", acc); if (pii.hasPw(tid, sid)) me.put("pwSet", true); }
         meFlags(me, sid, Lr, d);
         Map<String, Object> o = new LinkedHashMap<>(); o.put("me", me); o.put("lp", lp == null ? null : parse((String) lp.get("lp")));
         o.put("mine", d == null ? emptyMine() : mineOf(parse((String) d.get("doc")), sid, tid)); return o;

@@ -59,8 +59,9 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         mapper.insertLog(tid, cut(String.valueOf(actor), 80), action, lid, purpose, String.join(",", fields));
     }
     record Org(String type, JsonNode mode, boolean under14, JsonNode social, boolean idvOn, String idvReason) {}
+    @Override public boolean hasPw(String tid, String lid) throws Exception { return Boolean.TRUE.equals(ptx.run(tid, r -> r.P(() -> mapper.selectIdentityPw(tid, lid) != null))); }
     @Override public void changePw(String tid, String lid, String cur, String pw) throws Exception {
-        ptx.run(tid, r -> r.P(() -> { String h = mapper.selectIdentityPw(tid, lid); if (h == null || !DdCrypto.checkPw(cur, h)) throw processException("dd.401.login.pw"); mapper.updateIdentityPw(tid, lid, DdCrypto.hashPw(pw)); plog(tid, "self", "pw_change", lid, "self", List.of()); return null; }));
+        ptx.run(tid, r -> r.P(() -> { if (mapper.countIdentity(tid, lid) == 0) throw processException("dd.401.login.pw"); String h = mapper.selectIdentityPw(tid, lid); if (h != null && !DdCrypto.checkPw(cur, h)) throw processException("dd.401.login.pw"); mapper.updateIdentityPw(tid, lid, DdCrypto.hashPw(pw)); plog(tid, "self", "pw_change", lid, "self", List.of()); return null; }));
     }
     private boolean strictPw(String tid) { Map<String, Object> r = mapper.selectOrg(tid); if (r == null || r.get("cpl") == null) return false; JsonNode c = parse((String) r.get("cpl")); return c != null && truthy(get(c, "on")) && sOr(get(c, "profile")).startsWith("moel-"); }
     private Org orgOf(String tid) {
