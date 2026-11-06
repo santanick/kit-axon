@@ -32,10 +32,11 @@ public class McpServiceImpl extends EgovAbstractServiceImpl implements McpServic
 
     @Resource(name = "propertiesService") private EgovPropertyService props;
     @Resource(name = "messageSource") private MessageSource ms;
+    private final DdStateCrypto crypt;
     private final McpMapper mapper; private final TenantTx tx; private final TenantTxMapper txm; private final DdProps p; private final DdRateLimiter rl;
     private final List<ObjectNode> tools = new ArrayList<>();
-    public McpServiceImpl(McpMapper mapper, TenantTx tx, TenantTxMapper txm, DdProps p, DdRateLimiter rl) throws Exception {
-        this.mapper = mapper; this.tx = tx; this.txm = txm; this.p = p; this.rl = rl;
+    public McpServiceImpl(McpMapper mapper, TenantTx tx, TenantTxMapper txm, DdProps p, DdRateLimiter rl, DdStateCrypto crypt) throws Exception {
+        this.crypt = crypt; this.mapper = mapper; this.tx = tx; this.txm = txm; this.p = p; this.rl = rl;
         try (InputStream in = getClass().getResourceAsStream("/egovframework/mcp/tools.json")) { for (JsonNode t : DdWeb.JSON.readTree(in)) tools.add((ObjectNode) t); }
     }
     private String msg(String k, Object... a) { return ms.getMessage(k, a.length == 0 ? null : a, k, Locale.ROOT); }
@@ -137,12 +138,12 @@ public class McpServiceImpl extends EgovAbstractServiceImpl implements McpServic
             JsonNode res = tx.inTenant(tid, () -> {
                 Map<String, Object> r = writeTool ? mapper.selectDocForUpdate(tid) : mapper.selectDoc(tid);
                 if (r == null) throw new McpErr(msg("mcp.nostate"));
-                JsonNode doc = parse((String) r.get("doc"));
+                JsonNode doc = crypt.open(parse((String) r.get("doc")), tid);
                 JsonNode room = or(truthy(get(doc, "org")) ? get(doc, "org", "room") : get(doc, "org"), F.objectNode());
                 JsonNode eg = get(room, "egress");
                 if (truthy(eg) && get(eg, "mcp") != null && get(eg, "mcp").isBoolean() && !get(eg, "mcp").booleanValue()) throw new McpErr(msg("mcp.egress"));
                 if (!writeTool) return run(tname, doc, a, x);
-                JsonNode res2 = write(tname, (ObjectNode) doc, a, x); String s = stringify(doc);
+                JsonNode res2 = write(tname, (ObjectNode) doc, a, x); String s = stringify(crypt.seal(doc, tid));
                 mapper.updateDoc(tid, s, s.length());
                 ObjectNode det = F.objectNode(); det.put("key", (String) a.get("id"));
                 List<Map.Entry<String, JsonNode>> es = new ArrayList<>(); for (var e : entries(x)) es.add(Map.entry(e.getKey(), t(cut(S(e.getValue()), 80))));

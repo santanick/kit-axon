@@ -108,7 +108,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         return a;
     }
     @Override public Map<String, Object> need(HttpServletRequest req) throws Exception {
-        Map<String, Object> a = auth(req); if (a == null) throw processException("dd.401.auth"); return a;
+        Map<String, Object> a = auth(req); if (a == null) throw processException("dd.401.auth"); String up = req.getRequestURI(); if (Boolean.TRUE.equals(a.get("pw_temp")) && !"/api/me".equals(up) && !"/api/password".equals(up)) throw processException("dd.403.pw_temp"); return a;
     }
     @Override public Map<String, Object> needStaff(HttpServletRequest req) throws Exception { Map<String, Object> a = need(req); if ("teacher".equals(a.get("role"))) throw processException("dd.403.teacher"); return a; }
     @Override public Map<String, Object> needOwner(HttpServletRequest req) throws Exception { Map<String, Object> a = need(req); if (!"owner".equals(a.get("role"))) throw processException("dd.403.role"); return a; }
@@ -128,7 +128,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         if (!List.of("teacher", "sub").contains(role)) throw processException("dd.400.staff_role");
         byte[] rnd = new byte[12]; new java.security.SecureRandom().nextBytes(rnd);
         String pass = "Dd" + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(rnd).replaceAll("[-_]", "x") + "7"; String pw = DdCrypto.hashPw(pass);
-        try { tx.plain(() -> { if (mapper.countEmail(email) > 0) throw processException("dd.409.exists"); return mapper.insertUser(tid, email, pw, role); }); }
+        try { tx.plain(() -> { if (mapper.countEmail(email) > 0) throw processException("dd.409.exists"); String id = mapper.insertUser(tid, email, pw, role); mapper.setPwTemp(id); return id; }); }
         catch (DuplicateKeyException e) { throw processException("dd.409.exists", e); }
         tx.audit(tid, (String) a.get("email"), "staff.create", DdWeb.JSON.createObjectNode().put("email", email).put("role", role).toString());
         Map<String, Object> o = new LinkedHashMap<>(); o.put("email", email); o.put("role", role); o.put("password", pass); return o;
@@ -139,7 +139,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         tx.audit(tid, (String) a.get("email"), "staff.remove", DdWeb.JSON.createObjectNode().put("email", email).toString()); return Map.of("ok", true);
     }
     @Override public Map<String, Object> meOut(Map<String, Object> a) {
-        Map<String, Object> u = new LinkedHashMap<>(); u.put("email", a.get("email")); u.put("role", a.get("role"));
+        Map<String, Object> u = new LinkedHashMap<>(); u.put("email", a.get("email")); u.put("role", a.get("role")); if (Boolean.TRUE.equals(a.get("pw_temp"))) u.put("pwTemp", true);
         Map<String, Object> t = new LinkedHashMap<>(); t.put("tid", a.get("tid")); t.put("name", a.get("name")); t.put("type", a.get("type")); t.put("mode", a.get("mode"));
         Map<String, Object> o = new LinkedHashMap<>(); o.put("user", u); o.put("tenant", t); return o;
     }

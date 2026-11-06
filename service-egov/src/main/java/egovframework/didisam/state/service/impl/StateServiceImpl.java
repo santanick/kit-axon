@@ -16,15 +16,15 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
     public static final int STATE_MAX = 8 * 1024 * 1024;
     static final Pattern SID_RE = Pattern.compile("^[A-Za-z0-9_-]{4,20}$");
     @Resource(name = "propertiesService") private EgovPropertyService props;
-    private final StateMapper mapper; private final TenantTx tx; private final DdProps p;
-    public StateServiceImpl(StateMapper mapper, TenantTx tx, DdProps p) { this.mapper = mapper; this.tx = tx; this.p = p; }
+    private final StateMapper mapper; private final TenantTx tx; private final DdProps p; private final DdStateCrypto crypt;
+    public StateServiceImpl(StateMapper mapper, TenantTx tx, DdProps p, DdStateCrypto crypt) { this.mapper = mapper; this.tx = tx; this.p = p; this.crypt = crypt; }
 
     @Override public Map<String, Object> get(Map<String, Object> a) throws Exception {
         String tid = (String) a.get("tid");
         return tx.inTenant(tid, () -> {
             Map<String, Object> r = mapper.selectState(tid); Map<String, Object> o = new LinkedHashMap<>();
             if (r == null) { o.put("doc", null); o.put("rev", 0); return o; }
-            JsonNode d = DdWeb.JSON.readTree((String) r.get("doc")); o.put("doc", "teacher".equals(a.get("role")) ? DdModule.teacherView(d, (String) a.get("email")) : d); o.put("rev", r.get("rev")); o.put("at", r.get("at")); return o;
+            JsonNode d = crypt.open(DdWeb.JSON.readTree((String) r.get("doc")), tid); o.put("doc", "teacher".equals(a.get("role")) ? DdModule.teacherView(d, (String) a.get("email")) : d); o.put("rev", r.get("rev")); o.put("at", r.get("at")); return o;
         });
     }
 
@@ -41,7 +41,7 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
         if ("teacher".equals(a.get("role"))) {
             Map<String, Object> cur = tx.inTenant(tid, () -> mapper.selectState(tid));
             if (cur == null || ((Number) cur.get("rev")).intValue() != rev) throw processException("dd.409.conflict.rev");
-            docN = DdModule.teacherMerge(DdWeb.JSON.readTree((String) cur.get("doc")), docN, (String) a.get("email"));
+            docN = DdModule.teacherMerge(crypt.open(DdWeb.JSON.readTree((String) cur.get("doc")), tid), docN, (String) a.get("email"));
         }
         ObjectNode doc = (ObjectNode) docN; ObjectNode org = (ObjectNode) doc.get("org");
         JsonNode room = org.get("room");
@@ -49,8 +49,8 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
         if (!rtid.isEmpty() && !rtid.equals(tid)) throw processException("dd.403.tenant");
         ObjectNode nroom = room != null && room.isObject() ? (ObjectNode) room : DdWeb.JSON.createObjectNode();
         nroom.put("tid", tid); org.set("room", nroom);
-        String s = doc.toString();
-        if (s.length() > props.getInt("state.maxBytes")) throw processException("dd.413.too_large");
+        if (doc.toString().length() > props.getInt("state.maxBytes")) throw processException("dd.413.too_large");
+        String s = crypt.seal(doc, tid).toString();
         List<String> gone = new ArrayList<>();
         Map<String, Object> out = tx.inTenant(tid, () -> {
             Integer r;
