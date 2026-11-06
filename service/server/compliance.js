@@ -7,7 +7,7 @@
 const crypto = require('node:crypto');
 
 const { pwRule } = require('./pwrule');
-function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, env = {} }) {
+function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, env = {} }) {
   const KEY_RE = /^[\w-]{1,60}$/;
   /* 시험 답안 포함 요청이 있어 본문 상한을 넉넉히 둔다 */
   const dev = env.IDV_DEV === '1'; const pending = new Map();
@@ -28,6 +28,12 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw
   async function route(req, tid, sid) {
     const b = await readBody(req, 128 * 1024); const kind = String(b.kind || '');
     if (['beat', 'attend', 'exam-start'].includes(kind)) await guard(tid, sid, String(b.cls || ''));
+    if (kind === 'pw-change') {
+      limit(`cplv:${tid}:${sid}`, 10, 600e3); const pw = String(b.pw || ''), cur = String(b.cur || '');
+      const P = await inTenant(pool, tid, c => policy(c, tid)); const strict = P && P.on && /^moel-/.test(String(P.profile || '')); if (strict ? !pwRule(pw) : pw.length < 8 || pw.length > 64) throw new HttpErr(400, '비밀번호는 영문 · 숫자 · 특수문자 중 2종 10자 이상 또는 3종 8자 이상입니다.', 'pw_rule');
+      if (pii.isAccount(sid)) { await pii.changePw(tid, sid, cur, pw); return { ok: true }; }
+      return inTenant(pool, tid, async c => { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (!L || !L.pw_hash || !(await checkPw(cur, L.pw_hash))) throw new HttpErr(401, '비밀번호가 올바르지 않습니다.', 'login'); await c.query('update learners set pw_hash = $3 where tenant_id = $1 and sid = $2', [tid, sid, await hashPw(pw)]); await rec(c, tid, sid, 'group-pw', { ip: ip(req) }); return { ok: true }; });
+    }
     if (kind === 'group-pw') {
       limit(`cplv:${tid}:${sid}`, 10, 600e3); const pw = String(b.pw || ''); if (!pwRule(pw)) throw new HttpErr(400, '비밀번호는 영문 · 숫자 · 특수문자 중 2종 10자 이상 또는 3종 8자 이상입니다.', 'pw_rule');
       return inTenant(pool, tid, async c => { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (!L) throw new HttpErr(403, '단체가입 계정이 아닙니다.', 'group_none'); if (dev) { const v = (await c.query("select 1 from cpl_log where tenant_id = $1 and sid = $2 and kind in ('verify-phone', 'review') and at > now() - interval '15 minutes' limit 1", [tid, sid])).rows[0]; if (!v) throw new HttpErr(403, '휴대폰 본인인증을 먼저 진행해 주십시오.', 'group_verify'); } await c.query('update learners set pw_hash = $3 where tenant_id = $1 and sid = $2', [tid, sid, await hashPw(pw)]); await rec(c, tid, sid, 'group-pw', { ip: ip(req) }); return { ok: true }; });

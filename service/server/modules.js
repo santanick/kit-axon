@@ -47,6 +47,7 @@ function teacherView(doc, email) {
   out.classes = (Array.isArray(doc.classes) ? doc.classes : []).filter(c => c && sc.classes.has(String(c.id)));
   out.members = (Array.isArray(doc.members) ? doc.members : []).filter(m => m && sc.ids.has(String(m.id)));
   out.admins = (Array.isArray(doc.admins) ? doc.admins : []).filter(x => x && String(x.email || '').toLowerCase() === String(email).toLowerCase());
+  if (Array.isArray(doc.tq)) out.tq = doc.tq.filter(x => x && (sc.sids.has(String(x.sid)) || sc.classes.has(String(x.cls))));
   SCRUB.forEach(k => { if (doc[k]) out[k] = scrub(doc[k]); }); return out;
 }
 const CLASS_LOCK = ['id', 'learners', 'name', 'status', 'price', 'kind', 'legal', 'start', 'end', 'teacher', 'hrd', 'drop'];
@@ -54,6 +55,10 @@ function teacherMerge(cur, inc, email) {
   const sc = scope(cur, email); const byId = new Map((Array.isArray(inc && inc.classes) ? inc.classes : []).filter(c => c && c.id != null).map(c => [String(c.id), c]));
   const out = { ...cur };
   out.classes = (Array.isArray(cur.classes) ? cur.classes : []).map(c => { if (!c || !sc.classes.has(String(c.id))) return c; const n = byId.get(String(c.id)); if (!n || typeof n !== 'object' || Array.isArray(n)) return c; const m = { ...n }; for (const k of CLASS_LOCK) { if (k in c) m[k] = c[k]; else delete m[k]; } return m; });
+  /* 질문함: 담당 범위의 답변과 새 질문만 받는다 */
+  const inScope = x => x && (sc.sids.has(String(x.sid)) || sc.classes.has(String(x.cls)));
+  const curQ = Array.isArray(cur.tq) ? cur.tq : []; const incQ = new Map((Array.isArray(inc && inc.tq) ? inc.tq : []).filter(x => x && x.id != null).map(x => [String(x.id), x]));
+  if (curQ.length || incQ.size) { const seen = new Set(curQ.map(x => String(x && x.id))); out.tq = curQ.map(x => { if (!inScope(x)) return x; const n = incQ.get(String(x.id)); return n && typeof n === 'object' ? { ...n, id: x.id, sid: x.sid, q: x.q, cls: x.cls } : x; }); for (const [id, n] of incQ) if (!seen.has(id) && inScope(n)) out.tq.push(n); }
   return out;
 }
 module.exports = { PAGE, moduleOf, apiAllowed, mcpAllowed, roleAllowed, staticAllowed, parseIps, ipAllowed, scope, teacherView, teacherMerge };

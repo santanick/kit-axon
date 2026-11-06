@@ -24,7 +24,8 @@ public class CplServiceImpl extends EgovAbstractServiceImpl implements CplServic
     private static final Pattern KEY_RE = Pattern.compile("[\\w-]{1,60}");
     private final CplMapper mapper; private final TenantTx tx; private final DdWeb web; private final DdRateLimiter rl; private final DdProps p;
     private final Map<String, Object[]> pending = new ConcurrentHashMap<>(); private final SecureRandom rnd = new SecureRandom();
-    public CplServiceImpl(CplMapper mapper, TenantTx tx, DdWeb web, DdRateLimiter rl, DdProps p) { this.mapper = mapper; this.tx = tx; this.web = web; this.rl = rl; this.p = p; }
+    private final egovframework.didisam.pii.service.PiiService pii;
+    public CplServiceImpl(CplMapper mapper, TenantTx tx, DdWeb web, DdRateLimiter rl, DdProps p, @org.springframework.context.annotation.Lazy egovframework.didisam.pii.service.PiiService pii) { this.pii = pii; this.mapper = mapper; this.tx = tx; this.web = web; this.rl = rl; this.p = p; }
 
     private JsonNode policy(String tid) { Map<String, Object> r = mapper.selectPolicy(tid); return r == null || r.get("p") == null ? null : parse((String) r.get("p")); }
     private static boolean on(JsonNode P) { return truthy(P) && truthy(get(P, "on")); }
@@ -39,6 +40,12 @@ public class CplServiceImpl extends EgovAbstractServiceImpl implements CplServic
     @Override public Map<String, Object> route(HttpServletRequest req, byte[] body, String tid, String sid) throws Exception {
         JsonNode b = DdWeb.readBody(body, 128 * 1024); String kind = S(get(b, "kind"));
         if (List.of("beat", "attend", "exam-start").contains(kind)) { String gc = S(get(b, "cls")); tx.inTenant(tid, () -> { JsonNode P = policy(tid); if (!on(P)) return null; JsonNode gf = get(P, "groupFirst"); if (gf != null && gf.asBoolean(false)) { Map<String, Object> L = mapper.selectLearnerPw(tid, sid); if (L != null && L.get("pw_hash") == null) throw processException("dd.403.group_first"); } if (mapper.selectDropped(tid, sid, gc) != null) throw processException("dd.403.dropped"); return null; }); }
+        if ("pw-change".equals(kind)) {
+            rl.limit("cplv:" + tid + ":" + sid, 10, 600_000L); String pw = S(get(b, "pw")), cur = S(get(b, "cur"));
+            boolean strict = tx.inTenant(tid, () -> { JsonNode P = policy(tid); return on(P) && S(get(P, "profile")).startsWith("moel-"); }); if (strict ? !egovframework.didisam.cmm.DdModule.pwRule(pw) : pw.length() < 8 || pw.length() > 64) throw processException("dd.400.pw_rule");
+            if (sid.matches("(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")) { pii.changePw(tid, sid, cur, pw); Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); return o; }
+            return tx.inTenant(tid, () -> { Map<String, Object> L = mapper.selectLearnerPw(tid, sid); if (L == null || L.get("pw_hash") == null || !DdCrypto.checkPw(cur, (String) L.get("pw_hash"))) throw processException("dd.401.login.pw"); mapper.updateLearnerPw(tid, sid, DdCrypto.hashPw(pw)); mapper.insertLog(tid, sid, "group-pw", null, null, 0, web.ip(req), ua(req), null, null); Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); return o; });
+        }
         if ("group-pw".equals(kind)) {
             rl.limit("cplv:" + tid + ":" + sid, 10, 600_000L); String pw = S(get(b, "pw")); if (!egovframework.didisam.cmm.DdModule.pwRule(pw)) throw processException("dd.400.pw_rule");
             return tx.inTenant(tid, () -> { if (mapper.selectLearnerPw(tid, sid) == null) throw processException("dd.403.group_none"); if (p.devIdv && mapper.selectRecentPhone(tid, sid) == null) throw processException("dd.403.group_verify"); mapper.updateLearnerPw(tid, sid, DdCrypto.hashPw(pw)); mapper.insertLog(tid, sid, "group-pw", null, null, 0, web.ip(req), ua(req), null, null); Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); return o; });

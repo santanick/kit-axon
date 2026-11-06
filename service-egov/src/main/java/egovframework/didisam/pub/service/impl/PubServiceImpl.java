@@ -112,7 +112,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     /** 단체가입 최초 로그인 · 중도탈락 표시 */
     private void meFlags(Map<String, Object> me, String sid, Map<String, Object> learner, Map<String, Object> d) {
         if (d == null) return; JsonNode doc = parse((String) d.get("doc")); JsonNode org = get(doc, "org"); JsonNode P = org == null ? null : get(org, "cpl"); if (!truthy(P) || !truthy(get(P, "on"))) return;
-        if (truthy(get(P, "groupFirst")) && learner != null && learner.get("pw_hash") == null) me.put("groupFirst", true);
+        if (truthy(get(P, "groupFirst")) && learner != null && learner.get("pw_hash") == null) me.put("groupFirst", true); if (learner != null && learner.get("pw_hash") != null) me.put("pwSet", true);
         JsonNode m = null; for (JsonNode x : arr(or(get(doc, "members"), F.arrayNode()))) if (truthy(x) && strictEq(get(x, "sid"), sid)) { m = x; break; } if (m == null) return; String mid = sOr(get(m, "id")); List<String> D = new ArrayList<>();
         for (JsonNode c : arr(or(get(doc, "classes"), F.arrayNode()))) { JsonNode dr = truthy(c) ? get(c, "drop") : null; if (dr != null && dr.isObject() && truthy(dr.get(mid))) D.add(sOr(get(c, "id"))); } if (!D.isEmpty()) me.put("dropped", D);
     }

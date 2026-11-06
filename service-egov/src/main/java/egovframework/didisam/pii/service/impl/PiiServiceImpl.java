@@ -59,6 +59,9 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         mapper.insertLog(tid, cut(String.valueOf(actor), 80), action, lid, purpose, String.join(",", fields));
     }
     record Org(String type, JsonNode mode, boolean under14, JsonNode social, boolean idvOn, String idvReason) {}
+    @Override public void changePw(String tid, String lid, String cur, String pw) throws Exception {
+        ptx.run(tid, r -> r.P(() -> { String h = mapper.selectIdentityPw(tid, lid); if (h == null || !DdCrypto.checkPw(cur, h)) throw processException("dd.401.login.pw"); mapper.updateIdentityPw(tid, lid, DdCrypto.hashPw(pw)); plog(tid, "self", "pw_change", lid, "self", List.of()); return null; }));
+    }
     private boolean strictPw(String tid) { Map<String, Object> r = mapper.selectOrg(tid); if (r == null || r.get("cpl") == null) return false; JsonNode c = parse((String) r.get("cpl")); return c != null && truthy(get(c, "on")) && sOr(get(c, "profile")).startsWith("moel-"); }
     private Org orgOf(String tid) {
         Map<String, Object> r = mapper.selectOrg(tid); String type = r == null || r.get("type") == null ? "" : (String) r.get("type");
@@ -114,6 +117,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         if (!truthy(get(consent, "tos")) || !truthy(get(consent, "privacy"))) throw processException("dd.400.consent");
         String[] out = ptx.run(tid, r -> {
             Org org = r.L(() -> orgOf(tid)); boolean univ = "univ".equals(org.type());
+            if (r.L(() -> strictPw(tid)) && !truthy(get(consent, "third"))) throw processException("dd.400.consent_third");
             if (strictEq(org.mode(), "code") && !univ) throw processException("dd.403.mode.code");
             if (strictEq(org.mode(), "invite")) throw processException("dd.403.mode.invite");
             String nick = trim(sOr(get(b, "nickname"))); String login = via, sub = null, email = "", stu = null, dept = "";
@@ -147,7 +151,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             String lid;
             try { lid = r.L(() -> mapper.insertAccount(tid, acctLogin, fnick, fstu, fdept, st, fminor, truthy(get(consent, "mkt")))); }
             catch (DuplicateKeyException e) { throw processException("dd.409.exists.stuno"); }
-            ObjectNode cons = F.objectNode(); cons.put("tos", true); cons.put("privacy", true); cons.put("mkt", truthy(get(consent, "mkt")));
+            ObjectNode cons = F.objectNode(); cons.put("tos", true); cons.put("privacy", true); if (truthy(get(consent, "third"))) cons.put("third", true); cons.put("mkt", truthy(get(consent, "mkt")));
             cons.put("ver", cut(str(or(get(consent, "ver"), t("v23"))), 20)); cons.put("at", isoNow());
             String fsub = sub, femail = email, fpw = pw;
             try {

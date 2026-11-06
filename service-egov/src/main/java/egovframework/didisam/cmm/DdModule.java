@@ -89,6 +89,7 @@ public final class DdModule {
         out.set("classes", filter(doc.get("classes"), x -> sc.classes.contains(txt(x, "id"))));
         out.set("members", filter(doc.get("members"), x -> sc.ids.contains(txt(x, "id"))));
         out.set("admins", filter(doc.get("admins"), x -> sameMail(x, email)));
+        if (doc.get("tq") != null && doc.get("tq").isArray()) out.set("tq", filter(doc.get("tq"), x -> sc.sids.contains(txt(x, "sid")) || sc.classes.contains(txt(x, "cls"))));
         for (String k : SCRUB) if (doc.get(k) != null && !doc.get(k).isNull()) out.set(k, scrub(doc.get(k))); return out;
     }
     static ArrayNode filter(JsonNode arr, java.util.function.Predicate<JsonNode> f) { ArrayNode a = DdWeb.JSON.createArrayNode(); if (arr != null && arr.isArray()) for (JsonNode x : arr) if (x != null && x.isObject() && f.test(x)) a.add(x); return a; }
@@ -101,6 +102,10 @@ public final class DdModule {
             if (n == null) { list.add(c); continue; }
             ObjectNode m = ((ObjectNode) n).deepCopy(); for (String k : CLASS_LOCK) { if (c.has(k)) m.set(k, c.get(k)); else m.remove(k); } list.add(m);
         }
-        if (cl != null) out.set("classes", list); return out;
+        if (cl != null) out.set("classes", list);
+        /* 질문함: 담당 범위의 답변과 새 질문만 받는다 */
+        JsonNode cq = cur.get("tq"), iq = inc == null ? null : inc.get("tq"); Map<String, JsonNode> incQ = new LinkedHashMap<>(); if (iq != null && iq.isArray()) for (JsonNode x : iq) if (x != null && x.isObject() && x.has("id") && !x.get("id").isNull()) incQ.put(x.get("id").asText(), x);
+        if ((cq != null && cq.isArray() && !cq.isEmpty()) || !incQ.isEmpty()) { ArrayNode nq = DdWeb.JSON.createArrayNode(); Set<String> seen = new HashSet<>(); if (cq != null && cq.isArray()) for (JsonNode x : cq) { seen.add(txt(x, "id")); JsonNode n = x != null && x.isObject() && (sc.sids.contains(txt(x, "sid")) || sc.classes.contains(txt(x, "cls"))) ? incQ.get(txt(x, "id")) : null; if (n == null) { nq.add(x); continue; } ObjectNode m = ((ObjectNode) n).deepCopy(); for (String k : List.of("id", "sid", "q", "cls")) { if (x.has(k)) m.set(k, x.get(k)); else m.remove(k); } nq.add(m); } for (var e : incQ.entrySet()) if (!seen.contains(e.getKey()) && (sc.sids.contains(txt(e.getValue(), "sid")) || sc.classes.contains(txt(e.getValue(), "cls")))) nq.add(e.getValue()); out.set("tq", nq); }
+        return out;
     }
 }
