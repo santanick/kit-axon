@@ -16,14 +16,24 @@
   function st() {
     const L = S.lms = S.lms || {};
     const X = L.efh = L.efh || { asg: [], rub: [], subs: [], vers: [], files: {}, teams: [], plag: {}, banks: [], qs: [], exams: [], atts: [], pre: {}, items: [], scores: {}, pol: {}, final: {}, hist: [], queue: [], msgs: [], seq: 1 };
-    if (!X.rub.length) X.rub.push({ rubric_id: 'rub_tpl1', section_id: null, is_template: true, name: '보고서 공통 루브릭(운영자 템플릿)', criteria: [{ key: 'logic', name: '내용 · 논리', levels: [{ label: '우수', score: 10 }, { label: '보통', score: 6 }, { label: '미흡', score: 2 }] }, { key: 'form', name: '형식 · 인용', levels: [{ label: '우수', score: 5 }, { label: '보통', score: 3 }, { label: '미흡', score: 1 }] }] });
+    if (!X.rub.length) X.rub.push({ rubric_id: 'rub_tpl1', section_id: null, is_template: true, name: '보고서 공통 채점 기준(운영자 템플릿)', criteria: [{ key: 'logic', name: '내용 · 논리', levels: [{ label: '우수', score: 10 }, { label: '보통', score: 6 }, { label: '미흡', score: 2 }] }, { key: 'form', name: '형식 · 인용', levels: [{ label: '우수', score: 5 }, { label: '보통', score: 3 }, { label: '미흡', score: 1 }] }] });
     return X;
   }
   /* 데모: 스튜디오 강의실(S.classes) = 분반, 수강생 = 학번. 첫 분반의 마지막 수강생은 청강(데모) */
   const mno = id => { const m = typeof M === 'function' ? M(id) : null; return String((m && (m.extra && (m.extra.학번 || m.extra.사번)) || m && m.sid) || id); };
   const dept = id => { const m = typeof M === 'function' ? M(id) : null; const g = m && S.groups && S.groups.find(x => x.id === m.group); return g ? g.name : ''; };
-  function demoSections() { return (S.classes || []).filter(c => (c.learners || []).length).map((c, i) => ({ section_id: c.id, term_id: '2026-2', course_code: 'DEMO' + (100 + i), course_name: c.name, section_no: '01', title: c.name, regular: c.learners.length - (i === 0 ? 1 : 0), audit: i === 0 ? 1 : 0 })); }
+  function clsSections() { return (S.classes || []).filter(c => (c.learners || []).length).map((c, i) => ({ section_id: c.id, term_id: '2026-2', course_code: 'DEMO' + (100 + i), course_name: c.name, section_no: '01', title: c.name, regular: c.learners.length - (i === 0 ? 1 : 0), audit: i === 0 ? 1 : 0 })); }
+  /* u2: 스튜디오 강의실에 수강생이 없으면(빈 스튜디오 · 새 대학 기관) 묶음 A의 데모 학기 · 분반 · 수강생(S.lms.a)을 그대로 쓴다 — 같은 분반 · 학번이 모든 화면에 나온다 */
+  const aOn = () => !LIVE_ON() && !clsSections().length && typeof window.lmsaEns === 'function';
+  function aRoster(A, sid) { const ids = new Set([sid, ...A.sections.filter(s => s.rep_section_id === sid).map(s => s.section_id)]); const seen = new Set(); const un = c => { const u = A.units.find(x => x.unit_code === c); return u ? u.name : (c || ''); };
+    return A.enr.filter(e => ids.has(e.section_id) && e.status === 'enrolled' && !seen.has(e.member_no) && seen.add(e.member_no)).map(e => { const p = A.persons.find(x => x.member_no === e.member_no) || {}; return { person_id: e.member_no, member_no: e.member_no, unit_code: un(p.unit_code), kind: e.kind === 'audit' ? 'audit' : 'regular' }; }).sort((a, b) => a.member_no < b.member_no ? -1 : 1); }
+  function aSecs() { const A = window.lmsaEns(); const cn = c => (A.courses.find(x => x.course_code === c) || {}).name || c;
+    return A.sections.filter(s => !s.hidden && s.status !== 'archived').map(s => { const R = aRoster(A, s.section_id); return { section_id: s.section_id, term_id: s.term_id, course_code: s.course_code, course_name: cn(s.course_code), section_no: s.section_no, title: s.title, regular: R.filter(r => r.kind === 'regular').length, audit: R.filter(r => r.kind === 'audit').length }; })
+      .filter(s => s.regular + s.audit > 0).sort((a, b) => a.course_code < b.course_code ? -1 : a.course_code > b.course_code ? 1 : a.section_no < b.section_no ? -1 : 1); }
+  const aSec = sec => aOn() ? aSecs().find(s => s.section_id === sec) || null : null;
+  function demoSections() { return aOn() ? aSecs() : clsSections(); }
   function demoStudents(sec) {
+    if (aOn()) { if (!aSec(sec)) ERR(404, 'section', '없는 분반입니다.'); return aRoster(window.lmsaEns(), sec); }
     const c = (S.classes || []).find(x => x.id === sec); if (!c) ERR(404, 'section', '없는 분반입니다.');
     const first = demoSections()[0]; const L = c.learners || [];
     return L.map((id, i) => ({ person_id: id, member_no: mno(id), unit_code: dept(id), kind: first && first.section_id === sec && i === L.length - 1 ? 'audit' : 'regular' }));
@@ -35,6 +45,7 @@
       return api(method, url, method === 'GET' ? undefined : (body || {}));
     }
     const f = D[method + ' ' + path]; if (!f) ERR(404, 'not_found', '데모에서 지원하지 않는 기능입니다.');
+    if (aOn() && body && (body.section || body.section_id)) seedSec(body.section || body.section_id);
     const out = f(JSON.parse(JSON.stringify(body || {}))); save(); return JSON.parse(JSON.stringify(out));
   }
   /* 비동기 로딩 캐시: 화면은 캐시를 그리고, 없으면 불러온 뒤 다시 그린다 */
@@ -51,10 +62,19 @@
   function sections() { const r = load('sec', () => call('GET', '/api/lms/e/sections')); return r && r.ok ? r.ok.sections : null; }
   function secPick(uiKey, act) {
     const L = sections(); if (!L) return { html: wait(), sec: null };
-    if (!L.length) return { html: '<div class="empty">수강생이 있는 분반이 없습니다. 학사 연동(분반 · 수강) 뒤에 이용하세요.</div>', sec: null };
+    if (!L.length) return { html: '<div class="empty">이번 학기에 수강생이 있는 분반이 아직 없습니다.<small class="efh-note">학사(분반 · 수강) 자료가 들어오면 이곳에 분반이 나타납니다.</small></div>', sec: null };
     const sec = L.find(s => s.section_id === UI[uiKey]) || L[0]; UI[uiKey] = sec.section_id;
-    return { sec, html: `<div class="bar2 efh-bar"><label class="efh-lab">분반 <select data-chg="${act}" aria-label="분반 선택">${L.map(s => `<option value="${esc(s.section_id)}" ${s === sec ? 'selected' : ''}>${esc((s.course_name || s.title) + ' ' + s.section_no + '분반')}</option>`).join('')}</select></label>${tag('정규 ' + s0(sec.regular) + '명')} ${sec.audit ? tag('청강 ' + sec.audit + '명 · 성적 제외', 'y') : ''} ${LIVE_ON() ? tag('운영 서버') : tag('데모 데이터', 'y')}</div>` };
+    return { sec, html: `<div class="bar2 efh-bar"><label class="efh-lab">분반 <select data-chg="${act}" aria-label="분반 선택">${L.map(s => `<option value="${esc(s.section_id)}" ${s === sec ? 'selected' : ''}>${esc((s.course_name || s.title) + ' ' + s.section_no + '분반')}</option>`).join('')}</select></label><small class="muted">수강생 ${s0(sec.regular)}명${sec.audit ? ` · 청강 ${sec.audit}명(성적 제외)` : ''}</small>${demoTag()}</div>` };
   }
+  /* u2 화면 도우미: 데모 표시 · 지금 할 일 카드 · ⋯ 메뉴 · 탭 4개 + 더보기(펼침은 ux.js가 화면 기준으로 띄움) */
+  const demoTag = () => LIVE_ON() ? '' : '<small class="efh-demo" title="서버 없이 이 브라우저에만 저장됩니다">데모: 브라우저에만 저장</small>';
+  const todo = (html, btn) => `<div class="card u2-todo" role="status"><b class="u2-todo-k">지금 할 일</b><span class="u2-todo-t">${html}</span>${btn || ''}</div>`;
+  const dots = (items, label = '다른 작업') => { const L = (items || []).filter(Boolean); return L.length ? `<details class="uxmore uxdots efh-dots"><summary title="${esc(label)}">${typeof ic === 'function' ? ic('dots', 18) : '⋯'}<span class="sr">${esc(label)}</span></summary><div class="uxpop" role="menu">${L.join('')}</div></details>` : ''; };
+  function tabs4(key, list, cur, more) {
+    more = (more || []).filter(Boolean); const m = more.find(([id]) => id === cur);
+    return `<div class="efh-tabs">${tabs(key, list, cur)}${more.length ? `<details class="uxmore efh-tmore${m ? ' on' : ''}"><summary>${m ? esc(m[1]) : '더보기'} <em>${more.length}</em></summary><div class="uxpop" role="menu">${more.map(([id, l]) => `<button type="button" role="menuitem" class="${id === cur ? 'on' : ''}" data-act="tab" data-key="${esc(key)}" data-v="${esc(id)}">${esc(l)}</button>`).join('')}</div></details>` : ''}</div>`;
+  }
+  const mi = (act, label, v, extra = '') => `<button type="button" role="menuitem" data-act="${act}"${v != null ? ` data-v="${esc(v)}"` : ''} ${extra}>${esc(label)}</button>`;
   const s0 = v => v == null ? 0 : v;
   /* 파일 → base64, 내려받기, zip(무압축) 묶기 */
   const toB64 = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = no; r.readAsDataURL(f); });
@@ -72,9 +92,9 @@
     const cs = cen.reduce((a, b) => a + b.length, 0); const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cs), ...u32(off), ...u16(0)]);
     const all = [...parts, ...cen, end]; const out = new Uint8Array(all.reduce((a, b) => a + b.length, 0)); let p = 0; for (const x of all) { out.set(x, p); p += x.length; } return out;
   }
-  function css() { if (document.getElementById('efhCss')) return; const l = document.createElement('link'); l.id = 'efhCss'; l.rel = 'stylesheet'; l.href = 'lms/e.css?v=30.0'; document.head.appendChild(l); }
+  function css() { if (document.getElementById('efhCss')) return; const l = document.createElement('link'); l.id = 'efhCss'; l.rel = 'stylesheet'; l.href = 'lms/e.css?v=30.1'; document.head.appendChild(l); }
   const peek = k => C[k] && C[k].ok;
-  window.EFH = { peek, ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, sections, secPick, demoStudents, demoSections, rid, r2, fmt, ERR, nowIso, toB64, dl, b64bytes, zip, css, s0 };
+  window.EFH = { peek, ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, sections, secPick, demoStudents, demoSections, rid, r2, fmt, ERR, nowIso, toB64, dl, b64bytes, zip, css, s0, demoTag, todo, dots, tabs4, mi };
 
   /* ═════════ 데모 처리기(E) — 서버 lms_e_* 와 같은 응답 형태 ═════════ */
   const asgOf = id => { const a = st().asg.find(x => x.asg_id === id); if (!a) ERR(404, 'assignment', '없는 과제입니다.'); return a; };
@@ -157,7 +177,57 @@
   /* 성적 연결(묶음 H 데모 상태와 공유) */
   function gradeLink(sec, ref, cat, name, mx) { const X = st(); let it = X.items.find(i => i.section_id === sec && i.source_ref === ref); if (!it) { it = { item_id: rid(), section_id: sec, category: cat, name, weight_pct: 0, max_score: mx, source_ref: ref, sort: 50 }; X.items.push(it); } else Object.assign(it, { name, max_score: mx }); return it.item_id; }
   function gradePut(sec, item, pid, sc) { const p = demoStudents(sec).find(x => x.person_id === pid); if (!p || p.kind !== 'regular') return; const X = st(); (X.scores[item] = X.scores[item] || {})[pid] = { score: sc }; }
-  Object.assign(EFH, { gradeLink, gradePut, mno });
+  Object.assign(EFH, { gradeLink, gradePut, mno, aOn, aSec });
+
+  /* ═════════ u2: 데모 샘플(묶음 A 분반에 과제 · 제출 · 시험 · 응시 · 성적을 한 번 채운다, 결정적) ═════════ */
+  const hsh = s => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0; return h; };
+  const QSET = {
+    ai: [['single', 'AI 서비스가 학습한 데이터에 없는 사실을 그럴듯하게 지어내는 현상은?', ['환각(사실이 아닌 답)', '과적합', '편향', '암호화'], ['c1'], 'easy', 'AI 답변은 출처를 확인해야 합니다.'], ['multi', '생성형 AI를 수업 과제에 쓸 때 지켜야 할 것을 모두 고르세요.', ['사용 사실 밝히기', '출처 확인', '개인정보 입력 금지', '결과를 그대로 제출'], ['c1', 'c2', 'c3'], 'mid', '결과를 그대로 제출하면 표절이 될 수 있습니다.'], ['tf', '지도학습은 정답(레이블)이 있는 데이터로 학습한다.', null, ['t'], 'easy', '정답이 있는 데이터를 씁니다.'], ['short', '데이터를 학습용과 평가용으로 나눌 때 평가용 데이터를 무엇이라 부르나요?', null, ['테스트 데이터', '테스트셋', '검증 데이터'], 'mid', '학습에 쓰지 않은 데이터로 성능을 봅니다.'], ['numeric', '정확도 = 맞힌 수 ÷ 전체. 100개 중 85개를 맞히면 정확도(%)는?', null, { value: 85, tol: 0 }, 'easy', '85 ÷ 100 = 85%'], ['essay', 'AI를 학교생활에 활용한 경험 하나와 주의할 점을 3문장 이내로 쓰세요.', null, null, 'hard', '']],
+    mec: [['single', '열역학 제1법칙이 말하는 것은?', ['에너지 보존', '엔트로피 증가', '절대영도', '열평형'], ['c1'], 'easy', '에너지는 형태만 바뀝니다.'], ['multi', '상태량(상태 함수)을 모두 고르세요.', ['내부에너지', '엔탈피', '열', '일'], ['c1', 'c2'], 'hard', '열과 일은 경로에 따라 달라집니다.'], ['tf', '고립계의 엔트로피는 줄어들 수 없다.', null, ['t'], 'mid', '열역학 제2법칙입니다.'], ['short', '압력이 일정한 과정을 무엇이라 하나요?', null, ['등압과정', '정압과정'], 'easy', ''], ['numeric', '카르노 기관: 고온 500K, 저온 300K. 최대 효율(%)은?', null, { value: 40, tol: 0.5 }, 'mid', '1 − 300/500 = 0.4'], ['essay', '냉장고가 열을 옮기는 원리를 2~3문장으로 설명하세요.', null, null, 'hard', '']],
+    biz: [['single', '자산 = 부채 + ( ? )', ['자본', '수익', '비용', '매출'], ['c1'], 'easy', '회계 등식입니다.'], ['multi', '마케팅 4P에 들어가는 것을 모두 고르세요.', ['제품', '가격', '유통', '인사'], ['c1', 'c2', 'c3'], 'mid', '4P: 제품 · 가격 · 유통 · 촉진'], ['tf', '감가상각은 현금이 나가는 비용이다.', null, ['f'], 'hard', '현금 지출이 없는 비용입니다.'], ['short', '기업의 강점 · 약점 · 기회 · 위협을 보는 분석은?', null, ['SWOT', 'SWOT 분석'], 'easy', ''], ['numeric', '매출 200, 매출원가 120일 때 매출총이익률(%)은?', null, { value: 40, tol: 0 }, 'mid', '(200 − 120) ÷ 200'], ['essay', '우리 학교 앞 카페의 경쟁 전략을 한 가지 제안하세요(3문장 이내).', null, null, 'hard', '']]
+  };
+  const BODY = ['수업에서 배운 개념을 학과 사례에 적용해 정리했습니다. 자료 수집 · 정리 · 결론 순서로 썼고 참고문헌 2건을 붙였습니다.', '사례 기업의 문제를 정의하고 해결 방법 두 가지를 비교했습니다. 표와 그림으로 핵심을 요약했습니다.', '조원과 토의한 내용을 바탕으로 장단점을 나누어 쓰고, 한계와 다음 과제를 정리했습니다.', '실습 결과를 캡처해 붙이고 수치가 달라진 이유를 설명했습니다. 마지막에 느낀 점을 덧붙였습니다.'];
+  const FB = ['핵심을 잘 정리했습니다. 근거 자료를 한 가지 더 보완하면 좋겠습니다.', '구성이 좋습니다. 결론을 조금 더 분명하게 써 보세요.', '사례 선택이 적절합니다. 인용 형식을 맞춰 주세요.'];
+  function seedSec(sec) {
+    const X = st(); X.seeded = X.seeded || {}; if (X.seeded[sec]) return; const S0 = aSec(sec); if (!S0) return; X.seeded[sec] = 1;
+    const P = demoStudents(sec); const now = Date.now(), DAY = 864e5; const iso = t => new Date(t).toISOString(); const hp = (p, k) => hsh(p.member_no + '|' + sec + '|' + k);
+    /* 과제 3개: 마감 지난 보고서(채점 대기 다수) · 이번 주 마감 계획서 · 비공개 기말 보고서 */
+    const mkA = v => { const g = { asg_id: rid(), section_id: sec, body: '', kind: 'individual', submit_types: ['file', 'text'], max_files: 3, open_at: iso(now - 14 * DAY), late_until: null, late_penalty_pct: 0, max_score: 100, rubric_id: null, plag_on: false, status: 'published', ...v }; X.asg.push(g); gradeLink(sec, 'asg:' + g.asg_id, 'assignment', g.title, g.max_score); return g; };
+    const a1 = mkA({ title: '1주차 보고서 — 수업 개념 사례 조사', body: '수업에서 다룬 개념을 실제 사례 하나에 적용해 2쪽 이내로 정리합니다.', due_at: iso(now - 3 * DAY), late_until: iso(now - DAY), late_penalty_pct: 10, rubric_id: 'rub_tpl1', plag_on: true });
+    const a2 = mkA({ title: '중간 프로젝트 계획서', body: '팀 프로젝트 주제 · 역할 · 일정을 1쪽으로 제출합니다.', due_at: iso(now + 4 * DAY) });
+    mkA({ title: '기말 보고서', body: '학기 프로젝트 결과 보고서(5쪽 이내).', due_at: iso(now + 40 * DAY), status: 'draft' });
+    const sub = (g, p, v) => { const s = { sub_id: rid(), asg_id: g.asg_id, owner_key: 'p:' + p.person_id, person_id: p.person_id, team_id: null, files: [], ...v }; X.subs.push(s); X.vers.push({ sub_id: s.sub_id, ver: s.version, by: p.member_no, at: s.saved_at, body: s.body, files: [] }); return s; };
+    P.forEach(p => { const h = hp(p, 'a1'); if (h % 100 < 86) { const late = h % 7 === 0; const t = late ? now - 2 * DAY : now - (4 + h % 4) * DAY; const graded = h % 100 < 66;
+        const s = sub(a1, p, { status: graded ? 'graded' : 'submitted', body: BODY[h % BODY.length], version: 1 + h % 3, saved_at: iso(t), submitted_at: iso(t), late });
+        if (graded) { const l1 = [10, 6, 10, 6, 10][h % 5], l2 = [5, 3, 5, 1][h % 4]; s.rubric_scores = { logic: l1, form: l2 }; s.score = r2((l1 + l2) / 15 * 100 * (late ? 0.9 : 1)); s.feedback = FB[h % FB.length]; s.graded_at = iso(now - DAY); applyGrade(a1, s); } }
+      const h2 = hp(p, 'a2'); if (h2 % 100 < 30) sub(a2, p, { status: 'submitted', body: '주제: ' + S0.course_name + ' 관련 문제 해결 · 역할 분담과 4주 일정을 정리했습니다.', version: 1, saved_at: iso(now - DAY), submitted_at: iso(now - DAY), late: false });
+      else if (h2 % 100 < 55) sub(a2, p, { status: 'draft', body: '주제 후보를 정리하는 중입니다.', version: 1, saved_at: iso(now - 2 * 36e5), submitted_at: null, late: false }); });
+    /* 표절 검사 결과(유사도 높은 제출 1건) */
+    const sa = X.subs.filter(s => s.asg_id === a1.asg_id); sa.forEach((s, i) => { X.plag[s.sub_id] = { engine: 'stub-local', status: 'done', similarity: i === 1 ? 62 : 8 + (hsh(s.sub_id) % 25), matches: [], finished_at: iso(now - DAY) }; });
+    /* 문제은행 · 시험 */
+    const fam = /^(MEC)/.test(S0.course_code) ? 'mec' : /^(BUS|ACC)/.test(S0.course_code) ? 'biz' : 'ai';
+    const bank = { bank_id: rid(), name: S0.course_name + ' 문제은행', scope: 'section', section_id: sec, course_key: null }; X.banks.push(bank);
+    const qs = QSET[fam].map(([kind, stem, ch, answer, difficulty, explanation]) => { const choices = kind === 'tf' ? [{ id: 't', text: '참' }, { id: 'f', text: '거짓' }] : (ch || []).map((t, i) => ({ id: 'c' + (i + 1), text: t }));
+      const q = { q_id: rid(), bank_id: bank.bank_id, kind, stem, choices, answer, points: kind === 'essay' ? 4 : 2, difficulty, diff_auto: false, tags: [], media: [], explanation, origin_q: null, attempts_n: 0, correct_n: 0 }; X.qs.push(q); return q; });
+    const exBase = { section_id: sec, guide: '', shuffle_q: true, shuffle_c: true, ip_allow: [], show_result: 'immediate', retry_wrong: true, score_policy: 'best', status: 'published' };
+    const ex1 = { exam_id: rid(), ...exBase, title: '1차 퀴즈', open_at: iso(now - 10 * DAY), close_at: iso(now - 3 * DAY), time_limit_min: 20, max_attempts: 1, rules: [], fixed: qs.map(q => q.q_id), need_precheck: false };
+    const ex2 = { exam_id: rid(), ...exBase, title: '2차 퀴즈', open_at: iso(now - 36e5), close_at: iso(now + 7 * DAY), time_limit_min: 60, max_attempts: 1, rules: [{ bank_id: bank.bank_id, difficulty: null, n: 5 }], fixed: [], need_precheck: true, show_result: 'after_close' };
+    X.exams.push(ex1, ex2); const it1 = gradeLink(sec, 'exam:' + ex1.exam_id, 'quiz', ex1.title, 100); gradeLink(sec, 'exam:' + ex2.exam_id, 'quiz', ex2.title, 100);
+    const pr = { easy: 85, mid: 65, hard: 45 };
+    P.forEach((p, j) => { const h = hp(p, 'x1'); if (h % 100 >= 92) return; const t0 = now - (9 - h % 5) * DAY; let s = 0, mx = 0, pend = false; const answers = {}, marks = {};
+      const items = qs.map(q => ({ q: q.q_id, p: q.points, c: q.choices.map(c => c.id) }));
+      qs.forEach((q, k) => { mx += q.points; const ok = (hsh(p.member_no + q.q_id) % 100) < pr[q.difficulty];
+        if (q.kind === 'essay') { answers[q.q_id] = '수업 내용을 바탕으로 경험과 주의할 점을 정리했습니다.'; if (j % 4 === 1) { pend = true; marks[q.q_id] = { score: null, ok: null, auto: false }; } else { const sc = [4, 3, 2, 4][h % 4]; marks[q.q_id] = { score: sc, ok: sc >= q.points, auto: false }; s += sc; } return; }
+        answers[q.q_id] = q.kind === 'numeric' ? (ok ? q.answer.value : 50) : q.kind === 'short' ? (ok ? q.answer[0] : '모름') : q.kind === 'tf' ? (ok ? q.answer : [q.answer[0] === 't' ? 'f' : 't']) : (ok ? q.answer : [q.choices[q.choices.length - 1].id]);
+        marks[q.q_id] = { score: ok ? q.points : 0, ok, auto: true }; if (ok) s += q.points; q.attempts_n++; if (ok) q.correct_n++; });
+      const ip = `10.20.${30 + h % 8}.${h % 200 + 10}`; const t = { attempt_id: rid(), exam_id: ex1.exam_id, person_id: p.person_id, no: 1, status: pend ? 'submitted' : 'graded', started_at: iso(t0), deadline_at: iso(t0 + 20 * 6e4), submitted_at: iso(t0 + (12 + h % 7) * 6e4), auto_closed: false,
+        auto_score: s, score: pend ? null : s, max_score: mx, ip_start: ip, ip_last: j === 2 ? '10.99.1.7' : ip, ip_changed: j === 2, ip_log: [{ ip, at: iso(t0), ev: 'start' }], items, answers, marks };
+      X.atts.push(t); if (!pend) gradePut(sec, it1, p.person_id, r2(100 * s / mx)); });
+    /* 성적: 수업계획서 비율(중간 30 · 기말 30 · 과제 20 · 퀴즈 10 · 출석 10) — 과제 · 퀴즈는 위 자동 항목에 비율을 준다 */
+    X.items.filter(i => i.section_id === sec).forEach(i => { i.weight_pct = i.source_ref === 'asg:' + a1.asg_id ? 20 : i.source_ref === 'exam:' + ex1.exam_id ? 10 : 0; i.sort = i.weight_pct ? 20 : 60; });
+    [['midterm', '중간고사', 30, 1], ['final', '기말고사', 30, 2], ['attendance', '출석', 10, 30]].forEach(([category, name, w, sort]) => { const it = { item_id: rid(), section_id: sec, category, name, weight_pct: w, max_score: 100, source_ref: null, sort }; X.items.push(it);
+      P.forEach(p => { const h = hp(p, category); const v = category === 'attendance' ? 70 + h % 31 : 48 + h % 50; gradePut(sec, it.item_id, p.person_id, v); }); });
+  }
 
   /* ═════════ 화면 ═════════ */
   if (typeof MENU === 'object') {
@@ -169,18 +239,29 @@
   VIEWS.lmse = () => {
     if (!ON()) return '<div class="empty">대학(학사 LMS) 기관에서 쓰는 화면입니다.</div>'; css();
     const P = secPick('lmseSec', 'lmse-sec'); const tab = UI.lmseT || 'list';
-    const right = `<button class="btn" data-act="lmse-rub">루브릭 · 템플릿</button><button class="btn pri" data-act="lmse-new">새 과제</button>`;
-    let h = head('과제', '온라인 문서 · 파일 제출, 초안 자동 저장, 루브릭 채점 · 첨삭, 팀 과제 버전 관리, 표절 검사 결과를 한곳에서 다룹니다.', P.sec ? right : '') + P.html;
+    const right = `<button class="btn" data-act="lmse-rub">채점 기준 · 템플릿</button><button class="btn" data-act="lmse-new">새 과제</button>`;
+    let h = head('과제', '과제를 내고 제출물을 채점 기준으로 채점 · 첨삭합니다. 표절 검사 · 팀 과제 · 일괄 피드백은 과제의 「⋯」에 있습니다.', P.sec ? right : '') + P.html;
     if (!P.sec) return h;
-    h += tabs('lmseT', [['list', '과제 목록'], ['status', '제출 현황 · 채점'], ...(LIVE_ON() ? [] : [['learner', '학생 화면 미리보기']])], tab);
+    const r = load('lmse:list:' + P.sec.section_id, () => call('GET', '/api/lms/e/list', { section: P.sec.section_id }));
+    if (r && r.ok) h += todoE(r.ok.assignments);
+    h += tabs4('lmseT', [['list', '과제 목록'], ['status', '제출 현황 · 채점'], ...(LIVE_ON() ? [] : [['learner', '학생 화면 미리보기']])], tab);
     if (tab === 'status') return h + statusView(P.sec);
     if (tab === 'learner') return h + learnerView(P.sec);
-    const r = load('lmse:list:' + P.sec.section_id, () => call('GET', '/api/lms/e/list', { section: P.sec.section_id }));
     if (!r) return h + wait(); if (r.err) return h + errBox(r.err);
     const L = r.ok.assignments;
-    return h + `<div class="card">${table(['과제', '유형', '마감', '제출 / 대상', '채점', '상태', ''], L.map(g => [`<b>${esc(g.title)}</b>${g.plag_on ? ' ' + tag('표절 검사') : ''}`, g.kind === 'team' ? tag('팀') : '개인', fmt(g.due_at), `${g.submitted} / ${g.targets}`, String(g.graded), tag({ draft: '비공개', published: '공개', closed: '마감' }[g.status], g.status === 'published' ? 'g' : ''),
-      `<button class="btn sm" data-act="lmse-open" data-v="${esc(g.asg_id)}">제출 현황</button> <button class="btn sm" data-act="lmse-edit" data-v="${esc(g.asg_id)}">편집</button>`]), '아직 과제가 없습니다. 「새 과제」로 만드세요.')}</div>`;
+    return h + `<div class="card">${table(['과제', '마감', '제출', '채점 대기', ''], L.map(g => [`<b>${esc(g.title)}</b> ${g.status === 'published' ? '' : tag({ draft: '비공개', closed: '마감' }[g.status] || g.status)}${g.kind === 'team' ? ' ' + tag('팀') : ''}`, fmt(g.due_at), `${g.submitted} / ${g.targets}`, g.submitted - g.graded > 0 ? tag(String(g.submitted - g.graded) + '건', 'y') : '0',
+      `<button class="btn sm" data-act="lmse-open" data-v="${esc(g.asg_id)}">열기</button>`]), '아직 과제가 없습니다. 「새 과제」로 만드세요.')}</div>`;
   };
+  /* 지금 할 일: 채점 대기 · 다가오는 마감 */
+  function todoE(L) {
+    const pend = L.map(g => ({ g, n: g.submitted - g.graded })).filter(x => x.n > 0).sort((a, b) => b.n - a.n); const tot = pend.reduce((s, x) => s + x.n, 0);
+    const soon = L.filter(g => g.status === 'published' && g.due_at && Date.parse(g.due_at) > Date.now()).sort((a, b) => Date.parse(a.due_at) - Date.parse(b.due_at))[0];
+    const due = soon ? ` · 다음 마감 <b>${esc(soon.title)}</b> ${fmt(soon.due_at)} (제출 ${soon.submitted}/${soon.targets})` : '';
+    if (tot) return todo(`채점 대기 <b>${tot}건</b>${pend.length > 1 ? ` (과제 ${pend.length}개)` : ''}${due}`, `<button class="btn sm pri" data-act="lmse-start" data-v="${esc(pend[0].g.asg_id)}">채점 시작</button>`);
+    if (!L.length) return todo('이 분반에 아직 과제가 없습니다.', `<button class="btn sm pri" data-act="lmse-new">새 과제 만들기</button>`);
+    return todo(`채점할 제출물이 없습니다${due}`);
+  }
+  ACT['lmse-start'] = el => { UI.lmseA = el.dataset.v; UI.lmseT = 'status'; render(); };
   ACT['lmse-sec'] = el => { UI.lmseSec = el.value; UI.lmseA = null; render(); };
   ACT['lmse-open'] = el => { UI.lmseA = el.dataset.v; UI.lmseT = 'status'; render(); };
   function rubricsFor(sec) { const r = load('lmse:rub:' + sec, () => call('GET', '/api/lms/e/rubrics', { section: sec })); return r && r.ok ? r.ok.rubrics : []; }
@@ -209,18 +290,19 @@
 
   function statusView(sec) {
     const lr = load('lmse:list:' + sec.section_id, () => call('GET', '/api/lms/e/list', { section: sec.section_id })); if (!lr) return wait(); if (lr.err) return errBox(lr.err);
-    const L = lr.ok.assignments; if (!L.length) return '<div class="empty">과제가 없습니다.</div>';
+    const L = lr.ok.assignments; if (!L.length) return '<div class="empty">과제가 없습니다. 「새 과제」로 만드세요.</div>';
     const id = L.some(g => g.asg_id === UI.lmseA) ? UI.lmseA : L[0].asg_id; UI.lmseA = id;
-    const r = load('lmse:st:' + id, () => call('GET', '/api/lms/e/status', { asg: id })); const pick = `<div class="bar2"><select data-chg="lmse-pick" aria-label="과제 선택">${L.map(g => `<option value="${esc(g.asg_id)}" ${g.asg_id === id ? 'selected' : ''}>${esc(g.title)}</option>`).join('')}</select></div>`;
+    const r = load('lmse:st:' + id, () => call('GET', '/api/lms/e/status', { asg: id })); const pick = `<div class="bar2"><select data-chg="lmse-pick" aria-label="과제 선택">${L.map(g => `<option value="${esc(g.asg_id)}" ${g.asg_id === id ? 'selected' : ''}>${esc(g.title)}${g.submitted - g.graded > 0 ? ` (채점 대기 ${g.submitted - g.graded})` : ''}</option>`).join('')}</select></div>`;
     if (!r) return pick + wait(); if (r.err) return pick + errBox(r.err);
     const { assignment: g, rows, counts: c } = r.ok; const team = g.kind === 'team';
-    const pl = load('lmse:plag:' + id, () => call('GET', '/api/lms/e/plag', { asg: id }));
-    return pick + `<div class="kpis">${kpi('미제출', c.none)}${kpi('작성 중', c.draft)}${kpi('제출', c.submitted)}${kpi('채점 완료', c.graded)}${kpi('지각', c.late)}</div>
-      <div class="card"><div class="ch"><b>${esc(g.title)}</b><small>${team ? '팀 과제 — 팀원이 같은 문서를 함께 고치고 저장할 때마다 버전이 남습니다' : '개인 과제'} · 청강생은 제출할 수 있으나 성적에서 제외</small>
-      <span class="efh-acts">${team ? `<button class="btn sm" data-act="lmse-teams" data-v="${esc(id)}">팀 편성</button>` : ''}<button class="btn sm" data-act="lmse-bulk" data-v="${esc(id)}">일괄 피드백</button><button class="btn sm" data-act="lmse-zip" data-v="${esc(id)}">일괄 다운로드(zip)</button><button class="btn sm" data-act="lmse-plag" data-v="${esc(id)}">표절 검사 실행</button></span></div>
-      ${table(['', team ? '팀' : '학번', team ? '팀원' : '학과', '상태', '버전', '제출', '점수', '유사도', ''], rows.map(x => [x.sub_id && x.status !== 'draft' ? `<input type="checkbox" class="lmse-ck" value="${esc(x.sub_id)}" aria-label="선택">` : '', esc(team ? x.team : x.member_no) + (x.enroll === 'audit' ? ' ' + tag('청강', 'y') : ''), esc(team ? (x.members || []).join(', ') : x.unit_code || ''), stTag(x.status) + (x.late ? ' ' + tag('지각', 'r') : ''), String(x.version || ''), fmt(x.submitted_at), x.score == null ? '-' : String(x.score),
-        x.similarity == null ? '-' : tag(x.similarity + '%', x.similarity >= 50 ? 'r' : ''), x.sub_id && x.status !== 'draft' ? `<button class="btn sm" data-act="lmse-grade" data-v="${esc(x.sub_id)}">채점 · 첨삭</button>` : '']))}</div>
-      <div class="card"><div class="ch"><b>표절 검사 결과</b><small>${pl && pl.ok ? esc(pl.ok.engine.note) : ''}</small></div>${pl && pl.ok ? table(['제출자', '유사도', '비슷한 출처', '검사'], pl.ok.results.map(x => [esc(x.owner), tag((x.similarity ?? 0) + '%', x.similarity >= 50 ? 'r' : ''), esc((x.matches || []).map(m => `${m.source} ${m.pct}%`).join(' · ') || '-'), esc(x.status)]), '아직 검사하지 않았습니다.') : wait()}</div>`;
+    const pl = load('lmse:plag:' + id, () => call('GET', '/api/lms/e/plag', { asg: id })); const plR = pl && pl.ok ? pl.ok.results : [];
+    const menu = dots([mi('lmse-edit', '과제 설정 편집', id), team ? mi('lmse-teams', '팀 편성', id) : '', mi('lmse-bulk', '일괄 피드백(선택 · 전체)', id), mi('lmse-zip', '제출물 일괄 내려받기(zip)', id), mi('lmse-plag', plR.length ? '표절 검사 다시 실행' : '표절 검사 실행', id)], '이 과제의 다른 작업');
+    return pick + `<div class="kpis">${kpi('제출', c.submitted + c.graded, `채점 대기 ${c.submitted}`)}${kpi('채점 완료', c.graded)}${kpi('미제출', c.none, c.draft ? `작성 중 ${c.draft}` : '')}${kpi('지각', c.late)}</div>
+      <div class="card"><div class="ch"><b>${esc(g.title)}</b><small>${team ? '팀 과제 · 저장할 때마다 버전이 남습니다' : '개인 과제'} · 마감 ${fmt(g.due_at)} · 청강생은 성적 제외</small><span class="efh-acts">${menu}</span></div>
+      ${table(['', team ? '팀' : '학번', '상태', '점수', ''], rows.map(x => [x.sub_id && x.status !== 'draft' ? `<input type="checkbox" class="lmse-ck" value="${esc(x.sub_id)}" aria-label="선택">` : '', `<b>${esc(team ? x.team : x.member_no)}</b>${x.enroll === 'audit' ? ' ' + tag('청강', 'y') : ''}<small class="efh-sub2">${esc(team ? (x.members || []).join(', ') : x.unit_code || '')}</small>`, stTag(x.status) + (x.late ? ' ' + tag('지각', 'r') : '') + (x.similarity != null && x.similarity >= 50 ? ' ' + tag('유사도 ' + x.similarity + '%', 'r') : ''), x.score == null ? '-' : String(x.score),
+        x.sub_id && x.status !== 'draft' ? `<button class="btn sm" data-act="lmse-grade" data-v="${esc(x.sub_id)}">${/graded|returned/.test(x.status) ? '보기' : '채점'}</button>` : '']))}
+      <p class="efh-note">학번 옆 학과 · 제출 시각 · 버전 · 유사도는 「채점」을 누르면 함께 보입니다.</p></div>
+      ${plR.length ? `<div class="card"><div class="ch"><b>표절 검사 결과</b><small>${esc(pl.ok.engine.note)}</small></div>${table(['제출자', '유사도', '비슷한 출처'], plR.map(x => [esc(x.owner), tag((x.similarity ?? 0) + '%', x.similarity >= 50 ? 'r' : ''), esc((x.matches || []).map(m => `${m.source} ${m.pct}%`).join(' · ') || '-')]))}</div>` : ''}`;
   }
   ACT['lmse-pick'] = el => { UI.lmseA = el.value; render(); };
   const checked = () => [...document.querySelectorAll('.lmse-ck:checked')].map(x => x.value);
@@ -266,7 +348,7 @@
       <p class="muted">${esc(g.body || '')}</p>${g.submit_types.includes('text') ? `<textarea class="efh-ta" rows="5" data-asg="${esc(g.asg_id)}" data-ver="${s ? s.version : ''}" ${done ? 'readonly' : ''} aria-label="본문">${esc(s ? s.body : '')}</textarea>` : ''}
       <p class="muted efh-saved" id="sv_${esc(g.asg_id)}">${s ? `버전 ${s.version} · ${fmt(s.saved_at)} 저장` : '입력하면 자동으로 저장됩니다.'}</p>
       ${g.submit_types.includes('file') && !done ? `<label class="btn sm">파일 첨부<input type="file" multiple hidden data-chg="lmse-up" data-asg="${esc(g.asg_id)}"></label>` : ''} ${s ? s.files.map(f => tag(f.name)).join(' ') : ''}
-      <div class="efh-acts">${done ? (s.status === 'submitted' ? `<button class="btn sm" data-act="lmse-unsub" data-v="${esc(g.asg_id)}">제출 취소</button>` : '') : `<button class="btn sm pri" data-act="lmse-submit" data-v="${esc(g.asg_id)}">제출</button>`}${s ? `<button class="btn sm" data-act="lmse-vers" data-v="${esc(s.sub_id)}">버전 기록</button>` : ''}</div>
+      <div class="efh-acts">${done ? (s.status === 'submitted' ? `<button class="btn sm" data-act="lmse-unsub" data-v="${esc(g.asg_id)}">제출 취소</button>` : '') : `<button class="btn sm ink" data-act="lmse-submit" data-v="${esc(g.asg_id)}">제출</button>`}${s ? `<button class="btn sm" data-act="lmse-vers" data-v="${esc(s.sub_id)}">버전 기록</button>` : ''}</div>
       ${s && s.feedback ? `<div class="efh-fb"><b>피드백</b> ${s.score != null ? tag(s.score + '점', 'g') : ''}<p>${esc(s.feedback)}</p>${(s.annotations || []).map(a => `<p>「${esc(a.quote)}」 → ${esc(a.comment)}</p>`).join('')}</div>` : ''}</div>`; }).join('') || '<div class="empty">공개된 과제가 없습니다.</div>');
   }
   ACT['lmse-as'] = el => { UI.lmseAs = el.value; render(); };

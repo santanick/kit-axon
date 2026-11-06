@@ -18,3 +18,28 @@
 .efh-wrap{overflow-x:auto;max-width:100%}
 .efh-wrap table{min-width:560px}
 @media (max-width:600px){.efh-acts{margin-left:0}.efh-lab select{max-width:60vw}}
+/* u2(2단계 화면 단순화): 지금 할 일 카드 · 데모 표시 · 탭 더보기 · 접는 설정 · 행 상세 — 묶음 E · F · G · H · J 공용 */
+.u2-todo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;border-left:4px solid var(--mag);background:var(--magl);padding:12px 14px}
+.u2-todo-k{font-size:12px;color:var(--magd);white-space:nowrap}
+.u2-todo-t{flex:1 1 220px;min-width:0}
+.u2-todo .btn{margin-left:auto}
+.efh-demo{display:inline-block;font-size:11px;color:var(--muted);border:1px dashed var(--line);border-radius:99px;padding:1px 8px;white-space:nowrap}
+.efh-note{display:block;font-size:12px;color:var(--muted);margin:6px 0 0}
+.efh-sub2{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.efh-tabs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 10px}
+.efh-tabs>.seg2{margin:0}
+.efh-tmore.on>summary{background:var(--magl);color:var(--magd)}
+details.efh-set>summary{cursor:pointer;font-weight:700;list-style:revert}
+details.efh-set>summary small{font-weight:400;margin-left:6px}
+details.efh-set[open]>summary{margin-bottom:8px}
+.efh-board tr.efh-row{cursor:pointer}
+.efh-board tr.efh-row:hover,.efh-board tr.efh-row.on{background:var(--magl)}
+.efh-board tr.efh-det td{background:var(--paper);white-space:normal}
+.efh-kv{display:inline-flex;align-items:baseline;gap:4px;margin:2px 14px 2px 0}
+.efh-dots{vertical-align:middle}
+.efh-dots>summary{height:32px;padding:0 8px}
+@media (max-width:600px){.u2-todo .btn{margin-left:0}.efh-board th,.efh-board td{padding:6px 5px}}
+.w3-c.w3-c2{min-width:64px;padding:2px 10px;border:1px solid var(--line);font-weight:700}
+.w3-one td{vertical-align:middle}
+@media (max-width:600px){.w3-one th:nth-child(3),.w3-one td:nth-child(3){display:none}.w3-c.w3-c2{min-width:52px;padding:2px 6px}}
+.efh-hist div{align-self:stretch}.efh-hist[style] div,.efh-hist small{align-self:auto}
