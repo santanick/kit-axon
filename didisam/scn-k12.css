@@ -31,3 +31,7 @@
 @media (max-width:900px){.k-split.has,.k-att{grid-template-columns:minmax(0,1fr)}.k-tt{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.k-grid{grid-template-columns:minmax(0,1fr)}}
 .linkb{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer;text-align:left}
+.k-todo{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.k-todo p{margin:0}
+.k-dl{display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px 12px;margin:0 0 14px}.k-dl dt{color:var(--muted);font-size:13px}.k-dl dd{margin:0}
+.k-r{color:#d92d20}.k-sel{align-items:center}.k-date input[type=date]{width:auto}.k-sum{margin-bottom:14px}
+@media (max-width:900px){.k-split.has .k-card{order:-1}}
