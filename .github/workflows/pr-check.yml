@@ -33,7 +33,7 @@ jobs:
       - name: 공통 화면 회귀
         run: |
           mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i playwright@1 --no-fund >/dev/null && npx playwright install --with-deps chromium >/dev/null
-          cd "$GITHUB_WORKSPACE" && NODE_PATH=/tmp/pw/node_modules node tests/ui/smoke.js && NODE_PATH=/tmp/pw/node_modules node tests/ui/compliance.js
+          cd "$GITHUB_WORKSPACE" && NODE_PATH=/tmp/pw/node_modules node tests/ui/smoke.js && NODE_PATH=/tmp/pw/node_modules node tests/ui/compliance.js && NODE_PATH=/tmp/pw/node_modules node tests/ui/scn-k12.js
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17', cache: maven }
       - name: Java 서버 빌드 · 기동
@@ -45,7 +45,7 @@ jobs:
           for i in $(seq 1 90); do curl -sf localhost:8090/api/health && exit 0; sleep 1; done
           tail -40 /tmp/java.log; exit 1
       - name: 운영 모드 전 구간
-        env: { DATABASE_URL: 'postgresql://didisam:ci-only-pw@localhost:5432/didisam', COOKIE_SECURE: '0', TRUST_PROXY_HOPS: '0', SIGNUP_CODE: C0DE, SESSION_PEPPER: ci-only, PORT: '8091', PII_KEY: 0000000000000000000000000000000000000000000000000000000000000000 }
+        env: { DATABASE_URL: 'postgresql://didisam:ci-only-pw@localhost:5432/didisam', COOKIE_SECURE: '0', TRUST_PROXY_HOPS: '0', SIGNUP_CODE: C0DE, PII_DEV_OTP: '1', SESSION_PEPPER: ci-only, PORT: '8091', PII_KEY: '0000000000000000000000000000000000000000000000000000000000000000' }
         run: |
           node service/build-public.js didisam service/public
           (cd service && node server/index.js &) 
@@ -55,3 +55,4 @@ jobs:
           (cd service && MODULE=tutor PORT=8093 node server/index.js &)
           for p in 8092 8093; do for i in $(seq 1 30); do curl -sf localhost:$p/api/health && break; sleep 1; done; done
           ADMIN=http://127.0.0.1:8092 TUTOR=http://127.0.0.1:8093 NODE_PATH=/tmp/pw/node_modules node tests/ui/module-live.js
+          BASE=http://127.0.0.1:8092 TUTOR=http://127.0.0.1:8093 NODE_PATH=/tmp/pw/node_modules node tests/ui/scn-k12-live.js
