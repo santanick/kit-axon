@@ -264,6 +264,10 @@ const MIGRATIONS = [
    alter table cpl_log add constraint cpl_log_kind_check check (kind in ('login','beat','attend','verify-phone','verify-motp','review'));`,
   /* 11 — v31.1 임시 비밀번호 */
   `alter table users add column if not exists pw_temp boolean not null default false;`,
+  /* 12 — v31.2 단체가입 최초 로그인: 훈련생이 정한 비밀번호, 접근코드를 재발급하면 지운다 */
+  `alter table learners add column if not exists pw_hash text;
+   alter table cpl_log drop constraint if exists cpl_log_kind_check;
+   alter table cpl_log add constraint cpl_log_kind_check check (kind in ('login','beat','attend','verify-phone','verify-motp','review','group-pw'));`,
 ];
 
 async function migrate(pool) {

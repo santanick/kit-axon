@@ -7,7 +7,7 @@
 
   <!-- ── L: 학습 · 운영 데이터 ── -->
   <select id="selectOrg" resultType="java.util.LinkedHashMap">
-    select doc->'org'->>'type' type, (doc->'settings'->'acct')::text acct from tenant_state where tenant_id = #{tid}
+    select doc->'org'->>'type' type, (doc->'settings'->'acct')::text acct, (doc->'org'->'cpl')::text cpl from tenant_state where tenant_id = #{tid}
   </select>
   <select id="insertAccount" resultType="string" flushCache="true" useCache="false">
     insert into learner_accounts (tenant_id, kind, login, nickname, student_no, dept, status, minor, mkt)

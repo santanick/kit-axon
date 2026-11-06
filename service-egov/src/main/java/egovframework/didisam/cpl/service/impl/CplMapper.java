@@ -18,6 +18,12 @@ public interface CplMapper {
     Map<String, Object> selectExamAttempt(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
     int submitExam(@Param("id") String id, @Param("answers") String answers, @Param("score") int score, @Param("pass") Boolean pass, @Param("late") boolean late);
     List<Map<String, Object>> selectExams(@Param("tid") String tid);
+    List<Map<String, Object>> selectExamAnswers(@Param("tid") String tid);
+    String selectClasses(@Param("tid") String tid);
+    Map<String, Object> selectLearnerPw(@Param("tid") String tid, @Param("sid") String sid);
+    Integer selectDropped(@Param("tid") String tid, @Param("sid") String sid, @Param("cls") String cls);
+    Integer selectRecentPhone(@Param("tid") String tid, @Param("sid") String sid);
+    void updateLearnerPw(@Param("tid") String tid, @Param("sid") String sid, @Param("hash") String hash);
     List<String> selectTodayItems(@Param("tid") String tid, @Param("sid") String sid);
     long selectToday(@Param("tid") String tid, @Param("sid") String sid);
     void insertLog(@Param("tid") String tid, @Param("sid") String sid, @Param("kind") String kind, @Param("cls") String cls, @Param("item") String item, @Param("secs") int secs, @Param("ip") String ip, @Param("ua") String ua, @Param("evalCd") String evalCd, @Param("chasi") Integer chasi);

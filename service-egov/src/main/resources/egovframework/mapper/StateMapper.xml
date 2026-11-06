@@ -13,7 +13,7 @@
   <select id="selectLearnerFps" resultType="map">select sid, code_fp from learners where tenant_id = #{tid}</select>
   <insert id="upsertLearner">
     insert into learners (tenant_id, sid, dept, code_fp, code_hash) values (#{tid}, #{sid}, #{dept}, #{fp}, #{hash})
-    on conflict (tenant_id, sid) do update set dept = excluded.dept, code_fp = excluded.code_fp, code_hash = excluded.code_hash
+    on conflict (tenant_id, sid) do update set dept = excluded.dept, code_fp = excluded.code_fp, code_hash = excluded.code_hash, pw_hash = null
   </insert>
   <delete id="deleteLearners">
     delete from learners where tenant_id = #{tid} and sid in <foreach collection="sids" item="s" open="(" separator="," close=")">#{s}</foreach>

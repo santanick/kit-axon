@@ -59,6 +59,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         mapper.insertLog(tid, cut(String.valueOf(actor), 80), action, lid, purpose, String.join(",", fields));
     }
     record Org(String type, JsonNode mode, boolean under14, JsonNode social, boolean idvOn, String idvReason) {}
+    private boolean strictPw(String tid) { Map<String, Object> r = mapper.selectOrg(tid); if (r == null || r.get("cpl") == null) return false; JsonNode c = parse((String) r.get("cpl")); return c != null && truthy(get(c, "on")) && sOr(get(c, "profile")).startsWith("moel-"); }
     private Org orgOf(String tid) {
         Map<String, Object> r = mapper.selectOrg(tid); String type = r == null || r.get("type") == null ? "" : (String) r.get("type");
         JsonNode acct = r == null || r.get("acct") == null ? null : parse((String) r.get("acct"));
@@ -121,7 +122,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
                 stu = trim(sOr(get(b, "student_no"))); dept = cut(trim(sOr(get(b, "dept"))), 40);
                 if (!STU_RE.matcher(stu).matches()) throw processException("dd.400.student_no");
                 if (dept.isEmpty()) throw processException("dd.400.dept");
-                if (sOr(get(b, "pw")).length() < 8) throw processException("dd.400.pw");
+                if (sOr(get(b, "pw")).length() < 8) throw processException("dd.400.pw"); if (r.L(() -> strictPw(tid)) && !egovframework.didisam.cmm.DdModule.pwRule(sOr(get(b, "pw")))) throw processException("dd.400.pw_rule");
                 sub = bidx(tid, "univ", stu); if (nick.isEmpty()) nick = slice(stu, -4, stu.length()) + "학번";
             } else if ("email".equals(via)) {
                 email = trim(sOr(get(b, "email"))).toLowerCase(Locale.ROOT); if (!MAIL_RE.matcher(email).matches()) throw processException("dd.400.email");
@@ -140,7 +141,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
                 if (!ph.isEmpty()) gContact = ph;
             }
             String pw = null; JsonNode pwN = get(b, "pw");
-            if (truthy(pwN)) { String ps = str(pwN); if (ps.length() >= 8 && ps.length() <= 64) pw = DdCrypto.hashPw(ps); else throw processException("dd.400.pw.range"); }
+            if (truthy(pwN)) { String ps = str(pwN); if (r.L(() -> strictPw(tid)) && !egovframework.didisam.cmm.DdModule.pwRule(ps)) throw processException("dd.400.pw_rule"); if (ps.length() >= 8 && ps.length() <= 64) pw = DdCrypto.hashPw(ps); else throw processException("dd.400.pw.range"); }
             String st = minor ? "guardian_pending" : "active";
             String acctLogin = univ ? "univ" : login; String fstu = stu, fdept = dept, fnick = nick; boolean fminor = minor;
             String lid;

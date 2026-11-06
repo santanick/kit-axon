@@ -1,6 +1,7 @@
 package egovframework.didisam.cpl.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import egovframework.didisam.cmm.DdCrypto;
 import egovframework.didisam.cmm.DdProps;
 import egovframework.didisam.cmm.DdRateLimiter;
 import egovframework.didisam.cmm.DdWeb;
@@ -37,6 +38,11 @@ public class CplServiceImpl extends EgovAbstractServiceImpl implements CplServic
 
     @Override public Map<String, Object> route(HttpServletRequest req, byte[] body, String tid, String sid) throws Exception {
         JsonNode b = DdWeb.readBody(body, 128 * 1024); String kind = S(get(b, "kind"));
+        if (List.of("beat", "attend", "exam-start").contains(kind)) { String gc = S(get(b, "cls")); tx.inTenant(tid, () -> { JsonNode P = policy(tid); if (!on(P)) return null; JsonNode gf = get(P, "groupFirst"); if (gf != null && gf.asBoolean(false)) { Map<String, Object> L = mapper.selectLearnerPw(tid, sid); if (L != null && L.get("pw_hash") == null) throw processException("dd.403.group_first"); } if (mapper.selectDropped(tid, sid, gc) != null) throw processException("dd.403.dropped"); return null; }); }
+        if ("group-pw".equals(kind)) {
+            rl.limit("cplv:" + tid + ":" + sid, 10, 600_000L); String pw = S(get(b, "pw")); if (!egovframework.didisam.cmm.DdModule.pwRule(pw)) throw processException("dd.400.pw_rule");
+            return tx.inTenant(tid, () -> { if (mapper.selectLearnerPw(tid, sid) == null) throw processException("dd.403.group_none"); if (p.devIdv && mapper.selectRecentPhone(tid, sid) == null) throw processException("dd.403.group_verify"); mapper.updateLearnerPw(tid, sid, DdCrypto.hashPw(pw)); mapper.insertLog(tid, sid, "group-pw", null, null, 0, web.ip(req), ua(req), null, null); Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); return o; });
+        }
         if ("beat".equals(kind)) {
             rl.limit("cplb:" + tid + ":" + sid, 40, 60_000L);
             double d = Math.floor(num(get(b, "secs"))); if (!(d >= 1 && d <= 60)) throw processException("dd.400.secs");
@@ -97,6 +103,17 @@ public class CplServiceImpl extends EgovAbstractServiceImpl implements CplServic
             for (int i : ints((String) r.get("qorder"))) { JsonNode q = i < Q.size() ? Q.get(i) : null; double pt = num(get(q, "pts")); double p = pt > 0 ? pt : 1; tot += p; JsonNode a = obj ? ans.get(String.valueOf(i)) : null; String v = late || a == null || a.isNull() ? "" : a.isTextual() ? a.textValue() : S(a); if (v.length() > 2000) v = v.substring(0, 2000); clean.put(String.valueOf(i), v); boolean ok = right(q, v); if (ok) sc += p; Map<String, Object> m = new LinkedHashMap<>(); m.put("i", i); m.put("ok", ok); res.add(m); }
             int score = (int) Math.round(sc / Math.max(1, tot) * 100); JsonNode ps = get(R, "pass"); double gp = num(get(P, "pass")); Boolean pass = truthy(get(ps, "on")) ? (Boolean) (score >= num(get(ps, "v"))) : gp > 0 ? (Boolean) (score >= gp) : null; mapper.submitExam((String) r.get("id"), DdWeb.JSON.writeValueAsString(clean), score, pass, late); String sh = S(get(R, "show"));
             Map<String, Object> o = new LinkedHashMap<>(); o.put("score", score); o.put("pass", pass); o.put("late", late); Long clsEnd = classEnd(tid, (String) r.get("cls")); boolean moel = S(get(P, "profile")).startsWith("moel-"); boolean hide = "never".equals(sh) || "end".equals(sh) || (moel && !(clsEnd != null && System.currentTimeMillis() > clsEnd + 7 * 86_400_000L)); o.put("res", hide ? List.of() : res); return o; }); }
+    private static final java.util.regex.Pattern WS = java.util.regex.Pattern.compile("[\\s\\u00A0\\uFEFF\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]+");
+    private static java.util.Set<String> grams(String t) { String x = WS.matcher(t).replaceAll(""); java.util.Set<String> G = new java.util.HashSet<>(); for (int i = 0; i + 3 <= x.length(); i++) G.add(x.substring(i, i + 3)); return G; }
+    private static int simil(String a, String b) { var A = grams(a); var B = grams(b); if (A.isEmpty() || B.isEmpty()) return 0; int n = 0; for (String g : A) if (B.contains(g)) n++; return (int) Math.floor(n * 100.0 / (A.size() + B.size() - n) + 0.5); }
+    /** 서술형 답안 베낀 답안 검사 — Node examCopy와 같은 규칙 */
+    @Override public Map<String, Object> examCopy(Map<String, Object> a) throws Exception { String tid = (String) a.get("tid");
+        return tx.inTenant(tid, () -> { JsonNode P = policy(tid); double t0 = P == null ? 0 : num(get(P, "copyThr")); int thr = t0 > 0 ? (int) t0 : 80; String cj = mapper.selectClasses(tid); JsonNode classes = cj == null ? null : parse(cj); java.util.TreeMap<String, List<String[]>> G = new java.util.TreeMap<>();
+            for (Map<String, Object> r : mapper.selectExamAnswers(tid)) { JsonNode cl = null; if (classes != null && classes.isArray()) for (JsonNode x : classes) if (x != null && String.valueOf(r.get("cls")).equals(S(get(x, "id")))) { cl = x; break; } JsonNode it = null; if (cl != null) for (JsonNode x : arr(get(cl, "curriculum"))) if (x != null && String.valueOf(r.get("item")).equals(S(get(x, "id")))) { it = x; break; } List<JsonNode> Q = it == null ? List.of() : arr(get(it, "qs")); Object ans = r.get("answers"); if (ans == null) continue; JsonNode A = parse(String.valueOf(ans)); if (A == null || !A.isObject()) continue;
+                for (var e : (Iterable<Map.Entry<String, JsonNode>>) A::fields) { int k; try { k = Integer.parseInt(e.getKey()); } catch (NumberFormatException x) { continue; } if (k < 0 || k >= Q.size() || Q.get(k) == null || !"essay".equals(S(get(Q.get(k), "t")))) continue; String t = e.getValue() == null || e.getValue().isNull() ? "" : e.getValue().asText(); if (t.trim().length() < 30) continue; G.computeIfAbsent(r.get("cls") + "|" + r.get("item") + "|" + e.getKey(), z -> new java.util.ArrayList<>()).add(new String[] { String.valueOf(r.get("sid")), t }); } }
+            List<Map<String, Object>> out = new java.util.ArrayList<>(); for (var e : G.entrySet()) { String[] kk = e.getKey().split("\\|"); List<String[]> L = e.getValue(); for (int i = 0; i < L.size() && i < 500; i++) for (int j = i + 1; j < L.size() && j < 500; j++) { if (L.get(i)[0].equals(L.get(j)[0])) continue; int s = simil(L.get(i)[1], L.get(j)[1]); if (s >= thr) { Map<String, Object> m = new LinkedHashMap<>(); m.put("cls", kk[0]); m.put("item", kk[1]); m.put("q", Integer.parseInt(kk[2])); m.put("a", L.get(i)[0]); m.put("b", L.get(j)[0]); m.put("s", s); out.add(m); } } }
+            out.sort((x, y) -> { int c = Integer.compare((int) y.get("s"), (int) x.get("s")); return c != 0 ? c : ("" + x.get("cls") + x.get("item") + x.get("q") + x.get("a") + x.get("b")).compareTo("" + y.get("cls") + y.get("item") + y.get("q") + y.get("a") + y.get("b")); });
+            Map<String, Object> o = new LinkedHashMap<>(); o.put("rows", out.size() > 100 ? out.subList(0, 100) : out); o.put("thr", thr); return o; }); }
     @Override public Map<String, Object> exams(Map<String, Object> a) throws Exception { String tid = (String) a.get("tid"); Map<String, Object> o = new LinkedHashMap<>(); o.put("rows", tx.inTenant(tid, () -> mapper.selectExams(tid))); return o; }
 
     @Override public Map<String, Object> summary(Map<String, Object> a) throws Exception { String tid = (String) a.get("tid"); Map<String, Object> o = new LinkedHashMap<>(); o.put("rows", tx.inTenant(tid, () -> mapper.selectSummary(tid))); return o; }

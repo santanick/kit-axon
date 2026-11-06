@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 public final class DdModule {
     private DdModule() { }
     public static final Map<String, String> PAGE = Map.of("learner", "learner.html", "tutor", "tutor.html", "admin", "index.html");
-    static final Set<String> TUTOR_API = Set.of("GET /api/health", "GET /api/config", "POST /api/login", "POST /api/logout", "POST /api/password", "GET /api/me", "GET /api/state", "PUT /api/state", "POST /api/ai/messages", "GET /api/ai/usage", "GET /api/learners/progress", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs");
+    static final Set<String> TUTOR_API = Set.of("GET /api/health", "GET /api/config", "POST /api/login", "POST /api/logout", "POST /api/password", "GET /api/me", "GET /api/state", "PUT /api/state", "POST /api/ai/messages", "GET /api/ai/usage", "GET /api/learners/progress", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy");
     static final Set<String> VIEW_KEEP = Set.of("org", "classes", "members", "admins", "me", "nav", "settings", "site", "lsite", "guides", "bld", "rubrics", "tuts", "weeks");
     static final List<String> SCRUB = List.of("settings", "site", "lsite");
     /** 화면이 읽는 구조만 남기고 값은 지운다 */
@@ -19,7 +19,7 @@ public final class DdModule {
         ObjectNode o = DdWeb.JSON.createObjectNode(); v.fields().forEachRemaining(e -> { JsonNode x = e.getValue(); if (x.isArray()) o.set(e.getKey(), DdWeb.JSON.createArrayNode()); else if (x.isObject()) o.set(e.getKey(), DdWeb.JSON.createObjectNode()); else o.putNull(e.getKey()); }); return o;
     }
     static final Pattern SECRET = Pattern.compile("(key|secret|token|password|credential)", Pattern.CASE_INSENSITIVE);
-    static final List<String> CLASS_LOCK = List.of("id", "learners", "name", "status", "price", "kind", "legal", "start", "end", "teacher", "hrd");
+    static final List<String> CLASS_LOCK = List.of("id", "learners", "name", "status", "price", "kind", "legal", "start", "end", "teacher", "hrd", "drop");
     static final Pattern V4 = Pattern.compile("^(?:::ffff:)?(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$", Pattern.CASE_INSENSITIVE);
 
     public static boolean apiAllowed(String mod, String method, String path) {
@@ -59,6 +59,11 @@ public final class DdModule {
         return false;
     }
 
+    /** 공단 체크리스트 8번: 영문 · 숫자 · 특수문자 중 2종 10자 이상 또는 3종 8자 이상 */
+    public static boolean pwRule(String s) {
+        if (s == null || s.length() > 64) return false; int n = 0; if (s.matches("(?s).*[A-Za-z].*")) n++; if (s.matches("(?s).*\\d.*")) n++; if (s.matches("(?s).*[^A-Za-z\\d\\s].*")) n++;
+        return (n >= 2 && s.length() >= 10) || (n >= 3 && s.length() >= 8);
+    }
     public static final class Scope { public final Set<String> classes = new HashSet<>(), ids = new HashSet<>(), sids = new HashSet<>(); }
     static String txt(JsonNode n, String k) { JsonNode v = n == null ? null : n.get(k); return v == null || v.isNull() ? "" : v.asText(); }
     static boolean sameMail(JsonNode x, String email) { return x != null && x.isObject() && txt(x, "email").equalsIgnoreCase(email); }

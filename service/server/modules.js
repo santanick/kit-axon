@@ -3,7 +3,7 @@
    MODULE이 비어 있으면 기존처럼 한 서비스로 동작한다. Java: cmm/DdModule.java와 같은 규칙. */
 const PAGE = { learner: 'learner.html', tutor: 'tutor.html', admin: 'index.html' };
 const PUB = /^\/api\/pub\/[^/]+\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl)$/;
-const TUTOR_API = new Set(['GET /api/health', 'GET /api/config', 'POST /api/login', 'POST /api/logout', 'POST /api/password', 'GET /api/me', 'GET /api/state', 'PUT /api/state', 'POST /api/ai/messages', 'GET /api/ai/usage', 'GET /api/learners/progress', 'GET /api/cpl/summary', 'GET /api/cpl/exams', 'GET /api/cpl/logs']);
+const TUTOR_API = new Set(['GET /api/health', 'GET /api/config', 'POST /api/login', 'POST /api/logout', 'POST /api/password', 'GET /api/me', 'GET /api/state', 'PUT /api/state', 'POST /api/ai/messages', 'GET /api/ai/usage', 'GET /api/learners/progress', 'GET /api/cpl/summary', 'GET /api/cpl/exams', 'GET /api/cpl/logs', 'GET /api/cpl/exam-copy']);
 const moduleOf = env => { const m = String(env.MODULE || '').trim(); if (m && !PAGE[m]) throw new Error('MODULE은 learner, tutor, admin 중 하나여야 합니다.'); return m; };
 function apiAllowed(mod, method, path) {
   if (!mod) return true;
@@ -49,7 +49,7 @@ function teacherView(doc, email) {
   out.admins = (Array.isArray(doc.admins) ? doc.admins : []).filter(x => x && String(x.email || '').toLowerCase() === String(email).toLowerCase());
   SCRUB.forEach(k => { if (doc[k]) out[k] = scrub(doc[k]); }); return out;
 }
-const CLASS_LOCK = ['id', 'learners', 'name', 'status', 'price', 'kind', 'legal', 'start', 'end', 'teacher', 'hrd'];
+const CLASS_LOCK = ['id', 'learners', 'name', 'status', 'price', 'kind', 'legal', 'start', 'end', 'teacher', 'hrd', 'drop'];
 function teacherMerge(cur, inc, email) {
   const sc = scope(cur, email); const byId = new Map((Array.isArray(inc && inc.classes) ? inc.classes : []).filter(c => c && c.id != null).map(c => [String(c.id), c]));
   const out = { ...cur };
