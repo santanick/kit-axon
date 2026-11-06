@@ -12,5 +12,6 @@ public class CplController {
     private final AuthService authService; private final CplService cplService;
     public CplController(AuthService authService, CplService cplService) { this.authService = authService; this.cplService = cplService; }
     @GetMapping("/summary") public Map<String, Object> summary(HttpServletRequest req) throws Exception { return cplService.summary(authService.need(req)); }
+    @GetMapping("/exams") public Map<String, Object> exams(HttpServletRequest req) throws Exception { return cplService.exams(authService.need(req)); }
     @GetMapping("/logs") public Map<String, Object> logs(HttpServletRequest req, @RequestParam(required = false) String sid, @RequestParam(required = false) String limit) throws Exception { return cplService.logs(authService.need(req), sid, limit); }
 }

@@ -241,6 +241,21 @@ const MIGRATIONS = [
    create policy tenant_iso on cpl_log using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
    grant select, insert on cpl_log to didisam_tenant;
    grant usage, select on sequence cpl_log_id_seq to didisam_tenant;`,
+  /* 8 — v30.1 서버 출제 · 채점: 응시별 출제 문항 · 답안 · 점수 원본 */
+  `create table if not exists cpl_exam (
+     id text primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null, cls text not null, item text not null,
+     qorder jsonb not null, answers jsonb,
+     started_at timestamptz not null default now(), ends_at timestamptz, submitted_at timestamptz,
+     score integer, pass boolean, late boolean not null default false
+   );
+   create index if not exists cpl_exam_sid on cpl_exam (tenant_id, sid, cls, item);
+   alter table cpl_exam enable row level security;
+   alter table cpl_exam force row level security;
+   drop policy if exists tenant_iso on cpl_exam;
+   create policy tenant_iso on cpl_exam using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert, update on cpl_exam to didisam_tenant;`,
 ];
 
 async function migrate(pool) {

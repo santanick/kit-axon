@@ -395,6 +395,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     'POST /api/learners/pii': async req => pii.adminPii(await need(req), req),
     'GET /api/learners/pii-log': async req => pii.adminLog(await need(req)),
     'GET /api/cpl/summary': async req => cpl.summary(await need(req)),
+    'GET /api/cpl/exams': async req => cpl.exams(await need(req)),
     'GET /api/cpl/logs': async req => cpl.logs(await need(req), new URL(req.url, 'http://x')),
     'GET /api/audit': async req => {
       const a = await need(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 볼 수 있습니다.', 'role');

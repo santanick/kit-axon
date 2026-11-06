@@ -7,6 +7,7 @@ import java.util.Map;
 public interface CplService {
     void afterLogin(HttpServletRequest req, String tid, String sid, String keepHash) throws Exception;
     Map<String, Object> route(HttpServletRequest req, byte[] body, String tid, String sid) throws Exception;
+    Map<String, Object> exams(Map<String, Object> a) throws Exception;
     Map<String, Object> summary(Map<String, Object> a) throws Exception;
     Map<String, Object> logs(Map<String, Object> a, String sid, String limit) throws Exception;
 }
