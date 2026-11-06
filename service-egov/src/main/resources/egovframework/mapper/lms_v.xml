@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v32 미디어: 업무 함수(sql/a1_media.sql)를 부른다. 함수 이름은 고정 표에서만(${fn}). 대기열 문장은 Node lms/media/worker.js와 같다 -->
+<mapper namespace="egovframework.didisam.lms.v.service.impl.LmsVMapper">
+  <select id="call" resultType="string" flushCache="true" useCache="false">select ${fn}(cast(#{ctx} as jsonb), cast(#{a} as jsonb))::text</select>
+  <select id="selectData" resultType="map" flushCache="true" useCache="false">select data from lms_media_obj where media_id = cast(#{mid} as uuid) and path = #{path}</select>
+  <select id="selectFile" resultType="map" flushCache="true" useCache="false">select data from lms_file where file_id = cast(#{id} as uuid)</select>
+  <select id="selectStore" resultType="string" flushCache="true" useCache="false">select store from lms_media_obj where media_id = cast(#{mid} as uuid) and path = #{path}</select>
+  <insert id="putObj">insert into lms_media_obj (tenant_id, media_id, path, mime, size, store, data) values (current_setting('app.tenant'), cast(#{mid} as uuid), #{path}, #{mime}, #{size}, #{store}, #{data,jdbcType=BINARY})
+    on conflict (tenant_id, media_id, path) do update set mime = excluded.mime, size = excluded.size, store = excluded.store, data = excluded.data</insert>
+  <select id="claim" resultType="map" flushCache="true" useCache="false">update lms_media_q set status = 'running', locked_at = now(), worker = #{worker} where job_id = (select job_id from lms_media_q
+      where status = 'queued' or (status = 'running' and locked_at &lt; now() - interval '30 minutes') order by created_at limit 1 for update skip locked) returning job_id::text as job_id, tenant_id, kind</select>
+  <delete id="deleteQ">delete from lms_media_q where job_id = cast(#{job} as uuid)</delete>
+  <select id="univTenants" resultType="string">select id from tenants where type = 'univ'</select>
+</mapper>

@@ -75,10 +75,10 @@ const SEC_HEADERS = {
   'x-permitted-cross-domain-policies': 'none',
   'origin-agent-cluster': '?1'
 };
-const CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'";
+const CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'";
 
 const LCOOKIE = '__Host-dd_lsid';
-const LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'self'";
+const LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; media-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'self'";
 const LP_MAX = 256 * 1024;
 const TID_RE = /^tn_[a-z0-9]{8,16}$/; const SID_RE = /^[A-Za-z0-9_-]{4,20}$/;
 
@@ -494,6 +494,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
           const o = req.headers.origin; if (o && new URL(o).host !== req.headers.host) throw new HttpErr(403, '허용되지 않은 출처입니다.', 'origin');
         }
         const out = await fn(req, res);
+        if (res.headersSent) return; /* v32 스트리밍 경로(GET /api/lms/v/hls)는 직접 응답한다 */
         return send(res, 200, out);
       }
       if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'method');
