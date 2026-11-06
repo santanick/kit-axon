@@ -49,6 +49,10 @@ public class CplServiceImpl extends EgovAbstractServiceImpl implements CplServic
                 Map<String, Object> o = new LinkedHashMap<>(); o.put("today", s); o.put("max", max); o.put("over", max > 0 && s >= max); return o;
             });
         }
+        if ("review-skip".equals(kind)) {
+            rl.limit("cplv:" + tid + ":" + sid, 60, 600_000L); String ec = S(get(b, "evalCd")); String evalCd = List.of("00", "01", "02", "03", "04").contains(ec) ? ec : null; double cd = num(get(b, "chasi")); Integer chasi = cd >= 0 && cd < 1000 && cd == Math.rint(cd) && !S(get(b, "chasi")).isEmpty() ? (Integer) (int) cd : null; String vc = S(get(b, "cls")); String vcls = KEY_RE.matcher(vc).matches() ? vc : null;
+            return tx.inTenant(tid, () -> { JsonNode P = policy(tid); JsonNode L = on(P) ? get(P, "reviewers") : null; boolean hit = false; if (L != null && L.isArray()) for (JsonNode x : L) if (sid.equals(x.asText())) hit = true; if (!hit) throw processException("dd.403.reviewer"); mapper.insertLog(tid, sid, "review", vcls, null, 0, web.ip(req), ua(req), evalCd, chasi); Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); return o; });
+        }
         if ("verify-start".equals(kind) || "verify-confirm".equals(kind)) {
             String method = S(get(b, "method")); if (!List.of("phone", "motp").contains(method)) throw processException("dd.400.method");
             rl.limit("cplv:" + tid + ":" + sid, 10, 600_000L);

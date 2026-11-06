@@ -15,12 +15,12 @@ public class McpController {
     private final AuthService authService; private final McpService mcpService;
     public McpController(AuthService authService, McpService mcpService) { this.authService = authService; this.mcpService = mcpService; }
 
-    @GetMapping("/api/keys") public Map<String, Object> list(HttpServletRequest req) throws Exception { return mcpService.listKeys(authService.need(req)); }
+    @GetMapping("/api/keys") public Map<String, Object> list(HttpServletRequest req) throws Exception { return mcpService.listKeys(authService.needStaff(req)); }
     @PostMapping("/api/keys") public Map<String, Object> create(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception {
-        return mcpService.createKey(authService.need(req), body);
+        return mcpService.createKey(authService.needStaff(req), body);
     }
     @PostMapping("/api/keys/revoke") public Map<String, Object> revoke(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception {
-        return mcpService.revokeKey(authService.need(req), body);
+        return mcpService.revokeKey(authService.needStaff(req), body);
     }
 
     /** POST /mcp (MCP Streamable HTTP, JSON 응답). 다른 메서드는 Node와 같은 405 */

@@ -391,7 +391,7 @@ async function stage2All(a1, b1) {
     /* 마무리: 역할 권한 · 기관 파기 */
     const ea = await stage2End(A, 'n', na.X), eb = await stage2End(B, 'j', jb.X);
     compareR(ea, eb, '2단계 끝 ');
-    const E2 = { tKeys: 200, tKeyCreate: 403, tRevoke: 403, tAudit: 403, tPiiLog: 403, tPii: 403, tAccounts: 200, tDelete: 403, dBadPw: 401, dBadConfirm: 400, dOk: 200, dMe: 401, dSite: 404, dMcp: 401 };
+    const E2 = { tKeys: 403, tKeyCreate: 403, tRevoke: 403, tAudit: 403, tPiiLog: 403, tPii: 403, tAccounts: 403, tDelete: 403, dBadPw: 401, dBadConfirm: 400, dOk: 200, dMe: 401, dSite: 404, dMcp: 401 };
     for (const [k, s] of Object.entries(E2)) ok(eb[k].st === s, `Java 2단계 끝 ${k}: 기대 ${s} 실제 ${eb[k].st}`);
     ok(ea.dOk.sc.replace(/=[^;]*;/, '=;') === eb.dOk.sc.replace(/=[^;]*;/, '=;'), '기관 파기: set-cookie 속성');
   } finally { srv.close(); }

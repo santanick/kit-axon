@@ -35,7 +35,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     @Override public Map<String, Object> config() throws Exception {
         mapper.ping();
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("live", true); m.put("signup", p.allowSignup); m.put("signupCode", !p.signupCode.isEmpty());
+        m.put("live", true); if (!p.module.isEmpty()) m.put("module", p.module); m.put("signup", p.allowSignup && (p.module.isEmpty() || "admin".equals(p.module))); m.put("signupCode", !p.signupCode.isEmpty());
         m.put("ai", p.ai); m.put("models", MODELS); m.put("aiDaily", p.aiDaily);
         return m;
     }
@@ -88,6 +88,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
             throw processException("dd.401.login");
         }
         String uid = (String) u.get("id"), tid = (String) u.get("tenant_id");
+        if (!p.module.isEmpty() && !DdModule.roleAllowed(p.module, u.get("role"))) throw processException("dd.403.module");
         mapper.updateLastLogin(uid); mapper.deleteExpiredSessions(uid);
         newSession(res, uid, tid);
         tx.audit(tid, email, "login", null);
@@ -102,11 +103,40 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     @Override public Map<String, Object> auth(HttpServletRequest req) throws Exception {
         String t = web.sidToken(req); if (t == null || t.isEmpty() || t.length() > 100) return null;
         Map<String, Object> a = mapper.selectAuth(DdCrypto.sha(t), Math.max(0, p.idleH - 1), props.getInt("session.days"));
+        if (a != null && !p.module.isEmpty() && !DdModule.roleAllowed(p.module, a.get("role"))) return null;
         if (a != null && Boolean.TRUE.equals(a.get("slide"))) mapper.slideSession((String) a.get("sid"), props.getInt("session.days"), p.idleH);
         return a;
     }
     @Override public Map<String, Object> need(HttpServletRequest req) throws Exception {
         Map<String, Object> a = auth(req); if (a == null) throw processException("dd.401.auth"); return a;
+    }
+    @Override public Map<String, Object> needStaff(HttpServletRequest req) throws Exception { Map<String, Object> a = need(req); if ("teacher".equals(a.get("role"))) throw processException("dd.403.teacher"); return a; }
+    @Override public Map<String, Object> needOwner(HttpServletRequest req) throws Exception { Map<String, Object> a = need(req); if (!"owner".equals(a.get("role"))) throw processException("dd.403.role"); return a; }
+    @Override public Map<String, Object> password(Map<String, Object> a, JsonNode b) throws Exception {
+        String uid = (String) a.get("uid"), tid = (String) a.get("tid"); rl.limit("pw:" + uid, 8, 600_000L);
+        String cur = mapper.selectPw(uid);
+        if (cur == null || !DdCrypto.checkPw(DdWeb.str(b, "current"), cur)) throw processException("dd.401.login.pw");
+        if (!pwOk(b.get("next"))) throw processException("dd.400.password");
+        mapper.updatePw(uid, DdCrypto.hashPw(b.get("next").asText())); mapper.deleteOtherSessions(uid, (String) a.get("sid"));
+        tx.audit(tid, (String) a.get("email"), "password.change", null); return Map.of("ok", true);
+    }
+    @Override public Map<String, Object> staffList(Map<String, Object> a) throws Exception { Map<String, Object> o = new LinkedHashMap<>(); o.put("rows", mapper.selectStaff((String) a.get("tid"))); return o; }
+    @Override public Map<String, Object> staffCreate(Map<String, Object> a, JsonNode b) throws Exception {
+        String tid = (String) a.get("tid"); rl.limit("staff:" + tid, 30, 3600_000L);
+        String email = DdWeb.str(b, "email").trim().toLowerCase(), role = DdWeb.str(b, "role");
+        if (!emailOk(email)) throw processException("dd.400.email");
+        if (!List.of("teacher", "sub").contains(role)) throw processException("dd.400.staff_role");
+        byte[] rnd = new byte[12]; new java.security.SecureRandom().nextBytes(rnd);
+        String pass = "Dd" + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(rnd).replaceAll("[-_]", "x") + "7"; String pw = DdCrypto.hashPw(pass);
+        try { tx.plain(() -> { if (mapper.countEmail(email) > 0) throw processException("dd.409.exists"); return mapper.insertUser(tid, email, pw, role); }); }
+        catch (DuplicateKeyException e) { throw processException("dd.409.exists", e); }
+        tx.audit(tid, (String) a.get("email"), "staff.create", DdWeb.JSON.createObjectNode().put("email", email).put("role", role).toString());
+        Map<String, Object> o = new LinkedHashMap<>(); o.put("email", email); o.put("role", role); o.put("password", pass); return o;
+    }
+    @Override public Map<String, Object> staffRemove(Map<String, Object> a, JsonNode b) throws Exception {
+        String tid = (String) a.get("tid"), email = DdWeb.str(b, "email").trim().toLowerCase();
+        if (mapper.deleteStaff(tid, email) == 0) throw processException("dd.404.staff_missing");
+        tx.audit(tid, (String) a.get("email"), "staff.remove", DdWeb.JSON.createObjectNode().put("email", email).toString()); return Map.of("ok", true);
     }
     @Override public Map<String, Object> meOut(Map<String, Object> a) {
         Map<String, Object> u = new LinkedHashMap<>(); u.put("email", a.get("email")); u.put("role", a.get("role"));

@@ -259,6 +259,9 @@ const MIGRATIONS = [
   /* 9 — v30.2 공단 체크리스트: 본인인증 평가코드 · 차시(00 입과 · 01 진도 · 02 시험 · 03 과제 · 04 진행평가) */
   `alter table cpl_log add column if not exists eval_cd text;
    alter table cpl_log add column if not exists chasi integer;`,
+  /* 10 — v31 심사자 계정: 본인인증 면제 기록 */
+  `alter table cpl_log drop constraint if exists cpl_log_kind_check;
+   alter table cpl_log add constraint cpl_log_kind_check check (kind in ('login','beat','attend','verify-phone','verify-motp','review'));`,
 ];
 
 async function migrate(pool) {
