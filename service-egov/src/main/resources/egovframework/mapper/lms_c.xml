@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 학사 LMS 묶음 C — 업무 규칙 · 응답 JSON은 SQL 함수 lms_c_api(Node와 같은 함수) -->
+<mapper namespace="egovframework.didisam.lms.c.service.impl.LmsCMapper">
+  <select id="api" resultType="string" flushCache="true" useCache="false">
+    select lms_c_api(#{op}, cast(#{args} as jsonb), cast(#{actor} as jsonb))::text
+  </select>
+</mapper>

@@ -16,8 +16,12 @@ async function call(base, method, p, { body, cookie, csrf = true } = {}) {
 async function db(fn) { const c = new pg.Client({ connectionString: DBURL }); await c.connect(); try { return await fn(c); } finally { await c.end(); } }
 /* 기관 하나 + 학기 2개 · 교과목 · 분반 2개(이전 학기 · 이번 학기) · 교수/조교/채점자/학생 4명 */
 async function setup(base, tag) {
-  const su = await call(base, 'POST', '/api/signup', { body: { email: `lmsbcd_${tag}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@example.com`, password: 'LmsBtest2026x', orgName: '대조 국립대', type: 'univ' } });
-  const ck = su.ck; const tid = su.j.tenant.tid;
+  /* 가입 API는 IP당 시간 10회 제한이 있어 기관 · 운영자 · 세션을 DB에 바로 만든다(scrypt 비밀번호는 쓰지 않음) */
+  const crypto = require('node:crypto'); const tok = crypto.randomBytes(32).toString('base64url'); const tid = 'tn_' + crypto.randomBytes(6).toString('hex');
+  await db(async c => { await c.query("insert into tenants (id, name, type) values ($1, '대조 국립대', 'univ')", [tid]);
+    const u = (await c.query("insert into users (tenant_id, email, pw, role) values ($1, $2, 'scrypt$x$y', 'owner') returning id", [tid, `lmsbcd_${tag}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@example.com`])).rows[0].id;
+    await c.query("insert into sessions (id, user_id, tenant_id, expires_at) values ($1, $2, $3, now() + interval '2 hours')", [crypto.createHash('sha256').update(tok).digest('hex'), u, tid]); });
+  const ck = 'dd_sid=' + tok;
   const ids = await db(async c => {
     await c.query('begin'); await c.query('set local role didisam_tenant'); await c.query("select set_config('app.tenant', $1, true)", [tid]);
     await c.query(`insert into lms_term (tenant_id, term_id, name, starts_on, ends_on) values ($1, '2026-1', '2026학년도 1학기', '2026-03-02', '2026-06-20'), ($1, '2026-2', '2026학년도 2학기', '2026-09-01', '2026-12-19')`, [tid]);
