@@ -59,6 +59,13 @@
   D['POST /api/lms/h/message'] = a => { if (!String(a.text || '').trim()) ERR(400, 'required', '메시지을(를) 입력하세요.'); const ok = demoStudents(a.section_id).map(p => p.member_no); const tg = (a.member_nos || []).filter(m => ok.includes(m)); if (!tg.length) ERR(400, 'targets', '받을 학생을 고르세요.');
     const m = { mid: st().seq++, section_id: a.section_id, channel: a.channel || 'push', targets: tg, body: a.text, status: 'queued', created_at: nowIso() }; st().msgs.unshift(m); logAudit(`성적 안내 메시지 대기열 — ${tg.length}명`); return { mid: m.mid, n: tg.length, status: 'queued', note: '연동 후 동작: 문자 · 메일 · 푸시 발송기가 대기열에서 가져가 보냅니다.' }; };
 
+  /* 학습자 본인 성적(데모 — 학습자 앱 lms/efh-learner.js가 UI.lmshAs로 부른다) */
+  D['GET /api/lms/h/my'] = a => { const pid = UI.lmshAs; if (!pid) ERR(401, 'auth', '로그인이 필요합니다.'); const me = demoStudents(a.section).find(x => x.person_id === pid); if (!me) ERR(403, 'not_enrolled', '수강 중인 분반이 아닙니다.');
+    if (me.kind === 'audit') return { audit: true, message: '청강생은 성적이 산출되지 않습니다.' }; const p = pol(a.section);
+    if (p.hidden && p.status !== 'confirmed') return { audit: false, hidden: true, message: '교수자가 성적 확정 전까지 점수를 비공개로 두었습니다.', items: items(a.section).map(i => ({ name: i.name, category: i.category, weight_pct: i.weight_pct })) };
+    const r = compute(a.section).rows.find(x => x.person_id === pid) || {}; const f = st().final[a.section + ':' + pid];
+    return { audit: false, hidden: false, status: p.status, items: items(a.section).map(i => { const v = (st().scores[i.item_id] || {})[pid] || {}; return { name: i.name, category: i.category, weight_pct: i.weight_pct, max_score: i.max_score, score: v.score ?? null, feedback: v.feedback || null }; }), total: f ? f.total : r.total, letter: f ? f.letter : r.letter, confirmed: !!f }; };
+
   /* ═════════ 화면 — 기존 VIEWS.grade 감싸기 ═════════ */
   const base = VIEWS.grade;
   VIEWS.grade = () => { if (!ON()) return base ? base() : ''; css(); return gradeView() + (base ? `<details class="card efh-old"><summary>간편 성적 보기(이전 데모 화면)</summary>${base()}</details>` : ''); };
