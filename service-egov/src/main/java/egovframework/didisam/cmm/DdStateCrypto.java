@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 @Service("ddStateCrypto")
 public class DdStateCrypto extends EgovAbstractServiceImpl {
     static final String PFX = "enc1:";
-    static final Map<String, List<String>> SET = Map.of("members", List.of("name", "nick", "email", "phone"), "parents", List.of("name", "phone"), "codes", List.of("code"), "admins", List.of("name", "email"), "consults", List.of("title", "summary", "text", "note", "memo", "transcript"), "msgs", List.of("to", "title", "body"), "crmLeads", List.of("name", "school", "pname", "pphone", "memo"), "crmHist", List.of("memo"), "classes", List.of());
+    static final Map<String, List<String>> SET = Map.of("members", List.of("name", "nick", "email", "phone"), "parents", List.of("name", "phone"), "codes", List.of("code"), "admins", List.of("name", "email"), "consults", List.of("title", "summary", "text", "note", "memo", "transcript"), "msgs", List.of("to", "title", "body"), "crmLeads", List.of("name", "school", "pname", "pphone", "memo"), "crmHist", List.of("memo"), "classes", List.of(), "chat", List.of("text", "html", "title"));
     static final Map<String, List<String>> JSON_FIELDS = Map.of("members", List.of("extra", "crm"), "classes", List.of("crmDay", "k12Exams", "makeups"));
     private final DdPiiCrypto c;
     public DdStateCrypto(DdPiiCrypto c) { this.c = c; }
@@ -27,6 +27,7 @@ public class DdStateCrypto extends EgovAbstractServiceImpl {
                 for (String f : SET.get(kind)) { JsonNode v = x.get(f); if (v != null && v.isTextual() && !v.asText().isEmpty()) x.put(f, PFX + c.enc(v.asText(), aad(tid, kind, x, f))); }
                 for (String jf : JSON_FIELDS.getOrDefault(kind, List.of())) { JsonNode e = x.get(jf); if (e != null && (e.isObject() || e.isArray()) && !e.isEmpty()) x.put(jf, PFX + c.enc(e.toString(), aad(tid, kind, x, jf))); }
             } }
+        JsonNode ib = out.get("inbox"); if (ib != null && ib.isObject() && !ib.isEmpty()) out.put("inbox", PFX + c.enc(ib.toString(), tid + "|state|inbox"));
         return out;
     }
     public JsonNode open(JsonNode doc, String tid) throws Exception {
@@ -36,6 +37,7 @@ public class DdStateCrypto extends EgovAbstractServiceImpl {
                 for (String f : SET.get(kind)) { JsonNode v = x.get(f); if (v != null && v.isTextual() && v.asText().startsWith(PFX)) x.put(f, dec(v.asText(), aad(tid, kind, x, f))); }
                 for (String jf : JSON_FIELDS.getOrDefault(kind, List.of())) { JsonNode e = x.get(jf); if (e != null && e.isTextual() && e.asText().startsWith(PFX)) x.set(jf, DdWeb.JSON.readTree(dec(e.asText(), aad(tid, kind, x, jf)))); }
             } }
+        JsonNode ib = out.get("inbox"); if (ib != null && ib.isTextual() && ib.asText().startsWith(PFX)) out.set("inbox", DdWeb.JSON.readTree(dec(ib.asText(), tid + "|state|inbox")));
         return out;
     }
     public JsonNode memberName(JsonNode m, String tid) throws Exception { JsonNode v = m.get("name"); if (v != null && v.isTextual() && v.asText().startsWith(PFX)) return DdWeb.JSON.getNodeFactory().textNode(dec(v.asText(), aad(tid, "members", m, "name"))); return v; }
