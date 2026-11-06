@@ -159,12 +159,38 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     await pool.query('update learner_sessions set last_at = now() where id = $1', [sha(t)]); return s;
   }
   /* 학습자 본인 데이터만: 배지 · 과정 진도(어드민 상태에서 학번으로 찾음) */
+  /* v32.4 학원(k12) 원생 본인 기록: 출결 · 진도 · 과제 · 학원 시험 · 예정 보강. 반 평균은 내지만 석차 · 다른 원생 정보 · 개별 메모는 내지 않는다. Java PubServiceImpl.k12Of와 같다. */
+  function k12Of(doc, mid, tid) {
+    let D; try { D = crypt.open(doc, tid); } catch (e) { return null; }
+    const str = v => (v == null ? '' : String(v)); const cut = (v, n) => str(v).slice(0, n); const ob = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+    const att = [], ex = [], mk = [];
+    for (const c of (Array.isArray(D.classes) ? D.classes : [])) {
+      if (!c || !Array.isArray(c.learners) || !c.learners.map(String).includes(mid)) continue;
+      const cid = str(c.id), cn = cut(c.name, 60);
+      for (const s of (Array.isArray(c.sessions) ? c.sessions : [])) {
+        if (!s) continue; const k = str(s.id); const a = ob(ob(c.att)[k])[mid]; const st = typeof a === 'string' ? a : (a && typeof a === 'object' ? str(a.st) : '');
+        const day = ob(ob(c.crmDay)[k]); const row = ob(ob(day.rows)[mid]); const tm = ob(ob(ob(c.attT)[k])[mid]);
+        if (!st && !day.closed && !day.prog && !day.hw) continue;
+        att.push({ c: cid, cn, d: cut(s.date, 10), st: cut(st, 10), in: cut(tm.in, 5), out: cut(tm.out, 5), r: cut(row.reason, 60), p: cut(day.prog, 100), hw: cut(day.hw, 100), done: !!row.hw, x: !!day.closed });
+      }
+      for (const e of (Array.isArray(c.k12Exams) ? c.k12Exams : [])) {
+        if (!e) continue; const SC = ob(e.scores); const sc = SC[mid]; if (!sc || typeof sc !== 'object') continue;
+        const V = Object.values(SC).filter(x => x && typeof x === 'object' && !x.absent && x.v != null && x.v !== '' && Number.isFinite(+x.v)).map(x => +x.v);
+        const v = sc.v == null || sc.v === '' || !Number.isFinite(+sc.v) ? null : +sc.v;
+        ex.push({ c: cid, cn, n: cut(e.name, 60), d: cut(e.date, 10), max: Number.isFinite(+e.max) && +e.max > 0 ? +e.max : 100, v: sc.absent ? null : v, ab: !!sc.absent, avg: V.length ? Math.round(V.reduce((x, y) => x + y, 0) / V.length * 10) / 10 : null });
+      }
+      for (const x of (Array.isArray(c.makeups) ? c.makeups : [])) if (x && str(x.mid) === mid && x.st !== '완료') mk.push({ cn, d: cut(x.date, 10), t: cut(x.time, 10) });
+    }
+    const by = (a, b, dir) => (a.d < b.d ? -dir : a.d > b.d ? dir : 0);
+    return { att: att.sort((a, b) => by(a, b, -1)).slice(0, 30), ex: ex.sort((a, b) => by(a, b, -1)).slice(0, 20), mk: mk.sort((a, b) => by(a, b, 1)).slice(0, 10) };
+  }
   function mineOf(doc, sid, tid) {
     const own = (o, k) => o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k);
     const bk = Object.fromEntries(Object.entries(doc.bkgrades || {}).filter(([, M]) => own(M, sid)).slice(0, 200).map(([id, M]) => [id, Object.fromEntries(Object.entries(M[sid] || {}).slice(0, 200).map(([k, g]) => [k, { score: g && g.score != null && g.score !== '' ? +g.score : null, fb: String((g && g.fb) || '').slice(0, 500) }]))]));
     const qa = (Array.isArray(doc.tq) ? doc.tq : []).filter(x => x && x.sid === sid && x.st === 'answered' && x.a).slice(0, 30).map(x => ({ id: String(x.id || ''), q: String(x.q || '').slice(0, 400), a: String(x.a || '').slice(0, 2000), cls: String(x.cls || '').slice(0, 60), at: String(x.aAt || x.at || '').slice(0, 25) }));
     const m = (doc.members || []).find(x => x && (x.sid === sid || crypt.memberName(x, tid) === sid)); if (!m) return { badges: [], cls: {}, bk, qa };
-    return { bk, qa, badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))),
+    const k12 = doc.org && doc.org.type === 'k12' ? k12Of(doc, String(m.id), tid) : null;
+    return { bk, qa, ...(k12 ? { k12 } : {}), badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))),
       cls: Object.fromEntries((doc.classes || []).filter(c => c.prog && c.prog[m.id]).map(c => { const g = c.prog[m.id]; const thr = (c.criteria && c.criteria.threshold) || 80; return [c.id, { p: Math.round(+g.p || 0), st: g.assign || 'none', fb: String(g.fb || '').slice(0, 1000), score: g.score ?? null, done: (+g.p || 0) >= thr }]; })) };
   }
   const cleanLP = lp => { const o = { tut: {}, cls: {}, diag: {}, at: new Date().toISOString() }; if (!lp || typeof lp !== 'object') return o; for (const k of ['tut', 'cls', 'diag', 'book']) if (lp[k] && typeof lp[k] === 'object' && !Array.isArray(lp[k])) o[k] = Object.fromEntries(Object.entries(lp[k]).filter(([id]) => /^[\w-]{1,40}$/.test(id)).slice(0, 500)); if (lp.days && typeof lp.days === 'object') o.days = Object.fromEntries(Object.entries(lp.days).filter(([d, n]) => /^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(+n)).slice(-370).map(([d, n]) => [d, Math.min(999, Math.max(0, Math.round(+n)))]));
