@@ -38,7 +38,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "x-content-type-options", "nosniff",
         "referrer-policy", "strict-origin-when-cross-origin",
         "x-frame-options", "DENY",
-        "permissions-policy", "camera=(), geolocation=(), microphone=(self), payment=(), usb=(), serial=(), bluetooth=(), hid=(), display-capture=(), interest-cohort=()",
+        "permissions-policy", "camera=(self), geolocation=(self), microphone=(self), payment=(), usb=(), serial=(), bluetooth=(), hid=(), display-capture=(self), interest-cohort=()",
         "cross-origin-opener-policy", "same-origin",
         "cross-origin-resource-policy", "same-origin",
         "x-permitted-cross-domain-policies", "none",
