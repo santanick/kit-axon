@@ -13,6 +13,7 @@ async function call(base, method, p, { body, cookie, csrf = true } = {}) {
   const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch {}
   const sc = r.headers.get('set-cookie'); return { st: r.status, j, ck: sc ? sc.split(';')[0] : null };
 }
+async function learnerCookie(tid, sid) { const crypto = require('node:crypto'); const t = crypto.randomBytes(32).toString('base64url'); await db(c => c.query("insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval '1 hour')", [crypto.createHash('sha256').update(t).digest('hex'), tid, sid])); return 'dd_lsid=' + t; }
 async function db(fn) { const c = new pg.Client({ connectionString: DBURL }); await c.connect(); try { return await fn(c); } finally { await c.end(); } }
 /* 기관 하나 + 학기 2개 · 교과목 · 분반 2개(이전 학기 · 이번 학기) · 교수/조교/채점자/학생 4명 */
 async function setup(base, tag) {
@@ -69,7 +70,7 @@ async function run(scenario, EXP, label) {
 const MANI = { version: '1.2', identifier: 'pkg1', title: '자료구조 이러닝', scos: [{ id: 'sco1', title: '1장', href: 'index.html' }, { id: 'sco2', title: '2장', href: 'ch2/index.html' }], files: ['index.html', 'ch2/index.html'] };
 
 async function scenario(base, tag) {
-  const R = {}; const { ck, s1, s2 } = await setup(base, tag);
+  const R = {}; const { ck, s1, s2, tid, P: PP } = await setup(base, tag); void PP;
   const G = (p, as) => call(base, 'GET', `/api/lms/b/${p}${as ? (p.includes('?') ? '&' : '?') + 'as=' + as : ''}`, { cookie: ck });
   const P = (p, body) => call(base, 'POST', `/api/lms/b/${p}`, { cookie: ck, body });
   R.noAuth = await call(base, 'GET', `/api/lms/b/overview?section=${s2}`);
@@ -172,6 +173,33 @@ async function scenario(base, tag) {
   R.menuPref = await P('menu-pref', { as: '20261001', section: s2, hidden: ['chat'], order: ['board', 'forum'] });
   R.menu = await G(`menu?section=${s2}`, '20261001');
   R.menuStu = await P('menu-set', { as: '20261001', section: s2, modules: [] });
+  /* 학습자 포털 세션(dd_lsid → 학번): 학번으로 고정, as 전환 무시, 운영자 전용 경로 거부 */
+  const lck = await learnerCookie(tid, '20261002');
+  R.lOverview = await call(base, 'GET', `/api/lms/b/overview?section=${s2}&as=P2026001`, { cookie: lck });
+  R.lSections = await call(base, 'GET', '/api/lms/b/sections', { cookie: lck });
+  R.lEdit = await call(base, 'POST', '/api/lms/b/res-save', { cookie: lck, body: { section: s2, kind: 'label', title: '학생' } });
+  R.lPerm = await call(base, 'POST', '/api/lms/b/perm-set', { cookie: lck, body: { role: 'ta', perm: 'grade', allowed: true } });
+  R.lMark = await call(base, 'POST', '/api/lms/b/progress-mark', { cookie: lck, body: { resource: R.r1.j.id, score: 100 } });
+  R.lNone = await call(base, 'GET', `/api/lms/b/overview?section=${s2}`, { cookie: await learnerCookie(tid, '99990000') });
+  /* E 과제 · F 시험 결과 → 진도 · 이수 조건 자동 반영(제출 · 채점 · 응시를 DB에 넣으면 트리거가 반영) */
+  const ext = await db(async c => { await c.query('begin'); await c.query('set local role didisam_tenant'); await c.query("select set_config('app.tenant', $1, true)", [tid]);
+    const asg = (await c.query("insert into lms_assignment (tenant_id, section_id, title, status, max_score) values ($1, $2, '자료구조 과제 1', 'published', 100) returning asg_id", [tid, s2])).rows[0].asg_id;
+    const ex = (await c.query("insert into lms_exam (tenant_id, section_id, title, status, score_policy) values ($1, $2, '쪽지 시험', 'published', 'best') returning exam_id", [tid, s2])).rows[0].exam_id;
+    await c.query('commit'); return { asg, ex }; });
+  R.extList = await G(`ext-list?section=${s2}`);
+  R.rAsg = await P('res-save', { section: s2, kind: 'assign', title: '과제 1 연결', body: { ref: ext.asg }, completion: { type: 'score', score: 70 } });
+  R.rAsgBad = await P('res-save', { section: s2, kind: 'assign', title: 'x', body: { ref: '00000000-0000-4000-8000-000000000000' } });
+  R.rExam = await P('res-save', { section: s2, kind: 'exam', title: '쪽지 시험 연결', body: { ref: ext.ex }, completion: { type: 'score', score: 50 } });
+  R.rGated = await P('res-save', { section: s2, kind: 'page', title: '과제 통과 후 자료', body: { html: '<p>x</p>' }, access: { min_score: { res: R.rAsg.j.id, score: 80 } } });
+  await db(async c => { await c.query('begin'); await c.query('set local role didisam_tenant'); await c.query("select set_config('app.tenant', $1, true)", [tid]);
+    const pid = (await c.query("select person_id from lms_person where member_no = '20261003'")).rows[0].person_id;
+    await c.query("insert into lms_submission (tenant_id, asg_id, owner_key, person_id, status, submitted_at) values ($1, $2, 'p:' || $3::text, $3::uuid, 'submitted', now())", [tid, ext.asg, pid]);
+    await c.query("update lms_submission set status = 'graded', score = 85, graded_at = now() where tenant_id = $1 and asg_id = $2", [tid, ext.asg]);
+    await c.query("insert into lms_exam_attempt (tenant_id, exam_id, person_id, no, status, deadline_at, score, max_score) values ($1, $2, $3, 1, 'graded', now(), 40, 100), ($1, $2, $3, 2, 'graded', now(), 65, 100)", [tid, ext.ex, pid]);
+    await c.query('commit'); });
+  R.extProg = await G(`progress?section=${s2}`);
+  R.extStu = await G(`overview?section=${s2}`, '20261003');
+  R.extMark = await P('progress-mark', { as: '20261003', resource: R.rAsg.j.id });
   R.sesDel = await P('session-del', { section: s2, id: ses2 });
   R.weekDel = await P('week-del', { section: s2, week_no: 3 });
   return R;
@@ -182,7 +210,7 @@ const EXP = { noAuth: 401, csrf: 403, nf: 404, badSec: 404, sections: 200, tpls:
   ovStu: 200, markLocked: 403, mark1: 200, mark2: 200, levelSet: 200, levelBad: 400, optSeq: 200, ovStu2: 200, next: 200, progress: 200, progressStu: 403, notMember: 200, noPerson: 404,
   stuEdit: 403, taEdit: 200, graderEdit: 403, del: 200, delAgain: 409, trash: 200, restore: 200, del2: 200, purgeTa: 403, purge: 200, lib: 200, reuse: 200,
   timeline: 200, shift: 200, shift0: 400, tplSave: 200, tpls2: 200, copy: 200, copySelf: 404, ovCopied: 200, bk: 200, bks: 200, bkGet: 200, restoreStu: 403, restoreTa: 403, restoreBad: 400, restorePart: 200, bkImp: 200, bkImpBad: 400, ovAfter: 200,
-  perms: 200, permSet: 200, permBad: 400, taBackup: 200, menuSet: 200, menuPref: 200, menu: 200, menuStu: 403, sesDel: 200, weekDel: 200 };
+  lOverview: 200, lSections: 200, lEdit: 403, lPerm: 403, lMark: 403, lNone: 403, extList: 200, rAsg: 200, rAsgBad: 400, rExam: 200, rGated: 200, extProg: 200, extStu: 200, extMark: 200, perms: 200, permSet: 200, permBad: 400, taBackup: 200, menuSet: 200, menuPref: 200, menu: 200, menuStu: 403, sesDel: 200, weekDel: 200 };
 
-module.exports = { call, db, setup, norm, compare, run, scenario, EXP };
+module.exports = { learnerCookie, call, db, setup, norm, compare, run, scenario, EXP };
 if (require.main === module) run(scenario, EXP, 'lms-b').then(f => process.exit(f ? 1 : 0)).catch(e => { console.error(e); process.exit(1); });
