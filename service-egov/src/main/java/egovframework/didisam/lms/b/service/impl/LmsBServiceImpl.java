@@ -61,13 +61,23 @@ public class LmsBServiceImpl extends EgovAbstractServiceImpl implements LmsBServ
         Map.entry("scorm-file-put", Route.post(7340032)),
         Map.entry("scorm-commit", Route.post(524288)),
         Map.entry("menu-set", Route.post(16384)),
-        Map.entry("menu-pref", Route.post(16384)));
+        Map.entry("menu-pref", Route.post(16384)),
+        Map.entry("material", Route.fn("GET", 65536, false, "lms_bm_api")),
+        Map.entry("downloads", Route.fn("GET", 65536, false, "lms_bm_api")),
+        Map.entry("converted", Route.fn("GET", 65536, false, "lms_bm_api")),
+        Map.entry("mylib", Route.fn("GET", 65536, false, "lms_bm_api")),
+        Map.entry("material-file", Route.fn("POST", 65536, false, "lms_bm_api")),
+        Map.entry("convert-request", Route.fn("POST", 65536, false, "lms_bm_api")),
+        Map.entry("convert-done", Route.fn("POST", 2252800, true, "lms_bm_api")),
+        Map.entry("mylib-add", Route.fn("POST", 65536, false, "lms_bm_api")),
+        Map.entry("mylib-del", Route.fn("POST", 65536, false, "lms_bm_api")),
+        Map.entry("mylib-use", Route.fn("POST", 65536, false, "lms_bm_api")));
     private final LmsBMapper mapper; private final LmsBcdCore core;
     public LmsBServiceImpl(LmsBMapper mapper, LmsBcdCore core) { this.mapper = mapper; this.core = core; }
 
     @Override public Object call(String op, HttpServletRequest req, byte[] body) throws Exception {
         Route rt = ROUTES.get(op);
         if (rt == null || !rt.method().equals(req.getMethod())) throw new DdException(404, "없는 주소입니다.", "not_found");
-        return core.handle(core.who(req), "b", op, rt, req, body, (o, x) -> mapper.api(o, x[0], x[1]));
+        return core.handle(core.who(req), "b", op, rt, req, body, (o, x) -> "lms_bm_api".equals(rt.fn()) ? mapper.apiM(o, x[0], x[1]) : mapper.api(o, x[0], x[1]));
     }
 }

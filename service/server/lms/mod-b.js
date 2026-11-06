@@ -2,7 +2,7 @@
 /* v30 묶음 B — 강의실 구성(주차 · 차시 · 자원 · SCORM · 조건부/순차/수준별/적응형 · 템플릿 · 복사 · 백업 · 휴지통 · 버전 · 공유 · 역할/메뉴).
    업무 규칙 · 응답 JSON은 SQL 함수 lms_b_api(op, 인자, 행위자)가 만든다(sql/20_b.sql) → 전자정부 Java(lms.b)도 같은 함수를 불러 같은 JSON을 낸다.
    이 파일은 경로 표 · 세션 확인 · 기관 유형 · 크기 제한 · 감사 기록만 맡는다. 묶음 C · D도 같은 디스패처(bundle)를 쓴다.
-   경로 표 형식: 이름 → [메서드, 본문 최대 바이트, 운영자 전용(정 · 부운영자)] */
+   경로 표 형식: 이름 → [메서드, 본문 최대 바이트, 운영자 전용(정 · 부운영자), SQL 함수(기본 lms_<묶음>_api)] */
 const ROUTES = {
   sections: ['GET'], templates: ['GET'], 'ext-list': ['GET'], library: ['GET'], perms: ['GET'], file: ['GET'],
   overview: ['GET'], timeline: ['GET'], progress: ['GET'], next: ['GET'], backups: ['GET'], 'backup-get': ['GET'], trash: ['GET'], 'res-versions': ['GET'], menu: ['GET'],
@@ -13,7 +13,11 @@ const ROUTES = {
   'template-apply': ['POST'], 'template-save': ['POST'], 'template-del': ['POST'], copy: ['POST'], shift: ['POST'],
   backup: ['POST'], 'backup-import': ['POST', 8 * 1024 * 1024], 'backup-del': ['POST'], restore: ['POST'],
   'file-put': ['POST', 4500 * 1024], 'scorm-pkg': ['POST', 256 * 1024], 'scorm-file-put': ['POST', 7 * 1024 * 1024], 'scorm-commit': ['POST', 512 * 1024],
-  'menu-set': ['POST', 16384], 'menu-pref': ['POST', 16384]
+  'menu-set': ['POST', 16384], 'menu-pref': ['POST', 16384],
+  /* SFR-038 강의자료 관리(sql/99_b_material.sql의 lms_bm_api) */
+  material: ['GET', 65536, false, 'lms_bm_api'], downloads: ['GET', 65536, false, 'lms_bm_api'], converted: ['GET', 65536, false, 'lms_bm_api'], mylib: ['GET', 65536, false, 'lms_bm_api'],
+  'material-file': ['POST', 65536, false, 'lms_bm_api'], 'convert-request': ['POST', 65536, false, 'lms_bm_api'], 'convert-done': ['POST', 2200 * 1024, true, 'lms_bm_api'],
+  'mylib-add': ['POST', 65536, false, 'lms_bm_api'], 'mylib-del': ['POST', 65536, false, 'lms_bm_api'], 'mylib-use': ['POST', 65536, false, 'lms_bm_api']
 };
 
 /* 묶음 공용 디스패처: GET은 쿼리 문자열, 그 밖은 쿼리 + JSON 본문(본문 우선)을 인자로 넘긴다.
@@ -27,7 +31,7 @@ function bundle(ctx, b, routes) {
     const r = (await ctx.pool.query('select s.tenant_id, s.sid, t.type from learner_sessions s join tenants t on t.id = s.tenant_id where s.id = $1 and s.expires_at > now()', [crypto.createHash('sha256').update(t).digest('hex')])).rows[0];
     return r || null;
   };
-  for (const [op, [method, max = 65536, adm = false]] of Object.entries(routes)) {
+  for (const [op, [method, max = 65536, adm = false, fn = `lms_${b}_api`]] of Object.entries(routes)) {
     out[`${method} /api/lms/${b}/${op}`] = async req => {
       let a = null, actor, by;
       try { a = await ctx.need(req); } catch (e) { if (!(e instanceof ctx.HttpErr) || e.status !== 401) throw e; }
@@ -46,7 +50,7 @@ function bundle(ctx, b, routes) {
       }
       try {
         return await ctx.inTenant(ctx.pool, a.tid, async c => {
-          const r = (await c.query(`select lms_${b}_api($1, $2::jsonb, $3::jsonb) as r`, [op, JSON.stringify(args), JSON.stringify(actor)])).rows[0].r;
+          const r = (await c.query(`select ${fn}($1, $2::jsonb, $3::jsonb) as r`, [op, JSON.stringify(args), JSON.stringify(actor)])).rows[0].r;
           if (method !== 'GET') await ctx.audit(c, a.tid, by, `lms.${b}.${op}`, { section: args.section || null, id: (r && (r.id || null)) || args.id || null, as: args.as || null });
           return r;
         });

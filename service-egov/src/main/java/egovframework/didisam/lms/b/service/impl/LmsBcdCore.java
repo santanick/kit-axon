@@ -24,11 +24,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class LmsBcdCore {
     /** 경로 정의: 메서드 · 본문 최대 바이트 · 운영자 전용 */
-    public record Route(String method, int max, boolean adm) {
-        public static Route get() { return new Route("GET", 65536, false); }
-        public static Route post() { return new Route("POST", 65536, false); }
-        public static Route post(int max) { return new Route("POST", max, false); }
-        public static Route post(int max, boolean adm) { return new Route("POST", max, adm); }
+    public record Route(String method, int max, boolean adm, String fn) {
+        public static Route get() { return new Route("GET", 65536, false, null); }
+        public static Route post() { return new Route("POST", 65536, false, null); }
+        public static Route post(int max) { return new Route("POST", max, false, null); }
+        public static Route post(int max, boolean adm) { return new Route("POST", max, adm, null); }
+        /** 묶음 기본 함수(lms_{묶음}_api) 대신 다른 SQL 함수를 부르는 경로 */
+        public static Route fn(String method, int max, boolean adm, String fn) { return new Route(method, max, adm, fn); }
     }
     private final TenantTx tx; private final TenantTxMapper txm; private final AuthService auth; private final LmsBMapper bm; private final DdWeb web;
     public LmsBcdCore(TenantTx tx, TenantTxMapper txm, AuthService auth, LmsBMapper bm, DdWeb web) { this.tx = tx; this.txm = txm; this.auth = auth; this.bm = bm; this.web = web; }

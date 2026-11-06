@@ -200,6 +200,33 @@ async function scenario(base, tag) {
   R.extProg = await G(`progress?section=${s2}`);
   R.extStu = await G(`overview?section=${s2}`, '20261003');
   R.extMark = await P('progress-mark', { as: '20261003', resource: R.rAsg.j.id });
+  /* SFR-038 강의자료: 미리보기 · 내려받기 허용/기록 · 문서 변환 연동 지점 · 개인 자료함 재사용 */
+  await P('opt-set', { section: s2, sequential: false });
+  const fTxt = await P('file-put', { section: s2, name: '요약.txt', mime: 'text/plain', b64: Buffer.from('배열 요약').toString('base64') });
+  const fHwp = await P('file-put', { section: s2, name: '강의계획.hwp', mime: 'application/x-hwp', b64: Buffer.from('HWP binary').toString('base64') });
+  R.mRes = await P('res-save', { section: s2, kind: 'folder', title: '1주차 강의자료', body: { files: [{ file_id: fTxt.j.id, name: '요약.txt' }, { file_id: fHwp.j.id, name: '강의계획.hwp' }], download: false } });
+  R.mInfoStu = await G(`material?resource=${R.mRes.j.id}`, '20261002');
+  R.mViewStu = await P('material-file', { as: '20261002', resource: R.mRes.j.id, file_id: fTxt.j.id, mode: 'view' });
+  R.mDlStu = await P('material-file', { as: '20261002', resource: R.mRes.j.id, file_id: fTxt.j.id, mode: 'download' });
+  R.mViewHwp = await P('material-file', { as: '20261002', resource: R.mRes.j.id, file_id: fHwp.j.id, mode: 'view' });
+  R.mOther = await P('material-file', { resource: R.mRes.j.id, file_id: R.file.j.id, mode: 'view' });
+  R.mDlProf = await P('material-file', { resource: R.mRes.j.id, file_id: fHwp.j.id, mode: 'download' });
+  R.mDls = await G(`downloads?resource=${R.mRes.j.id}`);
+  R.mDlsStu = await G(`downloads?resource=${R.mRes.j.id}`, '20261002');
+  R.cvBad = await P('convert-request', { resource: R.mRes.j.id, file_id: fTxt.j.id });
+  R.cvReq = await P('convert-request', { as: '20261002', resource: R.mRes.j.id, file_id: fHwp.j.id });
+  R.cvNot = await G(`converted?resource=${R.mRes.j.id}&file_id=${fHwp.j.id}`, '20261002');
+  R.cvDoneStu = await P('convert-done', { as: '20261002', file_id: fHwp.j.id, status: 'done', html: '<p>변환</p>' });
+  R.cvDone = await P('convert-done', { file_id: fHwp.j.id, status: 'done', html: '<h1>강의계획</h1><p>1주차</p>' });
+  R.cvGot = await G(`converted?resource=${R.mRes.j.id}&file_id=${fHwp.j.id}`, '20261002');
+  R.mInfo = await G(`material?resource=${R.mRes.j.id}`);
+  R.libAdd = await P('mylib-add', { file_id: fTxt.j.id, tags: ['요약', '1주차'] });
+  R.libAddStu = await P('mylib-add', { as: '20261002', file_id: fTxt.j.id });
+  R.lib = await G('mylib');
+  R.libUse = await P('mylib-use', { id: R.libAdd.j.id, section: s1, title: '요약(재사용)' });
+  R.lib2 = await G('mylib');
+  R.libUseTa = await P('mylib-use', { as: 'T2026001', id: R.libAdd.j.id, section: s1 });
+  R.libDel = await P('mylib-del', { id: R.libAdd.j.id });
   R.sesDel = await P('session-del', { section: s2, id: ses2 });
   R.weekDel = await P('week-del', { section: s2, week_no: 3 });
   return R;
@@ -210,7 +237,7 @@ const EXP = { noAuth: 401, csrf: 403, nf: 404, badSec: 404, sections: 200, tpls:
   ovStu: 200, markLocked: 403, mark1: 200, mark2: 200, levelSet: 200, levelBad: 400, optSeq: 200, ovStu2: 200, next: 200, progress: 200, progressStu: 403, notMember: 200, noPerson: 404,
   stuEdit: 403, taEdit: 200, graderEdit: 403, del: 200, delAgain: 409, trash: 200, restore: 200, del2: 200, purgeTa: 403, purge: 200, lib: 200, reuse: 200,
   timeline: 200, shift: 200, shift0: 400, tplSave: 200, tpls2: 200, copy: 200, copySelf: 404, ovCopied: 200, bk: 200, bks: 200, bkGet: 200, restoreStu: 403, restoreTa: 403, restoreBad: 400, restorePart: 200, bkImp: 200, bkImpBad: 400, ovAfter: 200,
-  lOverview: 200, lSections: 200, lEdit: 403, lPerm: 403, lMark: 403, lNone: 403, extList: 200, rAsg: 200, rAsgBad: 400, rExam: 200, rGated: 200, extProg: 200, extStu: 200, extMark: 200, perms: 200, permSet: 200, permBad: 400, taBackup: 200, menuSet: 200, menuPref: 200, menu: 200, menuStu: 403, sesDel: 200, weekDel: 200 };
+  lOverview: 200, lSections: 200, lEdit: 403, lPerm: 403, lMark: 403, lNone: 403, extList: 200, rAsg: 200, rAsgBad: 400, rExam: 200, rGated: 200, extProg: 200, extStu: 200, extMark: 200, mRes: 200, mInfoStu: 200, mViewStu: 200, mDlStu: 403, mViewHwp: 415, mOther: 404, mDlProf: 200, mDls: 200, mDlsStu: 403, cvBad: 400, cvReq: 200, cvNot: 409, cvDoneStu: 403, cvDone: 200, cvGot: 200, mInfo: 200, libAdd: 200, libAddStu: 403, lib: 200, libUse: 200, lib2: 200, libUseTa: 404, libDel: 200, perms: 200, permSet: 200, permBad: 400, taBackup: 200, menuSet: 200, menuPref: 200, menu: 200, menuStu: 403, sesDel: 200, weekDel: 200 };
 
 module.exports = { learnerCookie, call, db, setup, norm, compare, run, scenario, EXP };
 if (require.main === module) run(scenario, EXP, 'lms-b').then(f => process.exit(f ? 1 : 0)).catch(e => { console.error(e); process.exit(1); });

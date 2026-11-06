@@ -5,6 +5,9 @@
   <select id="api" resultType="string" flushCache="true" useCache="false">
     select lms_b_api(#{op}, cast(#{args} as jsonb), cast(#{actor} as jsonb))::text
   </select>
+  <select id="apiM" resultType="string" flushCache="true" useCache="false">
+    select lms_bm_api(#{op}, cast(#{args} as jsonb), cast(#{actor} as jsonb))::text
+  </select>
   <select id="selectLearner" resultType="map">
     select s.tenant_id as tid, s.sid, t.type from learner_sessions s join tenants t on t.id = s.tenant_id where s.id = #{hash} and s.expires_at &gt; now()
   </select>

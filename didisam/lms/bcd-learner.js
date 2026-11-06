@@ -104,18 +104,57 @@
     let h = '';
     if (r.kind === 'page') h = typeof safeHTML === 'function' ? safeHTML(B.html || '') : nl(B.html || '');
     if (r.kind === 'url') h = `<p><a class="lbtn sm" href="${esc(typeof safeURL === 'function' ? safeURL(B.url) : B.url)}" target="_blank" rel="noopener noreferrer">링크 열기</a></p>`;
-    if (r.kind === 'video') h = B.url ? `<video controls playsinline src="${esc(typeof safeURL === 'function' ? safeURL(B.url) : B.url)}" style="width:100%"></video>` : '<p class="mini">영상 주소가 없습니다.</p>';
-    if (r.kind === 'file') h = `<button class="lbtn sm" data-lx="dl" data-f="${esc(B.file_id)}">${esc(B.name || '파일')} 내려받기</button>`;
-    if (r.kind === 'folder') h = (B.files || []).map(f => `<p><button class="lbtn sm ghost" data-lx="dl" data-f="${esc(f.file_id)}">${esc(f.name)}</button></p>`).join('');
+    const xv = xvid(B.url); let yt = null;
+    if (r.kind === 'video') h = !B.url ? '<p class="mini">영상 주소가 없습니다.</p>' : xv && xv.kind === 'youtube' ? `<div class="lmsxl-yt"><div id="lxYt" data-v="${esc(xv.id)}"></div></div><p class="mini" id="lxYtT">재생한 구간만 학습 시간으로 기록합니다.</p>`
+      : xv ? `<p>${esc(xv.name)} 영상은 새 창에서 재생합니다. 다 본 뒤 「학습 마침」을 누르면 시청 시간이 기록됩니다.</p><a class="lbtn sm" href="${esc(xv.watch)}" target="_blank" rel="noopener noreferrer">새 창에서 재생</a>`
+      : `<video controls playsinline src="${esc(typeof safeURL === 'function' ? safeURL(B.url) : B.url)}" style="width:100%"></video>`;
+    if (['file', 'folder'].includes(r.kind)) return material(r);
+    if (xv && xv.kind === 'youtube') yt = true;
     const box = document.createElement('div'); box.className = 'lmsxl-dlg'; box.innerHTML = `<div class="lmsxl-dlgin" role="dialog" aria-label="${esc(r.title)}"><h2>${esc(r.title)}</h2><div class="lmsxl-dlgb">${h}</div><button class="lbtn" data-lx="close" data-id="${esc(id)}">학습 마침</button></div>`; document.body.appendChild(box); box.dataset.t0 = Date.now(); box.dataset.sec = sec;
+    if (yt) ytWatch(box);
     if ((r.completion || {}).type !== 'time') mark(id);
+  }
+  /* 외부 영상: YouTube는 학습자 화면에서 임베드(IFrame API로 실제 재생 초만 센다), Vimeo는 새 창 + 열고 닫은 시간 */
+  function xvid(u) { u = String(u || ''); let m = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/.exec(u); if (m) return { kind: 'youtube', name: 'YouTube', id: m[1], watch: `https://www.youtube.com/watch?v=${m[1]}` };
+    m = /vimeo\.com\/(?:video\/)?(\d+)/.exec(u); if (m) return { kind: 'vimeo', name: 'Vimeo', id: m[1], watch: `https://vimeo.com/${m[1]}` }; return null; }
+  function ytWatch(box) {
+    const el = box.querySelector('#lxYt'); if (!el) return; const seen = new Set(); let p = null, iv = 0;
+    const done = () => { clearInterval(iv); box.dataset.watched = String(seen.size); try { p && p.destroy && p.destroy(); } catch (e) { } };
+    box.lxStop = done;
+    const go = () => { try { p = new YT.Player(el, { videoId: el.dataset.v, host: 'https://www.youtube-nocookie.com', playerVars: { rel: 0, playsinline: 1 } });
+      iv = setInterval(() => { try { if (p.getPlayerState && p.getPlayerState() === 1 && p.getPlaybackRate() <= 2) { seen.add(Math.floor(p.getCurrentTime())); const t = $('#lxYtT'); if (t) t.textContent = `학습 시간 ${seen.size}초 기록 중`; } } catch (e) { } }, 1000); } catch (e) { fallback(); } };
+    const fallback = () => { el.outerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${esc(el.dataset.v)}?rel=0" title="영상" allow="encrypted-media; picture-in-picture" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0"></iframe>`; box.dataset.ytfb = '1'; };
+    if (window.YT && YT.Player) return go();
+    const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { if (prev) try { prev(); } catch (e) { } go(); };
+    const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = fallback; document.head.appendChild(sc); setTimeout(() => { if (!p && !box.dataset.ytfb) fallback(); }, 8000);
+  }
+  /* 강의자료(SFR-038): PDF는 새 창(학습자 화면 CSP가 프레임 차단), 이미지 · 텍스트는 바로 보기, 문서는 HTML 변환(연동 지점), 내려받기 허용 · 기록 */
+  const b2u = b64 => { const s2 = atob(b64); const u = new Uint8Array(s2.length); for (let i = 0; i < s2.length; i++) u[i] = s2.charCodeAt(i); return u; };
+  async function material(r) {
+    const M = await G('b', 'material', { resource: r.id }).catch(e => { toast(e.message, 'bad'); return null; }); if (!M) return;
+    const box = document.createElement('div'); box.className = 'lmsxl-dlg'; box.dataset.t0 = Date.now();
+    box.innerHTML = `<div class="lmsxl-dlgin" role="dialog" aria-label="${esc(r.title)}"><h2>${esc(r.title)}</h2><p class="mini">${M.download ? '내려받기 허용' : '이 자료는 화면에서 보기만 할 수 있습니다(내려받기 금지).'}</p>
+      ${M.files.map(f => `<div class="lmsxl-post"><b>${esc(f.name)}</b> <small>${Math.ceil(f.size / 1024)}KB</small><br>
+        ${['pdf', 'image', 'text'].includes(f.preview) ? `<button class="lbtn sm" data-lx="mview" data-r="${esc(r.id)}" data-f="${esc(f.file_id)}" data-k="${f.preview}">보기</button>` : ''}
+        ${f.preview === 'convert' ? (f.convert && f.convert.status === 'done' ? `<button class="lbtn sm" data-lx="mconv" data-r="${esc(r.id)}" data-f="${esc(f.file_id)}">변환본 보기</button>` : `<button class="lbtn sm ghost" data-lx="mcreq" data-r="${esc(r.id)}" data-f="${esc(f.file_id)}">브라우저 보기 요청</button> <small class="mini">문서 변환 연동 후 동작</small>`) : ''}
+        ${M.can_download ? `<button class="lbtn sm ghost" data-lx="mdl" data-r="${esc(r.id)}" data-f="${esc(f.file_id)}">내려받기</button>` : ''}</div>`).join('') || '<p class="mini">파일이 없습니다.</p>'}
+      <div id="lxMbox" class="lmsxl-dlgb"></div><button class="lbtn" data-lx="close" data-id="${esc(r.id)}">학습 마침</button></div>`;
+    document.body.appendChild(box); if ((r.completion || {}).type !== 'time') mark(r.id);
   }
   document.addEventListener('click', async e => {
     const el = e.target.closest('[data-lx]'); if (!el) return; e.preventDefault(); const k = el.dataset.lx; const { sec } = rt();
     try {
       if (k === 'open') return openRes(el.dataset.id);
       if (k === 'dl') return dl(el.dataset.f);
-      if (k === 'close') { const box = el.closest('.lmsxl-dlg'); const r = allRes().find(x => x.id === el.dataset.id); if (r && (r.completion || {}).type === 'time') await mark(r.id, { time_sec: Math.round((Date.now() - (+box.dataset.t0)) / 1000) }); box.remove(); return lrender(); }
+      if (k === 'close') { const box = el.closest('.lmsxl-dlg'); if (box.lxStop) box.lxStop(); const r = allRes().find(x => x.id === el.dataset.id); const sec2 = box.dataset.watched != null && !box.dataset.ytfb ? +box.dataset.watched : Math.round((Date.now() - (+box.dataset.t0)) / 1000);
+        if (r && ((r.completion || {}).type === 'time' || r.kind === 'video')) await mark(r.id, { time_sec: sec2 }); box.remove(); return lrender(); }
+      if (k === 'mview') { const f = await P('b', 'material-file', { resource: el.dataset.r, file_id: el.dataset.f, mode: 'view' }); const mb = $('#lxMbox'); const kk = el.dataset.k;
+        if (kk === 'text') { mb.innerHTML = `<pre style="white-space:pre-wrap">${esc(new TextDecoder().decode(b2u(f.b64)))}</pre>`; return; }
+        const url = URL.createObjectURL(new Blob([b2u(f.b64)], { type: kk === 'pdf' ? 'application/pdf' : f.mime })); if (kk === 'image') { mb.innerHTML = `<img src="data:${esc(f.mime)};base64,${f.b64}" alt="${esc(f.name)}" style="max-width:100%">`; return; }
+        const w = window.open(url, '_blank'); if (!w) toast('팝업이 막혀 있습니다. 팝업을 허용하세요.', 'warn'); return; }
+      if (k === 'mdl') { const f = await P('b', 'material-file', { resource: el.dataset.r, file_id: el.dataset.f, mode: 'download' }); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([b2u(f.b64)], { type: f.mime })); a.download = f.name; a.click(); return; }
+      if (k === 'mcreq') { const r2 = await P('b', 'convert-request', { resource: el.dataset.r, file_id: el.dataset.f }); toast(r2.note, 'ok'); el.disabled = true; return; }
+      if (k === 'mconv') { const r2 = await G('b', 'converted', { resource: el.dataset.r, file_id: el.dataset.f }); $('#lxMbox').innerHTML = typeof safeHTML === 'function' ? safeHTML(r2.html || '') : esc(r2.html || ''); return; }
       if (k === 'post') { await P('c', 'post', { forum: el.dataset.f, body: ($('#lxBody') || {}).value || '' }); toast('글을 올렸습니다.', 'ok'); return lrender(); }
       if (k === 'reply') { const t = prompt('답글'); if (!t) return; await P('c', 'post', { forum: el.dataset.f, parent: el.dataset.p, body: t }); return lrender(); }
       if (k === 'wiki') { await P('c', 'wiki-save', { id: el.dataset.id, base_ver: +el.dataset.v, body: ($('#lxWiki') || {}).value || '', note: ($('#lxNote') || {}).value || '' }); toast('저장했습니다.', 'ok'); return lrender(); }
