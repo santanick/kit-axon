@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v30 묶음 G · I · J 학습자 포털 세션(Node mod-g.js learner()와 같은 질의) -->
+<mapper namespace="egovframework.didisam.lms.g.service.impl.LmsAuthMapper">
+  <select id="learnerSession" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select tenant_id, sid from learner_sessions where id = #{id} and expires_at &gt; now()</select>
+</mapper>

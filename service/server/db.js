@@ -272,6 +272,10 @@ const MIGRATIONS = [
   `alter table learner_sessions add column if not exists last_at timestamptz not null default now();`,
 ];
 
+/* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).
+   기본 MIGRATIONS 배열 끝에 새 항목을 더해도 LMS 파일 적용 기록이 밀리지 않는다. */
+const LMS_SQL = require('./lms').sqlMigrations();
+
 async function migrate(pool) {
   const c = await pool.connect();
   try {
@@ -281,6 +285,14 @@ async function migrate(pool) {
     for (let i = rows[0].v; i < MIGRATIONS.length; i++) {
       await c.query('begin');
       try { await c.query(MIGRATIONS[i]); await c.query('insert into schema_version (v) values ($1)', [i + 1]); await c.query('commit'); }
+      catch (e) { await c.query('rollback'); throw e; }
+    }
+    await c.query('create table if not exists lms_schema (name text primary key, at timestamptz not null default now())');
+    const done = new Set((await c.query('select name from lms_schema')).rows.map(r => r.name));
+    for (const [name, sql] of LMS_SQL) {
+      if (done.has(name)) continue;
+      await c.query('begin');
+      try { await c.query(sql); await c.query('insert into lms_schema (name) values ($1)', [name]); await c.query('commit'); }
       catch (e) { await c.query('rollback'); throw e; }
     }
   } finally { await c.query('select pg_advisory_unlock(820820)').catch(() => {}); c.release(); }

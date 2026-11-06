@@ -13,6 +13,7 @@ ENV NODE_ENV=production PORT=8080 PUBLIC_DIR=/app/public
 WORKDIR /app
 COPY --from=build /w/server/node_modules ./server/node_modules
 COPY service/server/*.js service/server/package.json ./server/
+COPY service/server/lms ./server/lms
 COPY --from=build /w/public ./public
 USER node
 EXPOSE 8080
