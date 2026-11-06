@@ -27,9 +27,9 @@ public class DdApiFilter extends OncePerRequestFilter {
         "GET /api/keys", "POST /api/keys", "POST /api/keys/revoke",
         "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log",
-        "GET /api/audit", "POST /api/tenant/delete");
+        "GET /api/audit", "POST /api/tenant/delete", "GET /api/cpl/summary", "GET /api/cpl/logs");
     /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */
-    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify)\\z");
+    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl)\\z");
     static final Map<String, String> SEC = Map.of(
         "x-content-type-options", "nosniff",
         "referrer-policy", "strict-origin-when-cross-origin",

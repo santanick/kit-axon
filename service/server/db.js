@@ -221,7 +221,26 @@ const MIGRATIONS = [
    grant usage on schema pii to didisam_pii;
    grant select, insert, update, delete on pii.identity, pii.otp, pii.guardian to didisam_pii;
    grant select, insert on pii.access_log to didisam_pii;
-   grant usage on sequence pii.access_log_id_seq to didisam_pii;`
+   grant usage on sequence pii.access_log_id_seq to didisam_pii;`,
+  /* 7 — v30 규정 준수: 훈련생 활동 원본 로그(로그인 · 차시별 학습시간 · 본인확인 · IP). 기관 삭제 시 함께 삭제 */
+  `create table if not exists cpl_log (
+     id bigserial primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null,
+     kind text not null check (kind in ('login','beat','attend','verify-phone','verify-motp')),
+     cls text, item text,
+     secs integer not null default 0 check (secs >= 0),
+     ip text, ua text,
+     day date not null default ((now() at time zone 'Asia/Seoul')::date),
+     at timestamptz not null default now()
+   );
+   create index if not exists cpl_log_sid on cpl_log (tenant_id, sid, day);
+   alter table cpl_log enable row level security;
+   alter table cpl_log force row level security;
+   drop policy if exists tenant_iso on cpl_log;
+   create policy tenant_iso on cpl_log using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert on cpl_log to didisam_tenant;
+   grant usage, select on sequence cpl_log_id_seq to didisam_tenant;`,
 ];
 
 async function migrate(pool) {

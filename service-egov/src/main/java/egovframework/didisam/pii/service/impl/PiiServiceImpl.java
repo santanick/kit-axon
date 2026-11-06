@@ -35,7 +35,8 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
 
     @Resource(name = "propertiesService") private EgovPropertyService props;
     private final PiiMapper mapper; private final PiiTx ptx; private final TenantTxMapper txm; private final DdPiiCrypto K; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl;
-    public PiiServiceImpl(PiiMapper mapper, PiiTx ptx, TenantTxMapper txm, DdPiiCrypto K, DdProps p, DdWeb web, DdRateLimiter rl) {
+    private final egovframework.didisam.cpl.service.CplService cpl;
+    public PiiServiceImpl(PiiMapper mapper, PiiTx ptx, TenantTxMapper txm, DdPiiCrypto K, DdProps p, DdWeb web, DdRateLimiter rl, egovframework.didisam.cpl.service.CplService cpl) { this.cpl = cpl;
         this.mapper = mapper; this.ptx = ptx; this.txm = txm; this.K = K; this.p = p; this.web = web; this.rl = rl;
     }
 
@@ -87,6 +88,8 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
 
     @Override public void newLearnerSession(HttpServletResponse res, String tid, String sid) throws Exception {
         String token = DdCrypto.newToken(); mapper.insertLearnerSession(DdCrypto.sha(token), tid, sid); web.setLsid(res, token);
+        org.springframework.web.context.request.RequestAttributes ra = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        if (ra instanceof org.springframework.web.context.request.ServletRequestAttributes sa) cpl.afterLogin(sa.getRequest(), tid, sid, DdCrypto.sha(token));
     }
 
     /* ── 공개(세션 없음) ── */
