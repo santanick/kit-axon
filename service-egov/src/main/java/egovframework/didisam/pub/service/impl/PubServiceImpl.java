@@ -35,8 +35,9 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     static final String TAG = "learner_message";
 
     @Resource(name = "propertiesService") private EgovPropertyService props;
+    private final DdStateCrypto crypt;
     private final PubMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final PiiService pii; private final DdAiClient ai; private final egovframework.didisam.cpl.service.CplService cpl;
-    public PubServiceImpl(PubMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, PiiService pii, DdAiClient ai, egovframework.didisam.cpl.service.CplService cpl) {
+    public PubServiceImpl(PubMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, PiiService pii, DdAiClient ai, egovframework.didisam.cpl.service.CplService cpl, DdStateCrypto crypt) { this.crypt = crypt;
         this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.pii = pii; this.ai = ai; this.cpl = cpl;
     }
 
@@ -102,13 +103,13 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             Map<String, Object> lp = mapper.selectLp(tid, sid), d = mapper.selectDoc(tid);
             Map<String, Object> me = new LinkedHashMap<>(); me.put("sid", sid); me.put("dept", L.get("dept"));
             Map<String, Object> o = new LinkedHashMap<>(); o.put("me", me); o.put("lp", lp == null ? null : parse((String) lp.get("lp")));
-            o.put("mine", d == null ? emptyMine() : mineOf(parse((String) d.get("doc")), sid)); return o;
+            o.put("mine", d == null ? emptyMine() : mineOf(parse((String) d.get("doc")), sid, tid)); return o;
         });
     }
     static ObjectNode emptyMine() { ObjectNode o = F.objectNode(); o.putArray("badges"); o.putObject("cls"); return o; }
 
     /** 학습자 응답(me · lp · mine) — 기관 범위 트랜잭션 안에서 호출 */
-    private Map<String, Object> learnerOut(String tid, String sid) {
+    private Map<String, Object> learnerOut(String tid, String sid) throws Exception {
         Map<String, Object> acc = null;
         if (UUIDISH.matcher(sid).matches()) {
             Map<String, Object> a = mapper.selectMeExtra(tid, sid);
@@ -119,11 +120,11 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         Map<String, Object> me = new LinkedHashMap<>(); me.put("sid", sid); me.put("dept", acc != null ? acc.get("dept") : Lr != null ? Lr.get("dept") : "");
         if (acc != null) me.put("acct", acc);
         Map<String, Object> o = new LinkedHashMap<>(); o.put("me", me); o.put("lp", lp == null ? null : parse((String) lp.get("lp")));
-        o.put("mine", d == null ? emptyMine() : mineOf(parse((String) d.get("doc")), sid)); return o;
+        o.put("mine", d == null ? emptyMine() : mineOf(parse((String) d.get("doc")), sid, tid)); return o;
     }
 
     /** 학습자 본인 데이터만: 배지 · 과정 진도(어드민 상태에서 학번으로 찾음) · 답변된 질문 · 북 성적 */
-    static ObjectNode mineOf(JsonNode doc, String sid) {
+    ObjectNode mineOf(JsonNode doc, String sid, String tid) throws Exception {
         List<Map.Entry<String, JsonNode>> bkE = new ArrayList<>();
         List<Map.Entry<String, JsonNode>> bks = new ArrayList<>(); for (var e : entries(or(get(doc, "bkgrades"), F.objectNode()))) if (own(e.getValue(), sid)) bks.add(e);
         for (var e : head(bks, 200)) {
@@ -145,7 +146,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             q.put("cls", cut(sOr(get(x, "cls")), 60)); q.put("at", cut(sOr(or(get(x, "aAt"), get(x, "at"))), 25));
         }
         JsonNode m = null;
-        for (JsonNode x : arr(or(get(doc, "members"), F.arrayNode()))) if (truthy(x) && (strictEq(get(x, "sid"), sid) || strictEq(get(x, "name"), sid))) { m = x; break; }
+        for (JsonNode x : arr(or(get(doc, "members"), F.arrayNode()))) if (truthy(x) && (strictEq(get(x, "sid"), sid) || (x.isObject() && strictEq(crypt.memberName(x, tid), sid)))) { m = x; break; }
         ObjectNode o = F.objectNode();
         if (m == null) { o.putArray("badges"); o.putObject("cls"); o.set("bk", bk); o.set("qa", qa); return o; }
         JsonNode mid = get(m, "id");
@@ -251,7 +252,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             JsonNode lp = or(lpr == null || lpr.get("lp") == null ? null : parse((String) lpr.get("lp")), F.objectNode());
             ObjectNode dd = F.objectNode();
             for (String k : List.of("members", "classes", "badges", "tq", "bkgrades")) { JsonNode v = col.apply(k); dd.set(k, v == null ? F.nullNode() : v); }
-            return new JsonNode[]{ tu, pub, lp, mineOf(dd, sid) };
+            return new JsonNode[]{ tu, pub, lp, mineOf(dd, sid, tid) };
         });
         JsonNode tu = ctx[0], P = ctx[1], lpc = ctx[2], mine = ctx[3];
         List<JsonNode> L = arr(or(get(P, "classes"), F.arrayNode())); List<JsonNode> types = arr(or(get(P, "types"), F.arrayNode()));

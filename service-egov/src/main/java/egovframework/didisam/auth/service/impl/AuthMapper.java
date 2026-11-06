@@ -17,6 +17,7 @@ public interface AuthMapper {
     void updateLastLogin(@Param("uid") String uid);
     void deleteExpiredSessions(@Param("uid") String uid);
     void deleteSession(@Param("sid") String sid);
+    void setPwTemp(@Param("uid") String uid);
     String selectPw(@Param("uid") String uid);
     void updatePw(@Param("uid") String uid, @Param("pw") String pw);
     void deleteOtherSessions(@Param("uid") String uid, @Param("sid") String sid);

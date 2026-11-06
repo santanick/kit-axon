@@ -262,6 +262,8 @@ const MIGRATIONS = [
   /* 10 — v31 심사자 계정: 본인인증 면제 기록 */
   `alter table cpl_log drop constraint if exists cpl_log_kind_check;
    alter table cpl_log add constraint cpl_log_kind_check check (kind in ('login','beat','attend','verify-phone','verify-motp','review'));`,
+  /* 11 — v31.1 임시 비밀번호 */
+  `alter table users add column if not exists pw_temp boolean not null default false;`,
 ];
 
 async function migrate(pool) {
