@@ -35,7 +35,7 @@ jobs:
           mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i playwright@1 --no-fund >/dev/null && npx playwright install --with-deps chromium >/dev/null
           cd "$GITHUB_WORKSPACE" && NODE_PATH=/tmp/pw/node_modules node tests/ui/smoke.js && NODE_PATH=/tmp/pw/node_modules node tests/ui/compliance.js
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '21', cache: maven }
+        with: { distribution: temurin, java-version: '17', cache: maven }
       - name: Java 서버 빌드 · 기동
         env: { JDBC_URL: 'jdbc:postgresql://localhost:5432/didisam', JDBC_USER: didisam, JDBC_PASSWORD: ci-only-pw, COOKIE_SECURE: '0', SESSION_PEPPER: ci-only, PORT: '8090', PUBLIC_DIR: ../service/public, DATABASE_URL: 'postgresql://didisam:ci-only-pw@localhost:5432/didisam' }
         run: |
