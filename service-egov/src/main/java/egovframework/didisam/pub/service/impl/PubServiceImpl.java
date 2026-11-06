@@ -134,6 +134,39 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         o.put("mine", d == null ? emptyMine() : mineOf(parse((String) d.get("doc")), sid, tid)); return o;
     }
 
+    /** v32.4 학원(k12) 원생 본인 기록 — Node app.js k12Of와 같다(석차 · 다른 원생 · 개별 메모 제외) */
+    static JsonNode obj(JsonNode v) { return v != null && v.isObject() ? v : F.objectNode(); }
+    static boolean finite(JsonNode v) { double d = num(v); return !Double.isNaN(d) && !Double.isInfinite(d); }
+    static boolean blankOrNull(JsonNode v) { return nullish(v) || (v.isTextual() && v.textValue().isEmpty()); }
+    ObjectNode k12Of(JsonNode doc, String mid, String tid) {
+        JsonNode D; try { D = crypt.open(doc, tid); } catch (Exception e) { return null; }
+        List<ObjectNode> att = new ArrayList<>(), ex = new ArrayList<>(), mk = new ArrayList<>();
+        for (JsonNode c : arr(get(D, "classes"))) {
+            if (c == null || !c.isObject()) continue; JsonNode L = get(c, "learners"); if (L == null || !L.isArray()) continue;
+            boolean in = false; for (JsonNode x : L) if (S(x).equals(mid)) { in = true; break; } if (!in) continue;
+            String cid = S(get(c, "id")), cn = cut(S(get(c, "name")), 60);
+            for (JsonNode s : arr(get(c, "sessions"))) {
+                if (!truthy(s)) continue; String k = S(get(s, "id")); JsonNode a = obj(get(c, "att")).get(k); a = a == null ? null : obj(a).get(mid);
+                String st = a != null && a.isTextual() ? a.textValue() : (a != null && a.isObject() ? S(get(a, "st")) : "");
+                JsonNode day = obj(obj(get(c, "crmDay")).get(k)); JsonNode row = obj(obj(get(day, "rows")).get(mid)); JsonNode tm = obj(obj(obj(get(c, "attT")).get(k)).get(mid));
+                if (st.isEmpty() && !truthy(get(day, "closed")) && !truthy(get(day, "prog")) && !truthy(get(day, "hw"))) continue;
+                ObjectNode o = F.objectNode(); o.put("c", cid); o.put("cn", cn); o.put("d", cut(S(get(s, "date")), 10)); o.put("st", cut(st, 10)); o.put("in", cut(S(get(tm, "in")), 5)); o.put("out", cut(S(get(tm, "out")), 5));
+                o.put("r", cut(S(get(row, "reason")), 60)); o.put("p", cut(S(get(day, "prog")), 100)); o.put("hw", cut(S(get(day, "hw")), 100)); o.put("done", truthy(get(row, "hw"))); o.put("x", truthy(get(day, "closed"))); att.add(o);
+            }
+            for (JsonNode e : arr(get(c, "k12Exams"))) {
+                if (!truthy(e)) continue; JsonNode SC = obj(get(e, "scores")); JsonNode sc = SC.get(mid); if (sc == null || !sc.isObject()) continue;
+                double sum = 0; int n = 0; for (JsonNode x : values(SC)) if (x != null && x.isObject() && !truthy(get(x, "absent")) && !blankOrNull(get(x, "v")) && finite(get(x, "v"))) { sum += num(get(x, "v")); n++; }
+                JsonNode sv = get(sc, "v"); boolean ab = truthy(get(sc, "absent"));
+                ObjectNode o = F.objectNode(); o.put("c", cid); o.put("cn", cn); o.put("n", cut(S(get(e, "name")), 60)); o.put("d", cut(S(get(e, "date")), 10));
+                double mx = num(get(e, "max")); o.set("max", finite(get(e, "max")) && mx > 0 ? numNode(mx) : F.numberNode(100));
+                o.set("v", ab || blankOrNull(sv) || !finite(sv) ? F.nullNode() : numNode(num(sv))); o.put("ab", ab); o.set("avg", n > 0 ? numNode(round(sum / n * 10) / 10) : F.nullNode()); ex.add(o);
+            }
+            for (JsonNode x : arr(get(c, "makeups"))) if (truthy(x) && S(get(x, "mid")).equals(mid) && !strictEq(get(x, "st"), "완료")) { ObjectNode o = F.objectNode(); o.put("cn", cn); o.put("d", cut(S(get(x, "date")), 10)); o.put("t", cut(S(get(x, "time")), 10)); mk.add(o); }
+        }
+        Comparator<ObjectNode> byD = Comparator.comparing(o -> o.get("d").textValue());
+        att.sort(byD.reversed()); ex.sort(byD.reversed()); mk.sort(byD);
+        ObjectNode out = F.objectNode(); ArrayNode A = out.putArray("att"); att.stream().limit(30).forEach(A::add); ArrayNode E = out.putArray("ex"); ex.stream().limit(20).forEach(E::add); ArrayNode M2 = out.putArray("mk"); mk.stream().limit(10).forEach(M2::add); return out;
+    }
     /** 학습자 본인 데이터만: 배지 · 과정 진도(어드민 상태에서 학번으로 찾음) · 답변된 질문 · 북 성적 */
     ObjectNode mineOf(JsonNode doc, String sid, String tid) throws Exception {
         List<Map.Entry<String, JsonNode>> bkE = new ArrayList<>();
@@ -175,7 +208,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             v.set("score", coalesce(get(g, "score"), F.nullNode())); v.put("done", pv >= num(thr));
             cls.add(Map.entry(key(get(c, "id")), v));
         }
-        o.set("bk", bk); o.set("qa", qa); o.set("badges", badges); o.set("cls", fromEntries(cls)); return o;
+        o.set("bk", bk); o.set("qa", qa); if (strictEq(get(doc, "org", "type"), "k12")) { ObjectNode k12 = k12Of(doc, S(mid), tid); if (k12 != null) o.set("k12", k12); } o.set("badges", badges); o.set("cls", fromEntries(cls)); return o;
     }
     static void setIf(ObjectNode o, String k, JsonNode v) { if (!undef(v)) o.set(k, v); }
 
