@@ -43,6 +43,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "cross-origin-resource-policy", "same-origin",
         "x-permitted-cross-domain-policies", "none",
         "origin-agent-cluster", "?1");
+    static final String LIVE_PP = "camera=(self), geolocation=(), microphone=(self), payment=(), usb=(), serial=(), bluetooth=(), hid=(), display-capture=(self), interest-cohort=()";
     static final String CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'";
     static final String LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'self'";
 
@@ -77,6 +78,7 @@ public class DdApiFilter extends OncePerRequestFilter {
                 res.setHeader("content-security-policy", learner ? LCSP : CSP);
                 res.setHeader("cache-control", "no-cache");
                 if (learner) res.setHeader("x-frame-options", "SAMEORIGIN");
+                if (path.endsWith("/liveclass.html")) res.setHeader("permissions-policy", LIVE_PP); // x2 실시간 수업: 카메라 · 마이크 · 화면 공유는 이 화면에서만
             } else res.setHeader("cache-control", "public, max-age=300");
         }
         if (!props.module.isEmpty() && "/".equals(path)) { req.getRequestDispatcher("/" + DdModule.PAGE.get(props.module)).forward(req, res); return; }
