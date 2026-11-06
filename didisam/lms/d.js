@@ -12,6 +12,22 @@
   const canSee = (q, a) => !q.deleted_at && (!(q.private || q.kind === 'counsel') || X.mgr(a) || mine(q.pid, a));
   const nm = (pid, label, anon, a) => anon && !['admin', 'professor'].includes(a.role) && pid !== a.pid ? '익명' : pid ? pno(pid) : label;
   X.notice = (sec, title, body, cat, a) => { ensure(sec); const q = { id: nid(), board: boardOf(sec, 'notice').id, sec, kind: 'notice', category: cat || '', title: String(title).slice(0, 200), body, pid: a.pid, label: a.label, pinned: false, private: false, anonymous: false, files: [], status: 'open', at: nowIso(), upd: nowIso() }; Dd().posts.push(q); return q.id; };
+  /* 데모 학기 2026-2 샘플 글(새 데모 저장소를 만들 때 한 번): 공지 · 답변 대기 Q&A · 자료실 · 1:1 상담 */
+  X.seedHooks.push(db => {
+    const pidOf = no => (db.persons.find(p => p.no === no) || {}).id || null; const at = (m, d, h) => new Date(Date.UTC(2026, m - 1, d, h - 9)).toISOString();
+    db.sections.filter(s => s.term === '2026-2').forEach(s => { ensure(s.id); const B = k => boardOf(s.id, k).id;
+      const P = (kind, cat, title, body, who, when, ex = {}) => { const q = { id: nid(), board: B(kind), sec: s.id, kind, category: cat, title, body, pid: who ? pidOf(who) : null, label: who || '교수자', pinned: false, private: false, anonymous: false, files: [], status: 'open', at: when, upd: when, ...ex }; Dd().posts.push(q); return q; };
+      P('notice', '시험', '중간고사 성적 공개 및 이의 신청 안내', '중간고사 성적을 공개했습니다. 이의 신청은 11월 13일(금)까지 1:1 상담으로 해 주세요.', null, at(11, 3, 10), { pinned: true });
+      P('notice', '과제', '과제 3 제출 안내(11월 12일 23:00 마감)', '코드와 보고서를 PDF 한 파일로 묶어 제출합니다. 늦은 제출은 하루 10% 감점입니다.', null, at(10, 29, 9));
+      P('notice', '학사', '11월 17일 휴강 및 보강 안내', '학과 행사로 휴강하고, 11월 24일 7교시에 보강합니다.', null, at(10, 27, 14));
+      const q1 = P('qna', '과제', '과제 3에서 외부 라이브러리를 써도 되나요?', '정렬 부분에 표준 라이브러리 말고 다른 것을 써도 되는지 궁금합니다.', '20261002', at(11, 5, 21));
+      P('qna', '시험', '퀴즈 3 범위가 어디까지인가요?', '9주차까지인지 10주차까지인지 알려 주세요.', '20261003', at(11, 6, 8));
+      const q3 = P('qna', '강의', '7주차 영상 소리가 끊깁니다', '12분 이후로 소리가 나오지 않습니다.', '20261001', at(10, 20, 19), { status: 'answered' });
+      Dd().answers.push({ id: nid(), post: q3.id, pid: null, label: '교수자', body: '영상을 다시 올렸습니다. 새로 고침 후 확인해 주세요.', anonymous: false, accepted: true, at: at(10, 21, 9) });
+      P('archive', '강의자료', '10주차 강의 슬라이드 — 트리와 탐색', '10주차 수업 자료입니다.', null, at(11, 2, 9)); P('archive', '참고자료', '중간고사 해설', '자주 틀린 문항 해설입니다.', null, at(11, 3, 11));
+      P('counsel', '학업', '중간고사 점수 확인 요청', '3번 문항 채점 기준을 확인하고 싶습니다.', '20261004', at(11, 4, 17), { private: true });
+      void q1; });
+  });
   const ctx = (args, sec) => { const a = X.actor(sec, args); X.need(a, 'course.view'); return a; };
   const postOf = id => { const q = Dd().posts.find(x => x.id === id); if (!q || q.deleted_at) fail(404, 'post', '글을 찾을 수 없습니다.'); return q; };
   const seeOrFail = (q, a) => { if (!canSee(q, a)) fail(403, 'private', '작성자와 담당 교수자만 볼 수 있는 글입니다.'); };
@@ -70,20 +86,23 @@
   async function viewD() {
     if (!X.sec) return X.head('강의 게시판', '강의실이 없습니다.', []) + '<div class="empty">강의실(분반)이 없습니다.</div>';
     const OV = await X.call('b', 'overview', { section: X.sec }); const Bs = await X.call('d', 'boards', { section: X.sec }); const me = Bs.me;
-    const top = X.head('강의 게시판', `공지 · Q&A · 자료실 · 1:1 상담 — 내 역할 <b>${esc(X.ROLE_N[me.role])}</b>`, [...OV.staff.map(s => ({ no: s.no, role: ({ co_professor: 'professor' })[s.role] || s.role })), ...OV.roster.map(r => ({ no: r.no, role: 'student' }))]);
+    const top = slimHead(X.head('강의 게시판', `공지 · Q&A · 자료실 · 1:1 상담 — 내 역할 <b>${esc(X.ROLE_N[me.role])}</b>`, [...OV.staff.map(s => ({ no: s.no, role: ({ co_professor: 'professor' })[s.role] || s.role })), ...OV.roster.map(r => ({ no: r.no, role: 'student' }))]));
     const tabsL = [...X.subTabs(Bs.boards.map(b => [b.kind, `${b.name}${b.unread ? ` (${b.unread})` : ''}`])), ...(me.manage ? [['outbox', '발송 대기열']] : [])];
     const tb = tabsL.some(t => t[0] === UI.lmsdT) ? UI.lmsdT : (tabsL[0] || ['none'])[0];
+    /* 지금 할 일: 답하지 않은 Q&A · 1:1 상담, 새 글 */
+    const openOf = async kind => { const bd = Bs.boards.find(x => x.kind === kind); if (!bd || X.hidden(kind)) return 0; try { const L = await X.call('d', 'posts', { board: bd.id, cat: '', q: '' }); return L.posts.filter(q => q.status === 'open').length; } catch (e) { return 0; } };
+    const [nQ, nC] = me.manage || ['professor', 'ta'].includes(me.role) ? await Promise.all([openOf('qna'), openOf('counsel')]) : [0, 0]; const nNew = Bs.boards.reduce((a, b) => a + (b.unread || 0), 0);
+    const todo = W().todo ? W().todo([{ n: nQ, t: '건 답변 대기 Q&A', btn: W().go('tab', '답하기', { key: 'lmsdT', v: 'qna' }) }, { n: nC, t: '건 1:1 상담 대기', btn: W().go('tab', '상담 열기', { key: 'lmsdT', v: 'counsel' }) }, { n: nNew, t: '건 안 읽은 글' }], '답할 질문 · 상담이 없습니다.') : '';
     let b = '';
     if (tb === 'outbox') { const O = await X.call('d', 'outbox', { section: X.sec }); b = `<div class="card"><div class="ch"><b>SMS · 메일 발송 대기열</b><small>${esc(O.note)}</small></div>${table(['때', '채널', '제목', '대상', '상태'], O.items.map(o => [fmt(o.created_at), o.channel === 'sms' ? 'SMS' : '메일', esc(o.title), o.targets + '명', tag(o.status === 'queued' ? '연동 후 발송' : o.status, 'y')]), '대기 중인 발송이 없습니다.')}</div>`; }
     else {
       const bd = Bs.boards.find(x => x.kind === tb) || Bs.boards[0]; const cat = CUR.cat && bd.categories.includes(CUR.cat) ? CUR.cat : ''; const L = await X.call('d', 'posts', { board: bd.id, cat, q: CUR.q || '' });
-      b = `<div class="card"><div class="ch"><b>${esc(bd.name)}</b><small>${({ notice: '열람자 확인 · 상단 고정 · 카테고리 · 다른 분반에 복제', qna: '공개/비공개 · 여러 답변 · 실명/익명 · 채택', archive: '강의자료 · 참고자료 파일', counsel: '학생과 담당 교수자만 보는 1:1 상담' })[bd.kind]}</small>${L.can_write ? `<button class="btn sm pri" data-act="lmsd-new" data-b="${esc(bd.id)}" data-k="${bd.kind}">글쓰기</button>` : ''}${me.manage ? `<button class="btn sm ghost" data-act="lmsd-cats" data-b="${esc(bd.id)}" data-c="${esc(bd.categories.join(','))}">카테고리</button>` : ''}</div>
+      b = `<div class="card"><div class="ch"><b>${esc(bd.name)}</b><small>${({ notice: '열람자 확인 · 상단 고정 · 카테고리 · 다른 분반에 복제', qna: '공개/비공개 · 여러 답변 · 실명/익명 · 채택', archive: '강의자료 · 참고자료 파일', counsel: '학생과 담당 교수자만 보는 1:1 상담' })[bd.kind]}</small>${L.can_write ? `<button class="btn sm pri" data-act="lmsd-new" data-b="${esc(bd.id)}" data-k="${bd.kind}">글쓰기</button>` : ''}${me.manage ? more(mi('lmsd-cats', '카테고리 관리', { b: bd.id, c: bd.categories.join(',') })) : ''}</div>
         <div class="bar2"><select data-chg="lmsd-cat"><option value="">전체 카테고리</option>${bd.categories.map(c => `<option ${c === cat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select><input data-lmsd-q placeholder="제목 · 내용 검색" value="${esc(CUR.q || '')}"><button class="btn sm" data-act="lmsd-search">검색</button><span class="mini">${L.total}건</span></div>
         ${table(['', '제목', '작성', '때', bd.kind === 'notice' ? '열람' : bd.kind === 'archive' ? '파일' : '답변'], L.posts.map(q => [`${q.pinned ? tag('고정', 'mg') : ''}${q.read ? '' : tag('새 글', 'g')}`, `<a href="#" data-act="lmsd-open" data-id="${esc(q.id)}">${q.category ? `[${esc(q.category)}] ` : ''}${esc(q.title)}</a>${q.private ? ' ' + tag('비공개') : ''}${['qna', 'counsel'].includes(bd.kind) ? ' ' + tag(ST[q.status], q.status === 'open' ? 'y' : 'g') : ''}${q.comments ? ` <small class="mini">댓글 ${q.comments}</small>` : ''}`, esc(q.author), fmt(q.created_at), bd.kind === 'notice' ? q.reads + '명' : bd.kind === 'archive' ? q.files : q.answers]), '글이 없습니다.')}</div>`;
       if (CUR.post) { try { const P = await X.call('d', 'post', { id: CUR.post }); const q = P.post; if (q.board_id === bd.id) {
         b += `<div class="card"><div class="ch"><b>${q.category ? `[${esc(q.category)}] ` : ''}${esc(q.title)}</b><small>${esc(q.author)} · ${fmt(q.created_at)} · 열람 ${q.reads}명${q.copied_from ? ' · 복제된 글' : ''}</small>
-          ${P.manage && q.kind === 'notice' ? `<button class="btn sm ghost" data-act="lmsd-pin" data-id="${esc(q.id)}" data-p="${q.pinned ? 0 : 1}">${q.pinned ? '고정 해제' : '상단 고정'}</button><button class="btn sm ghost" data-act="lmsd-readers" data-id="${esc(q.id)}">열람자</button>` : ''}${P.manage && ['notice', 'archive'].includes(q.kind) ? `<button class="btn sm ghost" data-act="lmsd-copy" data-id="${esc(q.id)}">다른 분반에 복제</button>` : ''}
-          ${q.mine ? `<button class="btn sm ghost" data-act="lmsd-edit" data-id="${esc(q.id)}">수정</button>` : ''}${q.mine || P.manage ? `<button class="btn sm ghost redl" data-act="lmsd-del" data-id="${esc(q.id)}">삭제</button>` : ''}
+          ${more((P.manage && q.kind === 'notice' ? mi('lmsd-pin', q.pinned ? '고정 해제' : '상단 고정', { id: q.id, p: q.pinned ? 0 : 1 }) + mi('lmsd-readers', '열람자 보기', { id: q.id }) : '') + (P.manage && ['notice', 'archive'].includes(q.kind) ? mi('lmsd-copy', '다른 분반에 복제', { id: q.id }) : '') + (q.mine ? mi('lmsd-edit', '수정', { id: q.id }) : '') + (q.mine || P.manage ? mi('lmsd-del', '삭제', { id: q.id }) : ''))}
           ${['counsel', 'qna'].includes(q.kind) && (q.mine || ['admin', 'professor', 'ta', 'staff'].includes(me.role)) ? `<select data-chg="lmsd-status" data-id="${esc(q.id)}">${Object.entries(ST).map(([k, l]) => `<option value="${k}" ${q.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}</div>
           <div class="lmsx-body">${esc(q.body)}</div>${q.files.map(f => `<button class="btn sm" data-act="lmsd-dl" data-f="${esc(f.file_id)}">${esc(f.name)} (${Math.ceil(f.size / 1024)}KB)</button>`).join(' ')}<div data-lmsd-readers></div>
           ${['qna', 'counsel'].includes(q.kind) ? `<div class="ch"><b>답변 ${P.answers.length}</b></div>${P.answers.map(x => `<div class="lmsx-post reply ${x.accepted ? 'pin' : ''}"><div class="lmsx-meta"><b>${esc(x.author)}</b><span>${fmt(x.created_at)}</span>${x.accepted ? tag('채택', 'g') : ''}${(q.mine || P.manage) && q.kind === 'qna' && !x.accepted ? `<button class="btn sm ghost" data-act="lmsd-accept" data-id="${esc(x.id)}">채택</button>` : ''}${x.mine || P.manage ? `<button class="btn sm ghost redl" data-act="lmsd-ans-del" data-id="${esc(x.id)}">삭제</button>` : ''}</div><div class="lmsx-body">${esc(x.body)}</div></div>`).join('')}
@@ -91,8 +110,17 @@
           ${q.kind !== 'counsel' ? `<div class="ch"><b>댓글 ${P.comments.length}</b></div>${P.comments.map(x => `<div class="lmsx-meta"><b>${esc(x.author)}</b> ${esc(x.body)} <span>${fmt(x.created_at)}</span>${x.mine || P.manage ? `<a href="#" data-act="lmsd-cm-del" data-id="${esc(x.id)}">삭제</a>` : ''}</div>`).join('')}
             ${P.can_comment ? `<div class="bar2"><input data-lmsd-cm placeholder="댓글" maxlength="4000" style="flex:1"><label class="ul-ck"><input type="checkbox" data-lmsd-cmanon> 익명</label><button class="btn sm" data-act="lmsd-comment" data-id="${esc(q.id)}">등록</button></div>` : ''}` : ''}</div>`; } } catch (e) { CUR.post = null; } }
     }
-    return top + `<div class="lmsb-tabs">${tabs('lmsdT', tabsL, tb)}</div>` + b;
+    return top + todo + `<div class="lmsb-tabs">${W().tabs ? W().tabs('lmsdT', tabsL, tb) : tabs('lmsdT', tabsL, tb)}</div>` + b;
   }
+  /* 2단계 단순화(화면만): 공용 머리(X.head, b.js)의 신분 전환은 「다른 신분으로 보기」 접기로, 긴 연동 안내는 작은 데모 표시로 바꾼다 */
+  function W() { return window.LW4 || {}; }
+  function more(items) { return W().more ? W().more(items) : items; }
+  function mi(act, label, data) { return W().mi ? W().mi(act, label, data) : `<button class="btn sm ghost" data-act="${act}"${Object.entries(data || {}).map(([k, v]) => ` data-${k}="${esc(String(v))}"`).join('')}>${esc(label)}</button>`; }
+  function slimHead(h) {
+    h = h.replace(/<p class="mini lmsx-note">[\s\S]*?<\/p>/, LIVE_ON2() ? '' : `<p class="mini lmsx-note">${W().demoTag ? W().demoTag(false) : '데모: 브라우저에만 저장'}</p>`);
+    return h.replace(/(<div class="lmsx-pick">)(<label>강의실<select[\s\S]*?<\/select><\/label>)\s*([\s\S]*?<button class="btn sm" data-act="lmsx-asgo">전환<\/button>)<\/div>/, (m, a, sec, as) => `${a}${sec}</div><details class="lmsd-as"${X.as ? ' open' : ''}><summary>다른 신분으로 보기(교수 · 조교 · 학생 화면 확인)${X.as ? ' — 지금 ' + esc(X.as) : ''}</summary><div class="lmsx-pick">${as}</div></details>`);
+  }
+  function LIVE_ON2() { return typeof LIVE !== 'undefined' && !!(LIVE && (LIVE.user || LIVE.tenant)); }
   X.mount('lmsd', viewD);
   const R = (op, args, msg) => X.run('d', op, args, msg).then(r => { if (r) X.refresh(); return r; });
   const formFiles = async inp => { const out = []; for (const f of [...(inp && inp.files || [])]) { const r = await X.call('b', 'file-put', { section: X.sec, name: f.name, mime: f.type || 'application/octet-stream', b64: X.b64of(new Uint8Array(await f.arrayBuffer())) }); out.push({ file_id: r.id }); } return out; };

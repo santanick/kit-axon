@@ -147,15 +147,27 @@
     (d.forums || []).forEach(f => c.forums.push({ id: nid(), sec, team: null, ...f })); (d.wiki || []).forEach(w => { const id = nid(); c.wiki.push({ id, sec, team: null, title: w.title, body: w.body, ver: 1, by: a.label, at: nowIso() }); c.wver.push({ page: id, ver: 1, title: w.title, body: w.body, note: '가져오기', by: a.label, at: nowIso() }); });
     (d.polls || []).forEach(q => c.polls.push({ id: nid(), sec, closed: false, closes_at: null, ...q })); (d.pretasks || []).forEach(k => c.pre.push({ id: nid(), sec, due_at: null, session_id: null, ...k })); (d.reviews || []).forEach(r => c.reviews.push({ id: nid(), sec, title: r.title, body: r.body, anonymous: r.anonymous, per: r.per_reviewer, mode: r.mode, self: r.self, criteria: r.criteria, due_at: null })); };
 
+  /* 2단계(UX) 데모 샘플: 이번 학기 강의실에 토론 · 설문 · 사전 과제를 미리 넣어 처음 연 화면이 비어 있지 않게 한다(운영 모드 영향 없음) */
+  X.seedHooks.push(L => { L.sections.filter(s => s.term === '2026-2').forEach(s => { try {
+    const sec = s.id; const fo = D['forum-save']({ section: sec, kind: 'free', layout: 'thread', title: '1주차 — 이번 학기에 기대하는 점', prompt: '이 과목에서 가장 배우고 싶은 것을 한두 문장으로 남겨 주세요.' });
+    [['20261001', '실무 사례를 많이 다뤘으면 좋겠습니다.'], ['20261002', '프로젝트로 직접 만들어 보고 싶습니다.'], ['20261004', '시험 준비 방법이 궁금합니다.']].forEach(([no, body]) => D.post({ as: no, forum: fo.id, body }));
+    const pl = D['poll-save']({ section: sec, question: '지난 수업 난이도는 어땠나요?', options: ['쉬웠다', '적당했다', '어려웠다'] });
+    [['20261001', 1], ['20261002', 1], ['20261003', 2], ['20261004', 0]].forEach(([no, c]) => D['poll-vote']({ as: no, poll: pl.id, choices: [c] }));
+    const due = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10) + 'T23:59';
+    const pt = D['pretask-save']({ section: sec, kind: 'pretask', title: '다음 주 사전 학습 — 핵심 개념 요약', body: '사전 영상을 보고 핵심 개념 3가지를 정리해 제출하세요.', due_at: due });
+    [['20261001', '1) 정의 2) 예시 3) 한계'], ['20261002', '개념 요약을 표로 정리했습니다.'], ['20261003', '영상 10분 지점 내용이 어려웠습니다.']].forEach(([no, body]) => D['pretask-submit']({ as: no, task: pt.id, body }));
+  } catch (e) { console.warn(e); } }); });
+
   /* ══════════ 화면 ══════════ */
   X.menu('lmsc', '학습활동', 'learn');
-  const TABS = [['forum', '토론'], ['wiki', '위키'], ['team', '팀 프로젝트'], ['review', '자기 · 동료 평가'], ['chat', '대화방'], ['poll', '간편 설문'], ['pretask', '사전 과제 · 질문'], ['eval', '수업 평가']];
+  /* 2단계(UX): 8개 탭 → 자주 쓰는 4개(토론 · 사전 과제 · 질문 · 팀 프로젝트 · 간편 설문) + 더보기(위키 · 동료 평가 · 대화방 · 수업 평가). 탭 키는 그대로 */
+  const TABS = [['forum', '토론'], ['pretask', '사전 과제 · 질문'], ['team', '팀 프로젝트'], ['poll', '간편 설문'], ['wiki', '위키(공동 문서)'], ['review', '자기 · 동료 평가'], ['chat', '대화방'], ['eval', '수업 평가']];
   const ST = { todo: '할 일', doing: '진행 중', done: '완료' };
   let OVC = null, CUR = {};
   async function viewC() {
     if (!X.sec) return X.head('학습활동', '강의실이 없습니다.', []) + '<div class="empty">강의실(분반)이 없습니다.</div>';
     OVC = await X.call('b', 'overview', { section: X.sec }); const me = OVC.me; const vis = X.subTabs(TABS); const tb = vis.some(t => t[0] === UI.lmscT) ? UI.lmscT : (vis[0] || ['none'])[0]; const man = me.can['activity.manage'];
-    const top = X.head('학습활동', `토론 · 위키 · 팀 프로젝트 · 동료 평가 · 대화방 · 설문 · 플립러닝 — 내 역할 <b>${esc(me.role_name)}</b>`, [...OVC.staff.map(s => ({ no: s.no, role: ({ co_professor: 'professor' })[s.role] || s.role })), ...OVC.roster.map(r => ({ no: r.no, role: 'student' }))]);
+    const top = X.head('학습활동', `${esc(OVC.section.term_name || '')} · ${esc(OVC.section.course || '')}-${esc(OVC.section.no || '')} · 내 역할 <b>${esc(me.role_name)}</b>`, [...OVC.staff.map(s => ({ no: s.no, role: ({ co_professor: 'professor' })[s.role] || s.role })), ...OVC.roster.map(r => ({ no: r.no, role: 'student' }))]);
     let b = '';
     if (tb === 'forum') {
       const F = await X.call('c', 'forums', { section: X.sec }); const cur = CUR.forum && F.forums.some(f => f.id === CUR.forum) ? CUR.forum : null;
@@ -221,7 +233,12 @@
           ${me.role === 'student' ? `${k.mine && k.mine.graded && (k.mine.score != null || k.mine.feedback) ? `<p>${k.mine.score != null ? `점수 <b>${k.mine.score}</b> · ` : ''}${esc(k.mine.feedback || '')}</p>` : k.mine && k.mine.graded ? '<p class="mini">평가 완료 — 결과 공지 후 점수를 볼 수 있습니다.</p>' : ''}<div class="lmsx-new"><textarea data-lmsc-pre="${esc(k.id)}" rows="2" placeholder="${k.kind === 'question' ? '질문을 남기세요' : '제출 내용'}">${esc(k.mine ? k.mine.body : '')}</textarea><button class="btn sm pri" data-act="lmsc-pre-sub" data-id="${esc(k.id)}" ${k.mine && k.mine.graded ? 'disabled' : ''}>${k.mine ? '다시 제출' : '제출'}</button></div>` : ''}
           ${(k.subs_list || []).length ? table(P.grade ? ['학번', '내용', '점수', k.kind === 'question' ? '답변' : '의견', ''] : ['', '질문', '답변'], k.subs_list.map(s => P.grade ? [esc(s.no), esc(s.body), `<input type="number" min="0" style="width:70px" data-lmsc-gs="${esc(k.id)}|${esc(s.no)}" value="${s.score ?? ''}">`, `<input data-lmsc-gf="${esc(k.id)}|${esc(s.no)}" value="${esc(s.feedback || '')}" placeholder="${k.kind === 'question' ? '답변' : '의견'}">`, `<button class="btn sm" data-act="lmsc-pre-grade" data-id="${esc(k.id)}" data-no="${esc(s.no)}">저장</button>`] : ['익명', esc(s.body), esc(s.feedback || '')])) : ''}</div>`).join('') || '<div class="empty">없습니다.</div>'}</div>`;
     }
-    return top + `<div class="lmsb-tabs">${tabs('lmscT', X.subTabs(TABS), tb)}</div>` + b;
+    /* 지금 할 일: 진행 중 설문 · 채점 기다리는 사전 과제 · 수업 평가 */
+    let todo = '';
+    if (man) { try { const [Pq, Pt] = await Promise.all([X.call('c', 'polls', { section: X.sec }), X.call('c', 'pretasks', { section: X.sec })]);
+      const openPoll = (Pq.polls || []).filter(q => !q.closed).length; const toGrade = (Pt.tasks || []).reduce((n, k) => n + Math.max(0, (k.subs || 0) - (k.graded || 0)), 0); const kGrade = (Pt.tasks || []).find(k => (k.subs || 0) > (k.graded || 0));
+      todo = X.todo(`진행 중 설문 <b>${openPoll}</b>개 · 확인할 제출 <b>${toGrade}</b>건`, kGrade ? `<button class="btn sm" data-act="tab" data-key="lmscT" data-v="${kGrade.kind === 'eval' ? 'eval' : 'pretask'}">제출 확인하기</button>` : ''); } catch (e) { todo = ''; } }
+    return top + todo + `<div class="lmsb-tabs">${X.tabs4('lmscT', X.subTabs(TABS), tb)}</div>` + b;
   }
   X.mount('lmsc', viewC);
   const R = (op, args, msg) => X.run('c', op, args, msg).then(r => { if (r) X.refresh(); return r; });

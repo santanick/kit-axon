@@ -39,3 +39,26 @@
 .lo-bar{height:8px;border-radius:4px;background:var(--soft);overflow:hidden}
 .lo-bar i{display:block;height:100%;background:var(--mag)}
 .lo-bar.warn i{background:var(--warn)}.lo-bar.over i{background:var(--bad)}
+/* 화면 단순화 공용(묶음 M · O · P): 탭 4개 + 더보기 · 「지금 할 일」 · 접기 */
+.lmp-tabs{flex-wrap:wrap;align-items:center}
+.lmp-tabs .lmp-tmore>summary{height:auto;min-height:32px;padding:0 12px;font-weight:600}
+.lmp-tabs .lmp-tmore.on>summary{background:var(--magl,#fdeef6);color:var(--mag,#c2185b)}
+.lmp-tabs .lmp-tmore .uxpop button{display:block;width:100%;text-align:left;border:0;background:none;padding:9px 14px;font:inherit;cursor:pointer;color:var(--ink)}
+.lmp-tabs .lmp-tmore .uxpop button.on,.lmp-tabs .lmp-tmore .uxpop button:hover{background:var(--soft)}
+.lmp-todo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;border:1px solid var(--line);border-left:4px solid var(--mag,#c2185b);border-radius:var(--r,8px);background:#fff;padding:10px 14px;margin:10px 0 12px}
+.lmp-todoh{font-size:13px;color:var(--muted);white-space:nowrap}
+.lmp-todoi{display:flex;flex-wrap:wrap;gap:4px 14px;flex:1;min-width:0}
+.lmp-todoi span{white-space:nowrap;font-size:14px}
+.lmp-todoi em{font-style:normal;font-weight:800;font-size:16px;margin-right:2px}
+.lmp-todoi span.r em{color:var(--bad,#c62828)}.lmp-todoi span.y em{color:var(--warn,#b26a00)}
+.lmp-todo .lmp-demo{flex-basis:100%;font-size:11.5px;color:var(--muted)}
+.lmp-fold{border:1px solid var(--line);border-radius:var(--r,8px);background:#fff;margin:10px 0;padding:0 12px}
+.lmp-fold>summary{cursor:pointer;padding:10px 0;list-style:revert}
+.lmp-fold>summary small{color:var(--muted);font-weight:400}
+.lmp-foldb{padding:0 0 12px}
+.lmp-link{font-weight:700;color:var(--mag,#c2185b);text-decoration:underline;text-underline-offset:2px}
+.lmp-sub{display:block;margin-top:2px}
+.lmp-langbtn{display:flex;flex-wrap:wrap;gap:6px}
+.lmp-langbtn .on{border-color:var(--mag,#c2185b);background:var(--magl,#fdeef6);font-weight:700}
+@media (max-width:600px){.lmp-todo{padding:9px 11px}.lmp-todo .btn{flex:1 1 100%}}
+.lo-h3{font-size:15px;margin:18px 0 6px}

@@ -26,4 +26,25 @@
 .lw-radar{max-width:340px;width:100%;height:auto}
 .lw-print{background:#fff;color:#111;padding:20px;border:1px solid var(--line);border-radius:8px;max-height:60vh;overflow:auto}
 @media (max-width:640px){.lw-two,.lw-q .lw-row{grid-template-columns:1fr}.lw-hbar{grid-template-columns:90px 1fr 54px}}
+/* 2단계 단순화: 탭 줄 + 더 보기 · 지금 할 일 · ⋯ 메뉴 · 데모 표시(K · N · Q · L · D 공용) */
+.lw-tabrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0 10px;min-width:0}
+.lw-tabrow>.seg2{margin:0;min-width:0;max-width:100%;overflow-x:auto}
+.lw-todo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;border:1px solid var(--line);border-left:4px solid var(--mag,var(--ink));border-radius:10px;padding:10px 14px;margin:6px 0 12px;background:var(--paper,#fff);font-size:14px}
+.lw-todoh{font-size:13px;color:var(--muted);font-weight:700;margin-right:2px}
+.lw-todoi{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.lw-todoi em{font:800 18px var(--num,inherit);font-style:normal;color:var(--ink)}
+.btn.lw-go{border-color:var(--ink);font-weight:700}
+.lw-demo{display:inline-block;font-size:11.5px;color:var(--muted);background:var(--g100);border-radius:99px;padding:2px 8px;margin:0 6px;white-space:nowrap}
+.lw-cardh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.lw-acts .lw-more>summary,.lw-cardh .lw-more>summary,td .lw-more>summary{height:30px;padding:0 8px}
+.lw-acts .lw-more>summary::after,.lw-cardh .lw-more>summary::after,td .lw-more>summary::after,.phr .lw-more>summary::after{display:none}
+.lw-steps{display:flex;gap:6px;flex-wrap:wrap;list-style:none;padding:0;margin:0 0 10px}
+.lw-steps li{font-size:12.5px;padding:4px 10px;border-radius:99px;background:var(--g100);color:var(--g700)}
+.lw-steps li.on{background:var(--ink);color:#fff}
+.lw-step[hidden]{display:none!important}
+.lmsd-as{font-size:12.5px;margin-top:6px}.lmsd-as>summary{cursor:pointer;color:var(--muted)}
+.lmsd-as .lmsx-pick{margin-top:6px}
+.lw-sub{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.lw-acts .lw-hidebtn{display:none}
 .lw-coverimg{width:100%;max-height:180px;object-fit:cover;border-radius:8px;background:var(--g100)}
+.lw-pe{display:inline-flex;gap:4px}.lw-pe input{width:58px;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:6px;padding:4px 6px}

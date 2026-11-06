@@ -7,7 +7,7 @@
   'use strict';
   if (typeof MENU !== 'object' || typeof VIEWS !== 'object') return;
   const ON = () => !!(S && S.org && S.org.type === 'univ' && S.org.ed === 'lms');
-  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/a.css?v=30.0'; document.head.appendChild(l); } catch (e) { }
+  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/a.css?v=31.8'; document.head.appendChild(l); } catch (e) { }
 
   /* ── 메뉴 · 프리셋 ── */
   MENU.lmsa = { label: '강좌 · 분반', ws: 'learn', only: 'univ' };
@@ -353,39 +353,61 @@
     if (!ON()) return head('강좌 · 분반') + '<div class="empty">대학(학사 LMS) 기관에서 쓰는 화면입니다. 설정 › 기관 유형에서 도입 형태를 학사 LMS로 바꾸세요.</div>';
     const ov = OV();
     if (!ov) return head('강좌 · 분반') + `<div class="empty">${AC.err ? esc(AC.err) : '학사 데이터를 불러오는 중입니다.'}</div>`;
-    const tch = isTeacher(ov); const TABS = tch ? [['section', '내 분반'], ['enr', '수강'], ['req', '조교 · 청강 신청']] : [['term', '학기'], ['course', '교과목'], ['section', '분반'], ['enr', '수강'], ['upload', '학사 업로드'], ['req', '조교 · 청강 신청'], ['org', '조직 · 권한']];
+    const tch = isTeacher(ov); const nReq = (ov.requests || []).length;
+    /* 2단계(UX): 학교 담당자용 — 「이번 학기 준비」 4단계(학기 → 교과목 → 분반 → 수강생)를 탭 줄로 쓰고, 나머지 일은 「더보기」 */
+    const TABS = tch ? [['section', '내 분반'], ['enr', '수강생'], ['req', '조교 · 청강 신청']] : [['term', '학기'], ['course', '교과목'], ['section', '분반'], ['enr', '수강생'], ['upload', '엑셀로 한꺼번에 올리기'], ['req', `조교 · 청강 신청${nReq ? ' ' + nReq : ''}`], ['org', '단과대학 · 학과 · 권한']];
     let tb = UI.lmsaT || 'section'; if (!TABS.some(([k]) => k === tb)) tb = 'section';
     const term = curTerm(ov); const secs = (ov.sections || []).filter(s => s.term_id === term);
     const scopeNote = ov.me.units ? `<span class="lmsa-scope">${ic('corp', 14)} 담당 범위: ${ov.me.units.map(u => esc(unitName(ov, u))).join(' · ')}</span>` : tch ? `<span class="lmsa-scope">${ic('users', 14)} ${esc(t('teacher'))} 사번 ${esc(ov.me.member_no || '미연결')}의 담당 분반</span>` : '';
-    const top = head('강좌 · 분반', `학기 · 교과목 · 분반 · 수강을 관리합니다. 학사 데이터는 지금은 CSV 업로드 · 수동 입력으로 운영하며, 학사 연동을 붙이면 같은 표가 자동으로 채워집니다(${SYNCNOTE}). 구성원은 학번 · 학과 · 학적만 저장합니다.`, scopeNote) +
-      `<div class="kpis">${kpi('이번 학기 분반', secs.filter(s => !s.hidden).length + '개', secs.filter(s => s.hidden).length ? `합반 공유분반 ${secs.filter(s => s.hidden).length}개 숨김` : '')}${kpi('정규 수강', secs.reduce((a, s) => a + s.enrolled, 0) + '건')}${kpi('청강', secs.reduce((a, s) => a + s.audit, 0) + '건', '성적 처리 자동 제외')}${kpi('처리할 신청', (ov.requests || []).length + '건')}${tch ? '' : kpi('구성원', num(ov.persons ? ov.persons.total : 0) + '명', `비학사 ${num(ov.persons ? ov.persons.manual : 0)}명`)}</div>` +
-      `<div class="bar2 lmsa-bar">${termSel(ov, 'lmsaTerm', term)}${tabs('lmsaT', TABS, tb)}</div>`;
+    const nSec = secs.filter(s => !s.hidden).length; const nEnr = secs.reduce((a, s) => a + s.enrolled, 0); const nAud = secs.reduce((a, s) => a + s.audit, 0);
+    const demoTag = LIVEM() ? '' : '<span class="lmsa-demo">데모: 브라우저에만 저장</span>';
+    const top = head('학기 · 강좌', tch ? '내가 맡은 분반의 수강생과 조교 · 청강 신청을 확인합니다.' : `이번 학기 수업을 <b>학기 → 교과목 → 분반 → 수강생</b> 순서로 준비합니다. <small class="lmsa-sub">학사 연동을 붙이면 자동으로 채워집니다 · 학번 · 학과 · 학적만 저장</small>`, scopeNote + demoTag);
+    let bar;
+    if (tch) bar = `<div class="lmsa-todo"><span>${ic('check', 16)} 이번 학기 담당 분반 <b>${nSec}</b> · 수강생 <b>${nEnr}</b>명${nReq ? ` · 처리할 신청 <b>${nReq}</b>건` : ''}</span>${nReq ? '<button class="btn sm pri" data-act="tab" data-key="lmsaT" data-v="req">신청 처리하기</button>' : ''}</div><div class="bar2 lmsa-bar">${termSel(ov, 'lmsaTerm', term)}${tabs('lmsaT', TABS, tb)}</div>`;
+    else {
+      const opTerm = (ov.terms || []).find(t0 => t0.term_id === term) || {};
+      const ST = [['term', '학기', (ov.terms || []).length ? esc(opTerm.name || term) : '아직 없음', (ov.terms || []).length > 0],
+        ['course', '교과목', `${(ov.courses || []).length}개`, (ov.courses || []).length > 0],
+        ['section', '분반', `${nSec}개${secs.length - nSec ? ` · 합반 ${secs.length - nSec}` : ''}`, nSec > 0],
+        ['enr', '수강생', `${nEnr}명${nAud ? ` · 청강 ${nAud}` : ''}`, nEnr > 0]];
+      const nx = ST.find(s => !s[3]); const noCls = secs.filter(s => !s.hidden && !s.class_id).length;
+      const NEXT = { term: ['학기 추가', 'lmsa-term-new', ''], course: ['교과목 추가', 'lmsa-course-new', ''], section: ['분반 개설', 'lmsa-sec-new', ''], enr: ['수강생 엑셀로 올리기', 'lmsa-goimp', 'enrollment'] };
+      const todo = nx ? `<span>${ic('spark', 16)} 다음 할 일: <b>${nx[1]}</b> 준비</span><button class="btn sm pri" data-act="${NEXT[nx[0]][1]}" data-v="${NEXT[nx[0]][2]}">${NEXT[nx[0]][0]}</button>`
+        : nReq ? `<span>${ic('check', 16)} 이번 학기 준비 완료 · 처리할 조교 · 청강 신청 <b>${nReq}</b>건</span><button class="btn sm pri" data-act="tab" data-key="lmsaT" data-v="req">신청 처리하기</button>`
+        : noCls ? `<span>${ic('check', 16)} 이번 학기 준비 완료 · 강의실이 연결되지 않은 분반 <b>${noCls}</b>개</span><button class="btn sm pri" data-act="tab" data-key="lmsaT" data-v="section">분반 확인하기</button>`
+        : `<span>${ic('check', 16)} 이번 학기 준비가 끝났습니다.</span>`;
+      const more = TABS.slice(4); const curMore = more.find(([k]) => k === tb);
+      bar = `<div class="lmsa-steps" role="tablist" aria-label="이번 학기 준비 순서">${ST.map(([k, l, n, done], i) => `<button role="tab" aria-selected="${k === tb}" class="lmsa-step ${k === tb ? 'on' : ''} ${done ? 'done' : ''} ${nx && nx[0] === k ? 'next' : ''}" data-act="tab" data-key="lmsaT" data-v="${k}"><i>${done ? ic('check', 14) : i + 1}</i><span><b>${l}</b><small>${n}</small></span></button>`).join('')}</div>
+        <div class="lmsa-todo">${todo}<span class="lmsa-tsel">${termSel(ov, 'lmsaTerm', term)}</span><details class="uxmore lmsa-more"><summary>${curMore ? esc(curMore[1]) : '더보기'}${curMore ? '' : ` <em>${more.length}</em>`}</summary><div class="uxpop" role="menu">${more.map(([k, l]) => `<button role="menuitem" class="${k === tb ? 'on' : ''}" data-act="tab" data-key="lmsaT" data-v="${k}">${esc(l)}</button>`).join('')}</div></details></div>`;
+    }
+    const top2 = top + bar;
     let b = '';
     try { b = ({ term: vTerm, course: vCourse, section: vSection, enr: vEnr, upload: vUpload, req: vReq, org: vOrg })[tb](ov, term, secs); } catch (e) { console.error(e); b = `<div class="warn">${esc(e.message)}</div>`; }
-    return `<div class="lmsa">${top}${b}</div>`;
+    return `<div class="lmsa">${top2}${b}</div>`;
   };
   ACT['lmsa-term'] = el => { UI.lmsaTerm = el.value; render(); };
+  ACT['lmsa-goimp'] = el => { UI.lmsaT = 'upload'; UI.lmsaImp = (el && el.dataset && el.dataset.v) || 'enrollment'; AC.prev = null; render(); };
 
   function vTerm(ov) {
-    return `<div class="card"><div class="ch"><b>학기</b><small>운영 학기는 하나만 지정합니다(학생 청강 신청 · 수강 화면 기준)</small><button class="btn sm pri" data-act="lmsa-term-new">학기 추가</button></div>
-      ${table(['학기 코드', '이름', '기간', '운영', ''], (ov.terms || []).map(t0 => [esc(t0.term_id), esc(t0.name), `${esc(t0.starts_on)} ~ ${esc(t0.ends_on)}`, t0.is_operating ? tag('운영 학기') : '—', `<button class="btn sm" data-act="lmsa-term-edit" data-v="${esc(t0.term_id)}">수정</button> <button class="btn sm ghost" data-act="lmsa-term-del" data-v="${esc(t0.term_id)}">삭제</button>`]), '등록된 학기가 없습니다. 학기 추가를 누르세요.')}</div>`;
+    return `<div class="card"><div class="ch"><b>학기</b><small>운영 학기는 하나만 지정합니다(학생 청강 신청 · 수강 화면 기준)</small><button class="btn sm" data-act="lmsa-term-new">학기 추가</button></div>
+      ${table(['학기', '기간', '운영', ''], (ov.terms || []).map(t0 => [`<b>${esc(t0.name)}</b><small class="lmsa-sub">${esc(t0.term_id)}</small>`, `${esc(t0.starts_on)} ~ ${esc(t0.ends_on)}`, t0.is_operating ? tag('운영 학기') : '—', `<button class="btn sm" data-act="lmsa-term-edit" data-v="${esc(t0.term_id)}">수정</button>`]), '등록된 학기가 없습니다. 학기 추가를 누르세요.')}</div>`;
   }
   const termForm = t0 => `<label class="fl">학기 코드<input name="term_id" maxlength="7" placeholder="2026-2" value="${esc(t0 ? t0.term_id : '')}" ${t0 ? 'readonly' : ''}></label><label class="fl">이름<input name="name" maxlength="60" placeholder="2026학년도 2학기" value="${esc(t0 ? t0.name : '')}"></label>
     <div class="form2"><label class="fl">시작일<input type="date" name="starts_on" value="${esc(t0 ? t0.starts_on : '')}"></label><label class="fl">종료일<input type="date" name="ends_on" value="${esc(t0 ? t0.ends_on : '')}"></label></div><label class="ul-ck"><input type="checkbox" name="is_operating" ${t0 && t0.is_operating ? 'checked' : ''}> 운영 학기로 지정</label>`;
-  const termModal = t0 => modal(t0 ? '학기 수정' : '학기 추가', termForm(t0), [{ id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { act('term', { term_id: fv(w, 'term_id'), name: fv(w, 'name'), starts_on: fv(w, 'starts_on'), ends_on: fv(w, 'ends_on'), is_operating: fv(w, 'is_operating') === true }, '학기를 저장했습니다.'); } }]);
+  const termModal = t0 => modal(t0 ? '학기 수정' : '학기 추가', termForm(t0), [...(t0 ? [{ id: 'del', label: '삭제', kind: 'red', run: () => { ACT['lmsa-term-del']({ dataset: { v: t0.term_id } }); return false; } }] : []), { id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { act('term', { term_id: fv(w, 'term_id'), name: fv(w, 'name'), starts_on: fv(w, 'starts_on'), ends_on: fv(w, 'ends_on'), is_operating: fv(w, 'is_operating') === true }, '학기를 저장했습니다.'); } }]);
   ACT['lmsa-term-new'] = () => termModal(null);
   ACT['lmsa-term-edit'] = el => termModal((OV().terms || []).find(t0 => t0.term_id === el.dataset.v));
   ACT['lmsa-term-del'] = el => modal('학기 삭제', `<p><b>${esc(el.dataset.v)}</b> 학기를 삭제합니다. 분반이 있는 학기는 삭제할 수 없습니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '삭제', kind: 'red', run: () => { act('term-delete', { term_id: el.dataset.v }, '학기를 삭제했습니다.'); } }]);
 
   function vCourse(ov) {
-    return `<div class="card"><div class="ch"><b>교과목</b><small>학수번호 · 학점 · 개설 학과 · 교과 구분</small><button class="btn sm pri" data-act="lmsa-course-new">교과목 추가</button></div>
-      ${table(['학수번호', '교과목명', '학점', '학과', '구분', '분반', ''], (ov.courses || []).map(c => [esc(c.course_code), esc(c.name), c.credits == null ? '—' : esc(c.credits), esc(unitName(ov, c.unit_code)), c.category ? tag(L.cat[c.category] || c.category) : '—', (ov.sections || []).filter(s => s.course_code === c.course_code).length + '개',
-        `<button class="btn sm" data-act="lmsa-course-edit" data-v="${esc(c.course_code)}">수정</button> <button class="btn sm ghost" data-act="lmsa-course-del" data-v="${esc(c.course_code)}">삭제</button>`]), '교과목이 없습니다. 학사 업로드(교과목 · 분반 CSV) 또는 교과목 추가로 등록하세요.')}</div>`;
+    return `<div class="card"><div class="ch"><b>교과목</b><small>학수번호 · 학점 · 개설 학과 · 교과 구분</small><button class="btn sm" data-act="lmsa-course-new">교과목 추가</button></div>
+      ${table(['교과목', '학과', '학점 · 구분', '분반', ''], (ov.courses || []).map(c => [`<b>${esc(c.name)}</b><small class="lmsa-sub">${esc(c.course_code)}</small>`, esc(unitName(ov, c.unit_code)), `${c.credits == null ? '—' : esc(c.credits) + '학점'}${c.category ? ' ' + tag(L.cat[c.category] || c.category) : ''}`, (ov.sections || []).filter(s => s.course_code === c.course_code).length + '개',
+        `<button class="btn sm" data-act="lmsa-course-edit" data-v="${esc(c.course_code)}">수정</button>`]), '교과목이 없습니다. 엑셀로 한꺼번에 올리기 또는 교과목 추가로 등록하세요.')}</div>`;
   }
   const courseModal = c => { const ov = OV(); modal(c ? '교과목 수정' : '교과목 추가', `<label class="fl">학수번호<input name="course_code" maxlength="20" placeholder="GEN1001" value="${esc(c ? c.course_code : '')}" ${c ? 'readonly' : ''}></label><label class="fl">교과목명<input name="name" maxlength="60" value="${esc(c ? c.name : '')}"></label>
       <div class="form2"><label class="fl">학점<input name="credits" type="number" min="0" max="30" step="0.5" value="${esc(c && c.credits != null ? c.credits : '')}"></label><label class="fl">개설 학과<select name="unit_code"><option value="">(없음)</option>${(ov.units || []).map(u => `<option value="${esc(u.unit_code)}" ${c && c.unit_code === u.unit_code ? 'selected' : ''}>${esc(u.name)} (${esc(u.unit_code)})</option>`).join('')}</select></label>
       <label class="fl">교과 구분<select name="category"><option value="">(없음)</option>${Object.entries(L.cat).map(([k, v]) => `<option value="${k}" ${c && c.category === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label></div>`,
-    [{ id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { act('course', { course_code: fv(w, 'course_code'), name: fv(w, 'name'), credits: fv(w, 'credits'), unit_code: fv(w, 'unit_code'), category: fv(w, 'category') }, '교과목을 저장했습니다.'); } }]); };
+    [...(c ? [{ id: 'del', label: '삭제', kind: 'red', run: () => { act('course-delete', { course_code: c.course_code }, '교과목을 삭제했습니다.'); } }] : []), { id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { act('course', { course_code: fv(w, 'course_code'), name: fv(w, 'name'), credits: fv(w, 'credits'), unit_code: fv(w, 'unit_code'), category: fv(w, 'category') }, '교과목을 저장했습니다.'); } }]); };
   ACT['lmsa-course-new'] = () => courseModal(null);
   ACT['lmsa-course-edit'] = el => courseModal((OV().courses || []).find(c => c.course_code === el.dataset.v));
   ACT['lmsa-course-del'] = el => act('course-delete', { course_code: el.dataset.v }, '교과목을 삭제했습니다.');
@@ -394,13 +416,13 @@
     const tch = isTeacher(ov); const byCourse = {}; secs.forEach(s => (byCourse[s.course_code] = byCourse[s.course_code] || []).push(s));
     const rows = secs.map(s => { const sib = byCourse[s.course_code].filter(y => y !== s && !y.rep_section_id); const rep = s.rep_section_id ? secs.find(y => y.section_id === s.rep_section_id) : null; const shared = secs.filter(y => y.rep_section_id === s.section_id);
       const cls = s.class_id ? (S.classes || []).find(c => c.id === s.class_id) : null;
-      return [esc(s.course_code), `<b>${esc(s.course_name)}</b><small class="lmsa-sub">${esc(s.title)}</small>`, esc(s.section_no), tag(L.mode[s.mode] || s.mode, s.mode === 'online' ? 'y' : ''), `<small>${esc(staffTxt(s))}</small>`, `${s.enrolled}${s.audit ? ` <small>+청강 ${s.audit}</small>` : ''}${s.pending ? ` ${tag('대기 ' + s.pending, 'y')}` : ''}`,
-        rep ? `${tag('공유분반 · 숨김', 'y')}<small class="lmsa-sub">대표 ${esc(rep.section_no)}분반</small>` : shared.length ? `${tag('대표분반')}<small class="lmsa-sub">공유 ${shared.map(y => esc(y.section_no)).join(' · ')}</small>` : '—',
-        cls ? `<small>${esc(cls.name)}</small>` : s.class_id ? `<small>${esc(s.class_id)}</small>` : '<small>미연결</small>',
-        `<div class="lmsa-acts"><button class="btn sm" data-act="lmsa-sec-open" data-v="${esc(s.section_id)}">관리</button>${!rep && s.class_id && sib.length ? `<button class="btn sm pri" data-act="lmsa-sync" data-v="${esc(s.section_id)}">분반 동기화</button>` : ''}${!rep && !shared.length && sib.length && (byCourse[s.course_code].length > 1) ? '' : ''}${rep ? `<button class="btn sm ghost" data-act="lmsa-unmerge" data-v="${esc(s.section_id)}">합반 해제</button>` : `<button class="btn sm ghost" data-act="lmsa-merge" data-v="${esc(s.section_id)}">합반</button>`}</div>`]; });
-    return `<div class="card"><div class="ch"><b>${tch ? '내 분반' : '분반'}</b><small>분반 동기화: 대표 분반의 공지 · 자료 · 주차 · 과제 · 토론 · 시험을 같은 과목의 모든 분반 강의실로 복제(분반에서 고치거나 지운 항목은 다시 동기화해도 덮어쓰지 않음)</small>${tch ? '' : '<button class="btn sm pri" data-act="lmsa-sec-new">분반 개설</button>'}</div>
-      ${table(['학수번호', '교과목', '분반', '방식', '담당', '수강', '합반', '강의실', ''], rows, tch ? '담당 분반이 없습니다. 정운영자에게 사번 연결을 요청하세요.' : '이 학기에 개설된 분반이 없습니다. 학사 업로드 또는 분반 개설로 등록하세요.')}
-      <p class="mini">자동 분반 개설 · Code Share 자동 합반은 ${SYNCNOTE}으로 동작합니다. 지금은 교수 · 관리자가 직접 합반하고, 공유분반은 학생 화면에서 숨겨 대표분반으로 보입니다.</p></div>`;
+      const more = [!rep && s.class_id && sib.length ? `<button data-act="lmsa-sync" data-v="${esc(s.section_id)}">분반 자료 맞추기(동기화)</button>` : '', rep ? `<button data-act="lmsa-unmerge" data-v="${esc(s.section_id)}">합반 해제</button>` : `<button data-act="lmsa-merge" data-v="${esc(s.section_id)}">합반</button>`, `<button data-act="lmsa-hist" data-v="${esc(s.section_id)}">동기화 이력</button>`].filter(Boolean);
+      return [`<b>${esc(s.course_name)} ${esc(s.section_no)}분반</b><small class="lmsa-sub">${esc(s.course_code)} · ${esc(L.mode[s.mode] || s.mode)}${s.title && s.title !== `${s.course_name} ${s.section_no}분반` ? ' · ' + esc(s.title) : ''}</small>`, `<small>${esc(staffTxt(s))}</small>`, `${s.enrolled}명${s.audit ? ` <small>+청강 ${s.audit}</small>` : ''}${s.pending ? ` ${tag('대기 ' + s.pending, 'y')}` : ''}`,
+        `${rep ? `${tag('합반됨', 'y')}<small class="lmsa-sub">${esc(rep.section_no)}분반으로 보임</small>` : shared.length ? `${tag('대표분반')}<small class="lmsa-sub">${shared.map(y => esc(y.section_no)).join(' · ')}분반 함께</small>` : ''}${cls ? `<small class="lmsa-sub">강의실: ${esc(cls.name)}</small>` : s.class_id ? `<small class="lmsa-sub">강의실 연결됨</small>` : `<small class="lmsa-sub lmsa-warn">강의실 미연결</small>`}`,
+        `<div class="lmsa-acts"><button class="btn sm" data-act="lmsa-sec-open" data-v="${esc(s.section_id)}">관리</button><details class="uxmore lmsa-rmore" data-lmsa-more="${esc(s.section_id)}"><summary aria-label="다른 작업">${ic('dots', 16)}</summary><div class="uxpop" role="menu">${more.join('')}</div></details></div>`]; });
+    return `<div class="card"><div class="ch"><b>${tch ? '내 분반' : '분반'}</b><small>같은 과목 여러 분반은 「⋯ › 분반 자료 맞추기」로 대표 분반의 자료를 한 번에 복제합니다(분반에서 고친 항목은 덮어쓰지 않음)</small>${tch ? '' : '<button class="btn sm" data-act="lmsa-sec-new">분반 개설</button>'}</div>
+      ${table(['분반', '담당', '수강', '합반 · 강의실', ''], rows, tch ? '담당 분반이 없습니다. 정운영자에게 사번 연결을 요청하세요.' : '이 학기에 개설된 분반이 없습니다. 엑셀로 한꺼번에 올리기 또는 분반 개설로 등록하세요.')}
+      <p class="mini">자동 분반 개설 · 자동 합반은 학사 연동 후 동작합니다. 합반한 분반은 학생에게 대표분반으로 보입니다.</p></div>`;
   }
   ACT['lmsa-sec-new'] = () => { const ov = OV(); const term = curTerm(ov);
     modal('분반 개설', `<label class="fl">학기${termSel(ov, 'term_id', term)}</label><label class="fl">교과목<select name="course_code">${(ov.courses || []).map(c => `<option value="${esc(c.course_code)}">${esc(c.course_code)} ${esc(c.name)}</option>`).join('')}</select></label>
@@ -433,19 +455,19 @@
 
   function vEnr(ov, term, secs) {
     const vis = secs.filter(s => !s.rep_section_id); const sid = vis.some(s => s.section_id === UI.lmsaSec) ? UI.lmsaSec : (vis[0] || {}).section_id;
-    if (!sid) return '<div class="empty">이 학기에 수강을 관리할 분반이 없습니다.</div>';
+    if (!sid) return '<div class="empty">이 학기에 분반이 아직 없습니다. 「분반」 단계에서 분반을 먼저 개설하세요.</div>';
     const grading = UI.lmsaGrade === '1'; const key = sid + '|' + (grading ? 1 : 0);
     let rows = null; if (!LIVEM()) { try { rows = DEMO.enrollments({ section_id: sid, grading: grading ? '1' : '' }).rows; } catch (e) { return `<div class="warn">${esc(e.message)}</div>`; } }
     else { rows = AC.enr[key] || null; if (!rows) X('enrollments', { section_id: sid, grading: grading ? '1' : '' }, true).then(r => { AC.enr[key] = r.rows; render(); }).catch(e => toast(e.message, 'warn')); }
     const s = vis.find(y => y.section_id === sid); const tch = isTeacher(ov);
     const look = UI.lmsaLook || ''; const vis0 = new Set((ov.sections || []).map(y => y.section_id)); const sv = !LIVEM() && look ? studentView(look).filter(v => vis0.has(v.section_id)) : null;
     return `<div class="card"><div class="ch"><b>수강생</b><select data-chg="lmsa-sec" aria-label="분반">${vis.map(y => `<option value="${esc(y.section_id)}" ${y.section_id === sid ? 'selected' : ''}>${esc(y.course_code)} ${esc(y.course_name)} ${esc(y.section_no)}분반</option>`).join('')}</select>
-      <label class="ul-ck in"><input type="checkbox" data-chg="lmsa-grade" ${grading ? 'checked' : ''}> 성적 처리 명단(청강 · 대기 제외)</label><button class="btn sm" data-act="lmsa-roster-csv" data-v="${esc(sid)}">CSV 내려받기</button></div>
-      ${rows ? table(['학번', '학과', '학적', '구분', '상태', '원 분반', '출처', ''], rows.map(r => [esc(r.member_no), esc(unitName(ov, r.unit_code)), esc(L.status[r.status] || r.status || ''), r.kind === 'audit' ? tag('청강', 'y') : '정규', r.enr_status === 'pending' ? tag('승인 대기', 'y') : '수강', esc(r.section_no) + (s && r.section_no !== s.section_no ? ' ' + tag('합반') : ''), esc(r.source === 'sis' ? '학사' : r.source === 'request' ? '신청' : '수동'),
+      <label class="ul-ck in"><input type="checkbox" data-chg="lmsa-grade" ${grading ? 'checked' : ''}> 성적 처리 명단(청강 · 대기 제외)</label><button class="btn sm" data-act="lmsa-roster-csv" data-v="${esc(sid)}">엑셀(CSV) 내려받기</button></div>
+      ${rows ? table(['학번', '학과 · 학적', '구분', '분반', ''], rows.map(r => [`<b>${esc(r.member_no)}</b><small class="lmsa-sub">${esc(r.source === 'sis' ? '학사' : r.source === 'request' ? '신청' : '수동')} 등록</small>`, `${esc(unitName(ov, r.unit_code))}<small class="lmsa-sub">${esc(L.status[r.status] || r.status || '')}</small>`, `${r.kind === 'audit' ? tag('청강', 'y') : '정규'}${r.enr_status === 'pending' ? ' ' + tag('승인 대기', 'y') : ''}`, esc(r.section_no) + (s && r.section_no !== s.section_no ? ' ' + tag('합반') : ''),
         r.enr_status === 'enrolled' ? `<button class="btn sm ghost" data-act="lmsa-drop" data-s="${esc(sid)}" data-m="${esc(r.member_no)}">수강 취소</button>` : '']), '수강생이 없습니다.') : '<div class="empty">불러오는 중입니다.</div>'}
       <p class="mini">청강생은 성적 처리 명단 · 성적 화면에서 자동으로 빠집니다. 합반의 대표분반에는 공유분반 수강생이 함께 보입니다.</p></div>
       <div class="card"><div class="ch"><b>일괄 수강신청</b><small>비학사 사용자 · 휴학생 청강 등록 등 — 학번을 줄바꿈 · 쉼표로 구분</small></div>
-      <textarea id="lmsaBulk" rows="3" class="lmsa-ta" placeholder="20261001&#10;20261002"></textarea><div class="bar2"><select id="lmsaBulkKind" aria-label="수강 구분"><option value="regular">정규</option><option value="audit">청강</option></select><button class="btn pri sm" data-act="lmsa-bulk" data-v="${esc(sid)}">수강 등록</button></div></div>
+      <textarea id="lmsaBulk" rows="3" class="lmsa-ta" placeholder="20261001&#10;20261002"></textarea><div class="bar2"><select id="lmsaBulkKind" aria-label="수강 구분"><option value="regular">정규</option><option value="audit">청강</option></select><button class="btn sm" data-act="lmsa-bulk" data-v="${esc(sid)}">수강 등록</button></div></div>
       ${tch ? '' : `<div class="card"><div class="ch"><b>학생 화면 미리보기</b><small>학번을 넣으면 그 학생에게 보이는 분반(공유분반은 대표분반으로)을 확인합니다</small></div><div class="bar2"><input id="lmsaLook" maxlength="20" placeholder="20261001" value="${esc(look)}" aria-label="학번"><button class="btn sm" data-act="lmsa-look">보기</button></div>
         ${LIVEM() ? '<p class="mini">운영 서버에서는 학생이 학습자 앱에서 로그인하면 /api/lms/a/my 로 같은 목록을 받습니다.</p>' : sv ? table(['학수번호', '교과목', '분반', '구분', '비고'], sv.map(v => [esc(v.course_code), esc(v.course_name), esc(v.section_no), esc(v.kind === 'ta' ? '조교' : L.enr[v.kind]), v.via ? `${esc(v.via)}분반 수강 → 대표분반으로 표시` : '']), '이 학번에게 보이는 분반이 없습니다.') : ''}</div>`}`;
   }
@@ -460,15 +482,15 @@
   const TPL = { person: '학번,구분,학과코드,학적,학년\n20269001,학생,CSE,휴학,3\nX0001,외부,,재학,\n', section: '학수번호,교과목명,분반,학점,학과코드,수업방식,정원,교과구분\nGEN2001,글쓰기와 소통,1,2,CSE,블렌디드,40,교양\n', enrollment: '학번,학수번호,분반,구분\n20261001,GEN1001,1,정규\n20261002,GEN1001,2,청강\n' };
   function vUpload(ov, term) {
     const k = UI.lmsaImp || 'enrollment'; const P = AC.prev && AC.prev.kind === k ? AC.prev : null;
-    return `<div class="card"><div class="ch"><b>학사 데이터 업로드</b><small>CSV(UTF-8) · 한 번에 5,000행 · 학사 연동을 붙이면 같은 데이터가 자동으로 들어옵니다(${SYNCNOTE})</small></div>
+    return `<div class="card"><div class="ch"><b>엑셀로 한꺼번에 올리기</b><small>엑셀에서 CSV(UTF-8)로 저장해 올립니다 · 한 번에 5,000행 · 학사 연동 후에는 자동으로 들어옵니다</small></div>
       <div class="form2"><label class="fl">데이터 종류<select data-chg="lmsa-imp-kind">${Object.entries(L.imp).map(([v, l]) => `<option value="${v}" ${k === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>${k === 'person' ? '' : `<label class="fl">학기${termSel(ov, 'impTerm', term)}</label>`}<label class="fl">CSV 파일<input type="file" accept=".csv,text/csv" data-chg="lmsa-file"></label></div>
       <textarea id="lmsaCsv" rows="6" class="lmsa-ta" spellcheck="false" placeholder="${esc(TPL[k])}">${esc(UI.lmsaCsv || '')}</textarea>
-      <div class="bar2"><button class="btn sm" data-act="lmsa-tpl">양식 내려받기</button><button class="btn sm pri" data-act="lmsa-prev">미리보기 · 검증</button>${P && P.ok ? `<button class="btn sm pri" data-act="lmsa-apply">${P.ok}행 반영${P.error ? `(오류 ${P.error}행 제외)` : ''}</button>` : ''}</div>
+      <div class="bar2"><button class="btn sm" data-act="lmsa-tpl">양식 내려받기</button><button class="btn sm ${P && P.ok ? '' : 'pri'}" data-act="lmsa-prev">미리보기 · 검증</button>${P && P.ok ? `<button class="btn sm pri" data-act="lmsa-apply">${P.ok}행 반영${P.error ? `(오류 ${P.error}행 제외)` : ''}</button>` : ''}</div>
       <p class="mini">${k === 'person' ? '비학사 사용자(외부 · 학점교류 · 휴학생 청강 등)를 일괄 등록합니다. 학번 · 구분 · 학과코드 · 학적 · 학년만 받고, 이름 · 연락처 열은 받지 않습니다.' : k === 'section' ? '없는 교과목은 함께 만들고, 이미 있는 분반은 건너뜁니다.' : '등록된 학번과 이 학기 분반만 받습니다. 구분이 「청강」이면 성적 처리에서 자동 제외됩니다.'}</p></div>
       ${P ? `<div class="card" id="lmsaPrev"><div class="ch"><b>미리보기</b><small>전체 ${P.total}행 · 정상 ${P.ok} · 건너뜀 ${P.skip} · 오류 ${P.error}${P.applied ? ' · 반영 완료' : ''}</small></div>
         ${P.errors.length ? `<h4 class="lmsa-h">오류 행</h4>${table(['행', '내용'], P.errors.slice(0, 100).map(e => [esc(e.line), `<span class="lmsa-err">${esc(e.msg)}</span>`]))}` : ''}
         ${table(['행', '결과', '값', '안내'], P.rows.slice(0, 50).map(r => [esc(r.line), r.st === 'ok' ? tag('정상') : r.st === 'skip' ? tag('건너뜀', 'y') : tag('오류', 'r'), `<small>${esc(Object.values(r.data).filter(v => v != null && v !== '').join(' · '))}</small>`, esc(r.msg)]))}</div>` : ''}
-      <div class="card"><div class="ch"><b>업로드 기록</b><small>lms_sis_sync_run · 수동 실행</small></div>${table(['번호', '시각', '종류', '학기', '반영', '건너뜀', '오류'], (ov.runs || []).map(r => [esc(r.run_id), esc(new Date(r.at).toLocaleString('ko-KR', { hour12: false })), esc(L.imp[r.scope] || r.scope), esc(r.term_id || '—'), esc(r.counts.inserted), esc(r.counts.skipped), r.errors_n ? tag(r.errors_n + '건', 'r') : '0']), '기록이 없습니다.')}</div>`;
+      <div class="card"><div class="ch"><b>올린 기록</b></div>${table(['올린 때', '종류 · 학기', '반영 · 건너뜀', '오류'], (ov.runs || []).map(r => [`${esc(new Date(r.at).toLocaleString('ko-KR', { hour12: false }))}<small class="lmsa-sub">#${esc(r.run_id)}</small>`, `${esc(L.imp[r.scope] || r.scope)}<small class="lmsa-sub">${esc(r.term_id || '—')}</small>`, `${esc(r.counts.inserted)} · ${esc(r.counts.skipped)}`, r.errors_n ? tag(r.errors_n + '건', 'r') : '0']), '기록이 없습니다.')}</div>`;
   }
   ACT['lmsa-imp-kind'] = el => { UI.lmsaImp = el.value; AC.prev = null; render(); };
   ACT['lmsa-file'] = el => { const f = el.files && el.files[0]; if (!f) return; if (f.size > 3 * 1024 * 1024) return toast('3MB 이하 CSV만 올릴 수 있습니다.', 'warn'); const rd = new FileReader(); rd.onload = () => { UI.lmsaCsv = String(rd.result || ''); AC.prev = null; render(); }; rd.readAsText(f, 'utf-8'); };
@@ -484,20 +506,20 @@
         `<div class="lmsa-acts"><button class="btn sm pri" data-act="lmsa-dec" data-y="1" data-s="${esc(r.section_id)}" data-m="${esc(r.member_no)}" data-k="${esc(r.kind)}">승인</button><button class="btn sm ghost" data-act="lmsa-dec" data-y="0" data-s="${esc(r.section_id)}" data-m="${esc(r.member_no)}" data-k="${esc(r.kind)}">반려</button></div>`]), '처리할 신청이 없습니다.')}</div>
       <div class="card"><div class="ch"><b>신청 등록</b><small>학생이 학습자 앱에서 직접 신청 · 취소할 수 있고, 교수 · 관리자가 대신 등록할 수도 있습니다</small></div>
       <div class="form2"><label class="fl">분반<select id="lmsaReqSec">${vis.map(y => `<option value="${esc(y.section_id)}">${esc(y.course_code)} ${esc(y.course_name)} ${esc(y.section_no)}분반</option>`).join('')}</select></label><label class="fl">학번 · 사번<input id="lmsaReqM" maxlength="20" placeholder="20261005"></label><label class="fl">구분<select id="lmsaReqK"><option value="audit">청강</option><option value="ta">조교</option></select></label></div>
-      <div class="bar2"><button class="btn sm pri" data-act="lmsa-req">신청 등록</button></div><p class="mini">청강생은 승인되면 수강 명단에 「청강」으로 들어가고 성적 처리에서 자동 제외됩니다. 조교는 승인되면 분반 담당(조교)으로 등록됩니다.</p></div>`;
+      <div class="bar2"><button class="btn sm" data-act="lmsa-req">신청 등록</button></div><p class="mini">청강생은 승인되면 수강 명단에 「청강」으로 들어가고 성적 처리에서 자동 제외됩니다. 조교는 승인되면 분반 담당(조교)으로 등록됩니다.</p></div>`;
   }
   ACT['lmsa-dec'] = el => act('request-decide', { section_id: el.dataset.s, member_no: el.dataset.m, kind: el.dataset.k, approve: el.dataset.y === '1' }, el.dataset.y === '1' ? '승인했습니다.' : '반려했습니다.', { after: () => { AC.enr = {}; } });
   ACT['lmsa-req'] = () => act('request', { section_id: ($('#lmsaReqSec') || {}).value, member_no: T(($('#lmsaReqM') || {}).value), kind: ($('#lmsaReqK') || {}).value }, '신청을 등록했습니다.');
 
   function vOrg(ov) {
     const U0 = ov.units || []; const colleges = U0.filter(u => u.kind === 'college' || u.kind === 'univ'); const owner = ov.me.role === 'owner';
-    return `<div class="card"><div class="ch"><b>조직(단과대학 · 학과)</b><small>학사 조직 코드 기준 · ${SYNCNOTE}</small><button class="btn sm pri" data-act="lmsa-unit-new">조직 추가</button></div>
+    return `<div class="card"><div class="ch"><b>단과대학 · 학과</b><small>학사 조직 코드 기준 · 학사 연동 후 자동</small><button class="btn sm" data-act="lmsa-unit-new">조직 추가</button></div>
       ${table(['코드', '이름', '구분', '상위', ''], U0.map(u => [esc(u.unit_code), esc(u.name), esc(L.ukind[u.kind] || u.kind), esc(u.parent_code ? unitName(ov, u.parent_code) : '—'), `<button class="btn sm ghost" data-act="lmsa-unit-del" data-v="${esc(u.unit_code)}">삭제</button>`]), '조직이 없습니다.')}</div>
       <div class="card"><div class="ch"><b>단과대학 관리 권한 · 교수 계정 연결</b><small>부운영자에게 단과대학을 지정하면 그 단과대학(소속 학과 포함)의 교과목 · 분반 · 구성원만 관리합니다. 서버에서도 같은 범위를 강제합니다</small></div>
       ${table(['계정', '역할', '관리 범위', '연결 사번'], (ov.scopes || []).map(s => [esc(s.email), esc(roleName(s.role)), s.units && s.units.length ? s.units.map(u => tag(unitName(ov, u))).join(' ') : '전체', esc(s.member_no || '—')]), '지정된 범위가 없습니다(모든 운영자가 전체 범위).')}
       ${owner ? `<div class="lmsa-scopeform"><label class="fl">${LIVEM() ? '운영자 이메일<input id="lmsaScEmail" maxlength="120" placeholder="dean@univ.ac.kr">' : `대상<select id="lmsaScEmail"><option value="sub">부운영자 화면(데모)</option><option value="teacher">${esc(t('teacher'))} 화면(데모)</option></select>`}</label>
         <div class="fl"><span>관리 범위(단과대학)</span><div class="lmsa-units">${colleges.map(u => `<label class="ul-ck in"><input type="checkbox" class="lmsaScU" value="${esc(u.unit_code)}"> ${esc(u.name)}</label>`).join('') || '<small>단과대학을 먼저 추가하세요.</small>'}</div></div>
-        <label class="fl">교수 사번(교수 화면 연결)<input id="lmsaScM" maxlength="20" placeholder="P0001"></label><div class="bar2"><button class="btn sm pri" data-act="lmsa-scope">저장</button></div></div>` : '<p class="mini">범위 지정은 정운영자만 할 수 있습니다.</p>'}</div>`;
+        <label class="fl">교수 사번(교수 화면 연결)<input id="lmsaScM" maxlength="20" placeholder="P0001"></label><div class="bar2"><button class="btn sm" data-act="lmsa-scope">저장</button></div></div>` : '<p class="mini">범위 지정은 정운영자만 할 수 있습니다.</p>'}</div>`;
   }
   ACT['lmsa-unit-new'] = () => { const ov = OV(); modal('조직 추가', `<div class="form2"><label class="fl">코드<input name="unit_code" maxlength="20" placeholder="CSE"></label><label class="fl">이름<input name="name" maxlength="60" placeholder="컴퓨터공학과"></label></div>
     <div class="form2"><label class="fl">구분<select name="kind">${Object.entries(L.ukind).map(([k, v]) => `<option value="${k}" ${k === 'dept' ? 'selected' : ''}>${v}</option>`).join('')}</select></label><label class="fl">상위 조직<select name="parent_code"><option value="">(없음)</option>${(ov.units || []).map(u => `<option value="${esc(u.unit_code)}">${esc(u.name)}</option>`).join('')}</select></label></div>`,
@@ -515,6 +537,6 @@
     const set = new Set(nos); const ids = new Set(); (S.members || []).forEach(m => { const no = String(m.sid || (m.extra && m.extra['학번']) || ''); if (no && set.has(no)) ids.add(m.id); }); return ids;
   }
   const withoutAudit = fn => { const saved = []; try { (S.classes || []).forEach(c => { const ex = auditMembers(c.id); if (ex.size && Array.isArray(c.learners)) { saved.push([c, c.learners]); c.learners = c.learners.filter(id => !ex.has(id)); } }); return fn(saved); } finally { saved.forEach(([c, l]) => { c.learners = l; }); } };
-  if (typeof VIEWS.grade === 'function') { const base = VIEWS.grade; VIEWS.grade = () => { if (!ON()) return base(); return withoutAudit(saved => { const h = base(); const n = saved.reduce((a, [c, l]) => a + l.length - c.learners.length, 0); return n ? `<div class="lmsa-note" id="lmsaAuditNote">${ic('check', 14)} 청강생 ${n}명은 성적 처리에서 자동 제외되었습니다(강좌 · 분반 › 수강).</div>` + h : h; }); }; }
+  if (typeof VIEWS.grade === 'function') { const base = VIEWS.grade; VIEWS.grade = () => { if (!ON()) return base(); return withoutAudit(saved => { const h = base(); const n = saved.reduce((a, [c, l]) => a + l.length - c.learners.length, 0); return n ? `<div class="lmsa-note" id="lmsaAuditNote">${ic('check', 14)} 청강생 ${n}명은 성적 처리에서 자동 제외되었습니다(학기 · 강좌 › 수강생).</div>` + h : h; }); }; }
   ['grade-xls', 'grade-send', 'gr-nudge'].forEach(k => { if (typeof ACT[k] === 'function') { const base = ACT[k]; ACT[k] = (...a) => (ON() ? withoutAudit(() => base(...a)) : base(...a)); } });
 })();

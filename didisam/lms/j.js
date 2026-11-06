@@ -87,13 +87,24 @@
   Object.keys(PRESET).filter(k => k !== 'univ_lms').forEach(k => { if (!PRESET[k].on.includes('lmsj') && !PRESET[k].off.includes('lmsj')) PRESET[k].off.push('lmsj'); });
 
   VIEWS.lmsj = () => {
-    W3.css('w3'); if (!ULMS_()) return '<div class="empty">대학(학사 LMS) 에디션에서 쓰는 화면입니다.</div>';
+    W3.css('w3'); if (window.EFH) EFH.css(); if (!ULMS_()) return '<div class="empty">대학(학사 LMS) 에디션에서 쓰는 화면입니다.</div>';
     const sec = W3.section(); if (sec === undefined) return W3.loading; if (sec.__err) return `<div class="empty">${esc(sec.__err)}</div>`;
-    const t = UI.w3jT || 'risk';
+    const t = UI.w3jT || 'risk'; const T4 = window.EFH ? EFH.tabs4 : (k, a, c, m) => tabs(k, [...a, ...(m || [])], c);
     return head('학습 분석', `${esc(sec.title)} · 학습 부진 복합 지표 = 성적 35 · 출결 30 · LMS 참여 25 · 비교과 10 · 학사 원천 데이터는 연동 후 반영`, `${W3.secPick()} ${W3.mode()}`)
-      + tabs('w3jT', [['risk', '위험 현황 · 예측'], ['warn', '조기 경고'], ['ins', '그룹 인사이트'], ['fb', '맞춤 피드백'], ['refl', '성찰일지'], ['stu', '학생 모드']], t)
+      + (t === 'stu' ? '' : todoJ(sec, t))
+      + T4('w3jT', [['risk', '위험 현황 · 예측'], ['warn', '조기 경고'], ['fb', '맞춤 피드백'], ['refl', '성찰일지']], t, [['ins', '그룹 인사이트(학과 · 학년)'], ['stu', '학생 화면 미리보기']])
       + ({ risk: jRisk, warn: jWarn, ins: jIns, fb: jFb, refl: jRefl, stu: jStu }[t])(sec);
   };
+  /* 지금 할 일: 위험 학생 → 맞춤 피드백 */
+  function todoJ(sec, t) {
+    if (!window.EFH) return ''; const R = W3.get('jrisk:' + sec.section_id, 'GET', '/api/lms/j/risk', { section_id: sec.section_id }); if (!R || R.__err) return '';
+    const up = R.students.filter(s => s.predicted >= 50 && s.risk < 50).length; const top = R.students[0];
+    const RF = W3.get('jrefl:' + sec.section_id, 'GET', '/api/lms/j/reflections', { section_id: sec.section_id }); const nc = RF && !RF.__err ? RF.filter(r => !r.comment).length : 0;
+    const txt = `위험 <b>${R.summary.danger}명</b> · 주의 ${R.summary.warn}명${up ? ` · 2주 뒤 위험 예상 ${up}명` : ''}${nc ? ` · 코멘트 기다리는 성찰일지 ${nc}건` : ''}`;
+    const btn = R.summary.danger && top && t !== 'fb' ? `<button class="btn sm pri" data-act="w3j-fgo" data-m="${esc(top.member_no)}">맞춤 피드백 만들기</button>` : '';
+    return EFH.todo(txt, btn);
+  }
+  ACT['w3j-fgo'] = el => { UI.w3jFm = el.dataset.m; UI.w3jT = 'fb'; render(); };
   const v = x => x == null ? '—' : x;
 
   /* 추이 + 예측 SVG(선: 기록, 점선: 2주 뒤 예측) */
@@ -111,10 +122,11 @@
   function jRisk(sec) {
     const R = W3.get('jrisk:' + sec.section_id, 'GET', '/api/lms/j/risk', { section_id: sec.section_id }); if (R === undefined) return W3.loading; if (R.__err) return `<div class="empty">${esc(R.__err)}</div>`;
     const sel = R.students.find(s => s.member_no === UI.w3jM) || R.students[0]; if (sel) UI.w3jM = sel.member_no;
+    const dots = window.EFH ? EFH.dots : () => ''; const mi = window.EFH ? EFH.mi : () => '';
     return `<div class="kpis">${kpi('위험', R.summary.danger + '명', '위험지수 50 이상', R.summary.danger ? 'warn' : '')}${kpi('주의', R.summary.warn + '명', '30~49')}${kpi('양호', R.summary.ok + '명')}${kpi('평균 위험지수', String(R.summary.avg_risk))}</div>
-      <div class="card"><div class="ch"><b>학습 부진 복합 지표</b><small>비교과 출처: ${R.extra_source === 'none' ? '비교과(묶음 Q) 데이터 없음 → 0점' : esc(R.extra_source)}</small><button class="btn sm" data-act="w3j-snap">오늘 기록 저장</button><button class="btn sm" data-act="w3j-csv">CSV</button></div>
-      ${table(['학번', '학과', '학년', '성적', '출석', '진도', '비교과', '위험지수', '등급', '2주 뒤', '중도이탈', ''], R.students.map(s => [`<b>${esc(s.member_no)}</b>`, esc(s.unit_code || ''), v(s.grade_year), v(s.grade), v(s.attendance), v(s.participation), s.extra, `<b class="w3-lvl-${s.level}">${s.risk}</b>`, tag(LVN[s.level], LVT[s.level]), (s.predicted > s.risk ? '▲ ' : s.predicted < s.risk ? '▼ ' : '') + s.predicted, s.dropout_pct + '%', `<button class="btn sm ghost" data-act="w3j-pick" data-m="${esc(s.member_no)}">그래프</button>`]))}</div>
-      ${sel ? `<div class="card"><div class="ch"><b>${esc(sel.member_no)} 현재 상태 · 예측</b><small>최근 기록 8개의 추세로 2주 뒤를 예측합니다(기록이 2개 미만이면 현재값)</small></div>${chart(sel.trend, sel.predicted)}</div>` : ''}`;
+      <div class="card"><div class="ch"><b>학습 부진 복합 지표</b><small>행을 누르면 성적 · 출석 · 진도와 추이 그래프 · 비교과 출처: ${R.extra_source === 'none' ? '비교과 데이터 없음 → 0점' : esc(R.extra_source)}</small><span class="efh-acts">${dots([mi('w3j-snap', '오늘 기록 저장(추이에 쌓기)'), mi('w3j-csv', '엑셀(CSV) 내려받기')], '학습 분석 다른 작업')}</span></div>
+      ${R.students.length ? `<div class="tw nomcard"><table class="efh-board"><thead><tr><th>학번</th><th>위험지수</th><th>2주 뒤</th><th>중도이탈</th></tr></thead><tbody>${R.students.map(s => `<tr class="efh-row${sel && sel.member_no === s.member_no ? ' on' : ''}" data-act="w3j-pick" data-m="${esc(s.member_no)}" tabindex="0"><td><b>${esc(s.member_no)}</b><small class="efh-sub2">${esc(s.unit_code || '')}${s.grade_year ? ' · ' + s.grade_year + '학년' : ''}</small></td><td><b class="w3-lvl-${s.level}">${s.risk}</b> ${tag(LVN[s.level], LVT[s.level])}</td><td>${(s.predicted > s.risk ? '▲ ' : s.predicted < s.risk ? '▼ ' : '') + s.predicted}</td><td>${s.dropout_pct}%</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">수강생이 없습니다.</div>'}</div>
+      ${sel ? `<div class="card"><div class="ch"><b>${esc(sel.member_no)} 현재 상태 · 예측</b><small>성적 ${v(sel.grade)} · 출석 ${v(sel.attendance)}% · 진도 ${v(sel.participation)}% · 비교과 ${sel.extra} — 최근 기록 8개의 추세로 2주 뒤를 예측합니다</small></div>${chart(sel.trend, sel.predicted)}</div>` : ''}`;
   }
   ACT['w3j-pick'] = el => { UI.w3jM = el.dataset.m; render(); };
   ACT['w3j-snap'] = () => W3.act(() => W3.call('POST', '/api/lms/j/snapshot', { section_id: UI.w3sec }), r => `${r.day} 기록 ${r.saved}명을 저장했습니다.`).then(() => { W3.drop('jrisk:'); render(); });
@@ -127,8 +139,8 @@
       ${table(['이름', '지표', '조건', '등급', ''], (RL.length ? RL : T.rules).map(r => [esc(r.name), esc(MET[r.metric]), `${r.threshold} ${op[r.op]}`, tag(LVN[r.level], LVT[r.level]), r.rule_id ? `<button class="btn sm ghost" data-act="w3j-rdel" data-id="${esc(r.rule_id)}">삭제</button>` : '기본']))}
       <div class="form2"><label>이름<input id="w3rn" maxlength="60" placeholder="예: 진도율 40% 이하"></label><label>지표<select id="w3rm">${Object.entries(MET).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label><label>조건<select id="w3ro"><option value="gte">이상</option><option value="lte">이하</option></select></label><label>값<input type="number" id="w3rt" min="0" max="100" value="50"></label><label>등급<select id="w3rl"><option value="warn">주의</option><option value="danger">위험</option></select></label></div>
       <button class="btn sm" data-act="w3j-radd">규칙 추가</button></div>
-      <div class="card"><div class="ch"><b>경고 대상 ${T.targets.length}명</b><button class="btn sm" data-act="w3j-tcsv">CSV</button><button class="btn sm pri" data-act="w3j-notify">안내 보내기</button></div>
-      ${table(['학번', '학과', '등급', '위험지수', '중도이탈', '출석', '진도', '성적', '해당 규칙'], T.targets.map(t => [`<b>${esc(t.member_no)}</b>`, esc(t.unit_code || ''), tag(LVN[t.level], LVT[t.level]), t.risk, t.dropout_pct + '%', v(t.attendance), v(t.participation), v(t.grade), esc(t.matched.join(', '))]), '경고 대상이 없습니다.')}</div>`;
+      <div class="card"><div class="ch"><b>경고 대상 ${T.targets.length}명</b><span class="efh-acts"><button class="btn sm" data-act="w3j-notify">안내 보내기</button>${window.EFH ? EFH.dots([EFH.mi('w3j-tcsv', '엑셀(CSV) 내려받기')], '경고 대상 다른 작업') : ''}</span></div>
+      ${table(['학번', '등급', '위험지수', '해당 규칙'], T.targets.map(t => [`<b>${esc(t.member_no)}</b><small class="efh-sub2">${esc(t.unit_code || '')} · 출석 ${v(t.attendance)} · 진도 ${v(t.participation)} · 성적 ${v(t.grade)}</small>`, tag(LVN[t.level], LVT[t.level]), `${t.risk}<small class="efh-sub2">중도이탈 ${t.dropout_pct}%</small>`, esc(t.matched.join(', '))]), '경고 대상이 없습니다.')}</div>`;
   }
   ACT['w3j-radd'] = () => W3.act(() => W3.call('POST', '/api/lms/j/rule', { name: $('#w3rn').value.trim() || `${MET[$('#w3rm').value]} ${$('#w3rt').value} ${$('#w3ro').value === 'gte' ? '이상' : '이하'}`, metric: $('#w3rm').value, op: $('#w3ro').value, threshold: +$('#w3rt').value, level: $('#w3rl').value }), '규칙을 추가했습니다.').then(() => { W3.drop('jrules'); W3.drop('jtar:'); render(); });
   ACT['w3j-rdel'] = el => W3.act(() => W3.call('POST', '/api/lms/j/rule/delete', { rule_id: el.dataset.id }), '삭제했습니다.').then(() => { W3.drop('jrules'); W3.drop('jtar:'); render(); });
@@ -137,7 +149,7 @@
 
   function jIns(sec) {
     const I = W3.get('jins:' + sec.section_id, 'GET', '/api/lms/j/insights', { section_id: sec.section_id }); if (I === undefined) return W3.loading; if (I.__err) return `<div class="empty">${esc(I.__err)}</div>`;
-    const grp = (title, G) => `<div class="card"><div class="ch"><b>${title}</b></div>${table(['그룹', '인원', '위험지수', '출석', '진도', '성적', '위험'], G.map(g => [esc(g.g), g.n, `${bar(g.risk, g.risk >= 50 ? 'r' : '')} ${v(g.risk)}`, v(g.attendance), v(g.participation), v(g.grade), g.danger]))}</div>`;
+    const grp = (title, G) => `<div class="card"><div class="ch"><b>${title}</b></div>${table(['그룹', '인원', '위험지수', '출석', '진도'], G.map(g => [`<b>${esc(g.g)}</b><small class="efh-sub2">성적 ${v(g.grade)} · 위험 ${g.danger}명</small>`, g.n, `${bar(g.risk, g.risk >= 50 ? 'r' : '')} ${v(g.risk)}`, v(g.attendance), v(g.participation)]))}</div>`;
     return `<div class="card"><div class="ch"><b>학습 패턴 인사이트</b><small>규칙 기반 자동 생성</small></div>${I.patterns.length ? `<ul>${I.patterns.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '<div class="empty">두드러진 패턴이 없습니다.</div>'}</div>` + grp('학과별', I.by_unit) + grp('학년별', I.by_year);
   }
 
