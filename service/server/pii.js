@@ -90,6 +90,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
     const consent = b.consent || {}; if (!consent.tos || !consent.privacy) throw new HttpErr(400, '필수 약관(이용약관 · 개인정보 수집 · 이용)에 동의해 주세요.', 'consent');
     const out = await tx(tid, async ({ L, P }) => {
       const org = await orgOf(L, tid); const univ = org.type === 'univ';
+      if (org.strictPw && !consent.third) throw new HttpErr(400, '개인정보 제3자 제공(고용노동부, 한국산업인력공단)에 동의해 주세요.', 'consent_third');
       if (org.mode === 'code' && !univ) throw new HttpErr(403, '이 기관은 접근코드로만 로그인합니다.', 'mode');
       if (org.mode === 'invite') throw new HttpErr(403, '초대받은 회원만 가입할 수 있습니다.', 'mode');
       let nick = String(b.nickname || '').trim(); let login = via, sub = null, email = '', stu = null, dept = '';
@@ -111,7 +112,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       let lid;
       try { lid = (await L('insert into learner_accounts (tenant_id, kind, login, nickname, student_no, dept, status, minor, mkt) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning learner_id', [tid, 'learner', univ ? 'univ' : login, nick, stu, dept, st, minor, !!consent.mkt])).rows[0].learner_id; }
       catch (e) { if (e.code === '23505') throw new HttpErr(409, '이미 가입한 학번입니다. 로그인하거나 비밀번호를 찾으세요.', 'exists'); throw e; }
-      const cons = { tos: true, privacy: true, mkt: !!consent.mkt, ver: String(consent.ver || 'v23').slice(0, 20), at: new Date().toISOString() };
+      const cons = { tos: true, privacy: true, ...(consent.third ? { third: true } : {}), mkt: !!consent.mkt, ver: String(consent.ver || 'v23').slice(0, 20), at: new Date().toISOString() };
       try { await P('insert into pii.identity (tid, learner_id, provider, provider_sub_hash, email_bidx, email_enc, email_mask, pw_hash, consent) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [tid, lid, univ ? 'univ' : login, sub, email ? bidx(tid, 'email', email) : null, email ? enc(email, aad(tid, lid, 'email')) : null, email ? maskEmail(email) : null, pw, JSON.stringify(cons)]); }
       catch (e) { if (e.code === '23505') throw new HttpErr(409, univ ? '이미 가입한 학번입니다.' : via === 'email' ? '이미 가입한 이메일입니다. 로그인하세요.' : '이미 가입한 SNS 계정입니다. 로그인하세요.', 'exists'); throw e; }
       let gtok = '';
@@ -162,6 +163,8 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
   const acctOf = async (L, tid, sid) => (await L('select learner_id, kind, login, nickname, student_no, dept, status, minor, idv_ok, mkt from learner_accounts where tenant_id = $1 and learner_id::text = $2', [tid, sid])).rows[0] || null;
   async function meExtra(c, tid, sid) { if (!/^[0-9a-f-]{36}$/.test(sid)) return null; const a = (await c.query('select kind, login, nickname, student_no, dept, status, minor, idv_ok from learner_accounts where tenant_id = $1 and learner_id = $2', [tid, sid])).rows[0]; return a ? { nickname: a.nickname, kind: a.kind, login: a.login, student_no: a.student_no, dept: a.dept, minor: a.minor, idv_ok: a.idv_ok, status: a.status } : null; }
 
+  const isAccount = sid => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(sid));
+  const changePw = (tid, lid, cur, pw) => tx(tid, async ({ P }) => { const r = (await P('select pw_hash from pii.identity where tid = $1 and learner_id = $2', [tid, lid])).rows[0]; if (!r || !r.pw_hash || !(await checkPw(cur, r.pw_hash))) throw new HttpErr(401, '비밀번호가 올바르지 않습니다.', 'login'); await P('update pii.identity set pw_hash = $3 where tid = $1 and learner_id = $2', [tid, lid, await hashPw(pw)]); await plog(P, tid, 'self', 'pw_change', lid, 'self', []); });
   async function myPii(req, res, tid, s) {
     if (req.method === 'GET') return tx(tid, async ({ P }) => { const r = (await P('select learner_id, provider, email_enc, phone_enc, name_enc, consent, created_at from pii.identity where tid = $1 and learner_id::text = $2', [tid, s.sid])).rows[0]; if (!r) throw new HttpErr(404, '계정 정보가 없습니다.', 'none');
       await plog(P, tid, 'self', 'view', r.learner_id, 'self_access', ['email', 'phone', 'name']);
@@ -237,7 +240,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
     return n;
   }
 
-  return { pubOpen: { 'POST otp': otp, 'POST signup': signup, 'POST guardian': guardian }, pubAuth: { 'GET pii': myPii, 'PUT pii': myPii, 'POST withdraw': withdraw, 'POST verify': verify }, login, meExtra, adminList, adminPii, adminLog, purge, maskEmail };
+  return { isAccount, changePw, pubOpen: { 'POST otp': otp, 'POST signup': signup, 'POST guardian': guardian }, pubAuth: { 'GET pii': myPii, 'PUT pii': myPii, 'POST withdraw': withdraw, 'POST verify': verify }, login, meExtra, adminList, adminPii, adminLog, purge, maskEmail };
 }
 
 module.exports = { createPii, piiKeys, maskEmail };

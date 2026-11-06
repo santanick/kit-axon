@@ -6,6 +6,8 @@
   <sql id="iso">'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'</sql>
 
   <!-- ── L: 학습 · 운영 데이터 ── -->
+  <select id="selectIdentityPw" resultType="java.lang.String">select pw_hash from pii.identity where tid = #{tid} and learner_id = cast(#{lid} as uuid)</select>
+  <update id="updateIdentityPw">update pii.identity set pw_hash = #{hash} where tid = #{tid} and learner_id = cast(#{lid} as uuid)</update>
   <select id="selectOrg" resultType="java.util.LinkedHashMap">
     select doc->'org'->>'type' type, (doc->'settings'->'acct')::text acct, (doc->'org'->'cpl')::text cpl from tenant_state where tenant_id = #{tid}
   </select>

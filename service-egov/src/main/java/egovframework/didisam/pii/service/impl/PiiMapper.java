@@ -7,6 +7,8 @@ import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 
 @EgovMapper
 public interface PiiMapper {
+    String selectIdentityPw(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("lid") String lid);
+    void updateIdentityPw(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("lid") String lid, @org.apache.ibatis.annotations.Param("hash") String hash);
     /* L */
     Map<String, Object> selectOrg(@Param("tid") String tid);
     String insertAccount(@Param("tid") String tid, @Param("login") String login, @Param("nick") String nick, @Param("stu") String stu, @Param("dept") String dept,

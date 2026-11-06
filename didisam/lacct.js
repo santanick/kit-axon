@@ -131,6 +131,7 @@ function laJoinState(tok, inv) { if (!LA.j || LA.j.tok !== tok) LA.j = { tok, in
 function laConsentHTML(J, U) { const k = J.keep || {}; const ck = n => k[n] ? 'checked' : '';
   return `<fieldset class="la-terms"><legend class="sr">약관 동의</legend><label class="ckl all"><input type="checkbox" data-ac="jall" ${k.tos && k.privacy && (U || k.mkt) ? 'checked' : ''}> <b>전체 동의</b> <small>(선택 항목 포함)</small></label>
     <label class="ckl"><input type="checkbox" name="tos" ${ck('tos')}> [필수] 이용약관 동의</label><details><summary>전문 보기</summary><pre>${esc(laCfg().tos || '이용약관은 기관 홈페이지 하단에서 확인할 수 있습니다.')}</pre></details>
+    ${(() => { const P = (SITE().cpl || {}); return P.on && /^moel-/.test(String(P.profile || '')) ? `<label class="ckl"><input type="checkbox" name="third" ${ck('third')}> [필수] 개인정보 제3자 제공 동의</label><details open><summary>제공 대상: 고용노동부, 한국산업인력공단</summary><p class="mini">목적: 훈련 지원 · 모니터링 / 항목: 이름, 연락처, 학습 이력, 평가 결과 / 수강 확인 문자(ACS)가 발송될 수 있습니다.</p></details>` : ''; })()}
     <label class="ckl"><input type="checkbox" name="privacy" ${ck('privacy')}> [필수] 개인정보 수집 · 이용 동의</label><details><summary>받는 항목: 로그인 수단(이메일 또는 SNS 식별값) · 닉네임 / 목적: 회원 식별 · 학습 서비스 / 보유: 탈퇴 시 파기 <u>자세히</u></summary>${laPolicyHTML(U, true)}</details>
     ${U ? '' : `<label class="ckl"><input type="checkbox" name="mkt" ${ck('mkt')}> [선택] 마케팅 정보 수신 동의 <small>— 동의하지 않아도 가입할 수 있습니다</small></label>`}</fieldset>`; }
 function laJoin(r) { const cfg = laCfg(); const tok = (r.b || '').replace(/[^\w-]/g, ''); const U = laUniv();
@@ -169,14 +170,14 @@ function laJoinDone(J) { const d = J.done;
   if (d.status === 'guardian_pending') return `<div class="gate">${ico('clock', 28)}<h2>보호자 동의를 기다리고 있습니다</h2><p class="lead">보호자(${esc(d.gmask)})에게 동의 링크를 보냈습니다. 보호자가 동의하면 바로 로그인할 수 있습니다. 7일 안에 동의가 없으면 가입 정보는 자동으로 삭제됩니다.</p><div class="cta"><a class="lbtn ghost" href="#guardian/${esc(d.gtok)}" data-demo="1">보호자 동의 화면 열기(데모)</a>${btn('홈으로', '#home', 'ghost')}</div><p class="mini">운영: 보호자에게 이메일 또는 알림톡으로 learner.html?t=…#guardian/… 링크를 발송합니다.</p></div>`;
   if (d.grade === '승인 대기') return `<div class="gate">${ico('clock', 28)}<h2>가입 신청이 접수되었습니다</h2><p class="lead">운영자 승인 후 이용할 수 있습니다. 승인되면 알림으로 안내합니다.</p><div class="cta"><a class="lbtn pri" href="#pending">승인 상태 확인</a>${btn('홈으로', '#home', 'ghost')}</div></div>`;
   return `<div class="gate">${ico('check', 28)}<h2>가입이 완료되었습니다</h2><p class="lead">${esc(SITE().org.name)}에 오신 것을 환영합니다, <b>${esc(d.nick)}</b>님.</p><div class="cta">${btn(J.kind === 'parent' ? '가족 연결하기' : '학습 시작', J.kind === 'parent' ? '#family' : '#my', 'pri')}</div></div>`; }
-function laJoinKeep(f) { const J = LA.j; if (!J || !f) return; const g = n => f.elements[n]; J.keep = { ...(J.keep || {}), ...Object.fromEntries(['tos', 'privacy', 'mkt'].filter(n => g(n)).map(n => [n, g(n).checked])), ...Object.fromEntries(['email', 'nick', 'gcontact', 'sid', 'dept'].filter(n => g(n)).map(n => [n, g(n).value])), ...(g('age14') && g('age14').type === 'checkbox' ? { age14: g('age14').checked } : {}) }; }
+function laJoinKeep(f) { const J = LA.j; if (!J || !f) return; const g = n => f.elements[n]; J.keep = { ...(J.keep || {}), ...Object.fromEntries(['tos', 'privacy', 'third', 'mkt'].filter(n => g(n)).map(n => [n, g(n).checked])), ...Object.fromEntries(['email', 'nick', 'gcontact', 'sid', 'dept'].filter(n => g(n)).map(n => [n, g(n).value])), ...(g('age14') && g('age14').type === 'checkbox' ? { age14: g('age14').checked } : {}) }; }
 /* 동의 · 나이 확인(가입 버튼 · SNS 버튼 공통) */
 function laJoinCheck(f, err) { const cfg = laCfg(); const J = LA.j; const U = laUniv(); const ck = n => !!(f.elements[n] && f.elements[n].checked);
-  if (!ck('tos') || !ck('privacy')) return err('필수 약관(이용약관 · 개인정보 수집 · 이용)에 동의해 주세요.');
-  if (U || J.kind === 'parent') return { age14: true, consent: { tos: true, privacy: true, mkt: ck('mkt') } };
+  if (!ck('tos') || !ck('privacy')) return err('필수 약관(이용약관 · 개인정보 수집 · 이용)에 동의해 주세요.'); if (f.elements.third && !ck('third')) return err('개인정보 제3자 제공에 동의해 주세요.');
+  if (U || J.kind === 'parent') return { age14: true, consent: { tos: true, privacy: true, ...(ck('third') ? { third: true } : {}), mkt: ck('mkt') } };
   const age14 = ck('age14'); let gc = '';
   if (!age14) { if (!cfg.under14) return err('이 기관은 만 14세 이상만 가입할 수 있습니다.'); gc = String(f.elements.gcontact && f.elements.gcontact.value || '').trim(); const ph = laPhone(gc); if (!LA_MAIL_RE.test(gc) && !LA_PHONE_RE.test(ph)) return err('보호자 이메일 또는 휴대폰 번호를 정확히 입력하세요.'); if (LA_PHONE_RE.test(ph)) gc = ph; }
-  return { age14, gcontact: gc, consent: { tos: true, privacy: true, mkt: ck('mkt') } }; }
+  return { age14, gcontact: gc, consent: { tos: true, privacy: true, ...(ck('third') ? { third: true } : {}), mkt: ck('mkt') } }; }
 function laExtra(f, err) { const cfg = laCfg(); const U = laUniv(); const J = LA.j; const Q = J.kind === 'parent' ? [] : cfg.extraQ.filter(q => !(U && ['학번', '학과'].includes(q.q))); const extra = {};
   for (let i = 0; i < Q.length; i++) { const q = Q[i]; const el = f.elements['xq' + i]; if (!el) continue;
     if (q.type === 'file') { const fl = el.files && el.files[0]; if (!fl) { if (q.req) return err(`「${q.q}」 파일을 첨부하세요.`); continue; } if (fl.size > 10 * 1024 * 1024) return err('첨부 파일은 10MB 이하만 올릴 수 있습니다.'); if (!/\.(pdf|jpe?g|png|hwpx?|docx?|zip)$/i.test(fl.name)) return err('첨부 파일 형식을 확인하세요(PDF · 이미지 · 한글 · 워드 · ZIP).'); extra[q.q] = { name: fl.name.slice(0, 120), size: fl.size, type: fl.type || '' }; /* 운영: 파일 서버 업로드 후 메타데이터만 저장 */ }
@@ -293,6 +294,7 @@ async function laAcctSubmit(f) { const acc = laFind(LR.me.sid); if (!acc) return
   if (f.id === 'laPhone') { const p = laPhone(fd('phone')); if (!LA_PHONE_RE.test(p)) return err('laHErr', '휴대폰 번호를 확인하세요.'); if (!f.elements.agree.checked) return err('laHErr', '알림톡 발송을 위한 휴대폰 번호 수집 · 이용에 동의해 주세요.'); const V = laV(); if (!V.ids[acc.sid]) return err('laHErr', '이 계정은 운영자가 관리합니다. 운영자에게 문의하세요.');
     V.ids[acc.sid].phone = p; V.ids[acc.sid].phoneAt = new Date().toISOString(); laVLog(V, 'update', acc.sid, 'alimtalk', ['phone']); laVSave(V); /* 운영: PUT /api/pub/<tid>/pii { field:'phone', purpose:'alimtalk' } — 알림톡은 서버가 이 번호로 발송(운영자에게 번호 비노출) */
     lpxPush('acct-profile', { sid: acc.sid, alimtalk: true }); toast('알림톡 수신을 등록했습니다.', 'ok'); lrender(); return; }
+  if (f.id === 'laPw' && LR.mode === 'live') { const p1 = f.elements.pw.value; if (p1 !== f.elements.pw2.value) return err('laWErr', '새 비밀번호가 서로 다릅니다.'); api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/cpl`, { kind: 'pw-change', cur: f.elements.cur ? f.elements.cur.value : '', pw: p1 }).then(() => { toast('비밀번호를 변경했습니다.', 'ok'); f.reset(); }).catch(x => err('laWErr', x.message)); return; }
   if (f.id === 'laPw') { const p1 = f.elements.pw.value; if (acc.pw && laPw(acc.pwKey, f.elements.cur.value) !== acc.pw) return err('laWErr', '현재 비밀번호가 올바르지 않습니다.'); if (!LA_PW_RE.test(p1)) return err('laWErr', '비밀번호는 영문 · 숫자 · 특수문자(~!@#$%^&*) 조합 8~20자입니다.'); if (p1 !== f.elements.pw2.value) return err('laWErr', '새 비밀번호가 서로 다릅니다.'); const h = laPw(acc.pwKey, p1); const prev = (laV().ids[acc.sid] || {}).prevPw; if (h === acc.pw || h === prev) return err('laWErr', '직전에 쓰던 비밀번호는 다시 쓸 수 없습니다.');
     laSetPw(acc, h); toast(acc.pw ? '비밀번호를 바꿨습니다.' : '비밀번호를 설정했습니다.', 'ok'); lrender(); return; }
   if (f.id === 'laAns') { const cfg = laCfg(); const Q = cfg.extraQ.filter(q => !(U && ['학번', '학과'].includes(q.q))); const ex = {};
@@ -371,7 +373,7 @@ function laRekeep(fid, fn) { const f = fid && $('#' + fid); const keep = f ? Obj
 document.addEventListener('click', async e => { const el = e.target.closest('[data-ac]'); if (!el) return; const k = el.dataset.ac, v = el.dataset.v; if (el.tagName !== 'INPUT') e.preventDefault(); const J = LA.j;
   if (k === 'dlgx') laDlgX();
   if (k === 'jkind' && J) { laJoinKeep($('#laJoin')); J.kind = v; lrender(); }
-  if (k === 'jall') { const f = el.closest('form'); ['tos', 'privacy', 'mkt'].forEach(n => { if (f.elements[n]) f.elements[n].checked = el.checked; }); }
+  if (k === 'jall') { const f = el.closest('form'); ['tos', 'privacy', 'third', 'mkt'].forEach(n => { if (f.elements[n]) f.elements[n].checked = el.checked; }); }
   if (k === 'jage') { const g = el.closest('form').querySelector('.la-guard'); if (g) g.hidden = el.checked; }
   if (k === 'jsnsx' && J) { J.sns = null; lrender(); }
   if (k === 'jsns' && J) { const f = el.closest('form'); const err = m => { const x = $('#laJErr'); if (x) x.textContent = m; return false; }; laJoinKeep(f); if (!laJoinCheck(f, err)) return; err(''); laSocDlg(v, 'join'); }
