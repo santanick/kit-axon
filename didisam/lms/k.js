@@ -4,7 +4,7 @@
    운영(서버) 모드: /api/lms/k/* 호출. 데모 모드: S.lms.k 상태 + 같은 규칙의 브라우저 엔진. 공용 도우미 LW4는 묶음 N · Q도 쓴다. */
 (function () {
   'use strict';
-  if (!document.querySelector('link[data-lw4]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/k.css?v=30.0'; l.dataset.lw4 = '1'; document.head.appendChild(l); }
+  if (!document.querySelector('link[data-lw4]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/k.css?v=31.8'; l.dataset.lw4 = '1'; document.head.appendChild(l); }
 
   /* ── 공용 도우미(K · N · Q) ── */
   const LW4 = window.LW4 = window.LW4 || { demo: {} };
@@ -39,6 +39,19 @@
   LW4.pickFile = accept => new Promise(ok => { const i = document.createElement('input'); i.type = 'file'; i.accept = accept; i.onchange = () => { const f = i.files[0]; if (!f) return ok(null); const r = new FileReader(); r.onload = () => ok(r.result); r.readAsText(f, 'utf-8'); }; i.click(); });
   LW4.st = (txt, tone = '') => `<span class="lw-st ${tone}">${esc(txt)}</span>`;
   LW4.hbar = (label, pct, right) => `<div class="lw-hbar"><span>${esc(label)}</span><span><i style="width:${Math.max(0, Math.min(100, +pct || 0))}%"></i></span><span>${esc(right)}</span></div>`;
+  /* ── 화면 단순화 도우미(2단계: 탭 4개 + 더 보기 · 주 버튼 1개 + ⋯ · 「지금 할 일」 한 줄 · 데모 표시) — K · N · Q · L · D 공용 ──
+     펼침 목록은 ux.js의 details.uxmore 처리(화면 기준 position:fixed 배치 · 바깥 클릭 닫기)를 그대로 쓴다. */
+  LW4.more = (items, label, cls = '') => items ? `<details class="uxmore lw-more ${cls}"><summary title="다른 작업">${label || `${typeof ic === 'function' ? ic('dots', 18) : '⋯'}<span class="sr">다른 작업</span>`}</summary><div class="uxpop" role="menu">${items}</div></details>` : '';
+  LW4.mi = (act, label, data = {}, cls = '') => `<button type="button" role="menuitem" class="${cls}" data-act="${act}"${Object.entries(data).map(([k, v]) => ` data-${k}="${esc(String(v))}"`).join('')}>${esc(label)}</button>`;
+  LW4.tabs = (key, list, cur, n = 4, act = 'tab') => {
+    const vis = list.slice(0, n); if (cur && !vis.some(x => x[0] === cur)) { const c = list.find(x => x[0] === cur); if (c) vis[n - 1] = c; }
+    const rest = list.filter(x => !vis.includes(x)); let h = tabs(key, vis, cur); if (act !== 'tab') h = h.split('data-act="tab"').join(`data-act="${act}"`);
+    return `<div class="lw-tabrow">${h}${rest.length ? LW4.more(rest.map(([id, l]) => `<button type="button" role="menuitem" data-act="${act}" data-key="${esc(key)}" data-v="${esc(id)}">${esc(l)}</button>`).join(''), `더 보기 <em>${rest.length}</em>`, 'lw-tabmore') : ''}</div>`;
+  };
+  /* 지금 할 일: [{ n, t: '승인 대기', btn: '<button …>' }] — 숫자가 0인 항목은 뺀다 */
+  LW4.todo = (items, none = '지금 처리할 일이 없습니다.') => { const L = items.filter(x => x && x.n); return `<div class="lw-todo" role="status"><b class="lw-todoh">지금 할 일</b>${L.length ? L.map(x => `<span class="lw-todoi"><em>${x.n}</em>${esc(x.t)}${x.btn ? ' ' + x.btn : ''}</span>`).join('') : `<span class="lw-todoi lw-muted">${esc(none)}</span>`}</div>`; };
+  LW4.go = (act, label, data = {}) => `<button type="button" class="btn sm lw-go" data-act="${act}"${Object.entries(data).map(([k, v]) => ` data-${k}="${esc(String(v))}"`).join('')}>${esc(label)} →</button>`;
+  LW4.demoTag = live => (live === undefined ? LW4.live() : live) ? '' : '<small class="lw-demo" title="학교 서버와 연동하기 전 데모 모드입니다. 저장한 내용은 이 브라우저에만 남습니다.">데모: 브라우저에만 저장</small>';
   LW4.addMenu = (id, def, after) => {
     MENU[id] = def;
     if (PRESET.univ_lms && !PRESET.univ_lms.on.includes(id)) PRESET.univ_lms.on.push(id);
@@ -164,6 +177,11 @@
     s.status = 'open'; K.surveys.push(s, t, t2);
     [['20261001', 0, [0, 1], 4], ['20261002', 1, [1], 3], ['20261003', 0, [0, 2], 5], ['20261004', 2, [2], 2], ['20261006', 0, [0], 4], ['20261007', 1, [0, 1, 2], 4]]
       .forEach(([no, a, b, c]) => store(s, no, { 1: a, 2: b, 3: c, 4: no.endsWith('3') ? '도서관 좌석이 더 필요합니다.' : '' }, 'web'));
+    /* 데모 학기 2026-2: 배포 전 만족도 설문 1 · 진행 중 중간 강의평가 1(응답 일부) */
+    const d1 = mk({ title: '2026-2 비교과 프로그램 만족도', langs: ['ko'], scope: 'program', target: { kinds: ['student'] } }, actor); putQs(d1, t.questions.map(q => ({ type: q.type, text: { ...q.text }, required: q.required })));
+    const e1 = mk({ title: '2026-2 중간 강의평가 · 프로그래밍 기초 01', kind: 'course_eval', scope: 'section', langs: ['ko', 'en'], gate_steps: ['grade'], target: { kinds: ['student'] } }, actor); putQs(e1, EVALQ); e1.status = 'open';
+    K.surveys.push(d1, e1);
+    [['20261001', 5, 4, 5, 4, 5], ['20261002', 4, 4, 3, 4, 4], ['20261005', 5, 5, 4, 5, 5]].forEach(([no, ...v]) => store(e1, no, { 1: v[0], 2: v[1], 3: v[2], 4: v[3], 5: v[4], 6: no === '20261002' ? '실습 시간이 조금 더 있으면 좋겠습니다.' : '' }, 'web'));
   }
 
   /* ═════════ 화면 ═════════ */
@@ -180,32 +198,34 @@
   VIEWS.lmsk = () => {
     const U = KS(); if (U.list === null) { U.list = []; setTimeout(refresh); }
     const tb = UI.lmskT || 'list'; const canOp = S.me.role !== 'teacher';
-    const top = head('설문 · 강의평가', '대학 · 학과 · 프로그램 · 분반 · 차시 단위 설문을 만들고 배포합니다. 다국어 문항, 템플릿, 통계(빈도 · 교차 · 리커트), 강의평가와 「설문 미참여 시 다음 단계 제한」을 함께 다룹니다.',
-      `<button class="btn pri" data-act="lmsk-new">새 설문</button>`) +
-      tabs('lmskT', [['list', '설문'], ['tpl', '템플릿'], ['eval', '강의평가'], ['stat', '통계'], ['gate', '다음 단계 제한'], ['me', '학생 화면']], tb);
+    const L0 = U.list || []; const nOpen = L0.filter(s => s.status === 'open').length, nDraft = L0.filter(s => s.status === 'draft').length, nEval0 = L0.filter(s => s.kind === 'course_eval' && s.status === 'open').length;
+    const top = head('설문 · 강의평가', `템플릿을 골라 설문을 만들고, 배포한 뒤 결과를 봅니다. ${LW4.demoTag()}`,
+      (canOp ? LW4.more(LW4.mi('lmsk-new', '빈 설문 직접 만들기') + LW4.mi('tab', '강의평가 일괄 만들기', { key: 'lmskT', v: 'eval' }) + LW4.mi('tab', '템플릿 관리', { key: 'lmskT', v: 'tpl' })) : LW4.more(LW4.mi('lmsk-new', '빈 설문 직접 만들기'))) +
+      `<button class="btn pri" data-act="lmsk-start">템플릿으로 새 설문</button>`) +
+      LW4.todo([{ n: nDraft, t: '건 배포 전(작성 중)', btn: LW4.go('lmsk-f', '배포하기', { k: 'fs', v: 'draft' }) }, { n: nOpen, t: '건 진행 중', btn: canOp ? LW4.go('lmsk-f', '응답 현황 · 독려', { k: 'fs', v: 'open' }) : '' }, { n: nEval0, t: '건 강의평가 진행 중' }], '배포를 기다리는 설문이 없습니다. 「템플릿으로 새 설문」으로 시작하세요.') +
+      LW4.tabs('lmskT', [['list', '설문 목록'], ['stat', '결과 통계'], ['eval', '강의평가'], ['tpl', '템플릿'], ['gate', '미참여 제한 확인'], ['me', '학생 화면 미리보기']], tb);
     let b = '';
     if (tb === 'list' || tb === 'tpl') {
       const L = tb === 'list' ? U.list : U.tpl;
       b = (tb === 'list' ? `<div class="lw-bar"><input type="search" placeholder="설문 제목 검색" value="${esc(U.q || '')}" data-chg="lmsk-f" data-k="q" aria-label="설문 검색"><select data-chg="lmsk-f" data-k="fk" aria-label="종류"><option value="">모든 종류</option>${Object.entries(KIND).map(([k, v]) => `<option value="${k}" ${U.fk === k ? 'selected' : ''}>${v}</option>`).join('')}</select><select data-chg="lmsk-f" data-k="fs" aria-label="상태"><option value="">모든 상태</option>${Object.entries(STS).map(([k, v]) => `<option value="${k}" ${U.fs === k ? 'selected' : ''}>${v[0]}</option>`).join('')}</select></div>` : `<p class="lw-note">템플릿은 배포하지 않고, 「이 템플릿으로 만들기」로 새 설문을 만듭니다. 비교과 만족도 · 강의평가 템플릿을 기관 표준으로 관리하세요.</p>`) +
         `<div class="lw-grid">${L.map(s => `<div class="lw-card" data-survey="${esc(s.survey_id)}"><div>${LW4.st(STS[s.status][0], STS[s.status][1])} <span class="lw-pill">${esc(KIND[s.kind])}</span><span class="lw-pill">${esc(SCOPE[s.scope])}${s.scope_ref ? ' · ' + esc(s.scope_ref.slice(0, 12)) : ''}</span></div>
           <h4>${esc(s.title)}</h4><small>문항 ${s.n_q}개 · 응답 ${s.n_resp}건 · 언어 ${esc((s.langs || []).join('/'))}${s.gate_steps.length ? ' · 제한: ' + s.gate_steps.map(g => GN[g]).join(', ') : ''}${s.kind === 'course_eval' ? ' · 교수 ' + (s.prof_public ? '공개' : '미공개') : ''}</small>
-          <div class="lw-acts">${s.is_template ? `<button class="btn sm pri" data-act="lmsk-fromtpl" data-id="${esc(s.survey_id)}">이 템플릿으로 만들기</button><button class="btn sm" data-act="lmsk-edit" data-id="${esc(s.survey_id)}">편집</button>` :
-            `<button class="btn sm" data-act="lmsk-edit" data-id="${esc(s.survey_id)}">편집</button>${s.status !== 'open' ? `<button class="btn sm pri" data-act="lmsk-st" data-op="open" data-id="${esc(s.survey_id)}">배포</button>` : `<button class="btn sm" data-act="lmsk-st" data-op="close" data-id="${esc(s.survey_id)}">마감</button>`}
-            <button class="btn sm" data-act="lmsk-stat" data-id="${esc(s.survey_id)}">통계</button><button class="btn sm" data-act="lmsk-csv" data-id="${esc(s.survey_id)}">CSV</button>${canOp ? `<button class="btn sm" data-act="lmsk-up" data-id="${esc(s.survey_id)}">엑셀 업로드</button>` : ''}${canOp && s.status === 'open' ? `<button class="btn sm" data-act="lmsk-remind" data-id="${esc(s.survey_id)}">독려</button>` : ''}
-            <button class="btn sm" data-act="lmsk-copy" data-id="${esc(s.survey_id)}">복사</button>${canOp && !s.n_resp ? `<button class="btn sm red" data-act="lmsk-del" data-id="${esc(s.survey_id)}">삭제</button>` : ''}`}</div></div>`).join('') || '<div class="empty">설문이 없습니다. 「새 설문」으로 시작하세요.</div>'}</div>`;
+          <div class="lw-acts">${s.is_template ? `<button class="btn sm lw-go" data-act="lmsk-fromtpl" data-id="${esc(s.survey_id)}">이 템플릿으로 만들기</button>${LW4.more(LW4.mi('lmsk-edit', '템플릿 편집', { id: s.survey_id }))}` :
+            `${s.status !== 'open' ? `<button class="btn sm lw-go" data-act="lmsk-st" data-op="open" data-id="${esc(s.survey_id)}">배포</button>` : `<button class="btn sm" data-act="lmsk-stat" data-id="${esc(s.survey_id)}">결과 보기</button>`}${canOp && s.status === 'open' ? `<button class="btn sm" data-act="lmsk-remind" data-id="${esc(s.survey_id)}">미응답 독려</button>` : ''}
+            ${LW4.more(LW4.mi('lmsk-edit', '편집', { id: s.survey_id }) + (s.status === 'open' ? LW4.mi('lmsk-st', '마감', { op: 'close', id: s.survey_id }) : LW4.mi('lmsk-stat', '결과 통계', { id: s.survey_id })) + LW4.mi('lmsk-csv', '응답 내려받기(CSV)', { id: s.survey_id }) + (canOp ? LW4.mi('lmsk-up', '오프라인 응답 올리기(엑셀)', { id: s.survey_id }) : '') + LW4.mi('lmsk-copy', '복사', { id: s.survey_id }) + (canOp && !s.n_resp ? LW4.mi('lmsk-del', '삭제', { id: s.survey_id }) : ''))}`}</div></div>`).join('') || '<div class="empty">조건에 맞는 설문이 아직 없습니다. 「템플릿으로 새 설문」으로 시작하세요.</div>'}</div>`;
     } else if (tb === 'eval') {
       const ev = U.list.filter(s => s.kind === 'course_eval'); const secs = LW4.live() ? [] : (S.classes || []);
       b = `<div class="card"><div class="ch"><b>강의평가 만들기</b><small>분반마다 하나 · 기본 문항 또는 템플릿</small></div><div class="lw-form lw-two">
         <label>분반${secs.length ? `<select id="lmskSec">${secs.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>` : `<input id="lmskSec" placeholder="분반 ID(학사 연동 분반)">`}</label>
         <label>템플릿<select id="lmskTpl"><option value="">기본 강의평가 문항</option>${U.tpl.filter(t => t.kind === 'course_eval').map(t => `<option value="${esc(t.survey_id)}">${esc(t.title)}</option>`).join('')}</select></label></div>
         <div class="lw-form"><label class="lw-ck"><input type="checkbox" id="lmskPub"> 결과를 교수자에게 공개</label><br>${Object.entries(GN).map(([k, v]) => `<label class="lw-ck"><input type="checkbox" class="lmskG" value="${k}" ${k === 'grade' ? 'checked' : ''}> 미참여 시 ${v} 제한</label>`).join('')}</div>
-        <button class="btn pri" data-act="lmsk-eval">강의평가 만들기</button></div>` +
+        <button class="btn lw-go" data-act="lmsk-eval">강의평가 만들기</button></div>` +
         table(['강의평가', '상태', '응답', '교수 공개', ''], ev.map(s => [esc(s.title), LW4.st(STS[s.status][0], STS[s.status][1]), s.n_resp + '건', s.prof_public ? '공개' : '미공개',
           `${canOp ? `<button class="btn sm" data-act="lmsk-pub" data-id="${esc(s.survey_id)}" data-v="${s.prof_public ? '' : '1'}">${s.prof_public ? '미공개로' : '공개로'}</button>` : ''} <button class="btn sm" data-act="lmsk-stat" data-id="${esc(s.survey_id)}">결과</button>`]), '강의평가가 아직 없습니다.');
     } else if (tb === 'stat') b = statView(U);
     else if (tb === 'gate') {
       b = `<div class="card"><div class="ch"><b>설문 미참여 시 다음 단계 제한</b><small>수료 · 수료증 · 다음 단계 · 성적 확인 · 강의실 이용</small></div>
-        <p class="lw-note">설문 편집에서 제한할 단계를 고르면, 다른 기능(수료 처리 · 수료증 · 성적 확인 · 강의실 입장)이 서버 점검 주소 <code>GET /api/lms/k/gate?member_no=&amp;step=&amp;scope=&amp;ref=</code>를 불러 미참여자를 막습니다. 비교과(묶음 Q)의 이수 처리는 이미 이 점검을 씁니다.</p>
+        <p class="lw-note">설문 편집에서 「미참여 시 제한」을 고르면 수료 처리 · 수료증 · 성적 확인 · 강의실 입장 때 설문에 참여하지 않은 학생을 막습니다. 비교과 이수 처리도 이 확인을 씁니다. 학번으로 지금 상태를 확인해 보세요.</p>
         <div class="lw-bar"><input id="lmskGno" value="${esc(U.me)}" aria-label="학번" placeholder="학번"><select id="lmskGst" aria-label="단계">${Object.entries(GN).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select><select id="lmskGsc" aria-label="단위"><option value="">모든 단위</option>${Object.entries(SCOPE).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select><button class="btn" data-act="lmsk-gate">점검</button></div>
         ${U.gate ? `<div class="lw-card">${U.gate.blocked ? LW4.st('제한됨', 'bad') : LW4.st('통과', 'on')} <b>${esc(GN[U.gate.step])}</b><small>${esc(U.gate.message || '참여해야 할 설문이 없습니다.')}</small>${U.gate.pending.map(p => `<span class="lw-pill">${esc(p.title)}</span>`).join('')}</div>` : ''}</div>`;
     } else if (tb === 'me') b = meView(U);
@@ -224,7 +244,7 @@
   }
   function meView(U) {
     const sv = U.ans;
-    return `<p class="lw-note">학생 화면 미리보기 — 운영 모드에서는 학습자 포털 로그인(학교 SSO 연동 후) 학번으로 고정됩니다. 여기서는 운영자가 학번을 골라 「해당 사용자로 보기」로 확인합니다.</p>
+    return `<p class="lw-note">학생 화면 미리보기 — 학번을 골라 그 학생이 보는 「참여할 설문」과 응답 화면을 확인합니다.</p>
       <div class="lw-bar"><select id="lmskMe" aria-label="학번">${LW4.roster.map(p => `<option ${U.me === p.member_no ? 'selected' : ''}>${p.member_no}</option>`).join('')}</select><button class="btn" data-act="lmsk-pend">참여할 설문 보기</button><select data-chg="lmsk-lang" aria-label="언어"><option value="ko">한국어</option><option value="en" ${U.lang === 'en' ? 'selected' : ''}>English</option></select></div>
       ${U.pend ? `<div class="lw-grid">${U.pend.map(p => `<div class="lw-card"><h4>${esc(p.title)}</h4><small>${esc(KIND[p.kind])} · ${esc(SCOPE[p.scope])}${p.gate_steps.length ? ' · 미참여 시 ' + p.gate_steps.map(g => GN[g]).join(', ') + ' 제한' : ''}</small><div class="lw-acts"><button class="btn sm pri" data-act="lmsk-ans" data-id="${esc(p.survey_id)}">참여하기</button></div></div>`).join('') || '<div class="empty">참여할 설문이 없습니다.</div>'}</div>` : ''}
       ${sv ? `<div class="card lw-form" id="lmskAnsForm"><div class="ch"><b>${esc(sv.title_l)}</b><small>${sv.anonymous ? '익명 응답' : '기명 응답(학번)'}</small></div>${sv.intro_html ? `<div class="lw-note">${sanitize(sv.intro_html)}</div>` : ''}${sv.video_url ? `<p><a href="${esc(sv.video_url)}" target="_blank" rel="noopener">안내 영상 보기</a></p>` : ''}
@@ -282,14 +302,24 @@
     const r = await LW4.run('k', 'POST', 'survey/save', a, '설문을 저장했습니다.'); if (r) { closeModal(); logAudit && logAudit('설문 저장 — ' + r.title); refresh(); }
   }
 
-  ACT['lmsk-f'] = el => { KS()[el.dataset.k] = el.value; refresh(); };
+  ACT['lmsk-f'] = el => { KS()[el.dataset.k] = el.tagName === 'BUTTON' ? (el.dataset.v || '') : el.value; if (el.tagName === 'BUTTON') UI.lmskT = 'list'; refresh(); };
+  /* 주 흐름: 템플릿 고르기 → 제목 · 대상 → (바로 배포) */
+  ACT['lmsk-start'] = () => { const T = KS().tpl || []; if (!T.length) return editor(null);
+    modal('템플릿으로 새 설문', `<div class="lw-form"><ol class="lw-steps"><li class="on">1 템플릿 고르기</li><li class="on">2 제목 · 대상</li><li class="on">3 배포</li></ol>
+      <label>템플릿<select name="tp">${T.map(t => `<option value="${esc(t.survey_id)}">${esc(t.title)} · 문항 ${t.n_q}개</option>`).join('')}</select></label>
+      <label>설문 제목<input name="t" maxlength="200" placeholder="예: 2026-2 AI 활용 취업 캠프 만족도"></label>
+      <label>대상 단위<select name="sc">${Object.entries(SCOPE).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
+      <label class="lw-ck"><input type="checkbox" name="go" checked> 만든 뒤 바로 배포(학생 화면에 「참여할 설문」으로 보입니다)</label>
+      <p class="lw-note">문항은 템플릿 그대로 복사됩니다. 고칠 것이 있으면 배포 전에 목록의 ⋯ › 편집에서 고치세요.</p></div>`,
+      [{ id: 'c', label: '취소' }, { id: 'o', label: '만들기', kind: 'pri', run: w => { const go2 = fv(w, 'go'); LW4.run('k', 'POST', 'survey/copy', { survey_id: fv(w, 'tp'), title: fv(w, 't'), scope: fv(w, 'sc'), scope_ref: '' }, go2 ? null : '설문을 만들었습니다. 목록에서 「배포」를 누르세요.').then(async r => { if (!r) return; closeModal();
+        if (go2) await LW4.run('k', 'POST', 'survey/open', { survey_id: r.survey_id }, '설문을 만들고 배포했습니다.'); const U = KS(); U.fs = ''; U.q = ''; UI.lmskT = 'list'; refresh(); }); return false; } }]); };
   ACT['lmsk-new'] = () => editor(null);
   ACT['lmsk-edit'] = async el => { const s = await LW4.run('k', 'GET', 'survey', { survey_id: el.dataset.id }); if (s) editor(s); };
   ACT['lmsk-qadd'] = () => { readQs(); const t = $('#lmskQT').value; UI.lmskQs.push({ type: t, text: { ko: '' }, options: ['single', 'multi'].includes(t) ? [{ ko: '보기 1' }, { ko: '보기 2' }] : [], required: true, meta: {} }); drawQs(); };
   ACT['lmsk-qdel'] = el => { readQs(); UI.lmskQs.splice(+el.dataset.i, 1); drawQs(); };
   ACT['lmsk-st'] = async el => { if (await LW4.run('k', 'POST', 'survey/' + el.dataset.op, { survey_id: el.dataset.id }, el.dataset.op === 'open' ? '설문을 배포했습니다.' : '설문을 마감했습니다.')) refresh(); };
   ACT['lmsk-copy'] = async el => { if (await LW4.run('k', 'POST', 'survey/copy', { survey_id: el.dataset.id }, '복사본을 만들었습니다.')) refresh(); };
-  ACT['lmsk-fromtpl'] = el => modal('템플릿으로 설문 만들기', `<div class="lw-form"><label>제목<input name="t" maxlength="200"></label><label>단위<select name="sc">${Object.entries(SCOPE).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label><label>단위 대상 ID<input name="ref"></label></div>`,
+  ACT['lmsk-fromtpl'] = el => modal('템플릿으로 설문 만들기', `<div class="lw-form"><label>제목<input name="t" maxlength="200"></label><label>단위<select name="sc">${Object.entries(SCOPE).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label><label>대상(학과 코드 · 분반, 비우면 전체)<input name="ref"></label></div>`,
     [{ id: 'c', label: '취소' }, { id: 'o', label: '만들기', kind: 'pri', run: w => { LW4.run('k', 'POST', 'survey/copy', { survey_id: el.dataset.id, title: fv(w, 't'), scope: fv(w, 'sc'), scope_ref: fv(w, 'ref') }, '템플릿으로 설문을 만들었습니다.').then(r => { if (r) { UI.lmskT = 'list'; refresh(); } }); } }]);
   ACT['lmsk-del'] = async el => { if (await LW4.run('k', 'POST', 'survey/delete', { survey_id: el.dataset.id }, '설문을 지웠습니다.')) refresh(); };
   ACT['lmsk-stat'] = async el => { const U = KS(); const r = await LW4.run('k', 'GET', 'stats', { survey_id: el.dataset.id, by: U.by, lang: U.lang }); if (r) { U.stat = r; UI.lmskT = 'stat'; render(); } };

@@ -46,29 +46,47 @@
     AFTER.push(up);
   };
   LMP.guard = (view) => () => (window.ULMS && ULMS() ? view() : `<div class="empty">대학 학사 LMS 에디션에서 쓰는 화면입니다. 설정 › 기관 유형에서 학사 LMS를 고르세요.</div>`);
-  (function css() { if (document.querySelector('link[data-lmp]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/l.css?v=30.0'; l.dataset.lmp = '1'; document.head.appendChild(l); })();
+  (function css() { if (document.querySelector('link[data-lmp]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/l.css?v=31.8'; l.dataset.lmp = '1'; document.head.appendChild(l); })();
 
   /* ── 데모 상태 ── */
   const ME = () => 'u:demo-' + ((S && S.me && S.me.role) || 'owner');
+  /* 데모 학기 2026-2(전남대 예시): 학사 일정 · 강좌 일정 · 대화 · 알림 규칙과 발생한 알림 */
+  const KST = (y, m, d, h = 9, mi = 0) => LMP.iso(new Date(Date.UTC(y, m - 1, d, h - 9, mi)));
+  function seed2(l) {
+    const d0 = new Date(); const at = (dd, h = 9) => { const d = new Date(d0); d.setDate(d.getDate() + dd); return KST(d.getFullYear(), d.getMonth() + 1, d.getDate(), h); };
+    const E = (scope, title, kind, starts_at, all_day) => ({ id: LMP.uuid(), scope, title, kind, starts_at, all_day: !!all_day, done: false, owner: scope === 'personal' ? ME() : null });
+    const ev = [E('academic', '2026-2학기 개강', 'event', KST(2026, 9, 1, 0), 1), E('academic', '수강 정정 마감', 'deadline', KST(2026, 9, 7, 18)), E('academic', '추석 연휴', 'holiday', KST(2026, 9, 24, 0), 1), E('academic', '중간고사 기간(10.20~10.24)', 'exam', KST(2026, 10, 20, 0), 1),
+      E('academic', '수업 일수 1/2선 · 수강 포기 마감', 'deadline', KST(2026, 10, 30, 18)), E('academic', '강의평가 시작', 'event', KST(2026, 12, 1, 0), 1), E('academic', '기말고사 기간(12.15~12.19)', 'exam', KST(2026, 12, 15, 0), 1), E('academic', '성탄절', 'holiday', KST(2026, 12, 25, 0), 1), E('academic', '성적 입력 마감', 'deadline', KST(2026, 12, 28, 18)),
+      E('course', '자료구조 01 · 퀴즈 3', 'exam', KST(2026, 11, 10, 10)), E('course', '프로그래밍 기초 01 · 과제 3 마감', 'deadline', KST(2026, 11, 12, 23)), E('course', '경영 데이터 분석 01 · 팀 발표', 'event', KST(2026, 11, 19, 13)), E('course', '간호학 개론 02 · 실습 보고서 마감', 'deadline', KST(2026, 11, 27, 18)),
+      E('course', '프로그래밍 기초 01 · 10주차 온라인 학습', 'event', at(0, 10)), E('course', '자료구조 01 · 11주차 온라인 학습 인정 마감', 'deadline', at(1, 23)), E('personal', '팀 프로젝트 자료 정리', 'todo', at(3, 14)), E('personal', '교수학습센터 튜터링 신청', 'todo', at(5, 11))];
+    ev.forEach(e => { if (!l.ev.some(x => x.title === e.title)) l.ev.push(e); });
+    const P = n => 'p:' + n; let id = Math.max(l.seq || 0, 100); const M = (sender, body, dd, h, read) => ({ id: ++id, sender, body, attachments: [], at: at(dd, h), read: read || 0 });
+    const rooms = [{ id: 'r2', kind: 'direct', title: '', members: [P('20261004')], msgs: [M(P('20261004'), '교수님, 과제 3은 PDF 한 파일로 내면 될까요?', -1, 21), M(ME(), '네, 코드와 보고서를 PDF 하나로 묶어 올려 주세요.', -1, 22, 1), M(P('20261004'), '감사합니다! 마감 전에 올리겠습니다.', 0, 8)] },
+      { id: 'r3', kind: 'group', title: '프로그래밍 기초 01 조교', members: [P('T2026001'), P('T2026002')], msgs: [M(P('T2026001'), '9주차 출결 정정 요청 2건 확인 부탁드립니다.', -2, 16), M(ME(), '확인했습니다. 병결 서류는 학과 사무실로 받아 주세요.', -2, 17, 2), M(P('T2026002'), '과제 3 채점 기준표 초안 올렸습니다.', 0, 9)] },
+      { id: 'r4', kind: 'broadcast', title: '중간고사 성적 공개 안내', members: ['20261001', '20261002', '20261003', '20261005'].map(P), msgs: [M(ME(), '중간고사 성적을 공개했습니다. 이의 신청은 11월 13일까지 강의 게시판 1:1 상담으로 해 주세요.', -3, 10, 4)] },
+      { id: 'r5', kind: 'direct', title: '', members: [P('20261007')], msgs: [M(P('20261007'), '다음 학기 휴학 관련해서 상담 가능할까요?', 0, 7)] }];
+    rooms.forEach(r => { if (!l.rooms.some(x => x.id === r.id)) { r.read = r.msgs.filter(m => m.sender === ME() || r.kind === 'broadcast').reduce((a, m) => Math.max(a, m.id), 0); if (r.id === 'r2') r.read = r.msgs[1].id; l.rooms.push(r); } });
+    const R = (event, params, channels, enabled = true) => ({ id: LMP.uuid(), event, section_id: null, params, channels, enabled });
+    [R('qna_new', {}, ['email', 'inapp']), R('analytics', { metric: 'absent_count', op: '>=', value: 3 }, ['inapp', 'kakao']), R('resource_new', {}, ['inapp'], false)].forEach(r => { if (!l.rules.some(x => x.event === r.event)) l.rules.push(r); });
+    const O = (ch, p, title, status, dd, h) => ({ id: ++id, principal: p, channel: ch, title, body: '', status, at: at(dd, h), not_before: status === 'held_quiet' ? '방해금지 종료 후' : null });
+    if (!l.inbox.length) l.inbox.push(O('inapp', ME(), '[Q&A] 프로그래밍 기초 01 · 과제 3 제출 형식 문의', 'sent', 0, 8), O('inapp', ME(), '[마감 24시간 전] 자료구조 01 · 11주차 온라인 학습 인정 마감', 'sent', 0, 7), O('inapp', ME(), '[학습 분석] 경영 데이터 분석 01 · 결석 3회 이상 2명', 'sent', -1, 18),
+      O('inapp', ME(), '[D-1] 10주차 온라인 학습 미이수 3명 — 알림 발송', 'sent', -2, 9), O('inapp', ME(), '[Q&A] 자료구조 01 · 퀴즈 3 범위 문의', 'sent', -3, 15));
+    if (!l.outbox.length) l.outbox.push(O('push', P('20261001'), '[D-1] 11주차 온라인 학습 미이수', 'queued', 0, 9), O('push', P('20261004'), '[D-1] 11주차 온라인 학습 미이수', 'queued', 0, 9), O('kakao', ME(), '[학습 분석] 결석 3회 이상 2명', 'held_quiet', -1, 23),
+      O('email', ME(), '[Q&A] 과제 3 제출 형식 문의', 'sent', 0, 8), O('push', P('20261002'), '중간고사 성적 공개 안내', 'sent', -3, 10), O('push', P('20261003'), '중간고사 성적 공개 안내', 'sent', -3, 10));
+    l.seq = id; l.v2 = 1;
+  }
   function ens() {
-    const L = (S.lms = S.lms || {}); if (L.l) return L.l;
-    const d0 = new Date(); const at = (dd, h = 9) => { const d = new Date(d0); d.setDate(d.getDate() + dd); d.setHours(h, 0, 0, 0); return LMP.iso(d); };
-    L.l = { ev: [
-      { id: LMP.uuid(), scope: 'academic', title: '중간고사 기간', kind: 'exam', starts_at: at(8, 0), all_day: true, done: false, owner: null },
-      { id: LMP.uuid(), scope: 'academic', title: '수강 정정 마감', kind: 'deadline', starts_at: at(2, 18), all_day: false, done: false, owner: null },
-      { id: LMP.uuid(), scope: 'course', title: '프로그래밍 기초 01 · 과제 2 마감', kind: 'deadline', starts_at: at(1, 23), all_day: false, done: false, owner: null },
-      { id: LMP.uuid(), scope: 'course', title: '경영 데이터 분석 01 · 4주차 온라인 학습', kind: 'event', starts_at: at(0, 10), all_day: false, done: false, owner: null },
-      { id: LMP.uuid(), scope: 'personal', title: '팀 프로젝트 자료 정리', kind: 'todo', starts_at: at(3, 14), all_day: false, done: false, owner: ME() }],
-      rooms: [{ id: 'r1', kind: 'group', title: '1조 프로젝트', members: ['p:20261001', 'p:20261002', 'p:20261003'], msgs: [{ id: 1, sender: 'p:20261001', body: '자료 조사 끝냈습니다.', attachments: [], at: at(-1, 15), read: 3 }], read: 0 }],
+    const L = (S.lms = S.lms || {}); if (L.l) { if (!L.l.v2) seed2(L.l); return L.l; }
+    L.l = { ev: [], rooms: [{ id: 'r1', kind: 'group', title: '1조 프로젝트', members: ['p:20261001', 'p:20261002', 'p:20261003'], msgs: [{ id: 1, sender: 'p:20261001', body: '자료 조사 끝냈습니다.', attachments: [], at: LMP.nowIso(), read: 3 }], read: 0 }],
       rules: [{ id: LMP.uuid(), event: 'due_before', section_id: null, params: { hours: 24 }, channels: ['inapp', 'push'], enabled: true }],
       quiet: { starts: '22:00', ends: '07:00', enabled: true }, outbox: [], inbox: [], seq: 10 };
-    return L.l;
+    seed2(L.l); return L.l;
   }
   const qNow = () => { const Q = ens().quiet; if (!Q || !Q.enabled || Q.starts === Q.ends) return false; const t = new Date().toTimeString().slice(0, 5); return Q.starts < Q.ends ? t >= Q.starts && t < Q.ends : t >= Q.starts || t < Q.ends; };
   const enq = (p, ch, title, body) => { const L = ens(); const st = ch === 'inapp' ? 'sent' : qNow() ? 'held_quiet' : 'queued'; const o = { id: ++L.seq, principal: p, channel: ch, title, body, status: st, at: LMP.nowIso(), not_before: st === 'held_quiet' ? '방해금지 종료 후' : null }; if (ch === 'inapp') L.inbox.unshift(o); else L.outbox.unshift(o); return st; };
   const need = (v, m) => { if (!v) throw new Error(m); };
   LMP.demo.l = {
-    'cal.list': q => ({ items: ens().ev.filter(e => (e.scope !== 'personal' || e.owner === ME()) && (!q.scope || e.scope === q.scope)).sort((a, b) => a.starts_at.localeCompare(b.starts_at)).map(e => ({ ...e, mine: e.scope === 'personal', src: 'event' })) }),
+    'cal.list': q => ({ items: ens().ev.filter(e => (e.scope !== 'personal' || e.owner === ME()) && (!q.scope || e.scope === q.scope) && (!q.from || String(e.starts_at).slice(0, 10) >= q.from) && (!q.to || String(e.starts_at).slice(0, 10) < q.to)).sort((a, b) => a.starts_at.localeCompare(b.starts_at)).map(e => ({ ...e, mine: e.scope === 'personal', src: 'event' })) }),
     'cal.add': q => { need(['academic', 'course', 'personal'].includes(q.scope), '구분은 학사 · 강좌 · 개인 중 하나입니다.'); need(q.title, 'title 값을 입력하세요.'); need(q.starts_at, 'starts_at 일시를 입력하세요.'); if (q.scope === 'academic') need(LMP.isAdm(), '학사 일정은 관리자만 등록할 수 있습니다.');
       const e = { id: LMP.uuid(), scope: q.scope, title: String(q.title).slice(0, 120), kind: q.kind || 'event', starts_at: LMP.iso(q.starts_at), all_day: !!q.all_day, done: false, owner: q.scope === 'personal' ? ME() : null }; ens().ev.push(e); logAudit('통합 달력 일정 등록'); return { ok: true, item: e }; },
     'cal.done': q => { const e = ens().ev.find(x => x.id === q.id); need(e, '없는 일정입니다.'); e.done = q.done == null ? !e.done : !!q.done; return { ok: true, item: e }; },
@@ -119,14 +137,18 @@
     const by = {}; items.forEach(e => { const k = String(e.starts_at).slice(0, 10); (by[k] = by[k] || []).push(e); });
     const todos = items.filter(e => e.kind === 'todo' || e.kind === 'deadline');
     const td = dk(new Date());
-    return head('통합 달력', '학사 일정 · 강좌 일정(차시 · 마감) · 개인 일정을 한 달력에서 봅니다. iCal(.ics)로 내보내 휴대폰 · Outlook · Google 캘린더에 구독할 수 있습니다.', `<button class="btn pri" data-act="lmsl-add">일정 추가</button>`) +
-      `<div class="bar2">${LMP.mode()}<button class="btn sm" data-act="lmsl-ics" data-from="${from}" data-to="${to}">iCal 내보내기</button>${LMP.isAdm() ? '<button class="btn sm" data-act="lmsl-d1">미이수 D-1 알림</button>' : ''}</div><div class="bar2 lmp-calbar"><button class="btn sm" data-act="lmsl-mon" data-d="-1" aria-label="이전 달">‹</button><b>${Y}년 ${M}월</b><button class="btn sm" data-act="lmsl-mon" data-d="1" aria-label="다음 달">›</button>${tabs('lmslSc', [['', '전체'], ['academic', '학사'], ['course', '강좌'], ['personal', '개인']], sc)}</div>` +
+    const now = Date.now(); const soon = items.filter(e => ['deadline', 'exam'].includes(e.kind) && !e.done && new Date(e.starts_at).getTime() > now && new Date(e.starts_at).getTime() - now <= 7 * 864e5).length;
+    const todayN = (by[td] || []).length; const dm = LW4.demoTag(LMP.live());
+    return head('통합 달력', `학사 · 강좌 · 개인 일정을 한 달력에서 보고, 휴대폰 · Google 캘린더로 내보냅니다. ${dm}`,
+      LW4.more(LW4.mi('lmsl-ics', 'iCal(.ics) 내보내기', { from, to }) + (LMP.isAdm() ? LW4.mi('lmsl-d1', '미이수 학생에게 D-1 알림 보내기') : '')) + `<button class="btn pri" data-act="lmsl-add">일정 추가</button>`) +
+      LW4.todo([{ n: todayN, t: '건 오늘 일정' }, { n: soon, t: '건 7일 안 마감 · 시험', btn: LMP.isAdm() ? LW4.go('lmsl-d1', '미이수 D-1 알림 보내기') : '' }], '이번 주 마감 · 시험이 없습니다.') +
+      `<div class="bar2 lmp-calbar"><button class="btn sm" data-act="lmsl-mon" data-d="-1" aria-label="이전 달">‹</button><b>${Y}년 ${M}월</b><button class="btn sm" data-act="lmsl-mon" data-d="1" aria-label="다음 달">›</button>${tabs('lmslSc', [['', '전체'], ['academic', '학사'], ['course', '강좌'], ['personal', '개인']], sc)}</div>` +
       (LMP.err(key) ? `<div class="warn">${esc(LMP.err(key))}</div>` : '') +
       `<div class="card lmp-cal" role="grid" aria-label="${Y}년 ${M}월 달력"><div class="lmp-calh" role="row">${['일', '월', '화', '수', '목', '금', '토'].map(w => `<span role="columnheader">${w}</span>`).join('')}</div><div class="lmp-calg">${days.map(x => { const k = dk(x); const L = by[k] || [];
         return `<div class="lmp-day ${x.getMonth() !== M - 1 ? 'out' : ''} ${k === td ? 'today' : ''}" role="gridcell" aria-label="${k} 일정 ${L.length}건"><i>${x.getDate()}</i>${L.slice(0, 3).map(e => `<span class="lmp-ev s-${e.scope} ${e.done ? 'done' : ''}" title="${esc(SC[e.scope][0] + ' · ' + e.title)}">${esc(e.title)}</span>`).join('')}${L.length > 3 ? `<small>+${L.length - 3}</small>` : ''}</div>`; }).join('')}</div></div>` +
-      `<div class="grid g2"><div class="card"><div class="ch"><b>To-do · 마감</b><small>체크하면 완료로 표시합니다</small></div>${todos.length ? todos.map(e => `<div class="row"><label class="ul-ck"><input type="checkbox" ${e.done ? 'checked' : ''} ${e.src === 'event' ? '' : 'disabled'} data-chg="lmsl-done" data-id="${esc(e.id)}"> ${esc(e.title)}</label><span class="mini">${tag(SC[e.scope][0], SC[e.scope][1])} ${esc(LMP.ts(e.starts_at))}</span></div>`).join('') : '<div class="empty">이번 달 To-do · 마감이 없습니다.</div>'}</div>
-      <div class="card"><div class="ch"><b>이번 달 일정</b><small>${items.length}건</small></div>${items.slice(0, 12).map(e => `<div class="row"><span>${tag(SC[e.scope][0], SC[e.scope][1])} ${esc(e.title)} <small class="mini">${esc(KD[e.kind] || e.kind)}</small></span><span class="mini">${esc(LMP.ts(e.starts_at))} ${e.src === 'event' && (e.mine || LMP.isAdm()) ? `<button class="btn sm" data-act="lmsl-del" data-id="${esc(e.id)}" aria-label="일정 삭제">삭제</button>` : ''}</span></div>`).join('') || '<div class="empty">일정이 없습니다.</div>'}
-      <p class="mini">Google Calendar 양방향 동기화는 연동 후 동작합니다. 지금은 iCal 파일 · 구독으로 바깥 달력에 보냅니다.</p></div></div>`;
+      `<div class="grid g2"><div class="card"><div class="ch"><b>To-do · 마감</b><small>체크하면 완료로 표시합니다</small></div>${todos.length ? todos.map(e => `<div class="row"><label class="ul-ck"><input type="checkbox" ${e.done ? 'checked' : ''} ${e.src === 'event' ? '' : 'disabled'} data-chg="lmsl-done" data-id="${esc(e.id)}"> ${esc(e.title)}</label><span class="mini">${tag(SC[e.scope][0], SC[e.scope][1])} ${esc(LMP.ts(e.starts_at))}</span></div>`).join('') : '<p class="mini">이번 달 To-do · 마감이 없습니다. 「일정 추가」로 넣을 수 있습니다.</p>'}</div>
+      <div class="card"><div class="ch"><b>이번 달 일정</b><small>${items.length}건</small></div>${items.slice(0, 12).map(e => `<div class="row"><span>${tag(SC[e.scope][0], SC[e.scope][1])} ${esc(e.title)} <small class="mini">${esc(KD[e.kind] || e.kind)}</small></span><span class="mini">${esc(LMP.ts(e.starts_at))} ${e.src === 'event' && (e.mine || LMP.isAdm()) ? `<button class="btn sm ghost" data-act="lmsl-del" data-id="${esc(e.id)}" aria-label="일정 삭제" title="일정 삭제">✕</button>` : ''}</span></div>`).join('') || '<div class="empty">일정이 없습니다.</div>'}
+      <p class="mini">Google 캘린더 양방향 연결은 연동 후 동작합니다(지금은 ⋯ › iCal 내보내기).</p></div></div>`;
   });
   ACT.lmslSc = el => { UI.lmslSc = el.dataset.v; render(); };
   ACT['lmsl-mon'] = el => { const [Y, M] = ym().split('-').map(Number); const d = new Date(Y, M - 1 + (+el.dataset.d), 1); UI.lmslYm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; render(); };
@@ -151,11 +173,14 @@
     const rooms = LMP.load('l:rooms', 'l', 'dm.rooms', {}); const L = (rooms && rooms.items) || []; const cur = UI.lmslRoom && L.find(r => r.id === UI.lmslRoom) ? UI.lmslRoom : (L[0] || {}).id;
     const ms = cur ? LMP.load('l:msgs:' + cur, 'l', 'dm.msgs', { room_id: cur }) : null;
     const K = { direct: '1:1', group: '그룹', broadcast: '일괄' };
-    return head('DM 채팅', '교수 · 조교 · 학생과 1:1 · 그룹으로 대화합니다. 읽음 표시, 이미지 · 음성 · 파일 첨부(메타데이터), 일괄 발송, 자동 번역을 지원합니다. 구성원은 학번으로만 찾습니다.', `<button class="btn pri" data-act="lmsl-new">새 대화</button>`) +
-      `<div class="bar2">${LMP.mode()}<button class="btn sm" data-act="lmsl-bc">일괄 발송</button></div><div class="lmp-dm"><div class="card lmp-rooms" role="list" aria-label="대화방 목록">${L.length ? L.map(r => `<button role="listitem" class="lmp-room ${r.id === cur ? 'on' : ''}" data-act="lmsl-room" data-id="${esc(r.id)}"><b>${esc(r.title || (r.members || []).map(who).join(', '))}</b><small>${tag(K[r.kind] || r.kind)} ${esc(String(r.last || '').slice(0, 24))}</small>${r.unread ? `<em aria-label="안 읽은 메시지 ${r.unread}개">${r.unread}</em>` : ''}</button>`).join('') : '<div class="empty">대화방이 없습니다. 새 대화를 시작하세요.</div>'}</div>
+    const unread = L.reduce((a, r) => a + (r.unread || 0), 0); const ur = L.find(r => r.unread);
+    return head('DM 채팅', `교수 · 조교 · 학생과 1:1 · 그룹으로 대화하고, 여러 학생에게 한 번에 안내합니다. 구성원은 학번으로 찾습니다. ${LW4.demoTag(LMP.live())}`,
+      LW4.more(LW4.mi('lmsl-bc', '여러 학생에게 일괄 발송')) + `<button class="btn pri" data-act="lmsl-new">새 대화</button>`) +
+      LW4.todo([{ n: unread, t: '개 안 읽은 메시지', btn: ur ? LW4.go('lmsl-room', '읽기', { id: ur.id }) : '' }, { n: L.length, t: '개 대화방' }], '안 읽은 메시지가 없습니다.') +
+      `<div class="lmp-dm"><div class="card lmp-rooms" role="list" aria-label="대화방 목록">${L.length ? L.map(r => `<button role="listitem" class="lmp-room ${r.id === cur ? 'on' : ''}" data-act="lmsl-room" data-id="${esc(r.id)}"><b>${esc(r.title || (r.members || []).map(who).join(', '))}</b><small>${tag(K[r.kind] || r.kind)} ${esc(String(r.last || '').slice(0, 24))}</small>${r.unread ? `<em aria-label="안 읽은 메시지 ${r.unread}개">${r.unread}</em>` : ''}</button>`).join('') : '<p class="mini">대화방이 아직 없습니다. 「새 대화」로 시작하세요.</p>'}</div>
       <div class="card lmp-chat">${ms ? `<div class="ch"><b>${esc(ms.room.title || '1:1 대화')}</b><small>참여 ${ms.members}명</small><button class="btn sm" data-act="lmsl-tr" data-id="${esc(cur)}">✦ 번역해서 보기</button></div>
         <div class="lmp-msgs" aria-live="polite">${ms.items.map(m => `<div class="lmp-msg ${m.mine ? 'mine' : ''}"><small>${esc(who(m.sender))} · ${esc(LMP.ts(m.at))}</small><p data-tr="${m.id}">${esc(m.body)}</p>${(m.attachments || []).map(a => `<button class="lmp-att" data-act="lmsl-att" data-room="${esc(cur)}" data-id="${esc(a.file_id || '')}" data-name="${esc(a.name)}" data-mime="${esc(a.mime || '')}" aria-label="${esc(a.name)} 내려받기">${a.kind === 'image' ? '🖼' : a.kind === 'voice' ? '🎙' : '📎'} ${esc(a.name)} <small>${Math.ceil((a.size || 0) / 1024)}KB</small></button>`).join('')}${m.mine ? `<small class="lmp-read">${m.read_by ? `읽음 ${m.read_by}` : '안 읽음'}</small>` : ''}</div>`).join('') || '<div class="empty">첫 메시지를 보내세요.</div>'}</div>
-        <div class="lmp-send"><input id="lmslMsg" maxlength="2000" placeholder="메시지 입력" aria-label="메시지 입력"><label class="btn sm">첨부<input type="file" id="lmslFile" multiple hidden></label><button class="btn pri" data-act="lmsl-send" data-id="${esc(cur)}">보내기</button></div>
+        <div class="lmp-send"><input id="lmslMsg" maxlength="2000" placeholder="메시지 입력" aria-label="메시지 입력"><label class="btn sm">첨부<input type="file" id="lmslFile" multiple hidden></label><button class="btn lw-go" data-act="lmsl-send" data-id="${esc(cur)}">보내기</button></div>
         <p class="mini">첨부 파일은 기관 파일 저장소에 저장되고, 대화방 참여자만 내려받을 수 있습니다(파일당 2MB · 실행 파일 차단).</p>` : cur ? '<div class="empty">불러오는 중…</div>' : '<div class="empty">왼쪽에서 대화방을 고르세요.</div>'}</div></div>`;
   });
   ACT['lmsl-room'] = el => { UI.lmslRoom = el.dataset.id; LMP.call('l', 'dm.read', { room_id: el.dataset.id }).catch(() => { }); LMP.drop('l:'); render(); };
@@ -181,12 +206,14 @@
     const d = LMP.load('l:rules', 'l', 'noti.rules', {}); const ob = LMP.isAdm() ? LMP.load('l:outbox', 'l', 'noti.outbox', {}) : null; const ib = LMP.load('l:inbox', 'l', 'noti.inbox', {});
     const Q = (d && d.quiet) || { starts: '22:00', ends: '07:00', enabled: false };
     const desc = r => r.event === 'due_before' ? `마감 ${r.params.hours}시간 전` : r.event === 'analytics' ? `${r.params.metric === 'late_count' ? '지각' : '결석'} ${r.params.value}회 ${r.params.op === '>' ? '초과' : '이상'}` : EVN[r.event];
-    return head('알림 규칙', '받고 싶은 알림을 조건별로 정하고, 방해금지 시간에는 푸시 · 문자 · 알림톡을 보류했다가 끝나면 보냅니다. 실제 발송은 발송 대기열을 외부 발송기가 가져가는 연동 지점입니다.', `<button class="btn pri" data-act="lmsl-rule">규칙 추가</button>`) +
-      `<div class="bar2">${LMP.mode()}${LMP.isAdm() ? '<button class="btn sm" data-act="lmsl-scan">지금 규칙 평가</button>' : ''}</div><div class="kpis">${kpi('내 규칙', ((d && d.items) || []).length + '개')}${kpi('방해금지', Q.enabled ? `${Q.starts}~${Q.ends}` : '꺼짐', d && d.quiet_now ? '지금 방해금지 중' : '')}${kpi('발송 대기', ((ob && ob.counts && ob.counts.queued) || 0) + '건', '연동 후 발송')}${kpi('보류', ((ob && ob.counts && ob.counts.held_quiet) || 0) + '건')}</div>` +
-      `<div class="grid g2"><div class="card"><div class="ch"><b>내 알림 규칙</b></div>${((d && d.items) || []).map(r => `<div class="row"><span><b>${esc(desc(r))}</b> <small class="mini">${r.channels.map(c => CHN[c] || c).join(' · ')}</small></span><span>${r.enabled ? tag('켜짐') : tag('꺼짐', 'y')} <button class="btn sm" data-act="lmsl-rdel" data-id="${esc(r.id)}">삭제</button></span></div>`).join('') || '<div class="empty">규칙이 없습니다.</div>'}</div>
+    const cnt = (ob && ob.counts) || {}; const ibL = (ib && ib.items) || [];
+    return head('알림 규칙', `받고 싶은 알림을 조건별로 정하고, 방해금지 시간에는 푸시 · 문자 · 알림톡을 보류했다가 끝나면 보냅니다. ${LW4.demoTag(LMP.live())}`,
+      (LMP.isAdm() ? LW4.more(LW4.mi('lmsl-scan', '지금 규칙대로 알림 점검') + ((ob && (ob.items || []).some(x => x.status === 'queued')) ? LW4.mi('lmsl-ack', '대기 건 발송 완료로 표시(시험)') : '')) : '') + `<button class="btn pri" data-act="lmsl-rule">규칙 추가</button>`) +
+      LW4.todo([{ n: ibL.length, t: '건 받은 알림' }, LMP.isAdm() ? { n: cnt.queued || 0, t: '건 발송 대기(연동 후 발송)' } : null, LMP.isAdm() ? { n: cnt.held_quiet || 0, t: '건 방해금지로 보류', btn: LW4.go('lmsl-scan', '보류 다시 확인') } : null, { n: ((d && d.items) || []).filter(r => r.enabled).length, t: '개 규칙 켜짐' }], '새 알림이 없습니다.') +
+      `<div class="grid g2"><div class="card"><div class="ch"><b>내 알림 규칙</b><small>${((d && d.items) || []).length}개</small></div>${((d && d.items) || []).map(r => `<div class="row"><span><b>${esc(desc(r))}</b> <small class="mini">${r.channels.map(c => CHN[c] || c).join(' · ')}</small></span><span>${r.enabled ? tag('켜짐') : tag('꺼짐', 'y')} <button class="btn sm ghost" data-act="lmsl-rdel" data-id="${esc(r.id)}" title="규칙 삭제" aria-label="규칙 삭제">✕</button></span></div>`).join('') || '<p class="mini">규칙이 아직 없습니다. 「규칙 추가」로 만드세요.</p>'}</div>
       <div class="card"><div class="ch"><b>방해금지 시간</b><small>푸시 · SMS · 알림톡 · 메일 보류(알림함은 바로 쌓임)</small></div><div class="form2"><label>시작<input type="time" id="lmslQs" value="${esc(Q.starts)}"></label><label>끝<input type="time" id="lmslQe" value="${esc(Q.ends)}"></label></div><label class="ul-ck"><input type="checkbox" id="lmslQo" ${Q.enabled ? 'checked' : ''}> 방해금지 사용</label><button class="btn" data-act="lmsl-quiet">저장</button></div></div>` +
-      (ob ? `<div class="card"><div class="ch"><b>발송 대기열</b><small>푸시 · 알림톡 · SMS · 메일 — 외부 발송기 연동 지점(연동 후 발송)</small>${(ob.items || []).some(x => x.status === 'queued') ? '<button class="btn sm" data-act="lmsl-ack">대기 건 발송 완료 처리(시험)</button>' : ''}</div>${table(['번호', '받는 사람', '채널', '제목', '상태', '보류 해제'], (ob.items || []).slice(0, 30).map(o => [o.id, esc(who(o.principal)), esc(CHN[o.channel] || o.channel), esc(o.title), tag(...(STN[o.status] || [o.status])), esc(o.not_before ? LMP.ts(o.not_before) : '—')]), '대기열이 비어 있습니다.')}</div>` : '') +
-      `<div class="card"><div class="ch"><b>내 알림함</b></div>${((ib && ib.items) || []).slice(0, 10).map(o => `<div class="row"><span>${esc(o.title)}</span><span class="mini">${esc(LMP.ts(o.at))}</span></div>`).join('') || '<div class="empty">받은 알림이 없습니다.</div>'}</div>`;
+      (ob ? `<div class="card"><div class="ch"><b>발송 대기열</b><small>푸시 · 알림톡 · SMS · 메일 — 외부 발송기 연동 지점(연동 후 발송)</small></div>${table(['받는 사람', '채널', '제목', '상태'], (ob.items || []).slice(0, 30).map(o => [esc(who(o.principal)), esc(CHN[o.channel] || o.channel), esc(o.title) + `<small class="lw-sub">${esc(LMP.ts(o.at))}${o.not_before ? ' · 보류: ' + esc(o.not_before) : ''}</small>`, tag(...(STN[o.status] || [o.status]))]), '대기열이 비어 있습니다.')}</div>` : '') +
+      `<div class="card"><div class="ch"><b>내 알림함</b><small>최근 10건</small></div>${((ib && ib.items) || []).slice(0, 10).map(o => `<div class="row"><span>${esc(o.title)}</span><span class="mini">${esc(LMP.ts(o.at))}</span></div>`).join('') || '<p class="mini">받은 알림이 아직 없습니다.</p>'}</div>`;
   });
   ACT['lmsl-rule'] = () => modal('알림 규칙 추가', `<label class="fl">조건<select name="event">${Object.entries(EVN).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label><label class="fl">마감 몇 시간 전(마감 조건)<input name="hours" type="number" min="1" max="168" value="24"></label>
     <label class="fl">분석 조건(학습 분석)<select name="metric"><option value="absent_count">결석 횟수</option><option value="late_count">지각 횟수</option></select></label><label class="fl">기준 횟수(이상)<input name="value" type="number" min="1" max="100" value="3"></label>
