@@ -127,7 +127,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   const needOwner = async req => { const a = await need(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 볼 수 있습니다.', 'role'); return a; };
   const needStaff = async req => { const a = await need(req); if (a.role === 'teacher') throw new HttpErr(403, '교강사 권한으로 사용할 수 없습니다.', 'teacher'); return a; };
   const stateDoc = a => inTenant(pool, a.tid, async c => { const { rows } = await c.query('select doc, rev from tenant_state where tenant_id = $1', [a.tid]); return rows[0] || null; });
-  const tScope = async a => { const r = await stateDoc(a); return M.scope(r ? r.doc : null, a.email); };
+  const tScope = async a => { const r = await stateDoc(a); return M.scope(r ? crypt.open(r.doc, a.tid) : null, a.email); };
   const audit = (c, tid, actor, action, detail) => c.query('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, actor, action, detail ? JSON.stringify(detail) : null]);
   const meOut = a => ({ user: { email: a.email, role: a.role, ...(a.pw_temp ? { pwTemp: true } : {}) }, tenant: { tid: a.tid, name: a.name, type: a.type, mode: a.mode } });
 
@@ -151,8 +151,12 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   }
   async function lauth(req, tid) {
     const t = cookies(req)[lcookieName]; if (!t || t.length > 100) return null;
-    const { rows } = await pool.query('select tenant_id, sid from learner_sessions where id = $1 and expires_at > now()', [sha(t)]);
-    return rows[0] && rows[0].tenant_id === tid ? rows[0] : null;
+    const { rows } = await pool.query('select tenant_id, sid, extract(epoch from now() - last_at) idle from learner_sessions where id = $1 and expires_at > now()', [sha(t)]);
+    const s = rows[0] && rows[0].tenant_id === tid ? rows[0] : null; if (!s || +s.idle < 60) return s;
+    /* 무활동 자동 로그아웃: 규정 준수 정책의 시간을 서버에서도 적용한다 */
+    const h = await inTenant(pool, tid, async c => { const P = (await c.query("select doc->'org'->'cpl' p from tenant_state where tenant_id = $1", [tid])).rows[0]; return P && P.p && P.p.on ? +P.p.idleH || 0 : 0; });
+    if (h > 0 && +s.idle >= h * 3600) { await pool.query('delete from learner_sessions where id = $1', [sha(t)]); return null; }
+    await pool.query('update learner_sessions set last_at = now() where id = $1', [sha(t)]); return s;
   }
   /* 학습자 본인 데이터만: 배지 · 과정 진도(어드민 상태에서 학번으로 찾음) */
   function mineOf(doc, sid, tid) {
@@ -175,10 +179,10 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   }
   /* v23 간편가입 · 개인정보 분리(pii.js) — 학습 경로는 가명 learner_id만 쓴다 */
   const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession });
-  const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, env });
+  const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env });
   /* 단체가입 최초 로그인 · 중도탈락 표시 */
   const meFlags = async (c, tid, sid, doc) => { const P = doc && doc.org && doc.org.cpl; if (!P || !P.on) return {}; const o = {}; { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (L && !L.pw_hash && P.groupFirst) o.groupFirst = true; if (L && L.pw_hash) o.pwSet = true; } const m = (doc.members || []).find(x => x && x.sid === sid); if (m) { const D = (doc.classes || []).filter(x => x && x.drop && x.drop[m.id]).map(x => x.id); if (D.length) o.dropped = D; } return o; };
-  const learnerOut = (c, tid, sid) => (async () => { const acc = await pii.meExtra(c, tid, sid); const L = acc ? null : (await c.query('select dept from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: acc ? acc.dept : L ? L.dept : '', ...(acc ? { acct: acc } : {}), ...(await meFlags(c, tid, sid, d && d.doc)) }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid, tid) : { badges: [], cls: {} } }; })();
+  const learnerOut = (c, tid, sid) => (async () => { const acc = await pii.meExtra(c, tid, sid); const L = acc ? null : (await c.query('select dept from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: acc ? acc.dept : L ? L.dept : '', ...(acc ? { acct: acc } : {}), ...(acc && (await pii.hasPw(tid, sid)) ? { pwSet: true } : {}), ...(await meFlags(c, tid, sid, d && d.doc)) }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid, tid) : { badges: [], cls: {} } }; })();
   async function pubRoute(req, res, m) {
     const [, tid, act] = m; if (!TID_RE.test(tid)) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
     const key = `${req.method} ${act}`;
@@ -435,6 +439,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     'GET /api/cpl/summary': async req => { const a = await need(req); const o = await cpl.summary(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.sids.has(String(r.sid))); } return o; },
     'GET /api/cpl/exams': async req => { const a = await need(req); const o = await cpl.exams(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.classes.has(String(r.cls)) && s.sids.has(String(r.sid))); } return o; },
     'GET /api/cpl/exam-copy': async req => { const a = await need(req); const o = await cpl.examCopy(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.classes.has(String(r.cls)) && s.sids.has(String(r.a)) && s.sids.has(String(r.b))); } return o; },
+    'GET /api/cpl/completion': async req => { const a = await need(req); const o = await cpl.completion(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.classes.has(String(r.cls)) && s.sids.has(String(r.sid))); } return o; },
     'GET /api/cpl/logs': async req => { const a = await need(req); const o = await cpl.logs(a, new URL(req.url, 'http://x')); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.sids.has(String(r.sid))); } return o; },
     'GET /api/audit': async req => {
       const a = await needStaff(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 볼 수 있습니다.', 'role');

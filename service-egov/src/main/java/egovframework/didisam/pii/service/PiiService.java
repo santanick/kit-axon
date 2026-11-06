@@ -12,6 +12,7 @@ import java.util.Map;
 public interface PiiService {
     /** 학습자 본인 비밀번호 변경 */
     void changePw(String tid, String lid, String cur, String pw) throws Exception;
+    boolean hasPw(String tid, String lid) throws Exception;
     /* 공개(세션 없음) */
     Map<String, Object> otp(HttpServletRequest req, byte[] body, String tid) throws Exception;
     Map<String, Object> signup(HttpServletRequest req, HttpServletResponse res, byte[] body, String tid) throws Exception;

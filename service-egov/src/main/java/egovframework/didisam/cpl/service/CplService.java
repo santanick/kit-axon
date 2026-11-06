@@ -9,6 +9,7 @@ public interface CplService {
     Map<String, Object> route(HttpServletRequest req, byte[] body, String tid, String sid) throws Exception;
     Map<String, Object> exams(Map<String, Object> a) throws Exception;
     Map<String, Object> examCopy(Map<String, Object> a) throws Exception;
+    Map<String, Object> completion(Map<String, Object> a) throws Exception;
     Map<String, Object> summary(Map<String, Object> a) throws Exception;
     Map<String, Object> logs(Map<String, Object> a, String sid, String limit) throws Exception;
 }

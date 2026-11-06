@@ -268,6 +268,8 @@ const MIGRATIONS = [
   `alter table learners add column if not exists pw_hash text;
    alter table cpl_log drop constraint if exists cpl_log_kind_check;
    alter table cpl_log add constraint cpl_log_kind_check check (kind in ('login','beat','attend','verify-phone','verify-motp','review','group-pw'));`,
+  /* 13 — v31.6 무활동 세션 만료: 마지막 활동 시각 */
+  `alter table learner_sessions add column if not exists last_at timestamptz not null default now();`,
 ];
 
 async function migrate(pool) {

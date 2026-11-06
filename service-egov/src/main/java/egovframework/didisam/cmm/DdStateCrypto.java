@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 @Service("ddStateCrypto")
 public class DdStateCrypto extends EgovAbstractServiceImpl {
     static final String PFX = "enc1:";
-    static final Map<String, List<String>> SET = Map.of("members", List.of("name", "nick", "email", "phone"), "parents", List.of("name", "phone"), "codes", List.of("code"));
+    static final Map<String, List<String>> SET = Map.of("members", List.of("name", "nick", "email", "phone"), "parents", List.of("name", "phone"), "codes", List.of("code"), "admins", List.of("name", "email"), "consults", List.of("title", "summary", "text", "note", "memo", "transcript"), "msgs", List.of("to", "title", "body"));
     private final DdPiiCrypto c;
     public DdStateCrypto(DdPiiCrypto c) { this.c = c; }
 
