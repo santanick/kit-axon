@@ -3,7 +3,7 @@
 .cpl-note-l summary{cursor:pointer;font-weight:600}
 .cpl-note-l ul{margin:8px 0 0 18px;padding:0;line-height:1.6}
 .cpl-mw{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:9000;padding:16px}
-.cpl-mb{background:#fff;color:#222;border-radius:14px;padding:20px;width:min(420px,100%);display:grid;gap:10px}
+.cpl-mb{background:#fff;color:#222;border-radius:14px;padding:20px;width:min(420px,100%);display:grid;gap:10px;box-sizing:border-box;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
 .cpl-mb h3{margin:0}
 .cpl-mb input,.cpl-mb textarea,.cpl-mb select{width:100%;box-sizing:border-box;padding:8px;font-size:16px}
 .cpl-mb .err{color:#b91c1c;margin:0;min-height:1em}

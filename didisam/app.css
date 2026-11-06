@@ -425,3 +425,4 @@ span.sw:not(:has(input)){display:inline-block;width:14px;height:14px;border-radi
 .bkb{grid-template-columns:250px minmax(0,1fr) minmax(0,1fr)}.bkb .lspg .lsname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bkb .lspg .lsrow .btn.sm{padding:4px 7px}.bkb .lspg .bar2 input{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font:inherit}.lssec .ch .bkchn{flex:1 1 auto;width:auto}
 @media (max-width:1180px){.bkb{grid-template-columns:230px minmax(0,1fr)}}@media (max-width:640px){.bkb{grid-template-columns:1fr}}
 .kpis.bkkpis{grid-template-columns:repeat(5,minmax(0,1fr))}@media (max-width:900px){.kpis.bkkpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.topr .lvacct{margin-top:0;flex:none}.topr .lvacct small{display:none}.topr .lvacct .btn{padding:4px 6px;font-size:11px;white-space:nowrap;min-height:0}}
