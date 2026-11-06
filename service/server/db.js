@@ -256,6 +256,9 @@ const MIGRATIONS = [
    drop policy if exists tenant_iso on cpl_exam;
    create policy tenant_iso on cpl_exam using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
    grant select, insert, update on cpl_exam to didisam_tenant;`,
+  /* 9 — v30.2 공단 체크리스트: 본인인증 평가코드 · 차시(00 입과 · 01 진도 · 02 시험 · 03 과제 · 04 진행평가) */
+  `alter table cpl_log add column if not exists eval_cd text;
+   alter table cpl_log add column if not exists chasi integer;`,
 ];
 
 async function migrate(pool) {

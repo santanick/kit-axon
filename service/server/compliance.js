@@ -11,8 +11,8 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = 
   /* 시험 답안 포함 요청이 있어 본문 상한을 넉넉히 둔다 */
   const dev = env.IDV_DEV === '1'; const pending = new Map();
   const policy = async (c, tid) => (await c.query("select doc->'org'->'cpl' p from tenant_state where tenant_id = $1", [tid])).rows[0]?.p || null;
-  const rec = (c, tid, sid, kind, o = {}) => c.query('insert into cpl_log (tenant_id, sid, kind, cls, item, secs, ip, ua) values ($1, $2, $3, $4, $5, $6, $7, $8)',
-    [tid, sid, kind, o.cls || null, o.item || null, o.secs || 0, o.ip || null, o.ua ? String(o.ua).slice(0, 160) : null]);
+  const rec = (c, tid, sid, kind, o = {}) => c.query('insert into cpl_log (tenant_id, sid, kind, cls, item, secs, ip, ua, eval_cd, chasi) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+    [tid, sid, kind, o.cls || null, o.item || null, o.secs || 0, o.ip || null, o.ua ? String(o.ua).slice(0, 160) : null, o.evalCd || null, o.chasi == null ? null : o.chasi]);
   const dayMaxOf = P => { const h = +(P && P.dayMax); return P && P.on && h > 0 ? Math.min(24, h) * 3600 : 0; };
   const today = async (c, tid, sid) => +(await c.query("select coalesce(sum(secs), 0) s from cpl_log where tenant_id = $1 and sid = $2 and kind = 'beat' and day = (now() at time zone 'Asia/Seoul')::date", [tid, sid])).rows[0].s;
 
@@ -29,6 +29,7 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = 
       const secs = Math.floor(+b.secs); if (!(secs >= 1 && secs <= 60)) throw new HttpErr(400, '학습시간 값이 올바르지 않습니다.', 'secs');
       const cls = String(b.cls || ''), item = String(b.item || ''); if (!KEY_RE.test(cls) || !KEY_RE.test(item)) throw new HttpErr(400, '과정 정보가 올바르지 않습니다.', 'item');
       return inTenant(pool, tid, async c => { const P = await policy(c, tid); const max = dayMaxOf(P); let s = await today(c, tid, sid); const over = !!max && s >= max;
+        const chMax = P && P.on ? Math.floor(+P.dayChasi) || 0 : 0; if (chMax) { const D = (await c.query("select distinct item from cpl_log where tenant_id = $1 and sid = $2 and kind = 'beat' and day = (now() at time zone 'Asia/Seoul')::date", [tid, sid])).rows.map(x => x.item); if (D.length >= chMax && !D.includes(item)) return { today: s, max, over: true, chasi: true }; }
         if (P && P.on && !over) {
           /* 직전 기록 이후 실제로 흐른 시간보다 많이 적립하지 않는다 */
           const el = (await c.query("select extract(epoch from now() - max(at)) e from cpl_log where tenant_id = $1 and sid = $2 and kind = 'beat'", [tid, sid])).rows[0].e;
@@ -43,7 +44,7 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = 
       const k = `${tid}|${sid}|${method}`;
       if (kind === 'verify-start') { const code = String(crypto.randomInt(100000, 1000000)); pending.set(k, { code, exp: Date.now() + 300e3 }); return { ok: true, ttl: 300, dev_code: code }; }
       const p = pending.get(k); if (!p || p.exp < Date.now() || p.code !== String(b.code || '')) throw new HttpErr(400, '인증번호가 올바르지 않습니다.', 'code');
-      pending.delete(k); await inTenant(pool, tid, c => rec(c, tid, sid, 'verify-' + method, { ip: ip(req), ua: req.headers['user-agent'] })); return { ok: true };
+      pending.delete(k); const evalCd = ['00', '01', '02', '03', '04'].includes(String(b.evalCd)) ? String(b.evalCd) : null; const chasi = Number.isInteger(+b.chasi) && +b.chasi >= 0 && +b.chasi < 1000 ? +b.chasi : null; const cls = KEY_RE.test(String(b.cls || '')) ? String(b.cls) : null; await inTenant(pool, tid, c => rec(c, tid, sid, 'verify-' + method, { cls, evalCd, chasi, ip: ip(req), ua: req.headers['user-agent'] })); return { ok: true };
     }
     if (kind === 'attend') {
       limit(`cpla:${tid}:${sid}`, 10, 600e3);
@@ -61,14 +62,17 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = 
   const norm = s => String(s ?? '').toLowerCase().replace(/\s+/g, '');
   const right = (q, v) => { if (v == null || v === '') return false; const t = q.t; if (t === 'mc') return String(v) === String(q.a); if (t === 'ox') return String(v).toUpperCase() === String(q.a).toUpperCase(); if (t === 'essay') return !!String(v).trim(); if (norm(v) && norm(v) === norm(q.a)) return true; const P = String(q.a ?? '').split(/[,/·]/).map(norm).filter(Boolean); return P.length > 1 && P.every(x => norm(v).includes(x)); };
   async function examItem(c, tid, cls, item) { if (!KEY_RE.test(cls) || !KEY_RE.test(item)) throw notOpen(); const r = (await c.query("select x c, doc->'org'->'cpl' p from tenant_state, jsonb_array_elements(doc->'classes') x where tenant_id = $1 and x->>'id' = $2 limit 1", [tid, cls])).rows[0]; if (!r || !r.p || !r.p.on) throw notOpen(); const it = (r.c.curriculum || []).find(x => x && x.id === item); if (!it || it.type !== 'exam' || !Array.isArray(it.qs) || !it.qs.length) throw notOpen(); return { it, P: r.p }; }
+  const classOf = async (c, tid, cls) => (await c.query("select x c from tenant_state, jsonb_array_elements(doc->'classes') x where tenant_id = $1 and x->>'id' = $2 limit 1", [tid, cls])).rows[0].c;
   const qOut = (it, order) => order.map(i => { const q = it.qs[i] || {}; return { i, t: q.t || 'mc', q: String(q.q ?? ''), opts: Array.isArray(q.opts) ? q.opts : [], pts: +q.pts || 1 }; });
   async function examStart(tid, sid, cls, item) { limit(`cplx:${tid}:${sid}`, 30, 600e3);
-    return inTenant(pool, tid, async c => { const { it } = await examItem(c, tid, cls, item); const R = it.rules || {}; const now = Date.now();
+    return inTenant(pool, tid, async c => { const { it, P: P0 } = await examItem(c, tid, cls, item); const R = it.rules || {}; const now = Date.now();
       const open = (await c.query('select id, qorder, ends_at from cpl_exam where tenant_id = $1 and sid = $2 and cls = $3 and item = $4 and submitted_at is null order by started_at desc limit 1', [tid, sid, cls, item])).rows[0];
       if (open && (!open.ends_at || +new Date(open.ends_at) + 60e3 > now)) return { attempt: open.id, end: open.ends_at ? +new Date(open.ends_at) : 0, qs: qOut(it, open.qorder), resumed: true };
       if (open) await c.query('update cpl_exam set submitted_at = now(), score = 0, pass = false, late = true where id = $1', [open.id]);
       const f = parseT(R.from), to = parseT(R.to, true); if ((f && now < f) || (to && now > to)) throw notOpen();
       const T = (await c.query('select score from cpl_exam where tenant_id = $1 and sid = $2 and cls = $3 and item = $4 and submitted_at is not null', [tid, sid, cls, item])).rows.map(x => +x.score || 0); const rt = R.retry || {}; const best = T.length ? Math.max(...T) : null; const passV = R.pass && R.pass.on ? +R.pass.v : null;
+      /* 공단 체크리스트 31: 재응시 불가, N차 평가는 훈련 종료 다음 날부터 1주 이내(규칙을 따로 정하지 않은 시험) */
+      if (!R.retry && T.length) { const clsEnd = parseT((await classOf(c, tid, cls)).end, true); const failed = (P0.pass > 0 ? best < +P0.pass : false) && T.length === 1; if (!(failed && clsEnd && now > clsEnd && now <= clsEnd + 7 * 864e5)) throw notOpen(); }
       if (R.retry) { if (rt.mode === 'none' && T.length >= 1) throw notOpen(); if (rt.mode === 'count' && (T.length >= +rt.v || (passV != null && best != null && best >= passV))) throw notOpen(); if (rt.mode === 'score' && best != null && best >= +rt.v) throw notOpen(); }
       const idx = it.qs.map((_, i) => i); for (let i = idx.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [idx[i], idx[j]] = [idx[j], idx[i]]; } const n = +it.cplN > 0 ? Math.min(+it.cplN, idx.length) : idx.length; const order = idx.slice(0, n);
       const id = 'ex' + crypto.randomBytes(12).toString('hex'); const ends = +it.time > 0 ? new Date(now + it.time * 60e3) : null;
@@ -79,7 +83,7 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = 
       const late = !!r.ends_at && Date.now() > +new Date(r.ends_at) + 60e3; let sc = 0, tot = 0; const clean = {}; const res = r.qorder.map(i => { const q = it.qs[i] || {}; const p = +q.pts || 1; tot += p; const v = late || A[i] == null ? '' : String(A[i]).slice(0, 2000); clean[i] = v; const ok = right(q, v); if (ok) sc += p; return { i, ok }; });
       const score = Math.round(sc / Math.max(1, tot) * 100); const pass = R.pass && R.pass.on ? score >= +R.pass.v : +P.pass > 0 ? score >= +P.pass : null;
       await c.query('update cpl_exam set submitted_at = now(), answers = $1, score = $2, pass = $3, late = $4 where id = $5', [JSON.stringify(clean), score, pass, late, r.id]);
-      return { score, pass, late, res: R.show === 'never' || R.show === 'end' ? [] : res }; }); }
+      const clsEnd = parseT((await classOf(c, tid, r.cls)).end, true); const moel = /^moel-/.test(String(P.profile || '')); const hideRes = R.show === 'never' || R.show === 'end' || (moel && !(clsEnd && Date.now() > clsEnd + 7 * 864e5)); return { score, pass, late, res: hideRes ? [] : res }; }); }
   const exams = a => inTenant(pool, a.tid, async c => ({ rows: (await c.query(`select sid, cls, item, score, pass, late, to_char(submitted_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from cpl_exam where tenant_id = $1 and submitted_at is not null order by submitted_at desc limit 2000`, [a.tid])).rows }));
 
   /* 어드민: 훈련생별 집계 · 원본 로그 */
@@ -88,7 +92,7 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, env = 
       count(distinct ip)::int ips, to_char(max(at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') last, (count(*) filter (where kind like 'verify-%'))::int verified
       from cpl_log where tenant_id = $1 group by sid order by max(at) desc limit 1000`, [a.tid])).rows }));
   const logs = (a, url) => { const sid = url.searchParams.get('sid') || ''; const n = Math.min(2000, Math.max(1, +url.searchParams.get('limit') || 200));
-    return inTenant(pool, a.tid, async c => ({ rows: (await c.query(`select id::text, sid, kind, cls, item, secs, ip, ua, to_char(at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from cpl_log where tenant_id = $1 and ($2 = '' or sid = $2) order by cpl_log.id desc limit $3`, [a.tid, sid, n])).rows })); };
+    return inTenant(pool, a.tid, async c => ({ rows: (await c.query(`select id::text, sid, kind, cls, item, secs, ip, ua, eval_cd, chasi, to_char(at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from cpl_log where tenant_id = $1 and ($2 = '' or sid = $2) order by cpl_log.id desc limit $3`, [a.tid, sid, n])).rows })); };
   return { afterLogin, route, summary, logs, exams };
 }
 module.exports = { createCompliance };

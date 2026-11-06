@@ -63,8 +63,22 @@ test('규정 준수 API', async t => {
     const ex = await call('A', 'GET', '/api/cpl/exams'); assert.equal(ex.status, 200); assert.ok(ex.j.rows.some(x => x.item === 'e1' && x.score === 100)); assert.equal((await call('anon', 'GET', '/api/cpl/exams')).status, 401);
     await put({ on: true, single: true, dayMax: 1 });
   });
+  await t.test('공단 체크리스트: 1일 8차시 · 재응시 · 결과 공개', async () => {
+    await put({ on: true, single: true, dayMax: 8, dayChasi: 2 }); const px = `/api/pub/${tid}/cpl`;
+    await pool.query("delete from cpl_log where tenant_id = $1 and kind = 'beat'", [tid]);
+    const beat = item => call('L2', 'POST', px, { kind: 'beat', cls: 'c9', item, secs: 5 });
+    assert.equal((await beat('a')).j.over, false); assert.equal((await beat('b')).j.over, false); const third = await beat('c'); assert.equal(third.j.over, true); assert.equal(third.j.chasi, true); assert.equal((await beat('a')).j.over, false, '오늘 들은 차시는 계속 가능');
+    const qs = Array.from({ length: 4 }, (_, i) => ({ t: 'mc', q: 'Q' + i, opts: ['a', 'b'], a: 0 })); const mk = end => ({ ...doc({ on: true, profile: 'moel-entrust', pass: 60 }), classes: [{ id: 'cz', name: 'Z', end, curriculum: [{ id: 'e1', type: 'exam', time: 30, qs }] }] });
+    const save = async d => { const r = await call('A', 'PUT', '/api/state', { doc: d, rev }); assert.equal(r.status, 200); rev = r.j.rev; };
+    const fut = new Date(Date.now() + 864e6).toISOString().slice(0, 10), past = new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10), old = new Date(Date.now() - 20 * 864e5).toISOString().slice(0, 10);
+    await save(mk(fut)); const go = () => call('L2', 'POST', px, { kind: 'exam-start', cls: 'cz', item: 'e1' }); const s = await go(); const w = {}; s.j.qs.forEach(q => { w[q.i] = '1'; }); const r = await call('L2', 'POST', px, { kind: 'exam-submit', attempt: s.j.attempt, ans: w }); assert.equal(r.j.score, 0); assert.equal(r.j.res.length, 0, '훈련 종료 1주 전에는 문항별 결과 미공개');
+    assert.equal((await go()).status, 400, '훈련 기간 중 재응시 불가');
+    await save(mk(past)); const s2 = await go(); assert.equal(s2.status, 200, 'N차 평가 가능'); const g = {}; s2.j.qs.forEach(q => { g[q.i] = '0'; }); assert.equal((await call('L2', 'POST', px, { kind: 'exam-submit', attempt: s2.j.attempt, ans: g })).j.score, 100); assert.equal((await go()).status, 400, 'N차는 1회');
+    await save(mk(old)); assert.equal((await go()).status, 400);
+    await put({ on: true, single: true, dayMax: 1 });
+  });
   await t.test('운영자: 집계 · 로그 조회, 로그인 필요', async () => {
-    const s = await call('A', 'GET', '/api/cpl/summary'); assert.equal(s.status, 200); const row = s.j.rows.find(x => x.sid === 'T0001'); assert.ok(row && row.secs >= 3600); assert.ok(row.ips >= 1);
+    const s = await call('A', 'GET', '/api/cpl/summary'); assert.equal(s.status, 200); const row = s.j.rows.find(x => x.sid === 'T0001'); assert.ok(row && row.secs >= 5); assert.ok(row.ips >= 1);
     const l = await call('A', 'GET', '/api/cpl/logs?sid=T0001&limit=5'); assert.equal(l.status, 200); assert.ok(l.j.rows.length >= 1); assert.ok('ip' in l.j.rows[0]);
     assert.equal((await call('anon', 'GET', '/api/cpl/summary')).status, 401);
   });
