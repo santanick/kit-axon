@@ -79,7 +79,7 @@ const MIME = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html
   ok(await G(() => { const before = S.bills.length; const id = S.classes[0].learners[0]; M(id).crm.st = '휴원'; const ym = '2031-01'; UI.crmBM = ym; UI.crmBS = new Set([S.classes[0].id]); ACT['crm-gen'](); const made = S.bills.filter(b => b.month === ym); return !made.some(b => b.who === id); }), '휴원 수강료 제외');
   await G(() => { const id = S.classes[0].learners[0]; M(id).crm.st = '재원'; });
   /* 운영 현황 */
-  await G(() => go('crmstat')); await wait(60); ok(await p.locator('.grid.g4 > *').count() === 4, '일일 현황 숫자 4개'); ok(/수납/.test(await p.innerText('.k-sum')), '일일 요약'); await G(() => { UI.crmST = 'mon'; render(); }); await wait(50); ok(/이사/.test(await p.innerText('body')), '퇴원 사유 통계'); await G(() => { UI.crmST = 'tch'; render(); }); await wait(50); ok(/김강사/.test(await p.innerText('body')), '강사별');
+  await G(() => { UI.crmST = 'day'; go('crmstat'); }); await wait(60); /* v34: 첫 화면은 목록(slim-b) — 일일 현황 탭을 지정해 연다 */ ok(await p.locator('.grid.g4 > *').count() === 4, '일일 현황 숫자 4개'); ok(/수납/.test(await p.innerText('.k-sum')), '일일 요약'); await G(() => { UI.crmST = 'mon'; render(); }); await wait(50); ok(/이사/.test(await p.innerText('body')), '퇴원 사유 통계'); await G(() => { UI.crmST = 'tch'; render(); }); await wait(50); ok(/김강사/.test(await p.innerText('body')), '강사별');
   /* 원생 카드 탭 */
   await G(() => { UI.crmF = { st: '', q: '', cls: '', gy: '', flag: '' }; UI.crmId = S.classes[0].learners[0]; UI.crmSel = new Set(); go('crmstu'); }); for (const k of ['study', 'cs', 'bill', 'sum']) { await G(`UI.crmT='${k}';render();`); await wait(30); ok(await p.locator('.k-card').count() === 1, `원생 카드 ${k}`); }
   /* 교강사: 담당 수업만, 수납 · 원생 없음 */
