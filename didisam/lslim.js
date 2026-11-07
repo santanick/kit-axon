@@ -44,6 +44,11 @@
     lm.querySelectorAll('section.sub .crumb').forEach(e => { e.dataset.lsHide = 1; });
     lm.querySelectorAll('section.sub .in > h1, .la-ih > h1, .mypage > .in > h1, .sh h2, .sh').forEach(e => { const x = e.textContent.trim(); if (e.matches('h1') || (title && x === title)) e.dataset.lsHide = 1; });
     lm.querySelectorAll('section.sub .in > p:not(.crumb), .in > p.mini, .in.narrow > p.mini, .in > p.lead, .la-ib + p.mini').forEach(p => { if (p.closest('form, details, li, .mycard, .ls-me') || p.querySelector('a, button, input, select')) return; const x = p.textContent.replace(/\s+/g, ' ').trim(); if (x.length < 15) return; T.push(x); p.dataset.lsHide = 1; });
+    /* v34 500명 QA: 설명을 숨겼더니 화면에 버튼만 남으면(수료증 대기 등) 그 안내 한 줄은 다시 보인다 — 화면만 보고 상태를 알 수 있게 */
+    { const vis = [...lm.querySelectorAll('h1,h2,h3,p,li,a,button,b,small,span')].filter(e => !e.closest('[data-ls-hide]') && e.offsetParent).map(e => e.textContent).join(' ').replace(/\s+/g, ' ').trim();
+      if (vis.length < 40) { const lead = lm.querySelector('p[data-ls-hide]'); if (lead) { delete lead.dataset.lsHide; const k = lead.textContent.replace(/\s+/g, ' ').trim(); const j = T.indexOf(k); if (j >= 0) T.splice(j, 1); } } }
+    /* 「나」 화면: 본문 제목이 위 막대(나)와 다르면 숨긴다(제목은 막대 하나) */
+    if (route().a === 'acct' && !route().b) lm.querySelectorAll('h1').forEach(h => { if (h.textContent.trim() !== '나') h.dataset.lsHide = 1; });
     /* 목록 위 일괄 작업(읽은 알림 삭제 · 전체 삭제)은 「⋯」 안으로 */
     const ib = lm.querySelector('.la-ib'); if (ib && !ib.querySelector('.ls-more')) { const B = [...ib.querySelectorAll(':scope > button')].filter(b => /삭제/.test(b.textContent)); if (B.length) { const d = document.createElement('details'); d.className = 'ls-more'; d.innerHTML = `<summary aria-label="다른 작업">${ic('dots', 20)}</summary><div class="ls-mp" role="menu"></div>`; const m = d.querySelector('.ls-mp'); B.forEach(b => { b.classList.remove('pri'); b.classList.add('ghost'); b.setAttribute('role', 'menuitem'); m.appendChild(b); }); ib.appendChild(d); } }
     if (!tt) return; let i = bar.querySelector('.ls-i'); if (!T.length) { if (i) i.remove(); bar.classList.remove('ls-hasi'); return; }
