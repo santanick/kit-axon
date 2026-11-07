@@ -70,7 +70,8 @@
   const priceHTML = x => { const f = priceOf(x); if (!+x.price) return '<b class="shp-free">무료</b>'; return f < x.price ? `<s>${won(x.price)}</s> <b>${won(f)}</b>${x.kind === 'sub' ? '<small>/월</small>' : ''}` : `<b>${won(f)}</b>${x.kind === 'sub' ? '<small>/월</small>' : ''}`; };
   const thumb = (x, cls = '') => x.thumb ? `<img class="shp-th ${cls}" src="${esc(x.thumb)}" alt="">` : `<span class="shp-th shp-th0 ${cls}" aria-hidden="true">${esc(String(x.name || '').slice(0, 6))}</span>`;
   const sec = (h, inner, crumb) => `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › ${crumb || esc(h)}</p><h1>${esc(h)}</h1></div></section><section class="sec shp"><div class="in">${inner}</div></section>`;
-  const noShop = () => sec('클래스', '<p class="empty">아직 판매 정보가 게시되지 않았습니다. 운영자가 학습자 사이트를 게시하면 보입니다.</p>');
+  const shopT = () => (typeof LAPP_FIND === 'function' && LAPP_FIND()) || '클래스';
+  const noShop = () => sec(shopT(), '<p class="empty">아직 판매 정보가 게시되지 않았습니다. 운영자가 학습자 사이트를 게시하면 보입니다.</p>');
   const gradeBlock = R => { const g = R.m && R.m.grade; if (g === '준회원') return '정회원만 결제할 수 있습니다. 본인인증 후 정회원이 되면 결제할 수 있습니다.'; if (g === '승인 대기') return '가입 승인 후 이용할 수 있습니다.'; if (g === '거절') return '가입이 거절된 계정입니다. 운영자에게 문의하세요.'; return ''; };
   const pv = () => { if (LR.mode === 'preview') { toast('미리보기에서는 신청 · 결제를 할 수 없습니다.', 'warn'); return true; } return false; };
 
@@ -89,7 +90,7 @@
     const parentOf = F.cat ? ((sh.cats || []).find(x => x.id === F.cat) || {}).parent : null;
     const chip = (k, v, l, on) => `<button type="button" class="shp-chip ${on ? 'on' : ''}" data-shf="${k}" data-v="${esc(v)}">${esc(l)}</button>`;
     const kinds = [...new Set(sh.classes.map(c => c.kind))];
-    return sec('클래스', `<div class="shp-filt"><input type="search" id="shpQ" placeholder="클래스 · 강사 검색" value="${esc(F.q || '')}" aria-label="클래스 검색">
+    return sec(shopT(), `<div class="shp-filt"><input type="search" id="shpQ" placeholder="클래스 · 강사 검색" value="${esc(F.q || '')}" aria-label="클래스 검색">
       ${top.length ? `<div class="shp-chips" aria-label="카테고리">${chip('cat', '', '전체', !F.cat)}${top.map(x => chip('cat', x.id, x.name, F.cat === x.id || parentOf === x.id)).join('')}</div>` : ''}
       ${(parentOf || subs.length) ? `<div class="shp-chips sub">${(sh.cats || []).filter(x => x.parent === (parentOf || F.cat)).map(x => chip('cat', x.id, x.name, F.cat === x.id)).join('')}</div>` : ''}
       ${kinds.length > 1 ? `<div class="shp-chips">${chip('kind', '', '모든 유형', !F.kind)}${kinds.map(k => chip('kind', k, KIND[k] || k, F.kind === k)).join('')}</div>` : ''}</div>

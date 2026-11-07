@@ -319,3 +319,5 @@ setInterval(() => lsyncMine(), 30000);
 window.addEventListener('focus', () => lsyncMine(true));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) lsyncMine(true); });
 window.addEventListener('storage', e => { if (LR.mode === 'demo' && e.key && e.key === 'didisam.room.' + LR.tid) lsyncMine(true); });
+/* v32.9: 휴대폰 폭에서는 튜터 창이 화면 전체를 덮으므로, 화면(주소)이 바뀌면 닫는다 — 뒤로 가기로 빠져나올 수 있게 */
+window.addEventListener('hashchange', () => { if (innerWidth <= 600 && typeof LT !== 'undefined' && LT.open) { LT.open = false; document.body.classList.remove('lt-on'); try { sessionStorage.setItem(LTK(), '0'); } catch (e) { } setTimeout(ltRender, 0); } });

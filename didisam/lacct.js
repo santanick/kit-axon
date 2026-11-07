@@ -25,6 +25,8 @@ const laCanAcct = () => LR.mode === 'demo' && !!LR.tid && LR.tid !== 'sample';
 let LA_RC = { at: 0, v: null };
 const laRoom = () => { if (!laCanAcct()) return null; if (Date.now() - LA_RC.at < 300 && LA_RC.v) return LA_RC.v; LA_RC = { at: Date.now(), v: demoRoom() }; return LA_RC.v; };
 const laFresh = () => { LA_RC.at = 0; };
+/* v32.9: 승인 대기 계정 id를 기관별로 기억(새로 고침 뒤에도 '승인 대기' 표시, 개인정보 없음) */
+function laPendKeep(sid) { try { localStorage.setItem('didisam.app.pend.' + (LR.tid || ''), sid); } catch (e) { } }
 const laWa = w => { const c = String(w || '').slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '과' : '와'; };
 function laCfg() { const r = laRoom(); const a = (r && r.settings && r.settings.acct) || (SITE() && SITE().acct) || null; const T = (r && r.settings && r.settings.terms) || (a && a.policy) || {};
   const iv = a && a.idv && a.idv.on ? { on: true, reason: a.idv.reason || 'refund', note: a.idv.note || '' } : { on: false };
@@ -114,7 +116,7 @@ async function laLogin(f) { laFresh(); const U = laUniv(); const id = String(f.e
   if (!acc) throw new Error('이 이메일로 가입한 계정이 없습니다. 위의 [30초 간편가입]으로 바로 가입할 수 있어요.'); LA.lv = null; return laAfterAuth(acc, back); }
 function laAfterAuth(acc, back) {
   if (acc.status === 'guardian_pending') throw new Error('보호자 동의를 기다리고 있습니다. 보호자에게 보낸 동의 링크를 확인해 주세요.');
-  if (acc.grade === '승인 대기') { LA.pend = acc.sid; location.hash = '#pending'; return; }
+  if (acc.grade === '승인 대기') { LA.pend = acc.sid; laPendKeep(acc.sid); location.hash = '#pending'; return; }
   if (acc.grade === '거절') throw new Error('가입이 승인되지 않았습니다.' + (acc.reject ? ' 사유: ' + acc.reject : '') + ' 운영자에게 문의하세요.');
   laSetMe(acc); toast(`${acc.nick || '회원'}님, 반갑습니다.`, 'ok'); location.hash = '#' + (acc.kind === 'parent' ? 'family' : (back || 'my')); lrender(); }
 /* SNS 간편가입 · 로그인(데모 동의 화면). 운영: 공급자 OAuth 창 → 서버가 토큰 검증 → 회원 식별자(sub)만 받음(이메일 · 이름 · 전화 · 생일 미요청) */
@@ -197,7 +199,7 @@ function laCreate(o) { const cfg = laCfg(); const J = LA.j; const U = laUniv(); 
   const pub = { kind: J.kind, login, sid, nick: o.nick, emailMask: o.email ? laMask(o.email) : '', dept: o.dept || '', verified: false, minor, consent: { ...o.consent, at }, extra: o.extra || {}, token: inv ? inv.token : '' };
   if (!minor) lpxPush('acct-join', pub); else laCacheSet(sid, { pendPub: pub }); /* 운영: await api('POST', `/api/pub/${LR.tid}/signup`, { via, email|provider+token|student_no, code, nickname, pw?, consent, age14, guardian }) */
   J.done = { sid, nick: o.nick, grade, status: minor ? 'guardian_pending' : 'active', gtok, gmask: minor ? (o.gcontact.includes('@') ? laMask(o.gcontact) : o.gcontact.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, '$1-****-$3')) : '' };
-  if (!minor && grade !== '승인 대기') laSetMe({ kind: J.kind, sid, login, nick: o.nick, grade, dept: o.dept || '' }); else if (grade === '승인 대기') LA.pend = sid;
+  if (!minor && grade !== '승인 대기') laSetMe({ kind: J.kind, sid, login, nick: o.nick, grade, dept: o.dept || '' }); else if (grade === '승인 대기') { LA.pend = sid; laPendKeep(sid); }
   lrender(); }
 function laJoinSubmit(f) { const J = LA.j; const U = laUniv(); const err = m => { const e = $('#laJErr'); if (e) e.textContent = m; return false; }; const fd = n => (f.elements[n] && f.elements[n].value || '').trim();
   laJoinKeep(f); const c = laJoinCheck(f, err); if (!c) return; const X = () => laExtra(f, err); let extra;
@@ -206,7 +208,7 @@ function laJoinSubmit(f) { const J = LA.j; const U = laUniv(); const err = m => 
       const r = laRoom() || {}; if ((r.members || []).some(m => m.sid === stu && m.acct)) return err('이미 가입한 학번입니다. 로그인하거나 문의하세요.');
       const p1 = f.elements.pw.value; if (!LA_PW_RE.test(p1)) return err('비밀번호는 영문 · 숫자 · 특수문자(~!@#$%^&*) 조합 8~20자입니다.'); if (p1 !== f.elements.pw2.value) return err('비밀번호가 서로 다릅니다.');
       if (!(extra = X())) return; return laCreate({ stu, dept, nick, pw: p1, consent: c.consent, extra, age14: true }); }
-    const nick = fd('nick'); if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.');
+    const nick = fd('nick').replace(/(.{2,})님$/, '$1'); /* v32.9: 호칭 '님'은 화면이 붙임 */ if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.');
     if (J.sns) { if (!(extra = X())) return; return laCreate({ login: J.sns.prov, sub: J.sns.sub, nick, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact }); }
     const email = fd('email').toLowerCase(); if (!LA_MAIL_RE.test(email)) return err('이메일을 입력하세요. SNS로 가입하려면 위의 SNS 버튼을 누르세요.'); const s = LA.jv || {};
     if (!s.code || s.email !== email) return err('이메일 인증번호를 먼저 받으세요.'); if (fd('vcode') !== s.code) return err('인증번호가 올바르지 않습니다.');
@@ -421,7 +423,7 @@ document.addEventListener('submit', async e => { const f = e.target; if (!f || !
     if (f.id === 'laLogin') { const b = f.querySelector('button[type=submit]'); b.disabled = true; $('#laErr').textContent = ''; try { await laLogin(f); } catch (x) { $('#laErr').textContent = x.message; b.disabled = false; } return; }
     if (f.id === 'laSoc') { const prov = f.dataset.v; const sub = f.elements.sub.value.trim(); const er = $('#laSocErr'); if (!/^[\w.-]{3,60}$/.test(sub)) { er.textContent = '계정 ID를 확인하세요.'; return; }
       const acc = laFind(`sns:${prov}:${sub}`);
-      if (f.dataset.mode === 'join') { if (acc) { er.textContent = `이미 가입한 ${LA_SN[prov]} 계정입니다. 로그인하세요.`; return; } const nick = f.elements.nick.value.trim(); if (!LA_NICK_RE.test(nick)) { er.textContent = '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'; return; }
+      if (f.dataset.mode === 'join') { if (acc) { er.textContent = `이미 가입한 ${LA_SN[prov]} 계정입니다. 로그인하세요.`; return; } const nick = f.elements.nick.value.trim().replace(/(.{2,})님$/, '$1'); if (!LA_NICK_RE.test(nick)) { er.textContent = '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'; return; }
         const J = LA.j; const fj = $('#laJoin'); laJoinKeep(fj); const c = laJoinCheck(fj, m => { er.textContent = m; return false; }); if (!c) return; const extra = laExtra(fj, m => { er.textContent = m; return false; }); if (!extra) return;
         laDlgX(); J.sns = { prov, sub, nick }; try { laCreate({ login: prov, sub, nick, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact }); } catch (x) { J.sns = null; toast(x.message, 'warn'); lrender(); } return; }
       if (acc) { laDlgX(); try { laAfterAuth(acc, 'my'); } catch (x) { toast(x.message, 'warn'); } return; }
