@@ -4,7 +4,7 @@
      theme: HPT 테마 id(clean · premium · warm · official · tech · kids · campus · senior) — 템플릿의 대표 색(tp.color)은 유지(hpColorLock)
      hero: 첫 화면 배치 center | split | bg → 첫 배너 data.hero
      deco: 템플릿 전용 짧은 CSS(테마가 그대로일 때만 미리보기 · 게시본 <style>에 덧붙임)
-   - 템플릿을 고르면(tpl-use) 실제 데이터 보강(HPT.enrich: 숫자 · 강사 · FAQ) + 품질 자동 보정(hpwFix: 빈 섹션 숨김 · 자리 문구 · SEO)을 거친다.
+   - siteFromTpl 결과는 테마 · 첫 화면 배치 적용 뒤 실제 데이터 보강(HPT.enrich: 숫자 · 강사 · FAQ) + 품질 자동 보정(hpwFix: 빈 섹션 숨김 · 자리 문구 · SEO)을 거친다.
    - 공공기관 템플릿 벤치마크: scratchpad/fix5/bench_public.md(지자체 교육원 · 직원 사이버 연수원 · 시민대학 · 디지털 배움터 · KRDS · 빌더 템플릿 — 구조만 참고)
    사실 원칙: 숫자는 HPT.facts만, 후기는 실제 후기만, 강사는 등록 강사만, 주소 · 전화는 설정값만(없으면 섹션이 숨겨짐), 운영 시간 · 기한 · 정원 같은 숫자 약속은 쓰지 않는다. */
 'use strict';
@@ -21,7 +21,7 @@
       if (tp && tp.theme && hasHPT(tp.theme)) HPT.apply(s, tp.theme, { color: /^#[0-9a-f]{6}$/i.test(tp.color || '') ? tp.color : undefined });
       if (tp && tp.hero && HOK.test(tp.hero)) { const b = A(s.sections).find(x => x && x.type === 'banner'); if (b) { b.data = b.data || {}; b.data.hero = tp.hero; } }
     } catch (e) { console.error('tpl-d siteFromTpl', e); }
-    return s; }; window.siteFromTpl = siteFromTpl; }
+    return prep(s); }; window.siteFromTpl = siteFromTpl; }
   /* 템플릿 전용 장식 CSS: 템플릿 테마가 그대로일 때만 */
   if (typeof siteHTML === 'function') { const base = siteHTML; siteHTML = (s, full, lang) => { const h = base(s, full, lang);
     try { const tp = s && s.tpl ? TPL.find(t => t.id === s.tpl) : null; if (tp && tp.deco && (!tp.theme || s.theme === tp.theme)) return h.replace('</style>', String(tp.deco).replace(/<\/?style/gi, '') + '</style>'); } catch (e) { console.error('tpl-d deco', e); }
@@ -30,7 +30,7 @@
   function prep(s) { if (!s) return s; try { if (window.HPT && s.theme && typeof HPT.enrich === 'function') HPT.enrich(s); } catch (e) { console.error('tpl-d enrich', e); }
     try { if (typeof window.hpwFix === 'function') { const fx = window.hpwFix(s); if (fx && fx.site) { s = fx.site; s.tplFix = A(fx.log); } } } catch (e) { console.error('tpl-d fix', e); }
     return s; }
-  const fromTpl = tp => prep(siteFromTpl(tp));
+  const fromTpl = tp => siteFromTpl(tp); /* siteFromTpl이 테마 → 첫 화면 배치 → 보강 → 품질 보정까지 마친다 */
 
   /* ═════════ ② public(공공기관) 템플릿 ═════════ */
   const ft = () => (S.settings && S.settings.footer) || {};
@@ -274,7 +274,7 @@
     w.classList.add('tpd-sw'); const f = w.querySelector('.tpd-pv iframe'); f.srcdoc = htmlOf(tp); if (innerWidth < 700) { const mb = w.querySelector('[data-act=tpd-dev][data-v=m]'); if (mb) ACT['tpd-dev'](mb); } /* 휴대폰에서는 휴대폰 미리보기부터 */ requestAnimationFrame(fitPv); setTimeout(fitPv, 260); };
   ACT['tpd-dev'] = el => { const b = document.querySelector('#slSheet .tpd-pv'); if (!b) return; b.classList.toggle('m', el.dataset.v === 'm'); el.parentElement.querySelectorAll('button').forEach(x => { const on = x === el; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); }); fitPv(); };
   /* 템플릿 적용(기존 tpl-use · 미리보기 창 포함): 실제 데이터 보강 + 품질 보정 */
-  { const base = ACT['tpl-use']; ACT['tpl-use'] = el => { base(el); try { if (S.site && S.site.tpl === el.dataset.v) { const pub = S.site.published, at = S.site.at; S.site = prep(S.site); S.site.published = pub; S.site.at = at; save(); render(); } } catch (e) { console.error('tpl-d use', e); } }; }
+  /* tpl-use(기존 미리보기 창 포함)는 siteFromTpl을 쓰므로 보강 · 품질 보정이 이미 적용된다 */
   ACT['tpd-use'] = el => { if (typeof slClose === 'function') slClose(); UI.tpdQ = ''; ACT['tpl-use'](el); SITE.clear();
     setTimeout(() => { try { if (ACT['hpe-open'] && S.site && S.site.tpl) ACT['hpe-open']({ dataset: { v: 'home' } }); } catch (e) { console.error('tpl-d hpe', e); } }, 60); };
 
