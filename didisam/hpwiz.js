@@ -20,7 +20,8 @@
   const K = () => t('cls'), L = () => t('learner');
   const ft = () => (S.settings && S.settings.footer) || {};
   const pubList = () => { const P = (S.classes || []).filter(c => c.open === '전체' && c.status !== '종료'); const R = P.filter(c => c.status === '운영중'); return R.length ? R : P; };
-  const reviewsReal = () => (S.posts || []).filter(p => p.board === '수강후기' && !p.hidden);
+  const QRE = /[?？]|질문|문의|궁금|어떻게|언제|어디서|되나요|있나요|인가요|할까요|건가요|가능한가요|알려\s*주|부탁드|모르겠/;
+  const reviewsReal = () => (window.HPT && typeof HPT.reviews === 'function') ? HPT.reviews() : (S.posts || []).filter(p => p.board === '수강후기' && !p.hidden && !QRE.test(`${p.title || ''} ${p.body || ''}`)); /* 실제 후기만(질문 · 문의 글 제외) */
   const noticesReal = () => [...A(S.notices), ...(S.classes || []).flatMap(c => A(c.notices))];
   const learnersN = () => (S.members || []).filter(m => !m.withdrawn && m.grade !== '승인 대기' && m.grade !== '거절').length;
   const n0x = n => typeof n0 === 'function' ? n0(n) : String(n);
@@ -45,7 +46,7 @@
   const curTheme = s => (s && (s.hpTheme || s.look)) || '';
   /* 테마 적용: HPT.apply 또는 룩 · 대표 색 */
   function applyTheme(s, id, keepColor) {
-    if (hasT() && HPT.list.some(x => String(x.id) === id)) { const col = s.color; let r = null; try { r = HPT.apply(s, id); } catch (e) { console.error('HPT.apply', e); } s = r && typeof r === 'object' ? r : s; s.hpTheme = id; if (keepColor && col) s.color = col; return s; }
+    if (hasT() && HPT.list.some(x => String(x.id) === id)) { const col = s.color; let r = null; try { r = HPT.apply(s, id, { keepColor: !!keepColor }); } catch (e) { console.error('HPT.apply', e); } s = r && typeof r === 'object' ? r : s; s.hpTheme = id; if (keepColor && col) s.color = col; return s; }
     if (typeof LOOKS !== 'undefined' && LOOKS[id]) { s.look = id; s.hpTheme = id; if (!keepColor) s.color = LK_COL[id] || s.color; }
     return s;
   }
@@ -124,13 +125,15 @@
     return out;
   }
   /* hpMake 결과에 시안 표시 · 테마 · 강좌 칩(실제 공개 강좌) · 버튼 연결 */
-  function finish(d, v, st) {
+  function finish(d, v, st, local) {
     d.hpHero = v.hero; d.hpVar = v.id;
     const bn = A(d.sections).find(x => x.type === 'banner'); if (bn && bn.data) { bn.data.hero = v.hero; if (!bn.data.link) bn.data.link = 'learn:shop';
       if (!hasT()) { if (v.hero === 'split') { bn.data.dstyle = 2; bn.data.align = 'left'; } else if (v.hero === 'bg') { bn.data.dstyle = 2; bn.data.align = 'center'; } }
       if (v.hero === 'split') { const P = pubList().slice(0, 3); if (P.length) bn.data.chips = P.map((c, k) => [String(k + 1).padStart(2, '0'), String(c.name).slice(0, 18), +c.price ? won(c.price) : '무료']); } }
     A(d.sections).forEach(x => { if (x.type === 'text' && x.data && x.data.variant === 'cta' && !x.data.link) x.data.link = 'learn:comm'; });
-    if (st.theme) d = applyTheme(d, st.theme, !!(st.colorOn && st.color));
+    const keepC = !!(st.colorOn && st.color) || (!local && /^#[0-9a-f]{6}$/i.test(d.color || '')); /* 고른 색 · Claude가 설계한 색은 테마가 덮어쓰지 않음 */
+    if (st.theme) d = applyTheme(d, st.theme, keepC);
+    if (hasT() && typeof HPT.enrich === 'function') { try { HPT.enrich(d); } catch (e) { console.error('HPT.enrich', e); } } /* 실제 데이터 숫자 띠 · FAQ · 등록 강사 */
     if (st.colorOn && /^#[0-9a-f]{6}$/i.test(st.color || '')) d.color = st.color;
     if (st.logo) d.gnb = Object.assign({}, typeof d.gnb === 'object' ? d.gnb : {}, { logo: st.logo });
     if (d.ai) d.ai.summary = `${v.name} — ${v.desc}`;
@@ -147,7 +150,8 @@
     const d = x.data || {}; const cols = A(d.cols);
     switch (x.type) {
       case 'banner': return !String(d.title || '').trim();
-      case 'text': return d.variant && d.variant !== 'cta' && d.variant !== 'plain' ? !cols.length : (!String(d.title || '').trim() && !String(typeof d.body === 'string' ? d.body : '').trim() && !cols.length);
+      case 'text': if (d.hpt === 'facts') return !(window.HPT && typeof HPT.facts === 'function' && HPT.facts().length >= 2); /* 그릴 때마다 실제 데이터로 셈 */
+        return d.variant && d.variant !== 'cta' && d.variant !== 'plain' ? !cols.length : (!String(d.title || '').trim() && !String(typeof d.body === 'string' ? d.body : '').trim() && !cols.length);
       case 'classes': return !pubList().length && !(A(d.ids).length && !d.auto);
       case 'notices': return !noticesReal().length;
       case 'reviews': return !reviewsReal().length;
@@ -175,7 +179,7 @@
     const ctas = secs.filter(x => x.type === 'text' && x.data && x.data.variant === 'cta').length; const bOk = bn && bn.data && bn.data.cta && bn.data.cta !== bn.data.cta2 && ctas <= 1;
     add('btn', '주 버튼', 10, bOk, bOk ? '첫 화면 주 버튼 1개 · 문의 블록 1개' : !bn || !bn.data || !bn.data.cta ? '첫 화면에 주 버튼이 없습니다' : ctas > 1 ? `문의 · 신청 블록이 ${ctas}개입니다` : '주 버튼과 보조 버튼 이름이 같습니다');
     const f = ft(); const cOk = !!(f.tel || f.mail); add('contact', '연락처', 10, cOk, cOk ? '전화 또는 이메일 있음' : '연락처(전화 · 이메일)가 비어 있습니다 — 아래에 입력하면 문의 블록에 들어갑니다', false);
-    const ok = allowedNums(); const bad = secs.filter(x => { const d = x.data || {}; const nums = [...A(d.stats).map(r => r && r[0]), ...(x.type === 'text' && d.variant === 'stats' ? A(d.cols).map(r => r && r[0]) : [])].filter(v => /\d/.test(String(v || '')));
+    const ok = allowedNums(); const bad = secs.filter(x => { const d = x.data || {}; if (d.hpt === 'facts') return false; const nums = [...A(d.stats).map(r => r && r[0]), ...(x.type === 'text' && d.variant === 'stats' ? A(d.cols).map(r => r && r[0]) : [])].filter(v => /\d/.test(String(v || '')));
       return nums.some(v => !ok.has(String(v).replace(/,/g, ''))); });
     add('fact', '사실(숫자)', 5, !bad.length, bad.length ? `실제 데이터와 다른 숫자 ${bad.length}곳` : '숫자는 실제 데이터만');
     const score = it.reduce((a, x) => a + (x.ok ? x.pts : 0), 0);
@@ -291,7 +295,7 @@
     const local = res.via === '기본 설계'; const j = local ? patchLocal(res.j || {}) : (res.j || {});
     const prev = site(); let url = ''; try { url = st.url && window.hpBenchURL ? hpBenchURL(st.url) : ''; } catch (e) { url = ''; }
     const meta = { brief: String(st.brief || '').slice(0, 1500), url, by: res.via };
-    st.drafts = variants(j, local).map(v => { let d; try { d = hpMake(clone(v.j), prev, meta); } catch (e) { console.error('hpw make', e); d = hpMake(hpLocal(st.brief), prev, meta); } d = finish(d, v, st);
+    st.drafts = variants(j, local).map(v => { let d; try { d = hpMake(clone(v.j), prev, meta); } catch (e) { console.error('hpw make', e); d = hpMake(hpLocal(st.brief), prev, meta); } d = finish(d, v, st, local);
       const q0 = hpwQuality(d); const fx = hpwFix(d); return { id: v.id, name: v.name, desc: v.desc, hero: v.hero, site: fx.site, q0, q: hpwQuality(fx.site), log: fx.log }; });
     st.notes = (res.notes || []).filter(n => !/기본 설계로 만들었습니다\. 설정/.test(n)); if (local) st.notes.unshift('Claude 없이 기관 유형 · 공개 강좌로 시안 3개를 만들었습니다. 설정 › 연동에서 Claude를 연결하면 설명 · 참고 사이트를 분석해 만듭니다.');
     st.via = res.via; st.bench = res.bench; st.pick = 0; st.busy = false; if (W.st === st && box()) paint();
@@ -343,7 +347,7 @@
     else if (/(테마|디자인|스타일|분위기)\S*\s*(바꿔|변경|바꾸|다른)/.test(s)) { const named = T.find(x => s.includes(x.name) || s.toLowerCase().includes(String(x.id).toLowerCase())); const i = T.findIndex(x => x.id === curTheme(cur)); const th = named || T[(i + 1) % T.length]; if (th) step(`테마를 「${th.name}」(으)로 바꾸기`, x => applyTheme(x, th.id)); }
     /* 색 */
     const cm = /(색|컬러|톤)/.test(s.replace(/검색/g, '')) ? COLORS.find(([re]) => re.test(s)) : null;
-    if (cm) step(`대표 색을 ${cm[2]}(${cm[1]})으로`, x => { x.color = cm[1]; return x; });
+    if (cm) step(`대표 색을 ${cm[2]}(${cm[1]})으로`, x => { x.color = cm[1]; x.hpColorLock = 1; return x; });
     /* 첫 화면 문구 */
     if ((/(첫\s*화면|배너|메인|대문|히어로)/.test(s) && /(문구|제목|글|카피|문장)/.test(s) && /(바꿔|고쳐|변경|다시|새로|으로|로\s*해)/.test(s)) || /(문구|카피)\S*\s*(바꿔|고쳐|다시)/.test(s)) {
       const qt = quoteOf(s); const bn = A(cur.sections).find(x => x.type === 'banner'); const now = bn && bn.data ? bn.data.title : '';

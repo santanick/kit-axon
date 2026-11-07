@@ -35,6 +35,8 @@ const MIN_SCORE = 85;
       await page.evaluate(() => { try { closeModal(); } catch (e) { } if (typeof fabClose === 'function') try { fabClose(); } catch (e) { } go('site'); render(); });
       await page.waitForTimeout(200);
       const hasT = await page.evaluate(() => !!(window.HPT && HPT.list && HPT.list.length));
+      /* 수강후기 게시판에 섞인 질문 글은 후기로 보이면 안 됨(v34.2 H1) */
+      if (ci === 0) await page.evaluate(() => { S.posts = S.posts || []; const m = (S.members || [])[0]; S.posts.unshift({ id: 'qa_q1', board: '수강후기', title: '수강 기간 연장 가능한가요?', body: '연장 방법이 궁금합니다', who: m ? m.id : '', at: today() }); save(); });
       /* 1) 사이트 화면 → 마법사 */
       await click('.hpw-cta [data-act="hpai-open"]');
       const nTheme = await page.$$eval('.hpw-th', L => L.length); if (nTheme < 4) bad.push(`테마 ${nTheme}개`);
@@ -45,7 +47,11 @@ const MIN_SCORE = 85;
       await click('[data-hw="gen"]'); await page.waitForFunction(() => document.querySelectorAll('.hpw-d').length === 3, null, { timeout: 30000 });
       const D = await page.evaluate(() => HPW.st.drafts.map(d => ({ id: d.id, hero: d.hero, sig: d.site.sections.filter(x => !x.hide).map(x => x.type + (x.data && x.data.variant ? ':' + x.data.variant : '')).join(','), q0: d.q0.score, q: d.q.score,
         bad: d.q.items.filter(x => !x.ok).map(x => x.k), look: d.site.hpTheme || d.site.look })));
-      if (new Set(D.map(d => d.sig)).size < 3) bad.push('시안 구성이 서로 같음'); if (new Set(D.map(d => d.hero)).size < 3) bad.push('첫 화면 배치가 서로 같음');
+      if (new Set(D.map(d => d.sig)).size < 3) bad.push('시안 구성이 서로 같음');
+      if (hasT) { const hc = await page.evaluate(() => HPW.st.drafts.map(d => (siteHTML(d.site).match(/class="hpt hp-hero ([^"]+)"/) || [])[1] || ''));
+        if (new Set(hc).size < 3) bad.push(`첫 화면이 화면에서 서로 같음 ${hc.join(' / ')}`);
+        const au = await page.evaluate(() => HPW.st.drafts.flatMap(d => HPT.audit(d.site).filter(r => r[3] < 4.5).map(r => `${d.id}:${r[0]} ${r[3]}`)));
+        if (au.length) bad.push(`대비 4.5:1 미만 ${au.slice(0, 3).join(', ')}`); } if (new Set(D.map(d => d.hero)).size < 3) bad.push('첫 화면 배치가 서로 같음');
       D.forEach(d => { if (d.q < MIN_SCORE) bad.push(`시안 ${d.id} 품질 ${d.q}점`); if (d.bad.some(k => k !== 'contact')) bad.push(`시안 ${d.id} 미해결 ${d.bad.join('/')}`); });
       const shown = await page.$eval('.hpw-q .hpw-score', e => parseInt(e.textContent, 10)).catch(() => -1); if (shown !== D[0].q) bad.push(`화면 점수 ${shown} ≠ ${D[0].q}`);
       /* 시안 고르기는 선택(기본은 A). 다른 유형에서는 B · C도 골라 본다 */
@@ -76,9 +82,9 @@ const MIN_SCORE = 85;
       const pm = await ctx.newPage(); pm.on('pageerror', e => errs.push('learner: ' + e.message)); await pm.setViewportSize({ width: 390, height: 844 });
       await pm.goto(`${base}/learner.html?t=${after.tid}#home`, { waitUntil: 'load' }); await pm.waitForTimeout(1500);
       const lh = await pm.evaluate(() => { const vw = document.documentElement.clientWidth; const over = [...document.querySelectorAll('body *')].filter(e => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); if (!r.width || cs.position === 'fixed' || e.closest('[aria-hidden="true"],.tick,.tt,svg')) return false; let p = e.parentElement; while (p) { const o = getComputedStyle(p).overflowX; if (o === 'hidden' || o === 'auto' || o === 'scroll' || o === 'clip') return false; p = p.parentElement; } return r.right > vw + 1; }).length;
-        const tx = document.body.innerText; return { sw: document.documentElement.scrollWidth, vw, over, ph: /(입력하세요|입력해 주세요|Lorem|대표번호|센터 주소)/.test(tx), rvTxt: /수강후기/.test(tx) }; });
+        const tx = document.body.innerText + [...document.querySelectorAll('.smhost')].map(h => h.shadowRoot ? h.shadowRoot.textContent : '').join(' '); return { q1: /연장 가능한가요/.test(tx), sw: document.documentElement.scrollWidth, vw, over, ph: /(입력하세요|입력해 주세요|Lorem|대표번호|센터 주소)/.test(tx), rvTxt: /수강후기/.test(tx) }; });
       await pm.close();
-      if (lh.sw > lh.vw + 1 || lh.over) bad.push(`휴대폰 가로 넘침 ${lh.sw}/${lh.vw} · 요소 ${lh.over}`); if (lh.ph) bad.push('게시 화면에 자리 문구');
+      if (lh.sw > lh.vw + 1 || lh.over) bad.push(`휴대폰 가로 넘침 ${lh.sw}/${lh.vw} · 요소 ${lh.over}`); if (lh.ph) bad.push('게시 화면에 자리 문구'); if (lh.q1) bad.push('질문 글이 후기로 보임');
       rows.push({ 유형: label + (empty ? '(빈 기관)' : ''), HPT: hasT, 누름: clicks, 경로: via === 'direct' ? '테마→시안→적용하고 게시' : '테마→시안→적용→바로 고치기→게시', 고른시안: D[picked].id, 품질: D.map(d => `${d.id}:${d.q0}→${d.q}`).join(' '), 게시후: after.q, 숨긴빈섹션: after.hid, 넘침: lh.over, 구성: D.map(d => d.sig).join(' | ') });
       if (clicks > (via === 'direct' ? 4 : 5) + (ci % 3 ? 1 : 0)) bad.push(`누름 ${clicks}회`);
     } catch (e) { bad.push('crash: ' + e.message.split('\n')[0]); }

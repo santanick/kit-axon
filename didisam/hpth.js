@@ -6,6 +6,9 @@
      공지 · 후기 · 오시는 길은 내용이 없으면 숨긴다(화면에서 바로 고치기 중에는 자리 안내를 보여 준다).
    - 칸 수는 내용 수에 맞춘다(3개면 3칸) · 섹션 여백 72px(휴대폰 44px) · 대비 4.5:1 이상(포인트색은 자동 보정).
    - 게시된 학습자 홈은 이 HTML · CSS를 그대로 Shadow DOM에 넣는다(sitemerge smHp) → 스튜디오 미리보기와 같은 결과.
+   - 시안 배치: banner.data.hero = 'center'(가운데 · 테마 바탕) | 'split'(좌우 분할 · 밝은 바탕) | 'bg'(어두운 배경)이면 테마와 관계없이 그 배치로 그린다(hpwiz 시안 3개).
+   - 대표 색: 사용자가 고른 색 · Claude 설계 색 · 말로 바꾼 색은 s.hpColorLock=1 → 테마를 바꿔도 유지. 대비는 HPT.audit(site)로 점검(첫 화면 바탕 3종 × 제목 · 강조 · 라벨 · 설명).
+   - 후기: 실제 후기만(질문 · 문의 글 제외) — HPT.reviews(). hpRun 직접 호출(AI SAM build_homepage)도 HPE.draft에서 hpwFix 품질 보정을 거친다.
    데이터: S.site.theme = 테마 id(없으면 기존 look 렌더러 그대로), 섹션 data.hpt = 'facts' | 'faq' | 'people'(이 모듈이 넣은 섹션 표시)
    인터페이스: window.HPT = { list, apply(site, id, opt), thumb(site, id), pick(type, ed, brief), enrich(site), facts(), css(site) } */
 'use strict';
@@ -45,10 +48,29 @@
   function tok(s, th) {
     let a = ok6(s && s.color) ? s.color : th.acc; const ink = th.ink;
     let on = '#ffffff'; if (CR(a, '#ffffff') < 4.5) { if (CR(a, ink) >= 4.5 && Lm(a) > .3) on = ink; else a = fit(a, '#ffffff', 4.6, '#000000'); }
-    const hb = th.hero === 'dark' ? th.hb : th.hero === 'band' ? mix(th.acc === a ? a : a, '#000000', th.illu === 'campus' ? .35 : .45) : th.bg;
-    const darkHero = th.hero === 'dark' || th.hero === 'band';
-    return { a, on, ink, mu: th.mu, bg: th.bg, alt: th.alt, at: fit(a, th.bg, 4.6), at2: fit(a, th.alt, 4.6), as: mix(a, '#ffffff', .9), as2: mix(a, '#ffffff', .78), hb, hi: darkHero ? '#ffffff' : ink, hm: darkHero ? 'rgba(255,255,255,.8)' : th.mu, ha: darkHero ? fit(mix(a, '#ffffff', th.hero === 'band' ? .62 : .25), hb, 4.6, '#ffffff') : fit(a, th.bg, 4.6), dark: darkHero };
+    const as = mix(a, '#ffffff', .9), as2 = mix(a, '#ffffff', .78); const at = fit(fit(a, as2, 4.6), th.alt, 4.6);
+    /* 첫 화면 바탕 3종: 밝은(light) · 어두운(dark) · 띠(band) — 글자색은 가장 밝은 지점(빛 번짐 · 라벨 바탕)과 비교해 4.5:1 이상 */
+    /* 빛 번짐(포인트색 34%) · 가장자리 밝힘(흰색 12~14%)을 더한 가장 밝은 지점도 흰 글자와 4.6:1 이상이 되도록 바탕을 어둡게 맞춘다 */
+    let hd = th.hero === 'dark' ? th.hb : mix(a, '#0B1020', .74); let hdHi = mix(mix(hd, a, .34), '#ffffff', .12);
+    for (let k = 0; k < 12 && CR('#ffffff', hdHi) < 4.6; k++) { hd = mix(hd, '#000000', .25); hdHi = mix(mix(hd, a, .34), '#ffffff', .12); }
+    const hbB = mix(a, '#000000', th.illu === 'campus' ? .35 : .45); let hbB2 = mix(hbB, a, .55); let hbHi = mix(hbB2, '#ffffff', .14);
+    for (let k = 0; k < 20 && CR('#ffffff', hbHi) < 4.6; k++) { hbB2 = mix(hbB2, '#000000', .1); hbHi = mix(hbB2, '#ffffff', .14); }
+    const L = { hi: ink, hm: fit(th.mu, as, 4.6), ha: fit(a, as2, 4.6), hy: fit(a, as, 4.8) };
+    const D = { hi: '#ffffff', hm: fit('#E2E6EE', hdHi, 4.6, '#ffffff'), ha: fit(mix(a, '#ffffff', .3), hdHi, 4.6, '#ffffff'), hy: fit(mix(a, '#ffffff', .45), hdHi, 4.8, '#ffffff') };
+    const B = { hi: '#ffffff', hm: fit('#E8ECF4', hbHi, 4.6, '#ffffff'), ha: fit(mix(a, '#ffffff', .62), hbHi, 4.6, '#ffffff'), hy: fit(mix(a, '#ffffff', .7), hbHi, 4.8, '#ffffff') };
+    const def = th.hero === 'dark' ? 'dark' : th.hero === 'band' ? 'band' : 'light';
+    return { a, on, ink, mu: th.mu, bg: th.bg, alt: th.alt, at, at2: at, as, as2, hb: def === 'dark' ? hd : def === 'band' ? hbB : th.bg, hd, hdHi, hbB, hbB2, hbHi, L, D, B, def,
+      hi: def === 'light' ? L.hi : '#ffffff', hm: (def === 'light' ? L : def === 'dark' ? D : B).hm, ha: (def === 'light' ? L : def === 'dark' ? D : B).ha, dark: def !== 'light' };
   }
+  /* 대비 점검(테스트 · 품질 점수용): [이름, 글자색, 바탕색, 비율] */
+  function audit(s) { const th = thOf(s); if (!th) return []; const T = tok(s, th); const R = [];
+    const add = (n, f, b) => R.push([n, f, b, Math.round(CR(f, b) * 100) / 100]);
+    add('주 버튼', T.on, T.a); add('섹션 라벨', T.at, T.bg); add('섹션 라벨(회색 띠)', T.at, T.alt); add('태그', T.at, T.as2); add('본문 보조', T.mu, T.alt);
+    add('밝은 첫 화면 제목', T.L.hi, T.as); add('밝은 첫 화면 강조', T.L.ha, T.as2); add('밝은 첫 화면 라벨', T.L.hy, T.as); add('밝은 첫 화면 설명', T.L.hm, T.as);
+    add('어두운 첫 화면 제목', T.D.hi, T.hdHi); add('어두운 첫 화면 강조', T.D.ha, T.hdHi); add('어두운 첫 화면 라벨', T.D.hy, T.hdHi); add('어두운 첫 화면 설명', T.D.hm, T.hdHi);
+    add('띠 첫 화면 제목', T.B.hi, T.hbHi); add('띠 첫 화면 강조', T.B.ha, T.hbHi); add('띠 첫 화면 라벨', T.B.hy, T.hbHi); add('띠 첫 화면 설명', T.B.hm, T.hbHi);
+    const ctaBg = fit(T.a, '#ffffff', 4.8, '#000000'); add('문의 띠 글자', '#ffffff', ctaBg); add('문의 띠 버튼', fit(T.a, '#ffffff', 4.6), '#ffffff');
+    return R; }
 
   /* ── 공통 ── */
   const IC = { play: 'M7 4.5l12 7.5-12 7.5z', tool: 'M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z', chat: 'M4 5h16v11H9l-5 4z', award: 'M12 15a6 6 0 100-12 6 6 0 000 12zM8.5 14L7 21l5-3 5 3-1.5-7', cal: 'M4 6h16v14H4zM4 10h16M8 3v5M16 3v5', users: 'M9 11a4 4 0 100-8 4 4 0 000 8zM2 21v-1a7 7 0 0114 0v1M16 3.5a4 4 0 010 7.5M22 21v-1a6 6 0 00-4-5.6', shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM8.5 12l2.5 2.5 4.5-5', spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z', chart: 'M4 20V10M10 20V4M16 20v-7M2 20h20', board: 'M3 4h18v12H3zM8 20l4-4 4 4', check: 'M20 12a8 8 0 11-16 0 8 8 0 0116 0zM8 12l3 3 5-6', brief: 'M3 7h18v13H3zM8 7V4h8v3M3 12h18', card: 'M3 6h18v12H3zM3 10h18M7 15h4', type: 'M4 7V4h16v3M12 4v16M8 20h8', clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 4v5l3 2', book: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19V5M8 7h7', pin: 'M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11zM12 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z', phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2', mail: 'M3 5h18v14H3zM3 6l9 7 9-7', arrow: 'M5 12h14M13 6l6 6-6 6', home: 'M3 11l9-8 9 8M5 10v10h14V10', heart: 'M12 20s-8-5-8-11a4.5 4.5 0 018-2.8A4.5 4.5 0 0120 9c0 6-8 11-8 11z', bell: 'M6 16V11a6 6 0 0112 0v5l2 2H4zM10 21h4', grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', user: 'M12 12a4.5 4.5 0 100-9 4.5 4.5 0 000 9zM4 21a8 8 0 0116 0' };
@@ -146,11 +168,13 @@
     const vis = d.img ? `<div class="hp-vis hp-photo"><img src="${E(d.img)}" alt="${E(d.alt || d.title || '')}"></div>` : (th.vis === 'mock' && mock(s, th, T)) || illu(s, th, T);
     const ey = d.eyebrow ? `<p class="hp-hey">${E(d.eyebrow)}</p>` : '';
     const txt = `<div class="hp-ht">${ey}<h1>${h1}</h1>${d.sub ? `<p class="hp-hs">${E(d.sub)}</p>` : ''}${btn}${trust}</div>`;
+    const mode = /^(center|split|bg)$/.test(d.hero || '') ? d.hero : ''; const lay = mode ? (mode === 'center' ? 'c' : 's') : (th.hero === 'center' ? 'c' : 's');
+    const bk = mode === 'bg' ? 'dark' : mode === 'split' ? 'light' : T.def;
     let qk = '';
-    if (th.hero === 'band') { const M = (s.menus || []).filter(m => m.on !== false && m.kind !== 'home' && m.access !== '비공개').slice(0, 4);
+    if (bk === 'band') { const M = (s.menus || []).filter(m => m.on !== false && m.kind !== 'home' && m.access !== '비공개').slice(0, 4);
       if (M.length >= 2) qk = `<nav class="hp-qk n${M.length}" aria-label="바로가기">${M.map((m, k) => `<a ${aAttr(m.link ? linkHref(m.link) || '#p-m-' + m.id : '#p-m-' + m.id)}><i>${svg(icOf(m.l, k + 2), 22)}</i><b>${E(m.l)}</b>${svg('arrow', 16, 2)}</a>`).join('')}</nav>`; }
-    const deco = th.hero === 'dark' ? '<i class="hp-glow g1"></i><i class="hp-glow g2"></i><i class="hp-grid"></i>' : th.hero === 'band' ? '<i class="hp-band-d"></i>' : '<i class="hp-blob b1"></i><i class="hp-blob b2"></i><i class="hp-dots"></i>';
-    return `<section class="hpt hp-hero hp-h-${th.hero}">${deco}<div class="hp-w hp-hg">${txt}${vis}</div>${qk ? `<div class="hp-w">${qk}</div>` : ''}</section>`;
+    const deco = bk === 'dark' ? '<i class="hp-glow g1"></i><i class="hp-glow g2"></i><i class="hp-grid"></i>' : bk === 'band' ? '<i class="hp-band-d"></i>' : '<i class="hp-blob b1"></i><i class="hp-blob b2"></i><i class="hp-dots"></i>';
+    return `<section class="hpt hp-hero hp-b-${bk} hp-l-${lay}${mode ? ' hp-m-' + mode : ''}">${deco}<div class="hp-w hp-hg">${txt}${vis}</div>${qk ? `<div class="hp-w">${qk}</div>` : ''}</section>`;
   }
   const gridN = n => n <= 4 ? n : n === 5 || n === 6 ? 3 : 4;
   function textSec(d, s, th, T, alt, x) {
@@ -197,10 +221,16 @@
     if (!L.length) return hint('hp-nt', '공지사항을 올리면 이곳에 최신 글이 표시됩니다(없으면 게시된 사이트에서 숨겨집니다).');
     const m = menuOf(s, 'notice');
     return SEC('hp-nt', `<div class="hp-split">${SH(d, '')}<div><ul class="hp-nl">${L.map(n => `<li><span class="hp-tag">공지</span><b>${E(n.title)}</b><time>${E(dot(n.at || ''))}</time></li>`).join('')}</ul>${m ? `<a class="hp-all" href="#p-m-${E(m.id)}">공지 전체 보기 ${svg('arrow', 16, 2.2)}</a>` : ''}</div></div>`, alt); }
-  function reviews(d, s, th, T, alt) {
+  /* 실제 수강후기만: 숨김 · 빈 글 · 질문 · 문의 글은 뺀다(수강후기 게시판에 섞인 질문 글 대비) */
+  const QRE = /[?？]|질문|문의|궁금|어떻게|언제|어디서|되나요|있나요|인가요|할까요|건가요|가능한가요|알려\s*주|부탁드|모르겠/;
+  function realReviews() {
     const nm = id => { const n = (typeof M === 'function' && M(id) && M(id).name) || ''; return /^[가-힣]/.test(n) ? n[0] + '○○' : t('learner'); };
-    const R = [...(S.reviews || []).filter(r => !r.hidden && String(r.body || '').trim()).map(r => ({ b: r.body, w: nm(r.who), st: +r.stars || 0, c: ((S.classes || []).find(c => c.id === r.cls) || {}).name || '' })),
-      ...(S.posts || []).filter(p => p.board === '수강후기' && !p.hidden && !(S.reviews || []).some(r => r.id === p.id)).map(p => ({ b: p.title, w: nm(p.who), st: 0, c: '' }))].slice(0, 3);
+    const R = (S.reviews || []).filter(r => !r.hidden && String(r.body || '').trim().length >= 6 && !QRE.test(String(r.body))).map(r => ({ id: r.id, b: String(r.body), w: nm(r.who), st: +r.stars || 0, c: ((S.classes || []).find(c => c.id === r.cls) || {}).name || '' }));
+    const P = (S.posts || []).filter(p => p.board === '수강후기' && !p.hidden && !p.priv && !(S.reviews || []).some(r => r.id === p.id)).filter(p => { const tx = `${p.title || ''} ${p.body || ''}`; return String(p.title || p.body || '').trim().length >= 6 && !QRE.test(tx); })
+      .map(p => ({ id: p.id, b: String(p.body || p.title), w: nm(p.who), st: +p.stars || 0, c: '' }));
+    return [...R, ...P]; }
+  function reviews(d, s, th, T, alt) {
+    const R = realReviews().slice(0, 3);
     if (!R.length) return hint('hp-rv', '실제 수강후기가 등록되면 이곳에 표시됩니다(없으면 게시된 사이트에서 숨겨집니다).');
     return SEC('hp-rv', SH(d, '') + `<div class="hp-g g${R.length}">${R.map(r => `<figure class="hp-card hp-rc">${r.st ? `<span class="hp-stars" aria-label="별점 ${r.st}점">${'★'.repeat(Math.min(5, r.st))}<i>${'★'.repeat(5 - Math.min(5, r.st))}</i></span>` : ''}<blockquote>${E(String(r.b).slice(0, 160))}</blockquote><figcaption><b>${E(r.w)}</b>${r.c ? `<small>${E(r.c)}</small>` : ''}</figcaption></figure>`).join('')}</div>`, alt); }
   function map(d, s, th, T, alt) { const f = ft();
@@ -236,23 +266,27 @@
   /* ── CSS ── */
   function css(s) { const th = thOf(s); if (!th) return ''; const T = tok(s, th); const big = th.big ? 1.14 : 1; const px = n => Math.round(n * big) + 'px';
     const cardS = th.card === 'shadow' ? `background:#fff;box-shadow:0 1px 2px rgba(16,24,40,.04),0 8px 28px -12px rgba(16,24,40,.14);border:1px solid rgba(16,24,40,.06)` : th.card === 'flat' ? `background:#fff;border:0;box-shadow:0 0 0 1px ${al(T.a, .1)}` : `background:#fff;border:1px solid #E3E6EC`;
-    const heroBg = th.hero === 'dark' ? `background:${T.hb};color:#fff` : th.hero === 'band' ? `background:linear-gradient(120deg,${T.hb},${mix(T.hb, T.a, .55)});color:#fff` : th.hero === 'center' ? `background:linear-gradient(180deg,${T.as} 0%,${th.bg} 100%)` : `background:${th.bg}`;
-    return `.hpt{--a:${T.a};--on:${T.on};--at:${T.at};--at2:${T.at2};--as:${T.as};--as2:${T.as2};--bg:${th.bg};--alt:${th.alt};--ink:${T.ink};--mu:${T.mu};--r:${th.r}px;--br:${th.br}px;--hb:${T.hb};--hi:${T.hi};--hm:${T.hm};--ha:${T.ha};box-sizing:border-box;position:relative;color:var(--ink);background:var(--bg);font-family:Pretendard,'Pretendard Variable','Apple SD Gothic Neo','Malgun Gothic',sans-serif;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere;font-size:${px(16)}}
+    return `.hpt{--a:${T.a};--on:${T.on};--at:${T.at};--at2:${T.at2};--as:${T.as};--as2:${T.as2};--bg:${th.bg};--alt:${th.alt};--ink:${T.ink};--mu:${T.mu};--r:${th.r}px;--br:${th.br}px;--hb:${T.hb};box-sizing:border-box;position:relative;color:var(--ink);background:var(--bg);font-family:Pretendard,'Pretendard Variable','Apple SD Gothic Neo','Malgun Gothic',sans-serif;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere;font-size:${px(16)}}
 .hpt *,.hpt *::before,.hpt *::after{box-sizing:border-box}.hpt a{color:inherit;text-decoration:none}:where(.hpt) :where(h1,h2,h3,p,ul,ol,dl,dd,figure,blockquote){margin:0;padding:0}:where(.hpt) :where(ul,ol){list-style:none}.hpt svg{flex:none}
 .hp-w{max-width:1160px;margin:0 auto;padding:0 32px;position:relative;z-index:1}
 .hp-s{padding:${px(76)} 0}.hp-s.hp-alt{background:var(--alt)}.hp-s.hp-alt .hp-ey{color:var(--at2)}
 .hp-sh{margin-bottom:${px(32)};max-width:720px}.hp-ey{font-size:${px(13)};font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--at);margin-bottom:10px}.hp-sh h2,.hp-prose h2,.hp-ctat h2{font-size:clamp(${px(26)},3vw,${px(38)});line-height:1.25;letter-spacing:-.03em;font-weight:800}.hp-sd,.hp-lead{color:var(--mu);font-size:${px(16.5)};margin-top:12px;line-height:1.75}.hp-lead{margin:-14px 0 28px;max-width:720px}
-.hp-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:${px(52)};padding:0 ${px(26)};border-radius:var(--br);font-weight:750;font-size:${px(16)};letter-spacing:-.01em;transition:transform .15s,box-shadow .15s,background .15s;white-space:nowrap}.hp-btn:hover{transform:translateY(-1px)}.hp-btn.pri{background:var(--a);color:var(--on);box-shadow:0 10px 24px -10px ${al(T.a, .7)}}.hp-btn.gh{box-shadow:inset 0 0 0 1.5px ${T.dark ? 'rgba(255,255,255,.45)' : al(T.ink, .2)};color:var(--hi);background:${T.dark ? 'rgba(255,255,255,.06)' : '#fff'}}.hp-btn.inv{background:#fff;color:${fit(T.a, '#ffffff', 4.6)};}
-/* 첫 화면 */
-.hp-hero{${heroBg};overflow:hidden;padding:${th.hero === 'center' ? px(84) + ' 0 ' + px(36) : px(88) + ' 0 ' + px(84)}}.hp-hg{display:grid;grid-template-columns:${th.hero === 'center' ? '1fr' : th.big ? 'minmax(0,1.25fr) minmax(0,.75fr)' : 'minmax(0,1.05fr) minmax(0,.95fr)'};gap:${th.hero === 'center' ? '36px' : '56px'};align-items:center}
-.hp-ht{${th.hero === 'center' ? 'text-align:center;max-width:760px;margin:0 auto;display:flex;flex-direction:column;align-items:center' : ''}}.hp-hey{display:inline-flex;align-items:center;gap:8px;font-size:${px(13)};font-weight:800;letter-spacing:.14em;color:var(--ha);${T.dark ? 'background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)' : `background:${T.as};`};padding:7px 14px;border-radius:999px;margin-bottom:22px}
-.hp-hero h1{font-size:clamp(${px(34)},4.6vw,${px(58)});line-height:1.16;letter-spacing:-.035em;font-weight:850;color:var(--hi)}.hp-hero h1 em{font-style:normal;color:var(--ha);${th.hero === 'split' || th.hero === 'center' ? `background:linear-gradient(transparent 68%,${al(T.a, .16)} 68%)` : ''}}
-.hp-hs{margin-top:20px;font-size:${px(18)};line-height:1.7;color:var(--hm);max-width:560px}.hp-hb{display:flex;flex-wrap:wrap;gap:10px;margin-top:32px;${th.hero === 'center' ? 'justify-content:center' : ''}}
-.hp-tr{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:28px;${th.hero === 'center' ? 'justify-content:center' : ''}}.hp-tr li{display:flex;align-items:center;gap:7px;font-size:${px(14)};color:var(--hm)}.hp-tr li svg{color:var(--ha)}.hp-tr b{color:var(--hi);font-weight:800}
+.hp-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:${px(52)};padding:0 ${px(26)};border-radius:var(--br);font-weight:750;font-size:${px(16)};letter-spacing:-.01em;transition:transform .15s,box-shadow .15s,background .15s;white-space:nowrap}.hp-btn:hover{transform:translateY(-1px)}.hp-btn.pri{background:var(--a);color:var(--on);box-shadow:0 10px 24px -10px ${al(T.a, .7)}}.hp-btn.gh{box-shadow:inset 0 0 0 1.5px ${al(T.ink, .2)};color:var(--ink);background:#fff}.hp-btn.inv{background:#fff;color:${fit(T.a, '#ffffff', 4.6)};}
+/* 첫 화면: 배치(hp-l-s 좌우 · hp-l-c 가운데) × 바탕(hp-b-light · hp-b-dark · hp-b-band) */
+.hp-hero{overflow:hidden;padding:${px(88)} 0 ${px(84)}}.hp-b-light{background:${th.bg};--hi:${T.L.hi};--hm:${T.L.hm};--ha:${T.L.ha};--hy:${T.L.hy};--hyb:${T.as}}.hp-b-light.hp-l-c{background:linear-gradient(180deg,${T.as} 0%,${th.bg} 100%)}
+.hp-b-dark{background:${T.hd};color:#fff;--hi:#fff;--hm:${T.D.hm};--ha:${T.D.ha};--hy:${T.D.hy};--hyb:rgba(0,0,0,.22)}.hp-b-band{background:linear-gradient(120deg,${T.hbB},${T.hbB2});color:#fff;--hi:#fff;--hm:${T.B.hm};--ha:${T.B.ha};--hy:${T.B.hy};--hyb:rgba(0,0,0,.2)}
+.hp-hg{display:grid;grid-template-columns:${th.big ? 'minmax(0,1.25fr) minmax(0,.75fr)' : 'minmax(0,1.05fr) minmax(0,.95fr)'};gap:56px;align-items:center}.hp-l-c{padding:${px(84)} 0 ${px(40)}}.hp-l-c .hp-hg{grid-template-columns:1fr;gap:36px}
+.hp-l-c .hp-ht{text-align:center;max-width:780px;margin:0 auto;display:flex;flex-direction:column;align-items:center}.hp-l-c .hp-hb,.hp-l-c .hp-tr{justify-content:center}.hp-l-c .hp-hs{margin-left:auto;margin-right:auto}.hp-l-c .hp-vis{min-height:260px}.hp-l-c .hp-illu svg{max-width:520px}
+.hp-hey{display:inline-flex;align-items:center;gap:8px;font-size:${px(13)};font-weight:800;letter-spacing:.14em;color:var(--hy);background:var(--hyb);padding:7px 14px;border-radius:999px;margin-bottom:22px}.hp-b-dark .hp-hey,.hp-b-band .hp-hey{box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+.hp-hero h1{font-size:clamp(${px(34)},4.6vw,${px(58)});line-height:1.16;letter-spacing:-.035em;font-weight:850;color:var(--hi)}.hp-hero h1 em{font-style:normal;color:var(--ha)}.hp-b-light h1 em{background:linear-gradient(transparent 68%,${al(T.a, .16)} 68%)}
+.hp-hs{margin-top:20px;font-size:${px(18)};line-height:1.7;color:var(--hm);max-width:560px}.hp-hb{display:flex;flex-wrap:wrap;gap:10px;margin-top:32px}
+.hp-tr{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:28px}.hp-tr li{display:flex;align-items:center;gap:7px;font-size:${px(14)};color:var(--hm)}.hp-tr li svg{color:var(--ha)}.hp-tr b{color:var(--hi);font-weight:800}
+.hp-hero .hp-btn.gh{box-shadow:inset 0 0 0 1.5px ${al(T.ink, .2)};color:var(--hi);background:#fff}.hp-b-dark .hp-btn.gh,.hp-b-band .hp-btn.gh{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5);background:rgba(255,255,255,.06);color:#fff}
+.hp-b-dark .hp-illu svg,.hp-b-band .hp-illu svg{filter:drop-shadow(0 24px 40px rgba(0,0,0,.35))}
 .hp-blob{position:absolute;border-radius:50%;filter:blur(2px);pointer-events:none}.hp-blob.b1{width:520px;height:520px;right:-120px;top:-160px;background:radial-gradient(circle,${al(T.a, .16)},transparent 68%)}.hp-blob.b2{width:360px;height:360px;left:-140px;bottom:-180px;background:radial-gradient(circle,${al(mix(T.a, '#F59E0B', .5), .14)},transparent 70%)}.hp-dots{position:absolute;inset:0;background-image:radial-gradient(${al(T.a, .14)} 1px,transparent 1.4px);background-size:22px 22px;-webkit-mask-image:linear-gradient(90deg,transparent 40%,#000 85%);mask-image:linear-gradient(90deg,transparent 40%,#000 85%);pointer-events:none}
 .hp-glow{position:absolute;border-radius:50%;pointer-events:none}.hp-glow.g1{width:640px;height:640px;right:-160px;top:-260px;background:radial-gradient(circle,${al(T.a, .34)},transparent 65%)}.hp-glow.g2{width:420px;height:420px;left:-160px;bottom:-240px;background:radial-gradient(circle,${al(mix(T.a, '#6366F1', .5), .22)},transparent 70%)}.hp-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 70% 40%,#000 20%,transparent 75%);mask-image:radial-gradient(ellipse at 70% 40%,#000 20%,transparent 75%);pointer-events:none}
 .hp-band-d{position:absolute;right:-8%;top:-30%;width:60%;height:160%;background:radial-gradient(ellipse at center,rgba(255,255,255,.12),transparent 62%);pointer-events:none}
-.hp-vis{position:relative;min-height:${th.hero === 'center' ? '260px' : '360px'};display:flex;align-items:center;justify-content:center}.hp-illu svg{width:100%;max-width:${th.hero === 'center' ? '520px' : '500px'};height:auto;display:block;filter:drop-shadow(0 24px 40px ${al(T.dark ? '#000000' : T.a, T.dark ? .35 : .12)})}.hp-photo img{width:100%;max-height:440px;object-fit:cover;border-radius:calc(var(--r) + 8px);box-shadow:0 30px 60px -30px rgba(0,0,0,.45)}
+.hp-vis{position:relative;min-height:360px;display:flex;align-items:center;justify-content:center}.hp-illu svg{width:100%;max-width:500px;height:auto;display:block;filter:drop-shadow(0 24px 40px ${al(T.a, .12)})}.hp-photo img{width:100%;max-height:440px;object-fit:cover;border-radius:calc(var(--r) + 8px);box-shadow:0 30px 60px -30px rgba(0,0,0,.45)}
 .hp-mock{min-height:400px}.hp-mc{position:absolute;width:min(330px,74%);border-radius:calc(var(--r) + 4px);overflow:hidden;background:#fff;color:#111827;box-shadow:0 30px 60px -24px rgba(15,23,42,.38),0 0 0 1px rgba(15,23,42,.06)}.hp-mf{left:50%;top:50%;transform:translate(-44%,-46%);z-index:2}.hp-mb{left:50%;top:50%;transform:translate(-80%,-62%) rotate(-7deg);opacity:.9;z-index:1;filter:saturate(.85)}.hp-mc .hp-cov{aspect-ratio:16/8}.hp-mcb{padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px}.hp-mcb b{font-size:16.5px;letter-spacing:-.02em;line-height:1.35}.hp-mcb small{color:#5B6170;font-size:13px}.hp-ln{display:block;height:9px;border-radius:9px;background:#EEF0F4;width:80%}.hp-ln.s{width:52%}
 .hp-mbar{height:7px;border-radius:7px;background:#EEF0F4;overflow:hidden;margin:6px 0 4px}.hp-mbar i{display:block;height:100%;width:38%;background:${T.a};border-radius:7px}.hp-mrow{display:flex;align-items:center;justify-content:space-between;gap:10px}.hp-mrow strong{font-size:17px;letter-spacing:-.02em}.hp-mbtn{font-size:13px;font-weight:800;background:${T.a};color:${T.on};padding:8px 14px;border-radius:var(--br)}
 .hp-chip{position:absolute;z-index:3;display:inline-flex;align-items:center;gap:7px;background:#fff;color:#111827;font-size:13.5px;font-weight:750;padding:10px 14px;border-radius:999px;box-shadow:0 14px 30px -12px rgba(15,23,42,.35),0 0 0 1px rgba(15,23,42,.05);white-space:nowrap}.hp-chip svg{color:${fit(T.a, '#ffffff', 4.6)}}.hp-chip.c1{right:4%;top:3%}.hp-chip.c2{left:2%;bottom:3%}
@@ -292,7 +326,7 @@
 .hp-empty{padding:28px 0}.hp-hint{border:2px dashed ${al(T.a, .35)};border-radius:var(--r);padding:20px;text-align:center;color:var(--at);font-weight:650;background:var(--as)}
 /* 태블릿 · 휴대폰 */
 @media(max-width:1000px){.hp-hg{grid-template-columns:1fr;gap:36px}.hp-ht{max-width:680px}.hp-vis{min-height:300px}.hp-mock{min-height:340px}.hp-g.g4,.hp-st.g4,.hp-st.g5{grid-template-columns:repeat(2,minmax(0,1fr))}.hp-g.g3{grid-template-columns:repeat(2,minmax(0,1fr))}.hp-st.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.hp-st::before{display:none}.hp-split,.hp-mapw{grid-template-columns:1fr;gap:24px}.hp-qk{grid-template-columns:repeat(2,minmax(0,1fr))}.hp-ctab.two{grid-template-columns:1fr}.hp-fl{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:16px}.hp-fl li:nth-child(odd){border-left:0}.hp-fl.n3{grid-template-columns:repeat(3,minmax(0,1fr))}.hp-fl.n3 li:nth-child(odd){border-left:1px solid ${al(T.ink, .09)}}.hp-fl.n3 li:first-child{border-left:0}}
-@media(max-width:640px){.hp-w{padding:0 20px}.hp-s{padding:${px(48)} 0}.hp-hero{padding:${px(44)} 0 ${px(40)}}.hp-hero h1{font-size:${px(31)};line-height:1.22}.hp-hs{font-size:${px(16)};margin-top:14px}.hp-hb{margin-top:24px}.hp-hb .hp-btn{flex:1 1 auto;min-width:140px}.hp-tr{margin-top:20px;gap:6px 14px}.hp-hey{margin-bottom:16px}
+@media(max-width:640px){.hp-w{padding:0 20px}.hp-s{padding:${px(48)} 0}.hp-hero,.hp-l-c{padding:${px(44)} 0 ${px(40)}}.hp-hero h1{font-size:${px(31)};line-height:1.22}.hp-hs{font-size:${px(16)};margin-top:14px}.hp-hb{margin-top:24px}.hp-hb .hp-btn{flex:1 1 auto;min-width:140px}.hp-tr{margin-top:20px;gap:6px 14px}.hp-hey{margin-bottom:16px}
 .hp-vis{min-height:0}.hp-illu svg{max-width:340px}.hp-mock{display:block;min-height:0;max-width:340px;margin:0 auto;width:100%;padding-top:14px}.hp-mb,.hp-chip.c2{display:none}.hp-mf{position:relative;left:auto;top:auto;transform:none;width:100%}.hp-mc .hp-cov{aspect-ratio:16/6}.hp-chip{font-size:12px;padding:7px 11px}.hp-chip.c1{right:-4px;top:0}
 .hp-sh{margin-bottom:22px}.hp-sh h2,.hp-prose h2,.hp-ctat h2{font-size:${px(25)}}.hp-sd{font-size:${px(15.5)}}
 .hp-g.g2,.hp-g.g3,.hp-g.g4{grid-template-columns:1fr;gap:12px}.hp-feat .hp-card,.hp-tiles .hp-card,.hp-ppl .hp-card{display:grid;grid-template-columns:auto 1fr;column-gap:16px;row-gap:2px;padding:18px;align-items:start}.hp-feat .hp-ic,.hp-tiles .hp-ic,.hp-ppl .hp-av{grid-row:span 2;margin:0;width:44px;height:44px}.hp-feat .hp-card h3,.hp-tiles .hp-card h3,.hp-ppl .hp-card h3{font-size:${px(16.5)};align-self:center}
@@ -302,9 +336,9 @@
 .hp-nl li{flex-wrap:wrap;gap:6px 10px;padding:14px 2px}.hp-nl b{flex-basis:100%;order:2;white-space:normal}.hp-nl time{order:1;margin-left:auto}
 .hp-qk{grid-template-columns:1fr 1fr;gap:8px;margin-top:28px}.hp-qk a{padding:12px;gap:10px;font-size:${px(14.5)}}.hp-qk a i{width:34px;height:34px}.hp-qk a>svg{display:none}
 .hp-cta{padding:${px(12)} 0 ${px(48)}}.hp-ctab{padding:30px 22px;gap:22px}.hp-ctaf .hp-btn{width:100%}.hp-dl div,.hp-tll li{grid-template-columns:1fr;gap:4px}.hp-mapv{min-height:200px}.hp-qa details{padding:0 16px}.hp-qa summary{font-size:${px(15.5)};padding:15px 0}}
-${th.illu === 'kids' ? `.hp-hero h1 em{background:linear-gradient(transparent 62%,#FFD25E 62%);color:var(--hi)}.hp-card{border-radius:var(--r)}.hp-feat .hp-g>.hp-card:nth-child(4n+1) .hp-ic{background:#F3E8FF;color:#6D28D9}.hp-feat .hp-g>.hp-card:nth-child(4n+2) .hp-ic{background:#FEF3C7;color:#92400E}.hp-feat .hp-g>.hp-card:nth-child(4n+3) .hp-ic{background:#D1FAE5;color:#065F46}.hp-feat .hp-g>.hp-card:nth-child(4n+4) .hp-ic{background:#FCE7F3;color:#9D174D}` : ''}
+${th.illu === 'kids' ? `.hp-b-light h1 em{background:linear-gradient(transparent 62%,#FFD25E 62%);color:var(--hi)}.hp-card{border-radius:var(--r)}.hp-feat .hp-g>.hp-card:nth-child(4n+1) .hp-ic{background:#F3E8FF;color:#6D28D9}.hp-feat .hp-g>.hp-card:nth-child(4n+2) .hp-ic{background:#FEF3C7;color:#92400E}.hp-feat .hp-g>.hp-card:nth-child(4n+3) .hp-ic{background:#D1FAE5;color:#065F46}.hp-feat .hp-g>.hp-card:nth-child(4n+4) .hp-ic{background:#FCE7F3;color:#9D174D}` : ''}
 ${th.illu === 'campus' ? `.hp-sh h2{font-weight:750;letter-spacing:-.02em}.hp-ey{letter-spacing:.2em}.hp-hero h1{font-weight:780}` : ''}
-${th.lux ? `.hp-hero h1{font-weight:700;letter-spacing:-.025em}.hp-ey{letter-spacing:.24em}.hp-sh h2{font-weight:750}.hp-cta .hp-ctab{background:linear-gradient(120deg,${T.hb},${mix(T.hb, '#1E293B', .5)});box-shadow:inset 0 0 0 1px ${al(T.a, .35)}}.hp-cta .hp-ctat .hp-ey{color:${T.ha}}.hp-cta .hp-btn.inv{background:var(--a);color:var(--on)}.hp-cta .hp-ci i{color:#111827}` : ''}`;
+${th.lux ? `.hp-hero h1{font-weight:700;letter-spacing:-.025em}.hp-ey{letter-spacing:.24em}.hp-sh h2{font-weight:750}.hp-cta .hp-ctab{background:linear-gradient(120deg,${T.hb},${mix(T.hb, '#1E293B', .5)});box-shadow:inset 0 0 0 1px ${al(T.a, .35)}}.hp-cta .hp-ctat .hp-ey{color:${fit(T.a, '#1E293B', 4.6, '#ffffff')}}.hp-cta .hp-btn.inv{background:var(--a);color:var(--on)}.hp-cta .hp-ci i{color:#111827}` : ''}`;
   }
   /* 미리보기 · 게시본에 CSS 넣기 */
   { const base = siteHTML; siteHTML = (s, full, lang) => { const h = base(s, full, lang); const th = thOf(s); if (!th) return h;
@@ -324,7 +358,7 @@ ${th.lux ? `.hp-hero h1{font-weight:700;letter-spacing:-.025em}.hp-ey{letter-spa
       const st = L.find(x => x.type === 'text' && x.data && x.data.variant === 'steps'); if (st) st.data.cols = cp.steps.map(r => r.slice()); }
     const has = k => L.some(x => x.data && x.data.hpt === k);
     const at = i => Math.max(1, Math.min(i, L.length));
-    if (!has('facts')) L.splice(L[0] && L[0].type === 'banner' ? 1 : 0, 0, S2x('text', { variant: 'stats', hpt: 'facts', title: '', cols: [] }));
+    if (!has('facts') && !L.some(x => x.type === 'text' && x.data && x.data.variant === 'stats') && facts().length >= 2) L.splice(L[0] && L[0].type === 'banner' ? 1 : 0, 0, S2x('text', { variant: 'stats', hpt: 'facts', title: '', cols: [] }));
     const P = people(); if (P.length && !has('people') && !L.some(x => x.data && x.data.variant === 'profiles')) { const ci = L.findIndex(x => x.type === 'classes'); L.splice(ci >= 0 ? ci + 1 : at(3), 0, S2x('text', { variant: 'profiles', hpt: 'people', eyebrow: 'TEACHERS', title: '함께하는 강사진', cols: P })); }
     const Q = faq(); if (Q.length >= 2 && !has('faq')) { let k = L.findIndex(x => x.type === 'notices'); if (k < 0) k = L.findIndex(x => (x.type === 'text' && x.data && x.data.variant === 'cta') || x.type === 'map'); L.splice(k >= 0 ? k : L.length, 0, S2x('text', { variant: 'info', hpt: 'faq', eyebrow: 'FAQ', title: '자주 묻는 질문', cols: Q })); }
     /* '시작 방법' 4칸 고정 → 내용 수만큼(렌더러가 칸을 맞춤), 문의 띠의 자리 문구 정리 */
@@ -335,7 +369,11 @@ ${th.lux ? `.hp-hero h1{font-weight:700;letter-spacing:-.025em}.hp-ey{letter-spa
   function apply(s, id, opt) { opt = opt || {}; if (!s) return s; const th = TH[id] ? TH[id] : TH[pick(S.org.type, S.org.ed, '')]; const key = TH[id] ? id : Object.keys(TH).find(k => TH[k] === th);
     const prevTh = s.theme && TH[s.theme]; s.theme = key; s.look = th.look; /* HPT가 없는 화면(기존 렌더러)에서도 비슷한 룩 */
     const userColor = opt.color && ok6(opt.color) ? opt.color : null;
-    if (userColor) s.color = userColor; else if (!opt.keepColor || !ok6(s.color) || (prevTh && s.color === prevTh.acc)) s.color = th.acc;
+    /* 대표 색: 사용자가 고른 색 · Claude가 설계한 색 · 말로 바꾼 색(hpColorLock)은 테마를 바꿔도 덮어쓰지 않는다 */
+    if (userColor) { s.color = userColor; s.hpColorLock = 1; }
+    else if (opt.keepColor && ok6(s.color)) s.hpColorLock = 1;
+    else if (!(s.hpColorLock && ok6(s.color)) || opt.force) { s.color = th.acc; delete s.hpColorLock; }
+    prevTh;
     s.tone = th.br >= 20 ? '친근' : th.r <= 8 ? '신뢰' : s.tone || '모던';
     return s; }
   function thumb(s, id) { const base = JSON.parse(JSON.stringify(s || site())); apply(base, id, { keepColor: false }); const th = TH[base.theme]; const T = tok(base, th);
@@ -344,15 +382,17 @@ ${th.lux ? `.hp-hero h1{font-weight:700;letter-spacing:-.025em}.hp-ey{letter-spa
     band = 0; const body = [hero(hero0.data || {}, base, th, T), ...rest.map(x => textSec(x.data, base, th, T, true, x) || '')].join('');
     return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=1280"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{margin:0;background:${th.bg}}${css(base)}</style></head><body>${body}</body></html>`; }
   const list = IDS.map(id => ({ id, name: TH[id].name, desc: TH[id].desc, swatch: [TH[id].acc, TH[id].hero === 'dark' ? TH[id].hb : TH[id].bg === '#FFFFFF' ? TH[id].alt : TH[id].bg, TH[id].sw2] }));
-  window.HPT = { list, apply, thumb, pick, enrich, facts, css, tokens: s => thOf(s) ? tok(s, thOf(s)) : null, has: id => !!TH[id] };
+  window.HPT = { list, apply, thumb, pick, rec: k => TYPE_TH[k] || 'clean', enrich, facts, css, audit, reviews: () => realReviews(), tokens: s => thOf(s) ? tok(s, thOf(s)) : null, has: id => !!TH[id] };
 
   /* ── AI로 만든 초안에 테마 · 보강 자동 적용(hpRun → HPE.draft) ── */
   if (typeof HPE !== 'undefined' && HPE && !Object.getOwnPropertyDescriptor(HPE, 'draft')?.set) { let cur = HPE.draft;
     Object.defineProperty(HPE, 'draft', { configurable: true, enumerable: true, get: () => cur, set: v => {
-      try { if (v && v.site && Array.isArray(v.site.sections)) { const o = v.o || {}; const brief = String(o.brief || '');
+      try { if (v && v.site && Array.isArray(v.site.sections) && !v.site.hpVar) { const o = v.o || {}; const brief = String(o.brief || ''); /* 마법사 시안(hpVar)은 hpwiz가 테마 · 보강 · 품질 보정을 이미 마침 */
         const id = o.theme && TH[o.theme] ? o.theme : v.site.theme && TH[v.site.theme] ? v.site.theme : pick(S.org.type, S.org.ed, brief);
         const keep = !!(o.color && ok6(o.color)) || /파랑|파란|블루|blue|보라|퍼플|주황|오렌지|네이비|남색|초록|녹색|그린|green|빨강|레드|핑크|분홍|민트|청록|노랑|옐로|검정|블랙/i.test(brief) || (v.via && v.via !== '기본 설계');
-        apply(v.site, id, { keepColor: keep, color: o.color }); enrich(v.site); } } catch (e) { console.error('hpth draft', e); }
+        apply(v.site, id, { keepColor: keep, color: o.color }); enrich(v.site);
+        /* AI SAM build_homepage · 예전 만들기 창(hpRun 직접 호출)도 마법사와 같은 품질 자동 보정을 거친다 */
+        if (typeof window.hpwFix === 'function') { const fx = window.hpwFix(v.site); if (fx && fx.site) { v.site = fx.site; if (Array.isArray(v.notes) && fx.log && fx.log.length) v.notes = [...v.notes, ...fx.log]; } } } } catch (e) { console.error('hpth draft', e); }
       cur = v; } }); }
 
   /* ── 게시본에 테마 정보(학습자 화면 바깥 틀 색 맞춤 · lhpth.js) ── */
