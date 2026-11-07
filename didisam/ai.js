@@ -80,7 +80,7 @@ function interpret(q) {
   if (has('HRD', '보고')) { return { title: '이번 주 HRD-Net 보고 자료 생성', steps: ['훈련생 등록 · 진도 · 출석 · 평가 집계', '수료 요건(평가 + 진도) 판정', '보고 파일 생성 → 담당자 확인 후 전송'], run: () => runAuto(S.autos.find(a => a.key === 'hrd-weekly') || { key: 'hrd-weekly', name: 'HRD-Net 주간 보고', actions: ['hrd'] }, true), go: 'hrd' }; }
   if (has('반환', '환불')) { const L = S.pays.filter(p => p.status === '환불 신청'); return { title: `${t('fee')} 반환 · 환불 신청 ${L.length}건`, steps: L.map(p => `${M(p.who)?.name} · ${p.item} · ${p.at} 신청 → 기한 ${addDays(p.at, 5)}`), go: menuOn('lifelong') ? 'lifelong' : 'sales' }; }
   if (has('30시간')) { const L = S.classes.filter(c => c.hours < 30); return { title: `30시간 미만 ${t('cls')} ${L.length}개`, steps: L.map(c => `${c.name} — ${c.hours}시간`), go: 'class' }; }
-  if (has('요약', '현황', '리포트', '매출', '출결')) { return { title: '운영 현황 요약', steps: summary(q), go: has('매출') ? 'sales' : has('출결') ? 'attend' : 'dash' }; }
+  if (has('요약', '현황', '리포트', '매출', '출결')) { const per = /(작년|지난해|전년|재작년|\d{4}\s*년|분기|상반기|하반기)/.exec(q); return { title: per ? `운영 현황 요약 — 「${per[1]}」 기간 자료는 아직 없어 최근 기준으로 보여 드립니다` : '운영 현황 요약', steps: summary(q), go: has('매출') ? 'sales' : has('출결') ? 'attend' : 'dash' }; }
   return { title: '이렇게 이해했습니다 — 조금 더 구체적으로 지시해 주세요', steps: ['예: "진도 30% 미만 독려 메시지 보내줘", "미납 재알림", "○○ 커리큘럼 만들어줘", "매주 월요일 … 자동화 만들어줘"'] };
 }
 function summary(q) {
@@ -145,7 +145,7 @@ function targets(a) {
     case 'nudge-away': return S.members.filter(m => m.last <= addDays(today(), -30)).map(m => m.id);
     case 'qna-draft': return S.posts.filter(p => p.kind === '질문' && !p.replies).map(p => p.id);
     case 'grade-draft': return pend().map(x => x.id);
-    case 'legal-d7': return [...new Set(legalUndone().map(x => x.id))];
+    case 'legal-d7': { const lim = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10); return [...new Set(legalUndone().filter(x => !x.c.end || String(x.c.end).slice(0, 10) <= lim).map(x => x.id))]; } /* v32.8 마감 7일 이내만(QA U3) */
     case 'unpaid': return S.bills.filter(b => b.status === '미납').map(b => b.who);
     case 'att-warn': return [...new Set(lowAtt().map(x => x.id))];
     case 'refund5': case 'refund-route': return S.pays.filter(p => p.status === '환불 신청').map(p => p.who);

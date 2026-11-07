@@ -25,6 +25,7 @@ const laCanAcct = () => LR.mode === 'demo' && !!LR.tid && LR.tid !== 'sample';
 let LA_RC = { at: 0, v: null };
 const laRoom = () => { if (!laCanAcct()) return null; if (Date.now() - LA_RC.at < 300 && LA_RC.v) return LA_RC.v; LA_RC = { at: Date.now(), v: demoRoom() }; return LA_RC.v; };
 const laFresh = () => { LA_RC.at = 0; };
+const laWa = w => { const c = String(w || '').slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '과' : '와'; };
 function laCfg() { const r = laRoom(); const a = (r && r.settings && r.settings.acct) || (SITE() && SITE().acct) || null; const T = (r && r.settings && r.settings.terms) || (a && a.policy) || {};
   const iv = a && a.idv && a.idv.on ? { on: true, reason: a.idv.reason || 'refund', note: a.idv.note || '' } : { on: false };
   return { mode: (a && a.mode) || 'code', social: ((a && a.social) || []).filter(k => LA_SOC.some(([x]) => x === k)), approve: (a && a.approve) || 'auto', idv: iv, under14: !!(a && a.under14), parent: !!(a && a.parent) && !laUniv(), editAns: !!(a && a.editAns), extraQ: (a && a.extraQ) || [], tos: T.tos || '', privacy: T.privacy || '' }; }
@@ -139,7 +140,7 @@ function laJoin(r) { const cfg = laCfg(); const tok = (r.b || '').replace(/[^\w-
   if (!laCanAcct()) return laGate('회원가입', LR.mode === 'preview' ? '미리보기에서는 가입할 수 없습니다. 게시한 학습자 사이트에서 가입해 보세요.' : '게시된 학습자 사이트에서 가입할 수 있습니다.');
   const inv = tok ? laInv(tok) : null;
   if (tok && !inv) return laGate('사용할 수 없는 초대 링크입니다', '링크가 재생성되었거나 만료되었습니다. 운영자에게 새 초대 링크를 요청하세요.');
-  if (!inv && cfg.mode === 'code') return laGate('접근코드로 로그인하는 기관입니다', `이 기관은 회원가입 없이 기관에서 받은 ${esc(lIdLabel())}와 접근코드로 로그인합니다.${U ? ' 학교 SSO 연동은 준비 중입니다.' : ''}`);
+  if (!inv && cfg.mode === 'code') return laGate('접근코드로 로그인하는 기관입니다', `이 기관은 회원가입 없이 기관에서 받은 ${esc(lIdLabel())}${laWa(lIdLabel())} 접근코드로 로그인합니다.${U ? ' 학교 SSO 연동은 준비 중입니다.' : ''}`);
   if (!inv && cfg.mode === 'invite') return laGate('초대받은 회원만 가입할 수 있습니다', '운영자에게 받은 초대 링크(알림톡 · 이메일 · 메신저)로 접속해 가입하세요.');
   const J = laJoinState(tok, inv);
   if (J.done) return laSec(J.kind === 'parent' ? '보호자 회원가입' : '회원가입', laJoinDone(J));
@@ -236,7 +237,7 @@ function laPendV() { laFresh(); const id = LA.pend || ''; const acc = id ? laFin
 function laFindV(r) { const b = r.b || (laCfg().mode === 'code' ? 'code' : 'id'); const U = laUniv(); if (!LA.f || LA.f.b !== b) LA.f = { b, step: 1 }; const F = LA.f; const cfg = laCfg();
   const tabs = `<div class="la-seg">${[...(cfg.mode !== 'code' ? [['id', '로그인 도움'], ['pw', '비밀번호 재설정']] : []), ['code', '접근코드 재발급'], ['inq', '문의하기']].map(([k, l]) => `<a href="#find/${k}" class="${b === k ? 'on' : ''}">${l}</a>`).join('')}</div>`;
   let body = '';
-  if (b === 'code') body = `<form id="laFC"><p class="mini">기관에서 받은 ${esc(lIdLabel())}와 접근코드로 로그인합니다. 코드를 잊었으면 재발급을 요청하세요. 운영자가 확인 후 새 코드를 알려 드립니다.</p><div class="form2"><label class="fl">${esc(lIdLabel())}<input name="sid" maxlength="20" required></label><label class="fl">${U ? '학과' : '소속 · 메모'}<input name="dept" maxlength="40"></label></div><button class="lbtn pri" type="submit">재발급 요청</button></form>`;
+  if (b === 'code') body = `<form id="laFC"><p class="mini">기관에서 받은 ${esc(lIdLabel())}${laWa(lIdLabel())} 접근코드로 로그인합니다. 코드를 잊었으면 재발급을 요청하세요. 운영자가 확인 후 새 코드를 알려 드립니다.</p><div class="form2"><label class="fl">${esc(lIdLabel())}<input name="sid" maxlength="20" required></label><label class="fl">${U ? '학과' : '소속 · 메모'}<input name="dept" maxlength="40"></label></div><button class="lbtn pri" type="submit">재발급 요청</button></form>`;
   if (b === 'inq') body = `<form id="laFQ"><p class="mini">로그인 수단을 모두 잃었거나 계정 삭제가 필요하면 남겨 주세요. 상담 가능 시간: 평일 오전 9시 ~ 오후 6시.</p><label class="fl">닉네임 또는 ${U ? '학번' : '가입 이메일'} <small>(기억나는 대로)</small><input name="lid" maxlength="60"></label>${U ? '' : '<label class="fl">회신받을 이메일 <small>(선택 — 운영자에게는 일부만 보이고, 답변은 시스템이 대신 보냅니다)</small><input name="reply" type="email" maxlength="80"></label>'}<label class="fl">문의 내용<textarea name="body" rows="3" maxlength="500" required></textarea></label><button class="lbtn pri" type="submit">문의 보내기</button></form>`;
   if (b === 'id') body = U ? `<p class="lead">대학 계정의 아이디는 학번입니다. 학번을 모르면 학과 사무실에 문의하세요.</p>` : F.step === 2 ? `<div class="la-res">${F.found ? `<p>이 이메일로 가입한 계정이 있습니다.</p><ul><li><b>${esc(F.found.nick || '')}</b> <small>${esc(LA_SN[F.found.login] || '이메일')} 가입 · ${esc(F.found.emailMask)}</small></li></ul><p class="mini">비밀번호 없이 이메일 인증번호로 로그인할 수 있습니다.</p><div class="cta">${btn('로그인', '#login', 'pri')}${btn('비밀번호 재설정', '#find/pw', 'ghost')}</div>` : '<p>이 이메일로 가입한 계정이 없습니다. SNS로 가입했다면 그 SNS 버튼으로 로그인하세요.</p><div class="cta">' + btn('로그인', '#login', 'pri') + btn('회원가입', '#join', 'ghost') + '</div>'}</div>`
     : `<p class="mini"><b>SNS로 가입했다면</b> 로그인 화면에서 같은 SNS 버튼을 누르면 됩니다(아이디 · 비밀번호가 없습니다).</p>${laSoc(cfg, 'soclogin')}<form id="laFI"><p class="mini"><b>이메일로 가입했다면</b> 가입한 이메일로 인증번호를 받아 계정을 확인합니다.</p><label class="fl">가입한 이메일<input name="lid" type="email" maxlength="80" required value="${esc((LA.fv && LA.fv.email) || '')}"></label>${laOtpBox('fv')}<p class="err" id="laFErr"></p><button class="lbtn pri" type="submit">계정 확인</button></form>`;

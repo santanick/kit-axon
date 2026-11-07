@@ -36,6 +36,7 @@ LR.api = {
       try { const me = await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/me`); LR.me = me.me; LR.lp = me.lp || LR.lp; LR.mine = me.mine || LR.mine; } catch (e) { }
     } else if (LR.mode === 'demo') {
       const st = demoRoom(); LR.site = st && st.lsite && st.lsite.pub; LR._codes = (st && st.codes) || [];
+      if (!LR.site && st) { LR.err = '아직 게시되지 않은 사이트입니다. 스튜디오 › 사이트 › 홈페이지 · 학습 사이트에서 [게시하기]를 누르면 학습자에게 열립니다.'; return; } /* v32.8 이 기관의 데이터가 있는데 게시 전이면 다른 기관 샘플을 보여 주지 않는다(QA U1) */
       if (!LR.site) { /* 이 브라우저에 게시본이 없으면(다른 기기 · 처음 방문) 체험용 샘플 사이트로 */
         try { const r = await fetch('learner-demo.json', { cache: 'no-cache' }); const j = r.ok ? await r.json() : null; if (j && j.pages) { LR.site = j; LR.sample = j.demo || null; LR.tid = 'sample'; LR._codes = j.demo ? [{ sid: j.demo.sid, code: j.demo.code, dept: j.demo.dept }] : []; } } catch (e) { }
         if (!LR.site) { LR.err = '아직 게시되지 않았습니다. 스튜디오 › 사이트 › 홈페이지 · 학습 사이트에서 [게시하기]를 누르세요.'; return; }

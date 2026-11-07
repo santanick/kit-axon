@@ -174,3 +174,18 @@ body.lapp .ap-ssh{text-align:left;max-height:88vh;overflow:auto}body.lapp .ap-ss
 body.lapp .ap-srr .ap-oty{grid-area:auto;order:-1}body.lapp .ap-srr b,body.lapp .ap-srr small{grid-area:auto}
 body.lapp .ap-srh .ap-oh{flex:1;margin:0;text-align:left}body.lapp .ap-srh .ap-lk{flex:none}
 body.lapp .ap-mf .ap-fch{padding:0 10px}
+
+/* v32.8 전수 QA(D1 · U5 · V4) — 앱 안 기존 화면 잔여 색 · 버튼 정리 */
+body.lapp{--pri2:var(--d-p)}
+body.lapp #lm .lbtn:not(.ghost):not(.out):not(.line):not(.red):not(.warn):not(.sec){background:var(--d-g800);color:#fff;border-radius:4px}
+body.lapp #lm .lbtn{border-radius:4px;min-height:44px}
+body.lapp #lm .lbtn.sm{min-height:36px}
+body.lapp #lm .st.submitted{background:var(--d-s50);color:var(--d-s800)}
+body.lapp .ap-sheet,body.lapp .lai-dlg::backdrop{background:rgba(42,43,43,.45)}
+body.lapp .ap-lk{display:inline-flex;align-items:center;min-height:44px}
+body.lapp .ap-mf{flex-wrap:wrap}body.lapp .ap-mf .ap-fc{flex:1 1 100%;order:2}body.lapp .ap-srt{order:1;margin-left:auto}
+body.lapp .ap-fch{min-height:36px}
+body.lapp .ap-fch.q .x{width:36px;height:36px}
+body.lapp .ap-tt,body.lapp .ap-me small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+body.lapp .certp+.cta,body.lapp .cta.noprint{flex-wrap:wrap}
+body.lapp .ap-oerr{margin:6px 0 0;color:var(--d-err);font:500 13px/16px var(--sg)}

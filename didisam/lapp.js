@@ -61,10 +61,10 @@
   /* v32.7 기관 유형별 가입 방식 — 학습자는 '특정 기관'에 가입한다(레거시 앱: 홈페이지 검색 → 홈페이지 가입(가입 질문 · 자동 수락/승인) · 일괄가입 최초 로그인).
      기본 안내는 유형별로 두고, 운영자가 설정한 실제 방식(laCfg: open · invite · code, 승인 · 만 14세 미만 · 본인인증)을 우선한다. */
   const JOIN = {
-    univ: { t: '학번으로 가입', s: ['학교가 안내한 학번으로 가입하거나, 학교가 일괄 등록한 학번 · 접근코드로 첫 로그인해요', '학번 · 학과만 받아요(이름 · 연락처 · 이메일 없음)', '학교 통합 계정(SSO) 연결은 학교 연동 뒤 열려요'] },
-    univ_lms: { t: '학교 수강 명단으로 시작', s: ['학교가 수강 명단을 일괄 등록하면 학번 · 접근코드로 첫 로그인해요', '첫 로그인 때 약관 동의 · 비밀번호를 정해요', '학번 · 학과만 받아요(이름 · 연락처 · 이메일 없음)'] },
-    corp: { t: '회사 초대로 가입', s: ['교육 담당자가 보낸 초대 링크(메일 · 메신저)로 가입해요', '초대받지 않은 계정은 가입할 수 없어요', '부서 · 직급 질문에 답하면 필수교육이 바로 배정돼요'] },
-    public: { t: '기관 초대 · 일괄 등록으로 시작', s: ['교육 담당 부서가 보낸 초대 링크나 접근코드로 시작해요', '필수(법정)교육은 가입하면 바로 배정돼요', '연락처는 기관 정책에 따라 최소한만 받아요'] },
+    univ: { t: '학번으로 가입', s: ['학교가 일괄 등록한 학번과 학교에서 받은 접근코드로 로그인해요', '학번 · 학과만 받아요(이름 · 연락처 · 이메일 없음)', '학교 통합 계정(SSO) 연결은 학교 연동 뒤 열려요'] },
+    univ_lms: { t: '학교 수강 명단으로 시작', s: ['학교가 수강 명단을 일괄 등록하면 학번 · 접근코드로 첫 로그인해요', '접근코드를 모르면 [접근코드를 모르겠어요]에서 재발급을 요청해요', '학번 · 학과만 받아요(이름 · 연락처 · 이메일 없음)'] },
+    corp: { t: '회사 초대로 가입', s: ['교육 담당자가 보낸 초대 링크(메일 · 메신저)로 가입해요', '초대받지 않은 계정은 가입할 수 없어요', '가입하면 필수(법정)교육이 내 교육에 바로 배정돼요'] },
+    public: { t: '기관 초대 · 일괄 등록으로 시작', s: ['교육 담당 부서가 보낸 초대 링크나 접근코드로 시작해요', '가입하면 필수(법정)교육이 내 교육에 바로 배정돼요', '연락처는 기관 정책에 따라 최소한만 받아요'] },
     k12: { t: '학원 가입 신청', s: ['학원 홈페이지에서 가입 신청 → 원장님이 승인하면 수업을 볼 수 있어요', '만 14세 미만은 보호자 동의가 먼저 필요해요', '보호자는 학원이 보낸 초대 링크로 자녀와 연결해요'] },
     adult: { t: '바로 가입', s: ['이메일 · 카카오 · 네이버로 30초 만에 가입해요', '가입하면 바로 강좌 신청 · 결제 · 수강을 시작해요'] },
     lifelong: { t: '회원가입 후 강좌 신청', s: ['이메일 또는 SNS로 가입해요', '강좌 신청 → 수강료 결제 → 출석 · 수료 기록을 앱에서 확인해요'] },
@@ -72,13 +72,20 @@
   };
   const MODE = { open: '누구나 가입', invite: '초대받은 사람만', code: '기관이 등록한 학습자만' };
   function joinInfo(ty) { const T = ty || oTy(); const base = (T === 'univ' && oEd() === 'lms' && !ty) ? JOIN.univ_lms : JOIN[T] || JOIN.adult; let c = null; try { c = !ty && typeof laCfg === 'function' ? laCfg() : null; } catch (e) { c = null; }
-    const mode = c ? c.mode : ({ corp: 'invite', public: 'invite', voc: 'code', univ: 'code' }[T] || 'open');
+    const def = ({ corp: 'invite', public: 'invite', voc: 'code', univ: 'code' }[T] || 'open'); const mode = c ? c.mode : def;
+    const GEN = { open: { t: '바로 가입', s: ['이메일이나 간편 로그인으로 가입해요', '가입하면 바로 강좌를 둘러보고 신청할 수 있어요'] }, invite: { t: '초대로 가입', s: ['기관이 보낸 초대 링크(메일 · 메신저)로 가입해요', '초대받지 않은 계정은 가입할 수 없어요'] }, code: { t: '기관 등록 후 시작', s: ['기관이 미리 등록한 아이디(학번 · 접근코드)로 첫 로그인해요', '코드를 모르면 기관 담당자에게 문의하세요'] } };
+    const B0 = mode === def ? base : GEN[mode] || base; const manual = c && c.approve === 'manual';
+    const S0 = B0.s.map(x => manual ? x : x.replace('원장님이 승인하면', '가입하면 바로'));
     const tags = [MODE[mode] || '', c && c.approve === 'manual' ? '운영자 승인 후 이용' : '', c && c.under14 ? '만 14세 미만 보호자 동의' : '', c && c.idv && c.idv.on ? '필요한 과정만 본인확인' : ''].filter(Boolean);
-    return { ...base, mode, tags }; }
-  function joinCard() { if (LR.me || isPar()) return ''; const J = joinInfo(); const pend = typeof LA !== 'undefined' && LA && LA.pend;
+    return { ...B0, s: manual && mode === 'open' && !S0.some(x => /승인/.test(x)) ? [...S0, '운영자가 승인하면 수강 · 결제가 열려요'] : S0, mode, tags }; }
+  /* 승인 대기: 새로 고침 · 앱 재실행 뒤에도 유지(기관별 계정 id만 기억, 승인 · 거절되면 지움) */
+  function pendSid() { const k = 'pend.' + (LR.tid || ''); let id = (typeof LA !== 'undefined' && LA && LA.pend) || ls.get(k); if (!id) return null;
+    try { const a = typeof laFind === 'function' ? laFind(id) : null; if (a && a.grade && a.grade !== '승인 대기') { ls.set(k, null); return null; } if (!a && !(LA && LA.pend) && LR.mode !== 'live') { ls.set(k, null); return null; } } catch (e) { }
+    ls.set(k, id); return id; }
+  function joinCard() { if (LR.me || isPar()) return ''; const J = joinInfo(); const pend = pendSid();
     if (pend) return `<section class="ap-join pend" aria-label="가입 상태"><span class="ap-tag w">가입 승인 대기 중</span><h2>운영자가 승인하면 바로 알려 드려요</h2><p>승인 전에도 강좌 · 공지를 둘러볼 수 있어요. 수강 · 결제는 승인 뒤에 열려요.</p><a class="ap-go ghost sm" href="${esc(browse())}">둘러보기</a></section>`;
     const cta = J.mode === 'open' ? `<a class="ap-go" href="#join">${esc(SITE().org.name)} 가입하기</a><a class="ap-lk" href="#login">이미 가입했어요 · 로그인</a>`
-      : J.mode === 'invite' ? `<button type="button" class="ap-go" data-ap="orgs">초대 링크 붙여 넣기</button><a class="ap-lk" href="#login">이미 가입했어요 · 로그인</a>`
+      : J.mode === 'invite' ? `<button type="button" class="ap-go" data-ap="orgs" data-v="add">초대 링크 붙여 넣기</button><a class="ap-lk" href="#login">이미 가입했어요 · 로그인</a>`
       : `<a class="ap-go" href="#login">${oTy() === 'univ' ? '학번' : '접근코드'}으로 시작하기</a><a class="ap-lk" href="#find/code">접근코드를 모르겠어요</a>`;
     return `<section class="ap-join" aria-labelledby="apJT"><p class="ap-jey">${esc(TYL[oTy()] || '기관')} · ${esc(SITE().org.name)}</p><h2 id="apJT">${esc(J.t)}</h2>${J.tags.length ? `<p class="ap-tags">${J.tags.map(t => `<span class="ap-tag">${esc(t)}</span>`).join('')}</p>` : ''}
       <ol>${J.s.map(x => `<li>${esc(x)}</li>`).join('')}</ol>${cta}</section>`; }
@@ -97,7 +104,7 @@
       ${D.length ? `<h3 class="ap-oh">이 기기에서 만든 기관(체험)</h3><ul class="ap-ol">${D.map(r => row({ tid: r.tid, name: r.name, type: r.type }, false, true)).join('')}</ul>` : ''}
       <form id="apOrgF" class="ap-oadd"><label for="apOC">다른 기관 추가</label><div><input id="apOC" name="c" autocomplete="off" autocapitalize="off" placeholder="기관 코드 또는 초대 링크"><button type="submit" class="ap-go sm">열기</button></div><small>기관에서 받은 초대 링크나 코드를 붙여 넣으세요.</small></form>
       <nav><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
-    document.body.appendChild(w); const f = w.querySelector('.ap-orow'); f && f.focus(); }
+    document.body.appendChild(w); const f = AP.focusAdd ? w.querySelector('#apOC') : w.querySelector('.ap-orow'); AP.focusAdd = false; f && f.focus(); if (!(L.length + D.length)) { const h = w.querySelector('#apOC'); h && h.focus(); } }
 
   /* v27.3 보호자 계정 — 학습자용 선생님 고르기 · 미션 대신 자녀 관리 중심(레거시 앱: 홈에서 연결된 자녀 클래스 · 메시지 · 청구서) */
   const isPar = () => !!(LR.me && LR.me.kind === 'parent');
@@ -121,7 +128,7 @@
     return `<nav class="ap-nav" aria-label="앱 메뉴">${it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span></a>`).join('')}</nav>`; }
   const TITLE = { my: '내 강의', c: '강의', t: '튜토리얼', bk: '디지털북', dg: '진단', cert: '수료증', badge: '배지', mybooks: '내 교재/교구', shop: '둘러보기', class: '클래스', courses: '코스', tutorials: '튜토리얼', textbooks: '교재/교구', tb: '교재/교구', books: '디지털북', pay: '결제하기', payok: '결제 완료', comm: '커뮤니티', post: '게시글', write: '글쓰기', notice: '공지사항', acct: '나', connect: '연결 · 알림', inbox: '알림', mypay: '결제 · 환불 내역', payd: '결제 상세', msg: '메시지', family: '가족', login: '로그인', join: '간편가입', find: '계정 찾기', privacy: '개인정보 처리방침' };
   function barHTML() { const a = route().a; const P = persona(); const pg = (SITE().pages || []).find(p => p.id === a);
-    const t = (a === 'my' ? scn().learn : a === 'shop' ? scn().find : null) || TITLE[a] || (pg && pg.name) || ((document.querySelector('#lm h1, #lm h2') || {}).textContent || '').trim().slice(0, 18) || SITE().org.name;
+    const t = (a === 'my' ? scn().learn : null) || (pg && pg.name) || (a === 'shop' ? scn().find : null) || TITLE[a] || ((document.querySelector('#lm h1, #lm h2') || {}).textContent || '').trim().slice(0, 18) || SITE().org.name;
     return `<header class="ap-bar" data-a="${esc(a)}"><button type="button" class="ap-ib" data-ap="back" aria-label="뒤로">${ico('back', 22)}</button><b class="ap-tt">${esc(t)}</b>${!isPar() && ['home', 'my', 'shop', 'courses'].includes(a) ? `<button type="button" class="ap-ib" data-ap="srch" aria-label="학습 찾기">${ico('search', 22)}</button>` : ''}${isPar() ? '<span class="ap-ib" aria-hidden="true"></span>' : `<button type="button" class="ap-call" data-tact="open" aria-label="${esc(tName())}에게 물어보기">${av(P)}<span>물어보기</span></button>`}</header>`; }
 
   /* ── 선생님 고르기(처음 한 번 · 언제든 바꾸기) ── */
@@ -190,11 +197,12 @@
     const today = new Date().toISOString().slice(0, 10); const exp = x => !x.done && x.c.end && String(x.c.end).slice(0, 10) < today;
     const stOf = x => exp(x) ? 'exp' : x.done ? 'done' : x.p > 0 ? 'ing' : 'pre'; const F = AP.myf || 'all'; const SO = AP.mys || 'recent';
     const live = C.filter(x => !exp(x)); const cntOf = k => k === 'all' ? live.length : live.filter(x => stOf(x) === k).length;
-    let V = F === 'all' ? live : live.filter(x => stOf(x) === F); V = SO === 'name' ? [...V].sort((a, b) => a.c.name.localeCompare(b.c.name, 'ko')) : V;
+    let V = F === 'all' ? live : live.filter(x => stOf(x) === F); const seen = srSeen(); const rk = x => { const i = seen.indexOf(x.c.id); return i < 0 ? 999 : i; };
+    V = SO === 'name' ? [...V].sort((a, b) => a.c.name.localeCompare(b.c.name, 'ko')) : [...V].sort((a, b) => rk(a) - rk(b));
     const EX = C.filter(exp);
     const ing = C.filter(x => !x.done), dn = C.filter(x => x.done);
     return `<section class="ap-my" style="--pc:${P ? P.c : 'var(--pri)'}"><div class="ap-pw2">
-      <div class="ap-myh">${av(P)}<p>${C.length ? `${esc(who())}, 수강 중 ${ing.length}개 · 수료 ${dn.length}개예요.${ing[0] && ing[0].next ? ` 「${esc(ing[0].next.title)}」부터 이어 가요.` : ''}` : `${esc(who())}, 아직 수강 중인 강좌가 없어요. 둘러보고 시작해 볼까요?`}</p></div>
+      <div class="ap-myh">${av(P)}<p>${C.length ? `${esc(who())}, 수강 전 ${cntOf('pre')}개 · 수강 중 ${cntOf('ing')}개 · 수료 ${cntOf('done')}개예요.${ing[0] && ing[0].next ? ` 「${esc(ing[0].next.title)}」부터 이어 가요.` : ''}` : `${esc(who())}, 아직 수강 중인 강좌가 없어요. 둘러보고 시작해 볼까요?`}</p></div>
       ${C.length ? `<div class="ap-mf"><div class="ap-fc" role="tablist" aria-label="수강 상태">${[['all', '전체'], ['pre', '수강 전'], ['ing', '수강 중'], ['done', '수강 완료']].map(([k, l]) => `<button type="button" role="tab" class="ap-fch${F === k ? ' on' : ''}" aria-selected="${F === k}" data-ap="myf" data-v="${k}">${l} <i>${cntOf(k)}</i></button>`).join('')}</div>
         <button type="button" class="ap-srt" data-ap="mys" aria-label="정렬 바꾸기 — 지금 ${SO === 'name' ? '제목순' : '최근 수강순'}">${ico('sortk', 14)}${SO === 'name' ? '제목순' : '최근 수강순'}</button></div>
         <div class="ap-cl">${V.length ? V.map(x => card(x)).join('') : `<p class="ap-empty">${F === 'pre' ? '아직 시작하지 않은 강좌가 없어요.' : F === 'done' ? '아직 완료한 강좌가 없어요. 조금만 더 힘내요!' : '해당하는 강좌가 없어요.'}</p>`}</div>
@@ -232,11 +240,15 @@
 
   function tsheet() { const P = persona(); closeSheet(); const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
     w.innerHTML = `<div class="ap-sh" role="dialog" aria-modal="true" aria-labelledby="apShT">${av(P, true)}<h2 id="apShT">${esc(isPar() ? SITE().org.name : tName())}</h2><p>${esc(isPar() ? '보호자 계정' : P ? `${P.t} · ${P.d}` : '내 AI 학습 비서')}</p>
-      <nav>${LR.me && !isPar() ? `<button type="button" data-ap="pick">${ico('sparkle', 18)}선생님 바꾸기 · 이름 바꾸기</button>` : ''}${LR.me && !isPar() ? `<a href="#connect" data-ap="sheet-x">${ico('cal', 18)}캘린더 · 알림 연결</a>` : ''}${LR.mode !== 'live' && !isPar() ? `<button type="button" data-ap="ai">${ico('sparkle', 18)}Claude 연결 <small class="ap-shs">${esc(aiSt().t)}</small></button>` : ''}<button type="button" data-ap="orgs">${ico('grid', 18)}내 기관 · 기관 바꾸기 <small class="ap-shs">${orgs().length}곳</small></button><button type="button" data-ap="install">${ico('install', 18)}${standalone() ? '앱으로 실행 중' : '홈 화면에 앱으로 설치'}</button><button type="button" data-ap="classic">${ico('grid', 18)}기존 화면으로 보기</button><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
+      <nav>${LR.me && !isPar() ? `<button type="button" data-ap="pick">${ico('sparkle', 18)}선생님 바꾸기 · 이름 바꾸기</button>` : ''}${LR.me && !isPar() ? `<a href="#connect" data-ap="sheet-x">${ico('cal', 18)}캘린더 · 알림 연결</a>` : ''}${LR.mode !== 'live' && !isPar() ? `<button type="button" data-ap="ai">${ico('sparkle', 18)}Claude 연결 <small class="ap-shs">${esc(aiSt().t)}</small></button>` : ''}<button type="button" data-ap="orgs">${ico('grid', 18)}내 기관 · 기관 바꾸기 <small class="ap-shs">${orgs().length}곳</small></button><button type="button" data-ap="install">${ico('install', 18)}${standalone() ? '앱으로 실행 중' : '홈 화면에 앱으로 설치'}</button><button type="button" data-ap="classic">${ico('grid', 18)}기존 화면으로 보기</button>${LR.me ? `<button type="button" data-lact="logout" data-ap="sheet-x">${ico('out', 18)}로그아웃</button>` : ''}<button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
     document.body.appendChild(w); const f = w.querySelector('nav button'); f && f.focus(); }
-  const srRecent = () => { try { const v = JSON.parse(ls.get('srq') || '[]'); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (e) { return []; } };
-  const srSeen = () => { try { const v = JSON.parse(ls.get('srv') || '[]'); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (e) { return []; } };
-  window.addEventListener('hashchange', () => { const m = /^#c\/([^/]+)/.exec(location.hash); if (!m) return; const L = [m[1], ...srSeen().filter(x => x !== m[1])].slice(0, 10); ls.set('srv', JSON.stringify(L)); });
+  const srRecent = () => { try { const v = JSON.parse(ls.get('srq.' + LR.tid) || '[]'); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (e) { return []; } };
+  const srSeen = () => { try { const v = JSON.parse(ls.get('srv.' + LR.tid) || '[]'); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (e) { return []; } };
+  /* v32.8 기간 만료 강좌는 기록만 보기 — 진도 · 제출 버튼을 막고 이유를 알린다(QA U10) */
+  const expCls = id => { try { if (typeof myStats !== 'function' || !LR.me) return false; const x = myStats().courses.find(y => y.c.id === id); return !!(x && !x.done && x.c.end && String(x.c.end).slice(0, 10) < new Date().toISOString().slice(0, 10)); } catch (e) { return false; } };
+  document.addEventListener('click', e => { const m = /^#c\/([^/]+)/.exec(location.hash); if (!m || !document.body.classList.contains('lapp')) return; const b = e.target.closest && e.target.closest('#lm [data-lact], #lm [data-a2], #lm [data-lc="live-in"]'); if (!b || /^(next|prev|back|note|tab)/.test(b.dataset.lact || '')) return; if (!expCls(decodeURIComponent(m[1]))) return; e.stopPropagation(); e.preventDefault(); toast('학습 기간이 끝난 강좌예요. 기록은 볼 수 있지만 새 진도 · 제출은 저장되지 않아요.', 'warn'); }, true);
+  window.addEventListener('hashchange', () => { closeSheet(); const d = document.getElementById('laiDlg'); if (d) { try { d.close(); } catch (e) { d.remove(); } } });
+  window.addEventListener('hashchange', () => { const m = /^#c\/([^/]+)/.exec(location.hash); if (!m) return; const L = [m[1], ...srSeen().filter(x => x !== m[1])].slice(0, 10); ls.set('srv.' + LR.tid, JSON.stringify(L)); });
   const srPool = () => { const S2 = SITE() || {}; const out = []; (S2.classes || []).forEach(c => out.push({ k: '클래스', n: c.name || '', d: [c.cat, c.teacher, (c.items || []).length ? `${c.items.length}개 항목` : ''].filter(Boolean).join(' · '), h: '#c/' + c.id, id: c.id, t: (c.items || []).map(i => i.title).join(' ') }));
     (S2.books || S2.textbooks || []).forEach(b => out.push({ k: '교재', n: b.name || b.title || '', d: b.desc || '', h: b.id ? '#book/' + b.id : '#shop', id: 'b:' + b.id, t: '' })); return out; };
   function srResults(q) { const P = srPool(); const k = q.trim().toLowerCase(); if (!k) return '';
@@ -284,12 +296,14 @@
     try { if (LR.tid && (on || LR.me)) { ls.set('tid', LR.tid); if (on) orgSave(); } } catch (e) { }
     const lm = document.getElementById('lm'); const app = document.getElementById('lapp'); if (!lm || !app) return;
     if (!on) { if (LR.me && route().a === 'home' && ls.get('classic') === '1' && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
-    const a = route().a; const needPick = LR.me && !isPar() && (!persona() || AP.pick) && a === 'home';
+    const a = route().a; if (LR.me && (a === 'login' || a === 'join')) { location.replace('#home'); return; } /* v32.8 로그인한 뒤 로그인 · 가입 화면은 홈으로 */
+    if (!LR.me && ['connect', 'books'].includes(a) && typeof needLogin === 'function' && !lm.textContent.trim()) lm.innerHTML = needLogin(a);
+    const needPick = LR.me && !isPar() && (!persona() || AP.pick) && a === 'home';
     if (needPick) { lm.innerHTML = pickHTML(); document.body.classList.add('ap-pickon'); }
     else if (a === 'connect' && LR.me) { lm.innerHTML = connectHTML(); }
     else if (a === 'home' && isPar()) { lm.innerHTML = parHomeHTML(); }
     else if (a === 'home') { if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } lm.innerHTML = homeHTML(); document.body.classList.add('ap-homeon'); const sc = document.getElementById('apScroll'); if (sc && (LT.msgs || []).some(m => !m.sys)) sc.scrollTop = sc.scrollHeight; }
-    if (a === 'my' && LR.me && !lm.querySelector('.ap-my')) { const h = lm.querySelector('section.myh'); if (h) h.hidden = true; lm.insertAdjacentHTML('afterbegin', myTopHTML()); }
+    if (a === 'my' && LR.me && !isPar() && !lm.querySelector('.ap-my')) { const h = lm.querySelector('section.myh'); if (h) h.hidden = true; lm.insertAdjacentHTML('afterbegin', myTopHTML()); }
     if (a !== 'home' && !needPick) { const ob = app.querySelector('.ap-bar'); if (!ob) app.insertAdjacentHTML('afterbegin', barHTML()); else if (ob.dataset.a !== a) ob.outerHTML = barHTML(); }
     if (LR.me && !needPick && !isPar()) dailyNudge();
     if (!app.querySelector('.ap-nav') && !needPick) app.insertAdjacentHTML('beforeend', navHTML());
@@ -305,10 +319,10 @@
     if (k === 'mys') { AP.mys = AP.mys === 'name' ? 'recent' : 'name'; lrender(); return; }
     if (k === 'srch') return searchSheet();
     if (k === 'srch-q') { const i = document.getElementById('apSQ'); if (i) { i.value = el.dataset.v; i.dispatchEvent(new Event('input', { bubbles: true })); } return; }
-    if (k === 'srch-del') { const L = srRecent().filter(x => x !== el.dataset.v); ls.set('srq', JSON.stringify(L)); searchSheet(); return; }
-    if (k === 'srch-clr') { ls.set(el.dataset.v, '[]'); searchSheet(); return; }
-    if (k === 'srch-go') { const v = el.dataset.v; const L = [v, ...srRecent().filter(x => x !== v)].slice(0, 10); ls.set('srq', JSON.stringify(L)); closeSheet(); location.hash = el.dataset.h; return; }
-    if (k === 'orgs') return orgSheet();
+    if (k === 'srch-del') { const L = srRecent().filter(x => x !== el.dataset.v); ls.set('srq.' + LR.tid, JSON.stringify(L)); searchSheet(); return; }
+    if (k === 'srch-clr') { ls.set(el.dataset.v + '.' + LR.tid, '[]'); searchSheet(); return; }
+    if (k === 'srch-go') { const v = el.dataset.v; const L = [v, ...srRecent().filter(x => x !== v)].slice(0, 10); ls.set('srq.' + LR.tid, JSON.stringify(L)); closeSheet(); location.hash = el.dataset.h; return; }
+    if (k === 'orgs') { AP.focusAdd = el.dataset.v === 'add'; return orgSheet(); }
     if (k === 'org-go') { const t = el.dataset.v; if (t === LR.tid) return closeSheet(); location.href = orgURL(t); return; }
     if (k === 'org-x') { const L = orgs().filter(o => o.tid !== el.dataset.v); ls.set('orgs', JSON.stringify(L)); orgSheet(); toast('목록에서 뺐습니다. 기관 계정은 그대로입니다.', 'ok'); return; }
     if (k === 'ai') return aiDlg();
@@ -331,18 +345,21 @@
   document.addEventListener('change', e => { const f = e.target.form; if (!f || f.id !== 'apPickF' || e.target.name !== 'pk') return; const nm = f.querySelector('[name=nm]'); const prev = PERS.find(x => x.k === AP.sel) || null;
     AP.sel = e.target.value; const B = PERS.find(x => x.k === AP.sel); if (!nm.value.trim() || (prev && nm.value === prev.n) || PERS.some(x => x.n === nm.value)) AP.nm = B.n; else AP.nm = nm.value; lrender(); setTimeout(() => { const r = document.querySelector(`#apPickF input[value="${AP.sel}"]`); r && r.focus(); }, 0); });
   document.addEventListener('input', e => { if (e.target.name === 'nm' && e.target.form && e.target.form.id === 'apPickF') { AP.nm = e.target.value; const b = e.target.form.querySelector('.ap-go'); if (b) b.textContent = `${jw(e.target.value.trim() || '선생님')} 시작하기`; }
-    if (e.target.id === 'apOS') { const k = e.target.value.trim().toLowerCase(); document.querySelectorAll('#apSheet .ap-ol li').forEach(li => { li.hidden = !!k && !li.textContent.toLowerCase().includes(k); }); }
+    if (e.target.id === 'apOS') { const k = e.target.value.trim().toLowerCase(); let vis = 0; document.querySelectorAll('#apSheet .ap-ol').forEach(ol => { let v = 0; ol.querySelectorAll('li').forEach(li => { li.hidden = !!k && !li.textContent.toLowerCase().includes(k); if (!li.hidden) v++; }); vis += v; const h = ol.previousElementSibling; if (h && h.classList.contains('ap-oh')) h.hidden = !v; });
+      let m = document.getElementById('apOSn'); if (!vis && k) { if (!m) { m = document.createElement('p'); m.id = 'apOSn'; m.className = 'ap-empty'; m.setAttribute('role', 'status'); e.target.closest('.ap-osr').after(m); } m.textContent = `‘${e.target.value.trim()}’ 이름의 기관이 없어요. 아래 '다른 기관 추가'에 코드나 초대 링크를 넣어 보세요.`; } else if (m) m.remove(); }
     if (e.target.id === 'apSQ') { const r = document.getElementById('apSR'), z = document.getElementById('apS0'); if (r) r.innerHTML = srResults(e.target.value); if (z) z.hidden = !!e.target.value.trim(); }
     if (e.target.id === 'apQ') { e.target.style.height = 'auto'; e.target.style.height = Math.min(132, e.target.scrollHeight) + 'px'; } });
   document.addEventListener('submit', e => { const f = e.target;
     if (f.id === 'apPickF') { e.preventDefault(); const k = (f.querySelector('[name=pk]:checked') || {}).value || 'warm'; const B = PERS.find(x => x.k === k) || PERS[0]; const n = (f.querySelector('[name=nm]').value || '').replace(/[<>]/g, '').trim().slice(0, 12) || B.n;
       tutorRec().persona = { k, n, at: new Date().toISOString() }; LR.api.save(); AP.pick = false; AP.sel = null; AP.nm = ''; LT.msgs = []; lrender(); toast(`${jw(n)} 함께 시작합니다.`, 'ok'); return; }
     if (f.id === 'apAiF') { e.preventDefault(); aiSave(f); return; }
-    if (f.id === 'apOrgF') { e.preventDefault(); const v = (f.elements.c.value || '').trim(); let t = v; try { const u = new URL(v, location.href); t = u.searchParams.get('t') || (/^https?:/.test(v) ? '' : v); } catch (e2) { } t = String(t || '').replace(/[^\w.-]/g, '').slice(0, 64);
-      if (!t) { toast('기관 코드나 초대 링크를 확인해 주세요.', ''); return; } location.href = orgURL(t); return; }
+    if (f.id === 'apOrgF') { e.preventDefault(); const v = (f.elements.c.value || '').trim(); let t = v, hh = '#home'; try { const u = new URL(v, location.href); t = u.searchParams.get('t') || (/^https?:/.test(v) ? '' : v); if (/^#(join|invite|inv)\//.test(u.hash)) hh = u.hash; } catch (e2) { } /* v32.8 초대 링크의 가입 토큰(#join/…)을 살린다(QA U3) */ t = String(t || '').replace(/[^\w.-]/g, '').slice(0, 64);
+      if (!t) { toast('기관 코드나 초대 링크를 확인해 주세요.', ''); return; }
+      if (LR.mode !== 'live') { let ok = orgs().some(o => o.tid === t) || demoRooms().some(r => r.tid === t); try { ok = ok || !!localStorage.getItem('didisam.room.' + t); } catch (e2) { } if (!ok) { const er = f.querySelector('.ap-oerr') || f.appendChild(Object.assign(document.createElement('p'), { className: 'ap-oerr', role: 'alert' })); er.textContent = '이 코드의 기관을 찾지 못했어요. 기관에서 받은 코드나 초대 링크를 다시 확인해 주세요.'; return; } }
+      const dest = orgURL(t).replace(/#home$/, hh); if (t === LR.tid && hh === '#home') { closeSheet(); return; } closeSheet(); location.href = dest; if (t === LR.tid) location.reload(); return; }
     if (f.id === 'apF') { e.preventDefault(); const ta = f.querySelector('textarea'); const v = ta.value; ta.value = ''; ta.style.height = ''; ltAsk(v); } });
   document.addEventListener('keydown', e => { if (e.target.id === 'apQ' && e.key === 'Enter' && !e.shiftKey && !e.isComposing && !('ontouchstart' in window)) { e.preventDefault(); e.target.form.requestSubmit(); }
-    if (e.key === 'Enter' && !e.isComposing && e.target.id === 'apSQ') { e.preventDefault(); const v = e.target.value.trim(); if (v) ls.set('srq', JSON.stringify([v, ...srRecent().filter(x => x !== v)].slice(0, 10))); const b = document.querySelector('#apSR .ap-srr'); b && b.focus(); }
+    if (e.key === 'Enter' && !e.isComposing && e.target.id === 'apSQ') { e.preventDefault(); const v = e.target.value.trim(); if (v && document.querySelector('#apSR .ap-srr')) ls.set('srq.' + LR.tid, JSON.stringify([v, ...srRecent().filter(x => x !== v)].slice(0, 10))); const b = document.querySelector('#apSR .ap-srr'); b && b.focus(); }
     if (e.key === 'Escape' && document.getElementById('apSheet')) closeSheet(); });
   document.addEventListener('click', e => { if (e.target.id === 'apSheet') closeSheet(); });
 

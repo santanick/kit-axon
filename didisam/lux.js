@@ -82,7 +82,7 @@
       ${LR.me ? `<p class="lux-who"><b>${esc(LR.me.nick || LR.me.sid)}</b>님</p>` : `<div class="lux-shc"><a class="lbtn pri blk" href="#join">무료 가입</a><a class="lbtn ghost blk" href="#login">로그인</a></div>`}
       <p class="lux-shg">둘러보기</p><nav class="lux-shl">${links.join('')}</nav>
       ${mine.length ? `<p class="lux-shg">내 학습</p><nav class="lux-shl">${mine.map(([h, l]) => `<a href="${h}">${l}</a>`).join('')}</nav>` : ''}
-      ${T || LR.me ? `<p class="lux-shg">도움</p><nav class="lux-shl">${T ? `<button type="button" data-tact="open" data-lux="close">${esc(T)}에게 묻기 · 내 AI 학습 비서</button>` : ''}${LR.me ? '<button type="button" data-lact="logout" data-lux="close">로그아웃</button>' : ''}</nav>` : ''}</div>`;
+      ${T || LR.me ? `<p class="lux-shg">도움</p><nav class="lux-shl">${T && !(LR.me && LR.me.kind === 'parent') ? `<button type="button" data-tact="open" data-lux="close">${esc(T)}에게 묻기 · 내 AI 학습 비서</button>` : ''}${LR.me ? '<button type="button" data-lact="logout" data-lux="close">로그아웃</button>' : ''}</nav>` : ''}</div>`;
     document.body.appendChild(w); document.body.classList.add('luxsheet'); const b = document.querySelector('[data-lux="menu"]'); if (b) b.setAttribute('aria-expanded', 'true'); const f = w.querySelector('.lux-sh button, .lux-sh a'); if (f) f.focus(); }
   function sheetClose() { const w = document.getElementById('luxSheet'); if (w) w.remove(); document.body.classList.remove('luxsheet'); const b = document.querySelector('[data-lux="menu"]'); if (b) b.setAttribute('aria-expanded', 'false'); }
   window.luxSheet = sheetOpen;
@@ -164,7 +164,7 @@
     if (t.classList && t.classList.contains('lux-sheet')) sheetClose();
     const tb = t.closest && t.closest('[data-lux-tab]'); if (tb) { e.preventDefault(); setTab(tb.dataset.luxTab); }
     const j = t.closest && t.closest('[data-lact="myjump"]'); if (j) { const el = document.getElementById(j.dataset.v); const g = el && el.closest('[data-lux-g]'); if (g) setTab(g.dataset.luxG); }
-    if (t.closest && t.closest('[data-lact="logout"]')) ss.set(BK(), null);
+    if (t.closest && t.closest('[data-lact="logout"]')) { ss.set(BK(), null); ss.set(TABK(), null); }
   }, true);
   document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (document.getElementById('luxSheet')) { sheetClose(); const b = document.querySelector('[data-lux="menu"]'); if (b) b.focus(); } const m = document.querySelector('.lux-more.open'); if (m) { m.classList.remove('open'); const b = m.querySelector('.lux-mb'); b.setAttribute('aria-expanded', 'false'); b.focus(); } });
   window.addEventListener('hashchange', sheetClose);

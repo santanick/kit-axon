@@ -138,13 +138,13 @@ function uxHead() {
   const b = hd.querySelector('.bhdl b'); if (b) b.textContent = key === 'home' ? '오늘의 운영' : key === 'dash' ? '현황' : key === 'settings' ? '설정' : mlabel(key);
   const d = UX_DESC()[key]; const hl = hd.querySelector('.bhdl'); if (d && hl && !hl.querySelector('.uxdesc')) hl.insertAdjacentHTML('beforeend', `<p class="uxdesc">${esc(d)}</p>`);
   const f = hd.querySelector('[data-act=chat-q]'); if (f) { f.innerHTML = `${ic('spark', 14)} AI SAM에게 맡기기`; f.title = f.dataset.v; }
-  if (w === 'home' || w === 'dash') hd.insertAdjacentHTML('afterend', `<div class="seg2 wtabs uxhd" role="tablist"><button role="tab" aria-selected="${w === 'home'}" class="${w === 'home' ? 'on' : ''}" data-act="go" data-v="home">오늘 할 일</button><button role="tab" aria-selected="${w === 'dash'}" class="${w === 'dash' ? 'on' : ''}" data-act="go" data-v="dash">현황</button></div>`);
+  if ((w === 'home' || w === 'dash') && S.me.role !== 'teacher') hd.insertAdjacentHTML('afterend', `<div class="seg2 wtabs uxhd" role="tablist"><button role="tab" aria-selected="${w === 'home'}" class="${w === 'home' ? 'on' : ''}" data-act="go" data-v="home">오늘 할 일</button><button role="tab" aria-selected="${w === 'dash'}" class="${w === 'dash' ? 'on' : ''}" data-act="go" data-v="dash">현황</button></div>`);
 }
 function uxEmpty(keep) {
   const v = document.querySelector('#main .bview'); if (!v || CUR.ws === 'home') return; const e = [...v.querySelectorAll('.empty')].find(x => x.offsetParent && !x.closest('.modal'));
   if (!e || e.dataset.ux || e.querySelector('button,a.btn')) return; e.dataset.ux = 1; e.classList.add('uxempty');
   const fq = typeof FILLQ === 'function' ? FILLQ()[CUR.tab] : ''; let h = '';
-  if (keep) { const c = keep.cloneNode(true); c.classList.remove('uxkeep'); c.classList.add('pri'); h += c.outerHTML; }
+  if (keep && /(만들|추가|등록|새 |올리|작성|개설|초대|가져오|발급)/.test(keep.textContent)) { const c = keep.cloneNode(true); c.classList.remove('uxkeep'); c.classList.add('pri'); h += c.outerHTML; }
   if (fq) h += `<button type="button" class="btn ghost" data-act="chat-q" data-v="${esc(fq)}">${ic('spark', 14)} AI SAM에게 맡기기</button>`;
   if (h) e.insertAdjacentHTML('beforeend', `<div class="uxecta">${h}</div>`);
 }

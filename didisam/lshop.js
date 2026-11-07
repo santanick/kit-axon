@@ -17,7 +17,7 @@
   /* ── 데이터 ── */
   const roomDoc = () => { if (!['demo', 'preview'].includes(LR.mode) || !LR.tid || LR.tid === 'sample') return null; try { return JSON.parse(localStorage.getItem('didisam.room.' + LR.tid) || 'null'); } catch (e) { return null; } };
   const SHOP = () => { const d = roomDoc(); return (d && d.lsite && d.lsite.pub && d.lsite.pub.shop) || (LR.site && LR.site.shop) || null; };
-  const meKeys = () => LR.me ? [LR.me.sid, LR.me.id, LR.me.email].filter(Boolean).map(String) : [];
+  const meKeys = () => LR.me ? [LR.me.sid, LR.me.id, LR.me.pid, LR.me.email, ...(typeof laPacct === 'function' && LR.me.kind === 'parent' ? [(laPacct() || {}).id] : [])].filter(Boolean).map(String) : []; /* v32.8 보호자는 가족 연결 id로도 찾는다(QA U8) */
   const meM = doc => { const K = meKeys(); if (!K.length || !doc) return null; return (doc.members || []).find(m => [m.id, m.sid, m.email, m.extra && m.extra.학번, m.acct && m.acct.email].some(v => v && K.includes(String(v)))) || null; };
   const qAll = () => { try { return JSON.parse(localStorage.getItem('didisam.room.' + LR.tid + '.lpx') || '[]'); } catch (e) { return []; } };
   const priceOf = x => { if (!x) return 0; let p = +x.price || 0; const d = x.discount; if (d && d.on && (!d.until || today() <= d.until)) p -= d.type === 'amount' ? (+d.v || 0) : Math.round(p * (+d.v || 0) / 100); const e = x.recruit && x.recruit.early; if (e && e.on && (!e.until || today() <= e.until)) p -= Math.round(p * (+e.rate || 0) / 100); return Math.max(0, Math.round(p)); };

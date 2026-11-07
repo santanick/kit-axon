@@ -8,7 +8,7 @@ const KIND = { period: '기간', episode: '회차', sub: '구독' };
 const ITEM = { video: '동영상 강의', live: '라이브 강의', offline: '오프라인 강의', quiz: '퀴즈', exam: '시험', assign: '과제', survey: '설문', chapter: '챕터' };
 const avgP = c => { const v = Object.values(c.prog); return v.length ? v.reduce((a, b) => a + b.p, 0) / v.length : 0; };
 const doneN = c => Object.values(c.prog).filter(p => p.p >= c.criteria.threshold).length;
-const pend = () => S.classes.flatMap(c => Object.entries(c.prog).filter(([, p]) => p.assign === 'submitted').map(([id]) => ({ c, id })));
+const pend = () => S.classes.filter(c => S.me.role !== 'teacher' || typeof tCls !== 'function' || tCls().includes(c)).flatMap(c => Object.entries(c.prog).filter(([, p]) => p.assign === 'submitted').map(([id]) => ({ c, id })));
 const owner = () => S.me.role === 'owner';
 
 /* ═════════ 홈 대시보드 ═════════ */
@@ -226,10 +226,10 @@ ACT['lib-del'] = el => { const l = S.lib.find(x => x.id === el.dataset.v); if (l
 const legalUndone = () => S.classes.filter(c => c.legal).flatMap(c => c.learners.filter(id => (c.prog[id]?.p || 0) < 100).map(id => ({ c, id })));
 VIEWS.compliance = () => {
   const L = S.classes.filter(c => c.legal);
-  return head('법정의무교육', '성희롱 예방 · 개인정보보호 · 장애인 인식개선 · 산업안전보건 — 연 1회 이상 이수 관리', `<button class="btn" data-act="comp-report">이수 증빙 보고서</button><button class="btn ai" data-act="auto-run-id" data-v="legal-d7">✦ 미이수자 독려 실행</button>`) +
+  return head('법정의무교육', `${L.length ? L.map(c => c.name.replace(/\s*교육.*$/, '')).join(' · ') : '법정 의무교육'} — 연 1회 이상 이수 관리`, `<button class="btn" data-act="comp-report">이수 증빙 보고서</button><button class="btn ai" data-act="auto-run-id" data-v="legal-d7">✦ 미이수자 독려 실행</button>`) +
     `<section class="grid g4">${L.map(c => kpi(c.name.replace(/교육.*$/, ''), pct(doneN(c) / Math.max(1, c.learners.length) * 100), `미이수 ${c.learners.length - doneN(c)}명 · 마감 ${c.end}`, doneN(c) / c.learners.length > .9 ? 'g' : 'y')).join('')}</section>` +
-    `<div class="card"><div class="ch"><b>${esc(t('group'))}별 이수율</b><small>법정교육 4종 평균</small></div>${table([t('group'), ...L.map(c => c.name.slice(0, 8)), '평균'], S.groups.map(g => { const r = L.map(c => { const ids = c.learners.filter(id => M(id)?.group === g.id); return ids.length ? ids.filter(id => c.prog[id].p >= 100).length / ids.length * 100 : 0; }); return [esc(g.name), ...r.map(v => `<span class="${v < 70 ? 'r' : ''}">${pct(v)}</span>`), `<b>${pct(avgOf(r))}</b>`]; }))}</div>` +
-    `<p class="mini">※ 이수 기준·주기는 관계 법령과 사내 규정을 따르며, 실제 운영 전 HR 담당 확인이 필요합니다.</p>`;
+    `<div class="card"><div class="ch"><b>${esc(t('group'))}별 이수율</b><small>법정교육 ${L.length}종 평균</small></div>${table([t('group'), ...L.map(c => c.name.replace(/\s*교육.*$/, '').slice(0, 12)), '평균'], S.groups.map(g => { const r = L.map(c => { const ids = c.learners.filter(id => M(id)?.group === g.id); return ids.length ? ids.filter(id => c.prog[id].p >= 100).length / ids.length * 100 : 0; }); return [esc(g.name), ...r.map(v => `<span class="${v < 70 ? 'r' : ''}">${pct(v)}</span>`), `<b>${pct(avgOf(r))}</b>`]; }))}</div>` +
+    `<p class="mini">※ 이수 기준·주기는 관계 법령과 ${S.org.type === 'public' ? '기관 규정을 따르며, 실제 운영 전 교육 담당 부서' : '사내 규정을 따르며, 실제 운영 전 HR 담당'} 확인이 필요합니다.</p>`;
 };
 ACT['comp-report'] = () => downloadCSV(`법정의무교육_이수현황_${today()}.csv`, ['교육', '이름', t('group'), '진도', '이수'], S.classes.filter(c => c.legal).flatMap(c => c.learners.map(id => [c.name, M(id)?.name, S.groups.find(g => g.id === M(id)?.group)?.name, c.prog[id].p, c.prog[id].p >= 100 ? 'Y' : 'N'])));
 

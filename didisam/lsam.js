@@ -19,7 +19,7 @@
   const P = s => `<p class="lt-mini">${s}</p>`;
   const OL = A => `<ol class="lt-ol">${A.filter(Boolean).map(x => `<li><b>${x}</b></li>`).join('')}</ol>`;
   /* 개인정보 가림: 이메일 · 전화번호 · 주민번호 꼴 */
-  const mask = s => String(s || '').replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[이메일]').replace(/(01[016789]|0\d{1,2})[-.\s]?\d{3,4}[-.\s]?\d{4}/g, '[전화번호]').replace(/\d{6}[-\s]?[1-4]\d{6}/g, '[주민번호]');
+  const mask = s => String(s || '').replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[이메일]').replace(/\d{6}[-\s]?[1-4]\d{6}/g, '[주민번호]').replace(/(01[016789]|0\d{1,2})[-.\s]?\d{3,4}[-.\s]?\d{4}/g, '[전화번호]'); /* v32.8 주민번호를 먼저 가린다(QA U11) */
   window.ltMask = mask;
   const clsOf = id => { const a = ((sh() || {}).classes || []).find(x => x.id === id) || null; const b = ((SITE() || {}).classes || []).find(x => x.id === id) || null; return a || b ? { ...(b || {}), ...(a || {}), items: (b && b.items) || [], nItems: a && typeof a.items === 'number' ? a.items : ((b && b.items) || []).filter(i => i.type !== 'chapter').length } : null; };
   const priceOf = c => { try { return typeof shPrice === 'function' && ((sh() || {}).classes || []).some(x => x.id === c.id) ? shPrice(c.id) : +(c.final != null ? c.final : c.price) || 0; } catch (e) { return +c.price || 0; } };
@@ -173,7 +173,7 @@
   }
   function nextOf(c, it) { const its = (c.items || []).filter(i => i.type !== 'chapter'); const r = ((LR.lp && LR.lp.cls && LR.lp.cls[c.id]) || { items: {} }).items || {}; const i0 = it ? its.indexOf(it) : -1; const nx = its.slice(i0 + 1).find(i => !(r[i.id] || {}).done) || its.find(i => !(r[i.id] || {}).done);
     return nx ? { t: `다음은 「${nx.title}」입니다.`, h: L([{ h: nx.title, d: ITN2[nx.type] || '', href: `#c/${c.id}/${nx.id}` }]) } : { t: '이 과정의 레슨을 모두 마쳤습니다. 수료증을 확인해 보세요.', h: L([{ h: '수료증', d: c.name, href: '#cert/' + c.id }]) }; }
-  function certRule(c) { const crit = c.crit || (c.criteria && c.criteria.items) || null; const thr = c.thr || (c.criteria && c.criteria.threshold) || 80;
+  function certRule(c) { const crit = c.crit || (c.criteria && c.criteria.items) || null; const cp = (SITE() && SITE().cpl && SITE().cpl.on) ? SITE().cpl : null; const thr = (cp && +cp.rate) || c.thr || (c.criteria && c.criteria.threshold) || 80; /* v32.8 규정 준수 기관은 게시된 수료 기준을 우선(QA U9) */
     return { t: `「${c.name}」 수료 기준입니다.`, h: OL([Array.isArray(crit) && crit.length ? `항목별 이수율 ${thr}% 이상(${crit.length}개 항목 가중 평균)` : `전체 진도 ${thr}% 이상`, ...(c.items || []).filter(i => ['exam', 'assign'].includes(i.type) && i.rules && i.rules.pass && i.rules.pass.on).map(i => `${esc(i.title)}: ${i.rules.pass.v}점 이상`), '기준을 채우면 수료증이 자동으로 발급됩니다']) }; }
   function leaveTxt() { return { t: '탈퇴하면 이렇게 처리됩니다.', h: OL(['개인정보(이메일 · 이름 · 휴대폰 · 로그인 수단)는 바로 파기', '학습 기록은 이름 없는 번호로만 남아 통계에 쓰임', '결제 기록은 법에 따라 5년 보관', '같은 SNS로 다시 가입하면 새 계정으로 시작']) + L([LR.me && { h: '회원정보 › 탈퇴', d: '', href: '#acct' }]) }; }
 

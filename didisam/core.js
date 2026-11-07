@@ -120,7 +120,7 @@ function presetNav(type, ed) {
   /* v29 대학은 도입 형태(에디션)로 나뉜다 — lite: 사업단 · 센터, lms: 학사 LMS(전교생 메인) */
   if (ed === undefined && type === 'univ' && S && S.org && S.org.type === 'univ') ed = S.org.ed;
   const P = PRESET[type === 'univ' && ed === 'lms' && PRESET.univ_lms ? 'univ_lms' : type]; const tabs = {}; P.ws.forEach(w => tabs[w] = []);
-  P.on.forEach(id => tabs[MENU[id].ws].push({ id, on: true })); P.off.forEach(id => tabs[MENU[id].ws].push({ id, on: false }));
+  P.on.forEach(id => tabs[MENU[id].ws].push({ id, on: true })); P.off.filter(id => !MENU[id].only || MENU[id].only === type).forEach(id => tabs[MENU[id].ws].push({ id, on: false })); /* v32.8 다른 유형 전용 탭은 꺼진 목록에도 넣지 않는다 */
   return { ws: [...P.ws], tabs };
 }
 const menuOn = id => !!S.nav.tabs[MENU[id]?.ws]?.find(x => x.id === id && x.on);
@@ -164,9 +164,10 @@ function resolve(id) {
   if (id === 'settings') return { ws: 'settings', tab: '' };
   if (WS[id]) { const tb = wsTabs(id); return { ws: id, tab: (UI['tab_' + id] && tb.includes(UI['tab_' + id])) ? UI['tab_' + id] : tb[0] || '' }; }
   if (MENU[id]) return { ws: MENU[id].ws, tab: id };
+  if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id)) { UI.settings = id; return { ws: 'settings', tab: '' }; } /* v32.8 설정 하위 화면 바로가기(현황 › 요금제 [업그레이드] 등) */
   return { ws: 'home', tab: '' };
 }
-const TEACH_NO = ['site', 'sales', 'billing', 'admins', 'org', 'auto'];
+const TEACH_NO = ['site', 'sales', 'billing', 'admins', 'org', 'auto', 'settings', 'dash']; /* v32.8 설정 · 기관 현황은 교수자 직접 이동도 막음(QA U4) */
 function go(id, keep) {
   let r = resolve(id);
   if (r.tab && MENU[r.tab]?.owner && S.me.role !== 'owner') { toast('정운영자만 볼 수 있는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; }
@@ -337,7 +338,7 @@ ACT['modal-close'] = () => closeModal();
 ACT.tab = el => { UI[el.dataset.key] = el.dataset.v; render(); };
 ACT['su-ed'] = el => { SU.ed = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; renderSignup(); };
 ACT['su-type'] = el => { if (el.dataset.v !== SU.type) SU.ed = el.dataset.v === 'univ' ? 'lite' : ''; SU.type = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; renderSignup(); };
-document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; const f = ACT[el.dataset.act]; if (f) { e.preventDefault(); f(el, e); } });
+document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; const f = ACT[el.dataset.act]; if (f) { if (el.tagName !== 'SUMMARY') e.preventDefault(); f(el, e); } }); /* v32.8 summary는 기본 접기 · 펼치기를 살린다 */
 document.addEventListener('change', e => {
   if (e.target.id === 'roleSel') { S.me.role = e.target.value; save(); toast(`${roleName(S.me.role)} 권한으로 보는 화면입니다.`); go(CUR.tab || CUR.ws); return; }
   const el = e.target.closest('[data-chg]'); if (el && ACT[el.dataset.chg]) ACT[el.dataset.chg](el, e);

@@ -9,7 +9,7 @@ try { Object.defineProperty(window, 'S', { get: () => S, configurable: true }); 
 const scn = () => !S || !S.me ? 'admin' : S.me.role === 'teacher' ? 'teacher' : 'admin';
 
 /* ── 교수자 데이터 ── */
-const tMe = () => { const a = (S.admins || []).find(x => x.role === 'teacher'); if (a && !Array.isArray(a.classes)) a.classes = []; return a || null; };
+const tMe = () => { const T = (S.admins || []).filter(x => x.role === 'teacher'); const a = T.find(x => x.id === S.me.tid) || T[0]; if (a && !Array.isArray(a.classes)) a.classes = []; return a || null; };
 const tCls = () => { const ids = (tMe() && tMe().classes) || []; const L = ids.map(C).filter(Boolean); return L.length ? L : S.classes.slice(0, 2); };
 const tCur = () => { const L = tCls(); return L.find(c => c.id === UI.tc) || L[0] || null; };
 const tSid = id => { const m = M(id); return m ? (m.sid || (m.extra || {}).학번 || '') : ''; };
@@ -171,7 +171,7 @@ function lxDemo() {
   const g = c.prog[id]; g.assign = 'returned'; g.score = 62; g.fb = `요구사항 2번(활용 사례 비교)이 빠졌습니다. 사례 2개를 표로 비교하고, 내 ${S.org.type === 'univ' ? '전공' : ['corp', 'public'].includes(S.org.type) ? '직무' : '실무'}에 적용할 점을 한 줄 덧붙여 다시 제출하세요.`;
   code = { sid, dept: (S.groups.find(x => x.id === m.group) || {}).name || '', code: 'DEMO' + String(Math.floor(1000 + Math.random() * 8999)), at: today(), demo: true }; S.codes.push(code); logAudit('체험 학습자 접근코드 발급(데모)'); save(); return code;
 }
-function asRole(r) {
+function asRole(r, tid) { if (r === 'teacher' && tid) S.me.tid = tid;
   S.chats = S.chats || {}; S.chats[scn()] = S.chat; UI.door = false; UI.tst = ''; UI.cls = null;
   if (r === 'teacher') { S.tSeen = S.classes.map(c => c.id); const me = tMe(); S.me.adminName = S.me.adminName || (S.me.role !== 'teacher' ? S.me.name : '관리자'); S.me.role = 'teacher'; S.me.name = (me && me.name) || t('teacher'); if (S.bld) S.bld.on = true; }
   else { S.me.role = 'owner'; S.me.name = S.me.adminName || '관리자'; }
@@ -185,7 +185,7 @@ function openPortal() {
   toast(c ? `학습자 포털을 새 창으로 열었습니다 — 체험 학번 ${c.sid} · 접근코드 ${c.code}` : '학습자 포털을 새 창으로 열었습니다.', 'ok'); return w;
 }
 ACT['as-admin'] = () => asRole('admin');
-ACT['as-teacher'] = () => asRole('teacher');
+ACT['as-teacher'] = el => asRole('teacher', el && el.dataset && el.dataset.v);
 ACT['lp-open'] = () => openPortal();
 ACT['door'] = () => { UI.door = true; render(); };
 ACT['door-x'] = () => { UI.door = false; render(); };

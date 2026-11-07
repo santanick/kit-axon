@@ -346,3 +346,5 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid color
 @media print{.bktop,.bkside,.bknav,.bkguest{display:none!important}}
 @media (max-width:600px){.bktop{top:60px}}
 @media (max-width:600px){.badges{grid-template-columns:1fr}}
+/* v32.8 수료증 휴대폰 폭(QA U5) */
+@media (max-width:600px){.certp{padding:28px 16px;overflow-wrap:anywhere}.certp h1{font-size:28px}.certp+.cta{flex-wrap:wrap}.certp+.cta>*{flex:1 1 140px}}
