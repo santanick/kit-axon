@@ -72,7 +72,7 @@
 
   /* ───────── 3. 메뉴 추가(카탈로그) ───────── */
   WS.more = { label: '메뉴 추가', icon: 'grid', desc: '' };
-  const allTabs = () => Object.entries(S.nav.tabs).flatMap(([w, A]) => (A || []).filter(x => MENU[x.id] && !(MENU[x.id].only && MENU[x.id].only !== S.org.type && !(S.org.type === 'univ' && MENU[x.id].only === 'univ'))).map(x => ({ ...x, w })));
+  const allTabs = () => Object.entries(S.nav.tabs).flatMap(([w, A]) => (A || []).filter(x => MENU[x.id] && !(/^(lms|sis|rfpmap|grade)/.test(x.id) && S.org.type !== 'univ') && !(MENU[x.id].only && MENU[x.id].only !== S.org.type && !(S.org.type === 'univ' && MENU[x.id].only === 'univ'))).map(x => ({ ...x, w })));
   VIEWS.menus = () => { const f = UI.slMenuF || 'all', q = (UI.slMenuQ || '').trim(); const A = allTabs(); const E = slimEss();
     const wsL = [...new Set(A.map(x => x.w))].filter(w => WS[w]); const L = A.filter(x => (f === 'all' || (f === 'on' ? x.on : x.w === f)) && (!q || (mlabel(x.id) + mdOf(x.id)[0]).includes(q)));
     const on = A.filter(x => x.on);
