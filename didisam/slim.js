@@ -157,7 +157,7 @@
     /* 안내 줄(경고 · 노란 띠)은 한 줄 요약 + 눌러서 보기로 */
     main.querySelectorAll('.mb-note, .warnl-note').forEach(n => { n.classList.add('sl-compact'); });
   };
-  const slHead = () => { const main = $('#main'); if (!main || !main.querySelector('.sl-page')) return; main.querySelectorAll('.bhdl > h1, .bhdl > b, .bhdl > small, .bhdl > p, .wh > div:first-child > h1, .wh > div:first-child > p').forEach(e => { e.hidden = true; }); };
+  const slHead = () => { const main = $('#main'); if (!main || !main.querySelector('.sl-page')) return; main.querySelectorAll('.bhdl > h1, .bhdl > b, .bhdl > small, .bhdl > p, .wh > div:first-child > h1, .wh > div:first-child > p, .bhd > [data-act="chat-q"], .bhd .bhdr > [data-act="chat-q"]').forEach(e => { e.hidden = true; }); }; /* 머리의 「AI SAM에게 맡기기」는 떠 있는 AI SAM 버튼과 겹치므로 목록 화면에서는 숨김 */
   AFTER.push(() => { slHead(); slTips(); setTimeout(() => { slHead(); slTips(); }, 0); });
   ACT['sl-tip'] = el => { const o = $('.sl-pop'); if (o) { const same = o.dataset.for === el.dataset.tip; o.remove(); if (same) return; }
     const r = el.getBoundingClientRect(); const d = document.createElement('div'); d.className = 'sl-pop'; d.dataset.for = el.dataset.tip; d.setAttribute('role', 'tooltip'); d.textContent = el.dataset.tip;

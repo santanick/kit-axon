@@ -87,3 +87,4 @@ details.sl-adv #fundCard{background:#fff}
 main:has(.sl-page) .bhdl > h1, main:has(.sl-page) .wh h1{font-size:15px;color:var(--t-sub);font-weight:600}
 .sl-gh{font-size:14px;color:var(--t-sub);font-weight:700;margin:18px 6px 4px}
 .sl-ic .ic{stroke:#fff;color:#fff}
+body:has(#slSheet) .mwrap{z-index:96}
