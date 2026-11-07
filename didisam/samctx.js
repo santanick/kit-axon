@@ -187,7 +187,7 @@ AFTER.push(() => scxMount());
 { const base = ACT['chat-open']; if (base) ACT['chat-open'] = el => { base(el); scxMount(); }; }
 
 /* ── 떠 있는 버튼: 열지 않고 '이 화면 도움 n'만 ── */
-if (typeof fabSync === 'function') { const base = fabSync; fabSync = (...a) => { const r = base(...a); try { const b = $('#fabBtn'); if (b && !document.body.classList.contains('fab-open') && !b.querySelector('.fabn')) { const k = scxKey(); const n = k === 'home' ? 0 : scxChips(k).length; const sp = b.querySelector(':scope > span'); if (n && sp && !sp.querySelector('small')) { sp.classList.add('scxbt'); sp.insertAdjacentHTML('beforeend', `<small>이 화면 도움 ${n}</small>`); b.setAttribute('aria-label', `AI SAM 열기 — 이 화면에서 도와드릴 수 있는 일 ${n}개`); } } } catch (e) { } return r; }; }
+if (typeof fabSync === 'function') { const base = fabSync; fabSync = (...a) => { const r = base(...a); try { const b = $('#fabBtn'); if (b && !document.body.classList.contains('fab-open') && !b.querySelector('.fabn')) { const k = scxKey(); const n = k === 'home' ? 0 : Math.min(3, scxChips(k).length); /* v34 화면 추천은 3개까지만 보인다 */ const sp = b.querySelector(':scope > span'); if (n && sp && !sp.querySelector('small')) { sp.classList.add('scxbt'); sp.insertAdjacentHTML('beforeend', `<small>이 화면 도움 ${n}</small>`); b.setAttribute('aria-label', `AI SAM 열기 — 이 화면에서 도와드릴 수 있는 일 ${n}개`); } } } catch (e) { } return r; }; }
 
 /* ── 규칙 엔진: 칩 문구 · '이거/이 강좌' 지시를 지금 화면 항목으로 ── */
 { SCX_BASE = answer; const base = answer; answer = (q, ...a) => { const s = String(q || '').trim();
