@@ -374,8 +374,8 @@
     const on = appOn(); document.body.classList.toggle('lapp', on); document.body.classList.remove('ap-homeon', 'ap-pickon');
     try { if (LR.tid && (on || LR.me)) { ls.set('tid', LR.tid); if (on) orgSave(); } } catch (e) { }
     const lm = document.getElementById('lm'); const app = document.getElementById('lapp'); if (!lm || !app) return;
-    document.body.classList.toggle('lpar', isPar());
-    if (!on && isPar()) { const a0 = route().a; if (['home', 'my', 'shop', 'courses', 'tutorials'].includes(a0)) { lm.innerHTML = parClassicHTML(); if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } }
+    document.body.classList.remove('lpar');
+    if (!on && isPar()) { const a0 = route().a; if (['home', 'my', 'shop', 'courses', 'tutorials'].includes(a0)) { lm.innerHTML = parClassicHTML(); document.body.classList.add('lpar'); if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } } /* 보호자 홈에서는 학생용 AI 튜터 버튼을 숨긴다(가족 연결 · 자녀 화면의 보호자 비서는 그대로) */
       document.querySelectorAll('header.lh a[href="#my"], header.lh a[href="#shop"], header.lh a[href="#courses"], header.lh a[href="#tutorials"], header.lh a[href="#login/my"]').forEach(x => { x.hidden = true; }); return; }
     if (!on && !LR.me && route().a === 'home' && !lm.querySelector('.lgj')) lm.insertAdjacentHTML('afterbegin', joinStrip());
     if (!on) { if (LR.me && route().a === 'home' && ls.get('classic') === '1' && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
