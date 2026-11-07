@@ -44,16 +44,16 @@
      이 기기에는 기관 번호 · 이름 · 유형만 기억한다(개인정보 없음). 운영: 디디쌤 통합 계정의 '내 기관' 목록(GET /api/me/orgs)으로 대체 */
   const TYL = { univ: '대학', corp: '기업', public: '공공기관', k12: '학원(초중고)', adult: '학원(성인)', lifelong: '평생교육원', voc: '직업훈련원' };
   const SCN = {
-    univ: { learn: '내 교과목', find: '비교과', sub: me => `학번 ${me.sid || ''} · 교과 · 비교과 · 배지를 함께 챙겨요`, chips: [['이번 학기 이수 현황', '이번 학기 교과 · 비교과 이수 현황 알려줘'], ['비교과 추천', '나한테 맞는 비교과 프로그램 추천해줘'], ['과제 마감', '이번 주 과제 마감 정리해줘']], d: '교과 · 비교과 · 학번 로그인' },
-    corp: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '직무 교육 · 필수교육 이수를 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘'], ['직무 과정 추천', '내 직무에 맞는 교육과정 추천해줘'], ['이수 현황', '내 교육 이수 현황 정리해줘']], d: '직무 · 법정의무교육 · 이수 관리' },
-    public: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '직무 교육 · 필수교육 이수를 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘'], ['교육과정 추천', '나에게 맞는 교육과정 추천해줘'], ['이수 현황', '내 교육 이수 현황 정리해줘']], d: '공무 · 법정의무교육 · 이수 관리' },
-    k12: { learn: '내 수업', find: '수업 찾기', sub: () => '숙제 · 출석 · 복습을 함께 챙겨요', chips: [['오늘 숙제', '오늘 해야 할 숙제 알려줘'], ['출석 확인', '내 출석 현황 알려줘'], ['복습 퀴즈', '복습 퀴즈 내줘']], d: '수업 · 숙제 · 출결 · 보호자' },
-    adult: { learn: '내 강의', find: '둘러보기', sub: () => '수강 · 복습 · 자격증 준비를 함께 챙겨요', chips: [['이번 주 계획', '이번 주 학습 계획 짜줘'], ['자격증 준비', '자격증 준비 순서 알려줘'], ['복습 퀴즈', '복습 퀴즈 내줘']], d: '강좌 수강 · 결제 · 자격증' },
-    lifelong: { learn: '내 강좌', find: '강좌 신청', sub: () => '강좌 신청 · 출석 · 수료를 함께 챙겨요', chips: [['신청할 강좌', '지금 신청할 수 있는 강좌 알려줘'], ['수료 조건', '수료 조건 알려줘'], ['이번 주 일정', '이번 주 수업 일정 알려줘']], d: '강좌 신청 · 출석 · 수료 기록' },
-    voc: { learn: '내 훈련', find: '훈련과정', sub: () => '출석 · 훈련 일지 · 수료 기준을 함께 챙겨요', chips: [['출석 확인', '오늘 출석 현황 알려줘'], ['수료 기준', '훈련 수료 기준 알려줘'], ['훈련 일지', '훈련 일지 쓰는 법 알려줘']], d: '훈련과정 · 출결 · 수료' }
+    univ: { learn: '내 교과목', find: '비교과', sub: me => `학번 ${me.sid || ''} · 교과 · 비교과 · 배지를 함께 챙겨요`, chips: [['이번 학기 이수 현황', '이번 학기 교과 · 비교과 이수 현황 알려줘', 'status'], ['비교과 추천', '나한테 맞는 비교과 프로그램 추천해줘', 'rec'], ['과제 마감', '이번 주 과제 마감 정리해줘', 'due']], d: '교과 · 비교과 · 학번 로그인' },
+    corp: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '직무 교육 · 필수교육 이수를 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['직무 과정 추천', '내 직무에 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '직무 · 법정의무교육 · 이수 관리' },
+    public: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '직무 교육 · 필수교육 이수를 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['교육과정 추천', '나에게 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '공무 · 법정의무교육 · 이수 관리' },
+    k12: { learn: '내 수업', find: '수업 찾기', sub: () => '숙제 · 출석 · 복습을 함께 챙겨요', chips: [['오늘 숙제', '오늘 해야 할 숙제 알려줘', 'due'], ['출석 확인', '내 출석 현황 알려줘', 'att'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '수업 · 숙제 · 출결 · 보호자' },
+    adult: { learn: '내 강의', find: '둘러보기', sub: () => '수강 · 복습 · 자격증 준비를 함께 챙겨요', chips: [['이번 주 계획', '이번 주 학습 계획 짜줘', 'plan'], ['자격증 준비', '자격증 준비 순서 알려줘', 'certprep'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '강좌 수강 · 결제 · 자격증' },
+    lifelong: { learn: '내 강좌', find: '강좌 신청', sub: () => '강좌 신청 · 출석 · 수료를 함께 챙겨요', chips: [['신청할 강좌', '지금 신청할 수 있는 강좌 알려줘', 'list'], ['수료 조건', '수료 조건 알려줘', 'rule'], ['이번 주 일정', '이번 주 수업 일정 알려줘', 'week']], d: '강좌 신청 · 출석 · 수료 기록' },
+    voc: { learn: '내 훈련', find: '훈련과정', sub: () => '출석 · 학습 시간 · 수료 기준을 함께 챙겨요', chips: [['출석 확인', '오늘 출석 현황 알려줘', 'att'], ['수료 기준', '훈련 수료 기준 알려줘', 'rule'], ['오늘 학습 한도', '오늘 학습할 수 있는 시간 알려줘', 'limit']], d: '훈련과정 · 출결 · 수료' }
   };
   /* v29 대학 학사 LMS(전교생 메인)는 수업 · 출석 · 과제 · 시험 · 성적 중심 시나리오 */
-  SCN.univ_lms = { learn: '이번 학기 강의', find: '비교과', sub: me => `학번 ${me.sid || ''} · 출석 · 과제 · 시험 · 성적을 함께 챙겨요`, chips: [['오늘 출석', '오늘 출석해야 할 수업 알려줘'], ['과제 · 시험 마감', '이번 주 과제 · 시험 마감 정리해줘'], ['학습 분량 점검', '이번 주 온라인 강의 중 덜 들은 차시 알려줘']], d: '교과 수업 · 스마트 출석 · 성적 · 학사 연동' };
+  SCN.univ_lms = { learn: '이번 학기 강의', find: '비교과', sub: me => `학번 ${me.sid || ''} · 출석 · 과제 · 시험 · 성적을 함께 챙겨요`, chips: [['오늘 출석', '오늘 출석해야 할 수업 알려줘', 'att'], ['과제 · 시험 마감', '이번 주 과제 · 시험 마감 정리해줘', 'due'], ['학습 분량 점검', '이번 주 온라인 강의 중 덜 들은 차시 알려줘', 'gap']], d: '교과 수업 · 스마트 출석 · 성적 · 학사 연동' };
   const oTy = () => (SITE() && SITE().org && SITE().org.type) || 'adult';
   const oEd = () => (SITE() && SITE().org && SITE().org.ed) || '';
   const scnExt = () => { for (const f of window.LSCN_PICK || []) { try { const x = f(oTy(), oEd()); if (x) return x; } catch (e) { console.error(e); } } return null; };
@@ -82,6 +82,12 @@
   function pendSid() { const k = 'pend.' + (LR.tid || ''); let id = (typeof LA !== 'undefined' && LA && LA.pend) || ls.get(k); if (!id) return null;
     try { const a = typeof laFind === 'function' ? laFind(id) : null; if (a && a.grade && a.grade !== '승인 대기') { ls.set(k, null); return null; } if (!a && !(LA && LA.pend) && LR.mode !== 'live') { ls.set(k, null); return null; } } catch (e) { }
     ls.set(k, id); return id; }
+  /* v33 휴대폰 기존 웹 방문자 홈 첫 화면 가입 진입(500명 QA 제안) — 기관 가입 방식(바로 가입 · 초대 · 접근코드)에 맞는 주 버튼 하나 */
+  function joinStrip() { if (LR.me || pendSid()) return ''; const J = joinInfo();
+    const cta = J.mode === 'open' ? `<a class="lbtn pri" href="#join">가입하기</a><a class="lgj-lk" href="#login">로그인</a>`
+      : J.mode === 'invite' ? `<a class="lbtn pri" href="#login">초대받은 계정으로 시작</a><span class="lgj-s">초대 링크(메일 · 메신저)를 열면 가입돼요</span>`
+      : `<a class="lbtn pri" href="#login">${oTy() === 'univ' ? '학번' : '접근코드'}으로 시작</a><a class="lgj-lk" href="#find/code">접근코드를 모르겠어요</a>`;
+    return `<section class="lgj" aria-label="가입 · 시작"><div><b>${esc(J.t)}</b><small>${esc(J.s[0] || '')}</small></div><div class="lgj-a">${cta}</div></section>`; }
   function joinCard() { if (LR.me || isPar()) return ''; const J = joinInfo(); const pend = pendSid();
     if (pend) return `<section class="ap-join pend" aria-label="가입 상태"><span class="ap-tag w">가입 승인 대기 중</span><h2>운영자가 승인하면 바로 알려 드려요</h2><p>승인 전에도 강좌 · 공지를 둘러볼 수 있어요. 수강 · 결제는 승인 뒤에 열려요.</p><a class="ap-go ghost sm" href="${esc(browse())}">둘러보기</a></section>`;
     const cta = J.mode === 'open' ? `<a class="ap-go" href="#join">${esc(SITE().org.name)} 가입하기</a><a class="ap-lk" href="#login">이미 가입했어요 · 로그인</a>`
@@ -121,6 +127,11 @@
       <div class="ap-scroll ap-pscroll"><section class="ap-hero">${orgChip()}${av(null, true)}<h1>${esc(who())},<br>자녀의 학습을 함께 챙겨요</h1><p class="ap-sub">출결 · 수업 소식 · 청구서를 한곳에서 확인하세요.</p></section>
       <nav class="ap-pg4" aria-label="보호자 바로가기">${tile('#family', 'user', '자녀 관리', '출결 · 수강 현황', 0)}${tile('#msg', 'chat', '메시지', c.m ? `안 읽은 메시지 ${c.m}개` : '기관 · 강사 소식', c.m)}${tile('#mypay/bill', 'layers', '청구서 · 결제', '결제 대기 · 내역', 0)}${tile('#notice', 'bell', '공지사항', '전체 · 클래스 공지', 0)}</nav>
       ${kidsHTML()}</div></div>`; }
+  /* v33 보호자 PC 웹(기존 화면) 홈 — 학생 기능(AI 튜터 · 내 학습 · 강좌) 대신 자녀 현황 · 청구서 · 알림 중심(QA #56) */
+  function parClassicHTML() { const c = cnt(); const tile = (h, i, t, d, k) => `<a class="lpar-t" href="${h}">${ico(i, 22)}<span><b>${esc(t)}</b><small>${esc(d)}</small></span>${bdg(k)}</a>`;
+    return `<section class="sec lpar-home"><div class="in"><p class="lpar-ey">${esc(SITE().org.name)} · 보호자 계정</p><h1>${esc(who())}, 자녀의 학습을 함께 챙겨요</h1><p class="lead">자녀 현황 · 청구서 · 알림을 한곳에서 확인하세요. 수강 · 과제 제출 · AI 튜터는 자녀 계정에서 이용해요.</p>
+      <nav class="lpar-g" aria-label="보호자 바로가기">${tile('#family', 'user', '자녀 현황', '출결 · 진도 · 성적', 0)}${tile('#mypay/bill', 'layers', '청구서 · 결제', '결제 대기 · 내역', 0)}${tile('#inbox', 'bell', '알림', c.n ? `새 알림 ${c.n}개` : '기관 · 수업 알림', c.n)}${tile('#msg', 'chat', '메시지', c.m ? `안 읽은 메시지 ${c.m}개` : '기관 · 강사 소식', c.m)}${tile('#notice', 'grid', '공지사항', '전체 · 수업 공지', 0)}</nav>
+      ${kidsHTML()}</div></section>`; }
   function navHTML() { const s = (isPar() ? SECP : SEC)[route().a] || '';
     if (isPar()) { const c = cnt(); const it = [['home', '#home', 'home', '홈'], ['kids', '#family', 'user', '자녀'], ['msg', '#msg', 'chat', '메시지'], ['pay', '#mypay/bill', 'layers', '결제'], ['me', '#acct', 'grid', '나']];
       return `<nav class="ap-nav" aria-label="앱 메뉴">${it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span>${k === 'msg' ? bdg(c.m) : ''}</a>`).join('')}</nav>`; }
@@ -134,9 +145,14 @@
     return `<header class="ap-bar" data-a="${esc(a)}"><button type="button" class="ap-ib" data-ap="back" aria-label="뒤로">${ico('back', 22)}</button><b class="ap-tt">${esc(t)}</b>${!isPar() && ['home', 'my', 'shop', 'courses'].includes(a) ? `<button type="button" class="ap-ib" data-ap="srch" aria-label="학습 찾기">${ico('search', 22)}</button>` : ''}${isPar() ? '<span class="ap-ib" aria-hidden="true"></span>' : `<button type="button" class="ap-call" data-tact="open" aria-label="${esc(tName())}에게 물어보기">${av(P)}<span>물어보기</span></button>`}</header>`; }
 
   /* ── 선생님 고르기(처음 한 번 · 언제든 바꾸기) ── */
+  /* v33 R2(#20): 결제 직후 선생님을 아직 고르지 않았으면 고르기 → 첫 강의로 이어 간다 */
+  const AFK = 'didisam.ap.after';
+  const afterGet = () => { try { return sessionStorage.getItem(AFK) || ''; } catch (e) { return AP.after || ''; } };
+  const afterSet = h => { AP.after = h || ''; try { h ? sessionStorage.setItem(AFK, h) : sessionStorage.removeItem(AFK); } catch (e) { } };
+  const afterGo = () => { const h = afterGet(); afterSet(''); if (h && /^#c\//.test(h)) { setTimeout(() => { location.hash = h; }, 0); return true; } return false; };
   function pickHTML() { const cur = persona(); const sel = AP.sel || (cur && cur.k) || 'warm'; const B = PERS.find(x => x.k === sel); const nm = AP.nm || (cur && cur.k === sel ? cur.n : B.n);
     return `<section class="ap-pick" aria-labelledby="apPickT"><div class="ap-pw">
-      <div class="ap-ph">${av(B, true)}<p class="ap-ey">${esc(SITE().org.name)} · 나만의 AI 선생님</p><h1 id="apPickT">${cur ? '선생님을 바꿔 볼까요?' : `${esc(who())}, 함께 공부할<br>AI 선생님을 골라 주세요`}</h1><p class="ap-lead">내 진도 · 과제 · 마감을 기억하고 매일 먼저 챙겨 주는 선생님이에요. 나중에 언제든 바꿀 수 있어요.</p></div>
+      <div class="ap-ph">${av(B, true)}<p class="ap-ey">${esc(SITE().org.name)} · 나만의 AI 선생님</p><h1 id="apPickT">${cur ? '선생님을 바꿔 볼까요?' : `${esc(who())}, 함께 공부할<br>AI 선생님을 골라 주세요`}</h1><p class="ap-lead">내 진도 · 과제 · 마감을 기억하고 매일 먼저 챙겨 주는 선생님이에요. 나중에 언제든 바꿀 수 있어요.${afterGet() ? ' 고르면 첫 강의로 바로 이어져요.' : ''}</p></div>
       <form id="apPickF"><fieldset class="ap-pl"><legend class="sr">선생님 스타일</legend>${PERS.map(p => `<label class="ap-pc ${p.k === sel ? 'on' : ''}" style="--pc:${p.c}"><input type="radio" name="pk" value="${p.k}" ${p.k === sel ? 'checked' : ''}>${av(p)}<span><b>${esc(p.t)}</b><small>${esc(p.d)}</small><em>“${esc(p.hi)}”</em></span></label>`).join('')}</fieldset>
       <label class="ap-nm">선생님 이름<input name="nm" maxlength="12" value="${esc(nm)}" autocomplete="off" required></label>
       <button type="submit" class="ap-go" style="--pc:${B.c}">${esc(jw(nm || B.n))} 시작하기</button>
@@ -149,10 +165,71 @@
     return `<p class="ap-st"><span><b>${st.streak}</b>일 연속</span><span>평균 진도 <b>${st.avg}%</b></span><span>배지 <b>${((LR.mine && LR.mine.badges) || []).length}</b>개</span></p>`; }
   function threadHTML() { const M = (LT.msgs || []).filter(m => !m.sys);
     return M.map(ltMsgHTML).join('').replace(/<span class="lt-orb sm" aria-hidden="true"><\/span>/g, av(persona())) + (LT.busy ? `<div class="lt-m">${av(persona())}<div class="lt-b"><span class="lt-dots"><i></i><i></i><i></i></span></div></div>` : ''); }
+  /* ── v33 홈 추천 칩의 의도(intent) — 칩마다 의도에 맞는 답 · 이동을 정해 둔다(QA #34). 값이 정해진 안내라 Claude가 지어내지 않게 기본 안내로 답한다 ── */
+  const IN = (() => {
+    const T = k => (typeof lTerm === 'function' ? lTerm(k) : '과정'); const J = w => (typeof lJ === 'function' ? lJ(w, '이', '가') : '이'); const LK = A => ltLinks(A.filter(Boolean)); const BT = A => ltBtns(A.filter(Boolean));
+    const td = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+    const addD = (d, n) => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+    const fm = d => (typeof lwFmt === 'function' ? lwFmt(d) : d) || d;
+    const cfg = () => { const c = SITE() && SITE().cpl; return c && c.on ? c : null; };
+    const st = () => { try { return myStats(); } catch (e) { return { courses: [], avg: 0 }; } };
+    const rep = L => `<div class="lt-rep">${L.join('')}</div>`;
+    const row = (a, b, c) => `<div><span>${esc(a)}</span>${b ? `<small>${esc(b)}</small>` : ''}<b>${esc(c)}</b></div>`;
+    /* 출결 수업(회차 · 라이브 · 오프라인)이 있는 내 클래스 */
+    const attCls = () => { if (typeof lwCls !== 'function') return []; return (SITE().classes || []).map(c => { try { const x = lwCls(c.id); return x && x.enrolled !== false && lwUnits(x).length && (x.enrolled || st().courses.some(y => y.c.id === c.id)) ? x : null; } catch (e) { return null; } }).filter(Boolean); };
+    const shopL = () => { try { const sh = typeof shInfo === 'function' ? shInfo() : null; return ((sh && sh.classes) || []).filter(c => (typeof shState === 'function' ? shState(c.id) : 'none') === 'none'); } catch (e) { return []; } };
+    const dueOf = (c, it) => String((it.rules && (it.rules.due || it.rules.to)) || it.due || c.end || '').replace('T', ' ').slice(0, 16);
+    const H = {
+      att() { const L = attCls(); const t0 = td();
+        if (!L.length) return { t: `출결을 기록하는 ${T('cls')}${J(T('cls'))} 아직 없어요. 온라인 강의는 진도로 학습 여부를 확인해요.`, h: LK([{ h: '내 학습 보기', d: '진도 · 수료 상태', href: '#my' }]) };
+        const R = L.map(c => ({ c, s: lwStat(c) })); const A0 = (R[0].s.A || {}); const today = R.flatMap(x => x.s.U.filter(u => u.date === t0).map(u => ({ c: x.c, u })));
+        return { t: `내 출결 현황이에요.${today.length ? ` 오늘 수업 ${today.length}개: ${today.map(x => `「${x.c.name}」${x.u.from ? ' ' + x.u.from : ''}`).join(', ')}.` : ' 오늘 예정된 출결 수업은 없어요.'} 출석률 ${DDAtt.MIN}% 이상이 수료 출결 기준이에요(${A0.rule || ''}).`,
+          h: rep(R.map(x => row(x.c.name, `출석 ${x.s.n.출석} · 지각 ${x.s.n.지각} · 조퇴 ${x.s.n.조퇴} · 결석 ${x.s.n.결석}${x.s.n.미입력 ? ` · 미입력 ${x.s.n.미입력}` : ''}`, x.s.rate == null ? '기록 전' : `출석률 ${x.s.rate}%`))) + LK(R.slice(0, 3).map(x => ({ h: `${x.c.name} 출결 표`, d: '회차별 출결', href: '#c/' + x.c.id }))) }; },
+      rule() { const C = cfg(); const S0 = st(); const moel = C && /^moel-/.test(String(C.profile || ''));
+        const thr = c => (C && C.rate) || c.thr || 80; const L = S0.courses;
+        const head = C && C.rate ? `수료 기준은 진도율 ${C.rate}% 이상${C.pass ? ` · 평가 ${C.pass}점 이상` : ''}${moel ? ` · 출결 수업은 출석률 ${DDAtt.MIN}% 이상` : ''}이에요(운영자가 게시한 규정).` : `수료 기준은 ${T('cls')}마다 정한 진도율 이상이에요${L.length ? '' : '. 수강을 시작하면 과정별 기준을 보여 드려요'}.`;
+        return { t: head, h: L.length ? rep(L.map(x => row(x.c.name, `기준 진도 ${thr(x.c)}%${C && C.pass && x.c.items.some(i => i.type === 'exam') ? ` · 평가 ${C.pass}점` : ''}`, x.done ? '수료' : `${x.p}%`))) + LK([{ h: '내 학습 보기', d: '수료증은 수료 후 발급', href: '#my' }]) : LK([{ h: `${T('cls')} 둘러보기`, d: '', href: '#shop' }]) }; },
+      due() { const S0 = st(); const t0 = td(); const A = [];
+        S0.courses.forEach(x => (x.c.items || []).filter(i => ['assign', 'exam', 'quiz'].includes(i.type)).forEach(i => { const r = (((LR.lp || {}).cls || {})[x.c.id] || {}).items || {}; const me = r[i.id] || {}; if (me.done || me.score != null || (i.type === 'assign' && x.st && x.st !== 'none' && x.st !== 'returned')) return; A.push({ x, i, d: dueOf(x.c, i) }); }));
+        /* 학원 수업 숙제(운영자가 수업 기록에 남긴 숙제) */
+        const HW = []; try { const d = typeof lwDoc === 'function' ? lwDoc() : null; attCls().forEach(c => { const raw = d && (d.classes || []).find(y => y.id === c.id); const day = raw && raw.crmDay; if (!day) return; const u = lwUnits(c).filter(u => u.date && u.date <= t0 && day[u.id] && day[u.id].hw).pop(); if (u) HW.push({ c, u, hw: day[u.id].hw }); }); } catch (e) { }
+        A.sort((a, b) => (a.d || '9').localeCompare(b.d || '9'));
+        if (!A.length && !HW.length) return { t: '지금 남은 과제 · 시험 마감이 없어요.', h: BT([['이번 주 계획 맡기기', '이번 주 학습 계획 짜줘']]) };
+        return { t: `마감이 가까운 순서예요. 과제 · 시험 ${A.length}건${HW.length ? ` · 수업 숙제 ${HW.length}건` : ''}.`, h: rep([...HW.map(y => row(`${y.c.name} 숙제`, `${fm(y.u.date)} 수업`, y.hw)), ...A.slice(0, 6).map(y => row(`${y.x.c.name} · ${y.i.title}`, ({ assign: '과제', exam: '시험', quiz: '퀴즈' })[y.i.type], y.d ? `${y.d}${y.d.slice(0, 10) < t0 ? ' 지남' : ' 마감'}` : '기한 없음'))]) + LK(A.slice(0, 3).map(y => ({ h: y.i.title, d: y.x.c.name, href: `#c/${y.x.c.id}/${y.i.id}` }))) }; },
+      legal() { const L = typeof lLegal === 'function' ? lLegal() : [];
+        if (!L.length) return { t: '미이수 필수(법정)교육이 없어요. 새로 배정되면 마감 전에 먼저 알려 드릴게요.', h: LK([{ h: '내 교육 보기', d: '이수 현황', href: '#my' }]) };
+        return { t: `미이수 필수교육 ${L.length}건이에요. 기한이 가까운 순서이며, 100% 수강해야 이수돼요.`, h: rep(L.map(({ x, d }) => row(x.c.name, x.c.end ? `${x.c.end}까지 · 진도 ${x.p}%` : `진도 ${x.p}%`, d == null ? '기한 확인' : d < 0 ? '기한 지남' : 'D-' + d))) + LK(L.slice(0, 3).map(({ x }) => ({ h: `${x.c.name} 이어서 수강`, d: '', href: '#c/' + x.c.id }))) }; },
+      status() { const S0 = st(); const L = S0.courses; if (!L.length) return { t: `아직 수강 중인 ${T('cls')}${J(T('cls'))} 없어요.`, h: LK([{ h: `${T('cls')} 둘러보기`, d: '', href: '#shop' }]) };
+        const dn = L.filter(x => x.done).length; return { t: `이수 현황이에요. 전체 ${L.length}개 중 이수 ${dn}개 · 진행 중 ${L.length - dn}개 · 평균 진도 ${S0.avg}%.`, h: rep(L.map(x => row(x.c.name, x.c.end ? `${x.c.end} 종료` : '', x.done ? '이수' : `${x.p}%`))) + LK([{ h: '내 학습 보기', d: '수료증 · 상세 기록', href: '#my' }]) }; },
+      rec() { const L = shopL(); if (!L.length) return { t: `지금 새로 신청할 수 있는 ${T('cls')}${J(T('cls'))} 없어요. 열리면 이곳에서 알려 드릴게요.`, h: LK([{ h: '내 학습 보기', d: '', href: '#my' }]) };
+        return { t: `아직 신청하지 않은 ${T('cls')} 중에서 골랐어요. 목표를 알려 주시면 더 좁혀 드릴게요.`, h: LK(L.slice(0, 4).map(c => ({ h: c.name, d: c.cat || c.level || '', href: '#class/' + c.id }))) }; },
+      list() { const t0 = td(); const L = shopL().filter(c => !(Array.isArray(c.sessions) && c.sessions.length && c.sessions.every(s => s.date && s.date < t0)));
+        if (!L.length) return { t: `지금 신청할 수 있는 ${T('cls')}${J(T('cls'))} 없어요.`, h: LK([{ h: `${T('cls')} 목록 보기`, d: '', href: '#shop' }]) };
+        return { t: `지금 신청할 수 있는 ${T('cls')} ${L.length}개예요.`, h: LK(L.slice(0, 5).map(c => ({ h: c.name, d: c.start ? `${c.start} 시작` : '', href: '#class/' + c.id }))) }; },
+      week() { const t0 = td(), t7 = addD(t0, 6); const U = attCls().flatMap(c => lwUnits(c).filter(u => u.date && u.date >= t0 && u.date <= t7).map(u => ({ c, u })));
+        const D = st().courses.flatMap(x => (x.c.items || []).filter(i => ['assign', 'exam'].includes(i.type)).map(i => ({ x, i, d: dueOf(x.c, i).slice(0, 10) })).filter(y => y.d && y.d >= t0 && y.d <= t7));
+        if (!U.length && !D.length) return { t: `이번 주(${fm(t0)}~${fm(t7)}) 예정된 수업 · 마감이 없어요.`, h: LK([{ h: '내 학습 보기', d: '', href: '#my' }]) };
+        const L = [...U.map(y => ({ d: y.u.date, h: row(`${fm(y.u.date)} ${y.u.from || ''}`, y.c.name, y.u.title || '수업') })), ...D.map(y => ({ d: y.d, h: row(`${fm(y.d)} 마감`, y.x.c.name, y.i.title) }))].sort((a, b) => a.d.localeCompare(b.d));
+        return { t: `이번 주 일정이에요. 수업 ${U.length}개 · 마감 ${D.length}건.`, h: rep(L.map(x => x.h)) + LK(U.slice(0, 2).map(y => ({ h: y.c.name, d: '회차 · 출결', href: '#c/' + y.c.id }))) }; },
+      gap() { const L = st().courses.filter(x => !x.done).map(x => { const r = (((LR.lp || {}).cls || {})[x.c.id] || {}).items || {}; const V = (x.c.items || []).filter(i => ['video', 'doc'].includes(i.type) && !(r[i.id] || {}).done); return { x, V }; }).filter(y => y.V.length);
+        if (!L.length) return { t: '덜 들은 온라인 차시가 없어요. 잘하고 있어요.', h: '' };
+        return { t: `덜 들은 온라인 차시가 ${L.reduce((a, y) => a + y.V.length, 0)}개 있어요.`, h: rep(L.map(y => row(y.x.c.name, `다음 「${y.V[0].title}」`, `${y.V.length}개 남음`))) + LK(L.slice(0, 3).map(y => ({ h: y.V[0].title, d: y.x.c.name, href: `#c/${y.x.c.id}/${y.V[0].id}` }))) }; },
+      limit() { const C = cfg(); if (!C || !(C.dayMax || C.dayChasi)) return { t: '이 기관은 하루 학습 시간 제한이 없어요.', h: '' };
+        const sec = typeof CPLL === 'object' && CPLL.todaySec ? CPLL.todaySec() : 0; const h = Math.floor(sec / 3600), m = Math.round(sec % 3600 / 60);
+        let n = 0; try { const d = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); Object.values((LR.lp || {}).cls || {}).forEach(c => Object.values((c && c.items) || {}).forEach(r => { if (r && r.d && r.d[d]) n++; })); } catch (e) { }
+        return { t: `오늘 학습 ${h}시간 ${m}분 · ${n}차시를 들었어요. 하루 최대 ${C.dayChasi ? C.dayChasi + '차시' : ''}${C.dayChasi && C.dayMax ? ' · ' : ''}${C.dayMax ? C.dayMax + '시간' : ''}까지 학습할 수 있어요.`, h: rep([row('남은 차시', '', C.dayChasi ? `${Math.max(0, C.dayChasi - n)}차시` : '제한 없음'), row('남은 시간', '', C.dayMax ? `${Math.max(0, Math.round((C.dayMax * 3600 - sec) / 60))}분` : '제한 없음')]) + LK([{ h: '이어서 학습', d: '', href: '#my' }]) }; },
+      certprep() { const L = st().courses.filter(x => (x.c.items || []).some(i => i.type === 'exam' || i.type === 'quiz'));
+        return { t: '자격증 준비는 이 순서를 추천해요.', h: `<ol class="lt-ol"><li><b>시험 범위 확인 · 기출 유형 파악</b></li><li><b>핵심 개념 강의 먼저 끝내기(진도 80% 이상)</b></li><li><b>강좌 안 퀴즈 · 모의시험으로 약점 찾기</b></li><li><b>틀린 문제 복습 퀴즈로 반복</b></li></ol>` + (L.length ? LK(L.slice(0, 3).map(x => ({ h: x.c.name, d: `진도 ${x.p}%`, href: x.next ? `#c/${x.c.id}/${x.next.id}` : '#c/' + x.c.id }))) : LK([{ h: `${T('cls')} 둘러보기`, d: '자격증 과정 찾기', href: '#shop' }])) + BT([['복습 퀴즈', '복습 퀴즈 내줘'], ['이번 주 계획 맡기기', '이번 주 학습 계획 짜줘']]) }; },
+      plan: () => null, quiz: () => null
+    };
+    return { H, chip: q => { if (!LR.me) return null; const C = scn().chips.find(c => c[1] === String(q || '').trim()); return C && C[2] ? { l: C[0], q: C[1], i: C[2], f: 1, r: () => (H[C[2]] || (() => null))() } : null; } };
+  })();
+  window.LAPP_INTENT = IN;
+  if (typeof LSAM === 'object' && LSAM.find) { const base = LSAM.find; LSAM.find = q => IN.chip(q) || base(q); }
   function chipsHTML() { let C = [];
     try { C = (typeof LSAM === 'object' ? LSAM.screen().chips.filter(c => !c.kind).map(c => [c.l, c.q]) : ltChips().map(x => [x, x])); } catch (e) { C = []; }
     if (LR.me) C = [['오늘 뭐 하면 돼?', '오늘 뭐 하면 돼?'], ...scn().chips, ...C, ['내 학습 리포트', '내 학습 리포트 보여줘']];
-    const seen = new Set(); C = C.filter(([l]) => !seen.has(l) && seen.add(l)).slice(0, 6);
+    const seen = new Set(), seenQ = new Set(); C = C.filter(([l, q]) => !seen.has(l) && !seenQ.has(q) && seen.add(l) && seenQ.add(q)).slice(0, 6); /* v33 같은 질문(오늘 뭐 하면 돼? · 오늘 할 일) 중복 제거 */
     return `<div class="ap-chips" role="list" aria-label="추천 질문">${C.map(([l, q]) => `<button type="button" role="listitem" class="ap-chip" data-tact="q" data-v="${esc(q)}">${esc(l)}</button>`).join('')}</div>`; }
   function homeHTML() { const P = persona(); const me = LR.me; const C = TCFG();
     const brief = me && typeof ltBrief === 'function' ? ltBrief() : null; const first = me ? `${esc(who())}, ${hiTime()}\n${esc(P ? P.hi : '')}` : '';
@@ -297,6 +374,10 @@
     const on = appOn(); document.body.classList.toggle('lapp', on); document.body.classList.remove('ap-homeon', 'ap-pickon');
     try { if (LR.tid && (on || LR.me)) { ls.set('tid', LR.tid); if (on) orgSave(); } } catch (e) { }
     const lm = document.getElementById('lm'); const app = document.getElementById('lapp'); if (!lm || !app) return;
+    document.body.classList.remove('lpar');
+    if (!on && isPar()) { const a0 = route().a; if (['home', 'my', 'shop', 'courses', 'tutorials'].includes(a0)) { lm.innerHTML = parClassicHTML(); document.body.classList.add('lpar'); if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } } /* 보호자 홈에서는 학생용 AI 튜터 버튼을 숨긴다(가족 연결 · 자녀 화면의 보호자 비서는 그대로) */
+      document.querySelectorAll('header.lh a[href="#my"], header.lh a[href="#shop"], header.lh a[href="#courses"], header.lh a[href="#tutorials"], header.lh a[href="#login/my"]').forEach(x => { x.hidden = true; }); return; }
+    if (!on && !LR.me && route().a === 'home' && !lm.querySelector('.lgj')) lm.insertAdjacentHTML('afterbegin', joinStrip());
     if (!on) { if (LR.me && route().a === 'home' && ls.get('classic') === '1' && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
     const a = route().a; if (LR.me && (a === 'login' || a === 'join')) { location.replace('#home'); return; } /* v32.8 로그인한 뒤 로그인 · 가입 화면은 홈으로 */
     if (!LR.me && ['connect', 'books'].includes(a) && typeof needLogin === 'function' && !lm.textContent.trim()) lm.innerHTML = needLogin(a);
@@ -331,8 +412,8 @@
     if (k === 'ai-off') { try { localStorage.removeItem(KEYK()); } catch (e) { } const d = el.closest('dialog'); d && d.close(); lrender(); toast('Claude 연결을 해제했습니다. 기본 안내로 답합니다.', 'ok'); return; }
     if (k === 'sheet-x') return closeSheet();
     if (k === 'pick') { closeSheet(); AP.pick = true; AP.sel = null; AP.nm = ''; if (route().a !== 'home') location.hash = '#home'; else lrender(); return; }
-    if (k === 'pick-x') { AP.pick = false; AP.sel = null; AP.nm = ''; lrender(); return; }
-    if (k === 'pick-skip') { tutorRec().persona = { k: 'warm', n: (TCFG().orgName || TCFG().name || '').replace(/^AI 튜터$/, '') || PERS[0].n, at: new Date().toISOString() }; LR.api.save(); lrender(); return; }
+    if (k === 'pick-x') { afterSet(''); AP.pick = false; AP.sel = null; AP.nm = ''; lrender(); return; }
+    if (k === 'pick-skip') { tutorRec().persona = { k: 'warm', n: (TCFG().orgName || TCFG().name || '').replace(/^AI 튜터$/, '') || PERS[0].n, at: new Date().toISOString() }; LR.api.save(); if (!afterGo()) lrender(); return; }
     if (k === 'install') return install();
     if (k === 'inst-x') { ls.set('instx', '1'); const b = el.closest('.ap-inst'); b && b.remove(); return; }
     if (k === 'dlg-x') { const d = el.closest('dialog'); d && d.close(); return; }
@@ -353,7 +434,7 @@
     if (e.target.id === 'apQ') { e.target.style.height = 'auto'; e.target.style.height = Math.min(132, e.target.scrollHeight) + 'px'; } });
   document.addEventListener('submit', e => { const f = e.target;
     if (f.id === 'apPickF') { e.preventDefault(); const k = (f.querySelector('[name=pk]:checked') || {}).value || 'warm'; const B = PERS.find(x => x.k === k) || PERS[0]; const n = (f.querySelector('[name=nm]').value || '').replace(/[<>]/g, '').trim().slice(0, 12) || B.n;
-      tutorRec().persona = { k, n, at: new Date().toISOString() }; LR.api.save(); AP.pick = false; AP.sel = null; AP.nm = ''; LT.msgs = []; lrender(); toast(`${jw(n)} 함께 시작합니다.`, 'ok'); return; }
+      tutorRec().persona = { k, n, at: new Date().toISOString() }; LR.api.save(); AP.pick = false; AP.sel = null; AP.nm = ''; LT.msgs = []; if (!afterGo()) lrender(); toast(`${jw(n)} 함께 시작합니다.`, 'ok'); return; }
     if (f.id === 'apAiF') { e.preventDefault(); aiSave(f); return; }
     if (f.id === 'apOrgF') { e.preventDefault(); const v = (f.elements.c.value || '').trim(); let t = v, hh = '#home'; try { const u = new URL(v, location.href); t = u.searchParams.get('t') || (/^https?:/.test(v) ? '' : v); if (/^#(join|invite|inv)\//.test(u.hash)) hh = u.hash; } catch (e2) { } /* v32.8 초대 링크의 가입 토큰(#join/…)을 살린다(QA U3) */ t = String(t || '').replace(/[^\w.-]/g, '').slice(0, 64);
       if (!t) { toast('기관 코드나 초대 링크를 확인해 주세요.', ''); return; }
@@ -364,6 +445,7 @@
     if (e.key === 'Enter' && !e.isComposing && e.target.id === 'apSQ') { e.preventDefault(); const v = e.target.value.trim(); if (v && document.querySelector('#apSR .ap-srr')) ls.set('srq.' + LR.tid, JSON.stringify([v, ...srRecent().filter(x => x !== v)].slice(0, 10))); const b = document.querySelector('#apSR .ap-srr'); b && b.focus(); }
     if (e.key === 'Escape' && document.getElementById('apSheet')) closeSheet(); });
   document.addEventListener('click', e => { if (e.target.id === 'apSheet') closeSheet(); });
+  document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a[href^="#c/"]'); if (!a || !appOn() || !LR.me || isPar() || persona() || route().a !== 'payok') return; e.preventDefault(); afterSet(a.getAttribute('href')); AP.pick = true; AP.sel = null; AP.nm = ''; location.hash = '#home'; }, true);
 
   /* ── 오프라인 · 설치용 서비스 워커(https · localhost에서만) ── */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) && !Q.get('nosw')) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
