@@ -162,8 +162,10 @@
   function payFail() { shModal('결제가 완료되지 않았습니다', `<p class="mini">다음을 먼저 확인해 주세요.</p><ul class="shp-chk"><li>팝업 차단 해제 — 결제창은 팝업으로 열립니다.</li><li>크롬(Chrome) 브라우저 권장</li><li>방문 기록 · 쿠키(캐시) 삭제 후 다시 시도</li><li>카드 한도 초과 · 잔액 부족 여부</li><li>카드 유효기간 만료 여부</li><li>법인카드는 개인 결제 제한 여부</li><li>해외 카드는 국내 결제 모듈에서 결제가 어려울 수 있습니다${(SHOP() || { pg: {} }).pg.intl ? '(이 홈페이지는 VISA · Master 해외카드 결제를 지원합니다)' : ''}.</li></ul><p class="mini">해결되지 않으면 홈페이지 운영자에게 오류 내용을 알려 주세요.</p>`, [{ label: '닫기', kind: 'pri' }]); }
 
   /* ── 결제 완료 · 결제 상세 · 결제 관리 ── */
+  /* v33 R2(#20): 결제 직후 첫 강의(단원 머리 제외)로 바로 간다 */
+  const firstHref = ref => { const c = ((typeof SITE === 'function' ? SITE() : LR.site) || {}).classes; const lc = (c || []).find(x => x.id === ref); const L = ((lc && lc.items) || []).filter(x => x.type !== 'chapter'); const r = (((LR.lp || {}).cls || {})[ref] || {}).items || {}; const fi = L.find(x => !(r[x.id] || {}).done) || L[0]; return '#c/' + ref + (fi ? '/' + fi.id : ''); };
   function viewPayOk(pid) { const R = mine(); const p = R.pays.find(x => x.id === pid); if (!p) return sec('결제 결과', '<p class="empty">결제 정보를 찾지 못했습니다.</p>');
-    const go = p.itemType === 'book' ? `<a class="lbtn pri" href="#mybooks">내 교재/교구</a>` : p.itemType === 'bill' ? '' : `<a class="lbtn pri" href="#c/${esc(p.ref)}">강의 보러 가기</a>`;
+    const go = p.itemType === 'book' ? `<a class="lbtn pri" href="#mybooks">내 교재/교구</a>` : p.itemType === 'bill' ? '' : `<a class="lbtn pri" href="${esc(firstHref(p.ref))}">강의 보러 가기</a>`;
     return sec(p.status === '결제 대기' ? '입금을 기다리고 있습니다' : '결제가 완료되었습니다', `<div class="shp-done">${p.status === '결제 대기' && p.vacct ? `<p>아래 가상계좌로 <b>${esc(p.vacct.until)}</b>까지 ${won(p.amount)}을 입금해야 결제가 완료됩니다.</p><p class="shp-acct">${esc(p.vacct.bank)} <b>${esc(p.vacct.no)}</b> (예금주 ${esc(SITE().org.name)})</p><div class="shp-row"><button class="lbtn ghost sm" data-shact="vpaid" data-v="${esc(p.id)}">입금 완료(데모)</button></div>` : `<p>${esc(p.item)} · ${won(p.amount)} · ${esc(p.method || '')}</p>`}<div class="shp-row">${p.status === '결제 완료' ? go : ''}<a class="lbtn ghost" href="#payd/${esc(p.id)}">결제 상세</a><a class="lbtn ghost" href="#mypay">결제 관리</a></div></div>`); }
   function refundBlock(p, R) { const sh = SHOP() || { books: [] };
     if (p.refund && p.refund.state === '거절') return '환불이 거절된 건은 다시 신청할 수 없습니다. 운영자에게 문의하세요.';

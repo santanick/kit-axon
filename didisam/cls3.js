@@ -78,7 +78,7 @@ W2.ex = (c, mid) => new Set((((c.enr || {})[mid] || {}).ex) || []);
 W2.mine = (c, mid) => { const X = W2.ex(c, mid); return W2.units(c).filter(u => !X.has(u.id)); };
 W2.cnt = (c, mid) => { const r = { 출석: 0, 지각: 0, 조퇴: 0, 결석: 0 }; W2.mine(c, mid).forEach(u => { const v = W2.get(c, u.id, mid); if (r[v] != null) r[v]++; }); return r; };
 /* 출석률: 지난 회차(오늘 포함) + 출결이 입력된 회차 기준, 출석 · 지각 · 조퇴 인정 */
-W2.rate = (c, mid) => { const U = W2.mine(c, mid).filter(u => (u.date && u.date <= today()) || W2.get(c, u.id, mid)); if (!U.length) return null; const ok = U.filter(u => ['출석', '지각', '조퇴'].includes(W2.get(c, u.id, mid))).length; return Math.round(ok / U.length * 100); };
+W2.rate = (c, mid) => { W2.norm(c); return DDAtt.of(c, mid, { conv: DDAtt.convFor(S.org && S.org.cpl) }).rate; }; /* v33 학습자 · 규정 준수 화면과 같은 공용 계산(attcalc.js, QA #31) */
 W2.used = (c, mid) => W2.mine(c, mid).filter(u => ['출석', '지각', '조퇴'].includes(W2.get(c, u.id, mid))).length;
 W2.remain = (c, mid) => { if (c.kind !== 'episode') return null; if (c.sub === '회차 차감반') return Math.max(0, (c.credits || {}).total - W2.ex(c, mid).size - W2.used(c, mid)); return W2.mine(c, mid).filter(u => u.date && u.date >= today()).length; };
 W2.creditEnd = (c, mid) => { const e = (c.enr || {})[mid]; const at = (e && e.at) || c.start || today(); return w2Add(at, +((c.credits || {}).days) || 90); };

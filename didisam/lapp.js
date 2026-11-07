@@ -134,9 +134,14 @@
     return `<header class="ap-bar" data-a="${esc(a)}"><button type="button" class="ap-ib" data-ap="back" aria-label="뒤로">${ico('back', 22)}</button><b class="ap-tt">${esc(t)}</b>${!isPar() && ['home', 'my', 'shop', 'courses'].includes(a) ? `<button type="button" class="ap-ib" data-ap="srch" aria-label="학습 찾기">${ico('search', 22)}</button>` : ''}${isPar() ? '<span class="ap-ib" aria-hidden="true"></span>' : `<button type="button" class="ap-call" data-tact="open" aria-label="${esc(tName())}에게 물어보기">${av(P)}<span>물어보기</span></button>`}</header>`; }
 
   /* ── 선생님 고르기(처음 한 번 · 언제든 바꾸기) ── */
+  /* v33 R2(#20): 결제 직후 선생님을 아직 고르지 않았으면 고르기 → 첫 강의로 이어 간다 */
+  const AFK = 'didisam.ap.after';
+  const afterGet = () => { try { return sessionStorage.getItem(AFK) || ''; } catch (e) { return AP.after || ''; } };
+  const afterSet = h => { AP.after = h || ''; try { h ? sessionStorage.setItem(AFK, h) : sessionStorage.removeItem(AFK); } catch (e) { } };
+  const afterGo = () => { const h = afterGet(); afterSet(''); if (h && /^#c\//.test(h)) { setTimeout(() => { location.hash = h; }, 0); return true; } return false; };
   function pickHTML() { const cur = persona(); const sel = AP.sel || (cur && cur.k) || 'warm'; const B = PERS.find(x => x.k === sel); const nm = AP.nm || (cur && cur.k === sel ? cur.n : B.n);
     return `<section class="ap-pick" aria-labelledby="apPickT"><div class="ap-pw">
-      <div class="ap-ph">${av(B, true)}<p class="ap-ey">${esc(SITE().org.name)} · 나만의 AI 선생님</p><h1 id="apPickT">${cur ? '선생님을 바꿔 볼까요?' : `${esc(who())}, 함께 공부할<br>AI 선생님을 골라 주세요`}</h1><p class="ap-lead">내 진도 · 과제 · 마감을 기억하고 매일 먼저 챙겨 주는 선생님이에요. 나중에 언제든 바꿀 수 있어요.</p></div>
+      <div class="ap-ph">${av(B, true)}<p class="ap-ey">${esc(SITE().org.name)} · 나만의 AI 선생님</p><h1 id="apPickT">${cur ? '선생님을 바꿔 볼까요?' : `${esc(who())}, 함께 공부할<br>AI 선생님을 골라 주세요`}</h1><p class="ap-lead">내 진도 · 과제 · 마감을 기억하고 매일 먼저 챙겨 주는 선생님이에요. 나중에 언제든 바꿀 수 있어요.${afterGet() ? ' 고르면 첫 강의로 바로 이어져요.' : ''}</p></div>
       <form id="apPickF"><fieldset class="ap-pl"><legend class="sr">선생님 스타일</legend>${PERS.map(p => `<label class="ap-pc ${p.k === sel ? 'on' : ''}" style="--pc:${p.c}"><input type="radio" name="pk" value="${p.k}" ${p.k === sel ? 'checked' : ''}>${av(p)}<span><b>${esc(p.t)}</b><small>${esc(p.d)}</small><em>“${esc(p.hi)}”</em></span></label>`).join('')}</fieldset>
       <label class="ap-nm">선생님 이름<input name="nm" maxlength="12" value="${esc(nm)}" autocomplete="off" required></label>
       <button type="submit" class="ap-go" style="--pc:${B.c}">${esc(jw(nm || B.n))} 시작하기</button>
@@ -331,8 +336,8 @@
     if (k === 'ai-off') { try { localStorage.removeItem(KEYK()); } catch (e) { } const d = el.closest('dialog'); d && d.close(); lrender(); toast('Claude 연결을 해제했습니다. 기본 안내로 답합니다.', 'ok'); return; }
     if (k === 'sheet-x') return closeSheet();
     if (k === 'pick') { closeSheet(); AP.pick = true; AP.sel = null; AP.nm = ''; if (route().a !== 'home') location.hash = '#home'; else lrender(); return; }
-    if (k === 'pick-x') { AP.pick = false; AP.sel = null; AP.nm = ''; lrender(); return; }
-    if (k === 'pick-skip') { tutorRec().persona = { k: 'warm', n: (TCFG().orgName || TCFG().name || '').replace(/^AI 튜터$/, '') || PERS[0].n, at: new Date().toISOString() }; LR.api.save(); lrender(); return; }
+    if (k === 'pick-x') { afterSet(''); AP.pick = false; AP.sel = null; AP.nm = ''; lrender(); return; }
+    if (k === 'pick-skip') { tutorRec().persona = { k: 'warm', n: (TCFG().orgName || TCFG().name || '').replace(/^AI 튜터$/, '') || PERS[0].n, at: new Date().toISOString() }; LR.api.save(); if (!afterGo()) lrender(); return; }
     if (k === 'install') return install();
     if (k === 'inst-x') { ls.set('instx', '1'); const b = el.closest('.ap-inst'); b && b.remove(); return; }
     if (k === 'dlg-x') { const d = el.closest('dialog'); d && d.close(); return; }
@@ -353,7 +358,7 @@
     if (e.target.id === 'apQ') { e.target.style.height = 'auto'; e.target.style.height = Math.min(132, e.target.scrollHeight) + 'px'; } });
   document.addEventListener('submit', e => { const f = e.target;
     if (f.id === 'apPickF') { e.preventDefault(); const k = (f.querySelector('[name=pk]:checked') || {}).value || 'warm'; const B = PERS.find(x => x.k === k) || PERS[0]; const n = (f.querySelector('[name=nm]').value || '').replace(/[<>]/g, '').trim().slice(0, 12) || B.n;
-      tutorRec().persona = { k, n, at: new Date().toISOString() }; LR.api.save(); AP.pick = false; AP.sel = null; AP.nm = ''; LT.msgs = []; lrender(); toast(`${jw(n)} 함께 시작합니다.`, 'ok'); return; }
+      tutorRec().persona = { k, n, at: new Date().toISOString() }; LR.api.save(); AP.pick = false; AP.sel = null; AP.nm = ''; LT.msgs = []; if (!afterGo()) lrender(); toast(`${jw(n)} 함께 시작합니다.`, 'ok'); return; }
     if (f.id === 'apAiF') { e.preventDefault(); aiSave(f); return; }
     if (f.id === 'apOrgF') { e.preventDefault(); const v = (f.elements.c.value || '').trim(); let t = v, hh = '#home'; try { const u = new URL(v, location.href); t = u.searchParams.get('t') || (/^https?:/.test(v) ? '' : v); if (/^#(join|invite|inv)\//.test(u.hash)) hh = u.hash; } catch (e2) { } /* v32.8 초대 링크의 가입 토큰(#join/…)을 살린다(QA U3) */ t = String(t || '').replace(/[^\w.-]/g, '').slice(0, 64);
       if (!t) { toast('기관 코드나 초대 링크를 확인해 주세요.', ''); return; }
@@ -364,6 +369,7 @@
     if (e.key === 'Enter' && !e.isComposing && e.target.id === 'apSQ') { e.preventDefault(); const v = e.target.value.trim(); if (v && document.querySelector('#apSR .ap-srr')) ls.set('srq.' + LR.tid, JSON.stringify([v, ...srRecent().filter(x => x !== v)].slice(0, 10))); const b = document.querySelector('#apSR .ap-srr'); b && b.focus(); }
     if (e.key === 'Escape' && document.getElementById('apSheet')) closeSheet(); });
   document.addEventListener('click', e => { if (e.target.id === 'apSheet') closeSheet(); });
+  document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a[href^="#c/"]'); if (!a || !appOn() || !LR.me || isPar() || persona() || route().a !== 'payok') return; e.preventDefault(); afterSet(a.getAttribute('href')); AP.pick = true; AP.sel = null; AP.nm = ''; location.hash = '#home'; }, true);
 
   /* ── 오프라인 · 설치용 서비스 워커(https · localhost에서만) ── */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) && !Q.get('nosw')) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));

@@ -29,10 +29,12 @@
     let R = null; try { R = typeof shMine === 'function' ? shMine() : null; } catch (e) { }
     const enr = (R && R.enr) || {}; const t = dayStr(); const lp = LR.lp.cls || {}; const mc = LR.mine.cls || {};
     const ids = new Set([...Object.keys(enr).filter(id => { const e = enr[id]; return e && e.status === 'active' && !(e.end && e.end < t); }), ...Object.keys(mc), ...Object.keys(lp).filter(id => Object.values((lp[id] || {}).items || {}).some(x => x && (x.done || x.w)))]);
+    let MS = []; try { MS = typeof myStats === 'function' ? myStats().courses : []; } catch (e) { MS = []; }
     const out = []; ids.forEach(id => { const c = (S2.classes || []).find(x => x.id === id); if (!c || !(c.items || []).length) return; if (enr[id] && (enr[id].status === 'hold' || enr[id].hold)) return;
       const r = (lp[id] || {}).items || {}; const its = c.items.filter(i => i.type !== 'chapter'); const L = its.length ? its : c.items; const done = L.filter(i => (r[i.id] || {}).done).length;
       const p = Math.min(100, Math.max(Math.round(done / Math.max(1, L.length) * 100), (mc[id] || {}).p || 0)); const nx = L.find(i => !(r[i.id] || {}).done) || L[0];
-      out.push({ c, p, done, n: L.length, nx, started: done > 0 || Object.values(r).some(x => x && x.w) }); });
+      const ms = MS.find(y => y.c.id === id); /* v33 진도 · 다음 항목은 myStats 하나로 맞춘다(규정 준수 기관의 차시 인정 포함, QA #32) */
+      out.push({ c, p: ms ? ms.p : p, done: ms && ms.doneN != null ? ms.doneN : done, n: L.length, nx: ms ? (ms.next || nx) : nx, fin: ms ? !!ms.done : p >= (c.thr || 80), started: done > 0 || (ms ? ms.p > 0 : false) || Object.values(r).some(x => x && x.w) }); });
     return out.sort((a, b) => ((a.p >= 100) - (b.p >= 100)) || (b.started - a.started) || (b.p - a.p)); }
   const nextHref = x => `#c/${encodeURIComponent(x.c.id)}${x.nx ? '/' + encodeURIComponent(x.nx.id) : ''}`;
   const shopHas = () => { try { const sh = typeof shInfo === 'function' ? shInfo() : null; return !!(sh && sh.classes && sh.classes.length); } catch (e) { return false; } };
@@ -41,7 +43,7 @@
     if (!x) return `<section class="lux-cont"><div class="in"><div class="lux-cc empty"><div><p class="lux-ey">${esc(LR.me.nick || '')}님, 반갑습니다</p><h2>첫 강좌를 골라 보세요</h2><p class="lux-sub">강좌를 신청하면 이 자리에서 바로 이어서 학습할 수 있습니다.</p></div><a class="lbtn pri" href="${browseHref()}">강좌 둘러보기 ${ico('arrow', 16)}</a></div></div></section>`;
     const rest = L.filter(y => y !== x).slice(0, 3);
     return `<section class="lux-cont${compact ? ' sm' : ''}"><div class="in"><div class="lux-cc"><div class="lux-cm"><p class="lux-ey">${x.started ? '이어서 학습하기' : '바로 시작하기'}</p><h2>${esc(x.c.name)}</h2><p class="lux-sub">${x.nx ? `다음 강의 · ${esc(x.nx.title)}${ITN[x.nx.type] ? ` <span class="lux-ty">${esc(ITN[x.nx.type])}</span>` : ''}` : ''}</p>
-      <div class="lux-bar" role="progressbar" aria-valuenow="${x.p}" aria-valuemin="0" aria-valuemax="100" aria-label="진도"><i style="width:${x.p}%"></i></div><small class="lux-pc">진도 ${x.p}%${Math.round(x.done / Math.max(1, x.n) * 100) === x.p ? ` · ${x.done}/${x.n} 완료` : ''}${x.p >= (x.c.thr || 80) ? ' · 수료 기준 달성' : ''}</small></div>
+      <div class="lux-bar" role="progressbar" aria-valuenow="${x.p}" aria-valuemin="0" aria-valuemax="100" aria-label="진도"><i style="width:${x.p}%"></i></div><small class="lux-pc">진도 ${x.p}%${Math.round(x.done / Math.max(1, x.n) * 100) === x.p ? ` · ${x.done}/${x.n} 완료` : ''}${x.fin ? ' · 수료 기준 달성' : ''}</small></div>
       <a class="lbtn pri lux-go" href="${nextHref(x)}">${x.p >= 100 ? '다시 보기' : x.started ? '이어서 학습하기' : '학습 시작하기'} ${ico('arrow', 16)}</a></div>
       ${rest.length ? `<ul class="lux-ol">${rest.map(y => `<li><a href="${nextHref(y)}"><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>${y.p}%</small>${ico('arrow', 14)}</a></li>`).join('')}</ul>` : ''}</div></section>`; }
 
@@ -142,7 +144,7 @@
     const keep = lm.querySelector('.lux-wide .lbtn.pri'); if (keep) [...lm.querySelectorAll('.mypage .lbtn.pri, .mypage .lbtn:not(.ghost):not(.sm):not(.wht)')].filter(b => b !== keep && !b.closest('.lux-wide, form, .lux-tabs')).forEach(b => { b.classList.remove('pri', 'dark'); b.classList.add('ghost'); }); }
   function myListHTML() { const L = myCourses(); const x = L.find(y => y.p < 100) || L[0];
     if (!L.length) return `<div class="mh"><h3>수강 중인 강좌</h3></div><p class="mini">아직 수강 중인 강좌가 없습니다.</p><a class="lbtn pri sm" href="${browseHref()}">강좌 둘러보기</a>`;
-    return `<div class="mh"><h3>수강 중인 강좌 <small>${L.length}개</small></h3></div><ul class="lux-ml">${L.map(y => `<li><div><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>진도 ${y.p}%${Math.round(y.done / Math.max(1, y.n) * 100) === y.p ? ` · ${y.done}/${y.n}` : ''}${y.nx && y.p < 100 ? ` · 다음 ${esc(y.nx.title)}` : ''}</small></div><span class="lux-mla">${y.p >= (y.c.thr || 80) ? `<a class="lbtn ghost sm" href="#cert/${esc(y.c.id)}">수료증</a>` : ''}<a class="lbtn ${y === x ? 'pri' : 'ghost'} sm" href="${nextHref(y)}">${y.p >= 100 ? '다시 보기' : y.started ? '이어서' : '시작'}</a></span></li>`).join('')}</ul>`; }
+    return `<div class="mh"><h3>수강 중인 강좌 <small>${L.length}개</small></h3></div><ul class="lux-ml">${L.map(y => `<li><div><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>진도 ${y.p}%${Math.round(y.done / Math.max(1, y.n) * 100) === y.p ? ` · ${y.done}/${y.n}` : ''}${y.nx && y.p < 100 ? ` · 다음 ${esc(y.nx.title)}` : ''}</small></div><span class="lux-mla">${y.fin ? `<a class="lbtn ghost sm" href="#cert/${esc(y.c.id)}">수료증</a>` : ''}<a class="lbtn ${y === x ? 'pri' : 'ghost'} sm" href="${nextHref(y)}">${y.p >= 100 ? '다시 보기' : y.started ? '이어서' : '시작'}</a></span></li>`).join('')}</ul>`; }
   function setTab(k) { const lm = document.getElementById('lm'); if (!lm) return; lm.dataset.luxtab = k; ss.set(TABK(), k); lm.querySelectorAll('[data-lux-tab]').forEach(b => { const on = b.dataset.luxTab === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); }
 
   /* ── 튜터: 사람이 열 때만 ── */
