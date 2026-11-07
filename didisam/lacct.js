@@ -217,15 +217,16 @@ function laJoinSubmit(f) { const J = LA.j; const U = laUniv(); const err = m => 
   } catch (x) { return err(x.message); } }
 
 /* ═════════ 보호자 동의(#guardian/<토큰>) — 본인인증(PASS) 없이 링크 동의. 운영: POST /api/pub/<tid>/guardian { token, ok } ═════════ */
-function laGuardV(r) { const tok = String(r.b || ''); const V = laV(); const sid = Object.keys(V.ids).find(k => V.ids[k].guardian && V.ids[k].guardian.token === tok); const g = sid && V.ids[sid].guardian; const c = sid ? laCache()[sid] || {} : {};
+function laGuardV(r) { const tok = String(r.b || ''); const V = laV(); const sid = Object.keys(V.ids).find(k => V.ids[k].guardian && tok && (V.ids[k].guardian.token === tok || V.ids[k].guardian.used === tok)); /* v33 처리한 링크도 결과를 보여 준다(QA #57, R2) */
+  if (!sid && tok && (LA.gNo || {})[tok]) return laSec('보호자 동의 거부', '<p class="lead">동의하지 않아 가입 정보를 삭제했습니다. 자녀가 다시 가입하려면 처음부터 다시 신청해야 합니다.</p>'); const g = sid && V.ids[sid].guardian; const c = sid ? laCache()[sid] || {} : {};
   if (!g) return laSec('보호자 동의', '<p class="lead">사용할 수 없는 동의 링크입니다. 만료되었거나 이미 처리했습니다.</p>');
-  if (g.status === 'ok') return laSec('보호자 동의 완료', `<p class="lead">${esc(c.nick || '')} 회원의 가입에 동의하셨습니다. 이제 로그인해 이용할 수 있습니다.</p><div class="cta">${btn('로그인', '#login', 'pri')}</div>`);
+  if (g.status === 'ok') { const man = laCfg().approve === 'manual'; return laSec('보호자 동의 완료', `<p class="lead">${esc(c.nick || '')} 회원의 가입에 동의하셨습니다. ${man ? '기관 운영자가 가입을 승인하면 로그인해 이용할 수 있습니다.' : '이제 로그인해 이용할 수 있습니다.'}</p><div class="cta">${btn(man ? '승인 후 로그인' : '로그인', '#login', 'pri')}</div>`); }
   return laSec('보호자(법정대리인) 동의', `<p class="lead">만 14세 미만 회원 <b>${esc(c.nick || '')}</b>이(가) ${esc(SITE().org.name)} 학습 사이트에 가입하려고 합니다. 아래 내용을 확인하고 동의 여부를 선택해 주세요.</p>${laPolicyHTML(false, true)}
     <p class="mini">동의하지 않으면 가입 정보는 즉시 삭제됩니다. 동의 후에도 자녀의 개인정보 열람 · 삭제를 언제든 요청할 수 있습니다.</p><div class="cta"><button class="lbtn pri" data-ac="gok" data-v="${esc(tok)}">동의합니다</button><button class="lbtn ghost" data-ac="gno" data-v="${esc(tok)}">동의하지 않습니다</button></div>`); }
 function laGuardRes(tok, ok) { const V = laV(); const sid = Object.keys(V.ids).find(k => V.ids[k].guardian && V.ids[k].guardian.token === tok); if (!sid) return; const c = laCache()[sid] || {};
-  if (ok) { V.ids[sid].guardian = { ...V.ids[sid].guardian, status: 'ok', at: new Date().toISOString(), token: '' }; laVLog(V, 'consent', sid, 'guardian_consent', []); laVSave(V); laCacheSet(sid, { status: 'active', pendPub: null });
-    if (c.pendPub) lpxPush('acct-join', { ...c.pendPub, guardian: { ok: true, at: new Date().toISOString() } }); toast('동의를 완료했습니다. 이제 로그인해 이용할 수 있습니다.', 'ok'); }
-  else { laVDelete(V, sid, 'guardian_refused'); laCacheSet(sid, { del: true, status: 'withdrawn', pendPub: null, nick: '' }); toast('동의하지 않아 가입 정보를 삭제했습니다.', 'ok'); }
+  if (ok) { V.ids[sid].guardian = { ...V.ids[sid].guardian, status: 'ok', at: new Date().toISOString(), token: '', used: tok }; laVLog(V, 'consent', sid, 'guardian_consent', []); laVSave(V); laCacheSet(sid, { status: 'active', pendPub: null });
+    if (c.pendPub) lpxPush('acct-join', { ...c.pendPub, guardian: { ok: true, at: new Date().toISOString() } }); toast(laCfg().approve === 'manual' ? '동의를 완료했습니다. 운영자 승인 후 이용할 수 있습니다.' : '동의를 완료했습니다. 이제 로그인해 이용할 수 있습니다.', 'ok'); }
+  else { LA.gNo = { ...(LA.gNo || {}), [tok]: 1 }; laVDelete(V, sid, 'guardian_refused'); laCacheSet(sid, { del: true, status: 'withdrawn', pendPub: null, nick: '' }); toast('동의하지 않아 가입 정보를 삭제했습니다.', 'ok'); }
   lrender(); }
 function laVDelete(V, sid, purpose) { delete V.ids[sid]; Object.keys(V.idx).forEach(k => { if (V.idx[k] === sid) delete V.idx[k]; }); laVLog(V, 'delete', sid, purpose, ['all']); laVSave(V); }
 

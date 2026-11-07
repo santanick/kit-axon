@@ -170,4 +170,15 @@
   }, true);
   document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (document.getElementById('luxSheet')) { sheetClose(); const b = document.querySelector('[data-lux="menu"]'); if (b) b.focus(); } const m = document.querySelector('.lux-more.open'); if (m) { m.classList.remove('open'); const b = m.querySelector('.lux-mb'); b.setAttribute('aria-expanded', 'false'); b.focus(); } });
   window.addEventListener('hashchange', sheetClose);
+  /* v33 R2(레이아웃 경고): 휴대폰(≤600) 기존 웹에서 떠 있는 AI 버튼이 본문 버튼 · 링크를 덮지 않게 한다.
+     본문 끝은 #lm 아래 여백(140px)으로 비워 두고, 화면 중간에서 겹치면 겹치지 않는 빈 줄까지 버튼을 위로 올린다. */
+  (() => { let tk = 0;
+    const run = () => { tk = 0; const f = document.querySelector('#ltut .lt-fab'); if (!f) return; f.style.translate = ''; if (innerWidth > 600 || document.body.classList.contains('lapp') || document.body.classList.contains('lt-on')) return;
+      const fr = f.getBoundingClientRect(); if (!fr.width) return;
+      const E = [...document.querySelectorAll('#lm a, #lm button, #lm input, #lm select, #lm textarea, #lm [role="button"], #lm [tabindex="0"]')].map(e => e.getBoundingClientRect()).filter(r => r.width && r.height && r.bottom > 0 && r.top < innerHeight);
+      const hit = dy => E.some(r => r.left < fr.right + 4 && r.right > fr.left - 4 && r.top < fr.bottom - dy + 4 && r.bottom > fr.top - dy - 4);
+      for (const dy of [0, 56, 112, 168, 224, 280, 336, 392]) if (!hit(dy) && fr.top - dy > 80) { if (dy) f.style.translate = `0 -${dy}px`; return; } };
+    const q = () => { if (!tk) tk = requestAnimationFrame(run); };
+    addEventListener('scroll', q, { passive: true }); addEventListener('resize', q); addEventListener('hashchange', () => setTimeout(q, 60));
+    try { new MutationObserver(q).observe(document.body, { childList: true, subtree: true }); } catch (e) { } })();
 })();
