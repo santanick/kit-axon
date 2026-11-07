@@ -69,6 +69,10 @@ ACT['rg-file'] = async el => { const files = [...(el.files || [])]; el.value = '
 ACT['rg-tg'] = el => { const d = RG.docs().find(x => x.id === el.dataset.v); if (!d) return; d.on = d.on === false; save(); rgDecorate(); };
 ACT['rg-del'] = el => { const D = RG.docs(); const i = D.findIndex(x => x.id === el.dataset.v); if (i < 0) return; const n = D[i].name; D.splice(i, 1); save(); rgDecorate(); toast(`「${n}」 첨부를 지웠습니다.`); };
 /* ── 질문 → 근거 찾기 → Claude 답(출처 표시) ── */
+/* v33 질문 의도로 먼저 가른다(QA #62): 문서를 가리키지 않은 운영 데이터 질문(매출 · 회원 · 독려 · 진도 · 출결 · 현황 …)은 첨부가 있어도 운영 경로로 */
+const RG_DOC = /(문서|파일|첨부|자료|계획서|기획안|rfp|회의록|보고서에|이\s*내용|위\s*내용|발췌|본문|조각|요약본)/i;
+const RG_OPS = /(매출|결제|환불|미납|청구서|정산|회원|가입자|신규\s*가입|탈퇴|독려|진도|출석률|출결|미접속|이탈|채점|운영\s*현황|현황|대시보드|통계|몇\s*명|몇\s*건|이번\s*(달|주)|지난\s*(달|주))/;
+const rgOps = q => RG_OPS.test(q) && !RG_DOC.test(q);
 const RG_ACT = /(보내|발송|만들어|생성|등록|삭제|승인|바꿔|변경|이동|열어|켜|꺼|배정|초대|예약)/;
 /* v26.11 문서 = 맥락. 문서 내용 질문이면 문서로 [번호] 근거, 문서를 바탕으로 한 조사 · 탐색 · 비교 · 작성 요청이면 web_search와 추론으로 적극 찾는다 */
 const RG_WEB = { type: 'web_search_20250305', name: 'web_search', max_uses: 5 };
@@ -89,7 +93,7 @@ async function rgAsk(sys, msgs) { let web = true, res;
   for (let k = 0; k < 3 && res.stop === 'pause_turn'; k++) res = await CL.call({ system: sys(web), messages: [...msgs, { role: 'assistant', content: res.content }], tools: web ? [RG_WEB] : undefined, max: 3000 });
   return { res, web }; }
 { const base = chatSend; chatSend = q => { q = String(q || '').trim().slice(0, 600); if (!q) return;
-  if (!RG.active().length || (RG_ACT.test(q) && !/(문서|파일|첨부|자료|계획서|기획안|rfp|회의록).{0,10}(따라|기준|근거|보고|참고|바탕|기반|토대|맞춰|맞게)/.test(q))) return base(q);
+  if (!RG.active().length || rgOps(q) || (RG_ACT.test(q) && !/(문서|파일|첨부|자료|계획서|기획안|rfp|회의록).{0,10}(따라|기준|근거|보고|참고|바탕|기반|토대|맞춰|맞게)/.test(q))) return base(q);
   const hits = RG.search(q); const on = typeof CL !== 'undefined' && CL.on('chat');
   if (!hits.length && !on) return base(q);
   const ctxs = on ? RG.context(q) : hits;

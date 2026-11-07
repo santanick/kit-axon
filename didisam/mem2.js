@@ -37,7 +37,7 @@ function mbEnsure() {
   if (!S.invites.some(i => i.target === 'student' && i.active && !i.cls)) S.invites.push({ id: uid('iv'), token: mbTok(), target: 'student', cls: '', uses: 0, active: true, at: today() });
 }
 function mbJoinSync() { const A = S.settings.acct; if (A.mode === 'invite') S.settings.join = '운영자 초대만'; else if (A.mode === 'open') S.settings.join = A.approve === 'manual' ? '운영자 수락' : '자동 수락'; S.settings.extraQ = A.extraQ.map(x => x.q); }
-{ const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { mbEnsure(); } catch (e) { console.error(e); } return r; }; }
+{ const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { mbEnsure(); if (mbUnivFix()) { mbJoinSync(); save(); } } catch (e) { console.error(e); } return r; }; }
 const mbInbox = (key, title, body, extra = {}) => { if (!key) return; S.inbox[key] = S.inbox[key] || []; S.inbox[key].unshift({ id: uid('n'), at: nowStr(), title: String(title).slice(0, 80), body: String(body || '').slice(0, 1000), read: false, ...extra }); S.inbox[key] = S.inbox[key].slice(0, 200); };
 const mbParSync = mid => { const m = M(mid); if (m) m.parents = S.parents.filter(p => p.child === mid && p.status === '연결 완료').map(p => p.id); };
 const mbTeacher = () => S.me && S.me.role === 'teacher' ? (S.admins.find(a => a.role === 'teacher' && a.name === S.me.name) || S.admins.find(a => a.role === 'teacher') || null) : null;
@@ -46,11 +46,15 @@ const mbAns = v => v && typeof v === 'object' ? (v.file ? `📎 ${esc(v.file.nam
 
 /* ═════════ 가입 · 계정 설정 ═════════ */
 function mbAcctSummary() { const A = S.settings.acct; return `${esc(MB_MODE()[A.mode])}${A.mode === 'open' ? ` · ${A.approve === 'manual' ? '운영자 승인' : '자동 승인'}` : ''}${A.social.length ? ` · SNS ${A.social.length}종` : ''} · 추가 질문 ${A.extraQ.length}개`; }
-const MB_MODE = () => ({ open: mbUniv() ? '학번 가입(학번 · 학과 · 비밀번호)' : '누구나 가입', invite: '초대받은 회원만(초대 링크 · 이메일 · 연락처)', code: '접근코드 로그인(기관이 번호 · 코드 발급)' });
+const MB_MODE = () => mbUniv() ? { open: '학번 가입(학번 · 학과 · 비밀번호)', code: '접근코드 로그인(기관이 학번 · 코드 발급)' } : { open: '누구나 가입', invite: '초대받은 회원만(초대 링크 · 이메일 · 연락처)', code: '접근코드 로그인(기관이 번호 · 코드 발급)' };
+/* v33 대학(univ · univ_lms)은 개인정보 최소 수집 원칙상 학번 · 학과 · 접근코드 방식만(QA #54) */
+const MB_UNIV_NOTE = '대학은 개인정보 최소 수집 원칙에 따라 학번 · 학과 · 접근코드 방식만 쓸 수 있습니다(이메일 · 연락처 초대는 제공하지 않습니다).';
+function mbUnivFix() { if (!mbUniv() || !S.settings) return false; let ch = false; const A = S.settings.acct; if (A) { if (A.mode === 'invite' || !['open', 'code'].includes(A.mode)) { A.mode = 'code'; ch = true; } if (A.social && A.social.length) { A.social = []; ch = true; } }
+  if (S.settings.join === '운영자 초대만') { S.settings.join = '운영자 수락'; ch = true; } return ch; }
 ACT['mb-acct'] = () => { mbEnsure(); const A = S.settings.acct; const U = mbUniv();
   modal('가입 · 계정 설정', `<p class="mini">학습자 사이트의 회원가입 · 로그인 방식입니다. 저장하면 바로 반영되고, 학습자 사이트를 다시 게시하면 게시본에도 들어갑니다.${U ? ' 대학 유형은 이름 · 연락처 · 이메일을 받지 않고 학번 · 학과만 저장합니다.' : ''}</p>
-    <div class="fl"><span>가입 방식</span><div class="mb-radios">${Object.entries(MB_MODE()).map(([k, l]) => `<label class="ckl"><input type="radio" name="mode" value="${k}" ${A.mode === k ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>
-    <div class="fl"><span>가입 승인(누구나 가입일 때)</span><div class="mb-radios"><label class="ckl"><input type="radio" name="approve" value="auto" ${A.approve !== 'manual' ? 'checked' : ''}> 자동 승인 — 가입 즉시 이용</label><label class="ckl"><input type="radio" name="approve" value="manual" ${A.approve === 'manual' ? 'checked' : ''}> 운영자 승인 — 승인 전에는 이용 불가</label></div><small class="mini">초대 링크 · 이메일 초대로 가입하면 승인 없이 바로 가입됩니다.</small></div>
+    <div class="fl"><span>가입 방식</span>${U ? `<small class="mini" id="mbUnivNote">${MB_UNIV_NOTE}</small>` : ''}<div class="mb-radios">${Object.entries(MB_MODE()).map(([k, l]) => `<label class="ckl"><input type="radio" name="mode" value="${k}" ${A.mode === k ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>
+    <div class="fl"><span>가입 승인(누구나 가입일 때)</span><div class="mb-radios"><label class="ckl"><input type="radio" name="approve" value="auto" ${A.approve !== 'manual' ? 'checked' : ''}> 자동 승인 — 가입 즉시 이용</label><label class="ckl"><input type="radio" name="approve" value="manual" ${A.approve === 'manual' ? 'checked' : ''}> 운영자 승인 — 승인 전에는 이용 불가</label></div><small class="mini">${U ? '접근코드로 로그인한 학생은 승인 없이 바로 이용합니다.' : '초대 링크 · 이메일 초대로 가입하면 승인 없이 바로 가입됩니다.'}</small></div>
     ${U ? '' : `<div class="fl"><span>SNS 간편 가입 · 로그인</span><div class="mb-radios">${MB_SOC.map(([k, l]) => `<label class="ckl"><input type="checkbox" name="soc_${k}" ${A.social.includes(k) ? 'checked' : ''}> ${l}</label>`).join('')}</div><small class="mini">이메일 가입은 항상 제공합니다. SNS 가입자는 비밀번호를 만들지 않습니다(데모: 모의 로그인 · 운영: OAuth 연동).</small></div>
     <label class="ckl"><input type="checkbox" name="verify" ${A.verify ? 'checked' : ''}> 휴대폰 본인인증을 마쳐야 정회원(미인증 · 일괄 가입은 준회원)</label>
     <label class="ckl"><input type="checkbox" name="under14" ${A.under14 ? 'checked' : ''}> 만 14세 미만 가입 허용(법정대리인 인증 · 동의)</label>
@@ -58,9 +62,9 @@ ACT['mb-acct'] = () => { mbEnsure(); const A = S.settings.acct; const U = mbUniv
     <label class="ckl"><input type="checkbox" name="editAns" ${A.editAns ? 'checked' : ''}> 학습자가 마이페이지에서 추가 질문 답변을 확인 · 수정할 수 있음</label>
     <div class="bar2"><button type="button" class="btn sm" data-act="mem-q">추가 질문 설정 (${A.extraQ.length}/6)</button><button type="button" class="btn sm ghost" data-act="mem-invite">초대 링크</button></div>`,
   [{ id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { const g = n => (w.querySelector(`[name="${n}"]:checked`) || {}).value;
-    A.mode = g('mode') || A.mode; A.approve = g('approve') || 'auto'; if (!U) { A.social = MB_SOC.map(x => x[0]).filter(k => fv(w, 'soc_' + k)); A.verify = !!fv(w, 'verify'); A.under14 = !!fv(w, 'under14'); A.parent = !!fv(w, 'parent'); } A.editAns = !!fv(w, 'editAns');
+    A.mode = g('mode') || A.mode; if (U && !MB_MODE()[A.mode]) A.mode = 'code'; A.approve = g('approve') || 'auto'; if (!U) { A.social = MB_SOC.map(x => x[0]).filter(k => fv(w, 'soc_' + k)); A.verify = !!fv(w, 'verify'); A.under14 = !!fv(w, 'under14'); A.parent = !!fv(w, 'parent'); } A.editAns = !!fv(w, 'editAns');
     mbJoinSync(); logAudit(`가입 · 계정 설정 — ${MB_MODE()[A.mode]}`); save(); render(); toast('가입 · 계정 설정을 저장했습니다.', 'ok'); } }]); };
-{ const base = ACT.st; ACT.st = el => { base(el); if (el.dataset.k !== 'join' || !S.settings.acct) return; const v = el.value, A = S.settings.acct; if (v === '운영자 초대만') A.mode = 'invite'; else { if (A.mode === 'invite') A.mode = 'open'; A.approve = v === '운영자 수락' ? 'manual' : 'auto'; } save(); }; }
+{ const base = ACT.st; ACT.st = el => { if (el.dataset.k === 'join' && el.value === '운영자 초대만' && mbUniv()) { toast(MB_UNIV_NOTE, 'warn'); render(); return; } base(el); if (el.dataset.k !== 'join' || !S.settings.acct) return; const v = el.value, A = S.settings.acct; if (v === '운영자 초대만') A.mode = 'invite'; else { if (A.mode === 'invite') A.mode = 'open'; A.approve = v === '운영자 수락' ? 'manual' : 'auto'; } save(); }; }
 { const base = VIEWS.settings; VIEWS.settings = () => { const h = base(); if ((UI.settings || 'menu') !== 'service') return h; mbEnsure();
   return h + `<div class="card mb-card"><div class="ch"><b>회원가입 · 로그인</b><small>${mbAcctSummary()}</small><span class="sp"></span><button class="btn sm pri" data-act="mb-acct">가입 · 계정 설정</button></div><p class="mini">추가 질문(최대 6개 · 파일 첨부 · 필수), 초대 링크(재생성 시 이전 링크 무효), 본인인증 · 만 14세 미만 · 보호자 계정을 여기서 정합니다.</p></div>`; }; }
 
@@ -391,3 +395,54 @@ LPX['fam-res'] = x => { const d = x.data || {}; const p = S.parents.find(y => y.
   if (d.ok) { p.status = '연결 완료'; if (d.acct) p.acct = p.acct || d.acct; } else p.status = '거절'; p.resAt = today(); mbParSync(p.child); if (p.status === '연결 완료') { mbInbox(p.child, '가족이 연결되었습니다', `${p.name}님과 연결되었습니다.`); if (p.acct) mbInbox(p.acct, '가족이 연결되었습니다', `${M(p.child)?.name || ''}님과 연결되었습니다. 자녀의 출결 · 수업을 확인할 수 있습니다.`, { href: '#family' }); } logAudit(`가족 연결 ${p.status} — ${p.name}`); };
 LPX['inbox-read'] = x => { const d = x.data || {}; const L = S.inbox[d.key]; if (!L) return; L.forEach(n => { if ((d.ids || []).includes(n.id)) n.read = true; }); };
 LPX['inbox-del'] = x => { const d = x.data || {}; if (!S.inbox[d.key]) return; S.inbox[d.key] = S.inbox[d.key].filter(n => !(d.ids || []).includes(n.id)); };
+
+/* ═════════ v33 AI SAM 대화 기록 개인정보 가림(QA #61) ═════════
+   저장 · 표시 · 서버 전송 전에 가린다. 순서는 주민번호 → 카드 → 휴대폰 · 전화 → 계좌(학습자 lsam.js mask와 같은 원칙: 주민번호 먼저).
+   ① 모든 대화 입력의 맨 바깥(chatSend)에서 가린 뒤 넘긴다 ② 화면 그리기 전 S.chat을 다시 훑는다 ③ 기존 저장분은 불러올 때(upgradeState) 가린다. */
+const SAM_PII = ['rrn', 'card', 'mobile', 'phone', 'acct'];
+function samMask(s) { const t = String(s == null ? '' : s);
+  if (typeof AIG === 'object' && AIG.redact) { const r = AIG.redact(t, SAM_PII); return { text: r.text, n: Object.values(r.hits).reduce((a, b) => a + b, 0) }; }
+  let n = 0; const o = t.replace(/(?<!\d)\d{6}[-\s]?[1-8]\d{6}(?!\d)/g, () => (n++, '[주민등록번호 가림]')).replace(/(?<!\d)0\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}(?!\d)/g, () => (n++, '[전화번호 가림]')); return { text: o, n }; }
+function samChatScrub() { let n = 0; (S && Array.isArray(S.chat) ? S.chat : []).forEach(m => { if (!m || m.role !== 'user') return; ['text', 'md'].forEach(k => { if (typeof m[k] !== 'string') return; const r = samMask(m[k]); if (r.n) { m[k] = r.text; n += r.n; } }); }); return n; }
+{ const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (samChatScrub()) save(); } catch (e) { console.error(e); } return r; }; }
+{ const base = threadHTML; threadHTML = (...a) => { try { if (samChatScrub()) save(); } catch (e) { } return base(...a); }; }
+(function samWrap() { const wrap = () => { if (typeof chatSend !== 'function' || chatSend.samMasked) return; const base = chatSend;
+    const f = (q, ...r) => { const m = samMask(q); if (m.n) { try { toast(`주민번호 · 전화번호 등 개인정보로 보이는 값 ${m.n}건을 가린 뒤 저장 · 전송합니다.`, 'warn'); } catch (e) { } } return base(m.text, ...r); };
+    f.samMasked = true; chatSend = f; };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wrap); else wrap(); })();
+
+/* ═════════ v33 강사 ↔ 학습자 메시지 왕복(QA #26) ═════════
+   ① 학습자 질문: 학습자 강의 · 과제 화면 · 메시지함 → lpxPush('msg-ask', { id, cls, item, body }) → 강사 질문함(S.tq, 출처 '메시지') + 강사 알림(S.tnoti)
+   ② 강사 답변(tq-send) → 학습자 메시지함 · 알림(S.inbox[회원 id], ask: 질문 id)
+   ③ 재제출 요청(채점 모달 '재제출 요청') → 학습자 알림 ④ 학습자 재제출(a2-sub 2차 이상) → 강사 알림
+   강사는 담당 강좌(tCls) 학습자의 질문 · 알림만 본다(pend() 필터와 같은 원칙). 운영: 같은 이벤트를 POST /api/pub/<tid>/events로 받는다. */
+const mbClsTeach = cid => (S.admins || []).filter(a => a.role === 'teacher' && (a.classes || []).includes(cid));
+const mbMyCids = () => S.me && S.me.role === 'teacher' && typeof tCls === 'function' ? new Set(tCls().map(c => c.id)) : null;
+const mbTnoti = (cid, kind, title, body, extra = {}) => { S.tnoti = Array.isArray(S.tnoti) ? S.tnoti : []; S.tnoti.unshift({ id: uid('tn'), at: nowStr(), cid: cid || '', to: mbClsTeach(cid).map(a => a.id), kind, title: String(title).slice(0, 80), body: String(body || '').slice(0, 400), read: false, ...extra }); S.tnoti = S.tnoti.slice(0, 200); };
+const mbTnotiMine = () => { const L = Array.isArray(S.tnoti) ? S.tnoti : []; const my = mbMyCids(); return my ? L.filter(n => my.has(n.cid)) : L; };
+const mbMemOf = x => (x.mid && M(x.mid)) || (x.sid && mbBySid(x.sid)) || null;
+LPX['msg-ask'] = x => { const d = x.data || {}; const m = typeof cmWho === 'function' ? cmWho(x.who) : mbBySid(x.who); if (!m) return; const body = samMask(String(d.body || '').trim().slice(0, 1000)).text; if (!body) return;
+  if (typeof tqEnsure === 'function') tqEnsure(); S.tq = Array.isArray(S.tq) ? S.tq : []; const id = String(d.id || uid('qa')).slice(0, 24); if (S.tq.some(y => y.id === id)) return;
+  const c = d.cls && C(d.cls); const enrolled = c && ((c.learners || []).includes(m.id) || (c.prog || {})[m.id]); const it = enrolled && d.item && (c.curriculum || []).find(i => i.id === d.item);
+  S.tq.unshift({ id, mid: m.id, sid: m.sid || '', q: body, cls: enrolled ? c.name : '', cid: enrolled ? c.id : '', item: it ? it.id : '', where: it ? it.title : (enrolled ? c.name : '메시지함'), src: '메시지', st: 'open', at: nowStr() });
+  mbTnoti(enrolled ? c.id : '', 'ask', `학습자 질문${enrolled ? ' · ' + c.name : ''}`, body.slice(0, 120), { tq: id });
+  logAudit(`학습자 질문 접수 — ${enrolled ? c.name : '메시지함'}`); };
+{ const base = ACT['tq-send']; if (base) ACT['tq-send'] = el => { const id = el.dataset.v || ''; base(el); try { const x = (S.tq || []).find(y => y.id === id); if (!x || x.st !== 'answered' || x.sentTo) return; const m = mbMemOf(x); if (!m) return;
+  const tch = (x.cid && mbClsTeach(x.cid)[0]) || (S.me.role === 'teacher' && typeof tMe === 'function' && tMe()) || null;
+  mbInbox(m.id, `[답변] ${x.cls ? x.cls + ' ' : ''}질문에 ${t('teacher')}이 답했습니다`, `Q. ${x.q}\n\nA. ${x.a}`, { from: tch ? `${tch.name} ${t('teacher')}` : S.org.name, ask: x.id, ...(x.cid ? { href: `#c/${x.cid}${x.item ? '/' + x.item : ''}` } : {}) });
+  x.sentTo = m.id; (S.tnoti || []).forEach(n => { if (n.tq === x.id) n.read = true; }); save(); } catch (e) { console.error(e); } }; }
+{ const base = ACT.grade; ACT.grade = el => { const r = base(el); try { const c = C(el.dataset.c), id = el.dataset.v, p = c && c.prog[id]; const w = $('#modal'); const b = w && w.querySelector('[data-mact="ret"]'); if (!p || !b) return r;
+  b.addEventListener('click', () => { const was = [p.assign, p.fb, p.score].join('|'); setTimeout(() => { if (p.assign !== 'returned' || [p.assign, p.fb, p.score].join('|') === was) return; const it = (c.curriculum || []).find(i => i.type === 'assign');
+    mbInbox(id, `[재제출 요청] ${c.name}`, `「${it ? it.title : c.name}」 과제에 재제출 요청이 왔습니다.\n피드백: ${p.fb || ''}\n과제 화면에서 고쳐서 다시 제출해 주세요.`, { from: `${(S.me.role === 'teacher' && typeof tMe === 'function' && tMe() ? tMe().name + ' ' : '')}${t('teacher')}`, href: `#c/${c.id}${it ? '/' + it.id : ''}`, kind: 'resub' });
+    save(); }, 0); }, true); } catch (e) { console.error(e); } return r; }; }
+{ const base = LPX['a2-sub']; if (base) LPX['a2-sub'] = x => { const d = x.data || {}; const c = C(d.cls); const it = c && (c.curriculum || []).find(i => i.id === d.item); const m = c && (typeof a2Mem === 'function' ? a2Mem(x.who) : mbBySid(x.who));
+  const prev = c && it && m ? (((c.subs || {})[it.id]) || []).filter(s => s.who === m.id) : []; const wasRet = m && c && ((c.prog || {})[m.id] || {}).assign === 'returned';
+  base(x); try { if (c && it && m && (prev.length || wasRet)) mbTnoti(c.id, 'resub', `재제출 · ${c.name}`, `${S.org.type === 'univ' ? (m.sid || '학습자') : (m.nick || m.name)} — 「${it.title}」 ${prev.length + 1}차 제출. 평가 · 채점에서 확인하세요.`, { mid: m.id }); } catch (e) { console.error(e); } }; }
+ACT['tn-open'] = el => { const n = (S.tnoti || []).find(y => y.id === el.dataset.v); if (!n) return; n.read = true; save(); if (n.tq && ACT['tq-open']) return ACT['tq-open']({ dataset: { v: n.tq } }); go('assess'); };
+ACT['tn-readall'] = () => { mbTnotiMine().forEach(n => { n.read = true; }); save(); render(); };
+function mbTnotiCard() { const L = mbTnotiMine().slice(0, 8); const un = mbTnotiMine().filter(n => !n.read).length; const Q = (Array.isArray(S.tq) ? S.tq : []).filter(x => x.src === '메시지' && x.st !== 'answered' && (!mbMyCids() || mbMyCids().has(x.cid)));
+  if (!L.length && !Q.length) return '';
+  return `<div class="card tnoti" id="tnoti"><div class="ch"><b>학습자 질문 · 재제출 알림</b><small>${un ? `새 알림 ${un}건` : '새 알림 없음'} · 답변은 ${esc(t('learner'))} 메시지함 · 알림으로 갑니다</small><span class="sp"></span>${un ? `<button class="btn sm ghost" data-act="tn-readall">모두 읽음</button>` : ''}</div>
+    ${table(['받은 때', '내용', ''], L.map(n => [esc(n.at), `${n.read ? '' : tag('새 알림', 'mg') + ' '}<b>${esc(n.title)}</b><br><small class="mini">${esc(n.body)}</small>`, `<button class="btn sm ${n.read ? '' : 'ink'}" data-act="tn-open" data-v="${esc(n.id)}">${n.kind === 'ask' ? '답변하기' : '채점 열기'}</button>`]), '받은 알림이 없습니다.')}</div>`; }
+if (typeof tHome === 'function') { const base = tHome; tHome = (...a) => { const h = base(...a); try { return mbTnotiCard() + h; } catch (e) { return h; } }; }
+document.addEventListener('DOMContentLoaded', () => { const base = VIEWS.message; if (base) VIEWS.message = (...a) => { const h = base(...a); try { const k = mbTnotiCard(); if (!k) return h; const i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + k + h.slice(i) : k + h; } catch (e) { return h; } }; });

@@ -223,17 +223,19 @@ EXQ.voc[1] = '웹개발 기초 과정에 퀴즈 5문항이랑 강의자료 만�
 function makeCourse(x) {
   const U = S.org.type === 'univ'; const topic = clean(x.topic) || '새 과정'; const weeks = clamp(+x.weeks || (U ? 15 : 6), 1, 30);
   const o = { topic, weeks, univ: U, quiz: x.quiz !== false, assign: x.assign !== false, exam: x.exam !== false, vids: 1, level: '보통', vsrc: x.vsrc || 'youtube', docs: !!x.docs };
-  const W = AI.design(o); const c = { id: uid('c'), name: topic, kind: 'period', sub: '', status: '준비중', price: 0, open: '비공개', start: today(), end: addDays(today(), weeks * 7), teacher: S.me.name, group: '', learners: [], prog: {}, criteria: { video: 50, exam: 30, assign: 20, threshold: 70 }, cert: 'auto', skip: false, speed: true, early: false, community: 'class', hours: weeks * (U ? 3 : 1), goal: AI.goal(topic, ''), notices: [], level: +x.level || 0 };
+  const W = AI.design(o); const c = { id: uid('c'), name: topic, kind: 'period', sub: '', status: '준비중', price: 0, open: '비공개', start: today(), end: addDays(today(), weeks * 7), teacher: S.me.name, group: '', learners: [], prog: {}, criteria: { video: 50, exam: 30, assign: 20, threshold: 70 }, cert: 'auto', skip: false, speed: true, early: false, community: 'class', hours: weeks * (U ? 3 : 1), goal: AI.goal(topic, x.aud || ''), notices: [], level: +x.level || 0 };
+  if (x.fee && x.fee.price != null && !x.fee.amb) c.price = x.fee.price; /* v33 요청한 수강료 반영(QA #48) */
   c.curriculum = itemsFromDesign(W, o); c.weekly = true; c.weekPlan = W.map(w => ({ w: w.w, title: w.title, goal: w.goal }));
   S.classes.unshift(c); logAudit(`AI 과정 생성 — ${c.name}`); if (o.vsrc !== 'ai' && S.settings.yt?.key) ytAutofill(c); return c;
 }
 const pushItem = (c, it) => { it.id = uid('it'); if (c.weekly && !it.week) it.week = Math.min(c.weekPlan.length, Math.max(1, ...c.curriculum.filter(x => x.week).map(x => x.week))); c.curriculum.push(it); return it; };
 
+const feeLine = x => x.fee ? (x.fee.amb ? ' · 수강료 확인 필요' : ` · 수강료 ${x.fee.txt}`) : ' · 수강료는 만든 뒤 설정에서 입력';
 /* 흐름 단계 정의: re(감지) · absorb(과정 생성에 흡수) · single(단독 요청 시 흐름으로 처리할지) */
 const FILL = [
-  { id: 'course', go: 'class', re: /(과정|교과목|강좌|교육과정|훈련과정|클래스|커리큘럼)\s*(을|를|도|하나)?\s*(새로\s*)?(만들|설계|개설|생성|짜|구성)|(15주|\d+\s*(주|차시))\s*(과정|교과목|강좌)?\s*(설계|편성)/, label: () => `${t('cls')} 생성`,
-    line: x => `「${x.topic}」 ${x.weeks}${x.univ ? '주' : '차시'} — 차시별 영상(${x.vsrc === 'ai' ? 'AI 생성' : 'YouTube 추천'}) · 퀴즈 · 과제+루브릭 · ${x.univ ? '중간/기말' : '최종 평가'}${x.docs ? ' · 강의자료' : ''}`,
-    run: x => { const c = makeCourse(x); x.cls = c; return `「${c.name}」 ${c.weekPlan.length}${x.univ ? '주' : '차시'} · 항목 ${c.curriculum.length}개`; }, open: x => ({ go: 'class', cls: x.cls?.id }) },
+  { id: 'course', go: 'class', re: /(과정|교과목|강좌|교육과정|훈련과정|클래스|커리큘럼)\s*(을|를|도|하나)?\s*(새로\s*)?(만들|설계|개설|생성|짜|구성)|(15주|\d+\s*(주|차시|회차|강))\s*(과정|교과목|강좌)?\s*(설계|편성)/, label: () => `${t('cls')} 생성`,
+    line: x => `「${x.topic}」 ${x.weeks}${x.univ ? '주' : '차시'} — 차시별 영상(${x.vsrc === 'ai' ? 'AI 생성' : 'YouTube 추천'}) · 퀴즈 · 과제+루브릭 · ${x.univ ? '중간/기말' : '최종 평가'}${x.docs ? ' · 강의자료' : ''}${feeLine(x)}`,
+    run: x => { const c = makeCourse(x); x.cls = c; return `「${c.name}」 ${c.weekPlan.length}${x.univ ? '주' : '차시'} · 항목 ${c.curriculum.length}개 · 수강료 ${c.price ? won(c.price) : x.fee && x.fee.price === 0 ? '무료' : '0원(설정에서 입력)'} · ${c.status}(공개 전)`; }, open: x => ({ go: 'class', cls: x.cls?.id }) },
   { id: 'video', absorb: 1, re: /영상/, label: () => 'AI 강의 영상', line: x => `「${x.target()}」에 AI 강의 영상 ${x.n || 1}개(대본 · 슬라이드 · 내레이션)`,
     run: x => { const c = x.tc(); for (let i = 0; i < (x.n || 1); i++) { const title = `${x.topic || clean(c.name)} 강의${x.n > 1 ? ' ' + (i + 1) : ''}`; pushItem(c, { type: 'video', src: 'ai', title, ai: { scenes: AI.lecture(title, 5), mins: 5, voice: 'f' }, url: 'ai:' }); } c.curriculum.forEach(i => { if (i.url === 'ai:') i.url = 'ai:' + i.id; }); return `「${c.name}」에 AI 강의 영상 ${x.n || 1}개`; }, open: x => ({ go: 'class', cls: x.tc().id }) },
   { id: 'doc', absorb: 1, re: /강의\s*자료|교안|핸드아웃|학습\s*자료|수업\s*자료/, label: () => '강의자료', line: x => `「${x.target()}」 차시별 강의자료(교안) 생성`,
@@ -265,7 +267,7 @@ const FILL = [
 const VERB = /(만들|생성|설계|작성|써|쓰|추가|등록|개설|짜|채워|채우|올려|보내|발송|준비|구성|연결|세팅|붙여)/;
 function flowTopic(q, idx) {
   const m = q.match(/[「"“'](.+?)[」"”']/); if (m) return m[1].trim().slice(0, 40);
-  let pre = q.slice(0, idx).replace(/\d+\s*(주|차시|문항|개|명|분)\S*/g, ' ').replace(/(^|\s)(새로운|새로|새|우리|이번|다음|기존)(?=\s)/g, ' ').replace(/[,·+]/g, ' ').replace(/\s+/g, ' ').trim();
+  let pre = feeStrip(q.slice(0, idx)).replace(/\S+\s*대상(으로|의|인)?(?=\s|$)/, ' ').replace(/\d+\s*(주|차시|회차|강|문항|개|명|분)\S*/g, ' ').replace(/(^|\s)(새로운|새로|새|우리|이번|다음|기존)(?=\s)/g, ' ').replace(/[,·+]/g, ' ').replace(/\s+/g, ' ').trim();
   pre = pre.replace(/\s*(AI\s*로?)?\s*(강의)?\s*$/, '').replace(/(?<=[가-힣A-Za-z0-9)])\s*(에다가?|에서|에|을|를)$/, '').replace(/\s*(과정|교과목|강좌)$/, '').trim();
   return pre.length >= 2 && pre.length <= 40 ? pre : '';
 }
@@ -276,8 +278,8 @@ function flowParse(q) {
   const ids = new Set(hits.map(h => h.f.id)); const U = S.org.type === 'univ';
   const named = S.classes.find(c => q.includes(clean(c.name)) && clean(c.name).length >= 2);
   const topic = flowTopic(q, hits[0].i); const tcls = named || (topic && S.classes.find(c => clean(c.name).includes(topic) || topic.includes(clean(c.name))));
-  if (!ids.has('course') && hits.some(h => h.f.absorb) && !tcls && topic && /\d+\s*(주|차시)/.test(q)) { hits.unshift({ f: FILL[0], i: -1 }); ids.add('course'); }
-  const x = { q, univ: U, topic: topic || (tcls ? clean(tcls.name) : ''), weeks: +(q.match(/(\d+)\s*(주|차시)/) || [])[1] || (U ? 15 : 6), n: +(q.match(/(\d+)\s*(문항|개)/) || [])[1] || 0,
+  if (!ids.has('course') && hits.some(h => h.f.absorb) && !tcls && topic && SESS_RE.test(q)) { hits.unshift({ f: FILL[0], i: -1 }); ids.add('course'); }
+  const x = { q, univ: U, topic: topic || (tcls ? clean(tcls.name) : ''), weeks: +(q.match(SESS_RE) || [])[1] || (U ? 15 : 6), fee: aiFee(q), aud: ((q.match(/([가-힣A-Za-z0-9]+)\s*대상/) || [])[1] || '').slice(0, 20), n: +(q.match(/(\d+)\s*(문항|개)/) || [])[1] || 0,
     vsrc: /AI\s*(로\s*)?(강의\s*)?영상|영상\S*\s*(AI|생성|만들)/i.test(q) ? 'ai' : 'youtube', docs: ids.has('doc'), deploy: /(배포|실행|시작|열어)/.test(q), send: /(보내|발송)/.test(q), dmode: /(수준|레벨|지식|역량\s*수준)/.test(q) ? 'level' : (/(유형|성향)/.test(q) || (U && !/수준/.test(q))) ? 'type' : 'level', willCourse: ids.has('course'), willDiag: ids.has('diag') };
   x.cls = !ids.has('course') ? (tcls || (CUR.tab === 'class' && UI.cls && C(UI.cls)) || null) : null;
   x.tc = () => x.cls || S.classes[0]; x.target = () => x.cls?.name || (ids.has('course') ? x.topic || '새 과정' : (x.tc()?.name || ''));
@@ -293,11 +295,15 @@ function flowParse(q) {
 }
 function flowRun(F) { return F.steps.map(f => { try { const res = f.run(F.x); const o = f.open ? f.open(F.x) : { go: f.go }; return { label: f.label(), res, ok: true, ...o }; } catch (e) { console.error(e); return { label: f.label(), res: '처리하지 못했습니다 — 화면에서 직접 확인해 주세요.', ok: false, go: f.go || 'home' }; } }); }
 function flowAnswer(q) {
-  const F = flowParse(q); if (!F) return null; const pid = uid('p');
+  const F = flowParse(q); if (!F) return null;
+  if (F.x.willCourse && F.x.fee && F.x.fee.amb) { const base = feeStrip(q); const O = F.x.fee.opts || [];
+    return { text: `${F.x.fee.amb}\n「${F.x.topic}」 ${F.x.weeks}${F.x.univ ? '주' : '차시'} ${t('cls')}는 수강료가 정해지면 바로 만들어 드립니다.${O.length ? '' : ' 금액을 함께 적어 다시 말씀해 주세요.'}`, html: `<div class="bqs">${O.map(v => `<button type="button" class="chip" data-act="chat-q" data-v="${esc(`${base} 수강료 ${v ? won(v) : '무료'}`)}">${v ? esc(won(v)) : '무료'}로 만들기</button>`).join('')}${O.includes(0) ? '' : `<button type="button" class="chip" data-act="chat-q" data-v="${esc(base + ' 무료')}">무료로 만들기</button>`}</div>` }; }
+  const pid = uid('p');
   PLANS[pid] = { flow: () => { const r = flowRun(F); S.ai.usage += F.steps.length; return r; }, q, go: F.steps[0].go || 'class' };
   const html = `<ol class="flow">${F.steps.map((f, i) => `<li><span class="fn">${i + 1}</span><div><b>${esc(f.label())}</b><small>${esc(f.line(F.x))}</small></div><em class="fm">${esc(mlabel(f.go || 'class'))}</em></li>`).join('')}</ol>`;
   const one = F.steps.length === 1;
-  return { title: '흐름', text: one ? `${F.steps[0].label()} — 아래 내용으로 진행할까요?` : `${F.steps.length}단계 흐름으로 처리하겠습니다. 앞 단계 결과(만든 ${t('cls')} · 진단)가 다음 단계에 자동으로 이어집니다.`, html, plan: pid, state: 'pending', cta: one ? '승인하고 채우기' : `흐름 실행(${F.steps.length}단계)`, ...(F.x.willCourse ? { btn: { act: 'ai-design', v: F.x.topic, label: '마법사에서 직접 조정' } } : {}) };
+  const how = F.x.willCourse ? `\n요청을 이렇게 이해했습니다: 「${F.x.topic}」 · ${F.x.weeks}${F.x.univ ? '주' : '차시'}${F.x.aud ? ` · 대상 ${F.x.aud}` : ''} · 수강료 ${F.x.fee ? F.x.fee.txt : '미정(만든 뒤 설정에서 입력)'}. 다르면 고쳐서 다시 말씀해 주세요.` : '';
+  return { title: '흐름', text: (one ? `${F.steps[0].label()} — 아래 내용으로 진행할까요?` : `${F.steps.length}단계 흐름으로 처리하겠습니다. 앞 단계 결과(만든 ${t('cls')} · 진단)가 다음 단계에 자동으로 이어집니다.`) + how, html, plan: pid, state: 'pending', cta: one ? '승인하고 채우기' : `흐름 실행(${F.steps.length}단계)`, ...(F.x.willCourse ? { btn: { act: 'ai-design', v: F.x.topic, label: '마법사에서 직접 조정' } } : {}) };
 }
 { const base = answer; answer = q => { const nav = /(열어|보여줘|가자|이동|화면)/.test(q) && q.length < 24; const status = /(현황|요약|몇|오래된|가입률|상황|어때)/.test(q) && !VERB.test(q.replace(/보고서?\s*만들/, ''));
   if (!nav && !status && !/(독려|미납|승인해|채점\s*초안|답변\s*초안|AI\s*평가|HRD|환불|반환|보고서|리포트|안\s*한|미완료)/i.test(q)) { const r = flowAnswer(q); if (r) return r; } return base(q); }; }

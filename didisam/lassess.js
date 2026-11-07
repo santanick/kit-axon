@@ -71,6 +71,7 @@ function a2lAsg(c, it) {
     `<div class="body">${nl(it.desc || '과제 안내를 확인하고 제출하세요.')}</div>${a2lFiles(it.files, '과제 자료')}
     ${stTxt ? `<p class="fbk ${esc(st)}"><b>${esc(stTxt)}</b>${m.score != null ? ` · ${esc(m.score)}점${R.pass && R.pass.on && st !== 'returned' ? (m.score >= R.pass.v ? ' (통과)' : ' (미통과)') : ''}` : ''}${m.fb ? ' — ' + esc(m.fb) : ''}</p>` : ''}
     ${why ? `<p class="a2lwhy">${esc(why)}</p>` : `<form id="a2as" class="a2las" data-c="${esc(c.id)}" data-i="${esc(it.id)}"><textarea name="t" rows="6" maxlength="4000" placeholder="제출 내용 · 결과물 링크">${esc(H.length ? H[H.length - 1].text || '' : '')}</textarea><label class="a2lfile">첨부 파일(최대 5개 · 파일당 100MB)<input type="file" name="f" multiple></label><button class="lbtn pri" type="submit">${H.length ? '다시 제출' : '과제 제출'}</button></form>`}
+    ${LR.me ? `<p class="a2lask"><a class="lbtn ghost sm" href="#msg/new:${encodeURIComponent(c.id)}:${encodeURIComponent(it.id)}">담당 강사에게 질문</a></p>` : ''}
     ${H.length ? `<details class="a2lhist" open><summary>제출 이력 ${H.length}건</summary><ol>${[...H].reverse().map((s, i) => `<li><small>${H.length - i}차 · ${esc(a2lDT(s.at).slice(0, 16))}</small><p>${nl(String(s.text || '').slice(0, 600))}</p>${(s.files || []).length ? `<small class="mini">첨부: ${s.files.map(f => esc(f.name)).join(', ')}</small>` : ''}</li>`).join('')}</ol></details>` : ''}`;
 }
 

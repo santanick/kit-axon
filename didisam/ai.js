@@ -55,6 +55,34 @@ const EX = {
   voc: ['출석률 80% 미만 훈련생에게 경고 보내줘', '이번 주 HRD-Net 보고 자료 만들어줘', '웹개발 과정 퀴즈 5문항 만들어줘', '매일 부정훈련 의심 건을 담당자에게 알리는 자동화 만들어줘']
 };
 /* 자연어 지시 → 실행 계획 */
+/* v33 AI 요청 해석 — 수강료 · 차시(QA #48). 99000원 · 99,000원 · 9만9천원 · 10만원 · 1.5만원 · 만원 · 무료 / 6차시 · 6강 · 6회차 · 6주
+   애매하면(금액이 여러 개 · 단위 없는 작은 수 · 유료인데 금액 없음 · 너무 큰 금액) amb 문구와 고를 값(opts)을 돌려준다. */
+const FEE_KEY = '(?:수강료|수업료|가격|금액|비용|요금|교육비|회비|참가비|판매가|정가|할인가)';
+const FEE_NUM = '(?:\\d[\\d,]*(?:\\.\\d+)?\\s*(?:억|만|천|백)?\\s*)+(?:만\\s*)?';
+const SESS_RE = /(\d+)\s*(?:차시|회차|주차?|강(?![의좌사습]))/;
+function krNum(s) {
+  const t = String(s || '').replace(/[,\s]/g, ''); if (!t) return null; let total = 0, sect = 0, any = false;
+  for (const m of t.matchAll(/(\d+(?:\.\d+)?)?(억|만|천|백)?/g)) { if (!m[0]) continue; any = true; const n = m[1] != null ? parseFloat(m[1]) : 0; const u = m[2];
+    if (u === '천' || u === '백') sect += (m[1] != null ? n : 1) * (u === '천' ? 1000 : 100);
+    else if (u === '만' || u === '억') { const base = sect + n; total += (base || 1) * (u === '만' ? 1e4 : 1e8); sect = 0; }
+    else sect += n; }
+  return any ? Math.round(total + sect) : null;
+}
+function aiFee(q) {
+  q = String(q || ''); const found = []; const add = (raw, w) => { const v = krNum(raw); if (v == null || isNaN(v)) return; const f = found.find(x => x.v === v); if (f) f.won = f.won || w; else found.push({ v, won: w }); };
+  for (const m of q.matchAll(new RegExp(`(${FEE_NUM}|(?<![\\d가-힣])만\\s*)원`, 'g'))) add(m[1], true);
+  for (const m of q.matchAll(new RegExp(`${FEE_KEY}\\s*(?:은|는|이|가|:|=)?\\s*(${FEE_NUM})(?![\\d,.]|\\s*(?:억|만|천|백|원|%|명|차시|회차|주|강|회|개|분|시간|일))`, 'g'))) add(m[1], false);
+  const free = /(무료|공짜|무상)/.test(q) && !/무료\s*체험/.test(q); const paid = /유료/.test(q);
+  if (!found.length) { if (free) return { price: 0, txt: '무료' }; if (paid) return { amb: '유료로 만들 수강료 금액을 알려 주세요(예: 수강료 99,000원).', opts: [] }; return null; }
+  if (free && found.some(f => f.v > 0)) return { amb: '「무료」와 금액이 함께 있어 수강료를 정하지 못했습니다. 어느 쪽으로 만들까요?', opts: [0, ...found.map(f => f.v).filter(v => v > 0)] };
+  if (found.length > 1) return { amb: `금액이 ${found.length}개(${found.map(f => won(f.v)).join(' · ')}) 있어 어느 것이 수강료인지 알 수 없습니다. 수강료를 골라 주세요.`, opts: found.map(f => f.v) };
+  const { v, won: w } = found[0];
+  if (v > 0 && v < 1000) return { amb: `수강료 금액(「${v}${w ? '원' : ''}」)이 너무 작습니다. ${won(v * 10000)}(${v}만원)으로 만들까요?`, opts: [v * 10000, v] };
+  if (v > 50000000) return { amb: `수강료 ${won(v)}이 맞는지 확인해 주세요.`, opts: [v] };
+  return { price: v, txt: v ? won(v) : '무료' };
+}
+/* 요청 문장에서 수강료 · 무료 · 대상 표현을 걷어낸다(강좌 이름 · 다시 묻기 문장용) */
+const feeStrip = q => String(q || '').replace(new RegExp(`${FEE_KEY}?\\s*(?:은|는|이|가|:|=)?\\s*(?:${FEE_NUM}|(?<![\\d가-힣])만\\s*)원\\S*`, 'g'), ' ').replace(new RegExp(`${FEE_KEY}\\s*(?:은|는|이|가|:|=)?\\s*(?:${FEE_NUM})?\\S*`, 'g'), ' ').replace(/(무료|공짜|무상|유료)\S*/g, ' ').replace(/\s+/g, ' ').trim();
 const qnum = (q, d) => { const m = q.match(/(\d+)\s*%/); return m ? +m[1] : d; };
 function interpret(q) {
   const has = (...w) => w.some(x => q.includes(x));
