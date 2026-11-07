@@ -1,1 +1,32 @@
-/* v34 slim-g */
+/* v34 slim-g — 화면 가이드(제목 옆 ⓘ) · 빈 상태 카드. DDS 토큰만 쓴다. */
+.slg-i{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:8px;border-radius:50%;border:1px solid var(--g400);background:#fff;color:var(--g700);font:700 12px/1 serif;font-style:italic;cursor:pointer;vertical-align:middle;padding:0;flex:none}
+.slg-i:hover,.slg-i[aria-expanded=true]{border-color:var(--s400);color:var(--s500);background:var(--s50)}
+.slg-i:focus-visible{outline:2px solid var(--s400);outline-offset:2px}
+.slg-pop{position:absolute;z-index:96;background:#fff;border:1px solid var(--g200);border-radius:16px;box-shadow:var(--e16);padding:16px;display:flex;flex-direction:column;gap:12px;font-size:14px;color:var(--g900)}
+.slg-pop.sheet{position:fixed;left:0;right:0;bottom:0;top:auto;border-radius:20px 20px 0 0;max-height:80vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.slg-ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.slg-ph small{width:100%;color:var(--t-sub);font-size:12px;font-weight:600}
+.slg-ph b{flex:1;font-size:16px;font-weight:800;min-width:0}
+.slg-x{border:0;background:var(--g100);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;margin-top:-22px}
+.slg-line{margin:0;font-size:15px;font-weight:600;line-height:1.45}
+.slg-first{align-self:flex-start;min-height:44px}
+.slg-asks{display:flex;flex-direction:column;gap:6px}
+.slg-asks small{color:var(--t-sub);font-size:12px;font-weight:600}
+.slg-ask{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:8px 12px;border:1px solid var(--g200);border-radius:12px;background:var(--g50);font:inherit;font-size:14px;color:var(--g900);text-align:left;cursor:pointer}
+.slg-ask:hover{border-color:var(--s400);background:#fff}
+.slg-ask .ic{color:var(--s500);flex:none}
+.slg-desc{border-top:1px solid var(--g200);padding-top:8px}
+.slg-desc summary{cursor:pointer;color:var(--g700);font-weight:600;font-size:13px}
+.slg-desc p{margin:6px 0 0;color:var(--t-sub);font-size:13px;line-height:1.5}
+.slg-links{display:flex;gap:14px;flex-wrap:wrap;border-top:1px solid var(--g200);padding-top:10px}
+.slg-lk{display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--g700);cursor:pointer;text-decoration:none}
+.slg-lk:hover{color:var(--s500)}
+/* 빈 상태 카드: 하는 일 한 줄 + 첫 할 일 + AI SAM 추천 */
+.slg-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;max-width:520px;margin:20px auto 24px;padding:28px 20px;border:1px dashed var(--g300);border-radius:20px;background:#fff}
+.slg-empty .slg-eic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--s50);color:var(--s500)}
+.slg-empty>b{font-size:17px;font-weight:700}
+.slg-empty .btn{min-height:44px}
+.slg-empty .slg-asks{width:100%;max-width:380px}
+@media (max-width:700px){.slg-empty{margin:12px 0 20px;padding:22px 16px}}
+.slg-hide,[data-slg-hide]{display:none!important}
+.slg-clamp{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal}

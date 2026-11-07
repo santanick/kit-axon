@@ -1,1 +1,46 @@
-/* v34 학습자 앱 단순화 */
+/* v34 학습자 앱 단순화(body.lapp) — DADS 토큰 · 터치 44px 이상 */
+body.lapp [data-ls-hide]{display:none!important}
+/* 「나」 설정형 목록 */
+body.lapp .ls-me{margin:0 0 8px}
+body.lapp .ls-prof{display:flex;align-items:center;gap:14px;padding:6px 4px 14px}
+body.lapp .ls-av{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:var(--d-p50);color:var(--d-p800);font:700 20px/1 var(--sg)}
+body.lapp .ls-prof b{display:block;font:700 18px/26px var(--sg);color:var(--d-g900)}
+body.lapp .ls-prof small{color:var(--d-g600);font-size:14px}
+body.lapp .ls-list{display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 0 0 1px var(--ap-line);overflow:hidden}
+body.lapp .ls-row{display:flex;align-items:center;gap:14px;min-height:64px;padding:10px 14px;border:0;background:none;font:inherit;text-align:left;color:var(--d-g900);text-decoration:none;width:100%;cursor:pointer}
+body.lapp .ls-row+.ls-row{border-top:1px solid var(--ap-line)}
+body.lapp .ls-row:active,body.lapp .ls-row:hover{background:var(--d-g50)}
+body.lapp .ls-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--c);color:#fff;flex:none}
+body.lapp .ls-ic svg{stroke:#fff}
+body.lapp .ls-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+body.lapp .ls-tx b{font:600 16px/24px var(--sg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.lapp .ls-tx small{font-size:14px;line-height:20px;color:var(--d-g600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.lapp .ls-go{color:var(--d-g400);font-size:22px;line-height:1;flex:none}
+body.lapp .ls-bd{font-style:normal;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--d-err);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+body.lapp .ls-gh{font:700 15px/22px var(--sg);color:var(--d-g600);margin:22px 4px 8px}
+/* 접는 줄 */
+body.lapp .ls-fold:not(.ls-open)>*:not(.ls-fh){display:none!important}
+body.lapp .ls-fold:not(.ls-open){padding:0!important;min-height:0;display:block!important}
+body.lapp .ls-fold>.ls-fh{grid-column:1/-1;color:var(--d-g900)!important;font-size:inherit}
+body.lapp .ls-fh b{color:var(--d-g900)}
+body.lapp .ls-fh{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 16px;border:0;background:none;font:inherit;text-align:left;color:var(--d-g900);cursor:pointer;border-radius:inherit}
+body.lapp .ls-open>.ls-fh{padding:4px 0 10px;min-height:44px}
+body.lapp .ls-open>.ls-fh .ls-go{transform:rotate(90deg)}
+body.lapp .ls-open>.ls-fh small{display:none}
+body.lapp .ls-fh:focus-visible,body.lapp .ls-row:focus-visible{outline:2px solid var(--d-ol);outline-offset:-2px}
+body.lapp .mygrid:has(.ls-fold){gap:8px}
+/* 머리 ⓘ */
+body.lapp .ap-bar.ls-hasi .ap-tt{flex:0 1 auto}
+body.lapp .ls-i{flex:none;width:28px;height:28px;margin:0 auto 0 2px;border-radius:50%;border:1px solid var(--d-g300);background:#fff;color:var(--d-g700);font:700 13px/1 serif;font-style:italic;display:grid;place-items:center;cursor:pointer;position:relative}
+body.lapp .ls-i::after{content:'';position:absolute;inset:-8px}
+body.lapp .ls-pop{position:fixed;left:12px;right:12px;z-index:60;background:var(--d-g900);color:#fff;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.55;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+body.lapp .ls-pop p{margin:0}
+body.lapp .ls-pop p+p{margin-top:6px}
+/* 일괄 작업 ⋯ */
+body.lapp .ls-more{position:relative;margin-left:auto}
+body.lapp .ls-more>summary{list-style:none;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;cursor:pointer;color:var(--d-g700)}
+body.lapp .ls-more>summary::-webkit-details-marker{display:none}
+body.lapp .ls-mp{position:absolute;right:0;top:calc(100% + 4px);background:#fff;border-radius:12px;box-shadow:0 0 0 1px var(--ap-line),0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:20;min-width:170px}
+body.lapp .ls-mp .lbtn{justify-content:flex-start;border:0;min-height:44px}
+body.lapp section.sub:has(.crumb[data-ls-hide]){padding-top:8px!important;padding-bottom:0!important}
+body.lapp section.sub:has(.crumb[data-ls-hide]) .in{padding-top:0!important;padding-bottom:0!important;min-height:0!important}
