@@ -1,1 +1,5 @@
-/* v34.2 */
+/* v34.2 학습자 홈페이지 테마(lhpth.js가 body.hpt-on · --hpt-* 를 단다) — 바깥 틀만 테마 색으로 맞춘다 */
+body.hpt-on header.lh .la-join.pri,body.hpt-on .lgj .lbtn.pri{background:var(--hpt-a);color:var(--hpt-on);border-color:var(--hpt-a)}
+body.hpt-on header.lh .la-join.pri:hover,body.hpt-on .lgj .lbtn.pri:hover{filter:brightness(.94)}
+body.hpt-on header.lh nav.ln>a.on,body.hpt-on header.lh nav.ln>.smmi>a.on{background:var(--hpt-a);color:var(--hpt-on)}
+body.hpt-on .lgj{border-color:var(--hpt-as)}
