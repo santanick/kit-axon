@@ -19,6 +19,12 @@ SEC="DATABASE_URL=didisam-db-url:latest,ANTHROPIC_API_KEY=didisam-anthropic-key:
 # 운영자 소셜 로그인(v32.4): 비밀값이 있는 제공자만 켠다(bash service/gcp/oauth.sh 로 등록)
 for k in GOOGLE_ID GOOGLE_SECRET KAKAO_ID KAKAO_SECRET; do n="didisam-oauth-$(echo $k | tr 'A-Z_' 'a-z-')"
   gcloud secrets describe "$n" --project "$PROJECT" >/dev/null 2>&1 && SEC="$SEC,OAUTH_$k=$n:latest"; done
+# 학습자 이메일 인증번호 발송(v33): bash service/gcp/mail.sh 로 등록한 값이 있으면 켠다(없으면 '설정되지 않음' 안내)
+has() { gcloud secrets describe "didisam-mail-$1" --project "$PROJECT" >/dev/null 2>&1; }
+MAILENV=""
+if has smtp-url; then SEC="$SEC,SMTP_URL=didisam-mail-smtp-url:latest"; MAILENV=",MAIL_PROVIDER=smtp"
+elif has webhook-url; then SEC="$SEC,MAIL_WEBHOOK_URL=didisam-mail-webhook-url:latest"; MAILENV=",MAIL_PROVIDER=webhook"; has webhook-token && SEC="$SEC,MAIL_WEBHOOK_TOKEN=didisam-mail-webhook-token:latest"; fi
+[ -n "$MAILENV" ] && has from && SEC="$SEC,MAIL_FROM=didisam-mail-from:latest"
 # 소셜 로그인 콜백 주소의 앞부분 — 제공자 콘솔에 등록한 주소와 같아야 한다(도메인을 붙이면 PUBLIC_URL=https://studio.aisam.com)
 PNUM=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
 PUBLIC_URL="${PUBLIC_URL:-https://didisam-studio-$PNUM.$REGION.run.app}"
@@ -34,7 +40,7 @@ say "3/3 Cloud Run 배포"
 gcloud run deploy didisam-studio --project "$PROJECT" --region "$REGION" --image "$IMAGE" \
   --service-account "$RUN" --add-cloudsql-instances "$CONN" \
   --set-secrets "$SEC" \
-  --set-env-vars "DB_POOL=5,AI_DAILY_CALLS=400,PUBLIC_URL=$PUBLIC_URL" \
+  --set-env-vars "DB_POOL=5,AI_DAILY_CALLS=400,PUBLIC_URL=$PUBLIC_URL$MAILENV" \
   --ingress "$ING" --allow-unauthenticated \
   --cpu 1 --memory 1Gi --min-instances 0 --max-instances 4 --concurrency 60 --timeout 300 --quiet
 URL=$(gcloud run services describe didisam-studio --project "$PROJECT" --region "$REGION" --format='value(status.url)')
