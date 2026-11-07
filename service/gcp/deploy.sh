@@ -13,6 +13,9 @@ IMAGE="$REGION-docker.pkg.dev/$PROJECT/didisam/studio:$TAG"
 RUN="didisam-run@$PROJECT.iam.gserviceaccount.com"
 CONN=$(gcloud sql instances describe didisam-pg --project "$PROJECT" --format='value(connectionName)')
 case "${INGRESS:-all}" in lb) ING=internal-and-cloud-load-balancing ;; *) ING=all ;; esac
+# 운영자 가입 코드: 기본은 끔(누구나 기관 가입 · 2026-11-07 대표 결정). 다시 켜려면 SIGNUP_CODE_ON=1
+SEC="DATABASE_URL=didisam-db-url:latest,ANTHROPIC_API_KEY=didisam-anthropic-key:latest,SESSION_PEPPER=didisam-session-pepper:latest,PII_KEY=didisam-pii-key:latest"
+[ "${SIGNUP_CODE_ON:-0}" = 1 ] && SEC="$SEC,SIGNUP_CODE=didisam-signup-code:latest"
 say() { printf '\n\033[1m▶ %s\033[0m\n' "$*"; }
 
 say "1/3 문법 점검"
@@ -24,7 +27,7 @@ gcloud builds submit --project "$PROJECT" --region "$REGION" --config service/gc
 say "3/3 Cloud Run 배포"
 gcloud run deploy didisam-studio --project "$PROJECT" --region "$REGION" --image "$IMAGE" \
   --service-account "$RUN" --add-cloudsql-instances "$CONN" \
-  --set-secrets "DATABASE_URL=didisam-db-url:latest,ANTHROPIC_API_KEY=didisam-anthropic-key:latest,SIGNUP_CODE=didisam-signup-code:latest,SESSION_PEPPER=didisam-session-pepper:latest,PII_KEY=didisam-pii-key:latest" \
+  --set-secrets "$SEC" \
   --set-env-vars "DB_POOL=5,AI_DAILY_CALLS=400" \
   --ingress "$ING" --allow-unauthenticated \
   --cpu 1 --memory 1Gi --min-instances 0 --max-instances 4 --concurrency 60 --timeout 300 --quiet
