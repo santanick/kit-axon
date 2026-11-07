@@ -5,13 +5,13 @@
   /* ───────── 1. 기관 유형별 필수 메뉴(사이드바 기본) ───────── */
   const ESS = {
     adult: ['class', 'members', 'enroll', 'message', 'sales', 'site'],
-    k12: ['crmstu', 'crmatt', 'class', 'crmbill', 'message', 'site'],
+    k12: ['crmstu', 'crmatt', 'crmex', 'class', 'crmbill', 'message', 'site'],
     univ: ['class', 'members', 'enroll', 'board', 'academic', 'site'],
     univ_lms: null, /* 학사 LMS는 업무 단위 3단 메뉴(ulms.js)를 그대로 쓰고, 아래 slimLms에서 줄인다 */
-    corp: ['class', 'members', 'enroll', 'compliance', 'cert', 'board'],
+    corp: ['class', 'members', 'enroll', 'compliance', 'cpl', 'board'],
     public: ['class', 'members', 'enroll', 'attend', 'cert', 'board'],
-    lifelong: ['class', 'members', 'attend', 'cert', 'lifelong', 'site'],
-    voc: ['class', 'members', 'attend', 'cert', 'hrd', 'message']
+    lifelong: ['class', 'members', 'attend', 'cert', 'lifelong', 'cpl', 'site'],
+    voc: ['class', 'members', 'attend', 'cert', 'hrd', 'cpl', 'message']
   };
   const essKey = () => S && S.org ? (S.org.type === 'univ' && S.org.ed === 'lms' ? 'univ_lms' : S.org.type) : '';
   window.slimEss = () => { const k = essKey(); const E = ESS[k]; if (E) return E.filter(id => MENU[id]); /* 학사 LMS: 지금 켜진 탭 중 앞의 7개 */
@@ -204,11 +204,14 @@
         (S.me.role !== 'teacher' ? SL.sum(`<span>자동 운영</span><span class="sl-n">${au}개 켜짐</span>`, 'sl-goauto', '') : '');
       two.replaceWith(box); }
   });
+  /* 코드 · AI SAM · 테스트가 부르는 go()로 꺼진 메뉴를 열 때는 메뉴 구성을 바꾸지 않고 그 화면만 연다 */
+  { const base = go; go = (id, keep) => { let t = null; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].only && MENU[id].only !== S.org.type)) { t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (t) t.on = true; } } catch (e) { }
+    try { return base(id, keep); } finally { if (t) t.on = false; } }; }
   ACT['sl-guide'] = () => { UI.slGuideOpen = !UI.slGuideOpen; const g = $('#main .aih-guide'); if (g) g.hidden = !UI.slGuideOpen; };
   ACT['sl-goconn'] = () => { if (typeof slMenuSet === 'function') slMenuSet('conn', true); UI.slConnOld = false; go('conn'); };
   ACT['sl-goauto'] = () => { slMenuSet('auto', true); go('auto'); };
-  /* 꺼진 메뉴로 가는 링크(홈 · AI SAM · 가이드)는 막지 않고 그 메뉴를 켜서 연다 — 필요할 때 켜진다 */
-  { const base = go; go = (id, keep) => { try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(id)) && (!MENU[id].only || MENU[id].only === S.org.type) && Object.values(S.nav.tabs).flat().some(x => x.id === id)) { slMenuSet(id, true); toast(`'${mlabel(id)}' 메뉴를 켰어요. 끄려면 [메뉴 추가]에서 끄세요.`, 'ok'); } } catch (e) { } return base(id, keep); }; }
+  /* 꺼진 메뉴로 가는 링크(홈 · 가이드 · 안내의 [이동] 버튼)를 사람이 누르면 막지 않고 그 메뉴를 켜서 연다 — 필요할 때 켜진다. 코드에서 부르는 go()는 그대로 */
+  { const base = ACT.go; ACT.go = (el, ...r) => { const id = el && el.dataset && el.dataset.v; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(id)) && (!MENU[id].only || MENU[id].only === S.org.type) && Object.values(S.nav.tabs).flat().some(x => x.id === id)) { slMenuSet(id, true); toast(`'${mlabel(id)}' 메뉴를 켰어요. 끄려면 [메뉴 추가]에서 끄세요.`, 'ok'); } } catch (e) { } return base(el, ...r); }; }
 
   /* 기존 사용자 한 번 안내 */
   AFTER.push(() => { if (!UI.slimNote) return; UI.slimNote = 0; toast('메뉴를 꼭 필요한 것만 남겼습니다. 다른 메뉴는 왼쪽 [메뉴 추가]에서 켜세요.', 'ok'); });

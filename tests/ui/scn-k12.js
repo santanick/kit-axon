@@ -12,7 +12,8 @@ const MIME = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html
   await p.goto(B + '/index.html'); await p.waitForTimeout(300); await p.addStyleTag({ content: '.bchat{display:none!important}' }); await p.evaluate(() => { createOrg('k12', '테스트학원'); });
   const wait = ms => p.waitForTimeout(ms); const mclick = async label => { await p.locator(`#modal button`, { hasText: new RegExp(`^${label}$`) }).click(); await wait(80); }; const G = (fn, a) => p.evaluate(fn, a);
   /* 메뉴 */
-  ok(await G(() => !S.nav.ws.includes('crm') && S.nav.tabs.people.slice(0, 4).map(x => x.id).join() === 'crmstu,crmatt,crmex,crmcs' && S.nav.tabs.ops.slice(0, 2).map(x => x.id).join() === 'crmbill,crmstat' && ['crmstu', 'crmatt', 'crmex', 'crmcs', 'crmbill', 'crmstat'].every(id => menuOn(id))), 'k12 메뉴: 레일을 늘리지 않음 ' + await G(() => JSON.stringify({ ws: S.nav.ws, p: S.nav.tabs.people.map(x => x.id), o: (S.nav.tabs.ops || []).map(x => x.id) })));
+  /* v34 대표님 '필수 시나리오 위주, 더 필요한 건 메뉴를 켜서': 원생 · 출결 · 성적 · 청구만 기본으로 켜고 상담 · 통계는 [메뉴 추가]에 둔다 */
+  ok(await G(() => !S.nav.ws.includes('crm') && S.nav.tabs.people.slice(0, 3).map(x => x.id).join() === 'crmstu,crmatt,crmex' && S.nav.tabs.ops[0].id === 'crmbill' && ['crmstu', 'crmatt', 'crmex', 'crmbill'].every(id => menuOn(id)) && ['crmcs', 'crmstat'].every(id => Object.values(S.nav.tabs).flat().some(x => x.id === id) && !menuOn(id))), 'k12 메뉴: 레일을 늘리지 않음 · 필수(원생 · 출결 · 성적 · 청구)만 켬 ' + await G(() => JSON.stringify({ ws: S.nav.ws, p: S.nav.tabs.people.map(x => x.id), o: (S.nav.tabs.ops || []).map(x => x.id) })));
   ok(await G(() => { const s0 = S; createOrg('adult', 'x'); const r = !JSON.stringify(S.nav).includes('crmstu'); S = s0; return r; }), '다른 유형에 메뉴 없음');
   /* 빈 화면과 샘플 */
   await G(() => go('crmstu')); await wait(100); ok(await p.locator('[data-act="crm-sample"]').count() === 1, '빈 화면 안내');
