@@ -22,4 +22,11 @@ public interface PubMapper {
     void insertLearnerSession(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
     Map<String, Object> selectLearnerSession(@Param("id") String id);
     int deleteLearnerSession(@Param("id") String id);
+    /* v33 요청함 · 첫 로그인 동의 */
+    java.util.List<java.util.Map<String, Object>> selectEvents(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("after") long after);
+    Long insertEventX(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("sid") String sid, @org.apache.ibatis.annotations.Param("type") String type, @org.apache.ibatis.annotations.Param("xid") String xid, @org.apache.ibatis.annotations.Param("data") String data);
+    int tenantStateExists(@org.apache.ibatis.annotations.Param("tid") String tid);
+    int deleteOldEvents(@org.apache.ibatis.annotations.Param("tid") String tid);
+    java.util.Map<String, Object> selectConsent(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("sid") String sid);
+    int setConsent(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("sid") String sid, @org.apache.ibatis.annotations.Param("v") String v);
 }

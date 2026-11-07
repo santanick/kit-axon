@@ -14,6 +14,8 @@ public class DdProps {
     public final String aiKey; public final String aiUrl;
     /** 개발 · 시험 전용 플래그(Node pii.js와 같은 이름): 인증번호 · 보호자 토큰 응답 포함, SNS dev_sub 허용, 본인확인 모의 성공 */
     public final boolean devOtp, devOauth, devIdv;
+    /** NODE_ENV=production */
+    public final boolean prod;
     /** v31 환급 에디션: 모듈(learner|tutor|admin, 비면 통합), 관리자 접속 허용 IP, 학습자 첫 화면의 기관 */
     public final String module, learnerTid; public final java.util.List<String> adminIps;
     /** 본인인증 이력 서버 강제(제공사 연동 후 켠다) */
@@ -35,6 +37,7 @@ public class DdProps {
         this.pepper = !pepper.isEmpty() ? pepper : !code.isEmpty() ? code : "didisam-learner";
         this.aiDaily = aiDaily; this.ai = aiKey.startsWith("sk-ant-");
         this.aiKey = this.ai ? aiKey.trim() : ""; this.aiUrl = aiUrl.isEmpty() ? "https://api.anthropic.com/v1/messages" : aiUrl;
+        this.prod = "production".equals(env);
         this.devOtp = "1".equals(devOtp); this.devOauth = "1".equals(devOauth); this.devIdv = "1".equals(devIdv);
         if ("production".equals(env)) {
             java.util.List<String> miss = new java.util.ArrayList<>();

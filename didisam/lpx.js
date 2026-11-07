@@ -10,3 +10,14 @@ function lpxPull() { if (typeof S === 'undefined' || !S || !S.org) return 0; let
 addEventListener('storage', e => { if (e.key && e.key === lpxKey()) lpxPull(); });
 addEventListener('focus', () => lpxPull());
 AFTER.push(() => { if (!lpxPull.ran) { lpxPull.ran = 1; setTimeout(lpxPull, 300); } });
+/* v33 운영: 학습자 요청은 서버 요청함(/api/pub/<tid>/events)에 쌓인다 → 같은 처리기(LPX)로 S에 반영(요청함 · 알림 · 회원).
+   어디까지 반영했는지는 S.lpxSeq에 두어 다른 창 · 기기에서도 이어서 가져온다. 30초마다(화면이 보일 때) + 창으로 돌아올 때 */
+async function lpxPullLive() { if (typeof LIVE === 'undefined' || !LIVE.user || !LIVE.tenant || LIVE.user.role === 'teacher' || typeof S === 'undefined' || !S || !S.org || lpxPullLive.busy) return 0;
+  lpxPullLive.busy = 1; let n = 0; const seq0 = +S.lpxSeq || 0;
+  try { for (let i = 0; i < 5; i++) { const r = await api('GET', `/api/pub/${encodeURIComponent(LIVE.tenant.tid)}/events?after=${+S.lpxSeq || 0}`); const E = r.events || [];
+      E.forEach(x => { const f = LPX[x.type]; if (!f) return; try { f(x); n++; } catch (e) { console.error('lpx', x.type, e); } }); if (r.last) S.lpxSeq = +r.last; if (E.length < 200) break; } }
+  catch (e) { if (e.status !== 401) console.warn('lpx live', e.message); }
+  finally { lpxPullLive.busy = 0; }
+  if (n || (+S.lpxSeq || 0) !== seq0) { save(); try { render(); } catch (e) { } } return n; }
+{ const base = lpxPull; lpxPull = (...a) => { const n = base(...a); lpxPullLive(); return n; }; }
+setInterval(() => { if (typeof LIVE !== 'undefined' && LIVE.user && !document.hidden) lpxPullLive(); }, 30e3);

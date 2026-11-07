@@ -141,7 +141,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       return { lid, st, nick, login: univ ? 'univ' : login, gtok, pend };
     });
     if (out.st === 'active' && !out.pend) await newLearnerSession(res, tid, out.lid);
-    return { me: { sid: out.lid, nickname: out.nick, login: out.login, status: out.pend ? 'pending' : out.st }, ...(out.st === 'guardian_pending' ? { guardian: 'sent', ...(devOtp ? { dev_token: out.gtok } : {}) } : {}) };
+    return { me: { sid: out.lid, nickname: out.nick, login: out.login, status: out.pend ? 'pending' : out.st }, ...(out.st === 'guardian_pending' ? { guardian: 'sent', ...(devCode ? { dev_token: out.gtok } : {}) } : {}) };
   }
 
   async function guardian(req, res, tid) {

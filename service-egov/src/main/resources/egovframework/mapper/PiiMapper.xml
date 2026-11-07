@@ -99,4 +99,14 @@
   <select id="selectTenantIds" resultType="string">select id from tenants</select>
   <delete id="deleteExpiredSessions">delete from sessions where expires_at &lt; now()</delete>
   <delete id="deleteExpiredLearnerSessions">delete from learner_sessions where expires_at &lt; now()</delete>
+  <!-- v33 학습자 → 운영자 요청함 · 운영자 승인 판단 -->
+  <insert id="insertEvent">insert into learner_events (tenant_id, sid, type, data) values (#{tid}, #{sid}, #{type}, #{data}::jsonb)</insert>
+  <select id="selectApproval" resultType="java.util.LinkedHashMap">
+    select doc->'settings'->'acct'->>'approve' ap, m is not null found, m->>'grade' g, m->>'reject' r from tenant_state
+      left join lateral (select x m from jsonb_array_elements(case when jsonb_typeof(doc->'members') = 'array' then doc->'members' else '[]'::jsonb end) x where x->>'sid' = #{lid} limit 1) mm on true
+     where tenant_id = #{tid}
+  </select>
+  <select id="selectOrgName" resultType="string">select doc->'org'->>'name' from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectAcctBrief" resultType="java.util.LinkedHashMap">select login, nickname, dept, mkt from learner_accounts where tenant_id = #{tid} and learner_id = #{lid}::uuid</select>
+  <select id="selectEmailMask" resultType="string">select email_mask from pii.identity where tid = #{tid} and learner_id = #{lid}::uuid</select>
 </mapper>
