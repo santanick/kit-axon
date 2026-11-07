@@ -279,6 +279,25 @@ const MIGRATIONS = [
      primary key (provider, sub)
    );
    create index if not exists user_oauth_user on user_oauth (user_id);`,
+  /* 15 — v33 학습자 → 운영자 요청함(문의 · 수강 취소 · 가족 연결 · 코드 재발급 · 커뮤니티 등). 본문은 개인정보를 가린 뒤 저장, 90일 보관.
+        대학 첫 로그인 동의: 동의 여부 · 일시만(학번 · 학과 외 항목 없음) */
+  `alter table learners add column if not exists consent jsonb;
+   create table if not exists learner_events (
+     id bigserial primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null default '',
+     type text not null check (type ~ '^[a-z0-9-]{2,24}$'),
+     xid text,
+     data jsonb not null default '{}',
+     at timestamptz not null default now()
+   );
+   create index if not exists levents_tid on learner_events (tenant_id, id);
+   alter table learner_events enable row level security;
+   alter table learner_events force row level security;
+   drop policy if exists tenant_iso on learner_events;
+   create policy tenant_iso on learner_events using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert, delete on learner_events to didisam_tenant;
+   grant usage, select on sequence learner_events_id_seq to didisam_tenant;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).

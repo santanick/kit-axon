@@ -182,12 +182,34 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession });
   const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env });
   /* 단체가입 최초 로그인 · 중도탈락 표시 */
-  const meFlags = async (c, tid, sid, doc) => { const P = doc && doc.org && doc.org.cpl; if (!P || !P.on) return {}; const o = {}; { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (L && !L.pw_hash && P.groupFirst) o.groupFirst = true; if (L && L.pw_hash) o.pwSet = true; } const m = (doc.members || []).find(x => x && x.sid === sid); if (m) { const D = (doc.classes || []).filter(x => x && x.drop && x.drop[m.id]).map(x => x.id); if (D.length) o.dropped = D; } return o; };
+  const meFlags = async (c, tid, sid, doc) => { const o0 = await consentFlag(c, tid, sid, doc); const P = doc && doc.org && doc.org.cpl; if (!P || !P.on) return o0; const o = o0; { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (L && !L.pw_hash && P.groupFirst) o.groupFirst = true; if (L && L.pw_hash) o.pwSet = true; } const m = (doc.members || []).find(x => x && x.sid === sid); if (m) { const D = (doc.classes || []).filter(x => x && x.drop && x.drop[m.id]).map(x => x.id); if (D.length) o.dropped = D; } return o; };
   const learnerOut = (c, tid, sid) => (async () => { const acc = await pii.meExtra(c, tid, sid); const L = acc ? null : (await c.query('select dept from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: acc ? acc.dept : L ? L.dept : '', ...(acc ? { acct: acc } : {}), ...(acc && (await pii.hasPw(tid, sid)) ? { pwSet: true } : {}), ...(await meFlags(c, tid, sid, d && d.doc)) }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid, tid) : { badges: [], cls: {} } }; })();
+  /* v33 대학 첫 로그인 동의(학번 · 접근코드 계정): 동의 여부 · 일시만 learners.consent에 둔다 */
+  const consentFlag = async (c, tid, sid, doc) => { if (!doc || !doc.org || doc.org.type !== 'univ') return {}; const L = (await c.query('select consent from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; return L && !L.consent ? { needConsent: true } : L && L.consent ? { consentAt: L.consent.at || '' } : {}; };
+  /* v33 학습자 → 운영자 요청함: 로그인 없이 보낼 수 있는 것은 문의 · 코드 재발급 요청뿐. 신원을 바꾸는 종류는 서버만 만든다 */
+  const EV_GUEST = new Set(['acct-inq', 'code-req']); const EV_SERVER = new Set(['acct-join', 'acct-pw', 'acct-verify', 'acct-idv']);
+  async function eventsRoute(req, res, tid, key) {
+    if (key === 'GET events') { const a = await needStaff(req); if (a.tid !== tid) throw new HttpErr(403, '다른 기관의 요청함입니다.', 'tenant');
+      const after = Math.max(0, Math.floor(+new URL(req.url, 'http://x').searchParams.get('after') || 0));
+      const rows = await inTenant(pool, tid, async c => (await c.query('select id, sid, type, xid, data, at from learner_events where tenant_id = $1 and id > $2 order by id limit 200', [tid, after])).rows);
+      return { events: rows.map(r => ({ seq: +r.id, id: r.xid || 'e' + r.id, type: r.type, who: r.sid, at: r.at, data: r.data })), last: rows.length ? +rows[rows.length - 1].id : after };
+    }
+    const s = await lauth(req, tid); const b = await readBody(req, 16 * 1024);
+    const type = String(b.type || ''); if (!/^[a-z0-9-]{2,24}$/.test(type) || EV_SERVER.has(type)) throw new HttpErr(400, '보낼 수 없는 요청입니다.', 'type');
+    if (!s && !EV_GUEST.has(type)) throw new HttpErr(401, '로그인이 필요합니다.', 'auth');
+    limit('lev:' + ip(req), 60, 600e3); limit('levt:' + tid, 600, 3600e3); if (s) limit(`levs:${tid}:${s.sid}`, 120, 600e3);
+    const data = pii.redactDeep(b.data && typeof b.data === 'object' && !Array.isArray(b.data) ? b.data : {}); const j = JSON.stringify(data); if (j.length > 12 * 1024) throw new HttpErr(413, '요청 내용이 너무 큽니다.', 'too_large');
+    const xid = /^[\w-]{4,40}$/.test(String(b.id || '')) ? String(b.id) : null;
+    const id = await inTenant(pool, tid, async c => { if (!(await c.query('select 1 from tenant_state where tenant_id = $1', [tid])).rows[0]) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
+      if (Math.random() < 0.02) await c.query("delete from learner_events where tenant_id = $1 and at < now() - interval '90 days'", [tid]);
+      return (await c.query('insert into learner_events (tenant_id, sid, type, xid, data) values ($1, $2, $3, $4, $5) returning id', [tid, s ? s.sid : '', type, xid, j])).rows[0].id; });
+    return { ok: true, seq: +id };
+  }
   async function pubRoute(req, res, m) {
     const [, tid, act] = m; if (!TID_RE.test(tid)) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
     const key = `${req.method} ${act}`;
     if (pii.pubOpen[key]) return pii.pubOpen[key](req, res, tid);
+    if (key === 'GET events' || key === 'POST events') return eventsRoute(req, res, tid, key);
     if (key === 'GET site') {
       const site = await inTenant(pool, tid, async c => (await c.query("select doc->'lsite'->'pub' pub from tenant_state where tenant_id = $1", [tid])).rows[0]);
       if (!site || !site.pub) throw new HttpErr(404, '아직 게시되지 않은 학습자 사이트입니다.', 'unpublished');
@@ -215,6 +237,9 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (key === 'PUT progress') { const b = await readBody(req, LP_MAX); const lp = cleanLP(b.lp); const j = JSON.stringify(lp); if (j.length > LP_MAX) throw new HttpErr(413, '학습 기록이 너무 큽니다.', 'too_large');
       await inTenant(pool, tid, c => c.query('insert into learner_progress (tenant_id, sid, lp, bytes) values ($1, $2, $3, $4) on conflict (tenant_id, sid) do update set lp = excluded.lp, bytes = excluded.bytes, updated_at = now()', [tid, s.sid, j, j.length])); return { ok: true }; }
     if (key === 'POST cpl') return cpl.route(req, tid, s.sid);
+    if (key === 'POST consent') { const b = await readBody(req, 1024); if (b.tos !== true || b.privacy !== true) throw new HttpErr(400, '필수 항목(이용약관 · 개인정보 수집 · 이용)에 동의해 주세요.', 'consent');
+      const at = new Date().toISOString(); const v = JSON.stringify({ tos: true, privacy: true, ver: String(b.ver || 'v33').slice(0, 20), at });
+      await inTenant(pool, tid, async c => { await c.query('update learners set consent = $3 where tenant_id = $1 and sid = $2 and consent is null', [tid, s.sid, v]); await audit(c, tid, 'learner:' + s.sid, 'learner.consent', { ver: String(b.ver || 'v33').slice(0, 20) }); }); return { ok: true, consentAt: at }; }
     if (key === 'POST tutor') return tutorRoute(req, tid, s.sid);
     if (key === 'POST logout') { const t = cookies(req)[lcookieName]; await pool.query('delete from learner_sessions where id = $1', [sha(t)]); res.setHeader('set-cookie', `${lcookieName}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure ? '; Secure' : ''}`); return { ok: true }; }
     throw new HttpErr(404, '없는 주소입니다.', 'not_found');
@@ -492,7 +517,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname.startsWith('/api/') && !M.apiAllowed(mod, req.method, url.pathname)) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
       if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl)$/);
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent)$/);
         const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key]; if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처

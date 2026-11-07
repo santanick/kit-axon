@@ -37,7 +37,8 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     @Resource(name = "propertiesService") private EgovPropertyService props;
     private final DdStateCrypto crypt;
     private final PubMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final PiiService pii; private final DdAiClient ai; private final egovframework.didisam.cpl.service.CplService cpl;
-    public PubServiceImpl(PubMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, PiiService pii, DdAiClient ai, egovframework.didisam.cpl.service.CplService cpl, DdStateCrypto crypt) { this.crypt = crypt;
+    private final egovframework.didisam.auth.service.AuthService auth; private final TenantTxMapper txm;
+    public PubServiceImpl(PubMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, PiiService pii, DdAiClient ai, egovframework.didisam.cpl.service.CplService cpl, DdStateCrypto crypt, egovframework.didisam.auth.service.AuthService auth, TenantTxMapper txm) { this.crypt = crypt; this.auth = auth; this.txm = txm;
         this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.pii = pii; this.ai = ai; this.cpl = cpl;
     }
 
@@ -48,6 +49,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             case "POST otp": return pii.otp(req, body, tid);
             case "POST signup": return pii.signup(req, res, body, tid);
             case "POST guardian": return pii.guardian(req, body, tid);
+            case "GET events": case "POST events": return events(req, body, tid, key);
             case "GET site": {
                 Map<String, Object> site = tx.inTenant(tid, () -> mapper.selectSitePub(tid));
                 JsonNode pub = site == null || site.get("pub") == null ? null : parse((String) site.get("pub"));
@@ -66,6 +68,14 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             case "POST withdraw": return pii.withdraw(body, tid, sid);
             case "POST verify": return pii.verify(body, tid, sid);
             case "POST cpl": return cpl.route(req, body, tid, sid);
+            case "POST consent": {
+                JsonNode b = DdWeb.readBody(body, 1024); JsonNode tos = get(b, "tos"), pv = get(b, "privacy");
+                if (!(tos != null && tos.isBoolean() && tos.booleanValue()) || !(pv != null && pv.isBoolean() && pv.booleanValue())) throw processException("dd.400.consent.first");
+                String at = isoNow(); String ver = cut(str(or(get(b, "ver"), t("v33"))), 20); ObjectNode v = F.objectNode(); v.put("tos", true); v.put("privacy", true); v.put("ver", ver); v.put("at", at);
+                ObjectNode det = F.objectNode(); det.put("ver", ver);
+                tx.inTenant(tid, () -> { mapper.setConsent(tid, sid, stringify(v)); txm.insertAudit(tid, "learner:" + sid, "learner.consent", stringify(det)); return null; });
+                Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); o.put("consentAt", at); return o;
+            }
             case "GET me": return tx.inTenant(tid, () -> learnerOut(tid, sid));
             case "PUT progress": {
                 JsonNode b = DdWeb.readBody(body, LP_MAX); ObjectNode lp = cleanLP(get(b, "lp")); String j = stringify(lp);
@@ -104,17 +114,48 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         return tx.inTenant(tid, () -> {
             mapper.touchLearner(tid, sid);
             Map<String, Object> lp = mapper.selectLp(tid, sid), d = mapper.selectDoc(tid);
-            Map<String, Object> me = new LinkedHashMap<>(); me.put("sid", sid); me.put("dept", L.get("dept")); meFlags(me, sid, mapper.selectLearnerDept(tid, sid), d);
+            Map<String, Object> me = new LinkedHashMap<>(); me.put("sid", sid); me.put("dept", L.get("dept")); meFlags(me, tid, sid, mapper.selectLearnerDept(tid, sid), d);
             Map<String, Object> o = new LinkedHashMap<>(); o.put("me", me); o.put("lp", lp == null ? null : parse((String) lp.get("lp")));
             o.put("mine", d == null ? emptyMine() : mineOf(parse((String) d.get("doc")), sid, tid)); return o;
         });
     }
     static ObjectNode emptyMine() { ObjectNode o = F.objectNode(); o.putArray("badges"); o.putObject("cls"); return o; }
 
+    /* v33 학습자 → 운영자 요청함: 로그인 없이 보낼 수 있는 것은 문의 · 코드 재발급 요청뿐. 신원을 바꾸는 종류는 서버만 만든다(Node eventsRoute와 같음) */
+    static final Set<String> EV_GUEST = Set.of("acct-inq", "code-req"), EV_SERVER = Set.of("acct-join", "acct-pw", "acct-verify", "acct-idv");
+    static final Pattern EV_TYPE = Pattern.compile("[a-z0-9-]{2,24}"), EV_XID = Pattern.compile("[\\w-]{4,40}");
+    private Object events(HttpServletRequest req, byte[] body, String tid, String key) throws Exception {
+        if ("GET events".equals(key)) {
+            Map<String, Object> a = auth.needStaff(req); if (!tid.equals(a.get("tid"))) throw processException("dd.403.tenant.ev");
+            String q = req.getParameter("after"); long after = 0; try { double d = q == null ? 0 : Double.parseDouble(q); after = Double.isNaN(d) ? 0 : Math.max(0, (long) Math.floor(d)); } catch (NumberFormatException e) { after = 0; }
+            long af = after; List<Map<String, Object>> rows = tx.inTenant(tid, () -> mapper.selectEvents(tid, af));
+            List<Map<String, Object>> ev = new ArrayList<>(); for (Map<String, Object> r : rows) { Map<String, Object> e = new LinkedHashMap<>(); long id = ((Number) r.get("id")).longValue();
+                e.put("seq", id); e.put("id", r.get("xid") != null ? r.get("xid") : "e" + id); e.put("type", r.get("type")); e.put("who", r.get("sid")); e.put("at", r.get("at")); e.put("data", parse((String) r.get("data"))); ev.add(e); }
+            Map<String, Object> o = new LinkedHashMap<>(); o.put("events", ev); o.put("last", rows.isEmpty() ? after : ((Number) rows.get(rows.size() - 1).get("id")).longValue()); return o;
+        }
+        Map<String, Object> s = lauth(req, tid); JsonNode b = DdWeb.readBody(body, 16 * 1024);
+        String type = sOr(get(b, "type")); if (!EV_TYPE.matcher(type).matches() || EV_SERVER.contains(type)) throw processException("dd.400.type.ev");
+        if (s == null && !EV_GUEST.contains(type)) throw processException("dd.401.auth");
+        rl.limit("lev:" + web.ip(req), 60, 600_000L); rl.limit("levt:" + tid, 600, 3_600_000L); if (s != null) rl.limit("levs:" + tid + ":" + s.get("sid"), 120, 600_000L);
+        JsonNode d0 = get(b, "data"); JsonNode data = pii.redactDeep(d0 != null && d0.isObject() ? d0 : F.objectNode()); String j = stringify(data);
+        if (j.length() > 12 * 1024) throw processException("dd.413.too_large.ev");
+        String xid0 = sOr(get(b, "id")); String xid = EV_XID.matcher(xid0).matches() ? xid0 : null; String sid = s == null ? "" : (String) s.get("sid");
+        Long id = tx.inTenant(tid, () -> { if (mapper.tenantStateExists(tid) == 0) throw processException("dd.404.tenant");
+            if (Math.random() < 0.02) mapper.deleteOldEvents(tid);
+            return mapper.insertEventX(tid, sid, type, xid, j); });
+        Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); o.put("seq", id); return o;
+    }
+    /** v33 대학 첫 로그인 동의(학번 · 접근코드 계정): 동의 여부 · 일시만 learners.consent */
+    private void consentFlag(Map<String, Object> me, String tid, String sid, Map<String, Object> d) {
+        if (d == null) return; JsonNode doc = parse((String) d.get("doc")); JsonNode org = get(doc, "org"); if (org == null || !strictEq(get(org, "type"), "univ")) return;
+        Map<String, Object> c = mapper.selectConsent(tid, sid); if (c == null) return; Object v = c.get("consent");
+        if (v == null) me.put("needConsent", true); else { JsonNode cj = parse((String) v); me.put("consentAt", sOr(get(cj, "at"))); }
+    }
+
     /** 학습자 응답(me · lp · mine) — 기관 범위 트랜잭션 안에서 호출 */
     /** 단체가입 최초 로그인 · 중도탈락 표시 */
-    private void meFlags(Map<String, Object> me, String sid, Map<String, Object> learner, Map<String, Object> d) {
-        if (d == null) return; JsonNode doc = parse((String) d.get("doc")); JsonNode org = get(doc, "org"); JsonNode P = org == null ? null : get(org, "cpl"); if (!truthy(P) || !truthy(get(P, "on"))) return;
+    private void meFlags(Map<String, Object> me, String tid, String sid, Map<String, Object> learner, Map<String, Object> d) {
+        if (d == null) return; consentFlag(me, tid, sid, d); JsonNode doc = parse((String) d.get("doc")); JsonNode org = get(doc, "org"); JsonNode P = org == null ? null : get(org, "cpl"); if (!truthy(P) || !truthy(get(P, "on"))) return;
         if (truthy(get(P, "groupFirst")) && learner != null && learner.get("pw_hash") == null) me.put("groupFirst", true); if (learner != null && learner.get("pw_hash") != null) me.put("pwSet", true);
         JsonNode m = null; for (JsonNode x : arr(or(get(doc, "members"), F.arrayNode()))) if (truthy(x) && strictEq(get(x, "sid"), sid)) { m = x; break; } if (m == null) return; String mid = sOr(get(m, "id")); List<String> D = new ArrayList<>();
         for (JsonNode c : arr(or(get(doc, "classes"), F.arrayNode()))) { JsonNode dr = truthy(c) ? get(c, "drop") : null; if (dr != null && dr.isObject() && truthy(dr.get(mid))) D.add(sOr(get(c, "id"))); } if (!D.isEmpty()) me.put("dropped", D);
@@ -129,7 +170,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         Map<String, Object> lp = mapper.selectLp(tid, sid), d = mapper.selectDoc(tid);
         Map<String, Object> me = new LinkedHashMap<>(); me.put("sid", sid); me.put("dept", acc != null ? acc.get("dept") : Lr != null ? Lr.get("dept") : "");
         if (acc != null) { me.put("acct", acc); if (pii.hasPw(tid, sid)) me.put("pwSet", true); }
-        meFlags(me, sid, Lr, d);
+        meFlags(me, tid, sid, Lr, d);
         Map<String, Object> o = new LinkedHashMap<>(); o.put("me", me); o.put("lp", lp == null ? null : parse((String) lp.get("lp")));
         o.put("mine", d == null ? emptyMine() : mineOf(parse((String) d.get("doc")), sid, tid)); return o;
     }

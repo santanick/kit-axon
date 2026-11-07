@@ -22,6 +22,12 @@ public interface PiiMapper {
     int setIdv(@Param("tid") String tid, @Param("lid") String lid);
     List<Map<String, Object>> selectAccounts(@Param("tid") String tid);
     int purgeWithdraw(@Param("tid") String tid, @Param("lid") String lid);
+    /* v33 */
+    void insertEvent(@Param("tid") String tid, @Param("sid") String sid, @Param("type") String type, @Param("data") String data);
+    Map<String, Object> selectApproval(@Param("tid") String tid, @Param("lid") String lid);
+    String selectOrgName(@Param("tid") String tid);
+    Map<String, Object> selectAcctBrief(@Param("tid") String tid, @Param("lid") String lid);
+    String selectEmailMask(@Param("tid") String tid, @Param("lid") String lid);
     /* P */
     void upsertOtp(@Param("tid") String tid, @Param("b") String b, @Param("purpose") String purpose, @Param("hash") String hash);
     Map<String, Object> selectOtp(@Param("tid") String tid, @Param("b") String b, @Param("purpose") String purpose);

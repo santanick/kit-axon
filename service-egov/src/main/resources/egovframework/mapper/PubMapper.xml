@@ -30,4 +30,15 @@
   <select id="selectIdleH" resultType="java.lang.String">select doc->'org'->'cpl'->>'idleH' from tenant_state where tenant_id = #{tid} and (doc->'org'->'cpl'->>'on')::boolean</select>
   <update id="touchLearnerSession">update learner_sessions set last_at = now() where id = #{id}</update>
   <delete id="deleteLearnerSession">delete from learner_sessions where id = #{id}</delete>
+  <!-- v33 학습자 → 운영자 요청함 · 대학 첫 로그인 동의 -->
+  <select id="selectEvents" resultType="java.util.LinkedHashMap">
+    select id, sid, type, xid, data::text data, to_char(at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from learner_events where tenant_id = #{tid} and id &gt; #{after} order by id limit 200
+  </select>
+  <select id="insertEventX" resultType="long" flushCache="true" useCache="false">
+    insert into learner_events (tenant_id, sid, type, xid, data) values (#{tid}, #{sid}, #{type}, #{xid}, #{data}::jsonb) returning id
+  </select>
+  <select id="tenantStateExists" resultType="int">select count(*) from tenant_state where tenant_id = #{tid}</select>
+  <delete id="deleteOldEvents">delete from learner_events where tenant_id = #{tid} and at &lt; now() - interval '90 days'</delete>
+  <select id="selectConsent" resultType="java.util.LinkedHashMap">select consent::text consent, true has from learners where tenant_id = #{tid} and sid = #{sid}</select>
+  <update id="setConsent">update learners set consent = #{v}::jsonb where tenant_id = #{tid} and sid = #{sid} and consent is null</update>
 </mapper>

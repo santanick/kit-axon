@@ -194,7 +194,7 @@ ACT['en-codes'] = () => { const lines = $('#enL').value.split('\n').map(s => s.s
     if (U && !S.members.some(m => m.sid === sid || (m.extra || {}).학번 === sid)) { S.members.push({ id: uid('m'), name: sid, nick: '', email: '', phone: '', sid, group: S.groups[0]?.id || '', grade: '정회원', joined: today(), last: '', extra: { 학번: sid, 학과: (dept || '').slice(0, 20) } }); nm++; } }); /* v32.8 발급한 학번은 명단에 바로(학번 · 학과만, QA U2) */
   logAudit(`접근코드 발급 ${lines.length}건`); save(); render(); const skip = raw - lines.length; toast(`${lines.length}건 발급했습니다${nm ? ` · 명단에 ${nm}명 추가` : ''}${skip > 0 ? ` · 형식이 맞지 않는 ${skip}줄은 건너뛰었습니다(학번 숫자 6~10자리)` : ''}. 학과 사무실에 배포하세요.`, skip > 0 ? 'warn' : 'ok'); };
 ACT['en-csv'] = () => downloadCSV(`접근코드_${today()}.csv`, ['학번', '학과', '접근코드', '발급일'], S.codes.map(c => [c.sid, c.dept, c.code, c.at]));
-ACT['en-copy'] = () => { const txt = `[${S.org.name}] 학습 포털 첫 로그인 안내\n주소: https://${S.org.domain}\n학번과 학교에서 받은 접근코드로 로그인하세요.`; const no = () => toast('복사하지 못했습니다. 브라우저의 클립보드 권한을 확인해 주세요.', 'warn'); try { navigator.clipboard.writeText(txt).then(() => toast('안내 문구를 복사했습니다.', 'ok'), no); } catch (e) { no(); } };
+ACT['en-copy'] = () => { const txt = `[${S.org.name}] 학습 포털 첫 로그인 안내\n주소: https://${S.org.domain}\n학번과 학교에서 받은 접근코드로 로그인하세요.\n첫 로그인 때 이용약관 · 개인정보(학번 · 학과만 수집) 동의 화면이 한 번 나옵니다. 비밀번호는 만들지 않습니다.`; const no = () => toast('복사하지 못했습니다. 브라우저의 클립보드 권한을 확인해 주세요.', 'warn'); try { navigator.clipboard.writeText(txt).then(() => toast('안내 문구를 복사했습니다.', 'ok'), no); } catch (e) { no(); } };
 
 /* ═════════ 설정 › 메뉴 구성 (공간 순서 · 탭 켜기/끄기 · 순서) ═════════ */
 function navEditor() {

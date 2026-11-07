@@ -31,4 +31,8 @@ public interface PiiService {
     int purge() throws Exception;
     /** 학습자 세션(30일) 발급 */
     void newLearnerSession(HttpServletResponse res, String tid, String sid) throws Exception;
+    /** v33 학습자 → 운영자 요청함 기록(L 역할 트랜잭션 안에서) */
+    void evIns(String tid, String sid, String type, com.fasterxml.jackson.databind.JsonNode data);
+    /** v33 요청 본문 개인정보 가림(Node pii.redactDeep) */
+    com.fasterxml.jackson.databind.JsonNode redactDeep(com.fasterxml.jackson.databind.JsonNode v);
 }
