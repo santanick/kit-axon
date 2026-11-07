@@ -17,6 +17,7 @@
   /* ═════════ ① siteFromTpl 감싸기: 테마 · 첫 화면 배치 ═════════ */
   { const base = siteFromTpl; siteFromTpl = tp => { const s = base(tp);
     try {
+      s.v251 = 1; /* 새 템플릿 사이트: hpai의 v25.1 이전 사이트 문구 교체(템플릿과 같은 첫 화면 → 기본 문구)를 건너뛴다 */
       if (tp && tp.theme && hasHPT(tp.theme)) HPT.apply(s, tp.theme, { color: /^#[0-9a-f]{6}$/i.test(tp.color || '') ? tp.color : undefined });
       if (tp && tp.hero && HOK.test(tp.hero)) { const b = A(s.sections).find(x => x && x.type === 'banner'); if (b) { b.data = b.data || {}; b.data.hero = tp.hero; } }
     } catch (e) { console.error('tpl-d siteFromTpl', e); }
@@ -270,7 +271,7 @@
       <div><dt>섹션 순서</dt><dd>${esc(live.join(' → '))}</dd></div>${tp.ref ? `<div><dt>구성 참고</dt><dd>${esc(tp.ref)}</dd></div>` : ''}${A(tp.langs).length > 1 ? `<div><dt>언어</dt><dd>${esc(tp.langs.map(l => (typeof langName === 'function' ? langName(l) : l)).join(' · '))}</dd></div>` : ''}</dl>
       <p class="mini">숫자 · 후기 · 강사 · 연락처는 우리 기관의 실제 데이터로만 채웁니다. 없는 섹션은 게시본에서 숨겨집니다.</p></div>`,
       `<button type="button" class="btn ghost" data-act="sl-close">닫기</button><button type="button" class="btn pri" data-act="tpd-use" data-v="${esc(tp.id)}">이 템플릿으로 시작</button>`);
-    w.classList.add('tpd-sw'); const f = w.querySelector('.tpd-pv iframe'); f.srcdoc = htmlOf(tp); requestAnimationFrame(fitPv); setTimeout(fitPv, 260); };
+    w.classList.add('tpd-sw'); const f = w.querySelector('.tpd-pv iframe'); f.srcdoc = htmlOf(tp); if (innerWidth < 700) { const mb = w.querySelector('[data-act=tpd-dev][data-v=m]'); if (mb) ACT['tpd-dev'](mb); } /* 휴대폰에서는 휴대폰 미리보기부터 */ requestAnimationFrame(fitPv); setTimeout(fitPv, 260); };
   ACT['tpd-dev'] = el => { const b = document.querySelector('#slSheet .tpd-pv'); if (!b) return; b.classList.toggle('m', el.dataset.v === 'm'); el.parentElement.querySelectorAll('button').forEach(x => { const on = x === el; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); }); fitPv(); };
   /* 템플릿 적용(기존 tpl-use · 미리보기 창 포함): 실제 데이터 보강 + 품질 보정 */
   { const base = ACT['tpl-use']; ACT['tpl-use'] = el => { base(el); try { if (S.site && S.site.tpl === el.dataset.v) { const pub = S.site.published, at = S.site.at; S.site = prep(S.site); S.site.published = pub; S.site.at = at; save(); render(); } } catch (e) { console.error('tpl-d use', e); } }; }
