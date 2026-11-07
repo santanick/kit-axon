@@ -1,1 +1,35 @@
-/* v34.3 tpl-d */
+/* v34.3 tpl-d — 홈페이지 템플릿 갤러리(v34 공통 틀): 칩 · 검색 · 실제 축소 썸네일 카드 · 오른쪽 시트 미리보기 */
+.sl-page:has(.tpd-g){max-width:1180px}
+.tpd-f .sl-chips{padding-bottom:8px}
+.tpd-f .sl-chips button{min-height:34px;padding:0 14px;font-size:14px}
+.tpd-q{margin:0 0 6px}
+.tpd-cnt{margin:6px 2px 12px}
+.tpd-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px;margin-bottom:28px}
+.tpd-c{display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 0 0 1px var(--g200,#E5E7EB);overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;outline:0;min-width:0}
+.tpd-c[hidden]{display:none}
+.tpd-c:hover{transform:translateY(-2px);box-shadow:0 0 0 1px var(--g300,#D1D5DB),0 14px 30px -18px rgba(17,24,39,.35)}
+.tpd-c:focus-visible{box-shadow:0 0 0 3px var(--p500,#5C74F6)}
+.tpd-th{position:relative;aspect-ratio:16/10;overflow:hidden;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 14%,#fff),#F6F7FA);border-bottom:1px solid var(--g200,#E5E7EB)}
+.tpd-th iframe{position:absolute;left:0;top:0;width:1280px;height:800px;border:0;transform-origin:0 0;pointer-events:none;background:#fff}
+.tpd-th:not([data-ok])::after{content:'';position:absolute;left:12%;right:12%;top:28%;height:10%;border-radius:8px;background:color-mix(in srgb,var(--c) 30%,#fff);box-shadow:0 40px 0 -8px #E9EAEE,0 70px 0 -8px #EEF0F3}
+.tpd-now{position:absolute;right:10px;top:10px;background:#111827;color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px}
+.tpd-cb{display:flex;flex-direction:column;gap:4px;padding:14px 16px 16px;min-width:0}
+.tpd-cb b{font-size:15.5px;letter-spacing:-.01em}
+.tpd-cb small{color:var(--g600,#4B5563);font-size:13px;line-height:1.5}
+.tpd-tg{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12.5px;color:var(--g700,#374151);font-weight:600}
+.tpd-tg i,.tpd-dl i{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;margin-right:2px;vertical-align:-1px}
+/* 시트 */
+.tpd-sw .sl-sheet{width:min(820px,100%)}
+.tpd-sh{display:flex;flex-direction:column;gap:12px}
+.tpd-dev{padding-bottom:4px}
+.tpd-pv{position:relative;overflow:hidden;border-radius:14px;box-shadow:0 0 0 1px var(--g200,#E5E7EB);background:#F6F7FA;width:100%}
+.tpd-pv iframe{position:absolute;left:0;top:0;border:0;transform-origin:0 0;background:#fff}
+.tpd-pv.m{max-width:390px;margin:0 auto;border-radius:28px;box-shadow:0 0 0 8px #111827}
+.tpd-sc{margin:0;font-weight:700;font-size:15px}
+.tpd-dl{margin:0;display:flex;flex-direction:column;gap:8px}
+.tpd-dl div{display:grid;grid-template-columns:88px 1fr;gap:10px;font-size:14px}
+.tpd-dl dt{color:var(--g600,#4B5563)}.tpd-dl dd{margin:0}
+/* AI 마법사 ① 테마 단계의 링크 */
+.tpd-wz{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:12px 14px;border-radius:14px;background:var(--g100,#F3F4F6);font-size:14px}
+@media(max-width:560px){.tpd-g{grid-template-columns:1fr 1fr;gap:10px}.tpd-cb{padding:10px 12px 12px}.tpd-cb small{display:none}.tpd-tg{font-size:11.5px;flex-wrap:wrap}.tpd-dl div{grid-template-columns:76px 1fr}}
+@media(max-width:360px){.tpd-g{grid-template-columns:1fr}}

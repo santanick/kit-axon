@@ -5,14 +5,14 @@
    안내표 · 바로가기 · 스토리 · 강사 · CTA · 협력기관 · 모듈을 표현한다. 외부 이미지 없이 CSS · 인라인 SVG로 그린다. */
 'use strict';
 const LOOKS = {
-  navyGlow: { n: '네이비 글로우', ref: '동원과기대 ATC · SHCB 캠프' },
-  mintSoft: { n: '소프트 그라데이션', ref: '어빌리티랩 퍼실리테이터' },
-  senior: { n: '큰 글씨 · 시니어', ref: '화정종합사회복지관 ATC' },
-  brandBold: { n: '브랜드 컬러 풀 배너', ref: '이재식국어학원 · 이승모T' },
-  corpPortal: { n: '기업 교육 포털', ref: '나이스평가정보 · 120다산콜재단' },
-  storyNumbered: { n: '스토리텔링 밴드', ref: '한진세이버 교육' },
-  publicTiles: { n: '배너 · 바로가기 타일', ref: 'KOBC · 군산 공명' },
-  campus: { n: '사업단 · 일정표형', ref: '부산창업공유대학 · 동아대 RISE' }
+  navyGlow: { n: '네이비 글로우', ref: '대학 AI 교육센터 · 캠프 포털형' },
+  mintSoft: { n: '소프트 그라데이션', ref: '부드러운 그라데이션 교육 포털형' },
+  senior: { n: '큰 글씨 · 시니어', ref: '복지관 디지털 교육형' },
+  brandBold: { n: '브랜드 컬러 풀 배너', ref: '학원 · 강사 브랜드형' },
+  corpPortal: { n: '기업 교육 포털', ref: '기업 · 공공 교육 포털형' },
+  storyNumbered: { n: '스토리텔링 밴드', ref: '기업 고객 교육형' },
+  publicTiles: { n: '배너 · 바로가기 타일', ref: '공공 · 평생학습 바로가기형' },
+  campus: { n: '사업단 · 일정표형', ref: '대학 사업단 · 일정표형' }
 };
 /* ── 색 도우미 ── */
 function hx(h) { h = String(h || '#2A2B2B').replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
@@ -23,124 +23,123 @@ function rgba(h, a) { const [r, g, b] = hx(h); return `rgba(${r},${g},${b},${a})
 const T2 = (variant, data) => S2('text', { variant, ...data });
 const spOrg = () => (S.org.name || '').replace(/(주식회사|\(주\)|재단법인|사단법인)/g, '').trim();
 const SITEV2 = {
-  'corp-academy': ['corpPortal', '나이스평가정보 교육 포털', () => [
+  'corp-academy': ['corpPortal', '기업 교육 포털형 — 카테고리 · 인기 과정', () => [
     S2('banner', { eyebrow: 'CORPORATE ACADEMY', title: `${spOrg()} 아카데미`, sub: '직무 역량부터 리더십 · 법정의무교육까지, 필요한 교육을 필요한 때에 이수하고 기록합니다.', cta: '내 교육 보기', cta2: '연간 교육 계획', chips: [['01', '직무 전문성', '부서 · 직급별 필수 과정'], ['02', 'AX 역량', 'AI 도구 실무 활용 과정'], ['03', '현장 중심', '사내 사례 기반 실습 · 평가']] }),
     T2('tiles', { eyebrow: 'CATEGORY', title: '교육 카테고리', cols: [['직무 교육', 'Job Skills'], ['리더십', 'Leadership'], ['법정의무교육', 'Compliance'], ['AX · 디지털', 'AI Transformation']] }),
     S2('classes', { eyebrow: 'POPULAR', title: '이번 분기 인기 과정', sub: '수강 신청이 많은 과정을 먼저 보여 드립니다.', ids: pubCls(4), layout: 'grid' }),
     S2('notices', { eyebrow: 'NOTICE', title: '교육 공지', n: 4 }),
-    T2('cta', { title: '교육 문의 및 FAQ', body: '수강 신청 · 이수증 · 환급 관련 문의는 교육지원센터로 연락해 주세요.', cta: '교육지원센터 바로가기', cols: [['운영 시간', '평일 09:00 ~ 18:00'], ['담당', '인재개발팀']] })]],
-  'corp-onboard': ['mintSoft', '어빌리티랩 퍼실리테이터 포털', () => [
+    T2('cta', { title: '교육 문의 및 FAQ', body: '수강 신청 · 이수증 · 환급 관련 문의는 교육지원센터로 연락해 주세요.', cta: '교육지원센터 바로가기', cols: [] })]],
+  'corp-onboard': ['mintSoft', '온보딩 포털형 — 30일 로드맵', () => [
     S2('banner', { eyebrow: 'ONBOARDING 30 DAYS', title: `${spOrg()}에 오신 것을\n환영합니다`, sub: '입사 첫 30일, 꼭 알아야 할 것만 순서대로 안내합니다.', cta: '온보딩 시작', cta2: '일정 보기', chips: [['1차시', '회사 · 문화'], ['2차시', '업무 도구'], ['3차시', '직무 기초'], ['4차시', '멘토 회고']] }),
     T2('features', { eyebrow: 'PROGRAM', title: '온보딩 프로그램', body: '입사 첫 달, 혼자 헤매지 않도록 필요한 정보와 사람을 연결합니다.', cols: [['대상', '신규 입사자 전원'], ['기간', '입사 후 30일'], ['방식', '온라인 학습 + 멘토 미팅'], ['도구', '사내 시스템 · 협업 툴'], ['멘토', '부서별 1:1 버디'], ['수료', '30일 회고 · 수료 배지']] }),
     T2('roadmap', { eyebrow: 'ROADMAP', title: '2단계 온보딩 로드맵', cols: [['공통 온보딩 · 1~2주', '회사 이해 · 규정 · 업무 도구 실습'], ['직무 온보딩 · 3~4주', '부서별 직무 기초 · 멘토 미팅 · 회고']] }),
     S2('classes', { eyebrow: 'COURSES', title: '온보딩 필수 과정', ids: pubCls(4), layout: 'grid' }),
     T2('cta', { title: '궁금한 점은 언제든', body: '인사팀과 버디에게 바로 물어보세요.', cta: 'FAQ 바로가기', cols: [['문의', '인사팀'], ['기간', '입사 후 30일']] })]],
-  'corp-legal': ['publicTiles', '120다산콜재단 온라인 교육 연수원', () => [
+  'corp-legal': ['publicTiles', '온라인 연수원형 — 바로가기 · 이수 기준', () => [
     S2('banner', { eyebrow: '2026 법정의무교육', title: '법정의무교육\n온라인 연수원', sub: '성희롱 예방 · 개인정보 보호 · 장애인 인식 개선 · 직장 내 괴롭힘 예방 교육을 마감 전에 이수하세요.', cta: '미이수 과정 보기', chips: [['연 1회', '4종 필수']] }),
     T2('tiles', { title: '바로가기', cols: [['수강 신청', 'REGISTRATION'], ['이수증 발급', 'CERTIFICATE'], ['문의 게시판', 'FAQ BOARD']] }),
-    T2('info', { eyebrow: 'GUIDE', title: '이수 기준', cols: [['대상', '전 임직원(계약 · 파견 포함)'], ['이수 기준', '진도 80% 이상 + 평가 통과'], ['기한', '매년 12월 15일까지'], ['증빙', '이수증 자동 발급 · 부서별 현황 보고']] }),
+    T2('info', { eyebrow: 'GUIDE', title: '이수 기준', cols: [['대상', '전 임직원(계약 · 파견 포함)'], ['이수 기준', '진도 80% 이상 + 평가 통과'], ['기한', '기관 공지에서 확인'], ['증빙', '이수증 자동 발급 · 부서별 현황 보고']] }),
     S2('classes', { eyebrow: 'COURSES', title: '올해 법정교육', ids: pubCls(4), layout: 'grid' }),
     S2('notices', { title: '마감 안내', n: 3 })]],
-  'corp-partner': ['storyNumbered', '한진세이버 교육 포털', () => [
+  'corp-partner': ['storyNumbered', '고객 · 파트너 교육형 — 번호 스토리', () => [
     S2('banner', { eyebrow: 'PARTNER ACADEMY', title: '제품을 가장 잘 쓰는 방법,\n파트너 아카데미와 함께', sub: '고객과 파트너를 위한 단계별 제품 교육과 인증 프로그램.', cta: '인증 과정 시작', cta2: '교육 일정' }),
     T2('story', { cols: [['처음부터 제대로 배우자!', '기초 개념부터 현장 사례까지, 누구든지 제품 전문가로 성장할 수 있어요.'], ['이론만? NO! 실습으로 탄탄히!', '실습 환경에서 실제 시나리오로 연습합니다.'], ['인증까지 한 번에', '교육 수료 후 실무 능력을 증명하는 인증서를 발급합니다.']] }),
     S2('classes', { eyebrow: 'CERTIFICATION', title: '인증 과정', ids: pubCls(4), layout: 'grid' }),
     S2('reviews', { title: '수강 후기', note: '실제 후기만 표시' }),
-    S2('map', { title: '교육 문의', addr: S.settings.footer.addr || '고객 성공팀', tel: S.settings.footer.tel || '대표번호', hours: '평일 10:00 ~ 17:00' })]],
-  'univ-aicenter': ['navyGlow', '동원과학기술대학교 ATC', () => [
-    S2('banner', { eyebrow: 'AI TRAINING CENTER', title: `${spOrg()}\nAI Training Center`, sub: 'AI 진단으로 나의 유형을 확인하고, 단계별 러닝 저니를 완주해 디지털 배지를 받으세요.', cta: 'AI 진단 시작하기', cta2: 'AI 튜토리얼 보기', stats: [['5', '가지 AI 유형'], ['3', '단계 러닝 저니'], ['15', '개 코스'], ['∞', '언제든 수강']], mark: 'AI' }),
+    S2('map', { title: '교육 문의', addr: S.settings.footer.addr || '', tel: S.settings.footer.tel || '' })]],
+  'univ-aicenter': ['navyGlow', '대학 AI 교육센터형 — 진단 · 러닝 저니', () => [
+    S2('banner', { eyebrow: 'AI TRAINING CENTER', title: `${spOrg()}\nAI Training Center`, sub: 'AI 진단으로 나의 유형을 확인하고, 단계별 러닝 저니를 완주해 디지털 배지를 받으세요.', cta: 'AI 진단 시작하기', cta2: 'AI 튜토리얼 보기', stats: [['5', '가지 AI 유형'], ['3', '단계 러닝 저니'], [String(pubCls(99).length), '개 공개 코스'], ['∞', '언제든 수강']], mark: 'AI' }),
     T2('features', { eyebrow: 'AI TUTORIAL', title: '나의 성향에 맞는 AI를 찾아보세요', body: 'SPZ 유형별 튜토리얼로 GPT · Claude · Gemini를 단계별로 배울 수 있습니다.', style: 'prism', cols: [['시각 / 이미지형', 'PRISM EYE'], ['영상 / 스토리형', 'PRISM STORY'], ['탐색 / 분석형', 'PRISM LENS'], ['글 / 문서형', 'PRISM PEN'], ['구조 / 기획형', 'PRISM MAP']] }),
     S2('notices', { eyebrow: 'NOTICE & SCHEDULE', title: '공지사항 및 교육 일정', n: 3 }),
     S2('classes', { eyebrow: 'ONLINE CONTENTS', title: '온라인 콘텐츠', sub: '언제 어디서나 AI 활용 방법을 영상으로 배워 보세요.', ids: pubCls(4), layout: 'grid' }),
-    S2('map', { title: '센터 위치 · 문의', addr: S.settings.footer.addr || '센터 주소', tel: S.settings.footer.tel || '대표번호', hours: '평일 09:00 ~ 18:00' })]],
-  'univ-extra': ['campus', '부산창업공유대학 · 동아대 RISE', () => [
+    S2('map', { title: '센터 위치 · 문의', addr: S.settings.footer.addr || '', tel: S.settings.footer.tel || '' })]],
+  'univ-extra': ['campus', '대학 비교과 포털형 — 일정표', () => [
     S2('banner', { eyebrow: 'EXTRACURRICULAR', title: '비교과로 채우는 나의 역량', sub: '특강 · 공모전 · 멘토링에 참여하고 역량 마일리지와 배지를 모으세요.', cta: '프로그램 신청', cta2: '일정표 보기' }),
     T2('stats', { cols: [[String(Math.max(3, S.classes.length)), '운영 프로그램'], ['VOD', '언제든 다시 보기'], ['1:1', '전문가 멘토링']] }),
     T2('features', { eyebrow: 'WHY', title: '우리 프로그램만의 특징', cols: [['역량 마일리지', '참여할수록 쌓이는 비교과 기록'], ['디지털 배지', '이수한 역량을 증명'], ['멘토 코칭', '현업 전문가 피드백']] }),
     S2('classes', { eyebrow: 'CLASSES', title: '어디에서나 참여 가능한 클래스', ids: pubCls(4), layout: 'grid' }),
     T2('timeline', { eyebrow: 'SCHEDULE', title: '교육 과정 일정표', cols: [['1차시', '오리엔테이션 · 팀 빌딩'], ['2~3차시', '문제 정의 · 시장 조사'], ['4~6차시', '프로젝트 실습 · 멘토링'], ['7차시', '결과 발표 · 수료']] }),
-    T2('profiles', { eyebrow: 'MENTORS', title: '멘토 소개', cols: [['멘토 A', '현업 전문가 · 기획'], ['멘토 B', '스타트업 대표 · 투자'], ['멘토 C', 'AI 엔지니어'], ['멘토 D', '디자이너 · UX']] }),
     S2('notices', { title: '공지사항', n: 3 })]],
-  'univ-lms': ['navyGlow', 'SHCB 스마트 헬스 커리어 브릿지', () => [
-    S2('banner', { eyebrow: 'ONLINE CLASSROOM', title: '차시별로 따라가는\n온라인 강의실', sub: '강의 영상 · 강의자료 · 과제 · 시험을 한 화면에서 확인하세요.', cta: '내 강의실', cta2: '수업 안내', stats: [['15', '주 편성'], ['8', '주 중간고사'], ['15', '주 기말고사'], ['100', '점 루브릭']], mark: 'CLASS' }),
+  'univ-lms': ['navyGlow', '학과 온라인 강의실형 — 모듈 · 학기 일정', () => [
+    S2('banner', { eyebrow: 'ONLINE CLASSROOM', title: '차시별로 따라가는\n온라인 강의실', sub: '강의 영상 · 강의자료 · 과제 · 시험을 한 화면에서 확인하세요.', cta: '내 강의실', cta2: '수업 안내', stats: [['차시별', '강의 영상'], ['퀴즈', '출석 인정'], ['루브릭', '과제 평가'], ['온라인', '중간 · 기말']], mark: 'CLASS' }),
     T2('modules', { eyebrow: 'MODULES', title: '수업 구성', body: '매주 강의를 수강하고 확인 퀴즈를 풀면 출석이 인정됩니다.', cols: [['M1 강의 영상', '차시별 핵심 개념'], ['M2 강의자료', '핸드아웃 · 워크시트'], ['M3 확인 퀴즈', '출석 인정'], ['M4 과제', '루브릭 기준 평가'], ['M5 중간 · 기말', '온라인 시험'], ['M6 피드백', '과제별 코멘트']] }),
-    T2('timeline', { eyebrow: 'SCHEDULE', title: '학기 일정', cols: [['1~7주', '차시별 강의 · 퀴즈'], ['8주', '중간고사'], ['9~14주', '프로젝트 과제'], ['15주', '기말고사']] }),
+    T2('timeline', { eyebrow: 'SCHEDULE', title: '학기 일정', cols: [['학기 초', '차시별 강의 · 퀴즈'], ['중간', '중간고사'], ['학기 후반', '프로젝트 과제'], ['학기 말', '기말고사']] }),
     S2('classes', { eyebrow: 'SUBJECTS', title: '이번 학기 교과목', ids: pubCls(4), layout: 'grid' }),
-    T2('cta', { title: '수업 관련\n문의 및 FAQ', body: '자주 묻는 질문과 담당자 연락처를 확인하세요.', cta: 'FAQ 바로가기', cols: [['수업 기간', '15주'], ['평가', '루브릭 공개']] })]],
-  'univ-lifelong': ['mintSoft', '어빌리티랩 · 대학 평생교육', () => [
+    T2('cta', { title: '수업 관련\n문의 및 FAQ', body: '자주 묻는 질문과 담당자 연락처를 확인하세요.', cta: 'FAQ 바로가기', cols: [] })]],
+  'univ-lifelong': ['mintSoft', '대학 평생교육원형 — 수강 안내', () => [
     S2('banner', { eyebrow: '대학 평생교육원', title: '대학에서 배우는 즐거움', sub: '교수진이 직접 여는 시민 강좌, 온라인과 캠퍼스에서 만나요.', cta: '강좌 둘러보기', cta2: '수강 안내', chips: [['교수진', '직접 강의'], ['캠퍼스', '오프라인'], ['온라인', '다시 보기'], ['수료증', '발급']] }),
-    T2('features', { eyebrow: 'GUIDE', title: '수강 안내', cols: [['대상', '지역 주민 누구나'], ['기간', '학기별 8~12주'], ['장소', '캠퍼스 · 온라인'], ['수강료', '강좌별 상이'], ['신청', '온라인 선착순'], ['수료', '출석 80% 이상']] }),
+    T2('features', { eyebrow: 'GUIDE', title: '수강 안내', cols: [['대상', '지역 주민 누구나'], ['기간', '강좌별 안내'], ['장소', '캠퍼스 · 온라인'], ['수강료', '강좌별 상이'], ['신청', '온라인 신청'], ['수료', '수료 기준 충족 시 수료증']] }),
     S2('classes', { eyebrow: 'COURSES', title: '이번 학기 시민 강좌', ids: pubCls(4), layout: 'grid' }),
     S2('reviews', { title: '수강 후기', note: '' }),
-    S2('map', { title: '오시는 길', addr: S.settings.footer.addr || '캠퍼스 주소', tel: S.settings.footer.tel || '대표번호', hours: '평일 09:00 ~ 18:00' })]],
-  'k12-total': ['brandBold', '이재식국어학원', () => [
+    S2('map', { title: '오시는 길', addr: S.settings.footer.addr || '', tel: S.settings.footer.tel || '' })]],
+  'k12-total': ['brandBold', '종합학원형 — 주간 관리 루틴', () => [
     S2('banner', { eyebrow: '진짜 공부의 시작', title: '실력은 쌓이고\n성적은 선명해진다', sub: '반별 맞춤 수업 · 매 회차 테스트 · 보호자 리포트로 성적 변화를 함께 확인합니다.', cta: '1:1 상담 신청', cta2: '레벨 테스트', stats: [[String(S.classes.length), '개 반 운영'], [String(S.members.length), '명 재원'], ['주 1회', '보호자 리포트']] }),
     T2('steps', { eyebrow: '주간 학습 관리', title: '주간 4단계 학습 관리 루틴', body: '진단 → 수업 → 클리닉 → 피드백으로 이어지는 관리 체계입니다.', cols: [['주간 정밀 진단', '테스트로 약점 파악'], ['핵심 압축 수업', '반별 맞춤 진도'], ['1:1 심층 클리닉', '오답 · 서술형 보완'], ['학부모 리포트', '주간 성취 · 출결 공유']] }),
     S2('classes', { eyebrow: 'CLASSES', title: '반 안내', ids: pubCls(4), layout: 'grid' }),
     S2('reviews', { title: '학부모 후기', note: '' }),
-    S2('map', { title: '오시는 길 · 상담', addr: S.settings.footer.addr || '학원 주소', tel: S.settings.footer.tel || '상담 전화', hours: '평일 14:00 ~ 22:00' })]],
-  'k12-exam': ['brandBold', '이승모T 브랜드 사이트', () => [
+    S2('map', { title: '오시는 길 · 상담', addr: S.settings.footer.addr || '', tel: S.settings.footer.tel || '' })]],
+  'k12-exam': ['brandBold', '입시 · 관리형 학원형 — 시간표', () => [
     S2('banner', { eyebrow: '입시 · 관리형', title: '목표 대학까지\n매일 관리합니다', sub: '1:1 학습 플랜 · 주간 모의고사 · 오답 클리닉.', cta: '레벨 테스트 신청', cta2: '시간표 보기', stats: [['1:1', '학습 플랜'], ['주 1회', '모의고사'], ['매일', '자습 관리']], dark: true }),
-    T2('timeline', { eyebrow: 'TIMETABLE', title: '수업 시간표', cols: [['월 · 수', '내신 대비반 18:00 ~ 22:00'], ['화 · 목', '수능 집중반 18:00 ~ 22:00'], ['토', '주간 모의고사 09:00 ~ 12:00'], ['일', '오답 클리닉 14:00 ~ 18:00']] }),
+    T2('timeline', { eyebrow: 'TIMETABLE', title: '수업 시간표', cols: [['평일 A', '내신 대비반'], ['평일 B', '수능 집중반'], ['주말', '주간 모의고사'], ['주말', '오답 클리닉']] }),
     S2('slideBanner', { title: '소식', slides: ['겨울방학 윈터스쿨 모집', '주말 오답 클리닉 운영', '신학기 레벨 테스트 안내'], sec: 5 }),
     S2('classes', { eyebrow: 'CLASSES', title: '관 · 반 안내', ids: pubCls(4), layout: 'grid' }),
     S2('notices', { title: '입시 공지', n: 4 }),
-    S2('map', { title: '상담 · 위치', addr: S.settings.footer.addr || '학원 주소', tel: S.settings.footer.tel || '상담 전화', hours: '매일 09:00 ~ 23:00' })]],
-  'k12-kids': ['publicTiles', '군산 공명 · KOBC', () => [
+    S2('map', { title: '상담 · 위치', addr: S.settings.footer.addr || '', tel: S.settings.footer.tel || '' })]],
+  'k12-kids': ['publicTiles', '키즈 학원형 — 바로가기 타일', () => [
     S2('banner', { eyebrow: '놀이처럼 배우는', title: '영어 · 코딩\n키즈 클래스', sub: '아이 눈높이 프로젝트 수업, 매달 결과물 발표회.', cta: '무료 체험 신청', chips: [['매달', '발표회']] }),
     T2('tiles', { title: '바로가기', cols: [['체험 신청', 'FREE TRIAL'], ['반 안내', 'CLASSES'], ['학부모 문의', 'Q&A']] }),
     T2('features', { eyebrow: 'HOW WE TEACH', title: '수업 방식', body: '20분 개념 · 30분 프로젝트 · 10분 발표로 아이가 스스로 만들고 말하게 합니다.', cols: [['원어민 영어', '파닉스 → 리딩'], ['코딩', '블록 → 파이썬'], ['발표회', '매월 1회']] }),
     S2('classes', { eyebrow: 'CLASSES', title: '반 안내', ids: pubCls(4), layout: 'grid' }),
     S2('reviews', { title: '학부모 후기', note: '' })]],
-  'adult-cert': ['corpPortal', '나이스평가정보 · 자격 과정', () => [
-    S2('banner', { eyebrow: 'CERTIFICATION', title: '한 번에 합격하는\n커리큘럼', sub: '기출 분석 · 단계별 강의 · 모의고사로 합격까지 이끕니다.', cta: '강좌 둘러보기', chips: [['01', '이론', '핵심 개념 정리'], ['02', '기출', '최근 10개년 분석'], ['03', '모의고사', '실전 환경 점검']] }),
+  'adult-cert': ['corpPortal', '자격 과정형 — 단계별 커리큘럼', () => [
+    S2('banner', { eyebrow: 'CERTIFICATION', title: '한 번에 합격하는\n커리큘럼', sub: '기출 분석 · 단계별 강의 · 모의고사로 합격까지 이끕니다.', cta: '강좌 둘러보기', chips: [['01', '이론', '핵심 개념 정리'], ['02', '기출', '최근 기출 분석'], ['03', '모의고사', '실전 환경 점검']] }),
     T2('tiles', { eyebrow: 'CLASS TYPE', title: '수강 방식', cols: [['Online Class', '언제든 수강'], ['Offline Class', '현장 강의'], ['특강', '시험 직전 점검']] }),
     S2('classes', { eyebrow: 'POPULAR', title: '인기 강좌', ids: pubCls(4), layout: 'grid', price: true }),
     S2('reviews', { title: '합격 후기', note: '' }),
     S2('books', { title: '교재', ids: S.books.map(b => b.id) })]],
-  'adult-bootcamp': ['navyGlow', 'SHCB 캠프 포털', () => [
-    S2('banner', { eyebrow: 'BOOTCAMP', title: '12주 후,\n개발자로 일합니다', sub: '현업 멘토와 실무 프로젝트 4개 · 포트폴리오 · 취업 연계.', cta: '지원하기', cta2: '커리큘럼', stats: [['12', '주 풀타임'], ['4', '개 프로젝트'], ['1:1', '멘토링'], ['취업', '연계']], mark: 'CODE' }),
+  'adult-bootcamp': ['navyGlow', '부트캠프형 — 모듈 · 기수', () => [
+    S2('banner', { eyebrow: 'BOOTCAMP', title: '실무 프로젝트로\n개발자를 준비합니다', sub: '현업 멘토와 실무 프로젝트 · 포트폴리오 · 취업 준비까지 함께합니다.', cta: '지원하기', cta2: '커리큘럼', stats: [['풀타임', '집중 과정'], ['팀', '프로젝트'], ['멘토', '코드 리뷰'], ['취업', '준비 지원']], mark: 'CODE' }),
     T2('modules', { eyebrow: 'MODULES', title: '4단계 교육 모듈', cols: [['M1 기초', '프로그래밍 · Git'], ['M2 프론트엔드', 'React · 디자인 시스템'], ['M3 백엔드', 'API · 데이터베이스'], ['M4 팀 프로젝트', '서비스 출시 · 데모데이']] }),
     S2('video', { title: '데모데이 영상', url: '' }),
     S2('classes', { eyebrow: 'COHORT', title: '모집 중 기수', ids: pubCls(4), layout: 'grid' }),
-    T2('cta', { title: '지원 관련\n문의 및 FAQ', body: '지원 자격 · 일정 · 비용을 확인하세요.', cta: 'FAQ 바로가기', cols: [['기간', '12주'], ['방식', '온 · 오프라인 병행']] })]],
-  'adult-hobby': ['storyNumbered', '한진세이버형 스토리 · 원데이', () => [
+    T2('cta', { title: '지원 관련\n문의 및 FAQ', body: '지원 자격 · 일정 · 비용을 확인하세요.', cta: 'FAQ 바로가기', cols: [['방식', '온 · 오프라인 병행']] })]],
+  'adult-hobby': ['storyNumbered', '원데이 클래스형 — 번호 스토리', () => [
     S2('banner', { eyebrow: 'ONE-DAY CLASS', title: '오늘,\n나를 위한 한 시간', sub: '드로잉 · 베이킹 · 플라워, 원데이부터 정규반까지.', cta: '클래스 예약', cta2: '이번 주 일정' }),
-    T2('story', { cols: [['처음이어도 괜찮아요', '모든 재료와 도구를 준비해 두었어요.'], ['소규모로 꼼꼼하게', '한 반 6명, 강사가 옆에서 도와드려요.'], ['완성품은 집으로', '오늘 만든 작품을 그대로 가져가세요.']] }),
+    T2('story', { cols: [['처음이어도 괜찮아요', '모든 재료와 도구를 준비해 두었어요.'], ['소규모로 꼼꼼하게', '적은 인원으로, 강사가 옆에서 도와드려요.'], ['완성품은 집으로', '오늘 만든 작품을 그대로 가져가세요.']] }),
     S2('classes', { eyebrow: 'THIS WEEK', title: '이번 주 클래스', ids: pubCls(4), layout: 'grid', price: true }),
     S2('reviews', { title: '수강 후기', note: '' }),
-    S2('map', { title: '오시는 길', addr: S.settings.footer.addr || '스튜디오 주소', tel: S.settings.footer.tel || '예약 문의', hours: '화~일 11:00 ~ 21:00' })]],
-  'adult-lang': ['mintSoft', '어빌리티랩형 · 다국어', () => [
+    S2('map', { title: '오시는 길', addr: S.settings.footer.addr || '', tel: S.settings.footer.tel || '' })]],
+  'adult-lang': ['mintSoft', '외국어 학원형 — 다국어', () => [
     S2('banner', { eyebrow: 'LANGUAGE ACADEMY', title: '말이 트이는 순간까지', sub: '레벨 테스트로 시작해 회화 · 시험 대비까지 단계별로.', cta: '레벨 테스트', cta2: '과정 안내', chips: [['English', 'A1 ~ C1'], ['日本語', 'JLPT'], ['中文', 'HSK'], ['Español', 'DELE']] }),
     T2('features', { eyebrow: 'COURSES', title: '언어별 과정', body: '레벨별 소규모 수업으로 진행합니다.', cols: [['영어', 'A1 ~ C1 회화 · 비즈니스'], ['일본어', 'JLPT N5 ~ N1'], ['중국어', 'HSK 1 ~ 6급'], ['스페인어', 'DELE A1 ~ B2']] }),
     S2('classes', { eyebrow: 'OPEN', title: '개강 강좌', ids: pubCls(4), layout: 'grid' }),
     S2('reviews', { title: '수강 후기', note: '' })], ['ko', 'en', 'ja', 'zh-CN']],
-  'life-city': ['publicTiles', 'KOBC · 군산 평생학습', () => [
+  'life-city': ['publicTiles', '평생학습관형 — 바로가기 · 수강 안내', () => [
     S2('banner', { eyebrow: '시민 평생학습관', title: '배움에는\n끝이 없습니다', sub: '생활 · 직업 · 인문 강좌를 온라인과 오프라인으로 만나 보세요.', cta: '강좌 신청하기', chips: [['2026', '하반기 모집']] }),
     T2('tiles', { title: '바로가기', cols: [['참여 신청', 'PROGRAM REGISTRATION'], ['공지사항', 'NOTICE'], ['문의게시판', 'FAQ BOARD']] }),
-    T2('info', { eyebrow: 'GUIDE', title: '수강 안내', cols: [['대상', '지역 주민 누구나'], ['개강 기준', '10명 이상 신청 시'], ['학습비 반환', '개강 후 5일 이내 신청'], ['신청', '온라인 또는 방문']] }),
+    T2('info', { eyebrow: 'GUIDE', title: '수강 안내', cols: [['대상', '지역 주민 누구나'], ['개강 기준', '강좌별 최소 인원 충족 시'], ['학습비 반환', '관련 규정에 따라 안내'], ['신청', '온라인 또는 방문']] }),
     S2('classes', { eyebrow: 'COURSES', title: '이번 분기 강좌', ids: pubCls(4), layout: 'grid' }),
     S2('notices', { title: '공지사항', n: 4 }),
-    S2('map', { title: '오시는 길', addr: S.settings.footer.addr || '학습관 주소', tel: S.settings.footer.tel || '대표번호', hours: '평일 09:00 ~ 18:00' })]],
-  'life-senior': ['senior', '화정종합사회복지관 ATC', () => [
+    S2('map', { title: '오시는 길', addr: S.settings.footer.addr || '', tel: S.settings.footer.tel || '' })]],
+  'life-senior': ['senior', '시니어 디지털 교육형 — 큰 글씨 · 신청 단계', () => [
     S2('banner', { eyebrow: '어르신을 위한 AI · 디지털 교육', title: '나도 할 수 있다!\n디지털 배움 교실', sub: '스마트폰부터 AI까지, 쉽고 재미있게 배워요.', cta: '전화로 신청하기' }),
-    T2('info', { title: '교육 안내', cols: [['대상', '60세 이상 누구나'], ['교육 기간', '매주 화요일 오후 2시 ~ 4시'], ['장소', '배움터 1층 프로그램실'], ['참가비', '무료'], ['신청 방법', '온라인 신청 · 회차당 10명 선착순']] }),
+    T2('info', { title: '교육 안내', cols: [['대상', '어르신 누구나'], ['교육 일정', '강좌별 안내'], ['장소', '배움터 교육실'], ['신청 방법', '온라인 · 전화 신청']] }),
     S2('classes', { title: '신청 가능한 교육', ids: pubCls(4), layout: 'grid' }),
     T2('steps', { title: '신청 방법', cols: [['원하는 교육 선택하기', '“수강 신청하기”를 눌러 주세요.'], ['무료 사전 신청 누르기', '이동한 화면에서 신청 버튼을 눌러요.'], ['회원가입 하기', '이름과 연락처로 간단히 가입해요.'], ['신청 완료', '교육 안내 전화를 드려요.']] }),
-    S2('map', { title: '전화 · 방문 신청', addr: S.settings.footer.addr || '배움터 주소', tel: S.settings.footer.tel || '전화 상담', hours: '평일 10:00 ~ 16:00' })]],
-  'voc-card': ['campus', '동아대 RISE · 부산창업공유대학', () => [
+    S2('map', { title: '전화 · 방문 신청', addr: S.settings.footer.addr || '', tel: S.settings.footer.tel || '' })]],
+  'voc-card': ['campus', '훈련기관형 — 수강 절차', () => [
     S2('banner', { eyebrow: '국민내일배움카드 훈련기관', title: '취업까지 이어지는 훈련', sub: '국민내일배움카드로 수강하고, 수료 후 취업을 함께 준비합니다.', cta: '훈련과정 보기', cta2: '수강 절차' }),
     T2('stats', { cols: [['국비', '자부담 최소화'], ['80%', '출석 수료 기준'], ['1:1', '취업 상담']] }),
     T2('steps', { eyebrow: 'PROCESS', title: '수강 절차', cols: [['카드 발급', '고용센터 · 온라인'], ['과정 상담', '적합 과정 추천'], ['HRD-Net 신청', '수강 신청 · 승인'], ['개강 · 수료', '출석 80% 이상']] }),
     S2('classes', { eyebrow: 'RECRUITING', title: '모집 중 과정', ids: pubCls(4), layout: 'grid' }),
     S2('reviews', { title: '수료생 후기', note: '' }),
     S2('notices', { title: '모집 공지', n: 4 })]],
-  'voc-employer': ['corpPortal', '한진세이버 · 기업 위탁', () => [
+  'voc-employer': ['corpPortal', '사업주 위탁 훈련형 — 운영 절차', () => [
     S2('banner', { eyebrow: 'EMPLOYER TRAINING', title: '기업 맞춤\n위탁 훈련', sub: '고용보험 환급 과정부터 맞춤 사내 교육까지 설계 · 운영합니다.', cta: '도입 문의', chips: [['01', '환급 과정', '고용보험 환급'], ['02', '맞춤 설계', '직무 분석 기반'], ['03', '결과 리포트', '수료 · 만족도']] }),
     T2('steps', { eyebrow: 'PROCESS', title: '운영 방식', cols: [['요구 분석', '직무 · 인원 파악'], ['과정 설계', '커리큘럼 · 일정'], ['운영 · 출결', '현장 · 온라인'], ['수료 · 환급', '서류 대행']] }),
     S2('classes', { eyebrow: 'COURSES', title: '대표 과정', ids: pubCls(4), layout: 'grid', price: true }),
-    S2('map', { title: '도입 문의', addr: S.settings.footer.addr || '주소', tel: S.settings.footer.tel || '대표번호', hours: '평일 09:00 ~ 18:00' })]],
-  'solo-creator': ['brandBold', '이승모T 강사 브랜드', () => [
+    S2('map', { title: '도입 문의', addr: S.settings.footer.addr || '', tel: S.settings.footer.tel || '' })]],
+  'solo-creator': ['brandBold', '1인 강사 브랜드형 — 강의 · 맛보기', () => [
     S2('banner', { eyebrow: 'INSTRUCTOR BRAND', title: `${spOrg()}의\n클래스`, sub: '현장에서 검증된 노하우를 온라인으로 배워 보세요.', cta: '강의 보러 가기', cta2: '맛보기 강의', stats: [[String(S.classes.length), '개 강의'], [String(S.members.length), '명 수강'], ['Q&A', '질문 게시판']] }),
     T2('features', { eyebrow: 'ABOUT', title: '강사 소개', body: '현장 경험과 수강생 성과로 증명된 커리큘럼을 운영합니다.', cols: [['커리큘럼', '단계별 설계'], ['질문 답변', '게시판 직접 답변'], ['교재', '자체 제작']] }),
     S2('video', { title: '맛보기 강의', url: '' }),
@@ -186,7 +185,7 @@ function proSec(x, i, s, lk) {
       return `<section class="sec ${lk === 'senior' ? '' : 'alt'}"><div class="wrap">${SEH(d, lk === 'senior' ? '' : 'CLASSES')}<div class="cls">${L.map((c, k) => `<article class="cc">${thumbArt(c.name, k, col, lk, (c.start || '').replace(/-/g, '.'))}<div class="cb"><h3>${esc(c.name)}</h3>${lk === 'senior' ? `<p class="mt">${esc(c.start)} · ${esc(c.hours ? c.hours + '시간' : '')}</p><a class="btn full" href="#">수강 신청하기</a>` : `<dl><dt>수강 기간</dt><dd>${esc(c.start)} ~ ${esc(c.end)}</dd><dt>모집 인원</dt><dd>${c.cap ? esc(c.cap) + '명' : '인원 무제한'}</dd></dl><p class="pr">${c.price ? won(c.price) : '무료'}</p>`}</div></article>`).join('') || '<p class="emp">전체 공개된 클래스가 이곳에 표시됩니다.</p>'}</div></div></section>`; }
     case 'books': { const L = (d.ids || []).map(id => S.books.find(b => b.id === id)).filter(Boolean); return `<section class="sec"><div class="wrap">${SEH(d, 'BOOKS')}<div class="cls">${L.map((b, k) => `<article class="cc">${thumbArt(b.name, k + 2, col, lk)}<div class="cb"><h3>${esc(b.name)}</h3><p class="mt">${esc(b.kind)}</p><p class="pr">${won(b.price)}</p></div></article>`).join('') || '<p class="emp">교재가 이곳에 표시됩니다.</p>'}</div></div></section>`; }
     case 'video': { const id = (String(d.url || '').match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/) || [])[1]; return `<section class="sec"><div class="wrap">${SEH(d, 'VIDEO')}<div class="vid">${id ? `<img alt="${esc(d.title)}" src="https://i.ytimg.com/vi/${esc(id)}/hqdefault.jpg">` : '<div class="vph"></div>'}<span class="play"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></span></div></div></section>`; }
-    case 'map': return `<section class="sec"><div class="wrap">${SEH(d, 'CONTACT')}<div class="mapw"><dl class="mapi"><div><dt>주소</dt><dd>${esc(d.addr)}</dd></div><div><dt>연락처</dt><dd class="tel">${esc(d.tel)}</dd></div><div><dt>운영 시간</dt><dd>${esc(d.hours)}</dd></div></dl><div class="mapv" role="img" aria-label="지도 자리"><svg viewBox="0 0 400 220" preserveAspectRatio="none"><path d="M0 60 L400 40 M0 150 L400 170 M90 0 L120 220 M260 0 L240 220 M0 105 C120 90 280 130 400 110" stroke="${rgba(col, .25)}" stroke-width="10" fill="none"/></svg><span class="pin"></span></div></div></div></section>`;
+    case 'map': if (!d.addr && !d.tel) return ''; /* v34.3 연락처가 없으면 숨김(지어낸 자리 값 대신) */ return `<section class="sec"><div class="wrap">${SEH(d, 'CONTACT')}<div class="mapw"><dl class="mapi">${[['주소', d.addr, ''], ['연락처', d.tel, 'tel'], ['운영 시간', d.hours, '']].filter(r => r[1]).map(([k, v, c]) => `<div><dt>${k}</dt><dd${c ? ` class="${c}"` : ''}>${esc(v)}</dd></div>`).join('')}</dl><div class="mapv" role="img" aria-label="지도 자리"><svg viewBox="0 0 400 220" preserveAspectRatio="none"><path d="M0 60 L400 40 M0 150 L400 170 M90 0 L120 220 M260 0 L240 220 M0 105 C120 90 280 130 400 110" stroke="${rgba(col, .25)}" stroke-width="10" fill="none"/></svg><span class="pin"></span></div></div></div></section>`;
     case 'notices': { const L = [...(S.notices || []), ...S.classes.flatMap(c => c.notices || [])].slice(0, +d.n || 3); return `<section class="sec"><div class="wrap">${SEH(d, 'NOTICE')}<ul class="nl">${L.map(n => `<li><span class="nt">공지</span><b>${esc(n.title)}</b><time>${esc(n.at || '')}</time></li>`).join('') || '<li class="emp">등록된 공지사항이 없습니다.</li>'}</ul></div></section>`; }
     case 'reviews': { const R = S.posts.filter(p => p.board === '수강후기' && !p.hidden).slice(0, 6); return `<section class="sec alt"><div class="wrap">${SEH(d, 'REVIEWS')}<div class="rv">${R.map(p => `<blockquote><p>“${esc(p.title)}”</p><cite>${(() => { const n = M(p.who)?.name || ''; return /^[가-힣]/.test(n) ? esc(n[0]) + '○○' : '수강생'; })()} · ${esc(p.at)}</cite></blockquote>`).join('') || `<p class="emp">수강후기 게시판에 등록된 실제 후기가 이곳에 표시됩니다.</p>`}</div></div></section>`; }
     case 'code': return `<section class="sec"><div class="wrap">${cleanHTML(d.html)}</div></section>`;
