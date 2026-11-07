@@ -138,3 +138,39 @@ body.lapp #lm input[type=checkbox],body.lapp #lm input[type=radio]{accent-color:
 
 /* 초점 */
 body.lapp .ap-nav a:focus-visible,body.lapp .ap-chip:focus-visible,body.lapp .ap-cd:focus-visible,body.lapp .ap-cc:focus-visible,body.lapp .ap-go:focus-visible{outline:2px solid var(--d-g900);outline-offset:2px}
+
+/* v32.7 기관 유형별 가입 안내 · 내 강의 필터 · 학습 찾기 (Figma [앱] New Ver.) */
+body.lapp .ap-join{margin:12px 16px;padding:16px;border:1px solid var(--d-ol);border-radius:8px;background:#fff;display:grid;gap:10px}
+body.lapp .ap-join.pend{border-color:var(--d-warn,#FF9800);background:#FFF3E0}
+body.lapp .ap-jey{font:600 12px/16px var(--sg);color:var(--d-p800)}
+body.lapp .ap-join h2{margin:0;font:700 18px/26px var(--sg);color:var(--d-g900)}
+body.lapp .ap-join p{margin:0;font:500 14px/18px var(--sg);color:var(--d-g700)}
+body.lapp .ap-join ol{margin:0;padding:0 0 0 18px;display:grid;gap:4px;font:500 13px/18px var(--sg);color:var(--d-g800)}
+body.lapp .ap-tags{display:flex;flex-wrap:wrap;gap:6px}
+body.lapp .ap-tag{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:4px;background:var(--d-p50);color:var(--d-p800);font:600 11px/16px var(--sg)}
+body.lapp .ap-tag.w{background:#FFF3E0;color:#EF6D00}
+body.lapp .ap-join .ap-lk,body.lapp .ap-lk{background:none;border:0;padding:0;color:var(--d-g600);font:500 13px/16px var(--sg);text-decoration:underline;cursor:pointer;justify-self:center}
+body.lapp .ap-osr{display:flex;align-items:center;gap:8px;height:44px;margin:8px 0 12px;padding:0 12px;border:1px solid var(--d-ol);border-radius:4px;background:var(--d-g100,#F6F7F7);color:var(--d-g600)}
+body.lapp .ap-osr.big{height:48px}
+body.lapp .ap-osr input{flex:1;min-width:0;border:0;background:transparent;font:500 16px/24px var(--sg);color:var(--d-g900);outline:0}
+body.lapp .ap-osr:focus-within{border-color:var(--d-g900)}
+body.lapp .ap-mf{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px}
+body.lapp .ap-fc{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}body.lapp .ap-fc.wrap{flex-wrap:wrap;overflow:visible}
+body.lapp .ap-fch{flex:none;display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 12px;border:1px solid var(--d-ol);border-radius:15px;background:#fff;color:var(--d-g700);font:600 13px/16px var(--sg);cursor:pointer}
+body.lapp .ap-fch i{font-style:normal;color:var(--d-g500)}
+body.lapp .ap-fch.on{border-color:var(--d-g900);background:var(--d-g900);color:#fff}body.lapp .ap-fch.on i{color:var(--d-g300,#EAEBEB)}
+body.lapp .ap-fch.q{padding:0 4px 0 12px}body.lapp .ap-fch.q button{border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:0}body.lapp .ap-fch.q .x{width:24px;height:24px;color:var(--d-g500);font-size:16px}
+body.lapp .ap-srt{flex:none;display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--d-g700);font:500 13px/16px var(--sg);cursor:pointer;min-height:44px}
+body.lapp .ap-cc.exp{filter:grayscale(1);opacity:.62}
+body.lapp .ap-cm em.ap-exp{color:var(--d-g600)}
+body.lapp .ap-empty{margin:16px 0;text-align:center;font:500 14px/18px var(--sg);color:var(--d-g600)}
+body.lapp .ap-h2 small{font:600 12px/16px var(--sg);color:var(--d-g500)}
+body.lapp .ap-srh{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+body.lapp .ap-srr{width:100%;display:grid;gap:2px;text-align:left;padding:12px 14px;border:1px solid var(--d-ol);border-radius:8px;background:#fff;color:var(--d-g900);text-decoration:none;cursor:pointer;min-height:56px}
+body.lapp .ap-srr b{font:600 15px/20px var(--sg)}body.lapp .ap-srr small{font:500 12px/16px var(--sg);color:var(--d-g600)}
+body.lapp .ap-ssh #apSR .ap-ol,body.lapp .ap-ssh #apS0 .ap-ol{max-height:none}
+body.lapp .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+body.lapp .ap-ssh{text-align:left;max-height:88vh;overflow:auto}body.lapp .ap-ssh h2{text-align:center}
+body.lapp .ap-srr .ap-oty{grid-area:auto;order:-1}body.lapp .ap-srr b,body.lapp .ap-srr small{grid-area:auto}
+body.lapp .ap-srh .ap-oh{flex:1;margin:0;text-align:left}body.lapp .ap-srh .ap-lk{flex:none}
+body.lapp .ap-mf .ap-fch{padding:0 10px}
