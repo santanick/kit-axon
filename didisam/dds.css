@@ -59,7 +59,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s400)}
 .btn.ink:hover,.btn.pri:hover{background:var(--g900)}
 .btn.ai{background:#fff;color:var(--t-mag,var(--s400));box-shadow:inset 0 0 0 1px var(--s400)}
 .btn.ai:hover{background:var(--s50)}
-.btn.acc,.btn.blue{background:var(--s400);color:#fff;box-shadow:none}
+.btn.acc,.btn.blue{background:var(--s500);color:#fff;box-shadow:none} /* v33: 흰 글자 대비 4.5:1 이상(Indigo 500) */
 .btn.red{background:var(--bad)}
 .btn.redl{color:var(--t-bad,var(--bad));box-shadow:inset 0 0 0 1px #F69397}
 .btn.ghost{box-shadow:none}
