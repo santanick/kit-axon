@@ -187,7 +187,7 @@
     [{ id: 'c', label: '취소' }, { id: 'ok', label: '초기화', kind: 'red', run: w => { if (fv(w, 'nm') !== S.org.name) { toast('기관 이름이 일치하지 않습니다.', 'warn'); return false; } closeModal(); setTimeout(() => { base(...a); setTimeout(() => { const ok = $('#modal [data-mact=ok]'); ok && ok.click(); }, 30); }, 0); return false; } }]); }
 
   /* 운영(라이브) 머리의 '비밀번호 변경'은 계정 메뉴 안으로 */
-  AFTER.push(() => { const a = $('#liveAcct'); if (!a || a.dataset.sl) return; a.dataset.sl = 1; const em = a.querySelector('small'); const pw = a.querySelector('[data-act="live-pw"]'); const out = a.querySelector('[data-act="live-out"], [data-act="logout"]');
+  AFTER.push(() => { const a = $('#liveAcct'); if (!a || a.dataset.sl) return; a.dataset.sl = 1; const em = a.querySelector('small'); const pw = a.querySelector('[data-act="live-pw"]'); const out = a.querySelector('[data-act="live-logout"], [data-act="live-out"], [data-act="logout"]');
     if (!pw) return; const d = document.createElement('details'); d.className = 'sl-acct'; d.innerHTML = `<summary aria-label="계정 메뉴"><span class="av">${esc((em && em.textContent || '?')[0].toUpperCase())}</span></summary><div class="sl-acm" role="menu"><small>${esc(em ? em.textContent : '')}</small></div>`;
     const m = d.querySelector('.sl-acm'); pw.classList.remove('sm'); m.appendChild(pw); if (out) m.appendChild(out); if (em) em.remove(); a.appendChild(d); });
 
