@@ -1,0 +1,102 @@
+/* 디디쌤 학습자 앱 v32.5 — DADS(DIDISAM APP Design System) 디자인 고도화. lapp.css 다음 마지막 층.
+   근거(피그마): DADS Foundation(Color · Typography = DDS Gray · Indigo · Green 단계) + [앱] New Ver. 「AS-IS 정리(261027)」
+   학습 · 내 학습 · 마이페이지 · 기관 변경 · 강의 플레이어 화면.
+   - 바탕은 흰색, 덩어리는 Gray 50 채움 카드(모서리 12 · 테두리 · 그림자 없음), 구역 사이는 8px Gray 100 띠
+   - 글자: 제목 Gray 900 굵게, 보조 Gray 600, 숫자 tabular · 진도 · 수료율은 Green 500
+   - 선택 = Gray 900(진회색) — 아래 탭 · 밑줄 탭 · 선택 칩 · 기관 선택 테두리. 실행 버튼은 선생님 색(--pc, 기관 테마)
+   - 기능 · id · 클래스 이름은 그대로 두고 겉모습만 바꾼다(qa_app 그대로 통과해야 함). */
+body.lapp{--ap-bg:#FFFFFF;--ap-ink:#2A2B2B;--ap-mute:#808181;--ap-line:#EAEBEB;--ap-g50:#FBFCFC;--ap-g100:#F6F7F7;--ap-g200:#F1F2F2;--ap-g700:#6C6C6C;--ap-green:#00C53B;--ap-r:12px;
+  background:#fff;font-feature-settings:'tnum' 1}
+body.lapp #lm{background:#fff}
+
+/* 머리 · 아래 탭: 흰 바탕 · 1px 선 · 선택 = 진회색 */
+body.lapp .ap-bar{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;border-bottom:1px solid var(--ap-line);padding:calc(6px + var(--ap-st)) 8px 6px}
+body.lapp .ap-tt{font:700 18px/1.3 var(--sg);letter-spacing:-.01em}
+body.lapp .ap-ib{border-radius:8px}body.lapp .ap-ib:active,body.lapp .ap-ib:hover{background:var(--ap-g200)}
+body.lapp .ap-call{border-color:var(--ap-line);background:#fff;font-weight:700;min-height:40px}
+body.lapp .ap-nav{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;border-top:1px solid var(--ap-line);padding-top:4px}
+body.lapp .ap-nav a{color:#AAABAB;font:500 11px/1.1 var(--sg);border-radius:8px}
+body.lapp .ap-nav a.on{color:var(--ap-ink);font-weight:700}body.lapp .ap-nav a.on svg{stroke-width:2.4}
+@media (min-width:900px){body.lapp .ap-nav{border-radius:16px;box-shadow:0 8px 24px -12px rgba(42,43,43,.25)}}
+
+/* 첫 화면(선생님과의 대화): 평평한 흰 바탕, 선생님 색은 포인트로만 */
+body.lapp .ap-home{background:#fff}
+body.lapp .ap-av{box-shadow:0 0 0 2px #fff}
+body.lapp .ap-av.big{width:76px;height:76px}body.lapp .ap-av.big i{font-size:38px}
+body.lapp .ap-av.big::after{inset:-6px;border-width:1.5px;opacity:.7}
+body.lapp .ap-hero{padding:12px 0 16px}
+body.lapp .ap-hero h1{margin:16px 0 8px;font:700 clamp(21px,5.4vw,26px)/1.36 var(--sg);letter-spacing:-.02em}
+body.lapp .ap-st span{background:var(--ap-g100);border:0;border-radius:6px;padding:7px 10px;color:var(--ap-g700)}body.lapp .ap-st b{color:var(--ap-ink)}
+body.lapp .ap-org{background:#fff;border-color:var(--ap-line);border-radius:8px}
+body.lapp .ap-org i{border-radius:4px}
+
+/* 덩어리 카드: Gray 50 채움 · 모서리 12 · 테두리 · 그림자 없음 */
+body.lapp .ap-inst,body.lapp .ap-conn,body.lapp .ap-cc,body.lapp .ap-pt,body.lapp .ap-kid,body.lapp .ap-pg .lai-sec{background:var(--ap-g100);border:0;border-radius:var(--ap-r);box-shadow:none}
+body.lapp .ap-kid.none{background:#fff;border:1px dashed #C8C9C9}
+body.lapp .ap-cc.warn{background:#FFF6EC;border:0}
+body.lapp .ap-inst{padding:12px 8px 12px 14px}
+body.lapp .ap-ib2{border-radius:8px;min-height:38px}
+
+/* 오늘의 미션(가로 카드): 흰 카드 · 1px 선. 첫 장은 선생님 색을 연하게 깔고 굵은 제목 */
+body.lapp .ap-cd{border-radius:var(--ap-r);border:1px solid var(--ap-line);box-shadow:none;padding:14px 40px 14px 14px;gap:6px}
+body.lapp .ap-cd.first{background:color-mix(in srgb,var(--pc) 8%,#fff);color:var(--ap-ink);border-color:color-mix(in srgb,var(--pc) 28%,#fff)}
+body.lapp .ap-cd.first small{color:var(--pc)}body.lapp .ap-cd.first span{color:var(--ap-g700)}
+body.lapp .ap-cd.first i{background:var(--pc);color:#fff}
+body.lapp .ap-cd small{display:inline-flex;align-self:flex-start;padding:4px 6px;border-radius:4px;background:color-mix(in srgb,var(--pc) 10%,#fff);letter-spacing:0}
+body.lapp .ap-cd.warn small{background:#FFF1E3;color:#DE6A00}
+body.lapp .ap-cd b{font:700 15.5px/1.4 var(--sg)}
+
+/* 대화 말풍선: 선생님 = Gray 100 채움(왼쪽 위만 각짐) · 나 = 선생님 색 */
+body.lapp .ap-th .lt-b{background:var(--ap-g100);border:0;box-shadow:none;border-radius:4px 16px 16px 16px;color:var(--ap-ink)}
+body.lapp .ap-th .lt-m.u .lt-b{border-radius:16px 4px 16px 16px}
+
+/* 입력 · 추천 칩: 칩 = Gray 200 알약, 입력 = 흰 알약 + 1px 선 */
+body.lapp .ap-comp{background:#fff;border-top:1px solid var(--ap-line);padding-top:10px}
+body.lapp .ap-chip{border:0;background:var(--ap-g200);color:var(--ap-ink);font:600 13.5px/1 var(--sg);min-height:36px;padding:9px 14px}
+body.lapp .ap-chip:active,body.lapp .ap-chip:hover{background:#EAEBEB}
+body.lapp .ap-box{border:1px solid var(--ap-line);box-shadow:none;border-radius:24px}
+body.lapp .ap-box:focus-within{border-color:var(--ap-ink);box-shadow:none}
+body.lapp .ap-mic{background:var(--ap-g200)}
+
+/* 선생님 고르기: 흰 바탕 · 선택 타일 = 진회색 테두리 + Gray 50 (피그마 기관 변경 시트와 같은 규칙) */
+body.lapp .ap-pick{background:#fff}
+body.lapp .ap-ph h1{font:700 clamp(21px,5.8vw,26px)/1.36 var(--sg)}
+body.lapp .ap-pc{border:1px solid var(--ap-line);border-radius:var(--ap-r);background:#fff}
+body.lapp .ap-pc.on{border:1.5px solid var(--ap-ink);background:var(--ap-g50);box-shadow:none}
+body.lapp .ap-nm input{border:1px solid #C8C9C9;border-radius:8px;height:48px}
+body.lapp .ap-nm input:focus{border-color:var(--ap-ink)}
+body.lapp .ap-go{border-radius:8px;min-height:52px}
+body.lapp .ap-go.sm{border-radius:8px}
+body.lapp .ap-go.ghost{border-color:#C8C9C9}
+
+/* 시트 · 대화 상자 */
+body.lapp .ap-sh{border-radius:16px 16px 0 0}
+body.lapp .ap-sh nav button,body.lapp .ap-sh nav a{border:0;background:var(--ap-g100);border-radius:var(--ap-r)}
+body.lapp .ap-sh nav button:last-child{background:none}
+body.lapp .ap-dlg{border-radius:12px}
+body.lapp .ap-orow{border:1px solid var(--ap-line);border-radius:var(--ap-r);background:var(--ap-g100)}
+body.lapp .ap-orow.on{border:1.5px solid var(--ap-ink);background:#fff}
+body.lapp .ap-oty,body.lapp .ap-orow em,body.lapp .ap-orow svg{color:#109BF1}
+
+/* 내 강의 · 진도: 진도 링과 수료율은 Green 500, 덩어리 사이 8px 띠 */
+body.lapp .ap-myh{background:var(--ap-g100);border:0;border-radius:4px 16px 16px 16px}
+body.lapp .ap-h2{font:700 18px/1.35 var(--sg);margin:22px 0 10px}
+body.lapp .ap-rg{background:conic-gradient(var(--ap-green) calc(var(--p)*1%),#EAEBEB 0)}
+body.lapp .ap-rg b{background:var(--ap-g100)}
+body.lapp .ap-cc i{background:var(--ap-ink)}body.lapp .ap-cc.done i{background:#EAEBEB}
+body.lapp .ap-cm em{color:#FF6B00}
+body.lapp .ap-qk .ap-chip{background:#fff;border:1px solid var(--ap-line)}
+body.lapp .ap-pg,body.lapp .ap-my{padding-top:12px}
+body.lapp .ap-my{border-bottom:8px solid var(--ap-g100)}
+
+/* 학습 · 결제 · 계정 나눔(lux-tabs): 피그마 '전체 | 내 학습' 밑줄 탭 */
+body.lapp .lux-tabs{display:flex;gap:0;background:#fff;border:0;border-bottom:1px solid var(--ap-line);border-radius:0;padding:0;margin:0 0 16px}
+body.lapp .lux-tabs button{flex:1;border-radius:0;padding:12px 0;min-height:46px;font:600 15px/1 var(--sg);color:#AAABAB;border-bottom:2px solid transparent;margin-bottom:-1px}
+body.lapp .lux-tabs button.on{background:none;color:var(--ap-ink);font-weight:700;border-bottom-color:var(--ap-ink)}
+
+/* 기존 화면 안 카드(내 학습 · 계정 · 연결)도 같은 덩어리 규칙 */
+body.lapp .mycard{border:0!important;background:var(--ap-g100)!important;border-radius:var(--ap-r)!important;box-shadow:none!important}
+body.lapp .ap-ai{border-radius:4px}
+
+/* 접근성: 선택 표시 · 초점 */
+body.lapp .ap-nav a:focus-visible,body.lapp .ap-chip:focus-visible,body.lapp .ap-cd:focus-visible,body.lapp .ap-cc:focus-visible{outline:2px solid var(--ap-ink);outline-offset:2px}
