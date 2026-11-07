@@ -11,7 +11,7 @@
 .la-steps li{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mute);padding:6px 12px;border-radius:99px;background:var(--line2)}
 .la-steps li span{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#fff;font-size:12px;font-weight:800}
 .la-steps li.on{background:var(--ink);color:#fff}.la-steps li.on span{color:var(--ink)}
-.la-steps li.ok{color:var(--ok)}
+.la-steps li.ok{color:var(--t-ok,var(--ok))}
 .la-inv{display:flex;gap:8px;align-items:center;padding:10px 14px;border-radius:8px;background:#EAF7EF;color:#14532D;font-size:14px;margin:0 0 14px}
 .la-inv.y{background:#FFF3D6;color:#7A4D00}
 .la-seg{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}
@@ -42,7 +42,7 @@
 .la-dl{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;margin:8px 0;font-size:14px}
 .la-dl dt{color:var(--mute)}.la-dl dd{margin:0;overflow-wrap:anywhere}.la-dl small{color:var(--mute)}
 .la-tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--line2);color:var(--mute);margin-left:6px}
-.la-tag.ok{background:#E3F4EA;color:#16804D}.la-tag.warn{background:#FFF3D6;color:#8A5A00}
+.la-tag.ok{background:#E3F4EA;color:var(--t-ok,#007A29)}.la-tag.warn{background:#FFF3D6;color:#8A5A00}
 .la-ava{display:flex;align-items:center;gap:10px;margin:0 0 12px}
 .la-ava img,.la-ava>span{width:56px;height:56px;border-radius:50%;object-fit:cover;display:grid;place-items:center;background:var(--line2);font-weight:800;font-size:20px}
 .la-socl{list-style:none;padding:0;margin:8px 0;display:flex;flex-direction:column;gap:8px}
@@ -107,13 +107,13 @@
 @media (max-width:640px){.la-pl li{grid-template-columns:1fr;gap:2px}.la-pol td.k,.la-pol th:first-child{width:60px}.la-pol{font-size:12px}
 .la .form2{grid-template-columns:1fr}.la-dl{grid-template-columns:90px 1fr}.la-acp{right:-8px}}
 /* v26.7 알림(피그마 My Page › 알림) */
-.la-ib{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line);margin-bottom:8px}.la-ib b{color:var(--pri)}.la-ib .sp{flex:1}
+.la-ib{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line);margin-bottom:8px}.la-ib b{color:var(--pri-tx,var(--pri))}.la-ib .sp{flex:1}
 .la-icf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;margin:8px 0}.la-icf span{flex:1;min-width:200px;font-size:14px}
 .la-ig{font-size:14px;font-weight:600;margin:18px 0 6px;padding-left:8px;border-left:2px solid var(--g500,#AAABAB)}
 .la-inbox li{align-items:center}.la-inbox li.new{border-color:var(--line);box-shadow:none}
 .la-dot{width:6px;height:6px;border-radius:50%;background:var(--g300,#EAEBEB);flex:none}.la-inbox li.new .la-dot{background:var(--pri)}
-.la-av{width:32px;height:32px;border-radius:50%;background:var(--g100,#F6F7F7);display:grid;place-items:center;flex:none;color:var(--g600,#808181)}
+.la-av{width:32px;height:32px;border-radius:50%;background:var(--g100,#F6F7F7);display:grid;place-items:center;flex:none;color:var(--t-sub,var(--g600))}
 .la-inbox .la-n{flex:1;min-width:0;text-align:left}.la-inbox .la-n p{margin:2px 0 0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.la-ago{color:var(--g600,#808181);white-space:nowrap;font-size:12px}.la-nx{border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:var(--g700,#6C6C6C);padding:4px 6px}.la-nx:hover{color:#DE0027}
-.la-iem{display:flex;align-items:center;gap:6px;justify-content:center;padding:48px 0;color:var(--g600,#808181)}
+.la-ago{color:var(--t-sub,var(--g600));white-space:nowrap;font-size:12px}.la-nx{border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:var(--g700,#6C6C6C);padding:4px 6px}.la-nx:hover{color:#DE0027}
+.la-iem{display:flex;align-items:center;gap:6px;justify-content:center;padding:48px 0;color:var(--t-sub,var(--g600))}
 .la.la-inb .in.narrow,body.la26 section.la.la-inb .in.narrow{max-width:760px}.la-ib .lbtn{white-space:nowrap}

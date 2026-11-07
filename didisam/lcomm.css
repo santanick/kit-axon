@@ -18,7 +18,7 @@
 .lct small,.lcm{color:var(--mute);font-size:12.5px}
 .lcm{white-space:nowrap;display:inline-flex;gap:4px;align-items:center}
 .lck{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--line2,#F1F2F2);color:var(--mute);white-space:nowrap}
-.lck.q{background:color-mix(in srgb,var(--pri) 12%,#fff);color:var(--pri)}
+.lck.q{background:color-mix(in srgb,var(--pri) 12%,#fff);color:var(--pri-tx,var(--pri))}
 .lcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:14px}
 .lccard{background:#fff;border-radius:var(--r,20px);box-shadow:var(--sh);padding:16px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:6px}
 .lccard p{margin:0;color:var(--mute);font-size:14px}
@@ -38,7 +38,7 @@
 .lcc.adm{border-left-color:var(--pri)}
 .lcc p{margin:4px 0 0}
 .lcl{border:0;background:none;color:var(--mute);font-size:12.5px;font-weight:700;cursor:pointer;padding:0 2px}
-.lcl:hover{color:var(--pri)}
+.lcl:hover{color:var(--pri-tx,var(--pri))}
 .lcform{display:flex;flex-direction:column;gap:10px;margin:12px 0}
 .lcw{background:#fff;border-radius:var(--r,20px);box-shadow:var(--sh);padding:22px}
 .lcw label{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px}
@@ -57,10 +57,10 @@
 .lcnotes{display:flex;flex-direction:column;gap:10px}
 .lcnote{display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--line2,#F1F2F2);padding-top:10px}
 .lcnote>div{flex:1;min-width:0}.lcnote p{margin:4px 0}
-.lcnote.own .lcch b{color:var(--pri)}
+.lcnote.own .lcch b{color:var(--pri-tx,var(--pri))}
 .lctime{border:0;background:var(--ink);color:#fff;border-radius:8px;padding:4px 8px;font:700 12px var(--sg);cursor:pointer;white-space:nowrap}
 .lcnc{flex-direction:row;margin:6px 0 0}.lcnc input{flex:1}
-.lcun{font-style:normal;font-size:11px;font-weight:800;color:#fff;background:var(--pri);border-radius:99px;padding:2px 7px;margin:0 6px}
+.lcun{font-style:normal;font-size:11px;font-weight:800;color:var(--pri-tx,var(--pri));background:var(--d-p50,#E7F8E8);border-radius:99px;padding:2px 7px;margin:0 6px}
 .lcnt2{margin:6px 0}
 .lcstar{color:#E8A317;letter-spacing:1px}
 .lcrvh{display:flex;align-items:center;gap:10px;margin-bottom:6px}
