@@ -16,6 +16,12 @@ case "${INGRESS:-all}" in lb) ING=internal-and-cloud-load-balancing ;; *) ING=al
 # 운영자 가입 코드: 기본은 끔(누구나 기관 가입 · 2026-11-07 대표 결정). 다시 켜려면 SIGNUP_CODE_ON=1
 SEC="DATABASE_URL=didisam-db-url:latest,ANTHROPIC_API_KEY=didisam-anthropic-key:latest,SESSION_PEPPER=didisam-session-pepper:latest,PII_KEY=didisam-pii-key:latest"
 [ "${SIGNUP_CODE_ON:-0}" = 1 ] && SEC="$SEC,SIGNUP_CODE=didisam-signup-code:latest"
+# 운영자 소셜 로그인(v32.4): 비밀값이 있는 제공자만 켠다(bash service/gcp/oauth.sh 로 등록)
+for k in GOOGLE_ID GOOGLE_SECRET KAKAO_ID KAKAO_SECRET; do n="didisam-oauth-$(echo $k | tr 'A-Z_' 'a-z-')"
+  gcloud secrets describe "$n" --project "$PROJECT" >/dev/null 2>&1 && SEC="$SEC,OAUTH_$k=$n:latest"; done
+# 소셜 로그인 콜백 주소의 앞부분 — 제공자 콘솔에 등록한 주소와 같아야 한다(도메인을 붙이면 PUBLIC_URL=https://studio.aisam.com)
+PNUM=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
+PUBLIC_URL="${PUBLIC_URL:-https://didisam-studio-$PNUM.$REGION.run.app}"
 say() { printf '\n\033[1m▶ %s\033[0m\n' "$*"; }
 
 say "1/3 문법 점검"
@@ -28,7 +34,7 @@ say "3/3 Cloud Run 배포"
 gcloud run deploy didisam-studio --project "$PROJECT" --region "$REGION" --image "$IMAGE" \
   --service-account "$RUN" --add-cloudsql-instances "$CONN" \
   --set-secrets "$SEC" \
-  --set-env-vars "DB_POOL=5,AI_DAILY_CALLS=400" \
+  --set-env-vars "DB_POOL=5,AI_DAILY_CALLS=400,PUBLIC_URL=$PUBLIC_URL" \
   --ingress "$ING" --allow-unauthenticated \
   --cpu 1 --memory 1Gi --min-instances 0 --max-instances 4 --concurrency 60 --timeout 300 --quiet
 URL=$(gcloud run services describe didisam-studio --project "$PROJECT" --region "$REGION" --format='value(status.url)')

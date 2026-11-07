@@ -23,8 +23,8 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     static final Pattern HAS_ALPHA = Pattern.compile("[a-zA-Z]"), HAS_DIGIT = Pattern.compile("\\d");
 
     @Resource(name = "propertiesService") private EgovPropertyService props;
-    private final AuthMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl;
-    public AuthServiceImpl(AuthMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl) { this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; }
+    private final AuthMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final DdOAuth oa;
+    public AuthServiceImpl(AuthMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, DdOAuth oa) { this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.oa = oa; }
 
     static boolean emailOk(String e) { return e.length() <= 120 && EMAIL.matcher(e).matches(); }
     static boolean pwOk(JsonNode v) {
@@ -35,7 +35,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     @Override public Map<String, Object> config() throws Exception {
         mapper.ping();
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("live", true); if (!p.module.isEmpty()) m.put("module", p.module); m.put("signup", p.allowSignup && (p.module.isEmpty() || "admin".equals(p.module))); m.put("signupCode", !p.signupCode.isEmpty());
+        m.put("live", true); if (!p.module.isEmpty()) m.put("module", p.module); m.put("signup", p.allowSignup && (p.module.isEmpty() || "admin".equals(p.module))); m.put("signupCode", !p.signupCode.isEmpty()); m.put("oauth", p.module.isEmpty() || "admin".equals(p.module) ? oa.names() : List.of());
         m.put("ai", p.ai); m.put("models", MODELS); m.put("aiDaily", p.aiDaily);
         return m;
     }

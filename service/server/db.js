@@ -270,6 +270,15 @@ const MIGRATIONS = [
    alter table cpl_log add constraint cpl_log_kind_check check (kind in ('login','beat','attend','verify-phone','verify-motp','review','group-pw'));`,
   /* 13 — v31.6 무활동 세션 만료: 마지막 활동 시각 */
   `alter table learner_sessions add column if not exists last_at timestamptz not null default now();`,
+  /* 14 — v32.4 운영자 소셜 로그인: 제공자 회원 번호만 저장(이름 · 사진 · 전화번호 없음) */
+  `create table if not exists user_oauth (
+     provider text not null check (provider in ('google','kakao')),
+     sub text not null check (length(sub) between 1 and 200),
+     user_id uuid not null references users(id) on delete cascade,
+     created_at timestamptz not null default now(),
+     primary key (provider, sub)
+   );
+   create index if not exists user_oauth_user on user_oauth (user_id);`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).

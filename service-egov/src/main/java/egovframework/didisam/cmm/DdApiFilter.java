@@ -29,7 +29,10 @@ public class DdApiFilter extends OncePerRequestFilter {
         "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log",
         "GET /api/audit", "POST /api/tenant/delete", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion",
-        "POST /api/password", "GET /api/staff", "POST /api/staff", "POST /api/staff/remove");
+        "POST /api/password", "GET /api/staff", "POST /api/staff", "POST /api/staff/remove",
+        /* v32.4 운영자 소셜 로그인 */
+        "GET /api/oauth/google/start", "GET /api/oauth/google/callback", "GET /api/oauth/kakao/start", "GET /api/oauth/kakao/callback",
+        "GET /api/oauth/pending", "POST /api/oauth/cancel", "POST /api/oauth/signup");
     /** v30 학사 LMS 묶음 경로(/api/lms/**) — 기동 때 DdLmsRoutes가 @RequestMapping에서 자동 수집한다(묶음별 등록 불필요) */
     public static final Set<String> LMS = ConcurrentHashMap.newKeySet();
     /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */

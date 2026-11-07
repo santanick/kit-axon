@@ -32,4 +32,9 @@
   <select id="selectMe" resultType="map">
     select t.id tid, t.name, t.type, t.mode, #{email}::text email, u.role, u.pw_temp from tenants t join users u on u.tenant_id = t.id where u.id = cast(#{uid} as uuid)
   </select>
+  <!-- v32.4 소셜 로그인(user_oauth) -->
+  <select id="selectOAuthUser" resultType="map">select u.id::text as id, u.tenant_id, u.role, u.email from user_oauth o join users u on u.id = o.user_id where o.provider = #{provider} and o.sub = #{sub}</select>
+  <select id="selectUserByEmailFull" resultType="map">select id::text as id, tenant_id, role, email from users where lower(email) = #{email}</select>
+  <insert id="insertOAuth">insert into user_oauth (provider, sub, user_id) values (#{provider}, #{sub}, cast(#{uid} as uuid)) on conflict do nothing</insert>
+  <insert id="insertOAuthStrict">insert into user_oauth (provider, sub, user_id) values (#{provider}, #{sub}, cast(#{uid} as uuid))</insert>
 </mapper>
