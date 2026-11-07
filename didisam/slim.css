@@ -1,0 +1,89 @@
+/* v34 단순화 층 — '휴대폰 설정형' 공통 틀: 제목 · 칩 한 줄 · 요약 한 줄 · 목록(아이콘 + 이름 + 한 줄 + 동작 하나) · 검색. 설명은 누른 뒤에. */
+.sl-page{max-width:760px;margin:0 auto;padding:4px 0 96px}
+.sl-h{display:flex;align-items:center;gap:12px;margin:4px 0 18px}
+.sl-h h2{font-size:24px;font-weight:800;margin:0;flex:1;min-width:0;letter-spacing:-.02em}
+.sl-hr{display:flex;gap:8px;flex-wrap:wrap}
+.sl-note{display:flex;gap:14px;align-items:center;background:var(--g100);border-radius:20px;padding:16px 18px;margin:0 0 16px}
+.sl-note .sl-ni{width:44px;height:44px;border-radius:14px;background:#fff;display:grid;place-items:center;color:var(--g700);flex:none}
+.sl-note b{display:block;font-size:16px;font-weight:700}
+.sl-note small{display:block;color:var(--t-sub);font-size:13px;margin-top:2px}
+.sl-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 14px;scrollbar-width:none;margin:0}
+.sl-chips::-webkit-scrollbar{display:none}
+.sl-chips button{flex:none;min-height:40px;padding:0 18px;border-radius:999px;border:0;background:var(--g100);color:var(--g800);font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.sl-chips button.on{background:var(--g900);color:#fff}
+.sl-sum{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:12px 4px;font:inherit;font-size:16px;font-weight:700;color:var(--g900);text-align:left;cursor:default}
+button.sl-sum{cursor:pointer}
+.sl-sum .sl-n{margin-left:auto;color:var(--t-sub);font-weight:600}
+.sl-sum .sl-n.sl-w{color:var(--t-warn)}
+.sl-sum .sl-go{color:var(--g500);font-size:22px;line-height:1}
+.sl-logos{display:flex;gap:6px}
+.sl-logos i{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font-style:normal;font-size:12px;font-weight:800}
+.sl-list{display:flex;flex-direction:column;gap:2px;margin:4px 0 12px}
+.sl-row{display:flex;align-items:center;gap:14px;width:100%;min-height:72px;padding:10px 6px;border-radius:16px;background:none;border:0;font:inherit;text-align:left;color:inherit}
+.sl-row[role=button]{cursor:pointer}
+.sl-row[role=button]:hover{background:var(--g100)}
+.sl-row[role=button]:focus-visible{outline:2px solid var(--s400);outline-offset:1px}
+.sl-ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:17px;flex:none}
+.sl-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sl-tx b{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl-tx small{font-size:14px;color:var(--t-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl-r{flex:none;display:flex;align-items:center;gap:6px}
+.sl-go{color:var(--g500);font-size:24px;line-height:1;padding:0 4px}
+.sl-plus{width:36px;height:36px;display:grid;place-items:center;font-size:26px;font-weight:300;color:var(--g700)}
+.sl-ok{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--b50);color:var(--t-ok);font-weight:800}
+.sl-dot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--warnl);color:var(--t-warn);font-weight:800}
+.sl-sw{width:50px;height:30px;border-radius:999px;border:0;background:var(--g300);position:relative;cursor:pointer;flex:none;transition:background .15s}
+.sl-sw i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:var(--e1);transition:left .15s}
+.sl-sw.on{background:var(--s500)}
+.sl-sw.on i{left:23px}
+.sl-search{position:sticky;bottom:16px;display:flex;align-items:center;gap:10px;background:rgba(246,247,247,.96);backdrop-filter:blur(8px);border:1px solid var(--g300);border-radius:999px;padding:0 20px;min-height:52px;margin:20px 0 0;box-shadow:var(--e8);color:var(--g600)}
+.sl-search input{flex:1;border:0;background:none;font:inherit;font-size:16px;outline:0;min-width:0;padding:0}
+.sl-empty,.sl-more{color:var(--t-sub);text-align:center;padding:24px 0;font-size:14px}
+.sl-back{max-width:760px;margin:0 auto 8px}
+.sl-acts .btn{min-height:36px}
+/* 시트: 휴대폰은 아래에서, PC는 오른쪽 패널 */
+.sl-sheetw{position:fixed;inset:0;background:rgba(31,32,32,.32);z-index:90;display:flex;justify-content:flex-end;opacity:0;transition:opacity .15s}
+.sl-sheetw.on{opacity:1}
+.sl-sheet{background:#fff;width:min(480px,100%);height:100%;display:flex;flex-direction:column;box-shadow:var(--e24);transform:translateX(24px);transition:transform .18s}
+.sl-sheetw.on .sl-sheet{transform:none}
+.sl-sh{display:flex;align-items:center;gap:8px;padding:18px 20px;border-bottom:1px solid var(--g200)}
+.sl-sh b{flex:1;font-size:18px}
+.sl-sh .x{border:0;background:var(--g100);border-radius:50%;width:36px;height:36px;display:grid;place-items:center;cursor:pointer}
+.sl-sb{flex:1;overflow:auto;padding:16px 20px}
+.sl-sf{padding:14px 20px;border-top:1px solid var(--g200);display:flex;gap:8px;justify-content:flex-end}
+.sl-sheetcard .cn-card{border:0;padding:0;box-shadow:none;background:none}
+@media (max-width:700px){
+  .sl-sheetw{align-items:flex-end}
+  .sl-sheet{height:auto;max-height:88vh;border-radius:20px 20px 0 0;transform:translateY(24px)}
+  .sl-h h2{font-size:21px}
+  .sl-page{padding-bottom:84px}
+}
+/* ⓘ 설명 */
+.sl-i{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:8px;border-radius:50%;border:1px solid var(--g400);background:#fff;color:var(--g700);font:700 12px/1 serif;font-style:italic;cursor:pointer;vertical-align:middle}
+.sl-i:hover{border-color:var(--g700)}
+.sl-pop{position:absolute;z-index:95;background:var(--g900);color:#fff;font-size:14px;line-height:1.5;padding:12px 14px;border-radius:12px;box-shadow:var(--e16)}
+/* 사이드바 [메뉴 추가] */
+.ri.sl-add{opacity:.85;margin-top:6px;border-top:1px dashed var(--g300);padding-top:10px}
+/* 고급 · 위험 구역 · 계정 메뉴 */
+details.sl-adv,details.sl-danger{margin:16px 0;border-radius:12px;background:var(--g100);padding:0 16px}
+details.sl-adv>summary,details.sl-danger>summary{cursor:pointer;padding:14px 0;font-weight:700;color:var(--g800);list-style:none}
+details.sl-adv>summary small{font-weight:500;color:var(--t-sub);margin-left:8px}
+details.sl-danger>summary{color:var(--t-bad)}
+details.sl-adv[open],details.sl-danger[open]{padding-bottom:16px}
+details.sl-adv #fundCard{background:#fff}
+.sl-acct{position:relative}
+.sl-acct>summary{list-style:none;cursor:pointer}
+.sl-acct>summary::-webkit-details-marker{display:none}
+.sl-acm{position:absolute;right:0;top:calc(100% + 8px);background:#fff;border:1px solid var(--g300);border-radius:12px;box-shadow:var(--e16);padding:8px;min-width:200px;z-index:60;display:flex;flex-direction:column;gap:2px}
+.sl-acm small{padding:8px 10px;color:var(--t-sub)}
+.sl-acm .btn{justify-content:flex-start;border:0;background:none}
+/* 노란 안내 띠: 한 줄로 */
+.sl-compact{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl-sum .sl-sub{color:var(--t-sub);font-weight:500;font-size:14px}
+.sl-homesum{max-width:760px;margin:8px auto;display:flex;flex-direction:column;border-top:1px solid var(--g200)}
+.sl-homesum .sl-sum{border-bottom:1px solid var(--g200);padding:16px 6px}
+.aih > .sl-sum{max-width:760px;margin:8px auto 0;border-bottom:1px solid var(--g200)}
+.sl-page:has(.sl-h) ~ *{}
+main:has(.sl-page) .bhdl > h1, main:has(.sl-page) .wh h1{font-size:15px;color:var(--t-sub);font-weight:600}
+.sl-gh{font-size:14px;color:var(--t-sub);font-weight:700;margin:18px 6px 4px}
+.sl-ic .ic{stroke:#fff;color:#fff}
