@@ -107,7 +107,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     if (ty === 'classes') return S2('classes', { eyebrow: str(o.eyebrow, 40), title: str(o.title, 60) || `지금 모집 중인 ${t('cls')}`, sub: str(o.sub, 140), ids: pubList().slice(0, 4).map(c => c.id), layout: 'grid', auto: true });
     if (ty === 'notices') return S2('notices', { title: str(o.title, 60) || '공지사항', n: 3 });
     if (ty === 'reviews') return S2('reviews', { title: str(o.title, 60) || '수강후기' });
-    if (ty === 'map') return S2('map', { title: str(o.title, 60) || '오시는 길 · 문의', addr: ft.addr || '주소를 입력하세요', tel: ft.tel || '연락처를 입력하세요', hours: str(o.hours, 60) || '평일 09:00 ~ 18:00' });
+    if (ty === 'map') return S2('map', { title: str(o.title, 60) || '오시는 길 · 문의', addr: ft.addr || '주소를 입력하세요', tel: ft.tel || '연락처를 입력하세요', hours: str(o.hours, 60) || str(ft.hours, 60) /* v34.2 지어낸 운영 시간을 넣지 않는다 — 설정값만 */ });
     if (ty === 'image') return S2('image', { title: str(o.title, 60), alt: str(o.alt, 80) || str(o.title, 60) });
     if (ty === 'video') return S2('video', { title: str(o.title, 60) || '소개 영상', url: '' });
     return null;
@@ -166,7 +166,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     if (/후기|리뷰/.test(must)) secs.push({ type: 'reviews', title: '수강후기' });
     if (/일정|스케줄/.test(must)) secs.push({ type: 'text', variant: 'timeline', title: '주요 일정', cols: [['모집', '상시 모집'], ['개강', '강좌별 안내'], ['수료', '기준 충족 시']] });
     secs.push({ type: 'notices', title: '공지사항' });
-    secs.push(/오시는|지도|위치|주소/.test(must) || S.settings.footer?.addr ? { type: 'map', title: '오시는 길 · 문의' } : { type: 'text', variant: 'cta', title: '궁금한 점이 있으신가요?', body: `${n}에 편하게 문의해 주세요.`, cta: '문의하기', cols: [['운영 시간', '평일 09:00 ~ 18:00']] });
+    secs.push(/오시는|지도|위치|주소/.test(must) || S.settings.footer?.addr ? { type: 'map', title: '오시는 길 · 문의' } : { type: 'text', variant: 'cta', title: '궁금한 점이 있으신가요?', body: `${n}에 편하게 문의해 주세요.`, cta: '문의하기', cols: ((S.settings && S.settings.footer && S.settings.footer.hours) ? [['운영 시간', S.settings.footer.hours]] : []) });
     const menus = [{ label: '홈', link: 'learn:home' },
       { label: ty.about, link: 'page', page: [{ type: 'text', variant: 'features', eyebrow: 'ABOUT', title: `${n} 소개`, body: `${n}이(가) 하는 일을 소개합니다.`, cols: ty.feat.slice(0, 3) }], subs: [{ label: '인사말', link: 'page', page: [{ type: 'text', title: '인사말', body: `${n}을(를) 찾아 주셔서 감사합니다. 배우는 모든 분이 끝까지 완주할 수 있도록 돕겠습니다.` }] }, { label: '오시는 길', link: 'page', page: [{ type: 'map', title: '오시는 길' }] }] },
       { label: t('cls'), link: 'learn:shop', subs: C.slice(0, 4).map(c => ({ label: c.name.slice(0, 20), link: 'cls:' + c.id })) },
@@ -395,7 +395,7 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     const n = N(); const D = { banner: { type: 'banner', title: n, sub: '한 문장 소개를 입력하세요.', cta: '자세히 보기' }, features: { type: 'text', variant: 'features', eyebrow: 'ABOUT', title: '이런 점이 좋습니다', cols: [['첫 번째 장점', '설명을 입력하세요'], ['두 번째 장점', '설명을 입력하세요'], ['세 번째 장점', '설명을 입력하세요']] },
       stats: { type: 'text', variant: 'stats', cols: [['숫자', '설명'], ['숫자', '설명'], ['숫자', '설명']] }, steps: { type: 'text', variant: 'steps', title: '이렇게 시작합니다', cols: [['1단계', '설명'], ['2단계', '설명'], ['3단계', '설명']] },
       classes: { type: 'classes', title: `지금 신청할 수 있는 ${t('cls')}` }, image: { type: 'image', title: '사진', alt: '사진 설명' }, video: { type: 'video', title: '소개 영상' }, notices: { type: 'notices', title: '공지사항' }, reviews: { type: 'reviews', title: '수강후기' }, map: { type: 'map', title: '오시는 길' },
-      cta: { type: 'text', variant: 'cta', title: '궁금한 점이 있으신가요?', body: '편하게 문의해 주세요.', cta: '문의하기', cols: [['운영 시간', '평일 09:00 ~ 18:00']] }, plain: { type: 'text', title: '제목', body: '내용을 입력하세요.' } };
+      cta: { type: 'text', variant: 'cta', title: '궁금한 점이 있으신가요?', body: '편하게 문의해 주세요.', cta: '문의하기', cols: ((S.settings && S.settings.footer && S.settings.footer.hours) ? [['운영 시간', S.settings.footer.hours]] : []) }, plain: { type: 'text', title: '제목', body: '내용을 입력하세요.' } };
     const x = secFrom(D[k]); if (!x) return; if (k === 'stats') x.data.variant = 'stats'; const L = secList(HPE.key); hpPush(); L.splice(Math.min(at, L.length), 0, x); save(); hpPaint(); toast('섹션을 넣었습니다. 글자를 눌러 고치세요.', 'ok'); }
   function imgPick(si, fld, k) {
     const x = secList(HPE.key)[si]; if (!x) return;
