@@ -39,7 +39,7 @@ details.uxmore>summary em{font:700 11px var(--num);font-style:normal;background:
 .uxtodo ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .uxt{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px 16px}
 .uxt.g{border-color:#D9CCF5;background:linear-gradient(90deg,#F6F1FF,#fff 60%)}
-.uxtn{font:700 26px/1 var(--num);color:var(--mag);text-align:center}.uxtn small{font-size:13px;color:var(--muted);margin-left:1px}
+.uxtn{font:700 26px/1 var(--num);color:var(--t-mag,var(--mag));text-align:center}.uxtn small{font-size:13px;color:var(--muted);margin-left:1px}
 .uxt.g .uxtn{color:#5B3FC4}
 .uxt b{display:block;font-size:15px}.uxt div small{display:block;font-size:13px;line-height:1.45}
 .uxnone{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;margin:0;color:var(--muted)}

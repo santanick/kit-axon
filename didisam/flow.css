@@ -25,7 +25,7 @@ body.mode-bld{background:var(--paper)}
 .bchat .composer{padding:12px 14px 14px}
 .bqs{display:flex;flex-wrap:wrap;gap:6px}
 .bqs .chip{border:0;background:#fff;border-radius:99px;font-size:12.5px;padding:7px 12px;box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;text-align:left;color:var(--ink)}
-.bqs .chip::before{content:'✦ ';color:var(--mag)}
+.bqs .chip::before{content:'✦ ';color:var(--t-mag,var(--mag))}
 .bqs .chip:hover{box-shadow:inset 0 0 0 1.5px var(--ink)}
 .bqs .chip.done{background:var(--ink);color:#fff;box-shadow:none}.bqs .chip.done::before{content:'';}
 .bqs .chip.off{color:var(--muted)}.bqs .chip.off::before{content:''}
@@ -38,7 +38,7 @@ body.mode-bld:not(.drawer-open) #main{padding-right:22px}
 .bst small{font:700 10.5px var(--num);letter-spacing:.03em}
 .bst b{font-size:12.5px;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bst i{font-style:normal;font-size:11px;opacity:.85}
-.bst.ok{background:var(--okl);color:var(--ok);box-shadow:none}
+.bst.ok{background:var(--okl);color:var(--t-ok,var(--ok));box-shadow:none}
 .bst.on{background:var(--ink);color:#fff;box-shadow:0 10px 24px -14px rgba(42,43,43,.7)}
 .bst.cfg{align-items:flex-start;color:var(--ink);box-shadow:inset 0 0 0 1.5px dashed var(--line);border:1.5px dashed #D9D5CA;box-shadow:none;background:transparent}
 .bst:hover:not(.on){box-shadow:0 0 0 1.5px var(--ink)}
