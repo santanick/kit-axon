@@ -103,7 +103,7 @@ const MIME = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html
   r = await sam('오늘 현황 요약'); ok(!r.plan && /수납/.test(r.text) && !r.text.includes(nm.n), 'AI 현황 요약에 이름 없음');
   r = await sam(`${nm.n} 요약해줘`); ok(r.html.includes('원생 카드 열기') && !r.text.includes(nm.n), 'AI 원생 요약');
   r = await sam('오늘 미입력 전체 출석', false); ok(/출석|없습니다/.test(r.title + r.text), 'AI 일괄 출석');
-  ok(await G(() => { UI.crmId = null; go('crmbill'); const L = scxChips('crmbill'); return L.length === 4 && L.every(x => x.run && x.run()); }), 'AI 수납 칩 4개 동작');
+  ok(await G(() => { UI.crmId = null; go('crmbill'); const L = scxChips('crmbill'); return L.length >= 4 && L.every(x => x.run && x.run()); }), 'AI 수납 칩 4개 이상 동작(v34 유형별 추천 의도를 앞에 더함 — 대화창에는 3개만 보임)');
   ok(await G(id => { UI.crmId = id; go('crmstu'); const L = scxChips('crmstu'); UI.crmId = null; return !L.some(x => /샘플/.test(x.l)) && L.length >= 3; }, nm.id), 'AI 칩 이름에 원생 이름 없음');
   ok(await G(() => { const s = S.me.role; S.me.role = 'teacher'; const a = chatSendTest('미납 원생 보여줘'); S.me.role = s; return a; function chatSendTest(q) { const n = S.chat.length; const r = (window.k12Probe || (() => null))(q); return !r; } }), 'AI 강사 수납 차단');
   ok(await G(() => { go('board'); return document.querySelector('.bcanvas, #main, body').innerText.length > 150; }), '샘플 수업이 있어도 공지 화면 정상');
