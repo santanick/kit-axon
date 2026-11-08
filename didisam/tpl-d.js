@@ -289,3 +289,11 @@
   ['hpwOpen', 'hpOpen'].forEach(k => { const base = window[k]; if (typeof base === 'function') window[k] = (...a) => { const r = base(...a); hookWiz(); return r; }; });
   window.TPD = { prep, fromTpl, meta, gallery, purposes: PUR.map(([k, l]) => [k, l]) };
 })();
+
+/* v34.3 통합: 기존 20종에도 테마를 붙여 새 렌더러(첫 화면 시각 요소 · 대비 보정 · 빈칸 없는 배치)로 그린다 — 원칙: 모든 템플릿 같은 품질 */
+(function () { const M = { 'corp-academy': ['tech', 'split'], 'corp-onboard': ['clean', 'split'], 'corp-legal': ['official', ''], 'corp-partner': ['clean', 'center'],
+  'univ-aicenter': ['campus', ''], 'univ-extra': ['campus', 'split'], 'univ-lms': ['official', ''], 'univ-lifelong': ['warm', 'split'],
+  'k12-total': ['warm', 'split'], 'k12-exam': ['premium', 'bg'], 'k12-kids': ['kids', 'center'], 'adult-cert': ['clean', 'split'], 'adult-bootcamp': ['tech', 'bg'],
+  'adult-hobby': ['warm', 'center'], 'adult-lang': ['clean', 'center'], 'life-city': ['official', ''], 'life-senior': ['senior', 'center'], 'voc-card': ['official', ''],
+  'voc-employer': ['tech', 'split'], 'solo-creator': ['premium', 'split'] };
+  try { TPL.forEach(tp => { const m = M[tp.id]; if (m && !tp.theme) { tp.theme = m[0]; if (m[1]) tp.hero = m[1]; } }); } catch (e) { console.error(e); } })();
