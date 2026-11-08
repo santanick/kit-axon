@@ -242,9 +242,9 @@
   /* 머리글 · 바닥글: FA의 직업훈련 유형 목록(contact · util · left / cta · biz · split) 안에서 고르게 나눈다 */
   const FD2H = { 't3-v-kdt': ['contact', 'cta'], 't3-v-design': ['util', 'biz'], 't3-v-trade': ['left', 'split'], 't3-v-beauty': ['contact', 'biz'], 't3-v-license': ['util', 'split'], 't3-v-midlife': ['left', 'cta'], 't3-v-youth': ['contact', 'split'], 't3-v-remote': ['util', 'cta'], 't3-v-factory': ['left', 'biz'], 't3-v-care': ['contact', 'cta'], 't3-v-consort': ['util', 'biz'], 't3-v-jobcenter': ['left', 'split'], 'voc-card': ['contact', 'biz'], 'voc-employer': ['util', 'split'], 'tv-auto': ['left', 'cta'], 'tv-office': ['contact', 'split'] };
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
-  /* H3(R2 H1 · BRIEF8): 주력 계열 5개(bulletin · typo · story · portal · fullbleed)로 모은다 — editorial 2종을 story a · portal a로 옮긴다.
+  /* H3(R2 H1 · BRIEF8): 주력 계열 4개(bulletin · typo · story · portal) + editorial · fullbleed 1종씩으로 모은다.
      [계열 또는 'hk:<S3 첫 화면>', 변형] */
-  const H3L = { 't3-v-design': ['story', 'a'], 'voc-employer': ['portal', 'a'] };
+  const H3L = { 'voc-employer': ['portal', 'a'], 'voc-card': ['hk:box', ''] }; /* design은 story a면 corp customer · lifelong health와 닮음(②) → editorial c 그대로 · voc-card bulletin b는 lifelong t2-life-credit과 닮음(거리 6) */
   Object.keys(H3L).forEach(id => { const c = CFG[id], v = H3L[id]; if (!c) return;
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); delete FD2V[id]; } else { c.L = v[0]; delete c.hk; FD2V[id] = v[1]; } });
   /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
@@ -304,7 +304,8 @@
   };
   Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'voc') tp.qaCls = QA[id]; }); }
   /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
-  ['t3-v-remote', 't3-v-consort', 't3-v-midlife', 't3-v-beauty'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
-    tp.build = () => { const L = A(b0()); const hasT = L.some(x => x && x.data && x.data.variant === 'tiles');
-      L.forEach(x => { if (x && x.type === 'text' && x.data && x.data.variant === 'steps') x.data.variant = hasT ? 'features' : 'tiles'; }); return L; }; });
+  ['t3-v-remote', 't3-v-consort', 't3-v-midlife', 't3-v-beauty', 't3-v-trade'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
 })();

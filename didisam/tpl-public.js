@@ -112,7 +112,7 @@
     't4-service': ['hk:grid', '', 'util', 'biz'], /* split이면 voc tv-office와 첫 화면이 닮음(거리 6) */
     't4-safety': ['splitscreen', 'b', 'util', 'gov'],
     't4-integrity': ['typo', 'b', 'center', 'gov'],
-    't4-youth': ['portal', 'a', 'util', 'biz'], /* H3: 주력 portal a · b · c (story는 newhire 1종만) */ /* c면 voc t3-v-youth와 첫 화면 거리 2 */
+    't4-youth': ['story', 'a', 'util', 'biz'], /* H3: b는 corp-onboard(public 공유)와 겹침 · c면 voc t3-v-youth와 닮음 */ /* c면 voc t3-v-youth와 첫 화면 거리 2 */
     't4-family': ['hk:scrim', '', 'center', 'gov'], /* H3: 상자형 첫 화면 유형당 3종 이하 */
     't4-green': ['typo', 'a', 'util', 'gov'],
     't4-data': ['splitscreen', 'a', 'center', 'biz'], /* H3: 주력 splitscreen a · b · c */
@@ -193,7 +193,8 @@
   };
   Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'public') tp.qaCls = QA[id]; }); }
   /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
-  ['t4-outreach', 't4-safety'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
-    tp.build = () => { const L = A(b0()); const hasT = L.some(x => x && x.data && x.data.variant === 'tiles');
-      L.forEach(x => { if (x && x.type === 'text' && x.data && x.data.variant === 'steps') x.data.variant = hasT ? 'features' : 'tiles'; }); return L; }; });
+  ['t4-outreach', 't4-safety', 't4-digital', 't4-service'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
 })();

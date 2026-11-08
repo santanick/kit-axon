@@ -258,13 +258,13 @@
     't2-life-humanities': ['editorial', 'c', 'center', 'gov'],
     't2-life-craft': ['mosaic', 'c', 'contact', 'cols'],
     't2-life-credit': ['bulletin', 'b', 'util', 'split'], /* a면 corp-legal과 닮음 · 사진 판 위 eyebrow 대비 3.14 */
-    't2-life-family': ['mosaic', 'b', 'contact', 'split'],
-    't2-life-career': ['portal', 'a', 'center', 'cols'],
+    't2-life-family': ['mosaic', 'a', 'contact', 'split'], /* H3: b는 adult-hobby(lifelong 공유)와 겹침 */
+    't2-life-career': ['portal', 'b', 'center', 'cols'],
     't2-life-village': ['story', 'c', 'contact', 'gov'],
     'tl-life-health': ['story', 'a', 'center', 'split'],
     'tl-life-lang': ['hk:scrim', '', 'center', 'cols'],
     'tl-life-univext': ['editorial', 'a', 'util', 'gov'], /* H3: 상자형 줄임 · 주력 editorial */
-    'tl-life-cert': ['portal', 'b', 'contact', 'gov'] /* H3: 상자형 줄임 · 주력 portal */
+    'tl-life-cert': ['portal', 'a', 'contact', 'gov'] /* H3: 상자형 줄임 · 주력 portal(b면 사진 위 글 대비 4.14) */
   };
   Object.keys(FD2).forEach(id => { const c = CFG[id], v = FD2[id]; if (!c) return;
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); } else { c.L = v[0]; delete c.hk; }
@@ -339,7 +339,8 @@
   };
   Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'lifelong') tp.qaCls = QA[id]; }); }
   /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
-  ['life-senior', 'tl-life-cert'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
-    tp.build = () => { const L = A(b0()); const hasT = L.some(x => x && x.data && x.data.variant === 'tiles');
-      L.forEach(x => { if (x && x.type === 'text' && x.data && x.data.variant === 'steps') x.data.variant = hasT ? 'features' : 'tiles'; }); return L; }; });
+  ['life-senior', 'tl-life-cert', 't2-life-career', 'tl-life-univext'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
 })();

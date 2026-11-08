@@ -116,7 +116,7 @@
      같은 계열을 다른 유형도 쓰면 변형(layoutVar, FD1 HPL.vars)을 서로 다르게 고른다. 머리글 · 바닥글은 FA의 유형별 허용 목록 안에서 2~3종으로 나눈다.
      [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
   const FD2 = {
-    't2-univ-ctl': ['portal', 'c', 'util', 'campus'],
+    't2-univ-ctl': ['editorial', 'b', 'util', 'campus'], /* H3: portal c면 lifelong life-city와 공지 · 일정 패널이 같음(H1 ③) */
     'univ-lms': ['sidebar', 'a', 'center', 'min'],
     't2-univ-dept': ['portal', 'a', 'util', 'biz'] /* 어두운 첫 화면: dept · startup 2종 */,
     't2-univ-faculty': ['editorial', 'a', 'center', 'campus'],
@@ -128,7 +128,7 @@
     't2-univ-ai': ['sidebar', 'b', 'center', 'biz'],
     't2-univ-intl': ['story', 'a', 'util', 'campus'],
     't2-univ-rise': ['story', 'c', 'center', 'campus'], /* H3: fullbleed 1회 → 주력 story c */
-    't2-univ-cll': ['editorial', 'b', 'center', 'campus'], /* H3: 주력 editorial b */
+    't2-univ-cll': ['hk:box', '', 'center', 'campus'], /* H3: editorial이면 lifelong(공유)에서 b가 겹침 */
     'univ-aicenter': ['hk:scrim', '', 'util', 'biz'], /* H3: 상자형 줄임 → 사진 전면 */
     'univ-extra': ['story', 'b', 'center', 'min'],
     'univ-lifelong': ['hk:split', '', 'util', 'campus']
@@ -221,7 +221,8 @@
   };
   Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'univ') tp.qaCls = QA[id]; }); }
   /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
-  ['t2-univ-tutor', 't2-univ-mooc', 't2-univ-ctl', 't2-univ-writing'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
-    tp.build = () => { const L = A(b0()); const hasT = L.some(x => x && x.data && x.data.variant === 'tiles');
-      L.forEach(x => { if (x && x.type === 'text' && x.data && x.data.variant === 'steps') x.data.variant = hasT ? 'features' : 'tiles'; }); return L; }; });
+  ['t2-univ-tutor', 't2-univ-mooc', 't2-univ-ctl', 't2-univ-writing', 't2-univ-faculty', 'univ-aicenter'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
 })();

@@ -239,7 +239,7 @@
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
   /* H3(R2 H1 · BRIEF8): 주력 계열 5개(splitscreen · story · sidebar · editorial · bulletin)로 모으고, S3 첫 화면은 3종(franchise 상자 · leader · safety 전면 사진)만 둔다.
      [계열 또는 'hk:<S3 첫 화면>', 변형] */
-  const H3L = { 'corp-academy': ['bulletin', 'b'], 'corp-onboard': ['story', 'b'], 'corp-partner': ['sidebar', 'a'], 't3-c-ax': ['editorial', 'b'], 't3-c-global': ['editorial', 'c'],
+  const H3L = { 'corp-onboard': ['story', 'b'], /* academy · partner는 public · adult에도 걸려 S3 그대로 */ 't3-c-ax': ['editorial', 'b'], 't3-c-global': ['editorial', 'c'],
     't3-c-esg': ['story', 'c'], 'tc-security': ['splitscreen', 'c'], 't3-c-supplier': ['splitscreen', 'a'] };
   Object.keys(H3L).forEach(id => { const c = CFG[id], v = H3L[id]; if (!c) return;
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); delete FD2V[id]; } else { c.L = v[0]; delete c.hk; FD2V[id] = v[1]; } });
@@ -306,7 +306,8 @@
   };
   Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'corp') tp.qaCls = QA[id]; }); }
   /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
-  ['t3-c-share', 't3-c-supplier'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
-    tp.build = () => { const L = A(b0()); const hasT = L.some(x => x && x.data && x.data.variant === 'tiles');
-      L.forEach(x => { if (x && x.type === 'text' && x.data && x.data.variant === 'steps') x.data.variant = hasT ? 'features' : 'tiles'; }); return L; }; });
+  ['t3-c-share', 't3-c-supplier', 't3-c-global'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
 })();

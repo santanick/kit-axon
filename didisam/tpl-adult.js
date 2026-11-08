@@ -203,7 +203,7 @@
     't1-ad-testprep': { name: '어학 시험 대비', hk: 'scrim', th: 'clean', pal: 'tomato', cd: 'table', ck: 'panel', hd: ['overlay', 'cta', 'full'],
       ph: { hero: 'lec-01', about: 'dsk-01', space: 'cls-01', cta: 'brd-02' },
       build: () => [
-        ban({ eyebrow: '토익 · 토익스피킹 · 오픽', title: '목표 점수까지\n유형별로 전략적으로', sub: '유형별 강의와 실전 모의고사, 오답 분석으로 시험 일정에 맞춰 준비합니다.', cta: '수강신청', cta2: '레벨 상담' }),
+        ban({ eyebrow: '', /* H3: fullbleed a 사진 위 eyebrow 대비 2.14 → 뺌 */ title: '목표 점수까지\n유형별로 전략적으로', sub: '유형별 강의와 실전 모의고사, 오답 분석으로 시험 일정에 맞춰 준비합니다.', cta: '수강신청', cta2: '레벨 상담' }),
         facts(),
         cls('시험별 개설 반', '시험과 목표에 맞는 반을 표로 비교해 보세요.', { n: 6 }),
         T('steps', { eyebrow: '', title: '점수를 올리는 순서', cols: [['진단', '첫 모의고사로 현재 위치 확인'], ['유형 강의', '파트별 풀이 전략'], ['실전 연습', '시간 안에 푸는 연습'], ['오답 분석', '틀린 유형만 다시']] }),
@@ -333,12 +333,12 @@
     't1-ad-wellness': ['fullbleed', 'c', 'center', 'min'],
     't1-ad-craft': ['mosaic', 'c', 'left', 'mega'],
     't1-ad-creative': ['editorial', 'b', 'float', 'split'],
-    't1-ad-coach': ['typo', 'b', 'center', 'split'], /* H3: 주력 계열 집중 */
+    't1-ad-coach': ['hk:scrim', '', 'center', 'split'], /* H3: 상자형 줄임(typo b는 voc t3-v-license가 adult에 함께 걸려 겹침) */
     't1-ad-money': ['hk:split', '', 'float', 'mega'],
     't1-ad-testprep': ['fullbleed', 'a', 'left', 'split'], /* H3: 주력 fullbleed a · b · c */
     'ta-music': ['mosaic', 'a', 'center', 'min'], /* H3: 주력 mosaic a · b · c */
     'ta-book': ['editorial', 'a', 'center', 'mega'],
-    'ta-writing': ['editorial', 'c', 'float', 'min'], /* H3: typo b는 coach로 · 주력 editorial a · b · c */
+    'ta-writing': ['typo', 'b', 'float', 'min'],
     'ta-photo': ['fullbleed', 'b', 'overlay', 'mega'],
     'ta-marketing': ['hk:split', '', 'left', 'mega']
   };
@@ -414,7 +414,8 @@
   };
   Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'adult') tp.qaCls = QA[id]; }); }
   /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
-  ['adult-cert', 't1-ad-coach', 't1-ad-office', 't1-ad-testprep'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
-    tp.build = () => { const L = A(b0()); const hasT = L.some(x => x && x.data && x.data.variant === 'tiles');
-      L.forEach(x => { if (x && x.type === 'text' && x.data && x.data.variant === 'steps') x.data.variant = hasT ? 'features' : 'tiles'; }); return L; }; });
+  ['adult-cert', 't1-ad-coach', 't1-ad-office', 't1-ad-testprep', 't1-ad-creative', 'ta-marketing'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
 })();
