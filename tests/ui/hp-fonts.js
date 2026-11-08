@@ -85,6 +85,12 @@ const SHOT = process.env.SHOT_DIR || '';
       }
     }
     console.log('조합 | 화면 | 조각 수 | 조각 KB | 글꼴 CSS KB | 건 CSS'); TAB.forEach(r => console.log(r.join(' | ')));
+    /* v34.5 FZ(FIXLIST 24): HPF.need는 font-family(var(--x))로 실제로 참조된 변수만 센다 — 고딕 템플릿에 노토 세리프가 붙지 않음, 명조 계열에는 붙음 */
+    const nd = await ev(() => { const R = { goth: 0, gothSer: [], ser: [] }; tplFor(S.org.type).forEach(tp => { const s = siteFromTpl(tp); const p = window.HPFT && HPFT.pair(s); const n = HPF.need(s, siteHTML(s, true, 'ko'));
+        const serifSite = !p || /serif|hahmlet|maru|batang/.test(p.hd + ' ' + p.bd) || ['editorial', 'noir'].includes(s.layout);
+        if (serifSite) { if (!n.includes('noto-serif-kr') && ['editorial', 'noir'].includes(s.layout)) R.ser.push(tp.id); } else { R.goth++; if (n.includes('noto-serif-kr')) R.gothSer.push(tp.id); } });
+      const g = siteFromTpl(tplFor(S.org.type).find(tp => !['editorial', 'noir'].includes(siteFromTpl(tp).layout)) || tplFor(S.org.type)[0]); const h0 = siteHTML(g, true, 'ko'); R.base = HPF.need(g, h0); const h = h0.replace('</style>', '.fzx{--fz-only-def:"Noto Serif KR"}.fzy{font:700 20px var(--fz-ref)}:root{--fz-ref:"Gowun Dodum",serif}</style>'); R.def = HPF.need(g, h); return R; });
+    ok('HPF.need: 고딕 템플릿에 노토 세리프 0 · 명조 계열(editorial · noir)에는 있음 · 정의만 된 변수는 세지 않고 font 줄임의 var는 셈', nd.goth > 0 && !nd.gothSer.length && !nd.ser.length && nd.def.includes('noto-serif-kr') === nd.base.includes('noto-serif-kr') && nd.def.includes('gowun-dodum'), nd);
   } catch (e) { ok('예외 없음', false, String(e && e.stack || e)); }
   ok('페이지 오류 0', !errs.length, errs.slice(0, 5));
   await browser.close(); srv.close();

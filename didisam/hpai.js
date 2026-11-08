@@ -255,7 +255,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     n.id = x.id; ['dstyle', 'bg', 'align', 'img', 'imgs', 'link', 'link2', 'auto', 'ids', 'layout', 'addr', 'tel'].forEach(k => { if (d[k] !== undefined && n.data[k] === undefined) n.data[k] = d[k]; }); if (x.hide) n.hide = true; return n; }
   function hpApply() {
     const D = HPE.draft; if (!D) return; const cur = site(); hpPush(); const ns = D.site; ns.published = !!cur.published; ns.at = cur.at;
-    S.site = ns; if (ns.aiSeo) { S.settings.seo = S.settings.seo || {}; ['title', 'desc', 'kw'].forEach(k => { if (ns.aiSeo[k] && !S.settings.seo[k]) S.settings.seo[k] = ns.aiSeo[k]; }); }
+    S.site = ns; seoSync(ns); /* v34.5 FZ(FIXLIST 19): 빈 칸에 한 번만 복사하던 것을 출처 표시(auto) 방식으로 — 아래 seoSync */
     S.ai.usage = (S.ai.usage || 0) + 1; logAudit(`AI 홈페이지 만들기${ns.ai.url ? ' — 참고 사이트 구성 참고' : ''}`); save(); HPE.draft = null; closeModal(); UI.smT = 'home'; UI.sitePage = 'home';
     if (CUR.tab !== 'site') go('site'); else render();
     toast('새 홈페이지를 적용했습니다. 글자를 눌러 바로 고치고, 마음에 들면 [게시하기]를 누르세요.', 'ok');
@@ -560,6 +560,22 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     const HP_RULE = '\n홈페이지: 홈페이지 만들기 · 꾸미기 · 리뉴얼 · 다른 사이트 참고(벤치마크) · 메뉴 구성 요청은 build_homepage로 계획 카드를 만듭니다(설명은 brief, 주소는 benchmark_url). 다른 사이트의 글 · 이미지는 쓰지 않고 구성과 분위기만 참고한다고 안내합니다. 이미 만든 홈페이지의 글자 수정은 사이트 화면의 「화면에서 바로 고치기」를 안내합니다.';
     const cb = CL.call; CL.call = function (o) { try { if (o && typeof o.system === 'string' && Array.isArray(o.tools) && o.tools.some(t2 => t2.name === 'build_homepage')) o = { ...o, system: o.system + HP_RULE }; } catch (e) { } return cb.call(CL, o); };
   }
+  /* ── v34.5 FZ(FIXLIST 19 · 28): 검색 제목 · 설명 자동 갱신 ──
+     자동으로 채운 값은 S.settings.seo.auto[k]에 그 값을 함께 적어 둔다(출처 표시). 지금 값이 auto와 같거나 비어 있으면 '자동'으로 보고,
+     템플릿 · AI 만들기 · 시안 적용 · 말로 고치기로 사이트가 바뀔 때마다(저장 시점) 새 사이트 기준(s.aiSeo, 없으면 첫 화면 설명)으로 다시 맞춘다.
+     운영자가 설정 · 메뉴 · AI 제안 [적용]으로 쓴 값은 auto와 달라지므로 그대로 둔다(그 칸의 auto 표시는 지운다). */
+  function seoWant(s) { const a = (s && s.aiSeo) || {}; const bn = (Array.isArray(s && s.sections) ? s.sections : []).find(x => x && x.type === 'banner' && !x.hide);
+    const sub = String((bn && bn.data && bn.data.sub) || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    return { title: String(a.title || '').slice(0, 60), desc: String(a.desc || (sub.length >= 20 ? sub : '')).slice(0, 160), kw: String(a.kw || '').slice(0, 200) }; }
+  function seoSync(s, st) { st = st || S; s = s || (st && st.site); if (!s || !st || !st.settings) return false; const se = st.settings.seo = st.settings.seo || {};
+    const fresh = !(se.auto && typeof se.auto === 'object'); const au = se.auto = fresh ? {} : se.auto; const w = seoWant(s); let ch = false;
+    /* 처음 한 번(이전 저장본): 지금 사이트의 aiSeo를 그대로 복사해 둔 값은 자동으로 본다 */
+    if (fresh) ['title', 'desc', 'kw'].forEach(k => { if (se[k] && s.aiSeo && se[k] === s.aiSeo[k]) au[k] = se[k]; });
+    ['title', 'desc', 'kw'].forEach(k => { const cur = String(se[k] || ''); if (cur && cur !== String(au[k] || '')) { if (k in au) { delete au[k]; ch = true; } return; }
+      const v = w[k] || ''; if (cur !== v) { se[k] = v; ch = true; } if (v) { if (au[k] !== v) { au[k] = v; ch = true; } } else if (k in au) { delete au[k]; ch = true; } });
+    return ch; }
+  { const b0 = Store.set; Store.set = function (v) { try { if (v && v === S && v.site) seoSync(v.site, v); } catch (e) { console.error('seoSync', e); } return b0.apply(this, arguments); }; }
+  window.HPSEO = { sync: seoSync, want: seoWant };
   window.hpLocal = hpLocal; window.hpMake = hpMake; window.hpGenerate = hpGenerate; window.hpBenchURL = benchURL;
   if (typeof COVER !== 'undefined') COVER.push(['[신규] AI로 홈페이지 만들기(설명 · 참고 사이트) · 화면에서 바로 고치기 · 메뉴 편성(상위 · 하위)', 'site', '']);
 })();

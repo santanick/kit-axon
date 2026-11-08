@@ -13,6 +13,11 @@ const ROOT = path.resolve(__dirname, '../../didisam');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/json', '.json': 'application/json', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.woff2': 'font/woff2' };
 const CASES = [['adult'], ['k12'], ['univ'], ['univ', 'lms'], ['corp'], ['public'], ['lifelong'], ['voc']];
 const MIN_SCORE = 90; /* v34.5 X4: 품질 90 이상 */
+/* v34.5 FZ: FB(R1 M8)가 품질 항목을 늘린 뒤(사진 해상도 · 업종 · 보이는 섹션 · 배치 겹침, 합계 100 재배분) 시안 점수는 빈 기관 79~86 · 채워진 기관 87~92였다.
+   - 시안이 스스로 맞출 수 있는 항목(첫 화면 사진 해상도 · 업종 맞춤 · 배치 겹침)은 hpwiz2가 고를 때 맞춘다 → 시험에서도 그대로 센다.
+   - 기관 데이터에 달린 항목은 시안이 고칠 수 없다: contact(설정 › 연락처 미입력), secN(공지 · 강좌 · 후기 데이터가 없으면 빈 섹션을 숨겨 보이는 섹션이 6개 미만).
+     이 둘은 화면 점수에서는 감점하되, 시험 기준(MIN_SCORE)에서는 '자동 보정 불가'로 분리해 그 배점만큼 빼고 본다(기준 90은 그대로). */
+const DATA_ITEMS = ['contact', 'secN'];
 
 const window_has_stock = sq => sq.some(x => x.pts !== 0 || !x.ok) || sq.every(x => !x.n);
 (async () => {
@@ -52,7 +57,7 @@ const window_has_stock = sq => sq.some(x => x.pts !== 0 || !x.ok) || sq.every(x 
       /* 3) 시안 3개 만들기 */
       await click('[data-hw="gen"]'); await page.waitForFunction(() => document.querySelectorAll('.hpw-d').length === 3, null, { timeout: 30000 });
       const D = await page.evaluate(() => HPW.st.drafts.map(d => ({ id: d.id, hero: d.hero, layout: d.site.layout || '', hk: ((d.site.sections.find(x => x.type === 'banner') || {}).data || {}).hk || '', pal: d.site.hpPal || '', photo: ((d.site.img || {}).hero || {}).stock || '', sig: d.site.sections.filter(x => !x.hide).map(x => x.type + (x.data && x.data.variant ? ':' + x.data.variant : '')).join(','), q0: d.q0.score, q: d.q.score,
-        bad: d.q.items.filter(x => !x.ok && x.auto !== false).map(x => x.k), look: d.site.hpTheme || d.site.look })));
+        bad: d.q.items.filter(x => !x.ok && x.auto !== false).map(x => x.k), miss: d.q.items.filter(x => !x.ok).map(x => ({ k: x.k, pts: x.pts, note: x.note })), look: d.site.hpTheme || d.site.look })));
       if (new Set(D.map(d => d.sig)).size < 3) bad.push('시안 구성이 서로 같음');
       if (hasT) { /* 첫 화면 비교: 계열이 있으면 계열 · 첫 화면 변형(hk), 없으면 화면의 첫 화면 class */
         const hc = await page.evaluate(() => HPW.st.drafts.map(d => { const h = siteHTML(d.site); const m = h.match(/<section[^>]*class="([^"]*\bhpl-(?:hero|s)\b[^"]*)"/); const f = d.site.layout && m ? (m[1].match(/\bhpl-(?!s\b|hero\b|on\b|img\b|w\b)([a-z]+)/) || [])[1] : '';
@@ -66,7 +71,7 @@ const window_has_stock = sq => sq.some(x => x.pts !== 0 || !x.ok) || sq.every(x 
         if (window_has_stock(sq)) bad.push(`샘플 사진 안내 줄 없음 또는 감점 ${JSON.stringify(sq)}`);
         const au = await page.evaluate(() => HPW.st.drafts.flatMap(d => HPT.audit(d.site).filter(r => r[3] < 4.5).map(r => `${d.id}:${r[0]} ${r[3]}`)));
         if (au.length) bad.push(`대비 4.5:1 미만 ${au.slice(0, 3).join(', ')}`); } if (new Set(D.map(d => d.hero)).size < 3) bad.push('첫 화면 배치가 서로 같음');
-      D.forEach(d => { if (d.q < MIN_SCORE) bad.push(`시안 ${d.id} 품질 ${d.q}점`); if (d.bad.some(k => k !== 'contact')) bad.push(`시안 ${d.id} 미해결 ${d.bad.join('/')}`); });
+      D.forEach(d => { const dq = d.miss.filter(x => DATA_ITEMS.includes(x.k)).reduce((a, x) => a + (+x.pts || 0), 0); if (d.q + dq < MIN_SCORE) bad.push(`시안 ${d.id} 품질 ${d.q}점(기관 데이터 항목 ${dq}점 제외 기준 ${MIN_SCORE}) ${JSON.stringify(d.miss)}`); if (d.bad.some(k => k !== 'contact')) bad.push(`시안 ${d.id} 미해결 ${d.bad.join('/')}`); });
       const shown = await page.$eval('.hpw-q .hpw-score', e => parseInt(e.textContent, 10)).catch(() => -1); if (shown !== D[0].q) bad.push(`화면 점수 ${shown} ≠ ${D[0].q}`);
       /* 시안 고르기는 선택(기본은 A). 다른 유형에서는 B · C도 골라 본다 */
       if (ci % 3) { await click(`[data-hw="pick"][data-v="${ci % 3}"]`); await page.waitForTimeout(150); }
@@ -99,12 +104,29 @@ const window_has_stock = sq => sq.some(x => x.pts !== 0 || !x.ok) || sq.every(x 
           n = run('어둡고 고급스럽게'); o.noir = !!n && (!L('noir') || n.layout === 'noir') && n.theme === 'premium';
           n = run('카드를 목록형으로'); o.card = !!n && n.sections.filter(x => x.type === 'classes').every(x => x.data.card === 'list');
           if (!site().sections.some(x => x.type === 'classes')) o.card = true; /* 강좌 목록이 없으면 안내만 */
-          n = run('머리글 투명하게'); o.head = !!n && !!n.hps && n.hps.head === 'overlay';
+          n = run('머리글 투명하게'); o.head = !!n && !!n.hps && n.hps.head === 'overlay' && n.hps.ownH === 1;
           n = run('매거진 느낌으로, 색을 초록으로'); o.mix = !!n && n.color.toLowerCase() === '#15803d';
           o.gate = !!hpwTalkAnswer('사진 크게'); return o; });
         Object.entries(t2).forEach(([k, v]) => { if (!v) bad.push(`말로 고치기(${k}) 실패`); });
         ['더 고급스럽게', '테마 바꿔줘', '첫 화면 문구 바꿔줘'].forEach(q => { if (r.out[q] !== 'plan') bad.push(`'${q}' 계획 없음`); }); if (r.out['후기 섹션 빼줘'] === 'none') bad.push('후기 빼기 응답 없음'); if (r.none) bad.push('홈페이지와 무관한 말을 가로챔');
       }
+      /* v34.5 FZ(FIXLIST 19 · 28): 검색 제목 · 설명 — 사이트를 바꾸면 자동 값은 새 사이트 기준으로, 운영자가 쓴 값은 그대로 */
+      if (ci === 0) { const so = await page.evaluate(() => { const keep = JSON.stringify(S.site); const a0 = { t: S.settings.seo.title, auto: Object.keys(S.settings.seo.auto || {}) };
+          const tp = tplFor(S.org.type).find(t => t.id !== S.site.tpl); S.site = siteFromTpl(tp); S.site.aiSeo = { title: '새 사이트 제목 FZ', desc: '새 사이트 설명입니다. 템플릿을 바꾸면 검색 설명도 함께 바뀌어야 합니다.', kw: 'fz, 검색' }; save();
+          const r1 = { t: S.settings.seo.title, d: S.settings.seo.desc, kw: S.settings.seo.kw };
+          S.settings.seo.desc = '운영자가 직접 쓴 설명입니다. 사이트를 바꿔도 그대로 있어야 합니다.'; save();
+          S.site = siteFromTpl(tp); S.site.aiSeo = { title: '세 번째 제목 FZ', desc: '세 번째 사이트 설명입니다. 이번에는 제목만 바뀌어야 합니다.', kw: '' }; save();
+          const r2 = { t: S.settings.seo.title, d: S.settings.seo.desc, kw: S.settings.seo.kw, auto: Object.keys(S.settings.seo.auto || {}) };
+          S.site = JSON.parse(keep); S.settings.seo.desc = ''; save(); return { a0, r1, r2, back: S.settings.seo.title }; });
+        if (!so.a0.auto.includes('title')) bad.push(`SEO 자동 표시 없음 ${JSON.stringify(so.a0)}`);
+        if (so.r1.t !== '새 사이트 제목 FZ' || !/템플릿을 바꾸면/.test(so.r1.d) || so.r1.kw !== 'fz, 검색') bad.push(`사이트를 바꿔도 SEO가 그대로 ${JSON.stringify(so.r1)}`);
+        if (so.r2.t !== '세 번째 제목 FZ' || !/운영자가 직접/.test(so.r2.d) || so.r2.kw || so.r2.auto.includes('desc')) bad.push(`운영자가 쓴 SEO 설명을 덮어씀 ${JSON.stringify(so.r2)}`);
+        if (so.back !== so.a0.t) bad.push(`원래 사이트로 돌리면 SEO 제목도 돌아와야 함 ${JSON.stringify(so)}`);
+        /* v34.5 FZ(FIXLIST 26): util 머리글 — 대표번호 · 공지가 하나도 없으면 위 유틸 띠를 그리지 않음 */
+        const ut = await page.evaluate(() => { const s = JSON.parse(JSON.stringify(S.site)); s.hps = Object.assign({}, s.hps || {}, { head: 'util', ownH: 1 }); delete s.hps.notice; const ft = S.settings.footer = S.settings.footer || {}; const t0 = ft.tel;
+          ft.tel = ''; const a = siteHTML(s, true, 'ko'); ft.tel = '051-000-0000'; const b = siteHTML(s, true, 'ko'); ft.tel = t0;
+          return { aHead: /hps-h-util/.test(a), aStrip: /class="hps-ut"/.test(a), bStrip: /class="hps-ut"/.test(b) }; });
+        if (!ut.aHead || ut.aStrip || !ut.bStrip) bad.push(`util 머리글 빈 띠 ${JSON.stringify(ut)}`); }
       /* 게시된 학습자 홈(휴대폰 390) */
       const pm = await ctx.newPage(); pm.on('pageerror', e => errs.push('learner: ' + e.message)); await pm.setViewportSize({ width: 390, height: 844 });
       await pm.goto(`${base}/learner.html?t=${after.tid}#home`, { waitUntil: 'load' }); await pm.waitForTimeout(1500);

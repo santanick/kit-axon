@@ -67,7 +67,17 @@
   function need(s, html) { const K = new Set();
     if (typeof html !== 'string') { try { html = String(base0 ? base0(s, true, 'ko') : ''); } catch (e) { html = ''; } }
     const H = html.replace(/&quot;|&#34;|&#39;/g, "'");
-    for (const m of H.matchAll(/(?:font-family|--[\w-]+)\s*:\s*([^;{}<>]+)/g)) { const first = m[1].split(',')[0]; if (!/['"A-Za-z]/.test(first)) continue; const k = byFam(first); if (k) K.add(k); }
+    /* v34.5 FZ(FIXLIST 24): CSS 변수 정의(--x: 'Noto Serif KR')는 세지 않고, font-family(· font 줄임) 값에서 var(--x)로 실제로 참조된 변수만 따라가 센다
+       — 예전에는 --hpl-serif 정의만으로 고딕 사이트 144곳 중 100곳에 노토 세리프 CSS(89KB)가 붙었다 */
+    const DEF = new Map(); for (const m of H.matchAll(/(--[\w-]+)\s*:\s*([^;{}<>]+)/g)) { if (!DEF.has(m[1])) DEF.set(m[1], []); DEF.get(m[1]).push(m[2]); }
+    const seen = new Set();
+    const val = (v, dep) => { v = String(v || '').trim(); if (!v || dep > 6) return;
+      if (/^var\(/.test(v)) { let lv = 0, end = -1; for (let i = 3; i < v.length; i++) { if (v[i] === '(') lv++; else if (v[i] === ')' && --lv === 0) { end = i; break; } }
+        const inner = v.slice(4, end < 0 ? v.length : end); const c = inner.indexOf(','); const nm = (c < 0 ? inner : inner.slice(0, c)).trim(); const fb = c < 0 ? '' : inner.slice(c + 1);
+        const D = DEF.get(nm); if (D && D.length) { if (!seen.has(nm)) { seen.add(nm); D.forEach(x => val(x, dep + 1)); } } else val(fb, dep + 1); return; }
+      const first = v.split(',')[0]; if (!/['"A-Za-z]/.test(first)) return; const k = byFam(first); if (k) K.add(k); };
+    for (const m of H.matchAll(/font-family\s*:\s*([^;{}<>]+)/g)) val(m[1], 0);
+    for (const m of H.matchAll(/[{;\s"']font\s*:\s*([^;{}<>]+)/g)) { for (const r of m[1].matchAll(/var\(\s*--[\w-]+[^)]*\)?/g)) val(r[0], 0); const q = /(['"])([^'"]+)\1/.exec(m[1]); if (q) val(q[0], 0); }
     const f = s && s.font && typeof s.font === 'object' ? s.font : {}; ['h', 'b'].forEach(x => { const k = id(f[x]); if (k) K.add(k); });
     try { const J = JSON.stringify([s && s.sections, ((s && s.menus) || []).map(m => m.sections)]); (J.match(/"ff":"([\w-]+)"/g) || []).forEach(m => { const k = id(m.slice(6, -1)); if (k) K.add(k); }); } catch (e) { }
     try { if (window.HPFT && typeof HPFT.need === 'function') (HPFT.need(s) || []).forEach(x => { const k = id(x); if (k) K.add(k); }); } catch (e) { }

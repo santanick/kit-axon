@@ -143,12 +143,12 @@ ${info}<nav aria-label="전체 메뉴"><ul class="hps-ml">${list}</ul></nav>
     const login = c.login && !['contact', 'util'].includes(kind) ? `<a class="hps-login" href="#">${E(c.login)}</a>` : '';
     const ctaA = `<a class="hps-cta" ${aAttr(c.cta.href)}>${E(c.cta.l)}</a>`; const mo = `<div class="hps-mo">${mTel}<label for="${id}-mt" class="hps-bg" title="전체 메뉴" aria-label="전체 메뉴 열기">${svg('menu', 24, 2)}</label></div>`;
     /* 유틸 띠(util): 위 36px 한 줄 = 대표번호 · 운영 시간(설정값) 또는 공지 + 오른쪽 로그인 · 공지 링크 */
-    let ut = '';
-    if (kind === 'util') { const nt = (c.items || []).find(it => /공지|알림/.test(it.l)); const left = tel ? `<a class="hps-utt" href="${E(telHref(tel))}"><em>대표전화</em><span>${E(tel)}</span></a>${c.hours ? `<span class="hps-uth">${E(c.hours)}</span>` : ''}` : n ? `<span class="hps-utn">${E(n.t)}</span>` : '';
+    let ut = ''; const utOn = kind === 'util' && !!(tel || n); /* v34.5 FZ(FIXLIST 26): 대표번호 · 공지 같은 설정값이 하나도 없으면 빈 띠를 그리지 않고, 언어 · 로그인은 아래 줄로 옮긴다 */
+    if (utOn) { const nt = (c.items || []).find(it => /공지|알림/.test(it.l)); const left = tel ? `<a class="hps-utt" href="${E(telHref(tel))}"><em>대표전화</em><span>${E(tel)}</span></a>${c.hours ? `<span class="hps-uth">${E(c.hours)}</span>` : ''}` : n ? `<span class="hps-utn">${E(n.t)}</span>` : '';
       ut = `<div class="hps-ut"><div class="hps-utw"><div class="hps-utl">${left}</div><div class="hps-utr">${nt ? `<a ${nt.a}>${E(nt.l)}</a>` : ''}${c.lsw}${c.login ? `<a class="hps-login" href="#">${E(c.login)}</a>` : ''}</div></div></div>`; }
     let body;
     if (kind === 'center') body = `<div class="hps-hw hps-c1"><div class="hps-cl">${telA}</div>${c.logo}<div class="hps-hr">${c.lsw}${login}${ctaA}</div>${mo}</div><div class="hps-c2">${c.nav}</div>`;
-    else body = `<div class="hps-hw">${c.logo}${kind === 'left' ? '<span class="hps-vr" aria-hidden="true"></span>' : ''}${c.nav}<div class="hps-hr">${kind === 'util' ? '' : c.lsw}${telA}${login}${ctaA}</div>
+    else body = `<div class="hps-hw">${c.logo}${kind === 'left' ? '<span class="hps-vr" aria-hidden="true"></span>' : ''}${c.nav}<div class="hps-hr">${utOn ? '' : c.lsw}${telA}${utOn ? '' : kind === 'util' && c.login ? `<a class="hps-login" href="#">${E(c.login)}</a>` : login}${ctaA}</div>
 ${mo}</div>`;
     const head = `<header class="gh hpt hps-h hps-h-${kind} hps-ty-${E(ty)}${c.cbg ? ' hps-cbg' : ''}" data-hps="${kind}">${ut}${body}</header>`;
     return `<input type="checkbox" id="${id}-mt" class="hps-mt" aria-label="전체 메뉴"><div class="hps-top${kind === 'overlay' ? ' hps-ovw' : ''}">${noticeHTML(kind === 'util' && !tel ? null : n, id)}${head}</div>${mobilePanel(c.mm, Object.assign({}, c, { tel }))}`; };

@@ -101,7 +101,7 @@ ${hsel}{font-family:var(--hd-ff);font-weight:var(--hd-fw);letter-spacing:var(--h
     /* 1-1. 첫 화면 부품(S3 hpsec-hero)은 굵기 · 자간 · 줄간을 고정값으로 쓴다 → 조합표 값으로(한 단계 높은 선택자, 줄간은 큰 격자형 !important만 맞춤) */
     L.push(`body .hpt.hps-hero h1,body .hps-cta h2{font-family:var(--hd-ff);font-weight:var(--hd-fw);letter-spacing:var(--hd-ls)}body .hpt.hps-hero h1{line-height:${p.lh}}body .hps-cta h2{line-height:${p.lh2}}
 body .hps-k-grid h1{line-height:${Math.max(1.12, p.lh - 0.04).toFixed(2)}!important}
-body .hpt .hps-q1 blockquote::before{font-family:${kind === 'serif' ? Q : "Georgia,'Times New Roman',serif"}}`);
+body .hpt .hps-q1 blockquote::before{font-family:${kind === 'serif' ? Q : "Georgia,'Times New Roman',serif"}!important}`); /* v34.5 FZ(FIXLIST 24): hpsec-trust의 범위 선택자가 더 세서 고딕 사이트 큰따옴표가 Georgia → 'Noto Serif KR'(웹폰트 조각 13KB)로 그려졌다 */
     /* 2. 단일 굵기 · 글자 수가 적은 제목 글꼴 */
     if (one(p.hd)) L.push(`${hsel},.hpt .hp-fl b{font-synthesis:none}`);
     if (small !== H) L.push(`.hpt .hp-card h3,.hpt .hp-ccb h3,.hpt .hp-st h3,.hpt .hp-pc h3,.hpt .hp-st .hp-no{font-family:${small}}`);

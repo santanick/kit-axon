@@ -470,7 +470,7 @@
   /* 품질 점수 창(사이트 화면 · 바로 고치기) */
   ACT['hpw-q'] = () => { if (!S.site) return; const q0 = hpwQuality(site()); const fx = hpwFix(site()); const q1 = hpwQuality(fx.site);
     modal('홈페이지 품질 점수', `<div class="hpw">${qHTML(q0, null, [], false)}${fx.log.length ? `<p class="hpw-lead">[자동 보정]을 누르면 ${q1.score}점이 됩니다(되돌리기 가능).</p><ul class="hpw-fl">${fx.log.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : '<p class="hpw-lead">자동으로 고칠 것이 없습니다.</p>'}${q1.items.some(x => !x.ok && !x.auto) ? '<p class="mini">연락처는 설정 › 홈페이지 푸터에서 입력합니다(지어낸 연락처는 넣지 않습니다).</p>' : ''}</div>`,
-      fx.log.length ? [{ id: 'c', label: '닫기' }, { id: 'ok', label: '자동 보정', kind: 'pri', run: () => { try { hpPush(); } catch (e) { } const n = fx.site; if (n.hpSeoFix && n.aiSeo) { S.settings.seo = S.settings.seo || {}; ['title', 'desc', 'kw'].forEach(k => { if (n.aiSeo[k] && !S.settings.seo[k]) S.settings.seo[k] = n.aiSeo[k]; }); } S.site = n; save(); repaint(); toast(`자동 보정했습니다 — 품질 ${q1.score}점.`, 'ok'); } }] : [{ id: 'c', label: '닫기' }]);
+      fx.log.length ? [{ id: 'c', label: '닫기' }, { id: 'ok', label: '자동 보정', kind: 'pri', run: () => { try { hpPush(); } catch (e) { } const n = fx.site; S.site = n; save(); /* v34.5 FZ(FIXLIST 19): 검색 제목 · 설명은 저장 때 HPSEO.sync가 n.aiSeo로 맞춘다(운영자가 쓴 값은 그대로) */ repaint(); toast(`자동 보정했습니다 — 품질 ${q1.score}점.`, 'ok'); } }] : [{ id: 'c', label: '닫기' }]);
     $('#modal').classList.add('hpai-m'); };
 
   /* ═════════ 사이트 첫 화면(v34 slim): 「AI로 홈페이지 만들기」 카드 · 품질 점수 ═════════ */

@@ -60,10 +60,15 @@
     A(TPL).forEach(t => { if (!t || t.hidden || !t.layout || !HPL.fam[t.layout]) return; const T2 = A(t.types); if (!(T2.includes(ty) || T2.includes(bt))) return; (R[t.layout] = R[t.layout] || []).push(t); });
     Object.keys(R).forEach(k => R[k].sort((a, b) => (A(a.types)[0] === bt ? 0 : 1) - (A(b.types)[0] === bt ? 0 : 1))); return R; }
   function tplExtras(t) { const o = {}; try { const L = typeof t.build === 'function' ? A(t.build()) : []; L.forEach(x => { const d = (x && x.data) || {}; if (x.type === 'banner' && d.hk) o.hk = d.hk; if (x.type === 'classes' && d.card) o.card = o.card || d.card; }); } catch (e) { } return o; }
+  /* v34.5 FZ: 품질 점수(FB HPS.qItems)의 첫 화면 사진 기준과 같게 — 첫 화면 자리(hero) · 긴 변 1200px 이상 · 기관 유형 맞춤. 시안이 스스로 맞출 수 있는 항목이므로 고를 때 거른다 */
+  const heroOk = (x, ty) => { if (typeof x === 'string') x = hasP() ? HPSTOCK.get(x) : null; if (!x) return false; const bt = baseTy(ty);
+    return A(x.slots).includes('hero') && Math.max(x.w || 0, x.h || 0) >= 1200 && (!A(x.types).length || A(x.types).includes(bt)); };
   function heroPick(ty, scene, used, seed) {
     if (!hasP()) return null; let L = [];
     try { L = A(HPSTOCK.forScene(baseTy(ty), scene, 'hero', { n: 10, seed, exclude: used, people: true })); } catch (e) { L = []; }
-    L = L.filter(x => x && !used.includes(x.id)); return (L.find(peopleish) || L[0] || null); }
+    L = L.filter(x => x && !used.includes(x.id)); const G = L.filter(x => heroOk(x, ty));
+    if (!G.length) { try { G.push(...A(Array.isArray(HPSTOCK.list) ? HPSTOCK.list : typeof HPSTOCK.list === 'function' ? HPSTOCK.list() : []).filter(x => x && !used.includes(x.id) && heroOk(x, ty) && A(x.types).includes(baseTy(ty)))); } catch (e) { } }
+    return (G.find(peopleish) || G[0] || L.find(peopleish) || L[0] || null); }
   function slotPick(ty, scene, slot, used, seed) { if (!hasP()) return null; try { const L = A(HPSTOCK.forScene(baseTy(ty), scene, slot, { n: 6, seed, exclude: used, people: slot !== 'cta' })).filter(x => x && !used.includes(x.id)); return L.find(peopleish) || L[0] || null; } catch (e) { return null; } }
   function palPick(ty, th, heroId, used, prefer) {
     if (!hasC()) return null; const L = A(HPC.forType(baseTy(ty), MOOD[th])); if (!L.length) return null;
@@ -89,7 +94,10 @@
     const LC = layoutCands(ty); const refs = tplRefs(ty); const CD = A(o.claude);
     const used = { layout: [], theme: [], pal: [], hero: [], photo: [], hk: [], card: [] }; const out = [];
     /* 다시 만들 때는 계열 후보를 세 칸씩 밀어 다른 조합을 보여 준다 */
-    const rot = LC.length ? (r * 3) % LC.length : 0; const order = LC.slice(rot).concat(LC.slice(0, rot));
+    const rot = LC.length ? (r * 3) % LC.length : 0; let order = LC.slice(rot).concat(LC.slice(0, rot));
+    /* v34.5 FZ: 같은 유형 템플릿 2종 이상과 배치가 겹치는 계열(품질 '배치 겹침')은 뒤로 — 순서는 그대로 두고 겹치지 않는 계열을 먼저 */
+    { const bt = baseTy(ty); const cnt = {}; A(typeof TPL !== 'undefined' ? TPL : []).forEach(t => { if (t && !t.hidden && t.layout && A(t.types).includes(bt)) cnt[t.layout] = (cnt[t.layout] || 0) + 1; });
+      const dup = id => (cnt[id] || 0) - (A(refs[id]).length ? 1 : 0); order = order.filter(id => dup(id) <= 1).concat(order.filter(id => dup(id) > 1)); }
     for (let i = 0; i < n; i++) {
       const cd = CD[i] || {}; const c = { by: [] };
       c.layout = cd.layout && !used.layout.includes(cd.layout) ? cd.layout : order.find(id => !used.layout.includes(id)) || ''; if (cd.layout && c.layout === cd.layout) c.by.push('claude');
@@ -99,7 +107,7 @@
       c.theme = thPick(c.layout, ty, i === 0 && o.theme ? [] : used.theme, want);
       /* 사진: Claude → 템플릿 → 규칙(사람 장면 우선), 첫 화면 사진은 서로 다르게 */
       const ph = Object.assign({}, ref && ref.photos ? ref.photos : {}, cd.photos || {});
-      Object.keys(ph).forEach(k => { if (!hasP() || !HPSTOCK.get(ph[k]) || used.photo.includes(ph[k])) delete ph[k]; });
+      Object.keys(ph).forEach(k => { if (!hasP() || !HPSTOCK.get(ph[k]) || used.photo.includes(ph[k])) delete ph[k]; }); if (ph.hero && !heroOk(ph.hero, ty)) delete ph.hero;
       if (!ph.hero || used.hero.includes(ph.hero)) { const h = heroPick(ty, scene, used.photo.concat(used.hero), `${S && S.org ? S.org.name : ''}|${r}|${i}`); if (h) ph.hero = h.id; else delete ph.hero; }
       ['about', 'space', 'cta'].forEach(sl => { if (ph[sl]) return; const x = slotPick(ty, scene, sl, used.photo.concat(Object.values(ph)), `${r}|${i}|${sl}`); if (x) ph[sl] = x.id; });
       c.photos = ph; if (ph.hero) used.hero.push(ph.hero); Object.values(ph).forEach(id => used.photo.push(id));
@@ -127,7 +135,7 @@
       Object.keys(c.photos || {}).forEach(sl => { if (img[sl] && img[sl].src) return; const v = HPSTOCK.slotImg(c.photos[sl], sl); if (v) img[sl] = v; });
       d.img = img; d.photos = Object.assign({}, c.photos || {}); }
     A(d.sections).forEach(x => { const dd = x && x.data; if (!dd) return; if (x.type === 'banner') { if (c.hk) dd.hk = c.hk; if (dd.img && isStock(dd.img)) delete dd.img; } if (x.type === 'classes' && c.card) dd.card = c.card; });
-    const h = Object.assign({}, d.hps || {}); delete h.head; delete h.foot; delete h.mm; Object.assign(h, c.hps || {}); if (Object.keys(h).length) d.hps = h; else delete d.hps;
+    const h = Object.assign({}, d.hps || {}); delete h.head; delete h.foot; delete h.mm; delete h.ownH; delete h.ownF; Object.assign(h, c.hps || {}); if (Object.keys(h).length) d.hps = h; else delete d.hps;
     if (c.tpl) d.tpl = c.tpl;
     d.hpDesign = { layout: c.layout || '', theme: c.theme || '', palette: c.palette || '', hero: (c.photos || {}).hero || '', hk: c.hk || '', card: c.card || '', tpl: c.tpl || '', by: A(c.by).join('+') };
     return d; }
@@ -174,7 +182,7 @@ ${fams ? `- 계열(layout): ${fams}\n` : ''}${pals ? `- 팔레트(palette): ${pa
   const FOOTK = [['mega', '어두운 바탕 · 큰 기관명'], ['cta', '신청 띠와 이어짐'], ['biz', '사업자 정보 표'], ['min', '최소형'], ['cols', '링크 열 · 연락처']];
   const kinds = grp => { const K = (window.HPS && HPS.kinds) || {}; const L = A(K[grp === 'nav' ? 'nav' : 'footer']); return L.length ? L : grp === 'nav' ? NAVK : FOOTK; };
   const kindName = (grp, id) => (kinds(grp).find(x => x[0] === id) || [])[1] || id;
-  const setLayout = (x, id) => { if (window.HPL && HPL.apply) HPL.apply(x, id); else x.layout = id; if (x.hps) { delete x.hps.head; delete x.hps.foot; delete x.hps.mm; } return x; };
+  const setLayout = (x, id) => { if (window.HPL && HPL.apply) HPL.apply(x, id); else x.layout = id; if (x.hps) { delete x.hps.head; delete x.hps.foot; delete x.hps.mm; delete x.hps.ownH; delete x.hps.ownF; } return x; };
   function talkX(s, cur, loose) {
     const clauses = String(s).split(/\s*(?:,|，|\.|·|그리고|하고\s|또\s|\s및\s)\s*/).filter(Boolean); const rest = []; const P = { steps: [], fns: [], msg: '' };
     const step = (l, f) => { P.steps.push(l); P.fns.push(f); }; const ty = tyKey(); const L = hasL();
@@ -193,8 +201,8 @@ ${fams ? `- 계열(layout): ${fams}\n` : ''}${pals ? `- 팔레트(palette): ${pa
         if (!n) P.msg = '강좌 목록 섹션이 없어 카드 모양을 바꾸지 않았습니다.'; else step(`강좌 카드를 「${nm}」(으)로`, x => { A(x.sections).forEach(y => { if (y.type === 'classes' && y.data) y.data.card = k; }); return x; }); }
       else if (/(머리글|헤더|상단\s*메뉴)/.test(c) && HEADW.some(([re]) => re.test(c))) { const k = HEADW.find(([re]) => re.test(c))[1]; const ft = (S.settings && S.settings.footer) || {};
         if (k === 'contact' && !ft.tel) P.msg = '전화번호가 비어 있어 전화 버튼 머리글을 쓰지 않았습니다. 설정 › 홈페이지 푸터에서 전화번호를 넣어 주세요.';
-        else step(`머리글을 「${kindName('nav', k)}」(으)로`, x => { x.hps = Object.assign({}, x.hps || {}, { head: k }); return x; }); }
-      else if (/(바닥글|푸터)/.test(c) && FOOTW.some(([re]) => re.test(c))) { const k = FOOTW.find(([re]) => re.test(c))[1]; step(`바닥글을 「${kindName('footer', k)}」(으)로`, x => { x.hps = Object.assign({}, x.hps || {}, { foot: k }); return x; }); }
+        else step(`머리글을 「${kindName('nav', k)}」(으)로`, x => { x.hps = Object.assign({}, x.hps || {}, { head: k, ownH: 1 }); return x; /* v34.5 FZ(FIXLIST 25): 말로 고친 머리글은 운영자 값 — 유형 목록 자동 재배정에서 제외 */ }); }
+      else if (/(바닥글|푸터)/.test(c) && FOOTW.some(([re]) => re.test(c))) { const k = FOOTW.find(([re]) => re.test(c))[1]; step(`바닥글을 「${kindName('footer', k)}」(으)로`, x => { x.hps = Object.assign({}, x.hps || {}, { foot: k, ownF: 1 }); return x; }); }
       else if (L && fams.some(f => f.name && c.includes(f.name.replace(/\s*(형|격자)$/, '')) && f.name.length >= 2) || (L && /(게시판형|신문형)/.test(c))) { const f = /(게시판형|신문형)/.test(c) ? { id: 'bulletin' } : fams.find(f2 => c.includes(f2.name.replace(/\s*(형|격자)$/, ''))); famStep(f.id); }
       else if (L && /(계열|레이아웃|배치|구조)\S*\s*(을|를)?\s*(바꿔|변경|다른|바꾸)/.test(c)) { const C = layoutCands(ty); const k = C.indexOf(curL); const id = C[(k + 1) % C.length]; famStep(id); }
       else if (/(팔레트|색\s*조합)\S*\s*(을|를)?\s*(바꿔|변경|다른|바꾸)/.test(c)) palStep(null, curTh);
@@ -235,7 +243,9 @@ ${fams ? `- 계열(layout): ${fams}\n` : ''}${pals ? `- 팔레트(palette): ${pa
     const T = A(s.sections).filter(x => x && !x.hide && x.data).map(x => String(x.data.title || '').replace(/[​\s]+/g, '')).filter(t => t.length >= 2);
     if (T.some(t => !tx.includes(plainTxt(E(t))))) return false;
     const M = A(s.menus).filter(m => m && m.on !== false).map(m => String(m.l || '')); const PM = A(hp.menus).map(m => String(m.l || ''));
-    return M.length === PM.length && M.every((l, i) => l === PM[i]); }
+    /* v34.5 FZ: 게시본 메뉴 이름은 유형별 이름(HPS.menuName — 예: 평생 '커뮤니티' → '학습 동아리')으로 바뀌어 저장되므로 같은 규칙으로 맞춰 비교한다(없으면 고친 것으로 잘못 보고 이전을 건너뛰었다) */
+    const mn = l => { try { return window.HPS && typeof HPS.menuName === 'function' ? String(HPS.menuName(l)) : l; } catch (e) { return l; } };
+    return M.length === PM.length && M.every((l, i) => l === PM[i] || mn(l) === PM[i]); }
   function migHead() {
     if (X.migDone) return; if (!S || !S.org || !S.site || !S.lsite || !S.lsite.pub || !S.lsite.pub.hp) return;
     const hp = S.lsite.pub.hp; if (Object.prototype.hasOwnProperty.call(hp, 'head') || S.site.hpHeadMig) { X.migDone = true; return; }

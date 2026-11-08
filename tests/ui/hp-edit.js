@@ -100,7 +100,8 @@ const BROCHURE = { name: 'brochure.txt', mimeType: 'text/plain', buffer: Buffer.
     let hero = await ev(() => ({ d: site().sections.find(x => x.type === 'banner').data.img.slice(0, 30), s: ((site().img || {}).hero || {}).src ? 1 : 0, len: site().sections.find(x => x.type === 'banner').data.img.length }));
     ok('사진 올리기 → banner.data.img = site.img.hero(300KB 이하)', hero.s && hero.len <= 300 * 1024, hero);
     await frameReady(); await page.waitForSelector('#hpiImg .hpi-pv img');
-    await page.click('#hpiImg [data-hpi-i="fit"][data-v="contain"]'); await wait(350);
+    await page.click('#hpiImg [data-hpi-i="fit"][data-v="contain"]'); await page.waitForFunction(() => ((site().img || {}).hero || {}).fit === 'contain'); await page.waitForSelector('#hpiImg .hpi-pv img'); await wait(350);
+    /* v34.5 FZ(FIXLIST 21): 맞춤을 바꾸면 패널이 다시 그려진다 — 부하가 크면 350ms 안에 끝나지 않아 옛 상자 좌표로 끌어 초점이 100% 100%가 되거나 상자가 null이었다 */
     const pv = await page.$('#hpiImg .hpi-pv'); const bx = await pv.boundingBox(); await page.mouse.move(bx.x + bx.width * .5, bx.y + bx.height * .5); await page.mouse.down(); await page.mouse.move(bx.x + bx.width * .2, bx.y + bx.height * .3, { steps: 4 }); await page.mouse.up(); await wait(400);
     await page.fill('#hpiImg [data-hpi-i="alt"]', '저녁 강의실 모습'); await page.press('#hpiImg [data-hpi-i="alt"]', 'Tab'); await wait(400);
     hero = await ev(() => (site().img || {}).hero || {}); ok('맞춤(전체) · 초점 끌기 · 대체 텍스트', hero.fit === 'contain' && /^2\d% 3\d%$/.test(hero.pos || '') && hero.alt === '저녁 강의실 모습', { fit: hero.fit, pos: hero.pos, alt: hero.alt });

@@ -147,7 +147,9 @@
       L.forEach(o => { if (out.length < 2 && out.every(c2 => dist(c2, o.c) > 70)) out.push(o.c); }); return out; } catch (e) { return []; } }
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); return true; } catch (e) { return false; } };
   const full = () => say('브라우저 저장 공간이 가득 차서 사진을 저장하지 못했습니다. 더 작은 사진을 쓰거나 다른 사진을 지운 뒤 다시 올려 주세요(운영 서버에서는 파일 서버에 저장합니다).', 'warn');
-  const repaint = () => { if (HPE.on) { if (typeof window.hpPaint === 'function') window.hpPaint(); else if (ACT['hpe-dev']) ACT['hpe-dev']({ dataset: { v: HPE.dev } }); } else if (typeof render === 'function') render(); };
+  const repaint = () => { if (HPE.on) { if (typeof window.hpPaint === 'function') window.hpPaint(); else if (ACT['hpe-dev']) ACT['hpe-dev']({ dataset: { v: HPE.dev } }); } else if (typeof render === 'function') { /* v34.5 FZ(FIXLIST 21): [적용] 뒤 setTimeout으로 늦게 오는 render()가 AI SAM 입력창을 새로 그려, 그 사이 쓴 글이 사라지거나 고른 사진이 떨어진 입력칸으로 가서 무시됐다 → 입력 중인 글 · 초점을 옮겨 준다 */
+      const ta = document.querySelector('.composer textarea'); const v = ta ? ta.value : ''; const foc = !!ta && document.activeElement === ta; render();
+      if (v || foc) { const t2 = document.querySelector('.composer textarea'); if (t2 && t2 !== ta) { if (v && !t2.value) t2.value = v; if (foc) t2.focus(); } } } };
   /* 바꾸기 한 번 = 되돌리기 한 단계. 저장 공간이 모자라면 되돌린다 */
   function commit(fn, msg) { if (typeof hpPush === 'function') hpPush(); const keep = HPE.undo[HPE.undo.length - 1];
     try { fn(site()); } catch (e) { console.error('hpimg commit', e); }
@@ -470,8 +472,10 @@
       catch (e) { say(`${f.name || '사진'}: ${e.message}.`, 'warn'); } }
     decorate2(); talkSync(); if (n) say(`사진 ${n}장을 첨부했습니다. 어디에 넣을지 말해 주세요(예: 이 사진으로 첫 화면 바꿔줘).`, 'ok'); return n; }
   const chipBar = () => HI.att.length ? `<div class="hpi-abar" aria-label="첨부한 사진">${HI.att.map(a => `<span class="hpi-chip" title="${E(a.name)} · ${SIZEW(a)}"><img src="${E(a.url)}" alt=""><em>${E(a.name)}</em><button type="button" data-act="hpi-adel" data-v="${a.id}" aria-label="${E(a.name)} 첨부 빼기">✕</button></span>`).join('')}<span class="hpi-aq">${[['이 사진으로 첫 화면 바꿔줘', '첫 화면'], ['로고 넣고 색 맞춰줘', '로고'], ['갤러리에 이 사진들 넣어줘', '갤러리']].map(([q, l]) => `<button type="button" class="chip" data-act="chat-q" data-v="${E(q)}">${E(l)}</button>`).join('')}</span></div>` : '';
+  /* v34.5 FZ(FIXLIST 21): 파일을 고르는 사이 화면이 다시 그려져 입력칸이 문서에서 떨어지면 문서 위임(data-chg)이 change를 못 받는다 → 떨어진 입력칸만 직접 처리 */
+  const lone = inp => { if (inp && !inp.__hpiLone) { inp.__hpiLone = 1; inp.addEventListener('change', () => { if (!inp.isConnected && ACT['hpi-att']) ACT['hpi-att'](inp); }); } };
   function decorate2() { document.querySelectorAll('.composer .cbox').forEach(b => { const f = b.closest('.composer'); if (!f) return;
-      if (!b.querySelector('.hpi-att')) { const lab = `<label class="hpi-att rg-att" title="사진 첨부 — 홈페이지 첫 화면 · 로고 · 갤러리 사진 바꾸기"><input type="file" multiple accept="image/png,image/jpeg,image/webp,image/svg+xml" data-chg="hpi-att" aria-label="AI SAM에 사진 첨부">${ICO}<span>사진</span></label>`; const rg = b.querySelector('.rg-att'); if (rg) rg.insertAdjacentHTML('afterend', lab); else b.insertAdjacentHTML('afterbegin', lab); }
+      if (!b.querySelector('.hpi-att')) { const lab = `<label class="hpi-att rg-att" title="사진 첨부 — 홈페이지 첫 화면 · 로고 · 갤러리 사진 바꾸기"><input type="file" multiple accept="image/png,image/jpeg,image/webp,image/svg+xml" data-chg="hpi-att" aria-label="AI SAM에 사진 첨부">${ICO}<span>사진</span></label>`; const rg = b.querySelector('.rg-att'); if (rg) rg.insertAdjacentHTML('afterend', lab); else b.insertAdjacentHTML('afterbegin', lab); lone(b.querySelector('.hpi-att input')); }
       const cur = f.querySelector('.hpi-abar'); const h = chipBar(); if (cur) { if (h) { if (cur.outerHTML !== h) cur.outerHTML = h; } else cur.remove(); } else if (h) b.insertAdjacentHTML('beforebegin', h); }); }
   if (typeof AFTER !== 'undefined') AFTER.push(() => { try { decorate2(); } catch (e) { } });
   new MutationObserver(() => { if ([...document.querySelectorAll('.composer .cbox')].some(b => !b.querySelector('.hpi-att'))) decorate2(); }).observe(document.body, { childList: true, subtree: true });
@@ -537,7 +541,7 @@
     if (P.async) { say('Claude가 문서를 읽고 있습니다…'); P.async.then(P2 => { if (P2 && P2.steps && P2.steps.length) talkRun(P2, inp); else say((P2 && P2.msg) || '고치지 못했습니다.', 'warn'); }); return; }
     if (!P.steps || !P.steps.length) { say(P.msg || '이해하지 못했습니다.', 'warn'); return; } talkRun(P, inp); }, true);
   function talkSync() { const f = document.querySelector('#hpe .hpw-talk'); if (!f) return;
-    if (!f.querySelector('.hpi-tclip')) { const inp = f.querySelector('input[name=q]'); if (inp) { inp.insertAdjacentHTML('afterend', `<label class="hpi-tclip" title="사진 첨부">${CLIP}<span class="sr">사진 첨부</span><input type="file" multiple accept="image/png,image/jpeg,image/webp,image/svg+xml" data-chg="hpi-att" aria-label="말로 고치기에 사진 첨부" hidden></label>`); } }
+    if (!f.querySelector('.hpi-tclip')) { const inp = f.querySelector('input[name=q]'); if (inp) { inp.insertAdjacentHTML('afterend', `<label class="hpi-tclip" title="사진 첨부">${CLIP}<span class="sr">사진 첨부</span><input type="file" multiple accept="image/png,image/jpeg,image/webp,image/svg+xml" data-chg="hpi-att" aria-label="말로 고치기에 사진 첨부" hidden></label>`); lone(f.querySelector('.hpi-tclip input')); } }
     let tg = f.querySelector('.hpi-tg'); const lab = HI.ipRef ? slotName(HI.ipRef) : HI.sel && HI.sel.el ? `「${String(HI.sel.el.textContent || '').trim().slice(0, 14)}${String(HI.sel.el.textContent || '').trim().length > 14 ? '…' : ''}」` : '';
     const html = `${lab ? `<span class="hpi-tgt" title="선택한 대상에 적용">대상: ${E(lab)}</span>` : ''}${HI.att.map(a => `<span class="hpi-chip sm" title="${E(a.name)}"><img src="${E(a.url)}" alt=""><button type="button" data-act="hpi-adel" data-v="${a.id}" aria-label="${E(a.name)} 첨부 빼기">✕</button></span>`).join('')}`;
     if (!html) { if (tg) tg.remove(); } else { if (!tg) { const inp = f.querySelector('input[name=q]'); if (inp) { inp.insertAdjacentHTML('beforebegin', '<span class="hpi-tg"></span>'); tg = f.querySelector('.hpi-tg'); } } if (tg && tg.innerHTML !== html) tg.innerHTML = html; }
