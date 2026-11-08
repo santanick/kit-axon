@@ -170,7 +170,7 @@
     /* 구직자 직업훈련 · 상담: 알림판형(공지 · 대상별 안내 · 표) — 공공 고용센터처럼 정보가 먼저 */
     't3-v-jobcenter': { cd: 'list', L: 'bulletin', th: 'campus', pal: 'civic', ph: { hero: 'hum-10', about: 'hum-04', space: 'cls-01', cta: 'lib-03' }, hd: ['notice', 'biz', 'full'], ck: 'panel',
       build: () => [
-        ban({ eyebrow: '구직자 직업훈련 · 취업 상담', title: '상담에서 시작해\n취업까지 한 곳에서', sub: '직업 상담으로 맞는 직종을 찾고, 훈련 수료 뒤 이력서 · 면접 · 구인 정보까지 단계마다 안내합니다.', cta: '상담 예약', cta2: '훈련과정 찾기' }),
+        ban({ eyebrow: '', /* FD2: bulletin a 사진 위 eyebrow 대비 3.15 → 뺌 */ title: '상담에서 시작해\n취업까지 한 곳에서', sub: '직업 상담으로 맞는 직종을 찾고, 훈련 수료 뒤 이력서 · 면접 · 구인 정보까지 단계마다 안내합니다.', cta: '상담 예약', cta2: '훈련과정 찾기' }),
         notices('모집 · 채용 소식', { board: 1, n: 5 }),
         T('info', { eyebrow: '', title: '대상별 훈련 안내', cols: [['구직자', '취업을 준비하는 분의 주간 과정'], ['재직자', '일하면서 듣는 야간 · 주말 과정'], ['신중년', '전직 · 재취업 준비 과정'], ['청년', '첫 취업 준비 과정']] }),
         cls('모집 중인 훈련과정', '상담 뒤 신청하면 더 잘 맞는 과정을 고를 수 있습니다.', { n: 5 }),
@@ -238,7 +238,7 @@
   /* FD2(유형 간 재배치 · BRIEF7): 계열 변형(layoutVar, FD1 HPL.vars). 같은 계열을 쓰는 다른 유형과 다른 변형을 고르고,
      portal · bulletin 4종(consort · remote · jobcenter · voc-card)의 '사진 + 찾기 상자 + 아이콘 줄'이 겹치지 않게 서로 다른 변형을 준다 */
   const FD2V = { 't3-v-design': 'c', 'voc-employer': 'b', 't3-v-trade': 'c', 't3-v-beauty': 'b', 't3-v-youth': 'c', 't3-v-license': 'b', 't3-v-factory': 'a',
-    't3-v-remote': 'b', 't3-v-consort': 'c', 't3-v-jobcenter': 'b', 'voc-card': 'a' };
+    't3-v-remote': 'b', 't3-v-consort': 'c', 't3-v-jobcenter': 'a', 'voc-card': 'b' /* card a면 public t4-civic(bulletin a)와 닮음 */ };
   /* 머리글 · 바닥글: FA의 직업훈련 유형 목록(contact · util · left / cta · biz · split) 안에서 고르게 나눈다 */
   const FD2H = { 't3-v-kdt': ['contact', 'cta'], 't3-v-design': ['util', 'biz'], 't3-v-trade': ['left', 'split'], 't3-v-beauty': ['contact', 'biz'], 't3-v-license': ['util', 'split'], 't3-v-midlife': ['left', 'cta'], 't3-v-youth': ['contact', 'split'], 't3-v-remote': ['util', 'cta'], 't3-v-factory': ['left', 'biz'], 't3-v-care': ['contact', 'cta'], 't3-v-consort': ['util', 'biz'], 't3-v-jobcenter': ['left', 'split'], 'voc-card': ['contact', 'biz'], 'voc-employer': ['util', 'split'], 'tv-auto': ['left', 'cta'], 'tv-office': ['contact', 'split'] };
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
