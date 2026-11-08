@@ -69,7 +69,7 @@
   const setCache = new Map();
   function stockSet(s) { const H = window.HPSTOCK; if (!H || typeof H.set !== 'function') return {};
     const ty = typeOf(); const sc = sceneOf(s); const key = [ty, sc, s && s.tpl].join('|');
-    if (!setCache.has(key)) { let r = {}; try { r = H.set(ty, sc, ['hero', 'about', 'space', 'cta'], (s && s.tpl) || (S.org && S.org.name) || ''); } catch (e) { console.error('HPS stock', e); } setCache.set(key, r); }
+    if (!setCache.has(key)) { let r = {}; try { r = H.set(ty, sc, ['hero', 'about', 'space', 'cta'], (s && s.tpl) || (S.org && S.org.name) || '', { people: true }); } catch (e) { console.error('HPS stock', e); } setCache.set(key, r); }
     return setCache.get(key) || {}; }
   /* 반환: { src, srcset, alt, pos, fit, stock, tone } 또는 null */
   function photo(s, slot, d) {
