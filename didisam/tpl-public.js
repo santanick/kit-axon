@@ -112,10 +112,10 @@
     't4-service': ['hk:grid', '', 'util', 'biz'], /* split이면 voc tv-office와 첫 화면이 닮음(거리 6) */
     't4-safety': ['splitscreen', 'b', 'util', 'gov'],
     't4-integrity': ['typo', 'b', 'center', 'gov'],
-    't4-youth': ['story', 'b', 'util', 'biz'], /* c면 voc t3-v-youth와 첫 화면 거리 2 */
-    't4-family': ['hk:box', '', 'center', 'gov'],
+    't4-youth': ['story', 'a', 'util', 'biz'], /* H3: b는 corp-onboard(public 공유)와 겹침 · c면 voc t3-v-youth와 닮음 */ /* c면 voc t3-v-youth와 첫 화면 거리 2 */
+    't4-family': ['hk:scrim', '', 'center', 'gov'], /* H3: 상자형 첫 화면 유형당 3종 이하 */
     't4-green': ['typo', 'a', 'util', 'gov'],
-    't4-data': ['hk:grid', '', 'center', 'biz'],
+    't4-data': ['splitscreen', 'a', 'center', 'biz'], /* H3: 주력 splitscreen a · b · c */
     't4-newcomer': ['hk:box', '', 'util', 'gov']
   };
   Object.keys(FD2).forEach(id => { const c = CFG[id], v = FD2[id]; if (!c) return;
@@ -170,4 +170,49 @@
     /* hpcolor의 가장 바깥 감싸기 표시(hpc)는 그대로 넘긴다 */
     if (base.hpc) f.hpc = base.hpc;
     siteFromTpl = f; window.siteFromTpl = f; }
+  /* H3(R2 N10): 점검용 업종별 강좌 이름 6개 — hp-visual 채운 기관이 템플릿마다 이 이름으로 강좌를 바꿔 찍는다(게시 화면에는 쓰지 않는다) */
+  { const QA = {
+    't4-agency': ['직무 기본 과정', '공공기관 회계 실무', '보고서 작성 실무', '청렴 · 윤리 필수', '자기계발 외국어', '디지털 업무 역량'],
+    't4-ai-gov': ['생성형 AI 행정 활용', 'AI 민원 응대 실습', '공문서 자동화', '데이터 기반 정책 기획', 'AI 윤리와 보안', '행정 업무 자동화'],
+    't4-civic': ['시민 민주주의 강좌', '지역 인문학', '시민 리더 양성', '생활 법률', '기후 시민 강좌', '마을 기록가 과정'],
+    't4-cyber': ['공직 가치 이러닝', '정보보안 기본', '개인정보 보호', '직장 내 성희롱 예방', '적극 행정', '디지털 행정 기초'],
+    't4-data': ['공공 데이터 활용', '데이터 시각화 실습', '엑셀 데이터 분석', '통계 읽기 기초', '근거 기반 행정', '공공 빅데이터 사례'],
+    't4-digital': ['스마트폰 첫걸음', '키오스크 이용하기', '모바일 뱅킹 안전', '영상 통화 배우기', '온라인 민원 신청', '디지털 사기 예방'],
+    't4-family': ['부모 교육', '아빠와 함께하는 놀이', '가족 소통 대화법', '청소년 자녀 이해', '다문화 가족 교육', '부부 관계 교실'],
+    't4-green': ['탄소중립 생활 실천', '기후 위기 이해', '자원 순환 교실', '마을 환경 활동가', '에너지 절약 실천', '녹색 소비 교육'],
+    't4-hrd-inst': ['신임 공무원 기본', '중견 리더 과정', '정책 기획 실무', '민원 서비스', '청렴 교육', '정보화 교육'],
+    't4-integrity': ['이해충돌 방지법', '청탁금지법 사례', '공직자 행동강령', '갑질 예방', '부패 신고 제도', '청렴 리더십'],
+    't4-leader': ['관리자 리더십', '정책 기획 역량', '조직 갈등 관리', '성과 관리', '위기 소통', '간부 혁신 세미나'],
+    't4-legal': ['폭력 예방 통합 교육', '개인정보 보호 교육', '장애인 인식 개선', '청렴 교육', '산업 안전 교육', '직장 내 괴롭힘 예방'],
+    't4-newcomer': ['한국어 초급', '한국어 중급', '생활 정보 안내', '한국 생활 법률', '취업 준비 한국어', '지역 정착 교육'],
+    't4-newhire': ['공직 기본 소양', '행정 실무 첫걸음', '공문서 작성법', '민원 응대 기본', '공직 윤리', '조직 적응 멘토링'],
+    't4-outreach': ['찾아가는 안전 교육', '찾아가는 청렴 교육', '찾아가는 디지털 교육', '기관 맞춤 출장 강의', '학교 방문 교육', '단체 신청 특강'],
+    't4-safety': ['재난 대응 기본', '심폐소생술 실습', '화재 대피 훈련', '지진 대응 교육', '현장 안전 관리', '안전 점검 실무'],
+    't4-service': ['민원 응대 실무', '갈등 민원 대응', '친절 서비스 교육', '쉬운 안내문 쓰기', '전화 응대 매너', '감정 노동 관리'],
+    't4-youth': ['청소년 진로 탐색', '직업 체험 캠프', '청년 취업 준비', '진로 멘토링', '창의 체험 활동', '청년 창업 입문']
+  };
+  Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'public') tp.qaCls = QA[id]; }); }
+  /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
+  ['t4-outreach', 't4-safety', 't4-digital', 't4-service'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
+  /* H2 사진 재배정표(fix6/h2/w/H2_change.json · H2_photo_map.md): 첫 화면 사무실 · 노트북 유형당 2장 이하, 첫 화면 중복 0.
+     슬롯 사진(photos)을 덮어쓰고, gal: { 이전 id: 새 id }는 사진 띠(image 섹션) 안의 사진을 바꾼다 */
+  { const H2P = {
+    't4-newhire': {'hero': 'civ-04'},
+    't4-outreach': {'cta': 'lec-02'},
+    't4-leader': {'hero': 'hum-46', 'cta': 'grp-01'},
+    't4-integrity': {'hero': 'lib-08', 'cta': 'dsk-05'},
+    't4-cyber': {'cta': 'arc-06', 'space': 'cor-06'},
+    't4-data': {'space': 'hum-06'},
+    't4-agency': {'space': 'hum-46', 'about': 'hum-51'}
+  };
+  const H2S = id => { const H = window.HPSTOCK; const x = H && typeof H.get === 'function' ? H.get(id) : null; return x ? (x.src800 || x.src) : ''; };
+  Object.keys(H2P).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'public') return; const v = H2P[id];
+    const ph = Object.assign({}, v); delete ph.gal; tp.photos = Object.assign({}, tp.photos || {}, ph);
+    if (v.gal && typeof tp.build === 'function') { const b0 = tp.build; tp.build = () => { const L = A(b0());
+      L.forEach(x => { if (!x || x.type !== 'image' || !x.data || !Array.isArray(x.data.imgs)) return;
+        x.data.imgs = x.data.imgs.map(im => { const m = String(im && im.src || '').match(/([a-z]{3}-\d{2})(?:-800)?\.webp/); const nw = m && v.gal[m[1]] ? H2S(v.gal[m[1]]) : '';
+          return nw ? Object.assign({}, im, { src: nw }) : im; }); }); return L; }; } }); }
 })();

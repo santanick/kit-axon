@@ -86,6 +86,9 @@ async function dismiss(op) { await op.waitForTimeout(150); const pm = await op.$
 async function applyTpl(op, id) {
   const r = await op.evaluate(id => { try { closeModal(); } catch (e) { }
     const tp = TPL.find(t => t.id === id); if (!tp) return { id, err: 'no tpl' };
+    /* H3(R2 N10): 채운 기관이면 템플릿 업종에 맞춘 강좌 이름(tp.qaCls 6개)으로 바꿔 찍는다. 없으면 유형 기본 이름으로 되돌린다 */
+    try { const C = S.classes || []; if (C.length && C.every(c => /^qc\d$/.test(c.id))) { const B = window.__hpvCls || (window.__hpvCls = C.map(c => c.name));
+      const N = Array.isArray(tp.qaCls) && tp.qaCls.length >= C.length ? tp.qaCls : B; C.forEach((c, i) => { c.name = N[i] || B[i]; }); } } catch (e) { }
     const s = siteFromTpl(tp); S.site = s; s.published = true;
     const live = (s.sections || []).filter(x => x && !x.hide);
     const secs = live.map(x => { const d = x.data || {}; return x.type + (d.variant ? ':' + d.variant : '') + (x.type === 'banner' ? '@' + (d.hero || '-') : ''); });

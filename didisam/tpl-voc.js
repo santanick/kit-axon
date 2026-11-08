@@ -242,6 +242,11 @@
   /* 머리글 · 바닥글: FA의 직업훈련 유형 목록(contact · util · left / cta · biz · split) 안에서 고르게 나눈다 */
   const FD2H = { 't3-v-kdt': ['contact', 'cta'], 't3-v-design': ['util', 'biz'], 't3-v-trade': ['left', 'split'], 't3-v-beauty': ['contact', 'biz'], 't3-v-license': ['util', 'split'], 't3-v-midlife': ['left', 'cta'], 't3-v-youth': ['contact', 'split'], 't3-v-remote': ['util', 'cta'], 't3-v-factory': ['left', 'biz'], 't3-v-care': ['contact', 'cta'], 't3-v-consort': ['util', 'biz'], 't3-v-jobcenter': ['left', 'split'], 'voc-card': ['contact', 'biz'], 'voc-employer': ['util', 'split'], 'tv-auto': ['left', 'cta'], 'tv-office': ['contact', 'split'] };
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
+  /* H3(R2 H1 · BRIEF8): 주력 계열 4개(bulletin · typo · story · portal) + editorial · fullbleed 1종씩으로 모은다.
+     [계열 또는 'hk:<S3 첫 화면>', 변형] */
+  const H3L = { 'voc-employer': ['portal', 'a'], 'voc-card': ['hk:box', ''], 't3-v-jobcenter': ['hk:split', ''] }; /* jobcenter bulletin a면 public t4-civic, b면 t4-legal · lifelong t2-life-credit과 닮음(거리 8) */ /* design은 story a면 corp customer · lifelong health와 닮음(②) → editorial c 그대로 · voc-card bulletin b는 lifelong t2-life-credit과 닮음(거리 6) */
+  Object.keys(H3L).forEach(id => { const c = CFG[id], v = H3L[id]; if (!c) return;
+    if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); delete FD2V[id]; } else { c.L = v[0]; delete c.hk; FD2V[id] = v[1]; } });
   /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
   const FCH = { 't3-v-kdt': 'lap-01', 't3-v-design': 'vid-01', 't3-v-trade': 'voc-01', 't3-v-beauty': 'bea-02', 't3-v-license': 'hum-18', 't3-v-midlife': 'wrk-01', 't3-v-youth': 'hum-15', 't3-v-remote': 'cor-11', 't3-v-factory': 'hum-19', 't3-v-care': 'fam-05', 't3-v-consort': 'cor-03', 't3-v-jobcenter': 'cor-04', 'voc-card': 'hum-17', 'voc-employer': 'off-01', 'tv-auto': 'aut-01', 'tv-office': 'off-08' };
   Object.keys(FCH).forEach(id => { const c = CFG[id]; if (!c) return; const v = typeof FCH[id] === 'string' ? { hero: FCH[id] } : FCH[id];
@@ -278,4 +283,48 @@
       return s; };
     if (base.hpc) f.hpc = base.hpc;
     siteFromTpl = f; window.siteFromTpl = f; }
+  /* H3(R2 N10): 점검용 업종별 강좌 이름 6개 — hp-visual 채운 기관이 템플릿마다 이 이름으로 강좌를 바꿔 찍는다(게시 화면에는 쓰지 않는다) */
+  { const QA = {
+    't3-v-beauty': ['미용사 일반 실기', '네일 아트 기초', '한식 조리 기능사', '제과 기능사 실기', '제빵 기능사 실기', '뷰티 창업 준비'],
+    't3-v-care': ['요양보호사 이론', '요양보호사 실기', '현장 실습 안내', '치매 돌봄 이해', '장애인 활동 지원', '돌봄 의사소통'],
+    't3-v-consort': ['재직자 생산 관리', '품질 관리 실무', '설비 보전 기초', '현장 리더십', '산업 안전 실무', '스마트 제조 이해'],
+    't3-v-design': ['포토샵 실무', '일러스트 실무', '영상 편집 실무', '모션 그래픽', 'UI 디자인 프로젝트', '포트폴리오 리뷰'],
+    't3-v-factory': ['PLC 제어 기초', '스마트공장 MES', '산업용 로봇 운용', '제조 데이터 분석', '설비 예지 보전', '공정 자동화 실습'],
+    't3-v-jobcenter': ['직업 상담', '구직자 기초 훈련', '이력서 · 면접 준비', '취업 정보 설명회', '직무 탐색 워크숍', '취업 후 적응 지원'],
+    't3-v-kdt': ['웹 개발 부트캠프', '데이터 엔지니어링', '클라우드 인프라', 'AI 서비스 개발', '팀 프로젝트', '취업 연계 특강'],
+    't3-v-license': ['전기기능사 필기', '전기기능사 실기', '용접기능사 실기', '산업안전기사 필기', '공조냉동 기능사', '기출 문제 풀이'],
+    't3-v-midlife': ['신중년 전직 상담', '시설 관리 실무', '경비 · 안전 관리', '사무 행정 재취업', '택배 · 물류 직무', '재취업 이력서 작성'],
+    't3-v-remote': ['재직자 엑셀 실무', '비즈니스 커뮤니케이션', '직무 리더십 이러닝', '정보보안 이러닝', '회계 기초 이러닝', '고객 응대 이러닝'],
+    't3-v-trade': ['용접 기초 실습', '특수 용접', '전기 내선 공사', '기계 가공 선반', 'CNC 밀링', '배관 기능 실습'],
+    't3-v-youth': ['청년 직무 훈련', 'IT 사무 실무', '마케팅 직무 입문', '면접 · 자기소개서', '취업 캠프', '직장 적응 교육'],
+    'tv-auto': ['엔진 정비 실습', '섀시 정비', '자동차 전기 · 전자', '전기차 정비 기초', '자동차 정비 기능사', '정비소 취업 준비'],
+    'tv-office': ['회계 원리', '전산회계 2급', '전산세무 2급', '급여 · 4대 보험 실무', '사무 행정 문서', 'ERP 실무'],
+    'voc-card': ['컴퓨터활용능력 2급', '바리스타 자격 과정', '회계 실무(전산회계)', '웹 디자인 기능사', '한식 조리 실무', '물류 관리사 준비'],
+    'voc-employer': ['신입 직무 위탁 교육', '현장 관리자 과정', '품질 관리 위탁 과정', '영업 역량 강화', '재직자 환급 과정', '안전 보건 위탁 교육']
+  };
+  Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'voc') tp.qaCls = QA[id]; }); }
+  /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
+  ['t3-v-remote', 't3-v-consort', 't3-v-midlife', 't3-v-beauty', 't3-v-trade', 'voc-employer'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
+  /* H3: 아래 블록 변형 지정(H1 HPS.blockVar 규약 — site.blocks가 유형 · 계열 기본값보다 우선). t3-v-beauty는 story 계열 corp-onboard와 첫 화면 아래 숫자 표가 같아 한 줄 숫자로 */
+  { const B = { 't3-v-beauty': { facts: 'one' } }; Object.keys(B).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp) tp.blocks = Object.assign({}, tp.blocks || {}, B[id]); }); }
+  /* H2 사진 재배정표(fix6/h2/w/H2_change.json · H2_photo_map.md): 첫 화면 사무실 · 노트북 유형당 2장 이하, 첫 화면 중복 0.
+     슬롯 사진(photos)을 덮어쓰고, gal: { 이전 id: 새 id }는 사진 띠(image 섹션) 안의 사진을 바꾼다 */
+  { const H2P = {
+    'voc-employer': {'hero': 'log-01', 'cta': 'hum-07'},
+    't3-v-remote': {'hero': 'hum-50', 'cta': 'hum-42', 'space': 'hum-07', 'gal': {'lap-10': 'grp-02'}},
+    't3-v-consort': {'hero': 'wrk-08'},
+    't3-v-jobcenter': {'hero': 'hum-51'},
+    't3-v-design': {'cta': 'grp-02', 'gallery2': 'hum-50'},
+    'tv-office': {'cta': 'hum-41', 'space': 'grp-06', 'about': 'hum-42', 'gal': {'lap-09': 'hum-49'}}
+  };
+  const H2S = id => { const H = window.HPSTOCK; const x = H && typeof H.get === 'function' ? H.get(id) : null; return x ? (x.src800 || x.src) : ''; };
+  Object.keys(H2P).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'voc') return; const v = H2P[id];
+    const ph = Object.assign({}, v); delete ph.gal; tp.photos = Object.assign({}, tp.photos || {}, ph);
+    if (v.gal && typeof tp.build === 'function') { const b0 = tp.build; tp.build = () => { const L = A(b0());
+      L.forEach(x => { if (!x || x.type !== 'image' || !x.data || !Array.isArray(x.data.imgs)) return;
+        x.data.imgs = x.data.imgs.map(im => { const m = String(im && im.src || '').match(/([a-z]{3}-\d{2})(?:-800)?\.webp/); const nw = m && v.gal[m[1]] ? H2S(v.gal[m[1]]) : '';
+          return nw ? Object.assign({}, im, { src: nw }) : im; }); }); return L; }; } }); }
 })();

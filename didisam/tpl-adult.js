@@ -203,7 +203,7 @@
     't1-ad-testprep': { name: '어학 시험 대비', hk: 'scrim', th: 'clean', pal: 'tomato', cd: 'table', ck: 'panel', hd: ['overlay', 'cta', 'full'],
       ph: { hero: 'lec-01', about: 'dsk-01', space: 'cls-01', cta: 'brd-02' },
       build: () => [
-        ban({ eyebrow: '토익 · 토익스피킹 · 오픽', title: '목표 점수까지\n유형별로 전략적으로', sub: '유형별 강의와 실전 모의고사, 오답 분석으로 시험 일정에 맞춰 준비합니다.', cta: '수강신청', cta2: '레벨 상담' }),
+        ban({ eyebrow: '', /* H3: fullbleed a 사진 위 eyebrow 대비 2.14 → 뺌 */ title: '목표 점수까지\n유형별로 전략적으로', sub: '유형별 강의와 실전 모의고사, 오답 분석으로 시험 일정에 맞춰 준비합니다.', cta: '수강신청', cta2: '레벨 상담' }),
         facts(),
         cls('시험별 개설 반', '시험과 목표에 맞는 반을 표로 비교해 보세요.', { n: 6 }),
         T('steps', { eyebrow: '', title: '점수를 올리는 순서', cols: [['진단', '첫 모의고사로 현재 위치 확인'], ['유형 강의', '파트별 풀이 전략'], ['실전 연습', '시간 안에 푸는 연습'], ['오답 분석', '틀린 유형만 다시']] }),
@@ -326,17 +326,17 @@
     'adult-hobby': ['mosaic', 'b', 'float', 'min'],
     'adult-lang': ['hk:grid', '', 'center', 'mega'],
     'solo-creator': ['splitscreen', 'b', 'center', 'min'],
-    't1-ad-license': ['hk:box', '', 'left', 'split'],
+    't1-ad-license': ['hk:scrim', '', 'left', 'split'], /* H3: 상자형 첫 화면 유형당 3종 이하(cert · lang · voc kdt) */
     't1-ad-civil': ['typo', 'a', 'left', 'mega'],
     't1-ad-office': ['bento', 'a', 'center', 'split'], /* 어두운 첫 화면: bootcamp · photo 2종 */
     't1-ad-talk': ['hk:split', '', 'float', 'min'],
     't1-ad-wellness': ['fullbleed', 'c', 'center', 'min'],
     't1-ad-craft': ['mosaic', 'c', 'left', 'mega'],
     't1-ad-creative': ['editorial', 'b', 'float', 'split'],
-    't1-ad-coach': ['hk:box', '', 'center', 'split'],
-    't1-ad-money': ['hk:box', '', 'float', 'mega'],
-    't1-ad-testprep': ['hk:scrim', '', 'left', 'split'],
-    'ta-music': ['hk:split', '', 'center', 'min'],
+    't1-ad-coach': ['hk:scrim', '', 'center', 'split'], /* H3: 상자형 줄임(typo b는 voc t3-v-license가 adult에 함께 걸려 겹침) */
+    't1-ad-money': ['hk:split', '', 'float', 'mega'],
+    't1-ad-testprep': ['fullbleed', 'a', 'left', 'split'], /* H3: 주력 fullbleed a · b · c */
+    'ta-music': ['mosaic', 'a', 'center', 'min'], /* H3: 주력 mosaic a · b · c */
     'ta-book': ['editorial', 'a', 'center', 'mega'],
     'ta-writing': ['typo', 'b', 'float', 'min'],
     'ta-photo': ['fullbleed', 'b', 'overlay', 'mega'],
@@ -389,4 +389,55 @@
       return s; };
     Object.keys(base).forEach(k => { try { f[k] = base[k]; } catch (e) {} });
     siteFromTpl = f; window.siteFromTpl = f; }
+  /* H3(R2 N10): 점검용 업종별 강좌 이름 6개 — hp-visual 채운 기관이 템플릿마다 이 이름으로 강좌를 바꿔 찍는다(게시 화면에는 쓰지 않는다) */
+  { const QA = {
+    'adult-bootcamp': ['웹 프론트엔드 집중 과정', '백엔드 API 개발 실습', '데이터 분석 파이썬', '팀 프로젝트 스프린트', '코드 리뷰와 협업 Git', '포트폴리오 · 기술 면접 준비'],
+    'adult-cert': ['컴퓨터활용능력 필기', '컴퓨터활용능력 실기', '워드프로세서 실기', '정보처리기능사 필기', 'ITQ 엑셀 · 한글', '기출 모의고사 특강'],
+    'adult-hobby': ['어반 스케치 원데이', '수채화 꽃 그리기', '펜 드로잉 기초', '아이패드 드로잉', '유화 입문 클래스', '캘리그라피 엽서 만들기'],
+    'adult-lang': ['일상 영어 회화', '비즈니스 일본어', '여행 중국어', '스페인어 입문', '프랑스어 발음 교정', '원어민 프리토킹'],
+    'solo-creator': ['유튜브 채널 기획', '스마트폰 영상 촬영', '컷 편집 기초', '썸네일 디자인', '숏폼 콘텐츠 제작', '온라인 강의 만들기'],
+    't1-ad-civil': ['국어 기본 이론', '영어 독해 · 어휘', '한국사 흐름 잡기', '행정법 총론', '행정학 핵심 정리', '실전 동형 모의고사'],
+    't1-ad-coach': ['자기소개서 첨삭', '직무 면접 실전', 'PT 면접 연습', '커리어 전환 코칭', '연봉 협상 준비', '링크드인 프로필 정리'],
+    't1-ad-craft': ['물레 도예 입문', '핸드빌딩 그릇 만들기', '유약 · 소성 이해', '목공 도마 만들기', '원목 스툴 제작', '짜맞춤 기초'],
+    't1-ad-creative': ['포토샵 기초 디자인', '일러스트레이터 로고', '프리미어 영상 편집', '애프터이펙트 모션', '브랜드 아이덴티티', '포트폴리오 완성'],
+    't1-ad-license': ['공인중개사 민법', '공인중개사 중개사법', '사회복지사 이론', '전산세무 실무', '기출 문제 풀이반', '시험 직전 핵심 정리'],
+    't1-ad-money': ['월급 관리와 가계부', '연말정산 이해하기', '펀드 · ETF 기초', '부동산 기초 상식', '연금 설계 입문', '금융 사기 예방'],
+    't1-ad-office': ['실무 엑셀 데이터 정리', '파워포인트 보고서', '생성형 AI 업무 활용', '파이썬 업무 자동화', '노션 협업 정리', '비즈니스 문서 작성'],
+    't1-ad-talk': ['기초 영어 회화', '직장인 영어 미팅', '화상 프리토킹', '영어 발음 클리닉', '여행 영어', '영어 프레젠테이션'],
+    't1-ad-testprep': ['토익 LC 유형', '토익 RC 문법', '토익스피킹 실전', '오픽 IH 대비', '텝스 독해', '실전 모의고사 · 오답 분석'],
+    't1-ad-wellness': ['요가 지도자 기본', '필라테스 매트 지도자', '기능 해부학', '호흡 · 명상 지도', '티칭 실습', '재활 필라테스 이해'],
+    'ta-book': ['고전 함께 읽기', '현대 소설 북클럽', '철학 입문 독서', '에세이 낭독 모임', '과학 교양서 읽기', '인문학 토론 강좌'],
+    'ta-marketing': ['퍼포먼스 마케팅 기초', '콘텐츠 마케팅 기획', '검색 광고 운영', 'SNS 브랜딩', 'GA4 데이터 분석', '카피라이팅 실무'],
+    'ta-music': ['성인 피아노 입문', '코드 반주 피아노', '통기타 기초', '핑거스타일 기타', '우쿨렐레 그룹 레슨', '보컬 발성 기초'],
+    'ta-photo': ['카메라 기초 조작', '인물 사진 촬영', '풍경 출사 클래스', '라이트룸 보정', '스마트폰 사진', '필름 카메라 입문'],
+    'ta-writing': ['에세이 쓰기', '기획서 · 보고서 글쓰기', '브런치 연재 클래스', '칼럼 쓰기', '콘텐츠 카피 작성', '합평 · 첨삭 모임']
+  };
+  Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'adult') tp.qaCls = QA[id]; }); }
+  /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
+  ['adult-cert', 't1-ad-coach', 't1-ad-office', 't1-ad-testprep', 't1-ad-creative', 'ta-marketing'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
+  /* H2 사진 재배정표(fix6/h2/w/H2_change.json · H2_photo_map.md): 첫 화면 사무실 · 노트북 유형당 2장 이하, 첫 화면 중복 0.
+     슬롯 사진(photos)을 덮어쓰고, gal: { 이전 id: 새 id }는 사진 띠(image 섹션) 안의 사진을 바꾼다 */
+  { const H2P = {
+    'adult-cert': {'hero': 'hum-39', 'cta': 'hum-02'},
+    'adult-bootcamp': {'hero': 'hum-41'},
+    'solo-creator': {'hero': 'hum-40', 'cta': 'hum-14', 'space': 'hum-09'},
+    'ta-writing': {'hero': 'hum-43', 'cta': 'hum-14', 'space': 'hum-05', 'gal': {'lap-04': 'hum-03'}},
+    'ta-marketing': {'hero': 'hum-49', 'cta': 'hum-01', 'space': 'hum-03', 'gal': {'dsk-04': 'hum-08'}},
+    'adult-hobby': {'gallery1': 'art-03'},
+    't1-ad-office': {'cta': 'hum-45', 'space': 'hum-03', 'about': 'hum-05'},
+    't1-ad-talk': {'cta': 'hum-38', 'gallery2': 'hum-06'},
+    't1-ad-creative': {'space': 'hum-37'},
+    't1-ad-coach': {'cta': 'cam-07'},
+    't1-ad-money': {'cta': 'grp-02', 'space': 'grp-05', 'about': 'hum-36', 'gal': {'dsk-02': 'hum-03'}}
+  };
+  const H2S = id => { const H = window.HPSTOCK; const x = H && typeof H.get === 'function' ? H.get(id) : null; return x ? (x.src800 || x.src) : ''; };
+  Object.keys(H2P).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'adult') return; const v = H2P[id];
+    const ph = Object.assign({}, v); delete ph.gal; tp.photos = Object.assign({}, tp.photos || {}, ph);
+    if (v.gal && typeof tp.build === 'function') { const b0 = tp.build; tp.build = () => { const L = A(b0());
+      L.forEach(x => { if (!x || x.type !== 'image' || !x.data || !Array.isArray(x.data.imgs)) return;
+        x.data.imgs = x.data.imgs.map(im => { const m = String(im && im.src || '').match(/([a-z]{3}-\d{2})(?:-800)?\.webp/); const nw = m && v.gal[m[1]] ? H2S(v.gal[m[1]]) : '';
+          return nw ? Object.assign({}, im, { src: nw }) : im; }); }); return L; }; } }); }
 })();

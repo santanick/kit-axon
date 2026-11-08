@@ -67,7 +67,7 @@
         faq('', [['레벨 테스트는 어떻게 하나요?', '상담 신청을 남겨 주시면 학년과 목표를 확인한 뒤 테스트 일정을 안내해 드립니다.'], ['선행과 내신 중 무엇을 먼저 하나요?', '진단 결과를 보고 이번 학기 내신을 먼저 챙길지, 다음 학기 선행을 함께 할지 상담으로 정합니다.']]),
         cta('우리 아이 수학,\n어디서부터 시작할까요?', '지금 실력과 목표를 알려 주시면 맞는 반과 시작 단원을 안내해 드립니다.', '상담 신청')] },
     /* 영어: 좌우 분할(어두운 글 판 + 밝은 서재 사진) — 레벨 테스트 → 반 배정 흐름 */
-    't1-k12-english': { cd: 'photo', L: 'splitscreen', th: 'warm', pal: 'lagoon', ph: { hero: 'lap-05', about: 'lap-07', space: 'cls-02', cta: 'lib-05' }, hd: ['solid', 'cols', 'drawer'], ck: 'panel',
+    't1-k12-english': { cd: 'photo', L: 'splitscreen', th: 'warm', pal: 'lagoon', ph: { hero: 'lap-05', about: 'lap-07', space: 'cls-02', cta: 'lib-06' }, hd: ['solid', 'cols', 'drawer'], ck: 'panel', /* H3: fullbleed 신청 띠 사진 위 제목 대비 4.01 → 더 어두운 서가 사진 */
       build: () => [
         ban({ eyebrow: '', /* FD2: fullbleed 사진 위 eyebrow 대비 3.79 → 뺌 */ title: '읽고, 말하고, 쓰는\n진짜 영어 실력', sub: '리딩 · 스피킹 · 라이팅을 레벨별로 이어 시험 점수와 말하기 자신감을 함께 키웁니다.', cta: '레벨 테스트 예약', cta2: '상담 문의' }),
         T('features', { eyebrow: '', title: '네 영역을 고르게', cols: [['Reading', '수준에 맞는 원서와 지문 읽기'], ['Speaking', '매 수업 말하기 · 발표 시간'], ['Writing', '문장에서 에세이까지 단계별 쓰기'], ['Grammar', '읽고 쓰는 데 필요한 문법 정리']] }),
@@ -254,12 +254,12 @@
     't1-k12-art': ['collage', 'a', 'float', 'split'],
     't1-k12-music': ['fullbleed', 'b', 'left', 'cols'],
     't1-k12-reading': ['mosaic', 'b', 'contact', 'split'],
-    't1-k12-science': ['hk:box', '', 'float', 'cta'], /* bento면 public t4-cyber와 엄격 유사(거리 12 · 구조 같음) */
+    't1-k12-science': ['mosaic', 'a', 'float', 'cta'], /* H3: S3 상자형 첫 화면 유형당 3종 이하 → 모자이크 a */ /* bento면 public t4-cyber와 엄격 유사(거리 12 · 구조 같음) */
     't1-k12-tutor': ['hk:split', '', 'left', 'split'],
     't1-k12-studycare': ['mosaic', 'c', 'contact', 'cols'],
     't1-k12-sports': ['hk:scrim', '', 'float', 'cta'],
     't1-k12-kinder': ['hk:grid', '', 'float', 'cols'],
-    't1-k12-retake': ['hk:grid', '', 'contact', 'split'],
+    't1-k12-retake': ['fullbleed', 'a', 'contact', 'split'], /* H3: 주력 계열 집중(fullbleed a · b · c) */
     't1-k12-online': ['hk:split', '', 'left', 'cta'],
     'k12-kids': ['collage', 'b', 'float', 'split']
   };
@@ -307,4 +307,44 @@
       return s; };
     if (base.hpc) f.hpc = base.hpc;
     siteFromTpl = f; window.siteFromTpl = f; }
+  /* H3(R2 N10): 점검용 업종별 강좌 이름 6개 — hp-visual 채운 기관이 템플릿마다 이 이름으로 강좌를 바꿔 찍는다(게시 화면에는 쓰지 않는다) */
+  { const QA = {
+    'k12-exam': ['수능 국어 독서', '수능 수학 미적분', '영어 내신 완성', '탐구 과목 개념', '모의고사 분석반', '자습 관리 프로그램'],
+    'k12-kids': ['파닉스 기초', '영어 리딩 클럽', '블록 코딩 놀이', '로봇 코딩 교실', '영어 발표 수업', '파이썬 첫걸음'],
+    'k12-total': ['중2 수학 개념 완성', '고1 영어 내신 대비', '초등 사고력 수학', '중3 과학 실험 탐구', '고2 국어 문학 정리', '중등 사회 · 역사'],
+    't1-k12-art': ['어린이 드로잉', '수채화 교실', '점토 조형', '명화 따라 그리기', '만화 캐릭터 그리기', '입시 기초 소묘'],
+    't1-k12-coding': ['스크래치 블록 코딩', '엔트리 게임 만들기', '파이썬 기초', '아두이노 피지컬', 'AI 이미지 분류 프로젝트', '정보 올림피아드 준비'],
+    't1-k12-english': ['초등 리딩 레벨', '중등 문법 완성', '스피킹 발표반', '에세이 라이팅', '중등 내신 영어', '원서 읽기 클럽'],
+    't1-k12-kinder': ['그림책 말놀이', '오감 놀이', '음악 · 율동', '종이 만들기', '숫자 놀이', '자연 관찰 놀이'],
+    't1-k12-math': ['초등 사고력 수학', '중1 수학 개념', '중2 수학 개념 완성', '고1 수학 내신', '수학 오답 클리닉', '고2 수학 심화'],
+    't1-k12-music': ['피아노 개인 레슨', '바이올린 기초', '클래식 기타', '청음 · 이론', '앙상블 합주', '콩쿠르 준비반'],
+    't1-k12-online': ['중등 국어 개념 강의', '중등 영어 문법 강의', '중등 수학 유형 강의', '고1 통합과학', '고1 통합사회', '고1 수학 내신 강의'],
+    't1-k12-reading': ['초등 그림책 독서', '초등 주제 독서', '중등 비문학 독해', '토론 · 논술 기초', '고등 논증 글쓰기', '서술형 대비 첨삭'],
+    't1-k12-retake': ['국어 종합반', '수학 종합반', '영어 종합반', '탐구 집중반', '실전 모의고사', '담임 상담 관리'],
+    't1-k12-science': ['물리 실험 탐구', '화학 반응 실험', '생명 관찰 일지', '지구 · 우주 탐구', '과학 탐구 대회 준비', '중등 과학 개념'],
+    't1-k12-sports': ['태권도 기초반', '줄넘기 교실', '어린이 체육', '농구 교실', '유아 체육 놀이', '승급 심사 준비'],
+    't1-k12-studycare': ['평일 관리형 자습', '주말 자습 관리', '플래너 코칭', '시험 기간 집중 관리', '방학 집중반', '학습 습관 상담'],
+    't1-k12-tutor': ['1:1 수학 수업', '1:1 영어 수업', '소수정예 국어', '내신 맞춤 플랜', '온라인 보강 수업', '학습 습관 코칭']
+  };
+  Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'k12') tp.qaCls = QA[id]; }); }
+  /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
+  ['t1-k12-english', 't1-k12-studycare', 't1-k12-online', 't1-k12-tutor', 't1-k12-art', 't1-k12-kinder', 't1-k12-music', 't1-k12-retake'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
+  /* H2 사진 재배정표(fix6/h2/w/H2_change.json · H2_photo_map.md): 첫 화면 사무실 · 노트북 유형당 2장 이하, 첫 화면 중복 0.
+     슬롯 사진(photos)을 덮어쓰고, gal: { 이전 id: 새 id }는 사진 띠(image 섹션) 안의 사진을 바꾼다 */
+  { const H2P = {
+    'k12-exam': {'cta': 'hum-39'},
+    't1-k12-tutor': {'cta': 'hum-12', 'gal': {'dsk-01': 'dsk-07'}},
+    't1-k12-studycare': {'cta': 'hum-39', 'space': 'dsk-07'},
+    't1-k12-online': {'cta': 'hum-02', 'space': 'hum-12', 'about': 'dsk-07'}
+  };
+  const H2S = id => { const H = window.HPSTOCK; const x = H && typeof H.get === 'function' ? H.get(id) : null; return x ? (x.src800 || x.src) : ''; };
+  Object.keys(H2P).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'k12') return; const v = H2P[id];
+    const ph = Object.assign({}, v); delete ph.gal; tp.photos = Object.assign({}, tp.photos || {}, ph);
+    if (v.gal && typeof tp.build === 'function') { const b0 = tp.build; tp.build = () => { const L = A(b0());
+      L.forEach(x => { if (!x || x.type !== 'image' || !x.data || !Array.isArray(x.data.imgs)) return;
+        x.data.imgs = x.data.imgs.map(im => { const m = String(im && im.src || '').match(/([a-z]{3}-\d{2})(?:-800)?\.webp/); const nw = m && v.gal[m[1]] ? H2S(v.gal[m[1]]) : '';
+          return nw ? Object.assign({}, im, { src: nw }) : im; }); }); return L; }; } }); }
 })();

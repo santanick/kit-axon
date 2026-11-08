@@ -116,7 +116,7 @@
      같은 계열을 다른 유형도 쓰면 변형(layoutVar, FD1 HPL.vars)을 서로 다르게 고른다. 머리글 · 바닥글은 FA의 유형별 허용 목록 안에서 2~3종으로 나눈다.
      [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
   const FD2 = {
-    't2-univ-ctl': ['portal', 'c', 'util', 'campus'],
+    't2-univ-ctl': ['editorial', 'b', 'util', 'campus'], /* H3: portal c면 lifelong life-city와 공지 · 일정 패널이 같음(H1 ③) */
     'univ-lms': ['sidebar', 'a', 'center', 'min'],
     't2-univ-dept': ['portal', 'a', 'util', 'biz'] /* 어두운 첫 화면: dept · startup 2종 */,
     't2-univ-faculty': ['editorial', 'a', 'center', 'campus'],
@@ -124,12 +124,12 @@
     't2-univ-writing': ['editorial', 'c', 'util', 'min'],
     't2-univ-career': ['hk:split', '', 'center', 'biz'],
     't2-univ-startup': ['noir', 'a', 'overlay', 'min'],
-    't2-univ-mooc': ['hk:grid', '', 'util', 'biz'],
+    't2-univ-mooc': ['portal', 'b', 'util', 'biz'], /* H3: 주력 계열 집중(portal a · b · c) */
     't2-univ-ai': ['sidebar', 'b', 'center', 'biz'],
     't2-univ-intl': ['story', 'a', 'util', 'campus'],
-    't2-univ-rise': ['fullbleed', 'c', 'center', 'campus'],
-    't2-univ-cll': ['hk:box', '', 'center', 'campus'],
-    'univ-aicenter': ['hk:box', '', 'util', 'biz'],
+    't2-univ-rise': ['story', 'c', 'center', 'campus'], /* H3: fullbleed 1회 → 주력 story c */
+    't2-univ-cll': ['hk:box', '', 'center', 'campus'], /* H3: editorial이면 lifelong(공유)에서 b가 겹침 */
+    'univ-aicenter': ['hk:scrim', '', 'util', 'biz'], /* H3: 상자형 줄임 → 사진 전면 */
     'univ-extra': ['story', 'b', 'center', 'min'],
     'univ-lifelong': ['hk:split', '', 'util', 'campus']
   };
@@ -200,4 +200,46 @@
       return h; }; window.siteHTML = siteHTML; }
 
   window.TPL_UNIV = { ids: [...MINE], cfg: CFG };
+  /* H3(R2 N10): 점검용 업종별 강좌 이름 6개 — hp-visual 채운 기관이 템플릿마다 이 이름으로 강좌를 바꿔 찍는다(게시 화면에는 쓰지 않는다) */
+  { const QA = {
+    't2-univ-ai': ['AI 리터러시 기초', '생성형 AI 활용', '파이썬 프로그래밍', '데이터 분석 입문', 'AI 융합 프로젝트', 'AI 윤리와 사회'],
+    't2-univ-career': ['진로 탐색 세미나', '직무 역량 워크숍', '자기소개서 클리닉', '모의 면접', '인턴십 준비', '취업 박람회 대비'],
+    't2-univ-cll': ['사회복지학 학점 과정', '경영학 학점 과정', '바리스타 자격 과정', '한국어교원 양성', '심리상담 전문 과정', '시민 교양 강좌'],
+    't2-univ-ctl': ['신임 교원 교수법', '플립러닝 설계', '학습법 워크숍', '이러닝 콘텐츠 제작', '수업 설계 컨설팅', '학습 공동체 운영'],
+    't2-univ-dept': ['전공 기초 세미나', '회로 이론', '데이터 구조', '캡스톤 디자인', '전공 실험', '졸업 프로젝트'],
+    't2-univ-faculty': ['신임 교원 교수법 연수', '수업 컨설팅', '루브릭 평가 설계', '토론식 수업 운영', 'AI 활용 수업 설계', '수업 나눔 세미나'],
+    't2-univ-intl': ['한국어 초급', '한국어 중급', 'TOPIK 대비', '한국 문화 체험', '버디 교류 프로그램', '학술 한국어'],
+    't2-univ-mooc': ['인문학 공개 강의', '경제학의 이해', '기초 통계학', '생명과학 입문', '철학 고전 읽기', '지역사회와 공공정책'],
+    't2-univ-rise': ['지역 정주 리빙랩', '지역 기업 인턴십', '지역 문제 해결 프로젝트', '평생학습 연계 과정', '산학 협력 캡스톤', '지역 창업 교육'],
+    't2-univ-startup': ['창업 아이디어 발굴', '린 캔버스 실습', '시제품 제작 워크숍', '투자 유치 IR', '데모데이 준비', '창업 동아리 멘토링'],
+    't2-univ-tutor': ['1:1 학습 튜터링', '전공 스터디 그룹', '학습 전략 컨설팅', '시간 관리 워크숍', '기초 수학 보충', '글쓰기 튜터링'],
+    't2-univ-writing': ['학술 글쓰기', '리포트 첨삭', '자기소개서 첨삭', '발표 코칭', '논문 작성법', '토론 · 스피치'],
+    'univ-aicenter': ['AI 역량 진단', 'AI 기초 러닝 저니', '프롬프트 엔지니어링', 'AI 업무 자동화', 'AI 프로젝트 실습', '디지털 배지 과정'],
+    'univ-extra': ['리더십 캠프', '봉사 프로그램', '글로벌 역량 세미나', '진로 멘토링', '문화 예술 체험', '공모전 준비'],
+    'univ-lifelong': ['시민 인문학 강좌', '지역사 탐방', '스마트폰 활용', '건강 체조', '합창 교실', '시니어 영어'],
+    'univ-lms': ['전공 이론', '전공 실습', '교양 필수', '온라인 보강 강의', '과제 · 평가 안내', '기말 프로젝트']
+  };
+  Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'univ') tp.qaCls = QA[id]; }); }
+  /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
+  ['t2-univ-tutor', 't2-univ-mooc', 't2-univ-ctl', 't2-univ-writing', 't2-univ-faculty', 'univ-aicenter'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
+    tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
+      L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
+  /* H2 사진 재배정표(fix6/h2/w/H2_change.json · H2_photo_map.md): 첫 화면 사무실 · 노트북 유형당 2장 이하, 첫 화면 중복 0.
+     슬롯 사진(photos)을 덮어쓰고, gal: { 이전 id: 새 id }는 사진 띠(image 섹션) 안의 사진을 바꾼다 */
+  { const H2P = {
+    't2-univ-faculty': {'cta': 'brd-01'},
+    't2-univ-startup': {'gallery': 'grp-03', 'gal': {'off-06': 'hum-04'}},
+    't2-univ-cll': {'cta': 'cam-02'},
+    'univ-lms': {'gallery': 'hum-08', 'gal': {'stu-01': 'hum-02'}},
+    't2-univ-writing': {'cta': 'hum-13'},
+    't2-univ-career': {'cta': 'grp-01', 'gallery': 'grp-06'}
+  };
+  const H2S = id => { const H = window.HPSTOCK; const x = H && typeof H.get === 'function' ? H.get(id) : null; return x ? (x.src800 || x.src) : ''; };
+  Object.keys(H2P).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'univ') return; const v = H2P[id];
+    const ph = Object.assign({}, v); delete ph.gal; tp.photos = Object.assign({}, tp.photos || {}, ph);
+    if (v.gal && typeof tp.build === 'function') { const b0 = tp.build; tp.build = () => { const L = A(b0());
+      L.forEach(x => { if (!x || x.type !== 'image' || !x.data || !Array.isArray(x.data.imgs)) return;
+        x.data.imgs = x.data.imgs.map(im => { const m = String(im && im.src || '').match(/([a-z]{3}-\d{2})(?:-800)?\.webp/); const nw = m && v.gal[m[1]] ? H2S(v.gal[m[1]]) : '';
+          return nw ? Object.assign({}, im, { src: nw }) : im; }); }); return L; }; } }); }
 })();
