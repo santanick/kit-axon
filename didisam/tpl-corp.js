@@ -34,7 +34,7 @@
      cd: 강좌 카드(S2) · L: 계열(없으면 S3 첫 화면 hk) · th: 테마 · pal: 팔레트 · ph: { hero, about, space, cta, gallery } · hd: [머리글, 바닥글, 휴대폰 메뉴] · ck: 신청 띠 */
   const CFG = {
     /* 그룹 아카데미: S3 사진 + 겹친 글자 상자(계단식 강의실) — corp 기본 시작 템플릿(마법사 시안의 바탕이라 계열 없이 둔다) */
-    'corp-academy': { cd: 'table', name: '그룹 인재개발 아카데미', hk: 'box', th: 'official', pal: 'harbor', ph: { hero: 'lec-03', about: 'sem-01', space: 'lec-02', cta: 'off-06' }, hd: ['solid', 'biz', 'full'], ck: 'panel',
+    'corp-academy': { cd: 'table', name: '그룹 인재개발 아카데미', hk: 'box', th: 'official', pal: 'harbor', ph: { hero: 'hum-11', about: 'lec-03', space: 'lec-02', cta: 'off-06' }, hd: ['solid', 'biz', 'full'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '인재개발 아카데미', title: `${org()}\n인재개발 아카데미`, sub: '직무 · 리더십 · 필수교육을 한 포털에서 신청하고, 이수 기록과 수료증까지 한 번에 확인합니다.', cta: '내 교육 보기', cta2: '연간 교육체계' }),
         notices('교육 공지', { board: 1, n: 5 }),
@@ -46,7 +46,7 @@
         cta('부서 맞춤 교육이 필요하신가요?', '부서 과제에 맞춘 과정 개설과 사내 강사 연결은 인재개발 담당 부서에서 안내합니다.', '교육 문의'),
         map('교육 문의')] },
     /* 신입 온보딩: 이야기형(입사 첫날 → 첫 주 → 첫 달 세로 줄기) — 순서가 곧 내용 */
-    'corp-onboard': { cd: 'list', name: '신입 입사자 온보딩', L: 'story', th: 'clean', pal: 'tealcorp', ph: { hero: 'off-02', about: 'off-03', space: 'off-04', cta: 'lap-10' }, hd: ['float', 'min', 'drawer'], ck: 'panel',
+    'corp-onboard': { cd: 'list', name: '신입 입사자 온보딩', L: 'story', th: 'clean', pal: 'tealcorp', ph: { hero: 'hum-36', about: 'off-02', space: 'off-04', cta: 'lap-10' }, hd: ['float', 'min', 'drawer'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '입사 첫 30일', title: '입사 첫 달,\n순서대로 함께 갑니다', sub: '첫날 준비물부터 업무 도구, 직무 기초, 멘토 미팅까지 알아야 할 것만 순서대로 안내합니다.', cta: '온보딩 시작', cta2: '첫날 안내' }),
         T('timeline', { eyebrow: '', title: '첫 달은 이렇게 흘러갑니다', cols: [['입사 첫날', '계정 발급 · 자리 · 팀 소개'], ['첫 주', '회사 이해 · 업무 도구 익히기'], ['둘째 · 셋째 주', '직무 기초 과정과 실습 과제'], ['첫 달 마무리', '멘토 미팅 · 회고 · 다음 목표']] }),
@@ -57,7 +57,7 @@
         faq('', [['입사 전에 미리 들을 수 있나요?', '계정이 발급되면 회사 이해 과정부터 먼저 들을 수 있습니다.'], ['온보딩 과정이 끝나면 어떻게 되나요?', '직무별 과정이 이어서 배정되고, 이수 기록은 내 강의에 남습니다.']]),
         cta('궁금한 점은 담당자에게', '입사 서류 · 계정 · 교육 일정 문의는 인사 담당 부서에서 안내합니다.', '온보딩 문의')] },
     /* 법정의무교육: 알림판형(마감 공지 · 대상 · 이수 절차를 표로) — 실제 기능만 문구로 */
-    'corp-legal': { cd: 'table', name: '법정의무교육 센터', L: 'bulletin', th: 'official', pal: 'oxford', ph: { hero: 'lap-04', about: 'dsk-03', space: 'lap-09', cta: 'dsk-05' }, hd: ['notice', 'biz', 'full'], ck: 'contact',
+    'corp-legal': { cd: 'table', name: '법정의무교육 센터', L: 'bulletin', th: 'official', pal: 'oxford', ph: { hero: 'hum-06', about: 'lap-04', space: 'lap-09', cta: 'dsk-05' }, hd: ['notice', 'biz', 'full'], ck: 'contact',
       build: () => [
         ban({ eyebrow: '법정의무교육', title: '법정의무교육,\n마감 전에 끝내세요', sub: '직장 내 성희롱 예방 · 개인정보 보호 · 장애인 인식 개선 · 직장 내 괴롭힘 예방 교육을 온라인으로 이수합니다.', cta: '내 필수교육 보기', cta2: '이수 방법' }),
         notices('마감 · 일정 공지', { n: 5 }),
@@ -67,7 +67,7 @@
         faq('', [['휴대폰으로 들어도 이수가 되나요?', 'PC와 휴대폰 어디서 들어도 같은 진도로 기록됩니다.'], ['수료증은 어디서 받나요?', '학습자 앱의 내 강의 → 수료증에서 내려받을 수 있습니다.']]),
         cta('이수 기록에 문제가 있나요?', '진도 · 수료증 · 마감 연장 문의는 교육 담당 부서에서 확인해 드립니다.', '이수 문의', 'contact')] },
     /* 파트너 인증: 벤토 격자(인증 단계 · 숫자 · 강좌 칸) — 리셀러 · 대리점 인증 프로그램 */
-    'corp-partner': { cd: 'big', name: '파트너 · 대리점 인증 아카데미', L: 'bento', th: 'tech', pal: 'denim', ph: { hero: 'lap-01', about: 'cod-03', space: 'sem-01', cta: 'lap-03' }, hd: ['solid', 'cols', 'drawer'], ck: 'photo',
+    'corp-partner': { cd: 'big', name: '파트너 · 대리점 인증 아카데미', L: 'bento', th: 'tech', pal: 'denim', ph: { hero: 'hum-10', about: 'lap-01', space: 'sem-01', cta: 'lap-03' }, hd: ['solid', 'cols', 'drawer'], ck: 'photo',
       build: () => [
         ban({ eyebrow: '파트너 인증 프로그램', title: '인증 파트너가\n되는 길', sub: '판매 · 구축 · 기술 지원 파트너를 위한 단계별 제품 교육과 인증 평가를 제공합니다.', cta: '인증 과정 시작', cta2: '인증 단계 보기' }),
         cls('인증 과정', '역할에 맞는 인증부터 시작하세요.', { n: 4 }),
@@ -87,7 +87,7 @@
         reviews('수료한 리더의 이야기'),
         cta('리더 과정 배정이 궁금하신가요?', '승진 예정자 과정 배정 · 이수 인정 · 일정 변경은 교육 담당 부서에서 안내합니다.', '교육 문의')] },
     /* AX · DX: 큰 글자(초대형 제목 + 코드 화면 띠) — 전 직원 AI 전환 */
-    't3-c-ax': { cd: 'schedule', L: 'typo', th: 'tech', pal: 'volt', ph: { hero: 'cod-02', about: 'cod-03', space: 'stu-01', cta: 'cod-04' }, hd: ['solid', 'mega', 'full'], ck: 'panel',
+    't3-c-ax': { cd: 'schedule', L: 'typo', th: 'tech', pal: 'volt', ph: { hero: 'hum-07', about: 'cod-02', space: 'stu-01', cta: 'cod-04' }, hd: ['solid', 'mega', 'full'], ck: 'panel',
       build: () => [
         ban({ eyebrow: 'AX · DX 아카데미', title: '업무에 바로 쓰는\n생성형 AI', sub: '문서 · 데이터 · 보고 업무를 AI와 함께 처리하는 방법을 직무별 실습으로 익힙니다. 사내 보안 기준도 함께 배웁니다.', cta: 'AI 과정 시작', cta2: '단계별 안내' }),
         T('steps', { eyebrow: '', title: '네 단계로 전환합니다', cols: [['AI 리터러시', '원리 · 한계 · 사내 사용 기준'], ['업무 적용', '문서 작성 · 요약 · 데이터 정리'], ['업무 자동화', '반복 업무를 AI 도구로'], ['사내 확산', '부서 사례를 동료에게 전파']] }),
@@ -97,7 +97,7 @@
         notices('AX 소식'),
         cta('우리 부서 맞춤 실습이 필요하신가요?', '부서 업무에 맞춘 실습 과제와 사례 공유회를 함께 설계합니다.', '맞춤 과정 요청')] },
     /* 제조 안전: 전체 화면 사진(용접 불꽃) — 현장의 긴장감, 대상별 교육 표 */
-    't3-c-safety': { cd: 'table', L: 'fullbleed', th: 'official', pal: 'safety', ph: { hero: 'voc-01', about: 'wrk-07', space: 'wrk-05', cta: 'wrk-04' }, hd: ['overlay', 'biz', 'full'], ck: 'contact',
+    't3-c-safety': { cd: 'table', L: 'fullbleed', th: 'official', pal: 'safety', ph: { hero: 'hum-19', about: 'voc-01', space: 'wrk-05', cta: 'wrk-04' }, hd: ['overlay', 'biz', 'full'], ck: 'contact',
       build: () => [
         ban({ eyebrow: '산업안전보건교육', title: '현장 안전교육,\n대상별로 빠짐없이', sub: '근로자 정기교육 · 채용 시 교육 · 작업내용 변경 시 교육 · 관리감독자 교육을 대상에 맞게 배정하고 이수 기록을 남깁니다.', cta: '내 안전교육 보기', cta2: '교육 대상 확인' }),
         T('info', { eyebrow: '', title: '교육 대상과 종류', sub: '세부 시간과 주기는 사업장 업종 · 규모에 따라 법령 기준을 따릅니다.', cols: [['근로자 정기교육', '모든 근로자 · 정해진 주기마다'], ['채용 시 교육', '신규 채용자 · 업무 배치 전'], ['작업내용 변경 시', '작업이 바뀐 근로자 · 변경 시점'], ['관리감독자 교육', '현장 관리감독자'], ['특별교육', '유해 · 위험 작업 종사자']] }),
@@ -107,7 +107,7 @@
         notices('안전 공지'),
         cta('사업장 안전교육 운영 문의', '대상자 명단 등록 · 집체 교육 일정 · 증빙 자료는 안전보건 담당 부서에서 안내합니다.', '안전교육 문의', 'contact')] },
     /* 영업: 좌우 분할(산호색 글 판 + 밝은 상담 테이블) — 현장 직원 마이크로러닝 */
-    't3-c-sales': { cd: 'photo', L: 'splitscreen', th: 'clean', pal: 'coral', ph: { hero: 'off-04', about: 'stu-02', space: 'lap-03', cta: 'dsk-02' }, hd: ['contact', 'cols', 'drawer'], ck: 'photo',
+    't3-c-sales': { cd: 'photo', L: 'splitscreen', th: 'clean', pal: 'coral', ph: { hero: 'hum-04', about: 'off-04', space: 'lap-03', cta: 'dsk-02' }, hd: ['contact', 'cols', 'drawer'], ck: 'photo',
       build: () => [
         ban({ eyebrow: '영업 · 서비스 아카데미', title: '꺼내 보는\n영업 · 응대 교육', sub: '짧은 영상과 확인 문항으로 상품 지식 · 고객 응대 · 상담 화법을 휴대폰에서 바로 익힙니다.', cta: '오늘의 학습 시작', cta2: '역할별 트랙' }),
         T('tiles', { eyebrow: '', title: '역할별 학습 트랙', cols: [['신규 영업 사원', '상품 기초 · 영업 규칙'], ['고객 응대', '응대 화법 · 불만 처리'], ['제안 · 계약', '상담 · 제안서 · 계약 실무'], ['팀장', '팀 코칭 · 성과 관리']] }),
@@ -117,7 +117,7 @@
         notices('신상품 · 교육 공지'),
         cta('신상품 출시 교육이 필요하신가요?', '팀 단위 출시 교육과 순회 교육 일정은 교육 담당자와 함께 정합니다.', '교육 요청')] },
     /* 프랜차이즈: 콜라주(기울어진 사진 카드 · 메모지) — 매장 오픈 준비의 경쾌함 */
-    't3-c-franchise': { cd: 'list', L: 'collage', th: 'warm', pal: 'tangerine', ph: { hero: 'dsk-02', gallery1: 'wrk-02', gallery2: 'wrk-06', about: 'dsk-04', cta: 'lib-05' }, hd: ['float', 'cta', 'drawer'], ck: 'panel',
+    't3-c-franchise': { cd: 'list', L: 'collage', th: 'warm', pal: 'tangerine', ph: { hero: 'hum-05', gallery1: 'wrk-02', gallery2: 'wrk-06', about: 'dsk-04', cta: 'lib-05' }, hd: ['float', 'cta', 'drawer'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '가맹점 · 매장 교육', title: '매장 문을 열기 전\n꼭 배워야 할 것들', sub: '가맹점주와 매장 직원이 같은 기준으로 운영할 수 있도록 표준 매뉴얼 · 위생 · 응대 교육을 한 곳에서 제공합니다.', cta: '오픈 교육 시작', cta2: '교육 일정' }),
         T('steps', { eyebrow: '', title: '오픈까지의 교육 순서', cols: [['브랜드 이해', '브랜드 기준과 운영 원칙'], ['표준 매뉴얼', '메뉴 · 상품 · 진열 기준'], ['매장 위생 · 안전', '위생 기준과 안전 수칙'], ['현장 실습', '교육 매장 실습과 점검'], ['오픈 점검', '오픈 전 최종 확인']] }),
@@ -128,7 +128,7 @@
         cta('오픈 일정에 맞춘 교육 상담', '오픈 예정일을 알려 주시면 담당 슈퍼바이저가 교육 일정을 함께 정합니다.', '교육 문의'),
         map('본부 교육장')] },
     /* 고객사 제품 교육: 전체 화면 사진(밝은 서재 위 노트북) — 역할별 러닝 패스 · 도움말 */
-    't3-c-customer': { cd: 'price', L: 'fullbleed', th: 'clean', pal: 'glacier', ph: { hero: 'lap-02', about: 'lap-05', space: 'off-06', cta: 'lap-09' }, hd: ['overlay', 'cols', 'full'], ck: 'panel',
+    't3-c-customer': { cd: 'price', L: 'fullbleed', th: 'clean', pal: 'glacier', ph: { hero: 'hum-01', about: 'lap-02', space: 'off-06', cta: 'lap-09' }, hd: ['overlay', 'cols', 'full'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '고객 아카데미', title: '제품을 더 잘 쓰는\n가장 빠른 길', sub: '처음 쓰는 분부터 관리자까지, 역할에 맞는 러닝 패스를 따라가면 필요한 기능을 순서대로 익힐 수 있습니다.', cta: '러닝 패스 시작', cta2: '도입 교육 문의' }),
         T('tiles', { eyebrow: '', title: '내 역할에 맞는 경로', sub: '기능 목록이 아니라 하는 일 기준으로 묶었습니다.', cols: [['처음 쓰는 사용자', '가입부터 첫 결과까지'], ['실무 담당자', '자주 쓰는 기능 · 작업 흐름'], ['관리자', '권한 · 설정 · 연동'], ['개발자', 'API · 데이터 연동']] }),
@@ -138,7 +138,7 @@
         notices('업데이트 소식', { board: 1 }),
         faq('', [['팀원 계정으로도 들을 수 있나요?', '관리자가 팀원을 초대하면 각자 계정으로 러닝 패스를 들을 수 있습니다.'], ['수료증이 나오나요?', '러닝 패스를 마치면 내 강의에서 수료증을 받을 수 있습니다.']])] },
     /* 협력사: 모자이크(도면 · 공구 · 작업대 사진 격자) — 품질 · 안전 현장이 먼저 보이는 포털 */
-    't3-c-supplier': { cd: 'schedule', L: 'mosaic', th: 'campus', pal: 'workbench', ph: { hero: 'wrk-03', about: 'wrk-04', space: 'wrk-02', gallery: 'cls-03', cta: 'wrk-07' }, hd: ['notice', 'biz', 'full'], ck: 'panel',
+    't3-c-supplier': { cd: 'schedule', L: 'mosaic', th: 'campus', pal: 'workbench', ph: { hero: 'hum-18', about: 'wrk-03', space: 'wrk-02', gallery: 'cls-03', cta: 'wrk-07' }, hd: ['notice', 'biz', 'full'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '협력사 상생 교육', title: '함께 지키는\n품질 · 안전 기준', sub: '협력사 임직원이 품질 · 안전 · 윤리 기준을 같은 눈높이로 익힐 수 있도록 교육과 이수 기록을 제공합니다.', cta: '협력사 과정 보기', cta2: '참여 방법' }),
         T('features', { eyebrow: '', title: '지원 분야', cols: [['품질', '품질 기준 · 불량 예방'], ['안전', '현장 안전 수칙 · 위험성 평가'], ['윤리 · 공정거래', '거래 원칙 · 신고 절차'], ['ESG', '환경 · 인권 · 공급망 기준']] }),
@@ -148,7 +148,7 @@
         faq('', [['비용이 드나요?', '참여 조건과 비용은 협력사 지원 부서에서 과정별로 안내합니다.'], ['이수 결과를 받을 수 있나요?', '협력사 담당자에게 임직원 이수 현황을 공유합니다.']]),
         cta('협력사 교육 참여 문의', '참여 대상 · 계정 등록 · 이수 보고 방식은 협력사 지원 부서에서 안내합니다.', '참여 문의')] },
     /* 직무 학교: 포털형(강의실 사진 위 찾기 상자 · 빠른 메뉴 · 직무 스쿨 목록) */
-    't3-c-job': { cd: 'table', L: 'portal', th: 'clean', pal: 'midnight', ph: { hero: 'lec-01', about: 'dsk-04', space: 'cls-02', cta: 'lap-08' }, hd: ['solid', 'mega', 'full'], ck: 'panel',
+    't3-c-job': { cd: 'table', L: 'portal', th: 'clean', pal: 'midnight', ph: { hero: 'hum-13', about: 'lec-01', space: 'cls-02', cta: 'lap-08' }, hd: ['solid', 'mega', 'full'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '사내 직무 학교', title: '우리 회사 직무 전문가는\n여기서 자랍니다', sub: '직무마다 필요한 역량을 레벨로 나누고, 레벨별 과정과 평가로 전문가 성장 경로를 안내합니다.', cta: '내 직무 트랙', cta2: '레벨 기준' }),
         notices('직무 스쿨 공지'),
@@ -158,7 +158,7 @@
         facts(),
         cta('레벨 인정 기준이 궁금하신가요?', '레벨 평가 일정과 경력 인정 기준은 인재개발 담당 부서에서 안내합니다.', '교육 문의')] },
     /* 사내 강사 · 지식 나눔: 매거진형(명조 제목 · 세미나 사진 · 목차형 강의) */
-    't3-c-share': { cd: 'big', L: 'editorial', th: 'warm', pal: 'ochre', ph: { hero: 'sem-01', about: 'stu-02', space: 'off-03', cta: 'dsk-01' }, hd: ['solid', 'min', 'full'], ck: 'panel',
+    't3-c-share': { cd: 'big', L: 'editorial', th: 'warm', pal: 'ochre', ph: { hero: 'hum-03', about: 'sem-01', space: 'off-03', cta: 'dsk-01' }, hd: ['solid', 'min', 'full'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '지식 나눔', title: '동료의 노하우를\n강의로 나눕니다', sub: '현장에서 쌓은 경험을 사내 강사가 짧은 강의로 만들고, 동료는 필요한 순간에 찾아 배웁니다.', cta: '사내 강의 둘러보기', cta2: '사내 강사 지원' }),
         cls('새로 올라온 사내 강의', '동료가 만든 강의를 먼저 들어 보세요.'),
@@ -168,7 +168,7 @@
         reviews('수강한 동료의 한마디'),
         cta('나누고 싶은 노하우가 있나요?', '사내 강사 지원과 강의 제작 지원은 교육 담당 부서에서 안내합니다.', '사내 강사 지원')] },
     /* 글로벌: S3 전면 사진 + 스크림(도시 전경) — 국문 · 영문 병기 */
-    't3-c-global': { cd: 'photo', hk: 'scrim', th: 'premium', pal: 'granite', ph: { hero: 'arc-03', about: 'arc-02', space: 'arc-01', cta: 'off-07' }, hd: ['overlay', 'cols', 'drawer'], ck: 'photo',
+    't3-c-global': { cd: 'photo', hk: 'scrim', th: 'premium', pal: 'granite', ph: { hero: 'hum-16', about: 'arc-03', space: 'arc-01', cta: 'off-07' }, hd: ['overlay', 'cols', 'drawer'], ck: 'photo',
       build: () => [
         ban({ eyebrow: '글로벌 러닝 · Global Learning', title: '본사와 해외 법인이\n같은 기준으로 배웁니다', sub: '공통 가치 · 규정 · 직무 교육을 국문과 영문으로 제공하고, 법인별 이수 현황을 한 곳에서 관리합니다.', cta: '내 교육 보기', cta2: '법인별 안내' }),
         T('features', { eyebrow: '', title: '전 법인 공통 과정', cols: [['행동 규범', 'Code of Conduct'], ['정보 보안', 'Information Security'], ['공정 거래 · 반부패', 'Anti-Corruption'], ['직무 기본', 'Job Fundamentals']] }),
@@ -188,7 +188,7 @@
         notices('윤리 · ESG 공지'),
         cta('판단이 어려운 상황이 있나요?', '윤리 · 준법 상담과 제보는 담당 부서가 비밀을 지켜 처리합니다.', '상담 · 제보 안내')] },
     /* IT 보안(새 템플릿): S3 큰 제목 + 사진 격자(어두운 코드 화면) — 보안 수칙 · 모의 훈련 */
-    'tc-security': { cd: 'schedule', hk: 'grid', th: 'tech', pal: 'circuit', ph: { hero: 'cod-01', about: 'cod-04', space: 'lap-08', cta: 'off-07' }, hd: ['notice', 'cols', 'full'], ck: 'contact',
+    'tc-security': { cd: 'schedule', hk: 'grid', th: 'tech', pal: 'circuit', ph: { hero: 'hum-08', about: 'cod-01', space: 'lap-08', cta: 'off-07' }, hd: ['notice', 'cols', 'full'], ck: 'contact',
       build: () => [
         ban({ eyebrow: '정보보호 교육', title: '보안은 습관입니다', sub: '피싱 메일 구별부터 계정 · 문서 관리, 사고 신고까지 모든 임직원이 알아야 할 보안 수칙을 짧은 과정으로 익힙니다.', cta: '보안 과정 시작', cta2: '사고 신고 방법' }),
         T('tiles', { eyebrow: '', title: '이번에 꼭 볼 것', cols: [['피싱 메일 구별', '링크 · 첨부를 열기 전에'], ['계정 보호', '비밀번호 · 2단계 인증'], ['문서 반출', '외부 공유 · 저장 매체 기준'], ['사고 신고', '이상 징후를 알리는 방법']] }),
