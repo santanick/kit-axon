@@ -10,6 +10,8 @@ const fs = require('node:fs'); const path = require('node:path');
 const H = require('./lib.js'); const A = H.args(process.argv.slice(2));
 const IN = path.resolve(A.in || A._[0] || 'hp-visual-out'); const OUT = path.resolve(A.out || path.join(IN, 'similar'));
 const TH = A.th != null ? +A.th : 12; const LOOK = A.look != null ? +A.look : 8;
+/* R2 N2(H1) ③ 아래 닮음: 첫 화면 아래 2개 화면 dHash(dh2) ≤ --low(12) 이고 아래 섹션 모양(low: 블록:변형 순서)이 같음, 또는 dh2 ≤ --lowlook(6). M6: 가장 긴 빈 띠 > --gap(200)px */
+const LOW = A.low != null ? +A.low : 12; const LOWLOOK = A.lowlook != null ? +A.lowlook : 6; const GAP = A.gap != null ? +A.gap : 200;
 fs.mkdirSync(OUT, { recursive: true });
 const sharp = H.need('sharp');
 const FONT = "font-family=\"Noto Sans CJK KR, Noto Sans KR, Pretendard, sans-serif\"";
@@ -20,33 +22,34 @@ const FONT = "font-family=\"Noto Sans CJK KR, Noto Sans KR, Pretendard, sans-ser
   if (!rows.length) { console.error('행이 없습니다 — 먼저 run.js를 실행하세요:', IN); process.exit(2); }
   let groups = A.cross ? { all: rows.slice().sort((a, b) => a.id.localeCompare(b.id)) } : H.byType(rows);
   if (want && !A.cross) groups = Object.fromEntries(Object.entries(groups).filter(([t]) => want.has(t)));
-  const res = { th: TH, look: LOOK, rule: '① dHash≤th + 섹션 종류 순서 같음 · ② dHash≤look', at: new Date().toISOString(), n: rows.length, strict: 0, look: 0, similar: 0, types: {} }; const flat = []; const V = [];
+  const res = { th: TH, look: LOOK, rule: '① dHash≤th + 섹션 종류 순서 같음 · ② dHash≤look · ③ 아래 dHash≤low + 아래 모양 같음 또는 아래 dHash≤lowlook', low: LOW, lowlook: LOWLOOK, gap: GAP, at: new Date().toISOString(), n: rows.length, strict: 0, look: 0, similar: 0, types: {} }; const flat = []; const V = [];
   for (const [ty, L] of Object.entries(groups)) {
     const n = L.length; const D = L.map(a => L.map(b => H.hamming(a.dh, b.dh))); const pairs = [];
     for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const d = D[i][j]; const dm = H.hamming(L[i].dh_m, L[j].dh_m); const ke = H.kinds(L[i]) === H.kinds(L[j]);
-      const strict = d <= TH && ke, look = d <= LOOK; if (strict || look || ke || d <= TH) pairs.push({ a: L[i].id, b: L[j].id, d, dm, kindsEq: ke, sigEq: L[i].sig === L[j].sig, strict, look, similar: strict || look }); }
+      const strict = d <= TH && ke, look = d <= LOOK; const d2 = L[i].dh2 && L[j].dh2 ? H.hamming(L[i].dh2, L[j].dh2) : null; const lowEq = !!L[i].low && L[i].low === L[j].low; const lower = d2 != null && ((lowEq && d2 <= LOW) || d2 <= LOWLOOK);
+      if (strict || look || ke || d <= TH || lower) pairs.push({ a: L[i].id, b: L[j].id, d, dm, d2, lowEq, kindsEq: ke, sigEq: L[i].sig === L[j].sig, strict, look, lower, similar: strict || look || lower }); }
     pairs.sort((x, y) => x.d - y.d);
-    const st = pairs.filter(p => p.strict), lk = pairs.filter(p => p.look), sim = pairs.filter(p => p.similar);
+    const st = pairs.filter(p => p.strict), lk = pairs.filter(p => p.look), lw = pairs.filter(p => p.lower), sim = pairs.filter(p => p.similar);
     const inSim = new Set(sim.flatMap(p => [p.a, p.b]));
     const lay = {}; L.forEach(r => { lay[r.layout] = (lay[r.layout] || 0) + 1; });
     let dsum = 0, dc = 0; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { dsum += D[i][j]; dc++; }
     const cBad = L.filter(r => r.cmin != null && r.cmin < 4.5).map(r => r.id), nBad = L.filter(r => (r.numSus || []).length).map(r => r.id);
     /* v34.5 FB: 첫 화면 사진(hero 슬롯 · 긴 변 1200 이상, R1 H6) · 번호 단계 섹션은 유형 템플릿의 절반 이하(R1 H3) — 측정값이 없는 예전 결과는 건너뜀 */
-    const pBad = L.filter(r => r.heroPh && r.heroPh.ok === false).map(r => r.id); const nNum = L.filter(r => r.numSec > 0).length; const numOver = L.some(r => r.numSec != null) && nNum * 2 > n;
-    const t = res.types[ty] = { n, short: n < H.MIN_N, strict: st.length, look: lk.length, similar: sim.length, idsInSimilar: inSim.size, contrastBad: cBad, numSus: nBad, photoBad: pBad, numSec: nNum, avgDist: dc ? Math.round(dsum / dc * 10) / 10 : 0, layouts: lay, pairs };
-    res.strict += st.length; res.look += lk.length; res.similar += sim.length;
+    const pBad = L.filter(r => r.heroPh && r.heroPh.ok === false).map(r => r.id); const gBad = L.filter(r => Math.max(r.gap || 0, r.gap_m || 0) > GAP).map(r => r.id); const lowN = new Set(L.map(r => r.low).filter(Boolean)).size; const nNum = L.filter(r => r.numSec > 0).length; const numOver = L.some(r => r.numSec != null) && nNum * 2 > n;
+    const t = res.types[ty] = { n, short: n < H.MIN_N, strict: st.length, look: lk.length, lower: lw.length, gapBad: gBad, lowShapes: lowN, similar: sim.length, idsInSimilar: inSim.size, contrastBad: cBad, numSus: nBad, photoBad: pBad, numSec: nNum, avgDist: dc ? Math.round(dsum / dc * 10) / 10 : 0, layouts: lay, pairs };
+    res.strict += st.length; res.look += lk.length; res.lower = (res.lower || 0) + lw.length; res.similar += sim.length;
     pairs.forEach(p => flat.push(Object.assign({ type: ty }, p)));
     await heat(ty, L, D, pairs); await side(ty, L, sim);
-    t.pass = !t.short && !st.length && !lk.length && !cBad.length && !nBad.length && !pBad.length && !numOver;
-    V.push(`${ty} ${t.pass ? 'OK' : 'NG'} ①${st.length} ②${lk.length} 대비${cBad.length} 숫자${nBad.length} 사진${pBad.length} 단계${nNum}/${n}${numOver ? '!' : ''} ${n}종${t.short ? '(15종 미만!)' : ''}`);
-    console.log(`${ty}: ${n}종${t.short ? ' ⚠ 15종 미만' : ''} · ①엄격 ${st.length}짝 · ②첫 화면 닮음 ${lk.length}짝 · 유사 관련 ${inSim.size}종 · 대비 미달 ${cBad.length} · 숫자 의심 ${nBad.length} · 평균 거리 ${t.avgDist}`);
+    t.pass = !t.short && !st.length && !lk.length && !lw.length && !gBad.length && !cBad.length && !nBad.length && !pBad.length && !numOver;
+    V.push(`${ty} ${t.pass ? 'OK' : 'NG'} ①${st.length} ②${lk.length} ③${lw.length} 공백${gBad.length} 대비${cBad.length} 숫자${nBad.length} 사진${pBad.length} 단계${nNum}/${n}${numOver ? '!' : ''} ${n}종${t.short ? '(15종 미만!)' : ''}`);
+    console.log(`${ty}: ${n}종${t.short ? ' ⚠ 15종 미만' : ''} · ①엄격 ${st.length}짝 · ②첫 화면 닮음 ${lk.length}짝 · ③아래 닮음 ${lw.length}짝(아래 모양 ${lowN}가지) · 공백 ${gBad.length} · 유사 관련 ${inSim.size}종 · 대비 미달 ${cBad.length} · 숫자 의심 ${nBad.length} · 평균 거리 ${t.avgDist}`);
   }
   const pass = Object.values(res.types).filter(t => t.pass).length, tot = Object.keys(res.types).length;
   res.verdict = `판정 ${pass}/${tot} 통과 | ` + V.join(' | ');
   fs.writeFileSync(path.join(OUT, 'similar.json'), JSON.stringify(res, null, 1));
-  fs.writeFileSync(path.join(OUT, 'similar.csv'), H.csv(flat, ['type', 'a', 'b', 'd', 'dm', 'kindsEq', 'sigEq', 'strict', 'look', 'similar']));
+  fs.writeFileSync(path.join(OUT, 'similar.csv'), H.csv(flat, ['type', 'a', 'b', 'd', 'dm', 'd2', 'lowEq', 'kindsEq', 'sigEq', 'strict', 'look', 'lower', 'similar']));
   fs.writeFileSync(path.join(OUT, 'verdict.txt'), res.verdict + '\n');
-  console.log(`합계: ①엄격 ${res.strict}짝 · ②첫 화면 닮음 ${res.look}짝 · 유사(①∪②) ${res.similar}짝 (${rows.length}종) → ${OUT}`);
+  console.log(`합계: ①엄격 ${res.strict}짝 · ②첫 화면 닮음 ${res.look}짝 · ③아래 닮음 ${res.lower || 0}짝 · 유사(①∪②) ${res.similar}짝 (${rows.length}종) → ${OUT}`);
   console.log(res.verdict);
 })().catch(e => { console.error(e); process.exit(1); });
 
@@ -73,8 +76,8 @@ async function side(ty, L, list) {
     let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Ht}"><rect width="100%" height="100%" fill="#f4f4f5"/><text x="16" y="32" font-size="20" font-weight="700" ${FONT}>${H.esc(ty)} 유사 짝 ${k * 8 + 1}–${k * 8 + part.length} / ${list.length} (①엄격 ≤${TH}+구조 · ②닮음 ≤${LOOK})</text>`;
     for (let i = 0; i < part.length; i++) { const p = part[i]; const y = 50 + i * rowH;
       [p.a, p.b].forEach((id, side) => { const x = 16 + side * (tw + mw + 24 + 8); const r = by[id] || {};
-        s += `<text x="${x}" y="${y + 18}" font-size="14" font-weight="700" ${FONT}>${H.esc(id)} · ${H.esc(r.name || '')}</text><text x="${x}" y="${y + 36}" font-size="12" fill="#555" ${FONT}>${H.esc([r.layout, r.theme, r.hero || '-', 'q' + r.q].join(' · '))}${side ? `  ← 거리 ${p.d}(휴대폰 ${p.dm}) · ${p.strict && p.look ? '①②' : p.strict ? '①엄격' : '②닮음'} · 구조 ${p.kindsEq ? '같음' : '다름'}` : ''}</text>`;
-        const f1 = path.join(SH, `${id}_hero.jpg`), f2 = path.join(SH, `${id}_hero_m.jpg`);
+        s += `<text x="${x}" y="${y + 18}" font-size="14" font-weight="700" ${FONT}>${H.esc(id)} · ${H.esc(r.name || '')}</text><text x="${x}" y="${y + 36}" font-size="12" fill="#555" ${FONT}>${H.esc([r.layout, r.theme, r.hero || '-', 'q' + r.q].join(' · '))}${side ? `  ← 거리 ${p.d}(휴대폰 ${p.dm}) · ${p.strict && p.look ? '①②' : p.strict ? '①엄격' : p.look ? '②닮음' : `③아래 닮음(아래 거리 ${p.d2})`} · 구조 ${p.kindsEq ? '같음' : '다름'}` : ''}</text>`;
+        const lo = p.lower && !p.strict && !p.look; const f1 = path.join(SH, `${id}_${lo ? 'low' : 'hero'}.jpg`), f2 = path.join(SH, `${id}_${lo ? 'low_m' : 'hero_m'}.jpg`);
         if (fs.existsSync(f1)) comp.push({ f: f1, w: tw, h: thh, left: x, top: y + 44 }); if (fs.existsSync(f2)) comp.push({ f: f2, w: mw, h: mh, left: x + tw + 8, top: y + 44 }); }); }
     s += '</svg>';
     const ims = await Promise.all(comp.map(async c => ({ input: await sharp(c.f).resize(c.w, c.h, { fit: 'cover', position: 'top' }).toBuffer(), left: c.left, top: c.top })));

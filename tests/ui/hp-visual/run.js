@@ -15,7 +15,7 @@ const dirOf = st => ST.length > 1 && st !== ST[0] ? path.join(OUT0, st) : OUT0;
 let OUT = OUT0, SHOT = path.join(OUT, 'shots'), ROWS = path.join(OUT, 'rows'); const useOut = st => { OUT = dirOf(st); SHOT = path.join(OUT, 'shots'); ROWS = path.join(OUT, 'rows'); [OUT, SHOT, ROWS].forEach(d => fs.mkdirSync(d, { recursive: true })); };
 const BUDGET = (+A.budget || 240) * 1000; const T0 = Date.now(); const PORT = +A.port || 9830;
 ST.forEach(useOut); useOut(ST[0]);
-const COLS = ['state', 'id', 'type', 'name', 'layout', 'theme', 'hero', 'color', 'q', 'qMiss', 'dh', 'dh_m', 'sig', 'nSec', 'cmin', 'cminTxt', 'cfail', 'cfailPx', 'auditMin', 'ov_pc', 'ov_m', 'wide_m', 'emptyDom', 'ph', 'numSus', 'photos', 'stock', 'stockRatio', 'art', 'nVis', 'numSec', 'clsVis', 'emptyCls', 'imgPending', 'hpH_pc', 'hpH_m', 'errs'];
+const COLS = ['state', 'id', 'type', 'name', 'layout', 'theme', 'hero', 'color', 'q', 'qMiss', 'dh', 'dh_m', 'dh2', 'dh2_m', 'gap', 'gap_m', 'sig', 'low', 'nSec', 'cmin', 'cminTxt', 'cfail', 'cfailPx', 'auditMin', 'ov_pc', 'ov_m', 'wide_m', 'emptyDom', 'ph', 'numSus', 'photos', 'stock', 'stockRatio', 'art', 'nVis', 'numSec', 'clsVis', 'emptyCls', 'imgPending', 'hpH_pc', 'hpH_m', 'errs'];
 
 function summarize() { const rows = H.loadRows(OUT).sort((a, b) => (a.type + a.id).localeCompare(b.type + b.id));
   fs.writeFileSync(path.join(OUT, 'summary.json'), JSON.stringify(rows, null, 1)); fs.writeFileSync(path.join(OUT, 'summary.csv'), H.csv(rows.map(r => Object.assign({}, r, { auditMin: r.auditMin ? r.auditMin.join(' ') : '' })), COLS)); return rows; }
@@ -58,7 +58,13 @@ function summarize() { const rows = H.loadRows(OUT).sort((a, b) => (a.type + a.i
         const top = Math.min(Math.round(m.top * sc), Math.max(0, meta.height - 10)); const hh = Math.min(Math.round(h * sc), meta.height - top);
         const region = { left: 0, top, width: meta.width, height: Math.max(8, hh) };
         r[sfx === 'pc' ? 'dh' : 'dh_m'] = await H.dhash(sharp, buf, region);
+        /* R2 N2(H1): 첫 화면 아래 2개 화면(두 번째 · 세 번째 화면)의 dHash — 아래 뼈대가 같은 사이트처럼 보이는지 */
+        { const t2 = Math.min(top + Math.round(h * sc), Math.max(0, meta.height - 10)); const h2 = Math.min(Math.round(h * 2 * sc), meta.height - t2);
+          if (h2 >= Math.round(h * sc * 0.5)) { const rg = { left: 0, top: t2, width: meta.width, height: h2 }; r[sfx === 'pc' ? 'dh2' : 'dh2_m'] = await H.dhash(sharp, buf, rg);
+            await sharp(buf).extract(rg).resize(sfx === 'pc' ? 480 : 200).jpeg({ quality: 78 }).toFile(path.join(SHOT, `${id}_${sfx === 'pc' ? 'low' : 'low_m'}.jpg`)); } }
         await sharp(buf).extract(region).resize(sfx === 'pc' ? 640 : 260).jpeg({ quality: 80 }).toFile(path.join(SHOT, `${id}_${sfx === 'pc' ? 'hero' : 'hero_m'}.jpg`));
+        /* R2 M6(H1): 홈페이지 안 가장 긴 빈 띠(첫 화면 아래 ~ 문서 끝 0.5화면 전) */
+        try { const g = await H.blankRun(sharp, buf, w, m.top + h, Math.max(m.top + h, meta.height / sc - h * 0.5)); r[sfx === 'pc' ? 'gap' : 'gap_m'] = g.max; r[sfx === 'pc' ? 'gapAt' : 'gapAt_m'] = g.at; } catch (e) { }
         const px = m.texts.filter(x => x.bg === null); await H.pixelContrast(sharp, buf, { w }, px);
         const T = m.texts.filter(x => x.cr != null); const worst = T.slice().sort((a, b) => a.cr - b.cr);
         r['ov_' + sfx] = m.over; r['hpH_' + sfx] = m.docH; if (m.wide.length) r['wide_' + sfx] = m.wide;

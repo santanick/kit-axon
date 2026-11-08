@@ -75,6 +75,8 @@ async function applyTpl(op, id) {
     const live = (s.sections || []).filter(x => x && !x.hide);
     const secs = live.map(x => { const d = x.data || {}; return x.type + (d.variant ? ':' + d.variant : '') + (x.type === 'banner' ? '@' + (d.hero || '-') : ''); });
     const fam = s.layout || '-';
+    /* R2 N2(H1): 아래 섹션 모양 — 숫자 · 일정 · 후기 · FAQ · 오시는 길 · 공지 블록의 변형 id(계열 자체 렌더러는 fam-<계열>) */
+    let low = ''; try { low = (window.HPS && HPS.blockSig) ? HPS.blockSig(s) : ''; } catch (e) { low = ''; }
     let q = null; try { const Q = hpwQuality(s); q = { score: Q.score, miss: Q.items.filter(x => !x.ok).map(x => x.k) }; } catch (e) { q = { score: null, err: String(e.message || e) }; }
     let amin = null; try { const au = HPT.audit(s) || []; const w = au.reduce((m, x) => (!m || x[3] < m[3]) ? x : m, null); if (w) amin = [String(w[0]) + ' ' + String(w[1]), Math.round(w[3] * 100) / 100]; } catch (e) { }
     let facts = []; try { facts = (HPT.facts() || []).map(f => String(f.v)); } catch (e) { }
@@ -87,7 +89,7 @@ async function applyTpl(op, id) {
       const m = String(src).match(/(?:^|\/)([a-z]{3}-\d{2})(?:-800)?(?:\.webp)?$/); const x = m && window.HPSTOCK && HPSTOCK.get ? HPSTOCK.get(m[1]) : null;
       if (x) heroPh = { id: x.id, long: Math.max(x.w, x.h), slot: (x.slots || []).includes('hero'), types: x.types || [], ok: (x.slots || []).includes('hero') && Math.max(x.w, x.h) >= 1200 }; else if (src) heroPh = { id: 'own', ok: true }; } catch (e) { }
     return { id, name: tp.name, types: tp.types || [], type: (tp.types || [])[0] || '', hidden: !!tp.hidden, theme: s.theme || '', color: s.color || '', layout: fam,
-      hero: (live.find(x => x.type === 'banner') || { data: {} }).data.hero || '', sig: fam + '|' + secs.join('>'), secs, nSec: live.length, nHidden: (s.sections || []).length - live.length,
+      hero: (live.find(x => x.type === 'banner') || { data: {} }).data.hero || '', sig: fam + '|' + secs.join('>') + '|' + low, low, secs, nSec: live.length, nHidden: (s.sections || []).length - live.length,
       q: q.score, qMiss: q.miss || [], qErr: q.err, auditMin: amin, facts, prices, heroPh };
   }, id);
   if (r.err) return r;
@@ -169,6 +171,17 @@ async function dhash(sharp, buf, region) {
   let bits = ''; for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) bits += px[y * 9 + x] > px[y * 9 + x + 1] ? '1' : '0';
   let hex = ''; for (let i = 0; i < 64; i += 4) hex += parseInt(bits.slice(i, i + 4), 2).toString(16); return hex;
 }
+/* R2 M6(H1): 화면에서 가장 긴 빈 띠 — 한 가지 색으로만 된 가로줄이 이어지는 길이(CSS px). 섹션 경계에서 바탕색이 바뀌면 끊는다.
+   from(CSS px)부터 재고, 끝 0.5화면(바닥글 · 셸)은 뺀다. 결과 { max, at } */
+async function blankRun(sharp, buf, cssW, fromCss, toCss) {
+  const W = 160; const { data, info } = await sharp(buf).removeAlpha().resize(W).raw().toBuffer({ resolveWithObject: true }); const ch = info.channels; const rpc = W / cssW;
+  const y0 = Math.max(0, Math.round(fromCss * rpc)), y1 = Math.min(info.height, Math.round(toCss * rpc)); let best = 0, at = 0, run = 0, c0 = null, st = 0;
+  for (let y = y0; y < y1; y++) { let mn = 255, mx = 0, sum = 0; for (let x = 2; x < W - 2; x++) { const i = (y * W + x) * ch; const v = (data[i] * 3 + data[i + 1] * 6 + data[i + 2]) / 10; if (v < mn) mn = v; if (v > mx) mx = v; sum += v; }
+    const flat = mx - mn <= 6; const avg = sum / (W - 4);
+    if (flat && c0 != null && Math.abs(avg - c0) <= 4) run++; else { if (run > best) { best = run; at = st; } run = flat ? 1 : 0; c0 = flat ? avg : null; st = y; } }
+  if (run > best) { best = run; at = st; }
+  return { max: Math.round(best / rpc), at: Math.round(at / rpc) };
+}
 function hamming(a, b) { if (!a || !b) return 64; let d = 0; for (let i = 0; i < 16; i++) { let x = parseInt(a[i], 16) ^ parseInt(b[i], 16); while (x) { d += x & 1; x >>= 1; } } return d; }
 
 /* 사진 위 글자 대비: 글자 상자 바깥 테두리 띠(2~6px)의 픽셀 = 바로 뒤 바탕으로 보고, 글자색과의 대비 하위 25% 값을 쓴다(글자 획 픽셀 제외) */
@@ -199,4 +212,4 @@ const TYPES = ['adult', 'k12', 'univ', 'lifelong', 'voc', 'corp', 'public'];
 const typesOf = r => (Array.isArray(r.types) && r.types.length ? r.types : [r.type]).filter(Boolean);
 const byType = rows => { const m = {}; rows.forEach(r => typesOf(r).forEach(t => { (m[t] = m[t] || []).push(r); })); Object.values(m).forEach(L => L.sort((a, b) => a.id.localeCompare(b.id))); return m; };
 
-module.exports = { STATES, settle, ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };
+module.exports = { blankRun, STATES, settle, ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };

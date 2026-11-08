@@ -405,25 +405,301 @@ ${P} .hps-ctw{flex-direction:column;align-items:flex-start;gap:20px}${P} .hps-ct
     const bg = `${ar}background-color:${avgOf(x.id)}`; if (/\sstyle="/i.test(o)) { if (!/background/i.test((o.match(/\sstyle="([^"]*)"/i) || [])[1])) o = o.replace(/\sstyle="([^"]*)"/i, (m, v) => ` style="${v.replace(/;?\s*$/, ';')}${bg}"`); } else o = o.replace(/^<img\b/i, `<img style="${bg}"`);
     return o; }); }
   const NOFLOW = /\b(hp-alt|is-alt|hp-cta|hps-cta|hp-hero|hps-hero|hpl-k-banner|hpl-k-cta|hpl-k-stats|hp-facts|hps-facts|hpl-noir|hps-empty|hps-ntop|hpl-empty|hp-empty)\b/;
+  const OWNBG = /\b(hp-cta|hps-cta|hp-hero|hps-hero|hpl-hero|hpl-k-banner|hpl-k-cta|hpl-noir|hpb-inv|hps-empty|hps-ntop|hpl-empty|hp-empty|hps-c-photo)\b/;
   function spacing(h) { const re = /<section\b[^>]*class="([^"]*)"[^>]*>/g; const M = []; let m; while ((m = re.exec(h))) M.push({ i: m.index, t: m[0], c: m[1] });
     if (!M.length) return h; const isTop = []; let depth = 0, p = 0; /* 최상위 섹션만: 앞 섹션이 닫혔는지 */
     M.forEach((x, k) => { const seg = h.slice(p, x.i); depth -= (seg.match(/<\/section>/g) || []).length; if (depth < 0) depth = 0; isTop[k] = depth === 0; depth++; p = x.i; });
-    const out = []; let last = 0; let prevFlow = false, prevEnd = -1;
+    const out = []; const tail = []; let last = 0; let prevFlow = '', prevEnd = -1, prevK = -1;
     M.forEach((x, k) => { if (!isTop[k]) return; const end = h.indexOf('</section>', x.i); const body = end > 0 ? h.slice(x.i, end) : '';
       const txt = body.replace(/<style[\s\S]*?<\/style>|<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       const rich = /<(img|figure|table|iframe|video|form|details|dl)\b/.test(body) || (body.match(/<li\b/g) || []).length > 2 || (body.match(/<article\b/g) || []).length > 1;
       const add = []; if (!NOFLOW.test(x.c) && !rich && txt.length <= 160) add.push('hps-short');
-      const flow = !NOFLOW.test(x.c) && /\b(hp-s|hpl-s)\b/.test(x.c) && !/style="[^"]*background/.test(x.t);
+      /* H1(R2 M6): 바탕이 같은 섹션이 이어지면(기본 바탕끼리 · 회색 띠끼리) 앞 섹션 아래 여백 × 0.7, 뒤 섹션 위 여백 × 0.5 → 섹션 사이 빈 띠 200px 이하
+         사진 · 어두운 띠 · 첫 화면 · 문의 띠처럼 자기 바탕이 있는 섹션은 건드리지 않는다 */
+      const key = OWNBG.test(x.c) || /style="[^"]*background/.test(x.t) ? '' : /\b(is-alt|hp-alt)\b/.test(x.c) ? 'alt' : 'bg';
       const gap = prevEnd >= 0 ? h.slice(prevEnd, x.i).replace(/<\/section>|<\/div>|\s/g, '') : 'x';
-      if (flow && prevFlow && !gap) add.push('hps-flow'); prevFlow = flow; prevEnd = end >= 0 ? end + 10 : -1;
+      if (key && key === prevFlow && !gap) { add.push('hps-flow'); if (prevK >= 0) tail.push(prevK); } prevFlow = key; prevK = k; prevEnd = end >= 0 ? end + 10 : -1;
       if (!add.length) return; out.push(h.slice(last, x.i), x.t.replace(/class="/, `class="${add.join(' ')} `)); last = x.i + x.t.length; });
+    if (tail.length) { /* 앞 섹션 아래 여백 줄이기(hps-flowb) — 위에서 이미 바꾼 여는 태그는 out 안에 있으므로 결과 문자열에서 다시 찾는다 */
+      let r = out.length ? out.join('') + h.slice(last) : h; const T = new Set(tail.map(k => M[k].t)); let n = 0;
+      r = r.replace(/<section\b[^>]*class="[^"]*"[^>]*>/g, t => { const raw = t.replace(/class="((?:hps-short|hps-flow) )+/, 'class="'); return T.has(raw) && !/hps-flowb|hps-short/.test(t) && n++ < 64 ? t.replace(/class="/, 'class="hps-flowb ') : t; });
+      return r; }
     if (!out.length) return h; out.push(h.slice(last)); return out.join(''); }
   const spCSS = `/* hps rhythm */
 .hpl-noir .hps-st,.hpl-noir .hpl-stars{color:#E3B341!important}.hpl-noir .hps-st i{color:#9A9A9A!important}
-section.hps-short{padding-top:calc(var(--sec,120px) * .6)!important;padding-bottom:calc(var(--sec,120px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec,120px) * .5)!important}
+section.hps-short{padding-top:calc(var(--sec,120px) * .6)!important;padding-bottom:calc(var(--sec,120px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec,120px) * .45)!important}section.hps-flowb{padding-bottom:calc(var(--sec,120px) * .65)!important}
 @media(max-width:640px){.hpl-noir .hps-st,.hpl-noir .hpl-stars{color:#E3B341!important}.hpl-noir .hps-st i{color:#9A9A9A!important}
-section.hps-short{padding-top:calc(var(--sec-m,72px) * .6)!important;padding-bottom:calc(var(--sec-m,72px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec-m,72px) * .5)!important}}`;
+section.hps-short{padding-top:calc(var(--sec-m,72px) * .6)!important;padding-bottom:calc(var(--sec-m,72px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec-m,72px) * .5)!important}section.hps-flowb{padding-bottom:calc(var(--sec-m,72px) * .75)!important}}`;
   HPS.rhythm = { imgFill, spacing };
   { const base = siteHTML; siteHTML = (s, full, lang) => { let h = base(s, full, lang);
     try { if (typeof h !== 'string' || !thOn(s)) return h; h = imgFill(h); const h2 = spacing(h); if ((h2 !== h || /hpl-noir/.test(h)) && h2.includes('</style>')) h = h2.replace('</style>', spCSS + '</style>'); return h; } catch (e) { console.error('hpsec-trust rhythm', e); return h; } }; window.siteHTML = siteHTML; }
+
+  /* ══ v34.5 H1(R2 N2 · M6 · N9): 아래 공통 블록 변형 — 숫자 · 일정 · 후기 · FAQ · 오시는 길 · 공지 ══
+     R2: 첫 화면은 달라도 두 번째 화면부터(숫자 4칸 → D-day 표 → 후기 5.0 → FAQ 상자 → 그림 지도) 7유형이 같은 사이트로 읽힌다.
+     블록마다 변형 4개(첫 번째 = 기존 모양)를 두고, 유형 기본표(TYB) + 계열 회전(famShift)으로 고정 배정한다.
+       facts   row(4칸) · line(한 줄 문장형) · one(큰 숫자 하나 + 곁 표) · table(운영 현황 표)
+       sched   list(D-day 줄) · cal(달력 날짜 칸) · cards(접수 진행 막대 카드) · table(모집 표)
+       reviews split(왼쪽 요약 + 인용) · wall(3단 후기 벽) · big(어두운 띠 큰 인용) · strip(가로 카드 줄)
+       faq     side(왼쪽 문의 상자) · one(가운데 한 단) · grid(펼친 질문 2단 + 문의 띠) · list(2단 아코디언)
+       map     split(주소 + 지명 글자 판) · card(가운데 주소 카드) · band(어두운 연락 띠) · cols(안내 표)
+       notices rows(목록) · cards(날짜 카드 4칸) · feat(대표 공지 + 목록) · line(한 줄 압축 띠)
+     우선순위: 섹션 data.bv > site.blocks[블록](템플릿 tp.blocks — H3 배정) > 유형 기본표 × 계열 회전.
+     N9: 오시는 길은 그림 지도(핀 + 도형)를 쓰지 않는다. 주소 · 연락처 + '지도 앱에서 보기' 링크, 장식은 지명 글자 판처럼 지도가 아님이 분명한 것만.
+     모두 실제 데이터만 쓰고, 데이터가 없으면 기존 렌더러(빈 상태 안내 · 숨김)로 돌아간다. */
+  const BV = { facts: ['row', 'line', 'one', 'table'], sched: ['list', 'cal', 'cards', 'table'], reviews: ['split', 'wall', 'big', 'strip'], faq: ['side', 'one', 'grid', 'list'], map: ['split', 'card', 'band', 'cols'], notices: ['rows', 'cards', 'feat', 'line'] };
+  const BK = Object.keys(BV);
+  const TYB = {
+    k12: { facts: 'one', sched: 'cards', reviews: 'wall', faq: 'one', map: 'card', notices: 'line' },
+    univ: { facts: 'table', sched: 'table', reviews: 'big', faq: 'list', map: 'split', notices: 'feat' },
+    adult: { facts: 'line', sched: 'cal', reviews: 'strip', faq: 'grid', map: 'band', notices: 'cards' },
+    public: { facts: 'row', sched: 'list', reviews: 'split', faq: 'side', map: 'cols', notices: 'rows' },
+    lifelong: { facts: 'one', sched: 'cal', reviews: 'big', faq: 'grid', map: 'split', notices: 'cards' },
+    voc: { facts: 'line', sched: 'table', reviews: 'wall', faq: 'side', map: 'band', notices: 'feat' },
+    corp: { facts: 'table', sched: 'cards', reviews: 'strip', faq: 'list', map: 'cols', notices: 'line' } };
+  /* 계열 회전: 같은 유형 안에서도 계열(또는 기본 첫 화면 종류)이 다르면 블록 모양이 달라지게 블록마다 0~3칸 민다 */
+  const FAMS = ['', 'editorial', 'bento', 'fullbleed', 'splitscreen', 'typo', 'portal', 'story', 'mosaic', 'sidebar', 'bulletin', 'collage', 'noir', 's3:scrim', 's3:box', 's3:split', 's3:grid'];
+  /* 계열 자체 렌더러가 그 계열의 정체성인 블록은 계열 것을 그대로 쓴다(변형이 첫 번째 값일 때도 계열 것) */
+  const FAMOWN = { bento: ['facts'], typo: ['facts', 'reviews'], editorial: ['reviews'], portal: ['notices'] };
+  const famKey = s => { if (!s) return ''; if (s.layout) return s.layout; const bn = (s.sections || []).find(x => x && x.type === 'banner'); const hk = bn && bn.data && bn.data.hk; return hk ? 's3:' + hk : ''; };
+  const famShift = (s, k) => { const key = famKey(s); let i = FAMS.indexOf(key); if (i < 0) { i = 0; for (const ch of key) i = (i * 31 + ch.charCodeAt(0)) % 997; i = i % 16 + 1; }
+    const v = s && s.layoutVar && s.layout ? ' abc'.indexOf(String(s.layoutVar)) : 0; return i ? (i * (k + 1) + (i >> 2) + Math.max(0, v)) % 4 : 0; };
+  const tyB = () => { const ty = typeKey(); return TYB[ty === 'univ_lms' ? 'univ' : ty] || TYB.adult; };
+  function blockVar(bk, s, d) { const L = BV[bk]; if (!L) return '';
+    if (d && L.includes(d.bv)) return d.bv;
+    const sb = s && s.blocks && s.blocks[bk]; if (L.includes(sb)) return sb;
+    const b0 = L.indexOf(tyB()[bk]); const k = BK.indexOf(bk); return L[(Math.max(0, b0) + famShift(s, k)) % L.length]; }
+  const famOwn = (bk, s) => !!(s && s.layout && (FAMOWN[s.layout] || []).includes(bk));
+  HPS.blockVar = blockVar; HPS.BLOCKS = BV;
+  const BKOF = { facts: 'facts', schedule: 'sched', reviews: 'reviews', faq: 'faq', map: 'map', notices: 'notices', board: 'notices' };
+  /* 아래 섹션 모양 서명(hp-visual 구조 서명 · R2 N2): 보이는 섹션 순서대로 '블록:변형' — 계열 자체 렌더러는 '블록:fam-<계열>' */
+  HPS.blockSig = s => { s = s || (typeof site === 'function' ? site() : null); if (!s) return ''; const HK = window.HPL && HPL.kind;
+    return (s.sections || []).filter(x => x && !x.hide).map(x => { const k = x.type === 'map' ? 'map' : kindOf(x); const bk = BKOF[k]; if (!bk) return '';
+      const fk = HK ? { facts: 'stats', reviews: 'reviews', notices: 'notices' }[bk] : ''; const F = s.layout && window.HPL && HPL.fam && HPL.fam[s.layout];
+      const hasFam = !!(fk && F && F.sec && typeof F.sec[fk === 'stats' ? 'stats' : fk] === 'function');
+      const v = blockVar(bk, s, x.data); return `${bk}:${hasFam && (famOwn(bk, s) || v === BV[bk][0]) ? 'fam-' + s.layout : v}`; }).filter(Boolean).join('>'); };
+  /* 유형별 배정 분포(H3 · 통합 담당 확인용): { 유형: { 블록: { 변형: 템플릿 수 } } } — 템플릿 build를 돌리지 않고 계열 · 첫 화면 종류 · blocks만 본다 */
+  HPS.blockPlan = () => { const out = {}; (typeof TPL !== 'undefined' ? TPL : []).filter(t => t && !t.hidden).forEach(t => { const ty = (t.types || [])[0]; if (!ty) return;
+      const s = { layout: t.layout || '', layoutVar: t.layoutVar, blocks: t.blocks, sections: t.hk ? [{ type: 'banner', data: { hk: t.hk } }] : [] }; const o = out[ty] = out[ty] || {};
+      const old = S && S.org ? S.org.type : null; try { if (S && S.org) S.org.type = ty; BK.forEach(bk => { const v = blockVar(bk, s); (o[bk] = o[bk] || {})[v] = (o[bk][v] || 0) + 1; }); } finally { if (S && S.org && old) S.org.type = old; } });
+    return out; };
+
+  /* ── 공통 조각 ── */
+  const tday2 = () => tday();
+  const md = d => { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? { y: +m[1], m: +m[2], d: +m[3], w: '일월화수목금토'[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] } : null; };
+  const ddOf = x => x.dd == null ? '상시' : x.dd === 0 ? 'D-DAY' : x.dd > 0 ? 'D-' + x.dd : 'D+' + (-x.dd);
+  const goA = (x, cls) => x.state !== 'closed' ? `<a class="${cls}" href="#p-c-${E(x.id)}">${x.state === 'open' ? '신청하기' : '자세히'} ${ic('arrow', 16)}</a>` : `<span class="${cls} off">마감</span>`;
+  const factV = f => `${E(f.v)}${f.u ? `<small>${E(f.u)}</small>` : ''}`;
+  const factsList = d => { const F = facts(); const own = d.hpt === 'facts' ? [] : (d.cols || []).filter(r => r && clean(r[0]) && !isSample(r)).map(r => { const m = String(r[0]).match(/^([\d.,]+)\s*(.*)$/); return m ? { v: m[1], u: m[2], l: clean(r[1]) } : { v: clean(r[0]), u: '', l: clean(r[1]) }; });
+    return { L: own.length >= 2 ? own : F, own: own.length >= 2 }; };
+  const fnote = own => own ? '' : `<p class="hps-fn">공개 ${E(term('cls'))} 기준 자동 집계 · <time>${E(dot(tday()))}</time></p>`;
+  const stars2 = n => `<span class="hps-st" role="img" aria-label="별점 ${n}점">${'★'.repeat(Math.min(5, n))}<i>${'★'.repeat(5 - Math.min(5, n))}</i></span>`;
+  const revSum = A => { const st = A.filter(r => r.st > 0); const avg = st.length >= 2 ? st.reduce((a, r) => a + Math.min(5, r.st), 0) / st.length : 0; return { avg, n: st.length }; };
+  const who2 = r => `<span class="hps-wh"><b>${E(r.w)}</b>${r.c ? `<small>${E(r.c)}</small>` : ''}</span>`;
+  const mapLinks = addr => addr ? `<p class="hpb-ml"><a ${aAttr('https://map.naver.com/p/search/' + encodeURIComponent(addr))}>네이버 지도에서 보기 ${ic('arrow', 15)}</a><a ${aAttr('https://map.kakao.com/?q=' + encodeURIComponent(addr))}>카카오맵에서 보기 ${ic('arrow', 15)}</a></p>` : '';
+  /* 주소에서 지명(시 · 구 · 군 · 길) 뽑기 — 지명 글자 판(장식)용 */
+  const place = addr => { const W = String(addr || '').split(/\s+/); const gu = W.find(w => /[가-힣](구|군)$/.test(w)) || W.find(w => /[가-힣]시$/.test(w)) || W[1] || W[0] || ''; const si = W.find(w => /(광역시|특별시|특별자치시|도)$/.test(w)) || ''; const road = W.find(w => /(로|길|대로)$/.test(w)) || ''; return { si, gu, road }; };
+  function mapData(s, d) { const f = ft(); const addr = !isPh(d.addr) && clean(d.addr) ? clean(d.addr) : (!isPh(f.addr) && clean(f.addr) ? clean(f.addr) : '');
+    const tel = !isPh(d.tel) && clean(d.tel) ? clean(d.tel) : (!isPh(f.tel) && clean(f.tel) ? clean(f.tel) : ''); const hours = !isPh(d.hours) && clean(d.hours) ? clean(d.hours) : (!isPh(f.hours) && clean(f.hours) ? clean(f.hours) : '');
+    const mail = f.email && !isPh(f.email) && /@/.test(f.email) ? clean(f.email) : '';
+    const rows = [addr && { k: 'pin', l: '주소', v: addr, h: '' }, tel && { k: 'phone', l: '연락처', v: tel, h: 'tel:' + tel.replace(/[^\d+]/g, '') }, hours && { k: 'clock', l: '운영 시간', v: hours, h: '' }, mail && !tel && { k: 'mail', l: '메일', v: mail, h: 'mailto:' + mail }].filter(Boolean);
+    return { addr, tel, hours, rows }; }
+  const rowV = r => r.h ? `<a href="${E(r.h)}">${E(r.v)}</a>` : `<span>${E(r.v)}</span>`;
+
+  const V = { facts: {}, sched: {}, reviews: {}, faq: {}, map: {}, notices: {} };
+  /* 숫자 */
+  V.facts.line = (s, o) => { const d = o.d || {}; const { L, own } = factsList(d); if (L.length < 2) return null;
+    return SEC('facts', `${d.title ? HEAD(d, '') : ''}<p class="hpb-fline">${L.slice(0, 4).map(f => `<span class="hpb-fi"><b>${factV(f)}</b> <span>${E(f.l)}</span></span>`).join('<i class="hpb-sep" aria-hidden="true"></i>')}</p>${fnote(own)}`, o); };
+  V.facts.one = (s, o) => { const d = o.d || {}; const { L, own } = factsList(d); if (L.length < 2) return null;
+    const num = L.filter(f => /^\d/.test(String(f.v))); const main = num.find(f => f.u === '시간') || num.slice().sort((a, b) => parseFloat(String(b.v).replace(/,/g, '')) - parseFloat(String(a.v).replace(/,/g, '')))[0] || L[0]; const rest = L.filter(f => f !== main).slice(0, 3);
+    return SEC('facts', `<div class="hpb-f1"><div class="hpb-f1m">${d.title ? `<h2 class="hpb-f1t">${br(d.title)}</h2>` : ''}<b>${factV(main)}</b><span>${E(main.l)}</span></div><dl class="hpb-f1r">${rest.map(f => `<div><dt>${E(f.l)}</dt><dd>${factV(f)}</dd></div>`).join('')}</dl></div>${fnote(own)}`, o); };
+  V.facts.table = (s, o) => { const d = o.d || {}; const { L, own } = factsList(d); if (L.length < 2) return null;
+    return SEC('facts', `<div class="hpb-ft"><h2 class="hpb-ftt">${br(d.title || '운영 현황')}</h2><dl>${L.slice(0, 4).map(f => `<div><dt>${E(f.l)}</dt><dd>${factV(f)}</dd></div>`).join('')}</dl></div>${fnote(own)}`, o); };
+  /* 일정 */
+  V.sched.cal = (s, o) => { const d = o.d || {}; const L = schedule(+o.n || 4); if (!L.length) return null;
+    const tile = x => { const dt = md(x.state === 'open' ? x.to : x.state === 'soon' ? x.from : x.start || x.to) ; return `<li class="st-${x.state}"><div class="hpb-cd">${dt ? `<span class="hpb-cm">${dt.m}월</span><b>${dt.d}</b><span class="hpb-cw">${dt.w}요일 · ${E(x.what || '일정')}</span>` : `<span class="hpb-cm">상시</span><b>·</b><span class="hpb-cw">${E(STL[x.state])}</span>`}</div><div class="hpb-cb"><p class="hpb-cs"><span class="hps-chip">${STL[x.state]}</span>${x.dd != null && x.dd >= 0 ? `<em>${ddOf(x)}</em>` : ''}</p><h3>${E(x.name)}</h3><dl class="hps-sm">${x.from || x.to ? `<div><dt>접수</dt><dd><time>${E(x.from ? dot(x.from).slice(5) : '지금')}</time> ~ <time>${E(x.to ? dot(x.to).slice(5) : '상시')}</time></dd></div>` : ''}${x.start ? `<div><dt>개강</dt><dd><time>${E(dot(x.start).slice(5))}</time></dd></div>` : ''}${x.cap ? `<div><dt>정원</dt><dd>${x.cap}명</dd></div>` : ''}</dl>${goA(x, 'hpb-cg')}</div></li>`; };
+    return SEC('schedule', `${HEAD({ eyebrow: d.eyebrow, title: d.title || '모집 일정', sub: d.sub })}<ol class="hpb-cal n${Math.min(L.length, 4)}">${L.map(tile).join('')}</ol>`, o); };
+  V.sched.cards = (s, o) => { const d = o.d || {}; const L = schedule(+o.n || 3).slice(0, 3); if (!L.length) return null; const T0 = tday2();
+    const card = x => { let bar = ''; if (x.from && x.to && x.to > x.from) { const p = Math.max(0, Math.min(100, Math.round(days(x.from, T0) / days(x.from, x.to) * 100))); bar = `<div class="hpb-bar" role="img" aria-label="접수 기간 ${p}% 지남"><i style="width:${p}%"></i></div><p class="hpb-bt"><time>${E(dot(x.from).slice(5))}</time><span>접수 기간</span><time>${E(dot(x.to).slice(5))}</time></p>`; }
+      return `<li class="st-${x.state}"><p class="hpb-sct"><span class="hps-chip">${STL[x.state]}</span><b>${ddOf(x)}</b></p><h3>${E(x.name)}</h3>${bar}<p class="hpb-scm">${[x.start ? `개강 ${dot(x.start).slice(5)}` : '', x.cap ? `정원 ${x.cap}명` : '', !bar && x.to ? `${dot(x.to).slice(5)} 마감` : ''].filter(Boolean).map(E).join(' <i aria-hidden="true"></i> ')}</p>${goA(x, 'hpb-cg')}</li>`; };
+    return SEC('schedule', `<div class="hpb-sch">${HEAD({ eyebrow: d.eyebrow, title: d.title || '모집 일정', sub: d.sub })}</div><ul class="hpb-sc n${L.length}">${L.map(card).join('')}</ul>`, o); };
+  V.sched.table = (s, o) => { const d = o.d || {}; const L = schedule(+o.n || 5); if (!L.length) return null;
+    const tr = x => `<tr class="st-${x.state}"><th scope="row" data-l="${E(term('cls'))}">${E(x.name)}</th><td data-l="상태"><span class="hps-chip">${STL[x.state]}</span></td><td data-l="접수 기간">${x.from || x.to ? `<time>${E(x.from ? dot(x.from) : '지금')}</time> ~ <time>${E(x.to ? dot(x.to) : '상시')}</time>` : '—'}</td><td data-l="개강">${x.start ? `<time>${E(dot(x.start))}</time>` : '—'}</td><td data-l="정원">${x.cap ? x.cap + '명' : '—'}</td><td class="hpb-tg">${goA(x, 'hpb-tgo')}</td></tr>`;
+    return SEC('schedule', `${HEAD({ eyebrow: d.eyebrow, title: d.title || '모집 일정', sub: d.sub })}<div class="hpb-tw"><table class="hpb-st"><thead><tr><th scope="col">${E(term('cls'))}</th><th scope="col">상태</th><th scope="col">접수 기간</th><th scope="col">개강</th><th scope="col">정원</th><th scope="col"><span class="hpb-sr">신청</span></th></tr></thead><tbody>${L.map(tr).join('')}</tbody></table></div>`, o); };
+  /* 후기 */
+  const revL = (A, n) => A.slice().sort((a, b) => (b.st - a.st) || (Math.min(b.b.length, 140) - Math.min(a.b.length, 140))).slice(0, n);
+  const revMore = (s, A, L) => { const m = menuOf(s, 'community') || menuOf(s, 'board'); return m && A.length > L.length ? `<a class="hps-more" href="#p-m-${E(m.id)}">후기 더 보기 ${ic('arrow', 16)}</a>` : ''; };
+  const sumLine = A => { const { avg, n } = revSum(A); return `<p class="hpb-rsum">${avg ? `<b>${avg.toFixed(1)}</b><small>/ 5</small>` : ''}<span>실제 수강후기 ${A.length}건${avg ? ` · 별점 ${n}건 평균` : ''}</span></p>`; };
+  V.reviews.wall = (s, o) => { const d = o.d || {}; const A = reviews(); if (!A.length) return null; const L = revL(A, +o.n || 6);
+    return SEC('reviews', `<div class="hpb-rh">${HEAD({ eyebrow: d.eyebrow, title: d.title || '수강생 이야기', sub: d.sub })}<div class="hpb-rhs">${sumLine(A)}${revMore(s, A, L)}</div></div><div class="hpb-rw n${Math.min(L.length, 3)}">${L.map(r => `<figure>${r.st ? stars2(r.st) : ''}<blockquote>${E(String(r.b).slice(0, 200))}</blockquote><figcaption>${who2(r)}</figcaption></figure>`).join('')}</div>`, o); };
+  V.reviews.big = (s, o) => { const d = o.d || {}; const A = reviews(); if (!A.length) return null; const L = revL(A, 3); const [t0, ...rest] = L;
+    return SEC('reviews hpb-inv', `<div class="hpb-rb"><p class="hpb-rbt">${E(d.title || '수강생 이야기')}</p><figure class="hpb-rbq">${t0.st ? stars2(t0.st) : ''}<blockquote>${E(String(t0.b).slice(0, 180))}</blockquote><figcaption>${who2(t0)}</figcaption></figure>${rest.length ? `<ul class="hpb-rbl">${rest.map(r => `<li><blockquote>${E(String(r.b).slice(0, 120))}</blockquote>${who2(r)}</li>`).join('')}</ul>` : ''}${sumLine(A)}${revMore(s, A, L)}</div>`, Object.assign({}, o, { alt: false })); };
+  V.reviews.strip = (s, o) => { const d = o.d || {}; const A = reviews(); if (!A.length) return null; const L = revL(A, +o.n || 6);
+    return SEC('reviews', `<div class="hpb-rh">${HEAD({ eyebrow: d.eyebrow, title: d.title || '수강생 이야기', sub: d.sub })}<div class="hpb-rhs">${sumLine(A)}${revMore(s, A, L)}</div></div><ul class="hpb-rs n${Math.min(L.length, 3)}">${L.map(r => `<li><blockquote>${E(String(r.b).slice(0, 160))}</blockquote><p class="hps-rm">${who2(r)}${r.st ? stars2(r.st) : ''}</p></li>`).join('')}</ul>`, o); };
+  /* FAQ */
+  const qItem = (x, k) => `<details${k === 0 ? ' open' : ''}><summary><span>${E(x.q)}</span><i aria-hidden="true">${ic('plus', 18)}</i></summary><div class="hps-ans"><p>${br(x.a)}</p></div></details>`;
+  const qSmp = smp => editing() ? smp.map(x => `<details class="is-sample"><summary><span>${E(x.q)}</span><i aria-hidden="true">${ic('plus', 18)}</i></summary><div class="hps-ans"><span class="hps-smp">샘플 문구 · 고치면 게시돼요</span><p>${br(x.a)}</p></div></details>`).join('') : '';
+  const askLine = s => { const C = contact(); const h = askHref(s); if (!C.length && !h) return ''; const tel = C.find(c => c.k === 'phone'); const mail = C.find(c => c.k === 'mail');
+    return `<p class="hpb-qc">더 궁금한 점은${tel ? ` <a href="${E(tel.h)}">${E(tel.v)}</a>` : ''}${tel && mail ? ' 또는' : ''}${mail ? ` <a href="${E(mail.h)}">${E(mail.v)}</a>` : ''}${tel || mail ? '로 연락하세요.' : ''}${h && !tel && !mail ? ` <a ${aAttr(h)}>문의 게시판</a>에 남겨 주세요.` : ''}</p>`; };
+  V.faq.one = (s, o) => { const d = o.d || {}; const { items, smp } = faqItems(d); if (!items.length && !(editing() && smp.length)) return null;
+    return SEC('faq', `<div class="hpb-q1">${HEAD({ eyebrow: d.eyebrow, title: d.title || '자주 묻는 질문', sub: d.sub })}<div class="hps-qa">${items.map(qItem).join('')}${qSmp(smp)}</div>${askLine(s)}</div>`, o); };
+  V.faq.grid = (s, o) => { const d = o.d || {}; const { items, smp } = faqItems(d); if (!items.length && !(editing() && smp.length)) return null; const C = contact(); const h = askHref(s);
+    const sm = editing() ? smp.map(x => `<div class="is-sample"><dt><span class="hps-smp">샘플 문구 · 고치면 게시돼요</span><br>${E(x.q)}</dt><dd>${br(x.a)}</dd></div>`).join('') : '';
+    const band = C.length || h ? `<div class="hpb-qband"><p><b>더 궁금한 점이 있나요?</b>${C.length ? `<span>${C.map(c => c.h ? `<a href="${E(c.h)}">${E(c.v)}</a>` : E(c.v)).join(' <i aria-hidden="true"></i> ')}</span>` : ''}</p>${h ? `<a class="hpb-qb" ${aAttr(h)}>문의하기 ${ic('arrow', 18)}</a>` : ''}</div>` : '';
+    return SEC('faq', `${HEAD({ eyebrow: d.eyebrow, title: d.title || '자주 묻는 질문', sub: d.sub })}<dl class="hpb-qg">${items.map(x => `<div><dt>${E(x.q)}</dt><dd>${br(x.a)}</dd></div>`).join('')}${sm}</dl>${band}`, o); };
+  V.faq.list = (s, o) => { const d = o.d || {}; const { items, smp } = faqItems(d); if (!items.length && !(editing() && smp.length)) return null; const h = askHref(s);
+    const all = items.map(qItem); const half = Math.ceil(all.length / 2);
+    return SEC('faq', `<div class="hpb-qh">${HEAD({ eyebrow: d.eyebrow, title: d.title || '자주 묻는 질문', sub: d.sub })}${h ? `<a class="hps-more" ${aAttr(h)}>문의하기 ${ic('arrow', 16)}</a>` : ''}</div><div class="hpb-q2"><div class="hps-qa">${all.slice(0, half).join('')}</div><div class="hps-qa">${all.slice(half).join('')}${qSmp(smp)}</div></div>${askLine(s)}`, o); };
+  /* 오시는 길(N9 — 그림 지도 없음) */
+  V.map.split = (s, o) => { const d = o.d || {}; const M = mapData(s, d); if (!M.addr && !M.tel) return null; const P = place(M.addr);
+    const plate = M.addr ? `<div class="hpb-mp" aria-hidden="true"><span>${E(P.si)}</span><b>${E(P.gu)}</b><small>${E(P.road)}</small></div>` : '';
+    return SEC('map', `<div class="hpb-ms${plate ? '' : ' one'}"><div>${HEAD({ eyebrow: d.eyebrow, title: d.title || '오시는 길', sub: d.sub })}<ul class="hpb-mr">${M.rows.map(r => `<li>${ic(r.k, 20)}<div><small>${E(r.l)}</small>${rowV(r)}</div></li>`).join('')}</ul>${mapLinks(M.addr)}</div>${plate}</div>`, o); };
+  V.map.card = (s, o) => { const d = o.d || {}; const M = mapData(s, d); if (!M.addr && !M.tel) return null; const rest = M.rows.filter(r => r.l !== '주소');
+    return SEC('map', `<div class="hpb-mc"><p class="hpb-mct">${E(d.title || '오시는 길')}</p>${M.addr ? `<address class="hpb-mca">${E(M.addr)}</address>` : ''}${rest.length ? `<ul class="hpb-mci">${rest.map(r => `<li>${ic(r.k, 18)}${rowV(r)}</li>`).join('')}</ul>` : ''}${mapLinks(M.addr)}</div>`, o); };
+  V.map.band = (s, o) => { const d = o.d || {}; const M = mapData(s, d); if (!M.addr && !M.tel) return null;
+    return SEC('map hpb-inv', `<div class="hpb-mb"><h2>${br(d.title || '오시는 길')}</h2><dl>${M.rows.map(r => `<div><dt>${E(r.l)}</dt><dd>${rowV(r)}</dd></div>`).join('')}</dl></div>${mapLinks(M.addr)}`, Object.assign({}, o, { alt: false })); };
+  V.map.cols = (s, o) => { const d = o.d || {}; const M = mapData(s, d); if (!M.addr && !M.tel) return null; const ml = mapLinks(M.addr);
+    return SEC('map', `<div class="hpb-mt"><div>${HEAD({ eyebrow: d.eyebrow, title: d.title || '오시는 길', sub: d.sub })}</div><dl>${M.rows.map(r => `<div><dt>${E(r.l)}</dt><dd>${rowV(r)}</dd></div>`).join('')}${ml ? `<div><dt>지도</dt><dd>${ml}</dd></div>` : ''}</dl></div>`, o); };
+  /* 공지 */
+  const ntMore = s => { const m = menuOf(s, 'notice'); return m ? `<a class="hps-more" href="#p-m-${E(m.id)}" aria-label="공지사항 더보기">더보기 ${ic('plus', 16)}</a>` : ''; };
+  V.notices.cards = (s, o) => { const d = o.d || {}; const L = noticeList(4); if (!L.length) return null;
+    return SEC('notices' + (o.top ? ' hps-ntop' : ''), `<div class="hpb-nh"><h2>${br(d.title || '공지사항')}</h2>${ntMore(s)}</div><ul class="hpb-nc n${L.length}">${L.map(x => { const t = md(x.at); return `<li${x.top ? ' class="is-pin"' : ''}><time datetime="${E(x.at)}">${t ? `<b>${String(t.d).padStart(2, '0')}</b><span>${t.y}.${String(t.m).padStart(2, '0')}</span>` : ''}</time><span class="hps-tag">${E(x.tag)}</span><h3>${E(x.title)}${x.isNew ? ' <em class="hps-new" aria-label="새 글">N</em>' : ''}</h3></li>`; }).join('')}</ul>`, o); };
+  V.notices.feat = (s, o) => { const d = o.d || {}; const L = noticeList(+d.n || 5); if (L.length < 2) return null; const [f, ...rest] = L;
+    return SEC('notices' + (o.top ? ' hps-ntop' : ''), `<div class="hpb-nf"><div class="hpb-nfm"><div class="hpb-nh"><h2>${br(d.title || '공지사항')}</h2>${ntMore(s)}</div><article${f.top ? ' class="is-pin"' : ''}><span class="hps-tag">${E(f.tag)}</span><h3>${E(f.title)}</h3><time datetime="${E(f.at)}">${E(dot(f.at))}</time></article></div>${ntRows(rest)}</div>`, o); };
+  V.notices.line = (s, o) => { const d = o.d || {}; const L = noticeList(3); if (!L.length) return null;
+    return SEC('notices hpb-nline' + (o.top ? ' hps-ntop' : ''), `<div class="hpb-nl"><h2>${br(d.title || '공지사항')}</h2>${ntRows(L)}${ntMore(s)}</div>`, o); };
+
+  /* 렌더러 바꿔 끼우기: 변형이 데이터 없음(null)이면 기존 렌더러(안내 · 숨김) */
+  const markB = (h, bk, v) => typeof h === 'string' && h ? h.replace(/<section\b([^>]*?)class="/, `<section$1data-hpb="${bk}:${v}" class="hpb-${bk}-${v} `) : h;
+  [['facts', 'facts'], ['schedule', 'sched'], ['reviews', 'reviews'], ['faq', 'faq'], ['notices', 'notices']].forEach(([k, bk]) => { const base = R[k];
+    R[k] = (s, o) => { o = o || {}; if (o.tone === 'photo' || o.bare) return base(s, o); const v = blockVar(bk, s, o.d); const f = V[bk][v]; let h = null;
+      try { h = f ? f(s, o) : null; } catch (e) { console.error('hpsec-trust block', bk, v, e); h = null; }
+      return markB(h == null ? base(s, o) : h, bk, h == null ? BV[bk][0] : v); }; });
+  R.map = (s, o) => { o = o || {}; const d = o.d || {}; let v = blockVar('map', s, d); if (!V.map[v]) v = 'split'; const h = V.map[v](s, o);
+    if (h == null) return hint('map', '설정 › 기관 정보에서 주소 · 연락처를 넣으면 오시는 길이 표시됩니다(없으면 게시된 사이트에서 숨겨집니다).', o); return markB(h, 'map', v); };
+  /* proSec: 오시는 길도 이 렌더러로(기존 hpth의 그림 지도 대신) */
+  { const base = proSec; proSec = (x, i, s, lk) => { if (!x || x.type !== 'map' || !thOn(s)) return base(x, i, s, lk); const d = x.data || {}; if (+d.dstyle) return base(x, i, s, lk);
+    if (x.hide && !editing()) return ''; const h0 = base(x, i, s, lk); let h; try { h = R.map(s, { d, alt: /\bhp-alt\b/.test(String(h0 || '').slice(0, 300)) }); } catch (e) { console.error('hpsec-trust map', e); return h0; }
+    if (!h) return ''; const m = editing() ? HPE.map.get(x) : null; if (m) h = h.replace(/<section\b/, `<section data-hpe="${E(m.key)}|${m.i}"${x.hide ? ' data-hpe-hid="1"' : ''}`); return h; }; }
+  /* 계열(HPL) 자체 숫자 · 후기 · 공지 렌더러: 변형이 첫 번째 값이 아니고 계열 정체성 블록(FAMOWN)이 아니면 이 렌더러로 넘긴다 */
+  const wrapHPL = () => { const H = window.HPL; if (!H || typeof H.render !== 'function' || H.render.hpb) return; const base = H.render;
+    const f = (x, i, s) => { const h = base(x, i, s); try { if (h && x && s && s.layout && thOn(s)) { const k = typeof H.kind === 'function' ? H.kind(x) : ''; const bk = { stats: 'facts', reviews: 'reviews', notices: 'notices' }[k];
+      if (bk && !famOwn(bk, s) && blockVar(bk, s, x.data) !== BV[bk][0]) return null; } } catch (e) { console.error('hpsec-trust hpl', e); } return h; };
+    f.hpb = 1; H.render = f; };
+  /* 템플릿 blocks → site.blocks(H3 배정) */
+  const wrapBlocks = () => { if (typeof siteFromTpl !== 'function' || siteFromTpl.hpb) return; const base = siteFromTpl;
+    const f = tp => { const s = base(tp); try { if (s && tp && tp.blocks && typeof tp.blocks === 'object') s.blocks = Object.assign({}, tp.blocks); } catch (e) { } return s; };
+    Object.keys(base).forEach(k => { f[k] = base[k]; }); f.hpb = 1; siteFromTpl = f; window.siteFromTpl = f; };
+  const lateWrap = () => { wrapHPL(); wrapBlocks(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', lateWrap); else setTimeout(lateWrap, 0);
+
+  /* 변형 CSS — 쓰인 변형만 넣는다(게시본 Shadow DOM에 그대로 들어감) */
+  function blkCSS(s, used) { const T = window.HPT && HPT.tokens ? HPT.tokens(s) : null; if (!T) return ''; const big = s.theme === 'senior'; const px = n => Math.round(n * (big ? 1.12 : 1)) + 'px';
+    const P = '.hpt.hps-t'; const on = k => used.has(k); const C = [];
+    C.push(`${P}.hpb-inv{background:var(--ink);color:var(--bg)}${P}.hpb-inv h2,${P}.hpb-inv h3,${P}.hpb-inv b,${P}.hpb-inv blockquote{color:var(--bg)}${P}.hpb-inv a{color:var(--bg)}${P}.hpb-inv .hps-st{color:#E8B84A}${P}.hpb-inv .hps-st i{color:color-mix(in srgb,var(--bg) 45%,var(--ink))}
+${P} .hpb-ml{display:flex;flex-wrap:wrap;gap:8px 24px;margin:24px 0 0}${P} .hpb-ml a{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:${px(15)};font-weight:650;color:var(--ink);text-decoration:underline;text-decoration-color:var(--hps-ln2);text-underline-offset:5px}${P} .hpb-ml a:hover{text-decoration-color:currentColor}`);
+    if (on('facts:line')) C.push(`${P}.hpb-facts-line{padding:calc(var(--sec,120px) * .55) 0}
+${P} .hpb-fline{margin:0;max-width:34em;font-size:clamp(${px(21)},2.5vw,${px(32)});line-height:1.55;letter-spacing:-.02em;color:var(--mu);font-weight:500;text-wrap:balance}
+${P} .hpb-fi{white-space:nowrap}${P} .hpb-fi b{font-family:var(--hd-ff,inherit);font-weight:var(--hd-fw,700);color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.03em}${P} .hpb-fi b small{font-size:1em;font-weight:inherit;margin-left:.05em}
+${P} .hpb-sep{display:inline-block;width:1px;height:.9em;margin:0 .7em;vertical-align:-.1em;background:var(--hps-ln2)}`);
+    if (on('facts:one')) C.push(`${P}.hpb-facts-one{padding:calc(var(--sec,120px) * .6) 0}
+${P} .hpb-f1{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:64px;align-items:end}
+${P} .hpb-f1t{font-size:${px(17)};font-weight:700;color:var(--ink);margin:0 0 20px;letter-spacing:-.01em}
+${P} .hpb-f1m b{display:flex;align-items:baseline;font-family:var(--hd-ff,inherit);font-weight:var(--hd-fw,700);font-size:clamp(${px(96)},13vw,${px(176)});line-height:.86;letter-spacing:-.055em;color:var(--at);font-variant-numeric:tabular-nums}${P} .hpb-f1m b small{font-size:.24em;letter-spacing:-.01em;margin-left:.12em;color:var(--ink)}
+${P} .hpb-f1m>span{display:block;margin-top:18px;font-size:${px(17)};color:var(--mu)}
+${P} .hpb-f1r{margin:0;border-top:2px solid var(--ink)}${P} .hpb-f1r div{border-left:0;display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:18px 0;border-bottom:1px solid var(--hps-ln)}${P} .hpb-f1r dt{font-size:${px(15)};color:var(--mu)}${P} .hpb-f1r dd{margin:0;font-family:var(--hd-ff,inherit);font-size:${px(26)};font-weight:700;letter-spacing:-.03em;color:var(--ink);font-variant-numeric:tabular-nums}${P} .hpb-f1r dd small{font-size:.6em;margin-left:2px;color:var(--mu)}`);
+    if (on('facts:table')) C.push(`${P}.hpb-facts-table{padding:calc(var(--sec,120px) * .5) 0}
+${P} .hpb-ft{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,9fr);gap:48px;align-items:start;padding:36px 40px;background:var(--alt);border-radius:var(--r)}${P}.hp-alt .hpb-ft{background:var(--bg)}
+${P} .hpb-ftt{margin:0;font-size:${px(19)};font-weight:700;letter-spacing:-.02em;color:var(--ink);line-height:1.35}
+${P} .hpb-ft dl{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:48px}${P} .hpb-ft dl div{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid var(--hps-ln2)}${P} .hpb-ft dt{font-size:${px(15)};color:var(--mu)}${P} .hpb-ft dd{margin:0;font-size:${px(22)};font-weight:700;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums}${P} .hpb-ft dd small{font-size:.66em;margin-left:2px}`);
+    if (on('sched:cal')) C.push(`${P} .hpb-cal{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}${P} .hpb-cal.n1{grid-template-columns:minmax(0,420px)}${P} .hpb-cal.n2{grid-template-columns:repeat(2,minmax(0,1fr))}${P} .hpb-cal.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+${P} .hpb-cal li{display:flex;flex-direction:column;border:1px solid var(--hps-ln2);border-radius:var(--r);overflow:hidden;background:var(--bg)}
+${P} .hpb-cd{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:14px;align-items:end;padding:20px 22px 18px;border-bottom:1px solid var(--hps-ln2)}${P} .hpb-cd b{grid-row:1/3;font-family:var(--hd-ff,inherit);font-size:${px(64)};font-weight:var(--hd-fw,700);line-height:.82;letter-spacing:-.05em;color:var(--ink);font-variant-numeric:tabular-nums}
+${P} .hpb-cm{font-size:${px(14)};font-weight:700;color:var(--at)}${P} .hpb-cw{font-size:${px(13)};color:var(--mu)}${P} li.st-closed .hpb-cd b{color:var(--mu)}
+${P} .hpb-cb{display:flex;flex-direction:column;gap:12px;padding:20px 22px 22px;flex:1}${P} .hpb-cs{display:flex;align-items:center;gap:10px;margin:0}${P} .hpb-cs em{font-style:normal;font-size:${px(14)};font-weight:800;color:var(--at);font-variant-numeric:tabular-nums}
+${P} .hpb-cb h3{font-size:${px(18)};font-weight:700;letter-spacing:-.02em;line-height:1.4;color:var(--ink)}${P} .hpb-cb .hps-sm{font-size:${px(14)}}
+${P} .hpb-cg{margin-top:auto;align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:${px(15)};font-weight:700;color:var(--ink);text-decoration:none;border-bottom:1.5px solid currentColor}${P} .hpb-cg:hover{color:var(--at)}${P} .hpb-cg.off{color:var(--mu);border-bottom-color:transparent}`);
+    if (on('sched:cards')) C.push(`${P} .hpb-sch{display:flex;justify-content:space-between;align-items:end}
+${P} .hpb-sc{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}${P} .hpb-sc.n1{grid-template-columns:minmax(0,520px)}${P} .hpb-sc.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+${P} .hpb-sc li{display:flex;flex-direction:column;gap:16px;padding:28px;background:var(--alt);border-radius:var(--r)}${P}.hp-alt .hpb-sc li{background:var(--bg)}
+${P} .hpb-sct{display:flex;justify-content:space-between;align-items:center;margin:0}${P} .hpb-sct b{font-family:var(--hd-ff,inherit);font-size:${px(34)};font-weight:var(--hd-fw,700);letter-spacing:-.04em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}${P} li.st-closed .hpb-sct b{color:var(--mu)}
+${P} .hpb-sc h3{font-size:${px(20)};font-weight:700;letter-spacing:-.02em;line-height:1.4;color:var(--ink);min-height:2.8em}
+${P} .hpb-bar{height:6px;border-radius:3px;background:var(--hps-ln);overflow:hidden}${P} .hpb-bar i{display:block;height:100%;background:var(--a);border-radius:3px}
+${P} .hpb-bt{display:flex;justify-content:space-between;margin:-8px 0 0;font-size:${px(13)};color:var(--mu);font-variant-numeric:tabular-nums}
+${P} .hpb-scm{margin:0;font-size:${px(15)};color:var(--ink);font-variant-numeric:tabular-nums}${P} .hpb-scm i{display:inline-block;width:3px;height:3px;border-radius:50%;background:var(--mu);vertical-align:middle;margin:0 6px}`);
+    if (on('sched:cal') || on('sched:cards')) C.push(`${P} .hpb-sc .hpb-cg{margin-top:auto}`);
+    if (on('sched:table')) C.push(`${P} .hpb-tw{overflow-x:auto}${P} .hpb-st{width:100%;border-collapse:collapse;font-size:${px(15.5)};font-variant-numeric:tabular-nums}
+${P} .hpb-st thead th{text-align:left;font-size:${px(13)};font-weight:700;color:var(--mu);padding:0 16px 12px 0;border-bottom:2px solid var(--ink);white-space:nowrap}
+${P} .hpb-st td,${P} .hpb-st tbody th{padding:20px 16px 20px 0;border-bottom:1px solid var(--hps-ln);color:var(--ink);text-align:left;vertical-align:middle;white-space:nowrap}${P} .hpb-st tbody th{font-size:${px(17)};font-weight:700;letter-spacing:-.02em;white-space:normal;min-width:12em}
+${P} .hpb-st td.hpb-tg{text-align:right;padding-right:0}${P} .hpb-tgo{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:var(--br,8px);border:1.5px solid var(--ink);color:var(--ink);font-weight:700;font-size:${px(14.5)};text-decoration:none}${P} tr.st-open .hpb-tgo{background:var(--a);border-color:var(--a);color:var(--on)}${P} .hpb-tgo.off{border-color:var(--hps-ln2);color:var(--mu)}
+${P} .hpb-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}`);
+    if (on('reviews:wall') || on('reviews:strip')) C.push(`${P} .hpb-rh{display:flex;justify-content:space-between;align-items:flex-end;gap:32px;margin-bottom:40px}${P} .hpb-rh .hps-hd{margin-bottom:0}${P} .hpb-rhs{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+${P} .hpb-rsum{display:flex;align-items:baseline;gap:6px;margin:0;color:var(--mu);font-size:${px(14)}}${P} .hpb-rsum b{font-family:var(--hd-ff,inherit);font-size:${px(40)};font-weight:700;letter-spacing:-.04em;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}${P} .hpb-rsum small{font-size:${px(17)};margin-right:10px}`);
+    if (on('reviews:wall')) C.push(`${P} .hpb-rw{columns:3;column-gap:24px}${P} .hpb-rw.n2{columns:2}${P} .hpb-rw.n1{columns:1;max-width:720px}
+${P} .hpb-rw figure{break-inside:avoid;margin:0 0 24px;padding:28px;border:1px solid var(--hps-ln2);border-radius:var(--r);display:flex;flex-direction:column;gap:18px;background:var(--bg)}${P} .hpb-rw figure:nth-child(3n+2){background:var(--as);border-color:transparent}
+${P} .hpb-rw blockquote{margin:0;font-size:${px(17)};line-height:1.7;color:var(--ink)}${P} .hpb-rw figure:first-child blockquote{font-size:${px(20)};line-height:1.6;font-weight:550;letter-spacing:-.015em}`);
+    if (on('reviews:strip')) C.push(`${P} .hpb-rs{list-style:none;margin:0;padding:0 0 4px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(300px,1fr);gap:20px;overflow-x:auto;scroll-snap-type:x mandatory}
+${P} .hpb-rs li{scroll-snap-align:start;display:flex;flex-direction:column;justify-content:space-between;gap:24px;padding:28px 28px 24px;border-left:3px solid var(--a);background:var(--alt)}${P}.hp-alt .hpb-rs li{background:var(--bg)}
+${P} .hpb-rs blockquote{margin:0;font-size:${px(17)};line-height:1.7;color:var(--ink)}${P} .hpb-rs .hps-rm{display:flex;align-items:center;gap:12px}${P} .hpb-rs .hps-rm .hps-st{margin-left:auto;font-size:13px}`);
+    if (on('reviews:big')) C.push(`${P}.hpb-reviews-big{padding:calc(var(--sec,120px) * .9) 0}${P} .hpb-rb{max-width:880px;margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center;gap:28px}
+${P} .hpb-rbt{margin:0;font-size:${px(15)};font-weight:700;letter-spacing:.02em;color:color-mix(in srgb,var(--bg) 78%,var(--ink))}
+${P} .hpb-rbq{margin:0;display:flex;flex-direction:column;align-items:center;gap:24px}${P} .hpb-rbq blockquote{margin:0;font-family:var(--hd-ff,inherit);font-weight:500;font-size:clamp(${px(24)},3.1vw,${px(38)});line-height:1.45;letter-spacing:-.025em;text-wrap:balance}
+${P}.hpb-inv .hps-wh small{color:color-mix(in srgb,var(--bg) 72%,var(--ink))}${P} .hpb-rbq .hps-wh{align-items:center}
+${P} .hpb-rbl{list-style:none;margin:16px 0 0;padding:28px 0 0;border-top:1px solid color-mix(in srgb,var(--bg) 24%,transparent);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;text-align:left;width:100%}${P} .hpb-rbl li{display:flex;flex-direction:column;gap:12px}${P} .hpb-rbl blockquote{margin:0;font-size:${px(16)};line-height:1.7;color:color-mix(in srgb,var(--bg) 88%,var(--ink))}
+${P}.hpb-inv .hpb-rsum{color:color-mix(in srgb,var(--bg) 78%,var(--ink));justify-content:center;display:flex;align-items:baseline;gap:6px;margin:0;font-size:${px(14)}}${P}.hpb-inv .hpb-rsum b{font-size:${px(28)};font-weight:700}${P}.hpb-inv .hps-more{color:var(--bg)}`);
+    if (on('faq:one')) C.push(`${P} .hpb-q1{max-width:800px;margin:0 auto}${P} .hpb-q1 .hps-hd{text-align:center;margin-left:auto;margin-right:auto}`);
+    if (on('faq:one') || on('faq:list')) C.push(`${P} .hpb-qc{margin:28px 0 0;font-size:${px(16)};color:var(--mu);line-height:1.7}${P} .hpb-q1 .hpb-qc{text-align:center}${P} .hpb-qc a{color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:4px;font-variant-numeric:tabular-nums}`);
+    if (on('faq:grid')) C.push(`${P} .hpb-qg{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:56px}${P} .hpb-qg div{padding:28px 0;border-top:1px solid var(--hps-ln2)}${P} .hpb-qg div:nth-child(-n+2){border-top:2px solid var(--ink)}
+${P} .hpb-qg dt{font-size:${px(18.5)};font-weight:700;letter-spacing:-.02em;line-height:1.45;color:var(--ink);margin-bottom:10px}${P} .hpb-qg dd{margin:0;font-size:${px(16)};line-height:1.75;color:var(--mu)}
+${P} .hpb-qband{margin-top:40px;display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 28px;background:var(--as);border-radius:var(--r)}${P}.hp-alt .hpb-qband{background:var(--bg)}${P} .hpb-qband p{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 20px;font-size:${px(15.5)};color:var(--ink)}${P} .hpb-qband b{font-size:${px(17)}}${P} .hpb-qband a{color:var(--ink);font-variant-numeric:tabular-nums}${P} .hpb-qband i{display:inline-block;width:3px;height:3px;border-radius:50%;background:var(--mu);vertical-align:middle;margin:0 4px}
+${P} .hpb-qb{flex:none;display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 22px;border-radius:var(--br,8px);background:var(--a);color:var(--on)!important;font-weight:700;font-size:15px;text-decoration:none}`);
+    if (on('faq:list')) C.push(`${P} .hpb-qh{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:40px}${P} .hpb-qh .hps-hd{margin-bottom:0}${P} .hpb-q2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 48px;align-items:start}${P} .hpb-q2 .hps-qa{border-top:2px solid var(--ink)}`);
+    if (on('map:split')) C.push(`${P} .hpb-ms{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:64px;align-items:stretch}${P} .hpb-ms.one{grid-template-columns:minmax(0,1fr);max-width:720px}
+${P} .hpb-mr{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}${P} .hpb-mr li{display:flex;gap:14px;align-items:flex-start;padding:18px 0;border-bottom:1px solid var(--hps-ln)}${P} .hpb-mr svg{color:var(--at);flex:none;margin-top:2px}${P} .hpb-mr small{display:block;font-size:${px(13)};color:var(--mu);margin-bottom:4px}${P} .hpb-mr a,${P} .hpb-mr span{font-size:${px(17)};font-weight:600;color:var(--ink);text-decoration:none;font-variant-numeric:tabular-nums}
+${P} .hpb-mp{position:relative;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;min-height:340px;padding:40px;border-radius:var(--r);background-color:var(--as);background-image:repeating-linear-gradient(90deg,transparent 0 47px,color-mix(in srgb,var(--at) 14%,transparent) 47px 48px),repeating-linear-gradient(0deg,transparent 0 47px,color-mix(in srgb,var(--at) 14%,transparent) 47px 48px);overflow:hidden}
+${P} .hpb-mp span{font-size:${px(16)};font-weight:700;color:var(--at)}${P} .hpb-mp b{font-family:var(--hd-ff,inherit);font-weight:var(--hd-fw,800);font-size:clamp(${px(56)},8vw,${px(112)});line-height:.95;letter-spacing:-.05em;color:var(--ink)}${P} .hpb-mp small{font-size:${px(16)};color:var(--mu)}`);
+    if (on('map:card')) C.push(`${P} .hpb-mc{max-width:860px;margin:0 auto;text-align:center;padding:clamp(36px,5vw,64px) clamp(24px,5vw,72px);border:1px solid var(--hps-ln2);border-radius:var(--r);background:var(--bg)}
+${P} .hpb-mct{margin:0 0 16px;font-size:${px(15)};font-weight:700;color:var(--at)}${P} .hpb-mca{font-style:normal;font-family:var(--hd-ff,inherit);font-weight:var(--hd-fw,700);font-size:clamp(${px(24)},3vw,${px(36)});line-height:1.35;letter-spacing:-.03em;color:var(--ink);text-wrap:balance}
+${P} .hpb-mci{list-style:none;margin:24px 0 0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px 28px;font-size:${px(16)};color:var(--ink)}${P} .hpb-mci li{display:flex;align-items:center;gap:8px}${P} .hpb-mci svg{color:var(--at)}${P} .hpb-mci a{color:var(--ink);font-weight:650;text-decoration:none;font-variant-numeric:tabular-nums}${P} .hpb-mc .hpb-ml{justify-content:center}`);
+    if (on('map:band')) C.push(`${P}.hpb-map-band{padding:calc(var(--sec,120px) * .55) 0}${P} .hpb-mb{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,9fr);gap:48px;align-items:start}${P} .hpb-mb h2{font-family:var(--hd-ff,inherit);font-weight:var(--hd-fw,800);font-size:clamp(${px(26)},2.6vw,${px(34)});letter-spacing:-.03em;line-height:1.2}
+${P} .hpb-mb dl{margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 40px}${P} .hpb-mb dl div{padding-top:16px;border-top:1px solid color-mix(in srgb,var(--bg) 30%,transparent)}${P} .hpb-mb dt{font-size:${px(13)};color:color-mix(in srgb,var(--bg) 78%,var(--ink));margin-bottom:8px}${P} .hpb-mb dd{margin:0;font-size:${px(17)};font-weight:600;line-height:1.5;font-variant-numeric:tabular-nums}${P} .hpb-mb dd a,${P} .hpb-mb dd span{color:var(--bg);text-decoration:none}
+${P}.hpb-map-band .hpb-ml{margin-top:32px;padding-left:calc(25% + 12px)}${P}.hpb-map-band .hpb-ml a{color:var(--bg);text-decoration-color:color-mix(in srgb,var(--bg) 45%,transparent)}`);
+    if (on('map:cols')) C.push(`${P} .hpb-mt{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:56px;align-items:start}${P} .hpb-mt dl{margin:0;border-top:2px solid var(--ink)}${P} .hpb-mt dl>div{display:grid;grid-template-columns:8em minmax(0,1fr);gap:24px;padding:20px 0;border-bottom:1px solid var(--hps-ln)}
+${P} .hpb-mt dt{font-size:${px(15)};font-weight:700;color:var(--mu)}${P} .hpb-mt dd{margin:0;font-size:${px(17)};color:var(--ink);font-variant-numeric:tabular-nums}${P} .hpb-mt dd a,${P} .hpb-mt dd>span{color:var(--ink);text-decoration:none;font-weight:600}${P} .hpb-mt .hpb-ml{margin:0}${P} .hpb-mt .hpb-ml a{min-height:32px;font-weight:600}`);
+    if (on('notices:cards') || on('notices:feat')) C.push(`${P} .hpb-nh{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}${P} .hpb-nh h2{font-family:var(--hd-ff,inherit);font-weight:var(--hd-fw,800);letter-spacing:var(--hd-ls,-.03em);font-size:clamp(${px(24)},2.4vw,${px(32)});line-height:1.2;color:var(--ink)}`);
+    if (on('notices:cards')) C.push(`${P} .hpb-nc{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}${P} .hpb-nc.n1{grid-template-columns:minmax(0,360px)}${P} .hpb-nc.n2{grid-template-columns:repeat(2,minmax(0,1fr))}${P} .hpb-nc.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+${P} .hpb-nc li{display:flex;flex-direction:column;gap:12px;padding-top:20px;border-top:2px solid var(--ink)}${P} .hpb-nc li.is-pin{border-top-color:var(--a)}
+${P} .hpb-nc time{display:flex;align-items:baseline;gap:8px}${P} .hpb-nc time b{font-family:var(--hd-ff,inherit);font-size:${px(40)};font-weight:700;letter-spacing:-.04em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}${P} .hpb-nc time span{font-size:${px(13)};color:var(--mu);font-variant-numeric:tabular-nums}
+${P} .hpb-nc .hps-tag{align-self:flex-start}${P} .hpb-nc h3{font-size:${px(17)};font-weight:600;line-height:1.5;letter-spacing:-.015em;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}${P} .hpb-nc li.is-pin .hps-tag{background:var(--a);border-color:var(--a);color:var(--on)}`);
+    if (on('notices:feat')) C.push(`${P} .hpb-nf{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:48px;align-items:start}
+${P} .hpb-nfm article{display:flex;flex-direction:column;align-items:flex-start;gap:14px;padding:32px;background:var(--as);border-radius:var(--r)}${P}.hp-alt .hpb-nfm article{background:var(--bg)}${P} .hpb-nfm article h3{font-family:var(--hd-ff,inherit);font-size:clamp(${px(21)},2vw,${px(26)});font-weight:700;line-height:1.4;letter-spacing:-.025em;color:var(--ink)}${P} .hpb-nfm time{font-size:${px(14)};color:var(--mu);font-variant-numeric:tabular-nums}${P} .hpb-nfm article.is-pin .hps-tag{background:var(--a);border-color:var(--a);color:var(--on)}`);
+    if (on('notices:line')) C.push(`${P}.hpb-nline{padding:calc(var(--sec,120px) * .4) 0}${P} .hpb-nl{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,9fr) auto;gap:32px;align-items:start}
+${P} .hpb-nl h2{font-size:${px(18)};font-weight:700;letter-spacing:-.02em;color:var(--ink);padding-top:14px}${P} .hpb-nl .hps-nl{border-top:0}${P} .hpb-nl .hps-nl li{min-height:52px;font-size:${px(15.5)}}${P} .hpb-nl .hps-nl li:last-child{border-bottom:0}${P} .hpb-nl .hps-more{padding-top:4px}`);
+    /* 휴대폰 */
+    const M = [];
+    if (on('facts:line')) M.push(`${P} .hpb-fline{font-size:${px(20)}}${P} .hpb-sep{margin:0 .45em}`);
+    if (on('facts:one')) M.push(`${P} .hpb-f1{grid-template-columns:1fr;gap:28px}${P} .hpb-f1m b{font-size:${px(88)}}`);
+    if (on('facts:table')) M.push(`${P} .hpb-ft{grid-template-columns:1fr;gap:12px;padding:24px 20px}${P} .hpb-ft dl{grid-template-columns:1fr}${P} .hpb-ft dd{font-size:${px(19)}}`);
+    if (on('sched:cal')) M.push(`${P} .hpb-cal,${P} .hpb-cal.n2,${P} .hpb-cal.n3,${P} .hpb-cal.n1{grid-template-columns:1fr;gap:14px}${P} .hpb-cal li{display:grid;grid-template-columns:96px minmax(0,1fr)}${P} .hpb-cd{display:flex;flex-direction:column;align-items:flex-start;gap:6px;border-bottom:0;border-right:1px solid var(--hps-ln2);padding:18px 14px}${P} .hpb-cd b{font-size:${px(44)}}${P} .hpb-cb{padding:18px 16px}`);
+    if (on('sched:cards')) M.push(`${P} .hpb-sc,${P} .hpb-sc.n2,${P} .hpb-sc.n1{grid-template-columns:1fr;gap:14px}${P} .hpb-sc li{padding:22px 20px}${P} .hpb-sc h3{min-height:0}`);
+    if (on('sched:table')) M.push(`${P} .hpb-st thead{display:none}${P} .hpb-st,${P} .hpb-st tbody{display:block}${P} .hpb-st tr{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;padding:20px 0;border-bottom:1px solid var(--hps-ln)}${P} .hpb-st tr:first-child{border-top:2px solid var(--ink)}
+${P} .hpb-st td,${P} .hpb-st tbody th{display:block;padding:0;border:0;white-space:normal}${P} .hpb-st tbody th{grid-column:1/-1;min-width:0}${P} .hpb-st td::before{content:attr(data-l);display:inline-block;width:5em;font-size:13px;color:var(--mu)}${P} .hpb-st td[data-l="상태"]{grid-column:1/-1}${P} .hpb-st td{grid-column:1/-1;font-size:${px(15)}}${P} .hpb-st td.hpb-tg{text-align:left;margin-top:8px}${P} .hpb-tgo{width:100%;justify-content:center;min-height:48px}`);
+    if (on('reviews:wall') || on('reviews:strip')) M.push(`${P} .hpb-rh{flex-direction:column;align-items:flex-start;gap:16px;margin-bottom:28px}${P} .hpb-rhs{align-items:flex-start}`);
+    if (on('reviews:wall')) M.push(`${P} .hpb-rw,${P} .hpb-rw.n2{columns:1}${P} .hpb-rw figure{padding:22px 20px;margin-bottom:14px}${P} .hpb-rw figure:first-child blockquote{font-size:${px(18)}}`);
+    if (on('reviews:strip')) M.push(`${P} .hpb-rs{grid-auto-columns:82%;gap:12px}${P} .hpb-rs li{padding:22px 20px}`);
+    if (on('reviews:big')) M.push(`${P}.hpb-reviews-big{padding:var(--sec-m,72px) 0}${P} .hpb-rbq blockquote{font-size:${px(22)}}${P} .hpb-rbl{grid-template-columns:1fr;gap:24px}`);
+    if (on('faq:grid')) M.push(`${P} .hpb-qg{grid-template-columns:1fr}${P} .hpb-qg div:nth-child(2){border-top:1px solid var(--hps-ln2)}${P} .hpb-qg div{padding:22px 0}${P} .hpb-qband{flex-direction:column;align-items:stretch;padding:22px 20px}${P} .hpb-qb{justify-content:center}`);
+    if (on('faq:list')) M.push(`${P} .hpb-qh{flex-direction:column;align-items:flex-start;gap:8px}${P} .hpb-q2{grid-template-columns:1fr}${P} .hpb-q2 .hps-qa+.hps-qa{border-top:0}`);
+    if (on('map:split')) M.push(`${P} .hpb-ms{grid-template-columns:1fr;gap:28px}${P} .hpb-mp{min-height:200px;padding:24px;order:-1}${P} .hpb-mp b{font-size:${px(56)}}`);
+    if (on('map:card')) M.push(`${P} .hpb-mc{text-align:left;padding:28px 22px}${P} .hpb-mci,${P} .hpb-mc .hpb-ml{justify-content:flex-start}${P} .hpb-mci{flex-direction:column;gap:10px}`);
+    if (on('map:band')) M.push(`${P}.hpb-map-band{padding:var(--sec-m,72px) 0}${P} .hpb-mb{grid-template-columns:1fr;gap:20px}${P} .hpb-mb dl{grid-template-columns:1fr;gap:16px}${P}.hpb-map-band .hpb-ml{padding-left:0;margin-top:20px}`);
+    if (on('map:cols')) M.push(`${P} .hpb-mt{grid-template-columns:1fr;gap:20px}${P} .hpb-mt dl>div{grid-template-columns:1fr;gap:6px;padding:16px 0}`);
+    if (on('notices:cards')) M.push(`${P} .hpb-nc,${P} .hpb-nc.n2,${P} .hpb-nc.n3,${P} .hpb-nc.n1{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px}${P} .hpb-nc time b{font-size:${px(32)}}${P} .hpb-nc h3{font-size:${px(15.5)}}`);
+    if (on('notices:feat')) M.push(`${P} .hpb-nf{grid-template-columns:1fr;gap:20px}${P} .hpb-nfm article{padding:22px 20px}`);
+    if (on('notices:line')) M.push(`${P} .hpb-nl{grid-template-columns:1fr auto;gap:4px 12px}${P} .hpb-nl h2{padding-top:0;align-self:center}${P} .hpb-nl .hps-nl{grid-column:1/-1;grid-row:2}${P} .hpb-nl .hps-more{grid-column:2;grid-row:1;padding-top:0}`);
+    if (on('map:split') || on('map:card') || on('map:cols')) M.push(`${P} .hpb-ml{gap:4px 20px}`);
+    return `/* hpsec-trust blocks (H1) */\n${C.join('\n')}${M.length ? `\n@media(max-width:640px){${M.join('\n')}}` : ''}\n@media(max-width:900px) and (min-width:641px){${P} .hpb-cal,${P} .hpb-nc{grid-template-columns:repeat(2,minmax(0,1fr))}${P} .hpb-sc{grid-template-columns:repeat(2,minmax(0,1fr))}${P} .hpb-f1,${P} .hpb-nf,${P} .hpb-ms,${P} .hpb-mt,${P} .hpb-mb{grid-template-columns:1fr;gap:32px}${P} .hpb-mb dl{grid-template-columns:repeat(2,minmax(0,1fr))}${P}.hpb-map-band .hpb-ml{padding-left:0}${P} .hpb-rw{columns:2}}`; }
+  HPS.blockCSS = blkCSS;
+  { const base = siteHTML; siteHTML = (s, full, lang) => { const h = base(s, full, lang);
+    try { if (typeof h !== 'string' || !thOn(s) || !h.includes('data-hpb="')) return h; const used = new Set((h.match(/data-hpb="([a-z]+:[a-z]+)"/g) || []).map(m => m.slice(10, -1)));
+      const c = blkCSS(s, used); return c && h.includes('</style>') ? h.replace('</style>', c.replace(/<\/?style/gi, '') + '</style>') : h; } catch (e) { console.error('hpsec-trust block css', e); return h; } }; window.siteHTML = siteHTML; }
 })();
