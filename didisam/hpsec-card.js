@@ -162,8 +162,10 @@
     const ink = T.ink, ln = al(ink, .12), ln2 = al(ink, .07), mu = T.mu; const at = fit(T.at || T.a, '#ffffff', 4.6); const atA = fit(T.at || T.a, T.alt, 4.6);
     const onImg = '#ffffff'; th;
     return `/* hps card */
-.hps{--hps-r:min(var(--r,12px),14px);--hps-ln:${ln};--hps-ln2:${ln2};--hps-card:transparent;--hps-at:${at};--hps-mu:${mu};font-variant-numeric:tabular-nums}
-.hp-alt .hps,.is-alt .hps{--hps-card:#ffffff;--hps-at:${atA}}
+.hps{--hps-r:min(var(--r,12px),14px);--hps-ln:${ln};--hps-ln2:${ln2};--hps-card:transparent;--hps-at:${at};--hps-mu:${fit(mu, T.bg || '#ffffff', 4.6)};font-variant-numeric:tabular-nums}
+.hps .hps-bd{right:auto;bottom:auto;cursor:inherit} /* v34.5 FB: 머리글 서랍 배경(.hps-bd, inset:0)과 이름이 겹쳐 배지가 카드 전체로 늘어나던 문제 */
+.hps .hps-pr .hps-pa{background:none;color:inherit;border-radius:0;padding-left:0;padding-right:0;padding-bottom:0} /* v34.5 FB: S3 신청 띠의 .hps-pa(진한 상자)와 이름이 겹쳐 가격 카드가 진한 바탕이 되던 문제 */
+.hp-alt .hps,.is-alt .hps{--hps-card:#ffffff;--hps-at:${atA};--hps-mu:${fit(mu, T.alt || '#ffffff', 4.6)}}
 .hps,.hps-c,.hps-row,.hps-sch,.hps-big,.hps-pr{position:relative}.hps .hps-sr{position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .hps a{color:inherit;text-decoration:none}.hps h3{margin:0;font-size:${px(19)};line-height:1.38;letter-spacing:-.022em;font-weight:750;color:${ink}}
 .hps .hps-img{margin:0;position:relative;overflow:hidden;background:${T.as};aspect-ratio:4/3;border-radius:calc(var(--hps-r) - 2px)}.hps .hps-img img{position:absolute;inset:0;width:100%;height:100%;display:block;transition:transform .5s cubic-bezier(.2,.7,.2,1)}

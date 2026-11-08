@@ -108,7 +108,9 @@ const MEASURE = () => {
   /* 바탕: 단색이면 계산, 사진 · 그라데이션 위면 null(픽셀로 잼) */
   function bgOf(el) { const stack = []; let a = el; while (a && a.nodeType === 1) { const cs = getComputedStyle(a); if (cs.backgroundImage && cs.backgroundImage !== 'none') return null; const c = parse(cs.backgroundColor); if (c && c[3] > 0) { stack.push(c); if (c[3] >= 0.99) break; } a = up(a); }
     let base = [255, 255, 255]; for (let i = stack.length - 1; i >= 0; i--) { const c = stack[i]; const al = c[3]; base = [c[0] * al + base[0] * (1 - al), c[1] * al + base[1] * (1 - al), c[2] * al + base[2] * (1 - al)]; } return base; }
-  function overMedia(root, el, r) { const x = r.left + r.width / 2, y = r.top + r.height / 2; if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return false;
+  const MR = new Map(); const mediaRects = root => { if (!MR.has(root)) MR.set(root, [...root.querySelectorAll('img, video, picture, canvas')].map(m => m.getBoundingClientRect()).filter(b => b.width > 40 && b.height > 30)); return MR.get(root); };
+  function overMedia(root, el, r) { const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return mediaRects(root).some(b => x >= b.left && x <= b.right && y >= b.top && y <= b.bottom); /* 화면 밖: 사진 영역 안이면 픽셀로 잰다(v34.5 FB) */
     const st = root.elementsFromPoint ? root.elementsFromPoint(x, y) : []; const i = st.indexOf(el); for (const e of st.slice(i + 1)) { if (/^(IMG|VIDEO|CANVAS|PICTURE)$/.test(e.tagName) || (e.tagName === 'svg' && e.getBoundingClientRect().width > 120)) return true; const cs = getComputedStyle(e); if (cs.backgroundImage && cs.backgroundImage !== 'none') return true; const c = parse(cs.backgroundColor); if (c && c[3] >= 0.99) return false; } return false; }
   const texts = [], photos = { img: 0, bg: 0, stock: 0, art: 0, slots: 0 }, empty = [], wide = []; let txtAll = '';
   roots.forEach(root => {
@@ -155,7 +157,7 @@ const PHRX = /입력하세요|입력해 주세요|대표번호|센터 주소|학
 function textChecks(txt, allowed) {
   const ph = [...new Set(txt.match(PHRX) || [])];
   const ok = new Set(allowed.map(v => String(v).replace(/,/g, '')));
-  const nums = [...new Set(txt.match(/\d[\d,.]*\s*(?:%|명|점|위|배|개국|만\s?명|년\s?연속|년\s?전통|년\s?경력|건)/g) || [])];
+  const nums = [...new Set(txt.match(/\d[\d,.]*\s*(?:%|명(?![가-힣])|점(?![가-힣])|위(?![가-힣])|배(?![가-힣])|개국|만\s?명|년\s?연속|년\s?전통|년\s?경력|건(?![가-힣]))/g) || [])];
   const sus = nums.filter(n => { const v = n.match(/\d[\d,.]*/)[0].replace(/,/g, ''); return !ok.has(v); });
   return { ph, nums, numSus: sus };
 }
