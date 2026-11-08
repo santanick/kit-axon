@@ -20,7 +20,6 @@
     { id: 'wanted-sans', name: '원티드 산스', kind: 'sans', fam: 'Wanted Sans', w: [500, 700, 800], src: 'cdn', href: CDN_WS, css: "'Wanted Sans','Pretendard Variable',Pretendard" + G, lic: 'OFL-1.1(RFN Wanted Sans · 원본 배포)' },
     { id: 'noto-serif-kr', name: '노토 세리프', kind: 'serif', fam: 'Noto Serif KR', w: [400, 700], src: 'self', css: "'Noto Serif KR','Noto Serif KR Fallback'" + SR, lic: 'OFL-1.1', key: 'serif' },
     { id: 'hahmlet', name: '함렛', kind: 'display', fam: 'Hahmlet', w: [600, 800], src: 'self', css: "'Hahmlet','Hahmlet Fallback','Noto Serif KR'" + SR, lic: 'OFL-1.1' },
-    { id: 'gowun-batang', name: '고운바탕', kind: 'serif', fam: 'Gowun Batang', w: [400, 700], src: 'self', css: "'Gowun Batang','Gowun Batang Fallback'" + SR, lic: 'OFL-1.1' },
     { id: 'gowun-dodum', name: '고운돋움', kind: 'round', fam: 'Gowun Dodum', w: [400], src: 'self', css: "'Gowun Dodum','Gowun Dodum Fallback',ui-rounded" + G, lic: 'OFL-1.1', key: 'round' },
     { id: 'do-hyeon', name: '도현', kind: 'display', fam: 'Do Hyeon', w: [400], src: 'self', css: "'Do Hyeon','Do Hyeon Fallback','Pretendard Variable',Pretendard" + G, lic: 'OFL-1.1' },
     { id: 'black-han-sans', name: '검은고딕', kind: 'display', fam: 'Black Han Sans', w: [400], src: 'legacy', css: "'Black Han Sans','Do Hyeon',Pretendard" + G, lic: 'OFL-1.1', key: 'display', legacy: 1 },
@@ -30,7 +29,7 @@
   const id = k => (k && BY[k] ? k : KEY[k] || null);
   const get = k => BY[id(k)] || null;
   /* font.css 내용 해시(tools/fonts/build.py가 마지막에 출력) — 다시 빌드하면 이 값을 바꾼다(서비스 워커 저장본 교체) */
-  const V = {"do-hyeon": "12f77a9f", "noto-serif-kr": "ea0bde31", "gowun-dodum": "58c173de", "hahmlet": "d8ae861c", "gowun-batang": "a9463621"};
+  const V = {"do-hyeon": "12f77a9f", "noto-serif-kr": "ea0bde31", "gowun-dodum": "58c173de", "hahmlet": "d8ae861c"};
   const href = k => { const f = get(k); return !f ? '' : f.src === 'self' ? `fonts/${f.id}/font.css${V[f.id] ? '?v=' + V[f.id] : ''}` : f.src === 'cdn' ? f.href : ''; };
   const css = k => (get(k) || {}).css || '';
   /* 조합(제목 + 본문) 기본 8종 — F1이 HPFT.pairs로 덮어쓴다 */
@@ -40,7 +39,7 @@
     { id: 'p-serif', name: '단정한 명조 제목', hd: 'noto-serif-kr', bd: 'pretendard', note: '대학 · 교수학습 · 공공' },
     { id: 'p-grand', name: '격조 있는 제목', hd: 'hahmlet', bd: 'pretendard', note: '프리미엄 · 대학원 · 아카데미' },
     { id: 'p-read', name: '읽는 명조', hd: 'noto-serif-kr', bd: 'noto-serif-kr', note: '인문 · 독서논술 · 긴 글' },
-    { id: 'p-warm', name: '따뜻한 바탕', hd: 'gowun-batang', bd: 'pretendard', note: '평생교육 · 시니어 · 유아' },
+    { id: 'p-warm', name: '따뜻한 돋움', hd: 'gowun-dodum', bd: 'pretendard', note: '평생교육 · 시니어 · 유아' },
     { id: 'p-round', name: '부드러운 둥근', hd: 'gowun-dodum', bd: 'gowun-dodum', note: '학원 · 키즈 · 친근함' },
     { id: 'p-poster', name: '굵은 포스터 제목', hd: 'do-hyeon', bd: 'pretendard', note: '학원 홍보 · 이벤트' }];
   const pairs = () => { try { const P = window.HPFT && (typeof HPFT.pairs === 'function' ? HPFT.pairs() : HPFT.pairs); if (Array.isArray(P) && P.length) return P.filter(p => p && get(p.hd) && get(p.bd)); } catch (e) { } return PAIRS; };

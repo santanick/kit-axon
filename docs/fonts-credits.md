@@ -9,7 +9,6 @@
 |---|---|---|---|---|---|---|
 | `noto-serif-kr` | Noto Serif KR | 400 · 700 (600 요청은 700) | 11,172 | Google LLC / Adobe | `ofl/notoserifkr/NotoSerifKR[wght].ttf` | `noto-serif-kr/OFL.txt` |
 | `gowun-dodum` | Gowun Dodum(고운돋움) | 400 | 11,172 | The Gowun Dodum Project Authors | `ofl/gowundodum/GowunDodum-Regular.ttf` | `gowun-dodum/OFL.txt` |
-| `gowun-batang` | Gowun Batang(고운바탕) | 400 · 700 | 11,172 | The Gowun Batang Project Authors | `ofl/gowunbatang/GowunBatang-{Regular,Bold}.ttf` | `gowun-batang/OFL.txt` |
 | `hahmlet` | Hahmlet(함렛) | 600 · 800 | 2,788(원본 한계) | The Hahmlet Project Authors | `ofl/hahmlet/Hahmlet[wght].ttf` | `hahmlet/OFL.txt` |
 | `do-hyeon` | Do Hyeon(도현) | 400 | 2,437(원본 한계) | The Do Hyeon Project Authors | `ofl/dohyeon/DoHyeon-Regular.ttf` | `do-hyeon/OFL.txt` |
 
@@ -44,3 +43,5 @@ RFN이 있는 글꼴은 분할 = 수정본이 되어 원래 이름을 쓸 수 �
 - 글꼴 파일 자체를 판매하지 않습니다. 홈페이지에 넣어 쓰는 것(임베딩)은 허용됩니다.
 - 라이선스 원문을 글꼴 폴더에 함께 배포합니다(`<id>/OFL.txt`, `OFL-*.txt`).
 - 다시 만들기: `pip install --break-system-packages fonttools brotli && python3 tools/fonts/build.py` → 마지막 줄의 `V` 값을 `hpfontpick.js`의 `V`에 적습니다.
+
+- (11-08 통합 결정) 고운바탕(gowun-batang)은 본명조 · 함렛과 역할이 겹치고 저장소 용량(약 2.9MB)이 커서 제외했다. tools/fonts/build.py 정의는 다시 빌드할 때를 위해 남겨 둔다.

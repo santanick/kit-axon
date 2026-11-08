@@ -59,7 +59,7 @@ const SHOT = process.env.SHOT_DIR || '';
 
     /* ── 4) 게시된 학습자 홈: 조합별 실제 로드 · 전송량(조각은 Resource Timing의 encodedBodySize) ── */
     const COMBO = [['함렛 제목 + 프리텐다드', { h: 'hahmlet' }, 'Hahmlet', 1], ['노토 세리프 제목 + 프리텐다드', { h: 'serif' }, 'Noto Serif KR', 1], ['고운돋움 제목 + 프리텐다드', { h: 'round' }, 'Gowun Dodum', 1],
-      ['도현 제목 + 프리텐다드', { h: 'do-hyeon' }, 'Do Hyeon', 1], ['고운바탕 제목 + 프리텐다드', { h: 'gowun-batang' }, 'Gowun Batang', 1], ['명조 제목 + 명조 본문(긴 글)', { h: 'hahmlet', b: 'serif' }, 'Hahmlet', 0]];
+      ['도현 제목 + 프리텐다드', { h: 'do-hyeon' }, 'Do Hyeon', 1], ['명조 제목 + 명조 본문(긴 글)', { h: 'hahmlet', b: 'serif' }, 'Hahmlet', 0]];
     const tid = await ev(() => DREG.cur()); const TAB = [];
     for (const [nm, font, fam, budget] of COMBO) {
       await ev(f => { site().font = f; save(); if (typeof hpPaint === 'function') hpPaint(); }, font); await frameReady(); await wait(300);
