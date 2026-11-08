@@ -421,7 +421,9 @@ ${P} .hps-ctw{flex-direction:column;align-items:flex-start;gap:20px}${P} .hps-ct
          첫 화면 바로 다음 섹션은 위 여백만 줄인다(첫 화면 자체는 그대로). noir(어두운) 계열은 noir 섹션끼리만 */
       const key = HEROC.test(x.c) ? 'hero' : /\bhpl-noir\b/.test(x.c) ? 'noir' : (OWNBG.test(x.c) || /style="[^"]*background/.test(x.t)) ? '' : 'n';
       const gap = prevEnd >= 0 ? h.slice(prevEnd, x.i).replace(/<\/section>|<\/div>|\s/g, '') : 'x';
-      if ((key === 'n' || key === 'noir') && (prevFlow === key || prevFlow === 'hero') && !gap) { add.push('hps-flow'); if (prevK >= 0 && prevFlow === key) tail.push(prevK); } prevFlow = key; prevK = k; prevEnd = end >= 0 ? end + 10 : -1;
+      if ((key === 'n' || key === 'noir') && (prevFlow === key || prevFlow === 'hero') && !gap) { add.push('hps-flow'); if (prevK >= 0 && prevFlow === key) tail.push(prevK); }
+      else if (key === '' && prevFlow === 'n' && !gap && prevK >= 0 && !HEROC.test(x.c)) tail.push(prevK); /* R3: 보통 섹션 → 자기 바탕 섹션(문의 띠 등)이면 앞 섹션 아래 여백만 줄인다(FAQ → 신청 띠 208px) */
+      prevFlow = key; prevK = k; prevEnd = end >= 0 ? end + 10 : -1;
       if (!add.length) return; out.push(h.slice(last, x.i), x.t.replace(/class="/, `class="${add.join(' ')} `)); last = x.i + x.t.length; });
     if (tail.length) { /* 앞 섹션 아래 여백 줄이기(hps-flowb) — 위에서 이미 바꾼 여는 태그는 out 안에 있으므로 결과 문자열에서 다시 찾는다 */
       let r = out.length ? out.join('') + h.slice(last) : h; const T = new Set(tail.map(k => M[k].t)); let n = 0;
