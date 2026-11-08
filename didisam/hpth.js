@@ -380,7 +380,7 @@ ${th.lux ? `.hp-hero h1{font-weight:700;letter-spacing:-.025em}.hp-ey{letter-spa
     const secs = (base.sections || []).filter(x => !x.hide); const hero0 = secs.find(x => x.type === 'banner') || { type: 'banner', data: { eyebrow: 'WELCOME', title: S.org.name, sub: '', cta: `${t('cls')} 둘러보기` } };
     const rest = secs.filter(x => x !== hero0 && x.type === 'text' && x.data && ['features', 'steps'].includes(x.data.variant)).slice(0, 1);
     band = 0; const body = [hero(hero0.data || {}, base, th, T), ...rest.map(x => textSec(x.data, base, th, T, true, x) || '')].join('');
-    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=1280"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{margin:0;background:${th.bg}}${css(base)}</style></head><body>${body}</body></html>`; }
+    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=1280"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' ${(typeof location!=='undefined'&&/^https?:/.test(location.origin))?location.origin:''} data: blob:; style-src 'unsafe-inline'"><style>body{margin:0;background:${th.bg}}${css(base)}</style></head><body>${body}</body></html>`; }
   const list = IDS.map(id => ({ id, name: TH[id].name, desc: TH[id].desc, swatch: [TH[id].acc, TH[id].hero === 'dark' ? TH[id].hb : TH[id].bg === '#FFFFFF' ? TH[id].alt : TH[id].bg, TH[id].sw2] }));
   window.HPT = { list, apply, thumb, pick, rec: k => TYPE_TH[k] || 'clean', enrich, facts, css, audit, reviews: () => realReviews(), tokens: s => thOf(s) ? tok(s, thOf(s)) : null, has: id => !!TH[id] };
 

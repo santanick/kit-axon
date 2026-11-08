@@ -153,6 +153,9 @@
     gallery: ['campus', 'civic', 'nature', 'art', 'workshop', 'library', 'lecture'],
     cta: ['coding', 'music', 'vocational', 'library', 'desk', 'art', 'classroom']
   };
+  /* 통합 결정(11:45): 실제 특정 건물(해외 대학 · 청사)이 드러나는 사진은 다른 기관 시설로 오인될 수 있어 고르는 목록에서 뺀다(파일은 지운다). */
+  var REAL = { 'cam-01': 1, 'cam-02': 1, 'cam-04': 1, 'civ-01': 1, 'civ-02': 1 };
+  LIST = LIST.filter(function (x) { return !REAL[x.id]; });
   var BY = {}; LIST.forEach(function (x) { BY[x.id] = x; });
 
   function hash(s) { s = String(s == null ? '' : s); var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
