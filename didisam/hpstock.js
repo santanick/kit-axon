@@ -240,7 +240,28 @@
   {"id":"yog-01","src":"img/stock/yog-01.webp","src800":"img/stock/yog-01-800.webp","w":1600,"h":1067,"focus":"50% 55%","tone":"dark","cat":"wellness","tags":["요가","운동","실루엣","건강","people","far"],"types":["adult","lifelong"],"slots":["hero","about","card"],"alt":"노을 앞에서 나무 자세를 한 실루엣","credit":{"by":"Patrick Hendry worldsbetweenlines","url":"https://commons.wikimedia.org/wiki/File:Patrick_Hendry_-_Yoga_Fog_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
   {"id":"yog-02","src":"img/stock/yog-02.webp","src800":"img/stock/yog-02-800.webp","w":1600,"h":1067,"focus":"50% 50%","tone":"dark","cat":"wellness","tags":["요가","운동","실루엣","지도자","people","far"],"types":["adult","lifelong"],"slots":["hero","about","card"],"alt":"동굴 입구 빛 앞에서 전사 자세를 한 실루엣","credit":{"by":"Dave Contreras basixfilms","url":"https://commons.wikimedia.org/wiki/File:Yoga_sunrise._(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
   {"id":"yog-03","src":"img/stock/yog-03.webp","src800":"img/stock/yog-03-800.webp","w":1600,"h":1067,"focus":"50% 55%","tone":"light","cat":"wellness","tags":["요가","필라테스","스튜디오","운동"],"types":["adult","lifelong"],"slots":["hero","about","card","space"],"alt":"짐볼이 걸린 밝은 요가 스튜디오","credit":{"by":"Sergej Majboroda (https://polyhaven.com/all?a=Sergej%20Majboroda / https://web.a","url":"https://commons.wikimedia.org/wiki/File:Yoga_Room_-_01_RAW-Export_(Sergej_Majboroda_via_Poly_Haven).png","license":"CC0 1.0","via":"Wikimedia Commons"}}
-  /* v34.5 FC 끝 */
+  /* v34.5 FC 끝 */,
+  /* v34.5 H2 시작: R2 N4 — 사무실 · 노트북 첫 화면 대체용 사람 있는 학습 · 협업 · 실습 장면(손 · 뒷모습 · 실루엣 · 원거리). CC0 */
+  {"id":"civ-04","src":"img/stock/civ-04.webp","src800":"img/stock/civ-04-800.webp","w":1440,"h":1029,"focus":"50% 50%","tone":"light","cat":"civic","tags":["공공건물","청사","광장","콘크리트"],"types":["public"],"slots":["hero","about","card","gallery"],"alt":"콘크리트 청사 앞 광장","credit":{"by":"Scott Webb scottwebb","url":"https://commons.wikimedia.org/wiki/File:Concrete_city_hall_plaza_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"grp-01","src":"img/stock/grp-01.webp","src800":"img/stock/grp-01-800.webp","w":1600,"h":1057,"focus":"50% 50%","tone":"dark","cat":"seminar","tags":["people","토론","워크숍","실루엣","긴 테이블"],"types":["corp","public","univ"],"slots":["hero","about","card","gallery"],"alt":"큰 창 앞 긴 테이블에서 토론하는 사람들의 실루엣","credit":{"by":"Samuel Zeller samuelzeller","url":"https://commons.wikimedia.org/wiki/File:Discussions_at_a_long_table_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"grp-02","src":"img/stock/grp-02.webp","src800":"img/stock/grp-02-800.webp","w":1600,"h":1069,"focus":"50% 50%","tone":"dark","cat":"seminar","tags":["people","스케치","회의","상담","손"],"types":["corp","voc","adult","univ"],"slots":["hero","about","card","gallery"],"alt":"한 테이블에서 노트에 함께 스케치하는 두 사람의 손","credit":{"by":"Brad Neathery bradneathery","url":"https://commons.wikimedia.org/wiki/File:Rough_Draft_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"grp-03","src":"img/stock/grp-03.webp","src800":"img/stock/grp-03-800.webp","w":1600,"h":1068,"focus":"50% 45%","tone":"light","cat":"seminar","tags":["people","회의","협업","손","서류"],"types":["corp","adult"],"slots":["hero","about","card","gallery"],"alt":"서류와 노트북을 함께 짚으며 회의하는 손들","credit":{"by":"helloquence","url":"https://commons.wikimedia.org/wiki/File:Helloquence-61189.jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"grp-05","src":"img/stock/grp-05.webp","src800":"img/stock/grp-05-800.webp","w":1600,"h":1068,"focus":"50% 55%","tone":"dark","cat":"seminar","tags":["people","카페","고객","서비스","원거리"],"types":["corp","lifelong","adult"],"slots":["hero","about","card","gallery"],"alt":"위에서 내려다본 카페 테이블의 사람들(원거리)","credit":{"by":"Tim Gouw punttim","url":"https://commons.wikimedia.org/wiki/File:Busy_people_at_a_coffee_shop_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"grp-06","src":"img/stock/grp-06.webp","src800":"img/stock/grp-06-800.webp","w":1600,"h":855,"focus":"50% 55%","tone":"light","cat":"seminar","tags":["people","포스트잇","워크숍","손","팀"],"types":["corp","univ","voc"],"slots":["hero","about","card","gallery"],"alt":"포스트잇과 펜을 든 워크숍 참가자들의 손","credit":{"by":"Nathan Kit Kennedy","url":"https://commons.wikimedia.org/wiki/File:Spokes_America_Students_Design_Plant_Pots.png","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"hum-39","src":"img/stock/hum-39.webp","src800":"img/stock/hum-39-800.webp","w":1600,"h":1067,"focus":"50% 50%","tone":"dark","cat":"desk","tags":["people","필기","연필","공부","시험"],"types":["adult","k12","univ"],"slots":["hero","about","card","gallery"],"alt":"연필로 노트에 메모하는 손","credit":{"by":"Thought Catalog thoughtcatalog","url":"https://commons.wikimedia.org/wiki/File:Taking_notes_with_a_pencil_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"hum-40","src":"img/stock/hum-40.webp","src800":"img/stock/hum-40-800.webp","w":1600,"h":1060,"focus":"55% 50%","tone":"light","cat":"art","tags":["people","디자인","드로잉","마커","크리에이터"],"types":["adult","voc"],"slots":["hero","about","card","gallery"],"alt":"마커를 옆에 두고 종이에 그리는 손","credit":{"by":"Kelly Sikkema kelsikkema","url":"https://commons.wikimedia.org/wiki/File:Design_work_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"hum-41","src":"img/stock/hum-41.webp","src800":"img/stock/hum-41-800.webp","w":1600,"h":1065,"focus":"55% 45%","tone":"dark","cat":"coding","tags":["people","모니터","원격","디지털","뒷모습"],"types":["voc","corp","adult"],"slots":["hero","about","card","gallery"],"alt":"여러 모니터 앞에서 일하는 사람의 뒷모습","credit":{"by":"Glenn Carstens-Peters glenncarstenspeters","url":"https://commons.wikimedia.org/wiki/File:Workday_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"hum-42","src":"img/stock/hum-42.webp","src800":"img/stock/hum-42-800.webp","w":1600,"h":808,"focus":"45% 45%","tone":"dark","cat":"coding","tags":["people","컴퓨터","개발","어두움","부트캠프"],"types":["adult","voc"],"slots":["hero","about","card","gallery"],"alt":"어두운 방에서 컴퓨터 화면을 보는 사람의 뒷모습","credit":{"by":"Mark Cruz mark_crz","url":"https://commons.wikimedia.org/wiki/File:Man_working_on_computer_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"hum-43","src":"img/stock/hum-43.webp","src800":"img/stock/hum-43-800.webp","w":1600,"h":1230,"focus":"50% 50%","tone":"light","cat":"desk","tags":["people","타자기","글쓰기","손","작가"],"types":["adult","lifelong"],"slots":["hero","about","card","gallery"],"alt":"타자기를 치는 손과 화분","credit":{"by":"rawpixel.com rawpixel","url":"https://commons.wikimedia.org/wiki/File:Writing_the_Moment_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"hum-45","src":"img/stock/hum-45.webp","src800":"img/stock/hum-45-800.webp","w":1280,"h":853,"focus":"50% 50%","tone":"dark","cat":"desk","tags":["people","필기","서류","흑백","손"],"types":["corp","public","adult"],"slots":["hero","about","card","gallery"],"alt":"흑백 사진 속 종이에 메모하는 손","credit":{"by":"Calum MacAulay","url":"https://commons.wikimedia.org/wiki/File:Person_taking_notes.jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"hum-46","src":"img/stock/hum-46.webp","src800":"img/stock/hum-46-800.webp","w":1600,"h":1067,"focus":"50% 50%","tone":"light","cat":"civic","tags":["people","계단","실루엣","리더"],"types":["public","corp"],"slots":["hero","about","card","gallery"],"alt":"건물 계단 위 사람의 실루엣","credit":{"by":"Taylor Nicole taynicole0630","url":"https://commons.wikimedia.org/wiki/File:Businessman_on_a_staircase_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"hum-49","src":"img/stock/hum-49.webp","src800":"img/stock/hum-49-800.webp","w":1600,"h":1144,"focus":"50% 50%","tone":"light","cat":"desk","tags":["people","온라인","쇼핑몰","마케팅","손"],"types":["adult","voc"],"slots":["hero","about","card","gallery"],"alt":"포장 상자와 노트북 사이에서 일하는 손(위에서)","credit":{"by":"rawpixel.com rawpixel","url":"https://commons.wikimedia.org/wiki/File:Shopping_for_gifts_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"hum-50","src":"img/stock/hum-50.webp","src800":"img/stock/hum-50-800.webp","w":1600,"h":1067,"focus":"55% 50%","tone":"dark","cat":"laptop","tags":["people","원격","노트북","어깨 너머","손"],"types":["voc","adult","corp"],"slots":["hero","about","card","gallery"],"alt":"어깨 너머로 본 노트북 앞 사람","credit":{"by":"Alejandro Escamilla alejandroescamilla","url":"https://commons.wikimedia.org/wiki/File:Man_typing_on_laptop_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"hum-51","src":"img/stock/hum-51.webp","src800":"img/stock/hum-51-800.webp","w":1600,"h":1067,"focus":"50% 60%","tone":"light","cat":"civic","tags":["people","출근","건물","원거리","취업"],"types":["voc","public","lifelong"],"slots":["hero","about","card","gallery"],"alt":"건물 앞 광장을 걸어가는 사람(원거리)","credit":{"by":"Bram Naus bramnaus","url":"https://commons.wikimedia.org/wiki/File:Businessman_leaving_the_office_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"lib-08","src":"img/stock/lib-08.webp","src800":"img/stock/lib-08-800.webp","w":1440,"h":960,"focus":"50% 50%","tone":"dark","cat":"library","tags":["people","열람실","도서관","원거리","공부"],"types":["public","univ","lifelong"],"slots":["hero","about","card","gallery"],"alt":"아치형 천장 아래 긴 열람실(원거리)","credit":{"by":"JOHN TOWNER heytowner","url":"https://commons.wikimedia.org/wiki/File:Reading_room_of_the_Biblioth%C3%A8que_Sainte-Genevi%C3%A8ve_in_2016.jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"sen-07","src":"img/stock/sen-07.webp","src800":"img/stock/sen-07-800.webp","w":1600,"h":1200,"focus":"50% 50%","tone":"light","cat":"senior","tags":["people","카페","신문","시니어","뒷모습"],"types":["lifelong","adult"],"slots":["hero","about","card","gallery"],"alt":"카페 창가에서 신문을 읽는 사람들의 뒷모습","credit":{"by":"Jeff Sheldon ugmonk","url":"https://commons.wikimedia.org/wiki/File:Old_man_reading_newspaper_with_tea_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}},
+  {"id":"wrk-08","src":"img/stock/wrk-08.webp","src800":"img/stock/wrk-08-800.webp","w":1600,"h":1065,"focus":"60% 50%","tone":"dark","cat":"workshop","tags":["people","공방","작업대","실습","공구"],"types":["voc","adult"],"slots":["hero","about","card","gallery"],"alt":"공구가 걸린 작업장에서 일하는 사람","credit":{"by":"Clark Young clark1","url":"https://commons.wikimedia.org/wiki/File:Clark_Young_2016_(Unsplash).jpg","license":"CC0 1.0","via":"Wikimedia Commons"}}
+  /* v34.5 H2 끝 */
   ];
   var TYPES = ['adult', 'k12', 'univ', 'lifelong', 'voc', 'corp', 'public'];
   var SLOTS = ['hero', 'about', 'card', 'space', 'gallery', 'cta'];
@@ -385,6 +406,70 @@
       return n;
     },
     credit: function (x) { if (typeof x === 'string') x = BY[x]; return x ? x.credit : null; }
+  };
+
+  /* ── v34.5 H2(R2 N1): 강좌 사진은 강좌명과 장면이 맞을 때만 ──
+     강좌명의 낱말 → 그 장면을 실제로 보여 주는 사진 묶음(사람이 눈으로 고른 id). 일반 장면(강의실 · 노트북 · 책상 · 회의실)은 넣지 않는다.
+     HPSTOCK.courseRule(name) → { k: 규칙 이름, ids } 또는 null · HPSTOCK.forCourse(type, name, { seed, exclude }) → 사진 1장 또는 null(→ 사진 없는 카드)
+     HPSTOCK.fitsCourse(id, name) → 이 사진이 강좌명과 맞는지(품질 점수 · 점검 도구용) */
+  var COURSE = [
+    ['piano', /피아노|건반/, ['mus-02', 'mus-08', 'mus-01', 'hum-29', 'mus-03', 'mus-04', 'mus-06']],
+    ['guitar', /기타 ?(교실|레슨|연주|입문|클래스|반)|통기타|우쿨렐레|기타$/, ['hum-30', 'mus-05']],
+    ['studio', /작곡|미디|녹음|음향|실용음악|보컬|홈레코딩|신디/, ['hum-31', 'hum-32', 'mus-05']],
+    ['music', /음악|악기|합주|합창|성악|바이올린|오케스트라|밴드/, ['mus-08', 'mus-02', 'hum-30', 'mus-01', 'hum-32', 'mus-06']],
+    ['callig', /캘리|서예|손글씨|펜글씨/, ['hum-28']],
+    ['paint', /수채|그림|드로잉|회화|미술|유화|일러스트|스케치|색연필/, ['art-01', 'hum-26', 'hum-27', 'art-02', 'art-03', 'art-06', 'art-04']],
+    ['design', /디자인|포트폴리오|편집디자인|UX|UI|피그마|포토샵/i, ['dsn-01', 'dsk-04']],
+    ['photo', /사진|카메라|촬영/, ['pho-01', 'pho-02']],
+    ['video', /영상|유튜브|편집|크리에이터|방송|미디어/, ['vid-01', 'pho-02']],
+    ['pottery', /도자|도예|물레|점토|흙/, ['hum-23', 'hum-24', 'hum-22', 'wrk-06']],
+    ['wood', /목공|가구|우드|나무/, ['hum-20', 'hum-18', 'wrk-02']],
+    ['knit', /뜨개|니트|털실|코바늘/, ['kni-03', 'kni-02', 'kni-01']],
+    ['weave', /직조|베틀|섬유|자수|바느질|퀼트/, ['hum-21', 'kni-02']],
+    ['craft', /공예|공방|만들기|메이커/, ['hum-17', 'hum-24', 'wrk-02', 'kni-02', 'hum-20']],
+    ['ai', /AI|인공지능|챗GPT|GPT|생성형|프롬프트|머신러닝|딥러닝/i, ['hum-07', 'rob-01', 'cod-03', 'cod-01']],
+    ['code', /코딩|프로그래밍|개발|파이썬|자바|웹|앱|SW|소프트웨어|알고리즘|프론트|백엔드|클라우드|보안/i, ['cod-03', 'hum-07', 'cod-01', 'cod-02', 'cod-04']],
+    ['data', /엑셀|데이터|통계|회계|재무|세무|전산|ERP|빅데이터|분석/i, ['dat-01']],
+    ['science', /과학|실험|화학|생물|물리|탐구|STEM/i, ['sci-01', 'hum-33', 'sci-02']],
+    ['soccer', /축구|풋살/, ['spo-06', 'spo-05']],
+    ['basket', /농구/, ['spo-03', 'spo-07', 'spo-04']],
+    ['sports', /육상|달리기|체육|운동회|스포츠|줄넘기|체력/, ['spo-08', 'spo-01', 'spo-02', 'spo-06', 'spo-03']],
+    ['yoga', /요가|필라테스|명상|스트레칭|마음챙김/, ['yog-01', 'yog-02', 'yog-03']],
+    ['bake', /제과|제빵|베이킹|빵|쿠키|디저트|케이크/, ['bak-01', 'bak-02', 'bak-04', 'bak-05', 'bak-03']],
+    ['barista', /바리스타|커피|라테|카페/, ['bar-01', 'bar-03', 'bar-02']],
+    ['cook', /요리|조리|한식|양식|중식|일식|셰프|반찬|외식/, ['coo-01', 'coo-02', 'coo-03']],
+    ['beauty', /메이크업|뷰티|네일|미용|헤어|피부|화장/, ['bea-02', 'bea-01']],
+    ['weld', /용접|배관|판금/, ['voc-01']],
+    ['auto', /정비|자동차|엔진|차량/, ['aut-01', 'aut-02', 'aut-03', 'wrk-05']],
+    ['machine', /전기|기계|설비|공구|기능사|CNC|선반|밀링|가공|제조|생산|공장|안전/i, ['hum-19', 'wrk-07', 'wrk-03', 'wrk-01', 'wrk-04']],
+    ['logi', /물류|유통|창고|배송|포장|공급망/, ['log-01', 'log-02']],
+    ['drone', /드론/, ['dro-01', 'dro-02']],
+    ['garden', /원예|정원|텃밭|가드닝|식물|숲|환경|생태|탄소|ESG/i, ['gar-01', 'nat-03', 'sen-04']],
+    ['family', /부모|육아|자녀|가족|태교|양육|엄마|아빠/, ['fam-01', 'fam-02', 'fam-03', 'fam-04', 'fam-05']],
+    ['kids', /유아|놀이|블록|키즈|유치|교구/, ['kid-01', 'kid-03', 'kid-04', 'kid-02', 'kid-06']],
+    ['lang', /영어|외국어|일본어|중국어|한국어|어학|회화|토익|토플|오픽|스페인어|프랑스어|독일어/, ['lan-01', 'lan-02', 'kid-09']],
+    ['math', /수학|연산|사고력|미적분|기하|수리/, ['brd-01', 'dsk-07', 'dsk-03']],
+    ['write', /논술|글쓰기|작문|에세이|자서전|문예/, ['hum-05', 'hum-02', 'dsk-09', 'dsk-01']],
+    ['read', /독서|(?<![정대])책|인문|고전|문학|북클럽|철학|역사|한자/, ['hum-37', 'hum-38', 'lib-07', 'lib-05', 'lib-06']],
+    ['counsel', /면접|취업|이력서|자기소개서|진로|커리어|상담|코칭|멘토|재취업|창업/, ['hum-06', 'hum-10', 'hum-04']],
+    ['legal', /법정|의무교육|청렴|윤리|개인정보|성희롱|괴롭힘|법률|계약|규정|컴플라이언스/, ['doc-01', 'dsk-08']],
+    ['service', /고객|서비스|응대|CS|민원|친절|영업|세일즈|협상/, ['hum-10', 'shk-01']],
+    ['exam', /시험|자격증|기출|모의고사|수능|입시|내신|공무원|합격|필기|실기|검정|학점/, ['hum-02', 'hum-03', 'dsk-01', 'hum-14', 'dsk-02', 'hum-01']],
+    ['senior', /시니어|어르신|실버|노인|인생 ?2막|50\+|신중년/, ['hum-34', 'sen-01', 'sen-03', 'kni-03', 'mus-03']]
+  ];
+  function courseRule(name) {
+    var t = String(name || ''); if (!t) return null; var best = null;
+    COURSE.forEach(function (r, i) { var m = r[1].exec(t); if (m && (!best || m.index < best.at)) best = { at: m.index, i: i, k: r[0], ids: r[2] }; });
+    return best ? { k: best.k, ids: best.ids.filter(function (id) { return !!BY[id]; }) } : null;
+  }
+  H.COURSE = COURSE;
+  H.courseRule = courseRule;
+  H.fitsCourse = function (id, name) { var r = courseRule(name); if (typeof id === 'object' && id) id = id.id; return !!(r && r.ids.indexOf(id) >= 0); };
+  H.forCourse = function (type, name, opts) {
+    opts = opts || {}; var r = courseRule(name); if (!r) return null; var ex = opts.exclude || [];
+    var ids = r.ids.filter(function (id) { return ex.indexOf(id) < 0; }); if (!ids.length) return null;
+    var k = opts.seed == null ? 0 : hash(opts.seed) % Math.min(ids.length, 2); /* 앞쪽(가장 맞는) 2장 안에서만 섞는다 */
+    return BY[ids[k]] || null;
   };
   window.HPSTOCK = H;
 })();
