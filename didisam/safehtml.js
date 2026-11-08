@@ -13,7 +13,7 @@
     'svg g path circle rect line polyline polygon ellipse defs lineargradient radialgradient stop use symbol title desc text tspan clippath mask pattern').split(' '));
   const DROP = new Set('script style template noscript object embed applet base link meta frame frameset foreignobject math form param xmp plaintext noembed noframes portal'.split(' '));
   const ATTR = new Set(('class id title lang dir role tabindex hidden style alt width height colspan rowspan scope headers align valign target rel name type value placeholder for ' +
-    'checked disabled readonly maxlength min max step loading decoding controls autoplay muted loop playsinline poster datetime open start reversed span label selected ' +
+    'checked disabled readonly maxlength min max step loading decoding fetchpriority controls autoplay muted loop playsinline poster datetime open start reversed span label selected ' +
     'multiple rows cols href src srcset sizes media kind srclang allow allowfullscreen frameborder referrerpolicy sandbox download').split(' '));
   const SVGA = /^(?:viewbox|d|fill|stroke|stroke-width|stroke-linecap|stroke-linejoin|stroke-dasharray|stroke-dashoffset|stroke-miterlimit|fill-rule|clip-rule|fill-opacity|stroke-opacity|opacity|cx|cy|r|rx|ry|x|y|x1|x2|y1|y2|points|transform|xmlns|xmlns:xlink|xlink:href|preserveaspectratio|offset|stop-color|stop-opacity|gradientunits|gradienttransform|clip-path|mask|font-size|font-family|font-weight|text-anchor|dominant-baseline|dx|dy|focusable|version|patternunits)$/;
   const URLA = new Set(['href', 'src', 'xlink:href', 'poster', 'cite', 'srcset', 'action', 'formaction', 'background', 'data']);

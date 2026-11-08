@@ -1,1 +1,110 @@
-/* v34.5 lhpshell */
+/* v34.5 lhpshell — 학습자 셸 ↔ 게시 홈페이지 이음새 (lhpshell.js · RULES_B2 · RULES_B3). 앱 화면(body.lapp)은 lapp.css가 셸을 숨기므로 손대지 않는다. */
+/* 1) 데모 · 미리보기 띠: 머리글 위 28px 한 줄 · 닫기 */
+body:not(.lapp) .pvbar.lhs-demo{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;min-height:28px;padding:0 40px;margin:0;background:#FFF6D6;color:#5C4400;font-size:12.5px;line-height:28px;letter-spacing:-.005em;border-bottom:1px solid #F1E2A8}
+body:not(.lapp) .pvbar.lhs-demo[hidden]{display:none}
+.pvbar .lhs-dt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pvbar .lhs-dx{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:44px;height:28px;display:grid;place-items:center;border:0;background:none;color:#5C4400;cursor:pointer;border-radius:6px}
+.pvbar .lhs-dx::after{content:'';position:absolute;inset:-8px 0}
+.pvbar .lhs-dx:hover{background:rgba(92,68,0,.08)}
+.pvbar .lhs-dx:focus-visible{outline:2px solid #5C4400;outline-offset:-2px}
+
+/* 2) 머리글 = 사이트 머리글: 테마 색 로고 칸 · 높이 72 / 56 · 그림자 없이 머리카락 선 */
+body.hpt-on:not(.lapp) header.lh .lg{background:var(--hpt-a);color:var(--hpt-on)}
+body.lhs-home header.lh{background:rgba(255,255,255,.94);border-bottom:1px solid rgba(17,24,39,.08);box-shadow:none}
+body.lhs-home header.lh .in{height:72px}
+body.lhs-home.hpt-on header.lh .acct .lbtn.pri,body.lhs-home.hpt-on header.lh .la-join{background:var(--hpt-a);color:var(--hpt-on);border-color:var(--hpt-a)}
+@media (max-width:900px){body.lhs-home header.lh .in{height:56px}}
+
+/* 3) 로그인(기존 웹 화면): 첫 화면 아래 「내 학습」 띠 — 한 덩어리로 묶어 홈페이지 섹션과 구분 */
+body.lhs-in .lhs-mine{background:var(--hpt-as,#F4F5F8);border-block:1px solid rgba(17,24,39,.06);padding:8px 0 16px}
+body.lhs-in .lhs-mine section.lai{padding-top:40px;padding-bottom:8px;background:transparent}
+body.lhs-in .lhs-mine section.lai h1{font-size:clamp(22px,3vw,30px);line-height:1.3;letter-spacing:-.02em}
+body.lhs-in .lhs-mine .lai-orb{display:none}
+body.lhs-in .lhs-mine .lux-cont,body.lhs-in .lhs-mine .lai-more{background:transparent}
+
+/* 3') 떠 있는 AI 튜터 버튼: PC는 오른쪽 아래 그대로, 휴대폰 홈에서는 행동 줄 안으로 들어가므로 숨긴다 */
+@media (max-width:900px){body.lhs-home .lt-fab{display:none!important}}
+
+/* 4) 휴대폰 행동 줄: 하단 탭 바로 위 · 56 + 여백 · 주 행동 1칸만 강조색(RULES_B2 §2 · §4) */
+.lhs-act{display:none}
+@media (max-width:900px){
+  body.lhs-home .lhs-act{position:fixed;left:0;right:0;bottom:var(--lhs-tb,62px);z-index:34;display:flex;align-items:center;gap:8px;padding:8px 16px;background:rgba(255,255,255,.96);-webkit-backdrop-filter:saturate(1.4) blur(12px);backdrop-filter:saturate(1.4) blur(12px);border-top:1px solid rgba(17,24,39,.08)}
+  body.lhs-home .lhs-act a,body.lhs-home .lhs-act button{min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--hpt-br,10px);font:inherit;font-size:15px;font-weight:700;letter-spacing:-.01em;text-decoration:none;cursor:pointer;white-space:nowrap}
+  body.lhs-home .lhs-act .lhs-ai{flex:none;width:48px;padding:0;border:1px solid rgba(17,24,39,.14);background:#fff;color:var(--hpt-at,#1F2937)}
+  body.lhs-home .lhs-act .lhs-b2{flex:1 1 0;padding:0 12px;border:1.5px solid rgba(17,24,39,.16);background:#fff;color:#1F2937}
+  body.lhs-home .lhs-act .lhs-b1{flex:1.4 1 0;padding:0 16px;border:1.5px solid var(--hpt-a,#1F2937);background:var(--hpt-a,#1F2937);color:var(--hpt-on,#fff)}
+  body.lhs-home .lhs-act .lhs-b1:active,body.lhs-home .lhs-act .lhs-b2:active,body.lhs-home .lhs-act .lhs-ai:active{transform:translateY(1px)}
+  body.lhs-home .lhs-act a:focus-visible,body.lhs-home .lhs-act button:focus-visible{outline:3px solid var(--hpt-a,#1F2937);outline-offset:2px}
+  body.lhs-home{padding-bottom:0!important}
+  body.lhs-home footer.lf{padding-bottom:calc(var(--lhs-tb,62px) + 72px)!important}
+  body.lhs-home .ltoast{bottom:calc(var(--lhs-tb,62px) + 80px)}
+  body.lhs-home.luxsheet .lhs-act,body.lhs-home.lt-on .lhs-act{display:none}
+}
+@media (prefers-reduced-motion:reduce){.lhs-act a,.lhs-act button{transition:none}}
+
+/* 5) 가입 띠: 홈페이지 끝(바닥글 바로 위) · 테마 색 띠 / 바닥글 아래 개인정보 한 줄은 바닥글 색에 맞춘다 */
+@media (max-width:600px){
+  body.lhs-home:not(.lapp) .lgj.lhs-join{margin:0;padding:28px 20px 32px;border:0;border-top:1px solid rgba(17,24,39,.08);border-radius:0;background:var(--hpt-as,#F4F5F8)}
+  body.lhs-home .lgj.lhs-join b{font-size:18px;line-height:26px;letter-spacing:-.02em}
+}
+footer.lf .smpriv.lhs-tone{margin:0;padding:12px 20px 16px;font-size:13px;line-height:1.5}
+footer.lf .smpriv.lhs-tone.lhs-dk{color:rgba(255,255,255,.72);border-top:1px solid rgba(255,255,255,.08)}
+
+/* 2') 홈페이지 머리글(HPS)이 사이트 머리글: 셸 머리글은 그 안의 메뉴 자리(slot)로 들어가 메뉴 링크만 보인다 */
+body.lhs-hps .lhs-head{position:sticky;top:0;z-index:45;display:block}
+body.lhs-hps .lhs-head>header.lh{position:static;display:flex;align-items:center;background:none!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;color:inherit;min-width:0}
+body.lhs-hps .lhs-head>header.lh>.in{display:flex;height:auto!important;padding:0;gap:0;max-width:none;width:auto;min-width:0}
+body.lhs-hps .lhs-head>header.lh .brand,body.lhs-hps .lhs-head>header.lh .acct,body.lhs-hps .lhs-head>header.lh .mnu,body.lhs-hps .lhs-head>header.lh .lcbell,body.lhs-hps .lhs-head>header.lh .la-join,body.lhs-hps .lhs-head>header.lh .la-acm{display:none!important}
+body.lhs-hps .lhs-head>header.lh nav.ln{display:flex;align-items:center;gap:clamp(18px,2.2vw,32px);background:none;padding:0;margin:0;border:0;box-shadow:none}
+body.lhs-hps .lhs-head>header.lh nav.ln>a,body.lhs-hps .lhs-head>header.lh nav.ln>.smmi>a,body.lhs-hps .lhs-head>header.lh .lux-mb{position:relative;background:none!important;color:inherit!important;font:inherit;font-size:15.5px;font-weight:550;letter-spacing:-.01em;padding:8px 0;border-radius:0;white-space:nowrap;text-decoration:none;opacity:.92}
+body.lhs-hps .lhs-head>header.lh nav.ln>a::after,body.lhs-hps .lhs-head>header.lh nav.ln>.smmi>a::after{content:'';position:absolute;left:0;right:0;bottom:2px;height:2px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .2s}
+body.lhs-hps .lhs-head>header.lh nav.ln>a:hover::after,body.lhs-hps .lhs-head>header.lh nav.ln>a.on::after,body.lhs-hps .lhs-head>header.lh nav.ln>.smmi>a.on::after{transform:scaleX(1)}
+body.lhs-hps .lhs-head>header.lh nav.ln>a.on{opacity:1}
+body.lhs-hps .lhs-head>header.lh a:focus-visible,body.lhs-hps .lhs-head>header.lh button:focus-visible{outline:3px solid currentColor;outline-offset:3px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){body.lhs-hps .lhs-head>header.lh nav.ln a::after{transition:none}}
+@media (max-width:900px){body.lhs-hps .lhs-head>header.lh{display:none!important}}
+
+/* 공지 한 줄(홈 밖 화면): 셸 머리글 위 · 40px · 닫기 */
+.lhs-nt{background:#1F2430;color:#fff;font-size:14px;line-height:1.4}
+.lhs-ntw{max-width:1280px;margin:0 auto;padding:0 16px;min-height:40px;display:flex;align-items:center;gap:12px}
+.lhs-ntw b{flex:none;font-size:12.5px;font-weight:700;color:#C9D2FF}
+.lhs-ntw a,.lhs-ntw span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;text-decoration:none}
+.lhs-ntw a:hover{text-decoration:underline;text-underline-offset:3px}
+.lhs-ntw button{flex:none;width:44px;height:40px;margin-right:-12px;display:grid;place-items:center;border:0;background:none;color:#fff;cursor:pointer;border-radius:6px}
+.lhs-ntw button:focus-visible,.lhs-ntw a:focus-visible{outline:2px solid #fff;outline-offset:2px}
+body.lapp .lhs-nt{display:none}
+
+/* 로그인(기존 웹 화면) 홈: 첫 화면 위 한 줄 바로가기 · 홈페이지 뒤 「내 학습」 */
+body.lhs-in .lhs-mt{background:var(--hpt-as,#F1F3F8);border-bottom:1px solid rgba(17,24,39,.06);font-size:14px;line-height:1.4;color:#1F2430}
+body.lhs-in .lhs-mtw{max-width:1280px;margin:0 auto;padding:0 16px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+body.lhs-in .lhs-mtw span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.lhs-in .lhs-mtw em{font-style:normal;font-weight:700;color:var(--hpt-at,#1F2430);font-variant-numeric:tabular-nums}
+body.lhs-in .lhs-mtw a{flex:none;display:inline-flex;align-items:center;gap:4px;min-height:44px;font-weight:700;color:var(--hpt-at,#1F2430);text-decoration:none}
+body.lhs-in .lhs-mtw a:hover{text-decoration:underline;text-underline-offset:3px}
+body.lhs-in .lhs-mine{scroll-margin-top:84px;outline:0}
+body.lhs-home .lgj.lhs-join .lbtn.pri{background:var(--hpt-a,#1F2430)!important;color:var(--hpt-on,#fff)!important;border-color:var(--hpt-a,#1F2430)!important}
+
+/* 홈: 홈페이지 끝 → 바닥글 사이 셸 여백 없애기(바닥글이 바로 이어짐) */
+body.lhs-home #lm{padding-bottom:0!important;margin-bottom:0!important}
+body.lhs-home footer.lf{margin-top:0!important}
+body.lhs-in .lhs-mtw .lhs-ab{display:inline-flex;margin-left:12px}
+body.lhs-in .lhs-mtw .lhs-ab button{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 4px;border:0;background:none;font:inherit;font-size:13px;color:#4B5160;cursor:pointer}
+body.lhs-in .lhs-mtw .lhs-ab button:hover{color:#111;text-decoration:underline;text-underline-offset:3px}
+body.lhs-in .lhs-mtw>a{margin-left:auto}
+@media (max-width:600px){body.lhs-in .lhs-mtw{flex-wrap:wrap;row-gap:0}body.lhs-in .lhs-mtw .lhs-ab{order:3;margin:0 0 4px -4px;width:100%}body.lhs-in .lhs-mtw .lhs-ab button{min-height:44px}}
+/* 어두운 계열(noir) 행동 줄 — M1 .hpm-act와 같은 값 */
+@media (max-width:900px){
+  body.lhs-home .lhs-act.dk{background:rgba(14,14,16,.94);border-top-color:rgba(255,255,255,.12)}
+  body.lhs-home .lhs-act.dk .lhs-b2,body.lhs-home .lhs-act.dk .lhs-ai{background:transparent;color:#F3F4F6;border-color:rgba(255,255,255,.28)}
+  body.lhs-home .lhs-act.dk.wb .lhs-b1{background:#fff;color:#111;border-color:#fff}
+}
+/* PC에서도 홈페이지 끝(바닥글 위)에 가입 · 시작 띠 하나 — 방문자의 가입 진입(RULES_B3 신청 띠: 제목 1줄 + 버튼 1~2개) */
+@media (min-width:601px){
+  body.lhs-home:not(.lapp) .lgj.lhs-join{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:0;padding:40px max(24px,calc((100% - 1200px) / 2));border:0;border-top:1px solid rgba(17,24,39,.08);border-radius:0;background:var(--hpt-as,#F4F5F8)}
+  body.lhs-home .lgj.lhs-join b{display:block;font-size:20px;line-height:28px;letter-spacing:-.02em;color:#111827}
+  body.lhs-home .lgj.lhs-join small{display:block;margin-top:4px;font-size:15px;line-height:22px;color:#4B5160}
+  body.lhs-home .lgj.lhs-join .lgj-a{display:flex;align-items:center;gap:16px;flex:none}
+  body.lhs-home .lgj.lhs-join .lgj-a .lbtn{min-height:48px;padding:0 24px;border-radius:var(--hpt-br,10px)}
+  body.lhs-home .lgj.lhs-join .lgj-lk{min-height:44px;display:inline-flex;align-items:center;color:#1F2430;text-decoration:underline;text-underline-offset:3px}
+  body.lhs-home .lgj.lhs-join .lgj-s{font-size:14px;color:#4B5160}
+}
