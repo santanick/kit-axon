@@ -23,8 +23,8 @@
     't4-hrd-inst': { card: 'table', L: 'portal', th: 'official', pal: 'harbor', ph: ['lec-02', 'stu-02', 'lec-01', 'lib-05'], hd: ['contact', 'biz', 'full'], ck: 'contact', ord: ['banner', 'notices', 'features', 'classes', 'stats', 'steps', 'cta'] },
     /* 공공기관 직원 포털: 왼쪽 고정 내비게이션 */
     't4-agency': { card: 'list', L: 'sidebar', th: 'clean', pal: 'slate', ph: ['hum-36', 'dsk-03', 'off-05', 'arc-02'], hd: ['solid', 'cols', 'drawer'], ck: 'photo', ord: ['banner', 'classes', 'features', 'notices', 'steps', 'stats', 'cta'] },
-    /* 사이버 연수원: 벤토(나의 강의실 · 배정 과정 · 숫자 칸) */
-    't4-cyber': { card: 'photo', L: 'bento', th: 'tech', pal: 'graphite', ph: ['hum-09', 'cod-03', 'off-06', 'dsk-05'], hd: ['float', 'mega', 'drawer'], ck: 'contact', ord: ['banner', 'classes', 'steps', 'notices', 'features', 'stats', 'cta'],
+    /* (FD2: 팔레트 graphite → denim — 문의 띠 eyebrow 대비 4.44 → 4.5 이상) 사이버 연수원: 벤토(나의 강의실 · 배정 과정 · 숫자 칸) */
+    't4-cyber': { card: 'photo', L: 'bento', th: 'tech', pal: 'denim', ph: ['hum-09', 'cod-03', 'off-06', 'dsk-05'], hd: ['float', 'mega', 'drawer'], ck: 'contact', ord: ['banner', 'classes', 'steps', 'notices', 'features', 'stats', 'cta'],
       ren: [['배정 과정 확인', '내 과정 열기']],
       add: [['notices', { type: 'text', data: { variant: 'info', eyebrow: 'FAQ', title: '학습 중 자주 묻는 질문', cols: [['배정된 과정이 보이지 않아요?', '기관 계정으로 로그인했는지 확인하고, 그래도 없으면 교육 담당 부서에 배정을 요청하세요.'], ['영상이 끝까지 재생됐는데 이수가 안 돼요?', '퀴즈 · 설문까지 마쳐야 이수로 처리됩니다. 나의 강의실에서 남은 항목을 확인하세요.'], ['수료증은 어디서 받나요?', '이수한 과정은 교육이력에서 수료증을 바로 내려받을 수 있습니다.']] } }]] },
     /* 법정의무교육: 게시판형(KRDS 분위기 · 마감 공지 우선) */

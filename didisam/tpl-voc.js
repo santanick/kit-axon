@@ -239,6 +239,9 @@
      portal · bulletin 4종(consort · remote · jobcenter · voc-card)의 '사진 + 찾기 상자 + 아이콘 줄'이 겹치지 않게 서로 다른 변형을 준다 */
   const FD2V = { 't3-v-design': 'c', 'voc-employer': 'b', 't3-v-trade': 'c', 't3-v-beauty': 'b', 't3-v-youth': 'c', 't3-v-license': 'b', 't3-v-factory': 'a',
     't3-v-remote': 'b', 't3-v-consort': 'c', 't3-v-jobcenter': 'a', 'voc-card': 'b' };
+  /* 머리글 · 바닥글: FA의 직업훈련 유형 목록(contact · util · left / cta · biz · split) 안에서 고르게 나눈다 */
+  const FD2H = { 't3-v-kdt': ['contact', 'cta'], 't3-v-design': ['util', 'biz'], 't3-v-trade': ['left', 'split'], 't3-v-beauty': ['contact', 'biz'], 't3-v-license': ['util', 'split'], 't3-v-midlife': ['left', 'cta'], 't3-v-youth': ['contact', 'split'], 't3-v-remote': ['util', 'cta'], 't3-v-factory': ['left', 'biz'], 't3-v-care': ['contact', 'cta'], 't3-v-consort': ['util', 'biz'], 't3-v-jobcenter': ['left', 'split'], 'voc-card': ['contact', 'biz'], 'voc-employer': ['util', 'split'], 'tv-auto': ['left', 'cta'], 'tv-office': ['contact', 'split'] };
+  Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'voc') return;
     const c = CFG[id];
