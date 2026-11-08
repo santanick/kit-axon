@@ -88,9 +88,12 @@
   /* 허용: data:image · https · blob · 같은 출처 상대 경로(img/stock/… · /api/media/…) — 스킴 붙은 경로(javascript: 등) · //호스트 · .. 는 막음 */
   const okSrc = v => { v = String(v || '').trim(); if (/^(data:image\/|https:\/\/|blob:)/i.test(v)) return true; if (!v || /^\/\//.test(v) || /^[a-z][a-z0-9+.-]*:/i.test(v) || /\.\./.test(v)) return false; return /^\/?[\w\-./%]+(\?[\w=&.%-]*)?$/.test(v); };
   H.okSrc = okSrc;
-  H.img = (s, slot, d) => { const m = s && s.img && s.img[slot];
+  /* 샘플 사진(HPSTOCK)인지: site.img[slot].stock(slotImg가 넣는 id) 또는 img/stock/ 경로 — s.stockOff면 템플릿 지정 사진(s.photos)도 같이 끈다(FIXLIST 17) */
+  const isStockImg = m => !!(m && (m.stock || /(^|\/)img\/stock\//.test(String(m.src || ''))));
+  H.isStockImg = isStockImg;
+  H.img = (s, slot, d) => { let m = s && s.img && s.img[slot]; if (m && s.stockOff && isStockImg(m)) m = null;
     if (m && okSrc(m.src)) return { src: m.src, alt: m.alt || '', fit: m.fit === 'contain' ? 'contain' : 'cover', pos: /^[\d.]+% [\d.]+%$/.test(m.pos || '') ? m.pos : '50% 50%' };
-    if (slot === 'hero') { const b = d || (((s && s.sections) || []).find(x => x && x.type === 'banner') || {}).data || {}; if (okSrc(b.img)) return { src: b.img, alt: b.alt || '', fit: 'cover', pos: '50% 50%' }; }
+    if (slot === 'hero') { const b = d || (((s && s.sections) || []).find(x => x && x.type === 'banner') || {}).data || {}; if (okSrc(b.img) && !(s && s.stockOff && isStockImg({ src: b.img }))) return { src: b.img, alt: b.alt || '', fit: 'cover', pos: '50% 50%' }; }
     if (/^cls-/.test(slot)) { const c = (S.classes || []).find(x => 'cls-' + x.id === slot); if (c && okSrc(c.thumb)) return { src: c.thumb, alt: c.name || '', fit: 'cover', pos: '50% 50%' }; }
     return null; };
   /* 대체 도형(사진 · HPL.art가 모두 없을 때만) — 원 · 블롭 없이 면과 가는 선으로 공간감만 */
@@ -117,7 +120,10 @@
   H.resetStock = () => { used = new Set(); };
   H.stock = (s, slot, o) => { o = o || {}; const P = window.HPSTOCK; if (!P || !s || s.stockOff) return null; const L = (Array.isArray(P.list) ? P.list : []).filter(x => x && okSrc(x.src)); if (!L.length) return null;
     const ty = typeKey(); const sk = /^cls-/.test(slot) ? 'card' : (KWS[o.scene] ? o.scene : KWS[slot] ? slot : 'card');
-    let first = null; const cur = (CUR[sk] || {})[ty === 'univ_lms' ? 'univ' : ty]; if (cur && typeof P.get === 'function') { for (const id of cur) { const x = P.get(id); if (x && okSrc(x.src) && !used.has(x.src)) { first = x; break; } } }
+    let first = null;
+    /* 템플릿이 정한 사진(tp.photos → s.photos, HPSTOCK id)을 가장 먼저 — hplay-b pickStock · S3 photo()와 같은 순서 */
+    const pk = /^cls-/.test(slot) ? 'card' : slot; const pid = s.photos && s.photos[pk]; if (pid && typeof P.get === 'function') { const x = P.get(Array.isArray(pid) ? pid[(o.k || 0) % pid.length] : pid); if (x && okSrc(x.src) && !used.has(x.src)) first = x; }
+    const cur = (CUR[sk] || {})[ty === 'univ_lms' ? 'univ' : ty]; if (!first && cur && typeof P.get === 'function') { for (const id of cur) { const x = P.get(id); if (x && okSrc(x.src) && !used.has(x.src)) { first = x; break; } } }
     if (!first && typeof P.forScene === 'function') { const sl = { hero: 'hero', about: 'about', card: 'card', space: 'space', gallery: 'gallery', cta: 'cta' }[sk] || 'card';
       const tp = s.tpl && typeof TPL !== 'undefined' ? (TPL.find(t => t.id === s.tpl) || {}) : {}; const scene = String(o.text || tp.scene || s.scene || (SCD[ty === 'univ_lms' ? 'univ' : ty] || SCD.adult)[sl === 'gallery' ? 'about' : sl] || '');
       try { const r = P.forScene(ty === 'univ_lms' ? 'univ' : ty, scene, sl, { seed: ((S && S.org && S.org.name) || '') + slot, exclude: L.filter(x => used.has(x.src)).map(x => x.id), tone: o.tone }); first = Array.isArray(r) ? r[0] : r; } catch (e) { first = null; } }
@@ -152,16 +158,38 @@
       if (v === 'info') return (d.hpt === 'faq' || cols(d).every(([a]) => /\?$/.test(String(a).trim()))) && cols(d).length ? 'faq' : 'info'; return v; }
     return x.type; }
   H.kind = kindKey;
+  /* ── 계열 변형(layoutVar · R1 H1): 같은 계열을 다른 유형 · 템플릿이 써도 첫 화면과 아래 섹션이 달라 보이게 한다.
+     site.layoutVar = 'a'|'b'|'c'(없거나 목록에 없으면 첫 변형). 섹션 · 바닥글 · body에 hpl-v-<id> 클래스가 붙고, 계열 변형 CSS가 그 아래로 범위를 좁힌다.
+     H.defVars(id, [{ id, name, desc, dark }], css(site, th, T, v)) — 계열 등록 순서와 무관. H.vars(id) · H.varOf(site) · H.setVar(site, v) */
+  H.vdef = H.vdef || {};
+  H.defVars = (id, list, css) => { H.vdef[id] = { list: list || [], css }; };
+  H.vars = id => { const L = ((H.vdef[id] || {}).list || []); return (L.length ? L : [{ id: 'a', name: '기본', desc: '', dark: false }]).map(x => Object.assign({}, x)); };
+  H.varOf = s => { const L = H.vars(s && s.layout); const v = s && s.layoutVar; return L.some(x => x.id === v) ? v : L[0].id; };
+  H.setVar = (s, v) => { if (!s) return s; if (v && H.vars(s.layout).some(x => x.id === v)) s.layoutVar = v; else delete s.layoutVar; return s; };
+  /* 사진 위 스크림(M1 · FIXLIST 1): 검정 대신 팔레트의 깊은 색(HPC.photo().scrim), 글자 쪽 40%에만 진하게 — dir = 글자가 있는 쪽에서 반대쪽으로(to top · to right …) */
+  H.scrimC = (s, slot) => { const m = H.img(s, slot || 'hero'); let c = ''; try { if (window.HPC && typeof HPC.photo === 'function') c = (HPC.photo(m ? m.src : null, s) || {}).scrim || ''; } catch (e) { c = ''; }
+    return /^rgba?\(/.test(c) ? c : 'rgba(12,16,24,.8)'; };
+  H.scrim = (s, slot, dir, o) => { o = o || {}; const c = H.scrimC(s, slot); const m = c.match(/rgba?\(([^)]+)\)/); const p = m ? m[1].split(',').map(x => x.trim()) : ['12', '16', '24', '.8']; const a0 = Math.min(.92, Math.max(.7, +(p[3] || .8) + (o.add || 0)));
+    const A = x => `rgba(${p[0]},${p[1]},${p[2]},${(a0 * x).toFixed(3)})`; const e = o.end || 40;
+    return `linear-gradient(${dir || 'to top'},${A(1)} 0%,${A(.92)} ${Math.round(e * .55)}%,${A(.55)} ${e}%,${A(.12)} ${Math.round(e * 1.5)}%,${A(0)} ${Math.min(100, Math.round(e * 1.9))}%)`; };
+  /* ── 머리말(eyebrow) 한글화(R1 M2 · RULES_B2 5): 영어만 있는 머리말은 공공 · 학원 · 평생 · 직업 · 기업 · 성인에서 한글 라벨로,
+     대학 · 프리미엄 테마는 '한글 · ENGLISH' 병기로 바꿔 그린다(데이터는 그대로 — 운영자가 한글로 고치면 그 값이 쓰인다) */
+  const EYW = [[/faculty|teacher|instructor/i, '교원'], [/public\s*service|government|civic|citizen/i, '시민 교육'], [/campus|university|college/i, '대학'], [/course|class|lecture|curriculum/i, '교육과정'], [/notice|news/i, '알림'], [/review|voice|testimonial/i, '수강 후기'], [/faq|question/i, '자주 묻는 질문'], [/contact|consult|apply|join|enrol/i, '상담 · 신청'], [/schedule|calendar/i, '일정'], [/about|intro|story/i, '소개'], [/step|process|how/i, '진행 순서'], [/youth|kid|junior|child/i, '어린이 · 청소년'], [/senior|lifelong/i, '평생학습'], [/career|job|work/i, '취업 · 직무'], [/\bai\b|digital|data|coding|tech/i, '디지털 · AI'], [/green|climate/i, '기후 · 환경'], [/cyber|security/i, '정보보호'], [/art|design|music|craft/i, '예술 · 공예'], [/online|e-?learning/i, '온라인'], [/academy/i, '아카데미'], [/program/i, '프로그램'], [/center|centre/i, '센터'], [/train|skill/i, '훈련']];
+  const KEY = { banner: '', classes: '교육과정', notices: '알림', reviews: '수강 후기', faq: '자주 묻는 질문', cta: '상담 · 신청', stats: '숫자로 보기', steps: '진행 순서', timeline: '진행 순서', features: '특징', info: '안내', plain: '소개', profiles: '강사', map: '오시는 길', image: '공간', video: '영상' };
+  H.koEy = (v, s, k) => { if (!v || /[가-힣]/.test(String(v)) || !/[A-Za-z]/.test(String(v))) return v; const ty = typeKey(); const both = ty === 'univ' || ty === 'univ_lms' || (s && s.theme === 'premium');
+    const hit = EYW.find(([re]) => re.test(v)); const ko = hit ? hit[1] : (KEY[k] || ((S && S.org && S.org.name) || '')); if (!ko) return v; return both ? `${ko} · ${String(v).toUpperCase()}` : ko; };
+  H.koEyOn = s => { const ty = typeKey(); return !(ty === 'univ' || ty === 'univ_lms' || (s && s.theme === 'premium')); };
   let band = 0;
   H.render = (x, i, s) => { const F = H.of(s); if (!F || !x) return null; const d = x.data || {}; const k = kindKey(x);
     const fn = k === 'banner' ? F.hero : F.sec && F.sec[k]; if (typeof fn !== 'function') return null;
     const T = H.tok(s); if (!T) return null; const th = thOf(s);
     if (i === 0) { band = 0; H.resetStock(); } const alt = !(k === 'banner' || k === 'cta' || k === 'stats') && (band++ % 2 === 1);
-    const ctx = { x, i, alt, edit: editing(), id: s.layout, u: H.u, kind: k };
-    const h = fn.call(k === 'banner' ? F : F.sec, s, d, th, T, ctx); if (h == null && alt) band--;
+    const ctx = { x, i, alt, edit: editing(), id: s.layout, u: H.u, kind: k, v: H.varOf(s) };
+    const ey = H.koEy(d.eyebrow, s, k); const d2 = ey === d.eyebrow ? d : Object.assign({}, d, { eyebrow: ey });
+    const h = fn.call(k === 'banner' ? F : F.sec, s, d2, th, T, ctx); if (h == null && alt) band--;
     return h; };
   /* 섹션 표시 클래스 + 바로 고치기 표시(data-hpe) */
-  const tagSec = (h, id, k) => String(h).replace(/<section\b([^>]*?)\bclass="/g, `<section$1class="hpl-${id} hpl-k-${k} `);
+  const tagSec = (h, s, k) => String(h).replace(/<section\b([^>]*?)\bclass="/g, `<section$1class="hpl-${s.layout} hpl-v-${H.varOf(s)} hpl-k-${k} `);
   const markEdit = (h, x) => { const m = editing() ? HPE.map.get(x) : null; if (!m || /data-hpe="/.test(h)) return h; h = h.replace(/<section\b/g, `<section data-hpe="${E(m.key)}|${m.i}"${x.hide ? ' data-hpe-hid="1"' : ''}`); if (!/<section\b/.test(h)) h = `<section data-hpe="${E(m.key)}|${m.i}">${h}</section>`; return h; };
   { const base = proSec; proSec = (x, i, s, lk) => {
     const F = H.of(s); if (!F || !x || !s.theme) return base(x, i, s, lk);
@@ -169,13 +197,13 @@
     const d = x.data || {}; if (+d.dstyle && !(x.type === 'banner' && +d.dstyle === 2)) return base(x, i, s, lk); /* 직접 고른 디자인 스타일은 존중 */
     const k = kindKey(x); let h = null;
     try { h = H.render(x, i, s); } catch (e) { console.error('HPL', s.layout, k, e); h = null; }
-    if (h == null) { const b = base(x, i, s, lk) || ''; return b ? tagSec(b, s.layout, k) : b; }
+    if (h == null) { const b = base(x, i, s, lk) || ''; return b ? tagSec(b, s, k) : b; }
     if (!h) return '';
-    return markEdit(tagSec(h, s.layout, k), x); }; }
+    return markEdit(tagSec(h, s, k), x); }; }
 
   /* ═════════ CSS · siteHTML 연결 ═════════ */
   function baseCSS(s, th, T, id) { const P = `.hpl-${id}`; const big = th.big ? 1.14 : 1; const px = n => Math.round(n * big) + 'px';
-    return `${P}{--hpl-serif:'Noto Serif KR','Noto Serif CJK KR','Nanum Myeongjo','AppleMyungjo','Batang',serif;--hpl-sans:Pretendard,'Pretendard Variable','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR','Noto Sans CJK KR',sans-serif;--hpl-gut:clamp(20px,4vw,48px)}
+    return `${P}{--hpl-sans:Pretendard,'Pretendard Variable','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR','Noto Sans CJK KR',sans-serif;--hpl-gut:clamp(20px,4vw,48px)}
 ${P} .hpl-w{max-width:1200px;margin:0 auto;padding:0 var(--hpl-gut);position:relative}
 ${P} .hpl-img{margin:0;position:relative;overflow:hidden;background:${T.as};display:block}${P} .hpl-img>img,${P} .hpl-img>svg{position:absolute;inset:0;width:100%;height:100%;display:block}${P} .hpl-img>img{object-fit:cover}
 ${P} .hpl-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:${px(50)};padding:0 ${px(24)};font-weight:700;font-size:${px(16)};letter-spacing:-.01em;border-radius:var(--br);white-space:nowrap;transition:background .15s,color .15s,box-shadow .15s}
@@ -184,14 +212,25 @@ ${P} a:focus-visible,${P} summary:focus-visible{outline:3px solid ${fit(T.a, T.b
 ${P} .hpl-hint{border:1.5px dashed ${al(T.a, .45)};padding:18px;text-align:center;color:${T.at};font-weight:650;background:${T.as};border-radius:var(--r)}
 ${P} li.tx b{font-size:clamp(${px(26)},3vw,${px(42)})!important;white-space:nowrap;letter-spacing:-.03em!important}${P} .hp-av{background:var(--a)!important;color:var(--on)!important}${P} .hp-stars,${P} .hpl-stars{color:#8A5A0B}${P} .hp-stars i{color:#5F6672}
 @media(prefers-reduced-motion:reduce){${P} *{transition:none!important;animation:none!important}}`; }
+  /* 모든 계열 공통 다듬기(R1 수정 회차 FD1)
+     H7 워드마크 · 큰 숫자 · 인용은 테마 제목 글꼴(F1: --hd-ff · --hd-fw · --hd-ls)을 따른다 — 글꼴 이름은 직접 쓰지 않는다(HPF가 이름을 보고 파일을 붙임)
+     M2 한글 머리말은 대문자 · 넓은 자간을 끈다 / L4 휴대폰은 첫 화면 사진이 글보다 먼저(계열별 규칙은 변형 CSS) */
+  function fd1CSS(s, th, T) { const P = `.hpl-${s.layout}`; const serifQ = th.id === 'premium' || th.id === 'campus' || s.layout === 'editorial' || s.layout === 'noir';
+    const num = `${P} :is([class*="-fl"],[class*="facts"],[class*="-fact"],[class*="-nl"],[class*="-num"],[class*="-stat"],[class*="-kpi"]) b`;
+    return `${num},${P} .ty-huge{font-family:var(--hd-ff,inherit);font-weight:var(--hd-fw,800);font-variant-numeric:tabular-nums}
+${P} blockquote,${P} blockquote p,${P} [class$="-q"] p{font-family:${serifQ ? 'var(--hd-ff,inherit)' : 'var(--bd-ff,inherit)'};font-weight:${serifQ ? 400 : 500}}
+.hpl-f.${'hpl-' + s.layout} .hps-wm,.hpl-f.${'hpl-' + s.layout} .gf-wm,${P}.gf b.gf-n{font-family:var(--hd-ff,inherit);font-weight:var(--hd-fw,800);letter-spacing:var(--hd-ls,-.03em)}
+${H.koEyOn(s) ? `${P} :is(.hpl-ey,[class$="-ey"]){text-transform:none;letter-spacing:.02em}` : ''}`; }
   H.css = s => { const F = H.of(s); if (!F) return ''; const T = H.tok(s); if (!T) return ''; const th = thOf(s); let c = baseCSS(s, th, T, s.layout);
     try { if (typeof F.css === 'function') c += '\n' + F.css(s, th, T); } catch (e) { console.error('HPL css', s.layout, e); }
+    try { c += '\n' + fd1CSS(s, th, T); } catch (e) { console.error('HPL fd1 css', e); }
+    try { const V = H.vdef[s.layout]; if (V && typeof V.css === 'function') c += `\n/* var ${H.varOf(s)} */` + V.css(s, th, T, H.varOf(s)); } catch (e) { console.error('HPL var css', s.layout, e); }
     return c; };
   { const base = siteHTML; siteHTML = (s, full, lang) => { const F = s && H.of(s); if (!F) return base(s, full, lang);
     H.resetStock(); let tmp = false; if (!s.theme && window.HPT && typeof HPT.rec === 'function') { s.theme = HPT.rec(typeKey()); tmp = true; }
     try { let h = base(s, full, lang); const c = H.css(s); if (!c) return h;
-      h = h.replace('</style>', `/* hpl ${s.layout} */${c.replace(/<\/?style/gi, '')}</style>`).replace(/<body class="([^"]*)"/, `<body class="$1 hpl-on hpl-${s.layout}"`);
-      h = h.replace(/<footer class="gf\b/g, `<footer class="gf hpt hpl-f hpl-${s.layout}`);
+      h = h.replace('</style>', `/* hpl ${s.layout} */${c.replace(/<\/?style/gi, '')}</style>`).replace(/<body class="([^"]*)"/, `<body class="$1 hpl-on hpl-${s.layout} hpl-v-${H.varOf(s)}"`);
+      h = h.replace(/<footer class="gf\b/g, `<footer class="gf hpt hpl-f hpl-${s.layout} hpl-v-${H.varOf(s)}`);
       return h; } catch (e) { console.error('HPL siteHTML', e); return base(s, full, lang); } finally { if (tmp) delete s.theme; } }; window.siteHTML = siteHTML; }
 })();
 
@@ -278,7 +317,7 @@ ${P} a:hover .hpl-img img{transform:scale(1.035)}${P} .hpl-img img{transition:tr
     },
     css(s, th, T) { const P = '.hpl-editorial'; const px = pxf(th); const ln = u.al(T.ink, .14); const sansT = /^(clean|tech|official|senior|)$/.test(th.id || ''); /* 고딕 테마에서도 매거진형은 명조 제목(계열 정체성), 명조 · 둥근 · 장식 테마는 테마 글꼴 */
       return `${typeCSS(P, th, T)}
-${P} .ed-h1,${P} .ed-shh h2,${P} .ed-lead h3,${P} .ed-list b,${P} .ed-ctt h2,${P} .ed-q blockquote,${P} .ed-fl b,${P} .ed-no{font-family:var(--hpl-serif);color:var(--ink)}
+${P} .ed-h1,${P} .ed-shh h2,${P} .ed-lead h3,${P} .ed-list b,${P} .ed-ctt h2,${P} .ed-q blockquote,${P} .ed-fl b,${P} .ed-no{font-family:var(--hpl-serif,var(--hd-ff,serif));color:var(--ink)}
 ${P}.ed-hero{background:var(--bg);padding:clamp(20px,3vw,32px) 0 clamp(56px,8vw,${px(112)})}
 ${P} .ed-mast{display:flex;align-items:center;justify-content:space-between;gap:12px 28px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--ink)}${P} .ed-mast .hpl-ey{margin:0}
 ${P} .ed-bd{display:flex;flex-wrap:wrap;margin:0;padding:0;list-style:none;font-size:${px(13.5)};color:var(--mu)}${P} .ed-bd li+li{border-left:1px solid ${ln};margin-left:14px;padding-left:14px}
@@ -296,7 +335,7 @@ ${P} .ed-ab{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:32px
 ${P} .ed-shh h2{margin:0;font-weight:500;font-size:clamp(${px(30)},3.6vw,${px(48)});line-height:1.18;letter-spacing:-.03em}${P} .ed-one{margin-bottom:48px;max-width:760px}
 ${P} .ed-items{list-style:none;margin:40px 0 0;padding:0;border-top:1px solid var(--ink)}${P} .ed-items li{display:grid;grid-template-columns:56px minmax(0,1fr);gap:16px;padding:24px 0;border-bottom:1px solid ${ln}}
 ${P} .ed-ix{font-size:${px(13)};font-weight:700;color:var(--at);padding-top:4px;letter-spacing:.04em}${P} .ed-items h3{margin:0 0 6px;font-size:${px(19)};font-weight:700;letter-spacing:-.02em}${P} .ed-items p{margin:0;color:var(--mu);line-height:1.7}
-${P} .ed-two{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:32px 64px}${P} .ed-body{margin:0;font-family:var(--hpl-serif);font-size:${px(20)};line-height:1.9;color:var(--ink)}
+${P} .ed-two{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:32px 64px}${P} .ed-body{margin:0;font-family:var(--hpl-serif,var(--hd-ff,serif));font-size:${px(20)};line-height:1.9;color:var(--ink)}
 ${P} .ed-sh{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;border-bottom:1px solid var(--ink);padding-bottom:20px;margin-bottom:40px}
 ${P} .ed-lead{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px 32px;align-items:center;padding-bottom:48px}${P} .ed-lead .hpl-img{grid-column:1/span 7;aspect-ratio:3/2}${P} .ed-lt{grid-column:9/span 4}
 ${P} .ed-meta{display:flex;flex-wrap:wrap;margin:0 0 16px;font-size:${px(13.5)};color:var(--mu)}${P} .ed-meta span+span{border-left:1px solid ${ln};margin-left:12px;padding-left:12px}
@@ -310,12 +349,12 @@ ${P} .ed-qs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;
 ${P}.ed-cta{border-top:1px solid ${ln}}${P} .ed-ctab{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:32px;align-items:center}${P} .ed-cf{grid-column:1/span 5;aspect-ratio:4/3}${P} .ed-ctt{grid-column:7/span 6}
 ${P} .ed-ctt h2{margin:0;font-weight:500;font-size:clamp(${px(30)},3.8vw,${px(52)});line-height:1.18;letter-spacing:-.03em}${P} .ed-cb{margin:16px 0 0;color:var(--mu);line-height:1.75;max-width:48ch}
 ${P} .ed-ci{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 32px;margin:36px 0 0;padding-top:24px;border-top:1px solid ${ln}}${P} .ed-ci dt{font-size:${px(12.5)};color:var(--mu)}${P} .ed-ci dd{margin:4px 0 0;font-weight:700;overflow-wrap:anywhere}
-${baseFix(P, { hf: 'var(--hpl-serif)', hw: 500, hl: '-.025em', card: 'box-shadow:none;border:0;border-top:1px solid var(--ink);border-radius:0;background:transparent' })}
-${P}.gf{background:var(--bg);color:var(--mu);border-top:1px solid var(--ink);padding:56px 0}${P}.gf b{font-family:var(--hpl-serif);font-weight:500;color:var(--ink);font-size:${px(26)}}${P}.gf .fl2,${P}.gf .fl2 a{color:var(--ink)}
+${baseFix(P, { hf: 'var(--hpl-serif,var(--hd-ff,serif))', hw: 500, hl: '-.025em', card: 'box-shadow:none;border:0;border-top:1px solid var(--ink);border-radius:0;background:transparent' })}
+${P}.gf{background:var(--bg);color:var(--mu);border-top:1px solid var(--ink);padding:56px 0}${P}.gf b{font-family:var(--hd-ff,inherit);font-weight:var(--hd-fw,700);letter-spacing:var(--hd-ls,-.02em);color:var(--ink);font-size:${px(26)}}${P}.gf .fl2,${P}.gf .fl2 a{color:var(--ink)}
 @media(max-width:900px){${P} .ed-top,${P} .ed-two{grid-template-columns:1fr}${P} .ed-ab,${P} .ed-lead,${P} .ed-ctab{grid-template-columns:1fr}${P} .ed-abf,${P} .ed-abt,${P} .ed-lead .hpl-img,${P} .ed-lt,${P} .ed-cf,${P} .ed-ctt{grid-column:1/-1}${P} .ed-abf{position:static;aspect-ratio:3/2}${P} .ed-fig{aspect-ratio:16/9}${P} .ed-ol{grid-template-columns:1fr 1fr}${P} .ed-fl,${P} .ed-fl.n3{grid-template-columns:1fr 1fr;row-gap:24px}${P} .ed-fl li:nth-child(odd){border-left:0;padding-left:0}${P} .ed-qs{grid-template-columns:1fr}${P} .ed-list a{grid-template-columns:96px minmax(0,1fr) auto}${P} .ed-k,${P} .ed-p{display:none}}
 @media(max-width:640px){${P} .ed-h1{font-size:${px(36)};line-height:1.16}${P} .ed-bd{display:none}${P} .ed-figw{padding:0}${P} .ed-fig{aspect-ratio:4/3}${P} .ed-sh{display:block}${P} .ed-sh .ed-link{margin-top:14px}${P} .ed-act .hpl-btn{flex:1 1 auto}
 ${P} .ed-list a{grid-template-columns:84px minmax(0,1fr);gap:4px 14px}${P} .ed-th{grid-row:span 2}${P} .ed-pp{grid-column:2;text-align:left;font-size:${px(14)};margin-top:-8px}${P} .ed-list b{font-size:${px(17)}}${P} .ed-ol{grid-template-columns:1fr;gap:20px}${P} .ed-ci{grid-template-columns:1fr}${P} .ed-items li{grid-template-columns:40px minmax(0,1fr)}}
-${tokCSS(P, { h1: `${P} .ed-h1`, h2: `${P} .ed-shh h2,${P} .ed-ctt h2`, k1: 1.25, k2: 1.1, ff: sansT ? 'var(--hpl-serif)' : 'var(--hd-ff,var(--hpl-serif))', fw: sansT ? '600' : 'var(--hd-fw,600)', m1: 36 })}`; }
+${tokCSS(P, { h1: `${P} .ed-h1`, h2: `${P} .ed-shh h2,${P} .ed-ctt h2`, k1: 1.25, k2: 1.1, ff: sansT ? 'var(--hpl-serif,var(--hd-ff,serif))' : 'var(--hd-ff,var(--hpl-serif,var(--hd-ff,serif)))', fw: sansT ? '600' : 'var(--hd-fw,600)', m1: 36 })}`; }
   });
 
   /* ─────────── 2. bento · 벤토 격자 ─────────── */
@@ -514,7 +553,7 @@ ${tokCSS(P, { h1: `${P}.sp-hero h1`, h2: `${P} .sp-hh h2,${P} .sp-cl h2`, k1: 1,
 ${P}.ty-hero{background:var(--bg);padding:clamp(24px,3vw,40px) 0 clamp(56px,8vw,${px(104)})}
 ${P} .ty-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px 32px;flex-wrap:wrap;padding-bottom:clamp(40px,7vw,${px(104)})}${P} .ty-ey{margin:0;color:var(--ink)}
 ${P} .ty-bd{display:flex;flex-wrap:wrap;gap:4px 24px;list-style:none;margin:0;padding:0;font-size:${px(14)};color:var(--mu)}
-${P} .ty-h1{margin:0;font-size:var(--ty-fs);line-height:1;letter-spacing:-.055em;font-weight:800;color:var(--ink);word-break:keep-all}
+${P} .ty-h1{margin:0;font-size:var(--ty-fs);line-height:1;letter-spacing:-.025em;font-weight:700;color:var(--ink);word-break:keep-all}
 ${P} .ty-bot{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;margin-top:clamp(40px,6vw,${px(88)});align-items:start}${P} .ty-bar{grid-column:1/span 2;display:block;width:96px;height:8px;background:var(--a);margin-top:12px}${P} .ty-bot>div{grid-column:6/span 7}
 ${P} .ty-sub{margin:0;font-size:clamp(${px(18)},1.8vw,${px(24)});line-height:1.6;color:var(--mu);max-width:36ch;letter-spacing:-.015em}${P} .ty-act{display:flex;flex-wrap:wrap;align-items:center;gap:16px 32px;margin-top:32px}
 ${P} .ty-go{display:inline-flex;align-items:center;gap:12px;font-size:clamp(${px(22)},2.2vw,${px(30)});font-weight:800;letter-spacing:-.03em;color:var(--ink);border-bottom:4px solid var(--a);padding-bottom:6px}${P} .ty-go:hover{color:var(--at)}
@@ -600,4 +639,110 @@ ${P}.gf{background:var(--alt);color:var(--mu);border-top:3px solid var(--a);padd
 @media(max-width:640px){${P}.pt-hero h1{font-size:${px(28)}}${P} .pt-sp{font-size:${px(14.5)}}${P} .pt-sb{padding:11px 12px;font-size:${px(13.5)}}${P} .pt-band{padding:40px 0 72px}${P} .pt-scr{background:${u.al(T.hbB, .86)}}${P} .pt-side{padding:18px}${P} .pt-tr{grid-template-columns:72px minmax(0,1fr);gap:4px 14px;padding:14px 2px}${P} .pt-tc{grid-row:span 3}${P} .pt-pr{grid-column:2;grid-row:auto;text-align:left}${P} .pt-fg,${P} .pt-fg.n3{grid-template-columns:1fr}${P} .pt-cb{padding:22px 18px}${P} .pt-ci{flex-direction:column}${P} .pt-cb .hpl-btn{width:100%}${P} .pt-pn{padding:18px}}
 ${tokCSS(P, { h1: `${P}.pt-hero h1`, h2: `${P} .pt-hh h2`, k1: .8, k2: .82, m1: 28 })}`; }
   });
+})();
+
+/* ═════════════════════════ 계열 변형(layoutVar) · 계열 A 6종 — R1 수정 회차(FD1) ═════════════════════════
+   R1 H1: '12계열 1회씩' 레시피라 유형이 달라도 같은 계열은 같은 모양으로 읽혔다. 계열마다 변형 2~3개를 두어 첫 화면 배치 · 밝기와 아래 섹션 배치를 바꾼다.
+   site.layoutVar = 'a'(기본 · 지금 모습) | 'b' | 'c' — 목록은 HPL.vars(id), 판정은 같은 계열 변형끼리 첫 화면 dHash > 12.
+   공통 수단: MIR(두 칸 배치 좌우 반전 · PC만) · CEN(섹션 제목 가운데) · INV(회색 띠 차례 뒤집기) + 계열마다 첫 화면 재배치 CSS.
+   M1 스크림: 사진 위 글자는 HPL.scrim(글자 쪽 40%, HPC.photo().scrim 색) · L4 휴대폰은 사진 먼저(typo) */
+(() => {
+  const H = window.HPL; if (!H || !H.u || typeof H.defVars !== 'function') return; const u = H.u;
+  const px = th => n => Math.round(n * (th.big ? 1.14 : 1)) + 'px';
+  const sel = (P, L) => L.split(',').map(x => `${P} ${x.trim()}`).join(',');
+  const MIR = (P, L) => `@media(min-width:901px){${sel(P, L)}{direction:rtl}${sel(P, L.split(',').map(x => x.trim() + '>*').join(','))}{direction:ltr}}`;
+  const CEN = P => `${P}.hpl-s:not(.hpl-hero) :is(header,[class$="-sh"],[class$="-hh"],[class$="-shh"],[class$="-fh"]){text-align:center;justify-items:center;justify-content:center;margin-left:auto;margin-right:auto}${P}.hpl-s:not(.hpl-hero) :is(header,[class$="-sh"],[class$="-hh"],[class$="-fh"]) .hpl-sd{margin-left:auto;margin-right:auto}`;
+  const INV = P => `${P}.hpl-s:not(.hpl-hero):not(.is-alt):not([class*="cta"]){background:var(--alt)}${P}.hpl-s.is-alt{background:var(--bg)}`;
+  /* 어두운 판 위 글자 묶음(밝은 변형 ↔ 어두운 변형 전환에 씀) */
+  const onDark = (Q, bg) => `${Q}{background:${bg};color:#fff}${Q} :is(h1,h2,h3,b,.hpl-ey,[class$="-ey"]){color:#fff}${Q} :is(p,span,li,small){color:rgba(255,255,255,.88)}${Q} .hpl-btn span{color:inherit}`;
+  const onLight = (Q, bg) => `${Q}{background:${bg};color:var(--ink)}${Q} :is(h1,h2,h3,b){color:var(--ink)}${Q} :is(.hpl-ey,[class$="-ey"]){color:var(--at)}${Q} :is(p,li,small){color:var(--mu)}${Q} .hpl-btn :is(span,svg){color:inherit}`;
+  const pri = Q => `${Q} .hpl-btn:is(.wh,.pri){background:var(--a);color:var(--on)}${Q} .hpl-btn.ol,${Q} .hpl-btn.gh{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}`;
+  const dkOf = T => T.hbB || T.hd || u.mix(T.a, '#000000', .72);
+
+  /* 1. editorial — a 제목 위 · 넓은 사진 / b 왼쪽 글 · 오른쪽 세로 사진 / c 표지형(사진 먼저 · 가운데 제목) */
+  H.defVars('editorial', [
+    { id: 'a', name: '매거진 기본', desc: '제목 줄 아래 21:9 넓은 사진 · 실제 숫자 띠', dark: false },
+    { id: 'b', name: '세로 사진 칼럼', desc: '왼쪽 5칸 글 · 오른쪽 7칸 세로 사진 · 소개 · 강좌 칸 좌우 반전', dark: false },
+    { id: 'c', name: '표지형', desc: '맨 위 넓은 사진 · 아래 가운데 정렬 큰 제목 · 섹션 제목 가운데 · 띠 차례 반전', dark: false }],
+  (s, th, T, v) => { const P = `.hpl-editorial.hpl-v-${v}`; const p = px(th);
+    if (v === 'b') return `${P}.ed-hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);grid-template-rows:auto 1fr;max-width:1440px;margin:0 auto;padding-top:0}
+${P}.ed-hero>.hpl-w:first-child{grid-column:1;grid-row:1;max-width:none;margin:0;padding:clamp(40px,5vw,88px) clamp(24px,3.6vw,56px) 24px var(--hpl-gut);display:flex;flex-direction:column;gap:clamp(28px,4vw,56px)}
+${P} .ed-top{display:flex;flex-direction:column;gap:24px}${P} .ed-mast{border-bottom:0;border-top:1px solid var(--ink);padding:12px 0 0}${P} .ed-bd{display:none}
+${P} .ed-figw{grid-column:2;grid-row:1/span 2;max-width:none;width:100%;margin:0;padding:0}${P} .ed-fig{aspect-ratio:auto!important;height:100%;min-height:min(84vh,${p(760)})}
+${P}.ed-hero>.hpl-w:nth-child(3){grid-column:1;grid-row:2;align-self:end;max-width:none;margin:0;padding:0 clamp(24px,3.6vw,56px) clamp(32px,4vw,56px) var(--hpl-gut)}${P} .ed-fl,${P} .ed-fl.n3,${P} .ed-fl.n4{grid-template-columns:1fr 1fr;row-gap:20px}
+${MIR(P, '.ed-ab,.ed-lead,.ed-ctab,.ed-two')}
+@media(max-width:900px){${P}.ed-hero{display:flex;flex-direction:column}${P} .ed-figw{order:-1}${P} .ed-fig{min-height:0;aspect-ratio:4/3!important;height:auto}${P}.ed-hero>.hpl-w:first-child{padding:28px var(--hpl-gut) 8px}}`;
+    if (v === 'c') return `${P}.ed-hero{display:flex;flex-direction:column;padding-top:0}${P} .ed-figw{order:-1;max-width:none;width:100%;margin:0;padding:0}${P} .ed-fig{aspect-ratio:2.6/1;max-height:46vh;width:100%}
+${P}.ed-hero>.hpl-w:first-child{padding-top:clamp(36px,5vw,72px)}${P} .ed-mast{justify-content:center;border-bottom:0;padding-bottom:0}${P} .ed-bd{display:none}
+${P} .ed-top{display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px}${P} .ed-h1{max-width:18ch}${P} .ed-side{display:flex;flex-direction:column;align-items:center;max-width:56ch}${P} .ed-act{justify-content:center}
+${P} .ed-fl{border-top:0}${CEN(P)}${INV(P)}
+@media(max-width:640px){${P} .ed-fig{aspect-ratio:4/3}${P} .ed-top{align-items:flex-start;text-align:left}${P} .ed-side{align-items:stretch}}`;
+    return ''; });
+
+  /* 2. bento — a 밝은 제목 칸 왼쪽 / b 사진 칸 왼쪽 · 어두운 제목 칸 */
+  H.defVars('bento', [
+    { id: 'a', name: '벤토 기본', desc: '밝은 제목 칸 + 오른쪽 사진 칸 + 숫자 · 강좌 칸', dark: false },
+    { id: 'b', name: '어두운 벤토', desc: '사진 칸이 왼쪽 · 제목 칸은 진한 색 · 아래 칸 배치 좌우 반전 · 섹션 제목 가운데', dark: true }],
+  (s, th, T, v) => { const P = `.hpl-bento.hpl-v-${v}`; const sub = `${P} .bt-main .bt-sub{font-size:clamp(16px,1.35vw,18px);line-height:1.65;max-width:44ch}`; /* L2 상자형 첫 화면 부제 17~18px · 대비 7:1 */
+    if (v !== 'b') return `${sub}${P} .bt-main .bt-sub{color:${u.fit(T.mu, T.as, 7)}}`;
+    return `${sub}${P} .bt-main .bt-sub{color:rgba(255,255,255,.92)}${MIR(P, '.bt-g')}${onDark(`${P} .bt-main`, dkOf(T))}${P} .bt-main .hpl-btn.gh{background:transparent;color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.8)}
+${P}.hpl-hero .bt-pic{aspect-ratio:auto}${P} .bt-fact{background:var(--bg);box-shadow:inset 0 0 0 1px ${u.al(T.ink, .12)}}${CEN(P)}`; });
+
+  /* 3. fullbleed — a 아래 왼쪽 제목 / b 오른쪽 정렬 제목(오른쪽 40% 스크림) / c 밝은 바탕 위 큰 사진 상자 + 아래 제목 */
+  H.defVars('fullbleed', [
+    { id: 'a', name: '전체 사진 기본', desc: '화면 가득 사진 · 아래 왼쪽 큰 제목 · 아래쪽 40% 스크림', dark: true },
+    { id: 'b', name: '오른쪽 제목', desc: '사진 위 오른쪽 정렬 제목 · 오른쪽 40% 스크림 · 아래 칸 좌우 반전', dark: true },
+    { id: 'c', name: '사진 상자', desc: '밝은 바탕에 둥근 21:9 사진 상자 · 아래 2단 제목 · 섹션 제목 가운데', dark: false }],
+  (s, th, T, v) => { const P = `.hpl-fullbleed.hpl-v-${v}`; const p = px(th); const sTop = H.scrim(s, 'hero', 'to top', { end: 56 }); const sc0 = H.scrimC(s, 'hero').replace(/,\s*[\d.]+\)$/, ',.95)');
+    const cta = `${P}.fb-cta .fb-scrim{background:${H.scrim(s, 'cta', 'to top', { end: 60, add: .06 })}}`;
+    if (v === 'a') return `${P}.fb-hero .fb-scrim{background:${sTop},${H.scrim(s, 'hero', 'to right', { end: 40, add: -.3 })}}${cta}`; /* 아래 40% + 왼쪽 옅은 덮개(글자 쪽) */
+    if (v === 'b') return `${P}.fb-hero .fb-scrim{background:linear-gradient(to left,${sc0} 0,${sc0} 44%,transparent 44%)}${cta}
+@media(min-width:901px){${P} .fb-in{display:flex;flex-direction:column;align-items:flex-end;text-align:right}${P} .fb-h1{margin-left:auto}${P} .fb-row{flex-direction:row-reverse;justify-content:flex-start;text-align:right}${P} .fb-sub{margin-left:auto}${P} .fb-act,${P} .fb-bd{justify-content:flex-end}${P} .fb-in{align-items:flex-start;text-align:left;margin-left:56%;width:44%;padding-left:clamp(28px,3vw,48px);padding-right:clamp(24px,3vw,48px)}${P} .fb-in>*{max-width:100%}${P} .fb-h1{max-width:100%;margin-left:0;font-size:clamp(34px,3.6vw,calc(var(--t-h1,64px) * .95))}${P} .fb-row{display:flex;flex-direction:column;align-items:flex-start;gap:24px;text-align:left}${P} .fb-sub{margin-left:0}${P} .fb-act,${P} .fb-bd{justify-content:flex-start}}
+@media(max-width:900px){${P}.fb-hero .fb-scrim{background:${sTop}}}${MIR(P, '.fb-fh,.fb-row,.fb-cb')}`;
+    if (v === 'c') return `${P}.fb-hero{min-height:0;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);padding:clamp(16px,2vw,24px) clamp(16px,2vw,24px) 0}
+${P}.fb-hero .fb-bg{position:relative!important;inset:auto;width:100%;aspect-ratio:21/9;max-height:50vh;border-radius:calc(var(--r) * 1.5);overflow:hidden}${P}.fb-hero .fb-scrim{display:none}
+${P}.fb-hero .fb-in{padding-top:clamp(36px,4vw,56px);padding-bottom:clamp(40px,5vw,72px)}${onLight(`${P}.fb-hero .fb-in`, 'transparent')}${pri(`${P}.fb-hero`)}${P}.fb-hero .fb-h1{color:var(--ink);text-shadow:none;max-width:20ch}${P}.fb-hero :is(.fb-sub,.fb-bd li){text-shadow:none}
+@media(min-width:901px){${P}.fb-hero .fb-in{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);column-gap:48px;align-items:end}${P}.fb-hero .fb-in>*{grid-column:1}${P}.fb-hero .fb-row{grid-column:2;grid-row:1/span 3;align-self:end;display:flex;flex-direction:column;align-items:flex-start;gap:24px}}
+@media(max-width:640px){${P}.fb-hero .fb-bg{aspect-ratio:4/3}}${cta}${CEN(P)}`;
+    return ''; });
+
+  /* 4. splitscreen — a 왼쪽 진한 글 판 / b 왼쪽 사진 · 오른쪽 밝은 판 / c 위 넓은 사진 + 아래 진한 띠(2단) */
+  H.defVars('splitscreen', [
+    { id: 'a', name: '좌우 분할 기본', desc: '왼쪽 진한 글 판 · 오른쪽 사진 반반', dark: true },
+    { id: 'b', name: '밝은 판 반전', desc: '왼쪽 사진 · 오른쪽 옅은 강조색 판 · 아래 칸 좌우 반전', dark: false },
+    { id: 'c', name: '위 사진 아래 띠', desc: '위 넓은 사진 · 아래 진한 띠에 제목과 설명 2단 · 섹션 제목 가운데', dark: true }],
+  (s, th, T, v) => { const P = `.hpl-splitscreen.hpl-v-${v}`; const p = px(th); const sub = `${P} .sp-sub{font-size:clamp(16px,1.35vw,18px);line-height:1.65;color:${v === 'b' ? u.fit(T.mu, T.as, 7) : 'rgba(255,255,255,.92)'}}`;
+    if (v === 'a') return sub;
+    if (v === 'b') return `${sub}@media(min-width:901px){${P}.sp-hero{direction:rtl}${P}.sp-hero>*{direction:ltr}}${onLight(`${P} .sp-txt`, 'var(--as)')}${pri(`${P} .sp-txt`)}${P} .sp-txt .sp-link{color:var(--ink);border-color:currentColor}${P} .sp-txt .sp-facts :is(span,small){color:${u.fit(T.mu, T.as, 4.8)}}${P} .sp-facts{border-color:${u.al(T.ink, .16)}}${P} .sp-facts li{border-color:${u.al(T.ink, .14)}}${MIR(P, '.sp-two,.sp-half')}${P} .sp-row:not(.rev) .hpl-img{order:2}${P} .sp-row.rev .hpl-img{order:0}`;
+    if (v === 'c') return `${sub}${P}.sp-hero{grid-template-columns:1fr;min-height:0}${P} .sp-fig{order:-1;min-height:0;aspect-ratio:2.5/1;max-height:50vh;width:100%}
+@media(min-width:901px){${P} .sp-txt{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:24px 56px;align-items:end;padding:clamp(40px,4.4vw,64px) var(--hpl-gut)}${P} .sp-in{max-width:none;margin:0;display:contents}${P} .sp-in>*{grid-column:1}${P} .sp-in .sp-sub,${P} .sp-in .sp-act{grid-column:2}${P} .sp-in .sp-sub{grid-row:2;margin:0}${P} .sp-in .sp-act{grid-row:3}${P} .sp-facts{grid-column:1/-1}}
+@media(max-width:640px){${P} .sp-fig{aspect-ratio:4/3}}${CEN(P)}${INV(P)}`;
+    return ''; });
+
+  /* 5. typo — a 큰 글자 + 아래 3:1 사진 띠 / b 왼쪽 세로 사진 + 오른쪽 큰 글자. 둘 다 휴대폰은 사진 먼저(L4 · 4:3) · 제목 700 · 자간 -0.025em(H7) */
+  H.defVars('typo', [
+    { id: 'a', name: '큰 글자 기본', desc: '초대형 제목 · 넓은 여백 · 아래 가로로 긴 사진 띠', dark: false },
+    { id: 'b', name: '사진 곁 큰 글자', desc: '왼쪽 5칸 세로 사진 · 오른쪽 큰 제목 · 아래 칸 좌우 반전 · 섹션 제목 가운데', dark: false }],
+  (s, th, T, v) => { const P = `.hpl-typo.hpl-v-${v}`;
+    const com = `${P}.ty-hero .ty-h1{font-weight:700;letter-spacing:-.025em}
+@media(max-width:640px){${P}.ty-hero{display:flex;flex-direction:column;padding-top:0}${P}.ty-hero .ty-sw{order:-1;margin:0 0 28px}${P}.ty-hero .ty-strip{aspect-ratio:4/3!important}${P}.ty-hero>.hpl-w{width:100%}}`;
+    if (v !== 'b') return com;
+    return `${com}@media(min-width:901px){${P}.ty-hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:stretch;padding:0}${P}.ty-hero .ty-sw{grid-column:1;grid-row:1;padding:0;margin:0;max-width:none}${P}.ty-hero .ty-strip{aspect-ratio:auto!important;height:100%;min-height:min(84vh,720px)}
+${P}.ty-hero>.hpl-w{grid-column:2;grid-row:1;max-width:none;margin:0;padding:clamp(32px,4vw,64px) var(--hpl-gut) clamp(40px,5vw,72px) clamp(32px,4vw,64px);display:flex;flex-direction:column;justify-content:space-between}
+${P}.ty-hero .ty-h1{font-size:calc(var(--ty-fs) * .6)}${P}.ty-hero .ty-top{padding-bottom:32px}}${MIR(P, '.ty-two,.ty-fhd')}${CEN(P)}`; });
+
+  /* 6. portal — a 사진 띠 위 찾기 + 오른쪽 공지 / b 공지 왼쪽 · 찾기 오른쪽(스크림도 오른쪽) / c 밝은 판 + 오른쪽 사진(사진 위 글자 없음) */
+  H.defVars('portal', [
+    { id: 'a', name: '포털 기본', desc: '사진 띠 위 왼쪽 찾기 상자 · 오른쪽 공지 패널', dark: true },
+    { id: 'b', name: '포털 반전', desc: '왼쪽 공지 패널 · 오른쪽 찾기 상자 · 오른쪽 40% 스크림 · 아래 칸 좌우 반전', dark: true },
+    { id: 'c', name: '밝은 포털', desc: '옅은 바탕 왼쪽 찾기 · 오른쪽 사진 상자 · 공지는 아래 · 섹션 제목 가운데', dark: false }],
+  (s, th, T, v) => { const P = `.hpl-portal.hpl-v-${v}`; const p = px(th);
+    const mob = `@media(max-width:900px){${P} .pt-scr{background:linear-gradient(${H.scrimC(s, 'hero')},${H.scrimC(s, 'hero')})}}`;
+    if (v === 'a') return `${P} .pt-scr{background:${H.scrim(s, 'hero', 'to right', { end: 64 })}}${mob}`;
+    if (v === 'b') return `${mob}${P} .pt-scr{background:${H.scrim(s, 'hero', 'to left', { end: 64 })}}@media(min-width:901px){${P} .pt-main{grid-column:6/span 7;grid-row:1}${P} .pt-side{grid-column:1/span 4;grid-row:1}${P} .pt-g.one .pt-main{grid-column:5/span 8}}
+${mob}${MIR(P, '.pt-two,.pt-fw,.pt-cb')}`;
+    if (v === 'c') return `${P} .pt-band{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);background:var(--as);max-width:none}${P} .pt-bg{position:relative!important;inset:auto;grid-column:2;grid-row:1;min-height:clamp(360px,44vw,560px);margin:clamp(20px,2.4vw,32px) clamp(20px,2.4vw,32px) clamp(20px,2.4vw,32px) 0;border-radius:var(--r);overflow:hidden}${P} .pt-scr{display:none}
+${P} .pt-g{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:stretch;justify-content:center;max-width:none;margin:0;padding:clamp(32px,4vw,64px) var(--hpl-gut)}${P} .pt-side{display:none}${onLight(`${P} .pt-main`, 'transparent')}${pri(`${P} .pt-main`)}${P} .pt-main .pt-srch{box-shadow:0 0 0 1px ${u.al(T.ink, .18)}}${P} .pt-pop a{background:var(--bg);color:var(--ink);box-shadow:inset 0 0 0 1px ${u.al(T.ink, .16)};text-shadow:none}${P} .pt-pop a:hover{background:var(--alt)}${P} .pt-pl{color:var(--mu)}
+@media(max-width:900px){${P} .pt-band{display:flex;flex-direction:column}${P} .pt-bg{order:-1;min-height:0;aspect-ratio:4/3;margin:0;border-radius:0}}${CEN(P)}${INV(P)}`;
+    return ''; });
 })();
