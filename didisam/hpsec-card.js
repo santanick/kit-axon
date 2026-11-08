@@ -219,7 +219,7 @@
 /* 큰 썸네일 */
 .hps-k-big{gap:16px}.hps-k-big .hps-big{position:relative;display:block;border-radius:var(--hps-r);overflow:hidden;min-width:0;color:${onImg}}
 .hps-k-big .hps-img{aspect-ratio:3/4;border-radius:0}.hps-n1.hps-k-big .hps-img{aspect-ratio:21/9}.hps-n2.hps-k-big .hps-img{aspect-ratio:5/4}.hps-k-big .hps-big[style*="span"] .hps-img{aspect-ratio:auto;height:100%;min-height:${px(360)}}
-.hps-k-big .hps-img::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 28%,rgba(0,0,0,.42) 52%,rgba(0,0,0,.8) 100%)}
+.hps-k-big .hps-img::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.08) 0%,rgba(0,0,0,.56) 38%,rgba(0,0,0,.86) 100%)}.hps-k-big .hps-ov{text-shadow:0 1px 10px rgba(0,0,0,.5)}
 .hps-k-big .hps-ov{position:absolute;left:0;right:0;bottom:0;padding:${px(24)} ${px(24)} ${px(22)};z-index:1}.hps-k-big .hps-ov h3{color:#ffffff;font-size:${px(22)};line-height:1.32}.hps-n1.hps-k-big .hps-ov{padding:${px(40)}}.hps-n1.hps-k-big .hps-ov h3{font-size:clamp(${px(26)},3vw,${px(40)});max-width:720px}
 .hps-k-big .hps-k{color:#ffffff;opacity:1}.hps-k-big .hps-m{color:#ffffff;margin-top:10px}
 .hps-k-big .hps-bd{left:16px;top:16px}.hps-k-big a:hover h3{text-decoration:underline}
@@ -287,7 +287,7 @@
 .hps-e{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);border:1px solid ${al(ink, .14)};border-radius:var(--hps-r,12px);overflow:hidden;background:#ffffff}
 .hps-e .hps-ec{padding:clamp(28px,4vw,48px);background:repeating-linear-gradient(135deg,transparent 0 14px,${al(ink, .035)} 14px 15px),#ffffff;border-right:1px solid ${al(ink, .1)}}
 .hps-e .hps-et{margin:0 0 18px}.hps-e .hps-et span{display:inline-block;padding:5px 12px;border:1px solid ${al(at, .5)};border-radius:999px;font-size:13px;font-weight:700;color:${at};background:#ffffff}
-.hps-e h3{font-size:clamp(22px,2.4vw,30px);line-height:1.3;letter-spacing:-.03em;font-weight:780;color:${ink};margin:0;max-width:20ch}
+.hps-e h3{font-size:clamp(22px,2.4vw,30px);line-height:1.3;letter-spacing:-.03em;font-weight:780;color:${fit(ink, '#ffffff', 7)} !important;margin:0;max-width:20ch}.hps-e .hps-eq{color:${fit(ink, T.as, 7)} !important} /* H5(N3): 카드 바탕은 늘 흰색 · 연한 색이라 noir 등 어두운 계열의 h3 흰 글자 규칙을 이겨야 한다(대비 1.15) */
 .hps-e .hps-ed{margin:12px 0 0;color:${mu};font-size:15px;line-height:1.65;max-width:42ch}
 .hps-e .hps-ea{padding:clamp(28px,4vw,48px);display:flex;flex-direction:column;justify-content:center;background:${T.as}}
 .hps-e .hps-eq{margin:0;font-size:17px;font-weight:750;color:${ink};letter-spacing:-.02em}.hps-e .hps-ea .hps-ed{color:${fit(T.mu, T.as, 4.6)}}

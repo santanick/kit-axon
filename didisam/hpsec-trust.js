@@ -379,7 +379,7 @@ ${P} .hps-ctw{flex-direction:column;align-items:flex-start;gap:20px}${P} .hps-ct
   /* ══ v34.5 FB(R1 M8): 품질 점수 변별력 — 첫 화면 사진 해상도 · 사진과 업종 · 보이는 섹션 수 · 같은 유형 계열 중복 ══
      hpwQuality 안의 연결 지점(HPW.qx)에 항목을 더하고, 배점을 다시 나눠 합계 100을 유지한다(X4의 안내 줄은 0점).
      새 항목은 자동 보정(hpwFix)으로 고칠 수 없으므로 auto:false. */
-  const QW = { contrast: 12, empty: 12, ph: 12, alt: 8, mobile: 8, seo: 8, btn: 8, contact: 8, fact: 6, photoRes: 5, photoFit: 4, secN: 6, famDup: 3 };
+  const QW = { contrast: 11, empty: 11, ph: 11, alt: 7, mobile: 7, seo: 7, btn: 7, contact: 7, fact: 6, photoRes: 5, photoFit: 3, secN: 5, famDup: 3, heroScene: 3, photoMix: 2, glyph: 2, rep: 3 }; /* H5(R2 M8): 합계 100 — 뒤 4개는 hpwiz HPW.qMore */
   const stockOf = v => { const m = String(v || '').match(/(?:^|\/)([a-z]{3}-\d{2})(?:-800)?(?:\.webp)?(?:[?#].*)?$/); return m && window.HPSTOCK && HPSTOCK.get ? HPSTOCK.get(m[1]) : null; };
   function heroSrc(s) { const im = s.img && s.img.hero; const bn = (s.sections || []).find(x => x && x.type === 'banner' && !x.hide); const d = (bn && bn.data) || {};
     return (im && (im.stock || im.src)) || d.img || (s.photos && s.photos.hero) || ''; }
@@ -394,7 +394,7 @@ ${P} .hps-ctw{flex-direction:column;align-items:flex-start;gap:20px}${P} .hps-ct
     add('secN', '보이는 섹션', QW.secN, vis >= 6, vis >= 6 ? `${vis}개` : `${vis}개 — 6개 이상이면 첫 방문자가 볼 내용이 충분합니다(공지 · 강좌 · 문의 등)`, false);
     let dup = 0; try { const T = (typeof TPL !== 'undefined' ? TPL : []).filter(t => t && !t.hidden && (t.types || []).includes(tk) && t.id !== (s.tpl || s.tplId)); dup = s.layout ? T.filter(t => t.layout === s.layout).length : 0; } catch (e) { dup = 0; }
     add('famDup', '배치 겹침', QW.famDup, dup <= 1, !s.layout ? '기본 배치' : dup <= 1 ? '같은 유형 템플릿과 배치가 겹치지 않음' : `같은 유형 템플릿 ${dup}종과 같은 배치(${s.layout})`, false); };
-  if (window.HPW) { (HPW.qx = HPW.qx || []).push((s, it, add) => { if (!s || !S || !S.org) return; HPS.qItems(s, add); it.forEach(x => { if (QW[x.k] != null) x.pts = QW[x.k]; }); }); }
+  if (window.HPW) { (HPW.qx = HPW.qx || []).push((s, it, add) => { if (!s || !S || !S.org) return; HPS.qItems(s, add); if (typeof HPW.qMore === 'function') HPW.qMore(s, add, QW); it.forEach(x => { if (QW[x.k] != null) x.pts = QW[x.k]; }); }); }
 
   /* ══ v34.5 FB(R1 M5 · M6): 늦게 뜨는 사진 자리 · 짧은 섹션 여백 ══
      M5 샘플 사진 <img>에 비율(aspect-ratio, 높이가 auto일 때만 적용)과 사진 평균색 바탕을 넣는다 → 늦게 떠도 흰 빈 상자가 보이지 않는다.

@@ -20,7 +20,9 @@
     'pretendard': { n: 'Pretendard', ko: '프리텐다드', k: 'sans', cov: 11172, w: [400, 500, 600, 700, 800], st: "'Pretendard Variable',Pretendard,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif" },
     'wanted-sans': { n: 'Wanted Sans', ko: '원티드 산스', k: 'sans', cov: 11172, w: [500, 700, 800], st: "'Wanted Sans','Pretendard Variable',Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif" },
     'noto-serif-kr': { n: 'Noto Serif KR', ko: '본명조', k: 'serif', cov: 11172, w: [400, 700], st: "'Noto Serif KR','Noto Serif KR Fallback','Noto Serif CJK KR','AppleMyungjo','Batang',serif" },
-    'hahmlet': { n: 'Hahmlet', ko: '함렛', k: 'serif', cov: 2788, w: [600, 800], st: "'Hahmlet','Hahmlet Fallback','Noto Serif KR','Noto Serif CJK KR','AppleMyungjo',serif" },
+    'hahmlet': { n: 'Hahmlet', ko: '함렛', k: 'serif', cov: 2788, w: [600, 700], st: "'Hahmlet','Hahmlet Fallback','Noto Serif KR','Noto Serif CJK KR','AppleMyungjo',serif" },
+    /* v34.5 H4(R2 H7): 기하형 고딕(원형 ㅇ · 넓은 속공간) — 프리텐다드와 실루엣이 달라 고딕 테마의 개성 · warm 제목(굵기 2개로 위계)을 맡는다 */
+    'line-seed-kr': { n: 'LINE Seed Sans KR', ko: '라인 시드', k: 'sans', cov: 11172, w: [400, 700], st: "'LINE Seed Sans KR','LINE Seed Sans KR Fallback','Pretendard Variable',Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif" },
     'gowun-dodum': { n: 'Gowun Dodum', ko: '고운돋움', k: 'round', cov: 11172, w: [400], st: "'Gowun Dodum','Gowun Dodum Fallback','Pretendard Variable',Pretendard,'Apple SD Gothic Neo',sans-serif" },
     'do-hyeon': { n: 'Do Hyeon', ko: '도현', k: 'display', cov: 2437, w: [400], st: "'Do Hyeon','Do Hyeon Fallback','Pretendard Variable',Pretendard,'Apple SD Gothic Neo',sans-serif" }
   };
@@ -33,12 +35,15 @@
   const PAIR = {
     pt8: { hd: 'pretendard', hw: 800, ls: -0.03, lh: 1.16, lh2: 1.24, nm: '고딕 굵게' },
     pt7: { hd: 'pretendard', hw: 700, ls: -0.022, lh: 1.26, lh2: 1.3, nm: '고딕' },
-    ws8: { hd: 'wanted-sans', hw: 800, ls: -0.028, lh: 1.15, lh2: 1.22, nm: '선명한 고딕' },
-    ws7: { hd: 'wanted-sans', hw: 700, ls: -0.022, lh: 1.18, lh2: 1.26, nm: '선명한 고딕(중간)' },
+    /* v34.5 H4(R2 H7 ④): 원티드 산스(ws7 · ws8)는 프리텐다드와 구분되지 않아 라인 시드로 바꾼다. 같은 글꼴이라도 테마마다 자간 · 줄간 · 크기 비로 결을 나눈다
+       ls7 clean: 기본 · ls8 tech: 빽빽하게(-0.04em · 줄간 1.12, 화면을 꽉 채우는 제목) · lw7 warm: 자간 0 · 줄간 1.32(둥글고 느슨하게 · 둥근 OFL 한글 여러 굵기가 없어 대신) */
+    ls7: { hd: 'line-seed-kr', hw: 700, ls: -0.03, lh: 1.2, lh2: 1.28, nm: '라인 시드' },
+    ls8: { hd: 'line-seed-kr', hw: 700, ls: -0.04, lh: 1.12, lh2: 1.22, nm: '라인 시드 빽빽하게' },
+    lw7: { hd: 'line-seed-kr', hw: 700, ls: 0, lh: 1.32, lh2: 1.34, nm: '라인 시드 느슨하게' },
     ns6: { hd: 'noto-serif-kr', hw: 600, ls: -0.02, lh: 1.26, lh2: 1.3, nm: '본명조' },
     ns7: { hd: 'noto-serif-kr', hw: 700, ls: -0.025, lh: 1.22, lh2: 1.28, nm: '본명조 굵게' },
     hm6: { hd: 'hahmlet', hw: 600, ls: -0.02, lh: 1.2, lh2: 1.26, nm: '함렛' },
-    hm8: { hd: 'hahmlet', hw: 800, ls: -0.03, lh: 1.15, lh2: 1.22, nm: '함렛 굵게' },
+    hm7: { hd: 'hahmlet', hw: 700, ls: -0.025, lh: 1.16, lh2: 1.24, nm: '함렛 굵게' }, /* v34.5 H4(R2 N5): 800 → 700(포스터 글씨 느낌 완화) */
     gd4: { hd: 'gowun-dodum', hw: 400, ls: -0.01, lh: 1.28, lh2: 1.3, nm: '고운돋움' },
     dh4: { hd: 'do-hyeon', hw: 400, ls: -0.01, lh: 1.2, lh2: 1.26, nm: '도현' }
   };
@@ -48,20 +53,21 @@
        명조 계열(editorial · noir)은 고딕 테마에도 명조, 기관 · 게시판 계열(portal · sidebar · bulletin)은 장식 글꼴을 빼고 읽기 쉬운 쪽,
        누아르는 계열 CSS가 300 · 500의 가는 명조를 쓰므로 굵기 400이 있는 본명조(함렛은 600부터),
        글자 중심(typo)은 한 단계 굵게, 놀이형(collage)은 둥근 · 굵은 글꼴. 큰 글씨(senior)는 끝까지 자간을 덜 줄인다. */
+  /* v34.5 H4: ws → ls(라인 시드), warm gd4 → lw7(굵기 2개 위계, collage만 고운돋움 유지), typo의 함렛 800 → premium hm7 · campus ns7(R2 N5) */
   const M = {
-    _:           'ws7 hm6 gd4 pt7 ws8 dh4 ns6 pt7',
+    _:           'ls7 hm6 lw7 pt7 ls8 dh4 ns6 pt7',
     editorial:   'ns6 hm6 ns6 ns6 ns7 gd4 hm6 ns7',
-    bento:       'ws7 hm6 gd4 pt7 ws8 dh4 ns6 pt7',
-    fullbleed:   'pt8 hm6 gd4 pt8 ws8 dh4 hm6 pt7',
-    splitscreen: 'ws8 ns6 gd4 pt7 ws7 dh4 ns6 pt7',
-    typo:        'ws8 hm8 gd4 pt8 ws8 dh4 hm8 pt8',
-    portal:      'pt7 ns6 gd4 pt7 pt8 gd4 ns6 pt7',
-    story:       'pt8 hm6 ns6 pt7 ws7 dh4 ns6 pt7',
-    mosaic:      'ws7 hm6 gd4 pt7 ws8 dh4 ns6 pt7',
-    sidebar:     'pt7 ns6 gd4 pt7 ws7 gd4 ns6 pt7',
-    bulletin:    'pt7 ns6 gd4 pt7 pt7 gd4 ns6 pt7',
+    bento:       'ls7 hm6 lw7 pt7 ls8 dh4 ns6 pt7',
+    fullbleed:   'pt8 hm6 lw7 pt8 ls8 dh4 hm6 pt7',
+    splitscreen: 'ls8 ns6 lw7 pt7 ls7 dh4 ns6 pt7',
+    typo:        'ls8 hm7 lw7 pt8 ls8 dh4 ns7 pt8',
+    portal:      'pt7 ns6 lw7 pt7 pt8 gd4 ns6 pt7',
+    story:       'pt8 hm6 ns6 pt7 ls7 dh4 ns6 pt7',
+    mosaic:      'ls7 hm6 lw7 pt7 ls8 dh4 ns6 pt7',
+    sidebar:     'pt7 ns6 lw7 pt7 ls7 gd4 ns6 pt7',
+    bulletin:    'pt7 ns6 lw7 pt7 pt7 gd4 ns6 pt7',
     collage:     'dh4 hm6 gd4 gd4 dh4 dh4 ns6 gd4',
-    noir:        'ns6 ns6 ns6 ns6 ws7 dh4 ns6 ns7'
+    noir:        'ns6 ns6 ns6 ns6 ls7 dh4 ns6 ns7'
   };
   const cellCode = (th, lay) => { const i = TH.indexOf(th); if (i < 0) return null; const row = (M[lay] || M._).split(/\s+/); return row[i] || null; };
   /* 테마 보정: 큰 글씨는 자간 -0.01em까지만, 줄간 +0.04 */
@@ -102,6 +108,8 @@ ${hsel}{font-family:var(--hd-ff);font-weight:var(--hd-fw);letter-spacing:var(--h
     L.push(`body .hpt.hps-hero h1,body .hps-cta h2{font-family:var(--hd-ff);font-weight:var(--hd-fw);letter-spacing:var(--hd-ls)}body .hpt.hps-hero h1{line-height:${p.lh}}body .hps-cta h2{line-height:${p.lh2}}
 body .hps-k-grid h1{line-height:${Math.max(1.12, p.lh - 0.04).toFixed(2)}!important}
 body .hpt .hps-q1 blockquote::before{font-family:${kind === 'serif' ? Q : "Georgia,'Times New Roman',serif"}!important}`); /* v34.5 FZ(FIXLIST 24): hpsec-trust의 범위 선택자가 더 세서 고딕 사이트 큰따옴표가 Georgia → 'Noto Serif KR'(웹폰트 조각 13KB)로 그려졌다 */
+    /* 1-2. 큰 숫자(R2 H7 ⑤ · v34.5 H4): 모집 일정 날짜 · 큰 가격도 제목 글꼴(작은 카드 가격은 본문 글꼴 그대로) */
+    L.push(`body .hpt .hps-k-schedule.hps-k-schedule .hps-dt b,body .hpt .hps-k-price.hps-k-price .hps-amt b{font-family:var(--hd-ff);font-variant-numeric:tabular-nums lining-nums}`);
     /* 2. 단일 굵기 · 글자 수가 적은 제목 글꼴 */
     if (one(p.hd)) L.push(`${hsel},.hpt .hp-fl b{font-synthesis:none}`);
     if (small !== H) L.push(`.hpt .hp-card h3,.hpt .hp-ccb h3,.hpt .hp-st h3,.hpt .hp-pc h3,.hpt .hp-st .hp-no{font-family:${small}}`);
@@ -113,6 +121,8 @@ body .hpt .hps-q1 blockquote::before{font-family:${kind === 'serif' ? Q : "Georg
       if (lay === 'collage') L.push(`${P} h1,${P} h2,${P} h3,${P} .hp-sh h2,${P} .hpl-co-p figcaption,${P} .hpl-co-st li>b{font-family:var(--hd-ff)}${P} h1,${P} h2{letter-spacing:var(--hd-ls)}${P} h3,${P} .hpl-co-p figcaption{font-family:${small}}`);
       if (lay === 'noir') L.push(`${P} h1,${P} h2,${P} .hp-sh h2{font-family:var(--hd-ff);letter-spacing:var(--hd-ls)}${P} h3,${P} .hpl-no-mh b,${P} .hpl-no-st b,${P} .hpl-no-fl b{font-family:${small}}${P} .hp-rc blockquote{font-family:${Q}}`);
       L.push(`${P} h1{line-height:${Math.max(1.15, p.lh - 0.04).toFixed(2)}}`);
+      /* 계열 고유 큰 숫자(이야기 숫자 띠 · 단계 번호, 모자이크 숫자 칸 · 번호, 글자 중심 번호, 누아르 숫자)도 제목 글꼴(R2 H7 ⑤ · v34.5 H4) — 굵기는 계열 값 */
+      L.push(`${P} :is(.hpl-st-f b,.hpl-st-no,.hpl-mo-s b,.hpl-mo-st i,.ty-no,.hpl-no-fl b){font-family:var(--hd-ff);font-variant-numeric:tabular-nums lining-nums}`);
       if (small !== H && lay !== 'collage') L.push(`${P} h3{font-family:${small};font-weight:700;letter-spacing:-.015em}`);
       /* 섹션 제목은 계열과 관계없이 조합표 제목 글꼴 · 자간(한글 -0.01 ~ -0.03em). 굵기는 계열 고유값을 둔다(누아르 500 · 매거진 500 등) */
       if (lay !== 'collage' && lay !== 'noir') L.push(`${P} .hp-sh h2,${P} .hp-prose h2,${P} .hp-ctat h2,${P} h2{font-family:var(--hd-ff);letter-spacing:var(--hd-ls)}`);
@@ -141,11 +151,12 @@ body .hpt .hps-q1 blockquote::before{font-family:${kind === 'serif' ? Q : "Georg
   /* ── 편집기 조합(F2 hpfontpick이 HPF.pairs 대신 쓴다) — hd · bd는 HPF id ── */
   const pairs = [
     { id: 'modern', name: '모던 고딕', hd: 'pretendard', bd: 'pretendard', hw: 800, hls: -0.03, note: '어느 기관에나 · 기업 · 공공 · 직업훈련' },
-    { id: 'sharp', name: '선명한 제목', hd: 'wanted-sans', bd: 'pretendard', hw: 800, hls: -0.028, note: '코딩 · 테크 · 스타트업 · 인강' },
+    { id: 'sharp', name: '기하형 고딕', hd: 'line-seed-kr', bd: 'pretendard', hw: 700, hls: -0.04, note: '코딩 · 테크 · 스타트업 · 인강' },
     { id: 'campus', name: '대학 명조', hd: 'noto-serif-kr', bd: 'pretendard', hw: 600, hls: -0.02, note: '대학 · 평생교육원 · 연구소' },
     { id: 'premium', name: '고급 명조', hd: 'hahmlet', bd: 'pretendard', hw: 600, hls: -0.02, note: '프리미엄 학원 · 대학원 · 아카데미' },
-    { id: 'grand', name: '굵은 명조 제목', hd: 'hahmlet', bd: 'pretendard', hw: 800, hls: -0.03, note: '큰 글자 첫 화면 · 예술 · 디자인 · 대학원' },
-    { id: 'warm', name: '따뜻한 둥근', hd: 'gowun-dodum', bd: 'pretendard', hw: 400, hls: -0.01, note: '동네 학원 · 공부방 · 상담' },
+    { id: 'grand', name: '굵은 명조 제목', hd: 'hahmlet', bd: 'pretendard', hw: 700, hls: -0.025, note: '큰 글자 첫 화면 · 예술 · 디자인 · 대학원' },
+    { id: 'warm', name: '따뜻한 고딕', hd: 'line-seed-kr', bd: 'pretendard', hw: 700, hls: 0, note: '동네 학원 · 공부방 · 상담(굵기 2개)' },
+    { id: 'soft', name: '부드러운 돋움', hd: 'gowun-dodum', bd: 'pretendard', hw: 400, hls: -0.01, note: '유아 · 그림 · 공예(굵기 1개)' },
     { id: 'play', name: '경쾌한 굵은 제목', hd: 'do-hyeon', bd: 'pretendard', hw: 400, hls: -0.01, note: '유아 · 초등 · 예체능' },
     { id: 'book', name: '전부 명조(긴 글 전용)', hd: 'noto-serif-kr', bd: 'noto-serif-kr', hw: 700, hls: -0.025, longOnly: true, layouts: ['editorial', 'story', 'sidebar'], note: '매거진 · 이야기 · 사이드 목차 계열의 긴 소개글 전용(약 460KB — 다른 계열에서는 제목만 명조)' }
   ];
