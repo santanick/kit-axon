@@ -242,6 +242,8 @@
     let sig = []; try { sig = window.HPS && HPS.blockSig ? String(HPS.blockSig(s) || '').split('>').filter(Boolean) : []; } catch (e) { sig = []; }
     const tv = L.filter(x => x.type !== 'banner').map(x => { const d = x.data || {}; return x.type + ':' + (d.variant || d.hpt || ''); }); const cnt = {}; tv.forEach(k => { cnt[k] = (cnt[k] || 0) + 1; }); const dup = Object.keys(cnt).filter(k => cnt[k] > 1 && !/^text:cta$/.test(k));
     let defN = 0; try { const B = window.HPS && HPS.BLOCKS; if (B) sig.forEach(t => { const [bk, v] = t.split(':'); const list = B[bk]; const first = Array.isArray(list) ? (typeof list[0] === 'object' ? list[0].id : list[0]) : null; if (first && v === first) defN++; }); } catch (e) { }
+    try { if (window.HPSTOCK && typeof HPSTOCK.courseRule === 'function') { const P = (S.classes || []).filter(c => c && c.status === '운영중' && c.open === '전체'); const ty = P.filter(c => !c.thumb && !HPSTOCK.courseRule(c.name)).length; /* H2: 강좌명으로 장면을 정할 수 없고 썸네일도 없으면 글자 타일로 그린다 — 감점 없는 안내 */
+      if (P.length) add('clsTile', '강좌 썸네일', 0, true, ty ? `강좌 ${ty}개는 사진 대신 글자 타일로 보입니다 — 강좌 썸네일을 올리면 바로 사진 카드가 됩니다` : '강좌 카드 사진이 강좌명과 맞음', false); } } catch (e) { }
     const rOk = !dup.length && defN < 4; add('rep', '블록 반복', QW.rep || 4, rOk, rOk ? '섹션 모양이 겹치지 않음' : dup.length ? `같은 모양 섹션이 두 번 이상(${dup.map(k => k.replace(/:$/, '')).join(' · ')})` : `공통 블록 ${defN}개가 기본 모양 그대로입니다 — 다른 모양을 섞으면 다른 기관과 덜 비슷해집니다`, false); };
   const qHTML = (q, q0, log, withContact) => {
     const f = ft(); const need = q.items.find(x => x.k === 'contact' && !x.ok);
