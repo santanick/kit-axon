@@ -76,8 +76,12 @@
     const m = s && s.img && s.img[slot]; const H = window.HPSTOCK;
     const own = (src, alt, pos, fitv) => { const a = absSrc(src); if (!a) return null; const st = stockRe.test(a); const x = st && H && H.list ? H.list.find(y => a.indexOf(y.src.replace(/\.webp$/, '')) >= 0) : null;
       return { src: a, srcset: x && H.srcset ? H.srcset(x) : '', alt: alt || (x && x.alt) || '', pos: posOk(pos) || (x && x.focus) || '50% 50%', fit: fitv === 'contain' ? 'contain' : 'cover', stock: st, tone: x ? x.tone : 'light' }; };
-    if (m && m.src) { const r = own(m.src, m.alt, m.pos, m.fit); if (r) return r; }
-    if (slot === 'hero') { const b = d || (((s && s.sections) || []).find(x => x && x.type === 'banner') || {}).data || {}; if (b.img) { const r = own(b.img, b.alt, '', ''); if (r) return r; } }
+    const off = !!(s && s.stockOff); /* FIXLIST 17: stockOff면 템플릿 지정(s.photos) · 자동 샘플 사진을 모두 끈다 */
+    if (m && m.src && !(off && (m.stock || stockRe.test(String(m.src))))) { const r = own(m.src, m.alt, m.pos, m.fit); if (r) return r; }
+    if (slot === 'hero') { const b = d || (((s && s.sections) || []).find(x => x && x.type === 'banner') || {}).data || {}; if (b.img && !(off && stockRe.test(String(b.img)))) { const r = own(b.img, b.alt, '', ''); if (r) return r; } }
+    if (off) return null;
+    const pid = s && s.photos && s.photos[slot]; const px = pid && H && typeof H.get === 'function' ? H.get(Array.isArray(pid) ? pid[0] : pid) : null;
+    if (px && px.src) return { src: H.url ? H.url(px) : px.src, srcset: H.srcset ? H.srcset(px) : '', alt: px.alt || '', pos: px.focus || '50% 50%', fit: 'cover', stock: true, tone: px.tone };
     const x = stockSet(s)[slot]; const it = Array.isArray(x) ? x[0] : x;
     if (it && H) return { src: H.url(it), srcset: H.srcset ? H.srcset(it) : '', alt: it.alt || '', pos: it.focus || '50% 50%', fit: 'cover', stock: true, tone: it.tone };
     return null; }
