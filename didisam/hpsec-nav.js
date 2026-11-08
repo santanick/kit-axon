@@ -367,7 +367,7 @@ footer.gf.hps-f-campus{padding-top:${px(80)}}.hps-cm{display:flex;flex-direction
 .hps-cad{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 22px;font-size:${px(14)}}.hps-cad em{font-style:normal;color:${P.lab};margin-right:4px}
 .hps-rel{position:relative;margin-top:10px;min-width:240px;text-align:left}.hps-rel summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:0 16px;border:1px solid ${al(P.fg, .35)};color:${P.fg};font-weight:600;cursor:pointer}.hps-rel summary::-webkit-details-marker{display:none}
 .hps-rel[open] summary span{transform:rotate(180deg)}.hps-rel summary span{display:grid;transition:transform .2s}.hps-rel ul{list-style:none;margin:0;padding:6px 0;border:1px solid ${al(P.fg, .35)};border-top:0}.hps-rel li a{display:block;padding:9px 16px;color:${P.fg}}
-.hps-barc{justify-content:center;text-align:center}.hps-f-campus .hps-bl{justify-content:center}
+.hps-barc{justify-content:center;text-align:center}footer.gf.hps-f-campus .s2esc{display:flex;width:max-content;max-width:100%;margin:0 auto 16px}.hps-f-campus .hps-bl{justify-content:center}
 /* split */
 .hps-sp{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:32px clamp(32px,5vw,72px);padding-bottom:${px(40)};align-items:stretch}
 .hps-spp{background:${spBg};color:${spF};border-radius:var(--r,16px);padding:${px(32)} ${px(32)} ${px(28)};display:flex;flex-direction:column;align-items:flex-start;gap:8px}
