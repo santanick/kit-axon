@@ -15,6 +15,7 @@
        python3 tools/fonts/build.py [--cache DIR] [--only id,id] [--jobs 2]
 RFN(예약 글꼴 이름)이 있는 글꼴(Pretendard · Wanted Sans · SUIT · IBM Plex · Nanum 등)은 분할 = 수정본이 되어
 원래 이름을 쓸 수 없으므로 여기서 빌드하지 않는다. Pretendard · Wanted Sans는 원저작자 배포본(jsdelivr)을 그대로 쓴다.
+v34.5 H4: LINE Seed Sans KR(OFL · RFN 없음) 추가, 함렛 800 → 700. 다시 빌드: --only line-seed-kr,hahmlet
 """
 import argparse, hashlib, io, json, os, sys, urllib.request
 from concurrent.futures import ProcessPoolExecutor
@@ -41,13 +42,24 @@ FAMILIES = {
         'fam': 'Hahmlet', 'kind': 'display', 'ver': 'google/fonts ofl/hahmlet (1.002)',
         'src': {'Hahmlet[wght].ttf': (GF + 'hahmlet/Hahmlet%5Bwght%5D.ttf', '892bffe530255770a7435226154a02f519055ff6bedf64254f37f21d15a59279')},
         'lic': GF + 'hahmlet/OFL.txt',
-        'weights': {600: ('Hahmlet[wght].ttf', 600, '100 699'), 800: ('Hahmlet[wght].ttf', 800, '700 900')},
+        # v34.5 H4(R2 N5): 800은 포스터 글씨처럼 무거워 700으로 내린다(700 이상 요청은 700 인스턴스)
+        'weights': {600: ('Hahmlet[wght].ttf', 600, '100 649'), 700: ('Hahmlet[wght].ttf', 700, '650 900')},
         'local': ['Noto Serif CJK KR', 'AppleMyungjo', 'Batang'], 'generic': 'serif'},
     'do-hyeon': {
         'fam': 'Do Hyeon', 'kind': 'display', 'ver': 'google/fonts ofl/dohyeon (3.100)',
         'src': {'DoHyeon-Regular.ttf': (GF + 'dohyeon/DoHyeon-Regular.ttf', '35644be7f28e0a68a447b1f7af351dcde5674b870f24f7b5f43e26d00b4ab653')},
         'lic': GF + 'dohyeon/OFL.txt',
         'weights': {400: ('DoHyeon-Regular.ttf', None, '100 900')},
+        'local': ['Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans CJK KR'], 'generic': 'sans-serif'},
+    # v34.5 H4(R2 H7 · N5): 고딕 제목에 개성 — 기하형(원형 ㅇ · 넓은 속공간) 고딕, 굵기 2개(400 · 700), 한글 11,172자.
+    # 라이선스: SIL OFL 1.1, 저작권 줄 '© LY Corporation' — 예약 글꼴 이름(RFN) 없음(2026-11-08 OFL.txt · name 13/0 확인) → 원래 이름으로 분할 가능.
+    # 원본은 LINE 공식 배포 zip(seed.line.me, 2023.09.06판)의 TTF. zip 안 파일은 (주소, zip SHA-256, zip 안 경로)로 적는다.
+    'line-seed-kr': {
+        'fam': 'LINE Seed Sans KR', 'kind': 'sans', 'ver': 'LINE Seed Sans KR 1.000 (seed.line.me LINE_SeedKR_2023.09.06, 2026-11-08 받음)',
+        'src': {'LINESeedKR-Rg.ttf': ('https://seed.line.me/src/images/fonts/LINE_Seed_Sans_KR.zip', 'bfc3d5f737a47be1d9fc6cc971d8f78c7b6688f327501b522071f306dcdcf3e1', 'LINE_SeedKR_2023.09.06/TTF/LINESeedKR-Rg.ttf', '52fdbf502f57c2652461eee99c8c71a9f85850f93ed411e5ed08e24327e33003'),
+                'LINESeedKR-Bd.ttf': ('https://seed.line.me/src/images/fonts/LINE_Seed_Sans_KR.zip', 'bfc3d5f737a47be1d9fc6cc971d8f78c7b6688f327501b522071f306dcdcf3e1', 'LINE_SeedKR_2023.09.06/TTF/LINESeedKR-Bd.ttf', 'df6d817f60814528922a0e2911b76a1252db0697c2de78a7283ea7a3c8e70e21')},
+        'lic': 'https://raw.githubusercontent.com/line/seed/main/OFL.txt',
+        'weights': {400: ('LINESeedKR-Rg.ttf', None, '100 549'), 700: ('LINESeedKR-Bd.ttf', None, '550 900')},
         'local': ['Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans CJK KR'], 'generic': 'sans-serif'},
     'gowun-batang': {
         'fam': 'Gowun Batang', 'kind': 'serif', 'ver': 'google/fonts ofl/gowunbatang (1.000)',
@@ -149,8 +161,18 @@ def main():
         for x in os.listdir(d):
             if x.endswith('.woff2'):
                 os.remove(os.path.join(d, x))
-        for fn, (url, h) in F['src'].items():
-            fetch(url, os.path.join(a.cache, fn), h)
+        for fn, src in F['src'].items():
+            if len(src) == 2:
+                fetch(src[0], os.path.join(a.cache, fn), src[1])
+            else:  # (zip 주소, zip 해시, zip 안 경로, 파일 해시) — 공식 배포가 zip뿐인 글꼴
+                dst = os.path.join(a.cache, fn)
+                if not os.path.exists(dst) or sha(dst) != src[3]:
+                    import zipfile
+                    z = fetch(src[0], os.path.join(a.cache, os.path.basename(src[0])), src[1])
+                    with zipfile.ZipFile(z) as zf, open(dst, 'wb') as f:
+                        f.write(zf.read(src[2]))
+                if sha(dst) != src[3]:
+                    raise SystemExit(f'SHA-256 불일치: {dst}')
         fetch(F['lic'], os.path.join(d, 'OFL.txt'))
         for w, (fn, wght, rng) in F['weights'].items():
             tasks.append((fid, w, os.path.join(a.cache, fn), wght, slices, d))
