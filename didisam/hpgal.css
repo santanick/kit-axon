@@ -172,3 +172,4 @@ body.tpg-dz-on .hpe-stage{padding-right:374px}
   .tpg-page .sl-hr{width:auto;flex:none}
   .tpg-page .sl-hr .btn{min-height:38px;padding:0 12px;font-size:13.5px;width:auto}
 }
+.tpg-sw0{align-items:center;justify-content:center;font-size:13px;color:var(--g600,#4B5563);background:repeating-linear-gradient(135deg,#F3F4F6 0 8px,#fff 8px 16px)}

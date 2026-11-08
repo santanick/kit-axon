@@ -25,13 +25,16 @@
   const QU = []; let RUN = 0; const MAXR = 3;
   function pump() {
     while (RUN < MAXR && QU.length) { const j = QU.shift(); if (!j.el.isConnected || j.el.dataset.done) continue; RUN++;
-      const fin = () => { if (j.fin) return; j.fin = 1; RUN = Math.max(0, RUN - 1); j.el.dataset.done = 1; j.el.classList.add('tpg-on'); if (j.after) try { j.after(j.f); } catch (e) { } TPG.stat.last = performance.now(); setTimeout(() => { pump(); idle(); }, 0); };
-      setTimeout(() => { let h = ''; try { h = j.html(); } catch (e) { console.error('hpgal mini', e); }
+      /* 문서가 그려지면(interactive) 바로 보여 주고 자리를 비운다 — 사진은 이어서 들어온다. load에서 한 번 더 맞춤(스크롤 위치) */
+      const show = () => { if (j.shown) return; j.shown = 1; j.ms = performance.now() - j.t0; RUN = Math.max(0, RUN - 1); j.el.dataset.done = 1; j.el.classList.add('tpg-on'); if (j.after) try { j.after(j.f); } catch (e) { } TPG.stat.last = performance.now(); setTimeout(() => { pump(); idle(); }, 0); };
+      const fin = () => { if (j.fin) return; j.fin = 1; clearInterval(j.iv); show(); if (j.after && j.f) try { j.after(j.f); } catch (e) { } };
+      j.t0 = performance.now(); setTimeout(() => { let h = ''; try { h = j.html(); if (window.HPP && typeof HPP.thumb === 'function') h = HPP.thumb(h); } catch (e) { console.error('hpgal mini', e); } /* X2: 썸네일은 800px 사진 한 벌 · lazy */
         if (!j.el.isConnected) { fin(); return; }
         const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-same-origin'); f.setAttribute('tabindex', '-1'); f.setAttribute('aria-hidden', 'true'); f.title = '';
         f.className = 'tpg-if'; f.style.width = j.W + 'px'; f.style.height = j.H + 'px'; j.f = f;
-        f.addEventListener('load', fin, { once: true }); setTimeout(fin, 4000);
-        j.el.querySelectorAll('iframe.tpg-if').forEach(x => x.remove()); j.el.appendChild(f); fitMini(j.el); f.srcdoc = h; }, 0); }
+        f.srcdoc = h; f.addEventListener('load', () => { if (f.contentDocument && f.contentDocument.URL === 'about:blank') return; fin(); }); setTimeout(fin, 5000);
+        j.iv = setInterval(() => { try { const d = f.contentDocument; if (d && d.URL !== 'about:blank' && d.readyState !== 'loading' && d.body) { clearInterval(j.iv); show(); } } catch (e) { clearInterval(j.iv); } }, 30);
+        j.el.querySelectorAll('iframe.tpg-if').forEach(x => x.remove()); j.el.appendChild(f); fitMini(j.el); }, 0); }
   }
   /* 보이는 것을 다 그린 뒤에는 쉬는 시간에 아래 카드도 한 장씩 미리 그린다(스크롤하면 이미 준비됨) */
   let IDLE = 0; const ric = window.requestIdleCallback || (f => setTimeout(f, 120));
@@ -115,8 +118,20 @@
   const clone = s => JSON.parse(JSON.stringify(s));
   const famList = () => { try { return window.HPL && typeof HPL.list === 'function' ? HPL.list() : Object.keys((window.HPL && HPL.fam) || {}).map(id => ({ id, name: HPL.fam[id].name || id, desc: HPL.fam[id].desc || '' })); } catch (e) { return []; } };
   const thList = () => A(window.HPT && HPT.list);
-  const palList = () => { const C = window.HPC; if (!C) return []; let L = typeof C.list === 'function' ? C.list() : C.list || C.pal || C.palettes; if (L && !Array.isArray(L) && typeof L === 'object') L = Object.keys(L).map(id => Object.assign({ id }, L[id]));
-    return A(L).map(p => { const cs = A(p.colors || p.c || p.sw || p.swatch).filter(x => /^#[0-9a-f]{6}$/i.test(x)); const acc = p.acc || p.accent || p.primary || cs[0]; return { id: p.id, name: p.name || p.id, acc, cs: cs.length ? cs : [acc].filter(Boolean) }; }).filter(p => p.id && /^#[0-9a-f]{6}$/i.test(p.acc || '')); };
+  const palList = () => { const C = window.HPC; if (!C) return []; let L = []; try { L = typeof C.forType === 'function' ? A(C.forType(S.org && S.org.type)) : []; if (L.length < 8) L = A(C.list); } catch (e) { L = A(C.list); }
+    return L.filter(p => p && p.id && /^#[0-9a-f]{6}$/i.test(p.acc || '')).map(p => ({ id: p.id, name: p.name || p.id, acc: p.acc, cs: [p.acc, p.acc2, p.dark, p.alt, p.bg].filter(x => /^#[0-9a-f]{6}$/i.test(x || '')) })); };
+  /* 섹션 모양(S2 · S3): 홈의 첫 화면(banner.data.hk) · 강좌 카드(classes.data.card) · 신청 띠(text cta.data.ck) */
+  const HERO_N = { scrim: '사진 위 글자', box: '상자 + 바로가기', split: '좌우 분할', grid: '사진 격자' };
+  const CTA_N = { photo: '사진 배경 띠', panel: '색 패널', contact: '연락 채널' };
+  const pagesOf = x => (typeof s2pages === 'function' ? s2pages(x) : [{ key: 'home', label: '홈', sections: x.sections }]).filter(p => Array.isArray(p.sections));
+  const homeSecs = x => A(x && x.sections);
+  const SECK = {
+    hero: { n: '첫 화면', test: x => x.type === 'banner', key: 'hk', list: () => A(window.HPS && HPS.kinds && HPS.kinds.hero).map(id => ({ id, name: HERO_N[id] || id })), auto: (x, d) => { try { const c = Object.assign({}, d); delete c.hk; return HPS.heroKind(x, c); } catch (e) { return ''; } }, one: true, sel: '.hps-hero, .hp-hero' },
+    card: { n: '강좌 카드', test: x => x.type === 'classes', key: 'card', list: () => A(window.HPS && HPS.cardKinds).map(k => ({ id: k.id, name: k.name })), auto: () => '', sel: '.hp-cls' },
+    cta: { n: '신청 띠', test: x => x.type === 'text' && x.data && x.data.variant === 'cta', key: 'ck', list: () => A(window.HPS && HPS.kinds && HPS.kinds.cta).map(id => ({ id, name: CTA_N[id] || id })), auto: (x, d) => { try { const c = Object.assign({}, d); delete c.ck; return HPS.ctaKind(x, c); } catch (e) { return ''; } }, sel: '.hps-cta, .hp-cta' } };
+  /* 대상: 섹션 하나(바로 고치기 섹션 툴바에서 고른 것 — DZ.tgt = { page, i }) 또는 홈의 해당 섹션 전부(첫 화면은 첫 번째만) */
+  function secTargets(x, k) { const D = SECK[k]; if (DZ.tgt && DZ.tgt.k === k) { const pg = pagesOf(x).find(p => p.key === DZ.tgt.page); const sec = pg && pg.sections[DZ.tgt.i]; if (sec && D.test(sec)) return [sec]; }
+    const L = homeSecs(x).filter(D.test); return D.one ? L.slice(0, 1) : L; }
   const fontList = () => A(window.HPI && HPI.fonts).length ? HPI.fonts : [['sans', '고딕', 'Pretendard,sans-serif'], ['serif', '명조', "'Noto Serif KR',serif"]];
   const kinds = k => A(window.HPS && HPS.kinds && HPS.kinds[k]);
   const chromeOf = s => { try { return window.HPS && typeof HPS.chrome === 'function' ? HPS.chrome(s) || {} : {}; } catch (e) { return {}; } };
@@ -129,7 +144,11 @@
     const kf = kinds('footer'); if (kf.length) G.push({ k: 'foot', n: '바닥글', grp: '구조', cur: (s.hps && s.hps.foot) || '', auto: ch.foot, opts: [{ id: '', name: '자동', desc: '계열 · 테마에 맞춤' }, ...kf.map(([id, name]) => ({ id, name }))], set: (x, v) => { if (v) hps(x).foot = v; else if (x.hps) delete x.hps.foot; }, th: 'foot' });
     const km = kinds('mm'); if (km.length) G.push({ k: 'mm', n: '휴대폰 메뉴', grp: '구조', cur: (s.hps && s.hps.mm) || '', auto: ch.mm, opts: [{ id: '', name: '자동', desc: '계열 · 테마에 맞춤' }, ...km.map(([id, name]) => ({ id, name }))], set: (x, v) => { if (v) hps(x).mm = v; else if (x.hps) delete x.hps.mm; }, th: 'mm' });
     const tl = thList(); if (tl.length) G.push({ k: 'theme', n: '테마', grp: '색 · 글꼴', cur: s.theme || '', opts: tl.map(t => ({ id: t.id, name: t.name, desc: t.desc || '', sw: t.swatch })), set: (x, v) => { if (window.HPT && v) HPT.apply(x, v, {}); }, th: 'pc' });
-    const pl = palList(); if (pl.length) G.push({ k: 'pal', n: '팔레트', grp: '색 · 글꼴', cur: s.palette || (pl.find(p => p.acc.toLowerCase() === String(s.color || '').toLowerCase()) || {}).id || '', opts: pl.map(p => ({ id: p.id, name: p.name, sw: p.cs })), set: (x, v) => { const p = pl.find(q => q.id === v); if (!p) return; if (window.HPC && typeof HPC.apply === 'function') { HPC.apply(x, v); } else if (window.HPT) HPT.apply(x, x.theme, { color: p.acc }); x.palette = v; }, th: 'sw' });
+    const pl = palList(); if (pl.length) G.push({ k: 'pal', n: '팔레트', grp: '색 · 글꼴', cur: (window.HPC && HPC.of && HPC.of(s) ? s.hpPal : '') || '', opts: [{ id: '', name: '테마 기본 색', sw: [] }, ...pl.map(p => ({ id: p.id, name: p.name, sw: p.cs }))],
+      set: (x, v) => { if (v) HPC.apply(x, v); else { HPC.apply(x, null); delete x.hpColorLock; if (window.HPT && x.theme) HPT.apply(x, x.theme, { force: true }); } }, th: 'sw' });
+    Object.keys(SECK).forEach(k => { const D = SECK[k]; const T = secTargets(s, k); const L = D.list(); if (!T.length || !L.length) return; const d = T[0].data || {};
+      G.push({ k: 'sec-' + k, n: D.n + (DZ.tgt && DZ.tgt.k === k ? ' (이 섹션)' : ''), grp: '섹션 모양', cur: d[D.key] || '', auto: D.auto(s, d), opts: [{ id: '', name: '자동', desc: '테마 · 기관 유형에 맞춤' }, ...L], th: 'sec', sel: D.sel,
+        set: (x, v) => secTargets(x, k).forEach(sec => { sec.data = sec.data || {}; if (v) sec.data[D.key] = v; else delete sec.data[D.key]; }) }); });
     const ff = fontList(); const f = (s.font && typeof s.font === 'object') ? s.font : {};
     G.push({ k: 'fh', n: '제목 글꼴', grp: '색 · 글꼴', cur: f.h || '', opts: [{ id: '', name: '테마 기본' }, ...ff.map(([id, name, fam]) => ({ id, name, fam }))], set: (x, v) => { x.font = Object.assign({}, x.font); if (v) x.font.h = v; else delete x.font.h; if (!Object.keys(x.font).length) delete x.font; }, th: 'font' });
     G.push({ k: 'fb', n: '본문 글꼴', grp: '색 · 글꼴', cur: f.b || '', opts: [{ id: '', name: '테마 기본' }, ...ff.filter(x => !['hand', 'display'].includes(x[0])).map(([id, name, fam]) => ({ id, name, fam }))], set: (x, v) => { x.font = Object.assign({}, x.font); if (v) x.font.b = v; else delete x.font.b; if (!Object.keys(x.font).length) delete x.font; }, th: 'font' });
@@ -143,15 +162,15 @@
     const row = g => `<button type="button" class="tpg-row" data-act="tpg-dzp" data-v="${g.k}"><span class="tpg-rl">${E(g.n)}</span><span class="tpg-rv">${E(nameOf(g))}</span>${SV(P.r, 16)}</button>`;
     const grp = (t, rows) => rows ? `<section class="tpg-grp"><h3>${E(t)}</h3><div class="tpg-card">${rows}</div></section>` : '';
     const off = !!s.stockOff; const tag = (s.hps && s.hps.tagline) || '';
-    return grp('구조', G.filter(g => g.grp === '구조').map(row).join('')) + grp('색 · 글꼴', G.filter(g => g.grp === '색 · 글꼴').map(row).join('')) +
+    return grp('구조', G.filter(g => g.grp === '구조').map(row).join('')) + grp('섹션 모양', G.filter(g => g.grp === '섹션 모양').map(row).join('')) + grp('색 · 글꼴', G.filter(g => g.grp === '색 · 글꼴').map(row).join('')) +
       grp('사진', `<label class="tpg-row tpg-sw1"><span class="tpg-rl">샘플 사진 쓰기<small>우리 사진이 없는 자리를 분위기 사진으로 채웁니다</small></span><input type="checkbox" role="switch" class="tpg-tg" data-tpg="stock" ${off ? '' : 'checked'} aria-label="샘플 사진 쓰기"></label>`) +
       grp('바닥글', `<label class="tpg-row tpg-in"><span class="tpg-rl">한 줄 소개<small>바닥글 기관명 아래에 보입니다. 비우면 표시하지 않습니다.</small></span><input type="text" maxlength="80" data-tpg="tagline" value="${E(tag)}" placeholder="예: 우리 기관을 한 줄로 소개해 주세요"></label>`) +
       `<p class="tpg-dzm">고르면 미리보기에 바로 반영됩니다. 되돌리기(Ctrl+Z)로 하나씩 되돌릴 수 있습니다.</p>`; }
   function pageHTML(g) {
-    const cls = { pc: 'tpg-o2', head: 'tpg-o1 tpg-wide', foot: 'tpg-o1 tpg-wide', sw: 'tpg-o2 tpg-sw', font: 'tpg-o1 tpg-fnt', mm: 'tpg-o2 tpg-mmg' }[g.th] || 'tpg-o2';
+    const cls = { sec: 'tpg-o2', pc: 'tpg-o2', head: 'tpg-o1 tpg-wide', foot: 'tpg-o1 tpg-wide', sw: 'tpg-o2 tpg-sw', font: 'tpg-o1 tpg-fnt', mm: 'tpg-o2 tpg-mmg' }[g.th] || 'tpg-o2';
     const one = o => { const on = o.id === g.cur; let vis = '';
-      if (g.th === 'pc' || g.th === 'head' || g.th === 'foot') vis = `<span class="tpg-mt tpg-mt-${g.th}" data-g="${g.k}" data-o="${E(o.id)}"><span class="tpg-sk" aria-hidden="true"><i></i><b></b><em></em><u></u></span></span>`;
-      else if (g.th === 'sw') vis = `<span class="tpg-sws">${A(o.sw).slice(0, 5).map(c => `<i style="background:${E(c)}"></i>`).join('')}</span>`;
+      if (g.th === 'pc' || g.th === 'sec' || g.th === 'head' || g.th === 'foot') vis = `<span class="tpg-mt tpg-mt-${g.th}" data-g="${g.k}" data-o="${E(o.id)}"><span class="tpg-sk" aria-hidden="true"><i></i><b></b><em></em><u></u></span></span>`;
+      else if (g.th === 'sw') vis = A(o.sw).length ? `<span class="tpg-sws">${A(o.sw).slice(0, 5).map(c => `<i style="background:${E(c)}"></i>`).join('')}</span>` : `<span class="tpg-sws tpg-sw0">테마 색</span>`;
       else if (g.th === 'font') { const fam = o.fam || ''; vis = `<span class="tpg-fs" style="${fam ? `font-family:${E(fam)}` : ''}">${g.k === 'fh' ? '배움이 시작되는 곳' : '수업 일정과 신청 방법을 확인하세요.'}</span>`; }
       else if (g.th === 'mm') vis = `<span class="tpg-mmv tpg-mmv-${E(o.id || 'auto')}" aria-hidden="true"><i></i><i></i><i></i></span>`;
       const autoTxt = !o.id && g.auto ? (g.opts.find(x => x.id === g.auto) || {}).name : '';
@@ -164,7 +183,8 @@
     /* 선택지 썸네일: 지금 사이트에 그 값을 넣어 그린다(보이는 것만 · 2장씩) */
     b.querySelectorAll('.tpg-mt').forEach(el => { const gg = G.find(x => x.k === el.dataset.g); if (!gg) return; const v = el.dataset.o; const kind = gg.th;
       const html = () => { const x = clone(site0()); gg.set(x, v); return siteHTML(x, false, 'ko'); };
-      watch(el, () => TPG.mini(el, html, 1280, kind === 'pc' ? 800 : kind === 'head' ? 260 : 460, kind === 'foot' ? f => { try { f.contentWindow.scrollTo(0, 1e6); } catch (e) { } } : null)); });
+      const after = kind === 'foot' ? f => { try { f.contentWindow.scrollTo(0, 1e6); } catch (e) { } } : kind === 'sec' && gg.sel ? f => { try { const d = f.contentDocument; const L = [...d.querySelectorAll(gg.sel)]; const t = L[0]; if (t) f.contentWindow.scrollTo(0, Math.max(0, t.getBoundingClientRect().top + f.contentWindow.scrollY - 8)); } catch (e) { } } : null;
+      watch(el, () => TPG.mini(el, html, 1280, kind === 'pc' || kind === 'sec' ? 800 : kind === 'head' ? 260 : 460, after)); });
   }
   function dzOpen() {
     if (!site0()) return; let w = $1('#tpgDz');
@@ -177,24 +197,31 @@
     DZ.on = true; document.body.classList.add('tpg-dz-on'); topOf(); dzPaint(); requestAnimationFrame(() => w.classList.add('on')); syncBtn(); }
   function topOf() { const w = $1('#tpgDz'); const b = $1('#hpe .hpe-stage') || $1('#hpe .hpe-bar'); if (w && b) w.style.setProperty('--tpg-top', Math.round(b.classList.contains('hpe-stage') ? b.getBoundingClientRect().top : b.getBoundingClientRect().bottom) + 'px'); }
   addEventListener('resize', topOf);
-  function dzClose() { DZ.on = false; DZ.pg = ''; const w = $1('#tpgDz'); if (w) w.remove(); document.body.classList.remove('tpg-dz-on'); syncBtn(); }
+  function dzClose() { DZ.on = false; DZ.pg = ''; DZ.tgt = null; const w = $1('#tpgDz'); if (w) w.remove(); document.body.classList.remove('tpg-dz-on'); syncBtn(); }
   DZ.open = dzOpen; DZ.close = dzClose; DZ.paint = dzPaint;
   const push = () => { try { if (typeof window.hpPush === 'function') window.hpPush(); } catch (e) { } };
   const done = msg => { try { save(); } catch (e) { } try { if (HPE.on && typeof window.hpPaint === 'function') window.hpPaint(); else if (typeof render === 'function') render(); } catch (e) { console.error('hpgal paint', e); } if (msg && typeof toast === 'function') toast(msg); };
   ACT['tpg-dz'] = () => (DZ.on ? dzClose() : dzOpen());
-  ACT['tpg-dzp'] = el => { DZ.pg = el.dataset.v || ''; dzPaint(); const f = $1(DZ.pg ? '#tpgDz .tpg-opt.on, #tpgDz .tpg-opt' : `#tpgDz [data-v="${el.dataset.from || ''}"]`); f && f.focus({ preventScroll: true }); };
+  ACT['tpg-dzp'] = el => { DZ.pg = el.dataset.v || ''; if (!DZ.pg) DZ.tgt = null; dzPaint(); const f = $1(DZ.pg ? '#tpgDz .tpg-opt.on, #tpgDz .tpg-opt' : `#tpgDz [data-v="${el.dataset.from || ''}"]`); f && f.focus({ preventScroll: true }); };
   ACT['tpg-dzs'] = el => { const s = site0(); const g = groups().find(x => x.k === el.dataset.g); if (!s || !g) return; const v = el.dataset.v || ''; if (v === g.cur) return;
     push(); g.set(s, v); const o = g.opts.find(x => x.id === v); done(`${g.n}: ${o ? o.name : v}`);
     $1('#tpgDz') && $1('#tpgDz').querySelectorAll(`.tpg-opt[data-g="${g.k}"]`).forEach(b => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); const t = b.querySelector('.tpg-on2'); if (t) t.innerHTML = `<b>${E((g.opts.find(x => x.id === b.dataset.v) || {}).name || '')}</b>${on ? SV(P.ok, 16, 2.4) : ''}`; });
     /* 다른 선택지 썸네일은 바뀐 사이트로 다시 그린다(레이아웃 · 테마는 서로 영향) */
-    if (g.th !== 'pc') return; setTimeout(() => { if (DZ.on && DZ.pg === g.k) { const b = $1('#tpgDz .tpg-dzb'); const y = b && b.scrollTop; dzPaint(); if (b) b.scrollTop = y; } }, 50); };
+    if (g.th !== 'pc' && g.th !== 'sw') return; setTimeout(() => { if (DZ.on && DZ.pg === g.k) { const b = $1('#tpgDz .tpg-dzb'); const y = b && b.scrollTop; dzPaint(); if (b) b.scrollTop = y; } }, 50); };
   /* 바로 고치기 막대에 [디자인] 버튼 · 닫히면 패널도 닫기 · 되돌리기 뒤 값 맞추기 */
   function syncBtn() { const b = $1('#hpe .tpg-dzbtn'); if (b) { b.setAttribute('aria-pressed', DZ.on); b.classList.toggle('on', DZ.on); } }
   function hookBar() { const bar = $1('#hpe .hpe-bar'); if (!bar || bar.querySelector('.tpg-dzbtn')) return; const at = bar.querySelector('[data-act=hpm-open]') || bar.querySelector('.sp');
     const btn = `<button type="button" class="btn sm tpg-dzbtn" data-act="tpg-dz" aria-pressed="${DZ.on}" title="레이아웃 · 테마 · 글꼴 · 머리글 · 바닥글">${SV(P.dz, 15, 1.7)} 디자인</button>`;
     if (at) at.insertAdjacentHTML(at.classList.contains('sp') ? 'afterend' : 'beforebegin', btn); syncBtn(); }
   new MutationObserver(() => { hookBar(); if (DZ.on && !document.body.classList.contains('hpe-open')) dzClose(); }).observe(document.body, { childList: true, subtree: false, attributes: true, attributeFilter: ['class'] });
-  document.addEventListener('load', e => { const t = e.target; if (t && t.id === 'hpeF') { hookBar(); topOf(); if (DZ.on) { const G = groups(); const g = DZ.pg && G.find(x => x.k === DZ.pg); const cur = $1('#tpgDz .tpg-opt.on'); if (!g || !cur || cur.dataset.v !== g.cur) dzPaint(); else if (!g) dzPaint(); } } }, true);
+  /* 섹션 툴바 [모양]: 첫 화면 · 강좌 · 신청 띠 섹션에서 그 섹션의 모양 고르기를 연다 */
+  function hookTb(f) { const doc = f.contentDocument; if (!doc) return; const x = site0(); if (!x) return; const pg = pagesOf(x).find(p => p.key === (HPE.key || 'home')); if (!pg) return;
+    doc.querySelectorAll('[data-hpe] > .hpe-tb').forEach(tb => { if (tb.querySelector('[data-tpg-k]')) return; const [, si] = tb.parentElement.dataset.hpe.split('|'); const sec = pg.sections[+si]; if (!sec) return;
+      const k = Object.keys(SECK).find(q => SECK[q].test(sec)); if (!k || !SECK[k].list().length) return;
+      const b = doc.createElement('button'); b.type = 'button'; b.dataset.tpgK = k; b.dataset.i = si; b.textContent = '모양'; b.title = `${SECK[k].n} 모양 고르기`; const ai = tb.querySelector('.ai'); tb.insertBefore(b, ai || null); });
+    if (!doc.__tpg) { doc.__tpg = 1; doc.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-tpg-k]'); if (!b) return; e.preventDefault(); e.stopPropagation();
+      DZ.tgt = { k: b.dataset.tpgK, page: HPE.key || 'home', i: +b.dataset.i }; DZ.pg = 'sec-' + b.dataset.tpgK; if (!DZ.on) dzOpen(); else dzPaint(); }, true); } }
+  document.addEventListener('load', e => { const t = e.target; if (t && t.id === 'hpeF') { setTimeout(() => { try { hookTb(t); } catch (x) { console.error('hpgal tb', x); } }, 0); hookBar(); topOf(); if (DZ.on) { const G = groups(); const g = DZ.pg && G.find(x => x.k === DZ.pg); const cur = $1('#tpgDz .tpg-opt.on'); if (!g || !cur || cur.dataset.v !== g.cur) dzPaint(); else if (!g) dzPaint(); } } }, true);
   { const base = ACT['hpe-open']; if (base) ACT['hpe-open'] = (...a) => { const r = base(...a); setTimeout(hookBar, 0); return r; }; }
   { const base = window.hpEdit; if (typeof base === 'function') window.hpEdit = (...a) => { const r = base(...a); setTimeout(hookBar, 0); return r; }; }
 })();
