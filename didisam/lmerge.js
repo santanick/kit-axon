@@ -71,7 +71,9 @@
   /* Shadow DOM에 홈페이지 HTML 넣기 */
   function mount(root) { const H = HP(); if (!H) return; (root || document).querySelectorAll('.smhost:not([data-ok])').forEach(el => { el.dataset.ok = '1'; const k = el.dataset.smk;
     const html = k === 'home' ? H.home : k === 'foot' ? H.foot : ((H.pages[k] || {}).html || '');
-    const sr = el.shadowRoot || el.attachShadow({ mode: 'open' }); sr.innerHTML = `<style>${safeCSS(H.css)}.smr{background:transparent;min-height:0}</style><div class="smr lk-${esc(H.look || 'campus')}">${safeHTML(html, { data: true, code: true })}</div>`; /* v25 게시본도 다시 정화(서버 API로 직접 넣은 HTML 대비) */ }); }
+    const sr = el.shadowRoot || el.attachShadow({ mode: 'open' }); sr.innerHTML = `<style>${safeCSS(H.css)}.smr{background:transparent;min-height:0}</style><div class="smr lk-${esc(H.look || 'campus')}">${safeHTML(html, { data: true, code: true })}</div>`; /* v25 게시본도 다시 정화(서버 API로 직접 넣은 HTML 대비) */ });
+    /* v34.5 G1 웹폰트: Shadow DOM 안의 @font-face는 브라우저가 무시하므로 문서 머리에 한 번 올린다(같은 출처 fonts/만) */
+    try { const ff = (safeCSS(H.css).match(/@font-face\{[^}]*url\('fonts\/[\w.-]+\.woff2'\)[^}]*\}/g) || []).join(''); let st = document.getElementById('hp-ff'); if (ff && (!st || st.textContent !== ff)) { if (!st) { st = document.createElement('style'); st.id = 'hp-ff'; document.head.appendChild(st); } st.textContent = ff; } } catch (e) { } }
   window.lmMount = mount;
   { let q = 0; new MutationObserver(() => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { mount(); } catch (e) { } }); }).observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); }
 
