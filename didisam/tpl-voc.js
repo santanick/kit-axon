@@ -244,7 +244,7 @@
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
   /* H3(R2 H1 · BRIEF8): 주력 계열 4개(bulletin · typo · story · portal) + editorial · fullbleed 1종씩으로 모은다.
      [계열 또는 'hk:<S3 첫 화면>', 변형] */
-  const H3L = { 'voc-employer': ['portal', 'a'], 'voc-card': ['hk:box', ''] }; /* design은 story a면 corp customer · lifelong health와 닮음(②) → editorial c 그대로 · voc-card bulletin b는 lifelong t2-life-credit과 닮음(거리 6) */
+  const H3L = { 'voc-employer': ['portal', 'a'], 'voc-card': ['hk:box', ''], 't3-v-jobcenter': ['bulletin', 'b'] }; /* jobcenter bulletin a면 public t4-civic과 닮음(거리 8) */ /* design은 story a면 corp customer · lifelong health와 닮음(②) → editorial c 그대로 · voc-card bulletin b는 lifelong t2-life-credit과 닮음(거리 6) */
   Object.keys(H3L).forEach(id => { const c = CFG[id], v = H3L[id]; if (!c) return;
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); delete FD2V[id]; } else { c.L = v[0]; delete c.hk; FD2V[id] = v[1]; } });
   /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
@@ -308,4 +308,6 @@
     /* editorial · fullbleed 계열은 '특징(features)'도 번호 목록으로 그리므로 함께 바꾼다. 바꿀 칸이 둘이면 두 번째는 정보 목록(info) */
     tp.build = () => { const L = A(b0()); let hasT = L.some(x => x && x.data && x.data.variant === 'tiles'); const numF = /^(editorial|fullbleed)$/.test(tp.layout || '');
       L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
+  /* H3: 아래 블록 변형 지정(H1 HPS.blockVar 규약 — site.blocks가 유형 · 계열 기본값보다 우선). t3-v-beauty는 story 계열 corp-onboard와 첫 화면 아래 숫자 표가 같아 한 줄 숫자로 */
+  { const B = { 't3-v-beauty': { facts: 'one' } }; Object.keys(B).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp) tp.blocks = Object.assign({}, tp.blocks || {}, B[id]); }); }
 })();
