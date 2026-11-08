@@ -51,8 +51,14 @@ const BROCHURE = { name: 'brochure.txt', mimeType: 'text/plain', buffer: Buffer.
     await page.keyboard.type('함께 배우는 저녁 교실'); await page.keyboard.press('Enter'); await wait(300); await frameReady();
     const t1 = await ev(() => site().sections.find(x => x.type === 'banner').data.title); ok('글자 수정 저장', t1 === '함께 배우는 저녁 교실', t1);
     await F().locator('.hp-hero h1[data-hpe-f]').first().click(); await page.waitForSelector('#hpiTb', { state: 'visible' });
-    await page.click('#hpiTb [data-hpi="ff"]'); await page.waitForSelector('#hpiTb .hpi-ffl'); const nf = await page.$$eval('#hpiTb [data-hpi="ffv"]', L => L.map(b => b.querySelector('span').style.fontFamily));
-    ok('글꼴 후보 6개(각 글꼴로 미리 보기)', nf.length === 6 && new Set(nf).size === 6, nf.length);
+    /* v34.5 F2: 글꼴 팝업은 '조합(제목+본문)'이 먼저 — 실제 사이트 제목 · 문장으로 미리 보기, [이 글자만]에서 개별 글꼴 */
+    await page.click('#hpiTb [data-hpi="ff"]'); await page.waitForSelector('#hpiTb .hpf-pairs');
+    const np = await page.$$eval('#hpiTb [data-hpf="pair"]', L => L.map(b => [b.querySelector('.hpf-t').textContent, b.querySelector('.hpf-t').style.fontFamily]));
+    ok('글꼴 조합 6~10개(실제 제목으로 미리 보기)', np.length >= 6 && np.length <= 10 && np.every(x => x[0].includes('함께 배우는')) && new Set(np.map(x => x[1])).size >= 5, np);
+    await page.evaluate(() => document.fonts.ready); await wait(900); await shot('hpe-toolbar-font-pairs');
+    await page.click('#hpiTb [data-hpi="ffs"][data-v="el"]'); await page.waitForSelector('#hpiTb .hpf-ones');
+    const nf = await page.$$eval('#hpiTb [data-hpi="ffv"]', L => L.map(b => b.querySelector('span').style.fontFamily));
+    ok('이 글자만: 글꼴 후보 6개 이상(각 글꼴로 미리 보기)', nf.length >= 6 && new Set(nf).size === nf.length, nf.length);
     await shot('hpe-toolbar-font');
     await page.click('#hpiTb [data-hpi="ffv"][data-v="serif"]'); await wait(400); await frameReady();
     const sty = () => ev(() => { const b = site().sections.find(x => x.type === 'banner'); return (b.data.sty || {}).title || null; });
@@ -67,7 +73,7 @@ const BROCHURE = { name: 'brochure.txt', mimeType: 'text/plain', buffer: Buffer.
     ok('정렬 가운데 · 낮은 대비 색은 4.5:1로 자동 보정', st && st.al === 'center' && st.c && st.c !== '#ffee88' && cr.r >= 4.5, { st, cr });
     const inl = await ev(() => document.getElementById('hpeF').contentDocument.querySelector('.hp-hero h1').getAttribute('style') || '');
     ok('편집 화면에 인라인 스타일 반영', /font-family/.test(inl) && /clamp\(/.test(inl) && /font-weight: ?800/.test(inl), inl);
-    await page.click('#hpiTb [data-hpi="ff"]'); await page.click('#hpiTb [data-hpi="ffs"][data-v="b"]'); await page.click('#hpiTb [data-hpi="ffv"][data-v="round"]'); await wait(400);
+    await page.click('#hpiTb [data-hpi="ff"]'); await page.click('#hpiTb [data-hpi="ffs"][data-v="b"]'); await page.waitForSelector('#hpiTb .hpf-ones'); await page.click('#hpiTb [data-hpi="ffv"][data-v="round"]'); await wait(400);
     ok('사이트 본문 글꼴(둥근) → S.site.font.b', await ev(() => (site().font || {}).b === 'round'));
     const nUndo = await ev(() => HPE.undo.length); await page.click('#hpe [data-act="hpe-undo"]'); await wait(400); await frameReady();
     ok('되돌리기(HPE.undo) 한 단계', await ev(n => !(site().font || {}).b && HPE.undo.length === n - 1, nUndo));

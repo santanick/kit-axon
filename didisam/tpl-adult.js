@@ -286,6 +286,66 @@
 
   /* ── 템플릿 덮어쓰기 ── */
   const HK2HERO = { split: 'split', box: 'center', scrim: 'bg', grid: 'center' };
+  /* ── FD2 eyebrow 한글화(R1 M2 · RULES_B2 5 '영어만 있는 eyebrow 금지'): 영문만 있는 작은 머리말을 한글 라벨로 바꾼다.
+     대학은 한영 병기(한글 · ENGLISH)를 허용한다. 사전에 없는 영문 문구는 지운다(빈 eyebrow = 표시 안 함). 한글이 들어 있으면 그대로 둔다. */
+  const EB_P = { 'WRITING & PRESENTATION': '글쓰기 · 발표', 'KOREAN LANGUAGE & EXCHANGE': '한국어 · 국제 교류', 'CONTINUING EDUCATION': '평생교육', 'SAFETY & HEALTH': '안전 · 보건', 'NOTICE': '공지', 'NEWS': '소식', 'REVIEWS': '수강 후기', 'COURSES': '강좌', 'CLASSES': '강좌', 'CLASS': '강좌', 'COURSE': '과정', 'GUIDE': '안내', 'ROADMAP': '로드맵',
+    'PROGRAMS': '프로그램', 'PROGRAM': '프로그램', 'PROCESS': '진행 순서', 'SCHEDULE': '일정', 'CALENDAR': '일정', 'TIMETABLE': '시간표', 'LOCATION': '오시는 길', 'SUPPORT': '지원',
+    'SUBJECTS': '과목', 'LEVEL': '수준별', 'LEVELS': '수준별', 'FIELDS': '분야', 'FIELD': '분야', 'TRACKS': '트랙', 'JOURNEY': '배움의 흐름', 'HOW WE TEACH': '수업 방식',
+    'HOW TO': '이용 방법', 'HOW TO JOIN': '참여 방법', 'HOW IT WORKS': '이용 방법', 'FAQ': '자주 묻는 질문', 'CONTACT': '문의', 'CERTIFICATION': '자격', 'CERTIFICATE': '수료',
+    'WHY': '특징', 'WHY US': '특징', 'WHO': '대상', 'FOR WHOM': '대상', 'WHAT WE DO': '하는 일', 'TOPICS': '주제', 'THEMES': '주제', 'THIS MONTH': '이달의 일정', 'THIS WEEK': '이번 주',
+    'THIS TERM': '이번 학기', 'THIS SEMESTER': '이번 학기', 'THIS SEASON': '이번 시즌', 'STORIES': '이야기', 'SKILLS': '역량', 'SHORTCUT': '바로가기', 'QUICK MENU': '바로가기',
+    'POPULAR': '인기 강좌', 'NOW OPEN': '모집 중', 'OPEN': '모집 중', 'RECRUITING': '모집 중', 'MODULES': '구성', 'FLOW': '진행 순서', 'STEPS': '단계', 'STAGES': '단계', 'CURRICULUM': '커리큘럼',
+    'CHECK': '확인', 'CATEGORY': '분야', 'CARE': '관리', 'ABOUT': '소개', 'WELCOME': '환영합니다', 'APPLY': '신청', 'ENROLL': '수강신청', 'REGISTRATION': '신청', 'INQUIRY': '문의',
+    'DRILL': '훈련 기록', 'WORKSHOP': '워크숍', 'WORKSHOPS': '워크숍', 'VALUES': '가치', 'STRATEGY': '전략', 'RESOURCES': '자료실', 'TESTS': '평가', 'TEST PREP': '시험 준비',
+    'ELIGIBILITY': '신청 자격', 'WHAT TO BRING': '준비물', 'RULES': '이용 규칙', 'TERMS': '이용 안내', 'FEATURED': '추천', 'PARTNER': '협력', 'COMMUNITY': '커뮤니티', 'STUDIO': '스튜디오',
+    'START': '시작하기', 'NEXT': '다음 단계', 'METHOD': '수업 방식', 'FORMAT': '운영 방식', 'SYSTEM': '운영 방식', 'ROUTINE': '학습 루틴', 'PATH': '경로', 'PATHS': '경로', 'ROUTE': '경로',
+    'PILLARS': '핵심 축', 'CORE': '핵심', 'FOCUS': '중점', 'HELP': '도움말', 'MENU': '메뉴', 'DEPARTMENTS': '학과', 'MAJORS': '전공', 'SCHOOLS': '학교', 'CHALLENGE': '도전 과제', 'SHARING': '나눔' };
+  const EB_W = { 'YOUTH': '청소년', 'CAREER': '진로', 'TRAINING': '교육', 'EDUCATION': '교육', 'PROGRAM': '프로그램', 'PROGRAMS': '프로그램', 'ACADEMY': '아카데미', 'CENTER': '센터', 'SCHOOL': '학교',
+    'CLUB': '동아리', 'SPORTS': '스포츠', 'SPEAKING': '말하기', 'WRITING': '글쓰기', 'READING': '독서', 'MATH': '수학', 'SCIENCE': '과학', 'MUSIC': '음악', 'ART': '미술', 'CODING': '코딩',
+    'DIGITAL': '디지털', 'DATA': '데이터', 'AI': 'AI', 'AX': 'AX', 'IT': 'IT', 'ESG': 'ESG', 'ONLINE': '온라인', 'CYBER': '사이버', 'SAFETY': '안전', 'DISASTER': '재난', 'ETHICS': '윤리', 'INTEGRITY': '청렴',
+    'GREEN': '녹색', 'CIVIC': '시민', 'CITIZEN': '시민', 'PUBLIC': '공공', 'SERVICE': '서비스', 'LEADERSHIP': '리더십', 'FACULTY': '교원', 'TEACHING': '교수', 'LEARNING': '학습', 'STUDY': '학습',
+    'LIFELONG': '평생', 'FAMILY': '가족', 'HEALTH': '건강', 'LANGUAGE': '외국어', 'ENGLISH': '영어', 'KOREAN': '한국어', 'GLOBAL': '글로벌', 'STARTUP': '창업', 'JOB': '취업', 'CERTIFICATE': '자격',
+    'LICENSE': '자격', 'EXAM': '시험', 'TEST': '시험', 'PREP': '준비', 'COACHING': '코칭', 'TUTORING': '튜터링', 'WORK': '직무', 'SKILLS': '역량', 'CORPORATE': '기업', 'COMPANY': '기업', 'EMPLOYEE': '임직원',
+    'ONBOARDING': '온보딩', 'MANDATORY': '법정', 'CREDIT': '학점', 'BANK': '은행제', 'DEGREE': '학위', 'HUMANITIES': '인문', 'CULTURE': '문화', 'CREATIVE': '창작', 'BOOK': '독서', 'MONEY': '재테크',
+    'SMART': '스마트', 'FACTORY': '공장', 'TECHNICAL': '기술', 'VOCATIONAL': '직업', 'REGIONAL': '지역', 'NATIONAL': '국가', 'GOVERNMENT': '행정', 'INNOVATION': '혁신', 'COMMUNITY': '공동체',
+    'EXTRACURRICULAR': '비교과', 'EXCHANGE': '교류', 'DEPARTMENT': '학과', 'UNIVERSITY': '대학', 'CAMPUS': '캠퍼스', 'CONTINUING': '평생', 'HANDS-ON': '실습', 'PRACTICE': '실습', 'LAB': '랩',
+    'STORE': '매장', 'BRAND': '브랜드', 'CUSTOMER': '고객', 'COHORT': '기수', 'BOOTCAMP': '부트캠프', 'STUDY CARE': '관리형 학습', 'COURSEWARE': '교재', 'CLASSROOM': '강의실', 'LECTURE': '강의',
+    'NEW': '새', 'ONE-DAY': '원데이', 'PRIVATE': '1:1', 'GROUP': '그룹', 'COMPETENCY': '역량', 'HUMAN': '인재', 'DEVELOPMENT': '개발', 'ADMISSION': '입시', 'GRADE': '학년', 'PRESENTATION': '발표' };
+  const EB = (v, uni) => { const s = String(v == null ? '' : v).trim(); if (!s || /[가-힣]/.test(s) || !/[A-Za-z]/.test(s)) return v;
+    const U = s.toUpperCase().replace(/\s+/g, ' '); let ko = EB_P[U];
+    if (!ko) { const W = U.split(/\s*(?:&|\/|·|,)\s*|\s+/).filter(Boolean); if (W.length <= 3 && W.every(w => EB_W[w])) ko = W.map(w => EB_W[w]).join(' ').replace(/(교육|학습) \1/g, '$1'); }
+    if (!ko) return '';
+    return uni ? ko + ' · ' + s : ko; };
+
+  /* ── FD2 유형 간 재배치(R1 H1 · M1, fix6/BRIEF7): 유형마다 주력 계열 5~6개만 쓴다 — 성인 = editorial · mosaic · bento · splitscreen · typo · fullbleed + S3. collage · noir · portal · bulletin · sidebar · story는 뺀다.
+     같은 계열을 다른 유형도 쓰면 변형(layoutVar, FD1 HPL.vars)을 서로 다르게 고른다. 머리글 · 바닥글은 FA의 유형별 허용 목록 안에서 2~3종으로 나눈다.
+     [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
+  const FD2 = {
+    'adult-bootcamp': ['bento', 'b', 'float', 'mega'],
+    'adult-cert': ['hk:grid', '', 'left', 'split'],
+    'adult-hobby': ['mosaic', 'b', 'float', 'min'],
+    'adult-lang': ['hk:grid', '', 'center', 'mega'],
+    'solo-creator': ['splitscreen', 'b', 'center', 'min'],
+    't1-ad-license': ['hk:box', '', 'left', 'split'],
+    't1-ad-civil': ['typo', 'a', 'left', 'mega'],
+    't1-ad-office': ['bento', 'a', 'center', 'split'],
+    't1-ad-talk': ['hk:split', '', 'float', 'min'],
+    't1-ad-wellness': ['fullbleed', 'c', 'center', 'min'],
+    't1-ad-craft': ['mosaic', 'c', 'left', 'mega'],
+    't1-ad-creative': ['editorial', 'b', 'float', 'split'],
+    't1-ad-coach': ['splitscreen', 'c', 'center', 'split'],
+    't1-ad-money': ['hk:box', '', 'float', 'mega'],
+    't1-ad-testprep': ['hk:scrim', '', 'left', 'split'],
+    'ta-music': ['hk:scrim', '', 'overlay', 'min'],
+    'ta-book': ['editorial', 'a', 'center', 'mega'],
+    'ta-writing': ['typo', 'b', 'float', 'min'],
+    'ta-photo': ['fullbleed', 'b', 'overlay', 'mega'],
+    'ta-marketing': ['hk:split', '', 'left', 'mega']
+  };
+  Object.keys(FD2).forEach(id => { const c = CFG[id], v = FD2[id]; if (!c) return;
+    if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); } else { c.L = v[0]; delete c.hk; }
+    c.lv = v[1] || ''; c.hd = [v[2], v[3], A(c.hd)[2] || 'full']; });
+
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'adult') return;
     const c = CFG[id];
@@ -294,6 +354,7 @@
     if (c.L) { tp.layout = c.L; tp.hero = ''; } else { delete tp.layout; tp.hero = HK2HERO[c.hk] || ''; }
     tp.photos = Object.assign({}, c.ph);
     tp.hps = { head: c.hd[0], foot: c.hd[1], mm: c.hd[2] };
+    if (c.L && c.lv) tp.layoutVar = c.lv; else delete tp.layoutVar;
     delete tp.deco; /* 원 · 링 · 줄무늬 장식 CSS 걷어냄 */
     tp.build = () => { const L = A(c.build()).filter(Boolean);
       L.forEach(x => { if (!x || !x.data) return; const d = x.data;
@@ -303,13 +364,18 @@
       return L; };
   });
 
+  /* FD2: 내 템플릿의 모든 섹션 eyebrow를 마지막에 한글화(덧붙인 섹션 포함) */
+  Object.keys(CFG).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || !tp.tpA || A(tp.types)[0] !== 'adult') return; const b0 = tp.build;
+    tp.build = () => { const L = A(b0()); L.forEach(x => { if (x && x.data && x.data.eyebrow) x.data.eyebrow = EB(x.data.eyebrow, false); }); return L; }; });
+
   /* ── siteFromTpl 감싸기: 내 템플릿에만 layout · photos · hps ── */
   { const base = siteFromTpl; const f = tp => { const s = base(tp);
       try {
         if (s && tp && tp.tpA && A(tp.types)[0] === 'adult') {
-          /* 계열은 성인 기관에서만 건다: 다른 유형 기관(예: voc의 추천 1순위가 adult-bootcamp)에서는 AI 마법사 시안 3개가 이전 사이트의 계열을 물려받아 첫 화면이 같아진다(hpwiz 문제 · 코어 변경 요청) */
+          /* v34.5 X4: 마법사 시안은 시안마다 계열을 다시 지정하므로(hpwiz2) 성인 기관 제한을 풀었다 */
           const orgTy = (() => { try { return S.org.type; } catch (e) { return 'adult'; } })();
-          if (tp.layout && orgTy === 'adult' && window.HPL && HPL.fam && HPL.fam[tp.layout]) { if (typeof HPL.apply === 'function') HPL.apply(s, tp.layout); else s.layout = tp.layout; } else delete s.layout;
+          if (tp.layout && orgTy && window.HPL && HPL.fam && HPL.fam[tp.layout]) { if (typeof HPL.apply === 'function') HPL.apply(s, tp.layout); else s.layout = tp.layout; } else delete s.layout;
+          if (s.layout && tp.layoutVar) s.layoutVar = tp.layoutVar; else delete s.layoutVar; /* FD2: 계열 변형(FD1 HPL.vars) */
           if (tp.photos && window.HPSTOCK && typeof HPSTOCK.slotImg === 'function') { s.photos = Object.assign({}, tp.photos); s.img = s.img || {};
             Object.keys(tp.photos).forEach(sl => { if (s.img[sl] && s.img[sl].src) return; const v = HPSTOCK.slotImg(tp.photos[sl], sl); if (v) s.img[sl] = v; }); }
           if (tp.hps) s.hps = Object.assign({}, s.hps || {}, tp.hps);

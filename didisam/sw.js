@@ -3,7 +3,7 @@
 const C = 'didisam-app-v34.4';
 const SHELL = ['learner.html', 'learner.css', 'lapp.css', 'ldads.css', 'lapp.js', 'manifest.webmanifest', 'app-icon-192.png'];
 /* v34.5 X2 런타임 캐시: 이름이 바뀌지 않는 파일(img/stock · fonts · /api/media/<내용 해시>)만. 최대 160개 · 약 40MB, 오래 안 쓴 것부터 지움(LRU) */
-const RTC = 'didisam-rt-media', RT = /\/(img\/stock\/[\w-]+\.webp|fonts\/[\w-]+\.woff2|api\/media\/[\w.-]+)$/, RT_N = 160, RT_B = 40 << 20;
+const RTC = 'didisam-rt-media', RT = /\/(img\/stock\/[\w-]+\.webp|fonts\/(?:[\w-]+\/)?[\w.-]+\.(?:woff2|css)|api\/media\/[\w.-]+)$/, RT_N = 300, RT_B = 40 << 20;
 const rt = async r => { const c = await caches.open(RTC); const hit = await c.match(r); if (hit) { c.delete(r).then(() => c.put(r, hit.clone())).catch(() => { }); return hit; }
   const res = await fetch(r); if (res.ok && res.type === 'basic' && res.status === 200) { const b = await res.clone().arrayBuffer(); const h = new Headers(res.headers); h.set('x-rt-size', String(b.byteLength));
     await c.put(r, new Response(b, { status: 200, headers: h })).catch(() => { }); const K = await c.keys(); let n = K.length, tot = 0; const sz = await Promise.all(K.map(k => c.match(k).then(m => +(m && m.headers.get('x-rt-size')) || 0)));
