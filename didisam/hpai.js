@@ -304,7 +304,7 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     let w = $('#hpe'); if (!w) { w = document.createElement('div'); w.id = 'hpe'; w.className = 'hpe'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', '화면에서 바로 고치기'); document.body.appendChild(w); }
     document.body.classList.add('hpe-open'); hpChrome(); hpPaint();
   }
-  window.hpEdit = hpEdit;
+  window.hpEdit = hpEdit; window.hpPaint = hpPaint; /* v34.5 hpimg: 스크롤을 지키며 다시 그리기 */
   function hpChrome() {
     const w = $('#hpe'); if (!w) return; const P = pagesOf(site());
     w.innerHTML = `<div class="hpe-bar"><div class="hpe-t"><b>화면에서 바로 고치기</b><small>글자를 누르면 바로 고칩니다 · Enter 저장 · Esc 취소 · 이미지를 누르면 바꿉니다</small></div>
