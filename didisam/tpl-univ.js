@@ -116,18 +116,18 @@
      같은 계열을 다른 유형도 쓰면 변형(layoutVar, FD1 HPL.vars)을 서로 다르게 고른다. 머리글 · 바닥글은 FA의 유형별 허용 목록 안에서 2~3종으로 나눈다.
      [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
   const FD2 = {
-    't2-univ-ctl': ['portal', 'a', 'util', 'campus'],
+    't2-univ-ctl': ['portal', 'c', 'util', 'campus'],
     'univ-lms': ['sidebar', 'a', 'center', 'min'],
-    't2-univ-dept': ['portal', 'b', 'util', 'biz'],
+    't2-univ-dept': ['portal', 'a', 'util', 'biz'] /* 어두운 첫 화면: dept · startup 2종 */,
     't2-univ-faculty': ['editorial', 'a', 'center', 'campus'],
     't2-univ-tutor': ['hk:grid', '', 'center', 'min'],
     't2-univ-writing': ['editorial', 'c', 'util', 'min'],
     't2-univ-career': ['hk:split', '', 'center', 'biz'],
     't2-univ-startup': ['noir', 'a', 'overlay', 'min'],
     't2-univ-mooc': ['hk:grid', '', 'util', 'biz'],
-    't2-univ-ai': ['fullbleed', 'c', 'center', 'biz'],
+    't2-univ-ai': ['sidebar', 'b', 'center', 'biz'],
     't2-univ-intl': ['story', 'a', 'util', 'campus'],
-    't2-univ-rise': ['fullbleed', 'a', 'overlay', 'campus'],
+    't2-univ-rise': ['fullbleed', 'c', 'center', 'campus'],
     't2-univ-cll': ['hk:box', '', 'center', 'campus'],
     'univ-aicenter': ['hk:box', '', 'util', 'biz'],
     'univ-extra': ['story', 'b', 'center', 'min'],
@@ -137,6 +137,11 @@
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); } else { c.L = v[0]; delete c.hk; }
     c.lv = v[1] || ''; c.hd = [v[2], v[3], A(c.hd)[2] || 'full']; });
 
+  /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
+  const FCH = { 't2-univ-ctl': 'lec-01', 'univ-lms': 'lap-05', 't2-univ-dept': 'cls-03', 't2-univ-faculty': 'lec-02', 't2-univ-tutor': 'cam-07', 't2-univ-writing': 'hum-05', 't2-univ-career': 'hum-10', 't2-univ-startup': 'cor-16', 't2-univ-mooc': 'lec-03', 't2-univ-ai': 'hum-07', 't2-univ-intl': 'lan-02', 't2-univ-rise': 'cam-05', 't2-univ-cll': 'lib-03', 'univ-aicenter': 'cod-01', 'univ-extra': 'cam-08', 'univ-lifelong': { hero: 'lib-01', about: 'lib-06' } };
+  Object.keys(FCH).forEach(id => { const c = CFG[id]; if (!c) return; const v = typeof FCH[id] === 'string' ? { hero: FCH[id] } : FCH[id];
+    if (Array.isArray(c.ph)) { const ix = { hero: 0, about: 1, space: 2, cta: 3, gallery: 4 }; c.ph = c.ph.slice(); Object.keys(v).forEach(k => { if (ix[k] != null) c.ph[ix[k]] = v[k]; }); }
+    else c.ph = Object.assign({}, c.ph, v); });
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'univ') return;
     const c = CFG[id]; const build0 = tp.build; MINE.add(id);
@@ -169,7 +174,7 @@
 
   /* FD2: 내 템플릿의 모든 섹션 eyebrow를 마지막에 한글화(덧붙인 섹션 포함) */
   Object.keys(CFG).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || !tp.tpU || A(tp.types)[0] !== 'univ') return; const b0 = tp.build;
-    tp.build = () => { const L = A(b0()); L.forEach(x => { if (x && x.data && x.data.eyebrow) x.data.eyebrow = EB(x.data.eyebrow, true); }); return L; }; });
+    tp.build = () => { const L = A(b0()); L.forEach(x => { if (x && x.type === 'banner' && x.data && ['t2-univ-startup'].includes(id)) x.data.eyebrow = ''; /* 사진 위 eyebrow 대비 미달 → 뺌 */ if (x && x.data && x.data.eyebrow) x.data.eyebrow = EB(x.data.eyebrow, true); }); return L; }; });
 
   /* ── siteFromTpl 감싸기: 내 템플릿에만 layout · photos(→ site.img[slot]) · hps ── */
   { const base = siteFromTpl; const f = tp => { const s = base(tp);

@@ -247,16 +247,16 @@
      [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
   const FD2 = {
     'k12-total': ['hk:box', '', 'contact', 'cols'],
-    'k12-exam': ['splitscreen', 'a', 'left', 'split'],
-    't1-k12-math': ['splitscreen', 'b', 'contact', 'cta'],
-    't1-k12-english': ['fullbleed', 'a', 'float', 'cols'],
-    't1-k12-coding': ['bento', 'a', 'left', 'cta'],
+    'k12-exam': ['splitscreen', 'b', 'left', 'split'],
+    't1-k12-math': ['bento', 'b', 'contact', 'cta'], /* 어두운 첫 화면은 math(bento b) · music(fullbleed b) 2종만 */
+    't1-k12-english': ['fullbleed', 'c', 'float', 'cols'],
+    't1-k12-coding': ['bento', 'a', 'left', 'cta'], /* b면 adult bootcamp(bento b)와 닮음 */
     't1-k12-art': ['collage', 'a', 'float', 'split'],
     't1-k12-music': ['fullbleed', 'b', 'left', 'cols'],
-    't1-k12-reading': ['mosaic', 'a', 'contact', 'split'],
+    't1-k12-reading': ['mosaic', 'b', 'contact', 'split'],
     't1-k12-science': ['hk:box', '', 'float', 'cta'], /* bento면 public t4-cyber와 엄격 유사(거리 12 · 구조 같음) */
     't1-k12-tutor': ['hk:split', '', 'left', 'split'],
-    't1-k12-studycare': ['mosaic', 'b', 'contact', 'cols'],
+    't1-k12-studycare': ['mosaic', 'c', 'contact', 'cols'],
     't1-k12-sports': ['hk:scrim', '', 'float', 'cta'],
     't1-k12-kinder': ['hk:grid', '', 'float', 'cols'],
     't1-k12-retake': ['hk:grid', '', 'contact', 'split'],
@@ -267,6 +267,11 @@
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); } else { c.L = v[0]; delete c.hk; }
     c.lv = v[1] || ''; c.hd = [v[2], v[3], A(c.hd)[2] || 'full']; });
 
+  /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
+  const FCH = { 'k12-total': 'cls-04', 'k12-exam': 'hum-02', 't1-k12-math': 'dsk-07', 't1-k12-english': 'kid-09', 't1-k12-coding': 'cod-02', 't1-k12-art': 'hum-27', 't1-k12-music': 'mus-02', 't1-k12-reading': 'lib-04', 't1-k12-science': 'sci-01', 't1-k12-tutor': 'hum-04', 't1-k12-studycare': 'lib-02', 't1-k12-sports': 'spo-06', 't1-k12-kinder': 'kid-06', 't1-k12-retake': { hero: 'cls-01', space: 'lec-01' }, 't1-k12-online': { hero: 'lap-07', about: 'dsk-03' }, 'k12-kids': 'hum-35' };
+  Object.keys(FCH).forEach(id => { const c = CFG[id]; if (!c) return; const v = typeof FCH[id] === 'string' ? { hero: FCH[id] } : FCH[id];
+    if (Array.isArray(c.ph)) { const ix = { hero: 0, about: 1, space: 2, cta: 3, gallery: 4 }; c.ph = c.ph.slice(); Object.keys(v).forEach(k => { if (ix[k] != null) c.ph[ix[k]] = v[k]; }); }
+    else c.ph = Object.assign({}, c.ph, v); });
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'k12') return;
     const c = CFG[id];

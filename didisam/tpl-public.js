@@ -100,19 +100,19 @@
      [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
   const FD2 = {
     't4-hrd-inst': ['portal', 'b', 'util', 'gov'],
-    't4-agency': ['sidebar', 'b', 'center', 'biz'],
-    't4-cyber': ['sidebar', 'a', 'util', 'biz'],
-    't4-legal': ['bulletin', 'a', 'util', 'gov'],
-    't4-newhire': ['story', 'b', 'center', 'gov'],
+    't4-agency': ['sidebar', 'a', 'center', 'biz'], /* b면 corp t3-c-job과 엄격 유사 */
+    't4-cyber': ['sidebar', 'b', 'util', 'biz'],
+    't4-legal': ['bulletin', 'b', 'util', 'gov'], /* a(사진 판 위 제목)면 제목 대비 3.7 */
+    't4-newhire': ['story', 'c', 'center', 'gov'],
     't4-ai-gov': ['portal', 'c', 'center', 'biz'],
-    't4-civic': ['bulletin', 'b', 'center', 'gov'],
+    't4-civic': ['bulletin', 'a', 'center', 'gov'],
     't4-digital': ['hk:split', '', 'util', 'gov'],
-    't4-outreach': ['hk:scrim', '', 'center', 'biz'],
-    't4-leader': ['splitscreen', 'c', 'center', 'biz'],
+    't4-outreach': ['hk:split', '', 'center', 'biz'],
+    't4-leader': ['splitscreen', 'c', 'center', 'biz'] /* 어두운 첫 화면: leader · hrd-inst 2종 */,
     't4-service': ['hk:grid', '', 'util', 'biz'], /* split이면 voc tv-office와 첫 화면이 닮음(거리 6) */
-    't4-safety': ['splitscreen', 'a', 'util', 'gov'],
+    't4-safety': ['splitscreen', 'b', 'util', 'gov'],
     't4-integrity': ['typo', 'b', 'center', 'gov'],
-    't4-youth': ['story', 'c', 'util', 'biz'],
+    't4-youth': ['story', 'b', 'util', 'biz'], /* c면 voc t3-v-youth와 첫 화면 거리 2 */
     't4-family': ['hk:box', '', 'center', 'gov'],
     't4-green': ['typo', 'a', 'util', 'gov'],
     't4-data': ['hk:grid', '', 'center', 'biz'],
@@ -122,6 +122,11 @@
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); } else { c.L = v[0]; delete c.hk; }
     c.lv = v[1] || ''; c.hd = [v[2], v[3], A(c.hd)[2] || 'full']; });
 
+  /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
+  const FCH = { 't4-hrd-inst': 'cam-03', 't4-agency': 'off-11', 't4-cyber': 'off-13', 't4-legal': 'doc-01', 't4-newhire': 'dsk-08', 't4-ai-gov': 'rob-01', 't4-civic': 'cam-06', 't4-digital': 'hum-36', 't4-outreach': 'hum-11', 't4-leader': 'dsk-06', 't4-service': 'shk-01', 't4-safety': 'dro-01', 't4-integrity': 'dsk-09', 't4-youth': 'spo-08', 't4-family': 'fam-03', 't4-green': 'nat-01', 't4-data': 'dat-01', 't4-newcomer': 'cam-09' };
+  Object.keys(FCH).forEach(id => { const c = CFG[id]; if (!c) return; const v = typeof FCH[id] === 'string' ? { hero: FCH[id] } : FCH[id];
+    if (Array.isArray(c.ph)) { const ix = { hero: 0, about: 1, space: 2, cta: 3, gallery: 4 }; c.ph = c.ph.slice(); Object.keys(v).forEach(k => { if (ix[k] != null) c.ph[ix[k]] = v[k]; }); }
+    else c.ph = Object.assign({}, c.ph, v); });
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'public') return;
     const c = CFG[id]; const build0 = tp.build;
@@ -148,7 +153,7 @@
 
   /* FD2: 내 템플릿의 모든 섹션 eyebrow를 마지막에 한글화(덧붙인 섹션 포함) */
   Object.keys(CFG).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || !tp.tpP || A(tp.types)[0] !== 'public') return; const b0 = tp.build;
-    tp.build = () => { const L = A(b0()); L.forEach(x => { if (x && x.data && x.data.eyebrow) x.data.eyebrow = EB(x.data.eyebrow, false); }); return L; }; });
+    tp.build = () => { const L = A(b0()); L.forEach(x => { if (x && x.type === 'banner' && x.data && ['t4-legal'].includes(id)) x.data.eyebrow = ''; /* 사진 위 eyebrow 대비 미달 → 뺌 */ if (x && x.data && x.data.eyebrow) x.data.eyebrow = EB(x.data.eyebrow, false); }); return L; }; });
 
   /* ── siteFromTpl 감싸기: 내 템플릿에만 layout · photos · hps ── */
   { const base = siteFromTpl; const f = tp => { const s = base(tp);
