@@ -165,7 +165,7 @@
   const longTok = s => String(s || '').split(/[\s\n]+/).some(w => w.replace(/​/g, '').length > (/[가-힣]/.test(w) ? 12 : 20) && !w.includes('​'));
   function seoOf(s) { const se = Object.assign({}, (S.settings && S.settings.seo) || {}); const a = s.aiSeo || {}; return { title: se.title || a.title || '', desc: se.desc || a.desc || '' }; }
   function hpwQuality(s) {
-    s = s || site(); const secs = live(s); const bn = secs.find(x => x.type === 'banner'); const it = [];
+    s = s || site(); try { if (W.qpre) W.qpre(s); } catch (e) { } /* v34.5 X4: 숨긴 빈 섹션 다시 판정(hpwiz2) */ const secs = live(s); const bn = secs.find(x => x.type === 'banner'); const it = [];
     const add = (k, label, pts, ok, note, auto) => it.push({ k, label, pts, ok: !!ok, note: note || '', auto: auto !== false });
     const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#5C74F6'; const cr = cRatio(col, '#ffffff');
     add('contrast', '글자 대비', 15, cr >= 4.5, cr >= 4.5 ? `대표 색 대비 ${cr.toFixed(1)}:1` : `대표 색 위 흰 글자 대비 ${cr.toFixed(1)}:1 — 4.5:1 미만`);
@@ -183,6 +183,7 @@
     const ok = allowedNums(); const bad = secs.filter(x => { const d = x.data || {}; if (d.hpt === 'facts') return false; const nums = [...A(d.stats).map(r => r && r[0]), ...(x.type === 'text' && d.variant === 'stats' ? A(d.cols).map(r => r && r[0]) : [])].filter(v => /\d/.test(String(v || '')));
       return nums.some(v => !ok.has(String(v).replace(/,/g, ''))); });
     add('fact', '사실(숫자)', 5, !bad.length, bad.length ? `실제 데이터와 다른 숫자 ${bad.length}곳` : '숫자는 실제 데이터만');
+    try { (W.qx || []).forEach(f => f(s, it, add)); } catch (e) { console.error('hpw qx', e); } /* v34.5 X4: 감점 없는 안내 줄(샘플 사진 N장 남음) */
     const score = it.reduce((a, x) => a + (x.ok ? x.pts : 0), 0);
     return { score, items: it };
   }
@@ -199,7 +200,7 @@
     /* 문의 블록: 실제 연락처로 다시 채움 · 둘 이상이면 하나만 */
     let ctaN = 0; secs.forEach(x => { const d = x.data || {}; if (x.type === 'text' && d.variant === 'cta') { ctaN++; if (ctaN > 1) { x.hide = true; return; } const R = contactRows(); const rest = A(d.cols).filter(r => !/^(전화|이메일|주소|운영 시간|문의 게시판)$/.test(r[0])); d.cols = [...R, ...rest].slice(0, 4); if (!d.cols.length) d.cols = [['문의 게시판', '커뮤니티 게시판에 질문을 남겨 주세요']]; } });
     if (ctaN > 1) log.push(`문의 · 신청 블록 ${ctaN - 1}개를 숨겨 하나만 남겼습니다`);
-    const em = live(s).filter(emptyOf); em.forEach(x => { x.hide = true; }); if (em.length) log.push(`내용이 없는 섹션 ${em.length}개(${[...new Set(em.map(x => (SEC[x.type] || {}).n || x.type))].join(' · ')})를 숨겼습니다 — 내용이 생기면 [보이기]로 켜세요`);
+    const em = live(s).filter(emptyOf); em.forEach(x => { x.hide = true; x.hideAuto = 1; }); /* v34.5 X4: 자동 숨김 표시 → 데이터가 생기면 그릴 때 다시 보임(hpwiz2) */ if (em.length) log.push(`내용이 없는 섹션 ${em.length}개(${[...new Set(em.map(x => (SEC[x.type] || {}).n || x.type))].join(' · ')})를 숨겼습니다 — 내용이 생기면 [보이기]로 켜세요`);
     let an = 0; live(s).forEach(x => { const d = x.data || {}; if (x.type === 'image' && A(d.imgs).some(i => i && i.src) && !(d.alt || d.title)) { d.alt = `${N()} 사진`; an++; } if (x.type === 'banner' && d.img && !d.alt) { d.alt = `${N()} 대표 이미지`; an++; } });
     if (an) log.push(`이미지 ${an}개에 설명(대체 텍스트)을 넣었습니다`);
     let mo = 0; live(s).forEach(x => { const d = x.data || {}; ['title', 'eyebrow'].forEach(k => { if (longTok(d[k])) { d[k] = brk(d[k]); mo++; } }); if (String(d.title || '').split('\n').length > 3) { d.title = d.title.split('\n').slice(0, 3).join('\n'); mo++; } if (A(d.cols).length > 6) { d.cols = d.cols.slice(0, 6); mo++; } });
@@ -215,11 +216,11 @@
     if (fx) log.push(`실제 데이터와 다른 숫자 ${fx}곳을 실제 값으로 바꾸거나 숨겼습니다`);
     return { site: s, log };
   }
-  window.hpwQuality = hpwQuality; window.hpwFix = hpwFix;
+  window.hpwQuality = hpwQuality; window.hpwFix = hpwFix; W.emptyOf = emptyOf;
   const qHTML = (q, q0, log, withContact) => {
     const f = ft(); const need = q.items.find(x => x.k === 'contact' && !x.ok);
     return `<div class="hpw-q" aria-live="polite"><div class="hpw-qs"><b class="hpw-score ${q.score >= 90 ? 'hi' : q.score >= 75 ? 'mid' : 'lo'}">${q.score}<small>점</small></b><div><b>품질 점수</b><small>${q0 && q0.score !== q.score ? `자동 보정 전 ${q0.score}점 → 보정 후 ${q.score}점` : '100점 만점'}</small></div></div>
-      <ul class="hpw-ql">${q.items.map(x => { const was = q0 && q0.items.find(y => y.k === x.k); const fixed = x.ok && was && !was.ok; return `<li class="${x.ok ? (fixed ? 'fx' : 'ok') : 'no'}"><span class="hpw-qi" aria-hidden="true">${x.ok ? (fixed ? '↻' : '✓') : '!'}</span><b>${esc(x.label)}</b><small>${fixed ? '자동 보정 · ' : ''}${esc(x.note)}</small><em>${x.ok ? x.pts : 0}/${x.pts}</em></li>`; }).join('')}</ul>
+      <ul class="hpw-ql">${q.items.map(x => { const was = q0 && q0.items.find(y => y.k === x.k); const fixed = x.ok && was && !was.ok; return `<li class="${x.ok ? (fixed ? 'fx' : 'ok') : 'no'}"><span class="hpw-qi" aria-hidden="true">${x.ok ? (fixed ? '↻' : '✓') : '!'}</span><b>${esc(x.label)}</b><small>${fixed ? '자동 보정 · ' : ''}${esc(x.note)}</small><em>${x.info ? '안내' : `${x.ok ? x.pts : 0}/${x.pts}`}</em></li>`; }).join('')}</ul>
       ${A(log).length ? `<details class="hpw-log"><summary>자동으로 고친 것 ${log.length}가지</summary><ul>${log.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
       ${need && withContact ? `<div class="hpw-ct"><b>연락처 넣기(선택)</b><div class="hpw-ctr"><label>전화<input name="hwTel" inputmode="tel" maxlength="30" placeholder="051-000-0000" value="${esc(f.tel || '')}"></label><label>이메일<input name="hwMail" inputmode="email" maxlength="80" placeholder="info@example.com" value="${esc(f.mail || '')}"></label></div><small>입력하면 문의 블록 · 푸터에 들어갑니다. 비워 두면 문의 게시판으로 안내합니다.</small></div>` : ''}</div>`;
   };
@@ -296,7 +297,8 @@
     const local = res.via === '기본 설계'; const j = local ? patchLocal(res.j || {}) : (res.j || {});
     const prev = site(); let url = ''; try { url = st.url && window.hpBenchURL ? hpBenchURL(st.url) : ''; } catch (e) { url = ''; }
     const meta = { brief: String(st.brief || '').slice(0, 1500), url, by: res.via };
-    st.drafts = variants(j, local).map(v => { let d; try { d = hpMake(clone(v.j), prev, meta); } catch (e) { console.error('hpw make', e); d = hpMake(hpLocal(st.brief), prev, meta); } d = finish(d, v, st, local);
+    st.drafts = variants(j, local).map((v, i) => { let d; try { d = hpMake(clone(v.j), prev, meta); } catch (e) { console.error('hpw make', e); d = hpMake(hpLocal(st.brief), prev, meta); } d = finish(d, v, st, local);
+      if (W.design) { try { d = W.design(d, v, i, st, local) || d; } catch (e) { console.error('hpw design', e); } } /* v34.5 X4: 계열 · 테마 · 팔레트 · 사진 축(hpwiz2) */
       const q0 = hpwQuality(d); const fx = hpwFix(d); return { id: v.id, name: v.name, desc: v.desc, hero: v.hero, site: fx.site, q0, q: hpwQuality(fx.site), log: fx.log }; });
     st.notes = (res.notes || []).filter(n => !/기본 설계로 만들었습니다\. 설정/.test(n)); if (local) st.notes.unshift('Claude 없이 기관 유형 · 공개 강좌로 시안 3개를 만들었습니다. 설정 › 연동에서 Claude를 연결하면 설명 · 참고 사이트를 분석해 만듭니다.');
     st.via = res.via; st.bench = res.bench; st.pick = 0; st.busy = false; if (W.st === st && box()) paint();
@@ -338,8 +340,9 @@
   function heroAlts() { const n = N(); const cp = COPY[tyKey()] || COPY.adult; const L0 = []; try { const j = hpLocal(''); const b = A(j.sections).find(x => x.type === 'banner'); if (b) L0.push([b.title, b.sub]); } catch (e) { } return [...L0, ...cp.map(([a, b]) => [fill(a, n), b])]; }
   /* 문장 → 계획 { title, steps[], next(s) } (없으면 null) */
   function hpwTalk(q, loose) {
-    const s = String(q || '').trim(); if (!s || !S || !S.site) return null; const T = themes(); const P = { steps: [], fns: [] }; const cur = site();
+    let s = String(q || '').trim(); if (!s || !S || !S.site) return null; const T = themes(); const P = { steps: [], fns: [] }; const cur = site();
     const step = (l, fn) => { P.steps.push(l); P.fns.push(fn); };
+    if (W.talkX) { try { const X = W.talkX(s, cur, loose); if (X) { X.steps.forEach((l, k) => step(l, X.fns[k])); if (X.msg) P.msg = X.msg; s = X.rest; } } catch (e) { console.error('hpw talkX', e); } } /* v34.5 X4: 계열 · 사진 · 카드 · 머리글 의도(hpwiz2) — 잡은 말은 빼고 나머지를 기존 규칙으로 */
     /* 테마 */
     if (/(고급|프리미엄|세련|럭셔리|품격)/.test(s)) { const th = hasT() ? themeByRe(/premium|dark|프리미엄|다크|고급|luxury/i) : T.find(x => x.id === 'navyGlow'); if (th) step(`테마를 「${th.name}」(으)로 바꾸기`, x => applyTheme(x, th.id)); step('분위기를 「모던」으로(모서리 · 굵기)', x => { x.tone = '모던'; return x; }); }
     else if (/(깔끔|심플|단정|미니멀)/.test(s) && !/(색|컬러)/.test(s)) { const th = hasT() ? themeByRe(/clean|modern|모던|깔끔|미니멀/i) : T.find(x => x.id === 'corpPortal'); if (th) step(`테마를 「${th.name}」(으)로 바꾸기`, x => applyTheme(x, th.id)); }
@@ -411,7 +414,7 @@
   ACT['hpw-undo'] = el => { const k = el.dataset.v; const sn = W.snaps[k]; if (!sn) { toast('아직 적용하지 않았습니다. [적용]을 누른 뒤에 되돌릴 수 있습니다.', 'warn'); return; } S.site = JSON.parse(sn); delete W.snaps[k]; save(); repaint(); toast('되돌렸습니다.', 'ok'); };
   const HPQ = /(홈페이지|사이트|첫\s*화면|배너|메인|문구|섹션|테마|디자인|후기|리뷰|고급|프리미엄|깔끔|따뜻|색|컬러|글씨|글자|버튼|공지|지도|오시는)/;
   function talkAnswer(q, force) {
-    const s = String(q || '').trim().slice(0, 300); if (!s || !S || !S.org || !S.site || !HPQ.test(s)) return null;
+    const s = String(q || '').trim().slice(0, 300); if (!s || !S || !S.org || !S.site || !(HPQ.test(s) || (W.talkQ && W.talkQ.test(s)))) return null;
     const ctx = force || /(홈페이지|사이트)/.test(s) || HPE.on || (typeof CUR !== 'undefined' && CUR.tab === 'site');
     if (!ctx) return null; if (/(게시|공개|올려|올리)/.test(s) && !/(테마|색|문구|섹션|후기|고급|버튼)/.test(s)) return null;
     if (/메뉴/.test(s) && /(짜|편성|구성)/.test(s)) return null;
