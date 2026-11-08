@@ -21,7 +21,6 @@
     'wanted-sans': { n: 'Wanted Sans', ko: '원티드 산스', k: 'sans', cov: 11172, w: [500, 700, 800], st: "'Wanted Sans','Pretendard Variable',Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif" },
     'noto-serif-kr': { n: 'Noto Serif KR', ko: '본명조', k: 'serif', cov: 11172, w: [400, 700], st: "'Noto Serif KR','Noto Serif KR Fallback','Noto Serif CJK KR','AppleMyungjo','Batang',serif" },
     'hahmlet': { n: 'Hahmlet', ko: '함렛', k: 'serif', cov: 2788, w: [600, 800], st: "'Hahmlet','Hahmlet Fallback','Noto Serif KR','Noto Serif CJK KR','AppleMyungjo',serif" },
-    'gowun-batang': { n: 'Gowun Batang', ko: '고운바탕', k: 'serif', cov: 11172, w: [400, 700], st: "'Gowun Batang','Gowun Batang Fallback','Noto Serif KR','AppleMyungjo',serif" },
     'gowun-dodum': { n: 'Gowun Dodum', ko: '고운돋움', k: 'round', cov: 11172, w: [400], st: "'Gowun Dodum','Gowun Dodum Fallback','Pretendard Variable',Pretendard,'Apple SD Gothic Neo',sans-serif" },
     'do-hyeon': { n: 'Do Hyeon', ko: '도현', k: 'display', cov: 2437, w: [400], st: "'Do Hyeon','Do Hyeon Fallback','Pretendard Variable',Pretendard,'Apple SD Gothic Neo',sans-serif" }
   };
@@ -40,7 +39,6 @@
     ns7: { hd: 'noto-serif-kr', hw: 700, ls: -0.025, lh: 1.22, lh2: 1.28, nm: '본명조 굵게' },
     hm6: { hd: 'hahmlet', hw: 600, ls: -0.02, lh: 1.2, lh2: 1.26, nm: '함렛' },
     hm8: { hd: 'hahmlet', hw: 800, ls: -0.03, lh: 1.15, lh2: 1.22, nm: '함렛 굵게' },
-    gb7: { hd: 'gowun-batang', hw: 700, ls: -0.02, lh: 1.28, lh2: 1.3, nm: '고운바탕' },
     gd4: { hd: 'gowun-dodum', hw: 400, ls: -0.01, lh: 1.28, lh2: 1.3, nm: '고운돋움' },
     dh4: { hd: 'do-hyeon', hw: 400, ls: -0.01, lh: 1.2, lh2: 1.26, nm: '도현' }
   };
@@ -52,18 +50,18 @@
        글자 중심(typo)은 한 단계 굵게, 놀이형(collage)은 둥근 · 굵은 글꼴. 큰 글씨(senior)는 끝까지 자간을 덜 줄인다. */
   const M = {
     _:           'ws7 hm6 gd4 pt7 ws8 dh4 ns6 pt7',
-    editorial:   'ns6 hm6 gb7 ns6 ns7 gd4 hm6 ns7',
+    editorial:   'ns6 hm6 ns6 ns6 ns7 gd4 hm6 ns7',
     bento:       'ws7 hm6 gd4 pt7 ws8 dh4 ns6 pt7',
     fullbleed:   'pt8 hm6 gd4 pt8 ws8 dh4 hm6 pt7',
     splitscreen: 'ws8 ns6 gd4 pt7 ws7 dh4 ns6 pt7',
-    typo:        'ws8 hm8 gb7 pt8 ws8 dh4 hm8 pt8',
+    typo:        'ws8 hm8 gd4 pt8 ws8 dh4 hm8 pt8',
     portal:      'pt7 ns6 gd4 pt7 pt8 gd4 ns6 pt7',
-    story:       'pt8 hm6 gb7 pt7 ws7 dh4 ns6 pt7',
+    story:       'pt8 hm6 ns6 pt7 ws7 dh4 ns6 pt7',
     mosaic:      'ws7 hm6 gd4 pt7 ws8 dh4 ns6 pt7',
     sidebar:     'pt7 ns6 gd4 pt7 ws7 gd4 ns6 pt7',
     bulletin:    'pt7 ns6 gd4 pt7 pt7 gd4 ns6 pt7',
-    collage:     'dh4 gb7 gd4 gd4 dh4 dh4 gb7 gd4',
-    noir:        'ns6 ns6 gb7 ns6 ws7 dh4 ns6 ns7'
+    collage:     'dh4 hm6 gd4 gd4 dh4 dh4 ns6 gd4',
+    noir:        'ns6 ns6 ns6 ns6 ws7 dh4 ns6 ns7'
   };
   const cellCode = (th, lay) => { const i = TH.indexOf(th); if (i < 0) return null; const row = (M[lay] || M._).split(/\s+/); return row[i] || null; };
   /* 테마 보정: 큰 글씨는 자간 -0.01em까지만, 줄간 +0.04 */
@@ -85,7 +83,7 @@
 
   /* ── 한글 조판 + 칸별 덮어쓰기 CSS ── */
   function css(s) { const p = pair(s); if (!p) return ''; const lay = s.layout && M[s.layout] ? s.layout : '';
-    const H = stack(p.hd), B = stack(p.bd), SER = stack(p.hd === 'gowun-batang' ? 'gowun-batang' : 'noto-serif-kr');
+    const H = stack(p.hd), B = stack(p.bd), SER = stack('noto-serif-kr');
     const kind = FAMS[p.hd].k; const small = p.hd === 'do-hyeon' || p.hd === 'gowun-dodum' ? B : H; /* 도현(2,437자)은 큰 제목에만, 고운돋움(굵기 1개)은 작은 제목을 Pretendard 굵게로 두어 위계를 만든다. 함렛(2,788자)은 작은 제목 · 인용에도 쓰고 빠진 음절만 본명조가 그린다 */
     const Q = kind === 'serif' ? H : SER; /* 인용 글꼴: 명조 짝이면 제목 글꼴 */
     const hsel = '.hp-hero h1,.hpt .hp-sh h2,.hpt .hp-prose h2,.hpt .hp-ctat h2';
@@ -126,7 +124,7 @@ body .hpt .hps-q1 blockquote::before{font-family:${kind === 'serif' ? Q : "Georg
 
   /* 이 사이트가 실제로 쓰는 글꼴 id(HPF.need가 합쳐 본다) */
   function need(s) { const p = pair(s); if (!p) return []; const K = [p.hd, p.bd]; const lay = s.layout && M[s.layout] ? s.layout : '';
-    if (p.hd === 'hahmlet' || FAMS[p.hd].k === 'serif' || lay === 'editorial' || lay === 'noir') K.push(p.hd === 'gowun-batang' ? 'gowun-batang' : 'noto-serif-kr');
+    if (p.hd === 'hahmlet' || FAMS[p.hd].k === 'serif' || lay === 'editorial' || lay === 'noir') K.push('noto-serif-kr');
     return [...new Set(K)]; }
 
   /* ── siteHTML 연결(hpdir 바로 바깥) ── */
@@ -146,11 +144,13 @@ body .hpt .hps-q1 blockquote::before{font-family:${kind === 'serif' ? Q : "Georg
     { id: 'sharp', name: '선명한 제목', hd: 'wanted-sans', bd: 'pretendard', hw: 800, hls: -0.028, note: '코딩 · 테크 · 스타트업 · 인강' },
     { id: 'campus', name: '대학 명조', hd: 'noto-serif-kr', bd: 'pretendard', hw: 600, hls: -0.02, note: '대학 · 평생교육원 · 연구소' },
     { id: 'premium', name: '고급 명조', hd: 'hahmlet', bd: 'pretendard', hw: 600, hls: -0.02, note: '프리미엄 학원 · 대학원 · 아카데미' },
-    { id: 'soft', name: '부드러운 바탕', hd: 'gowun-batang', bd: 'pretendard', hw: 700, hls: -0.02, note: '평생교육 · 문화센터 · 독서논술' },
+    { id: 'grand', name: '굵은 명조 제목', hd: 'hahmlet', bd: 'pretendard', hw: 800, hls: -0.03, note: '큰 글자 첫 화면 · 예술 · 디자인 · 대학원' },
     { id: 'warm', name: '따뜻한 둥근', hd: 'gowun-dodum', bd: 'pretendard', hw: 400, hls: -0.01, note: '동네 학원 · 공부방 · 상담' },
     { id: 'play', name: '경쾌한 굵은 제목', hd: 'do-hyeon', bd: 'pretendard', hw: 400, hls: -0.01, note: '유아 · 초등 · 예체능' },
-    { id: 'book', name: '전부 명조', hd: 'noto-serif-kr', bd: 'noto-serif-kr', hw: 700, hls: -0.025, note: '글이 긴 소개 · 인문 · 출판(내려받는 양이 늘어남)' }
+    { id: 'book', name: '전부 명조(긴 글 전용)', hd: 'noto-serif-kr', bd: 'noto-serif-kr', hw: 700, hls: -0.025, longOnly: true, layouts: ['editorial', 'story', 'sidebar'], note: '매거진 · 이야기 · 사이드 목차 계열의 긴 소개글 전용(약 460KB — 다른 계열에서는 제목만 명조)' }
   ];
 
-  window.HPFT = { fams: FAMS, pairs, M, TH, PAIR, KEY, cell, cellCode, pair, need, css, stack };
+  /* 명조 본문 조합은 긴 글 계열 사이트에서만 보인다(통합 담당 결정 — 약 460KB). HPF.pairs()는 배열 · 함수 둘 다 받는다 */
+  const pairsFor = s => { try { s = s || (typeof site === 'function' ? site() : null); } catch (e) { s = null; } return pairs.filter(p => !p.layouts || (s && p.layouts.includes(s.layout))); };
+  window.HPFT = { fams: FAMS, pairs: pairsFor, allPairs: pairs, M, TH, PAIR, KEY, cell, cellCode, pair, need, css, stack };
 })();

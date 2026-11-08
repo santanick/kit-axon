@@ -69,7 +69,6 @@
 | 선명한 고딕 | Wanted Sans(`wanted-sans`) | tech 제목, 벤토 · 큰 글자 · 모자이크 계열 |
 | 명조 | Noto Serif KR(`noto-serif-kr`) | campus 제목, 매거진 계열, 함렛의 빠진 음절 |
 | 디스플레이 명조 | Hahmlet(`hahmlet`) | premium 제목, 캠퍼스의 매거진 · 전체 화면 · 큰 글자 · 누아르 |
-| 부드러운 명조 | Gowun Batang(`gowun-batang`) | warm 테마의 매거진 · 큰 글자 · 이야기 · 누아르 |
 | 둥근 | Gowun Dodum(`gowun-dodum`) | warm 제목, 키즈의 기관 · 게시판형 계열 |
 | 굵은 제목 | Do Hyeon(`do-hyeon`) | kids 제목, 콜라주 계열 |
 | (호환만) | Gaegu · Black Han Sans | 예전에 '손글씨' · '굵은 제목'을 저장한 사이트 |
