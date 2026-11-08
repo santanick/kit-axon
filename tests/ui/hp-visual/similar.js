@@ -4,7 +4,8 @@
    ② 첫 화면 닮음(look): 구조와 관계없이 dHash ≤ 8(--look)
    사용: node tests/ui/hp-visual/similar.js --in <run.js 출력 폴더> [--th 12] [--look 8] [--type k12] [--cross]
    - 결과: <in>/similar/similar.json · similar.csv · verdict.txt(판정 요약 한 줄) · heat_<유형>.png · pairs_<유형>_<n>.jpg
-   - 판정 요약: 유형별 ①·② 짝 수, 대비 4.5 미만 템플릿 수, 지어낸 숫자 의심 템플릿 수, 15종 미만 경고 → 모두 0이면 통과 */
+   - 판정 요약: 유형별 ①·② 짝 수, 대비 4.5 미만 템플릿 수, 지어낸 숫자 의심 템플릿 수, 첫 화면 사진 미달(hero 슬롯 아님 · 긴 변 1200 미만) 수,
+     번호 단계 섹션이 있는 템플릿 수(절반 넘으면 '!'), 15종 미만 경고 → 모두 통과해야 OK */
 const fs = require('node:fs'); const path = require('node:path');
 const H = require('./lib.js'); const A = H.args(process.argv.slice(2));
 const IN = path.resolve(A.in || A._[0] || 'hp-visual-out'); const OUT = path.resolve(A.out || path.join(IN, 'similar'));
@@ -30,12 +31,14 @@ const FONT = "font-family=\"Noto Sans CJK KR, Noto Sans KR, Pretendard, sans-ser
     const lay = {}; L.forEach(r => { lay[r.layout] = (lay[r.layout] || 0) + 1; });
     let dsum = 0, dc = 0; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { dsum += D[i][j]; dc++; }
     const cBad = L.filter(r => r.cmin != null && r.cmin < 4.5).map(r => r.id), nBad = L.filter(r => (r.numSus || []).length).map(r => r.id);
-    const t = res.types[ty] = { n, short: n < H.MIN_N, strict: st.length, look: lk.length, similar: sim.length, idsInSimilar: inSim.size, contrastBad: cBad, numSus: nBad, avgDist: dc ? Math.round(dsum / dc * 10) / 10 : 0, layouts: lay, pairs };
+    /* v34.5 FB: 첫 화면 사진(hero 슬롯 · 긴 변 1200 이상, R1 H6) · 번호 단계 섹션은 유형 템플릿의 절반 이하(R1 H3) — 측정값이 없는 예전 결과는 건너뜀 */
+    const pBad = L.filter(r => r.heroPh && r.heroPh.ok === false).map(r => r.id); const nNum = L.filter(r => r.numSec > 0).length; const numOver = L.some(r => r.numSec != null) && nNum * 2 > n;
+    const t = res.types[ty] = { n, short: n < H.MIN_N, strict: st.length, look: lk.length, similar: sim.length, idsInSimilar: inSim.size, contrastBad: cBad, numSus: nBad, photoBad: pBad, numSec: nNum, avgDist: dc ? Math.round(dsum / dc * 10) / 10 : 0, layouts: lay, pairs };
     res.strict += st.length; res.look += lk.length; res.similar += sim.length;
     pairs.forEach(p => flat.push(Object.assign({ type: ty }, p)));
     await heat(ty, L, D, pairs); await side(ty, L, sim);
-    t.pass = !t.short && !st.length && !lk.length && !cBad.length && !nBad.length;
-    V.push(`${ty} ${t.pass ? 'OK' : 'NG'} ①${st.length} ②${lk.length} 대비${cBad.length} 숫자${nBad.length} ${n}종${t.short ? '(15종 미만!)' : ''}`);
+    t.pass = !t.short && !st.length && !lk.length && !cBad.length && !nBad.length && !pBad.length && !numOver;
+    V.push(`${ty} ${t.pass ? 'OK' : 'NG'} ①${st.length} ②${lk.length} 대비${cBad.length} 숫자${nBad.length} 사진${pBad.length} 단계${nNum}/${n}${numOver ? '!' : ''} ${n}종${t.short ? '(15종 미만!)' : ''}`);
     console.log(`${ty}: ${n}종${t.short ? ' ⚠ 15종 미만' : ''} · ①엄격 ${st.length}짝 · ②첫 화면 닮음 ${lk.length}짝 · 유사 관련 ${inSim.size}종 · 대비 미달 ${cBad.length} · 숫자 의심 ${nBad.length} · 평균 거리 ${t.avgDist}`);
   }
   const pass = Object.values(res.types).filter(t => t.pass).length, tot = Object.keys(res.types).length;

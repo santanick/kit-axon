@@ -10,5 +10,8 @@ for i in $(seq 1 12); do
 done
 T=""; prev=""; for a in "$@"; do [ "$prev" = "--type" ] && T="--type $a"; prev="$a"; done
 node "$D/similar.js" --in "$OUT" $T && node "$D/sheet.js" --in "$OUT" $T || exit $?
+# v34.5 FB: 빈 기관(--state both일 때 $OUT/empty) 시트 · 유형별 집계(번호 단계 비율 · 보이는 섹션 · 강좌 · 품질 분포)
+[ -d "$OUT/empty/rows" ] && node "$D/sheet.js" --in "$OUT/empty" $T >/dev/null
+node "$D/stats.js" --in "$OUT" $T; [ -d "$OUT/empty/rows" ] && { echo "(빈 기관)"; node "$D/stats.js" --in "$OUT/empty" $T; }
 # 판정 요약 한 줄(유형 디자이너 통과 기준): 유형별 ①엄격 · ②첫 화면 닮음 짝 수 · 대비 미달 · 숫자 의심 · 15종 미만 → 모두 0이면 OK
 echo; cat "$OUT/similar/verdict.txt"; grep -q " NG " "$OUT/similar/verdict.txt" && exit 4; exit 0

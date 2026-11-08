@@ -13,10 +13,14 @@ QA_RUN=$SP/qa20/qa-run.sh tests/ui/hp-visual/run-all.sh $OUT --type k12
 node tests/ui/hp-visual/similar.js --in $OUT [--th 12] [--type k12] [--near] [--cross]
 # 3) 유형별 모음 시트 (브라우저 불필요)
 node tests/ui/hp-visual/sheet.js --in $OUT [--type k12] [--full]
+# 4) 유형별 집계: 번호 단계 비율 · 보이는 섹션 · 강좌 카드 · 품질 분포 (브라우저 불필요, --vs로 전 → 후)
+node tests/ui/hp-visual/stats.js --in $OUT [--vs <이전 폴더>] [--type k12]
 ```
+- **기관 상태 `--state`(v34.5)**: `both`(기본) = **채워진 기관**(공개 강좌 6 · 공지 4 · 후기 3 · 연락처) → `$OUT/`, **빈 기관**(빈 스튜디오, 예전 도구의 점검 기관과 같음) → `$OUT/empty/`. 빨리 보려면 `--state filled`(또는 `empty`) 하나만. 유사 · 판정 · 시트는 `$OUT/`(채워진 기관) 기준이고, 빈 기관 시트는 `$OUT/empty/sheets/`.
+- 촬영 전에 페이지를 끝까지 내려 지연 불러오기 사진을 깨우고, 모든 사진이 뜰(decode) 때까지 기다린다(최대 4초, 남은 수 = `imgPending`).
 - 템플릿을 고친 뒤에는 `--force`(전부) 또는 `--ids`(고친 것만) + `--force`로 다시 찍는다. 다른 템플릿 결과는 그대로 남는다.
 - 기본은 `hidden: true` 템플릿을 뺀다(`--all`이면 포함). 유형은 `types[0]`(대표 유형) 기준이다.
-- 기관은 유형마다 하나 만들고(공개 강좌 · 결제 승인), 템플릿을 `siteFromTpl`로 적용 → `smPublish` → `learner.html?t=…#home`을 연다.
+- 기관은 유형 · 상태마다 하나 만들고(결제 승인), 템플릿을 `siteFromTpl`로 적용 → `smPublish` → `learner.html?t=…#home`을 연다.
 
 ## 결과 (`--out` 폴더)
 | 파일 | 내용 |
@@ -40,12 +44,17 @@ node tests/ui/hp-visual/sheet.js --in $OUT [--type k12] [--full]
 | `numSus` | 단위 붙은 숫자(%, 명, 점, 위, 배, 년 전통 …) 중 실제 데이터(HPT.facts · 가격)에 없는 것 — 지어낸 숫자 의심 |
 | `q` · `qMiss` | `hpwQuality` 점수 · 못 채운 항목 |
 | `photos` · `stock` · `stockRatio` · `art` | 사진 수(img + 배경 사진) · 그중 샘플 사진(img/stock) · 비율 · 아트 대체 자리 |
+| `nVis` · `numSec` | 화면에 보이는 최상위 섹션 수 · 번호 단계(1 · 2 · 3 / 01 · 02 · 03 표시)가 있는 섹션 수 |
+| `clsVis` · `emptyCls` | 강좌 카드가 보이는 섹션 수 · '개설 준비 중'(강좌 0개) 섹션 수 |
+| `heroPh` | 첫 화면 샘플 사진 `{id, long(긴 변), slot(hero 슬롯 여부), ok}` — hero 슬롯이고 긴 변 1200 이상이면 ok |
+| `state` · `imgPending` | 기관 상태(filled · empty) · 촬영 때까지 안 뜬 사진 수 |
 
 ## 유사 판정 (통합 결정 12:00)
 - **유형 묶음**: `types`에 그 유형이 포함된 템플릿은 모두 그 유형으로 센다(includes). 유형마다 15종 미만이면 경고한다.
 - **① 엄격**: 같은 유형 안에서 첫 화면 dHash ≤ 12(`--th`) **이고** 섹션 종류 순서가 같음(variant · 첫 화면 배치는 보지 않음).
 - **② 첫 화면 닮음**: 구조와 관계없이 dHash ≤ 8(`--look`).
 - 시트 · 히트맵 테두리: 빨강 = ①, 주황 = ②만. 히트맵의 파란 점 = 섹션 종류 순서만 같음.
-- **판정 요약 한 줄**(`similar/verdict.txt`, run-all.sh 마지막 줄): `판정 2/7 통과 | k12 OK ①0 ②0 대비0 숫자0 16종 | …`
-  - 유형마다 ① · ② 짝 수, 대비 4.5 미만 템플릿 수, 지어낸 숫자 의심 템플릿 수가 모두 0이고 15종 이상이면 OK. run-all.sh는 NG가 있으면 exit 4.
+- **판정 요약 한 줄**(`similar/verdict.txt`, run-all.sh 마지막 줄): `판정 2/7 통과 | k12 OK ①0 ②0 대비0 숫자0 사진0 단계6/16 16종 | …`
+  - 유형마다 ① · ② 짝 수, 대비 4.5 미만 템플릿 수, 지어낸 숫자 의심 템플릿 수, **첫 화면 사진 미달**(hero 슬롯이 아니거나 긴 변 1200 미만, R1 H6) 수가 모두 0이고, **번호 단계 섹션이 있는 템플릿이 절반 이하**(넘으면 `단계n/m!`, R1 H3)이며 15종 이상이면 OK. run-all.sh는 NG가 있으면 exit 4.
+  - 예전 결과(rows에 `numSec` · `heroPh`가 없는 것)는 사진 · 단계 판정을 건너뛴다.
 - 촬영은 템플릿마다 한 번(대표 유형 `types[0]` 기관으로 게시)이고, 묶음만 includes로 센다.

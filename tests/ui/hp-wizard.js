@@ -46,7 +46,7 @@ const MIN_SCORE = 85;
       /* 3) 시안 3개 만들기 */
       await click('[data-hw="gen"]'); await page.waitForFunction(() => document.querySelectorAll('.hpw-d').length === 3, null, { timeout: 30000 });
       const D = await page.evaluate(() => HPW.st.drafts.map(d => ({ id: d.id, hero: d.hero, sig: d.site.sections.filter(x => !x.hide).map(x => x.type + (x.data && x.data.variant ? ':' + x.data.variant : '')).join(','), q0: d.q0.score, q: d.q.score,
-        bad: d.q.items.filter(x => !x.ok).map(x => x.k), look: d.site.hpTheme || d.site.look })));
+        bad: d.q.items.filter(x => !x.ok && x.auto !== false).map(x => x.k), look: d.site.hpTheme || d.site.look })));
       if (new Set(D.map(d => d.sig)).size < 3) bad.push('시안 구성이 서로 같음');
       if (hasT) { const hc = await page.evaluate(() => HPW.st.drafts.map(d => (siteHTML(d.site).match(/class="hpt hp-hero ([^"]+)"/) || [])[1] || ''));
         if (new Set(hc).size < 3) bad.push(`첫 화면이 화면에서 서로 같음 ${hc.join(' / ')}`);
