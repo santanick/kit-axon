@@ -106,3 +106,56 @@
 - 일부 사진은 실제 건물(대학 · 청사)이다. 특정 기관 시설처럼 이름을 붙이지 말고 분위기 사진으로만 쓴다(cam-01 · cam-02 · cam-04 · civ-01 · civ-02).
 - lap-02 노트북에 작은 제조사 표기가 보인다. 첫 화면보다 카드 · 소개용으로 쓴다.
 - 강사(teacher) · 로고(logo) 슬롯에는 샘플 사진을 주지 않는다(HPSTOCK.forScene이 null).
+
+## 사람 장면 사진 추가 (v34.5 P2, 2026-11-08)
+
+첫 화면 · 소개 자리에 생동감을 주기 위해 사람이 나오는 학습 장면 38장(`hum-01`~`hum-38`)을 추가했다.
+
+- 선정 기준: 얼굴을 식별할 수 없는 사진만 골랐다(손 · 뒷모습 · 원거리 · 흐림 · 측면 실루엣). 실제 특정 건물이 드러나는 사진, 상표 · 로고 · 읽히는 글자가 드러나는 사진은 제외했고, 책 제목 · 상표가 걸린 사진은 그 부분을 잘라 냈다(hum-04 · hum-28).
+- 출처: 모두 Wikimedia Commons에서 구조화 데이터의 저작권 라이선스(P275)가 CC0(Q6938433)인 파일을 검색해 골랐다. 대부분 Unsplash 작가가 CC0로 공개해 Commons로 옮겨진 사진이다. 파일마다 Commons API의 `LicenseShortName`(CC0)과 파일 페이지의 CC0 1.0 링크(`publicdomain/zero/1.0`)를 직접 확인했다(아래 확인 칸).
+- 처리: 긴 변 1600px 이상 원본에서 긴 변 1600px(`<id>.webp`, 일부 카드용은 용량 때문에 1440px)과 800px(`<id>-800.webp`) 두 벌을 만들었다. 크롭 · 축소만 했고 합성은 하지 않았다.
+- 쓰임: tags에 `people`과 장면 낱말(`hands` · `back` · `far` · `group` · `kids`)이 있다. `HPSTOCK.forScene(type, scene, slot, { people: true })`를 쓰면 hero · about 자리에서 이 사진을 먼저 고른다.
+- 기존 목록과 같은 원본(art-01과 같은 수채화 손, 기존 피아노 손 사진)은 중복이라 넣지 않았다.
+
+| id | 분류 | 설명 | 작가 | 원본 페이지 | 라이선스 | 확인 | 원본 크기 |
+|---|---|---|---|---|---|---|---|
+| hum-01 | desk | 노트북 옆에서 노트에 필기하는 손 | Alejandro Escamilla | [File:Left-handed_writing_with_wristwatch.jpg](https://commons.wikimedia.org/wiki/File:Left-handed_writing_with_wristwatch.jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5616x3744 |
+| hum-02 | desk | 어두운 배경에서 펜으로 노트에 쓰는 손 | Tookapic | [File:Pen-writing-notes-studying.jpg](https://commons.wikimedia.org/wiki/File:Pen-writing-notes-studying.jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4752x3168 |
+| hum-03 | desk | 따뜻한 스웨터 소매로 책상에서 필기하는 손 | Green Chameleon craftedbygc | [File:Designer_sketching_Wireframes_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Designer_sketching_Wireframes_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5184x3456 |
+| hum-04 | seminar | 책상에 마주 앉아 함께 서류를 보며 필기하는 두 사람의 손 | Olu Eletu flenjoore | [File:Man_writing_on_paper_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Man_writing_on_paper_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4679x3099 |
+| hum-05 | desk | 위에서 본 플래너에 쓰는 손 | Cathryn Lavery cathrynlavery | [File:Writing_in_a_journal_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Writing_in_a_journal_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 2400x1600 |
+| hum-06 | desk | 셔츠 차림으로 종이에 쓰는 손 | Helloquence helloquence | [File:Sign_here_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Sign_here_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 7360x4912 |
+| hum-07 | coding | 어깨 너머로 본 노트북 화면의 코드 | Tirza van Dijk tirzavandijk | [File:Laptop_coding_programs_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Laptop_coding_programs_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4047x2698 |
+| hum-08 | laptop | 밝은 책상에서 노트북을 치는 손 | Thomas Lefebvre imthebear | [File:Typing_on_a_mac_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Typing_on_a_mac_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4705x3137 |
+| hum-09 | laptop | 흰 책상 위 노트북을 치는 손과 화분 | NordWood Themes nordwood | [File:Work_space_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Work_space_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4867x3245 |
+| hum-10 | seminar | 카페 테이블에서 메모하며 이야기하는 두 사람의 손 | Alejandro Escamilla alejandroescamilla | [File:Two_people_meeting_with_iphone_and_ipad_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Two_people_meeting_with_iphone_and_ipad_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4728x3168 |
+| hum-11 | lecture | 마이크 너머로 흐리게 보이는 행사장의 사람들 | Tim Napier timn2005 | [File:Microphone_in_hall.jpg](https://commons.wikimedia.org/wiki/File:Microphone_in_hall.jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5016x3344 |
+| hum-12 | library | 서가 사이 통로를 걸어가는 사람의 뒷모습 | Redd Angelo reddangelo16 | [File:Redd_Angelo_2015-03-27_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Redd_Angelo_2015-03-27_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 2500x1667 |
+| hum-13 | library | 서가 옆 긴 책상에서 공부하는 사람들 | Davide Cantelli cant89 | [File:Library_Books_Bookshelves_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Library_Books_Bookshelves_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 2600x1735 |
+| hum-14 | desk | 위에서 내려다본 책상과 공부하는 사람 | Davidson Luna davidsonluna | [File:Waiting_1_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Waiting_1_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5259x3483 |
+| hum-15 | campus | 배낭을 멘 학생의 뒷모습과 꽃나무 | Tim Gouw punttim | [File:Woman_facing_Painted_Ladies_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Woman_facing_Painted_Ladies_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4505x3003 |
+| hum-16 | campus | 배낭을 메고 거리를 걷는 사람의 뒷모습 | Crown Labs Agency crownlabs | [File:Parts_Unknown_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Parts_Unknown_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 3264x4928 |
+| hum-17 | workshop | 자와 칼로 재료를 다듬는 손 | Roman Kraft romankraft | [File:Beekeeper%27s_workshop_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Beekeeper%27s_workshop_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 3264x2205 |
+| hum-18 | vocational | 목재 위에서 치수를 재는 손 | Igor Ovsyannykov igorovsyannykov | [File:Craft_Workshop_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Craft_Workshop_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5848x3899 |
+| hum-19 | vocational | 어두운 작업장에서 드릴 프레스를 다루는 손 | Adi Goldstein adigold1 | [File:The_Workshop_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:The_Workshop_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 6685x4678 |
+| hum-20 | workshop | 나무판을 사포질하는 손 | Ian Schneider goian | [File:Woodworker_in_a_workshop_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Woodworker_in_a_workshop_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 6016x4016 |
+| hum-21 | workshop | 베틀에서 실을 고르는 손 | Igor Ovsyannykov igorovsyannykov | [File:Factory_Worker_Making_Clothes_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Factory_Worker_Making_Clothes_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 6000x4000 |
+| hum-22 | workshop | 흑백 사진 속 물레 위 흙을 감싼 두 손 | Quino Al quinoal | [File:Black_and_white_pottery_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Black_and_white_pottery_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5532x3688 |
+| hum-23 | workshop | 위에서 본 물레 위 흙을 빚는 손 | Jared Sluyter jaredsluyter | [File:Making_pottery_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Making_pottery_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5519x3679 |
+| hum-24 | workshop | 점토를 빚는 두 손 | Alex Jones alexjones | [File:Pottery_and_craft_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Pottery_and_craft_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5184x3456 |
+| hum-25 | kids | 어린이와 함께 물레를 돌리며 흙을 빚는 손 | Shane Albuquerque creative_shane | [File:Kala_Ghoda_pottery_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Kala_Ghoda_pottery_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4608x3072 |
+| hum-26 | art | 붓으로 수채화를 칠하는 손 | Nik MacMillan nikarthur | [File:Artist_painting_watercolor_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Artist_painting_watercolor_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5184x3456 |
+| hum-27 | art | 여러 색 물감 통에 붓을 담그는 손 | russn_fckr russn_fckr | [File:Santo_Domingo,_Dominican_Republic_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Santo_Domingo,_Dominican_Republic_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 3705x2084 |
+| hum-28 | art | 펜촉으로 글씨 연습을 하는 손 | Jazmin Quaynor jazminantoinette | [File:Math_tools_utensils_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Math_tools_utensils_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4050x2498 |
+| hum-29 | music | 어두운 방에서 그랜드 피아노를 치는 손 | Isaac Ibbott wanderingimagery | [File:Piano_reflection_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Piano_reflection_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4977x3318 |
+| hum-30 | music | 기타 줄을 튕기는 손 | John Hult iamjohnhult | [File:Fuzzy_guitar_player_in_Gothenburg_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Fuzzy_guitar_player_in_Gothenburg_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4592x3448 |
+| hum-31 | music | 녹음 스튜디오 콘솔 앞에 앉은 사람의 뒷모습 | John Hult iamjohnhult | [File:Mixing_session_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Mixing_session_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4592x3448 |
+| hum-32 | music | 붉은 신시사이저 건반을 누르는 손 | Puk Khantho puk_khantho | [File:Hands_on_the_keyboard_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Hands_on_the_keyboard_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5472x3648 |
+| hum-33 | vocational | 장갑 낀 손으로 페트리 접시를 든 실험 장면 | Drew Hays drew_hays | [File:Scientist_with_a_Petri_dish_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Scientist_with_a_Petri_dish_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 3238x4857 |
+| hum-34 | senior | 창가 테이블에 앉은 시니어의 뒷모습 | Jeff Sheldon ugmonk | [File:Old_man_reading_newspaper_with_tea_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Old_man_reading_newspaper_with_tea_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4373x3280 |
+| hum-35 | kids | 창가 소파에서 책을 읽는 어린이 | Josh Applegate joshapplegate | [File:Josh_Applegate_2016-10-14_(Unsplash_cwGk-u9PHOo).jpg](https://commons.wikimedia.org/wiki/File:Josh_Applegate_2016-10-14_(Unsplash_cwGk-u9PHOo).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 4000x2663 |
+| hum-36 | desk | 밝은 창가 책상에 앉은 사람의 뒷모습 | Bethany Legg bkotynski | [File:Man_reading_in_office_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Man_reading_in_office_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5760x3840 |
+| hum-37 | library | 책장을 넘기며 커피잔을 든 손 | rawpixel.com rawpixel | [File:Reading_in_Bangkok_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Reading_in_Bangkok_(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 5321x3551 |
+| hum-38 | library | 두 손으로 펼친 책을 든 모습 | Joseph Chan yulokchan | [File:Reading_is_love,_reading_is_life._(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Reading_is_love,_reading_is_life._(Unsplash).jpg) | CC0 1.0 | 확인(파일 페이지 CC0 1.0) | 6000x4000 |
+
+추가 38장 · 용량 3.58MB(두 벌 합계)
