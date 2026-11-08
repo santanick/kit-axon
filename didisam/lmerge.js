@@ -73,7 +73,10 @@
     const html = k === 'home' ? H.home : k === 'foot' ? H.foot : ((H.pages[k] || {}).html || '');
     const sr = el.shadowRoot || el.attachShadow({ mode: 'open' }); sr.innerHTML = `<style>${safeCSS(H.css)}.smr{background:transparent;min-height:0}</style><div class="smr lk-${esc(H.look || 'campus')}">${safeHTML(html, { data: true, code: true })}</div>`; /* v25 게시본도 다시 정화(서버 API로 직접 넣은 HTML 대비) */ });
     /* v34.5 G1 웹폰트: Shadow DOM 안의 @font-face는 브라우저가 무시하므로 문서 머리에 한 번 올린다(같은 출처 fonts/만) */
-    try { const ff = (safeCSS(H.css).match(/@font-face\{[^}]*url\('fonts\/[\w.-]+\.woff2'\)[^}]*\}/g) || []).join(''); let st = document.getElementById('hp-ff'); if (ff && (!st || st.textContent !== ff)) { if (!st) { st = document.createElement('style'); st.id = 'hp-ff'; document.head.appendChild(st); } st.textContent = ff; } } catch (e) { } }
+    try { const ff = (safeCSS(H.css).match(/@font-face\{[^}]*url\('fonts\/[\w.-]+\.woff2'\)[^}]*\}/g) || []).join(''); let st = document.getElementById('hp-ff'); if (ff && (!st || st.textContent !== ff)) { if (!st) { st = document.createElement('style'); st.id = 'hp-ff'; document.head.appendChild(st); } st.textContent = ff; } } catch (e) { }
+    /* v34.5 F2 분할 웹폰트: 표식 --hpf(글꼴 CSS) · --hpf-pre(첫 화면 제목 조각)를 문서 머리 link로(같은 출처 fonts/ · jsdelivr만) */
+    try { const C = safeCSS(H.css); const g = n => ((C.match(new RegExp(`--${n}:"([^"]*)"`)) || [])[1] || '').split('|').filter(u => /^(fonts\/[\w-]+\/[\w.-]+(\?[vh]=\w+)?|https:\/\/cdn\.jsdelivr\.net\/[\w@./-]+)$/.test(u));
+      [...g('hpf').map(u => ['stylesheet', u]), ...g('hpf-pre').map(u => ['preload', u])].forEach(([r, u]) => { if (document.querySelector(`link[data-hpf="${u}"]`)) return; const l = document.createElement('link'); l.rel = r; l.href = u; l.dataset.hpf = u; if (r === 'preload') { l.as = 'font'; l.type = 'font/woff2'; l.crossOrigin = 'anonymous'; } document.head.appendChild(l); }); } catch (e) { } }
   window.lmMount = mount;
   { let q = 0; new MutationObserver(() => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { mount(); } catch (e) { } }); }).observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); }
 
