@@ -2,7 +2,7 @@
    대표님(2026-11-08): "각 유형별로 15개씩 고를 수 있도록 확장해서 만들어 … 디자인 완성도 가장 높게"
    - 다른 요원(tpl-a~c)은 TPL.push({ …, theme, hero, deco })로 값만 넣는다. 적용은 이 파일이 한 곳에서 한다.
      theme: HPT 테마 id(clean · premium · warm · official · tech · kids · campus · senior) — 템플릿의 대표 색(tp.color)은 유지(hpColorLock)
-     hero: 첫 화면 배치 center | split | bg → 첫 배너 data.hero
+     hero: 첫 화면 배치 center | split | bg → 첫 배너 data.hero ('band' · 빈 값은 넣지 않고 테마 기본 배치)
      deco: 템플릿 전용 짧은 CSS(테마가 그대로일 때만 미리보기 · 게시본 <style>에 덧붙임)
    - siteFromTpl 결과는 테마 · 첫 화면 배치 적용 뒤 실제 데이터 보강(HPT.enrich: 숫자 · 강사 · FAQ) + 품질 자동 보정(hpwFix: 빈 섹션 숨김 · 자리 문구 · SEO)을 거친다.
    - 공공기관 템플릿 벤치마크: scratchpad/fix5/bench_public.md(지자체 교육원 · 직원 사이버 연수원 · 시민대학 · 디지털 배움터 · KRDS · 빌더 템플릿 — 구조만 참고)
@@ -203,7 +203,7 @@
 
   /* ═════════ ③ 갤러리(v34 공통 틀): 칩 · 검색 · 실제 축소 썸네일 · 오른쪽 시트 ═════════ */
   const PUR = [['apply', '모집 · 신청', /모집|신청|지원|체험|상담|예약|입학|등록|원서/], ['learn', '수강 · 이수', /이수|수강|강의실|학습|법정|필수|온보딩|연수|교과|과정/], ['info', '안내 · 소식', /안내|공지|소식|일정|센터|포털/], ['brand', '소개 · 브랜드', /브랜드|소개|아카데미|강사|스튜디오|크리에이터/]];
-  const HERO_L = { center: '가운데 배치', split: '좌우 분할', bg: '어두운 배경' };
+  const HERO_L = { center: '가운데 배치', split: '좌우 분할', bg: '어두운 배경', band: '띠 배너' };
   const SEC_L = { banner: '첫 화면', classes: '강좌', books: '교재', reviews: '후기', notices: '공지', map: '오시는 길', video: '영상', image: '사진', slideImage: '사진', slideBanner: '소식', code: 'HTML' };
   const VAR_L = { features: '특징', steps: '절차', stats: '숫자', info: '안내', cta: '문의', timeline: '일정', tiles: '바로가기', profiles: '사람', roadmap: '로드맵', modules: '구성', story: '이야기', logos: '로고' };
   const secL = x => x.type === 'text' ? (x.data && x.data.hpt === 'facts' ? '숫자' : x.data && x.data.hpt === 'faq' ? 'FAQ' : VAR_L[x.data && x.data.variant] || '글') : SEC_L[x.type] || x.type;
