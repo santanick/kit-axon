@@ -11,7 +11,8 @@
 
 | 변수 | 뜻 | 쓰는 법 |
 |---|---|---|
-| `--hd-ff` `--hd-fw` `--hd-ls` | 제목 글꼴 · 굵기 · 자간 | `h1, h2` 와 큰 숫자. 본문에는 쓰지 않음 |
+| `--hd-ff` `--hd-fw` `--hd-ls` | 제목 글꼴 · 굵기 · 자간(hpfont 조합표) | `h1, h2` 와 큰 숫자. 본문에는 쓰지 않음 |
+| `--bd-ff` | 본문 글꼴(Pretendard) | 본문 · 작은 제목 |
 | `--t-h1` `--t-h2` `--t-h3` | 제목 크기(PC) | `clamp(휴대폰값, 5vw, var(--t-h1))` |
 | `--t-lead` `--t-body` `--t-sm` `--t-xs` | 소개글 · 본문 · 작은 글(14) · 라벨(13) | 본문 14px 미만 금지(라벨만 13) |
 | `--lh-body` | 본문 줄간 | 제목 줄간은 1.08~1.3(아래 표) |
@@ -25,16 +26,19 @@
 
 ## 2. 테마별 값
 
+> v34.5 F1: 제목 글꼴 · 굵기 · 자간 · 줄간은 `didisam/hpfont.js`가 테마 × 계열 조합표로 덮어씁니다. 아래는 계열이 없을 때(기본 렌더러) 값이고, 계열별 값은 `docs/typography.md` 3절을 따릅니다.
+
+
 | 테마 | 제목 글꼴 · 굵기 · 자간 | h1 / h2 / h3 (PC) | h1 휴대폰 · 줄간 | 본문 / 줄간 | 섹션 PC / 휴대폰 | 카드 r · 버튼 r · 버튼 높이 | 테두리 · 그림자 | 호버 |
 |---|---|---|---|---|---|---|---|---|
-| clean 모던 클린 | Pretendard 800 · -0.04em | 64 / 44 / 20 | 36 · 1.12 | 16.5 / 1.7 | 128 / 72 | 16 · 12 · 52 | 1px 8% 잉크 · 아주 옅은 1겹 | 3px 들림 + 그림자 |
-| premium 프리미엄 | **Noto Serif KR** 600 · -0.02em | 60 / 42 / 20 | 34 · 1.22 | 16.5 / 1.75 | 144 / 80 | 2 · 0 · 54 | 1px 머리카락 선 · 없음 | 선이 짙어짐 |
-| warm 따뜻한 학원 | **Gowun Dodum** 400 · -0.01em | 58 / 40 / 20 | 34 · 1.24 | 16.5 / 1.75 | 120 / 72 | 22 · 알약 · 54 | 1px 따뜻한 잉크 · 옅은 주황 그림자 | 들림 |
-| official 공식 기관 | Pretendard 700 · -0.025em | 48 / 34 / 19 | 30 · 1.28 | 16 / 1.7 | 96 / 64 | 4 · 4 · 48 | 1px #D5DAE2 · 없음 | 테두리 포인트색 |
-| tech 테크 | Pretendard 800 · -0.045em | 66 / 44 / 19 | 36 · 1.08 | 16 / 1.7 | 136 / 76 | 12 · 10 · 50 | 1px 10% · 없음 | 테두리 포인트색 + 옅은 빛 |
-| kids 키즈 | **Black Han Sans** 400 · -0.01em | 60 / 42 / 20 | 36 · 1.2 | 17 / 1.7 | 112 / 68 | 28 · 알약 · 58 | 2px 8% · 아래 6px 단단한 그림자 | 눌림(아래 그림자 커짐) |
-| campus 캠퍼스 | **Noto Serif KR** 600 · -0.02em | 56 / 40 / 19 | 32 · 1.24 | 16.5 / 1.75 | 128 / 72 | 6 · 4 · 50 | 1px 14% · 없음 | 선이 짙어짐 |
-| senior 큰 글씨 | Pretendard 700 · -0.02em | 52 / 38 / 22 | 32 · 1.3 | **19 / 1.8** | 104 / 72 | 14 · 14 · **62** | 2px #D5DBE7 · 없음 | 테두리 포인트색 · 초점 4px |
+| clean 모던 클린 | Pretendard 800 · -0.03em | 64 / 44 / 20 | 36 · 1.16 | 16.5 / 1.7 | 128 / 72 | 16 · 12 · 52 | 1px 8% 잉크 · 아주 옅은 1겹 | 3px 들림 + 그림자 |
+| premium 프리미엄 | **Hahmlet(함렛)** 600 · -0.02em | 60 / 42 / 20 | 34 · 1.2 | 16.5 / 1.75 | 144 / 80 | 2 · 0 · 54 | 1px 머리카락 선 · 없음 | 선이 짙어짐 |
+| warm 따뜻한 학원 | **Gowun Dodum** 400 · -0.01em | 58 / 40 / 20 | 34 · 1.28 | 16.5 / 1.75 | 120 / 72 | 22 · 알약 · 54 | 1px 따뜻한 잉크 · 옅은 주황 그림자 | 들림 |
+| official 공식 기관 | Pretendard 700 · -0.022em | 48 / 34 / 19 | 30 · 1.26 | 16 / 1.7 | 96 / 64 | 4 · 4 · 48 | 1px #D5DAE2 · 없음 | 테두리 포인트색 |
+| tech 테크 | **Wanted Sans** 800 · -0.028em | 66 / 44 / 19 | 36 · 1.15 | 16 / 1.7 | 136 / 76 | 12 · 10 · 50 | 1px 10% · 없음 | 테두리 포인트색 + 옅은 빛 |
+| kids 키즈 | **Do Hyeon(도현)** 400 · -0.01em | 60 / 42 / 20 | 36 · 1.2 | 17 / 1.7 | 112 / 68 | 28 · 알약 · 58 | 2px 8% · 아래 6px 단단한 그림자 | 눌림(아래 그림자 커짐) |
+| campus 캠퍼스 | **Noto Serif KR** 600 · -0.02em | 56 / 40 / 19 | 32 · 1.26 | 16.5 / 1.75 | 128 / 72 | 6 · 4 · 50 | 1px 14% · 없음 | 선이 짙어짐 |
+| senior 큰 글씨 | Pretendard 700 · -0.01em | 52 / 38 / 22 | 32 · 1.3 | **19 / 1.75** | 104 / 72 | 14 · 14 · **62** | 2px #D5DBE7 · 없음 | 테두리 포인트색 · 초점 4px |
 
 - 영문 라벨(eyebrow): clean 13px · 0.08em 대문자, premium 12px · 0.22em, tech 13px · 0.12em, campus 13px · 0.16em. warm · official · kids · senior는 한국어 라벨(대문자 변환 없음, 자간 0)을 권장합니다.
 - 첫 화면 마지막 줄 강조: clean · warm · tech는 포인트색만(형광펜 배경 없음), kids는 형광펜 1겹, premium · official · campus · senior는 강조 없음.
@@ -58,17 +62,21 @@
 - 본문 14px 미만, 줄간 1.5 미만, 휴대폰 버튼 44px 미만.
 - 테마 글꼴 외의 웹폰트를 새로 넣기(필요하면 통합 담당에게 요청 · `docs/fonts-credits.md` 기준).
 
-## 5. 글꼴 (`didisam/fonts/`)
-| 키 | 글꼴 | 쓰는 테마 · 기능 |
+## 5. 글꼴 (v34.5 F1 · 상세는 `docs/typography.md`)
+| 성격 | 글꼴(HPF id) | 쓰는 테마 · 기능 |
 |---|---|---|
-| sans | Pretendard(기존) | clean · official · tech · senior, 본문 전체 |
-| serif | Noto Serif KR 400 · 600 | premium · campus 제목, editorial 계열, 바로 고치기 '명조' |
-| round | Gowun Dodum 400 | warm 제목, 바로 고치기 '둥근' |
-| display | Black Han Sans 400 | kids 제목, 바로 고치기 '굵은 제목' |
-| hand | Gaegu 400 · 700 | 바로 고치기 '손글씨' |
+| 본문(고정) | Pretendard Variable(`pretendard`) | 모든 테마의 본문 · 고딕 제목(clean · official · senior) |
+| 선명한 고딕 | Wanted Sans(`wanted-sans`) | tech 제목, 벤토 · 큰 글자 · 모자이크 계열 |
+| 명조 | Noto Serif KR(`noto-serif-kr`) | campus 제목, 매거진 계열, 함렛의 빠진 음절 |
+| 디스플레이 명조 | Hahmlet(`hahmlet`) | premium 제목, 캠퍼스의 매거진 · 전체 화면 · 큰 글자 · 누아르 |
+| 부드러운 명조 | Gowun Batang(`gowun-batang`) | warm 테마의 매거진 · 큰 글자 · 이야기 · 누아르 |
+| 둥근 | Gowun Dodum(`gowun-dodum`) | warm 제목, 키즈의 기관 · 게시판형 계열 |
+| 굵은 제목 | Do Hyeon(`do-hyeon`) | kids 제목, 콜라주 계열 |
+| (호환만) | Gaegu · Black Han Sans | 예전에 '손글씨' · '굵은 제목'을 저장한 사이트 |
 
-- `HPD.need(site)`가 그 사이트가 실제로 쓰는 글꼴만 골라 `@font-face`(font-display: swap)를 넣습니다. 계열 CSS에서 명조를 쓰려면 `var(--hpl-serif)` 또는 `var(--hd-ff)`를 쓰면 자동으로 잡힙니다.
-- 단일 굵기 글꼴(Gowun Dodum · Black Han Sans)은 `font-weight: 100 900` 범위로 선언해 가짜 굵게(합성 볼드)가 생기지 않습니다. 굵기를 바꿔도 모양은 같습니다.
+- 글꼴 파일 · `@font-face`는 F2(`hpfontpick.js` · `HPF`)가 최종 HTML의 font-family 이름을 보고 붙입니다. 계열 · 부품 CSS에서는 글꼴 이름을 직접 쓰지 말고 `var(--hd-ff)` · `var(--bd-ff)` · `var(--hpl-serif)`를 씁니다.
+- 단일 굵기 글꼴(Gowun Dodum · Do Hyeon)은 `font-weight: 100 900` 범위로 선언되고 hpfont가 `font-synthesis: none`을 겁니다.
+- 한글 조판 규칙(keep-all · 자간 · 줄간 · 숫자 tabular · 기울임 금지)은 `docs/typography.md` 4절.
 
 ## 6. 계열 · 부품 디자이너용 예시
 ```css
