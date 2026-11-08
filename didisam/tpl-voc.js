@@ -310,4 +310,21 @@
       L.forEach(x => { if (!x || x.type !== 'text' || !x.data) return; const v = x.data.variant; if (v === 'steps' || (numF && v === 'features')) { x.data.variant = hasT ? 'info' : 'tiles'; hasT = true; } }); return L; }; });
   /* H3: 아래 블록 변형 지정(H1 HPS.blockVar 규약 — site.blocks가 유형 · 계열 기본값보다 우선). t3-v-beauty는 story 계열 corp-onboard와 첫 화면 아래 숫자 표가 같아 한 줄 숫자로 */
   { const B = { 't3-v-beauty': { facts: 'one' } }; Object.keys(B).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp) tp.blocks = Object.assign({}, tp.blocks || {}, B[id]); }); }
+  /* H2 사진 재배정표(fix6/h2/w/H2_change.json · H2_photo_map.md): 첫 화면 사무실 · 노트북 유형당 2장 이하, 첫 화면 중복 0.
+     슬롯 사진(photos)을 덮어쓰고, gal: { 이전 id: 새 id }는 사진 띠(image 섹션) 안의 사진을 바꾼다 */
+  { const H2P = {
+    'voc-employer': {'hero': 'log-01', 'cta': 'hum-07'},
+    't3-v-remote': {'hero': 'hum-50', 'cta': 'hum-42', 'space': 'hum-07', 'gal': {'lap-10': 'grp-02'}},
+    't3-v-consort': {'hero': 'wrk-08'},
+    't3-v-jobcenter': {'hero': 'hum-51'},
+    't3-v-design': {'cta': 'grp-02', 'gallery2': 'hum-50'},
+    'tv-office': {'cta': 'hum-41', 'space': 'grp-06', 'about': 'hum-42', 'gal': {'lap-09': 'hum-49'}}
+  };
+  const H2S = id => { const H = window.HPSTOCK; const x = H && typeof H.get === 'function' ? H.get(id) : null; return x ? (x.src800 || x.src) : ''; };
+  Object.keys(H2P).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'voc') return; const v = H2P[id];
+    const ph = Object.assign({}, v); delete ph.gal; tp.photos = Object.assign({}, tp.photos || {}, ph);
+    if (v.gal && typeof tp.build === 'function') { const b0 = tp.build; tp.build = () => { const L = A(b0());
+      L.forEach(x => { if (!x || x.type !== 'image' || !x.data || !Array.isArray(x.data.imgs)) return;
+        x.data.imgs = x.data.imgs.map(im => { const m = String(im && im.src || '').match(/([a-z]{3}-\d{2})(?:-800)?\.webp/); const nw = m && v.gal[m[1]] ? H2S(v.gal[m[1]]) : '';
+          return nw ? Object.assign({}, im, { src: nw }) : im; }); }); return L; }; } }); }
 })();
