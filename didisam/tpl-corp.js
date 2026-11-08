@@ -239,8 +239,8 @@
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
   /* H3(R2 H1 · BRIEF8): 주력 계열 5개(splitscreen · story · sidebar · editorial · bulletin)로 모으고, S3 첫 화면은 3종(franchise 상자 · leader · safety 전면 사진)만 둔다.
      [계열 또는 'hk:<S3 첫 화면>', 변형] */
-  const H3L = { 'corp-onboard': ['story', 'b'], /* academy · partner는 public · adult에도 걸려 S3 그대로 */ 't3-c-ax': ['editorial', 'b'], 't3-c-global': ['editorial', 'c'],
-    't3-c-esg': ['story', 'c'], 'tc-security': ['splitscreen', 'c'], 't3-c-supplier': ['splitscreen', 'a'] };
+  const H3L = { 'corp-legal': ['hk:scrim', ''], /* bulletin a면 public t4-civic과 첫 화면 닮음(거리 6) */ 'corp-onboard': ['story', 'b'], /* academy · partner는 public · adult에도 걸려 S3 그대로 */ 't3-c-ax': ['editorial', 'b'], 't3-c-global': ['editorial', 'c'],
+    't3-c-esg': ['story', 'c'], 't3-c-job': ['sidebar', 'a'], /* b면 univ t2-univ-ai와 닮음(거리 7) */ 'tc-security': ['splitscreen', 'c'], 't3-c-supplier': ['splitscreen', 'a'] };
   Object.keys(H3L).forEach(id => { const c = CFG[id], v = H3L[id]; if (!c) return;
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); delete FD2V[id]; } else { c.L = v[0]; delete c.hk; FD2V[id] = v[1]; } });
 

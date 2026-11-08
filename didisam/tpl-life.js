@@ -260,8 +260,8 @@
     't2-life-credit': ['bulletin', 'b', 'util', 'split'], /* a면 corp-legal과 닮음 · 사진 판 위 eyebrow 대비 3.14 */
     't2-life-family': ['mosaic', 'a', 'contact', 'split'], /* H3: b는 adult-hobby(lifelong 공유)와 겹침 */
     't2-life-career': ['portal', 'a', 'center', 'cols'],
-    't2-life-village': ['story', 'c', 'contact', 'gov'],
-    'tl-life-health': ['story', 'a', 'center', 'split'],
+    't2-life-village': ['story', 'a', 'contact', 'gov'], /* H3: health와 변형 맞바꿈(health a면 corp t3-c-customer와 닮음) */
+    'tl-life-health': ['story', 'c', 'center', 'split'],
     'tl-life-lang': ['hk:scrim', '', 'center', 'cols'],
     'tl-life-univext': ['editorial', 'a', 'util', 'gov'], /* H3: 상자형 줄임 · 주력 editorial */
     'tl-life-cert': ['portal', 'c', 'contact', 'gov'] /* H3: 상자형 줄임 · 주력 portal(a · b면 사진 위 강좌 칩 대비 4.1~4.5) */

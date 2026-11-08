@@ -244,7 +244,7 @@
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
   /* H3(R2 H1 · BRIEF8): 주력 계열 4개(bulletin · typo · story · portal) + editorial · fullbleed 1종씩으로 모은다.
      [계열 또는 'hk:<S3 첫 화면>', 변형] */
-  const H3L = { 'voc-employer': ['portal', 'a'], 'voc-card': ['hk:box', ''], 't3-v-jobcenter': ['bulletin', 'b'] }; /* jobcenter bulletin a면 public t4-civic과 닮음(거리 8) */ /* design은 story a면 corp customer · lifelong health와 닮음(②) → editorial c 그대로 · voc-card bulletin b는 lifelong t2-life-credit과 닮음(거리 6) */
+  const H3L = { 'voc-employer': ['portal', 'a'], 'voc-card': ['hk:box', ''], 't3-v-jobcenter': ['hk:split', ''] }; /* jobcenter bulletin a면 public t4-civic, b면 t4-legal · lifelong t2-life-credit과 닮음(거리 8) */ /* design은 story a면 corp customer · lifelong health와 닮음(②) → editorial c 그대로 · voc-card bulletin b는 lifelong t2-life-credit과 닮음(거리 6) */
   Object.keys(H3L).forEach(id => { const c = CFG[id], v = H3L[id]; if (!c) return;
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); delete FD2V[id]; } else { c.L = v[0]; delete c.hk; FD2V[id] = v[1]; } });
   /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
