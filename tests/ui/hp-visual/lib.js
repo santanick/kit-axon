@@ -133,9 +133,14 @@ const CSVQ = v => { const s = Array.isArray(v) ? v.join(' ') : v == null ? '' : 
 function csv(rows, cols) { return '﻿' + [cols.join(','), ...rows.map(r => cols.map(c => CSVQ(r[c])).join(','))].join('\n') + '\n'; }
 const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/* 섹션 종류 순서(variant · 첫 화면 배치 제외): banner@split>text:features → banner>text */
+const kinds = r => (r.secs || String(r.sig || '').split('|')[1] || '').toString().split(/>|,/).filter(Boolean).map(x => x.replace(/[:@].*$/, '')).join('>');
+const MIN_N = 15;
 /* 요약 읽기: out/rows/*.json */
 function loadRows(out) { const d = path.join(out, 'rows'); if (!fs.existsSync(d)) return []; return fs.readdirSync(d).filter(f => f.endsWith('.json')).map(f => { try { return JSON.parse(fs.readFileSync(path.join(d, f), 'utf8')); } catch (e) { return null; } }).filter(Boolean); }
 const TYPES = ['adult', 'k12', 'univ', 'lifelong', 'voc', 'corp', 'public'];
-const byType = rows => { const m = {}; rows.forEach(r => { (m[r.type] = m[r.type] || []).push(r); }); Object.values(m).forEach(L => L.sort((a, b) => a.id.localeCompare(b.id))); return m; };
+/* 유형 묶음: types에 포함된 유형마다 센다(includes · 통합 결정 12:00) — 한 템플릿이 여러 유형에 들어갈 수 있다 */
+const typesOf = r => (Array.isArray(r.types) && r.types.length ? r.types : [r.type]).filter(Boolean);
+const byType = rows => { const m = {}; rows.forEach(r => typesOf(r).forEach(t => { (m[t] = m[t] || []).push(r); })); Object.values(m).forEach(L => L.sort((a, b) => a.id.localeCompare(b.id))); return m; };
 
-module.exports = { ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, dismiss };
+module.exports = { ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };

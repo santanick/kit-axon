@@ -1,6 +1,6 @@
 'use strict';
 /* 시각 품질 자동 점검 — 템플릿마다 게시본(학습자 홈)을 PC 1280 · 휴대폰 390으로 찍고 지표를 표로 만든다.
-   사용: node tests/ui/hp-visual/run.js [--type k12[,univ]] [--ids a,b] [--out dir] [--budget 240] [--force] [--port 9830] [--all]
+   사용: node tests/ui/hp-visual/run.js [--type k12[,univ]](types에 포함된 템플릿) [--ids a,b] [--out dir] [--budget 240] [--force] [--port 9830] [--all]
    - 이어서 실행: 이미 찍은 템플릿(out/rows/<id>.json)은 건너뛴다. 시간 예산(--budget 초)을 넘기면 멈추고 exit 3 → 같은 명령을 다시 실행.
    - 실행기 안에서: QA_APP=1 qa-run.sh tests/ui/hp-visual/run.js --out <dir>  (1회 280초 제한 · 기본 예산 240초)
    - 결과: out/summary.json · summary.csv · shots/<id>_{pc,m}.jpg(전체) · shots/<id>_{hero,hero_m}.jpg(첫 화면) */
@@ -22,9 +22,9 @@ function summarize() { const rows = H.loadRows(OUT).sort((a, b) => (a.type + a.i
   const errs = [];
   /* 템플릿 목록 */
   const p0 = await br.newPage(); await p0.route(/^https?:\/\/(?!127\.0\.0\.1)/, r => r.abort()); await p0.goto(base + 'index.html'); await p0.waitForFunction(() => typeof TPL !== 'undefined' && typeof siteFromTpl === 'function');
-  const ALL = await p0.evaluate(() => TPL.map(t => ({ id: t.id, type: (t.types || [])[0] || '', hidden: !!t.hidden }))); await p0.close();
+  const ALL = await p0.evaluate(() => TPL.map(t => ({ id: t.id, type: (t.types || [])[0] || '', types: t.types || [], hidden: !!t.hidden }))); await p0.close();
   const want = A.ids ? new Set(String(A.ids).split(',')) : null; const tys = A.type ? new Set(String(A.type).split(',')) : null;
-  let list = ALL.filter(t => (A.all || !t.hidden) && (!want || want.has(t.id)) && (!tys || tys.has(t.type)));
+  let list = ALL.filter(t => (A.all || !t.hidden) && (!want || want.has(t.id)) && (!tys || t.types.some(x => tys.has(x))));
   fs.writeFileSync(path.join(OUT, 'list.json'), JSON.stringify(list));
   const todo = list.filter(t => A.force || !fs.existsSync(path.join(ROWS, t.id + '.json')));
   console.log(`템플릿 ${list.length}종 · 남은 ${todo.length}종 · 출력 ${OUT}`);
