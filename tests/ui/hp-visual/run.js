@@ -52,8 +52,10 @@ function summarize() { const rows = H.loadRows(OUT).sort((a, b) => (a.type + a.i
         else await pg.waitForTimeout(500);
         const pend = await H.settle(pg); /* FIXLIST 16: 지연 불러오기 사진이 다 뜰 때까지(스크롤 · eager · decode) */
         await pg.evaluate(() => document.fonts.ready.then(() => 0)).catch(() => {}); /* R2 N6: 글꼴이 다 온 뒤 찍는다 */
-        const m = await pg.evaluate(H.MEASURE); if (sfx === 'pc') r.imgPending = pend;
-        const buf = await pg.screenshot({ fullPage: true, type: 'jpeg', quality: 78 });
+        /* H5(N7): 측정과 촬영 사이에 배치가 움직이면(가입 띠 이동 · 늦은 렌더) 글자 상자와 화면 픽셀이 어긋나 대비가 1.0대로 잘못 나온다 → 배치 서명이 같을 때까지 다시(최대 3회) */
+        const lay = () => pg.evaluate(() => [...document.querySelectorAll('.smhost')].map(h => { const b = h.getBoundingClientRect(); return Math.round(b.top + scrollY) + ':' + Math.round(b.height); }).join(',') + '|' + document.documentElement.scrollHeight);
+        let m, buf; for (let k = 0; k < 3; k++) { const L0 = await lay(); m = await pg.evaluate(H.MEASURE); buf = await pg.screenshot({ fullPage: true, type: 'jpeg', quality: 78 }); if (await lay() === L0) break; await pg.waitForTimeout(500); }
+        if (sfx === 'pc') r.imgPending = pend;
         fs.writeFileSync(path.join(SHOT, `${id}_${sfx}.jpg`), buf);
         const meta = await sharp(buf).metadata(); const sc = meta.width / w;
         const top = Math.min(Math.round(m.top * sc), Math.max(0, meta.height - 10)); const hh = Math.min(Math.round(h * sc), meta.height - top);
