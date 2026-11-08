@@ -30,6 +30,9 @@ const NET = require('./hp-visual/lib.js').net;
     await ev(() => { localStorage.clear(); localStorage.setItem('didisam.emptyStart', '0'); createOrg('univ', '해운대 열린 캠퍼스'); });
     await page.waitForFunction(() => window.S && S.org); await wait(400);
     await ev(() => window.HPF && HPF.load());
+    /* R2 N5(v34.5 H4): 글자 수가 모자란 제목 글꼴의 빠진 글자 — 함렛 · 도현은 목록이 있고, 전체 음절 글꼴은 빈 배열 */
+    const gp = await ev(() => ({ h: HPF.gaps('흔들리지 않는 수험 루틴 쀍딻', 'hahmlet'), d: HPF.gaps('똠햏', 'do-hyeon'), l: HPF.gaps('똠햏뷁', 'line-seed-kr'), p: HPF.gaps('똠햏', 'pretendard') }));
+    ok('HPF.gaps: 함렛 · 도현 빠진 글자 · 전체 음절 글꼴 0', Array.isArray(gp.h) && gp.h.length >= 1 && !gp.h.includes('흔') && gp.d.length >= 1 && gp.l.length === 0 && gp.p.length === 0, gp);
     ok('HPF 인터페이스(list · faces · need · css · href · pairs)', await ev(() => !!(window.HPF && HPF.list.length >= 7 && ['faces', 'need', 'css', 'href', 'pairs', 'panel'].every(k => typeof HPF[k] === 'function'))));
     await ev(() => { try { closeModal(); } catch (e) { } const s = site(); if (window.HPT) { HPT.apply(s, 'campus'); HPT.enrich(s); } const b = s.sections.find(x => x.type === 'banner'); b.data.title = '똠방각하도 배우는 열린 캠퍼스'; s.font = { h: 'hahmlet', b: 'serif' }; s.ai = s.ai || { at: today(), by: 'test' }; save(); });
 

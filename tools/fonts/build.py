@@ -140,6 +140,9 @@ def job(args):
         g = TTFont(io.BytesIO(base)); ss = subset.Subsetter(o2); ss.populate(unicodes=u); ss.subset(g)
         fn = f'{w}-{i}.woff2'; p = os.path.join(outdir, fn); g.flavor = 'woff2'; g.save(p)
         files.append([i, os.path.getsize(p), ranges(u), sha(p)[:8]])
+    # 한글 음절이 모자란 글꼴(함렛 2,788 · 도현 2,437)은 가진 음절 목록을 hpf.json에 남긴다 → HPF.gaps(글자, id)로 '빠진 글자 수'를 셈(R2 N5 · 품질 점수)
+    ko = ''.join(chr(c) for c in sorted(cmap) if 0xac00 <= c <= 0xd7a3)
+    met['ko'] = ko if len(ko) < 11172 else ''
     return fid, w, files, met
 
 
@@ -188,7 +191,10 @@ def main():
         fb = (f"@font-face{{font-family:'{F['fam']} Fallback';src:{','.join(f'local({chr(39)}{n}{chr(39)})' for n in F['local'])};"
               f"size-adjust:{sa * 100:.1f}%;ascent-override:{met['asc'] / up / sa * 100:.1f}%;descent-override:{met['desc'] / up / sa * 100:.1f}%;line-gap-override:{met['gap'] / up / sa * 100:.1f}%}}")
         css.append(fb)
+        ko = met.pop('ko', '')
         ent = {'fam': F['fam'], 'kind': F['kind'], 'lic': 'OFL-1.1', 'ver': F['ver'], 'w': {}, 'met': met}
+        if ko:
+            ent['ko'] = ko
         for w in sorted(W):
             files, _ = W[w]; rng = F['weights'][w][2]
             for i, size, ur, hh in files:  # ?h=내용 해시: 다시 빌드해도 서비스 워커 저장본이 섞이지 않게

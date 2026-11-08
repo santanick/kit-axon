@@ -7,7 +7,7 @@
       · 기존 2,350자 서브셋(Noto Serif KR · Gowun Dodum)은 분할본으로 대체. Gaegu · Black Han Sans는 저장 데이터 호환용(legacy)으로 hpdir가 그대로 낸다.
    2) 편집기 글꼴 고르기 — 바로 고치기 툴바(hpimg)의 글꼴 팝업을 '조합(제목+본문)' 중심으로 바꾸고, 실제 사이트 제목 · 문장으로 미리 보여 준다.
       데이터는 hpimg와 같다: S.site.font = { h, b } · section.data.sty[경로].ff (기존 키 sans · serif · round · hand · mono · display 호환)
-   인터페이스: window.HPF = { list, pairs, get(id), id(key), css(id), href(id), faces(id), need(site, html), pre(site, html), load(), panel(host, opt) } */
+   인터페이스: window.HPF = { list, pairs, get(id), id(key), css(id), href(id), faces(id), need(site, html), pre(site, html), gaps(text, id), load(), panel(host, opt) } */
 'use strict';
 (() => {
   const CDN_PRE = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css';
@@ -86,6 +86,11 @@
     try { if (window.HPFT && typeof HPFT.need === 'function') (HPFT.need(s) || []).forEach(x => { const k = id(x); if (k) K.add(k); }); } catch (e) { }
     [...K].forEach(k => { if (GAP[k]) K.add(GAP[k]); });
     return [...K]; }
+  /* 빠진 글자(R2 N5 · v34.5 H4): 한글 음절이 모자란 제목 글꼴(함렛 2,788 · 도현 2,437)에서 text의 한글 음절 중 원본에 없는 글자(중복 제외).
+     hpf.json(HPF.load)이 아직 없으면 null. 글자 수가 충분한 글꼴은 []. 품질 점수에서 '제목 글자 범위'로 쓴다 */
+  const KO = {};
+  function gaps(text, k) { const f = get(k); if (!f) return []; if (!MAN) return null; const e = MAN[f.id]; if (!e || !e.ko) return [];
+    const set = KO[f.id] || (KO[f.id] = new Set(e.ko)); const out = new Set(); for (const c of String(text || '')) { const u = c.codePointAt(0); if (u >= 0xac00 && u <= 0xd7a3 && !set.has(c)) out.add(c); } return [...out]; }
   /* 첫 화면 제목 글꼴(id) · 굵기 */
   function heading(s, html) { const f = s && s.font || {}; if (id(f.h)) return id(f.h);
     try { const p = window.HPFT && HPFT.pair && HPFT.pair(s); if (p && id(p.hd)) return id(p.hd); } catch (e) { }
@@ -196,6 +201,6 @@
   /* 디자인 설정(G2 hpgal 등)에서 쓰는 조합 고르기 패널: HPF.panel(host) */
   function panel(host, opt) { if (!host) return; studioFonts(); host.__hpfOpt = opt || {}; host.classList.add('hpf-panel'); host.innerHTML = pairHTML(cur()); }
 
-  window.HPF = { list, pairs, get, id, css, href, faces, need, pre, heading, load, panel, popHTML, applyPair, PAIRS };
+  window.HPF = { list, pairs, get, id, css, href, faces, need, pre, heading, gaps, load, panel, popHTML, applyPair, PAIRS };
   load();
 })();
