@@ -405,7 +405,8 @@ ${P} .hps-ctw{flex-direction:column;align-items:flex-start;gap:20px}${P} .hps-ct
     const bg = `${ar}background-color:${avgOf(x.id)}`; if (/\sstyle="/i.test(o)) { if (!/background/i.test((o.match(/\sstyle="([^"]*)"/i) || [])[1])) o = o.replace(/\sstyle="([^"]*)"/i, (m, v) => ` style="${v.replace(/;?\s*$/, ';')}${bg}"`); } else o = o.replace(/^<img\b/i, `<img style="${bg}"`);
     return o; }); }
   const NOFLOW = /\b(hp-alt|is-alt|hp-cta|hps-cta|hp-hero|hps-hero|hpl-k-banner|hpl-k-cta|hpl-k-stats|hp-facts|hps-facts|hpl-noir|hps-empty|hps-ntop|hpl-empty|hp-empty)\b/;
-  const OWNBG = /\b(hp-cta|hps-cta|hp-hero|hps-hero|hpl-hero|hpl-k-banner|hpl-k-cta|hpl-noir|hpb-inv|hps-empty|hps-ntop|hpl-empty|hp-empty|hps-c-photo)\b/;
+  const OWNBG = /\b(fb-cta|sp-cta|bt-cta|hpb-inv|hps-c-photo)\b/; /* 사진 · 어두운 띠 — 문의 띠(hp-cta)는 흰 바탕 안 상자형이 많아 줄임 대상 */
+  const HEROC = /\b(hp-hero|hps-hero|hpl-hero|hpl-k-banner)\b/;
   function spacing(h) { const re = /<section\b[^>]*class="([^"]*)"[^>]*>/g; const M = []; let m; while ((m = re.exec(h))) M.push({ i: m.index, t: m[0], c: m[1] });
     if (!M.length) return h; const isTop = []; let depth = 0, p = 0; /* 최상위 섹션만: 앞 섹션이 닫혔는지 */
     M.forEach((x, k) => { const seg = h.slice(p, x.i); depth -= (seg.match(/<\/section>/g) || []).length; if (depth < 0) depth = 0; isTop[k] = depth === 0; depth++; p = x.i; });
@@ -414,11 +415,13 @@ ${P} .hps-ctw{flex-direction:column;align-items:flex-start;gap:20px}${P} .hps-ct
       const txt = body.replace(/<style[\s\S]*?<\/style>|<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       const rich = /<(img|figure|table|iframe|video|form|details|dl)\b/.test(body) || (body.match(/<li\b/g) || []).length > 2 || (body.match(/<article\b/g) || []).length > 1;
       const add = []; if (!NOFLOW.test(x.c) && !rich && txt.length <= 160) add.push('hps-short');
-      /* H1(R2 M6): 바탕이 같은 섹션이 이어지면(기본 바탕끼리 · 회색 띠끼리) 앞 섹션 아래 여백 × 0.7, 뒤 섹션 위 여백 × 0.5 → 섹션 사이 빈 띠 200px 이하
+      /* H1(R2 M6): 보통 섹션이 이어지면 앞 섹션 아래 여백 × 0.6, 뒤 섹션 위 여백 × 0.45 → 섹션 사이 빈 띠 200px 이하
          사진 · 어두운 띠 · 첫 화면 · 문의 띠처럼 자기 바탕이 있는 섹션은 건드리지 않는다 */
-      const key = OWNBG.test(x.c) || /style="[^"]*background/.test(x.t) ? '' : /\b(is-alt|hp-alt)\b/.test(x.c) ? 'alt' : 'bg';
+      /* 바탕 판별은 클래스로 믿을 수 없어(계열마다 is-alt 색이 다름) 자기 바탕이 분명한 섹션만 빼고 모두 줄인다 — 다른 바탕끼리도 각 띠 안 여백은 65~86px 이상 남는다.
+         첫 화면 바로 다음 섹션은 위 여백만 줄인다(첫 화면 자체는 그대로). noir(어두운) 계열은 noir 섹션끼리만 */
+      const key = HEROC.test(x.c) ? 'hero' : /\bhpl-noir\b/.test(x.c) ? 'noir' : (OWNBG.test(x.c) || /style="[^"]*background/.test(x.t)) ? '' : 'n';
       const gap = prevEnd >= 0 ? h.slice(prevEnd, x.i).replace(/<\/section>|<\/div>|\s/g, '') : 'x';
-      if (key && key === prevFlow && !gap) { add.push('hps-flow'); if (prevK >= 0) tail.push(prevK); } prevFlow = key; prevK = k; prevEnd = end >= 0 ? end + 10 : -1;
+      if ((key === 'n' || key === 'noir') && (prevFlow === key || prevFlow === 'hero') && !gap) { add.push('hps-flow'); if (prevK >= 0 && prevFlow === key) tail.push(prevK); } prevFlow = key; prevK = k; prevEnd = end >= 0 ? end + 10 : -1;
       if (!add.length) return; out.push(h.slice(last, x.i), x.t.replace(/class="/, `class="${add.join(' ')} `)); last = x.i + x.t.length; });
     if (tail.length) { /* 앞 섹션 아래 여백 줄이기(hps-flowb) — 위에서 이미 바꾼 여는 태그는 out 안에 있으므로 결과 문자열에서 다시 찾는다 */
       let r = out.length ? out.join('') + h.slice(last) : h; const T = new Set(tail.map(k => M[k].t)); let n = 0;
@@ -427,7 +430,7 @@ ${P} .hps-ctw{flex-direction:column;align-items:flex-start;gap:20px}${P} .hps-ct
     if (!out.length) return h; out.push(h.slice(last)); return out.join(''); }
   const spCSS = `/* hps rhythm */
 .hpl-noir .hps-st,.hpl-noir .hpl-stars{color:#E3B341!important}.hpl-noir .hps-st i{color:#9A9A9A!important}
-section.hps-short{padding-top:calc(var(--sec,120px) * .6)!important;padding-bottom:calc(var(--sec,120px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec,120px) * .45)!important}section.hps-flowb{padding-bottom:calc(var(--sec,120px) * .65)!important}
+section.hps-short{padding-top:calc(var(--sec,120px) * .6)!important;padding-bottom:calc(var(--sec,120px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec,120px) * .45)!important}section.hps-flowb{padding-bottom:calc(var(--sec,120px) * .6)!important}
 @media(max-width:640px){.hpl-noir .hps-st,.hpl-noir .hpl-stars{color:#E3B341!important}.hpl-noir .hps-st i{color:#9A9A9A!important}
 section.hps-short{padding-top:calc(var(--sec-m,72px) * .6)!important;padding-bottom:calc(var(--sec-m,72px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec-m,72px) * .5)!important}section.hps-flowb{padding-bottom:calc(var(--sec-m,72px) * .75)!important}}`;
   HPS.rhythm = { imgFill, spacing };

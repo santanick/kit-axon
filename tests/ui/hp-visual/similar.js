@@ -10,8 +10,8 @@ const fs = require('node:fs'); const path = require('node:path');
 const H = require('./lib.js'); const A = H.args(process.argv.slice(2));
 const IN = path.resolve(A.in || A._[0] || 'hp-visual-out'); const OUT = path.resolve(A.out || path.join(IN, 'similar'));
 const TH = A.th != null ? +A.th : 12; const LOOK = A.look != null ? +A.look : 8;
-/* R2 N2(H1) ③ 아래 닮음: 첫 화면 아래 2개 화면 dHash(dh2) ≤ --low(12) 이고 아래 섹션 모양(low: 블록:변형 순서)이 같음, 또는 dh2 ≤ --lowlook(6). M6: 가장 긴 빈 띠 > --gap(200)px */
-const LOW = A.low != null ? +A.low : 12; const LOWLOOK = A.lowlook != null ? +A.lowlook : 6; const GAP = A.gap != null ? +A.gap : 200;
+/* R2 N2(H1) ③ 아래 닮음: 첫 화면 아래 2개 화면 dHash(dh2) ≤ --low(12) 이고 아래 섹션 모양(low: 블록:변형 순서)이 같음, 또는 dh2 ≤ --lowlook(5). M6: 가장 긴 빈 띠 > --gap(200)px */
+const LOW = A.low != null ? +A.low : 12; const LOWLOOK = A.lowlook != null ? +A.lowlook : 5; const GAP = A.gap != null ? +A.gap : 200;
 fs.mkdirSync(OUT, { recursive: true });
 const sharp = H.need('sharp');
 const FONT = "font-family=\"Noto Sans CJK KR, Noto Sans KR, Pretendard, sans-serif\"";

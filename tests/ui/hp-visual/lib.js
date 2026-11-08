@@ -82,7 +82,7 @@ async function applyTpl(op, id) {
     let facts = []; try { facts = (HPT.facts() || []).map(f => String(f.v)); } catch (e) { }
     const prices = (S.classes || []).map(c => String(+c.price || 0));
     /* 실제 데이터 숫자(채워진 기관): 정원 · 시간 · 차시 · 후기 · 공지 · 공개 강좌 수 — 지어낸 숫자 의심에서 뺀다 */
-    (S.classes || []).forEach(c => { [c.cap, c.recruit && c.recruit.cap, c.hours, (c.curriculum || []).length].forEach(v => { if (+v > 0) prices.push(String(+v)); }); });
+    (S.classes || []).forEach(c => { [c.cap, c.recruit && c.recruit.cap, c.hours, (c.curriculum || []).length, c.criteria && c.criteria.threshold].forEach(v => { if (+v > 0) prices.push(String(+v)); }); });
     try { prices.push(String(HPT.reviews().length), String((S.notices || []).length + (S.classes || []).reduce((a, c) => a + (c.notices || []).length, 0)), String((S.classes || []).filter(c => c.open === '전체').length)); } catch (e) { }
     /* 첫 화면 사진(R1 H6): 샘플 사진이면 hero 슬롯 · 긴 변 1200 이상인지 */
     let heroPh = null; try { const bnd = (live.find(x => x.type === 'banner') || { data: {} }).data; const im = (s.img && s.img.hero) || null; const src = (im && (im.stock || im.src)) || bnd.img || (s.photos && s.photos.hero) || '';
