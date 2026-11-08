@@ -154,7 +154,7 @@ ${P} .hpl-btn{display:inline-flex;align-items:center;justify-content:center;gap:
 ${P} .hpl-btn.pri{background:var(--a);color:var(--on)}${P} .hpl-btn.pri:hover{background:${mix(T.a, '#000000', .14)}}
 ${P} a:focus-visible,${P} summary:focus-visible{outline:3px solid ${fit(T.a, T.bg, 3)};outline-offset:3px;border-radius:4px}
 ${P} .hpl-hint{border:1.5px dashed ${al(T.a, .45)};padding:18px;text-align:center;color:${T.at};font-weight:650;background:${T.as};border-radius:var(--r)}
-${P} li.tx b{font-size:clamp(${px(26)},3vw,${px(42)})!important;white-space:nowrap;letter-spacing:-.03em!important}${P} .hp-av{background:var(--a)!important;color:var(--on)!important}${P} .hp-stars,${P} .hpl-stars{color:#8A5A0B}${P} .hp-stars i{color:#767C88}
+${P} li.tx b{font-size:clamp(${px(26)},3vw,${px(42)})!important;white-space:nowrap;letter-spacing:-.03em!important}${P} .hp-av{background:var(--a)!important;color:var(--on)!important}${P} .hp-stars,${P} .hpl-stars{color:#8A5A0B}${P} .hp-stars i{color:#5F6672}
 @media(prefers-reduced-motion:reduce){${P} *{transition:none!important;animation:none!important}}`; }
   H.css = s => { const F = H.of(s); if (!F) return ''; const T = H.tok(s); if (!T) return ''; const th = thOf(s); let c = baseCSS(s, th, T, s.layout);
     try { if (typeof F.css === 'function') c += '\n' + F.css(s, th, T); } catch (e) { console.error('HPL css', s.layout, e); }
