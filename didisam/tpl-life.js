@@ -3,7 +3,7 @@
          시니어는 senior 테마(본문 18 · 버튼 56) + 큰 글자 팔레트(bigblue · bigforest).
    - types[0]이 lifelong인 템플릿 12종(global.js 2 + tpl-b.js 10)을 id로 찾아 덮어쓰고, 업종이 비어 있던 4종(건강 · 외국어 · 대학 평생교육원 비학위 · 자격)을 새로 더한다(id 접두어 tl-).
      원본 파일은 고치지 않는다. 공유 템플릿(univ-lifelong · t2-univ-cll · adult-hobby · solo-creator · t3-v-care · t3-v-midlife)은 각 유형 디자이너 몫이라 손대지 않는다.
-   - 16종이 서로 다른 구조를 갖도록 레이아웃 계열(HPL) 12종을 한 번씩 쓰고, 나머지 4종은 S3 사진 첫 화면(box · split · scrim · grid)으로 둔다.
+   - 16종이 서로 다른 구조를 갖도록 레이아웃 계열(HPL) 11종을 쓰고(collage는 adult-hobby와 겹쳐 비워 둠 · fullbleed 2), 나머지 4종은 S3 사진 첫 화면(box · split · scrim · grid)으로 둔다.
    - 템플릿마다: layout · theme · palette(HPC, 서로 다름) · photos(HPSTOCK, 첫 화면 사진 서로 다름) · hps(머리글 · 바닥글 · 휴대폰 메뉴) · 강좌 카드 · 섹션 구성(업종별로 다시 씀)
    - 사실 원칙: 숫자는 실제 숫자 띠(hpt:'facts')만, 강사는 등록된 강사만, 후기는 실제 후기만, 연락처는 설정값만. 문구에 실적 · 횟수 · 인원 약속을 넣지 않는다.
    - tpl-b가 덧붙이던 템플릿 전용 장식 CSS(점선 카드 · 비정형 번호 원 등)는 내 템플릿에서 걷어낸다. */
@@ -32,7 +32,7 @@
      ph: { hero, about, space, cta, gallery } · hd: [머리글, 바닥글, 휴대폰 메뉴] · ck: 신청 띠 · build: 섹션 */
   const CFG = {
     /* 시민 평생학습관: 포털형(강좌 찾기 · 빠른 메뉴 · 공지가 첫 화면에) — 지자체 학습관의 기본 시작점 */
-    'life-city': { cd: 'schedule', name: '시민 평생학습관', L: 'portal', th: 'official', pal: 'civic', ph: { hero: 'lec-03', about: 'cls-02', space: 'lib-03', cta: 'sem-01' }, hd: ['notice', 'biz', 'full'], ck: 'panel',
+    'life-city': { cd: 'schedule', name: '시민 평생학습관', L: 'portal', th: 'official', pal: 'civic', ph: { hero: 'hum-11', about: 'cls-02', space: 'lib-03', cta: 'sem-01' }, hd: ['notice', 'biz', 'full'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '시민 평생학습관', title: '배우고 싶은 강좌를\n가까운 곳에서', sub: '인문 · 문화예술 · 건강 · 직업 강좌를 분기마다 열고, 온라인과 방문으로 신청을 받습니다.', cta: '강좌 찾기', cta2: '수강 안내' }),
         notices('공지사항', { n: 5 }),
@@ -54,7 +54,7 @@
         facts(),
         cta('우리 동네에도\n배움터가 필요하다면', '모임 공간이나 강좌 개설을 원하시면 담당 부서로 문의해 주세요.', '학습 공간 문의')] },
     /* 시니어 디지털 배움터: S3 사진 + 글자 상자(큰 글씨) — 따라 하기 쉬운 단계와 전화 신청이 먼저 */
-    'life-senior': { cd: 'big', name: '시니어 디지털 배움터', th: 'senior', pal: 'bigblue', hk: 'box', ph: { hero: 'lap-02', about: 'lap-10', space: 'cls-02', cta: 'sen-03' }, hd: ['contact', 'biz', 'full'], ck: 'contact',
+    'life-senior': { cd: 'big', name: '시니어 디지털 배움터', th: 'senior', pal: 'bigblue', hk: 'box', ph: { hero: 'hum-09', about: 'lap-10', space: 'cls-02', cta: 'sen-03' }, hd: ['contact', 'biz', 'full'], ck: 'contact',
       build: () => [
         ban({ eyebrow: '어르신 디지털 교실', title: '스마트폰,\n천천히 함께 배워요', sub: '큰 글씨 교재와 전화 상담으로 처음이어도 쉽게 시작합니다.', cta: '전화로 신청하기', cta2: '배우는 내용' }),
         T('steps', { eyebrow: '', title: '신청은 이렇게 해요', cols: [['교실 고르기', '아래에서 배우고 싶은 교실을 골라요'], ['신청하기', '버튼을 누르거나 전화로 말씀해 주세요'], ['문자 확인', '수업 날짜를 문자로 알려 드려요'], ['수업 참여', '평소 쓰는 휴대폰을 가져오세요']] }),
@@ -85,7 +85,7 @@
         reviews('먼저 시작한 분들의 이야기'),
         cta('다음 십 년을\n함께 그려 보세요', '지금 고민을 남겨 주시면 상담 일정을 안내해 드립니다.', '상담 신청')] },
     /* 디지털 · AI 생활 배움터: 벤토 격자(코드 화면 · 강좌 칸 · 숫자 칸) — 전 세대 생활 디지털 · AI 활용 */
-    't2-life-digital': { cd: 'photo', name: '디지털 · AI 생활 배움터', L: 'bento', th: 'tech', pal: 'sky', ph: { hero: 'cod-01', about: 'cod-03', space: 'cls-03', cta: 'lap-03' }, hd: ['float', 'cols', 'drawer'], ck: 'photo',
+    't2-life-digital': { cd: 'photo', name: '디지털 · AI 생활 배움터', L: 'bento', th: 'tech', pal: 'sky', ph: { hero: 'hum-07', about: 'cod-03', space: 'cls-03', cta: 'lap-03' }, hd: ['float', 'cols', 'drawer'], ck: 'photo',
       build: () => [
         ban({ eyebrow: '생활 디지털 · AI', title: '생활에 쓰는\n디지털과 AI', sub: '스마트폰 활용부터 생성형 AI로 글 쓰고 사진 다듬기까지, 생활과 일에 바로 쓰는 것을 배웁니다.', cta: '수업 신청하기', cta2: '배우는 내용' }),
         cls('모집 중인 수업', '', { n: 4 }),
@@ -95,7 +95,7 @@
         reviews('수강 후기'),
         cta('지금 수준에 맞는\n수업을 찾아 드려요', '쓰는 기기와 배우고 싶은 것을 남겨 주시면 맞는 수업을 안내해 드립니다.', '수업 상담')] },
     /* 시민 인문학: 매거진형(명조 제목 · 강연장 사진 · 목차형 강좌) */
-    't2-life-humanities': { cd: 'list', name: '시민 인문학 아카데미', L: 'editorial', th: 'campus', pal: 'maple', ph: { hero: 'lec-02', about: 'lib-06', space: 'lib-02', cta: 'lib-05' }, hd: ['solid', 'min', 'full'], ck: 'panel',
+    't2-life-humanities': { cd: 'list', name: '시민 인문학 아카데미', L: 'editorial', th: 'campus', pal: 'maple', ph: { hero: 'hum-13', about: 'lib-06', space: 'lib-02', cta: 'lib-05' }, hd: ['solid', 'min', 'full'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '시민 인문학 연속 강좌', title: '생각을 넓히는\n저녁의 인문학', sub: '철학 · 역사 · 문학 · 예술을 한 주제씩 깊이 읽고, 함께 이야기 나누는 연속 강좌입니다.', cta: '이번 분기 강좌', cta2: '수강 안내' }),
         T('features', { eyebrow: '', title: '네 개의 서가', cols: [['철학', '오래된 질문을 오늘의 말로'], ['역사', '사건 너머의 사람을 읽기'], ['문학', '한 권을 천천히 함께 읽기'], ['예술', '작품을 보는 눈 기르기']] }),
@@ -106,7 +106,7 @@
         notices('강좌 공지'),
         cta('듣고 싶은 주제가\n있나요?', '다음 분기 강좌로 다뤘으면 하는 주제를 남겨 주세요.', '주제 제안하기')] },
     /* 생활문화 공방: 모자이크(도예 · 공구 · 물감 사진 격자) — 사진이 먼저 말하는 공방 */
-    't2-life-craft': { cd: 'photo', name: '생활문화 · 공예 공방', L: 'mosaic', th: 'warm', pal: 'clay', ph: { hero: 'wrk-06', about: 'wrk-02', space: 'art-06', gallery: 'art-03', cta: 'sen-04' }, hd: ['float', 'cta', 'drawer'], ck: 'photo',
+    't2-life-craft': { cd: 'photo', name: '생활문화 · 공예 공방', L: 'mosaic', th: 'warm', pal: 'clay', ph: { hero: 'hum-23', about: 'wrk-02', space: 'art-06', gallery: 'art-03', cta: 'sen-04' }, hd: ['float', 'cta', 'drawer'], ck: 'photo',
       build: () => [
         ban({ eyebrow: '생활문화 · 공예', title: '손으로 만들고\n함께 즐기는 시간', sub: '도자 · 목공 · 가죽 · 그림 강좌를 처음 오시는 분도 부담 없이 시작할 수 있게 엽니다.', cta: '강좌 예약하기', cta2: '이번 달 일정' }),
         cls('이번 달 강좌', '', { n: 4 }),
@@ -116,7 +116,7 @@
         cta('모임 · 단체 수업을\n원하시나요?', '인원과 희망 날짜를 남겨 주시면 가능한 일정을 안내해 드립니다.', '단체 수업 문의'),
         map('공방 오시는 길')] },
     /* 원격평생교육원(학점은행): 사이드 메뉴형(왼쪽 고정 학습 메뉴) — 학위 과정 · 수강 신청 · 학습 지원 포털 */
-    't2-life-credit': { cd: 'price', name: '원격평생교육원(학점은행)', L: 'sidebar', th: 'clean', pal: 'slate', ph: { hero: 'lap-08', about: 'lap-09', space: 'stu-01', cta: 'lap-01' }, hd: ['solid', 'cols', 'full'], ck: 'panel',
+    't2-life-credit': { cd: 'price', name: '원격평생교육원(학점은행)', L: 'sidebar', th: 'clean', pal: 'slate', ph: { hero: 'hum-36', about: 'lap-09', space: 'stu-01', cta: 'lap-01' }, hd: ['solid', 'cols', 'full'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '원격평생교육원 · 학점은행', title: '일하면서 채우는\n학위 학점', sub: '온라인 학점 과목을 학기마다 열고, 학습 설계부터 학점 인정 신청까지 안내합니다.', cta: '개설 과목 보기', cta2: '학습 설계 상담' }),
         T('tiles', { eyebrow: '', title: '학위 과정 찾기', cols: [['사회복지', '전공 · 교양 과목'], ['경영 · 회계', '전공 · 교양 과목'], ['아동 · 보육', '전공 · 교양 과목'], ['심리 · 상담', '전공 · 교양 과목']] }),
@@ -125,8 +125,8 @@
         gal(['lap-09', 'stu-01', 'lap-01'], '노트와 노트북으로 공부하는 책상 사진'),
         notices('학사 공지', { board: 1 }),
         faq('', [['학점은 어떻게 인정받나요?', '과목을 이수한 뒤 정해진 기간에 학점 인정 신청을 하면 됩니다. 절차는 학사 공지에서 안내합니다.'], ['휴대폰으로도 들을 수 있나요?', 'PC와 휴대폰 모두에서 수강할 수 있고 이어 보기 위치가 저장됩니다.']])] },
-    /* 가족 · 부모 교육센터: 콜라주(기울어진 사진 카드 · 메모지) — 아이와 함께 오는 밝은 센터 */
-    't2-life-family': { cd: 'big', name: '가족 · 부모 교육센터', L: 'collage', th: 'kids', pal: 'hearth', ph: { hero: 'kid-02', gallery1: 'kid-01', gallery2: 'lib-04', about: 'kid-03', cta: 'art-02' }, hd: ['float', 'cta', 'drawer'], ck: 'photo',
+    /* 가족 · 부모 교육센터: 전체 화면 사진(아이와 어른이 함께 흙을 빚는 손) — 함께하는 장면이 먼저 말하는 센터 */
+    't2-life-family': { cd: 'big', name: '가족 · 부모 교육센터', L: 'fullbleed', th: 'kids', pal: 'hearth', ph: { hero: 'hum-25', about: 'kid-03', space: 'lib-04', gallery: 'kid-01', cta: 'art-02' }, hd: ['overlay', 'cta', 'drawer'], ck: 'photo',
       build: () => [
         ban({ eyebrow: '부모 교육 · 가족 프로그램', title: '아이와 함께\n자라는 부모 교실', sub: '부모 교육, 가족 소통, 아이와 함께하는 주말 프로그램을 계절마다 엽니다.', cta: '프로그램 신청', cta2: '이번 계절 일정' }),
         T('tiles', { eyebrow: '', title: '누구와 함께 오시나요?', cols: [['예비 · 초보 부모', '첫 육아 준비'], ['영유아 가족', '놀이와 발달 이해'], ['초등 가족', '대화 · 습관 · 진로'], ['조부모', '손주와 함께하는 시간']] }),
@@ -136,7 +136,7 @@
         notices('센터 알림'),
         cta('우리 가족에게 맞는\n프로그램이 궁금하다면', '아이 나이와 관심사를 남겨 주시면 맞는 프로그램을 안내해 드립니다.', '상담 신청')] },
     /* 재취업 · 경력 이음: 좌우 분할(어두운 글 판 + 밝은 회의실 사진) — 상담 → 준비 → 연결 */
-    't2-life-career': { cd: 'schedule', name: '중장년 재취업 · 경력 이음', L: 'splitscreen', th: 'clean', pal: 'ochre', ph: { hero: 'off-02', about: 'off-04', space: 'off-05', cta: 'dsk-02' }, hd: ['solid', 'cols', 'drawer'], ck: 'panel',
+    't2-life-career': { cd: 'schedule', name: '중장년 재취업 · 경력 이음', L: 'splitscreen', th: 'clean', pal: 'ochre', ph: { hero: 'hum-10', about: 'off-04', space: 'off-05', cta: 'dsk-02' }, hd: ['solid', 'cols', 'drawer'], ck: 'panel',
       build: () => [
         ban({ eyebrow: '경력 이음 · 재취업', title: '쉬었던 경력,\n다시 이어 갑니다', sub: '경력 상담, 직무 교육, 자격 준비를 단계별로 이어 새 일을 준비하도록 돕습니다.', cta: '취업 상담 신청', cta2: '과정 일정' }),
         T('steps', { eyebrow: '', title: '준비는 이렇게 이어집니다', cols: [['경력 상담', '지금 상황과 희망 직무 확인'], ['직무 교육', '필요한 실무 다시 익히기'], ['자격 준비', '직무에 맞는 자격 과정'], ['구직 연결', '이력서 · 면접 준비']] }),
@@ -146,7 +146,7 @@
         reviews('수료생 이야기'),
         cta('경력이 끊긴 기간이\n길어도 괜찮습니다', '지금 상황을 남겨 주시면 상담 일정을 안내해 드립니다.', '취업 상담 신청')] },
     /* 마을 학습공동체: 이야기형(모임 제안 → 회원 → 활동 → 나눔을 세로 줄기로) */
-    't2-life-village': { cd: 'list', name: '마을 학습공동체 · 학습 동아리', L: 'story', th: 'warm', pal: 'sage', ph: { hero: 'stu-02', about: 'nat-03', space: 'off-03', cta: 'off-04' }, hd: ['notice', 'cta', 'full'], ck: 'photo',
+    't2-life-village': { cd: 'list', name: '마을 학습공동체 · 학습 동아리', L: 'story', th: 'warm', pal: 'sage', ph: { hero: 'hum-04', about: 'nat-03', space: 'off-03', cta: 'off-04' }, hd: ['notice', 'cta', 'full'], ck: 'photo',
       build: () => [
         ban({ eyebrow: '마을 학습공동체', title: '이웃이 선생님이 되는\n마을 배움터', sub: '주민이 직접 여는 강좌와 학습 동아리로, 배운 것을 이웃과 나누는 마을 학습공동체입니다.', cta: '동아리 둘러보기', cta2: '동아리 만들기' }),
         T('steps', { eyebrow: '', title: '동아리는 이렇게 시작해요', cols: [['모임 제안', '주제와 모임 방식을 정해요'], ['회원 모으기', '게시판으로 이웃을 모아요'], ['활동 기록', '모임 일지를 남겨요'], ['나눔', '발표회 · 나눔 강좌로 이어가요']] }),
@@ -174,7 +174,7 @@
         cta('나에게 맞는 강도부터\n시작하세요', '궁금한 점을 남겨 주시면 맞는 강좌를 안내해 드립니다.', '강좌 상담')] },
     /* 시민 외국어 교실: S3 전면 사진 + 스크림(캠퍼스 잔디) — 레벨 확인 → 반 배정 */
     'tl-life-lang': { cd: 'table', name: '시민 외국어 교실', scene: '영어 · 일본어 · 중국어 회화와 여행 외국어', ref: '시민 외국어형 — 전면 사진 첫 화면 · 언어별 반 표 · 레벨 확인', color: '#2F5E8C',
-      th: 'warm', pal: 'dusk', hk: 'scrim', ph: { hero: 'cam-03', about: 'dsk-02', space: 'cls-04', cta: 'lib-05' }, hd: ['overlay', 'mega', 'full'], ck: 'photo',
+      th: 'warm', pal: 'dusk', hk: 'scrim', ph: { hero: 'hum-03', about: 'dsk-02', space: 'cls-04', cta: 'lib-05' }, hd: ['overlay', 'mega', 'full'], ck: 'photo',
       build: () => [
         ban({ eyebrow: '시민 외국어 교실', title: '여행에서, 일에서\n한마디 더 말하기', sub: '영어 · 일본어 · 중국어 회화를 수준별 소규모 반으로 열고, 처음 배우는 분을 위한 입문반도 함께 운영합니다.', cta: '반 배정 상담', cta2: '언어별 반 보기' }),
         T('tiles', { eyebrow: '', title: '언어별 반', cols: [['영어', '입문 · 생활 회화 · 여행'], ['일본어', '입문 · 생활 회화'], ['중국어', '입문 · 생활 회화'], ['한국어', '이주민 생활 한국어']] }),
@@ -186,7 +186,7 @@
         cta('어느 반이 맞을지\n함께 정해요', '배운 경험과 원하는 요일을 남겨 주시면 반을 안내해 드립니다.', '반 배정 상담')] },
     /* 대학 평생교육원(비학위 · 교양): 노와르(먹색 · 강의실 사진) — 대학 강의실에서 듣는 교양 · 전문 과정 */
     'tl-life-univext': { cd: 'list', name: '대학 평생교육원 · 교양 전문 과정', scene: '대학 강의실에서 여는 성인 교양 · 전문 · 최고위 과정', ref: '대학 평생교육원형 — 어두운 프리미엄 첫 화면 · 과정 목록 · 학기 일정', color: '#1F2A44',
-      L: 'noir', th: 'premium', pal: 'midnight', ph: { hero: 'lec-01', about: 'lib-01', space: 'cam-03', cta: 'off-07' }, hd: ['overlay', 'mega', 'full'], ck: 'photo',
+      L: 'noir', th: 'premium', pal: 'midnight', ph: { hero: 'hum-12', about: 'lib-01', space: 'cam-03', cta: 'off-07' }, hd: ['overlay', 'mega', 'full'], ck: 'photo',
       build: () => [
         ban({ eyebrow: '대학 평생교육원', title: '대학 강의실에서\n다시 듣는 수업', sub: '교양 · 전문 · 최고위 과정을 학기마다 열고, 대학의 강의실과 도서관을 함께 이용합니다.', cta: '개설 과정 보기', cta2: '등록 안내' }),
         T('features', { eyebrow: '', title: '과정 안내', cols: [['교양 과정', '인문 · 예술 · 외국어'], ['전문 과정', '직무 · 자격 연계 실무'], ['최고위 과정', '리더를 위한 연속 강연'], ['맞춤 과정', '기관 · 단체 위탁 교육']] }),
@@ -198,7 +198,7 @@
         cta('다음 학기 과정을\n먼저 안내받으세요', '관심 분야를 남겨 주시면 개설 소식을 알려 드립니다.', '과정 안내 신청')] },
     /* 자격 · 실무 과정 교육원: S3 큰 제목 + 사진 격자(필기 · 회의) — 시험 일정과 과정표가 먼저 */
     'tl-life-cert': { cd: 'price', name: '자격 · 실무 과정 교육원', scene: '요양 · 보육 · 사무 · 바리스타 등 자격 준비 과정', ref: '자격 과정형 — 사진 격자 첫 화면 · 과정표 · 준비 단계', color: '#0E5E6F',
-      th: 'official', pal: 'harbor', hk: 'grid', ph: { hero: 'off-01', about: 'dsk-01', space: 'off-06', cta: 'dsk-03' }, hd: ['contact', 'biz', 'drawer'], ck: 'contact',
+      th: 'official', pal: 'harbor', hk: 'grid', ph: { hero: 'hum-05', about: 'dsk-01', space: 'off-06', cta: 'dsk-03' }, hd: ['contact', 'biz', 'drawer'], ck: 'contact',
       build: () => [
         ban({ eyebrow: '자격 · 실무 과정', title: '필요한 자격을\n차근차근 준비합니다', sub: '이론 수업, 실습, 모의 시험을 묶은 자격 준비 과정을 열고 시험 일정에 맞춰 안내합니다.', cta: '과정 신청하기', cta2: '시험 일정' }),
         notices('시험 · 모집 공지', { n: 4 }),
