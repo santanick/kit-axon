@@ -8,7 +8,7 @@
       경로 찾기는 hpai hpBind와 같은 규칙(cands + 글자 비교)이라 바로 고치기의 data-hpe-f와 같은 요소에 붙는다.
    ② 이미지: figure[data-slot] · 첫 화면 .hp-photo/.hp-vis · 이미지 섹션 · 머리글 로고를 누르거나 파일을 끌어다 놓으면 사진 패널 —
       사진 바꾸기 · 초점 끌기 · 맞춤(채우기/전체) · 대체 텍스트 · 지우기(그림으로) · AI에게 맡기기(키 없으면 규칙, 키 있으면 안내 후 사진 전송).
-      업로드는 브라우저에서 긴 변 1600px · webp(안 되면 jpeg/png) · data URL 300KB 이하로 줄인다(서버 이미지 저장 /api가 없어 data URL — 코어 변경 요청).
+      업로드는 브라우저에서 긴 변 1600px · webp(안 되면 jpeg/png) · data URL 300KB 이하로 줄인다(운영 서버에서는 hpmedia.js(HPM)로 /api/media에 올리고 주소만 저장, 서버가 없으면 data URL).
       자리 규약: S.site.img[slot] = { src, alt, fit, pos } · 첫 화면은 banner.data.img(= img.hero)와 함께 맞춘다. 로고는 S.site.gnb.logo.
       로고를 올리면 주요 색 2개를 뽑아 '이 색으로 맞출까요?' 한 줄 제안 → HPT.apply(color) · hpColorLock.
    ③ AI SAM: 입력창에 [사진] 첨부(붙여 넣기 · 끌어다 놓기) → 말 + 첨부를 홈페이지 수정 의도로 해석 → 계획 카드 → 미리보기(전 · 후) → [적용] · [되돌리기].
@@ -326,7 +326,7 @@
     w.style.left = left + 'px'; w.style.top = Math.max(8, top) + 'px'; }
   function closeImg(quiet) { if (HI.ipEl) HI.ipEl.classList.remove('hpi-on'); HI.ipEl = null; HI.ipRef = null; if (HI.ip) { HI.ip.remove(); HI.ip = null; } if (!quiet) talkSync(); }
   async function upload(r, file) {
-    try { const o = await shrink(file, { max: r.k === 'logo' ? 800 : 1600 });
+    try { const o = await shrink(file, { max: r.k === 'logo' ? 800 : 1600 }); if (window.HPM) o.url = await HPM.keep(o.url, file.name); /* X1: 서버 /api/media 주소(없으면 data URL) */
       const ok = commit(s0 => { apply(s0, r, { src: o.url, ...(r.k === 'logo' ? {} : { fit: read(s0, r).fit || 'cover', pos: read(s0, r).pos || '50% 50%' }) }); }, `${slotName(r)}을(를) 바꿨습니다(${o.w}×${o.h} · ${o.kb}KB). 마음에 들지 않으면 [되돌리기]를 누르세요.`);
       if (ok && r.k === 'logo') { const C = await colors(o.url); if (C.length) { HI.sug = { colors: C, pick: C[0] }; sugShow(); } }
       if (!HI.ip) return; paintImg(); }
@@ -348,10 +348,10 @@
   function imgAI(r) { const v = read(site(), r); if (!v.src) { say('먼저 사진을 올려 주세요.', 'warn'); return; }
     const rule = async () => { let fitV = 'cover'; try { const im = await loadImg(v.src); const ar = im.naturalWidth / Math.max(1, im.naturalHeight); if (ar > 2.6 || ar < .5 || /svg/.test(v.src.slice(0, 30))) fitV = 'contain'; } catch (e) { }
       const alt = v.alt || `${N()} ${slotName(r).replace(/ 사진$/, '')} 사진`; commit(s0 => apply(s0, r, { alt, fit: fitV }), `규칙으로 대체 텍스트 「${alt}」 · 맞춤(${fitV === 'contain' ? '전체 보이기' : '채우기'})을 넣었습니다. Claude를 연결하면 사진을 보고 써 드립니다.`); };
-    if (!aiOn() || !/^data:image\/(png|jpeg|webp|gif);base64,/.test(v.src)) return rule();
+    if (!aiOn() || !(/^data:image\/(png|jpeg|webp|gif);base64,/.test(v.src) || (window.HPM && HPM.isMedia(v.src)))) return rule();
     modal('사진을 AI에게 보낼까요?', `<p>사진을 ${E(CL.label())}로 보내 대체 텍스트 · 맞춤 · 초점을 추천받습니다.</p><p class="mini">사진 속 얼굴 · 이름표 · 연락처 같은 개인정보도 함께 전송됩니다. 개인정보가 보이는 사진이면 [규칙으로]를 누르세요.</p>`,
       [{ id: 'c', label: '취소' }, { id: 'rule', label: '규칙으로', run: () => { rule(); } }, { id: 'ok', label: '보내기', kind: 'pri', run: () => { sendAI(r, v).catch(e => { say(`AI 추천 실패(${e.message}) — 규칙으로 넣습니다.`, 'warn'); rule(); }); } }]); }
-  async function sendAI(r, v) { say(`${CL.label()}가 사진을 보는 중입니다…`); const m = v.src.match(/^data:(image\/\w+);base64,(.*)$/);
+  async function sendAI(r, v) { say(`${CL.label()}가 사진을 보는 중입니다…`); const m = (/^data:/.test(v.src) ? v.src : await HPM.dataURL(v.src)).match(/^data:(image\/\w+);base64,(.*)$/); if (!m) throw new Error('보낼 수 없는 형식');
     const res = await CL.call({ system: '당신은 웹 접근성 전문가입니다. 홈페이지 사진의 대체 텍스트(40자 이내, 한국어, 보이는 것만 · 사람 이름이나 신원은 추측하지 않음)와 맞춤(cover|contain), 초점(가로 · 세로 %)을 추천합니다. JSON {"alt":"","fit":"cover","x":50,"y":50} 하나만 출력합니다.', messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } }, { type: 'text', text: `자리: ${slotName(r)} · 기관: ${N()}` }] }], max: 300 });
     const t2 = String(res.text || ''); const j = JSON.parse(t2.slice(t2.indexOf('{'), t2.lastIndexOf('}') + 1)); const x = Math.max(0, Math.min(100, Math.round(+j.x || 50))), y = Math.max(0, Math.min(100, Math.round(+j.y || 50)));
     const alt = String(j.alt || '').replace(/[<>]/g, '').slice(0, 120); commit(s0 => apply(s0, r, { alt: alt || v.alt, fit: j.fit === 'contain' ? 'contain' : 'cover', pos: `${x}% ${y}%` }), `${CL.label(res.model)} 추천을 넣었습니다: 「${alt}」.`); if (HI.ip) paintImg(); }
@@ -466,7 +466,7 @@
   const CLIP = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5l-8.6 8.6a5 5 0 01-7.1-7.1l8.6-8.6a3.4 3.4 0 014.8 4.8l-8.6 8.6a1.7 1.7 0 01-2.4-2.4l7.9-7.9"/></svg>';
   async function attach(files) { const L = [...(files || [])].filter(f => /^image\//.test(f.type)); if (!L.length) return 0; let n = 0;
     for (const f of L.slice(0, 8)) { if (HI.att.length >= 8) { say('사진은 한 번에 8장까지 첨부할 수 있습니다.', 'warn'); break; }
-      try { const o = await shrink(f); const a = { id: 'att_' + (++HI.n), kind: 'img', name: String(f.name || '사진').slice(0, 60), url: o.url, w: o.w, h: o.h, kb: o.kb, colors: await colors(o.url) }; HI.att.push(a); HI.used[a.id] = a; n++; }
+      try { const o = await shrink(f); const a = { id: 'att_' + (++HI.n), kind: 'img', name: String(f.name || '사진').slice(0, 60), url: window.HPM ? await HPM.keep(o.url, f.name) : o.url, w: o.w, h: o.h, kb: o.kb, colors: await colors(o.url) }; HI.att.push(a); HI.used[a.id] = a; n++; }
       catch (e) { say(`${f.name || '사진'}: ${e.message}.`, 'warn'); } }
     decorate2(); talkSync(); if (n) say(`사진 ${n}장을 첨부했습니다. 어디에 넣을지 말해 주세요(예: 이 사진으로 첫 화면 바꿔줘).`, 'ok'); return n; }
   const chipBar = () => HI.att.length ? `<div class="hpi-abar" aria-label="첨부한 사진">${HI.att.map(a => `<span class="hpi-chip" title="${E(a.name)} · ${SIZEW(a)}"><img src="${E(a.url)}" alt=""><em>${E(a.name)}</em><button type="button" data-act="hpi-adel" data-v="${a.id}" aria-label="${E(a.name)} 첨부 빼기">✕</button></span>`).join('')}<span class="hpi-aq">${[['이 사진으로 첫 화면 바꿔줘', '첫 화면'], ['로고 넣고 색 맞춰줘', '로고'], ['갤러리에 이 사진들 넣어줘', '갤러리']].map(([q, l]) => `<button type="button" class="chip" data-act="chat-q" data-v="${E(q)}">${E(l)}</button>`).join('')}</span></div>` : '';

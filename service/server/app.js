@@ -10,6 +10,7 @@ const { createMcp } = require('./mcp');
 const { createPii, piiKeys } = require('./pii');
 const { createCompliance } = require('./compliance');
 const { benchmark } = require('./bench');
+const { createMedia } = require('./media');
 const G = require('./aiguard');
 
 const TYPES = ['corp', 'univ', 'public', 'k12', 'adult', 'lifelong', 'voc'];
@@ -310,8 +311,12 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   /* ── 외부 AI 연결(MCP) · API 키(v16) ── */
   const mcp = createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt });
 
+  /* ── 홈페이지 이미지(v34.5 media.js) ── */
+  const media = createMedia({ pool, inTenant, HttpErr, limit, ip, audit, needStaff, send, env });
+
   /* ── API ── */
   const routes = {
+    ...media.routes,
     ...((!mod || mod === 'admin') ? oauth.routes : {}),
     'GET /api/keys': async req => mcp.listKeys(await needStaff(req)),
     'POST /api/keys': async req => mcp.createKey(await needStaff(req), req),
@@ -518,7 +523,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
         const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent)$/);
-        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key]; if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
+        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key] || media.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처
           if (req.headers['x-didisam'] !== '1') throw new HttpErr(403, '허용되지 않은 요청입니다.', 'csrf');
