@@ -174,7 +174,7 @@
 
   /* FD2: 내 템플릿의 모든 섹션 eyebrow를 마지막에 한글화(덧붙인 섹션 포함) */
   Object.keys(CFG).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || !tp.tpU || A(tp.types)[0] !== 'univ') return; const b0 = tp.build;
-    tp.build = () => { const L = A(b0()); L.forEach(x => { if (x && x.data && x.data.eyebrow) x.data.eyebrow = EB(x.data.eyebrow, true); }); return L; }; });
+    tp.build = () => { const L = A(b0()); L.forEach(x => { if (x && x.type === 'banner' && x.data && ['t2-univ-startup'].includes(id)) x.data.eyebrow = ''; /* 사진 위 eyebrow 대비 미달 → 뺌 */ if (x && x.data && x.data.eyebrow) x.data.eyebrow = EB(x.data.eyebrow, true); }); return L; }; });
 
   /* ── siteFromTpl 감싸기: 내 템플릿에만 layout · photos(→ site.img[slot]) · hps ── */
   { const base = siteFromTpl; const f = tp => { const s = base(tp);

@@ -190,10 +190,10 @@
     /* 재테크 교육: S3 사진 + 겹친 글자 상자 — 차분한 신뢰 */
     't1-ad-money': { name: '재테크 · 금융 교육', hk: 'box', th: 'official', pal: 'honey', cd: 'list', ck: 'contact', hd: ['solid', 'biz', 'full'],
       ph: { hero: 'lap-03', about: 'dsk-02', space: 'off-04', cta: 'dsk-05' },
-      build: () => [
+      build: () => [ /* FD2: 강좌를 첫 화면 바로 아래로(license와 섹션 순서가 같아 엄격 유사였음) */
         ban({ eyebrow: '가계 · 금융 상품 · 세금 기초', title: '돈 공부,\n기초부터 차근차근', sub: '가계 관리와 금융 상품, 세금의 기본을 쉬운 말로 배우는 교양 강좌입니다.', cta: '강좌 보기', cta2: '문의하기' }),
-        T('tiles', { eyebrow: '', title: '주제별 강좌', cols: [['가계 관리', '예산 · 지출 기록'], ['금융 상품', '예금 · 펀드 · 보험 이해'], ['세금 기초', '연말정산 · 신고 이해'], ['노후 준비', '연금 제도 알아보기']] }),
         cls('이번 달 강좌', '', { n: 4 }),
+        T('tiles', { eyebrow: '', title: '주제별 강좌', cols: [['가계 관리', '예산 · 지출 기록'], ['금융 상품', '예금 · 펀드 · 보험 이해'], ['세금 기초', '연말정산 · 신고 이해'], ['노후 준비', '연금 제도 알아보기']] }),
         T('info', { eyebrow: '', title: '수업 원칙', cols: [['특정 상품을 권하지 않습니다', '판단 기준을 배우는 교육입니다.'], ['쉬운 말로 설명합니다', '용어부터 차근차근 풀어 봅니다.']] }),
         gal(['dsk-02', 'off-04', 'lap-04'], '노트와 강의 공간 사진'),
         notices('강좌 공지', { board: 1 }),
@@ -321,14 +321,14 @@
      같은 계열을 다른 유형도 쓰면 변형(layoutVar, FD1 HPL.vars)을 서로 다르게 고른다. 머리글 · 바닥글은 FA의 유형별 허용 목록 안에서 2~3종으로 나눈다.
      [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
   const FD2 = {
-    'adult-bootcamp': ['bento', 'a', 'float', 'mega'],
+    'adult-bootcamp': ['bento', 'b', 'float', 'mega'], /* a면 k12 math(bento a)와 닮음 */
     'adult-cert': ['hk:grid', '', 'left', 'split'],
     'adult-hobby': ['mosaic', 'b', 'float', 'min'],
     'adult-lang': ['hk:grid', '', 'center', 'mega'],
     'solo-creator': ['splitscreen', 'b', 'center', 'min'],
     't1-ad-license': ['hk:box', '', 'left', 'split'],
     't1-ad-civil': ['typo', 'a', 'left', 'mega'],
-    't1-ad-office': ['bento', 'b', 'center', 'split'] /* 어두운 첫 화면: office · photo 2종 */,
+    't1-ad-office': ['bento', 'a', 'center', 'split'], /* 어두운 첫 화면: bootcamp · photo 2종 */
     't1-ad-talk': ['hk:split', '', 'float', 'min'],
     't1-ad-wellness': ['fullbleed', 'c', 'center', 'min'],
     't1-ad-craft': ['mosaic', 'c', 'left', 'mega'],

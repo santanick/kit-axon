@@ -100,8 +100,8 @@
      [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
   const FD2 = {
     't4-hrd-inst': ['portal', 'b', 'util', 'gov'],
-    't4-agency': ['sidebar', 'b', 'center', 'biz'],
-    't4-cyber': ['sidebar', 'a', 'util', 'biz'],
+    't4-agency': ['sidebar', 'a', 'center', 'biz'], /* b면 corp t3-c-job과 엄격 유사 */
+    't4-cyber': ['sidebar', 'b', 'util', 'biz'],
     't4-legal': ['bulletin', 'a', 'util', 'gov'],
     't4-newhire': ['story', 'c', 'center', 'gov'],
     't4-ai-gov': ['portal', 'c', 'center', 'biz'],
@@ -153,7 +153,7 @@
 
   /* FD2: 내 템플릿의 모든 섹션 eyebrow를 마지막에 한글화(덧붙인 섹션 포함) */
   Object.keys(CFG).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || !tp.tpP || A(tp.types)[0] !== 'public') return; const b0 = tp.build;
-    tp.build = () => { const L = A(b0()); L.forEach(x => { if (x && x.data && x.data.eyebrow) x.data.eyebrow = EB(x.data.eyebrow, false); }); return L; }; });
+    tp.build = () => { const L = A(b0()); L.forEach(x => { if (x && x.type === 'banner' && x.data && ['t4-legal'].includes(id)) x.data.eyebrow = ''; /* 사진 위 eyebrow 대비 미달 → 뺌 */ if (x && x.data && x.data.eyebrow) x.data.eyebrow = EB(x.data.eyebrow, false); }); return L; }; });
 
   /* ── siteFromTpl 감싸기: 내 템플릿에만 layout · photos · hps ── */
   { const base = siteFromTpl; const f = tp => { const s = base(tp);
