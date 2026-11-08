@@ -76,7 +76,7 @@
       const start = d.start || td(); const end = plus(start, Math.round((N(d.months) || 3) * 30.4) - 1);
       c.kind = 'episode'; c.sub = '요일반'; c.days = (d.days || []).slice(); c.time = { from: d.from || '', to: d.to || '' }; c.start = start; c.end = end;
       c.grade = d.grade || ''; c.cat = d.subject || c.cat || ''; c.billing = { cycle: 'month', price: N(d.price) };
-      try { if (window.W2 && W2.genWeekly) { c.sessions = W2.genWeekly(start, end, c.days, c.time.from, c.time.to).slice(0, 100); c.att = c.att || {}; c.attT = c.attT || {}; if (W2.renum) W2.renum(c); if (W2.sync) W2.sync(c); } } catch (e) { console.error(e); }
+      try { if (typeof W2 !== 'undefined' && W2.genWeekly) { c.sessions = W2.genWeekly(start, end, c.days, c.time.from, c.time.to).slice(0, 100); c.att = c.att || {}; c.attT = c.attT || {}; if (W2.renum) W2.renum(c); if (W2.period) W2.period(c); if (W2.sync) W2.sync(c); } } catch (e) { console.error(e); }
       c.hours = Math.round(((c.sessions && c.sessions.length) || Math.min(100, sessCount(Object.assign({}, d, { start })))) * (minsOf(c.time.from, c.time.to) || 90) / 60);
       return c;
     }
