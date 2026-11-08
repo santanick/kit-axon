@@ -273,7 +273,7 @@ ${P} .hps-q1 blockquote::before{content:'“';display:block;font-family:Georgia,
 ${P} .hps-q1 figcaption,${P} .hps-rm{display:flex;align-items:center;gap:12px}
 ${P} .hps-av{width:44px;height:44px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--bg);font-weight:700;font-size:17px}
 ${P} .hps-wh{display:flex;flex-direction:column;line-height:1.35;min-width:0}${P} .hps-wh b{font-size:15px;font-weight:700;color:var(--ink)}${P} .hps-wh small{font-size:13px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-${P} .hps-st{color:#8A5A00;letter-spacing:2px;font-size:15px;line-height:1}${P} .hps-st i{font-style:normal;color:${mix('#8A5A00', '#ffffff', .72)}}
+${P} .hps-st{color:#8A5A00;letter-spacing:2px;font-size:15px;line-height:1}${P} .hps-st i{font-style:normal;color:#5F6672}
 ${P} .hps-rl{list-style:none;margin:16px 0 0;padding:0}${P} .hps-rl li{padding:24px 0;border-bottom:1px solid var(--hps-ln);display:flex;flex-direction:column;gap:14px}${P} .hps-rl li:last-child{border-bottom:0}
 ${P} .hps-rl blockquote{margin:0;font-size:${big ? 18 : 16.5}px;line-height:1.7;color:var(--ink)}${P} .hps-rl .hps-av{width:36px;height:36px;font-size:14px;background:var(--as);color:var(--at)}${P} .hps-rm .hps-st{margin-left:auto;font-size:13px}
 /* 강사 */
