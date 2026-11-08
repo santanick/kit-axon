@@ -34,11 +34,27 @@
   const LXk = (l, lang) => (lang && lang !== 'ko' && typeof LX === 'function' ? (LX(l, lang) || l) : l);
 
   HPS.kinds = {
-    nav: [['overlay', '사진 위 투명'], ['solid', '흰 바탕 고정'], ['notice', '공지 띠 + 흰 바탕'], ['contact', '전화 · 신청 버튼'], ['float', '떠 있는 상자']],
+    nav: [['overlay', '사진 위 투명'], ['solid', '흰 바탕 고정'], ['notice', '공지 띠 + 흰 바탕'], ['contact', '전화 · 신청 버튼'], ['float', '떠 있는 상자'], ['util', '유틸 띠 2단'], ['center', '가운데 기관명 · 아래 메뉴'], ['left', '왼쪽 정렬 메뉴']],
     mm: [['full', '전체 화면 목록'], ['drawer', '오른쪽 서랍']],
-    footer: [['mega', '어두운 바탕 · 큰 기관명'], ['cta', '신청 띠와 이어짐'], ['biz', '사업자 정보 표'], ['min', '최소형'], ['cols', '링크 열 · 연락처']]
+    footer: [['mega', '어두운 바탕 · 큰 기관명'], ['cta', '신청 띠와 이어짐'], ['biz', '사업자 정보 표'], ['min', '최소형'], ['cols', '링크 열 · 연락처'], ['gov', '공공 누리집형'], ['campus', '대학형 · 가운데 기관명'], ['split', '상담 패널형']]
   };
   const KN = { head: HPS.kinds.nav.map(x => x[0]), foot: HPS.kinds.footer.map(x => x[0]), mm: HPS.kinds.mm.map(x => x[0]) };
+  /* v34.5 FA(R1 H2 · H3): 유형마다 쓰는 머리글 · 바닥글 종류를 나눈다 — 유형이 달라도 같은 머리글 · 바닥글이 나오던 문제.
+     템플릿 지정(tp.hps)이 목록 밖이면 그 유형 목록 안에서 템플릿 id로 고정 배정한다. 운영자가 직접 고른 값(hpgal ownH · ownF)은 그대로 둔다. */
+  const TYK = { k12: { head: ['contact', 'left', 'float'], foot: ['split', 'cta', 'cols'] }, adult: { head: ['overlay', 'center', 'left', 'float'], foot: ['min', 'mega', 'split'] },
+    univ: { head: ['center', 'util', 'overlay'], foot: ['campus', 'biz', 'min'] }, public: { head: ['util', 'center'], foot: ['gov', 'biz'] },
+    lifelong: { head: ['contact', 'center', 'util'], foot: ['split', 'gov', 'cols'] }, voc: { head: ['contact', 'util', 'left'], foot: ['cta', 'biz', 'split'] },
+    corp: { head: ['left', 'float', 'solid'], foot: ['min', 'cols', 'mega'] } };
+  HPS.typeKinds = TYK;
+  const hsh = v => [...String(v || '')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  /* 유형별 메뉴 이름(R1 H2 · L3): 기본 이름 그대로일 때만 바꾼다(운영자가 바꾼 이름은 그대로) */
+  const MN = { k12: { '클래스': '수업 안내', '교재/교구': '교재', '커뮤니티': '학부모 소통', '게시판': '자료실' },
+    univ: { '클래스': '교육과정', '교재/교구': '교재', '커뮤니티': '학습 커뮤니티', '공지사항': '공지', '게시판': '자료실' },
+    public: { '클래스': '교육신청', '교재/교구': '교재', '커뮤니티': '참여마당', '공지사항': '알림마당', '게시판': '자료실' },
+    lifelong: { '클래스': '강좌 안내', '교재/교구': '교재', '커뮤니티': '학습 동아리', '게시판': '자료실' },
+    voc: { '클래스': '훈련과정', '교재/교구': '교재', '커뮤니티': '수강생 소통', '게시판': '자료실' },
+    corp: { '클래스': '교육과정', '커뮤니티': '사내 소통', '공지사항': '공지', '게시판': '자료실' }, adult: {} };
+  HPS.menuName = (l, ty) => { const m = MN[ty || (typeof S !== 'undefined' && S && S.org && S.org.type) || 'adult'] || {}; return m[String(l == null ? '' : l).trim()] || l; };
 
   /* ── 종류 고르기: 직접 고른 값 → 계열(HPL) 선언 → 계열 기본표 → 테마 · 유형 ── */
   const FAM = { editorial: ['solid', 'min', 'full'], bento: ['float', 'mega', 'drawer'], fullbleed: ['overlay', 'cta', 'full'], splitscreen: ['solid', 'cols', 'drawer'], typo: ['solid', 'mega', 'full'], portal: ['contact', 'biz', 'full'],
@@ -49,8 +65,13 @@
     const fm = FAM[s.layout] || []; const tm = TH[s.theme] || TH.clean;
     const pick = (k, i) => [c[k], fd[k], fm[i], tm[i]].find(v => KN[k].includes(v));
     const r = { head: pick('head', 0), foot: pick('foot', 1), mm: pick('mm', 2) };
-    if (!c.head && !fd.head && r.head === 'contact' && !val(ft().tel)) r.head = 'solid';
+    const Y = TYK[typeKey()]; const seed = hsh(s.tpl || s.layout || s.theme || '');
+    if (Y) { if (!(c.ownH && c.head === r.head) && !Y.head.includes(r.head)) r.head = Y.head[seed % Y.head.length];
+      if (!(c.ownF && c.foot === r.foot) && !Y.foot.includes(r.foot)) r.foot = Y.foot[(seed >>> 3) % Y.foot.length]; }
+    if (!c.ownH && r.head === 'contact' && !val(ft().tel)) r.head = Y ? (Y.head.find(k => k !== 'contact' && k !== 'overlay') || 'left') : 'solid';
     return r; }
+  /* 투명 겹침을 못 쓸 때(첫 화면이 밝을 때) 그 유형의 다음 종류 */
+  const noOv = () => { const Y = TYK[typeKey()]; return (Y && Y.head.find(k => k !== 'overlay' && (k !== 'contact' || val(ft().tel)))) || 'solid'; };
   HPS.chrome = chrome;
 
   /* ── 공지 띠: site.hps.notice 또는 진행 중인 팝업 1건(레이어 팝업 대신) ── */
@@ -64,9 +85,24 @@
     if (v.startsWith('page:')) return '#p-' + v.slice(5); if (v.startsWith('cls:')) return '#p-c-' + v.slice(4); if (v.startsWith('url:')) return typeof safeURL === 'function' ? safeURL(v.slice(4)) || '' : (/^https:\/\//.test(v.slice(4)) ? v.slice(4) : ''); return ''; };
   const aAttr = h => `href="${E(h)}"${/^https?:/.test(h) ? ' target="_blank" rel="noopener"' : ''}`;
 
+  HPS.ctaWord = ty => (['k12', 'adult', 'voc'].includes(ty || typeKey()) ? '수강신청' : '신청하기');
+  /* ── 실제 행동 바로가기(R1 M4 · FIXLIST 2 · 18): 머리글 메뉴를 되풀이하지 않고 신청 · 일정 · 상담 · 공지로. 실제 데이터 · 설정값이 있는 것만 ── */
+  HPS.actions = (s, n) => { s = s || {}; const ty = typeKey(); const R = []; const f = ft(); const menu = k => (s.menus || []).find(m => m.kind === k && m.on !== false && m.access !== '비공개');
+    const mh = m => (m.link ? linkHref(m.link) : '') || '#p-m-' + m.id; const dot = d => String(d || '').slice(5, 10).replace('-', '.');
+    let C = []; try { C = (S.classes || []).filter(c => (c.open === '전체' || c.open == null) && c.status !== '종료'); } catch (e) { }
+    const cl = (typeof t === 'function' ? t('cls') : '강좌'); const cta = ctaOf(s);
+    R.push({ k: 'apply', ic: 'check', l: HPS.ctaWord(ty), sub: C.length ? `${cl} ${C.length}개 모집 중` : '', h: cta.href });
+    const T0 = new Date().toISOString().slice(0, 10); const nx = C.filter(c => c.start && c.start >= T0).sort((a, b) => String(a.start).localeCompare(b.start))[0];
+    const cm = menu('class'); if (nx) R.push({ k: 'cal', ic: 'cal', l: ty === 'univ' ? '프로그램 일정' : ['k12', 'adult', 'voc'].includes(ty) ? '개강 일정' : '교육 일정', sub: `${dot(nx.start)} ${nx.name}`.slice(0, 26), h: cm ? mh(cm) : '#p-c-' + nx.id });
+    const tel = val(f.tel), em = /@/.test(val(f.email)) ? val(f.email) : ''; const ask = ['k12', 'adult', 'voc'].includes(ty) ? '상담' : '문의';
+    if (tel) R.push({ k: 'ask', ic: 'phone', l: `전화 ${ask}`, sub: tel, h: telHref(tel) }); else if (em) R.push({ k: 'ask', ic: 'mail', l: `메일 ${ask}`, sub: em, h: 'mailto:' + em });
+    else { const bm = menu('community') || menu('board'); if (bm) R.push({ k: 'ask', ic: 'chat', l: `${ask} 게시판`, sub: '', h: mh(bm) }); }
+    const nm = menu('notice'); if (nm) { let lt = ''; try { const N = [...(S.notices || []), ...(S.classes || []).flatMap(c => c.notices || [])].filter(x => x && x.title); lt = N[0] ? String(N[0].title).slice(0, 22) : ''; } catch (e) { } R.push({ k: 'notice', ic: 'bell', l: HPS.menuName(nm.l === '공지사항' ? '공지사항' : nm.l, ty), sub: lt, h: mh(nm) }); }
+    return R.slice(0, n || 4); };
+
   /* ── 신청 버튼: 강좌 메뉴 → 첫 공개 강좌 → 홈 ── */
   function ctaOf(s, lang) { const c = (s.hps && s.hps.cta) || {}; const ty = typeKey();
-    const def = ['k12', 'adult', 'voc'].includes(ty) ? '수강신청' : '교육 신청';
+    const def = HPS.ctaWord(ty); /* FIXLIST 5: 머리글 · 행동 줄 · 휴대폰 메뉴 같은 낱말 */
     let href = linkHref(c.link);
     if (!href) { const m = (s.menus || []).find(m => m.kind === 'class' && m.on !== false); if (m && m.id) href = '#p-m-' + m.id; }
     if (!href) { try { const C = (S.classes || []).find(c => (c.open === '전체' || c.open == null) && c.status !== '종료'); if (C) href = '#p-c-' + C.id; } catch (e) { } }
@@ -94,14 +130,28 @@
 ${info}<nav aria-label="전체 메뉴"><ul class="hps-ml">${list}</ul></nav>
 <div class="hps-mf"><a class="hps-mcta" ${aAttr(c.cta.href)}>${E(c.cta.l)}${svg('arrow', 18, 2.2)}</a>${c.login ? `<a class="hps-mlog" href="#">${E(c.login)}</a>` : ''}</div></div></div>`; }
   /* ctx: { s, id, org, logo(HTML), nav(HTML), items, lsw, login, cta:{l,href}, tel, hours, notice, mm, dark } */
+  /* 워드마크(R1 H2): 로고 그림이 없으면 정사각 모노그램 대신 기관명을 제목 글꼴로. 유형마다 짜임이 다르다
+     public · lifelong = 두 줄(지역 · 기관), univ = 제목 글꼴(명조 테마면 명조) 한 줄, voc = 왼쪽 굵은 막대, corp = 작은 사각 표식, k12 · adult = 굵은 한 줄 + 강조색 점 */
+  const wmark = (org, ty, tag) => { org = String(org || '').trim(); const sp = org.lastIndexOf(' '); const two = (ty === 'public' || ty === 'lifelong') && sp > 0 && sp < org.length - 1;
+    const inner = two ? `<small>${E(org.slice(0, sp))}</small><b>${E(org.slice(sp + 1))}</b>` : `<b>${E(org)}</b>`;
+    return `<${tag || 'span'} class="hps-wmk hps-wmk-${E(ty)}${two ? ' two' : ''}">${ty === 'corp' || ty === 'voc' ? '<i aria-hidden="true"></i>' : ''}${inner}</${tag || 'span'}>`; };
+  HPS.wordmark = wmark;
   HPS.nav = (kind, c) => { kind = KN.head.includes(kind) ? kind : 'solid'; c = Object.assign({ id: 'hps', items: [], lsw: '', login: '', mm: 'full' }, c || {});
-    const id = c.id; const tel = c.tel; const n = kind === 'notice' && !c.notice ? null : c.notice;
-    const telA = tel && (kind === 'contact') ? `<a class="hps-tel" href="${E(telHref(tel))}" aria-label="전화 ${E(tel)}"><i class="hps-dot" aria-hidden="true"></i><span>${E(tel)}</span></a>` : '';
-    const mTel = tel && (kind === 'contact' || ['k12', 'adult', 'voc'].includes(typeKey())) ? `<a class="hps-mtb" href="${E(telHref(tel))}" title="전화 걸기" aria-label="전화 ${E(tel)}">${svg('phone', 21, 1.9)}</a>` : '';
-    const head = `<header class="gh hpt hps-h hps-h-${kind}${c.cbg ? ' hps-cbg' : ''}" data-hps="${kind}"><div class="hps-hw">
-${c.logo}${c.nav}<div class="hps-hr">${c.lsw}${telA}${c.login && kind !== 'contact' ? `<a class="hps-login" href="#">${E(c.login)}</a>` : ''}<a class="hps-cta" ${aAttr(c.cta.href)}>${E(c.cta.l)}</a></div>
-<div class="hps-mo">${mTel}<label for="${id}-mt" class="hps-bg" title="전체 메뉴" aria-label="전체 메뉴 열기">${svg('menu', 24, 2)}</label></div></div></header>`;
-    return `<input type="checkbox" id="${id}-mt" class="hps-mt" aria-label="전체 메뉴"><div class="hps-top${kind === 'overlay' ? ' hps-ovw' : ''}">${noticeHTML(n, id)}${head}</div>${mobilePanel(c.mm, Object.assign({}, c, { tel }))}`; };
+    const id = c.id; const tel = c.tel; const n = kind === 'notice' && !c.notice ? null : c.notice; const ty = typeKey();
+    const telA = tel && (kind === 'contact' || kind === 'center') ? `<a class="hps-tel" href="${E(telHref(tel))}" aria-label="전화 ${E(tel)}"><i class="hps-dot" aria-hidden="true"></i><span>${E(tel)}</span></a>` : '';
+    const mTel = tel && (kind === 'contact' || ['k12', 'adult', 'voc'].includes(ty)) ? `<a class="hps-mtb" href="${E(telHref(tel))}" title="전화 걸기" aria-label="전화 ${E(tel)}">${svg('phone', 21, 1.9)}</a>` : '';
+    const login = c.login && !['contact', 'util'].includes(kind) ? `<a class="hps-login" href="#">${E(c.login)}</a>` : '';
+    const ctaA = `<a class="hps-cta" ${aAttr(c.cta.href)}>${E(c.cta.l)}</a>`; const mo = `<div class="hps-mo">${mTel}<label for="${id}-mt" class="hps-bg" title="전체 메뉴" aria-label="전체 메뉴 열기">${svg('menu', 24, 2)}</label></div>`;
+    /* 유틸 띠(util): 위 36px 한 줄 = 대표번호 · 운영 시간(설정값) 또는 공지 + 오른쪽 로그인 · 공지 링크 */
+    let ut = '';
+    if (kind === 'util') { const nt = (c.items || []).find(it => /공지|알림/.test(it.l)); const left = tel ? `<a class="hps-utt" href="${E(telHref(tel))}"><em>대표전화</em><span>${E(tel)}</span></a>${c.hours ? `<span class="hps-uth">${E(c.hours)}</span>` : ''}` : n ? `<span class="hps-utn">${E(n.t)}</span>` : '';
+      ut = `<div class="hps-ut"><div class="hps-utw"><div class="hps-utl">${left}</div><div class="hps-utr">${nt ? `<a ${nt.a}>${E(nt.l)}</a>` : ''}${c.lsw}${c.login ? `<a class="hps-login" href="#">${E(c.login)}</a>` : ''}</div></div></div>`; }
+    let body;
+    if (kind === 'center') body = `<div class="hps-hw hps-c1"><div class="hps-cl">${telA}</div>${c.logo}<div class="hps-hr">${c.lsw}${login}${ctaA}</div>${mo}</div><div class="hps-c2">${c.nav}</div>`;
+    else body = `<div class="hps-hw">${c.logo}${kind === 'left' ? '<span class="hps-vr" aria-hidden="true"></span>' : ''}${c.nav}<div class="hps-hr">${kind === 'util' ? '' : c.lsw}${telA}${login}${ctaA}</div>
+${mo}</div>`;
+    const head = `<header class="gh hpt hps-h hps-h-${kind} hps-ty-${E(ty)}${c.cbg ? ' hps-cbg' : ''}" data-hps="${kind}">${ut}${body}</header>`;
+    return `<input type="checkbox" id="${id}-mt" class="hps-mt" aria-label="전체 메뉴"><div class="hps-top${kind === 'overlay' ? ' hps-ovw' : ''}">${noticeHTML(kind === 'util' && !tel ? null : n, id)}${head}</div>${mobilePanel(c.mm, Object.assign({}, c, { tel }))}`; };
 
   /* ═════════ 바닥글 ═════════ */
   function bizRows(s) { const f = ft(); const fo = s.foot || {}; const ty = typeKey();
@@ -119,11 +169,25 @@ ${c.logo}${c.nav}<div class="hps-hr">${c.lsw}${telA}${c.login && kind !== 'conta
   /* ctx: { s, org, items, tagline, esc2, cta:{l,href}, ctaTitle, hasCta, tel, lang } */
   HPS.footer = (kind, c) => { kind = KN.foot.includes(kind) ? kind : 'cols'; c = Object.assign({ items: [] }, c || {}); const s = c.s || {}; const org = c.org || ''; const R = bizRows(s);
     const tag = c.tagline ? `<p class="hps-tg">${E(c.tagline)}</p>` : ''; const items = c.items.filter(it => !/^(홈|home)$/i.test(it.l));
-    const brand = `<div class="hps-fb"><p class="hps-fn">${E(org)}</p>${tag}</div>`; const esc2 = c.esc2 || '';
+    const ty = typeKey(); const hint = c.edit && !R.some(r => ['주소', '전화'].includes(r[0])) ? `<p class="hps-edh">편집 화면에만 보이는 안내 — 설정 › 바닥글에 주소 · 대표번호를 입력하면 여기에 표시됩니다.</p>` : '';
+    const brand = `<div class="hps-fb"><p class="hps-fn">${E(org)}</p>${tag}${hint}</div>`; const esc2 = c.esc2 || '';
     const open = `<footer class="gf hpt hps-f hps-f-${kind}" data-hps="${kind}"><div class="hps-fw">`; const close = `</div></footer>`;
     if (kind === 'min') return `${open}<div class="hps-mr">${brand}<nav class="hps-lg" aria-label="약관">${legal()}</nav></div>${bizLine(R)}${esc2}${copy(org)}${close}`;
     if (kind === 'biz') return `${open}<div class="hps-g3">${brand}${linkCol(items, '바로가기')}<div class="hps-fc hps-fbz"><p class="hps-fl">기관 정보</p>${bizTable(R)}</div></div>${esc2}<div class="hps-bar"><nav class="hps-lg" aria-label="약관">${legal()}</nav>${copy(org)}</div>${close}`;
     if (kind === 'cols') return `${open}<div class="hps-g3">${brand}${linkCol(items, '바로가기')}${contactCol(R)}</div>${bizLine(R.filter(r => r[0] !== '주소'))}${esc2}<div class="hps-bar"><nav class="hps-lg" aria-label="약관">${legal()}</nav>${copy(org)}</div>${close}`;
+    const pick = k => R.find(r => r[0] === k);
+    /* gov(공공 누리집형): 위 정책 링크 띠(개인정보 처리방침 강조) → 두 줄 워드마크 + 주소 · 대표전화 · 운영 시간 한 묶음 → 저작권 */
+    if (kind === 'gov') { const ad = ['주소', '전화', '운영 시간', '이메일'].map(pick).filter(Boolean);
+      return `${open.replace('<div class="hps-fw">', '')}<div class="hps-gtop"><div class="hps-fw"><nav class="hps-glk" aria-label="정책 · 바로가기"><a href="#p-privacy" class="hps-gpv">개인정보 처리방침</a><a href="#p-terms">서비스 이용약관</a>${items.slice(0, 4).map(it => `<a ${it.a}>${E(it.l)}</a>`).join('')}</nav></div></div>
+<div class="hps-fw"><div class="hps-gm">${wmark(org, ty, 'p')}<div class="hps-gad">${ad.length ? `<dl>${ad.map(r => `<div><dt>${E(r[0] === '전화' ? '대표전화' : r[0])}</dt><dd>${cell(r)}</dd></div>`).join('')}</dl>` : ''}${bizLine(R.filter(r => !['주소', '전화', '운영 시간', '이메일'].includes(r[0])))}${hint}${tag}</div></div>${esc2}${copy(org)}${close}`; }
+    /* campus(대학형): 가운데 기관명(제목 글꼴) · 주소 한 줄 · 관련 링크 펼침 상자 */
+    if (kind === 'campus') { const ad = ['주소', '전화', '이메일'].map(pick).filter(Boolean);
+      return `${open}<div class="hps-cm">${wmark(org, ty, 'p')}${tag}${ad.length ? `<p class="hps-cad">${ad.map(r => `<span><em>${E(r[0])}</em> ${cell(r)}</span>`).join('')}</p>` : ''}${hint}
+${items.length ? `<details class="hps-rel"><summary>바로가기 <span aria-hidden="true">${svg('down', 16, 2)}</span></summary><ul>${items.slice(0, 8).map(it => `<li><a ${it.a}>${E(it.l)}</a></li>`).join('')}</ul></details>` : ''}</div>${bizLine(R.filter(r => !['주소', '전화', '이메일'].includes(r[0])))}${esc2}<div class="hps-bar hps-barc"><nav class="hps-lg" aria-label="약관">${legal()}</nav>${copy(org)}</div>${close}`; }
+    /* split(상담 패널형): 왼쪽 상담 패널(대표번호 크게 · 운영 시간 · 신청) + 오른쪽 기관명 · 링크 2열 */
+    if (kind === 'split') { const tel = pick('전화'), hrs = pick('운영 시간'), em = pick('이메일'); const ask = ['k12', 'adult', 'voc'].includes(ty) ? '수강 상담' : '교육 문의';
+      const big = tel ? `<a class="hps-sbig" href="${E(tel[2])}">${E(tel[1])}</a>` : em ? `<a class="hps-sbig sm" href="${E(em[2])}">${E(em[1])}</a>` : '';
+      return `${open}<div class="hps-sp"><div class="hps-spp"><p class="hps-fl">${ask}</p>${big}${hrs ? `<p class="hps-shr">${E(hrs[1])}</p>` : ''}<a class="hps-apc" ${aAttr(c.cta.href)}>${E(c.cta.l)}${svg('arrow', 18, 2.2)}</a></div><div class="hps-spr">${wmark(org, ty, 'p')}${tag}${items.length ? `<ul class="hps-s2">${items.slice(0, 8).map(it => `<li><a ${it.a}>${E(it.l)}</a></li>`).join('')}</ul>` : ''}${hint}</div></div>${bizLine(R.filter(r => !['전화', '운영 시간', '이메일'].includes(r[0])))}${esc2}<div class="hps-bar"><nav class="hps-lg" aria-label="약관">${legal()}</nav>${copy(org)}</div>${close}`; }
     if (kind === 'cta') { const tel = R.find(r => r[0] === '전화'); const hrs = R.find(r => r[0] === '운영 시간');
       const row = c.hasCta ? '' : `<div class="hps-ap"><div><h2>${E(c.ctaTitle)}</h2>${hrs ? `<p>${E(hrs[0])} ${E(hrs[1])}</p>` : ''}</div><div class="hps-apb"><a class="hps-apc" ${aAttr(c.cta.href)}>${E(c.cta.l)}${svg('arrow', 18, 2.2)}</a>${tel ? `<a class="hps-apt" href="${E(tel[2])}">${svg('phone', 18, 2)}<span>${E(tel[1])}</span></a>` : ''}</div></div>`;
       return `${open}${row}<div class="hps-g3">${brand}${linkCol(items, '바로가기')}${contactCol(R)}</div>${bizLine(R.filter(r => !['주소'].includes(r[0])))}${esc2}<div class="hps-bar"><nav class="hps-lg" aria-label="약관">${legal()}</nav>${copy(org)}</div>${close}`; }
@@ -136,8 +200,8 @@ ${c.logo}${c.nav}<div class="hps-hr">${c.lsw}${telA}${c.login && kind !== 'conta
     return { bg, dk, fg, mu: fit(mix(bg, fg, .74), bg, 4.8), lab: fit(mix(bg, fg, .6), bg, 4.6), ln: al(fg, dk ? .16 : .12) }; }
   HPS.css = s => { const T = tokOf(s); if (!T) return ''; const ch = chrome(s); const big = s.theme === 'senior' ? 1.14 : 1; const px = n => Math.round(n * big) + 'px';
     const fo = s.foot || {}; const a = T.a; const at = fit(a, T.bg, 4.6); const ink = T.ink; const bg = T.bg;
-    let fbg = ch.foot === 'mega' ? (T.dark ? T.hd : mix(ink, '#000000', .25)) : ch.foot === 'cta' ? mix(a, '#0B1020', .62) : ch.foot === 'biz' || ch.foot === 'min' ? (ch.foot === 'min' ? bg : T.alt) : mix(ink, '#000000', .1);
-    if (ch.foot === 'cta') { for (let k = 0; k < 12 && CR('#ffffff', fbg) < 8; k++) fbg = mix(fbg, '#000000', .18); }
+    let fbg = ch.foot === 'mega' ? (T.dark ? T.hd : mix(ink, '#000000', .25)) : ch.foot === 'cta' ? mix(a, '#0B1020', .62) : ch.foot === 'biz' || ch.foot === 'min' ? (ch.foot === 'min' ? bg : T.alt) : ch.foot === 'gov' || ch.foot === 'split' ? (T.dark ? mix(bg, '#ffffff', .06) : T.alt) : ch.foot === 'campus' ? mix(a, '#0B1020', .7) : mix(ink, '#000000', .1);
+    if (ch.foot === 'cta' || ch.foot === 'campus') { for (let k = 0; k < 12 && CR('#ffffff', fbg) < 8; k++) fbg = mix(fbg, '#000000', .18); }
     if (ok6(fo.bg)) fbg = fo.bg;
     const P = pal(fbg); const fa = fit(P.dk ? mix(a, '#ffffff', .35) : a, fbg, 4.6);
     const apBg = P.dk ? '#ffffff' : a; const apFg = P.dk ? fit(a, '#ffffff', 4.6) : T.on;
@@ -236,7 +300,83 @@ footer.hps-f-min{padding:${px(40)} 0 ${px(28)};border-top:1px solid ${al(ink, .1
 .hps-f-min .hps-bl{border-top:0;padding:0 0 12px}.hps-f-min .hps-cp{padding-top:4px}
 footer.gf.hps-f a:focus-visible{outline:3px solid ${fa};outline-offset:3px;border-radius:4px}
 @media(max-width:860px){footer.gf.hps-f{padding-top:${px(56)}}.hps-g3,.hps-f-biz .hps-g3{grid-template-columns:1fr 1fr;gap:32px 20px}.hps-g3>.hps-fb,.hps-g3>.hps-fbz{grid-column:1/-1}.hps-g3>.hps-fct:last-child:nth-child(2){grid-column:1/-1}
-.hps-fct dl div{grid-template-columns:1fr;gap:2px}.hps-bt div{grid-template-columns:${px(108)} 1fr}.hps-ap{padding-bottom:40px;margin-bottom:40px}.hps-apb{width:100%}.hps-apc,.hps-apt{flex:1 1 100%;justify-content:center}.hps-bar{flex-direction:column;align-items:flex-start}}`; };
+.hps-fct dl div{grid-template-columns:1fr;gap:2px}.hps-bt div{grid-template-columns:${px(108)} 1fr}.hps-ap{padding-bottom:40px;margin-bottom:40px}.hps-apb{width:100%}.hps-apc,.hps-apt{flex:1 1 100%;justify-content:center}.hps-bar{flex-direction:column;align-items:flex-start}}
+${typeCSS(s, T, { a, at, ink, bg, hb, HP, P, fbg, fa, px, br, ch })}`; };
+  /* ═════════ v34.5 FA: 워드마크 · 유형별 메뉴 글자 · 유틸 띠 · 가운데 2단 · 왼쪽 정렬 · 바닥글 gov · campus · split ═════════ */
+  const TYN = { public: [17, 700, -.02], univ: [15.5, 500, -.005], k12: [16, 700, -.02], adult: [15, 500, -.01], lifelong: [17, 650, -.02], voc: [15.5, 650, -.015], corp: [14.5, 600, 0] };
+  function typeCSS(s, T, o) { const { a, at, ink, bg, hb, HP, P, fbg, fa, px, br } = o; const ty = typeKey(); const N = TYN[ty] || TYN.adult; const lt = !HP.dk;
+    const ac = lt ? fit(a, hb, 3.2) : mix(a, '#ffffff', .45); const mu = fit(mix(hb, HP.fg, .62), hb, 4.6);
+    const ubg = ty === 'univ' ? mix(a, '#0B1020', .58) : mix(ink, '#000000', .28); const ubf = fit(mix(ubg, '#ffffff', .78), ubg, 7, '#ffffff');
+    const spBg = a; const spF = CR('#ffffff', a) >= 4.5 ? '#ffffff' : '#111827'; const spBtnF = fit(a, '#ffffff', 4.6);
+    return `/* hpsec-nav FA */
+header.gh.hps-h{--hps-nfs:${px(N[0])};--hps-nfw:${N[1]};--hps-nls:${N[2]}em}
+header.hps-h nav.gn a{font-size:var(--hps-nfs);font-weight:var(--hps-nfw);letter-spacing:var(--hps-nls)}
+header.hps-h .lhs-slot{font-size:var(--hps-nfs);font-weight:var(--hps-nfw);letter-spacing:var(--hps-nls)}
+/* 워드마크 */
+header.hps-h a.logo.hps-lw{max-width:46vw;overflow:visible}
+.hps-wmk{display:inline-flex;align-items:center;gap:10px;font-family:var(--hd-ff,inherit);line-height:1.12;color:inherit;letter-spacing:-.025em;white-space:nowrap;min-width:0}
+.hps-wmk b{font-weight:800;font-size:${px(19)};overflow:hidden;text-overflow:ellipsis}
+.hps-wmk-k12 b::after,.hps-wmk-adult b::after{content:'';display:inline-block;width:.3em;height:.3em;border-radius:50%;background:${ac};margin-left:.14em;vertical-align:.02em}
+.hps-wmk-k12 b{font-size:${px(20)}}.hps-wmk-adult b{font-weight:var(--hd-fw,750);font-size:${px(20)};letter-spacing:-.035em}
+.hps-wmk-univ b{font-weight:var(--hd-fw,650);font-size:${px(21)};letter-spacing:-.01em}
+.hps-wmk.two{flex-direction:column;align-items:flex-start;gap:1px}.hps-wmk.two small{font-family:Pretendard,system-ui,sans-serif;font-size:${px(12)};font-weight:650;letter-spacing:0;opacity:.72}
+.hps-wmk-lifelong b{font-weight:750}
+header.hps-h .logo .hps-wmk i,footer.hps-f .hps-wmk i{all:unset;display:block;flex:none;background:${ac}}
+.hps-wmk-voc i{width:4px;height:1.35em;border-radius:1px}.hps-wmk-voc b{font-size:${px(18)}}
+.hps-wmk-corp i{width:9px;height:9px}.hps-wmk-corp b{font-size:${px(17)};font-weight:700;letter-spacing:-.005em}
+footer.gf.hps-f .hps-wmk,footer.gf.hps-f .hps-wmk b,footer.gf.hps-f .hps-wmk small{color:${P.fg}}header.gh.hps-h .hps-wmk b,header.gh.hps-h .hps-wmk small{color:inherit}footer.hps-f .hps-wmk i{background:${P.dk ? mix(a, '#ffffff', .45) : fit(a, fbg, 3)}}
+.hps-fn,.hps-wm{font-family:var(--hd-ff,inherit)}.hps-wm{font-weight:var(--hd-fw,800)!important}
+/* 왼쪽 정렬 메뉴 */
+header.hps-h-left .hps-hw{height:${px(68)};gap:0}header.hps-h-left .hps-hw>nav.gn,header.hps-h-left .hps-hw>.lhs-slot{margin:0 auto 0 0;gap:clamp(18px,2vw,28px)}
+.hps-vr{width:1px;height:22px;background:${HP.ln};margin:0 clamp(18px,2.4vw,32px);flex:none}
+header.hps-h-left a.hps-cta{border-radius:0;min-height:${px(40)}}header.hps-h-left .hps-hr{gap:16px}
+/* 유틸 띠 2단 */
+.hps-ut{background:${ubg};color:${ubf};font-size:${px(13)};line-height:1.3}
+.hps-utw{max-width:1280px;margin:0 auto;padding:0 clamp(16px,3vw,40px);min-height:${px(36)};display:flex;align-items:center;justify-content:space-between;gap:16px}
+.hps-utl{display:flex;align-items:center;gap:14px;min-width:0}.hps-utl em{font-style:normal;opacity:.8;margin-right:6px}.hps-utt{color:inherit;font-variant-numeric:tabular-nums;font-weight:650;white-space:nowrap}.hps-uth{opacity:.85;white-space:nowrap}.hps-utn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hps-utr{display:flex;align-items:center;gap:0;flex:none}.hps-utr a{color:inherit;padding:0 12px;border-left:1px solid ${al(ubf, .3)};font-weight:550}.hps-utr a:first-child{border-left:0}.hps-utr .lsw a{border:0;padding:0 6px}.hps-ut .hps-login{opacity:1;font-size:inherit}
+.hps-ut a:hover{text-decoration:underline;text-underline-offset:3px}.hps-ut a:focus-visible{outline:2px solid #fff;outline-offset:2px}
+header.gh.hps-h-util{border-bottom:${ty === 'public' ? `2px solid ${ink}` : `1px solid ${HP.ln}`}}header.hps-h-util .hps-hw{height:${px(ty === 'public' ? 84 : 76)}}
+header.hps-h-util .hps-hw>nav.gn,header.hps-h-util .hps-hw>.lhs-slot{margin:0 0 0 auto;gap:clamp(22px,3vw,44px)}
+header.hps-h-util a.hps-cta{border-radius:${ty === 'public' ? '6px' : br}}
+header.hps-h-util nav.gn>.s2-mi>a::after{bottom:-${px(ty === 'public' ? 28 : 24)};height:3px}
+/* 가운데 2단 */
+header.gh.hps-h-center{border-bottom:1px solid ${HP.ln}}header.hps-h-center .hps-c1{height:${px(84)};display:grid;grid-template-columns:1fr auto 1fr;gap:24px}
+header.hps-h-center .hps-c1>.logo{justify-self:center}header.hps-h-center .hps-c1 .hps-wmk b{font-size:${px(ty === 'univ' ? 26 : 23)}}
+.hps-cl{display:flex;align-items:center;min-width:0}header.hps-h-center .hps-hr{justify-self:end}header.hps-h-center .hps-tel{font-size:${px(14.5)};font-weight:650}
+.hps-c2{border-top:1px solid ${HP.ln};display:flex;justify-content:center;min-height:${px(50)};align-items:center;padding:0 clamp(16px,3vw,40px)}
+.hps-c2>nav.gn,.hps-c2>.lhs-slot{margin:0 auto!important;gap:clamp(24px,3.4vw,52px)}
+header.hps-h-center a.hps-cta{border-radius:0;background:transparent;color:${HP.fg};box-shadow:inset 0 0 0 1.5px ${HP.fg};min-height:${px(40)}}header.hps-h-center a.hps-cta:hover{background:${HP.fg};color:${hb}}
+/* 공공: 메뉴 굵게 · 넓게 */
+header.hps-ty-public .hps-cta{font-weight:750}
+@media(max-width:960px){.hps-ut{display:none}header.hps-h-util .hps-hw,header.hps-h-left .hps-hw{height:${px(62)}}.hps-vr{display:none}
+header.hps-h-center .hps-c1{display:flex;height:${px(62)}}.hps-c2,.hps-cl{display:none}header.hps-h-center .hps-c1 .hps-wmk b{font-size:${px(19)}}}
+/* 바닥글: 편집 화면 안내 */
+footer.hps-f .hps-edh{margin-top:14px!important;font-size:${px(13)};padding:8px 12px;border:1px dashed ${al(P.fg, .45)};border-radius:8px;color:${P.fg};max-width:420px}
+/* gov */
+footer.gf.hps-f-gov{padding:0 0 ${px(32)};border-top:1px solid ${al(ink, .14)}}
+.hps-gtop{background:${T.dark ? fbg : bg};border-bottom:1px solid ${P.ln}}
+.hps-glk{display:flex;flex-wrap:wrap;align-items:center;min-height:${px(54)};gap:4px 0}.hps-glk a{font-size:${px(14)};font-weight:600;color:${P.fg};padding:0 16px;border-left:1px solid ${P.ln};line-height:1.2}.hps-glk a:first-child{padding-left:0;border-left:0}
+footer.gf.hps-f a.hps-gpv{color:${fit(a, T.dark ? fbg : bg, 4.6)};font-weight:800}
+.hps-gm{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:24px 56px;padding:${px(40)} 0 ${px(24)};align-items:start}
+.hps-gm .hps-wmk b{font-size:${px(20)}}.hps-gad dl{margin:0;display:flex;flex-wrap:wrap;gap:8px 28px}.hps-gad dl div{display:flex;gap:8px;align-items:baseline}.hps-gad dt{font-size:${px(13)};color:${P.lab};font-weight:650}.hps-gad dd{margin:0;color:${P.fg};font-size:${px(14.5)};font-variant-numeric:tabular-nums}
+.hps-gad .hps-bl{border:0;padding:12px 0 0}.hps-f-gov .hps-cp{padding-top:16px;border-top:1px solid ${P.ln}}
+/* campus */
+footer.gf.hps-f-campus{padding-top:${px(80)}}.hps-cm{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding-bottom:${px(40)}}
+.hps-cm .hps-wmk b{font-size:clamp(${px(26)},3.4vw,${px(38)});font-weight:var(--hd-fw,600);letter-spacing:-.015em}.hps-cm .hps-tg{margin:0!important;max-width:520px}
+.hps-cad{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 22px;font-size:${px(14)}}.hps-cad em{font-style:normal;color:${P.lab};margin-right:4px}
+.hps-rel{position:relative;margin-top:10px;min-width:240px;text-align:left}.hps-rel summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:0 16px;border:1px solid ${al(P.fg, .35)};color:${P.fg};font-weight:600;cursor:pointer}.hps-rel summary::-webkit-details-marker{display:none}
+.hps-rel[open] summary span{transform:rotate(180deg)}.hps-rel summary span{display:grid;transition:transform .2s}.hps-rel ul{list-style:none;margin:0;padding:6px 0;border:1px solid ${al(P.fg, .35)};border-top:0}.hps-rel li a{display:block;padding:9px 16px;color:${P.fg}}
+.hps-barc{justify-content:center;text-align:center}.hps-f-campus .hps-bl{justify-content:center}
+/* split */
+.hps-sp{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:32px clamp(32px,5vw,72px);padding-bottom:${px(40)};align-items:stretch}
+.hps-spp{background:${spBg};color:${spF};border-radius:var(--r,16px);padding:${px(32)} ${px(32)} ${px(28)};display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+footer.gf.hps-f .hps-spp .hps-fl{color:${spF};opacity:.85;margin:0 0 4px!important}
+footer.gf.hps-f .hps-spp a.hps-sbig{font-family:var(--hd-ff,inherit);font-size:clamp(${px(30)},3.6vw,${px(42)});font-weight:800;letter-spacing:-.02em;line-height:1.1;color:${spF};font-variant-numeric:tabular-nums}.hps-sbig.sm{font-size:${px(22)}!important}
+.hps-shr{font-size:${px(14)};opacity:.9}footer.gf.hps-f .hps-spp .hps-apc{margin-top:16px;background:#ffffff;color:${spBtnF}}
+.hps-spr{display:flex;flex-direction:column;gap:12px;padding-top:8px}.hps-spr .hps-wmk b{font-size:${px(22)}}
+.hps-s2{list-style:none;margin:12px 0 0;padding:16px 0 0;border-top:1px solid ${P.ln};display:grid;grid-template-columns:1fr 1fr;gap:10px 24px}.hps-s2 a{font-size:${px(15)};font-weight:550;color:${P.fg}}
+@media(max-width:860px){.hps-gm,.hps-sp{grid-template-columns:1fr}.hps-glk a{padding:0 12px}.hps-gad dl{flex-direction:column;gap:6px}}`; }
 
   /* ═════════ siteHTML 감싸기 ═════════ */
   /* v34.5 G2: 한 줄 소개는 이 사이트에 직접 쓴 값만 — 검색 설명(S.settings.seo.desc)은 첫 사이트 · 이전 템플릿 문구가 남아 있어(hpai 258행이 빈 칸일 때 한 번만 복사) 다른 템플릿 · 기관 문구가 보였다 */
@@ -248,24 +388,32 @@ footer.gf.hps-f a:focus-visible{outline:3px solid ${fa};outline-offset:3px;borde
     const a = h.indexOf('<header class="gh">'); const b = a < 0 ? -1 : h.indexOf('</header>', a); if (a < 0 || b < 0) return h;
     const fs = h.lastIndexOf('<footer class="gf'); const fe = fs < 0 ? -1 : h.indexOf('</footer>', fs);
     const oldH = h.slice(a, b + 9); const ch = chrome(s); const f = ft(); const org = (S.org && S.org.name) || '';
-    const logo = (oldH.match(/<a class="logo"[\s\S]*?<\/a>/) || [''])[0]; const nav = (oldH.match(/<nav class="gn[\s\S]*?<\/nav>(?=<div class="hr">)/) || oldH.match(/<nav class="gn[\s\S]*<\/nav>/) || [''])[0];
+    const logo = (oldH.match(/<a class="logo"[\s\S]*?<\/a>/) || [''])[0]; const nav0 = (oldH.match(/<nav class="gn[\s\S]*?<\/nav>(?=<div class="hr">)/) || oldH.match(/<nav class="gn[\s\S]*<\/nav>/) || [''])[0];
     const lsw = (oldH.match(/<span class="lsw">[\s\S]*?<\/span>/) || [''])[0]; const login = strip((oldH.match(/<a class="l"[^>]*>([\s\S]*?)<\/a>/) || [])[1] || '로그인');
-    const items = parseNav(nav); const cta = ctaOf(s, lang); const tel = val(f.tel); const hours = val(f.hours);
+    /* R1 H8: 홈페이지 머리글에서는 권한 배지(회원 · 지정 N)를 빼고, 메뉴 이름은 유형별로(H2 · L3, 한국어 화면만) */
+    const ty = typeKey(); const ko = !lang || lang === 'ko';
+    const nav = nav0.replace(/\s*<i class="s2lock">[\s\S]*?<\/i>/g, '').replace(/(<a\b[^>]*>)([^<]+)/g, (m, x, l) => ko ? x + E(HPS.menuName(l.replace(/&amp;/g, '&').trim(), ty)) + (/\s$/.test(l) ? ' ' : '') : m);
+    const items = parseNav(nav).map(it => Object.assign(it, { lock: '' })); const cta = ctaOf(s, lang); const tel = val(f.tel); const hours = val(f.hours);
+    const wlogo = /<img\b/.test(logo) ? logo : `<a class="logo hps-lw" href="#p-home" aria-label="${E(org)} 홈">${wmark(org, ty)}</a>`;
     /* 공지: 레이어 팝업은 그리지 않고 띠 1줄로 */
     h = h.replace(POP, ''); const notice = noticeOf(s);
     const cur = (h.match(/#p-([^{\s]+)\{display:block\}/) || [])[1] || 'home';
     const MH = '<main class="s2pg" id="p-home">'; const main = h.indexOf(MH); const mEnd = main >= 0 ? h.indexOf('</main>', main) : -1;
     const home = main >= 0 ? h.slice(main + MH.length, mEnd > main ? mEnd : h.length) : h.slice(b + 9, fs > b ? fs : h.length);
-    let head = ch.head; if (head === 'notice' && !notice) head = 'solid'; const ov = head === 'overlay' && cur === 'home' && darkHero(home); if (head === 'overlay' && !ov) head = 'solid';
-    const H = HPS.nav(head, { s, id: 'hps', org, logo, nav, items, lsw, login, cta, tel, hours, notice, mm: ch.mm, cbg: ok6((s.gnb || {}).bg) });
+    let head = ch.head; if (head === 'notice' && !notice) head = 'solid'; const ov = head === 'overlay' && cur === 'home' && darkHero(home); if (head === 'overlay' && !ov) head = noOv();
+    const H = HPS.nav(head, { s, id: 'hps', org, logo: wlogo, nav, items, lsw, login, cta, tel, hours, notice, mm: ch.mm, cbg: ok6((s.gnb || {}).bg) });
     let fjoin = false; let out = h.slice(0, a) + H + h.slice(b + 9, fs >= 0 && fe > fs ? fs : h.length);
     if (fs >= 0 && fe > fs) { const oldF = h.slice(fs, fe + 9); const esc2 = (oldF.match(/<a class="s2esc"[\s\S]*?<\/a>/) || [''])[0];
       const secs = home.match(/<section\b[^>]*>/g) || []; const last = secs[secs.length - 1] || '';
       const hasCta = /\bhp-cta\b|data-hps-cta|\bfb-cta\b|\bhpl-k-cta\b|\bhps-cta-sec\b/.test(last);
-      fjoin = hasCta && ch.foot === 'cta'; out += HPS.footer(ch.foot, { s, org, items, tagline: tagFor(s), esc2, cta, ctaTitle: val(s.hps && s.hps.ctaTitle) || CTA_T[typeKey()] || '교육 신청과 문의', hasCta, lang }) + h.slice(fe + 9); }
+      fjoin = hasCta && ch.foot === 'cta'; out += HPS.footer(ch.foot, { s, org, items, tagline: tagFor(s), esc2, cta, ctaTitle: val(s.hps && s.hps.ctaTitle) || CTA_T[typeKey()] || '교육 신청과 문의', hasCta, lang, edit: typeof HPE !== 'undefined' && !!HPE && !!HPE.map }) + h.slice(fe + 9); }
     out = out.replace(/<body class="([^"]*)"/, `<body class="$1 hps-on${ov ? ' hps-ov' : ''}${notice ? ' hps-has-nt' : ''}${fjoin ? ' hps-fjoin' : ''}"`);
     return out; }
   { const base = siteHTML; siteHTML = (s, full, lang) => { const h = base(s, full, lang); if (!themed(s)) return h;
     try { const c = HPS.css(s); if (!c) return h; let o = rebuild(h, s, lang || 'ko'); if (o === h) return h; return o.replace('</style>', c.replace(/<\/?style/gi, '') + '</style>'); } catch (e) { console.error('hpsec-nav', e); return h; } };
     window.siteHTML = siteHTML; }
+  /* 게시본(학습자 홈) 머리글 메뉴도 같은 유형별 이름으로 — lmerge가 hp.menus의 l로 셸 메뉴를 그린다 */
+  if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a);
+    try { if (r && r.hp && Array.isArray(r.hp.menus)) { const ty = typeKey(); r.hp.menus = r.hp.menus.map(m => Object.assign({}, m, { l: HPS.menuName(m.l, ty), subs: m.subs })); } } catch (e) { console.error('hpsec-nav menus', e); }
+    return r; }; window.lsSnapshot = lsSnapshot; }
 })();

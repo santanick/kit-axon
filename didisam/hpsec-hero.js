@@ -55,6 +55,8 @@
     if (C.some(c => c.period && c.period.mode === 'days')) B.push('신청 즉시 수강');
     if (C.length) B.push('PC · 휴대폰 수강');
     return B.slice(0, 3); }
+  /* v34.5 FA(R1 M4 · FIXLIST 2): 바로가기는 머리글 메뉴 대신 실제 행동(신청 · 일정 · 상담 · 공지, HPS.actions). 첫 화면 버튼이 이미 상담이면 게시판 상담은 뺀다 */
+  const acts = (s, d) => { if (!(window.HPS && typeof HPS.actions === 'function')) return quick(s); const L = HPS.actions(s, 5); const c1 = String((d && d.cta) || ''); return L.filter(x => !(x.k === 'ask' && /상담|문의/.test(c1) && !/^tel:|^mailto:/.test(x.h))).slice(0, 4); };
   const quick = s => ((s && s.menus) || []).filter(m => m.on !== false && m.kind !== 'home' && m.access !== '비공개' && m.l).slice(0, 4).map(m => ({ l: m.l, h: (m.link ? linkHref(m.link) : '') || '#p-m-' + m.id }));
   const typeOf = () => (typeof S !== 'undefined' && S && S.org && S.org.type) || 'adult';
 
@@ -121,7 +123,7 @@
     const L = lines(d); const long = L.join('').length > 22 || L.some(x => x.length > 14); /* 긴 제목은 한 단계 작게(4줄 방지) */
     const sec = (inner, extra) => `<section class="hpt hp-hero hps-hero hps-k-${kind}${p.tone === 'light' ? ' hps-light' : ''}${long ? ' hps-long' : ''}${extra ? ' ' + extra : ''}">${inner}</section>`;
     if (kind === 'scrim') return sec(`${fig('hero', p, { eager: 1 })}<i class="hps-scrim" aria-hidden="true"></i><div class="hps-w hps-sc"><div class="hps-tx">${head}${btns(s, d, 'on-dark')}</div>${factRow('on-dark', s)}</div>`);
-    if (kind === 'box') { const Q = quick(s); const side = Q.length >= 2 ? `<nav class="hps-quick" aria-label="바로가기">${Q.map(q => `<a ${aAttr(q.h)}><span>${E(q.l)}</span>${ic('arrow', 18)}</a>`).join('')}</nav>` : badgeRow() ? `<div class="hps-side">${badgeRow()}</div>` : '';
+    if (kind === 'box') { const Q = acts(s, d); const side = Q.length >= 2 ? `<nav class="hps-quick" aria-label="바로가기">${Q.map(q => `<a ${aAttr(q.h)}><span class="hps-qt"><span>${E(q.l)}</span>${q.sub ? `<small>${E(q.sub)}</small>` : ''}</span>${ic(q.k === 'ask' && /^tel:/.test(q.h) ? 'phone' : 'arrow', 18)}</a>`).join('')}</nav>` : badgeRow() ? `<div class="hps-side">${badgeRow()}</div>` : '';
       return sec(`${fig('hero', p, { eager: 1, cls: 'hps-bph' })}<div class="hps-w"><div class="hps-row"><div class="hps-box">${head}${btns(s, d, 'on-dark')}</div>${side}</div></div>`); }
     if (kind === 'split') return sec(`<div class="hps-st"><div class="hps-tx">${head}${btns(s, d)}${badgeRow() ? `<div class="hps-rule"></div>${badgeRow()}` : ''}</div>${fig('hero', p, { eager: 1, sizes: '(max-width: 1000px) 100vw, 58vw' })}</div>`);
     /* grid: 사진 3장(hero · about · space). 2장 이하면 split으로 */
@@ -194,7 +196,7 @@
 .hps-k-box h1{font-size:clamp(${px(34)},4.2vw,${px(58)})!important}.hps-k-box .hps-sub{color:rgba(255,255,255,.88);font-size:${px(17.5)}}
 .hps-k-box .hps-btns .hps-btn.p{background:#fff;color:${fit(T.a, '#ffffff', 4.8)}}.hps-k-box .hps-btns .hps-btn.p:hover{background:${mix('#ffffff', T.a, .1)}}
 .hps-k-box .hps-quick,.hps-k-box .hps-side{margin-top:244px}
-.hps-quick{display:flex;flex-direction:column;border-top:2px solid var(--ink)}.hps-quick a{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 4px;border-bottom:1px solid ${al(T.ink, .14)};font-size:${px(18)};font-weight:650;color:var(--ink);text-decoration:none;letter-spacing:-.02em}.hps-quick a svg{color:${accOnW};transition:transform .15s}.hps-quick a:hover svg{transform:translateX(4px)}.hps-quick a:hover span{text-decoration:underline;text-underline-offset:4px}
+.hps-quick{display:flex;flex-direction:column;border-top:2px solid var(--ink)}.hps-quick a{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 4px;border-bottom:1px solid ${al(T.ink, .14)};font-size:${px(18)};font-weight:650;color:var(--ink);text-decoration:none;letter-spacing:-.02em}.hps-quick a svg{color:${accOnW};transition:transform .15s;flex:none}.hps-qt{display:flex;flex-direction:column;gap:3px;min-width:0}.hps-qt small{font-size:${px(13.5)};font-weight:500;color:${fit(T.mu || '#5B6170', T.bg || '#ffffff', 4.6)};letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}.hps-quick a:hover svg{transform:translateX(4px)}.hps-quick a:hover span{text-decoration:underline;text-underline-offset:4px}
 /* ③ 좌우 분할 */
 .hps-k-split .hps-st{display:grid;grid-template-columns:minmax(0,11fr) minmax(0,13fr);min-height:clamp(560px,80vh,780px)}
 .hps-k-split .hps-tx{align-self:center;padding:clamp(56px,7vw,104px) clamp(32px,5vw,72px) clamp(56px,7vw,104px) max(var(--hps-gut),calc((100vw - 1240px)/2 + 40px))}

@@ -21,7 +21,10 @@
   const tid = () => (typeof LR !== 'undefined' && LR.tid) || 'x';
   const ic = (n, s) => (typeof ico === 'function' ? ico(n, s || 20) : '');
   /* 유형별 행동 줄 문구(RULES_B2 §1 상담 · 신청 — 한국어 동사) */
-  const ACTS = { adult: ['상담', '수강신청'], k12: ['상담', '수강신청'], voc: ['상담', '수강신청'], univ: ['문의', '프로그램 신청'], public: ['문의', '교육 신청'], lifelong: ['문의', '강좌 신청'], corp: ['문의', '교육 신청'] };
+  /* FIXLIST 5(FA): 머리글 신청 버튼(HPS.ctaWord)과 같은 낱말 — adult · k12 · voc = 수강신청, 나머지 = 신청하기 */
+  const ACTS = { adult: ['상담', '수강신청'], k12: ['상담', '수강신청'], voc: ['상담', '수강신청'], univ: ['문의', '신청하기'], public: ['문의', '신청하기'], lifelong: ['문의', '신청하기'], corp: ['문의', '신청하기'] };
+  /* R1 M3(FA): 휴대폰 아래 바는 하나만 — 학원 · 성인 · 직업 = 상담 · 신청 행동 줄(탭 숨김), 대학 · 공공 · 평생 · 기업 = 탭 바(행동 줄 숨김, 신청은 머리글 메뉴 아래 버튼) */
+  const BAR_ACT = ['adult', 'k12', 'voc'];
   if (typeof ICP === 'object') Object.assign(ICP, { phone: ICP.phone || 'M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2', chat: ICP.chat || 'M4 5h16v11H9l-5 4z', sparkle: ICP.sparkle || 'M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z', x: ICP.x || 'M6 6l12 12M18 6L6 18' });
 
   /* 기존 웹 화면의 홈(홈페이지가 그려진 홈)인지 */
@@ -101,7 +104,22 @@
   function size() { const tb = document.querySelector('nav.tabbar.lux-bn, nav.tabbar'); const v = tb && tb.getBoundingClientRect().height ? Math.round(tb.getBoundingClientRect().height) : 0; document.body.style.setProperty('--lhs-tb', v + 'px'); }
 
   /* 5) 가입 띠 · 바닥글 아래 한 줄 */
-  function joinLast(lm) { const j = lm.querySelector(':scope > .lgj'); if (!j) return; j.classList.add('lhs-join'); if (lm.lastElementChild !== j) lm.appendChild(j); }
+  function joinLast(lm) { const j = lm.querySelector(':scope > .lgj'); if (!j) return; j.classList.add('lhs-join'); if (lm.lastElementChild !== j) lm.appendChild(j); joinMerge(lm, j); }
+  /* R1 M3(FA): 가입 띠를 따로 끼우지 않고 홈페이지 마지막 신청 띠 안의 보조 줄로 합친다(신청 띠가 없으면 지금처럼 바닥글 위 띠) */
+  const CTA_RE = /\b(hp-cta|hps-cta-sec|fb-cta|hpl-k-cta|pt-cta|hpl-cta)\b|cta/;
+  function joinMerge(lm, j) { const host = lm.querySelector('.smhost[data-smk=home]'); const sr = host && host.shadowRoot; if (!sr) return;
+    if (sr.querySelector('.lhs-jn')) { j.classList.add('lhs-jm'); return; }
+    const secs = [...sr.querySelectorAll('.smr > section, .smr > * > section')]; const last = secs[secs.length - 1];
+    if (!last || !(CTA_RE.test(last.className) || last.hasAttribute('data-hps-cta'))) { j.classList.remove('lhs-jm'); return; }
+    const t = (j.querySelector('b') || {}).textContent || ''; const L = [...j.querySelectorAll('.lgj-a a')].filter(a => a.getAttribute('href')); if (!L.length) return;
+    const w = [...last.children].find(x => x.tagName === 'DIV' && !x.matches('[aria-hidden],.hps-scrim')) || last;
+    const box = document.createElement('div'); box.className = 'lhs-jn'; box.setAttribute('role', 'note'); box.setAttribute('aria-label', '가입 · 로그인');
+    box.innerHTML = `${t ? `<span>${esc(t)}</span>` : ''}${L.map(a => `<a href="${esc(a.getAttribute('href'))}">${esc(a.textContent.trim())}</a>`).join('')}`; w.appendChild(box);
+    if (!sr.getElementById('lhsJn')) { const st = document.createElement('style'); st.id = 'lhsJn'; st.textContent = '.lhs-jn{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;margin-top:28px;padding-top:18px;border-top:1px solid color-mix(in srgb,currentColor 22%,transparent);font-size:15px;line-height:1.5;position:relative;z-index:2}.lhs-jn span{opacity:.86}.lhs-jn a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:4px;min-height:44px;display:inline-flex;align-items:center}.lhs-jn a:focus-visible{outline:2px solid currentColor;outline-offset:2px}'; sr.appendChild(st); }
+    j.classList.add('lhs-jm'); }
+  /* R1 M3 · FIXLIST 7(FA): PC 떠 있는 튜터 버튼은 첫 화면에서 숨기고, 한 화면 내린 뒤 작은 원형으로 보인다(오른쪽 아래 카드 가림 방지) */
+  function past() { const b = document.body; if (!b || !b.classList.contains('lhs-home')) return; b.classList.toggle('lhs-past', (scrollY || document.documentElement.scrollTop) > innerHeight * .6); }
+  addEventListener('scroll', past, { passive: true });
   const rgb = c => (String(c).match(/[\d.]+/g) || []).map(Number);
   const lum = ([r, g, b]) => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }; return .2126 * f(r) + .7152 * f(g) + .0722 * f(b); };
   function footTone() { const p = document.querySelector('footer.lf .smpriv'); const host = document.querySelector('footer.lf .smhost[data-smk=foot]'); if (!p || !host || !host.shadowRoot) return;
@@ -136,11 +154,12 @@
   window.lhsDday = ddFix;
 
   function apply() { const b = document.body; if (!b) return; const app = document.getElementById('lapp'); const lm = document.getElementById('lm');
-    if (b.classList.contains('lapp')) { b.classList.remove('lhs-home', 'lhs-in'); const a = document.getElementById('lhsAct'); if (a) a.remove(); return; }
+    if (b.classList.contains('lapp')) { b.classList.remove('lhs-home', 'lhs-in', 'lhs-bar-act', 'lhs-bar-tab', 'lhs-past'); const a = document.getElementById('lhsAct'); if (a) a.remove(); return; }
     demo(); ddAll(); const on = homeOn(); b.classList.toggle('lhs-home', on); b.classList.toggle('lhs-in', on && !!LR.me);
     if (app) { if (on) hpsHead(app, lm); else { const hh = app.querySelector(':scope > .lhs-head'); if (hh) hpsHead(app, null, true); b.classList.remove('lhs-hps'); } noticeBar(app, on && b.classList.contains('lhs-hps')); }
-    const old = document.getElementById('lhsAct'); if (!on) { if (old) old.remove(); return; }
+    const old = document.getElementById('lhsAct'); if (!on) { b.classList.remove('lhs-bar-act', 'lhs-bar-tab', 'lhs-past'); if (old) old.remove(); return; }
     unsplit(lm, !!LR.me); if (LR.me) mineAfterHome(lm);
+    b.classList.toggle('lhs-bar-act', !LR.me && BAR_ACT.includes(ty())); b.classList.toggle('lhs-bar-tab', !!LR.me || !BAR_ACT.includes(ty())); past();
     joinLast(lm); actBar(app); requestAnimationFrame(footTone); setTimeout(footTone, 400); }
   window.lhsApply = apply;
   { const base = lrender; lrender = (...x) => { const r = base(...x); try { apply(); } catch (e) { console.error('lhpshell', e); } return r; }; }
