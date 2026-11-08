@@ -54,7 +54,7 @@
   const FONTS = [
     ['sans', '고딕', "Pretendard,'Pretendard Variable','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR','Noto Sans CJK KR',sans-serif"],
     ['serif', '명조', "'Noto Serif KR','Nanum Myeongjo','NanumMyeongjo','AppleMyungjo','Batang','Noto Serif CJK KR','Times New Roman',serif"],
-    ['round', '둥근', "'NanumSquareRound','Nanum Square Round','Jua',ui-rounded,'Arial Rounded MT Bold','Apple SD Gothic Neo','Malgun Gothic',sans-serif"],
+    ['round', '둥근', "'Gowun Dodum','NanumSquareRound','Nanum Square Round','Jua',ui-rounded,'Arial Rounded MT Bold','Apple SD Gothic Neo','Malgun Gothic',sans-serif"],
     ['hand', '손글씨', "'Nanum Pen Script','Nanum Pen','Gaegu','Nanum Brush Script','Comic Sans MS',cursive"],
     ['mono', '모노', "'D2Coding',ui-monospace,'SFMono-Regular',Menlo,Consolas,'Noto Sans Mono CJK KR',monospace"],
     ['display', '굵은 제목', "'Black Han Sans','Do Hyeon',Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif"]];
