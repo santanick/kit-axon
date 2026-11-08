@@ -659,7 +659,7 @@ ${C4.map((c, k) => `.hpl-co-n:nth-child(4n+${k + 1}){background:${c};transform:r
   regB('noir', {
     name: '노와르(고급 다크)', by: 'D2', desc: '어두운 바탕 · 명조 큰 제목 · 가는 금빛 선 · 아치형 사진 틀(프리미엄 · 전문 과정)', fits: ['adult', 'corp', 'univ', 'voc'],
     slots: ['hero', 'cls-*'], order: ['banner', 'text:stats', 'classes', 'text:features', 'text:steps', 'reviews', 'text:info', 'text:cta'],
-    css(s, th, T) { T = tk(s, T); const N = noirTok(T); const serif = `'Noto Serif KR','Nanum Myeongjo','AppleMyungjo','Batang',Georgia,serif`;
+    css(s, th, T) { T = tk(s, T); const N = noirTok(T); const serif = 'var(--hpl-serif,var(--hd-ff,serif))';
       return `${BASE('noir', T)}
 .hpl-noir.hpt{--bg:${N.bg};--alt:${N.bg2};--ink:${N.tx};--mu:${N.mu};--at:${N.gold};--at2:${N.gold};--as:${al(N.gold, .1)};--as2:${al(N.gold, .16)};color:${N.tx};background:${N.bg}}
 .hpl-noir.hpl-s,.hpl-noir.hp-s{padding:144px 0;background:${N.bg};color:${N.tx}}.hpl-noir.hp-s.hp-alt,.hpl-noir.hpl-alt{background:${N.bg2}}
@@ -714,4 +714,79 @@ ${C4.map((c, k) => `.hpl-co-n:nth-child(4n+${k + 1}){background:${c};transform:r
         return SEC('noir', 'hpl-no-ct hpl-alt', `<div class="hpl-no-end">${d.eyebrow ? `<p class="hpl-no-ey" style="justify-content:center">${E(d.eyebrow)}</p>` : ''}<h2 style="margin-top:24px">${br(d.title || '')}</h2>${body}${d.cta && h ? `<div class="hpl-no-bt"><a class="hpl-no-b pri" ${aAttr(h)}>${E(d.cta)}</a></div>` : ''}${Cc.length ? `<ul class="hpl-no-ci">${Cc.map(c => `<li>${IC_(c.ic, 18, 1.5)}${c.h ? `<a ${aAttr(c.h)}>${E(c.v)}</a>` : `<b>${E(c.v)}</b>`}</li>`).join('')}</ul>` : ''}</div>`); }
     }
   });
+})();
+
+/* ═════════════════════════ 계열 변형(layoutVar) · 계열 B 6종 — R1 수정 회차(FD1) ═════════════════════════
+   틀 · 판정은 hplay-a 끝의 변형 블록과 같다(HPL.defVars · hpl-v-<id> · 같은 계열 변형끼리 첫 화면 dHash > 12).
+   M7 collage: 별 · 물결 · 마스킹 테이프 · 점 장식을 걷고 기울기를 줄인다(두 변형 공통) · M1 bulletin · noir 스크림 = HPC.photo().scrim(글자 쪽 40%)
+   L4 휴대폰: story · mosaic · collage는 첫 화면 사진을 글보다 먼저(4:3 이상) */
+(() => {
+  const H = window.HPL; if (!H || !H.u || typeof H.defVars !== 'function') return; const u = H.u;
+  const sel = (P, L) => L.split(',').map(x => `${P} ${x.trim()}`).join(',');
+  const MIR = (P, L) => `@media(min-width:901px){${sel(P, L)}{direction:rtl}${sel(P, L.split(',').map(x => x.trim() + '>*').join(','))}{direction:ltr}}`;
+  const CEN = P => `${P}.hpl-s:not(.hpl-hero) :is(header,[class$="-sh"],[class$="-hh"]){text-align:center;justify-items:center;justify-content:center;margin-left:auto;margin-right:auto}${P}.hpl-s:not(.hpl-hero) :is(header,[class$="-sh"],[class$="-hh"]) p{margin-left:auto;margin-right:auto}`;
+  const INV = P => `${P}.hpl-s:not(.hpl-hero):not(.is-alt):not([class*="cta"]){background:var(--alt)}${P}.hpl-s.is-alt{background:var(--bg)}`;
+  const onLight = (Q, bg) => `${Q}{background:${bg}!important;color:var(--ink)}${Q} :is(h1,h2,h3,b){color:var(--ink)}${Q} :is([class$="-ey"]){color:var(--at)}${Q} :is(p,li,small){color:var(--mu)}`;
+  const onDark = (Q, bg) => `${Q}{background:${bg}!important;color:#fff}${Q} :is(h1,h2,h3,b,[class$="-ey"]){color:#fff}${Q} :is(p,li,small){color:rgba(255,255,255,.88)}`;
+  const dkOf = T => T.hbB || T.hd || u.mix(T.a, '#000000', .72);
+
+  /* 1. story — a 왼쪽 글 · 오른쪽 정사각 사진 / b 왼쪽 세로 사진(4:5) · 오른쪽 글 / c 위 넓은 사진 띠 + 아래 2단 글 */
+  H.defVars('story', [
+    { id: 'a', name: '이야기 기본', desc: '왼쪽 글과 단계 지도 · 오른쪽 정사각 사진', dark: false },
+    { id: 'b', name: '세로 사진 이야기', desc: '왼쪽 4:5 세로 사진 · 오른쪽 글 · 아래 칸 좌우 반전', dark: false },
+    { id: 'c', name: '사진 띠 이야기', desc: '위 넓은 사진 띠 · 아래 제목과 설명 2단 · 섹션 제목 가운데 · 띠 차례 반전', dark: false }],
+  (s, th, T, v) => { const P = `.hpl-story.hpl-v-${v}`;
+    const mob = `@media(max-width:900px){${P} .hpl-st-hg{display:flex;flex-direction:column}${P} .hpl-st-hg>div:last-child{order:-1;width:100%}${P} .hpl-st-hg .hpl-st-fig{aspect-ratio:4/3!important;border-radius:var(--r,12px)}${P} .hpl-st-dot{display:none}}`;
+    if (v === 'b') return `${mob}@media(min-width:901px){${P} .hpl-st-hg{grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:center}${P} .hpl-st-hg>div:last-child{grid-column:1;grid-row:1}${P} .hpl-st-hg .hpl-st-t{grid-column:2;grid-row:1}${P} .hpl-st-hg .hpl-st-fig{aspect-ratio:4/5!important;border-radius:var(--r,16px)}${P} .hpl-st-dot{display:none}}${MIR(P, '.hpl-st-row,.hpl-st-eg')}`;
+    if (v === 'c') return `${mob}@media(min-width:901px){${P} .hpl-st-hg{grid-template-columns:minmax(0,7fr) minmax(0,5fr);align-items:start;gap:24px 56px}${P} .hpl-st-hg>div:last-child{grid-column:1/-1;grid-row:1}${P} .hpl-st-hg .hpl-st-fig{aspect-ratio:21/8!important;border-radius:var(--r,16px)}${P} .hpl-st-dot{display:none}${P} .hpl-st-t{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);column-gap:56px;align-items:start}${P} .hpl-st-t>*{grid-column:2}${P} .hpl-st-t>h1,${P} .hpl-st-t>.hpl-st-ey{grid-column:1}${P} .hpl-st-t>h1{grid-row:2/span 3}}${CEN(P)}${INV(P)}`;
+    return mob; });
+
+  /* 2. mosaic — a 진한 글 칸 왼쪽 + 큰 사진 / b 반전 + 밝은 글 칸 / c 위 글 띠 + 큰 사진 8칸 · 작은 사진 2장 세로 */
+  H.defVars('mosaic', [
+    { id: 'a', name: '모자이크 기본', desc: '왼쪽 진한 글 칸 · 오른쪽 큰 사진 · 아래 작은 사진 3장', dark: true },
+    { id: 'b', name: '밝은 모자이크', desc: '큰 사진 왼쪽 · 옅은 강조색 글 칸 오른쪽 · 아래 칸 좌우 반전', dark: false },
+    { id: 'c', name: '갤러리 벽', desc: '위 글 띠 · 큰 사진 8칸 + 오른쪽 작은 사진 2장 · 섹션 제목 가운데', dark: false }],
+  (s, th, T, v) => { const P = `.hpl-mosaic.hpl-v-${v}`;
+    const mob = `@media(max-width:900px){${P} .hpl-mo-a{order:-1}${P} .hpl-mo-a .hpl-img{aspect-ratio:4/3!important}}${P} .hpl-mo-t .hpl-mo-sub{font-size:clamp(16px,1.35vw,18px);line-height:1.65;color:${v === 'a' ? 'rgba(255,255,255,.92)' : u.fit(T.mu, v === 'b' ? T.as : T.bg, 7)}}`; /* L2 부제 17~18px · 대비 7:1 */
+    if (v === 'b') return `${mob}${MIR(P, '.hpl-mo-g,.hpl-mo-cg,.hpl-mo-fg')}${onLight(`${P} .hpl-mo-t`, 'var(--as)')}${P} .hpl-mo-t a[class*="pri"],${P} .hpl-mo-t .hpl-mo-bt a:first-child{background:var(--a);color:var(--on)}${P} .hpl-mo-t .hpl-mo-bt a+a{color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink);background:transparent}`;
+    if (v === 'c') return `${mob}@media(min-width:901px){${P} .hpl-mo-g{grid-template-rows:auto minmax(220px,auto) minmax(220px,auto) auto}${P} .hpl-mo-t{grid-column:1/13;grid-row:1;min-height:0;display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);column-gap:48px;align-items:end;padding:8px 0 24px}${P} .hpl-mo-t>*{grid-column:2}${P} .hpl-mo-t>h1,${P} .hpl-mo-t>.hpl-mo-ey{grid-column:1}${P} .hpl-mo-t>h1{grid-row:2/span 2;margin:0}
+${P} .hpl-mo-a{grid-column:1/9;grid-row:2/4}${P} .hpl-mo-x1{grid-column:9/13;grid-row:2}${P} .hpl-mo-x2{grid-column:9/13;grid-row:3}${P} .hpl-mo-x3{grid-column:1/7;grid-row:4}${P} .hpl-mo-s{grid-column:7/13;grid-row:4}}${onLight(`${P} .hpl-mo-t`, 'transparent')}${P} .hpl-mo-t .hpl-mo-bt a:first-child{background:var(--a);color:var(--on)}${P} .hpl-mo-t .hpl-mo-bt a+a{color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink);background:transparent}${CEN(P)}${INV(P)}`;
+    return mob; });
+
+  /* 3. sidebar — a 왼쪽 메뉴 판 / b 오른쪽 메뉴 판 + 사진이 글 왼쪽 */
+  H.defVars('sidebar', [
+    { id: 'a', name: '왼쪽 메뉴 포털', desc: '왼쪽 고정 메뉴 판 · 글 + 사진 상자 · 바로가기 줄', dark: false },
+    { id: 'b', name: '오른쪽 메뉴 포털', desc: '오른쪽 메뉴 판 · 사진이 글 왼쪽 · 아래 칸 좌우 반전 · 섹션 제목 가운데', dark: false }],
+  (s, th, T, v) => { const P = `.hpl-sidebar.hpl-v-${v}`; if (v !== 'b') return '';
+    return `@media(min-width:901px){${P} .hpl-sd-hg{direction:rtl}${P} .hpl-sd-hg>*{direction:ltr}${P} .hpl-sd-main{direction:rtl}${P} .hpl-sd-main>*{direction:ltr}}${MIR(P, '.hpl-sd-fl')}${CEN(P)}`; });
+
+  /* 4. bulletin — a 큰 사진 판 왼쪽 + 공지 판 / b 공지 판 왼쪽 + 사진 판 오른쪽 · 진한 제목 띠 */
+  H.defVars('bulletin', [
+    { id: 'a', name: '게시판 기본', desc: '왼쪽 사진 판(아래 40% 스크림 위 제목) · 오른쪽 공지 · 모집 판', dark: false },
+    { id: 'b', name: '공지 우선', desc: '왼쪽 공지 판 · 오른쪽 사진 판 · 제목은 사진 아래 진한 띠 · 아래 칸 좌우 반전', dark: false }],
+  (s, th, T, v) => { const P = `.hpl-bulletin.hpl-v-${v}`; const sc = H.scrim(s, 'hero', 'to top', { end: 46 });
+    if (v !== 'b') return `${P} .hpl-bu-vis::after{background:${sc}}`;
+    return `${P} .hpl-bu-vis{flex-direction:column;align-items:stretch;min-height:0}${P} .hpl-bu-vis>.hpl-img{position:relative!important;inset:auto;height:auto;aspect-ratio:16/9!important}${P} .hpl-bu-vis::after{display:none}${onDark(`${P} .hpl-bu-ov`, dkOf(T))}${P} .hpl-bu-ov{max-width:none;padding:28px 32px}
+${MIR(P, '.hpl-bu-top,.hpl-bu-cta')}${CEN(P)}`; });
+
+  /* 5. collage — 장식 절제(M7) + a 왼쪽 글 · 오른쪽 사진 벽 / b 사진 벽 왼쪽 · 흰 바탕 */
+  H.defVars('collage', [
+    { id: 'a', name: '콜라주 기본', desc: '왼쪽 글 · 오른쪽 사진 3장 벽(기울기 작게)', dark: false },
+    { id: 'b', name: '흰 벽 콜라주', desc: '사진 벽 왼쪽 · 흰 바탕 · 아래 카드 정렬 반듯하게 · 섹션 제목 가운데', dark: false }],
+  (s, th, T, v) => { const P = `.hpl-collage.hpl-v-${v}`;
+    const calm = `${P} :is(.hpl-co-u,.hpl-co-sq,.hpl-co-dots,.hpl-co-path){display:none!important}${P} .hpl-co-p::before,${P} .hpl-co-n::before{display:none!important}
+${P} .hpl-co-p1{transform:rotate(-1.5deg)}${P} .hpl-co-p2{transform:rotate(1.5deg)}${P} .hpl-co-p3{transform:rotate(1deg)}${P} .hpl-co-stk{transform:none!important;width:auto!important;height:auto!important;min-width:0;padding:10px 14px;border-radius:var(--rs,10px)!important;font-size:14px}
+${P} :is(.hpl-co-n,.hpl-co-c,.hpl-co-ci li,.hpl-sh h2){transform:none!important}${P} .hpl-co-c:hover{transform:translateY(-3px)!important}
+@media(max-width:900px){${P} .hpl-co-hg{display:flex;flex-direction:column}${P} .hpl-co-hg>.hpl-co-wall{order:-1}}`;
+    if (v !== 'b') return calm;
+    return `${calm}${P}.hpl-hero,${P}.hpl-s{background:var(--bg)!important}${P}.hpl-s.is-alt{background:var(--alt)!important}${MIR(P, '.hpl-co-hg')}${P} .hpl-co-p{box-shadow:0 0 0 1px ${u.al(T.ink, .1)}}${P} .hpl-co-p1{transform:none}${P} .hpl-co-p2{transform:none}${P} .hpl-co-p3{transform:none}${CEN(P)}`; });
+
+  /* 6. noir — a 왼쪽 글(왼쪽 40% 스크림) / b 가운데 아래 글(아래 40% 스크림) */
+  H.defVars('noir', [
+    { id: 'a', name: '느와르 기본', desc: '어두운 전체 사진 · 왼쪽 큰 명조 제목 · 왼쪽 40% 스크림', dark: true },
+    { id: 'b', name: '느와르 가운데', desc: '어두운 전체 사진 · 아래 가운데 제목 · 아래 40% 스크림 · 아래 칸 좌우 반전', dark: true }],
+  (s, th, T, v) => { const P = `.hpl-noir.hpl-v-${v}`;
+    const c0 = H.scrimC(s, 'hero'); const veil = `linear-gradient(${u.al('#000000', .28)},${u.al('#000000', .28)})`; const mob = `@media(max-width:900px){${P}.hpl-hero .hpl-no-sc{background:${H.scrim(s, 'hero', 'to top', { end: 66, add: .12 })},${veil}}}`;
+    if (v !== 'b') return `${P}.hpl-hero .hpl-no-sc{background:${H.scrim(s, 'hero', 'to right', { end: 64, add: .14 })},${veil}}${mob}`;
+    return `${P}.hpl-hero .hpl-no-sc{background:${H.scrim(s, 'hero', 'to top', { end: 66, add: .14 })},${veil}}${mob}@media(min-width:901px){${P} .hpl-no-hg{display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:clamp(200px,34vh,360px)!important}${P} .hpl-no-hg>div{display:flex;flex-direction:column;align-items:center;max-width:820px}${P} .hpl-no-hg :is(.hpl-no-bt,ul){justify-content:center}}${MIR(P, '.hpl-no-fx,.hpl-no-m')}`; });
 })();
