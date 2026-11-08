@@ -114,16 +114,16 @@ body.lhs-in .lhs-mtw>a{margin-left:auto}
 body.lhs-hps .lhs-head .smlk{display:none!important}
 /* 가입 띠: 홈페이지 신청 띠 안 보조 줄로 합쳐졌으면 따로 그리지 않음 */
 body.lhs-home .lgj.lhs-jm{display:none!important}
-/* PC 떠 있는 튜터: 첫 화면에서는 숨기고, 내린 뒤에는 작은 원형(글자는 마우스 · 초점 때만) */
+/* PC 떠 있는 튜터(방문자 홈): 첫 화면에서는 숨기고, 내린 뒤에는 작은 원형(글자는 마우스 · 초점 때만) */
 @media (min-width:901px){
-  body.lhs-home:not(.lapp) #ltut .lt-fab{transition:opacity .2s ease,transform .2s ease,visibility .2s}
-  body.lhs-home:not(.lapp):not(.lhs-past) #ltut .lt-fab{opacity:0;visibility:hidden;transform:translateY(16px);pointer-events:none}
-  body.lhs-home:not(.lapp) #ltut .lt-fab:not(:hover):not(:focus-visible){width:52px;min-width:52px;height:52px;padding:0;justify-content:center}
-  body.lhs-home:not(.lapp) #ltut .lt-fab:not(:hover):not(:focus-visible) .lt-ft,body.lhs-home:not(.lapp) #ltut .lt-fab:not(:hover):not(:focus-visible) em{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-  body.lhs-home:not(.lapp) #ltut .lt-fab{right:20px;bottom:20px}
-  body.lhs-home:not(.lapp) footer.lf{padding-bottom:84px}
+  body.lhs-home:not(.lapp):not(.lhs-in) #ltut .lt-fab{transition:opacity .2s ease,transform .2s ease,visibility .2s}
+  body.lhs-home:not(.lapp):not(.lhs-in):not(.lhs-past) #ltut .lt-fab{opacity:0;visibility:hidden;transform:translateY(16px);pointer-events:none}
+  body.lhs-home:not(.lapp):not(.lhs-in) #ltut .lt-fab:not(:hover):not(:focus-visible){width:52px;min-width:52px;height:52px;padding:0;justify-content:center}
+  body.lhs-home:not(.lapp):not(.lhs-in) #ltut .lt-fab:not(:hover):not(:focus-visible) .lt-ft,body.lhs-home:not(.lapp):not(.lhs-in) #ltut .lt-fab:not(:hover):not(:focus-visible) em{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  body.lhs-home:not(.lapp):not(.lhs-in) #ltut .lt-fab{right:20px;bottom:20px}
+  body.lhs-home:not(.lapp):not(.lhs-in) footer.lf{padding-bottom:84px}
 }
-@media (prefers-reduced-motion:reduce){body.lhs-home #ltut .lt-fab{transition:none}}
+@media (prefers-reduced-motion:reduce){body.lhs-home:not(.lhs-in) #ltut .lt-fab{transition:none}}
 /* 휴대폰 아래 바 하나만 */
 @media (max-width:900px){
   body.lhs-home.lhs-bar-act nav.tabbar{display:none!important}
