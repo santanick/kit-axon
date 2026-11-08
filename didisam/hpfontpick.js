@@ -32,7 +32,7 @@
   const id = k => (k && BY[k] ? k : KEY[k] || null);
   const get = k => BY[id(k)] || null;
   /* font.css 내용 해시(tools/fonts/build.py가 마지막에 출력) — 다시 빌드하면 이 값을 바꾼다(서비스 워커 저장본 교체) */
-  const V = {"do-hyeon": "12f77a9f", "noto-serif-kr": "ea0bde31", "gowun-dodum": "58c173de", "hahmlet": "724db3e4", "line-seed-kr": "1c8636ab"};
+  const V = {"do-hyeon": "12f77a9f", "noto-serif-kr": "ea0bde31", "gowun-dodum": "58c173de", "hahmlet": "f33eda8b", "line-seed-kr": "1c8636ab"};
   const href = k => { const f = get(k); return !f ? '' : f.src === 'self' ? `fonts/${f.id}/font.css${V[f.id] ? '?v=' + V[f.id] : ''}` : f.src === 'cdn' ? f.href : ''; };
   const css = k => (get(k) || {}).css || '';
   /* 조합(제목 + 본문) 기본 8종 — F1이 HPFT.pairs로 덮어쓴다 */
