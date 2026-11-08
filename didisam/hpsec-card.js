@@ -88,7 +88,7 @@
     const x = stockFor(c); if (!x) return null; const H = window.HPSTOCK;
     return { src: H.url(x, 'sm'), big: H.url(x), alt: x.alt || '', pos: x.focus || '50% 50%', fit: 'cover', stock: x.id }; }
   const fig = (c, s, o) => { o = o || {}; const m = cardImg(c, s); const extra = o.over || '';
-    if (!m) return `<figure class="hps-img is-ph is-ty" data-slot="cls-${E(c.id)}" data-empty="1"><span class="hps-ty-n" aria-hidden="true">${E((/[가-힣A-Za-z0-9]/.exec(String(c.name || '').replace(/^(초등|중등|고등|중\d|고\d|초\d|직장인|성인|어린이|원데이|실무|기초|입문|심화)\s*/, '')) || ['·'])[0].toUpperCase())}</span><span class="hps-ty-w" aria-hidden="true">${E(catName(c) || kindName(c))}</span>${extra}</figure>`;
+    if (!m) return `<figure class="hps-img is-ph is-ty" data-slot="cls-${E(c.id)}" data-empty="1"><span class="hps-ty-n" aria-hidden="true">${E((/[가-힣A-Za-z]/.exec(String(c.name || '').replace(/^(초등|중등|고등|중\d|고\d|초\d|직장인|성인|어린이|원데이|실무|기초|입문|심화)\s*/, '')) || ['·'])[0].toUpperCase())}</span><span class="hps-ty-w" aria-hidden="true">${E(catName(c) || kindName(c))}</span>${extra}</figure>`;
     const ss = m.big && o.wide ? ` srcset="${E(m.src)} 800w, ${E(m.big)} 1600w" sizes="(max-width:640px) 100vw, 60vw"` : '';
     return `<figure class="hps-img" data-slot="cls-${E(c.id)}"${m.stock ? ` data-stock="${E(m.stock)}"` : ''}><img src="${E(m.src)}"${ss} alt="${E(m.alt)}"${o.i >= 4 ? ' loading="lazy"' : ''} decoding="async" style="object-fit:${m.fit};object-position:${E(m.pos)}">${extra}</figure>`; };
 
