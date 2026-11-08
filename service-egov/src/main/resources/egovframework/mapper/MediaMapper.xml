@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v34.5 홈페이지 이미지(media 표, RLS · inTenant) — Node media.js와 같은 SQL -->
+<mapper namespace="egovframework.didisam.media.service.impl.MediaMapper">
+  <select id="selectMeta" resultType="java.util.LinkedHashMap">select mime, bytes, w, h from media where tenant_id = #{tid} and id = #{id}</select>
+  <select id="selectUsage" resultType="java.util.LinkedHashMap">select coalesce(sum(bytes), 0)::bigint used, count(*)::int n from media where tenant_id = #{tid}</select>
+  <insert id="insertMedia">insert into media (tenant_id, id, mime, bytes, w, h, name, data, created_by) values (#{tid}, #{id}, #{mime}, #{bytes}, #{w,jdbcType=INTEGER}, #{h,jdbcType=INTEGER}, #{name}, #{data,jdbcType=BINARY}, #{by}) on conflict (tenant_id, id) do nothing</insert>
+  <select id="selectList" resultType="java.util.LinkedHashMap">
+    select id, mime, bytes, w, h, name, to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at
+      from media where tenant_id = #{tid} order by created_at desc, id limit #{n}
+  </select>
+  <select id="selectData" resultType="java.util.LinkedHashMap">select mime, data from media where tenant_id = #{tid} and id = #{id}</select>
+  <delete id="deleteMedia">delete from media where tenant_id = #{tid} and id = #{id}</delete>
+</mapper>

@@ -29,7 +29,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log",
         "GET /api/audit", "POST /api/tenant/delete", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion",
-        "POST /api/password", "GET /api/staff", "POST /api/staff", "POST /api/staff/remove",
+        "POST /api/password", "GET /api/staff", "POST /api/media", "GET /api/media", "POST /api/staff", "POST /api/staff/remove",
         /* v32.4 운영자 소셜 로그인 */
         "GET /api/oauth/google/start", "GET /api/oauth/google/callback", "GET /api/oauth/kakao/start", "GET /api/oauth/kakao/callback",
         "GET /api/oauth/pending", "POST /api/oauth/cancel", "POST /api/oauth/signup");
@@ -37,6 +37,9 @@ public class DdApiFilter extends OncePerRequestFilter {
     public static final Set<String> LMS = ConcurrentHashMap.newKeySet();
     /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */
     public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent)\\z");
+    /** v34.5 홈페이지 이미지: GET /api/media/{id}(공개) · DELETE /api/media/{id}(운영자) — Node media.match와 같음 */
+    public static final java.util.regex.Pattern MEDIA = java.util.regex.Pattern.compile("^/api/media/[^/]+\\z");
+    static boolean mediaRoute(String m, String path) { return ("GET".equals(m) || "DELETE".equals(m)) && MEDIA.matcher(path).matches(); }
     static final Map<String, String> SEC = Map.of(
         "x-content-type-options", "nosniff",
         "referrer-policy", "strict-origin-when-cross-origin",
@@ -60,7 +63,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         if ("admin".equals(props.module) && !("GET".equals(m) && "/api/health".equals(path)) && !DdModule.ipAllowed(props.adminIps, web.ip(req))) { res.setHeader("cache-control", "no-store"); json(res, 403, "ip", "허용되지 않은 접속 위치입니다."); return; }
         if (path.startsWith("/api/")) {
             res.setHeader("cache-control", "no-store");
-            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches()) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
+            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !mediaRoute(m, path)) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
             if (!"GET".equals(m)) {
                 if (!"1".equals(req.getHeader("x-didisam"))) { json(res, 403, "csrf", "허용되지 않은 요청입니다."); return; }
                 String o = req.getHeader("origin");

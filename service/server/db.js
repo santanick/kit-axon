@@ -298,6 +298,26 @@ const MIGRATIONS = [
    create policy tenant_iso on learner_events using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
    grant select, insert, delete on learner_events to didisam_tenant;
    grant usage, select on sequence learner_events_id_seq to didisam_tenant;`,
+  /* 16 — v34.5 홈페이지 이미지(/api/media, media.js): 기관별 바이트 저장(Cloud Run 디스크 · GCS 미사용). id = 정화 후 내용 sha256 앞 40자.
+        메타데이터(EXIF 등)는 저장 전에 지운다. 기관 삭제 시 함께 삭제 */
+  `create table if not exists media (
+     tenant_id text not null references tenants(id) on delete cascade,
+     id text not null check (id ~ '^[a-f0-9]{40}$'),
+     mime text not null check (mime in ('image/png','image/jpeg','image/webp','image/svg+xml')),
+     bytes integer not null check (bytes between 1 and 2097152),
+     w integer, h integer,
+     name text not null default '' check (length(name) <= 80),
+     data bytea not null,
+     created_by text not null default '',
+     created_at timestamptz not null default now(),
+     primary key (tenant_id, id)
+   );
+   create index if not exists media_tenant_at on media (tenant_id, created_at desc);
+   alter table media enable row level security;
+   alter table media force row level security;
+   drop policy if exists tenant_iso on media;
+   create policy tenant_iso on media using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert, delete on media to didisam_tenant;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).
