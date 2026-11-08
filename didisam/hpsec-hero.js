@@ -69,7 +69,7 @@
   const setCache = new Map();
   function stockSet(s) { const H = window.HPSTOCK; if (!H || typeof H.set !== 'function') return {};
     const ty = typeOf(); const sc = sceneOf(s); const key = [ty, sc, s && s.tpl].join('|');
-    if (!setCache.has(key)) { let r = {}; try { r = H.set(ty, sc, ['hero', 'about', 'space', 'cta'], (s && s.tpl) || (S.org && S.org.name) || ''); } catch (e) { console.error('HPS stock', e); } setCache.set(key, r); }
+    if (!setCache.has(key)) { let r = {}; try { r = H.set(ty, sc, ['hero', 'about', 'space', 'cta'], (s && s.tpl) || (S.org && S.org.name) || '', { people: true }); } catch (e) { console.error('HPS stock', e); } setCache.set(key, r); }
     return setCache.get(key) || {}; }
   /* 반환: { src, srcset, alt, pos, fit, stock, tone } 또는 null */
   function photo(s, slot, d) {
@@ -91,7 +91,7 @@
   HS.heroKind = (s, d) => { d = d || {}; if (HK.includes(d.hk)) return d.hk; if (HERO_HK[d.hero]) return HERO_HK[d.hero]; return TH_HK[s && s.theme] || 'split'; };
   const TY_CK = { corp: 'contact', univ: 'panel', public: 'panel', lifelong: 'panel' };
   HS.ctaKind = (s, d) => { d = d || {}; let k = CK.includes(d.ck) ? d.ck : (TY_CK[typeOf()] || 'photo'); if (k === 'contact' && !channels(s).length) k = 'panel'; return k; };
-  HS.kinds = { hero: HK.slice(), cta: CK.slice() };
+  HS.kinds = Object.assign(HS.kinds || {}, { hero: HK.slice(), cta: CK.slice() }); /* v34.5 G2: S1의 nav · mm · footer 목록을 덮어쓰지 않게 합친다 */
   HS.photo = photo;
 
   /* ── 토큰 ── */
