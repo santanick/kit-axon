@@ -15,10 +15,10 @@ const dirOf = st => ST.length > 1 && st !== ST[0] ? path.join(OUT0, st) : OUT0;
 let OUT = OUT0, SHOT = path.join(OUT, 'shots'), ROWS = path.join(OUT, 'rows'); const useOut = st => { OUT = dirOf(st); SHOT = path.join(OUT, 'shots'); ROWS = path.join(OUT, 'rows'); [OUT, SHOT, ROWS].forEach(d => fs.mkdirSync(d, { recursive: true })); };
 const BUDGET = (+A.budget || 240) * 1000; const T0 = Date.now(); const PORT = +A.port || 9830;
 ST.forEach(useOut); useOut(ST[0]);
-const COLS = ['state', 'id', 'type', 'name', 'layout', 'theme', 'hero', 'color', 'q', 'qMiss', 'dh', 'dh_m', 'dh2', 'dh2_m', 'gap', 'gap_m', 'sig', 'low', 'nSec', 'cmin', 'cminTxt', 'cfail', 'cfailPx', 'auditMin', 'ov_pc', 'ov_m', 'wide_m', 'emptyDom', 'ph', 'numSus', 'photos', 'stock', 'stockRatio', 'art', 'nVis', 'numSec', 'clsVis', 'emptyCls', 'imgPending', 'hpH_pc', 'hpH_m', 'errs'];
+const COLS = ['state', 'id', 'type', 'name', 'layout', 'theme', 'hero', 'color', 'q', 'qMiss', 'dh', 'dh_m', 'dh2', 'dh2_m', 'gap', 'gap_m', 'sig', 'low', 'nSec', 'cmin', 'cminTxt', 'cfail', 'cfailPx', 'auditMin', 'ov_pc', 'ov_m', 'wide_m', 'emptyDom', 'ph', 'numSus', 'photos', 'stock', 'stockRatio', 'art', 'nVis', 'numSec', 'clsVis', 'emptyCls', 'imgPending', 'hpH_pc', 'hpH_m', 'hfont', 'fonts', 'errs'];
 
 function summarize() { const rows = H.loadRows(OUT).sort((a, b) => (a.type + a.id).localeCompare(b.type + b.id));
-  fs.writeFileSync(path.join(OUT, 'summary.json'), JSON.stringify(rows, null, 1)); fs.writeFileSync(path.join(OUT, 'summary.csv'), H.csv(rows.map(r => Object.assign({}, r, { auditMin: r.auditMin ? r.auditMin.join(' ') : '' })), COLS)); return rows; }
+  fs.writeFileSync(path.join(OUT, 'summary.json'), JSON.stringify(rows, null, 1)); fs.writeFileSync(path.join(OUT, 'summary.csv'), H.csv(rows.map(r => Object.assign({}, r, { auditMin: r.auditMin ? r.auditMin.join(' ') : '', hfont: r.hfont ? r.hfont.join(' ') : '', fonts: (r.fonts || []).join('|') })), COLS)); return rows; }
 
 (async () => {
   if (A['summary-only']) { ST.forEach(st => { useOut(st); console.log('요약', st, summarize().length); }); process.exit(0); }
@@ -26,7 +26,7 @@ function summarize() { const rows = H.loadRows(OUT).sort((a, b) => (a.type + a.i
   const srv = await H.serve(PORT); const base = `http://127.0.0.1:${PORT}/`; const br = await chromium.launch();
   const errs = [];
   /* 템플릿 목록 */
-  const p0 = await br.newPage(); await p0.route(/^https?:\/\/(?!127\.0\.0\.1)/, r => r.abort()); await p0.goto(base + 'index.html'); await p0.waitForFunction(() => typeof TPL !== 'undefined' && typeof siteFromTpl === 'function');
+  const p0 = await br.newPage(); await H.net(p0); await p0.goto(base + 'index.html'); await p0.waitForFunction(() => typeof TPL !== 'undefined' && typeof siteFromTpl === 'function');
   const ALL = await p0.evaluate(() => TPL.map(t => ({ id: t.id, type: (t.types || [])[0] || '', types: t.types || [], hidden: !!t.hidden }))); await p0.close();
   const want = A.ids ? new Set(String(A.ids).split(',')) : null; const tys = A.type ? new Set(String(A.type).split(',')) : null;
   let list = ALL.filter(t => (A.all || !t.hidden) && (!want || want.has(t.id)) && (!tys || t.types.some(x => tys.has(x))));
@@ -51,6 +51,7 @@ function summarize() { const rows = H.loadRows(OUT).sort((a, b) => (a.type + a.i
         if (sfx === 'pc') { await pg.reload(); await pg.waitForFunction(() => document.querySelector('.smhost') && document.querySelector('.smhost').shadowRoot, null, { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(900); }
         else await pg.waitForTimeout(500);
         const pend = await H.settle(pg); /* FIXLIST 16: 지연 불러오기 사진이 다 뜰 때까지(스크롤 · eager · decode) */
+        await pg.evaluate(() => document.fonts.ready.then(() => 0)).catch(() => {}); /* R2 N6: 글꼴이 다 온 뒤 찍는다 */
         const m = await pg.evaluate(H.MEASURE); if (sfx === 'pc') r.imgPending = pend;
         const buf = await pg.screenshot({ fullPage: true, type: 'jpeg', quality: 78 });
         fs.writeFileSync(path.join(SHOT, `${id}_${sfx}.jpg`), buf);
@@ -71,12 +72,12 @@ function summarize() { const rows = H.loadRows(OUT).sort((a, b) => (a.type + a.i
         if (sfx === 'pc') { r.cmin = worst[0] ? worst[0].cr : null; r.cminTxt = worst[0] ? worst[0].t : ''; r.cfail = T.filter(x => x.cr < 4.5).length; r.cfailPx = T.filter(x => x.cr < 4.5 && x.px).length;
           r.cworst = worst.filter(x => x.cr < 4.5).slice(0, 6).map(x => [x.cr, x.t, x.px ? '사진 위' : '단색', x.fs, x.big ? '큰 글자' : '', x.box.join(',')]); r.nText = T.length;
           r.photos = m.photos.img + m.photos.bg; r.stock = m.photos.stock; r.stockRatio = r.photos ? Math.round(r.stock / r.photos * 100) / 100 : 0; r.art = m.photos.art; r.slots = m.photos.slots;
-          r.emptyDom = m.empty; r.nVis = m.nVis; r.numSec = m.numSec; r.clsVis = m.clsVis; r.emptyCls = m.emptyCls; const tc = H.textChecks(m.txt, allowed); r.ph = tc.ph; r.nums = tc.nums; r.numSus = tc.numSus; r.hosts = m.hosts; }
+          r.fonts = m.fonts; r.hfont = m.hfont; r.emptyDom = m.empty; r.nVis = m.nVis; r.numSec = m.numSec; r.clsVis = m.clsVis; r.emptyCls = m.emptyCls; const tc = H.textChecks(m.txt, allowed); r.ph = tc.ph; r.nums = tc.nums; r.numSus = tc.numSus; r.hosts = m.hosts; }
         else { r.cmin_m = worst[0] ? worst[0].cr : null; r.cfail_m = T.filter(x => x.cr < 4.5).length; }
       }
       r.state = state; r.errs = perr.slice(0, 3); r.ms = Date.now() - t1; delete r.facts; delete r.prices;
       fs.writeFileSync(path.join(ROWS, id + '.json'), JSON.stringify(r)); done++;
-      console.log('ROW', id, `q${r.q} c${r.cmin} ov${r.ov_m} 사진${r.photos} ${r.ms}ms`);
+      console.log('ROW', id, `q${r.q} c${r.cmin} ov${r.ov_m} 사진${r.photos} ${r.ms}ms 제목글꼴 ${r.hfont ? r.hfont.join('/') : '-'}`);
     }
     await o.ctx.close();
   }

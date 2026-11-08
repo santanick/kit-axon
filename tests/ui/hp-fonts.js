@@ -11,13 +11,15 @@ const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../../didisam');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/json', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.webp': 'image/webp' };
 const SHOT = process.env.SHOT_DIR || '';
+/* R2 N6(v34.5 H4): jsdelivr 글꼴(Pretendard · LINE Seed 등)은 로컬 캐시로 응답, 그 밖 외부는 차단 — hp-visual과 같은 방식 */
+const NET = require('./hp-visual/lib.js').net;
 
 (async () => {
   const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]); const f = path.join(ROOT, u === '/' ? 'index.html' : u);
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end(); }
     r.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); }).listen(0, '127.0.0.1');
   await new Promise(ok => srv.once('listening', ok)); const base = `http://127.0.0.1:${srv.address().port}`;
-  const browser = await chromium.launch(); const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 } }); await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
+  const browser = await chromium.launch(); const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 } }); await NET(ctx);
   const page = await ctx.newPage(); const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('dialog', d => d.accept());
   const R = []; const ok = (name, cond, info) => { R.push([name, !!cond, info]); console.log(`${cond ? '✓' : '✗'} ${name}${info != null ? ' — ' + (typeof info === 'string' ? info : JSON.stringify(info)) : ''}`); };
   const shot = async (n, el) => { if (!SHOT) return; fs.mkdirSync(SHOT, { recursive: true }); await (el || page).screenshot({ path: path.join(SHOT, n + '.png') }); };
@@ -28,6 +30,9 @@ const SHOT = process.env.SHOT_DIR || '';
     await ev(() => { localStorage.clear(); localStorage.setItem('didisam.emptyStart', '0'); createOrg('univ', '해운대 열린 캠퍼스'); });
     await page.waitForFunction(() => window.S && S.org); await wait(400);
     await ev(() => window.HPF && HPF.load());
+    /* R2 N5(v34.5 H4): 글자 수가 모자란 제목 글꼴의 빠진 글자 — 함렛 · 도현은 목록이 있고, 전체 음절 글꼴은 빈 배열 */
+    const gp = await ev(() => ({ h: HPF.gaps('흔들리지 않는 수험 루틴 쀍딻', 'hahmlet'), d: HPF.gaps('똠햏', 'do-hyeon'), l: HPF.gaps('똠햏뷁', 'line-seed-kr'), p: HPF.gaps('똠햏', 'pretendard') }));
+    ok('HPF.gaps: 함렛 · 도현 빠진 글자 · 전체 음절 글꼴 0', Array.isArray(gp.h) && gp.h.length >= 1 && !gp.h.includes('흔') && gp.d.length >= 1 && gp.l.length === 0 && gp.p.length === 0, gp);
     ok('HPF 인터페이스(list · faces · need · css · href · pairs)', await ev(() => !!(window.HPF && HPF.list.length >= 7 && ['faces', 'need', 'css', 'href', 'pairs', 'panel'].every(k => typeof HPF[k] === 'function'))));
     await ev(() => { try { closeModal(); } catch (e) { } const s = site(); if (window.HPT) { HPT.apply(s, 'campus'); HPT.enrich(s); } const b = s.sections.find(x => x.type === 'banner'); b.data.title = '똠방각하도 배우는 열린 캠퍼스'; s.font = { h: 'hahmlet', b: 'serif' }; s.ai = s.ai || { at: today(), by: 'test' }; save(); });
 
@@ -37,7 +42,7 @@ const SHOT = process.env.SHOT_DIR || '';
         preTag: (h.match(/<link rel="preload" as="font"[^>]*>/g) || []).length, old: /NotoSerifKR-\d|GowunDodum-4/.test(h), csp: (h.match(/font-src [^;"]*/) || [''])[0], full: /pretendardvariable\.min\.css/.test(h) }; });
     ok('게시 CSS: 표식에 함렛 · 노토 세리프 CSS', /fonts\/hahmlet\/font\.css/.test(sh.mark) && /fonts\/noto-serif-kr\/font\.css/.test(sh.mark), sh.mark);
     ok('게시 CSS에 분할 @font-face를 넣지 않음(safeCSS 200,000자 한도 안)', sh.faceN <= 8 && sh.cssLen < 200000, { faceN: sh.faceN, cssLen: sh.cssLen });
-    ok('미리보기 머리: 글꼴 CSS link + 첫 화면 제목 조각 preload 1~2개', sh.link >= 2 && sh.preTag >= 1 && sh.preTag <= 2 && /hahmlet\/800-\d+\.woff2/.test(sh.pre), { link: sh.link, preTag: sh.preTag, pre: sh.pre });
+    ok('미리보기 머리: 글꼴 CSS link + 첫 화면 제목 조각 preload 1~2개', sh.link >= 2 && sh.preTag >= 1 && sh.preTag <= 2 && /hahmlet\/700-\d+\.woff2/.test(sh.pre), { link: sh.link, preTag: sh.preTag, pre: sh.pre });
     ok("옛 2,350자 파일 참조 0 · font-src 'self'", !sh.old && /'self'/.test(sh.csp), sh.csp);
     ok('미리보기 Pretendard는 dynamic-subset(전체 가변 2MB 아님)', !sh.full);
 
@@ -59,13 +64,13 @@ const SHOT = process.env.SHOT_DIR || '';
 
     /* ── 4) 게시된 학습자 홈: 조합별 실제 로드 · 전송량(조각은 Resource Timing의 encodedBodySize) ── */
     const COMBO = [['함렛 제목 + 프리텐다드', { h: 'hahmlet' }, 'Hahmlet', 1], ['노토 세리프 제목 + 프리텐다드', { h: 'serif' }, 'Noto Serif KR', 1], ['고운돋움 제목 + 프리텐다드', { h: 'round' }, 'Gowun Dodum', 1],
-      ['도현 제목 + 프리텐다드', { h: 'do-hyeon' }, 'Do Hyeon', 1], ['명조 제목 + 명조 본문(긴 글)', { h: 'hahmlet', b: 'serif' }, 'Hahmlet', 0]];
+      ['도현 제목 + 프리텐다드', { h: 'do-hyeon' }, 'Do Hyeon', 1], ['라인 시드 제목 + 프리텐다드', { h: 'line-seed-kr' }, 'LINE Seed Sans KR', 1], ['명조 제목 + 명조 본문(긴 글)', { h: 'hahmlet', b: 'serif' }, 'Hahmlet', 0]];
     const tid = await ev(() => DREG.cur()); const TAB = [];
     for (const [nm, font, fam, budget] of COMBO) {
       await ev(f => { site().font = f; save(); if (typeof hpPaint === 'function') hpPaint(); }, font); await frameReady(); await wait(300);
       await page.click('#hpe [data-act="hpe-pub"]'); await wait(500);
       for (const [vw, vh, tag] of nm === COMBO[0][0] ? [[1280, 800, 'pc'], [390, 844, 'm']] : [[1280, 800, 'pc']]) {
-        const pc = await browser.newContext({ viewport: { width: vw, height: vh } }); await pc.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
+        const pc = await browser.newContext({ viewport: { width: vw, height: vh } }); await NET(pc);
         const st = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)]))));
         await pc.addInitScript(s => { try { if (!localStorage.length) { const o = JSON.parse(s); Object.keys(o).forEach(k => localStorage.setItem(k, o[k])); } } catch (e) { } }, st);
         const pm = await pc.newPage(); pm.on('pageerror', e => errs.push('learner: ' + e.message));

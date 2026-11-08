@@ -16,6 +16,21 @@ function serve(port) { const srv = http.createServer((q, r) => { const u = decod
   r.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); });
   return new Promise((ok, no) => { srv.once('error', no); srv.listen(port, '127.0.0.1', () => ok(srv)); }); }
 
+/* 외부 글꼴(R2 N6 · v34.5 H4): cdn.jsdelivr.net(Pretendard · 원저작자 배포 글꼴)만 로컬 캐시로 응답하고, 그 밖의 외부 요청은 끊는다.
+   캐시: HPV_CDN_CACHE(기본 ~/.cache/hpvisual-cdn) — 없으면 curl로 한 번 받는다(프록시 · CA는 curl 설정을 따름). 못 받으면 abort(시스템 글꼴로 찍힘 → 행의 fonts로 드러남) */
+const CDN_DIR = process.env.HPV_CDN_CACHE || path.join(require('node:os').homedir(), '.cache', 'hpvisual-cdn');
+const CDN_RX = /^https:\/\/cdn\.jsdelivr\.net\//; const CDN_MEM = new Map(); const cdnStat = { hit: 0, got: 0, fail: 0 };
+function cdnGet(u) { if (CDN_MEM.has(u)) return CDN_MEM.get(u);
+  const pr = new Promise(ok => { const f = path.join(CDN_DIR, require('node:crypto').createHash('sha1').update(u).digest('hex') + (u.split('?')[0].endsWith('.css') ? '.css' : '.bin'));
+    if (fs.existsSync(f) && fs.statSync(f).size > 0) { cdnStat.hit++; return ok(fs.readFileSync(f)); }
+    fs.mkdirSync(CDN_DIR, { recursive: true });
+    cp.execFile('curl', ['-sSfL', '--max-time', '25', '-o', f + '.part', u], e => { if (e || !fs.existsSync(f + '.part')) { cdnStat.fail++; try { fs.unlinkSync(f + '.part'); } catch (x) { } return ok(null); } fs.renameSync(f + '.part', f); cdnStat.got++; ok(fs.readFileSync(f)); }); });
+  CDN_MEM.set(u, pr); return pr; }
+async function net(t) { await t.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, async r => { const u = r.request().url();
+  if (!CDN_RX.test(u)) return r.abort(); const b = await cdnGet(u); if (!b) return r.abort();
+  const ct = /\.css(\?|$)/.test(u) ? 'text/css; charset=utf-8' : /\.woff2(\?|$)/.test(u) ? 'font/woff2' : /\.woff(\?|$)/.test(u) ? 'font/woff' : 'application/octet-stream';
+  return r.fulfill({ status: 200, body: b, contentType: ct, headers: { 'access-control-allow-origin': '*', 'cache-control': 'max-age=31536000' } }); }); }
+
 /* 인자: --key value · --flag */
 function args(argv) { const o = { _: [] }; for (let i = 0; i < argv.length; i++) { const a = argv[i]; if (a.startsWith('--')) { const k = a.slice(2); const n = argv[i + 1]; if (n === undefined || n.startsWith('--')) o[k] = true; else { o[k] = n; i++; } } else o._.push(a); } return o; }
 
@@ -39,7 +54,7 @@ const REVS = ['설명이 차근차근해서 처음 배우는 사람도 따라가
 async function mkOrg(br, base, type, errs, state) {
   state = STATES.includes(state) ? state : 'filled';
   const ctx = await br.newContext({ viewport: { width: 1280, height: 800 } });
-  await ctx.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, r => r.abort());
+  await net(ctx); /* R2 N6: jsdelivr 글꼴만 캐시 응답 · 나머지 외부 차단 */
   const op = await ctx.newPage(); op.on('pageerror', e => errs.push(`op[${type}]: ${e.message}`)); op.on('dialog', d => d.accept());
   await op.goto(base + 'index.html'); await op.waitForFunction(() => typeof createOrg === 'function');
   await op.evaluate(([type, name, empty]) => { localStorage.clear(); localStorage.setItem('didisam.emptyStart', empty ? '1' : '0'); createOrg(type, name); }, [type, ORGN[type] || '점검 기관', state === 'empty']);
@@ -138,7 +153,10 @@ const MEASURE = () => {
     if (ns.has(1) && ns.has(2) && ns.has(3)) numSec++;
     if (sec.classList.contains('hps-empty')) emptyCls++; else if (/\b(hp-cls|hpl-k-classes|hps-sec)\b/.test(sec.className) && sec.querySelector('a, article, tr')) clsVis++; }); });
   const h0 = hosts[0] ? hosts[0].getBoundingClientRect() : null;
-  return { hosts: hosts.length, top: h0 ? Math.round(h0.top + sy) : 0, docH: document.documentElement.scrollHeight, nVis, numSec, clsVis, emptyCls, over: document.documentElement.scrollWidth - innerWidth, wide, texts, photos, empty, txt: txtAll.replace(/\s+/g, ' ').trim().slice(0, 20000) };
+  /* 글꼴(R2 N6): 실제로 내려받아진 family · 첫 화면 h1 글꼴(첫 이름 · 굵기 · 로드 여부) */
+  const ld = [...new Set([...document.fonts].filter(f => f.status === 'loaded').map(f => f.family.replace(/^['"]|['"]$/g, '')))];
+  let hfont = null; for (const root of roots) { const h = root.querySelector('h1'); if (h && vis(h)) { const cs = getComputedStyle(h); const fam = cs.fontFamily.split(',')[0].trim().replace(/^['"]|['"]$/g, ''); hfont = [fam, +cs.fontWeight || 400, ld.includes(fam) ? 1 : 0]; break; } }
+  return { fonts: ld, hfont, hosts: hosts.length, top: h0 ? Math.round(h0.top + sy) : 0, docH: document.documentElement.scrollHeight, nVis, numSec, clsVis, emptyCls, over: document.documentElement.scrollWidth - innerWidth, wide, texts, photos, empty, txt: txtAll.replace(/\s+/g, ' ').trim().slice(0, 20000) };
 };
 
 /* 촬영 전 대기(FIXLIST 16): 페이지를 끝까지 내려 지연 불러오기를 깨우고, 모든 사진을 eager로 바꿔 다 뜨고(decode) 나면 맨 위로. 반환: 아직 안 뜬 사진 수 */
@@ -212,4 +230,4 @@ const TYPES = ['adult', 'k12', 'univ', 'lifelong', 'voc', 'corp', 'public'];
 const typesOf = r => (Array.isArray(r.types) && r.types.length ? r.types : [r.type]).filter(Boolean);
 const byType = rows => { const m = {}; rows.forEach(r => typesOf(r).forEach(t => { (m[t] = m[t] || []).push(r); })); Object.values(m).forEach(L => L.sort((a, b) => a.id.localeCompare(b.id))); return m; };
 
-module.exports = { blankRun, STATES, settle, ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };
+module.exports = { blankRun, net, cdnStat, STATES, settle, ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };

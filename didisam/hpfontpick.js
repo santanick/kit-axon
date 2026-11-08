@@ -7,7 +7,7 @@
       · 기존 2,350자 서브셋(Noto Serif KR · Gowun Dodum)은 분할본으로 대체. Gaegu · Black Han Sans는 저장 데이터 호환용(legacy)으로 hpdir가 그대로 낸다.
    2) 편집기 글꼴 고르기 — 바로 고치기 툴바(hpimg)의 글꼴 팝업을 '조합(제목+본문)' 중심으로 바꾸고, 실제 사이트 제목 · 문장으로 미리 보여 준다.
       데이터는 hpimg와 같다: S.site.font = { h, b } · section.data.sty[경로].ff (기존 키 sans · serif · round · hand · mono · display 호환)
-   인터페이스: window.HPF = { list, pairs, get(id), id(key), css(id), href(id), faces(id), need(site, html), pre(site, html), load(), panel(host, opt) } */
+   인터페이스: window.HPF = { list, pairs, get(id), id(key), css(id), href(id), faces(id), need(site, html), pre(site, html), gaps(text, id), load(), panel(host, opt) } */
 'use strict';
 (() => {
   const CDN_PRE = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css';
@@ -17,9 +17,12 @@
   /* self: 저장소 분할본(fonts/<id>/font.css) · cdn: 원저작자 배포본 그대로(RFN 있는 글꼴은 분할하지 않는다) · legacy: 기존 2,350자 파일(hpdir가 냄) */
   const list = [
     { id: 'pretendard', name: '프리텐다드', kind: 'sans', fam: 'Pretendard Variable', w: [400, 500, 600, 700, 800], src: 'cdn', href: CDN_PRE, css: "'Pretendard Variable',Pretendard" + G, lic: 'OFL-1.1(RFN Pretendard · 원본 배포)', key: 'sans' },
-    { id: 'wanted-sans', name: '원티드 산스', kind: 'sans', fam: 'Wanted Sans', w: [500, 700, 800], src: 'cdn', href: CDN_WS, css: "'Wanted Sans','Pretendard Variable',Pretendard" + G, lic: 'OFL-1.1(RFN Wanted Sans · 원본 배포)' },
+    /* v34.5 H4(R2 H7): 원티드 산스는 프리텐다드와 거의 구분되지 않아 조합표 · 고르기에서 뺀다. 이미 고른 사이트만 그대로 그린다(legacy) */
+    { id: 'wanted-sans', name: '원티드 산스', kind: 'sans', fam: 'Wanted Sans', w: [500, 700, 800], src: 'cdn', href: CDN_WS, css: "'Wanted Sans','Pretendard Variable',Pretendard" + G, lic: 'OFL-1.1(RFN Wanted Sans · 원본 배포)', legacy: 1 },
+    /* v34.5 H4: 라인 시드(기하형 고딕 · 원형 ㅇ) — 고딕 제목의 개성 · 따뜻한 테마 제목(굵기 400 · 700). OFL 1.1, RFN 없음 → 저장소 분할 */
+    { id: 'line-seed-kr', name: '라인 시드', kind: 'sans', fam: 'LINE Seed Sans KR', w: [400, 700], src: 'self', css: "'LINE Seed Sans KR','LINE Seed Sans KR Fallback','Pretendard Variable',Pretendard" + G, lic: 'OFL-1.1' },
     { id: 'noto-serif-kr', name: '노토 세리프', kind: 'serif', fam: 'Noto Serif KR', w: [400, 700], src: 'self', css: "'Noto Serif KR','Noto Serif KR Fallback'" + SR, lic: 'OFL-1.1', key: 'serif' },
-    { id: 'hahmlet', name: '함렛', kind: 'display', fam: 'Hahmlet', w: [600, 800], src: 'self', css: "'Hahmlet','Hahmlet Fallback','Noto Serif KR'" + SR, lic: 'OFL-1.1' },
+    { id: 'hahmlet', name: '함렛', kind: 'display', fam: 'Hahmlet', w: [600, 700], src: 'self', css: "'Hahmlet','Hahmlet Fallback','Noto Serif KR'" + SR, lic: 'OFL-1.1' },
     { id: 'gowun-dodum', name: '고운돋움', kind: 'round', fam: 'Gowun Dodum', w: [400], src: 'self', css: "'Gowun Dodum','Gowun Dodum Fallback',ui-rounded" + G, lic: 'OFL-1.1', key: 'round' },
     { id: 'do-hyeon', name: '도현', kind: 'display', fam: 'Do Hyeon', w: [400], src: 'self', css: "'Do Hyeon','Do Hyeon Fallback','Pretendard Variable',Pretendard" + G, lic: 'OFL-1.1' },
     { id: 'black-han-sans', name: '검은고딕', kind: 'display', fam: 'Black Han Sans', w: [400], src: 'legacy', css: "'Black Han Sans','Do Hyeon',Pretendard" + G, lic: 'OFL-1.1', key: 'display', legacy: 1 },
@@ -29,13 +32,13 @@
   const id = k => (k && BY[k] ? k : KEY[k] || null);
   const get = k => BY[id(k)] || null;
   /* font.css 내용 해시(tools/fonts/build.py가 마지막에 출력) — 다시 빌드하면 이 값을 바꾼다(서비스 워커 저장본 교체) */
-  const V = {"do-hyeon": "12f77a9f", "noto-serif-kr": "ea0bde31", "gowun-dodum": "58c173de", "hahmlet": "d8ae861c"};
+  const V = {"do-hyeon": "12f77a9f", "noto-serif-kr": "ea0bde31", "gowun-dodum": "58c173de", "hahmlet": "f33eda8b", "line-seed-kr": "1c8636ab"};
   const href = k => { const f = get(k); return !f ? '' : f.src === 'self' ? `fonts/${f.id}/font.css${V[f.id] ? '?v=' + V[f.id] : ''}` : f.src === 'cdn' ? f.href : ''; };
   const css = k => (get(k) || {}).css || '';
   /* 조합(제목 + 본문) 기본 8종 — F1이 HPFT.pairs로 덮어쓴다 */
   const PAIRS = [
     { id: 'p-clean', name: '기본 고딕', hd: 'pretendard', bd: 'pretendard', note: '어디에나 무난 · 가장 가벼움' },
-    { id: 'p-modern', name: '모던 고딕', hd: 'wanted-sans', bd: 'pretendard', note: '테크 · 부트캠프 · 기업' },
+    { id: 'p-modern', name: '모던 고딕', hd: 'line-seed-kr', bd: 'pretendard', note: '테크 · 부트캠프 · 기업' },
     { id: 'p-serif', name: '단정한 명조 제목', hd: 'noto-serif-kr', bd: 'pretendard', note: '대학 · 교수학습 · 공공' },
     { id: 'p-grand', name: '격조 있는 제목', hd: 'hahmlet', bd: 'pretendard', note: '프리미엄 · 대학원 · 아카데미' },
     { id: 'p-read', name: '읽는 명조', hd: 'noto-serif-kr', bd: 'noto-serif-kr', note: '인문 · 독서논술 · 긴 글' },
@@ -83,6 +86,11 @@
     try { if (window.HPFT && typeof HPFT.need === 'function') (HPFT.need(s) || []).forEach(x => { const k = id(x); if (k) K.add(k); }); } catch (e) { }
     [...K].forEach(k => { if (GAP[k]) K.add(GAP[k]); });
     return [...K]; }
+  /* 빠진 글자(R2 N5 · v34.5 H4): 한글 음절이 모자란 제목 글꼴(함렛 2,788 · 도현 2,437)에서 text의 한글 음절 중 원본에 없는 글자(중복 제외).
+     hpf.json(HPF.load)이 아직 없으면 null. 글자 수가 충분한 글꼴은 []. 품질 점수에서 '제목 글자 범위'로 쓴다 */
+  const KO = {};
+  function gaps(text, k) { const f = get(k); if (!f) return []; if (!MAN) return null; const e = MAN[f.id]; if (!e || !e.ko) return [];
+    const set = KO[f.id] || (KO[f.id] = new Set(e.ko)); const out = new Set(); for (const c of String(text || '')) { const u = c.codePointAt(0); if (u >= 0xac00 && u <= 0xd7a3 && !set.has(c)) out.add(c); } return [...out]; }
   /* 첫 화면 제목 글꼴(id) · 굵기 */
   function heading(s, html) { const f = s && s.font || {}; if (id(f.h)) return id(f.h);
     try { const p = window.HPFT && HPFT.pair && HPFT.pair(s); if (p && id(p.hd)) return id(p.hd); } catch (e) { }
@@ -193,6 +201,6 @@
   /* 디자인 설정(G2 hpgal 등)에서 쓰는 조합 고르기 패널: HPF.panel(host) */
   function panel(host, opt) { if (!host) return; studioFonts(); host.__hpfOpt = opt || {}; host.classList.add('hpf-panel'); host.innerHTML = pairHTML(cur()); }
 
-  window.HPF = { list, pairs, get, id, css, href, faces, need, pre, heading, load, panel, popHTML, applyPair, PAIRS };
+  window.HPF = { list, pairs, get, id, css, href, faces, need, pre, heading, gaps, load, panel, popHTML, applyPair, PAIRS };
   load();
 })();
