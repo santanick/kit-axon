@@ -1,6 +1,7 @@
 /* v34.5 tpl-public — 유형 디자이너 TP: public(공무원 교육원 · 지자체 시민 교육 · 공공기관 직원 포털 · 공공 디지털 배움터) 템플릿 재배치
    지시: fix6/BRIEF5.md · RULES_B2 '공공 교육원' 뼈대(기관 띠 → 첫 화면 → 공지 · 알림 → 바로가기 → 바닥글: 접근성 · 대표번호)
    - 원본(tpl-d.js)의 t4-* 18종을 id로 찾아 덮어쓴다(원본 파일은 고치지 않음). types[0]이 public인 것만 손댄다(공유 템플릿은 그 유형 디자이너 몫).
+   - 첫 화면 사진은 사람이 나오는 학습 장면(hum-*, 손 · 뒷모습 · 원거리, P2)을 우선 쓰고, 같은 유형 안에서 겹치지 않게 한다.
    - 템플릿마다: layout(HPL 계열, 같은 계열 최대 2) · theme · palette(HPC, 서로 다름) · photos(HPSTOCK id, 첫 화면 사진 서로 다름) · hps(머리글 · 바닥글)
      · 계열 없는 템플릿은 S3 첫 화면 banner.data.hk(scrim · box · split · grid) · 신청 띠 data.ck(photo · panel · contact)
      · 섹션 순서(order): 업종에 맞게 다시 배치(공지를 위로 올리는 포털 · 게시판형, 신청 흐름이 먼저인 시민 교육형 등)
@@ -21,44 +22,44 @@
     /* 공무원 교육원: 포털(찾기 상자 · 공지 패널 · 빠른 메뉴) — 국내 교육원 표준 */
     't4-hrd-inst': { card: 'table', L: 'portal', th: 'official', pal: 'harbor', ph: ['lec-02', 'stu-02', 'lec-01', 'lib-05'], hd: ['contact', 'biz', 'full'], ck: 'contact', ord: ['banner', 'notices', 'features', 'classes', 'stats', 'steps', 'cta'] },
     /* 공공기관 직원 포털: 왼쪽 고정 내비게이션 */
-    't4-agency': { card: 'list', L: 'sidebar', th: 'clean', pal: 'slate', ph: ['lap-09', 'dsk-03', 'off-05', 'arc-02'], hd: ['solid', 'cols', 'drawer'], ck: 'photo', ord: ['banner', 'classes', 'features', 'notices', 'steps', 'stats', 'cta'] },
+    't4-agency': { card: 'list', L: 'sidebar', th: 'clean', pal: 'slate', ph: ['hum-36', 'dsk-03', 'off-05', 'arc-02'], hd: ['solid', 'cols', 'drawer'], ck: 'photo', ord: ['banner', 'classes', 'features', 'notices', 'steps', 'stats', 'cta'] },
     /* 사이버 연수원: 벤토(나의 강의실 · 배정 과정 · 숫자 칸) */
-    't4-cyber': { card: 'photo', L: 'bento', th: 'tech', pal: 'graphite', ph: ['lap-08', 'cod-03', 'off-06', 'dsk-05'], hd: ['float', 'mega', 'drawer'], ck: 'contact', ord: ['banner', 'classes', 'steps', 'notices', 'features', 'stats', 'cta'],
+    't4-cyber': { card: 'photo', L: 'bento', th: 'tech', pal: 'graphite', ph: ['hum-09', 'cod-03', 'off-06', 'dsk-05'], hd: ['float', 'mega', 'drawer'], ck: 'contact', ord: ['banner', 'classes', 'steps', 'notices', 'features', 'stats', 'cta'],
       ren: [['배정 과정 확인', '내 과정 열기']],
       add: [['notices', { type: 'text', data: { variant: 'info', eyebrow: 'FAQ', title: '학습 중 자주 묻는 질문', cols: [['배정된 과정이 보이지 않아요?', '기관 계정으로 로그인했는지 확인하고, 그래도 없으면 교육 담당 부서에 배정을 요청하세요.'], ['영상이 끝까지 재생됐는데 이수가 안 돼요?', '퀴즈 · 설문까지 마쳐야 이수로 처리됩니다. 나의 강의실에서 남은 항목을 확인하세요.'], ['수료증은 어디서 받나요?', '이수한 과정은 교육이력에서 수료증을 바로 내려받을 수 있습니다.']] } }]] },
     /* 법정의무교육: 게시판형(KRDS 분위기 · 마감 공지 우선) */
-    't4-legal': { card: 'table', L: 'bulletin', th: 'official', pal: 'nuri', ph: ['lec-01', 'dsk-01', 'sem-01', 'lib-02'], hd: ['notice', 'biz', 'full'], ck: 'photo', ord: ['banner', 'notices', 'features', 'info', 'classes', 'cta'] },
+    't4-legal': { card: 'table', L: 'bulletin', th: 'official', pal: 'nuri', ph: ['hum-04', 'dsk-01', 'sem-01', 'lib-02'], hd: ['notice', 'biz', 'full'], ck: 'photo', ord: ['banner', 'notices', 'features', 'info', 'classes', 'cta'] },
     /* 신규 임용자: 이야기 · 단계형(로드맵이 주인공) */
-    't4-newhire': { card: 'schedule', L: 'story', th: 'campus', pal: 'ivy', ph: ['cls-01', 'dsk-02', 'cls-04', 'lib-06'], hd: ['solid', 'cta', 'full'], ck: 'photo', ord: ['banner', 'roadmap', 'features', 'classes', 'notices', 'cta'] },
+    't4-newhire': { card: 'schedule', L: 'story', th: 'campus', pal: 'ivy', ph: ['hum-01', 'dsk-02', 'cls-04', 'lib-06'], hd: ['solid', 'cta', 'full'], ck: 'photo', ord: ['banner', 'roadmap', 'features', 'classes', 'notices', 'cta'] },
     /* AI 행정: 어두운 프리미엄(코드 화면) */
-    't4-ai-gov': { card: 'big', L: 'noir', th: 'tech', pal: 'circuit', vmap: { timeline: 'steps' }, ph: ['cod-01', 'cod-04', 'lec-03', 'cod-02'], hd: ['overlay', 'mega', 'full'], ck: 'photo', ord: ['banner', 'features', 'steps', 'classes', 'stats', 'notices', 'cta'] },
+    't4-ai-gov': { card: 'big', L: 'noir', th: 'tech', pal: 'circuit', vmap: { timeline: 'steps' }, ph: ['hum-07', 'cod-04', 'lec-03', 'cod-02'], hd: ['overlay', 'mega', 'full'], ck: 'photo', ord: ['banner', 'features', 'steps', 'classes', 'stats', 'notices', 'cta'] },
     /* 시민대학: 매거진형(명조 큰 제목 · 도서관 라운지) */
-    't4-civic': { card: 'photo', bt: '시민 누구나\n배우는 우리 학교', L: 'editorial', th: 'campus', pal: 'maple', ph: ['lib-01', 'lib-03', 'sem-01', 'lib-05'], hd: ['solid', 'min', 'full'], ck: 'panel', ord: ['banner', 'features', 'classes', 'reviews', 'info', 'notices', 'map'] },
+    't4-civic': { card: 'photo', bt: '시민 누구나\n배우는 우리 학교', L: 'editorial', th: 'campus', pal: 'maple', ph: ['hum-13', 'lib-03', 'sem-01', 'lib-05'], hd: ['solid', 'min', 'full'], ck: 'panel', ord: ['banner', 'features', 'classes', 'reviews', 'info', 'notices', 'map'] },
     /* 시민 디지털 배움터: S3 좌우 분할 · 큰 글씨 · 어두운 책상 사진 */
-    't4-digital': { card: 'big', th: 'senior', pal: 'bigblue', hk: 'split', ph: ['lap-06', 'lap-07', 'cls-02', 'lib-04'], hd: ['contact', 'cols', 'full'], ck: 'contact', ord: ['banner', 'features', 'steps', 'classes', 'notices', 'map'] },
+    't4-digital': { card: 'big', th: 'senior', pal: 'bigblue', hk: 'split', ph: ['hum-34', 'lap-07', 'cls-02', 'lib-04'], hd: ['contact', 'cols', 'full'], ck: 'contact', ord: ['banner', 'features', 'steps', 'classes', 'notices', 'map'] },
     /* 찾아가는 교육: S3 전면 사진 + 스크림 */
-    't4-outreach': { card: 'schedule', th: 'warm', pal: 'brick', hk: 'scrim', ph: ['sem-01', 'off-04', 'lec-03', 'mus-07'], hd: ['overlay', 'cta', 'drawer'], ck: 'photo', ord: ['banner', 'steps', 'features', 'reviews', 'classes', 'cta'] },
+    't4-outreach': { card: 'schedule', th: 'warm', pal: 'brick', hk: 'scrim', ph: ['hum-11', 'off-04', 'lec-03', 'mus-07'], hd: ['overlay', 'cta', 'drawer'], ck: 'photo', ord: ['banner', 'steps', 'features', 'reviews', 'classes', 'cta'] },
     /* 간부 리더십: 좌우 분할(어두운 판 + 사진) */
-    't4-leader': { card: 'list', L: 'splitscreen', th: 'premium', pal: 'boardroom', ph: ['off-02', 'lib-06', 'off-04', 'off-07'], hd: ['solid', 'cols', 'drawer'], ck: 'panel', ord: ['banner', 'features', 'classes', 'timeline', 'notices', 'cta'] },
+    't4-leader': { card: 'list', L: 'splitscreen', th: 'premium', pal: 'boardroom', ph: ['hum-10', 'lib-06', 'off-04', 'off-07'], hd: ['solid', 'cols', 'drawer'], ck: 'panel', ord: ['banner', 'features', 'classes', 'timeline', 'notices', 'cta'] },
     /* 민원 응대: 전체 화면 사진(도서관 서가) */
-    't4-service': { card: 'photo', L: 'fullbleed', th: 'clean', pal: 'civic', ph: ['lib-03', 'off-05', 'lib-02', 'sen-03'], hd: ['overlay', 'cta', 'full'], ck: 'photo', ord: ['banner', 'features', 'steps', 'classes', 'reviews', 'notices', 'cta'] },
+    't4-service': { card: 'photo', L: 'fullbleed', th: 'clean', pal: 'civic', ph: ['hum-06', 'off-05', 'lib-02', 'sen-03'], hd: ['overlay', 'cta', 'full'], ck: 'photo', ord: ['banner', 'features', 'steps', 'classes', 'reviews', 'notices', 'cta'] },
     /* 안전 · 재난: 좌우 분할(진한 판 + 항공 사진, 훈련 공지 우선) */
     't4-safety': { card: 'schedule', L: 'splitscreen', th: 'official', pal: 'crimson', ph: ['cam-05', 'wrk-03', 'lec-02', 'arc-03'], hd: ['notice', 'cols', 'full'], ck: 'contact', ord: ['banner', 'notices', 'steps', 'features', 'info', 'classes', 'cta'],
       add: [['classes', { type: 'text', data: { variant: 'info', eyebrow: 'DRILL', title: '훈련 참여 기록 남기기', cols: [['참여 확인', '훈련이 끝나면 출석과 참여 여부를 교육이력에 남깁니다'], ['결과 공유', '훈련에서 나온 개선점은 공지로 함께 봅니다'], ['다시 보기', '대응 요령 영상은 언제든 다시 볼 수 있습니다']] } }]] },
     /* 청렴 · 공직윤리: 큰 글자(사진 띠) */
-    't4-integrity': { card: 'list', L: 'typo', th: 'campus', pal: 'press', ph: ['lib-02', 'lib-06', 'lib-03', 'mus-07'], hd: ['solid', 'mega', 'full'], ck: 'panel', ord: ['banner', 'info', 'features', 'classes', 'notices', 'cta'] },
+    't4-integrity': { card: 'list', L: 'typo', th: 'campus', pal: 'press', ph: ['hum-38', 'lib-06', 'lib-03', 'mus-07'], hd: ['solid', 'mega', 'full'], ck: 'panel', ord: ['banner', 'info', 'features', 'classes', 'notices', 'cta'] },
     /* 청소년 진로: 콜라주(경쾌한 기울어진 카드) */
-    't4-youth': { card: 'big', L: 'collage', th: 'kids', pal: 'berry', ph: ['lib-04', 'kid-02', 'cls-03', 'art-02'], hd: ['float', 'cta', 'drawer'], ck: 'photo', ord: ['banner', 'features', 'classes', 'steps', 'info', 'reviews', 'notices', 'cta'],
+    't4-youth': { card: 'big', L: 'collage', th: 'kids', pal: 'berry', ph: ['hum-15', 'kid-02', 'cls-03', 'art-02'], hd: ['float', 'cta', 'drawer'], ck: 'photo', ord: ['banner', 'features', 'classes', 'steps', 'info', 'reviews', 'notices', 'cta'],
       add: [['reviews', { type: 'text', data: { variant: 'info', eyebrow: 'GUIDE', title: '참여 전에 확인해 주세요', cols: [['참여 대상', '프로그램마다 정해진 학년 · 나이를 신청 화면에서 확인합니다'], ['보호자 동의', '보호자 동의가 필요한 프로그램은 동의 후 신청이 완료됩니다'], ['준비물', '프로그램 안내문에 적힌 준비물을 챙겨 옵니다'], ['참여 기록', '활동 기록과 수료 여부는 나의 학습에서 봅니다']] } }]] },
     /* 가족 · 부모: 모자이크(사진 우선) */
-    't4-family': { card: 'photo', L: 'mosaic', th: 'warm', pal: 'rose', ph: ['nat-02', 'kid-05', 'sen-02', 'kid-03'], hd: ['float', 'mega', 'drawer'], ck: 'panel', ord: ['banner', 'features', 'classes', 'reviews', 'info', 'notices', 'map'] },
+    't4-family': { card: 'photo', L: 'mosaic', th: 'warm', pal: 'rose', ph: ['hum-25', 'kid-05', 'sen-02', 'kid-03'], hd: ['float', 'mega', 'drawer'], ck: 'panel', ord: ['banner', 'features', 'classes', 'reviews', 'info', 'notices', 'map'] },
     /* 환경 · 탄소중립: 전체 화면 사진(정원) */
     't4-green': { card: 'big', L: 'fullbleed', th: 'campus', pal: 'bigforest', ph: ['nat-01', 'nat-03', 'off-03', 'wrk-06'], hd: ['overlay', 'cols', 'full'], ck: 'contact', ord: ['banner', 'steps', 'features', 'classes', 'notices', 'cta'],
       ren: [['배우기', '강의 듣기']], noDeco: 1 },
     /* 데이터 리터러시: S3 큰 제목 + 사진 3장 격자 */
-    't4-data': { card: 'table', th: 'tech', pal: 'glacier', hk: 'grid', ph: ['lec-03', 'dsk-04', 'off-06', 'cod-04'], hd: ['solid', 'biz', 'full'], ck: 'panel', ord: ['banner', 'stats', 'timeline', 'features', 'classes', 'notices', 'cta'] },
+    't4-data': { card: 'table', th: 'tech', pal: 'glacier', hk: 'grid', ph: ['hum-14', 'dsk-04', 'off-06', 'cod-04'], hd: ['solid', 'biz', 'full'], ck: 'panel', ord: ['banner', 'stats', 'timeline', 'features', 'classes', 'notices', 'cta'] },
     /* 외국인 주민: S3 사진 + 겹친 글자 상자(다국어) */
-    't4-newcomer': { card: 'list', th: 'clean', pal: 'lagoon', hk: 'box', ph: ['cls-04', 'brd-02', 'cls-02', 'lib-05'], hd: ['notice', 'min', 'full'], ck: 'photo', ord: ['banner', 'notices', 'steps', 'features', 'classes', 'map'] }
+    't4-newcomer': { card: 'list', th: 'clean', pal: 'lagoon', hk: 'box', ph: ['hum-03', 'brd-02', 'cls-02', 'lib-05'], hd: ['notice', 'min', 'full'], ck: 'photo', ord: ['banner', 'notices', 'steps', 'features', 'classes', 'map'] }
   };
 
   /* ── 템플릿 덮어쓰기 ── */
