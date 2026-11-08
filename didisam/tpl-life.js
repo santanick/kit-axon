@@ -249,7 +249,7 @@
      같은 계열을 다른 유형도 쓰면 변형(layoutVar, FD1 HPL.vars)을 서로 다르게 고른다. 머리글 · 바닥글은 FA의 유형별 허용 목록 안에서 2~3종으로 나눈다.
      [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
   const FD2 = {
-    'life-city': ['portal', 'c', 'util', 'gov'],
+    'life-city': ['portal', 'b', 'util', 'gov'],
     't2-life-hub': ['bulletin', 'a', 'util', 'gov'],
     'life-senior': ['hk:box', '', 'contact', 'split'],
     't2-life-silver': ['hk:split', '', 'contact', 'cols'],
@@ -259,12 +259,12 @@
     't2-life-craft': ['mosaic', 'c', 'contact', 'cols'],
     't2-life-credit': ['bulletin', 'b', 'util', 'split'], /* a면 corp-legal과 닮음 · 사진 판 위 eyebrow 대비 3.14 */
     't2-life-family': ['mosaic', 'a', 'contact', 'split'], /* H3: b는 adult-hobby(lifelong 공유)와 겹침 */
-    't2-life-career': ['portal', 'b', 'center', 'cols'],
+    't2-life-career': ['portal', 'a', 'center', 'cols'],
     't2-life-village': ['story', 'c', 'contact', 'gov'],
     'tl-life-health': ['story', 'a', 'center', 'split'],
     'tl-life-lang': ['hk:scrim', '', 'center', 'cols'],
     'tl-life-univext': ['editorial', 'a', 'util', 'gov'], /* H3: 상자형 줄임 · 주력 editorial */
-    'tl-life-cert': ['portal', 'a', 'contact', 'gov'] /* H3: 상자형 줄임 · 주력 portal(b면 사진 위 글 대비 4.14) */
+    'tl-life-cert': ['portal', 'c', 'contact', 'gov'] /* H3: 상자형 줄임 · 주력 portal(a · b면 사진 위 강좌 칩 대비 4.1~4.5) */
   };
   Object.keys(FD2).forEach(id => { const c = CFG[id], v = FD2[id]; if (!c) return;
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); } else { c.L = v[0]; delete c.hk; }

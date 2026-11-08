@@ -67,7 +67,7 @@
         faq('', [['레벨 테스트는 어떻게 하나요?', '상담 신청을 남겨 주시면 학년과 목표를 확인한 뒤 테스트 일정을 안내해 드립니다.'], ['선행과 내신 중 무엇을 먼저 하나요?', '진단 결과를 보고 이번 학기 내신을 먼저 챙길지, 다음 학기 선행을 함께 할지 상담으로 정합니다.']]),
         cta('우리 아이 수학,\n어디서부터 시작할까요?', '지금 실력과 목표를 알려 주시면 맞는 반과 시작 단원을 안내해 드립니다.', '상담 신청')] },
     /* 영어: 좌우 분할(어두운 글 판 + 밝은 서재 사진) — 레벨 테스트 → 반 배정 흐름 */
-    't1-k12-english': { cd: 'photo', L: 'splitscreen', th: 'warm', pal: 'lagoon', ph: { hero: 'lap-05', about: 'lap-07', space: 'cls-02', cta: 'lib-05' }, hd: ['solid', 'cols', 'drawer'], ck: 'contact', /* H3: photo 띠 위 제목 대비 4.01 → 연락 카드형 */
+    't1-k12-english': { cd: 'photo', L: 'splitscreen', th: 'warm', pal: 'lagoon', ph: { hero: 'lap-05', about: 'lap-07', space: 'cls-02', cta: 'lib-06' }, hd: ['solid', 'cols', 'drawer'], ck: 'panel', /* H3: fullbleed 신청 띠 사진 위 제목 대비 4.01 → 더 어두운 서가 사진 */
       build: () => [
         ban({ eyebrow: '', /* FD2: fullbleed 사진 위 eyebrow 대비 3.79 → 뺌 */ title: '읽고, 말하고, 쓰는\n진짜 영어 실력', sub: '리딩 · 스피킹 · 라이팅을 레벨별로 이어 시험 점수와 말하기 자신감을 함께 키웁니다.', cta: '레벨 테스트 예약', cta2: '상담 문의' }),
         T('features', { eyebrow: '', title: '네 영역을 고르게', cols: [['Reading', '수준에 맞는 원서와 지문 읽기'], ['Speaking', '매 수업 말하기 · 발표 시간'], ['Writing', '문장에서 에세이까지 단계별 쓰기'], ['Grammar', '읽고 쓰는 데 필요한 문법 정리']] }),
