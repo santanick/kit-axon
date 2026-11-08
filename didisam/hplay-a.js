@@ -119,6 +119,11 @@
   let used = new Set();
   H.resetStock = () => { used = new Set(); };
   H.stock = (s, slot, o) => { o = o || {}; const P = window.HPSTOCK; if (!P || !s || s.stockOff) return null; const L = (Array.isArray(P.list) ? P.list : []).filter(x => x && okSrc(x.src)); if (!L.length) return null;
+    /* v34.5 H2(R2 N1): 강좌 자리는 강좌명과 장면이 맞는 사진만(HPSTOCK.forCourse). 없으면 null → H.fig가 글자 타일 */
+    if (/^cls-/.test(slot)) { const c = ((typeof S !== 'undefined' && S && S.classes) || []).find(x => 'cls-' + x.id === slot); const ex = L.filter(x => used.has(x.src)).map(x => x.id);
+      let x = null; try { x = c && typeof P.forCourse === 'function' ? P.forCourse(typeKey(), c.name, { seed: String(c.id), exclude: ex }) : null; } catch (e) { x = null; }
+      if (!x || !okSrc(x.src)) return null; used.add(x.src);
+      return { src: o.small && x.src800 && okSrc(x.src800) ? x.src800 : x.src, alt: '', fit: 'cover', pos: /^[\d.]+% [\d.]+%$/.test(x.focus || '') ? x.focus : '50% 50%', stock: 1, tone: x.tone || '' }; }
     const ty = typeKey(); const sk = /^cls-/.test(slot) ? 'card' : (KWS[o.scene] ? o.scene : KWS[slot] ? slot : 'card');
     let first = null;
     /* 템플릿이 정한 사진(tp.photos → s.photos, HPSTOCK id)을 가장 먼저 — hplay-b pickStock · S3 photo()와 같은 순서 */
@@ -133,9 +138,14 @@
     const R = L.map((x, i) => [x, sc(x) + ((base + i * 7919) % 97) / 1000]).sort((p, q) => q[1] - p[1]).map(r => r[0]);
     const C = (first && okSrc(first.src) ? [first] : []).concat(R); const pickd = C.find(x => !used.has(x.src)) || C[(o.k || 0) % C.length]; used.add(pickd.src);
     return { src: o.small && pickd.src800 && okSrc(pickd.src800) ? pickd.src800 : pickd.src, alt: '', fit: 'cover', pos: /^[\d.]+% [\d.]+%$/.test(pickd.focus || '') ? pickd.focus : '50% 50%', stock: 1, tone: pickd.tone || '' }; };
+  /* v34.5 H2(R2 N1): 강좌명과 맞는 사진이 없을 때의 '사진 없는 카드' 타일 — 번호 + 분류 글자(장식 사진 · 그림 대신). dark: 사진 위 글자가 얹히는 자리 */
+  H.tyTile = (slot, T, k, label, o) => { o = o || {}; const dk = T.hd || mix(T.a, '#0B1020', .62); const bg = o.dark ? dk : (T.as || mix(T.a, '#ffffff', .9)); const fg = o.dark ? '#ffffff' : fit(T.at || T.a, bg, 4.6);
+    const r = o.ratio ? `aspect-ratio:${String(o.ratio).replace(':', '/')};` : '';
+    return `<figure class="${o.cls || 'hpl-img'} hpl-ty" data-slot="${E(slot)}" data-empty="1" style="${r}background:${bg};color:${fg};box-shadow:inset 0 0 0 1px ${al(T.ink || '#111111', .08)}"><span aria-hidden="true" style="position:absolute;left:8%;top:8%;font-size:clamp(30px,3.6vw,56px);line-height:1;font-weight:800;letter-spacing:-.04em">${String((+k || 0) + 1).padStart(2, '0')}</span>${label ? `<span aria-hidden="true" style="position:absolute;left:8%;right:8%;bottom:8%;font-size:13px;font-weight:700;letter-spacing:.02em;padding-top:10px;border-top:1px solid currentColor">${E(label)}</span>` : ''}</figure>`; };
   H.fig = (slot, s, th, T, o) => { o = o || {}; const m = H.img(s, slot, o.d) || (o.stock === false ? null : H.stock(s, slot, o)); const r = o.ratio ? `aspect-ratio:${o.ratio};` : ''; const cls = `hpl-img${o.cls ? ' ' + o.cls : ''}`;
     if (m) return `<figure class="${cls}${m.stock ? ' is-stock' : ''}" data-slot="${E(slot)}"${m.tone ? ` data-tone="${E(m.tone)}"` : ''} style="${r}"><img src="${E(m.src)}" alt="${E(m.alt || o.alt || '')}"${o.eager ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async" style="object-fit:${m.fit};object-position:${m.pos}"></figure>`;
     if (o.need) return '';
+    if (/^cls-/.test(slot)) return H.tyTile(slot, T, o.k || 0, o.label || '', { ratio: o.ratio, cls, dark: o.dark || /bt-cf/.test(cls) });
     let art = ''; if (typeof H.art === 'function') { try { art = String(H.art(slot, s, th, T, { ratio: o.ratio || '4/3', scene: o.scene }) || ''); } catch (e) { console.error('HPL.art', e); art = ''; } }
     if (!art) art = artLite(slot, s, th, T, o);
     return `<figure class="${cls} hpl-art" data-slot="${E(slot)}" data-empty="1" style="${r}" aria-hidden="true">${art}</figure>`; };
@@ -268,7 +278,7 @@ ${H.koEyOn(s) ? `${P} :is(.hpl-ey,[class$="-ey"]){text-transform:none;letter-spa
   const revList = n => u.reviews().slice(0, n || 3);
   const stars = r => r.st ? `<span class="hpl-stars" aria-label="별점 ${r.st}점">${'★'.repeat(Math.min(5, r.st))}</span>` : '';
   const lineMax = d => Math.max(4, ...u.lines(d).map(l => [...l].reduce((a, ch) => a + (/[\x00-\x7F]/.test(ch) ? .55 : 1), 0)));
-  const cfig = (s, th, T, c, k, o) => H.fig('cls-' + c.id, s, th, T, Object.assign({ scene: 'card', small: 1, k, text: c.name }, o || {}));
+  const cfig = (s, th, T, c, k, o) => H.fig('cls-' + c.id, s, th, T, Object.assign({ scene: 'card', small: 1, k, text: c.name, label: u.kindOf(c) }, o || {}));
   const ctaBtn = (s, d, cls) => { const h = u.askHref(s); return d.cta && h ? `<a class="${cls}" ${u.aAttr(h)}><span>${E(d.cta)}</span>${u.ic('arrow', 18)}</a>` : ''; };
   const ctaList = (I, cls) => I.length ? `<dl class="${cls}">${I.map(c => `<div><dt>${E(c.k)}</dt><dd>${c.h ? `<a ${u.aAttr(c.h)}>${E(c.v)}</a>` : E(c.v)}</dd></div>`).join('')}</dl>` : '';
   /* 기존 hpth 섹션(FAQ · 오시는 길 · 강사 등)을 계열 글꼴 · 여백에 맞추는 덮개 */
@@ -433,7 +443,7 @@ ${tokCSS(P, { h1: `${P} .bt-main h1`, h2: `${P} .bt-hh h2,${P} .bt-cmt h2`, k1: 
         return `<section class="hpt hpl-s fb-feat${ctx.alt ? ' is-alt' : ''}"><div class="hpl-w"><div class="fb-fh"><div>${eyb(d.eyebrow)}${d.title ? `<h2>${br(d.title)}</h2>` : ''}</div>${d.sub ? `<p class="hpl-sd">${E(d.sub)}</p>` : typeof d.body === 'string' && d.body ? `<p class="hpl-sd">${E(d.body)}</p>` : ''}</div></div>${H.fig('about', s, th, T, { cls: 'fb-wide', scene: 'about' })}<div class="hpl-w"><div class="fb-fl n${Math.min(C.length, 4)}">${C.map(([a, b], k) => `<article><span class="fb-ix">${String(k + 1).padStart(2, '0')}</span><h3>${E(a)}</h3>${b ? `<p>${E(b)}</p>` : ''}</article>`).join('')}</div></div></section>`; },
       plain(s, d, th, T, ctx) { if (u.cols(d).length) return this.features(s, d, th, T, ctx); return null; },
       classes(s, d, th, T, ctx) { const L = u.clsList(d); if (!L.length) return noCls(ctx);
-        return SEC('fb-cls', ctx, `<div class="fb-sh">${secHead(d, 'fb-hh')}${allLink(s, L.length, 'fb-all')}</div><div class="fb-rail n${Math.min(L.length, 4)}" role="list">${L.map((c, k) => `<a class="fb-card" role="listitem" href="#p-c-${E(c.id)}">${cfig(s, th, T, c, k)}<span class="fb-cs" aria-hidden="true"></span><div class="fb-cb"><span class="fb-k">${E(u.kindOf(c))}</span><h3>${E(c.name)}</h3><p>${meta(c).slice(1).map(m => `<span>${E(m)}</span>`).join('')}<span>${E(u.priceOf(c))}</span></p></div></a>`).join('')}</div>`); },
+        return SEC('fb-cls', ctx, `<div class="fb-sh">${secHead(d, 'fb-hh')}${allLink(s, L.length, 'fb-all')}</div><div class="fb-rail n${Math.min(L.length, 4)}" role="list">${L.map((c, k) => `<a class="fb-card" role="listitem" href="#p-c-${E(c.id)}">${cfig(s, th, T, c, k, { dark: 1 })}<span class="fb-cs" aria-hidden="true"></span><div class="fb-cb"><span class="fb-k">${E(u.kindOf(c))}</span><h3>${E(c.name)}</h3><p>${meta(c).slice(1).map(m => `<span>${E(m)}</span>`).join('')}<span>${E(u.priceOf(c))}</span></p></div></a>`).join('')}</div>`); },
       steps(s, d, th, T, ctx) { const C = u.cols(d); if (!C.length) return null;
         return `<section class="hpt hpl-s fb-steps"><div class="hpl-w">${secHead(d, 'fb-hh')}<ol class="fb-ol n${Math.min(C.length, 5)}">${C.map(([a, b], k) => `<li><span class="fb-no" aria-hidden="true">${k + 1}</span><h3>${E(a)}</h3>${b ? `<p>${E(b)}</p>` : ''}</li>`).join('')}</ol></div></section>`; },
       cta(s, d, th, T, ctx) { const I = ctaItems(d); if (!d.title && !I.length) return null; const b = ctaBtn(s, d, 'hpl-btn wh');
