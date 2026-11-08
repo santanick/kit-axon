@@ -69,7 +69,7 @@
     /* 영어: 좌우 분할(어두운 글 판 + 밝은 서재 사진) — 레벨 테스트 → 반 배정 흐름 */
     't1-k12-english': { cd: 'photo', L: 'splitscreen', th: 'warm', pal: 'lagoon', ph: { hero: 'lap-05', about: 'lap-07', space: 'cls-02', cta: 'lib-05' }, hd: ['solid', 'cols', 'drawer'], ck: 'panel',
       build: () => [
-        ban({ eyebrow: '초중등 영어', title: '읽고, 말하고, 쓰는\n진짜 영어 실력', sub: '리딩 · 스피킹 · 라이팅을 레벨별로 이어 시험 점수와 말하기 자신감을 함께 키웁니다.', cta: '레벨 테스트 예약', cta2: '상담 문의' }),
+        ban({ eyebrow: '', /* FD2: fullbleed 사진 위 eyebrow 대비 3.79 → 뺌 */ title: '읽고, 말하고, 쓰는\n진짜 영어 실력', sub: '리딩 · 스피킹 · 라이팅을 레벨별로 이어 시험 점수와 말하기 자신감을 함께 키웁니다.', cta: '레벨 테스트 예약', cta2: '상담 문의' }),
         T('features', { eyebrow: '', title: '네 영역을 고르게', cols: [['Reading', '수준에 맞는 원서와 지문 읽기'], ['Speaking', '매 수업 말하기 · 발표 시간'], ['Writing', '문장에서 에세이까지 단계별 쓰기'], ['Grammar', '읽고 쓰는 데 필요한 문법 정리']] }),
         cls('레벨별 수업'),
         T('steps', { eyebrow: '', title: '처음 오셨다면', cols: [['레벨 테스트', '영역별 지금 실력 확인'], ['반 배정', '레벨과 학년에 맞는 반'], ['수업 · 과제', '수업 뒤 온라인 과제로 복습'], ['정기 피드백', '성취와 다음 목표를 보호자와 공유']] }),
@@ -254,7 +254,7 @@
     't1-k12-art': ['collage', 'a', 'float', 'split'],
     't1-k12-music': ['fullbleed', 'b', 'left', 'cols'],
     't1-k12-reading': ['mosaic', 'a', 'contact', 'split'],
-    't1-k12-science': ['bento', 'b', 'float', 'cta'],
+    't1-k12-science': ['hk:box', '', 'float', 'cta'], /* bento면 public t4-cyber와 엄격 유사(거리 12 · 구조 같음) */
     't1-k12-tutor': ['hk:split', '', 'left', 'split'],
     't1-k12-studycare': ['mosaic', 'b', 'contact', 'cols'],
     't1-k12-sports': ['hk:scrim', '', 'float', 'cta'],

@@ -109,7 +109,7 @@
     't4-digital': ['hk:split', '', 'util', 'gov'],
     't4-outreach': ['hk:scrim', '', 'center', 'biz'],
     't4-leader': ['splitscreen', 'c', 'center', 'biz'],
-    't4-service': ['hk:split', '', 'util', 'biz'],
+    't4-service': ['hk:grid', '', 'util', 'biz'], /* split이면 voc tv-office와 첫 화면이 닮음(거리 6) */
     't4-safety': ['splitscreen', 'a', 'util', 'gov'],
     't4-integrity': ['typo', 'b', 'center', 'gov'],
     't4-youth': ['story', 'c', 'util', 'biz'],

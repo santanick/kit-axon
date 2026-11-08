@@ -235,7 +235,7 @@
   /* FD2(유형 간 재배치 · BRIEF7): 머리글 · 바닥글을 FA의 기업 유형 목록(left · float · solid / min · cols · mega) 안에서 고르게 나누고,
      다른 유형과 같은 계열을 쓰는 템플릿에는 다른 변형(layoutVar)을 준다 */
   const FD2H = { 'corp-academy': ['left', 'min'], 'corp-onboard': ['float', 'cols'], 'corp-legal': ['solid', 'mega'], 'corp-partner': ['left', 'cols'], 't3-c-leader': ['float', 'mega'], 't3-c-ax': ['solid', 'min'], 't3-c-safety': ['left', 'mega'], 't3-c-sales': ['float', 'min'], 't3-c-franchise': ['solid', 'cols'], 't3-c-customer': ['left', 'min'], 't3-c-supplier': ['float', 'cols'], 't3-c-job': ['solid', 'mega'], 't3-c-share': ['left', 'cols'], 't3-c-global': ['float', 'mega'], 't3-c-esg': ['solid', 'min'], 'tc-security': ['left', 'mega'] };
-  const FD2V = { 't3-c-sales': 'b', 't3-c-customer': 'a', 't3-c-supplier': 'a', 't3-c-job': 'b', 't3-c-share': 'a' };
+  const FD2V = { 'corp-legal': 'a', 't3-c-sales': 'b', 't3-c-customer': 'a', 't3-c-supplier': 'a', 't3-c-job': 'b', 't3-c-share': 'a' };
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
 
   /* ── 템플릿 덮어쓰기 ── */
