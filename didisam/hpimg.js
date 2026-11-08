@@ -103,7 +103,7 @@
 
   /* ═════════ 2. 사진 자리 읽기 · 쓰기(site.img · banner.data.img · 이미지 섹션 · 로고) ═════════ */
   const SLOTN = { hero: '첫 화면 사진', about: '소개 사진', teacher: '강사 사진', gallery: '갤러리 사진', logo: '로고', cta: '신청 띠 사진', campus: '캠퍼스 사진', class: '강좌 사진' };
-  const slotName = r => r.k === 'logo' ? '로고' : r.k === 'sec' ? '이미지 섹션 사진' : (SLOTN[r.slot] || `${r.slot} 사진`);
+  const slotName = r => r.k === 'logo' ? '로고' : r.k === 'sec' ? '이미지 섹션 사진' : (SLOTN[r.slot] || (/^cls-/.test(r.slot) ? '강좌 사진' : `${r.slot} 사진`));
   function bannerOn(s, r) { const key = r.pg || 'home'; const L = secList(key, s); if (r.si != null && L[r.si] && L[r.si].type === 'banner') return L[r.si];
     return (secList('home', s) || []).find(x => x.type === 'banner') || A(s.sections).find(x => x.type === 'banner') || null; }
   function read(s, r) { s = s || site();
@@ -166,13 +166,14 @@
 [data-hpe-f].hpi-cur{outline:2px solid #5C74F6;outline-offset:3px}
 [data-hpi-stock]::before{content:'샘플 — 우리 기관 사진으로 바꾸세요';position:absolute;left:12px;top:12px;z-index:32;background:rgba(20,22,31,.86);color:#fff;font:700 12px/1.2 Pretendard,system-ui,sans-serif;padding:7px 11px;border-radius:99px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.25);white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}`;
   function targets(doc) {
-    const mark = (el, r, lb) => { if (!el || el.hasAttribute('data-hpi-img')) return; el.setAttribute('data-hpi-img', JSON.stringify(r)); el.setAttribute('data-hpi-lb', lb); el.setAttribute('tabindex', '0'); el.setAttribute('role', 'button'); el.setAttribute('aria-label', `${lb} — 누르거나 사진을 끌어다 놓으세요`); };
+    const mark = (el, r, lb) => { if (!el || el.hasAttribute('data-hpi-img')) return; el.setAttribute('data-hpi-img', JSON.stringify(r)); el.removeAttribute('aria-hidden'); el.setAttribute('data-hpi-lb', lb); el.setAttribute('tabindex', '0'); el.setAttribute('role', 'button'); el.setAttribute('aria-label', `${lb} — 누르거나 사진을 끌어다 놓으세요`); };
     doc.querySelectorAll('[data-hpe]').forEach(sec => { const [key, si] = sec.dataset.hpe.split('|'); if (key !== HPE.key) return; const x = secList(HPE.key)[+si]; if (!x) return;
-      sec.querySelectorAll('figure[data-slot]').forEach(fg => mark(fg, { k: 'slot', slot: fg.dataset.slot, si: +si, pg: key }, `${SLOTN[fg.dataset.slot] || '사진'} 바꾸기`));
+      sec.querySelectorAll('figure[data-slot]').forEach(fg => mark(fg, { k: 'slot', slot: fg.dataset.slot, si: +si, pg: key }, `${SLOTN[fg.dataset.slot] || (/^cls-/.test(fg.dataset.slot) ? '강좌 사진' : '사진')} 바꾸기`));
       if (x.type === 'banner') { sec.querySelectorAll('.hp-photo,.hp-vis').forEach(v => { if (!v.closest('[data-hpi-img]')) mark(v, { k: 'slot', slot: 'hero', si: +si, pg: key }, '첫 화면 사진 바꾸기'); });
         sec.querySelectorAll('[data-hpe-img]').forEach(v => { if (!v.closest('[data-hpi-img]')) mark(v, { k: 'slot', slot: 'hero', si: +si, pg: key }, '첫 화면 사진 바꾸기'); }); }
       if (x.type === 'image' || x.type === 'slideImage') { const els = [...sec.querySelectorAll('[data-hpe-img]')]; els.forEach((v, n) => mark(v.closest('figure') || v, { k: 'sec', si: +si, n, pg: key }, '사진 바꾸기'));
         if (!els.length) sec.querySelectorAll('.hp-hint').forEach(v => mark(v, { k: 'sec', si: +si, n: 0, pg: key }, '사진 올리기')); } });
+    doc.querySelectorAll('figure[data-slot]').forEach(fg => { if (!fg.hasAttribute('data-hpi-img') && !fg.closest('[data-hpi-img]')) mark(fg, { k: 'slot', slot: fg.dataset.slot, pg: HPE.key }, `${SLOTN[fg.dataset.slot] || (/^cls-/.test(fg.dataset.slot) ? '강좌 사진' : '사진')} 바꾸기`); });
     doc.querySelectorAll('header .logo').forEach(l => mark(l, { k: 'logo' }, '로고 바꾸기')); }
   /* 샘플 사진(HPSTOCK · img/stock) 표시: 바로 고치기 화면에서만 */
   const isStock = src => { src = String(src || ''); if (!src || /^data:/.test(src)) return false; if (/(^|\/)img\/stock\//.test(src)) return true; try { const L = (window.HPSTOCK && HPSTOCK.list) || []; return L.some(o => o && (src.endsWith(o.src) || (o.src800 && src.endsWith(o.src800)))); } catch (e) { return false; } };

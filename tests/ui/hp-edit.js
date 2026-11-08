@@ -183,13 +183,32 @@ const BROCHURE = { name: 'brochure.txt', mimeType: 'text/plain', buffer: Buffer.
       const h = HPI.decorate('<section class="hpl"><figure class="hpl-img" data-slot="about"><img src="data:image/png;base64,AAAA" alt=""></figure></section>', { type: 'text', data: {} }, s);
       return s.img.about.alt === '소개' && /object-fit: ?contain/.test(h) && /object-position: ?10% 20%/.test(h); });
     ok('이미지 자리 규약 site.img[slot] · figure[data-slot] 맞춤 반영', slotOK);
+    /* 레이아웃 계열(HPL) figure.hpl-img[data-slot] 클릭 교체 + 샘플 사진 표시(편집 화면에서만) */
+    const hasHPL = await ev(() => !!(window.HPL && typeof HPL.fig === 'function'));
+    if (hasHPL) {
+      await ev(() => { hpClose(true); HPL.reg('t4', { name: '시험', fits: [], slots: ['hero', 'about'], css: () => '', hero: (s, d, th, T) => `<section class="hpt hp-hero hpl-t4"><div class="hp-w"><h1>${esc(d.title || '')}</h1>${HPL.fig('hero', s, th, T, { ratio: '16/9' })}</div></section>` });
+        const s = site(); s.layout = 't4'; s.img = { hero: { src: 'https://cdn.example.invalid/img/stock/sample-classroom.webp', alt: '', fit: 'cover', pos: '50% 40%' } }; save(); hpEdit('home'); });
+      await frameReady();
+      const st0 = await ev(() => { const d = document.getElementById('hpeF').contentDocument; const fg = d.querySelector('figure.hpl-img[data-slot="hero"]'); return { fig: !!fg, click: !!(fg && fg.hasAttribute('data-hpi-img')), stock: !!(fg && fg.hasAttribute('data-hpi-stock')), lb: fg ? getComputedStyle(fg, '::before').content : '' }; });
+      ok('계열 figure[data-slot] 클릭 자리 · 샘플 표시(편집 화면)', st0.fig && st0.click && st0.stock && /샘플/.test(st0.lb), st0);
+      ok('게시본 HTML에는 샘플 표시 없음', await ev(() => !/data-hpi-stock|샘플 — 우리 기관/.test(siteHTML(site(), true, 'ko'))));
+      await shot('hpe-stock-badge');
+      await F().locator('figure.hpl-img[data-slot="hero"]').first().click(); await page.waitForSelector('#hpiImg', { state: 'visible' }); await page.setInputFiles('#hpiImg [data-hpi-i="file"]', PHOTO2);
+      await page.waitForFunction(() => /^data:image/.test(((site().img || {}).hero || {}).src || ''), null, { timeout: 8000 }).catch(() => { }); await frameReady();
+      const st1 = await ev(() => { const d = document.getElementById('hpeF').contentDocument; const fg = d.querySelector('figure.hpl-img[data-slot="hero"]'); const b = site().sections.find(x => x.type === 'banner');
+        return { img: /^data:image/.test(((site().img || {}).hero || {}).src || ''), banner: b.data.img === site().img.hero.src, shown: !!(fg && fg.querySelector('img') && /^data:image/.test(fg.querySelector('img').getAttribute('src'))), stock: !!(fg && fg.hasAttribute('data-hpi-stock')) }; });
+      ok('계열 자리 교체 → site.img.hero = banner.data.img · 샘플 표시 사라짐', st1.img && st1.banner && st1.shown && !st1.stock, st1);
+      await page.click('#hpiImg [data-hpi-i="clr"]'); await wait(400);
+      ok('지우기 → site.img.hero · banner.data.img 함께 비움', await ev(() => !(site().img || {}).hero && !site().sections.find(x => x.type === 'banner').data.img));
+      await page.click('#hpiImg [data-hpi-i="x"]').catch(() => { }); await ev(() => { delete site().layout; save(); hpPaint(); }); await frameReady();
+    }
     /* 저장 공간 한도: 저장이 실패하면 되돌리고 안내 */
     await ev(() => { hpEdit('home'); }); await frameReady();
     const b0 = await ev(() => { window.__toast = []; const t0 = toast; window.toast = (m, k) => { window.__toast.push(m); return t0(m, k); }; window.__si = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (k === KEY && String(v).length > 1000) { const e = new Error('quota'); e.name = 'QuotaExceededError'; throw e; } return window.__si.call(this, k, v); }; return site().sections.find(x => x.type === 'banner').data.img.length; });
     await F().locator('.hp-hero [data-hpi-img]').first().click(); await page.waitForSelector('#hpiImg', { state: 'visible' }); await page.setInputFiles('#hpiImg [data-hpi-i="file"]', LOGO); await wait(900);
     const qv = await ev(b => { Storage.prototype.setItem = window.__si; return { same: site().sections.find(x => x.type === 'banner').data.img.length === b, msg: window.__toast.some(m => /저장 공간/.test(m)) }; }, b0);
     ok('저장 공간이 가득 차면 되돌리고 안내', qv.same && qv.msg, qv);
-  } catch (e) { ok('crash', false, e.message.split('\n').slice(0, 3).join(' | ')); }
+  } catch (e) { ok('crash', false, e.message.split('\n').slice(0, 3).join(' | ') + ' @' + ((String(e.stack).match(/hp-edit\.js:(\d+)/) || [])[1] || '?')); }
   ok('스크립트 오류 없음', !errs.length, errs.slice(0, 3));
   await browser.close(); srv.close();
   const bad = R.filter(r => !r[1]); console.log(bad.length ? `실패 ${bad.length}/${R.length}` : `통과 ${R.length}개 항목 — 글자 · 글꼴 · 스타일 · 게시본 · 사진 · 로고 색 · AI SAM 의도 7종 · 되돌리기`);
