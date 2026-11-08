@@ -239,7 +239,8 @@ footer.gf.hps-f a:focus-visible{outline:3px solid ${fa};outline-offset:3px;borde
 .hps-fct dl div{grid-template-columns:1fr;gap:2px}.hps-bt div{grid-template-columns:${px(108)} 1fr}.hps-ap{padding-bottom:40px;margin-bottom:40px}.hps-apb{width:100%}.hps-apc,.hps-apt{flex:1 1 100%;justify-content:center}.hps-bar{flex-direction:column;align-items:flex-start}}`; };
 
   /* ═════════ siteHTML 감싸기 ═════════ */
-  const tagFor = s => { const v = s.hps && s.hps.tagline; if (val(v)) return val(v).slice(0, 80); try { const d = val(S.settings && S.settings.seo && S.settings.seo.desc); return d && d.length <= 70 ? d : ''; } catch (e) { return ''; } };
+  /* v34.5 G2: 한 줄 소개는 이 사이트에 직접 쓴 값만 — 검색 설명(S.settings.seo.desc)은 첫 사이트 · 이전 템플릿 문구가 남아 있어(hpai 258행이 빈 칸일 때 한 번만 복사) 다른 템플릿 · 기관 문구가 보였다 */
+  const tagFor = s => { const v = s.hps && s.hps.tagline; return val(v) ? val(v).slice(0, 80) : ''; };
   const CTA_T = { k12: '수업 상담을 신청하세요', adult: '첫 수업을 시작해 보세요', voc: '모집 과정을 확인하고 신청하세요' };
   const darkHero = home => { const m = String(home).match(/^\s*<section\b[^>]*>/); if (!m) return false; return /data-hps-dark|\bhp-b-dark\b|\bhp-b-band\b|\bfb-hero\b|\bhps-dark\b/.test(m[0]); };
   const POP = /<input type="checkbox" id="s2pc\d+" class="s2pcx" hidden><div class="s2pop"[\s\S]*?<label for="s2pc\d+">닫기<\/label><\/div>/g;
