@@ -93,7 +93,7 @@
 
   /* ── 작은 부품 ── */
   const kline = c => { const a = catName(c); const b = kindName(c); return `<p class="hps-k"><span>${E(a || b)}</span>${a && b ? `<span class="hps-k2">${E(b)}</span>` : ''}</p>`; };
-  const badge = (c, p) => { const r = recOf(c); if (r && r.k === 'open') return `<span class="hps-bd is-on" data-due="${E(r.to)}">${E(r.l)}${ddTxt(r) ? ` <b>${E(ddTxt(r))}</b>` : ''}</span>`; if (r && r.k === 'soon') return `<span class="hps-bd">${E(md(r.from))} 모집 시작</span>`; if (r && r.k === 'closed') return `<span class="hps-bd is-off">모집 마감</span>`; if (p.off) return `<span class="hps-bd is-on">${p.off}% 할인</span>`; if (p.free) return `<span class="hps-bd">무료</span>`; return ''; };
+  const badge = (c, p) => { const r = recOf(c); if (r && r.k === 'open') return `<span class="hps-bd is-on" data-due="${E(r.to)}">${E(r.l)}${ddTxt(r) ? ` <b>${E(ddTxt(r))}</b>` : ''}</span>`; if (r && r.k === 'soon') return `<span class="hps-bd" data-from="${E(r.from)}" data-to="${E(r.to)}">${E(md(r.from))} 모집 시작</span>`; if (r && r.k === 'closed') return `<span class="hps-bd is-off">모집 마감</span>`; if (p.off) return `<span class="hps-bd is-on">${p.off}% 할인</span>`; if (p.free) return `<span class="hps-bd">무료</span>`; return ''; };
   const priceH = (p, cls) => p.free ? `<span class="${cls || 'hps-p'}"><b>무료</b></span>` : `<span class="${cls || 'hps-p'}">${p.was ? `<s><span class="hps-sr">정가 </span>${wonF(p.was)}원</s>` : ''}<b>${wonF(p.now)}<small>원${p.sub ? ' / 회차' : ''}</small></b></span>`;
   const metaL = c => [lesOf(c) ? `${lesOf(c)}차시` : '', hrsOf(c) ? `총 ${hrsOf(c)}시간` : '', perOf(c), schedOf(c)].filter(Boolean);
   const metaH = (c, max) => { const M = metaL(c).slice(0, max || 3); return M.length ? `<ul class="hps-m">${M.map(m => `<li>${E(m)}</li>`).join('')}</ul>` : ''; };
@@ -120,7 +120,7 @@
       const dt = st ? `<div class="hps-dt"><small>${E(st.slice(0, 4))}.${E(st.slice(5, 7))}</small><b>${+st.slice(8, 10)}</b><span>${E(wd(st))}요일 개강</span></div>`
         : (c.period && c.period.mode === 'days') ? `<div class="hps-dt is-any"><b>상시</b><span>신청 즉시 수강</span></div>` : `<div class="hps-dt is-any"><b>${E(kindName(c))}</b><span>${E(term('cls'))}</span></div>`;
       const rows = [r ? ['모집', recRange(r)] : null, perOf(c) ? ['기간', perOf(c)] : null, schedOf(c) ? ['수업', schedOf(c)] : null, capOf(c) ? ['정원', `${capOf(c)}명`] : null, ['수강료', p.free ? '무료' : `${wonF(p.now)}원`]].filter(x => x && x[1]);
-      return `<a class="hps-sch" href="${href(c)}">${dt}<div class="hps-b">${r ? `<p class="hps-st is-${r.k}"${r.k === 'open' ? ` data-due="${E(r.to)}"` : ''}><span>${E(r.l)}</span>${ddTxt(r) ? `<b>${E(ddTxt(r))}</b>` : ''}</p>` : kline(c)}<h3>${E(c.name)}</h3><dl class="hps-dl">${rows.map(([k, v]) => `<div><dt>${E(k)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl></div>${fig(c, o.s, { i: o.i })}<span class="hps-cta">${r && r.k === 'closed' ? '자세히' : '신청하기'}${ic('arrow', 16, 2)}</span></a>`; },
+      return `<a class="hps-sch" href="${href(c)}">${dt}<div class="hps-b">${r ? `<p class="hps-st is-${r.k}"${r.k === 'open' ? ` data-due="${E(r.to)}"` : r.k === 'soon' ? ` data-from="${E(r.from)}" data-to="${E(r.to)}"` : ''}><span>${E(r.l)}</span>${ddTxt(r) ? `<b>${E(ddTxt(r))}</b>` : ''}</p>` : kline(c)}<h3>${E(c.name)}</h3><dl class="hps-dl">${rows.map(([k, v]) => `<div><dt>${E(k)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl></div>${fig(c, o.s, { i: o.i })}<span class="hps-cta">${r && r.k === 'closed' ? '자세히' : '신청하기'}${ic('arrow', 16, 2)}</span></a>`; },
     /* 큰 썸네일: 세로 사진 전체 + 하단 스크림 위 제목(provost) */
     big(c, o) { const p = priceOf(c); const M = [lesOf(c) ? `${lesOf(c)}차시` : '', perOf(c), p.free ? '무료' : `${wonF(p.now)}원`].filter(Boolean);
       return `<a class="hps-big" href="${href(c)}"${o.span >= 2 ? ` style="grid-column:span ${o.span}"` : ''}>${fig(c, o.s, { i: o.i, wide: o.n <= 2 || o.span >= 2, over: badge(c, p) })}<div class="hps-ov"><p class="hps-k"><span>${E(catName(c) || kindName(c))}</span></p><h3>${E(c.name)}</h3><ul class="hps-m">${M.map(m => `<li>${E(m)}</li>`).join('')}</ul></div></a>`; }
@@ -133,7 +133,7 @@
     ].filter(([, f]) => L.some(c => f(c))).slice(0, 4);
     const head = `<thead><tr><th scope="col">${E(term('cls'))}명</th>${C.map(([k]) => `<th scope="col">${E(k)}</th>`).join('')}<th scope="col" class="hps-tp">수강료</th><th scope="col"><span class="hps-sr">신청</span></th></tr></thead>`;
     const body = L.map(c => { const p = priceOf(c); const r = recOf(c);
-      return `<tr><th scope="row"><a href="${href(c)}">${E(c.name)}</a><small>${E(catName(c) || kindName(c))}</small></th>${C.map(([k, f, x]) => { const v = f(c); return `<td data-l="${E(k)}"${!v ? ' class="is-none"' : ''}>${x === 'rec' && v ? `<span class="hps-tag is-${r.k}"${r.k === 'open' ? ` data-due="${E(r.to)}"` : ''}>${E(v)}</span>` : v ? E(v) : '<span aria-label="없음">—</span>'}</td>`; }).join('')}<td class="hps-tp" data-l="수강료">${p.free ? '무료' : `${p.was ? `<s>${wonF(p.was)}</s>` : ''}${wonF(p.now)}원`}</td><td class="hps-ta"><a class="hps-btn sm" href="${href(c)}">${r && r.k === 'closed' ? '보기' : '신청'}</a></td></tr>`; }).join('');
+      return `<tr><th scope="row"><a href="${href(c)}">${E(c.name)}</a><small>${E(catName(c) || kindName(c))}</small></th>${C.map(([k, f, x]) => { const v = f(c); return `<td data-l="${E(k)}"${!v ? ' class="is-none"' : ''}>${x === 'rec' && v ? `<span class="hps-tag is-${r.k}"${r.k === 'open' ? ` data-due="${E(r.to)}"` : r.k === 'soon' ? ` data-from="${E(r.from)}" data-to="${E(r.to)}"` : ''}>${E(v)}</span>` : v ? E(v) : '<span aria-label="없음">—</span>'}</td>`; }).join('')}<td class="hps-tp" data-l="수강료">${p.free ? '무료' : `${p.was ? `<s>${wonF(p.was)}</s>` : ''}${wonF(p.now)}원`}</td><td class="hps-ta"><a class="hps-btn sm" href="${href(c)}">${r && r.k === 'closed' ? '보기' : '신청'}</a></td></tr>`; }).join('');
     return `<div class="hps-tw"><table class="hps-tb">${head}<tbody>${body}</tbody></table></div>`; }
 
   /* ── 목록: 개수에 맞춘 칸 + 남는 칸은 첫 카드가 넓게 ── */
@@ -162,8 +162,10 @@
     const ink = T.ink, ln = al(ink, .12), ln2 = al(ink, .07), mu = T.mu; const at = fit(T.at || T.a, '#ffffff', 4.6); const atA = fit(T.at || T.a, T.alt, 4.6);
     const onImg = '#ffffff'; th;
     return `/* hps card */
-.hps{--hps-r:min(var(--r,12px),14px);--hps-ln:${ln};--hps-ln2:${ln2};--hps-card:transparent;--hps-at:${at};--hps-mu:${mu};font-variant-numeric:tabular-nums}
-.hp-alt .hps,.is-alt .hps{--hps-card:#ffffff;--hps-at:${atA}}
+.hps{--hps-r:min(var(--r,12px),14px);--hps-ln:${ln};--hps-ln2:${ln2};--hps-card:transparent;--hps-at:${at};--hps-mu:${fit(mu, T.bg || '#ffffff', 4.6)};font-variant-numeric:tabular-nums}
+.hps .hps-bd{right:auto;bottom:auto;cursor:inherit} /* v34.5 FB: 머리글 서랍 배경(.hps-bd, inset:0)과 이름이 겹쳐 배지가 카드 전체로 늘어나던 문제 */
+.hps .hps-pr .hps-pa{background:none;color:inherit;border-radius:0;padding-left:0;padding-right:0;padding-bottom:0} /* v34.5 FB: S3 신청 띠의 .hps-pa(진한 상자)와 이름이 겹쳐 가격 카드가 진한 바탕이 되던 문제 */
+.hp-alt .hps,.is-alt .hps{--hps-card:#ffffff;--hps-at:${atA};--hps-mu:${fit(mu, T.alt || '#ffffff', 4.6)}}
 .hps,.hps-c,.hps-row,.hps-sch,.hps-big,.hps-pr{position:relative}.hps .hps-sr{position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .hps a{color:inherit;text-decoration:none}.hps h3{margin:0;font-size:${px(19)};line-height:1.38;letter-spacing:-.022em;font-weight:750;color:${ink}}
 .hps .hps-img{margin:0;position:relative;overflow:hidden;background:${T.as};aspect-ratio:4/3;border-radius:calc(var(--hps-r) - 2px)}.hps .hps-img img{position:absolute;inset:0;width:100%;height:100%;display:block;transition:transform .5s cubic-bezier(.2,.7,.2,1)}
@@ -264,9 +266,47 @@
       return `<section${m[1]}class="hpt hp-s hp-cls hps-sec hps-sec-${kind}${m[2] || ''}"><div class="hp-w">${head}${body}</div></section>`;
     } catch (e) { console.error('hpsec-card', e); return h0; } }; }
 
+  /* ── 강좌 0개: '개설 준비 중' 상태(v34.5 FB · R1 H4) ──
+     숨기지 않는다. 지어낸 강좌 없이 '개설 예정' 카드 1장 + 문의(전화 · 메일 · 게시판 중 있는 것)를 보여 준다.
+     모든 계열(HPL)과 기본 렌더러에서 같게 나오도록 proSec 가장 바깥에서 처리한다(스크립트가 다 불린 뒤 감쌈). */
+  const menuOf = (s, k) => ((s && s.menus) || []).find(m => m.kind === k && m.on !== false);
+  function askOf(s) { const f = ((S.settings && S.settings.footer) || {}); const L = []; const ph = v => !v || /입력하세요|입력해 주세요|예시/.test(String(v));
+    if (!ph(f.tel)) L.push({ h: 'tel:' + String(f.tel).replace(/[^\d+]/g, ''), l: String(f.tel), ic: 'phone' });
+    const em = f.email || f.mail; if (!ph(em) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) L.push({ h: 'mailto:' + em, l: '메일로 문의', ic: 'mail' });
+    const m = menuOf(s, 'community') || menuOf(s, 'board'); if (m && m.access !== '비공개') L.push({ h: '#p-m-' + m.id, l: '게시판에 문의 남기기', ic: 'chat' });
+    return L; }
+  const EIC = { phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2', mail: 'M3 6h18v12H3zM3 7l9 6 9-6', chat: 'M4 5h16v11H9l-5 4z' };
+  const eic = k => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${EIC[k] || IC.arrow}"/></svg>`;
+  const jo = (w, a, b) => { const c = String(w || '').slice(-1).charCodeAt(0); return w + (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? a : b); };
+  function emptyCls(s, d, alt) { const n = term('cls'); const org = (S.org && S.org.name) || '';
+    const priv = (S.classes || []).some(c => c.status === '운영중' && c.open && c.open !== '전체'); const A = askOf(s); const head = `<div class="hp-shr"><div class="hp-sh">${d.title ? `<h2>${E(d.title).replace(/\n/g, '<br>')}</h2>` : `<h2>${E(n)} 안내</h2>`}</div></div>`;
+    const ask = A.length ? `<div class="hps-eb">${A.map((a, k) => `<a class="hps-btn${k ? ' g' : ''}" href="${E(a.h)}">${eic(a.ic)}<span>${E(a.l)}</span></a>`).join('')}</div>` : '';
+    return `<section class="hpt hp-s hp-cls hps-sec hps-empty${alt ? ' hp-alt' : ''}"><div class="${s && s.layout ? 'hpl-w' : 'hp-w'}">${head}<div class="hps hps-e"><div class="hps-ec">${priv ? `<p class="hps-et"><span>회원 전용</span></p><h3>배정된 ${E(jo(n, '은', '는'))} 로그인 후 볼 수 있습니다</h3><p class="hps-ed">${E(n)} 목록은 내 강의실에서 확인합니다. 공개 ${E(jo(n, '이', '가'))} 열리면 이곳에도 올립니다.</p>` : `<p class="hps-et"><span>개설 예정</span></p><h3>새 ${E(jo(n, '을', '를'))} 준비하고 있습니다</h3><p class="hps-ed">일정 · 수강료 · 신청 방법이 정해지면 이곳에 바로 올립니다.</p>`}</div><div class="hps-ea"><p class="hps-eq">${org ? `${E(org)}에 ` : ''}먼저 물어보세요</p><p class="hps-ed">개설 소식과 상담은 아래로 바로 연결됩니다.</p>${ask}</div></div></div></section>`; }
+  const emptyCSS = s => { const T = tokOf(s); if (!T) return ''; const ink = T.ink; const mu = fit(T.mu, '#ffffff', 4.6); const at = fit(T.at || T.a, '#ffffff', 4.6);
+    return `/* hps empty */
+.hps-e{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);border:1px solid ${al(ink, .14)};border-radius:var(--hps-r,12px);overflow:hidden;background:#ffffff}
+.hps-e .hps-ec{padding:clamp(28px,4vw,48px);background:repeating-linear-gradient(135deg,transparent 0 14px,${al(ink, .035)} 14px 15px),#ffffff;border-right:1px solid ${al(ink, .1)}}
+.hps-e .hps-et{margin:0 0 18px}.hps-e .hps-et span{display:inline-block;padding:5px 12px;border:1px solid ${al(at, .5)};border-radius:999px;font-size:13px;font-weight:700;color:${at};background:#ffffff}
+.hps-e h3{font-size:clamp(22px,2.4vw,30px);line-height:1.3;letter-spacing:-.03em;font-weight:780;color:${ink};margin:0;max-width:20ch}
+.hps-e .hps-ed{margin:12px 0 0;color:${mu};font-size:15px;line-height:1.65;max-width:42ch}
+.hps-e .hps-ea{padding:clamp(28px,4vw,48px);display:flex;flex-direction:column;justify-content:center;background:${T.as}}
+.hps-e .hps-eq{margin:0;font-size:17px;font-weight:750;color:${ink};letter-spacing:-.02em}.hps-e .hps-ea .hps-ed{color:${fit(T.mu, T.as, 4.6)}}
+.hps-e .hps-eb{display:flex;flex-direction:column;gap:8px;margin-top:20px}.hps-e .hps-btn{display:inline-flex;align-items:center;gap:10px;min-height:46px;padding:0 18px;border-radius:var(--br,10px);background:${T.a};color:${T.on};font-weight:700;font-size:15px;text-decoration:none;justify-content:flex-start}
+.hps-e .hps-btn.g{background:#ffffff;color:${ink};border:1px solid ${al(ink, .16)}}.hps-e .hps-btn:hover{filter:brightness(.94)}.hps-e .hps-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:760px){.hps-e{grid-template-columns:1fr}.hps-e .hps-ec{border-right:0;border-bottom:1px solid ${al(ink, .1)}}}`; };
+  HPS.clsEmpty = (s, d) => emptyCls(s || site(), d || {}, false);
+  const clsLive = d => { d = d || {}; const ids = d.auto ? pub().map(c => c.id) : (d.ids || []); return ids.map(id => (S.classes || []).find(c => c.id === id)).filter(Boolean).length; };
+  const lateWrap = () => { if (lateWrap.done) return; lateWrap.done = 1; const base = proSec; proSec = (x, i, s, lk) => {
+    try { if (x && x.type === 'classes' && s && s.theme && tokOf(s) && !(x.hide && !editing()) && !+(x.data || {}).dstyle && !clsLive(x.data)) {
+      let h = emptyCls(s, x.data || {}, false); const m = editing() ? HPE.map.get(x) : null; if (m) h = h.replace(/<section\b/, `<section data-hpe="${E(m.key)}|${m.i}"${x.hide ? ' data-hpe-hid="1"' : ''}`);
+      if (s.layout) h = h.replace(/<section\b([^>]*?)\bclass="/, `<section$1class="hpl-${E(s.layout)} hpl-k-classes `); return h; } } catch (e) { console.error('hpsec-card empty', e); }
+    return base(x, i, s, lk); }; window.proSec = proSec; };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', lateWrap, { once: true }); else setTimeout(lateWrap, 0);
+  HPS.lateWrap = lateWrap;
+
   /* ── siteHTML: 페이지마다 사진 겹침 기록 초기화 + CSS 넣기 ── */
   { const base = siteHTML; siteHTML = (s, full, lang) => { resetPhotos(s); const h = base(s, full, lang);
-    try { if (!s || !s.theme || !tokOf(s) || !/class="hps /.test(h)) return h; return h.replace('</style>', cardCSS(s).replace(/<\/?style/gi, '') + '</style>'); } catch (e) { console.error('hpsec-card css', e); return h; } }; window.siteHTML = siteHTML; }
+    try { if (!s || !s.theme || !tokOf(s) || !/class="hps /.test(h)) return h; return h.replace('</style>', (cardCSS(s) + (/hps-empty/.test(h) ? emptyCSS(s) : '')).replace(/<\/?style/gi, '') + '</style>'); } catch (e) { console.error('hpsec-card css', e); return h; } }; window.siteHTML = siteHTML; }
 
   Object.assign(HPS, {
     card: (kind, c, o) => { o = o || {}; const s = o.s || (typeof site === 'function' ? site() : {}); if (!c) return ''; if (kind === 'table') return table([c], { s }); return (CARD[kind] || CARD.photo)(c, { s, n: o.n || 1, i: o.i || 0, span: o.span || 1 }); },

@@ -52,7 +52,7 @@ const window_has_stock = sq => sq.some(x => x.pts !== 0 || !x.ok) || sq.every(x 
       /* 3) 시안 3개 만들기 */
       await click('[data-hw="gen"]'); await page.waitForFunction(() => document.querySelectorAll('.hpw-d').length === 3, null, { timeout: 30000 });
       const D = await page.evaluate(() => HPW.st.drafts.map(d => ({ id: d.id, hero: d.hero, layout: d.site.layout || '', hk: ((d.site.sections.find(x => x.type === 'banner') || {}).data || {}).hk || '', pal: d.site.hpPal || '', photo: ((d.site.img || {}).hero || {}).stock || '', sig: d.site.sections.filter(x => !x.hide).map(x => x.type + (x.data && x.data.variant ? ':' + x.data.variant : '')).join(','), q0: d.q0.score, q: d.q.score,
-        bad: d.q.items.filter(x => !x.ok).map(x => x.k), look: d.site.hpTheme || d.site.look })));
+        bad: d.q.items.filter(x => !x.ok && x.auto !== false).map(x => x.k), look: d.site.hpTheme || d.site.look })));
       if (new Set(D.map(d => d.sig)).size < 3) bad.push('시안 구성이 서로 같음');
       if (hasT) { /* 첫 화면 비교: 계열이 있으면 계열 · 첫 화면 변형(hk), 없으면 화면의 첫 화면 class */
         const hc = await page.evaluate(() => HPW.st.drafts.map(d => { const h = siteHTML(d.site); const m = h.match(/<section[^>]*class="([^"]*\bhpl-(?:hero|s)\b[^"]*)"/); const f = d.site.layout && m ? (m[1].match(/\bhpl-(?!s\b|hero\b|on\b|img\b|w\b)([a-z]+)/) || [])[1] : '';

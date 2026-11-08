@@ -134,6 +134,10 @@
   const okD = v => /^\d{4}-\d{2}-\d{2}$/.test(v);
   const setTx = (el, t) => { const n = [...el.childNodes].find(x => x.nodeType === 3 && x.textContent.trim()); if (n) n.textContent = t + ' '; else el.insertBefore(document.createTextNode(t + ' '), el.firstChild); };
   function ddFix(root) { const T0 = today();
+    /* v34.5 FB(FIXLIST 3): S2 '모집 예정'([data-from] · [data-to]) — 모집 시작일이 지났으면 모집중으로 바꾸고 아래 data-due 계산에 넘김 */
+    root.querySelectorAll('[data-from]').forEach(el => { const fr = String(el.dataset.from || '').slice(0, 10), to = String(el.dataset.to || '').slice(0, 10); if (!okD(fr) || !okD(to) || fr > T0) return;
+      el.removeAttribute('data-from'); el.classList.remove('is-soon'); el.dataset.due = to;
+      if (el.matches('.hps-bd')) { el.classList.add('is-on'); el.innerHTML = '모집중 <b></b>'; } else if (el.matches('.hps-st')) { el.classList.add('is-open'); el.innerHTML = '<span>모집중</span><b></b>'; } else { el.classList.add('is-open'); const dd = dDays(T0, to); el.textContent = '모집중 ' + (dd === 0 ? '오늘 마감' : 'D-' + dd); } });
     root.querySelectorAll('[data-due]').forEach(el => { const due = String(el.dataset.due || '').slice(0, 10); if (!okD(due)) return; const dd = dDays(T0, due); const tx = dd === 0 ? '오늘 마감' : 'D-' + dd; const b = el.querySelector(':scope > b');
       if (dd < 0) { el.classList.remove('is-on', 'is-open'); el.classList.add(el.matches('.hps-bd') ? 'is-off' : 'is-closed');
         if (el.matches('.hps-st')) { const sp = el.querySelector(':scope > span'); if (sp) sp.textContent = '모집 마감'; if (b) b.remove(); const go = el.closest('.hps-sch') && el.closest('.hps-sch').querySelector('.hps-cta'); if (go) setTx(go, '자세히'); }

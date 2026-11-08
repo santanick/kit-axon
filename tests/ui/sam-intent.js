@@ -38,12 +38,15 @@ const SET = {
     for (const [q, exp] of SET[ty]) { tot++; const e0 = pe.length;
       const fp = () => p.evaluate(() => { const o = {}; Object.keys(S).filter(k => !['chat', 'audit', 'ai', 'gsig'].includes(k)).forEach(k => { o[k] = S[k]; }); return JSON.stringify(o).length + ':' + JSON.stringify(o).split('').reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7); });
       const f0 = await fp();
-      await p.evaluate(q => { UI.siN = S.chat.length; chatSend(q); }, q); await p.waitForFunction(() => { const x = S.chat[S.chat.length - 1]; return x && x.role === 'ai' && !x.typing; }, null, { timeout: 4000 }).catch(() => { }); await p.waitForTimeout(60);
-      let m = await p.evaluate(() => { const x = S.chat.filter(y => y.role === 'ai').pop() || {}; return { plan: x.plan || '', fill: x.btn && x.btn.act === 'si-fill' ? x.btn.v : '', title: x.title || x.text || '', si: !!x.si }; });
+      await p.evaluate(q => { UI.siN = S.chat.length; chatSend(q); }, q); await p.waitForFunction(() => S.chat.slice(UI.siN || 0).some(x => x && x.role === 'ai' && !x.typing && (x.plan || (x.btn && x.btn.act === 'si-fill') || !/단계를 마쳤습니다|빌드 단계|^「[^」]+」 단계/.test(String(x.text || '')))) && !S.chat.some(x => x && x.typing), null, { timeout: 5000 }).catch(() => { }); await p.waitForTimeout(60);
+      /* FIXLIST 20: 보낸 뒤의 AI 답 중에서 고른다 — 화면을 다시 그릴 때 끼어드는 시작 가이드 '단계를 마쳤습니다' · 결제 연결 안내는 의도 답이 아니다 */
+      const PICK = () => { const L = S.chat.slice(UI.siN || 0).filter(y => y.role === 'ai' && !y.typing); const isNoise = y => !y.plan && !(y.btn && y.btn.act === 'si-fill') && /단계를 마쳤습니다|빌드 단계|^「[^」]+」 단계/.test(String(y.text || ''));
+        const x = L.find(y => y.plan) || L.find(y => y.btn && y.btn.act === 'si-fill') || L.filter(y => !isNoise(y)).pop() || L.pop() || {}; return { plan: x.plan || '', fill: x.btn && x.btn.act === 'si-fill' ? x.btn.v : '', title: x.title || x.text || '', si: !!x.si }; };
+      let m = await p.evaluate(`(${PICK})()`);
       if (m.fill) { await p.evaluate(v => ACT['si-fill']({ dataset: { v } }), m.fill); await p.waitForTimeout(80);
         await p.evaluate(() => { const w = document.querySelector('#siForm'); w.querySelectorAll('textarea').forEach(t => { if (!t.value.trim()) t.value = S.org.type === 'univ' ? '학번,학과\n20269001,경영학과\n20269002,컴퓨터공학과' : '번호,이름,소속\nX9001,측정일,1반\nX9002,측정이,2반'; }); });
         await p.click('#slSheet [data-act="si-fill-ok"]'); await p.waitForTimeout(150);
-        m = await p.evaluate(() => { const x = S.chat.filter(y => y.role === 'ai').pop() || {}; return { plan: x.plan || '', fill: '', title: x.title || x.text || '', si: !!x.si }; }); }
+        m = await p.evaluate(`(${PICK})()`); m.fill = ''; }
       let isCard = exp === 'direct' ? /메뉴|껐|켰|되돌/.test(m.title) : !!m.plan;
       if (exp === 'plan' && m.plan) { /* 화면에 보이는 [모두 실행] 버튼을 누른다(없으면 같은 동작을 직접) */
         await p.evaluate(v => { const b = [...document.querySelectorAll(`[data-act="plan-ok"][data-v="${v}"]`)].find(x => x.offsetParent); if (b) b.click(); else ACT['plan-ok']({ dataset: { v } }); }, m.plan);

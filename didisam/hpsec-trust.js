@@ -347,4 +347,83 @@ ${P} .hps-ctw{flex-direction:column;align-items:flex-start;gap:20px}${P} .hps-ct
     try { if (!h || !thOn(s) || !String(h).includes('</style>')) return h; const c = css(s); if (!c) return h;
       /* 계열(HPL) · 사용자 스타일(hpimg)보다 앞: 첫 </style> 바로 앞에 넣되, hpdir 토큰 뒤 */
       return h.replace('</style>', c.replace(/<\/?style/gi, '') + '</style>'); } catch (e) { console.error('hpsec-trust css', e); return h; } }; window.siteHTML = siteHTML; }
+
+  /* ══ v34.5 FB(R1 H3): 번호 단계 섹션 남발 줄이기 — 유형마다 '번호 단계'를 쓰는 템플릿은 40% 이하 ══
+     내용이 실제 순서(절차 · 신청 · 과정 · 방법 …)인 단계 섹션과 story 계열(타임라인이 정체성)은 남기고, 나머지는 유형에 맞는 다른 뼈대로 바꾼다.
+       board  = 공지 | 묻고 답하기 2단(이미 공지 섹션이 있으면 그것을 2단으로) · sched = 모집 일정표(실제 강좌 일정) · reviews = 큰 인용 후기(실제 후기)
+     모두 실제 데이터만 쓰고, 데이터가 없으면 숨는다(지어낸 내용 없음). 템플릿 원본은 고치지 않고 siteFromTpl 결과만 바꾼다(가장 바깥에서 감쌈). */
+  const ALT = { k12: ['reviews', 'board', 'sched'], adult: ['reviews', 'sched', 'board'], univ: ['board', 'sched', 'reviews'], univ_lms: ['board', 'sched', 'reviews'], lifelong: ['sched', 'board', 'reviews'], voc: ['sched', 'reviews', 'board'], corp: ['sched', 'board', 'reviews'], public: ['board', 'sched', 'reviews'] };
+  const SEQ = /절차|신청|과정|방법|흐름|순서|단계|진행|STEP|HOW/i;
+  const isSteps = x => x && x.type === 'text' && x.data && x.data.variant === 'steps';
+  const plan = {}; /* 유형 → { 템플릿 id: 'keep' | 바꿀 순번 } */
+  function stepPlan(ty) { if (plan[ty]) return plan[ty]; const P = plan[ty] = {}; const tk = ty === 'univ_lms' ? 'univ' : ty;
+    const L = (typeof TPL !== 'undefined' ? TPL : []).filter(t => t && !t.hidden && (t.types || [])[0] === tk);
+    const C = []; L.forEach(t => { let secs = []; try { secs = typeof t.build === 'function' ? t.build() : []; } catch (e) { secs = []; } const st = (secs || []).find(isSteps); if (st) C.push({ id: t.id, story: t.layout === 'story', seq: SEQ.test(`${st.data.title || ''} ${st.data.eyebrow || ''}`) }); });
+    const keepMax = Math.floor(L.length * 0.4); const ord = C.slice().sort((a, b) => (b.story - a.story) || (b.seq - a.seq) || a.id.localeCompare(b.id)); let k = 0;
+    ord.forEach((c, i) => { if (i < keepMax) P[c.id] = 'keep'; else P[c.id] = k++; }); return P; }
+  function reskel(s, tp) { const ty = typeKey(); const P = stepPlan(ty); const r = P[tp.id]; if (r == null || r === 'keep') return s; const L = s.sections || []; const i = L.findIndex(isSteps); if (i < 0) return s;
+    const mk = (type, data) => (typeof S2 === 'function' ? S2(type, data) : { id: 'x' + Math.random().toString(36).slice(2, 9), type, data });
+    const opts = ALT[ty] || ALT.adult; const has = k => L.some(x => x && (k === 'reviews' ? x.type === 'reviews' : k === 'sched' ? x.type === 'text' && x.data && (x.data.hpt === 'sched' || x.data.variant === 'timeline') : x.type === 'notices' && x.data && x.data.variant === 'board'));
+    for (let n = 0; n < opts.length; n++) { const k = opts[(r + n) % opts.length]; if (has(k)) continue;
+      if (k === 'board') { const no = L.find(x => x && x.type === 'notices'); if (no) { no.data = Object.assign({}, no.data, { variant: 'board' }); L.splice(i, 1); } else L.splice(i, 1, mk('notices', { variant: 'board', title: '공지 · 묻고 답하기', n: 5 })); }
+      else if (k === 'sched') L.splice(i, 1, mk('text', { variant: 'timeline', hpt: 'sched', eyebrow: '', title: '모집 일정', cols: [] }));
+      else L.splice(i, 1, mk('reviews', { title: '수강생 이야기', n: 3 }));
+      s.hpSkel = k; return s; }
+    L.splice(i, 1); s.hpSkel = 'drop'; return s; }
+  HPS.stepPlan = stepPlan;
+  const wrapSkel = () => { if (typeof siteFromTpl !== 'function' || siteFromTpl.hpsk) return; const base = siteFromTpl;
+    const f = tp => { const s = base(tp); try { if (s && tp && !tp.keepSteps && S && S.org) reskel(s, tp); } catch (e) { console.error('hpsec-trust skel', e); } return s; };
+    Object.keys(base).forEach(k => { f[k] = base[k]; }); f.hpsk = 1; siteFromTpl = f; window.siteFromTpl = f; };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wrapSkel); else setTimeout(wrapSkel, 0);
+
+  /* ══ v34.5 FB(R1 M8): 품질 점수 변별력 — 첫 화면 사진 해상도 · 사진과 업종 · 보이는 섹션 수 · 같은 유형 계열 중복 ══
+     hpwQuality 안의 연결 지점(HPW.qx)에 항목을 더하고, 배점을 다시 나눠 합계 100을 유지한다(X4의 안내 줄은 0점).
+     새 항목은 자동 보정(hpwFix)으로 고칠 수 없으므로 auto:false. */
+  const QW = { contrast: 12, empty: 12, ph: 12, alt: 8, mobile: 8, seo: 8, btn: 8, contact: 8, fact: 6, photoRes: 5, photoFit: 4, secN: 6, famDup: 3 };
+  const stockOf = v => { const m = String(v || '').match(/(?:^|\/)([a-z]{3}-\d{2})(?:-800)?(?:\.webp)?(?:[?#].*)?$/); return m && window.HPSTOCK && HPSTOCK.get ? HPSTOCK.get(m[1]) : null; };
+  function heroSrc(s) { const im = s.img && s.img.hero; const bn = (s.sections || []).find(x => x && x.type === 'banner' && !x.hide); const d = (bn && bn.data) || {};
+    return (im && (im.stock || im.src)) || d.img || (s.photos && s.photos.hero) || ''; }
+  HPS.qItems = (s, add) => { const ty = typeKey(); const tk = ty === 'univ_lms' ? 'univ' : ty;
+    const src = heroSrc(s); const x = stockOf(src); const L = Math.max((x && x.w) || 0, (x && x.h) || 0);
+    if (!src) add('photoRes', '첫 화면 사진', QW.photoRes, true, '사진 없는 첫 화면(글자 · 배치 중심)', false);
+    else if (!x) add('photoRes', '첫 화면 사진', QW.photoRes, true, '직접 올린 사진', false);
+    else { const ok = (x.slots || []).includes('hero') && L >= 1200; add('photoRes', '첫 화면 사진', QW.photoRes, ok, ok ? `긴 변 ${L}px` : !(x.slots || []).includes('hero') ? '첫 화면용이 아닌 사진입니다 — 넓게 키우면 흐려집니다' : `긴 변 ${L}px — 1200px 이상 사진으로 바꾸세요`, false); }
+    const fit = !x || !(x.types || []).length || x.types.includes(tk);
+    add('photoFit', '사진과 업종', QW.photoFit, fit, fit ? (x ? '기관 유형에 맞는 사진' : '샘플 사진이 아니거나 사진 없음') : `첫 화면 사진(${x.alt || x.id})이 이 기관 유형에 어울리지 않습니다`, false);
+    const eo = window.HPW && typeof HPW.emptyOf === 'function' ? HPW.emptyOf : null; const vis = (s.sections || []).filter(y => y && !y.hide && !(eo && eo(y))).length;
+    add('secN', '보이는 섹션', QW.secN, vis >= 6, vis >= 6 ? `${vis}개` : `${vis}개 — 6개 이상이면 첫 방문자가 볼 내용이 충분합니다(공지 · 강좌 · 문의 등)`, false);
+    let dup = 0; try { const T = (typeof TPL !== 'undefined' ? TPL : []).filter(t => t && !t.hidden && (t.types || []).includes(tk) && t.id !== (s.tpl || s.tplId)); dup = s.layout ? T.filter(t => t.layout === s.layout).length : 0; } catch (e) { dup = 0; }
+    add('famDup', '배치 겹침', QW.famDup, dup <= 1, !s.layout ? '기본 배치' : dup <= 1 ? '같은 유형 템플릿과 배치가 겹치지 않음' : `같은 유형 템플릿 ${dup}종과 같은 배치(${s.layout})`, false); };
+  if (window.HPW) { (HPW.qx = HPW.qx || []).push((s, it, add) => { if (!s || !S || !S.org) return; HPS.qItems(s, add); it.forEach(x => { if (QW[x.k] != null) x.pts = QW[x.k]; }); }); }
+
+  /* ══ v34.5 FB(R1 M5 · M6): 늦게 뜨는 사진 자리 · 짧은 섹션 여백 ══
+     M5 샘플 사진 <img>에 비율(aspect-ratio, 높이가 auto일 때만 적용)과 사진 평균색 바탕을 넣는다 → 늦게 떠도 흰 빈 상자가 보이지 않는다.
+     M6 글이 2줄 안팎이고 사진 · 표 · 목록이 없는 섹션은 hps-short(위아래 여백 × 0.6). 같은 흰 바탕 섹션이 이어지면 뒤 섹션 위 여백을 절반으로(hps-flow). */
+  const avgOf = id => { try { const p = window.HPC && HPC.photo ? HPC.photo(id) : null; return p && p.avg ? p.avg : '#E7E8EC'; } catch (e) { return '#E7E8EC'; } };
+  function imgFill(h) { return h.replace(/<img\b[^>]*>/gi, t => { const src = (t.match(/\ssrc="([^"]*)"/i) || [])[1] || ''; const x = stockOf(src); if (!x) return t;
+    let o = t; const ar = x.w && x.h && !/aspect-ratio/i.test(o) ? `aspect-ratio:${x.w}/${x.h};` : ''; /* width · height 속성은 높이를 고정해 배치를 바꾸므로 쓰지 않는다 — aspect-ratio는 높이가 auto일 때만 적용 */
+    const bg = `${ar}background-color:${avgOf(x.id)}`; if (/\sstyle="/i.test(o)) { if (!/background/i.test((o.match(/\sstyle="([^"]*)"/i) || [])[1])) o = o.replace(/\sstyle="([^"]*)"/i, (m, v) => ` style="${v.replace(/;?\s*$/, ';')}${bg}"`); } else o = o.replace(/^<img\b/i, `<img style="${bg}"`);
+    return o; }); }
+  const NOFLOW = /\b(hp-alt|is-alt|hp-cta|hps-cta|hp-hero|hps-hero|hpl-k-banner|hpl-k-cta|hpl-k-stats|hp-facts|hps-facts|hpl-noir|hps-empty|hps-ntop|hpl-empty|hp-empty)\b/;
+  function spacing(h) { const re = /<section\b[^>]*class="([^"]*)"[^>]*>/g; const M = []; let m; while ((m = re.exec(h))) M.push({ i: m.index, t: m[0], c: m[1] });
+    if (!M.length) return h; const isTop = []; let depth = 0, p = 0; /* 최상위 섹션만: 앞 섹션이 닫혔는지 */
+    M.forEach((x, k) => { const seg = h.slice(p, x.i); depth -= (seg.match(/<\/section>/g) || []).length; if (depth < 0) depth = 0; isTop[k] = depth === 0; depth++; p = x.i; });
+    const out = []; let last = 0; let prevFlow = false, prevEnd = -1;
+    M.forEach((x, k) => { if (!isTop[k]) return; const end = h.indexOf('</section>', x.i); const body = end > 0 ? h.slice(x.i, end) : '';
+      const txt = body.replace(/<style[\s\S]*?<\/style>|<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const rich = /<(img|figure|table|iframe|video|form|details|dl)\b/.test(body) || (body.match(/<li\b/g) || []).length > 2 || (body.match(/<article\b/g) || []).length > 1;
+      const add = []; if (!NOFLOW.test(x.c) && !rich && txt.length <= 160) add.push('hps-short');
+      const flow = !NOFLOW.test(x.c) && /\b(hp-s|hpl-s)\b/.test(x.c) && !/style="[^"]*background/.test(x.t);
+      const gap = prevEnd >= 0 ? h.slice(prevEnd, x.i).replace(/<\/section>|<\/div>|\s/g, '') : 'x';
+      if (flow && prevFlow && !gap) add.push('hps-flow'); prevFlow = flow; prevEnd = end >= 0 ? end + 10 : -1;
+      if (!add.length) return; out.push(h.slice(last, x.i), x.t.replace(/class="/, `class="${add.join(' ')} `)); last = x.i + x.t.length; });
+    if (!out.length) return h; out.push(h.slice(last)); return out.join(''); }
+  const spCSS = `/* hps rhythm */
+.hpl-noir .hps-st,.hpl-noir .hpl-stars{color:#E3B341!important}.hpl-noir .hps-st i{color:#9A9A9A!important}
+section.hps-short{padding-top:calc(var(--sec,120px) * .6)!important;padding-bottom:calc(var(--sec,120px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec,120px) * .5)!important}
+@media(max-width:640px){.hpl-noir .hps-st,.hpl-noir .hpl-stars{color:#E3B341!important}.hpl-noir .hps-st i{color:#9A9A9A!important}
+section.hps-short{padding-top:calc(var(--sec-m,72px) * .6)!important;padding-bottom:calc(var(--sec-m,72px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec-m,72px) * .5)!important}}`;
+  HPS.rhythm = { imgFill, spacing };
+  { const base = siteHTML; siteHTML = (s, full, lang) => { let h = base(s, full, lang);
+    try { if (typeof h !== 'string' || !thOn(s)) return h; h = imgFill(h); const h2 = spacing(h); if ((h2 !== h || /hpl-noir/.test(h)) && h2.includes('</style>')) h = h2.replace('</style>', spCSS + '</style>'); return h; } catch (e) { console.error('hpsec-trust rhythm', e); return h; } }; window.siteHTML = siteHTML; }
 })();

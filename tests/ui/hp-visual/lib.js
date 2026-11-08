@@ -21,18 +21,46 @@ function args(argv) { const o = { _: [] }; for (let i = 0; i < argv.length; i++)
 
 const ORGN = { adult: '센텀 실무 아카데미', k12: '센텀 수학학원', univ: '부산미래대학교', lifelong: '해운대구 평생학습관', voc: '부산 직업전문학교', corp: '한빛물산 인재개발원', public: '해운대구 인재개발원' };
 
-/* 기관 하나 만들기(유형별 한 번) — 공개 강좌 · 결제 승인 상태로 게시까지 */
-async function mkOrg(br, base, type, errs) {
+/* 점검 기관 상태(R1 H4 · v34.5 FB)
+   - filled(기본): 공개 강좌 6 · 공지 4 · 후기 3 · 연락처가 있는 '채워진 기관'(숫자는 강좌에서 HPT.facts가 셈)
+   - empty: 빈 스튜디오(강좌 · 공지 · 후기 · 연락처 없음) — 실제 신규 고객의 첫 게시본이자 예전 도구의 점검 기관과 같은 상태 */
+const STATES = ['filled', 'empty'];
+const CLS = {
+  adult: ['실무 엑셀 데이터 정리', '생성형 AI 업무 활용', '비즈니스 영어 회화', '포토샵 기초 디자인', '파이썬 업무 자동화', '프레젠테이션 스피치'],
+  k12: ['중2 수학 개념 완성', '고1 영어 내신 대비', '초등 사고력 수학', '중3 과학 실험 탐구', '고2 국어 문학 정리', '초등 코딩 블록 교실'],
+  univ: ['AI 리터러시 기초', '데이터 분석 입문', '학술 글쓰기', '진로 설계 세미나', '창업 아이디어 실습', '교수법 워크숍'],
+  lifelong: ['스마트폰 활용 교실', '수채화 입문', '생활 영어 회화', '우리 동네 역사 탐방', '건강 요가', '디지털 사진 기초'],
+  voc: ['전기기능사 실기', '웹 개발 부트캠프', '용접 기초 실습', '컴퓨터활용능력 2급', '바리스타 자격 과정', '회계 실무(전산회계)'],
+  corp: ['신입 온보딩 과정', '리더십 기본 과정', '정보보호 법정교육', '직장 내 괴롭힘 예방', '데이터 기반 의사결정', '고객 응대 실무'],
+  public: ['공직자 청렴 교육', '민원 응대 실무', '공공 데이터 활용', '디지털 행정 기초', '시민 안전 교육', '적극 행정 사례 연구'] };
+const NOTI = ['겨울 학기 수강 신청 안내', '시설 점검에 따른 휴강 안내', '수료증 발급 방법 안내', '상담 운영 시간 변경 안내'];
+const REVS = ['설명이 차근차근해서 처음 배우는 사람도 따라가기 좋았습니다.', '실습 위주라 바로 업무에 써먹을 수 있었어요. 다음 과정도 신청했습니다.', '수업 자료가 잘 정리되어 있어서 복습할 때 큰 도움이 됩니다.'];
+/* 기관 하나 만들기(유형별 한 번) — 상태(state)에 맞춰 데이터를 채우고 결제 승인 · 게시까지 */
+async function mkOrg(br, base, type, errs, state) {
+  state = STATES.includes(state) ? state : 'filled';
   const ctx = await br.newContext({ viewport: { width: 1280, height: 800 } });
   await ctx.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, r => r.abort());
   const op = await ctx.newPage(); op.on('pageerror', e => errs.push(`op[${type}]: ${e.message}`)); op.on('dialog', d => d.accept());
   await op.goto(base + 'index.html'); await op.waitForFunction(() => typeof createOrg === 'function');
-  await op.evaluate(([type, name]) => { localStorage.clear(); localStorage.setItem('didisam.emptyStart', '0'); createOrg(type, name); }, [type, ORGN[type] || '점검 기관']);
+  await op.evaluate(([type, name, empty]) => { localStorage.clear(); localStorage.setItem('didisam.emptyStart', empty ? '1' : '0'); createOrg(type, name); }, [type, ORGN[type] || '점검 기관', state === 'empty']);
   await op.waitForFunction(() => window.S && S.org); await op.waitForTimeout(700);
-  await op.evaluate(() => { try { closeModal(); } catch (e) { } try { if (typeof fabClose === 'function') fabClose(); } catch (e) { }
+  await op.evaluate(([state, names, noti, revs]) => { try { closeModal(); } catch (e) { } try { if (typeof fabClose === 'function') fabClose(); } catch (e) { }
     S.settings.toss = Object.assign(S.settings.toss || {}, { status: '승인', stage: 99, mid: 'qa_demo' }); S.settings.pg = 'toss';
-    S.classes.forEach(c => { if (c.status === '운영중' && c.open !== '비공개') c.open = c.open || '전체'; });
-    save(); try { lxDemo(); } catch (e) { } smPublish(); });
+    if (state === 'filled') { const day = n => { const d = new Date(Date.now() + n * 864e5); return d.toISOString().slice(0, 10); };
+      const C = S.classes || [];
+      S.classes = names.map((nm, i) => { const c = C[i] || { kind: i % 3 === 2 ? 'live' : 'vod', sub: '', level: i % 3, teacher: '', group: '', learners: [], prog: {}, legal: false,
+        curriculum: typeof curriculumFor === 'function' ? curriculumFor(nm, 'vod') : [], criteria: { video: 60, exam: 20, assign: 20, threshold: 80 }, skip: false, speed: true, early: false, community: 'class' };
+        return Object.assign(c, { id: c.id || 'qc' + i, name: nm, status: '운영중', open: '전체',
+        price: i === 5 ? 0 : [99000, 149000, 199000, 59000, 129000][i % 5], start: day(7 + i * 7), end: day(67 + i * 7), hours: 12 + i * 2, cert: 'auto',
+        days: [[1, 3], [2, 4], [6], [1, 3, 5], [2], [4]][i], time: { from: ['19:00', '10:00', '14:00', '18:30', '09:30', '20:00'][i], to: '' },
+        recruit: { on: true, from: i === 4 ? day(5) : day(-10 + i), to: day(5 + i * 4), cap: 12 + i * 4 }, notices: [] }); });
+      S.notices = noti.map((t2, i) => ({ id: 'qn' + i, title: t2, at: day(-1 - i * 3), pin: i === 0 }));
+      const who = (S.members || [])[0] ? S.members.map(m => m.id) : ['m0'];
+      S.posts = [...(S.posts || []).filter(p => p.board !== '수강후기'), ...revs.map((b, i) => ({ id: 'qr' + i, kind: '이야기', board: '수강후기', who: who[i * 2 % who.length], title: b.slice(0, 18), body: b, stars: 5, at: day(-2 - i), replies: 0, views: 20, hidden: false }))];
+      S.reviews = [];
+      S.settings.footer = Object.assign({}, S.settings.footer, { tel: '051-555-0123', mail: 'info@example.com', email: 'info@example.com', addr: '부산광역시 해운대구 센텀중앙로 00' }); }
+    else (S.classes || []).forEach(c => { if (c.status === '운영중' && c.open !== '비공개') c.open = c.open || '전체'; });
+    save(); try { lxDemo(); } catch (e) { } smPublish(); }, [state, CLS[type] || CLS.adult, NOTI, REVS]);
   await dismiss(op);
   const tid = await op.evaluate(() => DREG.cur());
   return { ctx, op, tid };
@@ -51,9 +79,16 @@ async function applyTpl(op, id) {
     let amin = null; try { const au = HPT.audit(s) || []; const w = au.reduce((m, x) => (!m || x[3] < m[3]) ? x : m, null); if (w) amin = [String(w[0]) + ' ' + String(w[1]), Math.round(w[3] * 100) / 100]; } catch (e) { }
     let facts = []; try { facts = (HPT.facts() || []).map(f => String(f.v)); } catch (e) { }
     const prices = (S.classes || []).map(c => String(+c.price || 0));
+    /* 실제 데이터 숫자(채워진 기관): 정원 · 시간 · 차시 · 후기 · 공지 · 공개 강좌 수 — 지어낸 숫자 의심에서 뺀다 */
+    (S.classes || []).forEach(c => { [c.cap, c.recruit && c.recruit.cap, c.hours, (c.curriculum || []).length].forEach(v => { if (+v > 0) prices.push(String(+v)); }); });
+    try { prices.push(String(HPT.reviews().length), String((S.notices || []).length + (S.classes || []).reduce((a, c) => a + (c.notices || []).length, 0)), String((S.classes || []).filter(c => c.open === '전체').length)); } catch (e) { }
+    /* 첫 화면 사진(R1 H6): 샘플 사진이면 hero 슬롯 · 긴 변 1200 이상인지 */
+    let heroPh = null; try { const bnd = (live.find(x => x.type === 'banner') || { data: {} }).data; const im = (s.img && s.img.hero) || null; const src = (im && (im.stock || im.src)) || bnd.img || (s.photos && s.photos.hero) || '';
+      const m = String(src).match(/(?:^|\/)([a-z]{3}-\d{2})(?:-800)?(?:\.webp)?$/); const x = m && window.HPSTOCK && HPSTOCK.get ? HPSTOCK.get(m[1]) : null;
+      if (x) heroPh = { id: x.id, long: Math.max(x.w, x.h), slot: (x.slots || []).includes('hero'), types: x.types || [], ok: (x.slots || []).includes('hero') && Math.max(x.w, x.h) >= 1200 }; else if (src) heroPh = { id: 'own', ok: true }; } catch (e) { }
     return { id, name: tp.name, types: tp.types || [], type: (tp.types || [])[0] || '', hidden: !!tp.hidden, theme: s.theme || '', color: s.color || '', layout: fam,
       hero: (live.find(x => x.type === 'banner') || { data: {} }).data.hero || '', sig: fam + '|' + secs.join('>'), secs, nSec: live.length, nHidden: (s.sections || []).length - live.length,
-      q: q.score, qMiss: q.miss || [], qErr: q.err, auditMin: amin, facts, prices };
+      q: q.score, qMiss: q.miss || [], qErr: q.err, auditMin: amin, facts, prices, heroPh };
   }, id);
   if (r.err) return r;
   await op.evaluate(() => { save(); smPublish(); }); await dismiss(op);
@@ -73,7 +108,9 @@ const MEASURE = () => {
   /* 바탕: 단색이면 계산, 사진 · 그라데이션 위면 null(픽셀로 잼) */
   function bgOf(el) { const stack = []; let a = el; while (a && a.nodeType === 1) { const cs = getComputedStyle(a); if (cs.backgroundImage && cs.backgroundImage !== 'none') return null; const c = parse(cs.backgroundColor); if (c && c[3] > 0) { stack.push(c); if (c[3] >= 0.99) break; } a = up(a); }
     let base = [255, 255, 255]; for (let i = stack.length - 1; i >= 0; i--) { const c = stack[i]; const al = c[3]; base = [c[0] * al + base[0] * (1 - al), c[1] * al + base[1] * (1 - al), c[2] * al + base[2] * (1 - al)]; } return base; }
-  function overMedia(root, el, r) { const x = r.left + r.width / 2, y = r.top + r.height / 2; if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return false;
+  const MR = new Map(); const mediaRects = root => { if (!MR.has(root)) MR.set(root, [...root.querySelectorAll('img, video, picture, canvas')].map(m => m.getBoundingClientRect()).filter(b => b.width > 40 && b.height > 30)); return MR.get(root); };
+  function overMedia(root, el, r) { const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return mediaRects(root).some(b => x >= b.left && x <= b.right && y >= b.top && y <= b.bottom); /* 화면 밖: 사진 영역 안이면 픽셀로 잰다(v34.5 FB) */
     const st = root.elementsFromPoint ? root.elementsFromPoint(x, y) : []; const i = st.indexOf(el); for (const e of st.slice(i + 1)) { if (/^(IMG|VIDEO|CANVAS|PICTURE)$/.test(e.tagName) || (e.tagName === 'svg' && e.getBoundingClientRect().width > 120)) return true; const cs = getComputedStyle(e); if (cs.backgroundImage && cs.backgroundImage !== 'none') return true; const c = parse(cs.backgroundColor); if (c && c[3] >= 0.99) return false; } return false; }
   const texts = [], photos = { img: 0, bg: 0, stock: 0, art: 0, slots: 0 }, empty = [], wide = []; let txtAll = '';
   roots.forEach(root => {
@@ -92,16 +129,35 @@ const MEASURE = () => {
     root.querySelectorAll('section, .smr > div').forEach(sec => { if (!vis(sec)) return; const txt = (sec.innerText || '').replace(/\s+/g, ' ').trim(); const media = sec.querySelector('img, svg, iframe, video, canvas, [data-slot]'); if (txt.length < 2 && !media) empty.push(String(sec.className).split(' ')[0] || sec.tagName.toLowerCase()); });
     txtAll += ' ' + [...root.children].filter(c => !/^(STYLE|SCRIPT|TEMPLATE)$/.test(c.tagName)).map(c => c.innerText || '').join(' ');
   });
+  /* 보이는 섹션(최상위 section) · 번호 단계 섹션(01 · 02 · 03 표시) · 강좌 섹션(카드 보임 / 개설 준비 중) — v34.5 FB */
+  let nVis = 0, numSec = 0, clsVis = 0, emptyCls = 0;
+  roots.forEach(root => { root.querySelectorAll('section').forEach(sec => { if (!vis(sec) || (sec.parentElement && sec.parentElement.closest('section'))) return; nVis++;
+    const ns = new Set(); sec.querySelectorAll('*').forEach(e => { if (!vis(e)) return; const own = [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim(); const m = own.match(/^(?:STEP\s*)?0?([1-6])\.?$/i); if (m) ns.add(+m[1]); });
+    if (ns.has(1) && ns.has(2) && ns.has(3)) numSec++;
+    if (sec.classList.contains('hps-empty')) emptyCls++; else if (/\b(hp-cls|hpl-k-classes|hps-sec)\b/.test(sec.className) && sec.querySelector('a, article, tr')) clsVis++; }); });
   const h0 = hosts[0] ? hosts[0].getBoundingClientRect() : null;
-  return { hosts: hosts.length, top: h0 ? Math.round(h0.top + sy) : 0, docH: document.documentElement.scrollHeight, over: document.documentElement.scrollWidth - innerWidth, wide, texts, photos, empty, txt: txtAll.replace(/\s+/g, ' ').trim().slice(0, 20000) };
+  return { hosts: hosts.length, top: h0 ? Math.round(h0.top + sy) : 0, docH: document.documentElement.scrollHeight, nVis, numSec, clsVis, emptyCls, over: document.documentElement.scrollWidth - innerWidth, wide, texts, photos, empty, txt: txtAll.replace(/\s+/g, ' ').trim().slice(0, 20000) };
 };
+
+/* 촬영 전 대기(FIXLIST 16): 페이지를 끝까지 내려 지연 불러오기를 깨우고, 모든 사진을 eager로 바꿔 다 뜨고(decode) 나면 맨 위로. 반환: 아직 안 뜬 사진 수 */
+async function settle(pg, ms) {
+  return pg.evaluate(async lim => { const t0 = Date.now(); const imgs = () => [...document.querySelectorAll('.smhost')].flatMap(h => h.shadowRoot ? [...h.shadowRoot.querySelectorAll('img')] : []);
+    imgs().forEach(i => { if (i.loading === 'lazy') i.loading = 'eager'; i.decoding = 'sync'; }); /* 전체 화면 촬영(captureBeyondViewport)은 decoding=async 사진을 빈 칸으로 찍을 때가 있다 */
+    const H = document.documentElement.scrollHeight; for (let y = 0; y < H; y += Math.round(innerHeight * .8)) { scrollTo(0, y); await new Promise(r => setTimeout(r, 60)); }
+    scrollTo(0, 0); await new Promise(r => setTimeout(r, 450)); /* 머리글 숨김 · 보임 전환(스크롤 방향)이 끝날 때까지 */
+    const L = imgs(); const all = Promise.all(L.map(i => (i.complete ? Promise.resolve() : new Promise(ok => { i.addEventListener('load', ok, { once: true }); i.addEventListener('error', ok, { once: true }); })).then(() => (i.decode ? i.decode().catch(() => {}) : 0))));
+    await Promise.race([all, new Promise(r => setTimeout(r, Math.max(300, lim - (Date.now() - t0))))]);
+    try { await document.fonts.ready; } catch (e) { }
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    return imgs().filter(i => !i.complete || !i.naturalWidth).length; }, ms || 4000).catch(() => -1);
+}
 
 /* 글자 점검: 자리 문구 · 오류 흔적 · 지어낸 숫자 의심 */
 const PHRX = /입력하세요|입력해 주세요|대표번호|센터 주소|학원 주소|OOO|○○○|Lorem|ipsum|평일 09:00|undefined|NaN|\[object Object\]|\{\{|\}\}/g;
 function textChecks(txt, allowed) {
   const ph = [...new Set(txt.match(PHRX) || [])];
   const ok = new Set(allowed.map(v => String(v).replace(/,/g, '')));
-  const nums = [...new Set(txt.match(/\d[\d,.]*\s*(?:%|명|점|위|배|개국|만\s?명|년\s?연속|년\s?전통|년\s?경력|건)/g) || [])];
+  const nums = [...new Set(txt.match(/\d[\d,.]*\s*(?:%|명(?![가-힣])|점(?![가-힣])|위(?![가-힣])|배(?![가-힣])|개국|만\s?명|년\s?연속|년\s?전통|년\s?경력|건(?![가-힣]))/g) || [])];
   const sus = nums.filter(n => { const v = n.match(/\d[\d,.]*/)[0].replace(/,/g, ''); return !ok.has(v); });
   return { ph, nums, numSus: sus };
 }
@@ -143,4 +199,4 @@ const TYPES = ['adult', 'k12', 'univ', 'lifelong', 'voc', 'corp', 'public'];
 const typesOf = r => (Array.isArray(r.types) && r.types.length ? r.types : [r.type]).filter(Boolean);
 const byType = rows => { const m = {}; rows.forEach(r => typesOf(r).forEach(t => { (m[t] = m[t] || []).push(r); })); Object.values(m).forEach(L => L.sort((a, b) => a.id.localeCompare(b.id))); return m; };
 
-module.exports = { ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };
+module.exports = { STATES, settle, ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };
