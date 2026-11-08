@@ -19,7 +19,8 @@
     try {
       s.v251 = 1; /* 새 템플릿 사이트: hpai의 v25.1 이전 사이트 문구 교체(템플릿과 같은 첫 화면 → 기본 문구)를 건너뛴다 */
       if (tp && tp.theme && hasHPT(tp.theme)) HPT.apply(s, tp.theme, { color: /^#[0-9a-f]{6}$/i.test(tp.color || '') ? tp.color : undefined });
-      if (tp && tp.hero && HOK.test(tp.hero)) { const b = A(s.sections).find(x => x && x.type === 'banner'); if (b) { b.data = b.data || {}; b.data.hero = tp.hero; } }
+      if (S && S.org && /^(voc|public|corp)$/.test(S.org.type)) A(s.menus).forEach(m => { if (m && /교재/.test(m.l || '')) m.on = false; }); /* 통합 결정: 교재/교구 메뉴는 직업훈련 · 공공 · 기업에서 기본 꺼짐 */
+      if (tp && tp.hero && HOK.test(tp.hero)) { /* 'band' · 빈 값은 테마 기본 배치 */ const b = A(s.sections).find(x => x && x.type === 'banner'); if (b) { b.data = b.data || {}; b.data.hero = tp.hero; } }
     } catch (e) { console.error('tpl-d siteFromTpl', e); }
     return prep(s); }; window.siteFromTpl = siteFromTpl; }
   /* 템플릿 전용 장식 CSS: 템플릿 테마가 그대로일 때만 */
