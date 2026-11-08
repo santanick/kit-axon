@@ -258,7 +258,7 @@
     't2-life-humanities': ['editorial', 'c', 'center', 'gov'],
     't2-life-craft': ['mosaic', 'c', 'contact', 'cols'],
     't2-life-credit': ['bulletin', 'a', 'util', 'split'],
-    't2-life-family': ['mosaic', 'a', 'contact', 'split'],
+    't2-life-family': ['mosaic', 'b', 'contact', 'split'],
     't2-life-career': ['portal', 'a', 'center', 'cols'],
     't2-life-village': ['story', 'c', 'contact', 'gov'],
     'tl-life-health': ['story', 'a', 'center', 'split'],

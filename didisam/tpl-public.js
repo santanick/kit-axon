@@ -107,10 +107,10 @@
     't4-ai-gov': ['portal', 'c', 'center', 'biz'],
     't4-civic': ['bulletin', 'b', 'center', 'gov'],
     't4-digital': ['hk:split', '', 'util', 'gov'],
-    't4-outreach': ['hk:scrim', '', 'center', 'biz'],
-    't4-leader': ['splitscreen', 'c', 'center', 'biz'],
+    't4-outreach': ['hk:split', '', 'center', 'biz'],
+    't4-leader': ['splitscreen', 'c', 'center', 'biz'] /* 어두운 첫 화면: leader · hrd-inst 2종 */,
     't4-service': ['hk:grid', '', 'util', 'biz'], /* split이면 voc tv-office와 첫 화면이 닮음(거리 6) */
-    't4-safety': ['splitscreen', 'a', 'util', 'gov'],
+    't4-safety': ['splitscreen', 'b', 'util', 'gov'],
     't4-integrity': ['typo', 'b', 'center', 'gov'],
     't4-youth': ['story', 'c', 'util', 'biz'],
     't4-family': ['hk:box', '', 'center', 'gov'],

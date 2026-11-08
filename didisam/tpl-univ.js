@@ -116,18 +116,18 @@
      같은 계열을 다른 유형도 쓰면 변형(layoutVar, FD1 HPL.vars)을 서로 다르게 고른다. 머리글 · 바닥글은 FA의 유형별 허용 목록 안에서 2~3종으로 나눈다.
      [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
   const FD2 = {
-    't2-univ-ctl': ['portal', 'a', 'util', 'campus'],
+    't2-univ-ctl': ['portal', 'c', 'util', 'campus'],
     'univ-lms': ['sidebar', 'a', 'center', 'min'],
-    't2-univ-dept': ['portal', 'b', 'util', 'biz'],
+    't2-univ-dept': ['portal', 'a', 'util', 'biz'] /* 어두운 첫 화면: dept · startup 2종 */,
     't2-univ-faculty': ['editorial', 'a', 'center', 'campus'],
     't2-univ-tutor': ['hk:grid', '', 'center', 'min'],
     't2-univ-writing': ['editorial', 'c', 'util', 'min'],
     't2-univ-career': ['hk:split', '', 'center', 'biz'],
     't2-univ-startup': ['noir', 'a', 'overlay', 'min'],
     't2-univ-mooc': ['hk:grid', '', 'util', 'biz'],
-    't2-univ-ai': ['fullbleed', 'c', 'center', 'biz'],
+    't2-univ-ai': ['sidebar', 'b', 'center', 'biz'],
     't2-univ-intl': ['story', 'a', 'util', 'campus'],
-    't2-univ-rise': ['fullbleed', 'a', 'overlay', 'campus'],
+    't2-univ-rise': ['fullbleed', 'c', 'center', 'campus'],
     't2-univ-cll': ['hk:box', '', 'center', 'campus'],
     'univ-aicenter': ['hk:box', '', 'util', 'biz'],
     'univ-extra': ['story', 'b', 'center', 'min'],
