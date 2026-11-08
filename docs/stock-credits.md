@@ -259,3 +259,34 @@ R1 비평 H5 · H6에 따라 업종을 맞힐 수 있는 첫 화면 사진 87장
 | yog-03 | wellness | 짐볼이 걸린 밝은 요가 스튜디오 | Sergej Majboroda (https://polyhaven.com/all?a=Sergej%20Majboroda / https://web.a | [File:Yoga_Room_-_01_RAW-Export_(Sergej_Majboroda_via_Poly_Haven).png](https://commons.wikimedia.org/wiki/File:Yoga_Room_-_01_RAW-Export_(Sergej_Majboroda_via_Poly_Haven).png) | CC0 1.0 | 5568x3712 |
 
 추가 87장 · 용량 8.99MB(두 벌 합계)
+## 사람 있는 장면 보강 (v34.5 H2, 2026-11-08)
+
+R2 비평 N4(첫 화면 사무실 · 노트북 29%)에 따라, 빈 회의실 · 노트북 사진을 대신할 사람 있는 학습 · 협업 · 실습 장면 19장을 추가했다.
+
+- 선정 기준: 얼굴을 식별할 수 없는 사진만 골랐다(손 · 뒷모습 · 실루엣 · 원거리). 국기 · 상표 · 읽히는 글자가 크게 드러나는 후보는 뺐다.
+- 출처: Wikimedia Commons에서 구조화 데이터의 저작권 라이선스(P275)가 CC0(Q6938433)인 파일만 검색했고, Commons API의 `LicenseShortName`이 CC0인지 함께 확인했다. 기존 목록과 dHash 거리 10 이하인 후보(같은 원본)는 넣지 않았다.
+- 처리: 긴 변 1600px(일부 1440 · 1280px) 첫 화면용과 800px 카드용 두 벌. 크롭 · 축소만 했다(grp-06은 위아래 검은 띠를 잘라냈다).
+
+| id | 분류 | 설명 | 작가 | 원본 페이지 | 라이선스 | 원본 크기 |
+|---|---|---|---|---|---|---|
+| civ-04 | civic | 콘크리트 청사 앞 광장 | Scott Webb scottwebb | [File:Concrete_city_hall_plaza_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Concrete_city_hall_plaza_(Unsplash).jpg) | CC0 1.0 | 3841x2744 |
+| grp-01 | seminar | 큰 창 앞 긴 테이블에서 토론하는 사람들의 실루엣 | Samuel Zeller samuelzeller | [File:Discussions_at_a_long_table_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Discussions_at_a_long_table_(Unsplash).jpg) | CC0 1.0 | 4208x2779 |
+| grp-02 | seminar | 한 테이블에서 노트에 함께 스케치하는 두 사람의 손 | Brad Neathery bradneathery | [File:Rough_Draft_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Rough_Draft_(Unsplash).jpg) | CC0 1.0 | 3953x2641 |
+| grp-03 | seminar | 서류와 노트북을 함께 짚으며 회의하는 손들 | helloquence | [File:Helloquence-61189.jpg](https://commons.wikimedia.org/wiki/File:Helloquence-61189.jpg) | CC0 1.0 | 7360x4912 |
+| grp-05 | seminar | 위에서 내려다본 카페 테이블의 사람들(원거리) | Tim Gouw punttim | [File:Busy_people_at_a_coffee_shop_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Busy_people_at_a_coffee_shop_(Unsplash).jpg) | CC0 1.0 | 2912x1945 |
+| grp-06 | seminar | 포스트잇과 펜을 든 워크숍 참가자들의 손 | Nathan Kit Kennedy | [File:Spokes_America_Students_Design_Plant_Pots.png](https://commons.wikimedia.org/wiki/File:Spokes_America_Students_Design_Plant_Pots.png) | CC0 1.0 | 2880x1800 |
+| hum-39 | desk | 연필로 노트에 메모하는 손 | Thought Catalog thoughtcatalog | [File:Taking_notes_with_a_pencil_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Taking_notes_with_a_pencil_(Unsplash).jpg) | CC0 1.0 | 5548x3699 |
+| hum-40 | art | 마커를 옆에 두고 종이에 그리는 손 | Kelly Sikkema kelsikkema | [File:Design_work_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Design_work_(Unsplash).jpg) | CC0 1.0 | 3000x1987 |
+| hum-41 | coding | 여러 모니터 앞에서 일하는 사람의 뒷모습 | Glenn Carstens-Peters glenncarstenspeters | [File:Workday_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Workday_(Unsplash).jpg) | CC0 1.0 | 4081x2716 |
+| hum-42 | coding | 어두운 방에서 컴퓨터 화면을 보는 사람의 뒷모습 | Mark Cruz mark_crz | [File:Man_working_on_computer_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Man_working_on_computer_(Unsplash).jpg) | CC0 1.0 | 3840x1941 |
+| hum-43 | desk | 타자기를 치는 손과 화분 | rawpixel.com rawpixel | [File:Writing_the_Moment_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Writing_the_Moment_(Unsplash).jpg) | CC0 1.0 | 4912x3776 |
+| hum-45 | desk | 흑백 사진 속 종이에 메모하는 손 | Calum MacAulay | [File:Person_taking_notes.jpg](https://commons.wikimedia.org/wiki/File:Person_taking_notes.jpg) | CC0 1.0 | 1776x1184 |
+| hum-46 | civic | 건물 계단 위 사람의 실루엣 | Taylor Nicole taynicole0630 | [File:Businessman_on_a_staircase_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Businessman_on_a_staircase_(Unsplash).jpg) | CC0 1.0 | 5184x3456 |
+| hum-49 | desk | 포장 상자와 노트북 사이에서 일하는 손(위에서) | rawpixel.com rawpixel | [File:Shopping_for_gifts_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Shopping_for_gifts_(Unsplash).jpg) | CC0 1.0 | 6524x4667 |
+| hum-50 | laptop | 어깨 너머로 본 노트북 앞 사람 | Alejandro Escamilla alejandroescamilla | [File:Man_typing_on_laptop_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Man_typing_on_laptop_(Unsplash).jpg) | CC0 1.0 | 5245x3497 |
+| hum-51 | civic | 건물 앞 광장을 걸어가는 사람(원거리) | Bram Naus bramnaus | [File:Businessman_leaving_the_office_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Businessman_leaving_the_office_(Unsplash).jpg) | CC0 1.0 | 5181x3454 |
+| lib-08 | library | 아치형 천장 아래 긴 열람실(원거리) | JOHN TOWNER heytowner | [File:Reading_room_of_the_Biblioth%C3%A8que_Sainte-Genevi%C3%A8ve_in_20](https://commons.wikimedia.org/wiki/File:Reading_room_of_the_Biblioth%C3%A8que_Sainte-Genevi%C3%A8ve_in_2016.jpg) | CC0 1.0 | 4096x2731 |
+| sen-07 | senior | 카페 창가에서 신문을 읽는 사람들의 뒷모습 | Jeff Sheldon ugmonk | [File:Old_man_reading_newspaper_with_tea_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Old_man_reading_newspaper_with_tea_(Unsplash).jpg) | CC0 1.0 | 4373x3280 |
+| wrk-08 | workshop | 공구가 걸린 작업장에서 일하는 사람 | Clark Young clark1 | [File:Clark_Young_2016_(Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Clark_Young_2016_(Unsplash).jpg) | CC0 1.0 | 3094x2059 |
+
+추가 19장 · 용량 2.00MB(두 벌 합계)

@@ -203,6 +203,9 @@
       if (typeof window.HPSTOCK.forScene === 'function') for (const sc of scenes) { let x = window.HPSTOCK.forScene(tx.type, sc, kind, { seed, exclude: ex }); if (Array.isArray(x)) x = x.find(ok); if (ok(x)) return x; }
       const L = window.HPSTOCK.list.filter(x => ok(x) && (!x.types || x.types.includes(tx.type))); return L.length ? L[hashS(seed) % L.length] : null; } catch (e) { console.error('HPL stock', e); return null; } }
   H.stockFor = pickStock;
+  const clsOf = slot => ((typeof S !== 'undefined' && S && S.classes) || []).find(x => 'cls-' + x.id === String(slot)) || null;
+  function clsStock(slot) { if (!stockOk() || typeof window.HPSTOCK.forCourse !== 'function') return null; const c = clsOf(slot); if (!c) return null;
+    try { const ex = [...USED].filter(x => x.startsWith('p:')).map(x => x.slice(2)); return window.HPSTOCK.forCourse((S.org && S.org.type) || 'adult', c.name, { seed: String(c.id), exclude: ex }); } catch (e) { return null; } }
   function bgMotif(kind, W, H, p, cx, cy, k, id) {
     const big = Math.max(W, H);
     if (kind === 'sun') return C(cx + 180 * k, cy - 120 * k, 300 * k, p.bg2) + C(cx + 180 * k, cy - 120 * k, 420 * k, 'none', ` stroke="${p.bg2}" stroke-width="${3 * k}" opacity=".7"`);
@@ -236,7 +239,11 @@
   /* opt: { ratio, cls, mode, scene, text(장면 고를 글), cap(작은 설명) } */
   const figB = function (slot, s, T, opt) { opt = opt || {}; const im = imgOf(slot, s); const r = RAT[opt.ratio] ? opt.ratio : SLOTR[String(slot).replace(/\d+$/, '')] || '4:3';
     const ar = r.replace(':', ' / ');
-    const st = im ? null : pickStock(slot, s, opt); if (st) mark('p:' + st.id);
+    /* v34.5 H2(R2 N1): 강좌 자리는 강좌명과 장면이 맞는 사진만. 없으면 글자 타일(H.tyTile, hplay-a) */
+    const isCls = /^cls-/.test(String(slot));
+    if (im) { const m0 = /img\/stock\/([a-z]{3}-\d{2})(?:-800)?\.webp/.exec(String(im.src || '')); if (m0) mark('p:' + m0[1]); } /* 첫 화면 사진을 같은 화면의 작은 칸에서 다시 쓰지 않게 */
+    const st = im ? null : isCls ? clsStock(slot) : pickStock(slot, s, opt); if (st) mark('p:' + st.id);
+    if (!im && !st && isCls && typeof H.tyTile === 'function') { const c = clsOf(slot); return H.tyTile(slot, T, opt.k != null ? opt.k : Math.max(0, pub().findIndex(x => c && x.id === c.id)), c ? KIND(c) : '', { ratio: r, cls: 'hpl-img' + (opt.cls ? ' ' + opt.cls : ''), dark: opt.mode === 'dark' }); }
     const pos = v => E(/^[\d.]+% [\d.]+%$/.test(v || '') ? v : '50% 50%');
     const small = /^(cls-|card|about\d|gallery)/.test(String(slot)) && st && st.src800;
     const inner = im ? `<img src="${E(im.src)}" alt="${E(im.alt || '')}" style="object-fit:${im.fit === 'contain' ? 'contain' : 'cover'};object-position:${pos(im.pos)}" loading="lazy" decoding="async">`
@@ -244,6 +251,10 @@
       : H.art(slot, s, null, T, { ratio: r, mode: opt.mode, scene: opt.scene, text: opt.text });
     /* 샘플 사진은 data-stock(바로 고치기 화면에서만 '샘플' 표시 · D4) — 게시본에는 표시 없음 */
     return `<figure class="hpl-img${opt.cls ? ' ' + opt.cls : ''}${im ? ' hpl-photo' : st ? ' hpl-photo hpl-stock' : ' hpl-isart'}" data-slot="${E(slot)}"${st ? ` data-stock="${E(st.id)}" data-tone="${E(st.tone || '')}"` : ''} style="aspect-ratio:${ar}">${inner}${opt.cap ? `<figcaption>${E(opt.cap)}</figcaption>` : ''}</figure>`; };
+  /* v34.5 H2(R2 N1): 첫 화면 사진 칸 — 강좌 자기 사진(썸네일 · site.img['cls-id'])이 있을 때만 강좌명을 붙인다. 없으면 장식 사진(gallery)만, 이름 없음 */
+  const galB = (k, c, s, T, opt, max) => { const own = c && imgOf('cls-' + c.id, s);
+    if (own) return figB('cls-' + c.id, s, T, Object.assign({}, opt, { cap: String(c.name).slice(0, max || 18) }));
+    return figB('gallery' + k, s, T, opt); };
   if (typeof H.fig !== 'function') H.fig = (slot, s, th, T, o) => figB(slot, s, T, Object.assign({}, o, { ratio: String((o && o.ratio) || '').replace('/', ':') }));
   H.FIG_CSS = `.hpl-img{position:relative;margin:0;overflow:hidden;display:block;width:100%;background:var(--as,#EEF0FF)}.hpl-img>svg,.hpl-img>img{position:absolute;inset:0;width:100%;height:100%;display:block}.hpl-img>figcaption{position:absolute;z-index:1}`;
 
@@ -435,7 +446,7 @@
         : B.length ? `<div class="hpl-mo-s"><ul>${B.map(([ic, l]) => `<li>${IC_(ic, 18, 2)}${E(l)}</li>`).join('')}</ul></div>` : `<div class="hpl-mo-x hpl-mo-s" style="padding:0;background:none">${figB('gallery4', s, T, { ratio: '4:3' })}</div>`;
       const cap = k => C0[k] ? C0[k].name : '';
       return `<section class="hpt hpl-s hpl-mosaic hpl-hero"><div class="hpl-w"><div class="hpl-mo-g"><div class="hpl-mo-t">${d.eyebrow ? `<p class="hpl-mo-ey">${E(d.eyebrow)}</p>` : ''}<h1>${h1Of(d)}</h1>${d.sub ? `<p class="hpl-mo-sub">${E(d.sub)}</p>` : ''}<div class="hpl-mo-bt">${btns(d, s, 'hpl-mo')}</div></div>
-        <div class="hpl-mo-a">${figB('hero', s, T, { ratio: '16:9' })}</div>${[1, 2, 3].map(k => `<div class="hpl-mo-x hpl-mo-x${k}">${figB('gallery' + k, s, T, { ratio: '4:3', text: cap(k - 1), cap: cap(k - 1) ? String(cap(k - 1)).slice(0, 18) : '' })}</div>`).join('')}${side}</div></div></section>`; },
+        <div class="hpl-mo-a">${figB('hero', s, T, { ratio: '16:9' })}</div>${[1, 2, 3].map(k => `<div class="hpl-mo-x hpl-mo-x${k}">${galB(k, C0[k - 1], s, T, { ratio: '4:3' }, 18)}</div>`).join('')}${side}</div></div></section>`; },
     sec: {
       features(d, s, th, T) { T = tk(s, T); const L = colsOf(d); if (!L.length) return null; const wide = k => L.length >= 3 && (k === 0 || (L.length >= 5 && k === 4));
         return SEC('mosaic', 'hpl-mo-ft', `${secHead(d, 'hpl-sh')}<div class="hpl-mo-fg">${L.map(([a, b], k) => `<article class="hpl-mo-f${wide(k) ? ' w' : ''}">${figB('about' + (k + 1), s, T, { ratio: wide(k) ? '1:1' : '16:9', text: a + ' ' + (b || '') })}<div class="hpl-mo-fb"><h3>${E(a)}</h3>${b ? `<p>${E(b)}</p>` : ''}</div></article>`).join('')}</div>`); },
@@ -636,7 +647,7 @@ ${C4.map((c, k) => `.hpl-co-n:nth-child(4n+${k + 1}){background:${c};transform:r
       const cap = k => C0[k] ? String(C0[k].name).slice(0, 16) : '';
       const star = `<svg class="hpl-co-sq" style="left:-2%;top:46%;width:54px" viewBox="0 0 24 24" aria-hidden="true"><path d="${IC.star}" fill="${hi}" stroke="${ink}" stroke-width="1.2" stroke-linejoin="round"/></svg><svg class="hpl-co-sq" style="right:-3%;bottom:16%;width:80px" viewBox="0 0 80 40" aria-hidden="true"><path d="M4 20c8-14 16 14 24 0s16 14 24 0 16 14 24 0" fill="none" stroke="${ink}" stroke-width="4" stroke-linecap="round"/></svg>`;
       return `<section class="hpt hpl-s hpl-collage hpl-hero"><div class="hpl-w hpl-co-hg"><div>${d.eyebrow ? `<p class="hpl-co-ey">${E(d.eyebrow)}</p>` : ''}<h1>${h1Of(d)}</h1>${under}${d.sub ? `<p class="hpl-co-sub">${E(d.sub)}</p>` : ''}<div class="hpl-co-bt">${btns(d, s, 'hpl-co')}</div></div>
-        <div class="hpl-co-wall">${star}<div class="hpl-co-p hpl-co-p1">${figB('hero', s, T, { ratio: '4:3', mode: 'warm' })}</div><div class="hpl-co-p hpl-co-p2">${figB('gallery1', s, T, { ratio: '1:1', mode: 'warm', text: cap(0), cap: cap(0) })}</div><div class="hpl-co-p hpl-co-p3">${figB('gallery2', s, T, { ratio: '1:1', mode: 'warm', text: cap(1), cap: cap(1) })}</div>
+        <div class="hpl-co-wall">${star}<div class="hpl-co-p hpl-co-p1">${figB('hero', s, T, { ratio: '4:3', mode: 'warm' })}</div><div class="hpl-co-p hpl-co-p2">${galB(1, C0[0], s, T, { ratio: '1:1', mode: 'warm' }, 16)}</div><div class="hpl-co-p hpl-co-p3">${galB(2, C0[1], s, T, { ratio: '1:1', mode: 'warm' }, 16)}</div>
         ${B[0] ? `<span class="hpl-co-stk s1">${E(B[0][1])}</span>` : ''}${B[1] ? `<span class="hpl-co-stk s2">${E(B[1][1])}</span>` : ''}</div></div></section>`; },
     sec: {
       features(d, s) { const L = colsOf(d); if (!L.length) return null; const n = L.length === 4 ? 2 : L.length >= 3 ? 3 : L.length;
