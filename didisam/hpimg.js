@@ -153,7 +153,7 @@
     try { fn(site()); } catch (e) { console.error('hpimg commit', e); }
     if (!persist()) { if (keep) { S.site = JSON.parse(keep); HPE.undo.pop(); } save(); full(); repaint(); return false; }
     repaint(); if (msg) say(msg, 'ok'); return true; }
-  const applyColor = (s, c) => { if (window.HPT && s.theme && HPT.has && HPT.has(s.theme)) HPT.apply(s, s.theme, { color: c }); else { s.color = c; s.hpColorLock = 1; } return s; };
+  const applyColor = (s, c, all) => { if (window.HPC && HPC.fromLogo && HPC.apply) { const P = HPC.fromLogo([c].concat((all || []).filter(x => x !== c))); if (P && P.ok) { if (window.HPT && s.theme && HPT.has && HPT.has(s.theme)) HPT.apply(s, s.theme, { palette: P }); else HPC.apply(s, P); return s; } } /* C1: 로고 색 → 검증된 팔레트 */ if (window.HPT && s.theme && HPT.has && HPT.has(s.theme)) HPT.apply(s, s.theme, { color: c }); else { s.color = c; s.hpColorLock = 1; } return s; };
 
   /* ═════════ 3. 바로 고치기 화면: iframe 연결 ═════════ */
   const hooked = new WeakSet();
@@ -361,7 +361,7 @@
     if (!b) { b = document.createElement('div'); b.id = 'hpiSug'; b.className = 'hpi-sugw'; const bar = w.querySelector('.hpw-talk') || w.querySelector('.hpe-bar'); if (bar) bar.insertAdjacentElement('afterend', b); else w.prepend(b); b.addEventListener('click', ipClick); }
     b.innerHTML = sugHTML(); }
   function sugApply() { const g = HI.sug; if (!g) return; const c = g.pick || g.colors[0]; HI.sug = null; const b = document.getElementById('hpiSug'); if (b) b.remove();
-    commit(s0 => applyColor(s0, c), `대표 색을 로고 색 ${c}(으)로 맞췄습니다(테마를 바꿔도 유지).`); if (HI.ip) paintImg(); }
+    commit(s0 => applyColor(s0, c, g.colors), `대표 색을 로고 색 ${c}(으)로 맞췄습니다(테마를 바꿔도 유지).`); if (HI.ip) paintImg(); }
 
   /* ═════════ 6. 의도 해석(AI SAM · 말로 고치기 공통, 키 없이 규칙) ═════════ */
   const W = { hero: /(첫\s*화면|메인|대문|배너|히어로|상단\s*(사진|이미지)|대표\s*(사진|이미지))/, logo: /(로고|심볼|엠블럼|\bCI\b|\bBI\b)/i, gallery: /(갤러리|사진첩|앨범|활동\s*사진|현장\s*사진|사진들)/,
@@ -403,7 +403,7 @@
       let k = 0; const take = () => imgs[Math.min(k++, imgs.length - 1)];
       T.forEach(([kind]) => { const sl = layoutSlots(site());
         if (kind === 'logo') { const a = take(); P.used.push(a); step(`머리글 로고를 첨부한 사진으로(${SIZEW(a)})`, x => apply(x, { k: 'logo' }, { src: a.url }));
-          if (/(색|컬러|톤|맞춰|맞게|어울리)/.test(s) && A(a.colors).length) { const c = a.colors[0]; step(`대표 색을 로고 색 ${c}(으)로 맞추기(테마는 그대로 · 바꿔도 유지)`, x => applyColor(x, c)); }
+          if (/(색|컬러|톤|맞춰|맞게|어울리)/.test(s) && A(a.colors).length) { const c = a.colors[0]; step(`대표 색을 로고 색 ${c}(으)로 맞추기(테마는 그대로 · 바꿔도 유지)`, x => applyColor(x, c, A(a.colors))); }
           else if (/(색|컬러)/.test(s)) P.msg = '로고에서 뚜렷한 색을 찾지 못해 색은 그대로 둡니다.'; return; }
         if (kind === 'hero') { const a = take(); P.used.push(a); step(`첫 화면 사진을 첨부한 사진으로(${SIZEW(a)} · 채우기)`, x => apply(x, { k: 'slot', slot: 'hero' }, { src: a.url, fit: 'cover', pos: '50% 50%', alt: `${N()} 첫 화면 사진` })); return; }
         const rest = kind === 'gallery' ? imgs.slice(Math.min(k, imgs.length - 1)) : [take()]; if (kind === 'gallery') k = imgs.length; rest.forEach(a => P.used.push(a));
