@@ -217,6 +217,32 @@
     return { site: s, log };
   }
   window.hpwQuality = hpwQuality; window.hpwFix = hpwFix; W.emptyOf = emptyOf;
+  /* ══ v34.5 H5(R2 M8 · N4 · N5 · N2): 채운 기관에서도 점수가 갈리게 하는 항목 — hpsec-trust FB 훅(HPW.qx)에서 HPW.qMore(s, add)로 부른다.
+     ① 첫 화면 장면: 샘플 사진이 사무실 · 책상 · 노트북(사람 없음)이면 감점(R2 N4)
+     ② 사진 쏠림: 사이트 샘플 사진의 절반 이상이 사무실 · 책상 · 노트북이거나 같은 사진이 두 번 쓰이면 감점
+     ③ 제목 글자 범위: 일부 글자만 있는 제목 글꼴(함렛 2,788자 · 도현 2,437자)에서 빠진 글자가 제목에 있으면 감점(R2 N5) — fonts/cov.json(분할본 cmap 추출)
+     ④ 블록 반복: 같은 섹션 모양(type:variant 또는 HPS.blockSig '블록:변형')이 두 번 이상이거나, 공통 블록 4개 이상이 기본 모양 그대로면 감점(R2 N2)
+     모두 자동 보정(hpwFix)으로 고칠 수 없으므로 auto:false. */
+  const OFFICE = /^(office|desk|laptop)$/; const GL = { c: null };
+  try { if (typeof fetch === 'function') fetch('fonts/cov.json').then(r => r.ok ? r.json() : null).then(j => { if (j && j.c) GL.c = j.c; }).catch(() => { }); } catch (e) { }
+  const covCache = {}; function covOf(fid) { if (covCache[fid]) return covCache[fid]; if (!GL.c) return null; if (!GL.c[fid]) return null; return (covCache[fid] = new Set(GL.c[fid])); } /* null = 모든 음절(또는 아직 못 받음) */
+  const stk = v => { const m = String(v || '').match(/([a-z]{3}-\d{2})/); return m && window.HPSTOCK && HPSTOCK.get ? HPSTOCK.get(m[1]) : null; };
+  const isPpl = x => !!(x && (window.HPSTOCK && HPSTOCK.isPeople ? HPSTOCK.isPeople(x) : (x.tags || []).includes('people')));
+  W.qMore = (s, add, QW) => { QW = QW || {}; const L = live(s);
+    const bn = L.find(x => x.type === 'banner'); const bd = (bn && bn.data) || {}; const hi = s.img && s.img.hero; const hs = (hi && (hi.stock || hi.src)) || bd.img || (s.photos && s.photos.hero) || ''; const hx = stk(hs);
+    const off = hx && OFFICE.test(hx.cat || '') && !isPpl(hx); add('heroScene', '첫 화면 장면', QW.heroScene || 4, !off, !hx ? (hs ? '직접 올린 사진' : '사진 없는 첫 화면') : off ? `첫 화면 사진이 사무실 · 책상 · 노트북 장면(${hx.alt || hx.id})입니다 — 수업 · 실습 장면이나 직접 찍은 사진을 권합니다` : '수업 · 업종 장면', false);
+    const js = JSON.stringify({ img: s.img || {}, photos: s.photos || {}, sec: L.map(x => x.data || {}) }); const all = [...js.matchAll(/img\/stock\/([a-z]{3}-\d{2})|"stock":"([a-z]{3}-\d{2})"/g)].map(m => m[1] || m[2]);
+    const ids = [...new Set(all)]; const X = ids.map(i => window.HPSTOCK && HPSTOCK.get ? HPSTOCK.get(i) : null).filter(Boolean); const offN = X.filter(x => OFFICE.test(x.cat || '') && !isPpl(x)).length;
+    const slots = s.img ? Object.values(s.img).map(v => v && (v.stock || v.src)).filter(Boolean).map(v => (String(v).match(/([a-z]{3}-\d{2})/) || [])[1]).filter(Boolean) : []; const dupN = slots.length - new Set(slots).size;
+    const mixOk = !(X.length >= 2 && offN * 2 >= X.length) && dupN === 0; add('photoMix', '사진 쏠림', QW.photoMix || 3, mixOk, mixOk ? `샘플 사진 ${X.length}장 · 장면 고름` : dupN ? `같은 사진이 ${dupN + 1}곳에 쓰였습니다` : `샘플 사진 ${X.length}장 중 ${offN}장이 사무실 · 책상 · 노트북입니다`, false);
+    let fid = ''; try { fid = window.HPF && HPF.heading ? HPF.heading(s, '') : ''; } catch (e) { } const T = L.flatMap(x => { const d = x.data || {}; return [d.title, d.eyebrow].filter(v => typeof v === 'string'); }).join(''); let miss = [], C = null;
+    if (fid && window.HPF && typeof HPF.gaps === 'function') { try { const g = HPF.gaps(T, fid); if (Array.isArray(g)) { miss = g; C = /^(hahmlet|do-hyeon)$/.test(fid) ? 1 : null; } } catch (e) { } } /* H4 HPF.gaps 우선 */
+    else { C = fid ? covOf(fid) : null; if (C) miss = [...new Set([...T].filter(c => /[가-힣]/.test(c) && !C.has(c)))]; } /* 없으면 fonts/cov.json */
+    add('glyph', '제목 글자 범위', QW.glyph || 3, !miss.length, miss.length ? `제목 글꼴에 없는 글자 ${miss.length}자(${miss.slice(0, 6).join('')}) — 다른 글꼴로 섞여 보입니다. 제목 글꼴을 바꾸거나 낱말을 바꾸세요` : C ? '제목 글자가 모두 글꼴에 있습니다' : '제목 글꼴이 모든 한글을 지원', false);
+    let sig = []; try { sig = window.HPS && HPS.blockSig ? String(HPS.blockSig(s) || '').split('>').filter(Boolean) : []; } catch (e) { sig = []; }
+    const tv = L.filter(x => x.type !== 'banner').map(x => { const d = x.data || {}; return x.type + ':' + (d.variant || d.hpt || ''); }); const cnt = {}; tv.forEach(k => { cnt[k] = (cnt[k] || 0) + 1; }); const dup = Object.keys(cnt).filter(k => cnt[k] > 1 && !/^text:cta$/.test(k));
+    let defN = 0; try { const B = window.HPS && HPS.BLOCKS; if (B) sig.forEach(t => { const [bk, v] = t.split(':'); const list = B[bk]; const first = Array.isArray(list) ? (typeof list[0] === 'object' ? list[0].id : list[0]) : null; if (first && v === first) defN++; }); } catch (e) { }
+    const rOk = !dup.length && defN < 4; add('rep', '블록 반복', QW.rep || 4, rOk, rOk ? '섹션 모양이 겹치지 않음' : dup.length ? `같은 모양 섹션이 두 번 이상(${dup.map(k => k.replace(/:$/, '')).join(' · ')})` : `공통 블록 ${defN}개가 기본 모양 그대로입니다 — 다른 모양을 섞으면 다른 기관과 덜 비슷해집니다`, false); };
   const qHTML = (q, q0, log, withContact) => {
     const f = ft(); const need = q.items.find(x => x.k === 'contact' && !x.ok);
     return `<div class="hpw-q" aria-live="polite"><div class="hpw-qs"><b class="hpw-score ${q.score >= 90 ? 'hi' : q.score >= 75 ? 'mid' : 'lo'}">${q.score}<small>점</small></b><div><b>품질 점수</b><small>${q0 && q0.score !== q.score ? `자동 보정 전 ${q0.score}점 → 보정 후 ${q.score}점` : '100점 만점'}</small></div></div>
