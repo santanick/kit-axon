@@ -105,8 +105,11 @@
     const menus = s0.menus.filter(m => m.on !== false).map(m => ({ id: m.id, kind: m.kind, l: m.l, access: m.access || '공개', hide: !!m.hide, allow: allowOf(m), href: menuHref(m),
       subs: m.subOn && Array.isArray(m.subs) ? m.subs.filter(sb => sb.on !== false).map(sb => ({ id: sb.id, l: sb.l, access: sb.access || '공개', hide: !!sb.hide, allow: allowOf(sb), href: sb.link ? linkOf(sb.link) : '#hp/s-' + m.id + '-' + sb.id })) : [] }));
     const st = S.settings || {}; const seo = st.seo || {}; const cb = st.chatbot || {}; const g = s0.gnb || {};
+    /* v34.5 L1: 홈페이지 머리글(HPS · S1 — 공지 띠 · 휴대폰 메뉴 포함)과 공지 한 줄을 게시본에 싣는다 → 학습자 홈 방문자 화면이 셸 머리글 대신 쓴다(lhpshell.js) */
+    const ha = h.indexOf('<input type="checkbox" id="hps-mt"'), hm = ha < 0 ? -1 : h.indexOf('class="hps-mf"', ha), he = hm < 0 ? -1 : h.indexOf('</div></div></div>', hm); const head = he > 0 ? fix(h.slice(ha, he + 18)) : '';
+    const ntT = (head.match(/class="hps-ntt"[^>]*>\s*<span>([^<]{1,200})<\/span>/) || [])[1], ntH = (head.match(/<a class="hps-ntt"[^>]*?href="(#[^"]*)"/) || [])[1]; const notice = ntT ? { t: ntT.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').slice(0, 80), href: ntH || '' } : null;
     const dark = c => { try { return /^#[0-9a-f]{6}$/i.test(c) && lum(c) < .35; } catch (e) { return false; } };
-    return { v: 1, at: nowStr(), name: S.org.name, look: typeof lookOf === 'function' ? lookOf(s0) : 'campus', color: s0.color || '', css: shadowCSS(css), home, pages, foot, menus,
+    return { v: 1, at: nowStr(), name: S.org.name, look: typeof lookOf === 'function' ? lookOf(s0) : 'campus', color: s0.color || '', css: shadowCSS(css), home, pages, foot, menus, head, notice,
       mode: cfg().home, logo: /^data:image\/|^https:\/\//.test(g.logo || '') ? g.logo : '', gnbBg: /^#[0-9a-f]{3,8}$/i.test(g.bg || '') ? g.bg : '', gnbDark: dark(g.bg || ''),
       seo: { title: String(seo.title || '').slice(0, 120), desc: String(seo.desc || '').slice(0, 300), kw: String(seo.kw || seo.keywords || '').slice(0, 300), index: seo.noindex ? false : true },
       favicon: /^data:image\/|^https:\/\//.test(st.favicon || '') ? st.favicon : '',
