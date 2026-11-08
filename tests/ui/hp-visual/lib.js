@@ -115,16 +115,17 @@ async function dhash(sharp, buf, region) {
 }
 function hamming(a, b) { if (!a || !b) return 64; let d = 0; for (let i = 0; i < 16; i++) { let x = parseInt(a[i], 16) ^ parseInt(b[i], 16); while (x) { d += x & 1; x >>= 1; } } return d; }
 
-/* 사진 위 글자 대비: 상자 안 픽셀 중 글자색과의 대비가 하위 35%인 값(글자 획 픽셀 제외 근사) */
+/* 사진 위 글자 대비: 글자 상자 바깥 테두리 띠(2~6px)의 픽셀 = 바로 뒤 바탕으로 보고, 글자색과의 대비 하위 25% 값을 쓴다(글자 획 픽셀 제외) */
 async function pixelContrast(sharp, buf, meta, items) {
   const Lc = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
   const Lum = (r, g, b) => 0.2126 * Lc(r) + 0.7152 * Lc(g) + 0.0722 * Lc(b);
   const { data, info } = await sharp(buf).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height, ch = info.channels; const sc = W / meta.w;
-  for (const it of items) { let [x, y, w, h] = it.box.map(v => Math.round(v * sc)); x = Math.max(0, x); y = Math.max(0, y); w = Math.min(W - x, w); h = Math.min(H - y, h); if (w < 2 || h < 2) continue;
-    const lt = Lum(...it.c); const cr = []; const step = Math.max(1, Math.floor(Math.sqrt(w * h / 900)));
-    for (let yy = y; yy < y + h; yy += step) for (let xx = x; xx < x + w; xx += step) { const i = (yy * W + xx) * ch; const l = Lum(data[i], data[i + 1], data[i + 2]); cr.push((Math.max(l, lt) + 0.05) / (Math.min(l, lt) + 0.05)); }
-    cr.sort((a, b) => a - b); it.cr = Math.round(cr[Math.floor(cr.length * 0.35)] * 100) / 100; it.px = 1; }
+  for (const it of items) { const [x0, y0, w0, h0] = it.box.map(v => Math.round(v * sc)); if (w0 < 2 || h0 < 2) continue;
+    const lt = Lum(...it.c); const cr = []; const ring = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * ch; const l = Lum(data[i], data[i + 1], data[i + 2]); cr.push((Math.max(l, lt) + 0.05) / (Math.min(l, lt) + 0.05)); };
+    const step = Math.max(1, Math.floor((w0 + h0) / 120));
+    for (let k = 2; k <= 6; k += 2) { for (let x = x0 - k; x <= x0 + w0 + k; x += step) { ring(x, y0 - k); ring(x, y0 + h0 + k); } for (let y = y0 - k; y <= y0 + h0 + k; y += step) { ring(x0 - k, y); ring(x0 + w0 + k, y); } }
+    if (!cr.length) continue; cr.sort((a, b) => a - b); it.cr = Math.round(cr[Math.floor(cr.length * 0.25)] * 100) / 100; it.px = 1; }
 }
 
 const CSVQ = v => { const s = Array.isArray(v) ? v.join(' ') : v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
