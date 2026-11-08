@@ -405,7 +405,7 @@ ${P} .hps-ctw{flex-direction:column;align-items:flex-start;gap:20px}${P} .hps-ct
     const bg = `${ar}background-color:${avgOf(x.id)}`; if (/\sstyle="/i.test(o)) { if (!/background/i.test((o.match(/\sstyle="([^"]*)"/i) || [])[1])) o = o.replace(/\sstyle="([^"]*)"/i, (m, v) => ` style="${v.replace(/;?\s*$/, ';')}${bg}"`); } else o = o.replace(/^<img\b/i, `<img style="${bg}"`);
     return o; }); }
   const NOFLOW = /\b(hp-alt|is-alt|hp-cta|hps-cta|hp-hero|hps-hero|hpl-k-banner|hpl-k-cta|hpl-k-stats|hp-facts|hps-facts|hpl-noir|hps-empty|hps-ntop|hpl-empty|hp-empty)\b/;
-  const OWNBG = /\b(fb-cta|sp-cta|bt-cta|hpb-inv|hps-c-photo)\b/; /* 사진 · 어두운 띠 — 문의 띠(hp-cta)는 흰 바탕 안 상자형이 많아 줄임 대상 */
+  const OWNBG = /\b(fb-cta|sp-cta|bt-cta|hpb-inv)\b/; /* 사진 · 어두운 띠 — 문의 띠(hp-cta)는 흰 바탕 안 상자형이 많아 줄임 대상 */
   const HEROC = /\b(hp-hero|hps-hero|hpl-hero|hpl-k-banner)\b/;
   function spacing(h) { const re = /<section\b[^>]*class="([^"]*)"[^>]*>/g; const M = []; let m; while ((m = re.exec(h))) M.push({ i: m.index, t: m[0], c: m[1] });
     if (!M.length) return h; const isTop = []; let depth = 0, p = 0; /* 최상위 섹션만: 앞 섹션이 닫혔는지 */
@@ -430,7 +430,7 @@ ${P} .hps-ctw{flex-direction:column;align-items:flex-start;gap:20px}${P} .hps-ct
     if (!out.length) return h; out.push(h.slice(last)); return out.join(''); }
   const spCSS = `/* hps rhythm */
 .hpl-noir .hps-st,.hpl-noir .hpl-stars{color:#E3B341!important}.hpl-noir .hps-st i{color:#9A9A9A!important}
-section.hps-short{padding-top:calc(var(--sec,120px) * .6)!important;padding-bottom:calc(var(--sec,120px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec,120px) * .45)!important}section.hps-flowb{padding-bottom:calc(var(--sec,120px) * .6)!important}
+section.hps-short{padding-top:calc(var(--sec,120px) * .6)!important;padding-bottom:calc(var(--sec,120px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec,120px) * .45)!important}section.hps-flowb{padding-bottom:calc(var(--sec,120px) * .6)!important}section.hps-flow .bt-head{padding-top:8px!important}
 @media(max-width:640px){.hpl-noir .hps-st,.hpl-noir .hpl-stars{color:#E3B341!important}.hpl-noir .hps-st i{color:#9A9A9A!important}
 section.hps-short{padding-top:calc(var(--sec-m,72px) * .6)!important;padding-bottom:calc(var(--sec-m,72px) * .6)!important}section.hps-flow{padding-top:calc(var(--sec-m,72px) * .5)!important}section.hps-flowb{padding-bottom:calc(var(--sec-m,72px) * .75)!important}}`;
   HPS.rhythm = { imgFill, spacing };
