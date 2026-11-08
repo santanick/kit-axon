@@ -222,12 +222,12 @@
   const siteOf = tp => { let s = SITE.get(tp.id); if (!s) { s = fromTpl(tp); SITE.set(tp.id, s); } return s; };
   const htmlOf = tp => { try { return siteHTML(siteOf(tp), false, 'ko'); } catch (e) { console.error('tpl-d thumb', e); return ''; } };
   const tyKey = () => S.org.type;
-  function listOf() { const f = UI.tplF || 'mine'; const md = UI.tpdM || 'all', pu = UI.tpdP || 'all';
+  function listOf() { const k = UI.tpdK || 'mine'; const f = k === 'all' ? 'all' : 'mine'; const md = (k === 'mine' || k === 'all') ? 'all' : k, pu = 'all';
     const L0 = f === 'mine' ? tplFor(tyKey()) : f === 'all' ? TPL : TPL.filter(t => A(t.types).includes(f));
     return { L0, L: L0.filter(t => (md === 'all' || moodOf(t) === md) && (pu === 'all' || meta(t).pur.includes(pu))) }; }
   function gallery() {
     const f = UI.tplF || 'mine'; const { L0, L } = listOf(); const q = String(UI.tpdQ || '').trim().toLowerCase();
-    const moods = [...new Set(L0.map(moodOf))]; const pc = k => L0.filter(t => meta(t).pur.includes(k)).length;
+    const moods = [...new Set((UI.tpdK === 'all' ? TPL : tplFor(tyKey())).map(moodOf))]; const pc = k => L0.filter(t => meta(t).pur.includes(k)).length;
     const right = S.site && S.site.tpl ? `<button type="button" class="btn ghost" data-act="tpl-back">편집으로 돌아가기</button>` : '';
     const card = tp => { const m = meta(tp); const hide = q && !m.q.includes(q);
       return `<article class="tpd-c" role="button" tabindex="0" data-act="tpd-open" data-v="${esc(tp.id)}" data-q="${esc(m.q)}"${hide ? ' hidden' : ''} aria-label="${esc(tp.name)} 미리 보기">
@@ -235,12 +235,10 @@
         <div class="tpd-cb"><b>${esc(tp.name)}</b><small>${esc(tp.scene || '')}</small>
         <span class="tpd-tg"><i style="background:${esc(tp.color || '#5C74F6')}"></i>${esc(moodName(moodOf(tp)))}${tp.hero ? ` · ${esc(HERO_L[tp.hero] || '')}` : ''} · 섹션 ${m.n}${A(tp.langs).length > 1 ? ' · 다국어' : ''}</span></div></article>`; };
     return SL.page('홈페이지 템플릿', right,
-      SL.note(ic('grid', 18), `${(TYPES[tyKey()] || {}).name || ''}에 맞는 템플릿 ${tplFor(tyKey()).length}종 · 전체 ${TPL.length}종`, '카드를 누르면 크게 보고 바로 시작합니다. 시작한 뒤 화면에서 바로 고치거나 말로 고칠 수 있습니다.') +
-      SL.chips('tplF', [['mine', `내 유형 추천 ${tplFor(tyKey()).length}`], ['all', `전체 ${TPL.length}`], ...Object.entries(TYPES).filter(([k]) => k !== tyKey()).map(([k, v]) => [k, `${v.name} ${TPL.filter(t => A(t.types).includes(k)).length}`])], f) +
-      `<div class="tpd-f">${SL.chips('tpdM', [['all', '분위기 전체'], ...moods.map(k => [k, `${moodName(k)} ${L0.filter(t => moodOf(t) === k).length}`])], UI.tpdM && moods.includes(UI.tpdM) ? UI.tpdM : 'all')}
-      ${SL.chips('tpdP', [['all', '목적 전체'], ...PUR.filter(([k]) => pc(k)).map(([k, l]) => [k, `${l} ${pc(k)}`])], UI.tpdP || 'all')}</div>` +
+      /* v34.3 대표님 '유형별 메뉴 부분은 너무 복잡 — 더 심플하게': 칩은 한 줄(추천 · 전체 · 분위기)만, 다른 유형 · 목적 칩은 없애고 검색으로 찾는다 */
+      SL.chips('tpdK', [['mine', '추천'], ['all', '전체'], ...moods.map(k => [k, moodName(k)])], UI.tpdK || 'mine') +
       `<div class="sl-search tpd-q">${ic('search' in IC ? 'search' : 'spark', 16)}<input id="tpdQ" type="search" value="${esc(UI.tpdQ || '')}" placeholder="템플릿 이름 · 업종 · 분위기 검색" aria-label="템플릿 검색"></div>` +
-      `<p class="tpd-cnt mini" aria-live="polite">${L.length}종</p><div class="tpd-g">${L.map(card).join('') || '<div class="sl-empty">조건에 맞는 템플릿이 없습니다.</div>'}</div>`);
+      `<p class="tpd-cnt mini" aria-live="polite">${(UI.tpdK || 'mine') === 'mine' ? `${esc((TYPES[tyKey()] || {}).name || '')} 추천 ` : ''}${L.length}종</p><div class="tpd-g">${L.map(card).join('') || '<div class="sl-empty">조건에 맞는 템플릿이 없습니다.</div>'}</div>`);
   }
   /* 사이트 화면: 갤러리 모드면 공통 틀 갤러리(학습 페이지 탭은 그대로) */
   { const base = VIEWS.site; VIEWS.site = (...a) => { try { if (S && S.org && UI.smT !== 'learn' && (UI.siteGallery || !(S.site && S.site.tpl))) return gallery(); } catch (e) { console.error('tpl-d gallery', e); } return base(...a); }; }

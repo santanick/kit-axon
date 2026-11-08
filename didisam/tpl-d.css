@@ -33,3 +33,6 @@
 .tpd-wz{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:12px 14px;border-radius:14px;background:var(--g100,#F3F4F6);font-size:14px}
 @media(max-width:560px){.tpd-g{grid-template-columns:1fr 1fr;gap:10px}.tpd-cb{padding:10px 12px 12px}.tpd-cb small{display:none}.tpd-tg{font-size:11.5px;flex-wrap:wrap}.tpd-dl div{grid-template-columns:76px 1fr}}
 @media(max-width:360px){.tpd-g{grid-template-columns:1fr}}
+
+/* v34.4 카드는 이름 + 한 줄만(분위기 · 배치 · 섹션 수 줄은 숨김) */
+.tpd-tg{display:none}
