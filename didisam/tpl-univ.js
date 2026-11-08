@@ -124,12 +124,12 @@
     't2-univ-writing': ['editorial', 'c', 'util', 'min'],
     't2-univ-career': ['hk:split', '', 'center', 'biz'],
     't2-univ-startup': ['noir', 'a', 'overlay', 'min'],
-    't2-univ-mooc': ['hk:grid', '', 'util', 'biz'],
+    't2-univ-mooc': ['portal', 'b', 'util', 'biz'], /* H3: 주력 계열 집중(portal a · b · c) */
     't2-univ-ai': ['sidebar', 'b', 'center', 'biz'],
     't2-univ-intl': ['story', 'a', 'util', 'campus'],
-    't2-univ-rise': ['fullbleed', 'c', 'center', 'campus'],
-    't2-univ-cll': ['hk:box', '', 'center', 'campus'],
-    'univ-aicenter': ['hk:box', '', 'util', 'biz'],
+    't2-univ-rise': ['story', 'c', 'center', 'campus'], /* H3: fullbleed 1회 → 주력 story c */
+    't2-univ-cll': ['editorial', 'b', 'center', 'campus'], /* H3: 주력 editorial b */
+    'univ-aicenter': ['hk:scrim', '', 'util', 'biz'], /* H3: 상자형 줄임 → 사진 전면 */
     'univ-extra': ['story', 'b', 'center', 'min'],
     'univ-lifelong': ['hk:split', '', 'util', 'campus']
   };
@@ -200,4 +200,28 @@
       return h; }; window.siteHTML = siteHTML; }
 
   window.TPL_UNIV = { ids: [...MINE], cfg: CFG };
+  /* H3(R2 N10): 점검용 업종별 강좌 이름 6개 — hp-visual 채운 기관이 템플릿마다 이 이름으로 강좌를 바꿔 찍는다(게시 화면에는 쓰지 않는다) */
+  { const QA = {
+    't2-univ-ai': ['AI 리터러시 기초', '생성형 AI 활용', '파이썬 프로그래밍', '데이터 분석 입문', 'AI 융합 프로젝트', 'AI 윤리와 사회'],
+    't2-univ-career': ['진로 탐색 세미나', '직무 역량 워크숍', '자기소개서 클리닉', '모의 면접', '인턴십 준비', '취업 박람회 대비'],
+    't2-univ-cll': ['사회복지학 학점 과정', '경영학 학점 과정', '바리스타 자격 과정', '한국어교원 양성', '심리상담 전문 과정', '시민 교양 강좌'],
+    't2-univ-ctl': ['신임 교원 교수법', '플립러닝 설계', '학습법 워크숍', '이러닝 콘텐츠 제작', '수업 설계 컨설팅', '학습 공동체 운영'],
+    't2-univ-dept': ['전공 기초 세미나', '회로 이론', '데이터 구조', '캡스톤 디자인', '전공 실험', '졸업 프로젝트'],
+    't2-univ-faculty': ['신임 교원 교수법 연수', '수업 컨설팅', '루브릭 평가 설계', '토론식 수업 운영', 'AI 활용 수업 설계', '수업 나눔 세미나'],
+    't2-univ-intl': ['한국어 초급', '한국어 중급', 'TOPIK 대비', '한국 문화 체험', '버디 교류 프로그램', '학술 한국어'],
+    't2-univ-mooc': ['인문학 공개 강의', '경제학의 이해', '기초 통계학', '생명과학 입문', '철학 고전 읽기', '지역사회와 공공정책'],
+    't2-univ-rise': ['지역 정주 리빙랩', '지역 기업 인턴십', '지역 문제 해결 프로젝트', '평생학습 연계 과정', '산학 협력 캡스톤', '지역 창업 교육'],
+    't2-univ-startup': ['창업 아이디어 발굴', '린 캔버스 실습', '시제품 제작 워크숍', '투자 유치 IR', '데모데이 준비', '창업 동아리 멘토링'],
+    't2-univ-tutor': ['1:1 학습 튜터링', '전공 스터디 그룹', '학습 전략 컨설팅', '시간 관리 워크숍', '기초 수학 보충', '글쓰기 튜터링'],
+    't2-univ-writing': ['학술 글쓰기', '리포트 첨삭', '자기소개서 첨삭', '발표 코칭', '논문 작성법', '토론 · 스피치'],
+    'univ-aicenter': ['AI 역량 진단', 'AI 기초 러닝 저니', '프롬프트 엔지니어링', 'AI 업무 자동화', 'AI 프로젝트 실습', '디지털 배지 과정'],
+    'univ-extra': ['리더십 캠프', '봉사 프로그램', '글로벌 역량 세미나', '진로 멘토링', '문화 예술 체험', '공모전 준비'],
+    'univ-lifelong': ['시민 인문학 강좌', '지역사 탐방', '스마트폰 활용', '건강 체조', '합창 교실', '시니어 영어'],
+    'univ-lms': ['전공 이론', '전공 실습', '교양 필수', '온라인 보강 강의', '과제 · 평가 안내', '기말 프로젝트']
+  };
+  Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'univ') tp.qaCls = QA[id]; }); }
+  /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
+  ['t2-univ-tutor', 't2-univ-mooc', 't2-univ-ctl', 't2-univ-writing'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    tp.build = () => { const L = A(b0()); const hasT = L.some(x => x && x.data && x.data.variant === 'tiles');
+      L.forEach(x => { if (x && x.type === 'text' && x.data && x.data.variant === 'steps') x.data.variant = hasT ? 'features' : 'tiles'; }); return L; }; });
 })();

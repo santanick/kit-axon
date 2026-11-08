@@ -237,6 +237,12 @@
   const FD2H = { 'corp-academy': ['left', 'min'], 'corp-onboard': ['float', 'cols'], 'corp-legal': ['solid', 'mega'], 'corp-partner': ['left', 'cols'], 't3-c-leader': ['float', 'mega'], 't3-c-ax': ['solid', 'min'], 't3-c-safety': ['left', 'mega'], 't3-c-sales': ['float', 'min'], 't3-c-franchise': ['solid', 'cols'], 't3-c-customer': ['left', 'min'], 't3-c-supplier': ['float', 'cols'], 't3-c-job': ['solid', 'mega'], 't3-c-share': ['left', 'cols'], 't3-c-global': ['float', 'mega'], 't3-c-esg': ['solid', 'min'], 'tc-security': ['left', 'mega'] };
   const FD2V = { 'corp-legal': 'a', 't3-c-sales': 'b', 't3-c-customer': 'a', 't3-c-supplier': 'c', 't3-c-job': 'b', 't3-c-share': 'a' };
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
+  /* H3(R2 H1 · BRIEF8): 주력 계열 5개(splitscreen · story · sidebar · editorial · bulletin)로 모으고, S3 첫 화면은 3종(franchise 상자 · leader · safety 전면 사진)만 둔다.
+     [계열 또는 'hk:<S3 첫 화면>', 변형] */
+  const H3L = { 'corp-academy': ['bulletin', 'b'], 'corp-onboard': ['story', 'b'], 'corp-partner': ['sidebar', 'a'], 't3-c-ax': ['editorial', 'b'], 't3-c-global': ['editorial', 'c'],
+    't3-c-esg': ['story', 'c'], 'tc-security': ['splitscreen', 'c'], 't3-c-supplier': ['splitscreen', 'a'] };
+  Object.keys(H3L).forEach(id => { const c = CFG[id], v = H3L[id]; if (!c) return;
+    if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); delete FD2V[id]; } else { c.L = v[0]; delete c.hk; FD2V[id] = v[1]; } });
 
   /* ── 템플릿 덮어쓰기 ── */
   /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
@@ -279,4 +285,28 @@
       return s; };
     if (base.hpc) f.hpc = base.hpc;
     siteFromTpl = f; window.siteFromTpl = f; }
+  /* H3(R2 N10): 점검용 업종별 강좌 이름 6개 — hp-visual 채운 기관이 템플릿마다 이 이름으로 강좌를 바꿔 찍는다(게시 화면에는 쓰지 않는다) */
+  { const QA = {
+    'corp-academy': ['신임 팀장 리더십', '직무 전문 과정', '4대 법정교육', '사내 AI 활용', '핵심 인재 과정', '글로벌 역량'],
+    'corp-legal': ['직장 내 성희롱 예방', '직장 내 장애인 인식 개선', '개인정보 보호 교육', '산업 안전 보건 교육', '직장 내 괴롭힘 예방', '퇴직 연금 교육'],
+    'corp-onboard': ['입사 첫날 안내', '회사 비전과 가치', '업무 시스템 사용법', '부서별 직무 기초', '보안 수칙 이해', '버디 멘토링'],
+    'corp-partner': ['제품 기본 교육', '설치 · 시공 인증', '영업 파트너 인증', '기술 지원 실무', '신제품 런칭 교육', '고객 응대 표준'],
+    't3-c-ax': ['생성형 AI 첫걸음', '프롬프트 실무', 'AI 문서 · 보고서 작성', '업무 자동화 실습', 'AI 데이터 분석', '부서별 AX 프로젝트'],
+    't3-c-customer': ['제품 시작하기', '관리자 설정 가이드', '고급 기능 활용', '통합 · 연동 실무', '제품 인증 시험', '신규 기능 소개'],
+    't3-c-esg': ['윤리 경영 기본', '공정 거래 · 준법', '환경 경영 이해', '인권 경영', 'ESG 공시 기초', '윤리 서약 안내'],
+    't3-c-franchise': ['매장 오픈 준비', '메뉴 조리 표준', '고객 응대 매뉴얼', '위생 관리 교육', '점주 경영 기초', 'POS · 재고 관리'],
+    't3-c-global': ['Global Onboarding', '본사 문화 이해', '다국어 보안 교육', '해외 법인 준법 교육', 'Business Korean', '크로스컬처 커뮤니케이션'],
+    't3-c-job': ['재무 직무 레벨 1', '인사 직무 레벨 1', '구매 직무 실무', '생산 관리 전문가', '마케팅 직무 심화', '직무 인증 평가'],
+    't3-c-leader': ['신임 리더 과정', '팀장 코칭 리더십', '성과 관리와 피드백', '승진자 필수 과정', '임원 전략 세미나', '조직 변화 관리'],
+    't3-c-safety': ['정기 안전보건교육', '채용 시 안전교육', '관리감독자 교육', '특별 안전교육', '밀폐 공간 작업 안전', '중대재해 예방'],
+    't3-c-sales': ['매장 응대 기본', '영업 대화 스킬', '상품 지식 영상', '클레임 응대', 'VMD 진열 기초', '판매 실적 관리'],
+    't3-c-share': ['사내 강사 양성', '강의 설계 워크숍', '실무 노하우 특강', '직원이 만드는 강의', '발표 코칭', '지식 나눔 세미나'],
+    't3-c-supplier': ['협력사 품질 교육', '협력사 안전 교육', '공정 거래 윤리', '공급망 ESG', '납품 시스템 사용법', '상생 협력 세미나'],
+    'tc-security': ['피싱 메일 대응', '계정 · 비밀번호 관리', '문서 보안 수칙', '개인정보 처리 기준', '보안 사고 신고', '재택 근무 보안']
+  };
+  Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'corp') tp.qaCls = QA[id]; }); }
+  /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
+  ['t3-c-share', 't3-c-supplier'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    tp.build = () => { const L = A(b0()); const hasT = L.some(x => x && x.data && x.data.variant === 'tiles');
+      L.forEach(x => { if (x && x.type === 'text' && x.data && x.data.variant === 'steps') x.data.variant = hasT ? 'features' : 'tiles'; }); return L; }; });
 })();

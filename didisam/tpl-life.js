@@ -254,7 +254,7 @@
     'life-senior': ['hk:box', '', 'contact', 'split'],
     't2-life-silver': ['hk:split', '', 'contact', 'cols'],
     't2-life-50plus': ['editorial', 'b', 'center', 'cols'],
-    't2-life-digital': ['hk:split', '', 'center', 'split'],
+    't2-life-digital': ['story', 'b', 'center', 'split'], /* H3: 주력 story a · b · c */
     't2-life-humanities': ['editorial', 'c', 'center', 'gov'],
     't2-life-craft': ['mosaic', 'c', 'contact', 'cols'],
     't2-life-credit': ['bulletin', 'b', 'util', 'split'], /* a면 corp-legal과 닮음 · 사진 판 위 eyebrow 대비 3.14 */
@@ -263,8 +263,8 @@
     't2-life-village': ['story', 'c', 'contact', 'gov'],
     'tl-life-health': ['story', 'a', 'center', 'split'],
     'tl-life-lang': ['hk:scrim', '', 'center', 'cols'],
-    'tl-life-univext': ['hk:box', '', 'util', 'gov'],
-    'tl-life-cert': ['hk:grid', '', 'contact', 'gov']
+    'tl-life-univext': ['editorial', 'a', 'util', 'gov'], /* H3: 상자형 줄임 · 주력 editorial */
+    'tl-life-cert': ['portal', 'b', 'contact', 'gov'] /* H3: 상자형 줄임 · 주력 portal */
   };
   Object.keys(FD2).forEach(id => { const c = CFG[id], v = FD2[id]; if (!c) return;
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); } else { c.L = v[0]; delete c.hk; }
@@ -318,4 +318,28 @@
     Object.keys(base).forEach(k => { g[k] = base[k]; });
     siteHTML = g; window.siteHTML = g; }
   window.TPL_LIFE = { ids: [...MINE] };
+  /* H3(R2 N10): 점검용 업종별 강좌 이름 6개 — hp-visual 채운 기관이 템플릿마다 이 이름으로 강좌를 바꿔 찍는다(게시 화면에는 쓰지 않는다) */
+  { const QA = {
+    'life-city': ['스마트폰 활용 교실', '수채화 입문', '생활 영어 회화', '우리 동네 역사 탐방', '건강 요가', '디지털 사진 기초'],
+    'life-senior': ['스마트폰 기초', '카카오톡 배우기', '키오스크 주문하기', '유튜브 즐기기', '사진 정리하기', '온라인 장보기'],
+    't2-life-50plus': ['인생 2막 설계', '사회 공헌 활동가', '은퇴 재무 설계', '시니어 모델 워킹', '자서전 쓰기', '중장년 창업 기초'],
+    't2-life-career': ['경력 이음 상담', '직업 상담사 준비', '중장년 재취업 이력서', '바리스타 자격', '공인중개사 기초', '소자본 창업 입문'],
+    't2-life-craft': ['가죽 공예', '도자기 생활 소품', '홈베이킹', '민화 그리기', '우쿨렐레 합주', '천연 비누 만들기'],
+    't2-life-credit': ['사회복지학 개론', '아동학 원론', '심리학 개론', '경영학 원론', '보육학 개론', '학위 설계 상담'],
+    't2-life-digital': ['스마트폰 금융 생활', '키오스크 연습', 'AI 비서 활용', '온라인 예약하기', '디지털 사진 앨범', '스미싱 예방 교실'],
+    't2-life-family': ['부모 교육 특강', '아이와 함께 그림책', '가족 요리 교실', '청소년 대화법', '조부모 손주 돌봄', '가족 캠프'],
+    't2-life-hub': ['시민 교양 강좌', '학습 동아리 지원', '외국어 회화', '생활 체육', '문화 예술 강좌', '평생학습 축제'],
+    't2-life-humanities': ['서양 철학사', '한국사 깊이 읽기', '세계 문학 산책', '미술사 강의', '클래식 음악 감상', '고전 읽기 모임'],
+    't2-life-silver': ['한글 교실', '건강 체조', '노래 교실', '서예 교실', '스마트폰 교실', '치매 예방 놀이'],
+    't2-life-village': ['마을 강사 양성', '반찬 나눔 요리', '마을 텃밭 가꾸기', '동네 책 모임', '공방 나눔 교실', '마을 기록 사진'],
+    'tl-life-cert': ['요양보호사 준비', '보육교사 과정', '전산 사무 자격', '바리스타 2급', '한식 조리 기능사', '심리상담사 준비'],
+    'tl-life-health': ['걷기 교실', '바른 자세 체조', '마음 명상', '건강 식생활', '근력 운동 기초', '수면 건강 강좌'],
+    'tl-life-lang': ['생활 영어 회화', '일본어 첫걸음', '중국어 여행 회화', '스페인어 기초', '영어 원서 읽기', '여행 외국어 특강'],
+    'tl-life-univext': ['인문 교양 과정', '최고경영자 과정', '심리 상담 전문 과정', '와인 문화 강좌', '미술 감상 과정', 'AI 이해 교양']
+  };
+  Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'lifelong') tp.qaCls = QA[id]; }); }
+  /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
+  ['life-senior', 'tl-life-cert'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    tp.build = () => { const L = A(b0()); const hasT = L.some(x => x && x.data && x.data.variant === 'tiles');
+      L.forEach(x => { if (x && x.type === 'text' && x.data && x.data.variant === 'steps') x.data.variant = hasT ? 'features' : 'tiles'; }); return L; }; });
 })();

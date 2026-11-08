@@ -254,12 +254,12 @@
     't1-k12-art': ['collage', 'a', 'float', 'split'],
     't1-k12-music': ['fullbleed', 'b', 'left', 'cols'],
     't1-k12-reading': ['mosaic', 'b', 'contact', 'split'],
-    't1-k12-science': ['hk:box', '', 'float', 'cta'], /* bento면 public t4-cyber와 엄격 유사(거리 12 · 구조 같음) */
+    't1-k12-science': ['mosaic', 'a', 'float', 'cta'], /* H3: S3 상자형 첫 화면 유형당 3종 이하 → 모자이크 a */ /* bento면 public t4-cyber와 엄격 유사(거리 12 · 구조 같음) */
     't1-k12-tutor': ['hk:split', '', 'left', 'split'],
     't1-k12-studycare': ['mosaic', 'c', 'contact', 'cols'],
     't1-k12-sports': ['hk:scrim', '', 'float', 'cta'],
     't1-k12-kinder': ['hk:grid', '', 'float', 'cols'],
-    't1-k12-retake': ['hk:grid', '', 'contact', 'split'],
+    't1-k12-retake': ['fullbleed', 'a', 'contact', 'split'], /* H3: 주력 계열 집중(fullbleed a · b · c) */
     't1-k12-online': ['hk:split', '', 'left', 'cta'],
     'k12-kids': ['collage', 'b', 'float', 'split']
   };
@@ -307,4 +307,28 @@
       return s; };
     if (base.hpc) f.hpc = base.hpc;
     siteFromTpl = f; window.siteFromTpl = f; }
+  /* H3(R2 N10): 점검용 업종별 강좌 이름 6개 — hp-visual 채운 기관이 템플릿마다 이 이름으로 강좌를 바꿔 찍는다(게시 화면에는 쓰지 않는다) */
+  { const QA = {
+    'k12-exam': ['수능 국어 독서', '수능 수학 미적분', '영어 내신 완성', '탐구 과목 개념', '모의고사 분석반', '자습 관리 프로그램'],
+    'k12-kids': ['파닉스 기초', '영어 리딩 클럽', '블록 코딩 놀이', '로봇 코딩 교실', '영어 발표 수업', '파이썬 첫걸음'],
+    'k12-total': ['중2 수학 개념 완성', '고1 영어 내신 대비', '초등 사고력 수학', '중3 과학 실험 탐구', '고2 국어 문학 정리', '중등 사회 · 역사'],
+    't1-k12-art': ['어린이 드로잉', '수채화 교실', '점토 조형', '명화 따라 그리기', '만화 캐릭터 그리기', '입시 기초 소묘'],
+    't1-k12-coding': ['스크래치 블록 코딩', '엔트리 게임 만들기', '파이썬 기초', '아두이노 피지컬', 'AI 이미지 분류 프로젝트', '정보 올림피아드 준비'],
+    't1-k12-english': ['초등 리딩 레벨', '중등 문법 완성', '스피킹 발표반', '에세이 라이팅', '중등 내신 영어', '원서 읽기 클럽'],
+    't1-k12-kinder': ['그림책 말놀이', '오감 놀이', '음악 · 율동', '종이 만들기', '숫자 놀이', '자연 관찰 놀이'],
+    't1-k12-math': ['초등 사고력 수학', '중1 수학 개념', '중2 수학 개념 완성', '고1 수학 내신', '수학 오답 클리닉', '고2 수학 심화'],
+    't1-k12-music': ['피아노 개인 레슨', '바이올린 기초', '클래식 기타', '청음 · 이론', '앙상블 합주', '콩쿠르 준비반'],
+    't1-k12-online': ['중등 국어 개념 강의', '중등 영어 문법 강의', '중등 수학 유형 강의', '고1 통합과학', '고1 통합사회', '고1 수학 내신 강의'],
+    't1-k12-reading': ['초등 그림책 독서', '초등 주제 독서', '중등 비문학 독해', '토론 · 논술 기초', '고등 논증 글쓰기', '서술형 대비 첨삭'],
+    't1-k12-retake': ['국어 종합반', '수학 종합반', '영어 종합반', '탐구 집중반', '실전 모의고사', '담임 상담 관리'],
+    't1-k12-science': ['물리 실험 탐구', '화학 반응 실험', '생명 관찰 일지', '지구 · 우주 탐구', '과학 탐구 대회 준비', '중등 과학 개념'],
+    't1-k12-sports': ['태권도 기초반', '줄넘기 교실', '어린이 체육', '농구 교실', '유아 체육 놀이', '승급 심사 준비'],
+    't1-k12-studycare': ['평일 관리형 자습', '주말 자습 관리', '플래너 코칭', '시험 기간 집중 관리', '방학 집중반', '학습 습관 상담'],
+    't1-k12-tutor': ['1:1 수학 수업', '1:1 영어 수업', '소수정예 국어', '내신 맞춤 플랜', '온라인 보강 수업', '학습 습관 코칭']
+  };
+  Object.keys(QA).forEach(id => { const tp = TPL.find(t => t && t.id === id); if (tp && A(tp.types)[0] === 'k12') tp.qaCls = QA[id]; }); }
+  /* H3(R2 H3 · BRIEF8): 번호 단계 섹션을 쓰는 템플릿을 유형마다 40% 미만으로 — 아래 템플릿의 '단계(steps)'를 번호 없는 칸(tiles)으로 바꾼다(내용은 그대로) */
+  ['t1-k12-english', 't1-k12-studycare', 't1-k12-online', 't1-k12-tutor'].forEach(id => { const tp = TPL.find(t => t && t.id === id); if (!tp || typeof tp.build !== 'function') return; const b0 = tp.build;
+    tp.build = () => { const L = A(b0()); const hasT = L.some(x => x && x.data && x.data.variant === 'tiles');
+      L.forEach(x => { if (x && x.type === 'text' && x.data && x.data.variant === 'steps') x.data.variant = hasT ? 'features' : 'tiles'; }); return L; }; });
 })();
