@@ -250,14 +250,14 @@
      [계열 또는 'hk:<S3 첫 화면>', 변형, 머리글, 바닥글] — 휴대폰 메뉴(hd[2])는 그대로 둔다 */
   const FD2 = {
     'life-city': ['portal', 'c', 'util', 'gov'],
-    't2-life-hub': ['bulletin', 'b', 'util', 'gov'],
+    't2-life-hub': ['bulletin', 'a', 'util', 'gov'],
     'life-senior': ['hk:box', '', 'contact', 'split'],
     't2-life-silver': ['hk:split', '', 'contact', 'cols'],
     't2-life-50plus': ['editorial', 'b', 'center', 'cols'],
     't2-life-digital': ['hk:split', '', 'center', 'split'],
     't2-life-humanities': ['editorial', 'c', 'center', 'gov'],
     't2-life-craft': ['mosaic', 'c', 'contact', 'cols'],
-    't2-life-credit': ['bulletin', 'a', 'util', 'split'],
+    't2-life-credit': ['bulletin', 'b', 'util', 'split'], /* a면 corp-legal과 닮음 · 사진 판 위 eyebrow 대비 3.14 */
     't2-life-family': ['mosaic', 'b', 'contact', 'split'],
     't2-life-career': ['portal', 'a', 'center', 'cols'],
     't2-life-village': ['story', 'c', 'contact', 'gov'],
@@ -270,6 +270,11 @@
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); } else { c.L = v[0]; delete c.hk; }
     c.lv = v[1] || ''; c.hd = [v[2], v[3], A(c.hd)[2] || 'full']; });
 
+  /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
+  const FCH = { 'life-city': 'off-12', 't2-life-hub': 'hum-13', 'life-senior': 'hum-34', 't2-life-silver': 'kni-03', 't2-life-50plus': 'sen-01', 't2-life-digital': 'hum-08', 't2-life-humanities': 'lib-07', 't2-life-craft': 'hum-23', 't2-life-credit': 'lap-02', 't2-life-family': 'fam-01', 't2-life-career': 'cor-06', 't2-life-village': 'sem-01', 'tl-life-health': 'yog-01', 'tl-life-lang': 'lan-01', 'tl-life-univext': 'hum-12', 'tl-life-cert': 'hum-38' };
+  Object.keys(FCH).forEach(id => { const c = CFG[id]; if (!c) return; const v = typeof FCH[id] === 'string' ? { hero: FCH[id] } : FCH[id];
+    if (Array.isArray(c.ph)) { const ix = { hero: 0, about: 1, space: 2, cta: 3, gallery: 4 }; c.ph = c.ph.slice(); Object.keys(v).forEach(k => { if (ix[k] != null) c.ph[ix[k]] = v[k]; }); }
+    else c.ph = Object.assign({}, c.ph, v); });
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'lifelong') return;
     const c = CFG[id]; MINE.add(id);

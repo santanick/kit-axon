@@ -238,10 +238,15 @@
   /* FD2(유형 간 재배치 · BRIEF7): 계열 변형(layoutVar, FD1 HPL.vars). 같은 계열을 쓰는 다른 유형과 다른 변형을 고르고,
      portal · bulletin 4종(consort · remote · jobcenter · voc-card)의 '사진 + 찾기 상자 + 아이콘 줄'이 겹치지 않게 서로 다른 변형을 준다 */
   const FD2V = { 't3-v-design': 'c', 'voc-employer': 'b', 't3-v-trade': 'c', 't3-v-beauty': 'b', 't3-v-youth': 'c', 't3-v-license': 'b', 't3-v-factory': 'a',
-    't3-v-remote': 'b', 't3-v-consort': 'c', 't3-v-jobcenter': 'a', 'voc-card': 'b' };
+    't3-v-remote': 'b', 't3-v-consort': 'c', 't3-v-jobcenter': 'b', 'voc-card': 'a' };
   /* 머리글 · 바닥글: FA의 직업훈련 유형 목록(contact · util · left / cta · biz · split) 안에서 고르게 나눈다 */
   const FD2H = { 't3-v-kdt': ['contact', 'cta'], 't3-v-design': ['util', 'biz'], 't3-v-trade': ['left', 'split'], 't3-v-beauty': ['contact', 'biz'], 't3-v-license': ['util', 'split'], 't3-v-midlife': ['left', 'cta'], 't3-v-youth': ['contact', 'split'], 't3-v-remote': ['util', 'cta'], 't3-v-factory': ['left', 'biz'], 't3-v-care': ['contact', 'cta'], 't3-v-consort': ['util', 'biz'], 't3-v-jobcenter': ['left', 'split'], 'voc-card': ['contact', 'biz'], 'voc-employer': ['util', 'split'], 'tv-auto': ['left', 'cta'], 'tv-office': ['contact', 'split'] };
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
+  /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
+  const FCH = { 't3-v-kdt': 'lap-01', 't3-v-design': 'vid-01', 't3-v-trade': 'voc-01', 't3-v-beauty': 'bea-02', 't3-v-license': 'hum-18', 't3-v-midlife': 'wrk-01', 't3-v-youth': 'hum-15', 't3-v-remote': 'cor-11', 't3-v-factory': 'hum-19', 't3-v-care': 'fam-05', 't3-v-consort': 'cor-03', 't3-v-jobcenter': 'cor-04', 'voc-card': 'hum-17', 'voc-employer': 'off-01', 'tv-auto': 'aut-01', 'tv-office': 'off-08' };
+  Object.keys(FCH).forEach(id => { const c = CFG[id]; if (!c) return; const v = typeof FCH[id] === 'string' ? { hero: FCH[id] } : FCH[id];
+    if (Array.isArray(c.ph)) { const ix = { hero: 0, about: 1, space: 2, cta: 3, gallery: 4 }; c.ph = c.ph.slice(); Object.keys(v).forEach(k => { if (ix[k] != null) c.ph[ix[k]] = v[k]; }); }
+    else c.ph = Object.assign({}, c.ph, v); });
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'voc') return;
     const c = CFG[id];

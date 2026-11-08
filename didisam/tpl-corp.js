@@ -239,6 +239,11 @@
   Object.keys(FD2H).forEach(id => { const c = CFG[id]; if (c) c.hd = [FD2H[id][0], FD2H[id][1], A(c.hd)[2] || 'full']; });
 
   /* ── 템플릿 덮어쓰기 ── */
+  /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
+  const FCH = { 'corp-academy': 'cor-01', 'corp-onboard': 'cor-05', 'corp-legal': 'cor-12', 'corp-partner': 'cor-15', 't3-c-leader': 'arc-05', 't3-c-ax': 'cor-14', 't3-c-safety': 'aut-03', 't3-c-sales': 'bar-03', 't3-c-franchise': 'bak-03', 't3-c-customer': 'cor-08', 't3-c-supplier': 'log-02', 't3-c-job': 'cor-09', 't3-c-share': 'cor-13', 't3-c-global': 'arc-06', 't3-c-esg': 'gar-01', 'tc-security': 'cor-07' };
+  Object.keys(FCH).forEach(id => { const c = CFG[id]; if (!c) return; const v = typeof FCH[id] === 'string' ? { hero: FCH[id] } : FCH[id];
+    if (Array.isArray(c.ph)) { const ix = { hero: 0, about: 1, space: 2, cta: 3, gallery: 4 }; c.ph = c.ph.slice(); Object.keys(v).forEach(k => { if (ix[k] != null) c.ph[ix[k]] = v[k]; }); }
+    else c.ph = Object.assign({}, c.ph, v); });
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'corp') return;
     const c = CFG[id];

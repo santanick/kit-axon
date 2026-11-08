@@ -137,6 +137,11 @@
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); } else { c.L = v[0]; delete c.hk; }
     c.lv = v[1] || ''; c.hd = [v[2], v[3], A(c.hd)[2] || 'full']; });
 
+  /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
+  const FCH = { 't2-univ-ctl': 'lec-01', 'univ-lms': 'lap-05', 't2-univ-dept': 'cls-03', 't2-univ-faculty': 'lec-02', 't2-univ-tutor': 'cam-07', 't2-univ-writing': 'hum-05', 't2-univ-career': 'hum-10', 't2-univ-startup': 'cor-16', 't2-univ-mooc': 'lec-03', 't2-univ-ai': 'hum-07', 't2-univ-intl': 'lan-02', 't2-univ-rise': 'cam-05', 't2-univ-cll': 'lib-03', 'univ-aicenter': 'cod-01', 'univ-extra': 'cam-08', 'univ-lifelong': { hero: 'lib-01', about: 'lib-06' } };
+  Object.keys(FCH).forEach(id => { const c = CFG[id]; if (!c) return; const v = typeof FCH[id] === 'string' ? { hero: FCH[id] } : FCH[id];
+    if (Array.isArray(c.ph)) { const ix = { hero: 0, about: 1, space: 2, cta: 3, gallery: 4 }; c.ph = c.ph.slice(); Object.keys(v).forEach(k => { if (ix[k] != null) c.ph[ix[k]] = v[k]; }); }
+    else c.ph = Object.assign({}, c.ph, v); });
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'univ') return;
     const c = CFG[id]; const build0 = tp.build; MINE.add(id);

@@ -346,6 +346,11 @@
     if (v[0].indexOf('hk:') === 0) { delete c.L; c.hk = v[0].slice(3); } else { c.L = v[0]; delete c.hk; }
     c.lv = v[1] || ''; c.hd = [v[2], v[3], A(c.hd)[2] || 'full']; });
 
+  /* FD2: FC 첫 화면 사진 재배정표(fix6/FC_hero_map.json — 전체 템플릿에서 첫 화면 사진 중복 0, hero 슬롯 · 긴 변 1200 이상) */
+  const FCH = { 'adult-bootcamp': 'cor-02', 'adult-cert': 'lap-08', 'adult-hobby': 'art-01', 'adult-lang': 'cls-02', 'solo-creator': 'lap-06', 't1-ad-license': 'hum-01', 't1-ad-civil': 'hum-14', 't1-ad-office': { hero: 'lap-03', cta: 'dsk-05' }, 't1-ad-talk': 'hum-09', 't1-ad-wellness': 'yog-02', 't1-ad-craft': 'hum-20', 't1-ad-creative': 'dsn-01', 't1-ad-coach': 'hum-06', 't1-ad-money': 'lap-04', 't1-ad-testprep': 'hum-03', 'ta-music': 'hum-30', 'ta-book': 'hum-37', 'ta-writing': 'lap-09', 'ta-photo': 'pho-01', 'ta-marketing': 'off-02' };
+  Object.keys(FCH).forEach(id => { const c = CFG[id]; if (!c) return; const v = typeof FCH[id] === 'string' ? { hero: FCH[id] } : FCH[id];
+    if (Array.isArray(c.ph)) { const ix = { hero: 0, about: 1, space: 2, cta: 3, gallery: 4 }; c.ph = c.ph.slice(); Object.keys(v).forEach(k => { if (ix[k] != null) c.ph[ix[k]] = v[k]; }); }
+    else c.ph = Object.assign({}, c.ph, v); });
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'adult') return;
     const c = CFG[id];
