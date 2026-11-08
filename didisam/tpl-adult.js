@@ -307,9 +307,9 @@
   { const base = siteFromTpl; const f = tp => { const s = base(tp);
       try {
         if (s && tp && tp.tpA && A(tp.types)[0] === 'adult') {
-          /* 계열은 성인 기관에서만 건다: 다른 유형 기관(예: voc의 추천 1순위가 adult-bootcamp)에서는 AI 마법사 시안 3개가 이전 사이트의 계열을 물려받아 첫 화면이 같아진다(hpwiz 문제 · 코어 변경 요청) */
+          /* v34.5 X4: 마법사 시안은 시안마다 계열을 다시 지정하므로(hpwiz2) 성인 기관 제한을 풀었다 */
           const orgTy = (() => { try { return S.org.type; } catch (e) { return 'adult'; } })();
-          if (tp.layout && orgTy === 'adult' && window.HPL && HPL.fam && HPL.fam[tp.layout]) { if (typeof HPL.apply === 'function') HPL.apply(s, tp.layout); else s.layout = tp.layout; } else delete s.layout;
+          if (tp.layout && orgTy && window.HPL && HPL.fam && HPL.fam[tp.layout]) { if (typeof HPL.apply === 'function') HPL.apply(s, tp.layout); else s.layout = tp.layout; } else delete s.layout;
           if (tp.photos && window.HPSTOCK && typeof HPSTOCK.slotImg === 'function') { s.photos = Object.assign({}, tp.photos); s.img = s.img || {};
             Object.keys(tp.photos).forEach(sl => { if (s.img[sl] && s.img[sl].src) return; const v = HPSTOCK.slotImg(tp.photos[sl], sl); if (v) s.img[sl] = v; }); }
           if (tp.hps) s.hps = Object.assign({}, s.hps || {}, tp.hps);
