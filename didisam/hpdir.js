@@ -10,8 +10,7 @@
 (() => {
   /* ── 웹폰트(저장소 안 · 같은 출처) ── */
   const FONTS = {
-    serif: { fam: 'Noto Serif KR', files: [['NotoSerifKR-400.woff2', '100 500'], ['NotoSerifKR-600.woff2', '600 900']] },
-    round: { fam: 'Gowun Dodum', files: [['GowunDodum-400.woff2', '100 900']] },
+    /* v34.5 F2: serif(Noto Serif KR) · round(Gowun Dodum)는 한글 전체 분할본(fonts/<id>/font.css, hpfontpick.js의 HPF)으로 옮김 — 여기는 legacy만 */
     hand: { fam: 'Gaegu', files: [['Gaegu-400.woff2', '100 500'], ['Gaegu-700.woff2', '600 900']] },
     display: { fam: 'Black Han Sans', files: [['BlackHanSans-400.woff2', '100 900']] }
   };
