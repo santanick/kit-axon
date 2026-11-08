@@ -107,15 +107,18 @@
   function joinLast(lm) { const j = lm.querySelector(':scope > .lgj'); if (!j) return; j.classList.add('lhs-join'); if (lm.lastElementChild !== j) lm.appendChild(j); joinMerge(lm, j); }
   /* R1 M3(FA): 가입 띠를 따로 끼우지 않고 홈페이지 마지막 신청 띠 안의 보조 줄로 합친다(신청 띠가 없으면 지금처럼 바닥글 위 띠) */
   const CTA_RE = /\b(hp-cta|hps-cta-sec|fb-cta|hpl-k-cta|pt-cta|hpl-cta)\b|cta/;
-  function joinMerge(lm, j) { const host = lm.querySelector('.smhost[data-smk=home]'); const sr = host && host.shadowRoot; if (!sr) return;
-    if (sr.querySelector('.lhs-jn')) { j.classList.add('lhs-jm'); return; }
+  /* 바닥글 안쪽 첫 칸: 홈 shadowRoot 안의 footer.gf(계열 · hps 바닥글) 또는 게시본 바닥글 호스트 */
+  function footIn(sr, lm) { const roots = [sr]; document.querySelectorAll('footer.lf .smhost[data-smk=foot], #lm .smhost').forEach(h => { if (h.shadowRoot && !roots.includes(h.shadowRoot)) roots.push(h.shadowRoot); });
+    for (const r of roots) { const f = [...r.querySelectorAll('footer.gf')].pop(); if (f) return f.querySelector(':scope > .hps-fw') || f.querySelector('.hps-fw, :scope > .wrap, :scope > div') || f; } return null; }
+  function joinMerge(lm, j) { const host = lm.querySelector('.smhost[data-smk=home]'); let sr = host && host.shadowRoot; if (!sr) return;
+    if (document.querySelector('#lm .smhost') && [...document.querySelectorAll('.smhost')].some(h => h.shadowRoot && h.shadowRoot.querySelector('.lhs-jn'))) { j.classList.add('lhs-jm'); return; }
     const secs = [...sr.querySelectorAll('.smr > section, .smr > * > section')]; const last = secs[secs.length - 1];
-    if (!last || !(CTA_RE.test(last.className) || last.hasAttribute('data-hps-cta'))) { j.classList.remove('lhs-jm'); return; }
     const t = (j.querySelector('b') || {}).textContent || ''; const L = [...j.querySelectorAll('.lgj-a a')].filter(a => a.getAttribute('href')); if (!L.length) return;
-    const w = [...last.children].find(x => x.tagName === 'DIV' && !x.matches('[aria-hidden],.hps-scrim')) || last;
+    let w; if (last && (CTA_RE.test(last.className) || last.hasAttribute('data-hps-cta'))) w = [...last.children].find(x => x.tagName === 'DIV' && !x.matches('[aria-hidden],.hps-scrim')) || last;
+    else { w = footIn(sr, lm); if (!w) { j.classList.remove('lhs-jm'); return; } sr = w.getRootNode(); } /* R2 M3(H5): 마지막이 신청 띠가 아니면(지도 · 문의 · 공지 등) 바닥글 첫 줄로 합친다 — 바닥글 위 따로 낀 연한 띠 제거 */
     const box = document.createElement('div'); box.className = 'lhs-jn'; box.setAttribute('role', 'note'); box.setAttribute('aria-label', '가입 · 로그인');
-    box.innerHTML = `${t ? `<span>${esc(t)}</span>` : ''}${L.map(a => `<a href="${esc(a.getAttribute('href'))}">${esc(a.textContent.trim())}</a>`).join('')}`; w.appendChild(box);
-    if (!sr.getElementById('lhsJn')) { const st = document.createElement('style'); st.id = 'lhsJn'; st.textContent = '.lhs-jn{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;margin-top:28px;padding-top:18px;border-top:1px solid color-mix(in srgb,currentColor 22%,transparent);font-size:15px;line-height:1.5;position:relative;z-index:2}.lhs-jn span{opacity:.86}.lhs-jn a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:4px;min-height:44px;display:inline-flex;align-items:center}.lhs-jn a:focus-visible{outline:2px solid currentColor;outline-offset:2px}'; sr.appendChild(st); }
+    box.innerHTML = `${t ? `<span>${esc(t)}</span>` : ''}${L.map(a => `<a href="${esc(a.getAttribute('href'))}">${esc(a.textContent.trim())}</a>`).join('')}`; if (w.closest && w.closest('footer')) { box.classList.add('lhs-jf'); w.insertBefore(box, w.firstChild); } else w.appendChild(box);
+    if (!sr.getElementById('lhsJn')) { const st = document.createElement('style'); st.id = 'lhsJn'; st.textContent = '.lhs-jn{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;margin-top:28px;padding-top:18px;border-top:1px solid color-mix(in srgb,currentColor 22%,transparent);font-size:15px;line-height:1.5;position:relative;z-index:2}.lhs-jn span{opacity:.86}.lhs-jn a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:4px;min-height:44px;display:inline-flex;align-items:center}.lhs-jn a:focus-visible{outline:2px solid currentColor;outline-offset:2px}.lhs-jn.lhs-jf{margin:0 0 28px;padding:0 0 18px;border-top:0;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent);font-size:14.5px;width:100%;grid-column:1/-1}'; sr.appendChild(st); }
     j.classList.add('lhs-jm'); }
   /* R1 M3 · FIXLIST 7(FA): PC 떠 있는 튜터 버튼은 첫 화면에서 숨기고, 한 화면 내린 뒤 작은 원형으로 보인다(오른쪽 아래 카드 가림 방지) */
   function past() { const b = document.body; if (!b || !b.classList.contains('lhs-home')) return; b.classList.toggle('lhs-past', (scrollY || document.documentElement.scrollTop) > innerHeight * .6); }

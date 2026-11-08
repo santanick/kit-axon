@@ -16,6 +16,21 @@ function serve(port) { const srv = http.createServer((q, r) => { const u = decod
   r.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); });
   return new Promise((ok, no) => { srv.once('error', no); srv.listen(port, '127.0.0.1', () => ok(srv)); }); }
 
+/* 외부 글꼴(R2 N6 · v34.5 H4): cdn.jsdelivr.net(Pretendard · 원저작자 배포 글꼴)만 로컬 캐시로 응답하고, 그 밖의 외부 요청은 끊는다.
+   캐시: HPV_CDN_CACHE(기본 ~/.cache/hpvisual-cdn) — 없으면 curl로 한 번 받는다(프록시 · CA는 curl 설정을 따름). 못 받으면 abort(시스템 글꼴로 찍힘 → 행의 fonts로 드러남) */
+const CDN_DIR = process.env.HPV_CDN_CACHE || path.join(require('node:os').homedir(), '.cache', 'hpvisual-cdn');
+const CDN_RX = /^https:\/\/cdn\.jsdelivr\.net\//; const CDN_MEM = new Map(); const cdnStat = { hit: 0, got: 0, fail: 0 };
+function cdnGet(u) { if (CDN_MEM.has(u)) return CDN_MEM.get(u);
+  const pr = new Promise(ok => { const f = path.join(CDN_DIR, require('node:crypto').createHash('sha1').update(u).digest('hex') + (u.split('?')[0].endsWith('.css') ? '.css' : '.bin'));
+    if (fs.existsSync(f) && fs.statSync(f).size > 0) { cdnStat.hit++; return ok(fs.readFileSync(f)); }
+    fs.mkdirSync(CDN_DIR, { recursive: true });
+    cp.execFile('curl', ['-sSfL', '--max-time', '25', '-o', f + '.part', u], e => { if (e || !fs.existsSync(f + '.part')) { cdnStat.fail++; try { fs.unlinkSync(f + '.part'); } catch (x) { } return ok(null); } fs.renameSync(f + '.part', f); cdnStat.got++; ok(fs.readFileSync(f)); }); });
+  CDN_MEM.set(u, pr); return pr; }
+async function net(t) { await t.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, async r => { const u = r.request().url();
+  if (!CDN_RX.test(u)) return r.abort(); const b = await cdnGet(u); if (!b) return r.abort();
+  const ct = /\.css(\?|$)/.test(u) ? 'text/css; charset=utf-8' : /\.woff2(\?|$)/.test(u) ? 'font/woff2' : /\.woff(\?|$)/.test(u) ? 'font/woff' : 'application/octet-stream';
+  return r.fulfill({ status: 200, body: b, contentType: ct, headers: { 'access-control-allow-origin': '*', 'cache-control': 'max-age=31536000' } }); }); }
+
 /* 인자: --key value · --flag */
 function args(argv) { const o = { _: [] }; for (let i = 0; i < argv.length; i++) { const a = argv[i]; if (a.startsWith('--')) { const k = a.slice(2); const n = argv[i + 1]; if (n === undefined || n.startsWith('--')) o[k] = true; else { o[k] = n; i++; } } else o._.push(a); } return o; }
 
@@ -39,7 +54,7 @@ const REVS = ['설명이 차근차근해서 처음 배우는 사람도 따라가
 async function mkOrg(br, base, type, errs, state) {
   state = STATES.includes(state) ? state : 'filled';
   const ctx = await br.newContext({ viewport: { width: 1280, height: 800 } });
-  await ctx.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, r => r.abort());
+  await net(ctx); /* R2 N6: jsdelivr 글꼴만 캐시 응답 · 나머지 외부 차단 */
   const op = await ctx.newPage(); op.on('pageerror', e => errs.push(`op[${type}]: ${e.message}`)); op.on('dialog', d => d.accept());
   await op.goto(base + 'index.html'); await op.waitForFunction(() => typeof createOrg === 'function');
   await op.evaluate(([type, name, empty]) => { localStorage.clear(); localStorage.setItem('didisam.emptyStart', empty ? '1' : '0'); createOrg(type, name); }, [type, ORGN[type] || '점검 기관', state === 'empty']);
@@ -108,9 +123,11 @@ const MEASURE = () => {
   /* 바탕: 단색이면 계산, 사진 · 그라데이션 위면 null(픽셀로 잼) */
   function bgOf(el) { const stack = []; let a = el; while (a && a.nodeType === 1) { const cs = getComputedStyle(a); if (cs.backgroundImage && cs.backgroundImage !== 'none') return null; const c = parse(cs.backgroundColor); if (c && c[3] > 0) { stack.push(c); if (c[3] >= 0.99) break; } a = up(a); }
     let base = [255, 255, 255]; for (let i = stack.length - 1; i >= 0; i--) { const c = stack[i]; const al = c[3]; base = [c[0] * al + base[0] * (1 - al), c[1] * al + base[1] * (1 - al), c[2] * al + base[2] * (1 - al)]; } return base; }
-  const MR = new Map(); const mediaRects = root => { if (!MR.has(root)) MR.set(root, [...root.querySelectorAll('img, video, picture, canvas')].map(m => m.getBoundingClientRect()).filter(b => b.width > 40 && b.height > 30)); return MR.get(root); };
-  function overMedia(root, el, r) { const x = r.left + r.width / 2, y = r.top + r.height / 2;
-    if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return mediaRects(root).some(b => x >= b.left && x <= b.right && y >= b.top && y <= b.bottom); /* 화면 밖: 사진 영역 안이면 픽셀로 잰다(v34.5 FB) */
+  const MR = new Map(); const mediaRects = root => { if (!MR.has(root)) MR.set(root, [...root.querySelectorAll('img, video, picture, canvas')].map(m => ({ m, b: m.getBoundingClientRect() })).filter(o => o.b.width > 40 && o.b.height > 30)); return MR.get(root); };
+  /* v34.5 H5(N7): 화면 밖 글자 — 사진 영역 안이어도, 그 사진을 품은 조상에 닿기 전에 불투명 바탕(칩 · 배지 · 버튼)이 있으면 그 바탕 위 글자다(D-day 칩 오탐 제거) */
+  function opaqueBefore(el, hit) { let a = el; while (a && a.nodeType === 1) { if (hit.some(o => a.contains(o.m))) return false; const cs = getComputedStyle(a); if (cs.backgroundImage && cs.backgroundImage !== 'none') return false; const c = parse(cs.backgroundColor); if (c && c[3] >= 0.99) return true; a = up(a); } return false; }
+  function overMedia(root, el, r) { const x = r.left + r.width / 2, y = r.top + r.height / 2; { const c0 = parse(getComputedStyle(el).backgroundColor); if (c0 && c0[3] >= 0.99) return false; } /* H5(N7): 자기 바탕이 불투명한 칩 · 배지는 그 바탕으로 계산 */
+    if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) { const hit = mediaRects(root).filter(({ b }) => x >= b.left && x <= b.right && y >= b.top && y <= b.bottom); return hit.length > 0 && !opaqueBefore(el, hit); } /* 화면 밖: 사진 영역 안이면 픽셀로 잰다(v34.5 FB) */
     const st = root.elementsFromPoint ? root.elementsFromPoint(x, y) : []; const i = st.indexOf(el); for (const e of st.slice(i + 1)) { if (/^(IMG|VIDEO|CANVAS|PICTURE)$/.test(e.tagName) || (e.tagName === 'svg' && e.getBoundingClientRect().width > 120)) return true; const cs = getComputedStyle(e); if (cs.backgroundImage && cs.backgroundImage !== 'none') return true; const c = parse(cs.backgroundColor); if (c && c[3] >= 0.99) return false; } return false; }
   const texts = [], photos = { img: 0, bg: 0, stock: 0, art: 0, slots: 0 }, empty = [], wide = []; let txtAll = '';
   roots.forEach(root => {
@@ -136,7 +153,10 @@ const MEASURE = () => {
     if (ns.has(1) && ns.has(2) && ns.has(3)) numSec++;
     if (sec.classList.contains('hps-empty')) emptyCls++; else if (/\b(hp-cls|hpl-k-classes|hps-sec)\b/.test(sec.className) && sec.querySelector('a, article, tr')) clsVis++; }); });
   const h0 = hosts[0] ? hosts[0].getBoundingClientRect() : null;
-  return { hosts: hosts.length, top: h0 ? Math.round(h0.top + sy) : 0, docH: document.documentElement.scrollHeight, nVis, numSec, clsVis, emptyCls, over: document.documentElement.scrollWidth - innerWidth, wide, texts, photos, empty, txt: txtAll.replace(/\s+/g, ' ').trim().slice(0, 20000) };
+  /* 글꼴(R2 N6): 실제로 내려받아진 family · 첫 화면 h1 글꼴(첫 이름 · 굵기 · 로드 여부) */
+  const ld = [...new Set([...document.fonts].filter(f => f.status === 'loaded').map(f => f.family.replace(/^['"]|['"]$/g, '')))];
+  let hfont = null; for (const root of roots) { const h = root.querySelector('h1'); if (h && vis(h)) { const cs = getComputedStyle(h); const fam = cs.fontFamily.split(',')[0].trim().replace(/^['"]|['"]$/g, ''); hfont = [fam, +cs.fontWeight || 400, ld.includes(fam) ? 1 : 0]; break; } }
+  return { fonts: ld, hfont, hosts: hosts.length, top: h0 ? Math.round(h0.top + sy) : 0, docH: document.documentElement.scrollHeight, nVis, numSec, clsVis, emptyCls, over: document.documentElement.scrollWidth - innerWidth, wide, texts, photos, empty, txt: txtAll.replace(/\s+/g, ' ').trim().slice(0, 20000) };
 };
 
 /* 촬영 전 대기(FIXLIST 16): 페이지를 끝까지 내려 지연 불러오기를 깨우고, 모든 사진을 eager로 바꿔 다 뜨고(decode) 나면 맨 위로. 반환: 아직 안 뜬 사진 수 */
@@ -199,4 +219,4 @@ const TYPES = ['adult', 'k12', 'univ', 'lifelong', 'voc', 'corp', 'public'];
 const typesOf = r => (Array.isArray(r.types) && r.types.length ? r.types : [r.type]).filter(Boolean);
 const byType = rows => { const m = {}; rows.forEach(r => typesOf(r).forEach(t => { (m[t] = m[t] || []).push(r); })); Object.values(m).forEach(L => L.sort((a, b) => a.id.localeCompare(b.id))); return m; };
 
-module.exports = { STATES, settle, ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };
+module.exports = { net, cdnStat, STATES, settle, ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };
