@@ -235,6 +235,10 @@
     TPL.push({ id, name: n.name, types: ['voc'], scene: n.scene, color: n.color, tone: '신뢰', look: n.look, ref: n.ref, theme: CFG[id].th, hero: '', build: () => [], langs: ['ko', 'en'] }); });
 
   /* ── 템플릿 덮어쓰기 ── */
+  /* FD2(유형 간 재배치 · BRIEF7): 계열 변형(layoutVar, FD1 HPL.vars). 같은 계열을 쓰는 다른 유형과 다른 변형을 고르고,
+     portal · bulletin 4종(consort · remote · jobcenter · voc-card)의 '사진 + 찾기 상자 + 아이콘 줄'이 겹치지 않게 서로 다른 변형을 준다 */
+  const FD2V = { 't3-v-design': 'c', 'voc-employer': 'b', 't3-v-trade': 'c', 't3-v-beauty': 'b', 't3-v-youth': 'c', 't3-v-license': 'b', 't3-v-factory': 'a',
+    't3-v-remote': 'b', 't3-v-consort': 'c', 't3-v-jobcenter': 'a', 'voc-card': 'b' };
   Object.keys(CFG).forEach(id => {
     const tp = TPL.find(t => t && t.id === id); if (!tp || A(tp.types)[0] !== 'voc') return;
     const c = CFG[id];
@@ -242,6 +246,7 @@
     if (c.L) { tp.layout = c.L; tp.hero = ''; } else { delete tp.layout; tp.hero = { split: 'split', box: 'center', scrim: 'bg', grid: 'center' }[c.hk] || ''; }
     tp.photos = Object.assign({}, c.ph);
     tp.hps = { head: c.hd[0], foot: c.hd[1], mm: c.hd[2] };
+    if (c.L && FD2V[id]) tp.layoutVar = FD2V[id]; else delete tp.layoutVar;
     delete tp.deco; /* 원 · 링 · 줄무늬 장식 CSS 걷어냄 */
     tp.build = () => { const L = A(c.build()).filter(Boolean);
       L.forEach(x => { if (!x || !x.data) return; const d = x.data;
@@ -256,6 +261,7 @@
       try {
         if (s && tp && tp.tpV && A(tp.types)[0] === 'voc') {
           if (tp.layout && window.HPL && HPL.fam && HPL.fam[tp.layout]) { if (typeof HPL.apply === 'function') HPL.apply(s, tp.layout); else s.layout = tp.layout; } else delete s.layout;
+          if (s.layout && tp.layoutVar) s.layoutVar = tp.layoutVar; else delete s.layoutVar; /* FD2: 계열 변형 */
           if (tp.photos && window.HPSTOCK && typeof HPSTOCK.slotImg === 'function') { s.photos = Object.assign({}, tp.photos); s.img = s.img || {};
             Object.keys(tp.photos).forEach(sl => { if (s.img[sl] && s.img[sl].src) return; const v = HPSTOCK.slotImg(tp.photos[sl], sl); if (v) s.img[sl] = v; }); }
           if (tp.hps) s.hps = Object.assign({}, s.hps || {}, tp.hps);
