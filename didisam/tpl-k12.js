@@ -248,9 +248,9 @@
   const FD2 = {
     'k12-total': ['hk:box', '', 'contact', 'cols'],
     'k12-exam': ['splitscreen', 'b', 'left', 'split'],
-    't1-k12-math': ['bento', 'a', 'contact', 'cta'] /* 어두운 첫 화면은 coding(bento b) · music(fullbleed b) 2종만 */,
+    't1-k12-math': ['bento', 'b', 'contact', 'cta'], /* 어두운 첫 화면은 math(bento b) · music(fullbleed b) 2종만 */
     't1-k12-english': ['fullbleed', 'c', 'float', 'cols'],
-    't1-k12-coding': ['bento', 'b', 'left', 'cta'],
+    't1-k12-coding': ['bento', 'a', 'left', 'cta'], /* b면 adult bootcamp(bento b)와 닮음 */
     't1-k12-art': ['collage', 'a', 'float', 'split'],
     't1-k12-music': ['fullbleed', 'b', 'left', 'cols'],
     't1-k12-reading': ['mosaic', 'b', 'contact', 'split'],

@@ -102,10 +102,10 @@
     't4-hrd-inst': ['portal', 'b', 'util', 'gov'],
     't4-agency': ['sidebar', 'a', 'center', 'biz'], /* b면 corp t3-c-job과 엄격 유사 */
     't4-cyber': ['sidebar', 'b', 'util', 'biz'],
-    't4-legal': ['bulletin', 'a', 'util', 'gov'],
+    't4-legal': ['bulletin', 'b', 'util', 'gov'], /* a(사진 판 위 제목)면 제목 대비 3.7 */
     't4-newhire': ['story', 'c', 'center', 'gov'],
     't4-ai-gov': ['portal', 'c', 'center', 'biz'],
-    't4-civic': ['bulletin', 'b', 'center', 'gov'],
+    't4-civic': ['bulletin', 'a', 'center', 'gov'],
     't4-digital': ['hk:split', '', 'util', 'gov'],
     't4-outreach': ['hk:split', '', 'center', 'biz'],
     't4-leader': ['splitscreen', 'c', 'center', 'biz'] /* 어두운 첫 화면: leader · hrd-inst 2종 */,
