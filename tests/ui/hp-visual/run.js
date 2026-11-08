@@ -57,7 +57,7 @@ function summarize() { const rows = H.loadRows(OUT).sort((a, b) => (a.type + a.i
         const T = m.texts.filter(x => x.cr != null); const worst = T.slice().sort((a, b) => a.cr - b.cr);
         r['ov_' + sfx] = m.over; r['hpH_' + sfx] = m.docH; if (m.wide.length) r['wide_' + sfx] = m.wide;
         if (sfx === 'pc') { r.cmin = worst[0] ? worst[0].cr : null; r.cminTxt = worst[0] ? worst[0].t : ''; r.cfail = T.filter(x => x.cr < 4.5).length; r.cfailPx = T.filter(x => x.cr < 4.5 && x.px).length;
-          r.cworst = worst.filter(x => x.cr < 4.5).slice(0, 6).map(x => [x.cr, x.t, x.px ? '사진 위' : '단색', x.fs, x.big ? '큰 글자' : '']); r.nText = T.length;
+          r.cworst = worst.filter(x => x.cr < 4.5).slice(0, 6).map(x => [x.cr, x.t, x.px ? '사진 위' : '단색', x.fs, x.big ? '큰 글자' : '', x.box.join(',')]); r.nText = T.length;
           r.photos = m.photos.img + m.photos.bg; r.stock = m.photos.stock; r.stockRatio = r.photos ? Math.round(r.stock / r.photos * 100) / 100 : 0; r.art = m.photos.art; r.slots = m.photos.slots;
           r.emptyDom = m.empty; const tc = H.textChecks(m.txt, allowed); r.ph = tc.ph; r.nums = tc.nums; r.numSus = tc.numSus; r.hosts = m.hosts; }
         else { r.cmin_m = worst[0] ? worst[0].cr : null; r.cfail_m = T.filter(x => x.cr < 4.5).length; }

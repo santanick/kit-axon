@@ -87,7 +87,7 @@ const MEASURE = () => {
       const own = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').replace(/\s+/g, ' ').trim();
       if (own && texts.length < 600 && !el.closest('svg')) { const cs = getComputedStyle(el); const c = parse(cs.color); if (!c || c[3] < 0.05) return;
         const bg = overMedia(root, el, r) ? null : bgOf(el); const fs = parseFloat(cs.fontSize); const fw = +cs.fontWeight || 400;
-        texts.push({ t: own.slice(0, 40), c: c.slice(0, 3), bg, cr: bg ? Math.round(ratio(c, bg) * 100) / 100 : null, fs, fw, big: fs >= 24 || (fs >= 18.66 && fw >= 700), box: [Math.round(r.left + sx), Math.round(r.top + sy), Math.round(r.width), Math.round(r.height)] }); }
+        const pd = ['Top', 'Right', 'Bottom', 'Left'].map(k => parseFloat(cs['padding' + k]) || 0); const ob = (cs.backgroundImage && cs.backgroundImage !== 'none') || ((parse(cs.backgroundColor) || [0, 0, 0, 0])[3] > 0.5); texts.push({ pad: pd, ownBg: ob, t: own.slice(0, 40), c: c.slice(0, 3), bg, cr: bg ? Math.round(ratio(c, bg) * 100) / 100 : null, fs, fw, big: fs >= 24 || (fs >= 18.66 && fw >= 700), box: [Math.round(r.left + sx), Math.round(r.top + sy), Math.round(r.width), Math.round(r.height)] }); }
     });
     root.querySelectorAll('section, .smr > div').forEach(sec => { if (!vis(sec)) return; const txt = (sec.innerText || '').replace(/\s+/g, ' ').trim(); const media = sec.querySelector('img, svg, iframe, video, canvas, [data-slot]'); if (txt.length < 2 && !media) empty.push(String(sec.className).split(' ')[0] || sec.tagName.toLowerCase()); });
     txtAll += ' ' + [...root.children].filter(c => !/^(STYLE|SCRIPT|TEMPLATE)$/.test(c.tagName)).map(c => c.innerText || '').join(' ');
@@ -123,8 +123,9 @@ async function pixelContrast(sharp, buf, meta, items) {
   const W = info.width, H = info.height, ch = info.channels; const sc = W / meta.w;
   for (const it of items) { const [x0, y0, w0, h0] = it.box.map(v => Math.round(v * sc)); if (w0 < 2 || h0 < 2) continue;
     const lt = Lum(...it.c); const cr = []; const ring = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * ch; const l = Lum(data[i], data[i + 1], data[i + 2]); cr.push((Math.max(l, lt) + 0.05) / (Math.min(l, lt) + 0.05)); };
-    const step = Math.max(1, Math.floor((w0 + h0) / 120));
-    for (let k = 2; k <= 6; k += 2) { for (let x = x0 - k; x <= x0 + w0 + k; x += step) { ring(x, y0 - k); ring(x, y0 + h0 + k); } for (let y = y0 - k; y <= y0 + h0 + k; y += step) { ring(x0 - k, y); ring(x0 + w0 + k, y); } }
+    const step = Math.max(1, Math.floor((w0 + h0) / 120)); const [pt, pr, pb, pl] = (it.pad || [0, 0, 0, 0]).map(v => Math.round(v * sc));
+    if (it.ownBg && h0 >= 10 && w0 >= 14) { /* 버튼 · 배지처럼 자기 바탕이 있는 상자: 테두리 안쪽 3px 띠 */ const ix = Math.max(3, Math.min(Math.floor(pl / 2), 12)), iy = Math.max(3, Math.min(Math.floor(pt / 2), 8)); for (let y = y0 + iy; y < y0 + h0 - iy; y += step) { ring(x0 + ix, y); ring(x0 + w0 - 1 - ix, y); } for (let x = x0 + ix; x < x0 + w0 - ix; x += step) { ring(x, y0 + iy); ring(x, y0 + h0 - 1 - iy); } }
+    else for (let k = 2; k <= 6; k += 2) { for (let x = x0 - k; x <= x0 + w0 + k; x += step) { ring(x, y0 - k); ring(x, y0 + h0 + k); } for (let y = y0 - k; y <= y0 + h0 + k; y += step) { ring(x0 - k, y); ring(x0 + w0 + k, y); } }
     if (!cr.length) continue; cr.sort((a, b) => a - b); it.cr = Math.round(cr[Math.floor(cr.length * 0.25)] * 100) / 100; it.px = 1; }
 }
 
