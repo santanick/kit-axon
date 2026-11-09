@@ -37,12 +37,15 @@
   function slimApply() { const E = slimEss(); if (!E.length) return;
     E.forEach(id => { if (MENU[id] && typeof navAdd === 'function' && !Object.values(S.nav.tabs).some(A => (A || []).some(x => x.id === id))) { try { navAdd(id, true); } catch (e) { } } }); /* v36 R1 프리셋에 없던 기본 메뉴(docs 등)도 자리를 만든다 */
     Object.keys(S.nav.tabs).forEach(w => { const A = S.nav.tabs[w] || []; A.forEach(x => { x.on = E.includes(x.id); }); A.sort((a, b) => (E.indexOf(a.id) + 1 || 99) - (E.indexOf(b.id) + 1 || 99)); });
-    S.slim34 = 1; S.nav.r36 = 1; }
+    S.slim34 = 1; S.nav.r36 = 1; auto36(); }
+  /* v36 R4 홈에 '자동 운영 n개 켜짐'인데 자동화 메뉴가 꺼져 있던 것 — 켜진 자동화가 있으면 자동화 메뉴도 기본으로 켠다(이미 저장된 기관은 upgradeState에서 한 번) */
+  function auto36() { if (!S || !S.nav || !S.nav.tabs || !MENU.auto) return; S.nav.au36 = 1; if (!(S.autos || []).some(a => a.on)) return; if (typeof navAdd === 'function') { try { navAdd('auto', true); } catch (e) { } } Object.values(S.nav.tabs).forEach(A => (A || []).forEach(x => { if (x.id === 'auto') x.on = true; })); }
   window.slimApply = slimApply;
   /* v35 F2b: 모든 유형에서 학습자 사이트 게시로 갈 수 있게 '홈페이지(site)'를 필수 메뉴에 둔다. 이미 저장된 기관(S.slim34 있음)은 한 번만 켠다 */
   function siteOn35() { if (!S || !S.org || !S.nav || !S.nav.tabs || S.site35 || !MENU.site) return; const k = essKey(); if (k !== 'univ_lms') { if (typeof navAdd === 'function') navAdd('site', true); Object.values(S.nav.tabs).forEach(L => (L || []).forEach(x => { if (x.id === 'site') x.on = true; })); } S.site35 = 1; }
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { siteOn35(); } catch (e) { console.error(e); } return r; }; }
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.slim34 && !(S.nav || {}).r36) { ess36(); save(); } } catch (e) { console.error(e); } return r; }; }
+  { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org && S.nav && !S.nav.au36) { auto36(); save(); } } catch (e) { console.error(e); } return r; }; }
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org && !S.slim34) { const old = !!S.org.created && S.org.created < '2026-11-08'; slimApply(); if (old) UI.slimNote = 1; save(); } } catch (e) { console.error(e); } return r; }; }
   if (typeof createOrg === 'function') { const base = createOrg; createOrg = (...a) => { const r = base(...a); try { if (S && S.org) { slimApply(); save(); render(); } } catch (e) { console.error(e); } return r; }; }
 

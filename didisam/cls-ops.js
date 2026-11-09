@@ -72,7 +72,7 @@
   const kindName = c => c.kind === 'pack' ? '과정 묶음' : (KIND[c.kind] || '기간') + (c.sub ? ' · ' + c.sub : '');
   const per = c => { try { return typeof c2Period === 'function' ? c2Period(c) : `${c.start || ''} ~ ${c.end || ''}`; } catch (e) { return `${c.start || ''} ~ ${c.end || ''}`; } };
   const catName = c => { try { return typeof c2CatName === 'function' ? c2CatName(c.cat) : ''; } catch (e) { return ''; } };
-  const hasAtt = c => c.kind === 'episode' || S.org.type === 'voc';
+  const hasAtt = c => { if (c.kind === 'episode') return true; if (S.org.type !== 'voc') return false; try { return !!W2.hasUnits(c); } catch (e) { return true; } }; /* v36 R4 회차(출석) 없는 직업훈련 기간 과정은 '진도율로 관리' 안내와 함께 출석률 열을 숨긴다 */
   function sumOf(c) { const L = A(c.learners); const n = L.length; const dn = L.filter(id => done(c, id)).length; const avg = n ? Math.round(L.reduce((a, id) => a + pOf(c, id), 0) / n) : 0;
     return { n, dn, rate: n ? Math.round(dn / n * 100) : 0, avg, away: L.filter(away).length, zero: L.filter(id => !pOf(c, id)).length, low: L.filter(id => pOf(c, id) < 30).length,
       grade: L.filter(id => ((c.prog[id] || {}).assign) === 'submitted').length, noCert: L.filter(id => done(c, id) && !certOf(c, id)).length }; }
@@ -84,16 +84,17 @@
       ...(withCls ? [hasAtt(c) && p.att != null ? +p.att : ''] : []), lastOf(id), done(c, id) ? t('done') : '미' + t('done'), ct ? ct.at : '', ct ? ct.no : '']; }
   function clsLCols(c) { const L = LCOLS(false); if (hasAtt(c)) L.splice(L.indexOf('과제') + 1, 0, '출석률(%)'); return L; }
   function clsLRow(c, id) { const r = lRow(c, id, false); if (hasAtt(c)) { const p = c.prog[id] || {}; r.splice(clsLCols(c).indexOf('출석률(%)'), 0, p.att == null ? '' : +p.att); } return r; }
+  const xlsW = () => S && S.org && S.org.type === 'k12' ? '수강' : t('done'); /* v36 R4 학원(초중고)은 '수료'가 아니라 '수강 현황 엑셀' */
   function xlsClass(c) { if (!c) return; try { if (typeof c2Ensure === 'function') c2Ensure(c); } catch (e) { }
-    xlsx(`${c.name}_${t('done')}현황_${today()}.xlsx`, [{ name: '요약', cols: SUMCOLS(), rows: [sumRow(c)] }, { name: `${t('done')} 현황`, cols: clsLCols(c), rows: A(c.learners).map(id => clsLRow(c, id)) }]);
-    logAudit(`${c.name} ${t('done')} 현황 엑셀 내려받기`); toast(`「${c.name}」 ${t('done')} 현황 엑셀을 내려받았습니다.`, 'ok'); }
+    xlsx(`${c.name}_${xlsW()}현황_${today()}.xlsx`, [{ name: '요약', cols: SUMCOLS(), rows: [sumRow(c)] }, { name: `${xlsW()} 현황`, cols: clsLCols(c), rows: A(c.learners).map(id => clsLRow(c, id)) }]);
+    logAudit(`${c.name} ${xlsW()} 현황 엑셀 내려받기`); toast(`「${c.name}」 ${xlsW()} 현황 엑셀을 내려받았습니다.`, 'ok'); }
   function xlsAll() { const CL = visCls(); try { if (typeof c2EnsureAll === 'function') c2EnsureAll(); } catch (e) { }
-    xlsx(`전체_${t('done')}현황_${today()}.xlsx`, [{ name: `${t('cls')}별 요약`, cols: SUMCOLS(), rows: CL.map(sumRow) }, { name: '전체 명단', cols: LCOLS(true), rows: CL.flatMap(c => A(c.learners).map(id => lRow(c, id, true))) }]);
-    logAudit(`전체 ${t('done')} 현황 엑셀 내려받기`); toast(`전체 ${t('done')} 현황 엑셀(${t('cls')}별 요약 · 전체 명단)을 내려받았습니다.`, 'ok'); }
+    xlsx(`전체_${xlsW()}현황_${today()}.xlsx`, [{ name: `${t('cls')}별 요약`, cols: SUMCOLS(), rows: CL.map(sumRow) }, { name: '전체 명단', cols: LCOLS(true), rows: CL.flatMap(c => A(c.learners).map(id => lRow(c, id, true))) }]);
+    logAudit(`전체 ${xlsW()} 현황 엑셀 내려받기`); toast(`전체 ${xlsW()} 현황 엑셀(${t('cls')}별 요약 · 전체 명단)을 내려받았습니다.`, 'ok'); }
   const visCls = () => { const tc = S.me.role === 'teacher' && typeof tMe === 'function' && tMe() ? tMe().classes || [] : null; return S.classes.filter(c => !tc || tc.includes(c.id)); };
   window.OPS36.xlsClass = xlsClass; window.OPS36.xlsAll = xlsAll; window.OPS36.sum = sumOf;
   ACT['ops-xls'] = el => { const v = el && el.dataset && el.dataset.v; if (v && C(v)) xlsClass(C(v)); else xlsAll(); };
-  const xlsBtn = (v, l) => `<button type="button" class="btn ops-xbtn" data-act="ops-xls" data-v="${esc(v || '')}">${I('download', 16)} ${esc(l || `${t('done')} 현황 엑셀`)}</button>`;
+  const xlsBtn = (v, l) => `<button type="button" class="btn ops-xbtn" data-act="ops-xls" data-v="${esc(v || '')}">${I('download', 16)} ${esc(l || `${xlsW()} 현황 엑셀`)}</button>`;
   window.OPS36.xlsBtn = xlsBtn;
   /* 기존 '수강현황 내려받기'(CSV, 열 이름과 값이 어긋나던 것)는 같은 버튼에서 엑셀로 */
   ACT['cls-dl'] = el => xlsClass(C(el.dataset.v));
@@ -144,14 +145,14 @@
   /* 카드 보기: 썸네일 = 운영현황 버튼(선택 체크박스는 그대로 위에) · 목록/카드 공통 바에 이수 현황 엑셀 */
   if (typeof c2ListView === 'function') { const base = c2ListView; c2ListView = (...a) => { let h = base(...a); try {
     h = h.replace(/<article class="d26-cc"><div class="d26-th">([\s\S]*?)(<label class="d26-ck"><input type="checkbox" class="c2ck" value="([^"]+)")/g, (m0, pre, lab, id) => { const c = C(id); return `<article class="d26-cc"><div class="d26-th">${pre}<button type="button" class="ops-thb" data-act="ops-open" data-v="${esc(id)}" aria-label="${esc(c ? c.name : '')} 운영현황 보기"><span>${I('chart', 16)} 운영현황</span></button>${lab}`; });
-    if (!/data-act="ops-xls"/.test(h)) h = h.replace(/(<span class="d26-view")/, `${xlsBtn('', `전체 ${t('done')} 현황 엑셀`)}$1`);
+    if (!/data-act="ops-xls"/.test(h)) h = h.replace(/(<span class="d26-view")/, `${xlsBtn('', `전체 ${xlsW()} 현황 엑셀`)}$1`);
   } catch (e) { console.error(e); } return h; }; }
 
   /* v36 R1 명단 화면(학습자 목록 · 학원 원생)에도 '전체 {이수/수료} 현황 엑셀' — 운영자가 과정 목록까지 가지 않아도 내려받게 */
-  ['members', 'crmstu'].forEach(k => { const base = VIEWS[k]; if (typeof base !== 'function') return; VIEWS[k] = (...a) => { let h = base(...a); try { if (S && S.org && S.me.role !== 'teacher' && A(S.classes).length && !/data-act="ops-xls"/.test(h)) h = h.replace('<div class="phr">', `<div class="phr"><span class="ops-xwrap">${xlsBtn('', `전체 ${t('done')} 현황 엑셀`)}</span>`); /* span으로 감싸 '⋯ 다른 작업'으로 접히지 않게 */ } catch (e) { console.error(e); } return h; }; });
+  ['members', 'crmstu'].forEach(k => { const base = VIEWS[k]; if (typeof base !== 'function') return; VIEWS[k] = (...a) => { let h = base(...a); try { if (S && S.org && S.me.role !== 'teacher' && A(S.classes).length && !/data-act="ops-xls"/.test(h)) h = h.replace('<div class="phr">', `<div class="phr"><span class="ops-xwrap">${xlsBtn('', S.org.type === 'k12' ? '수강 현황 엑셀' : `전체 ${t('done')} 현황 엑셀`)}</span>`); /* span으로 감싸 '⋯ 다른 작업'으로 접히지 않게 */ } catch (e) { console.error(e); } return h; }; });
   /* 과정 상세: '수강현황 내려받기' → '이수 현황 엑셀', 카테고리 칩 = 바로 고르기 */
   { const base = VIEWS.class; VIEWS.class = (...a) => { let h = base(...a); try { if (UI.cls && C(UI.cls)) {
-    h = h.replace(/(data-act="cls-dl"[^>]*>)[^<]*/, `$1${t('done')} 현황 엑셀`);
+    h = h.replace(/(data-act="cls-dl"[^>]*>)[^<]*/, `$1${xlsW()} 현황 엑셀`);
     /* 수료증 양식(설정 탭): 5종 + 내 이미지 */
     h = h.replace(/(<select data-chg="a2-cls-cert"[^>]*>[\s\S]*?)(<\/select>)/, (m0, pre, end) => { const c = C(UI.cls); const T = c.certTpl || {}; const add = ['c', 'd', 'e', 'img'].map(k => `<option value="${k}" ${T.use === 'custom' && T.design === k ? 'selected' : ''}>이 ${esc(t('cls'))} 전용 · ${esc(CERTK.label(k))}</option>`).join(''); return pre + add + end; });
     const c = C(UI.cls); if (c && c.certTpl && c.certTpl.use === 'custom' && c.certTpl.design === 'img') h = h.replace(/(data-act="a2-cls-certedit"[^>]*>[^<]*<\/button>)/, `$1 <button class="btn sm" data-act="ck-edit" data-v="${esc(c.id)}">이미지 · 글자 위치</button>`);
@@ -163,7 +164,7 @@
     corp: ['법정의무교육', '직무', '리더십', '신입 입문', 'AI 활용'], public: ['법정의무교육', '직무', '신규 임용', '정책 · 행정', 'AI 활용'], lifelong: ['인문 · 교양', '어학', '취미 · 예술', '자격 · 취업', '디지털'], voc: ['국가기간 · 전략산업', '일반 직종', '재직자 과정', '자격 대비', '취업 준비'] };
   const KW = { '업무 자동화': /자동화|노션|업무|생산성/, '오피스 · 엑셀': /엑셀|오피스|파워포인트|한글|컴활|워드/, 'AI 활용': /AI|인공지능|생성형|챗GPT|GPT|프롬프트/, '자격증': /자격|컴활|기사|필기|실기|시험/, '디자인 · 영상': /디자인|영상|사진|편집|포토샵/,
     '국어': /국어|문학|독서|논술/, '영어': /영어|English|토익|회화/, '수학': /수학|미적|확률|기하/, '과학': /과학|물리|화학|생명|지구/, '특강': /특강|캠프|방학/,
-    '교양': /교양|글쓰기|철학|역사/, '전공': /전공|공학|이론|원론/, '비교과': /비교과|프로그램|특강|캠프/, '취업 · 진로': /취업|진로|면접|자소서|자기소개서|이력서|커리어|채용|직무\s*탐색|인턴/, 'AI 역량': /AI|인공지능|데이터|코딩|생성형/,
+    '교양': /교양|글쓰기|철학|역사/, '전공': /전공|캡스톤|졸업\s*(작품|프로젝트|논문)|공학|이론|원론|개론|각론|설계|실험|학과|세미나|알고리즘|자료\s*구조|프로그래밍|운영체제|회로|역학|미적분|선형대수|통계학|해부|간호|재무|회계|마케팅|경영학|경제학|심리학|법학|교육학/, '비교과': /비교과|프로그램|특강|캠프/, '취업 · 진로': /취업|진로|면접|자소서|자기소개서|이력서|커리어|채용|직무\s*탐색|인턴/, 'AI 역량': /AI|인공지능|데이터|코딩|생성형/,
     '법정의무교육': /법정|의무|성희롱|폭력|개인정보|안전|장애인|청렴|반부패/, '직무': /직무|실무|역량|엑셀|보고서/, '리더십': /리더|관리자|코칭/, '신입 입문': /신입|입문|온보딩|오리엔테이션/, '신규 임용': /신규|임용/, '정책 · 행정': /행정|정책|민원|적극/,
     '인문 · 교양': /인문|교양|역사|철학/, '어학': /어학|영어|일본어|중국어/, '취미 · 예술': /취미|예술|미술|음악|원데이|공예/, '자격 · 취업': /자격|취업|면접|이력서|자기소개서|재취업/, '디지털': /디지털|스마트폰|AI|컴퓨터|코딩/,
     '국가기간 · 전략산업': /국가기간|전략|스마트|제조|용접|전기/, '일반 직종': /일반|사무|회계/, '재직자 과정': /재직/, '자격 대비': /자격|필기|실기/, '취업 준비': /면접|이력서|자기소개서|취업/ };
@@ -215,7 +216,9 @@
   /* v36 1-9: 처음 맞는 카테고리가 아니라 가장 잘 맞는 카테고리로 — 이름에서 맞은 말이 구체적일수록(특강 · 프로그램 같은 넓은 말은 반만) · 이름에서 맞으면 목표보다 높게. '취업역량 특강' → 취업 · 진로 */
   const BROAD = /^(특강|프로그램|캠프|역량|실무|업무|교양|이론|AI)$/i;
   const kwScore = (re, s) => { if (!re || !s) return 0; const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g'); let v = 0; const seen = new Set(); let m; while ((m = g.exec(s))) { if (!m[0]) { g.lastIndex++; continue; } const w = m[0]; if (seen.has(w)) continue; seen.add(w); v += BROAD.test(w) ? 0.5 : 1; } return v; };
-  const bestCat = c => { let best = null, bv = 0; S.cats.forEach((x, i) => { const re = KW[x.name]; if (!re) return; const v = kwScore(re, c.name) * 2 + kwScore(re, c.goal || '') - i * 0.001; if (v > bv) { bv = v; best = x; } }); return bv > 0.9 ? best : null; };
+  /* v36 R4 대학: 학과 이름(컴퓨터공학과 → 컴퓨터공학)이 과목명에 들어 있으면 '전공'으로 본다 — '캡스톤디자인'이 미분류 · '전공' 0개이던 문제 */
+  const deptRe = () => { if (S.org.type !== 'univ') return null; const W = A(S.groups).map(g => String(g.name || '').replace(/(학과|학부|전공)$/, '').trim()).filter(w => w.length >= 2).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); return W.length ? new RegExp(W.join('|')) : null; };
+  const bestCat = c => { let best = null, bv = 0; const dr = deptRe(); S.cats.forEach((x, i) => { const re = KW[x.name]; if (!re) return; const v = kwScore(re, c.name) * 2 + kwScore(re, c.goal || '') + (x.name === '전공' && dr ? kwScore(dr, c.name) * 2 : 0) - i * 0.001; if (v > bv) { bv = v; best = x; } }); return bv > 0.9 ? best : null; };
   function autoAssign() { let n = 0; S.classes.forEach(c => { if (c.cat) return; const k = bestCat(c); if (k) { c.cat = k.id; n++; } }); return n; }
   ACT['ops-catauto'] = () => { const n = autoAssign(); logAudit(`카테고리 자동 분류 ${n}개`); save(); render(); toast(n ? `${n}개 ${tj('cls', '을')} 이름에 맞는 카테고리에 넣었습니다. 다르면 [빼기]로 고치세요.` : `카테고리가 없는 ${t('cls')} 중 이름으로 분류할 수 있는 것이 없습니다. [+ 넣기]로 직접 넣으세요.`, n ? 'ok' : 'warn'); };
   ACT['ops-catmkall'] = () => { A(SUGGEST[S.org.type] || SUGGEST.adult).forEach(nm => { if (!S.cats.some(k => k.name === nm)) S.cats.push({ id: uid('cat'), name: nm, parent: '', order: S.cats.length }); }); const n = autoAssign(); UI.catSel = (c2CatTree()[0] || [])[0]?.id || ''; logAudit(`추천 카테고리 만들기 · 자동 분류 ${n}개`); save(); render(); toast(`추천 카테고리를 만들고 ${n}개 ${tj('cls', '을')} 넣었습니다.`, 'ok'); };
@@ -268,7 +271,7 @@
     h = h.replace(/<label>디자인<select data-chg="certInfo" data-k="design">[\s\S]*?<\/select><\/label>/, `<div class="fl ck-curl"><span>디자인</span><b>${esc(CERTK.label(CK().design || 'a'))}</b></div>`);
     const gal = `<section class="card ck-gwrap"><div class="ch"><b>수료증 디자인</b><small>5종 + 내 이미지 · 누르면 바로 바뀝니다</small><span class="sp"></span><button type="button" class="btn sm" data-act="cert-preview">미리보기</button></div>${galleryHTML('')}</section>`;
     const i = h.indexOf('<div class="grid g2">'); if (i >= 0) h = h.slice(0, i) + gal + h.slice(i); else h += gal;
-    h = h.replace(/(data-act="cert-manual"[^>]*>[^<]*<\/button>)/, `$1${xlsBtn('', `${t('done')} 현황 엑셀`)}`);
+    h = h.replace(/(data-act="cert-manual"[^>]*>[^<]*<\/button>)/, `$1${xlsBtn('', `${xlsW()} 현황 엑셀`)}`);
   } catch (e) { console.error(e); } return h; }; }
   /* 수동 발급 창의 디자인 고르기도 5종 */
   if (typeof a2CertIssueModal === 'function') { const base = a2CertIssueModal; a2CertIssueModal = (...a) => { const r = base(...a); try { const s = document.querySelector('#modal select[name=dz]'); if (s && !s.querySelector('option[value=c]')) { s.innerHTML = `<option value="">${esc(t('cls'))} 양식 그대로</option>` + CERTK.LIST.map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join(''); } } catch (e) { } return r; }; }

@@ -228,6 +228,8 @@
 .hpe-add{padding:0!important;height:0;overflow:visible}.hpe-add button{transform:translateY(-50%);opacity:0!important;transition:opacity .12s;background:#5C74F6!important;color:#fff!important;border:0!important;box-shadow:0 4px 14px rgba(92,116,246,.4);padding:0 16px!important;min-height:34px;line-height:34px}
 .hpe-add:hover button,.hpe-add button:focus-visible,[data-hpe]:hover+.hpe-add button,.hpe-add:first-child button,.hpe-add:last-child button{opacity:1!important}
 .hpe-add::before{content:'';position:absolute;left:0;right:0;top:0;border-top:2px dashed transparent}.hpe-add:hover::before{border-top-color:#5C74F6}
+/* v36 R4 맨 위 '+ 섹션 추가'(늘 보임)가 첫 섹션 사진의 '샘플' 표시와 겹치던 것(휴대폰) — 첫 섹션의 샘플 표시를 버튼 아래로 */
+.hpe-add:first-child+[data-hpi-stock]::before,.hpe-add:first-child+* [data-hpi-stock]::before,.hpe-add:first-child+*>[data-hpi-stock]::before{top:34px!important}
 [data-hpe-f].hps-pick,[data-hpi-img].hps-pick{outline:2px solid #5C74F6!important;outline-offset:3px;background-color:rgba(92,116,246,.06)}`;
   const bound = new WeakSet();
   function bindCanvas(f) {
@@ -495,10 +497,17 @@
     HS.lv = Object.assign({}, HS.lv, hit ? { tab: hit[0], name: (HS.lab && HS.lab[hit[0]]) || mName(hit[1].l) } : {}, { hash: h }); deco(true); lvPaint(); }
   function goHp(key) { HS.lv = null; HPE.key = pageOf(key) ? key : 'home'; UI.sitePage = HPE.key; HS.lastUI = HPE.key; lvPaint(); paint(); deco(true); }
   /* 말로 고치기: 규칙(따옴표 안 글 · 사진 · 정렬 · 높이 · 바탕) → 못 알아들으면 Claude(연결 시) */
+  /* v36 R4 '제목 바꿔줘 X' · '제목을 X로' · '제목 X'도 알아듣는다(따옴표 문구는 위에서 먼저 처리). 다른 지시가 섞이면 기존 규칙에 맡긴다 */
+  function lhTitle(v) { const m = String(v || '').match(/(?:^|\s)(?:제목|타이틀)(?:을|를|은|는|도)?\s*[:：]?\s*(.*)$/); if (!m) return '';
+    let x = m[1].split(/\s*(?:,|·|그리고|바꾸고|바꿔\s*주고|고치고|변경하고|해\s*주고|하고(?=\s))\s*/)[0].trim().replace(/^(?:좀\s*)?(?:바꿔|바꾸어|바꿔서|변경해|변경|고쳐|수정해|수정)\s*(?:줘|주세요|줄래|주라|봐)?\s*[:：\-—]?\s*/, '');
+    x = x.replace(/\s*(?:좀\s*)?(?:바꿔|바꾸어|바꿔서|변경해|변경|고쳐|수정해|수정|해|하자|해요|할게)\s*(?:줘|주세요|줄래|주라|봐|요)?[.!~]*$/, '').trim();
+    if (/으로$/.test(x)) x = x.slice(0, -2); else if (/로$/.test(x) && x.length > 1) { const c = x.charCodeAt(x.length - 2) - 0xAC00; if (!(c >= 0 && c < 11172) || c % 28 === 0 || c % 28 === 8) x = x.slice(0, -1); } /* '진로'처럼 받침 있는 글자 뒤 '로'는 이름의 일부 */
+    x = x.trim();
+    if (!x || x.length > 40 || /(사진|이미지|배경|정렬|가운데|크게|작게|색|소개|설명|문구|하고\s)/.test(x)) return ''; return x; }
   function lhRules(v, k) { const P = {}; const q = (v.match(/["“”'‘’「『]([^"“”'‘’」』]{1,80})["“”'‘’」』]/) || [])[1];
     const cut = re => { const m = v.match(re); return m ? m[1].trim() : ''; };
     if (q && /(소개|설명|문구|부제|한\s*줄)/.test(v) && !/(제목|이름|타이틀)/.test(v)) P.d = q; else if (q) P.t = q;
-    else { const t2 = cut(/(?:제목|이름|타이틀)[을를은는]?\s*(.{1,40}?)\s*(?:으로|로)\s*(?:바꿔|해|변경|고쳐)/); if (t2) P.t = t2; const d2 = cut(/(?:소개|설명)\s*(?:문구|글)?[을를은는]?\s*(.{2,120}?)\s*(?:으로|로|라고)\s*(?:바꿔|해|넣어|써)/); if (d2) P.d = d2; }
+    else { const t2 = lhTitle(v) || cut(/(?:제목|이름|타이틀)[을를은는]?\s*(.{1,40}?)\s*(?:으로|로)\s*(?:바꿔|해|변경|고쳐)/); if (t2) P.t = t2; const d2 = cut(/(?:소개|설명)\s*(?:문구|글)?[을를은는]?\s*(.{2,120}?)\s*(?:으로|로|라고)\s*(?:바꿔|해|넣어|써)/); if (d2) P.d = d2; }
     if (/(사진|이미지|배경)/.test(v)) { if (/(빼|없애|지워|삭제|없이)/.test(v)) P.img = ''; else if (!/(색|컬러)/.test(v) || /(사진|이미지)/.test(v)) { const u = lhStock(v, k); if (u) P.img = u; } }
     if (/(가운데|중앙)/.test(v)) P.al = 'c'; else if (/왼쪽/.test(v)) P.al = '';
     if (/(크게|높게|넓게|시원하게)/.test(v)) P.h = 'l'; else if (/(작게|낮게|얇게|짧게|줄여)/.test(v)) P.h = 's'; else if (/보통/.test(v)) P.h = '';

@@ -15,11 +15,12 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; } else { fail++;
   /* v36 H: 유형별로 필요한 정보만 — 첫 탭 '한눈에', 해당 없는 유형은 안내만(규정 수치는 그대로) */
   { const ctx = await browser.newContext(); const p = await open(ctx, '/index.html');
     const H = await p.evaluate(() => { const out = {}; const main = () => document.querySelector('#main').innerText; const vis = () => [...document.querySelectorAll('#main [data-key="cpl"]')].map(b => b.dataset.v);
-      for (const [ty, ed] of [['voc'], ['lifelong'], ['corp'], ['univ', 'lite'], ['k12'], ['public']]) { createOrg(ty, '점검', ed); UI.sbOld = { cpl: 1 }; UI.cpl = null; go('cpl'); UI.cpl = null; render(); out[ty] = { txt: main(), tabs: vis(), rate: S.org.cpl.rate, on: S.org.cpl.on }; }
+      for (const [ty, ed] of [['voc'], ['lifelong'], ['corp'], ['univ', 'lite'], ['k12'], ['public']]) { createOrg(ty, '점검', ed); UI.sbOld = { cpl: 1 }; UI.cpl = null; go('cpl'); UI.cpl = null; render(); out[ty] = { txt: main(), tabs: vis(), rate: S.org.cpl.rate, on: S.org.cpl.on, top: [...document.querySelectorAll('#main [data-key="cpl"]')].filter(b => !b.closest('details')).length, fold: !!document.querySelector('#main details.cpl-more2:not([open])') }; }
       createOrg('univ', '대학', 'lite'); UI.sbOld = { cpl: 1 }; UI.cpl = null; go('cpl'); render(); document.querySelector('[data-act="cpl-enable"][data-v="lifelong"]').click(); document.querySelector('#modal [data-mact="ok"]').click(); render(); out.uEnable = { on: S.org.cpl.on, prof: S.org.cpl.profile, txt: main(), tabs: vis() };
       createOrg('k12', '학원'); navAdd('cpl', true); (Object.values(S.nav.tabs).flat().find(x => x.id === 'cpl') || {}).on = true; UI.sbOld = { cpl: 1 }; UI.cpl = null; go('cpl'); render(); ACT['cpl-hide'](); out.hide = !Object.values(S.nav.tabs).flat().some(x => x.id === 'cpl' && x.on);
       return out; });
     ok(/훈련 규정/.test(H.voc.txt) && /HRD-Net 보고/.test(H.voc.txt) && /출결/.test(H.voc.txt) && /훈련시간/.test(H.voc.txt) && H.voc.tabs.includes('mon') && H.voc.rate === 80, 'v36 직업훈련 한눈에 ' + H.voc.tabs);
+    ok(H.voc.top <= 5 && H.voc.fold && /기한 있는 할 일/.test(H.voc.txt) && H.voc.txt.indexOf('기한 있는 할 일') < H.voc.txt.indexOf('규정 보기'), 'v36 R4 직업훈련 탭: 한눈에 + 주 탭 ' + H.voc.top + '개 · 나머지 더 보기 접기 · 기한 있는 할 일 맨 위');
     ok(/평생교육법/.test(H.lifelong.txt) && /학점은행/.test(H.lifelong.txt) && /학습비 반환/.test(H.lifelong.txt) && !/HRD-Net/.test(H.lifelong.txt), 'v36 평생교육 한눈에');
     ok(/법정의무교육/.test(H.corp.txt) && /사업주 훈련/.test(H.corp.txt) && !H.corp.tabs.includes('mon') && !H.corp.on, 'v36 기업: 법정의무교육 + 환급 시에만 ' + H.corp.tabs);
     ok(/법정의무교육/.test(H.public.txt) && !H.public.tabs.includes('mon'), 'v36 공공: 법정의무교육');
