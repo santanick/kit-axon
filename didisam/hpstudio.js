@@ -43,6 +43,10 @@
     x: '<path d="M6 6l12 12M18 6L6 18"/>', ok: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', plus: '<path d="M12 5v14M5 12h14"/>'
   };
   const lbl = () => (typeof t === 'function' ? t('cls') : '강좌');
+  /* 유형별 메뉴 이름(대학 '클래스' → '교육과정' 등 — hpsec-nav HPS.menuName, 캔버스 머리글 · 게시본과 같은 규칙) */
+  /* 세부 설정의 섹션 종류 이름 '클래스'도 유형별 용어로(site.js SEC — 값만 바꿈) */
+  try { if (typeof SEC !== 'undefined' && SEC.classes) Object.defineProperty(SEC.classes, 'n', { get: () => (typeof S !== 'undefined' && S && S.org && typeof t === 'function' ? `${t('cls')} 목록` : '클래스'), configurable: true }); } catch (e) { }
+  const mName = l => { try { return window.HPS && typeof HPS.menuName === 'function' ? HPS.menuName(l) : l; } catch (e) { return l; } };
   const aiOn = () => typeof CL !== 'undefined' && CL.on && CL.on('site');
   const pagesOf = s => (typeof s2pages === 'function' ? s2pages(s) : [{ key: 'home', label: '홈', sections: s.sections }]).filter(p => Array.isArray(p.sections));
   const pageOf = key => pagesOf(site()).find(p => p.key === key);
@@ -80,7 +84,7 @@
     w.style.setProperty('--hps-t', top + 'px'); w.style.setProperty('--hps-l', left + 'px'); w.style.setProperty('--hps-b', bot + 'px'); layout(); }
   addEventListener('resize', () => { place(); fit(); });
   function dockOn() { if (!HS.dock && !HS.devSet && innerWidth < 760) { HS.devSet = 1; if (HPE.dev !== 'mo') { HPE.dev = 'mo'; if (ACT['hpe-dev']) setTimeout(() => ACT['hpe-dev']({ dataset: { v: 'mo' } }), 0); } } HS.dock = true; document.body.classList.add('hps-dock'); const w = $1('#hpe'); if (w) { w.classList.add('hps'); w.setAttribute('role', 'region'); w.removeAttribute('aria-modal'); w.setAttribute('aria-label', '홈페이지 편집기'); } place(); }
-  function dockOff() { HS.dock = false; HS.pan = ''; HS.lv = null; document.body.classList.remove('hps-dock'); }
+  function dockOff() { HS.dock = false; HS.pan = ''; HS.lv = null; HS.gal = 0; document.body.classList.remove('hps-dock', 'hps-talk-on', 'hps-gal-on'); const g = $1('#hpsGal'); if (g) g.remove(); }
   AFTER.push(() => {
     try {
       if (want()) {
@@ -105,7 +109,7 @@
   ACT['hps-legacy'] = el => { const v = el && el.dataset && el.dataset.v === 'learn' ? 'learn' : 'site'; UI.hpsLegacy = v; UI.smT = v === 'learn' ? 'learn' : 'home'; UI.sitePage = HPE.key || 'home'; HS.pan = ''; render(); scrollTo(0, 0); };
   /* 닫기 · Esc는 편집기 화면에서는 쓰지 않는다(사이트 화면 자체이므로) */
   addEventListener('keydown', e => { if (!HS.dock || e.key !== 'Escape') return; const tg = e.target; if ($1('#modal') || (tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)))) return; const HI = window.HPI; const ix = HI && HI.ip && $1('#hpiImg [data-hpi-i="x"]'), tx = HI && HI.tb && $1('#hpiTb [data-hpi="x"]'); /* 사진 · 글자 도구가 떠 있으면 그것만 닫는다 */
-    if (ix || tx) { if (ix) ix.click(); if (tx) tx.click(); e.stopImmediatePropagation(); return; } if (HS.pan) { panClose(); e.stopImmediatePropagation(); return; } e.stopImmediatePropagation(); }, true);
+    if (ix || tx) { if (ix) ix.click(); if (tx) tx.click(); e.stopImmediatePropagation(); return; } if (HS.gal && !$1('#slSheet')) { galClose(); e.stopImmediatePropagation(); return; } if (HS.sheet) { sheetClose(); e.stopImmediatePropagation(); return; } if (HS.pan) { panClose(); e.stopImmediatePropagation(); return; } e.stopImmediatePropagation(); }, true);
   /* 편집기를 닫지 않고 창만 연다 */
   { const base = ACT['hpai-open']; ACT['hpai-open'] = (...a) => { if (!HS.dock) return base(...a); const pre = HPE.pre; HPE.pre = null; return window.hpOpen(pre || undefined); }; }
   { const base = ACT['hpm-open']; ACT['hpm-open'] = (...a) => { if (!HS.dock || typeof window.hpMenus !== 'function') return base(...a); return window.hpMenus(); }; }
@@ -125,7 +129,7 @@
     if (parent) return { key: 's-' + parent.id + '-' + it.id };
     if (it.kind === 'home') return { key: 'home' };
     if (SKIND[it.kind]) return { hash: SKIND[it.kind] };
-    if (it.kind === 'board') return { hash: '#comm' };
+    if (it.kind === 'board') { const bid = ((S.boards || []).find(b => b.id !== '커뮤니티') || {}).id; return { hash: bid ? '#comm/' + encodeURIComponent(bid) : '#comm' }; } /* 게시본(sitemerge menuHref)과 같은 주소 */
     if (it.kind === 'notice') { const L = (S.lsite && S.lsite.pages) || []; if (L.some(p => p.id === 'notice' && p.on)) return { hash: '#notice' }; }
     return { key: 'm-' + it.id };
   }
@@ -136,14 +140,14 @@
     const tab = (m, parent) => { const k = parent ? 's-' + parent.id + '-' + m.id : (m.kind === 'home' ? 'home' : 'm-' + m.id); const tg = target(m, parent);
       const on = curKey === k || (!parent && act === m && !A(m.subs).some(b => 's-' + m.id + '-' + b.id === curKey));
       const note = tg.hash ? '학습 페이지' : tg.url ? '외부 주소' : '';
-      const nm = (HS.lab && HS.lab[k]) || m.l || '메뉴'; return `<button type="button" role="tab" class="hps-tab${on ? ' on' : ''}${note ? ' lp' : ''}" aria-selected="${on}" data-act="hps-pg" data-v="${E(k)}"${parent ? ` data-p="${E(parent.id)}"` : ''} data-m="${E(m.id)}"${note ? ` title="${note}로 연결"` : ''}>${E(nm)}${note ? `<i aria-hidden="true">${tg.hash ? '학습' : '외부'}</i>` : ''}</button>`; };
+      const nm = (HS.lab && HS.lab[k]) || mName(m.l) || '메뉴'; return `<button type="button" role="tab" class="hps-tab${on ? ' on' : ''}${note ? ' lp' : ''}" aria-selected="${on}" data-act="hps-pg" data-v="${E(k)}"${parent ? ` data-p="${E(parent.id)}"` : ''} data-m="${E(m.id)}"${note ? ` title="${note}로 연결"` : ''}>${E(nm)}${note ? `<i aria-hidden="true">${tg.hash ? '학습' : '외부'}</i>` : ''}</button>`; };
     const subs = act && act.subOn !== false && A(act.subs).filter(b => b.on !== false);
     return `<div class="hps-tabs" role="tablist" aria-label="사이트 페이지">${M.map(m => tab(m)).join('')}<button type="button" class="hps-tadd" data-act="s2-madd" title="메뉴(페이지) 추가">${SV(P.plus, 16, 2)}<span>페이지</span></button></div>`
       + (subs && subs.length ? `<div class="hps-subs" role="tablist" aria-label="${E(act.l)} 하위 페이지"><span>${E(act.l)}</span>${tab(act).replace('hps-tab', 'hps-tab sub')}${subs.map(b => tab(b, act)).join('')}</div>` : '');
   }
   ACT['hps-pg'] = el => { const k = el.dataset.v; const s = site(); const m = A(s.menus).find(x => x.id === el.dataset.p || x.id === el.dataset.m);
     const it = el.dataset.p ? A(m && m.subs).find(b => b.id === el.dataset.m) : m; const tg = it ? target(it, el.dataset.p ? m : null) : { key: k };
-    if (tg.hash || tg.url) { HS.lv = { tab: k, hash: tg.hash || '', url: tg.url || '', name: it.l }; deco(true); lvPaint(); return; }
+    if (tg.hash || tg.url) { HS.lv = { tab: k, hash: tg.hash || '', url: tg.url || '', name: (HS.lab && HS.lab[k]) || mName(it.l) }; if (HS.pan === 'sec') panClose(); deco(true); lvPaint(); return; }
     HS.lv = null; const key = tg.key && pageOf(tg.key) ? tg.key : pageOf(k) ? k : 'home'; HPE.key = key; UI.sitePage = key; HS.lastUI = key; lvPaint(); paint(); deco(true); };
 
   /* 처음 흐름: 템플릿 → AI로 바꾸기 → 기본 정보 → 게시 */
@@ -161,8 +165,8 @@
     if (k === 'pub') return ACT['hpe-pub'](); };
   ACT['hps-flowoff'] = () => { site().hpsFlowOff = 1; persist(); deco(true); };
 
-  const RAIL = [['sec', '섹션', P.sec, 'hps-pan'], ['menu', '메뉴', P.menu, 'hpm-open'], ['design', '디자인', P.design, 'tpg-dz'], ['basic', '기본 정보', P.basic, 'hps-pan'], ['tpl', '템플릿', P.tpl, 'tpl-gallery'], ['ai', 'AI 새로', P.ai, 'hpai-open'], ['learn', '학습 페이지', P.learn, 'hps-legacy'], ['seo', '검색 노출', P.seo, 'hps-pan'], ['more', '세부 설정', P.more, 'hps-legacy']];
-  const railHTML = () => `<nav class="hps-rail" aria-label="편집 도구">${RAIL.map(([k, n, ic, act]) => `<button type="button" class="hps-ri${HS.pan === k || (k === 'design' && document.body.classList.contains('tpg-dz-on')) ? ' on' : ''}" data-act="${act}" data-v="${k}" title="${n}" aria-label="${n}"${act === 'hps-pan' ? ` aria-expanded="${HS.pan === k}"` : ''}>${SV(ic, 20)}<span>${n}</span></button>`).join('')}</nav>`;
+  const RAIL = [['talk', 'AI에게 말하기', P.ai, 'hps-talk'], ['sec', '섹션', P.sec, 'hps-pan'], ['menu', '메뉴', P.menu, 'hpm-open'], ['design', '디자인', P.design, 'tpg-dz'], ['basic', '기본 정보', P.basic, 'hps-pan'], ['tpl', '템플릿', P.tpl, 'tpl-gallery'], ['ai', 'AI 새로', P.ai, 'hpai-open'], ['learn', '학습 페이지', P.learn, 'hps-legacy'], ['seo', '검색 노출', P.seo, 'hps-pan'], ['more', '세부 설정', P.more, 'hps-legacy']];
+  const railHTML = () => `<nav class="hps-rail" aria-label="편집 도구">${RAIL.map(([k, n, ic, act]) => `<button type="button" class="hps-ri${k === 'talk' ? ' hps-mo' : ''}${(k === 'talk' && document.body.classList.contains('hps-talk-on')) || HS.pan === k || (k === 'design' && document.body.classList.contains('tpg-dz-on')) ? ' on' : ''}" data-act="${act}" data-v="${k}" title="${n}" aria-label="${n}"${act === 'hps-pan' ? ` aria-expanded="${HS.pan === k}"` : ''}>${SV(ic, 20)}<span>${n}</span></button>`).join('')}</nav>`;
   const ZOOMS = [['fit', '맞춤'], ['100', '100%'], ['75', '75%'], ['50', '50%']];
   function deco(force) {
     const w = $1('#hpe'); if (!w || !HS.dock) return; const bar = w.querySelector('.hpe-bar'); if (!bar) return; w.classList.add('hps');
@@ -193,19 +197,24 @@
     const Wd = mo ? W : (HS.zoom === 'fit' && pw >= W ? Math.min(pw, 1440) : W); const H = Math.round(ph / z);
     Object.assign(f.style, { width: Wd + 'px', maxWidth: 'none', minWidth: '0', height: H + 'px', minHeight: '0', transform: z < 1 ? `scale(${z})` : '', transformOrigin: 'top left', marginRight: z < 1 ? `${-Math.round(Wd * (1 - z))}px` : '', marginBottom: z < 1 ? `${-Math.round(H * (1 - z))}px` : '', flex: '0 0 auto' });
     st.dataset.z = Math.round(z * 100); const zs = w.querySelector('.hps-zoom select'); if (zs) zs.title = `지금 ${Math.round(z * 100)}%`;
-    const lv = w.querySelector('.hps-lv'); if (lv) lv.style.height = ph + 'px'; }
+    const lv = w.querySelector('.hps-lv'); if (lv) { lv.style.height = ph + 'px'; const lw = lv.querySelector('.hps-lvw'), lf = lv.querySelector('.hps-lvf');
+      if (lw && lf) { const hh = (lv.querySelector('.hps-lvh') || {}).offsetHeight || 0; const Hh = Math.max(120, ph - hh); lv.style.width = Math.round(Wd * z) + 'px'; lw.style.height = Hh + 'px';
+        Object.assign(lf.style, { width: Wd + 'px', height: Math.round(Hh / z) + 'px', transform: z < 1 ? `scale(${z})` : '', transformOrigin: 'top left' }); } else lv.style.width = ''; } }
 
-  /* 학습 페이지로 연결되는 메뉴: 게시된 학습 페이지를 같은 출처로 보여 준다(다른 출처면 새 창 버튼만 — 액자 차단 방지) */
+  /* 학습 페이지로 연결되는 메뉴(v36 R3 · 4-2): 학습자 화면 미리보기(learner.html?preview=1 — 지금 초안 lsSnapshot, 게시 전에도 보임)를 같은 비율로 띄우고,
+     그 안 머리글(제목 · 소개 · 배경 사진 · 배치)을 두 번 눌러 고치거나 위 입력줄에 말로 고친다(site.lhead → 게시본 hp.lhead → lhead.js). 외부 주소는 새 창 버튼만. */
+  const lvSrc = h => `learner.html?preview=1&r=${Date.now() % 1e6}${h || '#home'}`;
   function lvPaint() { const w = $1('#hpe'); if (!w) return; const st = w.querySelector('.hpe-stage'); if (!st) return; let lv = st.querySelector('.hps-lv');
     if (!HS.lv) { if (lv) lv.remove(); st.classList.remove('hps-lvon'); return; }
-    const L = HS.lv; const url = learnerURL(); let same = false; try { same = new URL(url, location.href).origin === location.origin; } catch (e) { }
-    const head = L.url ? `「${E(L.name)}」 메뉴는 외부 주소로 연결됩니다.` : `「${E(L.name)}」 메뉴는 학습 페이지로 연결됩니다. 내용은 ${E(lbl())} · 공지 · 게시판 데이터로 자동으로 채워집니다.`;
-    const btns = L.url ? `<a class="btn sm" href="${E(/^https?:\/\//.test(L.url) ? L.url : '#')}" target="_blank" rel="noopener">${SV(P.ext, 14)} 새 창으로 열기</a>` : `<button type="button" class="btn sm" data-act="hps-legacy" data-v="learn">학습 페이지 설정</button><a class="btn sm ghost" href="${E(url + L.hash)}" target="_blank" rel="noopener">${SV(P.ext, 14)} 새 창으로</a><button type="button" class="btn sm ghost" data-act="hpm-open">메뉴 연결 바꾸기</button>`;
-    const body = L.url ? `<div class="hps-lvc"><b>외부 주소</b><p>${E(L.url)}</p></div>`
-      : !isPub() ? `<div class="hps-lvc"><b>아직 게시하지 않았습니다</b><p>[게시하기]를 누르면 이 자리에서 실제 학습 페이지를 볼 수 있습니다.</p><button type="button" class="btn pri" data-act="hpe-pub">게시하기</button></div>`
-      : same ? `<iframe class="hps-lvf" title="학습 페이지 미리보기 — ${E(L.name)}" src="${E(url + L.hash)}"></iframe>` : `<div class="hps-lvc"><b>새 창에서 확인하세요</b><p>학습 사이트가 다른 주소에 있어 이 화면 안에는 열 수 없습니다.</p></div>`;
-    const html = `<div class="hps-lvh"><p>${head}</p><div>${btns}</div></div>${body}`;
-    if (!lv) { lv = document.createElement('div'); lv.className = 'hps-lv'; st.appendChild(lv); } if (lv.dataset.k !== L.tab + L.hash + isPub()) { lv.dataset.k = L.tab + L.hash + isPub(); lv.innerHTML = html; }
+    const L = HS.lv; const url = learnerURL();
+    const head = L.url ? `「${E(L.name)}」 메뉴는 외부 주소로 연결됩니다.` : `「${E(L.name)}」 학습 페이지<span class="hps-lvl"> — 목록은 ${E(lbl())} · 공지 · 게시판 데이터로 채워집니다. 머리글(제목 · 소개 · 배경 사진 · 배치)은 두 번 눌러 고치거나 위 입력줄에 말하세요.</span><span class="hps-lvs"> · 머리글은 두 번 눌러 고치기</span>`;
+    const btns = L.url ? `<a class="btn sm" href="${E(/^https?:\/\//.test(L.url) ? L.url : '#')}" target="_blank" rel="noopener">${SV(P.ext, 14)} 새 창으로 열기</a>` : `<button type="button" class="btn sm" data-act="hps-legacy" data-v="learn">학습 페이지 설정</button>${isPub() ? `<a class="btn sm ghost" href="${E(url + L.hash)}" target="_blank" rel="noopener">${SV(P.ext, 14)} 게시본 보기</a>` : ''}<button type="button" class="btn sm ghost" data-act="hpm-open">메뉴 연결 바꾸기</button>`;
+    const sig = (L.url ? 'u' : 'l') + '|' + L.tab + '|' + isPub();
+    if (!lv) { lv = document.createElement('div'); lv.className = 'hps-lv'; st.appendChild(lv); }
+    if (lv.dataset.k !== sig) { const keep = !L.url && lv.querySelector('#hpsLvF'); lv.dataset.k = sig;
+      if (keep) { lv.querySelector('.hps-lvh').innerHTML = `<p>${head}</p><div>${btns}</div>`; }
+      else lv.innerHTML = `<div class="hps-lvh"><p>${head}</p><div>${btns}</div></div>` + (L.url ? `<div class="hps-lvc"><b>외부 주소</b><p>${E(L.url)}</p></div>` : `<div class="hps-lvw"><iframe class="hps-lvf" id="hpsLvF" title="학습 페이지 미리보기 — ${E(L.name)}" src="${E(lvSrc(L.hash))}"></iframe></div>`); }
+    const lf = lv.querySelector('#hpsLvF'); if (lf) { lf.title = `학습 페이지 미리보기 — ${L.name}`; try { const cw = lf.contentWindow; if (cw && cw.location && /learner\.html/.test(cw.location.pathname) && cw.location.hash !== L.hash && L.hash) cw.location.hash = L.hash; } catch (e) { } lhWatch(lf); }
     st.classList.add('hps-lvon'); fit(); }
 
   /* ═════════ 4. 캔버스 안: 한 번 = 고르기, 두 번 = 고치기 · 섹션 도구 막대 · [+ 섹션] 갤러리 ═════════ */
@@ -287,9 +296,14 @@
 
   /* ═════════ 5. 오른쪽 패널(섹션 · 기본 정보 · 검색 노출) ═════════ */
   ACT['hps-pan'] = el => { const k = el.dataset.v; if (HS.pan === k) return panClose(); panOpen(k); };
-  function panOpen(k) { HS.pan = k; if (document.body.classList.contains('tpg-dz-on') && window.TPG && TPG.dz) try { TPG.dz.close(); } catch (e) { } panPaint(true); deco(true); }
+  function panOpen(k) { if (document.body.classList.contains('hps-talk-on')) talkSet(false); HS.pan = k; if (document.body.classList.contains('tpg-dz-on') && window.TPG && TPG.dz) try { TPG.dz.close(); } catch (e) { } panPaint(true); deco(true); }
   function panClose() { HS.pan = ''; const p = $1('#hpsPan'); if (p) p.remove(); document.body.classList.remove('hps-pan-on'); deco(true); setTimeout(fit, 0); }
   ACT['hps-panx'] = () => panClose();
+  /* 휴대폰: 「AI에게 말하기」 줄은 아래 시트(캔버스를 가리지 않게 평소에는 접어 둔다) */
+  function talkSet(on) { document.body.classList.toggle('hps-talk-on', !!on); const b = $1('#hpe .hps-ri[data-v="talk"]'); if (b) { b.classList.toggle('on', !!on); b.setAttribute('aria-expanded', !!on); }
+    if (on) { if (HS.pan) panClose(); const f = $1('#hpe .hpw-talk'); if (f) { const i = f.querySelector('input[name=q]'); setTimeout(() => { document.body.style.setProperty('--hps-tk', (f.offsetHeight || 150) + 'px'); if (i) try { i.focus(); } catch (e) { } }, 30); } } }
+  ACT['hps-talk'] = () => talkSet(!document.body.classList.contains('hps-talk-on'));
+  const sheetClose = () => talkSet(false); Object.defineProperty(HS, 'sheet', { get: () => document.body.classList.contains('hps-talk-on') && innerWidth <= 760, configurable: true });
   { const base = ACT['tpg-dz']; if (base) ACT['tpg-dz'] = (...a) => { if (HS.pan) { HS.pan = ''; const p = $1('#hpsPan'); if (p) p.remove(); document.body.classList.remove('hps-pan-on'); } const r = base(...a); setTimeout(() => { deco(true); fit(); }, 0); return r; }; }
   const SECN = x => { const d = x.data || {}; const v = d.variant; const N = { banner: '첫 화면 배너', classes: `${lbl()} 목록`, image: '사진', slideImage: '사진 슬라이드', video: '동영상', notices: '공지사항', reviews: '수강후기', map: '오시는 길', code: 'HTML 코드', books: '교재', catBrowse: '분야 둘러보기' }[x.type];
     const V = { features: '소개 카드', stats: '숫자 강조', steps: '단계 안내', timeline: '연혁', roadmap: '로드맵', info: '안내', tiles: '타일', profiles: '강사 소개', modules: '과정 구성', cta: '신청 띠', logos: '함께하는 곳', story: '이야기' }[v];
@@ -346,7 +360,7 @@
   /* ═════════ 6. 페이지 프롬프트(말로 고치기 + 코드 블록) ═════════ */
   function talkDeco(f) {
     const inp = f.querySelector('input[name=q]'); const pg = pageOf(HPE.key); const nm = HS.lv ? HS.lv.name : pg ? pg.label : '홈';
-    if (inp) { inp.placeholder = HS.lv ? `「${nm}」은 학습 페이지입니다 — 홈페이지 페이지를 고르면 여기서 바로 고칠 수 있습니다` : `「${nm}」 페이지를 어떻게 바꿀까요? 예: 강사 소개와 오시는 길 넣어줘 · 색을 초록으로 · 코드 블록 붙여 넣기`; inp.setAttribute('aria-label', `${nm} 페이지 고치기 요청`); }
+    if (inp) { inp.placeholder = HS.lv ? (HS.lv.url ? `「${nm}」은 외부 주소로 연결된 메뉴입니다` : `「${nm}」 머리글을 어떻게 바꿀까요? 예: 제목을 "전체 ${lbl()}"으로 · 배경 사진 넣어줘 · 가운데 정렬 · 대표 색으로`) : `「${nm}」 페이지를 어떻게 바꿀까요? 예: 강사 소개와 오시는 길 넣어줘 · 색을 초록으로 · 코드 블록 붙여 넣기`; inp.setAttribute('aria-label', `${nm} 페이지 고치기 요청`); }
     const tl = f.querySelector('.hpw-tl'); if (tl && !tl.dataset.hps) { tl.dataset.hps = 1; tl.innerHTML = `${SV(P.ai, 14, 1.9)} AI에게 말하기`; }
     if (!f.querySelector('.hps-cb')) { const sub = f.querySelector('button[type=submit], .btn'); const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sm hps-cb'; b.setAttribute('aria-expanded', 'false'); b.title = '코드 블록 붙여 넣기(HTML · JSON)'; b.innerHTML = `${SV(P.code, 15, 2)}<span>코드</span>`; b.dataset.act = 'hps-code';
       const clip = f.querySelector('.hpi-tclip'); (clip || sub) ? (clip || sub).insertAdjacentElement('beforebegin', b) : f.appendChild(b); }
@@ -367,7 +381,7 @@
     site().hpsAiAt = today(); persist(); paint(); deco(true); if (HS.pan === 'sec') panPaint(true); say(msg + ' 마음에 들지 않으면 [되돌리기]를 누르세요.', 'ok'); return true; }
   function codeRun(raw) {
     let code = String(raw); const fm = code.match(/```([a-z]*)\s*\n?([\s\S]*?)```/i); let lang = ''; if (fm) { lang = fm[1].toLowerCase(); code = fm[2]; } code = code.trim(); if (!code) { say('코드가 비어 있습니다.', 'warn'); return false; }
-    if (HS.lv) { say('학습 페이지에는 코드를 넣을 수 없습니다. 위에서 홈페이지 페이지를 고르세요.', 'warn'); return false; }
+    if (HS.lv) { say('학습 페이지 목록은 데이터로 채워지므로 코드를 넣을 수 없습니다. 머리글은 말로 고치거나 두 번 눌러 고치세요.', 'warn'); return false; }
     if (lang === 'json' || /^[\[{]/.test(code)) { let j = null; try { j = JSON.parse(code); } catch (e) { if (lang === 'json') { say('JSON 형식이 올바르지 않습니다.', 'warn'); return false; } }
       if (j) { const L = Array.isArray(j) ? j : A(j.sections); const secs = mapSecs(L.filter(x => x && typeof x === 'object' && x.type)); if (!secs.length) { say('JSON에 sections(섹션 설계)가 없습니다. 예: {"sections":[{"type":"text","title":"…"}]}', 'warn'); return false; }
         const ok = applySecs(secs, 'replace', `코드 블록(JSON)으로 「${(pageOf(HPE.key) || {}).label || '홈'}」 페이지를 섹션 ${secs.length}개로 다시 구성했습니다.`);
@@ -410,11 +424,139 @@
   document.addEventListener('submit', e => { const f = e.target; if (!HS.dock || !f || !f.matches || !f.matches('#hpe .hpw-talk')) return; const inp = f.querySelector('input[name=q]'); const v = inp ? inp.value.trim() : '';
     const code = $1('#hpsCodeT'); if (code && code.value.trim()) { e.preventDefault(); e.stopImmediatePropagation(); if (codeRun(code.value.trim())) { codeClose(); if (inp) inp.value = ''; } return; }
     if (!v) return; if (/```|<[a-z][\s\S]*>/i.test(v)) { e.preventDefault(); e.stopImmediatePropagation(); if (codeRun(v) && inp) inp.value = ''; return; }
-    if (HS.lv) { e.preventDefault(); e.stopImmediatePropagation(); say('학습 페이지는 데이터로 자동 구성됩니다. 위에서 홈페이지 페이지(홈 · 소개 등)를 고르면 말로 고칠 수 있습니다.', 'warn'); return; }
+    if (HS.lv) { e.preventDefault(); e.stopImmediatePropagation(); if (HS.lv.url) { say('외부 주소로 연결된 메뉴입니다. [메뉴 연결 바꾸기]로 연결을 바꾸세요.', 'warn'); return; } lhPrompt(v).then(ok => { if (ok && inp) inp.value = ''; }); return; }
     const HI = window.HPI; if (HI && ((HI.sel && HI.sel.el) || A(HI.att).length || HI.ip)) return; /* 고른 글자 · 첨부 사진이 있으면 기존 처리(hpimg) */
     const known = typeof window.hpwTalk === 'function' ? window.hpwTalk(v, true) : null; const global = GLOBAL_RE.test(v.replace(/검색/g, ''));
     if (HPE.key === 'home' ? (known && known.steps && known.steps.length) : (global && known)) { site().hpsAiAt = site().hpsAiAt || today(); return; }
     e.preventDefault(); e.stopImmediatePropagation(); pageBuild(v).then(ok => { if (ok && inp) inp.value = ''; }); }, true);
+
+  /* ═════════ 7. 학습 페이지 머리글(v36 R3 · 4-2): 두 번 눌러 고치기 · 머리글 도구 · 말로 고치기 · 게시본 hp.lhead ═════════ */
+  const LH_CSS = `.sub.llh h1,.sub.llh .llh-d{cursor:text;border-radius:4px}
+.sub.llh h1:hover,.sub.llh .llh-d:hover,.sub.llh .hps-pick{outline:2px dashed #5C74F6;outline-offset:4px}
+.sub.llh [contenteditable]{outline:2px solid #5C74F6!important;outline-offset:4px;background:#fff!important;color:#14161F!important;-webkit-text-fill-color:#14161F}
+.sub.llh .llh-ph{opacity:.6;border:1.5px dashed currentColor;padding:4px 12px;display:inline-block;border-radius:8px;font-size:15px}
+.sub.llh:hover{box-shadow:inset 0 0 0 2px rgba(92,116,246,.55)}
+.llh-tb{position:absolute;bottom:10px;right:12px;z-index:5;display:none;gap:2px;background:#2A2B2B;padding:4px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);font:600 12.5px/1 Pretendard,system-ui,sans-serif;flex-wrap:wrap;max-width:calc(100% - 24px);color:#fff}
+.sub.llh:hover .llh-tb,.sub.llh.llh-sel .llh-tb,.llh-tb:focus-within{display:flex}
+.llh-tb button{border:0;background:transparent;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit;white-space:nowrap;min-height:34px}.llh-tb button:hover,.llh-tb button:focus-visible{background:rgba(255,255,255,.18);outline:none}.llh-tb button[aria-pressed=true]{background:#5C74F6}
+.llh-tb i{width:1px;background:rgba(255,255,255,.22);margin:4px 3px}
+.llh-tag{position:absolute;left:12px;top:10px;z-index:5;background:#5C74F6;color:#fff;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:6px 10px;border-radius:99px;display:none}.sub.llh:hover .llh-tag,.sub.llh.llh-sel .llh-tag{display:block}`;
+  const lhFrame = () => $1('#hpsLvF');
+  const lhKeyNow = () => { const f = lhFrame(); try { const w = f && f.contentWindow; if (w && typeof w.lhKey === 'function') return w.lhKey(); } catch (e) { } return HS.lv && HS.lv.hash ? { k: decodeURIComponent(HS.lv.hash.slice(1)), top: true } : null; };
+  const lhCur = k => ((site().lhead || {})[k]) || {};
+  function lhReload() { const f = lhFrame(); try { if (f && f.contentWindow) f.contentWindow.postMessage('didisam:reload', location.origin); } catch (e) { } }
+  function lhSet(k, patch, msg) { if (!k) return false; push(); const s = site(); const all = s.lhead = Object.assign({}, s.lhead || {}); const c = Object.assign({}, all[k] || {}, patch);
+    Object.keys(c).forEach(x => { if (c[x] === '' || c[x] == null) delete c[x]; }); if (Object.keys(c).length) all[k] = c; else delete all[k];
+    persist(); lhReload(); HS.lhSig = lhSigNow(); if (msg) say(msg + ' 마음에 들지 않으면 [되돌리기]를 누르세요.', 'ok'); return true; }
+  window.hpsLhSet = lhSet;
+  /* 샘플 사진(분위기 사진 · img/stock — 학습자 화면과 같은 폴더라 상대 주소 그대로) */
+  function lhStock(q, k) { const H = window.HPSTOCK; if (!H || typeof H.forScene !== 'function') return ''; const cur = String(lhCur(k).img || ''); let L = [];
+    try { const r = H.forScene(S.org.type, `${q || ''} ${(HS.lv && HS.lv.name) || ''}`, 'hero', { n: 6, seed: S.org.name + k }); L = Array.isArray(r) ? r : r ? [r] : []; } catch (e) { }
+    const ok = L.filter(x => x && (x.src800 || x.src)); if (!ok.length) return ''; const i = ok.findIndex(x => cur.includes(x.id)); const it = ok[(i + 1) % ok.length]; return String(it.src800 || it.src); }
+  /* 머리글 도구 · 두 번 눌러 고치기 — 학습자 화면이 다시 그려질 때마다(#lapp 변화) 붙인다 */
+  const lhSeen = new WeakSet();
+  function lhWatch(f) { if (f.dataset.hpsL) return; f.dataset.hpsL = 1; f.addEventListener('load', () => lhBindDoc(f)); lhBindDoc(f); }
+  function lhBindDoc(f) { let doc; try { doc = f.contentDocument; } catch (e) { return; } if (!doc || !doc.body || lhSeen.has(doc) || !/learner\.html/.test(String(doc.URL || ''))) return; lhSeen.add(doc); const win = doc.defaultView;
+    const st = doc.createElement('style'); st.textContent = LH_CSS; doc.head.appendChild(st);
+    let q = 0; new MutationObserver(() => { if (q) return; q = win.requestAnimationFrame(() => { q = 0; lhDeco(doc, f); }); }).observe(doc.body, { childList: true, subtree: true }); lhDeco(doc, f);
+    win.addEventListener('click', e => { const t = e.target; const b = t.closest && t.closest('[data-llh]'); if (b) { e.preventDefault(); e.stopPropagation(); lhTool(b.dataset.llh, b.dataset.v); return; }
+      const el = t.closest && t.closest('.sub.llh h1, .sub.llh .llh-d'); if (el && !el.isContentEditable) { e.preventDefault(); doc.querySelectorAll('.hps-pick').forEach(x => x !== el && x.classList.remove('hps-pick')); el.classList.add('hps-pick'); const sub = el.closest('.sub'); if (sub) sub.classList.add('llh-sel'); hint(el, f, '두 번 눌러 글 고치기'); } }, true);
+    win.addEventListener('dblclick', e => { const el = e.target.closest && e.target.closest('.sub.llh h1, .sub.llh .llh-d'); if (!el) return; e.preventDefault(); hint(null); lhEdit(el, el.tagName === 'H1' ? 't' : 'd'); }, true);
+    win.addEventListener('hashchange', () => lhNav(win.location.hash || '#home'));
+    win.addEventListener('scroll', () => hint(null), { passive: true }); }
+  function lhDeco(doc, f) { const sub = doc.querySelector('#lm > section.sub.llh'); if (!sub || sub.querySelector('.llh-tb')) return; const K = lhKeyNow(); const k = K && K.k; const c = lhCur(k); const top = !!(K && K.top);
+    if (top && !sub.querySelector('.llh-d')) { const p = doc.createElement('p'); p.className = 'llh-d llh-ph'; p.textContent = '소개 문구 — 두 번 눌러 넣기'; (sub.querySelector('.in') || sub).appendChild(p); }
+    const pr = (a, v, on, n) => `<button type="button" data-llh="${a}" data-v="${v}" aria-pressed="${!!on}">${n}</button>`;
+    const tone = c.tone || 'soft', al = c.al || 'l', h = c.h || 'm';
+    sub.insertAdjacentHTML('beforeend', `<span class="llh-tag" aria-hidden="true">${top ? '머리글 — 글은 두 번 눌러 고치기' : '머리글 모양(제목은 목록 화면에서)'}</span><div class="llh-tb" role="toolbar" aria-label="머리글 도구"><button type="button" data-llh="up">사진 올리기</button><button type="button" data-llh="stock">샘플 사진</button>${c.img ? '<button type="button" data-llh="noimg">사진 빼기</button>' : ''}<i></i>${pr('al', 'l', al === 'l', '왼쪽')}${pr('al', 'c', al === 'c', '가운데')}<i></i>${pr('h', 's', h === 's', '작게')}${pr('h', 'm', h === 'm', '보통')}${pr('h', 'l', h === 'l', '크게')}<i></i>${pr('tone', 'plain', !c.img && tone === 'plain', '흰 바탕')}${pr('tone', 'soft', !c.img && tone === 'soft', '연한 색')}${pr('tone', 'brand', !c.img && tone === 'brand', '대표 색')}</div>`);
+    if (HS.lv && !HS.lv.url) { const n = (sub.querySelector('h1') || {}).textContent; if (n && top && HS.lv.name !== n.trim()) { /* 탭 이름은 메뉴 이름 그대로 */ } } }
+  function lhEdit(el, field) { const K = lhKeyNow(); if (!K || !K.k) return; if (!K.top) { say('이 화면은 목록 아래 화면입니다. 제목 · 소개 문구는 목록 화면에서 고칩니다.', 'warn'); return; }
+    const ph = el.classList.contains('llh-ph'); const orig = el.textContent; if (ph) el.textContent = ''; el.contentEditable = 'true'; el.focus();
+    try { const d = el.ownerDocument; const r = d.createRange(); r.selectNodeContents(el); const sel = d.defaultView.getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch (e) { }
+    let fin = false; const done = save => { if (fin) return; fin = true; el.removeEventListener('keydown', kd); el.removeEventListener('blur', bl); el.removeAttribute('contenteditable');
+      const v = String(el.textContent || '').replace(/\s+/g, ' ').trim(); const was = ph ? '' : String(orig).replace(/\s+/g, ' ').trim();
+      if (!save || v === was) { el.textContent = orig; return; } if (field === 't' && !v) { el.textContent = orig; say('제목은 비울 수 없습니다. 원래 이름으로 두려면 [되돌리기]를 누르세요.', 'warn'); return; }
+      lhSet(K.k, { [field]: v.slice(0, field === 't' ? 60 : 200) }, field === 't' ? `제목을 「${v.slice(0, 30)}」(으)로 고쳤습니다.` : v ? '소개 문구를 고쳤습니다.' : '소개 문구를 뺐습니다.'); };
+    const kd = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); done(true); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } };
+    const bl = () => done(true); el.addEventListener('keydown', kd); el.addEventListener('blur', bl); }
+  function lhTool(a, v) { const K = lhKeyNow(); const k = K && K.k; if (!k) return; const nm = (HS.lv && HS.lv.name) || '학습 페이지';
+    if (a === 'al') return lhSet(k, { al: v === 'c' ? 'c' : '' }, v === 'c' ? '머리글을 가운데로 맞췄습니다.' : '머리글을 왼쪽으로 맞췄습니다.');
+    if (a === 'h') return lhSet(k, { h: v === 'm' ? '' : v }, `머리글 높이를 ${{ s: '작게', m: '보통으로', l: '크게' }[v] || ''} 바꿨습니다.`);
+    if (a === 'tone') return lhSet(k, { tone: v === 'soft' ? '' : v, img: '' }, `머리글 바탕을 ${{ plain: '흰 바탕', soft: '연한 대표 색', brand: '대표 색' }[v]}으로 바꿨습니다.`);
+    if (a === 'noimg') return lhSet(k, { img: '' }, '배경 사진을 뺐습니다.');
+    if (a === 'stock') { const u = lhStock('', k); if (!u) { say('샘플 사진을 찾지 못했습니다. [사진 올리기]로 넣어 주세요.', 'warn'); return; } return lhSet(k, { img: u }, `「${nm}」 머리글에 샘플 사진을 넣었습니다(누를 때마다 다른 사진). 우리 기관 사진으로 바꾸려면 [사진 올리기]를 누르세요.`); }
+    if (a === 'up') { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.addEventListener('change', () => { const fl = i.files && i.files[0]; if (!fl) return;
+        const put = url => { if (!/^data:image\//.test(url || '') && !/^https:\/\//.test(url || '')) { say('사진을 읽지 못했습니다.', 'warn'); return; } lhSet(k, { img: url }, `「${nm}」 머리글 배경 사진을 바꿨습니다.`); };
+        if (typeof window.hpImgFile === 'function') window.hpImgFile(fl, put); else { const r = new FileReader(); r.onload = () => put(String(r.result || '')); r.readAsDataURL(fl); } }); i.click(); } }
+  /* 미리보기 안에서 메뉴를 누르면 편집기 탭도 그 페이지로 */
+  function lhNav(h) { if (!HS.lv || HS.lv.url) return; if (h === '#' || h === '#home') { goHp('home'); return; }
+    const m = h.match(/^#hp\/(.+)$/); if (m) { const k = decodeURIComponent(m[1]); if (pageOf(k)) { goHp(k); return; } }
+    const s = site(); let hit = null; A(s.menus).filter(x => x.on !== false).forEach(x => { const t1 = target(x); if (!hit && t1.hash === h) hit = [x.kind === 'home' ? 'home' : 'm-' + x.id, x]; A(x.subs).forEach(b => { const t2 = target(b, x); if (!hit && t2.hash === h) hit = ['s-' + x.id + '-' + b.id, b]; }); });
+    HS.lv = Object.assign({}, HS.lv, hit ? { tab: hit[0], name: (HS.lab && HS.lab[hit[0]]) || mName(hit[1].l) } : {}, { hash: h }); deco(true); lvPaint(); }
+  function goHp(key) { HS.lv = null; HPE.key = pageOf(key) ? key : 'home'; UI.sitePage = HPE.key; HS.lastUI = HPE.key; lvPaint(); paint(); deco(true); }
+  /* 말로 고치기: 규칙(따옴표 안 글 · 사진 · 정렬 · 높이 · 바탕) → 못 알아들으면 Claude(연결 시) */
+  function lhRules(v, k) { const P = {}; const q = (v.match(/["“”'‘’「『]([^"“”'‘’」』]{1,80})["“”'‘’」』]/) || [])[1];
+    const cut = re => { const m = v.match(re); return m ? m[1].trim() : ''; };
+    if (q && /(소개|설명|문구|부제|한\s*줄)/.test(v) && !/(제목|이름|타이틀)/.test(v)) P.d = q; else if (q) P.t = q;
+    else { const t2 = cut(/(?:제목|이름|타이틀)[을를은는]?\s*(.{1,40}?)\s*(?:으로|로)\s*(?:바꿔|해|변경|고쳐)/); if (t2) P.t = t2; const d2 = cut(/(?:소개|설명)\s*(?:문구|글)?[을를은는]?\s*(.{2,120}?)\s*(?:으로|로|라고)\s*(?:바꿔|해|넣어|써)/); if (d2) P.d = d2; }
+    if (/(사진|이미지|배경)/.test(v)) { if (/(빼|없애|지워|삭제|없이)/.test(v)) P.img = ''; else if (!/(색|컬러)/.test(v) || /(사진|이미지)/.test(v)) { const u = lhStock(v, k); if (u) P.img = u; } }
+    if (/(가운데|중앙)/.test(v)) P.al = 'c'; else if (/왼쪽/.test(v)) P.al = '';
+    if (/(크게|높게|넓게|시원하게)/.test(v)) P.h = 'l'; else if (/(작게|낮게|얇게|짧게|줄여)/.test(v)) P.h = 's'; else if (/보통/.test(v)) P.h = '';
+    if (/(진하게|어둡게|대표\s*색|브랜드\s*색|강조\s*색|포인트\s*색)/.test(v)) { P.tone = 'brand'; if (!('img' in P)) P.img = ''; } else if (/(연하게|밝게|부드럽|은은)/.test(v)) { P.tone = ''; if (!('img' in P)) P.img = ''; } else if (/(흰\s*바탕|하얀|흰색)/.test(v)) { P.tone = 'plain'; if (!('img' in P)) P.img = ''; }
+    if (!Object.keys(P).length && /(꾸며|멋지게|예쁘게|화려하게|눈에\s*띄게|고급)/.test(v)) { const u = lhStock(v, k); if (u) P.img = u; P.h = 'l'; }
+    return P; }
+  const LH_SYS = `당신은 교육기관 홈페이지 편집자입니다. 학습 페이지(목록 화면) 머리글 하나를 요청대로 바꿉니다. JSON 객체 하나만 출력합니다.
+형식: {"t":"제목(바꿀 때만, 20자 이내)","d":"소개 문구(바꿀 때만, 60자 이내)","al":"l|c","h":"s|m|l","tone":"plain|soft|brand","img":"stock|none|keep"}
+바꾸지 않는 항목은 넣지 않습니다. 없는 수치 · 수상 · 인물은 지어내지 않습니다. 쉬운 한국어.`;
+  async function lhPrompt(v) { const K = lhKeyNow(); const k = K && K.k; if (!k) { say('학습 페이지 화면을 불러오는 중입니다. 잠시 뒤 다시 시도하세요.', 'warn'); return false; }
+    if (!K.top) { say('이 화면은 목록 아래 화면입니다. 위 탭에서 목록 화면으로 돌아간 뒤 고치세요.', 'warn'); return false; }
+    let P = lhRules(v, k); let via = '규칙';
+    if (!Object.keys(P).length && aiOn()) { try { say(`${CL.label ? CL.label() : 'Claude'}가 머리글을 고치고 있습니다…`); const c = lhCur(k);
+        const r = await CL.call({ system: LH_SYS, messages: [{ role: 'user', content: `요청: ${v}\n페이지: ${(HS.lv && HS.lv.name) || k}\n기관: ${S.org.name}(${(TYPES[S.org.type] || {}).name || ''})\n지금: ${JSON.stringify(c)}` }], max: 600 });
+        const s = String(r.text || ''); const j = JSON.parse(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)); const Q = {};
+        if (j.t) Q.t = String(j.t).slice(0, 60); if (j.d) Q.d = String(j.d).slice(0, 200); if (/^[lc]$/.test(j.al)) Q.al = j.al === 'c' ? 'c' : ''; if (/^[sml]$/.test(j.h)) Q.h = j.h === 'm' ? '' : j.h;
+        if (/^(plain|soft|brand)$/.test(j.tone)) Q.tone = j.tone === 'soft' ? '' : j.tone; if (j.img === 'none') Q.img = ''; if (j.img === 'stock') { const u = lhStock(v, k); if (u) Q.img = u; } P = Q; via = 'Claude'; } catch (e) { say(`Claude 연결이 원활하지 않아 기본 규칙으로 처리합니다(${e.message}).`, 'warn'); } }
+    if (!Object.keys(P).length) { say(`알아듣지 못했습니다. 예: 제목을 "전체 ${lbl()}"으로 · 소개 문구 "…" · 배경 사진 넣어줘 · 가운데 정렬 · 크게 · 대표 색으로`, 'warn'); return false; }
+    const W = { t: '제목', d: '소개 문구', img: '배경 사진', al: '정렬', h: '높이', tone: '바탕 색' }; return lhSet(k, P, `「${(HS.lv && HS.lv.name) || '학습 페이지'}」 머리글의 ${Object.keys(P).map(x => W[x]).filter(Boolean).join(' · ')}을(를) 바꿨습니다(${via}).`); }
+  window.hpsLhPrompt = lhPrompt;
+  /* 되돌리기 · 다른 곳에서 바뀐 경우에도 미리보기를 맞춘다 */
+  /* 머리글 · 테마 색 · 글꼴 · 로고 · 메뉴가 바뀌면(되돌리기 · 디자인 패널 포함) 학습 페이지 미리보기도 다시 그린다 */
+  const lhSigNow = () => { const s = S.site; return JSON.stringify([s.lhead || {}, s.theme || '', s.color || '', s.hpFont || s.font || '', s.fonts || '', (s.gnb || {}).logo ? 1 : 0, A(s.menus).map(m => [m.l, m.on, m.link])]); };
+  const lhTick = () => { try { if (HS.dock && HS.lv && !HS.lv.url && S && S.site) { const sg = lhSigNow(); if (HS.lhSig != null && HS.lhSig !== sg) lhReload(); HS.lhSig = sg; } } catch (e) { } };
+  AFTER.push(lhTick); setInterval(lhTick, 700);
+  /* 게시본: hp.lhead(학습자 화면 lhead.js가 읽음) — 글자 수 · 사진 주소를 거른다 */
+  function lhPub() { const o = {}; const L = (S.site && S.site.lhead) || {};
+    Object.keys(L).slice(0, 40).forEach(k => { const c = L[k] || {}; if (!/^[\w가-힣ㄱ-ㅎ /.·()-]{1,48}$/.test(k)) return; const x = {};
+      if (c.t) x.t = String(c.t).slice(0, 60); if (c.d) x.d = String(c.d).slice(0, 200); const im = String(c.img || '');
+      if (/^data:image\/(png|jpe?g|webp|gif);base64,[\w+/=]+$/.test(im) || /^https?:\/\/[^\s"'()\\]+$/.test(im) || /^img\/stock\/[\w-]+\.(webp|jpg|png)$/.test(im)) x.img = im;
+      if (c.al === 'c') x.al = 'c'; if (c.h === 's' || c.h === 'l') x.h = c.h; if (/^(plain|soft|brand)$/.test(c.tone || '')) x.tone = c.tone; if (Object.keys(x).length) o[k] = x; });
+    return o; }
+  if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); try { if (r && r.hp) r.hp.lhead = lhPub(); } catch (e) { console.error('hps lhead', e); } return r; }; window.lsSnapshot = lsSnapshot; }
+
+  /* ═════════ 8. 템플릿 고르기 = 편집기 안 큰 패널(v36 R3 · 평가 4-5) — 고르면 적용 · [되돌리기]로 이전 사이트 · 닫으면 편집기 그대로 ═════════ */
+  { const base = ACT['tpl-gallery']; ACT['tpl-gallery'] = (...a) => { if (!HS.dock || !window.TPD || typeof TPD.gallery !== 'function') return base(...a); galOpen(); }; }
+  function galOpen() { HS.gal = 1; if (HS.pan) panClose(); hint(null); galPaint(); }
+  function galClose() { HS.gal = 0; const g = $1('#hpsGal'); if (g) g.remove(); document.body.classList.remove('hps-gal-on'); deco(true); setTimeout(fit, 0); }
+  ACT['hps-galx'] = () => galClose();
+  const galIO = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(x => { if (x.isIntersecting) { galIO.unobserve(x.target); galThumb(x.target); } }), { rootMargin: '360px 0px' }) : null;
+  function galThumb(el) { if (el.dataset.ok) return; const tp = TPL.find(t => t.id === el.dataset.tp); const f = el.querySelector('iframe'); if (!tp || !f) return; el.dataset.ok = 1;
+    const w = el.clientWidth; if (w) f.style.transform = `scale(${w / 1280})`; try { f.srcdoc = siteHTML(TPD.fromTpl(tp), false, 'ko'); } catch (e) { console.error('hps gal', e); } }
+  function galPaint() { const w = $1('#hpe'); if (!w || !HS.gal) return; let g = $1('#hpsGal'); const fresh = !g;
+    if (!g) { g = document.createElement('section'); g.id = 'hpsGal'; g.className = 'hps-gal'; g.setAttribute('role', 'region'); g.setAttribute('aria-label', '템플릿 고르기'); w.appendChild(g); }
+    let h = ''; try { h = TPD.gallery(); } catch (e) { console.error('hps gal', e); }
+    h = h.replace(/<button[^>]*data-act="tpl-back"[^>]*>[\s\S]*?<\/button>/, '');
+    const sig = h.length + '|' + (UI.tpdK || ''); if (g.dataset.sig === sig) return; g.dataset.sig = sig;
+    g.innerHTML = `<div class="hps-galh"><div><b>템플릿 고르기</b><p>카드를 누르면 크게 미리 봅니다. [이 템플릿으로 시작]을 누르면 지금 사이트가 바뀌고, 마음에 들지 않으면 [되돌리기]로 돌아옵니다.</p></div><button type="button" class="btn" data-act="hps-galx">${SV(P.x, 16, 2)} 닫고 편집기로</button></div><div class="hps-galb">${h}</div>`;
+    document.body.classList.add('hps-gal-on'); talkSet(false); const bar = w.querySelector('.hpe-bar'); if (bar) w.style.setProperty('--hps-gt', (bar.offsetTop + bar.offsetHeight) + 'px'); const sc = g.querySelector('.hps-galb');
+    g.querySelectorAll('.tpd-th:not([data-ok])').forEach(el => { if (galIO) galIO.observe(el); else galThumb(el); });
+    if (fresh) { const q = g.querySelector('#tpdQ'); if (q && innerWidth > 760) try { q.focus({ preventScroll: true }); } catch (e) { } if (sc) sc.scrollTop = 0; } }
+  addEventListener('resize', () => { document.querySelectorAll('#hpsGal .tpd-th[data-ok]').forEach(el => { const f = el.querySelector('iframe'); if (f && el.clientWidth) f.style.transform = `scale(${el.clientWidth / 1280})`; }); });
+  AFTER.push(() => { try { if (HS.dock && HS.gal) galPaint(); else if (!HS.dock && $1('#hpsGal')) galClose(); } catch (e) { console.error('hps gal', e); } });
+  { const base = ACT['tpd-use']; if (base) ACT['tpd-use'] = (...a) => { if (!HS.dock) return base(...a); const el = a[0]; const tp = TPL.find(t => t.id === (el && el.dataset && el.dataset.v)); if (!tp) return base(...a);
+      if (typeof slClose === 'function') try { slClose(); } catch (e) { } UI.tpdQ = ''; push(); const was = !!(S.site && S.site.published);
+      ACT['tpl-use']({ dataset: { v: tp.id } }); if (was && S.site && !S.site.published) S.site.published = true; HS.lv = null; HPE.key = 'home'; UI.sitePage = 'home'; galClose(); persist();
+      setTimeout(() => { paint(); deco(true); say(`「${tp.name}」 템플릿으로 바꿨습니다. 마음에 들지 않으면 [되돌리기]를 누르세요.`, 'ok'); }, 30); }; }
+  addEventListener('keydown', e => { if (e.key !== 'Escape' || !HS.gal || $1('#slSheet') || $1('#modal')) return; const tg = e.target; if (tg && /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName) && tg.value) return; galClose(); e.stopImmediatePropagation(); }, true);
 
   if (typeof COVER !== 'undefined') COVER.push(['[v36] 한 화면 홈페이지 편집기 — 메뉴 탭 · 페이지 프롬프트(코드 블록) · 두 번 눌러 고치기 · 섹션 갤러리 · 처음 흐름(템플릿 → AI → 기본 정보 → 게시) · 미리보기 링크 차단 수정', 'site', '']);
 })();
