@@ -6,7 +6,13 @@
 'use strict';
 const MB_SOC = [['kakao', '카카오'], ['naver', '네이버'], ['google', '구글'], ['apple', '애플'], ['facebook', '페이스북']];
 const MB_LOGIN = { email: '이메일', code: '접근코드', kakao: '카카오', naver: '네이버', google: '구글', apple: '애플', facebook: '페이스북' };
-const MB_QT = { text: '텍스트', file: '파일 첨부', choice: '선택형' };
+const MB_QT = { text: '짧은 답', choice: '하나 고르기', multi: '여러 개 고르기', date: '날짜', consent: '동의 체크', file: '파일 첨부' }; /* v36 유형 확장(가입 추가 질문 편집기) */
+/* v36 기관 유형별 노출: 보호자 연결은 학원(초중고)만, 결제 · 수납은 유료 운영 유형만(설정 › 서비스에서 바꿀 수 있음). 끄더라도 데이터는 지우지 않는다 */
+const MB_GUARD_T = ['k12'];
+const MB_PAY_DEF = { k12: true, adult: true, lifelong: true, voc: true, univ: false, corp: false, public: false };
+const mbGuardOn = () => MB_GUARD_T.includes(S?.org?.type);
+const mbPayOn = () => { const v = S?.settings?.payOn; return typeof v === 'boolean' ? v : MB_PAY_DEF[S?.org?.type] !== false; };
+window.mbGuardOn = mbGuardOn; window.mbPayOn = mbPayOn;
 /* 데모 해시(학습자 lacct.js와 같은 함수) — 운영: 서버에서 bcrypt/argon2 */
 const mbHash = s => { let a = 0x811c9dc5, b = 0x9e3779b1; for (const ch of String(s)) { const c = ch.codePointAt(0); a = Math.imul(a ^ c, 16777619) >>> 0; b = Math.imul(b ^ (c + a), 2654435761) >>> 0; } return a.toString(36) + b.toString(36); };
 const mbPw = (id, pw) => 'h1:' + mbHash('didisam|' + String(id).toLowerCase() + '|' + pw);
@@ -58,11 +64,11 @@ ACT['mb-acct'] = () => { mbEnsure(); const A = S.settings.acct; const U = mbUniv
     ${U ? '' : `<div class="fl"><span>SNS 간편 가입 · 로그인</span><div class="mb-radios">${MB_SOC.map(([k, l]) => `<label class="ckl"><input type="checkbox" name="soc_${k}" ${A.social.includes(k) ? 'checked' : ''}> ${l}</label>`).join('')}</div><small class="mini">이메일 가입은 항상 제공합니다. SNS 가입자는 비밀번호를 만들지 않습니다(데모: 모의 로그인 · 운영: OAuth 연동).</small></div>
     <label class="ckl"><input type="checkbox" name="verify" ${A.verify ? 'checked' : ''}> 휴대폰 본인인증을 마쳐야 정회원(미인증 · 일괄 가입은 준회원)</label>
     <label class="ckl"><input type="checkbox" name="under14" ${A.under14 ? 'checked' : ''}> 만 14세 미만 가입 허용(법정대리인 인증 · 동의)</label>
-    <label class="ckl"><input type="checkbox" name="parent" ${A.parent ? 'checked' : ''}> 보호자 계정 가입 · 가족 연결 사용</label>`}
+    ${mbGuardOn() ? `<label class="ckl"><input type="checkbox" name="parent" ${A.parent ? 'checked' : ''}> 보호자 계정 가입 · 가족 연결 사용</label>` : ''}`}
     <label class="ckl"><input type="checkbox" name="editAns" ${A.editAns ? 'checked' : ''}> 학습자가 마이페이지에서 추가 질문 답변을 확인 · 수정할 수 있음</label>
     <div class="bar2"><button type="button" class="btn sm" data-act="mem-q">추가 질문 설정 (${A.extraQ.length}/6)</button><button type="button" class="btn sm ghost" data-act="mem-invite">초대 링크</button></div>`,
   [{ id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { const g = n => (w.querySelector(`[name="${n}"]:checked`) || {}).value;
-    A.mode = g('mode') || A.mode; if (U && !MB_MODE()[A.mode]) A.mode = 'code'; A.approve = g('approve') || 'auto'; if (!U) { A.social = MB_SOC.map(x => x[0]).filter(k => fv(w, 'soc_' + k)); A.verify = !!fv(w, 'verify'); A.under14 = !!fv(w, 'under14'); A.parent = !!fv(w, 'parent'); } A.editAns = !!fv(w, 'editAns');
+    A.mode = g('mode') || A.mode; if (U && !MB_MODE()[A.mode]) A.mode = 'code'; A.approve = g('approve') || 'auto'; if (!U) { A.social = MB_SOC.map(x => x[0]).filter(k => fv(w, 'soc_' + k)); A.verify = !!fv(w, 'verify'); A.under14 = !!fv(w, 'under14'); if (w.querySelector('[name=parent]')) A.parent = !!fv(w, 'parent'); } A.editAns = !!fv(w, 'editAns');
     mbJoinSync(); logAudit(`가입 · 계정 설정 — ${MB_MODE()[A.mode]}`); save(); render(); toast('가입 · 계정 설정을 저장했습니다.', 'ok'); } }]); };
 { const base = ACT.st; ACT.st = el => { if (el.dataset.k === 'join' && el.value === '운영자 초대만' && mbUniv()) { toast(MB_UNIV_NOTE, 'warn'); render(); return; } base(el); if (el.dataset.k !== 'join' || !S.settings.acct) return; const v = el.value, A = S.settings.acct; if (v === '운영자 초대만') A.mode = 'invite'; else { if (A.mode === 'invite') A.mode = 'open'; A.approve = v === '운영자 수락' ? 'manual' : 'auto'; } save(); }; }
 { const base = VIEWS.settings; VIEWS.settings = () => { const h = base(); if ((UI.settings || 'menu') !== 'service') return h; mbEnsure();
@@ -89,7 +95,7 @@ function mbFiltered() { const f = UI.memF || 'all', q = (UI.memQ || '').toLowerC
     && (!A.cls || (C(A.cls)?.learners || []).includes(m.id)) && (!A.from || (m.joined || '') >= A.from) && (!A.to || (m.joined || '') <= A.to)
     && (!A.team || m.group === A.team) && (!A.login || ((m.acct && m.acct.login) || 'email') === A.login)
     && (!A.q || String(((m.extra || {})[A.q] && typeof m.extra[A.q] === 'object' ? m.extra[A.q].file?.name : (m.extra || {})[A.q]) || '').toLowerCase().includes(String(A.v || '').toLowerCase()))); }
-function mbList() { const U = mbUniv(); const f = UI.memF || 'all'; const L = mbFiltered(); const sel = UI.mbSel.filter(id => L.some(m => m.id === id)); UI.mbSel = sel; const A = UI.mbAdv || {}; const T = mbTeacher();
+function mbList() { const U = mbUniv(); const f = UI.memF || 'all'; const L = mbFiltered(); const Lid = new Set(L.map(m => m.id)); const sel = UI.mbSel.filter(id => Lid.has(id)); UI.mbSel = sel; const A = UI.mbAdv || {}; const T = mbTeacher();
   const cnt = g => S.members.filter(m => m.grade === g).length; const inq = S.acctInq.filter(x => !x.done);
   const right = (T ? '' : `<button class="btn" data-act="mb-acct">가입 · 계정 설정</button>`) + (U ? `<button class="btn" data-act="mem-xls">엑셀 내려받기</button><button class="btn pri" data-act="go" data-v="enroll">+ 학번 등록</button>` : `<button class="btn" data-act="mem-q">추가 질문 설정</button><button class="btn" data-act="mem-xls">엑셀 내려받기</button><button class="btn" data-act="mem-bulk">일괄 가입</button><button class="btn pri" data-act="mem-invite">+ ${esc(t('learner'))} 추가</button>`);
   const sub = U ? `학번 · 학과만 저장합니다(이름 · 연락처 · 이메일 미수집) · ${mbAcctSummary()} ${guideRef('features/member/student.md')}` : `정회원 · 준회원(본인인증 전) · 승인 대기 · ${mbAcctSummary()} ${guideRef('features/member/student.md')}`;
@@ -106,12 +112,14 @@ function mbList() { const U = mbUniv(); const f = UI.memF || 'all'; const L = mb
   const act = m => (m.grade === '승인 대기' && !T ? `<button class="btn sm pri" data-act="mb-ok" data-v="${m.id}">승인</button><button class="btn sm" data-act="mb-no" data-v="${m.id}">거절</button>` : '') + `<button class="btn sm ghost" data-act="mem-open" data-v="${m.id}">상세</button>`;
   const badges = m => (m.acct?.manual ? ' ' + tag('수동 계정', 'mg') : '') + (m.acct?.login && !['email', 'code'].includes(m.acct.login) ? ' ' + tag(MB_LOGIN[m.acct.login] || m.acct.login) : '') + (m.acct?.minor ? ' ' + tag('14세 미만') : '');
   const cols = U ? ['', '학번', t('group'), 'AI 진단', '등급', '가입일', '최근 접속', ''] : ['', '이름', '이메일', '연락처', t('group'), '등급', '가입일', '최근 접속', ''];
-  const rows = L.map(m => U ? [ck(m), `<a href="#" data-act="mem-open" data-v="${m.id}">${esc(typeof SID === 'function' ? SID(m) : m.sid || m.name)}</a>`, esc(m.extra?.['학과'] || gn(m.group)), m.diag ? tag(m.diag) : '<span class="mini">미응시</span>', gtag(m), m.joined, m.last <= addDays(today(), -30) ? tag(m.last, 'r') : m.last, act(m)]
+  const lim = UI.mbLim || MB_PAGE; const rows = L.slice(0, lim).map(m => U ? [ck(m), `<a href="#" data-act="mem-open" data-v="${m.id}">${esc(typeof SID === 'function' ? SID(m) : m.sid || m.name)}</a>`, esc(m.extra?.['학과'] || gn(m.group)), m.diag ? tag(m.diag) : '<span class="mini">미응시</span>', gtag(m), m.joined, m.last <= addDays(today(), -30) ? tag(m.last, 'r') : m.last, act(m)]
     : [ck(m), `<a href="#" data-act="mem-open" data-v="${m.id}">${esc(m.name)}</a>${m.nick && m.nick !== m.name ? ` <small class="mini">${esc(m.nick)}</small>` : ''}${badges(m)}`, esc(m.email), esc(m.phone), gn(m.group), gtag(m), m.joined, m.last <= addDays(today(), -30) ? tag(m.last, 'r') : m.last, act(m)]);
   const allck = `<label class="ckl mb-all"><input type="checkbox" data-chg="mb-selall" ${L.length && sel.length === L.length ? 'checked' : ''}> 전체 선택(${L.length}명)</label>`;
   return head('', sub, right) + (T ? `<div class="mb-note">${esc(t('teacher'))}는 정회원 중 담당 ${esc(t('cls'))}(${T.classes.length}개)의 ${esc(t('learner'))}만 볼 수 있습니다.</div>` : '') + alerts +
     tabs('memF', [['all', '전체 ' + S.members.length], ['정회원', '정회원 ' + cnt('정회원')], ['준회원', '준회원 ' + cnt('준회원')], ['승인 대기', '승인 대기 ' + cnt('승인 대기')], ['거절', '거절 ' + cnt('거절')]], f) +
-    `<div class="bar2"><input type="search" placeholder="${U ? '학번 · 학과 검색' : '이름 · 닉네임 · 이메일 · 연락처 · 추가정보 검색'}" value="${esc(UI.memQ || '')}" data-chg="memQ" aria-label="검색"><button class="btn sm ${UI.mbAdvOpen ? 'pri' : ''}" data-act="mb-adv">상세검색${Object.values(A).some(Boolean) ? ' · 적용 중' : ''}</button>${f === '승인 대기' && cnt('승인 대기') && !T ? '<button class="btn sm pri" data-act="mem-approve">일괄 승인</button>' : ''}${f === '준회원' && cnt('준회원') && !U && !T ? '<button class="btn sm" data-act="mb-vreq" data-all="1">준회원 전체에 본인인증 안내</button>' : ''}${allck}</div>` + adv + bulk + table(cols, rows, f === 'all' && !S.members.length ? `아직 ${tj('learner', '이')} 없습니다. 초대 링크를 공유하거나 일괄 가입으로 등록하세요.` : '조건에 맞는 회원이 없습니다.'); }
+    `<div class="bar2"><input type="search" placeholder="${U ? '학번 · 학과 검색' : '이름 · 닉네임 · 이메일 · 연락처 · 추가정보 검색'}" value="${esc(UI.memQ || '')}" data-chg="memQ" aria-label="검색"><button class="btn sm ${UI.mbAdvOpen ? 'pri' : ''}" data-act="mb-adv">상세검색${Object.values(A).some(Boolean) ? ' · 적용 중' : ''}</button>${f === '승인 대기' && cnt('승인 대기') && !T ? '<button class="btn sm pri" data-act="mem-approve">일괄 승인</button>' : ''}${f === '준회원' && cnt('준회원') && !U && !T ? '<button class="btn sm" data-act="mb-vreq" data-all="1">준회원 전체에 본인인증 안내</button>' : ''}${allck}</div>` + adv + bulk + table(cols, rows, f === 'all' && !S.members.length ? `아직 ${tj('learner', '이')} 없습니다. 초대 링크를 공유하거나 일괄 가입으로 등록하세요.` : '조건에 맞는 회원이 없습니다.') + (L.length > lim ? `<div class="mb-more"><span>${lim.toLocaleString()}명 표시 · 전체 ${L.length.toLocaleString()}명</span><button type="button" class="btn" data-act="mb-lim">${Math.min(MB_PAGE, L.length - lim).toLocaleString()}명 더 보기</button><small class="mini">검색 · 상세검색으로 좁히면 빠릅니다</small></div>` : ''); }
+const MB_PAGE = 100; /* v36 명단은 100명씩(5,000명 일괄 등록 뒤에도 화면이 느려지지 않게) */
+ACT['mb-lim'] = () => { UI.mbLim = (UI.mbLim || MB_PAGE) + MB_PAGE; render(); };
 { const base = VIEWS.members; VIEWS.members = () => { mbEnsure(); if (UI.mem && M(UI.mem)) return base(); return mbList(); }; }
 ACT['mb-sel'] = el => { const id = el.dataset.v; UI.mbSel = el.checked ? [...new Set([...UI.mbSel, id])] : UI.mbSel.filter(x => x !== id); render(); };
 ACT['mb-selall'] = el => { UI.mbSel = el.checked ? mbFiltered().map(m => m.id) : []; render(); };
@@ -148,8 +156,8 @@ ACT['mb-inqdone'] = el => { const x = S.acctInq.find(y => y.id === el.dataset.v)
   const acctCard = `<div class="card mb-card"><div class="ch"><b>계정</b><small>${a.manual ? '수동 계정 · 알림톡 수신 불가' : '디디쌤 계정'}</small><span class="sp"></span>${m.grade === '승인 대기' || m.grade === '거절' ? `<button class="btn sm pri" data-act="mb-ok" data-v="${m.id}">승인</button>` : ''}${m.grade === '승인 대기' ? `<button class="btn sm" data-act="mb-no" data-v="${m.id}">거절</button>` : ''}${m.grade === '준회원' && !U ? `<button class="btn sm" data-act="mb-vreq" data-v="${m.id}">본인인증 안내</button>` : ''}<button class="btn sm" data-act="mb-msg" data-v="${m.id}">메시지</button></div>
     <div class="mb-kv">${[['가입 수단', MB_LOGIN[a.login] || (U ? '접근코드' : '이메일')], ['연동 SNS', (a.links || []).filter(x => x !== 'email').map(x => MB_LOGIN[x]).join(', ') || '없음'], ['본인인증', a.verified ? '완료' + (a.verifiedBy === 'email' ? '(이메일)' : '(휴대폰)') : '미인증'], ['가입 경로', { self: '직접 가입', invite: '초대 링크', bulk: '일괄 가입', admin: '운영자 등록', manual: '수동 계정' }[m.src] || '—'], ['가입일', a.joined || m.joined || '—'], ...(a.minor ? [['법정대리인', `${a.guardian?.name || ''} ${a.guardian?.phone || ''} · 동의 완료`]] : []), ...(m.reject ? [['거절 사유', m.reject]] : [])].filter(([k]) => !(U && /SNS|본인인증/.test(k))).map(([k, v]) => `<span><small>${esc(k)}</small><b>${esc(v)}</b></span>`).join('')}</div></div>`;
   const qs = A.extraQ.filter(x => !(U && ['학번', '학과'].includes(x.q)));
-  const qCard = qs.length ? `<div class="card mb-card"><div class="ch"><b>추가 질문 답변</b><small>${A.editAns ? '학습자 수정 허용' : '학습자 수정 불가'}</small></div><div class="mb-kv">${qs.map(x => `<span><small>${esc(x.q)}${x.req ? ' *' : ''}</small><b>${mbAns((m.extra || {})[x.q]) || '<i class="mini">미응답</i>'}</b></span>`).join('')}</div></div>` : '';
-  const pCard = U ? '' : `<div class="card mb-card"><div class="ch"><b>보호자</b><small>출결 · 청구서 · 수업일 변경 · 메시지 알림</small><span class="sp"></span><button class="btn sm pri" data-act="par-req" data-v="${m.id}">보호자 +</button></div>${P.length ? `<div class="mb-chips">${P.map(p => `<button class="mb-chip ${p.status === '연결 완료' ? 'g' : p.status === '거절' ? 'r' : 'y'}" data-act="mb-parchip" data-v="${p.id}">${esc(p.name)}${p.rel ? ` (${esc(p.rel)})` : ''} · ${esc(p.status === '연결 요청' ? '연결 대기 중' : p.status)}</button>`).join('')}</div>` : '<p class="mini">연결된 보호자가 없습니다. [보호자 +]로 이름 · 연락처를 입력하면 보호자에게 연결 안내 알림톡이 갑니다.</p>'}<p class="mini">운영자가 보낸 연결 요청은 보호자가 거절할 수 없습니다. 상태 칩을 누르면 연결을 해제할 수 있습니다.</p></div>`;
+  const qCard = qs.length ? `<div class="card mb-card"><div class="ch"><b>추가 질문 답변</b><small>${esc(t('learner'))} ${A.editAns ? '수정 허용' : '수정 불가'}</small></div><div class="mb-kv">${qs.map(x => `<span><small>${esc(x.q)}${x.req ? ' *' : ''}</small><b>${mbAns((m.extra || {})[x.q]) || '<i class="mini">미응답</i>'}</b></span>`).join('')}</div></div>` : '';
+  const pCard = U || !mbGuardOn() ? '' : `<div class="card mb-card"><div class="ch"><b>보호자</b><small>출결 · 청구서 · 수업일 변경 · 메시지 알림</small><span class="sp"></span><button class="btn sm pri" data-act="par-req" data-v="${m.id}">보호자 +</button></div>${P.length ? `<div class="mb-chips">${P.map(p => `<button class="mb-chip ${p.status === '연결 완료' ? 'g' : p.status === '거절' ? 'r' : 'y'}" data-act="mb-parchip" data-v="${p.id}">${esc(p.name)}${p.rel ? ` (${esc(p.rel)})` : ''} · ${esc(p.status === '연결 요청' ? '연결 대기 중' : p.status)}</button>`).join('')}</div>` : '<p class="mini">연결된 보호자가 없습니다. [보호자 +]로 이름 · 연락처를 입력하면 보호자에게 연결 안내 알림톡이 갑니다.</p>'}<p class="mini">운영자가 보낸 연결 요청은 보호자가 거절할 수 없습니다. 상태 칩을 누르면 연결을 해제할 수 있습니다.</p></div>`;
   return h.replace('<div class="danger">', acctCard + qCard + pCard + '<div class="danger">'); }; }
 { const base = ACT['mem-set']; ACT['mem-set'] = el => { const m = M(el.dataset.v); if (!m) return; const k = el.dataset.k;
   if (k === 'nick' && el.value && !MB_NICK_RE.test(el.value)) { toast('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.', 'warn'); el.value = m.nick || ''; return; }
@@ -200,7 +208,7 @@ function mbInvite(target, cls, role) { let iv = S.invites.find(i => i.active && 
 const mbInvURL = iv => `${mbLURL()}#join/${iv.token}`;
 const MB_IT = () => [['phone', '연락처(알림톡)'], ['link', '링크'], ['email', '이메일'], ['manual', '수동 계정'], ['bulk', '일괄 초대']];
 function mbLinkPanel() { const tg = UI.mbInvT || 'student', cls = UI.mbInvC || '', role = UI.mbInvR || 'sub'; const A = S.settings.acct; const iv = mbInvite(tg, tg === 'student' ? cls : '', role); const url = mbInvURL(iv);
-  return `<div class="form2"><label>초대 대상<select data-chg="mb-invset" data-k="mbInvT"><option value="student" ${tg === 'student' ? 'selected' : ''}>${esc(t('learner'))}</option>${A.parent ? `<option value="parent" ${tg === 'parent' ? 'selected' : ''}>보호자</option>` : ''}<option value="admin" ${tg === 'admin' ? 'selected' : ''}>운영자 · ${esc(t('teacher'))}</option></select></label>
+  return `<div class="form2"><label>초대 대상<select data-chg="mb-invset" data-k="mbInvT"><option value="student" ${tg === 'student' ? 'selected' : ''}>${esc(t('learner'))}</option>${A.parent && mbGuardOn() ? `<option value="parent" ${tg === 'parent' ? 'selected' : ''}>보호자</option>` : ''}<option value="admin" ${tg === 'admin' ? 'selected' : ''}>운영자 · ${esc(t('teacher'))}</option></select></label>
     ${tg === 'student' ? `<label>가입과 함께 수강 권한(선택)<select data-chg="mb-invset" data-k="mbInvC"><option value="">없음</option>${S.classes.map(c => `<option value="${c.id}" ${cls === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` : tg === 'admin' ? `<label>권한<select data-chg="mb-invset" data-k="mbInvR"><option value="sub" ${role === 'sub' ? 'selected' : ''}>부운영자</option><option value="teacher" ${role === 'teacher' ? 'selected' : ''}>${esc(t('teacher'))}</option></select></label>` : ''}</div>
     <label class="fl">초대 링크 <small class="mini">가입 ${iv.uses}명 · 만든 날 ${esc(iv.at || '')}</small><input readonly id="mbInvU" value="${esc(url)}"></label>
     <div class="bar2"><button type="button" class="btn sm pri" data-act="mb-invcopy">복사</button><button type="button" class="btn sm" data-act="mb-invshare" data-v="kakao">카카오톡 공유</button><button type="button" class="btn sm" data-act="mb-invshare" data-v="facebook">페이스북 공유</button><button type="button" class="btn sm red" data-act="mb-invregen" data-v="${iv.id}">링크 재생성</button></div>
@@ -209,7 +217,7 @@ function mbInvBody(tb) { if (tb === 'link') return mbLinkPanel();
   if (tb === 'phone') return `<label class="fl">이름, 연락처(한 줄에 한 명)<textarea name="l" rows="5" placeholder="홍길동, 010-1234-5678"></textarea></label><p class="mini">입력한 연락처로 알림톡이 발송되고, 홈페이지 가입 링크가 함께 갑니다. 국내 번호가 없으면 [수동 계정]을 만드세요(알림톡 수신 불가).</p>`;
   if (tb === 'email') return `<label class="fl">이메일(한 줄에 한 명)<textarea name="l" rows="5" placeholder="name@example.com"></textarea></label><p class="mini">초대 링크를 이메일로 보냅니다. 이메일 초대로 가입하면 승인 없이 즉시 가입됩니다.</p>`;
   if (tb === 'manual') return `<p class="mini">국내 휴대폰 번호가 없는 외국인 · 해외 거주자용 계정입니다. 본인인증 없이 정회원으로 만들어지고, 알림톡은 받을 수 없습니다(이메일 · 앱 알림만).</p><div class="form2"><label>이름<input name="n" maxlength="20"></label><label>이메일(아이디)<input name="e" type="email" maxlength="60"></label><label>임시 비밀번호<input name="pw" type="password" maxlength="20" placeholder="영문 · 숫자 · 특수문자 8자 이상"></label></div>`;
-  return `<p>양식(CSV)에 이름 · 닉네임 · 이메일 · 비밀번호 · 연락처 · 추가정보를 채워 올리면 검사 후 한 번에 등록합니다. 일괄 가입 회원은 준회원으로 등록되고 본인인증 후 정회원이 됩니다.</p><button type="button" class="btn pri" data-act="mem-bulk">일괄 초대 열기</button>`; }
+  return `<p>엑셀(CSV) 양식에 이메일 · 이름을 채워 올리면 한 번에 최대 ${MB_BULK_MAX.toLocaleString()}명까지 검사 후 등록합니다. 비밀번호는 받지 않습니다 — 등록된 ${esc(t('learner'))}은 이메일 인증번호로 로그인합니다.</p><button type="button" class="btn pri" data-act="mem-bulk">일괄 초대 열기</button>`; }
 function mbInvModal() { const tb = UI.mbInvTab || 'link';
   modal(`${t('learner')} 추가 · 초대`, `<div class="seg2 full" role="tablist">${MB_IT().map(([k, l]) => `<button type="button" role="tab" class="${tb === k ? 'on' : ''}" aria-selected="${tb === k}" data-act="mb-invtab" data-v="${k}">${l}</button>`).join('')}</div><div id="mbInvB">${mbInvBody(tb)}</div>`,
     [{ id: 'c', label: '닫기' }, ...(['phone', 'email', 'manual'].includes(tb) ? [{ id: 'ok', label: tb === 'manual' ? '계정 만들기' : '초대 보내기', kind: 'pri', run: w => mbInvSend(tb, w) }] : [])], true); }
@@ -344,7 +352,7 @@ AFTER.unshift(() => { if (S && S.org && S.settings && !S.settings.acct) { mbEnsu
 
 /* ═════════ 학습자 스냅샷: 가입 · 계정 설정(공개 부분) ═════════ */
 { const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); try { mbEnsure(); const A = S.settings.acct; const T = S.settings.terms || {};
-  r.acct = { mode: A.mode, social: A.social.slice(), approve: A.approve, verify: !!A.verify, under14: !!A.under14, parent: !!A.parent, editAns: !!A.editAns, extraQ: A.extraQ.map(x => ({ q: x.q, type: x.type, req: !!x.req, opts: (x.opts || []).slice() })), policy: { tos: String(T.tos || '').slice(0, 6000), privacy: String(T.privacy || '').slice(0, 6000) } }; } catch (e) { console.error(e); } return r; }; }
+  r.acct = { mode: A.mode, social: A.social.slice(), approve: A.approve, verify: !!A.verify, under14: !!A.under14, parent: !!A.parent && mbGuardOn(), editAns: !!A.editAns, extraQ: A.extraQ.map(x => ({ q: x.q, type: x.type, req: !!x.req, opts: (x.opts || []).slice(), ...(x.help ? { help: x.help } : {}) })), policy: { tos: String(T.tos || '').slice(0, 6000), privacy: String(T.privacy || '').slice(0, 6000) } }; } catch (e) { console.error(e); } return r; }; }
 
 /* 학습 기록 동기화(lpApply)가 보호자 계정 기록으로 가짜 학습자를 만들지 않게 */
 { const base = lpApply; lpApply = (...a) => { const n = base(...a); try { if (S && (S.pacct || []).length) { const ps = new Set(S.pacct.map(p => p.sid)); const bad = S.members.filter(m => ps.has(m.sid) && !m.acct); if (bad.length) mbRemove(bad.map(m => m.id)); } } catch (e) { console.error(e); } return n; }; }
@@ -446,3 +454,190 @@ function mbTnotiCard() { const L = mbTnotiMine().slice(0, 8); const un = mbTnoti
     ${table(['받은 때', '내용', ''], L.map(n => [esc(n.at), `${n.read ? '' : tag('새 알림', 'mg') + ' '}<b>${esc(n.title)}</b><br><small class="mini">${esc(n.body)}</small>`, `<button class="btn sm ${n.read ? '' : 'ink'}" data-act="tn-open" data-v="${esc(n.id)}">${n.kind === 'ask' ? '답변하기' : '채점 열기'}</button>`]), '받은 알림이 없습니다.')}</div>`; }
 if (typeof tHome === 'function') { const base = tHome; tHome = (...a) => { const h = base(...a); try { return mbTnotiCard() + h; } catch (e) { return h; } }; }
 document.addEventListener('DOMContentLoaded', () => { const base = VIEWS.message; if (base) VIEWS.message = (...a) => { const h = base(...a); try { const k = mbTnotiCard(); if (!k) return h; const i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + k + h.slice(i) : k + h; } catch (e) { return h; } }; });
+
+/* ═════════ v36 E — 교육생(학습자) 관리 개선 ═════════
+   ① 기관 유형별 노출: 보호자 연결은 학원(초중고)만, 결제 · 수납은 유료 운영 유형만(데이터는 지우지 않음)
+   ② 엑셀(CSV) 일괄 등록 한 번에 최대 5,000명 — 머리글로 열을 찾고, 요약 + 오류 행만 표로, 500명씩 나눠 등록(화면이 멈추지 않게)
+   ③ 가입 추가 질문 편집기: 카드형(유형 고르기) · 끌어서 순서 바꾸기 · 필수 켜고 끄기 · 민감정보 차단/경고 · 학습자 가입 화면 실시간 미리보기(PC · 휴대폰) */
+if (MENU.parents) MENU.parents.only = 'k12';
+{ const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org && S.nav && S.nav.tabs && !mbGuardOn()) { let ch = 0; Object.values(S.nav.tabs).forEach(L => (L || []).forEach(x => { if (x.id === 'parents' && x.on) { x.on = false; ch = 1; } })); if (ch) save(); } } catch (e) { console.error(e); } return r; }; }
+/* 다른 층(간단히 보기 등)이 화면을 감싼 뒤에도 적용되도록 문서 로드 뒤에 감싼다 */
+document.addEventListener('DOMContentLoaded', () => { const base = VIEWS.parents; VIEWS.parents = (...a) => { if (S && S.org && !mbGuardOn()) { const n = (S.parents || []).length;
+  return `<div class="card mb-off"><b>${esc(TYPES[S.org.type]?.name || '이 기관')} 유형은 보호자 연결을 쓰지 않습니다</b><p class="mini">보호자 연결은 학원(초중고)처럼 미성년 ${esc(t('learner'))}의 출결 · 청구 알림이 보호자에게 가야 하는 기관에서만 씁니다.${n ? ` 이전에 연결한 보호자 ${n}명의 기록은 지우지 않고 보관합니다.` : ''}</p></div>`; } return base(...a); }; });
+/* 회원 상세: 결제 탭은 결제를 쓰는 기관에서만 */
+{ const base = memberDetail; memberDetail = m => { if (!mbPayOn() && UI.memT === 'pay') UI.memT = 'info'; let h = base(m); if (!mbPayOn()) h = h.replace(/<button role="tab"[^>]*data-key="memT" data-v="pay">[^<]*<\/button>/, '');
+  /* 추가 질문 답변은 아래 '추가 질문 답변' 카드에 한 번만(위 입력 칸 묶음에 같은 값이 한 번 더 보이던 것 정리) */
+  if ((UI.memT || 'info') === 'info' && m && /추가 질문 답변/.test(h)) Object.entries(m.extra || {}).forEach(([k, v]) => { if (typeof v === 'string' && !(mbUniv() && ['학번', '학과'].includes(k))) h = h.replace(`<label>${esc(k)}<input value="${esc(v)}" disabled></label>`, ''); });
+  return h; }; }
+/* 설정 › 서비스: 결제 · 수납, 보호자 연결 사용 여부(유형 기본값 + 사유) */
+const MB_PAY_WHY = { k12: '수강료 청구 · 수납이 운영의 중심입니다', adult: '강좌를 판매합니다(카드 · 간편결제)', lifelong: '유료 강좌 학습비를 받고 반환 기준을 지킵니다', voc: '국민내일배움카드 자부담금 · 일반 과정 훈련비를 받습니다', univ: '교과목은 등록금에 포함되어 학생이 따로 결제하지 않습니다', corp: '교육비는 회사가 부담해 임직원이 결제하지 않습니다', public: '교육비는 기관 예산으로 집행해 교육생이 결제하지 않습니다' };
+document.addEventListener('DOMContentLoaded', () => { const base = VIEWS.settings; VIEWS.settings = (...a) => { const h = base(...a); if ((UI.settings || 'menu') !== 'service' || !S || !S.org) return h; const ty = S.org.type; const on = mbPayOn(); const def = MB_PAY_DEF[ty] !== false;
+  return h + `<div class="card mb-card mb-pay"><div class="ch"><b>결제 · 수납</b><small>${on ? '켜짐' : '꺼짐'}${typeof S.settings.payOn === 'boolean' ? ' · 직접 설정' : ' · 기관 유형 기본값'}</small><span class="sp"></span><button type="button" class="sl-sw ${on ? 'on' : ''}" role="switch" aria-checked="${on}" aria-label="결제 · 수납 ${on ? '끄기' : '켜기'}" data-act="mb-payset"><i></i></button></div>
+    <p class="mini">${esc(TYPES[ty]?.name || '')} 기본값: ${def ? '켜짐' : '꺼짐'} — ${esc(MB_PAY_WHY[ty] || '')}. 끄면 ${esc(t('learner'))} 상세의 결제 탭이 숨겨집니다(결제 기록은 보관).</p>
+    <p class="mini">보호자 연결: ${mbGuardOn() ? '사용 — 학원(초중고)은 출결 · 청구 알림을 보호자에게 보냅니다.' : `사용 안 함 — ${esc(TYPES[ty]?.name || '')} 유형에는 필요하지 않아 메뉴 · 가입 화면에서 숨깁니다(기존 기록 보관).`}</p></div>`; }; });
+ACT['mb-payset'] = () => { const on = !mbPayOn(); S.settings.payOn = on; logAudit(`결제 · 수납 ${on ? '켬' : '끔'}`); save(); render(); toast(`결제 · 수납을 ${on ? '켰습니다' : '껐습니다'}.`, 'ok'); };
+{ const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); try { if (r) r.pay = mbPayOn(); } catch (e) { } return r; }; }
+
+/* ── ② 일괄 등록(최대 5,000명) ── */
+const MB_BULK_MAX = 5000;
+/* CSV 읽기: 큰따옴표 · 따옴표 안 쉼표/줄바꿈 · BOM · CRLF, 탭으로 나뉜 붙여넣기도 */
+function mbCSV(txt) { txt = String(txt || '').replace(/^﻿/, ''); const first = txt.slice(0, txt.indexOf('\n') + 1 || txt.length); const D = !first.includes(',') && first.includes('\t') ? '\t' : ',';
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < txt.length; i++) { const c = txt[i];
+    if (q) { if (c === '"') { if (txt[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; continue; }
+    if (c === '"' && f === '') q = true; else if (c === D) { row.push(f.trim()); f = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && txt[i + 1] === '\n') i++; row.push(f.trim()); f = ''; if (row.some(x => x)) rows.push(row); row = []; } else f += c; }
+  row.push(f.trim()); if (row.some(x => x)) rows.push(row); return rows; }
+const MB_BCOL = { email: /^(이메일|e-?mail|메일|아이디)/i, name: /^(이름|성명|name)$/i, nick: /^(닉네임|별명|nick)/i, phone: /^(연락처|휴대폰|휴대전화|전화|핸드폰|phone|mobile)/i, pw: /^(비밀번호|password|pw)$/i, group: /^(소속|부서|반|학과|기수|훈련반|팀|group)$/i };
+let MB_BK = null;
+function mbBulkParse(txt) { const R = mbCSV(txt); if (!R.length) return { err: '파일에 내용이 없습니다.' }; const H = R[0].map(h => h.replace(/\s|\*|\(.*?\)/g, ''));
+  const Q = S.settings.acct.extraQ.map(x => x.q); const gl = t('group');
+  const has = H.some(h => MB_BCOL.email.test(h)); const col = {}; let body = R;
+  if (has) { body = R.slice(1); H.forEach((h, i) => { for (const [k, re] of Object.entries(MB_BCOL)) if (col[k] == null && (re.test(h) || (k === 'group' && h === gl))) { col[k] = i; return; } const qi = Q.findIndex(q => q.replace(/\s/g, '') === h); if (qi >= 0) col['q' + qi] = i; }); }
+  else { Object.assign(col, { name: 0, nick: 1, email: 2, pw: 3, phone: 4 }); Q.forEach((_, j) => { col['q' + j] = 5 + j; }); } /* 머리글 없는 이전 양식: 이름, 닉네임, 이메일, 비밀번호, 연락처, 추가정보… */
+  if (body.length > MB_BULK_MAX) return { err: `한 번에 최대 ${MB_BULK_MAX.toLocaleString()}명입니다(이 파일 ${body.length.toLocaleString()}행). 파일을 나눠 올리세요.` };
+  const seenE = new Set(S.members.map(m => String(m.email || (m.acct && m.acct.email) || '').toLowerCase()).filter(Boolean)), seenP = new Set(S.members.map(m => m.phone).filter(Boolean)), fileE = new Set(), fileP = new Set();
+  const gset = new Set(S.groups.map(g => g.name.trim().toLowerCase())); const newG = new Set(); const ok = [], bad = []; const v = (r, k) => col[k] == null ? '' : String(r[col[k]] || '').trim();
+  body.forEach((r, i) => { const email = v(r, 'email').toLowerCase(), name = v(r, 'name').slice(0, 20), nick = v(r, 'nick'), ph0 = v(r, 'phone'), grp = v(r, 'group').slice(0, 30); const phone = ph0 ? mbPhone(ph0) : '';
+    const why = !email ? '이메일 누락' : !MB_MAIL_RE.test(email) ? '이메일 형식' : !name && !nick ? '이름(또는 닉네임) 누락' : nick && !MB_NICK_RE.test(nick) ? '닉네임 규칙(2~20자, - _ 외 특수문자 불가)' : ph0 && !MB_PHONE_RE.test(phone) ? '연락처 형식(예: 010-1234-5678)'
+      : seenE.has(email) ? '이미 등록된 이메일' : fileE.has(email) ? '파일 안 이메일 중복' : phone && seenP.has(phone) ? '이미 등록된 연락처' : phone && fileP.has(phone) ? '파일 안 연락처 중복' : '';
+    if (why) { bad.push({ row: i + (has ? 2 : 1), email, name: name || nick, why }); return; }
+    fileE.add(email); if (phone) fileP.add(phone); if (grp && !gset.has(grp.toLowerCase())) newG.add(grp);
+    ok.push({ email, name: name || nick, nick: (nick || name).slice(0, 20), phone, grp, extra: Object.fromEntries(Q.map((q, j) => [q, v(r, 'q' + j).slice(0, 200)]).filter(([, x]) => x)) }); });
+  return { total: body.length, ok, bad, newG: [...newG].slice(0, 200), pw: col.pw != null && body.some(r => v(r, 'pw')), head: has }; }
+function mbBkOut() { const B = MB_BK; const out = $('#mbBkOut'); if (!out) return; if (!B) { out.innerHTML = ''; return; } if (B.err) { out.innerHTML = `<p class="mb-bad">${esc(B.err)}</p>`; return; }
+  const ex = B.ok.slice(0, 5); const E = B.bad.slice(0, 200);
+  out.innerHTML = `<div class="mbk-sum"><span><small>읽은 행</small><b>${B.total.toLocaleString()}</b></span><span class="g"><small>등록 가능</small><b>${B.ok.length.toLocaleString()}명</b></span><span class="${B.bad.length ? 'r' : ''}"><small>오류</small><b>${B.bad.length.toLocaleString()}행</b></span><span><small>새 ${esc(t('group'))}</small><b>${B.newG.length}개</b></span></div><div class="mbk-prog" hidden><i></i><span></span></div>
+    ${B.pw ? '<p class="mini mb-warnl">파일의 비밀번호 열은 읽지 않았습니다 — 개인정보 보호를 위해 비밀번호는 받지 않고, 등록된 분은 이메일 인증번호로 로그인합니다.</p>' : ''}
+    ${B.newG.length ? `<p class="mini">처음 보는 ${esc(t('group'))} ${B.newG.length}개(${esc(B.newG.slice(0, 5).join(', '))}${B.newG.length > 5 ? ' …' : ''})는 등록할 때 새로 만듭니다.</p>` : ''}
+    ${E.length ? `<div class="mbk-err"><div class="ch"><b>오류 행</b><small>${B.bad.length > 200 ? `처음 200행만 표시 · 전체 ${B.bad.length.toLocaleString()}행` : '고쳐서 다시 올리면 이 행만 추가로 등록됩니다'}</small><span class="sp"></span><button type="button" class="btn sm" data-act="mb-bulkerr">오류 행 내려받기</button></div><div class="mbk-scroll">${table(['행', '이메일', '이름', '이유'], E.map(r => [r.row, esc(r.email), esc(r.name), tag(r.why, 'r') + (/이미 등록/.test(r.why) ? ' <button type="button" class="btn sm" data-act="mb-invtab" data-v="link">초대 링크 보내기</button>' : '')]))}</div></div>` : ''}
+    ${ex.length ? `<div class="mbk-ok"><b>등록 미리보기</b> <small class="mini">처음 ${ex.length}명</small>${table(['이메일', '이름', t('group'), '연락처'], ex.map(r => [esc(r.email), esc(r.name), esc(r.grp || '—'), esc(r.phone || '—')]))}</div>` : ''}
+`;
+  const mf = $('#modal .mf'); if (mf) { let b = mf.querySelector('[data-act="mb-bulkrun"]'); if (!b) { mf.insertAdjacentHTML('beforeend', '<button type="button" class="btn pri" data-act="mb-bulkrun"></button>'); b = mf.lastElementChild; } b.disabled = !B.ok.length; b.textContent = B.ok.length ? `${B.ok.length.toLocaleString()}명 등록하기` : '등록할 행이 없습니다'; } }
+ACT['mem-bulk'] = () => { mbEnsure(); if (mbUniv()) { toast('대학은 학번 등록(접근코드 발급)으로 안내합니다.'); go('enroll'); return; } MB_BK = null;
+  modal('엑셀로 일괄 등록', `<div class="mbk"><p class="mini">엑셀에서 <b>CSV UTF-8</b>로 저장한 파일을 올리세요. 한 번에 <b>최대 ${MB_BULK_MAX.toLocaleString()}명</b>, 5MB 이하. 열: <b>이메일 · 이름</b>(필수), ${esc(t('group'))} · 연락처 · 추가 질문(선택). 비밀번호는 받지 않습니다.</p>
+    <label class="mbk-drop"><input type="file" accept=".csv,.txt,text/csv" id="mbBkF"><span>${ic('doc' in IC ? 'doc' : 'book', 22)}<b>CSV 파일 고르기</b><small>또는 여기로 끌어다 놓기</small></span></label>
+    <div class="bar2"><button type="button" class="btn sm ghost" data-act="bulk-tpl">양식 내려받기</button></div><div id="mbBkOut" aria-live="polite"></div></div>`, [{ id: 'c', label: '닫기' }], true); };
+ACT['bulk-tpl'] = () => { const Q = S.settings.acct ? S.settings.acct.extraQ.map(x => x.q) : S.settings.extraQ; downloadCSV(`${t('learner')}_일괄등록_양식.csv`, ['이메일', '이름', '닉네임(선택)', t('group'), '연락처(선택)', ...Q], [['hong@example.com', '홍길동', '', (S.groups[0] || {}).name || '', '', ...Q.map(() => '')]]); };
+const mbBkFile = f => { const out = $('#mbBkOut'); if (!f || !out) return; if (!/\.(csv|txt)$/i.test(f.name) || f.size > 5 * 1024 * 1024) { MB_BK = { err: 'CSV 파일(5MB 이하)만 올릴 수 있습니다. 엑셀에서 [다른 이름으로 저장 › CSV UTF-8]을 고르세요.' }; mbBkOut(); return; }
+  out.innerHTML = '<p class="mini">검사하는 중…</p>'; f.text().then(txt => { const t0 = performance.now(); MB_BK = mbBulkParse(txt); MB_BK.ms = Math.round(performance.now() - t0); mbBkOut(); }); };
+document.addEventListener('change', e => { if (e.target && e.target.id === 'mbBkF') mbBkFile(e.target.files[0]); });
+document.addEventListener('dragover', e => { const d = e.target.closest && e.target.closest('.mbk-drop'); if (d) { e.preventDefault(); d.classList.add('on'); } });
+document.addEventListener('dragleave', e => { const d = e.target.closest && e.target.closest('.mbk-drop'); if (d) d.classList.remove('on'); });
+document.addEventListener('drop', e => { const d = e.target.closest && e.target.closest('.mbk-drop'); if (!d) return; e.preventDefault(); d.classList.remove('on'); mbBkFile(e.dataTransfer.files[0]); });
+ACT['mb-bulkerr'] = () => { if (MB_BK && MB_BK.bad) downloadCSV(`일괄등록_오류행_${today()}.csv`, ['행', '이메일', '이름', '이유'], MB_BK.bad.map(r => [r.row, r.email, r.name, r.why])); };
+ACT['mb-bulkrun'] = el => { const B = MB_BK; if (!B || !B.ok || !B.ok.length || B.running) return; B.running = true; el.disabled = true; el.textContent = '등록하는 중…'; const pr = $('#mbBkOut .mbk-prog'); if (pr) { pr.hidden = false; pr.scrollIntoView({ block: 'nearest' }); }
+  const gid = new Map(S.groups.map(g => [g.name.trim().toLowerCase(), g.id])); B.newG.forEach(n => { const g = { id: uid('g'), name: n, lead: '', at: today() }; S.groups.push(g); gid.set(n.toLowerCase(), g.id); });
+  const L = B.ok; let i = 0; const d = today();
+  const step = () => { const end = Math.min(L.length, i + 500);
+    for (; i < end; i++) { const r = L[i]; S.members.push({ id: uid('m'), sid: mbSid(r.email), name: r.name, nick: r.nick, email: r.email, phone: r.phone, group: (r.grp && gid.get(r.grp.toLowerCase())) || '', grade: '정회원', joined: d, last: '', extra: r.extra, src: 'bulk', acct: { login: 'email', email: r.email, phone: r.phone, pw: '', verified: false, joined: d, links: ['email'] } }); }
+    if (pr) { pr.querySelector('i').style.width = Math.round(i / L.length * 100) + '%'; pr.querySelector('span').textContent = `${i.toLocaleString()} / ${L.length.toLocaleString()}명`; }
+    if (i < L.length) return setTimeout(step, 0);
+    logAudit(`일괄 등록 ${L.length}명${B.newG.length ? ` · 새 ${t('group')} ${B.newG.length}개` : ''}`); save(); MB_BK = null; closeModal(); UI.mbLim = 0; render(); toast(`${L.length.toLocaleString()}명을 등록했습니다. 이메일 인증번호로 로그인하도록 초대 링크를 보내 주세요.`, 'ok'); };
+  step(); };
+
+/* 대학: 학번 등록(접근코드 발급) — 한 번에 최대 5,000명, 파일(CSV)로도 */
+ACT['en-codes'] = () => { const ta = $('#enL'); if (!ta) return; const raw = ta.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean); const lines = raw.map(s => s.split(/[,\t]/).map(x => x.trim())).filter(x => /^\d{6,10}$/.test(x[0] || ''));
+  if (!lines.length) { toast('학번(숫자 6~10자리)을 줄마다 입력하세요.', 'warn'); return; } if (lines.length > MB_BULK_MAX) { toast(`한 번에 최대 ${MB_BULK_MAX.toLocaleString()}명입니다(지금 ${lines.length.toLocaleString()}줄). 나눠서 발급하세요.`, 'warn'); return; }
+  const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const mk = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b => ch[b % ch.length]).join(''); const U = S.org.type === 'univ';
+  const have = new Set(S.codes.map(c => c.sid)); const mem = new Set(S.members.flatMap(m => [m.sid, (m.extra || {}).학번]).filter(Boolean)); const gid = new Map(S.groups.map(g => [g.name, g.id])); let nm = 0, nc = 0; const add = [];
+  lines.forEach(([sid, dept]) => { const dp = (dept || '').slice(0, 20); if (!have.has(sid)) { add.push({ sid, dept: dp, code: mk(), at: today() }); have.add(sid); nc++; }
+    if (U && !mem.has(sid)) { S.members.push({ id: uid('m'), name: sid, nick: '', email: '', phone: '', sid, group: gid.get(dp) || S.groups[0]?.id || '', grade: '정회원', joined: today(), last: '', extra: { 학번: sid, 학과: dp } }); mem.add(sid); nm++; } });
+  S.codes.unshift(...add.reverse()); logAudit(`접근코드 발급 ${nc}건`); save(); render(); const skip = raw.length - lines.length;
+  toast(`${nc.toLocaleString()}건 발급했습니다${nm ? ` · 명단에 ${nm.toLocaleString()}명 추가` : ''}${lines.length - nc ? ` · 이미 발급한 ${lines.length - nc}건은 그대로` : ''}${skip > 0 ? ` · 형식이 맞지 않는 ${skip}줄은 건너뛰었습니다(학번 숫자 6~10자리)` : ''}. 학과 사무실에 배포하세요.`, skip > 0 ? 'warn' : 'ok'); };
+document.addEventListener('change', e => { if (!e.target || e.target.id !== 'enF') return; const f = e.target.files[0]; const ta = $('#enL'); if (!f || !ta) return; if (f.size > 5 * 1024 * 1024) { toast('5MB 이하 파일만 올릴 수 있습니다.', 'warn'); return; }
+  f.text().then(txt => { const R = mbCSV(txt).filter(r => /^\d{6,10}$/.test(r[0] || '')); ta.value = R.map(r => `${r[0]}, ${r[1] || ''}`).join('\n'); toast(`학번 ${R.length.toLocaleString()}줄을 읽었습니다. [접근코드 발급]을 누르세요.`, R.length ? 'ok' : 'warn'); }); });
+{ const base = VIEWS.enroll; VIEWS.enroll = (...a) => { let h = base(...a); try { h = h.replace('일괄 등록은 1회 최대 100명입니다.', `엑셀(CSV)로 한 번에 최대 ${MB_BULK_MAX.toLocaleString()}명까지 등록합니다.`)
+    .replace('CSV 양식(이름, 닉네임, 이메일, 비밀번호, 연락처, 추가정보…)으로 올리면 형식 · 중복을 검사하고 준회원으로 등록합니다.', `CSV 양식(이메일 · 이름 · ${esc(t('group'))} · 연락처 · 추가 질문)으로 올리면 형식 · 중복을 검사해 한 번에 최대 ${MB_BULK_MAX.toLocaleString()}명까지 등록합니다. 비밀번호는 받지 않습니다.`)
+    .replace('<button class="btn ink" data-act="en-codes">접근코드 발급</button>', `<div class="bar2"><button class="btn ink" data-act="en-codes">접근코드 발급</button><label class="btn mb-file">파일(CSV)에서 불러오기<input type="file" id="enF" accept=".csv,.txt,text/csv"></label><small class="mini">한 번에 최대 ${MB_BULK_MAX.toLocaleString()}명</small></div>`);
+    if (mbUniv()) h = h.replace('<div class="ch"><b>초대</b></div><p class="mini">연락처(알림톡) · 링크 · 이메일로 초대합니다.</p><div class="bar2"><button class="btn" data-act="mem-invite">초대 보내기</button>', '<div class="ch"><b>안내 · 가입 질문</b></div><p class="mini">대학은 연락처 · 이메일 초대 대신 학번 · 접근코드로 안내합니다. 가입할 때 더 물어볼 내용은 가입 추가 질문에서 정합니다.</p><div class="bar2">' + (S.codes.length ? '<button class="btn" data-act="en-copy">안내 문구 복사</button>' : '')); } catch (e) { console.error(e); } return h; }; }
+
+/* ── ③ 가입 추가 질문 편집기 ── */
+const MBQ_MAX = 6;
+const MBQ_SVG = { text: '<path d="M4 7h16M4 12h10M4 17h7"/>', choice: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/>', multi: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12.5l3 3 5-6"/>', date: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>', consent: '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>', file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>' };
+const mbqIc = k => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MBQ_SVG[k] || MBQ_SVG.text}</svg>`;
+const MBQ_TYPES = [['text', '짧은 답', '부서 · 회사명처럼 한 줄'], ['choice', '하나 고르기', '학년 · 수강 목적 중 하나'], ['multi', '여러 개 고르기', '관심 분야를 여러 개'], ['date', '날짜', '입사일 · 희망 시작일'], ['consent', '동의 체크', '사진 활용 · 안내 수신 동의'], ['file', '파일 첨부', '재직 증명 · 수료증 사본']];
+const MBQ_SUG = { univ: [['학년', 'choice', ['1학년', '2학년', '3학년', '4학년']], ['관심 분야', 'multi', ['AI · 데이터', '취업 · 진로', '어학', '창업']], ['학습 안내 메시지 수신 동의', 'consent']],
+  corp: [['부서', 'text'], ['직급', 'choice', ['사원', '대리', '과장', '차장', '부장 이상']], ['입사일', 'date']], public: [['소속', 'text'], ['직급', 'choice', ['9급', '8급', '7급', '6급', '5급 이상']], ['임용일', 'date']],
+  k12: [['학년', 'choice', ['초등', '중1', '중2', '중3', '고1', '고2', '고3']], ['다니는 학교', 'text'], ['수업 안내 문자 수신 동의', 'consent']], adult: [['수강 목적', 'choice', ['자격증', '이직 · 취업', '업무 활용', '취미']], ['알게 된 경로', 'choice', ['검색', '지인 추천', 'SNS', '광고']], ['관심 분야', 'multi', ['엑셀', '디자인', '코딩', 'AI']]],
+  lifelong: [['거주 지역(시 · 구)', 'text'], ['관심 분야', 'multi', ['인문 · 교양', '디지털', '건강 · 생활', '자격증']], ['강좌 사진 촬영 · 홍보 활용 동의', 'consent']], voc: [['훈련 참여 유형', 'choice', ['재직자', '구직자', '기타']], ['국민내일배움카드', 'choice', ['있음', '없음', '발급 신청 중']], ['희망 훈련 시작일', 'date']] };
+/* 개인정보보호법: 고유식별정보(제24조) · 민감정보(제23조)는 가입 질문으로 받지 않는다 — 차단. 일반 개인정보는 최소 수집 경고 */
+const MBQ_BLOCK = [[/주민\s*(등록)?\s*번호|외국인\s*등록|여권|운전\s*면허/, '고유식별정보(주민등록번호 · 여권 · 운전면허 · 외국인등록번호)는 법령 근거 없이 받을 수 없습니다.'],
+  [/건강|병력|질병|질환|장애|복용|진단명|임신|혈액형/, '건강 정보는 민감정보라 가입 질문으로 받을 수 없습니다.'], [/종교|신앙|정치|정당|노조|노동조합|사상|성적\s*(지향|취향)|성생활|범죄|전과|유전|인종|민족/, '민감정보(종교 · 정치 · 범죄 경력 등)는 받을 수 없습니다.'],
+  [/카드\s*번호|계좌|비밀\s*번호|password|패스워드/i, '카드 · 계좌 · 비밀번호는 질문으로 받지 않습니다(결제는 결제대행사가 처리합니다).']];
+const MBQ_WARN = [[/이름|성명|실명/, '이름은 수료증 · 환불이 필요할 때 따로 받습니다. 꼭 필요한지 확인하세요.'], [/연락처|전화|휴대폰|핸드폰/, '휴대폰 번호는 알림톡 신청 때 따로 받습니다. 꼭 필요한지 확인하세요.'], [/이메일|메일\s*주소/, '이메일은 가입 수단으로 이미 받습니다.'],
+  [/주소|거주지/, '상세 주소 대신 시 · 구까지만 받는 것을 권장합니다.'], [/생년월일|나이|출생/, '생년월일은 고용보험 환급 훈련처럼 꼭 필요한 과정에서만 받으세요.'], [/성별/, '성별은 꼭 필요한 경우에만 받으세요.']];
+function mbqCheck(x) { const s = String(x.q || ''); for (const [re, m] of MBQ_BLOCK) if (re.test(s)) return { lv: 'bad', m };
+  if (mbUniv()) { if (/^(학번|학과)$/.test(s.trim())) return { lv: 'bad', m: '학번 · 학과는 대학 가입 화면에 기본으로 있습니다.' }; if (/이름|성명|연락처|전화|휴대폰|이메일/.test(s)) return { lv: 'bad', m: '대학은 개인정보 최소 수집 원칙에 따라 이름 · 연락처 · 이메일을 받지 않습니다.' }; }
+  for (const [re, m] of MBQ_WARN) if (re.test(s)) return { lv: 'warn', m }; return null; }
+const MBQ = { list: [], hid: [], editAns: false, dirty: false, tab: 'ed', dev: 'pc', drag: null };
+const mbqBuiltIn = x => mbUniv() && ['학번', '학과'].includes(String(x.q || '').trim()); /* 대학 가입 화면에 기본으로 있는 칸 — 편집 목록에서 숨기고 저장 때 그대로 둔다 */
+const mbqMax = () => MBQ_MAX - MBQ.hid.length;
+const mbqClone = L => L.map(x => ({ q: x.q, type: MB_QT[x.type] ? x.type : 'text', req: !!x.req, opts: (x.opts || []).slice(), help: x.help || '', lock: !!(x.q && mbAnsLocked(x.q)), orig: x.q }));
+function mbqCard(x, i) { const c = mbqCheck(x); const L = x.lock; const opt = x.type === 'choice' || x.type === 'multi';
+  return `<li class="mbq-c ${L ? 'lock' : ''} ${c ? c.lv : ''}" data-i="${i}" draggable="true">
+    <div class="mbq-ch"><span class="mbq-grip" title="끌어서 순서 바꾸기" aria-hidden="true"><i></i><i></i><i></i></span><b class="mbq-n">${i + 1}</b><span class="mbq-tt">${mbqIc(x.type)}${esc(MB_QT[x.type])}</span><span class="sp"></span>
+      <button type="button" class="mbq-ib" data-act="mbq-mv" data-v="${i}:-1" ${i ? '' : 'disabled'} aria-label="${i + 1}번 질문 위로">▲</button><button type="button" class="mbq-ib" data-act="mbq-mv" data-v="${i}:1" ${i < MBQ.list.length - 1 ? '' : 'disabled'} aria-label="${i + 1}번 질문 아래로">▼</button>
+      <button type="button" class="mbq-ib del" data-act="mbq-del" data-v="${i}" ${L ? 'disabled title="답변이 있어 지울 수 없습니다"' : ''} aria-label="${i + 1}번 질문 지우기">${ic('x', 16)}</button></div>
+    <label class="fl mbq-q"><span>${x.type === 'consent' ? '동의 문구' : '질문'}</span><input data-mbq="q" data-i="${i}" maxlength="30" value="${esc(x.q)}" placeholder="${x.type === 'consent' ? '예: 교육 사진 촬영 · 홍보 활용에 동의합니다' : '예: ' + (x.type === 'date' ? '입사일' : x.type === 'file' ? '재직 증명서' : opt ? '관심 분야' : '소속 부서')}" ${L ? 'readonly' : ''}></label>
+    ${opt ? `<div class="mbq-opts" aria-label="선택지">${x.opts.map((o, k) => `<span class="mbq-o">${esc(o)}${L ? '' : `<button type="button" data-act="mbq-odel" data-v="${i}:${k}" aria-label="선택지 ${esc(o)} 지우기">${ic('x', 12)}</button>`}</span>`).join('')}${L || x.opts.length >= 10 ? '' : `<input data-mbq="opt" data-i="${i}" maxlength="20" placeholder="${x.opts.length ? '선택지 더 넣기' : '선택지 입력 후 Enter'}" aria-label="선택지 추가">`}</div>` : ''}
+    <label class="fl mbq-help"><span>설명 <small>(선택)</small></span><input data-mbq="help" data-i="${i}" maxlength="60" value="${esc(x.help)}" placeholder="가입 화면 질문 아래에 작게 보입니다"></label>
+    <div class="mbq-cf"><label class="mbq-ty"><span class="sr">유형</span><select data-mbq="type" data-i="${i}" ${L ? 'disabled' : ''} aria-label="질문 유형">${MBQ_TYPES.map(([k, l]) => `<option value="${k}" ${x.type === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <span class="sp"></span><span class="mbq-rl">필수</span><button type="button" class="sl-sw ${x.req ? 'on' : ''}" role="switch" aria-checked="${x.req}" aria-label="${i + 1}번 질문 필수" data-act="mbq-req" data-v="${i}"><i></i></button></div>
+    <p class="mbq-msg" role="${c && c.lv === 'bad' ? 'alert' : 'status'}">${c ? esc(c.m) : L ? '이미 답변이 있어 질문 · 유형은 바꿀 수 없습니다(순서 · 필수 · 설명은 바꿀 수 있음).' : ''}</p></li>`; }
+function mbqAddHTML() { if (MBQ.list.length >= mbqMax()) return `<p class="mbq-full">질문은 최대 ${MBQ_MAX}개입니다. 꼭 필요한 질문만 남기면 가입을 끝까지 하는 분이 늘어납니다.</p>`;
+  const sug = (MBQ_SUG[S.org.type] || []).filter(([q]) => !MBQ.list.some(x => x.q === q));
+  return `<div class="mbq-add"><b>질문 추가</b><small>어떤 형식으로 받을까요?</small><div class="mbq-types">${MBQ_TYPES.map(([k, l, d]) => `<button type="button" class="mbq-t" data-act="mbq-add" data-v="${k}"><span class="mbq-ti">${mbqIc(k)}</span><b>${l}</b><small>${d}</small></button>`).join('')}</div>
+    ${sug.length ? `<div class="mbq-sug"><small>${esc(TYPES[S.org.type]?.name || '')} 추천</small>${sug.map(([q, k], i) => `<button type="button" class="mbq-s" data-act="mbq-sug" data-v="${esc(q)}">+ ${esc(q)} <em>${esc(MB_QT[k])}</em></button>`).join('')}</div>` : ''}</div>`; }
+function mbqListHTML() { return `<ol class="mbq-list" aria-label="가입 추가 질문 ${MBQ.list.length}개">${MBQ.list.map(mbqCard).join('')}</ol>${MBQ.list.length ? '' : '<p class="mbq-empty">아직 추가 질문이 없습니다. 아래에서 형식을 골라 추가하세요. 질문이 없으면 가입 화면이 가장 간단합니다.</p>'}${mbqAddHTML()}`; }
+function mbqDraw(focus) { const w = $('#mbqEd'); if (!w) return; const b = w.querySelector('.mbq-edin'); if (b) b.innerHTML = mbqListHTML(); const n = w.querySelector('.mbq-cnt'); if (n) n.textContent = `${MBQ.list.length}/${mbqMax()}`;
+  if (focus) { const el = w.querySelector(focus); if (el) { el.focus(); el.scrollIntoView({ block: 'nearest' }); } } mbqPost(); }
+let MBQ_T = 0;
+function mbqPost(fi) { clearTimeout(MBQ_T); MBQ_T = setTimeout(() => { const f = $('#mbqFrame'); if (!f || !f.contentWindow) return; try { f.contentWindow.postMessage({ t: 'mbq', q: MBQ.list.filter(x => x.q.trim()).map(({ q, type, req, opts, help }) => ({ q, type, req, opts, help })), focus: fi }, location.origin); } catch (e) { } }, 120); }
+function mbqFit() { const box = $('#mbqEd .mbq-frame'); const f = $('#mbqFrame'); if (!box || !f) return; const W = MBQ.dev === 'm' ? 390 : 1100; const s = Math.min(1, box.clientWidth / W); f.style.width = W + 'px'; f.style.height = Math.round(box.clientHeight / s) + 'px'; f.style.transform = `scale(${s})`; }
+ACT['mem-q'] = () => { mbEnsure(); const A = S.settings.acct; closeModal(); if (typeof slClose === 'function') slClose(); MBQ.hid = A.extraQ.filter(mbqBuiltIn); MBQ.list = mbqClone(A.extraQ.filter(x => !mbqBuiltIn(x))); MBQ.dev = innerWidth < 1000 ? 'm' : 'pc'; MBQ.editAns = !!A.editAns; MBQ.dirty = false; MBQ.tab = 'ed';
+  const old = $('#mbqEd'); if (old) old.remove(); const w = document.createElement('div'); w.className = 'mbq-wrap'; w.id = 'mbqEd'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', '가입 추가 질문');
+  w.innerHTML = `<div class="mbq"><header class="mbq-h"><div class="mbq-hl"><b>가입 추가 질문 <span class="mbq-cnt">${MBQ.list.length}/${mbqMax()}</span></b><small>가입할 때 ${esc(t('learner'))}에게 더 물어볼 내용입니다${mbUniv() ? '(학번 · 학과는 기본으로 받습니다)' : ''}. 오른쪽이 실제 가입 화면입니다.</small></div><span class="sp"></span><button type="button" class="btn" data-act="mbq-x">닫기</button><button type="button" class="btn pri" data-act="mbq-save">저장</button></header>
+    <div class="mbq-seg seg2" role="tablist"><button type="button" role="tab" class="on" aria-selected="true" data-act="mbq-tab" data-v="ed">질문 편집</button><button type="button" role="tab" aria-selected="false" data-act="mbq-tab" data-v="pv">가입 화면 미리보기</button></div>
+    <div class="mbq-body" data-tab="ed"><section class="mbq-ed" aria-label="질문 편집"><div class="mbq-note">${ic('check', 16)}<span><b>꼭 필요한 것만 물어보세요.</b> 주민등록번호 · 건강 · 종교처럼 민감한 정보는 받을 수 없게 막아 둡니다.</span></div><div class="mbq-edin"></div>
+      <label class="ckl mbq-ea"><input type="checkbox" id="mbqEA" ${MBQ.editAns ? 'checked' : ''}> ${esc(t('learner'))}이 마이페이지에서 답변을 보고 고칠 수 있게 하기</label></section>
+      <section class="mbq-pv" aria-label="가입 화면 미리보기"><div class="mbq-pvh"><b>가입 화면 미리보기</b><div class="mbq-dev" role="group" aria-label="화면 크기">${[['pc', 'PC'], ['m', '휴대폰']].map(([k, l]) => `<button type="button" class="${MBQ.dev === k ? 'on' : ''}" aria-pressed="${MBQ.dev === k}" data-act="mbq-dev" data-v="${k}">${l}</button>`).join('')}</div></div>
+        <div class="mbq-frame ${MBQ.dev}"><iframe id="mbqFrame" title="학습자 가입 화면 미리보기" src="learner.html?preview=1&pvjoin=1#join"></iframe></div><small class="mini">학습자 사이트의 실제 가입 화면입니다. 입력해 볼 수 있지만 가입되지는 않습니다. 저장해야 학습자 사이트에 반영됩니다.</small></section></div></div>`;
+  document.body.appendChild(w); mbqDraw(); $('#mbqFrame').addEventListener('load', () => { mbqFit(); mbqPost(); }); requestAnimationFrame(mbqFit); const f = w.querySelector('input,button.mbq-t'); if (f) f.focus({ preventScroll: true }); };
+addEventListener('resize', () => { if ($('#mbqEd')) mbqFit(); });
+const mbqClose = () => { const w = $('#mbqEd'); if (w) w.remove(); };
+ACT['mbq-x'] = () => { if (MBQ.dirty && !confirm('저장하지 않은 변경이 있습니다. 닫을까요?')) return; mbqClose(); };
+ACT['mbq-tab'] = el => { MBQ.tab = el.dataset.v; const w = $('#mbqEd'); w.querySelector('.mbq-body').dataset.tab = MBQ.tab; w.querySelectorAll('[data-act="mbq-tab"]').forEach(b => { const on = b.dataset.v === MBQ.tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); if (MBQ.tab === 'pv') { mbqFit(); mbqPost(); } };
+ACT['mbq-dev'] = el => { MBQ.dev = el.dataset.v; const w = $('#mbqEd'); const fr = w.querySelector('.mbq-frame'); fr.className = 'mbq-frame ' + MBQ.dev; w.querySelectorAll('[data-act="mbq-dev"]').forEach(b => { const on = b.dataset.v === MBQ.dev; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); mbqFit(); };
+ACT['mbq-add'] = el => { if (MBQ.list.length >= mbqMax()) return; const k = el.dataset.v; MBQ.list.push({ q: '', type: k, req: k === 'consent' ? false : false, opts: [], help: '', lock: false }); MBQ.dirty = true; mbqDraw(`.mbq-c[data-i="${MBQ.list.length - 1}"] [data-mbq="q"]`); };
+ACT['mbq-sug'] = el => { if (MBQ.list.length >= mbqMax()) return; const s = (MBQ_SUG[S.org.type] || []).find(([q]) => q === el.dataset.v); if (!s) return; MBQ.list.push({ q: s[0], type: s[1], req: false, opts: (s[2] || []).slice(), help: '', lock: false }); MBQ.dirty = true; mbqDraw(`.mbq-c[data-i="${MBQ.list.length - 1}"] [data-mbq="q"]`); };
+ACT['mbq-del'] = el => { const i = +el.dataset.v; const x = MBQ.list[i]; if (!x || x.lock) return; MBQ.list.splice(i, 1); MBQ.dirty = true; mbqDraw(); toast(`「${x.q || '빈 질문'}」을 지웠습니다. 저장해야 반영됩니다.`); };
+ACT['mbq-mv'] = el => { const [i, d] = el.dataset.v.split(':').map(Number); const j = i + d; if (j < 0 || j >= MBQ.list.length) return; const L = MBQ.list; [L[i], L[j]] = [L[j], L[i]]; MBQ.dirty = true; mbqDraw(`.mbq-c[data-i="${j}"] [data-act="mbq-mv"][data-v="${j}:${d}"]`); };
+ACT['mbq-req'] = el => { const x = MBQ.list[+el.dataset.v]; if (!x) return; x.req = !x.req; MBQ.dirty = true; el.classList.toggle('on', x.req); el.setAttribute('aria-checked', x.req); mbqPost(+el.dataset.v); };
+ACT['mbq-odel'] = el => { const [i, k] = el.dataset.v.split(':').map(Number); const x = MBQ.list[i]; if (!x || x.lock) return; x.opts.splice(k, 1); MBQ.dirty = true; mbqDraw(`.mbq-c[data-i="${i}"] [data-mbq="opt"]`); };
+const mbqOptAdd = el => { const i = +el.dataset.i; const x = MBQ.list[i]; const v = el.value.replace(/,/g, ' ').trim().slice(0, 20); if (!x || !v) return false; if (x.opts.includes(v)) { toast('이미 있는 선택지입니다.', 'warn'); return false; } if (x.opts.length >= 10) return false; x.opts.push(v); MBQ.dirty = true; mbqDraw(`.mbq-c[data-i="${i}"] [data-mbq="opt"]`); return true; };
+document.addEventListener('keydown', e => { const el = e.target; if (!el || !el.closest || !el.closest('#mbqEd')) return;
+  if (e.key === 'Escape') { e.preventDefault(); ACT['mbq-x'](); return; }
+  if (e.key === 'Enter' && el.dataset.mbq === 'opt') { e.preventDefault(); mbqOptAdd(el); }
+  if (e.key === 'Backspace' && el.dataset.mbq === 'opt' && !el.value) { const i = +el.dataset.i; const x = MBQ.list[i]; if (x && x.opts.length) { x.opts.pop(); MBQ.dirty = true; mbqDraw(`.mbq-c[data-i="${i}"] [data-mbq="opt"]`); } } }, true);
+document.addEventListener('input', e => { const el = e.target; if (!el || !el.dataset || !el.dataset.mbq || !el.closest('#mbqEd')) return; const i = +el.dataset.i; const x = MBQ.list[i]; if (!x) return;
+  if (el.dataset.mbq === 'q') { x.q = el.value; const c = mbqCheck(x); const li = el.closest('.mbq-c'); li.classList.toggle('bad', !!c && c.lv === 'bad'); li.classList.toggle('warn', !!c && c.lv === 'warn'); li.querySelector('.mbq-msg').textContent = c ? c.m : ''; }
+  else if (el.dataset.mbq === 'help') x.help = el.value; else if (el.dataset.mbq === 'opt') { if (/,/.test(el.value)) { el.value.split(',').forEach((v, k, A) => { if (k < A.length - 1) { el.value = v; mbqOptAdd(el); } }); return; } return; }
+  MBQ.dirty = true; mbqPost(i); });
+document.addEventListener('change', e => { const el = e.target; if (!el || !el.closest || !el.closest('#mbqEd')) return;
+  if (el.dataset.mbq === 'type') { const x = MBQ.list[+el.dataset.i]; if (!x || x.lock) return; x.type = el.value; if (!['choice', 'multi'].includes(x.type)) x.opts = x.opts; MBQ.dirty = true; mbqDraw(`.mbq-c[data-i="${el.dataset.i}"] [data-mbq="type"]`); }
+  if (el.id === 'mbqEA') { MBQ.editAns = el.checked; MBQ.dirty = true; }
+  if (el.dataset.mbq === 'opt' && el.value.trim()) mbqOptAdd(el); });
+/* 끌어서 순서 바꾸기(마우스) — 키보드 · 휴대폰은 ▲▼ 버튼 */
+document.addEventListener('dragstart', e => { const li = e.target.closest && e.target.closest('#mbqEd .mbq-c'); if (!li) return; if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement && document.activeElement.tagName) && li.contains(document.activeElement)) { e.preventDefault(); return; } MBQ.drag = +li.dataset.i; li.classList.add('drag'); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(MBQ.drag)); } catch (x) { } });
+document.addEventListener('dragover', e => { const li = e.target.closest && e.target.closest('#mbqEd .mbq-c'); if (!li || MBQ.drag == null) return; e.preventDefault(); document.querySelectorAll('#mbqEd .mbq-c.over').forEach(x => x !== li && x.classList.remove('over')); li.classList.add('over'); });
+document.addEventListener('drop', e => { const li = e.target.closest && e.target.closest('#mbqEd .mbq-c'); if (!li || MBQ.drag == null) return; e.preventDefault(); const from = MBQ.drag, to = +li.dataset.i; MBQ.drag = null; if (from === to) { mbqDraw(); return; } const [x] = MBQ.list.splice(from, 1); MBQ.list.splice(to, 0, x); MBQ.dirty = true; mbqDraw(); toast(`${from + 1}번 질문을 ${to + 1}번으로 옮겼습니다.`); });
+document.addEventListener('dragend', () => { if (MBQ.drag != null) { MBQ.drag = null; document.querySelectorAll('#mbqEd .mbq-c.drag,#mbqEd .mbq-c.over').forEach(x => x.classList.remove('drag', 'over')); } });
+ACT['mbq-save'] = () => { const A = S.settings.acct; const out = []; const bad = (i, m) => { toast(`${i + 1}번 질문: ${m}`, 'warn'); mbqDraw(`.mbq-c[data-i="${i}"] [data-mbq="q"]`); return false; };
+  for (let i = 0; i < MBQ.list.length; i++) { const x = MBQ.list[i]; const q = String(x.q || '').trim().slice(0, 30);
+    if (x.lock) { const o = A.extraQ.find(y => y.q === x.orig) || x; out.push({ q: o.q, type: o.type, req: !!x.req, opts: (o.opts || []).slice(), ...(x.help.trim() ? { help: x.help.trim().slice(0, 60) } : {}) }); continue; }
+    if (!q) return bad(i, '질문을 입력하세요(필요 없으면 지우세요).'); const c = mbqCheck({ q }); if (c && c.lv === 'bad') return bad(i, c.m);
+    if (out.some(y => y.q === q)) return bad(i, `「${q}」 질문이 중복됩니다.`); if ((x.type === 'choice' || x.type === 'multi') && x.opts.length < 2) return bad(i, '선택지를 2개 이상 넣으세요.');
+    out.push({ q, type: x.type, req: !!x.req, opts: ['choice', 'multi'].includes(x.type) ? x.opts.slice(0, 10) : [], ...(x.help.trim() ? { help: x.help.trim().slice(0, 60) } : {}) }); }
+  A.extraQ = [...MBQ.hid, ...out].slice(0, MBQ_MAX); A.editAns = MBQ.editAns; mbJoinSync(); logAudit(`가입 추가 질문 저장 ${A.extraQ.length}개`); save(); MBQ.dirty = false; mbqClose(); render(); toast(`가입 추가 질문 ${out.length}개를 저장했습니다. 학습자 사이트를 다시 게시하면 반영됩니다.`, 'ok'); };
+/* 이전 데이터 보정: 유형이 없거나 모르는 값이면 짧은 답 */
+{ const base = mbEnsure; mbEnsure = (...a) => { base(...a); try { const A = S && S.settings && S.settings.acct; if (A) A.extraQ.forEach(x => { if (!MB_QT[x.type]) x.type = 'text'; }); } catch (e) { } }; }

@@ -62,7 +62,7 @@ const TERMS = {
   univ: { learner: '학생', cls: '교과목', group: '학과', teacher: '교수', done: '이수', site: '학습 포털', fee: '수강료' },
   k12: { learner: '원생', cls: '수업', group: '반', teacher: '강사', done: '수료', site: '학원 홈페이지', fee: '수강료' },
   adult: { learner: '수강생', cls: '강좌', group: '기수', teacher: '강사', done: '수료', site: '홈페이지', fee: '수강료' },
-  lifelong: { learner: '학습자', cls: '강좌', group: '기수', teacher: '강사', done: '수료', site: '평생교육원 홈페이지', fee: '학습비' },
+  lifelong: { learner: '수강생', cls: '강좌', group: '기수', teacher: '강사', done: '수료', site: '평생교육원 홈페이지', fee: '학습비' },
   voc: { learner: '훈련생', cls: '훈련과정', group: '훈련반', teacher: '훈련교사', done: '수료', site: '훈련기관 홈페이지', fee: '훈련비' }
 };
 const t = k => (TERMS[S?.org?.type] || TERMS.adult)[k] || k;

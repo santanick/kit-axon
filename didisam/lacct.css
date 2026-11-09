@@ -117,3 +117,12 @@
 .la-ago{color:var(--t-sub,var(--g600));white-space:nowrap;font-size:12px}.la-nx{border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:var(--g700,#6C6C6C);padding:4px 6px}.la-nx:hover{color:#DE0027}
 .la-iem{display:flex;align-items:center;gap:6px;justify-content:center;padding:48px 0;color:var(--t-sub,var(--g600))}
 .la.la-inb .in.narrow,body.la26 section.la.la-inb .in.narrow{max-width:760px}.la-ib .lbtn{white-space:nowrap}
+/* v36 가입 추가 질문 유형(하나 고르기 · 여러 개 고르기 · 날짜 · 동의) */
+.la-q .la-qh{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin:2px 0 4px}
+.la-q fieldset.la-qo{border:0;padding:0;margin:0 0 12px;min-width:0}
+.la-q fieldset.la-qo legend{font-size:14px;font-weight:600;padding:0;margin-bottom:6px}
+.la-qopts{display:flex;flex-wrap:wrap;gap:8px}
+.la-qopts .ckl{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:14px}
+.la-qopts .ckl:has(input:checked){border-color:var(--mag,#5C74F6);background:rgba(92,116,246,.08)}
+.la-qc{margin:0 0 12px}.la-qc .ckl{display:flex;align-items:flex-start;gap:8px;min-height:44px;padding-top:10px;font-size:14px}
+.la-q input[type=date]{min-height:44px}
