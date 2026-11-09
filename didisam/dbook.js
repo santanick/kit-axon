@@ -19,11 +19,11 @@ function bkAIChapter(topic, title, k = 0, last = false, sec = null) {
     bkB('flip', { title: '펼쳐서 확인하기', cards: [...S1.map(s => ({ f: `「${s.h}」 한 문장 요약`, b: String(s.body).split(/(?<=[.!?다])\s/)[0].slice(0, 160) })), ...pts.slice(0, 2).map((p, i) => ({ f: `핵심 ${i + 1}`, b: p }))].slice(0, 4) }),
     bkB('quiz', { title: '확인 문제', pts: 10, qs: AI.questions(tp, 2, '보통', k % 2 ? ['ox', 'mc'] : ['mc', 'ox']).map(bkQ) })];
   if (k === 1 && steps.length >= 3) bl.push(bkB('order', { title: '실습 순서 맞추기', steps: steps.slice(0, 5), pts: 10 }));
-  if (last) { if (steps.length) bl.push(bkB('check', { title: '따라 하기', steps: steps.slice(0, 5) })); bl.push(bkB('write', { prompt: `「${tp}」을(를) 내 전공 · 업무에 적용하는 방법을 3문장으로 쓰세요.`, pts: 20, guide: '적용 대상 · 방법 · 기대 효과가 드러나면 좋습니다.' })); }
+  if (last) { if (steps.length) bl.push(bkB('check', { title: '따라 하기', steps: steps.slice(0, 5) })); bl.push(bkB('write', { prompt: `「${tp}」${AI.j(tp, '을')} 내 전공 · 업무에 적용하는 방법을 3문장으로 쓰세요.`, pts: 20, guide: '적용 대상 · 방법 · 기대 효과가 드러나면 좋습니다.' })); }
   return { id: uid('ch'), title: nm.slice(0, 60), blocks: bl };
 }
 function bkAIDraft(topic, n = 3, o = {}) {
-  const tp = clean(topic) || '핵심 개념'; const M = AI.material(tp); const S = M.secs; const b = bkNew(`${tp} 디지털북`, { ...o, desc: `${tp}을(를) 읽고 · 보고 · 풀고 · 쓰며 익히는 인터랙티브 교재입니다.` });
+  const tp = clean(topic) || '핵심 개념'; const M = AI.material(tp); const S = M.secs; const b = bkNew(`${tp} 디지털북`, { ...o, desc: `${tp}${AI.j(tp, '을')} 읽고 · 보고 · 풀고 · 쓰며 익히는 인터랙티브 교재입니다.` });
   b.chs = Array.from({ length: n }, (_, k) => { const sec = S[k % S.length]; return bkAIChapter(tp, `${sec.h}${k >= S.length ? ' 심화' : ''}`, k, k === n - 1, sec); });
   b.chs[0].blocks.unshift(bkB('key', { tone: 'tip', title: '학습 목표', body: M.goals.slice(0, 4).map(g => '- ' + g).join('\n') })); return bkNorm(b);
 }
@@ -156,7 +156,7 @@ ACT['bk-open'] = el => bkOpen(el.dataset.v, el.dataset.k);
 ACT['bk-back'] = () => { UI.bkId = null; render(); };
 ACT['bk-ch'] = el => { UI.bkCh = +el.dataset.v; render(); };
 ACT['bk-new'] = () => { const b = bkNorm(bkNew('새 디지털북')); b.chs = [{ id: uid('ch'), title: '1단원', blocks: [bkB('text', { body: '# 1단원\n여기에 내용을 입력하세요.' })] }]; bkNorm(b); bkL().push(b); logAudit(`디지털북 추가 — ${b.title}`); save(); bkOpen(b.id); ACT['bk-set']({ dataset: { v: b.id } }); };
-ACT['bk-fromcls'] = () => { const CS = S.classes.filter(c => (c.curriculum || []).length); if (!CS.length) { toast(`먼저 ${t('cls')}을(를) 만들어 주세요.`, 'warn'); return; }
+ACT['bk-fromcls'] = () => { const CS = S.classes.filter(c => (c.curriculum || []).length); if (!CS.length) { toast(`먼저 ${t('cls')}${AI.j(t('cls'), '을')} 만들어 주세요.`, 'warn'); return; }
   modal('과정으로 디지털북 만들기', `<p class="mini">과정의 '장'(없으면 차시)으로 단원을 나눕니다. 강의자료는 본문 · 핵심 카드 · 실습 체크로 옮기고, 영상 · 퀴즈 · 시험 · 과제 · 설문은 연결합니다 — 학습자가 책에서 풀면 과정 진도 · 점수에도 그대로 기록됩니다.</p>
     <div class="chk one">${CS.map((c, i) => `<label><input type="radio" name="c" value="${c.id}" ${i ? '' : 'checked'}> <b>${esc(c.name)}</b> <small class="mini">${c.curriculum.length}항목 · ${c.curriculum.filter(x => ['video', 'quiz', 'exam', 'assign'].includes(x.type)).length}개 연결</small></label>`).join('')}</div>`,
     [{ id: 'x', label: '취소' }, { id: 'ok', label: '만들기', kind: 'pri', run: w => { const c = C(fv(w, 'c') || (w.querySelector('[name=c]:checked') || {}).value); if (!c) return false; const b = bkFromCourse(c); bkL().push(b); logAudit(`디지털북 생성(과정) — ${b.title}`); save(); bkOpen(b.id); toast(`「${b.title}」 ${b.chs.length}단원을 만들었습니다. 미리보기로 확인한 뒤 게시하세요.`, 'ok'); } }], true); };

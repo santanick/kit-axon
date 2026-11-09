@@ -211,7 +211,7 @@
     return null;
   }
   function classes(d, s, th, T, alt) { const L = (d.ids || []).map(id => (S.classes || []).find(c => c.id === id)).filter(Boolean);
-    if (!L.length) return hint('hp-cls', `전체 공개한 ${t('cls')}이 이곳에 카드로 표시됩니다.`);
+    if (!L.length) return hint('hp-cls', `전체 공개한 ${tj('cls', '이')} 이곳에 카드로 표시됩니다.`);
     const n = L.length; const one = n === 1;
     const card = (c, k) => { const meta = [perOf(c), lesOf(c) ? `${lesOf(c)}차시` : ''].filter(Boolean);
       return `<a class="hp-cc${one ? ' one' : ''}" href="#p-c-${E(c.id)}">${cover(c, k, th, T, one)}<div class="hp-ccb"><h3>${E(c.name)}</h3>${meta.length ? `<p class="hp-cm">${meta.map(m => `<span>${E(m)}</span>`).join('')}</p>` : ''}<p class="hp-cp"><b>${E(priceOf(c))}</b><span class="hp-more">자세히 ${svg('arrow', 15, 2.2)}</span></p></div></a>`; };

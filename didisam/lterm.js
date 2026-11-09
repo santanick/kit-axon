@@ -14,7 +14,20 @@
   function apply() { if (!document.body || document.body.classList.contains('lapp')) return; if (typeof LR === 'undefined' || !LR || !LR.site) return;
     const [learn, find] = labels(); const tb = document.querySelector('nav.tabbar'); if (tb) { const A = [...tb.querySelectorAll('a')]; const my = A.find(a => /^#(login\/)?my$/.test(a.getAttribute('href') || '')); if (my) setTxt(my.querySelector('span'), learn); const fi = A[1] && A[1] !== my ? A[1] : null; if (fi) setTxt(fi.querySelector('span'), find); }
     const back = document.querySelector('.ap-back [data-ap="modern"]'); const n = tutor(); if (back && n) { const tn = [...back.childNodes].filter(x => x.nodeType === 3).pop(); const t = ` ${n} 앱 화면으로 보기`; if (tn && tn.nodeValue !== t) tn.nodeValue = t; } }
-  let q = false; const kick = () => { if (q) return; q = true; requestAnimationFrame(() => { q = false; apply(); }); };
+  /* v35 F2b: 학습자 화면의 일반 명칭 '클래스'를 기관 유형 용어(SITE().terms.cls — 교과목 · 수업 · 강좌 · 교육과정 · 훈련과정)로 바꾼다.
+     강좌 이름에 '클래스'가 들어간 경우(예: 원데이 클래스)는 그 글을 건드리지 않는다. 조사는 받침에 맞춘다. */
+  const JP = { 가: ['이', '가'], 이: ['이', '가'], 를: ['을', '를'], 을: ['을', '를'], 는: ['은', '는'], 은: ['은', '는'], 와: ['과', '와'], 과: ['과', '와'], 로: ['으로', '로'], 으로: ['으로', '로'] };
+  const bat = (w, ro) => { const c = String(w).slice(-1).charCodeAt(0) - 0xAC00; if (c < 0 || c > 11171) return false; const j = c % 28; return ro ? j !== 0 && j !== 8 : j !== 0; };
+  function clsWord() {
+    try { const T = SITE() && SITE().terms; const w = T && T.cls; if (!w || w === '클래스') return null; const names = ((SITE().classes || []).map(c => c.name || '')).concat(((typeof SHOP === 'function' && SHOP() && SHOP().classes) || []).map(c => c.name || '')).filter(n => n.includes('클래스')); return { w, names }; } catch (e) { return null; } }
+  function fixCls() { const X = clsWord(); if (!X || !document.body) return; const re = /클래스(으로|로|가|이|를|을|는|은|와|과)?(?![가-힣])|클래스(?=[가-힣])/g;
+    const fix = v => v.replace(re, (m, p) => { if (!p) return X.w; const P = JP[p]; return X.w + (bat(X.w, p === '로' || p === '으로') ? P[0] : P[1]); });
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n => !n.nodeValue.includes('클래스') || (n.parentElement && n.parentElement.closest('script,style,textarea,[contenteditable]')) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }); let n; const L = [];
+    while ((n = w.nextNode())) L.push(n);
+    L.forEach(n => { const v = n.nodeValue; if (X.names.some(nm => nm && v.includes(nm))) return; const x = fix(v); if (x !== v) n.nodeValue = x; });
+    document.querySelectorAll('input[placeholder*="클래스"],[aria-label*="클래스"]').forEach(el => { ['placeholder', 'aria-label'].forEach(a => { const v = el.getAttribute(a); if (v && v.includes('클래스')) el.setAttribute(a, fix(v)); }); }); }
+  window.lFixClsTerm = fixCls;
+  let q = false; const kick = () => { if (q) return; q = true; requestAnimationFrame(() => { q = false; apply(); try { fixCls(); } catch (e) { } }); };
   const start = () => { new MutationObserver(kick).observe(document.body, { childList: true, subtree: true }); kick(); };
   if (document.body) start(); else addEventListener('DOMContentLoaded', start);
   addEventListener('hashchange', kick);

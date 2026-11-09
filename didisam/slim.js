@@ -8,10 +8,10 @@
     k12: ['crmstu', 'crmatt', 'crmex', 'class', 'clib', 'crmbill', 'message', 'site'],
     univ: ['class', 'clib', 'members', 'enroll', 'board', 'academic', 'site'],
     univ_lms: null, /* 학사 LMS는 업무 단위 3단 메뉴(ulms.js)를 그대로 쓰고, 아래 slimLms에서 줄인다 */
-    corp: ['class', 'clib', 'members', 'enroll', 'compliance', 'cpl', 'board'],
-    public: ['class', 'clib', 'members', 'enroll', 'attend', 'cert', 'board'],
+    corp: ['class', 'clib', 'members', 'enroll', 'compliance', 'cpl', 'board', 'site'],
+    public: ['class', 'clib', 'members', 'enroll', 'attend', 'cert', 'board', 'site'],
     lifelong: ['class', 'clib', 'members', 'attend', 'cert', 'lifelong', 'cpl', 'site'],
-    voc: ['class', 'clib', 'members', 'attend', 'cert', 'hrd', 'cpl', 'message']
+    voc: ['class', 'clib', 'members', 'attend', 'cert', 'hrd', 'cpl', 'message', 'site']
   };
   const essKey = () => S && S.org ? (S.org.type === 'univ' && S.org.ed === 'lms' ? 'univ_lms' : S.org.type) : '';
   window.slimEss = () => { const k = essKey(); const E = ESS[k]; if (E) return E.filter(id => MENU[id]); /* 학사 LMS: 지금 켜진 탭 중 앞의 7개 */
@@ -20,25 +20,32 @@
     Object.keys(S.nav.tabs).forEach(w => { const A = S.nav.tabs[w] || []; A.forEach(x => { x.on = E.includes(x.id); }); A.sort((a, b) => (E.indexOf(a.id) + 1 || 99) - (E.indexOf(b.id) + 1 || 99)); });
     S.slim34 = 1; }
   window.slimApply = slimApply;
+  /* v35 F2b: 모든 유형에서 학습자 사이트 게시로 갈 수 있게 '홈페이지(site)'를 필수 메뉴에 둔다. 이미 저장된 기관(S.slim34 있음)은 한 번만 켠다 */
+  function siteOn35() { if (!S || !S.org || !S.nav || !S.nav.tabs || S.site35 || !MENU.site) return; const k = essKey(); if (k !== 'univ_lms') { if (typeof navAdd === 'function') navAdd('site', true); Object.values(S.nav.tabs).forEach(L => (L || []).forEach(x => { if (x.id === 'site') x.on = true; })); } S.site35 = 1; }
+  { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { siteOn35(); } catch (e) { console.error(e); } return r; }; }
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org && !S.slim34) { const old = !!S.org.created && S.org.created < '2026-11-08'; slimApply(); if (old) UI.slimNote = 1; save(); } } catch (e) { console.error(e); } return r; }; }
   if (typeof createOrg === 'function') { const base = createOrg; createOrg = (...a) => { const r = base(...a); try { if (S && S.org) { slimApply(); save(); render(); } } catch (e) { console.error(e); } return r; }; }
 
+  /* v35 F2b: 메뉴 찾기에서 '게시' · '공개' · '학습자 사이트'로도 홈페이지(게시) 화면이 나오게 한다(꺼져 있어도 결과에 보임) */
+  { const SYN = { site: '게시 게시하기 공개 공개하기 학습자 사이트 학습 사이트 포털 홈페이지 사이트 열기', clib: '자료 영상 교안 퀴즈 업로드 디지털북', enroll: '수강 권한 배정 초대 접근코드', class: '과정 만들기 개설' };
+    const base = ACT['ux-find']; if (base) ACT['ux-find'] = (...a) => { const r = base(...a); try { const L = document.querySelector('#modal .uxfl'); if (L) { Object.entries(SYN).forEach(([id, k]) => { if (!MENU[id]) return; let b = L.querySelector(`[data-v="${id}"]`); if (!b && id === 'site') { L.insertAdjacentHTML('afterbegin', `<button type="button" role="listitem" data-act="go" data-v="site" data-k=""><b>${esc(mlabel('site'))}</b><small>학습자 사이트 · 게시</small></button>`); b = L.querySelector('[data-v="site"]'); } if (b) b.dataset.k = (b.dataset.k + ' ' + k).toLowerCase(); }); const q = document.querySelector('#modal .uxq'); if (q && q.value) q.dispatchEvent(new Event('input')); } } catch (e) { console.error(e); } return r; }; }
+
   /* 메뉴 한 줄 설명(메뉴 추가 목록 · 화면 가이드에 쓴다) — 15자 안팎 */
   const MD = {
-    class: ['과정을 만들고 운영해요', '수업 만들어줘'], journey: ['학습 경로를 묶어요', '러닝 저니 만들어줘'], diag: ['AI 진단 검사를 열어요', '진단 결과 요약해줘'],
-    library: ['영상 · 자료를 모아 편성해요', '자료 올리는 법 알려줘'], assess: ['시험 · 과제를 내고 채점해요', '검수 대기 과제 보여줘'], badge: ['배지를 만들어 줘요', '배지 만들어줘'],
-    cert: ['수료증을 발급해요', '수료 대상자 보여줘'], attend: ['출결을 기록해요', '오늘 출결 요약해줘'], book: ['교재 · 교구를 팔아요', '교재 등록해줘'],
-    members: ['명단 · 가입 승인을 봐요', '승인 대기 보여줘'], enroll: ['초대 · 일괄 등록해요', '초대 링크 만들어줘'], groups: ['반 · 팀으로 묶어요', '반 나눠줘'],
-    parents: ['보호자를 연결해요', '보호자 연결 안 된 학생'], admins: ['운영자 · 기록을 봐요', '운영자 추가해줘'], board: ['공지 · 알림을 보내요', '공지 써줘'],
-    message: ['메시지 · 알림톡을 보내요', '미접속자에게 안내해줘'], community: ['게시판을 운영해요', '미답변 질문 보여줘'], consult: ['상담을 기록해요', '상담 요약해줘'],
-    auto: ['반복 업무를 자동으로', '자동 운영 상태 보여줘'], site: ['홈페이지를 만들고 게시해요', 'AI로 홈페이지 만들어줘'], sales: ['매출 · 결제를 봐요', '이번 달 매출 요약해줘'],
-    billing: ['청구서를 보내요', '미납 청구서 보여줘'], compliance: ['법정의무교육을 관리해요', '미이수자 보여줘'], academic: ['학사 · 비교과를 관리해요', '비교과 현황 보여줘'],
-    lifelong: ['학습비 · 과정을 신고해요', '신고 대상 보여줘'], hrd: ['HRD-Net에 보고해요', 'HRD 보고 준비해줘'], org: ['기관 정보를 관리해요', '기관 정보 보여줘'],
-    conn: ['외부 서비스를 연결해요', 'Slack 연결 도와줘'], calendar: ['학사 일정을 관리해요', '이번 달 일정 보여줘'], dbook: ['디지털 교재를 만들어요', '디지털북 만들어줘'], clib: ['영상 · 교안 · 퀴즈를 모아 만들어요', '콘텐츠 라이브러리 사용법 알려줘'], lmsa: ['학기 · 교과목 · 분반을 준비해요', '학기 · 교과목 현황 보여줘'],
-    tutorial: ['튜토리얼을 만들어요', '튜토리얼 만들어줘'], docs: ['문서를 만들고 보관해요', '운영 문서 써줘'], cpl: ['인가 · 규정을 지켜요', '규정 점검해줘'],
-    crmstu: ['원생을 등록하고 관리해요', '원생 등록해줘'], crmatt: ['등원 · 출결을 체크해요', '오늘 미등원 보여줘'], crmex: ['시험 성적을 기록해요', '성적 알림 보내줘'],
-    crmcs: ['상담을 기록해요', '상담 필요한 원생'], crmbill: ['수강료를 청구해요', '다음 달 청구해줘'], crmstat: ['원생 · 매출 통계를 봐요', '이번 달 통계 보여줘'],
-    grade: ['성적을 관리해요', '성적 입력 현황'], sis: ['학적 연동을 관리해요', '학적 연동 상태'], aigov: ['AI 사용을 관리해요', 'AI 사용량 보여줘']
+    class: ['과정을 만들고 운영합니다', '수업 만들어줘'], journey: ['학습 경로를 묶습니다', '러닝 저니 만들어줘'], diag: ['AI 진단 검사를 엽니다', '진단 결과 요약해줘'],
+    library: ['영상 · 자료를 모아 편성합니다', '자료 올리는 법 알려줘'], assess: ['시험 · 과제를 내고 채점합니다', '검수 대기 과제 보여줘'], badge: ['배지를 만들어 줍니다', '배지 만들어줘'],
+    cert: ['수료증을 발급합니다', '수료 대상자 보여줘'], attend: ['출결을 기록합니다', '오늘 출결 요약해줘'], book: ['교재 · 교구를 팝니다', '교재 등록해줘'],
+    members: ['명단 · 가입 승인을 봅니다', '승인 대기 보여줘'], enroll: ['초대 · 일괄 등록합니다', '초대 링크 만들어줘'], groups: ['반 · 팀으로 묶습니다', '반 나눠줘'],
+    parents: ['보호자를 연결합니다', '보호자 연결 안 된 학생'], admins: ['운영자 · 기록을 봅니다', '운영자 추가해줘'], board: ['공지 · 알림을 보냅니다', '공지 써줘'],
+    message: ['메시지 · 알림톡을 보냅니다', '미접속자에게 안내해줘'], community: ['게시판을 운영합니다', '미답변 질문 보여줘'], consult: ['상담을 기록합니다', '상담 요약해줘'],
+    auto: ['반복 업무를 자동으로', '자동 운영 상태 보여줘'], site: ['홈페이지를 만들고 게시합니다', 'AI로 홈페이지 만들어줘'], sales: ['매출 · 결제를 봅니다', '이번 달 매출 요약해줘'],
+    billing: ['청구서를 보냅니다', '미납 청구서 보여줘'], compliance: ['법정의무교육을 관리합니다', '미이수자 보여줘'], academic: ['학사 · 비교과를 관리합니다', '비교과 현황 보여줘'],
+    lifelong: ['학습비 · 과정을 신고합니다', '신고 대상 보여줘'], hrd: ['HRD-Net에 보고합니다', 'HRD 보고 준비해줘'], org: ['기관 정보를 관리합니다', '기관 정보 보여줘'],
+    conn: ['외부 서비스를 연결합니다', 'Slack 연결 도와줘'], calendar: ['학사 일정을 관리합니다', '이번 달 일정 보여줘'], dbook: ['디지털 교재를 만듭니다', '디지털북 만들어줘'], clib: ['영상 · 교안 · 퀴즈를 모아 만듭니다', '콘텐츠 라이브러리 사용법 알려줘'], lmsa: ['학기 · 교과목 · 분반을 준비합니다', '학기 · 교과목 현황 보여줘'],
+    tutorial: ['튜토리얼을 만듭니다', '튜토리얼 만들어줘'], docs: ['문서를 만들고 보관합니다', '운영 문서 써줘'], cpl: ['인가 · 규정을 지킵니다', '규정 점검해줘'],
+    crmstu: ['원생을 등록하고 관리합니다', '원생 등록해줘'], crmatt: ['등원 · 출결을 체크합니다', '오늘 미등원 보여줘'], crmex: ['시험 성적을 기록합니다', '성적 알림 보내줘'],
+    crmcs: ['상담을 기록합니다', '상담 필요한 원생'], crmbill: ['수강료를 청구합니다', '다음 달 청구해줘'], crmstat: ['원생 · 매출 통계를 봅니다', '이번 달 통계 보여줘'],
+    grade: ['성적을 관리합니다', '성적 입력 현황'], sis: ['학적 연동을 관리합니다', '학적 연동 상태'], aigov: ['AI 사용을 관리합니다', 'AI 사용량 보여줘']
   };
   const mdOf = id => MD[id] || [lab(WS[MENU[id]?.ws] || { label: '' }) + ' 기능', mlabel(id) + ' 알려줘'];
   window.slimMD = mdOf;
@@ -84,7 +91,7 @@
       SL.search('slMenuQ', '메뉴 검색'));
   };
   window.slMenuSet = (id, on) => { const t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (!t) return false; t.on = on; save(); return true; };
-  ACT['sl-menu'] = el => { const id = el.dataset.v; const t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (!t) return; slMenuSet(id, !t.on); toast(`'${mlabel(id)}' 메뉴를 ${t.on ? '켰습니다 — 왼쪽 메뉴에 생겼어요' : '껐습니다'}.`, 'ok'); render(); };
+  ACT['sl-menu'] = el => { const id = el.dataset.v; const t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (!t) return; slMenuSet(id, !t.on); toast(`'${mlabel(id)}' 메뉴를 ${t.on ? '켰습니다 — 왼쪽 메뉴에 생겼습니다' : '껐습니다'}.`, 'ok'); render(); };
   ACT['sl-menuorder'] = () => { go('settings'); UI.settings = 'menu'; UI.slSetIn = true; render(); };
   ACT['sl-reset-menu'] = () => { slimApply(); save(); render(); toast('기본 메뉴로 되돌렸습니다.', 'ok'); };
 
@@ -106,7 +113,7 @@
       const L = CN_IDS.filter(id => (f === 'all' || CN_CAT[id] === f) && (!q || (CN[id].name + CN_ONE[id]).toLowerCase().includes(q.toLowerCase())));
       const P = S.autos.filter(a => (a.actions || []).some(x => CN_ACT[x]));
       return SL.page('연결', `<button class="btn" data-act="sl-connold" data-v="1">자세히</button>`,
-        SL.note(ic('lock' in IC ? 'lock' : 'gear', 18), '연결 정보는 안전하게 보관돼요', '키 · 토큰은 화면에 가려서 표시합니다') +
+        SL.note(ic('lock' in IC ? 'lock' : 'gear', 18), '연결 정보는 안전하게 보관됩니다', '키 · 토큰은 화면에 가려서 표시합니다') +
         SL.chips('slCnF', [['all', '전체'], ['work', '업무툴'], ['pay', '결제'], ['msg', '메시지'], ['ai', 'AI']], f) +
         (on.length ? SL.sum(`<span>연결됨</span><span class="sl-logos">${on.map(id => `<i style="background:${CN[id].col}">${esc(CN[id].logo)}</i>`).join('')}</span><span class="sl-n">${on.length}</span>`, 'sl-cnf', 'on') : '') +
         SL.list(L.map(id => { const s = cnStatus(id); const ok = s.st === CN_ST.on, chk = s.st === CN_ST.chk;
@@ -211,7 +218,7 @@
   ACT['sl-goconn'] = () => { if (typeof slMenuSet === 'function') slMenuSet('conn', true); UI.slConnOld = false; go('conn'); };
   ACT['sl-goauto'] = () => { slMenuSet('auto', true); go('auto'); };
   /* 꺼진 메뉴로 가는 링크(홈 · 가이드 · 안내의 [이동] 버튼)를 사람이 누르면 막지 않고 그 메뉴를 켜서 연다 — 필요할 때 켜진다. 코드에서 부르는 go()는 그대로 */
-  { const base = ACT.go; ACT.go = (el, ...r) => { const id = el && el.dataset && el.dataset.v; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(id)) && (!MENU[id].only || MENU[id].only === S.org.type) && Object.values(S.nav.tabs).flat().some(x => x.id === id)) { slMenuSet(id, true); toast(`'${mlabel(id)}' 메뉴를 켰어요. 끄려면 [메뉴 추가]에서 끄세요.`, 'ok'); } } catch (e) { } return base(el, ...r); }; }
+  { const base = ACT.go; ACT.go = (el, ...r) => { const id = el && el.dataset && el.dataset.v; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(id)) && (!MENU[id].only || MENU[id].only === S.org.type) && Object.values(S.nav.tabs).flat().some(x => x.id === id)) { slMenuSet(id, true); toast(`'${mlabel(id)}' 메뉴를 켰습니다. 끄려면 [메뉴 추가]에서 끄세요.`, 'ok'); } } catch (e) { } return base(el, ...r); }; }
 
   /* 기존 사용자 한 번 안내 */
   AFTER.push(() => { if (!UI.slimNote) return; UI.slimNote = 0; toast('메뉴를 꼭 필요한 것만 남겼습니다. 다른 메뉴는 왼쪽 [메뉴 추가]에서 켜세요.', 'ok'); });

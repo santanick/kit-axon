@@ -33,7 +33,7 @@
 .shp-pay textarea,.shp-pay input[type=date],.shp-mw textarea,.shp-mw input,.shp-mw select{width:100%;border:1px solid var(--line);border-radius:6px;padding:10px 12px;font:inherit;font-size:16px;margin-top:6px;background:#fff;font-weight:400}
 .shp-mth{border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:0 0 14px;background:#fff;display:flex;flex-direction:column;gap:8px}.shp-mth legend{font-weight:800;padding:0 6px}.shp-mth label{display:flex;gap:8px;align-items:center;cursor:pointer}
 .shp-pol{margin-bottom:12px}.shp-pol summary{cursor:pointer;font-weight:700;font-size:14px}
-.shp-agree{display:flex;gap:8px;align-items:flex-start;font-size:14px;font-weight:600}.shp-agree input{width:auto!important;margin-top:4px!important}
+.shp-agree{display:flex;gap:8px;align-items:flex-start;font-size:14px;font-weight:600}.shp-agree input{width:22px!important;height:22px!important;flex:none;margin-top:0!important}
 .shp-sum{display:grid;grid-template-columns:1fr auto;gap:6px;margin:0}.shp-sum dt{color:var(--mute)}.shp-sum dd{margin:0;text-align:right}.shp-sum dd b{font-size:20px}
 .shp-done,.shp-card2{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;max-width:760px}
 .shp-acct{font-size:18px;background:var(--paper);border-radius:6px;padding:12px}

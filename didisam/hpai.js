@@ -161,7 +161,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     const must = [...(o.must || []), b].join(' ');
     const secs = [{ type: 'banner', eyebrow: ty.ey, title: focus ? `${focus.trim()},\n${n}에서` : h1, sub: h2, cta: `${t('cls')} 둘러보기`, cta2: '문의하기' },
       { type: 'text', variant: 'features', eyebrow: 'ABOUT', title: `${n}은(는) 이렇게 가르칩니다`, body: '', cols: ty.feat },
-      { type: 'classes', eyebrow: 'CLASSES', title: C.length ? `지금 신청할 수 있는 ${t('cls')}` : `${t('cls')} 안내`, sub: C.length ? C.slice(0, 3).map(c => c.name).join(' · ') : `공개한 ${t('cls')}이 이곳에 자동으로 표시됩니다.` },
+      { type: 'classes', eyebrow: 'CLASSES', title: C.length ? `지금 신청할 수 있는 ${t('cls')}` : `${t('cls')} 안내`, sub: C.length ? C.slice(0, 3).map(c => c.name).join(' · ') : `공개한 ${tj('cls', '이')} 이곳에 자동으로 표시됩니다.` },
       { type: 'text', variant: 'steps', eyebrow: 'HOW', title: '이렇게 시작합니다', cols: ty.steps }];
     if (/후기|리뷰/.test(must)) secs.push({ type: 'reviews', title: '수강후기' });
     if (/일정|스케줄/.test(must)) secs.push({ type: 'text', variant: 'timeline', title: '주요 일정', cols: [['모집', '상시 모집'], ['개강', '강좌별 안내'], ['수료', '기준 충족 시']] });

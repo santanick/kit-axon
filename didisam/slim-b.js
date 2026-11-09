@@ -55,10 +55,10 @@
       return pg('message', `${T() ? '' : more('message')}<button type="button" class="btn pri" data-act="sb-old" data-v="message">+ 새 메시지</button>`,
         SL.sum(`<span>이번 달 발송</span><span class="sl-n">${n0(used)}${lim ? ' / ' + n0(lim) : ''}건</span>`) +
         SL.list([
-          SL.row({ act: 'go', v: 'auto', name: '자동 발송', sub: auto ? `알림톡 · 앱 푸시 자동 규칙 ${auto}개 켜짐` : '반복 안내를 자동으로 보내요', icon: I('send', 20), col: '#7C5CF2' }),
+          SL.row({ act: 'go', v: 'auto', name: '자동 발송', sub: auto ? `알림톡 · 앱 푸시 자동 규칙 ${auto}개 켜짐` : '반복 안내를 자동으로 보냅니다', icon: I('send', 20), col: '#7C5CF2' }),
           SL.row({ act: 'sb-old', v: 'message', name: '수강 독려 메시지', sub: nudge ? '켜짐 · 진도가 늦은 ' + t('learner') + '에게' : '꺼짐', icon: I('bolt', 20), col: '#FF9800' })]) +
         (T() ? '' : H.length || q('sbMsgQ') ? `<h3 class="sl-gh">발송 내역 ${H.length}</h3>` + SL.list(H.slice(0, 50).map(m => SL.row({ act: 'cm-msg-view', v: m.id, name: m.title || '(제목 없음)', sub: [m.to, m.at, m.n ? m.n + '건' : ''].filter(Boolean).join(' · '), icon: I('chat', 20), col: '#5C74F6' }))) + SL.search('sbMsgQ', '보낸 메시지 검색')
-          : empty('chat', md('message')[0] || '메시지 · 알림을 보내요', `<button type="button" class="btn pri" data-act="sb-old" data-v="message">첫 메시지 보내기</button>`, ['미접속자에게 안내해줘', '이번 주 공지 메시지 써줘', '진도 늦은 ' + t('learner') + '에게 독려해줘']))); }
+          : empty('chat', md('message')[0] || '메시지 · 알림을 보냅니다', `<button type="button" class="btn pri" data-act="sb-old" data-v="message">첫 메시지 보내기</button>`, ['미접속자에게 안내해줘', '이번 주 공지 메시지 써줘', '진도 늦은 ' + t('learner') + '에게 독려해줘']))); }
   });
   /* 보낸 뒤에는 첫 화면(발송 내역)으로 */
   if (ACT['msg-send']) { const base = ACT['msg-send']; ACT['msg-send'] = (...a) => { const n = A(S.msgs).length; const r = base(...a); try { if (A(S.msgs).length > n && UI.sbOld) UI.sbOld.message = 0; } catch (e) { } return r; }; }
@@ -72,7 +72,7 @@
         : N.slice(0, 60).map(n => SL.row({ name: n.title, sub: [n.pin ? '고정' : '', n.g || '기관 공지', n.at].filter(Boolean).join(' · '), icon: I('chat', 20), col: n.pin ? '#E5487A' : '#5C74F6', right: '' }));
       return pg('board', `${more('board')}<button type="button" class="btn ghost" data-act="al-new">알림 보내기</button><button type="button" class="btn pri" data-act="notice-new">+ 공지</button>`,
         SL.chips('sbBdF', [['notice', `공지 ${N.length}`], ['alert', `알림함 ${AL.length}`]], f) +
-        (L.length ? SL.list(L) + SL.search('sbBdQ', '제목 검색') : empty('chat', f === 'alert' ? '알림함으로 공지를 보내요' : '공지는 사이트에 바로 보여요', f === 'alert' ? `<button type="button" class="btn pri" data-act="al-new">알림 보내기</button>` : `<button type="button" class="btn pri" data-act="notice-new">첫 공지 쓰기</button>`, ['공지 써줘', '이번 달 일정 공지 만들어줘', '휴강 안내 공지 써줘']))); }
+        (L.length ? SL.list(L) + SL.search('sbBdQ', '제목 검색') : empty('chat', f === 'alert' ? '알림함으로 공지를 보냅니다' : '공지는 사이트에 바로 보입니다', f === 'alert' ? `<button type="button" class="btn pri" data-act="al-new">알림 보내기</button>` : `<button type="button" class="btn pri" data-act="notice-new">첫 공지 쓰기</button>`, ['공지 써줘', '이번 달 일정 공지 만들어줘', '휴강 안내 공지 써줘']))); }
   });
 
   /* 커뮤니티: 게시판별 한 줄 — 누르면 기존 게시판 화면 */
@@ -96,7 +96,7 @@
         (cs.status === '연동' ? '' : SL.sum(`<span>채널톡 연결</span><span class="sl-n">안 됨</span>`, 'tab', 'set').replace('data-act="tab"', 'data-act="tab" data-key="csT"')) +
         SL.list([tabRow('csT', 'list', '상담 목록', '전화 · 채팅 · 대면', 'chat', '#6447F5', cnt(A(S.consults).length + '건')), tabRow('csT', 'dash', '상담 통계', '카테고리별 건수', 'chart', '#109BF1'), tabRow('csT', 'set', '상담 설정', cs.status === '연동' ? '채널톡 연결됨' : '카테고리 · 채널톡', 'gear', '#808181')]) +
         (L.length ? `<h3 class="sl-gh">최근 상담</h3>` + SL.list(L.slice(0, 20).map(c => SL.row({ act: 'cs-open-d', v: c.id, name: c.title || '상담', sub: [A(c.targets).map(id => (M(id) || {}).name || '').filter(Boolean).join(', '), typeof cmDate === 'function' ? cmDate(c.at) : c.at, c.summary ? '요약 완료' : ''].filter(Boolean).join(' · '), icon: I('chat', 20), col: '#6447F5' }))) + SL.search('sbCsQ', '상담 검색')
-          : empty('chat', md('consult')[0] || '상담을 기록해요', `<button type="button" class="btn pri" data-act="cs-start">첫 상담 기록</button>`, ['상담 요약해줘', '상담 필요한 ' + t('learner') + ' 보여줘']))); }
+          : empty('chat', md('consult')[0] || '상담을 기록합니다', `<button type="button" class="btn pri" data-act="cs-start">첫 상담 기록</button>`, ['상담 요약해줘', '상담 필요한 ' + t('learner') + ' 보여줘']))); }
   });
 
   /* ═════════ 운영(ops) · 매출 ═════════ */
@@ -106,10 +106,10 @@
       const req = pays.filter(p => p.refund && p.refund.state === '신청'); const st = S.settings || {}; const tossOn = st.pg === 'toss' && st.toss && st.toss.status === '승인'; const pgOn = st.pg && st.pg !== 'none';
       const L = pays.filter(p => p.itemType !== 'bill' && hit('sbSlQ', p.item, (M(p.who) || {}).name, p.status));
       return pg('sales', `${more('sales')}<button type="button" class="btn pri" data-act="sales-xls">내려받기</button>`,
-        (pgOn ? '' : status('chart', '결제를 받으려면 PG 연결이 필요해요', '연결 › 토스페이먼츠에서 시작', 'w')) +
+        (pgOn ? '' : status('chart', '결제를 받으려면 PG 연결이 필요합니다', '연결 › 토스페이먼츠에서 시작', 'w')) +
         SL.sum(`<span>${+ym.slice(5)}월 매출</span><span class="sl-n">${won0(mon.reduce((a, p) => a + (+p.amount || 0), 0))} · ${mon.length}건</span>`) +
         SL.list([
-          ...(req.length ? [tabRow('slTab', 'refund', '환불 요청', '승인 또는 거절이 필요해요', 'x', '#E5487A', cnt(req.length + '건', 1))] : []),
+          ...(req.length ? [tabRow('slTab', 'refund', '환불 요청', '승인 또는 거절이 필요합니다', 'x', '#E5487A', cnt(req.length + '건', 1))] : []),
           tabRow('slTab', 'pay', '결제 내역', '강좌 · 교재 · 구독', 'chart', '#0064FF', cnt(pays.filter(p => p.itemType !== 'bill').length + '건')),
           tabRow('slTab', 'refund', '환불 내역', '승인 · 거절 기록', 'refresh', '#808181'),
           tabRow('slTab', 'bill', '청구서 납부', '현장 · 온라인 납부', 'book', '#14A3A3'),
@@ -125,10 +125,10 @@
       const st = S.settings || {}; const ok = st.pg === 'toss' && st.toss && st.toss.status === '승인'; const un = B.filter(b => b.status === '미납');
       const G = Object.entries(g).filter(([, L]) => hit('sbBlQ', L[0].title));
       return pg('billing', `${more('billing')}<button type="button" class="btn pri" data-act="bill-new" ${ok ? '' : 'disabled title="토스페이먼츠 승인 필요"'}>+ 청구서</button>`,
-        (ok ? '' : status('chart', '청구서는 토스페이먼츠 연결 후 보낼 수 있어요', '연결에서 토스페이먼츠를 연결하세요', 'w')) +
+        (ok ? '' : status('chart', '청구서는 토스페이먼츠 연결 후 보낼 수 있습니다', '연결에서 토스페이먼츠를 연결하세요', 'w')) +
         (un.length ? SL.sum(`<span>미납</span><span class="sl-n sl-w">${un.length}건 · ${won0(un.reduce((a, b) => a + (typeof billTotal === 'function' ? billTotal(b) : 0), 0))}</span>`) : '') +
         (G.length ? SL.list(G.map(([k, L]) => { const u = L.filter(b => b.status === '미납').length; return SL.row({ act: 'sl2-bill', v: k, name: L[0].title || '청구서', sub: `${L.length}명 · 마감 ${L[0].due || '—'}${u ? ` · 미납 ${u}` : ' · 모두 납부'}`, icon: I('book', 20), col: u ? '#FF9800' : '#00A224' }); })) + SL.search('sbBlQ', '청구서 검색')
-          : empty('book', md('billing')[0] || '청구서를 보내요', ok ? `<button type="button" class="btn pri" data-act="bill-new">첫 청구서 만들기</button>` : `<button type="button" class="btn pri" data-act="sl-goconn">결제 연결하기</button>`, ['미납 청구서 보여줘', '다음 달 청구서 만들어줘']))); }
+          : empty('book', md('billing')[0] || '청구서를 보냅니다', ok ? `<button type="button" class="btn pri" data-act="bill-new">첫 청구서 만들기</button>` : `<button type="button" class="btn pri" data-act="sl-goconn">결제 연결하기</button>`, ['미납 청구서 보여줘', '다음 달 청구서 만들어줘']))); }
   });
 
   /* 학원 수납: 이번 달 미납 목록이 첫 화면, 탭(전체 내역 · 수강료 발생 · 통계)은 줄로 */
@@ -140,10 +140,10 @@
       const un = B.filter(open).filter(b => hit('sbCbQ', b.title, who(b))).sort((a, b) => String(a.due) < String(b.due) ? -1 : 1);
       const ym = today().slice(0, 7); const paid = B.filter(b => (b.month || String(b.due || '').slice(0, 7)) === ym && b.status !== '취소' && !open(b)).length;
       return pg('crmbill', `${more('crmbill')}<button type="button" class="btn pri" data-act="crm-gen-now">수강료 발생</button>`,
-        (auto ? status('check', `정기 납부일 수강료 ${auto}건을 자동 발생했어요`, '') : '') +
+        (auto ? status('check', `정기 납부일 수강료 ${auto}건을 자동 발생했습니다`, '') : '') +
         SL.sum(`<span>${+ym.slice(5)}월 미납</span><span class="sl-n ${un.length ? 'sl-w' : ''}">${un.length}건 · ${won0(un.reduce((a, b) => a + bal(b), 0))}</span>`) +
         (un.length ? SL.list(un.slice(0, 60).map(b => SL.row({ name: who(b), sub: `${b.title} · 마감 ${b.due || '—'}`, icon: undefined, right: `<span class="sb-n">${won0(bal(b))}</span><button type="button" class="btn sm pri" data-act="crm-pay" data-v="${esc(b.id)}">수납</button>` })))
-          : empty('check', paid ? `이번 달 완납 ${paid}건 — 미납이 없어요` : '이번 달 수강료를 발생시키면 여기서 수납해요', '', ['다음 달 청구해줘', '미납 원생에게 안내해줘'])) +
+          : empty('check', paid ? `이번 달 완납 ${paid}건 — 미납이 없습니다` : '이번 달 수강료를 발생시키면 여기서 수납합니다', '', ['다음 달 청구해줘', '미납 원생에게 안내해줘'])) +
         `<h3 class="sl-gh">더 보기</h3>` + SL.list([tabRow('crmBT', 'list', '전체 내역', '월별 · 상태별 수납 기록', 'book', '#14A3A3'), tabRow('crmBT', 'gen', '수강료 발생', '수업을 골라 한 번에', 'plus', '#5C74F6'), tabRow('crmBT', 'stat', '수납 통계', '월별 · 결제 수단별', 'chart', '#7C5CF2'), SL.row({ act: 'crm-bill-cfg', v: '', name: '수납 설정', sub: '마감일 · 할인 · 자동 발생', icon: I('gear', 20), col: '#808181' })]) +
         (un.length > 3 ? SL.search('sbCbQ', '원생 · 청구 검색') : '')); }
   });
@@ -176,7 +176,7 @@
         (L.length ? SL.sum(`<span>미이수</span><span class="sl-n ${miss ? 'sl-w' : ''}">${miss}명</span>`) + SL.list(L.map(c => { const n = A(c.learners).length, d = dn(c), r = Math.round(d / Math.max(1, n) * 100);
           return SL.row({ act: 'sb-old', v: 'compliance', name: c.name, sub: `이수 ${d}/${n}명${c.end ? ' · 마감 ' + c.end : ''}`, icon: I('check', 20), col: r >= 90 ? '#00A224' : '#FF9800', right: `<span class="sb-n ${r < 70 ? 'w' : ''}">${r}%</span>` }); })) +
           SL.list([SL.row({ act: 'comp-report', v: '', name: '이수 증빙 보고서', sub: '이수 현황 CSV 내려받기', icon: I('download', 20), col: '#808181' })])
-          : empty('check', '법정의무교육 이수를 관리해요', `<button type="button" class="btn pri" data-act="chat-q" data-v="법정의무교육 과정 만들어줘">법정교육 과정 만들기</button>`, ['미이수자 보여줘', '성희롱 예방교육 과정 만들어줘']))); }
+          : empty('check', '법정의무교육 이수를 관리합니다', `<button type="button" class="btn pri" data-act="chat-q" data-v="법정의무교육 과정 만들어줘">법정교육 과정 만들기</button>`, ['미이수자 보여줘', '성희롱 예방교육 과정 만들어줘']))); }
   });
 
   /* 학사 · 비교과(대학) */
@@ -196,7 +196,7 @@
     build: () => { const st = S.settings || {}; const chk = [A(S.classes).every(c => c.hours >= 30 || c.price === 0), !!(st.terms || {}).tos, true, true, !!S.llIns, !!(st.terms || {}).privacy, !!(st.footer || {}).biz];
       const ok = chk.filter(Boolean).length; const rf = A(S.pays).filter(p => p.status === '환불 신청'); const short = A(S.classes).filter(c => c.hours < 30 && c.price).length;
       return pg('lifelong', `${more('lifelong')}<button type="button" class="btn pri" data-act="ll-check">점검 완료로 표시</button>`,
-        status(ok === chk.length ? 'check' : 'book', `운영 요건 ${ok}/${chk.length} 충족`, ok === chk.length ? '모두 충족했어요' : '자세히에서 빠진 항목을 확인하세요', ok === chk.length ? '' : 'w') +
+        status(ok === chk.length ? 'check' : 'book', `운영 요건 ${ok}/${chk.length} 충족`, ok === chk.length ? '모두 충족했습니다' : '자세히에서 빠진 항목을 확인하세요', ok === chk.length ? '' : 'w') +
         SL.list([SL.row({ act: 'sb-old', v: 'lifelong', name: '운영 요건 체크리스트', sub: '평생교육법 요건 7가지', icon: I('check', 20), col: '#00A224', right: cnt(`${ok}/${chk.length}`, ok < chk.length) }),
           SL.row({ act: 'sb-old', v: 'lifelong', name: '학습비 반환 요청', sub: '신청일로부터 5일 이내 처리', icon: I('refresh', 20), col: '#E5487A', right: cnt(rf.length + '건', rf.length) }),
           SL.row({ act: 'sb-old', v: 'lifelong', name: '강좌별 운영 시간', sub: short ? `30시간 미만 유료 강좌 ${short}개` : '모든 강좌 기준 충족', icon: I('book', 20), col: '#109BF1', right: short ? cnt(short + '개', 1) : undefined }),
@@ -210,7 +210,7 @@
     build: () => { const R = A((S.hrd || {}).reports); const low = typeof lowAtt === 'function' ? lowAtt().length : 0; const wait = R.filter(r => r.st === '전송 대기').length;
       return pg('hrd', `${more('hrd')}<button type="button" class="btn pri" data-act="auto-run-id" data-v="hrd-weekly">${I('spark', 14)} 이번 주 보고 만들기</button>`,
         SL.sum(`<span>${t('learner')}</span><span class="sl-n">${A(S.members).length}명</span>`) +
-        SL.list([SL.row({ act: 'sb-old', v: 'hrd', name: '보고 내역', sub: R.length ? `최근 ${R[0].at} · ${R[0].kind}` : '아직 만든 보고가 없어요', icon: I('book', 20), col: '#5C74F6', right: cnt(wait ? `대기 ${wait}` : R.length + '건', wait) }),
+        SL.list([SL.row({ act: 'sb-old', v: 'hrd', name: '보고 내역', sub: R.length ? `최근 ${R[0].at} · ${R[0].kind}` : '아직 만든 보고가 없습니다', icon: I('book', 20), col: '#5C74F6', right: cnt(wait ? `대기 ${wait}` : R.length + '건', wait) }),
           SL.row({ act: 'sb-old', v: 'hrd', name: '출석률 80% 미만', sub: '수료 요건 미달 위험', icon: I('users', 20), col: '#FF9800', right: cnt(low + '명', low) }),
           SL.row({ act: 'sb-old', v: 'hrd', name: '부정훈련 의심', sub: '규칙 기반 탐지 · 확인 후 조치', icon: I('x', 20), col: '#E5487A' }),
           ...(MENU.cpl ? [SL.row({ act: 'go', v: 'cpl', name: lb('cpl'), sub: '원격훈련 요건 점검표', icon: I('check', 20), col: '#00A224' })] : [])]) +
@@ -224,7 +224,7 @@
       const R = L.filter(o => hit('sbOgQ', o.name));
       return pg('org', `${more('org')}<button type="button" class="btn pri" data-act="mb-org" data-v="">+ 기관 지정</button>`,
         R.length ? SL.list(R.map(o => { const s = sum(o); return SL.row({ act: 'mb-orgopen', v: o.id, name: o.name, sub: `회원 ${s.n}명 · ${t('cls')} ${s.cls}개${s.n ? ' · 수료율 ' + s.rate + '%' : ''}`, icon: o.logo ? `<img src="${esc(o.logo)}" alt="">` : undefined }); })) + (L.length > 5 ? SL.search('sbOgQ', '기관 검색') : '')
-          : empty('corp', md('org')[0] || '참여 기관을 관리해요', `<button type="button" class="btn pri" data-act="mb-org" data-v="">+ 첫 기관 지정</button>`, ['기관 정보 보여줘', '기관 담당자 추가해줘'])); }
+          : empty('corp', md('org')[0] || '참여 기관을 관리합니다', `<button type="button" class="btn pri" data-act="mb-org" data-v="">+ 첫 기관 지정</button>`, ['기관 정보 보여줘', '기관 담당자 추가해줘'])); }
   });
 
   /* 문서: 우리 기관 문서 목록이 첫 화면 */
@@ -258,7 +258,7 @@
       const url = typeof lsLearnerURL === 'function' ? lsLearnerURL() : 'learner.html'; const tp = typeof TPL !== 'undefined' ? TPL.find(x => x.id === s.tpl) : null;
       const pgs = A(s.pages).length; const secs = A(s.sections).length;
       return pg('site', `<a class="btn ghost" href="${esc(url)}" target="_blank" rel="noopener">사이트 열기</a><button type="button" class="btn pri" data-act="ls-pub">${pub ? '다시 게시' : '게시하기'}</button>`,
-        status(pub ? 'check' : 'globe', pub ? '게시됨' : '아직 게시하지 않았어요', pub ? `${at} · ${S.org.domain || ''}` : '고친 뒤 [게시하기]를 누르면 사이트에 반영돼요', pub ? '' : 'w') +
+        status(pub ? 'check' : 'globe', pub ? '게시됨' : '아직 게시하지 않았습니다', pub ? `${at} · ${S.org.domain || ''}` : '고친 뒤 [게시하기]를 누르면 사이트에 반영됩니다', pub ? '' : 'w') +
         SL.list([tabRow('smT', 'home', '홈페이지 · 메뉴 · 디자인', `섹션 ${secs}개${pgs ? ` · 페이지 ${pgs}개` : ''}`, 'globe', '#14A3A3'),
           tabRow('smT', 'learn', '학습 페이지 · 콘텐츠', `${t('cls')} 목록 · 학습 화면`, 'book', '#5C74F6'),
           SL.row({ act: 'tpl-gallery', v: '', name: '템플릿 바꾸기', sub: tp ? tp.name : '유형별 템플릿', icon: I('grid', 20), col: '#7C5CF2' })]) +

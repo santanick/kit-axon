@@ -7,20 +7,20 @@
 
 /* ═════════ ① AI 강의 영상 · 강의자료 ═════════ */
 const LEC = [
-  ['학습 목표', t => [`${t}이(가) 무엇인지 설명할 수 있다`, '핵심 원리를 실제 사례에 적용할 수 있다', '배운 내용을 스스로 점검할 수 있다'], t => `안녕하세요. 이번 시간에는 ${t}을(를) 함께 살펴보겠습니다. 먼저 오늘의 학습 목표 세 가지를 확인하겠습니다.`],
-  ['왜 필요할까요?', t => ['현장에서 자주 마주치는 문제', '기존 방식의 한계', `${t}이(가) 만드는 변화`], t => `${t}을(를) 배우는 이유부터 짚어 보겠습니다. 현장에서 반복되는 문제와 기존 방식의 한계를 보면 왜 지금 이 내용이 필요한지 알 수 있습니다.`],
+  ['학습 목표', t => [`${t}${AI.j(t, '이')} 무엇인지 설명할 수 있다`, '핵심 원리를 실제 사례에 적용할 수 있다', '배운 내용을 스스로 점검할 수 있다'], t => `안녕하세요. 이번 시간에는 ${t}${AI.j(t, '을')} 함께 살펴보겠습니다. 먼저 오늘의 학습 목표 세 가지를 확인하겠습니다.`],
+  ['왜 필요할까요?', t => ['현장에서 자주 마주치는 문제', '기존 방식의 한계', `${t}${AI.j(t, '이')} 만드는 변화`], t => `${t}${AI.j(t, '을')} 배우는 이유부터 짚어 보겠습니다. 현장에서 반복되는 문제와 기존 방식의 한계를 보면 왜 지금 이 내용이 필요한지 알 수 있습니다.`],
   ['핵심 개념', t => ['정의 — 한 문장으로 말하기', '구성 요소 세 가지', '꼭 알아야 할 용어'], t => `${t}의 핵심 개념입니다. 정의를 한 문장으로 말할 수 있어야 하고, 이를 이루는 구성 요소와 자주 쓰는 용어를 함께 기억해 두세요.`],
-  ['원리 이해', () => ['입력 → 처리 → 결과의 흐름', '조건이 바뀌면 결과도 바뀐다', '점검하고 고치는 과정을 반복한다'], t => `${t}은(는) 입력, 처리, 결과의 흐름으로 이해하면 쉽습니다. 조건을 바꾸면 결과가 달라지고, 결과를 점검해 다시 고치는 과정이 품질을 만듭니다.`],
-  ['사례로 보기', () => ['상황: 무엇이 문제였나', '적용: 어떤 방법을 썼나', '결과: 무엇이 달라졌나'], t => `실제 사례로 보겠습니다. 어떤 상황에서 ${t}을(를) 적용했고, 그 결과 무엇이 달라졌는지 순서대로 따라가 보세요.`],
+  ['원리 이해', () => ['입력 → 처리 → 결과의 흐름', '조건이 바뀌면 결과도 바뀐다', '점검하고 고치는 과정을 반복한다'], t => `${t}${AI.j(t, '은')} 입력, 처리, 결과의 흐름으로 이해하면 쉽습니다. 조건을 바꾸면 결과가 달라지고, 결과를 점검해 다시 고치는 과정이 품질을 만듭니다.`],
+  ['사례로 보기', () => ['상황: 무엇이 문제였나', '적용: 어떤 방법을 썼나', '결과: 무엇이 달라졌나'], t => `실제 사례로 보겠습니다. 어떤 상황에서 ${t}${AI.j(t, '을')} 적용했고, 그 결과 무엇이 달라졌는지 순서대로 따라가 보세요.`],
   ['따라 해 보기 ①', () => ['목표를 한 줄로 정한다', '필요한 조건과 자료를 준비한다', '첫 결과를 만들어 본다'], () => '이제 직접 해 보겠습니다. 목표를 한 줄로 정하고, 필요한 조건과 자료를 준비한 뒤 첫 결과를 만들어 보세요.'],
   ['따라 해 보기 ②', () => ['기준에 비추어 결과를 점검한다', '부족한 부분을 고친다', '최종본을 정리해 저장한다'], () => '만든 결과를 기준에 비추어 점검합니다. 부족한 부분을 고치고, 최종본을 정리해 저장하면 실습이 끝납니다.'],
   ['자주 하는 실수', () => ['맥락과 조건을 빠뜨린다', '검증 없이 그대로 쓴다', '기준 없이 느낌으로 판단한다'], () => '많이 하는 실수 세 가지입니다. 맥락과 조건을 빠뜨리는 것, 결과를 검증하지 않고 쓰는 것, 기준 없이 판단하는 것을 주의하세요.'],
   ['심화 팁', () => ['단계를 나눠 진행한다', '예시를 함께 제시한다', '결과를 기록하고 비교한다'], () => '한 단계 더 나아가는 팁입니다. 작업을 단계로 나누고, 예시를 함께 주고, 결과를 기록해 비교하면 품질이 안정됩니다.'],
-  ['내 전공 · 업무에 적용', () => ['적용할 장면 하나 고르기', '기대 효과 적어 보기', '다음 주까지 한 번 실행하기'], t => `배운 ${t}을(를) 자신의 전공이나 업무에 적용해 보세요. 장면 하나를 고르고, 기대 효과를 적고, 다음 시간 전까지 한 번 실행해 보는 것이 목표입니다.`],
+  ['내 전공 · 업무에 적용', () => ['적용할 장면 하나 고르기', '기대 효과 적어 보기', '다음 주까지 한 번 실행하기'], t => `배운 ${t}${AI.j(t, '을')} 자신의 전공이나 업무에 적용해 보세요. 장면 하나를 고르고, 기대 효과를 적고, 다음 시간 전까지 한 번 실행해 보는 것이 목표입니다.`],
   ['생각해 볼 질문', () => ['어디에 가장 먼저 쓸 수 있을까?', '주의해야 할 점은 무엇일까?', '어떻게 결과를 평가할까?'], () => '마지막으로 생각해 볼 질문입니다. 어디에 가장 먼저 쓸 수 있을지, 무엇을 주의해야 할지, 결과를 어떻게 평가할지 정리해 보세요.'],
   ['정리', t => [`${t}의 개념과 원리`, '실습 순서: 목표 → 조건 → 결과 → 점검', '다음 시간 예고'], t => `오늘은 ${t}의 개념과 원리, 그리고 실습 순서를 배웠습니다. 확인 퀴즈로 이해도를 점검하고 다음 시간에 뵙겠습니다.`]
 ];
-const lecTopic = s => clean(String(s || '').replace(/^\d+(주|차시)\s*(강의자료)?\s*—?\s*/, '').replace(/^[^:]*:\s*/, m => m.length > 24 ? '' : m).replace(/:/g, ' ')).replace(/\s+/g, ' ').trim() || '핵심 개념';
+const lecTopic = s => clean(String(s || '').replace(/^\d+(주차|주|회차|차시)\s*(강의자료)?\s*—?\s*/, '').replace(/^[^:]*:\s*/, m => m.length > 24 ? '' : m).replace(/:/g, ' ')).replace(/\s+/g, ' ').trim() || '핵심 개념';
 Object.assign(AI, {
   lecture(title, mins = 5) {
     const tp = lecTopic(title); const n = clamp(Math.round((+mins || 5) * 1.6), 4, LEC.length);
@@ -159,7 +159,7 @@ function pathFlow(o, mini) {
   return `<div class="pjflow ${mini ? 'mini' : ''}">${(o.path || []).map((s, i) => `<span class="pjst"><em>STEP ${i + 1}</em><b>${esc(s.name)}</b><small>${esc(s.cls.map(id => C(id)?.name).filter(Boolean).join(' · ') || '과정 미정')}</small></span>`).join(`<i class="pja">${ic('arrow', 14)}</i>`)}</div>`;
 }
 function dgOutsHTML(d) {
-  return `<div class="bar2"><button type="button" class="btn sm ink" data-act="dgp-all">${ic('spark', 14)} 모든 결과 AI 러닝 저니 다시 설계</button><span class="mini">단계마다 ${esc(t('cls'))}을 넣거나 빼고, 없는 과정은 AI로 바로 만들 수 있습니다.</span></div>` +
+  return `<div class="bar2"><button type="button" class="btn sm ink" data-act="dgp-all">${ic('spark', 14)} 모든 결과 AI 러닝 저니 다시 설계</button><span class="mini">단계마다 ${esc(tj('cls', '을'))} 넣거나 빼고, 없는 과정은 AI로 바로 만들 수 있습니다.</span></div>` +
     d.outs.map((o, k) => `<div class="card pjc"><div class="ch"><b>${esc(o.k)}</b><small>${esc(o.l || '')}</small><span class="sp"></span><div class="seg2"><button type="button" class="${o.mode === 'one' ? 'on' : ''}" data-act="dgp-mode" data-k="${k}" data-v="one">단일 ${esc(t('cls'))}</button><button type="button" class="${o.mode !== 'one' ? 'on' : ''}" data-act="dgp-mode" data-k="${k}" data-v="path">러닝 저니</button></div></div>
       ${o.mode === 'one' ? `<label class="fl">추천 ${esc(t('cls'))}<select data-dgo="${k}">${S.classes.map(c => `<option value="${c.id}" ${o.rec === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` :
       `<div class="pjsteps">${o.path.map((s, j) => `<div class="pjs"><div class="qh"><span class="jn">STEP ${j + 1}</span><input data-chg="dgp-name" data-k="${k}" data-s="${j}" value="${esc(s.name)}" maxlength="24" aria-label="단계 이름"><span class="sp"></span><button type="button" class="btn sm ghost" data-act="dgp-del" data-k="${k}" data-s="${j}" aria-label="단계 삭제">${ic('x', 14)}</button></div><small class="mini">${esc(s.goal)} · 열림: ${esc(s.unlock)}</small>
@@ -297,7 +297,7 @@ function flowRun(F) { return F.steps.map(f => { try { const res = f.run(F.x); co
 function flowAnswer(q) {
   const F = flowParse(q); if (!F) return null;
   if (F.x.willCourse && F.x.fee && F.x.fee.amb) { const base = feeStrip(q); const O = F.x.fee.opts || [];
-    return { text: `${F.x.fee.amb}\n「${F.x.topic}」 ${F.x.weeks}${F.x.univ ? '주' : '차시'} ${t('cls')}는 수강료가 정해지면 바로 만들어 드립니다.${O.length ? '' : ' 금액을 함께 적어 다시 말씀해 주세요.'}`, html: `<div class="bqs">${O.map(v => `<button type="button" class="chip" data-act="chat-q" data-v="${esc(`${base} 수강료 ${v ? won(v) : '무료'}`)}">${v ? esc(won(v)) : '무료'}로 만들기</button>`).join('')}${O.includes(0) ? '' : `<button type="button" class="chip" data-act="chat-q" data-v="${esc(base + ' 무료')}">무료로 만들기</button>`}</div>` }; }
+    return { text: `${F.x.fee.amb}\n「${F.x.topic}」 ${F.x.weeks}${F.x.univ ? '주' : '차시'} ${tj('cls', '은')} 수강료가 정해지면 바로 만들어 드립니다.${O.length ? '' : ' 금액을 함께 적어 다시 말씀해 주세요.'}`, html: `<div class="bqs">${O.map(v => `<button type="button" class="chip" data-act="chat-q" data-v="${esc(`${base} 수강료 ${v ? won(v) : '무료'}`)}">${v ? esc(won(v)) : '무료'}로 만들기</button>`).join('')}${O.includes(0) ? '' : `<button type="button" class="chip" data-act="chat-q" data-v="${esc(base + ' 무료')}">무료로 만들기</button>`}</div>` }; }
   const pid = uid('p');
   PLANS[pid] = { flow: () => { const r = flowRun(F); S.ai.usage += F.steps.length; return r; }, q, go: F.steps[0].go || 'class' };
   const html = `<ol class="flow">${F.steps.map((f, i) => `<li><span class="fn">${i + 1}</span><div><b>${esc(f.label())}</b><small>${esc(f.line(F.x))}</small></div><em class="fm">${esc(mlabel(f.go || 'class'))}</em></li>`).join('')}</ol>`;

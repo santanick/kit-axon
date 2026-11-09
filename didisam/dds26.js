@@ -12,7 +12,7 @@ AFTER.push(cur => {
     const phr = ph && ph.querySelector('.phr'); if (!phr || phr.querySelector('[data-act=d26-view]')) return;
     const cat = c.cat ? d26CatName(c.cat) : '';
     phr.insertAdjacentHTML('afterbegin', `<button class="btn sm ghost d26-cat" data-act="d26-cat" title="카테고리 바꾸기">${ic('folder', 14)} ${esc(cat || '카테고리 미지정')}</button><button class="btn sm ghost" data-act="d26-view" data-v="${esc(c.id)}">${ic('eye', 14)} ${esc(t('learner'))} 화면 보기</button><button class="btn sm ghost" data-act="d26-share" data-v="${esc(c.id)}">${ic('link', 14)} 공유하기</button>`);
-    const tw = document.querySelector('#main .c2lt, #main .tw'); if (tw && (UI.clsT || 'learners') === 'learners' && !document.querySelector('.d26-agg')) tw.insertAdjacentHTML('afterend', `<p class="mini d26-agg">수료율 집계 일시: ${esc(new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }))} · 진도는 ${esc(t('learner'))}가 학습할 때마다 바로 반영됩니다.</p>`);
+    const tw = document.querySelector('#main .c2lt, #main .tw'); if (tw && (UI.clsT || 'learners') === 'learners' && !document.querySelector('.d26-agg')) tw.insertAdjacentHTML('afterend', `<p class="mini d26-agg">수료율 집계 일시: ${esc(new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }))} · 진도는 ${esc(tj('learner', '이'))} 학습할 때마다 바로 반영됩니다.</p>`);
   } catch (e) { console.error(e); }
 });
 ACT['d26-view'] = el => { const c = C(el.dataset.v); if (!c) return; window.open(d26ClsURL(c), '_blank', 'noopener'); };
@@ -66,8 +66,8 @@ document.addEventListener('click', e => { const a = e.target.closest('a.cs26ch.o
 /* v26.2 교재/교구 관리 규칙(피그마 Studio › 교재/교구 › 운영 정책): 삭제 · 공개/비공개 */
 const bk26Active = b => { const d = (b.dl && +b.dl.days) || 30; const t0 = today(); return (b.grants || []).filter(g => !g.off && (typeof addDays === 'function' ? addDays(g.at, d) : g.at) >= t0); };
 ACT['bk26-del'] = el => { const b = S.books.find(x => x.id === el.dataset.v); if (!b) return; const eb = b.kind === '전자책';
-  if (eb && bk26Active(b).length) { modal('삭제할 수 없습니다', `<p>아직 다운로드 기간이 남은 ${esc(t('learner'))}이 있습니다. 모든 ${esc(t('learner'))}의 다운로드 기간 마감 후 삭제할 수 있습니다.</p>`, [{ id: 'ok', label: '확인', kind: 'pri' }]); return; }
-  if (!eb && ((b.grants || []).some(g => !g.off) || (b.ship || []).length)) { modal('삭제할 수 없습니다', `<p>이 교재를 결제/신청한 ${esc(t('learner'))}이 있어 삭제가 불가능합니다. 비공개로 전환하면 새로 판매되지 않습니다.</p>`, [{ id: 'ok', label: '확인', kind: 'pri' }]); return; }
+  if (eb && bk26Active(b).length) { modal('삭제할 수 없습니다', `<p>아직 다운로드 기간이 남은 ${esc(tj('learner', '이'))} 있습니다. 모든 ${esc(t('learner'))}의 다운로드 기간 마감 후 삭제할 수 있습니다.</p>`, [{ id: 'ok', label: '확인', kind: 'pri' }]); return; }
+  if (!eb && ((b.grants || []).some(g => !g.off) || (b.ship || []).length)) { modal('삭제할 수 없습니다', `<p>이 교재를 결제/신청한 ${esc(tj('learner', '이'))} 있어 삭제가 불가능합니다. 비공개로 전환하면 새로 판매되지 않습니다.</p>`, [{ id: 'ok', label: '확인', kind: 'pri' }]); return; }
   modal('교재 삭제', `<p>「${esc(b.name)}」을(를) 삭제합니다. 삭제하면 되돌릴 수 없습니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '삭제', kind: 'red', run: () => { S.books = S.books.filter(x => x !== b); logAudit('교재 삭제 — ' + b.name); save(); render(); toast('교재를 삭제했습니다.', 'ok'); } }]); };
 ACT['bk26-open'] = el => { const b = S.books.find(x => x.id === el.dataset.v); if (!b) return; const eb = b.kind === '전자책';
   if (b.open === '비공개') { b.open = '공개'; logAudit('교재 공개 — ' + b.name); save(); render(); toast('교재 상태를 공개로 전환하였습니다.', 'ok'); return; }

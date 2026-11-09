@@ -220,7 +220,7 @@
       case 'catBrowse': {
         let L = pubCls(); if ((d.cats || []).length) L = L.filter(c => d.cats.includes(c.cat) || (S.cats || []).some(x => x.id === c.cat && d.cats.includes(x.parent)));
         const G = catGroups(L);
-        return `<section class="sec"><div class="wrap">${SH(d, 'CATEGORY')}<div class="s2chips">${G.map(([n, l], k) => `<a href="#${id}-${k}">${esc(n)} <small>${l.length}</small></a>`).join('')}</div>${G.map(([n, l], k) => `<div class="s2cg" id="${id}-${k}"><h3>${esc(n)}</h3><div class="cls">${l.slice(0, +d.per || 4).map((c, j) => clsCard(c, j, s, lk)).join('')}</div></div>`).join('') || `<p class="emp">전체 공개 ${esc(t('cls'))}이 카테고리별로 표시됩니다.</p>`}</div></section>`;
+        return `<section class="sec"><div class="wrap">${SH(d, 'CATEGORY')}<div class="s2chips">${G.map(([n, l], k) => `<a href="#${id}-${k}">${esc(n)} <small>${l.length}</small></a>`).join('')}</div>${G.map(([n, l], k) => `<div class="s2cg" id="${id}-${k}"><h3>${esc(n)}</h3><div class="cls">${l.slice(0, +d.per || 4).map((c, j) => clsCard(c, j, s, lk)).join('')}</div></div>`).join('') || `<p class="emp">전체 공개 ${esc(tj('cls', '이'))} 카테고리별로 표시됩니다.</p>`}</div></section>`;
       }
     }
     return null;
