@@ -52,7 +52,7 @@ const measure = (p, sel = ROOTSEL) => p.evaluate(sel => { const W = innerWidth; 
   const scrollX = el => { for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) if (/(auto|scroll)/.test(getComputedStyle(a).overflowX)) return true; return false; };
   root.querySelectorAll('*').forEach(el => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return; const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
     if (r.right > W + 1 && r.left < W && !['fixed', 'absolute'].includes(cs.position) && !scrollX(el) && R.cut.length < 5) R.cut.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]} R${Math.round(r.right)}`);
-    if (el.matches('button, [role=button], a.btn') && r.height < 40 && /다음|개설|이전|이어서|채워/.test(el.innerText) && R.small.length < 5) R.small.push(`${el.innerText.trim().slice(0, 14)} ${Math.round(r.height)}px`);
+    if (el.matches('button, [role=button], a.btn') && r.height < 40 && /다음|개설|이전|이어서|채워/.test(el.innerText) && R.small.length < 5) R.small.push(`${el.innerText.trim().replace(/\s+/g, ' ').slice(0, 14)} ${Math.round(r.height)}px`);
     if (!el.children.length && el.innerText && el.innerText.trim().length > 8 && parseFloat(cs.fontSize) < 14 && !el.closest('small, .mini, .hint, sup')) R.tiny++; });
   const m = root.innerText.match(new RegExp(/커리큘럼|편성|시수|루브릭|썸네일|카테고리|모듈|프롬프트|템플릿|LMS|차감반|메타데이터|파라미터|인코딩/.source, 'g')); if (m) R.jargon = [...new Set(m)];
   return R; }, sel);
@@ -75,7 +75,7 @@ async function enterFlow(p, C, log) {
   await C.clk(hit, '만들기: ' + (await hit.innerText()).trim().slice(0, 14));
   for (let i = 0; i < 2 && !(await rootInfo(p)).on; i++) { /* 시트 · 선택창 */
     const opt = p.locator('#modal [data-act], .sheet [data-act], [role=dialog] [data-act]').filter({ visible: true }).filter({ hasText: /직접|하나씩|단계|처음부터|만들기/ }).first();
-    const resume = btnByText(p, /이어서/).first(); if (await resume.count()) return 'resume';
+    const resume = p.locator('[data-cfgo=resume]').filter({ visible: true }); if (await resume.count() || await btnByText(p, /이어서 하기/).count()) return 'resume';
     if (await opt.count()) await C.clk(opt, '선택: ' + (await opt.innerText()).trim().slice(0, 14)); else break; }
   return (await rootInfo(p)).on || (await btnByText(p, /이어서/).count()) ? true : false;
 }
@@ -86,7 +86,7 @@ async function runFlow(p, { type, ed, name, shots, tag, content = true, onStep }
   const before = await p.evaluate(() => S.classes.map(c => c.id));
   await p.evaluate(() => { window.__cfEv = []; try { ['step', 'create', 'error', 'idle', 'back'].forEach(ev => CF.on(ev, x => __cfEv.push([ev, x && (x.id || x.step || x.name || '')]))); } catch (e) { } });
   const ent = await enterFlow(p, C, log); if (!ent) return { fail: '흐름 진입 실패(만들기 버튼 또는 CF 화면 없음)', log, clicks: C.n };
-  if (ent === 'resume') { const fresh = btnByText(p, /새로|처음부터/).first(); if (await fresh.count()) await C.clk(fresh, '새로 만들기'); }
+  if (ent === 'resume' || await p.locator('[data-cfgo=resume]').filter({ visible: true }).count()) { const fm = p.locator('[data-cfgo=fresh]').filter({ visible: true }).first(); const fresh = (await fm.count()) ? fm : btnByText(p, /새로|처음부터/).first(); if (await fresh.count()) await C.clk(fresh, '새로 만들기'); }
   for (let i = 0; i < 9; i++) {
     let ri = await rootInfo(p); if (!ri.on) break;
     const sid = ri.step || `#${i + 1}`; if (!steps.includes(sid)) steps.push(sid);
@@ -96,15 +96,16 @@ async function runFlow(p, { type, ed, name, shots, tag, content = true, onStep }
     if (onStep) await onStep(sid, i);
     /* 1단계: 비어 있는 첫 글 입력칸에 과정 이름 */
     if (i === 0) { const inp = rootLoc(p).locator('input[type=text]:visible, input:not([type]):visible, textarea:visible').first(); if (await inp.count() && !(await inp.inputValue())) { await inp.fill(name); log.push('입력: 이름'); } }
-    if (content && /fill|채우/.test(sid + ri.text.slice(0, 60))) contentClicks += await addDocContent(p, log);
-    const nx = btnByText(p, NEXT_RE, ROOTSEL.split(',')[0]).last(); let nb = (await nx.count()) ? nx : btnByText(p, NEXT_RE).last();
+    if (content && sid === 'fill') contentClicks += await addDocContent(p, log);
+    const mk = p.locator('#crsFlow [data-cfgo=next], #crsFlow [data-cfgo=create]').filter({ visible: true }).last(); const nx = btnByText(p, NEXT_RE, ROOTSEL.split(',')[0]).last(); let nb = (await mk.count()) ? mk : (await nx.count()) ? nx : btnByText(p, NEXT_RE).last();
     if (!(await nb.count())) { stuck.push(`${sid}: [다음]/[개설하기] 버튼 없음`); break; }
     const label = (await nb.innerText()).trim(); await C.clk(nb, label.slice(0, 10)); await p.waitForTimeout(350);
     const after = await rootInfo(p); const made = await p.evaluate(b => S.classes.filter(c => !b.includes(c.id)).map(c => c.id), before);
     if (made.length) { created = made[0]; break; }
     if (after.on && (after.step || '') === (ri.step || '') && after.step) { /* 넘어가지 않음 → AI SAM 채우기 */
-      stuck.push(`${sid}: [${label}] 눌러도 넘어가지 않음 — ${(after.text.match(/[^\n]*(입력|필요|채워|선택)[^\n]*/) || [''])[0].slice(0, 60)}`);
-      const ai = btnByText(p, /AI SAM.*채워|채워 주|SAM에게 맡기/, ROOTSEL.split(',')[0]).first(); if (await ai.count()) { await C.clk(ai, 'AI 채우기'); await p.waitForTimeout(900); const nb2 = btnByText(p, NEXT_RE).last(); if (await nb2.count()) await C.clk(nb2, '다음(재시도)'); }
+      if (stuck.some(x => x.startsWith(sid + ':'))) { stuck.push(`${sid}: 두 번째도 못 넘어감 → 중단`); break; }
+      stuck.push(`${sid}: [${label}] 눌러도 넘어가지 않음 — ${await p.evaluate(() => [...document.querySelectorAll('#crsFlow .cf-err, .toast, .tst')].map(e => e.innerText.trim()).filter(Boolean).slice(-2).join(' / ').slice(0, 90))}`);
+      const ai = p.locator('#crsFlow [data-cfgo=ai], #crsFlow [data-cfai]').filter({ visible: true }).first(); if (await ai.count()) { await C.clk(ai, 'AI 채우기'); await p.waitForTimeout(900); const nb2 = btnByText(p, NEXT_RE).last(); if (await nb2.count()) await C.clk(nb2, '다음(재시도)'); }
       const made2 = await p.evaluate(b => S.classes.filter(c => !b.includes(c.id)).map(c => c.id), before); if (made2.length) { created = made2[0]; break; } }
   }
   if (!created) { await p.waitForTimeout(600); const made = await p.evaluate(b => S.classes.filter(c => !b.includes(c.id)).map(c => c.id), before); created = made[0] || null; }
@@ -114,15 +115,15 @@ async function runFlow(p, { type, ed, name, shots, tag, content = true, onStep }
   return { created, steps, clicks: C.n, contentClicks, log, stuck, meas, regSeen: [...regSeen], ev, post };
 }
 
-/* 차시 채우기: 첫 차시에 AI 교안 하나(CT.open('doc')) — 3번 클릭 안에 결과 */
-async function addDocContent(p, log) { let n = 0; const scope = ROOTSEL.split(',')[0];
-  const card = p.locator(`${ROOTSEL} [data-ct=doc], ${ROOTSEL} [data-kind=doc]`).filter({ visible: true }).first();
-  const pick = (await card.count()) ? card : btnByText(p, /교안/).first(); if (!(await pick.count())) { log.push('콘텐츠: 교안 버튼 없음'); return 0; }
-  const b0 = await p.evaluate(() => JSON.stringify(window.CF && CF.draft || {}).length);
-  await pick.click({ timeout: 4000 }).catch(() => {}); n++; log.push('콘텐츠: 교안'); await p.waitForTimeout(500);
-  for (let k = 0; k < 4; k++) { const ok = btnByText(p, /^(\s*)(만들기|AI로 만들기|넣기|이 차시에 넣기|저장|완료|확인|사용하기|이대로)/).last(); if (!(await ok.count())) break; await ok.click({ timeout: 4000 }).catch(() => {}); n++; log.push('콘텐츠: ' + (await ok.innerText().catch(() => '')).trim().slice(0, 10)); await p.waitForTimeout(900);
-    const b1 = await p.evaluate(() => JSON.stringify(window.CF && CF.draft || {}).length); const open = await p.locator('#modal').count(); if (b1 > b0 + 50 && !open) break; }
-  void scope; return n; }
+/* 차시 채우기: 첫 차시에 AI 교안 하나(C3 CT: .ct-kind[data-k=doc] → CT 창 .ct-pri) — 3번 클릭 안에 결과 */
+async function ctConfirm(p, log, max = 4) { let n = 0; for (let k = 0; k < max; k++) { const ok = p.locator('.ct-sh .ct-pri').filter({ visible: true }).last(); if (!(await ok.count()) || await ok.isDisabled()) break; const lb = (await ok.innerText().catch(() => '')).trim(); await ok.click({ timeout: 4000 }).catch(() => {}); n++; log.push('CT: ' + lb.slice(0, 12)); await p.waitForTimeout(900); if (!(await p.locator('.ct-sh').filter({ visible: true }).count())) break; } return n; }
+async function addDocContent(p, log) {
+  const card = p.locator('#crsFlow .ct-kind[data-k=doc]').filter({ visible: true }).first();
+  if (!(await card.count())) { log.push('콘텐츠: 교안 카드(.ct-kind[data-k=doc]) 없음'); return 0; }
+  const n0 = await p.evaluate(() => ((CF.draft || {}).curriculum || []).length);
+  await card.click({ timeout: 4000 }); log.push('콘텐츠: 교안'); await p.waitForTimeout(600); const n = 1 + await ctConfirm(p, log);
+  const n1 = await p.evaluate(() => ((CF.draft || {}).curriculum || []).length); if (n1 <= n0) log.push('콘텐츠: 교안이 초안에 안 들어감');
+  return n; }
 
 /* S.classes 스키마(SURVEY 1절) · 학습자 게시본 */
 const schemaCheck = (p, id) => p.evaluate(([id, KINDS, ITYPES]) => { const c = S.classes.find(x => x.id === id); const E = []; if (!c) return ['과정 없음'];
@@ -133,7 +134,9 @@ const schemaCheck = (p, id) => p.evaluate(([id, KINDS, ITYPES]) => { const c = S
   if (k.video + k.exam + k.assign && k.video + k.exam + k.assign !== 100) E.push(`criteria 합 ${k.video + k.exam + k.assign}`);
   if (!('start' in c) || !('end' in c)) E.push('start/end'); if (typeof c.teacher !== 'string') E.push('teacher');
   const cu = c.curriculum || []; if (!cu.length) E.push('curriculum 비어 있음'); const ids = new Set();
-  cu.forEach((it, i) => { if (!it.id || ids.has(it.id)) E.push(`item${i}.id`); ids.add(it.id); if (!ITYPES.includes(it.type)) E.push(`item${i}.type=${it.type}`); if (!it.title) E.push(`item${i}.title`); if (it.type !== 'chapter' && !(+it.week >= 1)) E.push(`item${i}.week=${it.week}`); });
+  const bad = {}; const add = (k, v) => { (bad[k] = bad[k] || []).push(v); };
+  cu.forEach((it, i) => { if (!it.id || ids.has(it.id)) add('id 중복/없음', i); ids.add(it.id); if (!ITYPES.includes(it.type)) add('type', it.type); if (!it.title) add('title 없음', i); if (it.type !== 'chapter' && !(+it.week >= 1)) add('week 없음', it.type); });
+  Object.entries(bad).forEach(([k, v]) => E.push(`항목 ${k} ${v.length}/${cu.length}개(${[...new Set(v)].slice(0, 3).join(',')})`));
   if (c.weekPlan && !Array.isArray(c.weekPlan)) E.push('weekPlan'); (c.weekPlan || []).forEach((w, i) => { if (!w || !w.title) E.push(`weekPlan${i}.title`); });
   const weeks = new Set(cu.filter(i => i.type !== 'chapter').map(i => +i.week)); const wp = (c.weekPlan || []).length; if (wp && weeks.size < Math.min(wp, 60)) E.push(`차시 ${wp}개 중 항목 있는 차시 ${weeks.size}`);
   return E; }, [id, KINDS, ITYPES]);
@@ -150,7 +153,7 @@ const snapCheck = (p, id) => p.evaluate(id => { const E = []; const c = S.classe
 async function learnerCheck(ctx, p, base, id, errs) {
   const r = await p.evaluate(id => { try { closeModal(); } catch (e) { } const c = S.classes.find(x => x.id === id); c.status = c.status === '준비중' ? c.status : c.status; if (c.open === '비공개') c.open = '전체'; (window.smPublish || ACT['ls-pub'])(); try { closeModal(); } catch (e) { } let code = null; try { code = lxDemo(); (window.smPublish || ACT['ls-pub'])(); } catch (e) { } try { closeModal(); } catch (e) { } return { tid: DREG.cur(), name: c.name, first: ((c.curriculum || []).find(i => i.type !== 'chapter') || {}).title || '' }; }, id);
   const l = await ctx.newPage(); l.on('pageerror', e => errs.push('learner: ' + e.message)); await l.addInitScript(() => { try { localStorage.setItem('didisam.app.classic', '1'); } catch (e) { } });
-  await l.goto(base + `learner.html?t=${encodeURIComponent(r.tid)}#c/${id}`); await l.waitForFunction(() => window.LR && LR.site, null, { timeout: 8000 }).catch(() => {}); await l.waitForTimeout(800);
+  await l.goto(base + `learner.html?t=${encodeURIComponent(r.tid)}#class/${id}`); await l.waitForFunction(() => window.LR && LR.site, null, { timeout: 8000 }).catch(() => {}); await l.waitForTimeout(800);
   const txt = await l.evaluate(() => document.body.innerText); await l.close();
   return { name: txt.includes(r.name), first: !r.first || txt.includes(r.first.slice(0, 12)), r };
 }
@@ -159,11 +162,11 @@ async function learnerCheck(ctx, p, base, id, errs) {
 async function resumeCheck(br, base, tc, opt) { const errs = []; const { ctx, p } = await openOrg(br, base, tc, { ...opt, errs }); const E = [];
   try { const log = [], C = clicker(p, log); if (!(await enterFlow(p, C, log))) { await ctx.close(); return ['흐름 진입 실패']; }
     const inp = rootLoc(p).locator('input[type=text]:visible, input:not([type]):visible, textarea:visible').first(); const nm = '이어하기 점검 과정'; if (await inp.count()) await inp.fill(nm);
-    const s1 = (await rootInfo(p)).step; const nb = btnByText(p, /^\s*다음/).last(); if (await nb.count()) await nb.click(); await p.waitForTimeout(1300);
-    const s2 = (await rootInfo(p)).step; const d = await p.evaluate(() => JSON.parse(localStorage.getItem('didisam.studio.v2') || '{}').crsDraft || null);
+    const s1 = (await rootInfo(p)).step; const nm2 = p.locator('#crsFlow [data-cfgo=next]').filter({ visible: true }).last(); const nb = (await nm2.count()) ? nm2 : btnByText(p, /^\s*다음/).last(); if (await nb.count()) await nb.click(); await p.waitForTimeout(1300);
+    const s2 = (await rootInfo(p)).step; const d = await p.evaluate(() => (Store.get() || {}).crsDraft || null);
     if (!d) E.push('S.crsDraft가 저장되지 않음'); else if (!JSON.stringify(d).includes(nm)) E.push('초안에 이름 없음');
     await p.reload(); await p.waitForFunction(() => window.S && S.org); await p.waitForTimeout(900);
-    const C2 = clicker(p, []); const ent = await enterFlow(p, C2, []); const rb = btnByText(p, /이어서/).first();
+    const C2 = clicker(p, []); const ent = await enterFlow(p, C2, []); const rm = p.locator('[data-cfgo=resume]').filter({ visible: true }).first(); const rb = (await rm.count()) ? rm : btnByText(p, /이어서/).first();
     if (!(await rb.count())) E.push('새로고침 후 [이어서 하기] 안내 없음(진입=' + ent + ')'); else { await rb.click(); await p.waitForTimeout(500);
       const s3 = (await rootInfo(p)).step; if (s2 && s3 !== s2) E.push(`이어서 한 단계 ${s3} ≠ 저장 단계 ${s2}(처음 ${s1})`);
       const has = await p.evaluate(nm => JSON.stringify(CF.draft || {}).includes(nm) || [...document.querySelectorAll('input, textarea')].some(i => i.value === nm) || document.body.innerText.includes(nm), nm); if (!has) E.push('이어서 한 화면에 이름이 없음'); }
@@ -174,11 +177,11 @@ async function resumeCheck(br, base, tc, opt) { const errs = []; const { ctx, p 
 const cfgCheck = (p, key) => p.evaluate(key => { const E = []; if (!window.CF) return ['window.CF 없음']; const g = (CF.cfg || {})[key]; if (!g) return [`CF.cfg.${key} 없음`];
   if (!Array.isArray(g.steps) || !g.steps.length) E.push('steps 없음'); else if (g.steps.length > 5) E.push(`단계 ${g.steps.length}개(>5)`);
   if (!Array.isArray(g.required)) E.push('required 배열 없음');
-  if (['voc', 'corp', 'lifelong'].includes(key)) { if (typeof g.check !== 'function') E.push('check(d) 없음'); else { let w = []; try { w = g.check({ name: '점검', sessions: 2, price: 300000, hours: 2, items: [] }) || []; } catch (e) { E.push('check 예외 ' + e.message); }
+  if (['voc', 'corp', 'lifelong'].includes(key)) { if (typeof g.check !== 'function') E.push('check(d) 없음'); else { let w = []; try { w = g.check({ name: '점검', sessions: 2, mins: 50, price: 300000, paid: true, refund: true, mode: 'remote', cat: 'job', items: [] }) || []; } catch (e) { E.push('check 예외 ' + e.message); }
     if (!w.length) E.push('규정 미달 초안에 경고 0건'); else if (!w.some(x => /심사|HRD|인정|4시간|30시간|분량|시간/.test(typeof x === 'string' ? x : JSON.stringify(x)))) E.push('경고에 규정 항목 언급 없음: ' + JSON.stringify(w).slice(0, 80)); } }
   return E; }, key);
 
-module.exports = { serve, openOrg, enterFlow, runFlow, rootInfo, measure, clicker, btnByText, schemaCheck, snapCheck, learnerCheck, resumeCheck, cfgCheck, TYPES, ROOTSEL, JARGON };
+module.exports = { ctConfirm, serve, openOrg, enterFlow, runFlow, rootInfo, measure, clicker, btnByText, schemaCheck, snapCheck, learnerCheck, resumeCheck, cfgCheck, TYPES, ROOTSEL, JARGON };
 
 if (require.main === module) (async () => {
   const only = (process.env.CRS_ONLY || '').split(',').filter(Boolean); const shots = process.env.CRS_SHOTS || ''; if (shots) fs.mkdirSync(shots, { recursive: true });

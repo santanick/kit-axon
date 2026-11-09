@@ -30,7 +30,7 @@ const probe = (p, i) => p.evaluate(([i, sel]) => { const root = [...document.que
   if (!btns.some(b => /나중에|이어서 하기|저장하고 닫기/.test(b.innerText))) B.push(['되돌리기', '[나중에 이어서 하기] 없음']);
   const words = root.innerText.match(/커리큘럼|편성|시수|루브릭|썸네일|카테고리|모듈|프롬프트|템플릿|LMS|차감반|메타데이터|파라미터|인코딩|심사코드|HRD-?Net|tracse|NCS|훈련과정 ID|DB|URL|업로드/g); if (words) B.push(['단어', '설명 없이 보이는 말: ' + [...new Set(words)].join(', ')]);
   const inputs = [...root.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea, select')].filter(vis);
-  const noEx = inputs.filter(x => { const box = x.closest('label, .fl, .crs-f, [data-k], .field') || x.parentElement; return !/예:|예시/.test(box ? box.innerText : ''); }); if (noEx.length) B.push(['예시', `입력칸 ${inputs.length}개 중 ${noEx.length}개 옆에 '예:' 문장 없음`]);
+  const noEx = inputs.filter(x => { const box = x.closest('.cf-f, .ct-f, label, .fl') || x.parentElement; return !/예:|예시/.test(box ? box.innerText : ''); }); if (noEx.length) B.push(['예시', `입력칸 ${inputs.length}개 중 ${noEx.length}개 옆에 '예:' 문장 없음`]);
   if (inputs.length && !btns.some(b => /채워|AI SAM/.test(b.innerText))) B.push(['AI', '[AI SAM이 채워 주기] 버튼 없음']);
   const head = root.querySelector('h1, h2, h3, .crs-now, [data-now]'); const prog = /[①②③④⑤]|\b1\s*\/\s*[2-5]\b|단계/.test(root.innerText.slice(0, 300)); if (!prog) B.push(['진행', '위쪽에 진행 표시(①②③ · n/5) 못 찾음']);
   const small = [...root.querySelectorAll('p, label, li, span, div')].filter(e => vis(e) && !e.children.length && e.innerText.trim().length > 10 && parseFloat(getComputedStyle(e).fontSize) < 15 && !e.closest('small, .mini, .hint')).length; if (small > 3) B.push(['글자', `16px 미만 본문 ${small}곳`]);
@@ -38,12 +38,13 @@ const probe = (p, i) => p.evaluate(([i, sel]) => { const root = [...document.que
 
 async function personaAct(p, act, log) { /* 차시 채우기 단계에서 페르소나 과제 */
   const C = []; const tryBtn = async (re, tag) => { const b = F.btnByText(p, re).first(); if (await b.count()) { await b.click({ timeout: 3000 }).catch(() => {}); C.push(tag); await p.waitForTimeout(500); return true; } C.push(tag + ' 못 찾음'); return false; };
-  const pickCard = async (kind, re) => { const c = p.locator(`${F.ROOTSEL.split(',')[0]} [data-ct=${kind}], [data-ct=${kind}]`).filter({ visible: true }).first(); if (await c.count()) { await c.click().catch(() => {}); C.push(kind); await p.waitForTimeout(500); return true; } return tryBtn(re, kind); };
-  const confirm = async () => { for (let k = 0; k < 4; k++) { const ok = F.btnByText(p, /^\s*(AI로 만들기|만들기|넣기|이 차시에 넣기|저장|완료|확인|올리기|추가)/).last(); if (!(await ok.count())) return; await ok.click({ timeout: 3000 }).catch(() => {}); C.push('확인'); await p.waitForTimeout(900); if (!(await p.locator('#modal, dialog[open]').count())) return; } };
-  if (act === 'ppt') { if (await pickCard('upload', /올리기|업로드|파일/)) { const fi = p.locator('input[type=file]').first(); if (await fi.count()) { await fi.setInputFiles({ name: '1주차_경영학원론.pptx', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', buffer: Buffer.from('PK\u0003\u0004 demo pptx') }); C.push('PPT 선택'); await p.waitForTimeout(1200); } else C.push('파일 칸 없음'); await confirm(); } }
-  if (act === 'yt') { if (await pickCard('youtube', /YouTube|유튜브|링크/)) { const u = p.locator('#modal input:visible, dialog[open] input:visible, input[type=url]:visible').first(); if (await u.count()) { await u.fill('https://youtu.be/dQw4w9WgXcQ'); C.push('링크 입력'); } await confirm(); }
+  const pickCard = async (kind, re) => { const c = p.locator(`#crsFlow .ct-kind[data-k=${kind}]`).filter({ visible: true }).first(); if (await c.count()) { await c.click().catch(() => {}); C.push(kind); await p.waitForTimeout(500); return true; } return tryBtn(re, kind); };
+  const confirm = async () => { const n = await F.ctConfirm(p, C); if (!n) C.push('확인 버튼 못 찾음'); };
+  if (act === 'ppt') { if (await pickCard('upload', /올리기|업로드|파일/)) { const fi = p.locator('.ct-sh input[type=file]').first(); if (await fi.count()) { await fi.setInputFiles({ name: '1주차_경영학원론.pptx', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', buffer: Buffer.from('PK\u0003\u0004 demo pptx') }); C.push('PPT 선택'); await p.waitForTimeout(1200); } else C.push('파일 칸 없음'); await confirm(); } }
+  if (act === 'yt') { if (await pickCard('youtube', /YouTube|유튜브|링크/)) { const u = p.locator('.ct-sh input:visible').first(); if (await u.count()) { await u.fill('https://youtu.be/dQw4w9WgXcQ'); C.push('링크 입력'); } await confirm(); }
     if (await pickCard('quiz', /퀴즈/)) await confirm(); }
   if (act === 'reg') { /* 규정 안내 확인만 */ }
+  if (await p.locator('.ct-sh').filter({ visible: true }).count()) { C.push('CT 창이 안 닫힘 → 닫기'); await p.locator('.ct-sh [data-act=ct-close], .ct-sh [data-act=ct-pk-x]').filter({ visible: true }).first().click().catch(() => {}); await p.waitForTimeout(300); const yes = F.btnByText(p, /닫기|나가기|버리기/, '#modal').last(); if (await yes.count()) await yes.click().catch(() => {}); }
   log.push(...C); return C; }
 
 (async () => {

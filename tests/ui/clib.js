@@ -20,16 +20,16 @@ async function openLib(p, C) { /* 사이드바(레일 → 라이브러리) 실�
 
 /* 라이브러리 안에서 kind 하나 만들기: 카드 [data-ct=kind] → 결과 확인 버튼 몇 번 */
 async function makeOne(p, kind, log) { const n0 = await p.evaluate(() => (S.clib || []).length); let clicks = 0;
-  let card = p.locator(`#main [data-ct=${kind}], #main [data-kind=${kind}]`).filter({ visible: true }).first();
-  if (!(await card.count())) { const mk = F.btnByText(p, /^\s*\+?\s*(만들기|새로 만들기|콘텐츠 만들기)/, '#main').first(); if (await mk.count()) { await mk.click(); clicks++; await p.waitForTimeout(300); } card = p.locator(`[data-ct=${kind}], [data-kind=${kind}]`).filter({ visible: true }).first(); }
+  let card = p.locator(`#main .ct-kind[data-k=${kind}], #main [data-ct=${kind}], #main [data-kind=${kind}]`).filter({ visible: true }).first();
+  if (!(await card.count())) { const mk = F.btnByText(p, /^\s*\+?\s*(만들기|새로 만들기|콘텐츠 만들기)/, '#main').first(); if (await mk.count()) { await mk.click(); clicks++; await p.waitForTimeout(300); } card = p.locator(`.ct-kind[data-k=${kind}], [data-ct=${kind}], [data-kind=${kind}]`).filter({ visible: true }).first(); }
   if (!(await card.count())) { log.push(`${kind}: 카드 없음 → CT.open 직접`); const ok = await p.evaluate(k => { if (!window.CT) return false; CT.open(k, { from: 'lib', onDone() { } }); return true; }, kind); if (!ok) return { err: 'CT 없음' }; }
   else { await card.click(); clicks++; }
   await p.waitForTimeout(500);
   if (kind === 'upload') { const fi = p.locator('input[type=file]').first(); if (await fi.count()) await fi.setInputFiles({ name: '1차시 강의자료.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF') }); else log.push('upload: 파일 칸 없음'); await p.waitForTimeout(1200); }
-  if (kind === 'youtube') { const u = p.locator('input[type=url]:visible, input[name*=url]:visible, input[placeholder*=youtu]:visible').first(); const any = (await u.count()) ? u : p.locator('#modal input:visible, [role=dialog] input:visible').first(); if (await any.count()) await any.fill('https://youtu.be/dQw4w9WgXcQ'); else log.push('youtube: 주소 칸 없음'); }
-  const topic = p.locator('#modal input[type=text]:visible, #modal textarea:visible, [role=dialog] input[type=text]:visible').first(); if (!['youtube', 'upload'].includes(kind) && await topic.count() && !(await topic.inputValue())) await topic.fill('엑셀 함수 기초');
+  if (kind === 'youtube') { const u = p.locator('input[type=url]:visible, input[name*=url]:visible, input[placeholder*=youtu]:visible').first(); const any = (await u.count()) ? u : p.locator('.ct-sh input:visible').first(); if (await any.count()) await any.fill('https://youtu.be/dQw4w9WgXcQ'); else log.push('youtube: 주소 칸 없음'); }
+  const topic = p.locator('.ct-sh input[type=text]:visible, .ct-sh textarea:visible').first(); if (!['youtube', 'upload'].includes(kind) && await topic.count() && !(await topic.inputValue())) await topic.fill('엑셀 함수 기초');
   for (let k = 0; k < 5; k++) { if ((await p.evaluate(() => (S.clib || []).length)) > n0) break;
-    const ok = F.btnByText(p, /^\s*(AI로 만들기|만들기|저장|라이브러리에 저장|완료|확인|이대로|넣기|등록|올리기|추가)/).last(); if (!(await ok.count())) break; await ok.click({ timeout: 4000 }).catch(() => {}); clicks++; await p.waitForTimeout(1100); }
+    const ok = p.locator('.ct-sh .ct-pri').filter({ visible: true }).last(); if (!(await ok.count()) || await ok.isDisabled()) { log.push(`${kind}: 확인 버튼 없음/꺼짐`); break; } await ok.click({ timeout: 4000 }).catch(() => {}); clicks++; await p.waitForTimeout(1100); }
   const r = await p.evaluate(([n0, kind]) => { const L = S.clib || []; const x = L.length > n0 ? L[0].at >= (L[L.length - 1].at || '') ? L[0] : L[L.length - 1] : null; const all = window.CLIB ? CLIB.all() : []; return { n: L.length - n0, rec: x && { id: x.id, kind: x.kind, title: x.title, has: !!(x.url || x.fileId || x.doc || x.ai || (x.qs || []).length || x.book || x.src) }, inAll: x ? all.some(y => y.id === x.id) : false }; }, [n0, kind]);
   await p.evaluate(() => { try { closeModal(); } catch (e) { } document.querySelectorAll('dialog[open]').forEach(d => d.close()); });
   return { ...r, clicks }; }
