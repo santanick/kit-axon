@@ -447,7 +447,7 @@
   function lhReload() { const f = lhFrame(); try { if (f && f.contentWindow) f.contentWindow.postMessage('didisam:reload', location.origin); } catch (e) { } }
   function lhSet(k, patch, msg) { if (!k) return false; push(); const s = site(); const all = s.lhead = Object.assign({}, s.lhead || {}); const c = Object.assign({}, all[k] || {}, patch);
     Object.keys(c).forEach(x => { if (c[x] === '' || c[x] == null) delete c[x]; }); if (Object.keys(c).length) all[k] = c; else delete all[k];
-    HS.lhSig = JSON.stringify(s.lhead || {}); persist(); lhReload(); if (msg) say(msg + ' 마음에 들지 않으면 [되돌리기]를 누르세요.', 'ok'); return true; }
+    persist(); lhReload(); HS.lhSig = lhSigNow(); if (msg) say(msg + ' 마음에 들지 않으면 [되돌리기]를 누르세요.', 'ok'); return true; }
   window.hpsLhSet = lhSet;
   /* 샘플 사진(분위기 사진 · img/stock — 학습자 화면과 같은 폴더라 상대 주소 그대로) */
   function lhStock(q, k) { const H = window.HPSTOCK; if (!H || typeof H.forScene !== 'function') return ''; const cur = String(lhCur(k).img || ''); let L = [];
@@ -520,8 +520,10 @@
     const W = { t: '제목', d: '소개 문구', img: '배경 사진', al: '정렬', h: '높이', tone: '바탕 색' }; return lhSet(k, P, `「${(HS.lv && HS.lv.name) || '학습 페이지'}」 머리글의 ${Object.keys(P).map(x => W[x]).filter(Boolean).join(' · ')}을(를) 바꿨습니다(${via}).`); }
   window.hpsLhPrompt = lhPrompt;
   /* 되돌리기 · 다른 곳에서 바뀐 경우에도 미리보기를 맞춘다 */
-  AFTER.push(() => { try { if (!HS.dock || !HS.lv || HS.lv.url || !S.site) return; const sg = JSON.stringify(S.site.lhead || {}); if (HS.lhSig != null && HS.lhSig !== sg) lhReload(); HS.lhSig = sg; } catch (e) { } });
-  { const tk = () => { try { if (HS.dock && HS.lv && !HS.lv.url && S && S.site) { const sg = JSON.stringify(S.site.lhead || {}); if (HS.lhSig != null && HS.lhSig !== sg) lhReload(); HS.lhSig = sg; } } catch (e) { } }; setInterval(tk, 700); }
+  /* 머리글 · 테마 색 · 글꼴 · 로고 · 메뉴가 바뀌면(되돌리기 · 디자인 패널 포함) 학습 페이지 미리보기도 다시 그린다 */
+  const lhSigNow = () => { const s = S.site; return JSON.stringify([s.lhead || {}, s.theme || '', s.color || '', s.hpFont || s.font || '', s.fonts || '', (s.gnb || {}).logo ? 1 : 0, A(s.menus).map(m => [m.l, m.on, m.link])]); };
+  const lhTick = () => { try { if (HS.dock && HS.lv && !HS.lv.url && S && S.site) { const sg = lhSigNow(); if (HS.lhSig != null && HS.lhSig !== sg) lhReload(); HS.lhSig = sg; } } catch (e) { } };
+  AFTER.push(lhTick); setInterval(lhTick, 700);
   /* 게시본: hp.lhead(학습자 화면 lhead.js가 읽음) — 글자 수 · 사진 주소를 거른다 */
   function lhPub() { const o = {}; const L = (S.site && S.site.lhead) || {};
     Object.keys(L).slice(0, 40).forEach(k => { const c = L[k] || {}; if (!/^[\w가-힣ㄱ-ㅎ /.·()-]{1,48}$/.test(k)) return; const x = {};
