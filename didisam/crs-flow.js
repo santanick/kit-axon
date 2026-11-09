@@ -301,6 +301,10 @@
   ACT['crs-open'] = el => open({ from: (el && el.dataset && el.dataset.from) || fromOf(el), step: el && el.dataset && el.dataset.step });
   { const b = ACT['cls-new-adv']; if (b) ACT['cls-new-adv'] = (...a) => { const d = F && F.d; close(true); b(...a); if (d && typeof WZ !== 'undefined' && WZ) { WZ.name = d.name || ''; WZ.target = d.target || ''; WZ.goal = d.goal || ''; if (typeof wizard === 'function') wizard(); } }; }
 
+  /* 이어서 하기 띠: 과정 목록 위에 초안이 있으면 한 줄로 알림 */
+  if (typeof render === 'function') { const b = render; render = function (...a) { const r = b.apply(this, a); try { const m = $('#main'); if (m && typeof CUR !== 'undefined' && CUR.tab === 'class' && !UI.cls && !F && hasDraft() && !m.querySelector('.cf-resbar')) { const x = S.crsDraft; m.insertAdjacentHTML('afterbegin', `<div class="cf-resbar" role="status"><span>만들던 <b>${esc(x.d.name || T('cls'))}</b>이(가) 있습니다.</span><button type="button" class="btn pri" data-act="crs-resume">이어서 하기</button></div>`); } } catch (e) { } return r; }; }
+  ACT['crs-resume'] = () => open({ resume: true, _asked: true, from: 'menu' });
+
   /* ───────── 생성 함수 통일 ───────── */
   if (typeof makeCourse === 'function') { const old = makeCourse; makeCourse = function (x) { x = x || {}; if (x.legacy) return old(x); /* 기존 호출자(SAM · 저니 · 에이전트) 호환: topic · weeks · aud · fee · docs · vsrc · quiz · assign · exam · level */
       return create({ name: x.topic, sessions: x.weeks, _n: clamp(+x.weeks || (U() ? 15 : 6), 1, 30), target: x.aud || '', fee: x.fee, docs: !!x.docs, vsrc: x.vsrc || 'youtube', quiz: x.quiz !== false, assign: x.assign !== false, exam: x.exam !== false, level: x.level, open: '비공개', status: '준비중', days: (clamp(+x.weeks || (U() ? 15 : 6), 1, 30)) * 7, audit: 'AI 과정 생성', from: 'sam' }); }; CF._makeCourseOld = old; }

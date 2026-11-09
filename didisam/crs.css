@@ -114,6 +114,7 @@ body.cf-on{overflow:hidden}
 .cf-next button.pri{border-color:var(--s400,#5C74F6);background:var(--s50,#EAEDFF)}.cf-next button .ic{color:var(--s400,#5C74F6);flex:none}
 .cf-next button:hover{border-color:var(--s300,#7D90F9)}
 .cf-laterh{display:none}
+.cf-resbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 16px;border:1px solid var(--s200,#A5B0FA);background:var(--s50,#EAEDFF);border-radius:8px;font-size:16px}.cf-resbar .btn{min-height:44px}
 /* 휴대폰 */
 @media (max-width:640px){
   .crsf{padding:0;align-items:stretch}
