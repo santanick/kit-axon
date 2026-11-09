@@ -1,5 +1,6 @@
 'use strict';
 /* v35 과정 만들기 개편 — 흐름 끝까지 자동 검증(C7).
+   v36 B: 유형별 템플릿(그 유형 6~8개 · 다른 유형 말 섞임 없음 · '구분' 칸 없음) · examPath(차시마다 다른 길이 → 시험 배수 · 무작위 · 시간 · 재응시 · 통과 점수 → 설문 → 기간 · 신청 기간 직접 → 평가 기준 → 개설 → 학습자 채점은 낸 문항만).
    7유형(k12 · univ lite · adult · public · lifelong · voc · corp) × (빈 기관 · 채운 기관) PC 1280 + 휴대폰 390(빈 기관).
    메뉴 진입(레일 → [+ 만들기]) → CF 단계 끝까지 → [개설하기].
    검사: 단계 수 ≤5 · 기본 경로 클릭 ≤10 · 단계마다 가로 넘침 0 · pageerror 0 · 자동 저장 후 새로고침 이어서 하기 ·
@@ -187,7 +188,85 @@ const cfgCheck = (p, key) => p.evaluate(key => { const E = []; if (!window.CF) r
     if (!w.length) E.push('규정 미달 초안에 경고 0건'); else if (!w.some(x => /심사|HRD|인정|4시간|30시간|분량|시간/.test(typeof x === 'string' ? x : JSON.stringify(x)))) E.push('경고에 규정 항목 언급 없음: ' + JSON.stringify(w).slice(0, 80)); } }
   return E; }, key);
 
-module.exports = { ctConfirm, serve, openOrg, enterFlow, runFlow, rootInfo, measure, clicker, btnByText, schemaCheck, snapCheck, learnerCheck, resumeCheck, cfgCheck, TYPES, ROOTSEL, JARGON };
+
+/* v36 B: 유형별 '이런 교육과정이 많습니다' — 그 유형 템플릿만 6~8개, 다른 유형 말(법정 의무교육 등)이 섞이지 않는다 */
+const TPL_BAN = { univ: /법정|의무교육|훈련|내신|원생/, k12: /법정|의무교육|훈련|학점|임직원/, adult: /법정|의무교육|임용|학점은행/, lifelong: /법정|의무교육|임용|사업주/, voc: /임용|내신|학점은행/, corp: /내신|임용|학점은행/, public: /내신|사업주|학점은행/ };
+const tplCheck = (p, type) => p.evaluate(([type, ban]) => { const E = []; try { CF.open({ fresh: true, from: 'menu' }); } catch (e) { return ['CF.open 예외 ' + e.message]; }
+  const L = [...document.querySelectorAll('#crsFlow [data-cftpl]')].map(b => b.innerText.replace(/\s+/g, ' ').trim()); const ids = [...document.querySelectorAll('#crsFlow [data-cftpl]')].map(b => b.dataset.cftpl);
+  if (L.length < 6 || L.length > 8) E.push(`템플릿 ${L.length}개(6~8 기대)`); const re = new RegExp(ban); const bad = L.filter(x => re.test(x)); if (bad.length) E.push('다른 유형 템플릿 섞임: ' + bad.join(' / '));
+  const own = (CF.cfg[CF.cfgKey()] || {}).templates || []; if (ids.some(id => !own.some(t => t.id === id))) E.push('지금 유형 cfg에 없는 템플릿');
+  const lab = [...document.querySelectorAll('#crsFlow .cf-lab')].map(x => x.innerText); if (lab.some(x => /^구분/.test(x))) E.push("목적이 불분명한 '구분' 칸이 남아 있음");
+  try { CF.close(false); CF.dropDraft(); } catch (e) { } return E; }, [type, (TPL_BAN[type] || /$^/).source]);
+
+/* v36 B: 차시마다 다른 길이 → 시험(배수 출제 · 무작위 · 시간 · 재응시 · 통과 점수) · 설문 → 수강 기간 직접 · 평가 기준 → 개설 → 게시본 · 학습자 채점 */
+async function examPath(br, base, tc, { vp = { width: 1280, height: 900 }, shots } = {}) {
+  const errs = []; const { ctx, p } = await openOrg(br, base, tc, { empty: true, vp, errs }); const E = []; const type = tc[0]; const log = []; const C = clicker(p, log);
+  const shot = async t => { if (shots) await p.screenshot({ path: path.join(shots, `exam_${type}_${vp.width}_${t}.png`) }); const m = await measure(p); if (m.over > 0) E.push(`${t} 가로 넘침 ${m.over}px`); if (m.cut.length) E.push(`${t} 잘림 ${m.cut.join(' ')}`); };
+  const next = async () => { await C.clk(p.locator('#crsFlow [data-cfgo=next]').filter({ visible: true }).last(), '다음'); await p.waitForTimeout(300); };
+  const step = async () => (await rootInfo(p)).step;
+  const editorDone = async () => { await p.waitForTimeout(400); if (await p.locator('#ctSheet').filter({ visible: true }).count()) { await ctConfirm(p, log); return 'ct'; } const ok = p.locator('#modal [data-mact=ok]').filter({ visible: true }); if (await ok.count()) { await C.clk(ok, '편집기 저장'); await p.waitForTimeout(400); return 'editor'; } return 'none'; };
+  try {
+    if (!(await enterFlow(p, C, log))) throw new Error('흐름 진입 실패');
+    if (await p.locator('[data-cfgo=fresh]').filter({ visible: true }).count()) await C.clk(p.locator('[data-cfgo=fresh]').first(), '새로 만들기');
+    await p.locator('#crsFlow input[type=text]:visible').first().fill('데이터 분석 기초'); await next();
+    /* ① 차시 길이: 차시마다 다르게 */
+    const each = p.locator('#crsFlow [data-cfset=minsMode][data-v=each]'); let sumMin = 0; const varm = await each.count();
+    if (varm) { await C.clk(each, '차시마다 다르게'); const ins = p.locator('#crsFlow [data-cfwm]'); const n = await ins.count(); const rem = type === 'voc';
+      for (let i = 0; i < n; i++) { const v = rem ? [30, 50, 60][i % 3] : [30, 45, 60, 90][i % 4]; await ins.nth(i).fill(String(v)); sumMin += v; }
+      await p.waitForTimeout(150); const tl = await p.locator('#crsFlow [data-cftot]').innerText(); const hm = `${Math.floor(sumMin / 60)}시간${sumMin % 60 ? ' ' + (sumMin % 60) + '분' : ''}`; if (!tl.includes(hm)) E.push(`합계 줄 '${tl}'에 ${hm} 없음`);
+      if (await p.locator('#crsFlow [data-cfset=mins]').filter({ visible: true }).count()) E.push('차시마다 다르게인데 1차시 길이 칸이 보임');
+      await shot('2each'); } else if (!['k12', 'univ'].includes(type)) E.push('차시 길이 방식(차시마다 다르게) 선택 없음');
+    await next(); if (await step() !== 'fill') throw new Error('차시 채우기로 못 넘어감: ' + await step() + ' ' + (await p.locator('#crsFlow .cf-err').allInnerTexts()).join('|'));
+    /* ② 중간고사: 10문제 × 3배 · 40분 · 재응시 2번 · 통과 60점 */
+    const mid = p.locator('#crsFlow [data-cfex=new][data-k=mid]'); if (!(await mid.count())) throw new Error('[중간고사 만들기] 없음');
+    await C.clk(mid, '중간고SA 만들기'.replace('SA', '사')); await p.waitForTimeout(500); let X0;
+    if (await p.locator('#cfExSh').filter({ visible: true }).count()) { /* CT 시험 편집기가 없을 때: 흐름 안 설정 창 */ X0 = { n: 10, bank: 30, time: 40, rv: 3, pass: 60 };
+      for (const [k, v] of [['n', 10], ['mult', 3], ['time', 40], ['retake', 2], ['pass', 60]]) await C.clk(p.locator(`#cfExSh [data-cfx=${k}][data-v="${v}"]`), `${k}=${v}`);
+      const sum = await p.locator('#cfExSh .cf-exsum').innerText(); if (!/30개/.test(sum) || !/10개/.test(sum)) E.push('배수 안내 문장: ' + sum);
+      await shot('3exsheet'); await C.clk(p.locator('#cfExSh [data-cfxgo=make]'), 'AI SAM이 문제 만들기'); await p.waitForTimeout(800); const ed1 = await editorDone(); log.push('시험 편집기: ' + ed1); }
+    else { /* D 요원 CT 'exam' 편집기: 흐름이 넘긴 기본값(중간고사 · 20문제 × 2배(직업훈련 3배) · 60분 · 재응시 1번 · 통과 60점)으로 만든다 */ const mu = type === 'voc' ? 3 : 2; X0 = { n: 20, bank: 20 * mu, time: 60, rv: 2, pass: 60 };
+      if (!(await p.locator('#ctSheet').filter({ visible: true }).count())) throw new Error('시험 편집기(CT exam)가 열리지 않음'); await shot('3exsheet'); await ctConfirm(p, log, 6); }
+    /* ③ 설문 */
+    await C.clk(p.locator('#crsFlow [data-cfex=new][data-k=survey]'), '설문 만들기'); await p.waitForTimeout(400); let svMin = 6;
+    if (await p.locator('#cfExSh').filter({ visible: true }).count()) { svMin = 8; await C.clk(p.locator('#cfExSh [data-cfx=sv][data-v=lec]'), '강의 평가'); await C.clk(p.locator('#cfExSh [data-cfxgo=make]'), '설문 만들기'); await p.waitForTimeout(500); await editorDone(); } else await ctConfirm(p, log, 6);
+    const dr = await p.evaluate(() => (CF.draft.curriculum || []).filter(i => i.type === 'exam' || i.type === 'survey').map(i => ({ t: i.type, n: (i.qs || []).length, w: i.week, time: i.time, R: i.rules || {}, pts: (i.qs || []).reduce((a, q) => a + (+q.pts || 0), 0) })));
+    const ex = dr.find(x => x.t === 'exam'), sv = dr.find(x => x.t === 'survey');
+    if (!ex) E.push('초안에 시험 없음'); else { if (ex.n !== X0.bank) E.push(`문제 은행 ${ex.n}개(${X0.bank} 기대)`); if (ex.R.draw !== X0.n || ex.R.shuffle === false) E.push('무작위 출제 규칙 ' + JSON.stringify(ex.R)); if (ex.time !== X0.time) E.push('시험 시간 ' + ex.time); if (!ex.R.retry || ex.R.retry.mode !== 'count' || ex.R.retry.v !== X0.rv) E.push('재응시 ' + JSON.stringify(ex.R.retry)); if (!ex.R.pass || !ex.R.pass.on || ex.R.pass.v !== X0.pass) E.push('통과 점수 ' + JSON.stringify(ex.R.pass)); if (ex.w < 2) E.push('중간고사가 가운데 차시가 아님: ' + ex.w); }
+    if (!sv) E.push('초안에 설문 없음'); else if (sv.n < svMin) E.push(`설문 문항 ${sv.n}개(${svMin} 기대)`);
+    const pan = await p.locator('#crsFlow .cf-exl').innerText().catch(() => ''); if (!new RegExp(`${X0.bank}개 중 ${X0.n}개`).test(pan)) E.push('시험 목록 줄에 배수 출제 표시 없음: ' + pan.replace(/\s+/g, ' ').slice(0, 80));
+    await shot('3filled'); await next();
+    /* ④ 수강 설정: 평가 기준 · 통과 점수 · 기간 직접 */
+    if (await step() !== 'setup') throw new Error('수강 설정 아님 ' + await step());
+    const evl = p.locator('#cfEval'); if (type === 'k12') { if (await evl.count()) E.push('학원(초중고)에 평가 기준이 보임'); }
+    else { if (!(await evl.count()) || !(await evl.evaluate(e => e.open))) E.push('시험이 있는데 평가 기준이 펼쳐져 있지 않음'); const tx = await evl.innerText().catch(() => ''); if (!/시험/.test(tx) || !/합계\s*100%/.test(tx)) E.push('평가 기준 내용: ' + tx.replace(/\s+/g, ' ').slice(0, 100));
+      await C.clk(p.locator('#crsFlow [data-cfset=passOn][data-v=yes]'), '통과 점수도 조건'); await C.clk(p.locator('#crsFlow [data-cfset=passV][data-v="70"]'), '70점'); }
+    const per = p.locator('#crsFlow [data-cfset=days][data-v=custom], #crsFlow [data-cfset=dur][data-v=custom]').first(); let range = false;
+    if (await per.count()) { if (!(await per.isVisible())) await C.clk(p.locator('#cfMore > summary'), '더 설정하기'); await C.clk(per, '기간 직접 정하기'); await C.clk(p.locator('#crsFlow [data-cfset=perMode][data-v=range]'), '날짜로'); await p.fill('#crsFlow [data-cf=pFrom]', '2026-12-01'); await p.fill('#crsFlow [data-cf=pTo]', '2027-01-30'); range = true; }
+    else if (['adult', 'public', 'corp', 'lifelong'].includes(type)) E.push('수강 기간 [직접 정하기] 없음');
+    const rd = p.locator('#crsFlow [data-cfset=rdays][data-v=custom]'); let rec = false; if (await rd.count()) { if (!(await rd.isVisible())) await C.clk(p.locator('#cfMore > summary'), '더 설정하기'); await C.clk(rd, '신청 기간 직접'); await p.fill('#crsFlow [data-cf=rFrom]', '2026-11-10'); await p.fill('#crsFlow [data-cf=rTo]', '2026-11-30'); rec = true; }
+    else if (['adult', 'public', 'lifelong', 'voc', 'univ'].includes(type)) E.push('수강신청 기간 [직접 정하기] 없음');
+    await shot('4setup'); await next(); if (await step() !== 'open') throw new Error('확인 화면 아님 ' + await step() + ' ' + (await p.locator('#crsFlow .cf-err').allInnerTexts()).join('|'));
+    const pv = (await rootInfo(p)).text; if (type !== 'k12' && !/평가 기준[\s\S]*시험 40%/.test(pv)) E.push('미리보기에 평가 기준 없음'); if (range && !/12월 1일 ~ 1월 30일/.test(pv)) E.push('미리보기에 직접 정한 수강 기간 없음'); if (varm && !/차시마다 다름/.test(pv)) E.push('미리보기에 차시마다 다른 길이 없음');
+    await shot('5open'); const before = await p.evaluate(() => S.classes.map(c => c.id));
+    await C.clk(p.locator('#crsFlow [data-cfgo=create]'), '개설하기'); await p.waitForTimeout(500); if (await p.locator('#modal [data-mact=go]').count()) { await C.clk(p.locator('#modal [data-mact=go]'), '그대로 개설'); await p.waitForTimeout(500); }
+    const id = await p.evaluate(b => (S.classes.find(c => !b.includes(c.id)) || {}).id, before); if (!id) throw new Error('개설되지 않음');
+    const c = await p.evaluate(id => { const c = S.classes.find(x => x.id === id); const exm = c.curriculum.find(i => i.type === 'exam'); const cr = c.criteria || {}; return { hours: c.hours, start: c.start, end: c.end, rec: c.recruit, by: cr.by, items: (cr.items || []).map(k => k.id), w: (cr.items || []).reduce((a, k) => a + k.w, 0), exId: exm && exm.id, pass: exm && exm.rules && exm.rules.pass, draw: exm && exm.rules && exm.rules.draw, sv: c.curriculum.some(i => i.type === 'survey'), wp: (c.weekPlan || []).map(w => w.mins) }; }, id);
+    if (varm && Math.abs(c.hours - Math.round(sumMin / 60 * 10) / 10) > 0.05) E.push(`과정 시간 ${c.hours}(차시별 합 ${sumMin}분)`); if (varm && c.wp.some(m => !(m > 0))) E.push('weekPlan에 차시별 분 없음');
+    if (range && (c.start !== '2026-12-01' || c.end !== '2027-01-30')) E.push(`수강 기간 ${c.start}~${c.end}`); if (rec && !(c.rec && c.rec.on && c.rec.from === '2026-11-10' && c.rec.to === '2026-11-30')) E.push('수강신청 기간 ' + JSON.stringify(c.rec));
+    if (type !== 'k12') { if (c.by !== 'eval' || !c.items.includes(c.exId) || c.w !== 100) E.push('평가 기준 반영 ' + JSON.stringify({ by: c.by, n: c.items.length, w: c.w })); if (!c.pass || !c.pass.on || c.pass.v !== 70) E.push('이수 기준 통과 점수 ' + JSON.stringify(c.pass)); }
+    if (c.draw !== X0.n || !c.sv) E.push('과정 시험 · 설문 ' + JSON.stringify({ draw: c.draw, sv: c.sv }));
+    /* ⑤ 게시본 · 학습자 채점(낸 문항만) */
+    const lc = await learnerCheck(ctx, p, base, id, errs); if (!lc.name) E.push('학습자 화면에 과정 없음');
+    const tid = await p.evaluate(() => DREG.cur()); const l = await ctx.newPage(); l.on('pageerror', e => errs.push('learner: ' + e.message)); await l.goto(base + `learner.html?t=${encodeURIComponent(tid)}#class/${id}`); await l.waitForFunction(() => typeof LR !== 'undefined' && LR.site, null, { timeout: 8000 }).catch(() => {}); await l.waitForTimeout(600);
+    const sc = await l.evaluate(id => { const c = ((LR.site && LR.site.classes) || []).find(x => x.id === id); const it = c && c.items.find(i => i.type === 'exam'); if (!it || typeof a2lScore !== 'function') return null; const pick = [0, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39].slice(0, it.rules.draw); const ans = it.qs.map((q, k) => pick.includes(k) ? q.a : '');
+      if (it.qs.every(q => q.t === 'ph')) return { n: it.qs.length, draw: it.rules && it.rules.draw, srv: true }; /* 직업훈련 규정 준수: 문항 · 정답은 응시 때 서버(데모는 같은 규격)가 cplN개를 무작위로 낸다 */
+      return { n: it.qs.length, draw: it.rules && it.rules.draw, withPick: a2lScore(it, ans, pick).score, noPick: a2lScore(it, ans).score }; }, id); await l.close();
+    if (!sc) E.push('학습자 게시본에 시험 없음'); else { if ((sc.srv ? sc.n !== X0.n : sc.n !== X0.bank) || sc.draw !== X0.n) E.push('게시본 시험 ' + JSON.stringify(sc)); /* 서버 출제는 응시 전 자리 문항이 출제 수(10)만큼 */ if (sc.srv) { const n = await p.evaluate(id => (S.classes.find(x => x.id === id).curriculum.find(i => i.type === 'exam') || {}).cplN, id); if (n !== X0.n) E.push('서버 출제 수(cplN) ' + n); } else if (sc.withPick < 80 || sc.noPick >= sc.withPick) E.push('낸 문항만 채점하지 않음 ' + JSON.stringify(sc)); }
+  } catch (e) { E.push('예외 ' + e.message.split('\n')[0]); }
+  if (errs.length) E.push('pageerror ' + [...new Set(errs)].slice(0, 2).join(' / ')); await ctx.close(); return { E, clicks: C.n, log };
+}
+
+module.exports = { tplCheck, examPath, ctConfirm, serve, openOrg, enterFlow, runFlow, rootInfo, measure, clicker, btnByText, schemaCheck, snapCheck, learnerCheck, resumeCheck, cfgCheck, TYPES, ROOTSEL, JARGON };
 
 if (require.main === module) (async () => {
   const only = (process.env.CRS_ONLY || '').split(',').filter(Boolean); const shots = process.env.CRS_SHOTS || ''; if (shots) fs.mkdirSync(shots, { recursive: true });
@@ -200,6 +279,7 @@ if (require.main === module) (async () => {
     const { ctx, p } = await openOrg(br, base, tc, { empty, vp, errs });
     try {
       const cf = await cfgCheck(p, CFG_KEY(type, ed)); cf.forEach(x => P.push('cfg: ' + x));
+      if (empty && dev === 'pc') { const tp = await tplCheck(p, type); tp.forEach(x => P.push('템플릿 ' + x)); }
       const r = await runFlow(p, { type, ed, name: `${type} 점검 과정`, shots, fillAll: !empty && dev === 'pc', tag: `${type}${ed ? '-' + ed : ''}_${empty ? 'e' : 'f'}_${dev}` });
       if (r.fail) P.push(r.fail);
       else {
@@ -222,6 +302,8 @@ if (require.main === module) (async () => {
     if (errs.length) P.push('pageerror ' + [...new Set(errs)].slice(0, 3).join(' / '));
     await ctx.close();
     if (dev === 'pc' && empty) { const rs = await resumeCheck(br, base, tc, { empty }); rs.forEach(x => P.push('이어하기 ' + x)); }
+    if (dev === 'pc' && empty && !process.env.CRS_NOEXAM) { const xr = await examPath(br, base, tc, { shots }); xr.E.forEach(x => P.push('시험 · 설문 · 차시별 시간 ' + x)); }
+    if (dev === 'm' && !process.env.CRS_NOEXAM) { const xr = await examPath(br, base, tc, { vp, shots }); xr.E.forEach(x => P.push('시험 · 설문(390) ' + x)); }
     const row = rows.find(x => x.label === label) || { label, steps: '-', clicks: '-', content: '-' };
     console.log(`${P.length ? '✗' : '✓'} ${label}  단계 ${row.steps} · 클릭 ${row.clicks} (+콘텐츠 ${row.content})`); P.forEach(x => console.log('   ✗ ' + x)); W.forEach(x => console.log('   △ ' + x));
     if (P.length) F++;

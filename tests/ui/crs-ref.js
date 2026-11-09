@@ -74,6 +74,9 @@ async function run(br, base, type, dev, shots) {
     const sq = await p.evaluate(() => { const R = document.querySelector('#crsFlow'); const top = [...R.querySelectorAll('.cf-f[data-cff]')].filter(e => !e.closest('details') && e.offsetParent && e.dataset.cff !== 'price'); const m = R.querySelector('#cfMore'); return { top: top.map(e => e.dataset.cff), more: m ? [...m.querySelectorAll('.cf-f[data-cff]')].map(e => e.dataset.cff) : [], open: m ? m.open : null, sum: m ? m.querySelector('.cf-more-s').innerText : '' }; });
     if (sq.top.length > 4) P.push(`수강 설정 위 질문 ${sq.top.length}개(4개 이하 기대): ${sq.top.join(',')}`);
     if (['adult', 'public', 'lifelong'].includes(type) && (!sq.more.length || sq.open || !/지금 값/.test(sq.sum))) P.push('더 설정하기 접기 없음 ' + JSON.stringify(sq)); else log.push(`수강 설정 위 ${sq.top.join(',')} · 접힘 ${sq.more.join(',')}`);
+    /* v36 B: 수강 기간 '직접 정하기'(날짜 · 일수) 선택지가 있고, 시험 · 과제가 없으면 평가 기준은 접혀 '진도로만'으로 보인다 */
+    { const v = await p.evaluate(k => { const R = document.querySelector('#crsFlow'); const e = R.querySelector('#cfEval'); return { custom: !!R.querySelector(`[data-cfset=${k}][data-v=custom]`), ev: e ? { open: e.open, s: e.querySelector('.cf-more-s').innerText } : null }; }, type === 'corp' ? 'dur' : 'days');
+      if (!v.custom) P.push("수강 기간 '직접 정하기' 없음"); if (!v.ev || v.ev.open || !/진도로만/.test(v.ev.s)) P.push('평가 기준(시험 없음) 접힘 표시 ' + JSON.stringify(v.ev)); }
     if (type === 'corp') await pick('dur', /약 90일/, '13주(약 90일)'); else await pick('days', /^\s*90일/, '90일');
     await pick('critBy', /강의 영상 진도만/, '강의 영상 진도만'); await pick('rate', /80%/, '80% 이상');
     const pr = p.locator('#crsFlow [data-cf=price]'); if (await pr.count() && (await pr.inputValue()) !== '0' && (await pr.inputValue()) !== '') P.push('수강료 기본값이 0(무료)이 아님');
