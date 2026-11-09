@@ -19,7 +19,7 @@ async function openLib(p, C) { /* 사이드바(레일 → 라이브러리) 실�
   return false; }
 
 /* 라이브러리 안에서 kind 하나 만들기: 카드 [data-ct=kind] → 결과 확인 버튼 몇 번 */
-async function makeOne(p, kind, log) { const ids0 = await p.evaluate(() => (S.clib || []).map(x => x.id)); let clicks = 0;
+async function makeOne(p, kind, log) { const ids0 = await p.evaluate(() => [...(S.clib || []).map(x => x.id), ...((S.lsite || {}).dbooks || []).map(b => b.id)]); let clicks = 0;
   const mk = p.locator('#main [data-act=clb-make]').filter({ visible: true }).first();
   if (await mk.count()) { await mk.click(); clicks++; await p.waitForTimeout(300); } else log.push('[만들기](clb-make) 버튼 없음');
   const card = p.locator(`#modal [data-act=clb-mk][data-v=${kind}], .ct-sh .ct-kind[data-k=${kind}]`).filter({ visible: true }).first();
@@ -29,12 +29,12 @@ async function makeOne(p, kind, log) { const ids0 = await p.evaluate(() => (S.cl
   if (kind === 'upload') { const fi = p.locator('.ct-sh input[type=file]').first(); if (await fi.count()) await fi.setInputFiles({ name: '1차시 강의자료.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF') }); else log.push('upload: 파일 칸 없음'); await p.waitForTimeout(1200); }
   if (kind === 'youtube') { const u = p.locator('input[type=url]:visible, input[name*=url]:visible, input[placeholder*=youtu]:visible').first(); const any = (await u.count()) ? u : p.locator('.ct-sh input:visible').first(); if (await any.count()) { await any.fill('https://youtu.be/dQw4w9WgXcQ'); await p.waitForTimeout(800); } else log.push('youtube: 주소 칸 없음'); }
   const topic = p.locator('.ct-sh input:not([type=file]):not([type=checkbox]):not([type=radio]):not([type=hidden]):visible, .ct-sh textarea:visible').first(); if (!['youtube', 'upload'].includes(kind) && await topic.count() && !(await topic.inputValue())) await topic.fill('엑셀 함수 기초');
-  for (let k = 0; k < 5; k++) { if ((await p.evaluate(i0 => (S.clib || []).some(x => !i0.includes(x.id)), ids0))) break;
+  for (let k = 0; k < 5; k++) { if ((await p.evaluate(i0 => [...(S.clib || []), ...((S.lsite || {}).dbooks || [])].some(x => !i0.includes(x.id)), ids0))) break;
     const ok = p.locator('.ct-sh .ct-pri').filter({ visible: true }).last(); let wait = 0; while ((!(await ok.count()) || await ok.isDisabled()) && wait < 30 && await p.locator('.ct-sh').filter({ visible: true }).count()) { await p.waitForTimeout(1000); wait++; } if (wait) log.push(`${kind}: 생성 기다림 ${wait}초`); if (!(await ok.count()) || await ok.isDisabled()) { log.push(`${kind}: 확인 버튼 없음/꺼짐`); break; } await ok.click({ timeout: 4000 }).catch(() => {}); clicks++; await p.waitForTimeout(1100); }
-  const r = await p.evaluate(i0 => { const x = (S.clib || []).find(y => !i0.includes(y.id)); const all = window.CLIB ? JSON.stringify(CLIB.all()) : ''; return { n: x ? 1 : 0, rec: x && { id: x.id, kind: x.kind, title: x.title, has: !!(x.url || x.fileId || x.doc || x.ai || (x.qs || []).length || x.book || x.src) }, inAll: x ? all.includes(x.id) : false }; }, ids0);
+  const r = await p.evaluate(i0 => { const x = [...(S.clib || []), ...((S.lsite || {}).dbooks || []).map(b => ({ ...b, kind: 'book', book: b.id }))].find(y => !i0.includes(y.id)); const all = window.CLIB ? JSON.stringify(CLIB.all()) : ''; return { n: x ? 1 : 0, rec: x && { id: x.id, kind: x.kind, title: x.title, has: !!(x.url || x.fileId || x.doc || x.ai || (x.qs || []).length || x.book || x.src) }, inAll: x ? all.includes(x.id) : false }; }, ids0);
   if (process.env.CRS_SHOTS) await p.screenshot({ path: require('node:path').join(process.env.CRS_SHOTS, `clib_make_${kind}.png`) });
   const left = await p.evaluate(() => { const o = [...document.querySelectorAll('.ct-sh, #modal')].filter(e => e.getClientRects().length).map(e => (e.getAttribute('aria-label') || e.querySelector('b,h2,h3')?.innerText || e.id).slice(0, 20)); try { closeModal(); } catch (e) { } try { CT.close(); } catch (e) { } document.querySelectorAll('dialog[open]').forEach(d => d.close()); return o; });
-  if (left.length) log.push(`${kind}: 저장 뒤 남은 창 ${left.join(',')}`);
+  if (left.length) log.push(`${kind}: 저장 뒤 남은 창 ${left.join(',')}`); if (left.some(x => /넣기/.test(x))) log.push(`${kind}: 저장 직후 [과정에 넣기] 창이 자동으로 뜸`);
   return { ...r, clicks, left }; }
 
 (async () => {
@@ -70,7 +70,7 @@ async function makeOne(p, kind, log) { const ids0 = await p.evaluate(() => (S.cl
           const mkb = p.locator('#main [data-act=clb-make]').filter({ visible: true }).first(); let kinds = []; if (await mkb.count()) { await mkb.click(); await p.waitForTimeout(300); kinds = await p.$$eval('#modal [data-act=clb-mk]', b => [...new Set(b.map(x => x.dataset.v))]); await p.evaluate(() => { try { closeModal(); } catch (e) { } }); } if (!kinds.length) kinds = (m.kinds.length ? m.kinds : MAKE).filter(k => k !== 'lib');
           if (kinds.length < 6) P.push(`만들기 종류 ${kinds.length}개(<6): ${kinds.join(',')}`);
           for (const k of kinds) { await p.evaluate(() => { go('clib'); render(); }); const r = await makeOne(p, k, log); kindRes[k] = kindRes[k] || []; kindRes[k].push(r.n > 0 ? r.clicks : 'X');
-            if (r.err) P.push(`${k}: ${r.err}`); else if (r.n <= 0) P.push(`${k}: 결과가 S.clib에 저장 안 됨`); else { if (!r.inAll) P.push(`${k}: CLIB.all()에 없음`); if (!r.rec.has) W.push(`${k}: 저장본에 내용(url · doc · ai · qs · book) 없음`); if (r.clicks > 4) W.push(`${k}: 클릭 ${r.clicks}회(>3)`); } }
+            if (r.err) P.push(`${k}: ${r.err}`); else if (r.n <= 0) P.push(`${k}: 결과가 라이브러리(S.clib · 디지털북)에 저장 안 됨`); else { if (!r.inAll) P.push(`${k}: CLIB.all()에 없음`); if (!r.rec.has) W.push(`${k}: 저장본에 내용(url · doc · ai · qs · book) 없음`); if (r.clicks > 4) W.push(`${k}: 클릭 ${r.clicks}회(>3)`); } }
           /* [과정에 넣기] */
           const put = await p.evaluate(async () => { const rec = (S.clib || []).find(r => r.kind === 'doc') || (S.clib || [])[0]; if (!rec) return { err: '라이브러리 항목 없음' }; if (!S.classes.length) return { skip: 1 }; go('clib'); render(); return { id: rec.id, cls: S.classes[0].id, n0: (S.classes[0].curriculum || []).length }; });
           if (put.id) { const title = await p.evaluate(id => S.clib.find(r => r.id === id).title, put.id);
