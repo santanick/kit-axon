@@ -158,13 +158,15 @@ function c2ListView() {
     `<div class="bar2 c2lbar"><input type="search" placeholder="${esc(t('cls'))}명 · 강사 검색" value="${esc(UI.clsQ || '')}" data-chg="c2-q" aria-label="${esc(t('cls'))} 검색"><select data-chg="c2-catf" aria-label="카테고리 필터"><option value="">카테고리 전체</option><option value="_none" ${cat === '_none' ? 'selected' : ''}>미지정</option>${c2CatTree().map(([k, d]) => `<option value="${k.id}" ${cat === k.id ? 'selected' : ''}>${d ? '　└ ' : ''}${esc(k.name)}</option>`).join('')}</select><span class="sp"></span><span class="mini c2selc">선택 0개</span><button class="btn sm" data-act="c2-catmv">카테고리 이동</button></div>` +
     table(['', t('cls'), '유형', '카테고리', '상태', '판매', '공개', t('fee'), '인원', '평균 진도', ''], list.map(c => [`<input type="checkbox" class="c2ck" value="${c.id}" aria-label="${esc(c.name)} 선택">`,
       `<a href="#" class="c2nm" data-act="cls-open" data-v="${c.id}">${c2ThumbImg(c.thumb, 'sm')}<b>${esc(c.name)}</b></a>${c.legal ? ' ' + tag('법정', 'r') : ''}${c.recruit.on ? ' ' + tag('모집', 'y') : ''}`,
-      esc(KIND[c.kind] + (c.sub ? ' · ' + c.sub : '')), c.cat ? esc(c2CatName(c.cat)) : '<span class="mini">미지정</span>', tag(c.status, c.status === '운영중' ? 'g' : ''), tag(c.sale, c.sale === '판매중' ? 'g' : c.sale === '판매 종료' ? 'r' : 'y'),
+      esc(KIND[c.kind] + (c.sub ? ' · ' + c.sub : '')), c.cat ? esc(c2CatName(c.cat)) : '<span class="mini">미지정</span>', tag(c.status, c.status === '운영중' ? 'g' : ''), tag(c2SaleLabel(c), c.sale === '판매중' ? 'g' : c.sale === '판매 종료' ? 'r' : 'y'),
       esc(c.open) + (c.open === '지정 회원' ? ` <small class="mini">${c.openTo.length}</small>` : ''), c2PriceHtml(c), c.learners.length + '명', bar(avgP(c)) + ' ' + pct(avgP(c)),
       `<button class="btn sm ghost" data-act="cls-open" data-v="${c.id}">관리</button><button class="btn sm ghost" data-act="cls-copy" data-v="${c.id}">복사</button>${c.price ? `<button class="btn sm ghost" data-act="c2-paylink" data-v="${c.id}">결제 링크</button>` : ''}`]), S.classes.length ? '조건에 맞는 클래스가 없습니다.' : `아직 ${tj('cls', '이')} 없습니다. [+ 직접 만들기]나 AI 과정 설계로 시작하세요.`);
 }
 AFTER.push(() => { const b = $('.c2lbar'); if (!b) return; const upd = () => { const n = $$('.c2ck:checked').length; const s = $('.c2selc'); if (s) s.textContent = `선택 ${n}개`; }; $$('.c2ck').forEach(x => x.addEventListener('change', upd)); });
 ACT['c2-q'] = el => { UI.clsQ = el.value; render(); setTimeout(() => { const i = $('.c2lbar input[type=search]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }); };
 ACT['c2-catf'] = el => { UI.clsCat = el.value; render(); };
+/* v35.3: '판매중'은 유료 판매 과정에만. 무료 · 대학 · 국비(직업훈련) · 공공 · 기업은 '신청 가능'(저장 값 c.sale은 그대로) */
+function c2SaleLabel(c) { if (c.sale !== '판매중') return c.sale; const ty = S.org && S.org.type; return +c.price > 0 && !['univ', 'voc', 'public', 'corp'].includes(ty) ? '판매중' : '신청 가능'; }
 ACT['c2-paylink'] = el => { const c = C(el.dataset.v); c2Ensure(c); if (c.sale !== '판매중') toast(`판매 상태가 '${c.sale}'라 링크로 결제할 수 없습니다. 설정 탭에서 판매중으로 바꾸세요.`, 'warn'); c2Copy(c2PayLink(c), '결제 링크를 복사했습니다. 지정 회원에게 메시지로 보내세요.'); };
 ACT['c2-catmv'] = () => {
   const ids = $$('.c2ck:checked').map(x => x.value); if (!ids.length) { toast(`이동할 ${tj('cls', '을')} 먼저 선택하세요.`, 'warn'); return; }
@@ -297,7 +299,7 @@ ACT['c2-introdel'] = el => { const t0 = el.dataset.t; if (t0 === 'wz') wzRead();
 { const base = classDetail; classDetail = c => { c2Ensure(c); c2Sync(c); const tb = UI.clsT || 'learners'; let h = base(c);
   h = h.replace(/(<div class="ph"><div class="phl"><h2>)/, `$1${c.thumb ? `<img class="c2th hd" src="${esc(c.thumb)}" alt="">` : ''}`);
   h = h.replace(/(<p>)([^<]*?)( · )([^<]*?) ~ ([^<]*?)( · )/, (m0, a, k, s1) => `${a}${k}${s1}${esc(c2Period(c))}${c.cat ? ' · ' + esc(c2CatName(c.cat)) : ''} · `);
-  h = h.replace(/(<\/div><div class="phr">)(<span class="tag)/, `$1${tag(c.sale, c.sale === '판매중' ? 'g' : c.sale === '판매 종료' ? 'r' : 'y')} ${c.price ? `<button class="btn sm ghost" data-act="c2-paylink" data-v="${c.id}">결제 링크 복사</button>` : ''}$2`);
+  h = h.replace(/(<\/div><div class="phr">)(<span class="tag)/, `$1${tag(c2SaleLabel(c), c.sale === '판매중' ? 'g' : c.sale === '판매 종료' ? 'r' : 'y')} ${c.price ? `<button class="btn sm ghost" data-act="c2-paylink" data-v="${c.id}">결제 링크 복사</button>` : ''}$2`);
   const cut = h.lastIndexOf('<div class="seg2" role="tablist">');
   if (cut < 0) return h; const tabsEnd = h.indexOf('</div>', cut) + 6; const pre = h.slice(0, tabsEnd);
   if (tb === 'learners') return pre + c2Learners(c);

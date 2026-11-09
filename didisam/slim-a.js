@@ -64,7 +64,7 @@
     if (!tb.length) tb = [['learners', t('learner')], [ep ? 'episodes' : 'curriculum', ep ? '회차' : '커리큘럼'], ...(ep ? [] : [['eval', '평가']]), ['notice', '공지사항'], ['set', '설정']];
     const ap = typeof avgP === 'function' ? Math.round(avgP(c)) : 0;
     const SUB = { learners: `${(c.learners || []).length}명 · 평균 진도 ${ap}%`, curriculum: `${(c.curriculum || []).length}개 강의`, episodes: `${(c.sessions || c.curriculum || []).length}개 회차`,
-      eval: `${t('done')} 기준 ${(c.criteria && c.criteria.threshold) != null ? c.criteria.threshold + '%' : '설정'}`, notice: `${(c.notices || []).length}개`, set: [c.open, c.sale, c.price ? won(c.price) : '무료'].filter(Boolean).join(' · ') };
+      eval: `${t('done')} 기준 ${(c.criteria && c.criteria.threshold) != null ? c.criteria.threshold + '%' : '설정'}`, notice: `${(c.notices || []).length}개`, set: [c.open, typeof c2SaleLabel === 'function' ? c2SaleLabel(c) : c.sale, c.price ? won(c.price) : '무료'].filter(Boolean).join(' · ') };
     const ICN = { learners: 'users', curriculum: 'book', episodes: 'book', eval: 'check', notice: 'chat', set: 'gear' };
     return backAct('cls-back', `${t('cls')} 목록`) + page(c.name, `${typeof ACT['d26-view'] === 'function' ? pri('d26-view', `${t('learner')} 화면`, c.id) : ''}${more('cls1', [
       typeof ACT['d26-share'] === 'function' && ['주소 공유', 'd26-share', c.id, '메시지 · 홈페이지에 붙여 넣기', 'send'], ['복사본 만들기', 'cls-copy', c.id, '같은 구성으로 새로 만들기', 'grid'], c.price && typeof ACT['c2-paylink'] === 'function' && ['결제 링크 복사', 'c2-paylink', c.id, '지정 회원에게 보낼 링크', 'chart']])}`,

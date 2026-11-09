@@ -133,7 +133,8 @@
   }
   const pri = (label, act, dis, extra) => `<button type="button" class="ct-btn ct-pri" data-act="${act}" ${dis ? 'disabled aria-disabled="true"' : ''} ${extra || ''}>${label}</button>`;
   const sec = (label, act, extra) => `<button type="button" class="ct-btn" data-act="${act}" ${extra || ''}>${label}</button>`;
-  const foot = (main, left) => `<div class="ct-fl">${left || ''}</div>${main}`;
+  /* 주제가 비면 만들기 버튼 옆에 이유를 적는다(평가 2회차 5번 — 버튼만 흐려 보여 막힌 느낌) */
+  const foot = (main, left) => { const need = !left && X && X.step === 0 && /data-act="ct-make"/.test(main) && !(() => { try { return seedTopic(X.ctx || {}); } catch (e) { return ''; } })(); return `<div class="ct-fl">${left || (need ? `<span class="ct-need" data-ctneed="1" ${String(X.topic || '').trim() ? 'hidden' : ''}>주제를 적으면 만들 수 있습니다</span>` : '')}</div>${main}`; };
   const busyBox = m => `<div class="ct-busy" role="status"><span class="ct-spin" aria-hidden="true"></span>${E(m)}</div>`;
   const topicField = (lab, ex) => `<label class="ct-f"><span class="ct-l">${E(lab)}</span><input id="ctTopic" value="${E(X.topic)}" maxlength="80" autocomplete="off"></label><p class="ct-ex">예: ${E(ex)}</p><button type="button" class="ct-btn ct-ai" data-act="ct-aifill">${svg('spark', 18)} AI SAM이 채워 주기</button>`;
   const chips = (key, opts, lab) => `<div class="ct-f"><span class="ct-l">${E(lab)}</span><div class="ct-chips" role="radiogroup" aria-label="${E(lab)}">${opts.map(([v, l]) => `<button type="button" role="radio" aria-checked="${String(X[key]) === String(v)}" class="ct-chip ${String(X[key]) === String(v) ? 'on' : ''}" data-act="ct-opt" data-k="${key}" data-v="${E(v)}">${E(l)}</button>`).join('')}</div></div>`;
@@ -376,7 +377,7 @@
   Object.keys(A).forEach(k => { ACT[k] = A[k]; });
   /* 입력 → 상태(다시 그리지 않음) */
   document.addEventListener('input', e => { const el = e.target; if (!X || !el.closest || !el.closest('#ctSheet')) return;
-    if (el.id === 'ctTopic') X.topic = el.value; if (el.id === 'ctUpT') X.upTitle = el.value;
+    if (el.id === 'ctTopic') { X.topic = el.value; const nd = $1('[data-ctneed]'); if (nd) nd.hidden = !!el.value.trim(); } if (el.id === 'ctUpT') X.upTitle = el.value;
     if (el.id === 'ctUrl') { X.url = el.value.trim(); X.yt = null; clearTimeout(X.ut); X.ut = setTimeout(() => { if (!X) return; const pos = el.selectionStart; draw(); const n = $1('#ctUrl'); if (n && !ytId(X.url)) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) { } } }, 350); }
     if (el.id === 'ctLq') { X.lq = el.value; clearTimeout(X.lt); X.lt = setTimeout(() => { if (!X) return; draw(); const n = $1('#ctLq'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 250); }
     if (el.dataset.ctd && X.res) { const k = el.dataset.ctd; X.res[k] = k === 'act' ? el.value : el.value.split('\n').map(x => x.trim()).filter(Boolean); }
@@ -404,7 +405,8 @@
       ${F.undo && !(F.undo.w && SS.some(s => s.w === F.undo.w && F.open === s.w)) ? undoBand() : ''}
       <ol class="ctf-list">${SS.map(s => { const its = has(s.w); const on = F.open === s.w; return `<li class="ctf-s ${on ? 'on' : ''} ${its.length ? 'has' : ''}" data-w="${s.w}"><button type="button" class="ctf-sh" data-act="ctf-open" data-v="${s.w}" aria-expanded="${on}"><span class="ctf-n">${its.length ? svg('check', 18) : s.w}</span><span class="ctf-tt"><b>${s.w}${U === '주차' ? '주차' : U} · ${E(s.title)}</b><small>${its.length ? its.map(x => E(TYPE_LABEL(x))).join(' · ') : '비어 있음'}</small></span>${svg('chev', 20)}</button>
         ${on ? `<div class="ctf-body">${F.undo && F.undo.w === s.w ? undoBand() : ''}${its.length ? `<ul class="ctf-its">${its.map(x => `<li><span class="ct-kic k-${E(icOf(x) === 'audio' ? 'audio' : TYPE_KIND(x))}">${svg(icOf(x), 18)}</span><span class="ct-lt"><b>${E(x.title)}</b><small>${E(TYPE_LABEL(x))}</small></span><button type="button" class="ct-btn sm" data-act="ctf-view" data-v="${E(x.id)}">보기</button><button type="button" class="ct-icb sm" data-act="ctf-del" data-v="${E(x.id)}" aria-label="「${E(x.title)}」 빼기">${svg('trash', 18)}</button></li>`).join('')}</ul>` : ''}
-          <p class="ctf-q">${its.length ? '더 넣을 콘텐츠가 있으면 고르세요' : `이 ${U}에 넣을 콘텐츠를 고르세요`}</p><div class="ct-kinds">${kindCards(s.w)}</div></div>` : ''}</li>`; }).join('')}</ol></div>`;
+          ${its.length && SS.some(x => x.w === s.w + 1) ? (() => { const nx = SS.find(x => x.w === s.w + 1); return `<div class="ctf-nextb"><span>${s.w}${U}에 더 넣으려면 아래에서 고르세요. 다음으로 넘어가려면</span><button type="button" class="ct-btn sm pri" data-act="ctf-open" data-v="${nx.w}" data-next="1">${nx.w}${U}(${E(String(nx.title || '').slice(0, 14))})에 넣기 →</button></div>`; })() : ''}
+          <p class="ctf-q">${its.length ? `<b>${s.w}${U}</b>에 더 넣을 콘텐츠` : `<b>${s.w}${U}</b>에 넣을 콘텐츠를 고르세요`}</p><div class="ct-kinds ${its.length ? 'cmp' : ''}">${kindCards(s.w)}</div></div>` : ''}</li>`; }).join('')}</ol></div>`;
   }
   const undoBand = () => `<div class="ctf-undo" role="status" aria-live="polite"><span>${E(F.undo.msg)}</span><button type="button" class="ct-btn sm" data-act="ctf-undo">${svg('undo', 16)} 되돌리기</button></div>`;
   const kindCards = (w, lib) => KINDS.filter(k => !(lib && k.k === 'lib')).map(k => `<button type="button" class="ct-kind" data-act="ct-kind" data-ct="${k.k}" data-k="${k.k}" ${w != null ? `data-w="${w}"` : ''}><span class="ct-kic k-${k.k}">${svg(k.k, 24)}</span><b>${E(k.name)}</b><small>${E(k.one)}</small><em>${E(k.time)}</em></button>`).join('');
@@ -414,9 +416,11 @@
       /* 넣은 직후 8초 동안 그 차시 안에 '넣었습니다 [되돌리기]' 띠를 남긴다 */
       const tok = {}; F.undo = { tok, w, msg: `${jo(`「${it.title}」`, '을')} ${w}${unit()}에 넣었습니다.`, run: () => { const L = itemsOf(d); const i = L.findIndex(x => x.id === it.id); if (i >= 0) L.splice(i, 1); sweep(); F.open = w; } };
       clearTimeout(F.ut); F.ut = setTimeout(() => { if (!F || !F.undo || F.undo.tok !== tok) return; F.undo = null; const b = F.el && F.el.querySelector('.ctf-undo'); if (b) b.remove(); }, W.__CT_UNDO_MS || 8000);
-      saveDraft(); refill(); try { W.CF && CF.emit && CF.emit('ct-add', it); } catch (e) { } } }); }
+      saveDraft(); refill(); try { toTop(F.el && F.el.querySelector(`.ctf-s[data-w="${w}"]`)); } catch (e) { } try { W.CF && CF.emit && CF.emit('ct-add', it); } catch (e) { } } }); }
   ACT['ct-kind'] = el => { const k = el.dataset.k; const w = el.dataset.w != null ? +el.dataset.w : null; if (F && w != null && F.el && F.el.contains(el)) return openFromFill(k, w); if (PK) { const ctx = PK; PK = null; closePick(); return open(k, ctx); } open(k, {}); };
-  ACT['ctf-open'] = el => { const w = +el.dataset.v; F.open = F.open === w ? 0 : w; refill(); const li = F.el.querySelector(`.ctf-s[data-w="${w}"]`); if (li && F.open) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); };
+  ACT['ctf-open'] = el => { const w = +el.dataset.v; F.open = el.dataset.next ? w : (F.open === w ? 0 : w); if (el.dataset.next) { clearTimeout(F.ut); F.undo = null; } refill(); const li = F.el.querySelector(`.ctf-s[data-w="${w}"]`); if (li && F.open) { if (el.dataset.next) toTop(li); else li.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } };
+  /* 펼친 차시의 머리글(차시 이름)이 스크롤 상자 맨 위에 오게 — 넣을 차시가 늘 보이도록(평가 2회차 2번) */
+  const toTop = li => { if (!li) return; const b = li.closest('.cf-body') || li.closest('[class*="body"]'); if (!b) { li.scrollIntoView({ block: 'start' }); return; } b.scrollTop += li.getBoundingClientRect().top - b.getBoundingClientRect().top - 8; };
   ACT['ctf-del'] = el => { const L = itemsOf(F.d); const i = L.findIndex(x => x.id === el.dataset.v); if (i < 0) return; const [it] = L.splice(i, 1); saveDraft(); const gone = sweep(); clearTimeout(F.ut); F.undo = { msg: `${jo(`「${it.title}」`, '을')} 뺐습니다.`, run: () => { L.splice(i, 0, it); if (gone.rbs.length) S.rubrics.push(...gone.rbs); if (gone.bks.length) try { bkL().push(...gone.bks); } catch (e) { } } }; saveDraft(); refill(); };
   ACT['ctf-undo'] = () => { if (F.undo) { clearTimeout(F.ut); const m = F.undo.tok ? '넣은 것을 되돌렸습니다.' : '되돌렸습니다.'; F.undo.run(); F.undo = null; saveDraft(); refill(); say(m, 'ok'); } };
   ACT['ctf-view'] = el => { const it = itemsOf(F.d).find(x => x.id === el.dataset.v); if (it) preview(it, draftCourse(F.d)); };
@@ -530,12 +534,16 @@ body:has(#slSheet) .ct-wrap{z-index:97}
 .ct-lt{flex:1;min-width:0}.ct-lt b{display:block;font-size:16px;line-height:1.4;overflow-wrap:anywhere}.ct-lt small{display:block;color:#6C6C6C;font-size:14px;line-height:1.4}
 .ct-srch input{min-height:48px}
 .ct-kic{width:44px;height:44px;flex:none;border-radius:12px;display:grid;place-items:center;background:#EAEDFF;color:#3B4FD0}.k-aivideo{background:#F3E8FF;color:#7A3BD0}.k-doc{background:#E3F3FC;color:#006ABF}.k-quiz,.k-assign{background:#E7F8E8;color:#009116}.k-book{background:#FFF3E0;color:#EF6D00}.k-youtube{background:#FFE8EA;color:#DE0027}.k-lib{background:#F1F2F2;color:#4C4D4D}
+.ct-need{font-size:15px;color:#6C6C6C}.ct-need[hidden]{display:none}
 .ct-kinds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .ct-kind{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;min-height:156px;padding:14px;border-radius:14px;border:1px solid #EAEBEB;background:#fff;font:inherit;color:#2A2B2B;cursor:pointer;position:relative}.ct-kind:hover,.ct-kind:focus-visible{border-color:#5C74F6;box-shadow:0 0 0 3px #EAEDFF}
 .ct-kind b{font-size:16px;line-height:1.35}.ct-kind small{font-size:14px;color:#6C6C6C;line-height:1.45}.ct-kind em{margin-top:auto;font-style:normal;font-size:13px;color:#808181}
 .ctf{font-size:16px;color:#2A2B2B}.ctf-top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}.ctf-sum{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.ctf-sum b{font-size:22px}.ctf-later{font-size:14px;color:#009116;background:#E7F8E8;border-radius:999px;padding:3px 10px;margin-left:4px}
 .ctf-undo{position:static;display:flex;align-items:center;gap:10px;justify-content:space-between;background:#2A2B2B;color:#fff;border-radius:12px;padding:6px 6px 6px 14px;margin:0 0 10px;flex-wrap:wrap}.ctf-undo .ct-btn{background:#fff}
-.ctf-list{list-style:none;padding:0;margin:0;display:grid;gap:8px}.ctf-s{border-radius:14px;background:#F6F7F7;overflow:hidden}.ctf-s.on{background:#fff;border:1px solid #C8C9C9}
+.ctf-list{list-style:none;padding:0;margin:0;display:grid;gap:8px}.ctf-s{border-radius:14px;background:#F6F7F7;overflow:hidden}.ctf-s.on{background:#fff;border:1px solid #C8C9C9;overflow:visible}
+.ctf-s.on>.ctf-sh{position:sticky;top:0;z-index:2;background:#fff;border-radius:14px 14px 0 0;box-shadow:0 1px 0 #EAEBEB}
+.ctf-nextb{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;background:#EAEDFF;border-radius:12px;padding:8px 8px 8px 14px;margin:0 0 10px;font-size:15px}.ctf-nextb .ct-btn{min-height:44px}.ctf-nextb .ct-btn.pri{background:#2A2B2B;color:#fff;border-color:#2A2B2B}
+.ct-kinds.cmp .ct-kind{min-height:56px;flex-direction:row;align-items:center;padding:8px 12px}.ct-kinds.cmp .ct-kind small,.ct-kinds.cmp .ct-kind em{display:none}.ct-kinds.cmp .ct-kic{width:32px;height:32px}.ct-kinds.cmp .ct-kind b{font-size:15px}
 .ctf-sh{width:100%;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 14px;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;color:inherit}.ctf-sh>.ct-ic{flex:none;color:#808181;transition:transform .15s}.ctf-s.on .ctf-sh>.ct-ic{transform:rotate(90deg)}
 .ctf-n{width:36px;height:36px;flex:none;border-radius:50%;background:#fff;border:1px solid #C8C9C9;display:grid;place-items:center;font-weight:700;font-size:15px}.ctf-s.has .ctf-n{background:#00C53B;border-color:#00C53B;color:#fff}
 .ctf-tt{flex:1;min-width:0}.ctf-tt b{display:block;font-size:16px;line-height:1.4;overflow-wrap:anywhere}.ctf-tt small{display:block;color:#6C6C6C;font-size:14px}
