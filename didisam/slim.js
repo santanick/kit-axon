@@ -4,14 +4,14 @@
 (function () {
   /* ───────── 1. 기관 유형별 필수 메뉴(사이드바 기본) ───────── */
   const ESS = {
-    adult: ['class', 'members', 'enroll', 'message', 'sales', 'site'],
-    k12: ['crmstu', 'crmatt', 'crmex', 'class', 'crmbill', 'message', 'site'],
-    univ: ['class', 'members', 'enroll', 'board', 'academic', 'site'],
+    adult: ['class', 'clib', 'members', 'enroll', 'message', 'sales', 'site'],
+    k12: ['crmstu', 'crmatt', 'crmex', 'class', 'clib', 'crmbill', 'message', 'site'],
+    univ: ['class', 'clib', 'members', 'enroll', 'board', 'academic', 'site'],
     univ_lms: null, /* 학사 LMS는 업무 단위 3단 메뉴(ulms.js)를 그대로 쓰고, 아래 slimLms에서 줄인다 */
-    corp: ['class', 'members', 'enroll', 'compliance', 'cpl', 'board'],
-    public: ['class', 'members', 'enroll', 'attend', 'cert', 'board'],
-    lifelong: ['class', 'members', 'attend', 'cert', 'lifelong', 'cpl', 'site'],
-    voc: ['class', 'members', 'attend', 'cert', 'hrd', 'cpl', 'message']
+    corp: ['class', 'clib', 'members', 'enroll', 'compliance', 'cpl', 'board'],
+    public: ['class', 'clib', 'members', 'enroll', 'attend', 'cert', 'board'],
+    lifelong: ['class', 'clib', 'members', 'attend', 'cert', 'lifelong', 'cpl', 'site'],
+    voc: ['class', 'clib', 'members', 'attend', 'cert', 'hrd', 'cpl', 'message']
   };
   const essKey = () => S && S.org ? (S.org.type === 'univ' && S.org.ed === 'lms' ? 'univ_lms' : S.org.type) : '';
   window.slimEss = () => { const k = essKey(); const E = ESS[k]; if (E) return E.filter(id => MENU[id]); /* 학사 LMS: 지금 켜진 탭 중 앞의 7개 */
@@ -34,7 +34,7 @@
     auto: ['반복 업무를 자동으로', '자동 운영 상태 보여줘'], site: ['홈페이지를 만들고 게시해요', 'AI로 홈페이지 만들어줘'], sales: ['매출 · 결제를 봐요', '이번 달 매출 요약해줘'],
     billing: ['청구서를 보내요', '미납 청구서 보여줘'], compliance: ['법정의무교육을 관리해요', '미이수자 보여줘'], academic: ['학사 · 비교과를 관리해요', '비교과 현황 보여줘'],
     lifelong: ['학습비 · 과정을 신고해요', '신고 대상 보여줘'], hrd: ['HRD-Net에 보고해요', 'HRD 보고 준비해줘'], org: ['기관 정보를 관리해요', '기관 정보 보여줘'],
-    conn: ['외부 서비스를 연결해요', 'Slack 연결 도와줘'], calendar: ['학사 일정을 관리해요', '이번 달 일정 보여줘'], dbook: ['디지털 교재를 만들어요', '디지털북 만들어줘'],
+    conn: ['외부 서비스를 연결해요', 'Slack 연결 도와줘'], calendar: ['학사 일정을 관리해요', '이번 달 일정 보여줘'], dbook: ['디지털 교재를 만들어요', '디지털북 만들어줘'], clib: ['영상 · 교안 · 퀴즈를 모아 만들어요', '콘텐츠 라이브러리 사용법 알려줘'], lmsa: ['학기 · 교과목 · 분반을 준비해요', '학기 · 교과목 현황 보여줘'],
     tutorial: ['튜토리얼을 만들어요', '튜토리얼 만들어줘'], docs: ['문서를 만들고 보관해요', '운영 문서 써줘'], cpl: ['인가 · 규정을 지켜요', '규정 점검해줘'],
     crmstu: ['원생을 등록하고 관리해요', '원생 등록해줘'], crmatt: ['등원 · 출결을 체크해요', '오늘 미등원 보여줘'], crmex: ['시험 성적을 기록해요', '성적 알림 보내줘'],
     crmcs: ['상담을 기록해요', '상담 필요한 원생'], crmbill: ['수강료를 청구해요', '다음 달 청구해줘'], crmstat: ['원생 · 매출 통계를 봐요', '이번 달 통계 보여줘'],
