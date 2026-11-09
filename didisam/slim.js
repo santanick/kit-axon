@@ -355,6 +355,12 @@
   /* 꺼진 메뉴로 가는 링크(홈 · 가이드 · 안내의 [이동] 버튼)를 사람이 누르면 막지 않고 그 메뉴를 켜서 연다 — 필요할 때 켜진다. 코드에서 부르는 go()는 그대로 */
   { const base = ACT.go; ACT.go = (el, ...r) => { const id = el && el.dataset && el.dataset.v; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(id)) && (!MENU[id].only || MENU[id].only === S.org.type) && Object.values(S.nav.tabs).flat().some(x => x.id === id)) { slMenuSet(id, true); toast(`'${mlabel(id)}' 메뉴를 켰습니다. 끄려면 [메뉴 추가]에서 끄세요.`, 'ok'); } } catch (e) { } return base(el, ...r); }; }
 
+  /* v37 기관 유형을 바꾼 뒤 이름 · 호칭 · 메뉴가 서로 어긋나던 문제(대표님 첨부 '닉 Univ' — 레일 '교육생', 홈 '센터 담당자님', 사이트 '교육신청')
+     설정 › 기관 유형 변경(type-chg)은 유형 · 프리셋 메뉴만 바꿨다. 이제 유형이 바뀌면 같은 자리에서: 대학 에디션 정리(대학이면 기본 lite, 아니면 삭제) ·
+     유형별 기본 메뉴(slimApply) 다시 적용 — 레일 라벨(t()) · 첫 화면 호칭(aihKey) · 사이트 메뉴 이름(HPS.menuName)이 모두 같은 S.org.type · S.org.ed를 본다. */
+  AFTER.push(() => { if (!S || !S.org) return; const k = S.org.type + '/' + (S.org.ed || ''); if (S.org.tySeen === k) return; const first = !S.org.tySeen; S.org.tySeen = k; if (first) return;
+    if (S.org.type === 'univ') { if (S.org.ed !== 'lms') S.org.ed = 'lite'; } else delete S.org.ed;
+    S.org.tySeen = S.org.type + '/' + (S.org.ed || ''); try { slimApply(); } catch (e) { console.error(e); } save(); setTimeout(render, 0); });
   /* 기존 사용자 한 번 안내 */
   AFTER.push(() => { if (!UI.slimNote) return; UI.slimNote = 0; toast('메뉴를 꼭 필요한 것만 남겼습니다. 다른 메뉴는 설정 › 메뉴에서 켜세요.', 'ok'); });
 })();
