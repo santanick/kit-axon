@@ -173,3 +173,9 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
 .cf-note.warn{background:var(--warnl,#FFF3E0);color:var(--g900,#2A2B2B)}.cf-note.warn b{color:var(--t-warn,#A84A00)}
 .cf-gempty{font-size:16px}.cf-gempty .cf-gt{font-size:17px;margin:0 0 8px}.cf-gl{margin:10px 0 0;padding-left:20px;display:grid;gap:6px}
 @media (max-width:640px){.cf-legal .cf-legalfix,.cf-over .btn{display:flex;width:100%;justify-content:center;margin:8px 0 0}}
+/* F4: 차시 목록 붙여 넣기 · 과정 복사해서 시작 */
+.cf-olb{display:flex;gap:8px;flex-wrap:wrap}
+.cf-bulk{border:1px solid var(--s200,#D5DBFF);background:var(--s50,#F5F7FF);border-radius:12px;padding:12px 14px;margin:0 0 12px}.cf-bulk textarea{width:100%;box-sizing:border-box;font:inherit;font-size:16px;line-height:1.5;padding:10px 12px;border:1px solid var(--g400,#C8C9C9);border-radius:8px;background:#fff;resize:vertical}
+.cf-bulkf{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.cf-bulkf .btn{flex:1 1 160px}
+.cf-copyg{display:grid;gap:8px;max-height:56vh;overflow:auto}.cf-copyc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;min-height:56px;padding:10px 14px;border:1px solid var(--g300,#DADBDB);border-radius:10px;background:#fff;font:inherit;font-size:16px;cursor:pointer}.cf-copyc:hover{border-color:var(--s400,#5C74F6)}.cf-copyc small{font-size:14px;color:var(--t-sub,#666767)}
+@media (max-width:640px){.cf-olb{width:100%}.cf-olb .cf-ai{flex:1 1 auto}}

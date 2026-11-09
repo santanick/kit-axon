@@ -133,7 +133,8 @@
     label: '성인 강좌', unit: () => '차시',
     terms: { cls: '강좌', unit: '차시', fee: '수강료', target: '수강 대상' },
     steps: ['basic', 'outline', 'fill', 'setup', 'open'],
-    stepTitle: { basic: '강좌 정보', outline: '차시 목록', fill: '차시 채우기', setup: '수강료', open: '확인' },
+    stepNow: { setup: '수강료 · 수강 기간 · 수료 기준을 정합니다. 무료면 수강료를 0 그대로 둡니다.' },
+    stepTitle: { basic: '강좌 정보', outline: '차시 목록', fill: '차시 채우기', setup: '수강 설정', open: '확인' },
     ask: {
       basic: [F.name('강좌 이름', '예: 컴활 1급 실기 한 달 완성'), F.target('누구에게', '예: 취업 준비생 · 엑셀 초보 직장인', true)],
       outline: [F.sessions('차시 수', '예: 12차시', 10, 60), F.mins('1차시 길이', '예: 30분(온라인 영상) · 2시간(교실 수업)', 30)],
@@ -151,7 +152,7 @@
     ],
     plan: d => ({ weeks: Math.min(30, N(d.sessions) || 10), per: 1, mins: N(d.mins) || 30, hours: Math.round(totalMin(d) / 60) }),
     check: d => { const R = []; if (N(d.sessions) > 60) R.push({ lv: 'stop', k: 'sessions', msg: '차시는 60개까지 만들 수 있습니다.', fix: { sessions: 60 } }); return R; },
-    summary: d => [['구성', hoursLine(d) || '—'], ['수강료', N(d.price) ? wn(d.price) : '무료 또는 나중에 입력'], ['수강 기간', `결제 후 ${N(d.days) || 90}일`]],
+    summary: d => [['구성', hoursLine(d) || '—'], ['수강료', N(d.price) ? wn(d.price) : '무료'], ['수강 기간', `결제 후 ${N(d.days) || 90}일`]],
     apply: (c, d) => { baseApply(c, d); c.kind = 'period'; c.period = Object.assign({}, c.period || {}, { mode: 'days', days: N(d.days) || 90 }); return c; }
   };
 
@@ -194,8 +195,8 @@
     label: '평생교육 강좌', unit: () => '차시',
     terms: { cls: '강좌', unit: '차시', fee: '학습비', target: '학습 대상' },
     steps: ['basic', 'outline', 'fill', 'setup', 'open'],
-    stepNow: { outline: '차시 수와 1차시 길이를 고릅니다. 학습비를 받으면 합계 30시간 이상이 필요합니다.' },
-    stepTitle: { basic: '강좌 정보', outline: '차시 · 시간', fill: '차시 채우기', setup: '학습비', open: '확인' },
+    stepNow: { outline: '차시 수와 1차시 길이를 고릅니다. 학습비를 받으면 합계 30시간 이상이 필요합니다.', setup: '학습비 · 수강 기간 · 수료 기준을 정합니다. 무료면 학습비를 0 그대로 둡니다.' },
+    stepTitle: { basic: '강좌 정보', outline: '차시 · 시간', fill: '차시 채우기', setup: '수강 설정', open: '확인' },
     ask: {
       basic: [F.name('강좌 이름', '예: 시니어를 위한 스마트폰 활용'), F.target('누구에게', '예: 60세 이상 지역 주민', true), { k: 'cb', label: '학점은행 과목인가요', kind: 'toggle', ex: '예: 사회복지학개론처럼 학점이 인정되는 과목이면 켭니다', def: false }],
       outline: [F.sessions('차시 수', '예: 15차시', 15, 60), F.mins('1차시 길이', '예: 2시간(교실) · 50분(온라인)', 120), { k: 'credit', label: '인정 학점', kind: 'choice', ex: '예: 3학점', def: 3, opts: [[1, '1학점'], [2, '2학점'], [3, '3학점']], show: d => !!d.cb }],
@@ -272,7 +273,7 @@
     ask: {
       basic: [F.name('교육과정 이름', '예: 2026 직장 내 성희롱 예방교육'), { k: 'cat', label: '구분', kind: 'choice', ex: '예: 법정 의무교육', def: 'job', opts: [['legal', '법정 의무교육'], ['job', '직무교육'], ['onboard', '신입 · 온보딩'], ['lead', '리더십']] }],
       outline: [F.sessions('차시 수', '예: 3차시', 3, 40), F.mins('1차시 길이', '예: 20~30분(짧을수록 이수율이 높습니다)', 30), { k: 'refund', label: '고용보험 환급(사업주 훈련)', kind: 'toggle', ex: '예: 환급받는 직무교육이면 켭니다', def: false, later: true }],
-      setup: [{ k: 'dept', label: '대상 부서', kind: 'text', ex: '예: 전 직원 · 영업본부 · 신입사원', later: true }, { k: 'dur', label: '교육 기간', kind: 'choice', ex: '예: 4주 안에 이수', def: 4, opts: [[1, '1주'], [2, '2주'], [4, '4주'], [8, '8주'], [12, '12주']] }, { k: 'rate', label: '이수 기준(진도)', kind: 'choice', ex: '예: 진도 100%', def: 80, opts: [[60, '60% 이상'], [80, '80% 이상'], [100, '100%(모두 시청)']] }]
+      setup: [{ k: 'dept', label: '대상 부서', kind: 'text', ex: '예: 전 직원 · 영업본부 · 신입사원', later: true }, { k: 'dur', label: '교육 기간', kind: 'choice', ex: '예: 4주 안에 이수', def: 4, opts: [[1, '1주'], [2, '2주'], [4, '4주'], [8, '8주'], [12, '12주'], [13, '13주(약 90일)']] }, { k: 'rate', label: '이수 기준(진도)', kind: 'choice', ex: '예: 진도 100%', def: 80, opts: [[60, '60% 이상'], [80, '80% 이상'], [100, '100%(모두 시청)']] }]
     },
     defaults: { cat: 'job', sessions: 3, mins: 30, rate: 80, dur: 4, refund: false, price: 0 },
     required: ['name', 'cat'],
