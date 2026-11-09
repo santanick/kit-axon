@@ -49,7 +49,7 @@ const window_has_stock = sq => sq.some(x => x.pts !== 0 || !x.ok) || sq.every(x 
       /* 수강후기 게시판에 섞인 질문 글은 후기로 보이면 안 됨(v34.2 H1) */
       if (ci === 0) await page.evaluate(() => { S.posts = S.posts || []; const m = (S.members || [])[0]; S.posts.unshift({ id: 'qa_q1', board: '수강후기', title: '수강 기간 연장 가능한가요?', body: '연장 방법이 궁금합니다', who: m ? m.id : '', at: today() }); save(); });
       /* 1) 사이트 화면 → 마법사 */
-      await click('.hpw-cta [data-act="hpai-open"]');
+      await click('#hpe .hps-rail [data-act="hpai-open"]'); /* v36: 사이트 화면 = 한 화면 편집기 — 'AI 새로' 아이콘 */
       const nTheme = await page.$$eval('.hpw-th', L => L.length); if (nTheme < 4) bad.push(`테마 ${nTheme}개`);
       /* 2) 테마(추천) 누르면 바로 설명 단계 */
       await click('.hpw-th.on'); await page.waitForSelector('[name=hw_brief]');
