@@ -290,7 +290,8 @@ function seed(type) {
   const classes = sm.cls.map(([name, kind, x], i) => {
     const legal = x === 'legal'; const sub = kind === 'episode' ? (x || '요일반') : '';
     const price = ['corp', 'univ'].includes(type) || legal ? 0 : kind === 'sub' ? 29000 : type === 'k12' ? 280000 : type === 'voc' ? 0 : [99000, 149000, 199000, 59000][i % 4];
-    const lr = members.filter((m, j) => m.grade !== '승인 대기' && (legal || j % (i + 2) !== 1)).map(m => m.id).slice(0, legal ? 44 : 14 + (i * 5) % 22);
+    const gyC = type === 'k12' ? (name.match(/[초중고]\d/) || [])[0] : ''; /* v36 R1 학원: 학년이 붙은 반(중2 · 고1)은 그 학년 원생만 */
+    const lr = members.filter((m, j) => m.grade !== '승인 대기' && (legal || j % (i + 2) !== 1) && (!gyC || (m.crm || {}).gy === gyC)).map(m => m.id).slice(0, legal ? 44 : 14 + (i * 5) % 22);
     const prog = {}; lr.forEach((id, j) => { const p = clamp(Math.round(rnd() * 118 - (j % 5 === 0 ? 40 : 0)), 0, 100); prog[id] = { p, exam: p > 60 ? Math.round(55 + rnd() * 45) : null, assign: p > 70 ? (rnd() > .45 ? 'graded' : 'submitted') : 'none', subAt: addDays(today(), -Math.floor(rnd() * 9)), att: Math.round(70 + rnd() * 30) }; });
     return { id: 'c' + i, name, kind, sub, legal, level: i % 3, status: i === sm.cls.length - 1 && type !== 'corp' ? '준비중' : '운영중', price, open: type === 'corp' ? '지정 회원' : '전체', start: addDays(today(), -30 + i * 3), end: addDays(today(), 60 + i * 10),
       teacher: t2(type, 'teacher') + ' ' + pick(SUR) + '○○', group: kind === 'episode' ? groups[i % groups.length].id : '', learners: lr, prog,
