@@ -46,88 +46,120 @@
     if (it.week) return `${it.week}${c.weekly && S.org.type === 'univ' ? '주차' : '차시'}`;
     const L = (c.curriculum || []).filter(x => x.type !== 'chapter'); const i = L.indexOf(it); return i >= 0 ? `${i + 1}차시` : '';
   }
-  const kindOfItem = it => it.type === 'video' ? 'video' : it.type === 'doc' ? ((it.doc && (it.doc.secs || []).length) || !(it.files || it.fileId) ? 'doc' : 'file') : ['quiz', 'exam'].includes(it.type) ? 'quiz' : it.type === 'assign' ? 'assign' : '';
+  /* 저장 종류(C3 CT와 같은 말): aivideo · youtube · upload · doc · book · quiz · assign → 화면 종류(KIND): video · doc · quiz · assign · book · file */
+  const C3K = ['aivideo', 'youtube', 'upload', 'doc', 'book', 'quiz', 'assign'];
+  const isVid = r => r.type === 'video' || /^(video|audio)\//.test(r.mime || '') || /\.(mp4|webm|mov|m4v|mp3|m4a|wav)$/i.test(r.file || '');
+  const dk = r => { const k = r.kind; if (k === 'aivideo' || k === 'youtube') return 'video'; if (k === 'upload') return isVid(r) ? 'video' : 'file';
+    if (k === 'doc') return r.src === 'book' ? 'book' : r.src === 'upload' || (r.files && !r.doc) ? 'file' : 'doc'; if (KIND[k]) return k;
+    return r.type === 'video' ? 'video' : ['quiz', 'exam'].includes(r.type) ? 'quiz' : r.type === 'assign' ? 'assign' : r.type === 'doc' ? (r.src === 'book' ? 'book' : r.src === 'upload' || ((r.files || r.fileId) && !r.doc) ? 'file' : 'doc') : 'file'; };
+  const c3k = r => { if (C3K.includes(r.kind)) return r.kind; const v = r.kind === 'video' || r.type === 'video';
+    if (v) return r.src === 'ai' || r.ai ? 'aivideo' : r.src === 'youtube' || /youtu/.test(r.url || '') ? 'youtube' : 'upload';
+    if (r.kind === 'file') return 'upload'; if (r.kind === 'book' || r.src === 'book') return 'book'; if (['quiz', 'exam'].includes(r.type) || r.kind === 'quiz') return 'quiz'; if (r.type === 'assign' || r.kind === 'assign') return 'assign';
+    return r.src === 'upload' || ((r.files || r.fileId) && !r.doc) ? 'upload' : 'doc'; };
+  const kindOfItem = it => ['video', 'doc', 'quiz', 'exam', 'assign'].includes(it.type) ? dk(it) : '';
   const libKind = l => ['동영상', 'YouTube'].includes(l.kind) ? 'video' : l.kind === '평가' ? (l.item && l.item.type === 'assign' ? 'assign' : 'quiz') : 'file';
   const books = () => { try { return typeof LSV === 'function' ? (LSV().dbooks || []) : []; } catch (e) { return []; } };
 
   /* ── 목록: 단독(S.clib) · 디지털북 · 예전 보관함(S.lib) · 과정 항목 ── */
+  /* 단독 콘텐츠를 넣은 과정 항목: it.clib(이 화면) 또는 usedIn + 같은 제목 · 종류(C3 '라이브러리에서 가져오기') */
+  const fromRec = (r, c, it) => it.clib === r.id || (!it.clib && (r.usedIn || []).includes(c.id) && it.title === r.title && (it.type === (r.type || it.type)));
   function usesOf(e) {
     if (e.origin === 'course') return [{ c: e.c, it: e.it }];
-    if (e.origin === 'book') { const c = e.ref.cls && C(e.ref.cls); return c ? [{ c, it: null }] : []; }
+    if (e.origin === 'book') { const id = e.ref.id; const U = (S.classes || []).flatMap(c => (c.curriculum || []).filter(it => it.src === 'book' && it.book === id).map(it => ({ c, it })));
+      const c = e.ref.cls && C(e.ref.cls); if (c && !U.some(u => u.c === c)) U.push({ c, it: null }); return U; }
     if (e.origin === 'lib') { try { if (typeof a2LibUse === 'function') return a2LibUse(e.ref).map(x => ({ c: x.c, it: x.it })); } catch (er) { } return (e.ref.cls || []).map(id => C(id)).filter(Boolean).map(c => ({ c, it: null })); }
-    const id = e.ref.id; return (S.classes || []).flatMap(c => (c.curriculum || []).filter(it => it.clib === id).map(it => ({ c, it })));
+    const r = e.ref; const U = (S.classes || []).flatMap(c => (c.curriculum || []).filter(it => fromRec(r, c, it)).map(it => ({ c, it })));
+    (r.usedIn || []).forEach(id => { const c = C(id); if (c && !U.some(u => u.c === c)) U.push({ c, it: null }); }); return U;
   }
   const useLabel = u => `${u.c.name}${u.it ? ' ' + posLabel(u.c, u.it) : ''}`;
-  function all() {
+  function entries() {
     if (!S) return [];
-    const out = [];
-    (S.clib || []).forEach(x => out.push({ key: 'cl:' + x.id, origin: 'clib', kind: KIND[x.kind] ? x.kind : 'file', title: x.title || '이름 없는 콘텐츠', at: x.at || '', ref: x }));
-    books().filter(b => (b.chs || []).length || b.url).forEach(b => out.push({ key: 'bk:' + b.id, origin: 'book', kind: 'book', title: b.title, at: b.at || '', ref: b }));
-    (S.lib || []).forEach(l => out.push({ key: 'lb:' + l.id, origin: 'lib', kind: libKind(l), title: String(l.name || '').replace(/\.(mp4|webm|mov)$/i, ''), at: l.at || '', ref: l }));
-    (S.classes || []).forEach(c => (c.curriculum || []).forEach(it => { if (it.clib || it.lib) return; const k = kindOfItem(it); if (!k) return; out.push({ key: 'it:' + c.id + ':' + it.id, origin: 'course', kind: k, title: it.title || ITEMX[it.type] || '항목', at: '', ref: it, it, c }); }));
+    const out = []; const R = (S.clib || []).filter(x => x && x.id); const B = books(); const libIn = new Set(R.map(x => x.lib).filter(Boolean));
+    R.forEach(x => { if (dk(x) === 'book' && B.some(b => b.id === (x.book && x.book.id || x.book))) return; out.push({ key: 'cl:' + x.id, origin: 'clib', kind: dk(x), title: x.title || x.name || '이름 없는 콘텐츠', at: x.at || '', ref: x }); });
+    B.filter(b => (b.chs || []).length || b.url).forEach(b => out.push({ key: 'bk:' + b.id, origin: 'book', kind: 'book', title: b.title, at: b.at || '', ref: b }));
+    (S.lib || []).forEach(l => { if (libIn.has(l.id)) return; out.push({ key: 'lb:' + l.id, origin: 'lib', kind: libKind(l), title: String(l.name || '').replace(/\.(mp4|webm|mov)$/i, ''), at: l.at || '', ref: l }); });
+    (S.classes || []).forEach(c => (c.curriculum || []).forEach(it => { if (it.clib || it.lib || it.src === 'book' || R.some(r => fromRec(r, c, it))) return; const k = kindOfItem(it); if (!k) return; out.push({ key: 'it:' + c.id + ':' + it.id, origin: 'course', kind: k, title: it.title || ITEMX[it.type] || '항목', at: '', ref: it, it, c }); }));
     out.forEach(e => { e.uses = usesOf(e); });
     return out;
   }
-  const byKey = k => all().find(e => e.key === k);
+  const byKey = k => entries().find(e => e.key === k);
+  /* CLIB.all(): C3 CT('라이브러리에서 가져오기')가 그대로 쓰는 기록 모양 { id, kind(C3 말), type, title, src, … , usedIn }.
+     단독 콘텐츠는 저장된 기록 그 자체를 준다(usedIn을 바꾸면 저장된다). 화면용 정보 key · origin · view · uses는 저장되지 않게(열거 안 됨) 붙인다. */
+  const meta = (o, e) => { const M = { key: e.key, origin: e.origin, view: e.kind, uses: e.uses.map(useLabel) }; Object.keys(M).forEach(k => Object.defineProperty(o, k, { value: M[k], enumerable: false, configurable: true, writable: true })); return o; };
+  function recOf(e) {
+    if (e.origin === 'clib') return meta(e.ref, e);
+    if (e.origin === 'book') return meta({ id: e.ref.id, kind: 'book', type: 'doc', src: 'book', book: e.ref.id, title: e.title, at: e.at, usedIn: [...new Set(e.uses.map(u => u.c.id))] }, e);
+    if (e.origin === 'lib') { const l = e.ref; let r;
+      if (l.kind === '평가') { const it = JSON.parse(JSON.stringify(l.item || { type: 'quiz' })); delete it.id; delete it.week; r = { ...it, kind: it.type === 'assign' ? 'assign' : 'quiz', title: l.name }; }
+      else if (l.kind === 'YouTube') r = { kind: 'youtube', type: 'video', src: 'youtube', url: l.url || (/^https:/.test(l.name) ? l.name : ''), title: l.name };
+      else if (l.kind === '동영상') r = { kind: 'upload', type: 'video', src: 'upload', file: l.name, url: l.url || 'lib:' + l.id, fileId: l.fileId || '', lib: l.id, title: e.title };
+      else r = { kind: 'upload', type: 'doc', src: 'upload', file: l.name, url: l.url || '', fileId: l.fileId || '', lib: l.id, title: String(l.name).replace(/\.\w+$/, '') };
+      return meta({ ...r, id: l.id, at: l.at || '', usedIn: [...new Set(e.uses.map(u => u.c.id))] }, e); }
+    const it = JSON.parse(JSON.stringify(e.it)); delete it.week; return meta({ ...it, kind: c3k(it), usedIn: [e.c.id] }, e);
+  }
+  const all = () => entries().map(recOf);
   const subOf = e => {
     const r = e.ref;
     if (e.origin === 'book') return `${(r.chs || []).length}단원`;
     if (e.origin === 'lib') return [r.kind === '평가' ? r.sub || '평가' : r.kind === '동영상' ? '올린 영상' : r.kind, r.size && r.size !== '—' ? r.size : ''].filter(Boolean).join(' · ');
-    const src = r.src === 'ai' ? 'AI로 만든 영상' : r.src === 'youtube' ? 'YouTube' : r.src === 'upload' || r.src === 'library' ? '올린 영상' : '';
+    const src = r.src === 'ai' || r.kind === 'aivideo' ? 'AI로 만든 영상' : r.src === 'youtube' || r.kind === 'youtube' ? 'YouTube' : r.src === 'upload' || r.src === 'library' || r.kind === 'upload' ? '올린 영상' : '';
     if (e.kind === 'video') return [src || '영상', r.ai && r.ai.mins ? `${r.ai.mins}분` : ''].filter(Boolean).join(' · ');
     if (e.kind === 'doc') return `교안${r.doc && (r.doc.secs || []).length ? ` · ${(r.doc.secs || []).length}절` : ''}`;
     if (e.kind === 'quiz') return `퀴즈 · ${(r.qs || []).length}문항`;
     if (e.kind === 'assign') return '과제';
-    return ['파일', r.size || (r.files && r.files[0] && r.files[0].name) || ''].filter(Boolean).join(' · ');
+    const sz = typeof r.size === 'number' ? (typeof a2Size === 'function' ? a2Size(r.size) : '') : r.size;
+    return ['파일', sz || r.file || (r.files && r.files[0] && r.files[0].name) || ''].filter(Boolean).join(' · ');
   };
 
-  /* ── 추가: CT.open의 onDone(item) 결과(과정 항목 모양이든 clib 모양이든)를 S.clib에 넣는다 ── */
+  /* ── 추가: CT.open의 onDone(item) 결과(과정 항목 모양이든 기록 모양이든)를 S.clib에 C3와 같은 기록 모양으로 넣는다 ── */
   function add(x) {
     if (!S || !x) return null; S.clib = Array.isArray(S.clib) ? S.clib : [];
-    const o = JSON.parse(JSON.stringify(x)); delete o.week;
-    let kind = KIND[o.kind] ? o.kind : (o.type ? kindOfItem(o) : '') || (o.book ? 'book' : o.src === 'youtube' || o.src === 'ai' ? 'video' : 'file');
-    if (o.type === 'book') kind = 'book';
+    const o = JSON.parse(JSON.stringify(x)); delete o.week; ['key', 'origin', 'view', 'uses'].forEach(k => delete o[k]);
+    const kind = c3k(o);
     if (kind === 'book') { /* 디지털북은 학습자 화면이 읽는 곳(LSV().dbooks)에 둔다 — S.clib에 겹쳐 두지 않는다 */
-      const id = o.bookId || (o.book && o.book.id) || o.id; let b = id && books().find(y => y.id === id);
-      if (!b && o.book && Array.isArray(o.book.chs) && typeof LSV === 'function') { b = typeof bkNorm === 'function' ? bkNorm(o.book) : o.book; LSV().dbooks.push(b); }
-      save(); return b ? { kind: 'book', id: b.id, title: b.title, book: b } : null; }
-    const it = { ...o, id: o.id && /^cl/.test(o.id) ? o.id : uid('cl'), kind, title: String(o.title || o.name || (KIND[kind] || KIND.file)[0]).slice(0, 80), at: o.at || today(), usedIn: Array.isArray(o.usedIn) ? o.usedIn : [] };
-    if (!it.type) it.type = kind === 'video' ? 'video' : kind === 'quiz' ? 'quiz' : kind === 'assign' ? 'assign' : 'doc';
+      const id = o.bookId || (o.book && typeof o.book === 'object' ? o.book.id : o.book) || (o.bookObj && o.bookObj.id) || o.id; let b = id && books().find(y => y.id === id);
+      const obj = o.book && typeof o.book === 'object' ? o.book : o.bookObj;
+      if (!b && obj && Array.isArray(obj.chs) && typeof LSV === 'function') { b = typeof bkNorm === 'function' ? bkNorm(obj) : obj; LSV().dbooks.push(b); }
+      save(); return b ? { id: b.id, kind: 'book', type: 'doc', src: 'book', book: b.id, title: b.title } : null; }
+    const it = { ...o, id: o.id && /^cl/.test(o.id) ? o.id : uid('cl'), kind, title: String(o.title || o.name || '콘텐츠').slice(0, 80), at: o.at || today(), usedIn: Array.isArray(o.usedIn) ? o.usedIn : [] };
+    if (!it.type) it.type = ({ aivideo: 'video', youtube: 'video', upload: isVid(it) ? 'video' : 'doc', quiz: 'quiz', assign: 'assign' })[kind] || 'doc';
+    if (kind === 'aivideo' && !it.src) it.src = 'ai'; if (kind === 'youtube' && !it.src) it.src = 'youtube'; if (kind === 'upload' && !it.src) it.src = 'upload';
     const at = S.clib.findIndex(y => y.id === it.id); if (at >= 0) S.clib[at] = it; else S.clib.unshift(it);
     save(); return it;
   }
 
-  /* ── 과정 항목으로 바꾸기(학습자 게시본 lsSnapshot이 읽는 기존 필드만) ── */
+  /* ── 과정 항목으로 바꾸기(학습자 게시본 lsSnapshot이 읽는 기존 필드 + C3 항목 모양) ── */
+  const KEEP = ['src', 'url', 'fileId', 'file', 'mime', 'size', 'dur', 'topic', 'fmt', 'desc', 'deliv', 'due', 'time', 'retake', 'yt', 'q', 'lib', 'book', 'files', 'subs', 'rubric'];
   function toItem(e) {
-    const r = JSON.parse(JSON.stringify(e.ref));
-    if (e.origin === 'course') { delete r.week; return { ...r, id: uid('it') }; }
-    if (e.origin === 'lib') { const l = e.ref;
-      if (l.kind === '평가') { const it = { ...JSON.parse(JSON.stringify(l.item || { type: 'quiz', title: l.name })), id: uid('it') }; delete it.week; return it; }
-      if (l.kind === 'YouTube') return { id: uid('it'), type: 'video', title: l.name, src: 'youtube', url: /^https:/.test(l.name) ? l.name : (l.url || '') };
-      if (l.kind === '동영상') return { id: uid('it'), type: 'video', title: e.title, src: 'library', lib: l.id, url: 'lib:' + l.id };
-      return { id: uid('it'), type: 'doc', title: String(l.name).replace(/\.\w+$/, ''), files: [{ name: l.name, size: (typeof a2Bytes === 'function' ? a2Bytes(l) : l.bytes) || 0 }], lib: l.id }; }
-    const x = r; const it = { id: uid('it'), title: x.title, clib: x.id };
-    if (x.kind === 'video') Object.assign(it, { type: 'video', src: x.src || (x.ai ? 'ai' : x.url ? 'youtube' : 'upload') }, x.ai ? { ai: x.ai } : {}, x.url ? { url: x.url } : {}, x.src === 'ai' && !x.url ? { url: 'ai:' + it.id } : {}, x.q ? { q: x.q } : {}, x.subs ? { subs: x.subs } : {}, x.fileId ? { fileId: x.fileId } : {}, x.file || x.src === 'upload' ? { file: x.file || x.title, fsize: x.bytes || x.fsize || 0 } : {}, x.dur ? { dur: x.dur } : {});
-    else if (x.kind === 'doc') Object.assign(it, { type: 'doc', topic: x.topic || x.title }, x.doc ? { doc: x.doc } : {}, x.fmt ? { fmt: x.fmt } : {}, x.files ? { files: x.files } : {});
-    else if (x.kind === 'quiz') Object.assign(it, { type: x.type === 'exam' ? 'exam' : 'quiz', qs: x.qs || [], time: x.time || 10, retake: x.retake || 3 });
-    else if (x.kind === 'assign') Object.assign(it, { type: 'assign', desc: x.desc || '' }, x.rubric ? { rubric: x.rubric } : {}, x.due ? { due: x.due } : {});
-    else Object.assign(it, { type: 'doc', files: x.files || [{ name: x.file || x.title, size: x.bytes || 0 }] }, x.url ? { url: x.url } : {}, x.fileId ? { fileId: x.fileId } : {});
+    const r = recOf(e); const it = { id: uid('it'), type: r.type || ({ aivideo: 'video', youtube: 'video', upload: 'video', quiz: 'quiz', assign: 'assign' })[r.kind] || 'doc', title: r.title || '콘텐츠' };
+    KEEP.forEach(k => { if (r[k] != null && r[k] !== '') it[k] = JSON.parse(JSON.stringify(r[k])); });
+    ['ai', 'doc', 'qs', 'rubrics'].forEach(k => { if (r[k]) it[k] = JSON.parse(JSON.stringify(r[k])); });
+    if (r.kind === 'aivideo') { it.src = 'ai'; if (!it.url || /^ai:/.test(it.url)) it.url = 'ai:' + it.id; }
+    if (r.kind === 'book') it.src = 'book';
+    if (r.rb && !it.rubric) { S.rubrics = Array.isArray(S.rubrics) ? S.rubrics : []; if (!S.rubrics.some(x => x.id === r.rb.id)) S.rubrics.push(JSON.parse(JSON.stringify(r.rb))); it.rubric = r.rb.id; }
+    if (['quiz', 'exam'].includes(it.type)) { it.qs = it.qs || []; it.time = it.time || 10; it.retake = it.retake || 3; }
+    if (it.type === 'video' && it.src === 'upload' && it.lib && !it.url) it.url = 'lib:' + it.lib;
+    if (it.type === 'doc' && it.src === 'upload' && !it.files && it.file) it.files = [{ name: it.file, size: +r.bytes || (typeof r.size === 'number' ? r.size : 0) }];
+    if (e.origin === 'clib') it.clib = e.ref.id;
     return it;
   }
   /* 과정에 넣기: pos = { week } (차시 목록이 있는 과정) | { after: 항목 index } | 없으면 맨 끝 */
   function put(e, classId, pos = {}) {
-    if (typeof e === 'string') e = byKey(e) || byKey('cl:' + e); const c = C(classId); if (!e || !c) return null;
-    if (e.origin === 'book') { e.ref.cls = c.id; save(); return { book: e.ref, c }; }
+    if (typeof e === 'string') e = byKey(e) || byKey('cl:' + e) || byKey('bk:' + e) || byKey('lb:' + e);
+    else if (e && !e.ref) e = byKey(e.key || ('cl:' + e.id)) || byKey('bk:' + e.id) || byKey('lb:' + e.id);
+    const c = C(classId); if (!e || !c) return null;
     const it = toItem(e); const L = c.curriculum = c.curriculum || [];
     if (pos.week && (c.weekly || L.some(x => x.week))) { it.week = +pos.week; let at = -1; L.forEach((x, i) => { if (x.week === it.week) at = i; }); if (at < 0) { L.forEach((x, i) => { if ((x.week || 0) < it.week) at = i; }); } L.splice(at + 1, 0, it); }
     else if (pos.after != null && pos.after >= -1 && pos.after < L.length) { if (c.weekly && L[pos.after]) it.week = L[pos.after].week; L.splice(pos.after + 1, 0, it); }
     else { if (c.weekly) it.week = Math.max(1, ...L.map(x => x.week || 0)); L.push(it); }
     if (e.origin === 'clib') e.ref.usedIn = [...new Set([...(e.ref.usedIn || []), c.id])];
-    if (e.origin === 'lib') { e.ref.cls = [...new Set([...(e.ref.cls || []), c.id])]; e.ref.used = (e.ref.used || 0) + 1; try { if (it.src === 'library' && typeof a2ConvOf === 'function') a2ConvOf(e.ref); } catch (er) { } }
+    if (e.origin === 'book' && !e.ref.cls) e.ref.cls = c.id;
+    if (e.origin === 'lib') { e.ref.cls = [...new Set([...(e.ref.cls || []), c.id])]; e.ref.used = (e.ref.used || 0) + 1; try { if (it.type === 'video' && typeof a2ConvOf === 'function') a2ConvOf(e.ref); } catch (er) { } }
     try { logAudit(`콘텐츠 라이브러리 → ${c.name} — ${it.title}`); } catch (er) { }
     save(); return { it, c };
   }
-  window.CLIB = { all, add, use: x => usesOf(x && x.origin ? x : { origin: 'clib', ref: x || {} }), put, kinds: KIND };
+  const useOf = x => { if (!x) return []; const e = x.ref && x.origin ? x : byKey(x.key || ('cl:' + x.id)) || byKey('bk:' + x.id) || byKey('lb:' + x.id); return e ? e.uses.map(u => ({ c: u.c, it: u.it, label: useLabel(u) })) : []; };
+  window.CLIB = { all, add, use: useOf, put, kinds: KIND };
 
   /* ── 임시 콘텐츠 도구(C3 CT가 오기 전) — 같은 이름 CT.open(kind, ctx) ── */
   const TMP = { __clibTmp: true, kinds: MAKE.map(([k, n, icon, d, time]) => ({ k, n, icon, d, time })), open: tmpOpen };
@@ -159,7 +191,7 @@
       return ask('디지털북 만들기', '어떤 주제의 교재인가요?', exTopic(), v => { if (typeof bkAIDraft !== 'function') { toast('디지털북 도구를 불러오지 못했습니다.', 'warn'); return; } const b = bkAIDraft(v, 3); S.ai && S.ai.usage++; done({ kind: 'book', book: b }); toast(`디지털북 「${b.title}」 ${b.chs.length}단원을 만들었습니다.`, 'ok'); }); }
     toast('준비 중인 도구입니다.', 'warn');
   }
-  const ctKind = e => e.kind === 'video' ? (e.ref.src === 'ai' || e.ref.ai ? 'aivideo' : e.ref.src === 'youtube' ? 'youtube' : 'upload') : e.kind === 'file' ? 'upload' : e.kind;
+  const ctKind = e => c3k(e.ref);
 
   /* ── 메뉴 · 프리셋 ── */
   MENU.clib = { label: '콘텐츠 라이브러리', ws: 'learn' };
@@ -188,7 +220,7 @@
     const use = U.length ? `<span class="clb-use on">${ic('check', 14)} 사용 중: ${esc(useLabel(u))}${U.length > 1 ? ` 외 ${U.length - 1}곳` : ''}</span>` : `<span class="clb-use">아직 어느 ${esc(cname())}에도 넣지 않았습니다</span>`;
     const q = `${e.title} ${subOf(e)} ${U.map(useLabel).join(' ')}`.toLowerCase();
     return `<article class="clb-card" data-q="${esc(q)}">${icoBox(e.kind)}<div class="clb-tx"><b title="${esc(e.title)}">${esc(e.title)}</b><small>${esc((KIND[e.kind] || KIND.file)[0])}${subOf(e) && subOf(e) !== (KIND[e.kind] || KIND.file)[0] ? ' · ' + esc(subOf(e).replace(/^(교안|파일|퀴즈|과제) · /, '')) : ''}</small>${use}</div>
-      <div class="clb-acts"><button type="button" class="btn pri" data-act="clb-put" data-v="${esc(e.key)}">${e.kind === 'book' ? `${esc(cname())}에 연결` : `${esc(cname())}에 넣기`}</button><button type="button" class="btn" data-act="clb-pv" data-v="${esc(e.key)}">미리보기</button><button type="button" class="btn" data-act="clb-edit" data-v="${esc(e.key)}">고치기</button></div></article>`;
+      <div class="clb-acts"><button type="button" class="btn pri" data-act="clb-put" data-v="${esc(e.key)}">${esc(cname())}에 넣기</button><button type="button" class="btn" data-act="clb-pv" data-v="${esc(e.key)}">미리보기</button><button type="button" class="btn" data-act="clb-edit" data-v="${esc(e.key)}">고치기</button></div></article>`;
   }
   const START = () => [
     ['upload', '1', '가진 파일 올리기', '쓰던 영상 · PPT · PDF가 있다면 그대로 올립니다.', '파일 올리기'],
@@ -203,7 +235,7 @@
     ensure();
     if (UI.clibSub === 'dbook' && VIEWS.dbook) { if (UI.bkId && typeof bkOf === 'function' && bkOf(UI.bkId)) return subBar('디지털북 고치기') + VIEWS.dbook(); UI.clibSub = ''; UI.clibT = 'book'; }
     if (UI.clibSub === 'library' && VIEWS.library) return subBar('영상 · 자료 보관함(저장 공간 · 변환 상태 · 이름 바꾸기)') + VIEWS.library();
-    const A = all(); const tb = TABS.some(x => x[0] === UI.clibT) ? UI.clibT : 'all'; const L = A.filter(e => inTab(e, tb)); const q = String(UI.clibQ || '').trim().toLowerCase();
+    const A = entries(); const tb = TABS.some(x => x[0] === UI.clibT) ? UI.clibT : 'all'; const L = A.filter(e => inTab(e, tb)); const q = String(UI.clibQ || '').trim().toLowerCase();
     const n = k => A.filter(e => inTab(e, k)).length; const lim = UI.clibN || PAGE;
     const top = `<div class="clb-top"><div class="clb-lead"><p>모든 ${esc(cname())}의 영상 · 교안 · 퀴즈 · 디지털북을 한곳에서 보고, 여기서 바로 만들어 ${esc(cname())}에 넣습니다.</p></div><button type="button" class="btn pri clb-make" data-act="clb-make">${ic('clplus', 20)} 만들기</button></div>`;
     const lmsNote = ULMS_() && MENU.lmsv && tb !== 'book' && tb !== 'doc' && tb !== 'quiz' ? `<div class="clb-note">${ic('clplay', 18)}<span>학사 수업의 강의 영상(녹화 · 자막 · 학사 전송)은 <b>강의 영상 관리</b>에서 올리고 관리합니다. 여기에는 교안 · 퀴즈 · 디지털북과 따로 만든 영상이 모입니다.</span><button type="button" class="btn" data-act="go" data-v="lmsv">강의 영상 관리 열기</button></div>` : '';
@@ -231,7 +263,7 @@
   ACT['clb-sub'] = el => { UI.clibSub = el.dataset.v; render(); window.scrollTo(0, 0); };
   /* 만들기: 종류 카드 하나 고르기 */
   ACT['clb-make'] = () => {
-    const K = (CTX().kinds || []).length ? CTX().kinds : TMP.kinds; const nm = k => { const x = K.find(y => (y.k || y.id || y.kind) === k); return x ? [x.n || x.name || '', x.d || x.desc || '', x.time || ''] : null; };
+    const K = (CTX().kinds || []).length ? CTX().kinds : TMP.kinds; const nm = k => { const x = K.find(y => (y.k || y.id || y.kind) === k); return x ? [x.n || x.name || '', x.d || x.one || x.desc || '', x.time || ''] : null; };
     modal('무엇을 만들까요?', `<p class="clb-now">지금 할 일: 만들 콘텐츠의 종류를 하나 고르세요.</p><div class="clb-kinds">${MAKE.map(([k, n, icon, d, time]) => { const o = nm(k); return `<button type="button" class="clb-kind" data-act="clb-mk" data-v="${k}">${`<span class="clb-ic k-${k === 'book' ? 'b' : k === 'quiz' ? 'q' : k === 'doc' ? 'd' : k === 'upload' ? 'f' : 'v'}" aria-hidden="true">${ic(icon, 24)}</span>`}<b>${esc(o && o[0] || n)}</b><small>${esc(o && o[1] || d)}</small><em>${esc(o && o[2] || time)}</em></button>`; }).join('')}</div>`, [{ id: 'c', label: '닫기' }], true);
   };
   ACT['clb-mk'] = el => { const k = el.dataset.v; closeModal(); CTX().open(k, { from: 'lib', onDone: x => { const r = add(x); if (r) { UI.clibT = 'all'; UI.clibQ = ''; render(); } } }); };
@@ -254,16 +286,18 @@
     if (e.origin === 'book') { UI.clibSub = 'dbook'; if (typeof bkOpen === 'function') bkOpen(e.ref.id); return; }
     if (e.origin === 'course') { const i = e.c.curriculum.indexOf(e.it); UI.cls = e.c.id; UI.clsT = 'curriculum'; go('class'); if (i >= 0 && typeof openEditor === 'function') setTimeout(() => openEditor(e.c, i), 0); return; }
     if (e.origin === 'lib') { UI.clibSub = 'library'; render(); window.scrollTo(0, 0); return; }
-    const ref = e.ref; CTX().open(ctKind(e), { item: ref, from: 'lib', onDone: x => { const nx = { ...ref, ...JSON.parse(JSON.stringify(x || {})), id: ref.id, usedIn: ref.usedIn || [], at: today() }; add(nx); render(); } }); };
+    const ref = e.ref; CTX().open(ctKind(e), { item: ref, from: 'lib', title: ref.title, onDone: x => { if (!x) return;
+      /* C3 도구는 라이브러리에서 연 결과를 새 기록으로 저장한다 → 고친 내용을 원래 기록에 옮기고 새 기록은 지운다(사용처 · id 유지) */
+      if (x.id && x.id !== ref.id) S.clib = (S.clib || []).filter(y => y.id !== x.id);
+      const nx = { ...ref, ...JSON.parse(JSON.stringify(x)), id: ref.id, usedIn: ref.usedIn || [], at: today() }; add(nx); render(); } }); };
   /* 과정에 넣기: ① 과정 고르기 → ② 차시 고르기 */
   ACT['clb-put'] = el => { const e = byKey(el.dataset.v); if (!e) return; const CS = (S.classes || []).filter(c => c.status !== '종료');
     if (!CS.length) { modal(`${cname()}에 넣기`, `<p>아직 ${esc(cname())}${josa(cname(), '이', '가')} 없습니다. 먼저 ${esc(cname())}${josa(cname(), '을', '를')} 만들면 이 콘텐츠를 차시에 넣을 수 있습니다.</p>`, [{ id: 'c', label: '닫기' }, { id: 'n', label: `${cname()} 만들기`, kind: 'pri', run: () => { setTimeout(() => { if (window.CF && typeof CF.open === 'function') CF.open({ from: 'lib' }); else if (ACT['cls-new']) ACT['cls-new'](); }, 0); } }]); return; }
     const st = { c: CS.length === 1 ? CS[0].id : '', pos: null };
-    const steps = () => `<ol class="clb-steps" aria-label="진행"><li class="${st.c ? 'done' : 'on'}">① ${esc(cname())} 고르기</li><li class="${st.c ? 'on' : ''}">② ${e.kind === 'book' ? '확인' : '차시 고르기'}</li></ol>`;
+    const steps = () => `<ol class="clb-steps" aria-label="진행"><li class="${st.c ? 'done' : 'on'}">① ${esc(cname())} 고르기</li><li class="${st.c ? 'on' : ''}">② 차시 고르기</li></ol>`;
     const draw = w => { const mb = w.querySelector('.mb'); const ok = w.querySelector('[data-mact=ok]'); const bk = w.querySelector('[data-mact=back]');
       if (!st.c) { mb.innerHTML = steps() + `<p class="clb-now">지금 할 일: 「${esc(e.title)}」${josa(e.title, '을', '를')} 넣을 ${esc(cname())}${josa(cname(), '을', '를')} 고르세요.</p><div class="clb-pick">${CS.map(c => `<button type="button" class="clb-row" data-clbc="${c.id}"><b>${esc(c.name)}</b><small>${(c.curriculum || []).filter(x => x.type !== 'chapter').length}개 항목 · ${esc(c.status || '')}</small><span aria-hidden="true">›</span></button>`).join('')}</div>`; ok.hidden = true; bk.hidden = true; return; }
       const c = C(st.c); ok.hidden = false; bk.hidden = CS.length === 1;
-      if (e.kind === 'book') { mb.innerHTML = steps() + `<p class="clb-now">「${esc(c.name)}」에 이 디지털북을 연결합니다. 학습자 마이페이지와 수료 흐름에 함께 보입니다.</p>`; ok.textContent = '연결하기'; return; }
       const W = c.weekly && (c.weekPlan || []).length ? c.weekPlan.map(wk => ({ v: 'w' + wk.w, h: `${wk.w}${S.org.type === 'univ' ? '주차' : '차시'}`, s: wk.title && !/^\d+(차시|주)$/.test(wk.title) ? wk.title : '', n: (c.curriculum || []).filter(x => x.week === wk.w).length }))
         : (c.curriculum || []).map((x, i) => [x, i]).filter(([x]) => x.type !== 'chapter').map(([x, i], k) => ({ v: 'a' + i, h: `${k + 1}차시 다음`, s: x.title, n: -1 }));
       if (st.pos == null) st.pos = 'end';
@@ -272,7 +306,7 @@
     const w = modal(`${cname()}에 넣기 — ${e.title}`, '', [{ id: 'back', label: '이전', run: w => { st.c = ''; st.pos = null; draw(w); return false; } }, { id: 'c', label: '취소' }, { id: 'ok', label: '넣기', kind: 'pri', run: () => {
       const c = C(st.c); if (!c) return false; const p = st.pos || 'end'; const pos = p[0] === 'w' ? { week: +p.slice(1) } : p[0] === 'a' ? { after: +p.slice(1) } : {};
       const r = put(e, c.id, pos); if (!r) { toast('넣지 못했습니다. 다시 시도해 주세요.', 'warn'); return false; }
-      render(); toast(r.it ? `「${r.it.title}」${josa(r.it.title, '을', '를')} 「${c.name}」 ${posLabel(c, r.it)}에 넣었습니다.` : `「${c.name}」에 디지털북을 연결했습니다.`, 'ok'); } }], true);
+      render(); toast(`「${r.it.title}」${josa(r.it.title, '을', '를')} 「${c.name}」 ${posLabel(c, r.it)}에 넣었습니다.`, 'ok'); } }], true);
     w.addEventListener('click', ev => { const b = ev.target.closest('[data-clbc],[data-clbp]'); if (!b) return; if (b.dataset.clbc) { st.c = b.dataset.clbc; st.pos = null; } else st.pos = b.dataset.clbp; draw(w); });
     draw(w); };
 
