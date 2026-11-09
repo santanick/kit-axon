@@ -12,6 +12,21 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; } else { fail++;
     const R = await p.evaluate(async () => { const out = {}; const has = id => Object.values(S.nav.tabs).flat().find(t => t.id === id); for (const [ty, ed] of [['voc'], ['lifelong'], ['corp'], ['univ', 'lite'], ['public'], ['k12'], ['adult']]) { createOrg(ty, '점검', ed); render(); const c = S.org.cpl, t = has('cpl'); const prof = c.profile; const bad = []; UI.cpl = null; const T = prof === 'lifelong' ? ['check', 'rule', 'file', 'refund'] : ['check', 'rule', 'item', 'mon', 'fb', 'att', 'rep', 'feed', 'ev']; for (const x of T) { UI.cpl = x; go('cpl'); render(); if (/화면을 표시하는 중 문제/.test(document.querySelector('#main').innerText)) bad.push(x); } out[ty] = { on: c.on, prof, tab: !!(t && t.on), bad }; } return out; });
     ok(R.voc.on && R.voc.prof === 'moel-entrust' && R.voc.tab, 'voc 기본'); ok(R.lifelong.on && R.lifelong.prof === 'lifelong' && R.lifelong.tab, 'lifelong 기본'); ok(!R.corp.on && R.corp.prof === 'moel-self' && R.corp.tab, 'corp 기본: 탭 있음 · 규칙은 켤 때'); ['univ', 'public', 'k12', 'adult'].forEach(k => ok(!R[k].on && !R[k].tab, k + ' 기본 꺼짐')); Object.entries(R).forEach(([k, v]) => ok(!v.bad.length, `${k} 화면 오류 ${v.bad}`));
     await ctx.close(); }
+  /* v36 H: 유형별로 필요한 정보만 — 첫 탭 '한눈에', 해당 없는 유형은 안내만(규정 수치는 그대로) */
+  { const ctx = await browser.newContext(); const p = await open(ctx, '/index.html');
+    const H = await p.evaluate(() => { const out = {}; const main = () => document.querySelector('#main').innerText; const vis = () => [...document.querySelectorAll('#main [data-key="cpl"]')].map(b => b.dataset.v);
+      for (const [ty, ed] of [['voc'], ['lifelong'], ['corp'], ['univ', 'lite'], ['k12'], ['public']]) { createOrg(ty, '점검', ed); UI.sbOld = { cpl: 1 }; UI.cpl = null; go('cpl'); UI.cpl = null; render(); out[ty] = { txt: main(), tabs: vis(), rate: S.org.cpl.rate, on: S.org.cpl.on }; }
+      createOrg('univ', '대학', 'lite'); UI.sbOld = { cpl: 1 }; UI.cpl = null; go('cpl'); render(); document.querySelector('[data-act="cpl-enable"][data-v="lifelong"]').click(); document.querySelector('#modal [data-mact="ok"]').click(); render(); out.uEnable = { on: S.org.cpl.on, prof: S.org.cpl.profile, txt: main(), tabs: vis() };
+      createOrg('k12', '학원'); navAdd('cpl', true); (Object.values(S.nav.tabs).flat().find(x => x.id === 'cpl') || {}).on = true; UI.sbOld = { cpl: 1 }; UI.cpl = null; go('cpl'); render(); ACT['cpl-hide'](); out.hide = !Object.values(S.nav.tabs).flat().some(x => x.id === 'cpl' && x.on);
+      return out; });
+    ok(/훈련 규정/.test(H.voc.txt) && /HRD-Net 보고/.test(H.voc.txt) && /출결/.test(H.voc.txt) && /훈련시간/.test(H.voc.txt) && H.voc.tabs.includes('mon') && H.voc.rate === 80, 'v36 직업훈련 한눈에 ' + H.voc.tabs);
+    ok(/평생교육법/.test(H.lifelong.txt) && /학점은행/.test(H.lifelong.txt) && /학습비 반환/.test(H.lifelong.txt) && !/HRD-Net/.test(H.lifelong.txt), 'v36 평생교육 한눈에');
+    ok(/법정의무교육/.test(H.corp.txt) && /사업주 훈련/.test(H.corp.txt) && !H.corp.tabs.includes('mon') && !H.corp.on, 'v36 기업: 법정의무교육 + 환급 시에만 ' + H.corp.tabs);
+    ok(/법정의무교육/.test(H.public.txt) && !H.public.tabs.includes('mon'), 'v36 공공: 법정의무교육');
+    ['univ', 'k12'].forEach(k => ok(/필요하지 않습니다/.test(H[k].txt) && !H[k].tabs.length && !/별표 1/.test(H[k].txt), `v36 ${k}: 안내만 ` + H[k].tabs));
+    ok(H.uEnable.on && H.uEnable.prof === 'lifelong' && /학점은행/.test(H.uEnable.txt) && H.uEnable.tabs.includes('refund'), 'v36 대학: 필요할 때 평생교육 기준 켜기 ' + JSON.stringify({ on: H.uEnable.on, p: H.uEnable.prof, t: H.uEnable.tabs }));
+    ok(H.hide, 'v36 해당 없음 → 메뉴 숨기기');
+    await ctx.close(); }
   /* ② 직업훈련원 운영자 → 학습자 */
   const ctx = await browser.newContext(); const a = await open(ctx, '/index.html');
   const R = await a.evaluate(async () => { createOrg('voc', '훈련원 "<b>"'); const r = {}; S.members = [0, 1, 2].map(i => ({ id: 'm' + i, name: '훈련생' + i, group: '', grade: '정회원', joined: today(), last: today(), extra: {} })); S.classes = [{ id: 'c1', name: '훈련과정', kind: 'period', status: '운영중', start: '2026-01-01', end: '2026-12-31', curriculum: [], learners: [], prog: {}, criteria: { threshold: 80 }, hours: 10 }]; const c = S.classes[0]; const m0 = S.members[0], m1 = S.members[1];
