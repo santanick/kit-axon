@@ -54,3 +54,66 @@ mark{background:#ffe58a;border-radius:3px;padding:0 2px}
 .cmrec .bar2{margin:0}
 .cmfav{font-size:17px;color:var(--muted)}.cmfav.on{color:#e8a317}
 @media (max-width:640px){.cmt{grid-template-columns:46px 1fr}.cmt p{grid-column:1/-1}.cmheat{font-size:8px}}
+/* v36 공지: 목록에서 바로 고치기 · 순서 · 고정 */
+.cmn-bar{align-items:center}.cmn-bar select{min-height:40px}.cmn-hint{margin-left:auto}
+.cmn{list-style:none;margin:8px 0 12px;padding:0;display:grid;gap:8px}
+.cmn-r{display:flex;align-items:stretch;gap:6px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:4px 6px 4px 2px;min-width:0}
+.cmn-r.pin{border-color:var(--mag);background:var(--magl)}
+.cmn-r.drag{opacity:.45}.cmn-r.over{box-shadow:0 -3px 0 var(--mag)}
+.cmn-h{width:22px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:grab;user-select:none;font-size:14px;letter-spacing:-2px}
+.cmn-m{flex:1;min-width:0;display:grid;gap:3px;text-align:left;background:none;border:0;padding:10px 6px;cursor:text;font:inherit;color:inherit;border-radius:8px;min-height:48px}
+.cmn-m:hover{background:var(--paper)}.cmn-m:focus-visible{outline:2px solid var(--mag);outline-offset:1px}
+.cmn-t{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}.cmn-t b{font-size:15px;overflow-wrap:anywhere}
+.cmn-pin{font-size:11px;font-weight:700;color:#fff;background:var(--mag);border-radius:4px;padding:1px 6px}
+.cmn-to{font-size:11px;color:var(--muted);background:var(--soft);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.cmn-x{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cmn-meta{color:var(--muted);font-size:12px}
+.cmn-o{display:flex;align-items:center;gap:4px;flex:none}
+.cmn-mv{display:none;width:40px;height:40px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:16px;cursor:pointer}
+.cmn-mv:disabled{opacity:.3;cursor:default}
+.cmn-r:focus-within .cmn-mv,.cmn-r:hover .cmn-mv{display:inline-block}
+.cmn-pb{min-height:40px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:0 10px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.cmn-pb.on{border-color:var(--mag);color:var(--magd);font-weight:700}
+.cmn-r.ed{display:block;padding:12px;border-color:var(--mag);box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.cmn-e{display:grid;gap:8px}
+.cmn-eh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.cmn-ti{flex:1;min-width:200px;font-size:16px;font-weight:700;min-height:44px}
+.cmn-tb{display:flex;gap:6px;flex-wrap:wrap}
+.cmn-tb button{min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:13px;cursor:pointer}
+.cmn-tb button:hover{background:var(--paper)}
+.cmn-lk{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.cmn-lk[hidden]{display:none}.cmn-lk input{flex:1;min-width:180px}
+.cmn-body{min-height:140px;max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:12px 14px;line-height:1.65;background:#fff;outline:none;overflow-wrap:anywhere}
+.cmn-body:focus{border-color:var(--mag);box-shadow:0 0 0 3px var(--magl)}
+.cmn-body:empty::before{content:attr(data-ph);color:var(--muted)}
+.cmn-body img{max-width:100%;height:auto;border-radius:6px;display:block;margin:6px 0}.cmn-body ul{margin:4px 0;padding-left:22px}.cmn-body a{color:var(--link);text-decoration:underline}
+.cmn-ft{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.cmn-ft .grow{flex:1}.cmn-ft .btn{min-height:44px}
+.cmn-del{color:var(--bad)}
+.cmn-wrap{display:grid;gap:16px}.cmn-card .bar2{margin-top:4px}
+/* v36 다중 게시판 */
+.cmb-chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
+.cmb-chips button{min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:#fff;font:inherit;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.cmb-chips button small{color:var(--muted);font-size:12px}.cmb-chips button em{font-style:normal;font-size:11px;font-weight:700;background:var(--warn);color:#fff;border-radius:999px;padding:0 6px}
+.cmb-chips button.on{background:var(--ink);border-color:var(--ink);color:#fff}.cmb-chips button.on small{color:#ddd}
+.cmb-chips .cmb-add{border-style:dashed;color:var(--muted)}
+.cmb-h{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--paper);margin-bottom:10px}
+.cmb-hl{min-width:0;flex:1}.cmb-hl>b{font-size:17px}.cmb-hl p{margin:4px 0 6px;color:var(--muted);font-size:13px}
+.cmb-hr{display:flex;gap:6px;flex-wrap:wrap}.cmb-hr .btn{min-height:44px}
+.cmb-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.cmb-list{list-style:none;margin:8px 0 16px;padding:0;display:grid;gap:8px}
+.cmb-r{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 10px 10px 4px;min-width:0}
+.cmb-r.fix{background:var(--paper)}.cmb-r.fix .cmn-h{cursor:default}
+.cmb-r.drag{opacity:.45}.cmb-r.over{box-shadow:0 -3px 0 var(--mag)}
+.cmb-ic{width:36px;height:36px;flex:none;border-radius:8px;background:var(--magl);color:var(--magd);display:flex;align-items:center;justify-content:center}
+.cmb-m{flex:1;min-width:0;display:grid;gap:2px}.cmb-m b{font-size:15px}.cmb-d{color:var(--muted);font-size:13px}
+.cmb-r .cmn-o .btn{min-height:40px}
+.cmb-tpl{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-top:6px}
+.cmb-tpl button{display:grid;gap:2px;text-align:left;border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px;font:inherit;cursor:pointer;min-height:56px}
+.cmb-tpl button small{color:var(--muted);font-size:12px}.cmb-tpl button.on{border-color:var(--mag);background:var(--magl)}
+.cmb-sw{display:flex;gap:16px;flex-wrap:wrap;margin:4px 0 10px}
+@media (max-width:760px){
+  .cmn-mv{display:inline-block}.cmn-h{display:none}.cmn-hint{display:none}
+  .cmn-r{flex-wrap:wrap;padding:6px}.cmn-m{flex-basis:100%}.cmn-o{width:100%;justify-content:flex-end}
+  .cmb-r{flex-wrap:wrap;padding:10px}.cmb-m{flex-basis:calc(100% - 50px)}.cmb-r .cmn-o{width:100%;justify-content:flex-end;flex-wrap:wrap}
+  .cmb-chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.cmb-chips button{flex:none}
+  .cmb-hr{width:100%}.cmb-hr .btn{flex:1}
+}
+.cmb-l{display:block;font-weight:700;margin-bottom:6px}
+.cmb-n{font-size:15px;font-weight:700;margin:6px 0}
