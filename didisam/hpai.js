@@ -426,6 +426,8 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     const w = modal('메뉴 편성', `<div id="hpmBox"></div>`, [{ id: 'pv', label: '화면에서 확인', run: () => { hpEdit('home'); } }, { id: 'ok', label: '완료', kind: 'pri' }], true); w.classList.add('hpm-m'); hpmPaint();
   }
   window.hpMenus = hpMenus;
+  /* v36 R3(2-2): 기본 메뉴 이름은 유형별 이름으로 보인다(대학 '클래스' → '교육과정' — 사이트에 보이는 이름과 같게). 칸을 고치면 고친 이름이 저장된다 */
+  const hpmN = l => { try { return window.HPS && typeof HPS.menuName === 'function' ? HPS.menuName(l) : l; } catch (e) { return l; } };
   function hpmRow(m, par, i, n) {
     const isSub = !!par; const ty = menuType(m, isSub); const home = !isSub && m.kind === 'home'; const id = esc(m.id);
     const baseNm = !isSub && m.kind !== 'custom' ? ({ home: '홈', class: `${t('cls')} 목록`, book: '교재 · 교구', community: '커뮤니티', notice: '공지사항', board: '게시판' })[m.kind] || '기본' : '';
@@ -437,18 +439,18 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     const subs = !isSub ? (m.subs || []) : [];
     return `<li class="hpm-i${isSub ? ' sub' : ''}${m.on === false ? ' off' : ''}" data-id="${id}" ${home ? '' : 'draggable="true"'}>
       <div class="hpm-r"><span class="hpm-h" aria-hidden="true" title="끌어서 옮기기">⠿</span>
-        <input class="hpm-n" data-hpm="name" data-id="${id}" value="${esc(m.l)}" maxlength="20" aria-label="${isSub ? '하위' : '상위'} 메뉴 이름">
+        <input class="hpm-n" data-hpm="name" data-id="${id}" value="${esc(isSub ? m.l : hpmN(m.l))}" maxlength="20" aria-label="${isSub ? '하위' : '상위'} 메뉴 이름">
         <select data-hpm="type" data-id="${id}" aria-label="${esc(m.l)} 연결 방식" ${home ? 'disabled' : ''}>${opts.map(([k, l]) => `<option value="${k}" ${ty === k || (ty === 'pagelink' && k === 'page') ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${second}
         <span class="hpm-bt"><button type="button" class="btn sm ghost" data-hpm="eye" data-id="${id}" ${home ? 'disabled' : ''} aria-pressed="${m.on !== false}" aria-label="${esc(m.l)} ${m.on === false ? '숨김 — 눌러서 보이기' : '보임 — 눌러서 숨기기'}">${m.on === false ? '숨김' : '보임'}</button>
         <button type="button" class="btn sm ghost" data-hpm="up" data-id="${id}" ${home || i === 0 || (!isSub && i === 1 && site().menus[0].kind === 'home') ? 'disabled' : ''} aria-label="${esc(m.l)} 위로">↑</button><button type="button" class="btn sm ghost" data-hpm="down" data-id="${id}" ${home || i === n - 1 ? 'disabled' : ''} aria-label="${esc(m.l)} 아래로">↓</button>
         ${isSub ? `<button type="button" class="btn sm ghost" data-hpm="out" data-id="${id}" aria-label="${esc(m.l)} 상위 메뉴로 꺼내기" title="상위 메뉴로">← 꺼내기</button>` : `<button type="button" class="btn sm ghost" data-hpm="in" data-id="${id}" ${home || i === 0 || subs.length ? 'disabled' : ''} aria-label="${esc(m.l)} 위 메뉴의 하위 메뉴로 넣기" title="하위 메뉴로">→ 하위로</button>`}
         <button type="button" class="btn sm ghost" data-hpm="more" data-id="${id}" ${par ? `data-p="${esc(par.id)}"` : ''} aria-label="${esc(m.l)} 세부 설정(권한 · SEO · 헤더 이미지)">⋯</button>${(!isSub && m.kind !== 'custom') ? '' : `<button type="button" class="btn sm ghost red" data-hpm="del" data-id="${id}" aria-label="${esc(m.l)} 삭제">✕</button>`}</span></div>
-      ${!isSub ? `<ol class="hpm-s" data-p="${id}">${subs.map((sb, j) => hpmRow(sb, m, j, subs.length)).join('')}${home ? '' : `<li class="hpm-dz" data-p="${id}"><button type="button" class="btn sm ghost" data-hpm="subadd" data-id="${id}">+ 「${esc(m.l)}」 하위 메뉴</button><span class="mini">여기로 끌어 놓으면 하위 메뉴가 됩니다</span></li>`}</ol>` : ''}</li>`;
+      ${!isSub ? `<ol class="hpm-s" data-p="${id}">${subs.map((sb, j) => hpmRow(sb, m, j, subs.length)).join('')}${home ? '' : `<li class="hpm-dz" data-p="${id}"><button type="button" class="btn sm ghost" data-hpm="subadd" data-id="${id}">+ 「${esc(hpmN(m.l))}」 하위 메뉴</button><span class="mini">여기로 끌어 놓으면 하위 메뉴가 됩니다</span></li>`}</ol>` : ''}</li>`;
   }
   function hpmPaint() {
     const box = $('#hpmBox'); if (!box) return; const s = site(); const P = HPE.mprop;
     box.innerHTML = `<div class="hpm-top"><p class="mini">상위 메뉴 아래에 하위 메뉴를 둘 수 있습니다(2단계). ⠿를 끌어 옮기거나 ↑ ↓ · 「→ 하위로」 · 「← 꺼내기」 버튼을 쓰세요. 이름은 칸에서 바로 고칩니다. 바꾼 내용은 바로 저장되고 [게시하기]를 누르면 사이트에 반영됩니다.</p>
-      <div class="hpm-ai"><input id="hpmQ" maxlength="300" placeholder="예: 기관 소개 · 강좌 · 커뮤니티 중심으로, 하위 메뉴까지" aria-label="AI에게 메뉴 요청" value="${esc(HPE.mq || '')}"><button type="button" class="btn sm ai" data-hpm="ai">${ic('spark', 13)} AI로 메뉴 짜기</button><button type="button" class="btn sm ghost" data-hpm="undo" ${HPE.undo.length ? '' : 'disabled'}>↶ 되돌리기</button></div></div>
+      <div class="hpm-ai"><input id="hpmQ" maxlength="300" placeholder="예: 기관 소개 · ${esc(t('cls'))} · 커뮤니티 중심으로, 하위 메뉴까지" aria-label="AI에게 메뉴 요청" value="${esc(HPE.mq || '')}"><button type="button" class="btn sm ai" data-hpm="ai">${ic('spark', 13)} AI로 메뉴 짜기</button><button type="button" class="btn sm ghost" data-hpm="undo" ${HPE.undo.length ? '' : 'disabled'}>↶ 되돌리기</button></div></div>
       ${P ? `<div class="hpm-prop"><b>AI가 제안한 메뉴</b><ol>${P.filter(m => m.on !== false).map(m => `<li>${esc(m.l)}${(m.subs || []).length ? `<ul>${m.subs.map(sb => `<li>${esc(sb.l)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ol><div class="bar2"><button type="button" class="btn sm pri" data-hpm="take">이대로 바꾸기</button><button type="button" class="btn sm ghost" data-hpm="drop">그대로 두기</button></div></div>` : ''}
       <ol class="hpm-l">${s.menus.map((m, i) => hpmRow(m, null, i, s.menus.length)).join('')}<li class="hpm-dz top" data-p=""><button type="button" class="btn sm" data-hpm="topadd">+ 상위 메뉴 추가</button></li></ol>`;
     box.querySelectorAll('[data-hpm]').forEach(el => { const ev = el.tagName === 'BUTTON' ? 'click' : 'change'; el.addEventListener(ev, e => { e.preventDefault(); hpmAct(el.dataset.hpm, el); }); });

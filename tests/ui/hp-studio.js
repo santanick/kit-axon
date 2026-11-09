@@ -111,7 +111,19 @@ const SHOT = process.env.SHOT_DIR || '';
     await page.click('#hpe [data-act="hpe-pub"]'); await wait(500);
     await page.click('#hpe .hps-tab.lp'); await page.waitForSelector('#hpe .hps-lv'); await wait(800);
     const lv = await ev(() => { const f = document.querySelector('#hpe .hps-lvf'); return f ? f.getAttribute('src') : ''; });
-    ok('학습 페이지로 가는 메뉴 → 같은 출처 학습 페이지 미리보기', /learner\.html\?t=.*#/.test(lv), lv);
+    /* v36 R3(4-2): 학습 페이지 탭은 게시 전에도 보이도록 초안 미리보기(learner.html?preview=1 — lsSnapshot)를 쓰고, 그 안 머리글을 고친다(기대값 변경: ?t= 게시본 → ?preview=1 초안) */
+    ok('학습 페이지로 가는 메뉴 → 같은 출처 학습 페이지 미리보기(초안)', /learner\.html\?preview=1.*#/.test(lv), lv);
+    await page.waitForFunction(() => { const f = document.getElementById('hpsLvF'); const d = f && f.contentDocument; return d && d.querySelector('#lm > section.sub.llh .llh-tb'); }, null, { timeout: 15000 });
+    const LF = page.frameLocator('#hpsLvF');
+    await LF.locator('#lm > section.sub h1').dblclick(); await wait(150); await page.keyboard.press('Control+A'); await page.keyboard.type('전체 강좌 보기'); await page.keyboard.press('Enter'); await wait(900);
+    await ev(() => { const i = document.querySelector('#hpe .hpw-talk input[name=q]'); i.value = '소개 문구 "원하는 강좌를 골라 신청하세요" 넣고 가운데 정렬, 대표 색으로'; i.form.requestSubmit(); }); await wait(1200);
+    const LH = await ev(() => { const f = document.getElementById('hpsLvF'); const sub = f.contentDocument.querySelector('#lm > section.sub'); const k = f.contentWindow.lhKey().k; return { k, cfg: (S.site.lhead || {})[k], h1: sub.querySelector('h1').textContent, d: (sub.querySelector('.llh-d') || {}).textContent, cls: sub.className, ff: getComputedStyle(sub.querySelector('h1')).fontFamily, head: !!f.contentDocument.querySelector('.lhs-head') }; });
+    ok('학습 페이지 머리글: 두 번 눌러 제목 · 말로 소개 문구 · 정렬 · 바탕 → 미리보기 반영', LH.cfg && LH.cfg.t === '전체 강좌 보기' && LH.h1 === '전체 강좌 보기' && /원하는 강좌/.test(LH.d || '') && LH.cfg.al === 'c' && LH.cfg.tone === 'brand' && /llh-brand/.test(LH.cls) && /llh-c/.test(LH.cls), LH);
+    ok('학습 페이지 머리 메뉴 = 홈페이지 머리글(방문자 화면)', LH.head, LH);
+    const pubL = await ev(() => lsSnapshot().hp.lhead); ok('게시본 hp.lhead에 머리글 설정', pubL && pubL[LH.k] && pubL[LH.k].t === '전체 강좌 보기', pubL);
+    await ev(() => { window.hpUndo(); }); await wait(1300); const un = await ev(() => { const f = document.getElementById('hpsLvF'); return [((S.site.lhead || {})[f.contentWindow.lhKey().k] || {}).tone || '', f.contentDocument.querySelector('#lm > section.sub').className]; });
+    ok('되돌리기 → 머리글 미리보기도 되돌아감', un[0] !== 'brand' && !/llh-brand/.test(un[1]), un);
+    await ev(() => { window.hpRedo(); }); await wait(600);
     ok('학습 페이지 액자가 막히지 않음(SAMEORIGIN)', !(await frameURL('#hpe .hps-lvf')).startsWith('chrome-error'), await frameURL('#hpe .hps-lvf')); await shot('st-5-learn');
     await page.click('#hpe .hps-tab[data-v="home"]'); await ready();
     await page.click('#hpe .hps-ri[data-v="more"]'); await page.waitForSelector('#sitePv'); await wait(600);
@@ -133,10 +145,29 @@ const SHOT = process.env.SHOT_DIR || '';
     await ev(() => go('home')); await wait(300); ok('다른 메뉴로 가면 편집기를 내림', await ev(() => !document.getElementById('hpe') && !document.body.classList.contains('hps-dock')));
     await ev(() => go('site')); await ready(); ok('사이트로 돌아오면 다시 편집기', await ev(() => HPE.on && document.body.classList.contains('hps-dock')));
 
+    /* ── 9b) 템플릿 고르기 = 편집기 안 패널(v36 R3) — 고르면 적용 · 되돌리기 · 닫으면 편집기 ── */
+    const tpl0 = await ev(() => S.site.tpl); await ev(() => document.querySelector('#hpe .hps-ri[data-v="tpl"]').click()); await page.waitForSelector('#hpsGal .tpd-c'); await wait(500);
+    const G = await ev(() => ({ dock: document.body.classList.contains('hps-dock'), hpe: !!document.getElementById('hpe'), n: document.querySelectorAll('#hpsGal .tpd-c').length, first: (document.querySelector('#hpsGal .tpd-c') || {}).dataset.v, mainGal: !!document.querySelector('#main .tpd-g') }));
+    ok('템플릿 고르기: 별도 화면이 아니라 편집기 안 패널(큰 미리보기 그리드)', G.dock && G.hpe && G.n >= 4 && !G.mainGal, G);
+    const pick = await ev(t0 => [...document.querySelectorAll('#hpsGal .tpd-c')].map(c => c.dataset.v).find(v => v !== t0), tpl0);
+    await ev(v => document.querySelector(`#hpsGal .tpd-c[data-v="${v}"]`).click(), pick); await page.waitForSelector('#slSheet [data-act="tpd-use"]'); await page.click('#slSheet [data-act="tpd-use"]'); await wait(1200);
+    const G2 = await ev(() => ({ tpl: S.site.tpl, gal: !!document.getElementById('hpsGal'), dock: document.body.classList.contains('hps-dock') && HPE.on }));
+    ok('템플릿을 고르면 적용되고 편집기로 돌아옴', G2.tpl === pick && !G2.gal && G2.dock, G2);
+    await ev(() => window.hpUndo()); await wait(800); ok('되돌리기 → 이전 템플릿', await ev(t0 => S.site.tpl === t0, tpl0));
+    await ev(() => document.querySelector('#hpe .hps-ri[data-v="tpl"]').click()); await wait(500); await page.keyboard.press('Escape'); await wait(300);
+    ok('Esc · 닫기로 패널만 닫힘(편집기 그대로)', await ev(() => !document.getElementById('hpsGal') && HPE.on && document.body.classList.contains('hps-dock')));
+
     /* ── 10) 휴대폰 390 ── */
     await page.setViewportSize({ width: 390, height: 844 }); await ev(() => { HPS2.devSet = 0; HPS2.dock = false; hpClose(true); render(); }); await ready(); await wait(400);
     const mo = await ev(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { talk: !!document.querySelector('#hpe .hpw-talk input'), over: document.documentElement.scrollWidth - innerWidth, dev: HPE.dev, rail: Math.round(r('#hpe .hps-rail').bottom), h: innerHeight, tabs: Math.round(r('#hpe .hps-tabs').top), nav: document.querySelector('nav.brail') ? Math.round(document.querySelector('nav.brail').getBoundingClientRect().bottom) : 0 }; });
     ok('휴대폰: 가로 넘침 0 · 휴대폰 보기 · 말로 고치기 줄 · 아이콘 줄은 아래 · 스튜디오 메뉴 줄을 가리지 않음', mo.talk && mo.over <= 0 && mo.dev === 'mo' && mo.rail <= mo.h && mo.tabs >= mo.nav, mo); await shot('st-6-mobile');
+    /* v36 R3(4-4): 캔버스 우선 — 위 도구는 탭 한 줄, 말로 고치기는 아래 [AI에게 말하기]로 여는 시트 */
+    const mc = await ev(() => { const r = s => document.querySelector(s).getBoundingClientRect(); const top = r('#hpe').top, st = r('#hpe .hpe-stage'); return { tools: Math.round(st.top - top), stage: Math.round(st.height), avail: Math.round(innerHeight - top), talkVis: getComputedStyle(document.querySelector('#hpe .hpw-talk')).display }; });
+    ok('휴대폰: 캔버스가 편집기 높이의 75% 이상 · 위 도구 한 줄(≤ 60px) · 말로 고치기는 접힘', mc.tools <= 60 && mc.stage >= mc.avail * .75 && mc.talkVis === 'none', mc);
+    await ev(() => document.querySelector('#hpe .hps-ri[data-v="talk"]').click()); await wait(300);
+    const mt = await ev(() => { const f = document.querySelector('#hpe .hpw-talk'); const b = f.getBoundingClientRect(); const rl = document.querySelector('#hpe .hps-rail').getBoundingClientRect(); return { vis: getComputedStyle(f).display !== 'none', bottom: Math.round(b.bottom), rail: Math.round(rl.top), focus: document.activeElement && document.activeElement.name }; });
+    ok('휴대폰: [AI에게 말하기] → 아래 시트(아이콘 줄 바로 위) · 입력칸 포커스', mt.vis && Math.abs(mt.bottom - mt.rail) <= 2 && mt.focus === 'q', mt); await shot('st-6b-mobile-talk');
+    await ev(() => document.querySelector('#hpe .hps-ri[data-v="talk"]').click()); await wait(200);
     ok('스크립트 오류 0', !errs.length, errs);
   } catch (e) { ok('crash — ' + String(e.message || e).split('\n').slice(0, 3).join(' | '), false); try { await shot('st-crash'); } catch (x) { } }
   await browser.close(); srv.close();

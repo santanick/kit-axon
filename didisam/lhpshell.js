@@ -43,11 +43,11 @@
         → 머리글은 한 겹. 모양 · 로고 · 신청 버튼 · 휴대폰 메뉴(체크박스 · details)는 홈페이지 것, 메뉴 링크는 셸이 합친 것(홈페이지 메뉴 + 학습 페이지 + 더 보기) 그대로.
         방문자 홈에서만. 로그인 · 내 강의실 진입은 홈페이지 머리글 오른쪽 버튼(로그인 → #login). */
   const noticeOff = () => ss.get('nt.' + tid()) === '0';
-  function hpsHead(app, lm, off) { const H = HP(); const lh = app.querySelector(':scope > header.lh, :scope > .lhs-head > header.lh'); const old = app.querySelector(':scope > .lhs-head');
+  function hpsHead(app, lm, off, sub) { const H = HP(); const lh = app.querySelector(':scope > header.lh, :scope > .lhs-head > header.lh'); const old = app.querySelector(':scope > .lhs-head');
     if (off || !H || !H.head || LR.me || !lh) { if (old) { if (lh) { lh.removeAttribute('slot'); old.after(lh); } old.remove(); } document.body.classList.remove('lhs-hps'); return; }
     if (old && old.contains(lh)) return;
     const host = old || document.createElement('div'); host.className = 'lhs-head'; host.dataset.ok = '1'; host.dataset.smk = 'head'; if (!old) lh.before(host);
-    const sr = host.shadowRoot || host.attachShadow({ mode: 'open' }); const ov = /hps-ovw/.test(H.head);
+    const sr = host.shadowRoot || host.attachShadow({ mode: 'open' }); const ov = !sub && /hps-ovw/.test(H.head); /* v36 R3: 학습 페이지(sub)는 사진 첫 화면이 없으므로 투명 머리글을 쓰지 않는다 */
     sr.innerHTML = `<style>${safeCSS(H.css)}.smr{background:transparent;min-height:0}.lhs-slot{display:flex;align-items:center;margin:0 auto;min-width:0}.hps-ovw{position:absolute!important;top:0}</style><div class="smr hps-on${ov ? ' hps-ov' : ''} lk-${esc(H.look || 'campus')}">${safeHTML(H.head, { data: true, code: true })}</div>`;
     const gn = sr.querySelector('header nav.gn'); if (gn) { const sl = document.createElement('slot'); sl.name = 'nav'; const w = document.createElement('div'); w.className = 'lhs-slot'; w.appendChild(sl); gn.replaceWith(w); }
     sr.querySelectorAll('a[href="#"], a:not([href])').forEach(a => { a.setAttribute('href', a.matches('.hps-login, .hps-mlog') ? '#login' : a.matches('.hps-cta, .hps-mcta') ? browse() : '#home'); });
@@ -163,7 +163,9 @@
   function apply() { const b = document.body; if (!b) return; const app = document.getElementById('lapp'); const lm = document.getElementById('lm');
     if (b.classList.contains('lapp')) { b.classList.remove('lhs-home', 'lhs-in', 'lhs-bar-act', 'lhs-bar-tab', 'lhs-past'); const a = document.getElementById('lhsAct'); if (a) a.remove(); return; }
     demo(); ddAll(); const on = homeOn(); b.classList.toggle('lhs-home', on); b.classList.toggle('lhs-in', on && !!LR.me);
-    if (app) { if (on) hpsHead(app, lm); else { const hh = app.querySelector(':scope > .lhs-head'); if (hh) hpsHead(app, null, true); b.classList.remove('lhs-hps'); } noticeBar(app, on && b.classList.contains('lhs-hps')); }
+    /* v36 R3(4-2): 방문자의 학습 페이지(교과목 · 공지 · 커뮤니티 · 자료실 등 머리글 section.sub가 있는 화면)도 홈페이지 머리글을 쓴다 — 머리 메뉴 · 로고 · 색 통일 */
+    const sub = !on && !LR.me && !!(lm && lm.querySelector(':scope > section.sub'));
+    if (app) { if (on || sub) hpsHead(app, on ? lm : null, false, !on); else { const hh = app.querySelector(':scope > .lhs-head'); if (hh) hpsHead(app, null, true); b.classList.remove('lhs-hps'); } noticeBar(app, (on || sub) && b.classList.contains('lhs-hps')); }
     const old = document.getElementById('lhsAct'); if (!on) { b.classList.remove('lhs-bar-act', 'lhs-bar-tab', 'lhs-past'); if (old) old.remove(); return; }
     unsplit(lm, !!LR.me); if (LR.me) mineAfterHome(lm);
     b.classList.toggle('lhs-bar-act', !LR.me && BAR_ACT.includes(ty())); b.classList.toggle('lhs-bar-tab', !!LR.me || !BAR_ACT.includes(ty())); past();
