@@ -96,7 +96,7 @@
     if (!S) return; ctx = ctx || {}; if (!KN[kind]) kind = 'doc'; if (kind === 'lib' && ctx.from === 'lib' && !ctx.course) kind = 'doc';
     X = { kind, ctx, step: 0, topic: seedTopic(ctx), mins: 5, n: 5, lv: '보통', fmt: 'hand', units: 3, res: null, by: '', busy: false };
     if (ctx.item) prefill(ctx.item);
-    if (kind === 'aivideo' && !X.res) { X.busy = true; GEN.aivideo(X.topic || '핵심 개념', { mins: X.mins }).then(r => { if (!X || X.kind !== 'aivideo') return; X.res = r.v; X.by = r.by; X.busy = false; draw(); }); }
+    if (kind === 'aivideo' && !X.res && X.topic) { X.busy = true; GEN.aivideo(X.topic, { mins: X.mins }).then(r => { if (!X || X.kind !== 'aivideo') return; X.res = r.v; X.by = r.by; X.busy = false; draw(); }); }
     mount(); draw(); return true;
   }
   function prefill(it) { const k = TYPE_KIND(it); if (k !== X.kind) return; if (k === 'aivideo' && it.ai?.scenes?.length) { X.res = JSON.parse(JSON.stringify(it.ai.scenes)); X.mins = it.ai.mins || 5; }
@@ -153,7 +153,8 @@
   VIEW.aivideo = () => {
     const sc = X.res || [];
     if (X.step === 0) {
-      if (X.busy || !X.res) return { now: '', body: busyBox('대본을 만들고 있습니다…'), foot: '' };
+      if (X.busy) return { now: '', body: busyBox('대본을 만들고 있습니다…'), foot: '' };
+      if (!X.res) return { now: '영상 주제를 한 줄 적고 [대본 만들기]를 누르세요.', body: topicField('영상 주제', '프롬프트를 잘 쓰는 세 가지 방법') + chips('mins', [[3, '3분'], [5, '5분'], [10, '10분']], '길이'), foot: foot(pri(`${svg('spark', 18)} 대본 만들기`, 'ct-make')) };
       const tot = sc.reduce((a, s) => a + (typeof secsFor === 'function' ? secsFor(s.say) : 6), 0);
       return { now: '대본을 읽어 보고 [이 대본으로 영상 만들기]를 누르세요. 고치지 않아도 됩니다.', body: topicField('영상 주제', '프롬프트를 잘 쓰는 세 가지 방법') + chips('mins', [[3, '3분'], [5, '5분'], [10, '10분']], '길이') + `<div class="ct-row">${sec('주제로 대본 다시 만들기', 'ct-make')}<span class="ct-mini">${sc.length}장면 · 약 ${Math.max(1, Math.round(tot / 60))}분</span></div>${byNote(X.by)}<ol class="ct-scn">${sc.map((s, k) => `<li><div class="ct-sh2"><b>${k + 1}</b><input data-ctv="${k}" data-f="h" value="${E(s.h)}" aria-label="${k + 1}장면 제목"><button type="button" class="ct-icb sm" data-act="ct-v-del" data-v="${k}" aria-label="${k + 1}장면 빼기" ${sc.length <= 2 ? 'disabled' : ''}>${svg('trash', 18)}</button></div><label class="ct-f"><span class="ct-l">읽어 줄 말</span><textarea rows="2" data-ctv="${k}" data-f="say">${E(s.say)}</textarea></label><p class="ct-mini">화면 글: ${E((s.pts || []).join(' · '))}</p></li>`).join('')}</ol>`, foot: foot(pri(`${svg('spark', 18)} 이 대본으로 영상 만들기`, 'ct-v-make', !sc.length)) };
     }
@@ -251,13 +252,13 @@
   function libItem() {
     const x = libAll().find(y => y.id === X.pick); if (!x) return null;
     if (x.item) { const it = JSON.parse(JSON.stringify(x.item)); delete it.id; delete it.week; return it; }
-    if (x.rec) { const it = recToItem(x.rec); X.fromRec = x.rec; return it; }
+    if (x.rec) { const it = recToItem(x.rec); it.clib = x.rec.id; X.fromRec = x.rec; return it; }
     if (x.asset) { const l = x.asset; if (l.kind === 'YouTube' && l.url) return { type: 'video', src: 'youtube', title: l.name, url: l.url }; return { type: l.kind === '동영상' ? 'video' : 'doc', src: 'library', title: l.name, lib: l.id, url: 'lib:' + l.id }; }
     return null;
   }
 
   /* 저장 완료(라이브러리 단독) */
-  function vDone() { const r = X.done; return { now: '', body: `<div class="ct-ok">${svg('check', 40)}<b>「${E(r.title)}」을(를) 라이브러리에 저장했습니다</b><span>과정의 ${unit()}에 넣으면 학습자에게 보입니다.</span></div>`, foot: foot(pri(`과정에 넣기`, 'ct-to-course'), sec('닫기', 'ct-close')) }; }
+  function vDone() { const r = X.done; return { now: '', body: `<div class="ct-ok">${svg('check', 40)}<b>「${E(r.title)}」을(를) 라이브러리에 저장했습니다</b><span>${E(t('cls'))}의 ${unit()}에 넣으면 ${E(t('learner'))}에게 보입니다.</span></div>`, foot: foot(pri(`${E(t('cls'))}에 넣기`, 'ct-to-course'), sec('닫기', 'ct-close')) }; }
 
   /* ── 결과 → 과정 항목 · 라이브러리 레코드 ── */
   async function buildItem() {
@@ -313,7 +314,7 @@
       const k = X.kind; close(); ctx.onDone(it, k); keep(); return;
     }
     const c = ctx.course && (S.classes.includes(ctx.course) ? ctx.course : (typeof C === 'function' ? C(ctx.course.id || ctx.course) : null));
-    if (!c) { say('넣을 과정을 찾지 못했습니다.', 'warn'); return; }
+    if (!c) { say(`넣을 ${t('cls')}를 찾지 못했습니다.`, 'warn'); return; }
     settle(it, c); c.curriculum = c.curriculum || [];
     if (ctx.item) { const i = c.curriculum.findIndex(x => x.id === ctx.item.id); if (i >= 0) { it.id = ctx.item.id; it.week = ctx.item.week; c.curriculum[i] = it; } else c.curriculum.push(it); } else c.curriculum.push(it);
     try { logAudit(`${c.name} 콘텐츠 추가 — ${it.title}`); } catch (e) { } keep(); close(); say(`「${it.title}」을(를) 넣었습니다.`, 'ok'); try { render(); } catch (e) { }
@@ -324,11 +325,11 @@
     rec = rec || (X && X.done); if (!rec || !S) return; opt = opt || {}; injectCSS();
     const L = S.classes.filter(c => c.kind !== 'pack'); close(true); const st = { cid: (L[0] || {}).id || '', w: 0 };
     const w = document.createElement('div'); w.className = 'ct-wrap'; w.id = 'ctSheet';
-    const body = () => { const c = L.find(x => x.id === st.cid); const WP = c ? (c.weekPlan || []) : []; return `<div class="ct-sh" role="dialog" aria-modal="true" aria-label="과정에 넣기"><div class="ct-hd"><span class="ct-icb" aria-hidden="true"></span><div class="ct-ht"><b>과정에 넣기</b><small>「${E(rec.title)}」</small></div><button type="button" class="ct-icb" data-ctc="x" aria-label="닫기">${svg('x', 22)}</button></div><p class="ct-now"><b>지금 할 일</b> 넣을 ${E(t('cls'))}와 ${unit()}를 고르세요.</p><div class="ct-bd">${L.length ? `<div class="ct-f"><span class="ct-l">${E(t('cls'))}</span><ul class="ct-ll">${L.map(x => `<li><button type="button" data-ctc="c" data-v="${E(x.id)}" class="${st.cid === x.id ? 'on' : ''}" aria-pressed="${st.cid === x.id}"><span class="ct-lt"><b>${E(x.name)}</b><small>${(x.curriculum || []).length}개 콘텐츠</small></span>${st.cid === x.id ? svg('check', 20) : ''}</button></li>`).join('')}</ul></div>${WP.length ? `<div class="ct-f"><span class="ct-l">${unit()}</span><div class="ct-chips">${WP.map(p => `<button type="button" class="ct-chip ${st.w === p.w ? 'on' : ''}" data-ctc="w" data-v="${p.w}" aria-pressed="${st.w === p.w}">${p.w}${unit() === '주차' ? '주' : ''} · ${E(String(p.title).slice(0, 14))}</button>`).join('')}</div><p class="ct-ex">고르지 않으면 맨 뒤에 넣습니다. 나중에 옮길 수 있습니다.</p></div>` : ''}` : `<div class="ct-empty"><b>아직 ${E(t('cls'))}가 없습니다</b><span>먼저 ${E(t('cls'))}를 만든 뒤 넣을 수 있습니다.</span></div>`}</div><div class="ct-ft"><div class="ct-fl"><button type="button" class="ct-btn" data-ctc="x">나중에</button></div><button type="button" class="ct-btn ct-pri" data-ctc="ok" ${st.cid ? '' : 'disabled'}>${svg('check', 18)} 넣기</button></div></div>`; };
+    const body = () => { const c = L.find(x => x.id === st.cid); const WP = c ? (c.weekPlan || []) : []; return `<div class="ct-sh" role="dialog" aria-modal="true" aria-label="${E(t('cls'))}에 넣기"><div class="ct-hd"><span class="ct-icb" aria-hidden="true"></span><div class="ct-ht"><b>${E(t('cls'))}에 넣기</b><small>「${E(rec.title)}」</small></div><button type="button" class="ct-icb" data-ctc="x" aria-label="닫기">${svg('x', 22)}</button></div><p class="ct-now"><b>지금 할 일</b> 넣을 ${E(t('cls'))}와 ${unit()}를 고르세요.</p><div class="ct-bd">${L.length ? `<div class="ct-f"><span class="ct-l">${E(t('cls'))}</span><ul class="ct-ll">${L.map(x => `<li><button type="button" data-ctc="c" data-v="${E(x.id)}" class="${st.cid === x.id ? 'on' : ''}" aria-pressed="${st.cid === x.id}"><span class="ct-lt"><b>${E(x.name)}</b><small>${(x.curriculum || []).length}개 콘텐츠</small></span>${st.cid === x.id ? svg('check', 20) : ''}</button></li>`).join('')}</ul></div>${WP.length ? `<div class="ct-f"><span class="ct-l">${unit()}</span><div class="ct-chips">${WP.map(p => `<button type="button" class="ct-chip ${st.w === p.w ? 'on' : ''}" data-ctc="w" data-v="${p.w}" aria-pressed="${st.w === p.w}">${p.w}${unit() === '주차' ? '주' : ''} · ${E(String(p.title).slice(0, 14))}</button>`).join('')}</div><p class="ct-ex">고르지 않으면 맨 뒤에 넣습니다. 나중에 옮길 수 있습니다.</p></div>` : ''}` : `<div class="ct-empty"><b>아직 ${E(t('cls'))}가 없습니다</b><span>먼저 ${E(t('cls'))}를 만든 뒤 넣을 수 있습니다.</span></div>`}</div><div class="ct-ft"><div class="ct-fl"><button type="button" class="ct-btn" data-ctc="x">나중에</button></div><button type="button" class="ct-btn ct-pri" data-ctc="ok" ${st.cid ? '' : 'disabled'}>${svg('check', 18)} 넣기</button></div></div>`; };
     w.innerHTML = body(); document.body.appendChild(w);
     w.addEventListener('click', e => { const b = e.target.closest('[data-ctc]'); if (e.target === w) { w.remove(); return; } if (!b) return; const a = b.dataset.ctc;
       if (a === 'x') { w.remove(); X = null; return; } if (a === 'c') { st.cid = b.dataset.v; st.w = 0; } if (a === 'w') st.w = st.w === +b.dataset.v ? 0 : +b.dataset.v;
-      if (a === 'ok') { const c = L.find(x => x.id === st.cid); if (!c) return; const it = recToItem(rec); it.id = nid('it'); if (it.type === 'video' && it.src === 'ai') it.url = 'ai:' + it.id; if (st.w) it.week = st.w; X = X || { ctx: {} }; X.fromRec = rec; settle(it, c); rec.usedIn = [...new Set([...(rec.usedIn || []), c.id])]; if (rec.book) { try { const bk = bkOf(rec.book); if (bk && !bk.cls) bk.cls = c.id; } catch (er) { } }
+      if (a === 'ok') { const c = L.find(x => x.id === st.cid); if (!c) return; const it = recToItem(rec); it.clib = rec.id; it.id = nid('it'); if (it.type === 'video' && it.src === 'ai') it.url = 'ai:' + it.id; if (st.w) it.week = st.w; X = X || { ctx: {} }; X.fromRec = rec; settle(it, c); rec.usedIn = [...new Set([...(rec.usedIn || []), c.id])]; if (rec.book) { try { const bk = bkOf(rec.book); if (bk && !bk.cls) bk.cls = c.id; } catch (er) { } }
         c.curriculum = c.curriculum || []; c.curriculum.push(it); try { logAudit(`${c.name} 콘텐츠 추가(라이브러리) — ${it.title}`); } catch (er) { } keep(); w.remove(); X = null; say(`「${c.name}」에 넣었습니다.`, 'ok'); try { opt.onDone && opt.onDone(it, c); } catch (er) { } try { render(); } catch (er) { } return; }
       w.innerHTML = body(); });
   }
@@ -336,8 +337,10 @@
   /* ── 버튼 동작 ── */
   const A = {
     'ct-close': () => close(), 'ct-back': () => { if (!X) return; if (X.kind === 'aivideo' && X.step === 2) X.step = 0; else if (X.kind === 'upload' && X.step === 1) { X.file = null; X.step = 0; } else if (X.kind === 'lib') X.pick = ''; else if (X.kind === 'youtube') X.url = ''; else X.step = Math.max(0, X.step - 1); X.edit = false; draw(); },
-    'ct-aifill': () => { const st = sessTitle(X.ctx), cn = courseName(X.ctx); const g = /^\d+\s*(차시|주차|주)$/.test(st); X.topic = topicOf(cn && st && !g && !st.includes(cn) ? `${cn} ${st}` : (st && !g ? st : cn)) || X.topic || cl((S.classes[0] || {}).name) || '핵심 개념'; draw(); say('주제를 채웠습니다. 그대로 두거나 고쳐 쓰세요.', 'ok'); },
-    'ct-opt': el => { const k = el.dataset.k; X[k] = isNaN(+el.dataset.v) ? el.dataset.v : +el.dataset.v; if (k === 'mins' && X.kind === 'aivideo') return A['ct-make'](); draw(); },
+    'ct-aifill': () => { const st = sessTitle(X.ctx), cn = courseName(X.ctx); const g = /^\d+\s*(차시|주차|주|회차)$/.test(st); const ok = v => { v = topicOf(v || ''); return v && v !== '핵심 개념' ? v : ''; };
+      const ex = (document.querySelector('#ctSheet .ct-ex') || {}).textContent || ''; const exT = ex.replace(/^예:\s*/, '').trim();
+      X.topic = ok(cn && st && !g && !st.includes(cn) ? `${cn} ${st}` : '') || ok(!g ? st : '') || ok(cn) || ok((X.topic || '').trim()) || ok(((X.ctx.course && X.ctx.course.topic) || '')) || ok(cl((S.classes.find(c => c.status !== '종료') || S.classes[0] || {}).name)) || exT || X.topic; draw(); say('주제를 채웠습니다. 그대로 두거나 고쳐 쓰세요.', 'ok'); },
+    'ct-opt': el => { const k = el.dataset.k; X[k] = isNaN(+el.dataset.v) ? el.dataset.v : +el.dataset.v; if (k === 'mins' && X.kind === 'aivideo' && X.res) return A['ct-make'](); draw(); },
     'ct-make': async () => { if (!X || X.busy) return; const tp = (X.topic || '').trim() || seedTopic(X.ctx); if (!tp) { const n = $1('#ctTopic'); if (n) { n.setAttribute('aria-invalid', 'true'); n.focus(); } say('주제를 한 줄 적어 주세요. 예처럼 짧게 써도 됩니다.', 'warn'); return; } X.topic = tp; X.busy = true; X.edit = false; if (X.kind !== 'aivideo') X.step = 1; draw();
       const r = await GEN[X.kind](tp, { mins: +X.mins || 5, n: +X.n || 5, lv: X.lv, n2: X.units, cname: courseName(X.ctx), target: (X.ctx.target || '') , ...(X.kind === 'book' ? { n: +X.units || 3 } : {}) }); if (!X) return; X.res = r.v; X.by = r.by; X.busy = false; draw(); },
     'ct-done': () => done(),
@@ -401,7 +404,7 @@
   ACT['ctf-all'] = () => { const n = fillAll(F.d); if (n) { const d = F.d; const before = n.ids; F.undo = { msg: `빈 ${unit()} ${n.s}곳에 교안 · 퀴즈를 넣었습니다.`, run: () => { d.curriculum = itemsOf(d).filter(x => !before.includes(x.id)); } }; saveDraft(); refill(); say(`빈 ${unit()} ${n.s}곳을 채웠습니다. 내용을 확인해 보세요.`, 'ok'); } };
   /* 빈 차시 모두: 교안 + 확인 퀴즈 3문제(규칙 생성, 즉시) */
   function fillAll(d) { const L = itemsOf(d); const ids = []; let s = 0; const cn = cl(d.name || d.topic || '');
-    sessOf(d).forEach(x => { if (L.some(y => +y.week === x.w)) return; const g = /^\d+\s*(차시|주차|주)$/.test(x.title); const tp = topicOf(g ? cn : (cn && !x.title.includes(cn) ? `${cn} ${x.title}` : x.title)) || cn || '핵심 개념'; const sh = topicOf(g ? cn : x.title) || tp;
+    sessOf(d).forEach(x => { if (L.some(y => +y.week === x.w)) return; const g = /^\d+\s*(차시|주차|주)$/.test(x.title); const tp = topicOf(g ? cn : (cn && !x.title.includes(cn) ? `${cn} ${x.title}` : x.title)) || cn || x.title; const sh = topicOf(g ? cn : x.title) || tp;
       if (/고사|최종 평가|시험/.test(x.title)) { const it = { id: nid('it'), type: 'exam', title: `${sh} 시험`, week: x.w, qs: AI.questions(cn || sh, 10, '보통'), time: 60, retake: 1 }; L.push(it); ids.push(it.id); s++; return; }
       const a = { id: nid('it'), type: 'doc', title: `${sh} 교안`, week: x.w, topic: tp, fmt: 'hand', doc: AI.material(tp, { name: cn }) }; const b = { id: nid('it'), type: 'quiz', title: `${sh} 확인 퀴즈`, week: x.w, qs: AI.questions(tp, 3, '보통', ['mc', 'ox', 'mc']), time: 10, retake: 3 }; L.push(a, b); ids.push(a.id, b.id); s++; });
     try { if (S.ai) S.ai.usage = (S.ai.usage || 0) + (s ? 1 : 0); } catch (e) { } return s ? { s, ids } : 0; }
