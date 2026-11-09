@@ -116,7 +116,7 @@ async function runFlow(p, { type, ed, name, shots, tag, content = true, onStep }
 }
 
 /* 차시 채우기: 첫 차시에 AI 교안 하나(C3 CT: .ct-kind[data-k=doc] → CT 창 .ct-pri) — 3번 클릭 안에 결과 */
-async function ctConfirm(p, log, max = 4) { let n = 0; for (let k = 0; k < max; k++) { const ok = p.locator('.ct-sh .ct-pri').filter({ visible: true }).last(); if (!(await ok.count()) || await ok.isDisabled()) break; const lb = (await ok.innerText().catch(() => '')).trim(); await ok.click({ timeout: 4000 }).catch(() => {}); n++; log.push('CT: ' + lb.slice(0, 12)); await p.waitForTimeout(900); if (!(await p.locator('.ct-sh').filter({ visible: true }).count())) break; } return n; }
+async function ctConfirm(p, log, max = 4) { let n = 0; for (let k = 0; k < max; k++) { const ok = p.locator('.ct-sh .ct-pri').filter({ visible: true }).last(); let w = 0; while ((!(await ok.count()) || await ok.isDisabled()) && w < 30 && await p.locator('.ct-sh').filter({ visible: true }).count()) { await p.waitForTimeout(1000); w++; } if (!(await ok.count()) || await ok.isDisabled()) break; const lb = (await ok.innerText().catch(() => '')).trim(); await ok.click({ timeout: 4000 }).catch(() => {}); n++; log.push('CT: ' + lb.slice(0, 12)); await p.waitForTimeout(900); if (!(await p.locator('.ct-sh').filter({ visible: true }).count())) break; } return n; }
 async function addDocContent(p, log) {
   const card = p.locator('#crsFlow .ct-kind[data-k=doc]').filter({ visible: true }).first();
   if (!(await card.count())) { log.push('콘텐츠: 교안 카드(.ct-kind[data-k=doc]) 없음'); return 0; }
