@@ -13,6 +13,7 @@
   const E = s => (typeof esc === 'function' ? esc(s) : String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
   const IC = (n, s) => (typeof ico === 'function' ? ico(n, s) : '');
   try { if (typeof ICP === 'object' && ICP && !ICP.audio) ICP.audio = 'M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11'; } catch (e) { } /* 음성 아이콘(ICP 내용만 보탬) */
+  try { if (typeof ITN === 'object' && ITN && !ITN.audio) ITN.audio = '음성'; if (typeof ITI === 'object' && ITI && !ITI.audio) ITI.audio = 'audio'; if (typeof BK_ITN === 'object' && BK_ITN && !BK_ITN.audio) BK_ITN.audio = '음성'; } catch (e) { } /* 음성 항목(type 'audio') 이름 · 아이콘 */
   const say = (m, k) => { try { toast(m, k || 'ok'); } catch (e) { } };
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
@@ -46,7 +47,7 @@
     return it.type === 'video' && !m && !x ? 'video' : 'file'; }
   function kindOf(it) { if (!it) return '';
     if (it.type === 'video' && it.src === 'ai' && it.ai && (it.ai.scenes || []).length) return 'ai';
-    if ((it.src === 'upload' || it.src === 'library') && (it.type === 'video' || it.type === 'doc')) { if (realUrl(it.url)) return 'file'; if (it.type === 'doc') return 'file0'; return ''; } /* 이름만 있는 영상은 기존 데모 플레이어(lassess) */
+    if ((it.src === 'upload' || it.src === 'library') && (it.type === 'video' || it.type === 'doc' || it.type === 'audio')) { if (realUrl(it.url)) return 'file'; if (it.type === 'doc' || it.type === 'audio') return 'file0'; return ''; } /* 이름만 있는 영상은 기존 데모 플레이어(lassess) */
     if (it.type === 'doc' && it.src === 'book') return 'book';
     if (it.type === 'doc' && it.doc && (it.doc.secs || []).length) return 'doc';
     return ''; }

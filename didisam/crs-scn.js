@@ -11,6 +11,9 @@
   const plus = (d, n) => { try { if (typeof addDays === 'function') return addDays(d, n); } catch (e) { } const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
   const wn = n => (typeof won === 'function' ? won(n) : (+n || 0).toLocaleString('ko-KR') + '원');
   const hm = m => { m = Math.round(N(m)); const h = Math.floor(m / 60), r = m % 60; return h ? `${h}시간${r ? ' ' + r + '분' : ''}` : `${r}분`; };
+  /* 받침에 맞는 조사: josa('훈련과정', '이') → '훈련과정이' · josa('강좌', '이') → '강좌가' (이/가 · 을/를 · 은/는 · 과/와 · 으로/로, ㄹ 받침 + 으로 → 로) */
+  const josa = (w, a) => { const s = String(w || ''); const ch = s.charCodeAt(s.length - 1); const jong = ch >= 0xAC00 && ch <= 0xD7A3 ? (ch - 0xAC00) % 28 : /[a-z]$/i.test(s) ? ('lmnr'.includes(s.slice(-1).toLowerCase()) ? 1 : 0) : /[0-9]$/.test(s) ? ([1, 3, 6, 7, 8, 0].includes(+s.slice(-1)) ? 1 : 0) : 0; const P = { '을': ['을', '를'], '이': ['이', '가'], '은': ['은', '는'], '과': ['과', '와'], '으로': ['으로', '로'] }[a]; return s + (P ? (jong && !(a === '으로' && jong === 8) ? P[0] : P[1]) : a); };
+  CF.josa = CF.josa || josa;
   const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
   const totalMin = d => N(d.sessions) * N(d.mins);
   const cplOn = () => { try { const P = window.cplPublic && cplPublic(); return P ? P : null; } catch (e) { return null; } };
@@ -223,12 +226,12 @@
     label: '훈련과정', unit: () => '차시',
     terms: { cls: '훈련과정', unit: '차시', fee: '훈련비', target: '훈련 대상' },
     steps: ['basic', 'outline', 'fill', 'setup', 'open'],
-    stepNow: { basic: '훈련과정 이름과 훈련 구분 · 방식을 고릅니다.', outline: '차시 수와 차시 인정 시간을 고릅니다. 원격은 합계 4시간 이상이어야 합니다.', setup: '훈련 시작일을 정합니다. 심사과정코드 · HRD-Net ID는 받은 뒤 넣어도 됩니다.' },
+    stepNow: { basic: '훈련과정 이름과 훈련 구분 · 방식을 고릅니다.', outline: '차시 수와 차시 인정 시간을 고릅니다. 원격은 합계 4시간 이상이어야 합니다.', setup: '훈련 시작일을 정합니다. 심사과정코드 · 훈련과정 ID(고용24)는 받은 뒤 넣어도 됩니다.' },
     stepTitle: { basic: '훈련과정 정보', outline: '훈련시간', fill: '차시 채우기', setup: '심사 정보', open: '규정 확인' },
     ask: {
       basic: [F.name('훈련과정 이름', '예: 웹 개발 기초(내일배움카드)'), { k: 'emp', label: '훈련 구분', kind: 'choice', ex: '예: 내일배움카드', def: '3', opts: [['3', '내일배움카드'], ['1', '사업주 훈련'], ['4', '공통']] }, { k: 'mode', label: '훈련 방식', kind: 'choice', ex: '예: 원격(인터넷) — 집에서 영상으로', def: 'remote', opts: Object.entries(VMODE) }],
       outline: [F.sessions('차시 수', '예: 16차시(원격은 하루 8차시까지 수강)', 16, 60), { k: 'mins', label: '차시 인정 시간', kind: 'choice', ex: '예: 30분 — 심사 받은 차시별 학습시간과 같게', def: 30, opts: [[25, '25분'], [30, '30분'], [50, '50분'], [60, '1시간']] }],
-      setup: [F.start('훈련 시작일'), { k: 'simsa', label: '심사과정코드', kind: 'code', len: 20, ex: '예: 심사 통과 후 받은 20자리 코드', later: true }, { k: 'tracse', label: 'HRD-Net 훈련과정 ID', kind: 'code', len: 17, ex: '예: HRD-Net에 등록된 17자리 ID', later: true }]
+      setup: [F.start('훈련 시작일'), { k: 'simsa', label: '심사과정코드', kind: 'code', len: 20, ex: '예: 심사 통과 후 받은 20자리 코드', hint: '훈련과정 심사를 통과하면 받는 번호입니다. 없으면 나중에 넣어도 됩니다.', later: true }, { k: 'tracse', label: '훈련과정 ID(고용24 · HRD-Net)', kind: 'code', len: 17, ex: '예: 고용24에 등록된 17자리 번호', hint: '고용24(HRD-Net)에 훈련과정을 등록하면 받는 번호입니다. 없으면 나중에 넣어도 됩니다.', later: true }]
     },
     defaults: { emp: '3', mode: 'remote', sessions: 16, mins: 30, price: 0, criteria: { threshold: 80 } },
     required: ['name', 'mode', 'sessions', 'mins'],
@@ -245,11 +248,11 @@
       const R = []; const P = cplOn() || {}; const online = d.mode !== 'group';
       if (online && totalMin(d) < 240) R.push({ lv: 'warn', k: 'sessions', msg: `원격 훈련과정 분량은 4시간 이상이어야 합니다. 지금은 ${hm(totalMin(d))}입니다.`, law: '사업주 직업능력개발훈련 지원규정 제6조', fix: { sessions: Math.ceil(240 / Math.max(1, N(d.mins) || 30)) } });
       if (online) R.push({ lv: 'info', k: 'sessions', msg: `훈련생은 하루 ${+P.dayChasi || 8}차시까지 수강합니다. 차시 진도는 인정 시간의 ${+P.itemMin || 50}% 이상 학습해야 인정됩니다.`, law: '원격훈련 과정인정요건 체크리스트 19 · 20번' });
-      [['simsa', 20, '심사과정코드'], ['tracse', 17, 'HRD-Net 훈련과정 ID']].forEach(([k, n, l]) => { const v = String(d[k] || '').trim(); if (v && v.length !== n) R.push({ lv: 'stop', k, msg: `${l}는 ${n}자리입니다. 지금 ${v.length}자리입니다.` }); else if (!v) R.push({ lv: 'info', k, msg: `${l}는 심사 · 등록 뒤에 넣어도 됩니다. 공단 보고 전에는 꼭 넣습니다.` }); });
+      [['simsa', 20, '심사과정코드'], ['tracse', 17, '훈련과정 ID(고용24)']].forEach(([k, n, l]) => { const v = String(d[k] || '').trim(); if (v && v.length !== n) R.push({ lv: 'stop', k, msg: `${josa(l, '은')} ${n}자리입니다. 지금 ${v.length}자리입니다.` }); else if (!v) R.push({ lv: 'info', k, msg: `${josa(l, '은')} 심사 · 등록 뒤에 넣어도 됩니다. 공단 보고 전에는 꼭 넣습니다.` }); });
       R.push({ lv: 'info', k: 'fill', msg: `평가 문항은 출제 수의 ${+P.bank || 3}배 이상 준비합니다. 수료 기준은 진도 ${+P.rate || 80}% 이상 · 평가 ${+P.pass || 60}점 이상입니다.`, law: '별표 1 · 국민내일배움카드 운영규정' });
       return R;
     },
-    summary: d => [['훈련 구분', { 3: '내일배움카드', 1: '사업주 훈련', 4: '공통' }[String(d.emp)] || '내일배움카드'], ['훈련 방식', VMODE[d.mode] || VMODE.remote], ['훈련시간', hoursLine(d) || '—'], ['심사과정코드', d.simsa || '나중에 입력'], ['HRD-Net ID', d.tracse || '나중에 입력']],
+    summary: d => [['훈련 구분', { 3: '내일배움카드', 1: '사업주 훈련', 4: '공통' }[String(d.emp)] || '내일배움카드'], ['훈련 방식', VMODE[d.mode] || VMODE.remote], ['훈련시간', hoursLine(d) || '—'], ['심사과정코드', d.simsa || '나중에 입력(심사 통과 후 받는 번호)'], ['훈련과정 ID(고용24)', d.tracse || '나중에 입력(고용24 등록 후 받는 번호)']],
     apply: (c, d) => { baseApply(c, d); const P = cplOn() || {}; c.hrd = Object.assign({}, c.hrd || {}, { simsa: String(d.simsa || '').trim().slice(0, 20), tracse: String(d.tracse || '').trim().slice(0, 17), emp: String(d.emp || '3'), mix: d.mode === 'mix' ? '1' : '', goal: (String(c.goal || '').split('\n').map(x => x.replace(/^[-\s\[]*|\]$/g, '').trim()).filter(x => x && !/^교육 목표$/.test(x))[0] || '').slice(0, 100), target: String(d.target || '').slice(0, 100) }); c.trainMode = d.mode || 'remote'; if (d.start) { c.start = d.start; }
       crit(c, { threshold: +P.rate || 80 }); c.cplPass = +P.pass || 60; return c; }
   };
@@ -280,7 +283,7 @@
     check: d => {
       const R = [];
       if (d.cat === 'legal') { R.push({ lv: 'info', k: 'cat', msg: '법정 의무교육은 해마다 대상자 전원이 이수해야 합니다(예: 성희롱 예방교육 연 1회 이상). 이수 기록은 \'법정\' 표시로 따로 모아 봅니다.', law: '남녀고용평등법 시행령 제3조 등' }); if (N(d.rate) < 100) R.push({ lv: 'warn', k: 'rate', msg: '법정 의무교육은 진도 100%를 권합니다.', fix: { rate: 100 } }); }
-      if (d.refund) { if (totalMin(d) < 240) R.push({ lv: 'warn', k: 'sessions', msg: `환급받는 원격 교육은 4시간 이상이어야 합니다. 지금은 ${hm(totalMin(d))}입니다.`, law: '사업주 직업능력개발훈련 지원규정 제6조', fix: { sessions: Math.ceil(240 / Math.max(1, N(d.mins) || 30)) } }); R.push({ lv: 'info', k: 'refund', msg: '환급 과정은 심사과정코드 · HRD-Net ID가 필요합니다. 개설 후 \'규정 준수\' 메뉴에서 넣습니다.' }); }
+      if (d.refund) { if (totalMin(d) < 240) R.push({ lv: 'warn', k: 'sessions', msg: `환급받는 원격 교육은 4시간 이상이어야 합니다. 지금은 ${hm(totalMin(d))}입니다.`, law: '사업주 직업능력개발훈련 지원규정 제6조', fix: { sessions: Math.ceil(240 / Math.max(1, N(d.mins) || 30)) } }); R.push({ lv: 'info', k: 'refund', msg: '환급 과정은 심사과정코드 · 훈련과정 ID(고용24에 등록하면 받는 번호)가 필요합니다. 개설 후 \'규정 준수\' 메뉴에서 넣습니다.' }); }
       return R;
     },
     summary: d => [['구분', { legal: '법정 의무교육', job: '직무교육', onboard: '신입 · 온보딩', lead: '리더십' }[d.cat] || '직무교육'], ['구성', hoursLine(d) || '—'], ['대상', d.dept || '나중에 배정'], ['기간', `${N(d.dur) || 4}주 안에 이수`], ['이수 기준', `진도 ${N(d.rate) || 80}% 이상`], ['환급', d.refund ? '사업주 훈련(환급)' : '해당 없음']],
