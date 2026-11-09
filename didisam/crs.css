@@ -1,1 +1,136 @@
-/* v35 과정 만들기 공통 스타일(C1 소유) */
+/* v35 과정 만들기 공통 스타일(C1 소유) — 흐름 화면 #crsFlow(.crsf) · 공용 조각 .cf-*
+   쉬운 사용 원칙: 본문 16px 이상 · 버튼 48px 이상 · 한 화면 결정 하나 · 휴대폰 390 폭에서 넘침 없음 */
+body.cf-on{overflow:hidden}
+.crsf{position:fixed;inset:0;z-index:58;background:rgba(31,32,32,.45);display:flex;align-items:center;justify-content:center;padding:24px;font-size:16px;line-height:1.55;color:var(--g900,#2A2B2B)}
+.crsf *{box-sizing:border-box}
+.cf-box{position:relative;background:#fff;border-radius:12px;width:min(760px,100%);max-height:calc(100vh - 48px);max-height:calc(100dvh - 48px);display:flex;flex-direction:column;box-shadow:var(--e24,0 16px 48px rgba(42,43,43,.2));overflow:hidden}
+.cf-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 6px 24px}
+.cf-ht{display:flex;align-items:baseline;gap:12px;min-width:0}
+.cf-ht b{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.cf-saved{font-size:14px;color:var(--t-ok,#007A29);opacity:0;transition:opacity .2s}.cf-saved.on{opacity:1}
+.cf-x{width:48px;height:48px;border:0;background:transparent;border-radius:8px;display:grid;place-items:center;cursor:pointer;color:var(--g800,#4C4D4D)}.cf-x:hover{background:var(--g200,#F1F2F2)}
+/* 진행 표시 ①②③④⑤ */
+.cf-prog{list-style:none;margin:0;padding:6px 24px 10px;display:flex;gap:6px;counter-reset:none}
+.cf-prog li{flex:1;min-width:0}
+.cf-prog button{width:100%;border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer;color:var(--t-sub,#666767);font:inherit;text-align:left}
+.cf-prog button:disabled{cursor:default}
+.cf-prog button::before{content:"";display:block;width:100%;height:4px;border-radius:2px;background:var(--g300,#EAEBEB)}
+.cf-prog li.done button::before,.cf-prog li.on button::before{background:var(--s400,#5C74F6)}
+.cf-dot{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--g200,#F1F2F2);font-size:14px;font-weight:800;flex:none}
+.cf-prog li.on .cf-dot{background:var(--s400,#5C74F6);color:#fff}.cf-prog li.done .cf-dot{background:var(--s50,#EAEDFF);color:var(--t-mag,#3F55D0)}
+.cf-prog button{flex-direction:row;flex-wrap:wrap;align-items:center}
+.cf-prog button::before{flex-basis:100%}
+.cf-sl{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.cf-prog li.on .cf-sl{color:var(--g900,#2A2B2B)}
+/* 지금 할 일 */
+.cf-nowb{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 24px;padding:12px 16px;background:var(--s50,#EAEDFF);border-radius:8px}
+.cf-now{margin:0;font-size:17px;font-weight:700;flex:1 1 260px}
+.cf-k{display:inline-block;font-size:13px;font-weight:800;color:#fff;background:var(--s600,#4257D7);border-radius:4px;padding:1px 7px;margin-right:6px;vertical-align:2px}
+.crs-sam-slot{display:flex;gap:8px;flex-wrap:wrap}
+.cf-body{flex:1;overflow:auto;padding:18px 24px 8px;-webkit-overflow-scrolling:touch}
+.cf-sam:empty{display:none}.cf-sam{padding:0 24px}
+/* 입력 */
+.cf-f{margin:0 0 20px}
+.cf-lab{display:block;font-size:16px;font-weight:800;margin:0 0 8px}
+.cf-req{font-style:normal;font-size:13px;font-weight:700;color:var(--t-bad,#C4001D);margin-left:4px}
+.cf-later{display:inline-block;font-size:13px;font-weight:600;color:var(--t-sub,#666767);background:var(--g200,#F1F2F2);border-radius:99px;padding:1px 9px;margin-left:6px;vertical-align:1px}
+.cf-f input[type=text],.cf-f input:not([type]),.cf-f input[type=date],.cf-f input[type=time],.cf-f input[type=number],.cf-f textarea,.cf-wl input{width:100%;min-height:48px;font:inherit;font-size:16px;padding:10px 14px;border:1px solid var(--g400,#C8C9C9);border-radius:8px;background:#fff;color:inherit}
+.cf-f textarea{min-height:96px;resize:vertical}
+.cf-f input:focus,.cf-f textarea:focus,.cf-wl input:focus{outline:2px solid var(--s400,#5C74F6);outline-offset:1px;border-color:var(--s400,#5C74F6)}
+.cf-f.bad input,.cf-f.bad textarea{border-color:var(--bad,#DE0027);background:var(--badl,#FFEAEE)}
+.cf-ex{margin:6px 0 0;font-size:15px;color:var(--t-sub,#666767)}.cf-ex b{color:var(--g800,#4C4D4D);margin-right:2px}
+.cf-hint{margin:6px 0 0;font-size:15px;color:var(--t-sub,#666767)}
+.cf-err{margin:6px 0 0;font-size:15px;font-weight:700;color:var(--t-bad,#C4001D)}
+.cf-ai{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:8px;padding:8px 14px;border:1px solid var(--s200,#A5B0FA);background:#fff;color:var(--t-mag,#3F55D0);border-radius:8px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.cf-ai:hover{background:var(--s50,#EAEDFF)}.cf-ai:disabled{opacity:.6;cursor:wait}
+.cf-nowb .cf-ai{margin:0;background:#fff}
+.cf-num{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cf-num input{width:110px!important;text-align:center;font-size:20px!important;font-weight:800}
+.cf-nb{width:48px;height:48px;border:1px solid var(--g400,#C8C9C9);background:#fff;border-radius:8px;font-size:22px;font-weight:700;cursor:pointer;color:inherit}.cf-nb:hover{background:var(--g100,#F6F7F7)}
+.cf-unit{font-size:16px;font-weight:700}
+.cf-choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.cf-choice button,.cf-tplg button,.cf-auto button{min-height:56px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:10px 14px;border:1.5px solid var(--g300,#EAEBEB);border-radius:8px;background:#fff;font:inherit;text-align:left;cursor:pointer;color:inherit}
+.cf-choice button b,.cf-tplg button b,.cf-auto button b{font-size:16px}
+.cf-choice button small,.cf-tplg button small,.cf-auto button small{font-size:14px;color:var(--t-sub,#666767);line-height:1.4}
+.cf-choice button.on,.cf-tplg button.on{border-color:var(--s400,#5C74F6);background:var(--s50,#EAEDFF);box-shadow:inset 0 0 0 1px var(--s400,#5C74F6)}
+.cf-choice button:hover,.cf-tplg button:hover,.cf-auto button:hover{border-color:var(--s300,#7D90F9)}
+.cf-days{display:flex;gap:6px;flex-wrap:wrap}
+.cf-days button{width:48px;height:48px;border:1.5px solid var(--g300,#EAEBEB);border-radius:50%;background:#fff;font:inherit;font-weight:800;cursor:pointer}
+.cf-days button.on{background:var(--s400,#5C74F6);border-color:var(--s400,#5C74F6);color:#fff}
+.cf-tog{display:inline-flex;align-items:center;gap:10px;min-height:48px;font-weight:700;cursor:pointer}.cf-tog input{width:22px;height:22px}
+/* 템플릿 */
+.cf-tpl{margin:0 0 22px}
+.cf-tplg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.cf-tplg .ic{color:var(--s400,#5C74F6);margin-bottom:2px}
+/* 차시 목록 */
+.cf-olh{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}.cf-olh .cf-lab{margin:0}.cf-olh .cf-ai{margin:0}
+.cf-wl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.cf-wl li{display:flex;align-items:center;gap:6px}
+.cf-wn{flex:none;width:32px;height:32px;border-radius:50%;background:var(--g200,#F1F2F2);display:grid;place-items:center;font-weight:800;font-size:15px}
+.cf-wl input{flex:1;min-width:0}
+.cf-ib{flex:none;width:44px;height:48px;border:1px solid var(--g300,#EAEBEB);background:#fff;border-radius:8px;font-size:16px;cursor:pointer;color:var(--g800,#4C4D4D)}.cf-ib:disabled{opacity:.35;cursor:default}.cf-ib:hover:not(:disabled){background:var(--g100,#F6F7F7)}
+.cf-add{margin-top:10px;min-height:48px;width:100%;border:1.5px dashed var(--g400,#C8C9C9);background:#fff;border-radius:8px;font:inherit;font-weight:700;color:var(--g800,#4C4D4D);cursor:pointer}.cf-add:hover{border-color:var(--s400,#5C74F6);color:var(--t-mag,#3F55D0)}
+.cf-emp{padding:20px;border-radius:8px;background:var(--g100,#F6F7F7);text-align:center}.cf-emp p{margin:0 0 6px}
+/* 채우기(기본) */
+.cf-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:18px}
+.cf-auto button{position:relative;padding-right:70px}
+.cf-auto .ic{color:var(--g600,#808181)}
+.cf-auto button.on{border-color:var(--s400,#5C74F6);background:var(--s50,#EAEDFF)}.cf-auto button.on .ic{color:var(--s400,#5C74F6)}
+.cf-ck{position:absolute;right:12px;top:12px;font-size:13px;font-weight:800;color:var(--t-sub,#666767)}.cf-auto button.on .cf-ck{color:var(--t-mag,#3F55D0)}
+.cf-note{padding:12px 14px;border-radius:8px;background:var(--g100,#F6F7F7);font-size:15px;color:var(--g800,#4C4D4D);margin:0 0 14px}.cf-note.bad{background:var(--badl,#FFEAEE);color:var(--t-bad,#C4001D)}.cf-note.warn{background:var(--warnl,#FFF3E0);color:var(--t-warn,#A84A00)}
+.cf-adv{font-size:15px;color:var(--t-sub,#666767);margin:4px 0 8px}
+.crsf .linkb{border:0;background:none;padding:6px 2px;font:inherit;font-weight:700;color:var(--link,#1A4CFF);text-decoration:underline;cursor:pointer;min-height:40px}
+/* 미리보기 */
+.cf-pv{border:1px solid var(--g300,#EAEBEB);border-radius:12px;overflow:hidden;margin-bottom:14px}
+.cf-pvh{padding:18px 20px;background:linear-gradient(135deg,var(--s50,#EAEDFF),#fff)}
+.cf-pvt{display:inline-block;font-size:13px;font-weight:800;color:var(--t-mag,#3F55D0);margin-bottom:4px}
+.cf-pvh b{display:block;font-size:22px;font-weight:800;letter-spacing:-.02em;word-break:keep-all}
+.cf-pvh p{margin:8px 0 0;color:var(--g800,#4C4D4D)}
+.cf-pvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;margin:0;border-top:1px solid var(--g300,#EAEBEB)}
+.cf-pvs div{padding:10px 20px;border-bottom:1px solid var(--g200,#F1F2F2)}
+.cf-pvs dt{font-size:13px;color:var(--t-sub,#666767);font-weight:700}.cf-pvs dd{margin:2px 0 0;font-weight:700;word-break:keep-all}
+.cf-pvl{list-style:none;margin:0;padding:12px 20px;display:flex;flex-direction:column;gap:6px}
+.cf-pvl li{display:flex;gap:10px;align-items:baseline}.cf-pvl li span{flex:none;min-width:24px;font-weight:800;color:var(--t-mag,#3F55D0)}.cf-pvl li.more{color:var(--t-sub,#666767);padding-left:34px}
+.cf-pvb{padding:0 20px 16px}.cf-pvb .btn{pointer-events:none;min-height:44px}
+.cf-chk{display:flex;flex-direction:column;gap:6px}
+.cf-c{margin:0;padding:10px 14px;border-radius:8px;font-size:15px;background:var(--warnl,#FFF3E0)}.cf-c b{margin-right:6px;color:var(--t-warn,#A84A00)}
+.cf-c.stop{background:var(--badl,#FFEAEE)}.cf-c.stop b{color:var(--t-bad,#C4001D)}.cf-c.info{background:var(--infol,#E3F3FC)}.cf-c.info b{color:var(--g800,#4C4D4D)}
+/* 하단 버튼 */
+.cf-ft{display:flex;align-items:center;gap:8px;padding:12px 24px 16px;border-top:1px solid var(--g300,#EAEBEB);background:#fff}
+.cf-sp{flex:1}
+.crsf .cf-big{min-height:48px;min-width:96px;font-size:16px;font-weight:800;padding:0 22px}
+.crsf .cf-later2,.crsf .cf-undo{min-height:48px;font-size:15px}
+/* 이어서 하기 · 완료 */
+.cf-resume,.cf-done{width:min(520px,100%)}
+.cf-rb{padding:28px 28px 22px;text-align:center}
+.cf-rb h2{margin:4px 0 6px;font-size:22px;word-break:keep-all}
+.cf-rb .cf-now{font-size:15px;color:var(--t-sub,#666767);font-weight:700;margin:0}
+.cf-sub{margin:0 0 16px;color:var(--g800,#4C4D4D)}
+.cf-rbb{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}.cf-rbb .btn{width:100%}
+.cf-ok{margin:0 auto 6px;width:56px;height:56px;border-radius:50%;background:var(--b50,#E7F8E8);color:var(--t-ok,#007A29);display:grid;place-items:center}
+.cf-next{display:flex;flex-direction:column;gap:8px;margin:6px 0 10px;text-align:left}
+.cf-next button{display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 16px;border:1.5px solid var(--g300,#EAEBEB);border-radius:10px;background:#fff;font:inherit;cursor:pointer;color:inherit;text-align:left}
+.cf-next button span{display:flex;flex-direction:column}.cf-next button small{color:var(--t-sub,#666767);font-size:14px}
+.cf-next button.pri{border-color:var(--s400,#5C74F6);background:var(--s50,#EAEDFF)}.cf-next button .ic{color:var(--s400,#5C74F6);flex:none}
+.cf-next button:hover{border-color:var(--s300,#7D90F9)}
+/* 휴대폰 */
+@media (max-width:640px){
+  .crsf{padding:0;align-items:stretch}
+  .cf-box{width:100%;max-height:none;height:100%;border-radius:0}
+  .cf-resume,.cf-done{width:100%}
+  .cf-hd{padding:8px 8px 4px 16px}
+  .cf-prog{padding:4px 16px 8px;gap:4px}
+  .cf-sl{display:none}
+  .cf-prog li.on .cf-sl{display:block}
+  .cf-prog li.on{flex:2.5}
+  .cf-nowb{margin:0 16px;padding:10px 12px}
+  .cf-now{font-size:16px;flex-basis:100%}
+  .cf-body{padding:14px 16px 8px}
+  .cf-sam{padding:0 16px}
+  .cf-ft{padding:10px 16px calc(10px + env(safe-area-inset-bottom));flex-wrap:wrap}
+  .cf-ft .cf-sp{display:none}
+  .crsf .cf-later2{order:5;flex-basis:100%;min-height:40px;border:0}
+  .crsf .cf-big{flex:1;min-width:0;padding:0 12px}
+  .cf-choice{grid-template-columns:1fr 1fr}
+  .cf-rb{padding:40px 18px 18px}
+}
