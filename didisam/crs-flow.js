@@ -267,8 +267,8 @@
   function publish(id) { const c = typeof C === 'function' ? C(id) : S.classes.find(x => x.id === id); if (!c) return;
     if ((c.open || '전체') === '비공개') { c.open = '전체'; c.status = '운영중'; }
     try { logAudit(`${T('cls')} 공개 — ${c.name}`); } catch (e) { } try { save(); } catch (e) { }
-    try { if (typeof smPublish === 'function') smPublish(); else if (ACT['ls-pub']) ACT['ls-pub'](); } catch (e) { console.error('publish', e); }
-    try { save(); } catch (e) { } toast(`${josa(c.name, '을')} ${josa(T('learner'), '에게')} 공개했습니다. 학습자 사이트 신청 목록에 보입니다.`, 'ok'); }
+    let ok = false; try { if (typeof smPublish === 'function') { smPublish(); ok = true; } else if (ACT['ls-pub']) { ACT['ls-pub'](); ok = true; } } catch (e) { console.error('publish', e); }
+    try { save(); } catch (e) { } if (!ok) toast(`${josa(c.name, '을')} 공개로 바꿨습니다. 사이트 메뉴에서 [게시하기]를 누르면 ${josa(T('learner'), '에게')} 보입니다.`, 'warn'); }
   /* 운영자 전용 미리보기: 비공개 · 미게시여도 학습자 화면(learner.html?preview=1)으로 이 과정을 연다. 게시본은 바꾸지 않는다 */
   function preview(id) { const c = typeof C === 'function' ? C(id) : S.classes.find(x => x.id === id); if (!c) return; CF._pv = c.id;
     const url = `learner.html?preview=1&r=${Date.now() % 1e6}#class/${encodeURIComponent(c.id)}`;
