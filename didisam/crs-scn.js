@@ -52,7 +52,7 @@
       outline: [{ k: 'wdays', label: '수업 요일', kind: 'days', ex: '예: 월 · 수 · 금', def: [1, 3, 5] }, { k: 'slot', label: '수업 시간', kind: 'choice', ex: '예: 오후 4:00~5:30(다른 시간은 만든 뒤 회차마다 바꿀 수 있어요)', def: '16:00-17:30', opts: [['14:00-15:30', '오후 2:00~3:30'], ['16:00-17:30', '오후 4:00~5:30'], ['17:30-19:00', '오후 5:30~7:00'], ['19:00-21:00', '저녁 7:00~9:00'], ['19:00-22:00', '저녁 7:00~10:00'], ['10:00-11:30', '오전 10:00~11:30']] }, { k: 'months', label: '기간', kind: 'choice', ex: '예: 3개월(한 학기 내신 대비)', def: 3, opts: [[1, '1개월'], [2, '2개월'], [3, '3개월'], [6, '6개월'], [12, '1년']] }],
       setup: [F.price('월 수강료', '예: 280,000원(학원에 게시한 교습비와 같게)', 0, true), F.cap('예: 8명(한 반)')]
     },
-    defaults: { kind: 'episode', grade: 'm2', subject: '수학', wdays: [1, 3, 5], slot: '16:00-17:30', months: 3, price: 0, cap: 0, mins: 90 },
+    defaults: { kind: 'episode', auto: { video: 'none', docs: true, quiz: true, assign: false, exam: false }, grade: 'm2', subject: '수학', wdays: [1, 3, 5], slot: '16:00-17:30', months: 3, price: 0, cap: 0, mins: 90 },
     required: ['name', 'wdays'],
     examples: { name: '예: 중2 수학 내신반', wdays: '예: 월 · 수 · 금', price: '예: 월 280,000원' },
     templates: [
@@ -62,7 +62,7 @@
       { id: 'k12-kor-mock', name: '수능 국어 실전반', icon: 'edit', desc: '고3 · 주 2회 · 2개월', prefill: { name: '고3 수능 국어 실전 모의고사반', grade: 'h3', subject: '국어', wdays: [2, 5], slot: '19:00-22:00', months: 2, cap: 15 } },
       { id: 'k12-vac', name: '방학 특강', icon: 'k12', desc: '중1 · 평일 매일 · 1개월', prefill: { name: '여름방학 중1 선행 특강', grade: 'm1', subject: '수학', wdays: [1, 2, 3, 4, 5], slot: '13:00-15:00', months: 1, cap: 12 } }
     ],
-    plan: d => { const n = sessCount(d); return { weeks: Math.min(30, Math.max(1, Math.ceil(n / Math.max(1, (d.wdays || []).length || 1)) || 4)), per: (d.wdays || []).length || 1, mins: minsOf(d.from, d.to) || 90, hours: Math.round(n * (minsOf(d.from, d.to) || 90) / 60), count: n }; },
+    plan: d => { const n = sessCount(d); return { weeks: Math.max(1, Math.min(60, n || 12)), per: (d.wdays || []).length || 1, mins: minsOf(d.from, d.to) || 90, hours: Math.round(n * (minsOf(d.from, d.to) || 90) / 60), count: n }; },
     check: d => {
       const R = [];
       if (!(d.wdays || []).length) R.push({ lv: 'stop', k: 'wdays', msg: '수업 요일을 하나 이상 고릅니다.' });
@@ -71,7 +71,7 @@
       if (N(d.price) > 0) R.push({ lv: 'info', k: 'price', msg: '월 수강료는 교육청에 등록하고 학원에 게시한 교습비와 같게 적습니다(학원법 교습비 게시 의무).', law: '학원의 설립 · 운영 및 과외교습에 관한 법률 제15조' });
       return R;
     },
-    summary: d => [['학년 · 과목', `${gradeName(d.grade)} · ${d.subject || '—'}`], ['수업', `매주 ${(d.wdays || []).map(i => DAYS[i]).join(' · ') || '—'} ${d.from || ''}~${d.to || ''}`], ['기간', `${N(d.months) || 3}개월 · 회차 ${Math.min(100, sessCount(d))}개`], ['월 수강료', N(d.price) ? wn(d.price) : '나중에 입력'], ['정원', N(d.cap) ? N(d.cap) + '명' : '제한 없음']],
+    summary: d => [['학년 · 과목', `${gradeName(d.grade)} · ${d.subject || '—'}`], ['수업', `매주 ${(d.wdays || []).map(i => DAYS[i]).join(' · ') || '—'} ${d.from || ''}~${d.to || ''}`], ['기간', `${N(d.months) || 3}개월 · 수업 ${Math.min(100, sessCount(d))}회`], ['월 수강료', N(d.price) ? wn(d.price) : '나중에 입력'], ['정원', N(d.cap) ? N(d.cap) + '명' : '제한 없음']],
     apply: (c, d) => {
       baseApply(c, Object.assign({}, d, { sessions: 0 }));
       const start = d.start || td(); const end = plus(start, Math.round((N(d.months) || 3) * 30.4) - 1);
@@ -209,7 +209,7 @@
     plan: d => ({ weeks: Math.min(30, N(d.sessions) || 15), per: 1, mins: N(d.mins) || 120, hours: Math.round(totalMin(d) / 60) }),
     check: d => {
       const R = []; const h = totalMin(d) / 60;
-      if (N(d.price) > 0 && h < 30) R.push({ lv: 'warn', k: 'sessions', msg: `학습비를 받는 원격 강좌는 30시간 이상이 신고 기준입니다. 지금은 ${hm(totalMin(d))}입니다.`, law: '평생교육법 시행령 제48조', fix: { sessions: Math.ceil(30 * 60 / Math.max(1, N(d.mins) || 120)) } });
+      if (N(d.price) > 0 && h < 30) R.push({ lv: 'warn', k: 'sessions', msg: `학습비를 받는 강좌는 30시간 이상이 원격 평생교육시설 신고 기준입니다. 지금은 ${hm(totalMin(d))}입니다.`, law: '평생교육법 시행령 제48조', fix: { sessions: Math.ceil(30 * 60 / Math.max(1, N(d.mins) || 120)) } });
       if (d.cb) { const need = (N(d.credit) || 3) * 15; if (h < need) R.push({ lv: 'warn', k: 'sessions', msg: `학점은행 ${N(d.credit) || 3}학점은 ${need}시간(1학점 15시간) 이상이 필요합니다. 지금은 ${hm(totalMin(d))}입니다.`, law: '학점인정 등에 관한 법률 시행령', fix: { sessions: Math.ceil(need * 60 / Math.max(1, N(d.mins) || 180)) } }); R.push({ lv: 'info', k: 'cb', msg: '학점은행 과목은 평가인정을 받은 학습과목명 · 시간으로 운영합니다. 국가평생교육진흥원 인정 내용을 확인합니다.' }); }
       return R;
     },
@@ -311,6 +311,8 @@
   const hasAsk = (g, k) => Object.values(g.ask || {}).flat().some(f => f.k === k);
   /* 학원: 요일 · 기간이 바뀌면 회차 수(최대 60)를 맞추고, 회차 목록이 있으면 길이를 맞춘다 */
   const k12Sync = d => { if (CF.cfgKey() !== 'k12' || !d) return false; const x = fill('k12', d); const n = Math.max(1, Math.min(60, sessCount(x))); if (+d.sessions === n) return false; d.sessions = n; const L = d.weekPlan; if (Array.isArray(L) && L.length) { while (L.length > n) L.pop(); if (L.length < n) { let P = []; try { P = CF.planFrom ? CF.planFrom(Object.assign({}, d, { sessions: n })) : []; } catch (e) { } while (L.length < n) L.push({ w: L.length + 1, title: (P[L.length] && P[L.length].title) || `${L.length + 1}회차 수업`, goal: '' }); } } return true; };
+  /* 차시 수와 목록 길이 맞추기(안내대로 고치기 · 템플릿으로 수가 바뀐 경우) */
+  const planSync = d => { if (!d) return false; const L = d.weekPlan; const n = Math.max(1, Math.min(60, N(d.sessions))); if (!Array.isArray(L) || !L.length || L.length === n) return false; while (L.length > n) L.pop(); let P = []; try { P = CF.planFrom ? CF.planFrom(Object.assign({}, d, { sessions: n })) : []; } catch (e) { } const u = CF.unit ? CF.unit(d) : '차시'; while (L.length < n) L.push({ w: L.length + 1, title: (P[L.length] && P[L.length].title) || `${L.length + 1}${u}`, goal: '' }); return true; };
   /* 유료 여부: 질문이 price 하나인 유형은 금액으로 정한다(C1 기본 paid 선택지 대신) */
   const paidSync = d => { const g = CF.cfgOf(); if (!d || !hasAsk(g, 'price') || hasAsk(g, 'paid')) return; d.paid = N(d.price) > 0; };
   const prep = (d, o) => { if (!d) return; const g = CF.cfgOf(); if (!g || !g.ask) return; const pre = (o && o.prefill) || {};
@@ -324,5 +326,5 @@
     (CF.steps || []).forEach(st => { ['title', 'now'].forEach(m => { const b = st[m]; if (typeof b !== 'function') return; st[m] = d => { try { const g = CF.cfgOf(); const v = (g[m === 'title' ? 'stepTitle' : 'stepNow'] || {})[st.id]; if (v) return typeof v === 'function' ? v(d || {}) : v; } catch (e) { } return b(d); }; }); }); };
   hook(); if (!CF.on) setTimeout(hook, 0);
   /* 학원은 요일 버튼(data-cfday)이 change를 내지 않으므로 누른 뒤 한 번 맞춘다 */
-  if (typeof document !== 'undefined') document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-cfday],[data-cftpl]'); if (!b) return; setTimeout(() => { const d = curD(); if (!d) return; CF.scnDefaults(d); paidSync(d); if (k12Sync(d)) { try { CF.saveDraft && CF.saveDraft(); CF.refresh && CF.refresh(); } catch (er) { } } }, 0); }, true);
+  if (typeof document !== 'undefined') document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-cfday],[data-cftpl],[data-cffix],[data-cfset]'); if (!b) return; setTimeout(() => { const d = curD(); if (!d) return; CF.scnDefaults(d); paidSync(d); if (k12Sync(d) | planSync(d)) { try { CF.saveDraft && CF.saveDraft(); CF.refresh && CF.refresh(); } catch (er) { } } }, 0); }, true);
 })();
