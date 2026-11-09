@@ -20,7 +20,7 @@ const smOn = () => !!(S && S.org && (S.ui || {}).simple === true);
 /* 측정 */
 function smCls() { return smRole() === 'teacher' ? tCls() : (S.classes || []); }
 function smStat() { const C = smCls(); const run = C.filter(c => c.status === '운영중'); const P = run.flatMap(c => (c.learners || []).map(id => +((c.prog || {})[id] || {}).p || 0));
-  const thr = c => (c.criteria && c.criteria.threshold) || 80; const done = run.reduce((s, c) => s + (c.learners || []).filter(id => (+((c.prog || {})[id] || {}).p || 0) >= thr(c)).length, 0);
+  const thr = c => (c.criteria && c.criteria.threshold) || 80; const done = run.reduce((s, c) => s + (c.learners || []).filter(id => clsDone(c, id)).length, 0);
   const ids = new Set(C.map(c => c.id)); const Q = (typeof tqEnsure === 'function' ? tqEnsure() : []).filter(x => x.st !== 'answered' && (smRole() !== 'teacher' || ids.has(x.cid) || C.some(c => c.name === x.cls)));
   const posts = smRole() === 'teacher' ? 0 : (S.posts || []).filter(p => p.kind === '질문' && !p.replies).length;
   const M = S.members || []; const away = M.filter(m => typeof daysAgo === 'function' && daysAgo(m.last) >= 14).length;

@@ -8,7 +8,7 @@ const D26 = { plan: { standard: ['스탠다드', 100, 1000], premium: ['프리�
 const d26n = v => (+v || 0).toLocaleString('ko-KR');
 const d26Learners = () => { const s = new Set(); (S.classes || []).forEach(c => (c.learners || []).forEach(id => s.add(id))); return s; };
 const d26Avg = c => { const L = c.learners || []; if (!L.length) return 0; return Math.round(L.reduce((a, id) => a + (((c.prog || {})[id] || {}).p || 0), 0) / L.length); };
-const d26Done = c => { const thr = (c.criteria && c.criteria.threshold) || 80; return (c.learners || []).filter(id => (((c.prog || {})[id] || {}).p || 0) >= thr).length; };
+const d26Done = c => doneN(c); /* v36 R1 이수 판정 한 곳(clsDone) */
 function d26Kpi() {
   const C = S.classes || [], L = d26Learners(), M = (S.members || []).filter(m => !m.withdrawn);
   const all = C.reduce((a, c) => a + (c.learners || []).length, 0), dn = C.reduce((a, c) => a + d26Done(c), 0);
@@ -42,7 +42,7 @@ function d26Left() { const b = (() => { try { return BRIEF().filter(x => x.n > 0
     ${st.length ? `<div class="card d26-ob"><div class="ch"><b>온보딩 현황</b><small>${st.filter(s => S.bld.steps[s.id].done).length}/${st.length} 완료</small></div>${bar(st.filter(s => S.bld.steps[s.id].done).length, st.length)}<ul>${st.map(s => `<li class="${S.bld.steps[s.id].done ? 'ok' : ''}"><button type="button" data-act="go" data-v="${esc(s.view)}"><span>${esc(bName(s))}</span>${S.bld.steps[s.id].done ? ic('check', 15) : '<em>↗</em>'}</button></li>`).join('')}</ul></div>` : ''}
     <div class="card d26-plan"><small class="d26-cap">요금제</small><div class="ch"><b>${esc(pk[0])} 플랜을<br>이용 중이에요.</b><span class="sp"></span><button class="btn sm pri" data-act="go" data-v="plan">업그레이드</button></div>
       <div class="d26-use"><small>회원 수 <em>${d26n(L)}${pk[1] ? '/' + d26n(pk[1]) : ''}명</em></small>${bar(L, pk[1] || L * 1.5 || 1)}<small>이번 달 메시지 <em>${d26n(msg)}${pk[2] ? '/' + d26n(pk[2]) : ''}건</em></small>${bar(msg, pk[2] || msg * 1.5 || 1)}<small>콘텐츠 <em>${d26n((S.lib || []).length)}개</em></small>${bar((S.lib || []).length, Math.max(50, (S.lib || []).length * 1.5))}</div></div>
-    <div class="card d26-rev"><div class="ch"><b>나의 수익 현황</b><span class="sp"></span><button class="btn sm" data-act="go" data-v="sales">자세히 보기</button></div><small>이번 달 결제 금액</small><strong>${d26n(sum)}원</strong>${d26Bars(wk.map(x => x.v), wk.map(x => x.l))}</div>
+    ${typeof mbPayOn === 'function' && !mbPayOn() ? '' : `<div class="card d26-rev"><div class="ch"><b>나의 수익 현황</b><span class="sp"></span><button class="btn sm" data-act="go" data-v="sales">자세히 보기</button></div><small>이번 달 결제 금액</small><strong>${d26n(sum)}원</strong>${d26Bars(wk.map(x => x.v), wk.map(x => x.l))}</div>`}
   </aside>`; }
 function d26Main(base) { const k = d26Kpi(); const tab = UI.d26t || 'cls';
   const kc = { 영상: '#5C74F6', 자료: '#63B8F4', 과제: '#71D87C', 평가: '#FFA826', 설문: '#FF7A73' }; const kt = Object.entries(k.kinds);

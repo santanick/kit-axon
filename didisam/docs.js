@@ -521,7 +521,7 @@ const DVARS = ['기관명', '과정명', '시작일', '종료일', '교육시간
 /* 과정 데이터로 변수 채우기(이름 대신 ID · 학번만) */
 function docVals(c) {
   const v = { 기관명: S.org.name, 작성일: today(), 담당자: S.me.name || '교육 담당자', 연락처: S.settings.footer?.tel || '', 장소: S.settings.footer?.addr || '온라인(디디쌤)', 연도: today().slice(0, 4), 월: String(+today().slice(5, 7)), 회신기한: addDays(today(), 7), 수집항목: S.org.type === 'univ' ? '학번, 학과' : '이름, 연락처(ID)', 총인원: String(S.members.length), 대상: t('learner') };
-  if (c) { const P = Object.values(c.prog || {}); const done = P.filter(p => p.p >= (c.criteria?.threshold || 80)).length; const tch = S.admins.find(a => a.role === 'teacher' && (a.classes || []).includes(c.id));
+  if (c) { const P = Object.values(c.prog || {}); const done = doneN(c); const tch = S.admins.find(a => a.role === 'teacher' && (a.classes || []).includes(c.id));
     Object.assign(v, { 과정명: c.name, 시작일: c.start || '', 종료일: c.end || '', 교육시간: String(c.hours || ''), 인원: String(c.learners?.length || P.length), 강사: tch?.name || t('teacher'), 교육비: c.price ? Number(c.price).toLocaleString() + '원' : '무료', 평균진도: String(Math.round(P.reduce((a, p) => a + (p.p || 0), 0) / Math.max(1, P.length))), 이수인원: String(done), 이수율: String(Math.round(done / Math.max(1, P.length) * 100)), 제출수: String(P.filter(p => p.assign && p.assign !== 'none').length), 배지수: String((S.badges || []).reduce((a, b) => a + (b.issued || []).filter(x => c.learners?.includes(x.who)).length, 0)) }); }
   return v;
 }
@@ -533,7 +533,7 @@ function docBlocks(c) {
   return {
     차시별일정: ['| 차시 | 주제 | 학습 활동 |', ...W.map(r => `| ${r.join(' | ')} |`)].join('\n'),
     출석표: [`| ID | ${Array.from({ length: n }, (_, i) => `${i + 1}회`).join(' | ')} | 출석률 |`, ...L.map(id => { const a = c.prog[id]?.att ?? 90; return `| ${mid(id)} | ${Array.from({ length: n }, (_, i) => (i * 13 + a) % 10 < a / 10 ? '○' : '×').join(' | ')} | ${a}% |`; })].join('\n'),
-    성적표: ['| ID | 진도 | 과제 | 시험 | 이수 |', ...L.map(id => { const p = c.prog[id] || {}; return `| ${mid(id)} | ${p.p ?? 0}% | ${p.score ?? '-'} | ${p.exam ?? '-'} | ${(p.p || 0) >= (c.criteria?.threshold || 80) ? '이수' : '미이수'} |`; })].join('\n'),
+    성적표: ['| ID | 진도 | 과제 | 시험 | 이수 |', ...L.map(id => { const p = c.prog[id] || {}; return `| ${mid(id)} | ${p.p ?? 0}% | ${p.score ?? '-'} | ${p.exam ?? '-'} | ${clsDone(c, id) ? '이수' : '미이수'} |`; })].join('\n'),
     진단분포: (() => { const d = (S.diags || [])[0]; if (!d) return '- 진행한 진단이 없습니다.'; const R = Object.values(d.res || {}); return [`- 진단: ${d.name} · 응시 ${R.length}명`, '| 결과 | 인원 |', ...(d.outs || []).map(o => `| ${o.l} | ${R.filter(r => r.out === o.k).length} |`)].join('\n'); })()
   };
 }

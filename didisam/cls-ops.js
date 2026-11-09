@@ -12,7 +12,7 @@
   const U = () => S && S.org && S.org.type === 'univ';
   const I = (k, s = 18) => (typeof ic === 'function' ? ic(k in IC ? k : 'grid', s) : '');
   const AWAY = 14; /* 이 날수 이상 접속하지 않으면 '미접속' */
-  const done = (c, id) => { if (A(S.certs).some(x => x.cls === c.id && x.who === id)) return true; /* 수료증이 나간 사람은 이수 */ try { if (typeof a2IsDone === 'function') return a2IsDone(c, id); } catch (e) { } return ((c.prog[id] || {}).p || 0) >= ((c.criteria || {}).threshold || 80); };
+  const done = (c, id) => clsDone(c, id); /* v36 R1 이수 판정은 한 곳(mods.js clsDone) — 관리 화면 · 엑셀 · 대시보드 · 수료증과 같은 값 */
   const certOf = (c, id) => A(S.certs).find(x => x.cls === c.id && x.who === id);
   const lastOf = id => (M(id) || {}).last || '';
   const away = id => { const l = lastOf(id); return !l || daysAgo(l) >= AWAY; };
