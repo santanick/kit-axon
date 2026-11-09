@@ -89,40 +89,111 @@ ACT['doc-play'] = () => { const D = ED.it.doc; aiPlayer(ED.it.title, [{ h: '학�
 
 /* 슬라이드 그리기 · 재생 · 녹화 */
 function wrapLines(g, text, maxW, maxLines) { const out = []; let line = ''; for (const ch of String(text || '')) { if (g.measureText(line + ch).width > maxW && line) { out.push(line); line = ch.trim() ? ch : ''; if (out.length === maxLines) break; } else line += ch; } if (out.length < maxLines && line) out.push(line); else if (out.length === maxLines && line) out[maxLines - 1] = out[maxLines - 1].replace(/.$/, '…'); return out; }
-function drawSlide(g, s, i, n, title, cap, prog) {
-  const W = 1280, H = 720, F = 'Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
-  g.fillStyle = '#F6F7F7'; g.fillRect(0, 0, W, H); g.fillStyle = '#2A2B2B'; g.fillRect(0, 0, W, 76);
-  g.fillStyle = '#fff'; g.font = `600 24px ${F}`; g.textBaseline = 'middle'; g.fillText(S.org.name, 48, 38); g.textAlign = 'right'; g.fillText(`${i + 1} / ${n}`, W - 48, 38); g.textAlign = 'left';
-  g.fillStyle = '#6C6C6C'; g.font = `500 24px ${F}`; g.fillText(wrapLines(g, title, W - 160, 1)[0] || '', 80, 128);
-  g.fillStyle = '#5C74F6'; g.fillRect(48, 160, 8, 62); g.fillStyle = '#2A2B2B'; g.font = `800 52px ${F}`; g.fillText(wrapLines(g, s.h, W - 160, 1)[0] || '', 80, 192);
-  let y = 290; g.font = `500 34px ${F}`; (s.pts || []).slice(0, 5).forEach(p => { g.fillStyle = '#5C74F6'; g.beginPath(); g.arc(92, y, 7, 0, 7); g.fill(); g.fillStyle = '#2A2B2B'; wrapLines(g, p, W - 220, 2).forEach((l, j) => g.fillText(l, 116, y + j * 44)); y += 74; });
-  if (cap) { g.fillStyle = 'rgba(31,32,32,.86)'; g.fillRect(0, H - 128, W, 128); g.fillStyle = '#fff'; g.font = `500 28px ${F}`; wrapLines(g, cap, W - 120, 2).forEach((l, j) => g.fillText(l, 60, H - 86 + j * 40)); }
-  g.fillStyle = '#EAEBEB'; g.fillRect(0, H - 6, W, 6); g.fillStyle = '#5C74F6'; g.fillRect(0, H - 6, W * clamp(prog || 0, 0, 1), 6);
+/* v36 영상 템플릿 · 아바타 선생님: drawSlide(g, s, i, n, title, cap, prog, opt) — opt = { tpl, avatar, mouth(0~1), blink } (없으면 예전 슬라이드 그대로) */
+const VTPL = [['slide', '슬라이드 강의형', '제목 · 요점 슬라이드(기본)'], ['board', '화이트보드형', '마커로 쓴 듯한 판서'], ['news', '뉴스 앵커형', '앵커와 하단 자막 띠'], ['card', '카드뉴스형', '큰 번호 카드 한 장씩'], ['chalk', '칠판형', '초록 칠판에 분필 글씨']];
+const VAV = [['none', '넣지 않음'], ['f', '여자 선생님'], ['m', '남자 선생님'], ['robot', '로봇 쌤'], ['bear', '곰돌이 쌤']];
+function drawAvatar(g, x, y, w, h, k, mouth, blink) {
+  if (!k || k === 'none') return; const cx = x + w / 2; const r = Math.min(w * 0.36, h * 0.27); const hy = y + h * 0.36; mouth = clamp(+mouth || 0, 0, 1);
+  g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
+  const body = { f: '#5C74F6', m: '#2A2B2B', robot: '#8A94A6', bear: '#EF6D00' }[k] || '#5C74F6';
+  g.fillStyle = body; g.beginPath(); g.moveTo(cx - w * 0.46, y + h); g.quadraticCurveTo(cx - w * 0.46, hy + r * 1.05, cx, hy + r * 1.05); g.quadraticCurveTo(cx + w * 0.46, hy + r * 1.05, cx + w * 0.46, y + h); g.closePath(); g.fill();
+  if (k === 'm') { g.fillStyle = '#fff'; g.beginPath(); g.moveTo(cx - r * .38, hy + r * 1.05); g.lineTo(cx, hy + r * 1.6); g.lineTo(cx + r * .38, hy + r * 1.05); g.fill(); g.fillStyle = '#DE0027'; g.beginPath(); g.moveTo(cx - r * .1, hy + r * 1.12); g.lineTo(cx + r * .1, hy + r * 1.12); g.lineTo(cx + r * .14, hy + r * 1.75); g.lineTo(cx, hy + r * 1.9); g.lineTo(cx - r * .14, hy + r * 1.75); g.fill(); }
+  if (k === 'f') { g.fillStyle = '#fff'; g.beginPath(); g.arc(cx, hy + r * 1.05, r * .32, 0, Math.PI); g.fill(); }
+  const skin = k === 'robot' ? '#D7DCE4' : k === 'bear' ? '#B7743A' : '#F6D2B5';
+  if (k === 'f') { g.fillStyle = '#4A2E1F'; g.beginPath(); g.ellipse(cx, hy + r * .25, r * 1.12, r * 1.25, 0, 0, Math.PI * 2); g.fill(); }
+  if (k === 'bear') { g.fillStyle = '#8A5226'; [-1, 1].forEach(d => { g.beginPath(); g.arc(cx + d * r * .78, hy - r * .78, r * .36, 0, 7); g.fill(); }); g.fillStyle = '#E3A66B'; [-1, 1].forEach(d => { g.beginPath(); g.arc(cx + d * r * .78, hy - r * .78, r * .18, 0, 7); g.fill(); }); }
+  if (k === 'robot') { g.strokeStyle = '#8A94A6'; g.lineWidth = r * .08; g.beginPath(); g.moveTo(cx, hy - r); g.lineTo(cx, hy - r * 1.35); g.stroke(); g.fillStyle = '#5C74F6'; g.beginPath(); g.arc(cx, hy - r * 1.4, r * .12, 0, 7); g.fill();
+    g.fillStyle = skin; const q = r * .95; g.beginPath(); g.roundRect ? g.roundRect(cx - q, hy - q, q * 2, q * 1.95, r * .3) : g.rect(cx - q, hy - q, q * 2, q * 1.95); g.fill(); }
+  else { g.fillStyle = skin; g.beginPath(); g.arc(cx, hy, r, 0, Math.PI * 2); g.fill(); }
+  if (k === 'f') { g.fillStyle = '#4A2E1F'; g.beginPath(); g.ellipse(cx - r * .2, hy - r * .62, r * .9, r * .45, -0.3, 0, Math.PI * 2); g.fill(); }
+  if (k === 'm') { g.fillStyle = '#1F2020'; g.beginPath(); g.ellipse(cx, hy - r * .62, r * 1.02, r * .52, 0, Math.PI, Math.PI * 2); g.fill(); g.fillRect(cx - r * 1.0, hy - r * .66, r * 2.0, r * .22); }
+  if (k === 'bear') { g.fillStyle = '#E3A66B'; g.beginPath(); g.ellipse(cx, hy + r * .38, r * .48, r * .36, 0, 0, 7); g.fill(); g.fillStyle = '#3B2414'; g.beginPath(); g.ellipse(cx, hy + r * .2, r * .14, r * .1, 0, 0, 7); g.fill(); }
+  const ey = hy - r * .05, ex = r * .38; const eyeC = k === 'robot' ? '#00C2FF' : '#2A2B2B';
+  [-1, 1].forEach(d => { g.fillStyle = eyeC; g.beginPath(); if (blink) g.fillRect(cx + d * ex - r * .12, ey, r * .24, r * .04); else if (k === 'robot') g.fillRect(cx + d * ex - r * .13, ey - r * .1, r * .26, r * .2); else { g.arc(cx + d * ex, ey, r * .09, 0, 7); g.fill(); } if (!blink && k !== 'robot') { g.fillStyle = '#fff'; g.beginPath(); g.arc(cx + d * ex + r * .03, ey - r * .03, r * .03, 0, 7); g.fill(); } });
+  if (k === 'f') { g.strokeStyle = '#2A2B2B'; g.lineWidth = r * .04; [-1, 1].forEach(d => { g.beginPath(); g.arc(cx + d * ex, ey, r * .2, 0, 7); g.stroke(); }); g.beginPath(); g.moveTo(cx - ex + r * .2, ey); g.lineTo(cx + ex - r * .2, ey); g.stroke(); }
+  if (k !== 'robot') { g.fillStyle = 'rgba(239,109,0,.18)'; [-1, 1].forEach(d => { g.beginPath(); g.ellipse(cx + d * r * .55, hy + r * .3, r * .16, r * .09, 0, 0, 7); g.fill(); }); }
+  const my = k === 'bear' ? hy + r * .55 : hy + r * .45; const mw = r * (k === 'robot' ? .5 : .34); const mh = r * (0.04 + 0.3 * mouth);
+  if (k === 'robot') { g.fillStyle = '#2A2B2B'; g.fillRect(cx - mw, my - mh / 2 - r * .04, mw * 2, mh + r * .08); g.fillStyle = '#00C2FF'; for (let b = 0; b < 5; b++) { const bh = (mh + r * .04) * (0.4 + 0.6 * Math.abs(Math.sin(b * 1.7 + mouth * 6))); g.fillRect(cx - mw + b * mw * .4 + mw * .06, my - bh / 2, mw * .28, bh); } }
+  else { g.fillStyle = mouth > .08 ? '#8B2E2E' : '#B5534A'; g.beginPath(); g.ellipse(cx, my, mw, Math.max(r * .035, mh), 0, 0, Math.PI * 2); g.fill(); if (mouth > .3) { g.fillStyle = '#fff'; g.fillRect(cx - mw * .55, my - mh + r * .01, mw * 1.1, r * .05); } }
+  g.restore();
 }
+function drawSlide(g, s, i, n, title, cap, prog, opt) {
+  opt = opt || {}; const tpl = opt.tpl || 'slide'; const av = opt.avatar && opt.avatar !== 'none' ? opt.avatar : '';
+  const W = 1280, H = 720, F = 'Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif'; const pts = (s.pts || []).slice(0, 5); g.save(); g.textAlign = 'left'; g.textBaseline = 'middle';
+  const AW = av ? 300 : 0; /* 아바타 자리 */
+  if (tpl === 'board') {
+    g.fillStyle = '#FDFDFB'; g.fillRect(0, 0, W, H); g.strokeStyle = 'rgba(92,116,246,.08)'; g.lineWidth = 1; for (let x = 40; x < W; x += 40) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); } for (let y = 40; y < H; y += 40) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+    g.fillStyle = '#6C6C6C'; g.font = `500 22px ${F}`; g.fillText(`${S.org.name} · ${wrapLines(g, title, 700, 1)[0] || ''}`, 56, 46); g.textAlign = 'right'; g.fillText(`${i + 1} / ${n}`, W - 56, 46); g.textAlign = 'left';
+    g.fillStyle = '#DC2626'; g.font = `800 54px ${F}`; const hl = wrapLines(g, s.h, W - 160 - AW, 1)[0] || ''; g.fillText(hl, 72, 130); const hw = Math.min(W - 160 - AW, g.measureText(hl).width);
+    g.strokeStyle = '#DC2626'; g.lineWidth = 6; g.beginPath(); for (let x = 0; x <= hw; x += 12) g[x ? 'lineTo' : 'moveTo'](72 + x, 172 + Math.sin(x / 18) * 4); g.stroke();
+    let y = 250; g.font = `600 34px ${F}`; pts.forEach(p => { g.strokeStyle = '#1E3A8A'; g.lineWidth = 4; g.strokeRect(78, y - 16, 30, 30); g.beginPath(); g.moveTo(84, y); g.lineTo(92, y + 9); g.lineTo(106, y - 12); g.stroke(); g.fillStyle = '#1E3A8A'; wrapLines(g, p, W - 220 - AW, 2).forEach((l, j) => g.fillText(l, 128, y + j * 44)); y += 82; });
+  } else if (tpl === 'news') {
+    const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#0B1F44'); gr.addColorStop(1, '#173A73'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(255,255,255,.06)'; for (let k = 0; k < 6; k++) g.fillRect(0, 100 + k * 90, W, 2);
+    g.fillStyle = '#fff'; g.font = `700 22px ${F}`; g.fillText(S.org.name, 48, 44); g.fillStyle = '#DE0027'; g.fillRect(W - 170, 26, 122, 36); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('강의 LIVE', W - 109, 44); g.textAlign = 'left';
+    const px = av ? 420 : 64, pw = W - px - 64; g.fillStyle = 'rgba(255,255,255,.96)'; g.fillRect(px, 96, pw, 380); g.fillStyle = '#0B1F44'; g.fillRect(px, 96, 10, 380);
+    g.fillStyle = '#0B1F44'; g.font = `800 40px ${F}`; g.fillText(wrapLines(g, s.h, pw - 60, 1)[0] || '', px + 36, 146); let y = 214; g.font = `500 28px ${F}`; pts.forEach(p => { g.fillStyle = '#DE0027'; g.fillRect(px + 38, y - 5, 12, 12); g.fillStyle = '#1F2937'; wrapLines(g, p, pw - 110, 1).forEach(l => g.fillText(l, px + 66, y)); y += 54; });
+    g.fillStyle = '#DE0027'; g.fillRect(0, 498, 210, 64); g.fillStyle = '#fff'; g.font = `800 28px ${F}`; g.fillText(`${i + 1} / ${n}`, 28, 530); g.fillStyle = 'rgba(255,255,255,.97)'; g.fillRect(210, 498, W - 210, 64); g.fillStyle = '#0B1F44'; g.font = `800 30px ${F}`; g.fillText(wrapLines(g, title, W - 280, 1)[0] || '', 236, 530);
+  } else if (tpl === 'card') {
+    const PAL = ['#FFE8EA', '#E3F3FC', '#E7F8E8', '#FFF3E0', '#F3E8FF', '#EAEDFF']; const AC = ['#DE0027', '#006ABF', '#009116', '#EF6D00', '#7A3BD0', '#3B48B5']; const ac = AC[i % AC.length];
+    g.fillStyle = PAL[i % PAL.length]; g.fillRect(0, 0, W, H); const cx0 = 80, cw = W - 160 - AW; g.fillStyle = '#fff'; g.shadowColor = 'rgba(0,0,0,.12)'; g.shadowBlur = 30; g.beginPath(); g.roundRect ? g.roundRect(cx0, 56, cw, 560, 28) : g.rect(cx0, 56, cw, 560); g.fill(); g.shadowBlur = 0;
+    g.fillStyle = ac; g.font = `900 92px ${F}`; g.fillText(String(i + 1).padStart(2, '0'), cx0 + 48, 140); g.fillStyle = '#2A2B2B'; g.font = `800 46px ${F}`; wrapLines(g, s.h, cw - 96, 2).forEach((l, j) => g.fillText(l, cx0 + 48, 236 + j * 56));
+    let y = 360; g.font = `500 30px ${F}`; pts.slice(0, 4).forEach((p, k) => { g.fillStyle = ac; g.beginPath(); g.arc(cx0 + 66, y, 18, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `800 20px ${F}`; g.textAlign = 'center'; g.fillText(String(k + 1), cx0 + 66, y + 1); g.textAlign = 'left'; g.font = `500 30px ${F}`; g.fillStyle = '#2A2B2B'; g.fillText(wrapLines(g, p, cw - 150, 1)[0] || '', cx0 + 100, y); y += 58; });
+    for (let k = 0; k < n; k++) { g.fillStyle = k === i ? ac : 'rgba(0,0,0,.18)'; g.beginPath(); g.arc(W / 2 - (n - 1) * 12 + k * 24 - AW / 2, 660, k === i ? 7 : 5, 0, 7); g.fill(); }
+    g.fillStyle = '#6C6C6C'; g.font = `600 20px ${F}`; g.textAlign = 'right'; g.fillText(S.org.name, cx0 + cw - 32, 90); g.textAlign = 'left';
+  } else if (tpl === 'chalk') {
+    g.fillStyle = '#7A4A22'; g.fillRect(0, 0, W, H); g.fillStyle = '#24452F'; g.fillRect(24, 24, W - 48, H - 48); g.fillStyle = 'rgba(255,255,255,.04)'; for (let k = 0; k < 40; k++) g.fillRect((k * 97) % W, (k * 53) % H, 160, 3);
+    g.fillStyle = 'rgba(255,255,255,.72)'; g.font = `500 22px ${F}`; g.fillText(`${S.org.name} · ${i + 1} / ${n}`, 64, 66);
+    g.fillStyle = '#FDE68A'; g.font = `800 52px ${F}`; g.fillText(wrapLines(g, s.h, W - 180 - AW, 1)[0] || '', 64, 140); g.strokeStyle = 'rgba(253,230,138,.8)'; g.lineWidth = 3; g.beginPath(); g.moveTo(64, 178); g.lineTo(Math.min(W - 120 - AW, 64 + g.measureText(s.h || '').width), 176); g.stroke();
+    let y = 252; g.font = `500 34px ${F}`; pts.forEach(p => { g.fillStyle = '#fff'; g.fillText('·', 72, y); g.fillStyle = 'rgba(255,255,255,.94)'; wrapLines(g, p, W - 220 - AW, 2).forEach((l, j) => g.fillText(l, 104, y + j * 44)); y += 78; });
+  } else {
+    g.fillStyle = '#F6F7F7'; g.fillRect(0, 0, W, H); g.fillStyle = '#2A2B2B'; g.fillRect(0, 0, W, 76);
+    g.fillStyle = '#fff'; g.font = `600 24px ${F}`; g.fillText(S.org.name, 48, 38); g.textAlign = 'right'; g.fillText(`${i + 1} / ${n}`, W - 48, 38); g.textAlign = 'left';
+    g.fillStyle = '#6C6C6C'; g.font = `500 24px ${F}`; g.fillText(wrapLines(g, title, W - 160 - AW, 1)[0] || '', 80, 128);
+    g.fillStyle = '#5C74F6'; g.fillRect(48, 160, 8, 62); g.fillStyle = '#2A2B2B'; g.font = `800 52px ${F}`; g.fillText(wrapLines(g, s.h, W - 160 - AW, 1)[0] || '', 80, 192);
+    let y = 290; g.font = `500 34px ${F}`; pts.forEach(p => { g.fillStyle = '#5C74F6'; g.beginPath(); g.arc(92, y, 7, 0, 7); g.fill(); g.fillStyle = '#2A2B2B'; wrapLines(g, p, W - 220 - AW, 2).forEach((l, j) => g.fillText(l, 116, y + j * 44)); y += 74; });
+  }
+  if (av) { const bx = tpl === 'news' ? 40 : W - AW - 10, by = tpl === 'news' ? 110 : 250, bw = tpl === 'news' ? 340 : AW, bh = tpl === 'news' ? 388 : H - 250 - (cap ? 128 : 6); if (tpl !== 'news') { g.fillStyle = tpl === 'chalk' ? 'rgba(255,255,255,.06)' : 'rgba(92,116,246,.08)'; g.beginPath(); g.arc(bx + bw / 2, by + bh * .4, bw * .42, 0, 7); g.fill(); } drawAvatar(g, bx, by, bw, bh, av, opt.mouth, opt.blink); }
+  if (cap) { g.fillStyle = 'rgba(31,32,32,.86)'; g.fillRect(0, H - 128, W, 128); g.fillStyle = '#fff'; g.font = `500 28px ${F}`; wrapLines(g, cap, W - 120, 2).forEach((l, j) => g.fillText(l, 60, H - 86 + j * 40)); }
+  g.fillStyle = '#EAEBEB'; g.fillRect(0, H - 6, W, 6); g.fillStyle = tpl === 'news' ? '#DE0027' : '#5C74F6'; g.fillRect(0, H - 6, W * clamp(prog || 0, 0, 1), 6); g.restore();
+}
+/* 목소리: 브라우저에 있는 목소리 목록(speechSynthesis) — 언어 · 성별(이름으로 추정) · 이름으로 고른다 */
+const VF = /female|여성|여자|Yuna|SunHi|Heami|Sora|Seoyeon|Jimin|Samantha|Victoria|Karen|Kyoko|Ting|Mei|Linh|Kanya|Damayanti|Monica|Amelie|Zira|Aria|Jenny|Nanami|Xiaoxiao|HoaiMy|Premwadee|Gadis|Elvira|Denise/i;
+const VM = /\bmale\b|남성|남자|InJoon|Minsu|Hyunsu|Daniel|Alex|Fred|David|Mark|Guy|Otoya|Keita|Kangkang|Yunxi|NamMinh|Niwat|Ardi|Alvaro|Henri|Thomas|Jorge/i;
+const vGender = v => VM.test(v.name) && !/female/i.test(v.name) ? 'm' : VF.test(v.name) ? 'f' : '';
+function vidVoices(lang) { try { const L = (LANG_TTS[lang] || lang || 'ko-KR').slice(0, 2).toLowerCase(); return (window.speechSynthesis ? speechSynthesis.getVoices() : []).filter(v => v.lang.toLowerCase().replace('_', '-').startsWith(L)).map(v => ({ name: v.name, lang: v.lang, g: vGender(v), local: v.localService })); } catch (e) { return []; } }
+function vidVoice(lang, gender, name) { try { const L = (LANG_TTS[lang] || lang || 'ko-KR').slice(0, 2).toLowerCase(); const vs = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().replace('_', '-').startsWith(L)); return (name && vs.find(v => v.name === name)) || vs.find(v => vGender(v) === (gender === 'm' ? 'm' : 'f')) || vs[0] || null; } catch (e) { return null; } }
+function vidSpeak(text, o) { o = o || {}; const syn = window.speechSynthesis; if (!syn || !text) return null; const u = new SpeechSynthesisUtterance(text); u.lang = LANG_TTS[o.lang] || 'ko-KR'; u.rate = clamp(+o.rate || 1, 0.5, 2); const v = vidVoice(o.lang || 'ko', o.voice, o.vname); if (v) u.voice = v; return u; }
 const sentences = s => String(s || '').split(/(?<=[.!?。])\s+/).filter(Boolean);
 function overlay(title, body) { const w = document.createElement('div'); w.className = 'mwrap top2'; w.innerHTML = `<div class="modal wide" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mh"><b>${esc(title)}</b><button class="x" data-x="1" aria-label="닫기">${ic('x', 18)}</button></div><div class="mb">${body}</div></div>`; document.body.appendChild(w); return w; }
 const sentIndex = (scenes, i, k) => scenes.slice(0, i).reduce((a, s) => a + Math.max(1, sentences(s.say).length), 0) + k;
-function aiPlayer(title, scenes, voice, tracks) {
-  if (!scenes?.length) return; tracks = tracks || {}; const TL = Object.keys(tracks).filter(l => (tracks[l] || []).length);
-  const w = overlay(`재생 — ${title}`, `<canvas class="aicv" width="1280" height="720" aria-label="AI 강의 슬라이드"></canvas><div class="bar2 pctl"><button class="btn sm" data-p="prev">이전</button><button class="btn sm ink" data-p="play">일시정지</button><button class="btn sm" data-p="next">다음</button><label class="ckl"><input type="checkbox" data-p="mute" ${'speechSynthesis' in window ? '' : 'checked disabled'}> 소리 끔</label>${TL.length ? `<select data-p="lang" aria-label="자막 언어"><option value="">자막: 원문</option>${TL.map(l => `<option value="${l}">자막: ${esc(langName(l))}</option>`).join('')}</select>` : ''}<span class="mini" data-p="st"></span></div>`);
+function aiPlayer(title, scenes, voice, tracks, opt) {
+  if (!scenes?.length) return; tracks = tracks || {}; opt = opt || {}; const TL = Object.keys(tracks).filter(l => (tracks[l] || []).length);
+  const capS = opt.capScenes || scenes, sayS = opt.sayScenes || scenes; /* 번역: 자막 · 화면 글은 capScenes, 읽는 말은 sayScenes */
+  const w = overlay(`재생 — ${title}`, `<canvas class="aicv" width="1280" height="720" aria-label="AI 강의 슬라이드"></canvas><div class="bar2 pctl"><button class="btn sm" data-p="prev">이전</button><button class="btn sm ink" data-p="play">일시정지</button><button class="btn sm" data-p="next">다음</button><label class="ckl"><input type="checkbox" data-p="mute" ${'speechSynthesis' in window ? '' : 'checked disabled'}> 소리 끔</label>${TL.length ? `<select data-p="lang" aria-label="자막 언어"><option value="">자막: 원문</option>${TL.map(l => `<option value="${l}">자막: ${esc(langName(l))}</option>`).join('')}</select>` : ''}<span class="mini" data-p="st"></span></div><p class="mini">미리보기 품질 — 브라우저 목소리로 읽어 줍니다.</p>`);
   const capLang = () => w.querySelector('[data-p=lang]')?.value || '';
-  const g = w.querySelector('canvas').getContext('2d'); let i = 0, k = 0, on = true, tm = null, alive = true; const syn = window.speechSynthesis;
+  const g = w.querySelector('canvas').getContext('2d'); let i = 0, k = 0, on = true, tm = null, alive = true, talk = 0, anim = 0, cur = ''; const syn = window.speechSynthesis;
   const muted = () => w.querySelector('[data-p=mute]').checked;
-  const stop = () => { clearTimeout(tm); try { syn && syn.cancel(); } catch (e) { } };
-  let tok = 0; const step = () => { if (!alive) return; stop(); const my = ++tok; const s = scenes[i]; const ss = sentences(s.say); const cl = capLang(); const cap = (cl && tracks[cl]?.[sentIndex(scenes, i, k)]?.t) || ss[k] || ''; drawSlide(g, s, i, scenes.length, title, cap, (i + (k + 1) / Math.max(1, ss.length)) / scenes.length); w.querySelector('[data-p=st]').textContent = `${i + 1} / ${scenes.length} 장면`;
-    if (!on) return; const nx = () => { if (++k >= ss.length) { k = 0; i++; } if (i >= scenes.length) { on = false; i = scenes.length - 1; w.querySelector('[data-p=play]').textContent = '처음부터'; return; } step(); };
-    if (syn && !muted() && cap) { const u = new SpeechSynthesisUtterance(cap); u.lang = (LANG_TTS[cl] || 'ko-KR'); u.rate = 1.05; const vs = syn.getVoices().filter(v => v.lang.toLowerCase().startsWith((LANG_TTS[cl] || 'ko-KR').slice(0, 2).toLowerCase())); const pv = vs.find(v => voice === 'm' ? /male|남|Minsu|InJoon/i.test(v.name) && !/female/i.test(v.name) : /female|여|Yuna|SunHi|Heami/i.test(v.name)) || vs[0]; if (pv) u.voice = pv; let fired = false; const once = () => { if (fired || !alive || !on || my !== tok) return; fired = true; nx(); }; u.onend = once; u.onerror = once; syn.speak(u); tm = setTimeout(() => { try { syn.cancel(); } catch (e) { } once(); }, secsFor(cap) * 1000 + 6000); }
-    else tm = setTimeout(nx, Math.max(1.6, secsFor(cap)) * 1000); };
-  w.addEventListener('click', e => { const p = e.target.closest('[data-p]')?.dataset.p; if (e.target.closest('[data-x]') || e.target === w) { alive = false; stop(); w.remove(); return; }
+  const paint = () => { const ss = sentences(capS[i].say); drawSlide(g, capS[i], i, scenes.length, title, cur, (i + (k + 1) / Math.max(1, ss.length)) / scenes.length, { tpl: opt.tpl, avatar: opt.avatar, mouth: talk ? 0.15 + 0.85 * Math.abs(Math.sin(performance.now() / 95)) * (0.6 + 0.4 * Math.random()) : 0, blink: performance.now() % 3200 < 140 }); };
+  const talking = v => { talk = v; clearInterval(anim); if (v && opt.avatar && opt.avatar !== 'none') anim = setInterval(() => alive ? paint() : clearInterval(anim), 90); paint(); };
+  const stop = () => { clearTimeout(tm); talking(0); try { syn && syn.cancel(); } catch (e) { } };
+  let tok = 0; const step = () => { if (!alive) return; stop(); const my = ++tok; const ss = sentences(capS[i].say); const say = sentences(sayS[i].say); const cl = capLang(); cur = (cl && tracks[cl]?.[sentIndex(scenes, i, k)]?.t) || ss[k] || ''; paint(); w.querySelector('[data-p=st]').textContent = `${i + 1} / ${scenes.length} 장면`;
+    if (!on) return; const nx = () => { talking(0); if (++k >= ss.length) { k = 0; i++; } if (i >= scenes.length) { on = false; i = scenes.length - 1; w.querySelector('[data-p=play]').textContent = '처음부터'; return; } step(); };
+    const line = cl ? cur : (say[k] || cur);
+    if (syn && !muted() && line) { const u = opt.vlang || opt.vname || opt.rate ? vidSpeak(line, { lang: cl || opt.vlang || 'ko', voice, vname: cl ? '' : opt.vname, rate: opt.rate || 1.05 }) : null; const uu = u || new SpeechSynthesisUtterance(line); if (!u) { uu.lang = (LANG_TTS[cl] || 'ko-KR'); uu.rate = 1.05; const vs = syn.getVoices().filter(v => v.lang.toLowerCase().startsWith((LANG_TTS[cl] || 'ko-KR').slice(0, 2).toLowerCase())); const pv = vs.find(v => voice === 'm' ? /male|남|Minsu|InJoon/i.test(v.name) && !/female/i.test(v.name) : /female|여|Yuna|SunHi|Heami/i.test(v.name)) || vs[0]; if (pv) uu.voice = pv; }
+      let fired = false; const once = () => { if (fired || !alive || !on || my !== tok) return; fired = true; nx(); }; uu.onstart = () => { if (my === tok) talking(1); }; uu.onend = once; uu.onerror = once; syn.speak(uu); talking(1); tm = setTimeout(() => { try { syn.cancel(); } catch (e) { } once(); }, secsFor(line) * 1000 / (opt.rate || 1) + 6000); }
+    else { talking(1); tm = setTimeout(nx, Math.max(1.6, secsFor(cur)) * 1000); } };
+  w.addEventListener('click', e => { const p = e.target.closest('[data-p]')?.dataset.p; if (e.target.closest('[data-x]') || e.target === w) { alive = false; stop(); clearInterval(anim); w.remove(); return; }
     if (p === 'prev') { i = Math.max(0, i - 1); k = 0; step(); } if (p === 'next') { i = Math.min(scenes.length - 1, i + 1); k = 0; step(); }
     if (p === 'play') { if (!on && i === scenes.length - 1) { i = 0; k = 0; } on = !on; e.target.textContent = on ? '일시정지' : '재생'; step(); } });
   w.querySelector('[data-p=mute]').addEventListener('change', step); w.querySelector('[data-p=lang]')?.addEventListener('change', step); step();
 }
-function aiRecord(title, scenes, track) {
+function aiRecord(title, scenes, track, opt) {
+  opt = opt || {};
   const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 720;
   if (!cv.captureStream || !window.MediaRecorder) { toast('이 브라우저는 영상 파일 만들기를 지원하지 않습니다. Chrome · Edge에서 시도하세요.', 'warn'); return; }
   const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m)) || '';
-  const plan = scenes.flatMap((s, i) => { const ss = sentences(s.say); return (ss.length ? ss : ['']).map((c, k) => ({ i, c: (track && track[sentIndex(scenes, i, k)]?.t) || c, d: secsFor(c), f: (i + (k + 1) / Math.max(1, ss.length)) / scenes.length })); });
+  const plan = (opt.capScenes || scenes).flatMap((s, i) => { const ss = sentences(s.say); return (ss.length ? ss : ['']).map((c, k) => ({ i, c: (track && track[sentIndex(scenes, i, k)]?.t) || c, d: secsFor(c), f: (i + (k + 1) / Math.max(1, ss.length)) / scenes.length })); });
   const total = plan.reduce((a, p) => a + p.d, 0);
   const w = overlay(`영상 파일 만들기 — ${title}`, `<p class="mini">장면을 실제 재생 시간대로 그리며 녹화합니다(약 ${Math.ceil(total / 60)}분). 창을 닫으면 취소됩니다.</p>${bar(0)}<p class="mini" data-r="st">준비 중…</p><div data-r="out"></div>`);
   const g = cv.getContext('2d'); const rec = new MediaRecorder(cv.captureStream(30), mime ? { mimeType: mime, videoBitsPerSecond: 2_500_000 } : undefined); const chunks = []; let cancel = false, el = 0, j = 0, tick;
@@ -133,7 +204,7 @@ function aiRecord(title, scenes, track) {
   rec.start(500); let t0 = performance.now(), segStart = t0;
   tick = setInterval(() => { if (cancel) return clearInterval(tick); const now = performance.now(); const p = plan[j];
     if ((now - segStart) / 1000 >= p.d) { j++; segStart = now; if (j >= plan.length) { clearInterval(tick); rec.stop(); return; } }
-    const q = plan[j]; drawSlide(g, scenes[q.i], q.i, scenes.length, title, q.c, q.f); el = (now - t0) / 1000;
+    const q = plan[j]; const capS = opt.capScenes || scenes; drawSlide(g, capS[q.i] || scenes[q.i], q.i, scenes.length, title, q.c, q.f, { tpl: opt.tpl, avatar: opt.avatar, mouth: 0.15 + 0.85 * Math.abs(Math.sin(now / 95)), blink: now % 3200 < 140 }); el = (now - t0) / 1000;
     const b = w.querySelector('.bar i'); if (b) b.style.width = Math.min(100, el / total * 100) + '%'; w.querySelector('[data-r=st]').textContent = `녹화 중 ${q.i + 1}/${scenes.length} 장면 · ${Math.round(el)}초 / ${Math.round(total)}초`; }, 100);
 }
 
