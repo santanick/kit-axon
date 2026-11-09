@@ -260,7 +260,7 @@ ACT['dgp-del'] = el => { const o = DG.outs[+el.dataset.k]; o.path.splice(+el.dat
 ACT['dgp-add-step'] = el => { const o = DG.outs[+el.dataset.k]; const p = o.path.at(-1); o.path.push({ id: uid('ps'), name: '새 단계', goal: '단계 목표를 적어 주세요', cls: [], need: `${o.k} 추가 과정`, unlock: p ? `${p.name} ${t('done')}` : '진단 직후 바로 열림', badge: '' }); dgRe(); };
 ACT['dgp-mk'] = el => { const s = PS(el); const c = makeCourse({ topic: s.need, weeks: S.org.type === 'univ' ? 8 : 6, docs: true }); s.cls.push(c.id); s.need = ''; dgEnsurePaths(DG); dgRe(); toast(`「${c.name}」 과정을 AI로 만들어 이 단계에 넣었습니다.`, 'ok'); };
 function personalPath(d, o, id) {
-  const done = cid => { const c = C(cid); return c && c.prog[id] && c.prog[id].p >= c.criteria.threshold; };
+  const done = cid => { const c = C(cid); if (!c) return false; return typeof clsDone === 'function' ? clsDone(c, id) : !!(c.prog && c.prog[id] && c.prog[id].p >= ((c.criteria || {}).threshold || 70)); }; /* v36: 이수 판정은 mods.js clsDone 한 곳 */
   return (o.path || []).filter(s => !s.cls.length || !s.cls.every(done));
 }
 function learnerPathCell(d, id, r) {

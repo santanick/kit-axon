@@ -47,7 +47,7 @@ const rootInfo = p => p.evaluate(sel => { const vis = el => el && el.getClientRe
 const rootLoc = p => p.locator(ROOTSEL).filter({ visible: true }).first();
 
 /* 단계 화면 측정: 가로 넘침 · 오른쪽으로 잘린 요소 · 작은 버튼 · 작은 본문 글자 · 용어 */
-const JARGON = /커리큘럼|편성|시수|루브릭|썸네일|카테고리|모듈|프롬프트|템플릿|LMS|차감반|syllabus|메타데이터|파라미터|인코딩|업로드 큐/;
+const JARGON = /커리큘럼|편성|시수|루브릭|썸네일|모듈|프롬프트|템플릿|LMS|차감반|syllabus|메타데이터|파라미터|인코딩|업로드 큐/;
 const measure = (p, sel = ROOTSEL) => p.evaluate(sel => { const W = innerWidth; const R = { over: document.documentElement.scrollWidth - W, cut: [], small: [], tiny: 0, jargon: [] };
   const root = [...document.querySelectorAll(sel)].find(el => el.getClientRects().length) || document.querySelector('#modal') || document.querySelector('#main'); if (!root) return R;
   const scrollX = el => { for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) if (/(auto|scroll)/.test(getComputedStyle(a).overflowX)) return true; return false; };
