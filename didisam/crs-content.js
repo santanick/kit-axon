@@ -79,7 +79,7 @@
   const BLOBS = {}; /* 이 창 안 미리보기용 object URL(새로고침하면 사라짐) */
   const upFn = () => (HPMx() && typeof HPM.upload === 'function') ? ((f, o) => HPM.upload(f, { kind: 'course', name: f.name, onProgress: o && o.onProgress })) : (W.crsUpload || null);
   const FKIND = f => { const n = (f.name || '').toLowerCase(); const ty = f.type || ''; if (ty.startsWith('video') || /\.(mp4|webm|mov|m4v)$/.test(n)) return 'video'; if (ty.startsWith('audio') || /\.(mp3|m4a|wav|ogg)$/.test(n)) return 'audio'; if (ty.startsWith('image')) return 'image'; if (ty === 'application/pdf' || /\.pdf$/.test(n)) return 'pdf'; return 'file'; };
-  const LIMIT = { video: 4 * 1024 ** 3, audio: 500 * 1024 ** 2, image: 30 * 1024 ** 2, pdf: 300 * 1024 ** 2, file: 300 * 1024 ** 2 };
+  const LIMIT = { video: 1024 ** 3, audio: 200 * 1024 ** 2, image: 30 * 1024 ** 2, pdf: 100 * 1024 ** 2, file: 100 * 1024 ** 2 }; /* HPM(C6)과 같은 상한 */
   const ACCEPT0 = 'video/*,audio/*,image/*,.pdf,.ppt,.pptx,.doc,.docx,.hwp,.hwpx,.xls,.xlsx';
   const accept = () => { try { if (HPMx() && HPM.accept) return HPM.accept('course') || ACCEPT0; } catch (e) { } return ACCEPT0; };
   const mb = n => n >= 1024 ** 3 ? (n / 1024 ** 3).toFixed(1) + 'GB' : (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + 'MB';
@@ -209,13 +209,13 @@
   /* 올리기 */
   VIEW.upload = () => {
     const f = X.file; const upOn = !!upFn();
-    if (!f) return { now: '올릴 파일을 고르세요. 휴대폰 사진첩 · 컴퓨터 폴더에서 고를 수 있습니다.', body: `<label class="ct-drop" id="ctDrop">${svg('upload', 40)}<b>파일 고르기</b><span>또는 이곳에 끌어다 놓기</span><input type="file" id="ctFile" accept="${accept()}"></label><p class="ct-ex">올릴 수 있는 파일: 영상(MP4 · WebM${HPMx() ? ', 최대 1GB' : ''}) · 음성 · PDF · PPT · 한글 · 워드 · 사진</p>`, foot: '', after: el => { const d = $1('#ctDrop', el); ['dragover', 'dragenter'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); })); d.addEventListener('dragleave', () => d.classList.remove('over')); d.addEventListener('drop', e => { e.preventDefault(); d.classList.remove('over'); const x = e.dataTransfer.files[0]; if (x) takeFile(x); }); } };
+    if (!f) return { now: '올릴 파일을 고르세요. 휴대폰 사진첩 · 컴퓨터 폴더에서 고를 수 있습니다.', body: `<label class="ct-drop" id="ctDrop">${svg('upload', 40)}<b>파일 고르기</b><span>또는 이곳에 끌어다 놓기</span><input type="file" id="ctFile" accept="${accept()}"></label><p class="ct-ex">올릴 수 있는 파일: 영상(MP4 · WebM, 최대 1GB) · 음성 · PDF · PPT · 한글 · 워드 · 사진</p>`, foot: '', after: el => { const d = $1('#ctDrop', el); ['dragover', 'dragenter'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); })); d.addEventListener('dragleave', () => d.classList.remove('over')); d.addEventListener('drop', e => { e.preventDefault(); d.classList.remove('over'); const x = e.dataTransfer.files[0]; if (x) takeFile(x); }); } };
     const u0 = BLOBS[f.bid]; const k = f.k; const srcA = u0 ? `src="${u0}"` : `data-hpm-src="${E(f.url || '')}"`;
     const pv = k === 'video' ? `<video controls preload="metadata" ${srcA} class="ct-media"></video>` : k === 'audio' ? `<audio controls ${srcA} class="ct-media"></audio>` : k === 'image' ? `<img ${srcA} alt="올린 사진 미리보기" class="ct-media">` : k === 'pdf' ? `<iframe ${srcA} title="PDF 미리보기" class="ct-pdf"></iframe>` : `<div class="ct-filec">${svg('doc', 40)}<b>${E(f.name)}</b><span>이 형식은 화면 미리보기가 없습니다. 학습자는 내려받아 봅니다.</span></div>`;
     return { now: '제목을 확인하고 넣으세요.', body: `<label class="ct-f"><span class="ct-l">제목</span><input id="ctUpT" value="${E(X.upTitle)}" maxlength="80"></label><p class="ct-ex">예: ${E(unit() === '주차' ? '3주차 강의 영상' : '1차시 강의 영상')}</p>${pv}<p class="ct-mini">${E(f.name)} · ${E(mb(f.size))}${f.dur ? ` · ${Math.floor(f.dur / 60)}분 ${f.dur % 60}초` : ''}</p>${X.upErr ? `<p class="ct-err" role="alert">${E(X.upErr)}</p>` : ''}${upOn ? (f.url ? '' : '<p class="ct-mini">[넣기]를 누르면 파일을 저장합니다.</p>') : '<div class="ct-note"><b>데모</b> 지금은 파일 이름과 크기만 저장하고, 미리보기는 이 창에서만 보입니다. 서버에 연결하면 파일이 실제로 저장됩니다.</div>'}<div class="ct-row">${sec('다른 파일 고르기', 'ct-up-again')}</div>`, foot: X.view ? foot(pri('닫기', 'ct-close')) : foot(X.busy ? `<span class="ct-busy sm" role="status"><span class="ct-spin" aria-hidden="true"></span>올리는 중 <b id="ctUpP">0%</b></span>` : pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')), after: el => { try { HPMx() && HPM.hydrate && HPM.hydrate(el); } catch (e) { } } };
   };
   function takeFile(f) {
-    const k = FKIND(f); if (HPMx() && typeof HPM.check === 'function') { try { const c = HPM.check(f); if (c && c.ok === false) { say(c.msg || '올릴 수 없는 파일입니다.', 'warn'); return; } } catch (e) { } } else if (f.size > LIMIT[k]) { say(`${f.name}: ${k === 'video' ? '영상은 4GB' : '파일은 ' + mb(LIMIT[k])}까지 올릴 수 있습니다.`, 'warn'); return; }
+    const k = FKIND(f); if (HPMx() && typeof HPM.check === 'function') { try { const c = HPM.check(f); if (c && c.ok === false) { say(c.msg || '올릴 수 없는 파일입니다.', 'warn'); return; } } catch (e) { } } else if (f.size > LIMIT[k]) { say(`${f.name}: ${k === 'video' ? '영상은 1GB' : '파일은 ' + mb(LIMIT[k])}까지 올릴 수 있습니다.`, 'warn'); return; }
     const bid = nid('b'); try { BLOBS[bid] = URL.createObjectURL(f); } catch (e) { }
     X.file = { name: String(f.name).slice(0, 120), size: f.size, mime: f.type || '', k, bid, raw: f }; X.step = 1; X.upErr = '';
     X.upTitle = sessTitle(X.ctx) && !/^\d+\s*(차시|주차|주)$/.test(sessTitle(X.ctx)) ? `${sessTitle(X.ctx)} ${k === 'video' ? '영상' : '자료'}` : String(f.name).replace(/\.[^.]+$/, '').slice(0, 60);
@@ -275,8 +275,8 @@
   }
   /* 실제 과정(S.classes)에 넣을 때 마무리: 루브릭 · 디지털북 · 라이브러리 사용처 */
   function settle(it, c) {
-    if (it._rb) { if (!Array.isArray(S.rubrics)) S.rubrics = []; S.rubrics.push(it._rb); it.rubric = it._rb.id; delete it._rb; }
-    if (it._book) { try { lsEnsure(); const b = it._book; if (c && c.id) b.cls = c.id; bkL().push(b); it.book = b.id; } catch (e) { } delete it._book; }
+    if (it._rb) { if (!Array.isArray(S.rubrics)) S.rubrics = []; if (!(c && c.id)) it._rb.crsDraft = 1; S.rubrics.push(it._rb); it.rubric = it._rb.id; delete it._rb; }
+    if (it._book) { try { lsEnsure(); const b = it._book; if (c && c.id) b.cls = c.id; else b.crsDraft = 1; bkL().push(b); it.book = b.id; } catch (e) { } delete it._book; }
     if (c && c.id && it.lib && Array.isArray(S.lib)) { const l = S.lib.find(x => x.id === it.lib); if (l) { l.cls = [...new Set([...(l.cls || []), c.id])]; l.used = l.cls.length; } }
     if (c && c.id && X && X.fromRec) { const r = X.fromRec; r.usedIn = [...new Set([...(r.usedIn || []), c.id])]; }
     delete it.prev; return it;
@@ -398,7 +398,7 @@
     open(kind, { from: 'flow', course: draftCourse(d), week: w, title: s.title, sess: s, target: d.target || '', onDone: it => { if (d.classId && typeof C === 'function' && C(d.classId)) { /* 이미 생성된 과정이면 settle 끝 */ } else settle(it, null); it.week = w; itemsOf(d).push(it); const nx = sessOf(d).find(x => x.w > w && !itemsOf(d).some(y => +y.week === x.w)); F.open = nx ? nx.w : w; F.undo = null; saveDraft(); refill(); say(`${w}${unit()}에 「${it.title}」을(를) 넣었습니다.`, 'ok'); try { W.CF && CF.emit && CF.emit('ct-add', it); } catch (e) { } } }); }
   ACT['ct-kind'] = el => { const k = el.dataset.k; const w = el.dataset.w != null ? +el.dataset.w : null; if (F && w != null && F.el && F.el.contains(el)) return openFromFill(k, w); if (PK) { const ctx = PK; PK = null; closePick(); return open(k, ctx); } open(k, {}); };
   ACT['ctf-open'] = el => { const w = +el.dataset.v; F.open = F.open === w ? 0 : w; refill(); const li = F.el.querySelector(`.ctf-s[data-w="${w}"]`); if (li && F.open) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); };
-  ACT['ctf-del'] = el => { const L = itemsOf(F.d); const i = L.findIndex(x => x.id === el.dataset.v); if (i < 0) return; const [it] = L.splice(i, 1); F.undo = { msg: `「${it.title}」을(를) 뺐습니다.`, run: () => L.splice(i, 0, it) }; saveDraft(); refill(); };
+  ACT['ctf-del'] = el => { const L = itemsOf(F.d); const i = L.findIndex(x => x.id === el.dataset.v); if (i < 0) return; const [it] = L.splice(i, 1); saveDraft(); const gone = sweep(); F.undo = { msg: `「${it.title}」을(를) 뺐습니다.`, run: () => { L.splice(i, 0, it); if (gone.rbs.length) S.rubrics.push(...gone.rbs); if (gone.bks.length) try { bkL().push(...gone.bks); } catch (e) { } } }; saveDraft(); refill(); };
   ACT['ctf-undo'] = () => { if (F.undo) { F.undo.run(); F.undo = null; saveDraft(); refill(); } };
   ACT['ctf-view'] = el => { const it = itemsOf(F.d).find(x => x.id === el.dataset.v); if (it) preview(it, draftCourse(F.d)); };
   ACT['ctf-all'] = () => { const n = fillAll(F.d); if (n) { const d = F.d; const before = n.ids; F.undo = { msg: `빈 ${unit()} ${n.s}곳에 교안 · 퀴즈를 넣었습니다.`, run: () => { d.curriculum = itemsOf(d).filter(x => !before.includes(x.id)); } }; saveDraft(); refill(); say(`빈 ${unit()} ${n.s}곳을 채웠습니다. 내용을 확인해 보세요.`, 'ok'); } };
@@ -428,15 +428,24 @@
   function linkCreated(c) { if (!c || !c.id) return; (c.curriculum || []).forEach(it => {
     if (it._rb) { if (!Array.isArray(S.rubrics)) S.rubrics = []; S.rubrics.push(it._rb); it.rubric = it._rb.id; delete it._rb; }
     if (it._book) { try { lsEnsure(); it._book.cls = c.id; bkL().push(it._book); it.book = it._book.id; } catch (e) { } delete it._book; }
-    if (it.book) { try { const b = bkOf(it.book); if (b && !b.cls) b.cls = c.id; } catch (e) { } }
+    if (it.book) { try { const b = bkOf(it.book); if (b) { if (!b.cls) b.cls = c.id; delete b.crsDraft; } } catch (e) { } }
+    if (it.rubric) { const rb = (S.rubrics || []).find(x => x.id === it.rubric); if (rb) delete rb.crsDraft; }
     if (it.lib && Array.isArray(S.lib)) { const l = S.lib.find(x => x.id === it.lib); if (l) { l.cls = [...new Set([...(l.cls || []), c.id])]; l.used = l.cls.length; } }
     delete it.prev; }); keep(); }
+  /* 초안이 만든 루브릭 · 디지털북 중 어느 과정 · 초안에도 연결되지 않은 것을 정리(통합 결정 ③) */
+  function sweep(keepItems) {
+    if (!S) return { rbs: [], bks: [] }; const rbRef = new Set(), bkRef = new Set(); const add = L => (L || []).forEach(it => { if (it && it.rubric) rbRef.add(it.rubric); if (it && it.book) bkRef.add(it.book); });
+    (S.classes || []).forEach(c => add(c.curriculum)); try { if (S.crsDraft && S.crsDraft.d) add(S.crsDraft.d.curriculum); } catch (e) { } try { if (W.CF && CF.isOpen && CF.isOpen() && CF.draft) add(CF.draft.curriculum); } catch (e) { } add(keepItems);
+    const rbs = (S.rubrics || []).filter(r => r.crsDraft && !rbRef.has(r.id)); if (rbs.length) S.rubrics = S.rubrics.filter(r => !rbs.includes(r));
+    let bks = []; try { lsEnsure(); const L = bkL(); bks = L.filter(b => b.crsDraft && !b.cls && !bkRef.has(b.id)); bks.forEach(b => L.splice(L.indexOf(b), 1)); } catch (e) { }
+    if (rbs.length || bks.length) keep(); return { rbs, bks };
+  }
   /* CF 연결(C1 흐름 엔진): fill 단계 render · aiFill, 생성 이벤트 */
   let hooked = false;
   function hookCF() { if (hooked || !W.CF) return; try {
     const st = Array.isArray(CF.steps) ? CF.steps.find(s => s.id === 'fill') : null;
     if (st) { st.render = (el, d) => renderFill(el, d); if (!st.aiFill) st.aiFill = d => Promise.resolve(fillAll(d)); if (!st.valid) st.valid = () => []; }
-    if (typeof CF.on === 'function') CF.on('create', x => linkCreated(x && x.course ? x.course : x)); hooked = true; } catch (e) { } }
+    if (typeof CF.on === 'function') { CF.on('create', x => { linkCreated(x && x.course ? x.course : x); sweep(); }); CF.on('close', () => setTimeout(() => sweep(), 0)); CF.on('open', x => { if (!(x && x.resume)) setTimeout(() => sweep(), 0); }); } hooked = true; } catch (e) { } }
   hookCF(); document.addEventListener('DOMContentLoaded', hookCF); setTimeout(hookCF, 0);
 
   /* 저장 데이터 */
@@ -518,5 +527,5 @@ body:has(#slSheet) .ct-wrap{z-index:97}
 `;
 
   /* ── 내보내기 ── */
-  W.CT = { open, pick, close: () => close(), kinds: KINDS.map(k => ({ ...k, icon: svg(k.k, 24) })), renderFill, fillAll, aiFill: d => { try { W.CF && CF.snap && CF.snap('AI SAM이 채우기 전'); } catch (e) { } const r = fillAll(d); refill(); return r; }, toCourse, toItem: recToItem, toRec: itemToRec, preview, link: linkCreated, hook: hookCF, steps: STEPS, gen: GEN };
+  W.CT = { open, pick, close: () => close(), kinds: KINDS.map(k => ({ ...k, icon: svg(k.k, 24) })), renderFill, fillAll, aiFill: d => { try { W.CF && CF.snap && CF.snap('AI SAM이 채우기 전'); } catch (e) { } const r = fillAll(d); refill(); return r; }, toCourse, sweep, toItem: recToItem, toRec: itemToRec, preview, link: linkCreated, hook: hookCF, steps: STEPS, gen: GEN };
 })();
