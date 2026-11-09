@@ -16,7 +16,7 @@
 
   /* ── 데이터 ── */
   const roomDoc = () => { if (!['demo', 'preview'].includes(LR.mode) || !LR.tid || LR.tid === 'sample') return null; try { return JSON.parse(localStorage.getItem('didisam.room.' + LR.tid) || 'null'); } catch (e) { return null; } };
-  const SHOP = () => { const d = roomDoc(); return (d && d.lsite && d.lsite.pub && d.lsite.pub.shop) || (LR.site && LR.site.shop) || null; };
+  const SHOP = () => { const d = LR.mode === 'preview' && LR.site && LR.site.shop ? null : roomDoc(); /* 운영자 미리보기는 어드민 초안(lsSnapshot)의 판매 정보를 쓴다 */ return (d && d.lsite && d.lsite.pub && d.lsite.pub.shop) || (LR.site && LR.site.shop) || null; };
   const meKeys = () => LR.me ? [LR.me.sid, LR.me.id, LR.me.pid, LR.me.email, ...(typeof laPacct === 'function' && LR.me.kind === 'parent' ? [(laPacct() || {}).id] : [])].filter(Boolean).map(String) : []; /* v32.8 보호자는 가족 연결 id로도 찾는다(QA U8) */
   const meM = doc => { const K = meKeys(); if (!K.length || !doc) return null; return (doc.members || []).find(m => [m.id, m.sid, m.email, m.extra && m.extra.학번, m.acct && m.acct.email].some(v => v && K.includes(String(v)))) || null; };
   const qAll = () => { try { return JSON.parse(localStorage.getItem('didisam.room.' + LR.tid + '.lpx') || '[]'); } catch (e) { return []; } };
@@ -58,7 +58,7 @@
   window.shState = id => { try { const sh = SHOP(); const c = sh && sh.classes.find(x => x.id === id); return c ? enrState(c, mine()) : 'none'; } catch (e) { return 'none'; } };
   window.shPrice = id => { const sh = SHOP(); const c = sh && sh.classes.find(x => x.id === id); return c ? priceOf(c) : 0; };
   window.shInfo = () => SHOP();
-  const visible = (x, R) => { const o = x.open || '전체'; if (o === '전체') return true; if (o === '비공개') return false; const m = R && R.m; return !!(m && (x.openTo || []).some(v => v === m.id || v === m.team || v === m.group)); };
+  const visible = (x, R) => { const o = x.open || '전체'; if (o === '전체') return true; if (o === '비공개') return false; if (o === '회원') return !!(R && R.m) || !!LR.me || LR.mode === 'preview'; /* v35 대학 '우리 학교 학생만'(crs-scn univ) = 로그인한 회원 */ const m = R && R.m; return !!(m && (x.openTo || []).some(v => v === m.id || v === m.team || v === m.group)); };
   const enrState = (c, R) => { const e = R.enr[c.id]; if (!e) return 'none'; if (e.status === 'hold' || e.hold) return 'hold'; if (e.status !== 'active') return 'none'; if (e.end && e.end < today()) return 'ended'; return 'active'; };
   function recruitState(c) { const R = c.recruit; const t = today();
     if (c.saleEnd && c.saleEnd <= t) return { ok: false, label: '판매 종료' };
