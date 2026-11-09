@@ -16,6 +16,7 @@
   const cl = s => (typeof clean === 'function' ? clean(s) : String(s || '').trim());
   const topicOf = s => { const x = typeof lecTopic === 'function' ? lecTopic(s) : cl(s); return x === '핵심 개념' && !cl(s) ? '' : x; };
   const unit = () => { try { const c = W.CF && CF.cfg && CF.cfg[S.org.type]; if (c && c.terms && c.terms.sess) return c.terms.sess; } catch (e) { } return S && S.org && S.org.type === 'univ' ? '주차' : '차시'; };
+  const HPMx = () => (typeof HPM === 'object' && HPM) || W.HPM || null;
   const clibL = () => (S.clib = Array.isArray(S.clib) ? S.clib : []);
   const P = { /* 선 굵기가 같은 아이콘(24 격자) */
     upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>',
@@ -45,10 +46,10 @@
   const KN = Object.fromEntries(KINDS.map(x => [x.k, x]));
   const STEPS = { upload: ['파일 고르기', '확인하고 넣기'], aivideo: ['대본 확인', '만들기', '미리보기'], doc: ['주제 확인', '미리보기'], quiz: ['주제 확인', '미리보기'], assign: ['주제 확인', '미리보기'], book: ['주제 확인', '미리보기'], youtube: ['주소 붙여 넣기', '확인하고 넣기'], lib: ['고르기', '확인하고 넣기'] };
   const TYPE_KIND = it => it.type === 'video' ? (it.src === 'ai' ? 'aivideo' : it.src === 'upload' ? 'upload' : 'youtube') : it.type === 'doc' ? (it.src === 'book' ? 'book' : it.src === 'upload' ? 'upload' : 'doc') : it.type === 'exam' ? 'quiz' : it.type;
-  const TYPE_LABEL = it => ({ aivideo: 'AI 영상', upload: it.type === 'video' ? '영상' : '자료', youtube: 'YouTube', doc: '교안', book: '디지털북', quiz: it.type === 'exam' ? '시험' : '퀴즈', assign: '과제' }[TYPE_KIND(it)] || (W.ITEMX && ITEMX[it.type]) || it.type);
+  const TYPE_LABEL = it => ({ aivideo: 'AI 영상', upload: it.type === 'video' ? '영상' : '자료', youtube: 'YouTube', doc: '교안', book: '디지털북', quiz: it.type === 'exam' ? '시험' : '퀴즈', assign: '과제' }[TYPE_KIND(it)] || (typeof ITEMX === 'object' && ITEMX[it.type]) || it.type);
 
   /* ── AI 생성(Claude 있으면 Claude, 없으면 규칙) ── */
-  const claudeOn = () => { try { return !!(W.CL && CL.on('docs')); } catch (e) { return false; } };
+  const claudeOn = () => { try { return typeof CL === 'object' && !!CL.on('docs'); } catch (e) { return false; } };
   async function claudeJSON(prompt, max) {
     const r = await Promise.race([CL.call({ system: '당신은 교육 콘텐츠 작성자입니다. 한국어로, 요청한 JSON 하나만 출력합니다. 설명 문장이나 코드 블록 표시는 쓰지 않습니다.', messages: [{ role: 'user', content: prompt }], max: max || 2000 }), new Promise((_, no) => setTimeout(() => no(new Error('시간 초과')), 30000))]);
     const m = String(r.text || '').match(/[[{][\s\S]*[\]}]/); if (!m) throw new Error('형식 오류'); return JSON.parse(m[0]);
@@ -76,10 +77,11 @@
 
   /* ── 업로드 저장(C6 연결 지점) ── */
   const BLOBS = {}; /* 이 창 안 미리보기용 object URL(새로고침하면 사라짐) */
-  const upFn = () => W.crsUpload || W.mediaUpload || (W.HPMEDIA && HPMEDIA.uploadFile) || null;
+  const upFn = () => (HPMx() && typeof HPM.upload === 'function') ? ((f, o) => HPM.upload(f, { kind: 'course', name: f.name, onProgress: o && o.onProgress })) : (W.crsUpload || null);
   const FKIND = f => { const n = (f.name || '').toLowerCase(); const ty = f.type || ''; if (ty.startsWith('video') || /\.(mp4|webm|mov|m4v)$/.test(n)) return 'video'; if (ty.startsWith('audio') || /\.(mp3|m4a|wav|ogg)$/.test(n)) return 'audio'; if (ty.startsWith('image')) return 'image'; if (ty === 'application/pdf' || /\.pdf$/.test(n)) return 'pdf'; return 'file'; };
   const LIMIT = { video: 4 * 1024 ** 3, audio: 500 * 1024 ** 2, image: 30 * 1024 ** 2, pdf: 300 * 1024 ** 2, file: 300 * 1024 ** 2 };
-  const ACCEPT = 'video/*,audio/*,image/*,.pdf,.ppt,.pptx,.doc,.docx,.hwp,.hwpx,.xls,.xlsx';
+  const ACCEPT0 = 'video/*,audio/*,image/*,.pdf,.ppt,.pptx,.doc,.docx,.hwp,.hwpx,.xls,.xlsx';
+  const accept = () => { try { if (HPMx() && HPM.accept) return HPM.accept('course') || ACCEPT0; } catch (e) { } return ACCEPT0; };
   const mb = n => n >= 1024 ** 3 ? (n / 1024 ** 3).toFixed(1) + 'GB' : (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + 'MB';
 
   /* ── 창 상태 ── */
@@ -188,13 +190,13 @@
   VIEW.book = () => {
     if (X.step === 0) return { now: '주제를 확인하고 [디지털북 만들기]를 누르세요.', body: topicField('디지털북 주제', '생성형 AI로 보고서 쓰기') + chips('units', [[2, '2단원'], [3, '3단원'], [4, '4단원']], '분량'), foot: foot(pri(`${svg('spark', 18)} 디지털북 만들기`, 'ct-make')) };
     if (X.busy || !X.res) return { now: '', body: busyBox('디지털북을 만들고 있습니다…'), foot: '' };
-    const b = X.res; const nm = k => (W.BK_NAME && BK_NAME[k]) || k;
+    const b = X.res; const nm = k => (typeof BK_NAME === 'object' && BK_NAME[k]) || k;
     return { now: '단원 구성을 확인하고 넣으세요. 블록은 나중에 디지털북 화면에서 고칠 수 있습니다.', body: `${byNote(X.by)}<div class="ct-tools">${sec('다시 만들기', 'ct-make')}</div><div class="ct-book"><div class="ct-bcov" style="--bk:${E(b.color || '#5C74F6')}"><b>${E(b.title)}</b><small>${E(b.desc || '')}</small></div><ol>${b.chs.map((ch, i) => { const cnt = {}; ch.blocks.forEach(x => cnt[x.type] = (cnt[x.type] || 0) + 1); const tx = (ch.blocks.find(x => x.type === 'text') || {}).body || ''; return `<li><b>${i + 1}단원 · ${E(ch.title)}</b><p>${E(String(tx).replace(/^#.*\n?/gm, '').slice(0, 110))}…</p><small>${Object.entries(cnt).map(([k, n]) => `${E(nm(k))} ${n}`).join(' · ')}</small></li>`; }).join('')}</ol></div>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')) };
   };
 
   /* YouTube */
   VIEW.youtube = () => {
-    const id = W.ytId ? ytId(X.url || '') : ''; X.step = id ? 1 : 0; const q = X.topic || sessTitle(X.ctx) || courseName(X.ctx);
+    const id = typeof ytId === 'function' ? ytId(X.url || '') : ''; X.step = id ? 1 : 0; const q = X.topic || sessTitle(X.ctx) || courseName(X.ctx);
     const key = !!(S.settings && S.settings.yt && S.settings.yt.key);
     return { now: id ? '영상이 맞는지 확인하고 넣으세요.' : 'YouTube에서 영상 주소를 복사해 아래 칸에 붙여 넣으세요.', body: `<label class="ct-f"><span class="ct-l">YouTube 주소</span><input id="ctUrl" value="${E(X.url || '')}" inputmode="url" autocomplete="off" aria-describedby="ctUrlEx"></label><p class="ct-ex" id="ctUrlEx">예: https://youtu.be/abcdEFGhijk · 영상 아래 [공유] → [복사]로 얻습니다.</p>${X.url && !id ? '<p class="ct-err" role="alert">YouTube 주소 형식이 아닙니다. 주소 전체를 붙여 넣었는지 확인하세요.</p>' : ''}
       <div class="ct-row">${key ? sec(`${svg('spark', 18)} 「${E(q.slice(0, 20))}」 영상 찾아 주기`, 'ct-yt-find') : `<a class="ct-btn" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${encodeURIComponent(q)}">YouTube에서 「${E(q.slice(0, 20))}」 찾기</a>`}</div>
@@ -206,13 +208,13 @@
   /* 올리기 */
   VIEW.upload = () => {
     const f = X.file; const upOn = !!upFn();
-    if (!f) return { now: '올릴 파일을 고르세요. 휴대폰 사진첩 · 컴퓨터 폴더에서 고를 수 있습니다.', body: `<label class="ct-drop" id="ctDrop">${svg('upload', 40)}<b>파일 고르기</b><span>또는 이곳에 끌어다 놓기</span><input type="file" id="ctFile" accept="${ACCEPT}"></label><p class="ct-ex">올릴 수 있는 파일: 영상(MP4 · WebM, 최대 4GB) · PDF · PPT · 한글 · 워드 · 엑셀 · 사진</p>`, foot: '', after: el => { const d = $1('#ctDrop', el); ['dragover', 'dragenter'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); })); d.addEventListener('dragleave', () => d.classList.remove('over')); d.addEventListener('drop', e => { e.preventDefault(); d.classList.remove('over'); const x = e.dataTransfer.files[0]; if (x) takeFile(x); }); } };
-    const u = BLOBS[f.bid]; const k = f.k;
-    const pv = k === 'video' ? `<video controls preload="metadata" src="${u}" class="ct-media"></video>` : k === 'audio' ? `<audio controls src="${u}" class="ct-media"></audio>` : k === 'image' ? `<img src="${u}" alt="올린 사진 미리보기" class="ct-media">` : k === 'pdf' ? `<iframe src="${u}" title="PDF 미리보기" class="ct-pdf"></iframe>` : `<div class="ct-filec">${svg('doc', 40)}<b>${E(f.name)}</b><span>이 형식은 화면 미리보기가 없습니다. 학습자는 내려받아 봅니다.</span></div>`;
-    return { now: '제목을 확인하고 넣으세요.', body: `<label class="ct-f"><span class="ct-l">제목</span><input id="ctUpT" value="${E(X.upTitle)}" maxlength="80"></label><p class="ct-ex">예: ${E(unit() === '주차' ? '3주차 강의 영상' : '1차시 강의 영상')}</p>${pv}<p class="ct-mini">${E(f.name)} · ${E(mb(f.size))}${f.dur ? ` · ${Math.floor(f.dur / 60)}분 ${f.dur % 60}초` : ''}</p>${X.upErr ? `<p class="ct-err" role="alert">${E(X.upErr)}</p>` : ''}${upOn ? '' : '<div class="ct-note"><b>데모</b> 지금은 파일 이름과 크기만 저장하고, 미리보기는 이 창에서만 보입니다. 서버에 연결하면 파일이 실제로 저장됩니다.</div>'}<div class="ct-row">${sec('다른 파일 고르기', 'ct-up-again')}</div>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done', X.busy)) };
+    if (!f) return { now: '올릴 파일을 고르세요. 휴대폰 사진첩 · 컴퓨터 폴더에서 고를 수 있습니다.', body: `<label class="ct-drop" id="ctDrop">${svg('upload', 40)}<b>파일 고르기</b><span>또는 이곳에 끌어다 놓기</span><input type="file" id="ctFile" accept="${accept()}"></label><p class="ct-ex">올릴 수 있는 파일: 영상(MP4 · WebM${HPMx() ? ', 최대 1GB' : ''}) · 음성 · PDF · PPT · 한글 · 워드 · 사진</p>`, foot: '', after: el => { const d = $1('#ctDrop', el); ['dragover', 'dragenter'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); })); d.addEventListener('dragleave', () => d.classList.remove('over')); d.addEventListener('drop', e => { e.preventDefault(); d.classList.remove('over'); const x = e.dataTransfer.files[0]; if (x) takeFile(x); }); } };
+    const u0 = BLOBS[f.bid]; const k = f.k; const srcA = u0 ? `src="${u0}"` : `data-hpm-src="${E(f.url || '')}"`;
+    const pv = k === 'video' ? `<video controls preload="metadata" ${srcA} class="ct-media"></video>` : k === 'audio' ? `<audio controls ${srcA} class="ct-media"></audio>` : k === 'image' ? `<img ${srcA} alt="올린 사진 미리보기" class="ct-media">` : k === 'pdf' ? `<iframe ${srcA} title="PDF 미리보기" class="ct-pdf"></iframe>` : `<div class="ct-filec">${svg('doc', 40)}<b>${E(f.name)}</b><span>이 형식은 화면 미리보기가 없습니다. 학습자는 내려받아 봅니다.</span></div>`;
+    return { now: '제목을 확인하고 넣으세요.', body: `<label class="ct-f"><span class="ct-l">제목</span><input id="ctUpT" value="${E(X.upTitle)}" maxlength="80"></label><p class="ct-ex">예: ${E(unit() === '주차' ? '3주차 강의 영상' : '1차시 강의 영상')}</p>${pv}<p class="ct-mini">${E(f.name)} · ${E(mb(f.size))}${f.dur ? ` · ${Math.floor(f.dur / 60)}분 ${f.dur % 60}초` : ''}</p>${X.upErr ? `<p class="ct-err" role="alert">${E(X.upErr)}</p>` : ''}${upOn ? (f.url ? '' : '<p class="ct-mini">[넣기]를 누르면 파일을 저장합니다.</p>') : '<div class="ct-note"><b>데모</b> 지금은 파일 이름과 크기만 저장하고, 미리보기는 이 창에서만 보입니다. 서버에 연결하면 파일이 실제로 저장됩니다.</div>'}<div class="ct-row">${sec('다른 파일 고르기', 'ct-up-again')}</div>`, foot: X.view ? foot(pri('닫기', 'ct-close')) : foot(X.busy ? `<span class="ct-busy sm" role="status"><span class="ct-spin" aria-hidden="true"></span>올리는 중 <b id="ctUpP">0%</b></span>` : pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')), after: el => { try { HPMx() && HPM.hydrate && HPM.hydrate(el); } catch (e) { } } };
   };
   function takeFile(f) {
-    const k = FKIND(f); if (f.size > LIMIT[k]) { say(`${f.name}: ${k === 'video' ? '영상은 4GB' : '파일은 ' + mb(LIMIT[k])}까지 올릴 수 있습니다.`, 'warn'); return; }
+    const k = FKIND(f); if (HPMx() && typeof HPM.check === 'function') { try { const c = HPM.check(f); if (c && c.ok === false) { say(c.msg || '올릴 수 없는 파일입니다.', 'warn'); return; } } catch (e) { } } else if (f.size > LIMIT[k]) { say(`${f.name}: ${k === 'video' ? '영상은 4GB' : '파일은 ' + mb(LIMIT[k])}까지 올릴 수 있습니다.`, 'warn'); return; }
     const bid = nid('b'); try { BLOBS[bid] = URL.createObjectURL(f); } catch (e) { }
     X.file = { name: String(f.name).slice(0, 120), size: f.size, mime: f.type || '', k, bid, raw: f }; X.step = 1; X.upErr = '';
     X.upTitle = sessTitle(X.ctx) && !/^\d+\s*(차시|주차|주)$/.test(sessTitle(X.ctx)) ? `${sessTitle(X.ctx)} ${k === 'video' ? '영상' : '자료'}` : String(f.name).replace(/\.[^.]+$/, '').slice(0, 60);
@@ -221,8 +223,8 @@
   }
   async function upItem() {
     const f = X.file; const fn = upFn(); let meta = {};
-    if (fn) { X.busy = true; draw(); try { meta = (await fn(f.raw, { kind: f.k, course: X.ctx.course && X.ctx.course.id })) || {}; } catch (e) { X.busy = false; X.upErr = `올리지 못했습니다: ${e.message || e}`; draw(); return null; } X.busy = false; }
-    const name = meta.name || f.name; const url = meta.fileId ? 'media:' + meta.fileId : meta.url || 'upload:' + name;
+    if (fn) { X.busy = true; draw(); try { meta = (await fn(f.raw, { kind: f.k, course: X.ctx.course && X.ctx.course.id, onProgress: p => { const b = $1('#ctUpP'); if (b) b.textContent = Math.round(p * 100) + '%'; } })) || {}; } catch (e) { X.busy = false; X.upErr = `올리지 못했습니다: ${e.message || e}`; draw(); return null; } X.busy = false; }
+    const name = meta.name || f.name; const url = meta.url || (meta.fileId ? 'media:' + meta.fileId : 'upload:' + name);
     const isV = f.k === 'video' || f.k === 'audio';
     const lib = { id: nid('l'), name: name.slice(0, 80), kind: isV ? '동영상' : f.k === 'image' ? '사진' : '문서', size: mb(f.size), bytes: f.size, used: 0, cls: [], at: today(), views: 0, drop: 0, conv: isV ? '대기' : '', fileId: meta.fileId || '', url: meta.url || '' };
     if (f.dur) lib.dur = f.dur; if (Array.isArray(S.lib)) S.lib.unshift(lib);
@@ -231,7 +233,7 @@
 
   /* 라이브러리에서 */
   const libAll = () => {
-    const out = []; try { if (W.CLIB && typeof CLIB.all === 'function') { (CLIB.all() || []).forEach(r => out.push(normLib(r))); return out.filter(Boolean); } } catch (e) { }
+    const out = []; try { if (typeof CLIB === 'object' && typeof CLIB.all === 'function') { (CLIB.all() || []).forEach(r => out.push(normLib(r))); return out.filter(Boolean); } } catch (e) { }
     clibL().forEach(r => out.push({ id: 'c:' + r.id, rec: r, kind: r.kind, title: r.title, sub: '라이브러리 콘텐츠', at: r.at }));
     (S.lib || []).forEach(l => out.push({ id: 'l:' + l.id, asset: l, kind: l.kind === '동영상' ? 'upload' : l.kind === 'YouTube' ? 'youtube' : 'upload', title: l.name, sub: `${l.kind}${l.size ? ' · ' + l.size : ''}`, at: l.at }));
     S.classes.forEach(c => (c.curriculum || []).forEach(it => { if (['chapter', 'live', 'offline', 'survey'].includes(it.type)) return; if (X && X.ctx.course && X.ctx.course.id === c.id) return; out.push({ id: 'i:' + c.id + ':' + it.id, item: it, kind: TYPE_KIND(it), title: it.title, sub: `${c.name}에서 사용 중`, at: '' }); }));
@@ -244,7 +246,7 @@
     const L = libAll(); const f = X.lf || 'all'; const q = (X.lq || '').trim(); const R = L.filter(x => lfOk(f, x.kind) && (!q || String(x.title).includes(q))).slice(0, 80);
     if (!L.length) return { now: '', body: `<div class="ct-empty">${svg('lib', 40)}<b>아직 라이브러리에 콘텐츠가 없습니다</b><span>여기서 바로 만들어 넣을 수 있습니다.</span><div class="ct-row">${sec('교안 만들기', 'ct-switch', 'data-v="doc"')}${sec('AI 강의 영상 만들기', 'ct-switch', 'data-v="aivideo"')}</div></div>`, foot: '' };
     X.step = X.pick ? 1 : 0;
-    return { now: '넣을 콘텐츠를 하나 고르세요.', body: `<div class="ct-chips one" role="tablist" aria-label="종류">${LF.map(([k, l]) => `<button type="button" role="tab" aria-selected="${f === k}" class="ct-chip ${f === k ? 'on' : ''}" data-act="ct-lf" data-v="${k}">${E(l)}</button>`).join('')}</div><label class="ct-f ct-srch"><span class="ct-l">찾기</span><input id="ctLq" value="${E(X.lq || '')}" autocomplete="off"></label><ul class="ct-ll" role="listbox" aria-label="라이브러리 콘텐츠">${R.map(x => `<li><button type="button" role="option" aria-selected="${X.pick === x.id}" class="${X.pick === x.id ? 'on' : ''}" data-act="ct-lpick" data-v="${E(x.id)}"><span class="ct-kic k-${E(x.kind)}">${svg(KN[x.kind] ? x.kind : 'doc', 20)}</span><span class="ct-lt"><b>${E(x.title)}</b><small>${E((KN[x.kind] || {}).name ? TYPE_LABEL(x.item || recToItem(x.rec || {}) || {}) : '')}${x.sub ? ' · ' + E(x.sub) : ''}</small></span>${X.pick === x.id ? svg('check', 20) : ''}</button></li>`).join('') || '<li class="ct-mini">찾는 콘텐츠가 없습니다.</li>'}</ul>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done', !X.pick)) };
+    return { now: '넣을 콘텐츠를 하나 고르세요.', body: `<div class="ct-chips one" role="tablist" aria-label="종류">${LF.map(([k, l]) => `<button type="button" role="tab" aria-selected="${f === k}" class="ct-chip ${f === k ? 'on' : ''}" data-act="ct-lf" data-v="${k}">${E(l)}</button>`).join('')}</div><label class="ct-f ct-srch"><span class="ct-l">찾기</span><input id="ctLq" value="${E(X.lq || '')}" autocomplete="off"></label><ul class="ct-ll" role="listbox" aria-label="라이브러리 콘텐츠">${R.map(x => `<li><button type="button" role="option" aria-selected="${X.pick === x.id}" class="${X.pick === x.id ? 'on' : ''}" data-act="ct-lpick" data-v="${E(x.id)}"><span class="ct-kic k-${E(x.kind)}">${svg(KN[x.kind] ? x.kind : 'doc', 20)}</span><span class="ct-lt"><b>${E(x.title)}</b><small>${E([x.asset ? '' : TYPE_LABEL(x.item || recToItem(x.rec) || {}), x.sub].filter(Boolean).join(' · '))}</small></span>${X.pick === x.id ? svg('check', 20) : ''}</button></li>`).join('') || '<li class="ct-mini">찾는 콘텐츠가 없습니다.</li>'}</ul>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done', !X.pick)) };
   };
   function libItem() {
     const x = libAll().find(y => y.id === X.pick); if (!x) return null;
@@ -299,7 +301,7 @@
     if (ctx.week != null) it.week = +ctx.week || ctx.week;
     if (ctx.from === 'lib' && !ctx.course) { /* 단독 콘텐츠 */
       const r = itemToRec(it); delete r.bookObj; if (it._book) { try { lsEnsure(); bkL().push(it._book); r.book = it._book.id; } catch (e) { } } if (it._rb) { if (!Array.isArray(S.rubrics)) S.rubrics = []; S.rubrics.push(it._rb); r.rb = it._rb; }
-      let added = null; try { if (W.CLIB && typeof CLIB.add === 'function') added = CLIB.add(r); } catch (e) { } if (!added) clibL().unshift(r);
+      let added = null; try { if (typeof CLIB === 'object' && typeof CLIB.add === 'function') added = CLIB.add(r); } catch (e) { } if (!added) clibL().unshift(r);
       const fin = (added && added.id) ? added : r;
       try { logAudit(`콘텐츠 라이브러리 추가 — ${r.title}`); } catch (e) { } keep(); X.done = fin; X.fromRec = fin;
       try { ctx.onDone && ctx.onDone(fin); } catch (e) { }
@@ -334,9 +336,9 @@
   /* ── 버튼 동작 ── */
   const A = {
     'ct-close': () => close(), 'ct-back': () => { if (!X) return; if (X.kind === 'aivideo' && X.step === 2) X.step = 0; else if (X.kind === 'upload' && X.step === 1) { X.file = null; X.step = 0; } else if (X.kind === 'lib') X.pick = ''; else if (X.kind === 'youtube') X.url = ''; else X.step = Math.max(0, X.step - 1); X.edit = false; draw(); },
-    'ct-aifill': () => { const st = sessTitle(X.ctx), cn = courseName(X.ctx); const g = /^\d+\s*(차시|주차|주)$/.test(st); X.topic = topicOf(cn && st && !g && !st.includes(cn) ? `${cn} ${st}` : (st && !g ? st : cn)) || X.topic || '핵심 개념'; draw(); say('주제를 채웠습니다. 그대로 두거나 고쳐 쓰세요.', 'ok'); },
+    'ct-aifill': () => { const st = sessTitle(X.ctx), cn = courseName(X.ctx); const g = /^\d+\s*(차시|주차|주)$/.test(st); X.topic = topicOf(cn && st && !g && !st.includes(cn) ? `${cn} ${st}` : (st && !g ? st : cn)) || X.topic || cl((S.classes[0] || {}).name) || '핵심 개념'; draw(); say('주제를 채웠습니다. 그대로 두거나 고쳐 쓰세요.', 'ok'); },
     'ct-opt': el => { const k = el.dataset.k; X[k] = isNaN(+el.dataset.v) ? el.dataset.v : +el.dataset.v; if (k === 'mins' && X.kind === 'aivideo') return A['ct-make'](); draw(); },
-    'ct-make': async () => { if (!X || X.busy) return; const tp = (X.topic || '').trim() || seedTopic(X.ctx) || '핵심 개념'; X.topic = tp; X.busy = true; X.edit = false; if (X.kind !== 'aivideo') X.step = 1; draw();
+    'ct-make': async () => { if (!X || X.busy) return; const tp = (X.topic || '').trim() || seedTopic(X.ctx); if (!tp) { const n = $1('#ctTopic'); if (n) { n.setAttribute('aria-invalid', 'true'); n.focus(); } say('주제를 한 줄 적어 주세요. 예처럼 짧게 써도 됩니다.', 'warn'); return; } X.topic = tp; X.busy = true; X.edit = false; if (X.kind !== 'aivideo') X.step = 1; draw();
       const r = await GEN[X.kind](tp, { mins: +X.mins || 5, n: +X.n || 5, lv: X.lv, n2: X.units, cname: courseName(X.ctx), target: (X.ctx.target || '') , ...(X.kind === 'book' ? { n: +X.units || 3 } : {}) }); if (!X) return; X.res = r.v; X.by = r.by; X.busy = false; draw(); },
     'ct-done': () => done(),
     'ct-doc-edit': () => { X.edit = !X.edit; draw(); },
@@ -380,14 +382,14 @@
     if (!SS.length) { el.innerHTML = `<div class="ctf"><div class="ct-empty">${svg('doc', 40)}<b>${U} 목록이 아직 없습니다</b><span>[이전]으로 돌아가 ${U} 목록을 먼저 만드세요. 비워 두고 나중에 넣어도 됩니다.</span></div></div>`; return; }
     const has = w => IT.filter(x => +x.week === w);
     if (F.open == null || !SS.some(s => s.w === F.open)) { const e1 = SS.find(s => !has(s.w).length); F.open = e1 ? e1.w : (F.open === 0 ? 0 : SS[0].w); }
-    const filled = SS.filter(s => has(s.w).length).length;
-    el.innerHTML = `<div class="ctf"><div class="ctf-top"><div class="ctf-sum"><b>${filled} / ${SS.length}</b><span>${U} 채움</span><span class="ctf-later">나중에 해도 돼요</span></div><button type="button" class="ct-btn ct-ai" data-act="ctf-all" ${filled === SS.length ? 'disabled' : ''}>${svg('spark', 18)} AI SAM이 빈 ${U} 모두 채우기</button></div>
+    const filled = SS.filter(s => has(s.w).length).length; const inFlow = !!el.closest('#crsFlow');
+    el.innerHTML = `<div class="ctf"><div class="ctf-top"><div class="ctf-sum"><b>${filled} / ${SS.length}</b><span>${U} 채움</span><span class="ctf-later">나중에 해도 돼요</span></div>${inFlow && !W.CT_FILLBTN ? '' : `<button type="button" class="ct-btn ct-ai" data-act="ctf-all" ${filled === SS.length ? 'disabled' : ''}>`}${inFlow && !W.CT_FILLBTN ? '' : `${svg('spark', 18)} AI SAM이 빈 ${U} 모두 채우기</button>`}</div>
       ${F.undo ? `<div class="ctf-undo" role="status">${E(F.undo.msg)}<button type="button" class="ct-btn sm" data-act="ctf-undo">${svg('undo', 16)} 되돌리기</button></div>` : ''}
       <ol class="ctf-list">${SS.map(s => { const its = has(s.w); const on = F.open === s.w; return `<li class="ctf-s ${on ? 'on' : ''} ${its.length ? 'has' : ''}" data-w="${s.w}"><button type="button" class="ctf-sh" data-act="ctf-open" data-v="${s.w}" aria-expanded="${on}"><span class="ctf-n">${its.length ? svg('check', 18) : s.w}</span><span class="ctf-tt"><b>${s.w}${U === '주차' ? '주차' : U} · ${E(s.title)}</b><small>${its.length ? its.map(x => E(TYPE_LABEL(x))).join(' · ') : '비어 있음'}</small></span>${svg('chev', 20)}</button>
         ${on ? `<div class="ctf-body">${its.length ? `<ul class="ctf-its">${its.map(x => `<li><span class="ct-kic k-${E(TYPE_KIND(x))}">${svg(KN[TYPE_KIND(x)] ? TYPE_KIND(x) : 'doc', 18)}</span><span class="ct-lt"><b>${E(x.title)}</b><small>${E(TYPE_LABEL(x))}</small></span><button type="button" class="ct-btn sm" data-act="ctf-view" data-v="${E(x.id)}">보기</button><button type="button" class="ct-icb sm" data-act="ctf-del" data-v="${E(x.id)}" aria-label="「${E(x.title)}」 빼기">${svg('trash', 18)}</button></li>`).join('')}</ul>` : ''}
           <p class="ctf-q">${its.length ? '더 넣을 콘텐츠가 있으면 고르세요' : `이 ${U}에 넣을 콘텐츠를 고르세요`}</p><div class="ct-kinds">${kindCards(s.w)}</div></div>` : ''}</li>`; }).join('')}</ol></div>`;
   }
-  const kindCards = (w, lib) => KINDS.filter(k => !(lib && k.k === 'lib')).map(k => `<button type="button" class="ct-kind" data-act="ct-kind" data-k="${k.k}" ${w != null ? `data-w="${w}"` : ''}><span class="ct-kic k-${k.k}">${svg(k.k, 24)}</span><b>${E(k.name)}</b><small>${E(k.one)}</small><em>${E(k.time)}</em></button>`).join('');
+  const kindCards = (w, lib) => KINDS.filter(k => !(lib && k.k === 'lib')).map(k => `<button type="button" class="ct-kind" data-act="ct-kind" data-ct="${k.k}" data-k="${k.k}" ${w != null ? `data-w="${w}"` : ''}><span class="ct-kic k-${k.k}">${svg(k.k, 24)}</span><b>${E(k.name)}</b><small>${E(k.one)}</small><em>${E(k.time)}</em></button>`).join('');
   const refill = () => { if (F && F.el && F.el.isConnected) renderFill(F.el, F.d); };
   function openFromFill(kind, w) { const d = F.d; const s = sessOf(d).find(x => x.w === w) || { w, title: '' };
     open(kind, { from: 'flow', course: draftCourse(d), week: w, title: s.title, sess: s, target: d.target || '', onDone: it => { if (d.classId && typeof C === 'function' && C(d.classId)) { /* 이미 생성된 과정이면 settle 끝 */ } else settle(it, null); it.week = w; itemsOf(d).push(it); const nx = sessOf(d).find(x => x.w > w && !itemsOf(d).some(y => +y.week === x.w)); F.open = nx ? nx.w : w; F.undo = null; saveDraft(); refill(); say(`${w}${unit()}에 「${it.title}」을(를) 넣었습니다.`, 'ok'); try { W.CF && CF.emit && CF.emit('ct-add', it); } catch (e) { } } }); }
@@ -405,9 +407,11 @@
     try { if (S.ai) S.ai.usage = (S.ai.usage || 0) + (s ? 1 : 0); } catch (e) { } return s ? { s, ids } : 0; }
 
   /* 넣은 콘텐츠 보기(읽기 전용) */
-  function preview(it, c) { const k = TYPE_KIND(it); if (k === 'aivideo' && it.ai?.scenes?.length) { try { aiPlayer(it.title, it.ai.scenes, it.ai.voice || 'f'); } catch (e) { } return; }
-    open(k === 'upload' || k === 'lib' ? 'doc' : k, { from: 'flow', course: c, week: it.week, title: it.title, item: it, onDone: n => { const L = c.curriculum || []; const i = L.findIndex(x => x.id === it.id); if (i >= 0) { n.id = it.id; n.week = it.week; L[i] = n; saveDraft(); refill(); } } });
-    if (k === 'youtube' || k === 'upload') { X.url = it.url; if (k === 'upload') { X.kind = 'doc'; close(); const u = it.url && /^https?:/.test(it.url) ? it.url : ''; say(u ? '새 창에서 엽니다.' : `${it.file || it.title} — 파일 이름만 저장된 데모 항목입니다.`); if (u) window.open(u, '_blank', 'noopener'); return; } X.kind = 'youtube'; draw(); } }
+  function preview(it, c) { const k = TYPE_KIND(it);
+    if (k === 'aivideo' && it.ai?.scenes?.length) { try { aiPlayer(it.title, it.ai.scenes, it.ai.voice || 'f'); } catch (e) { } return; }
+    const repl = n => { const L = c.curriculum || []; const i = L.findIndex(x => x.id === it.id); if (i >= 0) { n.id = it.id; n.week = it.week; L[i] = n; saveDraft(); refill(); } };
+    if (k === 'upload') { open('upload', { from: 'flow', course: c, week: it.week, title: it.title, item: it, onDone: repl }); const ext = String(it.file || '').toLowerCase(); X.file = { name: it.file || it.title, size: +it.size || 0, mime: it.mime || '', k: it.type === 'video' ? (/^audio/.test(it.mime || '') ? 'audio' : 'video') : /pdf$/.test(ext) || it.mime === 'application/pdf' ? 'pdf' : /^image/.test(it.mime || '') ? 'image' : 'file', bid: it.prev || '', url: /^upload:/.test(it.url || '') ? '' : it.url, dur: it.dur || 0 }; X.upTitle = it.title; X.step = 1; X.view = true; draw(); return; }
+    open(k, { from: 'flow', course: c, week: it.week, title: it.title, item: it, onDone: repl }); if (k === 'youtube') { X.url = it.url; X.yt = it.yt || null; draw(); } }
 
   /* 종류 고르기 시트(라이브러리 · 과정 상세에서 '새 콘텐츠') */
   let PK = null;
@@ -429,11 +433,19 @@
   function hookCF() { if (hooked || !W.CF) return; try {
     const st = Array.isArray(CF.steps) ? CF.steps.find(s => s.id === 'fill') : null;
     if (st) { st.render = (el, d) => renderFill(el, d); if (!st.aiFill) st.aiFill = d => Promise.resolve(fillAll(d)); if (!st.valid) st.valid = () => []; }
-    if (typeof CF.on === 'function') CF.on('create', c => linkCreated(c)); hooked = true; } catch (e) { } }
+    if (typeof CF.on === 'function') CF.on('create', x => linkCreated(x && x.course ? x.course : x)); hooked = true; } catch (e) { } }
   hookCF(); document.addEventListener('DOMContentLoaded', hookCF); setTimeout(hookCF, 0);
 
   /* 저장 데이터 */
   if (typeof upgradeState === 'function') { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); if (S && !Array.isArray(S.clib)) S.clib = []; return r; }; } /* eslint-disable-line no-global-assign */
+
+  /* 학습자 게시본: AI 교안 본문 · AI 강의 장면 · 올린 파일 주소를 항목에 싣는다(학습자 화면 표시는 별도) */
+  if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); try { (r.classes || []).forEach(x => { const c = typeof C === 'function' ? C(x.id) : null; if (!c) return;
+    (x.items || []).forEach(y => { const it = (c.curriculum || []).find(z => z.id === y.id); if (!it) return; if (it.src) y.src = it.src;
+      if (it.src === 'upload' || it.src === 'library') { ['url', 'fileId', 'mime', 'file'].forEach(k => { if (it[k] && !/^upload:/.test(String(it[k])) || k === 'file') if (it[k]) y[k] = String(it[k]).slice(0, 300); }); }
+      if (it.doc && (it.doc.secs || []).length) { const D = it.doc; y.doc = { goals: (D.goals || []).slice(0, 8).map(g => String(g).slice(0, 200)), secs: D.secs.slice(0, 12).map(q => ({ h: String(q.h || '').slice(0, 120), body: String(q.body || '').slice(0, 1500), pts: (q.pts || []).slice(0, 8).map(p => String(p).slice(0, 200)) })), act: String(D.act || '').slice(0, 1500), check: (D.check || []).slice(0, 8).map(q => String(q).slice(0, 300)) }; if (it.fmt) y.fmt = it.fmt; }
+      if (it.src === 'ai' && it.ai && (it.ai.scenes || []).length) y.ai = { scenes: it.ai.scenes.slice(0, 16).map(q => ({ h: String(q.h || '').slice(0, 120), pts: (q.pts || []).slice(0, 6).map(p => String(p).slice(0, 160)), say: String(q.say || '').slice(0, 800) })), voice: it.ai.voice || 'f' };
+      if (it.book) y.book = it.book; }); }); } catch (e) { console.error('crs-content snap', e); } return r; }; }
 
   /* ── 스타일(이 파일 안에서 주입: 디자인 토큰 dds.css 값을 따른다) ── */
   function injectCSS() { if (document.getElementById('ctCss')) return; const s = document.createElement('style'); s.id = 'ctCss'; s.textContent = CSS; document.head.appendChild(s); }
@@ -463,6 +475,7 @@ body:has(#slSheet) .ct-wrap{z-index:97}
 .ct-by{display:inline-block;font-size:14px;color:#6C6C6C;background:#F6F7F7;border-radius:6px;padding:4px 10px;margin:0 0 4px}.ct-by.c{color:#006ABF;background:#E3F3FC}
 .ct-note{background:#FFF3E0;border-radius:10px;padding:10px 14px;font-size:15px;line-height:1.55;margin:0 0 12px}.ct-note b{margin-right:6px;color:#EF6D00}
 .ct-busy{display:flex;align-items:center;justify-content:center;gap:12px;padding:40px 10px;font-size:17px;color:#4C4D4D;flex-wrap:wrap}.ct-spin{width:26px;height:26px;border-radius:50%;border:3px solid #EAEDFF;border-top-color:#5C74F6;animation:ctspin .8s linear infinite}@keyframes ctspin{to{transform:rotate(360deg)}}
+.ct-busy.sm{padding:0;font-size:16px;flex:1;justify-content:flex-end}
 @media (prefers-reduced-motion:reduce){.ct-spin{animation:none}}
 .ct-a4{background:#fff;border:1px solid #EAEBEB;box-shadow:0 2px 10px rgba(0,0,0,.06);border-radius:4px;padding:36px 40px;max-width:640px;margin:0 auto;min-height:420px;line-height:1.7;word-break:keep-all;font-size:15px}
 .ct-a4 header{border-bottom:3px solid #2A2B2B;padding-bottom:10px;margin-bottom:16px}.ct-a4 header small{color:#6C6C6C;font-size:13px}.ct-a4 h1{font-size:23px;margin:4px 0 0;line-height:1.35}
@@ -502,5 +515,5 @@ body:has(#slSheet) .ct-wrap{z-index:97}
 `;
 
   /* ── 내보내기 ── */
-  W.CT = { open, pick, close: () => close(), kinds: KINDS.map(k => ({ ...k, icon: svg(k.k, 24) })), renderFill, fillAll, toCourse, toItem: recToItem, toRec: itemToRec, preview, link: linkCreated, hook: hookCF, steps: STEPS, gen: GEN };
+  W.CT = { open, pick, close: () => close(), kinds: KINDS.map(k => ({ ...k, icon: svg(k.k, 24) })), renderFill, fillAll, aiFill: d => { try { W.CF && CF.snap && CF.snap('AI SAM이 채우기 전'); } catch (e) { } const r = fillAll(d); refill(); return r; }, toCourse, toItem: recToItem, toRec: itemToRec, preview, link: linkCreated, hook: hookCF, steps: STEPS, gen: GEN };
 })();
