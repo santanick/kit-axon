@@ -179,7 +179,7 @@
     const mm = s.match(/^(.{1,20}?)\s*(메뉴|탭)\s*(을|를|도|만)?\s*(다시\s*)?(켜|꺼|끄|보이|숨|추가|빼|없애|열어\s*둬|살려)/);
     if (mm) { if (teacher()) return { text: `${t('teacher')} 권한으로는 메뉴를 바꿀 수 없습니다.` }; const on = /(켜|보이|추가|열어|살려)/.test(mm[5]); const k = norm(mm[1]); const T = tabsAll();
       const hit = T.find(x => norm(mlabel(x.id)) === k) || T.find(x => norm(mlabel(x.id)).includes(k) || k.includes(norm(mlabel(x.id)))) || T.find(x => norm((typeof slimMD === 'function' ? slimMD(x.id)[0] : '')).includes(k));
-      if (!hit) return { text: `「${mm[1]}」 메뉴를 찾지 못했습니다. [메뉴 추가]에서 이름을 확인해 주세요.`, go: 'more' };
+      if (!hit) return { text: `「${mm[1]}」 메뉴를 찾지 못했습니다. 설정 › 메뉴에서 이름을 확인해 주세요.`, go: 'more' };
       if (hit.on === on) return { text: `'${mlabel(hit.id)}' 메뉴는 이미 ${on ? '켜져' : '꺼져'} 있습니다.` };
       slMenuSet(hit.id, on); setTimeout(render, 0); return { title: `'${mlabel(hit.id)}' 메뉴를 ${on ? '켰습니다' : '껐습니다'}`, text: on ? '왼쪽 메뉴에 생겼습니다. 끈 메뉴의 데이터는 지워지지 않습니다.' : '데이터는 그대로 남아 있고, 다시 켜면 바로 보입니다.', btn: undoBtn(() => slMenuSet(hit.id, !on)), via: 'AI SAM 설정' }; }
     /* 연결 — 키 · 토큰은 대화창에서 받지 않는다(연결 시트에서만 입력) */
