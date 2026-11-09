@@ -102,7 +102,7 @@ const BROCHURE = { name: 'brochure.txt', mimeType: 'text/plain', buffer: Buffer.
     await frameReady(); await page.waitForSelector('#hpiImg .hpi-pv img');
     await page.click('#hpiImg [data-hpi-i="fit"][data-v="contain"]'); await page.waitForFunction(() => ((site().img || {}).hero || {}).fit === 'contain'); await page.waitForSelector('#hpiImg .hpi-pv img'); await wait(350);
     /* v34.5 FZ(FIXLIST 21): 맞춤을 바꾸면 패널이 다시 그려진다 — 부하가 크면 350ms 안에 끝나지 않아 옛 상자 좌표로 끌어 초점이 100% 100%가 되거나 상자가 null이었다 */
-    const pv = await page.$('#hpiImg .hpi-pv'); const bx = await pv.boundingBox(); await page.mouse.move(bx.x + bx.width * .5, bx.y + bx.height * .5); await page.mouse.down(); await page.mouse.move(bx.x + bx.width * .2, bx.y + bx.height * .3, { steps: 4 }); await page.mouse.up(); await wait(400);
+    /* v36: 편집기 다시 그리기가 겹치면 패널이 한 번 더 그려진다 — 상자가 잡힐 때까지 기다린다 */ let bx = null; for (let k = 0; k < 10 && !bx; k++) { await wait(200); const pv = await page.$('#hpiImg .hpi-pv'); bx = pv && await pv.boundingBox().catch(() => null); } await wait(250); { const pv = await page.$('#hpiImg .hpi-pv'); bx = (pv && await pv.boundingBox().catch(() => null)) || bx; } await page.mouse.move(bx.x + bx.width * .5, bx.y + bx.height * .5); await page.mouse.down(); await page.mouse.move(bx.x + bx.width * .2, bx.y + bx.height * .3, { steps: 4 }); await page.mouse.up(); await wait(400);
     await page.fill('#hpiImg [data-hpi-i="alt"]', '저녁 강의실 모습'); await page.press('#hpiImg [data-hpi-i="alt"]', 'Tab'); await wait(400);
     hero = await ev(() => (site().img || {}).hero || {}); ok('맞춤(전체) · 초점 끌기 · 대체 텍스트', hero.fit === 'contain' && /^2\d% 3\d%$/.test(hero.pos || '') && hero.alt === '저녁 강의실 모습', { fit: hero.fit, pos: hero.pos, alt: hero.alt });
     await frameReady(); const fimg = await ev(() => { const im = document.getElementById('hpeF').contentDocument.querySelector('.hp-photo img'); return im ? [im.style.objectFit, im.style.objectPosition, im.alt] : null; });
@@ -210,7 +210,8 @@ const BROCHURE = { name: 'brochure.txt', mimeType: 'text/plain', buffer: Buffer.
       await page.click('#hpiImg [data-hpi-i="x"]').catch(() => { }); await ev(() => { delete site().layout; save(); hpPaint(); }); await frameReady();
     }
     /* 저장 공간 한도: 저장이 실패하면 되돌리고 안내 */
-    await ev(() => { hpEdit('home'); }); await frameReady();
+    /* v36: 편집기는 본문 자리에 붙고 AI SAM 창이 그 위에 뜬다 — 앞 단계에서 연 AI SAM 창을 닫고 캔버스를 누른다 */
+    await ev(() => { if (typeof fabClose === 'function') try { fabClose(); } catch (e) { } hpEdit('home'); }); await frameReady();
     const b0 = await ev(() => { window.__toast = []; const t0 = toast; window.toast = (m, k) => { window.__toast.push(m); return t0(m, k); }; window.__si = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (k === KEY && String(v).length > 1000) { const e = new Error('quota'); e.name = 'QuotaExceededError'; throw e; } return window.__si.call(this, k, v); }; return site().sections.find(x => x.type === 'banner').data.img.length; });
     await F().locator('.hp-hero [data-hpi-img]').first().dblclick(); await page.waitForSelector('#hpiImg', { state: 'visible' }); await page.setInputFiles('#hpiImg [data-hpi-i="file"]', LOGO); await wait(900);
     const qv = await ev(b => { Storage.prototype.setItem = window.__si; return { same: site().sections.find(x => x.type === 'banner').data.img.length === b, msg: window.__toast.some(m => /저장 공간/.test(m)) }; }, b0);
