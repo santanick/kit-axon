@@ -79,7 +79,7 @@ AFTER.push(cur => { if (!S || !S.org) return; const T = typeof scn === 'function
 /* ── ⑥ 보고서 내려받기(한글 · Word에서 열리는 .doc) ── */
 const SEG_REP = { corp: '부서별 교육 이수 현황 보고', univ: '사업단 교육 운영 실적 보고(비교과 · 진단 · 배지)', public: '교육 운영 실적 보고(결재용)' };
 function segReport() {
-  const ty = S.org.type; const L = S.classes.filter(c => c.learners.length); const done = c => c.learners.filter(id => (c.prog[id]?.p || 0) >= (c.criteria?.threshold || 80)).length;
+  const ty = S.org.type; const L = S.classes.filter(c => c.learners.length); const done = c => doneN(c);
   const all = L.reduce((a, c) => a + c.learners.length, 0), fin = L.reduce((a, c) => a + done(c), 0); const avg = all ? Math.round(L.reduce((a, c) => a + c.learners.reduce((x, id) => x + (c.prog[id]?.p || 0), 0), 0) / all) : 0;
   const lg = S.classes.filter(c => c.legal); const lgAll = lg.reduce((a, c) => a + c.learners.length, 0), lgFin = lg.reduce((a, c) => a + c.learners.filter(id => (c.prog[id]?.p || 0) >= 100).length, 0);
   const grp = S.groups.map(g => { const ids = new Set(S.members.filter(m => m.group === g.id).map(m => m.id)); let n = 0, f = 0, p = 0; L.forEach(c => c.learners.filter(id => ids.has(id)).forEach(id => { n++; p += c.prog[id]?.p || 0; if ((c.prog[id]?.p || 0) >= (c.criteria?.threshold || 80)) f++; })); return [g.name, ids.size, n ? Math.round(p / n) : 0, f, n ? Math.round(f / n * 100) : 0]; });

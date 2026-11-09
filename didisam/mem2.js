@@ -514,12 +514,12 @@ function mbBkOut() { const B = MB_BK; const out = $('#mbBkOut'); if (!out) retur
 `;
   const mf = $('#modal .mf'); if (mf) { let b = mf.querySelector('[data-act="mb-bulkrun"]'); if (!b) { mf.insertAdjacentHTML('beforeend', '<button type="button" class="btn pri" data-act="mb-bulkrun"></button>'); b = mf.lastElementChild; } b.disabled = !B.ok.length; b.textContent = B.ok.length ? `${B.ok.length.toLocaleString()}명 등록하기` : '등록할 행이 없습니다'; } }
 ACT['mem-bulk'] = () => { mbEnsure(); if (mbUniv()) { toast('대학은 학번 등록(접근코드 발급)으로 안내합니다.'); go('enroll'); return; } MB_BK = null;
-  modal('엑셀로 일괄 등록', `<div class="mbk"><p class="mini">엑셀에서 <b>CSV UTF-8</b>로 저장한 파일을 올리세요. 한 번에 <b>최대 ${MB_BULK_MAX.toLocaleString()}명</b>, 5MB 이하. 열: <b>이메일 · 이름</b>(필수), ${esc(t('group'))} · 연락처 · 추가 질문(선택). 비밀번호는 받지 않습니다.</p>
-    <label class="mbk-drop"><input type="file" accept=".csv,.txt,text/csv" id="mbBkF"><span>${ic('doc' in IC ? 'doc' : 'book', 22)}<b>CSV 파일 고르기</b><small>또는 여기로 끌어다 놓기</small></span></label>
+  modal('엑셀로 일괄 등록', `<div class="mbk"><p class="mini">엑셀 파일(.xlsx)을 그대로 올리거나 CSV로 올리세요. 한 번에 <b>최대 ${MB_BULK_MAX.toLocaleString()}명</b>, 5MB 이하. 열: <b>이메일 · 이름</b>(필수), ${esc(t('group'))} · 연락처 · 추가 질문(선택). 비밀번호는 받지 않습니다.</p>
+    <label class="mbk-drop"><input type="file" accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="mbBkF"><span>${ic('doc' in IC ? 'doc' : 'book', 22)}<b>엑셀 · CSV 파일 고르기</b><small>또는 여기로 끌어다 놓기</small></span></label>
     <div class="bar2"><button type="button" class="btn sm ghost" data-act="bulk-tpl">양식 내려받기</button></div><div id="mbBkOut" aria-live="polite"></div></div>`, [{ id: 'c', label: '닫기' }], true); };
 ACT['bulk-tpl'] = () => { const Q = S.settings.acct ? S.settings.acct.extraQ.map(x => x.q) : S.settings.extraQ; downloadCSV(`${t('learner')}_일괄등록_양식.csv`, ['이메일', '이름', '닉네임(선택)', t('group'), '연락처(선택)', ...Q], [['hong@example.com', '홍길동', '', (S.groups[0] || {}).name || '', '', ...Q.map(() => '')]]); };
-const mbBkFile = f => { const out = $('#mbBkOut'); if (!f || !out) return; if (!/\.(csv|txt)$/i.test(f.name) || f.size > 5 * 1024 * 1024) { MB_BK = { err: 'CSV 파일(5MB 이하)만 올릴 수 있습니다. 엑셀에서 [다른 이름으로 저장 › CSV UTF-8]을 고르세요.' }; mbBkOut(); return; }
-  out.innerHTML = '<p class="mini">검사하는 중…</p>'; f.text().then(txt => { const t0 = performance.now(); MB_BK = mbBulkParse(txt); MB_BK.ms = Math.round(performance.now() - t0); mbBkOut(); }); };
+const mbBkFile = f => { const out = $('#mbBkOut'); if (!f || !out) return; if (!/\.(csv|txt|xlsx)$/i.test(f.name) || f.size > 5 * 1024 * 1024) { MB_BK = { err: '엑셀(.xlsx) 또는 CSV 파일(5MB 이하)만 올릴 수 있습니다.' }; mbBkOut(); return; }
+  out.innerHTML = '<p class="mini">검사하는 중…</p>'; (window.XLSX36 && XLSX36.fileText ? XLSX36.fileText(f) : f.text()).catch(() => '').then(txt => { const t0 = performance.now(); MB_BK = mbBulkParse(txt); MB_BK.ms = Math.round(performance.now() - t0); mbBkOut(); }); };
 document.addEventListener('change', e => { if (e.target && e.target.id === 'mbBkF') mbBkFile(e.target.files[0]); });
 document.addEventListener('dragover', e => { const d = e.target.closest && e.target.closest('.mbk-drop'); if (d) { e.preventDefault(); d.classList.add('on'); } });
 document.addEventListener('dragleave', e => { const d = e.target.closest && e.target.closest('.mbk-drop'); if (d) d.classList.remove('on'); });

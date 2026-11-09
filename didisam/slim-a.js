@@ -58,7 +58,7 @@
 
   /* ═══════════ 1. 과정(class) — 목록 · 상세 첫 화면 ═══════════ */
   const kindL = c => c.kind === 'pack' ? '과정' : (KIND[c.kind] || '기간') + (c.sub ? ' · ' + c.sub : '');
-  const clsSub = c => [kindL(c), c.status, `${(c.learners || []).length}명`, c.price ? won(c.price) : '무료'].filter(Boolean).join(' · ');
+  const clsSub = c => [kindL(c), c.status, `${(c.learners || []).length}명`, c.price ? won(c.price) : (typeof mbPayOn === 'function' && !mbPayOn() ? '' : '무료')].filter(Boolean).join(' · ');
   const clsHomeOn = () => { const h = UI.slaClsHome; return h && h.id === UI.cls && h.t === (UI.clsT || 'learners'); };
   function clsHome(c, old) {
     const ep = c.kind === 'episode'; let tb = [];
@@ -66,7 +66,7 @@
     if (!tb.length) tb = [['learners', t('learner')], [ep ? 'episodes' : 'curriculum', ep ? '회차' : '커리큘럼'], ...(ep ? [] : [['eval', '평가']]), ['notice', '공지사항'], ['set', '설정']];
     const ap = typeof avgP === 'function' ? Math.round(avgP(c)) : 0;
     const SUB = { learners: `${(c.learners || []).length}명 · 평균 진도 ${ap}%`, curriculum: `${(c.curriculum || []).length}개 강의`, episodes: `${(c.sessions || c.curriculum || []).length}개 회차`,
-      eval: `${t('done')} 기준 ${(c.criteria && c.criteria.threshold) != null ? c.criteria.threshold + '%' : '설정'}`, notice: `${(c.notices || []).length}개`, set: [c.open, typeof c2SaleLabel === 'function' ? c2SaleLabel(c) : c.sale, c.price ? won(c.price) : '무료'].filter(Boolean).join(' · ') };
+      eval: `${t('done')} 기준 ${(c.criteria && c.criteria.threshold) != null ? c.criteria.threshold + '%' : '설정'}`, notice: `${(c.notices || []).length}개`, set: [c.open, typeof c2SaleLabel === 'function' ? c2SaleLabel(c) : c.sale, c.price ? won(c.price) : (typeof mbPayOn === 'function' && !mbPayOn() ? '' : '무료')].filter(Boolean).join(' · ') };
     const ICN = { learners: 'users', curriculum: 'book', episodes: 'book', eval: 'check', notice: 'chat', set: 'gear' };
     return backAct('cls-back', `${t('cls')} 목록`) + page(c.name, `${typeof ACT['d26-view'] === 'function' ? pri('d26-view', `${t('learner')} 화면`, c.id) : ''}${more('cls1', [
       typeof ACT['d26-share'] === 'function' && ['주소 공유', 'd26-share', c.id, '메시지 · 홈페이지에 붙여 넣기', 'send'], ['복사본 만들기', 'cls-copy', c.id, '같은 구성으로 새로 만들기', 'grid'], c.price && typeof ACT['c2-paylink'] === 'function' && ['결제 링크 복사', 'c2-paylink', c.id, '지정 회원에게 보낼 링크', 'chart']])}`,
@@ -82,7 +82,7 @@
     const K = [['all', '전체'], ...['period', 'pack', 'episode', 'sub'].filter(k => all.some(c => c.kind === k)).map(k => [k, k === 'pack' ? '과정' : KIND[k] || k])];
     const L = all.filter(c => (f === 'all' || c.kind === f) && has('slClsQ', c.name, c.teacher || ''));
     const recruit = all.filter(c => c.recruit && c.recruit.on).length;
-    return page(`${t('cls')} ${all.length}개`, tblBtn('class', '자세히') + mk + more('cls', [['카테고리 관리', 'c2-cats', '', '카테고리 묶기 · 순서', 'grid'], ['출결패드 실행', 'cls-pad', '', '휴대폰 끝 4자리로 출석', 'check']]),
+    return page(`${t('cls')} ${all.length}개`, tblBtn('class', '자세히') + mk + more('cls', [['카테고리 관리', 'c2-cats', '', '카테고리 묶기 · 순서', 'grid'], ['출석 체크 화면 열기', 'cls-pad', '', '휴대폰 끝 4자리로 출석', 'check']]),
       (K.length > 2 ? SL.chips('clsF', K, f) : '') +
       (recruit ? SL.sum(`<span>수강 신청 받는 중</span><span class="sl-n">${recruit}개</span>`) : '') +
       list(L.slice(0, 200).map(c => row({ act: 'cls-open', v: c.id, name: c.name, sub: clsSub(c), icon: clsIc(c), col: c.status === '운영중' ? 'var(--s400)' : 'var(--g500)' }))) + cap(L) +
@@ -117,13 +117,13 @@
   /* ═══════════ 3. 출결(attend) ═══════════ */
   wrap('attend', () => {
     W2.all(); const eps = S.classes.filter(c => W2.hasUnits(c) || S.org.type === 'voc'); const TC = tch(); const E = eps.filter(c => !TC || TC.includes(c.id));
-    const padB = pri('cls-pad', '출결패드');
+    const padB = pri('cls-pad', '출석 체크 화면');
     if (!E.length) return page('출결', '', empty('check', '오프라인 · 라이브 회차가 있는 수업의 출결을 받습니다', `<button type="button" class="btn pri" data-act="go" data-v="class">${esc(t('cls'))} 열기</button>`, ['회차반 수업 만들어줘', '오늘 출결 요약해줘']));
     const tdOf = c => { try { return W2.units(c).filter(u => u.date === today()); } catch (e) { return []; } };
     const f = UI.slAttF || (E.some(c => tdOf(c).length) ? 'today' : 'all');
     const L = E.filter(c => (f === 'all' || tdOf(c).length) && has('slAttQ', c.name));
     const low = typeof lowAtt === 'function' ? lowAtt() : [];
-    return page('출결', tblBtn('attend') + padB + more('att', [typeof ACT['w2-kiolink'] === 'function' && ['키오스크 주소 복사', 'w2-kiolink', '', '태블릿 전용 출결 화면', 'grid']]),
+    return page('출결', tblBtn('attend') + padB + more('att', [typeof ACT['w2-kiolink'] === 'function' && ['태블릿용 주소 복사', 'w2-kiolink', '', '태블릿 전용 출결 화면', 'grid']]),
       SL.chips('slAttF', [['today', `오늘 수업 ${E.filter(c => tdOf(c).length).length}`], ['all', '전체']], f) +
       (low.length ? SL.sum(`<span>출석률 80% 미만</span><span class="sl-n sl-w">${low.length}명</span>`, 'sla-t', 'attend:1') : '') +
       (L.length ? list(L.map(c => { const td = tdOf(c); const u = td[0];

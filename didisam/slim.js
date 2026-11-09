@@ -9,26 +9,40 @@
   window.SLIM_FRONT = window.SLIM_FRONT || new Set(); /* v36 G: 사이트도 요약 첫 화면 없이 한 화면 편집기(hpstudio.js) */
   window.slimFront = id => !!(window.SLIM_FRONT && SLIM_FRONT.has(id));
   /* ───────── 1. 기관 유형별 필수 메뉴(사이드바 기본) ───────── */
+  /* v36 R1 유형별 기본 메뉴 재점검(대표님: 유형별 메뉴가 들쭉날쭉) — 모든 유형 같은 뼈대:
+     {과정} · 콘텐츠 · (출결) · (수료증) / 명단 · 등록 · 초대 / 공지 · 메시지 / 사이트 / (유형 전용 · 규정 · 문서)
+     - 수료증(cert): 수료 · 이수가 있는 유형은 기본 켬. 학원(초중고)은 수업에 수료 개념이 약해 끔(메뉴 찾기에서 [켜기])
+     - 문서(docs): 공문 · 결과 보고가 있는 기관형(대학 · 기업 · 공공 · 평생 · 직업훈련)만 기본 켬. 학원(초중고 · 성인)은 끔
+     - 게시판(community): 대학은 목적별 게시판(학과 공지 · Q&A · 자료실)을 쓰므로 기본 켬
+     - 출결(attend): 출석이 이수 요건인 공공 · 평생 · 직업훈련만(학원 초중고는 crmatt). 대학 · 기업 · 성인은 온라인 진도율로 관리 */
   const ESS = {
-    adult: ['class', 'clib', 'members', 'enroll', 'message', 'sales', 'site'],
-    k12: ['crmstu', 'crmatt', 'crmex', 'class', 'clib', 'crmbill', 'message', 'site'],
-    univ: ['class', 'clib', 'members', 'enroll', 'board', 'academic', 'site'],
+    adult: ['class', 'clib', 'cert', 'members', 'enroll', 'board', 'message', 'sales', 'site'],
+    k12: ['crmstu', 'crmatt', 'crmex', 'class', 'clib', 'crmbill', 'board', 'message', 'site'],
+    univ: ['class', 'clib', 'cert', 'members', 'enroll', 'board', 'community', 'message', 'academic', 'docs', 'site'],
     univ_lms: null, /* 학사 LMS는 업무 단위 3단 메뉴(ulms.js)를 그대로 쓰고, 아래 slimLms에서 줄인다 */
-    corp: ['class', 'clib', 'members', 'enroll', 'compliance', 'cpl', 'board', 'site'],
-    public: ['class', 'clib', 'members', 'enroll', 'attend', 'cert', 'board', 'site'],
-    lifelong: ['class', 'clib', 'members', 'attend', 'cert', 'lifelong', 'cpl', 'site'],
-    voc: ['class', 'clib', 'members', 'attend', 'cert', 'hrd', 'cpl', 'message', 'site']
+    corp: ['class', 'clib', 'cert', 'members', 'enroll', 'board', 'message', 'compliance', 'cpl', 'docs', 'site'],
+    public: ['class', 'clib', 'attend', 'cert', 'members', 'enroll', 'board', 'message', 'docs', 'site'],
+    lifelong: ['class', 'clib', 'attend', 'cert', 'members', 'enroll', 'board', 'message', 'lifelong', 'cpl', 'docs', 'site'],
+    voc: ['class', 'clib', 'attend', 'cert', 'members', 'enroll', 'board', 'message', 'hrd', 'cpl', 'docs', 'site']
   };
+  /* v36 R1 이미 저장된 기관: 이번에 기본으로 바뀐 메뉴만 한 번 켠다(사용자가 켠 메뉴는 그대로, 이후에 끄면 다시 켜지 않음) */
+  const ESS36 = { adult: ['cert', 'board'], k12: ['board'], univ: ['cert', 'community', 'message', 'docs'], corp: ['cert', 'message', 'docs'], public: ['message', 'docs'], lifelong: ['enroll', 'board', 'message', 'docs'], voc: ['enroll', 'board', 'docs'] };
+  function ess36() { if (!S || !S.org || !S.nav || !S.nav.tabs || S.nav.r36) return; const k = essKey(); const L = ESS36[k] || [];
+    L.forEach(id => { if (!MENU[id]) return; if (typeof navAdd === 'function') { try { navAdd(id, true); } catch (e) { } } Object.values(S.nav.tabs).forEach(A => (A || []).forEach(x => { if (x.id === id) x.on = true; })); });
+    S.nav.r36 = 1; }
+  if (MENU.community) MENU.community.label = '게시판'; /* v36 R1 '커뮤니티' → 쉬운 말 '게시판'(목적별 게시판 여러 개) */
   const essKey = () => S && S.org ? (S.org.type === 'univ' && S.org.ed === 'lms' ? 'univ_lms' : S.org.type) : '';
   window.slimEss = () => { const k = essKey(); const E = ESS[k]; if (E) return E.filter(id => MENU[id]); /* 학사 LMS: 지금 켜진 탭 중 앞의 7개 */
     return Object.values(S.nav.tabs).flat().filter(x => x.on && MENU[x.id]).map(x => x.id).slice(0, 7); };
   function slimApply() { const E = slimEss(); if (!E.length) return;
+    E.forEach(id => { if (MENU[id] && typeof navAdd === 'function' && !Object.values(S.nav.tabs).some(A => (A || []).some(x => x.id === id))) { try { navAdd(id, true); } catch (e) { } } }); /* v36 R1 프리셋에 없던 기본 메뉴(docs 등)도 자리를 만든다 */
     Object.keys(S.nav.tabs).forEach(w => { const A = S.nav.tabs[w] || []; A.forEach(x => { x.on = E.includes(x.id); }); A.sort((a, b) => (E.indexOf(a.id) + 1 || 99) - (E.indexOf(b.id) + 1 || 99)); });
-    S.slim34 = 1; }
+    S.slim34 = 1; S.nav.r36 = 1; }
   window.slimApply = slimApply;
   /* v35 F2b: 모든 유형에서 학습자 사이트 게시로 갈 수 있게 '홈페이지(site)'를 필수 메뉴에 둔다. 이미 저장된 기관(S.slim34 있음)은 한 번만 켠다 */
   function siteOn35() { if (!S || !S.org || !S.nav || !S.nav.tabs || S.site35 || !MENU.site) return; const k = essKey(); if (k !== 'univ_lms') { if (typeof navAdd === 'function') navAdd('site', true); Object.values(S.nav.tabs).forEach(L => (L || []).forEach(x => { if (x.id === 'site') x.on = true; })); } S.site35 = 1; }
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { siteOn35(); } catch (e) { console.error(e); } return r; }; }
+  { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.slim34 && !(S.nav || {}).r36) { ess36(); save(); } } catch (e) { console.error(e); } return r; }; }
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org && !S.slim34) { const old = !!S.org.created && S.org.created < '2026-11-08'; slimApply(); if (old) UI.slimNote = 1; save(); } } catch (e) { console.error(e); } return r; }; }
   if (typeof createOrg === 'function') { const base = createOrg; createOrg = (...a) => { const r = base(...a); try { if (S && S.org) { slimApply(); save(); render(); } } catch (e) { console.error(e); } return r; }; }
 
@@ -36,6 +50,16 @@
   { const SYN = { site: '게시 게시하기 공개 공개하기 학습자 사이트 학습 사이트 포털 홈페이지 사이트 열기', clib: '자료 영상 교안 퀴즈 업로드 디지털북', enroll: '수강 권한 배정 초대 접근코드', class: '과정 만들기 개설' };
     const base = ACT['ux-find']; if (base) ACT['ux-find'] = (...a) => { const r = base(...a); try { const L = document.querySelector('#modal .uxfl'); if (L) { Object.entries(SYN).forEach(([id, k]) => { if (!MENU[id]) return; let b = L.querySelector(`[data-v="${id}"]`); if (!b && id === 'site') { L.insertAdjacentHTML('afterbegin', `<button type="button" role="listitem" data-act="go" data-v="site" data-k=""><b>${esc(mlabel('site'))}</b><small>학습자 사이트 · 게시</small></button>`); b = L.querySelector('[data-v="site"]'); } if (b) b.dataset.k = (b.dataset.k + ' ' + k).toLowerCase(); }); const q = document.querySelector('#modal .uxq'); if (q && q.value) q.dispatchEvent(new Event('input')); } } catch (e) { console.error(e); } return r; }; }
 
+  /* v36 R1 메뉴 찾기: 꺼진 메뉴도 결과에 보이고 [켜기] — '게시판' · '문서' · '수료증'을 찾으면 꺼져 있어도 나온다(누르면 켜고 바로 열기) */
+  { const SYN2 = { community: '게시판 커뮤니티 게시글 글 질문 q&a 자료실 학과 공지', docs: '문서 공문 보고서 결과보고 안내문 서식 가정통신문', cert: '수료증 이수증 수료 이수 증명서', attend: '출결 출석 결석 지각 출석부', badge: '배지 디지털 배지', message: '메시지 문자 알림톡 푸시', board: '공지 알림', enroll: '등록 초대 일괄 엑셀 명단', auto: '자동화 자동 반복', parents: '보호자 학부모', sales: '매출 결제 환불', consult: '상담 채널톡' };
+    const base = ACT['ux-find']; if (base) ACT['ux-find'] = (...a) => { const r = base(...a); try { const L = document.querySelector('#modal .uxfl'); if (!L || !S || !S.org) return r;
+      const D = typeof UX_DESC === 'function' ? UX_DESC() : {}; const role = S.me && S.me.role;
+      const off = allTabs().filter(x => !x.on && !['library', 'dbook'].includes(x.id) /* 콘텐츠 라이브러리(clib)에 합쳐진 옛 메뉴 */ && !(MENU[x.id].owner && role !== 'owner') && !(role === 'teacher') && !(x.id === 'parents' && typeof mbGuardOn === 'function' && !mbGuardOn()) && !(['sales', 'billing'].includes(x.id) && typeof mbPayOn === 'function' && !mbPayOn()) && !L.querySelector(`[data-v="${x.id}"]`));
+      L.querySelectorAll('button[data-v]').forEach(b => { const k = SYN2[b.dataset.v]; if (k) b.dataset.k = (b.dataset.k + ' ' + k).toLowerCase(); });
+      L.insertAdjacentHTML('beforeend', off.map(x => `<button type="button" role="listitem" class="uxoff" data-act="ux-on" data-v="${esc(x.id)}" data-k="${esc((mlabel(x.id) + ' ' + lab(WS[x.w] || { label: '' }) + ' ' + (D[x.id] || '') + ' ' + (SYN2[x.id] || '')).toLowerCase())}"><b>${esc(mlabel(x.id))} <em class="uxoff-t">꺼져 있음</em></b><small>${esc(lab(WS[x.w] || { label: '' }))}${D[x.id] || mdOf(x.id)[0] ? ' · ' + esc(D[x.id] || mdOf(x.id)[0]) : ''}</small><span class="uxon">켜기</span></button>`).join(''));
+      const p = document.querySelector('#modal .mini'); if (p && /꺼 둔 메뉴/.test(p.textContent)) p.textContent = '꺼져 있는 메뉴도 찾을 수 있습니다. [켜기]를 누르면 왼쪽 메뉴에 생기고 바로 열립니다.';
+      const q = document.querySelector('#modal .uxq'); if (q && q.value) q.dispatchEvent(new Event('input')); } catch (e) { console.error(e); } return r; }; }
+  ACT['ux-on'] = el => { const id = el.dataset.v; closeModal(); if (typeof slMenuSet === 'function') slMenuSet(id, true); try { logAudit(`메뉴 켜기 — ${mlabel(id)}`); } catch (e) { } go(id); render(); toast(`'${mlabel(id)}' 메뉴를 켰습니다. 왼쪽 메뉴에 생겼습니다.`, 'ok'); };
   /* 메뉴 한 줄 설명(메뉴 추가 목록 · 화면 가이드에 쓴다) — 15자 안팎 */
   const MD = {
     class: ['과정을 만들고 운영합니다', '수업 만들어줘'], journey: ['학습 경로를 묶습니다', '러닝 저니 만들어줘'], diag: ['AI 진단 검사를 엽니다', '진단 결과 요약해줘'],
@@ -48,7 +72,7 @@
     billing: ['청구서를 보냅니다', '미납 청구서 보여줘'], compliance: ['법정의무교육을 관리합니다', '미이수자 보여줘'], academic: ['학사 · 비교과를 관리합니다', '비교과 현황 보여줘'],
     lifelong: ['학습비 · 과정을 신고합니다', '신고 대상 보여줘'], hrd: ['HRD-Net에 보고합니다', 'HRD 보고 준비해줘'], org: ['기관 정보를 관리합니다', '기관 정보 보여줘'],
     conn: ['외부 서비스를 연결합니다', 'Slack 연결 도와줘'], calendar: ['학사 일정을 관리합니다', '이번 달 일정 보여줘'], dbook: ['디지털 교재를 만듭니다', '디지털북 만들어줘'], clib: ['영상 · 교안 · 퀴즈를 모아 만듭니다', '콘텐츠 라이브러리 사용법 알려줘'], lmsa: ['학기 · 교과목 · 분반을 준비합니다', '학기 · 교과목 현황 보여줘'],
-    tutorial: ['튜토리얼을 만듭니다', '튜토리얼 만들어줘'], docs: ['문서를 만들고 보관합니다', '운영 문서 써줘'], cpl: ['인가 · 규정을 지킵니다', '규정 점검해줘'],
+    tutorial: ['튜토리얼을 만듭니다', '튜토리얼 만들어줘'], docs: ['문서를 만들고 보관합니다', '수강 안내문 만들어줘'], cpl: ['인가 · 규정을 지킵니다', '규정 점검해줘'],
     crmstu: ['원생을 등록하고 관리합니다', '원생 등록해줘'], crmatt: ['등원 · 출결을 체크합니다', '오늘 미등원 보여줘'], crmex: ['시험 성적을 기록합니다', '성적 알림 보내줘'],
     crmcs: ['상담을 기록합니다', '상담 필요한 원생'], crmbill: ['수강료를 청구합니다', '다음 달 청구해줘'], crmstat: ['원생 · 매출 통계를 봅니다', '이번 달 통계 보여줘'],
     grade: ['성적을 관리합니다', '성적 입력 현황'], sis: ['학적 연동을 관리합니다', '학적 연동 상태'], aigov: ['AI 사용을 관리합니다', 'AI 사용량 보여줘']

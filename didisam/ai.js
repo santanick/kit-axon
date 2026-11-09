@@ -95,7 +95,7 @@ const qnum = (q, d) => { const m = q.match(/(\d+)\s*%/); return m ? +m[1] : d; }
 function interpret(q) {
   const has = (...w) => w.some(x => q.includes(x));
   const low = () => S.classes.flatMap(c => Object.entries(c.prog).filter(([, p]) => p.p < qnum(q, 30)).map(([id]) => id));
-  if (has('자동화', '매주', '매일', '마다')) { const r = recipeFromText(q); return { title: `자동화 레시피 초안 — ${r.name}`, steps: [`트리거: ${trigLabel(r.trigger)}`, `조건: ${r.cond}`, ...r.actions.map(a => '실행: ' + ACTION[a]), r.approve ? '실행 전 운영자 승인' : '자동 실행'], cta: '자동화로 저장', run: () => { S.autos.unshift(r); return `자동화 「${r.name}」를 저장했습니다.`; }, go: 'auto' }; }
+  if (has('자동화', '매주', '매일', '마다')) { const r = recipeFromText(q); return { title: `자동화 레시피 초안 — ${r.name}`, steps: [`시작 조건: ${trigLabel(r.trigger)}`, `조건: ${r.cond}`, ...r.actions.map(a => '실행: ' + ACTION[a]), r.approve ? '실행 전 운영자 승인' : '자동 실행'], cta: '자동화로 저장', run: () => { S.autos.unshift(r); return `자동화 「${r.name}」를 저장했습니다.`; }, go: 'auto' }; }
   if (has('독려', '미이수', '마감 안내', '경고')) {
     let ids, label;
     if (has('미이수', '법정')) { ids = [...new Set(legalUndone().map(x => x.id))]; label = '법정교육 미이수자'; }
@@ -122,7 +122,7 @@ function interpret(q) {
 function summary(q) {
   const g = S.groups.find(g => q.includes(g.name)); const ms = g ? S.members.filter(m => m.group === g.id).map(m => m.id) : S.members.map(m => m.id);
   const ps = S.classes.flatMap(c => ms.filter(id => c.prog[id]).map(id => c.prog[id].p));
-  const out = [`대상: ${g ? g.name : '전체'} ${ms.length}명`, `평균 진도 ${pct(avgOf(ps))} · ${t('done')} ${S.classes.reduce((a, c) => a + ms.filter(id => c.prog[id]?.p >= c.criteria.threshold).length, 0)}건`, `진도 30% 미만 ${ps.filter(p => p < 30).length}건 — 독려 권장`];
+  const out = [`대상: ${g ? g.name : '전체'} ${ms.length}명`, `평균 진도 ${pct(avgOf(ps))} · ${t('done')} ${S.classes.reduce((a, c) => a + ms.filter(id => (c.learners || []).includes(id) && clsDone(c, id)).length, 0)}건`, `진도 30% 미만 ${ps.filter(p => p < 30).length}건 — 독려 권장`];
   if (S.pays.length) out.push(`최근 30일 결제 ${won(S.pays.filter(p => p.status === '결제 완료' && p.at >= addDays(today(), -30)).reduce((a, p) => a + p.amount, 0))} · 환불 신청 ${S.pays.filter(p => p.status === '환불 신청').length}건`);
   if (S.bills.length) out.push(`청구서 미납 ${S.bills.filter(b => b.status === '미납').length}건`);
   if (/출결|출석/.test(q)) out.push(`출석률 80% 미만 ${lowAtt().length}명`);
@@ -185,7 +185,7 @@ function targets(a) {
     case 'unpaid': return S.bills.filter(b => b.status === '미납').map(b => b.who);
     case 'att-warn': return [...new Set(lowAtt().map(x => x.id))];
     case 'refund5': case 'refund-route': return S.pays.filter(p => p.status === '환불 신청').map(p => p.who);
-    case 'badge-auto': return S.classes[0] ? S.classes[0].learners.filter(id => S.classes[0].prog[id].p >= S.classes[0].criteria.threshold && !S.badges[0]?.issued.some(i => i.who === id)) : [];
+    case 'badge-auto': return S.classes[0] ? S.classes[0].learners.filter(id => clsDone(S.classes[0], id) && !S.badges[0]?.issued.some(i => i.who === id)) : [];
     case 'fraud': return S.members.slice(0, 3).map(m => m.id);
     case 'demand': return S.classes.filter(c => c.early && c.learners.length < 10).map(c => c.id);
     default: return S.members.slice(0, Math.max(1, Math.round(S.members.length / 6))).map(m => m.id);
@@ -204,7 +204,7 @@ function runAuto(a, force) {
   return `「${a.name}」 실행 — 대상 ${T.length}건 처리`;
 }
 ACT['auto-run-id'] = el => { const a = S.autos.find(x => x.key === el.dataset.v); if (!a) { toast('해당 자동화가 없습니다. 업무 자동화에서 추가하세요.', 'warn'); return; } confirmRun(a); };
-function confirmRun(a) { const T = targets(a); modal(`자동화 실행 — ${a.name}`, `<ol class="steps"><li>트리거: ${esc(trigLabel(a.trigger))}</li><li>조건: ${esc(a.cond)} → <b>대상 ${T.length}건</b></li>${a.actions.map(x => `<li>실행: ${esc(ACTION[x])}</li>`).join('')}</ol><p class="mini">대상: ${T.slice(0, 10).map(id => M(id) ? esc(M(id).name) : esc(id)).join(', ')}${T.length > 10 ? ` 외 ${T.length - 10}` : ''}</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '승인하고 실행', kind: 'pri', run: () => { toast(runAuto(a, true), 'ok'); render(); } }]); }
+function confirmRun(a) { const T = targets(a); modal(`자동화 실행 — ${a.name}`, `<ol class="steps"><li>시작 조건: ${esc(trigLabel(a.trigger))}</li><li>조건: ${esc(a.cond)} → <b>대상 ${T.length}건</b></li>${a.actions.map(x => `<li>실행: ${esc(ACTION[x])}</li>`).join('')}</ol><p class="mini">대상: ${T.slice(0, 10).map(id => M(id) ? esc(M(id).name) : esc(id)).join(', ')}${T.length > 10 ? ` 외 ${T.length - 10}` : ''}</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '승인하고 실행', kind: 'pri', run: () => { toast(runAuto(a, true), 'ok'); render(); } }]); }
 /* v36 H: 자동화 만들기 단순화 — 언제(보기) → 무엇을(보기) → 누구에게 3칸 문장 + 유형별 추천(켜기 한 번) + 한 줄 말로 채우기.
    대상 조건 · 승인 · 여러 단계(Slack · Google 등)는 '자세히'에 접는다. 저장 형식(trigger · cond · actions · approve)은 그대로라 기존 실행 · 연결 기능과 호환. */
 const AU_WHAT = { msg: '안내 메시지 보내기', report: '리포트 만들어 보내기', draft: 'AI 초안 만들기(답변 · 채점 · 요약)', assign: '수강 자동 배정', badge: '디지털 배지 발급', hrd: 'HRD-Net 보고 파일 만들기', task: '운영자 할 일 만들기', approve: '가입 자동 승인' };
@@ -219,7 +219,9 @@ function auSay(trigger, actions) { const L = actions || []; const { what } = auS
   const extra = L.filter(x => x !== what && !['msg', 'parent', 'manager'].includes(x));
   return `${trigLabel(trigger)} · ${AU_SHORT[what] || ACTION[what] || what}${extra.length ? ` + ${extra.map(x => AU_SHORT[x] || ACTION[x] || x).join(' + ')}` : ''}${to.length ? ` → ${to.join(', ')}` : ''}`; }
 const auName = (trigger, actions) => { const { what, who } = auSlots({ actions }); return `${trigLabel(trigger).replace(/\s*(시|오전 9시|오후 5시)$/, '')} ${who === 'none' ? '' : auWhoLabel(who) + ' '}${(AU_WHAT[what] || '').replace(/\(.*\)/, '').trim()}`.replace(/\s+/g, ' ').trim().slice(0, 40); };
-function auBuilder(a, open) { const { what, who } = auSlots(a); const ev = Object.entries(TRIG).filter(([k]) => k.startsWith('ev:')), sc = Object.entries(TRIG).filter(([k]) => !k.startsWith('ev:'));
+/* v36 R1 결제를 쓰지 않는 유형(대학 · 기업 · 공공)은 결제 · 환불 조건을 고를 수 없게(이미 저장된 값은 보임) */
+const auTrigOK = (k, cur) => k === cur || !/^ev:(pay|refund)$/.test(k) || typeof mbPayOn !== 'function' || mbPayOn();
+function auBuilder(a, open) { const { what, who } = auSlots(a); const ev = Object.entries(TRIG).filter(([k]) => k.startsWith('ev:') && auTrigOK(k, a.trigger)), sc = Object.entries(TRIG).filter(([k]) => !k.startsWith('ev:'));
   const opt = (L, cur) => L.map(([k, v]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(v)}</option>`).join('');
   const odd = auActs(what, who).join() !== (a.actions || []).join();
   return `<div class="au3"><label class="au-slot"><span>언제</span><select name="t" aria-label="언제"><optgroup label="정해진 시간">${opt(sc, a.trigger)}</optgroup><optgroup label="일이 생길 때">${opt(ev, a.trigger)}</optgroup></select></label><b class="au-arr" aria-hidden="true">→</b><label class="au-slot"><span>무엇을</span><select name="w" aria-label="무엇을">${opt(auWhat(what), what)}</select></label><b class="au-arr" aria-hidden="true">→</b><label class="au-slot"><span>누구에게</span><select name="o" aria-label="누구에게">${opt(auWho(), who)}</select></label></div>

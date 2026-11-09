@@ -212,7 +212,7 @@ function edRender() {
   if (it.type === 'doc') h += docEditor(it);
   if (it.type === 'survey') h += `<label class="fl">설문 문항(줄마다 1개)<textarea rows="5" data-ed="sv">${esc((it.qs || []).map(q => q.q).join('\n') || '과정에 전반적으로 만족한다.\n강의 내용이 업무 · 학습에 도움이 된다.\n개선할 점을 자유롭게 적어 주세요.')}</textarea></label>`;
   if (it.type === 'live') h += `<div class="form2"><label>라이브 주소(Zoom · Meet 등)<input data-ed="url" value="${esc(it.url || '')}"></label><label>일시<input type="datetime-local" data-ed="at" value="${esc(it.at || '')}"></label></div><p class="mini">시작 3일 전 · 당일 오전 9시 알림톡이 자동 발송됩니다. 출석 인정 시간을 설정할 수 있습니다.</p>`;
-  if (it.type === 'offline') h += `<div class="form2"><label>장소<input data-ed="place" value="${esc(it.place || '')}"></label><label>일시<input type="datetime-local" data-ed="at" value="${esc(it.at || '')}"></label></div><p class="mini">출석은 출결패드(휴대폰 끝 4자리)로 받습니다.</p>`;
+  if (it.type === 'offline') h += `<div class="form2"><label>장소<input data-ed="place" value="${esc(it.place || '')}"></label><label>일시<input type="datetime-local" data-ed="at" value="${esc(it.at || '')}"></label></div><p class="mini">출석은 출석 체크 화면(휴대폰 끝 4자리)로 받습니다.</p>`;
   b.innerHTML = h;
 }
 document.addEventListener('input', e => { if (!ED || !e.target.closest('#edBody')) return; const el = e.target;

@@ -12,7 +12,7 @@
   const U = () => S && S.org && S.org.type === 'univ';
   const I = (k, s = 18) => (typeof ic === 'function' ? ic(k in IC ? k : 'grid', s) : '');
   const AWAY = 14; /* 이 날수 이상 접속하지 않으면 '미접속' */
-  const done = (c, id) => { if (A(S.certs).some(x => x.cls === c.id && x.who === id)) return true; /* 수료증이 나간 사람은 이수 */ try { if (typeof a2IsDone === 'function') return a2IsDone(c, id); } catch (e) { } return ((c.prog[id] || {}).p || 0) >= ((c.criteria || {}).threshold || 80); };
+  const done = (c, id) => clsDone(c, id); /* v36 R1 이수 판정은 한 곳(mods.js clsDone) — 관리 화면 · 엑셀 · 대시보드 · 수료증과 같은 값 */
   const certOf = (c, id) => A(S.certs).find(x => x.cls === c.id && x.who === id);
   const lastOf = id => (M(id) || {}).last || '';
   const away = id => { const l = lastOf(id); return !l || daysAgo(l) >= AWAY; };
@@ -53,7 +53,20 @@
       ['xl/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="${NS}spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEEF1FE"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
       ...SH.map((s, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(s.cols, s.rows)])];
     const b = zip(files); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name.replace(/[\\/:*?"<>|]/g, '_'); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); return b; }
-  window.XLSX36 = { xlsx, zip, sheetXml };
+  /* v36 R1 엑셀(.xlsx) 읽기 — 일괄 등록 창에서 CSV뿐 아니라 엑셀 파일도 받는다(첫 시트 · 브라우저에서만 읽음, 서버 전송 없음) */
+  async function toCsv(buf) { if (typeof unzipEntry !== 'function') throw new Error('unzip');
+    const P = x => new DOMParser().parseFromString(x, 'application/xml'); let ss = [];
+    try { ss = [...P(await unzipEntry(buf, 'xl/sharedStrings.xml')).getElementsByTagName('si')].map(si => [...si.getElementsByTagName('t')].map(t => t.textContent).join('')); } catch (e) { }
+    let path = 'xl/worksheets/sheet1.xml'; try { const wb = P(await unzipEntry(buf, 'xl/workbook.xml')); const sh = wb.getElementsByTagName('sheet')[0]; const rid = sh && (sh.getAttribute('r:id') || sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id'));
+      if (rid) { const rel = [...P(await unzipEntry(buf, 'xl/_rels/workbook.xml.rels')).getElementsByTagName('Relationship')].find(r => r.getAttribute('Id') === rid); if (rel) { const tg = rel.getAttribute('Target') || ''; path = tg.startsWith('/') ? tg.slice(1) : 'xl/' + tg.replace(/^\.\//, ''); } } } catch (e) { }
+    const d = P(await unzipEntry(buf, path)); const col = ref => String(ref || '').replace(/[^A-Z]/gi, '').toUpperCase().split('').reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0) - 1;
+    const rows = [...d.getElementsByTagName('row')].map(r => { const out = []; [...r.getElementsByTagName('c')].forEach(c => { const ty = c.getAttribute('t'); const vEl = c.getElementsByTagName('v')[0]; let v = '';
+      if (ty === 's') v = ss[+(vEl ? vEl.textContent : -1)] || ''; else if (ty === 'inlineStr') v = [...c.getElementsByTagName('t')].map(x => x.textContent).join(''); else v = vEl ? vEl.textContent : '';
+      const j = col(c.getAttribute('r')); out[j >= 0 ? j : out.length] = v; }); return Array.from(out, v => v == null ? '' : String(v)); });
+    return rows.filter(r => r.some(v => v.trim())).map(r => r.map(v => /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v).join(',')).join('\n'); }
+  /* 파일 → 글자(엑셀이면 CSV로 바꿔서) */
+  const fileText = f => /\.xlsx$/i.test(f.name) ? f.arrayBuffer().then(toCsv) : f.text();
+  window.XLSX36 = { xlsx, zip, sheetXml, toCsv, fileText };
 
   /* ═════════ 이수 현황 데이터 ═════════ */
   const kindName = c => c.kind === 'pack' ? '과정 묶음' : (KIND[c.kind] || '기간') + (c.sub ? ' · ' + c.sub : '');
@@ -134,6 +147,8 @@
     if (!/data-act="ops-xls"/.test(h)) h = h.replace(/(<span class="d26-view")/, `${xlsBtn('', `전체 ${t('done')} 현황 엑셀`)}$1`);
   } catch (e) { console.error(e); } return h; }; }
 
+  /* v36 R1 명단 화면(학습자 목록 · 학원 원생)에도 '전체 {이수/수료} 현황 엑셀' — 운영자가 과정 목록까지 가지 않아도 내려받게 */
+  ['members', 'crmstu'].forEach(k => { const base = VIEWS[k]; if (typeof base !== 'function') return; VIEWS[k] = (...a) => { let h = base(...a); try { if (S && S.org && S.me.role !== 'teacher' && A(S.classes).length && !/data-act="ops-xls"/.test(h)) h = h.replace('<div class="phr">', `<div class="phr"><span class="ops-xwrap">${xlsBtn('', `전체 ${t('done')} 현황 엑셀`)}</span>`); /* span으로 감싸 '⋯ 다른 작업'으로 접히지 않게 */ } catch (e) { console.error(e); } return h; }; });
   /* 과정 상세: '수강현황 내려받기' → '이수 현황 엑셀', 카테고리 칩 = 바로 고르기 */
   { const base = VIEWS.class; VIEWS.class = (...a) => { let h = base(...a); try { if (UI.cls && C(UI.cls)) {
     h = h.replace(/(data-act="cls-dl"[^>]*>)[^<]*/, `$1${t('done')} 현황 엑셀`);
@@ -213,7 +228,11 @@
     const opts = `${eps.length ? `<optgroup label="출석부 · 진도율(회차 · 오프라인)">${eps.map(x => `<option value="${x.id}" ${x === pick ? 'selected' : ''}>${esc(x.name)} · ${esc(kindName(x))}</option>`).join('')}</optgroup>` : ''}${all.filter(x => !eps.includes(x)).length ? `<optgroup label="진도율(기간 · 구독 · 묶음)">${all.filter(x => !eps.includes(x)).map(x => `<option value="${x.id}" ${x === pick ? 'selected' : ''}>${esc(x.name)} · ${esc(kindName(x))}</option>`).join('')}</optgroup>` : ''}`;
     let h;
     if (eps.includes(pick)) { const keep = UI.attC; UI.attC = pick.id; h = base(...a); UI.attC = keep;
-      h = h.replace(/(<select data-chg="attSel"[^>]*>)[\s\S]*?(<\/select>)/, `$1${opts}$2`); }
+      h = h.replace(/(<select data-chg="attSel"[^>]*>)[\s\S]*?(<\/select>)/, `$1${opts}$2`);
+      /* v36 R1 회차 · 라이브 · 오프라인 강의가 없는 기간 과정(직업훈련 온라인 과정 등): 빈 '출결을 받을 강의가 없습니다' 상자를 빼고 진도표를 맨 위에 */
+      let noUnit = false; try { noUnit = !W2.hasUnits(pick); } catch (e) { }
+      if (noUnit) { try { const d = document.createElement('div'); d.innerHTML = h; d.querySelectorAll('.empty').forEach(e => { if (/출결을 받을/.test(e.textContent)) e.remove(); });
+        const sel = d.querySelector('select[data-chg="attSel"]'); const bar = sel && sel.closest('.bar2'); if (bar) { bar.querySelectorAll('.mini').forEach(x => { if (/직접 처리한 회차/.test(x.textContent)) x.textContent = `이 ${tj('cls', '은')} 온라인으로 듣는 과정이라 출석 대신 진도율로 관리합니다.`; }); bar.querySelectorAll('[data-act="w2-csv"]').forEach(x => x.remove()); bar.insertAdjacentHTML('afterend', progHTML(pick)); return d.innerHTML; } } catch (e) { console.error(e); } } }
     else { let hd = ''; try { const b0 = base(...a); const d = document.createElement('div'); d.innerHTML = b0; const ph = d.querySelector('.ph') || d.firstElementChild; hd = ph ? ph.outerHTML : ''; } catch (e) { }
       h = hd + `<div class="bar2"><select data-chg="attSel" aria-label="${esc(t('cls'))} 선택">${opts}</select><span class="mini">온라인으로 듣는 ${esc(t('cls'))}은(는) 출석 대신 진도율로 관리합니다.</span></div>`; }
     return h + progHTML(pick); }; }
