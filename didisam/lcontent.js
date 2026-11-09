@@ -12,6 +12,7 @@
   'use strict';
   const E = s => (typeof esc === 'function' ? esc(s) : String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
   const IC = (n, s) => (typeof ico === 'function' ? ico(n, s) : '');
+  try { if (typeof ICP === 'object' && ICP && !ICP.audio) ICP.audio = 'M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11'; } catch (e) { } /* 음성 아이콘(ICP 내용만 보탬) */
   const say = (m, k) => { try { toast(m, k || 'ok'); } catch (e) { } };
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
@@ -76,12 +77,13 @@
     </div>`; }
   let AIP = null; /* 지금 화면의 AI 강의 플레이어 하나 */
   function aiStop() { if (!AIP) return; AIP.alive = false; clearTimeout(AIP.tm); clearTimeout(AIP.guard); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } AIP = null; }
-  function aiMount(box, c, it) { if (box.dataset.lcm) return; box.dataset.lcm = '1'; aiStop();
+  const SEEN = new WeakSet(); /* 붙인 요소(다른 화면 코드가 innerHTML로 옮겨 그려도 새 요소에 다시 붙인다) */
+  function aiMount(box, c, it) { if (!box) return; const live = AIP && AIP.alive && AIP.iid === it.id; if (SEEN.has(box) && live) return; SEEN.add(box); if (live) { AIP.paint(); return; } aiStop();
     const scenes = it.ai.scenes; const plan = scenes.map(s => { const ss = sentences(s.say); return ss.length ? ss : [s.h || '']; }); const total = plan.reduce((a, x) => a + x.length, 0);
     const st0 = peek(c.id, it.id); let start = Math.min(total - 1, Math.max(0, +st0.pos || 0)); if (st0.done) start = 0;
     const at = n => { let i = 0; while (i < plan.length && n >= plan[i].length) { n -= plan[i].length; i++; } return [Math.min(i, plan.length - 1), n]; };
-    const P = AIP = { alive: true, on: false, n: start, muted: !('speechSynthesis' in window), seen: new Set(), tm: 0, guard: 0, tok: 0 };
-    const q = s => box.querySelector(s); const syn = window.speechSynthesis;
+    const P = AIP = { alive: true, on: false, n: start, muted: !('speechSynthesis' in window), seen: new Set(), tm: 0, guard: 0, tok: 0, iid: it.id };
+    const q = s => { const b = document.querySelector(`.lc[data-i="${CSS.escape(it.id)}"] .lc-ai`) || box; return b.querySelector(s); }; const syn = window.speechSynthesis;
     if (!('speechSynthesis' in window)) { const m = q('[data-lcp=mute]'); if (m) m.disabled = true; }
     const paint = () => { const [i, k] = at(P.n); const s = scenes[i]; const sl = q('.lc-slide');
       if (sl && sl.dataset.i !== String(i)) { sl.dataset.i = String(i); sl.innerHTML = `<small class="lc-sn">장면 ${i + 1} / ${scenes.length}</small><h3>${E(s.h)}</h3><ul>${(s.pts || []).map(p => `<li>${E(p)}</li>`).join('')}</ul>`; }
@@ -96,25 +98,27 @@
       const sec = secsFor(cap);
       if (syn && !P.muted && cap && !FAST()) { try { const u = new SpeechSynthesisUtterance(cap); u.lang = 'ko-KR'; u.rate = 1.0; const v = pickVoice(); if (v) u.voice = v; u.onend = nx; u.onerror = () => { P.tm = setTimeout(nx, sec * 1000); }; syn.speak(u); P.guard = setTimeout(nx, (sec * 2.2 + 3) * 1000); /* 음성이 끝 신호를 안 주는 브라우저 대비 */ } catch (e) { P.tm = setTimeout(nx, sec * 1000); } }
       else P.tm = setTimeout(nx, sec * 1000); };
-    box.addEventListener('click', e => { const b = e.target.closest('[data-lcp]'); if (!b || AIP !== P) return; const k = b.dataset.lcp; const [i] = at(P.n);
+    P.paint = () => { const sl = q('.lc-slide'); if (sl) delete sl.dataset.i; const m = q('[data-lcp=mute]'); if (m) m.textContent = P.muted ? '소리 켜기' : '소리 끄기'; paint(); };
+    P.click = b => { if (AIP !== P) return; const k = b.dataset.lcp; const [i] = at(P.n);
       if (k === 'play') { if (!P.on && P.n >= total - 1 && P.seen.size) { P.n = 0; } P.on = !P.on; step(); }
       if (k === 'prev') { const t = Math.max(0, i - 1); P.n = plan.slice(0, t).reduce((a, x) => a + x.length, 0); step(); }
       if (k === 'next') { const t = Math.min(scenes.length - 1, i + 1); P.n = plan.slice(0, t).reduce((a, x) => a + x.length, 0); step(); }
-      if (k === 'mute') { P.muted = !P.muted; b.textContent = P.muted ? '소리 켜기' : '소리 끄기'; b.setAttribute('aria-pressed', P.muted ? 'true' : 'false'); step(); } });
+      if (k === 'mute') { P.muted = !P.muted; b.textContent = P.muted ? '소리 켜기' : '소리 끄기'; b.setAttribute('aria-pressed', P.muted ? 'true' : 'false'); step(); } };
     paint(); }
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.lc-ai [data-lcp]'); if (!b || !AIP || !AIP.click) return; e.preventDefault(); AIP.click(b); });
 
   /* ── 올린 파일(영상 · 음성 · 문서) ── */
   const FKN = { video: '영상', audio: '음성', pdf: '문서(PDF)', image: '그림', file: '파일' };
   function fileHTML(c, it, st, fk) { const name = it.file || it.name || it.title || '파일'; const meta = [FKN[fk], sizeTx(+it.size || 0)].filter(Boolean).join(' · ');
-    const tools = `<div class="lc-ftools"><span class="lc-fn">${IC('book', 15)} <b>${E(name)}</b>${meta ? ` <small>${E(meta)}</small>` : ''}</span><span class="lc-fa">${fk === 'pdf' ? `<button type="button" class="lbtn ghost sm" data-lcf="open">새 창에서 크게 보기</button>` : ''}<button type="button" class="lbtn ghost sm" data-lcf="down">내려받기</button></span></div>`;
+    const tools = `<div class="lc-ftools"><span class="lc-fn">${IC(fk === 'video' ? 'video' : fk === 'audio' ? 'audio' : 'book', 15)} <b>${E(name)}</b>${meta ? ` <small>${E(meta)}</small>` : ''}</span><span class="lc-fa">${fk === 'pdf' && !phone() ? `<button type="button" class="lbtn ghost sm" data-lcf="open">새 창에서 크게 보기</button>` : ''}<button type="button" class="lbtn ghost sm" data-lcf="down">내려받기</button></span></div>`;
     let body = '';
     if (fk === 'video') body = `<div class="lc-media"><video controls playsinline preload="metadata" controlslist="nodownload" data-lcm-media="1" aria-label="${E(it.title)} 영상"></video><p class="lc-wait">영상을 불러오고 있어요…</p></div>`;
-    else if (fk === 'audio') body = `<div class="lc-media lc-aud"><span class="lc-audi">${IC('video', 30)}</span><audio controls preload="metadata" data-lcm-media="1" aria-label="${E(it.title)} 음성"></audio><p class="lc-wait">음성을 불러오고 있어요…</p></div>`;
+    else if (fk === 'audio') body = `<div class="lc-media lc-aud"><span class="lc-audi">${IC('audio', 34)}</span><audio controls preload="metadata" data-lcm-media="1" aria-label="${E(it.title)} 음성"></audio><p class="lc-wait">음성을 불러오고 있어요…</p></div>`;
     else if (fk === 'pdf') body = phone() ? `<div class="lc-pdfm">${IC('book', 30)}<p>휴대폰에서는 문서를 새 창에서 크게 볼 수 있어요.</p><button type="button" class="lbtn pri" data-lcf="open">문서 열어 보기</button></div>` : `<div class="lc-media lc-pdfw"><iframe class="lc-pdf" title="${E(it.title)} 문서" data-lcm-media="1"></iframe><p class="lc-wait">문서를 불러오고 있어요…</p></div>`;
     else if (fk === 'image') body = `<div class="lc-media"><img alt="${E(it.title)}" data-lcm-media="1"><p class="lc-wait">그림을 불러오고 있어요…</p></div>`;
     else body = `<div class="lc-pdfm">${IC('book', 30)}<p>이 파일은 내려받아서 열어요. 컴퓨터나 휴대폰에 있는 프로그램(한글 · 워드 · 파워포인트 등)으로 열 수 있어요.</p><button type="button" class="lbtn pri" data-lcf="down">파일 내려받기</button></div>`;
     const auto = fk === 'video' || fk === 'audio';
-    return `<div class="lc-file" data-fk="${fk}">${body}${tools}${auto ? `<div class="lc-bar"><i style="width:${Math.round((st.w || 0) * 100)}%"></i></div><small class="lc-bart">${fk === 'audio' ? '듣기' : '시청'} ${Math.round((st.w || 0) * 100)}%${st.done ? ' · 완료했어요' : ' · 80% 넘게 보면 완료돼요'}</small>` : ''}</div>${descHTML(it)}${auto ? '' : doneBtn(c, it, st, fk === 'pdf' ? '다 읽었어요' : '확인했어요')}`; }
+    return `<div class="lc-file" data-fk="${fk}">${fk === 'pdf' ? tools + body : body + tools}${auto ? `<div class="lc-bar"><i style="width:${Math.round((st.w || 0) * 100)}%"></i></div><small class="lc-bart">${fk === 'audio' ? '듣기' : '시청'} ${Math.round((st.w || 0) * 100)}%${st.done ? ' · 완료했어요' : ' · 80% 넘게 보면 완료돼요'}</small>` : ''}</div>${descHTML(it)}${auto ? '' : doneBtn(c, it, st, fk === 'pdf' ? '다 읽었어요' : '확인했어요')}`; }
   function file0HTML(c, it, st) { const name = it.file || it.name || String(it.url || '').replace(/^upload:/, '') || it.title;
     return `<div class="lc-file"><div class="lc-demo">${IC('book', 26)}<div><b>운영자가 올린 파일(데모)</b><p>「${E(name)}」 파일이 이 차시에 들어 있어요. 데모 화면에서는 파일 이름만 보여요. 실제 운영에서는 여기서 바로 열거나 내려받을 수 있어요.</p></div></div></div>${descHTML(it)}${doneBtn(c, it, st, '확인했어요')}`; }
   const demoNote = (why) => `<div class="lc-demo">${IC('book', 26)}<div><b>운영자가 올린 파일(데모)</b><p>${E(why || '데모에서 올린 파일은 운영자가 올린 같은 브라우저에서만 열려요. 실제 운영 서버에서는 어디서든 열 수 있어요.')}</p></div></div>`;
@@ -124,13 +128,12 @@
     const h = HP(); if (h && typeof h.src === 'function') return h.src(u);
     const m = /^media:(tn_[a-z0-9]{8,16}\.[a-f0-9]{40})$/.exec(u); if (m) return '/api/media/f/' + m[1];
     const e = new Error('demo'); e.code = 'media_demo'; throw e; }
-  function fileMount(box, c, it, fk) { if (box.dataset.lcm) return; box.dataset.lcm = '1';
+  function fileMount(box, c, it, fk) { if (!box || SEEN.has(box)) return; SEEN.add(box);
     const el = box.querySelector('[data-lcm-media]'); const wait = box.querySelector('.lc-wait'); const name = it.file || it.name || it.title || 'file';
     const fail = why => { const w = el ? el.closest('.lc-media') : null; if (w) w.outerHTML = demoNote(why); else if (wait) wait.remove(); };
-    box.addEventListener('click', async e => { const b = e.target.closest('[data-lcf]'); if (!b) return; e.preventDefault();
-      try { if (b.dataset.lcf === 'down') { const h = HP(); if (h && typeof h.download === 'function' && !/^\/api\/media\/f\//.test(it.url)) { await h.download(it.url, name); return; } const u = await srcOf(it.url); const a = document.createElement('a'); a.href = u + (/^\/api\//.test(u) ? (u.includes('?') ? '&' : '?') + 'dl=1' : ''); a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); return; }
+    FILE = { iid: it.id, act: async b => { try { if (b.dataset.lcf === 'down') { const h = HP(); if (h && typeof h.download === 'function' && !/^\/api\/media\/f\//.test(it.url)) { await h.download(it.url, name); return; } const u = await srcOf(it.url); const a = document.createElement('a'); a.href = u + (/^\/api\//.test(u) ? (u.includes('?') ? '&' : '?') + 'dl=1' : ''); a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); return; }
         if (b.dataset.lcf === 'open') { const u = await srcOf(it.url); const w = window.open(u, '_blank', 'noopener'); if (!w && !/^blob:/.test(u)) location.href = u; } }
-      catch (x) { say(x.code === 'media_demo' || x.code === 'media_missing' ? '데모에서 올린 파일은 운영자가 올린 같은 브라우저에서만 열려요.' : (x.message || '파일을 열지 못했어요.'), 'warn'); } });
+      catch (x) { say(x.code === 'media_demo' || x.code === 'media_missing' ? '데모에서 올린 파일은 운영자가 올린 같은 브라우저에서만 열려요.' : (x.message || '파일을 열지 못했어요.'), 'warn'); } } };
     if (!el) return;
     srcOf(it.url).then(u => { if (!document.body.contains(el)) return; if (wait) wait.remove();
       if (fk === 'video' || fk === 'audio') { const seen = new Set(); let last = 0;
@@ -144,6 +147,8 @@
       else if (fk === 'image') { el.addEventListener('error', () => fail('그림을 불러오지 못했어요.'), { once: true }); el.src = u; }
     }).catch(x => fail(x && x.code === 'media_missing' ? '이 파일은 운영자가 올린 브라우저에만 저장되어 있어요(데모). 실제 운영 서버에서는 어디서든 열 수 있어요.' : x && x.code === 'media_demo' ? '' : (x && x.message) || ''));
   }
+  let FILE = null;
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.lc [data-lcf]'); if (!b) return; e.preventDefault(); const box = b.closest('.lc'); if (FILE && box && box.dataset.i === FILE.iid) FILE.act(b); });
   /* 화면 보안 규칙(CSP)이 영상 · 문서 주소를 막은 경우 → 안내로 바꾼다 */
   document.addEventListener('securitypolicyviolation', e => { const u = String(e.blockedURI || ''); if (!/^(blob|data)|\/api\/media\/f\//.test(u)) return; document.querySelectorAll('.lc [data-lcm-media]').forEach(el => { const w = el.closest('.lc-media'); if (w && (/^blob/.test(u) ? /^blob:/.test(el.src || el.currentSrc || '') : true)) w.outerHTML = demoNote('이 화면에서는 파일을 바로 보여 줄 수 없어요. [내려받기]나 [새 창에서 크게 보기]를 눌러 주세요.'); }); });
 
@@ -178,10 +183,11 @@
     if (k === 'ai') aiMount(box.querySelector('.lc-ai'), c, it);
     if (k === 'file') fileMount(box.querySelector('.lc-file'), c, it, fileKind(it)); }
   if (typeof bkMount === 'function') { const base = bkMount; bkMount = function (...a) { const r = base.apply(this, a); try { mount(); } catch (e) { console.error('lcontent mount', e); } return r; }; } /* eslint-disable-line no-global-assign */
-  const mo = new MutationObserver(() => { if (document.querySelector('.lc[data-lck]:not([data-lcok])')) { document.querySelectorAll('.lc[data-lck]').forEach(x => { x.dataset.lcok = '1'; }); try { mount(); } catch (e) { console.error('lcontent mount', e); } } else if (AIP && !document.querySelector('.lc-ai')) aiStop(); });
+  const fresh = () => { const b = document.querySelector('.lc[data-lck]'); if (!b) return false; const x = b.querySelector('.lc-ai, .lc-file'); return !!x && (!SEEN.has(x) || (x.classList.contains('lc-ai') && !(AIP && AIP.alive && AIP.iid === b.dataset.i))); };
+  const mo = new MutationObserver(() => { if (fresh()) { try { mount(); } catch (e) { console.error('lcontent mount', e); } } else if (AIP && !document.querySelector('.lc-ai')) aiStop(); });
   const start = () => { try { mo.observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); } catch (e) { } };
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', start) : start();
-  window.addEventListener('hashchange', () => { if (AIP) aiStop(); });
+  window.addEventListener('hashchange', () => { setTimeout(() => { if (AIP && !document.querySelector(`.lc[data-i="${CSS.escape(AIP.iid)}"] .lc-ai`)) aiStop(); }, 0); }); /* 같은 항목을 다시 그린 경우는 이어서 재생 */
   window.addEventListener('pagehide', aiStop);
 
   /* 글자 크기 */
