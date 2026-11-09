@@ -48,33 +48,33 @@
     stepTitle: { basic: '어떤 수업인가요?', outline: '언제 수업하나요?', fill: '수업 자료 넣기', setup: '수강료 · 정원', open: '확인하고 열기' },
     ask: {
       basic: [F.name('수업 이름', '예: 중2 수학 내신반'), { k: 'grade', label: '학년', kind: 'choice', ex: '예: 중2', def: 'm2', opts: [['e1', '초등 1~3'], ['e4', '초등 4~6'], ['m1', '중1'], ['m2', '중2'], ['m3', '중3'], ['h1', '고1'], ['h2', '고2'], ['h3', '고3']] }, { k: 'subject', label: '과목', kind: 'choice', ex: '예: 수학', def: '수학', opts: [['국어', '국어'], ['영어', '영어'], ['수학', '수학'], ['과학', '과학'], ['사회', '사회'], ['기타', '기타']] }],
-      outline: [{ k: 'days', label: '수업 요일', kind: 'days', ex: '예: 월 · 수 · 금', def: [1, 3, 5] }, { k: 'from', label: '수업 시간', kind: 'time', ex: '예: 오후 4시 ~ 5시 30분', def: '16:00', to: 'to', toDef: '17:30' }, { k: 'months', label: '기간', kind: 'choice', ex: '예: 3개월(한 학기 내신 대비)', def: 3, opts: [[1, '1개월'], [2, '2개월'], [3, '3개월'], [6, '6개월'], [12, '1년']] }],
+      outline: [{ k: 'wdays', label: '수업 요일', kind: 'days', ex: '예: 월 · 수 · 금', def: [1, 3, 5] }, { k: 'from', label: '수업 시간', kind: 'time', ex: '예: 오후 4시 ~ 5시 30분', def: '16:00', to: 'to', toDef: '17:30' }, { k: 'months', label: '기간', kind: 'choice', ex: '예: 3개월(한 학기 내신 대비)', def: 3, opts: [[1, '1개월'], [2, '2개월'], [3, '3개월'], [6, '6개월'], [12, '1년']] }],
       setup: [F.price('월 수강료', '예: 280,000원(학원에 게시한 교습비와 같게)', 0, true), F.cap('예: 8명(한 반)')]
     },
-    defaults: { grade: 'm2', subject: '수학', days: [1, 3, 5], from: '16:00', to: '17:30', months: 3, price: 0, cap: 0, mins: 90 },
-    required: ['name', 'days'],
-    examples: { name: '예: 중2 수학 내신반', days: '예: 월 · 수 · 금', price: '예: 월 280,000원' },
+    defaults: { grade: 'm2', subject: '수학', wdays: [1, 3, 5], from: '16:00', to: '17:30', months: 3, price: 0, cap: 0, mins: 90 },
+    required: ['name', 'wdays'],
+    examples: { name: '예: 중2 수학 내신반', wdays: '예: 월 · 수 · 금', price: '예: 월 280,000원' },
     templates: [
-      { id: 'k12-math-mid', name: '수학 내신반', icon: 'calc', desc: '중2 · 월수금 · 3개월', prefill: { name: '중2 수학 내신반', grade: 'm2', subject: '수학', days: [1, 3, 5], from: '16:00', to: '17:30', months: 3, cap: 8 } },
-      { id: 'k12-eng-read', name: '영어 독해반', icon: 'book', desc: '고1 · 화목 · 3개월', prefill: { name: '고1 영어 독해반', grade: 'h1', subject: '영어', days: [2, 4], from: '19:00', to: '21:00', months: 3, cap: 10 } },
-      { id: 'k12-think', name: '초등 사고력 수학', icon: 'puzzle', desc: '초등 4~6 · 토 · 6개월', prefill: { name: '초등 사고력 수학', grade: 'e4', subject: '수학', days: [6], from: '10:00', to: '11:30', months: 6, cap: 6 } },
-      { id: 'k12-kor-mock', name: '수능 국어 실전반', icon: 'pen', desc: '고3 · 주 2회 · 2개월', prefill: { name: '고3 수능 국어 실전 모의고사반', grade: 'h3', subject: '국어', days: [2, 5], from: '19:00', to: '22:00', months: 2, cap: 15 } },
-      { id: 'k12-vac', name: '방학 특강', icon: 'sun', desc: '중1 · 평일 매일 · 1개월', prefill: { name: '여름방학 중1 선행 특강', grade: 'm1', subject: '수학', days: [1, 2, 3, 4, 5], from: '13:00', to: '15:00', months: 1, cap: 12 } }
+      { id: 'k12-math-mid', name: '수학 내신반', icon: 'calc', desc: '중2 · 월수금 · 3개월', prefill: { name: '중2 수학 내신반', grade: 'm2', subject: '수학', wwdays: [1, 3, 5], from: '16:00', to: '17:30', months: 3, cap: 8 } },
+      { id: 'k12-eng-read', name: '영어 독해반', icon: 'book', desc: '고1 · 화목 · 3개월', prefill: { name: '고1 영어 독해반', grade: 'h1', subject: '영어', wdays: [2, 4], from: '19:00', to: '21:00', months: 3, cap: 10 } },
+      { id: 'k12-think', name: '초등 사고력 수학', icon: 'puzzle', desc: '초등 4~6 · 토 · 6개월', prefill: { name: '초등 사고력 수학', grade: 'e4', subject: '수학', wdays: [6], from: '10:00', to: '11:30', months: 6, cap: 6 } },
+      { id: 'k12-kor-mock', name: '수능 국어 실전반', icon: 'pen', desc: '고3 · 주 2회 · 2개월', prefill: { name: '고3 수능 국어 실전 모의고사반', grade: 'h3', subject: '국어', wdays: [2, 5], from: '19:00', to: '22:00', months: 2, cap: 15 } },
+      { id: 'k12-vac', name: '방학 특강', icon: 'sun', desc: '중1 · 평일 매일 · 1개월', prefill: { name: '여름방학 중1 선행 특강', grade: 'm1', subject: '수학', wdays: [1, 2, 3, 4, 5], from: '13:00', to: '15:00', months: 1, cap: 12 } }
     ],
-    plan: d => { const n = sessCount(d); return { weeks: Math.min(30, Math.max(1, Math.ceil(n / Math.max(1, (d.days || []).length || 1)) || 4)), per: (d.days || []).length || 1, mins: minsOf(d.from, d.to) || 90, hours: Math.round(n * (minsOf(d.from, d.to) || 90) / 60), count: n }; },
+    plan: d => { const n = sessCount(d); return { weeks: Math.min(30, Math.max(1, Math.ceil(n / Math.max(1, (d.wdays || []).length || 1)) || 4)), per: (d.wdays || []).length || 1, mins: minsOf(d.from, d.to) || 90, hours: Math.round(n * (minsOf(d.from, d.to) || 90) / 60), count: n }; },
     check: d => {
       const R = [];
-      if (!(d.days || []).length) R.push({ lv: 'stop', k: 'days', msg: '수업 요일을 하나 이상 고릅니다.' });
+      if (!(d.wdays || []).length) R.push({ lv: 'stop', k: 'wdays', msg: '수업 요일을 하나 이상 고릅니다.' });
       if (d.from && d.to && minsOf(d.from, d.to) <= 0) R.push({ lv: 'stop', k: 'from', msg: '끝나는 시간이 시작 시간보다 늦어야 합니다.', fix: { to: addMin(d.from, 90) } });
       if (sessCount(d) > 100) R.push({ lv: 'warn', k: 'months', msg: `회차가 ${sessCount(d)}개라 100개까지만 만듭니다. 기간을 줄이는 것을 권합니다.` });
       if (N(d.price) > 0) R.push({ lv: 'info', k: 'price', msg: '월 수강료는 교육청에 등록하고 학원에 게시한 교습비와 같게 적습니다(학원법 교습비 게시 의무).', law: '학원의 설립 · 운영 및 과외교습에 관한 법률 제15조' });
       return R;
     },
-    summary: d => [['학년 · 과목', `${gradeName(d.grade)} · ${d.subject || '—'}`], ['수업', `매주 ${(d.days || []).map(i => DAYS[i]).join(' · ') || '—'} ${d.from || ''}~${d.to || ''}`], ['기간', `${N(d.months) || 3}개월 · 회차 ${Math.min(100, sessCount(d))}개`], ['월 수강료', N(d.price) ? wn(d.price) : '나중에 입력'], ['정원', N(d.cap) ? N(d.cap) + '명' : '제한 없음']],
+    summary: d => [['학년 · 과목', `${gradeName(d.grade)} · ${d.subject || '—'}`], ['수업', `매주 ${(d.wdays || []).map(i => DAYS[i]).join(' · ') || '—'} ${d.from || ''}~${d.to || ''}`], ['기간', `${N(d.months) || 3}개월 · 회차 ${Math.min(100, sessCount(d))}개`], ['월 수강료', N(d.price) ? wn(d.price) : '나중에 입력'], ['정원', N(d.cap) ? N(d.cap) + '명' : '제한 없음']],
     apply: (c, d) => {
       baseApply(c, Object.assign({}, d, { sessions: 0 }));
       const start = d.start || td(); const end = plus(start, Math.round((N(d.months) || 3) * 30.4) - 1);
-      c.kind = 'episode'; c.sub = '요일반'; c.days = (d.days || []).slice(); c.time = { from: d.from || '', to: d.to || '' }; c.start = start; c.end = end;
+      c.kind = 'episode'; c.sub = '요일반'; c.days = (d.wdays || []).slice(); c.time = { from: d.from || '', to: d.to || '' }; c.start = start; c.end = end;
       c.grade = d.grade || ''; c.cat = d.subject || c.cat || ''; c.billing = { cycle: 'month', price: N(d.price) };
       try { if (typeof W2 !== 'undefined' && W2.genWeekly) { c.sessions = W2.genWeekly(start, end, c.days, c.time.from, c.time.to).slice(0, 100); c.att = c.att || {}; c.attT = c.attT || {}; if (W2.renum) W2.renum(c); if (W2.period) W2.period(c); if (W2.sync) W2.sync(c); } } catch (e) { console.error(e); }
       c.hours = Math.round(((c.sessions && c.sessions.length) || Math.min(100, sessCount(Object.assign({}, d, { start })))) * (minsOf(c.time.from, c.time.to) || 90) / 60);
@@ -83,7 +83,7 @@
   };
   const minsOf = (a, b) => { if (!/^\d{1,2}:\d{2}$/.test(a || '') || !/^\d{1,2}:\d{2}$/.test(b || '')) return 0; const f = s => s.split(':').map(Number).reduce((h, m) => h * 60 + m); return f(b) - f(a); };
   const addMin = (a, m) => { const [h, mm] = String(a || '16:00').split(':').map(Number); const t = Math.min(23 * 60 + 59, h * 60 + mm + m); return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
-  const sessCount = d => { const days = d.days || []; if (!days.length) return 0; const n = Math.round((N(d.months) || 3) * 30.4); const s = new Date((d.start || td()) + 'T00:00:00'); let k = 0; for (let i = 0; i < n; i++) { const x = new Date(s); x.setDate(s.getDate() + i); if (days.includes(x.getDay())) k++; } return k; };
+  const sessCount = d => { const days = d.wdays || []; if (!days.length) return 0; const n = Math.round((N(d.months) || 3) * 30.4); const s = new Date((d.start || td()) + 'T00:00:00'); let k = 0; for (let i = 0; i < n; i++) { const x = new Date(s); x.setDate(s.getDate() + i); if (days.includes(x.getDay())) k++; } return k; };
   const gradeName = g => ({ e1: '초등 1~3', e4: '초등 4~6', m1: '중1', m2: '중2', m3: '중3', h1: '고1', h2: '고2', h3: '고3' }[g] || '—');
 
   /* ───────── 대학(라이트): 주차 · 차시 · 학점 ───────── */
@@ -281,6 +281,10 @@
     apply: (c, d) => { baseApply(c, d); c.legal = d.cat === 'legal'; c.cat = { legal: '법정 의무교육', job: '직무교육', onboard: '신입 · 온보딩', lead: '리더십' }[d.cat] || c.cat || ''; if (d.dept) { c.sub = String(d.dept).slice(0, 60); try { const g = (S.groups || []).find(x => x.name === d.dept); if (g) c.group = g.id; } catch (e) { } }
       c.end = plus(c.start || td(), (N(d.weeks) || 4) * 7 - 1); crit(c, d.cat === 'legal' ? { video: 100, exam: 0, assign: 0, threshold: N(d.rate) || 100 } : { threshold: N(d.rate) || 80 }); if (d.refund) c.hrd = Object.assign({}, c.hrd || {}, { emp: '1' }); return c; }
   };
+
+  /* C1은 cfg.check(d) · summary(d) · apply(c, d)를 바로 부른다 — 비운 칸은 기본값으로 보고 계산하도록 감싼다 */
+  const fill = (k, d) => { const g = CF.cfg[k]; const x = JSON.parse(JSON.stringify(d || {})); Object.entries(g.defaults || {}).forEach(([q, v]) => { if (x[q] === undefined || x[q] === '') x[q] = Array.isArray(v) ? v.slice() : v; }); Object.values(g.ask || {}).flat().forEach(f => { if ((x[f.k] === undefined || x[f.k] === '') && f.def !== undefined) x[f.k] = Array.isArray(f.def) ? f.def.slice() : f.def; if (f.to && !x[f.to]) x[f.to] = f.toDef; }); return x; };
+  Object.keys(CF.cfg).forEach(k => { const g = CF.cfg[k]; ['check', 'summary', 'plan'].forEach(m => { const f = g[m]; if (typeof f === 'function') g[m] = d => f(fill(k, d)); }); if (typeof g.apply === 'function') { const f = g.apply; g.apply = (c, d) => f(c, fill(k, d)); } });
 
   /* ───────── 도우미: 키 · 현재 cfg · 기본값 · 검사 ───────── */
   CF.cfgKey = () => { try { const ty = S && S.org && S.org.type; if (ty === 'univ' && S.org.ed === 'lms') return 'univ_lms'; return CF.cfg[ty] ? ty : 'adult'; } catch (e) { return 'adult'; } };
