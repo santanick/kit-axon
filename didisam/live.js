@@ -39,13 +39,17 @@ DREG.get = () => ({ cur: DREG.cur(), list: LIVE.tenant ? [{ tid: LIVE.tenant.tid
 const liveBar = (msg, kind) => { let b = $('#liveBar'); if (!msg) { b && b.remove(); return; } if (!b) { b = document.createElement('div'); b.id = 'liveBar'; b.setAttribute('role', 'status'); document.body.appendChild(b); } b.className = 'livebar ' + (kind || ''); b.textContent = msg; };
 async function liveFlush() {
   if (LIVE.saving || !LIVE.dirty || !LIVE.tenant || !S) return; LIVE.saving = true; LIVE.dirty = false;
-  try { const r = await api('PUT', '/api/state', { doc: S, rev: LIVE.rev }); LIVE.rev = r.rev; STQ.fail = false; liveBar(''); }
+  try { const r = await api('PUT', '/api/state', { doc: S, rev: LIVE.rev }); LIVE.rev = r.rev; STQ.fail = false; liveBar(''); if (r.pending > 0) liveSync(r.pending); }
   catch (e) {
     if (e.status === 409) { try { const st = await api('GET', '/api/state'); LIVE.rev = st.rev; if (st.doc) { S = liveMe(st.doc); upgradeState(); } toast(e.message, 'warn'); render(); } catch (x) { } }
     else if (e.status === 401) { liveBar('로그인이 만료되었습니다. 새로고침 후 다시 로그인하세요. 마지막 변경은 저장되지 않았습니다.', 'bad'); }
     else { LIVE.dirty = true; STQ.fail = true; liveBar(`저장하지 못했습니다 — ${e.message} 잠시 후 다시 시도합니다.`, 'bad'); clearTimeout(LIVE.timer); LIVE.timer = setTimeout(liveFlush, 5000); }
   } finally { LIVE.saving = false; if (LIVE.dirty) { clearTimeout(LIVE.timer); LIVE.timer = setTimeout(liveFlush, 400); } }
 }
+/* v36 일괄 등록(최대 5,000명) 뒤 학습자 로그인 계정(접근코드)을 500건씩 마저 만든다 — 남은 건수를 아래 띠로 보여 준다 */
+async function liveSync(n) { if (LIVE.syncing) return; LIVE.syncing = true; let left = n;
+  try { while (left > 0) { liveBar(`학습자 로그인 계정을 준비하고 있습니다 — ${left.toLocaleString()}명 남음`); const r = await api('POST', '/api/learners/sync', {}); if (!(r.pending < left)) break; left = r.pending; } liveBar(''); if (n > 0 && left <= 0) toast(`학습자 로그인 계정 ${n.toLocaleString()}명 준비를 마쳤습니다.`, 'ok'); }
+  catch (e) { liveBar(`학습자 로그인 계정 준비가 멈췄습니다 — ${e.message} 다음 저장 때 이어서 합니다.`, 'bad'); } finally { LIVE.syncing = false; } }
 const liveMe = d => { if (d && LIVE.user) { const a = (d.admins || []).find(x => x && String(x.email || '').toLowerCase() === String(LIVE.user.email).toLowerCase()); d.me = { ...(d.me || {}), role: LIVE.user.role, email: LIVE.user.email, ...(a && a.name ? { name: a.name } : {}) }; } return d; }; /* v31 권한은 서버 세션 기준 */
 Store.get = () => { const d = LIVE.doc; if (!d || !LIVE.tenant) return null; if (d.org && d.org.room && d.org.room.tid && d.org.room.tid !== LIVE.tenant.tid) return null; return liveMe(d); };
 Store.clear = () => {};

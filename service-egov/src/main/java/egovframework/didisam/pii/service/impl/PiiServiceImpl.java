@@ -75,7 +75,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
     }
     static ObjectNode cleanExtra(JsonNode x) { ObjectNode o = F.objectNode(); if (x == null || !x.isObject()) return o; int i = 0; var it = x.fields();
         while (it.hasNext() && i++ < 20) { var e = it.next(); String k = cut(e.getKey(), 40); JsonNode v = e.getValue();
-            if (v.isTextual()) o.put(k, DdAiGuard.redact(cut(v.textValue(), 100)).text());
+            if (v.isTextual()) o.put(k, DdAiGuard.redact(cut(v.textValue(), 200)).text()); /* v36 여러 개 고르기 답(쉼표로 이음) — Node cleanExtra와 같은 200자 */
             else if (v.isObject()) { ObjectNode f = F.objectNode(); f.put("name", cut(sOr(get(v, "name")), 120)); JsonNode sz = get(v, "size"); if (sz != null && sz.isNumber() && sz.doubleValue() != 0) f.set("size", sz); else f.put("size", 0); f.put("type", cut(sOr(get(v, "type")), 60)); o.set(k, f); } }
         return o; }
     /** v33 운영자 승인: 스튜디오 회원(상태 문서 members)의 등급으로 판단(Node pii.approval과 같음) — L 역할 */
