@@ -40,7 +40,7 @@
   const problems = id => { const s = stepOf(id); const d = draft(); if (!s || !d || typeof s.valid !== 'function') return []; try { return s.valid(d) || []; } catch (e) { return []; } };
 
   /* 단계별 상태: 물어본 단계 · 칸별 오류 수 · [이전] 횟수 · 마지막 입력 시각 */
-  function st() { const d = draft(); const key = d ? (d.id || d.at || 'd') : 'x';
+  function st() { const d = draft(); const key = d || 'x';
     if (!SAM.st || SAM.st.key !== key) SAM.st = { key, step: cur(), errs: {}, backs: 0, last: Date.now(), auto: {}, sam: SAM.pendSam ? true : !!(d && d.from === 'sam'), asked: new Set(d && Array.isArray(d.samAsked) ? d.samAsked : []) };
     return SAM.st; }
   const asked = id => st().asked.has(id);
@@ -48,14 +48,17 @@
   const touch = () => { if (SAM.st) SAM.st.last = Date.now(); };
 
   /* ═════════ 말풍선(화면을 가리지 않게 칸 아래 · 단계 머리에 끼워 넣음) ═════════ */
-  function live(msg) { let L = document.getElementById('csamLive'); if (!L) { L = document.createElement('div'); L.id = 'csamLive'; L.className = 'csam-sr'; L.setAttribute('aria-live', 'polite'); L.setAttribute('role', 'status'); document.body.appendChild(L); } L.textContent = ''; setTimeout(() => { L.textContent = msg; }, 30); }
-  const fieldEl = (R, f) => { if (!R || !f) return null; const q = String(f).replace(/["\\]/g, ''); return R.querySelector(`[data-k="${q}"], [name="${q}"], #${CSS.escape(q)}`); };
-  function spot(field) { const R = root(); if (!R) return null; const fe = fieldEl(R, field); if (fe) { const box = fe.closest('.crs-field, .crs-q, .fl, label, .field') || fe; return { el: box, pos: 'afterend' }; }
+  function live(msg) { let L = document.getElementById('csamLive'); if (!L) { L = document.createElement('div'); L.id = 'csamLive'; L.className = 'csam-sr'; L.setAttribute('aria-live', 'polite'); L.setAttribute('role', 'status'); document.body.appendChild(L); } const b = document.querySelector('.csam-b'); if (b && b.closest('[aria-live]')) return; /* 흐름의 .cf-sam이 이미 읽어 줌 */ L.textContent = ''; setTimeout(() => { L.textContent = msg; }, 30); }
+  const fieldEl = (R, f) => { if (!R || !f) return null; const q = String(f).replace(/["\\]/g, ''); try { return R.querySelector(`[data-cf="${q}"], [data-k="${q}"], [name="${q}"], [data-cff="${q}"]`); } catch (e) { return null; } };
+  function spot(field) { const R = root(); if (!R) return null; const fe = fieldEl(R, field); if (fe) { const box = fe.closest('.cf-f, .crs-field, .crs-q, .fl, label, .field') || fe; return { el: box, pos: 'afterend' }; }
+    const cs = R.querySelector('.cf-sam'); if (cs) return { el: cs, pos: 'beforeend' };
     const slot = R.querySelector('.crs-sam-slot'); if (slot) return { el: slot, pos: 'beforeend' };
     const foot = R.querySelector('.crs-foot, .crs-actions, .crs-nav, footer'); if (foot) return { el: foot, pos: 'beforebegin' };
     const body = R.querySelector('.crs-body, .crs-step, [data-step]') || R; return { el: body, pos: 'afterbegin' }; }
-  const drop = () => document.querySelectorAll('.csam-b').forEach(b => b.remove());
-  function bubble(id, html, field, cls) { drop(); try { decorate(); } catch (e) { } const p = spot(field); if (!p) return null;
+  const drop = () => { SAM.bb = null; document.querySelectorAll('.csam-b').forEach(b => b.remove()); };
+  /* 흐름이 같은 단계를 다시 그리면(칸 고침 · 오류 표시) 말풍선을 같은 자리에 되살린다 */
+  const restore = id => { const B = SAM.bb; if (!B || B.id !== id || document.querySelector('.csam-b')) return; bubble(B.id, B.html, B.field, B.cls); };
+  function bubble(id, html, field, cls) { drop(); try { decorate(); } catch (e) { } const p = spot(field); if (!p) return null; if (!/busy/.test(cls || '')) SAM.bb = { id, html, field, cls };
     const b = document.createElement('div'); b.className = 'csam-b' + (cls ? ' ' + cls : ''); b.dataset.step = id; b.setAttribute('role', 'group'); b.setAttribute('aria-label', 'AI SAM 도움');
     b.innerHTML = `<span class="orb sm" aria-hidden="true"></span><div class="csam-c"><b class="csam-n">AI SAM</b>${html}</div>`;
     p.el.insertAdjacentElement(p.pos, b); try { b.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { } return b; }
@@ -83,15 +86,17 @@
     let Wk = []; try { Wk = AI.design(o) || []; } catch (e) { } return { o, Wk }; }
   function ruleFill(id, d) { let n = 0; const set = (k, v) => { if (d[k] == null || d[k] === '' || (Array.isArray(d[k]) && !d[k].length)) { d[k] = v; n++; } };
     if (id === 'basic') { set('name', d.topic || sugg()[0]); set('topic', d.name); set('target', sugg()[1]); set('sessions', U() ? 15 : 6); try { set('goal', AI.goal(d.name, d.target)); } catch (e) { } }
-    else if (id === 'outline') { const { Wk } = design(d); if (Wk.length) set('outline', Wk.map(w => ({ w: w.w, title: w.title, goal: w.goal }))); }
-    else if (id === 'fill') { if (W.CT && typeof W.CT.autoFill === 'function') { W.CT.autoFill(d); n++; } else { const { o, Wk } = design(d); (d.outline || []).forEach((x, i) => { if (Wk[i] && x && x.title) { Wk[i].title = x.title; Wk[i].goal = x.goal || Wk[i].goal; } }); try { set('items', itemsFromDesign(Wk, o)); } catch (e) { } } }
+    else if (id === 'outline') { const { Wk } = design(d); if (Wk.length) set('weekPlan', Wk.map(w => ({ w: w.w, title: w.title, goal: w.goal }))); }
+    else if (id === 'fill') { if (W.CT && typeof W.CT.autoFill === 'function') { W.CT.autoFill(d); n++; } else { const { o, Wk } = design(d); (d.weekPlan || d.outline || []).forEach((x, i) => { if (Wk[i] && x && x.title) { Wk[i].title = x.title; Wk[i].goal = x.goal || Wk[i].goal; } }); try { set('items', itemsFromDesign(Wk, o)); } catch (e) { } } }
     else if (id === 'setup') { set('price', 0); set('open', '전체'); }
     return n > 0; }
   async function fill(id, opt = {}) { id = id || cur(); const d = draft(); if (!cf() || !d || !id) return false;
     const snap = JSON.stringify(d); const ti = title(id); const s = stepOf(id);
     const b = opt.auto ? null : bubble(id, `<p>AI SAM이 「${esc(ti)}」를 채우는 중입니다…</p>`, opt.field, 'busy'); if (!opt.auto) live(`AI SAM이 ${ti}를 채우는 중입니다.`);
-    let ok = false;
-    try { if (s && typeof s.aiFill === 'function') { await s.aiFill(d, { field: opt.field || '', from: 'sam' }); ok = JSON.stringify(d) !== snap; } } catch (e) { console.error(e); }
+    let ok = false; const F = cf(); try { if (typeof F.snap === 'function') F.snap('AI SAM이 채운 내용'); } catch (e) { }
+    /* 칸 하나(말풍선이 그 칸 아래에 뜬 경우): C1의 칸 채우기(fieldAI · planFrom)로 그 칸만 */
+    try { const k = opt.field; if (k && k !== '_' && k !== '_check') { if (k === 'weekPlan' && typeof F.planFrom === 'function') { d.weekPlan = F.planFrom(d); d.sessions = d.weekPlan.length; ok = true; } else if (typeof F.fieldAI === 'function') { const v = F.fieldAI(k, { ...d, [k]: '' }); if (v != null && v !== '') { d[k] = v; ok = true; } } } } catch (e) { console.error(e); }
+    try { if (!ok && s && typeof s.aiFill === 'function') { await s.aiFill(d, { field: opt.field || '', from: 'sam' }); ok = JSON.stringify(d) !== snap; } } catch (e) { console.error(e); }
     if (!ok) { try { ok = ruleFill(id, d); } catch (e) { console.error(e); ok = false; } }
     if (b) b.remove();
     if (!ok) { if (!opt.auto) { bubble(id, `<p>이 단계는 이미 채워져 있습니다. 내용을 확인하고 [다음]을 눌러 주세요.</p><div class="csam-a"><button type="button" class="btn ghost" data-act="csam-no">닫기</button></div>`, opt.field); live('이 단계는 이미 채워져 있습니다.'); } return false; }
@@ -116,9 +121,11 @@
   /* ═════════ CF 이벤트 구독 ═════════ */
   const arg = a => (a && typeof a === 'object' && !Array.isArray(a) ? a : {});
   const sid = a => { a = arg(a); const s = a.step; return String(a.id || (s && typeof s === 'object' ? s.id : s) || a.to || cur() || ''); };
-  function onStep(a) { const x = arg(a); const s = st(); const id = sid(a); const prev = x.prev || x.from || s.step; drop();
-    if (prev && prev !== id && idx(id) > idx(prev)) sig('crs_' + prev);
-    s.step = id; s.last = Date.now(); s.errs = {};
+  function onStep(a) { const x = arg(a); const s = st(); const id = sid(a); const prev = s.step && s.step !== id ? s.step : (x.prev && x.prev !== id ? x.prev : ''); if (s.step !== id) drop(); else setTimeout(() => restore(id), 0);
+    if (prev && idx(id) > idx(prev)) sig('crs_' + prev);
+    if (s.step !== id) { s.step = id; s.errs = {}; } s.last = Date.now();
+    /* 과정 가이드가 켜져 있으면 가이드 단계를 흐름 단계에 맞춘다(흐름이 열린 동안 가이드 바는 숨김) */
+    try { if (typeof GD === 'function') { const G = GD(); const gg = G.open && G.act === 'course' && gdG('course'); const gi = gg ? gg.steps.findIndex(z => z.crs === id) : -1; if (gi >= 0 && G.i !== gi) { const pi = prev ? gg.steps.findIndex(z => z.crs === prev) : -1; if (pi >= 0 && pi < gi && typeof gdMark === 'function') gdMark(gg, pi); G.i = gi; G.base = gdM(); } } } catch (e) { }
     setTimeout(() => { decorate(); if (!s.sam || !isOpen()) return;
       if (id === 'basic' && !s.auto.pre) { s.auto.pre = 1; done(id, 'pre'); return; }
       if ((id === 'outline' || id === 'setup') && !s.auto[id]) { s.auto[id] = 1; if (problems(id).length || id === 'outline') fill(id, { auto: true }); return; }
@@ -126,11 +133,11 @@
   function onError(a) { const x = arg(a); const id = sid(a); const f = String(x.field || x.k || x.key || ''); const msg = String(x.msg || x.text || (Array.isArray(x.problems) ? x.problems.join(' ') : '') || '');
     const empty = x.empty === true || (x.empty !== false && /(비어|비었|입력해|넣어|적어|골라|선택해|정해)/.test(msg));
     touch(); if (empty) { setTimeout(() => nudge(id, 'empty', f), 60); return; }
-    const s = st(); const k = id + ':' + (f || '*'); s.errs[k] = (s.errs[k] || 0) + 1; if (s.errs[k] >= 2) setTimeout(() => nudge(id, 'repeat', f), 60); }
-  function onBack() { const s = st(); s.backs++; touch(); if (s.backs >= 2) setTimeout(() => nudge(cur(), 'back'), 120); }
+    const s = st(); const k = id + ':' + (f || '*'); s.errs[k] = Math.max((s.errs[k] || 0) + 1, +x.n || 0); if (s.errs[k] >= 2) setTimeout(() => nudge(id, 'repeat', f), 60); }
+  function onBack(a) { const s = st(); s.backs = Math.max(s.backs + 1, +arg(a).n || 0); touch(); if (s.backs >= 2) setTimeout(() => nudge(cur(), 'back'), 120); }
   function onCreate(a) { const x = arg(a); sig('crs_create'); drop(); Object.keys(UNDO).forEach(k => delete UNDO[k]); SAM.st = null; const c = x.course || x.c;
     if (c && c.name) audit(`과정 만들기 완료 — ${c.name}${x.d && x.d.from === 'sam' ? ' (AI SAM 대화)' : ''}`); }
-  function bind() { const F = cf(); if (!F || SAM.bound || typeof F.on !== 'function') return; SAM.bound = true;
+  function bind() { const F = cf(); if (!F || SAM.bound || typeof F.on !== 'function') return; SAM.bound = true; F.samOwnsButton = true; /* 단계 맡기기 버튼은 이 파일이 그린다(되돌리기 · 확인 안내 포함) */
     const on = (ev, fn) => { try { F.on(ev, (...a) => { try { fn(...a); } catch (e) { console.error('crs-sam', ev, e); } }); } catch (e) { console.error(e); } };
     on('step', onStep); on('idle', a => nudge(sid(a), 'idle')); on('error', onError); on('back', onBack); on('create', onCreate);
     /* CF.open을 감싸 대화 · 가이드에서 연 흐름을 표시한다 */
@@ -139,15 +146,15 @@
   /* 입력 활동 · 60초 무입력 감지(C1이 'idle'을 보내지 않아도 동작) */
   ['input', 'keydown', 'pointerdown', 'change'].forEach(ev => document.addEventListener(ev, e => { const R = root(); if (R && e.target && R.contains(e.target) && !e.target.closest('.csam-b')) touch(); }, true));
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && e.target && e.target.closest && e.target.closest('.csam-b')) { e.stopPropagation(); ACT['csam-no'](); } }, true);
-  setInterval(() => { try { if (!S || !S.org) return; bind(); if (isOpen()) { decorate(); const s = st(); if (!document.hidden && Date.now() - s.last >= SAM.idleMs) { s.last = Date.now(); nudge(cur(), 'idle'); } } else libTick(); } catch (e) { } }, 1000);
+  setInterval(() => { try { if (!S || !S.org) return; bind(); if (isOpen()) { decorate(); const s = st(); if (!document.hidden && Date.now() - s.last >= Math.max(SAM.idleMs, +(cf() || {}).idleMs || 0)) { s.last = Date.now(); nudge(cur(), 'idle'); } } else libTick(); } catch (e) { } }, 1000);
 
   /* 콘텐츠 라이브러리: 60초 동안 아무것도 안 하면 한 번만 교안 만들기를 권한다 */
   const LIB = { since: 0, asked: false };
   function libTick() { const on = typeof CUR === 'object' && CUR.tab === 'clib'; if (!on) { LIB.since = 0; return; } if (!LIB.since) LIB.since = Date.now(); if (LIB.asked || Date.now() - LIB.since < SAM.idleMs || document.hidden) return;
-    const R = document.querySelector('#clib, [data-clib], .clib'); if (!R || !shown(R)) return; LIB.asked = true; drop();
+    const R = document.querySelector('.clb, #clib, [data-clib]'); if (!R || !shown(R)) return; LIB.asked = true; drop();
     const b = document.createElement('div'); b.className = 'csam-b'; b.setAttribute('role', 'group'); b.setAttribute('aria-label', 'AI SAM 도움');
     b.innerHTML = `<span class="orb sm" aria-hidden="true"></span><div class="csam-c"><b class="csam-n">AI SAM</b><p>${esc(MSG.lib())}</p><div class="csam-a"><button type="button" class="btn pri" data-act="csam-libdoc">${ic('spark', 16)} 교안 만들기 열기</button><button type="button" class="btn ghost" data-act="csam-no">괜찮아요</button></div></div>`;
-    R.insertAdjacentElement('afterbegin', b); live(`AI SAM: ${MSG.lib()}`); }
+    const top = R.querySelector('.clb-top'); if (top) top.insertAdjacentElement('afterend', b); else R.insertAdjacentElement('afterbegin', b); live(`AI SAM: ${MSG.lib()}`); }
   document.addEventListener('pointerdown', e => { if (LIB.since && !(e.target.closest && e.target.closest('.csam-b'))) LIB.since = Date.now(); }, true);
   ACT['csam-libdoc'] = () => { drop(); if (W.CT && typeof W.CT.open === 'function') W.CT.open('doc', { from: 'lib' }); else toast('교안 만들기를 열 수 없습니다. 화면의 [교안] 카드를 눌러 주세요.', 'warn'); };
 
@@ -184,9 +191,11 @@
     try { if (typeof flowParse === 'function') { const F = flowParse(s); if (F && F.steps.some(f => f.id !== 'course')) return false; } } catch (e) { }
     return true; }
   SAM.isOne = isOne;
-  function openFlow(q, from) { const F = cf(); if (!F) return false; const p = typeof q === 'string' ? parse(q) : (q || {}); const pre = {}; Object.keys(p).forEach(k => { if (p[k] !== '' && p[k] != null) pre[k] = p[k]; });
+  function openFlow(q, from) { const F = cf(); if (!F) return false; const p = typeof q === 'string' ? parse(q) : (q || {}); const pre = {}; Object.keys(p).forEach(k => { if (k !== 'q' && p[k] !== '' && p[k] != null) pre[k] = p[k]; });
+    /* 흐름(C1)의 자동 넣기 설정 d.auto로 옮긴다 */
+    if (pre.vsrc || pre.docs || pre.quiz === false) { let A = {}; try { A = { ...((F.defaults && F.defaults().auto) || {}) }; } catch (e) { } if (pre.vsrc) A.video = pre.vsrc; if (pre.docs) A.docs = true; if (pre.quiz === false) { A.quiz = false; A.exam = false; A.assign = false; } pre.auto = A; }
     if (innerWidth <= 860 && document.getElementById('drawer') && ACT['chat-close']) { try { ACT['chat-close'](); } catch (e) { } }
-    try { F.open({ from: from || 'sam', prefill: pre }); } catch (e) { console.error(e); toast('과정 만들기 화면을 열지 못했습니다. [+ 만들기]를 눌러 주세요.', 'warn'); return false; }
+    try { F.open({ from: from || 'sam', prefill: pre, fresh: true }); } catch (e) { console.error(e); toast('과정 만들기 화면을 열지 못했습니다. [+ 만들기]를 눌러 주세요.', 'warn'); return false; }
     audit(`AI SAM 과정 만들기 열기 — ${pre.name || '이름 미정'}`); return true; }
   SAM.open = openFlow;
   ACT['csam-open'] = el => openFlow(el.dataset.v || '', 'sam');
@@ -248,6 +257,7 @@
 .csam-a{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.csam-a .btn{min-height:48px;padding:0 18px;font-size:16px}.csam-a .btn.ghost{border:1px solid var(--g300,#d4d4d4);background:var(--paper,#fff)}
 .csam-do{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:8px 0 12px}.csam-dobtn{min-height:48px;padding:0 18px;font-size:16px;border-color:var(--s300,#A5B0FA);color:var(--s700,#3B48B5);background:var(--paper,#fff)}
 .csam-dobtn:hover{background:var(--s50,#F3F5FF)}.csam-dohint{font-size:14px;color:var(--g600,#666)}
+body.cf-on #gdBar{display:none} /* 과정 만들기 흐름이 열려 있으면 가이드 바가 [다음] 버튼을 가리지 않게 숨긴다(흐름 진행 표시가 같은 5단계) */
 @keyframes csamIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.csam-b{animation:none}}
 @media (max-width:600px){.csam-b{padding:12px}.csam-a .btn{flex:1 1 110px;padding:0 12px}.csam-dobtn{width:100%;justify-content:center}}`;
