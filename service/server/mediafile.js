@@ -53,7 +53,7 @@ function fileType(name) {
 }
 /** 저장 · 내려받기용 이름: 제어 문자 · 경로 · 따옴표 제거, 80자(확장자 유지) */
 function cleanFileName(name, ext) {
-  let s = String(name || '').replace(/[\u0000-\u001f\u007f<>"'&\\/:*?|]/g, '').replace(/\s+/g, ' ').trim();
+  let s = String(name || '').replace(/[\u0000-\u001f\u007f<>"'&\\/:*?|]/g, '').replace(/[ \u00a0\u3000]+/g, ' ').trim(); /* Java DdMediaFile.cleanFileName과 같은 규칙 */
   const base = s.replace(/\.[A-Za-z0-9]{2,5}$/, '').trim() || '파일';
   return `${base.slice(0, 80 - ext.length - 1)}.${ext}`;
 }
@@ -154,7 +154,7 @@ function createMediaFiles({ pool, inTenant, HttpErr, limit, ip, audit, need, nee
   async function part(req, id) {
     const a = await need(req); const h = own(a, id);
     limit(`mfp:${a.uid}`, 1200, 60e3);
-    const seq = Number(new URL(req.url, 'http://x').searchParams.get('part'));
+    const ps = new URL(req.url, 'http://x').searchParams.get('part'); const seq = ps == null || ps === '' ? NaN : Number(ps);
     const raw = await readRaw(req, L.chunk + 16);
     return fail(await inTenant(pool, a.tid, async c => {
       const m = (await c.query("select mime, bytes, name, parts, chunk, status from media where tenant_id = $1 and id = $2 and kind <> 'image'", [a.tid, h])).rows[0];
@@ -194,12 +194,13 @@ function createMediaFiles({ pool, inTenant, HttpErr, limit, ip, audit, need, nee
       const r = (await c.query("select mime, bytes, name from media where tenant_id = $1 and id = $2 and kind <> 'image' and status = 'ok'", [tid, h])).rows[0];
       if (!r) throw missing();
       const ext = fileType(r.name).ext; const size = +r.bytes;
-      const hdr = { 'cache-control': 'private, max-age=31536000, immutable', etag, 'accept-ranges': 'bytes', 'content-type': r.mime,
+      const hdr = { 'cache-control': 'private, max-age=31536000, immutable', etag, 'accept-ranges': 'bytes',
         'content-disposition': disposition(r.name, ext, q.get('dl') === '1'), 'content-security-policy': ext === 'pdf' ? PDF_CSP : FILE_CSP,
         ...(ext === 'pdf' ? { 'x-frame-options': 'SAMEORIGIN' } : {}) };
       const rg = parseRange(req.headers.range, size);
       if (!rg && String(req.headers['if-none-match'] || '') === etag) return send(res, 304, null, hdr);
-      if (rg === 'bad') return send(res, 416, null, { ...hdr, 'content-range': `bytes */${size}` });
+      hdr['content-type'] = r.mime; /* 304에는 싣지 않음(Java · Tomcat과 같음) */
+      if (rg === 'bad') return send(res, 416, null, { ...hdr, 'content-range': `bytes */${size}`, 'content-length': 0 });
       if (rg) {
         const CH = (await c.query('select chunk from media where tenant_id = $1 and id = $2', [tid, h])).rows[0].chunk;
         const [s] = rg; const e = Math.min(rg[1], (Math.floor(s / CH) + 1) * CH - 1); /* 한 번에 한 조각까지 — 브라우저가 이어서 요청한다 */

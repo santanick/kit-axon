@@ -29,7 +29,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log",
         "GET /api/audit", "POST /api/tenant/delete", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion",
-        "POST /api/password", "GET /api/staff", "POST /api/media", "GET /api/media", "POST /api/staff", "POST /api/staff/remove",
+        "POST /api/password", "GET /api/staff", "POST /api/media", "GET /api/media", "POST /api/media/f", "POST /api/staff", "POST /api/staff/remove",
         /* v32.4 운영자 소셜 로그인 */
         "GET /api/oauth/google/start", "GET /api/oauth/google/callback", "GET /api/oauth/kakao/start", "GET /api/oauth/kakao/callback",
         "GET /api/oauth/pending", "POST /api/oauth/cancel", "POST /api/oauth/signup");
@@ -38,8 +38,12 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */
     public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent)\\z");
     /** v34.5 홈페이지 이미지: GET /api/media/{id}(공개) · DELETE /api/media/{id}(운영자) — Node media.match와 같음 */
-    public static final java.util.regex.Pattern MEDIA = java.util.regex.Pattern.compile("^/api/media/[^/]+\\z");
-    static boolean mediaRoute(String m, String path) { return ("GET".equals(m) || "DELETE".equals(m)) && MEDIA.matcher(path).matches(); }
+    public static final java.util.regex.Pattern MEDIA = java.util.regex.Pattern.compile("^/api/media/(?:f/)?[^/]+\\z"); /* v35: 강의 파일 /api/media/f/{id} 포함 */
+    static boolean mediaRoute(String m, String path) {
+        return (("GET".equals(m) || "DELETE".equals(m)) && MEDIA.matcher(path).matches())
+            || ("PUT".equals(m) && egovframework.didisam.media.service.impl.DdMediaFile.FILE_PATH.matcher(path).matches())
+            || ("POST".equals(m) && egovframework.didisam.media.service.impl.DdMediaFile.DONE_PATH.matcher(path).matches());
+    }
     static final Map<String, String> SEC = Map.of(
         "x-content-type-options", "nosniff",
         "referrer-policy", "strict-origin-when-cross-origin",
@@ -50,7 +54,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "x-permitted-cross-domain-policies", "none",
         "origin-agent-cluster", "?1");
     static final String CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'";
-    static final String LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; media-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'self'";
+    static final String LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: https:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; media-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'self'";
 
     private final DdProps props; private final DdWeb web;
     public DdApiFilter(DdProps props, DdWeb web) { this.props = props; this.web = web; }
