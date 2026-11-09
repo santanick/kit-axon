@@ -219,16 +219,21 @@ async function examPath(br, base, tc, { vp = { width: 1280, height: 900 }, shots
     await next(); if (await step() !== 'fill') throw new Error('차시 채우기로 못 넘어감: ' + await step() + ' ' + (await p.locator('#crsFlow .cf-err').allInnerTexts()).join('|'));
     /* ② 중간고사: 10문제 × 3배 · 40분 · 재응시 2번 · 통과 60점 */
     const mid = p.locator('#crsFlow [data-cfex=new][data-k=mid]'); if (!(await mid.count())) throw new Error('[중간고사 만들기] 없음');
-    await C.clk(mid, '중간고사 만들기'); for (const [k, v] of [['n', 10], ['mult', 3], ['time', 40], ['retake', 2], ['pass', 60]]) await C.clk(p.locator(`#cfExSh [data-cfx=${k}][data-v="${v}"]`), `${k}=${v}`);
-    const sum = await p.locator('#cfExSh .cf-exsum').innerText(); if (!/30개/.test(sum) || !/10개/.test(sum)) E.push('배수 안내 문장: ' + sum);
-    await shot('3exsheet'); await C.clk(p.locator('#cfExSh [data-cfxgo=make]'), 'AI SAM이 문제 만들기'); await p.waitForTimeout(800); const ed1 = await editorDone(); log.push('시험 편집기: ' + ed1);
+    await C.clk(mid, '중간고SA 만들기'.replace('SA', '사')); await p.waitForTimeout(500); let X0;
+    if (await p.locator('#cfExSh').filter({ visible: true }).count()) { /* CT 시험 편집기가 없을 때: 흐름 안 설정 창 */ X0 = { n: 10, bank: 30, time: 40, rv: 3, pass: 60 };
+      for (const [k, v] of [['n', 10], ['mult', 3], ['time', 40], ['retake', 2], ['pass', 60]]) await C.clk(p.locator(`#cfExSh [data-cfx=${k}][data-v="${v}"]`), `${k}=${v}`);
+      const sum = await p.locator('#cfExSh .cf-exsum').innerText(); if (!/30개/.test(sum) || !/10개/.test(sum)) E.push('배수 안내 문장: ' + sum);
+      await shot('3exsheet'); await C.clk(p.locator('#cfExSh [data-cfxgo=make]'), 'AI SAM이 문제 만들기'); await p.waitForTimeout(800); const ed1 = await editorDone(); log.push('시험 편집기: ' + ed1); }
+    else { /* D 요원 CT 'exam' 편집기: 흐름이 넘긴 기본값(중간고사 · 20문제 × 2배(직업훈련 3배) · 60분 · 재응시 1번 · 통과 60점)으로 만든다 */ const mu = type === 'voc' ? 3 : 2; X0 = { n: 20, bank: 20 * mu, time: 60, rv: 2, pass: 60 };
+      if (!(await p.locator('#ctSheet').filter({ visible: true }).count())) throw new Error('시험 편집기(CT exam)가 열리지 않음'); await shot('3exsheet'); await ctConfirm(p, log, 6); }
     /* ③ 설문 */
-    await C.clk(p.locator('#crsFlow [data-cfex=new][data-k=survey]'), '설문 만들기'); await C.clk(p.locator('#cfExSh [data-cfx=sv][data-v=lec]'), '강의 평가'); await C.clk(p.locator('#cfExSh [data-cfxgo=make]'), '설문 만들기'); await p.waitForTimeout(500); await editorDone();
+    await C.clk(p.locator('#crsFlow [data-cfex=new][data-k=survey]'), '설문 만들기'); await p.waitForTimeout(400); let svMin = 6;
+    if (await p.locator('#cfExSh').filter({ visible: true }).count()) { svMin = 8; await C.clk(p.locator('#cfExSh [data-cfx=sv][data-v=lec]'), '강의 평가'); await C.clk(p.locator('#cfExSh [data-cfxgo=make]'), '설문 만들기'); await p.waitForTimeout(500); await editorDone(); } else await ctConfirm(p, log, 6);
     const dr = await p.evaluate(() => (CF.draft.curriculum || []).filter(i => i.type === 'exam' || i.type === 'survey').map(i => ({ t: i.type, n: (i.qs || []).length, w: i.week, time: i.time, R: i.rules || {}, pts: (i.qs || []).reduce((a, q) => a + (+q.pts || 0), 0) })));
     const ex = dr.find(x => x.t === 'exam'), sv = dr.find(x => x.t === 'survey');
-    if (!ex) E.push('초안에 시험 없음'); else { if (ex.n !== 30) E.push(`문제 은행 ${ex.n}개(30 기대)`); if (ex.R.draw !== 10 || !ex.R.shuffle) E.push('무작위 출제 규칙 ' + JSON.stringify(ex.R)); if (ex.time !== 40) E.push('시험 시간 ' + ex.time); if (!ex.R.retry || ex.R.retry.mode !== 'count' || ex.R.retry.v !== 3) E.push('재응시 ' + JSON.stringify(ex.R.retry)); if (!ex.R.pass || !ex.R.pass.on || ex.R.pass.v !== 60) E.push('통과 점수 ' + JSON.stringify(ex.R.pass)); if (ex.pts !== 100) E.push('배점 합 ' + ex.pts); }
-    if (!sv) E.push('초안에 설문 없음'); else if (sv.n < 8) E.push(`설문 문항 ${sv.n}개(강의 평가 8 기대)`);
-    const pan = await p.locator('#crsFlow .cf-exl').innerText().catch(() => ''); if (!/30개 중 10개/.test(pan)) E.push('시험 목록 줄에 배수 출제 표시 없음: ' + pan.replace(/\s+/g, ' ').slice(0, 80));
+    if (!ex) E.push('초안에 시험 없음'); else { if (ex.n !== X0.bank) E.push(`문제 은행 ${ex.n}개(${X0.bank} 기대)`); if (ex.R.draw !== X0.n || ex.R.shuffle === false) E.push('무작위 출제 규칙 ' + JSON.stringify(ex.R)); if (ex.time !== X0.time) E.push('시험 시간 ' + ex.time); if (!ex.R.retry || ex.R.retry.mode !== 'count' || ex.R.retry.v !== X0.rv) E.push('재응시 ' + JSON.stringify(ex.R.retry)); if (!ex.R.pass || !ex.R.pass.on || ex.R.pass.v !== X0.pass) E.push('통과 점수 ' + JSON.stringify(ex.R.pass)); if (ex.w < 2) E.push('중간고사가 가운데 차시가 아님: ' + ex.w); }
+    if (!sv) E.push('초안에 설문 없음'); else if (sv.n < svMin) E.push(`설문 문항 ${sv.n}개(${svMin} 기대)`);
+    const pan = await p.locator('#crsFlow .cf-exl').innerText().catch(() => ''); if (!new RegExp(`${X0.bank}개 중 ${X0.n}개`).test(pan)) E.push('시험 목록 줄에 배수 출제 표시 없음: ' + pan.replace(/\s+/g, ' ').slice(0, 80));
     await shot('3filled'); await next();
     /* ④ 수강 설정: 평가 기준 · 통과 점수 · 기간 직접 */
     if (await step() !== 'setup') throw new Error('수강 설정 아님 ' + await step());
@@ -249,14 +254,14 @@ async function examPath(br, base, tc, { vp = { width: 1280, height: 900 }, shots
     if (varm && Math.abs(c.hours - Math.round(sumMin / 60 * 10) / 10) > 0.05) E.push(`과정 시간 ${c.hours}(차시별 합 ${sumMin}분)`); if (varm && c.wp.some(m => !(m > 0))) E.push('weekPlan에 차시별 분 없음');
     if (range && (c.start !== '2026-12-01' || c.end !== '2027-01-30')) E.push(`수강 기간 ${c.start}~${c.end}`); if (rec && !(c.rec && c.rec.on && c.rec.from === '2026-11-10' && c.rec.to === '2026-11-30')) E.push('수강신청 기간 ' + JSON.stringify(c.rec));
     if (type !== 'k12') { if (c.by !== 'eval' || !c.items.includes(c.exId) || c.w !== 100) E.push('평가 기준 반영 ' + JSON.stringify({ by: c.by, n: c.items.length, w: c.w })); if (!c.pass || !c.pass.on || c.pass.v !== 70) E.push('이수 기준 통과 점수 ' + JSON.stringify(c.pass)); }
-    if (c.draw !== 10 || !c.sv) E.push('과정 시험 · 설문 ' + JSON.stringify({ draw: c.draw, sv: c.sv }));
+    if (c.draw !== X0.n || !c.sv) E.push('과정 시험 · 설문 ' + JSON.stringify({ draw: c.draw, sv: c.sv }));
     /* ⑤ 게시본 · 학습자 채점(낸 문항만) */
     const lc = await learnerCheck(ctx, p, base, id, errs); if (!lc.name) E.push('학습자 화면에 과정 없음');
     const tid = await p.evaluate(() => DREG.cur()); const l = await ctx.newPage(); l.on('pageerror', e => errs.push('learner: ' + e.message)); await l.goto(base + `learner.html?t=${encodeURIComponent(tid)}#class/${id}`); await l.waitForFunction(() => typeof LR !== 'undefined' && LR.site, null, { timeout: 8000 }).catch(() => {}); await l.waitForTimeout(600);
-    const sc = await l.evaluate(id => { const c = ((LR.site && LR.site.classes) || []).find(x => x.id === id); const it = c && c.items.find(i => i.type === 'exam'); if (!it || typeof a2lScore !== 'function') return null; const pick = [0, 3, 5, 7, 9, 11, 13, 15, 17, 19]; const ans = it.qs.map((q, k) => pick.includes(k) ? q.a : '');
+    const sc = await l.evaluate(id => { const c = ((LR.site && LR.site.classes) || []).find(x => x.id === id); const it = c && c.items.find(i => i.type === 'exam'); if (!it || typeof a2lScore !== 'function') return null; const pick = [0, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39].slice(0, it.rules.draw); const ans = it.qs.map((q, k) => pick.includes(k) ? q.a : '');
       if (it.qs.every(q => q.t === 'ph')) return { n: it.qs.length, draw: it.rules && it.rules.draw, srv: true }; /* 직업훈련 규정 준수: 문항 · 정답은 응시 때 서버(데모는 같은 규격)가 cplN개를 무작위로 낸다 */
       return { n: it.qs.length, draw: it.rules && it.rules.draw, withPick: a2lScore(it, ans, pick).score, noPick: a2lScore(it, ans).score }; }, id); await l.close();
-    if (!sc) E.push('학습자 게시본에 시험 없음'); else { if ((sc.srv ? sc.n !== 10 : sc.n !== 30) || sc.draw !== 10) E.push('게시본 시험 ' + JSON.stringify(sc)); /* 서버 출제는 응시 전 자리 문항이 출제 수(10)만큼 */ if (sc.srv) { const n = await p.evaluate(id => (S.classes.find(x => x.id === id).curriculum.find(i => i.type === 'exam') || {}).cplN, id); if (n !== 10) E.push('서버 출제 수(cplN) ' + n); } else if (sc.withPick < 80 || sc.noPick >= sc.withPick) E.push('낸 문항만 채점하지 않음 ' + JSON.stringify(sc)); }
+    if (!sc) E.push('학습자 게시본에 시험 없음'); else { if ((sc.srv ? sc.n !== X0.n : sc.n !== X0.bank) || sc.draw !== X0.n) E.push('게시본 시험 ' + JSON.stringify(sc)); /* 서버 출제는 응시 전 자리 문항이 출제 수(10)만큼 */ if (sc.srv) { const n = await p.evaluate(id => (S.classes.find(x => x.id === id).curriculum.find(i => i.type === 'exam') || {}).cplN, id); if (n !== X0.n) E.push('서버 출제 수(cplN) ' + n); } else if (sc.withPick < 80 || sc.noPick >= sc.withPick) E.push('낸 문항만 채점하지 않음 ' + JSON.stringify(sc)); }
   } catch (e) { E.push('예외 ' + e.message.split('\n')[0]); }
   if (errs.length) E.push('pageerror ' + [...new Set(errs)].slice(0, 2).join(' / ')); await ctx.close(); return { E, clicks: C.n, log };
 }
