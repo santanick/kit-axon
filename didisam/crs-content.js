@@ -27,6 +27,8 @@
     aivideo: '<rect x="3" y="5" width="14" height="14" rx="2"/><path d="M17 10l4-2v8l-4-2"/><path d="M9 9l.8 1.7L11.5 11l-1.7.8L9 13.5l-.8-1.7L6.5 11l1.7-.3z"/>',
     doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
     quiz: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.3 2.4c-.5.2-.8.6-.8 1.1V14M12 17h.01"/>',
+    exam: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12l1.5 1.5L13 11M9 17h6"/>',
+    survey: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
     assign: '<path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 13l2 2 4-4"/>',
     book: '<path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z"/><path d="M4 20a2 2 0 0 0 2 1h13v-3M9 7h6"/>',
     youtube: '<rect x="2.5" y="5.5" width="19" height="13" rx="3.5"/><path d="M10 9.5v5l4.5-2.5z"/>',
@@ -43,6 +45,8 @@
     { k: 'aivideo', name: 'AI 강의 영상 만들기', one: '주제만 적으면 대본 · 슬라이드 · 음성 설명을 한 번에 만듭니다', time: '약 1분' },
     { k: 'doc', name: '교안 만들기', one: '학습 목표 · 본문 · 실습 · 확인 문제가 담긴 A4 교안', time: '30초' },
     { k: 'quiz', name: '퀴즈 만들기', one: '정답과 해설이 있는 확인 문제', time: '30초' },
+    { k: 'exam', name: '시험 만들기', one: '중간 · 기말 · 과정 테스트 — 문제 은행에서 랜덤으로 냅니다', time: '1분' },
+    { k: 'survey', name: '설문 만들기', one: '객관식 · 척도 · 주관식 문항의 만족도 · 의견 설문', time: '30초' },
     { k: 'assign', name: '과제 만들기', one: '과제 안내와 채점 기준을 함께 만듭니다', time: '30초' },
     { k: 'book', name: '디지털북 만들기', one: '읽고 · 풀고 · 쓰며 익히는 교재', time: '1분' },
     { k: 'youtube', name: 'YouTube 영상 넣기', one: 'YouTube 주소를 붙여 넣습니다', time: '1분' },
@@ -50,9 +54,9 @@
   ];
   const KN = Object.fromEntries(KINDS.map(x => [x.k, x]));
   const icOf = it => (it && it.type === 'audio') || /^audio/.test((it && it.mime) || '') ? 'audio' : (KN[TYPE_KIND(it || {})] ? TYPE_KIND(it) : 'doc');
-  const STEPS = { upload: ['파일 고르기', '확인하고 넣기'], aivideo: ['주제 확인', '만들기', '미리보기'], doc: ['주제 확인', '미리보기'], quiz: ['주제 확인', '미리보기'], assign: ['주제 확인', '미리보기'], book: ['주제 확인', '미리보기'], youtube: ['주소 붙여 넣기', '확인하고 넣기'], lib: ['고르기', '확인하고 넣기'] };
-  const TYPE_KIND = it => it.type === 'audio' ? 'upload' : it.type === 'video' ? (it.src === 'ai' ? 'aivideo' : it.src === 'upload' ? 'upload' : 'youtube') : it.type === 'doc' ? (it.src === 'book' ? 'book' : it.src === 'upload' ? 'upload' : 'doc') : it.type === 'exam' ? 'quiz' : it.type;
-  const TYPE_LABEL = it => ({ aivideo: 'AI 영상', upload: it.type === 'video' ? '영상' : it.type === 'audio' ? '음성' : '자료', youtube: 'YouTube', doc: '교안', book: '디지털북', quiz: it.type === 'exam' ? '시험' : '퀴즈', assign: '과제' }[TYPE_KIND(it)] || (typeof ITEMX === 'object' && ITEMX[it.type]) || it.type);
+  const STEPS = { upload: ['파일 고르기', '확인하고 넣기'], aivideo: ['주제 확인', '만들기', '미리보기'], doc: ['주제 확인', '미리보기'], quiz: ['주제 확인', '미리보기'], exam: ['시험 설정', '문항 고치기'], survey: ['주제 확인', '문항 고치기'], assign: ['주제 확인', '미리보기'], book: ['주제 확인', '미리보기'], youtube: ['주소 붙여 넣기', '확인하고 넣기'], lib: ['고르기', '확인하고 넣기'] };
+  const TYPE_KIND = it => it.type === 'audio' ? 'upload' : it.type === 'video' ? (it.src === 'ai' ? 'aivideo' : it.src === 'upload' ? 'upload' : 'youtube') : it.type === 'doc' ? (it.src === 'book' ? 'book' : it.src === 'upload' ? 'upload' : 'doc') : it.type;
+  const TYPE_LABEL = it => ({ aivideo: 'AI 영상', upload: it.type === 'video' ? '영상' : it.type === 'audio' ? '음성' : '자료', youtube: 'YouTube', doc: '교안', book: '디지털북', quiz: '퀴즈', exam: '시험', survey: '설문', assign: '과제' }[TYPE_KIND(it)] || (typeof ITEMX === 'object' && ITEMX[it.type]) || it.type);
 
   /* ── AI 생성(Claude 있으면 Claude, 없으면 규칙) ── */
   const claudeOn = () => { try { return typeof CL === 'object' && !!CL.on('docs'); } catch (e) { return false; } };
@@ -77,6 +81,14 @@
       return { v: AI.questions(tp, o.n, o.lv, ['mc', 'ox', 'mc', 'mc', 'ox']), by: 'rule' };
     },
     async assign(tp) { return { v: { ...AI.assignment(tp), rb: AI.rubric(tp) }, by: 'rule' }; },
+    async exam(tp, o) { const need = Math.min(60, o.need || 30);
+      if (claudeOn()) try { const j = await claudeJSON(`주제 「${tp}」의 ${o.lv} 난이도 시험 문제 ${Math.min(need, 40)}개를 JSON 배열로(문제 은행, 서로 겹치지 않게): 객관식 {"t":"mc","q":"문제","opts":[보기 4개],"a":"정답 보기 번호(0부터)","exp":"해설"}, OX {"t":"ox","q":"문장","a":"O 또는 X","exp":"해설"}, 단답 {"t":"short","q":"문제","a":"정답","exp":"해설"}. 객관식 60% · OX 25% · 단답 15%.`, 6000);
+        if (Array.isArray(j) && j.length) { const L = j.map(q => ({ t: ['mc', 'ox', 'short'].includes(q.t) ? q.t : 'mc', q: strip(String(q.q || '')), opts: q.t === 'mc' || !q.t ? (q.opts || []).map(String).slice(0, 6) : undefined, a: String(q.a ?? '0'), exp: String(q.exp || ''), lv: o.lv })).filter(q => q.q); return { v: L.length < need ? L.concat(examBank(tp, need - L.length, o.lv, L)) : L.slice(0, need), by: 'claude' }; } } catch (e) { }
+      return { v: examBank(tp, need, o.lv), by: 'rule' }; },
+    async survey(tp, o) {
+      if (claudeOn()) try { const j = await claudeJSON(`주제 「${tp}」 교육의 만족도 · 의견 설문 ${o.n}문항을 JSON 배열로: 객관식 {"t":"single","q":"질문","opts":[항목 3~5개]}, 척도 {"t":"scale","q":"질문(그렇다/아니다로 답할 수 있게)"}, 주관식 {"t":"text","q":"질문"}. 넣을 유형: ${Object.keys(o.mix).filter(k => o.mix[k]).join(', ')}. 주관식은 마지막에.`, 2400);
+        if (Array.isArray(j) && j.length) return { v: j.slice(0, 12).map(q => q.t === 'scale' ? { id: nid('sq'), q: String(q.q || ''), t: 'single', opts: [...A5L], scale: true, req: true, etc: false, max: 0 } : q.t === 'text' ? { id: nid('sq'), q: String(q.q || ''), t: 'text', opts: [], req: false, etc: false, max: 0 } : { id: nid('sq'), q: String(q.q || ''), t: q.t === 'multi' ? 'multi' : 'single', opts: (q.opts || []).map(String).slice(0, 8), req: true, etc: false, max: 0 }).filter(q => q.q), by: 'claude' }; } catch (e) { }
+      return { v: svDraft(tp, o.n, o.mix), by: 'rule' }; },
     async book(tp, o) { const b = bkAIDraft(tp, o.n || 3, {}); return { v: b, by: 'rule' }; }
   };
   const byNote = by => by === 'claude' ? '<span class="ct-by c">Claude로 만들었습니다 · 내용을 한 번 확인하세요</span>' : '<span class="ct-by">기본 AI(브라우저 데모)로 만든 초안입니다 · 내용을 한 번 확인하세요</span>';
@@ -100,108 +112,234 @@
   const where = () => { const c = X.ctx; if (X.ctx.from === 'lib' && !c.course) return '콘텐츠 라이브러리에 저장합니다'; const w = c.week ? `${c.week}${unit()}` : ''; const st = sessTitle(c); const tt = st && !/^\d+\s*(차시|주차|주|회차)$/.test(st) ? `「${st}」` : ''; if (w) return `${w}${tt ? ' ' + tt : ''}에 넣습니다`; return `${tt || (courseName(c) ? `「${courseName(c)}」` : '')}에 넣습니다`.replace(/^에 넣습니다$/, `이 ${unit()}에 넣습니다`); }; /* 어느 차시에 들어가는지 크게(평가 1회차 6번) */
   const doneLabel = () => X.ctx.from === 'lib' && !X.ctx.course ? '라이브러리에 저장' : (X.ctx.item ? '이 콘텐츠로 바꾸기' : `이 ${unit()}에 넣기`);
 
+  /* ── v36 만들기 화면: 왼쪽(휴대폰은 위) 설정 + 오른쪽 실시간 미리보기, 미리보기 글자를 누르면 그 자리에서 고친다 ── */
+  const MK = new Set(['doc', 'quiz', 'exam', 'survey', 'assign', 'aivideo', 'book']);
+  const EXK = [['mid', '중간고사'], ['final', '기말고사'], ['test', '과정 테스트']];
+  const exName = k => (EXK.find(x => x[0] === k) || EXK[2])[1];
+  const guessEk = ctx => { const s = sessTitle(ctx) + ' ' + cl((ctx && ctx.title) || ''); if (/중간/.test(s)) return 'mid'; if (/기말|최종|종합/.test(s)) return 'final'; return 'test'; };
+  const SVT = [['single', '객관식(하나 고르기)'], ['multi', '객관식(여러 개 고르기)'], ['scale', '척도(5점)'], ['text', '주관식(자유롭게 쓰기)']];
+  const A5L = ['매우 그렇다', '그렇다', '보통', '그렇지 않다', '전혀 그렇지 않다'];
+  const svKind = q => q.t === 'text' ? 'text' : q.scale || (q.t === 'single' && JSON.stringify(q.opts) === JSON.stringify(A5L)) ? 'scale' : q.t === 'multi' || q.t === 'multiN' ? 'multi' : 'single';
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const strip = q => String(q || '').replace(/^\d+\.\s*/, '');
+
   function open(kind, ctx) {
     if (!S) return; ctx = ctx || {}; if (!KN[kind]) kind = 'doc'; if (kind === 'lib' && ctx.from === 'lib' && !ctx.course) kind = 'doc';
-    X = { kind, ctx, step: 0, topic: seedTopic(ctx), mins: 5, n: 5, lv: '보통', fmt: 'hand', units: 3, res: null, by: '', busy: false };
+    const pre = ctx.preset || {};
+    X = { kind, ctx, step: 0, topic: seedTopic(ctx), mins: 5, n: 5, lv: '보통', fmt: 'hand', units: 3, res: null, by: '', busy: false, dirty: false, ttl: '',
+      ek: pre.examKind || guessEk(ctx), en: +pre.n || 10, mult: +pre.mult || 3, time: +pre.time || (pre.examKind === 'test' ? 30 : 60), retake: pre.retake != null ? +pre.retake : 1, pass: +pre.pass || 60, passOn: pre.passOn !== false && pre.pass !== 0, rand: pre.random !== false, pvx: 'bank',
+      sn: kind === 'survey' ? (+pre.n || 6) : 6, mix: { single: 1, scale: 1, text: 1 },
+      tpl: 'slide', avatar: 'none', vg: 'f', rate: 1, vname: '', vlang: 'ko', slang: 'ko', tr: {}, scene: 0, due: 7 };
     if (ctx.item) prefill(ctx.item);
-    mount(); draw(); return true;
+    mount(); draw();
+    if (MK.has(kind) && !X.res && (X.topic || '').trim() && !claudeOn()) A['ct-make']();
+    return true;
   }
-  function prefill(it) { const k = TYPE_KIND(it); if (k !== X.kind) return; if (k === 'aivideo' && it.ai?.scenes?.length) { X.res = JSON.parse(JSON.stringify(it.ai.scenes)); X.mins = it.ai.mins || 5; X.step = 2; }
-    if (k === 'doc' && it.doc?.secs?.length) { X.res = JSON.parse(JSON.stringify(it.doc)); X.fmt = it.fmt || 'hand'; X.step = 1; } if (k === 'quiz' && it.qs?.length) { X.res = JSON.parse(JSON.stringify(it.qs)); X.step = 1; }
-    if (k === 'youtube' && it.url) X.url = it.url; if (it.topic) X.topic = topicOf(it.topic); }
+  function prefill(it) { const k = TYPE_KIND(it); if (k !== X.kind) return;
+    if (k === 'aivideo' && it.ai?.scenes?.length) { const a = it.ai; X.res = clone(a.scenes); X.mins = a.mins || 5; X.step = 2; Object.assign(X, { tpl: a.tpl || a.style || 'slide', avatar: a.avatar || 'none', vg: a.voice || 'f', rate: +a.rate || 1, vname: a.vname || '', vlang: a.vlang || 'ko', slang: a.slang || 'ko', tr: clone(a.tr || {}) }); }
+    if (k === 'doc' && it.doc?.secs?.length) { X.res = clone(it.doc); X.fmt = it.fmt || 'hand'; X.step = 1; }
+    if (k === 'quiz' && it.qs?.length) { X.res = clone(it.qs); X.step = 1; }
+    if (k === 'exam' && it.qs?.length) { const R = it.rules || {}; X.res = clone(it.qs); X.step = 1; X.ek = it.ek || guessEk({ title: it.title }); X.en = +R.draw || +(it.pool && it.pool.n) || it.qs.length; X.mult = +(it.pool && it.pool.mult) || Math.max(1, Math.round(it.qs.length / X.en)); X.time = +it.time || 60; X.retake = it.retake != null ? +it.retake : 1; X.passOn = !!(R.pass ? R.pass.on : true); X.pass = +(R.pass && R.pass.v) || 60; X.rand = R.shuffle !== false; }
+    if (k === 'survey' && it.qs?.length) { X.res = clone(it.qs).map(q => typeof q === 'object' ? { id: q.id || nid('sq'), q: q.q || '', t: q.t === 'likert' ? 'single' : (q.t || 'single'), opts: q.t === 'likert' ? [...A5L] : (q.opts || []), req: q.req !== false, scale: q.t === 'likert' || q.scale, etc: !!q.etc, max: +q.max || 0 } : { id: nid('sq'), q: String(q), t: 'single', opts: [...A5L], req: true, scale: true }); X.sn = X.res.length; X.step = 1; }
+    if (k === 'assign' && (it.desc || it.deliv)) { const rb = (S.rubrics || []).find(r => r.id === it.rubric) || it._rb || AI.rubric(it.title || ''); X.res = { desc: it.desc || '', deliv: it.deliv || '', due: +it.due || 7, rb: clone(rb) }; X.due = +it.due || 7; X.step = 1; }
+    if (k === 'book') { let b = it._book || null; try { if (!b && it.book && typeof bkOf === 'function') b = bkOf(it.book); } catch (e) { } if (b && (b.chs || []).length) { X.res = clone(b); X.units = b.chs.length; X.step = 1; X.bookRef = it.book || ''; } }
+    if (k === 'youtube' && it.url) X.url = it.url; if (it.topic) X.topic = topicOf(it.topic); if (it.title && MK.has(k)) X.ttl = it.title; }
   function mount() {
     close(true); injectCSS();
     const w = document.createElement('div'); w.className = 'ct-wrap'; w.id = 'ctSheet';
     w.innerHTML = `<div class="ct-sh" role="dialog" aria-modal="true" aria-labelledby="ctTitle"><div class="ct-hd"><button type="button" class="ct-icb" data-act="ct-back" aria-label="이전">${svg('back', 22)}</button><div class="ct-ht"><b id="ctTitle"></b><small id="ctWhere"></small></div><button type="button" class="ct-icb" data-act="ct-close" aria-label="닫기">${svg('x', 22)}</button></div><ol class="ct-steps" id="ctSteps"></ol><p class="ct-now" id="ctNow"></p><div class="ct-bd" id="ctBody"></div><div class="ct-ft" id="ctFoot"></div></div>`;
     document.body.appendChild(w);
     w.addEventListener('click', e => { if (e.target === w) close(); });
-    w.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
+    w.addEventListener('keydown', e => { if (e.key === 'Escape' && !(e.target && e.target.isContentEditable)) { e.stopPropagation(); close(); } });
     setTimeout(() => { const f = w.querySelector('.ct-bd input, .ct-bd textarea, .ct-ft .ct-pri'); f && f.focus({ preventScroll: true }); }, 30);
   }
-  function close(silent) { const w = $1('#ctSheet'); if (w) w.remove(); if (!silent) { X = null; } }
+  function close(silent) { const w = $1('#ctSheet'); if (w) w.remove(); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } if (!silent) { X = null; } }
 
   /* ── 화면 그리기 ── */
   function draw() {
-    const w = $1('#ctSheet'); if (!w || !X) return; const K = KN[X.kind]; const ST = STEPS[X.kind];
+    const w = $1('#ctSheet'); if (!w || !X) return; const K = KN[X.kind]; const ST = STEPS[X.kind]; const mk = MK.has(X.kind) && !X.done;
+    const sh = w.querySelector('.ct-sh'); if (sh) sh.classList.toggle('wide', mk);
     $1('#ctTitle').textContent = X.done ? '저장했습니다' : K.name; $1('#ctWhere').textContent = X.done ? '' : where(); $1('#ctWhere').className = !X.done && X.ctx.week ? 'ct-dest' : '';
-    $1('#ctSteps').innerHTML = X.done ? '' : ST.map((s, i) => `<li class="${i < X.step ? 'ok' : i === X.step ? 'on' : ''}" ${i === X.step ? 'aria-current="step"' : ''}><i>${i < X.step ? svg('check', 14) : i + 1}</i><span>${E(s)}</span></li>`).join('');
-    w.querySelector('[data-act=ct-back]').style.visibility = X.step > 0 && !X.done && !X.busy ? 'visible' : 'hidden';
+    $1('#ctSteps').innerHTML = X.done || mk ? '' : ST.map((s, i) => `<li class="${i < X.step ? 'ok' : i === X.step ? 'on' : ''}" ${i === X.step ? 'aria-current="step"' : ''}><i>${i < X.step ? svg('check', 14) : i + 1}</i><span>${E(s)}</span></li>`).join('');
+    $1('#ctSteps').hidden = X.done || mk;
+    w.querySelector('[data-act=ct-back]').style.visibility = !mk && X.step > 0 && !X.done && !X.busy ? 'visible' : 'hidden';
     const R = X.done ? vDone() : (VIEW[X.kind] || VIEW.doc)();
     $1('#ctNow').innerHTML = R.now ? `<b>지금 할 일</b> ${E(R.now)}` : ''; $1('#ctNow').hidden = !R.now;
-    $1('#ctBody').innerHTML = R.body; $1('#ctFoot').innerHTML = R.foot || '';
+    const ae = document.activeElement; const keep = ae && ae.id && w.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) ? [ae.id, ae.selectionStart, ae.selectionEnd] : null;
+    const pv0 = $1('#ctPv'), st0 = $1('.ct-set'); const sc = [pv0 ? pv0.scrollTop : 0, st0 ? st0.scrollTop : 0];
+    $1('#ctBody').innerHTML = mk ? `<div class="ct-mk ct-mk-${X.kind}"><div class="ct-set" role="region" aria-label="만들기 설정">${R.set}</div><section class="ct-pv" aria-label="실시간 미리보기"><div class="ct-pvh"><b>실시간 미리보기</b><small>${E(R.hint || (X.res ? '글자를 누르면 그 자리에서 바로 고칠 수 있습니다' : '설정을 바꾸면 여기에 바로 보입니다'))}</small></div><div class="ct-pvb" id="ctPv">${R.pv}</div></section></div>` : R.body;
+    $1('#ctFoot').innerHTML = R.foot || '';
+    if (mk) { const pv = $1('#ctPv'), st = $1('.ct-set'); if (pv) pv.scrollTop = sc[0]; if (st) st.scrollTop = sc[1]; }
+    if (keep) { const n = document.getElementById(keep[0]); if (n) { n.focus({ preventScroll: true }); try { if (keep[1] != null) n.setSelectionRange(keep[1], keep[2]); } catch (e) { } } }
     if (R.after) R.after($1('#ctBody'));
   }
   const pri = (label, act, dis, extra) => `<button type="button" class="ct-btn ct-pri" data-act="${act}" ${dis ? 'disabled aria-disabled="true"' : ''} ${extra || ''}>${label}</button>`;
   const sec = (label, act, extra) => `<button type="button" class="ct-btn" data-act="${act}" ${extra || ''}>${label}</button>`;
   /* 주제가 비면 만들기 버튼 옆에 이유를 적는다(평가 2회차 5번 — 버튼만 흐려 보여 막힌 느낌) */
-  const foot = (main, left) => { const need = !left && X && X.step === 0 && /data-act="ct-make"/.test(main) && !(() => { try { return seedTopic(X.ctx || {}); } catch (e) { return ''; } })(); return `<div class="ct-fl">${left || (need ? `<span class="ct-need" data-ctneed="1" ${String(X.topic || '').trim() ? 'hidden' : ''}>주제를 적으면 만들 수 있습니다</span>` : '')}</div>${main}`; };
+  const foot = (main, left) => { const need = !left && X && X.step === 0 && /data-act="ct-make"/.test(main) && !String(X.topic || '').trim(); return `<div class="ct-fl">${left || (need ? `<span class="ct-need" data-ctneed="1">주제를 적으면 만들 수 있습니다</span>` : '')}</div>${main}`; };
   const busyBox = m => `<div class="ct-busy" role="status"><span class="ct-spin" aria-hidden="true"></span>${E(m)}</div>`;
   const topicField = (lab, ex) => `<label class="ct-f"><span class="ct-l">${E(lab)}</span><input id="ctTopic" value="${E(X.topic)}" maxlength="80" autocomplete="off"></label><p class="ct-ex">예: ${E(ex)}</p><button type="button" class="ct-btn ct-ai" data-act="ct-aifill">${svg('spark', 18)} AI SAM이 채워 주기</button>`;
-  const chips = (key, opts, lab) => `<div class="ct-f"><span class="ct-l">${E(lab)}</span><div class="ct-chips" role="radiogroup" aria-label="${E(lab)}">${opts.map(([v, l]) => `<button type="button" role="radio" aria-checked="${String(X[key]) === String(v)}" class="ct-chip ${String(X[key]) === String(v) ? 'on' : ''}" data-act="ct-opt" data-k="${key}" data-v="${E(v)}">${E(l)}</button>`).join('')}</div></div>`;
+  const chips = (key, opts, lab, sub) => `<div class="ct-f"><span class="ct-l">${E(lab)}${sub ? ` <small class="ct-sub">${E(sub)}</small>` : ''}</span><div class="ct-chips" role="radiogroup" aria-label="${E(lab)}">${opts.map(([v, l]) => `<button type="button" role="radio" aria-checked="${String(X[key]) === String(v)}" class="ct-chip ${String(X[key]) === String(v) ? 'on' : ''}" data-act="ct-opt" data-k="${key}" data-v="${E(v)}">${E(l)}</button>`).join('')}</div></div>`;
+  const ce = (path, txt, tag, cls, ph) => `<${tag || 'span'} class="ct-ce ${cls || ''}" data-ce="${E(path)}" tabindex="0" role="textbox" aria-label="눌러서 고치기"${ph ? ` data-ph="${E(ph)}"` : ''}>${E(txt)}</${tag || 'span'}>`;
+  const makeBtn = (lab) => `<button type="button" class="ct-btn ct-ai ct-mkb" data-act="ct-make" ${X.busy ? 'disabled' : ''}>${svg('spark', 18)} ${E(X.res ? 'AI로 다시 만들기' : lab)}</button>${X.res && X.dirty ? '<p class="ct-mini">다시 만들면 미리보기에서 고친 내용은 새 초안으로 바뀝니다.</p>' : ''}`;
+  const setHead = (lab, ex) => topicField(lab, ex);
+  const pvEmpty = (m) => X.busy ? busyBox(m) : `<div class="ct-pvempty">${svg('spark', 34)}<b>${E(String(X.topic || '').trim() ? '[만들기]를 누르면 여기에 바로 만들어집니다' : '주제를 적으면 여기에 바로 만들어집니다')}</b><span>만든 뒤에는 미리보기의 글자를 눌러 그 자리에서 고칩니다.</span></div>`;
+  const mkFoot = (lab) => X.res && !X.busy ? foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')) : foot(pri(`${svg('spark', 18)} ${E(lab)}`, 'ct-make', X.busy));
+  const titleOf = () => X.ttl || ({ doc: docTitle(), quiz: `${X.topic || sessTitle(X.ctx) || ''} 확인 퀴즈`, exam: `${X.topic || sessTitle(X.ctx) || courseName(X.ctx) || ''} ${exName(X.ek)}`, survey: `${X.topic || courseName(X.ctx) || ''} 설문`, assign: `${X.topic || sessTitle(X.ctx) || ''} 과제`, aivideo: `${vTitle()} 강의 영상`, book: (X.res && X.res.title) || `${X.topic} 디지털북` }[X.kind] || '').replace(/\s+/g, ' ').trim();
+  const ttlRow = () => `<div class="ct-ttl">${ce('@title', titleOf(), 'h3', 'ct-ttlh')}</div>`;
+  const byRow = () => X.res ? byNote(X.by) : '';
 
   const VIEW = {};
   /* 교안 */
-  VIEW.doc = () => {
-    if (X.step === 0) return { now: '주제를 확인하고 [교안 만들기]를 누르세요.', body: topicField('교안 주제', '엑셀 함수로 매출 합계 구하기') + chips('fmt', [['hand', '교안'], ['work', '실습지'], ['slide', '슬라이드 요약']], '모양'), foot: foot(pri(`${svg('spark', 18)} 교안 만들기`, 'ct-make', !X.topic && false)) };
-    if (X.busy || !X.res) return { now: '', body: busyBox('교안을 만들고 있습니다…'), foot: '' };
-    return { now: '미리보기를 확인하고 넣으세요. 고칠 곳은 [글 고치기]에서 바꿀 수 있습니다.', body: `${byNote(X.by)}<div class="ct-tools">${sec(`${svg('down', 18)} 내려받기`, 'ct-doc-dl')}${sec(`${svg('print', 18)} 인쇄 · PDF`, 'ct-doc-print')}${sec(X.edit ? '미리보기로' : '글 고치기', 'ct-doc-edit')}${sec('다시 만들기', 'ct-make')}</div>${X.edit ? docEdit() : a4(X.res)}`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')) };
-  };
   const fmtName = { hand: '강의 교안', work: '실습 워크시트', slide: '슬라이드 요약' };
+  VIEW.doc = () => ({ now: X.res ? '미리보기의 글자를 눌러 바로 고치고, 다 되면 아래 버튼을 누르세요.' : '주제를 확인하고 [교안 만들기]를 누르세요.',
+    set: setHead('교안 주제', '엑셀 함수로 매출 합계 구하기') + chips('fmt', [['hand', '교안'], ['work', '실습지'], ['slide', '슬라이드 요약']], '모양', '바로 바뀝니다') + makeBtn('교안 만들기') + (X.res ? `<div class="ct-tools">${sec(`${svg('down', 18)} 내려받기`, 'ct-doc-dl')}${sec(`${svg('print', 18)} 인쇄 · PDF`, 'ct-doc-print')}</div>` : ''),
+    pv: X.res && !X.busy ? byRow() + a4(X.res) : pvEmpty('교안을 만들고 있습니다…'), foot: mkFoot('교안 만들기') });
   function a4(D) {
-    const f = X.fmt; return `<article class="ct-a4" aria-label="교안 미리보기"><header><small>${E(S.org.name)}${courseName(X.ctx) ? ' · ' + E(courseName(X.ctx)) : ''} · ${fmtName[f]}</small><h1>${E(docTitle())}</h1></header>
-      <section class="ct-a4box"><b>학습 목표</b><ul>${D.goals.map(g => `<li>${E(g)}</li>`).join('')}</ul></section>
-      ${D.secs.map((s, i) => `<h2>${i + 1}. ${E(s.h)}</h2>${f === 'slide' ? '' : `<p>${E(s.body)}</p>`}<ul>${(s.pts || []).map(p => `<li>${E(p)}</li>`).join('')}</ul>${f === 'work' ? '<div class="ct-ln"></div><div class="ct-ln"></div>' : ''}`).join('')}
-      <h2>실습 활동</h2><p>${E(D.act)}</p><h2>확인 문제</h2><ol>${D.check.map(q => `<li>${E(q)}${f === 'work' ? '<div class="ct-ln"></div>' : ''}</li>`).join('')}</ol><footer>AI 초안을 바탕으로 담당자가 검토한 자료입니다 · ${E(today())}</footer></article>`;
+    const f = X.fmt; return `<article class="ct-a4" aria-label="교안 미리보기"><header><small>${E(S.org.name)}${courseName(X.ctx) ? ' · ' + E(courseName(X.ctx)) : ''} · ${fmtName[f]}</small>${ce('@title', docTitle(), 'h1')}</header>
+      <section class="ct-a4box"><b>학습 목표</b><ul>${D.goals.map((g, i) => `<li>${ce(`goals.${i}`, g)}${xdel(`goals.${i}`, '목표')}</li>`).join('')}</ul>${xadd('goals', '목표 추가')}</section>
+      ${D.secs.map((s, i) => `<div class="ct-blk"><h2>${i + 1}. ${ce(`secs.${i}.h`, s.h)}${xdel(`secs.${i}`, `${i + 1}절`)}</h2>${f === 'slide' ? '' : ce(`secs.${i}.body`, s.body, 'p', 'ml')}<ul>${(s.pts || []).map((p, j) => `<li>${ce(`secs.${i}.pts.${j}`, p)}</li>`).join('')}</ul>${f === 'work' ? '<div class="ct-ln"></div><div class="ct-ln"></div>' : ''}</div>`).join('')}
+      ${xadd('secs', '+ 절 추가', 'sec')}
+      <h2>실습 활동</h2>${ce('act', D.act, 'p', 'ml')}<h2>확인 문제</h2><ol>${D.check.map((q, i) => `<li>${ce(`check.${i}`, q)}${xdel(`check.${i}`, '문제')}${f === 'work' ? '<div class="ct-ln"></div>' : ''}</li>`).join('')}</ol>${xadd('check', '확인 문제 추가')}<footer>AI 초안을 바탕으로 담당자가 검토한 자료입니다 · ${E(today())}</footer></article>`;
   }
-  function docEdit() { const D = X.res; return `<div class="ct-edit"><label class="ct-f"><span class="ct-l">학습 목표 (줄마다 하나)</span><textarea rows="3" data-ctd="goals">${E(D.goals.join('\n'))}</textarea></label>${D.secs.map((s, k) => `<div class="ct-card"><label class="ct-f"><span class="ct-l">${k + 1}절 제목</span><input data-cts="${k}" data-f="h" value="${E(s.h)}"></label><label class="ct-f"><span class="ct-l">본문</span><textarea rows="3" data-cts="${k}" data-f="body">${E(s.body)}</textarea></label></div>`).join('')}<label class="ct-f"><span class="ct-l">실습 활동</span><textarea rows="2" data-ctd="act">${E(D.act)}</textarea></label><label class="ct-f"><span class="ct-l">확인 문제 (줄마다 하나)</span><textarea rows="3" data-ctd="check">${E(D.check.join('\n'))}</textarea></label></div>`; }
-  const docTitle = () => { const st = sessTitle(X.ctx); return `${X.topic || st || '강의'} ${X.fmt === 'work' ? '실습지' : '교안'}`.replace(/\s+/g, ' ').trim(); };
+  const xdel = (p, what) => `<button type="button" class="ct-x" data-act="ct-x-del" data-p="${E(p)}" aria-label="${E(what)} 빼기" title="빼기">${svg('x', 14)}</button>`;
+  const xadd = (p, lab, t) => `<button type="button" class="ct-xadd" data-act="ct-x-add" data-p="${E(p)}" ${t ? `data-t="${t}"` : ''}>${E(lab.startsWith('+') ? lab : '+ ' + lab)}</button>`;
+  const docTitle = () => { if (X.ttl && X.kind === 'doc') return X.ttl; const st = sessTitle(X.ctx); return `${X.topic || st || '강의'} ${X.fmt === 'work' ? '실습지' : '교안'}`.replace(/\s+/g, ' ').trim(); };
   const docItem = () => ({ title: docTitle(), topic: X.topic, fmt: X.fmt, doc: X.res });
 
-  /* AI 강의 영상: 주제 확인 → [영상 만들기] 한 번(대본 + 슬라이드 자동) → 미리보기(대본 고치기는 여기서) */
-  VIEW.aivideo = () => {
-    const sc = X.res || [];
-    if (X.step === 0) {
-      if (X.busy) return { now: '', body: busyBox('대본을 쓰고 있습니다… 다 되면 슬라이드를 바로 그립니다.'), foot: '' };
-      return { now: '주제를 확인하고 [AI 강의 영상 만들기]를 누르세요. 대본과 슬라이드를 한 번에 만듭니다.', body: topicField('영상 주제', 'AI에게 일을 잘 시키는 세 가지 방법') + chips('mins', [[3, '3분'], [5, '5분'], [10, '10분']], '길이'), foot: foot(pri(`${svg('spark', 18)} AI 강의 영상 만들기`, 'ct-make')) };
-    }
-    if (X.step === 1) return { now: '', body: `<div class="ct-busy" role="status"><span class="ct-spin" aria-hidden="true"></span>슬라이드를 그리고 있습니다… <b id="ctVn">0</b> / ${sc.length}</div><div class="ct-thumbs" id="ctThumbs"></div>`, foot: '', after: buildSlides };
-    const tot = sc.reduce((a, s) => a + (typeof secsFor === 'function' ? secsFor(s.say) : 6), 0);
-    const ed = X.edit ? `<div class="ct-row"><span class="ct-mini">${sc.length}장면 · 약 ${Math.max(1, Math.round(tot / 60))}분 · 고친 뒤 [고친 대본으로 다시 그리기]를 누르세요.</span></div><ol class="ct-scn">${sc.map((s, k) => `<li><div class="ct-sh2"><b>${k + 1}</b><input data-ctv="${k}" data-f="h" value="${E(s.h)}" aria-label="${k + 1}장면 제목"><button type="button" class="ct-icb sm" data-act="ct-v-del" data-v="${k}" aria-label="${k + 1}장면 빼기" ${sc.length <= 2 ? 'disabled' : ''}>${svg('trash', 18)}</button></div><label class="ct-f"><span class="ct-l">읽어 줄 말</span><textarea rows="2" data-ctv="${k}" data-f="say">${E(s.say)}</textarea></label><p class="ct-mini">화면 글: ${E((s.pts || []).join(' · '))}</p></li>`).join('')}</ol><div class="ct-row">${sec(`${svg('spark', 18)} 고친 대본으로 다시 그리기`, 'ct-v-make')}</div>` : '';
-    return { now: X.edit ? '대본을 고치고 [고친 대본으로 다시 그리기]를 누르세요. 고치지 않아도 넣을 수 있습니다.' : '미리보기를 확인하고 넣으세요. 대본은 [대본 고치기]에서 바꿀 수 있습니다.', body: `${byNote(X.by)}<div class="ct-note"><b>미리보기 품질</b> 브라우저가 대본을 읽어 주는 슬라이드 영상입니다. 사람 목소리에 가까운 음성과 MP4 파일은 운영 서버 연결 후 제공됩니다.</div>${X.edit ? '' : `<div class="ct-player"><canvas id="ctCv" width="1280" height="720" aria-label="AI 강의 첫 장면"></canvas><button type="button" class="ct-playb" data-act="ct-v-play" aria-label="소리와 함께 재생">${svg('play', 34)}</button></div><div class="ct-thumbs" id="ctThumbs"></div>`}<div class="ct-tools">${X.edit ? '' : sec(`${svg('play', 18)} 소리와 함께 재생`, 'ct-v-play')}${sec(X.edit ? '미리보기로' : '대본 고치기', 'ct-doc-edit')}${X.edit ? '' : sec(`${svg('down', 18)} 영상 파일로 저장(WebM)`, 'ct-v-rec')}${sec('주제로 다시 만들기', 'ct-make')}</div>${ed}`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')), after: el => { if (!X.edit) { thumbs(el, true); drawBig(0); } } };
-  };
-  const vTitle = () => `${X.topic || sessTitle(X.ctx) || '강의'}`.trim();
-  function slideTo(cv, i) { const g = cv.getContext('2d'); const s = X.res[i]; try { drawSlide(g, s, i, X.res.length, vTitle(), sentences(s.say)[0] || '', (i + 1) / X.res.length); } catch (e) { } }
-  function drawBig(i) { const cv = $1('#ctCv'); if (cv) slideTo(cv, i); document.querySelectorAll('#ctThumbs button').forEach((b, k) => b.classList.toggle('on', k === i)); }
-  function thumbs(el, clickable) { const box = $1('#ctThumbs', el); if (!box) return; box.innerHTML = X.res.map((s, k) => `<button type="button" ${clickable ? `data-act="ct-v-show" data-v="${k}"` : 'tabindex="-1"'} aria-label="${k + 1}장면 ${E(s.h)}"><canvas width="1280" height="720"></canvas><small>${k + 1}. ${E(s.h)}</small></button>`).join(''); box.querySelectorAll('canvas').forEach((c, k) => slideTo(c, k)); }
-  function buildSlides(el) { const box = $1('#ctThumbs', el); const n = X.res.length; let k = 0; box.innerHTML = '';
-    const tick = () => { if (!X || X.kind !== 'aivideo' || X.step !== 1) return; if (k >= n) { X.step = 2; draw(); return; }
-      box.insertAdjacentHTML('beforeend', `<button type="button" tabindex="-1"><canvas width="1280" height="720"></canvas><small>${k + 1}. ${E(X.res[k].h)}</small></button>`); slideTo(box.lastElementChild.querySelector('canvas'), k); const c = $1('#ctVn'); if (c) c.textContent = k + 1; k++; setTimeout(tick, W.__REC_FAST ? 10 : 180); };
-    tick(); }
-  const vItem = () => ({ title: `${vTitle()} 강의 영상`, topic: X.topic, ai: { scenes: X.res, mins: +X.mins || 5, voice: 'f', style: 'slide' } });
+  /* 퀴즈 · 시험 문항(같은 편집 모양) */
+  const qRows = (L, o) => `<ol class="ct-qs">${L.map((q, k) => `<li id="ctq${k}"><div class="ct-q"><span class="ct-qn">${k + 1}</span><div class="ct-qt">${ce(`${k}.q`, strip(q.q), 'p', 'ml')}<small class="ct-qty">${E({ mc: '객관식', ox: 'OX', short: '단답', essay: '서술' }[q.t] || '')}</small></div><button type="button" class="ct-icb sm" data-act="ct-x-del" data-p="${k}" aria-label="${k + 1}번 문제 빼기" ${L.length <= 1 ? 'disabled' : ''}>${svg('trash', 18)}</button></div>
+      ${q.t === 'mc' ? `<ul class="ct-op">${(q.opts || []).map((op, j) => `<li class="${String(q.a) === String(j) ? 'a' : ''}"><button type="button" class="ct-ansb" data-act="ct-x-ans" data-k="${k}" data-v="${j}" aria-pressed="${String(q.a) === String(j)}" aria-label="${j + 1}번 보기를 정답으로">${String(q.a) === String(j) ? svg('check', 14) : ''}</button>${ce(`${k}.opts.${j}`, op)}</li>`).join('')}</ul>`
+        : q.t === 'ox' ? `<div class="ct-oxr">정답 ${['O', 'X'].map(v => `<button type="button" class="ct-chip sm ${q.a === v ? 'on' : ''}" data-act="ct-x-ans" data-k="${k}" data-v="${v}" aria-pressed="${q.a === v}">${v}</button>`).join('')}</div>`
+        : `<p class="ct-ansr">${q.t === 'essay' ? '채점 기준' : '정답'}: ${ce(`${k}.a`, q.a || '', 'b')}</p>`}
+      <p class="ct-mini">해설: ${ce(`${k}.exp`, q.exp || '', 'span', '', '해설을 적으려면 누르세요')}</p></li>`).join('')}</ol>${o && o.add === false ? '' : `<div class="ct-row">${[['mc', '객관식'], ['ox', 'OX'], ['short', '단답']].map(([t, l]) => `<button type="button" class="ct-xadd" data-act="ct-x-add" data-p="" data-t="q-${t}">+ ${l} 문제</button>`).join('')}</div>`}`;
+  VIEW.quiz = () => ({ now: X.res ? '문제 · 보기 · 해설 글자를 눌러 바로 고치세요. 동그라미를 누르면 정답이 바뀝니다.' : '주제를 확인하고 [퀴즈 만들기]를 누르세요.',
+    set: setHead('퀴즈 주제', '엑셀 SUM · AVERAGE 함수') + chips('n', [[3, '3문제'], [5, '5문제'], [10, '10문제']], '문제 수', '바로 바뀝니다') + chips('lv', [['쉬움', '쉬움'], ['보통', '보통'], ['어려움', '어려움']], '난이도') + makeBtn('퀴즈 만들기') + (X.res && typeof W.qsEdit === 'function' ? `<div class="ct-tools">${sec('자세히 고치기(배점 · 이미지)', 'ct-q-edit')}</div>` : ''),
+    pv: X.res && !X.busy ? byRow() + ttlRow() + qRows(X.res) : pvEmpty('문제를 만들고 있습니다…'), foot: mkFoot('퀴즈 만들기') });
+  const qItem = () => { const Q = X.res.map((q, i) => ({ ...q, q: `${i + 1}. ${strip(q.q)}` })); const per = Math.floor(100 / Q.length); Q.forEach((q, i) => q.pts = per + (i < 100 - per * Q.length ? 1 : 0)); return { title: titleOf(), qs: Q, time: 10, retake: 3 }; };
 
-  /* 퀴즈 */
-  VIEW.quiz = () => {
-    if (X.step === 0) return { now: '주제를 확인하고 [퀴즈 만들기]를 누르세요.', body: topicField('퀴즈 주제', '엑셀 SUM · AVERAGE 함수') + chips('n', [[3, '3문제'], [5, '5문제'], [10, '10문제']], '문제 수') + chips('lv', [['쉬움', '쉬움'], ['보통', '보통'], ['어려움', '어려움']], '난이도'), foot: foot(pri(`${svg('spark', 18)} 퀴즈 만들기`, 'ct-make')) };
-    if (X.busy || !X.res) return { now: '', body: busyBox('문제를 만들고 있습니다…'), foot: '' };
-    return { now: '문제를 확인하고 넣으세요. 마음에 들지 않는 문제는 뺄 수 있습니다.', body: `${byNote(X.by)}<div class="ct-tools">${typeof W.qsEdit === 'function' ? sec('문항 고치기', 'ct-q-edit') : ''}${sec('다시 만들기', 'ct-make')}</div><ol class="ct-qs">${X.res.map((q, k) => `<li><div class="ct-q"><p>${E(String(q.q).replace(/^\d+\.\s*/, ''))}</p><button type="button" class="ct-icb sm" data-act="ct-q-del" data-v="${k}" aria-label="${k + 1}번 문제 빼기" ${X.res.length <= 1 ? 'disabled' : ''}>${svg('trash', 18)}</button></div>${q.t === 'mc' ? `<ul class="ct-op">${(q.opts || []).map((o, j) => `<li class="${String(q.a) === String(j) ? 'a' : ''}">${String(q.a) === String(j) ? svg('check', 16) : '<i></i>'}${E(o)}</li>`).join('')}</ul>` : `<p class="ct-ans">정답: <b>${E(q.a)}</b></p>`}${q.exp ? `<p class="ct-mini">해설: ${E(q.exp)}</p>` : ''}</li>`).join('')}</ol>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')) };
-  };
-  const qItem = () => { const Q = X.res.map((q, i) => ({ ...q, q: `${i + 1}. ${String(q.q).replace(/^\d+\.\s*/, '')}` })); const per = Math.floor(100 / Q.length); Q.forEach((q, i) => q.pts = per + (i < 100 - per * Q.length ? 1 : 0)); return { title: `${X.topic || sessTitle(X.ctx) || ''} 확인 퀴즈`.trim(), qs: Q, time: 10, retake: 3 }; };
+  /* 시험: 시험 종류 · 출제 문항 수 · 문제 은행 배수 · 랜덤 출제 · 시험 시간 · 재응시 · 통과 점수 */
+  const need = () => Math.min(60, Math.max(1, +X.en || 10) * (X.rand ? Math.max(1, +X.mult || 1) : 1));
+  const seeded = (n, seed) => { const o = Array.from({ length: n }, (_, i) => i); let z = seed || 7; for (let i = n - 1; i > 0; i--) { z = (z * 9301 + 49297) % 233280; const j = Math.floor(z / 233280 * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } return o; };
+  VIEW.exam = () => { const P = X.res || []; const n = Math.min(+X.en || 10, P.length || +X.en || 10);
+    const sum = `<div class="ct-exs"><b>${E(exName(X.ek))}</b><span>${n}문항 출제</span><span>${X.rand ? `문제 은행 ${P.length || need()}문항에서 랜덤` : '모두 같은 순서'}</span><span>${X.time}분</span><span>${X.retake ? `재응시 ${X.retake}회` : '재응시 없음'}</span><span>${X.passOn ? `통과 ${X.pass}점` : '통과 점수 없음'}</span></div>`;
+    const tabs = `<div class="ct-chips one" role="tablist" aria-label="미리보기 종류">${[['bank', `문제 은행 ${P.length}문항(고치기)`], ['paper', '학습자 시험지 예시']].map(([v, l]) => `<button type="button" role="tab" aria-selected="${X.pvx === v}" class="ct-chip ${X.pvx === v ? 'on' : ''}" data-act="ct-pvx" data-v="${v}">${E(l)}</button>`).join('')}</div>`;
+    const paper = () => { const ord = X.rand ? seeded(P.length, (X.seed || 7)).slice(0, n) : P.map((_, i) => i).slice(0, n); return `<div class="ct-paper"><div class="ct-ptop"><b>${E(titleOf())}</b><span class="ct-timer">남은 시간 ${X.time}:00</span></div><p class="ct-mini">학습자마다 문제 은행에서 ${n}문항을 랜덤으로 뽑아 순서를 섞어 보여 줍니다. 아래는 한 학습자의 예시입니다.</p>${X.rand ? sec('다른 학습자 예시 보기', 'ct-x-seed') : ''}<ol class="ct-qs ro">${ord.map((k, i) => { const q = P[k]; return `<li><div class="ct-q"><span class="ct-qn">${i + 1}</span><p class="ct-qt">${E(strip(q.q))}</p></div>${q.t === 'mc' ? `<ul class="ct-op">${(q.opts || []).map(o => `<li><i class="ct-rad"></i>${E(o)}</li>`).join('')}</ul>` : q.t === 'ox' ? '<div class="ct-oxr"><span class="ct-chip sm">O</span><span class="ct-chip sm">X</span></div>' : '<div class="ct-ansbox">답을 쓰는 칸</div>'}</li>`; }).join('')}</ol></div>`; };
+    return { now: X.res ? (X.pvx === 'bank' ? '문제 · 보기 · 정답을 눌러 바로 고치세요. 왼쪽 설정은 바로 반영됩니다.' : '학습자에게 보이는 시험지입니다. 고치려면 [문제 은행]을 누르세요.') : '시험 종류와 문항 수를 고르고 [문제 은행 만들기]를 누르세요.',
+      set: setHead('시험 범위 · 주제', '엑셀 함수와 피벗 테이블') + chips('ek', EXK, '시험 종류') + chips('en', [[5, '5문항'], [10, '10문항'], [20, '20문항']], '출제 문항 수', '학습자 한 명이 푸는 수') +
+        `<div class="ct-f"><span class="ct-l">랜덤 출제</span><button type="button" class="ct-sw ${X.rand ? 'on' : ''}" role="switch" aria-checked="${X.rand}" data-act="ct-tog" data-k="rand"><i></i>${X.rand ? '켜짐 — 문제 은행에서 학습자마다 다르게 뽑습니다' : '꺼짐 — 모두 같은 문제를 같은 순서로'}</button></div>` +
+        (X.rand ? chips('mult', [[2, '2배수'], [3, '3배수'], [5, '5배수']], '문제 은행 크기', `${+X.en || 10}문항 × 배수 = ${need()}문항 · 최대 60`) : '') +
+        `<div class="ct-two"><label class="ct-f"><span class="ct-l">시험 시간(분)</span><input type="number" id="ctTime" data-ctset="time" min="5" max="600" step="5" value="${E(X.time)}" inputmode="numeric"></label><label class="ct-f"><span class="ct-l">재응시 횟수</span><select id="ctRetake" data-ctset="retake">${[0, 1, 2, 3, 5].map(v => `<option value="${v}" ${+X.retake === v ? 'selected' : ''}>${v ? v + '회' : '재응시 없음'}</option>`).join('')}</select></label></div>` +
+        `<div class="ct-f"><span class="ct-l">통과 점수</span><div class="ct-chips" role="radiogroup" aria-label="통과 점수">${[[0, '정하지 않음'], [60, '60점'], [70, '70점'], [80, '80점']].map(([v, l]) => { const on = v ? X.passOn && +X.pass === v : !X.passOn; return `<button type="button" role="radio" aria-checked="${on}" class="ct-chip ${on ? 'on' : ''}" data-act="ct-pass" data-v="${v}">${l}</button>`; }).join('')}</div><p class="ct-ex">통과 점수는 수료 기준(이수 기준)에도 쓰입니다.</p></div>` +
+        chips('lv', [['쉬움', '쉬움'], ['보통', '보통'], ['어려움', '어려움']], '난이도') + makeBtn('문제 은행 만들기'),
+      pv: X.res && !X.busy ? byRow() + ttlRow() + sum + tabs + (X.pvx === 'paper' ? paper() : qRows(P)) : X.busy ? busyBox(`문제 은행 ${need()}문항을 만들고 있습니다…`) : sum + pvEmpty(''), foot: mkFoot('문제 은행 만들기') }; };
+  const exItem = () => { const P = X.res.map((q, i) => ({ ...q, q: `${i + 1}. ${strip(q.q)}` })); const per = Math.floor(100 / P.length); P.forEach((q, i) => q.pts = per + (i < 100 - per * P.length ? 1 : 0));
+    const n = Math.min(+X.en || 10, P.length); const R = +X.retake || 0;
+    return { title: titleOf(), ek: X.ek, qs: P, time: +X.time || 60, retake: R, pool: { n, mult: X.rand ? +X.mult || 1 : 1 }, rules: { from: '', to: '', retry: R > 0 ? { mode: 'count', v: R + 1 } : { mode: 'none', v: 2 }, pass: { on: !!X.passOn, v: +X.pass || 60 }, show: 'after', shuffle: !!X.rand, draw: X.rand && n < P.length ? n : 0 } }; };
+  const nq = q => strip(q.q).replace(/\s+/g, '');
+  /* 규칙 문제 은행: 주제 문항(AI.questions) + 교안 요점에서 객관식 · OX · 단답을 만들어 겹치지 않게 모은다 */
+  function examBank(tp, cnt, lv, have) {
+    const out = []; const seen = new Set((have || []).map(nq)); const push = q => { const k = nq(q); if (!k || seen.has(k)) return false; seen.add(k); out.push({ ...q, lv }); return true; };
+    try { AI.questions(tp, Math.min(cnt, 10), lv, ['mc', 'ox', 'mc', 'short', 'mc', 'ox']).forEach(push); } catch (e) { }
+    const secs = []; [tp, `${tp} 활용`].forEach(t => { try { AI.material(t).secs.forEach(s => { if (!secs.some(x => x.h === s.h)) secs.push(s); }); } catch (e) { } });
+    const all = secs.flatMap(s => (s.pts || []).map(p => ({ h: s.h, p }))); const MC = [], OX = [], SH = [];
+    secs.forEach((s, si) => (s.pts || []).forEach((p, pi) => { const others = all.filter(x => x.h !== s.h).map(x => x.p).filter(x => x !== p); if (others.length >= 3) { const d = [0, 1, 2].map(k => others[(si * 3 + pi * 5 + k * 7) % others.length]); const opts = [...new Set([p, ...d])].slice(0, 4); if (opts.length === 4) { const rot = (si + pi) % 4; const o2 = opts.slice(rot).concat(opts.slice(0, rot)); MC.push({ t: 'mc', q: `「${s.h}」에 해당하는 설명으로 가장 알맞은 것은?`, opts: o2, a: String(o2.indexOf(p)), exp: `「${s.h}」의 요점: ${p}` }); } }
+      OX.push({ t: 'ox', q: `「${s.h}」의 요점이다: ${p}`, a: 'O', exp: `${p} — 「${s.h}」에서 다룬 내용입니다.` }); if (others.length) { const w2 = others[(si + pi * 3) % others.length]; OX.push({ t: 'ox', q: `「${s.h}」의 요점이다: ${w2}`, a: 'X', exp: `이 문장은 다른 내용(「${(all.find(x => x.p === w2) || {}).h || ''}」)의 요점입니다.` }); } }));
+    secs.forEach(s => SH.push({ t: 'short', q: `「${s.h}」에서 꼭 기억할 점을 한 가지 쓰시오.`, a: (s.pts || []).join(', '), exp: `요점: ${(s.pts || []).join(' · ')}` }));
+    const L = [MC, OX, MC, SH, MC, OX]; let guard = 0; while (out.length < cnt && guard++ < 400) { const A2 = L[guard % L.length]; if (!A2.length) { if (!MC.length && !OX.length && !SH.length) break; continue; } push(A2.shift()); }
+    let k = 0; while (out.length < cnt && k < secs.length * 2) { const s = secs[k % secs.length]; push({ t: 'essay', q: `${jo(`「${s.h}」`, '을')} ${k < secs.length ? '실제 사례에 적용하는 방법을 서술하시오.' : '지키지 않았을 때 생길 수 있는 문제를 서술하시오.'}`, a: '루브릭 기준으로 채점', exp: '적용 대상 · 방법 · 기대 효과가 드러나야 합니다.' }); k++; }
+    return out.slice(0, cnt);
+  }
+
+  /* 설문 */
+  function svDraft(tp, n, mix) {
+    const T = tp ? `「${tp}」` : `이 ${t('cls')}`; const S1 = (q, opts, extra) => ({ id: nid('sq'), q, t: 'single', opts, req: true, etc: false, max: 0, ...(extra || {}) });
+    const scale = [`${T}에 전반적으로 만족하십니까?`, `${T}의 내용이 학습 목표를 이루는 데 도움이 되었습니까?`, '강사의 설명은 이해하기 쉬웠습니까?', `${T}의 자료 · 영상 품질은 적절했습니까?`, '학습 분량과 기간은 적절했습니까?', '배운 내용을 실제로 활용할 수 있다고 생각하십니까?', `${jo(T, '을')} 다른 사람에게 추천하시겠습니까?`].map(q => S1(q, [...A5L], { scale: true }));
+    const single = [S1(`${T}에서 가장 도움이 된 부분은 무엇입니까?`, ['강의 영상', '강의 자료', '실습 · 과제', '퀴즈 · 시험']), { ...S1('도움이 된 학습 방법을 모두 고르세요.', ['혼자 영상 보기', '자료 읽기', '직접 실습하기', '질문 · 토론'], { t: 'multi', etc: true }) }, S1('학습에 주로 쓴 기기는 무엇입니까?', ['컴퓨터', '휴대폰', '태블릿']), S1('다음에 듣고 싶은 내용의 수준은 무엇입니까?', ['기초', '중급', '심화'])];
+    const text = [`${T}에서 좋았던 점을 자유롭게 적어 주세요.`, '고쳤으면 하는 점이나 바라는 점을 적어 주세요.', '더 배우고 싶은 주제가 있다면 적어 주세요.', '가장 기억에 남는 내용은 무엇입니까?', '공부하면서 어려웠던 점을 적어 주세요.', '강사에게 하고 싶은 말을 적어 주세요.'].map(q => ({ id: nid('sq'), q, t: 'text', opts: [], req: false, etc: false, max: 0 }));
+    const pat = ['scale', 'scale', 'single', 'scale', 'scale', 'single', 'scale', 'single', 'scale', 'single'].filter(k => mix[k]); const src = { scale, single, text }; const out = []; const on = Object.keys(mix).filter(k => mix[k]); if (!on.length) return [];
+    const tn = mix.text ? Math.max(1, Math.round(n / 5)) : 0; const body = n - tn; let i = 0; const pool = pat.length ? pat : on.filter(k => k !== 'text');
+    while (out.length < body && i < 40) { const k = pool[i % Math.max(1, pool.length)]; const L = src[k] || []; if (L.length) out.push(L.shift()); else if (!on.some(x => x !== 'text' && (src[x] || []).length)) break; i++; }
+    for (let j = 0; j < tn && text.length; j++) out.push(text.shift()); while (out.length < n && text.length && mix.text) out.push(text.shift());
+    return out.slice(0, n);
+  }
+  const svRow = (q, k, L) => { const kd = svKind(q); return `<li class="ct-svq"><div class="ct-q"><span class="ct-qn">${k + 1}</span><div class="ct-qt">${ce(`${k}.q`, q.q, 'p', 'ml')}</div><button type="button" class="ct-icb sm" data-act="ct-x-del" data-p="${k}" aria-label="${k + 1}번 문항 빼기" ${L.length <= 1 ? 'disabled' : ''}>${svg('trash', 18)}</button></div>
+    <div class="ct-svm"><label class="ct-svsel"><span class="ct-vh">문항 유형</span><select data-svt="${k}" aria-label="${k + 1}번 문항 유형">${SVT.map(([v, l]) => `<option value="${v}" ${kd === v ? 'selected' : ''}>${E(l)}</option>`).join('')}</select></label><button type="button" class="ct-chip sm ${q.req ? 'on' : ''}" data-act="ct-x-req" data-k="${k}" aria-pressed="${!!q.req}">${q.req ? '꼭 답하기' : '답하지 않아도 됨'}</button></div>
+    ${kd === 'text' ? '<div class="ct-ansbox">학습자가 자유롭게 쓰는 칸</div>' : kd === 'scale' ? `<div class="ct-scale">${q.opts.map((o, j) => `<span><i>${5 - j}</i>${ce(`${k}.opts.${j}`, o)}</span>`).join('')}</div>` : `<ul class="ct-op">${q.opts.map((o, j) => `<li><i class="${kd === 'multi' ? 'ct-box' : 'ct-rad'}"></i>${ce(`${k}.opts.${j}`, o)}${q.opts.length > 2 ? xdel(`${k}.opts.${j}`, '항목') : ''}</li>`).join('')}${q.etc ? '<li class="ct-mini"><i class="ct-rad"></i>기타(직접 입력)</li>' : ''}</ul>${xadd(`${k}.opts`, '항목 추가')}`}</li>`; };
+  VIEW.survey = () => ({ now: X.res ? '문항 글자를 눌러 바로 고치고, 문항 유형은 각 문항의 고르기 칸에서 바꾸세요.' : '설문 주제를 확인하고 [설문 초안 만들기]를 누르세요.',
+    set: setHead('설문 주제', '엑셀 실무 과정 만족도') + chips('sn', [[4, '4문항'], [6, '6문항'], [8, '8문항'], [10, '10문항']], '문항 수') +
+      `<div class="ct-f"><span class="ct-l">넣을 문항 유형</span><div class="ct-chips">${[['single', '객관식'], ['scale', '척도(5점)'], ['text', '주관식']].map(([k, l]) => `<button type="button" class="ct-chip ${X.mix[k] ? 'on' : ''}" aria-pressed="${!!X.mix[k]}" data-act="ct-mix" data-v="${k}">${E(l)}</button>`).join('')}</div></div>` + makeBtn('설문 초안 만들기'),
+    pv: X.res && !X.busy ? byRow() + ttlRow() + `<p class="ct-mini">학습자에게 이렇게 보여요. 응답은 [평가] › 설문 통계에서 봅니다.</p><ol class="ct-qs ct-sv">${X.res.map((q, k) => svRow(q, k, X.res)).join('')}</ol><div class="ct-row">${[['single', '객관식'], ['scale', '척도'], ['text', '주관식']].map(([t2, l]) => `<button type="button" class="ct-xadd" data-act="ct-x-add" data-p="" data-t="s-${t2}">+ ${l} 문항</button>`).join('')}</div>` : pvEmpty('설문 문항을 만들고 있습니다…'), foot: mkFoot('설문 초안 만들기') });
+  const svItem = () => ({ title: titleOf(), qs: X.res.map(q => { const o = { id: q.id || nid('sq'), q: String(q.q || '').trim(), t: q.t === 'multi' ? 'multi' : q.t === 'text' ? 'text' : 'single', opts: q.t === 'text' ? [] : (q.opts || []).map(x => String(x).trim()).filter(Boolean), req: !!q.req, etc: !!q.etc, max: 0 }; if (q.scale) o.scale = true; return o; }).filter(q => q.q), mins: Math.max(2, Math.round(X.res.length / 2)), doneMsg: '설문에 참여해 주셔서 감사합니다. 더 나은 수업으로 보답하겠습니다.', rules: { from: '', to: '' } });
 
   /* 과제 */
-  VIEW.assign = () => {
-    if (X.step === 0) return { now: '주제를 확인하고 [과제 만들기]를 누르세요.', body: topicField('과제 주제', '우리 회사 매출표를 피벗으로 정리하기'), foot: foot(pri(`${svg('spark', 18)} 과제 만들기`, 'ct-make')) };
-    if (X.busy || !X.res) return { now: '', body: busyBox('과제를 만들고 있습니다…'), foot: '' };
-    const A = X.res; return { now: '안내 글을 확인하고 넣으세요. 바로 고칠 수 있습니다.', body: `${byNote(X.by)}<label class="ct-f"><span class="ct-l">과제 안내</span><textarea rows="6" data-cta="desc">${E(A.desc)}</textarea></label><div class="ct-two"><label class="ct-f"><span class="ct-l">제출물</span><input data-cta="deliv" value="${E(A.deliv)}"></label><label class="ct-f"><span class="ct-l">제출 기한(공개 후 며칠)</span><input type="number" min="1" max="60" data-cta="due" value="${E(A.due)}"></label></div><div class="ct-f"><span class="ct-l">채점 기준</span><ul class="ct-rb">${A.rb.criteria.map(c => `<li><b>${E(c.n)}</b><em>${c.pts}점</em><small>${E(c.lv[0])}</small></li>`).join('')}</ul></div>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')) };
-  };
-  const aItem = () => ({ title: `${X.topic || sessTitle(X.ctx) || ''} 과제`.trim(), desc: X.res.desc, deliv: X.res.deliv, due: +X.res.due || 7 });
+  VIEW.assign = () => { const A2 = X.res; return { now: A2 ? '안내 글 · 제출물 · 채점 기준을 눌러 바로 고치세요.' : '주제를 확인하고 [과제 만들기]를 누르세요.',
+    set: setHead('과제 주제', '우리 회사 매출표를 피벗으로 정리하기') + (A2 ? `<label class="ct-f"><span class="ct-l">제출 기한(공개 후 며칠)</span><select id="ctDue" data-ctset="due">${[3, 5, 7, 10, 14, 21].map(v => `<option value="${v}" ${+A2.due === v ? 'selected' : ''}>${v}일</option>`).join('')}</select></label>` : '') + makeBtn('과제 만들기'),
+    pv: A2 && !X.busy ? byRow() + `<article class="ct-asg">${ttlRow()}<p class="ct-due">공개 후 ${E(A2.due)}일 안에 제출</p><h4>과제 안내</h4>${ce('desc', A2.desc, 'div', 'ml pre')}<h4>제출물</h4>${ce('deliv', A2.deliv, 'p')}<h4>채점 기준</h4><table class="ct-rbt"><thead><tr><th>기준</th><th>배점</th><th>잘한 경우</th></tr></thead><tbody>${A2.rb.criteria.map((c, i) => `<tr><td>${ce(`rb.criteria.${i}.n`, c.n)}</td><td>${ce(`rb.criteria.${i}.pts`, c.pts)}점</td><td>${ce(`rb.criteria.${i}.lv.0`, c.lv[0])}</td></tr>`).join('')}</tbody></table><div class="ct-ansbox">학습자 제출 칸(글 · 파일)</div></article>` : pvEmpty('과제를 만들고 있습니다…'), foot: mkFoot('과제 만들기') }; };
+  const aItem = () => ({ title: titleOf(), desc: X.res.desc, deliv: X.res.deliv, due: +X.res.due || 7 });
 
-  /* 디지털북 */
-  VIEW.book = () => {
-    if (X.step === 0) return { now: '주제를 확인하고 [디지털북 만들기]를 누르세요.', body: topicField('디지털북 주제', '생성형 AI로 보고서 쓰기') + chips('units', [[2, '2단원'], [3, '3단원'], [4, '4단원']], '분량'), foot: foot(pri(`${svg('spark', 18)} 디지털북 만들기`, 'ct-make')) };
-    if (X.busy || !X.res) return { now: '', body: busyBox('디지털북을 만들고 있습니다…'), foot: '' };
-    const b = X.res; const nm = k => (typeof BK_NAME === 'object' && BK_NAME[k]) || k;
-    return { now: '단원 구성을 확인하고 넣으세요. 블록은 나중에 디지털북 화면에서 고칠 수 있습니다.', body: `${byNote(X.by)}<div class="ct-tools">${sec('다시 만들기', 'ct-make')}</div><div class="ct-book"><div class="ct-bcov" style="--bk:${E(b.color || '#5C74F6')}"><b>${E(b.title)}</b><small>${E(b.desc || '')}</small></div><ol>${b.chs.map((ch, i) => { const cnt = {}; ch.blocks.forEach(x => cnt[x.type] = (cnt[x.type] || 0) + 1); const tx = (ch.blocks.find(x => x.type === 'text') || {}).body || ''; return `<li><b>${i + 1}단원 · ${E(ch.title)}</b><p>${E(String(tx).replace(/^#.*\n?/gm, '').slice(0, 110))}…</p><small>${Object.entries(cnt).map(([k, n]) => `${E(nm(k))} ${n}`).join(' · ')}</small></li>`; }).join('')}</ol></div>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')) };
-  };
+  /* 디지털북: 실시간 책 화면(BKW) — 더블클릭 바로 고치기 · 섹션 추가 · 한 줄 지시 */
+  const BKWx = () => W.BKW || null;
+  VIEW.book = () => { const b = X.res; const bw = BKWx();
+    return { now: b ? '책 화면에서 글자를 두 번 눌러 고치고, [+ 섹션 추가]로 필요한 부분을 넣으세요. 한 줄 지시로도 고칠 수 있습니다.' : '주제를 확인하고 [디지털북 만들기]를 누르세요.', hint: b ? '두 번 누르면 바로 고칩니다 · 섹션 사이 [+]로 추가' : '',
+      set: setHead('디지털북 주제', '생성형 AI로 보고서 쓰기') + chips('units', [[2, '2단원'], [3, '3단원'], [4, '4단원']], '분량') + makeBtn('디지털북 만들기') + (b && bw ? bw.cmdBox('ct') : ''),
+      pv: b && !X.busy ? byRow() + (bw ? bw.html(b, { all: true, edit: true }) : '') : pvEmpty('디지털북을 만들고 있습니다…'), foot: mkFoot('디지털북 만들기'),
+      after: el => { const box = el.querySelector('.bkw'); if (box && bw) bw.bind(box, b, { onChange: () => { X.dirty = true; draw(); } }); } }; };
+
+  /* AI 강의 영상: 템플릿 · 목소리 · 번역 언어 · 아바타 선생님 + 큰 화면 미리보기 + 대본 바로 고치기 */
+  const LANGx = () => (typeof LANGS !== 'undefined' ? LANGS : [['ko', '한국어'], ['en', 'English']]);
+  const lName = l => { try { return langName(l); } catch (e) { return l; } };
+  const VTx = () => (typeof VTPL !== 'undefined' ? VTPL : [['slide', '슬라이드 강의형', '']]); const VAx = () => (typeof VAV !== 'undefined' ? VAV : [['none', '넣지 않음']]);
+  const capScenes = () => (X.slang !== 'ko' && X.tr[X.slang]) || X.res; const sayScenes = () => (X.vlang !== 'ko' && X.tr[X.vlang]) || X.res;
+  VIEW.aivideo = () => { const sc = X.res || []; const vs = typeof vidVoices === 'function' ? vidVoices(X.vlang) : []; const vsg = vs.filter(v => !v.g || v.g === X.vg);
+    const tot = sc.reduce((a, s) => a + (typeof secsFor === 'function' ? secsFor(s.say) : 6), 0);
+    const trNote = l => X.trBusy === l ? `<p class="ct-mini" role="status">${E(lName(l))}로 번역하고 있습니다…</p>` : X.trMiss && X.trMiss === l ? `<p class="ct-err" role="status">이 브라우저는 번역 기능이 없어 ${E(lName(l))} 번역을 만들지 못했습니다. 지금은 한국어로 보입니다. 운영 서버의 번역(또는 Chrome 최신 버전)에서 다시 시도하세요.</p>` : '';
+    const set = setHead('영상 주제', 'AI에게 일을 잘 시키는 세 가지 방법') + chips('mins', [[3, '3분'], [5, '5분'], [10, '10분']], '길이') +
+      `<div class="ct-f"><span class="ct-l">영상 모양 <small class="ct-sub">바로 바뀝니다</small></span><div class="ct-tpls" role="radiogroup" aria-label="영상 모양">${VTx().map(([k, n, d]) => `<button type="button" role="radio" aria-checked="${X.tpl === k}" class="ct-tpl ${X.tpl === k ? 'on' : ''}" data-act="ct-opt" data-k="tpl" data-v="${k}"><canvas width="320" height="180" data-tplc="${k}" aria-hidden="true"></canvas><b>${E(n)}</b><small>${E(d)}</small></button>`).join('')}</div></div>` +
+      `<div class="ct-f"><span class="ct-l">아바타 선생님</span><div class="ct-avs" role="radiogroup" aria-label="아바타 선생님">${VAx().map(([k, n]) => `<button type="button" role="radio" aria-checked="${X.avatar === k}" class="ct-av ${X.avatar === k ? 'on' : ''}" data-act="ct-opt" data-k="avatar" data-v="${k}">${k === 'none' ? `<span class="ct-avn">${svg('x', 22)}</span>` : `<canvas width="120" height="120" data-avc="${k}" aria-hidden="true"></canvas>`}<small>${E(n)}</small></button>`).join('')}</div><p class="ct-ex">말할 때 입이 움직입니다.</p></div>` +
+      `<div class="ct-f"><span class="ct-l">목소리</span>${chips('vg', [['f', '여성'], ['m', '남성']], '성별').replace('<div class="ct-f"><span class="ct-l">성별</span>', '<div class="ct-f ct-in">')}<label class="ct-f ct-in"><span class="ct-vh">목소리 고르기</span><select id="ctVname" data-ctset="vname" aria-label="목소리 고르기"><option value="">자동으로 고르기${vs.length ? '' : ' (이 브라우저 목소리 없음)'}</option>${vsg.map(v => `<option value="${E(v.name)}" ${X.vname === v.name ? 'selected' : ''}>${E(v.name.replace(/^(Microsoft|Google)\s*/, ''))}${v.local ? '' : ' · 온라인'}</option>`).join('')}</select></label>${chips('rate', [[0.85, '천천히'], [1, '보통'], [1.2, '빠르게']], '속도').replace('<div class="ct-f"><span class="ct-l">속도</span>', '<div class="ct-f ct-in">')}<button type="button" class="ct-btn sm" data-act="ct-v-try">${svg('play', 16)} 목소리 들어 보기</button><p class="ct-ex">목소리는 이 컴퓨터 · 휴대폰에 설치된 브라우저 목소리 ${vs.length}개 중에서 고릅니다.</p></div>` +
+      `<div class="ct-f"><span class="ct-l">언어(번역)</span><div class="ct-two"><label class="ct-f"><span class="ct-vh">자막 · 화면 글</span><select id="ctSlang" data-ctset="slang">${LANGx().map(([k, n]) => `<option value="${k}" ${X.slang === k ? 'selected' : ''}>${E(n)}</option>`).join('')}</select></label><label class="ct-f"><span class="ct-vh">읽어 주는 음성</span><select id="ctVlang" data-ctset="vlang">${LANGx().map(([k, n]) => `<option value="${k}" ${X.vlang === k ? 'selected' : ''}>${E(n)}</option>`).join('')}</select></label></div>${trNote(X.slang)}${X.slang !== X.vlang ? trNote(X.vlang) : ''}</div>` + makeBtn('AI 강의 영상 만들기');
+    const k0 = Math.min(X.scene || 0, Math.max(0, sc.length - 1));
+    const pv = sc.length && !X.busy ? `${byNote(X.by)}<div class="ct-note"><b>미리보기 품질</b> 브라우저 목소리로 읽어 주는 슬라이드 영상입니다. 사람 목소리에 가까운 음성과 MP4 파일은 운영 서버 연결 후 제공됩니다.</div>${ttlRow()}<div class="ct-player"><canvas id="ctCv" width="1280" height="720" aria-label="AI 강의 장면 미리보기"></canvas><button type="button" class="ct-playb" data-act="ct-v-play" aria-label="소리와 함께 재생">${svg('play', 34)}</button></div>
+      <div class="ct-tools">${sec(`${svg('play', 18)} 소리와 함께 재생`, 'ct-v-play')}${sec(`${svg('down', 18)} 영상 파일로 저장(WebM)`, 'ct-v-rec')}<span class="ct-mini">${sc.length}장면 · 약 ${Math.max(1, Math.round(tot / 60))}분</span></div><div class="ct-thumbs" id="ctThumbs"></div>
+      <h4 class="ct-h4">대본 — 글자를 눌러 바로 고치세요</h4><ol class="ct-scn">${sc.map((s, k) => `<li class="${k === k0 ? 'on' : ''}"><div class="ct-sh2"><b>${k + 1}</b>${ce(`${k}.h`, s.h, 'span', 'ct-scnh')}<button type="button" class="ct-icb sm" data-act="ct-x-del" data-p="${k}" aria-label="${k + 1}장면 빼기" ${sc.length <= 2 ? 'disabled' : ''}>${svg('trash', 18)}</button></div><p class="ct-mini">화면 글: ${(s.pts || []).map((p, j) => ce(`${k}.pts.${j}`, p)).join(' · ')}</p><p class="ct-say"><span class="ct-vh">읽어 줄 말 </span>${ce(`${k}.say`, s.say, 'span', 'ml')}</p></li>`).join('')}</ol>${xadd('', '장면 추가', 'scene')}` : X.busy ? busyBox('대본을 쓰고 슬라이드를 그리고 있습니다…') : pvEmpty('');
+    return { now: sc.length ? '영상 모양 · 아바타 · 목소리를 고르면 미리보기가 바로 바뀝니다. 대본 글자는 눌러서 고치세요.' : '주제를 확인하고 [AI 강의 영상 만들기]를 누르세요.', set, pv, foot: mkFoot('AI 강의 영상 만들기'),
+      after: el => { paintOpts(el); if (sc.length && !X.busy) { thumbs(el, true); drawBig(k0); } } }; };
+  const vOpt = (mouth) => ({ tpl: X.tpl, avatar: X.avatar, mouth: mouth || 0 });
+  const vTitle = () => `${X.topic || sessTitle(X.ctx) || '강의'}`.trim();
+  function paintOpts(el) { const demo = { h: '핵심 개념', pts: ['정의 한 문장', '구성 요소 세 가지'], say: '' };
+    el.querySelectorAll('canvas[data-tplc]').forEach(c => { try { const g = c.getContext('2d'); g.setTransform(320 / 1280, 0, 0, 180 / 720, 0, 0); drawSlide(g, (X.res && X.res[1]) || demo, 1, 6, vTitle(), '', 0.3, { tpl: c.dataset.tplc, avatar: X.avatar }); } catch (e) { } });
+    el.querySelectorAll('canvas[data-avc]').forEach(c => { try { const g = c.getContext('2d'); g.clearRect(0, 0, 120, 120); g.fillStyle = '#EAEDFF'; g.beginPath(); g.arc(60, 60, 58, 0, 7); g.fill(); drawAvatar(g, 10, 14, 100, 112, c.dataset.avc, 0.2); } catch (e) { } }); }
+  function slideTo(cv, i, mouth) { const g = cv.getContext('2d'); const C2 = capScenes(); const s = C2[i] || X.res[i]; try { drawSlide(g, s, i, X.res.length, vTitle(), sentences(s.say)[0] || '', (i + 1) / X.res.length, vOpt(mouth)); } catch (e) { } }
+  function drawBig(i) { X.scene = i; const cv = $1('#ctCv'); if (cv) slideTo(cv, i, 0.35); document.querySelectorAll('#ctThumbs button').forEach((b, k) => b.classList.toggle('on', k === i)); document.querySelectorAll('.ct-scn>li').forEach((b, k) => b.classList.toggle('on', k === i)); }
+  function thumbs(el, clickable) { const box = $1('#ctThumbs', el); if (!box) return; box.innerHTML = X.res.map((s, k) => `<button type="button" ${clickable ? `data-act="ct-v-show" data-v="${k}"` : 'tabindex="-1"'} aria-label="${k + 1}장면 ${E(s.h)}"><canvas width="1280" height="720"></canvas><small>${k + 1}. ${E(s.h)}</small></button>`).join(''); box.querySelectorAll('canvas').forEach((c, k) => slideTo(c, k)); }
+  const vItem = () => { const tr = {}; [X.slang, X.vlang].forEach(l => { if (l !== 'ko' && X.tr[l]) tr[l] = X.tr[l]; }); return { title: titleOf(), topic: X.topic, ai: { scenes: X.res, mins: +X.mins || 5, voice: X.vg, style: X.tpl, tpl: X.tpl, avatar: X.avatar, rate: +X.rate || 1, vname: X.vname, vlang: X.vlang, slang: X.slang, tr } }; };
+  async function trScenes(lang) { if (!X || lang === 'ko' || !X.res) return X && X.res; if (X.tr[lang]) return X.tr[lang]; const src = X.res.map(s => ({ h: s.h, pts: s.pts || [], say: s.say })); const keep = X;
+    if (claudeOn()) try { const j = await claudeJSON(`다음 강의 장면 JSON 배열을 ${lName(lang)}(${lang})로 번역해 같은 모양의 JSON 배열 하나만 출력하세요: ${JSON.stringify(src)}`, 4000); if (Array.isArray(j) && j.length === src.length) { const out = j.map((s, i) => ({ h: String(s.h || src[i].h), pts: (s.pts || []).map(String).slice(0, 5), say: String(s.say || src[i].say) })); keep.tr[lang] = out; return out; } } catch (e) { }
+    if (typeof trText === 'function') { try { const out = []; for (const s of src) { const h = await trText(s.h, lang); if (!h) return null; const pts = []; for (const p of s.pts) { const r = await trText(p, lang); if (!r) return null; pts.push(r.t); } const say = await trText(s.say, lang); if (!say) return null; out.push({ h: h.t, pts, say: say.t }); } keep.tr[lang] = out; return out; } catch (e) { return null; } }
+    return null; }
+  async function langPick(key, lang) { if (!X) return; X[key] = lang; if (lang === 'ko' || !X.res || X.tr[lang]) { if (X.trMiss === lang) X.trMiss = ''; draw(); return; } X.trBusy = lang; draw(); const r = await trScenes(lang); if (!X) return; X.trBusy = ''; X.trMiss = r ? '' : lang; draw(); }
+  try { if (window.speechSynthesis) speechSynthesis.addEventListener('voiceschanged', () => { if (X && X.kind === 'aivideo' && !document.querySelector('#ctSheet .ct-ce[contenteditable]')) draw(); }); } catch (e) { }
+
+  /* 미리보기에서 바로 고치기: 경로(예: secs.1.body · 3.opts.2 · @title)로 X.res를 고친다 */
+  const pathGet = (o, p) => p.split('.').filter(x => x !== '').reduce((a, k) => a == null ? a : a[k], o);
+  const pathSet = (o, p, v) => { const k = p.split('.').filter(x => x !== ''); const last = k.pop(); const t2 = k.reduce((a, x) => a == null ? a : a[x], o); if (t2 == null) return false; t2[last] = typeof t2[last] === 'number' ? (Number.isFinite(+v) ? +v : t2[last]) : v; return true; };
+  function ceStart(el) { if (!X || el.isContentEditable) return; el.dataset.orig = el.innerText; try { el.contentEditable = 'plaintext-only'; } catch (e) { el.contentEditable = 'true'; } if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true'; el.classList.add('on'); el.focus();
+    try { const r = document.createRange(); r.selectNodeContents(el); const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(r); } catch (e) { } }
+  function ceEnd(el, cancel) { if (!el.isContentEditable) return; el.contentEditable = 'false'; el.removeAttribute('contenteditable'); el.classList.remove('on'); if (!X) return; const p = el.dataset.ce; const v = String(el.innerText || '').replace(/ /g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+    if (cancel) { el.innerText = el.dataset.orig || ''; return; } if (v === String(el.dataset.orig || '').trim()) return;
+    if (p === '@title') { X.ttl = v.slice(0, 80); } else if (X.res) { if (!v && /\.(q|h)$/.test(p)) { el.innerText = el.dataset.orig || ''; say('비워 둘 수 없는 칸입니다.', 'warn'); return; } pathSet(X.res, p, v); }
+    X.dirty = true; if (X.kind === 'aivideo') { X.tr = {}; const k = +p.split('.')[0]; if (Number.isFinite(k)) { const b = $1(`#ctThumbs button:nth-child(${k + 1}) canvas`); if (b) slideTo(b, k); drawBig(k); } } }
+  document.addEventListener('click', e => { const el = e.target && e.target.closest && e.target.closest('#ctSheet .ct-ce'); if (el && !el.isContentEditable) ceStart(el); });
+  document.addEventListener('keydown', e => { const el = e.target; if (!el || !el.classList || !el.classList.contains('ct-ce') || !el.closest('#ctSheet')) return;
+    if (!el.isContentEditable) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ceStart(el); } return; }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); ceEnd(el, true); el.focus(); return; }
+    if (e.key === 'Enter' && !e.isComposing && (!el.classList.contains('ml') || !e.shiftKey && !el.classList.contains('pre'))) { if (!el.classList.contains('ml') || !e.shiftKey) { e.preventDefault(); el.blur(); } } }, true);
+  document.addEventListener('focusout', e => { const el = e.target; if (el && el.classList && el.classList.contains('ct-ce') && el.isContentEditable) ceEnd(el); });
+  /* 문항 · 절 · 장면 추가 기본값 */
+  const NEWX = { sec: () => ({ h: '새 절 제목', body: '내용을 누르고 고쳐 쓰세요.', pts: ['요점 하나'] }), 'q-mc': () => ({ t: 'mc', q: '새 문제를 누르고 고쳐 쓰세요.', opts: ['보기 1', '보기 2', '보기 3', '보기 4'], a: '0', exp: '' }), 'q-ox': () => ({ t: 'ox', q: '새 OX 문장을 누르고 고쳐 쓰세요.', a: 'O', exp: '' }), 'q-short': () => ({ t: 'short', q: '새 단답 문제를 누르고 고쳐 쓰세요.', a: '정답', exp: '' }),
+    's-single': () => ({ id: nid('sq'), q: '새 질문을 누르고 고쳐 쓰세요.', t: 'single', opts: ['항목 1', '항목 2', '항목 3'], req: true, etc: false, max: 0 }), 's-scale': () => ({ id: nid('sq'), q: '새 척도 질문을 누르고 고쳐 쓰세요.', t: 'single', opts: [...A5L], req: true, scale: true, etc: false, max: 0 }), 's-text': () => ({ id: nid('sq'), q: '자유롭게 적어 주세요.', t: 'text', opts: [], req: false, etc: false, max: 0 }),
+    scene: () => ({ h: '새 장면', pts: ['요점 하나', '요점 둘'], say: '읽어 줄 말을 누르고 고쳐 쓰세요.' }) };
 
   /* YouTube */
   VIEW.youtube = () => {
@@ -253,8 +391,8 @@
     return out;
   };
   const normLib = r => { if (!r) return null; if (r.type && r.week != null && !r.kind) return { id: 'i:' + r.id, item: r, kind: TYPE_KIND(r), title: r.title, sub: '' }; return { id: 'c:' + r.id, rec: r, kind: r.kind || TYPE_KIND(r), title: r.title || r.name, sub: (r.usedIn || []).length ? `${r.usedIn.length}곳에서 사용 중` : '라이브러리 콘텐츠' }; };
-  const LF = [['all', '전체'], ['video', '영상 · 음성'], ['doc', '교안 · 자료'], ['quiz', '퀴즈 · 과제'], ['book', '디지털북']];
-  const lfOk = (f, k, x) => (f === 'video' && x && ((x.item || x.rec || {}).type === 'audio')) || f === 'all' || (f === 'video' && ['aivideo', 'youtube', 'upload'].includes(k)) || (f === 'doc' && ['doc', 'upload'].includes(k)) || (f === 'quiz' && ['quiz', 'assign'].includes(k)) || (f === 'book' && k === 'book');
+  const LF = [['all', '전체'], ['video', '영상 · 음성'], ['doc', '교안 · 자료'], ['quiz', '퀴즈 · 시험 · 설문 · 과제'], ['book', '디지털북']];
+  const lfOk = (f, k, x) => (f === 'video' && x && ((x.item || x.rec || {}).type === 'audio')) || f === 'all' || (f === 'video' && ['aivideo', 'youtube', 'upload'].includes(k)) || (f === 'doc' && ['doc', 'upload'].includes(k)) || (f === 'quiz' && ['quiz', 'exam', 'survey', 'assign'].includes(k)) || (f === 'book' && k === 'book');
   VIEW.lib = () => {
     const L = libAll(); const f = X.lf || 'all'; const q = (X.lq || '').trim(); const R = L.filter(x => lfOk(f, x.kind, x) && (!q || String(x.title).includes(q))).slice(0, 80);
     if (!L.length) return { now: '', body: `<div class="ct-empty">${svg('lib', 40)}<b>아직 라이브러리에 콘텐츠가 없습니다</b><span>여기서 바로 만들어 넣을 수 있습니다.</span><div class="ct-row">${sec('교안 만들기', 'ct-switch', 'data-v="doc"')}${sec('AI 강의 영상 만들기', 'ct-switch', 'data-v="aivideo"')}</div></div>`, foot: '' };
@@ -280,8 +418,11 @@
     if (k === 'doc') it = { type: 'doc', ...docItem() };
     if (k === 'aivideo') it = { type: 'video', src: 'ai', ...vItem() };
     if (k === 'quiz') it = { type: 'quiz', ...qItem() };
+    if (k === 'exam') it = { type: 'exam', ...exItem() };
+    if (k === 'survey') { it = { type: 'survey', ...svItem() }; if (!it.qs.length) { say('설문 문항을 하나 이상 넣으세요.', 'warn'); return null; } }
     if (k === 'assign') it = { type: 'assign', ...aItem(), _rb: X.res.rb };
-    if (k === 'book') { const b = X.res; it = { type: 'doc', src: 'book', title: b.title, topic: X.topic, doc: AI.material(X.topic || b.title, { name: courseName(X.ctx) }), _book: b }; }
+    if (k === 'book') { const b = X.res; if (X.ttl) b.title = X.ttl; if (X.bookRef) { try { const ex = bkOf(X.bookRef); if (ex) { Object.assign(ex, clone(b), { id: ex.id }); try { bkNorm(ex); } catch (e) { } it = { type: 'doc', src: 'book', title: ex.title, topic: X.topic, book: ex.id, doc: AI.material(X.topic || ex.title, { name: courseName(X.ctx) }) }; } } catch (e) { } }
+      if (!it) it = { type: 'doc', src: 'book', title: b.title, topic: X.topic, doc: AI.material(X.topic || b.title, { name: courseName(X.ctx) }), _book: b }; }
     if (k === 'youtube') it = { type: 'video', src: 'youtube', ...ytItem() };
     if (k === 'upload') it = await upItem();
     if (k === 'lib') it = libItem();
@@ -297,12 +438,12 @@
   }
   function itemToRec(it) {
     const r = { id: nid('cl'), kind: TYPE_KIND(it), type: it.type, title: it.title, src: it.src || '', at: today(), usedIn: [] };
-    ['url', 'fileId', 'file', 'mime', 'size', 'dur', 'topic', 'fmt', 'desc', 'deliv', 'due', 'time', 'retake', 'yt', 'q', 'lib', 'book'].forEach(k => { if (it[k] != null && it[k] !== '') r[k] = it[k]; });
+    ['url', 'fileId', 'file', 'mime', 'size', 'dur', 'topic', 'fmt', 'desc', 'deliv', 'due', 'time', 'retake', 'yt', 'q', 'lib', 'book', 'ek', 'pool', 'rules', 'mins', 'doneMsg'].forEach(k => { if (it[k] != null && it[k] !== '') r[k] = it[k]; });
     if (it.ai) r.ai = it.ai; if (it.doc) r.doc = it.doc; if (it.qs) r.qs = it.qs; if (it._rb) r.rb = it._rb; if (it._book) r.bookObj = it._book; return r;
   }
   function recToItem(r) {
-    if (!r) return null; const it = { type: r.type || (/^audio/.test(r.mime || '') ? 'audio' : null) || ({ aivideo: 'video', youtube: 'video', upload: 'video', doc: 'doc', book: 'doc', quiz: 'quiz', assign: 'assign' }[r.kind] || 'doc'), title: r.title || '콘텐츠' };
-    ['src', 'url', 'fileId', 'file', 'mime', 'size', 'dur', 'topic', 'fmt', 'desc', 'deliv', 'due', 'time', 'retake', 'yt', 'q', 'lib', 'book'].forEach(k => { if (r[k] != null && r[k] !== '') it[k] = JSON.parse(JSON.stringify(r[k])); });
+    if (!r) return null; const it = { type: r.type || (/^audio/.test(r.mime || '') ? 'audio' : null) || ({ aivideo: 'video', youtube: 'video', upload: 'video', doc: 'doc', book: 'doc', quiz: 'quiz', exam: 'exam', survey: 'survey', assign: 'assign' }[r.kind] || 'doc'), title: r.title || '콘텐츠' };
+    ['src', 'url', 'fileId', 'file', 'mime', 'size', 'dur', 'topic', 'fmt', 'desc', 'deliv', 'due', 'time', 'retake', 'yt', 'q', 'lib', 'book', 'ek', 'pool', 'rules', 'mins', 'doneMsg'].forEach(k => { if (r[k] != null && r[k] !== '') it[k] = JSON.parse(JSON.stringify(r[k])); });
     if (r.ai) it.ai = JSON.parse(JSON.stringify(r.ai)); if (r.doc) it.doc = JSON.parse(JSON.stringify(r.doc)); if (r.qs) it.qs = JSON.parse(JSON.stringify(r.qs));
     if (r.kind === 'book' && !it.src) it.src = 'book'; if (r.kind === 'upload' && !it.src) it.src = 'upload'; if (r.kind === 'aivideo' && !it.src) it.src = 'ai';
     if (r.rb && !it.rubric) { const ex = (S.rubrics || []).find(x => x.id === r.rb.id); if (ex) it.rubric = ex.id; else it._rb = JSON.parse(JSON.stringify(r.rb)); }
@@ -324,7 +465,7 @@
     }
     if (typeof ctx.onDone === 'function') { /* 흐름(초안) 또는 호출한 쪽이 넣는다 */
       const c = ctx.course && S.classes.includes(ctx.course) ? ctx.course : null; if (c) settle(it, c);
-      try { if (S.ai) S.ai.usage = (S.ai.usage || 0) + (['doc', 'aivideo', 'quiz', 'assign', 'book'].includes(X.kind) ? 1 : 0); } catch (e) { }
+      try { if (S.ai) S.ai.usage = (S.ai.usage || 0) + (['doc', 'aivideo', 'quiz', 'exam', 'survey', 'assign', 'book'].includes(X.kind) ? 1 : 0); } catch (e) { }
       const k = X.kind; close(); ctx.onDone(it, k); keep(); return;
     }
     const c = ctx.course && (S.classes.includes(ctx.course) ? ctx.course : (typeof C === 'function' ? C(ctx.course.id || ctx.course) : null));
@@ -351,25 +492,32 @@
 
   /* ── 버튼 동작 ── */
   const A = {
-    'ct-close': () => close(), 'ct-back': () => { if (!X) return; if (X.kind === 'aivideo' && X.step === 2) { X.step = 0; X.res = null; } else if (X.kind === 'upload' && X.step === 1) { X.file = null; X.step = 0; } else if (X.kind === 'lib') X.pick = ''; else if (X.kind === 'youtube') X.url = ''; else X.step = Math.max(0, X.step - 1); X.edit = false; draw(); },
+    'ct-close': () => close(), 'ct-back': () => { if (!X) return; if (MK.has(X.kind)) return; else if (X.kind === 'upload' && X.step === 1) { X.file = null; X.step = 0; } else if (X.kind === 'lib') X.pick = ''; else if (X.kind === 'youtube') X.url = ''; else X.step = Math.max(0, X.step - 1); X.edit = false; draw(); },
     'ct-aifill': () => { const st = sessTitle(X.ctx), cn = courseName(X.ctx); const g = /^\d+\s*(차시|주차|주|회차)$/.test(st); const ok = v => { v = topicOf(v || ''); return v && v !== '핵심 개념' ? v : ''; };
       const ex = (document.querySelector('#ctSheet .ct-ex') || {}).textContent || ''; const exT = ex.replace(/^예:\s*/, '').trim();
       X.topic = ok(cn && st && !g && !st.includes(cn) ? `${cn} ${st}` : '') || ok(!g ? st : '') || ok(cn) || ok((X.topic || '').trim()) || ok(((X.ctx.course && X.ctx.course.topic) || '')) || ok(cl((S.classes.find(c => c.status !== '종료') || S.classes[0] || {}).name)) || exT || X.topic; draw(); say('주제를 채웠습니다. 그대로 두거나 고쳐 쓰세요.', 'ok'); },
-    'ct-opt': el => { const k = el.dataset.k; X[k] = isNaN(+el.dataset.v) ? el.dataset.v : +el.dataset.v;  draw(); },
-    'ct-make': async () => { if (!X || X.busy) return; const tp = (X.topic || '').trim() || seedTopic(X.ctx); if (!tp) { const n = $1('#ctTopic'); if (n) { n.setAttribute('aria-invalid', 'true'); n.focus(); } say('주제를 한 줄 적어 주세요. 예처럼 짧게 써도 됩니다.', 'warn'); return; } X.topic = tp; X.busy = true; X.edit = false; X.step = X.kind === 'aivideo' ? 0 : 1; draw();
-      const r = await GEN[X.kind](tp, { mins: +X.mins || 5, n: +X.n || 5, lv: X.lv, n2: X.units, cname: courseName(X.ctx), target: (X.ctx.target || '') , ...(X.kind === 'book' ? { n: +X.units || 3 } : {}) }); if (!X) return; X.res = r.v; X.by = r.by; X.busy = false; if (X.kind === 'aivideo') X.step = X.res && X.res.length ? 1 : 0; draw(); },
+    'ct-opt': el => { const k = el.dataset.k; const v = isNaN(+el.dataset.v) ? el.dataset.v : +el.dataset.v; if (X[k] === v) return; X[k] = v; optChanged(k); },
+    'ct-tog': el => { const k = el.dataset.k; X[k] = !X[k]; optChanged(k); },
+    'ct-pass': el => { const v = +el.dataset.v; X.passOn = v > 0; if (v) X.pass = v; draw(); },
+    'ct-mix': el => { const k = el.dataset.v; const n = Object.keys(X.mix).filter(x => X.mix[x]).length; if (X.mix[k] && n <= 1) { say('문항 유형은 하나 이상 골라야 합니다.', 'warn'); return; } X.mix[k] = X.mix[k] ? 0 : 1; optChanged('mix'); },
+    'ct-pvx': el => { X.pvx = el.dataset.v; draw(); }, 'ct-x-seed': () => { X.seed = (X.seed || 7) + 13; draw(); },
+    'ct-x-del': el => { if (!X || !X.res) return; const p = el.dataset.p; const k = p.split('.').filter(x => x !== ''); const i = +k.pop(); const arr = k.length ? pathGet(X.res, k.join('.')) : X.res; if (!Array.isArray(arr) || arr.length <= 1) return; arr.splice(i, 1); X.dirty = true; if (X.kind === 'aivideo') { X.tr = {}; X.scene = Math.max(0, Math.min(X.scene, X.res.length - 1)); } draw(); },
+    'ct-x-add': el => { if (!X || !X.res) return; const p = el.dataset.p || ''; const arr = p ? pathGet(X.res, p) : X.res; if (!Array.isArray(arr)) return; const tp = el.dataset.t; const v = tp && NEWX[tp] ? NEWX[tp]() : (/opts$/.test(p) ? `항목 ${arr.length + 1}` : p === 'goals' ? '새 학습 목표' : p === 'check' ? '새 확인 문제' : '새 항목'); arr.push(v); X.dirty = true; if (X.kind === 'aivideo') { X.tr = {}; X.scene = X.res.length - 1; } draw(); setTimeout(() => { const L = [...document.querySelectorAll(`#ctPv [data-ce^="${p ? p + '.' : ''}${arr.length - 1}"]`)]; const t2 = L[0]; if (t2) { t2.scrollIntoView({ block: 'center' }); ceStart(t2); } }, 30); },
+    'ct-x-ans': el => { const q = X && X.res && X.res[+el.dataset.k]; if (!q) return; q.a = q.t === 'ox' ? el.dataset.v : String(el.dataset.v); X.dirty = true; draw(); },
+    'ct-x-req': el => { const q = X && X.res && X.res[+el.dataset.k]; if (!q) return; q.req = !q.req; X.dirty = true; draw(); },
+    'ct-v-try': () => { try { const s0 = (sayScenes() || [])[X.scene || 0]; const txt = (s0 && sentences(s0.say)[0]) || (X.vlang === 'ko' ? '안녕하세요. 오늘 함께 공부할 내용을 소개합니다.' : 'Hello. Let me introduce what we will learn today.'); const u = vidSpeak(txt, { lang: X.vlang, voice: X.vg, vname: X.vname, rate: X.rate }); if (!u) { say('이 브라우저는 목소리 읽기를 지원하지 않습니다.', 'warn'); return; } speechSynthesis.cancel(); const cv = $1('#ctCv'); let tk = 0; if (cv && X.avatar !== 'none') { tk = setInterval(() => { if (!X || !$1('#ctCv')) return clearInterval(tk); slideTo($1('#ctCv'), X.scene || 0, 0.15 + 0.85 * Math.abs(Math.sin(performance.now() / 95))); }, 90); } u.onend = u.onerror = () => { clearInterval(tk); if (X && $1('#ctCv')) slideTo($1('#ctCv'), X.scene || 0, 0); }; speechSynthesis.speak(u); } catch (e) { say('이 브라우저는 목소리 읽기를 지원하지 않습니다.', 'warn'); } },
+    'ct-make': async () => { if (!X || X.busy) return; const tp = (X.topic || '').trim() || seedTopic(X.ctx); if (!tp) { const n = $1('#ctTopic'); if (n) { n.setAttribute('aria-invalid', 'true'); n.focus(); } say('주제를 한 줄 적어 주세요. 예처럼 짧게 써도 됩니다.', 'warn'); return; } X.topic = tp; X.busy = true; X.edit = false; X.step = MK.has(X.kind) ? 0 : 1; const keep = X; draw();
+      const r = await GEN[X.kind](tp, { mins: +X.mins || 5, n: X.kind === 'survey' ? +X.sn || 6 : +X.n || 5, lv: X.lv, need: need(), mix: X.mix, cname: courseName(X.ctx), target: (X.ctx.target || ''), ...(X.kind === 'book' ? { n: +X.units || 3 } : {}) }); if (X !== keep) return; X.res = r.v; X.by = r.by; X.busy = false; X.dirty = false; X.tr = {}; X.scene = 0; X.trMiss = ''; X.step = 1;
+      if (X.kind === 'aivideo') { X.step = 2; [X.slang, X.vlang].filter(l => l !== 'ko').forEach(l => langPick(l === X.slang ? 'slang' : 'vlang', l)); } draw(); },
     'ct-done': () => done(),
     'ct-doc-edit': () => { X.edit = !X.edit; draw(); },
     'ct-doc-dl': () => { const it = { ...docItem(), title: docTitle() }; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([materialHTML(it, courseName(X.ctx))], { type: 'text/html' })); a.download = `${it.title.replace(/[\\/:*?"<>|]/g, '_')}.html`; document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 15000); say('교안을 내려받았습니다. 파일을 열어 [인쇄] → [PDF로 저장]할 수 있습니다.', 'ok'); },
     'ct-doc-print': () => { const it = { ...docItem(), title: docTitle() }; const u = URL.createObjectURL(new Blob([materialHTML(it, courseName(X.ctx))], { type: 'text/html' })); const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;width:0;height:0;border:0;right:0;bottom:0'; f.src = u; document.body.appendChild(f); f.onload = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { window.open(u, '_blank', 'noopener'); } setTimeout(() => { f.remove(); URL.revokeObjectURL(u); }, 60000); }; },
-    'ct-v-make': () => { if (!X.res || !X.res.length) return; X.edit = false; X.step = 1; draw(); },
-    'ct-v-del': el => { X.res.splice(+el.dataset.v, 1); draw(); },
     'ct-v-show': el => drawBig(+el.dataset.v),
-    'ct-v-play': () => { try { aiPlayer(vTitle(), X.res, 'f'); } catch (e) { say('이 브라우저에서는 재생할 수 없습니다.', 'warn'); } },
-    'ct-v-rec': () => { try { aiRecord(vTitle(), X.res, null); } catch (e) { say('이 브라우저에서는 영상 파일을 만들 수 없습니다. Chrome · Edge에서 시도하세요.', 'warn'); } },
-    'ct-q-del': el => { X.res.splice(+el.dataset.v, 1); draw(); },
+    'ct-v-play': () => { try { aiPlayer(titleOf(), X.res, X.vg, null, { tpl: X.tpl, avatar: X.avatar, rate: X.rate, vname: X.vname, vlang: X.slang !== 'ko' && X.tr[X.slang] ? X.slang : X.vlang, capScenes: capScenes(), sayScenes: sayScenes() }); } catch (e) { say('이 브라우저에서는 재생할 수 없습니다.', 'warn'); } },
+    'ct-v-rec': () => { try { aiRecord(titleOf(), X.res, null, { tpl: X.tpl, avatar: X.avatar, capScenes: capScenes() }); } catch (e) { say('이 브라우저에서는 영상 파일을 만들 수 없습니다. Chrome · Edge에서 시도하세요.', 'warn'); } },
     /* 문항 고치기: build.js qsEdit(z65, CT 창 위) — 고친 문항으로 다시 그림 */
-    'ct-q-edit': () => { if (!X || !Array.isArray(X.res) || typeof W.qsEdit !== 'function') return; const keep = X; W.qsEdit(X.res, { title: `${X.topic || sessTitle(X.ctx) || ''} 확인 퀴즈`.trim(), onSave: qs => { if (X !== keep) return; if (Array.isArray(qs) && qs.length) X.res = qs.map(q => ({ ...q, q: String(q.q || '').replace(/^\d+\.\s*/, '') })); draw(); } }); },
+    'ct-q-edit': () => { if (!X || !Array.isArray(X.res) || typeof W.qsEdit !== 'function') return; const keep = X; W.qsEdit(X.res, { title: titleOf(), onSave: qs => { if (X !== keep) return; if (Array.isArray(qs) && qs.length) { X.res = qs.map(q => ({ ...q, q: String(q.q || '').replace(/^\d+\.\s*/, '') })); X.dirty = true; } draw(); } }); },
     'ct-yt-find': async () => { const q = X.topic || sessTitle(X.ctx) || courseName(X.ctx); try { const r = await ytSearch(q); X.cands = r || []; if (r && r[0] && !X.url) { X.url = 'https://youtu.be/' + r[0].id; X.yt = r[0]; } } catch (e) { say('YouTube에서 찾지 못했습니다.', 'warn'); } draw(); },
     'ct-yt-pick': el => { X.url = 'https://youtu.be/' + el.dataset.v; X.yt = (X.cands || []).find(v => v.id === el.dataset.v) || null; draw(); },
     'ct-up-again': () => { X.file = null; X.step = 0; draw(); setTimeout(() => { const f = $1('#ctFile'); f && f.click(); }, 30); },
@@ -381,14 +529,23 @@
   Object.keys(A).forEach(k => { ACT[k] = A[k]; });
   /* 입력 → 상태(다시 그리지 않음) */
   document.addEventListener('input', e => { const el = e.target; if (!X || !el.closest || !el.closest('#ctSheet')) return;
-    if (el.id === 'ctTopic') { X.topic = el.value; const nd = $1('[data-ctneed]'); if (nd) nd.hidden = !!el.value.trim(); } if (el.id === 'ctUpT') X.upTitle = el.value;
+    if (el.id === 'ctTopic') { X.topic = el.value; el.removeAttribute('aria-invalid'); const nd = $1('[data-ctneed]'); if (nd) nd.hidden = !!el.value.trim(); if (MK.has(X.kind) && !claudeOn() && !X.dirty && el.value.trim().length >= 2) { clearTimeout(X.tt); const keep = X; X.tt = setTimeout(() => { if (X === keep && !X.busy && document.activeElement && document.activeElement.id === 'ctTopic') A['ct-make'](); }, 900); } } if (el.id === 'ctUpT') X.upTitle = el.value;
     if (el.id === 'ctUrl') { X.url = el.value.trim(); X.yt = null; clearTimeout(X.ut); X.ut = setTimeout(() => { if (!X) return; const pos = el.selectionStart; draw(); const n = $1('#ctUrl'); if (n && !ytId(X.url)) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) { } } }, 350); }
     if (el.id === 'ctLq') { X.lq = el.value; clearTimeout(X.lt); X.lt = setTimeout(() => { if (!X) return; draw(); const n = $1('#ctLq'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 250); }
-    if (el.dataset.ctd && X.res) { const k = el.dataset.ctd; X.res[k] = k === 'act' ? el.value : el.value.split('\n').map(x => x.trim()).filter(Boolean); }
-    if (el.dataset.cts != null && X.res) X.res.secs[+el.dataset.cts][el.dataset.f] = el.value;
-    if (el.dataset.ctv != null && X.res) X.res[+el.dataset.ctv][el.dataset.f] = el.value;
-    if (el.dataset.cta && X.res) X.res[el.dataset.cta] = el.value; });
-  document.addEventListener('change', e => { const el = e.target; if (el && el.id === 'ctFile' && el.files && el.files[0] && X) takeFile(el.files[0]); });
+  });
+  document.addEventListener('change', e => { const el = e.target; if (el && el.id === 'ctFile' && el.files && el.files[0] && X) takeFile(el.files[0]);
+    if (!X || !el || !el.closest || !el.closest('#ctSheet')) return;
+    if (el.dataset.ctset) { const k = el.dataset.ctset; const v = el.tagName === 'SELECT' && isNaN(+el.value) || el.value === '' ? el.value : +el.value;
+      if (k === 'slang' || k === 'vlang') { langPick(k, el.value); return; } if (k === 'time') X.time = Math.max(5, Math.min(600, +el.value || 60)); else if (k === 'due') { X.due = +el.value || 7; if (X.res) X.res.due = X.due; } else X[k] = v; draw(); }
+    if (el.dataset.svt != null && X.res) { const q = X.res[+el.dataset.svt]; const v = el.value; if (!q) return; if (v === 'text') { q.t = 'text'; q.opts = []; q.scale = false; } else if (v === 'scale') { q.t = 'single'; q.opts = [...A5L]; q.scale = true; } else { if (q.scale || !(q.opts || []).length) q.opts = ['항목 1', '항목 2', '항목 3']; q.t = v; q.scale = false; } X.dirty = true; draw(); } });
+  /* 설정이 바뀌면 미리보기를 바로 바꾼다: 규칙 생성은 즉시 다시 만들고, 고친 내용이 있으면 문항 수만 늘리거나 줄인다 */
+  function optChanged(k) { if (!X) return; const CONTENT = { quiz: ['n', 'lv'], exam: ['en', 'mult', 'rand', 'lv'], survey: ['sn', 'mix'], book: ['units'], aivideo: ['mins'] }[X.kind] || [];
+    if (!X.res || !CONTENT.includes(k) || X.busy) { draw(); return; }
+    if (X.kind === 'exam' && k !== 'lv') { const n = need(); if (X.res.length > n) X.res = X.res.slice(0, n); else if (X.res.length < n) X.res = X.res.concat(examBank(X.topic, n - X.res.length, X.lv, X.res)); draw(); return; }
+    if (X.kind === 'quiz' && k === 'n' && X.dirty) { const n = +X.n; if (X.res.length > n) X.res = X.res.slice(0, n); else X.res = X.res.concat(AI.questions(X.topic, n - X.res.length, X.lv).filter(q => !X.res.some(y => nq(y) === nq(q)))); draw(); return; }
+    if (X.kind === 'survey' && k === 'sn' && X.dirty) { const n = +X.sn; if (X.res.length > n) X.res = X.res.slice(0, n); else X.res = X.res.concat(svDraft(X.topic, n, X.mix).filter(q => !X.res.some(y => y.q === q.q)).slice(0, n - X.res.length)); draw(); return; }
+    if (X.dirty || claudeOn()) { X.stale = true; draw(); say('설정을 바꿨습니다. 새로 만들려면 [AI로 다시 만들기]를 누르세요.', ''); return; }
+    A['ct-make'](); }
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'ctTopic' && X && X.step === 0 && !e.isComposing) { e.preventDefault(); if (X.kind === 'aivideo') A['ct-make'](); else A['ct-make'](); } });
 
   /* ═════════ '차시 채우기' 단계(CF fill) ═════════ */
@@ -553,7 +710,8 @@
     (x.items || []).forEach(y => { const it = (c.curriculum || []).find(z => z.id === y.id); if (!it) return; if (it.src) y.src = it.src;
       if (it.src === 'upload' || it.src === 'library') { ['url', 'fileId', 'mime', 'file'].forEach(k => { if (it[k] && !/^upload:/.test(String(it[k])) || k === 'file') if (it[k]) y[k] = String(it[k]).slice(0, 300); }); }
       if (it.doc && (it.doc.secs || []).length) { const D = it.doc; y.doc = { goals: (D.goals || []).slice(0, 8).map(g => String(g).slice(0, 200)), secs: D.secs.slice(0, 12).map(q => ({ h: String(q.h || '').slice(0, 120), body: String(q.body || '').slice(0, 1500), pts: (q.pts || []).slice(0, 8).map(p => String(p).slice(0, 200)) })), act: String(D.act || '').slice(0, 1500), check: (D.check || []).slice(0, 8).map(q => String(q).slice(0, 300)) }; if (it.fmt) y.fmt = it.fmt; }
-      if (it.src === 'ai' && it.ai && (it.ai.scenes || []).length) y.ai = { scenes: it.ai.scenes.slice(0, 16).map(q => ({ h: String(q.h || '').slice(0, 120), pts: (q.pts || []).slice(0, 6).map(p => String(p).slice(0, 160)), say: String(q.say || '').slice(0, 800) })), voice: it.ai.voice || 'f' };
+      if (it.src === 'ai' && it.ai && (it.ai.scenes || []).length) { const A0 = it.ai; const vl = A0.vlang && A0.vlang !== 'ko' && A0.tr && (A0.tr[A0.vlang] || []).length ? A0.vlang : ''; const SC = vl ? A0.tr[vl] : A0.scenes; /* v36 번역 언어 · 목소리 · 속도 */
+        y.ai = { scenes: SC.slice(0, 16).map(q => ({ h: String(q.h || '').slice(0, 120), pts: (q.pts || []).slice(0, 6).map(p => String(p).slice(0, 160)), say: String(q.say || '').slice(0, 800) })), voice: A0.voice || 'f', ...(vl ? { lang: (typeof LANG_TTS === 'object' && LANG_TTS[vl]) || vl } : {}), ...(+A0.rate && +A0.rate !== 1 ? { rate: +A0.rate } : {}), ...(A0.vname ? { vname: String(A0.vname).slice(0, 80) } : {}), ...(A0.tpl && A0.tpl !== 'slide' ? { tpl: A0.tpl } : {}), ...(A0.avatar && A0.avatar !== 'none' ? { avatar: A0.avatar } : {}) }; }
       if (it.book) y.book = it.book; }); }); } catch (e) { console.error('crs-content snap', e); } return r; }; }
 
   /* ── 스타일(이 파일 안에서 주입: 디자인 토큰 dds.css 값을 따른다) ── */
@@ -626,8 +784,52 @@ body:has(#slSheet) .ct-wrap{z-index:97}
 @media (max-width:600px){.ctf-bb .ct-btn{flex:1 1 100%;justify-content:flex-start}}
 @media (max-width:600px){.ct-wrap{padding:0;align-items:flex-end}.ct-sh{border-radius:16px 16px 0 0;max-height:94dvh;width:100%}.ct-bd{padding:12px 16px 16px}.ct-now{margin:10px 16px 0}.ct-ft{padding:10px 16px calc(10px + env(safe-area-inset-bottom))}.ct-pri{flex:1;min-width:0}.ct-fl:empty{display:none}
  .ct-a4{padding:20px 18px;font-size:14px}.ct-a4 h1{font-size:20px}.ct-two{grid-template-columns:1fr}.ct-kind{min-height:140px;padding:12px}.ct-steps{margin:6px 12px 0}.ct-steps li{font-size:13px}.ct-thumbs{grid-template-columns:repeat(3,minmax(0,1fr))}.ctf-top .ct-ai{width:100%}}
+/* v36 만들기: 설정 + 실시간 미리보기 */
+.ct-sh.wide{width:min(1240px,100%);height:calc(100dvh - 32px)}
+.ct-sh.wide .ct-bd{padding:0;overflow:hidden;display:flex}
+.ct-mk{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);flex:1;min-height:0;width:100%}
+.ct-set{overflow:auto;padding:16px 18px 24px;border-right:1px solid #EAEBEB;overscroll-behavior:contain}
+.ct-set .ct-f{margin:0 0 14px}.ct-set .ct-ex{margin:-8px 0 12px}.ct-set>.ct-ai{margin:0 0 16px}.ct-mkb{width:100%;margin:6px 0 8px}
+.ct-pv{display:flex;flex-direction:column;min-width:0;min-height:0;background:#F1F2F2}
+.ct-pvh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid #EAEBEB;background:#fff}.ct-pvh b{font-size:15px}.ct-pvh small{color:#5B5C5C;font-size:14px}
+.ct-pvb{flex:1;overflow:auto;padding:18px;overscroll-behavior:contain}
+.ct-pvempty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;min-height:300px;border:2px dashed #C8C9C9;border-radius:16px;color:#4C4D4D;padding:24px;background:#fff}.ct-pvempty b{font-size:17px;color:#2A2B2B}.ct-pvempty .ct-ic{color:#5C74F6}
+.ct-sub{font-weight:500;color:#6C6C6C;font-size:13px}.ct-vh{display:block;font-size:14px;color:#4C4D4D;margin:0 0 4px}.ct-in{margin:8px 0 0 !important}
+.ct-set select,.ct-f select{width:100%;min-height:48px;font:inherit;font-size:16px;padding:0 12px;border:1px solid #C8C9C9;border-radius:10px;background:#fff;color:#2A2B2B}
+.ct-chip.sm{min-height:40px;padding:0 14px;font-size:15px}
+.ct-ce{cursor:text;border-radius:6px;outline:1px dashed transparent;outline-offset:2px;transition:outline-color .12s,background .12s;white-space:pre-wrap;overflow-wrap:anywhere}
+.ct-ce:hover,.ct-ce:focus-visible{outline-color:#8EA0FA;background:rgba(92,116,246,.06)}
+.ct-ce.on{outline:2px solid #5C74F6;background:#fff;box-shadow:0 0 0 4px rgba(92,116,246,.15)}
+.ct-ce:empty::before{content:attr(data-ph);color:#9A9B9B}
+.ct-x{width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:#808181;display:inline-grid;place-items:center;cursor:pointer;vertical-align:middle;margin-left:4px;opacity:.55}.ct-x:hover{background:#FFE8EA;color:#DE0027;opacity:1}
+.ct-xadd{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;margin:6px 6px 6px 0;border:1px dashed #8EA0FA;border-radius:999px;background:#fff;color:#3B4FD0;font:inherit;font-size:15px;font-weight:600;cursor:pointer}.ct-xadd:hover{background:#EAEDFF}
+.ct-ttl{margin:0 0 10px}.ct-ttlh{font-size:20px;margin:0;display:inline-block;padding:2px 4px}
+.ct-a4 h1.ct-ce{display:block}.ct-a4 h2 .ct-x{opacity:0}.ct-a4 h2:hover .ct-x,.ct-a4 li:hover .ct-x{opacity:.7}.ct-a4 li .ct-x{opacity:0}
+.ct-qs .ct-q p::before{content:none}.ct-qn{width:28px;height:28px;flex:none;border-radius:50%;background:#2A2B2B;color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700;margin-top:6px}
+.ct-qt{flex:1;min-width:0}.ct-qt p{margin:6px 0 2px;font-weight:700;line-height:1.5}.ct-qty{font-size:13px;color:#808181}
+.ct-ansb{width:26px;height:26px;flex:none;border-radius:50%;border:2px solid #AAABAB;background:#fff;display:grid;place-items:center;cursor:pointer;color:#fff;padding:0}.ct-op li.a .ct-ansb{background:#00C53B;border-color:#00C53B}
+.ct-oxr{display:flex;gap:8px;align-items:center;margin:4px 0}.ct-ansr{margin:4px 0}.ct-ansr b{color:#009116}
+.ct-qs.ro .ct-op li{color:#2A2B2B}.ct-rad,.ct-box{width:18px;height:18px;flex:none;border:2px solid #AAABAB;border-radius:50%;display:inline-block}.ct-box{border-radius:4px}
+.ct-ansbox{border:1px dashed #C8C9C9;border-radius:10px;padding:14px;color:#808181;font-size:14px;background:#fff;margin:6px 0}
+.ct-exs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}.ct-exs>*{background:#fff;border:1px solid #EAEBEB;border-radius:999px;padding:4px 12px;font-size:14px}.ct-exs b{background:#2A2B2B;color:#fff;border-color:#2A2B2B}
+.ct-sw{display:flex;align-items:center;gap:10px;min-height:48px;width:100%;text-align:left;border:1px solid #C8C9C9;border-radius:10px;background:#fff;padding:6px 12px;font:inherit;font-size:15px;cursor:pointer;color:#2A2B2B}.ct-sw i{width:40px;height:24px;border-radius:999px;background:#C8C9C9;position:relative;flex:none}.ct-sw i::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}.ct-sw.on{border-color:#5C74F6;background:#F5F7FF}.ct-sw.on i{background:#5C74F6}.ct-sw.on i::after{left:19px}
+.ct-paper{background:#fff;border-radius:12px;padding:16px;border:1px solid #EAEBEB}.ct-ptop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:2px solid #2A2B2B;padding-bottom:8px;margin-bottom:8px}.ct-timer{background:#FFE8EA;color:#DE0027;font-weight:700;border-radius:999px;padding:4px 12px;font-size:14px}
+.ct-svm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 8px 36px}.ct-svsel{flex:1 1 220px}.ct-svsel .ct-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.ct-svm select{min-height:40px;font:inherit;font-size:15px;border:1px solid #C8C9C9;border-radius:8px;padding:0 10px;background:#fff;width:100%}
+.ct-sv .ct-op,.ct-sv .ct-scale,.ct-sv .ct-ansbox,.ct-sv .ct-xadd{margin-left:36px}.ct-scale{display:flex;gap:6px;flex-wrap:wrap}.ct-scale span{display:flex;flex-direction:column;align-items:center;gap:4px;background:#fff;border:1px solid #EAEBEB;border-radius:10px;padding:6px 8px;min-width:76px;font-size:14px;text-align:center}.ct-scale i{font-style:normal;font-weight:800;color:#5C74F6}
+.ct-asg{background:#fff;border-radius:12px;padding:18px;border:1px solid #EAEBEB}.ct-asg h4{margin:16px 0 6px;font-size:16px}.ct-asg .pre{white-space:pre-wrap;line-height:1.6}.ct-due{display:inline-block;background:#FFF3E0;color:#A84A00;border-radius:999px;padding:3px 12px;font-size:14px;font-weight:700;margin:0}
+.ct-rbt{width:100%;border-collapse:collapse;font-size:15px}.ct-rbt th,.ct-rbt td{border:1px solid #EAEBEB;padding:8px;text-align:left;vertical-align:top}.ct-rbt th{background:#F6F7F7}
+.ct-tpls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.ct-tpl{display:flex;flex-direction:column;gap:2px;text-align:left;padding:6px 6px 8px;border:2px solid #EAEBEB;border-radius:12px;background:#fff;font:inherit;cursor:pointer;color:#2A2B2B}.ct-tpl canvas{width:100%;height:auto;border-radius:6px;display:block;background:#F1F2F2}.ct-tpl b{font-size:14px;margin-top:4px}.ct-tpl small{font-size:12px;color:#6C6C6C;line-height:1.35}.ct-tpl.on{border-color:#5C74F6;box-shadow:0 0 0 3px #EAEDFF}
+.ct-avs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.ct-av{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;border:2px solid #EAEBEB;border-radius:12px;background:#fff;font:inherit;cursor:pointer;color:#2A2B2B;min-height:96px}.ct-av canvas{width:56px;height:56px}.ct-av small{font-size:12px;line-height:1.25;text-align:center}.ct-av.on{border-color:#5C74F6;box-shadow:0 0 0 3px #EAEDFF}.ct-avn{width:56px;height:56px;border-radius:50%;background:#F1F2F2;display:grid;place-items:center;color:#808181}
+.ct-h4{margin:14px 0 8px;font-size:16px}.ct-scn>li.on{outline:2px solid #5C74F6}.ct-scnh{flex:1;font-weight:700;font-size:16px;padding:6px}.ct-say{margin:4px 0 0;line-height:1.55}
+.ct-pvb .ct-a4{max-width:720px}.ct-pvb .ct-qs>li{background:#fff}.ct-pvb .ct-scn>li{background:#fff}.ct-pvb .ct-book li{background:#fff}
+@media (max-width:860px){.ct-sh.wide{height:auto;max-height:94dvh}.ct-sh.wide .ct-bd{overflow:auto;display:block}.ct-mk{display:block}.ct-set{border-right:0;border-bottom:1px solid #EAEBEB;overflow:visible;padding:12px 16px}.ct-pvb{overflow:visible;padding:12px}.ct-pvh{position:sticky;top:0;z-index:3}.ct-avs{grid-template-columns:repeat(5,minmax(0,1fr))}.ct-svm,.ct-sv .ct-op,.ct-sv .ct-scale,.ct-sv .ct-ansbox,.ct-sv .ct-xadd{margin-left:0}}
 `;
 
   /* ── 내보내기 ── */
-  W.CT = { open, pick, close: () => close(), kinds: KINDS.map(k => ({ ...k, icon: svg(k.k, 24) })), renderFill, fillAll, aiFill: d => { try { W.CF && CF.snap && CF.snap('AI SAM이 채우기 전'); } catch (e) { } const r = fillAll(d); refill(); return r; }, toCourse, sweep, toItem: recToItem, toRec: itemToRec, preview, link: linkCreated, hook: hookCF, steps: STEPS, gen: GEN };
+  /* v36 인터페이스(B 과정 만들기 흐름이 부름):
+     CT.open('exam', { course, week, title, from:'flow', preset:{ examKind:'mid'|'final'|'test', n:출제 문항 수, mult:배수, time:분, retake:재응시 횟수, pass:통과 점수(0=없음), random:true }, onDone(item, 'exam') })
+       → item = { type:'exam', title, ek, qs:[문제 은행 n×mult], time, retake, pool:{n, mult}, rules:{ shuffle, draw:n(랜덤 출제 수, 0=전부), pass:{on,v}, retry:{mode,v}, from, to, show } }
+     CT.open('survey', { …, preset:{ n:문항 수 }, onDone(item, 'survey') }) → item = { type:'survey', title, qs:[{id,q,t:'single'|'multi'|'text',opts,req,scale?}], mins, doneMsg, rules }
+     CT.makers: 실시간 미리보기 만들기 종류 */
+  W.CT = { makers: [...MK], examBank, svDraft, open, pick, close: () => close(), kinds: KINDS.map(k => ({ ...k, icon: svg(k.k, 24) })), renderFill, fillAll, aiFill: d => { try { W.CF && CF.snap && CF.snap('AI SAM이 채우기 전'); } catch (e) { } const r = fillAll(d); refill(); return r; }, toCourse, sweep, toItem: recToItem, toRec: itemToRec, preview, link: linkCreated, hook: hookCF, steps: STEPS, gen: GEN };
 })();
