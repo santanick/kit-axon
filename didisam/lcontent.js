@@ -114,7 +114,7 @@
     let body = '';
     if (fk === 'video') body = `<div class="lc-media"><video controls playsinline preload="metadata" controlslist="nodownload" data-lcm-media="1" aria-label="${E(it.title)} 영상"></video><p class="lc-wait">영상을 불러오고 있어요…</p></div>`;
     else if (fk === 'audio') body = `<div class="lc-media lc-aud"><span class="lc-audi">${IC('audio', 34)}</span><audio controls preload="metadata" data-lcm-media="1" aria-label="${E(it.title)} 음성"></audio><p class="lc-wait">음성을 불러오고 있어요…</p></div>`;
-    else if (fk === 'pdf') body = phone() ? `<div class="lc-pdfm">${IC('book', 30)}<p>휴대폰에서는 문서를 새 창에서 크게 볼 수 있어요.</p><button type="button" class="lbtn pri" data-lcf="open">문서 열어 보기</button></div>` : `<div class="lc-media lc-pdfw"><iframe class="lc-pdf" title="${E(it.title)} 문서" data-lcm-media="1"></iframe><p class="lc-wait">문서를 불러오고 있어요…</p></div>`;
+    else if (fk === 'pdf') body = phone() ? `<div class="lc-pdfm">${IC('book', 30)}<p>휴대폰에서는 문서를 새 창에서 크게 볼 수 있어요.</p><button type="button" class="lbtn pri" data-lcf="open">문서 열어 보기</button></div>` : `<div class="lc-media lc-pdfw"><iframe class="lc-pdf" title="${E(it.title)} 문서" data-lcm-media="1"></iframe><p class="lc-wait">문서를 불러오고 있어요…</p></div><p class="lc-hint">문서가 보이지 않으면 [새 창에서 크게 보기]나 [내려받기]를 눌러 주세요.</p>`;
     else if (fk === 'image') body = `<div class="lc-media"><img alt="${E(it.title)}" data-lcm-media="1"><p class="lc-wait">그림을 불러오고 있어요…</p></div>`;
     else body = `<div class="lc-pdfm">${IC('book', 30)}<p>이 파일은 내려받아서 열어요. 컴퓨터나 휴대폰에 있는 프로그램(한글 · 워드 · 파워포인트 등)으로 열 수 있어요.</p><button type="button" class="lbtn pri" data-lcf="down">파일 내려받기</button></div>`;
     const auto = fk === 'video' || fk === 'audio';

@@ -38,7 +38,8 @@
 .lc-media video{display:block;width:100%;max-height:70vh;background:#000}
 .lc-media img{display:block;max-width:100%;margin:0 auto;background:#fff}
 .lc-aud{background:var(--paper,#F6F7F7);padding:20px;display:flex;flex-direction:column;align-items:center;gap:12px}.lc-aud audio{width:100%}.lc-audi{color:var(--pri,#5C74F6)}
-.lc-pdfw{background:var(--paper,#F6F7F7)}.lc-file[data-fk=pdf] .lc-ftools{margin:0 0 10px}
+.lc-pdfw{background:var(--paper,#F6F7F7);border:1px solid var(--line,#EAEBEB)}
+.lc-hint{margin:8px 0 0;color:var(--mute,#6C6C6C);font-size:14px}.lc-file[data-fk=pdf] .lc-ftools{margin:0 0 10px}
 .lc-pdf{display:block;width:100%;height:64vh;min-height:420px;border:0;background:#fff}
 .lc-wait{position:absolute;inset:auto 0 0;margin:0;padding:10px;text-align:center;color:#fff;background:rgba(0,0,0,.4);font-size:15px}
 .lc-aud .lc-wait,.lc-pdfw .lc-wait{position:static;background:none;color:var(--mute,#6C6C6C)}
