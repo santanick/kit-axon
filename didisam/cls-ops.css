@@ -1,0 +1,106 @@
+/* v36 A — 운영현황 시트 · 이수 현황 엑셀 · 진도율 · 카테고리 · 수료증 디자인 */
+/* 카드 보기 썸네일 = 운영현황 버튼 */
+.d26-th{position:relative}
+.ops-thb{position:absolute;inset:0;z-index:1;border:0;padding:0;margin:0;background:transparent;cursor:pointer;display:flex;align-items:flex-end;justify-content:flex-end;border-radius:inherit}
+.ops-thb>span{display:inline-flex;align-items:center;gap:6px;margin:10px;padding:6px 12px;border-radius:999px;background:rgba(31,32,32,.78);color:#fff;font-size:13px;font-weight:600;opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s}
+.ops-thb:hover>span,.ops-thb:focus-visible>span{opacity:1;transform:none}
+.ops-thb:focus-visible{outline:3px solid var(--s400,#5C74F6);outline-offset:-3px}
+@media (hover:none){.ops-thb>span{opacity:1;transform:none}}
+.d26-th .d26-ck,.d26-th .d26-kind,.d26-th .d26-rib{z-index:2}
+.d26-th .d26-kind{pointer-events:none}
+.d26-th .d26-ck{pointer-events:auto}
+.ops-xbtn{white-space:nowrap}
+.c2lbar .ops-xbtn{min-height:40px}
+/* 운영현황 시트 */
+.ops-w .sl-sheet{width:min(560px,100%)}
+.ops{display:flex;flex-direction:column;gap:14px}
+.ops-hd{display:flex;gap:12px;align-items:center}
+.ops-hd img,.ops-th0{width:72px;height:48px;border-radius:10px;object-fit:cover;flex:none}
+.ops-th0{display:grid;place-items:center;background:var(--s50,#EEF1FE);color:var(--s500,#3C4FC9);font-weight:800;font-size:18px}
+.ops-th0.sm{width:44px;height:32px;font-size:14px;border-radius:8px}
+.ops-hd b{display:block;font-size:17px;line-height:1.35}
+.ops-hd small{color:var(--g600,#6C6C6C);font-size:13px}
+.ops-ts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.ops-t{background:var(--g50,#F6F6F7);border-radius:12px;padding:10px 10px 9px;min-width:0}
+.ops-t small{display:block;color:var(--g600,#6C6C6C);font-size:12px;white-space:nowrap}
+.ops-t b{display:block;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.25}
+.ops-t b i{font-style:normal;font-size:12px;font-weight:500;margin-left:2px;color:var(--g600,#6C6C6C)}
+.ops-t span{display:block;font-size:11px;color:var(--g600,#6C6C6C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ops-t.g b{color:#00873D}.ops-t.w b{color:#C26A00}.ops-t.p b{color:#C2185B}
+.ops-bar{display:flex;height:10px;border-radius:99px;background:var(--g100,#EBEBEC);overflow:hidden}
+.ops-bar i{display:block;height:100%}.ops-bar .g{background:#00A651}.ops-bar .b{background:#5C74F6}
+.ops-lg{display:flex;gap:14px;margin:-6px 0 0;font-size:12px;color:var(--g600,#6C6C6C)}
+.ops-lg span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--g200,#D5D6D8);margin-right:5px}
+.ops-lg .g::before{background:#00A651}.ops-lg .b::before{background:#5C74F6}
+.ops .sl-gh{margin:6px 0 -4px}
+.ops-todo,.ops-low,.ops-crl{display:flex;flex-direction:column;gap:2px}
+.ops-tr,.ops-cr{display:flex;align-items:center;gap:12px;min-height:56px;padding:6px 4px;border-radius:12px}
+.ops-tr:hover,.ops-cr:hover{background:var(--g50,#F6F6F7)}
+.ops-ti{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--s50,#EEF1FE);color:var(--s500,#3C4FC9);flex:none}
+.ops-tx{flex:1;min-width:0}
+.ops-tx b{display:block;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ops-tx small{display:block;font-size:12.5px;color:var(--g600,#6C6C6C);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ops-tr .btn,.ops-cr .btn{min-height:40px;flex:none}
+.ops-none{color:var(--g600,#6C6C6C);font-size:14px;margin:4px 0}
+.ops-lr{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(60px,1fr) 44px 64px;gap:10px;align-items:center;min-height:40px;font-size:14px}
+.ops-lr>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ops-lr b{text-align:right;font-variant-numeric:tabular-nums}
+.ops-lr small{color:var(--g600,#6C6C6C);font-size:12px;text-align:right}
+.ops-pb{display:inline-block;width:72px;height:6px;background:var(--g100,#EBEBEC);border-radius:9px;overflow:hidden;vertical-align:middle}
+.ops-lr .ops-pb{width:100%}
+.ops-pb i{display:block;height:100%;background:#5C74F6;border-radius:9px}
+.ops-pb i.r{background:#E5484D}
+@media (max-width:560px){.ops-ts{grid-template-columns:repeat(3,minmax(0,1fr))}.ops-lr{grid-template-columns:minmax(0,1fr) 54px 44px}.ops-lr small{display:none}}
+/* 진도율 카드(출결) */
+.ops-prog{margin-top:16px}
+.ops-prog .ch{flex-wrap:wrap;gap:8px}
+.ops-prog .sl-chips{margin:8px 0 10px}
+/* 카테고리 */
+.ops-one{margin:0 0 10px;color:var(--g600,#6C6C6C);font-size:14px}
+.ops-catadd{display:flex;gap:8px;margin-top:14px}
+.ops-catadd input{flex:1;min-height:44px}
+.ops-sug{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
+.ops-sug small{color:var(--g600,#6C6C6C);margin-right:4px}
+.ops-sug .chip{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--g200,#D5D6D8);background:#fff;cursor:pointer;font-size:13px}
+.ops-sug .chip:hover{border-color:var(--s400,#5C74F6);color:var(--s500,#3C4FC9)}
+.ops-catempty{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding:28px}
+.ops-catempty>b{font-size:17px}
+.ops-cats .ops-q{width:100%;min-height:44px;margin:8px 0}
+.ops-cats .ch{display:flex;align-items:center;gap:8px}
+.ops-cr img{width:44px;height:32px;border-radius:8px;object-fit:cover;flex:none}
+.ops-cfcat{margin:0 0 18px;padding:14px 16px;border-radius:12px;background:var(--g50,#F6F6F7)}
+.ops-cfcat .cf-lb{display:block;font-weight:700;margin-bottom:8px}
+.ops-cfcat .cf-lb small{font-weight:400;color:var(--g600,#6C6C6C);margin-left:6px}
+.ops-cat{display:flex;gap:8px;flex-wrap:wrap}
+.ops-cat select,.ops-cat input{min-height:44px;min-width:220px;flex:1}
+/* 수료증 디자인 */
+.ck-gwrap{margin-bottom:16px}
+.ck-gwrap .ch{display:flex;align-items:center;gap:8px}
+.ck-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.ck-card{display:flex;flex-direction:column;gap:4px;align-items:stretch;text-align:left;padding:8px 8px 10px;border:1.5px solid var(--g100,#EBEBEC);border-radius:14px;background:#fff;cursor:pointer;min-width:0}
+.ck-card:hover{border-color:var(--g300,#AAABAB)}
+.ck-card.on{border-color:var(--s400,#5C74F6);box-shadow:0 0 0 3px rgba(92,116,246,.16)}
+.ck-card b{font-size:14px;padding:0 2px}.ck-card small{font-size:12px;color:var(--g600,#6C6C6C);padding:0 2px}
+.ck-mini{display:block;position:relative;width:100%;aspect-ratio:1.414;overflow:hidden;border-radius:8px;background:#F4F2EC;container-type:inline-size}
+.ck-mini-in{position:absolute;left:0;top:0;width:760px;transform-origin:0 0;transform:scale(.2);pointer-events:none}
+.ck-mini-in .certpv,.ck-mini-in .a2cert{margin:0!important;width:760px!important;max-width:none!important;box-shadow:none}
+.ck-up{display:grid;place-items:center;align-content:center;gap:6px;color:var(--g600,#6C6C6C);font-size:13px;background:repeating-linear-gradient(45deg,#F6F6F7,#F6F6F7 8px,#fff 8px,#fff 16px);border:1.5px dashed var(--g200,#D5D6D8)}
+.ck-curl b{display:block;padding:10px 0;font-weight:600}
+/* 내 이미지 편집기 */
+.ck-ed{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:18px;align-items:start}
+.ck-stage{background:#F4F2EC;border-radius:12px;padding:12px}
+.ck-stage .ck.img{box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.ck-edr{display:flex;flex-direction:column;gap:10px}
+.ck-upl{justify-content:center;min-height:44px}
+.ck-keys{display:flex;flex-direction:column;gap:2px;max-height:260px;overflow:auto}
+.ck-key{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 6px;border-radius:8px}
+.ck-key.on{background:var(--s50,#EEF1FE)}
+.ck-key>button{flex:1;text-align:left;border:0;background:none;min-height:36px;font-weight:600;cursor:pointer}
+.ck-key .sl-swl{font-size:12px;color:var(--g600,#6C6C6C);display:flex;gap:4px;align-items:center}
+.ck-props{border:1px solid var(--g100,#EBEBEC);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ck-props legend{font-weight:700;padding:0 4px}
+.ck-props label{display:flex;flex-direction:column;font-size:12px;gap:4px;color:var(--g600,#6C6C6C)}
+.ck-props input[type=number],.ck-props select{min-height:36px}
+.ck-props input[type=color]{width:100%;height:36px;padding:2px}
+.ck-props .sl-swl{flex-direction:row;align-items:center;align-self:end;min-height:36px}
+@media (max-width:760px){.ck-ed{grid-template-columns:1fr}.ck-keys{max-height:none;display:grid;grid-template-columns:1fr 1fr}}
