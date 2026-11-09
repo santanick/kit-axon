@@ -22,19 +22,30 @@ const LEC = [
 ];
 const lecTopic = s => clean(String(s || '').replace(/^\d+(주차|주|회차|차시)\s*(강의자료)?\s*—?\s*/, '').replace(/^[^:]*:\s*/, m => m.length > 24 ? '' : m).replace(/:/g, ' ')).replace(/\s+/g, ' ').trim() || '핵심 개념';
 Object.assign(AI, {
-  lecture(title, mins = 5) {
-    const tp = lecTopic(title); const n = clamp(Math.round((+mins || 5) * 1.6), 4, LEC.length);
-    const mid = LEC.slice(1, -1); const pickN = n - 2; const sel = Array.from({ length: pickN }, (_, i) => mid[Math.floor(i * mid.length / pickN)]);
-    return [LEC[0], ...sel, LEC[LEC.length - 1]].map(([h, p, s]) => ({ h, pts: p(tp), say: s(tp) }));
+  /* v36 1-④-3: 고른 길이에 맞춘다 — 장면 수(1분에 약 1.8장면)와 장면마다 읽을 말의 양(1초에 약 7글자)을 길이에서 거꾸로 계산한다.
+     예전에는 장면이 최대 ${LEC.length}개 · 장면당 22초로 막혀 '5분'을 골라도 약 2분이었다 */
+  lecture(title, mins = 5, o) {
+    const tp = lecTopic(title); const M = clamp(+mins || 5, 1, 30); const n = o && o.short ? clamp(Math.round(M * 1.6), 4, LEC.length) : clamp(Math.round(M * 1.8), 4, 40);
+    const mid = LEC.slice(1, -1); const pickN = n - 2; const used = {};
+    const sel = Array.from({ length: pickN }, (_, i) => { const x = mid[Math.floor(i * mid.length / pickN) % mid.length]; used[x[0]] = (used[x[0]] || 0) + 1; return [used[x[0]] > 1 ? `${x[0]} (${used[x[0]]})` : x[0], x[1], x[2], used[x[0]]]; });
+    const per = M * 60 / n * 7; /* 장면 하나에 읽을 글자 수 */
+    const J = (w, p) => w + AI.j(w, p);
+    const MORE = [p => `첫째, ${p[0]}. 이 부분을 먼저 분명히 해 두어야 다음 내용이 쉽게 이어집니다.`, p => `둘째, ${p[1] || p[0]}. 여러분의 수업이나 업무에서 비슷한 장면을 하나 떠올려 보세요.`, p => `셋째, ${p[2] || p[0]}. 화면의 요점을 보며 잠시 생각해 볼 시간을 갖겠습니다.`,
+      () => `예를 들어 처음 ${J(tp, '을')} 시도하는 사람은 목표를 너무 넓게 잡는 경우가 많습니다. 범위를 좁히면 결과가 훨씬 좋아집니다.`, () => `여기서 잠깐, 지금까지 들은 내용을 한 문장으로 정리해 보세요. 스스로 말할 수 있다면 잘 따라오고 있는 것입니다.`,
+      () => `${J(tp, '은')} 한 번에 완성되지 않습니다. 작게 시작해서 결과를 확인하고, 고치고, 다시 해 보는 과정이 중요합니다.`, () => `이 내용은 뒤에 나오는 실습과 확인 퀴즈에서 다시 다룹니다. 헷갈리는 부분은 표시해 두었다가 그때 확인해 보세요.`,
+      () => `실제로 해 보면 생각보다 시간이 걸릴 수 있습니다. 그래도 순서를 지키면 같은 실수를 줄일 수 있습니다.`];
+    const ORD = k => [0, 1, 2, ...Array.from({ length: MORE.length - 3 }, (_, i) => 3 + (i + k) % (MORE.length - 3))]; /* 첫째 · 둘째 · 셋째는 순서대로, 나머지 덧붙임 말은 장면마다 다르게 */
+    const grow = (say, pts, k) => { if (o && o.short) return say; let t = say; const L = ORD(k); let j = 0; while (t.length < per * 0.92 && j < L.length) { t += ' ' + MORE[L[j]](pts); j++; } return t; };
+    return [LEC[0], ...sel, LEC[LEC.length - 1]].map(([h, p, s, rep], k) => { const pts = p(tp); const say0 = s(tp) + (rep > 1 ? ` 앞에서 본 내용을 다른 각도에서 한 번 더 짚어 보겠습니다.` : ''); return { h, pts, say: grow(say0, pts, k) }; });
   },
   material(topic, c, scenes) {
-    const tp = lecTopic(topic); const sc = scenes && scenes.length ? scenes : AI.lecture(tp, 6);
+    const tp = lecTopic(topic); const sc = scenes && scenes.length ? scenes : AI.lecture(tp, 6, { short: 1 }); /* 교안 · 디지털북 본문은 영상 길이용 덧붙임 말 없이 */
     return { title: tp, goals: sc[0].pts.slice(), secs: sc.slice(1, -1).map(s => ({ h: s.h, body: s.say, pts: s.pts.slice() })),
       act: `「${tp}」 실습: ① 목표 한 줄 쓰기 ② 조건 · 자료 준비 ③ 결과 만들기 ④ 기준으로 점검 · 수정 ⑤ 최종본과 느낀 점 제출`,
       check: AI.questions(tp, 3, '보통', ['mc', 'ox', 'short']).map(q => q.q.replace(/^\d+\.\s*/, '')), course: c?.name || '' };
   }
 });
-const secsFor = s => window.__REC_FAST ? 0.35 : clamp(String(s || '').length / 7, 4, 22);
+const secsFor = s => window.__REC_FAST ? 0.35 : clamp(String(s || '').length / 7, 3, 180); /* v36: 장면당 22초 상한을 없애 고른 길이와 맞춘다 */
 
 /* 영상 편집기(소스 'ai') */
 function aivEditor(it) {
@@ -249,7 +260,7 @@ ACT['dgp-del'] = el => { const o = DG.outs[+el.dataset.k]; o.path.splice(+el.dat
 ACT['dgp-add-step'] = el => { const o = DG.outs[+el.dataset.k]; const p = o.path.at(-1); o.path.push({ id: uid('ps'), name: '새 단계', goal: '단계 목표를 적어 주세요', cls: [], need: `${o.k} 추가 과정`, unlock: p ? `${p.name} ${t('done')}` : '진단 직후 바로 열림', badge: '' }); dgRe(); };
 ACT['dgp-mk'] = el => { const s = PS(el); const c = makeCourse({ topic: s.need, weeks: S.org.type === 'univ' ? 8 : 6, docs: true }); s.cls.push(c.id); s.need = ''; dgEnsurePaths(DG); dgRe(); toast(`「${c.name}」 과정을 AI로 만들어 이 단계에 넣었습니다.`, 'ok'); };
 function personalPath(d, o, id) {
-  const done = cid => { const c = C(cid); return c && c.prog[id] && c.prog[id].p >= c.criteria.threshold; };
+  const done = cid => { const c = C(cid); if (!c) return false; return typeof clsDone === 'function' ? clsDone(c, id) : !!(c.prog && c.prog[id] && c.prog[id].p >= ((c.criteria || {}).threshold || 70)); }; /* v36: 이수 판정은 mods.js clsDone 한 곳 */
   return (o.path || []).filter(s => !s.cls.length || !s.cls.every(done));
 }
 function learnerPathCell(d, id, r) {

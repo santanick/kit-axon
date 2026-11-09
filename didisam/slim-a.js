@@ -82,7 +82,7 @@
     const K = [['all', '전체'], ...['period', 'pack', 'episode', 'sub'].filter(k => all.some(c => c.kind === k)).map(k => [k, k === 'pack' ? '과정' : KIND[k] || k])];
     const L = all.filter(c => (f === 'all' || c.kind === f) && has('slClsQ', c.name, c.teacher || ''));
     const recruit = all.filter(c => c.recruit && c.recruit.on).length;
-    return page(`${t('cls')} ${all.length}개`, tblBtn('class', '자세히') + mk + more('cls', [['카테고리 관리', 'c2-cats', '', '분류 묶기 · 순서', 'grid'], ['출석 체크 화면 열기', 'cls-pad', '', '휴대폰 끝 4자리로 출석', 'check']]),
+    return page(`${t('cls')} ${all.length}개`, tblBtn('class', '자세히') + mk + more('cls', [['카테고리 관리', 'c2-cats', '', '카테고리 묶기 · 순서', 'grid'], ['출석 체크 화면 열기', 'cls-pad', '', '휴대폰 끝 4자리로 출석', 'check']]),
       (K.length > 2 ? SL.chips('clsF', K, f) : '') +
       (recruit ? SL.sum(`<span>수강 신청 받는 중</span><span class="sl-n">${recruit}개</span>`) : '') +
       list(L.slice(0, 200).map(c => row({ act: 'cls-open', v: c.id, name: c.name, sub: clsSub(c), icon: clsIc(c), col: c.status === '운영중' ? 'var(--s400)' : 'var(--g500)' }))) + cap(L) +

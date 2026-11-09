@@ -30,10 +30,10 @@ function bkCalc(book, st, lpCls, grades, classes) {
   const complete = p >= thr && (score == null || score >= pass);
   return { p, done, tot, acts, chs, score, pts, pend, tried, thr, pass, complete, started: !!(Object.keys(B).length || Object.keys(R).length) };
 }
-/* 본문 표기: # 제목 · - 목록 · **굵게** · | 표 | 칸 | · 빈 줄 = 문단. 반드시 esc 후 변환 */
+/* 본문 표기: # 제목 · - 목록 · **굵게** · [글자](https://주소) · | 표 | 칸 | · 빈 줄 = 문단. 반드시 esc 후 변환 */
 function bkMd(s, escf) {
   const E = escf || (x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
-  const inl = x => E(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  const inl = x => E(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>'); /* v36: [글자](https://주소) 링크 — 주소는 이미 이스케이프됨 */
   const out = []; let ul = null; const flush = () => { if (ul) { out.push('<ul>' + ul.map(x => '<li>' + x + '</li>').join('') + '</ul>'); ul = null; } };
   let tb = null; const flushT = () => { if (!tb) return; const rows = tb.filter(r => !r.every(c => /^\s*:?-{2,}:?\s*$/.test(c))); const td = 'border:1px solid #D9DADA;padding:8px 10px;text-align:left;vertical-align:top'; out.push(`<div class="bktbl" style="overflow-x:auto;margin:8px 0"><table style="border-collapse:collapse;width:100%;font-size:inherit">${rows.map((r, i) => `<tr>${r.map(c => i === 0 ? `<th style="${td};background:#F1F2F2">${inl(c.trim())}</th>` : `<td style="${td}">${inl(c.trim())}</td>`).join('')}</tr>`).join('')}</table></div>`); tb = null; };
   String(s || '').split('\n').forEach(line => { const l = line.trim(); if (/^\|.*\|$/.test(l)) { flush(); (tb = tb || []).push(l.slice(1, -1).split('|')); return; } flushT(); if (/^[-•·]\s+/.test(l)) { (ul = ul || []).push(inl(l.replace(/^[-•·]\s+/, ''))); return; } flush(); if (!l) return; if (/^#{1,3}\s/.test(l)) out.push('<h3>' + inl(l.replace(/^#+\s/, '')) + '</h3>'); else out.push('<p>' + inl(l) + '</p>'); });
