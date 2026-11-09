@@ -3,7 +3,7 @@
    ② 기존 화면 홈의 앱 복귀 버튼 'AI 선생님 앱 화면으로 보기'를 앱 위 줄과 같은 선생님 이름으로
    용어 원본은 lapp.js의 SCN이다. lapp.js가 window.lappScn()을 내보내면 그것을, 아니면 시나리오 확장(LSCN_PICK)을, 그것도 없으면 아래 사본을 쓴다(SCN과 같은 값). */
 (function () {
-  const SCN_COPY = { univ: ['내 교과목', '비교과'], univ_lms: ['이번 학기 강의', '비교과'], corp: ['내 교육', '교육과정'], public: ['내 교육', '교육과정'], k12: ['내 수업', '수업 찾기'], adult: ['내 강의', '둘러보기'], lifelong: ['내 강좌', '강좌 신청'], voc: ['내 훈련', '훈련과정'] };
+  const SCN_COPY = { univ: ['내 교과목', '교과목 찾기'], univ_lms: ['이번 학기 강의', '비교과'], corp: ['내 교육', '교육과정'], public: ['내 교육', '교육과정'], k12: ['내 수업', '수업 찾기'], adult: ['내 강의', '둘러보기'], lifelong: ['내 강좌', '강좌 신청'], voc: ['내 훈련', '훈련과정'] };
   const org = () => { try { return (typeof SITE === 'function' && SITE() && SITE().org) || {}; } catch (e) { return {}; } };
   const labels = () => { const ty = org().type || 'adult', ed = org().ed || '';
     try { if (typeof window.lappScn === 'function') { const x = window.lappScn(); if (x && x.learn) return [x.learn, x.find]; } } catch (e) { }

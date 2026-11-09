@@ -60,7 +60,9 @@
   window.shInfo = () => SHOP();
   const visible = (x, R) => { const o = x.open || '전체'; if (o === '전체') return true; if (o === '비공개') return false; if (o === '회원') return !!(R && R.m) || !!LR.me || LR.mode === 'preview'; /* v35 대학 '우리 학교 학생만'(crs-scn univ) = 로그인한 회원 */ const m = R && R.m; return !!(m && (x.openTo || []).some(v => v === m.id || v === m.team || v === m.group)); };
   const enrState = (c, R) => { const e = R.enr[c.id]; if (!e) return 'none'; if (e.status === 'hold' || e.hold) return 'hold'; if (e.status !== 'active') return 'none'; if (e.end && e.end < today()) return 'ended'; return 'active'; };
-  function recruitState(c) { const R = c.recruit; const t = today();
+  /* v35.3: 강의가 하나도 없는 과정(회차 일정 · 묶음 제외)은 '준비 중' — 신청 버튼 대신 안내 */
+  const prepOf = c => !!c && c.items != null && +c.items === 0 && !(+c.sessions > 0) && c.kind !== 'pack';
+  function recruitState(c) { if (prepOf(c)) return { ok: false, label: '준비 중', prep: true }; const R = c.recruit; const t = today();
     if (c.saleEnd && c.saleEnd <= t) return { ok: false, label: '판매 종료' };
     if (R && R.on) { if (R.from && t < R.from) return { ok: false, label: `모집 예정 · ${R.from}부터` }; if (R.to && t > R.to) return { ok: false, label: '모집 마감' }; if (R.cap && (c.n || 0) >= +R.cap) return { ok: false, label: `정원 마감(${R.cap}명)` }; return { ok: true, label: `모집 중${R.to ? ` · ${R.to}까지` : ''}${R.cap ? ` · 잔여 ${Math.max(0, R.cap - (c.n || 0))}석` : ''}` }; }
     const P = c.period; if (P && P.mode !== 'days' && P.end && P.end < t) return { ok: false, label: '수강 기간 종료' };
@@ -103,7 +105,8 @@
     const base = ((SITE().classes || []).find(x => x.id === id) || {}); const items = base.items || []; const st = enrState(c, R); const rs = recruitState(c); const f = priceOf(c);
     const sub = R.subs.find(s => s.cls === id && s.status !== '해지') || R.subs.find(s => s.cls === id); const cnt = c.subsc ? +c.subsc.count || 0 : 0;
     let cta = '';
-    if (!LR.me) cta = f > 0 && sh.pg.use === 'none' ? `<button class="lbtn blk" disabled>결제 준비 중</button><p class="mini">운영자가 결제 연결을 마치면 이 화면에서 바로 신청할 수 있습니다.</p>` : `<a class="lbtn pri blk" href="#login/class/${esc(id)}">로그인하고 수강 신청</a>`; /* v25: 결제 연결 전에는 방문자도 '결제 준비 중'(가입 후 막다른 길 방지) */
+    if (rs.prep && st !== 'active') cta = `<button class="lbtn blk" disabled>준비 중</button><p class="mini">강의를 준비하고 있어요. 준비가 끝나면 이 화면에서 신청할 수 있어요.</p>`;
+    else if (!LR.me) cta = f > 0 && sh.pg.use === 'none' ? `<button class="lbtn blk" disabled>결제 준비 중</button><p class="mini">운영자가 결제 연결을 마치면 이 화면에서 바로 신청할 수 있습니다.</p>` : `<a class="lbtn pri blk" href="#login/class/${esc(id)}">로그인하고 수강 신청</a>`; /* v25: 결제 연결 전에는 방문자도 '결제 준비 중'(가입 후 막다른 길 방지) */
     else if (st === 'active') cta = `<a class="lbtn pri blk" href="#c/${esc(id)}">이어서 수강하기</a>${items[0] ? `<a class="lbtn ghost blk" href="#c/${esc(id)}/${esc(items[0].id)}">처음부터 수강하기</a>` : ''}${c.kind === 'sub' && sub ? `<p class="mini">구독 ${sub.status} · ${sub.n || 1}회차${cnt ? `/${cnt}` : ''} · 다음 결제일 ${esc(sub.next || '')}</p>` : ''}`;
     else if (st === 'hold') cta = `<div class="shp-warn">환불 신청 중입니다. 신청한 순간부터 이 클래스는 수강할 수 없습니다.</div><a class="lbtn ghost blk" href="#mypay/refund">환불 내역 보기</a>`;
     else if (st === 'ended' && !(c.kind === 'sub' && (!cnt || (sub && sub.n < cnt)))) cta = `<div class="shp-warn">수강 기간이 종료되었습니다. 같은 클래스는 다시 신청 · 결제할 수 없습니다. 연장이 필요하면 운영자에게 문의하세요.</div>`;
@@ -116,7 +119,7 @@
     else cta = `<button class="lbtn pri blk" data-shact="enroll" data-v="${esc(id)}">수강 신청(무료)</button>`;
     const vmin = c.vmin || items.filter(i => i.type === 'video').reduce((a, i) => a + (+i.time || 0), 0);
     return sec(c.name, `<div class="shp-det"><div class="shp-main">${thumb(c, 'big')}
-        <div class="shp-box"><div><small>강의 수</small><b>${c.items || items.length}개</b></div><div><small>총 영상 시간</small><b>${vmin ? (vmin >= 60 ? Math.floor(vmin / 60) + '시간 ' + (vmin % 60) + '분' : vmin + '분') : '—'}</b></div><div><small>수료 기준</small><b>진도 ${c.thr || 80}%</b></div><div><small>수강 기간</small><b>${esc(periodTxt(c) || '상시')}</b></div></div>
+        <div class="shp-box">${(() => { const n = c.items != null ? +c.items : items.filter(i => i.type !== 'chapter' && i.type !== 'offline').length; return !n && +c.sessions > 0 ? `<div><small>수업</small><b>${+c.sessions}회</b></div>` : `<div><small>강의 수</small><b>${n ? n + '개' : '준비 중'}</b></div>`; })()}<div><small>총 영상 시간</small><b>${vmin ? (vmin >= 60 ? Math.floor(vmin / 60) + '시간 ' + (vmin % 60) + '분' : vmin + '분') : '—'}</b></div><div><small>수료 기준</small><b>진도 ${c.thr || 80}%</b></div><div><small>수강 기간</small><b>${esc(periodTxt(c) || '상시')}</b></div></div>
         <nav class="shp-tabs" aria-label="클래스 안내"><a href="#" data-l26jump="shp-intro" class="on">클래스 소개</a><a href="#" data-l26jump="shp-curx">커리큘럼</a><a href="#" data-l26jump="shp-extx">수강후기 · 커뮤니티</a></nav>
         <div id="shp-intro"></div>${c.desc ? `<h2>✍️ 클래스에서 배울 수 있는 내용이에요</h2><p>${nl(c.desc)}</p>` : ''}
         ${(c.intro || []).length ? `<h2>✨ 담당 강사님을 소개합니다</h2><div class="shp-ins">${c.intro.map(i => `<div>${i.photo ? `<img src="${esc(i.photo)}" alt="">` : ''}<b>${esc(i.name)}</b><p class="mini">${nl(i.bio || '')}</p></div>`).join('')}</div>` : (c.teachers || []).length ? `<p class="mini">담당 강사: ${esc(c.teachers.join(', '))}</p>` : ''}

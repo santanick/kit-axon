@@ -115,6 +115,12 @@
     try { logAudit(`문제은행 ${X}배수 맞추기 — 문항 ${add}개 추가`); } catch (e) { } return add; }
   window.cplBankFill = () => bankFill(bankShort(true));
   window.cplBankShort = bankShort;
+  /* 게시 게이트: 법정 교육시간 미달 과정이 공개돼 있으면 한 번 더 묻는다(막지는 않음, 평가 2회차 1번). 문제은행 경고(아래)가 먼저, 이어서 이 경고 */
+  setTimeout(() => { const base = ACT['ls-pub']; if (!base) return; ACT['ls-pub'] = (el, ...r) => { if (!el || !el.dataset || !S || !S.classes) return base(el, ...r);
+    const L = S.classes.filter(c => c.status !== '종료' && (c.open || '전체') !== '비공개').map(c => ({ c, h: legalHours(c) })).filter(x => x.h && x.h.short); if (!L.length) return base(el, ...r);
+    modal('법정 교육시간이 모자란 과정이 있습니다', `<p style="font-size:16px"><b>이대로 게시하면 아래 과정은 법정 교육으로 인정받지 못할 수 있습니다.</b> 차시 수나 1차시 시간을 늘려 법정 시간을 채워 주십시오.</p>
+      ${table(['과정', '지금', '법정 기준', '근거'], L.slice(0, 20).map(x => [esc(x.c.name), `${x.h.have}시간`, `${x.h.need}시간 이상${x.h.per ? ` (${esc(x.h.per)})` : ''}`, `<small>${esc(x.h.law)}</small>`]))}<p class="mini">기준은 관계 법령 원문으로 다시 확인하십시오.</p>`,
+      [{ id: 'c', label: '직접 고치러 가기', run: () => { if (typeof menuOn === 'function' && !menuOn('cpl')) { UI.cls = L[0].c.id; UI.clsT = 'curriculum'; go('class'); return; } UI.cpl = 'item'; go('cpl'); } }, { id: 'ok', label: '그대로 게시', run: () => { base(el, ...r); } }]); }; }, 0);
   setTimeout(() => { const base = ACT['ls-pub']; if (!base) return; ACT['ls-pub'] = (el, ...r) => { const L = bankShort(); if (!L.length) return base(el, ...r); const X = +cplP().bank || 3;
     if (!el || !el.dataset) { toast(`시험 문제가 부족한 시험이 ${L.length}개 있습니다(고용노동부 기준: 출제 문항 수의 ${X}배 이상 준비). 인가 · 규정 준수 › 차시 · 평가에서 확인해 주십시오.`, 'warn'); return base(el, ...r); }
     modal('시험 문제를 더 준비해야 합니다', `<p style="font-size:16px">고용노동부 원격훈련 기준에 따라 <b>시험 문제를 실제 출제 문항 수의 ${X}배 이상</b> 준비해 두어야 합니다(학습자마다 다른 문제가 나가도록). 아래 시험의 문제가 부족합니다.</p>

@@ -227,11 +227,15 @@
     label: '훈련과정', unit: () => '차시',
     terms: { cls: '훈련과정', unit: '차시', fee: '훈련비', target: '훈련 대상' },
     steps: ['basic', 'outline', 'fill', 'setup', 'open'],
-    stepNow: { basic: '훈련과정 이름과 훈련 구분 · 방식을 고릅니다.', outline: '차시 수와 차시 인정 시간을 고릅니다. 원격은 합계 4시간 이상이어야 합니다.', setup: '훈련 시작일을 정합니다. 심사과정코드 · 훈련과정 ID(고용24)는 받은 뒤 넣어도 됩니다.' },
+    stepNow: { basic: '훈련과정 이름과 훈련 구분 · 방식을 고릅니다.', outline: '총 훈련시간을 적거나, 차시 수와 차시 인정 시간을 고릅니다. 원격은 합계 4시간 이상이어야 합니다.', setup: '훈련 시작일을 정합니다. 심사과정코드 · 훈련과정 ID(고용24)는 받은 뒤 넣어도 됩니다.' },
     stepTitle: { basic: '훈련과정 정보', outline: '훈련시간', fill: '차시 채우기', setup: '심사 정보', open: '규정 확인' },
     ask: {
       basic: [F.name('훈련과정 이름', '예: 웹 개발 기초(내일배움카드)'), { k: 'emp', label: '훈련 구분', kind: 'choice', ex: '예: 내일배움카드', def: '3', opts: [['3', '내일배움카드'], ['1', '사업주 훈련'], ['4', '공통']] }, { k: 'mode', label: '훈련 방식', kind: 'choice', ex: '예: 원격(인터넷) — 집에서 영상으로', def: 'remote', opts: Object.entries(VMODE) }],
-      outline: [F.sessions('차시 수', '예: 16차시(원격은 하루 8차시까지 수강)', 16, 60), { k: 'mins', label: '차시 인정 시간', kind: 'choice', ex: '예: 30분 — 심사 받은 차시별 학습시간과 같게', def: 30, opts: [[25, '25분'], [30, '30분'], [50, '50분'], [60, '1시간']] }],
+      /* 총 훈련시간(시간)을 적으면 차시 수 · 차시 인정 시간을 맞춘다(crs-flow applyFit). 차시는 60개까지라 집체 · 혼합은 1차시를 하루 단위까지 길게 고를 수 있다 — 평가 2회차 1번 */
+      outline: [{ k: 'totalH', label: '총 훈련시간', kind: 'num', min: 1, max: 2000, unit: '시간', later: true, ex: '예: 114 — 적고 [다음]을 누르면 차시 수와 차시 인정 시간을 맞춰 드립니다', hint: '지금 차시 수 × 차시 인정 시간의 합계가 보입니다. 고쳐 쓰면 거꾸로 맞춥니다.' },
+        F.sessions('차시 수', '예: 16차시(원격은 하루 8차시까지 수강) · 최대 60차시', 16, 60),
+        { k: 'mins', label: '차시 인정 시간', kind: 'choice', ex: '예: 30분 — 심사 받은 차시별 학습시간과 같게', def: 30, opts: [[25, '25분'], [30, '30분'], [50, '50분'], [60, '1시간']], show: d => (d.mode || 'remote') === 'remote' },
+        { k: 'mins', label: '1차시 시간', kind: 'choice', ex: '예: 3시간 — 실기 · 실습은 반나절(4시간)이나 하루(8시간)로 묶어도 됩니다', def: 30, opts: [[50, '50분'], [60, '1시간'], [120, '2시간'], [180, '3시간'], [240, '4시간'], [480, '8시간(하루)']], show: d => (d.mode || 'remote') !== 'remote' }],
       setup: [F.start('훈련 시작일'), { k: 'simsa', label: '심사과정코드', kind: 'code', len: 20, ex: '예: 심사 통과 후 받은 20자리 코드', hint: '훈련과정 심사를 통과하면 받는 번호입니다. 없으면 나중에 넣어도 됩니다.', later: true }, { k: 'tracse', label: '훈련과정 ID(고용24 · HRD-Net)', kind: 'code', len: 17, ex: '예: 고용24에 등록된 17자리 번호', hint: '고용24(HRD-Net)에 훈련과정을 등록하면 받는 번호입니다. 없으면 나중에 넣어도 됩니다.', later: true }]
     },
     defaults: { emp: '3', mode: 'remote', sessions: 16, mins: 30, price: 0, criteria: { threshold: 80 } },
@@ -239,9 +243,9 @@
     examples: { name: '예: 웹 개발 기초(내일배움카드)', simsa: '예: 20자리', tracse: '예: 17자리' },
     templates: [
       { id: 'v-web', name: 'K-디지털 웹 개발 기초', icon: 'doc', desc: '원격 · 16차시 · 8시간', prefill: { name: '웹 개발 기초(HTML · CSS · JS)', emp: '3', mode: 'remote', sessions: 16, mins: 30, target: '내일배움카드 소지자' } },
-      { id: 'v-care', name: '요양보호사 실기', icon: 'users', desc: '집체 · 실습 중심', prefill: { name: '요양보호사 실기', emp: '3', mode: 'group', sessions: 20, mins: 60, target: '요양보호사 교육생' } },
+      { id: 'v-care', name: '요양보호사 실기', icon: 'users', desc: '집체 · 법정 114시간', prefill: { name: '요양보호사 실기', emp: '3', mode: 'group', sessions: 38, mins: 180, target: '요양보호사 교육생' } }, /* 법정 114시간(compliance.js LEGALH care-prac) = 38차시 × 3시간 */
       { id: 'v-excel', name: '사업주 엑셀 데이터 분석', icon: 'chart', desc: '사업주 원격 · 10차시', prefill: { name: '엑셀 데이터 분석 실무', emp: '1', mode: 'remote', sessions: 10, mins: 30, target: '재직자(사업주 훈련)' } },
-      { id: 'v-safe', name: '산업안전 관리감독자', icon: 'lock', desc: '혼합 · 16차시', prefill: { name: '산업안전 관리감독자 교육', emp: '1', mode: 'mix', sessions: 16, mins: 60, target: '현장 관리감독자' } },
+      { id: 'v-safe', name: '산업안전 관리감독자', icon: 'lock', desc: '혼합 · 법정 16시간', prefill: { name: '산업안전 관리감독자 교육', emp: '1', mode: 'mix', sessions: 16, mins: 60, target: '현장 관리감독자' } },
       { id: 'v-elec', name: '전기기능사 필기', icon: 'bolt', desc: '원격 · 24차시 · 12시간', prefill: { name: '전기기능사 필기 대비', emp: '3', mode: 'remote', sessions: 24, mins: 30, target: '자격 취득 희망자' } }
     ],
     plan: d => ({ weeks: Math.min(30, N(d.sessions) || 16), per: 1, mins: N(d.mins) || 30, hours: Math.round(totalMin(d) / 60) }),
@@ -318,6 +322,8 @@
   /* 차시 수와 목록 길이 맞추기(안내대로 고치기 · 템플릿으로 수가 바뀐 경우) */
   const planSync = d => { if (!d) return false; const L = d.weekPlan; const n = Math.max(1, Math.min(60, N(d.sessions))); if (!Array.isArray(L) || !L.length || L.length === n) return false; while (L.length > n) L.pop(); let P = []; try { P = CF.planFrom ? CF.planFrom(Object.assign({}, d, { sessions: n })) : []; } catch (e) { } const u = CF.unit ? CF.unit(d) : '차시'; while (L.length < n) L.push({ w: L.length + 1, title: (P[L.length] && P[L.length].title) || `${L.length + 1}${u}`, goal: '' }); return true; };
   /* 유료 여부: 질문이 price 하나인 유형은 금액으로 정한다(C1 기본 paid 선택지 대신) */
+  /* 직업훈련: 훈련 방식이 바뀌면 1차시 시간이 그 방식의 선택지 안에 있게 맞춘다(원격 최대 1시간 · 집체 · 혼합은 50분 이상) */
+  const vocSync = d => { if (!d || CF.cfgKey() !== 'voc') return false; const m = N(d.mins); const rem = (d.mode || 'remote') === 'remote'; if (rem && m > 60) { d.mins = 60; return true; } if (!rem && m && ![50, 60, 120, 180, 240, 480].includes(m)) { d.mins = 60; return true; } return false; };
   const paidSync = d => { const g = CF.cfgOf(); if (!d || !hasAsk(g, 'price') || hasAsk(g, 'paid')) return; d.paid = N(d.price) > 0; };
   const prep = (d, o) => { if (!d) return; const g = CF.cfgOf(); if (!g || !g.ask) return; const pre = (o && o.prefill) || {};
     if (!(o && o.resume)) { const ds = (g.defaults || {}).sessions; if (ds && pre.sessions == null && pre.weeks == null && !(d.weekPlan || []).length) d.sessions = ds; }
@@ -330,5 +336,5 @@
     (CF.steps || []).forEach(st => { ['title', 'now'].forEach(m => { const b = st[m]; if (typeof b !== 'function') return; st[m] = d => { try { const g = CF.cfgOf(); const v = (g[m === 'title' ? 'stepTitle' : 'stepNow'] || {})[st.id]; if (v) return typeof v === 'function' ? v(d || {}) : v; } catch (e) { } return b(d); }; }); }); };
   hook(); if (!CF.on) setTimeout(hook, 0);
   /* 학원은 요일 버튼(data-cfday)이 change를 내지 않으므로 누른 뒤 한 번 맞춘다 */
-  if (typeof document !== 'undefined') document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-cfday],[data-cftpl],[data-cffix],[data-cfset]'); if (!b) return; setTimeout(() => { const d = curD(); if (!d) return; CF.scnDefaults(d); paidSync(d); if (k12Sync(d) | planSync(d)) { try { CF.saveDraft && CF.saveDraft(); CF.refresh && CF.refresh(); } catch (er) { } } }, 0); }, true);
+  if (typeof document !== 'undefined') document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-cfday],[data-cftpl],[data-cffix],[data-cfset]'); if (!b) return; setTimeout(() => { const d = curD(); if (!d) return; CF.scnDefaults(d); paidSync(d); if (k12Sync(d) | planSync(d) | vocSync(d)) { try { CF.saveDraft && CF.saveDraft(); CF.refresh && CF.refresh(); } catch (er) { } } }, 0); }, true);
 })();

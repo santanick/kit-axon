@@ -110,7 +110,10 @@
   SAM.fill = fill;
   const UNDO = {};
   /* 미리 채운 내용을 사실대로 알린다 — 사용자가 직접 말하지 않았을 수도 있으므로(칩 · 가이드) '말씀하신'이라고 하지 않는다(평가 1회차 3번) */
-  function preMsg() { const p = SAM.pre || {}; const d = draft() || {}; const got = [p.name ? `이름 「${d.name || p.name}」` : '', p.target ? `대상 「${d.target || p.target}」` : '', p.sessions ? `${p.sessions}${uName() === '회차' ? '회' : uName() === '주차' ? '주' : '차시'}` : '', p.price ? '수강료' : ''].filter(Boolean);
+  function preMsg() { const p = SAM.pre || {}; const d = draft() || {};
+    /* 추천 칩으로 연 경우: 사용자가 쓴 문장이 아니므로 이름은 비워 두고 예시 카드를 권한다(평가 2회차 5번) */
+    if (p._chip) return `${T('cls')} 이름은 비워 두었습니다. 아래 예시 카드를 누르면 칸이 채워집니다. 직접 적어도 됩니다.`;
+    const got = [p.name ? `이름 「${d.name || p.name}」` : '', p.target ? `대상 「${d.target || p.target}」` : '', p.sessions ? `${p.sessions}${uName() === '회차' ? '회' : uName() === '주차' ? '주' : '차시'}` : '', p.price ? '수강료' : ''].filter(Boolean);
     if (!got.length) return ''; const last = got[got.length - 1].replace(/」$/, ''); const pt = jo(last, '을').slice(last.length) || '을';
     return `요청 문장에서 ${got.join(' · ')}${pt} 읽어 미리 채워 두었습니다. 다르면 바로 고치면 됩니다.`; }
   function done(id, how) { const ti = title(id); const m = how === 'pre' ? preMsg() : how === 'auto' ? `「${ti}」도 AI SAM이 미리 채워 두었습니다. 확인만 해 주세요.` : `${jo(`「${ti}」`, '을')} 채웠습니다. 확인만 해 주세요. 고칠 곳은 바로 고치면 됩니다.`; if (!m) return;
@@ -200,15 +203,20 @@
     try { if (typeof flowParse === 'function') { const F = flowParse(s); if (F && F.steps.some(f => f.id !== 'course')) return false; } } catch (e) { }
     return true; }
   SAM.isOne = isOne;
-  function openFlow(q, from) { const F = cf(); if (!F) return false; const p = typeof q === 'string' ? parse(q) : (q || {}); const pre = {}; Object.keys(p).forEach(k => { if (k !== 'q' && p[k] !== '' && p[k] != null) pre[k] = p[k]; });
+  function openFlow(q, from, chip) { const F = cf(); if (!F) return false; const p = typeof q === 'string' ? parse(q) : (q || {}); const pre = {}; Object.keys(p).forEach(k => { if (k !== 'q' && p[k] !== '' && p[k] != null) pre[k] = p[k]; });
+    /* 추천 칩(사용자가 직접 쓰지 않은 문장)이면 이름 · 대상 · 목표는 채우지 않는다 */
+    if (chip) { ['name', 'topic', 'goal', 'target'].forEach(k => delete pre[k]); pre._chip = 1; }
     /* 흐름(C1)의 자동 넣기 설정 d.auto로 옮긴다 */
     if (pre.vsrc || pre.docs || pre.quiz === false) { let A = {}; try { A = { ...((F.defaults && F.defaults().auto) || {}) }; } catch (e) { } if (pre.vsrc) A.video = pre.vsrc; if (pre.docs) A.docs = true; if (pre.quiz === false) { A.quiz = false; A.exam = false; A.assign = false; } pre.auto = A; }
     if (innerWidth <= 860 && document.getElementById('drawer') && ACT['chat-close']) { try { ACT['chat-close'](); } catch (e) { } }
     try { F.open({ from: from || 'sam', prefill: pre }); } /* 만들던 초안이 있으면 흐름이 먼저 [이어서 하기 · 새로 만들기]를 묻는다(평가 1회차 5번) */ catch (e) { console.error(e); toast('과정 만들기 화면을 열지 못했습니다. [+ 만들기]를 눌러 주세요.', 'warn'); return false; }
-    audit(`AI SAM 과정 만들기 열기 — ${pre.name || '이름 미정'}`); return true; }
+    audit(`AI SAM 과정 만들기 열기 — ${pre.name || '이름 미정'}${chip ? ' (추천 칩)' : ''}`); return true; }
   SAM.open = openFlow;
+  /* 추천 칩(data-act=chat-q)으로 보낸 문장인지 표시 — 사용자가 직접 쓴 말과 구분 */
+  { const b = ACT['chat-q']; if (b) ACT['chat-q'] = (el, ...r) => { SAM.viaChip = true; try { return b(el, ...r); } finally { SAM.viaChip = false; } }; }
   ACT['csam-open'] = el => openFlow(el.dataset.v || '', 'sam');
-  const card = q => { const p = parse(q); const n = p.sessions || (U() ? 15 : 6); const unit = U() ? '주' : '차시';
+  const card = (q, chip) => { const p = parse(q); const n = p.sessions || (U() ? 15 : 6); const unit = U() ? '주' : '차시';
+    if (chip) return { title: `${T('cls')} 만들기`, text: `${T('cls')} 만들기 화면을 열었습니다. 이름은 비워 두었습니다. 화면의 예시 카드를 누르거나 직접 적고 [다음]을 누르세요. 막히면 [AI SAM에게 맡기기]를 누르면 됩니다.`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' };
     const got = [p.name ? `이름 「${p.name}」` : '', p.target ? `대상 ${p.target}` : '', `${n}${unit}`, p.price ? `수강료 ${won(p.price)}` : ''].filter(Boolean).join(' · ');
     return { title: `${T('cls')} 만들기`, text: `${T('cls')} 만들기 화면을 열고 말씀하신 내용(${got})을 미리 채워 두었습니다. 화면에서 확인만 하고 [다음]을 누르세요. 막히면 [AI SAM에게 맡기기]를 누르면 됩니다.${p.name ? '' : `\n이름은 비어 있습니다. 예: 「${sugg()[0]}」`}`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' }; };
   /* 흐름이 열려 있을 때 대화창에서 '이 단계 채워줘' · '어려워요' */
@@ -219,7 +227,7 @@
     return null; }
   /* 규칙 엔진 대화(Claude 미연결): 기관별 처리기 · 계획 엔진보다 먼저 잡는다 */
   { const base = chatSend; chatSend = (q, ...r) => { const s0 = String(q || '').trim().slice(0, 300); let hit = null;
-      try { if (s0 && S && S.org && cf() && !(typeof CL !== 'undefined' && CL.on && CL.on('chat'))) { const f = inFlow(s0); if (f) hit = f; else if (isOne(s0)) hit = { a: card(s0), run: () => openFlow(s0, 'sam') }; } } catch (e) { console.error(e); hit = null; }
+      try { if (s0 && S && S.org && cf() && !(typeof CL !== 'undefined' && CL.on && CL.on('chat'))) { const f = inFlow(s0); if (f) hit = f; else if (isOne(s0)) { const chip = !!SAM.viaChip; hit = { a: card(s0, chip), run: () => openFlow(s0, 'sam', chip) }; } } } catch (e) { console.error(e); hit = null; }
       if (!hit) return base(q, ...r);
       const s = typeof samMask === 'function' ? samMask(s0).text : s0; sig('chat');
       if (CUR.ws !== 'home' && !$('#drawer') && ACT['chat-open'] && innerWidth > 860) ACT['chat-open']();

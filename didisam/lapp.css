@@ -26,6 +26,7 @@ body.lapp .sr{position:absolute!important;width:1px;height:1px;overflow:hidden;c
 .ap-nav a{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;min-height:48px;border-radius:12px;color:#8A8FA3;text-decoration:none;font:600 11px/1.1 var(--sg)}
 .ap-nav a span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ap-nav a.on{color:var(--pri-tx,var(--pri))}.ap-nav a.on svg{stroke-width:2.3}
+@media (min-width:900px){body.ap-play .ap-nav{display:none}}
 @media (min-width:900px){.ap-nav{left:50%;right:auto;transform:translateX(-50%);bottom:16px;width:560px;border:1px solid var(--ap-line);border-radius:22px;box-shadow:0 14px 40px -18px rgba(31,35,64,.35);padding:6px}}
 
 /* 첫 화면: 선생님과의 대화 */

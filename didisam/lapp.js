@@ -44,7 +44,7 @@
      이 기기에는 기관 번호 · 이름 · 유형만 기억한다(개인정보 없음). 운영: 디디쌤 통합 계정의 '내 기관' 목록(GET /api/me/orgs)으로 대체 */
   const TYL = { univ: '대학', corp: '기업', public: '공공기관', k12: '학원(초중고)', adult: '학원(성인)', lifelong: '평생교육원', voc: '직업훈련원' };
   const SCN = {
-    univ: { learn: '내 교과목', find: '비교과', sub: me => `학번 ${me.sid || ''} · 교과 · 비교과 · 배지를 함께 챙겨요`, chips: [['이번 학기 이수 현황', '이번 학기 교과 · 비교과 이수 현황 알려줘', 'status'], ['비교과 추천', '나한테 맞는 비교과 프로그램 추천해줘', 'rec'], ['과제 마감', '이번 주 과제 마감 정리해줘', 'due']], d: '교과 · 비교과 · 학번 로그인' },
+    univ: { learn: '내 교과목', find: '교과목 찾기', sub: me => `학번 ${me.sid || ''} · 교과 · 비교과 · 배지를 함께 챙겨요`, chips: [['이번 학기 이수 현황', '이번 학기 교과 · 비교과 이수 현황 알려줘', 'status'], ['비교과 추천', '나한테 맞는 비교과 프로그램 추천해줘', 'rec'], ['과제 마감', '이번 주 과제 마감 정리해줘', 'due']], d: '교과 · 비교과 · 학번 로그인' },
     corp: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '직무 교육 · 필수교육 이수를 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['직무 과정 추천', '내 직무에 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '직무 · 법정의무교육 · 이수 관리' },
     public: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '직무 교육 · 필수교육 이수를 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['교육과정 추천', '나에게 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '공무 · 법정의무교육 · 이수 관리' },
     k12: { learn: '내 수업', find: '수업 찾기', sub: () => '숙제 · 출석 · 복습을 함께 챙겨요', chips: [['오늘 숙제', '오늘 해야 할 숙제 알려줘', 'due'], ['출석 확인', '내 출석 현황 알려줘', 'att'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '수업 · 숙제 · 출결 · 보호자' },
@@ -380,7 +380,7 @@
       document.querySelectorAll('header.lh a[href="#my"], header.lh a[href="#shop"], header.lh a[href="#courses"], header.lh a[href="#tutorials"], header.lh a[href="#login/my"]').forEach(x => { x.hidden = true; }); return; }
     if (!on && !LR.me && route().a === 'home' && !lm.querySelector('.lgj')) lm.insertAdjacentHTML('afterbegin', joinStrip());
     if (!on) { if (LR.me && route().a === 'home' && ls.get('classic') === '1' && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
-    const a = route().a; if (LR.me && (a === 'login' || a === 'join')) { location.replace('#home'); return; } /* v32.8 로그인한 뒤 로그인 · 가입 화면은 홈으로 */
+    const a = route().a; document.body.classList.toggle('ap-play', a === 'c' && decodeURIComponent(location.hash.slice(1)).split('/').length > 2); /* PC 강의 화면: 떠 있는 아래 메뉴가 본문을 가리지 않게(lapp.css) */ if (LR.me && (a === 'login' || a === 'join')) { location.replace('#home'); return; } /* v32.8 로그인한 뒤 로그인 · 가입 화면은 홈으로 */
     if (!LR.me && ['connect', 'books'].includes(a) && typeof needLogin === 'function' && !lm.textContent.trim()) lm.innerHTML = needLogin(a);
     const needPick = LR.me && !isPar() && (!persona() || AP.pick) && a === 'home';
     if (needPick) { lm.innerHTML = pickHTML(); document.body.classList.add('ap-pickon'); }
