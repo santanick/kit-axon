@@ -206,7 +206,7 @@
   function aiStep(id) { if (!F) return Promise.resolve(); readBody(); id = id || F.ids[F.step]; const st = stepOf(id); snap('AI SAM이 채운 내용'); const sp = $('#crsFlow .cf-aistep'); if (sp) { sp.disabled = true; sp.textContent = 'AI SAM이 채우는 중…'; }
     return Promise.resolve(st.aiFill(F.d)).then(() => { if (typeof S !== 'undefined' && S.ai) S.ai.usage = (S.ai.usage || 0) + 1; saveDraft(); paint(); toast('AI SAM이 채웠습니다. 확인하고 고쳐 주세요.', 'ok'); }).catch(e => { console.error(e); toast('AI SAM이 채우지 못했습니다. 직접 적어 주세요.', 'warn'); paint(); }); }
   function finish() {
-    if (!F) return; readBody(); for (let i = 0; i < F.ids.length; i++) { const P = problems(F.ids[i]); if (P.length) { F.step = i; F.bad = {}; P.forEach(p => F.bad[p.k] = p.msg); const keep = F.bad; paint(); F.bad = keep; markBad(); toast(P[0].msg, 'warn'); emit('error', { step: F.ids[i], field: P[0].k, msg: P[0].msg, n: 1, d: F.d }); return; } }
+    if (!F) return; readBody(); for (let i = 0; i < F.ids.length; i++) { const P = problems(F.ids[i]); if (P.length) { F.step = i; F.bad = {}; P.forEach(p => F.bad[p.k] = p.msg); const keep = F.bad; paint(); F.bad = keep; markBad(); emit('error', { step: F.ids[i], field: P[0].k, msg: P[0].msg, n: 1, d: F.d }); return; } }
     const d = F.d; const from = F.from; let c;
     try { c = create({ ...d, status: d.open === '비공개' ? '준비중' : '운영중', from }); } catch (e) { console.error('CF.create', e); toast(`${josa(T('cls'), '을')} 만들지 못했습니다. 다시 눌러 주세요.`, 'warn'); return; }
     try { save(); } catch (e) { } const prevDraft = S.crsDraft; delete S.crsDraft; try { save(); } catch (e) { }
@@ -240,11 +240,13 @@
       hours: +d.hours || Math.round(n * per * 10) / 10, goal: d.goal || (typeof AI !== 'undefined' && AI.goal ? AI.goal(name, d.target || d.aud || '') : ''), notices: [], level: +d.level || 0, target: d.target || d.aud || '',
       period: { mode: d.end ? 'range' : 'days', days, start: d.end ? start : '', end: d.end || '' }, enr: {}, cat: d.cat || '', thumb: d.thumb || '', intro: [], teachers: [], discount: { on: false, type: 'rate', v: 10, until: '' }, recruit: { on: false, cap: +d.cap || 0, from: today(), to: '', early: { on: false, until: '', rate: 10 } }, openTo: [], sale: '판매중', crs: { v: 35, from: d.from || 'api', at: Date.now() } };
     c.desc = String(c.goal || '').slice(0, 400);
-    if (kind === 'episode') { c.curriculum = (WP || W).map((w, i) => ({ id: uid('it'), type: 'offline', title: `${i + 1}회차 ${w.title}`.trim() })); }
-    else { const user = Array.isArray(d.curriculum) ? d.curriculum.filter(Boolean) : []; const has = new Set(user.map(x => +x.week || 0)); const auto = typeof itemsFromDesign === 'function' ? itemsFromDesign(W, o) : []; c.curriculum = [...auto.filter(x => !has.has(+x.week || 0)), ...user.map(x => ({ ...x, id: x.id || uid('it'), week: +x.week || 1 }))].sort((a, b) => (a.week || 0) - (b.week || 0)); }
+    /* 회차(episode)도 콘텐츠 항목은 그대로 두고, 회차 일정 항목(offline)에 week를 붙여 같은 회차에 묶는다(C7 1차 결함) */
+    { const user = Array.isArray(d.curriculum) ? d.curriculum.filter(Boolean) : []; const has = new Set(user.map(x => +x.week || 0)); const auto = typeof itemsFromDesign === 'function' ? itemsFromDesign(W, o) : []; c.curriculum = [...auto.filter(x => !has.has(+x.week || 0)), ...user.filter(x => x.type !== 'offline').map(x => ({ ...x, id: x.id || uid('it'), week: +x.week || 1 }))].sort((a, b) => (a.week || 0) - (b.week || 0));
+      if (kind === 'episode') c.curriculum = [...(WP || W).map((w, i) => ({ id: uid('it'), type: 'offline', title: `${i + 1}회차 ${w.title}`.trim(), week: i + 1 })), ...c.curriculum]; }
     c.weekly = kind !== 'episode'; c.weekPlan = W.map(w => ({ w: w.w, title: w.title, goal: w.goal || '' }));
     S.classes.unshift(c);
     try { if (c0 && typeof c0.apply === 'function') c0.apply(c, d); } catch (e) { console.error('cfg.apply', e); }
+    if (c.kind === 'episode') { const off = (c.curriculum || []).filter(x => x.type === 'offline'); off.forEach((x, i) => { if (!(+x.week > 0)) x.week = i + 1; }); const mx = off.length; (c.curriculum || []).forEach(x => { if (x.type !== 'offline' && mx && +x.week > mx) x.week = mx; }); c.curriculum = c.curriculum.map((x, i) => [x, i]).sort((A, B) => ((+A[0].week || 0) - (+B[0].week || 0)) || ((A[0].type === 'offline' ? 0 : 1) - (B[0].type === 'offline' ? 0 : 1)) || (A[1] - B[1])).map(z => z[0]); if (!(c.weekPlan || []).length || c.weekPlan.length < mx) c.weekPlan = off.map((x, i) => ({ w: i + 1, title: (c.weekPlan[i] && c.weekPlan[i].title) || String(x.title || '').replace(/^\d+회차\s*/, '') || `${i + 1}회차`, goal: (c.weekPlan[i] && c.weekPlan[i].goal) || '' })); }
     try { logAudit(`${d.audit || (T('cls') + ' 생성')} — ${c.name}`); } catch (e) { }
     if (kind !== 'episode' && vsrc !== 'ai' && S.settings && S.settings.yt && S.settings.yt.key && typeof ytAutofill === 'function') ytAutofill(c);
     emit('create', { course: c, d, id: c.id, name: c.name }); return c;
