@@ -40,7 +40,7 @@
       let inp = '';
       if (kind === 'area') inp = `<textarea id="${id}" data-cf="${esc(f.k)}" data-k="${esc(f.k)}" name="${esc(f.k)}" rows="${f.rows || 4}" maxlength="${f.maxLen || 2000}">${esc(v || '')}</textarea>`;
       else if (kind === 'num') inp = `<div class="cf-num"><button type="button" class="cf-nb" data-cfnum="${esc(f.k)}" data-d="-1" aria-label="줄이기">−</button><input id="${id}" type="number" inputmode="numeric" data-cf="${esc(f.k)}" data-k="${esc(f.k)}" name="${esc(f.k)}" data-num="1" value="${esc(v ?? f.def ?? '')}" ${f.min != null ? `min="${f.min}"` : ''} ${f.max != null ? `max="${f.max}"` : ''}><button type="button" class="cf-nb" data-cfnum="${esc(f.k)}" data-d="1" aria-label="늘리기">+</button>${f.unit ? `<span class="cf-unit">${esc(f.unit)}</span>` : ''}</div>`;
-      else if (kind === 'choice') inp = `<div class="cf-choice" role="radiogroup" aria-label="${esc(f.label)}">${(f.opts || []).map(([ov, ol, os]) => `<button type="button" role="radio" aria-checked="${String(v) === String(ov)}" class="${String(v) === String(ov) ? 'on' : ''}" data-cfset="${esc(f.k)}" data-v="${esc(ov)}"><b>${esc(ol)}</b>${os ? `<small>${esc(os)}</small>` : ''}</button>`).join('')}</div>`;
+      else if (kind === 'choice') inp = `<div class="cf-choice" role="radiogroup" aria-label="${esc(f.label)}">${(f.opts || []).map(([ov, ol, os]) => `<button type="button" role="radio" aria-checked="${String(v) === String(ov)}" class="${String(v) === String(ov) ? 'on' : ''}" data-cfset="${esc(f.k)}" data-v="${esc(ov)}"${typeof ov === 'number' ? ' data-n="1"' : ''}><b>${esc(ol)}</b>${os ? `<small>${esc(os)}</small>` : ''}</button>`).join('')}</div>`;
       else if (kind === 'toggle') inp = `<label class="cf-tog"><input type="checkbox" id="${id}" data-cf="${esc(f.k)}" data-k="${esc(f.k)}" name="${esc(f.k)}" data-bool="1" ${v ? 'checked' : ''}><span>${esc(f.on || '예')}</span></label>`;
       else if (kind === 'days') { const D = ['일', '월', '화', '수', '목', '금', '토']; const L = Array.isArray(v) ? v : []; inp = `<div class="cf-days" role="group" aria-label="${esc(f.label)}">${[1, 2, 3, 4, 5, 6, 0].map(i => `<button type="button" aria-pressed="${L.includes(i)}" class="${L.includes(i) ? 'on' : ''}" data-cfday="${esc(f.k)}" data-v="${i}">${D[i]}</button>`).join('')}</div>`; }
       else inp = `<input id="${id}" type="${kind === 'time' || kind === 'date' ? kind : 'text'}" data-cf="${esc(f.k)}" data-k="${esc(f.k)}" name="${esc(f.k)}" value="${esc(v || '')}" ${kind === 'code' && f.len ? `maxlength="${f.len}" inputmode="numeric"` : `maxlength="${f.maxLen || 60}"`}>`;
@@ -70,8 +70,8 @@
   };
 
   /* ───────── 기본 단계 ───────── */
-  const tplCards = d => { const c = cfgOf(); const L = (c && c.templates) || []; if (!L.length) return ''; return `<div class="cf-tpl"><p class="cf-lab">이런 ${esc(T('cls'))}가 많아요 <span class="cf-later">눌러서 시작하면 칸이 채워져요</span></p><div class="cf-tplg">${L.slice(0, 6).map(x => `<button type="button" class="${d.tpl === x.id ? 'on' : ''}" data-cftpl="${esc(x.id)}">${x.icon && typeof ic === 'function' ? ic(x.icon, 18) : ''}<b>${esc(x.name)}</b>${x.desc ? `<small>${esc(x.desc)}</small>` : ''}</button>`).join('')}</div></div>`; };
-  const askBlock = (id, d, fallback) => { const A = askOf(id); const L = A || fallback; const req = required(); return L.filter(f => shown(f, d)).map(f => ui.field({ ...f, req: f.req != null ? f.req : req.includes(f.k) && !f.later }, d)).join(''); };
+  const tplCards = d => { const c = cfgOf(); const L = (c && c.templates) || []; if (!L.length) return ''; const allIc = L.slice(0, 6).every(x => x.icon); return `<div class="cf-tpl"><p class="cf-lab">이런 ${esc(josa(T('cls'), '이'))} 많아요 <span class="cf-later">눌러서 시작하면 칸이 채워져요</span></p><div class="cf-tplg">${L.slice(0, 6).map(x => `<button type="button" class="${d.tpl === x.id ? 'on' : ''}" data-cftpl="${esc(x.id)}">${allIc && typeof ic === 'function' ? ic(x.icon, 18) : ''}<b>${esc(x.name)}</b>${x.desc ? `<small>${esc(x.desc)}</small>` : ''}</button>`).join('')}</div></div>`; };
+  const askBlock = (id, d, fallback) => { const A = askOf(id); const L = A || fallback; L.forEach(f => { if (f.def != null && d[f.k] === undefined) d[f.k] = Array.isArray(f.def) ? f.def.slice() : f.def; }); const req = required(); return L.filter(f => shown(f, d)).map(f => ui.field({ ...f, req: f.req != null ? f.req : req.includes(f.k) && !f.later }, d)).join(''); };
   const BASIC = () => [
     { k: 'name', label: `${T('cls')} 이름`, ex: ex('name', U() ? '생성형 AI와 글쓰기' : S.org.type === 'k12' ? '중2 수학 내신반' : '엑셀 실무 기초'), ai: true, maxLen: 50 },
     { k: 'target', label: '누가 배우나요', ex: ex('target', S.org.type === 'k12' ? '중학교 2학년' : U() ? '비전공 1학년' : '입사 1년 차 직원'), ai: true, later: true, maxLen: 40 },
@@ -83,14 +83,14 @@
       aiFill(d) { ['name', 'target', 'goal'].forEach(k => { if (!String(d[k] || '').trim()) d[k] = fieldAI(k, d); }); return Promise.resolve(d); } },
     { id: 'outline', title: d => `${unit(d)} 목록`, now: d => `몇 번 수업하는지 정하고, ${unit(d)}마다 제목을 확인해 주세요.`,
       render(el, d) {
-        const u = unit(d); if (!Array.isArray(d.weekPlan)) d.weekPlan = [];
+        const u = unit(d); if (!Array.isArray(d.weekPlan)) d.weekPlan = []; let pre = ''; if (!d.weekPlan.length && !d._olTouched) { d.weekPlan = planFrom(d); d._olTouched = 1; pre = ui.note(`AI SAM이 ${josa(u, '을')} 미리 채워 두었습니다. 제목을 눌러 고쳐 쓰셔도 됩니다.`); setTimeout(saveDraft); }
         const head = askBlock('outline', d, [{ k: 'sessions', label: `몇 ${u}인가요`, kind: 'num', min: 1, max: 60, unit: u, ex: U() ? '한 학기 15주' : '주 1회 6주면 6' }]);
         const L = d.weekPlan;
-        el.innerHTML = head + `<div class="cf-ol"><div class="cf-olh"><span class="cf-lab">${esc(u)}별 제목</span>${aiBtn('weekPlan', L.length ? '제목 다시 만들기' : `AI SAM이 ${u} 목록 만들기`)}</div>` +
+        el.innerHTML = head + pre + `<div class="cf-ol"><div class="cf-olh"><span class="cf-lab">${esc(u)}별 제목</span>${aiBtn('weekPlan', L.length ? '제목 다시 만들기' : `AI SAM이 ${u} 목록 만들기`)}</div>` +
           (L.length ? `<ol class="cf-wl">${L.map((w, i) => `<li><span class="cf-wn">${i + 1}</span><input value="${esc(w.title)}" maxlength="60" data-cfw="${i}" aria-label="${i + 1}${esc(u)} 제목"><button type="button" class="cf-ib" data-cfwmv="${i}" data-d="-1" aria-label="위로" ${i ? '' : 'disabled'}>↑</button><button type="button" class="cf-ib" data-cfwdel="${i}" aria-label="${i + 1}${esc(u)} 지우기">✕</button></li>`).join('')}</ol><button type="button" class="cf-add" data-cfwadd="1">+ ${esc(u)} 하나 더</button>`
             : `<div class="cf-emp"><p>아직 ${esc(u)} 목록이 없습니다.</p><p>[AI SAM이 ${esc(u)} 목록 만들기]를 누르면 제목이 채워집니다. 직접 쓰려면 아래를 누르세요.</p><button type="button" class="cf-add" data-cfwadd="1">+ 직접 쓰기</button></div>`) + errLine('weekPlan') + '</div>';
       },
-      valid(d) { const P = []; if (!(d.weekPlan || []).length) P.push({ k: 'weekPlan', msg: `${unit(d)} 목록이 비어 있습니다. [AI SAM이 ${unit(d)} 목록 만들기]를 누르거나 하나 이상 적어 주세요.` }); else if (d.weekPlan.some(w => !String(w.title || '').trim())) P.push({ k: 'weekPlan', msg: '제목이 빈 줄이 있습니다. 제목을 적거나 ✕로 지워 주세요.' }); return P; },
+      valid(d) { const P = []; if (!(d.weekPlan || []).length) { d.weekPlan = planFrom(d); return P; } if (false) P.push({ k: 'weekPlan', msg: `${unit(d)} 목록이 비어 있습니다. [AI SAM이 ${unit(d)} 목록 만들기]를 누르거나 하나 이상 적어 주세요.` }); d.weekPlan.forEach((w, i) => { if (!String(w.title || '').trim()) w.title = `${i + 1}${unit(d) === '회차' ? '회차' : unit(d) === '주차' ? '주차' : '차시'} 수업`; }); return P; },
       aiFill(d) { d.weekPlan = planFrom(d); d.sessions = d.weekPlan.length; return Promise.resolve(d); } },
     { id: 'fill', title: d => `${unit(d)} 채우기`, now: d => `${unit(d)}마다 넣을 강의 영상 · 교안 · 퀴즈를 고르세요. 나중에 채워도 됩니다.`,
       render(el, d) { if (window.CT && typeof CT.renderFill === 'function') { try { return CT.renderFill(el, d); } catch (e) { console.error('CT.renderFill', e); } } fillDefault(el, d); },
@@ -104,8 +104,8 @@
           { k: 'price', label: `${T('fee')}(원)`, kind: 'num', min: 0, max: 100000000, unit: '원', ex: '150000 (15만 원)', show: x => x.paid === true || x.paid === 'true' },
           { k: 'days', label: '수강 기간', kind: 'choice', opts: [[30, '30일'], [60, '60일'], [90, '90일'], [180, '180일']], hint: '신청한 날부터 이 기간 동안 들을 수 있습니다.' },
           { k: 'open', label: '누구에게 보이나요', kind: 'choice', opts: [['전체', '모두에게 공개', '홈페이지에 바로 보여요'], ['지정 회원', '정한 사람만', '초대한 사람만 들어요'], ['비공개', '아직 숨겨 두기', '준비가 끝나면 공개해요']] }]) +
-          ui.note(`수료 기준은 기본값(진도 ${D.criteria.video} · 시험 ${D.criteria.exam} · 과제 ${D.criteria.assign}, ${D.criteria.threshold}점 이상)을 씁니다. 만든 뒤 설정 탭에서 바꿀 수 있습니다.`) +
-          `<p class="cf-adv">회차 · 요일반 · 구독처럼 세부 운영이 필요하면 <button type="button" class="linkb" data-act="cls-new-adv">자세한 설정으로 만들기</button></p>`;
+          ui.note(`${T('done')} 기준은 이 ${josa(T('cls'), '에')} 맞는 기본값으로 정해 둡니다. 만든 뒤 설정 탭에서 바꿀 수 있습니다.`) +
+          (['adult', 'k12', 'lifelong'].includes(S.org.type) ? `<p class="cf-adv">회차 · 요일반 · 구독처럼 세부 운영이 필요하면 <button type="button" class="linkb" data-act="cls-new-adv">자세한 설정으로 만들기</button></p>` : '');
       },
       valid(d) { const P = []; if ((d.paid === true || d.paid === 'true') && !(+d.price > 0)) P.push({ k: 'price', msg: `유료라면 ${T('fee')}를 적어 주세요. 무료면 '무료'를 누르세요.` }); return P; },
       aiFill(d) { const D = defs(); if (d.paid == null) d.paid = false; if (d.days == null) d.days = D.days; if (d.open == null) d.open = '전체'; return Promise.resolve(d); } },
@@ -114,17 +114,17 @@
       valid() { return []; },
       aiFill(d) { return Promise.resolve(d); } }
   ];
-  const AUTO = [['video', '강의 영상', '차시마다 영상 1개(YouTube 추천 또는 AI 영상)', 'play'], ['docs', '교안', '차시마다 강의자료 초안', 'doc'], ['quiz', '확인 퀴즈', '차시마다 5문항', 'check'], ['assign', '과제', '실습 과제 + 채점 기준', 'pen'], ['exam', '최종 평가', '마지막에 시험 1번', 'flag']];
+  const AUTO = [['video', '강의 영상', '#마다 영상 1개(YouTube 추천 또는 AI 영상)', 'play'], ['docs', '교안', '#마다 강의자료 초안', 'doc'], ['quiz', '확인 퀴즈', '#마다 5문항', 'check'], ['assign', '과제', '실습 과제 + 채점 기준', 'book'], ['exam', '최종 평가', '마지막에 시험 1번', 'chart']];
   function fillDefault(el, d) {
     const A = d.auto = { ...defs().auto, ...(d.auto || {}) }; const u = unit(d); const items = d.curriculum || [];
-    el.innerHTML = `<p class="cf-lab">${esc(u)}마다 자동으로 넣을 것 <span class="cf-later">나중에 해도 돼요</span></p><div class="cf-auto">${AUTO.map(([k, l, s, i]) => { const onV = k === 'video' ? A.video !== 'none' : !!A[k]; return `<button type="button" class="${onV ? 'on' : ''}" aria-pressed="${onV}" data-cfauto="${k}">${typeof ic === 'function' ? ic(i, 20) : ''}<b>${esc(l)}</b><small>${esc(s)}</small><span class="cf-ck">${onV ? '넣어요' : '빼요'}</span></button>`; }).join('')}</div>` +
+    el.innerHTML = `<p class="cf-lab">${esc(u)}마다 자동으로 넣을 것 <span class="cf-later">나중에 해도 돼요</span></p><div class="cf-auto">${AUTO.map(([k, l, s, i]) => { const onV = k === 'video' ? A.video !== 'none' : !!A[k]; return `<button type="button" class="${onV ? 'on' : ''}" aria-pressed="${onV}" data-cfauto="${k}">${typeof ic === 'function' ? ic(i, 22) : ''}<span class="cf-at"><b>${esc(l)}</b><small>${esc(s.replace('#', u))}</small></span><span class="cf-ck">${onV ? '넣어요' : '빼요'}</span></button>`; }).join('')}</div>` +
       (A.video !== 'none' ? ui.field({ k: '_vsrc', label: '강의 영상은 어떻게 준비할까요', kind: 'choice', opts: [['youtube', 'YouTube에서 추천', '알맞은 영상을 찾아 연결'], ['ai', 'AI로 강의 영상 만들기', '슬라이드 + 음성(미리보기 품질)']] }, { _vsrc: A.video }) : '') +
       ui.note(`${(d.weekPlan || []).length}개 ${esc(u)}에 위 내용을 초안으로 넣습니다. 만든 뒤 ${esc(u)}을 눌러 영상 · 교안을 바꾸거나 파일을 올릴 수 있습니다.${items.length ? ` 직접 넣은 콘텐츠 ${items.length}개는 그대로 씁니다.` : ''}`);
   }
   function previewHTML(d) {
     const c = cfgOf(); const u = unit(d); const L = d.weekPlan || []; const paid = d.paid == null ? +d.price > 0 : (d.paid === true || d.paid === 'true');
     let sum = [['배울 사람', d.target || '누구나'], [`${u} 수`, `${L.length}${u === '회차' ? '회' : '개'}`], [T('fee'), paid && +d.price ? won(d.price) : '무료'], ['수강 기간', `신청 후 ${d.days || defs().days}일`], ['공개', { 전체: '모두에게 공개', '지정 회원': '정한 사람만', 비공개: '아직 숨겨 두기' }[d.open] || d.open || '모두에게 공개']];
-    try { if (c && typeof c.summary === 'function') { const x = c.summary(d); if (Array.isArray(x) && x.length) sum = [sum[0], [`${u} 수`, sum[1][1]], ...x].filter((r, i, A) => A.findIndex(y => y[0] === r[0]) === i); } } catch (e) { }
+    try { if (c && typeof c.summary === 'function') { const x = c.summary(d); if (Array.isArray(x) && x.length) sum = [...(x.some(r => /대상|배울/.test(r[0])) ? [] : [sum[0]]), [`${u} 수`, sum[1][1]], ...x].filter((r, i, A) => A.findIndex(y => y[0] === r[0]) === i); } } catch (e) { }
     const W = checks(d);
     return `<p class="cf-lab">${esc(T('learner'))}에게 이렇게 보여요</p><div class="cf-pv"><div class="cf-pvh"><span class="cf-pvt">${esc(T('cls'))}</span><b>${esc(d.name || '이름 없음')}</b>${d.goal ? `<p>${esc(String(d.goal).slice(0, 160))}</p>` : ''}</div>
       <dl class="cf-pvs">${sum.map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>
@@ -136,6 +136,7 @@
   /* ───────── 단계 목록(cfg.steps 순서) ───────── */
   const stepIds = () => { const c = cfgOf(); const ids = (c && Array.isArray(c.steps) && c.steps.length ? c.steps : steps.map(s => s.id)).filter(id => steps.some(s => s.id === id)); return ids.length ? ids.slice(0, 5) : ['basic', 'open']; };
   const stepOf = id => steps.find(s => s.id === id);
+  const nowOf = (id, d) => { const c = cfgOf(); const x = c && c.stepNow && c.stepNow[id]; if (x) return typeof x === 'function' ? x(d || {}) : x; return stepOf(id).now(d || {}); };
   const titleOf = (id, d) => { const c = cfgOf(); const x = c && c.stepTitle && c.stepTitle[id]; if (x) return typeof x === 'function' ? x(d || {}) : x; return stepOf(id).title(d || {}); };
 
   /* ───────── 열기 · 그리기 ───────── */
@@ -172,9 +173,9 @@
     if (!F) return; const w = mount(); const id = F.ids[F.step]; const st = stepOf(id); w.dataset.step = id; const d = F.d; const n = F.ids.length; const last = F.step === n - 1;
     const prog = F.ids.map((sid, i) => `<li class="${i < F.step ? 'done' : i === F.step ? 'on' : ''}" ${i === F.step ? 'aria-current="step"' : ''}><button type="button" data-cfjump="${i}" ${i > F.step ? 'disabled' : ''}><span class="cf-dot">${i < F.step ? '✓' : i + 1}</span><span class="cf-sl">${esc(titleOf(sid, d))}</span></button></li>`).join('');
     w.innerHTML = `<div class="cf-box" role="dialog" aria-modal="true" aria-label="${esc(T('cls'))} 만들기">
-      <header class="cf-hd"><div class="cf-ht"><b>${esc(T('cls'))} 만들기</b><span class="cf-saved" aria-live="polite"></span></div><button type="button" class="cf-x" data-cfgo="later" aria-label="닫기(나중에 이어서 하기)">${typeof ic === 'function' ? ic('x', 20) : '✕'}</button></header>
+      <header class="cf-hd"><div class="cf-ht"><b>${esc(T('cls'))} 만들기</b><span class="cf-saved" aria-live="polite"></span></div><button type="button" class="cf-laterh" data-cfgo="later">나중에 하기</button><button type="button" class="cf-x" data-cfgo="later" aria-label="닫기(나중에 이어서 하기)">${typeof ic === 'function' ? ic('x', 20) : '✕'}</button></header>
       <ol class="cf-prog" aria-label="진행 ${F.step + 1}/${n}">${prog}</ol>
-      <div class="cf-nowb"><p class="cf-now"><span class="cf-k">지금 할 일</span> ${esc(st.now(d))}</p><div class="crs-sam-slot">${id !== 'open' && !CF.samOwnsButton ? `<button type="button" class="cf-ai cf-aistep" data-cfgo="ai">${typeof ic === 'function' ? ic('spark', 16) : '✦'} AI SAM에게 이 단계 맡기기</button>` : ''}</div></div>
+      <div class="cf-nowb"><p class="cf-now"><span class="cf-k">지금 할 일</span> ${esc(nowOf(id, d))}</p><div class="crs-sam-slot">${id !== 'open' && !CF.samOwnsButton ? `<button type="button" class="cf-ai cf-aistep" data-cfgo="ai">${typeof ic === 'function' ? ic('spark', 16) : '✦'} AI SAM에게 이 단계 맡기기</button>` : ''}</div></div>
       <main class="cf-body" data-cfstep="${esc(id)}"></main>
       <div class="cf-sam" aria-live="polite"></div>
       <footer class="cf-ft">${F.step ? '<button type="button" class="btn cf-big" data-cfgo="prev">이전</button>' : ''}${F.undo.length ? `<button type="button" class="btn ghost cf-undo" data-cfgo="undo">되돌리기</button>` : ''}<span class="cf-sp"></span><button type="button" class="btn ghost cf-later2" data-cfgo="later">나중에 이어서 하기</button>${last ? `<button type="button" class="btn pri cf-big" data-cfgo="create">개설하기</button>` : `<button type="button" class="btn pri cf-big" data-cfgo="next">다음</button>`}</footer></div>`;
@@ -194,7 +195,7 @@
   function next() {
     if (!F) return; readBody(); const id = F.ids[F.step]; const P = problems(id);
     const empty = (askOf(id) || []).filter(f => shown(f, F.d) && f.later && !String(F.d[f.k] ?? '').trim()).map(f => f.k);
-    if (P.length) { F.bad = {}; P.forEach(p => { F.bad[p.k] = p.msg; const ek = id + '.' + p.k; F.errs[ek] = (F.errs[ek] || 0) + 1; emit('error', { step: id, field: p.k, msg: p.msg, empty: !String(F.d[p.k] ?? '').trim() || (p.k === 'weekPlan' && !(F.d.weekPlan || []).length), n: F.errs[ek], d: F.d }); }); const keep = F.bad; paint(); F.bad = keep; markBad(); toast(P[0].msg, 'warn'); return false; }
+    if (P.length) { F.bad = {}; P.forEach(p => { F.bad[p.k] = p.msg; const ek = id + '.' + p.k; F.errs[ek] = (F.errs[ek] || 0) + 1; emit('error', { step: id, field: p.k, msg: p.msg, empty: !String(F.d[p.k] ?? '').trim() || (p.k === 'weekPlan' && !(F.d.weekPlan || []).length), n: F.errs[ek], d: F.d }); }); const keep = F.bad; paint(); F.bad = keep; markBad(); return false; }
     emit('next', { step: id, empty, d: F.d });
     if (F.step < F.ids.length - 1) { F.step++; F.dir = 'next'; saveDraft(); paint(); }
     return true;
@@ -226,7 +227,7 @@
     const name = (clean ? clean(d.name || d.topic) : String(d.name || d.topic || '').trim()) || '새 과정';
     let plan = {}; try { if (c0 && typeof c0.plan === 'function') plan = c0.plan(d) || {}; } catch (e) { }
     let WP = Array.isArray(d.weekPlan) && d.weekPlan.length ? d.weekPlan.map((w, i) => ({ w: i + 1, title: String(w.title || `${i + 1}차시`).trim(), goal: w.goal || '' })) : null;
-    const n = clamp(+(WP ? WP.length : (plan.weeks || d.sessions || d.weeks || (Uv ? 15 : 6))), 1, 60);
+    const n = clamp(+(WP ? WP.length : (d._n || plan.weeks || d.sessions || d.weeks || (Uv ? 15 : 6))), 1, 60);
     const A = { ...D.auto, ...(d.auto || {}) }; const vsrc = d.vsrc || (A.video === 'ai' ? 'ai' : 'youtube');
     const o = { topic: name, weeks: Math.min(n, 30), univ: plan.univ != null ? plan.univ : Uv, quiz: d.quiz != null ? d.quiz !== false : !!A.quiz, assign: d.assign != null ? d.assign !== false : !!A.assign, exam: d.exam != null ? d.exam !== false : !!A.exam, vids: A.video === 'none' ? 0 : 1, level: d.levelTxt || '보통', vsrc, docs: d.docs != null ? !!d.docs : !!A.docs };
     const kind = d.kind || 'period'; const days = +d.days || D.days; const start = d.start || today(); const per = +(plan.per || d.per || (Uv ? 3 : (+d.mins || D.mins) / 60)) || 1;
@@ -267,11 +268,11 @@
         return; }
       if (!F) { if ((el = g('[data-cfdone]'))) { const k = el.dataset.cfdone; const id = el.dataset.c; close(false); if (k === 'fill' || k === 'close') { UI.cls = id; UI.clsT = 'curriculum'; if (typeof UI.slaClsHome !== 'undefined') UI.slaClsHome = k === 'close' ? { id, t: 'learners' } : null; go('class'); } else if (el.dataset.go) go(el.dataset.go); emit('done', { action: k, id }); } return; }
       if ((el = g('[data-cfjump]'))) { jump(+el.dataset.cfjump); return; }
-      if ((el = g('[data-cfset]'))) { readBody(); const k = el.dataset.cfset; let v = el.dataset.v; v = v === 'true' ? true : v === 'false' ? false : /^-?\d+$/.test(v) && !/^0\d/.test(v) && k !== 'name' ? +v : v; if (k === '_vsrc') { F.d.auto = { ...(F.d.auto || {}), video: v }; } else F.d[k] = v; emit('change', { step: F.ids[F.step], field: k, d: F.d }); saveDraft(); paint(); return; }
+      if ((el = g('[data-cfset]'))) { readBody(); const k = el.dataset.cfset; let v = el.dataset.v; v = v === 'true' ? true : v === 'false' ? false : el.dataset.n ? +v : v; if (k === '_vsrc') { F.d.auto = { ...(F.d.auto || {}), video: v }; } else F.d[k] = v; emit('change', { step: F.ids[F.step], field: k, d: F.d }); saveDraft(); paint(); return; }
       if ((el = g('[data-cfday]'))) { readBody(); const k = el.dataset.cfday, v = +el.dataset.v; const L = Array.isArray(F.d[k]) ? F.d[k] : []; F.d[k] = L.includes(v) ? L.filter(x => x !== v) : [...L, v].sort(); saveDraft(); paint(); return; }
       if ((el = g('[data-cfnum]'))) { readBody(); const k = el.dataset.cfnum; const inp = w.querySelector(`[data-cf="${k}"]`); const mn = inp && inp.min !== '' ? +inp.min : 0, mx = inp && inp.max !== '' ? +inp.max : 1e9; F.d[k] = clamp((+F.d[k] || 0) + +el.dataset.d, mn, mx); if (k === 'sessions') syncPlan(true); else { saveDraft(); paint(); } return; }
       if ((el = g('[data-cfai]'))) { readBody(); const k = el.dataset.cfai; snap('AI SAM이 채운 내용'); if (k === 'weekPlan') { F.d.weekPlan = planFrom(F.d); F.d.sessions = F.d.weekPlan.length; } else { F.d[k] = fieldAI(k, { ...F.d, [k]: '' }); F.focus = k; } if (S.ai) S.ai.usage = (S.ai.usage || 0) + 1; saveDraft(); paint(); toast('AI SAM이 채웠습니다. 확인하고 고쳐 주세요.', 'ok'); return; }
-      if ((el = g('[data-cftpl]'))) { readBody(); const c = cfgOf(); const x = ((c && c.templates) || []).find(y => y.id === el.dataset.cftpl); if (x) { snap('템플릿 선택'); Object.assign(F.d, JSON.parse(JSON.stringify(x.prefill || {})), { tpl: x.id }); if (x.prefill && x.prefill.sessions && !(x.prefill.weekPlan)) F.d.weekPlan = []; saveDraft(); paint(); } return; }
+      if ((el = g('[data-cftpl]'))) { readBody(); const c = cfgOf(); const x = ((c && c.templates) || []).find(y => y.id === el.dataset.cftpl); if (x) { snap('템플릿 선택'); Object.assign(F.d, JSON.parse(JSON.stringify(x.prefill || {})), { tpl: x.id }); if (!(x.prefill && x.prefill.weekPlan)) { F.d.weekPlan = []; delete F.d._olTouched; } saveDraft(); paint(); } return; }
       if ((el = g('[data-cfwadd]'))) { readBody(); F.d.weekPlan = F.d.weekPlan || []; F.d.weekPlan.push({ w: F.d.weekPlan.length + 1, title: '', goal: '' }); F.d.sessions = F.d.weekPlan.length; saveDraft(); paint(); const L = w.querySelectorAll('[data-cfw]'); L.length && L[L.length - 1].focus(); return; }
       if ((el = g('[data-cfwdel]'))) { readBody(); const i = +el.dataset.cfwdel; snap(`${i + 1}${unit(F.d)} 지우기`); F.d.weekPlan.splice(i, 1); F.d.sessions = F.d.weekPlan.length || 1; saveDraft(); paint(); return; }
       if ((el = g('[data-cfwmv]'))) { readBody(); const i = +el.dataset.cfwmv, j = i + +el.dataset.d; const L = F.d.weekPlan; if (j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; saveDraft(); paint(); return; }
@@ -300,9 +301,13 @@
   ACT['crs-open'] = el => open({ from: (el && el.dataset && el.dataset.from) || fromOf(el), step: el && el.dataset && el.dataset.step });
   { const b = ACT['cls-new-adv']; if (b) ACT['cls-new-adv'] = (...a) => { const d = F && F.d; close(true); b(...a); if (d && typeof WZ !== 'undefined' && WZ) { WZ.name = d.name || ''; WZ.target = d.target || ''; WZ.goal = d.goal || ''; if (typeof wizard === 'function') wizard(); } }; }
 
+  /* 이어서 하기 띠: 과정 목록 위에 초안이 있으면 한 줄로 알림 */
+  if (typeof render === 'function') { const b = render; render = function (...a) { const r = b.apply(this, a); try { const m = $('#main'); if (m && typeof CUR !== 'undefined' && CUR.tab === 'class' && !UI.cls && !F && hasDraft() && !m.querySelector('.cf-resbar')) { const x = S.crsDraft; m.insertAdjacentHTML('afterbegin', `<div class="cf-resbar" role="status"><span>만들던 <b>${esc(x.d.name || T('cls'))}</b>이(가) 있습니다.</span><button type="button" class="btn pri" data-act="crs-resume">이어서 하기</button></div>`); } } catch (e) { } return r; }; }
+  ACT['crs-resume'] = () => open({ resume: true, _asked: true, from: 'menu' });
+
   /* ───────── 생성 함수 통일 ───────── */
   if (typeof makeCourse === 'function') { const old = makeCourse; makeCourse = function (x) { x = x || {}; if (x.legacy) return old(x); /* 기존 호출자(SAM · 저니 · 에이전트) 호환: topic · weeks · aud · fee · docs · vsrc · quiz · assign · exam · level */
-      return create({ name: x.topic, sessions: x.weeks, target: x.aud || '', fee: x.fee, docs: !!x.docs, vsrc: x.vsrc || 'youtube', quiz: x.quiz !== false, assign: x.assign !== false, exam: x.exam !== false, level: x.level, open: '비공개', status: '준비중', days: (clamp(+x.weeks || (U() ? 15 : 6), 1, 30)) * 7, audit: 'AI 과정 생성', from: 'sam' }); }; CF._makeCourseOld = old; }
+      return create({ name: x.topic, sessions: x.weeks, _n: clamp(+x.weeks || (U() ? 15 : 6), 1, 30), target: x.aud || '', fee: x.fee, docs: !!x.docs, vsrc: x.vsrc || 'youtube', quiz: x.quiz !== false, assign: x.assign !== false, exam: x.exam !== false, level: x.level, open: '비공개', status: '준비중', days: (clamp(+x.weeks || (U() ? 15 : 6), 1, 30)) * 7, audit: 'AI 과정 생성', from: 'sam' }); }; CF._makeCourseOld = old; }
   if (typeof dsCreate === 'function') { const old = dsCreate; dsCreate = function (...a) { const n0 = S.classes[0]; const r = old.apply(this, a); const c = S.classes[0]; if (c && c !== n0) { c.criteria = { ...defs().criteria }; emit('create', { course: c, d: null, id: c.id, name: c.name }); try { save(); } catch (e) { } } return r; }; }
   if (typeof wzSave === 'function') { const old = wzSave; wzSave = function (...a) { const n0 = S.classes[0]; const r = old.apply(this, a); const c = S.classes[0]; if (r !== false && c && c !== n0) { c.criteria = { ...defs().criteria, ...(cfgOf() && cfgOf().defaults && cfgOf().defaults.criteria || {}) }; emit('create', { course: c, d: null, id: c.id, name: c.name }); try { save(); } catch (e) { } } return r; }; }
 })();

@@ -3,7 +3,7 @@
 body.cf-on{overflow:hidden}
 .crsf{position:fixed;inset:0;z-index:58;background:rgba(31,32,32,.45);display:flex;align-items:center;justify-content:center;padding:24px;font-size:16px;line-height:1.55;color:var(--g900,#2A2B2B)}
 .crsf *{box-sizing:border-box}
-.cf-box{position:relative;background:#fff;border-radius:12px;width:min(760px,100%);max-height:calc(100vh - 48px);max-height:calc(100dvh - 48px);display:flex;flex-direction:column;box-shadow:var(--e24,0 16px 48px rgba(42,43,43,.2));overflow:hidden}
+.cf-box{position:relative;background:#fff;border-radius:12px;width:min(760px,100%);height:min(820px,calc(100vh - 48px));height:min(820px,calc(100dvh - 48px));display:flex;flex-direction:column;box-shadow:var(--e24,0 16px 48px rgba(42,43,43,.2));overflow:hidden}
 .cf-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 6px 24px}
 .cf-ht{display:flex;align-items:baseline;gap:12px;min-width:0}
 .cf-ht b{font-size:20px;font-weight:800;letter-spacing:-.02em}
@@ -73,10 +73,10 @@ body.cf-on{overflow:hidden}
 .cf-emp{padding:20px;border-radius:8px;background:var(--g100,#F6F7F7);text-align:center}.cf-emp p{margin:0 0 6px}
 /* 채우기(기본) */
 .cf-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:18px}
-.cf-auto button{position:relative;padding-right:70px}
+.cf-auto button{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:12px;text-align:left}.cf-at{display:flex;flex-direction:column;gap:2px;min-width:0}
 .cf-auto .ic{color:var(--g600,#808181)}
 .cf-auto button.on{border-color:var(--s400,#5C74F6);background:var(--s50,#EAEDFF)}.cf-auto button.on .ic{color:var(--s400,#5C74F6)}
-.cf-ck{position:absolute;right:12px;top:12px;font-size:13px;font-weight:800;color:var(--t-sub,#666767)}.cf-auto button.on .cf-ck{color:var(--t-mag,#3F55D0)}
+.cf-ck{font-size:13px;white-space:nowrap;font-weight:800;color:var(--t-sub,#666767)}.cf-auto button.on .cf-ck{color:var(--t-mag,#3F55D0)}
 .cf-note{padding:12px 14px;border-radius:8px;background:var(--g100,#F6F7F7);font-size:15px;color:var(--g800,#4C4D4D);margin:0 0 14px}.cf-note.bad{background:var(--badl,#FFEAEE);color:var(--t-bad,#C4001D)}.cf-note.warn{background:var(--warnl,#FFF3E0);color:var(--t-warn,#A84A00)}
 .cf-adv{font-size:15px;color:var(--t-sub,#666767);margin:4px 0 8px}
 .crsf .linkb{border:0;background:none;padding:6px 2px;font:inherit;font-weight:700;color:var(--link,#1A4CFF);text-decoration:underline;cursor:pointer;min-height:40px}
@@ -86,7 +86,7 @@ body.cf-on{overflow:hidden}
 .cf-pvt{display:inline-block;font-size:13px;font-weight:800;color:var(--t-mag,#3F55D0);margin-bottom:4px}
 .cf-pvh b{display:block;font-size:22px;font-weight:800;letter-spacing:-.02em;word-break:keep-all}
 .cf-pvh p{margin:8px 0 0;color:var(--g800,#4C4D4D)}
-.cf-pvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;margin:0;border-top:1px solid var(--g300,#EAEBEB)}
+.cf-pvs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0;margin:0;border-top:1px solid var(--g300,#EAEBEB)}
 .cf-pvs div{padding:10px 20px;border-bottom:1px solid var(--g200,#F1F2F2)}
 .cf-pvs dt{font-size:13px;color:var(--t-sub,#666767);font-weight:700}.cf-pvs dd{margin:2px 0 0;font-weight:700;word-break:keep-all}
 .cf-pvl{list-style:none;margin:0;padding:12px 20px;display:flex;flex-direction:column;gap:6px}
@@ -101,7 +101,7 @@ body.cf-on{overflow:hidden}
 .crsf .cf-big{min-height:48px;min-width:96px;font-size:16px;font-weight:800;padding:0 22px}
 .crsf .cf-later2,.crsf .cf-undo{min-height:48px;font-size:15px}
 /* 이어서 하기 · 완료 */
-.cf-resume,.cf-done{width:min(520px,100%)}
+.cf-resume,.cf-done{width:min(520px,100%);height:auto}
 .cf-rb{padding:28px 28px 22px;text-align:center}
 .cf-rb h2{margin:4px 0 6px;font-size:22px;word-break:keep-all}
 .cf-rb .cf-now{font-size:15px;color:var(--t-sub,#666767);font-weight:700;margin:0}
@@ -113,6 +113,8 @@ body.cf-on{overflow:hidden}
 .cf-next button span{display:flex;flex-direction:column}.cf-next button small{color:var(--t-sub,#666767);font-size:14px}
 .cf-next button.pri{border-color:var(--s400,#5C74F6);background:var(--s50,#EAEDFF)}.cf-next button .ic{color:var(--s400,#5C74F6);flex:none}
 .cf-next button:hover{border-color:var(--s300,#7D90F9)}
+.cf-laterh{display:none}
+.cf-resbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 16px;border:1px solid var(--s200,#A5B0FA);background:var(--s50,#EAEDFF);border-radius:8px;font-size:16px}.cf-resbar .btn{min-height:44px}
 /* 휴대폰 */
 @media (max-width:640px){
   .crsf{padding:0;align-items:stretch}
@@ -129,8 +131,15 @@ body.cf-on{overflow:hidden}
   .cf-sam{padding:0 16px}
   .cf-ft{padding:10px 16px calc(10px + env(safe-area-inset-bottom));flex-wrap:wrap}
   .cf-ft .cf-sp{display:none}
-  .crsf .cf-later2{order:5;flex-basis:100%;min-height:40px;border:0}
+  .crsf .cf-later2{display:none}
+  .cf-laterh{display:block;margin-left:auto;min-height:44px;border:0;background:none;font:inherit;font-size:15px;font-weight:700;color:var(--t-mag,#3F55D0);padding:0 8px;cursor:pointer}
+  .cf-hd{gap:4px}.cf-ht b{font-size:18px}.cf-saved{display:none}
+  .cf-nowb .cf-ai{min-height:40px;padding:6px 12px;font-size:14px}
+  .cf-auto{grid-template-columns:1fr}
+  .cf-auto button{min-height:60px;padding:8px 12px}
   .crsf .cf-big{flex:1;min-width:0;padding:0 12px}
   .cf-choice{grid-template-columns:1fr 1fr}
+  .cf-tplg{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;margin:0 -16px;padding:0 16px 6px;scrollbar-width:none}.cf-tplg::-webkit-scrollbar{display:none}
+  .cf-tplg button{flex:0 0 70%;scroll-snap-align:start}
   .cf-rb{padding:40px 18px 18px}
 }
