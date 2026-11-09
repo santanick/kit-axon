@@ -152,7 +152,7 @@
     '법정의무교육': /법정|의무|성희롱|폭력|개인정보|안전|장애인|청렴|반부패/, '직무': /직무|실무|역량|엑셀|보고서/, '리더십': /리더|관리자|코칭/, '신입 입문': /신입|입문|온보딩|오리엔테이션/, '신규 임용': /신규|임용/, '정책 · 행정': /행정|정책|민원|적극/,
     '인문 · 교양': /인문|교양|역사|철학/, '어학': /어학|영어|일본어|중국어/, '취미 · 예술': /취미|예술|미술|음악|원데이|공예/, '자격 · 취업': /자격|취업/, '디지털': /디지털|스마트폰|AI|컴퓨터|코딩/,
     '국가기간 · 전략산업': /국가기간|전략|스마트|제조|용접|전기/, '일반 직종': /일반|사무|회계/, '재직자 과정': /재직/, '자격 대비': /자격|필기|실기/, '취업 준비': /취업|면접/ };
-  function catPickHTML(sel) { return `<div class="ops-cat"><select class="ops-catsel" aria-label="카테고리"><option value="">카테고리 없음</option>${catOpts(sel)}<option value="__new">+ 새 카테고리 만들기…</option></select><input class="ops-catnew" maxlength="30" placeholder="새 카테고리 이름" hidden aria-label="새 카테고리 이름"></div>`; }
+  function catPickHTML(sel, easy) { const W = easy ? '분류' : '카테고리'; return `<div class="ops-cat"><select class="ops-catsel" aria-label="${W}"><option value="">${W} 없음</option>${catOpts(sel)}<option value="__new">+ 새 ${W} 만들기…</option></select><input class="ops-catnew" maxlength="30" placeholder="새 ${W} 이름" hidden aria-label="새 ${W} 이름"></div>`; }
   /* 과정 상세의 '카테고리' 칩 → 시트에서 바로 고르기 · 새로 만들기 */
   ACT['d26-cat'] = () => { const c = C(UI.cls); if (!c) return; try { c2EnsureAll(); } catch (e) { }
     const T = typeof c2CatTree === 'function' ? c2CatTree() : [];
@@ -168,10 +168,10 @@
   /* 과정 만들기 흐름(crs-flow — B 담당 파일은 고치지 않고 CF 이벤트로): 마지막(개설) 단계에 카테고리 고르기, 만들 때 넣기 */
   function cfHook() { if (!window.CF || typeof CF.on !== 'function' || CF._ops36) return; CF._ops36 = 1;
     CF.on('step', x => { try { if (!x || !x.d) return; const last = x.i === x.n - 1; if (!last) return; const b = document.querySelector('#crsFlow .cf-body'); if (!b || b.querySelector('.ops-cfcat')) return;
-      try { c2EnsureAll(); } catch (e) { } const d = x.d; const box = document.createElement('section'); box.className = 'ops-cfcat'; box.innerHTML = `<label class="cf-lb">카테고리 <small>학습자 사이트 분류 탭</small></label>${catPickHTML(d.catPick || '')}`;
+      try { c2EnsureAll(); } catch (e) { } const d = x.d; const box = document.createElement('section'); box.className = 'ops-cfcat'; box.innerHTML = `<label class="cf-lb">분류 <small>${esc(t('learner'))}에게 보이는 목록에서 이 분류로 묶입니다</small></label>${catPickHTML(d.catPick || '', 1)}`;
       const hd = [...b.querySelectorAll('h2,h3,h4,.cf-h,.cf-sub,b,strong')].find(e => /이렇게 보입니다/.test(e.textContent)); if (hd) hd.before(box); else b.prepend(box); const s = box.querySelector('select'), inp = box.querySelector('input');
       s.addEventListener('change', () => { if (s.value === '__new') { inp.hidden = false; inp.focus(); return; } inp.hidden = true; d.catPick = s.value; });
-      const mk = () => { const v = inp.value.trim(); if (!v) return; const ex = A(S.cats).find(k => k.name === v && !k.parent); const k = ex || c2AddCat(v, ''); if (!k) return; d.catPick = k.id; s.innerHTML = `<option value="">카테고리 없음</option>${catOpts(k.id)}<option value="__new">+ 새 카테고리 만들기…</option>`; inp.value = ''; inp.hidden = true; toast(`「${v}」 카테고리를 만들었습니다.`, 'ok'); };
+      const mk = () => { const v = inp.value.trim(); if (!v) return; const ex = A(S.cats).find(k => k.name === v && !k.parent); const k = ex || c2AddCat(v, ''); if (!k) return; d.catPick = k.id; s.innerHTML = `<option value="">분류 없음</option>${catOpts(k.id)}<option value="__new">+ 새 분류 만들기…</option>`; inp.value = ''; inp.hidden = true; toast(`「${v}」 분류를 만들었습니다.`, 'ok'); };
       inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); mk(); } }); inp.addEventListener('blur', mk); } catch (e) { console.error(e); } });
     CF.on('create', x => { try { if (x && x.course && x.d && x.d.catPick && A(S.cats).some(k => k.id === x.d.catPick)) { x.course.cat = x.d.catPick; save(); } } catch (e) { } }); }
   cfHook(); setTimeout(cfHook, 0);
