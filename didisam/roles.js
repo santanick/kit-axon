@@ -91,7 +91,7 @@ function tOperate(c) {
   <div class="bar2"><button class="btn" data-act="go" data-v="assess">평가 · 채점 화면 열기</button></div>`;
 }
 function tReport(c) {
-  const v = Object.values(c.prog); const thr = c.criteria.threshold; const done = v.filter(p => p.p >= thr).length; const sc = v.map(p => p.score ?? p.exam).filter(x => x != null);
+  const v = Object.values(c.prog); const thr = c.criteria.threshold; const done = doneN(c); const sc = v.map(p => p.score ?? p.exam).filter(x => x != null);
   const band = [[90, 101], [80, 90], [70, 80], [0, 70]].map(([a, b]) => sc.filter(x => x >= a && x < b).length); const mx = Math.max(1, ...band);
   return `<section class="kpis">${kpi('이수율', v.length ? Math.round(done / v.length * 100) : 0, `${done}/${v.length}명`, '', '%')}${kpi('평균 진도', Math.round(avgP(c)), '', '', '%')}${kpi('평균 점수', sc.length ? Math.round(sc.reduce((a, b) => a + b, 0) / sc.length) : 0, `${sc.length}명 응시`, '', '점')}${kpi('질문 수', tqEnsure().filter(x => x.cls === c.name || x.cid === c.id).length, '튜터 · 게시판', '', '건')}</section>
   <div class="grid g2"><div class="card"><div class="ch"><b>점수 분포</b></div>${['90점 이상', '80점대', '70점대', '70점 미만'].map((l, i) => `<div class="tband"><span>${l}</span><i style="width:${band[i] / mx * 100}%"></i><b>${band[i]}</b></div>`).join('')}</div>
@@ -147,7 +147,7 @@ ACT['tc-sel'] = el => { UI.tc = el.value; UI.tst = ''; const c = C(el.value); if
     return { title: '독려 메시지', text: `진도 40% 미만 ${R.length}명에게 보낼 메시지 초안입니다.`, html: `<div class="pvmsg"><b>${esc(ttl)}</b><p>${esc(body)}</p></div>`, steps: [`대상: ${[...new Set(R.map(x => x.c.name))].join(' · ')} 진도 40% 미만 ${R.length}명`, '앱 푸시 + 이메일', '발송 내역 기록'], plan: pid, state: 'pending', cta: `${R.length}명에게 보내기` }; }
   if (/(성과|개선|리포트|보고)/.test(s) && c) { const v = Object.values(c.prog); const low = v.filter(p => p.p < 40).length; const qn = tqEnsure().filter(x => x.cls === c.name || x.cid === c.id).length;
     c.rep = [['초반 이탈 줄이기', `진도 40% 미만 ${low}명 — 1~2차시 영상을 10분 이내로 나누고, 1차시 퀴즈를 쉬운 문항으로 시작합니다.`], ['자주 묻는 질문을 자료에 반영', `학생 질문 ${qn}건 중 과제 형식 · 영상 재생 문의가 많습니다 — 과제 안내문에 예시 답안 구조를 넣습니다.`], ['과제 루브릭 공개', '재제출 사유 대부분이 요구사항 누락입니다 — 루브릭을 과제 화면에 미리 보여 줍니다.'], ['AI 튜터 활용 안내', '튜터 질문이 많은 차시에 복습 퀴즈를 추가해 스스로 점검하게 합니다.']]; logAudit(`성과 · 개선 리포트 — ${c.name}`); save(); UI.tc = c.id; UI.tst = 'report';
-    return { title: '성과 · 개선', text: `「${c.name}」 성과 리포트를 정리했습니다. 수강 ${c.learners.length}명 · 평균 진도 ${Math.round(avgP(c))}% · 이수 ${v.filter(p => p.p >= c.criteria.threshold).length}명.`, html: `<div class="trep">${c.rep.map(x => `<div><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join('')}</div>`, nav: 'home' }; }
+    return { title: '성과 · 개선', text: `「${c.name}」 성과 리포트를 정리했습니다. 수강 ${c.learners.length}명 · 평균 진도 ${Math.round(avgP(c))}% · 이수 ${doneN(c)}명.`, html: `<div class="trep">${c.rep.map(x => `<div><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join('')}</div>`, nav: 'home' }; }
   return base(q);
 }; }
 /* 교수 스튜디오에서 새로 만든 강의는 내 강의로(대화 · 마법사 · 직접 만들기 어느 경로든) */

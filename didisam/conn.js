@@ -1,11 +1,11 @@
-/* 디디쌤 스튜디오 v23 — 외부 연결 허브 · 연결형 업무 자동화(Process) · AI SAM 연결 가이드
+/* 디디쌤 스튜디오 v23 — 외부 연결 허브 · 연결형 업무 자동화 · AI SAM 연결 가이드
    대표님 요청(2026-11-03)
    ① "AI SAM에서 토큰 연결이라던가 필요한 절차를 가이드를 따라서 도와줄 수 있게 해 주고 단계에 포함시켜"
-   ② "슬랙 연결, 구글 연결 등을 통해 업무 자동화와 Process를 금방금방 연결하고 자동화시킬 수 있게 해 줘"
+   ② "슬랙 연결, 구글 연결 등을 통해 업무 자동화를 금방금방 연결하고 자동화시킬 수 있게 해 줘"
    - 운영 › 외부 연결: Claude API 키 · MCP 키 · Slack · Google(Calendar · Sheets · Drive · Gmail) · 토스페이먼츠(읽기 전용) · 채널톡
      카드마다 상태(미연결 · 연결됨 · 점검 필요) · 단계별 안내 · 입력 칸 · [연결 테스트] · [연결 해제]
    - 비밀값(웹훅 주소 · 봇 토큰 · Google 토큰)은 Claude 키와 같은 방식으로 이 브라우저 저장소에만 둔다(S · 내보내기 · 백업에 포함하지 않음). 화면에는 가려서 표시.
-   - 업무 자동화: 실행 단계 Slack 알림 · Sheets 행 추가 · Calendar 일정 · Gmail 발송 추가, 원클릭 Process 템플릿 8종, 단계별 실행 기록(데모)
+   - 업무 자동화: 실행 단계 Slack 알림 · Sheets 행 추가 · Calendar 일정 · Gmail 발송 추가, 원클릭 연결 자동화 템플릿 8종, 단계별 실행 기록(데모)
    - AI SAM: connect_guide · create_automation 도구, 키를 대화에 붙여 넣으면 저장하지 않고 경고 후 카드 입력 칸으로 안내
    - 시작 가이드: '외부 연결' 단계(자동화 앞), 연결이 1개 이상 생기면 자동 완료
    실제 외부 호출 지점은 '운영:' 주석으로 표시한다. 데모는 형식 검증 · 상태 · 흐름까지 완성한다. */
@@ -208,7 +208,7 @@ function cnCard(id) {
     <div class="bar2 cn-acts">${acts}${d.guide ? `<button class="btn sm ghost" data-act="gd-start" data-v="${d.guide}">${ic('spark', 13)} 따라하기</button>` : ''}</div>${last ? `<p class="mini cn-last">최근 확인: ${esc(last)}</p>` : ''}</div>`;
 }
 
-/* ═════════ 연결형 자동화(Process) ═════════ */
+/* ═════════ 연결형 자동화 ═════════ */
 Object.assign(ACTION, { slack: 'Slack 알림 보내기', gsheet: 'Google Sheets 행 추가', gcal: 'Google Calendar 일정 만들기', gmail: 'Gmail 메일 보내기' });
 if (!TRIG['ev:consultNew']) TRIG['ev:consultNew'] = '상담 접수 시';
 const CN_ACT = { slack: ['slack', '', 'Slack'], gsheet: ['google', 'sheets', 'Google Sheets'], gcal: ['google', 'calendar', 'Google Calendar'], gmail: ['google', 'gmail', 'Gmail'] };
@@ -232,11 +232,11 @@ function cnMake(k, o = {}) {
   const ex = S.autos.find(a => a.key === key); if (ex && !o.dup) return { a: ex, dup: true };
   const miss = cnNeeds(T.acts); const a = A(key, o.name || T.n, T.tr, T.cond, T.acts.slice(), T.ap, !miss.length);
   a.proc = true; a.custom = true; a.cfg = { ch: o.ch || cnEnsure().slack.ch || '#교육운영' };
-  S.autos.unshift(a); logAudit(`Process 생성 — ${a.name}${miss.length ? ` (연결 필요: ${miss.join(', ')})` : ''}`); return { a, miss };
+  S.autos.unshift(a); logAudit(`연결 자동화 생성 — ${a.name}${miss.length ? ` (연결 필요: ${miss.join(', ')})` : ''}`); return { a, miss };
 }
 function cnMakeCustom(name, tr, acts, ch) {
-  const a = A('cn-custom', String(name || '새 Process').slice(0, 40), TRIG[tr] ? tr : 'sc:mon', '대화 · 화면에서 만든 Process', acts.filter(x => ACTION[x]).slice(0, 6), acts.includes('gmail'), !cnNeeds(acts).length);
-  a.key = uid('cnp'); a.proc = true; a.custom = true; a.cfg = { ch: ch || cnEnsure().slack.ch || '#교육운영' }; S.autos.unshift(a); logAudit(`Process 생성 — ${a.name}`); return a;
+  const a = A('cn-custom', String(name || '새 연결 자동화').slice(0, 40), TRIG[tr] ? tr : 'sc:mon', '대화 · 화면에서 만든 연결 자동화', acts.filter(x => ACTION[x]).slice(0, 6), acts.includes('gmail'), !cnNeeds(acts).length);
+  a.key = uid('cnp'); a.proc = true; a.custom = true; a.cfg = { ch: ch || cnEnsure().slack.ch || '#교육운영' }; S.autos.unshift(a); logAudit(`연결 자동화 생성 — ${a.name}`); return a;
 }
 function cnTplCard(T) { const miss = cnNeeds(T.acts); const svc = cnNeedSvc(T.acts); const have = S.autos.some(a => a.key === 'cn-' + T.k);
   return `<div class="cn-tpl ${miss.length ? 'need' : ''}" data-tpl="${T.k}"><div class="cn-tflow"><span class="tr">${esc(trigLabel(T.tr))}</span>${T.acts.map(a => `<span class="ac ${CN_ACT[a] ? 'cx' : ''} ${cnNeed(a) ? 'miss' : ''}">${esc(ACTION[a] || a)}</span>`).join('')}</div><b>${esc(T.n)}</b><p>${esc(T.d)}</p>
@@ -265,7 +265,7 @@ function cnExec(a, T) {
     if (k === 'inactive7') return S.members.filter(m => m.last && daysAgo(m.last) >= 7).map(m => m.id);
     if (k === 'consult-cal') return (S.consults || []).slice(0, 3).map(x => x.id);
     if (k === 'weekly-report') return ['report'];
-    if (k === 'done-cert') return [...new Set(S.classes.flatMap(c => Object.entries(c.prog || {}).filter(([, p]) => (p.p || 0) >= ((c.criteria || {}).threshold || 80)).map(([id]) => id)))];
+    if (k === 'done-cert') return [...new Set(S.classes.flatMap(c => (c.learners || []).filter(id => clsDone(c, id))))];
     if (k === 'refund-alert') return (S.pays || []).filter(p => p.status === '환불 신청').map(p => p.id);
     if (k === 'question-slack') return S.posts.filter(p => p.kind === '질문' && !p.replies).map(p => p.id); } catch (e) { }
   return base(a); }; }
@@ -275,17 +275,17 @@ function cnExec(a, T) {
   if (r) { r.steps = steps; r.proc = true; r.st = !bad ? '완료' : bad === steps.length ? '연결 필요' : '일부 건너뜀'; }
   save(); return `${res}${bad ? ` · 연결 필요로 ${bad}단계 건너뜀` : ` · 연결 단계 ${steps.length}개 완료(데모)`}`; }; }
 function cnRunsHTML(lim = 12) { const R = (S.runs || []).filter(r => r.steps).slice(0, lim);
-  return table(['시각', 'Process', '단계별 결과', '상태'], R.map(r => [esc(r.at), esc(r.name), `<div class="cn-steps">${r.steps.map(s => `<span class="${s.ok ? 'ok' : 'no'}" title="${esc(s.msg)}">${s.ok ? '✓' : '!'} ${esc(ACTION[s.act] || s.act)}<small>${esc(s.msg)}</small></span>`).join('')}</div>`, tag(r.st, r.st === '완료' ? 'g' : 'y')]), '아직 Process 실행 기록이 없습니다. 템플릿을 만들고 [지금 실행]으로 확인하세요.'); }
-/* Process 직접 만들기: 트리거 → 단계 최대 5개(순서대로) */
+  return table(['시각', '연결 자동화', '단계별 결과', '상태'], R.map(r => [esc(r.at), esc(r.name), `<div class="cn-steps">${r.steps.map(s => `<span class="${s.ok ? 'ok' : 'no'}" title="${esc(s.msg)}">${s.ok ? '✓' : '!'} ${esc(ACTION[s.act] || s.act)}<small>${esc(s.msg)}</small></span>`).join('')}</div>`, tag(r.st, r.st === '완료' ? 'g' : 'y')]), '아직 연결 자동화 실행 기록이 없습니다. 템플릿을 만들고 [지금 실행]으로 확인하세요.'); }
+/* 연결 자동화 직접 만들기: 트리거 → 단계 최대 5개(순서대로) */
 function cnBuilder(pre) {
   const opt = sel => `<option value="">— 없음 —</option>${Object.entries(ACTION).map(([k, v]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>${esc(v)}${CN_ACT[k] && cnNeed(k) ? ' (연결 필요)' : ''}</option>`).join('')}`;
   const P = pre || { n: '', tr: 'ev:join', acts: ['slack', 'gsheet'] };
-  modal('Process 만들기 — 트리거 → 단계', `<label class="fl">이름<input name="n" maxlength="40" value="${esc(P.n)}" placeholder="예: 신규 가입 환영 Process"></label><label class="fl">트리거(언제)<select name="t">${Object.entries(TRIG).map(([k, v]) => `<option value="${k}" ${P.tr === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
+  modal('연결 자동화 만들기 — 시작 조건 → 단계', `<label class="fl">이름<input name="n" maxlength="40" value="${esc(P.n)}" placeholder="예: 신규 가입 환영 연결 자동화"></label><label class="fl">언제(시작 조건)<select name="t">${Object.entries(TRIG).filter(([k]) => typeof auTrigOK !== 'function' || auTrigOK(k, P.tr)).map(([k, v]) => `<option value="${k}" ${P.tr === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
     <div class="cn-bsteps">${[0, 1, 2, 3, 4].map(i => `<label class="fl"><span>단계 ${i + 1}</span><select name="s${i}">${opt(P.acts[i] || '')}</select></label>`).join('')}</div>
     <label class="fl">Slack 채널(선택)<input name="ch" maxlength="80" placeholder="${esc(cnEnsure().slack.ch || '#교육운영')}"></label><p class="mini">단계는 위에서부터 순서대로 실행됩니다. 연결이 없는 단계는 실행 시 건너뛰고 기록에 남깁니다.</p>`,
     [{ id: 'c', label: '취소' }, { id: 'ok', label: '만들기', kind: 'pri', run: w => { const acts = [0, 1, 2, 3, 4].map(i => fv(w, 's' + i)).filter(Boolean); if (!acts.length) { toast('단계를 하나 이상 고르세요.', 'warn'); return false; }
       const ch = fv(w, 'ch'); if (ch && !CN_RE.ch.test(ch)) { toast('채널은 #채널이름 형식으로 입력하세요.', 'warn'); return false; }
-      const a = cnMakeCustom(fv(w, 'n') || '새 Process', fv(w, 't'), [...new Set(acts)], ch); save(); render(); const miss = cnNeeds(a.actions); toast(miss.length ? `「${a.name}」을 꺼진 상태로 만들었습니다. 연결 필요: ${miss.join(', ')}` : `「${a.name}」을 만들었습니다.`, miss.length ? 'warn' : 'ok'); } }], true);
+      const a = cnMakeCustom(fv(w, 'n') || '새 연결 자동화', fv(w, 't'), [...new Set(acts)], ch); save(); render(); const miss = cnNeeds(a.actions); toast(miss.length ? `「${a.name}」을 꺼진 상태로 만들었습니다. 연결 필요: ${miss.join(', ')}` : `「${a.name}」을 만들었습니다.`, miss.length ? 'warn' : 'ok'); } }], true);
 }
 
 /* ═════════ 허브 화면 ═════════ */
@@ -294,19 +294,19 @@ VIEWS.conn = () => {
   cnEnsure(); const St = CN_IDS.map(cnStatus); const on = St.filter(s => s.st === CN_ST.on).length, chk = St.filter(s => s.st === CN_ST.chk).length;
   const P = S.autos.filter(a => (a.actions || []).some(x => CN_ACT[x])); const L = cnEnsure().log;
   return head('외부 연결', '외부 서비스를 연결하면 AI SAM과 업무 자동화가 Slack · Google · 결제와 함께 일합니다. 키 · 토큰은 이 브라우저에만 저장되고 화면에는 가려서 표시합니다.', `<button class="btn ai" data-act="chat-q" data-v="Slack 연결 도와줘">${ic('spark', 14)} AI SAM에게 연결 맡기기</button><button class="btn" data-act="go" data-v="auto">업무 자동화</button>`) +
-    `<section class="grid g4">${kpi('연결됨', `${on}/${CN_IDS.length}`, chk ? `점검 필요 ${chk}개` : '정상', on ? 'g' : '')}${kpi('연결형 Process', P.length + '개', `켜짐 ${P.filter(a => a.on).length}개`)}${kpi('연결 필요 Process', P.filter(a => cnNeeds(a.actions).length).length + '개', '연결하면 바로 실행')}${kpi('최근 연결 기록', L.length ? L[0].at.split(' ').slice(0, 3).join(' ') : '없음', L.length ? `${L.length}건` : '')}</section>
+    `<section class="grid g4">${kpi('연결됨', `${on}/${CN_IDS.length}`, chk ? `점검 필요 ${chk}개` : '정상', on ? 'g' : '')}${kpi('연결 자동화', P.length + '개', `켜짐 ${P.filter(a => a.on).length}개`)}${kpi('연결이 필요한 자동화', P.filter(a => cnNeeds(a.actions).length).length + '개', '연결하면 바로 실행')}${kpi('최근 연결 기록', L.length ? L[0].at.split(' ').slice(0, 3).join(' ') : '없음', L.length ? `${L.length}건` : '')}</section>
     <p class="mini cn-sec">${ic('lock' in IC ? 'lock' : 'gear', 13)} 키 · 토큰은 대화창(AI SAM)에 붙여 넣지 마세요. AI SAM은 단계를 안내하고 이 화면의 입력 칸을 열어 드립니다. 데모에서는 실제 외부 호출 대신 형식 확인 · 기록만 남깁니다(Slack 웹훅 제외).</p>
     <div class="cn-grid">${CN_IDS.map(cnCard).join('')}</div>
-    <div class="ph cn-ph"><div class="phl"><h2>Process 템플릿</h2><p>트리거 하나에 여러 단계를 잇는 연결형 자동화입니다. 누르면 업무 자동화에 바로 추가됩니다.</p></div><div class="phr"><button class="btn" data-act="cn-build">+ Process 직접 만들기</button></div></div>${cnTplHTML()}
-    <h2 class="h2">Process 실행 기록</h2>${cnRunsHTML(8)}
+    <div class="ph cn-ph"><div class="phl"><h2>연결 자동화 템플릿</h2><p>시작 조건 하나에 여러 단계를 잇는 연결형 자동화입니다. 누르면 업무 자동화에 바로 추가됩니다.</p></div><div class="phr"><button class="btn" data-act="cn-build">+ 연결 자동화 직접 만들기</button></div></div>${cnTplHTML()}
+    <h2 class="h2">연결 자동화 실행 기록</h2>${cnRunsHTML(8)}
     <details class="cn-log"><summary>연결 기록 ${L.length}건</summary>${table(['시각', '서비스', '내용', '결과'], L.slice(0, 20).map(x => [esc(x.at), esc((CN[x.svc] || {}).name || x.svc), esc(x.msg), x.ok ? tag('정상', 'g') : tag('건너뜀', 'y')]), '기록이 없습니다.')}</details>`;
 };
 /* 업무 자동화 화면: 템플릿 · 연결 필요 표시 · 단계별 실행 기록 */
 { const base = VIEWS.auto; VIEWS.auto = () => { let h = base(); cnEnsure();
-  const strip = `<div class="cn-astrip">${['slack', 'google'].map(id => { const s = cnStatus(id); return `<button class="cn-chip ${cnTone(s.st)}" data-act="cn-open" data-v="${id}"><i style="background:${CN[id].col}">${CN[id].logo}</i>${esc(CN[id].name)} ${esc(s.st)}</button>`; }).join('')}<span class="sp"></span><button class="btn sm" data-act="cn-build">+ Process 만들기</button><button class="btn sm ghost" data-act="go" data-v="conn">외부 연결 관리</button></div>`;
-  const gal = `<details class="cn-agal" ${UI.cnGal === false ? '' : 'open'}><summary data-act="cn-gal"><b>Slack · Google Process 템플릿</b><small>원클릭으로 만들고, 연결이 없으면 안내로 바로 이동합니다</small></summary>${cnTplHTML()}</details>`;
+  const strip = `<div class="cn-astrip">${['slack', 'google'].map(id => { const s = cnStatus(id); return `<button class="cn-chip ${cnTone(s.st)}" data-act="cn-open" data-v="${id}"><i style="background:${CN[id].col}">${CN[id].logo}</i>${esc(CN[id].name)} ${esc(s.st)}</button>`; }).join('')}<span class="sp"></span><button class="btn sm" data-act="cn-build">+ 연결 자동화 만들기</button><button class="btn sm ghost" data-act="go" data-v="conn">외부 연결 관리</button></div>`;
+  const gal = `<details class="cn-agal" ${UI.cnGal === false ? '' : 'open'}><summary data-act="cn-gal"><b>Slack · Google 연결 자동화 템플릿</b><small>원클릭으로 만들고, 연결이 없으면 안내로 바로 이동합니다</small></summary>${cnTplHTML()}</details>`;
   const i = h.indexOf('<div class="autos">'); h = i >= 0 ? h.slice(0, i) + strip + gal + h.slice(i) : h + strip + gal;
-  return h + `<h2 class="h2">Process 단계별 실행 기록</h2>${cnRunsHTML(10)}`; }; }
+  return h + `<h2 class="h2">연결 자동화 단계별 실행 기록</h2>${cnRunsHTML(10)}`; }; }
 AFTER.push(cur => { if (!S || !S.org || (cur && cur.tab !== 'auto')) return; (S.autos || []).forEach(a => { const miss = cnNeeds(a.actions); if (!miss.length) return; const b = document.querySelector(`.auto [data-act="auto-run"][data-v="${a.id}"]`); const box = b && b.closest('.auto'); if (!box || box.querySelector('.cn-need')) return;
   const svc = cnNeedSvc(a.actions); box.querySelector('.flow')?.insertAdjacentHTML('afterend', `<div class="cn-need">${tag('연결 필요', 'y')} <span>${esc(miss.join(' · '))}</span>${svc.map(s => `<button class="btn sm" data-act="cn-open" data-v="${s}">${esc(CN[s].name)} 연결 안내</button>`).join('')}</div>`); }); });
 
@@ -325,7 +325,7 @@ ACT['cn-toss'] = () => { if (typeof bMenuOn === 'function') bMenuOn('sales'); sa
 ACT['cn-mcp'] = () => { UI.settings = 'integr'; go('settings'); setTimeout(() => { const n = $('#mcpCard'); n && n.scrollIntoView({ block: 'center' }); }, 160); };
 ACT['cn-tpl'] = el => { const T = cnTpl(el.dataset.v); if (!T) return; const have = S.autos.some(a => a.key === 'cn-' + T.k); const r = cnMake(T.k, { dup: have }); if (!r) return;
   save(); render(); if (typeof renderThreads === 'function') renderThreads(); const miss = cnNeeds(T.acts);
-  if (miss.length) { const svc = cnNeedSvc(T.acts)[0]; modal('Process를 꺼진 상태로 만들었습니다', `<p>「${esc(T.n)}」을 업무 자동화에 추가했습니다. 아래 연결이 끝나면 켜서 쓰세요.</p><div class="cn-need">${tag('연결 필요', 'y')} <span>${esc(miss.join(' · '))}</span></div>`, [{ id: 'c', label: '나중에' }, { id: 'ok', label: `${CN[svc].name} 연결 안내 열기`, kind: 'pri', run: () => { setTimeout(() => cnFocus(svc), 0); } }]); }
+  if (miss.length) { const svc = cnNeedSvc(T.acts)[0]; modal('연결 자동화를 꺼진 상태로 만들었습니다', `<p>「${esc(T.n)}」을 업무 자동화에 추가했습니다. 아래 연결이 끝나면 켜서 쓰세요.</p><div class="cn-need">${tag('연결 필요', 'y')} <span>${esc(miss.join(' · '))}</span></div>`, [{ id: 'c', label: '나중에' }, { id: 'ok', label: `${CN[svc].name} 연결 안내 열기`, kind: 'pri', run: () => { setTimeout(() => cnFocus(svc), 0); } }]); }
   else toast(`「${T.n}」을 만들어 켰습니다. 업무 자동화에서 [지금 실행]으로 확인하세요.`, 'ok'); };
 ACT['cn-build'] = () => cnBuilder();
 ACT['cn-gal'] = el => { setTimeout(() => { UI.cnGal = !!el.closest('details')?.open; }, 0); };
@@ -335,7 +335,7 @@ ACT['cn-gal'] = el => { setTimeout(() => { UI.cnGal = !!el.closest('details')?.o
 /* ═════════ 시작 가이드: '외부 연결' 단계 · 자동화 단계에 템플릿 안내 ═════════ */
 if (!BLD_STEPS.some(s => s.id === 'conn')) { const i = BLD_STEPS.findIndex(s => s.id === 'auto'); BLD_STEPS.splice(i < 0 ? BLD_STEPS.length : i, 0, { id: 'conn', n: '외부 연결', d: 'Claude 키 · Slack · Google · 결제', view: 'conn', def: () => true }); }
 { const base = bQ; bQ = id => id === 'conn' ? ['Slack 연결 도와줘', 'Google 연결 도와줘', 'Claude API 키 연결 방법 알려줘'] : id === 'auto' ? ['Slack · Google 자동화 템플릿 보여줘', ...base(id)] : base(id); }
-{ const base = bGuideText; bGuideText = id => id === 'conn' ? 'Claude 키 · Slack · Google · 결제(토스페이먼츠) · 채널톡을 연결합니다. 카드마다 어디서 무엇을 복사하는지 단계별로 안내합니다.\n키 · 토큰은 대화창에 붙여 넣지 말고 카드의 입력 칸에 넣으세요. "Slack 연결 도와줘"라고 말씀하시면 AI SAM이 단계를 하나씩 안내합니다.' : id === 'auto' ? base(id) + '\nSlack · Google을 연결했다면 「신규 가입 → Slack 알림 + Sheets 기록」 같은 Process 템플릿을 원클릭으로 만들 수 있습니다.' : base(id); }
+{ const base = bGuideText; bGuideText = id => id === 'conn' ? 'Claude 키 · Slack · Google · 결제(토스페이먼츠) · 채널톡을 연결합니다. 카드마다 어디서 무엇을 복사하는지 단계별로 안내합니다.\n키 · 토큰은 대화창에 붙여 넣지 말고 카드의 입력 칸에 넣으세요. "Slack 연결 도와줘"라고 말씀하시면 AI SAM이 단계를 하나씩 안내합니다.' : id === 'auto' ? base(id) + '\nSlack · Google을 연결했다면 「신규 가입 → Slack 알림 + Sheets 기록」 같은 연결 자동화 템플릿을 원클릭으로 만들 수 있습니다.' : base(id); }
 AFTER.unshift(() => { if (!S || !S.org || !S.bld || !S.bld.steps) return; let ch = 0; const st = S.bld.steps.conn;
   if (!st) { S.bld.steps.conn = { on: true, done: false }; ch = 1; } else if (st.on && !st.done) { try { if (cnMade() >= 1) { st.done = true; ch = 1; } } catch (e) { } }
   if (S.nav && S.nav.tabs && typeof navAdd === 'function' && !Object.values(S.nav.tabs).some(L => L.some(x => x.id === 'conn'))) { navAdd('conn', true); ch = 1; }
@@ -348,18 +348,18 @@ if (typeof GUIDES !== 'undefined' && !GUIDES.some(g => g.id === 'cn-slack')) GUI
     { t: 'Slack 앱 만들기', d: CN.slack.steps[0] + ' ' + CN.slack.steps[1], done: { manual: 1 } },
     { t: '채널 고르고 Webhook URL 복사', d: CN.slack.steps[2] + ' ' + CN.slack.steps[3], go: 'conn', sel: '#cnSlUrl', done: { manual: 1 } },
     { t: '연결 테스트', d: '카드의 [연결 테스트]를 누르면 채널로 테스트 메시지를 보냅니다. 연습만 하려면 [데모로 연결]을 누릅니다.', go: 'conn', sel: '#cnCard-slack [data-act="cn-test"]', done: { inc: 'cn_slack' } },
-    { t: 'Process 템플릿 만들기', d: '「신규 가입 → Slack 알림 + Sheets 기록」 같은 템플릿을 원클릭으로 업무 자동화에 추가합니다.', go: 'auto', done: { inc: 'autos' } }] },
+    { t: '연결 자동화 템플릿 만들기', d: '「신규 가입 → Slack 알림 + Sheets 기록」 같은 템플릿을 원클릭으로 업무 자동화에 추가합니다.', go: 'auto', done: { inc: 'autos' } }] },
   { id: 'cn-google', cat: '외부 연결', role: 'admin', title: 'Google Workspace 연결', mins: 6, desc: 'Calendar · Sheets · Drive · Gmail 권한을 필요한 만큼만', steps: [
     { t: '쓸 서비스 고르기', d: CN.google.steps[0], go: 'conn', sel: '#cnCard-google .cn-svcs', done: { visit: 'conn' } },
     { t: 'Google 계정으로 연결', d: CN.google.steps[1] + ' ' + CN.google.steps[2], go: 'conn', sel: '#cnCard-google [data-act="cn-gconnect"]', done: { inc: 'cn_google' } },
     { t: '스프레드시트 지정 · 테스트', d: CN.google.steps[3] + ' ' + CN.google.steps[4], go: 'conn', sel: '#cnGSheet', done: { manual: 1 } },
-    { t: 'Process 템플릿 만들기', d: '「상담 접수 → Calendar 일정 + Slack」 · 「수료 → Gmail 축하 + Sheets 수료 대장」을 만들어 봅니다.', go: 'auto', done: { inc: 'autos' } }] },
+    { t: '연결 자동화 템플릿 만들기', d: '「상담 접수 → Calendar 일정 + Slack」 · 「수료 → Gmail 축하 + Sheets 수료 대장」을 만들어 봅니다.', go: 'auto', done: { inc: 'autos' } }] },
   { id: 'cn-claude', cat: '외부 연결', role: 'admin', title: 'Claude API 키 연결', mins: 4, desc: 'AI SAM 답변 품질을 높이는 Claude 연결', steps: [
     { t: 'API 키 발급', d: CN.claude.steps[0] + ' ' + CN.claude.steps[1], done: { manual: 1 } },
     { t: '입력 칸에 붙여 넣기 · 테스트', d: CN.claude.steps[2], go: 'conn', sel: '#cnClKey', done: { inc: 'cn_claude' } },
     { t: '사용 한도 정하기', d: CN.claude.steps[3], done: { manual: 1 } }] });
 
-/* ═════════ AI SAM: 연결 가이드 · Process 만들기 도구 ═════════ */
+/* ═════════ AI SAM: 연결 가이드 · 연결 자동화 만들기 도구 ═════════ */
 function cnGuideMsg(id) { const d = CN[id]; const s = cnStatus(id);
   return { title: `${d.name} 연결 가이드`, text: `${d.name} 연결을 단계별로 안내합니다. 지금 상태: ${s.st}${s.note ? ` (${s.note})` : ''}.\n키 · 토큰 · 웹훅 주소는 대화창에 붙여 넣지 마시고, 아래 [연결 카드 열기]를 눌러 카드의 입력 칸에 넣어 주세요. 이 브라우저에만 가려서 저장됩니다.`,
     html: `<ol class="cn-mlist">${d.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>${d.alt ? `<p class="mini">${esc(d.alt)}</p>` : ''}<div class="bqs"><button type="button" class="chip done" data-act="cn-open" data-v="${id}">${esc(d.name)} 연결 카드 열기</button>${d.guide ? `<button type="button" class="chip" data-act="gd-start" data-v="${d.guide}">따라하기 시작</button>` : ''}</div>` }; }
@@ -367,25 +367,25 @@ function cnAutoPlan(x, push) {
   const tk = String(x.template || '').trim(); const T = cnTpl(tk) || CN_TPL.find(t => tk && (t.n.includes(tk) || tk.includes(t.k)));
   let acts, tr, nm;
   if (T) { acts = T.acts; tr = T.tr; nm = String(x.name || T.n).slice(0, 40); }
-  else { acts = (Array.isArray(x.steps) ? x.steps : []).map(String).filter(k => ACTION[k]).slice(0, 5); tr = TRIG[x.trigger] ? x.trigger : 'sc:mon'; nm = String(x.name || '새 Process').slice(0, 40); if (!acts.length) return { ok: false, 이유: `template은 ${CN_TPL.map(t => t.k).join(' · ')} 중 하나이거나, steps에 ${Object.keys(ACTION).join(' · ')} 중 1개 이상이 필요합니다` }; }
+  else { acts = (Array.isArray(x.steps) ? x.steps : []).map(String).filter(k => ACTION[k]).slice(0, 5); tr = TRIG[x.trigger] ? x.trigger : 'sc:mon'; nm = String(x.name || '새 연결 자동화').slice(0, 40); if (!acts.length) return { ok: false, 이유: `template은 ${CN_TPL.map(t => t.k).join(' · ')} 중 하나이거나, steps에 ${Object.keys(ACTION).join(' · ')} 중 1개 이상이 필요합니다` }; }
   const ch = x.slack_channel && CN_RE.ch.test(String(x.slack_channel)) ? String(x.slack_channel) : '';
   const miss = cnNeeds(acts); const svc = cnNeedSvc(acts);
-  const card = { title: `Process — ${nm}`, text: `트리거 「${trigLabel(tr)}」에서 아래 단계를 순서대로 실행하는 Process를 만듭니다.${miss.length ? `\n연결 필요: ${miss.join(', ')} — 승인하면 꺼진 상태로 만들고, 연결을 마치면 켤 수 있습니다.` : '\n승인하시면 켜진 상태로 업무 자동화에 추가됩니다.'}`,
-    steps: [`트리거: ${trigLabel(tr)}`, ...acts.map((a, i) => `${i + 1}단계: ${ACTION[a]}${cnNeed(a) ? ' — 연결 필요' : ''}`)],
-    html: svc.length ? `<div class="bqs">${svc.map(s => `<button type="button" class="chip" data-act="cn-open" data-v="${s}">${esc(CN[s].name)} 연결 안내</button>`).join('')}</div>` : '', cta: miss.length ? '꺼진 상태로 만들기' : 'Process 만들기' };
-  const run = () => { const a = T ? cnMake(T.k, { name: nm, ch, dup: true }).a : cnMakeCustom(nm, tr, acts, ch); return `「${a.name}」 Process를 ${a.on ? '켜진' : '꺼진'} 상태로 만들었습니다.${a.on ? ' [지금 실행]으로 동작을 확인하세요.' : ` 연결 필요: ${cnNeeds(a.actions).join(', ')}`}`; };
+  const card = { title: `연결 자동화 — ${nm}`, text: `시작 조건 「${trigLabel(tr)}」에서 아래 단계를 순서대로 실행하는 연결 자동화를 만듭니다.${miss.length ? `\n연결 필요: ${miss.join(', ')} — 승인하면 꺼진 상태로 만들고, 연결을 마치면 켤 수 있습니다.` : '\n승인하시면 켜진 상태로 업무 자동화에 추가됩니다.'}`,
+    steps: [`시작 조건: ${trigLabel(tr)}`, ...acts.map((a, i) => `${i + 1}단계: ${ACTION[a]}${cnNeed(a) ? ' — 연결 필요' : ''}`)],
+    html: svc.length ? `<div class="bqs">${svc.map(s => `<button type="button" class="chip" data-act="cn-open" data-v="${s}">${esc(CN[s].name)} 연결 안내</button>`).join('')}</div>` : '', cta: miss.length ? '꺼진 상태로 만들기' : '연결 자동화 만들기' };
+  const run = () => { const a = T ? cnMake(T.k, { name: nm, ch, dup: true }).a : cnMakeCustom(nm, tr, acts, ch); return `「${a.name}」 연결 자동화를 ${a.on ? '켜진' : '꺼진'} 상태로 만들었습니다.${a.on ? ' [지금 실행]으로 동작을 확인하세요.' : ` 연결 필요: ${cnNeeds(a.actions).join(', ')}`}`; };
   push(card, run); return { ok: true, 승인필요: true, 이름: nm, 단계: acts.map(a => ACTION[a]), 연결필요: miss };
 }
 AG_TOOLS.push(
   { name: 'connect_guide', description: '외부 서비스 연결 절차를 단계별 안내 카드로 대화에 띄우고, 외부 연결 화면의 해당 카드 입력 칸을 엽니다. service: claude(Claude API 키) · mcp(외부 AI 연결 키) · slack · google(Calendar · Sheets · Drive · Gmail) · toss(토스페이먼츠, 읽기 전용) · channeltalk(채널톡). 토큰 · API 키 · 웹훅 주소는 절대 대화로 받지 말고 이 도구로 카드 입력 칸을 안내하세요. 결과로 현재 연결 상태와 단계가 돌아옵니다.', input_schema: { type: 'object', properties: { service: { type: 'string', enum: CN_IDS } }, required: ['service'] } },
-  { name: 'create_automation', description: `Slack · Google 연결을 쓰는 업무 자동화 Process(트리거 → 여러 단계)를 계획 카드로 만듭니다(승인 후 생성). template: ${CN_TPL.map(t => `${t.k}(${t.n})`).join(' · ')} — 맞는 템플릿이 없으면 template='custom'과 trigger(${Object.keys(TRIG).join(' · ')}) · steps(순서대로: slack · gsheet · gcal · gmail · msg · manager · report · draft · task 등)를 넣습니다. 필요한 연결이 없으면 카드에 '연결 필요'와 연결 안내 버튼이 붙습니다.`, input_schema: { type: 'object', properties: { template: { type: 'string' }, name: { type: 'string' }, trigger: { type: 'string' }, steps: { type: 'array', items: { type: 'string' } }, slack_channel: { type: 'string', description: '#채널이름(선택)' } }, required: ['template'] } });
+  { name: 'create_automation', description: `Slack · Google 연결을 쓰는 업무 자동화(트리거 → 여러 단계)를 계획 카드로 만듭니다(승인 후 생성). template: ${CN_TPL.map(t => `${t.k}(${t.n})`).join(' · ')} — 맞는 템플릿이 없으면 template='custom'과 trigger(${Object.keys(TRIG).join(' · ')}) · steps(순서대로: slack · gsheet · gcal · gmail · msg · manager · report · draft · task 등)를 넣습니다. 필요한 연결이 없으면 카드에 '연결 필요'와 연결 안내 버튼이 붙습니다.`, input_schema: { type: 'object', properties: { template: { type: 'string' }, name: { type: 'string' }, trigger: { type: 'string' }, steps: { type: 'array', items: { type: 'string' } }, slack_channel: { type: 'string', description: '#채널이름(선택)' } }, required: ['template'] } });
 { const base = agRun; agRun = (name, x, ctx) => { x = x || {};
   if (name === 'connect_guide') { const id = cnAlias(x.service) || String(x.service || ''); if (!CN[id]) return { ok: false, 이유: `service는 ${CN_IDS.join(' · ')} 중 하나입니다` }; const s = cnStatus(id); ctx.cards.push(cnGuideMsg(id)); ctx.after.push(() => cnFocus(id));
     return { ok: true, 서비스: CN[id].name, 상태: s.st, 상세: s.note, 단계: CN[id].steps, 안내: '연결 카드를 대화에 띄우고 입력 칸을 열었습니다. 키는 카드 입력 칸에서만 받습니다. 사용자에게 키를 대화로 보내 달라고 하지 마세요.' }; }
   if (name === 'create_automation') return cnAutoPlan(x, (card, run) => agCard(ctx, card, run, 'auto'));
   return base(name, x, ctx); }; }
 /* AI SAM 지시문에 연결 규칙을 덧붙인다(AG_SYS는 const라 요청 직전에 추가) */
-const CN_RULES = () => `\n외부 연결 · 연결형 자동화:\n- Slack · Google · Claude 키 · MCP · 토스페이먼츠 · 채널톡 연결이나 토큰 · 키 · 웹훅 절차를 물으면 connect_guide로 단계 카드를 띄웁니다. 키 · 토큰 · 웹훅 주소를 대화창에 붙여 넣으라고 절대 요청하지 않습니다. 입력은 항상 연결 카드의 입력 칸에서 합니다.\n- Slack 알림 · Sheets 기록 · Calendar 일정 · Gmail 발송이 들어간 자동화 · Process는 run_studio_command 대신 create_automation을 씁니다. 필요한 연결이 없으면 함께 connect_guide를 제안합니다.\n- 현재 연결: ${CN_IDS.map(id => `${CN[id].name}=${cnStatus(id).st}`).join(', ')}.`;
+const CN_RULES = () => `\n외부 연결 · 연결형 자동화:\n- Slack · Google · Claude 키 · MCP · 토스페이먼츠 · 채널톡 연결이나 토큰 · 키 · 웹훅 절차를 물으면 connect_guide로 단계 카드를 띄웁니다. 키 · 토큰 · 웹훅 주소를 대화창에 붙여 넣으라고 절대 요청하지 않습니다. 입력은 항상 연결 카드의 입력 칸에서 합니다.\n- Slack 알림 · Sheets 기록 · Calendar 일정 · Gmail 발송이 들어간 자동화는 run_studio_command 대신 create_automation을 씁니다. 필요한 연결이 없으면 함께 connect_guide를 제안합니다.\n- 현재 연결: ${CN_IDS.map(id => `${CN[id].name}=${cnStatus(id).st}`).join(', ')}.`;
 { const base = CL.call; CL.call = function (o) { try { if (o && typeof o.system === 'string' && Array.isArray(o.tools) && o.tools.some(t => t.name === 'connect_guide')) o = { ...o, system: o.system + CN_RULES() }; } catch (e) { } return base.call(CL, o); }; }
 
 /* 대화창에 키를 붙여 넣으면: 저장 · 전송하지 않고 가린 뒤 카드 입력 칸으로 안내 */
@@ -404,8 +404,8 @@ function cnScrub(s) { let out = String(s || ''), svc = '', hit = false; CN_SECRE
   if (/(자동화|프로세스|process|워크플로)/i.test(s) && /(슬랙|slack|시트|sheets|gmail|지메일|메일|캘린더|calendar|템플릿)/i.test(s)) {
     const tk = /가입/.test(s) ? 'join-notify' : /결제|영수/.test(s) ? 'pay-receipt' : /미접속/.test(s) ? 'inactive7' : /상담/.test(s) ? 'consult-cal' : /주간|리포트|보고/.test(s) ? 'weekly-report' : /수료/.test(s) ? 'done-cert' : /환불/.test(s) ? 'refund-alert' : /질문/.test(s) ? 'question-slack' : '';
     if (tk && /(만들|추가|생성|켜|연결해|해줘|해 줘)/.test(s) && !/템플릿/.test(s)) { let out = null; const res = cnAutoPlan({ template: tk }, (card, run) => { const pid = uid('p'); PLANS[pid] = { run, go: 'auto' }; out = { ...card, plan: pid, state: 'pending' }; }); if (out && res.ok) return out; }
-    return { title: 'Process 템플릿', text: `Slack · Google을 잇는 Process 템플릿 ${CN_TPL.length}종입니다. 누르면 업무 자동화에 바로 추가되고, 연결이 없으면 꺼진 상태로 만든 뒤 연결 안내를 엽니다.\n지금 연결: Slack ${cnStatus('slack').st} · Google ${cnStatus('google').st}`,
+    return { title: '연결 자동화 템플릿', text: `Slack · Google을 잇는 연결 자동화 템플릿 ${CN_TPL.length}종입니다. 누르면 업무 자동화에 바로 추가되고, 연결이 없으면 꺼진 상태로 만든 뒤 연결 안내를 엽니다.\n지금 연결: Slack ${cnStatus('slack').st} · Google ${cnStatus('google').st}`,
       html: `<div class="bqs cn-mtpl">${CN_TPL.map(t => `<button type="button" class="chip ${cnNeeds(t.acts).length ? '' : 'done'}" data-act="cn-tpl" data-v="${t.k}">${esc(t.n)}${cnNeeds(t.acts).length ? ' · 연결 필요' : ''}</button>`).join('')}</div>`, go: 'auto' }; }
   if (svcHit && wantConn && !/튜터/.test(s)) { const id = cnAlias(s.match(/(슬랙|slack|구글|google|지메일|gmail|스프레드시트|sheets?|드라이브|drive|토스|toss|채널톡|channel\s*talk|claude|클로드|anthropic)/i)[0]); if (id && CN[id]) { setTimeout(() => cnFocus(id), 60); return cnGuideMsg(id); } }
   return base(q, ...r); }; }
-if (typeof COVER !== 'undefined') COVER.push(['[신규] 외부 연결 허브: Claude 키 · MCP · Slack · Google · 토스페이먼츠 · 채널톡(단계별 안내 · 연결 테스트) + Slack · Google Process 템플릿', 'conn', '']);
+if (typeof COVER !== 'undefined') COVER.push(['[신규] 외부 연결 허브: Claude 키 · MCP · Slack · Google · 토스페이먼츠 · 채널톡(단계별 안내 · 연결 테스트) + Slack · Google 연결 자동화 템플릿', 'conn', '']);

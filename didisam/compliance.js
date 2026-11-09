@@ -333,6 +333,11 @@
      기업 · 공공: 법정의무교육 + (환급 과정 운영 시에만) 사업주 훈련 기준 / 대학 · 학원: 해당할 때만 켜는 안내 */
   const TABS_MOEL = [['home', '한눈에'], ['rule', '훈련 규정'], ['item', '훈련시간 · 평가'], ['att', '출결'], ['rep', 'HRD-Net 보고'], ['check', '점검표']];
   const MORE_MOEL = [['mon', '모니터링'], ['fb', '첨삭 · 베낀 답안'], ['feed', '데이터 연계'], ['acct', '계정 · 모듈'], ['ev', '증빙 · 조치']];
+  /* v36 R1 직업훈련 탭 정리: 한눈에 + 꼭 필요한 탭(훈련 규정 · 훈련시간 · 평가 · 점검표)만 위에, 나머지는 '더 보기'.
+     'HRD-Net 보고'는 운영 메뉴에 같은 이름의 화면(hrd)이 있으면 거기로 합치고(수료 보고 파일 · 학습 통계도 그 화면에), 출결은 {과정} › 출결 메뉴와 겹쳐 '더 보기'로 */
+  const hrdMenu = () => typeof menuOn === 'function' && menuOn('hrd');
+  const moelTabs = () => { const main = TABS_MOEL.filter(([k]) => k !== 'att' && !(k === 'rep' && hrdMenu())); const more = [...TABS_MOEL.filter(([k]) => k === 'att'), ...MORE_MOEL]; return { main, more }; };
+  window.cplRepHTML = () => { try { return viewRep(); } catch (e) { console.error(e); return ''; } };
   const TABS_LIFE = [['home', '한눈에'], ['check', '신고 요건 점검'], ['file', '신고 서류'], ['refund', '학습비 반환'], ['rule', '적용 규칙']];
   const cplActive = () => { const P = cplP(); return !!P.on; };
   const legalCls = () => S.classes.filter(c => c.legal && c.status !== '종료');
@@ -351,17 +356,17 @@
     const cl = S.classes.filter(c => c.status !== '종료'); const LH = cl.map(legalHours).filter(x => x && x.short); const BK = bankShort(true);
     let low = 0; cl.forEach(c => (c.learners || []).forEach(id => { const a = attCalc(c, id); if (a.rate != null && a.rate < DDAtt.MIN) low++; }));
     const d0 = today(); const due = reportRows().flatMap(r => [[r.notify, `「${r.c.name}」 실시신고`], [r.finish, `「${r.c.name}」 수료 보고`]]).filter(x => x[0] && x[0] >= d0).sort((x, y) => x[0] < y[0] ? -1 : 1)[0];
-    return `<div class="cpl-hg">${ty === 'corp' || ty === 'public' ? legalCard() : ''}${hcard('gear', '훈련 규정', [`수료: 진도율 ${+P.rate || 0}% 이상 · 평가 ${+P.pass || 0}점 이상`, `하루 최대 ${+P.dayChasi || 0}차시 · 무활동 ${+P.idleH || 0}시간 로그아웃 · ${esc(PROFILES[P.profile].n)}`], 'cpl-go', 'rule', '규정 보기')}${hcard('book', '훈련시간 · 평가', [LH.length ? `<b class="r">법정 교육시간 미달 ${LH.length}개</b>` : '법정 교육시간 미달 과정 없음', BK.length ? `<b class="r">시험 문제 부족 ${BK.length}개</b>(출제 수의 ${+P.bank || 3}배 이상 준비)` : '시험 문제 수 충족'], 'cpl-go', 'item', '차시 · 평가 보기')}${hcard('users', '출결', [low ? `<b class="r">출석률 ${DDAtt.MIN}% 미만 ${low}명</b>` : `출석률 ${DDAtt.MIN}% 미만 없음`, 'QR 출결 · 지각 3회 = 결석 1일 환산'], 'cpl-go', 'att', '출결 보기')}${hcard('send', 'HRD-Net 보고', [due ? `다음 기한 ${esc(due[0])} · ${esc(due[1])}` : '가까운 보고 기한 없음', '보고 파일을 내려받아 HRD-Net에 입력합니다.'], 'cpl-go', 'rep', '보고 보기')}</div>${sumLine}${note}`; }
+    return `<div class="cpl-hg">${ty === 'corp' || ty === 'public' ? legalCard() : ''}${hcard('gear', '훈련 규정', [`수료: 진도율 ${+P.rate || 0}% 이상 · 평가 ${+P.pass || 0}점 이상`, `하루 최대 ${+P.dayChasi || 0}차시 · 무활동 ${+P.idleH || 0}시간 로그아웃 · ${esc(PROFILES[P.profile].n)}`], 'cpl-go', 'rule', '규정 보기')}${hcard('book', '훈련시간 · 평가', [LH.length ? `<b class="r">법정 교육시간 미달 ${LH.length}개</b>` : '법정 교육시간 미달 과정 없음', BK.length ? `<b class="r">시험 문제 부족 ${BK.length}개</b>(출제 수의 ${+P.bank || 3}배 이상 준비)` : '시험 문제 수 충족'], 'cpl-go', 'item', '차시 · 평가 보기')}${hcard('users', '출결', [low ? `<b class="r">출석률 ${DDAtt.MIN}% 미만 ${low}명</b>` : `출석률 ${DDAtt.MIN}% 미만 없음`, 'QR 출결 · 지각 3회 = 결석 1일 환산'], 'cpl-go', 'att', '출결 보기')}${hcard('send', 'HRD-Net 보고', [due ? `다음 기한 ${esc(due[0])} · ${esc(due[1])}` : '가까운 보고 기한 없음', '보고 파일을 내려받아 HRD-Net에 입력합니다.'], hrdMenu() ? 'go' : 'cpl-go', hrdMenu() ? 'hrd' : 'rep', '보고 보기')}</div>${sumLine}${note}`; }
 
   VIEWS.cpl = () => { cplEnsure(); const P = cplP(); const life = P.profile === 'lifelong'; const on = cplActive();
-    const ALL = S.me.role === 'teacher' ? [['fb', '첨삭 · 베낀 답안']] : life ? TABS_LIFE : [...TABS_MOEL, ...MORE_MOEL];
+    const ALL = S.me.role === 'teacher' ? [['fb', '첨삭 · 베낀 답안']] : life ? TABS_LIFE : (() => { const T = moelTabs(); return [...T.main, ...T.more]; })();
     let cur = UI.cpl; if (!ALL.some(x => x[0] === cur)) cur = S.me.role === 'teacher' ? 'fb' : 'home';
     const B = { home: viewHome, check: viewCheck, rule: viewRule, item: viewItems, mon: viewMon, fb: viewFb, att: viewAtt, rep: viewRep, feed: viewFeed, acct: viewAcct, ev: viewEv, file: viewFile, refund: viewRefund }[cur];
     const desc = S.me.role === 'teacher' ? '담당 과정의 첨삭 기한과 베낀 답안을 확인합니다.' : !on ? (['corp', 'public'].includes(S.org.type) ? '법정의무교육 이수를 확인하고, 환급 과정을 운영할 때만 훈련 기준을 켭니다.' : '필요한 기관만 켜서 씁니다.') : life ? '평생교육법 신고 요건 · 학습비 반환 · 학점은행 운영 시 확인할 것을 모았습니다.' : '훈련 규정 · 훈련시간 · 출결 · HRD-Net 보고를 한곳에서 확인합니다.';
     let nav = ''; if (S.me.role === 'teacher') nav = tabs('cpl', ALL, cur);
     else if (!on) nav = cur === 'home' ? '' : `<div class="bar2"><button class="btn ghost" data-act="tab" data-key="cpl" data-v="home">‹ 한눈에</button></div>`;
     else if (life) nav = tabs('cpl', TABS_LIFE, cur);
-    else { const inMore = MORE_MOEL.some(x => x[0] === cur); nav = tabs('cpl', TABS_MOEL, inMore ? '' : cur) + `<div class="cpl-more"><span class="mini">더 보기</span>${MORE_MOEL.map(([k, l]) => `<button class="chip ${k === cur ? 'on' : ''}" data-act="tab" data-key="cpl" data-v="${k}">${esc(l)}</button>`).join('')}</div>`; }
+    else { const { main, more } = moelTabs(); const inMore = more.some(x => x[0] === cur); nav = tabs('cpl', main, inMore ? '' : cur) + `<div class="cpl-more"><span class="mini">더 보기</span>${more.map(([k, l]) => `<button class="chip ${k === cur ? 'on' : ''}" data-act="tab" data-key="cpl" data-v="${k}">${esc(l)}</button>`).join('')}</div>`; }
     return head('', desc) + nav + B(); };
   ACT['cpl-enable'] = el => { const k = el.dataset.v; if (!PROFILES[k]) return; modal('기준 켜기', `<p><b>${esc(PROFILES[k].n)}</b> 기준을 켭니다. 출결 · 진도 · 평가 규칙이 정해지고, 학습자 사이트를 게시하면 학습자 화면에 적용됩니다.</p><p class="mini">언제든 '훈련 규정 · 적용 규칙'에서 끌 수 있습니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '켜기', kind: 'pri', run: () => { const P = cplP(); if (P.profile !== k) Object.assign(P, JSON.parse(JSON.stringify(DEF[k])), { profile: k }); P.on = true; bioDefault(P); UI.cpl = 'home'; logAudit(`규정 준수 켜기: ${PROFILES[k].n}`); save(); render(); toast(`${PROFILES[k].n} 기준을 켰습니다.`, 'ok'); } }]); };
   ACT['cpl-hide'] = () => { const w = MENU.cpl.ws; const t0 = (S.nav.tabs[w] || []).find(x => x.id === 'cpl'); if (t0) t0.on = false; logAudit('인가 · 규정 준수 메뉴 숨김'); save(); go('home'); toast('메뉴에서 숨겼습니다. 메뉴 추가에서 다시 켤 수 있습니다.', 'ok'); };

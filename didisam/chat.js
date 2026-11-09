@@ -129,7 +129,7 @@ function answer(q) {
   if ((sid || byName) && /(상황|현황|어때|리포트|정보)/.test(q)) {
     const m = sid ? S.members.find(x => x.extra?.학번 === sid) : byName; if (!m) return { text: `${sid} 학번을 찾지 못했습니다. 등록 · 초대 화면에서 확인해 주세요.`, go: 'enroll' };
     const cs = S.classes.filter(c => c.prog[m.id]);
-    return { text: AI.report(m), html: table([t('cls'), '진도', '과제', t('done')], cs.map(c => [esc(c.name), pct(c.prog[m.id].p), { none: '미제출', submitted: '검수 대기', graded: '통과', returned: '재제출', failed: '미통과' }[c.prog[m.id].assign] || '—', c.prog[m.id].p >= c.criteria.threshold ? 'Y' : '—'])), go: 'members' };
+    return { text: AI.report(m), html: table([t('cls'), '진도', '과제', t('done')], cs.map(c => [esc(c.name), pct(c.prog[m.id].p), { none: '미제출', submitted: '검수 대기', graded: '통과', returned: '재제출', failed: '미통과' }[c.prog[m.id].assign] || '—', clsDone(c, m.id) ? 'Y' : '—'])), go: 'members' };
   }
   // 6) 진단 미완료
   if (/진단/.test(q) && /(안 한|미완료|안내)/.test(q)) {

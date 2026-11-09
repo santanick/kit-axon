@@ -282,15 +282,16 @@ const t2 = (type, k) => TERMS[type][k];
 function seed(type) {
   const sm = SAMPLE[type]; const groups = sm.grp.map((n, i) => ({ id: 'g' + i, name: n, lead: i % 2 ? '' : '담당 ' + pick(SUR) + '○○' }));
   const members = Array.from({ length: 48 }, (_, i) => {
-    const n = SUR[i % SUR.length] + GIV[(i * 7) % GIV.length]; const g = groups[i % groups.length].id; const grade = i < 40 ? '정회원' : i < 44 ? '준회원' : '승인 대기';
+    const n = SUR[i % SUR.length] + GIV[(i * 7 + Math.floor(i / SUR.length) * 3) % GIV.length]; /* v36 R1 성 · 이름 주기가 같아(20) 20명마다 같은 이름이 반복되던 것 — 바퀴마다 이름을 밀어 48명 모두 다르게 */ const g = groups[i % groups.length].id; const grade = i < 40 ? '정회원' : i < 44 ? '준회원' : '승인 대기';
     return { id: 'm' + i, name: n, nick: n.slice(1), email: `user${i + 1}@example.com`, phone: `010-0000-${String(1000 + i * 37).slice(-4)}`, group: g, grade, joined: addDays(today(), -Math.floor(rnd() * 180)), last: addDays(today(), -Math.floor(rnd() * (i % 7 === 0 ? 95 : 16))),
-      extra: type === 'corp' ? { 부서: groups[i % groups.length].name, 직급: pick(['사원', '대리', '과장', '차장']) } : type === 'univ' ? { 학번: '2026' + String(1000 + i), 학과: groups[i % groups.length].name } : type === 'voc' ? { 훈련생구분: pick(['내일배움카드', '사업주위탁', '실업자']) } : {}, diag: type === 'univ' && i < 38 ? pick(['EYE', 'PEN', 'LENS', 'STORY', 'MAP']) : '' };
+      extra: type === 'corp' ? { 부서: groups[i % groups.length].name, 직급: pick(['사원', '대리', '과장', '차장']) } : type === 'univ' ? { 학번: '2026' + String(1000 + i), 학과: groups[i % groups.length].name } : type === 'voc' ? { 훈련생구분: pick(['내일배움카드', '사업주위탁', '실업자']) } : {}, diag: type === 'univ' && i < 38 ? pick(['EYE', 'PEN', 'LENS', 'STORY', 'MAP']) : '', ...(type === 'k12' ? { crm: (gy => ({ gy, school: gy[0] === '초' ? '해운초등학교' : gy[0] === '중' ? '해운중학교' : '센텀고등학교' }))((groups[i % groups.length].name.match(/[초중고]\d/) || ['중2'])[0]) } : {}) }; /* v36 R1 학원 샘플 원생에 학년 · 학교 */
   });
   const parents = type === 'k12' ? members.slice(0, 30).map((m, i) => ({ id: 'p' + i, child: m.id, name: m.name[0] + '○○ 보호자', phone: `010-1111-${String(2000 + i * 13).slice(-4)}`, status: i % 6 === 5 ? '연결 대기 중' : '연결 완료' })) : [];
   const classes = sm.cls.map(([name, kind, x], i) => {
     const legal = x === 'legal'; const sub = kind === 'episode' ? (x || '요일반') : '';
     const price = ['corp', 'univ'].includes(type) || legal ? 0 : kind === 'sub' ? 29000 : type === 'k12' ? 280000 : type === 'voc' ? 0 : [99000, 149000, 199000, 59000][i % 4];
-    const lr = members.filter((m, j) => m.grade !== '승인 대기' && (legal || j % (i + 2) !== 1)).map(m => m.id).slice(0, legal ? 44 : 14 + (i * 5) % 22);
+    const gyC = type === 'k12' ? (name.match(/[초중고]\d/) || [])[0] : ''; /* v36 R1 학원: 학년이 붙은 반(중2 · 고1)은 그 학년 원생만 */
+    const lr = members.filter((m, j) => m.grade !== '승인 대기' && (legal || j % (i + 2) !== 1) && (!gyC || (m.crm || {}).gy === gyC)).map(m => m.id).slice(0, legal ? 44 : 14 + (i * 5) % 22);
     const prog = {}; lr.forEach((id, j) => { const p = clamp(Math.round(rnd() * 118 - (j % 5 === 0 ? 40 : 0)), 0, 100); prog[id] = { p, exam: p > 60 ? Math.round(55 + rnd() * 45) : null, assign: p > 70 ? (rnd() > .45 ? 'graded' : 'submitted') : 'none', subAt: addDays(today(), -Math.floor(rnd() * 9)), att: Math.round(70 + rnd() * 30) }; });
     return { id: 'c' + i, name, kind, sub, legal, level: i % 3, status: i === sm.cls.length - 1 && type !== 'corp' ? '준비중' : '운영중', price, open: type === 'corp' ? '지정 회원' : '전체', start: addDays(today(), -30 + i * 3), end: addDays(today(), 60 + i * 10),
       teacher: t2(type, 'teacher') + ' ' + pick(SUR) + '○○', group: kind === 'episode' ? groups[i % groups.length].id : '', learners: lr, prog,
@@ -307,7 +308,7 @@ function seed(type) {
   const COL = [['#E63295', '#4257D7', '#F5B5D2'], ['#4C77C5', '#2E4F8F', '#B9CCEB'], ['#E8A317', '#A86F00', '#F6D58A']];
   const badges = sm.lv.map((lv, i) => ({ id: 'bd' + i, name: `${lv}`, key: String(i + 1), cls: classes[i]?.id || 'c0', method: i === 2 ? 'manual' : 'pass', special: false, fill: COL[i][0], ring: COL[i][1], rib: COL[i][2], issued: (classes[i]?.learners || []).filter(id => classes[i].prog[id].p >= 80).slice(0, 14 - i * 5).map((id, j) => ({ who: id, at: addDays(today(), -j), no: `${String(i + 1)}-${String(j + 1).padStart(4, '0')}`, how: i === 2 ? '수동' : '자동', st: '유효', reason: '' })) }));
   badges.push({ id: 'bdx', name: '우수 프로젝트', key: '★', cls: '', method: 'manual', special: true, fill: '#2A2B2B', ring: '#1F2020', rib: '#5C74F6', issued: [] });
-  const certs = classes[0].learners.slice(0, 8).map((id, i) => ({ id: uid('ct'), cls: 'c0', who: id, at: addDays(today(), -i), no: `${today().slice(0, 4)}-${String(i + 1).padStart(4, '0')}`, dl: i % 2 === 0, manual: false }));
+  const certs = classes[0].learners.filter(id => (classes[0].prog[id] || {}).p >= classes[0].criteria.threshold).slice(0, 8).map((id, i) => /* v36 R1 샘플 수료증도 이수 기준을 채운 사람에게만 */ ({ id: uid('ct'), cls: 'c0', who: id, at: addDays(today(), -i), no: `${today().slice(0, 4)}-${String(i + 1).padStart(4, '0')}`, dl: i % 2 === 0, manual: false }));
   const msgs = [{ id: uid('ms'), at: addDays(today(), -2), to: '전체', title: '이번 주 운영 안내', ch: '앱 푸시 + 이메일', n: members.length }];
   const orgs = ['corp', 'univ', 'lifelong', 'voc'].includes(type) ? [{ id: 'o0', name: type === 'voc' ? '협약기업 A사' : type === 'univ' ? '취업지원센터' : type === 'corp' ? '계열사 B' : '구청 평생학습관', mgr: '기관 담당자', n: 14, done: 9, job: type === 'voc' ? 6 : 0 }] : [];
   const journey = sm.lv.map((lv, i) => ({ id: 'j' + i, name: lv, cls: classes.filter(c => c.level === i).map(c => c.id), unlock: i === 0 ? '바로 열림' : `${sm.lv[i - 1]} 배지 획득`, badge: 'bd' + i }));
