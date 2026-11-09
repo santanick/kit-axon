@@ -1,0 +1,101 @@
+/* v36 hpstudio — 한 화면 홈페이지 편집기(본문 자리에 붙인 #hpe) */
+body.hps-dock{overflow:hidden}
+body.hps-dock #hpe.hps{top:var(--hps-t,62px);left:var(--hps-l,76px);right:0;bottom:var(--hps-b,0px);z-index:40;background:#ECEBF3;box-shadow:inset 1px 0 0 var(--line,#E4E4EA)}
+#hpe.hps .hpe-t,#hpe.hps .hpe-pg,#hpe.hps .hpe-x,#hpe.hps .hpe-foot,#hpe.hps .hpe-bar>[data-act="hpm-open"],#hpe.hps .hpe-bar>[data-act="hpai-open"],#hpe.hps .hpe-bar>.tpg-dzbtn{display:none!important}
+#hpe.hps .hpe-bar{gap:6px;padding:6px 12px;flex-wrap:nowrap;box-shadow:none;border-bottom:1px solid var(--line,#E4E4EA)}
+#hpe.hps .hpe-bar .sp{display:none}
+.hps-tw{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hps-tabs,.hps-subs{display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none;min-width:0}
+.hps-tabs::-webkit-scrollbar,.hps-subs::-webkit-scrollbar{display:none}
+.hps-tab{flex:0 0 auto;border:0;background:transparent;font:inherit;font-size:14px;font-weight:600;color:var(--muted,#5B6170);padding:0 14px;min-height:40px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;position:relative}
+.hps-tab:hover{background:var(--soft,#F3F3F7);color:var(--ink,#14161F)}
+.hps-tab.on{color:var(--ink,#14161F);background:#fff;box-shadow:inset 0 0 0 1.5px var(--ink,#14161F)}
+.hps-tab i{font-style:normal;font-size:10.5px;font-weight:700;color:#4255C9;background:#EEF0FF;border-radius:99px;padding:2px 6px}
+.hps-tab:focus-visible,.hps-ri:focus-visible,.hps-tadd:focus-visible{outline:2px solid #5C74F6;outline-offset:2px}
+.hps-tadd{flex:0 0 auto;border:1.5px dashed #B7BCD6;background:transparent;color:var(--muted,#5B6170);border-radius:8px;min-height:36px;padding:0 10px;font:inherit;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px;cursor:pointer;margin-left:4px}
+.hps-tadd:hover{border-color:#5C74F6;color:#4255C9}
+.hps-subs{padding:0 0 2px 4px}.hps-subs>span{font-size:12px;color:var(--muted,#5B6170);margin-right:4px;font-weight:600}
+.hps-subs .hps-tab{min-height:32px;font-size:13px;padding:0 10px}.hps-subs .hps-tab.on{box-shadow:inset 0 -2px 0 #5C74F6;background:transparent;border-radius:0}
+.hps-zoom select{border:0;box-shadow:inset 0 0 0 1.5px var(--line,#E4E4EA);border-radius:8px;min-height:36px;padding:0 8px;font:inherit;font-size:13px;font-weight:600;background:#fff}
+#hpe.hps .hpe-bar .btn{white-space:nowrap}
+/* 처음 흐름 */
+.hps-flow{display:flex;align-items:center;gap:14px;padding:8px 14px;background:#fff;border-bottom:1px solid var(--line,#E4E4EA);position:relative;flex-wrap:wrap}
+.hps-flow ol{display:flex;gap:4px;margin:0;padding:0;list-style:none;flex-wrap:wrap}
+.hps-flow li button{border:0;background:var(--soft,#F3F3F7);border-radius:99px;min-height:36px;padding:0 14px 0 6px;font:inherit;font-size:13px;font-weight:600;color:var(--muted,#5B6170);display:inline-flex;align-items:center;gap:7px;cursor:pointer}
+.hps-flow li button i{width:24px;height:24px;border-radius:50%;background:#fff;color:var(--muted,#5B6170);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800;box-shadow:inset 0 0 0 1.5px #D3D5E2}
+.hps-flow li.done button{color:#0E7A3A;background:#E9F7EE}.hps-flow li.done button i{background:#16A34A;color:#fff;box-shadow:none}
+.hps-flow li.cur button{background:#14161F;color:#fff}.hps-flow li.cur button i{background:#5C74F6;color:#fff;box-shadow:none}
+.hps-flow p{margin:0;font-size:13px;color:var(--muted,#5B6170);flex:1;min-width:220px;padding-right:30px}
+.hps-ln{border:0;background:none;color:#4255C9;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
+.hps-fx{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--muted,#5B6170);width:32px;height:32px;border-radius:8px;cursor:pointer;display:grid;place-items:center}.hps-fx:hover{background:var(--soft,#F3F3F7)}
+/* 말로 고치기 줄 */
+#hpe.hps .hpw-talk{padding:8px 14px!important;background:#F7F6FD;border-bottom:1px solid var(--line,#E4E4EA)}
+#hpe.hps .hpw-talk input[name=q]{min-height:42px;font-size:14px}
+.hps-cb{display:inline-flex;align-items:center;gap:4px}.hps-cb[aria-expanded=true]{background:#14161F;color:#fff}
+.hps-pulse{animation:hpsP .9s ease 2}@keyframes hpsP{50%{box-shadow:inset 0 0 0 2px #5C74F6}}
+.hps-code{padding:8px 14px 10px;background:#F7F6FD;border-bottom:1px solid var(--line,#E4E4EA);display:flex;flex-direction:column;gap:6px}
+.hps-code label{font-size:12.5px;font-weight:700}
+.hps-code textarea{width:100%;box-sizing:border-box;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;border:0;box-shadow:inset 0 0 0 1.5px var(--line,#E4E4EA);border-radius:8px;padding:10px;background:#14161F;color:#E8E9F2;resize:vertical;min-height:110px;max-height:34vh}
+.hps-cbar{display:flex;align-items:center;gap:6px}.hps-cbar small{flex:1;color:var(--muted,#5B6170);font-size:12px}
+/* 캔버스 */
+#hpe.hps .hpe-stage{margin-right:72px;padding:16px 18px;overflow:auto;position:relative;justify-content:center;align-items:flex-start}
+body.hps-pan-on #hpe.hps .hpe-stage{margin-right:452px}
+body.tpg-dz-on.hps-dock #hpe.hps .hpe-stage{padding-right:18px;margin-right:446px}
+#hpe.hps .hpe-stage iframe#hpeF{border-radius:4px;box-shadow:0 1px 2px rgba(20,22,31,.06),0 12px 40px rgba(20,22,31,.14)}
+#hpe.hps .hpe-stage.hps-lvon iframe#hpeF{visibility:hidden;position:absolute}
+.hps-lv{width:100%;max-width:1280px;display:flex;flex-direction:column;background:#fff;border-radius:6px;box-shadow:0 12px 40px rgba(20,22,31,.14);overflow:hidden}
+.hps-lvh{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#EEF0FF;flex-wrap:wrap}.hps-lvh p{margin:0;flex:1;min-width:220px;font-size:13px;font-weight:600;color:#2B3796}.hps-lvh>div{display:flex;gap:6px;flex-wrap:wrap}
+.hps-lvf{flex:1;border:0;width:100%;min-height:0}
+.hps-lvc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:40px 20px;text-align:center}.hps-lvc b{font-size:17px}.hps-lvc p{margin:0;color:var(--muted,#5B6170);font-size:14px;word-break:break-all}
+/* 오른쪽 아이콘 줄 */
+.hps-rail{position:absolute;right:0;top:var(--hps-st,120px);bottom:0;width:72px;background:#fff;border-left:1px solid var(--line,#E4E4EA);display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:8px 6px;overflow-y:auto;z-index:3;box-sizing:border-box}
+.hps-ri{border:0;background:transparent;border-radius:10px;min-height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit;font-size:11px;font-weight:600;color:var(--muted,#5B6170);cursor:pointer;padding:4px 2px;letter-spacing:-.02em;line-height:1.15;text-align:center}
+.hps-ri:hover{background:var(--soft,#F3F3F7);color:var(--ink,#14161F)}.hps-ri.on{background:#EEF0FF;color:#3346C2}
+/* 패널 */
+.hps-pan{position:absolute;right:72px;top:var(--hps-st,120px);bottom:0;width:380px;background:#fff;border-left:1px solid var(--line,#E4E4EA);display:flex;flex-direction:column;z-index:3;box-shadow:-8px 0 24px rgba(20,22,31,.06)}
+body.hps-dock #tpgDz{right:72px!important;top:var(--tpg-top,120px)}
+.hps-ph{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 10px 16px;border-bottom:1px solid var(--line,#E4E4EA)}.hps-ph b{font-size:15px}
+.hps-pb{flex:1;overflow:auto;padding:12px 16px 20px}
+.hps-pd{margin:0 0 12px;font-size:13px;color:var(--muted,#5B6170);line-height:1.55}
+.hps-sl{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+.hps-sl li{border:1px solid var(--line,#E4E4EA);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px}.hps-sl li.hid{opacity:.6;border-style:dashed}
+.hps-sn{border:0;background:transparent;text-align:left;font:inherit;padding:4px 6px;border-radius:6px;cursor:pointer;display:flex;flex-direction:column}.hps-sn:hover{background:var(--soft,#F3F3F7)}.hps-sn b{font-size:14px}.hps-sn small{font-size:12px;color:var(--muted,#5B6170);min-height:1em}
+.hps-sa{display:flex;gap:4px;flex-wrap:wrap}.hps-sa button{border:0;background:var(--soft,#F3F3F7);border-radius:7px;min-height:32px;min-width:32px;padding:0 9px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.hps-sa button:disabled{opacity:.35;cursor:default}.hps-sa button:hover:not(:disabled){background:#E4E7FA}
+.hps-wide{width:100%;justify-content:center;min-height:48px}
+.hps-bf{display:flex;flex-direction:column;gap:10px}.hps-bf .fl>span{font-size:13px;font-weight:600;display:block;margin-bottom:4px}
+.hps-logo{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.hps-logo img{max-height:40px;max-width:140px;object-fit:contain;border:1px solid var(--line,#E4E4EA);border-radius:6px;padding:3px;background:#fff}.hps-logo em{font-style:normal;font-size:12.5px;color:var(--muted,#5B6170);flex-basis:100%}
+.hps-sw{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.hps-sw label{cursor:pointer;position:relative}.hps-sw input[type=radio]{position:absolute;opacity:0;width:1px;height:1px}
+.hps-sw i{display:block;width:32px;height:32px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}.hps-sw input:checked+i{box-shadow:0 0 0 2px #fff,0 0 0 4px #14161F}.hps-sw input:focus-visible+i{outline:2px solid #5C74F6;outline-offset:4px}
+.hps-cc input{width:36px;height:36px;padding:0;border:0;background:none;cursor:pointer}
+.hps-serp{border:1px solid var(--line,#E4E4EA);border-radius:10px;padding:10px 12px}.hps-serp small{color:#0E7A3A;font-size:12px}.hps-serp b{display:block;color:#1A0DAB;font-size:15px;margin:2px 0}.hps-serp p{margin:0;font-size:13px;color:#4D5156}
+/* 한 번 누름 안내 */
+.hps-hint{position:fixed;z-index:62;background:#14161F;color:#fff;font-size:12.5px;font-weight:700;padding:7px 11px;border-radius:99px;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.25);white-space:nowrap}
+/* [+ 섹션] 갤러리 */
+#modal.hps-galm .hpe-addg{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+#modal .hps-gc{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:12px;min-height:128px;text-align:left!important;justify-content:flex-start!important;box-shadow:inset 0 0 0 1.5px var(--line,#E4E4EA);background:#fff}
+#modal .hps-gc:hover,#modal .hps-gc:focus-visible{box-shadow:inset 0 0 0 2px #5C74F6;background:#FAFAFF}
+#modal .hps-gc svg{width:100%;height:auto;max-height:76px;background:#F6F7FB;border-radius:8px;margin-bottom:4px}
+#modal .hps-gc b{font-size:13.5px}#modal .hps-gc small{font-size:12px;color:var(--muted,#5B6170);font-weight:500}
+/* 고급 설정 · 템플릿 고르기로 갔을 때 돌아가기 줄 */
+.hps-back{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:8px 10px;background:#EEF0FF;border-radius:10px;flex-wrap:wrap}.hps-back span{font-size:13px;color:#2B3796;font-weight:600}
+/* 휴대폰(본문 폭 좁음): 아이콘 줄을 아래로, 패널은 아래 시트 */
+@media (max-width:760px){
+  #hpe.hps .hpe-bar{flex-wrap:wrap;padding:6px 8px}.hps-tw{flex-basis:100%;order:-1}
+  #hpe.hps .hpe-bar .hps-open,#hpe.hps .hps-zoom{display:none}
+  .hps-flow{padding:6px 8px;gap:6px}.hps-flow p{display:none}.hps-flow li button{padding:0 10px 0 4px;font-size:12px;min-height:34px}.hps-flow li:not(.cur) button{font-size:0;padding:0 4px;gap:0}.hps-flow li:not(.cur) button i{font-size:12px}
+  #hpe.hps .hpw-talk{padding:6px 8px!important}
+  #hpe.hps .hpe-stage{margin-right:0;margin-bottom:62px;padding:8px}
+  body.hps-pan-on #hpe.hps .hpe-stage{margin-right:0}
+  .hps-rail{top:auto;bottom:0;left:0;right:0;width:auto;height:62px;flex-direction:row;overflow-x:auto;overflow-y:hidden;border-left:0;border-top:1px solid var(--line,#E4E4EA);padding:4px}
+  .hps-ri{min-width:62px;min-height:52px;flex:0 0 auto}
+  .hps-pan{left:0;right:0;width:auto;top:auto;bottom:62px;max-height:70%;border-left:0;border-top:1px solid var(--line,#E4E4EA);border-radius:14px 14px 0 0;box-shadow:0 -10px 30px rgba(20,22,31,.16)}
+  body.hps-dock #tpgDz{right:0!important}
+}
+body.hps-dock #fabBtn{right:88px}
+.hps-pb{padding-bottom:96px}
+@media (max-width:760px){body.hps-dock #fabBtn{right:12px;bottom:74px}}
+/* 세부 설정 화면: 같은 일을 하는 겹친 안내(첫 화면 돌아가기 · AI 만들기 띠 · 바로 고치기 버튼)는 숨긴다 — 편집기에 있음 */
+.hps-legacy .sb-back,.hps-legacy~.hpai-bar,.hps-legacy .hpai-bar,.hps-legacy [data-act="hpe-open"],.hps-legacy .hpw-cta{display:none!important}
+@media (max-width:760px){body.hps-pan-on #fabBtn{display:none}}
+.hps-host{min-height:40vh}.hps-host>*{display:none!important}
+#hpe.hps .hpw2-mig.hps-note{margin:0;border-radius:0;border-width:0 0 1px;background:#FFF8E6}

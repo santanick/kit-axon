@@ -6,7 +6,7 @@
      slim-a · slim-b가 기존 화면 앞에 끼우던 요약 첫 화면(+ [자세히] · [표로 보기] · '‹ 간단히 보기' 토글)을 기본으로 끈다.
      기능은 그대로(기존 전체 화면이 곧 첫 화면). 요약 첫 화면을 계속 쓰는 화면만 SLIM_FRONT에 남긴다.
      - site: 사이트 첫 화면은 v36 G(한 화면 편집기)가 새로 정한다 — 그 전까지 지금 화면 유지 */
-  window.SLIM_FRONT = window.SLIM_FRONT || new Set(['site']);
+  window.SLIM_FRONT = window.SLIM_FRONT || new Set(); /* v36 G: 사이트도 요약 첫 화면 없이 한 화면 편집기(hpstudio.js) */
   window.slimFront = id => !!(window.SLIM_FRONT && SLIM_FRONT.has(id));
   /* ───────── 1. 기관 유형별 필수 메뉴(사이드바 기본) ───────── */
   const ESS = {
