@@ -318,6 +318,37 @@ const MIGRATIONS = [
    drop policy if exists tenant_iso on media;
    create policy tenant_iso on media using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
    grant select, insert, delete on media to didisam_tenant;`,
+  /* 17 — v35 강의 파일(/api/media/f, mediafile.js): 같은 media 표에 kind(doc · video · audio) · status(up = 올리는 중 · ok)를 더하고
+        바이트는 media_part(조각, 기본 8MB, 저장 방식 external — Range 응답이 필요한 부분만 읽음)에 둔다. 이미지는 그대로(2MB · data 열). */
+  `alter table media drop constraint if exists media_mime_check;
+   alter table media drop constraint if exists media_bytes_check;
+   alter table media add column if not exists kind text not null default 'image';
+   alter table media add column if not exists status text not null default 'ok';
+   alter table media add column if not exists parts integer not null default 0;
+   alter table media add column if not exists chunk integer not null default 0;
+   alter table media alter column data drop not null;
+   alter table media drop constraint if exists media_kind_ck;
+   alter table media add constraint media_kind_ck check (
+     (kind = 'image' and status = 'ok' and data is not null and bytes between 1 and 2097152 and mime in ('image/png','image/jpeg','image/webp','image/svg+xml'))
+     or (kind = 'doc' and data is null and status in ('up','ok') and bytes between 1 and 1073741824 and mime in ('application/pdf','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/x-hwp','application/hwp+zip'))
+     or (kind = 'video' and data is null and status in ('up','ok') and bytes between 1 and 2147483647 and mime in ('video/mp4','video/webm'))
+     or (kind = 'audio' and data is null and status in ('up','ok') and bytes between 1 and 1073741824 and mime in ('audio/mpeg','audio/mp4')));
+   create index if not exists media_tenant_kind on media (tenant_id, kind, created_at desc);
+   create table if not exists media_part (
+     tenant_id text not null,
+     id text not null,
+     seq integer not null check (seq between 0 and 200000),
+     data bytea not null,
+     primary key (tenant_id, id, seq),
+     foreign key (tenant_id, id) references media (tenant_id, id) on delete cascade
+   );
+   alter table media_part alter column data set storage external;
+   alter table media_part enable row level security;
+   alter table media_part force row level security;
+   drop policy if exists tenant_iso on media_part;
+   create policy tenant_iso on media_part using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant update (status) on media to didisam_tenant;
+   grant select, insert, update, delete on media_part to didisam_tenant;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).
