@@ -42,7 +42,7 @@
         x: { univ_lms: ['학번으로 학생 등록하는 법 알려줘', '미접속 학생 찾아줘', '학과별 인원 알려줘'], corp: ['부서별 임직원 명단 보여줘', '미이수 임직원 찾아줘', '임직원 일괄 등록해줘'] } },
       enroll: { d: '초대 링크를 보내거나 명단을 한 번에 올립니다', f: ['명단 양식 받기', 'bulk-tpl'], a: ['초대 링크 만들어줘', `${L} 명단 일괄 등록해줘`] },
       groups: { d: `${j(L, '을')} ${j(G, '으로')} 묶습니다`, f: [`+ ${G} 만들기`, 'grp-new'], a: [`${G} 나눠줘`, `${G}별 진도 보여줘`], n: () => N(S.groups) },
-      parents: { d: '보호자를 연결하고 알림을 보냅니다', f: ['+ 보호자 연결', 'par-req'], a: ['보호자 연결 안 된 학생 보여줘', '보호자에게 안내 보내줘'], n: () => N(S.parents) },
+      parents: { d: '보호자를 연결하고 알림을 보냅니다', f: ['+ 보호자 연결', 'par-req'], a: S.org && S.org.type === 'k12' ? ['보호자 연결 안 된 학생 보여줘', '보호자에게 안내 보내줘'] : ['보호자에게 안내 보내줘'], n: () => N(S.parents) },
       admins: { d: `운영자 · ${Te} 권한과 기록을 봅니다`, f: ['+ 운영자 추가', 'adm-new'], a: ['운영자 추가해줘', '최근 작업 기록 보여줘'] },
       /* 소통 */
       board: { d: '공지를 올리고 알림을 보냅니다', f: ['+ 공지', 'notice-new'], a: ['공지 써줘', '휴강 알림 보내줘'], n: () => N(S.notices) },
@@ -185,7 +185,8 @@
       if (txH(p) <= 2) return;
       p.dataset.slgLong = 1; p.dataset.slgHide = 1; });
     /* 목록 · 카드 안의 긴 설명은 두 줄까지만(전체 문장은 마우스를 올리거나 눌러서 연 상세에서) */
-    m.querySelectorAll('p, .mini, small, .desc').forEach(p => { if (p.dataset.slgLong || p.classList.contains('slg-clamp') || p.closest(CLAMP_NO)) return; if (!vis(p) || p.querySelector('button, input, select, textarea, a, p')) return;
+    /* v36: 두 줄 자르기는 목록 줄(.sl-row · ul/ol · .row)의 보조 설명에만 — 카드(결제 · 설정 등) 본문 설명은 자르지 않는다 */
+    m.querySelectorAll('p, .mini, small, .desc').forEach(p => { if (p.dataset.slgLong || p.classList.contains('slg-clamp') || p.closest(CLAMP_NO) || !p.closest('.sl-row, .sl-list, ul, ol, .row')) return; if (!vis(p) || p.querySelector('button, input, select, textarea, a, p')) return;
       const tx = p.textContent.trim(); if (tx.length < 16) return; if (txH(p) <= 2) return;
       p.classList.add('slg-clamp'); if (!p.title) p.title = tx.slice(0, 300); }); }
   const CLAMP_NO = 'table, form, label, .sl-sheet, .modal, .mwrap, .chat, .aih, .fab, .slg-empty, #slgPop, .bkblk, .dpaper, [contenteditable], .cn-card, article, .obd, .gdbar, .g26, [class*="detail"], [class*="body"], [class*="paper"], [class*="preview"], [class*="pv"], .lp, iframe, pre, code';

@@ -53,7 +53,7 @@
     crmcs: ['상담을 기록합니다', '상담 필요한 원생'], crmbill: ['수강료를 청구합니다', '다음 달 청구해줘'], crmstat: ['원생 · 매출 통계를 봅니다', '이번 달 통계 보여줘'],
     grade: ['성적을 관리합니다', '성적 입력 현황'], sis: ['학적 연동을 관리합니다', '학적 연동 상태'], aigov: ['AI 사용을 관리합니다', 'AI 사용량 보여줘']
   };
-  const mdOf = id => MD[id] || [lab(WS[MENU[id]?.ws] || { label: '' }) + ' 기능', mlabel(id) + ' 알려줘'];
+  const mdOf = id => (id === 'parents' && S && S.org && S.org.type !== 'k12' ? ['보호자를 연결합니다', '보호자에게 안내 보내줘'] : MD[id]) || [lab(WS[MENU[id]?.ws] || { label: '' }) + ' 기능', mlabel(id) + ' 알려줘'];
   window.slimMD = mdOf;
 
   /* ───────── 2. 공통 틀(휴대폰 설정형): 제목 · 칩 · 요약 · 목록 · 검색 ───────── */
