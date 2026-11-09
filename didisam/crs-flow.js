@@ -105,7 +105,7 @@
           { k: 'days', label: '수강 기간', kind: 'choice', opts: [[30, '30일'], [60, '60일'], [90, '90일'], [180, '180일']], hint: '신청한 날부터 이 기간 동안 들을 수 있습니다.' },
           { k: 'open', label: '누구에게 보이나요', kind: 'choice', opts: [['전체', '모두에게 공개', '홈페이지에 바로 보여요'], ['지정 회원', '정한 사람만', '초대한 사람만 들어요'], ['비공개', '아직 숨겨 두기', '준비가 끝나면 공개해요']] }]) +
           ui.note(`${T('done')} 기준은 이 ${josa(T('cls'), '에')} 맞는 기본값으로 정해 둡니다. 만든 뒤 설정 탭에서 바꿀 수 있습니다.`) +
-          `<p class="cf-adv">회차 · 요일반 · 구독처럼 세부 운영이 필요하면 <button type="button" class="linkb" data-act="cls-new-adv">자세한 설정으로 만들기</button></p>`;
+          (['adult', 'k12', 'lifelong'].includes(S.org.type) ? `<p class="cf-adv">회차 · 요일반 · 구독처럼 세부 운영이 필요하면 <button type="button" class="linkb" data-act="cls-new-adv">자세한 설정으로 만들기</button></p>` : '');
       },
       valid(d) { const P = []; if ((d.paid === true || d.paid === 'true') && !(+d.price > 0)) P.push({ k: 'price', msg: `유료라면 ${T('fee')}를 적어 주세요. 무료면 '무료'를 누르세요.` }); return P; },
       aiFill(d) { const D = defs(); if (d.paid == null) d.paid = false; if (d.days == null) d.days = D.days; if (d.open == null) d.open = '전체'; return Promise.resolve(d); } },
@@ -124,7 +124,7 @@
   function previewHTML(d) {
     const c = cfgOf(); const u = unit(d); const L = d.weekPlan || []; const paid = d.paid == null ? +d.price > 0 : (d.paid === true || d.paid === 'true');
     let sum = [['배울 사람', d.target || '누구나'], [`${u} 수`, `${L.length}${u === '회차' ? '회' : '개'}`], [T('fee'), paid && +d.price ? won(d.price) : '무료'], ['수강 기간', `신청 후 ${d.days || defs().days}일`], ['공개', { 전체: '모두에게 공개', '지정 회원': '정한 사람만', 비공개: '아직 숨겨 두기' }[d.open] || d.open || '모두에게 공개']];
-    try { if (c && typeof c.summary === 'function') { const x = c.summary(d); if (Array.isArray(x) && x.length) sum = [sum[0], [`${u} 수`, sum[1][1]], ...x].filter((r, i, A) => A.findIndex(y => y[0] === r[0]) === i); } } catch (e) { }
+    try { if (c && typeof c.summary === 'function') { const x = c.summary(d); if (Array.isArray(x) && x.length) sum = [...(x.some(r => /대상|배울/.test(r[0])) ? [] : [sum[0]]), [`${u} 수`, sum[1][1]], ...x].filter((r, i, A) => A.findIndex(y => y[0] === r[0]) === i); } } catch (e) { }
     const W = checks(d);
     return `<p class="cf-lab">${esc(T('learner'))}에게 이렇게 보여요</p><div class="cf-pv"><div class="cf-pvh"><span class="cf-pvt">${esc(T('cls'))}</span><b>${esc(d.name || '이름 없음')}</b>${d.goal ? `<p>${esc(String(d.goal).slice(0, 160))}</p>` : ''}</div>
       <dl class="cf-pvs">${sum.map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>

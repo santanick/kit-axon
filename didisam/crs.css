@@ -3,7 +3,7 @@
 body.cf-on{overflow:hidden}
 .crsf{position:fixed;inset:0;z-index:58;background:rgba(31,32,32,.45);display:flex;align-items:center;justify-content:center;padding:24px;font-size:16px;line-height:1.55;color:var(--g900,#2A2B2B)}
 .crsf *{box-sizing:border-box}
-.cf-box{position:relative;background:#fff;border-radius:12px;width:min(760px,100%);max-height:calc(100vh - 48px);max-height:calc(100dvh - 48px);display:flex;flex-direction:column;box-shadow:var(--e24,0 16px 48px rgba(42,43,43,.2));overflow:hidden}
+.cf-box{position:relative;background:#fff;border-radius:12px;width:min(760px,100%);height:min(820px,calc(100vh - 48px));height:min(820px,calc(100dvh - 48px));display:flex;flex-direction:column;box-shadow:var(--e24,0 16px 48px rgba(42,43,43,.2));overflow:hidden}
 .cf-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 6px 24px}
 .cf-ht{display:flex;align-items:baseline;gap:12px;min-width:0}
 .cf-ht b{font-size:20px;font-weight:800;letter-spacing:-.02em}
@@ -86,7 +86,7 @@ body.cf-on{overflow:hidden}
 .cf-pvt{display:inline-block;font-size:13px;font-weight:800;color:var(--t-mag,#3F55D0);margin-bottom:4px}
 .cf-pvh b{display:block;font-size:22px;font-weight:800;letter-spacing:-.02em;word-break:keep-all}
 .cf-pvh p{margin:8px 0 0;color:var(--g800,#4C4D4D)}
-.cf-pvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;margin:0;border-top:1px solid var(--g300,#EAEBEB)}
+.cf-pvs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0;margin:0;border-top:1px solid var(--g300,#EAEBEB)}
 .cf-pvs div{padding:10px 20px;border-bottom:1px solid var(--g200,#F1F2F2)}
 .cf-pvs dt{font-size:13px;color:var(--t-sub,#666767);font-weight:700}.cf-pvs dd{margin:2px 0 0;font-weight:700;word-break:keep-all}
 .cf-pvl{list-style:none;margin:0;padding:12px 20px;display:flex;flex-direction:column;gap:6px}
@@ -101,7 +101,7 @@ body.cf-on{overflow:hidden}
 .crsf .cf-big{min-height:48px;min-width:96px;font-size:16px;font-weight:800;padding:0 22px}
 .crsf .cf-later2,.crsf .cf-undo{min-height:48px;font-size:15px}
 /* 이어서 하기 · 완료 */
-.cf-resume,.cf-done{width:min(520px,100%)}
+.cf-resume,.cf-done{width:min(520px,100%);height:auto}
 .cf-rb{padding:28px 28px 22px;text-align:center}
 .cf-rb h2{margin:4px 0 6px;font-size:22px;word-break:keep-all}
 .cf-rb .cf-now{font-size:15px;color:var(--t-sub,#666767);font-weight:700;margin:0}
