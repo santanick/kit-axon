@@ -10,6 +10,7 @@
   const emit = (ev, x) => (H[ev] || []).slice().forEach(f => { try { f(x, CF); } catch (e) { console.error('CF.on', ev, e); } });
   const T = k => { const c = cfgOf(); return (c && c.terms && c.terms[k]) || (typeof t === 'function' ? t(k) : k); };
   const josa = (w, a) => { const s = String(w || ''); const ch = s.charCodeAt(s.length - 1); const jong = ch >= 0xAC00 && ch <= 0xD7A3 ? (ch - 0xAC00) % 28 : 0; const P = { '을': ['을', '를'], '이': ['이', '가'], '은': ['은', '는'], '과': ['과', '와'], '으로': ['으로', '로'] }[a]; return s + (P ? (jong && !(a === '으로' && jong === 8) ? P[0] : P[1]) : a); };
+  const jq = (w, a) => `'${w}'${josa(w, a).slice(String(w || '').length)}`; /* 따옴표로 감싼 말 + 받침에 맞는 조사 */
   const cfgKey = () => { const o = (typeof S !== 'undefined' && S && S.org) || {}; return o.type === 'univ' && o.ed === 'lms' ? 'univ_lms' : (o.type || 'adult'); };
   const cfgOf = () => { const k = cfgKey(); return CF.cfg[k] || (k === 'univ_lms' ? CF.cfg.univ : null) || null; };
   const U = () => (typeof S !== 'undefined' && S && S.org && S.org.type) === 'univ';
@@ -26,7 +27,7 @@
   const dropDraft = () => { if (typeof S !== 'undefined' && S) { delete S.crsDraft; try { save(); } catch (e) { } } };
   const hasDraft = () => { const x = typeof S !== 'undefined' && S && S.crsDraft; return !!(x && x.d && x.key === cfgKey() && (x.d.name || (x.d.weekPlan || []).length)); };
   const snap = (label) => { if (!F) return; F.undo.push({ label: label || '바꾼 내용', d: JSON.stringify(F.d), step: F.step }); if (F.undo.length > 20) F.undo.shift(); };
-  const undo = () => { if (!F || !F.undo.length) return; const u = F.undo.pop(); F.d = JSON.parse(u.d); F.step = u.step; saveDraft(); paint(); emit('undo', { step: F.ids[F.step], label: u.label }); toast(`'${u.label}'을(를) 되돌렸습니다.`, 'ok'); };
+  const undo = () => { if (!F || !F.undo.length) return; const u = F.undo.pop(); F.d = JSON.parse(u.d); F.step = u.step; saveDraft(); paint(); emit('undo', { step: F.ids[F.step], label: u.label }); toast(`${jq(u.label, '을')} 되돌렸습니다.`, 'ok'); };
 
   /* ───────── 공용 화면 조각(C2 · C3도 씀): CF.ui ───────── */
   const aiBtn = (k, label) => `<button type="button" class="cf-ai" data-cfai="${esc(k)}">${typeof ic === 'function' ? ic('spark', 16) : '✦'} ${esc(label || 'AI SAM이 채워 주기')}</button>`;
@@ -96,7 +97,7 @@
       render(el, d) { if (window.CT && typeof CT.renderFill === 'function') { try { return CT.renderFill(el, d); } catch (e) { console.error('CT.renderFill', e); } } fillDefault(el, d); },
       valid() { return []; },
       aiFill(d) { if (window.CT && typeof CT.aiFill === 'function') return Promise.resolve(CT.aiFill(d)).then(() => d); d.auto = { ...defs().auto, ...(d.auto || {}) }; return Promise.resolve(d); } },
-    { id: 'setup', title: () => '수강 설정', now: () => `${T('fee')}와 수강 기간, 공개 범위를 정해 주세요.`,
+    { id: 'setup', title: () => '수강 설정', now: () => `${josa(T('fee'), '과')} 수강 기간, 공개 범위를 정해 주세요.`,
       render(el, d) {
         const D = defs(); if (d.paid == null && !askOf('setup')) d.paid = (+d.price || 0) > 0; if (d.days == null) d.days = D.days; if (d.open == null) d.open = '전체';
         el.innerHTML = askBlock('setup', d, [
@@ -107,7 +108,7 @@
           ui.note(`${T('done')} 기준은 이 ${josa(T('cls'), '에')} 맞는 기본값으로 정해 둡니다. 만든 뒤 설정 탭에서 바꿀 수 있습니다.`) +
           (['adult', 'k12', 'lifelong'].includes(S.org.type) ? `<p class="cf-adv">회차 · 요일반 · 구독처럼 세부 운영이 필요하면 <button type="button" class="linkb" data-act="cls-new-adv">자세한 설정으로 만들기</button></p>` : '');
       },
-      valid(d) { const P = []; if ((d.paid === true || d.paid === 'true') && !(+d.price > 0)) P.push({ k: 'price', msg: `유료라면 ${T('fee')}를 적어 주세요. 무료면 '무료'를 누르세요.` }); return P; },
+      valid(d) { const P = []; if ((d.paid === true || d.paid === 'true') && !(+d.price > 0)) P.push({ k: 'price', msg: `유료라면 ${josa(T('fee'), '을')} 적어 주세요. 무료면 '무료'를 누르세요.` }); return P; },
       aiFill(d) { const D = defs(); if (d.paid == null) d.paid = false; if (d.days == null) d.days = D.days; if (d.open == null) d.open = '전체'; return Promise.resolve(d); } },
     { id: 'open', title: () => '미리보기 · 개설', now: () => `${T('learner')}에게 보일 모습을 확인하고 [개설하기]를 누르세요.`,
       render(el, d) { el.innerHTML = previewHTML(d); },
@@ -119,7 +120,7 @@
     const A = d.auto = { ...defs().auto, ...(d.auto || {}) }; const u = unit(d); const items = d.curriculum || [];
     el.innerHTML = `<p class="cf-lab">${esc(u)}마다 자동으로 넣을 것 <span class="cf-later">나중에 해도 돼요</span></p><div class="cf-auto">${AUTO.map(([k, l, s, i]) => { const onV = k === 'video' ? A.video !== 'none' : !!A[k]; return `<button type="button" class="${onV ? 'on' : ''}" aria-pressed="${onV}" data-cfauto="${k}">${typeof ic === 'function' ? ic(i, 22) : ''}<span class="cf-at"><b>${esc(l)}</b><small>${esc(s.replace('#', u))}</small></span><span class="cf-ck">${onV ? '넣어요' : '빼요'}</span></button>`; }).join('')}</div>` +
       (A.video !== 'none' ? ui.field({ k: '_vsrc', label: '강의 영상은 어떻게 준비할까요', kind: 'choice', opts: [['youtube', 'YouTube에서 추천', '알맞은 영상을 찾아 연결'], ['ai', 'AI로 강의 영상 만들기', '슬라이드 + 음성(미리보기 품질)']] }, { _vsrc: A.video }) : '') +
-      ui.note(`${(d.weekPlan || []).length}개 ${esc(u)}에 위 내용을 초안으로 넣습니다. 만든 뒤 ${esc(u)}을 눌러 영상 · 교안을 바꾸거나 파일을 올릴 수 있습니다.${items.length ? ` 직접 넣은 콘텐츠 ${items.length}개는 그대로 씁니다.` : ''}`);
+      ui.note(`${(d.weekPlan || []).length}개 ${esc(u)}에 위 내용을 초안으로 넣습니다. 만든 뒤 ${esc(josa(u, '을'))} 눌러 영상 · 교안을 바꾸거나 파일을 올릴 수 있습니다.${items.length ? ` 직접 넣은 콘텐츠 ${items.length}개는 그대로 씁니다.` : ''}`);
   }
   function previewHTML(d) {
     const c = cfgOf(); const u = unit(d); const L = d.weekPlan || []; const paid = d.paid == null ? +d.price > 0 : (d.paid === true || d.paid === 'true');
@@ -157,7 +158,7 @@
   function askResume(opts) {
     const x = S.crsDraft; const nm = x.d.name || '이름 없는 ' + T('cls'); const sid = x.step; const si = stepIds().indexOf(sid);
     mount(); F = null;
-    $('#crsFlow').innerHTML = `<div class="cf-box cf-resume" role="dialog" aria-modal="true" aria-label="이어서 만들기"><div class="cf-rb"><p class="cf-now">만들던 ${esc(T('cls'))}가 있습니다</p><h2>${esc(nm)}</h2><p class="cf-sub">${si >= 0 ? `${si + 1}단계 '${esc(titleOf(sid, x.d))}'까지 했습니다.` : ''} 이어서 할까요?</p>
+    $('#crsFlow').innerHTML = `<div class="cf-box cf-resume" role="dialog" aria-modal="true" aria-label="이어서 만들기"><div class="cf-rb"><p class="cf-now">만들던 ${esc(josa(T('cls'), '이'))} 있습니다</p><h2>${esc(nm)}</h2><p class="cf-sub">${si >= 0 ? `${si + 1}단계 '${esc(titleOf(sid, x.d))}'까지 했습니다.` : ''} 이어서 할까요?</p>
       <div class="cf-rbb"><button type="button" class="btn pri cf-big" data-cfgo="resume">이어서 하기</button><button type="button" class="btn cf-big" data-cfgo="fresh">새로 만들기</button></div><p class="cf-hint">새로 만들어도 지금 초안은 [되돌리기]로 되찾을 수 있습니다.</p><button type="button" class="linkb" data-cfgo="close">닫기</button></div></div>`;
     CF._pending = opts;
   }
@@ -175,7 +176,7 @@
     w.innerHTML = `<div class="cf-box" role="dialog" aria-modal="true" aria-label="${esc(T('cls'))} 만들기">
       <header class="cf-hd"><div class="cf-ht"><b>${esc(T('cls'))} 만들기</b><span class="cf-saved" aria-live="polite"></span></div><button type="button" class="cf-laterh" data-cfgo="later">나중에 하기</button><button type="button" class="cf-x" data-cfgo="later" aria-label="닫기(나중에 이어서 하기)">${typeof ic === 'function' ? ic('x', 20) : '✕'}</button></header>
       <ol class="cf-prog" aria-label="진행 ${F.step + 1}/${n}">${prog}</ol>
-      <div class="cf-nowb"><p class="cf-now"><span class="cf-k">지금 할 일</span> ${esc(nowOf(id, d))}</p><div class="crs-sam-slot">${id !== 'open' && !CF.samOwnsButton ? `<button type="button" class="cf-ai cf-aistep" data-cfgo="ai">${typeof ic === 'function' ? ic('spark', 16) : '✦'} AI SAM에게 이 단계 맡기기</button>` : ''}</div></div>
+      <div class="cf-nowb"><p class="cf-now" data-cfnow="1"><span class="cf-k">지금 할 일</span> ${esc(nowOf(id, d))}</p><div class="crs-sam-slot">${id !== 'open' && !CF.samOwnsButton ? `<button type="button" class="cf-ai cf-aistep" data-cfgo="ai">${typeof ic === 'function' ? ic('spark', 16) : '✦'} AI SAM에게 이 단계 맡기기</button>` : ''}</div></div>
       <main class="cf-body" data-cfstep="${esc(id)}"></main>
       <div class="cf-sam" aria-live="polite"></div>
       <footer class="cf-ft">${F.step ? '<button type="button" class="btn cf-big" data-cfgo="prev">이전</button>' : ''}${F.undo.length ? `<button type="button" class="btn ghost cf-undo" data-cfgo="undo">되돌리기</button>` : ''}<span class="cf-sp"></span><button type="button" class="btn ghost cf-later2" data-cfgo="later">나중에 이어서 하기</button>${last ? `<button type="button" class="btn pri cf-big" data-cfgo="create">개설하기</button>` : `<button type="button" class="btn pri cf-big" data-cfgo="next">다음</button>`}</footer></div>`;
@@ -188,8 +189,8 @@
 
   /* ───────── 이동 · 검사 · 만들기 ───────── */
   const problems = id => { const st = stepOf(id); let P = []; try { P = st.valid(F.d) || []; } catch (e) { console.error(e); }
-    if (id === 'basic' || id === stepIds()[0]) { const A = askOf(id) || []; required().forEach(k => { const f = A.find(x => x.k === k); if (f && shown(f, F.d) && !String(F.d[k] ?? '').trim() && !P.some(p => p.k === k)) P.push({ k, msg: `'${f.label}'을(를) 적어 주세요.` }); }); }
-    (askOf(id) || []).forEach(f => { if (f.req && shown(f, F.d) && !String(F.d[f.k] ?? '').trim() && !P.some(p => p.k === f.k)) P.push({ k: f.k, msg: `'${f.label}'을(를) 적어 주세요.` }); });
+    if (id === 'basic' || id === stepIds()[0]) { const A = askOf(id) || []; required().forEach(k => { const f = A.find(x => x.k === k); if (f && shown(f, F.d) && !String(F.d[k] ?? '').trim() && !P.some(p => p.k === k)) P.push({ k, msg: `${jq(f.label, '을')} 적어 주세요.` }); }); }
+    (askOf(id) || []).forEach(f => { if (f.req && shown(f, F.d) && !String(F.d[f.k] ?? '').trim() && !P.some(p => p.k === f.k)) P.push({ k: f.k, msg: `${jq(f.label, '을')} 적어 주세요.` }); });
     const stopC = checks(F.d).filter(w => w.lv === 'stop' && (!w.step || w.step === id) && (w.step || id === 'open')); stopC.forEach(w => P.push({ k: w.k || '_check', msg: w.msg, check: true }));
     return P.map(p => typeof p === 'string' ? { k: '_', msg: p } : p); };
   function next() {
@@ -304,7 +305,9 @@
   { const b = ACT['cls-new-adv']; if (b) ACT['cls-new-adv'] = (...a) => { const d = F && F.d; close(true); b(...a); if (d && typeof WZ !== 'undefined' && WZ) { WZ.name = d.name || ''; WZ.target = d.target || ''; WZ.goal = d.goal || ''; if (typeof wizard === 'function') wizard(); } }; }
 
   /* 이어서 하기 띠: 과정 목록 위에 초안이 있으면 한 줄로 알림 */
-  if (typeof render === 'function') { const b = render; render = function (...a) { const r = b.apply(this, a); try { const m = $('#main'); if (m && typeof CUR !== 'undefined' && CUR.tab === 'class' && !UI.cls && !F && hasDraft() && !m.querySelector('.cf-resbar')) { const x = S.crsDraft; m.insertAdjacentHTML('afterbegin', `<div class="cf-resbar" role="status"><span>만들던 <b>${esc(x.d.name || T('cls'))}</b>이(가) 있습니다.</span><button type="button" class="btn pri" data-act="crs-resume">이어서 하기</button></div>`); } } catch (e) { } return r; }; }
+  /* 휴대폰: 두 줄로 줄인 '지금 할 일'을 누르면 전체 문장 펼치기 */
+  document.addEventListener('click', e => { const n = e.target && e.target.closest && e.target.closest('#crsFlow [data-cfnow]'); if (n && n.parentNode) n.parentNode.classList.toggle('open'); });
+  if (typeof render === 'function') { const b = render; render = function (...a) { const r = b.apply(this, a); try { const m = $('#main'); if (m && typeof CUR !== 'undefined' && CUR.tab === 'class' && !UI.cls && !F && hasDraft() && !m.querySelector('.cf-resbar')) { const x = S.crsDraft; m.insertAdjacentHTML('afterbegin', `<div class="cf-resbar" role="status"><span>만들던 <b>${esc(x.d.name || T('cls'))}</b>${josa(x.d.name || T('cls'), '이').slice(String(x.d.name || T('cls')).length)} 있습니다.</span><button type="button" class="btn pri" data-act="crs-resume">이어서 하기</button></div>`); } } catch (e) { } return r; }; }
   ACT['crs-resume'] = () => open({ resume: true, _asked: true, from: 'menu' });
 
   /* ───────── 생성 함수 통일 ───────── */

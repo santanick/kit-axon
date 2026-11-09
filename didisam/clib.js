@@ -48,16 +48,17 @@
   }
   /* 저장 종류(C3 CT와 같은 말): aivideo · youtube · upload · doc · book · quiz · assign → 화면 종류(KIND): video · doc · quiz · assign · book · file */
   const C3K = ['aivideo', 'youtube', 'upload', 'doc', 'book', 'quiz', 'assign'];
-  const isVid = r => r.type === 'video' || /^(video|audio)\//.test(r.mime || '') || /\.(mp4|webm|mov|m4v|mp3|m4a|wav)$/i.test(r.file || '');
+  const isAud = r => r.type === 'audio' || /^audio\//.test(r.mime || '') || /\.(mp3|m4a|wav)$/i.test(r.file || '');
+  const isVid = r => r.type === 'video' || r.type === 'audio' || /^(video|audio)\//.test(r.mime || '') || /\.(mp4|webm|mov|m4v|mp3|m4a|wav)$/i.test(r.file || '');
   const dk = r => { const k = r.kind; if (k === 'aivideo' || k === 'youtube') return 'video'; if (k === 'upload') return isVid(r) ? 'video' : 'file';
     if (k === 'doc') return r.src === 'book' ? 'book' : r.src === 'upload' || (r.files && !r.doc) ? 'file' : 'doc'; if (KIND[k]) return k;
-    return r.type === 'video' ? 'video' : ['quiz', 'exam'].includes(r.type) ? 'quiz' : r.type === 'assign' ? 'assign' : r.type === 'doc' ? (r.src === 'book' ? 'book' : r.src === 'upload' || ((r.files || r.fileId) && !r.doc) ? 'file' : 'doc') : 'file'; };
-  const c3k = r => { if (C3K.includes(r.kind)) return r.kind; const v = r.kind === 'video' || r.type === 'video';
+    return r.type === 'video' || r.type === 'audio' ? 'video' : ['quiz', 'exam'].includes(r.type) ? 'quiz' : r.type === 'assign' ? 'assign' : r.type === 'doc' ? (r.src === 'book' ? 'book' : r.src === 'upload' || ((r.files || r.fileId) && !r.doc) ? 'file' : 'doc') : 'file'; };
+  const c3k = r => { if (C3K.includes(r.kind)) return r.kind; if (r.type === 'audio') return 'upload'; const v = r.kind === 'video' || r.type === 'video';
     if (v) return r.src === 'ai' || r.ai ? 'aivideo' : r.src === 'youtube' || /youtu/.test(r.url || '') ? 'youtube' : 'upload';
     if (r.kind === 'file') return 'upload'; if (r.kind === 'book' || r.src === 'book') return 'book'; if (['quiz', 'exam'].includes(r.type) || r.kind === 'quiz') return 'quiz'; if (r.type === 'assign' || r.kind === 'assign') return 'assign';
     return r.src === 'upload' || ((r.files || r.fileId) && !r.doc) ? 'upload' : 'doc'; };
-  const kindOfItem = it => ['video', 'doc', 'quiz', 'exam', 'assign'].includes(it.type) ? dk(it) : '';
-  const libKind = l => ['동영상', 'YouTube'].includes(l.kind) ? 'video' : l.kind === '평가' ? (l.item && l.item.type === 'assign' ? 'assign' : 'quiz') : 'file';
+  const kindOfItem = it => ['video', 'audio', 'doc', 'quiz', 'exam', 'assign'].includes(it.type) ? dk(it) : '';
+  const libKind = l => ['동영상', '음성', 'YouTube'].includes(l.kind) ? 'video' : l.kind === '평가' ? (l.item && l.item.type === 'assign' ? 'assign' : 'quiz') : 'file';
   const books = () => { try { return typeof LSV === 'function' ? (LSV().dbooks || []) : []; } catch (e) { return []; } };
 
   /* ── 목록: 단독(S.clib) · 디지털북 · 예전 보관함(S.lib) · 과정 항목 ── */
@@ -102,7 +103,7 @@
     const r = e.ref;
     if (e.origin === 'book') return `${(r.chs || []).length}단원`;
     if (e.origin === 'lib') return [r.kind === '평가' ? r.sub || '평가' : r.kind === '동영상' ? '올린 영상' : r.kind, r.size && r.size !== '—' ? r.size : ''].filter(Boolean).join(' · ');
-    const src = r.src === 'ai' || r.kind === 'aivideo' ? 'AI로 만든 영상' : r.src === 'youtube' || r.kind === 'youtube' ? 'YouTube' : r.src === 'upload' || r.src === 'library' || r.kind === 'upload' ? '올린 영상' : '';
+    const src = r.src === 'ai' || r.kind === 'aivideo' ? 'AI로 만든 영상' : r.src === 'youtube' || r.kind === 'youtube' ? 'YouTube' : r.src === 'upload' || r.src === 'library' || r.kind === 'upload' ? (isAud(r) ? '올린 음성' : '올린 영상') : '';
     if (e.kind === 'video') return [src || '영상', r.ai && r.ai.mins ? `${r.ai.mins}분` : ''].filter(Boolean).join(' · ');
     if (e.kind === 'doc') return `교안${r.doc && (r.doc.secs || []).length ? ` · ${(r.doc.secs || []).length}절` : ''}`;
     if (e.kind === 'quiz') return `퀴즈 · ${(r.qs || []).length}문항`;
@@ -122,7 +123,7 @@
       if (!b && obj && Array.isArray(obj.chs) && typeof LSV === 'function') { b = typeof bkNorm === 'function' ? bkNorm(obj) : obj; LSV().dbooks.push(b); }
       save(); return b ? { id: b.id, kind: 'book', type: 'doc', src: 'book', book: b.id, title: b.title } : null; }
     const it = { ...o, id: o.id && /^cl/.test(o.id) ? o.id : uid('cl'), kind, title: String(o.title || o.name || '콘텐츠').slice(0, 80), at: o.at || today(), usedIn: Array.isArray(o.usedIn) ? o.usedIn : [] };
-    if (!it.type) it.type = ({ aivideo: 'video', youtube: 'video', upload: isVid(it) ? 'video' : 'doc', quiz: 'quiz', assign: 'assign' })[kind] || 'doc';
+    if (!it.type) it.type = ({ aivideo: 'video', youtube: 'video', upload: isAud(it) ? 'audio' : isVid(it) ? 'video' : 'doc', quiz: 'quiz', assign: 'assign' })[kind] || 'doc';
     if (kind === 'aivideo' && !it.src) it.src = 'ai'; if (kind === 'youtube' && !it.src) it.src = 'youtube'; if (kind === 'upload' && !it.src) it.src = 'upload';
     const at = S.clib.findIndex(y => y.id === it.id); if (at >= 0) S.clib[at] = it; else S.clib.unshift(it);
     save(); return it;
@@ -178,7 +179,7 @@
     const topic = ed ? String(ed.title || '').replace(/ (AI 강의 영상|교안|퀴즈|디지털북)$/, '') : '';
     const preset = w => { if (topic) { const i = w.querySelector('[name=t]'); if (i) i.value = topic; } return w; };
     if (kind === 'upload') { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = 'video/*,audio/*,.pdf,.hwp,.hwpx,.ppt,.pptx,.doc,.docx,.xls,.xlsx,image/*'; inp.hidden = true; document.body.appendChild(inp);
-      inp.addEventListener('change', () => { const F = [...inp.files]; F.forEach(f => { const vid = /^video\//.test(f.type); if (vid && f.size > 4 * 1024 ** 3) { toast(`${f.name}: 영상은 4GB까지 올릴 수 있습니다.`, 'warn'); return; }
+      inp.addEventListener('change', () => { const F = [...inp.files]; F.forEach(f => { const vid = /^video\//.test(f.type); if (vid && f.size > ((window.HPM && HPM.FMAX && HPM.FMAX.video) || 1024 ** 3)) { toast(`${f.name}: 영상은 ${(window.HPM && HPM.sizeText && HPM.FMAX) ? HPM.sizeText(HPM.FMAX.video) : '1GB'}까지 올릴 수 있습니다.`, 'warn'); return; }
         done({ kind: vid ? 'video' : 'file', src: 'upload', title: f.name.replace(/\.\w+$/, '').slice(0, 80), file: f.name, bytes: f.size, size: typeof a2Size === 'function' ? a2Size(f.size) : `${Math.round(f.size / 1024)}KB`, mime: f.type }); });
         inp.remove(); if (F.length) toast(`${F.length}개를 올렸습니다. (데모: 파일 이름 · 크기만 기록합니다)`, 'ok'); }); inp.click(); return; }
     if (kind === 'youtube') { const w = modal('YouTube 영상 넣기', `<div class="clb-ask"><label class="fl clb-fl">YouTube 주소<input name="u" inputmode="url" autocomplete="off" value="${esc(ed && ed.url || '')}"></label><p class="clb-ex">예: https://youtu.be/abcdefghijk</p><label class="fl clb-fl">제목 <small class="clb-later">나중에 해도 돼요</small><input name="t" maxlength="80" value="${esc(ed && ed.title || '')}"></label></div>`,

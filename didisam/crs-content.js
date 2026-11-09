@@ -16,6 +16,9 @@
   const cl = s => (typeof clean === 'function' ? clean(s) : String(s || '').trim());
   const topicOf = s => { const x = typeof lecTopic === 'function' ? lecTopic(s) : cl(s); return x === '핵심 개념' && !cl(s) ? '' : x; };
   const unit = () => { try { const c = W.CF && CF.cfg && CF.cfg[S.org.type]; if (c && c.terms && c.terms.sess) return c.terms.sess; } catch (e) { } return S && S.org && S.org.type === 'univ' ? '주차' : '차시'; };
+  /* 받침에 맞는 조사: jo('강좌', '을') → '강좌를' · jo('훈련과정', '이') → '훈련과정이' */
+  const jo = (w, a) => { const s = String(w ?? ''); const t = s.replace(/[」』"')\]\s]+$/, ''); const ch = t.charCodeAt(t.length - 1); const jong = ch >= 0xAC00 && ch <= 0xD7A3 ? (ch - 0xAC00) % 28 : /[0-9]$/.test(t) ? ([0, 1, 3, 6, 7, 8].includes(+t.slice(-1)) ? 1 : 0) : /[lmnr]$/i.test(t) ? 1 : 0; const P = { '을': ['을', '를'], '이': ['이', '가'], '은': ['은', '는'], '과': ['과', '와'], '으로': ['으로', '로'] }[a]; return s + (P ? (jong && !(a === '으로' && jong === 8) ? P[0] : P[1]) : a); };
+  try { if (typeof ITEMX === 'object' && ITEMX && !ITEMX.audio) ITEMX.audio = '음성'; } catch (e) { } /* 운영자 목차 라벨: 올린 음성(type 'audio') */
   const HPMx = () => (typeof HPM === 'object' && HPM) || W.HPM || null;
   const clibL = () => (S.clib = Array.isArray(S.clib) ? S.clib : []);
   const P = { /* 선 굵기가 같은 아이콘(24 격자) */
@@ -26,6 +29,7 @@
     assign: '<path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 13l2 2 4-4"/>',
     book: '<path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z"/><path d="M4 20a2 2 0 0 0 2 1h13v-3M9 7h6"/>',
     youtube: '<rect x="2.5" y="5.5" width="19" height="13" rx="3.5"/><path d="M10 9.5v5l4.5-2.5z"/>',
+    audio: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
     lib: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5h5"/>',
     x: '<path d="M6 6l12 12M18 6L6 18"/>', back: '<path d="M15 5l-7 7 7 7"/>', check: '<path d="M5 12l5 5 9-10"/>', spark: '<path d="M12 3l2.1 6.4L20.5 12l-6.4 2.1L12 20.5l-2.1-6.4L3.5 12l6.4-2.6z"/>',
     play: '<path d="M7 5v14l11-7z"/>', down: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>', print: '<path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7z"/>', chev: '<path d="M9 6l6 6-6 6"/>', undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>', trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'
@@ -34,8 +38,8 @@
 
   /* ── 종류 카드 ── */
   const KINDS = [
-    { k: 'upload', name: '영상 · 자료 올리기', one: '가지고 있는 영상 · PDF · PPT · 한글 파일을 올립니다', time: '1분' },
-    { k: 'aivideo', name: 'AI 강의 영상 만들기', one: '대본을 확인하면 슬라이드와 음성 설명을 만듭니다', time: '약 2분' },
+    { k: 'upload', name: '영상 · 자료 올리기', one: '가지고 있는 영상 · 음성 · PDF · PPT · 한글 파일을 올립니다', time: '1분' },
+    { k: 'aivideo', name: 'AI 강의 영상 만들기', one: '주제만 적으면 대본 · 슬라이드 · 음성 설명을 한 번에 만듭니다', time: '약 1분' },
     { k: 'doc', name: '교안 만들기', one: '학습 목표 · 본문 · 실습 · 확인 문제가 담긴 A4 교안', time: '30초' },
     { k: 'quiz', name: '퀴즈 만들기', one: '정답과 해설이 있는 확인 문제', time: '30초' },
     { k: 'assign', name: '과제 만들기', one: '과제 안내와 채점 기준을 함께 만듭니다', time: '30초' },
@@ -44,9 +48,10 @@
     { k: 'lib', name: '라이브러리에서 가져오기', one: '이미 만들어 둔 콘텐츠를 고릅니다', time: '30초' }
   ];
   const KN = Object.fromEntries(KINDS.map(x => [x.k, x]));
-  const STEPS = { upload: ['파일 고르기', '확인하고 넣기'], aivideo: ['대본 확인', '만들기', '미리보기'], doc: ['주제 확인', '미리보기'], quiz: ['주제 확인', '미리보기'], assign: ['주제 확인', '미리보기'], book: ['주제 확인', '미리보기'], youtube: ['주소 붙여 넣기', '확인하고 넣기'], lib: ['고르기', '확인하고 넣기'] };
-  const TYPE_KIND = it => it.type === 'video' ? (it.src === 'ai' ? 'aivideo' : it.src === 'upload' ? 'upload' : 'youtube') : it.type === 'doc' ? (it.src === 'book' ? 'book' : it.src === 'upload' ? 'upload' : 'doc') : it.type === 'exam' ? 'quiz' : it.type;
-  const TYPE_LABEL = it => ({ aivideo: 'AI 영상', upload: it.type === 'video' ? '영상' : '자료', youtube: 'YouTube', doc: '교안', book: '디지털북', quiz: it.type === 'exam' ? '시험' : '퀴즈', assign: '과제' }[TYPE_KIND(it)] || (typeof ITEMX === 'object' && ITEMX[it.type]) || it.type);
+  const icOf = it => (it && it.type === 'audio') || /^audio/.test((it && it.mime) || '') ? 'audio' : (KN[TYPE_KIND(it || {})] ? TYPE_KIND(it) : 'doc');
+  const STEPS = { upload: ['파일 고르기', '확인하고 넣기'], aivideo: ['주제 확인', '만들기', '미리보기'], doc: ['주제 확인', '미리보기'], quiz: ['주제 확인', '미리보기'], assign: ['주제 확인', '미리보기'], book: ['주제 확인', '미리보기'], youtube: ['주소 붙여 넣기', '확인하고 넣기'], lib: ['고르기', '확인하고 넣기'] };
+  const TYPE_KIND = it => it.type === 'audio' ? 'upload' : it.type === 'video' ? (it.src === 'ai' ? 'aivideo' : it.src === 'upload' ? 'upload' : 'youtube') : it.type === 'doc' ? (it.src === 'book' ? 'book' : it.src === 'upload' ? 'upload' : 'doc') : it.type === 'exam' ? 'quiz' : it.type;
+  const TYPE_LABEL = it => ({ aivideo: 'AI 영상', upload: it.type === 'video' ? '영상' : it.type === 'audio' ? '음성' : '자료', youtube: 'YouTube', doc: '교안', book: '디지털북', quiz: it.type === 'exam' ? '시험' : '퀴즈', assign: '과제' }[TYPE_KIND(it)] || (typeof ITEMX === 'object' && ITEMX[it.type]) || it.type);
 
   /* ── AI 생성(Claude 있으면 Claude, 없으면 규칙) ── */
   const claudeOn = () => { try { return typeof CL === 'object' && !!CL.on('docs'); } catch (e) { return false; } };
@@ -79,7 +84,9 @@
   const BLOBS = {}; /* 이 창 안 미리보기용 object URL(새로고침하면 사라짐) */
   const upFn = () => (HPMx() && typeof HPM.upload === 'function') ? ((f, o) => HPM.upload(f, { kind: 'course', name: f.name, onProgress: o && o.onProgress })) : (W.crsUpload || null);
   const FKIND = f => { const n = (f.name || '').toLowerCase(); const ty = f.type || ''; if (ty.startsWith('video') || /\.(mp4|webm|mov|m4v)$/.test(n)) return 'video'; if (ty.startsWith('audio') || /\.(mp3|m4a|wav|ogg)$/.test(n)) return 'audio'; if (ty.startsWith('image')) return 'image'; if (ty === 'application/pdf' || /\.pdf$/.test(n)) return 'pdf'; return 'file'; };
-  const LIMIT = { video: 1024 ** 3, audio: 200 * 1024 ** 2, image: 30 * 1024 ** 2, pdf: 100 * 1024 ** 2, file: 100 * 1024 ** 2 }; /* HPM(C6)과 같은 상한 */
+  const LIMIT0 = { video: 1024 ** 3, audio: 200 * 1024 ** 2, image: 2 * 1024 ** 2, pdf: 100 * 1024 ** 2, file: 100 * 1024 ** 2 };
+  const LIMIT = new Proxy(LIMIT0, { get: (o, k) => { try { const M = HPMx() && HPM.FMAX; if (M) { const v = M[k === 'pdf' || k === 'file' ? 'doc' : k]; if (+v > 0) return +v; } } catch (e) { } return o[k]; } }); /* 상한은 hpmedia.js HPM.FMAX(= 서버 mediafile.js limits)를 그대로 쓴다 */
+  const limText = () => `영상 ${mb(LIMIT.video).replace('.0', '')} · 음성 ${mb(LIMIT.audio)} · 문서 ${mb(LIMIT.file)}까지`;
   const ACCEPT0 = 'video/*,audio/*,image/*,.pdf,.ppt,.pptx,.doc,.docx,.hwp,.hwpx,.xls,.xlsx';
   const accept = () => { try { if (HPMx() && HPM.accept) return HPM.accept('course') || ACCEPT0; } catch (e) { } return ACCEPT0; };
   const mb = n => n >= 1024 ** 3 ? (n / 1024 ** 3).toFixed(1) + 'GB' : (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + 'MB';
@@ -96,10 +103,9 @@
     if (!S) return; ctx = ctx || {}; if (!KN[kind]) kind = 'doc'; if (kind === 'lib' && ctx.from === 'lib' && !ctx.course) kind = 'doc';
     X = { kind, ctx, step: 0, topic: seedTopic(ctx), mins: 5, n: 5, lv: '보통', fmt: 'hand', units: 3, res: null, by: '', busy: false };
     if (ctx.item) prefill(ctx.item);
-    if (kind === 'aivideo' && !X.res && X.topic) { X.busy = true; GEN.aivideo(X.topic, { mins: X.mins }).then(r => { if (!X || X.kind !== 'aivideo') return; X.res = r.v; X.by = r.by; X.busy = false; draw(); }); }
     mount(); draw(); return true;
   }
-  function prefill(it) { const k = TYPE_KIND(it); if (k !== X.kind) return; if (k === 'aivideo' && it.ai?.scenes?.length) { X.res = JSON.parse(JSON.stringify(it.ai.scenes)); X.mins = it.ai.mins || 5; }
+  function prefill(it) { const k = TYPE_KIND(it); if (k !== X.kind) return; if (k === 'aivideo' && it.ai?.scenes?.length) { X.res = JSON.parse(JSON.stringify(it.ai.scenes)); X.mins = it.ai.mins || 5; X.step = 2; }
     if (k === 'doc' && it.doc?.secs?.length) { X.res = JSON.parse(JSON.stringify(it.doc)); X.fmt = it.fmt || 'hand'; X.step = 1; } if (k === 'quiz' && it.qs?.length) { X.res = JSON.parse(JSON.stringify(it.qs)); X.step = 1; }
     if (k === 'youtube' && it.url) X.url = it.url; if (it.topic) X.topic = topicOf(it.topic); }
   function mount() {
@@ -149,17 +155,17 @@
   const docTitle = () => { const st = sessTitle(X.ctx); return `${X.topic || st || '강의'} ${X.fmt === 'work' ? '실습지' : '교안'}`.replace(/\s+/g, ' ').trim(); };
   const docItem = () => ({ title: docTitle(), topic: X.topic, fmt: X.fmt, doc: X.res });
 
-  /* AI 강의 영상: 대본 확인 → 만들기 → 미리보기 */
+  /* AI 강의 영상: 주제 확인 → [영상 만들기] 한 번(대본 + 슬라이드 자동) → 미리보기(대본 고치기는 여기서) */
   VIEW.aivideo = () => {
     const sc = X.res || [];
     if (X.step === 0) {
-      if (X.busy) return { now: '', body: busyBox('대본을 만들고 있습니다…'), foot: '' };
-      if (!X.res) return { now: '영상 주제를 한 줄 적고 [대본 만들기]를 누르세요.', body: topicField('영상 주제', '프롬프트를 잘 쓰는 세 가지 방법') + chips('mins', [[3, '3분'], [5, '5분'], [10, '10분']], '길이'), foot: foot(pri(`${svg('spark', 18)} 대본 만들기`, 'ct-make')) };
-      const tot = sc.reduce((a, s) => a + (typeof secsFor === 'function' ? secsFor(s.say) : 6), 0);
-      return { now: '대본을 읽어 보고 [이 대본으로 영상 만들기]를 누르세요. 고치지 않아도 됩니다.', body: topicField('영상 주제', '프롬프트를 잘 쓰는 세 가지 방법') + chips('mins', [[3, '3분'], [5, '5분'], [10, '10분']], '길이') + `<div class="ct-row">${sec('주제로 대본 다시 만들기', 'ct-make')}<span class="ct-mini">${sc.length}장면 · 약 ${Math.max(1, Math.round(tot / 60))}분</span></div>${byNote(X.by)}<ol class="ct-scn">${sc.map((s, k) => `<li><div class="ct-sh2"><b>${k + 1}</b><input data-ctv="${k}" data-f="h" value="${E(s.h)}" aria-label="${k + 1}장면 제목"><button type="button" class="ct-icb sm" data-act="ct-v-del" data-v="${k}" aria-label="${k + 1}장면 빼기" ${sc.length <= 2 ? 'disabled' : ''}>${svg('trash', 18)}</button></div><label class="ct-f"><span class="ct-l">읽어 줄 말</span><textarea rows="2" data-ctv="${k}" data-f="say">${E(s.say)}</textarea></label><p class="ct-mini">화면 글: ${E((s.pts || []).join(' · '))}</p></li>`).join('')}</ol>`, foot: foot(pri(`${svg('spark', 18)} 이 대본으로 영상 만들기`, 'ct-v-make', !sc.length)) };
+      if (X.busy) return { now: '', body: busyBox('대본을 쓰고 있습니다… 다 되면 슬라이드를 바로 그립니다.'), foot: '' };
+      return { now: '주제를 확인하고 [AI 강의 영상 만들기]를 누르세요. 대본과 슬라이드를 한 번에 만듭니다.', body: topicField('영상 주제', 'AI에게 일을 잘 시키는 세 가지 방법') + chips('mins', [[3, '3분'], [5, '5분'], [10, '10분']], '길이'), foot: foot(pri(`${svg('spark', 18)} AI 강의 영상 만들기`, 'ct-make')) };
     }
     if (X.step === 1) return { now: '', body: `<div class="ct-busy" role="status"><span class="ct-spin" aria-hidden="true"></span>슬라이드를 그리고 있습니다… <b id="ctVn">0</b> / ${sc.length}</div><div class="ct-thumbs" id="ctThumbs"></div>`, foot: '', after: buildSlides };
-    return { now: '미리보기를 확인하고 넣으세요.', body: `<div class="ct-note"><b>미리보기 품질</b> 브라우저가 대본을 읽어 주는 슬라이드 영상입니다. 사람 목소리에 가까운 음성과 MP4 파일은 운영 서버 연결 후 제공됩니다.</div><div class="ct-player"><canvas id="ctCv" width="1280" height="720" aria-label="AI 강의 첫 장면"></canvas><button type="button" class="ct-playb" data-act="ct-v-play" aria-label="소리와 함께 재생">${svg('play', 34)}</button></div><div class="ct-thumbs" id="ctThumbs"></div><div class="ct-tools">${sec(`${svg('play', 18)} 소리와 함께 재생`, 'ct-v-play')}${sec(`${svg('down', 18)} 영상 파일로 저장(WebM)`, 'ct-v-rec')}</div>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')), after: el => { thumbs(el, true); drawBig(0); } };
+    const tot = sc.reduce((a, s) => a + (typeof secsFor === 'function' ? secsFor(s.say) : 6), 0);
+    const ed = X.edit ? `<div class="ct-row"><span class="ct-mini">${sc.length}장면 · 약 ${Math.max(1, Math.round(tot / 60))}분 · 고친 뒤 [고친 대본으로 다시 그리기]를 누르세요.</span></div><ol class="ct-scn">${sc.map((s, k) => `<li><div class="ct-sh2"><b>${k + 1}</b><input data-ctv="${k}" data-f="h" value="${E(s.h)}" aria-label="${k + 1}장면 제목"><button type="button" class="ct-icb sm" data-act="ct-v-del" data-v="${k}" aria-label="${k + 1}장면 빼기" ${sc.length <= 2 ? 'disabled' : ''}>${svg('trash', 18)}</button></div><label class="ct-f"><span class="ct-l">읽어 줄 말</span><textarea rows="2" data-ctv="${k}" data-f="say">${E(s.say)}</textarea></label><p class="ct-mini">화면 글: ${E((s.pts || []).join(' · '))}</p></li>`).join('')}</ol><div class="ct-row">${sec(`${svg('spark', 18)} 고친 대본으로 다시 그리기`, 'ct-v-make')}</div>` : '';
+    return { now: X.edit ? '대본을 고치고 [고친 대본으로 다시 그리기]를 누르세요. 고치지 않아도 넣을 수 있습니다.' : '미리보기를 확인하고 넣으세요. 대본은 [대본 고치기]에서 바꿀 수 있습니다.', body: `${byNote(X.by)}<div class="ct-note"><b>미리보기 품질</b> 브라우저가 대본을 읽어 주는 슬라이드 영상입니다. 사람 목소리에 가까운 음성과 MP4 파일은 운영 서버 연결 후 제공됩니다.</div>${X.edit ? '' : `<div class="ct-player"><canvas id="ctCv" width="1280" height="720" aria-label="AI 강의 첫 장면"></canvas><button type="button" class="ct-playb" data-act="ct-v-play" aria-label="소리와 함께 재생">${svg('play', 34)}</button></div><div class="ct-thumbs" id="ctThumbs"></div>`}<div class="ct-tools">${X.edit ? '' : sec(`${svg('play', 18)} 소리와 함께 재생`, 'ct-v-play')}${sec(X.edit ? '미리보기로' : '대본 고치기', 'ct-doc-edit')}${X.edit ? '' : sec(`${svg('down', 18)} 영상 파일로 저장(WebM)`, 'ct-v-rec')}${sec('주제로 다시 만들기', 'ct-make')}</div>${ed}`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')), after: el => { if (!X.edit) { thumbs(el, true); drawBig(0); } } };
   };
   const vTitle = () => `${X.topic || sessTitle(X.ctx) || '강의'}`.trim();
   function slideTo(cv, i) { const g = cv.getContext('2d'); const s = X.res[i]; try { drawSlide(g, s, i, X.res.length, vTitle(), sentences(s.say)[0] || '', (i + 1) / X.res.length); } catch (e) { } }
@@ -209,16 +215,16 @@
   /* 올리기 */
   VIEW.upload = () => {
     const f = X.file; const upOn = !!upFn();
-    if (!f) return { now: '올릴 파일을 고르세요. 휴대폰 사진첩 · 컴퓨터 폴더에서 고를 수 있습니다.', body: `<label class="ct-drop" id="ctDrop">${svg('upload', 40)}<b>파일 고르기</b><span>또는 이곳에 끌어다 놓기</span><input type="file" id="ctFile" accept="${accept()}"></label><p class="ct-ex">올릴 수 있는 파일: 영상(MP4 · WebM, 최대 1GB) · 음성 · PDF · PPT · 한글 · 워드 · 사진</p>`, foot: '', after: el => { const d = $1('#ctDrop', el); ['dragover', 'dragenter'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); })); d.addEventListener('dragleave', () => d.classList.remove('over')); d.addEventListener('drop', e => { e.preventDefault(); d.classList.remove('over'); const x = e.dataTransfer.files[0]; if (x) takeFile(x); }); } };
+    if (!f) return { now: '올릴 파일을 고르세요. 휴대폰 사진첩 · 컴퓨터 폴더에서 고를 수 있습니다.', body: `<label class="ct-drop" id="ctDrop">${svg('upload', 40)}<b>파일 고르기</b><span>또는 이곳에 끌어다 놓기</span><input type="file" id="ctFile" accept="${accept()}"></label><p class="ct-ex">올릴 수 있는 파일: 영상(MP4 · WebM) · 음성(MP3 · M4A) · PDF · PPT · 한글 · 워드 · 사진</p><p class="ct-mini">파일 하나에 ${E(limText())} 올릴 수 있습니다.</p>`, foot: '', after: el => { const d = $1('#ctDrop', el); ['dragover', 'dragenter'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); })); d.addEventListener('dragleave', () => d.classList.remove('over')); d.addEventListener('drop', e => { e.preventDefault(); d.classList.remove('over'); const x = e.dataTransfer.files[0]; if (x) takeFile(x); }); } };
     const u0 = BLOBS[f.bid]; const k = f.k; const srcA = u0 ? `src="${u0}"` : `data-hpm-src="${E(f.url || '')}"`;
     const pv = k === 'video' ? `<video controls preload="metadata" ${srcA} class="ct-media"></video>` : k === 'audio' ? `<audio controls ${srcA} class="ct-media"></audio>` : k === 'image' ? `<img ${srcA} alt="올린 사진 미리보기" class="ct-media">` : k === 'pdf' ? `<iframe ${srcA} title="PDF 미리보기" class="ct-pdf"></iframe>` : `<div class="ct-filec">${svg('doc', 40)}<b>${E(f.name)}</b><span>이 형식은 화면 미리보기가 없습니다. 학습자는 내려받아 봅니다.</span></div>`;
     return { now: '제목을 확인하고 넣으세요.', body: `<label class="ct-f"><span class="ct-l">제목</span><input id="ctUpT" value="${E(X.upTitle)}" maxlength="80"></label><p class="ct-ex">예: ${E(unit() === '주차' ? '3주차 강의 영상' : '1차시 강의 영상')}</p>${pv}<p class="ct-mini">${E(f.name)} · ${E(mb(f.size))}${f.dur ? ` · ${Math.floor(f.dur / 60)}분 ${f.dur % 60}초` : ''}</p>${X.upErr ? `<p class="ct-err" role="alert">${E(X.upErr)}</p>` : ''}${upOn ? (f.url ? '' : '<p class="ct-mini">[넣기]를 누르면 파일을 저장합니다.</p>') : '<div class="ct-note"><b>데모</b> 지금은 파일 이름과 크기만 저장하고, 미리보기는 이 창에서만 보입니다. 서버에 연결하면 파일이 실제로 저장됩니다.</div>'}<div class="ct-row">${sec('다른 파일 고르기', 'ct-up-again')}</div>`, foot: X.view ? foot(pri('닫기', 'ct-close')) : foot(X.busy ? `<span class="ct-busy sm" role="status"><span class="ct-spin" aria-hidden="true"></span>올리는 중 <b id="ctUpP">0%</b></span>` : pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')), after: el => { try { HPMx() && HPM.hydrate && HPM.hydrate(el); } catch (e) { } } };
   };
   function takeFile(f) {
-    const k = FKIND(f); if (HPMx() && typeof HPM.check === 'function') { try { const c = HPM.check(f); if (c && c.ok === false) { say(c.msg || '올릴 수 없는 파일입니다.', 'warn'); return; } } catch (e) { } } else if (f.size > LIMIT[k]) { say(`${f.name}: ${k === 'video' ? '영상은 1GB' : '파일은 ' + mb(LIMIT[k])}까지 올릴 수 있습니다.`, 'warn'); return; }
+    const k = FKIND(f); if (HPMx() && typeof HPM.check === 'function') { try { const c = HPM.check(f); if (c && c.ok === false) { say(c.msg || '올릴 수 없는 파일입니다.', 'warn'); return; } } catch (e) { } } else if (f.size > LIMIT[k]) { say(`${f.name}: ${k === 'video' ? '영상은' : k === 'audio' ? '음성은' : '파일은'} ${mb(LIMIT[k]).replace('.0GB', 'GB')}까지 올릴 수 있습니다.`, 'warn'); return; }
     const bid = nid('b'); try { BLOBS[bid] = URL.createObjectURL(f); } catch (e) { }
     X.file = { name: String(f.name).slice(0, 120), size: f.size, mime: f.type || '', k, bid, raw: f }; X.step = 1; X.upErr = '';
-    X.upTitle = sessTitle(X.ctx) && !/^\d+\s*(차시|주차|주)$/.test(sessTitle(X.ctx)) ? `${sessTitle(X.ctx)} ${k === 'video' ? '영상' : '자료'}` : String(f.name).replace(/\.[^.]+$/, '').slice(0, 60);
+    X.upTitle = sessTitle(X.ctx) && !/^\d+\s*(차시|주차|주)$/.test(sessTitle(X.ctx)) ? `${sessTitle(X.ctx)} ${k === 'video' ? '영상' : k === 'audio' ? '음성' : '자료'}` : String(f.name).replace(/\.[^.]+$/, '').slice(0, 60);
     if (k === 'video') try { const v = document.createElement('video'); v.preload = 'metadata'; v.onloadedmetadata = () => { if (X && X.file && X.file.bid === bid && Number.isFinite(v.duration)) { if (v.duration > 7200) { X.upErr = '영상은 2시간까지 올릴 수 있습니다.'; } X.file.dur = Math.round(v.duration); draw(); } }; v.src = BLOBS[bid]; } catch (e) { }
     draw();
   }
@@ -227,9 +233,9 @@
     if (fn) { X.busy = true; draw(); try { meta = (await fn(f.raw, { kind: f.k, course: X.ctx.course && X.ctx.course.id, onProgress: p => { const b = $1('#ctUpP'); if (b) b.textContent = Math.round(p * 100) + '%'; } })) || {}; } catch (e) { X.busy = false; X.upErr = `올리지 못했습니다: ${e.message || e}`; draw(); return null; } X.busy = false; }
     const name = meta.name || f.name; const url = meta.url || (meta.fileId ? 'media:' + meta.fileId : 'upload:' + name);
     const isV = f.k === 'video' || f.k === 'audio';
-    const lib = { id: nid('l'), name: name.slice(0, 80), kind: isV ? '동영상' : f.k === 'image' ? '사진' : '문서', size: mb(f.size), bytes: f.size, used: 0, cls: [], at: today(), views: 0, drop: 0, conv: isV ? '대기' : '', fileId: meta.fileId || '', url: meta.url || '' };
+    const lib = { id: nid('l'), name: name.slice(0, 80), kind: f.k === 'video' ? '동영상' : f.k === 'audio' ? '음성' : f.k === 'image' ? '사진' : '문서', size: mb(f.size), bytes: f.size, used: 0, cls: [], at: today(), views: 0, drop: 0, conv: isV ? '대기' : '', fileId: meta.fileId || '', url: meta.url || '' };
     if (f.dur) lib.dur = f.dur; if (Array.isArray(S.lib)) S.lib.unshift(lib);
-    return { type: isV ? 'video' : 'doc', src: 'upload', title: X.upTitle || name, file: name.slice(0, 80), url, fileId: meta.fileId || '', mime: f.mime, size: f.size, lib: lib.id, dur: f.dur || 0, prev: f.bid };
+    return { type: f.k === 'audio' ? 'audio' : isV ? 'video' : 'doc', src: 'upload', title: X.upTitle || name, file: name.slice(0, 80), url, fileId: meta.fileId || '', mime: f.mime, size: f.size, lib: lib.id, dur: f.dur || 0, prev: f.bid };
   }
 
   /* 라이브러리에서 */
@@ -241,10 +247,10 @@
     return out;
   };
   const normLib = r => { if (!r) return null; if (r.type && r.week != null && !r.kind) return { id: 'i:' + r.id, item: r, kind: TYPE_KIND(r), title: r.title, sub: '' }; return { id: 'c:' + r.id, rec: r, kind: r.kind || TYPE_KIND(r), title: r.title || r.name, sub: (r.usedIn || []).length ? `${r.usedIn.length}곳에서 사용 중` : '라이브러리 콘텐츠' }; };
-  const LF = [['all', '전체'], ['video', '영상'], ['doc', '교안 · 자료'], ['quiz', '퀴즈 · 과제'], ['book', '디지털북']];
-  const lfOk = (f, k) => f === 'all' || (f === 'video' && ['aivideo', 'youtube', 'upload'].includes(k)) || (f === 'doc' && ['doc', 'upload'].includes(k)) || (f === 'quiz' && ['quiz', 'assign'].includes(k)) || (f === 'book' && k === 'book');
+  const LF = [['all', '전체'], ['video', '영상 · 음성'], ['doc', '교안 · 자료'], ['quiz', '퀴즈 · 과제'], ['book', '디지털북']];
+  const lfOk = (f, k, x) => (f === 'video' && x && ((x.item || x.rec || {}).type === 'audio')) || f === 'all' || (f === 'video' && ['aivideo', 'youtube', 'upload'].includes(k)) || (f === 'doc' && ['doc', 'upload'].includes(k)) || (f === 'quiz' && ['quiz', 'assign'].includes(k)) || (f === 'book' && k === 'book');
   VIEW.lib = () => {
-    const L = libAll(); const f = X.lf || 'all'; const q = (X.lq || '').trim(); const R = L.filter(x => lfOk(f, x.kind) && (!q || String(x.title).includes(q))).slice(0, 80);
+    const L = libAll(); const f = X.lf || 'all'; const q = (X.lq || '').trim(); const R = L.filter(x => lfOk(f, x.kind, x) && (!q || String(x.title).includes(q))).slice(0, 80);
     if (!L.length) return { now: '', body: `<div class="ct-empty">${svg('lib', 40)}<b>아직 라이브러리에 콘텐츠가 없습니다</b><span>여기서 바로 만들어 넣을 수 있습니다.</span><div class="ct-row">${sec('교안 만들기', 'ct-switch', 'data-v="doc"')}${sec('AI 강의 영상 만들기', 'ct-switch', 'data-v="aivideo"')}</div></div>`, foot: '' };
     X.step = X.pick ? 1 : 0;
     return { now: '넣을 콘텐츠를 하나 고르세요.', body: `<div class="ct-chips one" role="tablist" aria-label="종류">${LF.map(([k, l]) => `<button type="button" role="tab" aria-selected="${f === k}" class="ct-chip ${f === k ? 'on' : ''}" data-act="ct-lf" data-v="${k}">${E(l)}</button>`).join('')}</div><label class="ct-f ct-srch"><span class="ct-l">찾기</span><input id="ctLq" value="${E(X.lq || '')}" autocomplete="off"></label><ul class="ct-ll" role="listbox" aria-label="라이브러리 콘텐츠">${R.map(x => `<li><button type="button" role="option" aria-selected="${X.pick === x.id}" class="${X.pick === x.id ? 'on' : ''}" data-act="ct-lpick" data-v="${E(x.id)}"><span class="ct-kic k-${E(x.kind)}">${svg(KN[x.kind] ? x.kind : 'doc', 20)}</span><span class="ct-lt"><b>${E(x.title)}</b><small>${E([x.asset ? '' : TYPE_LABEL(x.item || recToItem(x.rec) || {}), x.sub].filter(Boolean).join(' · '))}</small></span>${X.pick === x.id ? svg('check', 20) : ''}</button></li>`).join('') || '<li class="ct-mini">찾는 콘텐츠가 없습니다.</li>'}</ul>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done', !X.pick)) };
@@ -253,12 +259,14 @@
     const x = libAll().find(y => y.id === X.pick); if (!x) return null;
     if (x.item) { const it = JSON.parse(JSON.stringify(x.item)); delete it.id; delete it.week; return it; }
     if (x.rec) { const it = recToItem(x.rec); it.clib = x.rec.id; X.fromRec = x.rec; return it; }
-    if (x.asset) { const l = x.asset; if (l.kind === 'YouTube' && l.url) return { type: 'video', src: 'youtube', title: l.name, url: l.url }; return { type: l.kind === '동영상' ? 'video' : 'doc', src: 'library', title: l.name, lib: l.id, url: 'lib:' + l.id }; }
+    if (x.asset) { const l = x.asset; if (l.kind === 'YouTube' && l.url) return { type: 'video', src: 'youtube', title: l.name, url: l.url }; return { type: l.kind === '동영상' ? 'video' : l.kind === '음성' ? 'audio' : 'doc', src: 'library', title: l.name, lib: l.id, url: 'lib:' + l.id }; }
     return null;
   }
 
   /* 저장 완료(라이브러리 단독) */
-  function vDone() { const r = X.done; return { now: '', body: `<div class="ct-ok">${svg('check', 40)}<b>「${E(r.title)}」을(를) 라이브러리에 저장했습니다</b><span>${E(t('cls'))}의 ${unit()}에 넣으면 ${E(t('learner'))}에게 보입니다.</span></div>`, foot: foot(pri(`${E(t('cls'))}에 넣기`, 'ct-to-course'), sec('닫기', 'ct-close')) }; }
+  function vDone() { const r = X.done; const cls = t('cls'); const none = !S.classes.some(c => c.kind !== 'pack');
+    if (none) return { now: '', body: `<div class="ct-ok">${svg('check', 40)}<b>${E(jo(`「${r.title}」`, '을'))} 라이브러리에 저장했습니다</b><span>${E(jo(cls, '을'))} 먼저 만들면 이 콘텐츠를 ${unit()}에 넣을 수 있습니다.</span></div>`, foot: foot(pri(`${E(cls)} 만들기`, 'ct-new-course'), sec('닫기', 'ct-close')) };
+    return { now: '', body: `<div class="ct-ok">${svg('check', 40)}<b>${E(jo(`「${r.title}」`, '을'))} 라이브러리에 저장했습니다</b><span>${E(cls)}의 ${unit()}에 넣으면 ${E(t('learner'))}에게 보입니다. 지금 넣지 않아도 라이브러리에서 언제든 넣을 수 있습니다.</span></div>`, foot: foot(pri(`${E(cls)}에 넣기`, 'ct-to-course'), sec('닫기', 'ct-close')) }; }
 
   /* ── 결과 → 과정 항목 · 라이브러리 레코드 ── */
   async function buildItem() {
@@ -287,7 +295,7 @@
     if (it.ai) r.ai = it.ai; if (it.doc) r.doc = it.doc; if (it.qs) r.qs = it.qs; if (it._rb) r.rb = it._rb; if (it._book) r.bookObj = it._book; return r;
   }
   function recToItem(r) {
-    if (!r) return null; const it = { type: r.type || ({ aivideo: 'video', youtube: 'video', upload: 'video', doc: 'doc', book: 'doc', quiz: 'quiz', assign: 'assign' }[r.kind] || 'doc'), title: r.title || '콘텐츠' };
+    if (!r) return null; const it = { type: r.type || (/^audio/.test(r.mime || '') ? 'audio' : null) || ({ aivideo: 'video', youtube: 'video', upload: 'video', doc: 'doc', book: 'doc', quiz: 'quiz', assign: 'assign' }[r.kind] || 'doc'), title: r.title || '콘텐츠' };
     ['src', 'url', 'fileId', 'file', 'mime', 'size', 'dur', 'topic', 'fmt', 'desc', 'deliv', 'due', 'time', 'retake', 'yt', 'q', 'lib', 'book'].forEach(k => { if (r[k] != null && r[k] !== '') it[k] = JSON.parse(JSON.stringify(r[k])); });
     if (r.ai) it.ai = JSON.parse(JSON.stringify(r.ai)); if (r.doc) it.doc = JSON.parse(JSON.stringify(r.doc)); if (r.qs) it.qs = JSON.parse(JSON.stringify(r.qs));
     if (r.kind === 'book' && !it.src) it.src = 'book'; if (r.kind === 'upload' && !it.src) it.src = 'upload'; if (r.kind === 'aivideo' && !it.src) it.src = 'ai';
@@ -314,21 +322,22 @@
       const k = X.kind; close(); ctx.onDone(it, k); keep(); return;
     }
     const c = ctx.course && (S.classes.includes(ctx.course) ? ctx.course : (typeof C === 'function' ? C(ctx.course.id || ctx.course) : null));
-    if (!c) { say(`넣을 ${t('cls')}를 찾지 못했습니다.`, 'warn'); return; }
+    if (!c) { say(`넣을 ${jo(t('cls'), '을')} 찾지 못했습니다.`, 'warn'); return; }
     settle(it, c); c.curriculum = c.curriculum || [];
     if (ctx.item) { const i = c.curriculum.findIndex(x => x.id === ctx.item.id); if (i >= 0) { it.id = ctx.item.id; it.week = ctx.item.week; c.curriculum[i] = it; } else c.curriculum.push(it); } else c.curriculum.push(it);
-    try { logAudit(`${c.name} 콘텐츠 추가 — ${it.title}`); } catch (e) { } keep(); close(); say(`「${it.title}」을(를) 넣었습니다.`, 'ok'); try { render(); } catch (e) { }
+    try { logAudit(`${c.name} 콘텐츠 추가 — ${it.title}`); } catch (e) { } keep(); close(); say(`${jo(`「${it.title}」`, '을')} 넣었습니다.`, 'ok'); try { render(); } catch (e) { }
   }
 
+  const newCourse = () => { setTimeout(() => { try { if (W.CF && typeof CF.open === 'function') CF.open({ from: 'lib' }); else if (ACT['cls-new']) ACT['cls-new'](); } catch (e) { } }, 0); };
   /* [과정에 넣기] — 라이브러리 레코드를 과정 · 차시에 */
   function toCourse(rec, opt) {
     rec = rec || (X && X.done); if (!rec || !S) return; opt = opt || {}; injectCSS();
     const L = S.classes.filter(c => c.kind !== 'pack'); close(true); const st = { cid: (L[0] || {}).id || '', w: 0 };
     const w = document.createElement('div'); w.className = 'ct-wrap'; w.id = 'ctSheet';
-    const body = () => { const c = L.find(x => x.id === st.cid); const WP = c ? (c.weekPlan || []) : []; return `<div class="ct-sh" role="dialog" aria-modal="true" aria-label="${E(t('cls'))}에 넣기"><div class="ct-hd"><span class="ct-icb" aria-hidden="true"></span><div class="ct-ht"><b>${E(t('cls'))}에 넣기</b><small>「${E(rec.title)}」</small></div><button type="button" class="ct-icb" data-ctc="x" aria-label="닫기">${svg('x', 22)}</button></div><p class="ct-now"><b>지금 할 일</b> 넣을 ${E(t('cls'))}와 ${unit()}를 고르세요.</p><div class="ct-bd">${L.length ? `<div class="ct-f"><span class="ct-l">${E(t('cls'))}</span><ul class="ct-ll">${L.map(x => `<li><button type="button" data-ctc="c" data-v="${E(x.id)}" class="${st.cid === x.id ? 'on' : ''}" aria-pressed="${st.cid === x.id}"><span class="ct-lt"><b>${E(x.name)}</b><small>${(x.curriculum || []).length}개 콘텐츠</small></span>${st.cid === x.id ? svg('check', 20) : ''}</button></li>`).join('')}</ul></div>${WP.length ? `<div class="ct-f"><span class="ct-l">${unit()}</span><div class="ct-chips">${WP.map(p => `<button type="button" class="ct-chip ${st.w === p.w ? 'on' : ''}" data-ctc="w" data-v="${p.w}" aria-pressed="${st.w === p.w}">${p.w}${unit() === '주차' ? '주' : ''} · ${E(String(p.title).slice(0, 14))}</button>`).join('')}</div><p class="ct-ex">고르지 않으면 맨 뒤에 넣습니다. 나중에 옮길 수 있습니다.</p></div>` : ''}` : `<div class="ct-empty"><b>아직 ${E(t('cls'))}가 없습니다</b><span>먼저 ${E(t('cls'))}를 만든 뒤 넣을 수 있습니다.</span></div>`}</div><div class="ct-ft"><div class="ct-fl"><button type="button" class="ct-btn" data-ctc="x">나중에</button></div><button type="button" class="ct-btn ct-pri" data-ctc="ok" ${st.cid ? '' : 'disabled'}>${svg('check', 18)} 넣기</button></div></div>`; };
+    const body = () => { const c = L.find(x => x.id === st.cid); const WP = c ? (c.weekPlan || []) : []; return `<div class="ct-sh" role="dialog" aria-modal="true" aria-label="${E(t('cls'))}에 넣기"><div class="ct-hd"><span class="ct-icb" aria-hidden="true"></span><div class="ct-ht"><b>${E(t('cls'))}에 넣기</b><small>「${E(rec.title)}」</small></div><button type="button" class="ct-icb" data-ctc="x" aria-label="닫기">${svg('x', 22)}</button></div><p class="ct-now"><b>지금 할 일</b> 넣을 ${E(jo(t('cls'), '과'))} ${E(jo(unit(), '을'))} 고르세요.</p><div class="ct-bd">${L.length ? `<div class="ct-f"><span class="ct-l">${E(t('cls'))}</span><ul class="ct-ll">${L.map(x => `<li><button type="button" data-ctc="c" data-v="${E(x.id)}" class="${st.cid === x.id ? 'on' : ''}" aria-pressed="${st.cid === x.id}"><span class="ct-lt"><b>${E(x.name)}</b><small>${(x.curriculum || []).length}개 콘텐츠</small></span>${st.cid === x.id ? svg('check', 20) : ''}</button></li>`).join('')}</ul></div>${WP.length ? `<div class="ct-f"><span class="ct-l">${unit()}</span><div class="ct-chips">${WP.map(p => `<button type="button" class="ct-chip ${st.w === p.w ? 'on' : ''}" data-ctc="w" data-v="${p.w}" aria-pressed="${st.w === p.w}">${p.w}${unit() === '주차' ? '주' : ''} · ${E(String(p.title).slice(0, 14))}</button>`).join('')}</div><p class="ct-ex">고르지 않으면 맨 뒤에 넣습니다. 나중에 옮길 수 있습니다.</p></div>` : ''}` : `<div class="ct-empty"><b>아직 ${E(jo(t('cls'), '이'))} 없습니다</b><span>${E(jo(t('cls'), '을'))} 먼저 만들면 넣을 수 있습니다.</span></div>`}</div><div class="ct-ft"><div class="ct-fl"><button type="button" class="ct-btn" data-ctc="x">나중에</button></div>${L.length ? `<button type="button" class="ct-btn ct-pri" data-ctc="ok" ${st.cid ? '' : 'disabled'}>${svg('check', 18)} 넣기</button>` : `<button type="button" class="ct-btn ct-pri" data-ctc="new">${E(t('cls'))} 만들기</button>`}</div></div>`; };
     w.innerHTML = body(); document.body.appendChild(w);
     w.addEventListener('click', e => { const b = e.target.closest('[data-ctc]'); if (e.target === w) { w.remove(); return; } if (!b) return; const a = b.dataset.ctc;
-      if (a === 'x') { w.remove(); X = null; return; } if (a === 'c') { st.cid = b.dataset.v; st.w = 0; } if (a === 'w') st.w = st.w === +b.dataset.v ? 0 : +b.dataset.v;
+      if (a === 'x') { w.remove(); X = null; return; } if (a === 'new') { w.remove(); X = null; newCourse(); return; } if (a === 'c') { st.cid = b.dataset.v; st.w = 0; } if (a === 'w') st.w = st.w === +b.dataset.v ? 0 : +b.dataset.v;
       if (a === 'ok') { const c = L.find(x => x.id === st.cid); if (!c) return; const it = recToItem(rec); it.clib = rec.id; it.id = nid('it'); if (it.type === 'video' && it.src === 'ai') it.url = 'ai:' + it.id; if (st.w) it.week = st.w; X = X || { ctx: {} }; X.fromRec = rec; settle(it, c); rec.usedIn = [...new Set([...(rec.usedIn || []), c.id])]; if (rec.book) { try { const bk = bkOf(rec.book); if (bk && !bk.cls) bk.cls = c.id; } catch (er) { } }
         c.curriculum = c.curriculum || []; c.curriculum.push(it); try { logAudit(`${c.name} 콘텐츠 추가(라이브러리) — ${it.title}`); } catch (er) { } keep(); w.remove(); X = null; say(`「${c.name}」에 넣었습니다.`, 'ok'); try { opt.onDone && opt.onDone(it, c); } catch (er) { } try { render(); } catch (er) { } return; }
       w.innerHTML = body(); });
@@ -336,18 +345,18 @@
 
   /* ── 버튼 동작 ── */
   const A = {
-    'ct-close': () => close(), 'ct-back': () => { if (!X) return; if (X.kind === 'aivideo' && X.step === 2) X.step = 0; else if (X.kind === 'upload' && X.step === 1) { X.file = null; X.step = 0; } else if (X.kind === 'lib') X.pick = ''; else if (X.kind === 'youtube') X.url = ''; else X.step = Math.max(0, X.step - 1); X.edit = false; draw(); },
+    'ct-close': () => close(), 'ct-back': () => { if (!X) return; if (X.kind === 'aivideo' && X.step === 2) { X.step = 0; X.res = null; } else if (X.kind === 'upload' && X.step === 1) { X.file = null; X.step = 0; } else if (X.kind === 'lib') X.pick = ''; else if (X.kind === 'youtube') X.url = ''; else X.step = Math.max(0, X.step - 1); X.edit = false; draw(); },
     'ct-aifill': () => { const st = sessTitle(X.ctx), cn = courseName(X.ctx); const g = /^\d+\s*(차시|주차|주|회차)$/.test(st); const ok = v => { v = topicOf(v || ''); return v && v !== '핵심 개념' ? v : ''; };
       const ex = (document.querySelector('#ctSheet .ct-ex') || {}).textContent || ''; const exT = ex.replace(/^예:\s*/, '').trim();
       X.topic = ok(cn && st && !g && !st.includes(cn) ? `${cn} ${st}` : '') || ok(!g ? st : '') || ok(cn) || ok((X.topic || '').trim()) || ok(((X.ctx.course && X.ctx.course.topic) || '')) || ok(cl((S.classes.find(c => c.status !== '종료') || S.classes[0] || {}).name)) || exT || X.topic; draw(); say('주제를 채웠습니다. 그대로 두거나 고쳐 쓰세요.', 'ok'); },
-    'ct-opt': el => { const k = el.dataset.k; X[k] = isNaN(+el.dataset.v) ? el.dataset.v : +el.dataset.v; if (k === 'mins' && X.kind === 'aivideo' && X.res) return A['ct-make'](); draw(); },
-    'ct-make': async () => { if (!X || X.busy) return; const tp = (X.topic || '').trim() || seedTopic(X.ctx); if (!tp) { const n = $1('#ctTopic'); if (n) { n.setAttribute('aria-invalid', 'true'); n.focus(); } say('주제를 한 줄 적어 주세요. 예처럼 짧게 써도 됩니다.', 'warn'); return; } X.topic = tp; X.busy = true; X.edit = false; if (X.kind !== 'aivideo') X.step = 1; draw();
-      const r = await GEN[X.kind](tp, { mins: +X.mins || 5, n: +X.n || 5, lv: X.lv, n2: X.units, cname: courseName(X.ctx), target: (X.ctx.target || '') , ...(X.kind === 'book' ? { n: +X.units || 3 } : {}) }); if (!X) return; X.res = r.v; X.by = r.by; X.busy = false; draw(); },
+    'ct-opt': el => { const k = el.dataset.k; X[k] = isNaN(+el.dataset.v) ? el.dataset.v : +el.dataset.v;  draw(); },
+    'ct-make': async () => { if (!X || X.busy) return; const tp = (X.topic || '').trim() || seedTopic(X.ctx); if (!tp) { const n = $1('#ctTopic'); if (n) { n.setAttribute('aria-invalid', 'true'); n.focus(); } say('주제를 한 줄 적어 주세요. 예처럼 짧게 써도 됩니다.', 'warn'); return; } X.topic = tp; X.busy = true; X.edit = false; X.step = X.kind === 'aivideo' ? 0 : 1; draw();
+      const r = await GEN[X.kind](tp, { mins: +X.mins || 5, n: +X.n || 5, lv: X.lv, n2: X.units, cname: courseName(X.ctx), target: (X.ctx.target || '') , ...(X.kind === 'book' ? { n: +X.units || 3 } : {}) }); if (!X) return; X.res = r.v; X.by = r.by; X.busy = false; if (X.kind === 'aivideo') X.step = X.res && X.res.length ? 1 : 0; draw(); },
     'ct-done': () => done(),
     'ct-doc-edit': () => { X.edit = !X.edit; draw(); },
     'ct-doc-dl': () => { const it = { ...docItem(), title: docTitle() }; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([materialHTML(it, courseName(X.ctx))], { type: 'text/html' })); a.download = `${it.title.replace(/[\\/:*?"<>|]/g, '_')}.html`; document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 15000); say('교안을 내려받았습니다. 파일을 열어 [인쇄] → [PDF로 저장]할 수 있습니다.', 'ok'); },
     'ct-doc-print': () => { const it = { ...docItem(), title: docTitle() }; const u = URL.createObjectURL(new Blob([materialHTML(it, courseName(X.ctx))], { type: 'text/html' })); const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;width:0;height:0;border:0;right:0;bottom:0'; f.src = u; document.body.appendChild(f); f.onload = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { window.open(u, '_blank', 'noopener'); } setTimeout(() => { f.remove(); URL.revokeObjectURL(u); }, 60000); }; },
-    'ct-v-make': () => { if (!X.res || !X.res.length) return; X.step = 1; draw(); },
+    'ct-v-make': () => { if (!X.res || !X.res.length) return; X.edit = false; X.step = 1; draw(); },
     'ct-v-del': el => { X.res.splice(+el.dataset.v, 1); draw(); },
     'ct-v-show': el => drawBig(+el.dataset.v),
     'ct-v-play': () => { try { aiPlayer(vTitle(), X.res, 'f'); } catch (e) { say('이 브라우저에서는 재생할 수 없습니다.', 'warn'); } },
@@ -358,7 +367,8 @@
     'ct-up-again': () => { X.file = null; X.step = 0; draw(); setTimeout(() => { const f = $1('#ctFile'); f && f.click(); }, 30); },
     'ct-lf': el => { X.lf = el.dataset.v; draw(); }, 'ct-lpick': el => { X.pick = X.pick === el.dataset.v ? '' : el.dataset.v; draw(); },
     'ct-switch': el => { const ctx = X.ctx; open(el.dataset.v, ctx); },
-    'ct-to-course': () => toCourse(X.done)
+    'ct-to-course': () => toCourse(X.done),
+    'ct-new-course': () => { close(); newCourse(); }
   };
   Object.keys(A).forEach(k => { ACT[k] = A[k]; });
   /* 입력 → 상태(다시 그리지 않음) */
@@ -387,19 +397,23 @@
     if (F.open == null || !SS.some(s => s.w === F.open)) { const e1 = SS.find(s => !has(s.w).length); F.open = e1 ? e1.w : (F.open === 0 ? 0 : SS[0].w); }
     const filled = SS.filter(s => has(s.w).length).length; const inFlow = !!el.closest('#crsFlow');
     el.innerHTML = `<div class="ctf"><div class="ctf-top"><div class="ctf-sum"><b>${filled} / ${SS.length}</b><span>${U} 채움</span><span class="ctf-later">나중에 해도 돼요</span></div>${inFlow && !W.CT_FILLBTN ? '' : `<button type="button" class="ct-btn ct-ai" data-act="ctf-all" ${filled === SS.length ? 'disabled' : ''}>`}${inFlow && !W.CT_FILLBTN ? '' : `${svg('spark', 18)} AI SAM이 빈 ${U} 모두 채우기</button>`}</div>
-      ${F.undo ? `<div class="ctf-undo" role="status">${E(F.undo.msg)}<button type="button" class="ct-btn sm" data-act="ctf-undo">${svg('undo', 16)} 되돌리기</button></div>` : ''}
+      ${F.undo ? `<div class="ctf-undo" role="status" aria-live="polite"><span>${E(F.undo.msg)}</span><button type="button" class="ct-btn sm" data-act="ctf-undo">${svg('undo', 16)} 되돌리기</button></div>` : ''}
       <ol class="ctf-list">${SS.map(s => { const its = has(s.w); const on = F.open === s.w; return `<li class="ctf-s ${on ? 'on' : ''} ${its.length ? 'has' : ''}" data-w="${s.w}"><button type="button" class="ctf-sh" data-act="ctf-open" data-v="${s.w}" aria-expanded="${on}"><span class="ctf-n">${its.length ? svg('check', 18) : s.w}</span><span class="ctf-tt"><b>${s.w}${U === '주차' ? '주차' : U} · ${E(s.title)}</b><small>${its.length ? its.map(x => E(TYPE_LABEL(x))).join(' · ') : '비어 있음'}</small></span>${svg('chev', 20)}</button>
-        ${on ? `<div class="ctf-body">${its.length ? `<ul class="ctf-its">${its.map(x => `<li><span class="ct-kic k-${E(TYPE_KIND(x))}">${svg(KN[TYPE_KIND(x)] ? TYPE_KIND(x) : 'doc', 18)}</span><span class="ct-lt"><b>${E(x.title)}</b><small>${E(TYPE_LABEL(x))}</small></span><button type="button" class="ct-btn sm" data-act="ctf-view" data-v="${E(x.id)}">보기</button><button type="button" class="ct-icb sm" data-act="ctf-del" data-v="${E(x.id)}" aria-label="「${E(x.title)}」 빼기">${svg('trash', 18)}</button></li>`).join('')}</ul>` : ''}
+        ${on ? `<div class="ctf-body">${its.length ? `<ul class="ctf-its">${its.map(x => `<li><span class="ct-kic k-${E(icOf(x) === 'audio' ? 'audio' : TYPE_KIND(x))}">${svg(icOf(x), 18)}</span><span class="ct-lt"><b>${E(x.title)}</b><small>${E(TYPE_LABEL(x))}</small></span><button type="button" class="ct-btn sm" data-act="ctf-view" data-v="${E(x.id)}">보기</button><button type="button" class="ct-icb sm" data-act="ctf-del" data-v="${E(x.id)}" aria-label="「${E(x.title)}」 빼기">${svg('trash', 18)}</button></li>`).join('')}</ul>` : ''}
           <p class="ctf-q">${its.length ? '더 넣을 콘텐츠가 있으면 고르세요' : `이 ${U}에 넣을 콘텐츠를 고르세요`}</p><div class="ct-kinds">${kindCards(s.w)}</div></div>` : ''}</li>`; }).join('')}</ol></div>`;
   }
   const kindCards = (w, lib) => KINDS.filter(k => !(lib && k.k === 'lib')).map(k => `<button type="button" class="ct-kind" data-act="ct-kind" data-ct="${k.k}" data-k="${k.k}" ${w != null ? `data-w="${w}"` : ''}><span class="ct-kic k-${k.k}">${svg(k.k, 24)}</span><b>${E(k.name)}</b><small>${E(k.one)}</small><em>${E(k.time)}</em></button>`).join('');
   const refill = () => { if (F && F.el && F.el.isConnected) renderFill(F.el, F.d); };
   function openFromFill(kind, w) { const d = F.d; const s = sessOf(d).find(x => x.w === w) || { w, title: '' };
-    open(kind, { from: 'flow', course: draftCourse(d), week: w, title: s.title, sess: s, target: d.target || '', onDone: it => { if (d.classId && typeof C === 'function' && C(d.classId)) { /* 이미 생성된 과정이면 settle 끝 */ } else settle(it, null); it.week = w; itemsOf(d).push(it); const nx = sessOf(d).find(x => x.w > w && !itemsOf(d).some(y => +y.week === x.w)); F.open = nx ? nx.w : w; F.undo = null; saveDraft(); refill(); say(`${w}${unit()}에 「${it.title}」을(를) 넣었습니다.`, 'ok'); try { W.CF && CF.emit && CF.emit('ct-add', it); } catch (e) { } } }); }
+    open(kind, { from: 'flow', course: draftCourse(d), week: w, title: s.title, sess: s, target: d.target || '', onDone: it => { if (d.classId && typeof C === 'function' && C(d.classId)) { /* 이미 생성된 과정이면 settle 끝 */ } else settle(it, null); it.week = w; itemsOf(d).push(it); const nx = sessOf(d).find(x => x.w > w && !itemsOf(d).some(y => +y.week === x.w)); F.open = nx ? nx.w : w;
+      /* 넣은 직후 다음 빈 차시가 펼쳐져 방금 넣은 항목의 [빼기]가 안 보이므로, 8초 동안 '넣었습니다 [되돌리기]' 띠를 남긴다 */
+      const tok = {}; F.undo = { tok, msg: `${jo(`「${it.title}」`, '을')} ${w}${unit()}에 넣었습니다.`, run: () => { const L = itemsOf(d); const i = L.findIndex(x => x.id === it.id); if (i >= 0) L.splice(i, 1); sweep(); F.open = w; } };
+      clearTimeout(F.ut); F.ut = setTimeout(() => { if (!F || !F.undo || F.undo.tok !== tok) return; F.undo = null; const b = F.el && F.el.querySelector('.ctf-undo'); if (b) b.remove(); }, W.__CT_UNDO_MS || 8000);
+      saveDraft(); refill(); try { W.CF && CF.emit && CF.emit('ct-add', it); } catch (e) { } } }); }
   ACT['ct-kind'] = el => { const k = el.dataset.k; const w = el.dataset.w != null ? +el.dataset.w : null; if (F && w != null && F.el && F.el.contains(el)) return openFromFill(k, w); if (PK) { const ctx = PK; PK = null; closePick(); return open(k, ctx); } open(k, {}); };
   ACT['ctf-open'] = el => { const w = +el.dataset.v; F.open = F.open === w ? 0 : w; refill(); const li = F.el.querySelector(`.ctf-s[data-w="${w}"]`); if (li && F.open) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); };
-  ACT['ctf-del'] = el => { const L = itemsOf(F.d); const i = L.findIndex(x => x.id === el.dataset.v); if (i < 0) return; const [it] = L.splice(i, 1); saveDraft(); const gone = sweep(); F.undo = { msg: `「${it.title}」을(를) 뺐습니다.`, run: () => { L.splice(i, 0, it); if (gone.rbs.length) S.rubrics.push(...gone.rbs); if (gone.bks.length) try { bkL().push(...gone.bks); } catch (e) { } } }; saveDraft(); refill(); };
-  ACT['ctf-undo'] = () => { if (F.undo) { F.undo.run(); F.undo = null; saveDraft(); refill(); } };
+  ACT['ctf-del'] = el => { const L = itemsOf(F.d); const i = L.findIndex(x => x.id === el.dataset.v); if (i < 0) return; const [it] = L.splice(i, 1); saveDraft(); const gone = sweep(); clearTimeout(F.ut); F.undo = { msg: `${jo(`「${it.title}」`, '을')} 뺐습니다.`, run: () => { L.splice(i, 0, it); if (gone.rbs.length) S.rubrics.push(...gone.rbs); if (gone.bks.length) try { bkL().push(...gone.bks); } catch (e) { } } }; saveDraft(); refill(); };
+  ACT['ctf-undo'] = () => { if (F.undo) { clearTimeout(F.ut); const m = F.undo.tok ? '넣은 것을 되돌렸습니다.' : '되돌렸습니다.'; F.undo.run(); F.undo = null; saveDraft(); refill(); say(m, 'ok'); } };
   ACT['ctf-view'] = el => { const it = itemsOf(F.d).find(x => x.id === el.dataset.v); if (it) preview(it, draftCourse(F.d)); };
   ACT['ctf-all'] = () => { const n = fillAll(F.d); if (n) { const d = F.d; const before = n.ids; F.undo = { msg: `빈 ${unit()} ${n.s}곳에 교안 · 퀴즈를 넣었습니다.`, run: () => { d.curriculum = itemsOf(d).filter(x => !before.includes(x.id)); } }; saveDraft(); refill(); say(`빈 ${unit()} ${n.s}곳을 채웠습니다. 내용을 확인해 보세요.`, 'ok'); } };
   /* 빈 차시 모두: 교안 + 확인 퀴즈 3문제(규칙 생성, 즉시) */
@@ -413,7 +427,7 @@
   function preview(it, c) { const k = TYPE_KIND(it);
     if (k === 'aivideo' && it.ai?.scenes?.length) { try { aiPlayer(it.title, it.ai.scenes, it.ai.voice || 'f'); } catch (e) { } return; }
     const repl = n => { const L = c.curriculum || []; const i = L.findIndex(x => x.id === it.id); if (i >= 0) { n.id = it.id; n.week = it.week; L[i] = n; saveDraft(); refill(); } };
-    if (k === 'upload') { open('upload', { from: 'flow', course: c, week: it.week, title: it.title, item: it, onDone: repl }); const ext = String(it.file || '').toLowerCase(); X.file = { name: it.file || it.title, size: +it.size || 0, mime: it.mime || '', k: it.type === 'video' ? (/^audio/.test(it.mime || '') ? 'audio' : 'video') : /pdf$/.test(ext) || it.mime === 'application/pdf' ? 'pdf' : /^image/.test(it.mime || '') ? 'image' : 'file', bid: it.prev || '', url: /^upload:/.test(it.url || '') ? '' : it.url, dur: it.dur || 0 }; X.upTitle = it.title; X.step = 1; X.view = true; draw(); return; }
+    if (k === 'upload') { open('upload', { from: 'flow', course: c, week: it.week, title: it.title, item: it, onDone: repl }); const ext = String(it.file || '').toLowerCase(); X.file = { name: it.file || it.title, size: +it.size || 0, mime: it.mime || '', k: it.type === 'audio' || /^audio/.test(it.mime || '') ? 'audio' : it.type === 'video' ? 'video' : /pdf$/.test(ext) || it.mime === 'application/pdf' ? 'pdf' : /^image/.test(it.mime || '') ? 'image' : 'file', bid: it.prev || '', url: /^upload:/.test(it.url || '') ? '' : it.url, dur: it.dur || 0 }; X.upTitle = it.title; X.step = 1; X.view = true; draw(); return; }
     open(k, { from: 'flow', course: c, week: it.week, title: it.title, item: it, onDone: repl }); if (k === 'youtube') { X.url = it.url; X.yt = it.yt || null; draw(); } }
 
   /* 종류 고르기 시트(라이브러리 · 과정 상세에서 '새 콘텐츠') */
@@ -515,7 +529,7 @@ body:has(#slSheet) .ct-wrap{z-index:97}
 .ct-kind{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;min-height:156px;padding:14px;border-radius:14px;border:1px solid #EAEBEB;background:#fff;font:inherit;color:#2A2B2B;cursor:pointer;position:relative}.ct-kind:hover,.ct-kind:focus-visible{border-color:#5C74F6;box-shadow:0 0 0 3px #EAEDFF}
 .ct-kind b{font-size:16px;line-height:1.35}.ct-kind small{font-size:14px;color:#6C6C6C;line-height:1.45}.ct-kind em{margin-top:auto;font-style:normal;font-size:13px;color:#808181}
 .ctf{font-size:16px;color:#2A2B2B}.ctf-top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}.ctf-sum{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.ctf-sum b{font-size:22px}.ctf-later{font-size:14px;color:#009116;background:#E7F8E8;border-radius:999px;padding:3px 10px;margin-left:4px}
-.ctf-undo{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#2A2B2B;color:#fff;border-radius:12px;padding:6px 6px 6px 14px;margin:0 0 10px;flex-wrap:wrap}.ctf-undo .ct-btn{background:#fff}
+.ctf-undo{position:sticky;top:0;z-index:3;box-shadow:0 4px 12px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;justify-content:space-between;background:#2A2B2B;color:#fff;border-radius:12px;padding:6px 6px 6px 14px;margin:0 0 10px;flex-wrap:wrap}.ctf-undo .ct-btn{background:#fff}
 .ctf-list{list-style:none;padding:0;margin:0;display:grid;gap:8px}.ctf-s{border-radius:14px;background:#F6F7F7;overflow:hidden}.ctf-s.on{background:#fff;border:1px solid #C8C9C9}
 .ctf-sh{width:100%;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 14px;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;color:inherit}.ctf-sh>.ct-ic{flex:none;color:#808181;transition:transform .15s}.ctf-s.on .ctf-sh>.ct-ic{transform:rotate(90deg)}
 .ctf-n{width:36px;height:36px;flex:none;border-radius:50%;background:#fff;border:1px solid #C8C9C9;display:grid;place-items:center;font-weight:700;font-size:15px}.ctf-s.has .ctf-n{background:#00C53B;border-color:#00C53B;color:#fff}

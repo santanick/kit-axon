@@ -217,9 +217,9 @@ ACT['ai-bookthumb'] = () => modal('교재 썸네일 키워드 추천', `<p>${S.b
 
 /* ═════════ 콘텐츠 라이브러리 ═════════ */
 VIEWS.library = () => head('콘텐츠 라이브러리', `동영상 · 문서(PDF · 한글 · 엑셀 · PPT) · 사진 ${guideRef('features/library.md')}`, `<label class="btn pri">업로드<input type="file" multiple hidden data-chg="lib-up" accept="video/*,.pdf,.hwp,.hwpx,.xlsx,.xls,.ppt,.pptx,image/*"></label>`) +
-  `<p class="mini">영상 1개 최대 2시간 · 4GB. 업로드 후 최적화는 순서대로 처리됩니다. ${esc(t('cls'))}에 쓰인 파일은 삭제할 수 없습니다. 데모에서는 파일 이름과 크기만 기록하고 내용은 업로드하지 않습니다.</p>` +
+  `<p class="mini">영상 1개 최대 2시간 · ${(window.HPM && HPM.sizeText && HPM.FMAX) ? HPM.sizeText(HPM.FMAX.video) : '1GB'}. 업로드 후 최적화는 순서대로 처리됩니다. ${esc(t('cls'))}에 쓰인 파일은 삭제할 수 없습니다. 데모에서는 파일 이름과 크기만 기록하고 내용은 업로드하지 않습니다.</p>` +
   table(['이름', '종류', '크기/길이', '사용 중', '등록일', ''], S.lib.map(l => [esc(l.name), esc(l.kind), esc(l.size), l.used ? tag(l.used + '곳', 'g') : '—', l.at, `<button class="btn sm ghost" data-act="lib-del" data-v="${l.id}">삭제</button>`]));
-ACT['lib-up'] = el => { [...el.files].forEach(f => { const big = f.type.startsWith('video') && f.size > 4 * 1024 ** 3; if (big) { toast(`${f.name}: 4GB를 넘습니다.`, 'warn'); return; } S.lib.unshift({ id: uid('l'), name: f.name.slice(0, 80), kind: f.type.startsWith('video') ? '동영상' : f.type.startsWith('image') ? '사진' : '문서', size: (f.size / 1024 / 1024).toFixed(1) + 'MB', used: 0, at: today() }); }); save(); render(); };
+ACT['lib-up'] = el => { [...el.files].forEach(f => { const big = f.type.startsWith('video') && f.size > ((window.HPM && HPM.FMAX && HPM.FMAX.video) || 1024 ** 3); if (big) { toast(`${f.name}: ${(window.HPM && HPM.sizeText && HPM.FMAX) ? HPM.sizeText(HPM.FMAX.video) : '1GB'}를 넘습니다.`, 'warn'); return; } S.lib.unshift({ id: uid('l'), name: f.name.slice(0, 80), kind: f.type.startsWith('video') ? '동영상' : f.type.startsWith('image') ? '사진' : '문서', size: (f.size / 1024 / 1024).toFixed(1) + 'MB', used: 0, at: today() }); }); save(); render(); };
 ACT['lib-del'] = el => { const l = S.lib.find(x => x.id === el.dataset.v); if (l.used) { toast('사용 중인 파일은 삭제할 수 없습니다.', 'warn'); return; } S.lib = S.lib.filter(x => x !== l); save(); render(); };
 
 /* ═════════ 유형 전용: 기업 법정의무교육 ═════════ */
