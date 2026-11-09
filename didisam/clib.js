@@ -19,19 +19,24 @@
     clup: '<path d="M12 16V5M7 10l5-5 5 5M5 19h14"/>',
     clyt: '<rect x="2.5" y="6" width="19" height="12" rx="4"/><path d="M10.5 9.5l4 2.5-4 2.5z"/>',
     clplus: '<path d="M12 5v14M5 12h14"/>',
-    clsearch: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'
+    clsearch: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+    clexam: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12l1.5 1.5L13 11M9 17h6"/>',
+    clsv: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'
   });
 
   /* ── 종류 ── */
-  const KIND = { video: ['영상', 'clplay', 'v'], doc: ['교안', 'cldoc', 'd'], quiz: ['퀴즈', 'clquiz', 'q'], assign: ['과제', 'cldoc', 'q'], book: ['디지털북', 'book', 'b'], file: ['파일', 'clfile', 'f'] };
-  const TABS = [['all', '전체'], ['video', '영상'], ['doc', '교안'], ['quiz', '퀴즈 · 과제'], ['book', '디지털북'], ['file', '파일']];
-  const inTab = (e, tb) => tb === 'all' || e.kind === tb || (tb === 'quiz' && e.kind === 'assign');
+  const KIND = { video: ['영상', 'clplay', 'v'], doc: ['교안', 'cldoc', 'd'], quiz: ['퀴즈', 'clquiz', 'q'], exam: ['시험', 'clexam', 'q'], survey: ['설문', 'clsv', 'q'], assign: ['과제', 'cldoc', 'q'], book: ['디지털북', 'book', 'b'], file: ['파일', 'clfile', 'f'] };
+  const TABS = [['all', '전체'], ['video', '영상'], ['doc', '교안'], ['quiz', '퀴즈 · 시험 · 설문'], ['book', '디지털북'], ['file', '파일']];
+  const inTab = (e, tb) => tb === 'all' || e.kind === tb || (tb === 'quiz' && ['assign', 'exam', 'survey'].includes(e.kind));
   /* [만들기] 종류 카드 — C3 CT.kinds가 있으면 이름 · 설명을 그쪽 것으로 맞춘다 */
   const MAKE = [
     ['upload', '올리기', 'clup', '가진 영상 · 문서 파일을 올립니다', '1분'],
     ['aivideo', 'AI 강의 영상', 'clplay', '주제만 쓰면 AI가 슬라이드 강의를 만듭니다', '약 1분'],
     ['doc', '교안', 'cldoc', '주제만 쓰면 AI가 수업 자료를 씁니다', '약 1분'],
     ['quiz', '퀴즈', 'clquiz', '주제만 쓰면 AI가 문제 5개를 냅니다', '30초'],
+    ['exam', '시험', 'clexam', '중간 · 기말 · 과정 테스트 — 문제 은행에서 랜덤 출제', '1분'],
+    ['survey', '설문', 'clsv', '객관식 · 척도 · 주관식 만족도 설문', '30초'],
+    ['assign', '과제', 'cldoc', '과제 안내와 채점 기준을 함께 만듭니다', '30초'],
     ['book', '디지털북', 'book', '읽고 풀며 배우는 교재를 AI가 엮습니다', '약 2분'],
     ['youtube', 'YouTube', 'clyt', '유튜브 주소를 붙여 넣습니다', '30초']
   ];
@@ -47,17 +52,17 @@
     const L = (c.curriculum || []).filter(x => x.type !== 'chapter'); const i = L.indexOf(it); return i >= 0 ? `${i + 1}차시` : '';
   }
   /* 저장 종류(C3 CT와 같은 말): aivideo · youtube · upload · doc · book · quiz · assign → 화면 종류(KIND): video · doc · quiz · assign · book · file */
-  const C3K = ['aivideo', 'youtube', 'upload', 'doc', 'book', 'quiz', 'assign'];
+  const C3K = ['aivideo', 'youtube', 'upload', 'doc', 'book', 'quiz', 'exam', 'survey', 'assign'];
   const isAud = r => r.type === 'audio' || /^audio\//.test(r.mime || '') || /\.(mp3|m4a|wav)$/i.test(r.file || '');
   const isVid = r => r.type === 'video' || r.type === 'audio' || /^(video|audio)\//.test(r.mime || '') || /\.(mp4|webm|mov|m4v|mp3|m4a|wav)$/i.test(r.file || '');
   const dk = r => { const k = r.kind; if (k === 'aivideo' || k === 'youtube') return 'video'; if (k === 'upload') return isVid(r) ? 'video' : 'file';
     if (k === 'doc') return r.src === 'book' ? 'book' : r.src === 'upload' || (r.files && !r.doc) ? 'file' : 'doc'; if (KIND[k]) return k;
-    return r.type === 'video' || r.type === 'audio' ? 'video' : ['quiz', 'exam'].includes(r.type) ? 'quiz' : r.type === 'assign' ? 'assign' : r.type === 'doc' ? (r.src === 'book' ? 'book' : r.src === 'upload' || ((r.files || r.fileId) && !r.doc) ? 'file' : 'doc') : 'file'; };
+    return r.type === 'video' || r.type === 'audio' ? 'video' : r.type === 'quiz' ? 'quiz' : r.type === 'exam' ? 'exam' : r.type === 'survey' ? 'survey' : r.type === 'assign' ? 'assign' : r.type === 'doc' ? (r.src === 'book' ? 'book' : r.src === 'upload' || ((r.files || r.fileId) && !r.doc) ? 'file' : 'doc') : 'file'; };
   const c3k = r => { if (C3K.includes(r.kind)) return r.kind; if (r.type === 'audio') return 'upload'; const v = r.kind === 'video' || r.type === 'video';
     if (v) return r.src === 'ai' || r.ai ? 'aivideo' : r.src === 'youtube' || /youtu/.test(r.url || '') ? 'youtube' : 'upload';
-    if (r.kind === 'file') return 'upload'; if (r.kind === 'book' || r.src === 'book') return 'book'; if (['quiz', 'exam'].includes(r.type) || r.kind === 'quiz') return 'quiz'; if (r.type === 'assign' || r.kind === 'assign') return 'assign';
+    if (r.kind === 'file') return 'upload'; if (r.kind === 'book' || r.src === 'book') return 'book'; if (r.type === 'exam') return 'exam'; if (r.type === 'survey') return 'survey'; if (r.type === 'quiz' || r.kind === 'quiz') return 'quiz'; if (r.type === 'assign' || r.kind === 'assign') return 'assign';
     return r.src === 'upload' || ((r.files || r.fileId) && !r.doc) ? 'upload' : 'doc'; };
-  const kindOfItem = it => ['video', 'audio', 'doc', 'quiz', 'exam', 'assign'].includes(it.type) ? dk(it) : '';
+  const kindOfItem = it => ['video', 'audio', 'doc', 'quiz', 'exam', 'survey', 'assign'].includes(it.type) ? dk(it) : '';
   const libKind = l => ['동영상', '음성', 'YouTube'].includes(l.kind) ? 'video' : l.kind === '평가' ? (l.item && l.item.type === 'assign' ? 'assign' : 'quiz') : 'file';
   const books = () => { try { return typeof LSV === 'function' ? (LSV().dbooks || []) : []; } catch (e) { return []; } };
 
@@ -107,6 +112,8 @@
     if (e.kind === 'video') return [src || '영상', r.ai && r.ai.mins ? `${r.ai.mins}분` : ''].filter(Boolean).join(' · ');
     if (e.kind === 'doc') return `교안${r.doc && (r.doc.secs || []).length ? ` · ${(r.doc.secs || []).length}절` : ''}`;
     if (e.kind === 'quiz') return `퀴즈 · ${(r.qs || []).length}문항`;
+    if (e.kind === 'exam') { const R = r.rules || {}; return R.draw ? `시험 · ${R.draw}문항 랜덤 출제(문제 은행 ${(r.qs || []).length})` : `시험 · ${(r.qs || []).length}문항`; }
+    if (e.kind === 'survey') return `설문 · ${(r.qs || []).length}문항`;
     if (e.kind === 'assign') return '과제';
     const sz = typeof r.size === 'number' ? (typeof a2Size === 'function' ? a2Size(r.size) : '') : r.size;
     return ['파일', sz || r.file || (r.files && r.files[0] && r.files[0].name) || ''].filter(Boolean).join(' · ');
@@ -123,16 +130,16 @@
       if (!b && obj && Array.isArray(obj.chs) && typeof LSV === 'function') { b = typeof bkNorm === 'function' ? bkNorm(obj) : obj; LSV().dbooks.push(b); }
       save(); return b ? { id: b.id, kind: 'book', type: 'doc', src: 'book', book: b.id, title: b.title } : null; }
     const it = { ...o, id: o.id && /^cl/.test(o.id) ? o.id : uid('cl'), kind, title: String(o.title || o.name || '콘텐츠').slice(0, 80), at: o.at || today(), usedIn: Array.isArray(o.usedIn) ? o.usedIn : [] };
-    if (!it.type) it.type = ({ aivideo: 'video', youtube: 'video', upload: isAud(it) ? 'audio' : isVid(it) ? 'video' : 'doc', quiz: 'quiz', assign: 'assign' })[kind] || 'doc';
+    if (!it.type) it.type = ({ aivideo: 'video', youtube: 'video', upload: isAud(it) ? 'audio' : isVid(it) ? 'video' : 'doc', quiz: 'quiz', exam: 'exam', survey: 'survey', assign: 'assign' })[kind] || 'doc';
     if (kind === 'aivideo' && !it.src) it.src = 'ai'; if (kind === 'youtube' && !it.src) it.src = 'youtube'; if (kind === 'upload' && !it.src) it.src = 'upload';
     const at = S.clib.findIndex(y => y.id === it.id); if (at >= 0) S.clib[at] = it; else S.clib.unshift(it);
     save(); return it;
   }
 
   /* ── 과정 항목으로 바꾸기(학습자 게시본 lsSnapshot이 읽는 기존 필드 + C3 항목 모양) ── */
-  const KEEP = ['src', 'url', 'fileId', 'file', 'mime', 'size', 'dur', 'topic', 'fmt', 'desc', 'deliv', 'due', 'time', 'retake', 'yt', 'q', 'lib', 'book', 'files', 'subs', 'rubric'];
+  const KEEP = ['src', 'url', 'fileId', 'file', 'mime', 'size', 'dur', 'topic', 'fmt', 'desc', 'deliv', 'due', 'time', 'retake', 'yt', 'q', 'lib', 'book', 'files', 'subs', 'rubric', 'ek', 'pool', 'rules', 'mins', 'doneMsg'];
   function toItem(e) {
-    const r = recOf(e); const it = { id: uid('it'), type: r.type || ({ aivideo: 'video', youtube: 'video', upload: 'video', quiz: 'quiz', assign: 'assign' })[r.kind] || 'doc', title: r.title || '콘텐츠' };
+    const r = recOf(e); const it = { id: uid('it'), type: r.type || ({ aivideo: 'video', youtube: 'video', upload: 'video', quiz: 'quiz', exam: 'exam', survey: 'survey', assign: 'assign' })[r.kind] || 'doc', title: r.title || '콘텐츠' };
     KEEP.forEach(k => { if (r[k] != null && r[k] !== '') it[k] = JSON.parse(JSON.stringify(r[k])); });
     ['ai', 'doc', 'qs', 'rubrics'].forEach(k => { if (r[k]) it[k] = JSON.parse(JSON.stringify(r[k])); });
     if (r.kind === 'aivideo') { it.src = 'ai'; if (!it.url || /^ai:/.test(it.url)) it.url = 'ai:' + it.id; }
@@ -238,7 +245,7 @@
     if (UI.clibSub === 'library' && VIEWS.library) return subBar('영상 · 자료 보관함(저장 공간 · 변환 상태 · 이름 바꾸기)') + VIEWS.library();
     const A = entries(); const tb = TABS.some(x => x[0] === UI.clibT) ? UI.clibT : 'all'; const L = A.filter(e => inTab(e, tb)); const q = String(UI.clibQ || '').trim().toLowerCase();
     const n = k => A.filter(e => inTab(e, k)).length; const lim = UI.clibN || PAGE;
-    const top = `<div class="clb-top"><div class="clb-lead"><p>모든 ${esc(cname())}의 영상 · 교안 · 퀴즈 · 디지털북을 한곳에서 보고, 여기서 바로 만들어 ${esc(cname())}에 넣습니다.</p></div><button type="button" class="btn pri clb-make" data-act="clb-make">${ic('clplus', 20)} 만들기</button></div>`;
+    const top = `<div class="clb-top"><div class="clb-lead"><p>모든 ${esc(cname())}의 영상 · 교안 · 퀴즈 · 디지털북을 한곳에서 보고, 여기서 바로 만들어 ${esc(cname())}에 넣습니다.</p></div><div class="clb-topb"><button type="button" class="btn clb-tutb" data-act="clb-tut">${ic('clyt', 20)} 튜토리얼 영상 추천</button><button type="button" class="btn pri clb-make" data-act="clb-make">${ic('clplus', 20)} 만들기</button></div></div>`;
     const lmsNote = ULMS_() && MENU.lmsv && tb !== 'book' && tb !== 'doc' && tb !== 'quiz' ? `<div class="clb-note">${ic('clplay', 18)}<span>학사 수업의 강의 영상(녹화 · 자막 · 학사 전송)은 <b>강의 영상 관리</b>에서 올리고 관리합니다. 여기에는 교안 · 퀴즈 · 디지털북과 따로 만든 영상이 모입니다.</span><button type="button" class="btn" data-act="go" data-v="lmsv">강의 영상 관리 열기</button></div>` : '';
     if (!A.length) return `<div class="clb">${top}${lmsNote}${emptyHTML()}${legacy()}</div>`;
     const bar = `<div class="clb-bar"><div class="clb-tabs" role="tablist" aria-label="종류">${TABS.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === tb}" class="${k === tb ? 'on' : ''}" data-act="clb-tab" data-v="${k}">${esc(l)} <em>${n(k)}</em></button>`).join('')}</div>
@@ -265,7 +272,7 @@
   /* 만들기: 종류 카드 하나 고르기 */
   ACT['clb-make'] = () => {
     const K = (CTX().kinds || []).length ? CTX().kinds : TMP.kinds; const nm = k => { const x = K.find(y => (y.k || y.id || y.kind) === k); return x ? [x.n || x.name || '', x.d || x.one || x.desc || '', x.time || ''] : null; };
-    modal('무엇을 만들까요?', `<p class="clb-now">지금 할 일: 만들 콘텐츠의 종류를 하나 고르세요.</p><div class="clb-kinds">${MAKE.map(([k, n, icon, d, time]) => { const o = nm(k); return `<button type="button" class="clb-kind" data-act="clb-mk" data-v="${k}">${`<span class="clb-ic k-${k === 'book' ? 'b' : k === 'quiz' ? 'q' : k === 'doc' ? 'd' : k === 'upload' ? 'f' : 'v'}" aria-hidden="true">${ic(icon, 24)}</span>`}<b>${esc(o && o[0] || n)}</b><small>${esc(o && o[1] || d)}</small><em>${esc(o && o[2] || time)}</em></button>`; }).join('')}</div>`, [{ id: 'c', label: '닫기' }], true);
+    modal('무엇을 만들까요?', `<p class="clb-now">지금 할 일: 만들 콘텐츠의 종류를 하나 고르세요.</p><div class="clb-kinds">${MAKE.map(([k, n, icon, d, time]) => { const o = nm(k); return `<button type="button" class="clb-kind" data-act="clb-mk" data-v="${k}">${`<span class="clb-ic k-${k === 'book' ? 'b' : ['quiz', 'exam', 'survey', 'assign'].includes(k) ? 'q' : k === 'doc' ? 'd' : k === 'upload' ? 'f' : 'v'}" aria-hidden="true">${ic(icon, 24)}</span>`}<b>${esc(o && o[0] || n)}</b><small>${esc(o && o[1] || d)}</small><em>${esc(o && o[2] || time)}</em></button>`; }).join('')}</div>`, [{ id: 'c', label: '닫기' }], true);
   };
   ACT['clb-mk'] = el => { const k = el.dataset.v; closeModal(); CTX().open(k, { from: 'lib', onDone: x => { const r = add(x); if (r) { UI.clibT = 'all'; UI.clibQ = ''; render(); } } }); };
   /* 미리보기 */
@@ -310,6 +317,56 @@
       render(); toast(`「${r.it.title}」${josa(r.it.title, '을', '를')} 「${c.name}」 ${posLabel(c, r.it)}에 넣었습니다.`, 'ok'); } }], true);
     w.addEventListener('click', ev => { const b = ev.target.closest('[data-clbc],[data-clbp]'); if (!b) return; if (b.dataset.clbc) { st.c = b.dataset.clbc; st.pos = null; } else st.pos = b.dataset.clbp; draw(w); });
     draw(w); };
+
+
+  /* ── 튜토리얼 영상 추천(v36): 프롬프트 → 필요한 영상 20개 → 하나씩 저장 · 모두 저장 · 더 보기(다음 20개) ──
+     YouTube API 키(설정 › 연동)가 있으면 실제 YouTube 검색 결과 20개씩(다음 페이지 토큰). 키가 없으면 정직하게 알리고,
+     ① 디디쌤 데모 목록(실제 YouTube 영상 15개) 중 관련 있는 것 + ② 'YouTube에서 찾아볼 검색어' 후보로 채운다. 저장은 S.clib(youtube). */
+  const TUTV = ['', ' 기초', ' 강의', ' 사용법', ' 따라하기', ' 입문', ' 실습', ' 예제', ' 꿀팁', ' 총정리', ' 초보자', ' 쉽게 배우기', ' 10분 정리', ' 실무 활용', ' 핵심 정리', ' 자주 하는 실수', ' 단계별', ' 완벽 가이드', ' 업무 자동화', ' 시작하기', ' 중급', ' 고급 기능', ' 문제 풀이', ' 사례', ' 템플릿 활용', ' 무료 강의', ' 한 번에 끝내기', ' 비교', ' 최신', ' Q&A', ' 교육용', ' 수업 활용', ' 과제', ' 연습 문제', ' 프로젝트', ' 노하우', ' 실전', ' 원리', ' 설명', ' 데모'];
+  const tutBase = q => String(q || '').replace(/(튜토리얼|추천|영상|동영상|유튜브|YouTube|찾아\s*줘|해\s*줘|주세요|보여\s*줘|필요한|관련|에\s*대한|20개|개)/gi, ' ').replace(/\s+/g, ' ').trim();
+  const ytKey = () => !!(S.settings && S.settings.yt && S.settings.yt.key);
+  const demoTuts = () => { try { return typeof LSEED_UNIV_TUTS !== 'undefined' ? LSEED_UNIV_TUTS : []; } catch (e) { return []; } };
+  const TUT = () => (UI.tut = UI.tut || { q: '', list: [], page: 0, token: '', saved: {}, busy: false, mode: '', err: '' });
+  async function tutApi(q, token) { const y = S.settings.yt || {}; const p = new URLSearchParams({ part: 'snippet', type: 'video', videoEmbeddable: 'true', maxResults: '20', relevanceLanguage: 'ko', safeSearch: 'strict', q, key: y.key }); if (token) p.set('pageToken', token); if (y.cc) p.set('videoLicense', 'creativeCommon');
+    const r = await fetch('https://www.googleapis.com/youtube/v3/search?' + p); if (!r.ok) throw new Error('YouTube 검색 실패(' + r.status + ')'); const j = await r.json(); const ids = (j.items || []).map(x => x.id && x.id.videoId).filter(Boolean); let dur = {};
+    try { if (ids.length) { const r2 = await fetch('https://www.googleapis.com/youtube/v3/videos?' + new URLSearchParams({ part: 'contentDetails', id: ids.join(','), key: y.key })); const j2 = await r2.json(); (j2.items || []).forEach(v => { dur[v.id] = String(v.contentDetails.duration || '').replace(/^PT/, '').replace('H', '시간 ').replace('M', '분 ').replace('S', '초').trim(); }); } } catch (e) { }
+    return { list: (j.items || []).filter(x => x.id && x.id.videoId).map(x => ({ id: x.id.videoId, title: x.snippet.title, ch: x.snippet.channelTitle, dur: dur[x.id.videoId] || '', how: 'api' })), next: j.nextPageToken || '' }; }
+  async function tutQueries(base, page) { /* 검색어 후보: Claude가 연결돼 있으면 Claude가 20개, 아니면 규칙 */
+    try { if (typeof CL === 'object' && CL.on('docs')) { const r = await Promise.race([CL.call({ system: '교육 담당자를 돕습니다. 요청한 JSON 배열 하나만 출력합니다.', messages: [{ role: 'user', content: `「${base}」을(를) 배우는 학습자에게 필요한 YouTube 튜토리얼 검색어 20개를 기초부터 심화 순서로, 서로 겹치지 않게 JSON 문자열 배열로 주세요.${page ? ` (이미 ${page * 20}개를 보여 줬으니 다른 관점으로)` : ''}` }], max: 1200 }), new Promise((_, no) => setTimeout(() => no(new Error('t')), 20000))]); const m = String(r.text || '').match(/\[[\s\S]*\]/); const a = m && JSON.parse(m[0]); if (Array.isArray(a) && a.length) return { list: a.map(String).slice(0, 20), by: 'claude' }; } } catch (e) { }
+    return { list: TUTV.slice(page * 20, page * 20 + 20).map(v => `${base}${v}`), by: 'rule' }; }
+  const tutScore = (t, words) => { const s = `${t.title} ${t.tool || ''} ${t.ch || ''}`.toLowerCase(); return words.reduce((a, w) => a + (w.length >= 2 && s.includes(w.toLowerCase()) ? 1 : 0), 0); };
+  async function tutLoad(more) { const T = TUT(); const base = tutBase(T.q); if (!base) { toast('어떤 영상이 필요한지 한 줄로 적어 주세요. 예: 엑셀 피벗 테이블 기초', 'warn'); return; }
+    if (!more) { T.list = []; T.page = 0; T.token = ''; T.err = ''; } T.busy = true; tutDraw();
+    try { if (ytKey()) { const r = await tutApi(base, more ? T.token : ''); T.mode = 'api'; T.token = r.next; T.list = T.list.concat(r.list.filter(v => !T.list.some(x => x.id === v.id))); T.end = !r.next; }
+      else { T.mode = 'demo'; const words = base.split(/\s+/); const add = [];
+        if (!more) demoTuts().map(t => ({ t, sc: tutScore(t, words) })).filter(x => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, 10).forEach(({ t }) => add.push({ id: t.vid, title: t.title, ch: t.ch, dur: '', how: 'demo' }));
+        const qs = await tutQueries(base, T.page); T.qby = qs.by; qs.list.slice(0, 20 - (more ? 0 : add.length)).forEach(q => add.push({ q, title: q, how: 'link' })); T.list = T.list.concat(add.filter(v => !T.list.some(x => (x.id && x.id === v.id) || (x.q && x.q === v.q)))); T.end = qs.by === 'rule' && (T.page + 1) * 20 >= TUTV.length; }
+      T.page++; } catch (e) { T.err = e.message || String(e); }
+    T.busy = false; tutDraw(); try { S.ai && (S.ai.usage = (S.ai.usage || 0) + 1); } catch (e) { } }
+  const tutKey = v => v.id ? 'y:' + v.id : 'q:' + v.q;
+  function tutSave(v) { const T = TUT(); const k = tutKey(v); if (T.saved[k]) return null;
+    const rec = v.id ? { kind: 'youtube', type: 'video', src: 'youtube', url: 'https://youtu.be/' + v.id, yt: { id: v.id, title: v.title, ch: v.ch || '', dur: v.dur || '' }, title: String(v.title).slice(0, 80), topic: tutBase(T.q), tut: 1 }
+      : { kind: 'youtube', type: 'video', src: 'youtube', url: '', q: v.q, topic: v.q, title: `찾아볼 영상: ${v.q}`.slice(0, 80), tut: 1 };
+    const r = add(rec); if (r) T.saved[k] = r.id; return r; }
+  function tutCard(v, i) { const T = TUT(); const on = !!T.saved[tutKey(v)]; const link = v.id ? `https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(v.q)}`;
+    return `<li class="clb-tc ${v.how}"><a class="clb-tth" href="${esc(link)}" target="_blank" rel="noopener" aria-label="${esc(v.title)} YouTube에서 보기">${v.id ? `<img src="https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg" alt="" loading="lazy">` : `<span class="clb-tq">${ic('clsearch', 26)}<b>YouTube 검색</b></span>`}</a><div class="clb-tt"><b>${i + 1}. ${esc(v.title)}</b><small>${v.how === 'api' ? esc([v.ch, v.dur].filter(Boolean).join(' · ')) : v.how === 'demo' ? `데모 목록 · ${esc(v.ch || '')}` : '검색어 후보 — 눌러서 YouTube에서 고르세요'}</small></div><button type="button" class="btn ${on ? '' : 'pri'} clb-ts" data-act="clb-tut-save" data-v="${i}" ${on ? 'disabled' : ''}>${on ? ic('check', 16) + ' 저장됨' : '저장'}</button></li>`; }
+  function tutBody() { const T = TUT(); const key = ytKey(); const left = T.list.filter(v => !T.saved[tutKey(v)]).length;
+    return `<div class="clb-tut"><p class="clb-now">지금 할 일: 필요한 영상을 한 줄로 적고 [추천 받기]를 누르세요. 마음에 드는 영상을 [저장]하면 라이브러리에 들어갑니다.</p>
+      <div class="clb-tqr"><label class="clb-fl"><span class="clb-vh">어떤 영상이 필요한가요?</span><input id="clbTutQ" maxlength="120" autocomplete="off" value="${esc(T.q)}" placeholder="예: 엑셀 피벗 테이블 기초 — 신입 사원용"></label><button type="button" class="btn pri" data-act="clb-tut-go" ${T.busy ? 'disabled' : ''}>${ic('spark', 16)} 추천 받기</button></div>
+      <p class="clb-ex">예: 엑셀 피벗 테이블 기초 · 챗GPT로 보고서 쓰기 · 초등 분수 덧셈 설명</p>
+      ${key ? `<p class="clb-src ok">${ic('check', 16)} YouTube에서 실제 영상을 20개씩 찾습니다(설정 › 연동의 API 키 사용).</p>` : `<div class="clb-src no"><b>YouTube API 키가 없어 실제 영상 검색은 하지 못합니다.</b><span>지금은 ① 디디쌤 데모 목록(실제 YouTube 영상 ${demoTuts().length}개) 중 관련 있는 영상과 ② YouTube에서 찾아볼 검색어 후보 20개를 보여 드립니다. 검색어 후보를 저장하면 '찾아볼 영상'으로 들어가고, 나중에 [고치기]에서 주소를 넣을 수 있습니다.</span><button type="button" class="btn" data-act="clb-tut-key">API 키 넣으러 가기</button></div>`}
+      ${T.err ? `<p class="clb-err" role="alert">${esc(T.err)}</p>` : ''}
+      ${T.list.length ? `<div class="clb-tbar"><b>추천 ${T.list.length}개</b>${T.qby === 'claude' ? '<small>검색어: Claude</small>' : ''}<span class="sp"></span><button type="button" class="btn" data-act="clb-tut-all" ${left ? '' : 'disabled'}>모두 저장 (${left}개)</button></div><ol class="clb-tl">${T.list.map(tutCard).join('')}</ol>${T.end ? '<p class="clb-ex">더 보여 드릴 추천이 없습니다. 다른 말로 다시 찾아보세요.</p>' : `<div class="clb-more"><button type="button" class="btn" data-act="clb-tut-more" ${T.busy ? 'disabled' : ''}>더 보기 (다음 20개)</button></div>`}` : ''}
+      ${T.busy ? `<p class="clb-ex" role="status">영상을 찾고 있습니다…</p>` : ''}</div>`; }
+  function tutDraw() { const w = document.querySelector('#modal .clb-tutw'); if (!w) return; const sc = w.closest('.mb') ? w.closest('.mb').scrollTop : 0; w.innerHTML = tutBody(); const mb = w.closest('.mb'); if (mb) mb.scrollTop = sc; }
+  ACT['clb-tut'] = () => { TUT(); const w = modal('튜토리얼 영상 추천', `<div class="clb-tutw">${tutBody()}</div>`, [{ id: 'c', label: '닫기', run: () => { render(); } }], true); try { w.classList.add('clb-tutm'); } catch (e) { } setTimeout(() => { const i = document.getElementById('clbTutQ'); i && i.focus(); }, 30); };
+  ACT['clb-tut-go'] = () => { const i = document.getElementById('clbTutQ'); TUT().q = i ? i.value : TUT().q; tutLoad(false); };
+  ACT['clb-tut-more'] = () => tutLoad(true);
+  ACT['clb-tut-save'] = el => { const v = TUT().list[+el.dataset.v]; if (!v) return; const r = tutSave(v); if (r) toast(`「${r.title}」을(를) 라이브러리에 저장했습니다.`.replace('」을(를)', `」${josa(r.title, '을', '를')}`), 'ok'); tutDraw(); };
+  ACT['clb-tut-all'] = () => { const T = TUT(); let n = 0; T.list.forEach(v => { if (tutSave(v)) n++; }); toast(n ? `영상 ${n}개를 라이브러리에 저장했습니다.` : '이미 모두 저장했습니다.', n ? 'ok' : ''); tutDraw(); };
+  ACT['clb-tut-key'] = () => { closeModal(); UI.settings = 'integr'; go('settings'); };
+  document.addEventListener('input', ev => { if (ev.target && ev.target.id === 'clbTutQ') TUT().q = ev.target.value; });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing && ev.target && ev.target.id === 'clbTutQ') { ev.preventDefault(); ACT['clb-tut-go'](); } });
 
   /* ── 모양(공통 토큰만 사용) ── */
   if (!document.querySelector('style[data-clib]')) { const st = document.createElement('style'); st.dataset.clib = '1'; st.textContent = `
@@ -372,5 +429,14 @@
 .clb-qs li{margin:0 0 10px;line-height:1.5}.clb-qs ul{margin:4px 0 0;color:var(--t-sub)}
 .clb-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px}.clb-dl dt{color:var(--t-sub)}.clb-dl dd{margin:0}
 @media (max-width:640px){.clb-top{gap:12px}.clb .btn.clb-make{width:100%;justify-content:center}.clb-search{flex:1 1 100%}.clb-grid{grid-template-columns:1fr}
-  .clb-tabs{flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:2px;scrollbar-width:none}.clb-tabs button{flex:0 0 auto}.clb-kinds{grid-template-columns:1fr 1fr}.clb-kind{min-height:130px;padding:12px}.clb-start{padding:16px}}`; document.head.appendChild(st); }
+  .clb-tabs{flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:2px;scrollbar-width:none}.clb-tabs button{flex:0 0 auto}.clb-kinds{grid-template-columns:1fr 1fr}.clb-kind{min-height:130px;padding:12px}.clb-start{padding:16px}}
+.clb-topb{display:flex;gap:10px;flex-wrap:wrap}.clb .btn.clb-tutb{min-height:56px;padding:0 20px;font-size:17px;font-weight:700;border-radius:8px;display:inline-flex;align-items:center;gap:8px}
+.clb-tut{font-size:16px}.clb-tqr{display:flex;gap:8px;align-items:flex-end}.clb-tqr .clb-fl{flex:1;min-width:0}.clb-tqr input{width:100%;min-height:48px;font-size:16px;box-sizing:border-box}.clb-tqr .btn{min-height:48px;white-space:nowrap}.clb-vh{display:block;font-weight:700;margin:0 0 6px}
+.clb-src{border-radius:8px;padding:10px 14px;margin:0 0 12px;font-size:15px;line-height:1.5}.clb-src.ok{background:var(--b50);color:var(--t-ok);display:flex;gap:6px;align-items:center}.clb-src.no{background:#FFF3E0;display:flex;flex-direction:column;gap:6px;align-items:flex-start}.clb-src.no .btn{min-height:44px}
+.clb-err{color:var(--t-err,#DE0027)}.clb-tbar{display:flex;gap:10px;align-items:center;margin:4px 0 10px;flex-wrap:wrap}.clb-tbar .sp{flex:1}.clb-tbar .btn{min-height:44px}
+.clb-tl{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.clb-tc{display:flex;flex-direction:column;border:1px solid var(--g300);border-radius:8px;overflow:hidden;background:#fff}.clb-tth{display:block;aspect-ratio:16/9;background:var(--g200);text-decoration:none}.clb-tqr input{padding:0 12px;border:1px solid var(--g400);border-radius:8px}.clb-tth img{width:100%;height:100%;object-fit:cover;display:block}
+.clb-tq{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#C4302B;background:#FFF5F5}.clb-tt{padding:8px 10px;flex:1;display:flex;flex-direction:column;gap:2px}.clb-tt b{font-size:15px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.clb-tt small{font-size:13px;color:var(--t-sub)}
+.clb-ts{margin:0 10px 10px;min-height:44px}.clb-tc.link{border-style:dashed}
+@media (max-width:640px){.clb-topb{width:100%}.clb-topb .btn{flex:1 1 100%;justify-content:center}.clb-tqr{flex-direction:column;align-items:stretch}.clb-tl{grid-template-columns:1fr 1fr}.clb-tt b{font-size:14px}}`; document.head.appendChild(st); }
 })();
