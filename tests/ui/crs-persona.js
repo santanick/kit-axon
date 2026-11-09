@@ -30,16 +30,16 @@ const probe = (p, i) => p.evaluate(([i, sel]) => { const root = [...document.que
   if (!btns.some(b => /나중에|이어서 하기|저장하고 닫기/.test(b.innerText))) B.push(['되돌리기', '[나중에 이어서 하기] 없음']);
   const words = root.innerText.match(/커리큘럼|편성|시수|루브릭|썸네일|카테고리|모듈|프롬프트|템플릿|LMS|차감반|메타데이터|파라미터|인코딩|심사코드|HRD-?Net|tracse|NCS|훈련과정 ID|DB|URL|업로드/g); if (words) B.push(['단어', '설명 없이 보이는 말: ' + [...new Set(words)].join(', ')]);
   const inputs = [...root.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea, select')].filter(vis);
-  const noEx = inputs.filter(x => { const box = x.closest('.cf-f, .ct-f, label, .fl') || x.parentElement; return !/예:|예시/.test(box ? box.innerText : ''); }); if (noEx.length) B.push(['예시', `입력칸 ${inputs.length}개 중 ${noEx.length}개 옆에 '예:' 문장 없음`]);
+  const fields = inputs.filter(x => x.closest('.cf-f')); const noEx = fields.filter(x => !/예:|예시/.test(x.closest('.cf-f').innerText)); if (noEx.length) B.push(['예시', `입력칸 ${fields.length}개 중 ${noEx.length}개 옆에 '예:' 문장 없음(${noEx.map(x => x.closest('.cf-f').dataset.cff).join(',')})`]);
   if (inputs.length && !btns.some(b => /채워|AI SAM/.test(b.innerText))) B.push(['AI', '[AI SAM이 채워 주기] 버튼 없음']);
-  const head = root.querySelector('h1, h2, h3, .crs-now, [data-now]'); const prog = /[①②③④⑤]|\b1\s*\/\s*[2-5]\b|단계/.test(root.innerText.slice(0, 300)); if (!prog) B.push(['진행', '위쪽에 진행 표시(①②③ · n/5) 못 찾음']);
+  const head = root.querySelector('h1, h2, h3, .crs-now, [data-now]'); const prog = !!root.querySelector('.cf-prog') || /[①②③④⑤]|\b1\s*\/\s*[2-5]\b|단계/.test(root.innerText.slice(0, 300)); if (!prog) B.push(['진행', '위쪽에 진행 표시(①②③ · n/5) 못 찾음']);
   const small = [...root.querySelectorAll('p, label, li, span, div')].filter(e => vis(e) && !e.children.length && e.innerText.trim().length > 10 && parseFloat(getComputedStyle(e).fontSize) < 15 && !e.closest('small, .mini, .hint')).length; if (small > 3) B.push(['글자', `16px 미만 본문 ${small}곳`]);
   return { B, now: head ? head.innerText.trim().slice(0, 60) : '' }; }, [i, F.ROOTSEL]);
 
 async function personaAct(p, act, log) { /* 차시 채우기 단계에서 페르소나 과제 */
   const C = []; const tryBtn = async (re, tag) => { const b = F.btnByText(p, re).first(); if (await b.count()) { await b.click({ timeout: 3000 }).catch(() => {}); C.push(tag); await p.waitForTimeout(500); return true; } C.push(tag + ' 못 찾음'); return false; };
   const pickCard = async (kind, re) => { const c = p.locator(`#crsFlow .ct-kind[data-k=${kind}]`).filter({ visible: true }).first(); if (await c.count()) { await c.click().catch(() => {}); C.push(kind); await p.waitForTimeout(500); return true; } return tryBtn(re, kind); };
-  const confirm = async () => { const n = await F.ctConfirm(p, C); if (!n) C.push('확인 버튼 못 찾음'); };
+  const confirm = async () => { const n0 = await p.evaluate(() => ((CF.draft || {}).curriculum || []).length); const n = await F.ctConfirm(p, C); const n1 = await p.evaluate(() => ((CF.draft || {}).curriculum || []).length); if (n1 > n0) C.push(`초안에 ${n1 - n0}개 들어감`); else if (!n) C.push('확인 버튼 없음 · 초안에 안 들어감'); else C.push('초안에 안 들어감'); };
   if (act === 'ppt') { if (await pickCard('upload', /올리기|업로드|파일/)) { const fi = p.locator('.ct-sh input[type=file]').first(); if (await fi.count()) { await fi.setInputFiles({ name: '1주차_경영학원론.pptx', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', buffer: Buffer.from('PK\u0003\u0004 demo pptx') }); C.push('PPT 선택'); await p.waitForTimeout(1200); } else C.push('파일 칸 없음'); await confirm(); } }
   if (act === 'yt') { if (await pickCard('youtube', /YouTube|유튜브|링크/)) { const u = p.locator('.ct-sh input:visible').first(); if (await u.count()) { await u.fill('https://youtu.be/dQw4w9WgXcQ'); C.push('링크 입력'); } await confirm(); }
     if (await pickCard('quiz', /퀴즈/)) await confirm(); }
@@ -60,7 +60,7 @@ async function personaAct(p, act, log) { /* 차시 채우기 단계에서 페르
         const pr = await probe(p, i); const extra = [];
         if (P.act === 'reg' && i === 0 && !/심사|HRD|훈련/.test((await F.rootInfo(p)).text)) extra.push(['규정', '1단계에 훈련과정 규정 안내 없음']);
         if (/fill|채우/.test(sid)) { const did = await personaAct(p, P.act, actLog); did.filter(x => /못 찾음|없음/.test(x)).forEach(x => extra.push(['버튼', '과제 막힘: ' + x]));
-          const undo = await p.evaluate(sel => { const r = document.querySelector(sel.split(',')[0]) || document; return [...r.querySelectorAll('button, [role=button]')].some(b => /빼기|삭제|지우기|되돌리기|취소/.test(b.innerText) || /삭제|빼기/.test(b.getAttribute('aria-label') || '')); }, F.ROOTSEL); if (!undo) extra.push(['되돌리기', '넣은 콘텐츠를 빼는 버튼 없음']); }
+          const undo = await p.evaluate(sel => { if (document.querySelector('[data-act=ctf-del], [data-act=ctf-undo]')) return true; const r = document.querySelector(sel.split(',')[0]) || document; return [...r.querySelectorAll('button, [role=button]')].some(b => /빼기|삭제|지우기|되돌리기|취소/.test(b.innerText) || /삭제|빼기/.test(b.getAttribute('aria-label') || '')); }, F.ROOTSEL); if (!undo) extra.push(['되돌리기', '넣은 뒤 화면이 다음 차시로 넘어가 방금 넣은 콘텐츠의 [빼기]가 안 보임(차시를 다시 펼쳐야 함)']); }
         if (P.act === 'reg' && /setup|open|설정|미리/.test(sid) && !/심사|인정|분량|4시간|HRD/.test((await F.rootInfo(p)).text)) extra.push(['규정', `${sid} 단계에 규정 점검 결과 안 보임`]);
         rows.push({ step: `${i + 1}. ${sid}`, now: pr.now, imgs: await shoot(`${i + 1}${sid.replace(/[^\w-]/g, '')}`), B: [...pr.B, ...extra] }); } });
     } catch (e) { r = { fail: '예외 ' + e.message.split('\n')[0] }; }

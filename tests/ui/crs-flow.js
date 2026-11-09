@@ -146,16 +146,17 @@ const snapCheck = (p, id) => p.evaluate(id => { const E = []; const c = S.classe
   const rich = it => it.doc || it.ai || it.url || it.yt || it.fileId || (it.qs || []).length || it.desc || it.html || (it.files || []).length;
   const src = (c.curriculum || []).filter(rich); const pub = (x.items || []).filter(y => y.yt || y.desc || (y.qs || []).length || y.doc || y.html || y.ai || y.link || y.fileId || y.url || (y.files || []).length);
   if (src.length && !pub.length) E.push(`콘텐츠 ${src.length}개가 게시본에 안 실림(제목만)`);
-  const docs = (c.curriculum || []).filter(i => i.doc && (i.doc.secs || []).length); docs.forEach(d => { const y = (x.items || []).find(z => z.id === d.id); if (y && !(y.doc || y.html || (y.desc && y.desc.length > 40))) E.push(`AI 교안 '${d.title.slice(0, 16)}' 본문이 게시본에 없음`); });
+  const docs = (c.curriculum || []).filter(i => i.doc && (i.doc.secs || []).length); const miss = docs.filter(d => { const y = (x.items || []).find(z => z.id === d.id); return y && !(y.doc || y.html || (y.desc && y.desc.length > 40)); }); if (miss.length) E.push(`AI 교안 ${miss.length}/${docs.length}개 본문이 게시본에 없음(제목만, 예: '${miss[0].title.slice(0, 16)}')`);
   return { E, items: (x.items || []).length, content: pub.length, srcContent: src.length }; }, id);
 
 /* 학습자 화면: 게시 → learner.html#c/<id> 에 과정 이름과 첫 차시 */
 async function learnerCheck(ctx, p, base, id, errs) {
   const r = await p.evaluate(id => { try { closeModal(); } catch (e) { } const c = S.classes.find(x => x.id === id); c.status = c.status === '준비중' ? c.status : c.status; if (c.open === '비공개') c.open = '전체'; (window.smPublish || ACT['ls-pub'])(); try { closeModal(); } catch (e) { } let code = null; try { code = lxDemo(); (window.smPublish || ACT['ls-pub'])(); } catch (e) { } try { closeModal(); } catch (e) { } return { tid: DREG.cur(), name: c.name, first: ((c.curriculum || []).find(i => i.type !== 'chapter') || {}).title || '' }; }, id);
   const l = await ctx.newPage(); l.on('pageerror', e => errs.push('learner: ' + e.message)); await l.addInitScript(() => { try { localStorage.setItem('didisam.app.classic', '1'); } catch (e) { } });
-  await l.goto(base + `learner.html?t=${encodeURIComponent(r.tid)}#class/${id}`); await l.waitForFunction(() => window.LR && LR.site, null, { timeout: 8000 }).catch(() => {}); await l.waitForTimeout(800);
-  const txt = await l.evaluate(() => document.body.innerText); await l.close();
-  return { name: txt.includes(r.name), first: !r.first || txt.includes(r.first.slice(0, 12)), r };
+  await l.goto(base + `learner.html?t=${encodeURIComponent(r.tid)}#class/${id}`); await l.waitForFunction(() => typeof LR !== 'undefined' && LR.site, null, { timeout: 8000 }).catch(() => {}); await l.waitForTimeout(800);
+  const txt = await l.evaluate(() => document.body.innerText); const site = await l.evaluate(id => { const c = ((typeof LR !== 'undefined' && LR.site && LR.site.classes) || []).find(x => x.id === id); return c ? { name: c.name, items: (c.items || []).map(i => i.title) } : null; }, id); await l.close();
+  /* 회원 공개(예: 대학 '회원')는 방문자 상세에 안 보이므로 학습자 앱이 읽은 게시본(LR.site)으로 확인 */
+  return { name: txt.includes(r.name) || !!(site && site.name === r.name), first: !r.first || txt.includes(r.first.slice(0, 12)) || !!(site && site.items.includes(r.first)), r, vis: txt.includes(r.name) };
 }
 
 /* 자동 저장 → 새로고침 → [이어서 하기] */
@@ -206,7 +207,8 @@ if (require.main === module) (async () => {
         if (r.created) {
           const sc = await schemaCheck(p, r.created); sc.forEach(x => P.push('스키마 ' + x));
           const sn = await snapCheck(p, r.created); if (Array.isArray(sn)) sn.forEach(x => P.push('게시본 ' + x)); else { sn.E.forEach(x => P.push('게시본 ' + x)); if (!sn.content) W.push(`게시본 콘텐츠 0(항목 ${sn.items}개 제목만)`); }
-          if (!/다음|이어서|해 보세요|할 일/.test(r.post)) W.push('개설 후 다음 할 일 안내 못 찾음');
+          const done = await p.evaluate(() => [...document.querySelectorAll('[data-cfdone]')].filter(e => e.getClientRects().length).map(e => e.dataset.cfdone)); if (done.length < 2 && !/할 일|해 보세요/.test(r.post)) W.push('개설 후 다음 할 일 안내 못 찾음'); else if (done.length > 4) W.push(`개설 후 안내 버튼 ${done.length}개(2~3 권장)`);
+          if (shots) await p.screenshot({ path: path.join(shots, `${type}${ed ? '-' + ed : ''}_${empty ? 'e' : 'f'}_${dev}_9done.png`) });
           if (dev === 'pc') { const lc = await learnerCheck(ctx, p, base, r.created, errs); if (!lc.name) P.push('학습자 화면에 과정 이름 없음'); if (!lc.first) P.push('학습자 화면에 첫 차시 없음'); }
         }
         rows.push({ label, steps: r.steps.length, clicks: r.clicks, content: r.contentClicks, ok: 0 });
