@@ -63,7 +63,7 @@ function rewrite(x, how) { const d = x.data; const short = s => (s || '').split(
   if (how === '더 짧게') { d.title = short(d.title).slice(0, 18); if (d.sub) d.sub = short(d.sub) + '.'; if (typeof d.body === 'string') d.body = short(d.body) + '.'; }
   if (how === '신뢰감 있게') { if (d.sub) d.sub = d.sub.replace(/\.?$/, '') + ' — 체계적인 관리와 기록으로 결과를 확인하세요.'; d.title = (d.title || '').replace(/[!~]/g, ''); }
   if (how === '친근하게') { if (d.sub) d.sub = d.sub.replace(/합니다\.?$/, '해요.').replace(/하세요\.?$/, '해 보세요!'); if (typeof d.body === 'string') d.body = d.body.replace(/합니다\./g, '해요.'); }
-  if (how === '숫자로 구체적으로') { const n = S.members.length, c = S.classes.length; if (d.sub) d.sub = `${c}개 ${t('cls')} · ${n}명의 ${t('learner')}이 함께합니다. ` + d.sub; }
+  if (how === '숫자로 구체적으로') { const n = S.members.length, c = S.classes.length; if (d.sub) d.sub = `${c}개 ${t('cls')} · ${n}명의 ${tj('learner', '이')} 함께합니다. ` + d.sub; }
   if (how === '행동 유도 강화') { d.cta = d.cta ? d.cta.replace(/보기|하기/, '') + ' 지금 시작하기' : '지금 시작하기'; } }
 ACT['site-edit'] = el => { const i = +el.dataset.v, x = site().sections[i], d = x.data; const F = (k, l, ta) => ta ? `<label class="fl">${l}<textarea name="${k}" rows="4">${esc(d[k] || '')}</textarea></label>` : `<label class="fl">${l}<input name="${k}" value="${esc(d[k] || '')}" maxlength="120"></label>`;
   let body = F('title', '제목'); const k = x.type;

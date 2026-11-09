@@ -8,6 +8,28 @@ const clean = s => String(s || '').replace(/\(.*?\)|\[.*?\]/g, '').trim();
 /* ═════════ AI 생성기(데모 규칙) ═════════ */
 const WEEK15 = ['오리엔테이션 · 과목 소개', '기본 개념과 용어', '핵심 원리 Ⅰ', '핵심 원리 Ⅱ', '도구와 실습 환경', '실습 Ⅰ: 따라 하기', '사례 분석', '중간고사', '심화 Ⅰ', '심화 Ⅱ', '프로젝트 기획', '프로젝트 실습', '프로젝트 피드백', '결과 발표 · 공유', '기말고사'];
 const MOD = ['시작하기', '핵심 개념', '원리 이해', '실습 따라 하기', '사례로 배우기', '응용하기', '심화', '정리 · 평가'];
+const QBANK = [
+  { re: /일차\s*함수|기울기|y\s*절편/, mc: [['일차함수 y = 2x + 3의 그래프의 기울기는?', ['2', '3', '-2', '5'], 'y = ax + b에서 x의 계수 a가 기울기입니다.'], ['일차함수 y = 2x + 3의 그래프의 y절편은?', ['3', '2', '-3', '0'], 'x = 0일 때의 y값(상수항 b)이 y절편입니다.'], ['일차함수 y = -x + 1의 그래프에 대한 설명으로 옳은 것은?', ['x가 커지면 y는 작아진다', 'x가 커지면 y도 커진다', '원점을 지난다', 'x축과 평행하다'], '기울기가 음수(-1)이면 오른쪽 아래로 내려가는 직선입니다.']], ox: [['일차함수 y = ax + b(a ≠ 0)의 그래프는 직선이다.', 'O', '일차함수의 그래프는 항상 직선입니다.']] },
+  { re: /방정식|일차식|연립/, mc: [['방정식 2x + 4 = 10의 해는?', ['x = 3', 'x = 2', 'x = 7', 'x = 5'], '양변에서 4를 빼면 2x = 6, 양변을 2로 나누면 x = 3입니다.'], ['방정식 x - 5 = 3의 해는?', ['x = 8', 'x = 2', 'x = -2', 'x = 15'], '양변에 5를 더하면 x = 8입니다.']], ox: [['등식의 양변에 같은 수를 더해도 등식은 성립한다.', 'O', '등식의 성질입니다.']] },
+  { re: /수학|연산|분수|도형|사고력/, mc: [['삼각형 세 내각의 크기의 합은?', ['180°', '90°', '360°', '270°'], '삼각형의 세 내각의 합은 항상 180°입니다.'], ['3/4 + 1/4의 값은?', ['1', '4/8', '1/2', '3/16'], '분모가 같으면 분자끼리 더합니다: 4/4 = 1.']], ox: [['0은 짝수이다.', 'O', '0은 2로 나누어떨어지므로 짝수입니다.']] },
+  { re: /영어|독해|토익|TOEIC|English/i, mc: [['영어 지문의 중심 생각(main idea)을 찾을 때 먼저 살펴볼 곳은?', ['첫 문장과 마지막 문장(주제문)', '가장 긴 단어', '지문의 글자 수', '모르는 단어의 개수'], '주제문은 대개 글의 처음이나 끝에 있습니다.'], ["연결어 'however'가 나타내는 관계는?", ['역접(대조)', '예시', '원인과 결과', '첨가'], "however는 앞 내용과 반대되는 내용을 이어 줍니다."], ["'He has lived here since 2020.'에 쓰인 시제는?", ['현재완료', '단순 과거', '미래', '과거완료'], 'have(has) + 과거분사 + since는 현재완료입니다.']], ox: [['지문의 모든 단어를 알아야 정답을 찾을 수 있다.', 'X', '문맥과 주제문으로 모르는 단어가 있어도 답을 찾을 수 있습니다.']] },
+  { re: /국어|문학|비문학|글쓰기/, mc: [['비문학 지문에서 글쓴이의 주장을 찾는 데 가장 도움이 되는 표현은?', ["'따라서 · 그러므로' 뒤의 문장", '등장인물의 대사', '각주의 출처', '제목의 글자 수'], '결론을 이끄는 접속어 뒤에 주장이 오는 경우가 많습니다.'], ['다음 중 직유법이 쓰인 문장은?', ['내 마음은 호수처럼 고요하다', '내 마음은 호수요', '바다가 노래한다', '하늘이 무너져도 솟아날 구멍이 있다'], "'~처럼 · ~같이'로 직접 빗대는 것이 직유법입니다."]], ox: [['시의 화자(말하는 이)는 언제나 시인 자신이다.', 'X', '화자는 시인이 내세운 목소리로, 시인과 다를 수 있습니다.']] },
+  { re: /엑셀|Excel|컴활|컴퓨터활용|스프레드시트|피벗/i, mc: [['A1부터 A10까지의 합계를 구하는 수식은?', ['=SUM(A1:A10)', '=COUNT(A1:A10)', '=AVERAGE(A1:A10)', '=MAX(A1:A10)'], 'SUM은 합계, COUNT는 개수, AVERAGE는 평균입니다.'], ['수식을 복사해도 참조 셀이 바뀌지 않게 하는 표기는?', ['$A$1', 'A1', '#A1', '@A1'], '$를 붙이면 절대 참조가 됩니다.'], ['다른 표에서 조건에 맞는 값을 찾아오는 함수는?', ['VLOOKUP', 'LEN', 'TODAY', 'ROUND'], 'VLOOKUP(또는 XLOOKUP)은 기준값으로 표에서 값을 찾아옵니다.']], ox: [['피벗 테이블은 많은 데이터를 항목별로 요약할 때 쓴다.', 'O', '피벗 테이블은 항목별 합계 · 개수 등을 빠르게 요약합니다.']] },
+  { re: /파이썬|Python|코딩|프로그래밍/i, mc: [['파이썬에서 화면에 글자를 출력하는 함수는?', ['print()', 'input()', 'len()', 'range()'], 'print()는 값을 화면에 출력합니다.'], ['a = [3, 5, 7]일 때 a[0]의 값은?', ['3', '5', '7', '오류'], '파이썬의 인덱스는 0부터 시작합니다.'], ['range(3)이 만드는 수는?', ['0, 1, 2', '1, 2, 3', '0, 1, 2, 3', '3'], 'range(n)은 0부터 n-1까지 만듭니다.']], ox: [['파이썬은 들여쓰기로 코드 블록을 구분한다.', 'O', '같은 블록은 같은 깊이로 들여씁니다.']] },
+  { re: /HTML|CSS|웹\s*개발|자바스크립트|JavaScript|프론트엔드/i, mc: [['웹 페이지의 구조(제목 · 문단 · 링크)를 만드는 언어는?', ['HTML', 'CSS', 'SQL', 'Python'], 'HTML은 문서의 구조를 표시합니다.'], ['글자 색 · 배치 같은 꾸밈을 맡는 것은?', ['CSS', 'HTML', 'HTTP', 'DNS'], 'CSS는 모양과 배치를 정합니다.'], ['버튼을 눌렀을 때의 동작을 만드는 언어는?', ['JavaScript', 'CSS', 'HTML', 'XML'], '자바스크립트가 화면의 동작을 맡습니다.']], ox: [['<a> 태그는 다른 페이지로 가는 링크를 만든다.', 'O', 'href 속성에 주소를 넣습니다.']] },
+  { re: /AI|인공지능|생성형|챗GPT|ChatGPT|프롬프트/, mc: [['생성형 AI에서 좋은 답을 얻는 요청 방법으로 알맞은 것은?', ['목적 · 대상 · 형식을 구체적으로 적는다', '한 단어로만 묻는다', '개인정보를 자세히 넣는다', '결과를 확인하지 않고 그대로 쓴다'], '목적 · 대상 · 원하는 형식을 함께 적으면 답이 정확해집니다.'], ['생성형 AI가 사실과 다른 내용을 그럴듯하게 만들어 내는 현상은?', ['환각(할루시네이션)', '과적합', '암호화', '캐싱'], '그럴듯하지만 틀린 내용을 만드는 것을 환각이라고 합니다.'], ['업무에 AI를 쓸 때 입력하면 안 되는 것은?', ['고객의 주민등록번호 같은 개인정보', '공개된 보도자료', '내가 쓴 초안 문장', '일반 상식 질문'], '개인정보 · 기밀은 외부 AI에 넣지 않습니다.']], ox: [['AI가 만든 결과물도 사람이 사실 여부를 확인해야 한다.', 'O', '최종 책임은 사용하는 사람에게 있습니다.']] },
+  { re: /성희롱|폭력\s*예방|4대\s*폭력|성폭력/, mc: [['직장 내 성희롱 예방교육의 법정 실시 주기는?', ['연 1회 이상', '3년에 1회', '입사할 때 한 번만', '5년에 1회'], '남녀고용평등법 시행령 제3조: 사업주는 연 1회 이상 실시합니다.'], ['직장 내 성희롱 신고를 받은 사업주가 할 일로 알맞은 것은?', ['지체 없이 사실 확인 조사를 한다', '당사자끼리 해결하게 둔다', '신고한 사람을 먼저 다른 부서로 보낸다', '소문이 나지 않게 덮는다'], '사업주는 지체 없이 조사하고 피해자 보호 조치를 해야 합니다.']], ox: [['성희롱 피해를 신고한 직원에게 불리한 처우를 해서는 안 된다.', 'O', '신고자 · 피해자에 대한 불리한 처우는 금지됩니다.']] },
+  { re: /개인정보/, mc: [['다음 중 개인정보에 해당하는 것은?', ['이름과 휴대전화 번호', '회사 대표 전화번호', '오늘의 날씨', '제품 가격'], '살아 있는 개인을 알아볼 수 있는 정보가 개인정보입니다.'], ['개인정보가 담긴 파일을 보낼 때 알맞은 방법은?', ['파일에 암호를 걸고 암호는 따로 알린다', '본문에 그대로 붙여 보낸다', '전체 메일로 모두에게 보낸다', '파일 이름에 주민등록번호를 쓴다'], '암호를 걸고 받는 사람을 최소로 합니다.']], ox: [['보유 기간이 지난 개인정보는 지체 없이 파기해야 한다.', 'O', '개인정보 보호법 제21조.']] },
+  { re: /산업\s*안전|안전\s*교육|관리감독자|안전보건/, mc: [['작업 전에 위험 요인을 찾아 크기를 따지고 줄이는 활동은?', ['위험성평가', '인사평가', '재고 조사', '고객 만족도 조사'], '위험성평가로 위험 요인을 찾고 대책을 세웁니다.'], ['높은 곳(추락 위험)에서 작업할 때 꼭 착용해야 하는 것은?', ['안전대(안전벨트)', '귀마개', '방진 마스크', '보안경만'], '추락 위험 작업에는 안전대를 걸고 작업합니다.']], ox: [['사고가 날 뻔한 일(아차사고)도 기록하고 공유하는 것이 좋다.', 'O', '아차사고를 공유하면 큰 사고를 미리 막을 수 있습니다.']] },
+  { re: /요양|돌봄|보호사|간병/, mc: [['오래 누워 지내는 어르신의 욕창을 막기 위해 자세를 바꿔 드리는 간격으로 흔히 권하는 것은?', ['2시간마다', '하루에 한 번', '일주일에 한 번', '바꾸지 않는다'], '같은 부위가 오래 눌리지 않게 보통 2시간마다 자세를 바꿉니다.'], ['휠체어로 옮겨 앉도록 돕기 전에 먼저 할 일은?', ['휠체어 바퀴 잠금장치를 잠근다', '어르신을 바로 일으켜 세운다', '발 받침대를 내려 둔다', '안전벨트를 푼다'], '바퀴가 움직이지 않게 잠근 뒤 이동을 돕습니다.'], ['식사를 도울 때 사레를 줄이는 자세는?', ['상체를 세우고 고개를 약간 숙인다', '똑바로 눕힌다', '고개를 뒤로 젖힌다', '엎드린 자세로 한다'], '앉은 자세에서 턱을 약간 당기면 사레가 줄어듭니다.']], ox: [['어르신의 건강 상태와 개인 정보는 관계없는 사람에게 말하지 않는다.', 'O', '비밀 유지는 요양보호사의 기본 윤리입니다.']] },
+  { re: /전기|전자|회로/, mc: [['옴의 법칙에서 전압(V)은?', ['전류 × 저항', '전류 ÷ 저항', '저항 ÷ 전류', '전류 + 저항'], 'V = I × R입니다.'], ['저항의 단위는?', ['옴(Ω)', '볼트(V)', '암페어(A)', '와트(W)'], '저항은 옴(Ω), 전압은 볼트, 전류는 암페어입니다.'], ['전력의 단위는?', ['와트(W)', '옴(Ω)', '헤르츠(Hz)', '쿨롱(C)'], '전력은 와트(W)로 나타냅니다.']], ox: [['저항을 직렬로 연결하면 합성 저항은 각 저항의 합이다.', 'O', '직렬 합성 저항 R = R1 + R2 + …']] },
+  { re: /바리스타|커피|에스프레소/, mc: [['에스프레소 한 잔의 일반적인 추출 시간은?', ['20~30초', '2~3초', '3~4분', '10분 이상'], '보통 20~30초 안에 추출합니다.'], ['다음 중 우유가 들어가지 않는 커피는?', ['아메리카노', '카페라테', '카푸치노', '플랫 화이트'], '아메리카노는 에스프레소에 물을 더한 커피입니다.']], ox: [['원두는 분쇄한 뒤 시간이 지날수록 향이 빨리 줄어든다.', 'O', '추출 직전에 분쇄하는 것이 좋습니다.']] },
+  { re: /스마트폰|휴대폰|키오스크|디지털\s*기초/, mc: [['모르는 번호로 온 문자 속 링크는 어떻게 할까요?', ['누르지 않고 지운다', '바로 눌러 확인한다', '답장으로 개인정보를 보낸다', '지인에게 전달한다'], '모르는 링크는 스미싱일 수 있어 누르지 않습니다.'], ['화면 글자를 크게 하려면 어디로 가야 할까요?', ['설정 › 디스플레이(글자 크기)', '카메라', '계산기', '알람'], '설정의 디스플레이 메뉴에서 글자 크기를 바꿉니다.']], ox: [['앱은 공식 앱 마켓(플레이 스토어 · 앱 스토어)에서 설치하는 것이 안전하다.', 'O', '출처를 알 수 없는 앱은 설치하지 않습니다.']] },
+  { re: /청렴|반부패|부정청탁|이해충돌/, mc: [['공직자 등이 금품을 받거나 부정한 청탁을 받는 것을 막는 법은?', ['청탁금지법', '도로교통법', '저작권법', '건축법'], '부정청탁 및 금품등 수수의 금지에 관한 법률(청탁금지법)입니다.']], ox: [['부정한 청탁을 받으면 거절 의사를 분명히 밝혀야 한다.', 'O', '거절 의사를 밝히고, 다시 받으면 신고합니다.']] },
+  { re: /사회복지/, mc: [['사회복지 실천의 기본 가치로 알맞은 것은?', ['인간의 존엄성과 자기결정 존중', '기관의 이익 우선', '결과만 중시', '모든 사람에게 같은 지원만 제공'], '존엄성과 자기결정권 존중이 핵심 가치입니다.']], ox: [['사회복지사는 클라이언트의 비밀을 지켜야 한다.', 'O', '비밀보장은 윤리 기준의 기본입니다.']] },
+  { re: /영업|세일즈|고객\s*응대|민원/, mc: [['고객의 요구를 알아내는 데 가장 좋은 질문은?', ['열린 질문(어떤 점이 가장 불편하셨나요?)', '예 · 아니오로만 답하는 질문만', '가격만 묻는 질문', '경쟁사를 깎아내리는 질문'], '열린 질문은 고객이 상황을 자세히 말하게 합니다.']], ox: [['불만 고객의 말은 끝까지 듣고 요점을 다시 확인하는 것이 좋다.', 'O', '경청과 확인이 응대의 첫 단계입니다.']] },
+  { re: /리더십|팀장|관리자|코칭/, mc: [['효과적인 피드백 방법으로 알맞은 것은?', ['구체적인 행동과 결과를 제때 이야기한다', '몇 달 모았다가 한 번에 말한다', '사람의 성격을 평가한다', '여러 사람 앞에서 꾸짖는다'], '행동 중심으로 제때 · 구체적으로 말합니다.']], ox: [['팀원에게 일을 맡길 때 목표와 기한을 함께 알려야 한다.', 'O', '목표 · 기한 · 권한을 함께 정해야 합니다.']] }
+];
 Object.assign(AI, {
   design(o) {
     const topic = clean(o.topic) || '새 과정', n = clamp(+o.weeks || (o.univ ? 15 : 6), 1, 30); const W = [];
@@ -17,27 +39,38 @@ Object.assign(AI, {
       if (!exam) {
         items.push({ type: 'video', title: `${topic}: ${base}`, q: `${topic} ${base.replace(/[ⅠⅡ:·]/g, ' ')} 강의`.replace(/\s+/g, ' ') });
         if (o.vids > 1) items.push({ type: 'video', title: `${base} 실습 영상`, q: `${topic} 실습 튜토리얼` });
-        if (o.quiz) items.push({ type: 'quiz', title: `${w}차시 확인 퀴즈`, gen: { n: 5, lv: o.level } });
+        if (o.quiz) items.push({ type: 'quiz', title: `${w}${AI.unitW(o)} 확인 퀴즈`, gen: { n: 5, lv: o.level } });
         if (o.assign && (w % 3 === 0 || /프로젝트|실습/.test(base))) items.push({ type: 'assign', title: `${base} 과제`, gen: true });
       } else if (o.exam) items.push({ type: 'exam', title: `${topic} ${base}`, gen: { n: base.includes('중간') ? 15 : 20, lv: o.level } });
-      W.push({ w, title: base, goal: exam ? `${w > n / 2 ? '전체' : '전반부'} 학습 내용을 평가한다.` : `${topic}의 ${base.replace(/[ⅠⅡ]/g, '').trim()}을(를) 이해하고 적용한다.`, items });
+      W.push({ w, title: base, goal: exam ? `${w > n / 2 ? '전체' : '전반부'} 학습 내용을 평가한다.` : (b2 => `${topic}의 ${b2}${AI.j(b2, '을')} 이해하고 적용한다.`)(base.replace(/[ⅠⅡ]/g, '').trim()), items });
     }
     return W;
   },
+  /* 회차 · 주차 · 차시: 대학 = 주차, 학원(회차 운영) = 회차, 그 외 = 차시 */
+  unitW(o) { if (o && o.unit) return o.unit; if (o && o.univ) return '주차'; try { if (S && S.org && S.org.type === 'k12') return '회차'; } catch (e) { } return '차시'; },
   questions(topic, n = 5, lv = '보통', mix = ['mc', 'mc', 'ox', 'short', 'mc', 'essay']) {
-    topic = clean(topic) || '핵심 개념'; const per = Math.floor(100 / n), rest = 100 - per * n;
+    topic = clean(topic) || '핵심 개념'; const per = Math.floor(100 / n), rest = 100 - per * n; const J = p => AI.j(topic, p);
+    /* 주제어에 맞는 문항을 먼저 쓰고(QBANK), 모자라면 주제 이름을 넣은 일반 문항으로 채운다 */
+    const bank = AI.qbank(topic); const bMC = bank.flatMap(b => b.mc || []), bOX = bank.flatMap(b => b.ox || []); let im = 0, io = 0;
     const MC = [[`「${topic}」의 목적을 가장 잘 설명한 것은?`, ['문제를 정의하고 근거를 바탕으로 해결 방법을 찾는 것', '절차 없이 결과만 빠르게 얻는 것', '용어를 외우는 데 집중하는 것', '다른 사람의 결과물을 그대로 쓰는 것'], 0],
-      [`「${topic}」을(를) 실무에 적용할 때 가장 먼저 할 일은?`, ['목표와 조건을 명확히 정한다', '도구부터 구매한다', '결과를 먼저 발표한다', '평가 기준을 나중에 정한다'], 0],
+      [`「${topic}」${J('을')} 실무에 적용할 때 가장 먼저 할 일은?`, ['목표와 조건을 명확히 정한다', '도구부터 구매한다', '결과를 먼저 발표한다', '평가 기준을 나중에 정한다'], 0],
       [`다음 중 「${topic}」 학습 결과를 점검하는 방법으로 알맞지 않은 것은?`, ['기준 없이 느낌으로 판단한다', '루브릭으로 스스로 점검한다', '동료 피드백을 받는다', '사례와 비교한다'], 0],
       [`「${topic}」에서 흔히 하는 실수로 가장 알맞은 것은?`, ['맥락과 조건을 빠뜨리고 진행한다', '단계별로 확인하며 진행한다', '근거 자료를 기록한다', '결과를 다시 검토한다'], 0]];
+    let gm = 0;
     return Array.from({ length: n }, (_, i) => {
-      const t = mix[i % mix.length], pts = per + (i < rest ? 1 : 0);
-      if (t === 'mc') { const [q, o, a] = MC[i % MC.length]; const sh = [...o]; const rot = i % 4; const opts = sh.slice(rot).concat(sh.slice(0, rot)); return { t, q: `${i + 1}. ${q}`, opts, a: String(opts.indexOf(o[a])), pts, exp: `「${topic}」은(는) 목표 · 조건 · 근거를 바탕으로 진행해야 합니다.`, lv }; }
-      if (t === 'ox') return { t, q: `${i + 1}. 「${topic}」은(는) 결과를 확인하고 개선하는 과정을 반복한다.`, a: 'O', pts, exp: '점검과 개선의 반복이 핵심입니다.', lv };
-      if (t === 'short') return { t, q: `${i + 1}. 「${topic}」을(를) 시작할 때 정해야 하는 세 가지를 쓰시오.`, a: '목표, 조건, 평가 기준', pts, exp: '목표 · 조건 · 평가 기준을 정해야 결과를 판단할 수 있습니다.', lv };
-      return { t: 'essay', q: `${i + 1}. 「${topic}」을(를) 자신의 전공 또는 업무에 적용하는 방법을 사례와 함께 서술하시오.`, a: '루브릭 기준으로 채점', pts, exp: '적용 대상 · 방법 · 기대 효과가 드러나야 합니다.', lv };
+      let t = mix[i % mix.length]; const pts = per + (i < rest ? 1 : 0);
+      if (bank.length && (t === 'short' || t === 'essay') && (im < bMC.length || io < bOX.length) && n <= 10 && i < n - 1) t = im < bMC.length ? 'mc' : 'ox';
+      if (t === 'ox' && io < bOX.length) { const [q, a, exp] = bOX[io++]; return { t, q: `${i + 1}. ${q}`, a, pts, exp, lv }; }
+      if (t === 'ox' && im < bMC.length) t = 'mc';
+      if (t === 'mc' && im < bMC.length) { const [q, o, exp] = bMC[im++]; const rot = (i + im) % o.length; const opts = o.slice(rot).concat(o.slice(0, rot)); return { t, q: `${i + 1}. ${q}`, opts, a: String(opts.indexOf(o[0])), pts, exp, lv }; }
+      if (t === 'mc') { const [q, o, a] = MC[gm++ % MC.length]; const sh = [...o]; const rot = i % 4; const opts = sh.slice(rot).concat(sh.slice(0, rot)); return { t, q: `${i + 1}. ${q}`, opts, a: String(opts.indexOf(o[a])), pts, exp: `「${topic}」${J('은')} 목표 · 조건 · 근거를 바탕으로 진행해야 합니다.`, lv }; }
+      if (t === 'ox') return { t, q: `${i + 1}. 「${topic}」${J('은')} 결과를 확인하고 개선하는 과정을 반복한다.`, a: 'O', pts, exp: '점검과 개선의 반복이 핵심입니다.', lv };
+      if (t === 'short') return { t, q: `${i + 1}. 「${topic}」${J('을')} 시작할 때 정해야 하는 세 가지를 쓰시오.`, a: '목표, 조건, 평가 기준', pts, exp: '목표 · 조건 · 평가 기준을 정해야 결과를 판단할 수 있습니다.', lv };
+      return { t: 'essay', q: `${i + 1}. 「${topic}」${J('을')} 자신의 전공 또는 업무에 적용하는 방법을 사례와 함께 서술하시오.`, a: '루브릭 기준으로 채점', pts, exp: '적용 대상 · 방법 · 기대 효과가 드러나야 합니다.', lv };
     });
   },
+  /* 주제어별 기본 문항(데모 규칙 생성기). mc: [문제, [정답, 오답…], 해설] · ox: [문장, 'O'|'X', 해설]. 첫 보기가 정답이며 낼 때 섞는다 */
+  qbank(topic) { const s = String(topic || ''); return QBANK.filter(b => b.re.test(s)).slice(0, 2); },
   assignment(topic) { topic = clean(topic) || '실습'; return { desc: `「${topic}」 내용을 바탕으로 자신의 전공 또는 업무에서 실제로 쓸 수 있는 결과물을 만드세요.\n① 해결하려는 문제와 목표 ② 사용한 방법과 과정 ③ 결과물 ④ 느낀 점과 개선할 점을 포함합니다.`, deliv: '결과물 파일(PDF · 이미지 · 링크) + 1쪽 설명서', due: 7 }; },
   rubric(name) { name = clean(name) || '과제'; return { id: uid('rb'), name: `${name} 루브릭`, criteria: [
     { n: '요구사항 충족', pts: 40, lv: ['문제 · 목표 · 과정 · 결과 · 성찰 다섯 요소가 모두 분명하다', '요소가 대부분 있으나 일부가 모호하다', '핵심 요소가 빠져 있다'] },
@@ -69,9 +102,9 @@ Object.assign(AI, {
 function itemsFromDesign(W, o) {
   const items = []; let crb = o.rubric || null; W.forEach(wk => wk.items.forEach(x => { const it = { id: uid('it'), type: x.type, title: x.title, week: wk.w };
     if (x.type === 'video') { if (o.vsrc === 'ai') { it.src = 'ai'; it.ai = { scenes: AI.lecture(x.title, 5, o.level), mins: 5, voice: 'f' }; it.url = 'ai:' + it.id; } else { it.src = 'youtube'; it.q = x.q; it.url = ''; } }
-    if (x.gen && ['quiz', 'exam'].includes(x.type)) { it.qs = AI.questions(o.topic, x.gen.n, x.gen.lv || '보통'); it.time = x.type === 'exam' ? 60 : 10; it.retake = x.type === 'exam' ? 1 : 3; }
+    if (x.gen && ['quiz', 'exam'].includes(x.type)) { it.qs = AI.questions(o.topic, x.gen.n, x.gen.lv || '보통'); it.time = x.type === 'exam' ? 60 : 10; it.retake = x.type === 'exam' ? 1 : 3; it.autoGen = 1; /* 사용자가 직접 만들지 않은 자동 초안 표시(규정 게이트에서 구분) */ }
     if (x.type === 'assign') { Object.assign(it, AI.assignment(x.title)); if (!crb) { const rb = AI.rubric(clean(o.topic) + ' 과제'); S.rubrics.push(rb); crb = rb.id; } it.rubric = crb; }
-    items.push(it); if (o.docs && x.type === 'video' && !wk.items.slice(0, wk.items.indexOf(x)).some(y => y.type === 'video')) items.push({ id: uid('it'), type: 'doc', title: `${wk.w}${o.univ ? '주' : '차시'} 강의자료 — ${wk.title}`, week: wk.w, topic: `${clean(o.topic)} ${wk.title}`, doc: AI.material(`${clean(o.topic)} ${wk.title}`, { name: o.topic, goal: wk.goal }) }); })); return items;
+    items.push(it); if (o.docs && x.type === 'video' && !wk.items.slice(0, wk.items.indexOf(x)).some(y => y.type === 'video')) items.push({ id: uid('it'), type: 'doc', title: `${wk.w}${o.univ ? '주' : AI.unitW(o)} 강의자료 — ${wk.title}`, week: wk.w, topic: `${clean(o.topic)} ${wk.title}`, doc: AI.material(`${clean(o.topic)} ${wk.title}`, { name: o.topic, goal: wk.goal }) }); })); return items;
 }
 
 /* ═════════ YouTube 자동 추천 ═════════ */
@@ -95,7 +128,9 @@ const ytLink = q => `https://www.youtube.com/results?search_query=${encodeURICom
 /* ═════════ 과정 상세: 커리큘럼 · 차시 편성 ═════════ */
 const itemBadge = it => {
   if (it.type === 'video' && it.src === 'ai') return (it.ai?.scenes || []).length ? tag(`AI 영상 ${it.ai.scenes.length}장면`, 'g') : tag('AI 영상 미생성', 'y');
-  if (it.type === 'doc') return (it.doc?.secs || []).length ? tag(`자료 ${it.doc.secs.length}절`, 'g') : tag('자료 없음', 'y');
+  if (it.type === 'doc') { if ((it.doc?.secs || []).length) return tag(`자료 ${it.doc.secs.length}절`, 'g'); if (it.src === 'book' || it.book) return tag('디지털북', 'g');
+    if (it.src === 'upload' || it.fileId || it.file || /^(upload:|idb:|media:|\/api\/media|https?:)/.test(String(it.url || ''))) { const n = String(it.name || it.file || it.url || '').toLowerCase(); const m = String(it.mime || '').toLowerCase(); const K = /pdf/.test(m) || /\.pdf$/.test(n) ? 'PDF 파일' : /presentation|powerpoint/.test(m) || /\.pptx?$/.test(n) ? 'PPT 파일' : /word/.test(m) || /\.docx?$/.test(n) ? 'Word 파일' : /hwp/.test(m) || /\.hwpx?$/.test(n) ? '한글 파일' : '올린 파일'; return tag(K, 'g'); }
+    if (it.src === 'library' || it.lib) return tag('라이브러리 자료', 'g'); return tag('자료 없음', 'y'); }
   if (it.type === 'video') return it.url ? tag(it.auto ? 'YouTube 자동' : it.src === 'upload' ? '업로드' : 'YouTube', 'g') : tag('영상 미연결', 'y');
   if (['quiz', 'exam'].includes(it.type)) return (it.qs || []).length ? tag((it.qs || []).length + '문항', 'g') : tag('문항 없음', 'y');
   if (it.type === 'assign') return it.rubric ? tag('루브릭', 'g') : tag('루브릭 없음', 'y');
@@ -108,7 +143,7 @@ function curriculumView(c) {
   if (!c.weekly) return bar + `<ol class="cur">${c.curriculum.map((it, i) => itemRow(c, it, i)).join('')}</ol>`;
   const W = c.weekPlan || []; const un = c.curriculum.map((it, i) => [it, i]).filter(([it]) => !it.week);
   return bar + `<div class="weeks">${W.map(wk => { const its = c.curriculum.map((it, i) => [it, i]).filter(([it]) => it.week === wk.w); const ex = its.some(([it]) => it.type === 'exam');
-    return `<div class="wk ${ex ? 'ex' : ''}"><div class="wkh"><span class="wn">${wk.w}주</span><input value="${esc(wk.title)}" data-chg="wk-title" data-c="${c.id}" data-v="${wk.w}" maxlength="40" aria-label="${wk.w}차시 주제"><select data-chg="wk-add" data-c="${c.id}" data-v="${wk.w}" aria-label="${wk.w}차시 항목 추가"><option value="">+</option>${['video', 'doc', 'quiz', 'assign', 'exam', 'live', 'offline', 'survey'].map(k => `<option value="${k}">${ITEMX[k]}</option>`).join('')}</select></div>
+    return `<div class="wk ${ex ? 'ex' : ''}"><div class="wkh"><span class="wn">${wk.w}${c.kind === 'episode' ? '회차' : S.org.type === 'univ' ? '주' : '차시'}</span><input value="${esc(wk.title)}" data-chg="wk-title" data-c="${c.id}" data-v="${wk.w}" maxlength="40" aria-label="${wk.w}차시 주제"><select data-chg="wk-add" data-c="${c.id}" data-v="${wk.w}" aria-label="${wk.w}차시 항목 추가"><option value="">+</option>${['video', 'doc', 'quiz', 'assign', 'exam', 'live', 'offline', 'survey'].map(k => `<option value="${k}">${ITEMX[k]}</option>`).join('')}</select></div>
       <small class="wg">${esc(wk.goal || '')}</small><ul>${its.map(([it, i]) => `<li><span class="ty">${esc(ITEMX[it.type])}</span><button class="link ib" data-act="item-edit" data-c="${c.id}" data-v="${i}">${esc(it.title)}</button>${itemBadge(it)}</li>`).join('') || '<li class="mini">항목 없음</li>'}</ul></div>`; }).join('')}</div>` +
     (un.length ? `<div class="card"><div class="ch"><b>차시 미배정</b></div><ol class="cur">${un.map(([it, i]) => itemRow(c, it, i)).join('')}</ol></div>` : '');
 }
@@ -132,7 +167,7 @@ function openEditor(c, i) { ED = { c, i, it: JSON.parse(JSON.stringify(c.curricu
 ACT['item-edit'] = el => openEditor(C(el.dataset.c), +el.dataset.v);
 function edRender() {
   const it = ED.it, b = $('#edBody'); if (!b) return; let h = `<label class="fl">제목<input data-ed="title" value="${esc(it.title)}" maxlength="80"></label>`;
-  if (ED.c.weekly) h += `<label class="fl">차시<select data-ed="week">${ED.c.weekPlan.map(w => `<option value="${w.w}" ${it.week === w.w ? 'selected' : ''}>${w.w}주 · ${esc(w.title)}</option>`).join('')}</select></label>`;
+  if (ED.c.weekly) h += `<label class="fl">차시<select data-ed="week">${ED.c.weekPlan.map(w => `<option value="${w.w}" ${it.week === w.w ? 'selected' : ''}>${w.w}${S.org.type === 'univ' ? '주' : '차시'} · ${esc(w.title)}</option>`).join('')}</select></label>`;
   if (it.type === 'video') {
     const id = ytId(it.url); const key = !!S.settings.yt?.key;
     h += `<div class="seg2">${[['youtube', 'YouTube'], ['ai', 'AI 강의 영상 생성'], ['upload', '파일 업로드'], ['library', '라이브러리']].map(([k, l]) => `<button type="button" class="${(it.src || 'youtube') === k ? 'on' : ''}" data-act="ed-src" data-v="${k}">${l}</button>`).join('')}</div>`;
@@ -180,6 +215,41 @@ function evenPts(Q) { const n = Q.length; if (!n) return; const per = Math.floor
 ACT['ed-bank'] = () => { const B = S.bank || []; if (!B.length) { toast('문항 은행이 비어 있습니다. 평가 › 문항 은행에서 추가하세요.', 'warn'); return; } modal2('문항 은행에서 가져오기', `<div class="chk one">${B.map((q, k) => `<label><input type="checkbox" class="bkq" value="${k}"> ${esc(q.q.slice(0, 70))} <small>${esc(q.topic || '')}</small></label>`).join('')}</div>`, () => { $$('.bkq:checked').forEach(x => ED.it.qs.push(JSON.parse(JSON.stringify(B[+x.value])))); evenPts(ED.it.qs); edRender(); }); };
 ACT['ed-aia'] = () => { const a = AI.assignment(ED.it.title); Object.assign(ED.it, a); const rb = AI.rubric(ED.it.title); S.rubrics.push(rb); ED.it.rubric = rb.id; S.ai.usage++; save(); edRender(); toast('과제 안내와 루브릭을 만들었습니다.', 'ok'); };
 /* 편집기 위에 겹치는 작은 대화상자(편집 중인 모달을 닫지 않음) */
+/* v35 F2b: 문항 고치기(쉬운 편집기) — 과정에 넣기 전 결과 화면(CT 등)에서도 쓴다.
+   qsEdit(qs, { title, onSave(qs) }) → 복사본을 고쳐 [저장] 때 onSave에 넘긴다. 원본은 건드리지 않는다.
+   과정 항목은 qsEditItem(classId, itemId)로 바로 고친다(저장 · 다시 그리기 포함). z-index 65로 콘텐츠 창(62) 위에 뜬다. */
+function qsEdit(qs, o = {}) {
+  const Q = JSON.parse(JSON.stringify(Array.isArray(qs) ? qs : [])); const old = document.getElementById('qsEd'); if (old) old.remove();
+  const w = document.createElement('div'); w.className = 'mwrap top2'; w.id = 'qsEd';
+  const strip = q => String(q || '').replace(/^\d+\.\s*/, '');
+  const row = (q, i) => { const mc = q.t === 'mc', ox = q.t === 'ox'; const A = String(q.a ?? '');
+    return `<fieldset class="qse-q" data-i="${i}" style="border:1px solid var(--line,#e2e4e8);border-radius:12px;padding:12px 14px;margin:0 0 12px;min-width:0"><legend style="font-weight:700;padding:0 4px">${i + 1}번 · ${mc ? '객관식' : ox ? 'O · X' : q.t === 'short' ? '단답형' : q.t === 'essay' ? '서술형' : '문항'}</legend>
+      <label class="fl">문제<textarea rows="2" data-qf="q" style="font-size:16px">${esc(strip(q.q))}</textarea></label>
+      ${mc ? (q.opts || []).map((op, j) => `<label style="display:flex;gap:10px;align-items:center;margin:6px 0;min-height:44px"><input type="radio" name="qa${i}" value="${j}" ${A === String(j) ? 'checked' : ''} aria-label="${j + 1}번 보기를 정답으로" style="width:24px;height:24px;flex:none"><input data-qf="o${j}" value="${esc(op)}" aria-label="${j + 1}번 보기" style="flex:1;min-width:0;font-size:16px;min-height:44px;padding:0 12px;border-radius:8px;border:1px solid var(--line,#d5d8de)"></label>`).join('') : ''}
+      ${ox ? `<div style="display:flex;gap:16px;margin:6px 0">${['O', 'X'].map(v => `<label style="display:flex;gap:8px;align-items:center;min-height:44px;font-size:16px"><input type="radio" name="qa${i}" value="${v}" ${A === v ? 'checked' : ''} style="width:24px;height:24px"> ${v}가 정답</label>`).join('')}</div>` : ''}
+      ${!mc && !ox ? `<label class="fl">모범 답안<input data-qf="a" value="${esc(A)}" style="font-size:16px"></label>` : ''}
+      <label class="fl">해설 <small class="mini">학습자가 답한 뒤 보는 설명 · 비워도 됩니다</small><input data-qf="exp" value="${esc(q.exp || '')}" style="font-size:16px"></label>
+      <button type="button" class="btn ghost" data-qse="del" data-v="${i}" style="min-height:44px">이 문항 빼기</button></fieldset>`; };
+  const read = () => w.querySelectorAll('.qse-q').forEach(f => { const q = Q[+f.dataset.i]; if (!q) return; f.querySelectorAll('[data-qf]').forEach(el => { const k = el.dataset.qf; if (/^o\d+$/.test(k)) { q.opts = q.opts || []; q.opts[+k.slice(1)] = el.value.trim(); } else if (k === 'q') q.q = `${+f.dataset.i + 1}. ${el.value.trim()}`; else q[k] = el.value.trim(); }); const r = f.querySelector(`input[type=radio]:checked`); if (r) q.a = r.value; });
+  const paint = () => { w.innerHTML = `<div class="modal wide" role="dialog" aria-modal="true" aria-label="문항 고치기"><div class="mh"><b>${esc(o.title || '문항 고치기')}</b><button class="x" data-qse="c" aria-label="닫기">${ic('x', 18)}</button></div>
+    <div class="mb"><p class="mini" style="font-size:15px">문제와 보기를 바로 고칠 수 있습니다. 동그라미를 누르면 정답이 바뀝니다.</p>${Q.map(row).join('') || '<p class="empty">문항이 없습니다. 아래 [문항 더하기]를 누르세요.</p>'}
+    <button type="button" class="btn" data-qse="add" style="min-height:48px">${ic('plus', 16)} 객관식 문항 더하기</button></div>
+    <div class="mf"><button class="btn" data-qse="c" style="min-height:48px">취소</button><button class="btn pri" data-qse="ok" style="min-height:48px">저장</button></div></div>`; };
+  paint(); document.body.appendChild(w);
+  w.addEventListener('click', e => { const b = e.target.closest('[data-qse]'); if (e.target === w) { w.remove(); return; } if (!b) return; const x = b.dataset.qse;
+    if (x === 'c') { w.remove(); return; }
+    read();
+    if (x === 'del') { Q.splice(+b.dataset.v, 1); Q.forEach((q, i) => q.q = `${i + 1}. ${strip(q.q)}`); paint(); return; }
+    if (x === 'add') { Q.push({ t: 'mc', q: `${Q.length + 1}. `, opts: ['', '', '', ''], a: '0', pts: 0 }); paint(); const L = w.querySelectorAll('.qse-q textarea'); L.length && L[L.length - 1].focus(); return; }
+    if (x === 'ok') { const bad = Q.findIndex(q => !strip(q.q) || (q.t === 'mc' && (q.opts || []).filter(Boolean).length < 2)); if (bad >= 0) { toast(`${bad + 1}번 문항의 문제 또는 보기(2개 이상)를 채워 주세요.`, 'warn'); return; }
+      Q.forEach(q => { if (q.t === 'mc') { const keep = (q.opts || []).map((v, j) => [v, j]).filter(z => z[0]); const ai = keep.findIndex(z => String(z[1]) === String(q.a)); q.opts = keep.map(z => z[0]); q.a = String(ai >= 0 ? ai : 0); } });
+      if (typeof evenPts === 'function' && Q.length) evenPts(Q); w.remove(); try { o.onSave && o.onSave(Q); } catch (err) { console.error(err); } } });
+  const f = w.querySelector('textarea'); f && f.focus(); return w;
+}
+function qsEditItem(cid, iid) { const c = C(cid); const it = c && (c.curriculum || []).find(x => x.id === iid); if (!it) return null;
+  return qsEdit(it.qs || [], { title: `문항 고치기 — ${it.title || ''}`, onSave: qs => { it.qs = qs; save(); try { render(); } catch (e) { } toast(`문항 ${qs.length}개를 저장했습니다.`, 'ok'); } }); }
+window.qsEdit = qsEdit; window.qsEditItem = qsEditItem;
+ACT['qs-edit'] = el => qsEditItem(el.dataset.c, el.dataset.i);
 function modal2(title, body, onOk) { const w = document.createElement('div'); w.className = 'mwrap top2'; w.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mh"><b>${esc(title)}</b></div><div class="mb">${body}</div><div class="mf"><button class="btn" data-x="c">취소</button><button class="btn pri" data-x="ok">${ic('spark', 14)} 확인</button></div></div>`; document.body.appendChild(w); w.addEventListener('click', e => { const x = e.target.closest('[data-x]'); if (e.target === w || x) { if (x && x.dataset.x === 'ok') onOk(); w.remove(); } }); }
 function edSave() {
   const it = ED.it; if (!it.title?.trim()) { toast('제목을 입력하세요.', 'warn'); return false; }

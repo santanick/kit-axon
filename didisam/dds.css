@@ -241,8 +241,8 @@ input[type=search]::placeholder,input::placeholder,textarea::placeholder{color:v
 /* v26.9 시작 화면: 학원 종류 질문 · 시작 못 하는 이유 · 강사/수강생 안내 */
 .su-q{margin:14px 0 6px;font-size:14px;font-weight:700;color:var(--g900)}.su-q small{font-weight:400;color:var(--t-sub,var(--g600));margin-left:6px}
 .su-hint{margin:8px 0 0;font-size:13px;color:var(--g700);text-align:center}.su-who{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--g300);font-size:12.5px;color:var(--g700);line-height:1.6}
-.su-r .seg2.full{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:none;padding:0;box-shadow:none;border:0}
-.su-r .seg2.full button{border:1px solid var(--g300);border-radius:8px;padding:12px 10px;background:#fff;font-weight:600;color:var(--g800);cursor:pointer}
+.su-r .seg2.full{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;background:none;padding:0;box-shadow:none;border:0}
+.su-r .seg2.full button{white-space:normal;min-width:0;word-break:keep-all;line-height:1.35;border:1px solid var(--g300);border-radius:8px;padding:12px 10px;background:#fff;font-weight:600;color:var(--g800);cursor:pointer}
 .su-r .seg2.full button:hover{border-color:var(--s400)}.su-r .seg2.full button.on{border-color:var(--s400);background:var(--s50,#EAEDFF);color:var(--s700,#3A4FD1);box-shadow:inset 0 0 0 1px var(--s400)}
 
 /* v32.8 전수 QA(D2): 폼 안 체크박스 · 라디오 · 파일 입력은 입력칸 모양을 쓰지 않는다 */

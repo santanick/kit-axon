@@ -27,7 +27,7 @@
   }
   if (typeof BWORD !== 'undefined') BWORD.forEach(w => { if (w[0] === 'lsite') w[0] = 'site'; });
   if (typeof bQ === 'function') { const base = bQ; bQ = id => id === 'site' || id === 'lsite' ? [...base('site').filter(x => !/게시/.test(x)), '홈페이지 게시해줘'] : base(id); }
-  if (typeof bGuideText === 'function') { const base = bGuideText; bGuideText = id => id === 'site' || id === 'lsite' ? `홈페이지와 학습 사이트는 이제 하나의 사이트입니다. 화면에서 메뉴 · 첫 화면 섹션 · 학습 페이지(진단 · 튜토리얼 · 마이페이지 등)를 함께 고치고, "홈페이지 게시해줘"라고 하시면 ${t('learner')}이 같은 주소에서 바로 보게 됩니다.` : base(id); }
+  if (typeof bGuideText === 'function') { const base = bGuideText; bGuideText = id => id === 'site' || id === 'lsite' ? `홈페이지와 학습 사이트는 이제 하나의 사이트입니다. 화면에서 메뉴 · 첫 화면 섹션 · 학습 페이지(진단 · 튜토리얼 · 마이페이지 등)를 함께 고치고, "홈페이지 게시해줘"라고 하시면 ${tj('learner', '이')} 같은 주소에서 바로 보게 됩니다.` : base(id); }
 
   /* 사용 가이드(guide.js): 'lsite' 방문 = 통합 화면 방문, 문구 갱신 */
   if (typeof gdVisit === 'function') { const base = gdVisit; gdVisit = v => { const x = typeof gdVal === 'function' ? gdVal(v) : v; return x === 'lsite' ? CUR.tab === 'site' : base(v); }; }

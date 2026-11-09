@@ -28,12 +28,12 @@
   const inTab = (e, tb) => tb === 'all' || e.kind === tb || (tb === 'quiz' && e.kind === 'assign');
   /* [만들기] 종류 카드 — C3 CT.kinds가 있으면 이름 · 설명을 그쪽 것으로 맞춘다 */
   const MAKE = [
-    ['upload', '올리기', 'clup', '가진 영상 · 문서 파일을 올려요', '1분'],
-    ['aivideo', 'AI 강의 영상', 'clplay', '주제만 쓰면 AI가 슬라이드 강의를 만들어요', '약 1분'],
-    ['doc', '교안', 'cldoc', '주제만 쓰면 AI가 수업 자료를 써요', '약 1분'],
-    ['quiz', '퀴즈', 'clquiz', '주제만 쓰면 AI가 문제 5개를 내요', '30초'],
-    ['book', '디지털북', 'book', '읽고 풀며 배우는 교재를 AI가 엮어요', '약 2분'],
-    ['youtube', 'YouTube', 'clyt', '유튜브 주소를 붙여 넣어요', '30초']
+    ['upload', '올리기', 'clup', '가진 영상 · 문서 파일을 올립니다', '1분'],
+    ['aivideo', 'AI 강의 영상', 'clplay', '주제만 쓰면 AI가 슬라이드 강의를 만듭니다', '약 1분'],
+    ['doc', '교안', 'cldoc', '주제만 쓰면 AI가 수업 자료를 씁니다', '약 1분'],
+    ['quiz', '퀴즈', 'clquiz', '주제만 쓰면 AI가 문제 5개를 냅니다', '30초'],
+    ['book', '디지털북', 'book', '읽고 풀며 배우는 교재를 AI가 엮습니다', '약 2분'],
+    ['youtube', 'YouTube', 'clyt', '유튜브 주소를 붙여 넣습니다', '30초']
   ];
   const EX = { k12: '분수의 덧셈과 뺄셈', univ: '생성형 AI의 이해와 활용', corp: '개인정보 보호 기본 수칙', adult: '엑셀 피벗 테이블로 매출 정리하기', lifelong: '스마트폰으로 사진 정리하기', voc: '전기 작업 안전 수칙', public: '청렴 · 공정한 업무 처리' };
   const exTopic = () => { try { const c = (S.classes || []).find(x => (x.weekPlan || []).length) || (S.classes || [])[0]; const w = c && (c.weekPlan || []).find(x => x.title && !/^\d+(차시|주)$/.test(x.title)); if (w) return w.title; } catch (e) { } return EX[S && S.org && S.org.type] || EX.adult; };
@@ -182,7 +182,7 @@
       inp.addEventListener('change', () => { const F = [...inp.files]; F.forEach(f => { const vid = /^video\//.test(f.type); if (vid && f.size > ((window.HPM && HPM.FMAX && HPM.FMAX.video) || 1024 ** 3)) { toast(`${f.name}: 영상은 ${(window.HPM && HPM.sizeText && HPM.FMAX) ? HPM.sizeText(HPM.FMAX.video) : '1GB'}까지 올릴 수 있습니다.`, 'warn'); return; }
         done({ kind: vid ? 'video' : 'file', src: 'upload', title: f.name.replace(/\.\w+$/, '').slice(0, 80), file: f.name, bytes: f.size, size: typeof a2Size === 'function' ? a2Size(f.size) : `${Math.round(f.size / 1024)}KB`, mime: f.type }); });
         inp.remove(); if (F.length) toast(`${F.length}개를 올렸습니다. (데모: 파일 이름 · 크기만 기록합니다)`, 'ok'); }); inp.click(); return; }
-    if (kind === 'youtube') { const w = modal('YouTube 영상 넣기', `<div class="clb-ask"><label class="fl clb-fl">YouTube 주소<input name="u" inputmode="url" autocomplete="off" value="${esc(ed && ed.url || '')}"></label><p class="clb-ex">예: https://youtu.be/abcdefghijk</p><label class="fl clb-fl">제목 <small class="clb-later">나중에 해도 돼요</small><input name="t" maxlength="80" value="${esc(ed && ed.title || '')}"></label></div>`,
+    if (kind === 'youtube') { const w = modal('YouTube 영상 넣기', `<div class="clb-ask"><label class="fl clb-fl">YouTube 주소<input name="u" inputmode="url" autocomplete="off" value="${esc(ed && ed.url || '')}"></label><p class="clb-ex">예: https://youtu.be/abcdefghijk</p><label class="fl clb-fl">제목 <small class="clb-later">나중에 해도 됩니다</small><input name="t" maxlength="80" value="${esc(ed && ed.title || '')}"></label></div>`,
       [{ id: 'c', label: '취소' }, { id: 'ok', label: '넣기', kind: 'pri', run: w => { const u = fv(w, 'u'); if (!/^https:\/\/(www\.|m\.)?(youtube\.com\/(watch\?v=|shorts\/)|youtu\.be\/)[\w-]{11}/.test(u)) { toast('YouTube 주소를 확인해 주세요. 예: https://youtu.be/abcdefghijk', 'warn'); return false; } done({ ...(ed || {}), kind: 'video', src: 'youtube', url: u, title: fv(w, 't') || 'YouTube 영상' }); toast('YouTube 영상을 넣었습니다.', 'ok'); } }]); return w; }
     if (kind === 'aivideo') return preset(ask(ed ? 'AI 강의 영상 고치기' : 'AI 강의 영상 만들기', '무엇을 설명하는 영상인가요?', exTopic(), v => { const sc = AI.lecture(v, 5); S.ai && S.ai.usage++; done({ ...(ed || {}), kind: 'video', src: 'ai', title: `${v} AI 강의 영상`, ai: { scenes: sc, mins: 5, voice: 'f' } }); toast(`AI 강의 영상(장면 ${sc.length}개)을 만들었습니다. [미리보기]로 확인하세요.`, 'ok'); }, '<p class="mini clb-honest">미리보기 품질입니다 — 브라우저 음성 · 슬라이드로 재생합니다.</p>'));
     if (kind === 'doc') return preset(ask(ed ? '교안 고치기' : '교안 만들기', '어떤 내용의 교안인가요?', exTopic(), v => { const d = AI.material(v); S.ai && S.ai.usage++; done({ ...(ed || {}), kind: 'doc', title: `${v} 교안`, topic: v, doc: d }); toast(`교안 ${d.secs.length}절을 만들었습니다.`, 'ok'); }));
