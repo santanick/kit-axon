@@ -3,7 +3,7 @@
 .c2pt{margin-bottom:10px}
 .c2pkbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}.c2pkbar input{flex:1;min-width:180px;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:6px;padding:9px 12px}
 .c2pkl{max-height:320px;overflow:auto;background:var(--paper);border-radius:6px;padding:8px;display:grid;gap:4px}
-.c2pk{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:#fff;font-size:13.5px;cursor:pointer}.c2pk small{margin-left:auto;color:var(--muted);font-size:12px}
+.c2pk{display:flex;align-items:center;gap:12px;padding:10px 12px;min-height:48px;border-radius:8px;background:#fff;font-size:16px;cursor:pointer}.c2pk input[type=checkbox]{width:24px;height:24px;flex:none;margin:0}.c2pk small{margin-left:auto;color:var(--muted);font-size:12px}
 .c2inl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}.c2inl input,.c2inl select{width:auto!important;display:inline-block!important;margin:0!important;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:6px;padding:8px 10px;background:#fff;max-width:100%}
 .c2inl input[type=number]{width:96px!important}.c2inl input[name=nk]{min-width:160px}
 .c2inl .btn.on,.c2pf .btn.on{background:var(--ink);color:#fff}

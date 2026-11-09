@@ -22,7 +22,7 @@
     cur.querySelectorAll('.items li li').forEach(li => { const a = li.querySelector('a'); if (!a || a.querySelector('.l26st')) return; const done = li.classList.contains('done'), on = li.classList.contains('on'); const ty = ((a.querySelector('em') || {}).textContent || '').trim();
       if (/^(단원|챕터)$/.test(ty)) { li.classList.add('l26chap'); return; }
       a.insertAdjacentHTML('beforeend', `<small class="l26st ${done ? 'ok' : on ? 'now' : ''}">${done ? '✓ 수강완료' : on ? '학습 중' : '미수강'}</small>`); });
-    const ih = main.querySelector('.ih'); main.insertAdjacentHTML('afterbegin', `<div class="l26top"><a class="l26back" href="${E(back)}" aria-label="클래스로 돌아가기"><span aria-hidden="true">←</span> 클래스로 돌아가기</a></div>`);
+    const ih = main.querySelector('.ih'); const CLS = (typeof lcTerm === 'function' && lcTerm('cls')) || '과정'; const BK = back === '#my' ? '내 학습으로 돌아가기' : `${CLS}${typeof lJ === 'function' ? lJ(CLS, '으로', '로') : '(으)로'} 돌아가기`; main.insertAdjacentHTML('afterbegin', `<div class="l26top"><a class="l26back" href="${E(back)}" aria-label="${E(BK)}"><span aria-hidden="true">←</span> ${E(BK)}</a></div>`);
     const h2 = main.querySelector(':scope > h2'); if (h2 && name) h2.insertAdjacentHTML('beforebegin', `<small class="l26cls">${E(name)}</small>`); void ih;
     const panel = main.querySelector('#lcPanel'); if (panel) { const side = document.createElement('aside'); side.className = 'l26side'; side.setAttribute('aria-label', '학습노트 · 공지 · 커뮤니티 · 수강후기'); cw.appendChild(side); side.appendChild(panel); }
   }

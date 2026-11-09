@@ -121,7 +121,7 @@
     const auto = fk === 'video' || fk === 'audio';
     return `<div class="lc-file" data-fk="${fk}">${fk === 'pdf' ? tools + body : body + tools}${auto ? `<div class="lc-bar"><i style="width:${Math.round((st.w || 0) * 100)}%"></i></div><small class="lc-bart">${fk === 'audio' ? '듣기' : '시청'} ${Math.round((st.w || 0) * 100)}%${st.done ? ' · 완료했어요' : ' · 80% 넘게 보면 완료돼요'}</small>` : ''}</div>${descHTML(it)}${auto ? '' : doneBtn(c, it, st, fk === 'pdf' ? '다 읽었어요' : '확인했어요')}`; }
   function file0HTML(c, it, st) { const name = it.file || it.name || String(it.url || '').replace(/^upload:/, '') || it.title;
-    return `<div class="lc-file"><div class="lc-demo">${IC('book', 26)}<div><b>운영자가 올린 파일(데모)</b><p>「${E(name)}」 파일이 이 차시에 들어 있어요. 데모 화면에서는 파일 이름만 보여요. 실제 운영에서는 여기서 바로 열거나 내려받을 수 있어요.</p></div></div></div>${descHTML(it)}${doneBtn(c, it, st, '확인했어요')}`; }
+    return `<div class="lc-file"><div class="lc-demo">${IC('book', 26)}<div><b>운영자가 올린 파일(데모)</b><p>「${E(name)}」 파일이 여기에 들어 있어요. 데모 화면에서는 파일 이름만 보여요. 실제 운영에서는 여기서 바로 열거나 내려받을 수 있어요.</p></div></div></div>${descHTML(it)}${doneBtn(c, it, st, '확인했어요')}`; }
   const demoNote = (why) => `<div class="lc-demo">${IC('book', 26)}<div><b>운영자가 올린 파일(데모)</b><p>${E(why || '데모에서 올린 파일은 운영자가 올린 같은 브라우저에서만 열려요. 실제 운영 서버에서는 어디서든 열 수 있어요.')}</p></div></div>`;
   /* 주소 만들기: 서버 파일은 그대로, 데모(IndexedDB) 파일은 HPM이 있을 때만 */
   const HP = () => window.HPM || (typeof HPM !== 'undefined' ? HPM : null); // eslint-disable-line no-undef
