@@ -61,8 +61,8 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
                 r = mapper.updateState(tid, s, s.length(), rev);
                 if (r == null) throw processException("dd.409.conflict.rev");
             }
-            syncLearners(tid, doc.get("codes"), gone);
-            return new LinkedHashMap<>(Map.of("rev", r));
+            int pending = syncLearners(tid, doc.get("codes"), gone, props.getInt("learner.syncMax"));
+            Map<String, Object> o = new LinkedHashMap<>(Map.of("rev", r)); if (pending > 0) o.put("pending", pending); return o;
         });
         /* 기관 역할 밖(plain): 학습자 세션 정리, 운영 모드 · 기관명 반영 — Node 서버는 같은 시점에 pool로 직접 실행 */
         if (!gone.isEmpty()) tx.plain(() -> { mapper.deleteLearnerSessions(tid, gone); return null; });
@@ -75,23 +75,34 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
         return out;
     }
 
-    /** 어드민이 발급한 접근코드(doc.codes)를 학습자 로그인 표로 동기화 — 바뀐 코드만 scrypt로 다시 해시(한 번에 최대 300건) */
-    private void syncLearners(String tid, JsonNode codes, List<String> goneOut) {
-        if (codes == null || !codes.isArray()) return;
+    /** v36 일괄 등록 뒤 남은 학습자 로그인 계정을 learner.syncBatch(500)건씩 마저 만든다 — Node POST /api/learners/sync와 같음 */
+    @Override public Map<String, Object> syncPending(Map<String, Object> a) throws Exception {
+        String tid = (String) a.get("tid"); List<String> gone = new ArrayList<>();
+        int pending = tx.inTenant(tid, () -> { Map<String, Object> r = mapper.selectState(tid); if (r == null) return 0;
+            JsonNode d = crypt.open(DdWeb.JSON.readTree((String) r.get("doc")), tid); return syncLearners(tid, d == null ? null : d.get("codes"), gone, props.getInt("learner.syncBatch")); });
+        if (!gone.isEmpty()) tx.plain(() -> { mapper.deleteLearnerSessions(tid, gone); return null; });
+        return new LinkedHashMap<>(Map.of("pending", pending));
+    }
+
+    /** 어드민이 발급한 접근코드(doc.codes)를 학습자 로그인 표로 동기화 — 바뀐 코드만 scrypt로 다시 해시(한 번에 최대 max건, 남은 건수를 돌려준다).
+     *  v36: 한도에서 멈추면 그 뒤 학번이 '삭제 대상'으로 잘못 잡히던 문제 — 모든 유효 학번을 먼저 keep에 넣는다 */
+    private int syncLearners(String tid, JsonNode codes, List<String> goneOut, int max) {
+        if (codes == null || !codes.isArray()) return 0;
         Map<String, String> cur = new HashMap<>();
         for (Map<String, Object> r : mapper.selectLearnerFps(tid)) cur.put((String) r.get("sid"), (String) r.get("code_fp"));
-        Set<String> keep = new HashSet<>(); int n = 0; int i = 0;
+        Set<String> keep = new HashSet<>(); int n = 0, todo = 0, i = 0;
         for (JsonNode x : codes) {
             if (i++ >= props.getInt("learner.codesMax")) break;
             String sid = x != null && x.isObject() ? DdWeb.str(x, "sid") : ""; String code = x != null && x.isObject() ? DdWeb.str(x, "code") : "";
-            if (!SID_RE.matcher(sid).matches() || code.length() < 4 || code.length() > 20) continue; keep.add(sid);
+            if (!SID_RE.matcher(sid).matches() || code.length() < 4 || code.length() > 20 || keep.contains(sid)) continue; keep.add(sid);
             String fp = DdCrypto.hmacHex(p.pepper, tid + "|" + sid + "|" + code.toUpperCase());
             if (fp.equals(cur.get(sid))) continue;
-            if (++n > props.getInt("learner.syncMax")) break;
+            todo++; if (++n > max) continue;
             String dept = DdWeb.str(x, "dept"); if (dept.length() > 40) dept = dept.substring(0, 40);
             mapper.upsertLearner(tid, sid, dept, fp, DdCrypto.hashPw(code.toUpperCase()));
         }
         for (String sid : cur.keySet()) if (!keep.contains(sid)) goneOut.add(sid);
         if (!goneOut.isEmpty()) mapper.deleteLearners(tid, goneOut);
+        return Math.max(0, todo - max);
     }
 }
