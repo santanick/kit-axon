@@ -49,7 +49,7 @@ public class EgovConfigCommon {
         m.put("body.signupMax", "16384"); m.put("body.loginMax", "4096");
         m.put("rate.signup.max", "10"); m.put("rate.signup.winMs", "3600000");
         m.put("rate.loginIp.max", "30"); m.put("rate.loginEmail.max", "8"); m.put("rate.login.winMs", "600000");
-        m.put("learner.syncMax", "300"); m.put("learner.codesMax", "5000");
+        m.put("learner.syncMax", "300"); m.put("learner.syncBatch", "500"); m.put("learner.codesMax", "5000");
         /* 2단계(Node app.js · mcp.js · pii.js와 같은 값) */
         m.put("body.keyMax", "2048"); m.put("body.keyRevokeMax", "1024"); m.put("body.mcpMax", String.valueOf(256 * 1024));
         m.put("body.aiMax", String.valueOf(600 * 1024)); m.put("body.benchMax", "4096"); m.put("body.tutorMax", String.valueOf(16 * 1024));

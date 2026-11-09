@@ -43,6 +43,8 @@
     const old = VIEWS[id]; if (typeof old !== 'function') return; OLD[id] = old;
     VIEWS[id] = (...a) => {
       if (!S || !S.org) return old(...a);
+      /* v36: '간단히 보기' 폐지(대표님 2026-11-09) — 처음부터 전체 화면. 요약 첫 화면은 SLIM_FRONT에 남긴 화면만 */
+      if (!slimFront(id)) return old(...a);
       if (T()[id]) return back(id) + old(...a);
       let r = null; try { r = build(old, ...a); } catch (e) { console.error(e); r = null; }
       if (r && typeof r === 'object') return (r.pre || '') + old(...a);
@@ -98,7 +100,7 @@
   wrap('enroll', () => {
     const U = S.org.type === 'univ'; const wait = S.members.filter(m => m.grade === '승인 대기');
     const R = [U ? row({ act: 'sla-codes', name: '학번으로 접근코드 발급', sub: `학번 · 학과만 받습니다 · 발급 ${S.codes.length}건`, icon: I('users'), col: 'var(--s400)' })
-      : row({ act: 'mem-bulk', name: '엑셀(CSV)로 일괄 등록', sub: '한 번에 100명까지', icon: I('doc'), col: 'var(--s400)' }),
+      : row({ act: 'mem-bulk', name: '엑셀(CSV)로 일괄 등록', sub: '한 번에 5,000명까지', icon: I('doc'), col: 'var(--s400)' }),
       row({ act: 'mem-invite', name: '초대 보내기', sub: '알림톡 · 링크 · 이메일', icon: I('send'), col: '#00A224' }),
       row({ act: 'mem-q', name: '가입 추가 질문', sub: '가입할 때 받을 항목', icon: I('chat'), col: '#FF9800' }),
       U ? (S.codes.length ? row({ act: 'en-csv', name: '접근코드 내려받기', sub: 'CSV로 학과에 배포', icon: I('download'), col: 'var(--g700)' }) : '')
@@ -351,7 +353,7 @@
   wrap('parents', () => {
     const P = S.parents || []; const f = UI.parF || 'all'; const wait = P.filter(p => p.status === '연결 요청').length;
     const R = pri('par-req', '+ 보호자 연결');
-    if (!P.length) return page('보호자', R, empty('users', '보호자를 연결하면 출결 · 청구서 알림이 함께 갑니다', pri('par-req', '+ 보호자 연결'), ['보호자 연결 안 된 학생', '보호자 앱 안내 문구 써줘']));
+    if (!P.length) return page('보호자', R, empty('users', '보호자를 연결하면 출결 · 청구서 알림이 함께 갑니다', pri('par-req', '+ 보호자 연결'), [...(S.org.type === 'k12' ? ['보호자 연결 안 된 학생'] : []), '보호자 앱 안내 문구 써줘']));
     const L = P.filter(p => (f === 'all' || p.status === f) && has('slParQ', p.name, nm(p.child)));
     return page(`보호자 ${P.length}명`, tblBtn('parents') + R,
       SL.chips('parF', [['all', '전체'], ['연결 완료', '연결 완료'], ['연결 요청', `대기${wait ? ' ' + wait : ''}`], ['거절', '거절']], f) +
