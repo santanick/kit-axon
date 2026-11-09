@@ -8,6 +8,7 @@
    SVG는 script · foreignObject · on* · 외부 참조 · DOCTYPE/ENTITY를 막고, 응답에 CSP sandbox를 붙인다(직접 열어도 스크립트가 돌지 않음).
    Java(service-egov media 패키지)와 같은 규칙 · 같은 응답 — 바꾸면 양쪽을 같이 바꾼다. */
 const crypto = require('node:crypto');
+const { createMediaFiles } = require('./mediafile');
 
 const MAX = 2 * 1024 * 1024;
 const ID_RE = /^(tn_[a-z0-9]{8,16})\.([a-f0-9]{40})$/;
@@ -141,7 +142,8 @@ function readRaw(req, max) {
 }
 const cleanName = v => String(v || '').replace(/[\u0000-\u001f<>"'&\\/]/g, '').trim().slice(0, 80);
 
-function createMedia({ pool, inTenant, HttpErr, limit, ip, audit, needStaff, send, env = {} }) {
+function createMedia({ pool, inTenant, HttpErr, limit, ip, audit, need, needStaff, send, sendHead, env = {} }) {
+  const files = createMediaFiles({ pool, inTenant, HttpErr, limit, ip, audit, need: need || needStaff, needStaff, send, sendHead, env }); /* v35 강의 파일 */
   const quota = Math.max(1, Number(env.MEDIA_TENANT_MB || 100)) * 1024 * 1024;
   const maxFiles = Math.max(1, Number(env.MEDIA_MAX_FILES || 2000));
   const E = e => e instanceof MediaErr ? new HttpErr(e.status, e.message, e.code) : e;
@@ -153,9 +155,9 @@ function createMedia({ pool, inTenant, HttpErr, limit, ip, audit, needStaff, sen
     let m; try { m = prepare(await readRaw(req, MAX)); } catch (e) { throw E(e); }
     const name = cleanName(new URL(req.url, 'http://x').searchParams.get('name'));
     return inTenant(pool, a.tid, async c => {
-      const cur = (await c.query('select mime, bytes, w, h from media where tenant_id = $1 and id = $2', [a.tid, m.hash])).rows[0];
+      const cur = (await c.query("select mime, bytes, w, h from media where tenant_id = $1 and id = $2 and kind = 'image'", [a.tid, m.hash])).rows[0];
       if (cur) return { ...out(a.tid, { id: m.hash, ...cur }), dup: true };
-      const u = (await c.query('select coalesce(sum(bytes), 0)::bigint used, count(*)::int n from media where tenant_id = $1', [a.tid])).rows[0];
+      const u = (await c.query("select coalesce(sum(bytes), 0)::bigint used, count(*)::int n from media where tenant_id = $1 and kind = 'image'", [a.tid])).rows[0];
       if (+u.used + m.buf.length > quota) throw new HttpErr(413, `기관 이미지 저장 한도(${Math.round(quota / 1048576)}MB)를 넘었습니다. 쓰지 않는 이미지를 지워 주세요.`, 'media_quota');
       if (+u.n >= maxFiles) throw new HttpErr(413, `기관 이미지는 ${maxFiles}개까지 저장할 수 있습니다. 쓰지 않는 이미지를 지워 주세요.`, 'media_quota');
       await c.query('insert into media (tenant_id, id, mime, bytes, w, h, name, data, created_by) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) on conflict (tenant_id, id) do nothing', [a.tid, m.hash, m.mime, m.buf.length, m.w, m.h, name, m.buf, a.email]);
@@ -164,11 +166,12 @@ function createMedia({ pool, inTenant, HttpErr, limit, ip, audit, needStaff, sen
     });
   }
   async function list(req) {
+    if (new URL(req.url, 'http://x').searchParams.get('kind') === 'file') return files.list(req);
     const a = await needStaff(req);
     const n = Math.max(1, Math.min(200, Math.floor(+new URL(req.url, 'http://x').searchParams.get('limit') || 50)));
     return inTenant(pool, a.tid, async c => {
-      const rows = (await c.query(`select id, mime, bytes, w, h, name, to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from media where tenant_id = $1 order by created_at desc, id limit $2`, [a.tid, n])).rows;
-      const u = (await c.query('select coalesce(sum(bytes), 0)::bigint used, count(*)::int n from media where tenant_id = $1', [a.tid])).rows[0];
+      const rows = (await c.query(`select id, mime, bytes, w, h, name, to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from media where tenant_id = $1 and kind = 'image' order by created_at desc, id limit $2`, [a.tid, n])).rows;
+      const u = (await c.query("select coalesce(sum(bytes), 0)::bigint used, count(*)::int n from media where tenant_id = $1 and kind = 'image'", [a.tid])).rows[0];
       return { rows: rows.map(r => ({ ...out(a.tid, r), name: r.name, at: r.at })), used: +u.used, max: quota, n: +u.n };
     });
   }
@@ -177,7 +180,7 @@ function createMedia({ pool, inTenant, HttpErr, limit, ip, audit, needStaff, sen
     limit('mg:' + ip(req), 3000, 60e3);
     const etag = `"${m[2]}"`;
     const hdr = { 'cache-control': 'public, max-age=31536000, immutable', etag, 'cross-origin-resource-policy': 'cross-origin', 'content-security-policy': MEDIA_CSP };
-    const r = await inTenant(pool, m[1], async c => (await c.query('select mime, data from media where tenant_id = $1 and id = $2', [m[1], m[2]])).rows[0]);
+    const r = await inTenant(pool, m[1], async c => (await c.query("select mime, data from media where tenant_id = $1 and id = $2 and kind = 'image'", [m[1], m[2]])).rows[0]);
     if (!r) throw new HttpErr(404, '없는 이미지입니다.', 'media_missing');
     if (String(req.headers['if-none-match'] || '') === etag) return send(res, 304, null, hdr);
     return send(res, 200, req.method === 'HEAD' ? '' : r.data, { ...hdr, 'content-type': r.mime, 'content-length': r.data.length });
@@ -186,15 +189,16 @@ function createMedia({ pool, inTenant, HttpErr, limit, ip, audit, needStaff, sen
     const a = await needStaff(req); const m = ID_RE.exec(id);
     if (!m || m[1] !== a.tid) throw new HttpErr(404, '없는 이미지입니다.', 'media_missing');
     return inTenant(pool, a.tid, async c => {
-      const r = await c.query('delete from media where tenant_id = $1 and id = $2', [a.tid, m[2]]);
+      const r = await c.query("delete from media where tenant_id = $1 and id = $2 and kind = 'image'", [a.tid, m[2]]);
       if (!r.rowCount) throw new HttpErr(404, '없는 이미지입니다.', 'media_missing');
       await audit(c, a.tid, a.email, 'media.delete', { id: m[2] }); return { ok: true };
     });
   }
   return {
-    routes: { 'POST /api/media': upload, 'GET /api/media': list },
+    routes: { 'POST /api/media': upload, 'GET /api/media': list, ...files.routes },
     /** /api/media/:id — GET(공개) · DELETE(운영자). 해당 없으면 null */
     match(method, pathname) {
+      const f = files.match(method, pathname); if (f) return f;
       const p = MEDIA_PATH.exec(pathname); if (!p) return null; const id = decodeURIComponent(p[1]);
       if (method === 'GET') return (req, res) => getOne(req, res, id);
       if (method === 'DELETE') return req => del(req, id);

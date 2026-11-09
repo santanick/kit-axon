@@ -58,7 +58,8 @@
   /* ───────── 규칙 생성(데모 AI) — 서버 모드여도 같은 결과를 즉시 준다 ───────── */
   const N = d => clamp(+d.sessions || (U() ? 15 : 6), 1, 60);
   const designW = d => { if (typeof AI === 'undefined' || !AI.design) return []; return AI.design({ topic: d.name || d.topic || '새 과정', weeks: Math.min(30, N(d)), univ: U(), quiz: true, assign: true, exam: true, vids: 1, level: '보통', vsrc: 'youtube' }); };
-  const planFrom = d => { const W = designW(d); const n = N(d); const out = []; for (let i = 1; i <= n; i++) { const w = W[i - 1]; out.push({ w: i, title: w ? w.title : `${i}${unit(d) === '회차' ? '회차' : unit(d) === '주차' ? '주차' : '차시'} 수업`, goal: w ? (w.goal || '') : '' }); } return out; };
+  const planOf = d => { const c = cfgOf(); try { return (c && typeof c.plan === 'function' && c.plan(d)) || {}; } catch (e) { return {}; } };
+  const planFrom = d => { const pw = +planOf(d).weeks; const n = pw ? clamp(pw, 1, 60) : N(d); const W = designW({ ...d, sessions: n }); const out = []; for (let i = 1; i <= n; i++) { const w = W[i - 1]; out.push({ w: i, title: w ? w.title : `${i}${unit(d) === '회차' ? '회차' : unit(d) === '주차' ? '주차' : '차시'} 수업`, goal: w ? (w.goal || '') : '' }); } return out; };
   const fieldAI = (k, d) => {
     const nm = (d.name || d.topic || '').trim();
     if (k === 'name') return nm || ex('nameAI', U() ? '생성형 AI와 글쓰기' : '업무에 바로 쓰는 생성형 AI');
@@ -97,7 +98,7 @@
       aiFill(d) { if (window.CT && typeof CT.aiFill === 'function') return Promise.resolve(CT.aiFill(d)).then(() => d); d.auto = { ...defs().auto, ...(d.auto || {}) }; return Promise.resolve(d); } },
     { id: 'setup', title: () => '수강 설정', now: () => `${T('fee')}와 수강 기간, 공개 범위를 정해 주세요.`,
       render(el, d) {
-        const D = defs(); if (d.paid == null) d.paid = (+d.price || 0) > 0; if (d.days == null) d.days = D.days; if (d.open == null) d.open = '전체';
+        const D = defs(); if (d.paid == null && !askOf('setup')) d.paid = (+d.price || 0) > 0; if (d.days == null) d.days = D.days; if (d.open == null) d.open = '전체';
         el.innerHTML = askBlock('setup', d, [
           { k: 'paid', label: T('fee'), kind: 'choice', opts: [[false, '무료', '누구나 바로 신청'], [true, '유료', '금액을 정해요']] },
           { k: 'price', label: `${T('fee')}(원)`, kind: 'num', min: 0, max: 100000000, unit: '원', ex: '150000 (15만 원)', show: x => x.paid === true || x.paid === 'true' },
@@ -121,9 +122,9 @@
       ui.note(`${(d.weekPlan || []).length}개 ${esc(u)}에 위 내용을 초안으로 넣습니다. 만든 뒤 ${esc(u)}을 눌러 영상 · 교안을 바꾸거나 파일을 올릴 수 있습니다.${items.length ? ` 직접 넣은 콘텐츠 ${items.length}개는 그대로 씁니다.` : ''}`);
   }
   function previewHTML(d) {
-    const c = cfgOf(); const u = unit(d); const L = d.weekPlan || []; const paid = d.paid === true || d.paid === 'true';
+    const c = cfgOf(); const u = unit(d); const L = d.weekPlan || []; const paid = d.paid == null ? +d.price > 0 : (d.paid === true || d.paid === 'true');
     let sum = [['배울 사람', d.target || '누구나'], [`${u} 수`, `${L.length}${u === '회차' ? '회' : '개'}`], [T('fee'), paid && +d.price ? won(d.price) : '무료'], ['수강 기간', `신청 후 ${d.days || defs().days}일`], ['공개', { 전체: '모두에게 공개', '지정 회원': '정한 사람만', 비공개: '아직 숨겨 두기' }[d.open] || d.open || '모두에게 공개']];
-    try { if (c && typeof c.summary === 'function') { const x = c.summary(d); if (Array.isArray(x) && x.length) sum = sum.concat(x); } } catch (e) { }
+    try { if (c && typeof c.summary === 'function') { const x = c.summary(d); if (Array.isArray(x) && x.length) sum = [sum[0], [`${u} 수`, sum[1][1]], ...x].filter((r, i, A) => A.findIndex(y => y[0] === r[0]) === i); } } catch (e) { }
     const W = checks(d);
     return `<p class="cf-lab">${esc(T('learner'))}에게 이렇게 보여요</p><div class="cf-pv"><div class="cf-pvh"><span class="cf-pvt">${esc(T('cls'))}</span><b>${esc(d.name || '이름 없음')}</b>${d.goal ? `<p>${esc(String(d.goal).slice(0, 160))}</p>` : ''}</div>
       <dl class="cf-pvs">${sum.map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>
@@ -135,6 +136,7 @@
   /* ───────── 단계 목록(cfg.steps 순서) ───────── */
   const stepIds = () => { const c = cfgOf(); const ids = (c && Array.isArray(c.steps) && c.steps.length ? c.steps : steps.map(s => s.id)).filter(id => steps.some(s => s.id === id)); return ids.length ? ids.slice(0, 5) : ['basic', 'open']; };
   const stepOf = id => steps.find(s => s.id === id);
+  const titleOf = (id, d) => { const c = cfgOf(); const x = c && c.stepTitle && c.stepTitle[id]; if (x) return typeof x === 'function' ? x(d || {}) : x; return stepOf(id).title(d || {}); };
 
   /* ───────── 열기 · 그리기 ───────── */
   function open(opts) {
@@ -154,7 +156,7 @@
   function askResume(opts) {
     const x = S.crsDraft; const nm = x.d.name || '이름 없는 ' + T('cls'); const sid = x.step; const si = stepIds().indexOf(sid);
     mount(); F = null;
-    $('#crsFlow').innerHTML = `<div class="cf-box cf-resume" role="dialog" aria-modal="true" aria-label="이어서 만들기"><div class="cf-rb"><p class="cf-now">만들던 ${esc(T('cls'))}가 있습니다</p><h2>${esc(nm)}</h2><p class="cf-sub">${si >= 0 ? `${si + 1}단계 '${esc(stepOf(sid).title(x.d))}'까지 했습니다.` : ''} 이어서 할까요?</p>
+    $('#crsFlow').innerHTML = `<div class="cf-box cf-resume" role="dialog" aria-modal="true" aria-label="이어서 만들기"><div class="cf-rb"><p class="cf-now">만들던 ${esc(T('cls'))}가 있습니다</p><h2>${esc(nm)}</h2><p class="cf-sub">${si >= 0 ? `${si + 1}단계 '${esc(titleOf(sid, x.d))}'까지 했습니다.` : ''} 이어서 할까요?</p>
       <div class="cf-rbb"><button type="button" class="btn pri cf-big" data-cfgo="resume">이어서 하기</button><button type="button" class="btn cf-big" data-cfgo="fresh">새로 만들기</button></div><p class="cf-hint">새로 만들어도 지금 초안은 [되돌리기]로 되찾을 수 있습니다.</p><button type="button" class="linkb" data-cfgo="close">닫기</button></div></div>`;
     CF._pending = opts;
   }
@@ -168,7 +170,7 @@
   }
   function paint() {
     if (!F) return; const w = mount(); const id = F.ids[F.step]; const st = stepOf(id); w.dataset.step = id; const d = F.d; const n = F.ids.length; const last = F.step === n - 1;
-    const prog = F.ids.map((sid, i) => `<li class="${i < F.step ? 'done' : i === F.step ? 'on' : ''}" ${i === F.step ? 'aria-current="step"' : ''}><button type="button" data-cfjump="${i}" ${i > F.step ? 'disabled' : ''}><span class="cf-dot">${i < F.step ? '✓' : i + 1}</span><span class="cf-sl">${esc(stepOf(sid).title(d))}</span></button></li>`).join('');
+    const prog = F.ids.map((sid, i) => `<li class="${i < F.step ? 'done' : i === F.step ? 'on' : ''}" ${i === F.step ? 'aria-current="step"' : ''}><button type="button" data-cfjump="${i}" ${i > F.step ? 'disabled' : ''}><span class="cf-dot">${i < F.step ? '✓' : i + 1}</span><span class="cf-sl">${esc(titleOf(sid, d))}</span></button></li>`).join('');
     w.innerHTML = `<div class="cf-box" role="dialog" aria-modal="true" aria-label="${esc(T('cls'))} 만들기">
       <header class="cf-hd"><div class="cf-ht"><b>${esc(T('cls'))} 만들기</b><span class="cf-saved" aria-live="polite"></span></div><button type="button" class="cf-x" data-cfgo="later" aria-label="닫기(나중에 이어서 하기)">${typeof ic === 'function' ? ic('x', 20) : '✕'}</button></header>
       <ol class="cf-prog" aria-label="진행 ${F.step + 1}/${n}">${prog}</ol>
@@ -282,7 +284,7 @@
 
   /* ───────── 공개 인터페이스 ───────── */
   const CF = window.CF = Object.assign(window.CF || {}, {
-    open, close, next, prev, undo, create, on, emit, steps, step: stepOf, stepIds, cfgKey, cfgOf, unit, ui, DEF, defaults: defs, fieldAI, planFrom,
+    open, close, next, prev, undo, create, on, emit, steps, step: stepOf, stepIds, titleOf, planOf, cfgKey, cfgOf, unit, ui, DEF, defaults: defs, fieldAI, planFrom,
     aiFill: aiStep, saveDraft, dropDraft, hasDraft, snap, idleMs: 60000, cur: () => F ? { i: F.step, id: F.ids[F.step], n: F.ids.length } : null, isOpen: () => !!F, repaint: () => paint(), refresh: () => paint()
   });
   CF.cfg = CF.cfg || {};
