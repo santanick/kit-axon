@@ -116,7 +116,7 @@
       valid(d) { const P = []; if (!(d.weekPlan || []).length) { d.weekPlan = planFrom(d); return P; } if (false) P.push({ k: 'weekPlan', msg: `${unit(d)} 목록이 비어 있습니다. [AI SAM이 ${unit(d)} 목록 만들기]를 누르거나 하나 이상 적어 주세요.` }); d.weekPlan.forEach((w, i) => { if (!String(w.title || '').trim()) w.title = `${i + 1}${unit(d) === '회차' ? '회차' : unit(d) === '주차' ? '주차' : '차시'} 수업`; }); return P; },
       aiFill(d) { d.weekPlan = planFrom(d); d.sessions = d.weekPlan.length; return Promise.resolve(d); } },
     { id: 'fill', title: d => `${unit(d)} 채우기`, now: d => `${unit(d)}마다 넣을 강의 영상 · 교안 · 퀴즈를 고르세요. 나중에 채워도 됩니다.`,
-      render(el, d) { if (window.CT && typeof CT.renderFill === 'function') { try { return CT.renderFill(el, d); } catch (e) { console.error('CT.renderFill', e); } } fillDefault(el, d); },
+      render(el, d) { if (window.CT && typeof CT.renderFill === 'function') { try { CT.renderFill(el, d); return; } /* 법정 시간 안내는 CT.renderFill이 CF.legalBox로 맨 위에 그린다(다시 그려도 남게) */ catch (e) { console.error('CT.renderFill', e); } } fillDefault(el, d); const lh = legalBox(d); if (lh) el.insertAdjacentHTML('afterbegin', lh); },
       valid() { return []; },
       aiFill(d) { if (window.CT && typeof CT.aiFill === 'function') return Promise.resolve(CT.aiFill(d)).then(() => d); d.auto = { ...defs().auto, ...(d.auto || {}) }; return Promise.resolve(d); } },
     { id: 'setup', title: () => '수강 설정', now: () => `${josa(T('fee'), '과')} 수강 기간, 공개 범위를 정해 주세요.`,
@@ -153,10 +153,13 @@
     /* 확인 화면에서 바로 고치기: 교육 목표(평가 1회차 1번) · 빈 차시 AI 채우기 선택(기본 끔, 2번) */
     const edit = ui.field({ k: 'goal', label: '교육 목표', kind: 'area', rows: 4, maxLen: 1200, hint: `${T('learner')} 소개 화면에 그대로 보입니다. 여기서 바로 고칠 수 있습니다.`, ai: 'AI SAM이 다시 쓰기' }, d) +
       (nE ? ui.field({ k: 'fillEmpty', label: `빈 ${u} ${nE}개를 AI로 채울까요?`, kind: 'toggle', on: `예, 빈 ${josa(u, '에')} 영상 · 교안 · 퀴즈 초안을 넣습니다`, hint: `끄면 빈 ${josa(u, '은')} 비워 둔 채 개설합니다. 나중에 ${u}마다 하나씩 채울 수 있습니다.` }, d) : '');
-    return chk + `<p class="cf-lab">${esc(T('learner'))}에게 이렇게 보입니다</p><div class="cf-pv"><div class="cf-pvh"><span class="cf-pvt">${esc(T('cls'))}</span><b>${esc(d.name || '이름 없음')}</b><p data-cfpvgoal="1"${d.goal ? '' : ' hidden'}>${esc(String(d.goal || '').slice(0, 160))}</p></div>
+    return legalBox(d) + chk + `<p class="cf-lab">${esc(T('learner'))}에게 이렇게 보입니다</p><div class="cf-pv"><div class="cf-pvh"><span class="cf-pvt">${esc(T('cls'))}</span><b>${esc(d.name || '이름 없음')}</b><p data-cfpvgoal="1"${d.goal ? '' : ' hidden'}>${esc(String(d.goal || '').slice(0, 160))}</p></div>
       <dl class="cf-pvs">${sum.map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>
       <ol class="cf-pvl">${L.slice(0, 8).map((w, i) => `<li><span>${i + 1}</span>${esc(w.title)}</li>`).join('')}${L.length > 8 ? `<li class="more">… 외 ${L.length - 8}개</li>` : ''}</ol><div class="cf-pvb"><span class="btn pri">신청하기</span></div></div>` + `<div class="cf-pved">${edit}</div>`;
   }
+  /* 법정 교육시간(compliance.js cplLegalHours, 템플릿 id는 d.tpl) — 3단계 · 확인 화면 맨 위에 보인다. 미달이면 경고 */
+  const legalBox = d => { let L = null; try { if (typeof window.cplLegalHours === 'function') L = window.cplLegalHours({ ...d, tpl: d.tpl || '', sessions: +d.sessions || (d.weekPlan || []).length }); } catch (e) { console.error('cplLegalHours', e); } if (!L) return '';
+    return `<p class="cf-c ${L.short ? 'warn' : 'info'} cf-legal" role="${L.short ? 'alert' : 'status'}"><b>${L.short ? '법정 교육시간 미달' : '법정 교육시간'}</b> ${esc(L.msg)} <small>(${esc(L.law)})</small></p>`; };
   /* 아직 아무 콘텐츠도 넣지 않은 차시 수(회차 일정 항목 offline은 콘텐츠로 치지 않음) */
   const emptyN = d => { const L = d.weekPlan || []; const has = new Set((d.curriculum || []).filter(x => x && x.type !== 'offline').map(x => +x.week || 0)); return L.filter((w, i) => !has.has(i + 1)).length; };
   const checks = d => { const c = cfgOf(); try { return (c && typeof c.check === 'function' && c.check(d)) || []; } catch (e) { console.error('cfg.check', e); return []; } };
@@ -276,18 +279,20 @@
   /* 강좌 상세 [학생 화면 보기]도 운영자 미리보기로(비공개 · 미게시면 '공개되지 않은 클래스'만 보이던 문제) */
   if (ACT['d26-view'] && !ACT['d26-view0']) { ACT['d26-view0'] = ACT['d26-view']; ACT['d26-view'] = el => preview(el && el.dataset && el.dataset.v); }
   { const base = typeof lsSnapshot === 'function' ? lsSnapshot : null; if (base) { lsSnapshot = function (...a) { const id = CF._pv; const c = id && document.getElementById('crsPvF') && S && (S.classes || []).find(x => x.id === id); if (!c) return base.apply(this, a); const o = c.open, st = c.status; c.open = '전체'; if (c.status === '종료') c.status = '운영중'; try { return base.apply(this, a); } finally { c.open = o; c.status = st; } }; window.lsSnapshot = lsSnapshot; } }
+  /* '31회차 31회차 수업'처럼 번호가 겹치지 않게: 제목 앞 번호 · 단위 · '수업'만 남은 제목은 정리한다 */
+  const sessTitle = (i, title, u) => { u = u || unit({}); const t0 = String(title || '').replace(/^\s*\d+\s*(회차|차시|주차|주|회)\s*/, '').trim(); return (t0 && t0 !== '수업' ? `${i}${u} ${t0}` : `${i}${u} 수업`).slice(0, 80); };
   /* 생성 함수(단일): d → course. makeCourse와 같은 스키마 + cls2 필드. 저장(save)과 화면 이동은 부른 쪽이 한다. */
   function create(d) {
     d = { ...(d || {}) }; if (!(Array.isArray(d.weekPlan) && d.weekPlan.length) && Array.isArray(d.outline) && d.outline.length) d.weekPlan = d.outline.map(w => typeof w === 'string' ? { title: w } : w); if (!Array.isArray(d.curriculum) && Array.isArray(d.items)) d.curriculum = d.items; const Uv = U(); const D = defs(); const c0 = cfgOf();
     const name = (clean ? clean(d.name || d.topic) : String(d.name || d.topic || '').trim()) || '새 과정';
-    let plan = {}; try { if (c0 && typeof c0.plan === 'function') plan = c0.plan(d) || {}; } catch (e) { }
-    let WP = Array.isArray(d.weekPlan) && d.weekPlan.length ? d.weekPlan.map((w, i) => ({ w: i + 1, title: String(w.title || `${i + 1}차시`).trim(), goal: w.goal || '' })) : null;
+    const U1 = unit(d); let plan = {}; try { if (c0 && typeof c0.plan === 'function') plan = c0.plan(d) || {}; } catch (e) { }
+    let WP = Array.isArray(d.weekPlan) && d.weekPlan.length ? d.weekPlan.map((w, i) => ({ w: i + 1, title: String(w.title || `${i + 1}${U1}`).trim(), goal: w.goal || '' })) : null;
     const n = clamp(+(WP ? WP.length : (d._n || plan.weeks || d.sessions || d.weeks || (Uv ? 15 : 6))), 1, 60);
     const A = { ...D.auto, ...(d.auto || {}) }; const vsrc = d.vsrc || (A.video === 'ai' ? 'ai' : 'youtube');
     const o = { topic: name, weeks: Math.min(n, 30), univ: plan.univ != null ? plan.univ : Uv, quiz: d.quiz != null ? d.quiz !== false : !!A.quiz, assign: d.assign != null ? d.assign !== false : !!A.assign, exam: d.exam != null ? d.exam !== false : !!A.exam, vids: A.video === 'none' ? 0 : 1, level: d.levelTxt || '보통', vsrc, docs: d.docs != null ? !!d.docs : !!A.docs };
     const kind = d.kind || 'period'; const days = +d.days || D.days; const start = d.start || today(); const per = +(plan.per || d.per || (Uv ? 3 : (+d.mins || D.mins) / 60)) || 1;
     let W = (typeof AI !== 'undefined' && AI.design) ? AI.design({ ...o, weeks: Math.min(n, 30) }) : [];
-    while (W.length < n) W.push({ w: W.length + 1, title: `${W.length + 1}차시`, goal: '', items: [{ type: 'video', title: `${name}: ${W.length + 1}차시`, q: name }] });
+    while (W.length < n) W.push({ w: W.length + 1, title: `${W.length + 1}${U1}`, goal: '', items: [{ type: 'video', title: `${name}: ${W.length + 1}${U1}`, q: name }] }); /* 보충 차시 제목도 유형 단위(회차 · 주차 · 차시) */
     if (WP) W = W.slice(0, n).map((w, i) => { const t2 = WP[i].title; const items = (w.items || []).map(x => x.type === 'video' && !/실습 영상/.test(x.title) ? { ...x, title: t2, q: `${name} ${t2}` } : x.type === 'quiz' ? { ...x } : x); return { ...w, w: i + 1, title: t2, goal: WP[i].goal || w.goal || '', items }; });
     if (o.vids === 0) W = W.map(w => ({ ...w, items: (w.items || []).filter(x => x.type !== 'video') }));
     const price = d.fee && d.fee.price != null && !d.fee.amb ? +d.fee.price : ((d.paid === false || d.paid === 'false') ? 0 : Math.max(0, +d.price || 0));
@@ -297,7 +302,7 @@
     c.desc = String(c.goal || '').slice(0, 400);
     /* 회차(episode)도 콘텐츠 항목은 그대로 두고, 회차 일정 항목(offline)에 week를 붙여 같은 회차에 묶는다(C7 1차 결함) */
     { const user = Array.isArray(d.curriculum) ? d.curriculum.filter(Boolean) : []; const has = new Set(user.map(x => +x.week || 0)); const auto = d.fillEmpty !== false && typeof itemsFromDesign === 'function' ? itemsFromDesign(W, o) : []; /* 흐름은 확인 화면에서 고른 경우만 빈 차시를 채운다(fillEmpty, 기본 끔). 대화 · 에이전트(makeCourse)는 그대로 채움 */ c.curriculum = [...auto.filter(x => !has.has(+x.week || 0)), ...user.filter(x => x.type !== 'offline').map(x => ({ ...x, id: x.id || uid('it'), week: +x.week || 1 }))].sort((a, b) => (a.week || 0) - (b.week || 0));
-      if (kind === 'episode') c.curriculum = [...(WP || W).map((w, i) => ({ id: uid('it'), type: 'offline', title: `${i + 1}회차 ${w.title}`.trim(), week: i + 1 })), ...c.curriculum]; }
+      if (kind === 'episode') c.curriculum = [...(WP || W).map((w, i) => ({ id: uid('it'), type: 'offline', title: sessTitle(i + 1, w.title, '회차'), week: i + 1 })), ...c.curriculum]; }
     c.weekly = kind !== 'episode'; c.weekPlan = W.map(w => ({ w: w.w, title: w.title, goal: w.goal || '' }));
     S.classes.unshift(c);
     try { if (c0 && typeof c0.apply === 'function') c0.apply(c, d); } catch (e) { console.error('cfg.apply', e); }
@@ -345,7 +350,7 @@
 
   /* ───────── 공개 인터페이스 ───────── */
   const CF = window.CF = Object.assign(window.CF || {}, {
-    open, close, next, prev, undo, create, on, emit, steps, step: stepOf, stepIds, titleOf, planOf, cfgKey, cfgOf, unit, ui, DEF, defaults: defs, fieldAI, planFrom,
+    open, close, next, prev, undo, create, on, emit, sessTitle, legalBox, steps, step: stepOf, stepIds, titleOf, planOf, cfgKey, cfgOf, unit, ui, DEF, defaults: defs, fieldAI, planFrom,
     aiFill: aiStep, saveDraft, dropDraft, hasDraft, snap, idleMs: 60000, cur: () => F ? { i: F.step, id: F.ids[F.step], n: F.ids.length } : null, isOpen: () => !!F, repaint: () => paint(), refresh: () => paint()
   });
   CF.cfg = CF.cfg || {};

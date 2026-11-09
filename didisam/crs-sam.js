@@ -96,7 +96,7 @@
     return n > 0; }
   async function fill(id, opt = {}) { id = id || cur(); const d = draft(); if (!cf() || !d || !id) return false;
     const snap = JSON.stringify(d); const ti = title(id); const s = stepOf(id);
-    const jl = (window.CF && typeof CF.josa === 'function') ? CF.josa(String(ti), '을').slice(String(ti).length) : '을(를)'; const b = opt.auto ? null : bubble(id, `<p>AI SAM이 「${esc(ti)}」${jl} 채우는 중입니다…</p>`, opt.field, 'busy'); if (!opt.auto) live(`AI SAM이 ${ti}${jl} 채우는 중입니다.`);
+    const jl = jo(String(ti), '을').slice(String(ti).length) || '을'; const b = opt.auto ? null : bubble(id, `<p>AI SAM이 「${esc(ti)}」${jl} 채우는 중입니다…</p>`, opt.field, 'busy'); if (!opt.auto) live(`AI SAM이 ${ti}${jl} 채우는 중입니다.`);
     let ok = false; const F = cf(); try { if (typeof F.snap === 'function') F.snap('AI SAM이 채운 내용'); } catch (e) { }
     /* 칸 하나(말풍선이 그 칸 아래에 뜬 경우): C1의 칸 채우기(fieldAI · planFrom)로 그 칸만 */
     try { const k = opt.field; if (k && k !== '_' && k !== '_check') { if (k === 'weekPlan' && typeof F.planFrom === 'function') { d.weekPlan = F.planFrom(d); d.sessions = d.weekPlan.length; ok = true; } else if (typeof F.fieldAI === 'function') { const v = F.fieldAI(k, { ...d, [k]: '' }); if (v != null && v !== '') { d[k] = v; ok = true; } } } } catch (e) { console.error(e); }

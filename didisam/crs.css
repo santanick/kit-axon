@@ -166,3 +166,5 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
 .cf-pvfr{border:1px solid var(--g300,#EAEBEB);border-radius:8px;overflow:hidden;background:#fff}.cf-pvfr iframe{display:block;width:100%;height:min(640px,70vh);border:0}
 .cf-pvnote{margin:0 0 10px}
 .cf-hl{outline:3px solid var(--s400,#5C74F6);outline-offset:2px}
+.cf-legal{margin:0 0 12px}
+.cf-chk{margin-bottom:14px}

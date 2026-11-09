@@ -13,7 +13,8 @@
   const hm = m => { m = Math.round(N(m)); const h = Math.floor(m / 60), r = m % 60; return h ? `${h}시간${r ? ' ' + r + '분' : ''}` : `${r}분`; };
   /* 받침에 맞는 조사: josa('훈련과정', '이') → '훈련과정이' · josa('강좌', '이') → '강좌가' (이/가 · 을/를 · 은/는 · 과/와 · 으로/로, ㄹ 받침 + 으로 → 로) */
   const josa = (w, a) => { const s = String(w || ''); const ch = s.charCodeAt(s.length - 1); const jong = ch >= 0xAC00 && ch <= 0xD7A3 ? (ch - 0xAC00) % 28 : /[a-z]$/i.test(s) ? ('lmnr'.includes(s.slice(-1).toLowerCase()) ? 1 : 0) : /[0-9]$/.test(s) ? ([1, 3, 6, 7, 8, 0].includes(+s.slice(-1)) ? 1 : 0) : 0; const P = { '을': ['을', '를'], '이': ['이', '가'], '은': ['은', '는'], '과': ['과', '와'], '으로': ['으로', '로'] }[a]; return s + (P ? (jong && !(a === '으로' && jong === 8) ? P[0] : P[1]) : a); };
-  CF.josa = CF.josa || josa;
+  /* 조사 하나로 통일(F2 통합 요청): ai.js AI.j(따옴표 · 괄호 뒤 · 영문 · 숫자 · ㄹ+으로)가 있으면 그것, 없으면 이 파일의 josa */
+  CF.josa = (w, a) => { try { if (typeof AI !== 'undefined' && AI && typeof AI.j === 'function') return String(w == null ? '' : w) + AI.j(w, a); } catch (e) { } return josa(w, a); };
   const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
   const totalMin = d => N(d.sessions) * N(d.mins);
   const cplOn = () => { try { const P = window.cplPublic && cplPublic(); return P ? P : null; } catch (e) { return null; } };
@@ -80,7 +81,7 @@
       const start = d.start || td(); const end = plus(start, Math.round((N(d.months) || 3) * 30.4) - 1);
       c.kind = 'episode'; c.sub = '요일반'; c.days = (d.wdays || []).slice(); c.time = { from: d.from || '', to: d.to || '' }; c.start = start; c.end = end;
       c.grade = d.grade || ''; c.cat = d.subject || c.cat || ''; c.billing = { cycle: 'month', price: N(d.price) };
-      try { if (typeof W2 !== 'undefined' && W2.genWeekly) { c.sessions = W2.genWeekly(start, end, c.days, c.time.from, c.time.to).slice(0, 100); const WP = (d.weekPlan || []).map(w => String(w.title || '').trim()).filter(Boolean); c.sessions.forEach((x, i) => { if (WP[i]) x.title = `${i + 1}회차 ${WP[i]}`.slice(0, 80); }); c.curriculum = (c.curriculum || []).filter(it => it.type !== 'offline'); c.att = c.att || {}; c.attT = c.attT || {}; if (W2.renum) W2.renum(c); if (W2.period) W2.period(c); if (W2.sync) W2.sync(c); } } catch (e) { console.error(e); }
+      try { if (typeof W2 !== 'undefined' && W2.genWeekly) { c.sessions = W2.genWeekly(start, end, c.days, c.time.from, c.time.to).slice(0, 100); const WP = (d.weekPlan || []).map(w => String(w.title || '').trim()).filter(Boolean); c.sessions.forEach((x, i) => { if (WP[i]) x.title = CF.sessTitle ? CF.sessTitle(i + 1, WP[i], '회차') : `${i + 1}회차 ${WP[i]}`.slice(0, 80); }); c.curriculum = (c.curriculum || []).filter(it => it.type !== 'offline'); c.att = c.att || {}; c.attT = c.attT || {}; if (W2.renum) W2.renum(c); if (W2.period) W2.period(c); if (W2.sync) W2.sync(c); } } catch (e) { console.error(e); }
       c.hours = Math.round(((c.sessions && c.sessions.length) || Math.min(100, sessCount(Object.assign({}, d, { start })))) * (minsOf(c.time.from, c.time.to) || 90) / 60);
       return c;
     }
