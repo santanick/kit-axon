@@ -15,9 +15,10 @@
   const keep = () => { try { save(); } catch (e) { } };
   const cl = s => (typeof clean === 'function' ? clean(s) : String(s || '').trim());
   const topicOf = s => { const x = typeof lecTopic === 'function' ? lecTopic(s) : cl(s); return x === '핵심 개념' && !cl(s) ? '' : x; };
-  const unit = () => { try { const c = W.CF && CF.cfg && CF.cfg[S.org.type]; if (c && c.terms && c.terms.sess) return c.terms.sess; } catch (e) { } return S && S.org && S.org.type === 'univ' ? '주차' : '차시'; };
+  const unit = () => { try { if (W.CF && typeof CF.unit === 'function') { const u = CF.unit((F && F.d) || CF.draft || {}); if (u) return u; } const c = W.CF && CF.cfg && CF.cfg[S.org.type]; if (c && c.terms && (c.terms.sess || c.terms.unit)) return c.terms.sess || c.terms.unit; } catch (e) { } return S && S.org && S.org.type === 'univ' ? '주차' : '차시'; };
   /* 받침에 맞는 조사: jo('강좌', '을') → '강좌를' · jo('훈련과정', '이') → '훈련과정이' */
-  const jo = (w, a) => { const s = String(w ?? ''); const t = s.replace(/[」』"')\]\s]+$/, ''); const ch = t.charCodeAt(t.length - 1); const jong = ch >= 0xAC00 && ch <= 0xD7A3 ? (ch - 0xAC00) % 28 : /[0-9]$/.test(t) ? ([0, 1, 3, 6, 7, 8].includes(+t.slice(-1)) ? 1 : 0) : /[lmnr]$/i.test(t) ? 1 : 0; const P = { '을': ['을', '를'], '이': ['이', '가'], '은': ['은', '는'], '과': ['과', '와'], '으로': ['으로', '로'] }[a]; return s + (P ? (jong && !(a === '으로' && jong === 8) ? P[0] : P[1]) : a); };
+  const jo = (w, a) => { try { if (W.CF && typeof CF.josa === 'function') return CF.josa(w, a); } catch (e) { } return jo0(w, a); }; /* 조사는 CF.josa(=AI.j)로 통일 */
+  const jo0 = (w, a) => { const s = String(w ?? ''); const t = s.replace(/[」』"')\]\s]+$/, ''); const ch = t.charCodeAt(t.length - 1); const jong = ch >= 0xAC00 && ch <= 0xD7A3 ? (ch - 0xAC00) % 28 : /[0-9]$/.test(t) ? ([0, 1, 3, 6, 7, 8].includes(+t.slice(-1)) ? 1 : 0) : /[lmnr]$/i.test(t) ? 1 : 0; const P = { '을': ['을', '를'], '이': ['이', '가'], '은': ['은', '는'], '과': ['과', '와'], '으로': ['으로', '로'] }[a]; return s + (P ? (jong && !(a === '으로' && jong === 8) ? P[0] : P[1]) : a); };
   try { if (typeof ITEMX === 'object' && ITEMX && !ITEMX.audio) ITEMX.audio = '음성'; } catch (e) { } /* 운영자 목차 라벨: 올린 음성(type 'audio') */
   const HPMx = () => (typeof HPM === 'object' && HPM) || W.HPM || null;
   const clibL = () => (S.clib = Array.isArray(S.clib) ? S.clib : []);
@@ -96,7 +97,7 @@
   const sessTitle = ctx => cl((ctx && (ctx.title || (ctx.sess && ctx.sess.title))) || '');
   const courseName = ctx => cl((ctx && ctx.course && ctx.course.name) || '');
   const seedTopic = ctx => { const st = sessTitle(ctx); const cn = courseName(ctx); const g = /^\d+\s*(차시|주차|주|회차)$/.test(st) || !st; return topicOf(g ? cn || st : st) || cn || ''; };
-  const where = () => { const c = X.ctx; if (X.ctx.from === 'lib' && !c.course) return '콘텐츠 라이브러리에 저장합니다'; const w = c.week ? `${c.week}${unit()}` : ''; const st = sessTitle(c); return `${w ? w + ' · ' : ''}${st && !/^\d+\s*(차시|주차|주)$/.test(st) ? `「${st}」` : courseName(c) ? `「${courseName(c)}」` : ''}에 넣습니다`.replace(/^에 넣습니다$/, '이 차시에 넣습니다'); };
+  const where = () => { const c = X.ctx; if (X.ctx.from === 'lib' && !c.course) return '콘텐츠 라이브러리에 저장합니다'; const w = c.week ? `${c.week}${unit()}` : ''; const st = sessTitle(c); const tt = st && !/^\d+\s*(차시|주차|주|회차)$/.test(st) ? `「${st}」` : ''; if (w) return `${w}${tt ? ' ' + tt : ''}에 넣습니다`; return `${tt || (courseName(c) ? `「${courseName(c)}」` : '')}에 넣습니다`.replace(/^에 넣습니다$/, `이 ${unit()}에 넣습니다`); }; /* 어느 차시에 들어가는지 크게(평가 1회차 6번) */
   const doneLabel = () => X.ctx.from === 'lib' && !X.ctx.course ? '라이브러리에 저장' : (X.ctx.item ? '이 콘텐츠로 바꾸기' : `이 ${unit()}에 넣기`);
 
   function open(kind, ctx) {
@@ -122,7 +123,7 @@
   /* ── 화면 그리기 ── */
   function draw() {
     const w = $1('#ctSheet'); if (!w || !X) return; const K = KN[X.kind]; const ST = STEPS[X.kind];
-    $1('#ctTitle').textContent = X.done ? '저장했습니다' : K.name; $1('#ctWhere').textContent = X.done ? '' : where();
+    $1('#ctTitle').textContent = X.done ? '저장했습니다' : K.name; $1('#ctWhere').textContent = X.done ? '' : where(); $1('#ctWhere').className = !X.done && X.ctx.week ? 'ct-dest' : '';
     $1('#ctSteps').innerHTML = X.done ? '' : ST.map((s, i) => `<li class="${i < X.step ? 'ok' : i === X.step ? 'on' : ''}" ${i === X.step ? 'aria-current="step"' : ''}><i>${i < X.step ? svg('check', 14) : i + 1}</i><span>${E(s)}</span></li>`).join('');
     w.querySelector('[data-act=ct-back]').style.visibility = X.step > 0 && !X.done && !X.busy ? 'visible' : 'hidden';
     const R = X.done ? vDone() : (VIEW[X.kind] || VIEW.doc)();
@@ -181,7 +182,7 @@
   VIEW.quiz = () => {
     if (X.step === 0) return { now: '주제를 확인하고 [퀴즈 만들기]를 누르세요.', body: topicField('퀴즈 주제', '엑셀 SUM · AVERAGE 함수') + chips('n', [[3, '3문제'], [5, '5문제'], [10, '10문제']], '문제 수') + chips('lv', [['쉬움', '쉬움'], ['보통', '보통'], ['어려움', '어려움']], '난이도'), foot: foot(pri(`${svg('spark', 18)} 퀴즈 만들기`, 'ct-make')) };
     if (X.busy || !X.res) return { now: '', body: busyBox('문제를 만들고 있습니다…'), foot: '' };
-    return { now: '문제를 확인하고 넣으세요. 마음에 들지 않는 문제는 뺄 수 있습니다.', body: `${byNote(X.by)}<div class="ct-tools">${sec('다시 만들기', 'ct-make')}</div><ol class="ct-qs">${X.res.map((q, k) => `<li><div class="ct-q"><p>${E(String(q.q).replace(/^\d+\.\s*/, ''))}</p><button type="button" class="ct-icb sm" data-act="ct-q-del" data-v="${k}" aria-label="${k + 1}번 문제 빼기" ${X.res.length <= 1 ? 'disabled' : ''}>${svg('trash', 18)}</button></div>${q.t === 'mc' ? `<ul class="ct-op">${(q.opts || []).map((o, j) => `<li class="${String(q.a) === String(j) ? 'a' : ''}">${String(q.a) === String(j) ? svg('check', 16) : '<i></i>'}${E(o)}</li>`).join('')}</ul>` : `<p class="ct-ans">정답: <b>${E(q.a)}</b></p>`}${q.exp ? `<p class="ct-mini">해설: ${E(q.exp)}</p>` : ''}</li>`).join('')}</ol>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')) };
+    return { now: '문제를 확인하고 넣으세요. 마음에 들지 않는 문제는 뺄 수 있습니다.', body: `${byNote(X.by)}<div class="ct-tools">${typeof W.qsEdit === 'function' ? sec('문항 고치기', 'ct-q-edit') : ''}${sec('다시 만들기', 'ct-make')}</div><ol class="ct-qs">${X.res.map((q, k) => `<li><div class="ct-q"><p>${E(String(q.q).replace(/^\d+\.\s*/, ''))}</p><button type="button" class="ct-icb sm" data-act="ct-q-del" data-v="${k}" aria-label="${k + 1}번 문제 빼기" ${X.res.length <= 1 ? 'disabled' : ''}>${svg('trash', 18)}</button></div>${q.t === 'mc' ? `<ul class="ct-op">${(q.opts || []).map((o, j) => `<li class="${String(q.a) === String(j) ? 'a' : ''}">${String(q.a) === String(j) ? svg('check', 16) : '<i></i>'}${E(o)}</li>`).join('')}</ul>` : `<p class="ct-ans">정답: <b>${E(q.a)}</b></p>`}${q.exp ? `<p class="ct-mini">해설: ${E(q.exp)}</p>` : ''}</li>`).join('')}</ol>`, foot: foot(pri(`${svg('check', 18)} ${doneLabel()}`, 'ct-done')) };
   };
   const qItem = () => { const Q = X.res.map((q, i) => ({ ...q, q: `${i + 1}. ${String(q.q).replace(/^\d+\.\s*/, '')}` })); const per = Math.floor(100 / Q.length); Q.forEach((q, i) => q.pts = per + (i < 100 - per * Q.length ? 1 : 0)); return { title: `${X.topic || sessTitle(X.ctx) || ''} 확인 퀴즈`.trim(), qs: Q, time: 10, retake: 3 }; };
 
@@ -362,6 +363,8 @@
     'ct-v-play': () => { try { aiPlayer(vTitle(), X.res, 'f'); } catch (e) { say('이 브라우저에서는 재생할 수 없습니다.', 'warn'); } },
     'ct-v-rec': () => { try { aiRecord(vTitle(), X.res, null); } catch (e) { say('이 브라우저에서는 영상 파일을 만들 수 없습니다. Chrome · Edge에서 시도하세요.', 'warn'); } },
     'ct-q-del': el => { X.res.splice(+el.dataset.v, 1); draw(); },
+    /* 문항 고치기: build.js qsEdit(z65, CT 창 위) — 고친 문항으로 다시 그림 */
+    'ct-q-edit': () => { if (!X || !Array.isArray(X.res) || typeof W.qsEdit !== 'function') return; const keep = X; W.qsEdit(X.res, { title: `${X.topic || sessTitle(X.ctx) || ''} 확인 퀴즈`.trim(), onSave: qs => { if (X !== keep) return; if (Array.isArray(qs) && qs.length) X.res = qs.map(q => ({ ...q, q: String(q.q || '').replace(/^\d+\.\s*/, '') })); draw(); } }); },
     'ct-yt-find': async () => { const q = X.topic || sessTitle(X.ctx) || courseName(X.ctx); try { const r = await ytSearch(q); X.cands = r || []; if (r && r[0] && !X.url) { X.url = 'https://youtu.be/' + r[0].id; X.yt = r[0]; } } catch (e) { say('YouTube에서 찾지 못했습니다.', 'warn'); } draw(); },
     'ct-yt-pick': el => { X.url = 'https://youtu.be/' + el.dataset.v; X.yt = (X.cands || []).find(v => v.id === el.dataset.v) || null; draw(); },
     'ct-up-again': () => { X.file = null; X.step = 0; draw(); setTimeout(() => { const f = $1('#ctFile'); f && f.click(); }, 30); },
@@ -396,18 +399,20 @@
     const has = w => IT.filter(x => +x.week === w);
     if (F.open == null || !SS.some(s => s.w === F.open)) { const e1 = SS.find(s => !has(s.w).length); F.open = e1 ? e1.w : (F.open === 0 ? 0 : SS[0].w); }
     const filled = SS.filter(s => has(s.w).length).length; const inFlow = !!el.closest('#crsFlow');
-    el.innerHTML = `<div class="ctf"><div class="ctf-top"><div class="ctf-sum"><b>${filled} / ${SS.length}</b><span>${U} 채움</span><span class="ctf-later">나중에 해도 돼요</span></div>${inFlow && !W.CT_FILLBTN ? '' : `<button type="button" class="ct-btn ct-ai" data-act="ctf-all" ${filled === SS.length ? 'disabled' : ''}>`}${inFlow && !W.CT_FILLBTN ? '' : `${svg('spark', 18)} AI SAM이 빈 ${U} 모두 채우기</button>`}</div>
-      ${F.undo ? `<div class="ctf-undo" role="status" aria-live="polite"><span>${E(F.undo.msg)}</span><button type="button" class="ct-btn sm" data-act="ctf-undo">${svg('undo', 16)} 되돌리기</button></div>` : ''}
+    let lgl = ''; try { if (el.closest('#crsFlow') && W.CF && typeof CF.legalBox === 'function') lgl = CF.legalBox(d); } catch (e) { }
+    el.innerHTML = `${lgl}<div class="ctf"><div class="ctf-top"><div class="ctf-sum"><b>${filled} / ${SS.length}</b><span>${U} 채움</span><span class="ctf-later">나중에 해도 됩니다</span></div>${inFlow && !W.CT_FILLBTN ? '' : `<button type="button" class="ct-btn ct-ai" data-act="ctf-all" ${filled === SS.length ? 'disabled' : ''}>`}${inFlow && !W.CT_FILLBTN ? '' : `${svg('spark', 18)} AI SAM이 빈 ${U} 모두 채우기</button>`}</div>
+      ${F.undo && !(F.undo.w && SS.some(s => s.w === F.undo.w && F.open === s.w)) ? undoBand() : ''}
       <ol class="ctf-list">${SS.map(s => { const its = has(s.w); const on = F.open === s.w; return `<li class="ctf-s ${on ? 'on' : ''} ${its.length ? 'has' : ''}" data-w="${s.w}"><button type="button" class="ctf-sh" data-act="ctf-open" data-v="${s.w}" aria-expanded="${on}"><span class="ctf-n">${its.length ? svg('check', 18) : s.w}</span><span class="ctf-tt"><b>${s.w}${U === '주차' ? '주차' : U} · ${E(s.title)}</b><small>${its.length ? its.map(x => E(TYPE_LABEL(x))).join(' · ') : '비어 있음'}</small></span>${svg('chev', 20)}</button>
-        ${on ? `<div class="ctf-body">${its.length ? `<ul class="ctf-its">${its.map(x => `<li><span class="ct-kic k-${E(icOf(x) === 'audio' ? 'audio' : TYPE_KIND(x))}">${svg(icOf(x), 18)}</span><span class="ct-lt"><b>${E(x.title)}</b><small>${E(TYPE_LABEL(x))}</small></span><button type="button" class="ct-btn sm" data-act="ctf-view" data-v="${E(x.id)}">보기</button><button type="button" class="ct-icb sm" data-act="ctf-del" data-v="${E(x.id)}" aria-label="「${E(x.title)}」 빼기">${svg('trash', 18)}</button></li>`).join('')}</ul>` : ''}
+        ${on ? `<div class="ctf-body">${F.undo && F.undo.w === s.w ? undoBand() : ''}${its.length ? `<ul class="ctf-its">${its.map(x => `<li><span class="ct-kic k-${E(icOf(x) === 'audio' ? 'audio' : TYPE_KIND(x))}">${svg(icOf(x), 18)}</span><span class="ct-lt"><b>${E(x.title)}</b><small>${E(TYPE_LABEL(x))}</small></span><button type="button" class="ct-btn sm" data-act="ctf-view" data-v="${E(x.id)}">보기</button><button type="button" class="ct-icb sm" data-act="ctf-del" data-v="${E(x.id)}" aria-label="「${E(x.title)}」 빼기">${svg('trash', 18)}</button></li>`).join('')}</ul>` : ''}
           <p class="ctf-q">${its.length ? '더 넣을 콘텐츠가 있으면 고르세요' : `이 ${U}에 넣을 콘텐츠를 고르세요`}</p><div class="ct-kinds">${kindCards(s.w)}</div></div>` : ''}</li>`; }).join('')}</ol></div>`;
   }
+  const undoBand = () => `<div class="ctf-undo" role="status" aria-live="polite"><span>${E(F.undo.msg)}</span><button type="button" class="ct-btn sm" data-act="ctf-undo">${svg('undo', 16)} 되돌리기</button></div>`;
   const kindCards = (w, lib) => KINDS.filter(k => !(lib && k.k === 'lib')).map(k => `<button type="button" class="ct-kind" data-act="ct-kind" data-ct="${k.k}" data-k="${k.k}" ${w != null ? `data-w="${w}"` : ''}><span class="ct-kic k-${k.k}">${svg(k.k, 24)}</span><b>${E(k.name)}</b><small>${E(k.one)}</small><em>${E(k.time)}</em></button>`).join('');
   const refill = () => { if (F && F.el && F.el.isConnected) renderFill(F.el, F.d); };
   function openFromFill(kind, w) { const d = F.d; const s = sessOf(d).find(x => x.w === w) || { w, title: '' };
-    open(kind, { from: 'flow', course: draftCourse(d), week: w, title: s.title, sess: s, target: d.target || '', onDone: it => { if (d.classId && typeof C === 'function' && C(d.classId)) { /* 이미 생성된 과정이면 settle 끝 */ } else settle(it, null); it.week = w; itemsOf(d).push(it); const nx = sessOf(d).find(x => x.w > w && !itemsOf(d).some(y => +y.week === x.w)); F.open = nx ? nx.w : w;
-      /* 넣은 직후 다음 빈 차시가 펼쳐져 방금 넣은 항목의 [빼기]가 안 보이므로, 8초 동안 '넣었습니다 [되돌리기]' 띠를 남긴다 */
-      const tok = {}; F.undo = { tok, msg: `${jo(`「${it.title}」`, '을')} ${w}${unit()}에 넣었습니다.`, run: () => { const L = itemsOf(d); const i = L.findIndex(x => x.id === it.id); if (i >= 0) L.splice(i, 1); sweep(); F.open = w; } };
+    open(kind, { from: 'flow', course: draftCourse(d), week: w, title: s.title, sess: s, target: d.target || '', onDone: it => { if (d.classId && typeof C === 'function' && C(d.classId)) { /* 이미 생성된 과정이면 settle 끝 */ } else settle(it, null); it.week = w; itemsOf(d).push(it); F.open = w; /* 넣은 뒤에도 같은 차시를 펼쳐 둔다(다음 차시 자동 펼침 끔 — 평가 1회차 6번) */
+      /* 넣은 직후 8초 동안 그 차시 안에 '넣었습니다 [되돌리기]' 띠를 남긴다 */
+      const tok = {}; F.undo = { tok, w, msg: `${jo(`「${it.title}」`, '을')} ${w}${unit()}에 넣었습니다.`, run: () => { const L = itemsOf(d); const i = L.findIndex(x => x.id === it.id); if (i >= 0) L.splice(i, 1); sweep(); F.open = w; } };
       clearTimeout(F.ut); F.ut = setTimeout(() => { if (!F || !F.undo || F.undo.tok !== tok) return; F.undo = null; const b = F.el && F.el.querySelector('.ctf-undo'); if (b) b.remove(); }, W.__CT_UNDO_MS || 8000);
       saveDraft(); refill(); try { W.CF && CF.emit && CF.emit('ct-add', it); } catch (e) { } } }); }
   ACT['ct-kind'] = el => { const k = el.dataset.k; const w = el.dataset.w != null ? +el.dataset.w : null; if (F && w != null && F.el && F.el.contains(el)) return openFromFill(k, w); if (PK) { const ctx = PK; PK = null; closePick(); return open(k, ctx); } open(k, {}); };
@@ -479,7 +484,7 @@
 .ct-wrap{position:fixed;inset:0;z-index:62;background:rgba(31,32,32,.5);display:flex;align-items:center;justify-content:center;padding:16px}
 body:has(#slSheet) .ct-wrap{z-index:97}
 .ct-sh{background:#fff;border-radius:16px;width:min(760px,100%);max-height:calc(100dvh - 32px);display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18);font-size:16px;color:#2A2B2B;overflow:hidden}
-.ct-hd{display:flex;align-items:center;gap:8px;padding:12px 12px 4px}.ct-ht{flex:1;min-width:0;text-align:center}.ct-ht b{display:block;font-size:19px;font-weight:700;line-height:1.35}.ct-ht small{display:block;color:#6C6C6C;font-size:14px;line-height:1.4;margin-top:2px;overflow-wrap:anywhere}
+.ct-hd{display:flex;align-items:center;gap:8px;padding:12px 12px 4px}.ct-ht{flex:1;min-width:0;text-align:center}.ct-ht b{display:block;font-size:19px;font-weight:700;line-height:1.35}.ct-ht small{display:block;color:#6C6C6C;font-size:14px;line-height:1.4;margin-top:2px;overflow-wrap:anywhere}.ct-ht small.ct-dest{display:inline-block;margin-top:6px;padding:4px 14px;border-radius:999px;background:#EAEDFF;color:#3B48B5;font-size:17px;font-weight:800}
 .ct-icb{width:48px;height:48px;flex:none;border:0;background:transparent;border-radius:12px;display:grid;place-items:center;color:#4C4D4D;cursor:pointer}.ct-icb:hover{background:#F1F2F2}.ct-icb.sm{width:44px;height:44px}.ct-icb:disabled{opacity:.35;cursor:default}
 .ct-steps{list-style:none;margin:6px 20px 0;padding:0;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.ct-steps li{display:flex;align-items:center;gap:6px;font-size:14px;color:#808181;padding:4px 10px 4px 4px;border-radius:999px;background:#F6F7F7}
 .ct-steps li i{font-style:normal;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#EAEBEB;font-weight:700;font-size:13px}.ct-steps li.on{color:#2A2B2B;background:#EAEDFF;font-weight:700}.ct-steps li.on i{background:#5C74F6;color:#fff}.ct-steps li.ok i{background:#00C53B;color:#fff}
@@ -529,7 +534,7 @@ body:has(#slSheet) .ct-wrap{z-index:97}
 .ct-kind{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;min-height:156px;padding:14px;border-radius:14px;border:1px solid #EAEBEB;background:#fff;font:inherit;color:#2A2B2B;cursor:pointer;position:relative}.ct-kind:hover,.ct-kind:focus-visible{border-color:#5C74F6;box-shadow:0 0 0 3px #EAEDFF}
 .ct-kind b{font-size:16px;line-height:1.35}.ct-kind small{font-size:14px;color:#6C6C6C;line-height:1.45}.ct-kind em{margin-top:auto;font-style:normal;font-size:13px;color:#808181}
 .ctf{font-size:16px;color:#2A2B2B}.ctf-top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}.ctf-sum{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.ctf-sum b{font-size:22px}.ctf-later{font-size:14px;color:#009116;background:#E7F8E8;border-radius:999px;padding:3px 10px;margin-left:4px}
-.ctf-undo{position:sticky;top:0;z-index:3;box-shadow:0 4px 12px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;justify-content:space-between;background:#2A2B2B;color:#fff;border-radius:12px;padding:6px 6px 6px 14px;margin:0 0 10px;flex-wrap:wrap}.ctf-undo .ct-btn{background:#fff}
+.ctf-undo{position:static;display:flex;align-items:center;gap:10px;justify-content:space-between;background:#2A2B2B;color:#fff;border-radius:12px;padding:6px 6px 6px 14px;margin:0 0 10px;flex-wrap:wrap}.ctf-undo .ct-btn{background:#fff}
 .ctf-list{list-style:none;padding:0;margin:0;display:grid;gap:8px}.ctf-s{border-radius:14px;background:#F6F7F7;overflow:hidden}.ctf-s.on{background:#fff;border:1px solid #C8C9C9}
 .ctf-sh{width:100%;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 14px;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;color:inherit}.ctf-sh>.ct-ic{flex:none;color:#808181;transition:transform .15s}.ctf-s.on .ctf-sh>.ct-ic{transform:rotate(90deg)}
 .ctf-n{width:36px;height:36px;flex:none;border-radius:50%;background:#fff;border:1px solid #C8C9C9;display:grid;place-items:center;font-weight:700;font-size:15px}.ctf-s.has .ctf-n{background:#00C53B;border-color:#00C53B;color:#fff}

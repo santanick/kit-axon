@@ -51,6 +51,8 @@
   function live(msg) { let L = document.getElementById('csamLive'); if (!L) { L = document.createElement('div'); L.id = 'csamLive'; L.className = 'csam-sr'; L.setAttribute('aria-live', 'polite'); L.setAttribute('role', 'status'); document.body.appendChild(L); } const b = document.querySelector('.csam-b'); if (b && b.closest('[aria-live]')) return; /* 흐름의 .cf-sam이 이미 읽어 줌 */ L.textContent = ''; setTimeout(() => { L.textContent = msg; }, 30); }
   const fieldEl = (R, f) => { if (!R || !f) return null; const q = String(f).replace(/["\\]/g, ''); try { return R.querySelector(`[data-cf="${q}"], [data-k="${q}"], [name="${q}"], [data-cff="${q}"]`); } catch (e) { return null; } };
   function spot(field) { const R = root(); if (!R) return null; const fe = fieldEl(R, field); if (fe) { const box = fe.closest('.cf-f, .crs-field, .crs-q, .fl, label, .field') || fe; return { el: box, pos: 'afterend' }; }
+    /* 흐름 본문(스크롤 영역) 맨 위: 하단 고정 자리(.cf-sam)는 휴대폰에서 입력칸 · 버튼을 가렸다(평가 1회차 10번) */
+    const bd = R.querySelector('.cf-body'); if (bd) return { el: bd, pos: 'afterbegin' };
     const cs = R.querySelector('.cf-sam'); if (cs) return { el: cs, pos: 'beforeend' };
     const slot = R.querySelector('.crs-sam-slot'); if (slot) return { el: slot, pos: 'beforeend' };
     const foot = R.querySelector('.crs-foot, .crs-actions, .crs-nav, footer'); if (foot) return { el: foot, pos: 'beforebegin' };
@@ -62,19 +64,21 @@
     const b = document.createElement('div'); b.className = 'csam-b' + (cls ? ' ' + cls : ''); b.dataset.step = id; b.setAttribute('role', 'group'); b.setAttribute('aria-label', 'AI SAM 도움');
     b.innerHTML = `<span class="orb sm" aria-hidden="true"></span><div class="csam-c"><b class="csam-n">AI SAM</b>${html}</div>`;
     p.el.insertAdjacentElement(p.pos, b); try { b.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { } return b; }
+  const jo = (w, a) => { const s0 = String(w || ''); try { if (W.CF && typeof W.CF.josa === 'function') return W.CF.josa(s0, a); } catch (e) { } return s0 + a; };
+  const uName = () => { try { if (W.CF && typeof W.CF.unit === 'function') return W.CF.unit(draft() || {}); } catch (e) { } return U() ? '주차' : '차시'; };
   const MSG = {
     idle: (f, ti) => f ? `이 칸에서 잠시 멈추셨네요. 제가 이 칸을 채워 드릴까요?` : `「${ti}」에서 잠시 멈추셨네요. 제가 이 단계를 채워 드릴까요?`,
     empty: (f, ti) => f ? `이 칸이 비어 있습니다. 제가 이 칸을 채워 드릴까요?` : `「${ti}」에 빈 칸이 있습니다. 제가 채워 드릴까요?`,
     repeat: () => '같은 안내가 두 번 나왔습니다. 제가 이 칸을 알맞게 채워 드릴까요?',
-    back: (f, ti) => `앞뒤로 오가고 계시네요. 「${ti}」를 제가 대신 채워 드릴까요?`,
-    fill: () => `차시마다 영상 · 교안 · 퀴즈를 넣는 단계입니다. 제가 차시마다 초안을 채워 드릴까요? 나중에 해도 됩니다.`,
+    back: (f, ti) => `앞뒤로 오가고 계시네요. ${jo(`「${ti}」`, '을')} 제가 대신 채워 드릴까요?`,
+    fill: () => `${uName()}마다 영상 · 교안 · 퀴즈를 넣는 단계입니다. 제가 ${uName()}마다 초안을 채워 드릴까요? 나중에 해도 됩니다.`,
     lib: () => '어떤 자료를 만들지 고민되시나요? 교안은 주제만 넣으면 3번 안에 만들어집니다. 제가 교안 만들기를 열어 드릴까요?'
   };
   /* 막힘 → 한 단계에 한 번만 */
   function nudge(id, why, field) { id = id || cur(); if (!id || !isOpen() || id === 'open' || asked(id) || document.querySelector('.csam-b.busy')) return false;
     const ti = title(id); const msg = (MSG[why] || MSG.idle)(field, ti); markAsked(id);
-    bubble(id, `<p>${esc(msg)}</p><div class="csam-a"><button type="button" class="btn pri" data-act="csam-yes" data-v="${esc(id)}" data-f="${esc(field || '')}">${ic('spark', 16)} 채워 주세요</button><button type="button" class="btn ghost" data-act="csam-no" data-v="${esc(id)}">괜찮아요</button></div>`, field);
-    live(`AI SAM: ${msg} 아래 [채워 주세요] 또는 [괜찮아요] 버튼을 누르세요.`); audit(`AI SAM 과정 만들기 도움 제안 — ${ti}(${why})`); return true; }
+    bubble(id, `<p>${esc(msg)}</p><div class="csam-a"><button type="button" class="btn pri" data-act="csam-yes" data-v="${esc(id)}" data-f="${esc(field || '')}">${ic('spark', 16)} 채워 주세요</button><button type="button" class="btn ghost" data-act="csam-no" data-v="${esc(id)}">괜찮습니다</button></div>`, field);
+    live(`AI SAM: ${msg} 아래 [채워 주세요] 또는 [괜찮습니다] 버튼을 누르세요.`); audit(`AI SAM 과정 만들기 도움 제안 — ${ti}(${why})`); return true; }
   SAM.nudge = nudge;
   ACT['csam-no'] = () => { drop(); touch(); live('알겠습니다. 필요하면 [AI SAM에게 맡기기]를 누르세요.'); };
   ACT['csam-yes'] = el => fill(el.dataset.v || cur(), { field: el.dataset.f || '' });
@@ -85,14 +89,14 @@
   function design(d) { const n = Math.max(1, Math.min(30, +d.sessions || +d.weeks || (U() ? 15 : 6))); const o = { topic: d.name || d.topic || sugg()[0], weeks: n, univ: U(), quiz: d.quiz !== false, assign: d.assign !== false, exam: d.exam !== false, vids: 1, level: d.level || '보통', vsrc: d.vsrc || 'youtube', docs: !!d.docs };
     let Wk = []; try { Wk = AI.design(o) || []; } catch (e) { } return { o, Wk }; }
   function ruleFill(id, d) { let n = 0; const set = (k, v) => { if (d[k] == null || d[k] === '' || (Array.isArray(d[k]) && !d[k].length)) { d[k] = v; n++; } };
-    if (id === 'basic') { set('name', d.topic || sugg()[0]); set('topic', d.name); set('target', sugg()[1]); set('sessions', U() ? 15 : 6); try { set('goal', AI.goal(d.name, d.target)); } catch (e) { } }
+    if (id === 'basic') { const FA = (k) => { try { const F = cf(); if (F && typeof F.fieldAI === 'function') return F.fieldAI(k, { ...d, [k]: '' }); } catch (e) { } return null; }; set('name', d.topic || FA('name') || sugg()[0]); if (FA('target')) set('target', FA('target')); if (FA('goal')) { set('goal', FA('goal')); if (d.goal && d._goalAI == null) d._goalAI = d.goal; } set('topic', d.name); set('target', sugg()[1]); set('sessions', U() ? 15 : 6); try { set('goal', AI.goal(d.name, d.target)); } catch (e) { } }
     else if (id === 'outline') { const { Wk } = design(d); if (Wk.length) set('weekPlan', Wk.map(w => ({ w: w.w, title: w.title, goal: w.goal }))); }
     else if (id === 'fill') { if (W.CT && typeof W.CT.autoFill === 'function') { W.CT.autoFill(d); n++; } else { const { o, Wk } = design(d); (d.weekPlan || d.outline || []).forEach((x, i) => { if (Wk[i] && x && x.title) { Wk[i].title = x.title; Wk[i].goal = x.goal || Wk[i].goal; } }); try { set('items', itemsFromDesign(Wk, o)); } catch (e) { } } }
     else if (id === 'setup') { set('price', 0); set('open', '전체'); }
     return n > 0; }
   async function fill(id, opt = {}) { id = id || cur(); const d = draft(); if (!cf() || !d || !id) return false;
     const snap = JSON.stringify(d); const ti = title(id); const s = stepOf(id);
-    const jl = (window.CF && typeof CF.josa === 'function') ? CF.josa(String(ti), '을').slice(String(ti).length) : '을(를)'; const b = opt.auto ? null : bubble(id, `<p>AI SAM이 「${esc(ti)}」${jl} 채우는 중입니다…</p>`, opt.field, 'busy'); if (!opt.auto) live(`AI SAM이 ${ti}${jl} 채우는 중입니다.`);
+    const jl = jo(String(ti), '을').slice(String(ti).length) || '을'; const b = opt.auto ? null : bubble(id, `<p>AI SAM이 「${esc(ti)}」${jl} 채우는 중입니다…</p>`, opt.field, 'busy'); if (!opt.auto) live(`AI SAM이 ${ti}${jl} 채우는 중입니다.`);
     let ok = false; const F = cf(); try { if (typeof F.snap === 'function') F.snap('AI SAM이 채운 내용'); } catch (e) { }
     /* 칸 하나(말풍선이 그 칸 아래에 뜬 경우): C1의 칸 채우기(fieldAI · planFrom)로 그 칸만 */
     try { const k = opt.field; if (k && k !== '_' && k !== '_check') { if (k === 'weekPlan' && typeof F.planFrom === 'function') { d.weekPlan = F.planFrom(d); d.sessions = d.weekPlan.length; ok = true; } else if (typeof F.fieldAI === 'function') { const v = F.fieldAI(k, { ...d, [k]: '' }); if (v != null && v !== '') { d[k] = v; ok = true; } } } } catch (e) { console.error(e); }
@@ -105,8 +109,12 @@
     setTimeout(() => done(id, opt.auto ? 'auto' : 'fill'), 60); return true; }
   SAM.fill = fill;
   const UNDO = {};
-  function done(id, how) { const ti = title(id); const m = how === 'pre' ? '말씀하신 내용으로 채워 두었습니다. 확인만 해 주세요. 고칠 곳은 바로 고치면 됩니다.' : how === 'auto' ? `「${ti}」도 AI SAM이 미리 채워 두었습니다. 확인만 해 주세요.` : `「${ti}」를 채웠습니다. 확인만 해 주세요. 고칠 곳은 바로 고치면 됩니다.`;
-    bubble(id, `<p>${esc(m)}</p><div class="csam-a">${UNDO[id] ? `<button type="button" class="btn ghost" data-act="csam-undo" data-v="${esc(id)}">되돌리기</button>` : ''}<button type="button" class="btn ghost" data-act="csam-no">확인했어요</button></div>`, '', 'ok'); live(`AI SAM: ${m}`); }
+  /* 미리 채운 내용을 사실대로 알린다 — 사용자가 직접 말하지 않았을 수도 있으므로(칩 · 가이드) '말씀하신'이라고 하지 않는다(평가 1회차 3번) */
+  function preMsg() { const p = SAM.pre || {}; const d = draft() || {}; const got = [p.name ? `이름 「${d.name || p.name}」` : '', p.target ? `대상 「${d.target || p.target}」` : '', p.sessions ? `${p.sessions}${uName() === '회차' ? '회' : uName() === '주차' ? '주' : '차시'}` : '', p.price ? '수강료' : ''].filter(Boolean);
+    if (!got.length) return ''; const last = got[got.length - 1].replace(/」$/, ''); const pt = jo(last, '을').slice(last.length) || '을';
+    return `요청 문장에서 ${got.join(' · ')}${pt} 읽어 미리 채워 두었습니다. 다르면 바로 고치면 됩니다.`; }
+  function done(id, how) { const ti = title(id); const m = how === 'pre' ? preMsg() : how === 'auto' ? `「${ti}」도 AI SAM이 미리 채워 두었습니다. 확인만 해 주세요.` : `${jo(`「${ti}」`, '을')} 채웠습니다. 확인만 해 주세요. 고칠 곳은 바로 고치면 됩니다.`; if (!m) return;
+    bubble(id, `<p>${esc(m)}</p><div class="csam-a">${UNDO[id] ? `<button type="button" class="btn ghost" data-act="csam-undo" data-v="${esc(id)}">되돌리기</button>` : ''}<button type="button" class="btn ghost" data-act="csam-no">확인했습니다</button></div>`, '', 'ok'); live(`AI SAM: ${m}`); }
   ACT['csam-undo'] = el => { const id = el.dataset.v; const d = draft(); const snap = UNDO[id]; if (!d || !snap) { toast('되돌릴 내용이 없습니다.', 'warn'); return; }
     const o = JSON.parse(snap); Object.keys(d).forEach(k => { if (!(k in o)) delete d[k]; }); Object.assign(d, o); delete UNDO[id]; save2(); refresh(id); drop(); live('채우기 전으로 되돌렸습니다.'); toast('채우기 전으로 되돌렸습니다.', 'ok'); };
 
@@ -139,6 +147,7 @@
     if (c && c.name) audit(`과정 만들기 완료 — ${c.name}${x.d && x.d.from === 'sam' ? ' (AI SAM 대화)' : ''}`); }
   function bind() { const F = cf(); if (!F || SAM.bound || typeof F.on !== 'function') return; SAM.bound = true; F.samOwnsButton = true; /* 단계 맡기기 버튼은 이 파일이 그린다(되돌리기 · 확인 안내 포함) */
     const on = (ev, fn) => { try { F.on(ev, (...a) => { try { fn(...a); } catch (e) { console.error('crs-sam', ev, e); } }); } catch (e) { console.error(e); } };
+    on('open', a => { const x = arg(a); const s = st(); if (x.resume) { s.sam = false; SAM.pre = null; } else if (x.from === 'sam') { s.sam = true; SAM.pre = x.prefill || {}; } else SAM.pre = null; });
     on('step', onStep); on('idle', a => nudge(sid(a), 'idle')); on('error', onError); on('back', onBack); on('create', onCreate);
     /* CF.open을 감싸 대화 · 가이드에서 연 흐름을 표시한다 */
     const base = F.open; F.open = (o = {}, ...r) => { if (o && o.from === 'sam') { SAM.st = null; SAM.pendSam = true; } const out = base.call(F, o, ...r); setTimeout(() => { const s = st(); if (o && o.from === 'sam') { s.sam = true; SAM.pendSam = false; } }, 0); return out; }; }
@@ -153,7 +162,7 @@
   function libTick() { const on = typeof CUR === 'object' && CUR.tab === 'clib'; if (!on) { LIB.since = 0; return; } if (!LIB.since) LIB.since = Date.now(); if (LIB.asked || Date.now() - LIB.since < SAM.idleMs || document.hidden) return;
     const R = document.querySelector('.clb, #clib, [data-clib]'); if (!R || !shown(R)) return; LIB.asked = true; drop();
     const b = document.createElement('div'); b.className = 'csam-b'; b.setAttribute('role', 'group'); b.setAttribute('aria-label', 'AI SAM 도움');
-    b.innerHTML = `<span class="orb sm" aria-hidden="true"></span><div class="csam-c"><b class="csam-n">AI SAM</b><p>${esc(MSG.lib())}</p><div class="csam-a"><button type="button" class="btn pri" data-act="csam-libdoc">${ic('spark', 16)} 교안 만들기 열기</button><button type="button" class="btn ghost" data-act="csam-no">괜찮아요</button></div></div>`;
+    b.innerHTML = `<span class="orb sm" aria-hidden="true"></span><div class="csam-c"><b class="csam-n">AI SAM</b><p>${esc(MSG.lib())}</p><div class="csam-a"><button type="button" class="btn pri" data-act="csam-libdoc">${ic('spark', 16)} 교안 만들기 열기</button><button type="button" class="btn ghost" data-act="csam-no">괜찮습니다</button></div></div>`;
     const top = R.querySelector('.clb-top'); if (top) top.insertAdjacentElement('afterend', b); else R.insertAdjacentElement('afterbegin', b); live(`AI SAM: ${MSG.lib()}`); }
   document.addEventListener('pointerdown', e => { if (LIB.since && !(e.target.closest && e.target.closest('.csam-b'))) LIB.since = Date.now(); }, true);
   ACT['csam-libdoc'] = () => { drop(); if (W.CT && typeof W.CT.open === 'function') W.CT.open('doc', { from: 'lib' }); else toast('교안 만들기를 열 수 없습니다. 화면의 [교안] 카드를 눌러 주세요.', 'warn'); };
@@ -195,7 +204,7 @@
     /* 흐름(C1)의 자동 넣기 설정 d.auto로 옮긴다 */
     if (pre.vsrc || pre.docs || pre.quiz === false) { let A = {}; try { A = { ...((F.defaults && F.defaults().auto) || {}) }; } catch (e) { } if (pre.vsrc) A.video = pre.vsrc; if (pre.docs) A.docs = true; if (pre.quiz === false) { A.quiz = false; A.exam = false; A.assign = false; } pre.auto = A; }
     if (innerWidth <= 860 && document.getElementById('drawer') && ACT['chat-close']) { try { ACT['chat-close'](); } catch (e) { } }
-    try { F.open({ from: from || 'sam', prefill: pre, fresh: true }); } catch (e) { console.error(e); toast('과정 만들기 화면을 열지 못했습니다. [+ 만들기]를 눌러 주세요.', 'warn'); return false; }
+    try { F.open({ from: from || 'sam', prefill: pre }); } /* 만들던 초안이 있으면 흐름이 먼저 [이어서 하기 · 새로 만들기]를 묻는다(평가 1회차 5번) */ catch (e) { console.error(e); toast('과정 만들기 화면을 열지 못했습니다. [+ 만들기]를 눌러 주세요.', 'warn'); return false; }
     audit(`AI SAM 과정 만들기 열기 — ${pre.name || '이름 미정'}`); return true; }
   SAM.open = openFlow;
   ACT['csam-open'] = el => openFlow(el.dataset.v || '', 'sam');
@@ -204,7 +213,7 @@
     return { title: `${T('cls')} 만들기`, text: `${T('cls')} 만들기 화면을 열고 말씀하신 내용(${got})을 미리 채워 두었습니다. 화면에서 확인만 하고 [다음]을 누르세요. 막히면 [AI SAM에게 맡기기]를 누르면 됩니다.${p.name ? '' : `\n이름은 비어 있습니다. 예: 「${sugg()[0]}」`}`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' }; };
   /* 흐름이 열려 있을 때 대화창에서 '이 단계 채워줘' · '어려워요' */
   function inFlow(q) { if (!isOpen()) return null; const s = String(q || ''); const id = cur(); if (!id) return null; const ti = title(id);
-    if (/(채워|맡길|맡겨|대신|알아서|써\s*줘|만들어\s*줘)/.test(s) && /(이|지금|여기|이번)\s*(단계|칸|화면)|여기|알아서|대신/.test(s)) return { a: { text: `「${ti}」를 채웠습니다. 과정 만들기 화면에서 확인만 해 주세요.`, via: 'AI SAM' }, run: () => fill(id) };
+    if (/(채워|맡길|맡겨|대신|알아서|써\s*줘|만들어\s*줘)/.test(s) && /(이|지금|여기|이번)\s*(단계|칸|화면)|여기|알아서|대신/.test(s)) return { a: { text: `${jo(`「${ti}」`, '을')} 채웠습니다. ${T('cls')} 만들기 화면에서 확인만 해 주세요.`, via: 'AI SAM' }, run: () => fill(id) };
     if (/(어려|모르겠|막혔|막혀|헷갈|뭘\s*해야|어떻게\s*해|도와)/.test(s)) { const P = problems(id);
       return { a: { text: `지금은 「${ti}」 단계입니다.${P.length ? `\n남은 일: ${P.slice(0, 3).map(x => typeof x === 'string' ? x : (x && (x.msg || x.text)) || '').filter(Boolean).join(' · ')}` : '\n지금 단계는 채워져 있습니다. [다음]을 누르면 됩니다.'}\n버튼 하나로 제가 대신 채울 수 있습니다.`, btn: { act: 'csam-do', v: id, label: '이 단계 AI SAM에게 맡기기' }, via: 'AI SAM' } }; }
     return null; }

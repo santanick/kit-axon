@@ -2,7 +2,7 @@
    CF.cfg[type]: 단계 구성 · 질문 · 용어 · 필수 항목 · 기본값 · 예시 · 템플릿 · 규정 검사 · 생성 후 반영(apply).
    근거: 규정 수치는 compliance.js(DEF · e-hours · 심사코드 20자리 · HRD ID 17자리 · itemMin 50 · rate 80 · pass 60 · dayChasi 8 · bank 3)와
    mods.js 평생교육(유료 30시간) · docs/compliance/README.md를 따른다. 학원법 교습비 게시 · 고등교육법 1학점 15시간 · 남녀고용평등법 연 1회는 안내만 한다.
-   질문은 단계마다 최대 3개, 나머지는 '나중에 해도 돼요'(later). 로드 시 S는 null — S는 함수 안에서만 읽는다. */
+   질문은 단계마다 최대 3개, 나머지는 '나중에 해도 됩니다'(later). 로드 시 S는 null — S는 함수 안에서만 읽는다. */
 (() => {
   const CF = window.CF = window.CF || {};
   CF.cfg = CF.cfg || {};
@@ -13,7 +13,8 @@
   const hm = m => { m = Math.round(N(m)); const h = Math.floor(m / 60), r = m % 60; return h ? `${h}시간${r ? ' ' + r + '분' : ''}` : `${r}분`; };
   /* 받침에 맞는 조사: josa('훈련과정', '이') → '훈련과정이' · josa('강좌', '이') → '강좌가' (이/가 · 을/를 · 은/는 · 과/와 · 으로/로, ㄹ 받침 + 으로 → 로) */
   const josa = (w, a) => { const s = String(w || ''); const ch = s.charCodeAt(s.length - 1); const jong = ch >= 0xAC00 && ch <= 0xD7A3 ? (ch - 0xAC00) % 28 : /[a-z]$/i.test(s) ? ('lmnr'.includes(s.slice(-1).toLowerCase()) ? 1 : 0) : /[0-9]$/.test(s) ? ([1, 3, 6, 7, 8, 0].includes(+s.slice(-1)) ? 1 : 0) : 0; const P = { '을': ['을', '를'], '이': ['이', '가'], '은': ['은', '는'], '과': ['과', '와'], '으로': ['으로', '로'] }[a]; return s + (P ? (jong && !(a === '으로' && jong === 8) ? P[0] : P[1]) : a); };
-  CF.josa = CF.josa || josa;
+  /* 조사 하나로 통일(F2 통합 요청): ai.js AI.j(따옴표 · 괄호 뒤 · 영문 · 숫자 · ㄹ+으로)가 있으면 그것, 없으면 이 파일의 josa */
+  CF.josa = (w, a) => { try { if (typeof AI !== 'undefined' && AI && typeof AI.j === 'function') return String(w == null ? '' : w) + AI.j(w, a); } catch (e) { } return josa(w, a); };
   const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
   const totalMin = d => N(d.sessions) * N(d.mins);
   const cplOn = () => { try { const P = window.cplPublic && cplPublic(); return P ? P : null; } catch (e) { return null; } };
@@ -52,7 +53,7 @@
     stepTitle: { basic: '수업 정보', outline: '수업 일정', fill: '수업 자료', setup: '수강료', open: '확인' },
     ask: {
       basic: [F.name('수업 이름', '예: 중2 수학 내신반'), { k: 'grade', label: '학년', kind: 'choice', ex: '예: 중2', def: 'm2', opts: [['e1', '초등 1~3'], ['e4', '초등 4~6'], ['m1', '중1'], ['m2', '중2'], ['m3', '중3'], ['h1', '고1'], ['h2', '고2'], ['h3', '고3']] }, { k: 'subject', label: '과목', kind: 'choice', ex: '예: 수학', def: '수학', opts: [['국어', '국어'], ['영어', '영어'], ['수학', '수학'], ['과학', '과학'], ['사회', '사회'], ['기타', '기타']] }],
-      outline: [{ k: 'wdays', label: '수업 요일', kind: 'days', ex: '예: 월 · 수 · 금', def: [1, 3, 5] }, { k: 'slot', label: '수업 시간', kind: 'choice', ex: '예: 오후 4:00~5:30(다른 시간은 만든 뒤 회차마다 바꿀 수 있어요)', def: '16:00-17:30', opts: [['14:00-15:30', '오후 2:00~3:30'], ['16:00-17:30', '오후 4:00~5:30'], ['17:30-19:00', '오후 5:30~7:00'], ['19:00-21:00', '저녁 7:00~9:00'], ['19:00-22:00', '저녁 7:00~10:00'], ['10:00-11:30', '오전 10:00~11:30']] }, { k: 'months', label: '기간', kind: 'choice', ex: '예: 3개월(한 학기 내신 대비)', def: 3, opts: [[1, '1개월'], [2, '2개월'], [3, '3개월'], [6, '6개월'], [12, '1년']] }],
+      outline: [{ k: 'wdays', label: '수업 요일', kind: 'days', ex: '예: 월 · 수 · 금', def: [1, 3, 5] }, { k: 'slot', label: '수업 시간', kind: 'choice', ex: '예: 오후 4:00~5:30(다른 시간은 만든 뒤 회차마다 바꿀 수 있습니다)', def: '16:00-17:30', opts: [['14:00-15:30', '오후 2:00~3:30'], ['16:00-17:30', '오후 4:00~5:30'], ['17:30-19:00', '오후 5:30~7:00'], ['19:00-21:00', '저녁 7:00~9:00'], ['19:00-22:00', '저녁 7:00~10:00'], ['10:00-11:30', '오전 10:00~11:30']] }, { k: 'months', label: '기간', kind: 'choice', ex: '예: 3개월(한 학기 내신 대비)', def: 3, opts: [[1, '1개월'], [2, '2개월'], [3, '3개월'], [6, '6개월'], [12, '1년']] }],
       setup: [F.price('월 수강료', '예: 280,000원(학원에 게시한 교습비와 같게)', 0, true), F.cap('예: 8명(한 반)')]
     },
     defaults: { kind: 'episode', auto: { video: 'none', docs: true, quiz: true, assign: false, exam: false }, grade: 'm2', subject: '수학', wdays: [1, 3, 5], slot: '16:00-17:30', months: 3, price: 0, cap: 0, mins: 90 },
@@ -80,7 +81,7 @@
       const start = d.start || td(); const end = plus(start, Math.round((N(d.months) || 3) * 30.4) - 1);
       c.kind = 'episode'; c.sub = '요일반'; c.days = (d.wdays || []).slice(); c.time = { from: d.from || '', to: d.to || '' }; c.start = start; c.end = end;
       c.grade = d.grade || ''; c.cat = d.subject || c.cat || ''; c.billing = { cycle: 'month', price: N(d.price) };
-      try { if (typeof W2 !== 'undefined' && W2.genWeekly) { c.sessions = W2.genWeekly(start, end, c.days, c.time.from, c.time.to).slice(0, 100); const WP = (d.weekPlan || []).map(w => String(w.title || '').trim()).filter(Boolean); c.sessions.forEach((x, i) => { if (WP[i]) x.title = `${i + 1}회차 ${WP[i]}`.slice(0, 80); }); c.curriculum = (c.curriculum || []).filter(it => it.type !== 'offline'); c.att = c.att || {}; c.attT = c.attT || {}; if (W2.renum) W2.renum(c); if (W2.period) W2.period(c); if (W2.sync) W2.sync(c); } } catch (e) { console.error(e); }
+      try { if (typeof W2 !== 'undefined' && W2.genWeekly) { c.sessions = W2.genWeekly(start, end, c.days, c.time.from, c.time.to).slice(0, 100); const WP = (d.weekPlan || []).map(w => String(w.title || '').trim()).filter(Boolean); c.sessions.forEach((x, i) => { if (WP[i]) x.title = CF.sessTitle ? CF.sessTitle(i + 1, WP[i], '회차') : `${i + 1}회차 ${WP[i]}`.slice(0, 80); }); c.curriculum = (c.curriculum || []).filter(it => it.type !== 'offline'); c.att = c.att || {}; c.attT = c.attT || {}; if (W2.renum) W2.renum(c); if (W2.period) W2.period(c); if (W2.sync) W2.sync(c); } } catch (e) { console.error(e); }
       c.hours = Math.round(((c.sessions && c.sessions.length) || Math.min(100, sessCount(Object.assign({}, d, { start })))) * (minsOf(c.time.from, c.time.to) || 90) / 60);
       return c;
     }
@@ -180,7 +181,7 @@
     check: d => {
       const R = [];
       if (d.cat === 'legal') { R.push({ lv: 'info', k: 'cat', msg: '법정 의무교육은 대상자 전원의 이수 기록이 필요합니다. 이수 기준을 진도 100%로 두는 것을 권합니다.' }); if (N(d.rate) < 80) R.push({ lv: 'warn', k: 'rate', msg: '법정 의무교육의 이수 기준이 낮습니다.', fix: { rate: 100 } }); }
-      if (N(d.rdays) && !N(d.cap)) R.push({ lv: 'info', k: 'cap', msg: '기간을 정해 모집할 때는 정원도 적어 두면 마감이 쉬워요.' });
+      if (N(d.rdays) && !N(d.cap)) R.push({ lv: 'info', k: 'cap', msg: '기간을 정해 모집할 때는 정원도 적어 두면 마감 관리가 쉽습니다.' });
       return R;
     },
     summary: d => [['구분', { legal: '법정 의무교육', job: '직무교육', onboard: '신규 임용자', lead: '리더십 · 관리자' }[d.cat] || '직무교육'], ['구성', hoursLine(d) || '—'], ['모집', N(d.rdays) ? `오늘부터 ${N(d.rdays)}일` : '바로 · 계속 받기'], ['정원', N(d.cap) ? N(d.cap) + '명' : '제한 없음'], ['이수 기준', `진도 ${N(d.rate) || 80}% 이상`]],
@@ -266,7 +267,7 @@
     stepTitle: { basic: '교육 정보', outline: '차시 목록', fill: '차시 채우기', setup: '대상 · 이수', open: '확인' },
     ask: {
       basic: [F.name('교육과정 이름', '예: 2026 직장 내 성희롱 예방교육'), { k: 'cat', label: '구분', kind: 'choice', ex: '예: 법정 의무교육', def: 'job', opts: [['legal', '법정 의무교육'], ['job', '직무교육'], ['onboard', '신입 · 온보딩'], ['lead', '리더십']] }],
-      outline: [F.sessions('차시 수', '예: 3차시', 3, 40), F.mins('1차시 길이', '예: 20~30분(짧을수록 이수율이 높아요)', 30), { k: 'refund', label: '고용보험 환급(사업주 훈련)', kind: 'toggle', ex: '예: 환급받는 직무교육이면 켭니다', def: false, later: true }],
+      outline: [F.sessions('차시 수', '예: 3차시', 3, 40), F.mins('1차시 길이', '예: 20~30분(짧을수록 이수율이 높습니다)', 30), { k: 'refund', label: '고용보험 환급(사업주 훈련)', kind: 'toggle', ex: '예: 환급받는 직무교육이면 켭니다', def: false, later: true }],
       setup: [{ k: 'dept', label: '대상 부서', kind: 'text', ex: '예: 전 직원 · 영업본부 · 신입사원', later: true }, { k: 'dur', label: '교육 기간', kind: 'choice', ex: '예: 4주 안에 이수', def: 4, opts: [[1, '1주'], [2, '2주'], [4, '4주'], [8, '8주'], [12, '12주']] }, { k: 'rate', label: '이수 기준(진도)', kind: 'choice', ex: '예: 진도 100%', def: 80, opts: [[60, '60% 이상'], [80, '80% 이상'], [100, '100%(모두 시청)']] }]
     },
     defaults: { cat: 'job', sessions: 3, mins: 30, rate: 80, dur: 4, refund: false, price: 0 },

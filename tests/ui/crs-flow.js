@@ -81,7 +81,7 @@ async function enterFlow(p, C, log) {
 }
 
 /* 흐름 끝까지: 기본 경로(이름만 입력 → 다음 … → 개설하기). 막히면 [AI SAM이 채워 주기]를 누르고 기록 */
-async function runFlow(p, { type, ed, name, shots, tag, content = true, onStep } = {}) {
+async function runFlow(p, { type, ed, name, shots, tag, content = true, onStep, fillAll = false } = {}) {
   const log = [], C = clicker(p, log), steps = [], stuck = [], meas = [], regSeen = new Set(); let contentClicks = 0, created = null;
   const before = await p.evaluate(() => S.classes.map(c => c.id));
   await p.evaluate(() => { window.__cfEv = []; try { ['step', 'create', 'error', 'idle', 'back'].forEach(ev => CF.on(ev, x => __cfEv.push([ev, x && (x.id || x.step || x.name || '')]))); } catch (e) { } });
@@ -97,6 +97,8 @@ async function runFlow(p, { type, ed, name, shots, tag, content = true, onStep }
     /* 1단계: 비어 있는 첫 글 입력칸에 과정 이름 */
     if (i === 0) { const inp = rootLoc(p).locator('input[type=text]:visible, input:not([type]):visible, textarea:visible').first(); if (await inp.count() && !(await inp.inputValue())) { await inp.fill(name); log.push('입력: 이름'); } }
     if (content && sid === 'fill') contentClicks += await addDocContent(p, log);
+    /* v35.2: 확인 화면의 '빈 차시 N개를 AI로 채울까요?'는 기본 끔. fillAll이면 켠다 */
+    if (fillAll && sid === 'open') { const tg = p.locator('#crsFlow [data-cf=fillEmpty]').filter({ visible: true }).first(); if (await tg.count() && !(await tg.isChecked())) { await C.clk(tg, '빈 차시 AI로 채우기'); } }
     const mk = p.locator('#crsFlow [data-cfgo=next], #crsFlow [data-cfgo=create]').filter({ visible: true }).last(); const nx = btnByText(p, NEXT_RE, ROOTSEL.split(',')[0]).last(); let nb = (await mk.count()) ? mk : (await nx.count()) ? nx : btnByText(p, NEXT_RE).last();
     if (!(await nb.count())) { stuck.push(`${sid}: [다음]/[개설하기] 버튼 없음`); break; }
     const label = (await nb.innerText()).trim(); await C.clk(nb, label.slice(0, 10)); await p.waitForTimeout(350);
@@ -138,7 +140,10 @@ const schemaCheck = (p, id) => p.evaluate(([id, KINDS, ITYPES]) => { const c = S
   cu.forEach((it, i) => { if (!it.id || ids.has(it.id)) add('id 중복/없음', i); ids.add(it.id); if (!ITYPES.includes(it.type)) add('type', it.type); if (!it.title) add('title 없음', i); if (it.type !== 'chapter' && !(+it.week >= 1)) add('week 없음', it.type); });
   Object.entries(bad).forEach(([k, v]) => E.push(`항목 ${k} ${v.length}/${cu.length}개(${[...new Set(v)].slice(0, 3).join(',')})`));
   if (c.weekPlan && !Array.isArray(c.weekPlan)) E.push('weekPlan'); (c.weekPlan || []).forEach((w, i) => { if (!w || !w.title) E.push(`weekPlan${i}.title`); });
-  const weeks = new Set(cu.filter(i => i.type !== 'chapter').map(i => +i.week)); const wp = (c.weekPlan || []).length; if (wp && weeks.size < Math.min(wp, 60)) E.push(`차시 ${wp}개 중 항목 있는 차시 ${weeks.size}`);
+  const weeks = new Set(cu.filter(i => i.type !== 'chapter').map(i => +i.week)); const wp = (c.weekPlan || []).length; const fill = (c.crs || {}).fill;
+  /* v35.2: 빈 차시는 확인 화면에서 고른 경우(c.crs.fill)만 AI로 채운다. 끄면 직접 넣은 차시만 항목이 있어야 한다 */
+  if (fill !== false && wp && weeks.size < Math.min(wp, 60)) E.push(`차시 ${wp}개 중 항목 있는 차시 ${weeks.size}`);
+  if (fill === false && c.kind !== 'episode' && weeks.size > 1) E.push(`빈 차시를 묻지 않고 채움(항목 있는 차시 ${weeks.size}개, 직접 넣은 차시는 1개)`);
   return E; }, [id, KINDS, ITYPES]);
 const snapCheck = (p, id) => p.evaluate(id => { const E = []; const c = S.classes.find(x => x.id === id); let s; try { s = lsSnapshot(); } catch (e) { return ['lsSnapshot 오류 ' + e.message]; }
   const x = (s.classes || []).find(y => y.id === id); if (!x) return ['게시본에 과정 없음(status=' + c.status + ')'];
@@ -195,7 +200,7 @@ if (require.main === module) (async () => {
     const { ctx, p } = await openOrg(br, base, tc, { empty, vp, errs });
     try {
       const cf = await cfgCheck(p, CFG_KEY(type, ed)); cf.forEach(x => P.push('cfg: ' + x));
-      const r = await runFlow(p, { type, ed, name: `${type} 점검 과정`, shots, tag: `${type}${ed ? '-' + ed : ''}_${empty ? 'e' : 'f'}_${dev}` });
+      const r = await runFlow(p, { type, ed, name: `${type} 점검 과정`, shots, fillAll: !empty && dev === 'pc', tag: `${type}${ed ? '-' + ed : ''}_${empty ? 'e' : 'f'}_${dev}` });
       if (r.fail) P.push(r.fail);
       else {
         if (!r.created) P.push('개설되지 않음(S.classes 변화 없음) 경로: ' + r.log.join(' › '));
@@ -207,7 +212,7 @@ if (require.main === module) (async () => {
         if (r.created) {
           const sc = await schemaCheck(p, r.created); sc.forEach(x => P.push('스키마 ' + x));
           const sn = await snapCheck(p, r.created); if (Array.isArray(sn)) sn.forEach(x => P.push('게시본 ' + x)); else { sn.E.forEach(x => P.push('게시본 ' + x)); if (!sn.content) W.push(`게시본 콘텐츠 0(항목 ${sn.items}개 제목만)`); }
-          const done = await p.evaluate(() => [...document.querySelectorAll('[data-cfdone]')].filter(e => e.getClientRects().length).map(e => e.dataset.cfdone)); if (done.length < 2 && !/할 일|해 보세요/.test(r.post)) W.push('개설 후 다음 할 일 안내 못 찾음'); else if (done.length > 4) W.push(`개설 후 안내 버튼 ${done.length}개(2~3 권장)`);
+          const done = await p.evaluate(() => [...document.querySelectorAll('[data-cfdone]')].filter(e => e.getClientRects().length).map(e => e.dataset.cfdone)); if (done.length < 2 && !/할 일|해 보세요/.test(r.post)) W.push('개설 후 다음 할 일 안내 못 찾음'); else if (done.filter(k => !['close', 'pv'].includes(k)).length > 3) W.push(`개설 후 안내 버튼 ${done.length}개(2~3 권장)`);
           if (shots) await p.screenshot({ path: path.join(shots, `${type}${ed ? '-' + ed : ''}_${empty ? 'e' : 'f'}_${dev}_9done.png`) });
           if (dev === 'pc') { const lc = await learnerCheck(ctx, p, base, r.created, errs); if (!lc.name) P.push('학습자 화면에 과정 이름 없음'); if (!lc.first) P.push('학습자 화면에 첫 차시 없음'); }
         }
