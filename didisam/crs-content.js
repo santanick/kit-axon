@@ -90,7 +90,7 @@
   const limText = () => `영상 ${mb(LIMIT.video).replace('.0', '')} · 음성 ${mb(LIMIT.audio)} · 문서 ${mb(LIMIT.file)}까지`;
   const ACCEPT0 = 'video/*,audio/*,image/*,.pdf,.ppt,.pptx,.doc,.docx,.hwp,.hwpx,.xls,.xlsx';
   const accept = () => { try { if (HPMx() && HPM.accept) return HPM.accept('course') || ACCEPT0; } catch (e) { } return ACCEPT0; };
-  const mb = n => n >= 1024 ** 3 ? (n / 1024 ** 3).toFixed(1) + 'GB' : (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + 'MB';
+  const mb = n => n >= 1024 ** 3 ? (n / 1024 ** 3).toFixed(1) + 'GB' : n < 102400 ? Math.max(1, Math.round(n / 1024)) + 'KB' : (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + 'MB';
 
   /* ── 창 상태 ── */
   let X = null; /* { kind, ctx, step, topic, mins, n, lv, fmt, res, by, busy, file, url, pick, done } */
@@ -233,11 +233,15 @@
   async function upItem() {
     const f = X.file; const fn = upFn(); let meta = {};
     if (fn) { X.busy = true; draw(); try { meta = (await fn(f.raw, { kind: f.k, course: X.ctx.course && X.ctx.course.id, onProgress: p => { const b = $1('#ctUpP'); if (b) b.textContent = Math.round(p * 100) + '%'; } })) || {}; } catch (e) { X.busy = false; X.upErr = `올리지 못했습니다: ${e.message || e}`; draw(); return null; } X.busy = false; }
-    const name = meta.name || f.name; const url = meta.url || (meta.fileId ? 'media:' + meta.fileId : 'upload:' + name);
+    return upMake(f, meta, X.upTitle);
+  }
+  /* 올린 파일(f: {name,size,mime,k,dur,bid}) + 저장 결과(meta) → 과정 항목. 영상 · 자료 S.lib에도 기록(하나 올리기 · 여러 개 올리기 공용) */
+  function upMake(f, meta, title) {
+    meta = meta || {}; const name = meta.name || f.name; const url = meta.url || (meta.fileId ? 'media:' + meta.fileId : 'upload:' + name);
     const isV = f.k === 'video' || f.k === 'audio';
     const lib = { id: nid('l'), name: name.slice(0, 80), kind: f.k === 'video' ? '동영상' : f.k === 'audio' ? '음성' : f.k === 'image' ? '사진' : '문서', size: mb(f.size), bytes: f.size, used: 0, cls: [], at: today(), views: 0, drop: 0, conv: isV ? '대기' : '', fileId: meta.fileId || '', url: meta.url || '' };
     if (f.dur) lib.dur = f.dur; if (Array.isArray(S.lib)) S.lib.unshift(lib);
-    return { type: f.k === 'audio' ? 'audio' : isV ? 'video' : 'doc', src: 'upload', title: X.upTitle || name, file: name.slice(0, 80), url, fileId: meta.fileId || '', mime: f.mime, size: f.size, lib: lib.id, dur: f.dur || 0, prev: f.bid };
+    return { type: f.k === 'audio' ? 'audio' : isV ? 'video' : 'doc', src: 'upload', title: title || name, file: name.slice(0, 80), url, fileId: meta.fileId || '', mime: f.mime, size: f.size, lib: lib.id, dur: f.dur || 0, prev: f.bid };
   }
 
   /* 라이브러리에서 */
@@ -401,7 +405,8 @@
     if (F.open == null || !SS.some(s => s.w === F.open)) { const e1 = SS.find(s => !has(s.w).length); F.open = e1 ? e1.w : (F.open === 0 ? 0 : SS[0].w); }
     const filled = SS.filter(s => has(s.w).length).length; const inFlow = !!el.closest('#crsFlow');
     let lgl = ''; try { if (el.closest('#crsFlow') && W.CF && typeof CF.legalBox === 'function') lgl = CF.legalBox(d); } catch (e) { }
-    el.innerHTML = `${lgl}<div class="ctf"><div class="ctf-top"><div class="ctf-sum"><b>${filled} / ${SS.length}</b><span>${U} 채움</span><span class="ctf-later">나중에 해도 됩니다</span></div>${inFlow && !W.CT_FILLBTN ? '' : `<button type="button" class="ct-btn ct-ai" data-act="ctf-all" ${filled === SS.length ? 'disabled' : ''}>`}${inFlow && !W.CT_FILLBTN ? '' : `${svg('spark', 18)} AI SAM이 빈 ${U} 모두 채우기</button>`}</div>
+    const bulk = SS.length > 1 ? `<div class="ctf-bulk" role="group" aria-label="모든 ${E(U)}에 한 번에 넣기"><p class="ctf-bq"><b>모든 ${E(U)}에 한 번에 넣기</b><small>${E(U)}마다 같은 구성(영상 하나 + 퀴즈 하나 등)이면 여기서 한 번에 넣습니다.</small></p><div class="ctf-bb"><button type="button" class="ct-btn" data-act="ctf-bulkv">${svg('upload', 18)} 영상 여러 개 한 번에 올리기</button><button type="button" class="ct-btn" data-act="ctf-same" data-k="quiz">${svg('quiz', 18)} 모든 ${E(U)}에 퀴즈 넣기</button><button type="button" class="ct-btn" data-act="ctf-same" data-k="doc">${svg('doc', 18)} 모든 ${E(U)}에 교안 넣기</button></div></div>` : '';
+    el.innerHTML = `${lgl}<div class="ctf">${bulk}<div class="ctf-top"><div class="ctf-sum"><b>${filled} / ${SS.length}</b><span>${U} 채움</span><span class="ctf-later">나중에 해도 됩니다</span></div>${inFlow && !W.CT_FILLBTN ? '' : `<button type="button" class="ct-btn ct-ai" data-act="ctf-all" ${filled === SS.length ? 'disabled' : ''}>`}${inFlow && !W.CT_FILLBTN ? '' : `${svg('spark', 18)} AI SAM이 빈 ${U} 모두 채우기</button>`}</div>
       ${F.undo && !(F.undo.w && SS.some(s => s.w === F.undo.w && F.open === s.w)) ? undoBand() : ''}
       <ol class="ctf-list">${SS.map(s => { const its = has(s.w); const on = F.open === s.w; return `<li class="ctf-s ${on ? 'on' : ''} ${its.length ? 'has' : ''}" data-w="${s.w}"><button type="button" class="ctf-sh" data-act="ctf-open" data-v="${s.w}" aria-expanded="${on}"><span class="ctf-n">${its.length ? svg('check', 18) : s.w}</span><span class="ctf-tt"><b>${s.w}${U === '주차' ? '주차' : U} · ${E(s.title)}</b><small>${its.length ? its.map(x => E(TYPE_LABEL(x))).join(' · ') : '비어 있음'}</small></span>${svg('chev', 20)}</button>
         ${on ? `<div class="ctf-body">${F.undo && F.undo.w === s.w ? undoBand() : ''}${its.length ? `<ul class="ctf-its">${its.map(x => `<li><span class="ct-kic k-${E(icOf(x) === 'audio' ? 'audio' : TYPE_KIND(x))}">${svg(icOf(x), 18)}</span><span class="ct-lt"><b>${E(x.title)}</b><small>${E(TYPE_LABEL(x))}</small></span><button type="button" class="ct-btn sm" data-act="ctf-view" data-v="${E(x.id)}">보기</button><button type="button" class="ct-icb sm" data-act="ctf-del" data-v="${E(x.id)}" aria-label="「${E(x.title)}」 빼기">${svg('trash', 18)}</button></li>`).join('')}</ul>` : ''}
@@ -431,6 +436,60 @@
       if (/고사|최종 평가|시험/.test(x.title)) { const it = { id: nid('it'), type: 'exam', title: `${sh} 시험`, week: x.w, qs: AI.questions(cn || sh, 10, '보통'), time: 60, retake: 1 }; L.push(it); ids.push(it.id); s++; return; }
       const a = { id: nid('it'), type: 'doc', title: `${sh} 교안`, week: x.w, topic: tp, fmt: 'hand', doc: AI.material(tp, { name: cn }) }; const b = { id: nid('it'), type: 'quiz', title: `${sh} 확인 퀴즈`, week: x.w, qs: AI.questions(tp, 3, '보통', ['mc', 'ox', 'mc']), time: 10, retake: 3 }; L.push(a, b); ids.push(a.id, b.id); s++; });
     try { if (S.ai) S.ai.usage = (S.ai.usage || 0) + (s ? 1 : 0); } catch (e) { } return s ? { s, ids } : 0; }
+
+  /* ═════ 모든 차시에 한 번에 넣기(F4) ═════
+     ① 영상 여러 개 한 번에 올리기: 파일 이름 순(숫자는 숫자 순: lec2 < lec10)으로 영상이 없는 차시에 차례로 넣는다. 넣기 전에 '몇 차시 ← 어떤 파일'을 보여 준다.
+     ② 모든 차시에 퀴즈 · 교안 넣기: 그 종류가 없는 차시마다 차시 제목을 주제로 만든다(Claude 연결 시 Claude, 아니면 규칙 생성). */
+  let BX = null; /* { k:'v'|'quiz'|'doc', files:[], n, busy, at, tot } */
+  const natCmp = (a, b) => String(a).localeCompare(String(b), 'ko', { numeric: true, sensitivity: 'base' });
+  const genericT = t2 => /^\s*\d+\s*(차시|주차|주|회차)?\s*(수업)?\s*$/.test(String(t2 || ''));
+  const bxTargets = (d, k) => { const IT = itemsOf(d); const want = k === 'v' ? (x => x.type === 'video') : k === 'quiz' ? (x => x.type === 'quiz' || x.type === 'exam') : (x => x.type === 'doc'); return sessOf(d).filter(s => !IT.some(x => +x.week === s.w && want(x))); };
+  const bxTopic = (d, s) => { const cn = cl(d.name || d.topic || ''); return (genericT(s.title) ? topicOf(cn) : topicOf(s.title)) || cn || s.title; };
+  function bxOpen(k) { if (!F || !F.d) return; X = null; const tw = document.getElementById('toasts'); if (tw) tw.innerHTML = ''; /* 앞 알림이 창 제목을 가리지 않게 */ mount(); BX = { k, files: [], n: 5, busy: false, at: 0, tot: 0 }; bxDraw(); }
+  function bxClose() { BX = null; const w = $1('#ctSheet'); if (w) w.remove(); }
+  function bxDraw() {
+    const w = $1('#ctSheet'); if (!w || !BX || !F) return; const d = F.d; const U = unit(); const TG = bxTargets(d, BX.k); const nm = { v: '영상 여러 개 한 번에 올리기', quiz: `모든 ${U}에 퀴즈 넣기`, doc: `모든 ${U}에 교안 넣기` }[BX.k];
+    $1('#ctTitle').textContent = nm; $1('#ctWhere').textContent = `${jo(cl(d.name || '') ? `「${cl(d.name)}」` : `이 ${t('cls')}`, '의')} ${U} ${sessOf(d).length}개`.replace('의의', '의'); $1('#ctSteps').innerHTML = ''; w.querySelector('[data-act=ct-back]').style.visibility = 'hidden';
+    const nowE = $1('#ctNow'); let now = '', body = '', foot2 = '';
+    if (BX.busy) { now = ''; body = busyBox(`${BX.k === 'v' ? '올리는 중' : '만드는 중'}… ${BX.at} / ${BX.tot}`); }
+    else if (!TG.length) { body = `<div class="ct-ok">${svg('check', 40)}<b>모든 ${E(U)}에 이미 ${BX.k === 'v' ? '영상이' : BX.k === 'quiz' ? '퀴즈가' : '교안이'} 있습니다</b><span>더 넣으려면 ${E(U)}를 펼쳐 하나씩 넣으십시오.</span></div>`; foot2 = foot(pri('닫기', 'ctb-x')); }
+    else if (BX.k === 'v' && !BX.files.length) {
+      now = '올릴 영상 파일을 한꺼번에 고르십시오. 여러 개를 고를 수 있습니다.';
+      body = `<label class="ct-drop" id="ctDrop">${svg('upload', 40)}<b>영상 파일 여러 개 고르기</b><span>또는 이곳에 끌어다 놓기</span><input type="file" id="ctFiles" multiple accept="video/*,audio/*,.mp4,.webm,.m4v,.mov,.mp3,.m4a"></label><p class="ct-ex">예: 1강.mp4 · 2강.mp4 … 처럼 파일 이름에 번호가 있으면 그 순서대로 ${E(U)}에 들어갑니다(파일 이름 순).</p><p class="ct-mini">영상이 없는 ${E(U)} ${TG.length}곳에 차례로 넣습니다. 파일 하나에 ${E(limText())} 올릴 수 있습니다.</p>`;
+    } else if (BX.k === 'v') {
+      const L = BX.files; const ok = L.filter(f => !f.err); const pairs = ok.slice(0, TG.length).map((f, i) => [TG[i], f]); const extra = ok.length - pairs.length;
+      now = `순서가 맞는지 확인하고 [영상 ${pairs.length}개 넣기]를 누르십시오.`;
+      body = `<ol class="ctb-map">${pairs.map(([s, f]) => `<li><b>${s.w}${E(U)}</b><span class="ctb-t">${E(s.title)}</span><span class="ctb-f">${svg('upload', 16)} ${E(f.name)} <small>${E(mb(f.size))}</small></span></li>`).join('')}</ol>${extra > 0 ? `<p class="ct-err" role="status">남는 파일 ${extra}개(${E(ok.slice(TG.length).map(f => f.name).slice(0, 3).join(', '))}${extra > 3 ? ' …' : ''})는 넣을 ${E(U)}가 없어 넣지 않습니다. ${E(U)}를 늘리려면 [이전]에서 ${E(U)} 목록을 고치십시오.</p>` : ''}${L.filter(f => f.err).map(f => `<p class="ct-err" role="alert">${E(f.name)}: ${E(f.err)}</p>`).join('')}<p class="ct-mini">제목은 ${E(U)} 제목을 씁니다. 순서가 틀리면 파일 이름 앞에 번호(01, 02 …)를 붙여 다시 고르십시오.</p><div class="ct-row">${sec('다른 파일 고르기', 'ctb-again')}</div>`;
+      foot2 = foot(pri(`${svg('check', 18)} 영상 ${pairs.length}개 넣기`, 'ctb-go', !pairs.length));
+    } else {
+      now = `${BX.k === 'quiz' ? '퀴즈' : '교안'}가 없는 ${U} ${TG.length}곳에 ${U} 제목을 주제로 만들어 넣습니다.`;
+      body = `${BX.k === 'quiz' ? `<div class="ct-f"><span class="ct-l">${E(U)}마다 문제 수</span><div class="ct-chips" role="radiogroup" aria-label="문제 수">${[[3, '3문제'], [5, '5문제'], [10, '10문제']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${BX.n === v}" class="ct-chip ${BX.n === v ? 'on' : ''}" data-act="ctb-n" data-v="${v}">${l}</button>`).join('')}</div></div>` : ''}<ol class="ctb-map">${TG.map(s => `<li><b>${s.w}${E(U)}</b><span class="ctb-t">${E(s.title)}</span><span class="ctb-f">${svg(BX.k, 16)} ${E(bxTopic(d, s))} ${BX.k === 'quiz' ? '확인 퀴즈' : '교안'}</span></li>`).join('')}</ol><p class="ct-mini">${claudeOn() ? 'Claude로 만듭니다.' : '기본 AI(브라우저 데모)로 만든 초안입니다.'} 넣은 뒤 ${E(U)}를 펼쳐 [보기]로 확인하고 고칠 수 있습니다.</p>`;
+      foot2 = foot(pri(`${svg('check', 18)} ${TG.length}개 ${E(U)}에 ${BX.k === 'quiz' ? '퀴즈' : '교안'} 넣기`, 'ctb-go'));
+    }
+    nowE.innerHTML = now ? `<b>지금 할 일</b> ${E(now)}` : ''; nowE.hidden = !now; $1('#ctBody').innerHTML = body; $1('#ctFoot').innerHTML = foot2;
+    const dz = $1('#ctDrop'); if (dz) { ['dragover', 'dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); })); dz.addEventListener('dragleave', () => dz.classList.remove('over')); dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); bxTake([...(e.dataTransfer.files || [])]); }); }
+  }
+  function bxTake(list) { if (!BX) return; BX.files = [...list].sort((a, b) => natCmp(a.name, b.name)).map(f => { let err = ''; const k = FKIND(f); if (k !== 'video' && k !== 'audio') err = '영상 · 음성 파일이 아닙니다.'; else if (HPMx() && typeof HPM.check === 'function') { try { const c = HPM.check(f); if (c && c.ok === false) err = c.msg || '올릴 수 없는 파일입니다.'; } catch (e) { } } else if (f.size > LIMIT[k]) err = `${mb(LIMIT[k])}까지 올릴 수 있습니다.`; const x = { raw: f, name: String(f.name).slice(0, 120), size: f.size, mime: f.type || '', k, err, bid: nid('b'), dur: 0 }; if (!err) { try { BLOBS[x.bid] = URL.createObjectURL(f); const v = document.createElement(k === 'audio' ? 'audio' : 'video'); v.preload = 'metadata'; v.onloadedmetadata = () => { if (Number.isFinite(v.duration)) x.dur = Math.round(v.duration); }; v.src = BLOBS[x.bid]; } catch (e) { } } return x; }); bxDraw(); } /* 영상 길이(학습자 화면 '총 영상 시간')는 고를 때 미리 읽어 둔다 */
+  async function bxGo() {
+    if (!BX || BX.busy || !F) return; const d = F.d; const U = unit(); const TG = bxTargets(d, BX.k); const L = itemsOf(d); const ids = [];
+    if (BX.k === 'v') { const pairs = BX.files.filter(f => !f.err).slice(0, TG.length).map((f, i) => [TG[i], f]); if (!pairs.length) return; BX.busy = true; BX.tot = pairs.length; BX.at = 0; bxDraw(); const fn = upFn(); let fail = 0;
+      for (const [s, f] of pairs) { BX.at++; bxDraw(); let meta = {}; if (fn) { try { meta = (await fn(f.raw, { kind: f.k, onProgress: () => { } })) || {}; } catch (e) { fail++; continue; } }
+        const it = upMake(f, meta, genericT(s.title) ? String(f.name).replace(/\.[^.]+$/, '').slice(0, 60) : s.title); it.id = nid('it'); it.week = s.w; settle(it, null); L.push(it); ids.push(it.id); }
+      BX.busy = false; if (fail) say(`영상 ${fail}개는 올리지 못했습니다. 그 ${jo(U, '은')} 하나씩 다시 올려 주십시오.`, 'warn'); }
+    else { BX.busy = true; BX.tot = TG.length; BX.at = 0; bxDraw();
+      for (const s of TG) { BX.at++; bxDraw(); const tp = bxTopic(d, s); let it;
+        try { if (BX.k === 'quiz') { const r = await GEN.quiz(tp, { n: BX.n, lv: '보통' }); const Q = (r.v || []).map((q, i) => ({ ...q, q: `${i + 1}. ${String(q.q).replace(/^\d+\.\s*/, '')}` })); const per = Math.floor(100 / Math.max(1, Q.length)); Q.forEach((q, i) => { q.pts = per + (i < 100 - per * Q.length ? 1 : 0); }); it = { type: 'quiz', title: `${tp} 확인 퀴즈`, qs: Q, time: 10, retake: 3 }; }
+          else { const r = await GEN.doc(tp, { cname: cl(d.name || ''), target: d.target || '' }); it = { type: 'doc', title: `${tp} 교안`, topic: tp, fmt: 'hand', doc: r.v }; } } catch (e) { continue; }
+        it.id = nid('it'); it.week = s.w; L.push(it); ids.push(it.id); }
+      BX.busy = false; try { if (S.ai && ids.length) S.ai.usage = (S.ai.usage || 0) + 1; } catch (e) { } }
+    if (!BX) return; const what = BX.k === 'v' ? '영상' : BX.k === 'quiz' ? '퀴즈' : '교안'; bxClose(); if (!ids.length) { refill(); return; }
+    L.sort((a, b) => (+a.week || 0) - (+b.week || 0)); /* 같은 차시 안에서는 넣은 순서 유지(sort는 안정 정렬) */
+    clearTimeout(F.ut); const d0 = d; F.undo = { msg: `${what} ${ids.length}개를 ${U} 순서대로 넣었습니다.`, run: () => { d0.curriculum = itemsOf(d0).filter(x => !ids.includes(x.id)); } }; F.open = 0;
+    saveDraft(); refill(); say(`${what} ${ids.length}개를 ${U}마다 넣었습니다.`, 'ok'); try { W.CF && CF.emit && CF.emit('ct-add', { bulk: what, n: ids.length }); } catch (e) { } }
+  ACT['ctf-bulkv'] = () => bxOpen('v'); ACT['ctf-same'] = el => bxOpen(el.dataset.k === 'doc' ? 'doc' : 'quiz');
+  ACT['ctb-go'] = () => { bxGo(); }; ACT['ctb-x'] = () => bxClose(); ACT['ctb-n'] = el => { if (BX) { BX.n = +el.dataset.v || 5; bxDraw(); } };
+  ACT['ctb-again'] = () => { if (!BX) return; BX.files = []; bxDraw(); setTimeout(() => { const f = $1('#ctFiles'); f && f.click(); }, 30); };
+  document.addEventListener('change', e => { const el = e.target; if (el && el.id === 'ctFiles' && el.files && el.files.length && BX) bxTake([...el.files]); });
 
   /* 넣은 콘텐츠 보기(읽기 전용) */
   function preview(it, c) { const k = TYPE_KIND(it);
@@ -538,7 +597,7 @@ body:has(#slSheet) .ct-wrap{z-index:97}
 .ct-kinds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .ct-kind{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;min-height:156px;padding:14px;border-radius:14px;border:1px solid #EAEBEB;background:#fff;font:inherit;color:#2A2B2B;cursor:pointer;position:relative}.ct-kind:hover,.ct-kind:focus-visible{border-color:#5C74F6;box-shadow:0 0 0 3px #EAEDFF}
 .ct-kind b{font-size:16px;line-height:1.35}.ct-kind small{font-size:14px;color:#6C6C6C;line-height:1.45}.ct-kind em{margin-top:auto;font-style:normal;font-size:13px;color:#808181}
-.ctf{font-size:16px;color:#2A2B2B}.ctf-top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}.ctf-sum{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.ctf-sum b{font-size:22px}.ctf-later{font-size:14px;color:#009116;background:#E7F8E8;border-radius:999px;padding:3px 10px;margin-left:4px}
+.ctf{font-size:16px;color:#2A2B2B}.ctf-bulk{border:1px solid #D5DBFF;background:#F5F7FF;border-radius:14px;padding:12px 14px;margin:0 0 14px}.ctf-bq{margin:0 0 10px;display:flex;flex-direction:column;gap:2px}.ctf-bq b{font-size:16px}.ctf-bq small{font-size:14px;color:#5B5C5C}.ctf-bb{display:flex;flex-wrap:wrap;gap:8px}.ctf-bb .ct-btn{background:#fff}.ctb-map{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px}.ctb-map li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline;background:#F6F7F7;border-radius:10px;padding:8px 12px}.ctb-map b{grid-row:span 2;color:#3B55E6;font-size:15px;min-width:3.6em}.ctb-t{font-weight:600;overflow-wrap:anywhere}.ctb-f{font-size:14px;color:#5B5C5C;display:flex;gap:6px;align-items:center;overflow-wrap:anywhere;min-width:0}.ctb-f small{color:#8A8B8B}.ctf-top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}.ctf-sum{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.ctf-sum b{font-size:22px}.ctf-later{font-size:14px;color:#009116;background:#E7F8E8;border-radius:999px;padding:3px 10px;margin-left:4px}
 .ctf-undo{position:static;display:flex;align-items:center;gap:10px;justify-content:space-between;background:#2A2B2B;color:#fff;border-radius:12px;padding:6px 6px 6px 14px;margin:0 0 10px;flex-wrap:wrap}.ctf-undo .ct-btn{background:#fff}
 .ctf-list{list-style:none;padding:0;margin:0;display:grid;gap:8px}.ctf-s{border-radius:14px;background:#F6F7F7;overflow:hidden}.ctf-s.on{background:#fff;border:1px solid #C8C9C9;overflow:visible}
 .ctf-s.on>.ctf-body{padding-top:10px}.ctf-s.on>.ctf-sh{position:sticky;top:0;z-index:2;background:#fff;border-radius:14px 14px 0 0;box-shadow:0 1px 0 #EAEBEB}
@@ -549,6 +608,7 @@ body:has(#slSheet) .ct-wrap{z-index:97}
 .ctf-tt{flex:1;min-width:0}.ctf-tt b{display:block;font-size:16px;line-height:1.4;overflow-wrap:anywhere}.ctf-tt small{display:block;color:#6C6C6C;font-size:14px}
 .ctf-body{padding:0 14px 14px}.ctf-q{font-weight:700;margin:10px 0 10px}.ctf-its{list-style:none;padding:0;margin:0;display:grid;gap:6px}.ctf-its li{display:flex;align-items:center;gap:10px;background:#F6F7F7;border-radius:12px;padding:6px 6px 6px 8px}
 @media (max-width:860px){.ct-kinds{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.ctf-bb .ct-btn{flex:1 1 100%;justify-content:flex-start}}
 @media (max-width:600px){.ct-wrap{padding:0;align-items:flex-end}.ct-sh{border-radius:16px 16px 0 0;max-height:94dvh;width:100%}.ct-bd{padding:12px 16px 16px}.ct-now{margin:10px 16px 0}.ct-ft{padding:10px 16px calc(10px + env(safe-area-inset-bottom))}.ct-pri{flex:1;min-width:0}.ct-fl:empty{display:none}
  .ct-a4{padding:20px 18px;font-size:14px}.ct-a4 h1{font-size:20px}.ct-two{grid-template-columns:1fr}.ct-kind{min-height:140px;padding:12px}.ct-steps{margin:6px 12px 0}.ct-steps li{font-size:13px}.ct-thumbs{grid-template-columns:repeat(3,minmax(0,1fr))}.ctf-top .ct-ai{width:100%}}
 `;
