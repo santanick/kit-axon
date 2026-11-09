@@ -133,6 +133,38 @@
   /* 개설할 때: 영상 진도만이면 수료 항목(criteria.items, assess2 a2Crit)을 강의 영상으로 고르게 나눈다 — 학습자 화면은 게시본 crit으로 같은 규칙을 쓴다 */
   const critApply = (c, d) => { if (!critOn() || !c || !d) return; const cr = c.criteria = c.criteria || { ...defs().criteria }; if (+d.rate > 0) cr.threshold = +d.rate; cr.by = d.critBy === 'video' ? 'video' : 'all';
     if (cr.by === 'video') { const V = (c.curriculum || []).filter(i => i.type === 'video'); Object.assign(cr, { video: 100, exam: 0, assign: 0 }); if (V.length) { cr.items = V.map(i => ({ id: i.id, w: 0 })); evenW(cr.items); } } };
+  /* ───── F5: '강의 영상 진도만'(criteria.by === 'video') 과정은 영상을 더 넣거나 빼도 수료 항목이 따라간다 ─────
+     어디서 넣든(흐름 · 과정 상세 편집기 · 콘텐츠 라이브러리 · AI SAM) 공통 지점 세 곳에서 맞춘다: 저장(Store.set) · 수료 항목 읽기(a2Crit, 관리 화면 · 학습자 게시본 lsSnapshot) .
+     고르게 나눈 비중이면 다시 고르게, 손으로 고친 비중이면 남은 영상의 비율을 지키고 새 영상은 평균 비중으로 넣어 합 100에 맞춘다.
+     관리자가 수료 항목을 직접 고르면(assess2 a2-crit-on · all · clear) by='manual'로 바꿔 자동 맞춤을 멈춘다. */
+  const vidSync = c => { const cr = c && c.criteria; if (!cr || cr.by !== 'video') return false; const V = (c.curriculum || []).filter(i => i && i.type === 'video').map(i => i.id);
+    const K = (cr.items || []).filter(k => k && V.includes(k.id)); const sum = K.reduce((a, k) => a + (+k.w || 0), 0); const same = K.length === V.length && (cr.items || []).length === V.length;
+    if (same && (sum === 100 || !V.length)) return false;
+    const W0 = K.map(k => +k.w || 0); const even = !W0.length || Math.max(...W0) - Math.min(...W0) <= 1;
+    const N = V.map(id => { const k = K.find(x => x.id === id); return { id, w: k ? +k.w || 0 : 0, nw: !k }; });
+    if (even || !sum) { evenW(N); } else { const avg = sum / K.length; N.forEach(x => { if (x.nw) x.w = avg; }); const tot = N.reduce((a, x) => a + x.w, 0) || 1; const R = N.map(x => x.w / tot * 100); N.forEach((x, i) => { x.w = Math.floor(R[i]); }); let rest = 100 - N.reduce((a, x) => a + x.w, 0); R.map((r, i) => [r - Math.floor(r), i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (rest > 0) { N[i].w++; rest--; } }); }
+    cr.items = N.map(x => ({ id: x.id, w: x.w })); return true; };
+  const vidSyncAll = () => { try { (S && Array.isArray(S.classes) ? S.classes : []).forEach(vidSync); } catch (e) { } };
+  window.CF_VIDSYNC = vidSync;
+  if (typeof a2Crit === 'function') { const base = a2Crit; a2Crit = function (c) { try { vidSync(c); } catch (e) { } return base.apply(this, arguments); }; }
+  if (typeof Store === 'object' && Store && typeof Store.set === 'function') { const base = Store.set; Store.set = function (v) { try { if (v && v === S) vidSyncAll(); } catch (e) { } return base.apply(this, arguments); }; }
+  if (typeof ACT === 'object') ['a2-crit-on', 'a2-crit-all', 'a2-crit-clear'].forEach(k => { const base = ACT[k]; if (typeof base !== 'function') return; ACT[k] = (el, ...r) => { try { const c = C((el.dataset || {}).c || (el.dataset || {}).v); if (c && c.criteria && c.criteria.by === 'video') c.criteria.by = 'manual'; } catch (e) { } return base(el, ...r); }; });
+  /* ───── F5: 수강 설정 질문이 4개를 넘으면 꼭 정할 것 3개만 위에, 나머지는 '더 설정하기(나중에 해도 됩니다)'에 접고 지금 값을 한 줄로 보여 준다 ─────
+     위에 둘 순서: 수강료(유료 여부) → 수강 기간 → 무엇으로 수료하나요 → 수료 기준 → 그 밖. 꼭 적어야 하는 칸(req)과 오류가 난 칸은 접지 않는다. 접힘 상태는 F.more로 기억한다. */
+  const SET_TOP = ['paid', 'price', 'days', 'dur', 'critBy', 'rate', 'simsa'];
+  const valTxt = (f, d) => { const v = d[f.k]; if (f.kind === 'choice') { const o = (f.opts || []).find(([ov]) => String(ov) === String(v)); return o ? o[1] : '정하지 않음'; }
+    if (f.kind === 'num') { const n = +v || 0; if (!n) return f.k === 'cap' ? '제한 없음' : f.k === 'price' ? '무료' : '0'; return `${n.toLocaleString()}${f.unit || ''}`; }
+    if (f.kind === 'date') return v ? String(v) : (f.k === 'start' ? '오늘' : '정하지 않음'); if (f.kind === 'toggle') return v ? '예' : '아니요'; return v ? String(v).slice(0, 20) : '나중에'; };
+  const setupBlock = (d, fallback, CA) => { const A = askOf('setup'); const L0 = (A || fallback).concat(CA || []); L0.forEach(f => { if (f.def != null && d[f.k] === undefined) d[f.k] = Array.isArray(f.def) ? f.def.slice() : f.def; });
+    const req = required(); const L = L0.filter(f => shown(f, d)).map(f => ({ ...f, req: f.req != null ? f.req : req.includes(f.k) && !f.later }));
+    const dec = L.filter(f => !(f.k === 'price' && L.some(x => x.k === 'paid'))); /* 유료일 때 나오는 금액 칸은 '수강료' 결정 하나로 센다 */
+    if (dec.length <= 4) return L.map(f => ui.field(f, d)).join('');
+    const rank = f => { const i = SET_TOP.indexOf(f.k); return i < 0 ? 99 : i; }; const top = new Set(); [...dec].sort((a, b) => rank(a) - rank(b)).slice(0, 3).forEach(f => top.add(f.k)); if (top.has('paid')) top.add('price');
+    L.forEach(f => { if (f.req || (F && F.bad && F.bad[f.k])) top.add(f.k); });
+    const T1 = L.filter(f => top.has(f.k)); const T2 = L.filter(f => !top.has(f.k)); if (!T2.length) return L.map(f => ui.field(f, d)).join('');
+    const open = !!(F && F.more) || T2.some(f => F && F.bad && F.bad[f.k]);
+    return T1.map(f => ui.field(f, d)).join('') + `<details class="cf-more" id="cfMore"${open ? ' open' : ''}><summary><span class="cf-more-h"><b>더 설정하기</b> <span class="cf-later">나중에 해도 됩니다</span></span><span class="cf-more-s">지금 값: ${T2.map(f => `${esc(String(f.label).replace(/\(.*?\)/g, '').trim())} ${esc(valTxt(f, d))}`).join(' · ')}</span></summary><div class="cf-more-b">${T2.map(f => ui.field({ ...f, later: false }, d)).join('')}</div></details>`; };
+  document.addEventListener('toggle', e => { const t = e.target; if (t && t.id === 'cfMore' && F) F.more = !!t.open; }, true);
   /* ───── 이미 만든 과정을 복사해 시작(F4): 차시 목록 · 콘텐츠 · 수강 설정을 가져온다. 수강생 · 진도는 가져오지 않는다 ───── */
   const copySrc = () => (typeof S !== 'undefined' && S && Array.isArray(S.classes) ? S.classes : []).filter(c => c && c.kind !== 'pack' && c.kind !== 'episode' && (c.curriculum || []).length);
   const copyLink = () => { if (!copySrc().length) return ''; return `<p class="cf-adv cf-copyl">이미 만든 ${esc(josa(T('cls'), '과'))} 비슷하면 <button type="button" class="linkb" data-cfcopy="pick">${esc(T('cls'))} 복사해서 시작하기</button></p>`; };
@@ -171,12 +203,13 @@
     { id: 'setup', title: () => '수강 설정', now: () => `${josa(T('fee'), '과')} 수강 기간, 공개 범위를 정해 주세요.`,
       render(el, d) {
         const D = defs(); if (d.paid == null && !askOf('setup')) d.paid = (+d.price || 0) > 0; if (d.days == null) d.days = D.days; if (d.open == null) d.open = '전체';
-        el.innerHTML = askBlock('setup', d, [
+        const CA = critAsk(d);
+        el.innerHTML = setupBlock(d, [
           { k: 'paid', label: T('fee'), kind: 'choice', opts: [[false, '무료', '누구나 바로 신청합니다'], [true, '유료', '금액을 정합니다']] },
           { k: 'price', label: `${T('fee')}(원)`, kind: 'num', min: 0, max: 100000000, unit: '원', ex: '150000 (15만 원)', show: x => x.paid === true || x.paid === 'true' },
           { k: 'days', label: '수강 기간', kind: 'choice', opts: [[30, '30일'], [60, '60일'], [90, '90일'], [180, '180일']], hint: '신청한 날부터 이 기간 동안 들을 수 있습니다.' },
-          { k: 'open', label: '누구에게 보이나요', kind: 'choice', opts: [['전체', '모두에게 공개', '홈페이지에 바로 보입니다'], ['지정 회원', '정한 사람만', '초대한 사람만 듣습니다'], ['비공개', '아직 숨겨 두기', '준비가 끝나면 공개합니다']] }]) +
-          (critAsk(d).length ? critAsk(d).map(f => ui.field(f, d)).join('') + ui.note(`시험 점수 · 과제처럼 더 자세한 ${T('done')} 기준은 만든 뒤 설정 탭에서 바꿀 수 있습니다.`)
+          { k: 'open', label: '누구에게 보이나요', kind: 'choice', opts: [['전체', '모두에게 공개', '홈페이지에 바로 보입니다'], ['지정 회원', '정한 사람만', '초대한 사람만 듣습니다'], ['비공개', '아직 숨겨 두기', '준비가 끝나면 공개합니다']] }], CA) +
+          (CA.length ? ui.note(`시험 점수 · 과제처럼 더 자세한 ${T('done')} 기준은 만든 뒤 설정 탭에서 바꿀 수 있습니다.`)
             : ui.note(`${T('done')} 기준은 이 ${josa(T('cls'), '에')} 맞는 기본값으로 정해 둡니다. 만든 뒤 설정 탭에서 바꿀 수 있습니다.`)) +
           (['adult', 'k12', 'lifelong'].includes(S.org.type) ? `<p class="cf-adv">회차 · 요일반 · 구독처럼 세부 운영이 필요하면 <button type="button" class="linkb" data-act="cls-new-adv">자세한 설정으로 만들기</button></p>` : '');
       },

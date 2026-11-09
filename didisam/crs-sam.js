@@ -253,7 +253,7 @@
       g.steps = [
         { crs: 'basic', t: '① 무엇을 · 누구에게', d: () => `${T('cls')} 이름과 대상만 정합니다. 예: "${ex()}". 모르면 [AI SAM에게 맡기기]를 누르세요.`, go: 'class', ask: () => `${ex()} ${T('cls')} 만들어줘`, done: { inc: 'crs_basic' } },
         { crs: 'outline', t: '② 차시 목록', d: 'AI SAM이 만든 차시 제목을 읽어 보고, 고칠 곳만 고칩니다. 엑셀 · 문서에 있는 목록은 [목록 붙여 넣기]로 한 번에 넣습니다.', go: 'class', done: { inc: 'crs_outline' } },
-        { crs: 'fill', t: '③ 차시 채우기', d: '차시마다 영상 · 교안 · 퀴즈를 넣습니다. 차시마다 같은 구성이면 [영상 여러 개 한 번에 올리기] · [모든 차시에 퀴즈 넣기]로 한 번에 넣습니다. 나중에 해도 됩니다.', go: 'class', done: { inc: 'crs_fill' } },
+        { crs: 'fill', t: '③ 차시 채우기', d: '차시마다 영상 · 교안 · 퀴즈를 넣습니다. 차시마다 같은 구성이면 [파일 여러 개 한 번에 올리기] · [모든 차시에 퀴즈 넣기]로 한 번에 넣습니다. 나중에 해도 됩니다.', go: 'class', done: { inc: 'crs_fill' } },
         { crs: 'setup', t: '④ 수강 설정', d: '수강 기간 · 수강료 · 수료 기준을 정합니다. 기본값 그대로 두어도 됩니다.', go: 'class', done: { inc: 'crs_setup' } },
         { crs: 'open', t: '⑤ 미리보기 · 개설', d: `${T('learner')}에게 보이는 모습을 확인하고 [개설하기]를 누릅니다.`, go: 'class', done: { inc: 'crs_create' } }]; }
     const s0 = GUIDES.find(x => x.id === 'start'); const s3 = s0 && s0.steps.find(x => x.done && x.done.inc === 'classes');

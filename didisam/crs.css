@@ -83,6 +83,15 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
 .cf-ck{font-size:13px;white-space:nowrap;font-weight:800;color:var(--t-sub,#666767)}.cf-auto button.on .cf-ck{color:var(--t-mag,#3F55D0)}
 .cf-note{padding:12px 14px;border-radius:8px;background:var(--g100,#F6F7F7);font-size:15px;color:var(--g800,#4C4D4D);margin:0 0 14px}.cf-note.bad{background:var(--badl,#FFEAEE);color:var(--t-bad,#C4001D)}.cf-note.warn{background:var(--warnl,#FFF3E0);color:var(--t-warn,#A84A00)}
 .cf-adv{font-size:15px;color:var(--t-sub,#666767);margin:4px 0 8px}
+/* F5 수강 설정 '더 설정하기' 접기 */
+.cf-more{border:1px solid var(--g300,#EAEBEB);border-radius:12px;margin:4px 0 14px;background:var(--g50,#FBFCFC)}
+.cf-more>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:4px;padding:12px 44px 12px 16px;min-height:56px;justify-content:center;position:relative;border-radius:12px}
+.cf-more>summary::-webkit-details-marker{display:none}
+.cf-more>summary::after{content:"";position:absolute;right:18px;top:22px;width:9px;height:9px;border-right:2px solid var(--g700,#666767);border-bottom:2px solid var(--g700,#666767);transform:rotate(45deg);transition:transform .15s}
+.cf-more[open]>summary::after{transform:rotate(-135deg);top:26px}
+.cf-more>summary:hover{background:var(--g100,#F6F7F7)}.cf-more>summary:focus-visible{outline:3px solid var(--s200,#B9C3FF);outline-offset:2px}
+.cf-more-h b{font-size:16px}.cf-more-s{font-size:15px;color:var(--t-sub,#666767);overflow-wrap:anywhere}
+.cf-more[open] .cf-more-s{display:none}.cf-more-b{padding:4px 16px 2px;border-top:1px solid var(--g300,#EAEBEB)}
 .crsf .linkb{border:0;background:none;padding:6px 2px;font:inherit;font-weight:700;color:var(--link,#1A4CFF);text-decoration:underline;cursor:pointer;min-height:40px}
 /* 미리보기 */
 .cf-pv{border:1px solid var(--g300,#EAEBEB);border-radius:12px;overflow:hidden;margin-bottom:14px}
