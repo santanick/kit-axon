@@ -1,0 +1,66 @@
+/* v35 lcontent — 학습자 콘텐츠 보기(교안 · AI 강의 · 올린 파일 · 디지털북) C8. 휴대폰 우선, 본문 16px 이상, 버튼 48px */
+.lc{font-size:16px;line-height:1.7;color:var(--ink,#2A2B2B);min-width:0}
+.lc .lbtn{min-height:48px;font-size:16px}
+.lc .lbtn.sm{min-height:44px;padding:10px 16px;font-size:15px}
+.lc-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:0 0 12px;color:var(--mute,#6C6C6C);font-size:15px}
+.lc-fs{min-width:52px;height:48px;border-radius:12px;border:1px solid var(--line,#EAEBEB);background:#fff;color:var(--ink,#2A2B2B);font:inherit;font-weight:800;font-size:18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:1px}
+.lc-fs small{font-size:15px;font-weight:700}.lc-fs[data-lcfs="1"]{font-size:22px}
+.lc-fs:hover{border-color:var(--ink,#2A2B2B)}.lc-fs:disabled{opacity:.4;cursor:default}
+.lc-doc{font-size:var(--lcfs,18px);line-height:1.75;word-break:keep-all;overflow-wrap:anywhere}
+.lc-doc section{margin:0 0 18px;padding:18px 20px;border-radius:14px;background:#fff;border:1px solid var(--line,#EAEBEB)}
+.lc-doc h3{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:1.1em;line-height:1.4;font-weight:800}
+.lc-doc p{margin:0 0 10px}.lc-doc ul,.lc-doc ol{margin:0;padding-left:1.3em}.lc-doc li{margin:4px 0}
+.lc-goal{background:#EEF1FF!important;border-color:#D9DFFF!important}.lc-goal h3{color:#3F55D0}
+.lc-no{flex:none;width:1.6em;height:1.6em;border-radius:50%;background:var(--ink,#2A2B2B);color:#fff;display:inline-grid;place-items:center;font-size:.8em}
+.lc-act{background:#FFF8EC!important;border-color:#F8E3BF!important}
+.lc-chk{background:#F2FBF4!important;border-color:#CDEFD6!important}.lc-chk ol li{margin:8px 0}
+.lc-sub{color:var(--mute,#6C6C6C);font-size:.9em}
+.lc-desc{margin:0 0 14px;padding:14px 16px;border-radius:12px;background:var(--paper,#F6F7F7)}
+.lc-done{display:flex;justify-content:center;margin:20px 0 6px}.lc-done .lbtn{min-width:220px}
+/* AI 강의 */
+.lc-stage{position:relative;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#1F2238,#2F3A7A);color:#fff;aspect-ratio:16/9;display:flex;flex-direction:column;justify-content:space-between;min-height:220px}
+.lc-slide{padding:22px 26px 8px;min-height:0;overflow:auto}
+.lc-sn{display:inline-block;font-size:13px;opacity:.8;margin-bottom:6px}
+.lc-slide h3{margin:0 0 10px;font-size:clamp(20px,3vw,30px);line-height:1.3;font-weight:800}
+.lc-slide ul{margin:0;padding-left:1.2em;font-size:clamp(16px,1.9vw,21px);line-height:1.55}.lc-slide li{margin:3px 0}
+.lc-cap{margin:0;padding:12px 18px;background:rgba(0,0,0,.55);font-size:17px;line-height:1.5;text-align:center;min-height:3.2em}
+.lc-ctl{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0 6px}
+.lc-ctl .lc-play{min-width:150px}
+.lc-ctl [data-lcp=prev] .ic{transform:rotate(180deg)}
+.lc-q{margin:8px 0;padding:10px 14px;border-radius:10px;background:#FFF8EC;color:#6B4A00;font-size:15px;line-height:1.55}
+.lc-q b{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:99px;background:#A84A00;color:#fff;font-size:13px}
+.lc-script{margin:10px 0 0;font-size:16px}.lc-script summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:700;color:var(--ink2,#4C4D4D)}
+.lc-script p{margin:8px 0;line-height:1.65}
+.lc-bar{height:6px;background:var(--line2,#F1F2F2);border-radius:99px;overflow:hidden;margin:10px 0 4px}.lc-bar i{display:block;height:100%;background:var(--ok,#16A34A);border-radius:99px;transition:width .4s}
+.lc-bart{display:block;color:var(--mute,#6C6C6C);font-size:14px}
+/* 올린 파일 */
+.lc-media{position:relative;border-radius:12px;overflow:hidden;background:#111}
+.lc-media video{display:block;width:100%;max-height:70vh;background:#000}
+.lc-media img{display:block;max-width:100%;margin:0 auto;background:#fff}
+.lc-aud{background:var(--paper,#F6F7F7);padding:20px;display:flex;flex-direction:column;align-items:center;gap:12px}.lc-aud audio{width:100%}.lc-audi{color:var(--pri,#5C74F6)}
+.lc-pdfw{background:var(--paper,#F6F7F7);border:1px solid var(--line,#EAEBEB)}
+.lc-hint{margin:8px 0 0;color:var(--mute,#6C6C6C);font-size:14px}.lc-file[data-fk=pdf] .lc-ftools{margin:0 0 10px}
+.lc-pdf{display:block;width:100%;height:64vh;min-height:420px;border:0;background:#fff}
+.lc-wait{position:absolute;inset:auto 0 0;margin:0;padding:10px;text-align:center;color:#fff;background:rgba(0,0,0,.4);font-size:15px}
+.lc-aud .lc-wait,.lc-pdfw .lc-wait{position:static;background:none;color:var(--mute,#6C6C6C)}
+.lc-ftools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin:10px 0 0}
+.lc-fn{min-width:0;overflow-wrap:anywhere;font-size:15px}.lc-fn small{color:var(--mute,#6C6C6C)}.lc-fa{display:flex;gap:8px;flex-wrap:wrap}
+.lc-pdfm{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:28px 18px;border-radius:14px;background:var(--paper,#F6F7F7);color:var(--ink2,#4C4D4D)}.lc-pdfm p{margin:0;max-width:30em}
+.lc-demo{display:flex;gap:12px;align-items:flex-start;padding:16px 18px;border-radius:14px;background:#F6F7F7;border:1px dashed #C8C9C9;color:var(--ink2,#4C4D4D);margin:0 0 12px}
+.lc-demo>.ic{flex:none;color:var(--pri,#5C74F6);margin-top:2px}.lc-demo b{display:block;font-size:16px;color:var(--ink,#2A2B2B)}.lc-demo p{margin:4px 0 0;font-size:15px;line-height:1.6}
+/* 디지털북 */
+.lc-book{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:16px;border:1px solid var(--line,#EAEBEB);background:#fff;color:inherit;text-decoration:none;margin:0 0 16px;box-shadow:var(--sh)}
+.lc-book:hover{border-color:var(--c,#5C74F6)}
+.lc-bkc{flex:none;width:56px;height:72px;border-radius:8px;background:var(--c,#5C74F6);color:#fff;display:grid;place-items:center}
+.lc-bkt{flex:1;min-width:0;display:flex;flex-direction:column}.lc-bkt small{color:var(--mute,#6C6C6C);font-size:14px}.lc-bkt b{font-size:18px;line-height:1.35}.lc-bkt em{font-style:normal;color:var(--mute,#6C6C6C);font-size:14px}
+.lc-hd2{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 10px}.lc-hd2 b{font-size:17px}.lc-hd2 .lc-tools{margin:0}
+@media (max-width:700px){
+  .lc-doc section{padding:14px 14px;border-radius:12px}
+  .lc-stage{aspect-ratio:auto;min-height:260px}
+  .lc-slide{padding:16px 16px 8px}
+  .lc-cap{font-size:16px;padding:10px 12px}
+  .lc-ctl{display:grid;grid-template-columns:1fr 1fr;gap:8px}.lc-ctl .lc-play{grid-column:1/-1;order:-1;min-width:0}.lc-ctl .lbtn{width:100%;padding-left:10px;padding-right:10px}
+  .lc-done .lbtn{width:100%;min-width:0}
+  .lc-ftools{flex-direction:column;align-items:stretch}.lc-fa{display:grid;grid-template-columns:1fr 1fr}.lc-fa .lbtn{width:100%}.lc-fa .lbtn:only-child{grid-column:1/-1}
+  .lc-book{flex-wrap:wrap}.lc-book .lbtn{width:100%}
+}
