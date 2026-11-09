@@ -16,7 +16,8 @@
   /* 조사 하나로 통일(F2 통합 요청): ai.js AI.j(따옴표 · 괄호 뒤 · 영문 · 숫자 · ㄹ+으로)가 있으면 그것, 없으면 이 파일의 josa */
   CF.josa = (w, a) => { try { if (typeof AI !== 'undefined' && AI && typeof AI.j === 'function') return String(w == null ? '' : w) + AI.j(w, a); } catch (e) { } return josa(w, a); };
   const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
-  const totalMin = d => { if (d.minsMode === 'each' && Array.isArray(d.weekPlan) && d.weekPlan.length) return d.weekPlan.reduce((a, w) => a + (N(w.mins) || N(d.mins)), 0); return N(d.sessions) * N(d.mins); }; /* v36: 차시마다 다르게(직접 입력)면 차시별 분의 합 */
+  const varM = d => d.minsMode === 'each' || d.minsMode === 'auto'; /* v36: 차시별 분(직접 · 자동 배분) */
+  const totalMin = d => { if (varM(d) && Array.isArray(d.weekPlan) && d.weekPlan.length) return d.weekPlan.reduce((a, w) => a + (N(w.mins) || N(d.mins)), 0); return N(d.sessions) * N(d.mins); }; /* v36: 차시마다 다르게(직접 입력)면 차시별 분의 합 */
   const cplOn = () => { try { const P = window.cplPublic && cplPublic(); return P ? P : null; } catch (e) { return null; } };
   /* 공통 질문 조각 */
   const F = {
@@ -29,16 +30,16 @@
     start: (label) => ({ k: 'start', label: label || '시작일', kind: 'date', ex: '예: 다음 달 1일', later: true })
   };
   /* 차시 수 · 길이로 총 시간 한 줄 */
-  const hoursLine = (d, unit) => d.minsMode === 'each' && (d.weekPlan || []).length ? `${unit || '차시'} ${d.weekPlan.length}개(차시마다 다름) = 총 ${hm(totalMin(d))}` : N(d.sessions) && N(d.mins) ? `${unit || '차시'} ${N(d.sessions)}개 × ${hm(d.mins)} = 총 ${hm(totalMin(d))}` : '';
+  const hoursLine = (d, unit) => varM(d) && (d.weekPlan || []).length ? `${unit || '차시'} ${d.weekPlan.length}개(차시마다 다름) = 총 ${hm(totalMin(d))}` : N(d.sessions) && N(d.mins) ? `${unit || '차시'} ${N(d.sessions)}개 × ${hm(d.mins)} = 총 ${hm(totalMin(d))}` : '';
   /* 공통 apply: 정원 · 모집 · 시간 */
   const baseApply = (c, d) => {
     if (N(d.cap) > 0) { c.recruit = c.recruit || { on: false, cap: 0, from: '', to: '', early: { on: false, until: '', rate: 0 } }; c.recruit.cap = N(d.cap); }
-    if ((N(d.sessions) && N(d.mins)) || d.minsMode === 'each') c.hours = Math.round(totalMin(d) / 60 * 10) / 10;
+    if ((N(d.sessions) && N(d.mins)) || varM(d)) c.hours = Math.round(totalMin(d) / 60 * 10) / 10;
     if (d.target) c.sub = String(d.target).slice(0, 60);
     if (N(d.price) >= 0 && d.price !== '' && d.price != null) c.price = N(d.price);
     if (d.tpl) c.crsTpl = d.tpl;
     /* 차시 인정 시간: 영상 항목에 1차시 분량 기록(직업훈련 · 기업 환급의 '인정 학습시간' 기본값) */
-    if (N(d.mins) || d.minsMode === 'each') (c.curriculum || []).filter(i => i.type === 'video' && !(+i.cplMin > 0)).forEach(i => { const w = d.minsMode === 'each' && (d.weekPlan || [])[(+i.week || 1) - 1]; i.cplMin = (w && N(w.mins)) || N(d.mins); });
+    if (N(d.mins) || varM(d)) (c.curriculum || []).filter(i => i.type === 'video' && !(+i.cplMin > 0)).forEach(i => { const w = varM(d) && (d.weekPlan || [])[(+i.week || 1) - 1]; i.cplMin = (w && N(w.mins)) || N(d.mins); });
     c.crsScn = CF.cfgKey ? CF.cfgKey() : '';
     return c;
   };
@@ -95,6 +96,8 @@
   const gradeName = g => ({ e1: '초등 1~3', e4: '초등 4~6', m1: '중1', m2: '중2', m3: '중3', h1: '고1', h2: '고2', h3: '고3' }[g] || '—');
 
   /* ───────── 대학(라이트): 주차 · 차시 · 학점 ───────── */
+  const uMin = d => d.umin === 'custom' ? Math.max(10, Math.min(300, N(d.uminN) || 50)) : (N(d.umin) || 50); /* 1차시 길이(분) */
+  const uHrs = d => Math.round((N(d.sessions) || 15) * (N(d.per) || 3) * uMin(d) / 50 * 10) / 10; /* 인정 시간: 대학 1시간 = 50분 수업 */
   CF.cfg.univ = {
     label: '대학 교과목', unit: () => '주차',
     terms: { cls: '교과목', unit: '주차', fee: '수강료', target: '대상 학생' },
@@ -103,10 +106,13 @@
     stepTitle: { basic: '교과목 정보', outline: '주차 목록', fill: '주차 자료', setup: '개강 · 공개', open: '확인' },
     ask: {
       basic: [F.name('교과목 이름', '예: AI 리터러시와 글쓰기'), F.target('대상 학생', '예: 1학년 전체 · 간호학과 2학년', true)], /* v36: '구분(교양 · 전공 · 비교과 · 교원 연수)'은 학점 칸을 숨기는 데만 쓰여 목적이 불분명했다 → 없애고 학점 칸에 '학점 없음(비교과 · 연수)'로 */
-      outline: [{ k: 'sessions', label: '주차 수', kind: 'choice', ex: '예: 15주(한 학기) · 비교과는 4주', def: 15, opts: [[4, '4주'], [8, '8주'], [15, '15주(한 학기)'], [16, '16주']] }, { k: 'per', label: '한 주 차시', kind: 'choice', ex: '예: 3차시(3학점 강의)', def: 3, opts: [[1, '1차시'], [2, '2차시'], [3, '3차시']] }, { k: 'credit', label: '학점', kind: 'choice', ex: '예: 3학점(전공 · 교양) · 비교과 프로그램과 교원 연수는 학점 없음', def: 3, opts: [[0, '학점 없음', '비교과 · 연수'], [1, '1학점'], [2, '2학점'], [3, '3학점']] }],
-      setup: [F.start('수강 시작일(개강일)'), { k: 'openTo', label: '누가 볼 수 있나요', kind: 'choice', ex: '예: 우리 학교 학생만', def: 'member', opts: [['member', '우리 학교 학생만'], ['all', '누구나']], later: true }]
+      /* v36 1-③-3): 학점을 고르면 '한 주 차시'가 학점 기준(1학점 = 주 1시간)으로 맞춰지고, 1차시 길이(50분 기본 · 75분 · 100분 · 직접)도 정한다 */
+      outline: [{ k: 'sessions', label: '주차 수', kind: 'choice', ex: '예: 15주(한 학기) · 비교과는 4주', def: 15, opts: [[4, '4주'], [8, '8주'], [15, '15주(한 학기)'], [16, '16주']] }, { k: 'credit', label: '학점', kind: 'choice', ex: '예: 3학점(전공 · 교양) · 비교과 프로그램과 교원 연수는 학점 없음', def: 3, opts: [[0, '학점 없음', '비교과 · 연수'], [1, '1학점'], [2, '2학점'], [3, '3학점']] }, { k: 'per', label: '한 주 차시', kind: 'choice', ex: '학점을 고르면 학점 기준(1학점 = 주 1차시)으로 맞춰집니다. 바꿔도 됩니다.', def: 3, opts: [[1, '1차시'], [2, '2차시'], [3, '3차시'], [4, '4차시']] }, { k: 'umin', label: '1차시 길이', kind: 'choice', ex: '예: 50분(대학 1시간 수업) · 75분 수업은 1.5시간으로 셉니다', def: 50, opts: [[50, '50분', '대학 1시간(기본)'], [75, '75분', '1시간 30분 수업'], [100, '100분', '2시간 연강'], ['custom', '직접 적기', '분 단위']] }, { k: 'uminN', label: '1차시 길이(분)', kind: 'num', min: 10, max: 300, unit: '분', def: 60, ex: '예: 90', show: d => d.umin === 'custom' }],
+      setup: [F.start('수강 시작일(개강일)'), { k: 'uend', label: '수강 끝나는 날', kind: 'choice', def: 'auto', opts: [['auto', '주차 수에 맞춰', '개강일부터 주차 수만큼'], ['custom', '직접 정하기', '학기 종료일(종강일)']], ex: '예: 기말고사 주 금요일까지' }, { k: 'endD', sub: 'uend', label: '종강일(수강 끝나는 날)', kind: 'date', ex: '예: 2026-12-18 — 이 날 밤 12시까지 들을 수 있습니다', show: d => d.uend === 'custom' }, { k: 'openTo', label: '누가 볼 수 있나요', kind: 'choice', ex: '예: 우리 학교 학생만', def: 'member', opts: [['member', '우리 학교 학생만'], ['all', '누구나']], later: true }]
     },
-    defaults: { sessions: 15, per: 3, credit: 3, mins: 50, price: 0, openTo: 'member' },
+    defaults: { sessions: 15, per: 3, credit: 3, mins: 50, umin: 50, price: 0, openTo: 'member', uend: 'auto' },
+    onSet: (k, v, d) => { if (k === 'per') d._perSet = 1; if (k === 'credit' && !d._perSet) d.per = Math.max(1, Math.min(4, N(v) || 1)); },
+    totLine: d => { const w = N(d.sessions) || 15, per = N(d.per) || 3, m = uMin(d); const cr = N(d.credit); return `주당 ${per}차시 × ${m}분 = <b>주 ${hm(per * m)}</b> · ${w}주 합계 <b>${uHrs(d)}시간</b>(대학 1시간 = 50분 수업 기준)${cr ? ` · ${cr}학점 기준 ${cr * 15}시간` : ''}`; },
     required: ['name', 'sessions'],
     examples: { name: '예: AI 리터러시와 글쓰기', sessions: '예: 15주' },
     templates: [
@@ -119,14 +125,14 @@
       { id: 'u-fresh', name: '신입생 대학 생활 적응', icon: 'univ', desc: '4주 · 학점 없음 · 비교과', prefill: { name: '신입생 대학 생활과 공부법', sessions: 4, per: 1, credit: 0, target: '신입생 전체' } },
       { id: 'u-faculty', name: '교원 AI 수업 연수', icon: 'book', desc: '4주 · 학점 없음 · 교수 대상', prefill: { name: '교수를 위한 생성형 AI 수업 설계', sessions: 4, per: 1, credit: 0, target: '전임 · 비전임 교원' } }
     ],
-    plan: d => ({ weeks: N(d.sessions) || 15, per: N(d.per) || 3, mins: 50, hours: (N(d.sessions) || 15) * (N(d.per) || 3), univ: true }),
+    plan: d => ({ weeks: N(d.sessions) || 15, per: N(d.per) || 3, mins: uMin(d), hours: uHrs(d), univ: true }),
     check: d => {
-      const R = []; const h = (N(d.sessions) || 15) * (N(d.per) || 3); const cr = N(d.credit);
+      const R = []; const h = uHrs(d); const cr = N(d.credit);
       if (cr && h < cr * 15) R.push({ lv: 'warn', k: 'per', msg: `${cr}학점은 보통 ${cr * 15}시간(1학점 15시간) 이상입니다. 지금은 ${h}시간입니다.`, law: '고등교육법 시행령 제14조', fix: { sessions: 15, per: Math.max(cr, N(d.per)) } });
       return R;
     },
-    summary: d => [['구성', `${N(d.sessions) || 15}주 × 주 ${N(d.per) || 3}차시 = ${(N(d.sessions) || 15) * (N(d.per) || 3)}시간`], ['학점', N(d.credit) ? N(d.credit) + '학점' : '학점 없음(비교과 · 연수)'], ['대상', d.target || '나중에 입력']],
-    apply: (c, d) => { baseApply(c, Object.assign({}, d, { sessions: 0 })); const w = N(d.sessions) || 15; c.credit = N(d.credit) || 0; c.hours = w * (N(d.per) || 3); if (d.start) { c.start = d.start; c.end = plus(d.start, w * 7 - 1); } if (d.openTo === 'member') c.open = c.open === '전체' ? '회원' : c.open; return c; }
+    summary: d => [['구성', `${N(d.sessions) || 15}주 × 주 ${N(d.per) || 3}차시(1차시 ${uMin(d)}분) = ${uHrs(d)}시간`], ...(d.start || (d.uend === 'custom' && d.endD) ? [['수강 기간', `${d.start || '개설일'} ~ ${d.uend === 'custom' && d.endD ? d.endD : d.start ? plus(d.start, (N(d.sessions) || 15) * 7 - 1) : `${N(d.sessions) || 15}주 뒤`}`]] : []), ['학점', N(d.credit) ? N(d.credit) + '학점' : '학점 없음(비교과 · 연수)'], ['대상', d.target || '나중에 입력']],
+    apply: (c, d) => { baseApply(c, Object.assign({}, d, { sessions: 0, mins: uMin(d) })); const w = N(d.sessions) || 15; c.credit = N(d.credit) || 0; c.hours = uHrs(d); c.perWeek = N(d.per) || 3; c.sessMin = uMin(d); if (d.start) { c.start = d.start; c.end = plus(d.start, w * 7 - 1); } if (d.uend === 'custom' && d.endD) { c.start = c.start || d.start || td(); c.end = d.endD; c.period = Object.assign({}, c.period || {}, { mode: 'range', start: c.start, end: d.endD }); } if (d.openTo === 'member') c.open = c.open === '전체' ? '회원' : c.open; return c; }
   };
   /* 학사 LMS는 기존 lms/* 체계 — 진입만 연결 */
   CF.cfg.univ_lms = {

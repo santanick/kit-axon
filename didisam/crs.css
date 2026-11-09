@@ -27,11 +27,12 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
 .cf-sl{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
 .cf-prog li.on .cf-sl{color:var(--g900,#2A2B2B)}
 /* 지금 할 일 */
-.cf-nowb{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 24px;padding:12px 16px;background:var(--s50,#EAEDFF);border-radius:8px}
+.cf-nowb{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px;padding:12px 16px;background:var(--s50,#EAEDFF);border-radius:8px}
 .cf-now{margin:0;font-size:17px;font-weight:700;flex:1 1 260px}
 .cf-k{display:inline-block;font-size:13px;font-weight:800;color:#fff;background:var(--s600,#4257D7);border-radius:4px;padding:1px 7px;margin-right:6px;vertical-align:2px}
 .crs-sam-slot{display:flex;gap:8px;flex-wrap:wrap}
-.cf-body{flex:1;overflow:auto;padding:18px 24px 8px;-webkit-overflow-scrolling:touch}
+.cf-body{flex:1;overflow:auto;padding:16px 24px 8px;-webkit-overflow-scrolling:touch}
+.cf-wm.cf-wma{display:inline-flex;align-items:baseline;gap:2px;min-width:56px;justify-content:flex-end;font-size:16px}.cf-wm.cf-wma b{font-size:17px}
 .cf-sam:empty{display:none}.cf-sam{padding:0 24px}
 /* 입력 */
 .cf-f{margin:0 0 20px}
@@ -138,7 +139,7 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
   .cf-sl{display:none}
   .cf-prog li.on .cf-sl{display:block}
   .cf-prog li.on{flex:2.5}
-  .cf-nowb{margin:0 16px;padding:10px 12px}
+  .cf-nowb{margin:0 0 12px;padding:10px 12px}
   .cf-now{font-size:16px;flex-basis:100%}
   .cf-body{padding:14px 16px 8px}
   .cf-sam{padding:0 16px}
@@ -158,9 +159,9 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
 }
 /* F1: 휴대폰에서는 '지금 할 일'을 두 줄까지만(눌러서 펼침), [AI SAM에게 맡기기]는 그 아래 작은 버튼 한 줄. 진행 표시는 위에 그대로 */
 @media (max-width:640px){
-  .crsf .cf-nowb{gap:6px;margin:0 16px;padding:8px 10px}
-  .crsf .cf-now{flex:1 1 100%;min-width:0;font-size:16px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
-  .crsf .cf-nowb.open .cf-now{display:block;-webkit-line-clamp:unset;line-clamp:none}
+  .crsf .cf-nowb{gap:6px;margin:0 0 12px;padding:8px 10px}
+  /* v36 평가 11: 본문과 함께 올라가므로 두 줄로 자르지 않고 문장을 다 보여 준다(휴대폰 문장 잘림) */
+  .crsf .cf-now{flex:1 1 100%;min-width:0;font-size:16px;line-height:1.45;word-break:keep-all;overflow-wrap:anywhere}
   .crsf .cf-k{font-size:12px;padding:0 5px;margin-right:4px}
   .crsf .cf-nowb .crs-sam-slot:empty{display:none}
   .crsf .cf-nowb .csam-do{margin:0;flex-wrap:nowrap}

@@ -85,9 +85,18 @@
     B.filter(b => (b.chs || []).length || b.url).forEach(b => out.push({ key: 'bk:' + b.id, origin: 'book', kind: 'book', title: b.title, at: b.at || '', ref: b }));
     (S.lib || []).forEach(l => { if (libIn.has(l.id)) return; out.push({ key: 'lb:' + l.id, origin: 'lib', kind: libKind(l), title: String(l.name || '').replace(/\.(mp4|webm|mov)$/i, ''), at: l.at || '', ref: l }); });
     (S.classes || []).forEach(c => (c.curriculum || []).forEach(it => { if (it.clib || it.lib || it.src === 'book' || R.some(r => fromRec(r, c, it))) return; const k = kindOfItem(it); if (!k) return; out.push({ key: 'it:' + c.id + ':' + it.id, origin: 'course', kind: k, title: it.title || ITEMX[it.type] || '항목', at: '', ref: it, it, c }); }));
-    out.forEach(e => { e.uses = usesOf(e); });
+    out.forEach(e => { e.uses = usesOf(e); e.title = niceTitle(e); });
     return out;
   }
+  /* v36 평가 12: 주소(URL)가 그대로 제목이면 사람이 읽는 제목으로 — 파일은 파일 이름, YouTube는 영상 제목(oEmbed로 한 번 받아 기록에 저장, 못 받으면 'YouTube 영상') */
+  const YTT = {}; const ytOfU = u => (String(u || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([\w-]{11})/) || [])[1] || '';
+  function niceTitle(e) { const t = String(e.title || '').trim(); if (!/^(https?:\/\/|www\.)\S+$/i.test(t) && !(t === 'YouTube 영상' && ytOfU(e.ref && (e.ref.url || e.ref.yt && e.ref.yt.id && 'https://youtu.be/' + e.ref.yt.id)))) return t;
+    const r = e.ref || {}; const id = ytOfU(t) || ytOfU(r.url) || (r.yt && r.yt.id) || '';
+    if (id) { const k = YTT[id]; if (k && k !== 1) return k; if (r.yt && r.yt.title && !/^https?:/.test(r.yt.title)) return r.yt.title; ytFetch(id, e); return 'YouTube 영상'; }
+    try { const u = new URL(/^www\./i.test(t) ? 'https://' + t : t); const seg = decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() || ''); if (seg && /\.[a-z0-9]{2,5}$/i.test(seg)) return seg.slice(0, 80); return `${u.hostname.replace(/^www\./, '')} 링크`; } catch (er) { return t; } }
+  function ytFetch(id, e) { if (YTT[id]) return; YTT[id] = 1; if (typeof fetch !== 'function' || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+    fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id)).then(r => r.ok ? r.json() : null).then(j => { const tt = j && String(j.title || '').trim(); if (!tt) return; YTT[id] = tt.slice(0, 80);
+      try { const r = e.ref; if (e.origin === 'clib' || e.origin === 'course') { if (/^(https?:\/\/|www\.)|^YouTube 영상$/.test(String(r.title || ''))) r.title = YTT[id]; } else if (e.origin === 'lib' && /^(https?:\/\/|www\.)/.test(String(r.name || ''))) r.name = YTT[id]; save(); if (typeof CUR !== 'undefined' && document.querySelector('#main .clb')) render(); } catch (er) { } }).catch(() => { }); }
   const byKey = k => entries().find(e => e.key === k);
   /* CLIB.all(): C3 CT('라이브러리에서 가져오기')가 그대로 쓰는 기록 모양 { id, kind(C3 말), type, title, src, … , usedIn }.
      단독 콘텐츠는 저장된 기록 그 자체를 준다(usedIn을 바꾸면 저장된다). 화면용 정보 key · origin · view · uses는 저장되지 않게(열거 안 됨) 붙인다. */
@@ -259,7 +268,7 @@
   };
   function legacy() { const L = [];
     if (VIEWS.library && (S.lib || []).length) L.push(`<button type="button" class="link" data-act="clb-sub" data-v="library">영상 · 자료 보관함(저장 공간 · 변환 상태)</button>`);
-    return L.length ? `<p class="clb-legacy">예전 화면: ${L.join(' · ')}</p>` : ''; }
+    return ''; /* v36 평가 12: '예전 화면' 링크는 혼란을 주어 뺐다(보관함 기능은 메뉴 찾기 · 설정에서 그대로) */ }
 
   /* 검색은 다시 그리지 않고 카드만 거른다(입력 중 초점 유지) */
   document.addEventListener('input', ev => { if (ev.target.id !== 'clbQ') return; UI.clibQ = ev.target.value; const q = ev.target.value.trim().toLowerCase(); let k = 0;
@@ -326,6 +335,26 @@
   const tutBase = q => String(q || '').replace(/(튜토리얼|추천|영상|동영상|유튜브|YouTube|찾아\s*줘|해\s*줘|주세요|보여\s*줘|필요한|관련|에\s*대한|20개|개)/gi, ' ').replace(/\s+/g, ' ').trim();
   const ytKey = () => !!(S.settings && S.settings.yt && S.settings.yt.key);
   const demoTuts = () => { try { return typeof LSEED_UNIV_TUTS !== 'undefined' ? LSEED_UNIV_TUTS : []; } catch (e) { return []; } };
+  /* v36 1-5: 키가 없을 때 쓰는 분야별 데모 목록 — 실제 공개 YouTube 영상만(2026-11-10 oEmbed로 제목 · 채널 확인). [영상 id, 제목, 채널] */
+  const TUT_DEMO = [
+    { re: /엑셀|excel|피벗|스프레드시트|컴활|vlookup|함수/i, v: [["R7q0r_YD0a4", "엑셀 초보도 한 방에 이해하는 피벗테이블 기초!", "방과후도우미"], ["k2FsYHMtXMY", "[엑셀이뭐니]12강 피벗테이블(상) / 기초부터 디자인까지/ PIVOT TABLE/ 엑셀강좌", "엑셀런투데이"], ["GnTsrcNIyxg", "엑셀 13강] 피벗 테이블을 잘 만드는 방법 👍 | 02-7", "짤막한 강좌"], ["0L36b0GJ24g", "엑셀 피벗테이블 만들기 방법 |초보자", "쉬운엑셀"], ["zJyd2o2g7wQ", "직장인 엑셀 피벗테이블 너무 쉽다! 복잡한 데이터 10분만에 정리하기!", "배우공"], ["Wk5dFhLsp6U", "엑셀 피벗테이블: 실무자가 꼭 알아야 할 핵심 기능 총정리 | 이 영상으로 마스터하세요!", "오빠두엑셀 l 엑셀 강의 대표채널"]] },
+    { re: /파이썬|python|코딩|프로그래밍/i, v: [["yytWGELNeOI", "파이썬 무료 기초 강의 - 1강 파이썬이란 무엇인가?", "조코딩 JoCoding"], ["KL1MIuBfWe0", "파이썬 코딩 무료 강의 - 5시간만 투자하면 개발자가 됩니다", "조코딩 JoCoding"], ["3R6vFdb7YI4", "파이썬 왕초보 기초 강의 - 파이썬 프로그래밍의 기초, 자료형(1)", "조코딩 JoCoding"], ["ns61Ol2OIuo", "파이썬 기초 무료 강의 - [한양대 ERICA 소프트웨어학부 도경구 교수] - 우리학교 명강의", "메타코드M"]] },
+    { re: /파워포인트|ppt|powerpoint|발표\s*자료|슬라이드/i, v: [["WW7eHCbyyYo", "[파워포인트 기초강좌1] PPT 왕초보를 위한 열기 글자변경 슬라이드 삽입 저장까지", "스마일정쌤"], ["gF_SvivXzWQ", "파워포인트 처음부터 시작하기 1. 메뉴 및 화면구성/ #powerpoint", "지식나눔터"], ["aWTtIaCJ3cg", "파워포인트 기초 강좌 1 - 화면 구성과 저장 방법", "방컴TV (방과후 컴퓨터)"]] },
+    { re: /노션|notion/i, v: [["XzU81FfDXLs", "[템플릿 제공] 2026 노션 사용법, 기초부터 데이터베이스·자동화·AI까지 이 영상 하나로 끝! (노션 기초 강의 풀버전)", "시간기획자 최민정"], ["7TCdvnlbdSk", "노션 사용법 입문 총정리: 왕초보도 이 영상 하나면 기초부터 데이터베이스까지 끝!", "1000쌤 | 교사·선생님을 위한 노션, AI 가이드"], ["mebSi7p85_4", "노션(notion) 초보자를 위한 설치부터 기본 사용법까지!｜경기도 지식(GSEEK)", "경기도 지식 GSEEK"], ["dTSMrPsiSCg", "[노션 기초 강의] 노션 데이터베이스 사용법 1편 I 표, 칸반 보드, 갤러리", "러닝스푼즈 | 커리어 성공의 비밀"]] },
+    { re: /데이터|통계|분석|시각화/i, v: [["HNlRYQnLkek", "[데이터 분석 기초 강의] 7강. 통계로 요약하기", "한빛미디어"], ["R3E4m8fqUSg", "[데이터 분석 기초 강의] 13강. 통계적으로 추론하기", "한빛미디어"], ["r7jTwciTdXo", "통계 기초의 모든것을 5시간만에 끝내드립니다ㅣ고려대 통계학과 출신 데이터분석가ㅣ표본, 기대값, 정규분포, 모평균, t분포, 포아송분포, 조건부 확률 등", "메타코드M"], ["Zqq-HvKhlW8", "[Full 버전] 데이터 분석 8시간 무료강의 - 미국 빅테크 Data Scientist 현직자가 알려드려요", "메타코드M"]] },
+    { re: /취업|면접|자기소개|자소서|이력서|진로/i, v: [["QUvvGKKrbNU", "자기소개서, 면접 준비 방법", "면이괜(면접이대로괜찮은가)"], ["5-sbXv0KK2o", "취업 준비를 위한 자기소개서 작성, 완벽한 구조와 예시!🔍", "내일부터 출근"], ["EKYxExHE0B0", "면접관이 알려주는 1분 자기소개의 모든 것", "면접왕 이형"], ["XZ6N70UW2n4", "서류 40번 떨어지고 깨달은 합격 자기소개서 쓰는 법", "취업갤러리"]] },
+    { re: /분수|수학|덧셈|뺄셈|초등/i, v: [["FGIfZ3YDz3k", "분수의 덧셈과 뺄셈 1 : 기초 (초등수학)", "청개구리유여사"], ["avX_LvT3bpE", "분수의 덧셈 : 개념 (초등수학)", "청개구리유여사"], ["quOnh5g5qT4", "분모가 같은 분수의 덧셈과 뺄셈(4학년 1학기 1단원)", "재미있는수학이야기"], ["giF_f0AEgb8", "초등 수학 개념잡기 - 27강 분수의 덧셈과 뺄셈   _#001", "EBS Learning"]] },
+    { re: /챗\s*gpt|chatgpt|프롬프트|생성형|gpt/i, v: [["pPJ7Pr7SYtI", "챗GPT의 프롬프트 작성의 기초! | 챗GPT 사용법, Chat GPT", "감자나라ai"], ["qd6w-IbfLlA", "챗GPT 초보를 위한 프롬프트 작성법 5가지 / 프롬프트, 잘 쓴 것 같은데 왜 답이 이상할까?", "TASoL"], ["rZE9f9CPPxw", "[챗GPT] 프롬프트 전문적 작성방법 - 7가지 방법과 사례 심층 정리", "promptStrategies"], ["ELZ7rYyKA4w", "입문자, 초보자가 알아야 할 ChatGPT 사용 방법 Top 3 - 프롬프트 잘 쓰는 법, PDF 파일 대화, 유튜브 추출", "버프TV (한국GPT협회)"]] },
+    { re: /성희롱|폭력\s*예방|법정|의무\s*교육|직장\s*내/i, v: [["xaqQ7j7gHcM", "(고용노동부 제작, 성희롱 예방교육)  뭉쳤다! 국내 최고의 소통전문가와 공인노무사 with 레이디제인", "고용노동부"], ["qT3C4G9HCDE", "(사업장교육용) 매년 실시하는 직장내 성희롱 예방교육 이 영상을 확인하세요!", "고용노동부"], ["dM7qPxoRMYU", "[동영상 강의]노동법률_직장 내 성희롱 예방", "제주특별자치도노동권익센터"]] },
+    { re: /영어|회화|english/i, v: [["OGHo7apPWIY", "왕초보를 위한 영어회화 강의 - Lesson 001 [기본적인 문장 구성하기]", "라이브 아카데미 토들러"], ["iMDR9wAj0k8", "왕초보 기초 영어회화 100문장 | 생활영어 첫걸음 이것부터 외우세요(흘려듣기)", "말트영어(기초&여행&생활영어)"], ["-Iqytaj8oxI", "영어회화 왕초보라면 제발 꼭 보세요🔥매일 쓰는 기초 생활영어 200개 완벽 정리", "해커스톡 기초영어회화 공식 유튜브"]] }
+  ];
+  /* 주제와 상관없는 넓은 말(기초 · 강의 · 사용법 …)로는 맞췄다고 치지 않는다 — '엑셀 피벗 기초'에 n8n '기초부터' 영상이 1번으로 오던 문제 */
+  const TUT_GEN = /^(기초|기본|입문|강의|강좌|사용법|방법|초보|초보자|왕초보|활용|실무|따라하기|따라|하기|완벽|정리|총정리|가이드|배우기|만들기|쉽게|무료|최신|핵심|실습|예제|신입|사원|신입사원|직장인|학생|교사|교수|대학생|위한|위해|용|쉬운|처음|시작|시작하기|과정|교육|수업)$/;
+  const tutWords = base => base.split(/[\s·,/—\-]+/).map(w => w.replace(/(을|를|이|가|은|는|의|로|으로|에서|에|과|와|용)$/, '')).filter(w => w.length >= 2 && !TUT_GEN.test(w));
+  function tutDemo(base) { const words = tutWords(base); const out = []; const seen = new Set(); const push = (id, title, ch, sc) => { if (seen.has(id)) return; seen.add(id); out.push({ id, title, ch, dur: '', how: 'demo', sc }); };
+    TUT_DEMO.forEach(g => { if (!g.re.test(base)) return; g.v.forEach(([id, t, ch]) => push(id, t, ch, 1 + tutScore({ title: t, ch }, words))); });
+    demoTuts().forEach(t => { const sc = tutScore(t, words); if (sc > 0) push(t.vid, t.title, t.ch, sc); });
+    return out.sort((a, b) => b.sc - a.sc).slice(0, 20); }
   const TUT = () => (UI.tut = UI.tut || { q: '', list: [], page: 0, token: '', saved: {}, busy: false, mode: '', err: '' });
   async function tutApi(q, token) { const y = S.settings.yt || {}; const p = new URLSearchParams({ part: 'snippet', type: 'video', videoEmbeddable: 'true', maxResults: '20', relevanceLanguage: 'ko', safeSearch: 'strict', q, key: y.key }); if (token) p.set('pageToken', token); if (y.cc) p.set('videoLicense', 'creativeCommon');
     const r = await fetch('https://www.googleapis.com/youtube/v3/search?' + p); if (!r.ok) throw new Error('YouTube 검색 실패(' + r.status + ')'); const j = await r.json(); const ids = (j.items || []).map(x => x.id && x.id.videoId).filter(Boolean); let dur = {};
@@ -333,14 +362,13 @@
     return { list: (j.items || []).filter(x => x.id && x.id.videoId).map(x => ({ id: x.id.videoId, title: x.snippet.title, ch: x.snippet.channelTitle, dur: dur[x.id.videoId] || '', how: 'api' })), next: j.nextPageToken || '' }; }
   async function tutQueries(base, page) { /* 검색어 후보: Claude가 연결돼 있으면 Claude가 20개, 아니면 규칙 */
     try { if (typeof CL === 'object' && CL.on('docs')) { const r = await Promise.race([CL.call({ system: '교육 담당자를 돕습니다. 요청한 JSON 배열 하나만 출력합니다.', messages: [{ role: 'user', content: `「${base}」을(를) 배우는 학습자에게 필요한 YouTube 튜토리얼 검색어 20개를 기초부터 심화 순서로, 서로 겹치지 않게 JSON 문자열 배열로 주세요.${page ? ` (이미 ${page * 20}개를 보여 줬으니 다른 관점으로)` : ''}` }], max: 1200 }), new Promise((_, no) => setTimeout(() => no(new Error('t')), 20000))]); const m = String(r.text || '').match(/\[[\s\S]*\]/); const a = m && JSON.parse(m[0]); if (Array.isArray(a) && a.length) return { list: a.map(String).slice(0, 20), by: 'claude' }; } } catch (e) { }
-    return { list: TUTV.slice(page * 20, page * 20 + 20).map(v => `${base}${v}`), by: 'rule' }; }
+    const V = TUTV.filter(v => !v.trim() || !base.includes(v.trim())); /* '기초'가 이미 있으면 '기초 기초'를 만들지 않는다 */ return { list: V.slice(page * 20, page * 20 + 20).map(v => `${base}${v}`), by: 'rule' }; }
   const tutScore = (t, words) => { const s = `${t.title} ${t.tool || ''} ${t.ch || ''}`.toLowerCase(); return words.reduce((a, w) => a + (w.length >= 2 && s.includes(w.toLowerCase()) ? 1 : 0), 0); };
   async function tutLoad(more) { const T = TUT(); const base = tutBase(T.q); if (!base) { toast('어떤 영상이 필요한지 한 줄로 적어 주세요. 예: 엑셀 피벗 테이블 기초', 'warn'); return; }
     if (!more) { T.list = []; T.page = 0; T.token = ''; T.err = ''; } T.busy = true; tutDraw();
     try { if (ytKey()) { const r = await tutApi(base, more ? T.token : ''); T.mode = 'api'; T.token = r.next; T.list = T.list.concat(r.list.filter(v => !T.list.some(x => x.id === v.id))); T.end = !r.next; }
-      else { T.mode = 'demo'; const words = base.split(/\s+/); const add = [];
-        if (!more) demoTuts().map(t => ({ t, sc: tutScore(t, words) })).filter(x => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, 10).forEach(({ t }) => add.push({ id: t.vid, title: t.title, ch: t.ch, dur: '', how: 'demo' }));
-        const qs = await tutQueries(base, T.page); T.qby = qs.by; qs.list.slice(0, 20 - (more ? 0 : add.length)).forEach(q => add.push({ q, title: q, how: 'link' })); T.list = T.list.concat(add.filter(v => !T.list.some(x => (x.id && x.id === v.id) || (x.q && x.q === v.q)))); T.end = qs.by === 'rule' && (T.page + 1) * 20 >= TUTV.length; }
+      else { T.mode = 'demo'; /* v36 1-5: 키가 없으면 주제에 맞는 데모 영상만 카드로 보이고, 모자라는 만큼은 'YouTube에서 찾기' 한 줄(검색어 링크)로 묶는다 */
+        T.list = tutDemo(base); const qs = await tutQueries(base, 0); T.qby = qs.by; T.finds = qs.list.slice(0, 8); T.end = true; }
       T.page++; } catch (e) { T.err = e.message || String(e); }
     T.busy = false; tutDraw(); try { S.ai && (S.ai.usage = (S.ai.usage || 0) + 1); } catch (e) { } }
   const tutKey = v => v.id ? 'y:' + v.id : 'q:' + v.q;
@@ -354,9 +382,11 @@
     return `<div class="clb-tut"><p class="clb-now">지금 할 일: 필요한 영상을 한 줄로 적고 [추천 받기]를 누르세요. 마음에 드는 영상을 [저장]하면 라이브러리에 들어갑니다.</p>
       <div class="clb-tqr"><label class="clb-fl"><span class="clb-vh">어떤 영상이 필요한가요?</span><input id="clbTutQ" maxlength="120" autocomplete="off" value="${esc(T.q)}" placeholder="예: 엑셀 피벗 테이블 기초 — 신입 사원용"></label><button type="button" class="btn pri" data-act="clb-tut-go" ${T.busy ? 'disabled' : ''}>${ic('spark', 16)} 추천 받기</button></div>
       <p class="clb-ex">예: 엑셀 피벗 테이블 기초 · 챗GPT로 보고서 쓰기 · 초등 분수 덧셈 설명</p>
-      ${key ? `<p class="clb-src ok">${ic('check', 16)} YouTube에서 실제 영상을 20개씩 찾습니다(설정 › 연동의 API 키 사용).</p>` : `<div class="clb-src no"><b>YouTube API 키가 없어 실제 영상 검색은 하지 못합니다.</b><span>지금은 ① 디디쌤 데모 목록(실제 YouTube 영상 ${demoTuts().length}개) 중 관련 있는 영상과 ② YouTube에서 찾아볼 검색어 후보 20개를 보여 드립니다. 검색어 후보를 저장하면 '찾아볼 영상'으로 들어가고, 나중에 [고치기]에서 주소를 넣을 수 있습니다.</span><button type="button" class="btn" data-act="clb-tut-key">API 키 넣으러 가기</button></div>`}
+      ${key ? `<p class="clb-src ok">${ic('check', 16)} YouTube에서 실제 영상을 20개씩 찾습니다(설정 › 연동의 API 키 사용).</p>` : `<div class="clb-src no"><b>YouTube API 키가 없어 실제 영상 검색은 하지 못합니다.</b><span>지금은 디디쌤 데모 목록(분야별 실제 YouTube 영상 ${TUT_DEMO.reduce((a, g) => a + g.v.length, 0) + demoTuts().length}개) 중 주제에 맞는 영상만 보여 드립니다. 키를 넣으면 주제에 맞는 영상을 20개씩 바로 추천합니다.</span><button type="button" class="btn" data-act="clb-tut-key">API 키 넣으러 가기</button></div>`}
       ${T.err ? `<p class="clb-err" role="alert">${esc(T.err)}</p>` : ''}
-      ${T.list.length ? `<div class="clb-tbar"><b>추천 ${T.list.length}개</b>${T.qby === 'claude' ? '<small>검색어: Claude</small>' : ''}<span class="sp"></span><button type="button" class="btn" data-act="clb-tut-all" ${left ? '' : 'disabled'}>모두 저장 (${left}개)</button></div><ol class="clb-tl">${T.list.map(tutCard).join('')}</ol>${T.end ? '<p class="clb-ex">더 보여 드릴 추천이 없습니다. 다른 말로 다시 찾아보세요.</p>' : `<div class="clb-more"><button type="button" class="btn" data-act="clb-tut-more" ${T.busy ? 'disabled' : ''}>더 보기 (다음 20개)</button></div>`}` : ''}
+      ${!key && T.mode === 'demo' && !T.busy && !T.list.length ? `<p class="clb-none1">「${esc(tutBase(T.q))}」에 맞는 데모 영상이 아직 없습니다. 아래 검색어로 YouTube에서 찾거나 API 키를 넣어 주세요.</p>` : ''}
+      ${T.list.length ? `<div class="clb-tbar"><b>${T.mode === 'demo' ? '주제에 맞는 데모 영상' : '추천'} ${T.list.length}개</b>${T.qby === 'claude' ? '<small>검색어: Claude</small>' : ''}<span class="sp"></span><button type="button" class="btn" data-act="clb-tut-all" ${left ? '' : 'disabled'}>모두 저장 (${left}개)</button></div><ol class="clb-tl">${T.list.map(tutCard).join('')}</ol>${T.end ? (T.mode === 'demo' ? '' : '<p class="clb-ex">더 보여 드릴 추천이 없습니다. 다른 말로 다시 찾아보세요.</p>') : `<div class="clb-more"><button type="button" class="btn" data-act="clb-tut-more" ${T.busy ? 'disabled' : ''}>더 보기 (다음 20개)</button></div>`}` : ''}
+      ${!key && T.mode === 'demo' && (T.finds || []).length && !T.busy ? `<div class="clb-tfind" role="group" aria-label="YouTube에서 찾기"><b>${ic('clsearch', 16)} YouTube에서 찾기</b>${T.list.length ? `<small>데모 영상 ${T.list.length}개 말고 더 필요하면</small>` : ''}<span class="clb-tfl">${T.finds.map(q => `<a href="https://www.youtube.com/results?search_query=${encodeURIComponent(q)}" target="_blank" rel="noopener">${esc(q)}</a>`).join('')}</span></div>` : ''}
       ${T.busy ? `<p class="clb-ex" role="status">영상을 찾고 있습니다…</p>` : ''}</div>`; }
   function tutDraw() { const w = document.querySelector('#modal .clb-tutw'); if (!w) return; const sc = w.closest('.mb') ? w.closest('.mb').scrollTop : 0; w.innerHTML = tutBody(); const mb = w.closest('.mb'); if (mb) mb.scrollTop = sc; }
   ACT['clb-tut'] = () => { TUT(); const w = modal('튜토리얼 영상 추천', `<div class="clb-tutw">${tutBody()}</div>`, [{ id: 'c', label: '닫기', run: () => { render(); } }], true); try { w.classList.add('clb-tutm'); } catch (e) { } setTimeout(() => { const i = document.getElementById('clbTutQ'); i && i.focus(); }, 30); };
@@ -437,6 +467,6 @@
 .clb-tl{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
 .clb-tc{display:flex;flex-direction:column;border:1px solid var(--g300);border-radius:8px;overflow:hidden;background:#fff}.clb-tth{display:block;aspect-ratio:16/9;background:var(--g200)}.clb-tth,.clb-tth *{text-decoration:none !important}.clb-tqr input{padding:0 12px;border:1px solid var(--g400);border-radius:8px}.clb-tth img{width:100%;height:100%;object-fit:cover;display:block}
 .clb-tq{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#C4302B;background:#FFF5F5}.clb-tt{padding:8px 10px;flex:1;display:flex;flex-direction:column;gap:2px}.clb-tt b{font-size:15px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.clb-tt small{font-size:13px;color:var(--t-sub)}
-.clb-ts{margin:0 10px 10px;min-height:44px}.clb-tc.link{border-style:dashed}
+.clb-ts{margin:0 10px 10px;min-height:44px}.clb-tfind{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:12px 0;padding:10px 12px;border:1px dashed var(--g400,#BFC0C0);border-radius:8px;font-size:15px}.clb-tfind>b{display:inline-flex;align-items:center;gap:4px}.clb-tfind small{color:var(--t-sub,#666767)}.clb-tfl{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;flex:1 1 100%;scrollbar-width:thin;padding-bottom:2px}.clb-tfl a{flex:0 0 auto;padding:8px 12px;border-radius:999px;background:var(--g100,#F1F2F2);color:var(--g900,#2A2B2B);text-decoration:none;font-size:14px;white-space:nowrap}.clb-tfl a:hover{background:var(--s50,#EAEDFF)}.clb-none1{margin:0 0 10px;font-size:15px}.clb-tc.link{border-style:dashed}
 @media (max-width:640px){.clb-topb{width:100%}.clb-topb .btn{flex:1 1 100%;justify-content:center}.clb-tqr{flex-direction:column;align-items:stretch}.clb-tl{grid-template-columns:1fr 1fr}.clb-tt b{font-size:14px}}`; document.head.appendChild(st); }
 })();
