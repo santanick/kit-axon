@@ -16,7 +16,7 @@
     return { k: a === 'comm' && P[1] ? 'comm/' + P[1] : a, top: P.length === 1 || (a === 'comm' && P.length === 2) }; }
   window.lhKey = keyOf;
   function css() { if (document.getElementById('llhCss')) return; const st = document.createElement('style'); st.id = 'llhCss';
-    st.textContent = `.sub.llh{position:relative;padding:52px 0 44px;background:var(--llh-bg,transparent);color:var(--llh-tx,inherit);isolation:isolate}
+    st.textContent = `.sub.llh{position:relative;padding:36px 0 28px;background:var(--llh-bg,transparent);color:var(--llh-tx,inherit);isolation:isolate}
 .sub.llh h1{font-family:var(--llh-ff,inherit);font-weight:var(--llh-fw,800);letter-spacing:-.02em;line-height:1.2;color:inherit;word-break:keep-all}
 .sub.llh p{color:var(--llh-mu,var(--mute))}.sub.llh .crumb a{color:var(--llh-ln,inherit)}
 .sub.llh .llh-d{font-size:17px;line-height:1.6;max-width:720px;margin:6px 0 0;white-space:pre-line}
@@ -26,9 +26,9 @@
 .sub.llh-img::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(10,12,20,.72),rgba(10,12,20,.38) 70%,rgba(10,12,20,.25))}
 .sub.llh-img.llh-c::before{background:rgba(10,12,20,.52)}
 .sub.llh-c .in{text-align:center}.sub.llh-c .llh-d{margin-left:auto;margin-right:auto}
-.sub.llh-s{padding:30px 0 24px}.sub.llh-s h1{font-size:clamp(24px,3vw,32px)}
+.sub.llh-s{padding:24px 0 18px}.sub.llh-s h1{font-size:clamp(24px,3vw,32px)}
 .sub.llh-l{padding:96px 0 80px}.sub.llh-l h1{font-size:clamp(34px,5vw,56px)}
-.sub.llh+.sec{padding-top:40px}
+.sub.llh+.sec{padding-top:28px} /* 기본 높이는 예전 머리글(48 + 40)과 거의 같게 — 아래 목록 위치가 밀리지 않게 */
 @media (max-width:640px){.sub.llh{padding:36px 0 30px}.sub.llh-l{padding:64px 0 52px}.sub.llh .llh-d{font-size:15px}}`;
     document.head.appendChild(st); }
   function apply() {
