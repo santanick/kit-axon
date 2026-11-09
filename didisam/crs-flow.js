@@ -162,7 +162,7 @@
     CF._pending = opts;
   }
   function mount() {
-    let w = $('#crsFlow'); if (!w) { w = document.createElement('div'); w.id = 'crsFlow'; w.className = 'crsf'; w.dataset.crsFlow = '1'; document.body.appendChild(w); bind(w); }
+    let w = $('#crsFlow'); if (!w) { const tw = $('#toasts'); if (tw) tw.innerHTML = ''; /* 흐름을 열기 전 알림은 지운다(겹침 방지) */ w = document.createElement('div'); w.id = 'crsFlow'; w.className = 'crsf'; w.dataset.crsFlow = '1'; document.body.appendChild(w); bind(w); }
     document.body.classList.add('cf-on'); return w;
   }
   function close(keep) {

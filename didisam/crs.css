@@ -1,6 +1,10 @@
 /* v35 과정 만들기 공통 스타일(C1 소유) — 흐름 화면 #crsFlow(.crsf) · 공용 조각 .cf-*
    쉬운 사용 원칙: 본문 16px 이상 · 버튼 48px 이상 · 한 화면 결정 하나 · 휴대폰 390 폭에서 넘침 없음 */
 body.cf-on{overflow:hidden}
+/* 흐름이 열려 있을 때 공통 알림: 한 개만, 위쪽에(입력 칸 · 하단 버튼을 가리지 않게) */
+body.cf-on #toasts{top:16px;bottom:auto}
+body.cf-on #toasts .toast:not(:last-child){display:none}
+@media (max-width:640px){body.cf-on #toasts{top:auto;bottom:calc(76px + env(safe-area-inset-bottom));width:calc(100% - 32px)}body.cf-on #toasts .toast{max-width:100%}}
 .crsf{position:fixed;inset:0;z-index:58;background:rgba(31,32,32,.45);display:flex;align-items:center;justify-content:center;padding:24px;font-size:16px;line-height:1.55;color:var(--g900,#2A2B2B)}
 .crsf *{box-sizing:border-box}
 .cf-box{position:relative;background:#fff;border-radius:12px;width:min(760px,100%);height:min(820px,calc(100vh - 48px));height:min(820px,calc(100dvh - 48px));display:flex;flex-direction:column;box-shadow:var(--e24,0 16px 48px rgba(42,43,43,.2));overflow:hidden}
@@ -139,7 +143,7 @@ body.cf-on{overflow:hidden}
   .cf-auto button{min-height:60px;padding:8px 12px}
   .crsf .cf-big{flex:1;min-width:0;padding:0 12px}
   .cf-choice{grid-template-columns:1fr 1fr}
-  .cf-tplg{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;margin:0 -16px;padding:0 16px 6px;scrollbar-width:none}.cf-tplg::-webkit-scrollbar{display:none}
+  .cf-tplg{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 16px;gap:8px;margin:0 -16px;padding:2px 16px 6px;scrollbar-width:none}.cf-tplg::-webkit-scrollbar{display:none}
   .cf-tplg button{flex:0 0 70%;scroll-snap-align:start}
   .cf-rb{padding:40px 18px 18px}
 }
