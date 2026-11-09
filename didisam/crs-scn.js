@@ -4,23 +4,6 @@
    mods.js 평생교육(유료 30시간) · docs/compliance/README.md를 따른다. 학원법 교습비 게시 · 고등교육법 1학점 15시간 · 남녀고용평등법 연 1회는 안내만 한다.
    질문은 단계마다 최대 3개, 나머지는 '나중에 해도 됩니다'(later). 로드 시 S는 null — S는 함수 안에서만 읽는다. */
 (() => {
-  /* AI 기초와 활용(14차시) — 대표 지시(2026-11-09): AI 과정은 부산창업학교 「AI 기초와 활용」(didisam.com classes/77375) 편성을 따른다.
-     차시마다 강의 영상 1개 + 퀴즈 1개, 영상 약 5시간 58분, 수료 80%, 수강 90일. 영상 파일은 기관이 올리거나 라이브러리에서 연결한다. */
-  const AI14 = [['AI가 무엇인지 알아보자', 1212], ['생성형 AI가 무엇인가?', 1297], ['AI와 대화하는 기술', 1076], ['AI 활용 글쓰기', 1152], ['M365 Copilot 기본', 1195], ['MS 오피스 생산성을 높이는 MS Copilot 활용', 1158], ['Copilot 활용 문서 작성', 1239], ['Copilot 활용 엑셀 업무', 1072], ['Copilot 활용 프레젠테이션 제작', 1154], ['Copilot 활용 노트 작성 및 관리', 1043], ['Copilot 활용 이메일 작성 및 관리', 1053], ['M365 Copilot 활용 업무 자동화 실습', 1137], ['AI 활용 멀티미디어 제작', 1185], ['AI윤리', 1190]];
-  const AI14_RE = /(AI|인공지능|생성형\s*AI)\s*(의\s*)?(기초|입문|활용|리터러시|이해)/i, AI14_NOT = /영상\s*제작|자동화|프로젝트|진단|면접|수업\s*설계|행정|코딩|파이썬|데이터/;
-  const isAI14 = t => { t = String(t || ''); return /AI 기초와 활용/.test(t) || (AI14_RE.test(t) && !AI14_NOT.test(t)); };
-  function AI14T(type, extra) { return { id: 'ai14', name: 'AI 기초와 활용', icon: 'spark', desc: '14' + (type === 'univ' ? '주' : '차시') + ' · 영상 + 퀴즈 · 약 6시간', ai14: 1, prefill: Object.assign({ name: 'AI 기초와 활용', sessions: 14, mins: 25, rate: 80, _olTouched: 1,
-    /* 고를 때마다 새 id · 새 문항으로 만들어지도록 getter(흐름은 prefill을 JSON으로 복사한다) */
-    get weekPlan() { return ai14Plan(14).map((t, i) => ({ w: i + 1, title: t, goal: `${t}의 핵심 내용을 이해하고 업무와 생활에 적용한다.` })); },
-    get curriculum() { const u = (typeof S !== 'undefined' && S && S.org && S.org.type === 'univ') ? '주차' : '차시'; return ai14Items({ sessions: 14 }, u); } }, extra || {}) }; }
-  const ai14Plan = (n, u) => { n = Math.max(1, +n || 14); const L = AI14.map(x => x[0]); let T = n >= 14 ? L.slice() : n >= 3 ? [...L.slice(0, n - 1), L[13]] : L.slice(0, n); return T; };
-  const ai14Items = (d, unitW) => { const id = typeof uid === 'function' ? uid : (p => p + Math.random().toString(36).slice(2, 9)); const T = ai14Plan(+d.sessions || 14); const out = [];
-    T.forEach((title, i) => { const sec = (AI14.find(x => x[0] === title) || [0, 1200])[1]; const w = i + 1;
-      out.push({ id: id('it'), type: 'video', src: 'upload', title, week: w, time: Math.round(sec / 60), desc: '' });
-      let qs = []; try { if (typeof AI !== 'undefined' && AI.questions) qs = AI.questions(title, 5, '쉬움', ['mc', 'mc', 'ox', 'mc', 'ox']); } catch (e) { }
-      out.push({ id: id('it'), type: 'quiz', title: `${w}${unitW} 퀴즈 — ${title}`, week: w, qs, time: 10, retake: 3 }); });
-    return out; };
-
   const CF = window.CF = window.CF || {};
   CF.cfg = CF.cfg || {};
   const N = v => (v === '' || v == null || isNaN(+v)) ? 0 : +v;
@@ -117,14 +100,13 @@
     stepTitle: { basic: '교과목 정보', outline: '주차 목록', fill: '주차 자료', setup: '개강 · 공개', open: '확인' },
     ask: {
       basic: [F.name('교과목 이름', '예: AI 리터러시와 글쓰기'), F.target('대상 학생', '예: 1학년 전체 · 간호학과 2학년', true), { k: 'kindU', label: '구분', kind: 'choice', ex: '예: 교양', def: 'gen', opts: [['gen', '교양'], ['major', '전공'], ['extra', '비교과'], ['staff', '교원 연수']] }],
-      outline: [{ k: 'sessions', label: '주차 수', kind: 'choice', ex: '예: 15주(한 학기) · 비교과는 4주', def: 15, opts: [[4, '4주'], [8, '8주'], [14, '14주'], [15, '15주(한 학기)'], [16, '16주']] }, { k: 'per', label: '한 주 차시', kind: 'choice', ex: '예: 3차시(3학점 강의)', def: 3, opts: [[1, '1차시'], [2, '2차시'], [3, '3차시']] }, { k: 'credit', label: '학점', kind: 'choice', ex: '예: 3학점', def: 3, opts: [[0, '학점 없음'], [1, '1학점'], [2, '2학점'], [3, '3학점']], show: d => d.kindU !== 'extra' && d.kindU !== 'staff' }],
+      outline: [{ k: 'sessions', label: '주차 수', kind: 'choice', ex: '예: 15주(한 학기) · 비교과는 4주', def: 15, opts: [[4, '4주'], [8, '8주'], [15, '15주(한 학기)'], [16, '16주']] }, { k: 'per', label: '한 주 차시', kind: 'choice', ex: '예: 3차시(3학점 강의)', def: 3, opts: [[1, '1차시'], [2, '2차시'], [3, '3차시']] }, { k: 'credit', label: '학점', kind: 'choice', ex: '예: 3학점', def: 3, opts: [[0, '학점 없음'], [1, '1학점'], [2, '2학점'], [3, '3학점']], show: d => d.kindU !== 'extra' && d.kindU !== 'staff' }],
       setup: [F.start('수강 시작일(개강일)'), { k: 'openTo', label: '누가 볼 수 있나요', kind: 'choice', ex: '예: 우리 학교 학생만', def: 'member', opts: [['member', '우리 학교 학생만'], ['all', '누구나']], later: true }]
     },
     defaults: { kindU: 'gen', sessions: 15, per: 3, credit: 3, mins: 50, price: 0, openTo: 'member' },
     required: ['name', 'sessions'],
     examples: { name: '예: AI 리터러시와 글쓰기', sessions: '예: 15주' },
     templates: [
-      AI14T('univ', { kindU: 'gen', per: 1, credit: 1, target: '1학년 전체' }),
       { id: 'u-ai-lit', name: '교양 AI 리터러시', icon: 'spark', desc: '15주 · 주 2차시 · 2학점', prefill: { name: 'AI 리터러시와 글쓰기', kindU: 'gen', sessions: 15, per: 2, credit: 2, target: '1학년 전체' } },
       { id: 'u-prog', name: '전공 기초 프로그래밍', icon: 'doc', desc: '15주 · 주 3차시 · 3학점', prefill: { name: '파이썬 프로그래밍 기초', kindU: 'major', sessions: 15, per: 3, credit: 3, target: '컴퓨터공학과 1학년' } },
       { id: 'u-career', name: '비교과 취업 특강', icon: 'users', desc: '4주 · 주 1차시', prefill: { name: '취업 준비 — 자기소개서와 AI 모의면접', kindU: 'extra', sessions: 4, per: 1, credit: 0, target: '3~4학년' } },
@@ -161,7 +143,6 @@
     required: ['name', 'sessions'],
     examples: { name: '예: 컴활 1급 실기 한 달 완성', price: '예: 99,000원' },
     templates: [
-      AI14T('adult', { target: '직장인 · 일반 성인', days: 90, price: 0 }),
       { id: 'a-comp', name: '컴활 1급 실기', icon: 'award', desc: '자격증 · 12차시 · 60일', prefill: { name: '컴퓨터활용능력 1급 실기 한 달 완성', target: '자격증 준비생', sessions: 12, mins: 50, days: 60 } },
       { id: 'a-toeic', name: '토익 700 단기', icon: 'chat', desc: '어학 · 20차시 · 90일', prefill: { name: '토익 700 단기 완성', target: '토익 첫 응시자', sessions: 20, mins: 30, days: 90 } },
       { id: 'a-excel', name: '직장인 엑셀 실무', icon: 'chart', desc: '실무 · 8차시 · 30일', prefill: { name: '바로 쓰는 직장인 엑셀 실무', target: '사무직 직장인', sessions: 8, mins: 30, days: 30 } },
@@ -193,7 +174,7 @@
       { id: 'p-4v', name: '4대 폭력예방 통합교육', icon: 'lock', desc: '법정 · 4차시 · 연 1회', prefill: { name: '4대 폭력예방 통합교육', cat: 'legal', target: '전 직원', sessions: 4, mins: 60, rate: 100 } },
       { id: 'p-anti', name: '청렴 · 반부패 교육', icon: 'public', desc: '법정 · 2차시', prefill: { name: '청렴 · 반부패 교육', cat: 'legal', target: '전 직원', sessions: 2, mins: 60, rate: 100 } },
       { id: 'p-new', name: '신규 임용자 기본교육', icon: 'users', desc: '신규 · 10차시 · 기수 운영', prefill: { name: '신규 임용자 기본교육', cat: 'onboard', target: '올해 신규 임용자', sessions: 10, mins: 60, cap: 40, rate: 80 } },
-      AI14T('public', { cat: 'job', target: '전 직원', rate: 80 }),
+      { id: 'p-ai', name: '생성형 AI 행정 활용', icon: 'spark', desc: '직무 · 6차시', prefill: { name: '생성형 AI 행정 업무 활용', cat: 'job', target: '행정직 전 직급', sessions: 6, mins: 50, rate: 80 } },
       { id: 'p-civil', name: '적극행정 · 민원응대', icon: 'chat', desc: '직무 · 4차시 · 정원 30명', prefill: { name: '적극행정 · 민원응대 실무', cat: 'job', target: '민원 담당 공무원', sessions: 4, mins: 60, cap: 30, rate: 80 } }
     ],
     plan: d => ({ weeks: Math.min(30, N(d.sessions) || 4), per: 1, mins: N(d.mins) || 60, hours: Math.round(totalMin(d) / 60) }),
@@ -224,7 +205,6 @@
     required: ['name', 'sessions', 'mins'],
     examples: { name: '예: 시니어를 위한 스마트폰 활용', price: '예: 120,000원' },
     templates: [
-      AI14T('lifelong', { target: '지역 주민', price: 0 }),
       { id: 'l-phone', name: '시니어 스마트폰 활용', icon: 'chat', desc: '무료 · 10차시 · 교실', prefill: { name: '시니어를 위한 스마트폰 활용', target: '60세 이상 지역 주민', sessions: 10, mins: 120, price: 0, cap: 20 } },
       { id: 'l-barista', name: '바리스타 자격 준비', icon: 'award', desc: '유료 · 15차시 · 30시간', prefill: { name: '바리스타 2급 자격 준비', target: '창업 · 취업 준비 성인', sessions: 15, mins: 120, cap: 12 } },
       { id: 'l-cb-sw', name: '사회복지학개론(학점은행)', icon: 'book', desc: '3학점 · 15차시 · 온라인', prefill: { name: '사회복지학개론', target: '학점은행제 학습자', cb: true, credit: 3, sessions: 15, mins: 180 } },
@@ -262,7 +242,6 @@
     required: ['name', 'mode', 'sessions', 'mins'],
     examples: { name: '예: 웹 개발 기초(내일배움카드)', simsa: '예: 20자리', tracse: '예: 17자리' },
     templates: [
-      AI14T('voc', { emp: '3', mode: 'remote', target: '내일배움카드 소지자' }),
       { id: 'v-web', name: 'K-디지털 웹 개발 기초', icon: 'doc', desc: '원격 · 16차시 · 8시간', prefill: { name: '웹 개발 기초(HTML · CSS · JS)', emp: '3', mode: 'remote', sessions: 16, mins: 30, target: '내일배움카드 소지자' } },
       { id: 'v-care', name: '요양보호사 실기', icon: 'users', desc: '집체 · 법정 114시간', prefill: { name: '요양보호사 실기', emp: '3', mode: 'group', sessions: 38, mins: 180, target: '요양보호사 교육생' } }, /* 법정 114시간(compliance.js LEGALH care-prac) = 38차시 × 3시간 */
       { id: 'v-excel', name: '사업주 엑셀 데이터 분석', icon: 'chart', desc: '사업주 원격 · 10차시', prefill: { name: '엑셀 데이터 분석 실무', emp: '1', mode: 'remote', sessions: 10, mins: 30, target: '재직자(사업주 훈련)' } },
@@ -299,7 +278,6 @@
     required: ['name', 'cat'],
     examples: { name: '예: 2026 직장 내 성희롱 예방교육', dept: '예: 전 직원' },
     templates: [
-      AI14T('corp', { cat: 'job', dept: '전 직원', rate: 80, dur: 4 }),
       { id: 'c-harass', name: '직장 내 성희롱 예방', icon: 'lock', desc: '법정 · 연 1회 · 전 직원', prefill: { name: '직장 내 성희롱 예방교육', cat: 'legal', sessions: 2, mins: 30, dept: '전 직원', rate: 100, dur: 4 } },
       { id: 'c-privacy', name: '개인정보보호 교육', icon: 'eye', desc: '법정 · 2차시', prefill: { name: '개인정보보호 교육', cat: 'legal', sessions: 2, mins: 30, dept: '개인정보 취급자', rate: 100, dur: 4 } },
       { id: 'c-ojt', name: '신입사원 OJT', icon: 'users', desc: '온보딩 · 8차시 · 2주', prefill: { name: '신입사원 OJT', cat: 'onboard', sessions: 8, mins: 30, dept: '신입사원', rate: 80, dur: 2 } },
@@ -328,20 +306,6 @@
   /* 모든 질문의 def를 d에 채운다(이미 있는 값은 유지) */
   CF.scnDefaults = (d, k) => { const g = CF.cfgOf(k); d = d || {}; Object.entries(g.defaults || {}).forEach(([x, v]) => { if (d[x] === undefined) d[x] = Array.isArray(v) ? v.slice() : v; }); Object.values(g.ask || {}).flat().forEach(f => { if (d[f.k] === undefined && f.def !== undefined) d[f.k] = Array.isArray(f.def) ? f.def.slice() : f.def; if (f.to && d[f.to] === undefined) d[f.to] = f.toDef; }); return d; };
   CF.scnTemplate = (id, d, k) => { const g = CF.cfgOf(k); const T = (g.templates || []).find(x => x.id === id); if (!T) return d; d = Object.assign(d || {}, JSON.parse(JSON.stringify(T.prefill)), { tpl: id }); return CF.scnDefaults(d, k); };
-  /* AI 기초와 활용 템플릿: 차시 목록 14개 + 차시마다 영상 · 퀴즈를 미리 편성 */
-  { const base = CF.scnTemplate; CF.scnTemplate = (id, d, k) => { const r = base(id, d, k); try { const g = CF.cfgOf(k); const T = (g.templates || []).find(x => x.id === id); if (T && T.ai14 && r) { const uw = (k || (S && S.org && S.org.type)) === 'univ' ? '주차' : '차시'; r.weekPlan = ai14Plan(14).map((t, i) => ({ w: i + 1, title: t, goal: '' })); r.sessions = 14; r._olTouched = 1; r.curriculum = ai14Items(r, uw); r._goalAI = 1; } } catch (e) { console.error('ai14 template', e); } return r; }; }
-  /* AI 과정 설계(대화 · AI SAM · 예시 과정 포함): 주제가 AI 기초 · 활용이면 같은 14개 편성을 쓴다 */
-  if (typeof AI !== 'undefined' && AI.design && !AI.design._ai14) { const b0 = AI.design; AI.design = function (o) { o = o || {}; if (!isAI14(o.topic)) return b0.call(this, o);
-    const n = Math.max(1, Math.min(30, +o.weeks || 14)); const uw = AI.unitW ? AI.unitW(o) : '차시'; const T = ai14Plan(Math.min(n, 14)); const W = [];
-    T.forEach((title, i) => { const w = i + 1; const items = [{ type: 'video', title, q: `${title} 강의`, time: Math.round(((AI14.find(x => x[0] === title) || [0, 1200])[1]) / 60) }]; if (o.quiz !== false) items.push({ type: 'quiz', title: `${w}${uw} 퀴즈 — ${title}`, gen: { n: 5, lv: o.level || '쉬움' } }); W.push({ w, title, goal: `${title}의 핵심 내용을 이해하고 실제 업무와 생활에 적용한다.`.replace(/\?의 핵심/, '의 핵심'), items }); });
-    for (let w = T.length + 1; w <= n; w++) W.push(w === n && o.exam ? { w, title: '정리 · 최종 평가', goal: '전체 학습 내용을 평가한다.', items: [{ type: 'exam', title: `${clean ? clean(o.topic) : o.topic} 정리 · 최종 평가`, gen: { n: 20, lv: o.level || '보통' } }] } : { w, title: w === n ? '정리 · 최종 평가' : `실습 · 복습 ${w - T.length}`, goal: '앞에서 배운 AI 활용법을 직접 해 보며 익힌다.', items: [] });
-    return W; }; AI.design._ai14 = 1; }
-  CF.isAI14 = isAI14;
-  /* 원본 편성의 수료 기준: 영상 진도 100% 반영 · 80% 이상 수료(시험 · 과제 없음), 수강 90일 */
-  const ai14Done = x => { try { const c = x && (x.course || x), d = (x && x.d) || {}; if (!c || !(d.tpl === 'ai14' || c.crsTpl === 'ai14')) return; c.criteria = Object.assign({}, c.criteria || {}, { video: 100, exam: 0, assign: 0, threshold: 80 }); c.crsTpl = 'ai14';
-    if (!(S && S.org && S.org.type === 'univ')) { const st = c.start || (typeof today === 'function' ? today() : ''); c.period = Object.assign({}, c.period || {}, { mode: 'days', days: 90, start: st, end: typeof addDays === 'function' && st ? addDays(st, 90) : (c.period || {}).end }); }
-    if (typeof save === 'function') save(); } catch (e) { console.error('ai14 create', e); } };
-  const ai14Hook = () => { if (CF.on && !CF._ai14on) { CF.on('create', ai14Done); CF._ai14on = 1; } }; ai14Hook(); if (!CF._ai14on) setTimeout(ai14Hook, 0);
   /* 단계 검사: 그 단계 질문의 필수 빈칸(stop) + cfg.check 중 그 단계 칸 */
   CF.scnCheck = (d0, step, k) => { const g = CF.cfgOf(k); const d = CF.scnDefaults(JSON.parse(JSON.stringify(d0 || {})), k); /* 비운 칸은 기본값으로 본다(비워도 개설까지) */ const ask = step ? (g.ask || {})[step] || [] : Object.values(g.ask || {}).flat(); const keys = new Set(ask.map(f => f.k)); const R = [];
     ask.forEach(f => { if (f.show && !f.show(d)) return; const v = d[f.k]; const empty = v == null || v === '' || (Array.isArray(v) && !v.length); if ((g.required || []).includes(f.k) && empty) R.push({ lv: 'stop', k: f.k, msg: `${f.label} 칸을 채웁니다. ${f.ex || ''}`.trim() }); if (!empty && f.kind === 'num' && ((f.min != null && N(v) < f.min) || (f.max != null && N(v) > f.max))) R.push({ lv: 'stop', k: f.k, msg: `${f.label}: ${f.min}~${f.max}${f.unit || ''} 사이로 넣습니다.` }); });
