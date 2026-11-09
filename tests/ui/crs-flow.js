@@ -142,7 +142,7 @@ const schemaCheck = (p, id) => p.evaluate(([id, KINDS, ITYPES]) => { const c = S
   return E; }, [id, KINDS, ITYPES]);
 const snapCheck = (p, id) => p.evaluate(id => { const E = []; const c = S.classes.find(x => x.id === id); let s; try { s = lsSnapshot(); } catch (e) { return ['lsSnapshot 오류 ' + e.message]; }
   const x = (s.classes || []).find(y => y.id === id); if (!x) return ['게시본에 과정 없음(status=' + c.status + ')'];
-  const n = Math.min(60, (c.curriculum || []).length); if ((x.items || []).length !== n) E.push(`게시본 항목 ${(x.items || []).length}/${n}`);
+  const n = Math.min(200, (c.curriculum || []).length); if ((x.items || []).length !== n) E.push(`게시본 항목 ${(x.items || []).length}/${n}`);
   const rich = it => it.doc || it.ai || it.url || it.yt || it.fileId || (it.qs || []).length || it.desc || it.html || (it.files || []).length;
   const src = (c.curriculum || []).filter(rich); const pub = (x.items || []).filter(y => y.yt || y.desc || (y.qs || []).length || y.doc || y.html || y.ai || y.link || y.fileId || y.url || (y.files || []).length);
   if (src.length && !pub.length) E.push(`콘텐츠 ${src.length}개가 게시본에 안 실림(제목만)`);
