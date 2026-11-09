@@ -464,7 +464,7 @@ const COVER = [
   ['교재/교구: 전자책 · 실물 · 다운로드 현황 · 전달 체크 · 환불 규칙', 'book', 'features/book.md'],
   ['콘텐츠 라이브러리: 동영상 · 문서 · 사진 · 사용 중 삭제 불가', 'library', 'features/library.md'],
   ['수강생 관리: 정회원 · 준회원 · 승인 대기 · 일괄 승인 · 상세(기본/클래스/결제/작성글)', 'members', 'features/member/student.md'],
-  ['초대: 연락처(알림톡) · 링크 · 이메일 · 일괄 가입(100명)', 'members', 'features/member/invite.md'],
+  ['초대: 연락처(알림톡) · 링크 · 이메일 · 일괄 등록(한 번에 5,000명)', 'members', 'features/member/invite.md'],
   ['추가 질문(최대 6개) · 엑셀 내려받기(비밀번호)', 'members', 'features/member/student.md'],
   ['팀 관리(반 · 부서 · 학과) · 팀 단위 권한 · 메시지', 'groups', 'features/member/team.md'],
   ['보호자 연결 · 연결 상태 · 운영자 연결 요청', 'parents', 'features/member/parents.md'],
