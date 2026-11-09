@@ -222,3 +222,9 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
   .cf-shf .btn{flex:1 1 140px}.cf-exg{grid-template-columns:1fr 1fr}.cf-exa{width:100%}.cf-exa .btn{flex:1 1 auto}
 }
 .cf-thumbt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 220px}.cf-thumbt .cf-hint{margin:0}
+.cf-thumbr .btn{white-space:normal;text-align:left}
+@media (max-width:640px){
+  .cf-shf .btn{flex:1 1 100%;white-space:normal}
+  .cf-wlm li{flex-wrap:wrap;row-gap:6px}.cf-wlm li input[data-cfw]{flex:1 1 calc(100% - 46px)}.cf-wlm li .cf-wm{margin-left:42px;flex:1 1 auto}
+  .cf-thumbr .btn{flex:1 1 100%;width:100%;justify-content:center}
+}
