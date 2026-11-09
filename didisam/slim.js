@@ -2,6 +2,12 @@
    휴대폰 「앱 및 서비스 연결하기」처럼 전반적인 UI UX를 심플하게(목록에는 이름과 한 줄, 설명은 누른 뒤에)'.
    이 파일은 다른 스크립트를 모두 읽은 뒤(boot.js 바로 앞) 읽는다. 기능은 지우지 않고, 보이는 것만 줄인다(마이그레이션 동등성). */
 (function () {
+  /* ───────── 0. v36 '간단히 보기' 폐지(대표님 2026-11-09: '간단보기가 오히려 혼란 — 처음부터 전체 화면') ─────────
+     slim-a · slim-b가 기존 화면 앞에 끼우던 요약 첫 화면(+ [자세히] · [표로 보기] · '‹ 간단히 보기' 토글)을 기본으로 끈다.
+     기능은 그대로(기존 전체 화면이 곧 첫 화면). 요약 첫 화면을 계속 쓰는 화면만 SLIM_FRONT에 남긴다.
+     - site: 사이트 첫 화면은 v36 G(한 화면 편집기)가 새로 정한다 — 그 전까지 지금 화면 유지 */
+  window.SLIM_FRONT = window.SLIM_FRONT || new Set(['site']);
+  window.slimFront = id => !!(window.SLIM_FRONT && SLIM_FRONT.has(id));
   /* ───────── 1. 기관 유형별 필수 메뉴(사이드바 기본) ───────── */
   const ESS = {
     adult: ['class', 'clib', 'members', 'enroll', 'message', 'sales', 'site'],
@@ -107,7 +113,7 @@
   const CN_ONE = { claude: 'AI SAM 대화 · 문서 만들기', mcp: '다른 AI가 우리 데이터로 일하기', slack: '알림을 채널로 받기', google: '캘린더 · 시트 · 메일', toss: '수강료 온라인 결제', channeltalk: '홈페이지 상담 버튼' };
   if (typeof VIEWS.conn === 'function') {
     const oldConn = VIEWS.conn; window.slOldConn = oldConn;
-    VIEWS.conn = () => { if (UI.slConnOld) return `<div class="sl-back"><button class="btn ghost" data-act="sl-connold" data-v="0">‹ 간단히 보기</button></div>` + oldConn();
+    VIEWS.conn = () => { if (UI.slConnOld) return `<div class="sl-back"><button class="btn ghost" data-act="sl-connold" data-v="0">‹ 연결 목록</button></div>` + oldConn();
       cnEnsure(); const f = UI.slCnF || 'all', q = (UI.slCnQ || '').trim();
       const on = CN_IDS.filter(id => cnStatus(id).st === CN_ST.on);
       const L = CN_IDS.filter(id => (f === 'all' || CN_CAT[id] === f) && (!q || (CN[id].name + CN_ONE[id]).toLowerCase().includes(q.toLowerCase())));
@@ -138,7 +144,7 @@
   /* ───────── 5. 명단 — 표 대신 목록(표로 보기 = 기존 화면 그대로) ───────── */
   if (typeof VIEWS.members === 'function') {
     const oldMem = VIEWS.members;
-    VIEWS.members = () => { if (UI.mem || UI.slMemTable || (typeof mbUniv === 'function' && mbUniv())) return (UI.mem ? '' : `<div class="sl-back"><button class="btn ghost" data-act="sl-memtable" data-v="0">‹ 간단히 보기</button></div>`) + oldMem();
+    VIEWS.members = () => { if (!slimFront('members') || UI.mem || UI.slMemTable || (typeof mbUniv === 'function' && mbUniv())) return (UI.mem || !slimFront('members') ? '' : `<div class="sl-back"><button class="btn ghost" data-act="sl-memtable" data-v="0">‹ 목록</button></div>`) + oldMem();
       try { mbEnsure(); } catch (e) { }
       const f = UI.memF || 'all'; const L = typeof mbFiltered === 'function' ? mbFiltered() : S.members; const cnt = g => S.members.filter(m => m.grade === g).length; const T = typeof mbTeacher === 'function' && mbTeacher();
       const wait = cnt('승인 대기'); const gn2 = id => (S.groups.find(g => g.id === id) || {}).name || '';
@@ -181,11 +187,13 @@
     return [['기본', [['go:more', '메뉴', '켜고 끌 메뉴 고르기', 'grid', '#5C74F6'], ['type', '기관 정보', '기관 유형 · 이름', 'gear', '#6C6C6C'], ['rules', '학습 규칙 · AI 튜터', '진도 · 수료 기준', 'book', '#00A224'], ['lang', '언어', '화면 · 사이트 언어', 'globe', '#109BF1']]],
       ['연결', [...(O ? [['go:conn', '연결', 'Slack · Google · 결제', 'send', '#7C5CF2']] : []), ['integr', 'API · MCP', '외부 AI · 시스템 연동', 'spark', '#4C77C5']]],
       ['회원 · 사이트', [['service', '가입 · 회원', '가입 방식 · 승인', 'users', '#E5487A'], ['home', '홈페이지', '주소 · 기본 정보', 'globe', '#14A3A3'], ['popup', '팝업', '공지 팝업', 'chat', '#FF9800'], ['consult', '상담', '상담 버튼 · 시간', 'chat', '#6447F5'], ['terms', '약관', '이용약관 · 개인정보', 'book', '#808181']]],
-      ['요금 · 데이터', [...(O ? [['plan', '요금제 · 결제', '플랜 · 부가 옵션', 'chart', '#0064FF'], ['room', '데이터룸 · 배포', '배포 · 백업 공간', 'grid', '#2E40B3']] : []), ['data', '데이터', '내보내기 · 초기화', 'gear', '#4C4D4D'], ['cover', '기능 맵', '전체 기능 한눈에', 'grid', '#AAABAB']]]]; };
+      ['요금 · 데이터', [...(O ? [['plan', '요금제 · 결제', '플랜 · 부가 옵션', 'chart', '#0064FF'], ['room', '데이터룸 · 배포', '배포 · 백업 공간', 'grid', '#2E40B3']] : []), ['data', '데이터', '내보내기 · 초기화', 'gear', '#4C4D4D'], ['cover', '기능 맵', '전체 기능 한눈에', 'grid', '#AAABAB']]],
+      /* v36: 머리에서 숨긴 관리자 아이디 · 비밀번호 변경 · 로그아웃은 여기(운영 서버 로그인일 때만) */
+      ...(typeof LIVE !== 'undefined' && LIVE && LIVE.user ? [['계정', [['act:live-pw', '비밀번호 변경', LIVE.user.email || '로그인 계정', 'lock' in IC ? 'lock' : 'gear', '#6C6C6C'], ['act:live-logout', '로그아웃', '이 기기에서 로그아웃', 'send', '#808181']]]] : [])]; };
   { const base = VIEWS.settings; VIEWS.settings = () => { if (UI.slSetIn) return `<div class="sl-back"><button class="btn ghost" data-act="sl-setback">‹ 설정</button></div>` + base();
       const q = (UI.slSetQ || '').trim();
       return SL.page('설정', '', SETS().map(([g, L]) => { const R = L.filter(x => !q || (x[1] + x[2]).includes(q)); return R.length ? `<h3 class="sl-gh">${esc(g)}</h3>` + SL.list(R.map(([k, n, d, i, c]) => SL.row({ act: 'sl-set', v: k, name: n, sub: d, col: c, icon: ic(i in IC ? i : 'gear', 20) }))) : ''; }).join('') + SL.search('slSetQ', '설정 검색')); }; }
-  ACT['sl-set'] = el => { const k = el.dataset.v; if (k.startsWith('go:')) { const t = k.slice(3); if (t === 'conn') { ACT['sl-goconn'](); return; } go(t); return; } UI.settings = k; UI.slSetIn = true; render(); window.scrollTo(0, 0); };
+  ACT['sl-set'] = el => { const k = el.dataset.v; if (k.startsWith('act:')) { const f = ACT[k.slice(4)]; if (f) f(el); return; } if (k.startsWith('go:')) { const t = k.slice(3); if (t === 'conn') { ACT['sl-goconn'](); return; } go(t); return; } UI.settings = k; UI.slSetIn = true; render(); window.scrollTo(0, 0); };
   ACT['sl-setback'] = () => { UI.slSetIn = false; render(); };
   { const base = go; go = (id, keep) => { if (id === 'settings') UI.slSetIn = false; else if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id)) UI.slSetIn = true; return base(id, keep); }; }
 
@@ -193,10 +201,8 @@
   if (ACT['reset-all']) { const base = ACT['reset-all']; ACT['reset-all'] = (...a) => modal('기관 초기화', `<p>데모 데이터를 모두 지우고 가입 화면으로 돌아갑니다. 되돌릴 수 없습니다.</p><label class="fl">확인을 위해 기관 이름 「${esc(S.org.name)}」을 입력하세요<input name="nm" autocomplete="off"></label>`,
     [{ id: 'c', label: '취소' }, { id: 'ok', label: '초기화', kind: 'red', run: w => { if (fv(w, 'nm') !== S.org.name) { toast('기관 이름이 일치하지 않습니다.', 'warn'); return false; } closeModal(); setTimeout(() => { base(...a); setTimeout(() => { const ok = $('#modal [data-mact=ok]'); ok && ok.click(); }, 30); }, 0); return false; } }]); }
 
-  /* 운영(라이브) 머리의 '비밀번호 변경'은 계정 메뉴 안으로 */
-  AFTER.push(() => { const a = $('#liveAcct'); if (!a || a.dataset.sl) return; a.dataset.sl = 1; const em = a.querySelector('small'); const pw = a.querySelector('[data-act="live-pw"]'); const out = a.querySelector('[data-act="live-logout"], [data-act="live-out"], [data-act="logout"]');
-    if (!pw) return; const d = document.createElement('details'); d.className = 'sl-acct'; d.innerHTML = `<summary aria-label="계정 메뉴"><span class="av">${esc((em && em.textContent || '?')[0].toUpperCase())}</span></summary><div class="sl-acm" role="menu"><small>${esc(em ? em.textContent : '')}</small></div>`;
-    const m = d.querySelector('.sl-acm'); pw.classList.remove('sm'); m.appendChild(pw); if (out) m.appendChild(out); if (em) em.remove(); a.appendChild(d); });
+  /* v36: 운영(라이브) 머리의 관리자 아이디 · 비밀번호 변경 · 로그아웃은 머리에서 숨긴다(대표님 2026-11-09) — 기능은 설정 › 계정에 */
+  AFTER.push(() => { const a = $('#liveAcct'); if (a && !a.hidden) { a.hidden = true; a.style.display = 'none'; a.setAttribute('aria-hidden', 'true'); } });
 
   /* ───────── 8. 홈 — 입력창 + 추천 + 오늘 할 일만, 나머지는 한 줄 요약 ───────── */
   AFTER.push(() => { if (CUR.ws !== 'home') return; const R = $('#main .aih'); if (!R || R.dataset.sl) return; R.dataset.sl = 1;

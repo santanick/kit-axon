@@ -43,6 +43,8 @@
     const old = VIEWS[id]; if (typeof old !== 'function') return; OLD[id] = old;
     VIEWS[id] = (...a) => {
       if (!S || !S.org) return old(...a);
+      /* v36: '간단히 보기' 폐지(대표님 2026-11-09) — 처음부터 전체 화면. 요약 첫 화면은 SLIM_FRONT에 남긴 화면만 */
+      if (!slimFront(id)) return old(...a);
       if (T()[id]) return back(id) + old(...a);
       let r = null; try { r = build(old, ...a); } catch (e) { console.error(e); r = null; }
       if (r && typeof r === 'object') return (r.pre || '') + old(...a);
