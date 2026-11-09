@@ -137,19 +137,27 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   const pepper = env.SESSION_PEPPER || env.SIGNUP_CODE || 'didisam-learner';
   const codeFp = (tid, sid, code) => crypto.createHmac('sha256', pepper).update(`${tid}|${sid}|${String(code).toUpperCase()}`).digest('hex');
   const lcookieName = secure ? LCOOKIE : 'dd_lsid';
-  /* 어드민이 발급한 접근코드(S.codes)를 학습자 로그인 표로 동기화 — 바뀐 코드만 scrypt로 다시 해시 */
-  async function syncLearners(c, tid, codes) {
-    if (!Array.isArray(codes)) return;
+  /* 어드민이 발급한 접근코드(S.codes)를 학습자 로그인 표로 동기화 — 바뀐 코드만 scrypt로 다시 해시.
+     v36 일괄 등록 5,000명: 한 번에 max건(저장 PUT 300 · POST /api/learners/sync 500)씩 8개 동시 해시, 남은 건수(pending)를 돌려준다.
+     (이전에는 한도에서 멈추면 그 뒤 학번이 '삭제 대상'으로 잘못 잡혔다 — 모든 유효 학번을 먼저 keep에 넣는다) */
+  const SYNC_PUT = Math.max(1, +env.LEARNER_SYNC_PUT || 300), SYNC_BATCH = Math.max(1, +env.LEARNER_SYNC_BATCH || 500), CODES_MAX = 5000;
+  async function syncLearners(c, tid, codes, max = SYNC_PUT) {
+    if (!Array.isArray(codes)) return 0;
     const cur = new Map((await c.query('select sid, code_fp from learners where tenant_id = $1', [tid])).rows.map(r => [r.sid, r.code_fp]));
-    const keep = new Set(); let n = 0;
-    for (const x of codes.slice(0, 5000)) {
-      const sid = String(x && x.sid || ''); const code = String(x && x.code || ''); if (!SID_RE.test(sid) || code.length < 4 || code.length > 20) continue; keep.add(sid);
+    const keep = new Set(); const todo = [];
+    for (const x of codes.slice(0, CODES_MAX)) {
+      const sid = String(x && x.sid || ''); const code = String(x && x.code || ''); if (!SID_RE.test(sid) || code.length < 4 || code.length > 20 || keep.has(sid)) continue; keep.add(sid);
       const fp = codeFp(tid, sid, code); if (cur.get(sid) === fp) continue;
-      if (++n > 300) break; // 한 번 저장에 최대 300건(나머지는 다음 저장 때)
-      await c.query('insert into learners (tenant_id, sid, dept, code_fp, code_hash) values ($1, $2, $3, $4, $5) on conflict (tenant_id, sid) do update set dept = excluded.dept, code_fp = excluded.code_fp, code_hash = excluded.code_hash, pw_hash = null', [tid, sid, String(x.dept || '').slice(0, 40), fp, await hashPw(code.toUpperCase())]);
+      todo.push({ sid, dept: String(x.dept || '').slice(0, 40), fp, code });
+    }
+    const now = todo.slice(0, max);
+    for (let i = 0; i < now.length; i += 8) {
+      const part = now.slice(i, i + 8); const hs = await Promise.all(part.map(x => hashPw(x.code.toUpperCase())));
+      for (let k = 0; k < part.length; k++) await c.query('insert into learners (tenant_id, sid, dept, code_fp, code_hash) values ($1, $2, $3, $4, $5) on conflict (tenant_id, sid) do update set dept = excluded.dept, code_fp = excluded.code_fp, code_hash = excluded.code_hash, pw_hash = null', [tid, part[k].sid, part[k].dept, part[k].fp, hs[k]]);
     }
     const gone = [...cur.keys()].filter(sid => !keep.has(sid));
     if (gone.length) { await c.query('delete from learners where tenant_id = $1 and sid = any($2)', [tid, gone]); await pool.query('delete from learner_sessions where tenant_id = $1 and sid = any($2)', [tid, gone]); }
+    return todo.length - now.length;
   }
   async function lauth(req, tid) {
     const t = cookies(req)[lcookieName]; if (!t || t.length > 100) return null;
@@ -409,14 +417,14 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
         if (rev === 0) {
           const r = await c.query('insert into tenant_state (tenant_id, doc, rev, bytes) values ($1, $2, 1, $3) on conflict (tenant_id) do nothing returning rev', [a.tid, s, s.length]);
           if (!r.rowCount) throw new HttpErr(409, '다른 곳에서 먼저 저장했습니다.', 'conflict');
-          await syncLearners(c, a.tid, doc.codes);
-          return { rev: 1 };
+          const pending = await syncLearners(c, a.tid, doc.codes);
+          return { rev: 1, ...(pending ? { pending } : {}) };
         }
         const r = await c.query('update tenant_state set doc = $2, rev = rev + 1, bytes = $3, updated_at = now() where tenant_id = $1 and rev = $4 returning rev', [a.tid, s, s.length, rev]);
         if (!r.rowCount) throw new HttpErr(409, '다른 창이나 운영자가 먼저 저장했습니다. 최신 내용을 불러옵니다.', 'conflict');
-        await syncLearners(c, a.tid, doc.codes);
+        const pending = await syncLearners(c, a.tid, doc.codes);
         const m = doc.org.room.mode; if (m && m !== a.mode) await pool.query('update tenants set mode = $2, name = $3 where id = $1', [a.tid, String(m).slice(0, 20), String(doc.org.name || a.name).slice(0, 30)]);
-        return { rev: r.rows[0].rev };
+        return { rev: r.rows[0].rev, ...(pending ? { pending } : {}) };
       });
     },
 
@@ -472,6 +480,9 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     'GET /api/learners/accounts': async req => pii.adminList(await needStaff(req)),
     'POST /api/learners/pii': async req => pii.adminPii(await needStaff(req), req),
     'GET /api/learners/pii-log': async req => pii.adminLog(await needStaff(req)),
+    /* v36 일괄 등록 뒤 남은 학습자 로그인 계정(접근코드 해시)을 500건씩 마저 만든다 — 응답 { pending } 이 0이 될 때까지 화면이 반복 호출 */
+    'POST /api/learners/sync': async req => { const a = await needStaff(req); limit('lsync:' + a.tid, 120, 3600e3); const r = await stateDoc(a); if (!r) return { pending: 0 };
+      const doc = crypt.open(r.doc, a.tid); return inTenant(pool, a.tid, async c => ({ pending: await syncLearners(c, a.tid, doc && doc.codes, SYNC_BATCH) })); },
     'GET /api/cpl/summary': async req => { const a = await need(req); const o = await cpl.summary(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.sids.has(String(r.sid))); } return o; },
     'GET /api/cpl/exams': async req => { const a = await need(req); const o = await cpl.exams(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.classes.has(String(r.cls)) && s.sids.has(String(r.sid))); } return o; },
     'GET /api/cpl/exam-copy': async req => { const a = await need(req); const o = await cpl.examCopy(a); if (a.role === 'teacher') { const s = await tScope(a); o.rows = o.rows.filter(r => s.classes.has(String(r.cls)) && s.sids.has(String(r.a)) && s.sids.has(String(r.b))); } return o; },

@@ -76,3 +76,12 @@
 .lh .acct:has(.lcbell){display:flex;align-items:center;gap:4px;flex-direction:row}
 .lcbar select{min-width:110px;appearance:auto;-webkit-appearance:menulist}
 @media (max-width:640px){.lcbar select{flex:1 1 calc(50% - 8px);min-width:120px}.lcbar .lcgrow{display:none}.lcbar .lbtn{flex:1;justify-content:center}}
+/* v36 다중 게시판 · 공지 서식 */
+.lck.pin{background:var(--pri);color:#fff;margin-right:4px}
+.lcbdesc{margin:6px 0 10px;color:var(--mute);font-size:14px}
+.lcro{color:var(--mute)}
+.lc26bd nav a small{font-size:11px;color:var(--mute);margin-left:4px}
+.lcmd p{margin:0 0 8px}.lcmd ul{margin:0 0 8px;padding-left:22px}.lcmd li{margin:2px 0}
+.lcmd a{color:var(--pri-tx,var(--pri));text-decoration:underline;overflow-wrap:anywhere}
+.lcmd img{max-width:100%;height:auto;border-radius:8px;display:block;margin:8px 0}
+.nt>.lcmd{padding:4px 18px 16px;font-size:14px;line-height:1.7}.mycard .nt>.lcmd{padding:0 0 12px}.ncard>.lcmd{padding-top:10px}

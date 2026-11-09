@@ -28,5 +28,6 @@ public class TenantController {
     @PostMapping("/learners/pii") public Map<String, Object> pii(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception {
         return piiService.adminPii(authService.needStaff(req), body);
     }
+    @PostMapping("/learners/sync") public Map<String, Object> sync(HttpServletRequest req) throws Exception { return stateService.syncPending(authService.needStaff(req)); }
     @GetMapping("/learners/pii-log") public Map<String, Object> piiLog(HttpServletRequest req) throws Exception { return piiService.adminLog(authService.needStaff(req)); }
 }

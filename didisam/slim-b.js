@@ -17,11 +17,12 @@
   /* ── 공통: 첫 화면 ↔ 기존 화면 ── */
   const FR = {};
   const isOld = id => { const o = FR[id]; if (!o) return true; if (UI.sbOld && UI.sbOld[id]) return true; if (o.key && UI[o.key] != null && UI[o.key] !== '') return true; try { return !!(o.oldIf && o.oldIf()); } catch (e) { return false; } };
-  window.sbIsFront = id => !!FR[id] && !isOld(id);
+  window.sbIsFront = id => !!FR[id] && slimFront(id) && !isOld(id);
   const backBar = id => `<div class="sl-back sb-back"><button type="button" class="btn ghost" data-act="sb-front" data-v="${id}">‹ ${esc(FR[id].title ? FR[id].title() : lb(id))}</button></div>`;
   function front(id, o) {
     if (typeof VIEWS[id] !== 'function') return; const old = VIEWS[id]; FR[id] = o; o.old = old;
-    VIEWS[id] = (...a) => { if (isOld(id)) return (o.noBack && o.noBack() ? '' : backBar(id)) + old(...a);
+    VIEWS[id] = (...a) => { if (!slimFront(id)) return old(...a); /* v36: 처음부터 전체 화면(간단히 보기 폐지) */
+      if (isOld(id)) return (o.noBack && o.noBack() ? '' : backBar(id)) + old(...a);
       try { return o.build(old, ...a); } catch (e) { console.error(e); return old(...a); } };
   }
   const clearFront = id => { const o = FR[id]; if (!o) return; UI.sbOld = UI.sbOld || {}; UI.sbOld[id] = 0; if (o.key) delete UI[o.key]; A(o.reset).forEach(k => { delete UI[k]; }); };
@@ -296,7 +297,4 @@
   /* 아래 탭(같은 그룹) 이동 시에도 정리를 다시 */
   { const base = ACT.tab; ACT.tab = (el, ...r) => { if (el && el.dataset && el.dataset.key === 'settings') { const m = $('#main'); if (m) delete m.dataset.sbSet; } return base(el, ...r); }; }
 })();
-/* 운영(라이브) 계정 메뉴: slim.js가 비밀번호 변경을 계정 메뉴로 옮길 때 로그아웃(live-logout)도 같은 메뉴로 — 머리에 버튼을 남기지 않는다 */
-(function () { if (typeof AFTER === 'undefined') return;
-  AFTER.push(() => { const a = document.getElementById('liveAcct'); if (!a) return; const m = a.querySelector('.sl-acm'); const out = a.querySelector('[data-act="live-logout"]'); if (m && out && !m.contains(out)) { out.classList.remove('sm'); m.appendChild(out); } });
-})();
+/* v36: 운영(라이브) 계정(아이디 · 비밀번호 변경 · 로그아웃)은 머리에서 숨기고 설정 › 계정으로 옮겼다(slim.js) */
