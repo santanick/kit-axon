@@ -197,7 +197,7 @@
   { const base = viewPage; viewPage = (id, ...a) => {
     if (id === 'cal') { if (!LR.me) return needLogin('cal'); try { return calHTML(); } catch (e) { console.error('lcal', e); return '<section class="sec"><div class="in"><p class="empty">캘린더를 그리지 못했어요. 새로 고침해 주세요.</p></div></section>'; } }
     if (id === 'connect' && !(pageOf && pageOf('connect'))) { if (!LR.me) return needLogin('connect'); const more = typeof window.laiMore === 'function' ? window.laiMore() : '';
-      return `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › 연결 · 알림</p><h1>연결 · 알림</h1><p>캘린더 · 카카오톡 연결과 학습 리마인더를 설정해요.</p></div></section><section class="sec lq-conn"><div class="in"><p><a class="lbtn ghost sm" href="#cal">${ico('cal', 16)}학습 캘린더 보기</a></p><div class="ap-conn-a" hidden></div>${more}</div></section>`; }
+      return `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › 연결 · 알림</p><h1>연결 · 알림</h1><p>${(SITE().org || {}).type === 'univ' ? '캘린더' : '캘린더 · 카카오톡'} 연결과 학습 리마인더를 설정해요.</p></div></section><section class="sec lq-conn"><div class="in"><p><a class="lbtn ghost sm" href="#cal">${ico('cal', 16)}학습 캘린더 보기</a></p><div class="ap-conn-a" hidden></div>${more}</div></section>`; }
     return base(id, ...a); }; }
 
   /* ── 진입: 웹 머리 메뉴(로그인한 학습자 · 보호자) ── */
