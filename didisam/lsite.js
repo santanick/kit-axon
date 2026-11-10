@@ -149,5 +149,10 @@ function lpApply() {
 }
 /* v38 F5 L · U: 운영자가 꺼 둔 기능(배지 · 디지털북)과 영상 없는 예시 튜토리얼은 게시본에서 빼 학습자에게 보이지 않게 한다 */
 { const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); try { if (r && typeof menuOn === 'function') { const on = id => !MENU[id] || menuOn(id);
+  r.f538 = 1; /* 이 표시가 없는 옛 게시본이면 사이트 화면에 '다시 게시' 안내 */
   if (!on('badge')) r.badges = [];
   r.pages = (r.pages || []).filter(p => !(p.id === 'books' && !on('dbook') && !on('library')) && !(p.id === 'tutorials' && !(r.tuts || []).some(t => t.yt)) && !(p.id === 'courses' && !(r.tracks || []).length && !(r.classes || []).length)); } } catch (e) { console.error(e); } return r; }; }
+/* v38 F5: v38 이전 게시본(결제 · '무료' · 메뉴 이름 정리 전)이면 사이트 화면 위에 '다시 게시하면 반영됩니다' 안내 */
+if (typeof AFTER !== 'undefined') AFTER.push(() => { try { if (!S || !S.org || typeof CUR === 'undefined' || CUR.tab !== 'site') return; const pub = S.lsite && S.lsite.pub; const m = document.querySelector('#main'); if (!pub || pub.f538 || !m || m.querySelector('.f5-repub')) return;
+  m.insertAdjacentHTML('afterbegin', `<div class="note f5-repub" role="status" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px">${typeof ic === 'function' ? ic('info', 16) : ''}<span style="flex:1;min-width:200px">학습자 화면 문구(결제 · '무료' 표시, 메뉴 이름)가 바뀌었습니다. 다시 게시하면 학습자 사이트에 반영됩니다.</span><button type="button" class="btn sm pri" data-act="f5-repub">다시 게시하기</button></div>`); } catch (e) { } });
+if (typeof ACT !== 'undefined') ACT['f5-repub'] = () => { (typeof smPublish === 'function' ? smPublish : ACT['ls-pub'])(); };
