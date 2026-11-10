@@ -90,7 +90,7 @@ function lcViewWrite(arg) { if (!LR.me) return needLogin('write'); const C2 = CO
     <label>게시판<select name="board" data-lcchg="wboard">${boards.map(b => `<option value="${esc(b.id)}" ${b.id === b0 ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select></label>${bw.desc ? `<p class="mini" id="lcWBd">${esc(bw.desc)}</p>` : '<p class="mini" id="lcWBd"></p>'}
     <fieldset class="lcrad" id="lcWKind" ${wTalk || ask ? '' : 'hidden'}><legend>카테고리</legend>${['질문', '이야기'].map(k => `<label><input type="radio" name="kind" value="${k}" ${v.kind === k ? 'checked' : ''}> ${k}</label>`).join('')}</fieldset>
     <div class="lc2"><label>연관 ${esc(lcTerm('cls'))}(선택)<select name="cls" data-lcchg="wcls"><option value="">선택 안 함</option>${clsL.map(c => `<option value="${esc(c.id)}" ${v.cls === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label><label>연관 강의(선택)<select name="item" id="lcWItem">${c0 ? `<option value="">${esc(lcTerm('cls'))} 전체</option>` + (c0.items || []).map(i => `<option value="${esc(i.id)}" ${v.item === i.id ? 'selected' : ''}>${esc(i.title)}</option>`).join('') : '<option value="">—</option>'}</select></label></div>
-    <p class="mini">${esc(lcTerm('cls'))}/강의를 고르면 ${esc(lcTerm('teacher'))}과 그 ${esc(lcTerm('cls'))} ${esc(lcTerm('learner'))}만 볼 수 있습니다.</p>
+    <p class="mini">${esc(lcTerm('cls'))}/강의를 고르면 ${esc(lcTerm('teacher'))}${typeof lJ === 'function' ? lJ(lcTerm('teacher'), '과', '와') : '과'} 그 ${esc(lcTerm('cls'))} ${esc(lcTerm('learner'))}만 볼 수 있습니다.</p>
     <label>제목(선택 · 비우면 본문 앞부분이 제목이 됩니다)<input name="title" maxlength="120" value="${esc(v.title || '')}"></label>
     <label>내용<textarea name="body" rows="8" maxlength="4000" required>${esc(v.body || '')}</textarea></label>
     <div id="lcWFB" ${bw.file === false ? 'hidden' : ''}><label>이미지 · 파일 첨부(최대 10개 · 파일당 20MB · 이미지 200KB 이하는 미리보기 저장)<input type="file" id="lcWF" multiple></label><div class="lcfiles" id="lcWFL">${lcWFiles()}</div></div>
@@ -123,7 +123,7 @@ function lcClsComm(cid) { const L = lcPosts().filter(p => p.cls === cid).sort(lc
 function lcReviewGate(c) { if (!LR.me) return '로그인하면 후기를 남길 수 있습니다.'; const C2 = COMM(); const cond = C2.reviewCond; const cfg = C2.cfg[c.id] || {}; const my = lcMyCls();
   const r = LR.lp.cls[c.id] || { items: {} }; const done = (c.items || []).filter(x => ((r.items || {})[x.id] || {}).done).length; const p = Math.max(Math.round(done / Math.max(1, (c.items || []).length) * 100), ((LR.mine.cls || {})[c.id] || {}).p || 0);
   if (cond === '작성 불가') return '이 홈페이지는 수강후기를 받지 않습니다.';
-  if (cond !== '누구나' && !my.has(c.id)) return `이 ${lcTerm('cls')}를 수강 중인 ${lcTerm('learner')}만 후기를 남길 수 있습니다.`;
+  if (cond !== '누구나' && !my.has(c.id)) return `이 ${lcTerm('cls')}${typeof lJ === 'function' ? lJ(lcTerm('cls'), '을', '를') : '를'} 수강 중인 ${lcTerm('learner')}만 후기를 남길 수 있습니다.`;
   if (cond === '진도 50% 이상' && p < 50) return `진도 50% 이상이면 후기를 남길 수 있습니다(현재 ${p}%).`;
   if (cond === '수료 시' && p < (c.thr || 80)) return `수료(진도 ${c.thr || 80}%) 후 후기를 남길 수 있습니다(현재 ${p}%).`;
   if ((cfg.kind || c.kind) === 'sub') { const sub = (LR.mine.subs || {})[c.id]; const n = sub ? +sub.n || 0 : done; if (n < 2) return '구독 클래스는 2회차 이상 진행(만료 포함)한 뒤 후기를 남길 수 있습니다.'; }

@@ -12,6 +12,7 @@ function emptyOut() {
   (S.autos || []).forEach(a => { a.on = false; a.runs = 0; a.last = ''; });
   S.admins = (S.admins || []).filter(a => a.role === 'owner').map(a => ({ ...a, classes: [] }));
   S.org.empty = today(); S.chat = []; S.guides = { done: {}, fin: {} };
+  if (S.lsite && Array.isArray(S.lsite.dbooks)) S.lsite.dbooks = []; /* v38 A-8: 샘플 과정으로 만든 디지털북 3권도 비운다 */
   delete S.bld; bInit();
   S.chat = [{ role: 'ai', text: `안녕하세요, AI SAM입니다.\n${S.org.name} 스튜디오가 비어 있는 상태로 준비되었습니다. 위의 '시작 가이드'를 따라 하나씩 채우겠습니다.\n말로 지시하셔도 됩니다. 예: "임직원 대상 AI 교육과정 3개 만들어줘", "연습용 학습자 30명 등록해줘".` }];
   logAudit('빈 스튜디오로 시작(샘플 데이터 없음)'); save();

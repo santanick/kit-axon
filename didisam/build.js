@@ -53,25 +53,56 @@ Object.assign(AI, {
   },
   /* 회차 · 주차 · 차시: 대학 = 주차, 학원(회차 운영) = 회차, 그 외 = 차시 */
   unitW(o) { if (o && o.unit) return o.unit; if (o && o.univ) return '주차'; try { if (S && S.org && S.org.type === 'k12') return '회차'; } catch (e) { } return '차시'; },
+  /* v38 A-4 · P-6: 키 없는 규칙 생성 — 주제 문항(QBANK) → 과정 맥락(qctx) → 주제 이름을 넣은 '뜻이 통하는' 일반 문항 순서. 같은 문항을 되풀이하지 않고,
+     교안 장면 제목(「왜 필요할까요?」)이나 문장이 아닌 요점(「기존 방식의 한계」)을 문항으로 쓰지 않는다 */
+  genPts() { if (AI._gp) return AI._gp; const S0 = new Set(); try { LEC.forEach(r => r[1]('§').forEach(x => { if (!String(x).includes('§')) S0.add(String(x)); })); } catch (e) { } return (AI._gp = S0); }, /* 규칙 교안(studio.js LEC)의 주제와 무관한 공통 요점 */
+  qTopic(topic) { let s = clean(topic).replace(/^\s*\d+\s*(차시|주차|주|회차|강)\s*/, '').replace(/\s*(확인\s*)?(퀴즈|시험|중간고사|기말고사|최종\s*평가|정리\s*·\s*평가)\s*$/, '').trim();
+    const m = s.match(/^(.{2,}?)\s+\d+\s*:\s*.+$/); if (m) s = m[1]; s = s.replace(/\s*[—-]\s*(시작하기|핵심 개념|원리 이해|실습 따라 하기|사례로 배우기|응용하기|심화|정리 · 평가)(\s+\d+)?$/, '').replace(/^(시작하기|핵심 개념|원리 이해|실습 따라 하기|사례로 배우기|응용하기|심화|정리 · 평가)(\s+\d+)?\s*[—-]\s*/, '');
+    return s.replace(/\s+/g, ' ').trim(); },
+  genPool(topic) { const T = `「${topic}」`, J = p => AI.j(T, p);
+    return { mc: [[`${T}${J('을')} 처음 배울 때 가장 효과적인 방법은?`, ['작은 예제로 직접 해 보고 결과를 확인한다', '설명을 끝까지 읽기만 한다', '가장 어려운 과제부터 시작한다', '모르는 부분은 건너뛴다'], '직접 해 보고 결과를 확인해야 빨리 익힙니다.'],
+        [`${T} 실습 결과물이 기준에 맞는지 확인하는 가장 좋은 방법은?`, ['미리 정한 기준(체크리스트)과 하나씩 비교한다', '완성한 느낌이 들면 끝낸다', '분량이 많으면 잘된 것으로 본다', '다른 사람 결과물을 그대로 따라 한다'], '기준을 먼저 정하고 하나씩 비교해야 빠뜨린 것을 찾습니다.'],
+        [`${T}${J('을')} 실제에 적용할 때 가장 먼저 할 일은?`, ['목표와 조건을 분명히 정한다', '도구부터 산다', '결과를 먼저 발표한다', '평가 기준은 나중에 정한다'], '목표와 조건이 정해져야 방법과 평가 기준을 고를 수 있습니다.'],
+        [`${T}${J('을')} 배운 뒤 오래 기억하는 데 가장 도움이 되는 것은?`, ['배운 내용을 자기 말로 정리하고 다시 써 본다', '한 번 듣고 넘어간다', '시험 직전에만 몰아서 본다', '요점을 정리하지 않고 둔다'], '자기 말로 다시 정리하면 오래 기억합니다.'],
+        [`${T} 관련 자료를 고를 때 가장 알맞은 기준은?`, ['출처가 분명하고 최신인 자료', '누가 썼는지 모르는 자료', '가장 짧은 자료', '제목이 눈에 띄는 자료'], '출처와 작성 시점을 확인해야 믿을 수 있습니다.'],
+        [`${T}에서 흔히 하는 실수로 가장 알맞은 것은?`, ['조건과 맥락을 빠뜨린 채 진행한다', '단계마다 확인하며 진행한다', '근거 자료를 기록해 둔다', '결과를 다시 검토한다'], '조건과 맥락을 빠뜨리면 결과가 엇나갑니다.'],
+        [`${T} 과제를 여럿이 함께 할 때 알맞은 방법은?`, ['역할과 마감을 정하고 진행 상황을 공유한다', '한 사람이 모두 맡는다', '마감 직전에 한꺼번에 합친다', '의견이 달라도 말하지 않는다'], '역할 · 마감 · 공유가 있어야 함께 끝낼 수 있습니다.'],
+        [`${T}에서 모르는 내용이 나왔을 때 가장 알맞은 행동은?`, ['자료를 다시 찾아보고 그래도 모르면 질문한다', '모르는 채로 넘어간다', '추측한 답을 사실처럼 쓴다', '공부를 그만둔다'], '확인하고 질문하는 습관이 실력을 키웁니다.'],
+        [`${T} 실습 결과를 다른 사람에게 설명할 때 가장 좋은 방법은?`, ['목적 · 방법 · 결과 순서로 짧게 설명한다', '결과만 보여 주고 설명하지 않는다', '어려운 용어만 골라 쓴다', '과정을 모두 생략한다'], '목적 · 방법 · 결과 순서가 듣는 사람에게 쉽습니다.'],
+        [`${T} 학습 계획을 세울 때 가장 알맞은 것은?`, ['매주 할 분량과 확인 방법을 정한다', '마감 직전에 한 번에 몰아서 한다', '목표 없이 생각날 때 한다', '어려운 것은 계획에서 뺀다'], '분량과 확인 방법을 정하면 꾸준히 할 수 있습니다.'],
+        [`${T}에서 배운 내용을 실제로 써 볼 때 먼저 확인할 것은?`, ['상황과 조건이 배운 내용과 맞는지', '가장 화려한 방법이 무엇인지', '다른 사람이 무엇을 했는지만', '결과를 언제 발표할지'], '조건이 맞아야 배운 방법이 제대로 작동합니다.'],
+        [`${T} 결과물을 고칠 때 가장 효과적인 방법은?`, ['피드백을 받아 한 가지씩 고치고 다시 확인한다', '처음부터 모두 지우고 새로 만든다', '피드백을 듣지 않는다', '고친 내용을 기록하지 않는다'], '한 가지씩 고치고 확인해야 무엇이 나아졌는지 압니다.'],
+        [`${T}${J('을')} 꾸준히 익히는 데 가장 도움이 되는 습관은?`, ['짧게라도 자주 연습하고 기록한다', '한 달에 한 번 오래 한다', '기분이 좋을 때만 한다', '결과를 기록하지 않는다'], '짧고 잦은 연습이 오래 남습니다.'],
+        [`${T} 관련 자료에서 숫자나 사실을 인용할 때 알맞은 것은?`, ['출처를 함께 적는다', '출처 없이 쓴다', '숫자를 보기 좋게 바꾼다', '기억나는 대로 적는다'], '출처를 적어야 다른 사람이 확인할 수 있습니다.']],
+      ox: [[`${T}${J('은')} 한 번에 완성하기보다 작게 시작해 고쳐 나가는 것이 좋다.`, 'O', '작게 해 보고 고치는 과정을 반복하면 결과가 좋아집니다.'],
+        [`${T} 결과물은 기준 없이 느낌으로 판단해도 충분하다.`, 'X', '미리 정한 기준으로 점검해야 합니다.'],
+        [`${T}${J('을')} 공부할 때 모르는 용어는 뜻을 찾아 정리해 두는 것이 좋다.`, 'O', '용어를 정리해 두면 다음 내용을 쉽게 이해합니다.'],
+        [`출처를 확인하지 않은 자료도 ${T} 결과물에 그대로 써도 된다.`, 'X', '출처를 확인하고 밝혀야 합니다.'],
+        [`${T}에서 배운 내용을 실제 사례에 적용해 보면 이해가 깊어진다.`, 'O', '사례에 적용하면 원리를 더 잘 이해합니다.'],
+        [`${T} 과제에서 AI 도구가 만든 결과는 확인하지 않고 그대로 내도 된다.`, 'X', 'AI 결과는 사실을 확인하고 고쳐서 써야 합니다.'],
+        [`${T}${J('을')} 배울 때는 목표를 먼저 정하는 것이 좋다.`, 'O', '목표가 있어야 무엇을 익힐지 분명해집니다.'],
+        [`${T} 실습은 한 번 해 보면 다시 점검할 필요가 없다.`, 'X', '결과를 점검하고 고치는 과정이 필요합니다.'],
+        [`${T}에서 다른 사람의 결과물을 출처 없이 내 것처럼 써도 된다.`, 'X', '출처를 밝히고 자기 말로 다시 써야 합니다.'],
+        [`${T}에서 배운 내용을 자기 말로 설명할 수 있으면 잘 이해한 것이다.`, 'O', '자기 말로 설명할 수 있어야 이해한 것입니다.'],
+        [`${T} 학습 기록을 남겨 두면 다음에 같은 실수를 줄일 수 있다.`, 'O', '기록은 다음 학습의 기준이 됩니다.']],
+      short: [[`${T}${J('을')} 시작할 때 정해야 하는 세 가지를 쓰시오.`, '목표, 조건, 평가 기준', '목표 · 조건 · 평가 기준을 정해야 결과를 판단할 수 있습니다.']],
+      essay: [`${T}${J('을')} 자신의 전공 또는 업무에 적용하는 방법을 사례와 함께 서술하시오.`, `${T}${J('을')} 배우기 전과 후에 달라진 점을 구체적인 예를 들어 서술하시오.`, `${T}에서 가장 어려웠던 부분과 그것을 해결한 방법을 서술하시오.`] }; },
   questions(topic, n = 5, lv = '보통', mix = ['mc', 'mc', 'ox', 'short', 'mc', 'essay']) {
-    topic = clean(topic) || '핵심 개념'; const per = Math.floor(100 / n), rest = 100 - per * n; const J = p => AI.j(topic, p);
-    /* 주제어에 맞는 문항을 먼저 쓰고(QBANK), 모자라면 주제 이름을 넣은 일반 문항으로 채운다 */
-    let bank = AI.qbank(topic); if (!bank.length) { const cx = AI.qctx(topic); if (cx) bank = [cx]; } const bMC = bank.flatMap(b => b.mc || []), bOX = bank.flatMap(b => b.ox || []); let im = 0, io = 0;
-    const MC = [[`「${topic}」의 목적을 가장 잘 설명한 것은?`, ['문제를 정의하고 근거를 바탕으로 해결 방법을 찾는 것', '절차 없이 결과만 빠르게 얻는 것', '용어를 외우는 데 집중하는 것', '다른 사람의 결과물을 그대로 쓰는 것'], 0],
-      [`「${topic}」${J('을')} 실무에 적용할 때 가장 먼저 할 일은?`, ['목표와 조건을 명확히 정한다', '도구부터 구매한다', '결과를 먼저 발표한다', '평가 기준을 나중에 정한다'], 0],
-      [`다음 중 「${topic}」 학습 결과를 점검하는 방법으로 알맞지 않은 것은?`, ['기준 없이 느낌으로 판단한다', '루브릭으로 스스로 점검한다', '동료 피드백을 받는다', '사례와 비교한다'], 0],
-      [`「${topic}」에서 흔히 하는 실수로 가장 알맞은 것은?`, ['맥락과 조건을 빠뜨리고 진행한다', '단계별로 확인하며 진행한다', '근거 자료를 기록한다', '결과를 다시 검토한다'], 0]];
-    let gm = 0;
+    topic = AI.qTopic(topic) || clean(topic) || '핵심 개념'; const per = Math.floor(100 / n), rest = 100 - per * n;
+    let bank = AI.qbank(topic); const cx = AI.qctx(topic); if (!bank.length && cx) bank = [cx]; const cxT = bank.includes(cx) || !cx ? { mc: [], ox: [] } : cx; /* v38: 주제 문항 → 일반 문항 → 과정 구성 문항 순(큰 문제 은행도 뜻이 통하는 문항으로 채움) */
+    const G = AI.genPool(topic); const MC = [...bank.flatMap(b => b.mc || []), ...G.mc, ...(cxT.mc || [])], OX = [...bank.flatMap(b => b.ox || []), ...G.ox, ...(cxT.ox || [])], SH = [...G.short]; const nB = bank.flatMap(b => b.mc || []).length + bank.flatMap(b => b.ox || []).length;
+    let im = 0, io = 0, is = 0, ie = 0;
     return Array.from({ length: n }, (_, i) => {
       let t = mix[i % mix.length]; const pts = per + (i < rest ? 1 : 0);
-      if (bank.length && (t === 'short' || t === 'essay') && (im < bMC.length || io < bOX.length) && n <= 10 && i < n - 1) t = im < bMC.length ? 'mc' : 'ox';
-      if (t === 'ox' && io < bOX.length) { const [q, a, exp] = bOX[io++]; return { t, q: `${i + 1}. ${q}`, a, pts, exp, lv }; }
-      if (t === 'ox' && im < bMC.length) t = 'mc';
-      if (t === 'mc' && im < bMC.length) { const [q, o, exp] = bMC[im++]; const rot = (i + im) % o.length; const opts = o.slice(rot).concat(o.slice(0, rot)); return { t, q: `${i + 1}. ${q}`, opts, a: String(opts.indexOf(o[0])), pts, exp, lv }; }
-      if (t === 'mc') { const [q, o, a] = MC[gm++ % MC.length]; const sh = [...o]; const rot = i % 4; const opts = sh.slice(rot).concat(sh.slice(0, rot)); return { t, q: `${i + 1}. ${q}`, opts, a: String(opts.indexOf(o[a])), pts, exp: `「${topic}」${J('은')} 목표 · 조건 · 근거를 바탕으로 진행해야 합니다.`, lv }; }
-      if (t === 'ox') return { t, q: `${i + 1}. 「${topic}」${J('은')} 결과를 확인하고 개선하는 과정을 반복한다.`, a: 'O', pts, exp: '점검과 개선의 반복이 핵심입니다.', lv };
-      if (t === 'short') return { t, q: `${i + 1}. 「${topic}」${J('을')} 시작할 때 정해야 하는 세 가지를 쓰시오.`, a: '목표, 조건, 평가 기준', pts, exp: '목표 · 조건 · 평가 기준을 정해야 결과를 판단할 수 있습니다.', lv };
-      return { t: 'essay', q: `${i + 1}. 「${topic}」${J('을')} 자신의 전공 또는 업무에 적용하는 방법을 사례와 함께 서술하시오.`, a: '루브릭 기준으로 채점', pts, exp: '적용 대상 · 방법 · 기대 효과가 드러나야 합니다.', lv };
+      if (nB && (t === 'short' || t === 'essay') && (im + io) < nB && n <= 10 && i < n - 1) t = 'mc';
+      if (t === 'short' && is >= SH.length) t = 'essay';
+      if (t === 'essay' && ie >= G.essay.length) t = im < MC.length ? 'mc' : 'ox'; /* 서술형은 되풀이하지 않고 남은 객관식 · OX로 */
+      if (t === 'ox' && io >= OX.length) t = 'mc';
+      if (t === 'mc' && im >= MC.length) t = io < OX.length ? 'ox' : 'essay';
+      if (t === 'ox') { const [q, a, exp] = OX[io++]; return { t, q: `${i + 1}. ${q}`, a, pts, exp, lv }; }
+      if (t === 'mc') { const [q, o, exp] = MC[im++]; const rot = (i + im) % o.length; const opts = o.slice(rot).concat(o.slice(0, rot)); return { t, q: `${i + 1}. ${q}`, opts, a: String(opts.indexOf(o[0])), pts, exp, lv }; }
+      if (t === 'short') { const [q, a, exp] = SH[is++]; return { t, q: `${i + 1}. ${q}`, a, pts, exp, lv }; }
+      return { t: 'essay', q: `${i + 1}. ${G.essay[ie++ % G.essay.length]}`, a: '루브릭 기준으로 채점', pts, exp: '적용 대상 · 방법 · 기대 효과가 드러나야 합니다.', lv };
     });
   },
   /* 주제어별 기본 문항(데모 규칙 생성기). mc: [문제, [정답, 오답…], 해설] · ox: [문장, 'O'|'X', 해설]. 첫 보기가 정답이며 낼 때 섞는다 */
@@ -83,12 +114,18 @@ Object.assign(AI, {
     if (!c) try { c = (S.classes || []).find(x => x && x.name && (nm(x.name).includes(nm(tp)) || nm(tp).includes(nm(x.name)))) || null; } catch (e) { }
     if (!c) return null; const GEN = /^(오리엔테이션|중간고사|기말고사|정리|결과 발표|프로젝트 (기획|실습|피드백))/;
     const W = (c.weekPlan || []).map(w => ({ t: String(w.title || '').trim(), g: String(w.goal || '').trim() })).filter(w => w.t && !GEN.test(w.t));
-    const P = []; (c.curriculum || []).forEach(it => { const D = it && it.doc; if (D && Array.isArray(D.secs)) D.secs.forEach(x => (x.pts || []).forEach(p => { p = String(p || '').trim(); if (p.length > 6 && !P.includes(p)) P.push(p); })); });
+    const P = []; const GP = AI.genPts(); (c.curriculum || []).forEach(it => { const D = it && it.doc; if (D && Array.isArray(D.secs)) D.secs.forEach(x => (x.pts || []).forEach(p => { p = String(p || '').trim(); if (p.length > 10 && /다\.?$/.test(p) && !GP.has(p) && !P.includes(p)) P.push(p); })); }); /* v38: 문장(…다)만 · 규칙 교안의 공통 요점은 빼고 */
     const mc = [], ox = []; const G = W.filter(w => w.g && !w.g.startsWith(tp + '의 ')); /* 목표가 '주제의 제목을 이해한다'처럼 뻔하면 쓰지 않는다 */
     G.forEach((w, i) => { const o = G.filter(x => x !== w).map(x => x.g); if (o.length >= 3) mc.push([`「${w.t}」에서 배우는 내용으로 가장 알맞은 것은?`, [w.g, o[i % o.length], o[(i + 1) % o.length], o[(i + 2) % o.length]].filter((x, k, A) => A.indexOf(x) === k), `「${w.t}」의 학습 목표: ${w.g}`]); });
     P.forEach((p, i) => { if (i < 6) ox.push([p, 'O', `교안에서 다룬 내용입니다: ${p}`]); });
+    /* v38: 키 없이도 과정 구성에서 뜻이 통하는 문항 — 순서 · 몇 번째 · 다루는 내용(문제 은행 배수 출제를 채울 만큼) */
+    { const WA = (c.weekPlan || []).map((w, i) => ({ t: String(w.title || '').replace(/\s+—\s+.*$/, '').trim(), n: +w.w || i + 1 })).filter(w => w.t && !GEN.test(w.t)); const cn = clean(c.name) || c.name; const un = AI.unitW({ univ: (S.org || {}).type === 'univ' });
+      if (WA.length >= 4) { WA.forEach((w, i) => { const nx = WA[i + 1]; if (nx && nx.n === w.n + 1) { const o = WA.filter(x => x !== nx && x !== w).map(x => x.t); if (o.length >= 3) mc.push([`「${cn}」에서 「${w.t}」 바로 다음에 배우는 내용은?`, [nx.t, o[i % o.length], o[(i + 2) % o.length], o[(i + 4) % o.length]].filter((x, k, A) => A.indexOf(x) === k), `차시 순서: 「${w.t}」 → 「${nx.t}」`]); }
+          const nn = [w.n, w.n + 1, Math.max(1, w.n - 1), w.n + 2].filter((x, k, A) => A.indexOf(x) === k && (x !== w.n || k === 0)); if (nn.length >= 3) mc.push([`「${cn}」에서 「${w.t}」${AI.j(`「${w.t}」`, '은')} 몇 번째 ${un}에 배우나요?`, nn.map(x => `${x}${un}`), `「${w.t}」${AI.j(`「${w.t}」`, '은')} ${w.n}${un} 내용입니다.`]);
+          ox.push([`「${cn}」에서는 「${w.t}」${AI.j(`「${w.t}」`, '을')} 배운다.`, 'O', `${w.n}${un}에서 다룹니다.`]); });
+        /* 큰 문제 은행(배수 출제)용: 두 내용 중 먼저 배우는 것 — 일반 문항 뒤에 쓰인다 */ let k2 = 0; for (let a = 0; a < WA.length && k2 < 40; a++) for (let b = a + 2; b < WA.length && k2 < 40; b++) { const x = WA[a], y = WA[b]; mc.push([`「${cn}」에서 「${x.t}」${AI.j(`「${x.t}」`, '과')} 「${y.t}」 중 먼저 배우는 것은?`, [x.t, y.t], `「${x.t}」(${x.n}${un}) → 「${y.t}」(${y.n}${un})`]); k2++; } } }
     if (W.length >= 4) { const L = W.map(w => w.t); mc.push([`「${clean(c.name)}」에서 다루는 순서로 가장 앞에 오는 것은?`, [L[0], L[L.length - 1], L[Math.floor(L.length / 2)], L[1]].filter((x, k, A) => A.indexOf(x) === k), `차시 목록 순서: ${L.slice(0, 4).join(' → ')} …`]); }
-    return mc.filter(x => x[1].length >= 3).length || ox.length ? { mc: mc.filter(x => x[1].length >= 3), ox } : null; },
+    return mc.filter(x => x[1].length >= 2).length || ox.length ? { mc: mc.filter(x => x[1].length >= 2), ox } : null; },
   assignment(topic) { topic = clean(topic) || '실습'; return { desc: `「${topic}」 내용을 바탕으로 자신의 전공 또는 업무에서 실제로 쓸 수 있는 결과물을 만드세요.\n① 해결하려는 문제와 목표 ② 사용한 방법과 과정 ③ 결과물 ④ 느낀 점과 개선할 점을 포함합니다.`, deliv: '결과물 파일(PDF · 이미지 · 링크) + 1쪽 설명서', due: 7 }; },
   rubric(name) { name = clean(name) || '과제'; return { id: uid('rb'), name: `${name} 루브릭`, criteria: [
     { n: '요구사항 충족', pts: 40, lv: ['문제 · 목표 · 과정 · 결과 · 성찰 다섯 요소가 모두 분명하다', '요소가 대부분 있으나 일부가 모호하다', '핵심 요소가 빠져 있다'] },
@@ -120,7 +157,7 @@ Object.assign(AI, {
 function itemsFromDesign(W, o) {
   const items = []; let crb = o.rubric || null; W.forEach(wk => wk.items.forEach(x => { const it = { id: uid('it'), type: x.type, title: x.title, week: wk.w };
     if (x.type === 'video') { if (o.vsrc === 'ai') { it.src = 'ai'; it.ai = { scenes: AI.lecture(x.title, 5, o.level), mins: 5, voice: 'f' }; it.url = 'ai:' + it.id; } else { it.src = 'youtube'; it.q = x.q; it.url = ''; } }
-    if (x.gen && ['quiz', 'exam'].includes(x.type)) { it.qs = AI.questions(o.topic, x.gen.n, x.gen.lv || '보통'); it.time = x.type === 'exam' ? 60 : 10; it.retake = x.type === 'exam' ? 1 : 3; it.autoGen = 1; /* 사용자가 직접 만들지 않은 자동 초안 표시(규정 게이트에서 구분) */ }
+    if (x.gen && ['quiz', 'exam'].includes(x.type)) { it.qs = AI.questions(o.topic, x.gen.n, x.gen.lv || '보통'); it.time = x.type === 'exam' ? 60 : 0; it.retake = x.type === 'exam' ? 1 : 98; /* v38: 확인 퀴즈는 연습 — 시간 제한 없음 · 다시 풀기 제한 없음(98회 = 최대) */ it.autoGen = 1; /* 사용자가 직접 만들지 않은 자동 초안 표시(규정 게이트에서 구분) */ }
     if (x.type === 'assign') { Object.assign(it, AI.assignment(x.title)); if (!crb) { const rb = AI.rubric(clean(o.topic) + ' 과제'); S.rubrics.push(rb); crb = rb.id; } it.rubric = crb; }
     items.push(it); if (o.docs && x.type === 'video' && !wk.items.slice(0, wk.items.indexOf(x)).some(y => y.type === 'video')) items.push({ id: uid('it'), type: 'doc', title: `${wk.w}${o.univ ? '주' : AI.unitW(o)} 강의자료 — ${wk.title}`, week: wk.w, topic: `${clean(o.topic)} ${wk.title}`, doc: AI.material(`${clean(o.topic)} ${wk.title}`, { name: o.topic, goal: wk.goal }) }); })); return items;
 }
@@ -157,7 +194,7 @@ const itemBadge = it => {
 function itemRow(c, it, i) { return `<li class="${it.type === 'chapter' ? 'chap' : ''}"><span class="ty">${esc(ITEMX[it.type])}</span><button class="link ib" data-act="item-edit" data-c="${c.id}" data-v="${i}">${esc(it.title)}</button>${itemBadge(it)}<span class="sp"></span>${it.type === 'video' ? `<button class="btn sm ghost ai" data-act="ai-script" data-c="${c.id}" data-v="${i}">스크립트</button>` : ''}<button class="btn sm ghost" data-act="cur-mv" data-c="${c.id}" data-v="${i}" data-d="-1" aria-label="위로">↑</button><button class="btn sm ghost" data-act="cur-mv" data-c="${c.id}" data-v="${i}" data-d="1" aria-label="아래로">↓</button><button class="btn sm ghost" data-act="cur-del" data-c="${c.id}" data-v="${i}" aria-label="삭제">${ic('x', 14)}</button></li>`; }
 function curriculumView(c) {
   const ep = c.kind === 'episode'; const miss = c.curriculum.filter(it => (it.type === 'video' && !it.url) || (it.type === 'doc' && !(it.doc?.secs || []).length) || (['quiz', 'exam'].includes(it.type) && !(it.qs || []).length) || (it.type === 'assign' && !it.rubric)).length;
-  const bar = `<div class="bar2"><button class="btn sm" data-act="cur-add" data-v="${c.id}">+ 항목</button><button class="btn sm" data-act="cur-lib" data-v="${c.id}">라이브러리에서</button>${ep ? '' : `<button class="btn sm ink" data-act="ai-fill" data-v="${c.id}">${ic('spark', 14)} AI로 콘텐츠 채우기${miss ? ` (${miss})` : ''}</button>`}${c.weekly ? `<button class="btn sm" data-act="syl-csv" data-v="${c.id}">강의계획서 CSV</button>` : (ep ? '' : `<button class="btn sm" data-act="to-weekly" data-v="${c.id}">차시별로 편성</button>`)}<span class="mini">${ep ? '회차 클래스 최대 100회차' : '항목을 누르면 영상(YouTube · AI 생성) · 강의자료 · 문항 · 과제를 편집합니다'}</span></div>`;
+  const bar = `<div class="bar2"><button class="btn sm" data-act="cur-add" data-v="${c.id}">+ 항목</button><button class="btn sm" data-act="cur-lib" data-v="${c.id}">라이브러리에서</button>${ep ? '' : `<button class="btn sm ink" data-act="ai-fill" data-v="${c.id}">${ic('spark', 14)} AI로 콘텐츠 채우기${miss + emptyWeeks(c).length ? ` (${miss + emptyWeeks(c).length})` : ''}</button>`}${c.weekly ? `<button class="btn sm" data-act="syl-csv" data-v="${c.id}">강의계획서 CSV</button>` : (ep ? '' : `<button class="btn sm" data-act="to-weekly" data-v="${c.id}">차시별로 편성</button>`)}<span class="mini">${ep ? '회차 클래스 최대 100회차' : '항목을 누르면 영상(YouTube · AI 생성) · 강의자료 · 문항 · 과제를 편집합니다'}</span></div>`;
   if (!c.weekly) return bar + `<ol class="cur">${c.curriculum.map((it, i) => itemRow(c, it, i)).join('')}</ol>`;
   const W = c.weekPlan || []; const un = c.curriculum.map((it, i) => [it, i]).filter(([it]) => !it.week);
   return bar + `<div class="weeks">${W.map(wk => { const its = c.curriculum.map((it, i) => [it, i]).filter(([it]) => it.week === wk.w); const ex = its.some(([it]) => it.type === 'exam');
@@ -170,13 +207,24 @@ ACT['wk-add'] = el => { if (!el.value) return; const c = C(el.dataset.c), w = +e
 ACT['to-weekly'] = el => { const c = C(el.dataset.v); modal('차시별 편성으로 바꾸기', `<label class="fl">차시 수<input name="n" type="number" min="1" max="30" value="${S.org.type === 'univ' ? 15 : 8}"></label><p class="mini">기존 항목은 순서대로 차시에 나눠 배정합니다. 나중에 옮길 수 있습니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '바꾸기', kind: 'pri', run: w => { const n = clamp(+fv(w, 'n') || 8, 1, 30); makeWeekly(c, n); save(); render(); } }]); };
 function makeWeekly(c, n) { const L = c.curriculum.filter(i => i.type !== 'chapter'); c.curriculum = L; c.weekly = true; c.weekPlan = Array.from({ length: n }, (_, i) => ({ w: i + 1, title: n === 15 && S.org.type === 'univ' ? WEEK15[i] : `${i + 1}차시`, goal: '' })); const per = Math.max(1, Math.ceil(L.length / n)); L.forEach((it, i) => it.week = Math.min(n, Math.floor(i / per) + 1)); }
 ACT['syl-csv'] = el => { const c = C(el.dataset.v); downloadCSV(`${c.name}_강의계획서.csv`, ['차시', '주제', '학습 목표', '학습 활동', '평가'], c.weekPlan.map(wk => { const its = c.curriculum.filter(i => i.week === wk.w); return [wk.w, wk.title, wk.goal, its.filter(i => ['video', 'live', 'offline'].includes(i.type)).map(i => i.title).join(' / '), its.filter(i => ['quiz', 'exam', 'assign'].includes(i.type)).map(i => `${ITEMX[i.type]}: ${i.title}`).join(' / ')]; })); };
-ACT['ai-fill'] = el => { const c = C(el.dataset.v); let q = 0, a = 0, v = 0;
-  c.curriculum.forEach(it => { if (['quiz', 'exam'].includes(it.type) && !(it.qs || []).length) { it.qs = AI.questions(it.title.replace(/퀴즈|시험|확인/g, '') || c.name, it.type === 'exam' ? 15 : 5); it.time = it.type === 'exam' ? 60 : 10; q++; }
+/* v38 A-3 · C-5: 빈 차시(항목 0개)도 채운다 — 영상(검색어) · 교안 · 확인 퀴즈, '평가 · 고사' 차시는 시험. 예전에는 있는 항목의 빈칸만 채워 '0건'만 알렸다 */
+const emptyWeeks = c => { if (!c || !c.weekly || c.kind === 'episode') return []; const has = new Set((c.curriculum || []).filter(x => x && x.type !== 'offline').map(x => +x.week || 0)); return (c.weekPlan || []).filter(w => !has.has(+w.w)); };
+function fillEmptyWeeks(c) { const E = emptyWeeks(c); if (!E.length) return 0; const nm = clean(c.name) || c.name; const un = c.kind === 'episode' ? '회차' : S.org.type === 'univ' ? '주' : AI.unitW({}); let k = 0;
+  E.forEach(w => { const wt = String(w.title || '').replace(/^\d+\s*(차시|주차|주|회차)\s*/, '').trim() || `${w.w}${un}`; const tp = `${nm} ${wt}`.slice(0, 60);
+    if (/고사|최종\s*평가|정리\s*·\s*(최종\s*)?평가/.test(wt)) { c.curriculum.push({ id: uid('it'), type: 'exam', title: `${nm} ${wt}`.slice(0, 80), week: w.w, qs: AI.questions(nm, 15), time: 60, retake: 1, autoGen: 1 }); k++; return; }
+    c.curriculum.push({ id: uid('it'), type: 'video', title: wt, week: w.w, src: 'youtube', q: `${tp} 강의`, url: '' },
+      { id: uid('it'), type: 'doc', title: `${w.w}${un} 교안 — ${wt}`.slice(0, 80), week: w.w, topic: tp, doc: AI.material(tp, { name: c.name, goal: w.goal }) },
+      { id: uid('it'), type: 'quiz', title: `${w.w}${un} 확인 퀴즈`, week: w.w, qs: AI.questions(nm, 5), time: 0, retake: 98, autoGen: 1 }); k++; });
+  c.curriculum.sort((a, b) => (+a.week || 0) - (+b.week || 0)); return k; }
+ACT['ai-fill'] = el => { const c = C(el.dataset.v); let q = 0, a = 0, v = 0; const ew = fillEmptyWeeks(c); const nmQ = clean(c.name) || c.name;
+  c.curriculum.forEach(it => { if (['quiz', 'exam'].includes(it.type) && !(it.qs || []).length) { it.qs = AI.questions(nmQ, it.type === 'exam' ? 15 : 5); it.time = it.type === 'exam' ? 60 : 0; if (it.type === 'quiz' && it.retake == null) it.retake = 98; q++; }
     if (it.type === 'assign' && !it.rubric) { Object.assign(it, AI.assignment(it.title), { desc: it.desc || AI.assignment(it.title).desc }); const rb = AI.rubric(it.title); S.rubrics.push(rb); it.rubric = rb.id; a++; }
     if (it.type === 'video' && it.src === 'ai' && !(it.ai?.scenes || []).length) { it.ai = { scenes: AI.lecture(it.title, 5), mins: 5, voice: 'f' }; it.url = 'ai:' + it.id; v++; }
     if (it.type === 'video' && !it.url && !it.q) { it.q = `${clean(c.name)} ${it.title}`; }
     if (it.type === 'doc' && !(it.doc?.secs || []).length) { it.doc = AI.material(it.topic || it.title, c); v++; } });
-  S.ai.usage++; save(); render(); toast(`문항 ${q}건 · 과제/루브릭 ${a}건 · AI 영상/강의자료 ${v}건을 만들었습니다.`, 'ok');
+  S.ai.usage++; save(); render(); const un2 = S.org.type === 'univ' ? '주차' : AI.unitW({});
+  if (!ew && !q && !a && !v) toast(`채울 빈칸이 없습니다. 모든 ${un2}에 콘텐츠가 들어 있습니다. 항목을 눌러 내용을 바꿀 수 있습니다.`, 'ok');
+  else toast(`${ew ? `빈 ${un2} ${ew}개에 영상 · 교안 · 확인 퀴즈 초안을 넣었습니다. ` : ''}${q || a || v ? `문항 ${q}건 · 과제/루브릭 ${a}건 · AI 영상/강의자료 ${v}건을 채웠습니다. ` : ''}확인하고 고쳐 주세요.${c.crs && c.crs.hold ? ` 다 보셨으면 [운영 시작하기 · 전체 공개]로 공개합니다.` : ''}`, 'ok');
   ytAutofill(c).then(n => { if (n === -1) toast('영상은 검색어만 준비했습니다. 설정 › 연동에 YouTube API 키를 넣으면 자동으로 연결됩니다.'); else if (n) toast(`YouTube 영상 ${n}개를 자동으로 연결했습니다. 확인 후 바꿀 수 있습니다.`, 'ok'); }); };
 
 /* ═════════ 항목 편집기(영상 · 퀴즈/시험 · 과제 · 설문 · 라이브 · 오프라인) ═════════ */
@@ -437,7 +485,7 @@ const SAMPLE_SUB = ['문제: 반복되는 주간 보고서 작성 시간이 길�
 function postSeed(type) {
   S.rubrics = [AI.rubric('실습 결과물'), AI.rubric('프로젝트 보고서')]; S.bank = []; S.settings.yt = { key: '', cc: false, maxMin: 30 };
   S.classes.forEach((c, ci) => {
-    c.curriculum.forEach(it => { if (it.type === 'video') { it.src = 'youtube'; it.q = `${clean(c.name)} ${it.title}`; } if (['quiz', 'exam'].includes(it.type)) { it.qs = AI.questions(clean(c.name), it.type === 'exam' ? 10 : 5); it.time = it.type === 'exam' ? 60 : 10; it.retake = 1; } if (it.type === 'assign') { Object.assign(it, AI.assignment(c.name)); it.rubric = S.rubrics[ci % 2].id; } });
+    c.curriculum.forEach(it => { if (it.type === 'video') { it.src = 'youtube'; it.q = `${clean(c.name)} ${it.title}`; } if (['quiz', 'exam'].includes(it.type)) { it.qs = AI.questions(clean(c.name), it.type === 'exam' ? 10 : 5); it.time = it.type === 'exam' ? 60 : 0; it.retake = it.type === 'exam' ? 1 : 98; } if (it.type === 'assign') { Object.assign(it, AI.assignment(c.name)); it.rubric = S.rubrics[ci % 2].id; } });
     Object.entries(c.prog).forEach(([, p], j) => { if (p.assign !== 'none') p.sub = SAMPLE_SUB[j % 3]; });
     if (type === 'univ' && c.kind === 'period') { const W = AI.design({ topic: c.name, weeks: 15, univ: true, quiz: true, assign: true, exam: true, vids: 1, level: '보통' }); c.curriculum = itemsFromDesign(W, { topic: c.name, rubric: S.rubrics[0].id }); c.curriculum.forEach(it => { if (it.type === 'assign') it.rubric = it.rubric || S.rubrics[0].id; }); c.weekly = true; c.weekPlan = W.map(w => ({ w: w.w, title: w.title, goal: w.goal })); }
   });

@@ -231,3 +231,10 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
 }
 .cf-exwks select{min-height:44px;font:inherit;font-size:15px;padding:0 10px;border:1px solid var(--g400,#C8C9C9);border-radius:8px;background:#fff}
 .cf-exwks .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* v38 L-2 대기자 명단 */
+.cf-waits .cf-wl{list-style:decimal;margin:0;padding:0 0 0 20px}
+.cf-waits .cf-wl li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line,#e5e7eb)}
+.cf-waits .cf-wl li:first-child{border-top:0}
+.cf-waits .cf-wl li span{flex:1;min-width:120px;font-weight:600}
+.cf-waits .cf-wl .btn{min-height:44px}

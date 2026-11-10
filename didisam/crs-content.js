@@ -216,7 +216,7 @@
   VIEW.quiz = () => ({ now: X.res ? '문제 · 보기 · 해설 글자를 눌러 바로 고치세요. 동그라미를 누르면 정답이 바뀝니다.' : '주제를 확인하고 [퀴즈 만들기]를 누르세요.',
     set: setHead('퀴즈 주제', '엑셀 SUM · AVERAGE 함수') + chips('n', [[3, '3문제'], [5, '5문제'], [10, '10문제']], '문제 수', '바로 바뀝니다') + chips('lv', [['쉬움', '쉬움'], ['보통', '보통'], ['어려움', '어려움']], '난이도') + makeBtn('퀴즈 만들기') + (X.res && typeof W.qsEdit === 'function' ? `<div class="ct-tools">${sec('자세히 고치기(배점 · 이미지)', 'ct-q-edit')}</div>` : ''),
     pv: X.res && !X.busy ? byRow() + ttlRow() + qRows(X.res) : pvEmpty('문제를 만들고 있습니다…'), foot: mkFoot('퀴즈 만들기') });
-  const qItem = () => { const Q = X.res.map((q, i) => ({ ...q, q: `${i + 1}. ${strip(q.q)}` })); const per = Math.floor(100 / Q.length); Q.forEach((q, i) => q.pts = per + (i < 100 - per * Q.length ? 1 : 0)); return { title: titleOf(), qs: Q, time: 10, retake: 3 }; };
+  const qItem = () => { const Q = X.res.map((q, i) => ({ ...q, q: `${i + 1}. ${strip(q.q)}` })); const per = Math.floor(100 / Q.length); Q.forEach((q, i) => q.pts = per + (i < 100 - per * Q.length ? 1 : 0)); return { title: titleOf(), qs: Q, time: 0, retake: 98 }; }; /* v38: 확인 퀴즈는 연습(시간 · 다시 풀기 제한 없음) — 시간 · 재응시는 시험에만 */
 
   /* 시험: 시험 종류 · 출제 문항 수 · 문제 은행 배수 · 랜덤 출제 · 시험 시간 · 재응시 · 통과 점수 */
   const need = () => Math.min(60, Math.max(1, +X.en || 10) * (X.rand ? Math.max(1, +X.mult || 1) : 1));
@@ -240,14 +240,9 @@
   /* 규칙 문제 은행: 주제 문항(AI.questions) + 교안 요점에서 객관식 · OX · 단답을 만들어 겹치지 않게 모은다 */
   function examBank(tp, cnt, lv, have) {
     const out = []; const seen = new Set((have || []).map(nq)); const push = q => { const k = nq(q); if (!k || seen.has(k)) return false; seen.add(k); out.push({ ...q, lv }); return true; };
-    try { AI.questions(tp, Math.min(cnt, 10), lv, ['mc', 'ox', 'mc', 'short', 'mc', 'ox']).forEach(push); } catch (e) { }
-    const secs = []; [tp, `${tp} 활용`].forEach(t => { try { AI.material(t).secs.forEach(s => { if (!secs.some(x => x.h === s.h)) secs.push(s); }); } catch (e) { } });
-    const all = secs.flatMap(s => (s.pts || []).map(p => ({ h: s.h, p }))); const MC = [], OX = [], SH = [];
-    secs.forEach((s, si) => (s.pts || []).forEach((p, pi) => { const others = all.filter(x => x.h !== s.h).map(x => x.p).filter(x => x !== p); if (others.length >= 3) { const d = [0, 1, 2].map(k => others[(si * 3 + pi * 5 + k * 7) % others.length]); const opts = [...new Set([p, ...d])].slice(0, 4); if (opts.length === 4) { const rot = (si + pi) % 4; const o2 = opts.slice(rot).concat(opts.slice(0, rot)); MC.push({ t: 'mc', q: `「${s.h}」에 해당하는 설명으로 가장 알맞은 것은?`, opts: o2, a: String(o2.indexOf(p)), exp: `「${s.h}」의 요점: ${p}` }); } }
-      OX.push({ t: 'ox', q: `「${s.h}」의 요점이다: ${p}`, a: 'O', exp: `${p} — 「${s.h}」에서 다룬 내용입니다.` }); if (others.length) { const w2 = others[(si + pi * 3) % others.length]; OX.push({ t: 'ox', q: `「${s.h}」의 요점이다: ${w2}`, a: 'X', exp: `이 문장은 다른 내용(「${(all.find(x => x.p === w2) || {}).h || ''}」)의 요점입니다.` }); } }));
-    secs.forEach(s => SH.push({ t: 'short', q: `「${s.h}」에서 꼭 기억할 점을 한 가지 쓰시오.`, a: (s.pts || []).join(', '), exp: `요점: ${(s.pts || []).join(' · ')}` }));
-    const L = [MC, OX, MC, SH, MC, OX]; let guard = 0; while (out.length < cnt && guard++ < 400) { const A2 = L[guard % L.length]; if (!A2.length) { if (!MC.length && !OX.length && !SH.length) break; continue; } push(A2.shift()); }
-    let k = 0; while (out.length < cnt && k < secs.length * 2) { const s = secs[k % secs.length]; push({ t: 'essay', q: `${jo(`「${s.h}」`, '을')} ${k < secs.length ? '실제 사례에 적용하는 방법을 서술하시오.' : '지키지 않았을 때 생길 수 있는 문제를 서술하시오.'}`, a: '루브릭 기준으로 채점', exp: '적용 대상 · 방법 · 기대 효과가 드러나야 합니다.' }); k++; }
+    /* v38 A-4: 규칙 교안의 장면 제목 · 요점(「왜 필요할까요?」의 요점이다: 정의 — 한 문장으로 말하기)으로 만들던 문항은 뜻이 통하지 않아 뺐다.
+       주제 문항(QBANK) · 과정 맥락 · 주제 이름을 넣은 일반 문항만 쓰고, 모자라면 문제 은행을 그만큼만 만든다(같은 말 되풀이 금지) */
+    try { AI.questions(tp, Math.max(10, Math.min(60, cnt + (have || []).length)), lv, ['mc', 'ox', 'mc', 'short', 'mc', 'ox']).forEach(push); } catch (e) { }
     return out.slice(0, cnt);
   }
 
@@ -591,7 +586,7 @@
   function fillAll(d) { const L = itemsOf(d); const ids = []; let s = 0; const cn = cl(d.name || d.topic || '');
     sessOf(d).forEach(x => { if (L.some(y => +y.week === x.w)) return; const g = /^\d+\s*(차시|주차|주)$/.test(x.title); const tp = topicOf(g ? cn : (cn && !x.title.includes(cn) ? `${cn} ${x.title}` : x.title)) || cn || x.title; const sh = topicOf(g ? cn : x.title) || tp;
       if (/고사|최종 평가|시험/.test(x.title)) { const it = { id: nid('it'), type: 'exam', title: `${sh} 시험`, week: x.w, qs: AI.questions(cn || sh, 10, '보통'), time: 60, retake: 1 }; L.push(it); ids.push(it.id); s++; return; }
-      const a = { id: nid('it'), type: 'doc', title: `${sh} 교안`, week: x.w, topic: tp, fmt: 'hand', doc: AI.material(tp, { name: cn }) }; const b = { id: nid('it'), type: 'quiz', title: `${sh} 확인 퀴즈`, week: x.w, qs: AI.questions(tp, 3, '보통', ['mc', 'ox', 'mc']), time: 10, retake: 3 }; L.push(a, b); ids.push(a.id, b.id); s++; });
+      const a = { id: nid('it'), type: 'doc', title: `${sh} 교안`, week: x.w, topic: tp, fmt: 'hand', doc: AI.material(tp, { name: cn }) }; const b = { id: nid('it'), type: 'quiz', title: `${sh} 확인 퀴즈`, week: x.w, qs: AI.questions(tp, 3, '보통', ['mc', 'ox', 'mc']), time: 0, retake: 98 }; L.push(a, b); ids.push(a.id, b.id); s++; });
     try { if (S.ai) S.ai.usage = (S.ai.usage || 0) + (s ? 1 : 0); } catch (e) { } return s ? { s, ids } : 0; }
 
   /* ═════ 모든 차시에 한 번에 넣기(F4) ═════
@@ -633,7 +628,7 @@
       body = `<ol class="ctb-map">${P.rows.map(r => `<li><b>${r.s.w}${E(U)}</b><span class="ctb-t">${E(r.s.title)}</span>${r.v ? fl(r.v, 'upload') : ''}${r.d ? fl(r.d, 'doc') : ''}</li>`).join('')}</ol>${P.extra.length ? `<p class="ct-err" role="status">남는 파일 ${P.extra.length}개(${E(P.extra.map(f => f.name).slice(0, 3).join(', '))}${P.extra.length > 3 ? ' …' : ''})는 넣을 ${E(U)}가 없어 넣지 않습니다. ${E(U)}를 늘리려면 [이전]에서 ${E(U)} 목록을 고치십시오.</p>` : ''}${L.filter(f => f.err).map(f => `<p class="ct-err" role="alert">${E(f.name)}: ${E(f.err)}</p>`).join('')}<p class="ct-mini">영상 ${P.nv}개 · 문서 ${P.nd}개. 영상 제목은 ${E(U)} 제목, 문서 제목은 '${E(U)} 제목 + 자료'로 넣습니다. 순서가 틀리면 파일 이름 앞에 번호(01, 02 …)를 붙여 다시 고르십시오.</p><div class="ct-row">${sec('다른 파일 고르기', 'ctb-again')}</div>`;
       foot2 = foot(pri(`${svg('check', 18)} 파일 ${n}개 넣기`, 'ctb-go', !n));
     } else {
-      now = `${BX.k === 'quiz' ? '퀴즈' : '교안'}가 없는 ${U} ${TG.length}곳에 ${U} 제목을 주제로 만들어 넣습니다.`;
+      now = `${jo(BX.k === 'quiz' ? '퀴즈' : '교안', '이')} 없는 ${U} ${TG.length}곳에 ${U} 제목을 주제로 만들어 넣습니다.`;
       body = `${BX.k === 'quiz' ? `<div class="ct-f"><span class="ct-l">${E(U)}마다 문제 수</span><div class="ct-chips" role="radiogroup" aria-label="문제 수">${[[3, '3문제'], [5, '5문제'], [10, '10문제']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${BX.n === v}" class="ct-chip ${BX.n === v ? 'on' : ''}" data-act="ctb-n" data-v="${v}">${l}</button>`).join('')}</div></div>` : ''}<ol class="ctb-map">${TG.map(s => `<li><b>${s.w}${E(U)}</b><span class="ctb-t">${E(s.title)}</span><span class="ctb-f">${svg(BX.k, 16)} ${E(bxTopic(d, s))} ${BX.k === 'quiz' ? '확인 퀴즈' : '교안'}</span></li>`).join('')}</ol><p class="ct-mini">${claudeOn() ? 'Claude로 만듭니다.' : '기본 AI(브라우저 데모)로 만든 초안입니다.'} 넣은 뒤 ${E(U)}를 펼쳐 [보기]로 확인하고 고칠 수 있습니다.</p>`;
       foot2 = foot(pri(`${svg('check', 18)} ${TG.length}개 ${E(U)}에 ${BX.k === 'quiz' ? '퀴즈' : '교안'} 넣기`, 'ctb-go'));
     }
@@ -650,7 +645,7 @@
       BX.busy = false; if (fail) BX.failMsg = `${fail}개는 올리지 못했습니다${BX.lastErr ? `(${BX.lastErr})` : ''}. 그 ${jo(U, '은')} 하나씩 다시 올려 주십시오.`; }
     else { BX.busy = true; BX.tot = TG.length; BX.at = 0; bxDraw();
       for (const s of TG) { BX.at++; bxDraw(); const tp = bxTopic(d, s); let it;
-        try { if (BX.k === 'quiz') { const r = await GEN.quiz(tp, { n: BX.n, lv: '보통' }); const Q = (r.v || []).map((q, i) => ({ ...q, q: `${i + 1}. ${String(q.q).replace(/^\d+\.\s*/, '')}` })); const per = Math.floor(100 / Math.max(1, Q.length)); Q.forEach((q, i) => { q.pts = per + (i < 100 - per * Q.length ? 1 : 0); }); it = { type: 'quiz', title: `${tp} 확인 퀴즈`, qs: Q, time: 10, retake: 3 }; }
+        try { if (BX.k === 'quiz') { const r = await GEN.quiz(tp, { n: BX.n, lv: '보통' }); const Q = (r.v || []).map((q, i) => ({ ...q, q: `${i + 1}. ${String(q.q).replace(/^\d+\.\s*/, '')}` })); const per = Math.floor(100 / Math.max(1, Q.length)); Q.forEach((q, i) => { q.pts = per + (i < 100 - per * Q.length ? 1 : 0); }); it = { type: 'quiz', title: `${tp} 확인 퀴즈`, qs: Q, time: 0, retake: 98 }; }
           else { const r = await GEN.doc(tp, { cname: cl(d.name || ''), target: d.target || '' }); it = { type: 'doc', title: `${tp} 교안`, topic: tp, fmt: 'hand', doc: r.v }; } } catch (e) { continue; }
         it.id = nid('it'); it.week = s.w; L.push(it); ids.push(it.id); }
       BX.busy = false; try { if (S.ai && ids.length) S.ai.usage = (S.ai.usage || 0) + 1; } catch (e) { } }
