@@ -81,7 +81,7 @@
   function noticeOf(s) { const n = s && s.hps && s.hps.notice;
     if (n && n.on === false) return null;
     if (n && val(n.text)) return { t: val(n.text).slice(0, 80), link: n.link || '' };
-    try { const d = typeof today === 'function' ? today() : new Date().toISOString().slice(0, 10);
+    try { const d = typeof today === 'function' ? today() : (typeof ymdL === 'function' ? ymdL(new Date()) : new Date().toISOString().slice(0, 10));
       const p = ((S.settings && S.settings.popups) || []).find(p => p && p.on !== false && (!p.s || p.s <= d) && (!p.e || p.e >= d) && val(p.t));
       return p ? { t: val(p.t).slice(0, 80), link: p.link || '' } : null; } catch (e) { return null; } }
   const linkHref = v => { v = String(v || ''); if (!v) return ''; if (v.startsWith('learn:')) return '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice' }[v.slice(6)] || 'home');
@@ -95,7 +95,7 @@
     let C = []; try { C = (S.classes || []).filter(c => (c.open === '전체' || c.open == null) && c.status !== '종료'); } catch (e) { }
     const cl = (typeof t === 'function' ? t('cls') : '강좌'); const cta = ctaOf(s);
     R.push({ k: 'apply', ic: 'check', l: HPS.ctaWord(ty), sub: C.length ? `${cl} ${C.length}개 모집 중` : '', h: cta.href });
-    const T0 = new Date().toISOString().slice(0, 10); const nx = C.filter(c => c.start && c.start >= T0).sort((a, b) => String(a.start).localeCompare(b.start))[0];
+    const T0 = typeof today === 'function' ? today() : (typeof ymdL === 'function' ? ymdL(new Date()) : new Date().toISOString().slice(0, 10)); const nx = C.filter(c => c.start && c.start >= T0).sort((a, b) => String(a.start).localeCompare(b.start))[0];
     const cm = menu('class'); if (nx) R.push({ k: 'cal', ic: 'cal', l: ty === 'univ' ? '프로그램 일정' : ['k12', 'adult', 'voc'].includes(ty) ? '개강 일정' : '교육 일정', sub: `${dot(nx.start)} ${nx.name}`.slice(0, 26), h: cm ? mh(cm) : '#p-c-' + nx.id });
     const tel = val(f.tel), em = /@/.test(val(f.email)) ? val(f.email) : ''; const ask = ['k12', 'adult', 'voc'].includes(ty) ? '상담' : '문의';
     if (tel) R.push({ k: 'ask', ic: 'phone', l: `전화 ${ask}`, sub: tel, h: telHref(tel) }); else if (em) R.push({ k: 'ask', ic: 'mail', l: `메일 ${ask}`, sub: em, h: 'mailto:' + em });

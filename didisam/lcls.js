@@ -6,7 +6,7 @@ const LW = { yp: null, doc: undefined, ro: '', cc: '' };
 const LW_D = ['일', '월', '화', '수', '목', '금', '토'];
 const lwDow = s => new Date(String(s).slice(0, 10) + 'T00:00:00Z').getUTCDay();
 const lwFmt = s => /^\d{4}-\d{2}-\d{2}/.test(s || '') ? `${s.slice(5, 7)}.${s.slice(8, 10)}(${LW_D[lwDow(s)]})` : '';
-const lwToday = () => new Date().toISOString().slice(0, 10);
+const lwToday = () => ymdL(new Date()); /* v38 현지 날짜 */
 const lwTone = { 출석: 'ok', 지각: 'wn', 조퇴: 'wn', 결석: 'bd' };
 /* 기관 원본(데모: localStorage 기관 데이터 · 미리보기: 부모 창 S) — 화면마다 한 번 읽음 */
 function lwDoc() { if (LW.doc !== undefined) return LW.doc; let d = null; try { if (LR.mode === 'preview' && window.parent !== window && window.parent.S) d = window.parent.S; else if (LR.mode === 'demo' && typeof demoRoom === 'function') d = demoRoom(); } catch (e) { d = null; } LW.doc = d && d.classes ? d : null; return LW.doc; }

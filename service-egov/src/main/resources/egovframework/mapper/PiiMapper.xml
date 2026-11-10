@@ -12,6 +12,11 @@
   <select id="selectOrg" resultType="java.util.LinkedHashMap">
     select doc->'org'->>'type' type, (doc->'settings'->'acct')::text acct, (doc->'org'->'cpl')::text cpl from tenant_state where tenant_id = #{tid}
   </select>
+  <!-- v38 초대 토큰(공용 초대 · 등록 회원 개인 초대 itok) 확인 — Node pii.js signup과 같은 조건 -->
+  <select id="selectInviteOk" resultType="boolean">
+    select exists(select 1 from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'invites') = 'array' then t.doc->'invites' else '[]'::jsonb end) i where t.tenant_id = #{tid} and i->>'token' = #{tok} and i->>'active' = 'true' and coalesce(nullif(i->>'target', ''), 'student') = 'student')
+      or exists(select 1 from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'members') = 'array' then t.doc->'members' else '[]'::jsonb end) m where t.tenant_id = #{tid} and m->>'itok' = #{tok})
+  </select>
   <select id="insertAccount" resultType="string" flushCache="true" useCache="false">
     insert into learner_accounts (tenant_id, kind, login, nickname, student_no, dept, status, minor, mkt)
     values (#{tid}, 'learner', #{login}, #{nick}, #{stu}, #{dept}, #{st}, #{minor}, #{mkt}) returning learner_id::text

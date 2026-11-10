@@ -17,7 +17,7 @@
   const live = () => typeof LIVE !== 'undefined' && !!(LIVE && LIVE.user);
   const td = () => today();
   const dday = d => { if (!d) return null; return Math.round((new Date(d + 'T00:00:00') - new Date(td() + 'T00:00:00')) / 864e5); };
-  const plus = (d, n) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+  const plus = (d, n) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return ymdL(x); };
   const WD = '일월화수목금토';
   /* 내가 볼 강좌: 교수자는 담당 강좌만 */
   const myCls = () => { const L = arr(S.classes).filter(c => c.status !== '종료'); if (!isT() || typeof tCls !== 'function') return L; const T = new Set(tCls().map(c => c.id)); return L.filter(c => T.has(c.id)); };

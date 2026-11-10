@@ -107,7 +107,14 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       const org = await orgOf(L, tid); const univ = org.type === 'univ';
       if (org.strictPw && !consent.third) throw new HttpErr(400, '개인정보 제3자 제공(고용노동부, 한국산업인력공단)에 동의해 주세요.', 'consent_third');
       if (org.mode === 'code' && !univ) throw new HttpErr(403, '이 기관은 접근코드로만 로그인합니다.', 'mode');
-      if (org.mode === 'invite') throw new HttpErr(403, '초대받은 회원만 가입할 수 있습니다.', 'mode');
+      /* v38 초대 링크(공용 · 개인): 토큰이 기관 문서의 초대(학습자 대상 · 사용 중) 또는 아직 가입하지 않은 등록 회원(itok)과 맞아야 한다.
+         맞으면 초대제 기관도 가입할 수 있고 승인 없이 정회원 — 운영자 요청함(acct-join)에 token을 실어 그 등록 행에 계정을 붙인다(QA K1 · C2) */
+      const tok = String(b.token || '').trim(); let tokOk = false;
+      if (tok) { if (!/^[\w-]{6,40}$/.test(tok)) throw new HttpErr(403, '사용할 수 없는 초대 링크입니다. 운영자에게 새 링크를 요청하세요.', 'invite_bad');
+        tokOk = (await L(`select exists(select 1 from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'invites') = 'array' then t.doc->'invites' else '[]'::jsonb end) i where t.tenant_id = $1 and i->>'token' = $2 and i->>'active' = 'true' and coalesce(nullif(i->>'target', ''), 'student') = 'student')
+          or exists(select 1 from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'members') = 'array' then t.doc->'members' else '[]'::jsonb end) m where t.tenant_id = $1 and m->>'itok' = $2) ok`, [tid, tok])).rows[0].ok;
+        if (!tokOk) throw new HttpErr(403, '사용할 수 없는 초대 링크입니다. 운영자에게 새 링크를 요청하세요.', 'invite_bad'); }
+      if (org.mode === 'invite' && !tokOk) throw new HttpErr(403, '초대받은 회원만 가입할 수 있습니다.', 'mode');
       let nick = String(b.nickname || '').trim(); let login = via, sub = null, email = '', stu = null, dept = '';
       if (univ) { if (via !== 'univ') throw new HttpErr(400, '대학 계정은 학번으로 가입합니다.', 'via');
         stu = String(b.student_no || '').trim(); dept = String(b.dept || '').trim().slice(0, 40);
@@ -123,7 +130,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
         if (!MAIL_RE.test(gContact) && !PHONE_RE.test(ph || '-')) throw new HttpErr(400, '보호자 이메일 또는 휴대폰 번호를 입력하세요.', 'guardian'); if (ph) gContact = ph; }
       if (org.strictPw && b.pw && !pwRule(b.pw)) throw new HttpErr(400, '비밀번호는 영문 · 숫자 · 특수문자 중 2종 10자 이상 또는 3종 8자 이상입니다.', 'pw_rule');
       const pw = b.pw ? (String(b.pw).length >= 8 && String(b.pw).length <= 64 ? await hashPw(String(b.pw)) : (() => { throw new HttpErr(400, '비밀번호는 8~64자입니다.', 'pw'); })()) : null;
-      const st = minor ? 'guardian_pending' : 'active'; const pend = !minor && org.approve === 'manual';
+      const st = minor ? 'guardian_pending' : 'active'; const pend = !minor && org.approve === 'manual' && !tokOk;
       let lid;
       try { lid = (await L('insert into learner_accounts (tenant_id, kind, login, nickname, student_no, dept, status, minor, mkt) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning learner_id', [tid, 'learner', univ ? 'univ' : login, nick, stu, dept, st, minor, !!consent.mkt])).rows[0].learner_id; }
       catch (e) { if (e.code === '23505') throw new HttpErr(409, '이미 가입한 학번입니다. 로그인하거나 비밀번호를 찾으세요.', 'exists'); throw e; }
@@ -136,7 +143,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       await plog(P, tid, 'self', 'create', lid, 'signup', [email ? 'email' : '', sub ? 'provider_sub' : '', pw ? 'pw' : '', minor ? 'guardian' : ''].filter(Boolean));
       await L('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, 'learner:' + lid, 'learner.signup', JSON.stringify({ login: univ ? 'univ' : login, minor })]);
       /* v33 운영자 요청함으로 가입 알림(가명 sid · 닉네임 · 가린 이메일만). 보호자 동의가 필요한 가입은 동의 후에 보낸다 */
-      const jd = { kind: 'learner', login: univ ? 'univ' : login, sid: lid, nick, emailMask: email ? maskEmail(email) : '', dept, minor, consent: { tos: true, privacy: true, mkt: !!consent.mkt, at: cons.at }, extra: cleanExtra(b.extra) };
+      const jd = { kind: 'learner', login: univ ? 'univ' : login, sid: lid, nick, emailMask: email ? maskEmail(email) : '', dept, minor, consent: { tos: true, privacy: true, mkt: !!consent.mkt, at: cons.at }, extra: cleanExtra(b.extra), ...(tokOk ? { token: tok } : {}) };
       if (!minor) await evIns(L, tid, lid, 'acct-join', jd);
       return { lid, st, nick, login: univ ? 'univ' : login, gtok, pend };
     });

@@ -100,7 +100,7 @@
   wrap('enroll', () => {
     const U = S.org.type === 'univ'; const wait = S.members.filter(m => m.grade === '승인 대기');
     const R = [U ? row({ act: 'sla-codes', name: '학번으로 접근코드 발급', sub: `학번 · 학과만 받습니다 · 발급 ${S.codes.length}건`, icon: I('users'), col: 'var(--s400)' })
-      : row({ act: 'mem-bulk', name: '엑셀(CSV)로 일괄 등록', sub: '한 번에 5,000명까지', icon: I('doc'), col: 'var(--s400)' }),
+      : row({ act: 'mem-bulk', name: '엑셀 일괄 등록', sub: '한 번에 5,000명까지', icon: I('doc'), col: 'var(--s400)' }),
       row({ act: 'mem-invite', name: '초대 보내기', sub: '알림톡 · 링크 · 이메일', icon: I('send'), col: '#00A224' }),
       row({ act: 'mem-q', name: '가입 추가 질문', sub: '가입할 때 받을 항목', icon: I('chat'), col: '#FF9800' }),
       U ? (S.codes.length ? row({ act: 'en-csv', name: '접근코드 내려받기', sub: 'CSV로 학과에 배포', icon: I('download'), col: 'var(--g700)' }) : '')

@@ -12,6 +12,7 @@ public interface PiiMapper {
     void updateIdentityPw(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("lid") String lid, @org.apache.ibatis.annotations.Param("hash") String hash);
     /* L */
     Map<String, Object> selectOrg(@Param("tid") String tid);
+    boolean selectInviteOk(@Param("tid") String tid, @Param("tok") String tok);
     String insertAccount(@Param("tid") String tid, @Param("login") String login, @Param("nick") String nick, @Param("stu") String stu, @Param("dept") String dept,
                          @Param("st") String st, @Param("minor") boolean minor, @Param("mkt") boolean mkt);
     int withdrawRefused(@Param("tid") String tid, @Param("lid") String lid);

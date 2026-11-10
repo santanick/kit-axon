@@ -26,7 +26,7 @@
   const isPh = v => /입력하세요|입력해 주세요|예시|^\s*$/.test(String(v || ''));
   const editing = () => typeof HPE !== 'undefined' && !!HPE && !!HPE.map;
   const term = k => (typeof t === 'function' ? t(k) : k === 'cls' ? '강좌' : k);
-  const tday = () => (typeof today === 'function' ? today() : new Date().toISOString().slice(0, 10));
+  const tday = () => (typeof today === 'function' ? today() : (typeof ymdL === 'function' ? ymdL(new Date()) : new Date().toISOString().slice(0, 10)));
   const dot = d => String(d || '').replace(/-/g, '.');
   const okD = d => /^\d{4}-\d{2}-\d{2}/.test(String(d || ''));
   const days = (a, b) => Math.round((Date.parse(String(b).slice(0, 10)) - Date.parse(String(a).slice(0, 10))) / 864e5);

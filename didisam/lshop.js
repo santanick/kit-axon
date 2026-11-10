@@ -5,8 +5,8 @@
 'use strict';
 (() => {
   const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }; /* v22 현지 날짜(자정~09시 KST에 전날로 찍히던 문제) */
-  const addD = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
-  const addM = (d, n) => { const t = new Date(d); t.setMonth(t.getMonth() + n); return t.toISOString().slice(0, 10); };
+  const addD = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return ymdL(t); };
+  const addM = (d, n) => { const t = new Date(d); t.setMonth(t.getMonth() + n); return ymdL(t); };
   const won = n => (Number(n) || 0).toLocaleString('ko-KR') + '원';
   const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
   const rid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -31,13 +31,13 @@
       (doc.classes || []).forEach(c => { const e = c.enr && c.enr[id]; if (e) R.enr[c.id] = { ...e }; else if ((c.learners || []).includes(id)) R.enr[c.id] = { status: 'active', at: c.start, end: c.end || null, src: 'admin' }; });
       (doc.books || []).forEach(b => { const g = (b.grants || []).find(x => x.who === id && !x.off); if (g) R.books[b.id] = { ...g, until: addD(g.at, (b.dl && +b.dl.days) || 30) }; const s = (b.ship || []).find(x => x.who === id); if (s) R.ship[b.id] = { ...s }; });
     }
-    if (doc && !id) { const K0 = meKeys(); const par = (doc.parents || []).find(p => K0.includes(String(p.id))); if (par) R.bills = (doc.bills || []).filter(b => (b.to || []).some(t => t.who === par.id) || b.who === par.child).map(b => ({ ...b })); } /* 보호자 계정: 자녀 청구서 */
+    if (doc && !id) { const K0 = meKeys(); const P = (doc.parents || []).filter(p => (K0.includes(String(p.id)) || K0.includes(String(p.acct || ''))) && (!p.acct || /연결 완료/.test(p.status || ''))); if (P.length) { const kids = new Set(P.map(p => p.child)), pids = new Set(P.map(p => p.id)); R.bills = (doc.bills || []).filter(b => kids.has(b.who) || (b.to || []).some(t => pids.has(t.who) || kids.has(t.who))).map(b => ({ ...b })); } } /* 보호자 계정: 연결된 모든 자녀의 청구서(v38 — 행 id가 아니라 보호자 계정 id로 찾음, QA K4) */
     if (LR.mode === 'live' && LR.mine && LR.mine.shop) Object.assign(R, LR.mine.shop); /* 운영: 서버가 내 판매 데이터를 내려줌 */
     const K = meKeys();
     const grant = (type, ref, at, payId, ship) => { if (type === 'class') R.enr[ref] = { status: 'active', at, end: null, src: 'pay', paid: payId, pending: true };
       if (type === 'book') { const b = shop.books.find(x => x.id === ref); R.books[ref] = { who: id, at, dl: 0, pay: payId, until: addD(at, (b && b.dl && +b.dl.days) || 30), pending: true }; if (b && b.kind !== '전자책') R.ship[ref] = { done: false, memo: ship || '' }; }
       if (type === 'sub') { let s = R.subs.find(x => x.cls === ref && x.status !== '해지'); if (!s) { s = { id: rid('sb'), cls: ref, status: '구독중', n: 0, start: at }; R.subs.push(s); } s.status = '구독중'; s.n = (s.n || 0) + 1; s.next = addM(at, 1); s.pay = payId; s.pending = true; R.enr[ref] = { status: 'active', at, end: s.next, src: 'pay', pending: true }; } };
-    qAll().filter(x => K.includes(String(x.who)) || (x.type === 'bill-pay' && R.bills.some(b => b.id === (x.data || {}).billId))).forEach(x => { const d = x.data || {}; const at = String(x.at || '').slice(0, 10) || today(); const P = R.pays.find(p => p.id === d.payId);
+    qAll().filter(x => K.includes(String(x.who)) || (x.type === 'bill-pay' && R.bills.some(b => b.id === (x.data || {}).billId))).forEach(x => { const d = x.data || {}; const at = lLocal(x.at).slice(0, 10) || today(); const P = R.pays.find(p => p.id === d.payId);
       if (x.type === 'pay' && !P) { const it = d.itemType === 'book' ? shop.books.find(b => b.id === d.ref) : shop.classes.find(c => c.id === d.ref); R.pays.unshift({ id: d.payId, at, item: (it && it.name) || d.item || '', itemType: d.itemType, ref: d.ref, amount: priceOf(it), method: d.method, status: d.status, vacct: d.vacct || null, ship: d.ship || '', pending: true }); if (d.status === '결제 완료') grant(d.itemType, d.ref, at, d.payId, d.ship); }
       if (x.type === 'vacct-paid' && P && P.status === '결제 대기') { P.status = '결제 완료'; P.pending = true; grant(P.itemType, P.ref, at, P.id, P.ship); }
       if (x.type === 'pay-cancel' && P && P.status === '결제 대기') { P.status = '취소'; P.pending = true; }
@@ -187,8 +187,8 @@
     return sec('결제 상세', `<div class="shp-card2"><div class="shp-row sp"><b>${esc(p.item)}</b><span>${acts}</span></div>
       <dl class="shp-dl"><dt>결제 금액</dt><dd>${won(p.amount)}</dd><dt>결제 일시</dt><dd>${esc(p.at)}${p.refund && p.refund.at ? `<br><small class="mini">환불 신청일 ${esc(p.refund.at)}</small>` : ''}</dd><dt>결제 수단</dt><dd>${esc(p.method || '')}</dd><dt>결제 상태</dt><dd>${stTag(p)}</dd>${p.vacct ? `<dt>가상계좌</dt><dd>${esc(p.vacct.bank)} ${esc(p.vacct.no)} · ${esc(p.vacct.until)}까지</dd>` : ''}${p.ship ? `<dt>요청사항</dt><dd>${esc(p.ship)}</dd>` : ''}${p.refund ? `<dt>환불 사유</dt><dd>${esc(p.refund.reason || '')}</dd>${p.refund.state === '승인' ? `<dt>환불 금액</dt><dd>${won(p.refund.amount)} · ${esc(p.refund.done || '')}</dd>` : ''}${p.refund.note ? `<dt>거절 사유</dt><dd>${esc(p.refund.note)}</dd>` : ''}` : ''}</dl>
       ${rb ? `<p class="mini">${esc(rb)}</p>` : ''}${p.refund && p.refund.state === '신청' ? '<p class="mini">운영자가 승인하면 환불이 완료됩니다. 카드 결제 취소 · 금액 반환은 영업일 기준 며칠 걸릴 수 있습니다.</p>' : ''}</div>`, '<a href="#mypay">결제 관리</a> › 결제 상세'); }
-  function viewMyPay(tb) { if (!LR.me) return needLogin('mypay'); tb = tb || 'pay'; const R = mine(); const sh = SHOP() || { classes: [] };
-    const tabs = [['pay', '결제 내역'], ['refund', '환불 내역'], ['sub', '구독 관리'], ['bill', '청구서']];
+  function viewMyPay(tb) { if (!LR.me) return needLogin('mypay'); tb = tb || (LR.me.kind === 'parent' ? 'bill' : 'pay'); const R = mine(); const sh = SHOP() || { classes: [] };
+    const par = LR.me.kind === 'parent'; if (par && !['bill', 'pay', 'refund'].includes(tb)) tb = 'bill'; const tabs = par ? [['bill', '청구서'], ['pay', '결제 내역'], ['refund', '환불 내역']] : [['pay', '결제 내역'], ['refund', '환불 내역'], ['sub', '구독 관리'], ['bill', '청구서']]; /* v38 보호자: 청구서 먼저, 구독 관리 없음(QA K13) */
     const nm = id => ((sh.classes.find(c => c.id === id) || {}).name) || '구독 클래스';
     let body = '';
     if (tb === 'pay') { const pend = R.bills.filter(b => b.status === '미납');

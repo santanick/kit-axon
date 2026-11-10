@@ -12,7 +12,7 @@ const lcKey = () => 'didisam.room.' + (LR.tid || '') + '.lcomm.' + lcSid();
 const lcId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const lcSize = n => { n = +n || 0; return n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : n >= 1024 ? Math.round(n / 1024) + 'KB' : n + 'B'; };
 const lcSec = s => { s = Math.max(0, Math.round(+s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
-const lcDay = v => String(v || '').slice(0, 10);
+const lcDay = v => lLocal(v).slice(0, 10); /* v38 현지 날짜 */
 const lcImg = d => /^data:image\/(png|jpe?g|gif|webp);base64,/.test(String(d || ''));
 /* v36 공지 서식(운영자 화면 comm2 cmMd와 같은 규칙): 전부 이스케이프한 뒤 **굵게** · '- ' 목록 · [글](https://) · ![](img:id | https://)만 바꾼다 */
 const lcImgSafe = d => /^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(String(d || ''));
@@ -69,7 +69,7 @@ function lcViewComm(bid) { const C2 = COMM(); const f = LCM.f; const mine = bid 
   return lcSub(cur && cur.id !== '커뮤니티' ? '<a href="#comm">커뮤니티</a>' : '커뮤니티', cur && cur.id !== '커뮤니티' ? cur.name : '커뮤니티', cur && cur.id !== '커뮤니티' ? (cur.desc || '') : `${lcTerm('cls')}${(w => { const c = String(w || '').slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '과' : '와'; })(lcTerm('cls'))} 강의에 대해 ${lcTerm('teacher')} · 다른 ${lcTerm('learner')}${(w => { const c = String(w || '').slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '과' : '와'; })(lcTerm('learner'))} 질문하고 이야기를 나눕니다.`) + `<section class="sec lcsec"><div class="in">${bar}<div class="lc26w ${side ? '' : 'one'} ${bdSide ? 'bd' : ''}">${bdSide}<div class="lc26main">${sortBar}${L.length ? (C2.layout === 'sns' ? `<div class="lcgrid">${L.map(card).join('')}</div>` : `<div class="lclist lc26l">${L.map(row).join('')}</div>`) : `<div class="empty2"><p>${mine ? '아직 작성한 글이 없습니다.' : '아직 글이 없습니다. 첫 글을 남겨 보세요.'}</p></div>`}</div>${side}</div><p class="mini">${esc(lcTerm('cls'))}/강의를 골라 쓴 글은 ${esc(lcTerm('teacher'))}${(w => { const c = String(w || '').slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '과' : '와'; })((lcTerm('teacher')))} 그 ${esc(lcTerm('cls'))} ${esc(lcTerm('learner'))}만 봅니다. '쌤에게만 공개' 글은 운영자 · ${esc(lcTerm('teacher'))}만 봅니다.</p></div></section>`; }
 
 /* ── 게시글 상세 ── */
-function lcThread(L, pid, kind = 'post') { return (L || []).map(r => `<div class="lcc ${r.admin ? 'adm' : ''}"><div class="lcch"><b>${esc(r.nick || '회원')}</b>${r.admin ? '<span class="lck q">운영</span>' : ''}<small>${esc(String(r.at || '').replace('T', ' ').slice(0, 16))}${r.pend ? ' · 반영 대기' : ''}</small><span class="lcgrow"></span>${LR.me ? `<button class="lcl" data-lc="re" data-k="${kind}" data-p="${esc(pid)}" data-v="${esc(r.id)}">답글</button>` : ''}${LR.me && r.au && r.au === lcMe() ? `<button class="lcl" data-lc="cdel" data-k="${kind}" data-p="${esc(pid)}" data-v="${esc(r.id)}">삭제</button>` : ''}</div><p>${nl(r.body)}</p>${lcThread(r.replies, pid, kind)}</div>`).join(''); }
+function lcThread(L, pid, kind = 'post') { return (L || []).map(r => `<div class="lcc ${r.admin ? 'adm' : ''}"><div class="lcch"><b>${esc(r.nick || '회원')}</b>${r.admin ? '<span class="lck q">운영</span>' : ''}<small>${esc(lLocal(r.at).slice(0, 16))}${r.pend ? ' · 반영 대기' : ''}</small><span class="lcgrow"></span>${LR.me ? `<button class="lcl" data-lc="re" data-k="${kind}" data-p="${esc(pid)}" data-v="${esc(r.id)}">답글</button>` : ''}${LR.me && r.au && r.au === lcMe() ? `<button class="lcl" data-lc="cdel" data-k="${kind}" data-p="${esc(pid)}" data-v="${esc(r.id)}">삭제</button>` : ''}</div><p>${nl(r.body)}</p>${lcThread(r.replies, pid, kind)}</div>`).join(''); }
 const lcFilesH = F => (F || []).length ? `<div class="lcfiles">${F.map(x => lcImg(x.data) ? `<a href="${esc(x.data)}" download="${esc(x.name)}" title="내려받기"><img src="${esc(x.data)}" alt="${esc(x.name)}"></a>` : `<span class="lcf">${ico('book', 13)} ${esc(x.name)} · ${lcSize(x.size)}</span>`).join('')}</div>` : '';
 function lcViewPost(id) { const p = lcPosts().find(x => x.id === id); if (!p) return lcSub('<a href="#comm">커뮤니티</a>', '게시글') + '<section class="sec"><div class="in narrow"><div class="empty2"><p>글을 찾지 못했습니다. 삭제되었거나 볼 권한이 없습니다.</p><a class="lbtn ghost sm" href="#comm">목록으로</a></div></div></section>';
   if (!LCM.viewed[id] && !p.pend) { LCM.viewed[id] = 1; lcPush('post-view', { id }); }
@@ -154,7 +154,9 @@ const lcPanelRefresh = () => { const p = $('#lcPanel'); if (p) p.outerHTML = lcP
 
 /* ── 메시지함 ── */
 function lcInbox() { const st = lcStore(); if (!LR.me) return []; /* 운영: GET /api/pub/<tid>/inbox */ const r = lcRoom(); if (!r) return []; const m = lcMember(); const I = r.inbox || {};
-  const pk = LR.me.pid || (LR.me.parent && LR.me.parent.id) || ''; const L = [...(m ? I[m.id] || [] : []), ...(pk ? (I['par:' + pk] || []).map(x => ({ ...x, par: pk })) : [])];
+  const pa = LR.me.kind === 'parent' ? (r.pacct || []).find(x => x.sid === LR.me.sid) : null; /* v38 보호자 계정 id(운영자 '보호자 포함' 발송 키) + 계정 연결 전 행 id(QA K3) */
+  const pks = [...new Set([LR.me.pid, LR.me.parent && LR.me.parent.id, pa && pa.id, ...(pa ? (r.parents || []).filter(p => p.acct === pa.id).map(p => p.id) : [])].filter(Boolean))];
+  const L = [...(m ? I[m.id] || [] : []), ...pks.flatMap(pk => (I['par:' + pk] || []).map(x => ({ ...x, par: pk })))].filter((x, i, A) => A.findIndex(y => y.id === x.id) === i);
   return L.map(x => ({ ...x, read: !!(x.read || st.read[x.id]) })).sort((a, b) => String(b.at).localeCompare(String(a.at))); }
 window.lcInbox = lcInbox;
 const lcUnread = () => lcInbox().filter(x => !x.read).length;

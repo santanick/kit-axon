@@ -276,7 +276,7 @@
     const ring = p => `<span class="ap-rg" style="--p:${Math.max(0, Math.min(100, p))}"><b>${p}%</b></span>`;
     const card = (x, ex) => { const href = x.next ? `#c/${x.c.id}/${x.next.id}` : `#c/${x.c.id}`; const warn = x.st === 'returned';
       return `<a class="ap-cc ${x.done ? 'done' : ''} ${warn ? 'warn' : ''}${ex ? ' exp' : ''}" href="${esc(href)}">${x.c.thumb ? `<span class="ap-thw"><img class="ap-th" src="${esc(x.c.thumb)}" alt="" loading="lazy">${ring(x.p)}</span>` : anyTh ? `<span class="ap-thw"><span class="ap-th ap-th0" aria-hidden="true">${esc(String(x.c.name || '').slice(0, 4))}</span>${ring(x.p)}</span>` : ring(x.p)}<span class="ap-cm"><b>${esc(x.c.name)}</b><small>${ex ? '학습 기간이 끝났어요 · 기록만 볼 수 있어요' : x.done ? '수료 · 다시 보기' : warn ? '재제출 요청 · 피드백 확인' : x.next ? '다음 · ' + esc(x.next.title) : '시작하기'}</small>${ex ? '<em class="ap-exp">만료됨</em>' : x.c.end && !x.done ? `<em>${esc(x.c.end)} 마감</em>` : ''}</span><i>${x.done ? ico('check', 16) : ico('play', 16)}</i></a>`; };
-    const today = new Date().toISOString().slice(0, 10); const exp = x => !x.done && x.c.end && String(x.c.end).slice(0, 10) < today;
+    const today = ymdL(new Date()); const exp = x => !x.done && x.c.end && String(x.c.end).slice(0, 10) < today;
     const stOf = x => exp(x) ? 'exp' : x.done ? 'done' : x.p > 0 ? 'ing' : 'pre'; const F = AP.myf || 'all'; const SO = AP.mys || 'recent';
     const live = C.filter(x => !exp(x)); const cntOf = k => k === 'all' ? live.length : live.filter(x => stOf(x) === k).length;
     let V = F === 'all' ? live : live.filter(x => stOf(x) === F); const seen = srSeen(); const rk = x => { const i = seen.indexOf(x.c.id); return i < 0 ? 999 : i; };
@@ -327,7 +327,7 @@
   const srRecent = () => { try { const v = JSON.parse(ls.get('srq.' + LR.tid) || '[]'); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (e) { return []; } };
   const srSeen = () => { try { const v = JSON.parse(ls.get('srv.' + LR.tid) || '[]'); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (e) { return []; } };
   /* v32.8 기간 만료 강좌는 기록만 보기 — 진도 · 제출 버튼을 막고 이유를 알린다(QA U10) */
-  const expCls = id => { try { if (typeof myStats !== 'function' || !LR.me) return false; const x = myStats().courses.find(y => y.c.id === id); return !!(x && x.c.end && String(x.c.end).slice(0, 10) < new Date().toISOString().slice(0, 10)); } catch (e) { return false; } };
+  const expCls = id => { try { if (typeof myStats !== 'function' || !LR.me) return false; const x = myStats().courses.find(y => y.c.id === id); return !!(x && x.c.end && String(x.c.end).slice(0, 10) < ymdL(new Date())); } catch (e) { return false; } };
   document.addEventListener('click', e => { const m = /^#c\/([^/]+)/.exec(location.hash); if (!m || !document.body.classList.contains('lapp')) return; const b = e.target.closest && e.target.closest('#lm [data-lact], #lm [data-a2], #lm [data-lc="live-in"]'); if (!b || /^(next|prev|back|note|tab)/.test(b.dataset.lact || '')) return; if (!expCls(decodeURIComponent(m[1]))) return; e.stopPropagation(); e.preventDefault(); toast('학습 기간이 끝난 강좌예요. 기록은 볼 수 있지만 새 진도 · 제출은 저장되지 않아요.', 'warn'); }, true);
   window.addEventListener('hashchange', () => { closeSheet(); const d = document.getElementById('laiDlg'); if (d) { try { d.close(); } catch (e) { d.remove(); } } });
   window.addEventListener('hashchange', () => { const m = /^#c\/([^/]+)/.exec(location.hash); if (!m) return; const L = [m[1], ...srSeen().filter(x => x !== m[1])].slice(0, 10); ls.set('srv.' + LR.tid, JSON.stringify(L)); });

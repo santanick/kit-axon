@@ -18,7 +18,7 @@ const cmTeamOf = m => (m && (m.team || m.group)) || '';
 const cmNick = m => { if (!m) return '회원'; if (m.nick) return m.nick; if (S.org.type === 'univ' || !m.name) return '학습자'; return m.name[0] + '○○'; };
 const cmSec = s => { s = Math.max(0, Math.round(+s || 0)); const h = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60), ss = s % 60; return (h ? h + ':' + String(mm).padStart(2, '0') : mm) + ':' + String(ss).padStart(2, '0'); };
 const cmSize = n => { n = +n || 0; return n >= 1073741824 ? (n / 1073741824).toFixed(2) + 'GB' : n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : n >= 1024 ? Math.round(n / 1024) + 'KB' : n + 'B'; };
-const cmDate = v => { v = String(v || ''); if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10); const m = v.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/); return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : v.slice(0, 10); };
+const cmDate = v => { v = atL(v); if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10); /* v38 학습자 UTC 시각 → 현지 날짜 */ const m = v.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/); return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : v.slice(0, 10); };
 /* 아이콘 보강(없을 때만) */
 [['plus', '<path d="M12 5v14M5 12h14"/>'], ['refresh', '<path d="M20 11a8 8 0 0 0-14.9-3M4 4v4h4M4 13a8 8 0 0 0 14.9 3M20 20v-4h-4"/>'], ['upload', '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>'], ['mic', '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'], ['edit', '<path d="M4 20h4L19 9l-4-4L4 16z"/>'], ['doc', '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/>']].forEach(([k, v]) => { if (typeof IC !== 'undefined' && !IC[k]) IC[k] = v; });
 const cmAdminLabel = () => S.me.role === 'teacher' ? (S.me.name || t('teacher')) : '운영자';
@@ -260,7 +260,7 @@ function cmSend(mc, title, body, imgs, R) {
   S.msgs.unshift({ id, at, to: cmToLabel(mc), mode: mc.mode, toIds: R.ids, parents: !!mc.par, pIds: R.pars.map(p => p.id), title, body, imgs: imgs.map(f => ({ name: f.name, size: f.size, type: f.type, data: f.data || '' })), ch: '앱 푸시 + 이메일', n, by: S.me.name });
   const entry = extra => ({ id: uid('ib'), msg: id, at, title, body, imgs: imgs.length, read: false, from: S.org.name, ...extra });
   R.ids.forEach(mid => { (S.inbox[mid] = S.inbox[mid] || []).unshift(entry({})); S.inbox[mid] = S.inbox[mid].slice(0, 200); });
-  R.pars.forEach(p => { const k = 'par:' + p.id; (S.inbox[k] = S.inbox[k] || []).unshift(entry({ child: (M(p.child) || {}).name || '' })); S.inbox[k] = S.inbox[k].slice(0, 200); });
+  R.pars.forEach(p => { const k = 'par:' + (p.acct || p.id); /* v38 보호자 계정 id(학습자 메시지함이 읽는 키) — 계정 전이면 행 id(가입 연결 시 옮김) */ (S.inbox[k] = S.inbox[k] || []).unshift(entry({ child: (M(p.child) || {}).name || '' })); S.inbox[k] = S.inbox[k].slice(0, 200); });
   /* 운영: POST /api/messages { toIds, parents, title, body, imgs } → 앱 푸시(FCM) + 가입 이메일 발송 */
   UI.msgDraft = UI.msgDraftT = ''; mc.imgs = []; logAudit(`메시지 발송 — ${title} (${n}명)`); save(); render(); toast(`${n}명에게 발송했습니다(데모).`, 'ok');
 }
@@ -536,7 +536,7 @@ function csDash() { const { from, to } = csPeriod(); const L = S.consults.filter
   const ym = today().slice(0, 7); const F2F = S.consults.filter(c => csType(c) === '대면'); const sttM = c => (c.dur || 0) / 60; const sumMin = A => A.reduce((s, c) => s + sttM(c), 0);
   const thisM = sumMin(F2F.filter(c => cmDate(c.at).startsWith(ym))), allM = sumMin(F2F); const aiThis = S.consults.filter(c => c.summary && cmDate(c.sumAt || c.at).startsWith(ym)).length, aiAll = S.consults.filter(c => c.summary).length;
   const rc = UI.csRc || ''; const recent = S.consults.filter(c => !rc || csTop(c) === rc || c.catId === rc).slice(0, 8);
-  const ic2 = UI.csIc || (top[0] || {}).id || ''; const inC = c => !ic2 || csTop(c) === ic2 || c.catId === ic2; const mAgo = n => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - n); return d.toISOString().slice(0, 7); };
+  const ic2 = UI.csIc || (top[0] || {}).id || ''; const inC = c => !ic2 || csTop(c) === ic2 || c.catId === ic2; const mAgo = n => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - n); return ymdL(d).slice(0, 7); };
   const mc = k => S.consults.filter(c => inC(c) && cmDate(c.at).startsWith(k)).length; const cur = mc(mAgo(0)), prev = mc(mAgo(1)), ly = mc(mAgo(12)); const tr = UI.csTr || 3; const tk = Array.from({ length: tr }, (_, i) => mAgo(tr - 1 - i)); const tmx = Math.max(1, ...tk.map(mc));
   const diff = (a, b) => b ? `${a >= b ? '+' : ''}${Math.round((a - b) / b * 100)}%` : (a ? '신규' : '—');
   return `<div class="bar2"><label class="mini">기간 <input type="date" value="${esc(from)}" data-chg="cs-p" data-k="from" aria-label="시작일"></label><label class="mini">~ <input type="date" value="${esc(to)}" data-chg="cs-p" data-k="to" aria-label="종료일"></label>${[1, 3, 6].map(n => `<button class="btn sm ghost" data-act="cs-pq" data-v="${n}">최근 ${n}개월</button>`).join('')}<span class="mini">최대 6개월</span></div>

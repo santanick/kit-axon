@@ -72,9 +72,11 @@
   const SEC = { home: 'home', shop: 'shop', class: 'shop', pay: 'shop', payok: 'shop', courses: 'shop', textbooks: 'shop', tb: 'shop', c: 'my', my: 'my', cert: 'my', badge: 'my', mypay: 'my', payd: 'my', mybooks: 'my', acct: 'my', inbox: 'my', family: 'my', login: 'my', join: 'my', comm: 'comm', post: 'comm', write: 'comm', msg: 'my', notice: 'comm' };
   function bottomNav() { const tb = document.querySelector('nav.tabbar'); if (!tb) return; const a = route().a; const s = SEC[a] || (a === 'hp' ? 'home' : '');
     const hasComm = (SITE().pages || []).some(p => p.id === 'comm') || !!document.querySelector('header .ln a[href="#comm"]') || typeof lcCommHTML === 'function';
-    const it = [['home', '#home', 'home', '홈'], ['shop', browseHref(), 'grid', '강좌'], ['my', LR.me ? '#my' : '#login/my', 'user', '내 학습'], hasComm ? ['comm', '#comm', 'msg', '커뮤니티'] : ['comm', '#notice', 'bell', '공지']];
+    const par = !!(LR.me && LR.me.kind === 'parent'); /* v38 보호자 웹 휴대폰: 앱과 같은 보호자 탭(홈 · 자녀 · 메시지 · 결제) — 학생 탭(수업 찾기 · 내 학습) 대신(QA K13) */
+    const ps = { home: 'home', hp: 'home', family: 'kids', msg: 'msg', inbox: 'msg', mypay: 'pay', payd: 'pay' }[a] || '';
+    const it = par ? [['home', '#home', 'home', '홈'], ['kids', '#family', 'user', '자녀'], ['msg', '#msg', 'msg', '메시지'], ['pay', '#mypay/bill', 'grid', '결제']] : [['home', '#home', 'home', '홈'], ['shop', browseHref(), 'grid', '강좌'], ['my', LR.me ? '#my' : '#login/my', 'user', '내 학습'], hasComm ? ['comm', '#comm', 'msg', '커뮤니티'] : ['comm', '#notice', 'bell', '공지']];
     tb.className = 'tabbar lux-bn'; tb.setAttribute('aria-label', '아래 메뉴');
-    tb.innerHTML = it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 21)}<span>${l}</span></a>`).join('') + `<button type="button" data-lux="menu" aria-haspopup="dialog" aria-expanded="false">${ico('menu', 21)}<span>메뉴</span></button>`; }
+    const on = par ? ps : s; tb.innerHTML = it.map(([k, h, i, l]) => `<a href="${h}" class="${on === k ? 'on' : ''}"${on === k ? ' aria-current="page"' : ''}>${ico(i, 21)}<span>${l}</span></a>`).join('') + `<button type="button" data-lux="menu" aria-haspopup="dialog" aria-expanded="false">${ico('menu', 21)}<span>메뉴</span></button>`; }
   function sheetOpen() { sheetClose(); const links = []; const seen = new Set();
     document.querySelectorAll('header.lh nav.ln a').forEach(a => { const h = a.getAttribute('href'); if (!h || seen.has(h)) return; seen.add(h); links.push(`<a href="${esc(h)}"${a.target ? ' target="_blank" rel="noopener"' : ''}>${esc(a.textContent.replace('▾', '').trim())}</a>`); });
     const fam = !!document.querySelector('.la-acp a[href="#family"]'); const T = typeof TCFG === 'function' && TCFG().enabled ? TCFG().name : '';
