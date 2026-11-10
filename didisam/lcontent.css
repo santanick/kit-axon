@@ -33,6 +33,18 @@
 .lc-script p{margin:8px 0;line-height:1.65}
 .lc-bar{height:6px;background:var(--line2,#F1F2F2);border-radius:99px;overflow:hidden;margin:10px 0 4px}.lc-bar i{display:block;height:100%;background:var(--ok,#16A34A);border-radius:99px;transition:width .4s}
 .lc-bart{display:block;color:var(--mute,#6C6C6C);font-size:14px}
+/* v37 L1 AI 영상 템플릿 · 아바타 선생님 · 언어 */
+.lc-meta{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.lc-meta span{padding:3px 10px;border-radius:99px;background:var(--paper,#F1F2F2);color:var(--ink2,#4C4D4D);font-size:13px;font-weight:600}
+.lc-t-board .lc-stage{background:#FDFDFB linear-gradient(rgba(92,116,246,.08) 1px,transparent 1px) 0 0/100% 32px;color:#1E3A8A;border:1px solid #E5E7EB}.lc-t-board .lc-slide h3{color:#DC2626;text-decoration:underline wavy #DC2626 2px;text-underline-offset:8px}.lc-t-board .lc-sn{color:#6C6C6C;opacity:1}
+.lc-t-news .lc-stage{background:linear-gradient(135deg,#0B1F44,#173A73)}.lc-t-news .lc-slide{margin:44px 18px 8px;padding:16px 20px;background:rgba(255,255,255,.96);color:#0B1F44;border-left:8px solid #0B1F44;border-radius:4px}.lc-t-news .lc-slide li::marker{color:#DE0027}.lc-t-news .lc-sn{color:#6C6C6C;opacity:1}
+.lc-live{position:absolute;top:12px;right:14px;padding:4px 10px;background:#DE0027;color:#fff;font-size:13px;font-weight:800;border-radius:3px}
+.lc-t-card .lc-stage{background:#E3F3FC}.lc-t-card .lc-slide{margin:16px 18px 8px;padding:18px 22px;background:#fff;color:#2A2B2B;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.1)}.lc-t-card .lc-sn{color:#006ABF;font-size:22px;font-weight:900;opacity:1}
+.lc-t-chalk .lc-stage{background:#24452F;border:12px solid #7A4A22}.lc-t-chalk .lc-slide h3{color:#FDE68A}.lc-t-chalk .lc-slide{font-family:inherit}
+.lc-hasav .lc-slide{padding-right:min(34%,210px)}.lc-t-news.lc-hasav .lc-slide{margin-right:min(34%,200px);padding-right:20px}
+.lc-av{position:absolute;right:10px;bottom:64px;width:min(30%,180px);aspect-ratio:1;pointer-events:none}.lc-av svg{width:100%;height:100%;display:block}
+.lc-av .lc-mo{transform-box:fill-box;transform-origin:center}.lc-ai.talk .lc-av .lc-mo{animation:lcTalk .32s ease-in-out infinite alternate}
+@keyframes lcTalk{from{transform:scaleY(1)}to{transform:scaleY(3.4)}}
+@media (prefers-reduced-motion:reduce){.lc-ai.talk .lc-av .lc-mo{animation:none;transform:scaleY(2.4)}}
 /* 올린 파일 */
 .lc-media{position:relative;border-radius:12px;overflow:hidden;background:#111}
 .lc-media video{display:block;width:100%;max-height:70vh;background:#000}
@@ -59,6 +71,7 @@
   .lc-stage{aspect-ratio:auto;min-height:260px}
   .lc-slide{padding:16px 16px 8px}
   .lc-cap{font-size:16px;padding:10px 12px}
+  .lc-hasav .lc-slide{padding-right:16px}.lc-t-news.lc-hasav .lc-slide{margin:78px 14px 8px}.lc-t-news.lc-hasav .lc-slide h3{padding-right:0}.lc-av{width:76px;right:8px;bottom:auto;top:6px;opacity:.95}.lc-hasav .lc-slide h3{padding-right:78px}.lc-t-news .lc-live{left:14px;right:auto}
   .lc-ctl{display:grid;grid-template-columns:1fr 1fr;gap:8px}.lc-ctl .lc-play{grid-column:1/-1;order:-1;min-width:0}.lc-ctl .lbtn{width:100%;padding-left:10px;padding-right:10px}
   .lc-done .lbtn{width:100%;min-width:0}
   .lc-ftools{flex-direction:column;align-items:stretch}.lc-fa{display:grid;grid-template-columns:1fr 1fr}.lc-fa .lbtn{width:100%}.lc-fa .lbtn:only-child{grid-column:1/-1}

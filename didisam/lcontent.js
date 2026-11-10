@@ -67,10 +67,26 @@
   const descHTML = it => it.desc ? `<div class="lc-desc">${typeof nl === 'function' ? nl(it.desc) : E(it.desc)}</div>` : '';
 
   /* ── AI 강의 영상(슬라이드 + 음성 합성) ── */
-  function aiHTML(c, it, st) { const S2 = it.ai.scenes; const s0 = S2[0];
-    return `<div class="lc-ai" data-lcai="1">
+  /* v37 L1: 운영자가 고른 AI 영상 템플릿(슬라이드 · 화이트보드 · 뉴스 앵커 · 카드뉴스 · 칠판) · 아바타 선생님 · 목소리/자막 언어를 학습자 화면에도 그대로 보여 준다 */
+  const TPLN = { slide: '슬라이드 강의', board: '화이트보드', news: '뉴스 앵커', card: '카드뉴스', chalk: '칠판' };
+  const AVN = { f: '여자 선생님', m: '남자 선생님', robot: '로봇 쌤', bear: '곰돌이 쌤' };
+  const LGN = { ko: '한국어', en: 'English', ja: '日本語', zh: '中文', vi: 'Tiếng Việt', th: 'ไทย', id: 'Bahasa Indonesia', es: 'Español', fr: 'Français' };
+  const tplOf = it => TPLN[it.ai.tpl] ? it.ai.tpl : 'slide'; const avOf = it => AVN[it.ai.avatar] ? it.ai.avatar : '';
+  const capScenes = it => (Array.isArray(it.ai.cap) && it.ai.cap.length === it.ai.scenes.length ? it.ai.cap : null);
+  const avSVG = k => { const body = { f: '#5C74F6', m: '#2A2B2B', robot: '#8A94A6', bear: '#EF6D00' }[k]; const skin = k === 'robot' ? '#D7DCE4' : k === 'bear' ? '#B7743A' : '#F6D2B5';
+    const hair = k === 'f' ? '<ellipse cx="50" cy="40" rx="27" ry="29" fill="#4A2E1F"/>' : ''; const ears = k === 'bear' ? '<circle cx="31" cy="24" r="9" fill="#8A5226"/><circle cx="69" cy="24" r="9" fill="#8A5226"/>' : k === 'robot' ? '<path d="M50 14v-8" stroke="#8A94A6" stroke-width="3"/><circle cx="50" cy="5" r="3.5" fill="#5C74F6"/>' : '';
+    const head = k === 'robot' ? `<rect x="27" y="16" width="46" height="44" rx="9" fill="${skin}"/>` : `<circle cx="50" cy="40" r="23" fill="${skin}"/>`;
+    const top = k === 'f' ? '<path d="M28 34c4-14 18-18 30-15 8 2 13 8 14 14-10-6-27-7-44 1z" fill="#4A2E1F"/>' : k === 'm' ? '<path d="M27 36c0-14 10-21 23-21s23 7 23 21c-6-7-14-9-23-9s-17 2-23 9z" fill="#1F2020"/>' : '';
+    const eyes = k === 'robot' ? '<rect x="37" y="32" width="8" height="7" rx="1" fill="#00C2FF"/><rect x="55" y="32" width="8" height="7" rx="1" fill="#00C2FF"/>' : '<circle cx="41" cy="38" r="2.6" fill="#2A2B2B"/><circle cx="59" cy="38" r="2.6" fill="#2A2B2B"/>';
+    const snout = k === 'bear' ? '<ellipse cx="50" cy="47" rx="10" ry="7.5" fill="#E3A66B"/><ellipse cx="50" cy="44" rx="3" ry="2.2" fill="#3B2414"/>' : '';
+    return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path d="M12 100c0-22 17-36 38-36s38 14 38 36z" fill="${body}"/>${ears}${hair}${head}${top}${eyes}${snout}<ellipse class="lc-mo" cx="50" cy="${k === 'bear' ? 52 : 50}" rx="${k === 'robot' ? 8 : 5.5}" ry="1.6" fill="${k === 'robot' ? '#2A2B2B' : '#B5534A'}"/></svg>`; };
+  const langTx = it => { const v = String(it.ai.lang || 'ko').slice(0, 2); const vn = LGN[v] || it.ai.lang; return [v !== 'ko' ? `목소리 ${vn}` : '', it.ai.clang ? `자막 ${it.ai.clang}` : ''].filter(Boolean).join(' · '); };
+  function aiHTML(c, it, st) { const CS = capScenes(it); const S2 = CS || it.ai.scenes; const s0 = S2[0]; const tp = tplOf(it), av = avOf(it); const lt = langTx(it);
+    return `<div class="lc-ai lc-t-${tp}${av ? ' lc-hasav' : ''}" data-lcai="1">
+      ${tp !== 'slide' || av || lt ? `<p class="lc-meta">${[tp !== 'slide' ? `${E(TPLN[tp])}형` : '', av ? E(AVN[av]) : '', E(lt)].filter(Boolean).map(x => `<span>${x}</span>`).join('')}</p>` : ''}
       <div class="lc-stage" aria-live="polite"><div class="lc-slide"><small class="lc-sn">장면 1 / ${S2.length}</small><h3>${E(s0.h)}</h3><ul>${(s0.pts || []).map(p => `<li>${E(p)}</li>`).join('')}</ul></div>
-        <p class="lc-cap" aria-label="자막">재생을 누르면 AI 강사가 읽어 줘요.</p></div>
+        ${av ? `<div class="lc-av lc-av-${av}" role="img" aria-label="${E(AVN[av])}">${avSVG(av)}</div>` : ''}${tp === 'news' ? `<span class="lc-live" aria-hidden="true">강의 LIVE</span>` : ''}
+        <p class="lc-cap" aria-label="자막"${it.ai.clang ? ` lang="${E(String(it.ai.clang))}"` : ''}>재생을 누르면 AI 강사가 읽어 줘요.</p></div>
       <div class="lc-ctl"><button type="button" class="lbtn ghost lc-c" data-lcp="prev" aria-label="이전 장면">${IC('arrow', 16)}<span>이전</span></button><button type="button" class="lbtn pri lc-play" data-lcp="play">▶ 재생</button><button type="button" class="lbtn ghost lc-c" data-lcp="next" aria-label="다음 장면"><span>다음</span>${IC('arrow', 16)}</button><button type="button" class="lbtn ghost lc-c" data-lcp="mute" aria-pressed="false">${'speechSynthesis' in window ? '소리 끄기' : '소리 없음'}</button></div>
       <p class="lc-q"><b>미리보기 품질</b> 브라우저의 음성으로 읽어 주는 AI 강의예요. 목소리가 기계처럼 들릴 수 있고, 자막과 슬라이드로도 내용을 볼 수 있어요.</p>
       <div class="lc-bar"><i style="width:${Math.round((st.w || 0) * 100)}%"></i></div><small class="lc-bart">시청 ${Math.round((st.w || 0) * 100)}%${st.done ? ' · 완료했어요' : ' · 80% 넘게 보면 완료돼요'}</small>
@@ -81,14 +97,15 @@
   const SEEN = new WeakSet(); /* 붙인 요소(다른 화면 코드가 innerHTML로 옮겨 그려도 새 요소에 다시 붙인다) */
   function aiMount(box, c, it) { if (!box) return; const live = AIP && AIP.alive && AIP.iid === it.id; if (SEEN.has(box) && live) return; SEEN.add(box); if (live) { AIP.paint(); return; } aiStop();
     const scenes = it.ai.scenes; const plan = scenes.map(s => { const ss = sentences(s.say); return ss.length ? ss : [s.h || '']; }); const total = plan.reduce((a, x) => a + x.length, 0);
+    const CS = capScenes(it); const capOf = (i, k) => { if (!CS) return plan[i][k] || ''; const cs = sentences(CS[i].say); return (cs.length === plan[i].length ? cs[k] : CS[i].say) || ''; }; /* v37 L1: 자막 언어가 다르면 자막 · 슬라이드는 자막 언어로, 목소리는 목소리 언어로 */
     const st0 = peek(c.id, it.id); let start = Math.min(total - 1, Math.max(0, +st0.pos || 0)); if (st0.done) start = 0;
     const at = n => { let i = 0; while (i < plan.length && n >= plan[i].length) { n -= plan[i].length; i++; } return [Math.min(i, plan.length - 1), n]; };
     const P = AIP = { alive: true, on: false, n: start, muted: !('speechSynthesis' in window), seen: new Set(), tm: 0, guard: 0, tok: 0, iid: it.id };
     const q = s => { const b = document.querySelector(`.lc[data-i="${CSS.escape(it.id)}"] .lc-ai`) || box; return b.querySelector(s); }; const syn = window.speechSynthesis;
     if (!('speechSynthesis' in window)) { const m = q('[data-lcp=mute]'); if (m) m.disabled = true; }
-    const paint = () => { const [i, k] = at(P.n); const s = scenes[i]; const sl = q('.lc-slide');
+    const paint = () => { const [i, k] = at(P.n); const s = (CS || scenes)[i]; const sl = q('.lc-slide'); const root = q('.lc-stage'); if (root && root.parentNode) root.parentNode.classList.toggle('talk', !!P.on && !P.muted);
       if (sl && sl.dataset.i !== String(i)) { sl.dataset.i = String(i); sl.innerHTML = `<small class="lc-sn">장면 ${i + 1} / ${scenes.length}</small><h3>${E(s.h)}</h3><ul>${(s.pts || []).map(p => `<li>${E(p)}</li>`).join('')}</ul>`; }
-      const cap = q('.lc-cap'); if (cap) cap.textContent = P.on || P.n > 0 ? (plan[i][k] || '') : '재생을 누르면 AI 강사가 읽어 줘요.';
+      const cap = q('.lc-cap'); if (cap) cap.textContent = P.on || P.n > 0 ? capOf(i, k) : '재생을 누르면 AI 강사가 읽어 줘요.';
       const pb = q('.lc-play'); if (pb) pb.textContent = P.on ? '❚❚ 일시정지' : P.n >= total - 1 && P.seen.size ? '↺ 처음부터' : '▶ 재생'; };
     const mark = () => { P.seen.add(P.n); const base = peek(c.id, it.id).w || 0; const w = Math.max(base, P.seen.size / total); progress(c.id, it.id, w, { pos: P.n });
       if (P.n >= total - 1 && P.seen.size) { if (P.seen.size / total >= 0.8 || base >= 0.8) progress(c.id, it.id, 1, { pos: 0 }); } };
