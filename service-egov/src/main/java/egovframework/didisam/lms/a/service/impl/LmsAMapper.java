@@ -48,6 +48,10 @@ public interface LmsAMapper {
     int existsPerson(@Param("mno") String mno);
     int insertPerson(@Param("tid") String tid, @Param("mno") String mno, @Param("kind") String kind, @Param("unit") String unit, @Param("status") String status, @Param("gy") Integer gy);
     List<Map<String, Object>> selectUnitsAll();
+    List<Map<String, Object>> selectUnitNames();
+    String selectUnitByName(@Param("name") String name);
+    String selectUnitName(@Param("code") String code);
+    int countUnits();
     List<String> selectMemberNos();
     List<Map<String, Object>> selectPersonsAll();
     List<Map<String, Object>> selectCoursesAll();

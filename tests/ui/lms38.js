@@ -43,6 +43,8 @@ const go = async (p, h, w = 1000) => { await p.evaluate(h => { location.hash = h
   const E0 = await op.evaluate(() => { const A = lmsaEns(); const n = k => { try { return k(); } catch (e) { return 'ERR ' + e.message; } };
     return { terms: A.terms.length, courses: A.courses.length, sections: A.sections.length, persons: A.persons.length, units: A.units.length, req: A.staff.length + A.enr.length, rooms: LMSX.db().sections.length, w3: W3.D().sections.length,
       cal: n(() => LMP.demo.l['cal.list']({}).items.length), tree: LMSNAV.tree().map(g => g.k), on: ['lmse', 'lmsb', 'members', 'enroll', 'site', 'lmsf', 'lmsg'].filter(id => menuOn(id)) }; });
+  const DOM = await op.evaluate(() => ({ d: S.org.domain, short: (S.lsite && S.lsite.brand || {}).short }));
+  ok(/^org-[a-z0-9]{6}\.didisam\.com$/.test(DOM.d) && DOM.short === '해운대대', `한글 기관명: 임시 주소 org-… · 짧은 이름 한글(이전 e.didisam.com · 로고 e) (${JSON.stringify(DOM)})`);
   ok(E0.terms === 1 && E0.courses === 0 && E0.sections === 0 && E0.persons === 0 && E0.units === 0 && E0.req === 0, `#4 빈 학사: 학기 1 · 교과목 0 · 분반 0 · 구성원 0 · 조직 0 · 신청 0 (${JSON.stringify(E0).slice(0, 120)})`);
   ok(E0.rooms === 0 && E0.w3 === 0 && E0.cal === 0, `#4 빈 강의실 0 · 출결 분반 0 · 달력 일정 0 (${E0.rooms}/${E0.w3}/${E0.cal})`);
   ok(['g-people', 'g-site'].every(k => E0.tree.includes(k)) && E0.on.length === 7, `#13 업무 메뉴: 학생 · 사이트 공간, 과제 · 강의실 · 학생 명단 켜짐 (${E0.tree.join(',')} / ${E0.on.join(',')})`);
@@ -128,6 +130,8 @@ const go = async (p, h, w = 1000) => { await p.evaluate(h => { location.hash = h
     ok(!/학사 정보에 등록된 학번이 아닙니다/.test(M1) && /이번 학기 강의실이 없습니다/.test(M1) === false && /AI와 데이터 리터러시\(01\)/.test(M1), `#1 [${tag}] 내 학습: 출석 · 강의실 카드 정상`);
     const bad = (M1.match(/진단하기|다음 배지까지|배지 지갑|내 디지털북|수준 로드맵|추천 튜토리얼|강좌 둘러보기|아직 수강 중인 강좌가 없/g) || []); ok(!bad.length, `#11 · #12 [${tag}] 내 학습에 진단 · 배지 · 디지털북 · 튜토리얼 · 빈 강좌 안내 없음 (${bad.join(',')})`);
     ok(!(await g.evaluate(() => [...document.querySelectorAll('#lm .lux-tabs a, #lm .lux-tabs button, #lm nav.mytab a')].some(a => a.offsetParent && /^(결제|디지털북|배지)$/.test(a.textContent.trim())))), `#11 [${tag}] 결제 · 디지털북 · 배지 탭 숨김`);
+    ok(!/3차시 대면 수업 자막|자료구조\(01\)/.test(M1), `[${tag}] 빈 스튜디오 기관에 실시간 수업 데모 샘플(자막 · 자료구조) 없음`);
+    ok(!(await g.evaluate(() => [...document.querySelectorAll('.lg, .l26logo')].some(e => e.offsetParent && e.textContent.trim() === 'e'))), `[${tag}] 로고 글자가 「e」가 아님`);
     ok(!/e교과목/.test(M1), `#14 [${tag}] 기관명 「e클래스」가 바뀌지 않음 (${(M1.match(/.{20}e교과목.{10}/) || [''])[0]})`);
     await go(g, '#home', 1300); const H1 = await txt(g, 'body'); ok(!/님, 반갑습니다|첫 강좌를 골라 보세요/.test(H1), `#12 [${tag}] 홈에 빈 이름 · 「첫 강좌를 골라 보세요」 없음`);
     await go(g, '#cal', 1300); ok(/중간고사 기간/.test(await txt(g, 'body')), `#7 [${tag}] 학습자 캘린더에 학사 일정`);
