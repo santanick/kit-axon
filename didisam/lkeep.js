@@ -7,14 +7,15 @@
 (function () {
   'use strict';
   if (typeof lrender !== 'function') return;
-  let last = null, seq = 0, user = 0;
+  let last = null, seq = 0, user = 0, navAt = 0;
   ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(ev => addEventListener(ev, () => { user = 1; }, { passive: true, capture: true }));
   const box = () => document.getElementById('apScroll');
   const base = lrender;
   lrender = function (...a) {
     const h = location.hash; const same = last === h; const y = window.scrollY; const b0 = box(); const by = b0 ? b0.scrollTop : 0;
-    const r = base.apply(this, a); last = location.hash;
-    if (same && location.hash === h && (y > 0 || by > 0)) {
+    const r = base.apply(this, a); if (!same) navAt = Date.now(); last = location.hash;
+    /* 화면 이동 직후(0.8초 안) 저절로 한 번 더 그리는 경우는 이동으로 본다 — 이동 중 잠깐 생긴 위치를 붙잡지 않게 */
+    if (same && location.hash === h && (y > 0 || by > 0) && Date.now() - navAt > 800) {
       const put = () => { if (Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y); const b1 = box(); if (b1 && by && Math.abs(b1.scrollTop - by) > 1) b1.scrollTop = by; };
       /* Shadow DOM 홈 · 배지 · 달력처럼 다음 프레임에 위쪽 내용이 붙는 화면은 브라우저 스크롤 고정이 위치를 밀어 내므로, 사용자가 직접 움직이기 전까지 몇 번 더 맞춘다 */
       const t0 = ++seq; user = 0; const again = () => { if (t0 === seq && !user && location.hash === h) put(); };
