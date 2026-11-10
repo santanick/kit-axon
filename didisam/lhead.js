@@ -80,7 +80,23 @@
         : `<li class="hpx-bde">${esc2(bid && !(typeof COMM === 'function' && (COMM().boards || []).some(x => x.id === bid && (typeof lcBoardOK !== 'function' || lcBoardOK(x)))) ? '회원 전용 게시판이에요. 로그인하면 글이 보여요.' : '아직 글이 없어요. 첫 글을 남겨 주세요.')}</li>`;
       const w = sec.querySelector('a.hpx-bdw'); if (w && typeof COMM === 'function' && typeof lcBoardOK === 'function' && LR && LR.me) { const bd = (COMM().boards || []).find(x => x.id === bid); if (bd && !lcBoardOK(bd, true)) w.remove(); } })); }
   window.lhBoardFill = bdFill;
-  { let q = 0; const tick = () => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { if (typeof window.lmMount === "function") window.lmMount(); lxMount(); bdFill(); } catch (e) { console.error('lhead lx', e); } }); };
+  /* v37 P4(대표님 2026-11-10 16:14 · 학습 페이지 콘텐츠 패널): 게시본 hp.lcfg[키] = { n 한 번에 보일 개수, card 'list'|'big' 카드 모양, filt 0 = 검색 칸 숨김 }을
+     교과목 · 교재 목록(.shp-grid)에 입힌다. 개수를 넘는 카드는 [더 보기]로 펼치고, 검색 중에는 모두 보인다. 데이터는 바꾸지 않는다. */
+  function lcApply() { const b = document.body; if (!b || b.classList.contains('lapp')) return; const lm = document.getElementById('lm'); if (!lm) return; let H = null; try { H = SITE().hp || null; } catch (e) { }
+    const { k, top } = keyOf(); const c = top && H && H.lcfg && typeof H.lcfg[k] === 'object' ? H.lcfg[k] : null; const g = lm.querySelector('.shp-grid'); if (!g) return;
+    if (!document.getElementById('llcCss')) { const st = document.createElement('style'); st.id = 'llcCss'; st.textContent = `.shp-grid.llc-list{grid-template-columns:1fr}.shp-grid.llc-list .shp-card{flex-direction:row;align-items:stretch}.shp-grid.llc-list .shp-th{width:220px;flex:none;aspect-ratio:16/10;height:auto}
+.shp-grid.llc-big{grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr));gap:24px}.shp-grid.llc-big .shp-card h3{font-size:1.25em}
+.shp-grid.llc-cut .shp-card.llc-x{display:none}.llc-more{display:flex;justify-content:center;margin:20px 0 0}.llc-more button{min-height:48px;padding:0 24px}
+@media (max-width:640px){.shp-grid.llc-list .shp-th{width:112px}}`; document.head.appendChild(st); }
+    g.classList.toggle('llc-list', !!c && c.card === 'list'); g.classList.toggle('llc-big', !!c && c.card === 'big');
+    const f = lm.querySelector('.shp-filt'); if (f) f.style.display = c && c.filt === 0 ? 'none' : '';
+    const q = lm.querySelector('#shpQ'); const n = c && +c.n > 0 ? +c.n : 0; const cards = [...g.querySelectorAll(':scope > .shp-card')]; const cut = n && cards.length > n && !g.dataset.llcAll && !(q && q.value.trim() && !(c && c.filt === 0));
+    cards.forEach((x, i) => x.classList.toggle('llc-x', !!n && i >= n)); g.classList.toggle('llc-cut', !!cut);
+    let m = lm.querySelector('.llc-more'); if (cut) { if (!m) { m = document.createElement('div'); m.className = 'llc-more'; m.innerHTML = '<button type="button" class="lbtn"></button>'; g.insertAdjacentElement('afterend', m);
+        m.querySelector('button').addEventListener('click', () => { g.dataset.llcAll = '1'; lcApply(); }); } const tx = `더 보기 (${cards.length - n}개 더)`; const bt = m.querySelector('button'); if (bt.textContent !== tx) bt.textContent = tx; } else if (m) m.remove(); }
+  window.llcApply = lcApply;
+  document.addEventListener('input', e => { if (e.target && e.target.id === 'shpQ') lcApply(); });
+  { let q = 0; const tick = () => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { if (typeof window.lmMount === "function") window.lmMount(); lxMount(); bdFill(); lcApply(); } catch (e) { console.error('lhead lx', e); } }); };
     const host = () => document.getElementById('lapp') || document.body; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => new MutationObserver(tick).observe(host(), { childList: true, subtree: true }), { once: true }); else new MutationObserver(tick).observe(host(), { childList: true, subtree: true });
     addEventListener('hashchange', tick); }
   { const base = lrender; lrender = (...a) => { const r = base(...a); try { apply(); } catch (e) { console.error('lhead', e); } return r; }; }

@@ -111,7 +111,7 @@
     const dark = c => { try { return /^#[0-9a-f]{6}$/i.test(c) && lum(c) < .35; } catch (e) { return false; } };
     return { v: 1, at: nowStr(), name: S.org.name, look: typeof lookOf === 'function' ? lookOf(s0) : 'campus', color: s0.color || '', css: shadowCSS(css), home, pages, foot, menus, head, notice,
       mode: cfg().home, logo: /^data:image\/|^https:\/\//.test(g.logo || '') ? g.logo : '', gnbBg: /^#[0-9a-f]{3,8}$/i.test(g.bg || '') ? g.bg : '', gnbDark: dark(g.bg || ''),
-      seo: { title: String(seo.title || '').slice(0, 120), desc: String(seo.desc || '').slice(0, 300), kw: String(seo.kw || seo.keywords || '').slice(0, 300), index: seo.noindex ? false : true },
+      seo: { title: String(seo.title || '').slice(0, 120), desc: String(seo.desc || '').slice(0, 300), kw: String(seo.kw || seo.keywords || '').slice(0, 300), index: seo.noindex ? false : true, img: /^data:image\/(png|jpe?g|webp);base64,|^https:\/\//.test(seo.img || '') ? seo.img : '' }, /* v37 P4 공유 이미지(og:image) */
       favicon: /^data:image\/|^https:\/\//.test(st.favicon || '') ? st.favicon : '',
       chat: cb.type && cb.type !== 'none' ? { type: cb.type, kakaoUrl: /^https:\/\//.test(cb.kakaoUrl || '') ? cb.kakaoUrl : '', ctKey: String(cb.ctKey || '').slice(0, 80), label: String(cb.label || '상담하기').slice(0, 20), pos: cb.pos === 'left' ? 'left' : 'right' } : null };
   }
