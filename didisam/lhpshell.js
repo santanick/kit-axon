@@ -92,7 +92,7 @@
   const browse = () => { try { const P = SITE().pages || []; return document.querySelector('header.lh a[href="#shop"]') || P.some(p => p.id === 'shop') ? '#shop' : P.some(p => p.id === 'courses') ? '#courses' : '#home'; } catch (e) { return '#shop'; } };
   /* 4) 휴대폰 행동 줄 */
   function actBar(app) { let el = document.getElementById('lhsAct'); const A = ACTS[ty()] || ACTS.adult; const c = consult(); const me = !!(typeof LR !== 'undefined' && LR.me);
-    const lbl2 = me ? '이어서 학습' : A[1]; const href2 = me ? '#my' : browse(); const lbl1 = c.ai ? `AI ${A[0]}` : A[0];
+    const inv = !me && typeof laCfg === 'function' && laCfg().mode === 'invite'; /* v38 초대제면 신청 대신 로그인 */ const lbl2 = me ? '이어서 학습' : inv ? '로그인' : A[1]; const href2 = me ? '#my' : inv ? '#login' : browse(); const lbl1 = c.ai ? `AI ${A[0]}` : A[0];
     const tutor = c.ai ? '' : `<button type="button" class="lhs-ai" data-tact="open" aria-label="AI 튜터에게 묻기">${ic('sparkle', 20)}</button>`;
     const h = `${tutor}<${c.tag} ${c.tag === 'button' ? 'type="button" ' : ''}class="lhs-b2" ${c.attr}>${ic(c.ic, 18)}<span>${esc(lbl1)}</span></${c.tag}><a class="lhs-b1" href="${esc(href2)}">${esc(lbl2)}</a>`;
     if (!el) { el = document.createElement('nav'); el.id = 'lhsAct'; el.className = 'lhs-act'; el.setAttribute('aria-label', '빠른 신청'); }

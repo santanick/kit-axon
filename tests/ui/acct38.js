@@ -37,6 +37,7 @@ const only = (process.env.ONLY || 'corp,k12,univ,pub,life,date').split(',');
     /* C3: 초대 링크에 부서 지정 */
     const g3 = await op.evaluate(() => { UI.mbInvT = 'student'; UI.mbInvC = ''; UI.mbInvG = S.groups[0].id; const h = mbLinkPanel(); const iv = mbInvite('student', '', ''); UI.mbInvG = ''; return { sel: /가입과 함께/.test(h), grp: iv.grp === S.groups[0].id, tok: iv.token }; });
     ok(g3.sel && g3.grp, 'C3: 초대 링크 창에서 부서 지정 → 초대에 부서가 실림');
+    ok(await op.evaluate(() => typeof HPS === 'object' && HPS.inviteOnly && HPS.inviteOnly()), 'F5 이관 ①: 기업 초대제면 머리 신청 버튼이 「초대받은 분 로그인」');
     const tid = await pub(op);
     /* ① 공용 초대 링크 + 같은 이메일 → 등록 회원에 연결(C2) */
     const l1 = await lp(ctx, tid, urls.pub.slice(urls.pub.indexOf('#'))); const e1 = await join(l1, 'jh.kim@ex.kr', '지훈'); await pull(op);
@@ -132,6 +133,7 @@ const only = (process.env.ONLY || 'corp,k12,univ,pub,life,date').split(',');
     const p1 = await op.evaluate(() => { mbEnsure(); return { join: S.settings.join, mode: S.settings.acct.mode, q: S.settings.acct.extraQ.map(x => x.q) }; });
     ok(p1.mode === 'open' && !p1.q.includes('직급'), `P1 · P8: 공공 새 기관은 누구나 가입 · 직급 질문 없음 ${JSON.stringify(p1)}`);
     const p2 = await op.evaluate(() => { S.settings.join = '운영자 초대만'; S.settings.acct.mode = 'invite'; delete S.settings.join38; upgradeState(); const a = S.settings.acct.mode; S.settings.acct.mode = 'invite'; S.settings.join = '운영자 초대만'; upgradeState(); return [a, S.settings.acct.mode]; });
+    ok(await op.evaluate(() => !(MBQ_SUG.public || []).some(x => x[0] === '직급')), 'F5 이관 ③: 공공 가입 질문 추천 칩에 직급 없음');
     ok(p2[0] === 'open' && p2[1] === 'invite', `P1: 기존 공공 기관 1회 이전 · 이후 운영자 값 존중 ${p2}`);
     const p3 = await op.evaluate(() => { S.members.push({ id: 'mm1', sid: 'u1', name: '서미래', nick: '서미래', email: 'mirae@ex.kr', phone: '010-1234-5678', group: '', grade: '정회원', joined: today(), extra: { 소속: '사하구 주민' }, src: 'bulk' }); UI.mem = null; go('members'); render(); return document.querySelector('#main').innerText; });
     ok(/사하구 주민/.test(p3) && /mi\*+@e\*+\.kr/.test(p3) && /010-\*\*\*\*-5678/.test(p3), 'P12 · P13: 명단 소속 답 표시 · 이메일 · 전화 같은 규칙으로 가림 ' + p3.replace(/\n+/g, ' | ').slice(-300));
@@ -151,6 +153,7 @@ const only = (process.env.ONLY || 'corp,k12,univ,pub,life,date').split(',');
     const tid = await pub(op);
     for (const [e, n] of [['a1@ex.kr', '가입일'], ['a2@ex.kr', '가입이']]) { const l = await lp(ctx, tid, w.u.slice(w.u.indexOf('#'))); await join(l, e, n); await pull(op); await l.close(); }
     const cap = await op.evaluate(cid => C(cid).learners.length, w.cid); ok(cap === 1, `L10: 초대 링크 정원 검사(정원 1 → 배정 ${cap}명)`);
+    const jp = await lp(ctx, tid, '#join'); ok(await jp.evaluate(() => !laCfg().parent && !document.querySelector('[data-ac=jkind][data-v=parent]')), 'F5 이관 ②: 평생교육원 가입 화면에 보호자 회원 유형 없음'); await jp.close();
     const lc = await lp(ctx, tid, '#login'); const lcr = await lc.evaluate(async ([sid, code]) => { const d = document.querySelector('details.la-code'); if (!d) return 'no code form'; d.open = true; const f = document.querySelector('#li'); f.elements.sid.value = sid; f.elements.code.value = code; f.querySelector('button[type=submit], button').click(); await new Promise(o => setTimeout(o, 900)); return LR.me ? LR.me.sid : 'no login ' + ((document.querySelector('#li .err') || {}).textContent || ''); }, [l13.sid, l13.code]);
     ok(lcr === l13.sid, `L13: 번호 · 접근코드로 학습자 로그인 ${lcr}`); await lc.close();
     const l14 = await lp(ctx, tid, '#login'); await l14.click('[data-ac=lmode][data-v=pw]').catch(() => {}); await l14.waitForTimeout(200); await l14.fill('#laLogin [name=lid]', 'hong@ex.kr'); await l14.fill('#laLogin [name=pw]', 'Temp123!x'); await l14.click('#laLogin button[type=submit]'); await l14.waitForTimeout(1200);

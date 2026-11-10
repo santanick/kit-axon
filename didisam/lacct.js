@@ -61,7 +61,7 @@ function laPendKeep(sid) { try { localStorage.setItem('didisam.app.pend.' + (LR.
 const laWa = w => { const c = String(w || '').slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '과' : '와'; };
 function laCfg() { const r = laRoom(); const a = (r && r.settings && r.settings.acct) || (SITE() && SITE().acct) || null; const T = (r && r.settings && r.settings.terms) || (a && a.policy) || {};
   const iv = a && a.idv && a.idv.on ? { on: true, reason: a.idv.reason || 'refund', note: a.idv.note || '' } : { on: false };
-  return { mode: (a && a.mode) || 'code', social: ((a && a.social) || []).filter(k => LA_SOC.some(([x]) => x === k)), approve: (a && a.approve) || 'auto', idv: iv, under14: !!(a && a.under14), parent: !!(a && a.parent) && !laUniv(), editAns: !!(a && a.editAns), extraQ: (a && a.extraQ) || [], tos: T.tos || '', privacy: T.privacy || '', ...(laLive() ? { social: [] } : {}) /* 운영: 학습자 SNS 로그인은 OAuth 앱 등록 후 연결(현재 이메일만) */ }; }
+  return { mode: (a && a.mode) || 'code', social: ((a && a.social) || []).filter(k => LA_SOC.some(([x]) => x === k)), approve: (a && a.approve) || 'auto', idv: iv, under14: !!(a && a.under14), parent: !!(a && a.parent) && !laUniv() && (((SITE() && SITE().org) || {}).type || (r && r.org && r.org.type)) === 'k12' /* v38 보호자 가입은 학원(초중고)만 */, editAns: !!(a && a.editAns), extraQ: (a && a.extraQ) || [], tos: T.tos || '', privacy: T.privacy || '', ...(laLive() ? { social: [] } : {}) /* 운영: 학습자 SNS 로그인은 OAuth 앱 등록 후 연결(현재 이메일만) */ }; }
 const LA_IDV = { refund: '고용보험 환급 과정', adult: '성인 인증 콘텐츠', credit: '학점 인정' };
 
 /* ── 신원 저장소(PII) — 운영: 서버 pii.identity(AES-256-GCM 암호화 · 블라인드 인덱스 · 별도 DB 역할) ── */

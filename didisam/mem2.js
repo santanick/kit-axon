@@ -30,7 +30,7 @@ const mbLURL = () => (typeof lsLearnerURL === 'function' ? lsLearnerURL() : loca
 function mbEnsure() {
   if (!S || !S.org || !S.settings) return; const st = S.settings; const ty = S.org.type;
   if (!st.acct) { const j = st.join || '자동 수락';
-    st.acct = { mode: ty === 'univ' ? 'code' : j === '운영자 초대만' ? 'invite' : 'open', social: ty === 'univ' ? [] : MB_SOC.map(x => x[0]), extraQ: [], approve: j === '운영자 수락' ? 'manual' : 'auto', verify: ty !== 'univ', under14: !['corp', 'univ', 'public'].includes(ty), editAns: false, parent: ty === 'k12' || ty === 'lifelong' }; }
+    st.acct = { mode: ty === 'univ' ? 'code' : j === '운영자 초대만' ? 'invite' : 'open', social: ty === 'univ' ? [] : MB_SOC.map(x => x[0]), extraQ: [], approve: j === '운영자 수락' ? 'manual' : 'auto', verify: ty !== 'univ', under14: !['corp', 'univ', 'public'].includes(ty), editAns: false, parent: ty === 'k12' }; /* v38 보호자 계정은 학원(초중고)만 */ }
   const A = st.acct; if (!Array.isArray(A.extraQ)) A.extraQ = []; if (!Array.isArray(A.social)) A.social = [];
   (st.extraQ || []).forEach(q => { if (q && !A.extraQ.some(x => x.q === q) && A.extraQ.length < 6) A.extraQ.push({ q, type: 'text', req: false, opts: [] }); });
   A.extraQ = A.extraQ.slice(0, 6); st.extraQ = A.extraQ.map(x => x.q);
@@ -566,7 +566,7 @@ const MBQ_SVG = { text: '<path d="M4 7h16M4 12h10M4 17h7"/>', choice: '<circle c
 const mbqIc = k => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MBQ_SVG[k] || MBQ_SVG.text}</svg>`;
 const MBQ_TYPES = [['text', '짧은 답', '부서 · 회사명처럼 한 줄'], ['choice', '하나 고르기', '학년 · 수강 목적 중 하나'], ['multi', '여러 개 고르기', '관심 분야를 여러 개'], ['date', '날짜', '입사일 · 희망 시작일'], ['consent', '동의 체크', '사진 활용 · 안내 수신 동의'], ['file', '파일 첨부', '재직 증명 · 수료증 사본']];
 const MBQ_SUG = { univ: [['학년', 'choice', ['1학년', '2학년', '3학년', '4학년']], ['관심 분야', 'multi', ['AI · 데이터', '취업 · 진로', '어학', '창업']], ['학습 안내 메시지 수신 동의', 'consent']],
-  corp: [['부서', 'text'], ['직급', 'choice', ['사원', '대리', '과장', '차장', '부장 이상']], ['입사일', 'date']], public: [['소속', 'text'], ['직급', 'choice', ['9급', '8급', '7급', '6급', '5급 이상']], ['임용일', 'date']],
+  corp: [['부서', 'text'], ['직급', 'choice', ['사원', '대리', '과장', '차장', '부장 이상']], ['입사일', 'date']], public: [['소속(기관 · 단체 · 거주 구)', 'text'], ['참여 구분', 'choice', ['시민', '공무원 · 공공기관 재직자', '기타']], ['교육 안내 문자 수신 동의', 'consent']] /* v38 공공은 시민 · 재직자 공통 질문(직급 칩 제외) */,
   k12: [['학년', 'choice', ['초등', '중1', '중2', '중3', '고1', '고2', '고3']], ['다니는 학교', 'text'], ['수업 안내 문자 수신 동의', 'consent']], adult: [['수강 목적', 'choice', ['자격증', '이직 · 취업', '업무 활용', '취미']], ['알게 된 경로', 'choice', ['검색', '지인 추천', 'SNS', '광고']], ['관심 분야', 'multi', ['엑셀', '디자인', '코딩', 'AI']]],
   lifelong: [['거주 지역(시 · 구)', 'text'], ['관심 분야', 'multi', ['인문 · 교양', '디지털', '건강 · 생활', '자격증']], ['강좌 사진 촬영 · 홍보 활용 동의', 'consent']], voc: [['훈련 참여 유형', 'choice', ['재직자', '구직자', '기타']], ['국민내일배움카드', 'choice', ['있음', '없음', '발급 신청 중']], ['희망 훈련 시작일', 'date']] };
 /* 개인정보보호법: 고유식별정보(제24조) · 민감정보(제23조)는 가입 질문으로 받지 않는다 — 차단. 일반 개인정보는 최소 수집 경고 */
