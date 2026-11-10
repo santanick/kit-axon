@@ -134,7 +134,7 @@ function modal(title, body, actions = [], wide = false) {
   w.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mh"><b>${esc(title)}</b><button class="x" data-act="modal-close" aria-label="닫기">${ic('x', 18)}</button></div><div class="mb">${body}</div><div class="mf">${actions.map(a => `<button class="btn ${a.kind || ''}" data-mact="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</div></div>`;
   document.body.appendChild(w);
   w.addEventListener('click', e => { if (e.target === w) closeModal(); const b = e.target.closest('[data-mact]'); if (!b) return; const a = actions.find(x => x.id === b.dataset.mact); if (a && a.run) { if (a.run(w) !== false) closeModal(); } else closeModal(); });
-  const f = w.querySelector('input,select,textarea,button.btn'); f && f.focus(); return w;
+  const f = w.querySelector('input,select,textarea,button.btn'); f && f.focus({ preventScroll: true }); return w;
 }
 const closeModal = () => { const m = $('#modal'); m && m.remove(); };
 const fv = (w, n) => { const el = w.querySelector(`[name="${n}"]`); return el ? (el.type === 'checkbox' ? el.checked : el.value.trim()) : ''; };
