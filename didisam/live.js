@@ -169,7 +169,9 @@ ACT['live-logout'] = async () => { await liveFlush(); try { await api('POST', '/
 ACT['live-pw'] = () => modal('비밀번호 변경', `<label class="fl">현재 비밀번호<input name="cur" type="password" autocomplete="current-password"></label><label class="fl">새 비밀번호<input name="next" type="password" autocomplete="new-password" placeholder="10자 이상, 영문과 숫자"></label>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '변경', kind: 'pri', run: w => { api('POST', '/api/password', { current: fv(w, 'cur'), next: fv(w, 'next') }).then(() => toast('비밀번호를 변경했습니다.')).catch(e => toast(e.message, 'warn')); } }]);
 AFTER.push(cur => {
   if (!LIVE.user) return;
-  const foot = $('.side .rfoot') || $('.top .topr') || $('header.top'); if (foot && !$('#liveAcct')) foot.insertAdjacentHTML('beforeend', `<div id="liveAcct" class="lvacct"><small title="${esc(LIVE.user.email)}">${esc(LIVE.user.email)}</small><button class="btn sm ghost" data-act="live-pw">비밀번호 변경</button><button class="btn sm ghost" data-act="live-logout">로그아웃</button></div>`);
+  /* v37: 머리(상단 · 레일 아래)에 로그인 아이디 · 비밀번호 변경 · 로그아웃을 넣지 않는다(대표님 2026-11-10 — v36은 slim.js에서 숨겼지만
+     live.js가 slim.js보다 늦게 읽혀 매 렌더마다 다시 넣어 운영 서버에서 그대로 보였다). 두 기능은 설정 › 계정 카드에만 있다. */
+  { const old = $('#liveAcct'); if (old) old.remove(); }
   if (LIVE.user.role !== 'owner' || (LIVE.cfg && LIVE.cfg.module)) { const rs = $('#roleSel'); if (rs) rs.remove(); }
   if (LIVE.user.role === 'teacher') document.querySelectorAll('[data-act="tst-new"], [data-act="cls-new"]').forEach(x => x.remove());
   if (cur.ws === 'settings' && UI.settings === 'room') {

@@ -54,7 +54,10 @@
     lifelong: { '클래스': '강좌 안내', '교재/교구': '교재', '커뮤니티': '학습 동아리', '게시판': '자료실' },
     voc: { '클래스': '훈련과정', '교재/교구': '교재', '커뮤니티': '훈련생 소통', '게시판': '자료실' },
     corp: { '클래스': '교육과정', '커뮤니티': '사내 소통', '공지사항': '공지', '게시판': '자료실' }, adult: { '클래스': '클래스 안내', '교재/교구': '교재', '커뮤니티': '수강생 라운지', '게시판': '자료실' } }; /* H5(N8): adult도 기본 이름 그대로 두지 않는다 */
-  HPS.menuName = (l, ty) => { const m = MN[ty || (typeof S !== 'undefined' && S && S.org && S.org.type) || 'adult'] || {}; return m[String(l == null ? '' : l).trim()] || l; };
+  /* v37(P1 범위 밖 최소 수정): 저장된 메뉴 이름이 다른 유형의 이름(예: 공공 '교육신청' · '알림마당')이면 기본 이름으로 되돌린 뒤 지금 유형 이름으로 —
+     기관 유형을 바꾼 뒤에도 사이트 메뉴가 이전 유형 이름으로 남던 문제(대표님 첨부 '닉 Univ'의 교육신청 · 참여마당 · 알림마당) */
+  const MNR = {}; Object.values(MN).forEach(m => Object.entries(m).forEach(([k, v]) => { if (!(v in MNR)) MNR[v] = k; }));
+  HPS.menuName = (l, ty) => { const m = MN[ty || (typeof S !== 'undefined' && S && S.org && S.org.type) || 'adult'] || {}; const k = String(l == null ? '' : l).trim(); const b = m[k] ? k : (MNR[k] || k); return m[b] || (b !== k && !Object.values(m).includes(k) ? b : '') || l; };
 
   /* ── 종류 고르기: 직접 고른 값 → 계열(HPL) 선언 → 계열 기본표 → 테마 · 유형 ── */
   const FAM = { editorial: ['solid', 'min', 'full'], bento: ['float', 'mega', 'drawer'], fullbleed: ['overlay', 'cta', 'full'], splitscreen: ['solid', 'cols', 'drawer'], typo: ['solid', 'mega', 'full'], portal: ['contact', 'biz', 'full'],
