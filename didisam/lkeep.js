@@ -18,7 +18,7 @@
       const put = () => { if (Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y); const b1 = box(); if (b1 && by && Math.abs(b1.scrollTop - by) > 1) b1.scrollTop = by; };
       /* Shadow DOM 홈 · 배지 · 달력처럼 다음 프레임에 위쪽 내용이 붙는 화면은 브라우저 스크롤 고정이 위치를 밀어 내므로, 사용자가 직접 움직이기 전까지 몇 번 더 맞춘다 */
       const t0 = ++seq; user = 0; const again = () => { if (t0 === seq && !user && location.hash === h) put(); };
-      put(); requestAnimationFrame(again); setTimeout(again, 120); setTimeout(again, 400);
+      const t1 = Date.now(); const loop = () => { if (t0 !== seq || user || location.hash !== h) return; put(); if (Date.now() - t1 < 700) requestAnimationFrame(loop); }; put(); requestAnimationFrame(loop); setTimeout(again, 900);
     }
     return r;
   };
