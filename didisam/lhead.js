@@ -82,13 +82,13 @@
   window.lhBoardFill = bdFill;
   /* v37 P4(대표님 2026-11-10 16:14 · 학습 페이지 콘텐츠 패널): 게시본 hp.lcfg[키] = { n 한 번에 보일 개수, card 'list'|'big' 카드 모양, filt 0 = 검색 칸 숨김 }을
      교과목 · 교재 목록(.shp-grid)에 입힌다. 개수를 넘는 카드는 [더 보기]로 펼치고, 검색 중에는 모두 보인다. 데이터는 바꾸지 않는다. */
-  function lcApply() { const b = document.body; if (!b || b.classList.contains('lapp')) return; const lm = document.getElementById('lm'); if (!lm) return; let H = null; try { H = SITE().hp || null; } catch (e) { }
+  function lcApply() { const b = document.body; if (!b) return; const app = b.classList.contains('lapp'); /* v37 L2: 앱 화면에도 개수 · 검색 칸 설정은 적용(카드 모양은 앱 한 줄 카드 유지) */ const lm = document.getElementById('lm'); if (!lm) return; let H = null; try { H = SITE().hp || null; } catch (e) { }
     const { k, top } = keyOf(); const c = top && H && H.lcfg && typeof H.lcfg[k] === 'object' ? H.lcfg[k] : null; const g = lm.querySelector('.shp-grid'); if (!g) return;
     if (!document.getElementById('llcCss')) { const st = document.createElement('style'); st.id = 'llcCss'; st.textContent = `.shp-grid.llc-list{grid-template-columns:1fr}.shp-grid.llc-list .shp-card{flex-direction:row;align-items:stretch}.shp-grid.llc-list .shp-th{width:220px;flex:none;aspect-ratio:16/10;height:auto}
 .shp-grid.llc-big{grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr));gap:24px}.shp-grid.llc-big .shp-card h3{font-size:1.25em}
 .shp-grid.llc-cut .shp-card.llc-x{display:none}.llc-more{display:flex;justify-content:center;margin:20px 0 0}.llc-more button{min-height:48px;padding:0 24px}
 @media (max-width:640px){.shp-grid.llc-list .shp-th{width:112px}}`; document.head.appendChild(st); }
-    g.classList.toggle('llc-list', !!c && c.card === 'list'); g.classList.toggle('llc-big', !!c && c.card === 'big');
+    g.classList.toggle('llc-list', !app && !!c && c.card === 'list'); g.classList.toggle('llc-big', !app && !!c && c.card === 'big');
     const f = lm.querySelector('.shp-filt'); if (f) f.style.display = c && c.filt === 0 ? 'none' : '';
     const q = lm.querySelector('#shpQ'); const n = c && +c.n > 0 ? +c.n : 0; const cards = [...g.querySelectorAll(':scope > .shp-card')]; const cut = n && cards.length > n && !g.dataset.llcAll && !(q && q.value.trim() && !(c && c.filt === 0));
     cards.forEach((x, i) => x.classList.toggle('llc-x', !!n && i >= n)); g.classList.toggle('llc-cut', !!cut);

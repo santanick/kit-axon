@@ -25,9 +25,11 @@
     const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n => !n.nodeValue.includes('클래스') || (n.parentElement && n.parentElement.closest('script,style,textarea,[contenteditable]')) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }); let n; const L = [];
     while ((n = w.nextNode())) L.push(n);
     L.forEach(n => { const v = n.nodeValue; if (X.names.some(nm => nm && v.includes(nm))) return; const x = fix(v); if (x !== v) n.nodeValue = x; });
+    /* v37 L2: 바닥(게시본 푸터 — Shadow DOM)의 메뉴 링크 이름도 머리글과 같은 유형 용어로(본문 글은 건드리지 않음) */
+    document.querySelectorAll('.smhost[data-smk=foot]').forEach(h => { const sr = h.shadowRoot; if (!sr) return; sr.querySelectorAll('a, nav').forEach(a => { if (a.tagName === 'NAV') return; a.childNodes.forEach(n => { if (n.nodeType === 3 && n.nodeValue.includes('클래스') && !X.names.some(nm => nm && n.nodeValue.includes(nm))) { const x = fix(n.nodeValue); if (x !== n.nodeValue) n.nodeValue = x; } }); }); });
     document.querySelectorAll('input[placeholder*="클래스"],[aria-label*="클래스"]').forEach(el => { ['placeholder', 'aria-label'].forEach(a => { const v = el.getAttribute(a); if (v && v.includes('클래스')) el.setAttribute(a, fix(v)); }); }); }
   window.lFixClsTerm = fixCls;
-  let q = false; const kick = () => { if (q) return; q = true; requestAnimationFrame(() => { q = false; apply(); try { fixCls(); } catch (e) { } }); };
+  let q = false; const kick = () => { if (q) return; q = true; requestAnimationFrame(() => { q = false; apply(); try { fixCls(); } catch (e) { } setTimeout(() => { try { fixCls(); } catch (e) { } }, 250); /* v37 L2: 바닥 Shadow DOM은 lmerge가 다음 프레임에 붙이므로 한 번 더 */ }); };
   const start = () => { new MutationObserver(kick).observe(document.body, { childList: true, subtree: true }); kick(); };
   if (document.body) start(); else addEventListener('DOMContentLoaded', start);
   addEventListener('hashchange', kick);
