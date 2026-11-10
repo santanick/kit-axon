@@ -76,7 +76,7 @@
       const P = L.filter(p => (bid ? p.board === bid : !['수강후기', '학습노트'].includes(p.board))).sort((a, b) => (!!b.pin - !!a.pin) || String(b.at || '').localeCompare(String(a.at || ''))).slice(0, n);
       const sig = P.map(p => p.id + (p.cmts || []).length).join(','); if (sec.dataset.fill === sig) return; sec.dataset.fill = sig; const ul = sec.querySelector('ul.hpx-bdl'); if (!ul) return;
       const tt = p => typeof lcTitle === 'function' ? lcTitle(p) : (p.title || '(내용 없음)'); const cnt = p => { const f = l => (l || []).reduce((s, r) => s + 1 + f(r.replies), 0); return f(p.cmts); };
-      ul.innerHTML = P.length ? P.map(p => `<li><a href="#post/${encodeURIComponent(p.id)}"><b>${p.pin ? '<em>공지</em>' : ''}${esc2(tt(p))}</b><small>${esc2(p.own ? '나' : (p.nick || '회원'))} · ${esc2(String(p.at || '').slice(0, 10))}${cnt(p) ? ` · 댓글 ${cnt(p)}` : ''}</small></a></li>`).join('')
+      ul.innerHTML = P.length ? P.map(p => `<li><a href="#post/${encodeURIComponent(p.id)}"><b>${p.pin ? '<em>공지</em>' : ''}${esc2(tt(p))}</b><small>${esc2(p.own ? '나' : (p.nick || '회원'))} · ${esc2(lLocal(p.at).slice(0, 10))}${cnt(p) ? ` · 댓글 ${cnt(p)}` : ''}</small></a></li>`).join('')
         : `<li class="hpx-bde">${esc2(bid && !(typeof COMM === 'function' && (COMM().boards || []).some(x => x.id === bid && (typeof lcBoardOK !== 'function' || lcBoardOK(x)))) ? '회원 전용 게시판이에요. 로그인하면 글이 보여요.' : '아직 글이 없어요. 첫 글을 남겨 주세요.')}</li>`;
       const w = sec.querySelector('a.hpx-bdw'); if (w && typeof COMM === 'function' && typeof lcBoardOK === 'function' && LR && LR.me) { const bd = (COMM().boards || []).find(x => x.id === bid); if (bd && !lcBoardOK(bd, true)) w.remove(); } })); }
   window.lhBoardFill = bdFill;

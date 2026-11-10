@@ -7,8 +7,8 @@
   const CF = window.CF = window.CF || {};
   CF.cfg = CF.cfg || {};
   const N = v => (v === '' || v == null || isNaN(+v)) ? 0 : +v;
-  const td = () => (typeof today === 'function' ? today() : new Date().toISOString().slice(0, 10));
-  const plus = (d, n) => { try { if (typeof addDays === 'function') return addDays(d, n); } catch (e) { } const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+  const td = () => (typeof today === 'function' ? today() : ymdL(new Date()));
+  const plus = (d, n) => { try { if (typeof addDays === 'function') return addDays(d, n); } catch (e) { } const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return ymdL(x); };
   const wn = n => (typeof won === 'function' ? won(n) : (+n || 0).toLocaleString('ko-KR') + '원');
   const hm = m => { m = Math.round(N(m)); const h = Math.floor(m / 60), r = m % 60; return h ? `${h}시간${r ? ' ' + r + '분' : ''}` : `${r}분`; };
   /* 받침에 맞는 조사: josa('훈련과정', '이') → '훈련과정이' · josa('강좌', '이') → '강좌가' (이/가 · 을/를 · 은/는 · 과/와 · 으로/로, ㄹ 받침 + 으로 → 로) */
