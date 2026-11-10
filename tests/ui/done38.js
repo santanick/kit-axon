@@ -99,6 +99,11 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; } else { fail++;
   ok(/닉네임/.test(U.certTxt) && /실명을 입력/.test(U.certTxt), 'C10 · L5 닉네임 수료증이면 실명 입력 안내');
   const CT = await a.evaluate(() => { S.certs = []; lpApply(); return { p: (C('u2').prog.m0 || {}).p, certs: S.certs.filter(x => x.cls === 'u2').map(x => [x.who, !!x.no, !!x.at]) }; });
   ok(JSON.stringify(CT.certs) === '[["m0",true,true]]', 'C10 · L6 학습자 수료 → 운영자 발급 대장(번호 · 발급일) ' + JSON.stringify(CT));
+  /* V14 과정 상세 집계(강의 수 · 오프라인 수업 · 영상 시간) · V15 입과하면 '수강 중' */
+  const V14 = await a.evaluate(() => { const c = S.classes[0]; c.curriculum = [{ id: 'd1', type: 'doc', title: '교안' }, { id: 'vv', type: 'video', title: '영상', mins: 10 }, { id: 'e1', type: 'exam', title: '시험', qs: [] }, ...[1, 2, 3, 4, 5].map(k => ({ id: 'of' + k, type: 'offline', title: '집체 ' + k }))]; const sn = sl2Snap(); const x = (sn.classes || []).find(y => y.id === c.id) || {}; return { items: x.items, off: x.off, vmin: x.vmin }; });
+  ok(V14.items === 3 && V14.off === 5 && V14.vmin === 10, 'V14 강의 수 3 · 오프라인 5 · 영상 10분 ' + JSON.stringify(V14));
+  const V15 = await l2.evaluate(() => { LR.lp.cls._cpl = { ack: { u2: new Date().toISOString() } }; LR.lp.cls.u2 = { items: {} }; const x = myStats().courses.find(y => y.c.id === 'u2'); return { started: x.started, p: x.p }; });
+  ok(V15.started === true, 'V15 입과(유의사항 확인)하면 진도 0%여도 수강 중 ' + JSON.stringify(V15));
   ok(!errs.length, 'pageerror 0 ' + errs.slice(0, 3).join(' | '));
   await browser.close(); srv.close(); console.log(`pass ${pass} fail ${fail}`); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

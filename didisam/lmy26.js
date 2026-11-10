@@ -9,7 +9,7 @@
   const shop = () => { try { return (typeof shMine === 'function' && shMine()) || null; } catch (e) { return null; } };
   const books = () => { try { const R = shop(); const I = (typeof shInfo === 'function' && shInfo()) || {}; return Object.entries((R && R.books) || {}).map(([id, g]) => ({ id, g, b: (I.books || []).find(x => x.id === id) })).filter(x => x.b).sort((a, b) => String(b.g.at || '').localeCompare(String(a.g.at || ''))); } catch (e) { return []; } };
   function counts(st) { const R = shop(); const enr = (R && R.enr) || {}; const t = td(); const k = { pre: 0, on: 0, done: 0, exp: 0 };
-    (st.courses || []).forEach(x => { const e = enr[x.c.id] || {}; const end = e.end || x.c.end || ''; if (x.done) k.done++; else if ((end && end < t) || e.status === 'ended') k.exp++; else if (!x.p && ((e.at || x.c.start || '') > t || !x.doneN)) k.pre++; else k.on++; });
+    (st.courses || []).forEach(x => { const e = enr[x.c.id] || {}; const end = e.end || x.c.end || ''; if (x.done) k.done++; else if ((end && end < t) || e.status === 'ended') k.exp++; else if (!x.p && !x.started && ((e.at || x.c.start || '') > t || !x.doneN)) k.pre++; else k.on++; });
     return { ...k, bk: books().length }; }
   function statusBar(st) { const k = counts(st); const cls = (typeof lcTerm === 'function' ? lcTerm('cls') : '') || '클래스';
     const it = [['수강 전', k.pre, 'm-courses'], ['수강 중', k.on, 'm-courses'], ['수료', k.done, 'm-courses'], ['기간 만료', k.exp, 'm-courses'], ...(typeof lPayOff === 'function' && lPayOff() && !k.bk ? [] : [['교재/교구', k.bk, 'm-books']])]; /* v38 F5 결제 꺼진 기관은 교재/교구 칸을 감춘다 */
