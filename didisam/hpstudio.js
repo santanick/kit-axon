@@ -617,6 +617,8 @@
      ④ 게시판 섹션: 기존 게시판 고르기 또는 새로 만들기(comm2 cmMkBoard · CM_BT 그대로), 최근 글 n개 · 더 보기 · 글쓰기, 메뉴(페이지)로도 추가.
         학습자 사이트: 글 목록 #comm/<게시판> · 글 보기 #post/<id> · 글쓰기 #write/b:<게시판>(lcomm) — lhead.js가 최신 글로 다시 채운다. */
   const cls = () => (typeof t === 'function' ? t('cls') : '강좌');
+  /* 세부 설정(예전 섹션 목록)이 학습 페이지의 새 섹션 종류 이름을 읽을 수 있게 — 추가 목록(열거)에는 넣지 않는다 */
+  try { if (typeof SEC !== 'undefined') [['lshead', '머리글(페이지 제목)', 1], ['lslist', '자동 목록', 1], ['board', '게시판', 99]].forEach(([k, n, max]) => { if (!SEC[k]) Object.defineProperty(SEC, k, { value: { n, max }, enumerable: false, configurable: true }); }); } catch (e) { }
   const enc = v => encodeURIComponent(String(v == null ? '' : v));
   const boardsL = () => A(typeof S !== 'undefined' && S ? S.boards : []);
   /* 학습 주소 → 목록 종류 */
