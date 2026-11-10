@@ -91,11 +91,21 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 
   /* ── 문구 · 조사 ── */
   { const { ctx, op } = await org('public');
+    ok(await op.evaluate(() => THUMB.detect('바리스타 2급 자격과정').k === 'cafe' && THUMB.detect('제과제빵 기능사').k === 'cook'), '썸네일 분야: 바리스타 → 커피, 제과제빵 → 요리 · 제과');
+    ok(await op.evaluate(() => { const c = { status: '운영중', learners: ['a'], curriculum: [], end: '2099-01-01', open: '전체' }; return tStageOf(c).id === 'operate'; }), '강사 스튜디오: 수강생 있는 운영 중 강좌는 \'강의 운영\' 단계');
+    ok(await op.evaluate(() => !!(S.lsite.pub && S.lsite.pub.f538)), '게시본 v38 표시');
+    await op.evaluate(() => { delete S.lsite.pub.f538; go('site'); render(); }); await op.waitForTimeout(300); ok(!!(await op.$('.f5-repub')), '옛 게시본: 사이트 화면에 \'다시 게시하면 반영됩니다\' 안내'); await op.evaluate(() => { S.lsite.pub.f538 = 1; });
     const cert = await op.evaluate(() => { S.settings.certInfo = Object.assign(S.settings.certInfo || {}, { rep: '' }); ACT['cert-preview'](); const t = (document.querySelector('#modal') || {}).textContent || ''; closeModal(); return t; });
     ok(!/○○○/.test(cert), '수료증 미리보기: 대표 미입력이면 ○○○ 대신 기관명만');
     ok(await op.evaluate(() => AI.j('교육과정', '을') === '을' && AI.j('강사', '과') === '와'), '조사 함수(을/를 · 과/와)');
     await ctx.close(); }
 
+  /* ── 평생교육원 '학습비 반환' 용어 · 초중고 출석부 날짜 ── */
+  { const { ctx, code, tid } = await org('lifelong'); const p = await ctx.newPage(); p.on('pageerror', e => errs.push('ln life: ' + e.message)); await p.addInitScript(() => { try { localStorage.setItem('didisam.app.classic', '1'); } catch (e) { } });
+    await p.goto(base + `learner.html?t=${tid}#home`); await p.waitForFunction(() => typeof LR !== 'undefined' && LR.site); await login(p, code); await go(p, '#mypay/pay', 700);
+    const t = await p.evaluate(() => document.body.innerText); ok(/학습비 반환/.test(t) && !/(^|[^(])환불/.test(t.replace(/학습비 반환\(환불\)/g, '')), '평생교육원 학습자: 환불 → 학습비 반환(운영자와 같은 말)'); await ctx.close(); }
+  { const { ctx, op } = await org('k12'); await op.evaluate(() => { go('crmatt'); render(); }); await op.waitForTimeout(400);
+    const d = await op.evaluate(() => ((document.querySelector('.k-dd span') || {}).textContent || '').trim()); ok(/^\d{4}\. \d{1,2}\. \d{1,2}\.$/.test(d), `출석부 날짜 한국식 표시 (${d})`); await ctx.close(); }
   ok(!errs.length, '오류 없음 ' + errs.slice(0, 3).join(' | '));
   await br.close(); srv.close();
   console.log(fails.length ? `✗ 실패 ${fails.length}건` : '✓ v38 F5 유형별 노출 · 용어 · 크기 점검 통과'); process.exit(fails.length ? 1 : 0);
