@@ -16,7 +16,7 @@
     finish: ['이수 처리 시작', 'running', false], close_request: ['마감보고서 제출', 'completing', false], close: ['마감 승인', 'closing', true], reopen: ['마감 반려', 'closing', true] };
 
   /* ═════════ 데모 엔진(서버 lms_q_* 와 같은 규칙) ═════════ */
-  const ens = () => { S.lms = S.lms || {}; const Q = S.lms.q = S.lms.q || { groups: [], programs: [], apps: [], teams: [], attend: [], expenses: [], cqi: [], hist: [], wish: [], reviews: [], board: [], notify: [] }; if (!Q.seeded) { Q.seeded = true; seed(Q); } return Q; };
+  const ens = () => { S.lms = S.lms || {}; const Q = S.lms.q = S.lms.q || { groups: [], programs: [], apps: [], teams: [], attend: [], expenses: [], cqi: [], hist: [], wish: [], reviews: [], board: [], notify: [] }; if (!Q.seeded) { Q.seeded = true; if (!(S && S.org && S.org.empty)) seed(Q); } return Q; };
   const getP = id => { const p = ens().programs.find(x => x.program_id === id); if (!p) LW4.err(404, '프로그램을 찾을 수 없습니다.'); return p; };
   const can = (actor, p) => { if (actor.role === 'owner') return; if (actor.role === 'sub' && (p.created_by === actor.email || p.operator_email === actor.email)) return; LW4.err(403, '이 프로그램의 운영자만 처리할 수 있습니다.'); };
   const unlocked = p => { if (p.status === 'closed') LW4.err(409, '마감된 프로그램은 고칠 수 없습니다.'); };

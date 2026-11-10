@@ -8,8 +8,16 @@ const KIND = { period: '기간', episode: '회차', sub: '구독' };
 const ITEM = { video: '동영상 강의', live: '라이브 강의', offline: '오프라인 강의', quiz: '퀴즈', exam: '시험', assign: '과제', survey: '설문', chapter: '챕터' };
 /* v36 R1 이수 판정 한 곳(clsDone) — 운영현황 · 관리 화면 · 엑셀 · 대시보드 · 수료증이 모두 이 값을 쓴다.
    과정에 이수 기준 항목(가중치 · 기준 점수)이 있으면 그 기준(a2IsDone), 없으면 진도 ≥ 기준. 진도 0%는 어떤 경우에도 이수가 아니다.
-   평균 진도 · 이수 인원은 지금 수강 명단(c.learners) 기준으로 센다(명단에서 빠진 사람의 진도 기록은 세지 않음). */
+   평균 진도 · 이수 인원은 지금 수강 명단(c.learners) 기준으로 센다(명단에서 빠진 사람의 진도 기록은 세지 않음).
+   v38 규정 준수(고용노동부 프로필)가 켜진 기관은 훈련 규정 판정(cplDone: 진도율 · 평가 점수)을 쓰고, 출결 수업(오프라인 · 라이브 · 회차)이 있으면
+   출석률 80% 이상(attcalc.js DDAtt.MIN)도 채워야 수료다 — 수료 판정 · 수료증 · HRD-Net · 수료보고 CSV · 학습자 화면이 같은 기준(docs/compliance 「수료 판정」). */
+const clsMoel = () => { try { const P = S.org && S.org.cpl; return !!(P && P.on && /^moel-/.test(String(P.profile || ''))); } catch (e) { return false; } };
+/* 출석률 한 곳: 출결 입력 · QR 출결을 DDAtt로 계산(출결 수업이 없으면 예전 기록 prog.att, 그것도 없으면 null) */
+function clsAtt(c, id) { if (!c || id == null) return null; try { if (typeof W2 !== 'undefined' && W2.norm) W2.norm(c); } catch (e) { } try { if (typeof DDAtt !== 'undefined' && DDAtt.unitsOf(c).length) return DDAtt.of(c, id, { conv: clsMoel() }).rate; } catch (e) { } const a = ((c.prog || {})[id] || {}).att; return a == null || a === '' ? null : +a; }
+function clsAttOK(c, id) { if (!clsMoel()) return true; try { if (typeof DDAtt === 'undefined' || !DDAtt.unitsOf(c).length) return true; const r = DDAtt.of(c, id, { conv: true }).rate; return r == null || r >= DDAtt.MIN; } catch (e) { return true; } }
 function clsDone(c, id) { if (!c || id == null) return false; const p = +(((c.prog || {})[id] || {}).p) || 0; if (p <= 0) return false;
+  if (!clsAttOK(c, id)) return false;
+  try { if (clsMoel() && typeof window.cplDone === 'function') return !!window.cplDone(c, id); } catch (e) { }
   try { if (typeof a2IsDone === 'function') return !!a2IsDone(c, id); } catch (e) { } return p >= (((c.criteria || {}).threshold) || 80); }
 const avgP = c => { const L = (c.learners || []); return L.length ? L.reduce((a, id) => a + (+(((c.prog || {})[id] || {}).p) || 0), 0) / L.length : 0; };
 const doneN = c => (c.learners || []).filter(id => clsDone(c, id)).length;
@@ -165,15 +173,17 @@ ACT.grade = el => { const c = C(el.dataset.c), id = el.dataset.v, p = c.prog[id]
 ACT['ai-grade-all'] = () => { pend().forEach(({ c, id }) => { c.prog[id].draft = AI.gradeDraft(c, id); }); S.ai.usage += pend().length; save(); render(); toast('AI 채점 초안을 만들었습니다. 한 건씩 확인 후 확정하세요.', 'ok'); };
 
 /* ═════════ 출결 ═════════ */
-const lowAtt = () => S.classes.filter(c => c.kind === 'episode' || S.org.type === 'voc').flatMap(c => Object.entries(c.prog).filter(([, p]) => p.att < 80).map(([id, p]) => ({ c, id, att: p.att })));
+/* v38 출석률은 clsAtt(DDAtt) 한 곳 — 출결 탭 격자 · 경고 카드 · HRD-Net · 규정 준수 '한눈에'가 같은 숫자(QA V4). 지금 수강 명단 기준 */
+const lowAtt = () => S.classes.filter(c => c.kind === 'episode' || S.org.type === 'voc').flatMap(c => (c.learners || []).map(id => ({ c, id, att: clsAtt(c, id) })).filter(x => x.att != null && x.att < 80));
+const lowAttN = () => new Set(lowAtt().map(x => x.id)).size;
 VIEWS.attend = () => {
   const eps = S.classes.filter(c => c.kind === 'episode' || S.org.type === 'voc'); const c = C(UI.attC) || eps[0];
   if (!c) return head('출결') + '<div class="empty">회차 클래스가 없습니다.</div>';
   const n = Math.min(8, c.curriculum.length || 8); c.att = c.att || {};
-  const cell = (id, r) => { const v = c.att[id + ':' + r] || (r < 5 ? (((id.charCodeAt(1) + r) % 9) === 0 ? '결석' : ((id.charCodeAt(1) + r) % 7) === 0 ? '지각' : '출석') : ''); return `<button class="att ${({ 출석: 'g', 지각: 'y', 결석: 'r' })[v] || ''}" data-act="att" data-c="${c.id}" data-v="${id}" data-r="${r}" title="클릭해서 변경">${v ? v[0] : '·'}</button>`; };
+  const cell = (id, r) => { const v = c.att[id + ':' + r] || ''; /* v38 입력하지 않은 칸은 비워 둔다(예전 데모 자동값 제거 — 출석률 계산과 어긋나던 것) */ return `<button class="att ${({ 출석: 'g', 지각: 'y', 결석: 'r' })[v] || ''}" data-act="att" data-c="${c.id}" data-v="${id}" data-r="${r}" title="클릭해서 변경">${v ? v[0] : '·'}</button>`; };
   return head('출결', `출석 체크 화면(휴대폰 끝 4자리) · 수동 변경 · ${S.org.type === 'voc' ? '<b>출석률 80% 미만 훈련생 경고</b>' : '라이브 강의 출석 인정 시간 설정'} ${guideRef('features/class/operate.md')}`, `<button class="btn pri" data-act="cls-pad">출석 체크 화면 열기</button>`) +
     `<div class="bar2"><select data-chg="attSel" aria-label="${esc(t('cls'))} 선택">${eps.map(x => `<option value="${x.id}" ${x === c ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select><span class="mini">운영자가 수동 처리한 회차는 보호자 앱에 출석 시간이 표시되지 않습니다.</span></div>` +
-    table(['이름', ...Array.from({ length: n }, (_, i) => i + 1 + '회'), '출석률'], c.learners.map(id => [mn(id), ...Array.from({ length: n }, (_, r) => cell(id, r)), (c.prog[id]?.att < 80 ? tag(pct(c.prog[id].att), 'r') : pct(c.prog[id]?.att))])) +
+    table(['이름', ...Array.from({ length: n }, (_, i) => i + 1 + '회'), '출석률'], c.learners.map(id => [mn(id), ...Array.from({ length: n }, (_, r) => cell(id, r)), (a => a == null ? '—' : a < 80 ? tag(pct(a), 'r') : pct(a))(clsAtt(c, id))])) +
     (lowAtt().length ? `<div class="card"><div class="ch"><b>출석률 80% 미만</b><button class="btn sm ai" data-act="auto-run-id" data-v="att-warn">✦ 경고 메시지 자동 발송</button></div>${lowAtt().slice(0, 8).map(x => `<div class="row"><span>${mn(x.id)} · ${esc(x.c.name)}</span><b class="r">${pct(x.att)}</b></div>`).join('')}</div>` : '');
 };
 ACT.attSel = el => { UI.attC = el.value; render(); };
@@ -199,7 +209,7 @@ VIEWS.cert = () => {
     table(['발급번호', t('cls'), '이름', '발급일', '방식', '다운로드'], S.certs.map(x => [esc(x.no), esc(C(x.cls)?.name || '—'), mn(x.who), x.at, x.manual ? '수동' : '자동', x.dl ? tag('받음', 'g') : '—']));
 };
 ACT.certInfo = el => { S.settings.certInfo[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; save(); };
-ACT['cert-preview'] = () => { const ci = S.settings.certInfo, b = ci.design === 'b'; modal('수료증 미리보기', `<div class="certpv ${b ? 'b' : ''}"><small>CERTIFICATE OF COMPLETION</small><h2>수 료 증</h2><p class="nm">홍길동</p><p>위 사람은 「${esc(S.classes[0]?.name || '')}」 과정을<br>성실히 이수하였기에 이 증서를 수여합니다.</p><p class="mini">교육기간 ${S.classes[0]?.start} ~ ${S.classes[0]?.end} · 교육시간 ${S.classes[0]?.hours}시간</p><p class="sg">${esc(ci.org || S.org.name)}<br>대표 ${esc(ci.rep || '○○○')} <span class="seal">印</span></p>${ci.no !== false ? `<small>발급번호 ${today().slice(0, 4)}-0001 · ${today()}</small>` : ''}</div>`, [{ id: 'c', label: '닫기' }], true); };
+ACT['cert-preview'] = () => { const ci = S.settings.certInfo, b = ci.design === 'b'; modal('수료증 미리보기', `<div class="certpv ${b ? 'b' : ''}"><small>CERTIFICATE OF COMPLETION</small><h2>수 료 증</h2><p class="nm">홍길동</p><p>위 사람은 「${esc(S.classes[0]?.name || '')}」 과정을<br>성실히 이수하였기에 이 증서를 수여합니다.</p><p class="mini">교육기간 ${S.classes[0]?.start} ~ ${S.classes[0]?.end} · 교육시간 ${S.classes[0]?.hours}시간</p><p class="sg">${esc(ci.org || S.org.name)}${ci.rep ? `<br>${['public', 'univ'].includes(S.org.type) ? '' : '대표 '}${esc(ci.rep)}` : ''} <span class="seal">印</span></p>${ci.no !== false ? `<small>발급번호 ${today().slice(0, 4)}-0001 · ${today()}</small>` : ''}</div>`, [{ id: 'c', label: '닫기' }], true); };
 ACT['cert-manual'] = () => modal('수료증 수동 발급', `<label class="fl">${esc(t('cls'))}<select name="c">${S.classes.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label><label class="fl">대상<select name="m">${S.members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></label><div class="form2"><label>교육 시작<input type="date" name="s" value="${addDays(today(), -30)}"></label><label>교육 종료<input type="date" name="e" value="${today()}"></label><label>교육 시간<input type="number" name="h" value="16" min="1"></label><label>발행일<input type="date" name="d" value="${today()}"></label></div>`,
   [{ id: 'c', label: '취소' }, { id: 'ok', label: '발급', kind: 'pri', run: w => { if (!clsDone(C(fv(w, 'c')), fv(w, 'm'))) { toast(`${t('done')} 기준을 채운 사람에게만 발급할 수 있습니다.`, 'warn'); return false; } S.certs.unshift({ id: uid('ct'), cls: fv(w, 'c'), who: fv(w, 'm'), at: fv(w, 'd'), no: `${today().slice(0, 4)}-${String(S.certs.length + 1).padStart(4, '0')}`, dl: false, manual: true }); logAudit('수료증 수동 발급'); save(); render(); } }]);
 
@@ -231,7 +241,7 @@ ACT['lib-del'] = el => { const l = S.lib.find(x => x.id === el.dataset.v); if (l
 const legalUndone = () => S.classes.filter(c => c.legal).flatMap(c => c.learners.filter(id => !clsDone(c, id)).map(id => ({ c, id })));
 VIEWS.compliance = () => {
   const L = S.classes.filter(c => c.legal);
-  return head('법정의무교육', `${L.length ? L.map(c => c.name.replace(/\s*교육.*$/, '')).join(' · ') : '법정 의무교육'} — 연 1회 이상 이수 관리`, `<button class="btn" data-act="comp-report">이수 증빙 보고서</button><button class="btn ai" data-act="auto-run-id" data-v="legal-d7">✦ 미이수자 독려 실행</button>`) +
+  return head('법정의무교육', `${L.length ? L.map(c => c.name.replace(/\s*교육.*$/, '')).join(' · ') : '법정 의무교육'} — 연 1회 이상 이수 관리`, `<button class="btn" data-act="comp-report">이수 증빙 보고서</button><button class="btn ai" data-act="legal-nudge">✦ 미이수자 독려 실행</button>`) +
     `<section class="grid g4">${L.map(c => kpi(c.name.replace(/교육.*$/, ''), pct(doneN(c) / Math.max(1, c.learners.length) * 100), `미이수 ${c.learners.length - doneN(c)}명 · 마감 ${c.end}`, doneN(c) / c.learners.length > .9 ? 'g' : 'y')).join('')}</section>` +
     `<div class="card"><div class="ch"><b>${esc(t('group'))}별 이수율</b><small>법정교육 ${L.length}종 평균</small></div>${table([t('group'), ...L.map(c => c.name.replace(/\s*교육.*$/, '').slice(0, 12)), '평균'], S.groups.map(g => { const r = L.map(c => { const ids = c.learners.filter(id => M(id)?.group === g.id); return ids.length ? ids.filter(id => clsDone(c, id)).length / ids.length * 100 : 0; }); return [esc(g.name), ...r.map(v => `<span class="${v < 70 ? 'r' : ''}">${pct(v)}</span>`), `<b>${pct(avgOf(r))}</b>`]; }))}</div>` +
     `<p class="mini">※ 이수 기준·주기는 관계 법령과 ${S.org.type === 'public' ? '기관 규정을 따르며, 실제 운영 전 교육 담당 부서' : '사내 규정을 따르며, 실제 운영 전 HR 담당'} 확인이 필요합니다.</p>`;
@@ -262,16 +272,17 @@ ACT['ll-ins'] = () => { S.llIns = !S.llIns; save(); render(); };
 
 /* ═════════ 유형 전용: 직업훈련원 HRD-Net ═════════ */
 VIEWS.hrd = () => {
-  const R = S.hrd.reports; const sus = S.members.slice(0, 3).map((m, i) => ({ m, why: ['동일 IP 동시 접속 2건', '영상 재생 중 무입력 40분 이상', '출석 체크 화면 연속 입력 간격 3초'][i] }));
+  /* v38 부정훈련 의심은 실제 기록(규정 준수 모니터링: 여러 IP 접속 · 하루 학습시간 초과)에서만 — 근거가 없으면 '없음'(QA V5) */
+  const R = S.hrd.reports; const sus = typeof cplSuspects === 'function' ? cplSuspects() : [];
   return head('HRD-Net 보고', `훈련생 등록 · 진도 · 평가 · 수료 보고 준비 · 부정훈련 의심 모니터링 ${guideRef('faq-1/register/undefined.md')}`, `<button class="btn ai" data-act="auto-run-id" data-v="hrd-weekly">✦ 이번 주 보고 자료 생성</button>`) +
     `<div class="warn">HRD-Net 실제 전송은 고용노동부 · 한국산업인력공단 연계 승인 후 사용합니다. 데모에서는 보고 파일 생성까지 진행합니다.</div>` +
-    `<section class="grid g4">${kpi('훈련생', S.members.length + '명')}${kpi('출석률 80% 미만', lowAtt().length + '명', '', lowAtt().length ? 'r' : 'g')}${kpi('수료 요건 충족', S.classes.reduce((a, c) => a + doneN(c), 0) + '명', '평가 성적 + 진도율')}${kpi('보고 대기', R.filter(r => r.st === '전송 대기').length + '건')}</section>` +
+    `<section class="grid g4">${kpi('훈련생', S.members.length + '명')}${kpi('출석률 80% 미만', lowAttN() + '명', '', lowAttN() ? 'r' : 'g')}${kpi('수료 요건 충족', S.classes.reduce((a, c) => a + doneN(c), 0) + '명', '진도율 + 평가 성적 + 출석률')}${kpi('보고 대기', R.filter(r => r.st === '전송 대기').length + '건')}</section>` +
     `<div class="card"><div class="ch"><b>보고 내역</b></div>${table(['생성 시각', '종류', '대상', '상태', ''], R.map((r, i) => [esc(r.at), esc(r.kind), r.n + '명', tag(r.st, r.st === '전송 대기' ? 'y' : 'g'), `<button class="btn sm ghost" data-act="hrd-dl" data-v="${i}">파일</button>`]), '아직 생성한 보고가 없습니다.')}</div>` +
     /* v36 R1 인가 · 규정 준수의 'HRD-Net 보고'(수료 보고 파일 · 학습 통계)를 이 화면으로 합침 — 같은 이름의 화면이 두 곳에 있던 것 */
     (typeof cplRepHTML === 'function' ? (() => { const h = cplRepHTML(); return h ? `<section class="hrd-cpl">${h.replace(/<div class="warn">HRD-Net 실제 전송은[\s\S]*?<\/div>/, '').replace(/<button class="btn sm" data-act="go" data-v="hrd">HRD-Net 보고 화면<\/button>/, '')}</section>` : ''; })() : '') +
-    `<div class="card"><div class="ch"><b>부정훈련 의심 모니터링</b><small>규칙 기반 탐지 · 확인 후 조치</small></div>${sus.map(s => `<div class="row"><span>${esc(s.m.name)} — ${esc(s.why)}</span><button class="btn sm ghost" data-act="hrd-ok" data-v="${s.m.id}">확인</button></div>`).join('')}</div>`;
+    `<div class="card"><div class="ch"><b>부정훈련 의심 모니터링</b><small>학습 기록 규칙 기반 탐지 · 확인 후 조치</small></div>${sus.length ? sus.map(s => `<div class="row"><span>${esc(s.m.name)} — ${esc(s.why)}</span><button class="btn sm ghost" data-act="hrd-ok" data-v="${s.m.id}">확인</button></div>`).join('') : '<p class="mini">지금 학습 기록에서 찾은 의심 건이 없습니다. 여러 IP 동시 접속 · 하루 학습시간 초과가 생기면 여기에 표시합니다.</p>'}</div>`;
 };
-ACT['hrd-dl'] = el => { const r = S.hrd.reports[+el.dataset.v]; downloadCSV(`HRD_${r.kind}_${r.at.slice(0, 10)}.csv`, ['훈련과정', '훈련생', '구분', '진도', '출석률', '평가', '수료'], S.classes.flatMap(c => c.learners.map(id => { const p = c.prog[id]; return [c.name, M(id).name, M(id).extra?.훈련생구분 || '', p.p, p.att, p.exam ?? '', clsDone(c, id) && (p.att == null || p.att >= 80) ? 'Y' : 'N']; }))); r.st = '파일 생성'; save(); render(); };
+ACT['hrd-dl'] = el => { const r = S.hrd.reports[+el.dataset.v]; downloadCSV(`HRD_${r.kind}_${r.at.slice(0, 10)}.csv`, ['훈련과정', '훈련생', '구분', '진도', '출석률', '평가', '수료'], S.classes.flatMap(c => c.learners.map(id => { const p = c.prog[id] || {}; const a = clsAtt(c, id); return [c.name, M(id)?.name || '', M(id)?.extra?.훈련생구분 || '', p.p ?? 0, a == null ? '' : a, p.exam ?? '', clsDone(c, id) ? 'Y' : 'N']; }))); r.st = '파일 생성'; save(); render(); };
 ACT['hrd-ok'] = () => toast('확인 처리했습니다. 감사 로그에 기록됩니다.', 'ok');
 
 /* ═════════ 회원: 수강생 ═════════ */

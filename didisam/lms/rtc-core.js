@@ -33,8 +33,13 @@
       setting: { stun_urls: ['stun:stun.l.google.com:19302'], turn_urls: [], turn_user: null, turn_cred_set: false, sfu_url: null, mesh_max: 6, fanout_max: 25, rec_days: 180, att_min_pct: 70 },
       caps: [cap], capset: {}, audio: [], seq: 10 };
   }
-  function db() { let d = null; try { d = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { } if (!d || d.v !== 1) { d = seed(); save(d); } return d; }
-  function save(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) { } }
+  /* v38 데모 저장소는 기관(데이터룸)별 키 — 스튜디오는 DREG.cur(), 학습자 앱은 LR.tid. 빈 스튜디오 기관은 샘플 없이 시작한다 */
+  const tidOf = () => { try { if (typeof DREG !== 'undefined' && DREG.cur && DREG.cur()) return DREG.cur(); } catch (e) { } try { if (typeof LR !== 'undefined' && LR && LR.tid) return LR.tid; } catch (e) { } return ''; };
+  const kOf = () => { const t = tidOf(); return t ? KEY + '.' + t : KEY; };
+  const emptyOrg = () => { try { if (typeof S !== 'undefined' && S && S.org) return !!S.org.empty; } catch (e) { } try { const r = typeof demoRoom === 'function' ? demoRoom() : null; return !!(r && r.org && r.org.empty); } catch (e) { return false; } };
+  function seedFor() { const d = seed(); if (!emptyOrg()) return d; return { ...d, sections: [], rooms: [], peers: [], evts: {}, att: {}, recs: [], caps: [], capset: {}, audio: [] }; }
+  function db() { let d = null; try { d = JSON.parse(localStorage.getItem(kOf()) || 'null'); } catch (e) { } if (!d || d.v !== 1) { d = seedFor(); save(d); } return d; }
+  function save(d) { try { localStorage.setItem(kOf(), JSON.stringify(d)); } catch (e) { } }
   const LIM = '실시간 수업은 브라우저끼리 직접 연결합니다. 소그룹(메시)은 최대 6명 발언, 방송은 교수자 1명이 설정 인원까지 직접 보냅니다. 그보다 큰 수업은 SFU 연동 후 동작합니다.';
   const secOf = (d, id) => d.sections.find(s => s.section_id === id);
   const roomJ = (d, r) => ({ ...r, section_title: (secOf(d, r.section_id) || {}).title || '', online: d.peers.filter(p => p.room_id === r.room_id && p.state === 'on' && Date.now() - p.seen < 30e3).length, recording: d.recs.some(c => c.room_id === r.room_id && c.status === 'rec') });
@@ -164,6 +169,6 @@
   /* QR(묶음 O의 부호기를 쓴다 — 없으면 주소만) */
   function qr(text) { const M = typeof window.lmsoQr === 'function' ? window.lmsoQr(text) : null; if (!M) return ''; const N = M.length + 8; let p = ''; M.forEach((row, y) => row.forEach((dd, x) => { if (dd) p += `M${x + 4} ${y + 4}h1v1h-1z`; })); return `<svg viewBox="0 0 ${N} ${N}" role="img" aria-label="접속 QR" shape-rendering="crispEdges"><rect width="${N}" height="${N}" fill="#fff"/><path d="${p}" fill="#000"/></svg>`; }
   const base = () => location.origin + location.pathname.replace(/[^/]*$/, '');
-  window.LV = { LN, SR, api, b64, qr, uid, ruleTr, ruleSum, demoMe: null, setMode: m => { mode = m; }, mode: () => mode, demoDb: db, demoReset: () => { try { localStorage.removeItem(KEY); } catch (e) { } },
+  window.LV = { LN, SR, api, b64, qr, uid, ruleTr, ruleSum, demoMe: null, setMode: m => { mode = m; }, mode: () => mode, demoDb: db, demoReset: () => { try { localStorage.removeItem(kOf()); } catch (e) { } },
     url: hash => base() + 'liveclass.html#' + hash, LIMIT: LIM };
 })();

@@ -34,7 +34,7 @@
       <h1 id="laiH">${me ? `${esc(who)}, 오늘은<br><em>무엇을 함께 해 볼까요?</em>` : `궁금한 것을<br><em>무엇이든 물어보세요</em>`}</h1>
       <form class="lai-f" id="laiF"><label for="laiQ" class="sr">${esc(C.name)}에게 질문</label><textarea id="laiQ" rows="1" maxlength="800" placeholder="${me ? '예: 이번 주 학습 계획 짜줘' : '예: 어떤 강좌가 있어요?'}"></textarea><button type="submit" aria-label="보내기">${ico('send', 18)}</button></form>
       <div class="lai-chips" role="list" aria-label="추천 질문">${chips.map(([l, q]) => `<button type="button" role="listitem" class="lt-chip" data-tact="q" data-v="${esc(q)}">${esc(l)}</button>`).join('')}</div>
-      <p class="lai-note">${me ? '과제를 대신 써 주지 않고 함께 풀어요 · 대화 내용은 저장하지 않아요' : '로그인 없이 강좌 · 수강 방법 · 가격을 안내해 드려요. <a href="#login">로그인</a>하면 이어서 학습 · 학습 리마인더도 쓸 수 있어요.'}</p>
+      <p class="lai-note">${me ? '과제를 대신 써 주지 않고 함께 풀어요 · 대화 내용은 저장하지 않아요' : `로그인 없이 강좌 · 수강 방법${typeof lPayOff === 'function' && lPayOff() ? '' : ' · 가격'}을 안내해 드려요. <a href="#login">로그인</a>하면 이어서 학습 · 학습 리마인더도 쓸 수 있어요.`}</p>
       <div class="lai-res" ${th ? '' : 'hidden'}><div class="lai-rh"><b>${esc(C.name)}의 답</b><button type="button" class="lai-lk" data-lai="clear">지우기</button></div><div class="lai-th" aria-live="polite">${th}</div></div>
     </div></section>`;
   }

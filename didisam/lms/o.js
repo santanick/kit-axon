@@ -344,6 +344,7 @@
       providers: [{ provider_id: uid(), kind: 'anthropic', name: 'Anthropic Claude(상용)', endpoint_url: null, model: 'claude-haiku-5-5', enabled: true, created_at: iso() }], routes: {}, embed: { kind: 'local-hash' },
       setting: { limit_tokens: 2000000, alert_pct: 80, hard_block: true }, calls: [], alerts: [],
       people: [['20261234', 'CSE', 9, 1, 0, 0, 91.5], ['20261235', 'CSE', 6, 1, 3, 0, 58], ['20261236', 'CSE', 8, 0, 1, 1, 74]] };
+    if ((S && S.org && S.org.empty)) { Object.assign(L.o, { sections: [], docs: [], faq: [], people: [] }); return L.o; } /* v38 빈 스튜디오: 샘플 없이 */
     try { seedMore(L.o, s1, doc); } catch (e) { console.warn('lmso 데모 시드', e); }
     return L.o;
   }

@@ -58,7 +58,7 @@
   const RO = { f: 1 }; /* 정해진 카드(계획 · 퀴즈 · 리포트 · 할 일)는 기본 안내로 */
   function screen() { const S2 = SITE(); if (!S2) return { k: 'none', name: '', chips: [] };
     const r = route(); const a = r.a; const p = parts(); const me = !!LR.me; const C = [];
-    const add = (l, q, o = {}) => C.push({ l, q: q || l, ...o });
+    const pOff = typeof lPayOff === 'function' && lPayOff(); const add = (l, q, o = {}) => { if (pOff && /가격|무료로|결제|환불/.test(l)) return; C.push({ l, q: q || l, ...o }); }; /* v38 F5 결제 꺼진 기관은 가격 · 결제 · 환불 칩을 감춘다 */
     const esc2 = () => me && !guard() && add('선생님께 질문 넘기기', '', { kind: 'escq' });
     let k = a, name = '', ctx = '';
     if (guard()) { k = 'guard'; name = `보호자 보기 · ${({ c: '수업', my: '내 학습', home: '홈' })[a] || '학습 현황'}`;
@@ -68,11 +68,11 @@
       add('선생님께 문의', '', { kind: 'go', href: '#msg/new' });
       return { k, name, ctx: '보호자가 자녀의 학습 현황을 읽기 전용으로 보는 화면', chips: C }; }
     if (a === 'home' || (!a)) { k = 'home'; name = '홈';
-      if (!me) { add('어떤 강좌가 있나요?', `어떤 ${term('cls')}가 있나요?`, { r: () => listCls(), f: 1, re: /어떤.{0,4}(강좌|과정|수업|교과목|클래스)|강좌\s*목록/ }); add('나에게 맞는 강좌 추천', '저에게 맞는 강좌를 추천해 주세요', { r: () => ({ ...listCls(4), t: `목표(예: 자격증 · 실무 · 취미)를 알려 주시면 더 정확히 골라 드립니다. 먼저 지금 열려 있는 ${term('cls')}입니다.` }) }); add('수강 신청 방법', '수강 신청은 어떻게 하나요?', { r: howEnroll, f: 1, re: /수강\s*신청|신청\s*방법/ }); add('가입 방법', '가입은 어떻게 하나요?', { r: joinHow, f: 1, re: /가입|로그인\s*방법/ }); }
+      if (!me) { add('어떤 강좌가 있나요?', `어떤 ${term('cls')}${lJ(term('cls'), '이', '가')} 있나요?`, { r: () => listCls(), f: 1, re: /어떤.{0,4}(강좌|과정|수업|교과목|클래스)|강좌\s*목록/ }); add('나에게 맞는 강좌 추천', '저에게 맞는 강좌를 추천해 주세요', { r: () => ({ ...listCls(4), t: `목표(예: 자격증 · 실무 · 취미)를 알려 주시면 더 정확히 골라 드립니다. 먼저 지금 열려 있는 ${term('cls')}입니다.` }) }); add('수강 신청 방법', '수강 신청은 어떻게 하나요?', { r: howEnroll, f: 1, re: /수강\s*신청|신청\s*방법/ }); add('가입 방법', '가입은 어떻게 하나요?', { r: joinHow, f: 1, re: /가입|로그인\s*방법/ }); }
       else { add('오늘 할 일', '오늘 뭐 하면 돼?', RO); add('이번 주 학습 계획', '이번 주 학습 계획 짜줘', RO); add('복습 퀴즈', '복습 퀴즈 내줘', RO); add('내 학습 리포트', '내 학습 리포트 보여줘', RO); } }
     else if (['shop', 'courses', 'tutorials'].includes(a)) { k = 'list'; name = a === 'shop' ? `${term('cls')} 목록` : PGN(a) || '단계별 코스';
       ctx = `공개 ${term('cls')}: ${(((sh() || {}).classes) || S2.classes || []).slice(0, 12).map(c => `${c.name}(${won(priceOf(c))})`).join(', ')}`;
-      add('나에게 맞는 강좌 추천', `저에게 맞는 ${term('cls')}를 추천해 주세요`, { r: me ? null : () => ({ ...listCls(4), t: `목표(예: 자격증 · 실무 · 취미)를 알려 주시면 더 정확히 골라 드립니다. 먼저 인기 ${term('cls')}입니다.` }) });
+      add('나에게 맞는 강좌 추천', `저에게 맞는 ${term('cls')}${lJ(term('cls'), '을', '를')} 추천해 주세요`, { r: me ? null : () => ({ ...listCls(4), t: `목표(예: 자격증 · 실무 · 취미)를 알려 주시면 더 정확히 골라 드립니다. 먼저 인기 ${term('cls')}입니다.` }) });
       add('강좌 목록 · 가격', `${term('cls')} 목록과 가격 알려줘`, { r: () => listCls(8), f: 1 }); add('무료로 들을 수 있나요?', '무료로 들을 수 있는 강좌가 있나요?', { r: () => { const F = (((sh() || {}).classes) || []).filter(c => !priceOf(c)); return F.length ? { t: `무료 ${term('cls')} ${F.length}개가 있습니다.`, h: L(F.slice(0, 5).map(c => ({ h: c.name, d: '무료', href: '#class/' + c.id }))) } : { t: `지금은 무료 ${term('cls')}가 없습니다. ${term('cls')} 상세에서 할인 · 얼리버드 가격을 확인할 수 있습니다.` }; }, f: 1 });
       add('수강 신청 방법', '수강 신청은 어떻게 하나요?', { r: howEnroll, f: 1 }); }
     else if (a === 'class') { const c = clsOf(r.b); k = 'class'; name = `${term('cls')} 상세${c ? ' · ' + c.name : ''}`;
@@ -167,7 +167,7 @@
     else if (a === 'hp') { const key = r.rest || 'home'; k = 'hp'; name = hpName(key); const tx = () => { let t = ''; document.querySelectorAll('#lm .smhost').forEach(h => { if (h.shadowRoot) t += ' ' + h.shadowRoot.textContent; }); return mask(t || textOf('#lm')).replace(/\s+/g, ' ').trim().slice(0, 1200); };
       ctx = `홈페이지 페이지: ${name}`;
       add('이 페이지 요약', '이 페이지 내용을 쉽게 요약해 줘', { x: () => `[페이지 내용]\n${tx()}`, r: () => { const S3 = sents(tx(), 3); return { t: `「${name}」 페이지 앞부분입니다.`, h: S3.length ? OL(S3.map(esc)) : P('요약할 글이 없습니다.') }; } });
-      add('어떤 강좌가 있나요?', `어떤 ${term('cls')}가 있나요?`, { r: () => listCls(), f: 1 }); add('문의 방법', '상담 · 문의는 어떻게 하나요?', { r: () => { const o = S2.org || {}; return { t: '문의는 아래 방법으로 할 수 있습니다.', h: OL([o.tel && `전화: ${esc(o.tel)}`, o.email && `이메일: ${esc(o.email)}`, S2.chat && S2.chat.type && S2.chat.type !== 'none' && '화면의 상담 버튼(카카오톡 · 채널톡)', LR.me ? '「메시지」로 운영자에게 보내기' : '가입 후 「메시지」로 문의']) }; }, f: 1 }); }
+      add('어떤 강좌가 있나요?', `어떤 ${term('cls')}${lJ(term('cls'), '이', '가')} 있나요?`, { r: () => listCls(), f: 1 }); add('문의 방법', '상담 · 문의는 어떻게 하나요?', { r: () => { const o = S2.org || {}; return { t: '문의는 아래 방법으로 할 수 있습니다.', h: OL([o.tel && `전화: ${esc(o.tel)}`, o.email && `이메일: ${esc(o.email)}`, S2.chat && S2.chat.type && S2.chat.type !== 'none' && '화면의 상담 버튼(카카오톡 · 채널톡)', LR.me ? '「메시지」로 운영자에게 보내기' : '가입 후 「메시지」로 문의']) }; }, f: 1 }); }
     else { const pg = (S2.pages || []).find(x => x.id === a); k = 'page'; name = pg ? pg.name : '홈'; add('이 화면에서 할 수 있는 일', '이 화면에서 무엇을 할 수 있나요?', { r: () => ({ t: `「${name}」 화면입니다. 자주 찾는 곳으로 바로 가실 수 있습니다.`, h: L([{ h: `${term('cls')} 둘러보기`, d: '', href: '#shop' }, LR.me ? { h: '내 학습', d: '', href: '#my' } : { h: '무료 가입', d: '', href: '#join' }, { h: '공지사항', d: '', href: '#notice' }]) }) }); if (me) add('오늘 할 일', '오늘 뭐 하면 돼?', RO); else add('수강 신청 방법', '수강 신청은 어떻게 하나요?', { r: howEnroll, f: 1 }); }
     return { k, name: name || '홈', ctx, chips: C.slice(0, 5) };
   }
@@ -181,6 +181,10 @@
   const LSAM = { screen: () => { try { CUR = screen(); } catch (e) { console.error('lsam', e); CUR = { k: 'page', name: '홈', chips: [] }; } return CUR; }, cur: () => CUR || LSAM.screen(),
     find(q) { const s = String(q || '').trim(); const C = (CUR || LSAM.screen()).chips; return C.find(c => c.q === s) || C.find(c => c.re && c.re.test(s) && c.r && c.f) || null; },
     ctx() { const s = CUR || LSAM.screen(); return `지금 화면: ${s.name}${s.ctx ? '\n' + mask(s.ctx).slice(0, 900) : ''}`; } };
+  /* v38 F5 L: '환불' · '글씨 크게'처럼 사이트 이용 질문은 공부 질문으로 되묻지 않고 안내 · 바로 가기로 답한다 */
+  { const GEN = [[/글씨|글자/, () => ({ t: '모든 화면의 글자를 크게 볼 수 있어요. 아래 버튼을 누르거나 「나 › 글자 크게 보기」에서 켜고 끌 수 있어요.', h: typeof lFsRow === 'function' ? lFsRow() : '' })],
+      [/환불|학습비 반환|반환/, () => (typeof lPayOff === 'function' && lPayOff()) ? { t: `이 기관은 학습자가 직접 결제하지 않아 환불 절차가 없어요. 수강 취소는 ${SITE().org.name}에 문의해 주세요.`, h: L([{ h: '메시지로 문의하기', d: '', href: '#msg' }]) } : { t: '환불은 「내 학습 › 결제」 또는 결제 · 환불 내역에서 결제 건을 고르고 [환불 신청]을 누르면 돼요. 금액은 기관 환불 규정을 따릅니다.', h: L([{ h: '결제 · 환불 내역', d: '', href: '#mypay/pay' }]) }]];
+    const base = LSAM.find; LSAM.find = q => { const r = base(q); if (r) return r; const s = String(q || ''); const g = GEN.find(([re]) => re.test(s)); return g ? { l: s, q: s, r: g[1], f: 1 } : null; }; }
   window.LSAM = LSAM;
   /* 칩 문자열(홈 비서 · 예전 호출 호환) */
   ltChips = () => LSAM.screen().chips.filter(c => !c.kind).map(c => c.q).slice(0, 4);

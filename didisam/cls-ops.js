@@ -14,7 +14,7 @@
   const AWAY = 14; /* 이 날수 이상 접속하지 않으면 '미접속' */
   const done = (c, id) => clsDone(c, id); /* v36 R1 이수 판정은 한 곳(mods.js clsDone) — 관리 화면 · 엑셀 · 대시보드 · 수료증과 같은 값 */
   const certOf = (c, id) => A(S.certs).find(x => x.cls === c.id && x.who === id);
-  const lastOf = id => (M(id) || {}).last || '';
+  const lastOf = id => { const m = M(id) || {}; const l = m.last || ''; return l && m.joined && String(l).slice(0, 10) < String(m.joined).slice(0, 10) ? m.joined : l; }; /* v38 최근 접속이 가입일보다 앞서 보이지 않게(QA C11) */
   const away = id => { const l = lastOf(id); return !l || daysAgo(l) >= AWAY; };
   const pOf = (c, id) => +((c.prog || {})[id] || {}).p || 0;
   const grpName = id => { const m = M(id) || {}; try { if (typeof c2TName === 'function') { const n = c2TName(m.team || m.group); if (n) return n; } } catch (e) { } return ((S.groups || []).find(g => g.id === m.group) || {}).name || ''; };
@@ -80,10 +80,13 @@
   const sumRow = c => { const s = sumOf(c); return [c.name, kindName(c), catName(c), c.status || '', per(c), s.n, s.dn, s.rate, s.avg, s.away, s.zero]; };
   const LCOLS = (withCls) => [...(withCls ? [t('cls')] : []), ...idCols().map(x => x[0]), '진도율(%)', '시험 점수', '과제', ...(withCls ? ['출석률(%)'] : []), '최근 접속', `${t('done')} 여부`, `${t('done')}일`, '수료증 번호'];
   function lRow(c, id, withCls) { const m = M(id) || { id, extra: {} }; const p = c.prog[id] || {}; const ct = certOf(c, id);
-    return [...(withCls ? [c.name] : []), ...idCols().map(x => x[1](m)), pOf(c, id), p.exam == null ? '' : +p.exam, { none: '미제출', submitted: '채점 대기', graded: '채점 완료' }[p.assign] || '',
-      ...(withCls ? [hasAtt(c) && p.att != null ? +p.att : ''] : []), lastOf(id), done(c, id) ? t('done') : '미' + t('done'), ct ? ct.at : '', ct ? ct.no : '']; }
+    return [...(withCls ? [c.name] : []), ...idCols().map(x => x[1](m)), pOf(c, id), !hasTy(c, 'exam', 'quiz') ? '—' : p.exam == null ? '미응시' : +p.exam, !hasTy(c, 'assign') ? '—' : { none: '미제출', submitted: '채점 대기', graded: '채점 완료' }[p.assign] || '미제출',
+      ...(withCls ? [hasAtt(c) ? attOf(c, id) : ''] : []), lastOf(id), done(c, id) ? t('done') : '미' + t('done'), ct ? ct.at : '', ct ? ct.no : '']; }
+  /* v38 과정에 없는 항목은 '—'(과제 없는 과정의 '미제출' 제거), 출석률은 clsAtt 한 곳(QA C11 · V4) */
+  const hasTy = (c, ...T) => (c.curriculum || []).some(i => T.includes(i.type));
+  const attOf = (c, id) => { const a = clsAtt(c, id); return a == null ? '' : a; };
   function clsLCols(c) { const L = LCOLS(false); if (hasAtt(c)) L.splice(L.indexOf('과제') + 1, 0, '출석률(%)'); return L; }
-  function clsLRow(c, id) { const r = lRow(c, id, false); if (hasAtt(c)) { const p = c.prog[id] || {}; r.splice(clsLCols(c).indexOf('출석률(%)'), 0, p.att == null ? '' : +p.att); } return r; }
+  function clsLRow(c, id) { const r = lRow(c, id, false); if (hasAtt(c)) r.splice(clsLCols(c).indexOf('출석률(%)'), 0, attOf(c, id)); return r; }
   const xlsW = () => S && S.org && S.org.type === 'k12' ? '수강' : t('done'); /* v36 R4 학원(초중고)은 '수료'가 아니라 '수강 현황 엑셀' */
   function xlsClass(c) { if (!c) return; try { if (typeof c2Ensure === 'function') c2Ensure(c); } catch (e) { }
     xlsx(`${c.name}_${xlsW()}현황_${today()}.xlsx`, [{ name: '요약', cols: SUMCOLS(), rows: [sumRow(c)] }, { name: `${xlsW()} 현황`, cols: clsLCols(c), rows: A(c.learners).map(id => clsLRow(c, id)) }]);
@@ -92,7 +95,7 @@
     xlsx(`전체_${xlsW()}현황_${today()}.xlsx`, [{ name: `${t('cls')}별 요약`, cols: SUMCOLS(), rows: CL.map(sumRow) }, { name: '전체 명단', cols: LCOLS(true), rows: CL.flatMap(c => A(c.learners).map(id => lRow(c, id, true))) }]);
     logAudit(`전체 ${xlsW()} 현황 엑셀 내려받기`); toast(`전체 ${xlsW()} 현황 엑셀(${t('cls')}별 요약 · 전체 명단)을 내려받았습니다.`, 'ok'); }
   const visCls = () => { const tc = S.me.role === 'teacher' && typeof tMe === 'function' && tMe() ? tMe().classes || [] : null; return S.classes.filter(c => !tc || tc.includes(c.id)); };
-  window.OPS36.xlsClass = xlsClass; window.OPS36.xlsAll = xlsAll; window.OPS36.sum = sumOf;
+  window.OPS36.xlsClass = xlsClass; window.OPS36.xlsAll = xlsAll; window.OPS36.sum = sumOf; window.OPS36.lCols = clsLCols; window.OPS36.lRow = clsLRow;
   ACT['ops-xls'] = el => { const v = el && el.dataset && el.dataset.v; if (v && C(v)) xlsClass(C(v)); else xlsAll(); };
   const xlsBtn = (v, l) => `<button type="button" class="btn ops-xbtn" data-act="ops-xls" data-v="${esc(v || '')}">${I('download', 16)} ${esc(l || `${xlsW()} 현황 엑셀`)}</button>`;
   window.OPS36.xlsBtn = xlsBtn;
@@ -247,7 +250,7 @@
     return `<section class="card ops-prog" aria-labelledby="opsPg"><div class="ch"><b id="opsPg">진도율 — ${esc(c.name)}</b><small>평균 ${s.avg}% · ${esc(t('done'))} ${s.dn}/${s.n}명 · 미접속 ${s.away}명</small><span class="sp"></span>${s.away ? `<button type="button" class="btn sm" data-act="ops-nudge" data-v="${c.id}|away">미접속 독려</button>` : ''}${xlsBtn(c.id, '엑셀')}</div>
       <div class="sl-chips" role="tablist" aria-label="진도율 보기">${chip('all', `전체 ${s.n}`)}${chip('low', `30% 미만 ${s.low}`)}${chip('away', `미접속 ${s.away}`)}${chip('undone', `미${t('done')} ${s.n - s.dn}`)}${chip('done', `${t('done')} ${s.dn}`)}</div>
       ${R.length ? table(cols, R.slice(0, 300).map(id => { const m = M(id) || { id, extra: {} }; const p = c.prog[id] || {}; const pp = pOf(c, id); const l = lastOf(id);
-        return [...idCols().map((x, j) => j ? esc(x[1](m)) : `<b>${esc(x[1](m) || '—')}</b>`), `<span class="ops-pb"><i style="width:${pp}%" class="${pp < 30 ? 'r' : ''}"></i></span> ${pp}%`, ...(ep ? [p.att == null ? '—' : pct(p.att)] : []), p.exam == null ? '—' : esc(String(p.exam)),
+        return [...idCols().map((x, j) => j ? esc(x[1](m)) : `<b>${esc(x[1](m) || '—')}</b>`), `<span class="ops-pb"><i style="width:${pp}%" class="${pp < 30 ? 'r' : ''}"></i></span> ${pp}%`, ...(ep ? [(a => a == null ? '—' : pct(a))(clsAtt(c, id))] : []), p.exam == null ? '—' : esc(String(p.exam)),
           l ? `${esc(l.slice(5))}${away(id) ? ` ${tag(daysAgo(l) + '일', 'y')}` : ''}` : tag('없음', 'y'), done(c, id) ? tag(t('done'), 'g') : `<small class="mini">미${esc(t('done'))}</small>`]; })) + (R.length > 300 ? `<p class="mini">${R.length - 300}명 더 있음 — 엑셀로 보세요.</p>` : '') : `<p class="ops-none">${L.length ? '조건에 맞는 사람이 없습니다.' : `아직 ${esc(tj('learner', '이'))} 없습니다.`}</p>`}</section>`; }
   ACT['ops-pf'] = el => { UI.opsPF = el.dataset.v; render(); };
 

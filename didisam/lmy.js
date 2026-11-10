@@ -10,7 +10,10 @@ const ST_TXT = { none: '', submitted: '검수 대기', graded: '검수 완료', 
 /* ── 집계 ── */
 function myStats() {
   const S2 = SITE(); const lp = LR.lp; const mine = LR.mine;
-  const clsIds = [...new Set([...Object.keys(lp.cls || {}), ...Object.keys(mine.cls || {})])].filter(id => S2.classes.some(c => c.id === id));
+  /* v38 수강 신청 · 배정으로 들어온 과정(shMine 수강 등록)도 '수강 전'으로 센다 — 웹 목록은 1개인데 앱 '내 교육'은 '수강 중인 강좌가 없어요'라던 것(QA C9 · UL12) */
+  let enr = {}; try { const R = typeof shMine === 'function' ? shMine() : null; enr = (R && R.enr) || {}; } catch (e) { enr = {}; } const t0 = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const enrIds = Object.keys(enr).filter(id => { const e = enr[id]; return e && e.status === 'active' && !e.hold && !(e.end && e.end < t0); });
+  const clsIds = [...new Set([...Object.keys(lp.cls || {}), ...Object.keys(mine.cls || {}), ...enrIds])].filter(id => S2.classes.some(c => c.id === id && (c.items || []).length));
   const courses = clsIds.map(id => { const c = S2.classes.find(x => x.id === id); const r = (lp.cls || {})[id] || { items: {} }; const m = (mine.cls || {})[id] || {};
     const LI = c.items.filter(x => x.type !== 'chapter'); const L0 = LI.length ? LI : c.items; const doneN = L0.filter(x => ((r.items || {})[x.id] || {}).done).length; const pLocal = Math.round(doneN / Math.max(1, L0.length) * 100); const p = Math.max(pLocal, m.p || 0);
     const next = L0.find(x => !((r.items || {})[x.id] || {}).done); return { c, p, doneN, next, st: m.st || (r.sub ? 'submitted' : 'none'), fb: m.fb || '', score: m.score, done: m.done || p >= (c.thr || 80) }; });
@@ -32,8 +35,8 @@ const MYR = {
     return `<section class="myh"><div class="in"><div class="myp"><span class="ava" style="--c:${esc(ty ? ty.color : lv.color || '#5C74F6')}">${esc(ty ? ty.k.slice(0, 2) : String(LR.me.sid).slice(-2))}</span>
       <div class="mpi"><small>${esc(S2.org.name)}</small><b>${esc(LR.me.nick || LR.me.sid)}</b><span>${esc(LR.me.dept || '')}</span><div class="chips2">${ty ? `<span class="tg" style="--c:${esc(ty.color)}">${esc(ty.k)} · ${esc(ty.name)}</span>` : `<a class="tg" style="--c:#5C74F6" href="#dg/${esc((diagFirst() || {}).id || '')}">진단 전 · 진단하기</a>`}<span class="tg" style="--c:${esc(lv.color || '#5C74F6')}">LEVEL ${st.level + 1} · ${esc(lv.name || '')}</span></div></div>
       <button class="lbtn sm ghost out" data-lact="logout">${ico('out', 14)} 로그아웃</button></div>
-      <div class="myhg"><div class="mylv">${medal(st.level + 1, (nb && nb.fill) || lv.color, nb && nb.ring)}<div><small>다음 배지까지</small><b>${esc((nb && nb.name) || lv.name || '')}</b><p>${esc(lv.goal || '')}</p><div class="wbar"><i style="width:${pct}%"></i></div><small>이 수준 튜토리얼 ${td}/${T.length} · ${pct}%</small></div></div>
-      <div class="mpn">${[[LR.mine.badges.length, '획득 배지', 'award'], [st.courses.length, '수강 과정', 'grid'], [st.tuts.filter(x => (x.r.steps || []).filter(Boolean).length >= 3).length, '튜토리얼 완료', 'video'], [st.streak + '일', '연속 학습', 'spark']].map(([n, l, i]) => `<div>${ico(i, 16)}<b>${esc(String(n))}</b><small>${l}</small></div>`).join('')}</div></div>
+      <div class="myhg"><div class="mylv">${medal(st.level + 1, (nb && nb.fill) || lv.color, nb && nb.ring)}<div><small>다음 배지까지</small><b>${esc((nb && nb.name) || lv.name || '')}</b><p>${esc(lv.goal || '')}</p><div class="wbar"><i style="width:${pct}%"></i></div>${T.length ? `<small>이 수준 튜토리얼 ${td}/${T.length} · ${pct}%</small>` : ''}</div></div>
+      <div class="mpn">${[[LR.mine.badges.length, '획득 배지', 'award'], [st.courses.length, '수강 과정', 'grid'], ...(S2.tuts.length ? [[st.tuts.filter(x => (x.r.steps || []).filter(Boolean).length >= 3).length, '튜토리얼 완료', 'video']] : []), /* v38 실습 영상이 없는 기관은 숨김 */ [st.streak + '일', '연속 학습', 'spark']].map(([n, l, i]) => `<div>${ico(i, 16)}<b>${esc(String(n))}</b><small>${l}</small></div>`).join('')}</div></div>
       <nav class="mytab">${[['m-next', '지금 할 일'], ['m-courses', '내 과정'], ['m-books', '디지털북'], ['m-badges', '배지'], ['m-rec', '기록']].map(([h, l]) => `<a href="#my" data-lact="myjump" data-v="${h}">${l}</a>`).join('')}</nav></div></section>`; },
   next(st) { const M = meNow(); const S2 = SITE(); const A = [];
     if (M.next) A.push([M.next.h, M.next.d, M.next.href, M.next.warn ? 'warn' : 'pri', M.next.cta, M.next.yt]);
@@ -41,7 +44,7 @@ const MYR = {
     if (!st.myType && diagFirst() && !A.some(a => /^#dg/.test(a[2]))) A.push(['진단부터 시작하세요', '5분이면 나에게 맞는 과정이 열립니다.', '#dg/' + diagFirst().id, 'pri']);
     st.courses.filter(x => !x.done && x.next).slice(0, 2).forEach(x => { const h = `#c/${x.c.id}/${x.next.id}`; if (!A.some(a => a[2] === h)) A.push([`이어서 학습 · ${x.c.name}`, `${x.next.title} (${x.p}%)`, h, '']); });
     st.tuts.filter(x => (x.r.steps || []).filter(Boolean).length >= 3 && !x.r.mission).slice(0, 1).forEach(x => A.push([`미션 제출 · ${x.t.title}`, x.t.mission, `#t/${x.t.id}`, '']));
-    const rec = S2.tuts.find(t => !tutDone(t) && (!st.myType || t.type === st.myType) && t.level <= st.level) || S2.tuts.find(t => !tutDone(t));
+    const TV = S2.tuts.filter(t => t.yt); const rec = TV.find(t => !tutDone(t) && (!st.myType || t.type === st.myType) && t.level <= st.level) || TV.find(t => !tutDone(t)); /* v38 F5 영상 없는 예시 튜토리얼은 추천하지 않는다 */
     if (rec && !A.some(a => a[2] === '#t/' + rec.id)) A.push([`추천 튜토리얼 · ${rec.title}`, `${tyOf(rec.type).name} · ${lvOf(rec.level).name}`, `#t/${rec.id}`, '']);
     const [f, ...rest] = A.slice(0, 4);
     return `<div class="mycard wide nextc">${myHead('m-next', '지금 할 일', A.length ? `${A.length}건` : '')}${f ? `<a class="nx big ${f[3]}" href="${esc(f[2])}">${f[5] && ytOK(f[5]) ? thumb(f[5]) : `<span class="nxi">${ico(f[3] === 'warn' ? 'edit' : 'target', 26)}</span>`}<span class="nxt"><small>${f[3] === 'warn' ? '먼저 처리하세요' : '가장 먼저 할 일'}</small><b>${esc(f[0])}</b><small>${esc(f[1] || '')}</small></span><span class="lbtn pri">${esc(f[4] || '시작')}${ico('arrow', 15)}</span></a>` : ''}
@@ -67,7 +70,7 @@ document.addEventListener('click', e => { const el = e.target.closest('[data-lac
 /* ── 수료증 · 배지 증명(인쇄용) ── */
 function viewCert(cid) {
   if (!LR.me) return needLogin('cert/' + cid); const st = myStats(); const x = st.courses.find(y => y.c.id === cid);
-  if (!x || !x.done) return `<section class="sec"><div class="in narrow"><h1>수료증</h1><p class="lead">수료 기준(${x ? x.c.thr || 80 : 80}%)을 채우면 수료증이 발급됩니다.</p>${btn('내 과정으로', '#my', 'ghost')}</div></section>`;
+  if (!x || !x.done) return `<section class="sec"><div class="in narrow"><h1>수료증</h1><p class="lead">${x && typeof a2lCritTxt === 'function' ? esc(a2lCritTxt(x.c).l) + ' 기준을 채우면 수료증이 발급됩니다.' : `수료 기준(${x ? x.c.thr || 80 : 80}%)을 채우면 수료증이 발급됩니다.`}</p>${btn('내 과정으로', '#my', 'ghost')}</div></section>`;
   return `<section class="sec"><div class="in narrow"><div class="certp"><small>CERTIFICATE OF COMPLETION</small><h1>수료증</h1><p class="cn">${esc(LR.me.sid)}${LR.me.dept ? ` · ${esc(LR.me.dept)}` : ''}</p><p>위 학습자는 「${esc(x.c.name)}」 과정을 진도 ${x.p}%로 이수하였기에 이 증서를 드립니다.</p><p class="cd">${esc(kstDay())}</p><b class="co">${esc(SITE().org.name)}</b></div><div class="cta noprint"><button class="lbtn" data-lact="print">인쇄 · PDF 저장</button>${btn('내 과정으로', '#my', 'ghost')}</div></div></section>`;
 }
 function viewBadgeCert(bid) {
@@ -79,3 +82,8 @@ document.addEventListener('click', e => { const el = e.target.closest('[data-lac
   if (el.dataset.lact === 'print') window.print();
   if (el.dataset.lact === 'mydl' && LR.me) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ format: 'didisam-learner/1', org: SITE().org.name, sid: LR.me.sid, dept: LR.me.dept || '', exportedAt: new Date().toISOString(), badges: LR.mine.badges, progress: LR.lp }, null, 1)], { type: 'application/json' })); a.download = `my_learning_${LR.me.sid}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); }
 });
+/* v38 F5 P8 · L: 배지를 쓰지 않는 기관(배지 0종)의 '수료증'(#badges) 화면은 배지 로드맵('0종 모두 받으면 …', '배지 지갑 0/0') 대신 내 수료증 목록을 보인다 */
+{ const base = viewPage; viewPage = id => { try { if (id === 'badges' && !(SITE().badges || []).length) { if (!LR.me) return needLogin('badges');
+  const st = myStats(); const W = (typeof lcTerm === 'function' && lcTerm('cls')) || '과정';
+  const li = st.courses.map(x => `<li class="lcert-li"><div><b>${esc(x.c.name)}</b><small>${x.done ? '수료' : `진도 ${x.p || 0}% · 수료 기준을 채우면 발급돼요`}</small></div>${x.done ? `<a class="lbtn pri sm" href="#cert/${esc(x.c.id)}">수료증 보기</a>` : `<a class="lbtn ghost sm" href="#c/${esc(x.c.id)}">이어서 학습</a>`}</li>`).join('');
+  return `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › 수료증</p><h1>수료증</h1><p>수료한 ${esc(W)}의 수료증을 보고 인쇄할 수 있어요.</p></div></section><section class="sec"><div class="in narrow">${li ? `<ul class="shp-list lcert-l">${li}</ul>` : `<p class="empty">아직 수강 중인 ${esc(W)}${lJ(W, '이', '가')} 없어요.</p>`}</div></section>`; } } catch (e) { console.error(e); } return base(id); }; }

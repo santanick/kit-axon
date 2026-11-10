@@ -185,10 +185,10 @@ const SQL_SYNC_HIST = `select coalesce(json_agg(json_build_object('at', lms_ts(x
   from (select y.*, s.section_no from lms_section_sync y left join lms_section s on s.tenant_id = y.tenant_id and s.section_id = y.dst_section where y.src_section = $1::uuid or y.dst_section = $1::uuid order by y.id desc limit 200) x`;
 const SQL_PUB = `select json_build_object(
   'sections', coalesce((select json_agg(z.o order by z.term_id desc, z.course_code, z.section_no) from (
-      select distinct on (v.section_id) v.term_id, v.course_code, v.section_no, json_build_object('section_id', v.section_id, 'term_id', v.term_id, 'course_code', v.course_code, 'course_name', c.name, 'section_no', v.section_no, 'title', v.title, 'mode', v.mode, 'schedule', v.schedule, 'class_id', v.class_id, 'kind', m.kind, 'via', case when m.section_id <> v.section_id then m.section_no end) o
+      select distinct on (v.section_id) v.term_id, v.course_code, v.section_no, json_build_object('section_id', v.section_id, 'term_id', v.term_id, 'course_code', v.course_code, 'course_name', c.name, 'section_no', v.section_no, 'title', v.title, 'mode', v.mode, 'schedule', v.schedule, 'class_id', v.class_id, 'kind', m.kind, 'ta', exists (select 1 from lms_section_staff t2 where t2.tenant_id = v.tenant_id and t2.section_id in (v.section_id, m.section_id) and t2.person_id = $1::uuid and t2.role = 'ta' and t2.status = 'active'), 'via', case when m.section_id <> v.section_id then m.section_no end) o
       from (select e.section_id, e.kind, s0.section_no, coalesce(s0.rep_section_id, s0.section_id) shown from lms_enrollment e join lms_section s0 on s0.tenant_id = e.tenant_id and s0.section_id = e.section_id where e.person_id = $1::uuid and e.status = 'enrolled'
             union all select st.section_id, 'ta', s0.section_no, coalesce(s0.rep_section_id, s0.section_id) from lms_section_staff st join lms_section s0 on s0.tenant_id = st.tenant_id and s0.section_id = st.section_id where st.person_id = $1::uuid and st.status = 'active') m
-      join lms_section v on v.section_id = m.shown join lms_course c on c.tenant_id = v.tenant_id and c.course_code = v.course_code where v.status in ('open', 'closed') order by v.section_id, m.kind desc) z), '[]'::json),
+      join lms_section v on v.section_id = m.shown join lms_course c on c.tenant_id = v.tenant_id and c.course_code = v.course_code where v.status in ('open', 'closed') order by v.section_id, (m.kind = 'ta'), m.kind desc) z), '[]'::json),
   'requests', coalesce((select json_agg(json_build_object('section_id', r.section_id, 'kind', r.kind, 'at', lms_ts(r.at)) order by r.at) from (
       select st.section_id, 'ta'::text kind, st.requested_at at from lms_section_staff st where st.person_id = $1::uuid and st.status = 'pending'
       union all select e.section_id, 'audit', e.enrolled_at from lms_enrollment e where e.person_id = $1::uuid and e.status = 'pending') r), '[]'::json),
@@ -244,15 +244,19 @@ function createLms({ pool, inTenant, need, HttpErr, readBody, limit, audit }) {
     const seen = new Set(); const out = [];
     if (kind === 'person') {
       const have = new Set((await q(c, 'select member_no from lms_person', [])).rows.map(r => r.member_no));
+      /* v38 학과코드 자리에 학과 이름도 받는다: 있는 학과 이름이면 그 코드, 처음 보는 한글 이름이면 반영할 때 학과(dept)를 새로 만든다(Java 같은 규칙) */
+      const byName = new Map((await q(c, 'select unit_code, name from lms_org_unit order by unit_code desc', [])).rows.map(r => [r.name, r.unit_code])); /* 같은 이름이면 코드가 앞선 학과(Java putIfAbsent와 같음) */
       rows.forEach((r, i) => {
         const d = { member_no: g(r, '학번'), kind: g(r, '구분'), unit_code: g(r, '학과코드'), status: g(r, '학적'), grade_year: g(r, '학년') }; let msg = ''; let st = 'error';
         const kd = d.kind === '' ? 'student' : has(MAP.kind, d.kind) ? MAP.kind[d.kind] : null; const ss = d.status === '' ? 'active' : has(MAP.status, d.status) ? MAP.status[d.status] : null;
-        const gy = d.grade_year === '' ? null : /^[1-6]$/.test(d.grade_year) ? Number(d.grade_year) : -1;
+        const gy = d.grade_year === '' ? null : /^[1-6]$/.test(d.grade_year) ? Number(d.grade_year) : -1; let uname = null;
+        if (d.unit_code !== '' && !units.has(d.unit_code)) { if (byName.has(d.unit_code)) d.unit_code = byName.get(d.unit_code); else if (/[가-힣]/.test(d.unit_code) && d.unit_code.length <= 60 && !x.units) { uname = d.unit_code; d.unit_code = ''; } }
         if (!RE.mno.test(d.member_no)) msg = R.MNO; else if (!kd) msg = R.KIND; else if (kd === 'student' && !RE.stu.test(d.member_no)) msg = R.STU; else if (!ss) msg = R.STAT; else if (gy === -1) msg = R.YEAR;
         else if (d.unit_code !== '' && !units.has(d.unit_code)) msg = R.UNIT; else if (x.units && !(d.unit_code !== '' && inUnits(x, d.unit_code, units.get(d.unit_code)))) msg = R.SCOPE;
         else if (seen.has(d.member_no)) msg = R.DUPF; else if (have.has(d.member_no)) { st = 'skip'; msg = R.EXIST_P; } else st = 'ok';
         if (st !== 'error' || msg !== R.MNO) seen.add(d.member_no);
-        out.push({ line: i + 2, st, msg, data: { member_no: d.member_no, kind: kd, unit_code: d.unit_code || null, status: ss, grade_year: gy === -1 ? null : gy } });
+        if (uname && st === 'ok') msg = `새 학과 「${uname}」를 함께 만듭니다.`;
+        out.push({ line: i + 2, st, msg, data: { member_no: d.member_no, kind: kd, unit_code: d.unit_code || null, status: ss, grade_year: gy === -1 ? null : gy, ...(uname ? { unit_name: uname } : {}) } });
       });
       return out;
     }
@@ -445,10 +449,14 @@ function createLms({ pool, inTenant, need, HttpErr, readBody, limit, audit }) {
       const errors = rows.filter(r => r.st === 'error').slice(0, 500).map(r => ({ line: r.line, msg: r.msg }));
       const out = { kind, term_id: term, ...cnt, rows: rows.slice(0, 300).map(r => ({ line: r.line, st: r.st, msg: r.msg, data: r.data })), errors };
       if (b.apply !== true) return out;
-      let ins = 0;
+      let ins = 0; const students = [];
       for (const r of rows) {
         if (r.st !== 'ok') continue; const d = r.data;
-        if (kind === 'person') await q(c, "insert into lms_person (tenant_id, member_no, kind, unit_code, status, grade_year, source) values ($1, $2, $3, $4, $5, $6, 'manual') on conflict (tenant_id, member_no) do nothing", [x.tid, d.member_no, d.kind, d.unit_code, d.status, d.grade_year]);
+        if (kind === 'person') { let uc = d.unit_code;
+          if (d.unit_name) { const u0 = await one(c, 'select unit_code from lms_org_unit where name = $1 order by unit_code limit 1', [d.unit_name]); if (u0) uc = u0.unit_code; else { let n = Number((await one(c, 'select count(*)::int n from lms_org_unit', [])).n) + 1; let code; do { code = 'D' + String(n++).padStart(3, '0'); } while (await one(c, 'select 1 from lms_org_unit where unit_code = $1', [code]));
+            await q(c, "insert into lms_org_unit (tenant_id, unit_code, name, kind, parent_code) values ($1, $2, $3, 'dept', null)", [x.tid, code, d.unit_name]); uc = code; } }
+          await q(c, "insert into lms_person (tenant_id, member_no, kind, unit_code, status, grade_year, source) values ($1, $2, $3, $4, $5, $6, 'manual') on conflict (tenant_id, member_no) do nothing", [x.tid, d.member_no, d.kind, uc, d.status, d.grade_year]);
+          if (d.kind === 'student') students.push({ member_no: d.member_no, dept: d.unit_name || (uc ? ((await one(c, 'select name from lms_org_unit where unit_code = $1', [uc])) || {}).name || '' : '') }); }
         else if (kind === 'section') {
           await q(c, "insert into lms_course (tenant_id, course_code, name, credits, unit_code, category, synced_at) values ($1, $2, $3, $4, $5, $6, now()) on conflict (tenant_id, course_code) do update set name = excluded.name, credits = coalesce(excluded.credits, lms_course.credits), unit_code = coalesce(excluded.unit_code, lms_course.unit_code), category = coalesce(excluded.category, lms_course.category), synced_at = now()", [x.tid, d.course_code, d.name, d.credits, d.unit_code, d.category]);
           await q(c, "insert into lms_section (tenant_id, term_id, course_code, section_no, title, mode, capacity, source, synced_at) values ($1, $2, $3, $4, $5, $6, $7, 'sis', now()) on conflict (tenant_id, term_id, course_code, section_no) do nothing", [x.tid, term, d.course_code, d.section_no, `${d.name} ${d.section_no}분반`, d.mode, d.capacity]);
@@ -458,7 +466,7 @@ function createLms({ pool, inTenant, need, HttpErr, readBody, limit, audit }) {
       const counts = { inserted: ins, skipped: cnt.skip, error: cnt.error };
       const run0 = await one(c, "insert into lms_sis_sync_run (tenant_id, term_id, scope, trigger, finished_at, counts, errors) values ($1, $2, $3, 'manual', now(), $4::jsonb, $5::jsonb) returning run_id::int", [x.tid, term, kind, JSON.stringify(counts), JSON.stringify(errors)]);
       await audit(c, x.tid, x.email, 'lms.import', { kind, term_id: term, ...counts });
-      return { ...out, applied: true, run_id: run0.run_id, counts };
+      return { ...out, applied: true, run_id: run0.run_id, counts, ...(kind === 'person' ? { students } : {}) }; /* v38 학생 학번 — 화면이 접근코드를 함께 발급(기관 문서 S.codes → 학습자 로그인 표) */
     }); },
 
     /* 분반 동기화(SFR-018) */

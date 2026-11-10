@@ -19,11 +19,16 @@
     W.logAudit = W.logAudit || (() => {}); W.M = W.M || (id => ((W.S && W.S.members) || []).find(m => m.id === id));
     W.save = W.save || (() => { try { localStorage.setItem('didisam.room.' + LR.tid, JSON.stringify(W.S)); } catch (e) { } });
     W.render = W.render || rer;
+    /* v38 학사 LMS 수강 분반은 학기 · 강좌(S.lms.a)를 읽는다 — 학습자 앱에는 lms/a.js가 없으므로 읽기 전용 접근자를 둔다(시드하지 않음) */
+    if (typeof W.lmsaEns !== 'function') W.lmsaEns = () => { const A = W.S && W.S.lms && W.S.lms.a; return A || { terms: [], units: [], courses: [], persons: [], sections: [], staff: [], enr: [] }; };
     const load = f => new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'lms/' + f + '?v=30.0'; s.onload = ok; s.onerror = () => no(new Error(f + ' 불러오기 실패')); document.head.appendChild(s); });
     demoReady = load('e.js').then(() => load('f.js')).then(() => load('h.js'));
     return demoReady;
   }
-  function demoMe() { const S = window.S; const sid = String(LR.me && LR.me.sid || ''); const m = (S.members || []).find(x => EFH.mno(x.id) === sid); return m ? m.id : null; }
+  /* v38 학습자 = 학번. 분반 명단(person_id)은 학사 LMS에서 학번, 예전 데모(S.classes)에서는 회원 id이므로 명단에서 학번으로 찾아 그 id를 쓴다 */
+  function demoMe() { const sid = String(LR.me && LR.me.sid || ''); if (!sid) return null;
+    for (const s of EFH.demoSections()) { const p = EFH.demoStudents(s.section_id).find(x => String(x.member_no) === sid); if (p) return p.person_id; }
+    const A = window.S && window.S.lms && window.S.lms.a; return A && (A.persons || []).some(p => p.member_no === sid) ? sid : null; }
   async function call(method, path, body) {
     if (LR.mode === 'live') { let u = path; if (method === 'GET' && body) u += '?' + new URLSearchParams(Object.entries(body).filter(([, v]) => v != null && v !== '')).toString(); return api(method, u, method === 'GET' ? undefined : (body || {})); }
     await demoBoot(); window.S = typeof demoRoom === 'function' ? demoRoom() : null; if (!window.S) throw new Error('데모 기관 데이터가 없습니다.');

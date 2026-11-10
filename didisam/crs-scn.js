@@ -317,6 +317,8 @@
     check: d => {
       const R = [];
       if (d.cat === 'legal') { R.push({ lv: 'info', k: 'cat', msg: '법정 의무교육은 해마다 대상자 전원이 이수해야 합니다(예: 성희롱 예방교육 연 1회 이상). 이수 기록은 \'법정\' 표시로 따로 모아 봅니다.', law: '남녀고용평등법 시행령 제3조 등' }); if (N(d.rate) < 100) R.push({ lv: 'warn', k: 'rate', msg: '법정 의무교육은 진도 100%를 권합니다.', fix: { rate: 100 } }); }
+      /* v38 이름이 법정 의무교육인데 '아니요'면 묻는다 — 법정의무교육 메뉴 · 마감 안내에서 빠지던 것(QA C1) */
+      if (d.cat !== 'legal' && /성희롱|개인정보\s*보호|장애인\s*인식|산업\s*안전|안전\s*보건|직장\s*내\s*괴롭힘|퇴직연금/.test(String(d.name || ''))) R.push({ lv: 'warn', k: 'cat', msg: `「${String(d.name).slice(0, 30)}」은(는) 법정 의무교육으로 보입니다. 법정 의무교육으로 표시하면 법정의무교육 메뉴에서 미이수자 · 마감을 관리할 수 있습니다.`, fix: { cat: 'legal', rate: 100 } });
       if (d.refund) { if (totalMin(d) < 240) R.push({ lv: 'warn', k: 'sessions', msg: `환급받는 원격 교육은 4시간 이상이어야 합니다. 지금은 ${hm(totalMin(d))}입니다.`, law: '사업주 직업능력개발훈련 지원규정 제6조', fix: { sessions: Math.ceil(240 / Math.max(1, N(d.mins) || 30)) } }); R.push({ lv: 'info', k: 'refund', msg: '환급 과정은 심사과정코드 · 훈련과정 ID(고용24에 등록하면 받는 번호)가 필요합니다. 개설 후 \'규정 준수\' 메뉴에서 넣습니다.' }); }
       return R;
     },

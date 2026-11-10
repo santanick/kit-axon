@@ -173,7 +173,7 @@
     title: () => lb('compliance'),
     build: () => { const L = A(S.classes).filter(c => c.legal); const dn = c => (typeof doneN === 'function' ? doneN(c) : 0);
       const miss = L.reduce((a, c) => a + A(c.learners).length - dn(c), 0);
-      return pg('compliance', `${more('compliance')}<button type="button" class="btn pri" data-act="auto-run-id" data-v="legal-d7">${I('spark', 14)} 미이수자 독려</button>`,
+      return pg('compliance', `${more('compliance')}<button type="button" class="btn pri" data-act="legal-nudge">${I('spark', 14)} 미이수자 독려</button>`,
         (L.length ? SL.sum(`<span>미이수</span><span class="sl-n ${miss ? 'sl-w' : ''}">${miss}명</span>`) + SL.list(L.map(c => { const n = A(c.learners).length, d = dn(c), r = Math.round(d / Math.max(1, n) * 100);
           return SL.row({ act: 'sb-old', v: 'compliance', name: c.name, sub: `이수 ${d}/${n}명${c.end ? ' · 마감 ' + c.end : ''}`, icon: I('check', 20), col: r >= 90 ? '#00A224' : '#FF9800', right: `<span class="sb-n ${r < 70 ? 'w' : ''}">${r}%</span>` }); })) +
           SL.list([SL.row({ act: 'comp-report', v: '', name: '이수 증빙 보고서', sub: '이수 현황 CSV 내려받기', icon: I('download', 20), col: '#808181' })])
