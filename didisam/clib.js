@@ -26,8 +26,7 @@
 
   /* ── 종류 ── */
   const KIND = { video: ['영상', 'clplay', 'v'], doc: ['교안', 'cldoc', 'd'], quiz: ['퀴즈', 'clquiz', 'q'], exam: ['시험', 'clexam', 'q'], survey: ['설문', 'clsv', 'q'], assign: ['과제', 'cldoc', 'q'], book: ['디지털북', 'book', 'b'], file: ['파일', 'clfile', 'f'] };
-  const TABS = [['all', '전체'], ['video', '영상'], ['doc', '교안'], ['quiz', '퀴즈 · 시험 · 설문'], ['book', '디지털북'], ['file', '파일']];
-  const inTab = (e, tb) => tb === 'all' || e.kind === tb || (tb === 'quiz' && ['assign', 'exam', 'survey'].includes(e.kind));
+  const TABS = [['all', '전체'], ['video', '영상'], ['doc', '문서'], ['quiz', '퀴즈 · 시험 · 설문'], ['book', '디지털북'], ['link', '링크']];
   /* [만들기] 종류 카드 — C3 CT.kinds가 있으면 이름 · 설명을 그쪽 것으로 맞춘다 */
   const MAKE = [
     ['upload', '올리기', 'clup', '가진 영상 · 문서 파일을 올립니다', '1분'],
@@ -222,23 +221,55 @@
     Object.values(S.nav.tabs).forEach(L => (L || []).forEach(y => { if (y.id === 'library' || y.id === 'dbook') y.on = false; })); }
   function ensure() { if (!S || !S.org || !S.nav || !S.nav.tabs) return; S.clib = Array.isArray(S.clib) ? S.clib : [];
     if (typeof navAdd === 'function') navAdd('clib', true); else if (!(S.nav.tabs.learn || []).some(x => x.id === 'clib')) (S.nav.tabs.learn = S.nav.tabs.learn || []).push({ id: 'clib', on: true });
-    if (!S.clib35) { placeTab(); S.clib35 = 1; } }
+    if (!S.clib35) { placeTab(); S.clib35 = 1; }
+    /* v37 P3: '영상 · 자료' · '디지털북' 메뉴는 콘텐츠 라이브러리 하나로 합쳤다 — 메뉴 구성 · 메뉴 추가에서 다시 켜져 두 곳이 되지 않게 탭에서 뺀다(데이터 S.lib · 디지털북은 그대로) */
+    stripOld(S.nav); }
+  function stripOld(N) { if (!N || !N.tabs) return N; Object.keys(N.tabs).forEach(w => { if (Array.isArray(N.tabs[w])) N.tabs[w] = N.tabs[w].filter(y => y.id !== 'library' && y.id !== 'dbook'); }); return N; }
+  if (typeof presetNav === 'function') { const base = presetNav; presetNav = (...a) => stripOld(base(...a)); }
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { ensure(); } catch (e) { console.error(e); } return r; }; }
   if (typeof createOrg === 'function') { const base = createOrg; createOrg = (...a) => { const r = base(...a); try { if (S && S.org) { S.clib35 = 0; ensure(); save(); } } catch (e) { console.error(e); } return r; }; }
   /* 예전 주소: 꺼진 '영상 · 자료' · '디지털북'으로 가면 라이브러리 안에서 연다(기능 · 데이터 그대로) */
   { const g0 = go; go = function (id, keep) { try { if (S && S.org && S.nav && typeof id === 'string') { if (id === 'clib') UI.clibSub = '';
-    else if ((id === 'library' || id === 'dbook') && MENU.clib && !menuOn(id) && menuOn('clib')) { UI.clibSub = id; return g0('clib', keep); } } } catch (e) { console.warn(e); } return g0(id, keep); }; }
+    else if ((id === 'library' || id === 'dbook') && MENU.clib) { UI.clibSel = ''; if (id === 'library') { UI.clibSub = ''; UI.clibT = 'video'; } else if (UI.bkId && typeof bkOf === 'function' && bkOf(UI.bkId)) UI.clibSub = 'dbook'; else { UI.clibSub = ''; UI.clibT = 'book'; } return g0('clib', keep); }
+    if (id !== 'clib') document.body.classList.remove('clb-sheet'); } } catch (e) { console.warn(e); } return g0(id, keep); }; }
+  /* AI SAM 칩: 합친 화면에서 예전 두 화면('영상 · 자료' · '디지털북')의 칩을 함께 쓴다 */
+  if (typeof scxDefs === 'function') { const base = scxDefs; scxDefs = k => { const r = base(k); if (k !== 'clib' || (r && r.length >= 3)) return r; let L = (r || []).slice();
+    try { const V = base('library') || [], B = base('dbook') || []; L = L.concat([V[0], B[0], V.find(x => x[0] === 'l-unused'), V.find(x => x[0] === 'l-conv'), B.find(x => x[0] === 'db-list')].filter(Boolean)); } catch (e) { } return L; }; }
 
-  /* ── 화면 ── */
+  /* ── 화면(v37 P3) — '영상 · 자료'와 하나로 합친 콘텐츠 라이브러리 ──
+     대표님(2026-11-10): '영상자료 / 콘텐츠 라이브러리가 겹치는 기능 같은데 하나로 합쳐줘. UI/UX도 좀 더 깔끔하게'.
+     위 [만들기] 하나 + 옆 [튜토리얼 영상 추천] · 종류 칩(전체 · 영상 · 문서 · 퀴즈/시험/설문 · 디지털북 · 링크) · 찾기 · 카드/목록 전환
+     · 카드(썸네일 · 종류 · 길이 · 사용처) 클릭 → 오른쪽 미리보기 패널(바로 고치기 · 과정에 넣기 · 복제 · 삭제). 휴대폰은 패널이 아래에서 올라온다.
+     예전 '영상 · 자료 보관함'의 기능(이름 바꾸기 · 변환 상태 · 저장 공간 · 사용 중 삭제 막기)은 이 화면의 패널 · 아래 줄로 옮겼다. */
   const PAGE = 36;
+  const kName = k => (KIND[k] || KIND.file)[0];
   const icoBox = k => `<span class="clb-ic k-${(KIND[k] || KIND.file)[2]}" aria-hidden="true">${ic((KIND[k] || KIND.file)[1], 22)}</span>`;
-  function card(e) {
-    const U = e.uses; const u = U[0];
-    const use = U.length ? `<span class="clb-use on">${ic('check', 14)} 사용 중: ${esc(useLabel(u))}${U.length > 1 ? ` 외 ${U.length - 1}곳` : ''}</span>` : `<span class="clb-use">아직 어느 ${esc(cname())}에도 넣지 않았습니다</span>`;
-    const q = `${e.title} ${subOf(e)} ${U.map(useLabel).join(' ')}`.toLowerCase();
-    return `<article class="clb-card" data-q="${esc(q)}">${icoBox(e.kind)}<div class="clb-tx"><b title="${esc(e.title)}">${esc(e.title)}</b><small>${esc((KIND[e.kind] || KIND.file)[0])}${subOf(e) && subOf(e) !== (KIND[e.kind] || KIND.file)[0] ? ' · ' + esc(subOf(e).replace(/^(교안|파일|퀴즈|과제) · /, '')) : ''}</small>${use}</div>
-      <div class="clb-acts"><button type="button" class="btn pri" data-act="clb-put" data-v="${esc(e.key)}">${esc(cname())}에 넣기</button><button type="button" class="btn" data-act="clb-pv" data-v="${esc(e.key)}">미리보기</button><button type="button" class="btn" data-act="clb-edit" data-v="${esc(e.key)}">고치기</button></div></article>`;
-  }
+  const ytOfE = e => { const r = e.ref || {}; return (r.yt && r.yt.id) || ytOfU(r.url) || ytOfU(e.origin === 'lib' ? r.name : '') || ''; };
+  /* 링크 = 바깥 주소로 연결한 것(YouTube · 웹 주소 · 'YouTube에서 찾아볼 영상') */
+  const isLink = e => { const r = e.ref || {}; if (e.origin === 'lib') return r.kind === 'YouTube' || /^https?:/.test(String(r.url || ''));
+    return r.kind === 'youtube' || r.src === 'youtube' || r.tut === 1 || /^https?:\/\//.test(String(r.url || '')); };
+  const inTab = (e, tb) => tb === 'all' || (tb === 'video' && e.kind === 'video') || (tb === 'doc' && ['doc', 'file'].includes(e.kind)) || (tb === 'quiz' && ['quiz', 'exam', 'survey', 'assign'].includes(e.kind)) || (tb === 'book' && e.kind === 'book') || (tb === 'link' && isLink(e));
+  function lenOf(e) { const r = e.ref || {};
+    if (e.origin === 'book') return `${(r.chs || []).length}단원`;
+    if (e.origin === 'lib') return r.kind === '평가' ? `${((r.item || {}).qs || []).length || ''}${((r.item || {}).qs || []).length ? '문항' : ''}` : (r.size && r.size !== '—' ? String(r.size) : '');
+    if (e.kind === 'video') return r.ai && r.ai.mins ? `${r.ai.mins}분` : (r.yt && r.yt.dur) || r.dur || (typeof r.size === 'string' ? r.size : '');
+    if (['quiz', 'survey'].includes(e.kind)) return `${(r.qs || []).length}문항`;
+    if (e.kind === 'exam') { const R = r.rules || {}; return R.draw ? `${R.draw}문항 출제` : `${(r.qs || []).length}문항`; }
+    if (e.kind === 'doc') return r.doc && (r.doc.secs || []).length ? `${r.doc.secs.length}절` : '';
+    if (e.kind === 'file') return typeof r.size === 'number' ? (typeof a2Size === 'function' ? a2Size(r.size) : '') : (r.size || (r.bytes && typeof a2Size === 'function' ? a2Size(+r.bytes) : ''));
+    return ''; }
+  const extOf = e => { const r = e.ref || {}; const n = String((r.files && r.files[0] && r.files[0].name) || r.file || r.name || ''); const m = n.match(/\.(\w{2,5})$/); return m ? m[1].toUpperCase() : ''; };
+  function thumb(e) { const k = (KIND[e.kind] || KIND.file)[2]; const id = ytOfE(e); const r = e.ref || {}; const L = lenOf(e);
+    const st = e.origin === 'book' && r.color ? ` style="--bk:${esc(String(r.color).replace(/[^#\w(),.% ]/g, ''))}"` : '';
+    const inner = id ? `<img class="clb-thimg" src="https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg" alt="" loading="lazy">` : '';
+    const cap = e.origin === 'book' ? `<b class="clb-thb">${esc(e.title)}</b>` : e.kind === 'file' && extOf(e) ? `<b class="clb-thx">${esc(extOf(e))}</b>` : '';
+    return `<span class="clb-th k-${k}${id ? ' yt' : ''}"${st} aria-hidden="true"><span class="clb-thi">${ic((KIND[e.kind] || KIND.file)[1], 30)}${cap}</span>${inner}<em class="clb-thk">${esc(isLink(e) && e.kind === 'video' ? 'YouTube' : kName(e.kind))}</em>${L ? `<em class="clb-thl">${esc(L)}</em>` : ''}</span>`; }
+  const useLine = e => { const U = e.uses; return U.length ? `<span class="clb-use on">${ic('check', 14)} ${esc(useLabel(U[0]))}${U.length > 1 ? ` 외 ${U.length - 1}곳` : ''}</span>` : `<span class="clb-use">아직 사용 안 함</span>`; };
+  const qOf = e => `${e.title} ${kName(e.kind)} ${subOf(e)} ${e.uses.map(useLabel).join(' ')}`.toLowerCase();
+  function card(e) { const on = UI.clibSel === e.key;
+    return `<article class="clb-card${on ? ' on' : ''}" data-act="clb-sel" data-v="${esc(e.key)}" data-q="${esc(qOf(e))}" role="button" tabindex="0" aria-pressed="${on}" aria-label="${esc(e.title)} 미리보기">${thumb(e)}<div class="clb-tx"><b title="${esc(e.title)}">${esc(e.title)}</b><small>${esc(subOf(e))}</small>${useLine(e)}</div></article>`; }
+  function row(e) { const on = UI.clibSel === e.key; const L = lenOf(e);
+    return `<article class="clb-lrow${on ? ' on' : ''}" data-act="clb-sel" data-v="${esc(e.key)}" data-q="${esc(qOf(e))}" role="button" tabindex="0" aria-pressed="${on}" aria-label="${esc(e.title)} 미리보기">${thumb(e)}<div class="clb-tx"><b title="${esc(e.title)}">${esc(e.title)}</b>${useLine(e)}</div><span class="clb-lk">${esc(kName(e.kind))}</span><span class="clb-ll">${esc(L || '—')}</span><span class="clb-chev" aria-hidden="true">›</span></article>`; }
   const START = () => [
     ['upload', '1', '가진 파일 올리기', '쓰던 영상 · PPT · PDF가 있다면 그대로 올립니다.', '파일 올리기'],
     ['aivideo', '2', '주제만 쓰고 AI 강의 영상 만들기', '한 줄만 쓰면 슬라이드와 목소리로 된 강의가 나옵니다.', 'AI 영상 만들기'],
@@ -248,36 +279,93 @@
       <p class="clb-help">어려우면 오른쪽 아래 <b>AI SAM</b>에게 "콘텐츠 만들어줘"라고 말해 보세요.</p></section>`;
   }
   function subBar(name) { return `<div class="clb-subbar"><button type="button" class="btn" data-act="clb-home">← 콘텐츠 라이브러리</button><span>${esc(name)}</span></div>`; }
+  const viewMode = () => { if (UI.clibV) return UI.clibV; try { UI.clibV = localStorage.getItem('didisam.clibV') === 'list' ? 'list' : 'card'; } catch (e) { UI.clibV = 'card'; } return UI.clibV; };
+  function storageLine() { try { const LB = (S.lib || []).filter(l => l.kind !== '평가' && l.kind !== 'YouTube'); if (!LB.length || typeof a2Bytes !== 'function') return '';
+    const used = LB.reduce((a, l) => a + (a2Bytes(l) || 0), 0); const capG = (typeof A2 !== 'undefined' && A2.plan && A2.plan[S.org.plan]) || 1000;
+    return `<p class="clb-store">${ic('clfile', 16)} 올린 파일 저장 공간 ${esc((typeof a2Size === 'function' && a2Size(used)) || '0KB')} / ${capG}GB · 영상 1개 최대 2시간</p>`; } catch (e) { return ''; } }
+
+  /* 오른쪽 미리보기 패널 */
+  function pvBody(e) { const r = e.ref; const T = e.title; const id = ytOfE(e);
+    if (e.origin === 'book') { const ch = r.chs || []; return `<div class="clb-pbk" style="--bk:${esc(String(r.color || '#5C74F6').replace(/[^#\w(),.% ]/g, ''))}"><b>${esc(T)}</b><small>${ch.length}단원</small></div>${ch.length ? `<ol class="clb-pch">${ch.slice(0, 8).map(c => `<li>${esc(c.title || '')}</li>`).join('')}${ch.length > 8 ? `<li class="mini">외 ${ch.length - 8}단원</li>` : ''}</ol>` : ''}`; }
+    if (id) return `<a class="clb-yt" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener"><span class="clb-pth">${thumb(e)}</span><span>YouTube에서 보기 ›</span></a>`;
+    if (e.origin === 'lib' && r.kind !== '평가') { const cv = r.kind === '동영상' && typeof a2ConvOf === 'function' ? a2ConvOf(r) : ''; return `<span class="clb-pth">${thumb(e)}</span>${cv ? `<p class="clb-conv">재생 준비 상태: <b>${esc(cv)}</b>${cv === '최적화 실패' ? ' — Handbrake로 다시 인코딩한 뒤 올려 주세요.' : ''}</p>` : ''}<p class="mini">데모에서는 파일 이름 · 크기만 기록합니다. 실제 운영에서는 여기서 바로 재생 · 열기가 됩니다.</p>`; }
+    const it = e.origin === 'lib' ? (r.item || {}) : r;
+    if (it.ai && (it.ai.scenes || []).length) return `<span class="clb-pth">${thumb(e)}</span><button type="button" class="btn clb-play" data-act="clb-pv" data-v="${esc(e.key)}">${ic('clplay', 18)} 재생해 보기 (장면 ${it.ai.scenes.length}개)</button>`;
+    if (it.doc && (it.doc.secs || []).length) { const D = it.doc; return `<div class="clb-docpv">${(D.goals || []).length ? `<b>학습 목표</b><ul>${D.goals.slice(0, 3).map(g => `<li>${esc(g)}</li>`).join('')}</ul>` : ''}${D.secs.slice(0, 3).map((s, i) => `<h4>${i + 1}. ${esc(s.h)}</h4><p>${esc(String(s.body || '').slice(0, 160))}${String(s.body || '').length > 160 ? '…' : ''}</p>`).join('')}${D.secs.length > 3 ? `<p class="mini">외 ${D.secs.length - 3}절</p>` : ''}</div>`; }
+    if ((it.qs || []).length) return `<ol class="clb-qs">${it.qs.slice(0, 5).map(x => `<li>${esc(String(x.q || '').replace(/^\d+\.\s*/, ''))}</li>`).join('')}</ol>${it.qs.length > 5 ? `<p class="mini">외 ${it.qs.length - 5}문항</p>` : ''}`;
+    if (it.desc) return `<p class="clb-pre">${esc(String(it.desc).slice(0, 400))}</p>`;
+    if (it.q && !it.url) return `<p>아직 영상을 고르지 않았습니다. <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(it.q)}" target="_blank" rel="noopener">YouTube에서 「${esc(it.q)}」 찾기 ›</a></p>`;
+    if ((it.files || []).length || it.file) return `<span class="clb-pth">${thumb(e)}</span><p>파일: ${esc((it.files && it.files[0] && it.files[0].name) || it.file)}</p>`;
+    return `<p class="mini">아직 내용이 비어 있습니다. [바로 고치기]로 채워 주세요.</p>`; }
+  function canDel(e) { if (e.origin === 'course') return `「${e.c.name}」 안에 있는 항목입니다. ${cname()} 화면에서 지울 수 있습니다.`; if (e.uses.length) return `${e.uses.length}곳에서 쓰고 있어 지울 수 없습니다. 먼저 ${cname()}에서 빼 주세요.`; return ''; }
+  function panelHTML() { const e = UI.clibSel && byKey(UI.clibSel); if (!e) return '';
+    const no = canDel(e); const U = e.uses;
+    return `<div class="clb-ph"><span class="clb-pk">${esc(kName(e.kind))}</span><b>${esc(e.title)}</b><button type="button" class="clb-px" data-act="clb-close" aria-label="미리보기 닫기">${ic('x', 20)}</button></div>
+      <div class="clb-pa"><button type="button" class="btn pri" data-act="clb-edit" data-v="${esc(e.key)}">${ic('spark', 16)} 바로 고치기</button><button type="button" class="btn" data-act="clb-put" data-v="${esc(e.key)}">${esc(cname())}에 넣기</button>
+      <button type="button" class="btn" data-act="clb-dup" data-v="${esc(e.key)}">복제</button><button type="button" class="btn clb-del" data-act="clb-del" data-v="${esc(e.key)}" ${no ? 'aria-disabled="true"' : ''} title="${esc(no)}">삭제</button>${no ? `<p class="clb-pno">${esc(no)}</p>` : ''}</div>
+      <div class="clb-pb">${pvBody(e)}
+      <dl class="clb-dl"><dt>종류</dt><dd>${esc(subOf(e) || kName(e.kind))}</dd>${lenOf(e) ? `<dt>길이</dt><dd>${esc(lenOf(e))}</dd>` : ''}${e.at ? `<dt>만든 날</dt><dd>${esc(String(e.at).slice(0, 10))}</dd>` : ''}<dt>사용처</dt><dd>${U.length ? `<ul class="clb-ul">${U.map(u => `<li><button type="button" class="link" data-act="clb-goc" data-v="${esc(u.c.id)}">${esc(useLabel(u))}</button></li>`).join('')}</ul>` : '아직 없음'}</dd></dl></div>`; }
+  function panelDraw() { const P = document.getElementById('clbPanel'); if (!P) return render(); const h = panelHTML(); P.innerHTML = h; P.hidden = !h;
+    const W = document.querySelector('#main .clb-wrap'); if (W) W.classList.toggle('has-p', !!h); document.body.classList.toggle('clb-sheet', !!h && innerWidth <= 860);
+    document.querySelectorAll('#main [data-act=clb-sel]').forEach(c => { const on = c.dataset.v === UI.clibSel; c.classList.toggle('on', on); c.setAttribute('aria-pressed', on); });
+    if (h) { const x = P.querySelector('.clb-px'); if (innerWidth <= 860 && x) x.focus({ preventScroll: true }); } }
+
   VIEWS.clib = () => {
     ensure();
-    if (UI.clibSub === 'dbook' && VIEWS.dbook) { if (UI.bkId && typeof bkOf === 'function' && bkOf(UI.bkId)) return subBar('디지털북 고치기') + VIEWS.dbook(); UI.clibSub = ''; UI.clibT = 'book'; }
-    if (UI.clibSub === 'library' && VIEWS.library) return subBar('영상 · 자료 보관함(저장 공간 · 변환 상태 · 이름 바꾸기)') + VIEWS.library();
+    if (UI.clibSub === 'dbook' && VIEWS.dbook) { if (UI.bkId && typeof bkOf === 'function' && bkOf(UI.bkId)) return subBar('디지털북 고치기') + VIEWS.dbook(); UI.clibSub = ''; }
+    if (UI.clibSub === 'library') { UI.clibSub = ''; UI.clibT = 'video'; } /* 예전 '영상 · 자료' → 같은 화면의 '영상' */
     const A = entries(); const tb = TABS.some(x => x[0] === UI.clibT) ? UI.clibT : 'all'; const L = A.filter(e => inTab(e, tb)); const q = String(UI.clibQ || '').trim().toLowerCase();
-    const n = k => A.filter(e => inTab(e, k)).length; const lim = UI.clibN || PAGE;
-    const top = `<div class="clb-top"><div class="clb-lead"><p>모든 ${esc(cname())}의 영상 · 교안 · 퀴즈 · 디지털북을 한곳에서 보고, 여기서 바로 만들어 ${esc(cname())}에 넣습니다.</p></div><div class="clb-topb"><button type="button" class="btn clb-tutb" data-act="clb-tut">${ic('clyt', 20)} 튜토리얼 영상 추천</button><button type="button" class="btn pri clb-make" data-act="clb-make">${ic('clplus', 20)} 만들기</button></div></div>`;
-    const lmsNote = ULMS_() && MENU.lmsv && tb !== 'book' && tb !== 'doc' && tb !== 'quiz' ? `<div class="clb-note">${ic('clplay', 18)}<span>학사 수업의 강의 영상(녹화 · 자막 · 학사 전송)은 <b>강의 영상 관리</b>에서 올리고 관리합니다. 여기에는 교안 · 퀴즈 · 디지털북과 따로 만든 영상이 모입니다.</span><button type="button" class="btn" data-act="go" data-v="lmsv">강의 영상 관리 열기</button></div>` : '';
-    if (!A.length) return `<div class="clb">${top}${lmsNote}${emptyHTML()}${legacy()}</div>`;
+    if (UI.clibSel && !A.some(e => e.key === UI.clibSel)) UI.clibSel = '';
+    const n = k => A.filter(e => inTab(e, k)).length; const lim = UI.clibN || PAGE; const vm = viewMode();
+    const top = `<div class="clb-top"><p class="clb-lead">모든 ${esc(cname())}의 영상 · 문서 · 퀴즈 · 디지털북을 한곳에서 보고, 여기서 바로 만들어 ${esc(cname())}에 넣습니다.</p><div class="clb-topb"><button type="button" class="btn pri clb-make" data-act="clb-make">${ic('clplus', 20)} 만들기</button><button type="button" class="btn clb-tutb" data-act="clb-tut">${ic('clyt', 20)} 튜토리얼 영상 추천</button></div></div>`;
+    const lmsNote = ULMS_() && MENU.lmsv && ['all', 'video'].includes(tb) ? `<div class="clb-note">${ic('clplay', 18)}<span>학사 수업의 강의 영상(녹화 · 자막 · 학사 전송)은 <b>강의 영상 관리</b>에서 올리고 관리합니다. 여기에는 교안 · 퀴즈 · 디지털북과 따로 만든 영상이 모입니다.</span><button type="button" class="btn" data-act="go" data-v="lmsv">강의 영상 관리 열기</button></div>` : '';
+    if (!A.length) return `<div class="clb">${top}${lmsNote}${emptyHTML()}</div>`;
     const bar = `<div class="clb-bar"><div class="clb-tabs" role="tablist" aria-label="종류">${TABS.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === tb}" class="${k === tb ? 'on' : ''}" data-act="clb-tab" data-v="${k}">${esc(l)} <em>${n(k)}</em></button>`).join('')}</div>
-      <label class="clb-search">${ic('clsearch', 18)}<input type="search" id="clbQ" value="${esc(UI.clibQ || '')}" placeholder="이름 · ${esc(cname())} 이름으로 찾기" aria-label="콘텐츠 찾기"></label></div>`;
-    const shown = L.filter(e => !q || `${e.title} ${subOf(e)} ${e.uses.map(useLabel).join(' ')}`.toLowerCase().includes(q));
-    const make1 = MAKE.find(m => (tb === 'video' && m[0] === 'aivideo') || (tb === 'doc' && m[0] === 'doc') || (tb === 'quiz' && m[0] === 'quiz') || (tb === 'book' && m[0] === 'book') || (tb === 'file' && m[0] === 'upload'));
-    const body = L.length ? `<div class="clb-grid" id="clbGrid">${L.slice(0, lim).map(card).join('')}</div><div class="clb-none" id="clbNone" ${shown.length ? 'hidden' : ''}>찾는 콘텐츠가 없습니다. 다른 말로 찾아보거나 [만들기]를 눌러 새로 만드세요.</div>${L.length > lim ? `<div class="clb-more"><button type="button" class="btn" data-act="clb-more">더 보기 (${L.length - lim}개 더)</button></div>` : ''}`
-      : `<div class="clb-empty1"><p>아직 ${esc(TABS.find(x => x[0] === tb)[1])} 콘텐츠가 없습니다.</p>${make1 ? `<button type="button" class="btn pri" data-act="clb-mk" data-v="${make1[0]}">${esc(make1[1])} ${make1[0] === 'upload' ? '' : '만들기'}</button>` : ''}</div>`;
+      <div class="clb-tools"><label class="clb-search">${ic('clsearch', 18)}<input type="search" id="clbQ" value="${esc(UI.clibQ || '')}" placeholder="콘텐츠 찾기" aria-label="콘텐츠 이름 · ${esc(cname())} 이름으로 찾기"></label>
+      <div class="clb-vw" role="group" aria-label="보기 방식"><button type="button" data-act="clb-view" data-v="card" aria-pressed="${vm === 'card'}" class="${vm === 'card' ? 'on' : ''}">카드</button><button type="button" data-act="clb-view" data-v="list" aria-pressed="${vm === 'list'}" class="${vm === 'list' ? 'on' : ''}">목록</button></div></div></div>`;
+    const shown = L.filter(e => !q || qOf(e).includes(q));
+    const make1 = MAKE.find(m => (tb === 'video' && m[0] === 'aivideo') || (tb === 'doc' && m[0] === 'doc') || (tb === 'quiz' && m[0] === 'quiz') || (tb === 'book' && m[0] === 'book') || (tb === 'link' && m[0] === 'youtube'));
+    const body = L.length ? `<div class="${vm === 'list' ? 'clb-list' : 'clb-grid'}" id="clbGrid">${L.slice(0, lim).map(vm === 'list' ? row : card).join('')}</div><div class="clb-none" id="clbNone" ${shown.length ? 'hidden' : ''}>찾는 콘텐츠가 없습니다. 다른 말로 찾아보거나 [만들기]를 눌러 새로 만드세요.</div>${L.length > lim ? `<div class="clb-more"><button type="button" class="btn" data-act="clb-more">더 보기 (${L.length - lim}개 더)</button></div>` : ''}`
+      : `<div class="clb-empty1"><p>아직 ${esc(TABS.find(x => x[0] === tb)[1])} 콘텐츠가 없습니다.</p>${make1 ? `<button type="button" class="btn pri" data-act="clb-mk" data-v="${make1[0]}">${esc(make1[1])} ${['upload', 'youtube'].includes(make1[0]) ? '넣기' : '만들기'}</button>` : ''}</div>`;
     const fresh = !A.some(x => x.origin !== 'book'); /* 기본으로 들어 있는 디지털북만 있을 때도 처음 안내를 먼저 보여 준다 */
-    return `<div class="clb">${top}${lmsNote}${fresh ? emptyHTML() : ''}${bar}${body}${legacy()}</div>`;
+    const ph = panelHTML(); setTimeout(() => document.body.classList.toggle('clb-sheet', !!ph && innerWidth <= 860), 0);
+    return `<div class="clb">${top}${lmsNote}${fresh ? emptyHTML() : ''}${bar}<div class="clb-wrap${ph ? ' has-p' : ''}"><div class="clb-main">${body}${storageLine()}</div><aside class="clb-panel" id="clbPanel" aria-label="미리보기" ${ph ? '' : 'hidden'}>${ph}</aside></div></div>`;
   };
-  function legacy() { const L = [];
-    if (VIEWS.library && (S.lib || []).length) L.push(`<button type="button" class="link" data-act="clb-sub" data-v="library">영상 · 자료 보관함(저장 공간 · 변환 상태)</button>`);
-    return ''; /* v36 평가 12: '예전 화면' 링크는 혼란을 주어 뺐다(보관함 기능은 메뉴 찾기 · 설정에서 그대로) */ }
 
   /* 검색은 다시 그리지 않고 카드만 거른다(입력 중 초점 유지) */
   document.addEventListener('input', ev => { if (ev.target.id !== 'clbQ') return; UI.clibQ = ev.target.value; const q = ev.target.value.trim().toLowerCase(); let k = 0;
-    document.querySelectorAll('#clbGrid .clb-card').forEach(c => { const on = !q || c.dataset.q.includes(q); c.hidden = !on; if (on) k++; }); const no = document.getElementById('clbNone'); if (no) no.hidden = !!k; });
+    document.querySelectorAll('#clbGrid [data-q]').forEach(c => { const on = !q || c.dataset.q.includes(q); c.hidden = !on; if (on) k++; }); const no = document.getElementById('clbNone'); if (no) no.hidden = !!k; });
+  /* 썸네일을 못 받으면(오프라인 등) 아이콘 그림으로 둔다 — 인라인 onerror는 CSP로 막혀 있어 여기서 */
+  document.addEventListener('error', ev => { const t = ev.target; if (t && t.classList && t.classList.contains('clb-thimg')) { const p = t.parentElement; t.remove(); if (p) p.classList.remove('yt'); } }, true);
+  document.addEventListener('keydown', ev => { const t = ev.target; if ((ev.key === 'Enter' || ev.key === ' ') && t && t.matches && t.matches('#main article[data-act=clb-sel]')) { ev.preventDefault(); ACT['clb-sel'](t); }
+    if (ev.key === 'Escape' && UI.clibSel && document.getElementById('clbPanel') && !document.getElementById('modal')) ACT['clb-close'](); });
 
   ACT['clb-tab'] = el => { UI.clibT = el.dataset.v; UI.clibN = 0; render(); };
   ACT['clb-more'] = () => { UI.clibN = (UI.clibN || PAGE) + PAGE; render(); };
   ACT['clb-home'] = () => { UI.clibSub = ''; UI.bkId = null; render(); };
-  ACT['clb-sub'] = el => { UI.clibSub = el.dataset.v; render(); window.scrollTo(0, 0); };
+  ACT['clb-sub'] = el => { UI.clibSub = el.dataset.v; render(); };
+  ACT['clb-view'] = el => { UI.clibV = el.dataset.v === 'list' ? 'list' : 'card'; try { localStorage.setItem('didisam.clibV', UI.clibV); } catch (e) { } render(); };
+  ACT['clb-sel'] = el => { const k = el.dataset.v; UI.clibSel = UI.clibSel === k && innerWidth > 860 ? '' : k; panelDraw(); };
+  ACT['clb-close'] = () => { const k = UI.clibSel; UI.clibSel = ''; panelDraw(); const c = k && document.querySelector(`#main [data-act=clb-sel][data-v="${CSS.escape(k)}"]`); if (c) c.focus({ preventScroll: true }); };
+  ACT['clb-goc'] = el => { UI.cls = el.dataset.v; UI.clibSel = ''; document.body.classList.remove('clb-sheet'); go('class'); };
+  /* 복제: 단독 콘텐츠 · 과정 항목 · 예전 보관함 → 새 단독 콘텐츠(S.clib), 디지털북 → 새 디지털북 */
+  ACT['clb-dup'] = el => { const e = byKey(el.dataset.v); if (!e) return; let nk = '';
+    if (e.origin === 'book') { if (typeof LSV !== 'function') return; const b = JSON.parse(JSON.stringify(e.ref)); b.id = uid('bk'); b.title = `${b.title} (사본)`.slice(0, 60); delete b.cls; b.at = today(); LSV().dbooks.push(typeof bkNorm === 'function' ? bkNorm(b) : b); save(); nk = 'bk:' + b.id; }
+    else { const r = JSON.parse(JSON.stringify(recOf(e))); delete r.id; if (e.origin !== 'lib') delete r.lib; delete r.clib; r.usedIn = []; r.at = today(); r.title = `${r.title || e.title} (사본)`.slice(0, 80); const x = add(r); if (x) nk = 'cl:' + x.id; }
+    if (!nk) { toast('복제하지 못했습니다.', 'warn'); return; } try { logAudit(`콘텐츠 라이브러리 복제 — ${e.title}`); } catch (er) { }
+    UI.clibSel = nk; UI.clibT = 'all'; UI.clibQ = ''; render(); toast(`「${e.title}」${josa(e.title, '을', '를')} 복제했습니다. 사본은 아직 어느 ${cname()}에도 넣지 않았습니다.`, 'ok'); };
+  ACT['clb-del'] = el => { const e = byKey(el.dataset.v); if (!e) return; const no = canDel(e); if (no) { toast(no, 'warn'); return; }
+    modal('콘텐츠 삭제', `<p>「${esc(e.title)}」${josa(e.title, '을', '를')} 라이브러리에서 지울까요? 지우면 되돌릴 수 없습니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '삭제', kind: 'pri', run: () => {
+      if (e.origin === 'clib') S.clib = (S.clib || []).filter(x => x !== e.ref);
+      else if (e.origin === 'lib') S.lib = (S.lib || []).filter(x => x !== e.ref);
+      else if (e.origin === 'book' && typeof LSV === 'function') { const L = LSV(); L.dbooks = (L.dbooks || []).filter(x => x !== e.ref); }
+      try { logAudit(`콘텐츠 라이브러리 삭제 — ${e.title}`); } catch (er) { } UI.clibSel = ''; document.body.classList.remove('clb-sheet'); save(); render(); toast('지웠습니다.', 'ok'); } }]); };
+  /* 예전 보관함 자료 고치기: 이름(YouTube는 주소도) — 예전 '영상 · 자료' 화면의 이름 바꾸기를 여기로 */
+  function libEdit(e) { const l = e.ref; const yt = l.kind === 'YouTube';
+    modal('바로 고치기', `<div class="clb-ask"><label class="fl clb-fl">이름<input name="t" maxlength="80" value="${esc(e.title)}"></label>${yt ? `<label class="fl clb-fl">YouTube 주소<input name="u" inputmode="url" value="${esc(l.url || (/^https:/.test(l.name) ? l.name : ''))}"></label>` : ''}</div>`,
+      [{ id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { const v = fv(w, 't'); if (!v) { toast('이름을 적어 주세요.', 'warn'); return false; }
+        if (yt) { const u = fv(w, 'u'); if (u && !/^https:\/\/(www\.|m\.)?(youtube\.com\/(watch\?v=|shorts\/)|youtu\.be\/)[\w-]{11}/.test(u)) { toast('YouTube 주소를 확인해 주세요.', 'warn'); return false; } if (u) l.url = u; }
+        const ext = (String(l.name).match(/\.(mp4|webm|mov|m4v|pdf|pptx?|docx?|xlsx?|hwpx?)$/i) || [''])[0]; l.name = v + (ext && !v.toLowerCase().endsWith(ext.toLowerCase()) ? ext : ''); save(); render(); toast('저장했습니다.', 'ok'); } }]); }
   /* 만들기: 종류 카드 하나 고르기 */
   ACT['clb-make'] = () => {
     const K = (CTX().kinds || []).length ? CTX().kinds : TMP.kinds; const nm = k => { const x = K.find(y => (y.k || y.id || y.kind) === k); return x ? [x.n || x.name || '', x.d || x.one || x.desc || '', x.time || ''] : null; };
@@ -302,7 +390,7 @@
   ACT['clb-edit'] = el => { const e = byKey(el.dataset.v); if (!e) return;
     if (e.origin === 'book') { UI.clibSub = 'dbook'; if (typeof bkOpen === 'function') bkOpen(e.ref.id); return; }
     if (e.origin === 'course') { const i = e.c.curriculum.indexOf(e.it); UI.cls = e.c.id; UI.clsT = 'curriculum'; go('class'); if (i >= 0 && typeof openEditor === 'function') setTimeout(() => openEditor(e.c, i), 0); return; }
-    if (e.origin === 'lib') { UI.clibSub = 'library'; render(); window.scrollTo(0, 0); return; }
+    if (e.origin === 'lib' && e.ref.kind !== '평가') { libEdit(e); return; }
     const ref = e.ref; CTX().open(ctKind(e), { item: ref, from: 'lib', title: ref.title, onDone: x => { if (!x) return;
       /* C3 도구는 라이브러리에서 연 결과를 새 기록으로 저장한다 → 고친 내용을 원래 기록에 옮기고 새 기록은 지운다(사용처 · id 유지) */
       if (x.id && x.id !== ref.id) S.clib = (S.clib || []).filter(y => y.id !== x.id);
@@ -468,5 +556,65 @@
 .clb-tc{display:flex;flex-direction:column;border:1px solid var(--g300);border-radius:8px;overflow:hidden;background:#fff}.clb-tth{display:block;aspect-ratio:16/9;background:var(--g200)}.clb-tth,.clb-tth *{text-decoration:none !important}.clb-tqr input{padding:0 12px;border:1px solid var(--g400);border-radius:8px}.clb-tth img{width:100%;height:100%;object-fit:cover;display:block}
 .clb-tq{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#C4302B;background:#FFF5F5}.clb-tt{padding:8px 10px;flex:1;display:flex;flex-direction:column;gap:2px}.clb-tt b{font-size:15px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.clb-tt small{font-size:13px;color:var(--t-sub)}
 .clb-ts{margin:0 10px 10px;min-height:44px}.clb-tfind{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:12px 0;padding:10px 12px;border:1px dashed var(--g400,#BFC0C0);border-radius:8px;font-size:15px}.clb-tfind>b{display:inline-flex;align-items:center;gap:4px}.clb-tfind small{color:var(--t-sub,#666767)}.clb-tfl{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;flex:1 1 100%;scrollbar-width:thin;padding-bottom:2px}.clb-tfl a{flex:0 0 auto;padding:8px 12px;border-radius:999px;background:var(--g100,#F1F2F2);color:var(--g900,#2A2B2B);text-decoration:none;font-size:14px;white-space:nowrap}.clb-tfl a:hover{background:var(--s50,#EAEDFF)}.clb-none1{margin:0 0 10px;font-size:15px}.clb-tc.link{border-style:dashed}
-@media (max-width:640px){.clb-topb{width:100%}.clb-topb .btn{flex:1 1 100%;justify-content:center}.clb-tqr{flex-direction:column;align-items:stretch}.clb-tl{grid-template-columns:1fr 1fr}.clb-tt b{font-size:14px}}`; document.head.appendChild(st); }
+@media (max-width:640px){.clb-topb{width:100%}.clb-topb .btn{flex:1 1 100%;justify-content:center}.clb-tqr{flex-direction:column;align-items:stretch}.clb-tl{grid-template-columns:1fr 1fr}.clb-tt b{font-size:14px}}
+/* v37 P3: 하나로 합친 라이브러리 — 썸네일 카드 · 목록 · 오른쪽 미리보기 패널 */
+.clb-top{align-items:flex-end}.clb-lead{margin:0;color:var(--t-sub);font-size:16px;line-height:1.5;max-width:620px;flex:1 1 320px}
+.clb-topb .btn.clb-tutb{min-height:56px;font-size:16px;font-weight:600}
+.clb-tools{display:flex;gap:8px;align-items:center;flex:0 1 460px;min-width:0}
+.clb-tools .clb-search{flex:1 1 auto;min-width:0}
+.clb-vw{display:inline-flex;border:1px solid var(--g400);border-radius:8px;overflow:hidden;flex:0 0 auto}
+.clb-vw button{min-height:48px;min-width:56px;padding:0 12px;border:0;background:#fff;font:inherit;font-size:15px;font-weight:600;color:var(--g700);cursor:pointer}
+.clb-vw button+button{border-left:1px solid var(--g300)}.clb-vw button.on{background:var(--g900);color:#fff}
+.clb-wrap{display:block}.clb-wrap.has-p{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+.clb-main{min-width:0}
+.clb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.clb-card{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;overflow:hidden;cursor:pointer;background:#fff;border:1px solid var(--g300);border-radius:10px;box-shadow:var(--e1);transition:border-color .15s,box-shadow .15s}
+.clb-card:hover,.clb-lrow:hover{border-color:var(--s400)}
+.clb-card:focus-visible,.clb-lrow:focus-visible{outline:none;box-shadow:0 0 0 3px var(--s100);border-color:var(--s400)}
+.clb-card.on,.clb-lrow.on{border-color:var(--s500,#5C74F6);box-shadow:0 0 0 2px var(--s100)}
+.clb-card .clb-tx{padding:12px 14px 14px;gap:4px}
+.clb-card .clb-tx b{font-size:16px}
+.clb-th{position:relative;display:block;aspect-ratio:16/9;background:var(--s50);color:var(--s600);overflow:hidden}
+.clb-th.k-d{background:#E3F3FC;color:#0B6FAE}.clb-th.k-q{background:#FFF3E0;color:#A84A00}.clb-th.k-f{background:var(--g200);color:var(--g800)}
+.clb-th.k-b{background:var(--bk,#5C74F6);color:#fff}
+.clb-thi{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;text-align:center}
+.clb-thb{font-size:15px;line-height:1.3;max-width:90%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.clb-thx{font-size:13px;letter-spacing:.04em}
+.clb-thimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.clb-thk,.clb-thl{position:absolute;font-style:normal;font-size:12px;font-weight:700;line-height:1;padding:5px 7px;border-radius:6px;background:rgba(31,32,32,.78);color:#fff}
+.clb-thk{left:8px;top:8px}.clb-thl{right:8px;bottom:8px}
+.clb-list{display:flex;flex-direction:column;gap:8px}
+.clb-lrow{display:grid;grid-template-columns:96px minmax(0,1fr) 88px 80px 20px;gap:14px;align-items:center;padding:8px 14px 8px 8px;background:#fff;border:1px solid var(--g300);border-radius:10px;cursor:pointer;min-height:64px}
+.clb-lrow[hidden],.clb-card[hidden]{display:none}
+.clb-lrow .clb-th{width:96px;border-radius:6px}.clb-lrow .clb-thk,.clb-lrow .clb-thl,.clb-lrow .clb-thb,.clb-lrow .clb-thx{display:none}
+.clb-lrow .clb-tx b{font-size:16px;-webkit-line-clamp:1}
+.clb-lk{font-size:14px;font-weight:600;color:var(--g800)}.clb-ll{font-size:14px;color:var(--t-sub)}.clb-chev{font-size:20px;color:var(--g600)}
+.clb-store{display:flex;gap:6px;align-items:center;margin:16px 0 0;color:var(--t-sub);font-size:14px}
+.clb-panel{position:sticky;top:76px;background:#fff;border:1px solid var(--g300);border-radius:12px;box-shadow:var(--e2,0 4px 16px rgba(0,0,0,.08));display:flex;flex-direction:column;max-height:calc(100vh - 96px);overflow:hidden}
+.clb-panel[hidden]{display:none}
+.clb-ph{display:grid;grid-template-columns:1fr 48px;grid-template-rows:auto auto;column-gap:8px;padding:16px 8px 12px 18px;border-bottom:1px solid var(--g200)}
+.clb-pk{grid-column:1;font-size:13px;font-weight:700;color:var(--t-sub)}
+.clb-ph>b{grid-column:1;font-size:18px;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+.clb-px{grid-column:2;grid-row:1/3;width:48px;height:48px;border:0;background:transparent;border-radius:8px;cursor:pointer;color:var(--g700);display:grid;place-items:center}
+.clb-px:hover{background:var(--g100)}
+.clb-pb{padding:16px 18px;overflow:auto;flex:1 1 auto;display:flex;flex-direction:column;gap:14px}
+.clb-pth{display:block;border-radius:8px;overflow:hidden}.clb-pth .clb-th{border-radius:8px}
+.clb-pb .clb-yt span:last-child{display:inline-block;margin-top:8px;font-weight:700;color:var(--link)}
+.clb-pbk{background:var(--bk);color:#fff;border-radius:8px;padding:22px 18px;display:flex;flex-direction:column;gap:4px}.clb-pbk b{font-size:18px}
+.clb-pch{margin:0;padding-left:20px;line-height:1.7}
+.clb-conv{margin:0}.clb-play{min-height:48px}
+.clb-pb .clb-dl{margin:0;font-size:15px}.clb-ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}.clb-ul .link{font-size:15px;text-align:left;min-height:32px}
+.clb-pa{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px 18px;border-bottom:1px solid var(--g200)}
+.clb-pa .btn{min-height:48px;padding:0 6px;font-size:15px;justify-content:center;white-space:nowrap}.clb-pa .btn.pri{grid-column:1/-1;display:inline-flex;align-items:center;gap:6px}
+.clb-pa .clb-del{color:var(--t-err,#DE0027)}.clb-pa .clb-del[aria-disabled=true]{color:var(--g500,#9a9b9b);border-style:dashed}
+.clb-pno{grid-column:1/-1;margin:0;font-size:13px;color:var(--t-sub);line-height:1.45}
+@media (max-width:1100px){.clb-wrap.has-p{grid-template-columns:minmax(0,1fr) 330px}}
+@media (max-width:860px){.clb-wrap.has-p{display:block}
+  .clb-panel{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:90;max-height:88vh;border-radius:16px 16px 0 0;border:0;box-shadow:0 -8px 30px rgba(0,0,0,.18)}
+  body.clb-sheet::before{content:'';position:fixed;inset:0;background:rgba(31,32,32,.45);z-index:89}
+  body.clb-sheet .fab,body.clb-sheet #fab{visibility:hidden}
+  .clb-lrow{grid-template-columns:80px minmax(0,1fr) 20px;gap:10px}.clb-lrow .clb-th{width:80px}.clb-lk,.clb-ll{display:none}}
+@media (max-width:640px){.clb-bar{flex-direction:column;align-items:stretch}.clb-tools{flex:1 1 auto;width:100%}.clb-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .clb-card .clb-tx{padding:10px}.clb-card .clb-thb{display:none}.clb-card .clb-tx b{font-size:15px}.clb-card .clb-use{font-size:13px}.clb-card .clb-tx small{display:none}
+  .clb-topb .btn.clb-make,.clb-topb .btn.clb-tutb{flex:1 1 100%}}`; document.head.appendChild(st); }
 })();
