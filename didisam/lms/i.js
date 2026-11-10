@@ -44,7 +44,7 @@
     reg.forEach((p, j) => { if (c1) d.plays.push({ play_id: W3.uid(), content_id: c1.c.content_id, person_id: p.person_id, device: j % 3 ? 'desktop' : 'mobile', ip_masked: `10.20.${j}.*`, started_at: W3.ts(Date.parse(c1.s.starts_at) + 36e5 * (j + 1)), ended_at: W3.ts(Date.parse(c1.s.starts_at) + 36e5 * (j + 1) + 1500e3), last_beat_at: W3.ts(Date.parse(c1.s.starts_at) + 36e5 * (j + 1) + 1500e3), last_pos: 1500, rate_x100: 100, watched_sec: 1400 + j * 10 });
       d.acts.push({ section_id: sid, person_id: p.person_id, kind: ['view_material', 'download', 'post', 'submit_assignment'][j % 4], ref: '1차시', device: 'desktop', ip_masked: `10.20.${j}.*`, at: W3.ts(Date.parse(c1 ? c1.s.starts_at : now()) + 864e5) }); });
   };
-  L['POST /api/lms/i/seed'] = b => { if (!D().sections.find(s => s.section_id === b.section_id)) throw W3.err('not_found'); const n0 = D().contents.length; if (!secCts(b.section_id).length) W3.seedI(b.section_id); return { created: D().contents.length - n0 }; };
+  L['POST /api/lms/i/seed'] = b => { if (!D().sections.find(s => s.section_id === b.section_id)) throw W3.err('not_found'); const n0 = D().contents.length; if (!secCts(b.section_id).length && !(S && S.org && S.org.empty)) W3.seedI(b.section_id); return { created: D().contents.length - n0 }; };
   L['GET /api/lms/i/contents'] = b => { if (!D().sections.find(s => s.section_id === b.section_id)) throw W3.err('not_found'); return secCts(b.section_id).map(cj); };
   L['POST /api/lms/i/content'] = b => { const s = sesOf(b.session_id); if (!s) throw W3.err('not_found'); if (!b.title || !(+b.duration_sec >= 1)) throw W3.err('bad_input');
     const c = { content_id: W3.uid(), session_id: s.session_id, title: String(b.title).slice(0, 120), duration_sec: +b.duration_sec, src: b.src || null, qualities: ['auto', '360p', '720p', '1080p'], check_at_sec: b.check_at_sec != null ? Math.min(+b.check_at_sec, +b.duration_sec) : null }; D().contents.push(c); return cj({ c, s }); };
@@ -111,6 +111,7 @@
     W3.css('w3'); if (!ULMS_()) return '<div class="empty">대학(학사 LMS) 에디션에서 쓰는 화면입니다.</div>';
     const sec = W3.section(); if (sec === undefined) return W3.loading; if (sec.__err) return `<div class="empty">${esc(sec.__err)}</div>`;
     const C = W3.get('contents:' + sec.section_id, 'GET', '/api/lms/i/contents', { section_id: sec.section_id }); if (C === undefined) return W3.loading; if (C.__err) return `<div class="empty">${esc(C.__err)}</div>`;
+    if (!C.length && (S && S.org && S.org.empty)) return `<div class="empty">이 분반에 올린 강의 영상이 없습니다.<small class="efh-note">강의 영상 관리에서 영상을 올리고 차시에 배치하면 진도 · 학습시간이 기록됩니다.</small><button class="btn sm" data-act="go" data-v="lmsv">강의 영상 관리로 가기</button></div>`;
     if (!C.length && !W3.busy.iseed) { W3.busy.iseed = 1; W3.call('POST', '/api/lms/i/seed', { section_id: sec.section_id }).finally(() => { delete W3.busy.iseed; W3.drop('contents:'); render(); }); return W3.loading; }
     const t = UI.w3iT || 'player'; if (t !== 'player' && P.st) endPlay(true);
     UI.w3iC = UI.w3iC && C.find(c => c.content_id === UI.w3iC) ? UI.w3iC : C[0]?.content_id;

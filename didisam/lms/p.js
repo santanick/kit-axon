@@ -51,6 +51,7 @@
   function ens() {
     const L = (S.lms = S.lms || {}); if (L.p) return L.p;
     L.p = { pref: { lang: 'ko', a11y: a11y() }, clsLang: {}, uploads: [], drafts: {}, layout: ['today', 'courses', 'due', 'dm', 'attendance', 'advisees', 'links'], att: {}, guard: { fails: 0, locked: 0, last: null, prev: null, sess: null }, pii: [], classes: null, perf: [], mig: [], seq: 1 };
+    if ((S && S.org && S.org.empty)) return L.p; /* v38 빈 스튜디오: 샘플 없이 */
     /* 데모 샘플(빈 화면 없애기): 최근 파일 2 · 개인정보 열람 기록 3 · 무들 이관 기록 1 */
     const ago = h => LMP.iso(Date.now() - h * 36e5); const P = L.p;
     P.uploads = [{ id: LMP.uuid(), name: '2026-2 강의계획서 양식.hwp', size: 182400, mime: 'application/x-hwp', sha256: null, entries: 0, chunks: [], at: ago(20) }, { id: LMP.uuid(), name: '1차시 실습자료.zip', size: 2411000, mime: 'application/zip', sha256: null, entries: 6, chunks: [], at: ago(50) }];

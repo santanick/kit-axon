@@ -234,6 +234,6 @@
     if (['my', 'family'].includes(a) && !lm.querySelector('.lq-hc')) { const anc = lm.querySelector('.la-myl') || lm.querySelector('.la-seg.kids') || lm.querySelector('.mypage .in > h1'); const host = lm.querySelector('.mypage .in');
       if (anc) anc.insertAdjacentHTML('afterend', card('web')); else if (host) host.insertAdjacentHTML('afterbegin', card('web')); }
     if (a === 'home' && isPar() && !lm.querySelector('.lq-hc')) { const g = lm.querySelector('.lpar-g'); if (g) g.insertAdjacentHTML('afterend', card('web')); } }
-  { const base = lrender; lrender = (...x) => { base(...x); try { decorate(); if (route().a === 'cal') document.title = `${SITE().org.name} · ${isPar() ? '자녀 일정' : '캘린더'}`; } catch (e) { console.error('lcal decorate', e); } }; }
+  { const base = lrender; lrender = (...x) => { base(...x); try { if (!SITE() || !SITE().org) return; /* v38 게시 전(게시본 없음)에는 꾸미지 않는다 */ decorate(); if (route().a === 'cal') document.title = `${SITE().org.name} · ${isPar() ? '자녀 일정' : '캘린더'}`; } catch (e) { console.error('lcal decorate', e); } }; }
   addEventListener('hashchange', close);
 })();

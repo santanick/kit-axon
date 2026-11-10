@@ -40,3 +40,12 @@
   .lmsa .lmsa-todo .lmsa-tsel{margin-left:0;width:100%}
   .lmsa .lmsa-todo .lmsa-tsel select{max-width:100%;width:100%}
 }
+/* v38 올리는 순서 안내 · 휴대폰 터치 크기(학기 선택 · 관리 버튼) */
+.lmsa-steps{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;padding:0;margin:4px 0 10px}
+.lmsa-steps li{color:var(--mut,#64748b)}.lmsa-steps li.on{color:inherit}.lmsa-steps li.on b{color:var(--pri,#5C74F6)}
+.lmsa-ta{font-weight:700}
+@media (max-width:600px){
+  #main select[data-chg="lmsa-term"],#main select[name="impTerm"],#lmsaBulkKind,#lmsaLook{min-height:44px;font-size:15px}
+  .lmsa-acts .btn.sm,#main [data-act^="lmsa-"].btn.sm{min-height:40px;padding-top:8px;padding-bottom:8px;position:relative}
+  .lmsa-acts .btn.sm::after,#main [data-act^="lmsa-"].btn.sm::after{content:"";position:absolute;inset:-2px 0}
+}

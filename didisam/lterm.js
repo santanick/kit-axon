@@ -19,7 +19,7 @@
   const JP = { 가: ['이', '가'], 이: ['이', '가'], 를: ['을', '를'], 을: ['을', '를'], 는: ['은', '는'], 은: ['은', '는'], 와: ['과', '와'], 과: ['과', '와'], 로: ['으로', '로'], 으로: ['으로', '로'] };
   const bat = (w, ro) => { const c = String(w).slice(-1).charCodeAt(0) - 0xAC00; if (c < 0 || c > 11171) return false; const j = c % 28; return ro ? j !== 0 && j !== 8 : j !== 0; };
   function clsWord() {
-    try { const T = SITE() && SITE().terms; const w = T && T.cls; if (!w || w === '클래스') return null; const names = ((SITE().classes || []).map(c => c.name || '')).concat(((typeof SHOP === 'function' && SHOP() && SHOP().classes) || []).map(c => c.name || '')).filter(n => n.includes('클래스')); return { w, names }; } catch (e) { return null; } }
+    try { const T = SITE() && SITE().terms; const w = T && T.cls; if (!w || w === '클래스') return null; const names = ((SITE().classes || []).map(c => c.name || '')).concat(((typeof SHOP === 'function' && SHOP() && SHOP().classes) || []).map(c => c.name || '')).concat([(SITE().org || {}).name || '', (SITE().org || {}).short || '']).filter(n => n.includes('클래스')); return { w, names }; } catch (e) { return null; } } /* v38 기관명(예: 해운대대학교 e클래스)도 이름이므로 바꾸지 않는다 */
   function fixCls() { const X = clsWord(); if (!X || !document.body) return; const re = /클래스(으로|로|가|이|를|을|는|은|와|과)?(?![가-힣])|클래스(?=[가-힣])/g;
     const fix = v => v.replace(re, (m, p) => { if (!p) return X.w; const P = JP[p]; return X.w + (bat(X.w, p === '로' || p === '으로') ? P[0] : P[1]); });
     const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n => !n.nodeValue.includes('클래스') || (n.parentElement && n.parentElement.closest('script,style,textarea,[contenteditable]')) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }); let n; const L = [];
