@@ -15,6 +15,7 @@
   const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   /* 설치한 앱은 시작 주소에 기관 번호가 없으므로 마지막 기관을 기억해 둔다 */
   if (!LR.tid && (Q.get('app') === '1' || standalone())) { const t = ls.get('tid'); if (t) LR.tid = t; }
+  if (Q.get('app') === '1') { try { ls.set('classic', null); } catch (e) { } } /* v38 F5 V · L: 주소에 ?app=1이 있으면 전에 저장한 '기존 화면' 선택을 지우고 앱 화면으로 연다(앱 안의 '기존 화면으로 보기'는 그대로 동작) */
   const appOn = () => { try { return !!SITE() && LR.mode !== 'preview' && ls.get('classic') !== '1' && (!!LR.me || standalone() || Q.get('app') === '1'); } catch (e) { return false; } };
   window.lappOn = appOn;
 
@@ -46,7 +47,7 @@
   const SCN = {
     univ: { learn: '내 교과목', find: '교과목 찾기', sub: me => `학번 ${me.sid || ''} · 교과 · 비교과 · 배지를 함께 챙겨요`, chips: [['이번 학기 이수 현황', '이번 학기 교과 · 비교과 이수 현황 알려줘', 'status'], ['비교과 추천', '나한테 맞는 비교과 프로그램 추천해줘', 'rec'], ['과제 마감', '이번 주 과제 마감 정리해줘', 'due']], d: '교과 · 비교과 · 학번 로그인' },
     corp: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '직무 교육 · 필수교육 이수를 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['직무 과정 추천', '내 직무에 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '직무 · 법정의무교육 · 이수 관리' },
-    public: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '직무 교육 · 필수교육 이수를 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['교육과정 추천', '나에게 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '공무 · 법정의무교육 · 이수 관리' },
+    public: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '교육 신청 · 이수 현황을 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['교육과정 추천', '나에게 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '교육 신청 · 필수교육 · 이수 관리' },
     k12: { learn: '내 수업', find: '수업 찾기', sub: () => '숙제 · 출석 · 복습을 함께 챙겨요', chips: [['오늘 숙제', '오늘 해야 할 숙제 알려줘', 'due'], ['출석 확인', '내 출석 현황 알려줘', 'att'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '수업 · 숙제 · 출결 · 보호자' },
     adult: { learn: '내 강의', find: '둘러보기', sub: () => '수강 · 복습 · 자격증 준비를 함께 챙겨요', chips: [['이번 주 계획', '이번 주 학습 계획 짜줘', 'plan'], ['자격증 준비', '자격증 준비 순서 알려줘', 'certprep'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '강좌 수강 · 결제 · 자격증' },
     lifelong: { learn: '내 강좌', find: '강좌 신청', sub: () => '강좌 신청 · 출석 · 수료를 함께 챙겨요', chips: [['신청할 강좌', '지금 신청할 수 있는 강좌 알려줘', 'list'], ['수료 조건', '수료 조건 알려줘', 'rule'], ['이번 주 일정', '이번 주 수업 일정 알려줘', 'week']], d: '강좌 신청 · 출석 · 수료 기록' },
@@ -77,7 +78,7 @@
     const GEN = { open: { t: '바로 가입', s: ['이메일이나 간편 로그인으로 가입해요', '가입하면 바로 강좌를 둘러보고 신청할 수 있어요'] }, invite: { t: '초대로 가입', s: ['기관이 보낸 초대 링크(메일 · 메신저)로 가입해요', '초대받지 않은 계정은 가입할 수 없어요'] }, code: { t: '기관 등록 후 시작', s: ['기관이 미리 등록한 아이디(학번 · 접근코드)로 첫 로그인해요', '코드를 모르면 기관 담당자에게 문의하세요'] } };
     const B0 = mode === def ? base : GEN[mode] || base; const manual = c && c.approve === 'manual';
     const S0 = B0.s.map(x => manual ? x : x.replace('원장님이 승인하면', '가입하면 바로'));
-    const tags = [MODE[mode] || '', c && c.approve === 'manual' ? '운영자 승인 후 이용' : '', c && c.under14 ? '만 14세 미만 보호자 동의' : '', c && c.idv && c.idv.on ? '필요한 과정만 본인확인' : ''].filter(Boolean);
+    const tags = [MODE[mode] || '', c && c.approve === 'manual' ? '운영자 승인 후 이용' : '', c && c.under14 && !['voc', 'corp', 'public', 'univ'].includes(T) ? '만 14세 미만 보호자 동의' : '' /* v38 F5 V16: 성인 대상 유형(직업훈련 · 기업 · 공공 · 대학)에는 만 14세 미만 칩을 보이지 않는다 */, c && c.idv && c.idv.on ? '필요한 과정만 본인확인' : ''].filter(Boolean);
     return { ...B0, s: manual && mode === 'open' && !S0.some(x => /승인/.test(x)) ? [...S0, '운영자가 승인하면 수강 · 결제가 열려요'] : S0, mode, tags }; }
   /* 승인 대기: 새로 고침 · 앱 재실행 뒤에도 유지(기관별 계정 id만 기억, 승인 · 거절되면 지움) */
   function pendSid() { const k = 'pend.' + (LR.tid || ''); let id = (typeof LA !== 'undefined' && LA && LA.pend) || ls.get(k); if (!id) return null;
@@ -102,7 +103,7 @@
     const i = L.findIndex(x => x.tid === o.tid); if (i < 0) L.unshift(o); else L[i] = { ...L[i], ...o, me: o.me || L[i].me }; try { ls.set('orgs', JSON.stringify(L.slice(0, 20))); } catch (e) { } }
   function demoRooms() { try { const r = JSON.parse(localStorage.getItem('didisam.rooms') || 'null'); return ((r && r.list) || []).filter(x => x.tid); } catch (e) { return []; } }
   const orgURL = tid => `learner.html?t=${encodeURIComponent(tid)}&app=1#home`;
-  function orgChip() { const n = orgs().length; return `<button type="button" class="ap-org" data-ap="orgs" aria-label="기관 바꾸기 — 지금 ${esc(SITE().org.name)}">${ico('grid', 14)}<span>${esc(TYL[oTy()] || '기관')} · ${esc(SITE().org.name)}</span>${n > 1 ? `<i>${n}</i>` : ''}${ico('down', 14)}</button>`; }
+  function orgChip() { const n = orgs().length; return `<button type="button" class="ap-org" data-ap="orgs" aria-label="기관 바꾸기 — 지금 ${esc(SITE().org.name)}">${ico('grid', 14)}<span>${esc(SITE().org.name)}</span>${n > 1 ? `<i>${n}</i>` : ''}${ico('down', 14)}</button>`; }
   function orgSheet() { closeSheet(); const L = orgs(); const mine = new Set(L.map(o => o.tid)); const D = demoRooms().filter(r => !mine.has(r.tid));
     const row = (o, cur, demo) => `<li><button type="button" class="ap-orow${cur ? ' on' : ''}" data-ap="org-go" data-v="${esc(o.tid)}"${cur ? ' aria-current="true"' : ''}><span class="ap-oty">${esc(TYL[o.type] || '기관')}</span><b>${esc(o.name || o.tid)}</b><small>${esc((SCN[o.type] || SCN.adult).d)}${demo ? ' · 이 기기의 체험 기관' : o.me ? ' · 가입함' : ` · 가입 방법: ${esc(joinInfo(o.type).t)}`}</small>${cur ? `<em>지금 보는 중</em>` : ico('arrow', 16)}</button>${!cur && !demo ? `<button type="button" class="ap-ox" data-ap="org-x" data-v="${esc(o.tid)}" aria-label="${esc(o.name)} 목록에서 빼기">${ico('x', 14)}</button>` : ''}</li>`;
     const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
@@ -233,6 +234,9 @@
     if (LR.me) C = [['오늘 뭐 하면 돼?', '오늘 뭐 하면 돼?'], ...scn().chips, ...C, ['내 학습 리포트', '내 학습 리포트 보여줘']];
     const seen = new Set(), seenQ = new Set(); C = C.filter(([l, q]) => !seen.has(l) && !seenQ.has(q) && seen.add(l) && seenQ.add(q)).slice(0, 6); /* v33 같은 질문(오늘 뭐 하면 돼? · 오늘 할 일) 중복 제거 */
     return `<div class="ap-chips" role="list" aria-label="추천 질문">${C.map(([l, q]) => `<button type="button" role="listitem" class="ap-chip" data-tact="q" data-v="${esc(q)}">${esc(l)}</button>`).join('')}</div>`; }
+  /* v38 F5 C9: 기업 · 공공 앱 홈에도 웹 '필수교육 이수 기한' 카드(D-day) — lseg.js lLegal과 같은 기준 */
+  const legalCard = () => { try { if (!LR.me || typeof lLegal !== 'function') return ''; const L = lLegal(); if (!L.length) return ''; const { x, d } = L[0];
+    return `<a class="ap-legal${d != null && d <= 7 ? ' hot' : ''}" href="#c/${esc(x.c.id)}"><span class="ap-ld">${d == null ? '기한 확인' : d < 0 ? '기한 지남' : 'D-' + d}</span><span class="ap-lt"><b>필수교육 · ${esc(x.c.name)}</b><small>${x.c.end ? esc(x.c.end) + '까지 · ' : ''}진도 ${x.p}% · 100% 수강해야 이수${L.length > 1 ? ` · 외 ${L.length - 1}건` : ''}</small></span>${ico('arrow', 16)}</a>`; } catch (e) { return ''; } };
   function homeHTML() { const P = persona(); const me = LR.me; const C = TCFG();
     const brief = me && typeof ltBrief === 'function' ? ltBrief() : null; const first = me ? `${esc(who())}, ${hiTime()}\n${esc(P ? P.hi : '')}` : '';
     const instBox = !standalone() && ls.get('instx') !== '1' ? `<div class="ap-inst" role="note">${ico('install', 18)}<span><b>홈 화면에 앱으로 설치</b><small>${IOS ? '공유 버튼 → 「홈 화면에 추가」' : '한 번 누르면 앱처럼 바로 열려요'}</small></span><button type="button" class="ap-ib2" data-ap="install">설치</button><button type="button" class="ap-ix" data-ap="inst-x" aria-label="설치 안내 닫기">${ico('x', 16)}</button></div>` : '';
@@ -241,9 +245,9 @@
         <button type="button" class="ap-ib" data-ap="srch" aria-label="학습 찾기">${ico('search', 21)}</button>${me ? topIcons() : ''}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
       <div class="ap-scroll" id="apScroll">
         <section class="ap-hero">${orgChip()}${av(P, true)}<h1>${me ? `${esc(who())},<br>오늘은 무엇을 함께 할까요?` : `나만의 AI 선생님과<br>공부를 시작해 보세요`}</h1>${me ? `<p class="ap-sub">${esc(scn().sub(me))}</p>` : ''}${statHTML()}</section>
-        ${me ? '' : joinCard()}${instBox}${cardsHTML()}${me ? connRow() : ''}
+        ${me ? legalCard() : joinCard()}${instBox}${cardsHTML()}${me ? connRow() : ''}
         <div class="ap-th lai-th" aria-live="polite" aria-label="${esc(tName())}와의 대화">
-          ${me ? `<div class="lt-m ap-hi">${av(P)}<div class="lt-b"><p>${nl(first)}</p>${brief ? `<p>${nl(brief.t)}</p>${brief.h || ''}` : ''}</div></div>` : `<div class="lt-m ap-hi">${av(null)}<div class="lt-b"><p>안녕하세요, ${esc(SITE().org.name)}의 ${esc(C.name)}입니다.\n강좌 · 수강 방법 · 가격을 바로 물어보세요. 로그인하면 내 진도와 과제에 맞춰 나만의 선생님이 매일 챙겨 드려요.</p><div class="ap-gb"><a class="ap-go sm" href="#login">로그인</a>${SITE().org.type === 'univ' ? '' : '<a class="ap-go sm ghost" href="#join">30초 간편가입</a>'}</div></div></div>`}
+          ${me ? `<div class="lt-m ap-hi">${av(P)}<div class="lt-b"><p>${nl(first)}</p>${brief ? `<p>${nl(brief.t)}</p>${brief.h || ''}` : ''}</div></div>` : `<div class="lt-m ap-hi">${av(null)}<div class="lt-b"><p>안녕하세요, ${esc(SITE().org.name)}의 ${esc(C.name)}입니다.\n강좌 · 수강 방법${typeof lPayOff === 'function' && lPayOff() ? '' : ' · 가격'}을 바로 물어보세요. 로그인하면 내 진도와 과제에 맞춰 나만의 선생님이 매일 챙겨 드려요.</p><div class="ap-gb"><a class="ap-go sm" href="#login">로그인</a>${SITE().org.type === 'univ' ? '' : '<a class="ap-go sm ghost" href="#join">30초 간편가입</a>'}</div></div></div>`}
           ${threadHTML()}</div></div>
       <form class="ap-comp" id="apF">${chipsHTML()}<div class="ap-box"><label for="apQ" class="sr">${esc(tName())}에게 말하기</label><textarea id="apQ" rows="1" maxlength="800" placeholder="${me ? '무엇이든 말해 보세요' : '무엇이든 물어보세요'}"></textarea>
         ${(window.SpeechRecognition || window.webkitSpeechRecognition) ? `<button type="button" class="ap-mic" data-ap="mic" aria-label="말로 묻기">${ico('mic', 20)}</button>` : ''}<button type="submit" class="ap-send" aria-label="보내기">${ico('up', 20)}</button></div>
@@ -384,6 +388,7 @@
     if (!on) { if (LR.me && route().a === 'home' && ls.get('classic') === '1' && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
     const a = route().a; document.body.classList.toggle('ap-play', a === 'c' && decodeURIComponent(location.hash.slice(1)).split('/').length > 2); /* PC 강의 화면: 떠 있는 아래 메뉴가 본문을 가리지 않게(lapp.css) */ if (LR.me && (a === 'login' || a === 'join')) { location.replace('#home'); return; } /* v32.8 로그인한 뒤 로그인 · 가입 화면은 홈으로 */
     if (!LR.me && ['connect', 'books'].includes(a) && typeof needLogin === 'function' && !lm.textContent.trim()) lm.innerHTML = needLogin(a);
+    if (LR.me && !isPar() && LR.lp && !persona() && !AP.pick && a === 'home') { try { tutorRec().persona = { k: 'warm', n: (TCFG().orgName || TCFG().name || '').replace(/^AI 튜터$/, '') || PERS[0].n, at: new Date().toISOString(), auto: 1 }; LR.api.save(); } catch (e) { } } /* v38 F5 P19 · A14: 가입 직후 '선생님 고르기'를 먼저 띄우지 않고 기본 선생님으로 바로 홈 — 바꾸기는 '나 › 선생님 · 앱 설정' */
     const needPick = LR.me && !isPar() && (!persona() || AP.pick) && a === 'home';
     if (needPick) { lm.innerHTML = pickHTML(); document.body.classList.add('ap-pickon'); }
     else if (a === 'connect' && LR.me) { lm.innerHTML = connectHTML(); }

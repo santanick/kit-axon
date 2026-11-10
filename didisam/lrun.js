@@ -10,7 +10,7 @@ const nowISO = () => new Date().toISOString();
 const Q = new URLSearchParams(location.search);
 const LR = { mode: 'demo', tid: Q.get('t') || '', site: null, me: null, lp: { tut: {}, cls: {}, diag: {}, book: {} }, mine: { badges: [], cls: {}, bk: {} }, timer: 0, err: '' };
 
-function toast(msg, kind = '') { const t = document.createElement('div'); t.className = 'ltoast ' + kind; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100); }
+function toast(msg, kind = '') { document.querySelectorAll('.ltoast').forEach(x => x.remove()); /* v38 F5: 안내는 한 번에 하나만(겹쳐 버튼을 가리지 않게) */ const t = document.createElement('div'); t.className = 'ltoast ' + kind; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100); }
 const api = async (method, url, body) => { const r = await fetch(url, { method, credentials: 'same-origin', headers: { 'x-didisam': '1', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined }); const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.message || `오류 ${r.status}`); e.status = r.status; e.code = j.error; throw e; } return j; };
 
 /* ── 데이터 포트 ── */
@@ -66,7 +66,7 @@ LR.api = {
 };
 
 /* ── 공통 조각(v11 디자인 — KIT AX ON 수준) ── */
-const SITE = () => LR.site; const lvOf = i => SITE().levels[i] || { name: '', color: '#666' }; const tyOf = k => SITE().types.find(x => x.k === k) || { name: k || '', color: '#666' };
+const SITE = () => LR.site; window.lPayOff = () => { try { const st = LR.site || {}; return typeof st.pay === 'boolean' ? !st.pay : ['univ', 'corp', 'public'].includes((st.org || {}).type); } catch (e) { return false; } }; /* v38 F5 결제를 쓰지 않는 기관(게시본 pay:false · 대학 · 기업 · 공공 기본)은 학습자 화면의 결제 · 교재 · 구독 흔적을 감춘다 */ const lvOf = i => SITE().levels[i] || { name: '', color: '#666' }; const tyOf = k => SITE().types.find(x => x.k === k) || { name: k || '', color: '#666' };
 const ICP = { arrow: 'M5 12h14M13 6l6 6-6 6', play: 'M8 5v14l11-7z', check: 'M5 12l5 5L20 7', lock: 'M7 11V8a5 5 0 0110 0v3M5 11h14v10H5z', pin: 'M12 22s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z', book: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19a2 2 0 012-2h13', star: 'M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.3L12 17.5 6.5 20.4l1-6.3L3 9.7l6.2-.9z', link: 'M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1', layers: 'M12 3l9 5-9 5-9-5zM3 13l9 5 9-5', brief: 'M4 8h16v11H4zM9 8V5h6v3', award: 'M12 15a6 6 0 100-12 6 6 0 000 12zM8.5 14L7 22l5-3 5 3-1.5-8', bell: 'M6 16V11a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0', user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0', home: 'M3 11l9-7 9 7v9h-6v-6H9v6H3z', grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', compass: 'M12 21a9 9 0 100-18 9 9 0 000 18zM15.5 8.5l-2 5-5 2 2-5z', menu: 'M4 7h16M4 12h16M4 17h16', x: 'M6 6l12 12M18 6L6 18', clock: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2', spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6', video: 'M3 6h12v12H3zM15 10l6-3v10l-6-3', edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', target: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 16a4 4 0 100-8 4 4 0 000 8z', down: 'M6 9l6 6 6-6', out: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11' };
 const ico = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${n === 'play' || n === 'star' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICP[n] || ''}"/></svg>`;
 /* 육각 메달(배지) — 수준 번호 · 리본 */
@@ -90,7 +90,7 @@ function meNow() {
     if (rc) next = { h: `재제출 요청 · ${rc.name}`, d: ret[1].fb || '운영자 피드백을 확인하고 다시 제출하세요.', href: '#c/' + rc.id, cta: '다시 제출', warn: 1 };
     if (!next) { const c = cls.map(id => S2.classes.find(x => x.id === id)).find(c => c.items.some(i => !((lp.cls[c.id].items || {})[i.id] || {}).done)); if (c) { const it = c.items.find(i => !((lp.cls[c.id].items || {})[i.id] || {}).done); next = { h: `이어서 학습 · ${c.name}`, d: it.title, href: `#c/${c.id}/${it.id}`, cta: '이어서 학습' }; } }
     if (!next) { const t = tStarted.find(t => !tutDone(t)); if (t) next = { h: `이어서 따라 하기 · ${t.title}`, d: `${(lp.tut[t.id].steps || []).filter(Boolean).length}/3단계 완료`, href: '#t/' + t.id, cta: '이어서 하기' }; }
-    if (!next) { const t = S2.tuts.find(t => !tutDone(t) && (!myType || t.type === myType) && t.level <= level) || S2.tuts.find(t => !tutDone(t)); if (t) next = { h: `추천 튜토리얼 · ${t.title}`, d: `${tyOf(t.type).name} · ${lvOf(t.level).name} · 영상 보고 3단계 따라 하기`, href: '#t/' + t.id, cta: '시작하기', yt: t.yt }; } }
+    if (!next) { const TV = S2.tuts.filter(t => t.yt); /* v38 F5 V12 · A8: 영상이 없는 기본 예시 튜토리얼('웹개발 첫 실습' 등)은 추천하지 않는다 */ const t = TV.find(t => !tutDone(t) && (!myType || t.type === myType) && t.level <= level) || TV.find(t => !tutDone(t)); if (t) next = { h: `추천 튜토리얼 · ${t.title}`, d: `${tyOf(t.type).name} · ${lvOf(t.level).name} · 영상 보고 3단계 따라 하기`, href: '#t/' + t.id, cta: '시작하기', yt: t.yt }; } }
   return { dg, dres, myType, step, level, earned, tStarted, tDone, cls, next };
 }
 const toolsOf = k => [...new Set(SITE().tuts.filter(t => t.type === k).map(t => t.tool).filter(Boolean))].slice(0, 4);

@@ -168,7 +168,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     secs.push({ type: 'notices', title: '공지사항' });
     secs.push(/오시는|지도|위치|주소/.test(must) || S.settings.footer?.addr ? { type: 'map', title: '오시는 길 · 문의' } : { type: 'text', variant: 'cta', title: '궁금한 점이 있으신가요?', body: `${n}에 편하게 문의해 주세요.`, cta: '문의하기', cols: ((S.settings && S.settings.footer && S.settings.footer.hours) ? [['운영 시간', S.settings.footer.hours]] : []) });
     const menus = [{ label: '홈', link: 'learn:home' },
-      { label: ty.about, link: 'page', page: [{ type: 'text', variant: 'features', eyebrow: 'ABOUT', title: `${n} 소개`, body: `${n}이(가) 하는 일을 소개합니다.`, cols: ty.feat.slice(0, 3) }], subs: [{ label: '인사말', link: 'page', page: [{ type: 'text', title: '인사말', body: `${n}을(를) 찾아 주셔서 감사합니다. 배우는 모든 분이 끝까지 완주할 수 있도록 돕겠습니다.` }] }, { label: '오시는 길', link: 'page', page: [{ type: 'map', title: '오시는 길' }] }] },
+      { label: ty.about, link: 'page', page: [{ type: 'text', variant: 'features', eyebrow: 'ABOUT', title: `${n} 소개`, body: `${n}${AI.j(n, '이')} 하는 일을 소개합니다.`, cols: ty.feat.slice(0, 3) }], subs: [{ label: '인사말', link: 'page', page: [{ type: 'text', title: '인사말', body: `${n}을(를) 찾아 주셔서 감사합니다. 배우는 모든 분이 끝까지 완주할 수 있도록 돕겠습니다.` }] }, { label: '오시는 길', link: 'page', page: [{ type: 'map', title: '오시는 길' }] }] },
       { label: t('cls'), link: 'learn:shop', subs: C.slice(0, 4).map(c => ({ label: c.name.slice(0, 20), link: 'cls:' + c.id })) },
       { label: '커뮤니티', link: 'learn:comm', subs: [{ label: '공지사항', link: 'learn:notice' }] },
       { label: '내 학습', link: 'learn:my' }];
