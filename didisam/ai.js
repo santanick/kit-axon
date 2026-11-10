@@ -102,7 +102,9 @@ function interpret(q) {
     else if (has('출석', '80')) { ids = [...new Set(lowAtt().map(x => x.id))]; label = '출석률 80% 미만'; }
     else if (has('미접속', '접속')) { ids = S.members.filter(m => m.last <= addDays(today(), -30)).map(m => m.id); label = '30일 이상 미접속'; }
     else { ids = [...new Set(low())]; label = `진도 ${qnum(q, 30)}% 미만`; }
-    const m = AI.msg(has('경고') ? '출석률 관리 안내' : has('미이수', '법정') ? '법정의무교육 이수 마감 안내' : '학습 독려 안내');
+    const lg = has('미이수', '법정'); const m = lg ? legalNudgeMsg(ids) : AI.msg(has('경고') ? '출석률 관리 안내' : '학습 독려 안내');
+    /* v38 대상이 0명이면 실행 버튼 없이 이유를 알린다(QA C4) */
+    if (!ids.length) return { title: `${label} 0명 — 보낼 대상이 없습니다`, steps: [lg ? (S.classes.some(c => c.legal) ? '법정 의무교육 과정의 대상자가 모두 이수했습니다.' : '법정 의무교육으로 지정된 과정이 없습니다. 과정 › 설정에서 「법정 의무교육」을 켜면 대상이 잡힙니다.') : '조건에 맞는 대상이 없습니다.'] };
     return { title: `${label} ${ids.length}명에게 안내 발송`, steps: [`대상 추출: ${label} → ${ids.length}명`, '메시지 초안 작성(아래 미리보기)', '앱 푸시 + 이메일 발송', '발송 내역 · 감사 로그 기록'], preview: `<div class="pvmsg"><b>${esc(m.title)}</b><p>${esc(m.body).replace(/\n/g, '<br>')}</p><small>대상: ${ids.slice(0, 8).map(mn).join(', ')}${ids.length > 8 ? ` 외 ${ids.length - 8}명` : ''}</small></div>`, run: () => { S.msgs.unshift({ id: uid('ms'), at: nowStr(), to: label, title: m.title, ch: '앱 푸시 + 이메일', n: ids.length }); if (has('미이수', '법정')) S.nudged = true; return `${ids.length}명에게 발송했습니다(데모).`; } };
   }
   if (has('미납', '청구서')) { const L = S.bills.filter(b => b.status === '미납'); return { title: `미납 ${L.length}건 재알림`, steps: [`미납 청구서 ${L.length}건 확인`, '보호자 · 원생에게 알림톡 재발송(청구서 템플릿)', '3일 뒤 미납이면 담당자 할 일 생성'], preview: table(['대상', '청구서', '마감'], L.map(b => [mn(b.who), esc(b.title), b.due])), run: () => { S.runs.unshift({ at: nowStr(), name: '미납 재알림', n: L.length, st: '완료' }); return `${L.length}건 재알림을 보냈습니다(데모).`; }, go: 'billing' }; }
@@ -125,7 +127,7 @@ function summary(q) {
   const out = [`대상: ${g ? g.name : '전체'} ${ms.length}명`, `평균 진도 ${pct(avgOf(ps))} · ${t('done')} ${S.classes.reduce((a, c) => a + ms.filter(id => (c.learners || []).includes(id) && clsDone(c, id)).length, 0)}건`, `진도 30% 미만 ${ps.filter(p => p < 30).length}건 — 독려 권장`];
   if (S.pays.length) out.push(`최근 30일 결제 ${won(S.pays.filter(p => p.status === '결제 완료' && p.at >= addDays(today(), -30)).reduce((a, p) => a + p.amount, 0))} · 환불 신청 ${S.pays.filter(p => p.status === '환불 신청').length}건`);
   if (S.bills.length) out.push(`청구서 미납 ${S.bills.filter(b => b.status === '미납').length}건`);
-  if (/출결|출석/.test(q)) out.push(`출석률 80% 미만 ${lowAtt().length}명`);
+  if (/출결|출석/.test(q)) out.push(`출석률 80% 미만 ${lowAttN()}명`);
   return out;
 }
 
@@ -186,7 +188,7 @@ function targets(a) {
     case 'att-warn': return [...new Set(lowAtt().map(x => x.id))];
     case 'refund5': case 'refund-route': return S.pays.filter(p => p.status === '환불 신청').map(p => p.who);
     case 'badge-auto': return S.classes[0] ? S.classes[0].learners.filter(id => clsDone(S.classes[0], id) && !S.badges[0]?.issued.some(i => i.who === id)) : [];
-    case 'fraud': return S.members.slice(0, 3).map(m => m.id);
+    case 'fraud': return typeof cplSuspects === 'function' ? [...new Set(cplSuspects().map(x => x.m.id))] : []; /* v38 실제 모니터링 기록만(QA V5) */
     case 'demand': return S.classes.filter(c => c.early && c.learners.length < 10).map(c => c.id);
     default: return S.members.slice(0, Math.max(1, Math.round(S.members.length / 6))).map(m => m.id);
   }
@@ -204,7 +206,13 @@ function runAuto(a, force) {
   return `「${a.name}」 실행 — 대상 ${T.length}건 처리`;
 }
 ACT['auto-run-id'] = el => { const a = S.autos.find(x => x.key === el.dataset.v); if (!a) { toast('해당 자동화가 없습니다. 업무 자동화에서 추가하세요.', 'warn'); return; } confirmRun(a); };
-function confirmRun(a) { const T = targets(a); modal(`자동화 실행 — ${a.name}`, `<ol class="steps"><li>시작 조건: ${esc(trigLabel(a.trigger))}</li><li>조건: ${esc(a.cond)} → <b>대상 ${T.length}건</b></li>${a.actions.map(x => `<li>실행: ${esc(ACTION[x])}</li>`).join('')}</ol><p class="mini">대상: ${T.slice(0, 10).map(id => M(id) ? esc(M(id).name) : esc(id)).join(', ')}${T.length > 10 ? ` 외 ${T.length - 10}` : ''}</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '승인하고 실행', kind: 'pri', run: () => { toast(runAuto(a, true), 'ok'); render(); } }]); }
+/* v38 법정교육 안내문: 과정별 마감일 · 남은 날을 넣는다(일반 '과제 · 퀴즈 기한' 문구 대신, QA C4) */
+function legalNudgeMsg(ids) { const set = new Set(ids || []); const L = S.classes.filter(c => c.legal && (c.learners || []).some(id => set.has(id) && !clsDone(c, id))); const dd = e => { if (!e) return ''; const n = Math.round((new Date(String(e).slice(0, 10)) - new Date(today())) / 864e5); return n >= 0 ? ` (D-${n})` : ' (마감 지남)'; };
+  return { title: '법정의무교육 이수 마감 안내', body: `아직 이수하지 않은 법정 의무교육이 있습니다.\n${L.map(c => `· 「${c.name}」 이수 마감 ${c.end ? String(c.end).slice(0, 10) : '기관 공지'}${dd(c.end)} · 진도 ${(c.criteria || {}).threshold || 100}% 이상`).join('\n')}\n마감 전에 수강을 마쳐 주십시오. 미이수 시 법정 의무교육 이수 기록이 남지 않습니다.` }; }
+/* v38 법정의무교육 화면의 [미이수자 독려 실행]: 마감 7일 이내만이 아니라 지금 미이수자 전원에게 마감일을 넣어 보낸다 */
+ACT['legal-nudge'] = () => { const ids = [...new Set(legalUndone().map(x => x.id))]; if (!ids.length) { toast(S.classes.some(c => c.legal) ? '법정 의무교육 미이수자가 없습니다.' : '법정 의무교육으로 지정된 과정이 없습니다. 과정 › 설정에서 지정해 주십시오.', 'warn'); return; } const m = legalNudgeMsg(ids);
+  modal(`법정교육 미이수자 ${ids.length}명에게 안내`, `<div class="pvmsg"><b>${esc(m.title)}</b><p>${esc(m.body).replace(/\n/g, '<br>')}</p><small>대상: ${ids.slice(0, 10).map(mn).join(', ')}${ids.length > 10 ? ` 외 ${ids.length - 10}명` : ''}</small></div>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: `${ids.length}명에게 보내기`, kind: 'pri', run: () => { S.msgs.unshift({ id: uid('ms'), at: nowStr(), to: '법정교육 미이수자', title: m.title, body: m.body, ch: '앱 푸시 + 이메일', n: ids.length }); S.nudged = true; logAudit(`법정교육 미이수자 안내 ${ids.length}명`); save(); render(); toast(`${ids.length}명에게 안내를 보냈습니다.`, 'ok'); } }]); };
+function confirmRun(a) { const T = targets(a); if (!T.length) { toast(`「${a.name}」 대상이 지금 0건이라 실행하지 않았습니다(조건: ${a.cond}).`, 'warn'); return; } modal(`자동화 실행 — ${a.name}`, `<ol class="steps"><li>시작 조건: ${esc(trigLabel(a.trigger))}</li><li>조건: ${esc(a.cond)} → <b>대상 ${T.length}건</b></li>${a.actions.map(x => `<li>실행: ${esc(ACTION[x])}</li>`).join('')}</ol><p class="mini">대상: ${T.slice(0, 10).map(id => M(id) ? esc(M(id).name) : esc(id)).join(', ')}${T.length > 10 ? ` 외 ${T.length - 10}` : ''}</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '승인하고 실행', kind: 'pri', run: () => { toast(runAuto(a, true), 'ok'); render(); } }]); }
 /* v36 H: 자동화 만들기 단순화 — 언제(보기) → 무엇을(보기) → 누구에게 3칸 문장 + 유형별 추천(켜기 한 번) + 한 줄 말로 채우기.
    대상 조건 · 승인 · 여러 단계(Slack · Google 등)는 '자세히'에 접는다. 저장 형식(trigger · cond · actions · approve)은 그대로라 기존 실행 · 연결 기능과 호환. */
 const AU_WHAT = { msg: '안내 메시지 보내기', report: '리포트 만들어 보내기', draft: 'AI 초안 만들기(답변 · 채점 · 요약)', assign: '수강 자동 배정', badge: '디지털 배지 발급', hrd: 'HRD-Net 보고 파일 만들기', task: '운영자 할 일 만들기', approve: '가입 자동 승인' };

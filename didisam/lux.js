@@ -151,9 +151,13 @@
   /* ── 튜터: 사람이 열 때만 ── */
   function tutorQuiet() { try { if (typeof LT === 'object' && LT) { LT.auto = true; if (mob() || route().a === 'c' || ['pay', 'join', 'login'].includes(route().a)) LT.nudge = ''; } } catch (e) { } }
 
+  /* v38 학사 LMS 수강 분반이 있으면 '아직 수강 중인 강좌가 없어요' 빈 안내를 분반 안내로 바꾼다 — 한 화면에 상태 두 가지가 나오던 것(QA UL12) */
+  function lmsMyFix() { const n = document.querySelectorAll('#lmsaMy .lmsa-ul li > b').length; if (!n) return; const msg = `이번 학기 수강 분반 ${n}개는 「이번 학기 수강 분반」에서 확인해요.`;
+    document.querySelectorAll('.lux-wide p.mini, .ap-myh p').forEach(p => { if (/아직 수강 중인 강좌가 없/.test(p.textContent)) p.textContent = msg; });
+    document.querySelectorAll('.lux-wide a.lbtn.pri[href*="shop"], .lux-wide a.lbtn.pri[href*="courses"]').forEach(a => { if (/둘러보기/.test(a.textContent) && a.closest('.lux-wide').querySelector('.lux-ml') == null) a.hidden = true; }); }
   /* ── 렌더 감싸기(가장 바깥) ── */
   { const base = lrender; lrender = (...a) => { tutorQuiet(); base(...a); if (!SITE()) return;
-      try { navFix(route().a); acctFix(); bottomNav(); if (pageFix() === 'redirect') return; hpFix(); plain(document.getElementById('lm')); plain(document.querySelector('header.lh')); document.body.dataset.luxr = route().a; } catch (e) { console.error('lux', e); }
+      try { navFix(route().a); acctFix(); bottomNav(); if (pageFix() === 'redirect') return; hpFix(); lmsMyFix(); plain(document.getElementById('lm')); plain(document.querySelector('header.lh')); document.body.dataset.luxr = route().a; } catch (e) { console.error('lux', e); }
       requestAnimationFrame(() => { try { hpFix(); } catch (e) { } }); }; }
 
   /* ── 이벤트 ── */
