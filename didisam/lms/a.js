@@ -542,7 +542,7 @@
   ACT['lmsa-tpl'] = () => { const k = UI.lmsaImp || 'enrollment'; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + TPL[k]], { type: 'text/csv' })); a.download = `학사업로드_${L.imp[k].replace(/[^가-힣]/g, '')}_양식.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
   const impBody = apply => { const k = UI.lmsaImp || 'enrollment'; UI.lmsaCsv = ($('#lmsaCsv') || {}).value || UI.lmsaCsv || ''; const tsel = $('select[name="impTerm"]'); return { kind: k, term_id: k === 'person' ? undefined : (tsel ? tsel.value : curTerm(OV())), csv: UI.lmsaCsv, apply }; };
   ACT['lmsa-prev'] = async () => { try { AC.prev = await X('import', impBody(false)); render(); const p = $('#lmsaPrev'); p && p.scrollIntoView && p.scrollIntoView({ block: 'nearest' }); } catch (e) { AC.prev = null; toast(e.message, 'warn'); render(); } };
-  ACT['lmsa-apply'] = () => { const P = AC.prev; modal('학사 데이터 반영', `<p>정상 <b>${P.ok}</b>행을 반영합니다.${P.error ? ` 오류 ${P.error}행은 빼고 기록으로 남깁니다.` : ''}${P.skip ? ` 이미 있는 ${P.skip}행은 건너뜁니다.` : ''}</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '반영', kind: 'pri', run: () => { act('import', impBody(true), r => `반영 ${r.counts.inserted}행 · 건너뜀 ${r.counts.skipped} · 오류 ${r.counts.error} (기록 #${r.run_id})${r.codes ? ` · 접근코드 ${r.codes}건 발급` : ''}`, { after: r => { AC.prev = r; AC.enr = {}; } }); } }]); };
+  ACT['lmsa-apply'] = () => { const P = AC.prev; modal('학사 데이터 반영', `<p>정상 <b>${P.ok}</b>행을 반영합니다.${P.error ? ` 오류 ${P.error}행은 빼고 기록으로 남깁니다.` : ''}${P.skip ? ` 이미 있는 ${P.skip}행은 건너뜁니다.` : ''}</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '반영', kind: 'pri', run: () => { act('import', impBody(true), r => `반영 ${r.counts.inserted}행 · 건너뜀 ${r.counts.skipped} · 오류 ${r.counts.error} (기록 #${r.run_id})${r.codes ? ` · 접근코드 ${r.codes}건 발급` : ''}`, { after: r => { AC.prev = r; AC.enr = {}; if (LIVEM() && Array.isArray(r.students) && r.students.length) { r.codes = issueCodes(r.students.map(x => ({ sid: x.member_no, dept: x.dept }))); try { save(); } catch (e) { } } } }); } }]); }; /* v38 운영: 서버가 돌려준 학생 학번으로 접근코드 발급(기관 문서 저장 → 학습자 로그인 표) */
 
   function vReq(ov, term, secs) {
     const R0 = (ov.requests || []); const vis = secs.filter(s => !s.rep_section_id);
@@ -587,5 +587,8 @@
   window.lmsaX = X;
   window.lmsaDemo = (name, body) => { const r = DEMO[name](body || {}); bump(); ens(); try { save(); } catch (e) { } return r; }; /* 점검(tests/ui/lms38.js)용 */
   /* v38 학번 등록(접근코드 발급, mem2.js) 직후 학사 구성원 · 강의실 · 출결에 바로 반영 */
-  { const base = ACT['en-codes']; if (typeof base === 'function') ACT['en-codes'] = (...a) => { const r = base(...a); try { if (ON() && !LIVEM()) { ens(); save(); } } catch (e) { console.error(e); } return r; }; }
+  { const base = ACT['en-codes']; if (typeof base === 'function') ACT['en-codes'] = (...a) => { const before = new Set((S.codes || []).map(c => c.sid)); const r = base(...a); try { if (ON() && !LIVEM()) { ens(); save(); }
+      /* 운영: 새로 발급한 학번을 학사 구성원(학생 · 학과 이름)으로 서버에 함께 등록 — 수강 등록이 바로 되게 */
+      else if (ON() && LIVEM()) { const nw = (S.codes || []).filter(c => !before.has(c.sid) && RE.stu.test(c.sid)); if (nw.length) { const q2 = v => /[",\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
+        X('import', { kind: 'person', csv: '학번,구분,학과코드\n' + nw.map(c => `${c.sid},학생,${q2(c.dept || '')}`).join('\n') + '\n', apply: true }).then(x => { if (x && x.error) toast(`학사 구성원 등록 오류 ${x.error}건 — 학기 · 강좌 › 엑셀로 올리기에서 확인하세요.`, 'warn'); }).catch(e => toast(e.message, 'warn')); } } } catch (e) { console.error(e); } return r; }; }
 })();

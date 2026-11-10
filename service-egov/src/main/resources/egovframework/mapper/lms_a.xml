@@ -80,6 +80,10 @@
 
   <!-- ── 학사 CSV ── -->
   <select id="selectUnitsAll" resultType="java.util.LinkedHashMap">select unit_code, parent_code from lms_org_unit</select>
+  <select id="selectUnitNames" resultType="java.util.LinkedHashMap">select unit_code, name from lms_org_unit order by unit_code</select>
+  <select id="selectUnitByName" resultType="string">select unit_code from lms_org_unit where name = #{name} order by unit_code limit 1</select>
+  <select id="selectUnitName" resultType="string">select name from lms_org_unit where unit_code = #{code}</select>
+  <select id="countUnits" resultType="int">select count(*) from lms_org_unit</select>
   <select id="selectMemberNos" resultType="string">select member_no from lms_person</select>
   <select id="selectPersonsAll" resultType="java.util.LinkedHashMap">select member_no, person_id::text person_id from lms_person</select>
   <select id="selectCoursesAll" resultType="java.util.LinkedHashMap">select course_code, unit_code from lms_course</select>

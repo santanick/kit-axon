@@ -101,6 +101,11 @@ async function scenario(base, tag) {
   R.impPrev = await call(base, 'POST', '/api/lms/a/import', { cookie: ck, body: { kind: 'person', csv: pcsv } });
   R.impApply = await call(base, 'POST', '/api/lms/a/import', { cookie: ck, body: { kind: 'person', csv: pcsv, apply: true } });
   R.impAgain = await call(base, 'POST', '/api/lms/a/import', { cookie: ck, body: { kind: 'person', csv: pcsv } });
+  /* v38 학과코드 자리에 학과 이름: 없는 한글 이름 → 새 학과(같은 파일 두 번째 줄은 그 학과로), 학생 학번 목록(students)을 돌려 화면이 접근코드를 발급 */
+  const ncsv = `학번,구분,학과코드\n${stu(40)},학생,간호학과\n${stu(41)},학생,간호학과\n${stu(42)},학생,BUS\nP${P}009,교수,간호학과\n`;
+  R.impNamePrev = await call(base, 'POST', '/api/lms/a/import', { cookie: ck, body: { kind: 'person', csv: ncsv } });
+  R.impName = await call(base, 'POST', '/api/lms/a/import', { cookie: ck, body: { kind: 'person', csv: ncsv, apply: true } });
+  R.impNameOv = await call(base, 'GET', '/api/lms/a/persons?q=' + stu(40).slice(0, 4), { cookie: ck });
   const scsv = '학수번호,교과목명,분반,학점,학과코드,수업방식,정원,교과구분\nMEC3001,열역학,1,3,MEC,오프라인,50,전공\nMEC3001,열역학,2,3,MEC,온라인,50,전공\nGEN1001,AI 리터러시,1,,,,,\nMEC3001,열역학,2,3,MEC,온라인,50,전공\nX,이름,1,,,,,\nMEC3002,"동역학, 기초",1,3,MEC,VR,,\nMEC3003,제어,1,40,MEC,,,\nMEC3004,설계,1,3,MEC,,-1,\n';
   R.impSecTerm = await call(base, 'POST', '/api/lms/a/import', { cookie: ck, body: { kind: 'section', csv: scsv } });
   R.impSec = await call(base, 'POST', '/api/lms/a/import', { cookie: ck, body: { kind: 'section', term_id: '2026-2', csv: scsv, apply: true } });
@@ -240,8 +245,11 @@ function checks(o, who) {
   ok(J('uOv') && J('uOv').sections.length > 0 && J('uOv').sections.every(s => ['CSE', 'MEC'].includes(s.unit_code)) && J('uOv').me.units.join() === 'ENG', `${who} 단과대학 관리자 범위`);
   ok(J('uImp') && J('uImp').ok === 1 && J('uImp').error === 2, `${who} 단과대학 범위 CSV`);
   ok(J('uPersons') && J('uPersons').rows.length > 0 && J('uPersons').rows.every(r => ['CSE', 'MEC'].includes(r.unit_code)), `${who} 단과대학 범위 구성원`);
-  const ov = J('ovEnd'); ok(ov && ov.scopes.length === 2 && ov.sections.find(s => s.section_id === X.S.b2).hidden === false && ov.runs.length === 3, `${who} 개요(범위 목록 · 합반 해제 · 실행 기록)`);
+  const ov = J('ovEnd'); ok(ov && ov.scopes.length === 2 && ov.sections.find(s => s.section_id === X.S.b2).hidden === false && ov.runs.length === 4, `${who} 개요(범위 목록 · 합반 해제 · 실행 기록 — v38 학과 이름 CSV 반영 1건 추가로 4)`);
   ok(J('ovReq') && J('ovReq').requests.length === 2, `${who} 신청 목록`);
+  { const a = J('impName'); const pv = J('impNamePrev'); const two = a && Array.isArray(a.students) ? a.students.slice(0, 2).map(x => x.member_no) : []; const nu = a && (J('impNameOv') || { rows: [] }).rows.filter(r => two.includes(r.member_no)).map(r => r.unit_code);
+    ok(pv && pv.ok === 4 && /새 학과 「간호학과」/.test(pv.rows[0].msg), `${who} 학과 이름 CSV 미리보기(새 학과 안내)`);
+    ok(a && a.counts.inserted === 4 && Array.isArray(a.students) && a.students.length === 3 && a.students[0].dept === '간호학과' && nu && nu.length === 2 && nu[0] && nu[0] === nu[1], `${who} 학과 이름 CSV 반영: 학과 1개 생성 · 학생 학번 3명 반환 ${JSON.stringify(a && a.students)} ${JSON.stringify(nu)}`); }
   ok(J('persons') && J('persons').rows.every(r => !('name' in r) && !('phone' in r) && !('email' in r)), `${who} 구성원 응답에 이름 · 연락처 없음`);
 }
 

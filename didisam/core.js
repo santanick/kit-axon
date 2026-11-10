@@ -260,10 +260,11 @@ function renderSignup() {
 }
 function createOrg(type, name, ed) {
   RNG = 7 + Object.keys(TYPES).indexOf(type) * 13;
-  S = { v: 2, org: { name, type, created: today(), domain: (name.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'myschool') + '.didisam.com', plan: 'premium', ...(type === 'univ' ? { ed: ed === 'lms' ? 'lms' : 'lite' } : {}) }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type, type === 'univ' ? (ed === 'lms' ? 'lms' : 'lite') : undefined), audit: [], runs: [], ai: { usage: 0 }, chat: [] };
+  S = { v: 2, org: { name, type, created: today(), domain: ((a => a.length >= 3 ? a : 'org-' + Math.random().toString(36).slice(2, 8))(name.replace(/[^a-z0-9]/gi, '').toLowerCase())) + '.didisam.com', /* v38 한글 이름(영문 3자 미만)은 'e.didisam.com' 대신 기관별 기본 주소 — 홈페이지 › 도메인에서 바꿈 */ plan: 'premium', ...(type === 'univ' ? { ed: ed === 'lms' ? 'lms' : 'lite' } : {}) }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type, type === 'univ' ? (ed === 'lms' ? 'lms' : 'lite') : undefined), audit: [], runs: [], ai: { usage: 0 }, chat: [] };
   Object.assign(S, seed(type));
   if (typeof postSeed === 'function') postSeed(type);
   logAudit(`기관 생성 — 유형 ${TYPES[type].name}`); save(); CUR = { ws: 'home', tab: '' };
+  if (/^org-/.test(S.org.domain)) setTimeout(() => { try { toast(`홈페이지 주소를 임시로 ${S.org.domain}로 정했습니다. 나중에 홈페이지 › 도메인에서 영문 주소로 바꿀 수 있습니다.`); } catch (e) { } }, 1500); /* v38 */
   $('#app').innerHTML = `<div class="gen"><div class="spin"></div><b>${esc(TYPES[type].name)} 맞춤 어드민을 준비하고 있습니다</b><p>메뉴 구성 · 용어 · 자동화 레시피 · 샘플 데이터</p></div>`;
   setTimeout(() => { render(); }, 800);
 }
