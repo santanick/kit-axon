@@ -11,7 +11,7 @@
   function mySecs() { try { const me = typeof LR !== 'undefined' && LR && LR.me; if (!me) return null; const r = typeof demoRoom === 'function' ? demoRoom() : null; const A = r && r.lms && r.lms.a; if (!A) return null;
     const m = String(me.sid || ''); return A.enr.filter(e => e.member_no === m && e.status === 'enrolled').length; } catch (e) { return null; } }
   function fix() {
-    if (!on()) return; if (!document.getElementById('ulmsCss')) { const st = document.createElement('style'); st.id = 'ulmsCss'; st.textContent = '[data-ulms-off]{display:none!important}'; document.head.appendChild(st); } const lm = document.getElementById('lm') || document.body; if (!lm) return;
+    if (!on()) return; if (!document.getElementById('ulmsCss')) { const st = document.createElement('style'); st.id = 'ulmsCss'; st.textContent = '[data-ulms-off]{display:none!important}body.lapp .ap-call{white-space:nowrap}'; /* v38 #15 앱 머리 「물어보기」 줄바꿈 */ document.head.appendChild(st); } const lm = document.getElementById('lm') || document.body; if (!lm) return;
     /* 진단 · 수준 · 배지 · 디지털북 · 결제 · 튜토리얼 */
     lm.querySelectorAll('.chips2 > *').forEach(c => { if (/진단|단계부터|LEVEL|Explorer|Builder|Master/.test(T(c))) hide(c); });
     lm.querySelectorAll('.myhg, .mylv, .mpn, .my26-stat, section.prog, .ap-lv, .ap-badge, .ap-roadmap').forEach(hide);
@@ -28,6 +28,8 @@
     lm.querySelectorAll('.ap-myh').forEach(h => { if (!/아직 수강 중인 (강좌|교과목)(이|가) 없/.test(T(h)) || h.querySelector('[data-ulms-lead]')) return; const n = mySecs(); const p = [...h.querySelectorAll('p, b, strong, h1, h2, span')].find(x => /아직 수강 중인/.test(x.textContent) && !x.children.length) || null;
       const txt = n ? `이번 학기 수강 분반 ${n}개 — 아래 「과제 · 시험 · 성적」 · 「내 강의실」에서 바로 시작해요.` : '학교가 수강 등록을 마치면 이번 학기 강의가 여기에 보여요.'; if (p) { p.textContent = `${(typeof LR !== 'undefined' && LR.me && LR.me.sid) || ''}님, ${txt}`; p.setAttribute('data-ulms-lead', '1'); } else h.insertAdjacentHTML('beforeend', `<p data-ulms-lead="1">${txt}</p>`); });
     lm.querySelectorAll('a, button').forEach(a => { if (/^(강좌|교과목) 둘러보기$/.test(T(a))) hide(a); });
+    /* v38 #15 접근코드 재발급 요청 버튼: 휴대폰 터치 크기 44px */
+    lm.querySelectorAll('button.lbtn.sm, a.lbtn.sm').forEach(b => { if (/재발급/.test(T(b)) && !b.dataset.ulmsH) { b.dataset.ulmsH = '1'; b.style.minHeight = '44px'; } });
     /* 비로그인 튜터 인사: 가격 문의 대신 학사 안내 */
     document.querySelectorAll('.lt-b p').forEach(p => { if (p.textContent.includes('가격을 바로 물어보세요')) p.textContent = p.textContent.replace('강좌 · 수강 방법 · 가격을 바로 물어보세요.', '수업 · 과제 · 출석 · 학사 일정을 바로 물어보세요.'); });
   }
