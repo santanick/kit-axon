@@ -11,6 +11,7 @@ const { createPii, piiKeys } = require('./pii');
 const { createCompliance } = require('./compliance');
 const { benchmark } = require('./bench');
 const { createMedia } = require('./media');
+const { cleanCal } = require('./lpcal');
 const G = require('./aiguard');
 
 const TYPES = ['corp', 'univ', 'public', 'k12', 'adult', 'lifelong', 'voc'];
@@ -179,6 +180,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   }
   const cleanLP = lp => { const o = { tut: {}, cls: {}, diag: {}, at: new Date().toISOString() }; if (!lp || typeof lp !== 'object') return o; for (const k of ['tut', 'cls', 'diag', 'book']) if (lp[k] && typeof lp[k] === 'object' && !Array.isArray(lp[k])) o[k] = Object.fromEntries(Object.entries(lp[k]).filter(([id]) => /^[\w-]{1,40}$/.test(id)).slice(0, 500)); if (lp.days && typeof lp.days === 'object') o.days = Object.fromEntries(Object.entries(lp.days).filter(([d, n]) => /^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(+n)).slice(-370).map(([d, n]) => [d, Math.min(999, Math.max(0, Math.round(+n)))]));
     const T = lp.tutor; if (T && typeof T === 'object') { const str = (v, n) => String(v == null ? '' : v).slice(0, n); const plan = (Array.isArray(T.plan) ? T.plan : []).slice(0, 14).filter(x => x && typeof x === 'object').map(x => ({ d: str(x.d, 20), t: str(x.t, 80), m: Math.min(240, Math.max(0, Math.round(+x.m || 0))), h: /^#[\w/%-]{0,120}$/.test(String(x.h || '')) ? String(x.h) : '' })); const ask = (Array.isArray(T.ask) ? T.ask : []).slice(0, 30).filter(x => x && typeof x === 'object' && /^[\w-]{1,24}$/.test(String(x.id || ''))).map(x => ({ id: String(x.id), q: str(x.q, 400), cls: str(x.cls, 60), cid: /^[\w-]{1,40}$/.test(String(x.cid || '')) ? String(x.cid) : '', where: str(x.where, 80), at: str(x.at, 30) })); o.tutor = { plan, ask, planAt: str(T.planAt, 30) }; }
+    { const cal = cleanCal(lp.cal); if (cal) o.cal = cal; } /* v37.4 학습 캘린더 '내 일정'(lpcal.js) */
     return o; };
   const cplAfterLogin = (req, tid, sid, keep) => cpl.afterLogin(req, tid, sid, keep);
   async function newLearnerSession(res, tid, sid) {

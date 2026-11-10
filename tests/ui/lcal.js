@@ -45,6 +45,11 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
       for (let i = 0; i < 2; i++) { await p.evaluate(() => { location.hash = '#my'; }); await p.waitForTimeout(400); if (await p.evaluate(() => location.hash === '#consent' && !!document.querySelector('#lcConsent'))) { await p.check('#lcConsent [data-cn=all]'); await p.click('#lcConsent button[type=submit]'); await p.waitForTimeout(500); } } }
     await p.evaluate(() => { document.head.insertAdjacentHTML('beforeend', '<style>.ltoast{display:none!important}</style>'); }); return { ctx, p }; };
   const go = (p, h) => p.evaluate(h => { location.hash = h; }, h).then(() => p.waitForTimeout(350));
+  /* 앱 아래 탭: 홈 다음 '캘린더', 칸마다 48px 이상 · 글자 안 잘림(390 · 360) */
+  const tabs = async (p, tag, label) => { for (const w of [390, 360]) { const vp = p.viewportSize(); await p.setViewportSize({ width: w, height: 800 }); await p.waitForTimeout(150);
+      const r = await p.evaluate(() => { const A = [...document.querySelectorAll('#lapp .ap-nav > a')]; return A.map(a => { const b = a.getBoundingClientRect(); const s = a.querySelector('span'); const sr = s.getBoundingClientRect(); return { h: a.getAttribute('href'), t: s.textContent, w: Math.round(b.width), hh: Math.round(b.height), cut: s.scrollWidth > s.clientWidth + 1 || sr.bottom > b.bottom + 1 || sr.right > b.right + 1 || sr.left < b.left - 1 }; }); });
+      ok(r.length >= 5 && r[1] && r[1].h === '#cal' && r[1].t === label && r.every(x => x.w >= 48 && x.hh >= 48 && !x.cut), `${tag} 아래 탭 ${w}: ${r.length}칸 · 2번째 '${label}' · 모두 48px 이상 · 안 잘림 — ${r.map(x => x.t + ':' + x.w + (x.cut ? '(잘림)' : '')).join(' ')}`);
+      if (SH && w === 360) await shot(p, `tabs_${tag.replace(/[\[\] ]+/g, '_')}_360`); await p.setViewportSize(vp); await p.waitForTimeout(100); } };
   const over = p => p.evaluate(() => { const A = []; document.querySelectorAll('#lm *').forEach(el => { const r = el.getBoundingClientRect(); if (r.width && r.right > innerWidth + 1 && !el.closest('.lq-month')) A.push(el.className || el.tagName); }); return { sx: document.documentElement.scrollWidth > innerWidth + 1, A: A.slice(0, 3) }; });
 
   try {
@@ -54,7 +59,7 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
         const tag = `[${type} ${mode} ${w}]`; const { ctx, p } = await learner(o, mode, w);
         ok(await p.evaluate(m => document.body.classList.contains('lapp') === (m === 'app'), mode), `${tag} 화면 모드`);
         /* 진입 */
-        if (mode === 'app') { await p.evaluate(() => { LR.lp.tutor = { ...(LR.lp.tutor || {}), persona: { k: 'warm', n: '하루쌤', at: new Date().toISOString() } }; LR.api.save(); }); await go(p, '#home'); ok(await p.locator('#lm a.lq-hc[href="#cal"]').count() === 1, `${tag} 앱 홈: 학습 캘린더 카드`); if (w === 390) await shot(p, `${type}_app_home_${w}`);
+        if (mode === 'app') { await p.evaluate(() => { LR.lp.tutor = { ...(LR.lp.tutor || {}), persona: { k: 'warm', n: '하루쌤', at: new Date().toISOString() } }; LR.api.save(); }); await go(p, '#home'); ok(await p.locator('#lm a.lq-hc[href="#cal"]').count() === 1, `${tag} 앱 홈: 학습 캘린더 카드`); if (w === 390) { await tabs(p, tag, '캘린더'); await p.click('#lapp .ap-nav a[href="#cal"]'); await p.waitForTimeout(350); ok(await p.evaluate(() => route().a === 'cal' && document.querySelector('#lapp .ap-nav a.on') === document.querySelector('#lapp .ap-nav a[href="#cal"]') && !!document.querySelector('#lm .lq-sum')), `${tag} 아래 탭 '캘린더' → 캘린더 · 탭 켜짐`); await go(p, '#home'); } if (w === 390) await shot(p, `${type}_app_home_${w}`);
           await go(p, '#acct'); ok(await p.locator('#lm .ls-list a[href="#cal"]').count() === 1, `${tag} 「나」 목록: 학습 캘린더`); }
         else { ok(await p.locator('header.lh nav.ln a[href="#cal"]').count() >= 1, `${tag} 웹 머리 메뉴: 캘린더`); await go(p, '#my'); ok(await p.locator('#lm a.lq-hc[href="#cal"]').count() === 1, `${tag} 마이페이지: 학습 캘린더 카드`); }
         await go(p, '#cal'); await p.waitForTimeout(150);
@@ -105,10 +110,22 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
         }
         await ctx.close();
       }
+      /* 운영 모드(결정 1): lp.cal이 원본 · 처음 한 번 이 기기 일정 합치기(id 중복 제거 · 수정 시각 늦은 쪽) — 서버는 두지 않고 저장 호출만 가로챈다 */
+      if (type === 'univ') { const { ctx, p } = await learner(o, 'app', 390); const tag = '[univ 운영 모드]';
+        const r = await p.evaluate(() => { const k = `didisam.lcal.${LR.tid}.${LR.me.sid}`; localStorage.setItem(k, JSON.stringify([{ id: 'lcA', title: '기기 일정 A', date: '2026-11-20', at: '2026-11-09T00:00:00Z' }, { id: 'lcB', title: '기기 옛 제목', date: '2026-11-21', at: '2026-11-01T00:00:00Z' }])); localStorage.removeItem(`didisam.lcal.merged.${LR.tid}.${LR.me.sid}`);
+          let saved = 0; LR.api.save = () => { saved++; }; LR.mode = 'live'; LR.lp.cal = [{ id: 'lcB', title: '서버 새 제목', date: '2026-11-21', at: '2026-11-08T00:00:00Z' }, { id: 'lcC', title: '다른 기기 일정', date: '2026-11-22', at: '2026-11-07T00:00:00Z' }];
+          const E1 = lcalEvents().filter(e => e.src === 'me').map(e => e.title).sort(); const s1 = saved; const cal1 = LR.lp.cal.map(x => x.id).sort().join();
+          localStorage.setItem(k, JSON.stringify([{ id: 'lcZ', title: '나중 기기 일정', date: '2026-11-23', at: '2026-11-10T00:00:00Z' }])); const E2 = lcalEvents().filter(e => e.src === 'me').length;
+          return { E1, s1, cal1, E2 }; });
+        ok(r.cal1 === 'lcA,lcB,lcC' && r.E1.join() === ['기기 일정 A', '다른 기기 일정', '서버 새 제목'].sort().join() && r.s1 === 1, `${tag} 처음 한 번 이 기기 일정 합침(id 중복 제거 · 늦은 수정 우선) — ${r.E1.join(' · ')}`);
+        ok(r.E2 === 3, `${tag} 합친 뒤에는 lp.cal이 원본(이 기기 저장소는 다시 합치지 않음)`);
+        await go(p, '#cal'); await p.click('#lm [data-lcal="add"]'); await p.waitForTimeout(150); await p.fill('#lcalF [name=t]', '운영 일정'); await p.click('#lcalDlg button[type=submit]'); await p.waitForTimeout(250);
+        ok(await p.evaluate(() => LR.lp.cal.some(x => x.title === '운영 일정' && x.at) && /다른 기기에서도/.test(document.querySelector('#lm .lq-help').textContent)), `${tag} 내 일정 추가 → lp.cal에 저장 · 안내 문구`);
+        await ctx.close(); }
       /* 학원 보호자 */
       if (type === 'k12') for (const mode of ['app', 'web']) for (const w of [1280, 390]) { const tag = `[k12 보호자 ${mode} ${w}]`;
         const { ctx, p } = await learner(o, mode, w, { sid: 'pT0001', id: 'pT0001', kind: 'parent', acct: 'code', nick: '수학맘', grade: '정회원' });
-        await go(p, '#home'); ok(await p.locator('#lm a.lq-hc[href="#cal"]').count() === 1, `${tag} 보호자 홈: 자녀 일정 카드`); if (w === 390) await shot(p, `k12_parent_${mode}_home_${w}`);
+        await go(p, '#home'); ok(await p.locator('#lm a.lq-hc[href="#cal"]').count() === 1, `${tag} 보호자 홈: 자녀 일정 카드`); if (mode === 'app' && w === 390) await tabs(p, tag, '자녀 일정'); if (w === 390) await shot(p, `k12_parent_${mode}_home_${w}`);
         await go(p, '#cal'); const r = await p.evaluate(() => ({ E: lcalEvents(), h: document.title, add: !!document.querySelector('#lm [data-lcal="add"]') }));
         ok(r.E.some(e => e.who && e.src === 'auto') && /자녀 일정/.test(r.h), `${tag} 자녀 일정(자녀 이름 표시 ${r.E.filter(e => e.who).length}개)`);
         ok(!r.add, `${tag} 보호자: 내 일정 추가 버튼 없음`); const ov = await over(p); ok(!ov.sx && !ov.A.length, `${tag} 가로 넘침 없음`); await shot(p, `k12_parent_${mode}_cal_${w}`); await ctx.close(); }

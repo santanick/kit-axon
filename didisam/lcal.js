@@ -4,7 +4,7 @@
    - 내 수강 과정 일정 자동 표시(게시본 classes에서 바로 계산): 수강 시작 · 차시 열림(대학은 n주차 수업) · 회차 · 라이브 · 시험 · 과제 마감 · 설문 · 수강 종료
    - 운영자가 넣은 기관 일정(게시본 calx — calx.js에서 '학습자에게 보이기'를 켠 일정, 과정에 묶인 일정은 그 과정 수강생에게만)
    - 날짜 · 일정 누르기 → 상세(과정 · 차시로 바로 가기), '내 일정' 추가 · 수정 · 삭제
-   - 내 일정은 이 기기에만 저장(localStorage didisam.lcal.<기관>.<번호>) — 서버 학습 기록(lp)에는 싣지 않는다(서버 cleanLP가 모르는 키는 버림)
+   - 내 일정: 운영 모드는 서버 학습 기록 lp.cal(기기 간 같음, 처음 한 번 이 기기 일정을 합침), 시연 · 미리보기는 이 기기 localStorage(didisam.lcal.<기관>.<번호>)
    - [내 캘린더로 보내기]: 이 캘린더 일정 파일(.ics) · Google Calendar 연결(lai-home 창) · 리마인더(#connect)
    - 보호자(학원 초중고): 연결된 자녀의 일정('자녀 일정')
    진입: 앱 홈 카드 · 「나」 목록 · 웹 머리 메뉴 · 마이페이지 카드. 웹에서도 #connect(연결 · 알림)를 같은 카드(laiMore)로 연다.
@@ -37,8 +37,20 @@
   /* ── 내 일정(이 기기) ── */
   const key = () => `didisam.lcal.${LR.tid || 'x'}.${(LR.me && (LR.me.sid || LR.me.id)) || 'guest'}`;
   let MEM = null;
-  function mine() { if (MEM && MEM.k === key()) return MEM.L; let L = []; try { const j = JSON.parse(localStorage.getItem(key()) || '[]'); if (Array.isArray(j)) L = j.filter(x => x && okD(x.date) && x.title).slice(0, 300); } catch (e) { } MEM = { k: key(), L }; return L; }
-  function mineSave() { if (LR.mode === 'preview') return true; try { localStorage.setItem(key(), JSON.stringify(mine().slice(0, 300))); return true; } catch (e) { toast('이 기기에 저장하지 못했어요. 브라우저 저장 공간을 확인해 주세요.', 'bad'); return false; } }
+  /* v37.4 결정 1(대표님 23:10): 운영 모드(로그인)는 서버 학습 기록 lp.cal이 원본(기기 간 같음, 서버가 필드 · 개수 · 크기를 정리 — lpcal.js / PubServiceImpl.cleanCal).
+     처음 한 번만 이 기기에 있던 내 일정을 lp.cal에 합친다(id로 중복 제거, 수정 시각 at이 늦은 쪽). 시연 · 미리보기는 지금처럼 이 기기 localStorage. */
+  const live = () => LR.mode === 'live' && !!LR.me && !!LR.lp;
+  const okU = x => x && okD(x.date) && x.title && /^[\w-]{1,40}$/.test(String(x.id || ''));
+  function local() { try { const j = JSON.parse(localStorage.getItem(key()) || '[]'); return Array.isArray(j) ? j.filter(okU).slice(0, 300) : []; } catch (e) { return []; } }
+  function mergeOnce() { const fk = 'didisam.lcal.merged.' + (LR.tid || 'x') + '.' + (LR.me.sid || LR.me.id || ''); let done = false; try { done = localStorage.getItem(fk) === '1'; } catch (e) { done = true; } if (done) return false;
+    const by = new Map(); (Array.isArray(LR.lp.cal) ? LR.lp.cal : []).filter(okU).forEach(x => by.set(x.id, x)); let n = 0;
+    local().forEach(x => { const p = by.get(x.id); if (!p || String(x.at || '') > String(p.at || '')) { by.set(x.id, x); n++; } });
+    LR.lp.cal = [...by.values()].slice(0, 300); try { localStorage.setItem(fk, '1'); } catch (e) { } if (n) { LR.api.save(); setTimeout(() => toast(`이 기기에 있던 내 일정 ${n}개를 계정에 옮겼어요. 이제 다른 기기에서도 보여요.`, 'ok'), 400); } return true; }
+  window.lcalMerge = mergeOnce;
+  function mine() { if (live()) { if (!Array.isArray(LR.lp.cal)) LR.lp.cal = []; mergeOnce(); LR.lp.cal = LR.lp.cal.filter(okU); return LR.lp.cal; }
+    if (MEM && MEM.k === key()) return MEM.L; const L = local(); MEM = { k: key(), L }; return L; }
+  function mineSave() { if (LR.mode === 'preview') return true; if (live()) { LR.lp.cal = mine().slice(0, 300); LR.api.save(); return true; }
+    try { localStorage.setItem(key(), JSON.stringify(mine().slice(0, 300))); return true; } catch (e) { toast('이 기기에 저장하지 못했어요. 브라우저 저장 공간을 확인해 주세요.', 'bad'); return false; } }
 
   /* ── 내(또는 자녀) 수강 과정 ── */
   function kids() { if (!isPar()) return []; try { const r = (typeof laRoom === 'function' && laRoom()) || {}; const pa = typeof laPacct === 'function' ? laPacct() : null; if (!pa) return [];
@@ -117,7 +129,7 @@
         <span class="lq-nav">${v === 'list' ? '' : `<button type="button" class="lq-ib" data-lcal="mv" data-v="-1" aria-label="이전">‹</button>`}<b class="lq-ttl">${title}</b>${v === 'list' ? '' : `<button type="button" class="lq-ib" data-lcal="mv" data-v="1" aria-label="다음">›</button>`}</span><button type="button" class="lq-tb" data-lcal="mv" data-v="0">오늘</button></div>
       ${v === 'month' ? monthHTML(E) : v === 'week' ? weekHTML(E) : listHTML(E)}
       <div class="lq-leg" aria-label="일정 종류">${ks.map(k => `<span><i style="background:${COL[k]}"></i>${esc(LBL[k])}</span>`).join('')}</div>
-      <p class="lq-help">날짜를 누르면 그날 일정을 보고${P ? '' : ' 내 일정을 넣을 수 있어요'}. 일정을 누르면 ${esc(T('cls'))} · 차시로 바로 갈 수 있어요. ${P ? '' : '내 일정은 이 기기에만 저장돼요.'}</p>
+      <p class="lq-help">날짜를 누르면 그날 일정을 보고${P ? '' : ' 내 일정을 넣을 수 있어요'}. 일정을 누르면 ${esc(T('cls'))} · 차시로 바로 갈 수 있어요. ${P ? '' : live() ? '내 일정은 내 계정에 저장돼 다른 기기에서도 보여요.' : '내 일정은 이 기기에만 저장돼요.'}</p>
     </div></section>`; }
   window.lcalHTML = calHTML;
 
@@ -144,7 +156,7 @@
       <div class="lq-f3"><label>날짜<input type="date" name="d" required value="${esc(u ? u.date : date || td())}"></label><label>시작<input type="time" name="s" value="${esc(u ? u.time || '' : '')}"></label><label>끝<input type="time" name="e" value="${esc(u ? u.end || '' : '')}"></label></div>
       ${C.length ? `<label>연결 ${esc(T('cls'))}(선택)<select name="c"><option value="">없음</option>${C.map(c => `<option value="${esc(c.id)}" ${u && u.cls === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` : ''}
       <label>메모(선택)<input name="m" maxlength="120" value="${esc(u ? u.memo || '' : '')}"></label>
-      <p class="lq-err" id="lcalErr" role="alert"></p><p class="lq-note">내 일정은 이 기기에만 저장되고 기관에는 보이지 않아요.</p></form>`,
+      <p class="lq-err" id="lcalErr" role="alert"></p><p class="lq-note">${live() ? '내 일정은 내 계정에 저장돼 다른 기기에서도 보이고, 기관에는 보이지 않아요.' : '내 일정은 이 기기에만 저장되고 기관에는 보이지 않아요.'}</p></form>`,
       `${u ? `<button type="button" class="lbtn ghost lq-del" data-lcal="del" data-v="${esc(u.id)}">삭제</button>` : ''}<button type="submit" form="lcalF" class="lbtn pri">${u ? '저장' : '추가'}</button>`);
     setTimeout(() => { const i = document.querySelector('#lcalF [name=t]'); i && i.focus(); }, 30); }
   function sendOpen() { const g = !!(LR.lp && LR.lp.conn && LR.lp.conn.gcal && LR.lp.conn.gcal.on); const ar = Array.isArray(LR.lp && LR.lp.auto) ? LR.lp.auto.filter(a => a.on).length : 0; const n = icsEvents().length;
@@ -188,7 +200,7 @@
     const t = v('t').replace(/[<>]/g, ''), d = v('d'), s = v('s'), en = v('e');
     if (!t) return err('제목을 입력해 주세요.'); if (!okD(d)) return err('날짜를 골라 주세요.'); if (s && en && en <= s) return err('끝나는 시간이 시작보다 빨라요.');
     const o = { title: t.slice(0, 60), date: d, time: okT(s) ? s : '', end: okT(en) ? en : '', cls: v('c'), memo: v('m').replace(/[<>]/g, '').slice(0, 120) };
-    const L = mine(); const id = f.dataset.v; if (id) { const u = L.find(x => x.id === id); if (!u) return close(); Object.assign(u, o); } else { if (L.length >= 300) return err('내 일정은 300개까지 넣을 수 있어요.'); L.push({ id: 'lc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ...o, at: new Date().toISOString() }); }
+    const L = mine(); const id = f.dataset.v; if (id) { const u = L.find(x => x.id === id); if (!u) return close(); Object.assign(u, o, { at: new Date().toISOString() }); } else { if (L.length >= 300) return err('내 일정은 300개까지 넣을 수 있어요.'); L.push({ id: 'lc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ...o, at: new Date().toISOString() }); }
     if (!mineSave()) return; close(); LC.d = d; rerender(); toast(id ? '일정을 저장했어요.' : `${fmt(d)}에 내 일정을 넣었어요.`, 'ok'); }, true);
   /* 칸의 빈 곳을 눌러도 그날 일정 */
   document.addEventListener('click', e => { const c = e.target.closest && e.target.closest('.lq-day[data-lcday]'); if (!c || e.target.closest('[data-lcal]')) return; dayOpen(c.dataset.lcday); });
@@ -210,6 +222,11 @@
   const card = (cls) => { const b = brief(); const P = isPar(); return `<a class="lq-hc ${cls || ''}" href="#cal">${ico('cal', 22)}<span><b>${P ? '자녀 일정' : '학습 캘린더'}</b><small>${esc(b.s)}</small></span>${b.T0 ? `<em>${b.T0}</em>` : ''}${ico('arrow', 16)}</a>`; };
   function decorate() { if (!SITE() || !LR.me) return; const lm = document.getElementById('lm'); if (!lm) return; const a = route().a;
     if (appOn()) {
+      /* v37.4 결정 2: 앱 아래 탭에 '캘린더'(보호자 '자녀 일정') — 홈 다음. lapp.js navHTML은 그대로 두고 그린 뒤 끼운다(L2 앱 셸 작업과 충돌 없게). */
+      const nav = document.querySelector('#lapp .ap-nav'); if (nav && !nav.querySelector('a[href="#cal"]')) { const on = a === 'cal'; const L = [...nav.querySelectorAll(':scope > a')];
+        if (on) L.forEach(x => { x.classList.remove('on'); x.removeAttribute('aria-current'); });
+        const t = document.createElement('a'); t.href = '#cal'; t.className = 'lq-tab' + (on ? ' on' : ''); if (on) t.setAttribute('aria-current', 'page'); t.innerHTML = `${ico('cal', 22)}<span>${isPar() ? '자녀 일정' : '캘린더'}</span>`;
+        if (L[0]) L[0].after(t); else nav.prepend(t); nav.classList.add('lq-n' + nav.querySelectorAll(':scope > a').length); }
       if (a === 'home' && !lm.querySelector('.lq-hc')) { const P = isPar(); const anc = P ? lm.querySelector('.ap-pg4') : (lm.querySelector('.ap-conn') || lm.querySelector('.ap-hero')); if (anc) anc.insertAdjacentHTML(P || anc.classList.contains('ap-conn') ? 'beforebegin' : 'afterend', card(P ? 'par' : 'app')); }
       if (a === 'acct' && !route().b && !lm.querySelector('.ls-list a[href="#cal"]')) { const ref = lm.querySelector('.ls-list a[href="#connect"], .ls-list a[href="#family"]'); if (ref) { const b = brief(); ref.insertAdjacentHTML('beforebegin', `<a href="#cal" class="ls-row"><span class="ls-ic" style="--c:#14A3A3">${ico('cal', 20)}</span><span class="ls-tx"><b>${isPar() ? '자녀 일정' : '학습 캘린더'}</b><small>${esc(b.s)}</small></span>${b.T0 ? `<i class="ls-bd">${b.T0}</i>` : ''}<span class="ls-go" aria-hidden="true">›</span></a>`); } }
       if (a === 'my' && !isPar() && !lm.querySelector('.lq-hc')) { const anc = lm.querySelector('.ap-my'); if (anc) anc.insertAdjacentHTML('afterend', `<div class="lq-myw">${card('app')}</div>`); }

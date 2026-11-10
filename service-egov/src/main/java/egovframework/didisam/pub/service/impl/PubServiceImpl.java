@@ -255,7 +255,29 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             tu.put("planAt", cut(S(get(T, "planAt")), 30));
             o.set("tutor", tu);
         }
+        { ArrayNode cal = cleanCal(get(lp, "cal")); if (cal != null) o.set("cal", cal); } /* v37.4 학습 캘린더 '내 일정' — Node lpcal.js와 같은 규칙 */
         return o;
+    }
+
+    /* v37.4 lp.cal 정리: 배열 · 최대 300개 · 직렬화 64KB · 필드 id/title(80)/date/time/end/memo(300)/cls/at(30)만, 같은 id는 수정 시각이 늦은 것 */
+    static final int CAL_MAX = 300, CAL_BYTES = 64 * 1024;
+    static final Pattern CAL_HM = Pattern.compile("([01]\\d|2[0-3]):[0-5]\\d");
+    static String calStr(JsonNode v, int n) { String x = S(v).replaceAll("[<>]", "").replaceAll("[\\u0000-\\u001f\\u007f]", " ").strip(); return x.length() > n ? x.substring(0, n) : x; }
+    static ArrayNode cleanCal(JsonNode a) {
+        if (a == null || !a.isArray()) return null;
+        LinkedHashMap<String, ObjectNode> by = new LinkedHashMap<>();
+        for (JsonNode x : head(arr(a), CAL_MAX * 2)) {
+            if (x == null || !x.isObject()) continue;
+            String id = S(get(x, "id")), title = calStr(get(x, "title"), 80), date = S(get(x, "date"));
+            if (!LPKEY.matcher(id).matches() || title.isEmpty() || !DAY.matcher(date).matches()) continue;
+            String tm = sOr(get(x, "time")), en = sOr(get(x, "end")), cl = sOr(get(x, "cls"));
+            ObjectNode y = F.objectNode(); y.put("id", id); y.put("title", title); y.put("date", date); y.put("time", CAL_HM.matcher(tm).matches() ? tm : ""); y.put("end", CAL_HM.matcher(en).matches() ? en : "");
+            y.put("memo", calStr(get(x, "memo"), 300)); y.put("cls", LPKEY.matcher(cl).matches() ? cl : ""); y.put("at", calStr(get(x, "at"), 30));
+            ObjectNode p = by.get(id); if (p == null || y.get("at").asText().compareTo(p.get("at").asText()) > 0) by.put(id, y);
+        }
+        ArrayNode out = F.arrayNode(); int bytes = 2;
+        for (ObjectNode y : by.values()) { if (out.size() >= CAL_MAX) break; int n = stringify(y).getBytes(java.nio.charset.StandardCharsets.UTF_8).length + 1; if (bytes + n > CAL_BYTES) break; bytes += n; out.add(y); }
+        return out;
     }
 
     /** n.toLocaleString('ko-KR') */
