@@ -152,8 +152,10 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     lifelong: { look: 'senior', color: '#2F6FE4', ey: 'LIFELONG LEARNING', hero: n => [`${n}\n배움에는 끝이 없습니다`, '생활 · 직업 · 인문 강좌를 온라인과 오프라인으로 만나 보세요.'], about: '학습관 소개', feat: [['생활 강좌', '일상에 도움이 되는 배움'], ['직업 강좌', '새로운 일을 위한 준비'], ['인문 · 문화', '함께 읽고 나누는 시간'], ['큰 글씨 화면', '누구나 쉽게 신청']], steps: [['강좌 보기', '관심 있는 강좌를 찾습니다'], ['신청', '온라인이나 전화로 신청합니다'], ['참여', '정해진 날 함께 배웁니다']] },
     voc: { look: 'publicTiles', color: '#1E40AF', ey: 'TRAINING', hero: n => [`${n}\n취업까지 이어지는 훈련`, '훈련 과정부터 수료 후 취업 준비까지 함께합니다.'], about: '기관 소개', feat: [['국비 과정', '국민내일배움카드로 수강'], ['실무 훈련', '현장에서 쓰는 기술'], ['취업 지원', '이력서 · 면접 준비'], ['출결 관리', '훈련 기록을 정확하게']], steps: [['과정 상담', '나에게 맞는 과정을 찾습니다'], ['수강 신청', '카드 확인 후 신청합니다'], ['훈련 · 수료', '수료 후 취업을 준비합니다']] }
   };
+  /* v38 대학 학사 LMS(전교생 메인 LMS): 배지 · 신청 중심의 사업단 문구 대신 수업 · 과제 · 출석 문구 */
+  const LTY_ULMS = Object.assign({}, LTY.univ, { ey: 'LEARNING MANAGEMENT', hero: n => [`${n}\n수업과 학습을 한 곳에서`, '강의 자료 · 과제 · 시험 · 출석 · 공지를 학기 단위로 확인합니다.'], about: '이용 안내', feat: [['강의실', '주차별 수업 자료와 공지'], ['과제 · 시험', '제출 · 응시 · 피드백을 온라인으로'], ['출석', '인증번호 · QR로 출석하고 바로 확인'], ['성적', '항목별 점수와 피드백']], steps: [['로그인', '학번과 접근코드로 로그인합니다'], ['강의실 입장', '이번 학기 수강 분반이 바로 보입니다'], ['과제 · 시험', '마감 전에 제출하고 결과를 확인합니다']] });
   function hpLocal(brief, o) {
-    o = o || {}; const ty = LTY[S.org.type] || LTY.adult; const n = N(); const b = String(brief || '');
+    o = o || {}; const ty = (S.org.type === 'univ' && S.org.ed === 'lms' ? LTY_ULMS : null) || LTY[S.org.type] || LTY.adult; const n = N(); const b = String(brief || '');
     const tone = TONES[o.tone] ? o.tone : (Object.keys(TONES).find(k => b.includes(k)) || '신뢰');
     const color = /파랑|블루|blue/i.test(b) ? '#2563EB' : /보라|퍼플/.test(b) ? '#5C74F6' : /주황|오렌지/.test(b) ? '#EA580C' : /네이비|남색/.test(b) ? '#1E3A8A' : /초록|그린|green/i.test(b) ? '#15803D' : ty.color;
     const focus = (b.match(/([가-힣A-Za-z0-9 ]{2,20})\s*(을|를)?\s*(강조|중심|위주)/) || [])[1];

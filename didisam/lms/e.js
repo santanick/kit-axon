@@ -24,12 +24,18 @@
   const dept = id => { const m = typeof M === 'function' ? M(id) : null; const g = m && S.groups && S.groups.find(x => x.id === m.group); return g ? g.name : ''; };
   function clsSections() { return (S.classes || []).filter(c => (c.learners || []).length).map((c, i) => ({ section_id: c.id, term_id: '2026-2', course_code: 'DEMO' + (100 + i), course_name: c.name, section_no: '01', title: c.name, regular: c.learners.length - (i === 0 ? 1 : 0), audit: i === 0 ? 1 : 0 })); }
   /* u2: 스튜디오 강의실에 수강생이 없으면(빈 스튜디오 · 새 대학 기관) 묶음 A의 데모 학기 · 분반 · 수강생(S.lms.a)을 그대로 쓴다 — 같은 분반 · 학번이 모든 화면에 나온다 */
-  const aOn = () => !LIVE_ON() && !clsSections().length && typeof window.lmsaEns === 'function';
+  /* v38 학사 LMS 기관은 언제나 학기 · 강좌(S.lms.a)의 분반 · 학번을 쓴다(스튜디오 과정 S.classes와 섞지 않음 — 학습자 앱과 같은 분반 · 학번) */
+  const lmsOrg = () => !!(S && S.org && S.org.type === 'univ' && S.org.ed === 'lms');
+  const aOn = () => !LIVE_ON() && typeof window.lmsaEns === 'function' && (lmsOrg() || !clsSections().length);
+  /* v38 교수 화면(데모: 역할 = 교수)은 내 담당 분반만 — 학기 · 강좌의 담당(교수 · 공동교수 · 조교 · 채점자) 기준 */
+  const tchView = () => typeof window.LR !== 'object' && !!(S && S.me && S.me.role === 'teacher'); /* 학습자 앱에서 불러 쓸 때는 해당 없음 */
+  function mineOnly(L) { if (!tchView() || !aOn()) return L; const A = window.lmsaEns(); const me = A.scopes && A.scopes.teacher && A.scopes.teacher.member_no; if (!me) return [];
+    const ok = new Set(A.staff.filter(t => t.member_no === me && t.status === 'active').map(t => t.section_id)); return L.filter(s => ok.has(s.section_id)); }
   function aRoster(A, sid) { const ids = new Set([sid, ...A.sections.filter(s => s.rep_section_id === sid).map(s => s.section_id)]); const seen = new Set(); const un = c => { const u = A.units.find(x => x.unit_code === c); return u ? u.name : (c || ''); };
     return A.enr.filter(e => ids.has(e.section_id) && e.status === 'enrolled' && !seen.has(e.member_no) && seen.add(e.member_no)).map(e => { const p = A.persons.find(x => x.member_no === e.member_no) || {}; return { person_id: e.member_no, member_no: e.member_no, unit_code: un(p.unit_code), kind: e.kind === 'audit' ? 'audit' : 'regular' }; }).sort((a, b) => a.member_no < b.member_no ? -1 : 1); }
   function aSecs() { const A = window.lmsaEns(); const cn = c => (A.courses.find(x => x.course_code === c) || {}).name || c;
     return A.sections.filter(s => !s.hidden && s.status !== 'archived').map(s => { const R = aRoster(A, s.section_id); return { section_id: s.section_id, term_id: s.term_id, course_code: s.course_code, course_name: cn(s.course_code), section_no: s.section_no, title: s.title, regular: R.filter(r => r.kind === 'regular').length, audit: R.filter(r => r.kind === 'audit').length }; })
-      .filter(s => s.regular + s.audit > 0).sort((a, b) => a.course_code < b.course_code ? -1 : a.course_code > b.course_code ? 1 : a.section_no < b.section_no ? -1 : 1); }
+      .sort((a, b) => a.course_code < b.course_code ? -1 : a.course_code > b.course_code ? 1 : a.section_no < b.section_no ? -1 : 1); }
   const aSec = sec => aOn() ? aSecs().find(s => s.section_id === sec) || null : null;
   function demoSections() { return aOn() ? aSecs() : clsSections(); }
   function demoStudents(sec) {
@@ -45,6 +51,7 @@
       return api(method, url, method === 'GET' ? undefined : (body || {}));
     }
     const f = D[method + ' ' + path]; if (!f) ERR(404, 'not_found', '데모에서 지원하지 않는 기능입니다.');
+    if (aOn() && body && (body.section || body.section_id) && tchView()) { const sid = body.section || body.section_id; if (!mineOnly(demoSections()).some(s => s.section_id === sid)) ERR(403, 'role', '담당 분반이 아닙니다.'); }
     if (aOn() && body && (body.section || body.section_id)) seedSec(body.section || body.section_id);
     const out = f(JSON.parse(JSON.stringify(body || {}))); save(); return JSON.parse(JSON.stringify(out));
   }
@@ -62,7 +69,7 @@
   function sections() { const r = load('sec', () => call('GET', '/api/lms/e/sections')); return r && r.ok ? r.ok.sections : null; }
   function secPick(uiKey, act) {
     const L = sections(); if (!L) return { html: wait(), sec: null };
-    if (!L.length) return { html: '<div class="empty">이번 학기에 수강생이 있는 분반이 아직 없습니다.<small class="efh-note">학사(분반 · 수강) 자료가 들어오면 이곳에 분반이 나타납니다.</small></div>', sec: null };
+    if (!L.length) return { html: S && S.me && S.me.role === 'teacher' ? '<div class="empty">담당 분반이 없습니다.<small class="efh-note">학기 · 강좌 › 분반 관리에서 담당 교수로 지정되면 이곳에 분반이 나타납니다.</small></div>' : '<div class="empty">이번 학기에 개설된 분반이 없습니다.<small class="efh-note">학기 · 강좌에서 교과목 · 분반을 개설하면(수강생이 없어도) 이곳에서 과제 · 시험 · 성적을 미리 준비할 수 있습니다.</small><button class="btn sm" data-act="go" data-v="lmsa">학기 · 강좌로 가기</button></div>', sec: null };
     const sec = L.find(s => s.section_id === UI[uiKey]) || L[0]; UI[uiKey] = sec.section_id;
     return { sec, html: `<div class="bar2 efh-bar"><label class="efh-lab">분반 <select data-chg="${act}" aria-label="분반 선택">${L.map(s => `<option value="${esc(s.section_id)}" ${s === sec ? 'selected' : ''}>${esc((s.course_name || s.title) + ' ' + s.section_no + '분반')}</option>`).join('')}</select></label><small class="muted">수강생 ${s0(sec.regular)}명${sec.audit ? ` · 청강 ${sec.audit}명(성적 제외)` : ''}</small>${demoTag()}</div>` };
   }
@@ -102,7 +109,7 @@
   const filesJ = ids => (ids || []).map(id => st().files[id]).filter(Boolean).map(f => ({ file_id: f.file_id, name: f.name, mime: f.mime, size: f.size }));
   const subJ = s => ({ sub_id: s.sub_id, asg_id: s.asg_id, owner: s.owner_key, status: s.status, body: s.body, files: filesJ(s.files), version: s.version, saved_at: s.saved_at, submitted_at: s.submitted_at, late: s.late, score: s.score, rubric_scores: s.rubric_scores || {}, feedback: s.feedback || null, annotations: s.annotations || [], feedback_files: filesJ(s.feedback_files), graded_at: s.graded_at || null });
   const words = t => new Set(String(t || '').toLowerCase().split(/[^0-9a-z가-힣]+/).filter(w => w.length >= 2));
-  D['GET /api/lms/e/sections'] = () => ({ sections: demoSections() });
+  D['GET /api/lms/e/sections'] = () => ({ sections: mineOnly(demoSections()) });
   D['GET /api/lms/e/list'] = a => ({ assignments: st().asg.filter(x => x.section_id === a.section).map(g => { const ss = st().subs.filter(s => s.asg_id === g.asg_id); return { ...g, submitted: ss.filter(s => s.status !== 'draft').length, graded: ss.filter(s => /graded|returned/.test(s.status)).length, drafts: ss.filter(s => s.status === 'draft').length, targets: g.kind === 'team' ? st().teams.filter(t => t.asg_id === g.asg_id).length : demoStudents(g.section_id).length }; }) });
   D['POST /api/lms/e/save'] = a => {
     if (!String(a.title || '').trim()) ERR(400, 'required', '과제 제목을(를) 입력하세요.');
@@ -189,7 +196,7 @@
   const BODY = ['수업에서 배운 개념을 학과 사례에 적용해 정리했습니다. 자료 수집 · 정리 · 결론 순서로 썼고 참고문헌 2건을 붙였습니다.', '사례 기업의 문제를 정의하고 해결 방법 두 가지를 비교했습니다. 표와 그림으로 핵심을 요약했습니다.', '조원과 토의한 내용을 바탕으로 장단점을 나누어 쓰고, 한계와 다음 과제를 정리했습니다.', '실습 결과를 캡처해 붙이고 수치가 달라진 이유를 설명했습니다. 마지막에 느낀 점을 덧붙였습니다.'];
   const FB = ['핵심을 잘 정리했습니다. 근거 자료를 한 가지 더 보완하면 좋겠습니다.', '구성이 좋습니다. 결론을 조금 더 분명하게 써 보세요.', '사례 선택이 적절합니다. 인용 형식을 맞춰 주세요.'];
   function seedSec(sec) {
-    const X = st(); X.seeded = X.seeded || {}; if (X.seeded[sec]) return; const S0 = aSec(sec); if (!S0) return; X.seeded[sec] = 1;
+    const X = st(); X.seeded = X.seeded || {}; if (X.seeded[sec]) return; if (S.org && S.org.empty) { X.seeded[sec] = 1; return; } const S0 = aSec(sec); if (!S0) return; X.seeded[sec] = 1;
     const P = demoStudents(sec); const now = Date.now(), DAY = 864e5; const iso = t => new Date(t).toISOString(); const hp = (p, k) => hsh(p.member_no + '|' + sec + '|' + k);
     /* 과제 3개: 마감 지난 보고서(채점 대기 다수) · 이번 주 마감 계획서 · 비공개 기말 보고서 */
     const mkA = v => { const g = { asg_id: rid(), section_id: sec, body: '', kind: 'individual', submit_types: ['file', 'text'], max_files: 3, open_at: iso(now - 14 * DAY), late_until: null, late_penalty_pct: 0, max_score: 100, rubric_id: null, plag_on: false, status: 'published', ...v }; X.asg.push(g); gradeLink(sec, 'asg:' + g.asg_id, 'assignment', g.title, g.max_score); return g; };
