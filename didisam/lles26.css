@@ -9,6 +9,7 @@ section.crsh.l26hide{display:none}
 .l26dl{display:block;color:var(--t-sub,var(--g600));font-size:12.5px;margin-bottom:10px}
 .l26bar{height:6px;border-radius:99px;background:var(--g200,#E9EBEC);overflow:hidden}.l26bar i{display:block;height:100%;background:var(--pri);border-radius:inherit}
 .l26pc{display:block;margin-top:6px;color:var(--pri-tx,var(--pri));font-size:12.5px;font-weight:700}
+.l26crit{display:block;margin-top:4px;color:var(--mute,#6C6C6C);font-size:12.5px;line-height:1.45} /* v37 L1 */
 .l26cert{display:inline-flex;margin-top:10px;font-size:13px;font-weight:700;color:var(--pri-tx,var(--pri));text-decoration:none}
 .cw2.l26 .items{padding:6px 0 24px}
 .cw2.l26 .wk>p{margin:14px 18px 6px}

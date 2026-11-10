@@ -49,6 +49,7 @@
 .lux-ml li{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--line2);border-radius:8px;background:#fff}
 .lux-ml li>div{flex:1;min-width:0;display:grid;gap:4px}.lux-ml b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lux-ml .lux-mbar{width:100%;max-width:340px}.lux-ml small{color:var(--mute);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lux-mla{display:flex;gap:6px;flex-shrink:0}
+.lux-mth{flex:none;width:96px;height:54px;object-fit:cover;border-radius:6px;background:var(--line2)}.lux-mth0{display:grid;place-items:center;padding:4px;background:var(--pri-50,#EAEDFF);color:var(--pri-tx,#3B48B5);font-size:12px;font-weight:800;text-align:center;line-height:1.2;overflow:hidden} /* v37 L1 강좌 썸네일 */
 .lux-acct .shp-list a{display:flex;align-items:center;justify-content:space-between}
 
 /* ── 휴대폰 ── */
@@ -78,7 +79,7 @@ body.luxsheet{overflow:hidden}
   body[data-luxr=join] .lt-fab,body[data-luxr=login] .lt-fab,body[data-luxr=pay] .lt-fab,body[data-luxr=acct] .lt-fab,body.luxsheet .lt-fab{display:none}
   .lux-cont{padding:16px 0 4px}.lux-cc{flex-direction:column;align-items:stretch;gap:14px;padding:20px;border-radius:12px}.lux-cc .lux-go{justify-content:center}.lux-sub{white-space:normal}
   .lux-tabs{display:flex}.lux-tabs button{flex:1;padding:9px 0}
-  .lux-ml li{flex-wrap:wrap}.lux-mla{width:100%;justify-content:flex-end}
+  .lux-ml li{flex-wrap:wrap}.lux-mla{width:100%;justify-content:flex-end}.lux-mth{width:72px;height:40px}.lux-ml li>div{flex:1 1 160px}
   /* 강좌 상세: 가격 · 신청 버튼을 화면 아래에 고정 */
   body[data-luxr=class] .shp-side{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom));top:auto;z-index:20;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 14px;border-radius:12px;box-shadow:0 -10px 30px -18px rgba(42,43,43,.45)}
   body[data-luxr=class] .shp-side .shp-meta,body[data-luxr=class] .shp-side>small{display:none}

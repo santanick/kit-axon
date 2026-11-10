@@ -271,9 +271,10 @@
 
   /* ── v27.1 내 강의(#my) 앱 화면: 이어서 학습 카드 + 아래에 기존 학습 기록(배지 · 수료증 · 결제 · 활동) 그대로 ── */
   function myTopHTML() { if (typeof myStats !== 'function') return ''; const st = myStats(); const C = st.courses; const P = persona();
+    const anyTh = C.some(x => x.c && x.c.thumb); /* v37 L1: 썸네일이 있는 과정이 하나라도 있으면 없는 과정은 이름 타일로 줄을 맞춘다 */
     const ring = p => `<span class="ap-rg" style="--p:${Math.max(0, Math.min(100, p))}"><b>${p}%</b></span>`;
     const card = (x, ex) => { const href = x.next ? `#c/${x.c.id}/${x.next.id}` : `#c/${x.c.id}`; const warn = x.st === 'returned';
-      return `<a class="ap-cc ${x.done ? 'done' : ''} ${warn ? 'warn' : ''}${ex ? ' exp' : ''}" href="${esc(href)}">${ring(x.p)}<span class="ap-cm"><b>${esc(x.c.name)}</b><small>${ex ? '학습 기간이 끝났어요 · 기록만 볼 수 있어요' : x.done ? '수료 · 다시 보기' : warn ? '재제출 요청 · 피드백 확인' : x.next ? '다음 · ' + esc(x.next.title) : '시작하기'}</small>${ex ? '<em class="ap-exp">만료됨</em>' : x.c.end && !x.done ? `<em>${esc(x.c.end)} 마감</em>` : ''}</span><i>${x.done ? ico('check', 16) : ico('play', 16)}</i></a>`; };
+      return `<a class="ap-cc ${x.done ? 'done' : ''} ${warn ? 'warn' : ''}${ex ? ' exp' : ''}" href="${esc(href)}">${x.c.thumb ? `<span class="ap-thw"><img class="ap-th" src="${esc(x.c.thumb)}" alt="" loading="lazy">${ring(x.p)}</span>` : anyTh ? `<span class="ap-thw"><span class="ap-th ap-th0" aria-hidden="true">${esc(String(x.c.name || '').slice(0, 4))}</span>${ring(x.p)}</span>` : ring(x.p)}<span class="ap-cm"><b>${esc(x.c.name)}</b><small>${ex ? '학습 기간이 끝났어요 · 기록만 볼 수 있어요' : x.done ? '수료 · 다시 보기' : warn ? '재제출 요청 · 피드백 확인' : x.next ? '다음 · ' + esc(x.next.title) : '시작하기'}</small>${ex ? '<em class="ap-exp">만료됨</em>' : x.c.end && !x.done ? `<em>${esc(x.c.end)} 마감</em>` : ''}</span><i>${x.done ? ico('check', 16) : ico('play', 16)}</i></a>`; };
     const today = new Date().toISOString().slice(0, 10); const exp = x => !x.done && x.c.end && String(x.c.end).slice(0, 10) < today;
     const stOf = x => exp(x) ? 'exp' : x.done ? 'done' : x.p > 0 ? 'ing' : 'pre'; const F = AP.myf || 'all'; const SO = AP.mys || 'recent';
     const live = C.filter(x => !exp(x)); const cntOf = k => k === 'all' ? live.length : live.filter(x => stOf(x) === k).length;
