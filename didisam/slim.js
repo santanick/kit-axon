@@ -8,6 +8,26 @@
      - site: 사이트 첫 화면은 v36 G(한 화면 편집기)가 새로 정한다 — 그 전까지 지금 화면 유지 */
   window.SLIM_FRONT = window.SLIM_FRONT || new Set(); /* v36 G: 사이트도 요약 첫 화면 없이 한 화면 편집기(hpstudio.js) */
   window.slimFront = id => !!(window.SLIM_FRONT && SLIM_FRONT.has(id));
+  /* ───────── 0-1. v37 클릭 후 스크롤이 맨 위로 튀는 현상 방지(대표님 2026-11-10 '해당 페이지 부분에 고정되어 있어야 돼') ─────────
+     원인: 화면을 바꾸는 클릭은 대부분 render()로 #app 전체를 다시 그린다. 스튜디오 화면은 #main(.bcanvas)이 스스로 스크롤하는 상자라서,
+     새 #main이 생기면 scrollTop이 0이 된다(휴대폰은 창 스크롤이지만 문서가 잠깐 짧아지면 위로 당겨진다).
+     처리: 다시 그리기 전후로 '같은 화면'(공간 · 탭 · 첫 제목이 같음)이면 #main · 창 · 화면 안 스크롤 상자 위치를 되돌린다.
+     다른 화면으로 가는 이동(go · 상세 열기 등 제목이 바뀌는 경우)은 그대로 맨 위에서 시작한다. */
+  { const sig = () => { try { const m = document.getElementById('main'); if (!m || typeof CUR === 'undefined' || !CUR) return ''; const h = [...m.querySelectorAll('.sl-h h2, .bhdl b, h1, h2')].find(x => x.offsetParent !== null && !x.closest('#modal,.mwrap,#slSheet'));
+        const back = m.querySelector('.sl-back, [data-act$="back"], [data-act$="-list"], .w2back, .crumb'); /* 상세(뒤로 버튼) ↔ 목록이 바뀌면 다른 화면 */
+        return `${CUR.ws}/${CUR.tab}|${back ? 'd' : 'l'}|${h ? h.textContent.replace(/[\d,.\s·()]+/g, '').slice(0, 24) : ''}`; } catch (e) { return ''; } };
+    const boxes = () => { const m = document.getElementById('main'); return m ? [...m.querySelectorAll('[data-keep-scroll], .hps-canvas, .hpst-canvas, .ct-pv, .bk-pv, .s2tree, .sl-list')].filter(e => e.scrollTop > 0).map(e => [e.id || e.className, e.scrollTop]) : []; };
+    window.slKeepScroll = true;
+    const base = render; render = (...a) => { if (!window.slKeepScroll || !S || !S.org) return base(...a);
+      const m0 = document.getElementById('main'); const k0 = sig(); const my = m0 ? m0.scrollTop : 0; const wy = window.scrollY; const B = boxes();
+      const r = base(...a);
+      try { if (k0 && k0 === sig() && (my > 0 || wy > 0)) { const put = () => { const m = document.getElementById('main'); if (m && my > 0 && Math.abs(m.scrollTop - my) > 1) m.scrollTop = my; if (wy > 0 && Math.abs(window.scrollY - wy) > 1) window.scrollTo(0, wy);
+            B.forEach(([k, y]) => { const e = m && [...m.querySelectorAll('[data-keep-scroll], .hps-canvas, .hpst-canvas, .ct-pv, .bk-pv, .s2tree, .sl-list')].find(x => (x.id || x.className) === k); if (e) e.scrollTop = y; }); };
+          put(); requestAnimationFrame(put); setTimeout(put, 60); } } catch (e) { }
+      return r; }; }
+  /* 버튼처럼 쓰는 href="#" 링크가 주소를 바꾸며 맨 위로 가지 않게(ACT가 없는 링크 포함) */
+  document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a[href="#"]'); if (a && !a.closest('.lhp, iframe')) e.preventDefault(); }, true);
+
   /* ───────── 1. 기관 유형별 필수 메뉴(사이드바 기본) ───────── */
   /* v36 R1 유형별 기본 메뉴 재점검(대표님: 유형별 메뉴가 들쭉날쭉) — 모든 유형 같은 뼈대:
      {과정} · 콘텐츠 · (출결) · (수료증) / 명단 · 등록 · 초대 / 공지 · 메시지 / 사이트 / (유형 전용 · 규정 · 문서)
@@ -117,7 +137,7 @@
     const wsL = [...new Set(A.map(x => x.w))].filter(w => WS[w]); const L = A.filter(x => (f === 'all' || (f === 'on' ? x.on : x.w === f)) && (!q || (mlabel(x.id) + mdOf(x.id)[0]).includes(q)));
     const on = A.filter(x => x.on);
     return SL.page('메뉴 추가', `<button class="btn ghost" data-act="sl-menuorder">순서 바꾸기</button><button class="btn" data-act="sl-reset-menu">기본 메뉴로</button>`,
-      SL.note(ic('grid', 18), '필요한 메뉴만 켜서 쓰세요', 'AI SAM에 "○○ 메뉴 켜줘"라고 해도 됩니다') +
+      
       SL.chips('slMenuF', [['all', '전체'], ['on', `켜짐 ${on.length}`], ...wsL.map(w => [w, lab(WS[w])])], f) +
       SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
         right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) +
@@ -125,13 +145,12 @@
   };
   window.slMenuSet = (id, on) => { const t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (!t) return false; t.on = on; save(); return true; };
   ACT['sl-menu'] = el => { const id = el.dataset.v; const t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (!t) return; slMenuSet(id, !t.on); toast(`'${mlabel(id)}' 메뉴를 ${t.on ? '켰습니다 — 왼쪽 메뉴에 생겼습니다' : '껐습니다'}.`, 'ok'); render(); };
-  ACT['sl-menuorder'] = () => { go('settings'); UI.settings = 'menu'; UI.slSetIn = true; render(); };
   ACT['sl-reset-menu'] = () => { slimApply(); save(); render(); toast('기본 메뉴로 되돌렸습니다.', 'ok'); };
 
-  /* 사이드바: 켜진 메뉴가 없는 공간은 숨기고, 아래에 [+ 메뉴] 하나 */
+  /* 사이드바: 켜진 메뉴가 없는 공간은 숨긴다(v37: 아래 [+ 메뉴 추가]는 설정 › 메뉴로) */
   { const base = rail; rail = () => { const keep = S.nav.ws; const vis = keep.filter(w => w === 'home' || w === 'dash' || wsTabs(w).length);
       const sv = S.nav.ws; S.nav.ws = vis; let h; try { h = base(); } finally { S.nav.ws = sv; }
-      return h + (S.me.role === 'teacher' ? '' : `<button class="ri sl-add ${CUR.ws === 'more' ? 'on' : ''}" data-act="go" data-v="more" aria-label="메뉴 추가">${ic('grid')}<span>메뉴 추가</span></button>`); }; }
+      return h; /* v37: 레일의 '메뉴 추가'는 설정 › 메뉴 카드로 옮겼다 */ }; }
   /* '메뉴 추가'는 탭이 없는 공간(more) — 화면은 VIEWS.menus */
   { const base = safeView; safeView = () => { if (CUR.ws === 'more') { if (S.me.role === 'teacher') return '<div class="empty">교수자 권한으로는 메뉴를 바꿀 수 없습니다.</div>'; try { return VIEWS.menus(); } catch (e) { console.error(e); } } return base(); }; }
 
@@ -148,9 +167,9 @@
       return SL.page('연결', `<button class="btn" data-act="sl-connold" data-v="1">자세히</button>`,
         SL.note(ic('lock' in IC ? 'lock' : 'gear', 18), '연결 정보는 안전하게 보관됩니다', '키 · 토큰은 화면에 가려서 표시합니다') +
         SL.chips('slCnF', [['all', '전체'], ['work', '업무툴'], ['pay', '결제'], ['msg', '메시지'], ['ai', 'AI']], f) +
-        (on.length ? SL.sum(`<span>연결됨</span><span class="sl-logos">${on.map(id => `<i style="background:${CN[id].col}">${esc(CN[id].logo)}</i>`).join('')}</span><span class="sl-n">${on.length}</span>`, 'sl-cnf', 'on') : '') +
+        (on.length ? SL.sum(`<span>연결됨</span><span class="sl-logos">${on.map(id => typeof brandLogo === 'function' ? brandLogo(id, 26, CN[id].name) : `<i style="background:${CN[id].col}">${esc(CN[id].logo)}</i>`).join('')}</span><span class="sl-n">${on.length}</span>`, 'sl-cnf', 'on') : '') +
         SL.list(L.map(id => { const s = cnStatus(id); const ok = s.st === CN_ST.on, chk = s.st === CN_ST.chk;
-          return SL.row({ act: 'sl-cn', v: id, name: CN[id].name.replace(/\(.*\)/, '').trim(), sub: CN_ONE[id], col: CN[id].col, icon: esc(CN[id].logo),
+          return SL.row({ act: 'sl-cn', v: id, name: CN[id].name.replace(/\(.*\)/, '').trim(), sub: CN_ONE[id], col: typeof brandLogo === 'function' ? 'transparent' : CN[id].col, icon: typeof brandLogo === 'function' ? brandLogo(id, 44, CN[id].name) : esc(CN[id].logo),
             right: ok ? '<span class="sl-ok" aria-label="연결됨">✓</span>' : chk ? '<span class="sl-dot" aria-label="점검 필요">!</span>' : '<span class="sl-plus" aria-label="연결">+</span>' }); })) +
         (P.length ? SL.sum(`<span>연결형 자동화 ${P.length}개</span>`, 'go', 'auto') : '') +
         SL.search('slCnQ', '서비스 검색'));
@@ -209,20 +228,103 @@
     const fund = main.querySelector('#fundCard'); if (fund && !fund.closest('.sl-adv')) { const d = document.createElement('details'); d.className = 'sl-adv'; d.innerHTML = '<summary>고급 설정 <small>재원 표시 등</small></summary>'; fund.replaceWith(d); d.appendChild(fund); }
     main.querySelectorAll('[data-act="reset-all"]').forEach(b => { if (b.closest('.sl-danger')) return; const d = document.createElement('details'); d.className = 'sl-danger'; d.innerHTML = '<summary>위험 구역</summary>'; b.replaceWith(d); d.appendChild(b); b.classList.remove('red'); b.classList.add('ghost'); b.textContent = '기관 초기화'; });
   });
-  /* 설정 첫 화면 = 목록(휴대폰 설정처럼). 줄을 누르면 기존 설정 화면(동작 그대로) */
-  const SETS = () => { const O = S.me.role === 'owner';
-    return [['기본', [['go:more', '메뉴', '켜고 끌 메뉴 고르기', 'grid', '#5C74F6'], ['type', '기관 정보', '기관 유형 · 이름', 'gear', '#6C6C6C'], ['rules', '학습 규칙 · AI 튜터', '진도 · 수료 기준', 'book', '#00A224'], ['lang', '언어', '화면 · 사이트 언어', 'globe', '#109BF1']]],
-      ['연결', [...(O ? [['go:conn', '연결', 'Slack · Google · 결제', 'send', '#7C5CF2']] : []), ['integr', 'API · MCP', '외부 AI · 시스템 연동', 'spark', '#4C77C5']]],
-      ['회원 · 사이트', [['service', '가입 · 회원', '가입 방식 · 승인', 'users', '#E5487A'], ['home', '홈페이지', '주소 · 기본 정보', 'globe', '#14A3A3'], ['popup', '팝업', '공지 팝업', 'chat', '#FF9800'], ['consult', '상담', '상담 버튼 · 시간', 'chat', '#6447F5'], ['terms', '약관', '이용약관 · 개인정보', 'book', '#808181']]],
-      ['요금 · 데이터', [...(O ? [['plan', '요금제 · 결제', '플랜 · 부가 옵션', 'chart', '#0064FF'], ['room', '데이터룸 · 배포', '배포 · 백업 공간', 'grid', '#2E40B3']] : []), ['data', '데이터', '내보내기 · 초기화', 'gear', '#4C4D4D'], ['cover', '기능 맵', '전체 기능 한눈에', 'grid', '#AAABAB']]],
-      /* v36: 머리에서 숨긴 관리자 아이디 · 비밀번호 변경 · 로그아웃은 여기(운영 서버 로그인일 때만) */
-      ...(typeof LIVE !== 'undefined' && LIVE && LIVE.user ? [['계정', [['act:live-pw', '비밀번호 변경', LIVE.user.email || '로그인 계정', 'lock' in IC ? 'lock' : 'gear', '#6C6C6C'], ['act:live-logout', '로그아웃', '이 기기에서 로그아웃', 'send', '#808181']]]] : [])]; };
-  { const base = VIEWS.settings; VIEWS.settings = () => { if (UI.slSetIn) return `<div class="sl-back"><button class="btn ghost" data-act="sl-setback">‹ 설정</button></div>` + base();
-      const q = (UI.slSetQ || '').trim();
-      return SL.page('설정', '', SETS().map(([g, L]) => { const R = L.filter(x => !q || (x[1] + x[2]).includes(q)); return R.length ? `<h3 class="sl-gh">${esc(g)}</h3>` + SL.list(R.map(([k, n, d, i, c]) => SL.row({ act: 'sl-set', v: k, name: n, sub: d, col: c, icon: ic(i in IC ? i : 'gear', 20) }))) : ''; }).join('') + SL.search('slSetQ', '설정 검색')); }; }
-  ACT['sl-set'] = el => { const k = el.dataset.v; if (k.startsWith('act:')) { const f = ACT[k.slice(4)]; if (f) f(el); return; } if (k.startsWith('go:')) { const t = k.slice(3); if (t === 'conn') { ACT['sl-goconn'](); return; } go(t); return; } UI.settings = k; UI.slSetIn = true; render(); window.scrollTo(0, 0); };
-  ACT['sl-setback'] = () => { UI.slSetIn = false; render(); };
-  { const base = go; go = (id, keep) => { if (id === 'settings') UI.slSetIn = false; else if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id)) UI.slSetIn = true; return base(id, keep); }; }
+  /* ───────── v37 설정 한 화면(대표님 2026-11-10 '설정 UI UX가 헷갈려. 한 화면에 볼 수 있게', '메뉴 추가는 설정 페이지로') ─────────
+     v34~36: 설정 목록 → 줄을 누르면 하위 화면(2~3단 탭)으로 들어갔다. v37: 묶음 카드 한 화면 — 카드마다 지금 값 요약 + 바로 고치는 칸,
+     [펼치기]를 누르면 그 자리에서 기존 설정 화면(동작 그대로)이 열린다(한 번에 하나). 위의 검색으로 카드를 거른다.
+     레일의 '메뉴 추가'는 없애고 '메뉴' 카드로 옮겼다(go('more')도 이 카드를 연다). */
+  const SXN = { type: '기관 유형', onoff: '메뉴 켜고 끄기', menu: '메뉴 순서', service: '가입 · 회원', popup: '팝업 공지', integr: 'API · MCP', plan: '요금제', rules: '학습 규칙 · AI 튜터', home: '홈페이지 검색 노출', consult: '상담', terms: '약관', lang: '언어', data: '내보내기 · 초기화', room: '데이터룸 · 배포', cover: '기능 맵' };
+  const sxLive = () => typeof LIVE !== 'undefined' && LIVE && LIVE.user;
+  const sxPay = () => (typeof mbPayOn === 'function' ? mbPayOn() : true);
+  const sxRow = (a, b) => `<div class="sx-kv"><span>${esc(a)}</span><b>${b}</b></div>`;
+  const sxBtn = (l, act, v, cls) => `<button type="button" class="btn sm ${cls || ''}" data-act="${act}" data-v="${esc(v || '')}">${esc(l)}</button>`;
+  const sxEdName = () => S.org.type === 'univ' && !/\(/.test(TYPES.univ.name) ? (S.org.ed === 'lms' ? '학사 LMS' : '사업단 · 센터') : ''; /* ulms.js가 유형 이름에 에디션을 이미 붙이면 다시 붙이지 않는다 */
+  /* 외부 연결 카드: 연결할 수 있는 서비스(CN) + 다른 화면에서 쓰는 서비스(어디서 쓰는지로 이동) */
+  const SX_EXT = () => [['kakao', '카카오', '상담 버튼 · 알림톡', 'sx-sub', 'site|consult'], ['naver', '네이버', '캘린더 보내기', 'go', 'calendar'], ['youtube', 'YouTube', '영상 가져오기 · 재생', 'sx-sub', 'conn|integr'],
+    ['zoom', 'Zoom', '라이브 수업 링크', 'sx-soon', 'Zoom'], ['notion', 'Notion', 'MCP로 연결', 'sx-soon', 'Notion'], ['microsoft', 'Microsoft', 'Teams · Outlook(MCP)', 'sx-soon', 'Microsoft'],
+    ...(S.org.type === 'voc' ? [['hrdnet', 'HRD-Net', '훈련 보고', 'go', 'hrd']] : [])];
+  const SXC = () => { const O = S.me.role === 'owner'; const st = S.settings || {};
+    const adm = S.admins || []; const rc = r => adm.filter(a => a.role === r).length;
+    const onM = Object.values(S.nav.tabs).flat().filter(x => x.on && MENU[x.id]);
+    const cnOnL = typeof CN_IDS !== 'undefined' ? CN_IDS.filter(id => { try { return cnStatus(id).st === CN_ST.on; } catch (e) { return false; } }) : [];
+    const nr = st.nudgeRule || { on: !!st.nudge }; const au = (S.autos || []).filter(a => a.on).length; const pops = (st.popups || []).filter(p => p.on !== false).length;
+    const pgOn = st.pg === 'toss' && st.toss && st.toss.status === '승인';
+    return [
+      { k: 'org', n: '기관 정보', i: 'gear', subs: ['type'], kw: '기관 이름 유형 주소 도메인 홈페이지 주소 에디션',
+        sum: `${TYPES[S.org.type].name}${sxEdName() ? ' · ' + sxEdName() : ''}`,
+        q: () => sxRow('기관 이름', esc(S.org.name)) + sxRow('기관 유형', esc(TYPES[S.org.type].name + (sxEdName() ? ' · ' + sxEdName() : ''))) + sxRow('홈페이지 주소', `<code>${esc(S.org.domain || '')}</code>`) + sxRow('부르는 말', esc(`${t('learner')} · ${t('cls')} · ${t('teacher')}`)) },
+      { k: 'menu', n: '메뉴', i: 'grid', subs: ['onoff', 'menu'], kw: '메뉴 추가 켜기 끄기 순서 왼쪽 레일 사이드바 기본 메뉴',
+        sum: `켜진 메뉴 ${onM.length}개`,
+        q: () => `<div class="sx-chips">${onM.slice(0, 10).map(x => `<span>${esc(mlabel(x.id))}</span>`).join('')}${onM.length > 10 ? `<span>+${onM.length - 10}</span>` : ''}</div><div class="sx-acts">${sxBtn('+ 메뉴 추가 · 켜고 끄기', 'sx-sub', 'menu|onoff', 'pri')}${sxBtn('순서 바꾸기', 'sx-sub', 'menu|menu')}</div>` },
+      { k: 'users', n: '사용자 · 권한', i: 'users', subs: ['service'], kw: '운영자 권한 부운영자 교수 강사 교수자 가입 승인 회원 가입 질문 초대',
+        sum: `운영자 ${adm.length}명 · 가입 ${esc(st.join || '자동 수락')}`,
+        q: () => sxRow('정운영자 · 부운영자', `${rc('owner')}명 · ${rc('sub')}명`) + sxRow(t('teacher'), `${rc('teacher')}명`) + sxRow('가입 방식', esc(st.join || '자동 수락')) +
+          `<div class="sx-acts">${MENU.admins ? sxBtn('운영자 · 권한 관리', 'go', 'admins') : ''}${sxBtn('가입 설정', 'sx-sub', 'users|service')}</div>` },
+      { k: 'notify', n: '알림', i: 'chat', subs: ['popup'], kw: '알림 독려 미접속 자동 운영 메시지 팝업 공지 슬랙',
+        sum: `독려 알림 ${nr.on ? '켜짐' : '꺼짐'} · 자동 운영 ${au}개`,
+        q: () => `<div class="sx-kv"><span>미접속 · 진도 독려 알림</span><button type="button" class="sl-sw ${nr.on ? 'on' : ''}" role="switch" aria-checked="${!!nr.on}" aria-label="독려 알림 ${nr.on ? '끄기' : '켜기'}" data-act="sx-nudge"><i></i></button></div>` +
+          sxRow('켜진 자동 운영', `${au}개`) + sxRow('홈페이지 팝업', `${pops}개 노출 중`) + `<div class="sx-acts">${sxBtn('자동 운영 열기', 'go', 'auto')}${sxBtn('팝업 공지', 'sx-sub', 'notify|popup')}</div>` },
+      { k: 'conn', n: '외부 연결', i: 'send', subs: ['integr'], kw: '연결 slack google 구글 토스 채널톡 카카오 네이버 zoom 줌 youtube 유튜브 notion 노션 microsoft 마이크로소프트 mcp api claude 클로드 hrd',
+        sum: `연결됨 ${cnOnL.length}개`,
+        q: () => `<div class="sx-logos">${(typeof CN_IDS !== 'undefined' ? CN_IDS : []).map(id => { let on = false; try { on = cnStatus(id).st === CN_ST.on; } catch (e) { }
+            return `<button type="button" class="sx-lg ${on ? 'on' : ''}" data-act="${O ? 'sl-cn' : 'sx-owner'}" data-v="${id}" aria-label="${esc(CN[id].name)} ${on ? '연결됨' : '연결하기'}">${typeof brandLogo === 'function' ? brandLogo(id, 36, CN[id].name) : esc(CN[id].logo)}<small>${esc(CN[id].name.replace(/\(.*\)| API 키/g, '').trim())}</small><em>${on ? '연결됨' : '연결'}</em></button>`; }).join('')}
+          ${SX_EXT().map(([id, n, d, act, v]) => `<button type="button" class="sx-lg ext" data-act="${act}" data-v="${esc(v)}" aria-label="${esc(n)} — ${esc(d)}">${typeof brandLogo === 'function' ? brandLogo(id, 36, n) : esc(n[0])}<small>${esc(n)}</small><em>${act === 'sx-soon' ? '준비 중' : esc(d)}</em></button>`).join('')}</div>` },
+      ...(O || sxPay() ? [{ k: 'pay', n: sxPay() ? '요금제 · 결제' : '요금제', i: 'chart', subs: O ? ['plan'] : [], kw: '요금제 플랜 결제 수강료 pg 토스 환불 매출 청구',
+        sum: `${esc(({ standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' })[S.org.plan] || '체험')}${sxPay() ? ` · 결제 ${pgOn ? '연결됨' : '미연결'}` : ''}`,
+        q: () => sxRow('요금제', esc(({ standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' })[S.org.plan] || '체험')) + (sxPay() ? sxRow(`${t('fee')} 온라인 결제`, pgOn ? '토스페이먼츠 연결됨' : '연결 전') : '') +
+          `<div class="sx-acts">${O ? sxBtn('요금제 보기', 'sx-sub', 'pay|plan') : ''}${sxPay() && MENU.sales ? sxBtn('매출 · 결제 열기', 'go', 'sales') : ''}${sxPay() && O && !pgOn ? sxBtn('결제 연결', 'sl-cn', 'toss') : ''}</div>` }] : []),
+      { k: 'learn', n: '학습 규칙 · AI 튜터', i: 'book', subs: ['rules'], kw: '진도 수료 이수 기준 배속 건너뛰기 ai 튜터 학습 규칙', sum: '진도 · 수료 기준 · AI 튜터',
+        q: () => `<div class="sx-acts">${sxBtn('학습 규칙 열기', 'sx-sub', 'learn|rules')}</div>` },
+      { k: 'site', n: '홈페이지 · 약관', i: 'globe', subs: ['home', 'consult', 'terms'], kw: '홈페이지 검색 노출 seo 상담 약관 개인정보 처리방침 카카오 채널톡',
+        sum: `약관 ${(st.termsHist || []).length ? '버전 ' + (st.termsHist || []).length + '개' : '기본'} · 상담 ${st.consultKeys || st.kakao ? '연결' : '없음'}`,
+        q: () => sxRow('검색 제목', esc((st.seo || {}).title || '—')) + `<div class="sx-acts">${sxBtn('검색 노출', 'sx-sub', 'site|home')}${sxBtn('상담', 'sx-sub', 'site|consult')}${sxBtn('약관', 'sx-sub', 'site|terms')}</div>` },
+      { k: 'lang', n: '언어', i: 'globe', subs: ['lang'], kw: '언어 영어 일본어 중국어 베트남어 번역', sum: '화면 · 사이트 언어',
+        q: () => `<div class="sx-acts">${sxBtn('언어 설정', 'sx-sub', 'lang|lang')}</div>` },
+      { k: 'data', n: '데이터', i: 'gear', subs: ['data', ...(O ? ['room'] : []), 'cover'], kw: '데이터 내보내기 백업 초기화 데이터룸 배포 기능 맵', sum: '내보내기 · 데이터룸',
+        q: () => `<div class="sx-acts">${sxBtn('내보내기(JSON)', 'data-export', '')}${sxBtn('데이터 · 초기화', 'sx-sub', 'data|data')}${O ? sxBtn('데이터룸 · 배포', 'sx-sub', 'data|room') : ''}</div>` },
+      ...(sxLive() ? [{ k: 'acct', n: '계정', i: 'users', subs: [], kw: '계정 로그인 아이디 이메일 비밀번호 변경 로그아웃', sum: esc(LIVE.user.email || ''),
+        q: () => sxRow('로그인 아이디', esc(LIVE.user.email || '')) + `<div class="sx-acts">${sxBtn('비밀번호 변경', 'live-pw', '')}${sxBtn('로그아웃', 'live-logout', '', 'ghost')}</div>` }] : [])
+    ]; };
+  window.SXC = SXC;
+  /* 메뉴 켜고 끄기(예전 '메뉴 추가' 화면 본문) */
+  const menusBody = () => { const f = UI.slMenuF || 'all', q = (UI.slMenuQ || '').trim(); const A = allTabs(); const E = slimEss();
+    const wsL = [...new Set(A.map(x => x.w))].filter(w => WS[w]); const L = A.filter(x => (f === 'all' || (f === 'on' ? x.on : x.w === f)) && (!q || (mlabel(x.id) + mdOf(x.id)[0]).includes(q)));
+    const on = A.filter(x => x.on);
+    return SL.chips('slMenuF', [['all', '전체'], ['on', `켜짐 ${on.length}`], ...wsL.map(w => [w, lab(WS[w])])], f) +
+      SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
+        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) +
+      `<div class="sx-acts">${sxBtn('기본 메뉴로', 'sl-reset-menu', '')}</div>` + SL.search('slMenuQ', '메뉴 검색'); };
+  window.slMenusBody = menusBody;
+  /* mem2.js가 DOMContentLoaded에 감싸는 층(결제 · 수납 카드)까지 안쪽에 두려고 같은 시점에 가장 바깥에서 감싼다 */
+  document.addEventListener('DOMContentLoaded', () => { const base = VIEWS.settings; window.slSetBase = base;
+    VIEWS.settings = () => { UI.slSetIn = false; const C = SXC(); const q = (UI.slSetQ || '').trim().toLowerCase(); const open = UI.sxOpen || '';
+      const hit = c => !q || (c.n + ' ' + c.kw + ' ' + c.sum + ' ' + c.subs.map(x => SXN[x] || '').join(' ')).toLowerCase().includes(q);
+      const L = C.filter(hit); const keepSet = UI.settings;
+      const body = c => { if (open !== c.k || !c.subs.length) return ''; const sub = c.subs.includes(UI.sxSub) ? UI.sxSub : c.subs[0];
+        let h = ''; if (sub === 'onoff') h = menusBody(); else { UI.settings = sub; try { h = base(); } catch (e) { console.error(e); h = '<div class="warn">이 설정을 표시하지 못했습니다.</div>'; } }
+        return `<div class="sx-x">${c.subs.length > 1 ? `<div class="sl-chips sx-subs" role="tablist">${c.subs.map(x => `<button type="button" role="tab" aria-selected="${x === sub}" class="${x === sub ? 'on' : ''}" data-act="sx-sub" data-v="${c.k}|${x}">${esc(SXN[x] || x)}</button>`).join('')}</div>` : ''}<div class="sl-setx" data-sub="${esc(sub)}">${h}</div></div>`; };
+      const cards = L.map(c => { const isOpen = open === c.k;
+        return `<section class="sx-card ${isOpen ? 'open' : ''}" id="sx-${c.k}" data-k="${c.k}" aria-labelledby="sxh-${c.k}"><div class="sx-h"><span class="sx-ic">${ic(c.i in IC ? c.i : 'gear', 20)}</span><div class="sx-t"><h3 id="sxh-${c.k}">${esc(c.n)}</h3><small>${c.sum}</small></div>${c.subs.length ? `<button type="button" class="btn sm ghost sx-tog" data-act="sx-open" data-v="${c.k}" aria-expanded="${isOpen}">${isOpen ? '접기' : '펼치기'}</button>` : ''}</div>
+          <div class="sx-q">${c.q()}</div>${body(c)}</section>`; }).join('');
+      const out = `<div class="sx-page"><div class="sx-top">${SL.search('slSetQ', '설정 검색 — 예: 메뉴, 가입, 결제, 약관')}</div>${L.length ? `<div class="sx-grid">${cards}</div>` : `<div class="sl-empty">「${esc(UI.slSetQ)}」에 맞는 설정이 없습니다.</div>`}</div>`;
+      if (open && C.find(c => c.k === open)) { const c = C.find(x => x.k === open); UI.settings = c.subs.includes(UI.sxSub) ? UI.sxSub : (c.subs[0] || keepSet); } else UI.settings = keepSet;
+      return out; }; });
+  /* 하위 키(plan · integr · …)가 들어 있는 카드 */
+  const sxCardOf = sub => { const c = SXC().find(x => x.subs.includes(sub)); return c ? c.k : ''; };
+  window.slSetOpen = (sub, scroll) => { const k = sxCardOf(sub); if (!k) return false; UI.sxOpen = k; UI.sxSub = sub; UI.settings = sub === 'onoff' ? UI.settings : sub; if (scroll) UI.sxScroll = k; return true; };
+  ACT['sx-open'] = el => { const k = el.dataset.v; if (UI.sxOpen === k) { UI.sxOpen = ''; } else { UI.sxOpen = k; const c = SXC().find(x => x.k === k); UI.sxSub = c && c.subs[0]; } render(); };
+  ACT['sx-sub'] = el => { const [k, sub] = String(el.dataset.v).split('|'); if (CUR.ws !== 'settings') { go('settings'); } UI.sxOpen = k; UI.sxSub = sub; UI.sxScroll = k; render(); };
+  ACT['sx-soon'] = el => toast(`${el.dataset.v} 연결은 준비 중입니다. 지금은 설정 › 외부 연결 › API · MCP(MCP 키)로 외부 AI 앱과 연결해 쓸 수 있습니다.`);
+  ACT['sx-owner'] = () => toast('외부 연결은 정운영자만 관리할 수 있습니다.', 'warn');
+  ACT['sx-nudge'] = () => { const st = S.settings; const r = st.nudgeRule = st.nudgeRule || { base: 'period', v: 50, rate: 30, when: '09:00', on: !!st.nudge }; r.on = !r.on; st.nudge = r.on; logAudit(`독려 알림 ${r.on ? '켜기' : '끄기'}`); save(); render(); toast(`미접속 · 진도 독려 알림을 ${r.on ? '켰습니다' : '껐습니다'}.`, 'ok'); };
+  /* 예전 진입점 호환: 목록 줄(sl-set) · ‹ 설정 · 하위 화면 바로가기 · '메뉴 추가'(more) */
+  ACT['sl-set'] = el => { const k = el.dataset.v; if (k.startsWith('act:')) { const f = ACT[k.slice(4)]; if (f) f(el); return; } if (k.startsWith('go:')) { const t2 = k.slice(3); if (t2 === 'conn') { ACT['sl-goconn'](); return; } if (t2 === 'more') { slSetOpen('onoff', true); go('settings'); return; } go(t2); return; } slSetOpen(k, true); render(); };
+  ACT['sl-setback'] = () => { UI.sxOpen = ''; render(); };
+  { const base = go; go = (id, keep) => { if (id === 'more') { slSetOpen('onoff', true); id = 'settings'; }
+      else if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id)) { slSetOpen(id, true); const r = base('settings', keep); return r; }
+      return base(id, keep); }; }
+  /* 깊은 링크로 연 카드는 화면에 보이게 */
+  AFTER.push(() => { if (CUR.ws !== 'settings' || !UI.sxScroll) return; const k = UI.sxScroll; UI.sxScroll = ''; setTimeout(() => { const e = document.getElementById('sx-' + k); if (e && e.scrollIntoView) e.scrollIntoView({ block: 'start' }); }, 90); });
+  ACT['sl-menuorder'] = () => { slSetOpen('menu', true); go('settings'); };
 
   /* 기관 초기화: 기관 이름을 입력해야 실행(되돌릴 수 없음) */
   if (ACT['reset-all']) { const base = ACT['reset-all']; ACT['reset-all'] = (...a) => modal('기관 초기화', `<p>데모 데이터를 모두 지우고 가입 화면으로 돌아갑니다. 되돌릴 수 없습니다.</p><label class="fl">확인을 위해 기관 이름 「${esc(S.org.name)}」을 입력하세요<input name="nm" autocomplete="off"></label>`,
@@ -240,7 +342,7 @@
       g.hidden = !UI.slGuideOpen; }
     const two = R.querySelector('.aih-two'); if (two) { const on = (typeof CN_IDS !== 'undefined' ? CN_IDS.filter(id => cnStatus(id).st === CN_ST.on) : []); const au = (S.autos || []).filter(a => a.on).length;
       const box = document.createElement('div'); box.className = 'sl-homesum';
-      box.innerHTML = (typeof CN_IDS !== 'undefined' && S.me.role === 'owner' ? SL.sum(`<span>연결</span><span class="sl-logos">${on.map(id => `<i style="background:${CN[id].col}">${esc(CN[id].logo)}</i>`).join('')}</span><span class="sl-n">${on.length}/${CN_IDS.length}</span>`, 'sl-goconn', '') : '') +
+      box.innerHTML = (typeof CN_IDS !== 'undefined' && S.me.role === 'owner' ? SL.sum(`<span>연결</span><span class="sl-logos">${on.map(id => typeof brandLogo === 'function' ? brandLogo(id, 26, CN[id].name) : `<i style="background:${CN[id].col}">${esc(CN[id].logo)}</i>`).join('')}</span><span class="sl-n">${on.length}/${CN_IDS.length}</span>`, 'sl-goconn', '') : '') +
         (S.me.role !== 'teacher' ? SL.sum(`<span>자동 운영</span><span class="sl-n">${au}개 켜짐</span>`, 'sl-goauto', '') : '');
       two.replaceWith(box); }
   });
@@ -253,6 +355,12 @@
   /* 꺼진 메뉴로 가는 링크(홈 · 가이드 · 안내의 [이동] 버튼)를 사람이 누르면 막지 않고 그 메뉴를 켜서 연다 — 필요할 때 켜진다. 코드에서 부르는 go()는 그대로 */
   { const base = ACT.go; ACT.go = (el, ...r) => { const id = el && el.dataset && el.dataset.v; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(id)) && (!MENU[id].only || MENU[id].only === S.org.type) && Object.values(S.nav.tabs).flat().some(x => x.id === id)) { slMenuSet(id, true); toast(`'${mlabel(id)}' 메뉴를 켰습니다. 끄려면 [메뉴 추가]에서 끄세요.`, 'ok'); } } catch (e) { } return base(el, ...r); }; }
 
+  /* v37 기관 유형을 바꾼 뒤 이름 · 호칭 · 메뉴가 서로 어긋나던 문제(대표님 첨부 '닉 Univ' — 레일 '교육생', 홈 '센터 담당자님', 사이트 '교육신청')
+     설정 › 기관 유형 변경(type-chg)은 유형 · 프리셋 메뉴만 바꿨다. 이제 유형이 바뀌면 같은 자리에서: 대학 에디션 정리(대학이면 기본 lite, 아니면 삭제) ·
+     유형별 기본 메뉴(slimApply) 다시 적용 — 레일 라벨(t()) · 첫 화면 호칭(aihKey) · 사이트 메뉴 이름(HPS.menuName)이 모두 같은 S.org.type · S.org.ed를 본다. */
+  AFTER.push(() => { if (!S || !S.org) return; const k = S.org.type + '/' + (S.org.ed || ''); if (S.org.tySeen === k) return; const first = !S.org.tySeen; S.org.tySeen = k; if (first) return;
+    if (S.org.type === 'univ') { if (S.org.ed !== 'lms') S.org.ed = 'lite'; } else delete S.org.ed;
+    S.org.tySeen = S.org.type + '/' + (S.org.ed || ''); try { slimApply(); } catch (e) { console.error(e); } save(); setTimeout(render, 0); });
   /* 기존 사용자 한 번 안내 */
-  AFTER.push(() => { if (!UI.slimNote) return; UI.slimNote = 0; toast('메뉴를 꼭 필요한 것만 남겼습니다. 다른 메뉴는 왼쪽 [메뉴 추가]에서 켜세요.', 'ok'); });
+  AFTER.push(() => { if (!UI.slimNote) return; UI.slimNote = 0; toast('메뉴를 꼭 필요한 것만 남겼습니다. 다른 메뉴는 설정 › 메뉴에서 켜세요.', 'ok'); });
 })();

@@ -101,7 +101,7 @@
       dash: { d: '목표 대비 성과와 참여 추이를 봅니다', f: ['엑셀로 받기', 'd26-xls'], a: ['이번 주 운영 현황 요약해줘', `${D}율 낮은 ${C} 찾아줘`, '지난달과 비교해줘'] },
       more: { d: '필요한 메뉴만 켜서 씁니다', f: ['기본 메뉴로', 'sl-reset-menu'], a: ['출결 메뉴 켜줘', '안 쓰는 메뉴 정리해줘'] },
       settings: { d: '메뉴 · 기관 정보 · 연결을 설정합니다', f: ['메뉴 고르기', 'go', 'more'], a: ['Claude 연결 도와줘', '메뉴 켜고 끄는 법 알려줘'] },
-      'set:menu': { d: '메뉴 순서와 켜고 끄기를 정합니다', f: ['메뉴 추가 열기', 'go', 'more'], a: ['안 쓰는 메뉴 꺼줘', '메뉴 순서 바꿔줘'] },
+      'set:menu': { d: '메뉴 순서와 켜고 끄기를 정합니다', f: ['메뉴 켜고 끄기', 'go', 'more'], a: ['안 쓰는 메뉴 꺼줘', '메뉴 순서 바꿔줘'] },
       'set:type': { d: '기관 유형 · 이름을 바꿉니다', f: ['설정 목록', 'sl-setback'], a: ['기관 유형 바꾸면 뭐가 달라져?', '기관 이름 바꿔줘'] },
       'set:rules': { d: `진도 · ${D} 기준과 AI 튜터를 정합니다`, f: ['설정 목록', 'sl-setback'], a: [`${D} 기준 80%로 바꿔줘`, 'AI 튜터 말투 정해줘'] },
       'set:integr': { d: 'API · MCP로 외부 시스템과 연동합니다', f: ['연결 화면', 'sl-goconn'], a: ['MCP 연결 방법 알려줘', 'API 키 만들어줘'] },
@@ -112,7 +112,7 @@
       'set:popup': { d: '공지 팝업을 띄웁니다', f: ['+ 팝업', 'popup-new'], a: ['방학 공지 팝업 만들어줘'] },
       'set:consult': { d: '상담 버튼과 시간을 정합니다', f: ['상담 화면', 'go', 'consult'], a: ['상담 가능 시간 정해줘', '채널톡 연결해줘'] },
       'set:terms': { d: '이용약관 · 개인정보 처리방침을 관리합니다', f: ['AI 약관 초안', 'ai-terms'], a: ['개인정보 처리방침 점검해줘', '이용약관 초안 써줘'] },
-      'set:cover': { d: '전체 기능을 한눈에 봅니다', f: ['메뉴 추가 열기', 'go', 'more'], a: ['우리 기관에 필요한 기능 추천해줘'] },
+      'set:cover': { d: '전체 기능을 한눈에 봅니다', f: ['메뉴 켜고 끄기', 'go', 'more'], a: ['우리 기관에 필요한 기능 추천해줘'] },
       'set:room': { d: '배포 · 백업 공간을 관리합니다', f: ['설정 목록', 'sl-setback'], a: ['백업 만들어줘', '배포 상태 알려줘'] },
       'set:data': { d: '데이터를 내보내거나 지웁니다', f: ['데이터 내보내기', 'data-export'], a: ['전체 데이터 내보내줘', '개인정보 보관 기간 알려줘'] }
     }; };
@@ -130,7 +130,7 @@
     if (CUR.ws === 'settings') return UI.slSetIn ? 'set:' + (UI.settings || 'menu') : 'settings'; return CUR.tab || ''; };
   window.slgKey = slgKey;
   const SETN = { menu: '메뉴 구성', type: '기관 정보', rules: '학습 규칙 · AI 튜터', integr: 'API · MCP', lang: '언어', plan: '요금제 · 결제', service: '가입 · 회원', home: '홈페이지 설정', popup: '팝업', consult: '상담 설정', terms: '약관', cover: '기능 맵', room: '데이터룸 · 배포', data: '데이터' };
-  const nameOf = id => id === 'more' ? '메뉴 추가' : id === 'dash' ? '현황' : id === 'settings' ? '설정' : id.startsWith('set:') ? '설정 › ' + (SETN[id.slice(4)] || id.slice(4)) : mlabel(id);
+  const nameOf = id => id === 'more' ? '설정 › 메뉴' : id === 'dash' ? '현황' : id === 'settings' ? '설정' : id.startsWith('set:') ? '설정 › ' + (SETN[id.slice(4)] || id.slice(4)) : mlabel(id);
 
   /* 첫 할 일: 표의 act가 없으면 화면의 주 버튼 → AI SAM 순서로 대신한다(버튼이 죽지 않게) */
   function firstOf(g) { const f = g.f || []; if (f[1] && (ACT[f[1]] || f[1] === 'go')) return { l: f[0], act: f[1], v: f[2] || '' };

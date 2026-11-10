@@ -124,7 +124,7 @@ function cnGoogleConnect() {
   g.client = client || '';
   /* 운영: google.accounts.oauth2.initCodeClient({ client_id, scope: 'openid email ' + scopes, ux_mode: 'popup', access_type: 'offline', callback: r => POST /api/oauth/google { code } })
      → 서버가 code를 토큰으로 교환하고 refresh token을 암호화해 보관. 브라우저는 토큰을 저장하지 않는다. */
-  modal('Google 계정 연결 — 동의 화면(데모)', `<div class="cn-oauth"><div class="cn-gacc"><span class="cn-logo" style="background:#1A73E8">G</span><div><b>디디쌤 스튜디오</b>에서 Google 계정 접근을 요청합니다<small>운영: 실제 Google 로그인 · 동의 화면이 새 창으로 열립니다</small></div></div>
+  modal('Google 계정 연결 — 동의 화면(데모)', `<div class="cn-oauth"><div class="cn-gacc">${typeof brandLogo === 'function' ? brandLogo('google', 40) : '<span class="cn-logo" style="background:#1A73E8">G</span>'}<div><b>디디쌤 스튜디오</b>에서 Google 계정 접근을 요청합니다<small>운영: 실제 Google 로그인 · 동의 화면이 새 창으로 열립니다</small></div></div>
     <label class="fl">연결할 Google 계정<input name="acct" type="email" maxlength="80" placeholder="ops@기관.kr" value="${esc(g.acct || '')}"></label>
     <p class="mini">요청 권한(고른 서비스만):</p><ul class="cn-scopes">${sv.map(k => `<li><b>${esc(CN_GSCOPE[k][0])}</b><span>${esc(CN_GSCOPE[k][2])}</span><code>${esc(CN_GSCOPE[k][1].replace('https://www.googleapis.com/auth/', ''))}</code></li>`).join('')}</ul>
     <p class="mini">로그인 정보(토큰)는 이 브라우저에만 보관되고 화면 · 내보내기 파일에는 나타나지 않습니다. 운영 모드에서는 서버가 암호화해 보관합니다.</p></div>`,
@@ -203,7 +203,7 @@ function cnCard(id) {
     body = `<label class="fl">플러그인 키(Plugin Key)${pw('cnCtKey', 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', k ? cnMask(k) : '')}</label>`;
     acts = `<button class="btn ink sm" data-act="cn-test" data-v="channeltalk">${ic('check', 14)} 연결 테스트</button>${k ? `<button class="btn sm ghost" data-act="cn-off" data-v="channeltalk">연결 해제</button>` : ''}`; }
   const last = id === 'claude' ? c.claude.test : id === 'slack' ? c.slack.test : id === 'google' ? c.google.test : id === 'channeltalk' ? c.channeltalk.test : '';
-  return `<div class="card cn-card ${UI.cnOpen === id ? 'cn-hl' : ''}" id="cnCard-${id}" data-st="${esc(s.st)}"><div class="cn-h"><span class="cn-logo" style="background:${d.col}">${esc(d.logo)}</span><div><b>${esc(d.name)}</b><small>${esc(d.use)}</small></div>${tag(s.st, cnTone(s.st))}</div>
+  return `<div class="card cn-card ${UI.cnOpen === id ? 'cn-hl' : ''}" id="cnCard-${id}" data-st="${esc(s.st)}"><div class="cn-h">${typeof brandLogo === 'function' ? brandLogo(id, 44, d.name) : `<span class="cn-logo" style="background:${d.col}">${esc(d.logo)}</span>`}<div><b>${esc(d.name)}</b><small>${esc(d.use)}</small></div>${tag(s.st, cnTone(s.st))}</div>
     <p class="cn-note">${esc(s.note)}</p>${cnGuideHTML(id, open)}<div class="cn-body">${body}</div>
     <div class="bar2 cn-acts">${acts}${d.guide ? `<button class="btn sm ghost" data-act="gd-start" data-v="${d.guide}">${ic('spark', 13)} 따라하기</button>` : ''}</div>${last ? `<p class="mini cn-last">최근 확인: ${esc(last)}</p>` : ''}</div>`;
 }
@@ -303,7 +303,7 @@ VIEWS.conn = () => {
 };
 /* 업무 자동화 화면: 템플릿 · 연결 필요 표시 · 단계별 실행 기록 */
 { const base = VIEWS.auto; VIEWS.auto = () => { let h = base(); cnEnsure();
-  const strip = `<div class="cn-astrip">${['slack', 'google'].map(id => { const s = cnStatus(id); return `<button class="cn-chip ${cnTone(s.st)}" data-act="cn-open" data-v="${id}"><i style="background:${CN[id].col}">${CN[id].logo}</i>${esc(CN[id].name)} ${esc(s.st)}</button>`; }).join('')}<span class="sp"></span><button class="btn sm" data-act="cn-build">+ 연결 자동화 만들기</button><button class="btn sm ghost" data-act="go" data-v="conn">외부 연결 관리</button></div>`;
+  const strip = `<div class="cn-astrip">${['slack', 'google'].map(id => { const s = cnStatus(id); return `<button class="cn-chip ${cnTone(s.st)}" data-act="cn-open" data-v="${id}">${typeof brandLogo === 'function' ? brandLogo(id, 22, CN[id].name) : `<i style="background:${CN[id].col}">${CN[id].logo}</i>`}${esc(CN[id].name)} ${esc(s.st)}</button>`; }).join('')}<span class="sp"></span><button class="btn sm" data-act="cn-build">+ 연결 자동화 만들기</button><button class="btn sm ghost" data-act="go" data-v="conn">외부 연결 관리</button></div>`;
   const gal = `<details class="cn-agal" ${UI.cnGal === false ? '' : 'open'}><summary data-act="cn-gal"><b>Slack · Google 연결 자동화 템플릿</b><small>원클릭으로 만들고, 연결이 없으면 안내로 바로 이동합니다</small></summary>${cnTplHTML()}</details>`;
   const i = h.indexOf('<div class="autos">'); h = i >= 0 ? h.slice(0, i) + strip + gal + h.slice(i) : h + strip + gal;
   return h + `<h2 class="h2">연결 자동화 단계별 실행 기록</h2>${cnRunsHTML(10)}`; }; }

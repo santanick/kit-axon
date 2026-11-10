@@ -16,7 +16,15 @@ function aihActive() {
   try { if (!S || !S.org || !S.bld || UI.door || CUR.ws !== 'home') return false; if (typeof smOn === 'function' && smOn()) return false;
     if (aihTeacher() && (UI.tst === 'operate' || UI.tst === 'report')) return false; return true; } catch (e) { return false; }
 }
-const aihWho = () => aihTeacher() ? `${t('teacher')}님` : (S.me.name && !/^(관리자|운영자)$/.test(S.me.name) ? S.me.name + '님' : ((typeof SEG_TITLE !== 'undefined' && SEG_TITLE[S.org.type]) || '담당자') + '님');
+/* v37 첫 화면 호칭 · 예시 문장(대표님 2026-11-10 '각 기관별 유형 담당자 이름을 제대로 부르는지 · 페르소나에 맞는 워딩인지 재검수')
+   유형 판단은 한 곳(aihKey: 유형 + 대학 에디션) — 레일 · 용어(TERMS) · 사이트 메뉴 이름(HPS.menuName)과 같은 S.org.type · S.org.ed를 쓴다.
+   - 대학 lite(사업단 · 센터): 교수학습센터 · ATC · 사업단 운영자가 쓰는 화면 → '센터 담당자님'(교수는 교수 스튜디오에서 '교수님')
+   - 대학 lms(학사 LMS · 전교생): 학사 운영(학기 · 교과목 · 분반 준비) 담당 → '학사 담당자님' */
+const aihKey = () => S.org.type === 'univ' ? (S.org.ed === 'lms' ? 'univ_lms' : 'univ_lite') : S.org.type;
+const AIH_WHO = { univ_lms: '학사 담당자', univ_lite: '센터 담당자', corp: 'HRD 담당자', public: '교육 담당자', k12: '원장', adult: '원장', lifelong: '운영 담당자', voc: '훈련 담당자' };
+const AIH_PH = { univ_lms: '이번 학기 개설 교과목 점검하고 미접속 학생에게 안내 보내줘', univ_lite: 'AI 리터러시 비교과 프로그램 만들고 진단 · 모집 공지까지 채워줘' };
+const aihWho = () => aihTeacher() ? `${t('teacher')}님` : (S.me.name && !/^(관리자|운영자)$/.test(S.me.name) ? S.me.name + '님' : (AIH_WHO[aihKey()] || (typeof SEG_TITLE !== 'undefined' && SEG_TITLE[S.org.type]) || '담당자') + '님');
+const aihPh = () => AIH_PH[aihKey()] || ((typeof EXQ !== 'undefined' && EXQ[S.org.type]) || ['이번 주 운영 현황 요약해줘'])[0];
 const aihDate = () => { const d = new Date(); return `${d.getMonth() + 1}월 ${d.getDate()}일 ${'일월화수목금토'[d.getDay()]}요일`; };
 
 /* ── 추천 일(최대 5) ── */
@@ -51,7 +59,7 @@ function aihConnHTML() {
   const ids = CN_IDS.filter(id => CN[id]); const on = ids.filter(id => cnStatus(id).st === CN_ST.on).length;
   return `<section class="aih-sec" aria-labelledby="aihCn"><div class="aih-sh"><h2 id="aihCn">Connect <small>업무 툴 연결 ${on}/${ids.length}</small></h2><span class="sp"></span>${S.me.role === 'owner' ? `<button type="button" class="aih-lk" data-act="go" data-v="conn">전체 보기</button>` : ''}</div>
     <div class="aih-cn">${ids.map(id => { const s = cnStatus(id); const d = CN[id]; const tone = s.st === CN_ST.on ? 'on' : s.st === CN_ST.chk ? 'chk' : '';
-      return `<button type="button" class="aih-cc ${tone}" data-act="cn-open" data-v="${id}" aria-label="${esc(d.name)} — ${esc(s.st)}. 연결 안내 열기"><span class="aih-lg" style="--c:${esc(d.col)}">${esc(d.logo)}</span><span class="aih-cm"><b>${esc(d.name.replace(' API 키', '').replace('(외부 AI 연결)', ''))}</b><small>${esc(s.st === CN_ST.on ? s.st : s.st === CN_ST.chk ? s.st : AIH_USE[id] || d.use.split(' · ')[0])}</small></span><i class="aih-dot" aria-hidden="true"></i></button>`; }).join('')}</div></section>`;
+      return `<button type="button" class="aih-cc ${tone}" data-act="cn-open" data-v="${id}" aria-label="${esc(d.name)} — ${esc(s.st)}. 연결 안내 열기">${typeof brandLogo === 'function' ? brandLogo(id, 40, d.name) : `<span class="aih-lg" style="--c:${esc(d.col)}">${esc(d.logo)}</span>`}<span class="aih-cm"><b>${esc(d.name.replace(' API 키', '').replace('(외부 AI 연결)', ''))}</b><small>${esc(s.st === CN_ST.on ? s.st : s.st === CN_ST.chk ? s.st : AIH_USE[id] || d.use.split(' · ')[0])}</small></span><i class="aih-dot" aria-hidden="true"></i></button>`; }).join('')}</div></section>`;
 }
 /* 교수자 Connect: 내 계정 단위(데모) — Calendar · Drive · Slack · Zoom */
 const AIH_TC = {
@@ -67,7 +75,7 @@ function aihTCState(id) { const d = AIH_TC[id]; if (d.soon) return { st: '준비
   return { st: '미연결', on: false }; }
 function aihTConnHTML() { const ids = Object.keys(AIH_TC); const on = ids.filter(id => aihTCState(id).on).length;
   return `<section class="aih-sec" aria-labelledby="aihCn"><div class="aih-sh"><h2 id="aihCn">Connect <small>내 업무 툴 ${on}/${ids.length}</small></h2></div>
-    <div class="aih-cn">${ids.map(id => { const d = AIH_TC[id]; const s = aihTCState(id); return `<button type="button" class="aih-cc ${s.on ? 'on' : ''} ${d.soon ? 'soon' : ''}" data-act="aih-tc" data-v="${id}" aria-label="${esc(d.n)} — ${esc(s.st)}. 연결 안내 열기"><span class="aih-lg" style="--c:${d.col}">${d.lg}</span><span class="aih-cm"><b>${esc(d.n)}</b><small>${esc(s.on ? (s.note || s.st) : d.soon ? '준비 중' : d.use)}</small></span><i class="aih-dot" aria-hidden="true"></i></button>`; }).join('')}</div></section>`; }
+    <div class="aih-cn">${ids.map(id => { const d = AIH_TC[id]; const s = aihTCState(id); return `<button type="button" class="aih-cc ${s.on ? 'on' : ''} ${d.soon ? 'soon' : ''}" data-act="aih-tc" data-v="${id}" aria-label="${esc(d.n)} — ${esc(s.st)}. 연결 안내 열기">${typeof brandLogo === 'function' ? brandLogo(id, 40, d.n) : `<span class="aih-lg" style="--c:${d.col}">${d.lg}</span>`}<span class="aih-cm"><b>${esc(d.n)}</b><small>${esc(s.on ? (s.note || s.st) : d.soon ? '준비 중' : d.use)}</small></span><i class="aih-dot" aria-hidden="true"></i></button>`; }).join('')}</div></section>`; }
 ACT['aih-tc'] = el => { const id = el.dataset.v; const d = AIH_TC[id]; if (!d) return; const s = aihTCState(id); const mine = aihTC()[id] || {};
   const acts = d.soon ? [{ id: 'c', label: '확인', kind: 'pri' }] : s.on ? [{ id: 'c', label: '닫기' }, ...(mine.on ? [{ id: 'off', label: '연결 해제', run: () => { delete aihTC()[id]; logAudit(`교수자 연결 해제 — ${d.n}`); save(); render(); toast(`${d.n} 연결을 해제했습니다.`, 'ok'); } }] : [])]
     : [{ id: 'c', label: '나중에' }, { id: 'ok', label: '연결하기(데모)', kind: 'pri', run: () => { aihTC()[id] = { on: true, mode: 'demo', at: today() }; /* 운영: Google OAuth(initCodeClient, 고른 범위만) · Slack OAuth를 서버가 처리하고 토큰은 서버에 보관 */ logAudit(`교수자 연결 — ${d.n}(데모)`); save(); render(); toast(`${d.n}을 연결했습니다(데모 — 실제 계정 연결은 운영 서버에서).`, 'ok'); } }];
@@ -122,7 +130,7 @@ function aihHomeHTML() {
   <section class="aih-hero" aria-labelledby="aihH"><span class="aih-orb" aria-hidden="true">${ic('spark', 22)}</span>
     <p class="aih-ey">${esc(aihDate())} · ${esc(S.org.name)} · ${T ? `${t('teacher')} 비서` : '운영 비서'} ${esc(nm)}</p>
     <h1 id="aihH">안녕하세요, ${esc(aihWho())}.<br><em>무엇을 도와드릴까요?</em></h1>
-    <form class="composer aih-comp" data-where="home"><div class="cbox"><label for="aihQ" class="sr">${esc(nm)}에게 지시</label><textarea id="aihQ" rows="1" maxlength="300" placeholder="${T ? '예: 3차시 퀴즈 5문항 만들어줘' : `예: ${esc(((typeof EXQ !== 'undefined' && EXQ[S.org.type]) || ['이번 주 운영 현황 요약해줘'])[0])}`}"></textarea><button class="send" type="submit" aria-label="보내기">${ic('send', 18)}</button></div></form>
+    <form class="composer aih-comp" data-where="home"><div class="cbox"><label for="aihQ" class="sr">${esc(nm)}에게 지시</label><textarea id="aihQ" rows="1" maxlength="300" placeholder="${T ? '예: 3차시 퀴즈 5문항 만들어줘' : `예: ${esc(aihPh())}`}"></textarea><button class="send" type="submit" aria-label="보내기">${ic('send', 18)}</button></div></form>
     <div class="aih-chips" role="list" aria-label="추천 일">${chips.map(([l, q]) => `<button type="button" role="listitem" class="chip" data-act="chat-q" data-v="${esc(q)}">${esc(l)}</button>`).join('')}</div>
     <p class="aih-note">${typeof CL !== 'undefined' && CL.on && CL.on('chat') ? `${esc(CL.label())} 연결됨 · ` : ''}실행하는 일은 계획을 먼저 보여 드리고, 승인하신 뒤에 처리합니다.</p>
   </section>
