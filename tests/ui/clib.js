@@ -64,6 +64,11 @@ async function makeOne(p, kind, log) { const ids0 = await p.evaluate(() => [...(
         const post = await p.evaluate(() => ({ lib: JSON.stringify(S.lib || []), books: JSON.stringify(((S.lsite || {}).dbooks || []).map(b => ({ id: b.id, title: b.title }))), all: window.CLIB ? JSON.stringify(CLIB.all()) : '', libIds: [...(S.lib || []).map(l => l.id), ...(S.classes[0] && (S.classes[0].curriculum || []).some(i => i.id === 'itq1') ? ['itq1'] : [])], bkIds: ((S.lsite || {}).dbooks || []).map(b => b.id) }));
         if (post.lib !== pre.lib) P.push('S.lib(영상 · 자료)가 바뀜'); if (post.books !== pre.books) P.push('디지털북 목록이 바뀜');
         if (m.CLIB) { const miss = [...post.libIds, ...post.bkIds].filter(id => !post.all.includes(id)); if (miss.length) P.push(`CLIB.all()에 기존 자료 ${miss.length}개 안 보임(${miss.slice(0, 3).join(',')})`); }
+        /* v37: 예전 '영상 · 자료' · '디지털북' 메뉴를 메뉴 구성에서 다시 켠 채 저장해도 새로고침하면 빠지고, 레일 · 탭 · 메뉴 찾기에 두 번째 콘텐츠 화면이 없다 */
+        await p.evaluate(() => { (S.nav.tabs.learn = S.nav.tabs.learn || []).push({ id: 'library', on: true }, { id: 'dbook', on: true }); save(); }); await p.reload(); await p.waitForFunction(() => window.S && S.org); await p.waitForTimeout(500);
+        const dup = await p.evaluate(() => { const T = Object.values(S.nav.tabs).flat().filter(x => ['library', 'dbook'].includes(x.id)).map(x => x.id); const tabsTxt = [...document.querySelectorAll('[data-act=go]')].filter(e => e.getClientRects().length).map(e => e.innerText.trim()).filter(x => /^영상\s*·?\s*자료$|^디지털북$/.test(x)); let finder = []; try { finder = uxRoutes().map(r => r[0]).filter(id => ['library', 'dbook'].includes(id)); } catch (e) { } return { T, tabsTxt, finder }; });
+        if (dup.T.length) P.push('예전 메뉴가 탭에 남음 ' + dup.T.join(',')); if (dup.tabsTxt.length) P.push('화면에 예전 메뉴 이름 ' + dup.tabsTxt.join(',')); if (dup.finder.length) P.push('메뉴 찾기에 예전 메뉴 ' + dup.finder.join(','));
+        const toVid = await p.evaluate(() => { go('library'); render(); return { cur: CUR.tab, t: UI.clibT, sel: !!document.querySelector('#main .clb-tabs button.on[data-v=video]') }; }); if (toVid.cur !== 'clib' || !toVid.sel) P.push(`go('library') → 통합 화면 '영상' 칩 아님 ${JSON.stringify(toVid)}`);
         for (const old of ['library', 'dbook']) { const ok = await p.evaluate(id => { try { go(id); render(); return !/화면을 표시하는 중 문제가 생겼습니다/.test(document.querySelector('#main').innerText) && document.querySelector('#main').innerText.length > 30; } catch (e) { return false; } }, old); if (!ok) P.push(`기존 메뉴 링크 go('${old}') 깨짐`); }
         /* 만들기(채운 기관 · 전 유형, 빈 기관은 adult만 전 종류) */
         if (m.CT && (!empty || type === 'adult')) { await p.evaluate(() => { go('clib'); render(); });
@@ -74,9 +79,12 @@ async function makeOne(p, kind, log) { const ids0 = await p.evaluate(() => [...(
           /* [과정에 넣기] */
           const put = await p.evaluate(async () => { const rec = (S.clib || []).find(r => r.kind === 'doc') || (S.clib || [])[0]; if (!rec) return { err: '라이브러리 항목 없음' }; if (!S.classes.length) return { skip: 1 }; go('clib'); render(); return { id: rec.id, cls: S.classes[0].id, n0: (S.classes[0].curriculum || []).length }; });
           if (put.id) { const title = await p.evaluate(id => S.clib.find(r => r.id === id).title, put.id);
-            const cardPut = p.locator('#main [data-act=clb-put]').filter({ visible: true }); let any = null; const nb = await cardPut.count();
-            for (let i = 0; i < nb; i++) { const b = cardPut.nth(i); const ok = await b.evaluate((el, t) => { let a = el; for (let k = 0; k < 5 && a; k++, a = a.parentElement) if (a.innerText.includes(t)) return true; return false; }, title); if (ok) { any = b; break; } }
-            if (!any) P.push(`[과정에 넣기] 버튼 없음(clb-put ${nb}개)`); else { await any.click(); await p.waitForTimeout(400);
+            /* v37: 카드를 누르면 오른쪽 미리보기 패널 → 패널의 [과정에 넣기] */
+            const cardSel = p.locator(`#main [data-act=clb-sel][data-v="cl:${put.id}"]`).first(); let any = null; let nb = 0;
+            if (await cardSel.count()) { await cardSel.click(); await p.waitForTimeout(300); const pb = p.locator('#clbPanel [data-act=clb-put]').filter({ visible: true }); nb = await pb.count(); if (nb) any = pb.first();
+              const pa = await p.evaluate(() => [...document.querySelectorAll('#clbPanel [data-act]')].map(b => b.dataset.act)); for (const a of ['clb-edit', 'clb-put', 'clb-dup', 'clb-del']) if (!pa.includes(a)) P.push(`미리보기 패널에 ${a} 없음`); }
+            else P.push('콘텐츠 카드(clb-sel) 없음');
+            if (!any) P.push(`[과정에 넣기] 버튼 없음(패널 clb-put ${nb}개)`); else { await any.click(); await p.waitForTimeout(400);
               const pickC = p.locator(`#modal [data-clbc="${put.cls}"]`).first(); if (await pickC.count()) { await pickC.click(); await p.waitForTimeout(250); }
               const ok = p.locator('#modal [data-mact=ok]').first(); if (await ok.count()) { await ok.click(); await p.waitForTimeout(500); } else P.push('[과정에 넣기] 창에 [넣기] 없음');
               const res = await p.evaluate(put => { const c = S.classes.find(x => x.id === put.cls); const rec = S.clib.find(r => r.id === put.id); const use = window.CLIB && CLIB.use ? CLIB.use(rec) : null;
@@ -86,6 +94,13 @@ async function makeOne(p, kind, log) { const ids0 = await p.evaluate(() => [...(
           /* 저장 → 새로고침 → 유지 */
           const n1 = await p.evaluate(() => (S.clib || []).length); await p.reload(); await p.waitForFunction(() => window.S && S.org); await p.waitForTimeout(500); const n2 = await p.evaluate(() => (S.clib || []).length); if (n2 !== n1) P.push(`새로고침 뒤 S.clib ${n1}→${n2}`);
         }
+        /* v37: 목록 보기 · 복제 · 삭제(사용 중이 아닌 것만) */
+        { const r = await p.evaluate(() => { go('clib'); UI.clibT = 'all'; render(); const b = document.querySelector('[data-act=clb-view][data-v=list]'); if (!b) return { err: '카드/목록 전환 없음' }; b.click(); const list = !!document.querySelector('#main .clb-list [data-act=clb-sel]'); document.querySelector('[data-act=clb-view][data-v=card]').click();
+            const rec = (S.clib || []).find(x => !(x.usedIn || []).length && !(CLIB.use(x) || []).length); if (!rec) return { list };
+            const n0 = S.clib.length; ACT['clb-dup']({ dataset: { v: 'cl:' + rec.id } }); const n1 = S.clib.length; const cp = S.clib.find(x => x.id !== rec.id && /\(사본\)$/.test(x.title));
+            if (cp) { ACT['clb-del']({ dataset: { v: 'cl:' + cp.id } }); const ok = document.querySelector('#modal [data-mact=ok]'); ok && ok.click(); }
+            return { list, dup: n1 === n0 + 1, del: S.clib.length === n0 }; });
+          if (r.err) P.push(r.err); else { if (!r.list) P.push('목록 보기에 항목 없음'); if (r.dup === false) P.push('복제 안 됨'); if (r.del === false) P.push('사본 삭제 안 됨'); } }
         /* 휴대폰 */
         await p.setViewportSize({ width: 390, height: 844 }); await p.evaluate(() => { go('clib'); render(); }); await p.waitForTimeout(400); const mm = await F.measure(p, '#main'); if (mm.over > 0) P.push(`390 가로 넘침 ${mm.over}`); if (mm.cut.length) P.push('390 잘림 ' + mm.cut.join(' '));
         if (shots) await p.screenshot({ path: path.join(shots, `clib_${type}_${empty ? 'e' : 'f'}_m.png`) });
