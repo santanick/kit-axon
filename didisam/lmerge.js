@@ -87,6 +87,9 @@
     if (/^#?(home)?$/.test(location.hash)) title = S0.title || H.name;
     else if (r.a === 'hp') { const pg = H.pages[decodeURIComponent(location.hash.slice(1)).split('/')[1] || '']; if (pg) { title = `${(pg.seo && pg.seo.title) || pg.name} · ${H.name}`; desc = (pg.seo && pg.seo.desc) || desc; kw = (pg.seo && pg.seo.kw) || kw; } }
     if (title) document.title = title; meta('description', desc); meta('keywords', kw);
+    /* v37 P4: 링크 공유 미리보기(og) — 제목 · 설명 · 공유 이미지 */
+    const og = (p2, v) => { let m = document.querySelector(`meta[property="${p2}"]`); if (!v && !m) return; if (!m) { m = document.createElement('meta'); m.setAttribute('property', p2); document.head.appendChild(m); } m.content = v || ''; };
+    og('og:title', title || document.title); og('og:description', desc); og('og:image', /^data:image\/|^https:\/\//.test(S0.img || '') && !/^data:/.test(S0.img) ? S0.img : '');
     if (LR.mode === 'live' && S0.index !== false) meta('robots', 'index,follow');
     if (H.favicon) { const l = document.querySelector('link[rel="icon"]'); if (l && l.getAttribute('href') !== H.favicon) l.setAttribute('href', H.favicon); } }
 
