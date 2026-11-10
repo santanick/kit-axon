@@ -127,7 +127,7 @@ const menuOn = id => !!S.nav.tabs[MENU[id]?.ws]?.find(x => x.id === id && x.on);
 const wsTabs = w => (S.nav.tabs[w] || []).filter(x => x.on && MENU[x.id] && !(MENU[x.id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(x.id))).map(x => x.id);
 
 /* ───────── 공용 UI ───────── */
-function toast(msg, kind = '') { const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; $('#toasts').appendChild(el); setTimeout(() => el.classList.add('out'), 2600); setTimeout(() => el.remove(), 3000); }
+function toast(msg, kind = '') { const box = $('#toasts'); if (box) [...box.children].forEach(x => x.remove()); /* v38 F5 P21 · C15: 안내는 한 번에 하나만 — '[게시하기]를 누르세요'와 '게시했습니다'가 겹치지 않게 */ const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; $('#toasts').appendChild(el); setTimeout(() => el.classList.add('out'), 2600); setTimeout(() => el.remove(), 3000); }
 function modal(title, body, actions = [], wide = false) {
   closeModal();
   const w = document.createElement('div'); w.className = 'mwrap'; w.id = 'modal';

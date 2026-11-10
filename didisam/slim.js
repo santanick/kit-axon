@@ -40,8 +40,8 @@
     k12: ['crmstu', 'crmatt', 'crmex', 'class', 'clib', 'crmbill', 'board', 'message', 'site'],
     univ: ['class', 'clib', 'cert', 'members', 'enroll', 'board', 'community', 'message', 'academic', 'docs', 'site'],
     univ_lms: null, /* 학사 LMS는 업무 단위 3단 메뉴(ulms.js)를 그대로 쓰고, 아래 slimLms에서 줄인다 */
-    corp: ['class', 'clib', 'cert', 'members', 'enroll', 'board', 'message', 'compliance', 'cpl', 'docs', 'site'],
-    public: ['class', 'clib', 'attend', 'cert', 'members', 'enroll', 'board', 'message', 'docs', 'site'],
+    corp: ['class', 'clib', 'cert', 'members', 'enroll', 'calendar', 'board', 'message', 'compliance', 'cpl', 'docs', 'site'], /* v38 F5 C6: 기업은 교육 일정(캘린더)을 기본으로 켠다 */
+    public: ['class', 'clib', 'attend', 'cert', 'members', 'enroll', 'board', 'community', 'message', 'docs', 'site'], /* v38 F5 P11: 공공 사이트의 참여마당(게시판) 글을 운영자가 바로 보도록 게시판을 기본으로 켠다 */
     lifelong: ['class', 'clib', 'attend', 'cert', 'members', 'enroll', 'board', 'message', 'lifelong', 'cpl', 'docs', 'site'],
     voc: ['class', 'clib', 'attend', 'cert', 'members', 'enroll', 'board', 'message', 'hrd', 'cpl', 'docs', 'site']
   };
@@ -74,7 +74,7 @@
     const base = ACT['ux-find']; if (base) ACT['ux-find'] = (...a) => { const r = base(...a); try { const L = document.querySelector('#modal .uxfl'); if (L) { Object.entries(SYN).forEach(([id, k]) => { if (!MENU[id]) return; let b = L.querySelector(`[data-v="${id}"]`); if (!b && id === 'site') { L.insertAdjacentHTML('afterbegin', `<button type="button" role="listitem" data-act="go" data-v="site" data-k=""><b>${esc(mlabel('site'))}</b><small>학습자 사이트 · 게시</small></button>`); b = L.querySelector('[data-v="site"]'); } if (b) b.dataset.k = (b.dataset.k + ' ' + k).toLowerCase(); }); const q = document.querySelector('#modal .uxq'); if (q && q.value) q.dispatchEvent(new Event('input')); } } catch (e) { console.error(e); } return r; }; }
 
   /* v36 R1 메뉴 찾기: 꺼진 메뉴도 결과에 보이고 [켜기] — '게시판' · '문서' · '수료증'을 찾으면 꺼져 있어도 나온다(누르면 켜고 바로 열기) */
-  { const SYN2 = { community: '게시판 커뮤니티 게시글 글 질문 q&a 자료실 학과 공지', docs: '문서 공문 보고서 결과보고 안내문 서식 가정통신문', cert: '수료증 이수증 수료 이수 증명서', attend: '출결 출석 결석 지각 출석부', badge: '배지 디지털 배지', message: '메시지 문자 알림톡 푸시', board: '공지 알림', enroll: '등록 초대 일괄 엑셀 명단', auto: '자동화 자동 반복', parents: '보호자 학부모', sales: '매출 결제 환불', consult: '상담 채널톡' };
+  { const SYN2 = { community: '게시판 커뮤니티 게시글 글 질문 q&a 자료실 학과 공지 참여마당 소통 라운지 학습 동아리', calendar: '캘린더 달력 일정 학사 일정 교육 일정', docs: '문서 공문 보고서 결과보고 안내문 서식 가정통신문', cert: '수료증 이수증 수료 이수 증명서', attend: '출결 출석 결석 지각 출석부', badge: '배지 디지털 배지', message: '메시지 문자 알림톡 푸시', board: '공지 알림', enroll: '등록 초대 일괄 엑셀 명단', auto: '자동화 자동 반복', parents: '보호자 학부모', sales: '매출 결제 환불', consult: '상담 채널톡' };
     const base = ACT['ux-find']; if (base) ACT['ux-find'] = (...a) => { const r = base(...a); try { const L = document.querySelector('#modal .uxfl'); if (!L || !S || !S.org) return r;
       const D = typeof UX_DESC === 'function' ? UX_DESC() : {}; const role = S.me && S.me.role;
       const off = allTabs().filter(x => !x.on && !['library', 'dbook'].includes(x.id) /* 콘텐츠 라이브러리(clib)에 합쳐진 옛 메뉴 */ && !(MENU[x.id].owner && role !== 'owner') && !(role === 'teacher') && !(x.id === 'parents' && typeof mbGuardOn === 'function' && !mbGuardOn()) && !(['sales', 'billing'].includes(x.id) && typeof mbPayOn === 'function' && !mbPayOn()) && !L.querySelector(`[data-v="${x.id}"]`));
@@ -162,11 +162,11 @@
     VIEWS.conn = () => { if (UI.slConnOld) return `<div class="sl-back"><button class="btn ghost" data-act="sl-connold" data-v="0">‹ 연결 목록</button></div>` + oldConn();
       cnEnsure(); const f = UI.slCnF || 'all', q = (UI.slCnQ || '').trim();
       const on = CN_IDS.filter(id => cnStatus(id).st === CN_ST.on);
-      const L = CN_IDS.filter(id => (f === 'all' || CN_CAT[id] === f) && (!q || (CN[id].name + CN_ONE[id]).toLowerCase().includes(q.toLowerCase())));
+      const L = (typeof cnIds === 'function' ? cnIds() : CN_IDS).filter(id => (f === 'all' || CN_CAT[id] === f) && (!q || (CN[id].name + CN_ONE[id]).toLowerCase().includes(q.toLowerCase())));
       const P = S.autos.filter(a => (a.actions || []).some(x => CN_ACT[x]));
       return SL.page('연결', `<button class="btn" data-act="sl-connold" data-v="1">자세히</button>`,
         SL.note(ic('lock' in IC ? 'lock' : 'gear', 18), '연결 정보는 안전하게 보관됩니다', '키 · 토큰은 화면에 가려서 표시합니다') +
-        SL.chips('slCnF', [['all', '전체'], ['work', '업무툴'], ['pay', '결제'], ['msg', '메시지'], ['ai', 'AI']], f) +
+        SL.chips('slCnF', [['all', '전체'], ['work', '업무툴'], ...(typeof mbPayOn === 'function' && !mbPayOn() ? [] : [['pay', '결제']]), ['msg', '메시지'], ['ai', 'AI']], f) +
         (on.length ? SL.sum(`<span>연결됨</span><span class="sl-logos">${on.map(id => typeof brandLogo === 'function' ? brandLogo(id, 26, CN[id].name) : `<i style="background:${CN[id].col}">${esc(CN[id].logo)}</i>`).join('')}</span><span class="sl-n">${on.length}</span>`, 'sl-cnf', 'on') : '') +
         SL.list(L.map(id => { const s = cnStatus(id); const ok = s.st === CN_ST.on, chk = s.st === CN_ST.chk;
           return SL.row({ act: 'sl-cn', v: id, name: CN[id].name.replace(/\(.*\)/, '').trim(), sub: CN_ONE[id], col: typeof brandLogo === 'function' ? 'transparent' : CN[id].col, icon: typeof brandLogo === 'function' ? brandLogo(id, 44, CN[id].name) : esc(CN[id].logo),
@@ -265,7 +265,7 @@
           sxRow('켜진 자동 운영', `${au}개`) + sxRow('홈페이지 팝업', `${pops}개 노출 중`) + `<div class="sx-acts">${sxBtn('자동 운영 열기', 'go', 'auto')}${sxBtn('팝업 공지', 'sx-sub', 'notify|popup')}</div>` },
       { k: 'conn', n: '외부 연결', i: 'send', subs: ['integr'], kw: '연결 slack google 구글 토스 채널톡 카카오 네이버 zoom 줌 youtube 유튜브 notion 노션 microsoft 마이크로소프트 mcp api claude 클로드 hrd',
         sum: `연결됨 ${cnOnL.length}개`,
-        q: () => `<div class="sx-logos">${(typeof CN_IDS !== 'undefined' ? CN_IDS : []).map(id => { let on = false; try { on = cnStatus(id).st === CN_ST.on; } catch (e) { }
+        q: () => `<div class="sx-logos">${(typeof cnIds === 'function' ? cnIds() : typeof CN_IDS !== 'undefined' ? CN_IDS : []).map(id => { let on = false; try { on = cnStatus(id).st === CN_ST.on; } catch (e) { }
             return `<button type="button" class="sx-lg ${on ? 'on' : ''}" data-act="${O ? 'sl-cn' : 'sx-owner'}" data-v="${id}" aria-label="${esc(CN[id].name)} ${on ? '연결됨' : '연결하기'}">${typeof brandLogo === 'function' ? brandLogo(id, 36, CN[id].name) : esc(CN[id].logo)}<small>${esc(CN[id].name.replace(/\(.*\)| API 키/g, '').trim())}</small><em>${on ? '연결됨' : '연결'}</em></button>`; }).join('')}
           ${SX_EXT().map(([id, n, d, act, v]) => `<button type="button" class="sx-lg ext" data-act="${act}" data-v="${esc(v)}" aria-label="${esc(n)} — ${esc(d)}">${typeof brandLogo === 'function' ? brandLogo(id, 36, n) : esc(n[0])}<small>${esc(n)}</small><em>${act === 'sx-soon' ? '준비 중' : esc(d)}</em></button>`).join('')}</div>` },
       ...(O || sxPay() ? [{ k: 'pay', n: sxPay() ? '요금제 · 결제' : '요금제', i: 'chart', subs: O ? ['plan'] : [], kw: '요금제 플랜 결제 수강료 pg 토스 환불 매출 청구',

@@ -86,7 +86,7 @@
   const dot = d => String(d || '').replace(/-/g, '.');
   const perOf = c => c.period && c.period.mode === 'days' && +c.period.days ? `신청일부터 ${+c.period.days}일` : (c.start || c.end) ? [dot(c.start), dot(c.end)].filter(Boolean).join(' ~ ') : '';
   const lesOf = c => (c.curriculum || []).length;
-  const priceOf = c => +c.price ? won(c.price) : '무료';
+  const priceOf = c => +c.price ? won(c.price) : ((typeof mbPayOn === 'function' && window.S && S.org ? !mbPayOn() : (typeof SITE === 'function' && SITE() ? SITE().pay === false : false)) ? '' : '무료'); /* v38 F5 결제 꺼진 기관은 '무료' 표시도 감춘다 */
   const linkHref = v => !v ? '' : v.startsWith('learn:') ? '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice' }[v.slice(6)] || 'home') : v.startsWith('page:') ? '#p-' + v.slice(5) : v.startsWith('cls:') ? '#p-c-' + v.slice(4) : v.startsWith('url:') ? (typeof safeURL === 'function' ? safeURL(v.slice(4)) : '') : '';
   const aAttr = h => `href="${E(h)}"${/^https?:/.test(h) ? ' target="_blank" rel="noopener"' : ''}`;
   const menuOf = (s, kind) => (s.menus || []).find(m => m.kind === kind && m.on !== false);
@@ -127,7 +127,7 @@
     else if (C.some(c => c.cert === 'manual')) Q.push(['수료증은 어떻게 받나요?', '수료 기준을 채우면 운영자가 확인한 뒤 수료증을 발급합니다.']);
     const pg = S.settings && S.settings.pg === 'toss' && S.settings.toss && S.settings.toss.status === '승인';
     if (pg && C.some(c => +c.price)) Q.push(['결제와 환불은 어떻게 하나요?', '수강 신청 화면에서 온라인으로 결제합니다. 환불은 로그인 후 내 결제 내역에서 신청하며, 이용약관의 환불 규정을 따릅니다.']);
-    if (C.length && C.every(c => !+c.price)) Q.push([`수강료가 있나요?`, `지금 공개된 ${cl}은 모두 무료입니다.`]);
+    if (C.length && C.every(c => !+c.price) && !(typeof mbPayOn === 'function' && window.S && S.org ? !mbPayOn() : (typeof SITE === 'function' && SITE() ? SITE().pay === false : false))) Q.push([`수강료가 있나요?`, `지금 공개된 ${cl}은 모두 무료입니다.`]);
     return Q.slice(0, 4); }
 
   /* ── 시각 요소: 강좌 카드 목업 · SVG 일러스트 ── */
