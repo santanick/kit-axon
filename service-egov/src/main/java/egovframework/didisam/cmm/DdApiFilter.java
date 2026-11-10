@@ -57,7 +57,8 @@ public class DdApiFilter extends OncePerRequestFilter {
     static final String LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com; media-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'self'";
 
     private final DdProps props; private final DdWeb web;
-    public DdApiFilter(DdProps props, DdWeb web) { this.props = props; this.web = web; }
+    private final DdOgMeta og; private final java.nio.file.Path pubDir; /* v37 L2 learner.html og 메타 */
+    public DdApiFilter(DdProps props, DdWeb web, DdOgMeta og, @org.springframework.beans.factory.annotation.Value("${PUBLIC_DIR:public}") String pubDir) { this.props = props; this.web = web; this.og = og; this.pubDir = java.nio.file.Paths.get(pubDir).toAbsolutePath().normalize(); }
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws ServletException, IOException {
@@ -87,6 +88,9 @@ public class DdApiFilter extends OncePerRequestFilter {
                 res.setHeader("content-security-policy", learner ? LCSP : CSP);
                 res.setHeader("cache-control", "no-cache");
                 if (learner) res.setHeader("x-frame-options", "SAMEORIGIN");
+                /* v37 L2: learner.html은 게시본의 제목 · 설명 · 공유 이미지를 og 메타로 넣어 보낸다(Node serveStatic과 같음) */
+                if ("/learner.html".equals(path)) { String tid = DdOgMeta.tidOf(req.getParameter("t"), props.learnerTid); java.nio.file.Path f = pubDir.resolve("learner.html");
+                    if (!tid.isEmpty() && java.nio.file.Files.isRegularFile(f)) { byte[] b = og.page(java.nio.file.Files.readAllBytes(f), tid); res.setStatus(200); res.setContentType("text/html; charset=utf-8"); res.setContentLength(b.length); if (!"HEAD".equals(m)) res.getOutputStream().write(b); return; } }
             } else res.setHeader("cache-control", "public, max-age=300");
         }
         if (!props.module.isEmpty() && "/".equals(path)) { req.getRequestDispatcher("/" + DdModule.PAGE.get(props.module)).forward(req, res); return; }

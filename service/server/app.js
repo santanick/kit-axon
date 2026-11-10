@@ -25,6 +25,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 const SESSION_DAYS = 14;
 const STATE_MAX = 8 * 1024 * 1024;      // 기관 상태 최대 8MB(JSON)
 const M = require('./modules');
+const OG = require('./ogmeta'); /* v37 L2 링크 공유 미리보기 */
 const { createStateCrypto } = require('./statecrypt');
 const { createOAuth } = require('./oauth');
 const COOKIE = '__Host-dd_sid';
@@ -521,6 +522,12 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (isHtml) h['content-security-policy'] = path.basename(f) === 'learner.html' ? LCSP : CSP;
       if (path.basename(f) === 'learner.html') h['x-frame-options'] = 'SAMEORIGIN';
       if (secure) h['strict-transport-security'] = 'max-age=31536000; includeSubDomains';
+      /* v37 L2: learner.html은 게시본의 제목 · 설명 · 공유 이미지를 og 메타로 넣어 보낸다(미리보기 크롤러는 스크립트를 실행하지 않음) */
+      const otid = path.basename(f) === 'learner.html' ? OG.tidOf(req.url, learnerTid) : '';
+      if (otid) return (async () => { let body = await fs.promises.readFile(f, 'utf8');
+        try { const r = await inTenant(pool, otid, async c => (await c.query("select doc->'lsite'->'pub'->'hp'->'seo' seo, doc->'lsite'->'pub'->'hp'->>'name' name, doc->'lsite'->'pub'->'org' org from tenant_state where tenant_id = $1", [otid])).rows[0]);
+          if (r && (r.seo || r.name || r.org)) body = OG.injectOg(body, OG.ogFields({ hp: { seo: r.seo || {}, name: r.name || '' }, org: r.org || {} })); } catch (e) { log.error && log.error('og', e.message); }
+        const b = Buffer.from(body, 'utf8'); h['content-length'] = b.length; res.writeHead(200, h); res.end(req.method === 'HEAD' ? undefined : b); })().catch(() => { if (!res.headersSent) send(res, 500, 'error'); });
       res.writeHead(200, h); if (req.method === 'HEAD') return res.end();
       fs.createReadStream(f).pipe(res);
     });
