@@ -15,7 +15,7 @@
      다른 화면으로 가는 이동(go · 상세 열기 등 제목이 바뀌는 경우)은 그대로 맨 위에서 시작한다. */
   { const sig = () => { try { const m = document.getElementById('main'); if (!m || typeof CUR === 'undefined' || !CUR) return ''; const h = [...m.querySelectorAll('.sl-h h2, .bhdl b, h1, h2')].find(x => x.offsetParent !== null && !x.closest('#modal,.mwrap,#slSheet'));
         const back = m.querySelector('.sl-back, [data-act$="back"], [data-act$="-list"], .w2back, .crumb'); /* 상세(뒤로 버튼) ↔ 목록이 바뀌면 다른 화면 */
-        return `${CUR.ws}/${CUR.tab}|${UI.settings || ''}|${back ? 'd' : 'l'}|${h ? h.textContent.replace(/[\d,.\s·()]+/g, '').slice(0, 24) : ''}`; } catch (e) { return ''; } };
+        return `${CUR.ws}/${CUR.tab}|${back ? 'd' : 'l'}|${h ? h.textContent.replace(/[\d,.\s·()]+/g, '').slice(0, 24) : ''}`; } catch (e) { return ''; } };
     const boxes = () => { const m = document.getElementById('main'); return m ? [...m.querySelectorAll('[data-keep-scroll], .hps-canvas, .hpst-canvas, .ct-pv, .bk-pv, .s2tree, .sl-list')].filter(e => e.scrollTop > 0).map(e => [e.id || e.className, e.scrollTop]) : []; };
     window.slKeepScroll = true;
     const base = render; render = (...a) => { if (!window.slKeepScroll || !S || !S.org) return base(...a);
