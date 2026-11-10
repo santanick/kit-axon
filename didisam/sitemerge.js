@@ -90,7 +90,7 @@
       if (key.startsWith('m-')) { const id = key.slice(2); const m = s0.menus.find(x => x.id === id) || s0.menus.find(x => id.startsWith(x.id + '-')); return m ? menuHref(m) : '#hp/' + key; }
       return '#hp/' + key;
     };
-    function linkOf(v) { v = String(v || ''); if (v.startsWith('learn:')) { const r = v.slice(6); return ['home', 'shop', 'comm', 'notice', 'textbooks', 'my', 'courses'].includes(r) ? '#' + r : '#home'; } /* v24 학습 페이지 연결 */ if (v.startsWith('page:')) return keyHref(v.slice(5)); if (v.startsWith('cls:')) return '#class/' + v.slice(4); if (v.startsWith('url:') && /^https?:\/\//.test(v.slice(4))) return v.slice(4); return '#home'; }
+    function linkOf(v) { v = String(v || ''); if (v.startsWith('learn:comm/')) return '#comm/' + encodeURIComponent(v.slice(11)); /* v37 게시판 하나로 가는 메뉴 */ if (v.startsWith('learn:')) { const r = v.slice(6); return ['home', 'shop', 'comm', 'notice', 'textbooks', 'my', 'courses'].includes(r) ? '#' + r : '#home'; } /* v24 학습 페이지 연결 */ if (v.startsWith('page:')) return keyHref(v.slice(5)); if (v.startsWith('cls:')) return '#class/' + v.slice(4); if (v.startsWith('url:') && /^https?:\/\//.test(v.slice(4))) return v.slice(4); return '#home'; }
     const fix = html => String(html || '').replace(/href="#p-([^"]*)"/g, (_, k) => `href="${esc(keyHref(k))}"`);
     const pages = {}; let home = '';
     const re = /<main class="s2pg" id="p-([^"]+)">/g; let mm; const idx = [];

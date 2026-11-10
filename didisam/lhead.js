@@ -57,5 +57,31 @@
     else if (d) d.classList.add('llh-d');
   }
   window.llhApply = apply;
+
+  /* v37 P2(대표님 2026-11-10 지시 2 · 4): ① 사이트 편집기에서 학습 페이지(목록 화면) 위 · 아래에 넣은 홈페이지 섹션 — 게시본 hp.lx[키] = { pre, post }를
+     머리글 아래 · 목록 아래에 붙인다(그림자 DOM + 홈페이지 CSS · 다시 정화). ② 홈페이지 · 학습 페이지의 '게시판' 섹션(.hpx-bd)을 이 기기의 최신 글로 다시 채운다
+     (lcomm lcPosts — 게시판 권한 · 비공개 글 규칙 그대로, 내가 쓴 글 포함). 글 보기 #post/<id> · 글쓰기 #write/b:<게시판> · 더 보기 #comm/<게시판>은 lcomm이 처리한다. */
+  const esc2 = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  function lxMount() { const b = document.body; if (!b || b.classList.contains('lapp')) return; const lm = document.getElementById('lm'); if (!lm) return; let H = null; try { H = SITE().hp || null; } catch (e) { } if (!H || !H.lx) return;
+    const { k, top } = keyOf(); const X = top ? H.lx[k] : null; const sig = k + '|' + (X ? 1 : 0);
+    lm.querySelectorAll(':scope > .lxhost').forEach(h => { if (h.dataset.sig !== sig) h.remove(); }); if (!X || lm.querySelector(':scope > .lxhost')) return;
+    const put = (html, where) => { if (!html) return; const el = document.createElement('div'); el.className = 'lxhost'; el.dataset.sig = sig; el.dataset.w = where;
+      const sr = el.attachShadow({ mode: 'open' }); const css = typeof safeCSS === 'function' ? safeCSS(H.css) : ''; const body = typeof safeHTML === 'function' ? safeHTML(html, { data: true, code: true }) : '';
+      sr.innerHTML = `<style>${css}.smr{background:transparent;min-height:0}</style><div class="smr lk-${esc2(H.look || 'campus')}">${body}</div>`;
+      const sub = lm.querySelector(':scope > section.sub'); if (where === 'pre' && sub) sub.insertAdjacentElement('afterend', el); else lm.appendChild(el); };
+    put(X.pre, 'pre'); put(X.post, 'post'); }
+  function bdFill() { if (typeof lcPosts !== 'function') return; let L = null; const roots = [...document.querySelectorAll('.smhost, .lxhost')].map(h => h.shadowRoot).filter(Boolean);
+    roots.forEach(r => r.querySelectorAll('section.hpx-bd').forEach(sec => { const m = sec.querySelector('a.hpx-bdm'); const h = m ? m.getAttribute('href') || '' : ''; const bid = h.startsWith('#comm/') ? decodeURIComponent(h.slice(6)) : '';
+      if (!L) { try { L = lcPosts(); } catch (e) { L = []; } } const n = Math.max(1, Math.min(20, +(sec.dataset.n || 5) || 5));
+      const P = L.filter(p => (bid ? p.board === bid : !['수강후기', '학습노트'].includes(p.board))).sort((a, b) => (!!b.pin - !!a.pin) || String(b.at || '').localeCompare(String(a.at || ''))).slice(0, n);
+      const sig = P.map(p => p.id + (p.cmts || []).length).join(','); if (sec.dataset.fill === sig) return; sec.dataset.fill = sig; const ul = sec.querySelector('ul.hpx-bdl'); if (!ul) return;
+      const tt = p => typeof lcTitle === 'function' ? lcTitle(p) : (p.title || '(내용 없음)'); const cnt = p => { const f = l => (l || []).reduce((s, r) => s + 1 + f(r.replies), 0); return f(p.cmts); };
+      ul.innerHTML = P.length ? P.map(p => `<li><a href="#post/${encodeURIComponent(p.id)}"><b>${p.pin ? '<em>공지</em>' : ''}${esc2(tt(p))}</b><small>${esc2(p.own ? '나' : (p.nick || '회원'))} · ${esc2(String(p.at || '').slice(0, 10))}${cnt(p) ? ` · 댓글 ${cnt(p)}` : ''}</small></a></li>`).join('')
+        : `<li class="hpx-bde">${esc2(bid && !(typeof COMM === 'function' && (COMM().boards || []).some(x => x.id === bid && (typeof lcBoardOK !== 'function' || lcBoardOK(x)))) ? '회원 전용 게시판이에요. 로그인하면 글이 보여요.' : '아직 글이 없어요. 첫 글을 남겨 주세요.')}</li>`;
+      const w = sec.querySelector('a.hpx-bdw'); if (w && typeof COMM === 'function' && typeof lcBoardOK === 'function' && LR && LR.me) { const bd = (COMM().boards || []).find(x => x.id === bid); if (bd && !lcBoardOK(bd, true)) w.remove(); } })); }
+  window.lhBoardFill = bdFill;
+  { let q = 0; const tick = () => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { if (typeof window.lmMount === "function") window.lmMount(); lxMount(); bdFill(); } catch (e) { console.error('lhead lx', e); } }); };
+    const host = () => document.getElementById('lapp') || document.body; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => new MutationObserver(tick).observe(host(), { childList: true, subtree: true }), { once: true }); else new MutationObserver(tick).observe(host(), { childList: true, subtree: true });
+    addEventListener('hashchange', tick); }
   { const base = lrender; lrender = (...a) => { const r = base(...a); try { apply(); } catch (e) { console.error('lhead', e); } return r; }; }
 })();

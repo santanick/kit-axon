@@ -60,6 +60,8 @@
       if (m.subOn && Array.isArray(m.subs)) m.subs.forEach(sb => P.push({ key: `s-${m.id}-${sb.id}`, label: `${mN(m.l)} › ${sb.l}`, name: sb.l, kind: 'sub', m, sb, sections: sb.sections }));
     });
     if (!P.length || P[0].key !== 'home') P.unshift({ key: 'home', label: '홈', name: '홈', kind: 'home', sections: s.sections });
+    /* v37 P2: 학습 페이지로 가는 메뉴도 홈페이지와 같은 섹션 편집(hpstudio s2pagesHook — p.sections = 메뉴의 lsecs, p.learn = 학습 주소) */
+    try { if (typeof window.s2pagesHook === 'function') window.s2pagesHook(P, s); } catch (e) { console.error('s2pages hook', e); }
     return P;
   }
   const curPg = s => { const P = s2pages(s); return P.find(p => p.key === UI.sitePage) || P[0]; };
@@ -268,7 +270,7 @@
     const lab = l => (lang && lang !== 'ko' && typeof LX === 'function') ? LX(l, lang) : l;
     const visible = m => m.on !== false && !(full && m.access === '지정 회원' && m.hide && (m.targets || []).length);
     const lock = m => m.access !== '공개' ? ` <i class="s2lock">${m.access === '비공개' ? '비공개' : `지정 ${(m.targets || []).length}`}</i>` : '';
-    const href = (m, key) => m.link ? linkAttr(m.link) : `href="#p-${esc(key)}"`;
+    const href = (m, key) => m.link && !(live && !full && /^(learn:(?!home$)|cls:)/.test(m.link)) ? linkAttr(m.link) : `href="#p-${esc(key)}"`; /* v37: 편집 화면에서는 학습 페이지 메뉴도 그 메뉴의 페이지(같은 캔버스)로 */
     const items = s.menus.filter(visible).map(m => {
       const key = m.kind === 'home' ? 'home' : 'm-' + m.id; const subs = m.subOn && Array.isArray(m.subs) ? m.subs.filter(visible) : [];
       return `<div class="s2-mi"><a ${href(m, key)}>${esc(lab(m.l))}${live && !full ? lock(m) : ''}${subs.length ? ' <small class="s2car">▾</small>' : ''}</a>${subs.length ? `<div class="s2-dd">${subs.map(sb => `<a ${href(sb, `s-${m.id}-${sb.id}`)}>${esc(sb.l)}${live && !full ? lock(sb) : ''}</a>`).join('')}</div>` : ''}</div>`;
@@ -326,7 +328,7 @@
         else if (p.sections) { inner = p.sections.map((x, i) => proSec(x, i, sx, lk)).join(''); if (!inner && p.kind === 'custom' && m.subOn) inner = `<section class="sec"><div class="wrap"><div class="s2sublist">${m.subs.filter(x => x.on !== false).map(sb => `<a href="#p-s-${esc(m.id)}-${esc(sb.id)}">${esc(sb.l)} →</a>`).join('')}</div></div></section>`; if (!inner) inner = `<section class="sec"><div class="wrap"><p class="emp">섹션을 추가해 페이지를 구성하세요.</p></div></section>`; }
         else inner = basePage(p, sx, lk);
         const note = !full && it.access !== '공개' ? `<div class="s2note">운영자 미리보기 — 접근 권한: ${esc(it.access)}${it.access === '지정 회원' ? ` ${(it.targets || []).length}명/팀${it.hide ? ' · 지정 회원 외 메뉴 숨김' : ''}` : ''} (권한이 없는 회원에게는 접근 불가 안내가 표시됩니다)</div>` : '';
-        pages.push(`<main class="s2pg" id="p-${esc(p.key)}">${note}${pageHead(p, sx, crumbs)}${inner}</main>`);
+        pages.push(`<main class="s2pg" id="p-${esc(p.key)}">${note}${p.learn ? '' : pageHead(p, sx, crumbs)}${inner}</main>`); /* v37: 학습 페이지는 머리글 섹션(lshead)이 제목을 그린다 */
       });
       pubCls().forEach(c => pages.push(clsPage(c, sx, lk)));
       const tm = S.settings.terms || {};
