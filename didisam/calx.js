@@ -15,6 +15,10 @@
   const COL = { 개강: '#00A224', 종강: '#B3121B', 회차: '#4C77C5', 시험: '#B3121B', 과제: '#5C74F6', 라이브: '#7D5CB5', 진단: '#E8622A', 수업: '#4C77C5' };
   const UCOL = ['#E5487A', '#14A3A3', '#FF9800', '#6447F5', '#109BF1'];
   const kinds = () => KINDS[(S && S.org && S.org.type) || 'adult'] || KINDS.adult;
+  /* v37.4 학습자 캘린더(lcal.js): 직접 넣은 일정 중 '학습자에게 보이기'가 켜진 것만 게시본(lsSnapshot.calx)에 싣는다. 내부 일정 종류는 기본 꺼짐. */
+  const INNER = ['회의', '상담', 'HRD-Net 보고 기한', '학습비 반환 기한'];
+  const pubOf = e => (e && typeof e.pub === 'boolean') ? e.pub : !INNER.includes(e && e.kind);
+  window.cxPub = () => { try { if (!S) return []; return store().ev.filter(pubOf).slice(0, 300).map(e => ({ id: e.id, title: String(e.title || '').slice(0, 60), date: e.date, time: e.time || '', end: e.end || '', kind: e.kind || '', cls: e.cls || '' })).filter(e => okD(e.date)); } catch (x) { return []; } };
   const kcol = k => COL[k] || UCOL[Math.max(0, kinds().indexOf(k)) % UCOL.length];
   const store = () => { S.calx = S.calx && typeof S.calx === 'object' ? S.calx : {}; S.calx.ev = Array.isArray(S.calx.ev) ? S.calx.ev : []; return S.calx; };
   const pad = n => String(n).padStart(2, '0');
@@ -78,7 +82,8 @@
       <div class="form2"><label>날짜<input type="date" name="cxD" value="${esc(e ? e.date : date)}"></label><label>시작<input type="time" name="cxS" value="${esc(e ? e.time || '' : '')}"></label><label>종료<input type="time" name="cxE" value="${esc(e ? e.end || '' : '')}"></label></div>
       <label class="fl">일정 종류<select name="cxK">${K.map(k => `<option ${k === k0 ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select></label>
       <label class="fl">연결 ${esc(t('cls'))}(선택)<select name="cxC"><option value="">없음</option>${(S.classes || []).slice(0, 200).map(c => `<option value="${esc(c.id)}" ${e && e.cls === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>
-      <label class="fl">메모<input name="cxM" maxlength="120" value="${esc(e ? e.memo || '' : '')}"></label></div>`; }
+      <label class="fl">메모<input name="cxM" maxlength="120" value="${esc(e ? e.memo || '' : '')}"></label>
+      <label class="cx-pub"><input type="checkbox" name="cxP" ${pubOf(e || { kind: k0 }) ? 'checked' : ''}> ${esc(t('learner'))} 캘린더에도 보이기 <small>(${esc(t('cls'))}을 연결하면 그 수강생에게만 · 게시하면 반영)</small></label></div>`; }
   const fv2 = (w, n) => { const x = w.querySelector(`[name="${n}"]`); return x ? x.value.trim() : ''; };
   function dayOpen(d) { UI.cxSel = d; const L = cxEvents().filter(e => e.date === d);
     SL.sheet(fmt(d), `${L.length ? `<div class="cx-list">${L.map(e => `<button type="button" class="cx-lr" data-act="cx-ev" data-v="${esc(e.id)}"><i style="background:${kcol(e.kind)}"></i><span class="cx-lk">${esc(e.kind)}</span><b>${esc(e.title)}</b><small>${esc(e.time || '')}</small></button>`).join('')}</div>` : '<p class="mini">이 날은 일정이 없습니다.</p>'}`,
@@ -97,7 +102,7 @@
   ACT['cx-save'] = el => { const w = $('#slSheet'); if (!w) return; const T = fv2(w, 'cxT'), D = fv2(w, 'cxD');
     if (!T) { toast('제목을 입력하세요.', 'warn'); return; } if (!okD(D)) { toast('날짜를 입력하세요.', 'warn'); return; }
     const S1 = fv2(w, 'cxS'), E1 = fv2(w, 'cxE'); if (S1 && E1 && E1 <= S1) { toast('종료 시간이 시작 시간보다 빠릅니다.', 'warn'); return; }
-    const o = { title: T.slice(0, 60), date: D, time: S1, end: E1, kind: fv2(w, 'cxK') || kinds()[0], cls: fv2(w, 'cxC'), memo: fv2(w, 'cxM').slice(0, 120) };
+    const o = { title: T.slice(0, 60), date: D, time: S1, end: E1, kind: fv2(w, 'cxK') || kinds()[0], cls: fv2(w, 'cxC'), memo: fv2(w, 'cxM').slice(0, 120), pub: !!(w.querySelector('[name="cxP"]') || {}).checked };
     const L = store().ev; const id = el.dataset.v; if (id) { const u = L.find(x => x.id === id); if (!u) return; Object.assign(u, o); logAudit(`일정 수정 — ${o.title}`); } else { L.push({ id: uid('cx'), ...o }); logAudit(`일정 추가 — ${o.title}`); }
     UI.cxSel = D; save(); slClose(); render(); toast(id ? '일정을 저장했습니다.' : `${fmt(D)}에 일정을 추가했습니다.`, 'ok'); };
   ACT['cx-del'] = el => { const L = store().ev; const i = L.findIndex(x => x.id === el.dataset.v); if (i < 0) return; const u = L[i];
@@ -154,6 +159,7 @@
 .cx-lr{display:grid;grid-template-columns:10px auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:left;width:100%;border:1px solid #EAEBEB;background:#fff;border-radius:12px;padding:10px 12px;font:inherit;cursor:pointer;min-height:52px}
 .cx-lr:hover{border-color:#A5B0FA}.cx-lr>i{width:10px;height:10px;border-radius:50%;grid-row:1/3}.cx-lk{font-size:12px;font-weight:700;color:#6C6C6C;background:#F6F7F7;border-radius:6px;padding:2px 6px}.cx-lr b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.cx-lr small{grid-column:2/4;color:#808181;font-size:13px}
 .cx-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:#4C4D4D}.cx-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.cx-pub{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:600}.cx-pub input{width:20px;height:20px}.cx-pub small{color:#808181;font-weight:400}
 .cx-form .form2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .d26-evl .cx-lr{margin-top:6px;grid-template-columns:10px minmax(0,1fr)}.d26-evl .cx-lk{display:none}.d26-evl .cx-lr b{white-space:normal;font-size:13.5px}
 @media (max-width:640px){.cx-day{min-height:64px;padding:2px}.cx-ev{font-size:0;height:8px;min-height:8px;padding:0;border-left-width:0;background:var(--k);border-radius:4px}.cx-ev i{display:none}.cx-week{grid-template-columns:1fr}.cx-wcol{min-height:0}.cx-form .form2{grid-template-columns:1fr 1fr}.cx-bar .sp{display:none}}`;
