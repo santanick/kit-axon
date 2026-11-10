@@ -35,7 +35,29 @@
     const s3 = sec('2026-2', '2026-09-01', '2026-12-19', '경영정보시스템(02)', 'BUS3101', 'online'); s3.staff = { [pid('P2026002')]: 'professor' };
     return { v: 1, persons, sections: [s1, s2, s3], weeks: [], sessions: [], res: [], vers: [], hist: [], prog: [], level: [], opt: {}, tpl: [], backups: [], perm: {}, menuPref: {}, pkgs: [], att: [], files: [], scorm: [], c: {}, d: {} };
   }
-  X.db = () => { const L = S.lms = S.lms || {}; if (!L.bcd || L.bcd.v !== 1) { L.bcd = seed(); X.seedHooks.forEach(f => { try { f(L.bcd); } catch (e) { console.error(e); } }); } return L.bcd; };
+  /* v38 빈 스튜디오(S.org.empty)는 샘플 강의실 없이 시작 — 강의실은 학기 · 강좌의 분반에서 만들어진다(X.syncA) */
+  const seedEmpty = () => ({ v: 1, persons: [], sections: [], weeks: [], sessions: [], res: [], vers: [], hist: [], prog: [], level: [], opt: {}, tpl: [], backups: [], perm: {}, menuPref: {}, pkgs: [], att: [], files: [], scorm: [], c: {}, d: {} });
+  X.db = () => { const L = S.lms = S.lms || {}; if (!L.bcd || L.bcd.v !== 1) { if (S.org && S.org.empty) L.bcd = seedEmpty(); else { L.bcd = seed(); X.seedHooks.forEach(f => { try { f(L.bcd); } catch (e) { console.error(e); } }); } } if (typeof window.lmsaPoke === 'function') window.lmsaPoke(); return L.bcd; };
+  /* v38 학사(강좌 · 분반, S.lms.a) → 강의실: 분반마다 강의실 하나(수업 방식에 맞는 15주 뼈대 · 학기 날짜), 담당 · 수강생은 학번으로 맞춘다 */
+  X.syncA = A => {
+    const L = S.lms.bcd || X.db(); const a = { pid: null, no: null, role: 'admin', label: '학사 연동' };
+    const pm = new Map(L.persons.map(p => [p.no, p]));
+    const per = (no, kind, unit, year) => { let p = pm.get(no); if (!p) { p = { id: nid(), no, kind, unit: unit || '', year: year || null }; L.persons.push(p); pm.set(no, p); } return p; };
+    A.persons.forEach(p => per(p.member_no, p.kind === 'professor' ? 'professor' : p.kind === 'student' ? 'student' : 'staff', p.unit_code, p.grade_year));
+    const live = new Set();
+    A.sections.forEach(s0 => { if (s0.status === 'archived' || s0.rep_section_id) return; live.add(s0.section_id);
+      const t = A.terms.find(x => x.term_id === s0.term_id) || {}; const co = A.courses.find(c => c.course_code === s0.course_code) || {};
+      let r = L.sections.find(x => x.lmsa === s0.section_id); const fresh = !r;
+      if (!r) { r = { id: nid(), lmsa: s0.section_id, term: s0.term_id, syllabus: { weeks: [] }, staff: {}, enroll: [], status: 'open' }; L.sections.push(r); }
+      Object.assign(r, { term: s0.term_id, from: t.starts_on || null, to: t.ends_on || null, title: `${co.name || s0.course_code}(${s0.section_no})`, course: s0.course_code, no: s0.section_no, mode: s0.mode, capacity: s0.capacity, status: s0.status === 'closed' ? 'closed' : 'open' });
+      if (fresh) { const k = s0.mode === 'online' ? 'online' : s0.mode === 'offline' ? 'offline' : 'blended'; const d = builtin(k);
+        if (d) { importSec(r.id, d, ['structure', 'resources'], false, 0, a); (L.opt[r.id] = L.opt[r.id] || {}).template = k;
+          if (t.starts_on) L.weeks.filter(w => w.sec === r.id).forEach(w => { w.starts_on = addDays(t.starts_on, (w.week_no - 1) * 7); w.ends_on = addDays(t.starts_on, (w.week_no - 1) * 7 + 6); }); } }
+      const st = {}; A.staff.filter(x => x.section_id === s0.section_id && x.status === 'active').forEach(x => { const p = per(x.member_no, x.role === 'professor' || x.role === 'co_professor' ? 'professor' : 'student'); st[p.id] = x.role; }); r.staff = st;
+      const ids = new Set([s0.section_id, ...A.sections.filter(y => y.rep_section_id === s0.section_id).map(y => y.section_id)]); const seen = new Set(); const old = new Map(r.enroll.map(e => [e.pid, e]));
+      r.enroll = A.enr.filter(e => ids.has(e.section_id) && e.status !== 'pending').map(e => { const p = per(e.member_no, 'student'); if (seen.has(p.id)) return null; seen.add(p.id); const o = old.get(p.id); return { pid: p.id, kind: e.kind === 'audit' ? 'audit' : 'regular', status: e.status === 'enrolled' ? 'enrolled' : 'dropped', at: (o && o.at) || e.at || nowIso() }; }).filter(Boolean); });
+    L.sections = L.sections.filter(r => !r.lmsa || live.has(r.lmsa));
+  };
   X.seedHooks = X.seedHooks || [];
   /* 2단계(UX) 데모 샘플: 이번 학기(2026-2) 강의실 두 곳에 15주 뼈대를 미리 넣어, 처음 연 화면이 비어 있지 않게 한다(운영 모드에는 영향 없음) */
   X.seedHooks.push(L => { const a = { pid: null, no: null, role: 'admin', label: '정운영자' };

@@ -104,3 +104,20 @@
 .ck-props input[type=color]{width:100%;height:36px;padding:2px}
 .ck-props .sl-swl{flex-direction:row;align-items:center;align-self:end;min-height:36px}
 @media (max-width:760px){.ck-ed{grid-template-columns:1fr}.ck-keys{max-height:none;display:grid;grid-template-columns:1fr 1fr}}
+/* v38 F5 디자인 크기(스튜디오 휴대폰 공통 부품): 레일 · 아래 메뉴 글자 12px 이상, 버튼 44px 이상, 작은 i · 닫기 · 뒤로는 누를 자리 44px */
+@media (max-width:860px){
+  .brail .ri{font-size:12px;letter-spacing:-.03em}.brail .ri span{max-width:64px}
+  .uxacs small,.acp small,.scxbt small{font-size:12px}
+  .topr .uxfind,.topr>button,.topr>a.btn,.btn.sm,.chip,.acp button{min-height:44px}
+  #modal .mh .x,.lmodal .x{min-width:44px;min-height:44px}
+  .slg-i,.sl-i,.link.back{position:relative}
+  .slg-i::after,.sl-i::after{content:'';position:absolute;inset:-12px}
+  .link.back{min-height:44px;display:inline-flex;align-items:center}
+  .bview,.bhd+*{padding-bottom:84px} /* AI SAM 떠 있는 버튼이 마지막 줄 버튼('반 설정' · '진도 30% 미만 독려')을 가리지 않게 */
+}
+/* v38 F5 A11 · UL15: 390 홈 AI 입력칸 예시 문구가 두 줄로 잘리지 않게(한 줄 말줄임) · 추천 칩은 잘리지 않고 줄바꿈 */
+@media (max-width:860px){
+  .aih-comp textarea{font-size:15px}.aih-comp textarea::placeholder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .aih-chips{flex-wrap:wrap!important;overflow:visible!important;-webkit-mask:none!important;mask:none!important}
+}
+@media (max-width:860px){.scxbt small{font-size:12px!important}.uxpop .btn,.uxpop button{min-height:44px}}

@@ -77,7 +77,7 @@
   }
   function guideSec() {
     const P = pubList(); const R = [];
-    const pr = P.map(c => +c.price || 0); if (P.length) { const mn = Math.min(...pr), mx = Math.max(...pr); R.push([t('fee') || '수강료', mx === 0 ? '무료' : mn === mx ? won(mn) : `${mn ? won(mn) : '무료'} ~ ${won(mx)}`]); }
+    const pr = P.map(c => +c.price || 0); if (P.length && !(typeof mbPayOn === 'function' && window.S && S.org ? !mbPayOn() : (typeof SITE === 'function' && SITE() ? SITE().pay === false : false))) { /* v38 F5 결제 꺼진 기관은 수강료 줄을 넣지 않는다 */ const mn = Math.min(...pr), mx = Math.max(...pr); R.push([t('fee') || '수강료', mx === 0 ? '무료' : mn === mx ? won(mn) : `${mn ? won(mn) : '무료'} ~ ${won(mx)}`]); }
     const c0 = P.find(c => c.period && (c.period.mode === 'days' ? c.period.days : c.start)); if (c0) R.push(['수강 기간', c0.period.mode === 'days' ? `신청일부터 ${c0.period.days}일` : [c0.start, c0.end].filter(Boolean).join(' ~ ')]);
     R.push(['신청 방법', S.org.type === 'corp' ? '포털에 로그인한 뒤 과정을 신청합니다' : S.org.type === 'k12' ? '상담을 신청하면 수준에 맞는 반을 안내합니다' : '회원 가입 후 온라인으로 신청합니다']);
     const f = ft(); R.push(['문의', f.tel || f.mail || '커뮤니티 게시판']);

@@ -89,7 +89,7 @@
     const pg = S.settings && S.settings.pg === 'toss' && S.settings.toss && S.settings.toss.status === '승인';
     const tos = String((S.settings && S.settings.terms && (S.settings.terms.refund || S.settings.terms.tos)) || ''); const rf = (tos.split(/\n+|(?<=[.다])\s+/).map(clean).find(x => /환불/.test(x) && x.length >= 10 && x.length <= 160 && !isPh(x))) || '';
     if (C.some(c => +c.price)) { if (pg || rf) Q.push(['결제와 환불은 어떻게 하나요?', [pg ? `수강 신청 화면에서 온라인으로 결제합니다.` : '', rf || (pg ? '환불은 로그인 후 내 결제 내역에서 신청하며, 이용약관의 환불 규정을 따릅니다.' : '')].filter(Boolean).join(' ')]); }
-    else if (C.length) Q.push(['수강료가 있나요?', `지금 공개된 ${cl}은 모두 무료입니다.`]);
+    else if (C.length && !(typeof mbPayOn === 'function' && window.S && S.org ? !mbPayOn() : (typeof SITE === 'function' && SITE() ? SITE().pay === false : false))) Q.push(['수강료가 있나요?', `지금 공개된 ${cl}은 모두 무료입니다.`]);
     if (f.hours && !isPh(f.hours)) Q.push(['상담은 언제 받을 수 있나요?', `운영 시간은 ${clean(f.hours)}입니다.${f.tel && !isPh(f.tel) ? ` 전화 ${clean(f.tel)}로 연락하세요.` : ''}`]);
     if (f.addr && !isPh(f.addr) && C.some(c => /offline|blend/.test(c.kind || ''))) Q.push(['수업 장소는 어디인가요?', `${clean(f.addr)}에서 진행합니다.`]);
     return Q.slice(0, 6); }

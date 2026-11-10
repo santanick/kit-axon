@@ -239,7 +239,7 @@
 .hps-ddw.open .hps-dd{display:flex}.hps-dd>button{width:100%;text-align:left;justify-content:flex-start;border:0;background:transparent;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit}.hps-dd>button:hover,.hps-dd>button:focus-visible{background:rgba(255,255,255,.16);outline:none}
 .hpe-add{padding:0!important;height:0;overflow:visible}.hpe-add button{transform:translateY(-50%);opacity:0!important;transition:opacity .12s;background:#5C74F6!important;color:#fff!important;border:0!important;box-shadow:0 4px 14px rgba(92,116,246,.4);padding:0 16px!important;min-height:34px;line-height:34px}
 .hpe-add:hover button,.hpe-add button:focus-visible,[data-hpe]:hover+.hpe-add button,.hpe-add:first-child button,.hpe-add:last-child button{opacity:1!important}
-.hpe-add::before{content:'';position:absolute;left:0;right:0;top:0;border-top:2px dashed transparent}.hpe-add:hover::before{border-top-color:#5C74F6}
+.hpe-add::before{content:'';position:absolute;left:0;right:0;top:0;border-top:2px dashed transparent}.hpe-add:first-child button{transform:translateY(8px)} /* v38 F5 A20: 맨 위 '+ 섹션 추가'가 미리보기 머리 바에 반쯤 가려지지 않게 */.hpe-add:hover::before{border-top-color:#5C74F6}
 /* v36 R4 맨 위 '+ 섹션 추가'(늘 보임)가 첫 섹션 사진의 '샘플' 표시와 겹치던 것(휴대폰) — 첫 섹션의 샘플 표시를 버튼 아래로 */
 .hpe-add:first-child+[data-hpi-stock]::before,.hpe-add:first-child+* [data-hpi-stock]::before,.hpe-add:first-child+*>[data-hpi-stock]::before{top:34px!important}
 [data-hpe-f].hps-pick,[data-hpi-img].hps-pick{outline:2px solid #5C74F6!important;outline-offset:3px;background-color:rgba(92,116,246,.06)}`;

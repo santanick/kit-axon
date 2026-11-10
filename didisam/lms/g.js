@@ -21,7 +21,26 @@
     err(code) { const e = new Error(ERRM[code] || '요청을 처리할 수 없습니다.'); e.code = code; return e; },
     uid() { return (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => (Math.random() * 16 | 0).toString(16))); },
     ts(t) { return t == null ? null : new Date(t).toISOString(); },
-    D() { S.lms = S.lms || {}; const D = S.lms.w3 = S.lms.w3 || {}; ['sections', 'sessions', 'persons', 'beacons', 'log', 'contents', 'plays', 'events', 'quizzes', 'acts', 'rules', 'snaps', 'refl', 'fb'].forEach(k => D[k] = D[k] || []); ['att', 'codes', 'prog', 'subs', 'answers', 'grades', 'rule'].forEach(k => D[k] = D[k] || {}); return D; },
+    D() { S.lms = S.lms || {}; const D = S.lms.w3 = S.lms.w3 || {}; ['sections', 'sessions', 'persons', 'beacons', 'log', 'contents', 'plays', 'events', 'quizzes', 'acts', 'rules', 'snaps', 'refl', 'fb'].forEach(k => D[k] = D[k] || []); ['att', 'codes', 'prog', 'subs', 'answers', 'grades', 'rule'].forEach(k => D[k] = D[k] || {}); if (typeof window.lmsaPoke === 'function') window.lmsaPoke(); return D; },
+    /* v38 학사(강좌 · 분반, S.lms.a) → 출결 · 강의 · 성찰: 같은 분반 번호 · 학번. 차시는 학기 시작일 · 강의 시간표로 15주를 만든다(샘플 출결 없음) */
+    syncA(A) {
+      const d = S.lms.w3 || W3.D(); if (!(S.org && S.org.empty) && !d.sections.length && !d.seeded && W3.LOCAL['POST /api/lms/g/seed']) { d.seeded = 1; try { W3.LOCAL['POST /api/lms/g/seed']({}); } catch (e) { } }
+      d.seeded = 1; const DAY = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 }; const live = new Set(); const rep = id => { const s = A.sections.find(x => x.section_id === id); return s && s.rep_section_id ? s.rep_section_id : id; };
+      A.sections.forEach(s0 => { if (s0.status === 'archived' || s0.rep_section_id) return; live.add(s0.section_id); const co = A.courses.find(c => c.course_code === s0.course_code) || {};
+        let w = d.sections.find(x => x.section_id === s0.section_id); const fresh = !w; if (!w) { w = { section_id: s0.section_id, lmsa: 1 }; d.sections.push(w); }
+        Object.assign(w, { term_id: s0.term_id, course_code: s0.course_code, section_no: s0.section_no, title: `${co.name || s0.course_code} (${s0.section_no}분반)`, mode: s0.mode });
+        if (fresh && !d.sessions.some(x => x.section_id === s0.section_id)) { const t = A.terms.find(x => x.term_id === s0.term_id) || {}; const sc = (s0.schedule || [])[0] || {};
+          const st = t.starts_on ? Date.parse(t.starts_on + 'T00:00:00+09:00') : Date.now(); const dow = DAY[sc.day]; const first = st + (dow == null ? 0 : ((dow - new Date(st).getDay() + 7) % 7)) * 864e5;
+          const per = parseInt(String(sc.period || '1'), 10) || 1; const h = 8 + per; const kind = s0.mode === 'online' ? 'online' : 'class';
+          for (let n = 1; n <= 15; n++) { const t0 = first + (n - 1) * 7 * 864e5 + h * 36e5; d.sessions.push({ session_id: W3.uid(), section_id: s0.section_id, week_no: n, seq: 1, kind, starts_at: W3.ts(t0), ends_at: W3.ts(t0 + 75 * 6e4), open_at: W3.ts(t0), close_at: W3.ts(t0 + 7 * 864e5), room: sc.room || '', required_sec: 0, extra_study_sec: 0 }); } } });
+      d.sections = d.sections.filter(x => !x.lmsa || live.has(x.section_id)); d.sessions = d.sessions.filter(x => d.sections.some(y => y.section_id === x.section_id));
+      const pm = new Map(d.persons.map(p => [p.member_no, p]));
+      A.persons.filter(p => p.kind === 'student' || A.enr.some(e => e.member_no === p.member_no)).forEach(p => { const my = A.enr.filter(e => e.member_no === p.member_no && e.status === 'enrolled');
+        const reg = [...new Set(my.filter(e => e.kind !== 'audit').map(e => rep(e.section_id)))].filter(id => live.has(id)); const aud = [...new Set(my.filter(e => e.kind === 'audit').map(e => rep(e.section_id)))].filter(id => live.has(id) && !reg.includes(id));
+        let q = pm.get(p.member_no); if (!q) { q = { person_id: W3.uid(), member_no: p.member_no, lmsa: 1 }; d.persons.push(q); pm.set(p.member_no, q); }
+        if (!q.lmsa) { q.secs = [...new Set([...(q.secs || []).filter(id => !A.sections.some(x => x.section_id === id)), ...reg])]; return; }
+        Object.assign(q, { unit_code: p.unit_code || '', grade_year: p.grade_year || null, ekind: reg.length || !aud.length ? 'regular' : 'audit', secs: reg.length ? reg : aud }); });
+    },
     async call(m, p, b) {
       if (W3.live()) {
         if (m === 'GET') { const q = new URLSearchParams(Object.entries(b || {}).filter(([, v]) => v != null && v !== '')).toString(); return api('GET', p + (q ? '?' + q : '')); }
@@ -43,6 +62,7 @@
     section() {
       const L = W3.get('sections', 'GET', '/api/lms/g/sections'); if (L === undefined) return undefined;
       if (L.__err) return L;
+      if (!L.length && S.org && S.org.empty) return { __err: '이번 학기에 개설된 분반이 없습니다. 학기 · 강좌에서 교과목과 분반을 먼저 개설하세요.' };
       if (!L.length) { if (!W3.busy.seed) { W3.busy.seed = 1; W3.call('POST', '/api/lms/g/seed', {}).catch(e => toast(e.message, 'warn')).finally(() => { delete W3.busy.seed; W3.drop(); render(); }); } return undefined; }
       UI.w3sec = UI.w3sec && L.find(s => s.section_id === UI.w3sec) ? UI.w3sec : L[0].section_id; return L.find(s => s.section_id === UI.w3sec);
     },
@@ -71,7 +91,8 @@
   /* ═════════ 데모 경로(서버 SQL과 같은 규칙을 단순화) ═════════ */
   const L = W3.LOCAL;
   L['POST /api/lms/g/seed'] = () => {
-    const d = D(); if (d.sections.length) return { section_id: d.sections[0].section_id, sessions: d.sessions.length, students: regular(d.sections[0].section_id).length, rule: 0, beacons: 0 };
+    const d = D(); if (S.org && S.org.empty) return { section_id: null, sessions: 0, students: 0, rule: 0, beacons: 0, empty: true };
+    if (d.sections.length) return { section_id: d.sections[0].section_id, sessions: d.sessions.length, students: regular(d.sections[0].section_id).length, rule: 0, beacons: 0 };
     const sec = { section_id: W3.uid(), term_id: '2026-2', course_code: 'DEMO1001', section_no: '01', title: '데이터와 인공지능 기초 (01분반)', mode: 'hyflex' }; d.sections.push(sec);
     const base = Date.parse('2026-09-07T00:00:00Z'); /* 09:00 KST */
     for (let w = 1; w <= 15; w++) for (const seq of (w === 10 ? [1, 2] : [1])) { const t = base + (w - 1) * 7 * 864e5 + (seq - 1) * 90 * 6e4; d.sessions.push({ session_id: W3.uid(), section_id: sec.section_id, week_no: w, seq, kind: [3, 7, 12].includes(w) ? 'online' : 'class', starts_at: W3.ts(t), ends_at: W3.ts(t + 75 * 6e4), open_at: W3.ts(t), close_at: W3.ts(t + 7 * 864e5), room: '공학관 301', required_sec: 0, extra_study_sec: 0 }); }

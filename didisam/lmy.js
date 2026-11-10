@@ -41,7 +41,7 @@ const MYR = {
     if (!st.myType && diagFirst() && !A.some(a => /^#dg/.test(a[2]))) A.push(['진단부터 시작하세요', '5분이면 나에게 맞는 과정이 열립니다.', '#dg/' + diagFirst().id, 'pri']);
     st.courses.filter(x => !x.done && x.next).slice(0, 2).forEach(x => { const h = `#c/${x.c.id}/${x.next.id}`; if (!A.some(a => a[2] === h)) A.push([`이어서 학습 · ${x.c.name}`, `${x.next.title} (${x.p}%)`, h, '']); });
     st.tuts.filter(x => (x.r.steps || []).filter(Boolean).length >= 3 && !x.r.mission).slice(0, 1).forEach(x => A.push([`미션 제출 · ${x.t.title}`, x.t.mission, `#t/${x.t.id}`, '']));
-    const rec = S2.tuts.find(t => !tutDone(t) && (!st.myType || t.type === st.myType) && t.level <= st.level) || S2.tuts.find(t => !tutDone(t));
+    const TV = S2.tuts.filter(t => t.yt); const rec = TV.find(t => !tutDone(t) && (!st.myType || t.type === st.myType) && t.level <= st.level) || TV.find(t => !tutDone(t)); /* v38 F5 영상 없는 예시 튜토리얼은 추천하지 않는다 */
     if (rec && !A.some(a => a[2] === '#t/' + rec.id)) A.push([`추천 튜토리얼 · ${rec.title}`, `${tyOf(rec.type).name} · ${lvOf(rec.level).name}`, `#t/${rec.id}`, '']);
     const [f, ...rest] = A.slice(0, 4);
     return `<div class="mycard wide nextc">${myHead('m-next', '지금 할 일', A.length ? `${A.length}건` : '')}${f ? `<a class="nx big ${f[3]}" href="${esc(f[2])}">${f[5] && ytOK(f[5]) ? thumb(f[5]) : `<span class="nxi">${ico(f[3] === 'warn' ? 'edit' : 'target', 26)}</span>`}<span class="nxt"><small>${f[3] === 'warn' ? '먼저 처리하세요' : '가장 먼저 할 일'}</small><b>${esc(f[0])}</b><small>${esc(f[1] || '')}</small></span><span class="lbtn pri">${esc(f[4] || '시작')}${ico('arrow', 15)}</span></a>` : ''}
@@ -79,3 +79,8 @@ document.addEventListener('click', e => { const el = e.target.closest('[data-lac
   if (el.dataset.lact === 'print') window.print();
   if (el.dataset.lact === 'mydl' && LR.me) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ format: 'didisam-learner/1', org: SITE().org.name, sid: LR.me.sid, dept: LR.me.dept || '', exportedAt: new Date().toISOString(), badges: LR.mine.badges, progress: LR.lp }, null, 1)], { type: 'application/json' })); a.download = `my_learning_${LR.me.sid}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); }
 });
+/* v38 F5 P8 · L: 배지를 쓰지 않는 기관(배지 0종)의 '수료증'(#badges) 화면은 배지 로드맵('0종 모두 받으면 …', '배지 지갑 0/0') 대신 내 수료증 목록을 보인다 */
+{ const base = viewPage; viewPage = id => { try { if (id === 'badges' && !(SITE().badges || []).length) { if (!LR.me) return needLogin('badges');
+  const st = myStats(); const W = (typeof lcTerm === 'function' && lcTerm('cls')) || '과정';
+  const li = st.courses.map(x => `<li class="lcert-li"><div><b>${esc(x.c.name)}</b><small>${x.done ? '수료' : `진도 ${x.p || 0}% · 수료 기준을 채우면 발급돼요`}</small></div>${x.done ? `<a class="lbtn pri sm" href="#cert/${esc(x.c.id)}">수료증 보기</a>` : `<a class="lbtn ghost sm" href="#c/${esc(x.c.id)}">이어서 학습</a>`}</li>`).join('');
+  return `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › 수료증</p><h1>수료증</h1><p>수료한 ${esc(W)}의 수료증을 보고 인쇄할 수 있어요.</p></div></section><section class="sec"><div class="in narrow">${li ? `<ul class="shp-list lcert-l">${li}</ul>` : `<p class="empty">아직 수강 중인 ${esc(W)}${lJ(W, '이', '가')} 없어요.</p>`}</div></section>`; } } catch (e) { console.error(e); } return base(id); }; }

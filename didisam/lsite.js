@@ -94,7 +94,7 @@ function lsDefault(ty) {
   const types = (LS_TYPES[ty] || LS_TYPES.corp).map(([k, name, color, d]) => ({ k, name, color, d }));
   const tracks = (LS_TRACKS[ty] || LS_TRACKS.corp).map(([name, eyebrow, color, desc, steps, cta]) => ({ id: uid('tr'), name, eyebrow, color, desc, steps, cta }));
   const dbooks = levels.map((l, i) => ({ id: uid('bk'), title: `${l.name} 디지털북`, level: i, units: types.map(x => `${x.name} 실습`), url: '', color: l.color }));
-  return { v: 1, look: univ ? 'kit' : 'clean', brand: { short: (S.org.name.match(/[A-Za-z]+/) || [''])[0].slice(0, 6) || S.org.name.slice(0, 4) }, pages: LS_PAGES.map(([id, name, access]) => ({ id, name, on: !(id === 'books' && !univ), access, sections: P[id] })), levels, types, tracks, dbooks, grid: {}, my: { blocks: LS_MYB.map(([k]) => [k, true]) }, pub: null, pubAt: '' };
+  return { v: 1, look: univ ? 'kit' : 'clean', brand: { short: (/^[A-Za-z0-9]/.test(S.org.name) && (S.org.name.match(/[A-Za-z]+/) || [''])[0].slice(0, 6)) || S.org.name.slice(0, 4) } /* v38 한글 이름은 중간의 영문(예: e클래스의 e) 대신 이름 앞부분 — 학습자 로고는 lShortName이 낱말 기준으로 */, pages: LS_PAGES.map(([id, name, access]) => ({ id, name, on: !(id === 'books' && !univ), access, sections: P[id] })), levels, types, tracks, dbooks, grid: {}, my: { blocks: LS_MYB.map(([k]) => [k, true]) }, pub: null, pubAt: '' };
 }
 function lsSeedTuts(ty) {
   if (ty === 'univ' && typeof LSEED_UNIV_TUTS !== 'undefined') return LSEED_UNIV_TUTS.map(t => ({ id: 'tu' + t.id, title: t.title, ch: t.ch, tool: t.tool, level: t.lv - 1, type: t.type, yt: t.vid, steps: t.steps.slice(0, 3), mission: t.mission, badge: '', on: true, at: today() }));
@@ -145,3 +145,7 @@ function lpApply() {
   });
   return n;
 }
+/* v38 F5 L · U: 운영자가 꺼 둔 기능(배지 · 디지털북)과 영상 없는 예시 튜토리얼은 게시본에서 빼 학습자에게 보이지 않게 한다 */
+{ const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); try { if (r && typeof menuOn === 'function') { const on = id => !MENU[id] || menuOn(id);
+  if (!on('badge')) r.badges = [];
+  r.pages = (r.pages || []).filter(p => !(p.id === 'books' && !on('dbook') && !on('library')) && !(p.id === 'tutorials' && !(r.tuts || []).some(t => t.yt)) && !(p.id === 'courses' && !(r.tracks || []).length && !(r.classes || []).length)); } } catch (e) { console.error(e); } return r; }; }

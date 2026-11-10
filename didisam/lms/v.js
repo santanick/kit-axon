@@ -52,7 +52,7 @@
     url_ver: m.url_ver || 1, access: m.access || 'enrolled', domains: m.domains || [], consent: m.consent || null, retain_until: m.retain_until, stt_auto: !!m.stt_auto, stt_lang: m.stt_lang, place_session: m.place_session || null,
     placements: places(m).length, captions: capsOf(m).map(c => ({ lang: c.lang, status: c.status, source: c.source })), job: m.job || null, created_at: m.created_at, ready_at: m.ready_at || null });
   function seedV() {
-    const d = DS(); if (d.mseeded) return; d.mseeded = 1; const sec = d.sections[0]; if (!sec) return;
+    const d = DS(); if (d.mseeded) return; d.mseeded = 1; if ((S && S.org && S.org.empty)) return; const sec = d.sections[0]; if (!sec) return;
     const ses = d.sessions.filter(s => s.section_id === sec.section_id && s.kind === 'online').sort((a, b) => a.week_no - b.week_no);
     const t0 = now() - 3 * 864e5; const R = [{ name: '360p', height: 360, kbps: 800 }, { name: '720p', height: 720, kbps: 2500 }];
     const base = { kind: 'upload', status: 'ready', progress: 100, src_mime: 'video/mp4', chunks: 1, renditions: R, has_audio: true, width: 1280, height: 720, access: 'enrolled', domains: [], url_ver: 1, retain_until: new Date(now() + 365 * 864e5).toISOString().slice(0, 10), jobs: [] };

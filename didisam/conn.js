@@ -60,6 +60,7 @@ const CN = {
     steps: ['채널톡 데스크(desk.channel.io)에 로그인합니다.', '[채널 설정] › [버튼 설치 및 설정]에서 플러그인 키(Plugin Key)를 [복사]합니다.', '아래 입력 칸에 붙여 넣고 [연결 테스트]를 누르면 홈페이지 상담 버튼에 바로 적용됩니다.', '상담 내용 동기화(시크릿 키)는 소통 › 상담 설정에서 따로 연결합니다.'] }
 };
 const CN_IDS = ['claude', 'mcp', 'slack', 'google', 'toss', 'channeltalk'];
+const cnIds = () => CN_IDS.filter(id => id !== 'toss' || typeof mbPayOn !== 'function' || mbPayOn()); /* v38 F5 결제를 끈 기관(대학 · 기업 · 공공 기본)은 토스페이먼츠 카드를 감춘다 — 결제를 켜면 다시 보인다 */
 const cnAlias = s => { s = String(s || '').toLowerCase().trim(); if (/claude|클로드|anthropic|api\s*키/.test(s)) return 'claude'; if (/mcp|외부\s*ai/.test(s)) return 'mcp'; if (/slack|슬랙/.test(s)) return 'slack'; if (/google|구글|gmail|지메일|sheet|시트|calendar|캘린더|drive|드라이브|workspace/.test(s)) return 'google'; if (/toss|토스|pg|결제/.test(s)) return 'toss'; if (/channel|채널톡/.test(s)) return 'channeltalk'; return CN[s] ? s : ''; };
 
 /* ═════════ 상태 판정 ═════════ */
@@ -291,12 +292,12 @@ function cnBuilder(pre) {
 /* ═════════ 허브 화면 ═════════ */
 MENU.conn = { label: '외부 연결', ws: 'ops', owner: true };
 VIEWS.conn = () => {
-  cnEnsure(); const St = CN_IDS.map(cnStatus); const on = St.filter(s => s.st === CN_ST.on).length, chk = St.filter(s => s.st === CN_ST.chk).length;
+  cnEnsure(); const St = cnIds().map(cnStatus); const on = St.filter(s => s.st === CN_ST.on).length, chk = St.filter(s => s.st === CN_ST.chk).length;
   const P = S.autos.filter(a => (a.actions || []).some(x => CN_ACT[x])); const L = cnEnsure().log;
   return head('외부 연결', '외부 서비스를 연결하면 AI SAM과 업무 자동화가 Slack · Google · 결제와 함께 일합니다. 키 · 토큰은 이 브라우저에만 저장되고 화면에는 가려서 표시합니다.', `<button class="btn ai" data-act="chat-q" data-v="Slack 연결 도와줘">${ic('spark', 14)} AI SAM에게 연결 맡기기</button><button class="btn" data-act="go" data-v="auto">업무 자동화</button>`) +
-    `<section class="grid g4">${kpi('연결됨', `${on}/${CN_IDS.length}`, chk ? `점검 필요 ${chk}개` : '정상', on ? 'g' : '')}${kpi('연결 자동화', P.length + '개', `켜짐 ${P.filter(a => a.on).length}개`)}${kpi('연결이 필요한 자동화', P.filter(a => cnNeeds(a.actions).length).length + '개', '연결하면 바로 실행')}${kpi('최근 연결 기록', L.length ? L[0].at.split(' ').slice(0, 3).join(' ') : '없음', L.length ? `${L.length}건` : '')}</section>
+    `<section class="grid g4">${kpi('연결됨', `${on}/${cnIds().length}`, chk ? `점검 필요 ${chk}개` : '정상', on ? 'g' : '')}${kpi('연결 자동화', P.length + '개', `켜짐 ${P.filter(a => a.on).length}개`)}${kpi('연결이 필요한 자동화', P.filter(a => cnNeeds(a.actions).length).length + '개', '연결하면 바로 실행')}${kpi('최근 연결 기록', L.length ? L[0].at.split(' ').slice(0, 3).join(' ') : '없음', L.length ? `${L.length}건` : '')}</section>
     <p class="mini cn-sec">${ic('lock' in IC ? 'lock' : 'gear', 13)} 키 · 토큰은 대화창(AI SAM)에 붙여 넣지 마세요. AI SAM은 단계를 안내하고 이 화면의 입력 칸을 열어 드립니다. 데모에서는 실제 외부 호출 대신 형식 확인 · 기록만 남깁니다(Slack 웹훅 제외).</p>
-    <div class="cn-grid">${CN_IDS.map(cnCard).join('')}</div>
+    <div class="cn-grid">${cnIds().map(cnCard).join('')}</div>
     <div class="ph cn-ph"><div class="phl"><h2>연결 자동화 템플릿</h2><p>시작 조건 하나에 여러 단계를 잇는 연결형 자동화입니다. 누르면 업무 자동화에 바로 추가됩니다.</p></div><div class="phr"><button class="btn" data-act="cn-build">+ 연결 자동화 직접 만들기</button></div></div>${cnTplHTML()}
     <h2 class="h2">연결 자동화 실행 기록</h2>${cnRunsHTML(8)}
     <details class="cn-log"><summary>연결 기록 ${L.length}건</summary>${table(['시각', '서비스', '내용', '결과'], L.slice(0, 20).map(x => [esc(x.at), esc((CN[x.svc] || {}).name || x.svc), esc(x.msg), x.ok ? tag('정상', 'g') : tag('건너뜀', 'y')]), '기록이 없습니다.')}</details>`;

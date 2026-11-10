@@ -83,7 +83,7 @@
       <label class="fl">일정 종류<select name="cxK">${K.map(k => `<option ${k === k0 ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select></label>
       <label class="fl">연결 ${esc(t('cls'))}(선택)<select name="cxC"><option value="">없음</option>${(S.classes || []).slice(0, 200).map(c => `<option value="${esc(c.id)}" ${e && e.cls === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>
       <label class="fl">메모<input name="cxM" maxlength="120" value="${esc(e ? e.memo || '' : '')}"></label>
-      <label class="cx-pub"><input type="checkbox" name="cxP" ${pubOf(e || { kind: k0 }) ? 'checked' : ''}> ${esc(t('learner'))} 캘린더에도 보이기 <small>(${esc(t('cls'))}을 연결하면 그 수강생에게만 · 게시하면 반영)</small></label></div>`; }
+      <label class="cx-pub"><input type="checkbox" name="cxP" ${pubOf(e || { kind: k0 }) ? 'checked' : ''}> ${esc(t('learner'))} 캘린더에도 보이기 <small>(${esc(tj('cls', '을'))} 연결하면 그 수강생에게만 · 게시하면 반영)</small></label></div>`; }
   const fv2 = (w, n) => { const x = w.querySelector(`[name="${n}"]`); return x ? x.value.trim() : ''; };
   function dayOpen(d) { UI.cxSel = d; const L = cxEvents().filter(e => e.date === d);
     SL.sheet(fmt(d), `${L.length ? `<div class="cx-list">${L.map(e => `<button type="button" class="cx-lr" data-act="cx-ev" data-v="${esc(e.id)}"><i style="background:${kcol(e.kind)}"></i><span class="cx-lk">${esc(e.kind)}</span><b>${esc(e.title)}</b><small>${esc(e.time || '')}</small></button>`).join('')}</div>` : '<p class="mini">이 날은 일정이 없습니다.</p>'}`,

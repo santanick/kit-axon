@@ -123,7 +123,7 @@
       <div class="lq-top"><button type="button" class="lbtn ghost lq-send" data-lcal="send">${ico('cal', 18)}내 캘린더로 보내기</button>${P ? '' : `<button type="button" class="lbtn pri lq-addb" data-lcal="add" data-v="${td()}">${ico('plus', 18)}내 일정 추가</button>`}</div>
       ${P && K.length > 1 ? `<div class="lq-kids" role="tablist" aria-label="자녀">${[['', '모두'], ...K.map(k => [k.id, k.name])].map(([id, n]) => `<button type="button" role="tab" aria-selected="${LC.kid === id}" class="${LC.kid === id ? 'on' : ''}" data-lcal="kid" data-v="${esc(id)}">${esc(n)}</button>`).join('')}</div>` : ''}
       ${P && !K.length ? `<div class="lq-empty">${ico('user', 24)}<p>아직 연결된 자녀가 없어요. 자녀와 연결하면 자녀의 수업 · 시험 일정이 여기에 보여요.</p><a class="lbtn pri" href="#family">자녀와 연결하기</a></div>` : ''}
-      ${!P && none ? `<div class="lq-empty">${ico('book2', 24)}<p>아직 수강 중인 ${esc(T('cls'))}이 없어요. 신청하면 차시 · 시험 · 과제 마감이 자동으로 들어와요.</p></div>` : ''}
+      ${!P && none ? `<div class="lq-empty">${ico('book2', 24)}<p>아직 수강 중인 ${esc(T('cls'))}${typeof lJ === 'function' ? lJ(T('cls'), '이', '가') : '이'} 없어요. 신청하면 차시 · 시험 · 과제 마감이 자동으로 들어와요.</p></div>` : ''}
       ${sumHTML(E)}
       <div class="lq-bar"><div class="lq-seg" role="tablist" aria-label="보기">${[['month', '월'], ['week', '주'], ['list', '목록']].map(([k, l]) => `<button type="button" role="tab" aria-selected="${v === k}" class="${v === k ? 'on' : ''}" data-lcal="view" data-v="${k}">${l}</button>`).join('')}</div>
         <span class="lq-nav">${v === 'list' ? '' : `<button type="button" class="lq-ib" data-lcal="mv" data-v="-1" aria-label="이전">‹</button>`}<b class="lq-ttl">${title}</b>${v === 'list' ? '' : `<button type="button" class="lq-ib" data-lcal="mv" data-v="1" aria-label="다음">›</button>`}</span><button type="button" class="lq-tb" data-lcal="mv" data-v="0">오늘</button></div>
@@ -234,6 +234,6 @@
     if (['my', 'family'].includes(a) && !lm.querySelector('.lq-hc')) { const anc = lm.querySelector('.la-myl') || lm.querySelector('.la-seg.kids') || lm.querySelector('.mypage .in > h1'); const host = lm.querySelector('.mypage .in');
       if (anc) anc.insertAdjacentHTML('afterend', card('web')); else if (host) host.insertAdjacentHTML('afterbegin', card('web')); }
     if (a === 'home' && isPar() && !lm.querySelector('.lq-hc')) { const g = lm.querySelector('.lpar-g'); if (g) g.insertAdjacentHTML('afterend', card('web')); } }
-  { const base = lrender; lrender = (...x) => { base(...x); try { decorate(); if (route().a === 'cal') document.title = `${SITE().org.name} · ${isPar() ? '자녀 일정' : '캘린더'}`; } catch (e) { console.error('lcal decorate', e); } }; }
+  { const base = lrender; lrender = (...x) => { base(...x); try { if (!SITE() || !SITE().org) return; /* v38 게시 전(게시본 없음)에는 꾸미지 않는다 */ decorate(); if (route().a === 'cal') document.title = `${SITE().org.name} · ${isPar() ? '자녀 일정' : '캘린더'}`; } catch (e) { console.error('lcal decorate', e); } }; }
   addEventListener('hashchange', close);
 })();
