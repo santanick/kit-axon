@@ -18,7 +18,7 @@ SAMPLE.public = { cls: [['신규 임용자 기본교육', 'period'], ['4대 폭�
   D.members.forEach((m, i) => { m.extra = { 소속: (D.groups.find(g => g.id === m.group) || {}).name || '', 직급: ['주무관', '주무관', '팀장', '과장'][i % 4] }; });
   D.classes.forEach(c => { c.price = 0; c.open = '지정 회원'; if (c.status === '준비중') c.status = '운영중'; }); D.pays = [];
   D.orgs = [{ id: 'o0', name: '산하기관 교육 담당', mgr: '기관 담당자', n: 14, done: 9, job: 0 }];
-  Object.assign(D.settings, { join: '운영자 초대만', siteOpen: 'private', extraQ: ['소속', '직급'] }); return D; }; }
+  Object.assign(D.settings, { join: '운영자 초대만', siteOpen: 'public', extraQ: ['소속', '직급'] }); return D; }; }
 { const base = defaultAutos; defaultAutos = type => base(type === 'public' ? 'corp' : type).map(a => type === 'public' ? JSON.parse(JSON.stringify(a).replace(/부서장/g, '소속 부서장').replace(/신규 입사자/g, '신규 임용자').replace(/입사/g, '임용')) : a); }
 EX.public = ['법정의무교육 미이수자에게 마감 안내 보내줘', '소속별 이번 달 수료 현황 요약해줘', '신규 임용자 기본교육 커리큘럼 만들어줘', '교육 실적 보고서 만들어줘'];
 EXQ.public = ['생성형 AI 행정 활용 6차시 과정 설계해줘', '법정의무교육 미이수 소속 3곳', '교육 실적 결재용 보고서 만들어줘', '매주 금요일 소속 부서장에게 수료 현황 보내는 자동화 만들어줘'];
@@ -49,6 +49,7 @@ function segSite(L, ty) { const P = SEG_PAGES[ty]; if (!P || !L || !L.pages) ret
   L.segV = 1; return L; }
 { const base = lsDefault; lsDefault = ty => segSite(base(ty), ty); }
 { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.lsite && !S.lsite.segV) { segSite(S.lsite, S.org.type); S.lsite.segV = 1; } } catch (e) { console.error(e); } return r; }; }
+{ const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org && S.org.type === 'public' && S.settings && !S.settings.open37) { if (S.settings.siteOpen === 'private') S.settings.siteOpen = 'public'; S.settings.open37 = 1; } } catch (e) { console.error(e); } return r; }; } /* v37.2: 공공도 처음에는 전체 공개(대표 결정 2026-11-10). 기존 공공 기관은 한 번만 바꾸고, 이후 운영자가 고른 값은 그대로 */
 /* 게시본: 기관 용어 전체 · 필수(법정)교육 표시 */
 { const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); r.terms = { ...(TERMS[S.org.type] || {}), ...(r.terms || {}) }; (r.classes || []).forEach(x => { const c = C(x.id); if (c && c.legal) x.legal = true; }); return r; }; }
 
