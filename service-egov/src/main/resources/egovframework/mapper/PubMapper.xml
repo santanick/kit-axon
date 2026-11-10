@@ -3,6 +3,8 @@
 <!-- 학습자 포털(/api/pub/{tid}/…) — 기관 범위(inTenant) 쿼리와 학습자 세션(plain) -->
 <mapper namespace="egovframework.didisam.pub.service.impl.PubMapper">
   <select id="selectSitePub" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub')::text pub from tenant_state where tenant_id = #{tid}</select>
+  <!-- v37 L2 링크 공유 미리보기(og): 게시본의 검색 노출 값 · 사이트 이름만(Node app.js serveStatic과 같은 열) -->
+  <select id="selectOg" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub'->'hp'->'seo')::text seo, doc->'lsite'->'pub'->'hp'->>'name' name, (doc->'lsite'->'pub'->'org')::text org from tenant_state where tenant_id = #{tid}</select>
   <select id="selectLearner" resultType="java.util.LinkedHashMap">select sid, dept, code_hash, pw_hash from learners where tenant_id = #{tid} and sid = #{sid}</select>
   <select id="selectLearnerDept" resultType="java.util.LinkedHashMap">select dept, pw_hash from learners where tenant_id = #{tid} and sid = #{sid}</select>
   <update id="touchLearner">update learners set last_login = now() where tenant_id = #{tid} and sid = #{sid}</update>
