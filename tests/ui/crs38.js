@@ -156,7 +156,7 @@ async function create(p) { await p.click('#crsFlow [data-cfgo=create]'); await p
       const r2 = await p.evaluate(([id, mid]) => { const c = S.classes.find(x => x.id === id); return { st: c.status, open: c.open, ib: ((S.inbox || {})[mid] || []).filter(x => x.title.includes(c.name)).length, lg: legalUndone().filter(x => x.c.id === id).length }; }, [c.id, r1.mid]);
       ok(r2.st === '운영중' && r2.open !== '비공개' && r2.ib === 1 && r2.lg === 1, `C-R1 공개하는 순간 보류 알림 발송 · 독려 대상 포함 ${JSON.stringify(r2)}`);
       const c14 = await p.evaluate(() => { const q = '업무 자동화 기초 6차시 과정 만들어줘'; return { one: CSAM.isOne(q), n: CSAM.parse(q).name }; }); ok(c14.one && c14.n === '업무 자동화 기초', `C-14 '업무 자동화 기초'를 자르지 않음 ${JSON.stringify(c14)}`);
-      await p.evaluate(() => { go('home'); chatSend('14일 미접속자에게 독려 메시지 보내줘'); }); await p.waitForTimeout(900);
+      await p.evaluate(() => { go('home'); chatSend('교육생 초대 링크 만들어줘'); } /* 14일 미접속은 대상 0명이면 버튼 대신 안내(R2-2) — 버튼 문구는 초대 링크 카드로 본다 */); await p.waitForTimeout(900);
       const bt = await p.evaluate(() => [...document.querySelectorAll('[data-act=plan-ok]')].map(b => b.textContent.trim())); ok(bt.length && bt.every(x => x === '승인하고 실행'), `P-20 승인 버튼 문구 통일 ${bt}`);
       await ctx.close(); }
     { const { ctx, p } = await openOrg(br, base, ['univ', 'lite'], { empty: true, errs });

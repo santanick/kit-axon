@@ -34,7 +34,8 @@ const SET = {
       if (!(S.posts || []).some(x => x.kind === '질문' && !x.replies)) (S.posts = S.posts || []).push({ id: uid('po'), kind: '질문', board: '질문', title: '과제 형식이 궁금합니다', who: (S.members[0] || {}).id, at: today(), likes: [], replies: 0 });
       if (S.classes[0] && S.members[0] && !(S.pays || []).some(x => x.status === '환불 신청')) (S.pays = S.pays || []).push({ id: uid('pay'), at: today(), who: S.classes[0].learners[0] || S.members[0].id, item: S.classes[0].name, amount: 99000, method: '카드', status: '환불 신청' });
       if (S.org.type === 'corp') S.classes.filter(x => x.legal).forEach(x => { const id = x.learners[0]; if (id) x.prog[id].p = 40; });
-      S.classes.forEach(x => { const id = x.learners[1]; if (id) x.prog[id].p = 100; }); save(); });
+      S.classes.forEach(x => { const id = x.learners[1]; if (id) x.prog[id].p = 100; });
+      /* v38 P R2-2: '14일 미접속' 독려가 실제로 보낼 대상이 있게 한 명은 30일 전 접속(0명이면 버튼 대신 안내가 나온다 — 아래 따로 점검) */ if (S.members[2]) S.members[2].last = addDays(today(), -30); save(); });
     for (const [q, exp] of SET[ty]) { tot++; const e0 = pe.length;
       const fp = () => p.evaluate(() => { const o = {}; Object.keys(S).filter(k => !['chat', 'audit', 'ai', 'gsig'].includes(k)).forEach(k => { o[k] = S[k]; }); return JSON.stringify(o).length + ':' + JSON.stringify(o).split('').reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7); });
       const f0 = await fp();
@@ -56,6 +57,12 @@ const SET = {
       if (isCard) card++; if (ch) changed++; errs += er;
       if (!isCard || !ch || er) bad.push(`${ty} · ${q} → 카드 ${isCard ? 'O' : 'X'} · 변경 ${ch ? 'O' : 'X'} · 오류 ${er} | ${m.title.slice(0, 50)} | ${res.slice(0, 80)}`);
     }
+    /* v38 P R2-1: 한 줄 요청도 계획 카드([승인하고 실행]) — 초대 링크 · 공지 · 일정 · 수료증 · 엑셀 */
+    for (const q of ['교육생 초대 링크 만들어줘', '공지 써줘', '내일 오후 3시 운영 회의 일정 추가해줘', '수료증 발급해줘', '엑셀 내려줘']) { tot++; const r = await p.evaluate(q => new Promise(ok => { const n = S.chat.length; chatSend(q); setTimeout(() => { const L = S.chat.slice(n).filter(y => y.role === 'ai' && !y.typing); const x = L.find(y => y.plan) || L.pop() || {}; ok({ plan: !!x.plan, t: String(x.title || x.text || '').slice(0, 60) }); }, 700); }), q);
+      if (r.plan) card++; else bad.push(`${ty} · 한 줄 「${q}」 → 계획 카드 X | ${r.t}`); changed++; }
+    /* v38 P R2-2: 대상이 0명이면 [승인하고 실행] 대신 '지금은 대상이 없습니다' */
+    { tot++; const r = await p.evaluate(() => new Promise(ok => { (S.members || []).forEach(m => { m.last = today(); }); const n = S.chat.length; chatSend('14일 미접속자에게 독려 메시지 보내줘'); setTimeout(() => { const L = S.chat.slice(n).filter(y => y.role === 'ai' && !y.typing); const x = L.pop() || {}; ok({ plan: !!x.plan, t: String(x.text || '') }); }, 700); }));
+      if (!r.plan && /지금은 대상이 없습니다/.test(r.t)) { card++; changed++; } else bad.push(`${ty} · 대상 0명인데 실행 버튼 ${JSON.stringify(r).slice(0, 120)}`); }
     /* Claude 키가 있을 때: Claude가 run_intent 도구로 같은 엔진을 쓴다(호출을 흉내 냄 — 외부 요청 없음) */
     if (ty === 'adult') { const r = await p.evaluate(async () => { const on = CL.on, call = CL.call; let n = 0; CL.on = () => true;
         CL.call = async o => { n++; const u = { input_tokens: 1, output_tokens: 1 }; if (n === 1) return { tools: [{ id: 't1', name: 'run_intent', input: { command: '14일 미접속자에게 독려 메시지 보내고 미답변 질문 답변 초안 만들어줘' } }], content: [{ type: 'tool_use', id: 't1', name: 'run_intent', input: {} }], text: '', usage: u, model: 'mock' }; return { tools: [], content: [], text: '승인하시면 실행됩니다.', usage: u, model: 'mock' }; };
