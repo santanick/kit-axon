@@ -38,7 +38,10 @@
      → 학습자 캘린더 「기관 일정」 · 공지(#notice) · 홈에 보인다. 개인 일정 · 비공개 글 · 강좌 일정(분반 소속 미확인)은 넣지 않는다. */
   if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = function () { const snap = base.apply(this, arguments); // eslint-disable-line no-global-assign
     try { if (!UL() || !snap) return snap; const L = S.lms || {};
-      const ev = ((L.l && L.l.ev) || []).filter(e => e && e.scope === 'academic' && e.starts_at && e.title).slice(0, 200).map(e => ({ id: 'lmsl-' + e.id, title: String(e.title).slice(0, 60), date: String(e.starts_at).slice(0, 10), time: e.all_day ? '' : String(e.starts_at).slice(11, 16), end: '', kind: '학사 일정', cls: '' }));
+      /* 결정(3차 재검토): 구분이 '학사'인 일정만 학습자에게. '개인'은 제목과 상관없이 절대 게시하지 않는다(시험 출제 메모 등 유출 방지).
+         예전 기본값 '개인'으로 저장된 학사 같은 일정은 통합 달력 위 확인 카드에서 운영자가 골라 '학사'로 바꾼다(lms/l.js) */
+      const pubEv = e => e && e.scope === 'academic' && e.starts_at && e.title;
+      const ev = ((L.l && L.l.ev) || []).filter(pubEv).slice(0, 200).map(e => ({ id: 'lmsl-' + e.id, title: String(e.title).slice(0, 60), date: String(e.starts_at).slice(0, 10), time: e.all_day ? '' : String(e.starts_at).slice(11, 16), end: '', kind: '학사 일정', cls: '' }));
       if (ev.length) snap.calx = [...(Array.isArray(snap.calx) ? snap.calx : []), ...ev.filter(e => !(snap.calx || []).some(x => x.id === e.id))];
       const B = L.bcd; if (B && B.d && Array.isArray(B.d.posts)) { const room = id => (B.sections || []).find(r => r.id === id);
         const N = B.d.posts.filter(q => q && q.kind === 'notice' && !q.deleted_at && !q.private && q.status !== 'hidden').map(q => { const r = room(q.sec); return { id: 'lmsd-' + q.id, title: String(q.title || '').slice(0, 200), at: String(q.at || '').slice(0, 10), pin: !!q.pinned, cls: r ? r.title : '', lsec: r && r.lmsa ? r.lmsa : '', body: String(q.body || '').replace(/<[^>]+>/g, ' ').slice(0, 2000) }; });
