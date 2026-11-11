@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const http = require('http'), fs = r
 const ROOT = path.resolve(__dirname, '../../didisam'); const OUT = process.env.SHOTS || '';
 const MT = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/json' };
 const R = []; const ok = (c, m) => { R.push([!!c, m]); console.log(c ? '✓' : '✗', m); };
-const only = (process.env.ONLY || 'corp,k12,univ,pub,life,date').split(',');
+const only = (process.env.ONLY || 'corp,k12,k12b,univ,pub,life,date,r2').split(',');
 (async () => {
   const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]); const f = path.join(ROOT, u === '/' ? 'index.html' : u); if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': MT[path.extname(f)] || 'application/octet-stream' }); r.end(fs.readFileSync(f)); }).listen(0);
   await new Promise(o => srv.once('listening', o)); const base = `http://127.0.0.1:${srv.address().port}/`;
@@ -163,6 +163,58 @@ const only = (process.env.ONLY || 'corp,k12,univ,pub,life,date').split(',');
     ok(lcr === l13.sid, `L13: 번호 · 접근코드로 학습자 로그인 ${lcr}`); await lc.close();
     const l14 = await lp(ctx, tid, '#login'); await l14.click('[data-ac=lmode][data-v=pw]').catch(() => {}); await l14.waitForTimeout(200); await l14.fill('#laLogin [name=lid]', 'hong@ex.kr'); await l14.fill('#laLogin [name=pw]', 'Temp123!x'); await l14.click('#laLogin button[type=submit]'); await l14.waitForTimeout(1200);
     const h14 = await l14.evaluate(() => [location.hash, !!document.querySelector('#laPw')]); ok(h14[0] === '#acct' && h14[1], `L14: 임시 비밀번호 첫 로그인 → 비밀번호 바꾸기 ${JSON.stringify(h14)}`);
+    await ctx.close(); }
+
+  /* 2차 보완(R2): K7 · K10 · K12 · K17 · 반 공용 링크 연결 · 시각 표기 */
+  if (only.includes('k12b')) { const { ctx, op } = await mk('k12');
+    const k10 = await op.evaluate(() => { ACT['crm-sample'](); S.classes.forEach(c => { c.price = 0; c.fee = 0; c.feeMode = ''; }); save(); go('crmbill'); UI.crmBT = 'now'; render(); const t1 = document.querySelector('#main').innerText; ACT['crm-gen-now'](); return { t1, toast: [...document.querySelectorAll('.toast, #toast')].map(x => x.textContent).join(' ') }; });
+    ok(/수강료가 정해지지 않은 수업/.test(k10.t1) || /수강료가 정해지지 않은 수업/.test(k10.toast), `K10: 0원 수업만 있으면 '수강료가 정해지지 않은 수업' 안내 ${k10.t1.slice(0, 120)}`);
+    ok(await op.evaluate(() => /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(nowStr()) && atL('2026. 11. 11. 5시 30분 0초') === '2026-11-11 05:30'), '시각 표기: nowStr · 옛 표기 모두 YYYY-MM-DD HH:mm');
+    /* K17: 이름을 바꾸면 '새 과정' 파생 문구도 바뀜 */
+    const k17 = await op.evaluate(() => { const c = S.classes[0]; c._nm = '새 과정'; c.goal = '[교육 목표]\n- 원생이 새에서 배우는 개념을 정확히 이해합니다.'; c.curriculum = [...(c.curriculum || []), { id: 'q9', type: 'quiz', title: '새 과정 정리 · 최종 평가' }]; c.name = '초등 국어 독해반'; render(); return { goal: c.goal, t: c.curriculum.find(x => x.id === 'q9').title }; });
+    ok(!/새에서|새 과정/.test(k17.goal + k17.t), `K17: 이름 바꾼 뒤 파생 문구 갱신 ${JSON.stringify(k17)}`);
+    /* K7 · K17 학습자: 퀴즈를 고르면 회차 표 접힘, 수강 기간은 실제 기간 */
+    const ids = await op.evaluate(() => { const c = S.classes[0]; c.price = 0; c.curriculum.push({ id: 'qz1', type: 'quiz', title: '1회차 확인 퀴즈', qs: [{ t: 'ox', q: '1+1=2', a: 'O' }] }); const m = S.members.find(x => c.learners.includes(x.id) && !/서윤|서준/.test(x.name)); c.prog = c.prog || {}; c.prog[m.id] = c.prog[m.id] || { p: 0, exam: null, assign: 'none', att: 0 }; m.acct = { login: 'code', consent: { tos: true } }; S.codes = [{ sid: m.sid, code: 'KKK111', dept: '' }]; save(); return { cid: c.id, sid: m.sid }; });
+    const tid = await pub(op); const lk = await lp(ctx, tid, '#login');
+    await lk.evaluate(async ([sid]) => { await LR.api.login(sid, 'KKK111'); location.hash = '#home'; }, [ids.sid]); await lk.waitForTimeout(400);
+    const k7 = await lk.evaluate(async cid => { location.hash = `#c/${cid}/qz1`; await new Promise(o => setTimeout(o, 700)); const d = document.querySelector('details.lw-sched'); return d ? d.open : 'none ' + JSON.stringify(LR.me) + document.body.innerText.slice(0, 200).replace(/\n+/g, ' | '); }, ids.cid);
+    ok(k7 === false, `K7: 퀴즈를 고르면 회차 · 출결 표가 접혀 있음 (${k7})`);
+    const per = await lk.evaluate(async cid => { location.hash = `#class/${cid}`; await new Promise(o => setTimeout(o, 700)); return document.body.innerText.match(/수강 기간[^\n|]*\n?[^\n]*/) ? document.body.innerText.match(/수강 기간\s*([^\n]*)/)[1] : 'none'; }, ids.cid);
+    ok(!/수강 신청 후/.test(per) && /\d{4}-\d{2}-\d{2} ~ \d{4}-\d{2}-\d{2}/.test(per), `K17: 회차 수업 수강 기간 = 실제 기간 '${per}'`);
+    /* K12: 로그인 유지 — 새 탭(세션 저장소 비어 있음)에서도 로그인 */
+    const kp = await lp(ctx, tid, '#login'); await kp.waitForTimeout(300); const keepBox = await kp.evaluate(async sid => { const k = document.querySelector('form#li [name=keep]') || document.querySelector('[name=keep]'); if (!k) return false; const d = k.closest('details'); if (d) d.open = true; k.checked = true; await LR.api.login(sid, 'KKK111'); return true; }, ids.sid);
+    ok(keepBox, "K12: 로그인 화면에 '이 기기에서 로그인 유지'");
+    const kp2 = await lp(ctx, tid, '#home'); const kept = await kp2.evaluate(() => !!LR.me); ok(kept, 'K12: 앱 · 탭을 닫았다 열어도 로그인 유지(localStorage + 만료)'); await kp2.evaluate(async () => { await LR.api.logout(); }); const kp3 = await lp(ctx, tid, '#home'); ok(await kp3.evaluate(() => !LR.me), 'K12: 로그아웃하면 기억도 지움');
+    await kp.close(); await kp2.close(); await kp3.close(); await lk.close();
+    /* 반 공용 초대 링크 + 이름 · 보호자 연락처 → 등록 행에 연결 */
+    const reg = await op.evaluate(() => { const m = S.members.find(x => /강서윤/.test(x.name)); const p = S.parents.find(x => x.child === m.id); return { id: m.id, ph: p.phone, url: mbInvURL(mbInvite('student', S.classes[0].id, '')) }; });
+    const tid2 = await pub(op); const lj = await lp(ctx, tid2, reg.url.slice(reg.url.indexOf('#')));
+    await lj.waitForSelector('#laJoin', { timeout: 6000 }).catch(() => {}); const hasG = await lj.$('#laJoin [name=gmatch]'); if (hasG) await lj.fill('#laJoin [name=gmatch]', reg.ph);
+    await join(lj, 'seoyun@ex.kr', '서윤'); await pull(op);
+    const rj = await op.evaluate(id => { const m = M(id); return { n: S.members.filter(x => /서윤/.test(x.name + x.nick)).length, linked: m && m.acct && m.acct.linked && m.acct.linked.by }; }, reg.id);
+    ok(!!hasG && rj.n === 1 && rj.linked === 'gphone', `반 공용 링크 + 이름 · 보호자 연락처 → 등록 원생에 연결 ${JSON.stringify(rj)} g=${!!hasG} ${JSON.stringify(await op.evaluate(() => JSON.parse(localStorage.getItem('didisam.room.' + DREG.cur() + '.lpx') || '[]').filter(x => x.type === 'acct-join').map(x => x.data.link || null)))}`);
+    await ctx.close(); }
+
+  if (only.includes('r2')) { const { ctx, op } = await mk('corp');
+    const r = await op.evaluate(() => { makeCourse({ name: '정보보호 교육', weeks: 2 }); const c = S.classes[S.classes.length - 1]; c.status = '운영중'; render(); ACT['cls-grant']({ dataset: { v: c.id } }); const t7 = (document.querySelector('#modal') || {}).innerText || ''; closeModal();
+      S.members.push({ id: 'mo1', sid: 'u-o', name: '오하윤', nick: '오하윤', email: '', phone: '', group: '', grade: '정회원', joined: today(), extra: {} }); const lab = c2MLabel(M('mo1'));
+      c.recruit = { on: false, cap: 1 }; c.price = 0; c.learners = []; S.members.push({ id: 'mo2', sid: 'u-o2', name: '정다은', nick: '', email: '', phone: '', group: '', grade: '정회원', joined: today(), extra: {} }); let warn = ''; const old = c2ov; ACT['cls-grant']({ dataset: { v: c.id } }); const ov = [...document.querySelectorAll('.c2ov')].pop(); ov.querySelectorAll('.c2pkl input[type=checkbox]').forEach(x => x.click()); ov.querySelector('[data-c2a=ok]').click(); const cf = [...document.querySelectorAll('.c2ov')].pop(); warn = cf ? cf.innerText : ''; document.querySelectorAll('.c2ov').forEach(x => x.remove());
+      return { t7, lab, warn }; });
+    ok(!/학번/.test(r.t7) && /엑셀 일괄 등록/.test(r.t7), `C7: 기업 빈 배정 창에 대학 문구 없음 ${r.t7.slice(0, 80)}`);
+    ok(r.lab === '오하윤', `C16 · P23: 배정 창 이름 중복 없음 '${r.lab}'`);
+    ok(/정원 1명/.test(r.warn), `L10: 직접 배정이 정원을 넘으면 경고 '${r.warn.slice(0, 80)}'`);
+    const opt = await op.evaluate(() => { const c = S.classes[S.classes.length - 1]; c.price = 120000; c.recruit = { on: false, cap: 2 }; c.learners = ['a', 'b']; UI.mbInvT = 'student'; UI.mbInvC = ''; S.org.type = 'lifelong'; const h = mbLinkPanel(); S.org.type = 'corp'; return h; });
+    ok(/유료 120,000원 · 정원 마감 2\/2/.test(opt), 'L10: 초대 창 강좌 목록에서 고르기 전에 유료 · 정원 표시');
+    /* C3: 기업 가입 — 부서 미지정 초대면 부서 필수, 미지정 줄 집계 */
+    const q = await op.evaluate(() => { S.settings.acct.extraQ = [{ q: '부서', type: 'text', req: false, opts: [] }]; S.settings.acct.mode = 'open'; save(); return mbInvURL(mbInvite('student', '', '')); });
+    const tid = await pub(op); const lq = await lp(ctx, tid, q.slice(q.indexOf('#'))); const e3 = await join(lq, 'nodept@ex.kr', '부서없음');
+    ok(/부서/.test(e3), `C3: 부서 지정 없는 초대 링크면 부서 필수 '${e3}'`); await lq.close();
+    const u = await op.evaluate(() => { const c = S.classes[S.classes.length - 1]; c.legal = true; c.learners = ['mo1']; go('legal'); render(); return (document.querySelector('#main') || {}).innerText || ''; });
+    ok(/미지정/.test(u) || !/별 이수율/.test(u), `C3: ${'부서'}별 이수율에 '미지정' 줄`);
+    /* V19: 일괄 등록 미리보기에 추가 질문 열 */
+    const csv = path.join(require('os').tmpdir(), 'acct38-v19.csv'); fs.writeFileSync(csv, '\ufeff이메일,이름,부서,연락처,생년월일\r\nv19@ex.kr,김훈련,,,1990-01-01\r\n');
+    await op.evaluate(() => { S.settings.acct.extraQ = [{ q: '생년월일', type: 'date', req: false, opts: [] }]; ACT['mem-bulk'](); }); await op.setInputFiles('#mbBkF', csv); await op.waitForSelector('.mbk-ok', { timeout: 6000 }).catch(() => {});
+    const pv = await op.evaluate(() => (document.querySelector('.mbk-ok') || {}).innerText || ''); ok(/생년월일/.test(pv) && /1990-01-01/.test(pv), `V19: 일괄 등록 미리보기에 추가 질문 열 ${pv.slice(0, 100)}`);
     await ctx.close(); }
 
   if (only.includes('date')) { const ctx = await br.newContext({ timezoneId: 'Asia/Seoul' }); const p = await ctx.newPage(); await p.goto(base + 'learner.html?t=sample'); await p.waitForTimeout(400);

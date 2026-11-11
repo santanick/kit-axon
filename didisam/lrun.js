@@ -9,7 +9,7 @@ const ytOK = id => /^[\w-]{11}$/.test(id || '');
 const nowISO = () => new Date().toISOString();
 function ymdL(d) { d = d instanceof Date ? d : new Date(d == null ? Date.now() : d); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; } /* v38 현지(Asia/Seoul) 날짜 하나로 — toISOString().slice(0, 10)은 UTC라 오전 9시 전에 하루 전이 됨 */
 /* v38 학습자 화면의 날짜 · 시각은 현지(Asia/Seoul) 기준 — UTC 시각(…Z)을 그대로 잘라 하루 전으로 보이던 문제(QA U8 · K11). 'YYYY-MM-DD HH:mm' */
-const lLocal = v => { const s = String(v == null ? '' : v); if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s)) return s.replace('T', ' '); const d = new Date(s); if (isNaN(d)) return s.replace('T', ' '); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+const lLocal = v => { const s0 = String(v == null ? '' : v); const k = s0.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*(?:(오전|오후)\s*)?(\d{1,2})(?:시\s*|:)(\d{1,2})/); if (k) { let h = +k[5]; if (k[4] === '오후' && h < 12) h += 12; if (k[4] === '오전' && h === 12) h = 0; const p = n => String(n).padStart(2, '0'); return `${k[1]}-${p(k[2])}-${p(k[3])} ${p(h)}:${p(k[6])}`; } const s = s0; /* v38 옛 한국어 시각 표기도 YYYY-MM-DD HH:mm */ if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s)) return s.replace('T', ' '); const d = new Date(s); if (isNaN(d)) return s.replace('T', ' '); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 window.lLocal = lLocal;
 const Q = new URLSearchParams(location.search);
 const LR = { mode: 'demo', tid: Q.get('t') || '', site: null, me: null, lp: { tut: {}, cls: {}, diag: {}, book: {} }, mine: { badges: [], cls: {}, bk: {} }, timer: 0, err: '' };
@@ -28,6 +28,15 @@ const mineFrom = (doc, sid) => { const own = (o, k) => o && typeof o === 'object
     cls: Object.fromEntries((doc.classes || []).filter(c => c.prog && c.prog[m.id]).map(c => { const g = c.prog[m.id]; const thr = (c.criteria && c.criteria.threshold) || 80; return [c.id, { p: Math.round(+g.p || 0), st: g.assign || 'none', fb: String(g.fb || '').slice(0, 1000), score: g.score ?? null, exam: g.exam ?? null, done: (+g.p || 0) >= thr }]; })) }; };
 const demoMine = st => (!st || !LR.me) ? { badges: [], cls: {} } : mineFrom(st, LR.me.sid);
 const SESS = 'didisam.learner.' ;
+/* v38 로그인 유지(QA K12): 앱은 기본으로 이 기기에 30일 기억(localStorage + 만료), 웹은 로그인 화면의 '이 기기에서 로그인 유지'를 고를 때만(공용 PC 대비). 운영 서버는 keep:false면 브라우저를 닫을 때 끝나는 쿠키 */
+const lKeepApp = () => { try { return document.body.classList.contains('lapp') || Q.get('app') === '1' || matchMedia('(display-mode: standalone)').matches; } catch (e) { return false; } };
+const lKeepDef = () => lKeepApp(); /* 앱은 기본으로 기억, 웹은 '로그인 유지'를 고를 때만 */
+const lKeepOn = () => { const K = [...document.querySelectorAll('form#laLogin [name=keep], form#li [name=keep]')]; return K.length ? K.some(k => k.checked) : lKeepDef(); };
+const lKeepK = () => 'didisam.keep.' + (LR.tid || 'x') + (lKeepApp() ? '.app' : '.web'); /* 앱 · 웹 따로 기억 */
+function lKeepSave(me) { try { if (me && LR.mode !== 'live' && lKeepOn()) localStorage.setItem(lKeepK(), JSON.stringify({ me, exp: Date.now() + 30 * 864e5 })); else localStorage.removeItem(lKeepK()); } catch (e) { } }
+function lKeepLoad() { try { const v = JSON.parse(localStorage.getItem(lKeepK()) || 'null'); if (!v || !v.me || !(v.exp > Date.now())) { localStorage.removeItem(lKeepK()); return null; } return v.me; } catch (e) { return null; } }
+const lKeepHTML = () => `<label class="ckl la-keep"><input type="checkbox" name="keep" ${lKeepDef() ? 'checked' : ''}> 이 기기에서 로그인 유지 <small>공용 PC에서는 끄세요</small></label>`;
+Object.assign(window, { lKeepSave, lKeepLoad, lKeepOn, lKeepHTML });
 LR.api = {
   async load() {
     if (Q.get('preview') === '1') {
@@ -46,18 +55,18 @@ LR.api = {
         if (!LR.site) { LR.err = '아직 게시되지 않았습니다. 스튜디오 › 사이트 › 홈페이지 · 학습 사이트에서 [게시하기]를 누르세요.'; return; }
       }
     }
-    try { const s = JSON.parse(sessionStorage.getItem(SESS + LR.tid) || 'null'); if (s && LR.mode !== 'live') LR.me = s; } catch (e) { }
+    try { const s = JSON.parse(sessionStorage.getItem(SESS + LR.tid) || 'null') || lKeepLoad(); if (s && LR.mode !== 'live') { LR.me = s; sessionStorage.setItem(SESS + LR.tid, JSON.stringify(s)); } } catch (e) { }
     if (LR.me && LR.mode !== 'live') { try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[LR.me.sid] || {}) }; } catch (e) { } if (LR.mode === 'demo') LR.mine = demoMine(demoRoom()); }
   },
   async login(sid, code) {
-    if (LR.mode === 'live') { const r = await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/login`, { sid, code }); LR.me = r.me; LR.lp = r.lp || LR.lp; LR.mine = r.mine || LR.mine; return; }
+    if (LR.mode === 'live') { const r = await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/login`, { sid, code, keep: lKeepOn() }); LR.me = r.me; LR.lp = r.lp || LR.lp; LR.mine = r.mine || LR.mine; return; }
     const c = (LR._codes || []).find(x => x.sid === sid && String(x.code).toUpperCase() === String(code).toUpperCase());
     if (!c) throw new Error('번호 또는 접근코드가 올바르지 않습니다.');
-    LR.me = { sid, dept: c.dept || '' }; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { }
+    LR.me = { sid, dept: c.dept || '' }; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { } lKeepSave(LR.me);
     try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[sid] || {}) }; } catch (e) { }
     if (LR.mode === 'demo') LR.mine = demoMine(demoRoom());
   },
-  async logout() { if (LR.mode === 'live') { try { await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/logout`); } catch (e) { } } try { sessionStorage.removeItem(SESS + LR.tid); } catch (e) { } LR.me = null; LR.lp = { tut: {}, cls: {}, diag: {} }; LR.mine = { badges: [], cls: {} }; },
+  async logout() { if (LR.mode === 'live') { try { await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/logout`); } catch (e) { } } try { sessionStorage.removeItem(SESS + LR.tid); localStorage.removeItem(lKeepK()); } catch (e) { } LR.me = null; LR.lp = { tut: {}, cls: {}, diag: {} }; LR.mine = { badges: [], cls: {} }; },
   save() {
     if (!LR.me) return; LR.lp.at = nowISO(); clearTimeout(LR.timer);
     const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); LR.lp.days = LR.lp.days || {}; LR.lp.days[day] = Math.min(999, (LR.lp.days[day] || 0) + 1); const ks = Object.keys(LR.lp.days).sort(); if (ks.length > 370) ks.slice(0, ks.length - 370).forEach(k => delete LR.lp.days[k]);

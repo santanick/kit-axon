@@ -57,6 +57,10 @@ test('초대 토큰 가입', async t => {
     assert.equal((await kj('pb', `dad${sfx}@k.kr`, { kind: 'parent', gtok: g.j.parent_token })).j.error, 'gtok_bad', '연결 토큰은 1회용');
     const pp = await kj('pc', `par${sfx}@k.kr`, { kind: 'parent', token: 'partok12345' }); assert.equal(pp.status, 200); assert.equal((await kev(pp.j.me.sid))[0].token, 'partok12345');
     assert.equal((await kj('pd', `x${sfx}@k.kr`, { kind: 'parent', token: 'kidtok12345' })).j.error, 'invite_bad', '원생 토큰으로 보호자 가입 불가');
+    /* 로그인 유지(QA K12): keep:false면 브라우저를 닫을 때 끝나는 쿠키, 기본은 30일 */
+    const em = `par${sfx}@k.kr`; const lg = async keep => { const o = await call('z', 'POST', KP('otp'), { email: em, purpose: 'login' }); const r = await fetch(U + KP('login'), { method: 'POST', headers: { 'x-didisam': '1', 'content-type': 'application/json' }, body: JSON.stringify({ via: 'email', email: em, code: o.j.dev_code, ...(keep === undefined ? {} : { keep }) }) }); return [r.status, r.headers.get('set-cookie') || '']; };
+    const [s1, c1] = await lg(false); assert.equal(s1, 200); assert.ok(!/Max-Age/i.test(c1), c1);
+    const [s2, c2] = await lg(); assert.equal(s2, 200); assert.match(c2, /Max-Age=2592000/);
     await pool.query('delete from tenants where id = $1', [K.tid]);
   });
   await pool.query('delete from tenants where id = $1', [C.tid]);

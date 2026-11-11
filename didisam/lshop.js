@@ -69,7 +69,7 @@
     const P = c.period; if (P && P.mode !== 'days' && P.end && P.end < t) return { ok: false, label: '수강 기간 종료' };
     try { const sh = SHOP(); if (sh && sh.pg && sh.pg.use === 'none' && priceOf(c) > 0) return { ok: true, label: '결제 준비 중', pend: true }; } catch (e) { } /* v25.1: 결제 미연결 유료 강좌에 '수강 신청 가능'이 함께 뜨던 문제 */
     return { ok: true, label: '수강 신청 가능' }; }
-  const periodTxt = c => { const P = c.period; if (!P) return ''; return P.mode === 'days' ? `수강 신청 후 ${P.days}일` : `${P.start || ''} ~ ${P.end || ''}`; };
+  const periodTxt = c => { const P = c.period; if (Array.isArray(c.span) && c.span[0]) return `${c.span[0]} ~ ${c.span[1]}`; /* v38 회차 수업은 실제 수업 기간(QA K17) */ if (!P) return ''; return P.mode === 'days' ? `수강 신청 후 ${P.days}일` : `${P.start || ''} ~ ${P.end || ''}`; };
   /* v37 L1: 결제를 쓰지 않는 기관(대학 · 기업 · 공공 기본, 운영자 설정 S.settings.payOn → 게시본 pay:false)은 강좌 가격 · '무료' 표시 · 결제 단계를 감춘다 */
   const payOff = () => { try { return SITE().pay === false; } catch (e) { return false; } };
   const critOf = c => { try { const b = (SITE().classes || []).find(x => x.id === c.id) || c; return typeof a2lCritTxt === 'function' ? a2lCritTxt({ ...b, thr: b.thr || c.thr }) : { s: `진도 ${c.thr || 80}%`, l: `진도 ${c.thr || 80}% 이상` }; } catch (e) { return { s: `진도 ${c.thr || 80}%`, l: `진도 ${c.thr || 80}% 이상` }; } };

@@ -61,7 +61,8 @@ function lwAttTable(cid, mid) { try { const c = lwCls(cid, mid); if (!c || !lwUn
 
 { const base = viewCourse; viewCourse = (id, itemId) => { const h = base(id, itemId); try { if (!SITE() || !LR.me) return h; const c = lwCls(id); if (!c) return h; let out = h;
     if (c.kind === 'sub') { const s = lwSubCur(c.id); if (s && s.status === '해지') LW.ro = c.id; }
-    const p = lwPanel(c); if (p) out = out.replace('<section class="crsb">', p + '<section class="crsb">');
+    let p = lwPanel(c); const sel = itemId && (c.items || []).find(x => x.id === itemId); if (p && sel && !['live', 'offline'].includes(sel.type)) p = p.replace('<details class="lw-sched" open>', '<details class="lw-sched">'); /* v38 퀴즈 · 과제 · 시험을 고르면 회차 · 출결 표를 접어 그 항목이 바로 보이게(QA K7) */
+    if (p) out = out.replace('<section class="crsb">', p + '<section class="crsb">');
     /* 선택된 항목: 일정 · 장소 · 라이브 입장 */
     const r = (LR.lp.cls || {})[c.id] || { items: {} }; const it = (c.items || []).find(x => x.id === itemId) || (c.items || []).find(x => !((r.items || {})[x.id] || {}).done) || (c.items || [])[0];
     if (it && (it.type === 'live' || it.type === 'offline')) { const se = c.kind === 'episode' ? c.sessions.find(s => s.id === it.id) : null; const u = se || it; const when = u.date ? `${lwFmt(u.date)} ${u.from || ''}${u.to ? '–' + u.to : ''}${u.from ? ' (KST)' + lwKST(u.date, u.from) : ''}` : c.sub === '회차 차감반' ? '지정 일자 없음 — 출석한 날이 수업일로 기록됩니다' : '일정 미정';
