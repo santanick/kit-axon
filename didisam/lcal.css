@@ -109,3 +109,6 @@ body.lapp .ap-scroll small,body.lapp .ap-home .ap-sub{font-size:13px}
   #lm small,#lm .mini,.ap-scroll small{font-size:max(13px,1em)}}
 /* v38 F5 A9: '내 학습'(#my) 첫 화면에서는 떠 있는 튜터 버튼이 [이어서] · [시작] 버튼을 가리지 않게 숨기고, 아래로 내리면 보인다(홈과 같은 방식) */
 body[data-luxr=my]:not(.f5-scr) #ltut .lt-fab{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+/* v38 F5 R3 U14: 학습자 주 버튼 48px(PC · 휴대폰 · 앱 같은 기준) — 이번 주 계획 맡기기 · 추천 질문 칩 · 이어서 학습 · 설치 */
+body.lapp .ap-chip,body .ap-chip,body.lapp .ap-go,body.lapp .ap-ib2,#lm .nx .lbtn,#lm .lux-ml .lbtn,#lm .lux-cc .lbtn,#lm .lbtn.pri{min-height:48px!important}
+body.lapp .ap-org{min-height:44px!important}body.lapp .ap-ix{min-width:44px;min-height:44px}

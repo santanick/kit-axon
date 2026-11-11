@@ -40,6 +40,17 @@ const SKIP = /^(go|chat-q|chat-open|chat-close|cls-open|mem-open|ux-find|sl-clos
     if (errs.length) { console.log(`✗ ${vw.width} ${type}: 스크립트 오류 ${errs.slice(0, 2).join(' | ')}`); fails.push(`${type} errors`); }
     await ctx.close();
   }
+  /* v38 F5: 390 원생 화면 [전체 원생 현황 엑셀](ops-xls) 고정 — 화면을 다시 그린 직후(40ms) 스크롤해 누르면 늦은 스크롤 복원(60ms)이 예전 위치로 되돌리던 간헐 실패 */
+  { const ctx = await browser.newContext({ viewport: { width: 390, height: 760 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+    await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await p.goto(`${base}/index.html`, { waitUntil: 'load' });
+    await p.evaluate(() => { try { localStorage.setItem('didisam.emptyStart', '0'); } catch (e) { } const b = document.querySelector('#suEmpty'); if (b) b.checked = false; createOrg('k12', '스크롤 점검'); });
+    const R = await p.evaluate(async () => { const wait = ms => new Promise(ok => setTimeout(ok, ms)); const out = []; go('crmstu'); render(); await wait(120);
+      for (const y0 of [284, 120, 400, 185, 300]) { scrollTo(0, y0); await wait(30); go('crmstu'); render(); await wait(40); const el = document.querySelector('#main [data-act="ops-xls"]'); if (!el) return ['no ops-xls'];
+        const top = el.getBoundingClientRect().top + scrollY; scrollTo(0, Math.max(120, top - 200)); await wait(5); const y1 = scrollY; el.click(); await wait(160); out.push([y1, scrollY]); }
+      return out; });
+    const bad = Array.isArray(R[0]) ? R.filter(([a, b]) => Math.abs(a - b) > 4) : R; clicks += R.length;
+    console.log(`${bad.length ? '✗' : '✓'} 390 k12 crmstu [전체 원생 현황 엑셀] 고정 5번: ${JSON.stringify(R)}`); if (bad.length || errs.length) fails.push('390 k12 ops-xls 고정');
+    await ctx.close(); }
   await browser.close(); srv.close();
   console.log(`측정 화면 ${screens}곳 · 클릭 ${clicks}번`);
   if (screens < 20) fails.push(`측정 화면 ${screens}곳(20곳 미만)`);

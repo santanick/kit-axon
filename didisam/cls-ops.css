@@ -137,3 +137,15 @@
   body .wkh .wn,body li .ty,body .chap .ty,body .ob1 em,body .ob1 i,body kbd,body .scxt small,body .agl,body .stepper span,body .lsnum,body .hps-steps li,body .tdots li,body .smck small,body .cn-steps small,body .bst small,body .bst i,body .bmseg em,body .c2b small,body .c2b b,body .c2hl,body .d26-calg small,body .gdt small,body .gdrec small,body .gdc small,body .lmsb-cols small,body .lmsb-kind,body .efh-hist small,body .efh-demo,body .lmp-ev,body .lmp-room em,body .lmp-msg small,body .lw-pill,body .lw-demo,body .lmp-todo .lmp-demo,body .lv-msg small,body .brail .ri em,body .hps-tab i{font-size:12px!important}
   body .lsnum{width:26px;height:26px}
 }
+/* v38 F5 R3 U14: PC에서도 스튜디오 머리 · 홈 주 버튼 40px 이상(DDS 기준) — 메뉴 찾기 · 사이트 열기 · 시작 가이드 · 맡기기 */
+.topr .uxfind,.topr .btn,.topr>button,.topr>a,.bprog,.uxt .btn,.uxt button,.aih-chips .chip{min-height:40px}
+/* v38 F5 R3 U14 · C13: 사이트 편집기 아래 레일 · 시안 카드 · 단계 표시의 작은 글자 12px 이상(PC · 390) */
+body .hps-ri{font-size:12px}body .hps-steps li,body .hps-cnt,body .hps-og small,body .hpw-rec,body .hpw-db em,body .hpw-qi,body .hpai-via,body .hpe-bar #hpeUndo em,body .hps-tab i,body .hps-lsxh summary b::after{font-size:12px!important}
+@media (max-width:860px){body .hps-ri{font-size:13px;min-height:56px}}
+.hps-flow .hps-fok{display:inline-flex;align-items:center;margin-left:2px;color:#16A34A}.hps-flow li.done button i{background:#16A34A;color:#fff}
+/* v38 F5 R3 K14: 390 초대 창 등 창 안 명단의 이름 링크는 줄 전체 높이 44px로 누른다 */
+@media (max-width:860px){#modal td a,#modal li a,#modal .row a,#modal a[data-act=mem-open],#main td a[data-act=mem-open]{display:inline-flex;align-items:center;min-height:44px}}
+@media (max-width:860px){body .cbox button,body .rg-att,body .hpi-att,body .aih-comp button{min-width:44px;min-height:44px}}
+/* v38 F5 R3 UL15: 학사 LMS 하위 탭 · 단계 숫자(em) · 자동화 흐름 글자 12px 이상(390), PC 레일 · 계정 메뉴 보조 글 12px */
+@media (max-width:860px){body #main em,body header em,body .bsub em{font-size:max(12px,1em)!important}body .cn-tflow span{font-size:12px!important}}
+@media (min-width:861px){body .brail .ri{font-size:12px}}body .acn small,body .uxacs small,body .acp small,body .uxacs label{font-size:12px}

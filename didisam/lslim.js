@@ -19,7 +19,7 @@
       { href: '#inbox', i: 'bell', c: '#FF9800', n: '알림', s: c.n ? `새 알림 ${c.n}개` : '공지 · 가입 · 수업 알림', k: c.n },
       { href: '#msg', i: 'chat', c: '#109BF1', n: '메시지', s: c.m ? `안 읽은 메시지 ${c.m}개` : `${org} 소식`, k: c.m },
       ...(P ? [{ href: '#mypay/bill', i: 'layers', c: '#00C53B', n: '청구서 · 결제', s: '결제 대기 · 내역' }] : typeof lPayOff === 'function' && lPayOff() ? [] /* v38 F5 결제 꺼진 기관은 결제 줄을 감춘다 */ : [{ href: '#mypay/pay', i: 'layers', c: '#00C53B', n: '결제 · 환불 내역', s: '결제 · 환불 · 구독 · 청구서' }]),
-      ...(P ? [{ href: '#family', i: 'user', c: '#E5487A', n: '자녀', s: '출결 · 수강 현황' }] : [{ href: '#connect', i: 'clock', c: '#7C5CF2', n: '연결 · 알림', s: '앱 알림 · 캘린더 · 리마인더' }, { ap: 'tsheet', i: 'sparkle', c: '#5C74F6', n: '선생님 · 앱 설정', s: '선생님 바꾸기 · AI 연결 · 화면' }]),
+      ...(P ? [{ href: '#family', i: 'user', c: '#E5487A', n: '자녀', s: '출결 · 수강 현황' }] : [{ href: '#connect', i: 'clock', c: '#7C5CF2', n: '연결 · 알림', s: '앱 알림 · 캘린더 · 리마인더' }, { ap: 'tsheet', i: 'sparkle', c: '#5C74F6', n: 'AI 튜터 · 앱 설정', s: '튜터 이름 바꾸기 · AI 연결 · 화면' }]),
       { ap: 'orgs', i: 'grid', c: '#6C6C6C', n: '내 기관', s: org },
       ...(LR.me ? [{ la: 'logout', i: 'out', c: '#6C6C6C', n: '로그아웃', s: '공용 기기라면 꼭 로그아웃하세요' }] : []) /* v38 F5 U13 로그아웃을 '나'에서 바로 */
     ];
