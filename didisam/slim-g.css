@@ -30,3 +30,4 @@
 @media (max-width:700px){.slg-empty{margin:12px 0 20px;padding:22px 16px}}
 .slg-hide,[data-slg-hide]{display:none!important}
 .slg-clamp{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal}
+@media (max-width:600px){.slg-i{width:32px;height:32px;font-size:15px}} /* v38 390 터치: 보이는 크기 32px(터치 영역은 cls-ops.css ::after로 44px 이상) */

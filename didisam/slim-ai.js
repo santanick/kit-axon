@@ -114,11 +114,25 @@
   /* ═════════ 2. 계획 만들기 ═════════ */
   const KIND = { money: ['금액', 'r'], send: ['발송', 'y'], del: ['삭제', 'r'] };
   const SI_PEND = {}; /* 빠진 값 입력 대기(새로고침하면 사라짐) */
-  function siPlan(q, V = {}) { const parts = siSplit(q); const steps = [], skip = [];
+  /* v38 이름 목록: '교과목 3개 열어줘: 데이터베이스, 웹프로그래밍, 인공지능개론' · '데이터베이스 · 웹프로그래밍과 인공지능개론 과정 만들어줘'
+     → 이름을 각각 하나의 과정으로(쉼표 · 가운뎃점 · 빗금 · '와/과/및/랑'). 목록 조각에 동사가 있으면(여러 단계 지시) 건드리지 않는다 */
+  const NSEP = /\s*(?:,|，|、|·|ㆍ|\/)\s*|(?<=[가-힣A-Za-z0-9)])(?:와|과|및|이랑|랑)\s+|\s+(?:및|그리고)\s+/;
+  const VERB = /(만들|열어|열고|개설|생성|추가|설계|써|보내|등록|게시|공개|올려|해\s*줘|해줘|하고|주세요|줘)/;
+  function siNames(q) { const s = String(q || '').replace(/\s+/g, ' ').trim(); if (!new RegExp(CLS_W).test(s) || !/(만들|열|개설|생성|추가|설계)/.test(s)) return null;
+    const clean = L => L.map(x => x.replace(/^(?:이번\s*학기\s*)?/, '').replace(/\s*(?:을|를|으로|로|이라는|라는)$/, '').trim()).filter(Boolean);
+    const ok = L => L.length >= 2 && L.length <= 12 && L.every(x => x.length >= 2 && x.length <= 40 && !VERB.test(x) && !/\d+\s*개/.test(x));
+    let m = s.match(/^(.+?)\s*[:：]\s*(.+)$/);
+    if (m && new RegExp(CLS_W).test(m[1])) { const L = clean(m[2].replace(/\s*(?:으로|로)?\s*(?:해\s*줘|해주세요|부탁해?요?)\.?$/, '').split(NSEP)); if (ok(L)) { const h = /(\d+)\s*개/.test(m[1]) ? m[1] : m[1].replace(new RegExp(CLS_W), `$1 ${L.length}개`); return { q: h, names: L }; } }
+    m = s.match(new RegExp(`^(.+?)\\s*(?:라는|이라는)?\\s*${CLS_W}\\s*(?:(\\d+)\\s*개\\s*)?((?:을|를)?\\s*(?:만들|열|개설|생성|추가|설계).*)$`));
+    if (m && NSEP.test(m[1])) { const L = clean(m[1].replace(/^(?:새로?\s*|신규\s*)/, '').split(NSEP)); if (ok(L)) return { q: `${m[2]} ${L.length}개 ${m[4].replace(/^(?:을|를)\s*/, '')}`, names: L }; }
+    return null; }
+  window.siNames = siNames;
+  function siPlan(q, V = {}) { { const NL = !(V.names && V.names.length) && siNames(q); if (NL) { q = NL.q; V = Object.assign({}, V, { names: NL.names }); } }
+    const parts = siSplit(q); const steps = [], skip = [];
     parts.forEach(p => { const d = stepOf(p); if (!d) { skip.push(p); return; } if (steps.some(x => x.did === d.id) && !['notice', 'course'].includes(d.id)) return; let st; try { st = d.make(p, V); } catch (e) { console.error(e); skip.push(p); return; } st.did = d.id; st.src = p; st.own = !!(d.own && d.own(p)); steps.push(st); });
     const bi = steps.findIndex(x => x.did === 'bill'); steps.forEach((x, i) => { if (bi >= 0 && i > bi && x.did === 'unpaid') x.est = '청구 후 다시 계산'; if (i > 0 && x.did === 'publish' && steps.slice(0, i).some(y => y.did === 'course')) x.est = '앞에서 만든 ' + K_(); });
-    return { q, steps, skip, need: steps.flatMap(s => s.need || []) }; }
-  function siCard(P, V) {
+    return { q, steps, skip, need: steps.flatMap(s => s.need || []), V }; }
+  function siCard(P, V) { V = V || P.V;
     const rows = P.steps.map(s => ({ l: s.l, k: s.k, est: s.est }));
     if (P.need.length) { const key = uid('si'); SI_PEND[key] = { q: P.q, V: V || {}, need: P.need };
       return { title: '빠진 값만 알려 주세요', text: `${P.steps.length}단계로 처리하겠습니다. 아래 ${P.need.length}가지를 한 번에 입력하면 계획을 완성합니다.`, si: rows, siNeed: P.need.map(n => n.label), btn: { act: 'si-fill', v: key, label: '빠진 값 입력' }, via: 'AI SAM 계획' }; }

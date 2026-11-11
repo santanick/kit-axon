@@ -47,6 +47,7 @@
         return api(m, p, b || {});
       }
       const f = W3.LOCAL[m + ' ' + p]; if (!f) throw W3.err('not_found');
+      { const M = W3.mine && W3.mine(); const sid = b && b.section_id; if (M && sid && !M.has(sid)) throw W3.err('role'); }
       const out = f(b || {}); if (m !== 'GET') save(); return JSON.parse(JSON.stringify(out == null ? null : out));
     },
     /* 화면 캐시: 키별로 한 번 불러와 render() — 화면 함수는 동기라 캐시만 읽는다 */
@@ -106,7 +107,10 @@
     if (typeof W3.seedJ === 'function') W3.seedJ(sec.section_id);
     return { section_id: sec.section_id, sessions: d.sessions.length, students: reg.length, rule: 1, beacons: 2 };
   };
-  L['GET /api/lms/g/sections'] = () => D().sections.map(s => ({ ...s, students: regular(s.section_id).length }));
+  /* v38 교수 화면(데모: 역할 = 교수)은 학기 · 강좌에서 내가 담당인 분반만 — 과제 · 성적(e.js mineOnly)과 같은 규칙 */
+  W3.mine = () => { try { if (!(S && S.me && S.me.role === 'teacher') || typeof window.lmsaEns !== 'function' || !(typeof ULMS === 'function' && ULMS())) return null; const A = window.lmsaEns(); const me = A.scopes && A.scopes.teacher && A.scopes.teacher.member_no;
+    return new Set(me ? A.staff.filter(t => t.member_no === me && t.status === 'active').map(t => t.section_id) : []); } catch (e) { return null; } };
+  L['GET /api/lms/g/sections'] = () => { const M = W3.mine(); return D().sections.filter(s => !M || M.has(s.section_id)).map(s => ({ ...s, students: regular(s.section_id).length })); };
   L['GET /api/lms/g/sessions'] = b => secSessions(b.section_id).map(sessJ);
   L['POST /api/lms/g/session'] = b => { const s = sesOf(b.session_id); if (!s) throw W3.err('not_found'); ['starts_at', 'ends_at', 'open_at', 'close_at', 'room', 'kind', 'note', 'required_sec', 'extra_study_sec'].forEach(k => { if (b[k] != null && b[k] !== '') s[k] = /_at$/.test(k) ? W3.ts(b[k]) : /_sec$/.test(k) ? +b[k] : b[k]; }); return sessJ(s); };
   L['POST /api/lms/g/makeup'] = b => { const o = sesOf(b.session_id); if (!o) throw W3.err('not_found'); if (!b.starts_at) throw W3.err('required'); const t = Date.parse(b.starts_at); const dur = o.ends_at ? Date.parse(o.ends_at) - Date.parse(o.starts_at) : 75 * 6e4;
