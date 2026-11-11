@@ -65,6 +65,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; } else { fail++;
     location.hash = '#c/c1/v1'; lrender(); await wait(200); const st = myStats().courses.find(x => x.c.id === 'c1'); r.statDone = st.done; r.att = st.att;
     const ring = document.querySelector('.crsh .ring'); r.ringDone = ring && ring.dataset.done; const pc = document.querySelector('.l26pc'); r.side = pc ? pc.textContent : ''; r.cert = !!document.querySelector('.l26cert, .crsh a[href^="#cert/"]');
     r.kpi = (document.querySelector('.lw-kpi') || {}).innerText || ''; r.warn = !!document.querySelector('.lw-warn'); r.crit = (document.querySelector('.l26crit') || {}).textContent || '';
+    r.note = [...document.querySelectorAll('.cpl-note-l')].map(x => x.textContent).join(' | '); r.teacherRow = /교강사/.test(r.note);
     location.hash = '#c/c1/ex1'; lrender(); await wait(200); r.why = (document.querySelector('.a2lwhy') || {}).textContent || ''; const rb = document.querySelector('[data-cpl-rv]'); r.rvBtn = !!rb; r.pass = (document.querySelector('.a2linfo') || {}).innerText || '';
     if (rb) { rb.click(); await wait(50); document.getElementById('cplRt').value = '실습이 도움이 됐어요.'; document.getElementById('cplRo').click(); await wait(150); }
     const sb = document.querySelector('[data-a2="start"]'); r.start = !!sb; let loops = 0;
@@ -75,6 +76,8 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; } else { fail++;
   ok(L.statDone === false && L.ringDone === '0' && !/수료/.test(L.side.replace('수료 기준', '')) && !L.cert, 'V7 시험 전 · 출석 60%면 수료 표시 없음 ' + JSON.stringify([L.statDone, L.ringDone, L.side]));
   ok(L.att === 60 && /출석률\s*60%/.test(L.kpi) && L.warn, 'V8 학습자 출석률 · 80% 기준 경고 ' + JSON.stringify([L.att, L.kpi.slice(0, 40)]));
   ok(/평가 60점/.test(L.crit) && /출석 80%/.test(L.crit), 'V9 수료 기준 문구에 평가 · 출석 ' + L.crit);
+  ok(/수료 기준: 진도율 80% 이상 · 평가 60점 이상 · 출결 수업 출석률 80% 이상/.test(L.note) && /수료기준 진도율 80% 이상 · 평가 60점 이상 · 출결 수업 출석률 80% 이상/.test(L.note), 'V9 R2 유의사항 · 과정 안내 수료 기준에 출석 80% ' + L.note.slice(0, 300));
+  ok(!L.teacherRow, 'V14 R2 등록 강사 없으면 교강사 줄 숨김(관리자 표시 안 함)');
   ok(/수강평/.test(L.why) && L.rvBtn, 'V1 수강평 관문에 [수강평 쓰기] ' + L.why);
   ok(/60점\(훈련 수료 기준\)/.test(L.pass), 'V9 통과 점수 = 훈련 규정 ' + L.pass.replace(/\n/g, ' ').slice(0, 120));
   ok(L.start && L.loops === 0 && (L.running || L.form), 'V2 유의사항 → mOTP → 문항(반복 없음) ' + JSON.stringify(L));
@@ -90,15 +93,20 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; } else { fail++;
     location.hash = '#c/u1/d1'; lrender(); await wait(200); r.side = (document.querySelector('.l26pc') || {}).textContent || ''; r.ring = (document.querySelector('.crsh .ring') || {}).dataset; r.ring = r.ring && r.ring.done; r.stat = myStats().courses.find(x => x.c.id === 'u1').done;
     location.hash = '#c/u2/d2'; lrender(); await wait(200); r.crit2 = (document.querySelector('.l26crit') || {}).textContent || '';
     location.hash = '#c/u2/q2'; lrender(); await wait(200); const t = (document.querySelector('.a2lmain') || document.querySelector('.imain') || {}).innerText || ''; r.quizTxt = t; r.quizStart = !!document.querySelector('[data-a2="start"]'); r.quizForm = !!document.getElementById('a2qz');
-    LR.lp.cls.u2.items = { d2: { done: true }, q2: { done: true, score: 0 } }; LR.api.save(); location.hash = '#cert/u2'; lrender(); await wait(200); r.certTxt = (document.querySelector('#lapp') || document.body).innerText; await wait(700); return r; });
+    LR.lp.cls.u2.items = { d2: { done: true }, q2: { done: true, score: 0 } }; LR.api.save(); location.hash = '#cert/u2'; lrender(); await wait(200); r.certTxt = (document.querySelector('#lapp') || document.body).innerText; r.noPrintBtn = !document.querySelector('[data-a2="certprint"]') && !!document.getElementById('a2lName');
+    window.print = () => { r.printed = 1; }; const f = document.getElementById('a2lName'); if (f) { f.querySelector('[name=name]').value = '김서준'; f.requestSubmit(); await wait(400); } r.after = { name: LR.me.name, cert: /김서준/.test(((document.querySelector('.a2lcert, .certp') || {}).innerText) || ''), printBtn: !!document.querySelector('[data-a2="certprint"]'), printed: r.printed };
+    await wait(700); return r; });
   ok(Q.opDone === false && U.stat === false && U.ring === '0' && !/수료$/.test(U.side.trim()), 'U1 시험 31점(통과 60) — 학습자 · 운영자 모두 수료 아님 ' + JSON.stringify([U.side, U.ring, U.stat]));
   ok(/진도 80%/.test(U.crit2) && !/점 이상/.test(U.crit2), "A2 '모든 콘텐츠 진도' 과정 = 진도 80% " + U.crit2);
   ok(!/시험 보기 전에/.test(U.quizTxt) && !/3번 남았어요/.test(U.quizTxt), 'A15 퀴즈는 퀴즈 · 1회 뒤 남은 횟수 ' + U.quizTxt.replace(/\n/g, ' ').slice(0, 160));
 
+  if (process.env.SHOT) { await l2.setViewportSize({ width: 390, height: 844 }); await l2.evaluate(() => { LR.me.name = ''; try { const V = laV(); if (V.ids[LR.me.sid]) { V.ids[LR.me.sid].name = ''; laVSave(V); } } catch (e) { } location.hash = '#cert/u2'; lrender(); }); await l2.waitForTimeout(400); await l2.screenshot({ path: process.env.SHOT + '/f3_certname_390.png', fullPage: true }); }
   ok(!U.quizStart && U.quizForm, 'L12 확인 퀴즈는 시작 버튼 · 시간 제한 없이 바로 풀기 ' + JSON.stringify([U.quizStart, U.quizForm, U.quizTxt.slice(0, 200)]));
-  ok(/닉네임/.test(U.certTxt) && /실명을 입력/.test(U.certTxt), 'C10 · L5 닉네임 수료증이면 실명 입력 안내');
-  const CT = await a.evaluate(() => { S.certs = []; lpApply(); return { p: (C('u2').prog.m0 || {}).p, certs: S.certs.filter(x => x.cls === 'u2').map(x => [x.who, !!x.no, !!x.at]) }; });
+  ok(/닉네임/.test(U.certTxt) && /실명을 입력/.test(U.certTxt) && U.noPrintBtn, 'C10 · L5 닉네임 수료증이면 인쇄 전에 실명 입력 단계 ' + U.noPrintBtn);
+  ok(U.after && U.after.name === '김서준' && U.after.cert && U.after.printBtn, 'L5 R2 실명 입력 → 수료증 성명 실명 · 인쇄 ' + JSON.stringify(U.after));
+  const CT = await a.evaluate(() => { lpApply(); lpxPull(); /* 학습자 이벤트(수료증 · 실명)가 먼저 반영됐을 수 있어 대장을 비우지 않는다 */ const k = (S.certs || []).find(x => x.cls === 'u2'); return { ledgerName: k && (k.name || (S.certName || {})[k.who]), certName: k ? a2CertData(C('u2'), k.who, k).name : '', p: (C('u2').prog.m0 || {}).p, certs: S.certs.filter(x => x.cls === 'u2').map(x => [x.who, !!x.no, !!x.at]) }; });
   ok(JSON.stringify(CT.certs) === '[["m0",true,true]]', 'C10 · L6 학습자 수료 → 운영자 발급 대장(번호 · 발급일) ' + JSON.stringify(CT));
+  ok(CT.ledgerName === '김서준' && CT.certName === '김서준', 'L5 R2 운영자 대장 · 수료증에 실명 ' + JSON.stringify(CT));
   /* V14 과정 상세 집계(강의 수 · 오프라인 수업 · 영상 시간) · V15 입과하면 '수강 중' */
   const V14 = await a.evaluate(() => { const c = S.classes[0]; c.curriculum = [{ id: 'd1', type: 'doc', title: '교안' }, { id: 'vv', type: 'video', title: '영상', mins: 10 }, { id: 'e1', type: 'exam', title: '시험', qs: [] }, ...[1, 2, 3, 4, 5].map(k => ({ id: 'of' + k, type: 'offline', title: '집체 ' + k }))]; const sn = sl2Snap(); const x = (sn.classes || []).find(y => y.id === c.id) || {}; return { items: x.items, off: x.off, vmin: x.vmin }; });
   ok(V14.items === 3 && V14.off === 5 && V14.vmin === 10, 'V14 강의 수 3 · 오프라인 5 · 영상 10분 ' + JSON.stringify(V14));
