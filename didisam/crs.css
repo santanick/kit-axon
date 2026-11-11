@@ -238,3 +238,6 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
 .cf-waits .cf-wl li:first-child{border-top:0}
 .cf-waits .cf-wl li span{flex:1;min-width:120px;font-weight:600}
 .cf-waits .cf-wl .btn{min-height:44px}
+
+/* v38 A-17 쿠폰 관리 */
+.cpn-row{display:flex;gap:8px;align-items:center}.cpn-row input{flex:1;min-width:0}.cpn-card .cpn-t td .btn{min-height:44px}

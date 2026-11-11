@@ -60,7 +60,7 @@ const EX = {
   k12: ['미납 보호자에게 청구서 다시 알려줘', '중2-A반 이번 주 출결 요약해줘', '결석한 원생에게 보강 영상 배정하는 자동화 만들어줘', '겨울방학 특강 공지 써줘'],
   adult: ['승인 대기 회원 모두 승인해줘', '엑셀 실무 마스터 커리큘럼 다시 짜줘', '수료한 수강생에게 후기 요청 보내는 자동화 만들어줘', '이번 달 매출 요약해줘'],
   lifelong: ['학습비 반환 신청 기한 확인해줘', '30시간 미만 강좌 찾아줘', '바리스타 과정 모집 공지 써줘', '사전 수강신청 10명 미만 강좌 알리는 자동화 만들어줘'],
-  voc: ['출석률 80% 미만 훈련생에게 경고 보내줘', '이번 주 HRD-Net 보고 자료 만들어줘', '웹개발 과정 퀴즈 5문항 만들어줘', '매일 부정훈련 의심 건을 담당자에게 알리는 자동화 만들어줘']
+  voc: ['출석률 80% 미만 훈련생에게 경고 보내줘', '이번 주 HRD-Net 보고 자료 만들어줘', '용접기능사 실기 과정 퀴즈 5문항 만들어줘', '매일 부정훈련 의심 건을 담당자에게 알리는 자동화 만들어줘']
 };
 /* 자연어 지시 → 실행 계획 */
 /* v33 AI 요청 해석 — 수강료 · 차시(QA #48). 99000원 · 99,000원 · 9만9천원 · 10만원 · 1.5만원 · 만원 · 무료 / 6차시 · 6강 · 6회차 · 6주
@@ -179,7 +179,7 @@ function defaultAutos(type) {
 }
 function targets(a) {
   switch (a.key) {
-    case 'nudge-low': case 'univ-risk': return [...new Set(S.classes.flatMap(c => Object.entries(c.prog).filter(([, p]) => p.p < 30).map(([id]) => id)))];
+    case 'nudge-low': case 'univ-risk': return [...new Set(S.classes.filter(c => typeof clsLive !== 'function' || clsLive(c)).flatMap(c => Object.entries(c.prog).filter(([, p]) => p.p < 30).map(([id]) => id)))];
     case 'nudge-away': return S.members.filter(m => m.last <= addDays(today(), -30)).map(m => m.id);
     case 'qna-draft': return S.posts.filter(p => p.kind === '질문' && !p.replies).map(p => p.id);
     case 'grade-draft': return pend().map(x => x.id);

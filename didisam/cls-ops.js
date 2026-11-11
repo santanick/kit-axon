@@ -104,6 +104,7 @@
 
   /* ═════════ 독려 알림(실제 전달이 연동되지 않았으면 '등록') ═════════ */
   function nudge(c, ids, why) { ids = A(ids); if (!ids.length) { toast('대상이 없습니다.', 'warn'); return; }
+    if (c && typeof clsLive === 'function' && !clsLive(c)) { toast(`「${c.name}」${AI.j(c.name, '은')} 아직 '준비 중 · 비공개'라 ${tj('learner', '이')} 볼 수 없어 독려를 보내지 않았습니다. [운영 시작 · 공개] 뒤에 보내십시오.`, 'warn'); return; } /* v38 C-R1 */
     if (typeof menuOn === 'function' && menuOn('message') && typeof cmCommSnap === 'function') { slClose && slClose(); UI.msgTo = 'mem:' + ids.join(','); go('message'); toast(`${why} ${ids.length}명을 받는 사람으로 넣었습니다.`, 'ok'); return; }
     const tt = `「${c.name}」 학습을 이어가 보세요`, bd = `${S.org.name}입니다. 「${c.name}」 진도가 남아 있어요. 오늘 한 차시만 이어서 들어 보세요.`;
     (typeof c2ov === 'function' ? c2ov : modal)(`${why} ${ids.length}명 독려`, `<label class="fl">제목<input name="t" maxlength="60" value="${esc(tt)}"></label><label class="fl">내용<textarea name="b" rows="4" maxlength="1000">${esc(bd)}</textarea></label>`,

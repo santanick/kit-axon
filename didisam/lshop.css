@@ -59,3 +59,6 @@
 .shp-mb{padding:18px 20px}.shp-mf{display:flex;justify-content:flex-end;gap:8px;padding:0 20px 18px;flex-wrap:wrap}
 @media (max-width:860px){.shp-det,.shp-pay{grid-template-columns:minmax(0,1fr)}.shp-side{position:static}.shp-box{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:520px){.shp-item{flex-direction:column;align-items:flex-start}.shp-item .shp-th{width:100%}.shp-dl{grid-template-columns:90px 1fr}.shp-grid{grid-template-columns:1fr}}
+
+/* v38 A-17 쿠폰 입력 */
+.p26cp{margin:12px 0}.cpn-row{display:flex;gap:8px;align-items:center}.cpn-row input{flex:1;min-width:0;min-height:48px}.cpn-row .lbtn{min-height:48px;flex:none;width:auto;margin:0}#p26cpm.ok{color:#15803d;font-weight:600}#p26cpm.bad{color:#b91c1c}

@@ -78,7 +78,7 @@
     async quiz(tp, o) {
       if (claudeOn()) try { const j = await claudeJSON(`주제 「${tp}」의 ${o.lv} 난이도 확인 문제 ${o.n}개를 JSON 배열로: 객관식은 {"t":"mc","q":"문제","opts":[보기 4개],"a":"정답 보기 번호(0부터)","exp":"해설"}, OX는 {"t":"ox","q":"문장","a":"O 또는 X","exp":"해설"}. 객관식과 OX를 섞습니다.`, 2400);
         if (Array.isArray(j) && j.length) { const per = Math.floor(100 / j.length); return { v: j.slice(0, 20).map((q, i) => ({ t: q.t === 'ox' ? 'ox' : 'mc', q: `${i + 1}. ${String(q.q || '').replace(/^\d+\.\s*/, '')}`, opts: q.t === 'ox' ? undefined : (q.opts || []).map(String).slice(0, 6), a: String(q.a ?? '0'), exp: String(q.exp || ''), pts: per + (i < 100 - per * j.length ? 1 : 0), lv: o.lv })), by: 'claude' }; } } catch (e) { }
-      return { v: AI.questions(tp, o.n, o.lv, ['mc', 'ox', 'mc', 'mc', 'ox']), by: 'rule' };
+      return { v: AI.questions(tp, o.n, o.lv, ['mc', 'ox', 'mc', 'mc', 'ox'], +o.off || 0), by: 'rule' };
     },
     async assign(tp) { return { v: { ...AI.assignment(tp), rb: AI.rubric(tp) }, by: 'rule' }; },
     async exam(tp, o) { const need = Math.min(60, o.need || 30);
@@ -586,7 +586,7 @@
   function fillAll(d) { const L = itemsOf(d); const ids = []; let s = 0; const cn = cl(d.name || d.topic || '');
     sessOf(d).forEach(x => { if (L.some(y => +y.week === x.w)) return; const g = /^\d+\s*(차시|주차|주)$/.test(x.title); const tp = topicOf(g ? cn : (cn && !x.title.includes(cn) ? `${cn} ${x.title}` : x.title)) || cn || x.title; const sh = topicOf(g ? cn : x.title) || tp;
       if (/고사|최종 평가|시험/.test(x.title)) { const it = { id: nid('it'), type: 'exam', title: `${sh} 시험`, week: x.w, qs: AI.questions(cn || sh, 10, '보통'), time: 60, retake: 1 }; L.push(it); ids.push(it.id); s++; return; }
-      const a = { id: nid('it'), type: 'doc', title: `${sh} 교안`, week: x.w, topic: tp, fmt: 'hand', doc: AI.material(tp, { name: cn }) }; const b = { id: nid('it'), type: 'quiz', title: `${sh} 확인 퀴즈`, week: x.w, qs: AI.questions(tp, 3, '보통', ['mc', 'ox', 'mc']), time: 0, retake: 98 }; L.push(a, b); ids.push(a.id, b.id); s++; });
+      const a = { id: nid('it'), type: 'doc', title: `${sh} 교안`, week: x.w, topic: tp, fmt: 'hand', doc: AI.material(tp, { name: cn }) }; const b = { id: nid('it'), type: 'quiz', title: `${sh} 확인 퀴즈`, week: x.w, qs: AI.questions(tp, 3, '보통', ['mc', 'ox', 'mc'], (+x.w || 1) - 1), time: 0, retake: 98 }; L.push(a, b); ids.push(a.id, b.id); s++; });
     try { if (S.ai) S.ai.usage = (S.ai.usage || 0) + (s ? 1 : 0); } catch (e) { } return s ? { s, ids } : 0; }
 
   /* ═════ 모든 차시에 한 번에 넣기(F4) ═════
@@ -645,7 +645,7 @@
       BX.busy = false; if (fail) BX.failMsg = `${fail}개는 올리지 못했습니다${BX.lastErr ? `(${BX.lastErr})` : ''}. 그 ${jo(U, '은')} 하나씩 다시 올려 주십시오.`; }
     else { BX.busy = true; BX.tot = TG.length; BX.at = 0; bxDraw();
       for (const s of TG) { BX.at++; bxDraw(); const tp = bxTopic(d, s); let it;
-        try { if (BX.k === 'quiz') { const r = await GEN.quiz(tp, { n: BX.n, lv: '보통' }); const Q = (r.v || []).map((q, i) => ({ ...q, q: `${i + 1}. ${String(q.q).replace(/^\d+\.\s*/, '')}` })); const per = Math.floor(100 / Math.max(1, Q.length)); Q.forEach((q, i) => { q.pts = per + (i < 100 - per * Q.length ? 1 : 0); }); it = { type: 'quiz', title: `${tp} 확인 퀴즈`, qs: Q, time: 0, retake: 98 }; }
+        try { if (BX.k === 'quiz') { const r = await GEN.quiz(tp, { n: BX.n, lv: '보통', off: (+s.w || 1) - 1 }); const Q = (r.v || []).map((q, i) => ({ ...q, q: `${i + 1}. ${String(q.q).replace(/^\d+\.\s*/, '')}` })); const per = Math.floor(100 / Math.max(1, Q.length)); Q.forEach((q, i) => { q.pts = per + (i < 100 - per * Q.length ? 1 : 0); }); it = { type: 'quiz', title: `${tp} 확인 퀴즈`, qs: Q, time: 0, retake: 98 }; }
           else { const r = await GEN.doc(tp, { cname: cl(d.name || ''), target: d.target || '' }); it = { type: 'doc', title: `${tp} 교안`, topic: tp, fmt: 'hand', doc: r.v }; } } catch (e) { continue; }
         it.id = nid('it'); it.week = s.w; L.push(it); ids.push(it.id); }
       BX.busy = false; try { if (S.ai && ids.length) S.ai.usage = (S.ai.usage || 0) + 1; } catch (e) { } }

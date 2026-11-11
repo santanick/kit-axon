@@ -23,7 +23,7 @@ const EXQ = {
   k12: ['중2-A반 이번 주 출결 요약해줘', '결석한 원생에게 보강 영상 배정하는 자동화 만들어줘', '겨울방학 특강 공지 써줘', '이번 달 매출 요약해줘'],
   adult: ['이번 달 매출 요약해줘', '엑셀 실무 마스터 커리큘럼 다시 짜줘', '수료한 수강생에게 후기 요청 보내는 자동화 만들어줘', '가입률 낮은 기수'],
   lifelong: ['30시간 미만 강좌 찾아줘', '바리스타 과정 모집 공지 써줘', '사전 수강신청 10명 미만 강좌 알리는 자동화 만들어줘', '이번 주 운영 현황 요약'],
-  voc: ['이번 주 HRD-Net 보고 자료 만들어줘', '웹개발 과정 퀴즈 5문항 만들어줘', '매일 부정훈련 의심 건을 담당자에게 알리는 자동화 만들어줘', '가입률 낮은 훈련반']
+  voc: ['이번 주 HRD-Net 보고 자료 만들어줘', '용접기능사 실기 과정 퀴즈 5문항 만들어줘', '매일 부정훈련 의심 건을 담당자에게 알리는 자동화 만들어줘', '가입률 낮은 훈련반']
 };
 const CTXQ = { assess: '검수 대기 오래된 순으로', badge: '이번 주 배지 발급 현황 요약', members: `14일 미접속 ${''}독려 메시지 보내줘`, class: '진도 30% 미만 학생에게 독려 메시지 보내줘', billing: '미납 보호자에게 청구서 다시 알려줘', site: '홈페이지를 신뢰감 있는 분위기로 다시 만들어줘', auto: '매주 금요일 주간 보고서 보내는 자동화 만들어줘', dash: '주간 보고서 만들어 줘' };
 
@@ -56,7 +56,7 @@ function aiBody(m) {
   if (m.steps) h += `<ol class="msteps">${m.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>`;
   if (m.plan) {
     const live = PLANS[m.plan] && m.state === 'pending';
-    h += `<div class="mact">${live ? `<button class="btn sm ink" data-act="plan-ok" data-v="${m.plan}">${esc(m.cta || '승인하고 실행')}</button><button class="btn sm ghost" data-act="plan-no" data-v="${m.plan}">취소</button>` : m.state === 'done' ? tag('실행 완료', 'g') : m.state === 'cancel' ? tag('취소함') : tag('만료됨 — 다시 요청해 주세요')}</div>`;
+    h += `<div class="mact">${live ? `<button class="btn sm ink" data-act="plan-ok" data-v="${m.plan}"${m.cta && m.cta !== '승인하고 실행' ? ` title="${esc(m.cta)}"` : ''}>승인하고 실행</button><button class="btn sm ghost" data-act="plan-no" data-v="${m.plan}">취소</button>` : m.state === 'done' ? tag('실행 완료', 'g') : m.state === 'cancel' ? tag('취소함') : tag('만료됨 — 다시 요청해 주세요')}</div>`;
   }
   if (m.go) h += `<div class="mact"><button class="btn sm" data-act="go" data-v="${esc(m.go)}">${esc(mlabel(m.go))} 열기 ${ic('arrow', 14)}</button></div>`;
   if (m.btn) h += `<div class="mact"><button class="btn sm ink" data-act="${esc(m.btn.act)}" data-v="${esc(m.btn.v || '')}">${ic('spark', 14)} ${esc(m.btn.label)}</button></div>`;

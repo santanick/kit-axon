@@ -14,9 +14,12 @@ const HERO = {
   lifelong: ['배움에는 끝이 없습니다', '지역과 함께하는 평생교육 강좌, 온라인과 오프라인으로 만나 보세요.', '강좌 신청하기'],
   voc: ['취업까지 이어지는 훈련', '국민내일배움카드 과정부터 사업주훈련까지, 수료 후 취업을 함께 준비합니다.', '훈련과정 보기']
 };
+/* v38 A-20: 성인 학원도 기관 · 과정 이름 · 대상이 어르신 · 생활 디지털이면 '실무' 문구 대신 생활 문구 */
+function adultSenior() { try { const t = [S.org.name, ...(S.classes || []).map(c => `${c.name} ${c.target || ''} ${c.sub || ''}`)].join(' '); return /(어르신|시니어|노인|실버|장년|스마트폰|키오스크|디지털\s*(기초|배움)|컴퓨터\s*교실|늘봄)/.test(t); } catch (e) { return false; } }
+const HERO_SENIOR = ['천천히 함께 배우는 디지털 교실', '한 단계씩 따라 하며 생활에 바로 씁니다. 모르면 언제든 다시 물어보세요.', '강좌 둘러보기'];
 const TONES = { 신뢰: { r: '6px', f: 700 }, 따뜻: { r: '20px', f: 600 }, 모던: { r: '0px', f: 800 }, 친근: { r: '16px', f: 600 } };
 function SITEGEN(prompt = '') {
-  const ty = S.org.type, h = HERO[ty]; const tone = Object.keys(TONES).find(k => prompt.includes(k)) || '신뢰';
+  const ty = S.org.type, h = ty === 'adult' && adultSenior() ? HERO_SENIOR : HERO[ty]; const tone = Object.keys(TONES).find(k => prompt.includes(k)) || '신뢰';
   const color = /파랑|블루|blue/i.test(prompt) ? '#2563EB' : /보라|퍼플/.test(prompt) ? '#5C74F6' : /주황|오렌지/.test(prompt) ? '#EA580C' : /네이비|남색/.test(prompt) ? '#1E3A8A' : '#00C53B';
   const focus = (prompt.match(/([가-힣A-Za-z0-9 ]{2,20})\s*(을|를)?\s*(강조|중심|위주)/) || [])[1];
   const S2 = (type, data) => ({ id: uid('s'), type, data });

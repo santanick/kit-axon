@@ -145,6 +145,50 @@ async function create(p) { await p.click('#crsFlow [data-cfgo=create]'); await p
       const nm = await p.evaluate(() => { const r = typeof siPlan === 'function' ? siPlan('평생교육 강좌 3개 만들어줘') : null; return JSON.stringify(r && r.steps ? r.steps.map(x => x.need || x.siNeed || x.names || x.l) : r).slice(0, 300); });
       ok(!/평생교육 1/.test(nm), `L-11 '평생교육 1 · 2 · 3' 이름을 만들지 않음 ${nm}`);
       await ctx.close(); }
+    /* ── 2차(R2): 공개 전 알림 보류 · 공개 제안 · 칩 이름 · 승인 버튼 · 지난 신청 기간 · 차시 제목 · 퀴즈마다 다른 문항 · 어르신 문구 · 쿠폰 · 대기 신청(방문자) ── */
+    { const { ctx, p } = await openOrg(br, base, ['corp'], { empty: false, errs });
+      await runFlow(p, { name: '개인정보 보호 교육', sessions: 2 }); const c = await create(p); await p.evaluate(() => { try { document.querySelector('#crsFlow [data-cfdone=close]').click(); } catch (e) { } });
+      const r1 = await p.evaluate(id => { const c = S.classes.find(x => x.id === id); c.legal = true; if (!S.members.length) S.members.push({ id: 'mz1', sid: 'mz1', name: '김점검', grade: '정회원', group: '' }); const m = S.members[0]; window.pickTargets = (t, a, go2) => go2([m.id]); ACT['cls-grant']({ dataset: { v: id } }); const ib = ((S.inbox || {})[m.id] || []).filter(x => x.title.includes(c.name)).length; const lg = legalUndone().filter(x => x.c.id === id).length; return { ib, lg, mid: m.id }; }, c.id);
+      ok(r1.ib === 0 && r1.lg === 0, `C-R1 준비 중 · 비공개 과정은 배정 알림 · 법정 독려 대상 아님 ${JSON.stringify(r1)}`);
+      await p.evaluate(id => { UI.cls = id; UI.clsT = 'curriculum'; go('class'); ACT['ai-fill']({ dataset: { v: id } }); }, c.id); await p.waitForTimeout(600);
+      const md = await p.evaluate(() => (document.querySelector('#modal') || {}).innerText || ''); ok(/이제 공개할까요/.test(md), 'C-R1 콘텐츠를 채우면 [운영 시작 · 공개]를 바로 제안');
+      await p.click('#modal [data-mact=ok]'); await p.waitForTimeout(300);
+      const r2 = await p.evaluate(([id, mid]) => { const c = S.classes.find(x => x.id === id); return { st: c.status, open: c.open, ib: ((S.inbox || {})[mid] || []).filter(x => x.title.includes(c.name)).length, lg: legalUndone().filter(x => x.c.id === id).length }; }, [c.id, r1.mid]);
+      ok(r2.st === '운영중' && r2.open !== '비공개' && r2.ib === 1 && r2.lg === 1, `C-R1 공개하는 순간 보류 알림 발송 · 독려 대상 포함 ${JSON.stringify(r2)}`);
+      const c14 = await p.evaluate(() => { const q = '업무 자동화 기초 6차시 과정 만들어줘'; return { one: CSAM.isOne(q), n: CSAM.parse(q).name }; }); ok(c14.one && c14.n === '업무 자동화 기초', `C-14 '업무 자동화 기초'를 자르지 않음 ${JSON.stringify(c14)}`);
+      await p.evaluate(() => { go('home'); chatSend('14일 미접속자에게 독려 메시지 보내줘'); }); await p.waitForTimeout(900);
+      const bt = await p.evaluate(() => [...document.querySelectorAll('[data-act=plan-ok]')].map(b => b.textContent.trim())); ok(bt.length && bt.every(x => x === '승인하고 실행'), `P-20 승인 버튼 문구 통일 ${bt}`);
+      await ctx.close(); }
+    { const { ctx, p } = await openOrg(br, base, ['univ', 'lite'], { empty: true, errs });
+      await runFlow(p, { name: '취업 특강', sessions: 4 }); await p.evaluate(() => { const d = CF.draft; d.rdays = 'custom'; d.rFrom = '2026-11-01'; d.rTo = '2026-11-10'; });
+      await p.click('#crsFlow [data-cfgo=create]'); await p.waitForTimeout(400); const md = await p.evaluate(() => (document.querySelector('#modal') || {}).innerText || '');
+      ok(/신청 기간이 이미 끝났습니다/.test(md), 'U-15 지난 신청 마감일이면 개설 전에 묻는다'); await p.click('#modal [data-mact=fix]'); await p.waitForTimeout(200);
+      const d = await draft(p); ok(d.rTo >= '2026-11-11', `U-15 [오늘부터 2주로 고치기] ${d.rFrom}~${d.rTo}`); await p.evaluate(() => CF.close(false)); await ctx.close(); }
+    { const { ctx, p } = await openOrg(br, base, ['adult'], { empty: true, errs });
+      const T = await p.evaluate(() => CF.planFrom({ name: 'ITQ 엑셀 자격증 8주 완성', sessions: 12 }).map(w => w.title)); ok(new Set(T).size === 12 && !T.some(t => /—|\s\d+$|ITQ/.test(t)) && T.every(t => t.length <= 12), `A-12 차시 제목이 짧고 모두 다름 ${T.join(' / ')}`);
+      const q = await p.evaluate(() => { const c = makeCourse({ topic: '엑셀 실무 기초', weeks: 4 }); c.curriculum = []; ACT['ai-fill']({ dataset: { v: c.id } }); try { closeModal(); } catch (e) { } return c.curriculum.filter(i => i.type === 'quiz').map(i => (i.qs || []).map(x => x.q.replace(/^\d+\.\s*/, '')).join('|')); });
+      ok(q.length >= 3 && new Set(q.map(x => x.split('|')[0])).size === q.length, `8 퀴즈마다 첫 문항이 다름 ${q.map(x => x.split('|')[0].slice(0, 18)).join(' / ')}`);
+      const h = await p.evaluate(() => { S.org.name = '늘봄 컴퓨터 교실'; return SITEGEN('').sections[0]; }); ok(!/실무에 바로 쓰는/.test(JSON.stringify(h)), 'A-20 어르신 교실에는 실무 문구 대신 생활 문구');
+      await ctx.close(); }
+    { const { ctx, p } = await openOrg(br, base, ['adult'], { empty: false, errs });
+      const pr = await p.evaluate(() => { S.settings.pg = 'toss'; S.settings.toss = Object.assign(S.settings.toss || {}, { status: '승인', stage: 99 }); const c = S.classes.find(x => (x.curriculum || []).length && x.kind !== 'sub' && x.kind !== 'episode') || makeCourse({ topic: '엑셀 실무', weeks: 4 }); c.status = '운영중'; c.open = '전체'; c.price = 100000; c.discount = { on: false, type: 'rate', v: 0, until: '' }; if (c.recruit) c.recruit.early = { on: false, until: '', rate: 0 };
+        S.coupons = [{ id: 'k1', code: 'WELCOME10', type: 'rate', v: 10, until: '2099-12-31', max: 0, cls: [], on: true }]; go('sales'); const card = !!document.querySelector('.cpn-card');
+        if (!S.members.some(m => m.id === 'mt8')) S.members.push({ id: 'mt8', sid: 'T9002', name: '다른 학습자', grade: '정회원', group: '' }); const L = S.members.find(m => m.id === 'mt8'); const n0 = S.pays.length; LPX.pay({ who: L.sid || L.id, at: new Date().toISOString(), data: { payId: 'pay-t1', itemType: 'class', ref: c.id, amount: 1, cpn: 'welcome10', status: '결제 완료' } }); const py = S.pays.find(x => x.id === 'pay-t1');
+        const code = { sid: 'T9001', code: 'ABC234', at: today(), dept: '' }; S.codes = (S.codes || []).concat([code]); if (!S.members.some(m => m.sid === 'T9001')) S.members.push({ id: 'mt9', sid: 'T9001', name: '쿠폰 학습자', nick: '쿠폰', grade: '정회원', group: '', joined: today() }); if (S.members.length < 3) S.members.push({ id: 'mt8', sid: 'T9002', name: '다른 학습자', grade: '정회원', group: '' }); const cap = S.classes.find(x => x.id !== c.id && (x.curriculum || []).length && x.kind !== 'sub' && x.kind !== 'episode') || makeCourse({ topic: '파워포인트 실무', weeks: 4 }); if (cap) { cap.status = '운영중'; cap.open = '전체'; if (!cap.learners.length) cap.learners.push(S.members.find(m => m.sid !== code.sid).id); cap.recruit = Object.assign(cap.recruit || {}, { on: false, cap: Math.max(1, cap.learners.length) }); }
+        save(); (typeof smPublish === 'function' ? smPublish : ACT['ls-pub'])(); return { card, amt: py && py.amount, off: py && py.cpnOff, cid: c.id, code, tid: DREG.cur(), capId: cap && cap.id, capMid: cap && cap.learners.includes((S.members.find(m => m.sid === code.sid) || {}).id) }; });
+      await p.waitForTimeout(300); { const pm = await p.$('#modal [data-mact=ok]'); if (pm) { await pm.click(); await p.waitForTimeout(200); } }
+      ok(pr.card && pr.amt === 90000 && pr.off === 10000, `A-17 운영자 쿠폰 카드 · 결제 기록 때 쿠폰을 다시 계산 ${JSON.stringify({ card: pr.card, amt: pr.amt, off: pr.off })}`);
+      const lp = await ctx.newPage(); lp.on('pageerror', e => errs.push('ln: ' + e.message)); await lp.goto(base + `learner.html?t=${pr.tid}#class/${pr.capId}`); await lp.waitForTimeout(900);
+      const v1 = await lp.evaluate(() => document.querySelector('main, #lm, body').innerText); ok(/정원 마감/.test(v1) && /로그인하고 대기 신청하기/.test(v1), `L-1 · L-2 방문자: 정원 마감 + 로그인하고 대기 신청 ${(v1.replace(/\s+/g, ' ').match(/수강 신청:.{0,160}/) || [''])[0]}`);
+      await lp.evaluate(id => { location.hash = '#class/' + id; }, pr.cid); await lp.waitForTimeout(500); const dl = await lp.evaluate(() => { const h = [...document.querySelectorAll('h2')].find(x => /배울 수 있는 내용/.test(x.textContent)); const n = h && h.nextElementSibling; const box = h ? h.parentElement.innerText : ''; return { ul: !!document.querySelector('.shp-dl li'), raw: /(^|\n)\s*- \S/.test(box) || /\[교육 목표\]/.test(box) }; });
+      ok(dl.ul && !dl.raw, `C-16 과정 소개의 '- ' · '[교육 목표]'를 목록 · 제목으로 ${JSON.stringify(dl)}`);
+      await lp.evaluate(async c => { await LR.api.login(c.sid, c.code); lrender(); }, pr.code); await lp.evaluate(id => { location.hash = '#pay/class/' + id; }, pr.cid); await lp.waitForTimeout(600);
+      await lp.fill('#shpPay [name=cpn]', 'welcome10'); await lp.click('#shpPay [data-lcpn]'); await lp.waitForTimeout(300);
+      const tot = await lp.evaluate(() => [document.querySelector('#p26cpm').textContent, document.querySelector('.p26amt dd.tot').textContent]); ok(/적용/.test(tot[0]) && /90,000/.test(tot[1]), `A-17 학습자 결제 화면 쿠폰 적용 ${tot}`);
+      await lp.fill('#shpPay [name=cpn]', 'nope'); await lp.click('#shpPay [data-lcpn]'); await lp.waitForTimeout(300); const bad = await lp.evaluate(() => [document.querySelector('#p26cpm').textContent, document.querySelector('.p26amt dd.tot').textContent]); ok(/없는 쿠폰/.test(bad[0]) && /100,000/.test(bad[1]), `A-17 틀린 코드는 원래 금액 ${bad}`);
+      if (!pr.capMid) { await lp.evaluate(id => { location.hash = '#class/' + id; }, pr.capId); await lp.waitForTimeout(500); const wb = await lp.$('[data-lwait]'); ok(!!wb, 'L-2 로그인 학습자: [대기 신청하기]'); if (wb) { await wb.click(); await lp.waitForTimeout(300); } }
+      await p.reload(); await p.waitForFunction(() => window.S && S.org); await p.waitForTimeout(900); const ws = await p.evaluate(id => ((S.classes.find(c => c.id === id) || {}).waits || []).length, pr.capId); ok(pr.capMid || ws === 1, `L-2 운영자 대기자 명단에 들어옴(${ws})`);
+      await ctx.close(); }
   } catch (e) { console.error(e); P.push('예외: ' + e.message); }
   ok(!errs.length, `pageerror 0 ${errs.slice(0, 3)}`);
   await br.close(); srv.close();
