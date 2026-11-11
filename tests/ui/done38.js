@@ -112,6 +112,12 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; } else { fail++;
   ok(V14.items === 3 && V14.off === 5 && V14.vmin === 10, 'V14 강의 수 3 · 오프라인 5 · 영상 10분 ' + JSON.stringify(V14));
   const V15 = await l2.evaluate(() => { LR.lp.cls._cpl = { ack: { u2: new Date().toISOString() } }; LR.lp.cls.u2 = { items: {} }; const x = myStats().courses.find(y => y.c.id === 'u2'); return { started: x.started, p: x.p }; });
   ok(V15.started === true, 'V15 입과(유의사항 확인)하면 진도 0%여도 수강 중 ' + JSON.stringify(V15));
+  /* 수료증 본문 교육시간: 없으면 구절 통째로 빼고, 있으면 'n시간'(운영자 a2CertHTML · 학습자 a2lCertHTML · certkit 공통) */
+  const B0 = '위 사람은 「{과정명}」 과정({교육기간}, {교육시간}시간)을 이수했습니다.';
+  const H1 = await a.evaluate(B0 => { const d = { name: '김', cls: '과정', period: '2026-01-01 ~ 2026-02-01', at: '2026-02-02', no: '1' }; const t = h => (document.createElement('div').innerHTML = a2CertHTML({ body: B0 }, { ...d, hours: h }), (() => { const x = document.createElement('div'); x.innerHTML = a2CertHTML({ body: B0 }, { ...d, hours: h }); return x.innerText; })()); return [t(''), t(8)]; }, B0);
+  const H2 = await l2.evaluate(B0 => { const d = { name: '김', cls: '과정', period: '2026-01-01 ~ 2026-02-01', at: '2026-02-02', no: '1' }; const t = (f, h) => { const x = document.createElement('div'); x.innerHTML = f({ body: B0 }, { ...d, hours: h }); return x.innerText; }; const D5 = ['a', 'b', 'c', 'd', 'e', 'img'].map(k => t((T, d2) => a2lCertHTML({ ...T, design: k, ...(k === 'img' ? { bg: 'data:image/png;base64,iVBORw0KGgo=' } : {}) }, d2), '')); return [t(a2lCertHTML, ''), t(a2lCertHTML, 12), D5.every(x => /과정\(2026-01-01 ~ 2026-02-01\)을/.test(x) && !/,\s*시간|\{교육시간\}/.test(x)) ? '과정(2026-01-01 ~ 2026-02-01)을' : JSON.stringify(D5)]; }, B0);
+  const noH = x => /과정\(2026-01-01 ~ 2026-02-01\)을/.test(x) && !/,\s*시간|\(\s*시간|\{교육시간\}/.test(x);
+  ok(noH(H1[0]) && /2026-02-01, 8시간\)을/.test(H1[1]) && noH(H2[0]) && /2026-02-01, 12시간\)을/.test(H2[1]) && noH(H2[2]), '수료증 본문 교육시간 빈 칸 없음 · n시간 ' + JSON.stringify([H1, H2]).replace(/\n/g, ' ').slice(0, 400));
   ok(!errs.length, 'pageerror 0 ' + errs.slice(0, 3).join(' | '));
   await browser.close(); srv.close(); console.log(`pass ${pass} fail ${fail}`); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
