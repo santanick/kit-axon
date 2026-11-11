@@ -99,8 +99,16 @@
           run: X => { const L = (V.names && V.names.length ? V.names : names || []).slice(0, 12); L.forEach(nm => { const c = makeCourse({ topic: nm, weeks: wks }); if (price) c.price = price; X.made.push(c.id); }); if (X.made[0]) UI.cls = X.made[0]; logAudit(`AI SAM ${K_()} ${L.length}개 생성`); return { n: L.length, msg: `${K_()} ${L.length}개를 만들었습니다(준비중${price ? ` · ${won(price)}` : ''})` }; } }; } },
     { id: 'publish', m: s => /(홈페이지|사이트|포털|학습자\s*화면)\S*\s*(에|에도)?\s*(올리|올려|게시|공개|노출|띄우)|(강좌|과정|수업)?\s*(공개|게시|오픈|판매\s*시작|모집\s*시작)(해|하|처리)?/.test(s) && !/(공지|사이트\s*게시해|홈페이지\s*(만들|게시해))/.test(s), own: () => false,
       make: () => { const tg = X => X && X.made.length ? X.made.map(C).filter(Boolean) : (S.classes || []).filter(c => c.status === '준비중'); return { l: `${K_()} 홈페이지 공개(운영중 · 전체 공개)`, k: 'change', est: `${tg(null).length || '앞 단계'}개`, go: 'site', run: X => { const L = tg(X); L.forEach(c => { c.status = '운영중'; c.open = '전체'; }); logAudit(`AI SAM ${K_()} 공개 ${L.length}개`); return { n: L.length, msg: `${K_()} ${L.length}개를 학습자 홈페이지에 공개했습니다` }; } }; } },
-    { id: 'invite', m: s => /초대\s*(링크|코드|주소|url)/i.test(s), own: () => false,
-      make: () => ({ l: `${L_()} 초대 링크 만들기`, k: 'make', est: '링크 1개', go: 'enroll', run: X => { if (typeof mbInvite !== 'function') return { n: 0, msg: '초대 기능을 찾지 못했습니다' }; const iv = mbInvite('student', X.made[0] || '', ''); const url = mbInvURL(iv); X.copy = url; save(); return { n: 1, msg: `초대 링크 1개: ${url}` }; } }) }
+    { id: 'invite', m: s => /초대\s*(링크|코드|주소|url)/i.test(s), own: () => true, /* v38 P R2-1: '교육생 초대 링크 만들어줘' 한 줄도 계획 카드 */
+      make: () => ({ l: `${L_()} 초대 링크 만들기`, k: 'make', est: '링크 1개', go: 'enroll', run: X => { if (typeof mbInvite !== 'function') return { n: 0, msg: '초대 기능을 찾지 못했습니다' }; const iv = mbInvite('student', X.made[0] || '', ''); const url = mbInvURL(iv); X.copy = url; save(); return { n: 1, msg: `초대 링크 1개: ${url}` }; } }) },
+    /* v38 P R2-1: 한 줄 요청 — 일정 추가 · 엑셀 내려받기 */
+    { id: 'event', m: s => /(일정|스케줄)/.test(s) && /(추가|넣|등록|만들|잡아)/.test(s) && !/(구글|동기화|자동화)/.test(s), own: () => true,
+      make: s => { const td = today(); const y = +td.slice(0, 4); const pad = n => String(n).padStart(2, '0'); let d = ''; const m1 = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/); if (m1) { d = `${y}-${pad(+m1[1])}-${pad(+m1[2])}`; if (d < td) d = `${y + 1}-${pad(+m1[1])}-${pad(+m1[2])}`; } else if (/모레/.test(s)) d = addDays(td, 2); else if (/내일/.test(s)) d = addDays(td, 1); else if (/다음\s*주/.test(s)) d = addDays(td, 7); else if (/오늘/.test(s)) d = td; const guess = !d; if (!d) d = addDays(td, 7);
+        const tm = s.match(/(오전|오후)?\s*(\d{1,2})\s*시(\s*반)?/); const time = tm ? `${pad((+tm[2] % 12) + (tm[1] === '오후' || (!tm[1] && +tm[2] < 8) ? 12 : 0))}:${tm[3] ? '30' : '00'}` : '';
+        const q = s.match(/[「"“'](.+?)[」"”']/); const title = (q ? q[1] : s.replace(/(\d{1,2})\s*월\s*(\d{1,2})\s*일|오늘|내일|모레|다음\s*주|(오전|오후)?\s*\d{1,2}\s*시(\s*반)?|(캘린더|달력)\S*|(일정|스케줄)\S*|(추가|넣|등록|만들|잡아)\S*|(에|에다|으로|로)(?=\s|$)/g, ' ').replace(/\s+/g, ' ').trim()) || '운영 일정';
+        return { l: `캘린더 일정 추가 — 「${title.slice(0, 30)}」 ${d}${time ? ' ' + time : ''}`, k: 'make', est: guess ? '일정 1개 · 날짜는 일주일 뒤로(캘린더에서 바꿈)' : '일정 1개', go: 'calendar', run: () => { S.calx = S.calx && typeof S.calx === 'object' ? S.calx : {}; S.calx.ev = Array.isArray(S.calx.ev) ? S.calx.ev : []; S.calx.ev.push({ id: uid('cx'), title: title.slice(0, 60), date: d, time, end: '', kind: '운영', cls: '', memo: '', pub: false }); logAudit(`일정 추가 — ${title}`); return { n: 1, msg: `일정 「${title.slice(0, 30)}」(${d})을 캘린더에 넣었습니다. 학습자 캘린더에 보이게 하려면 일정을 눌러 '캘린더에도 보이기'를 켜십시오.` }; } }; } },
+    { id: 'export', m: s => /(엑셀|csv|xlsx|파일)/i.test(s) && /(내려|다운|받|뽑|추출|저장)/.test(s) && !/(올려|등록|가져와)/.test(s), own: () => true,
+      make: s => { const mem = /(명단|회원|교육생|수강생|학생|훈련생|임직원|원생)/.test(s) && !/(진도|현황|이수|수료)/.test(s); return { l: mem ? `${L_()} 명단 엑셀 내려받기` : '운영 현황 엑셀 내려받기(과정별 · 학습자별)', k: 'make', est: '파일 1개', go: mem ? 'members' : 'class', run: () => { const a = mem ? ACT['mem-xls'] : ACT['ops-xls']; if (!a) return { n: 0, msg: '내려받기 기능을 찾지 못했습니다' }; setTimeout(() => { try { a({ dataset: {} }); } catch (e) { console.error(e); } }, 200); return { n: 1, msg: mem ? '명단 내려받기 창을 열었습니다(연락처는 가린 목록이 기본)' : '운영 현황 엑셀을 내려받았습니다' }; } }; } }
   ];
   const stepOf = s => STEPS.find(d => { try { return d.m(s); } catch (e) { return false; } });
 
@@ -143,6 +151,8 @@
     const rows = P.steps.map(s => ({ l: s.l, k: s.k, est: s.est }));
     if (P.need.length) { const key = uid('si'); SI_PEND[key] = { q: P.q, V: V || {}, need: P.need };
       return { title: '빠진 값만 알려 주세요', text: `${P.steps.length}단계로 처리하겠습니다. 아래 ${P.need.length}가지를 한 번에 입력하면 계획을 완성합니다.`, si: rows, siNeed: P.need.map(n => n.label), btn: { act: 'si-fill', v: key, label: '빠진 값 입력' }, via: 'AI SAM 계획' }; }
+    /* v38 P R2-2: 보낼 대상이 0명(0건)인 발송 · 독려만 있으면 [승인하고 실행] 대신 '지금은 대상이 없습니다' 안내 */
+    { const Z = P.steps.filter(x => x.k === 'send' && /^0\s*(명|건)$/.test(String(x.est || ''))); if (Z.length && Z.length === P.steps.length) return { title: P.steps.map(x => x.l).join(' · '), text: `지금은 대상이 없습니다(0명). 보낼 사람이 없어 실행 버튼을 보여 드리지 않습니다.\n대상이 생기면 다시 말씀해 주세요. 조건에 맞는 사람이 생길 때마다 보내려면 '매주 월요일 ${P.steps[0].l} 자동화 만들어줘'처럼 말씀하시면 됩니다.`, si: rows, via: 'AI SAM 계획' }; }
     const risky = P.steps.filter(s => KIND[s.k]); const pid = uid('p'); const go2 = (P.steps[P.steps.length - 1] || {}).go || '';
     PLANS[pid] = { run: () => siExec(P), go: go2, si: true, risky: risky.map(s => `${KIND[s.k][0]} · ${s.l} · ${s.est}`) };
     const multi = P.steps.length > 1;
