@@ -113,7 +113,7 @@
   function preMsg() { const p = SAM.pre || {}; const d = draft() || {};
     /* 추천 칩으로 연 경우: 사용자가 쓴 문장이 아니므로 이름은 비워 두고 예시 카드를 권한다(평가 2회차 5번) */
     if (p._chip) return `${T('cls')} 이름은 비워 두었습니다. 아래 예시 카드를 누르면 칸이 채워집니다. 직접 적어도 됩니다.`;
-    const got = [p.name ? `이름 「${d.name || p.name}」` : '', p.target ? `대상 「${d.target || p.target}」` : '', p.sessions ? `${p.sessions}${uName() === '회차' ? '회' : uName() === '주차' ? '주' : '차시'}` : '', p.price ? '수강료' : ''].filter(Boolean);
+    const got = [p.name ? `이름 「${d.name || p.name}」` : '', p.target ? `대상 「${d.target || p.target}」` : '', p.sessions ? `${p.sessions}${uName() === '회차' ? '회' : uName() === '주차' ? '주' : '차시'}` : '', p.price ? '수강료' : '', ...extraGot(p)].filter(Boolean);
     if (!got.length) return ''; const last = got[got.length - 1].replace(/」$/, ''); const pt = jo(last, '을').slice(last.length) || '을';
     return `요청 문장에서 ${got.join(' · ')}${pt} 읽어 미리 채워 두었습니다. 다르면 바로 고치면 됩니다.`; }
   function done(id, how) { const ti = title(id); const m = how === 'pre' ? preMsg() : how === 'auto' ? `「${ti}」도 AI SAM이 미리 채워 두었습니다. 확인만 해 주세요.` : `${jo(`「${ti}」`, '을')} 채웠습니다. 확인만 해 주세요. 고칠 곳은 바로 고치면 됩니다.`; if (!m) return;
@@ -174,6 +174,8 @@
   const CW = '(과정|교과목|강좌|강의|수업|코스|클래스|교육과정|훈련과정|프로그램)';
   const MK = new RegExp(`${CW}\\s*(을|를|도|하나|한\\s*개|1\\s*개)?\\s*(새로\\s*)?(만들|설계|개설|생성|짜\\s*줘|짜줘|짜\\s*주|구성)`);
   const MK15 = /(\d+\s*(주|차시|회차))\s*(과정|교과목|강좌)?\s*(설계|편성)/;
+  /* v38 U-2 · V-11: '프로그램 「AI 글쓰기 클리닉」 4주로 만들어줘' · '훈련과정 20차시로 만들어줘'처럼 과정 낱말과 '만들'이 떨어져 있어도 과정 하나 만들기로 본다 */
+  const MKF = new RegExp(`${CW}[^.!?\\n]{0,40}?(만들어|만들|개설해|개설|열어)\\s*(줘|주세요|주십시오|줄래|주실|달라)`);
   const GRADE = /(초등학생|초등\s*[1-6]\s*학년|초[1-6]|중학생|중학교\s*[1-3]\s*학년|중[1-3]|고등학생|고등학교\s*[1-3]\s*학년|고[1-3]|대학생|신입생|재학생)/;
   const AUDW = /(신입\s*사원|신규\s*입사자|임직원|직장인|재직자|구직자|시니어|어르신|성인|훈련생|지역\s*주민|주민|공무원|학부모|교원|교사|강사|관리자|팀장)/;
   function parse(q) { const s = String(q || '').replace(/\s+/g, ' ').trim(); const p = { q: s };
@@ -181,22 +183,31 @@
     let fee = null; try { fee = typeof aiFee === 'function' ? aiFee(s) : null; } catch (e) { } if (fee && fee.price != null && !fee.amb) p.price = fee.price;
     const am = s.match(/((?:(?:신규|신입|예비|일반|전체|초보|현직|소속)\s)?[가-힣A-Za-z0-9]+)\s*대상(?:으로|의|인)?/); const gm = s.match(GRADE); const wm = s.match(AUDW);
     p.target = (am && am[1]) || (gm && gm[1]) || (wm && wm[1]) || '';
-    const qm = s.match(/[「"“'](.+?)[」"”']/); const ci = s.search(MK); let pre = qm ? qm[1] : ci > 0 ? s.slice(0, ci) : s.replace(MK15, ' ');
+    const qm = s.match(/[「"“'](.+?)[」"”']/); const ci0 = s.search(MK); const ci = ci0 >= 0 ? ci0 : s.search(MKF); let pre = qm ? qm[1] : ci > 0 ? s.slice(0, ci) : s.replace(MK15, ' ');
     pre = (typeof feeStrip === 'function' ? feeStrip(pre) : pre).replace(/((?:(?:신규|신입|예비|일반|전체|초보|현직|소속)\s)?[가-힣A-Za-z0-9]+)\s*대상(?:으로|의|인)?/, ' ').replace(typeof SESS_RE !== 'undefined' ? new RegExp(SESS_RE.source, 'g') : /x^/, ' ')
       .replace(/\d+\s*(시간|분|개|명|문항)\S*/g, ' ').replace(/(^|\s)(새로운|새로|새|신규|우리|이번|다음|기존|AI\s*로|AI로)(?=\s|$)/g, ' ').replace(/(퀴즈|과제|시험|강의\s*자료|교안|영상)\S*\s*(포함|까지|도)?/g, ' ').replace(/[,·+]/g, ' ').replace(/\s+/g, ' ').trim()
       .replace(/(?<=[가-힣A-Za-z0-9)])\s*(에다가?|에서|에|을|를|으로|로)$/, '').replace(/\s*(과정|교과목|강좌)$/, '').trim();
+    pre = pre.replace(/(?:\d{4}\s*[-.년]\s*)?\d{1,2}\s*(?:월|[-./])\s*\d{1,2}\s*일?\s*(?:까지|마감)\S*/g, ' ').replace(/(신청|모집)\s*(은|는)?\s*$/, '').replace(/정원\s*(은|는|이)?\s*$/, '').replace(/\s+/g, ' ').trim();
     if (pre.length > 40) pre = pre.slice(0, 40);
     const topic = gm && pre.startsWith(gm[1]) ? pre.slice(gm[1].length).trim() : pre;
     if (pre.length >= 2) { p.name = pre; p.topic = topic.length >= 2 ? topic : pre; }
     if (/AI\s*(로\s*)?(강의\s*)?영상|영상\S*\s*(AI|생성)/i.test(s)) p.vsrc = 'ai'; if (/강의\s*자료|교안/.test(s)) p.docs = true;
     if (/(퀴즈|시험|과제)\s*(없이|빼고)/.test(s)) { p.quiz = false; p.exam = false; p.assign = false; }
     const lv = s.match(/(입문|기초|초급|중급|고급|심화)/); if (lv) p.level = { 입문: '쉬움', 기초: '쉬움', 초급: '쉬움', 중급: '보통', 고급: '어려움', 심화: '어려움' }[lv[1]];
+    /* v38: 신청 마감 · 정원 · 이름이 분류 낱말뿐인 경우 */
+    { const td0 = typeof today === 'function' ? today() : new Date().toISOString().slice(0, 10); const y0 = +td0.slice(0, 4); const pad = n => String(n).padStart(2, '0');
+      const dm = s.match(/(?:(\d{4})\s*[-.년]\s*)?(\d{1,2})\s*(?:월|[-./])\s*(\d{1,2})\s*일?\s*(?:까지|마감)/); if (dm) { let y = +(dm[1] || y0); let iso = `${y}-${pad(+dm[2])}-${pad(+dm[3])}`; if (!dm[1] && iso < td0) iso = `${y + 1}-${pad(+dm[2])}-${pad(+dm[3])}`; if (+dm[2] >= 1 && +dm[2] <= 12 && +dm[3] >= 1 && +dm[3] <= 31) { p.rdays = 'custom'; p.rFrom = td0; p.rTo = iso; } } }
+    { const cm = s.match(/정원\s*(?:은|는|이)?\s*(\d{1,4})\s*명|(\d{1,4})\s*명\s*(?:정원|모집|까지\s*받|선착순)/); if (cm) p.cap = Math.min(9999, +(cm[1] || cm[2])); }
+    if (p.name && /^(비교과|교양|전공|특강|온라인|오프라인|무료|유료|새|신규|정규|단기|직무|법정|필수)(\s*(프로그램|과정|교육|강좌|교과목|훈련))?$/.test(p.name)) { p.kindWord = p.name; delete p.name; delete p.topic; }
+    if (U() && /(비교과|특강|연수|클리닉|워크숍|워크샵|캠프|세미나)/.test(s)) { p.credit = 0; p.per = 1; if (!p.sessions) p.sessions = 4; }
     if (p.name) { try { p.goal = AI.goal(p.name, p.target); } catch (e) { } }
     return p; }
+  const md = v => String(v || '').replace(/^\d{4}-(\d{2})-(\d{2})$/, (m, a, b) => `${+a}월 ${+b}일`);
+  const extraGot = (p) => [p.rTo ? `신청 마감 ${md(p.rTo)}` : '', p.cap ? `정원 ${p.cap}명` : ''].filter(Boolean);
   SAM.parse = parse;
   /* 과정 하나만 만드는 말인가(여러 단계 의도 · 기존 과정 편집은 아님) */
   function isOne(q) { const s = String(q || '').replace(/\s+/g, ' ').trim(); if (!s || s.length > 200) return false;
-    if (!(MK.test(s) || MK15.test(s))) return false;
+    if (!(MK.test(s) || MK15.test(s) || MKF.test(s))) return false;
     const nm = s.match(/(\d+)\s*개/); if (nm && +nm[1] > 1) return false;
     if (/(홈페이지|사이트|포털|공지|초대|명단|엑셀\s*(로|파일)|csv|진단|배지|저니|로드맵|메시지|문자|보내|발송|청구|수료증|공개|게시|올려|루브릭|채점|교재|전자책|디지털북|문항\s*은행|설문|라이브|레시피|복사|삭제|지워|수정|바꿔|화면\s*열)/i.test(s) || /(학과|부서|그룹|반)\s*(을|를)?\s*(\d+\s*개\s*)?(만들|추가)/.test(s)) return false;
     try { if (typeof siPlan === 'function') { const P = siPlan(s); if (P.steps.some(x => x.did !== 'course')) return false; } } catch (e) { }
@@ -217,7 +228,7 @@
   ACT['csam-open'] = el => openFlow(el.dataset.v || '', 'sam');
   const card = (q, chip) => { const p = parse(q); const n = p.sessions || (U() ? 15 : 6); const unit = U() ? '주' : '차시';
     if (chip) return { title: `${T('cls')} 만들기`, text: `${T('cls')} 만들기 화면을 열었습니다. 이름은 비워 두었습니다. 화면의 예시 카드를 누르거나 직접 적고 [다음]을 누르세요. 막히면 [AI SAM에게 맡기기]를 누르면 됩니다.`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' };
-    const got = [p.name ? `이름 「${p.name}」` : '', p.target ? `대상 ${p.target}` : '', `${n}${unit}`, p.price ? `수강료 ${won(p.price)}` : ''].filter(Boolean).join(' · ');
+    const got = [p.name ? `이름 「${p.name}」` : '', p.target ? `대상 ${p.target}` : '', `${n}${unit}`, p.price ? `수강료 ${won(p.price)}` : '', ...extraGot(p)].filter(Boolean).join(' · ');
     return { title: `${T('cls')} 만들기`, text: `${T('cls')} 만들기 화면을 열고 말씀하신 내용(${got})을 미리 채워 두었습니다. 화면에서 확인만 하고 [다음]을 누르세요. 막히면 [AI SAM에게 맡기기]를 누르면 됩니다.${p.name ? '' : `\n이름은 비어 있습니다. 예: 「${sugg()[0]}」`}`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' }; };
   /* 흐름이 열려 있을 때 대화창에서 '이 단계 채워줘' · '어려워요' */
   function inFlow(q) { if (!isOpen()) return null; const s = String(q || ''); const id = cur(); if (!id) return null; const ti = title(id);
@@ -225,9 +236,31 @@
     if (/(어려|모르겠|막혔|막혀|헷갈|뭘\s*해야|어떻게\s*해|도와)/.test(s)) { const P = problems(id);
       return { a: { text: `지금은 「${ti}」 단계입니다.${P.length ? `\n남은 일: ${P.slice(0, 3).map(x => typeof x === 'string' ? x : (x && (x.msg || x.text)) || '').filter(Boolean).join(' · ')}` : '\n지금 단계는 채워져 있습니다. [다음]을 누르면 됩니다.'}\n버튼 하나로 제가 대신 채울 수 있습니다.`, btn: { act: 'csam-do', v: id, label: '이 단계 AI SAM에게 맡기기' }, via: 'AI SAM' } }; }
     return null; }
+  /* v38 P-5 · P-6: 만든 과정에 '빈 차시 채워줘' · '영상 2개랑 확인 퀴즈 하나 넣어줘' — 과정 이름(또는 지금 보는 과정)을 찾아 바로 채운다 */
+  const KN = { 하나: 1, 한: 1, 둘: 2, 두: 2, 셋: 3, 세: 3, 넷: 4, 네: 4, 다섯: 5 };
+  const cnt = (s, re) => { const m = s.match(new RegExp(`(${re})\\s*(\\d{1,2}|하나|한|둘|두|셋|세|넷|네|다섯)?\\s*(개|편|문항|세트)?`)); if (!m) return 0; return m[2] ? (+m[2] || KN[m[2]] || 1) : 1; };
+  function findCourse(s) { const L = (S.classes || []).filter(c => c && c.name); const nm = x => String(x || '').replace(/\(.*?\)|\[.*?\]/g, '').replace(/\s+/g, '');
+    const s1 = s.replace(/\s+/g, ''); let best = null; L.forEach(c => { const k = nm(c.name); if (k.length >= 2 && s1.includes(k) && (!best || k.length > nm(best.name).length)) best = c; }); if (best) return best;
+    if (typeof CUR === 'object' && CUR.tab === 'class' && UI.cls) { const c = L.find(x => x.id === UI.cls); if (c) return c; }
+    if (W.CF && CF.last && L.includes(CF.last)) return CF.last; return null; }
+  function fillIntent(s) { if (!/(채워|넣어|추가해|만들어\s*넣)/.test(s)) return null; const empty = /빈\s*(차시|주차|주|회차|칸|항목)|콘텐츠\s*(를|을)?\s*(채워|넣어)|내용\s*(을)?\s*채워/.test(s);
+    const nv = /영상/.test(s) ? cnt(s, '영상') : 0, nq = /퀴즈/.test(s) ? cnt(s, '(?:확인\\s*)?퀴즈') : 0, nd = /(교안|강의\s*자료)/.test(s) ? cnt(s, '교안|강의\\s*자료') : 0;
+    if (!empty && !(nv || nq || nd)) return null; const c = findCourse(s); if (!c) return null; if (/(진단|설문|홈페이지|사이트|공지|메시지)/.test(s)) return null;
+    const u = c.kind === 'episode' ? '회차' : U() ? '주차' : '차시';
+    if (empty) return { a: { title: `${T('cls')} 채우기`, text: `「${c.name}」의 빈 ${u}에 영상 · 교안 · 확인 퀴즈 초안을 넣었습니다. ${T('cls')} 상세에서 확인하고 고쳐 주세요.`, via: 'AI SAM' }, run: () => { UI.cls = c.id; UI.clsT = 'curriculum'; go('class'); setTimeout(() => { if (ACT['ai-fill']) ACT['ai-fill']({ dataset: { v: c.id } }); }, 60); } };
+    const nmQ = String(c.name).replace(/\(.*?\)|\[.*?\]/g, '').trim(); const has = new Set((c.curriculum || []).filter(x => x && x.type !== 'offline').map(x => +x.week || 0));
+    const wk = c.weekly && (c.weekPlan || []).length ? ((c.weekPlan || []).find(w => !has.has(+w.w)) || c.weekPlan[c.weekPlan.length - 1]).w : 1; const wt = ((c.weekPlan || []).find(w => +w.w === +wk) || {}).title || '';
+    const tp = `${nmQ} ${wt}`.trim(); const add = [];
+    for (let i = 0; i < Math.min(nv, 5); i++) add.push({ id: uid('it'), type: 'video', title: `${wt || nmQ} 영상 ${i + 1}`.trim(), week: wk, src: 'youtube', q: `${tp} 강의`, url: '' });
+    for (let i = 0; i < Math.min(nd, 5); i++) add.push({ id: uid('it'), type: 'doc', title: `${wk}${u === '주차' ? '주' : u} 교안${nd > 1 ? ' ' + (i + 1) : ''}`, week: wk, topic: tp, doc: AI.material(tp, { name: c.name }) });
+    for (let i = 0; i < Math.min(nq, 5); i++) add.push({ id: uid('it'), type: 'quiz', title: `${wk}${u === '주차' ? '주' : u} 확인 퀴즈${nq > 1 ? ' ' + (i + 1) : ''}`, week: wk, qs: AI.questions(nmQ, 5), time: 0, retake: 98, autoGen: 1 });
+    const what = [nv ? `영상 ${nv}개` : '', nd ? `교안 ${nd}개` : '', nq ? `확인 퀴즈 ${nq}개` : ''].filter(Boolean).join(' · ');
+    return { a: { title: `${T('cls')}에 넣기`, text: `「${c.name}」 ${wk}${u === '주차' ? '주차' : u}에 ${what}를 넣었습니다.${nv ? ' 영상은 검색어만 준비했습니다. 항목을 눌러 YouTube 주소를 붙이거나 파일을 올리세요.' : ''}`, via: 'AI SAM' },
+      run: () => { c.curriculum = (c.curriculum || []).concat(add).sort((a, b) => (+a.week || 0) - (+b.week || 0)); try { S.ai.usage++; } catch (e) { } save(); UI.cls = c.id; UI.clsT = 'curriculum'; go('class'); toast(`${what}를 넣었습니다.`, 'ok'); } }; }
+  SAM.fillIntent = fillIntent;
   /* 규칙 엔진 대화(Claude 미연결): 기관별 처리기 · 계획 엔진보다 먼저 잡는다 */
   { const base = chatSend; chatSend = (q, ...r) => { const s0 = String(q || '').trim().slice(0, 300); let hit = null;
-      try { if (s0 && S && S.org && cf() && !(typeof CL !== 'undefined' && CL.on && CL.on('chat'))) { const f = inFlow(s0); if (f) hit = f; else if (isOne(s0)) { const chip = !!SAM.viaChip; hit = { a: card(s0, chip), run: () => openFlow(s0, 'sam', chip) }; } } } catch (e) { console.error(e); hit = null; }
+      try { if (s0 && S && S.org && cf() && !(typeof CL !== 'undefined' && CL.on && CL.on('chat'))) { const f = inFlow(s0); if (f) hit = f; else if (!isOne(s0)) { const fi = fillIntent(s0); if (fi) hit = fi; } if (!hit && isOne(s0)) { const chip = !!SAM.viaChip; hit = { a: card(s0, chip), run: () => openFlow(s0, 'sam', chip) }; } } } catch (e) { console.error(e); hit = null; }
       if (!hit) return base(q, ...r);
       const s = typeof samMask === 'function' ? samMask(s0).text : s0; sig('chat');
       if (CUR.ws !== 'home' && !$('#drawer') && ACT['chat-open'] && innerWidth > 860) ACT['chat-open']();

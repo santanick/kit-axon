@@ -68,7 +68,7 @@
     x = x.replace(/\s+/g, ' ').trim(); if (!x && d && d.subject && d.subject !== '기타') x = d.subject; return x.slice(0, 20); };
   /* 규칙 생성기의 과목 무관 제목(build.js MOD)은 주제어를 붙인다: '시작하기' → '일차함수 1: 시작하기'(대학 주차는 그대로) */
   const GENERIC = /^(시작하기|핵심 개념|원리 이해|실습 따라 하기|사례로 배우기|응용하기|심화|정리 · 평가)$/;
-  const withTopic = (d, i, t) => { if (U() || !GENERIC.test(String(t || '').trim())) return t; const k = topicCore(d); return k ? `${k} ${i}: ${t}`.slice(0, 60) : t; };
+  const withTopic = (d, i, t) => { const t0 = String(t || '').trim(); if (U() || !GENERIC.test(t0.replace(/\s+\d+$/, ''))) return t; const k = topicCore(d); return k ? `${t0} — ${k}`.slice(0, 60) : t; }; /* v38 A-12: 강좌명을 앞에 붙이면 카드에서 모든 차시가 '강좌명…'으로 같아 보였다 → 차시 내용을 앞에, 주제어는 뒤에 */
   const planFrom = d => { const pw = +planOf(d).weeks; const n = pw ? clamp(pw, 1, 60) : N(d); const W = designW({ ...d, sessions: n }); const out = []; for (let i = 1; i <= n; i++) { const w = W[i - 1]; out.push({ w: i, title: w ? withTopic(d, i, w.title) : `${i}${unit(d) === '회차' ? '회차' : unit(d) === '주차' ? '주차' : '차시'} 수업`, goal: w ? (w.goal || '') : '' }); } return out; };
   /* 유형별 예시(CF.cfg[type].examples · templates)에서 채울 말을 고른다 — 학원에 기업 문구가 들어가지 않게(평가 1회차 3번) */
   const exVal = k => { const c = cfgOf(); const v = c && c.examples && (c.examples[k + 'AI'] || c.examples[k]); if (v) return String(v).replace(/^예:\s*/, '').replace(/\s*\(.*\)$/, '').trim(); const t0 = c && (c.templates || []).find(x => x.prefill && x.prefill[k]); return t0 ? String(t0.prefill[k]) : ''; };
@@ -161,8 +161,12 @@
     const req = required(); const L = L0.filter(f => shown(f, d)).map(f => ({ ...f, req: f.req != null ? f.req : req.includes(f.k) && !f.later }));
     const dec = L.filter(f => !f.sub && !(f.k === 'price' && L.some(x => x.k === 'paid'))); /* 유료일 때 나오는 금액 칸은 '수강료' 결정 하나로 센다 · '직접 정하기' 하위 칸도 부모 결정 하나로 */
     if (dec.length <= 4) return L.map(f => ui.field(f, d)).join('');
-    const rank = f => { const i = SET_TOP.indexOf(f.k); return i < 0 ? 99 : i; }; const top = new Set(); [...dec].sort((a, b) => rank(a) - rank(b)).slice(0, 3).forEach(f => top.add(f.k)); if (top.has('paid')) top.add('price');
-    L.forEach(f => { if (f.req || (F && F.bad && F.bad[f.k])) top.add(f.k); }); L.forEach(f => { if (f.sub && top.has(f.sub)) top.add(f.k); });
+    const REC1 = ['univ', 'lifelong', 'public'].includes(cfgKey()); /* v38 L-8 · U-4: 학기 모집형(평생 · 대학 비교과 · 공공)은 개강일 · 신청 기간 · 정원을 먼저(위 4개까지) */
+    const ORD = REC1 ? ['paid', 'price', 'start', 'rdays', 'cap', ...SET_TOP.filter(k => !['paid', 'price'].includes(k))] : SET_TOP;
+    const rank = f => { const i = ORD.indexOf(f.k); return i < 0 ? 99 : i; }; const top = new Set(); [...dec].sort((a, b) => rank(a) - rank(b)).slice(0, REC1 ? 4 : 3).forEach(f => top.add(f.k)); if (top.has('paid')) top.add('price');
+    L.forEach(f => { if (f.req || (F && F.bad && F.bad[f.k])) top.add(f.k); });
+    /* v38 U-4: 대화로 말한 신청 마감 · 정원처럼 값이 정해져 있으면 접지 않는다(위 칸 4개를 넘지 않게) */ L.forEach(f => { if (top.size < 4 && ((f.k === 'rdays' && d.rdays && String(d.rdays) !== '0') || (f.k === 'cap' && +d.cap > 0))) top.add(f.k); });
+    L.forEach(f => { if (f.sub && top.has(f.sub)) top.add(f.k); });
     const T1 = L.filter(f => top.has(f.k)); const T2 = L.filter(f => !top.has(f.k)); if (!T2.length) return L.map(f => ui.field(f, d)).join('');
     const open = !!(F && F.more) || T2.some(f => F && F.bad && F.bad[f.k]);
     return T1.map(f => ui.field(f, d)).join('') + `<details class="cf-more" id="cfMore"${open ? ' open' : ''}><summary><span class="cf-more-h"><b>더 설정하기</b> <span class="cf-later">나중에 해도 됩니다</span></span><span class="cf-more-s">지금 값: ${T2.map(f => `${esc(String(f.label).replace(/\(.*?\)/g, '').trim())} ${esc(valTxt(f, d))}`).join(' · ')}</span></summary><div class="cf-more-b">${T2.map(f => ui.field({ ...f, later: false }, d)).join('')}</div></details>`; };
@@ -243,7 +247,7 @@
     const edit = ui.field({ k: 'goal', label: '교육 목표', kind: 'area', rows: 4, maxLen: 1200, hint: `${T('learner')} 소개 화면에 그대로 보입니다. 여기서 바로 고칠 수 있습니다.`, ai: 'AI SAM이 다시 쓰기' }, d) +
       (nE ? ui.field({ k: 'fillEmpty', label: `빈 ${u} ${nE}개를 AI로 채울까요?`, kind: 'toggle', on: `예, 빈 ${josa(u, '에')} 영상 · 교안 · 퀴즈 초안을 넣습니다`, hint: `끄면 빈 ${josa(u, '은')} 비워 둔 채 개설합니다. 나중에 ${u}마다 하나씩 채울 수 있습니다.` }, d) : '');
     /* 내용이 하나도 없는 채로 공개하면 학습자 화면에 '준비 중'(신청 불가)으로 보인다(lshop prepOf) — 평가 2회차 4번 */
-    const prepN = (L.length && nE >= L.length && d.kind !== 'episode' && cfgKey() !== 'k12' && (d.open || defs().open) !== '비공개') ? ui.note(`<b>아직 넣은 콘텐츠가 없습니다.</b> 내용 없는 ${josa(T('cls'), '을')} 공개하면 ${josa(T('learner'), '에게')} '준비 중'으로 보이고 신청할 수 없습니다. 아래 '빈 ${u}를 AI로 채울까요?'를 켜거나, 개설한 뒤 ${u}를 채워 주십시오.`, 'warn cf-prep') : '';
+    const prepN = (L.length && nE >= L.length && d.kind !== 'episode' && cfgKey() !== 'k12' && (d.open || defs().open) !== '비공개') ? ui.note(`<b>아직 넣은 콘텐츠가 없습니다.</b> 이대로 개설하면 '준비 중(비공개)'으로 만들어 ${josa(T('learner'), '에게')} 보이지 않고 알림도 보내지 않습니다. 아래 '빈 ${josa(u, '을')} AI로 채울까요?'를 켜거나, 개설한 뒤 ${josa(u, '에')} 영상 · 교안 · 퀴즈를 하나 이상 넣고 공개하십시오.`, 'warn cf-prep') : '';
     const noV = critOn() && d.critBy === 'video' && !(d.curriculum || []).some(x => x && x.type === 'video') && !(d.fillEmpty === true || d.fillEmpty === 'true') ? ui.note(`<b>아직 넣은 강의 영상이 없습니다.</b> 그래서 지금은 모든 콘텐츠 진도로 셉니다. 영상을 넣은 뒤 설정 탭의 ${esc(T('done'))} 기준에서 영상 항목을 고르면 영상 진도만 셉니다.`, 'warn') : '';
     return legalBox(d) + chk + prepN + noV + `<p class="cf-lab">${esc(T('learner'))}에게 이렇게 보입니다</p>${thumbSlot(d)}<div class="cf-pv"><div class="cf-pvh">${d.thumb ? `<img class="cf-pvimg" src="${esc(d.thumb)}" alt="">` : ''}<span class="cf-pvt">${esc(T('cls'))}</span><b>${esc(d.name || '이름 없음')}</b><p data-cfpvgoal="1"${d.goal ? '' : ' hidden'}>${esc(String(d.goal || '').slice(0, 160))}</p></div>
       <dl class="cf-pvs">${sum.map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>
@@ -291,7 +295,16 @@
     return `<div class="cf-note warn cf-over" role="status"><b>${u}는 ${MAXS}개까지 만들 수 있습니다.</b> ${v}${josa(String(v), '을').slice(String(v).length)} 넣으셔서 ${MAXS}개로 맞춰 두었습니다. 총 ${v}시간이 필요하면 1${u} 시간을 늘려 맞출 수 있습니다${r.reach ? `(${u} ${r.sessions}개 × ${hmTxt(r.mins)})` : ''}. <button type="button" class="btn sm pri" data-cffit="${v}">총 ${v}시간으로 맞추기</button></div>`; };
   /* 아직 아무 콘텐츠도 넣지 않은 차시 수(회차 일정 항목 offline은 콘텐츠로 치지 않음) */
   const emptyN = d => { const L = d.weekPlan || []; const has = new Set((d.curriculum || []).filter(x => x && x.type !== 'offline').map(x => +x.week || 0)); return L.filter((w, i) => !has.has(i + 1)).length; };
-  const checks = d => { const c = cfgOf(); try { return (c && typeof c.check === 'function' && c.check(d)) || []; } catch (e) { console.error('cfg.check', e); return []; } };
+  const checks = d => { const c = cfgOf(); let R = []; try { R = (c && typeof c.check === 'function' && c.check(d)) || []; } catch (e) { console.error('cfg.check', e); R = []; } try { R = R.concat(flowChecks(d)); } catch (e) { console.error('flowChecks', e); } return R; };
+  /* v38: 유형과 상관없는 확인 — 지난 신청 기간(U-15) · 평가 없는 직업훈련 과정(V-13) */
+  /* 결제를 받을 수 있는가(sales2 tossOK와 같은 기준). 결제 · 수납을 끈 기관은 가격을 쓰지 않으므로 묻지 않는다 */
+  const payReady = () => { try { if (typeof mbPayOn === 'function' && !mbPayOn()) return true; const st = (S && S.settings) || {}; return st.pg === 'toss' && st.toss && st.toss.status === '승인'; } catch (e) { return true; } };
+  const flowChecks = d => { const R = []; const td0 = typeof today === 'function' ? today() : '';
+    if (d.rdays === 'custom' && d.rTo && td0 && d.rTo < td0) R.push({ lv: 'warn', k: 'rTo', step: '', msg: `신청 마감일(${fmtD(d.rTo)})이 이미 지났습니다. 이대로 개설하면 ${josa(T('learner'), '이')} 신청할 수 없습니다. 설정 단계에서 마감일을 오늘(${fmtD(td0)}) 이후로 바꿔 주십시오.` });
+    else if (d.rdays === 'custom' && d.rFrom && d.rTo && td0 && d.rFrom < td0 && d.rTo >= td0) R.push({ lv: 'info', k: 'rFrom', msg: `신청 시작일이 오늘보다 앞이라 개설하면 바로 신청을 받습니다(${fmtD(d.rTo)}까지).` });
+    { const paid = d.paid == null ? +d.price > 0 : (d.paid === true || d.paid === 'true'); if (paid && +d.price > 0 && !payReady()) R.push({ lv: 'warn', k: 'price', fix: { paid: false, price: 0 }, msg: `${T('fee')}를 받는 ${T('cls')}이지만 결제가 아직 연결되지 않았습니다. 이대로 공개하면 ${josa(T('learner'), '은')} '결제 준비 중'만 보고 신청할 수 없습니다. [이렇게 고치기]를 누르면 무료 신청으로 받고, 유료로 받으려면 개설 뒤 결제 연결(설정 › 결제 · 수납)을 마치십시오.` }); } /* v38 L-3 */
+    if (cfgKey() === 'voc') { const fill = d.fillEmpty === true || d.fillEmpty === 'true'; const A = { ...defs().auto, ...(d.auto || {}) }; const ex = (d.curriculum || []).some(x => x && x.type === 'exam') || (fill && A.exam); if (!ex) R.push({ lv: 'warn', k: 'exam', msg: '평가(시험)가 없습니다. 직업훈련 과정은 수료 기준에 평가 점수(보통 60점 이상)가 들어가 평가 없이는 아무도 수료할 수 없습니다. 차시 채우기 단계에서 [시험 만들기]로 최종 평가를 넣어 주십시오.', law: '규정 준수 › 훈련 규정의 수료 기준' }); }
+    return R; };
 
   /* ═════════ v36 지시 1-③ 4)~6): 시험 · 설문 · 수강/신청 기간 직접 설정 · 평가 기준 ═════════ */
   const SCALE5 = ['매우 그렇다', '그렇다', '보통이다', '그렇지 않다', '전혀 그렇지 않다'];
@@ -374,7 +387,7 @@
   /* ── 수강 기간 · 수강신청 기간 직접 정하기 ── */
   const PERK = ['days', 'dur'];
   const REC_T = ['adult', 'lifelong', 'voc', 'univ']; /* 수강신청 기간을 따로 묻지 않던 유형(공공은 cfg에 있음, 기업은 배정 · 학원은 월 수강) */
-  const recAsk = A => { if (!REC_T.includes(cfgKey()) || (A || []).some(f => f.k === 'rdays')) return []; return [{ k: 'rdays', label: '수강신청 받는 기간', kind: 'choice', def: 0, opts: [[0, '언제나 받기'], [7, '1주'], [14, '2주'], [30, '한 달'], ['custom', '직접 정하기', '시작 · 마감 날짜']], ex: '예: 개강 전 2주 동안만 신청을 받습니다' }]; };
+  const recAsk = A => { if (!REC_T.includes(cfgKey())) return []; /* v38 U-4: 신청 기간 옆에 정원(0이면 제한 없음) — 정원은 개설 뒤 설정에서만 바꿀 수 있던 문제 */ const capF = (A || []).some(f => f.k === 'cap') ? [] : [{ k: 'cap', label: '정원', kind: 'num', ex: '예: 20명 — 차면 신청 버튼이 닫힙니다', def: 0, min: 0, max: 9999, unit: '명', later: true, hint: '0이면 제한 없음' }]; if ((A || []).some(f => f.k === 'rdays')) return capF; return [{ k: 'rdays', label: '수강신청 받는 기간', kind: 'choice', def: 0, opts: [[0, '언제나 받기'], [7, '1주'], [14, '2주'], [30, '한 달'], ['custom', '직접 정하기', '시작 · 마감 날짜']], ex: '예: 개강 전 2주 동안만 신청을 받습니다' }, ...capF]; };
   function subExpand(L0, d) { const out = []; L0.forEach(f => { out.push(f);
       if (PERK.includes(f.k) && d[f.k] === 'custom') { if (!d.perMode) d.perMode = 'days'; out.push({ k: 'perMode', sub: f.k, label: '기간을 어떻게 정할까요', kind: 'choice', opts: [['days', '며칠 동안', '신청한 날부터'], ['range', '날짜로', '시작일 ~ 끝나는 날']] });
         if (d.perMode === 'range') out.push({ k: 'pFrom', sub: f.k, label: '수강 시작일', kind: 'date' }, { k: 'pTo', sub: f.k, label: '수강 끝나는 날', kind: 'date', ex: '예: 이 날 밤 12시까지 들을 수 있습니다' });
@@ -446,7 +459,7 @@
     try { closeModal(); } catch (e) { }
     if (!opts.fresh && hasDraft() && !opts._asked) return askResume(opts);
     const D = defs(); const base = opts.resume && S.crsDraft ? JSON.parse(JSON.stringify(S.crsDraft.d)) : { sessions: U() ? 15 : 6, auto: { ...D.auto } };
-    const p = opts.resume ? {} : { ...(opts.prefill || {}) }; /* 이어서 하기를 고르면 초안 그대로(새 요청 내용으로 덮어쓰지 않음) */ if (p.topic && !p.name) p.name = p.topic; if (Array.isArray(p.outline) && !p.weekPlan) p.weekPlan = p.outline.map((w, i) => ({ w: i + 1, title: w.title || String(w), goal: w.goal || '' })); if (Array.isArray(p.items) && !p.curriculum) p.curriculum = p.items; if (p.weeks && !p.sessions) p.sessions = p.weeks; Object.assign(base, p); if (p.goal && (opts.from === 'sam' || opts.from === 'guide')) { if (/이\(가\)/.test(p.goal)) base.goal = fieldAI('goal', base); base._goalAI = base.goal; } /* 대화에서 AI가 만든 목표는 자동 목표로 본다 → 이름을 바꾸면 다시 만든다 */
+    const p = opts.resume ? {} : { ...(opts.prefill || {}) }; /* 이어서 하기를 고르면 초안 그대로(새 요청 내용으로 덮어쓰지 않음) */ if (p.topic && !p.name) p.name = p.topic; if (Array.isArray(p.outline) && !p.weekPlan) p.weekPlan = p.outline.map((w, i) => ({ w: i + 1, title: w.title || String(w), goal: w.goal || '' })); if (Array.isArray(p.items) && !p.curriculum) p.curriculum = p.items; if (p.weeks && !p.sessions) p.sessions = p.weeks; if (p.sessions) base._sessSet = 1; Object.assign(base, p); if (p.goal && (opts.from === 'sam' || opts.from === 'guide')) { if (/이\(가\)/.test(p.goal)) base.goal = fieldAI('goal', base); base._goalAI = base.goal; } /* 대화에서 AI가 만든 목표는 자동 목표로 본다 → 이름을 바꾸면 다시 만든다 */
     if (p.sessions && !(p.weekPlan) && !opts.resume) base.weekPlan = base.weekPlan || [];
     F = { d: base, ids: stepIds(), step: 0, from: opts.from || 'menu', undo: [], backs: 0, errs: {}, bad: {}, idle: {}, opts };
     const want = (opts.resume && S.crsDraft.step) || opts.step; const i = F.ids.indexOf(want); if (i >= 0) F.step = i;
@@ -497,6 +510,7 @@
     const P = problems(id);
     const empty = (askOf(id) || []).filter(f => shown(f, F.d) && f.later && !String(F.d[f.k] ?? '').trim()).map(f => f.k);
     if (P.length) { F.bad = {}; P.forEach(p => { F.bad[p.k] = p.msg; const ek = id + '.' + p.k; F.errs[ek] = (F.errs[ek] || 0) + 1; emit('error', { step: id, field: p.k, msg: p.msg, empty: !String(F.d[p.k] ?? '').trim() || (p.k === 'weekPlan' && !(F.d.weekPlan || []).length), n: F.errs[ek], d: F.d }); }); const keep = F.bad; paint(); F.bad = keep; markBad(); return false; }
+    { const c0 = cfgOf(); if (c0 && typeof c0.onNext === 'function') try { c0.onNext(id, F.d); } catch (e) { console.error('cfg.onNext', e); } } /* v38: 유형별 다음 단계 기본값(대학 비교과 · 특강 → 4주 · 학점 없음) */
     emit('next', { step: id, empty, d: F.d });
     if (F.step < F.ids.length - 1) { F.step++; F.dir = 'next'; saveDraft(); paint(); }
     return true;
@@ -514,6 +528,8 @@
       modal('법정 교육시간이 모자랍니다', `<p style="font-size:16px"><b>이대로 개설하면 ${esc(L.name)}${josa(L.name, '으로').slice(L.name.length)} 인정받지 못할 수 있습니다.</b></p><p style="font-size:16px">${esc(L.msg)}</p><p class="mini">근거: ${esc(L.law)} · 기준은 관계 법령 원문으로 다시 확인하십시오.</p>`,
         [{ id: 'fix', label: `법정 시간(${L.need}시간)에 맞추기`, kind: 'pri', run: () => { const r = applyFit(L.need, '법정 시간에 맞추기'); if (r) toast(`${u} ${r.sessions}개 × ${hmTxt(r.mins)} = ${r.hours}시간으로 맞췄습니다. 확인하고 [개설하기]를 누르세요.`, 'ok'); } }, { id: 'go', label: '그대로 개설하기', run: () => { if (F) { F.d._legalAck = 1; setTimeout(finish, 0); } } }, { id: 'c', label: '취소' }]); return; } }
     try { c = create({ ...d, fillEmpty: d.fillEmpty === true || d.fillEmpty === 'true', status: d.open === '비공개' ? '준비중' : '운영중', from }); } catch (e) { console.error('CF.create', e); toast(`${josa(T('cls'), '을')} 만들지 못했습니다. 다시 눌러 주세요.`, 'warn'); return; }
+    /* v38 결정(U-3 · A-5 · C-5 · P-4): 콘텐츠가 하나도 없는 과정은 공개로 열지 않는다 → '준비 중(비공개)'. 채운 뒤 [학습자에게 공개하기]로 연다 */
+    try { if (holdIfEmpty(c)) audit2(`${T('cls')} 준비 중(콘텐츠 없음) — ${c.name}`); } catch (e) { console.error('holdIfEmpty', e); }
     try { save(); } catch (e) { } const prevDraft = S.crsDraft; delete S.crsDraft; try { save(); } catch (e) { }
     clearTimeout(F.idleT); done(c, prevDraft);
   }
@@ -521,10 +537,14 @@
     const w = mount(); const d0 = F ? F.d : {}; const u = unit(d0); F = null; const L = T('learner'); const nE = emptyN({ weekPlan: c.weekPlan || [], curriculum: c.curriculum || [] });
     const enr = typeof menuOn === 'function' && menuOn('enroll') ? 'enroll' : 'members'; const site = typeof menuOn === 'function' && menuOn('lsite') ? 'lsite' : 'site';
     /* 개설 후 할 일(평가 1회차 4번): 채우기 · 수강 배정(또는 초대) · 공개(게시) + 운영자 미리보기 */
-    const st = pubState(c);
-    const nx = [['fill', nE ? `빈 ${u} ${nE}개 채우기` : `${u} 내용 확인하기`, nE ? `${u}마다 영상 · 교안 · 퀴즈를 넣습니다` : '넣은 영상 · 교안 · 퀴즈를 확인하고 바꿉니다', 'grid'],
-      ['enroll', `${L} 수강 배정 · 초대`, `이 ${josa(T('cls'), '에')} ${josa(L, '을')} 배정하거나 초대 링크를 보냅니다`, 'users'],
-      ['site', st.ok ? '학습자 화면에 최신 내용 반영하기' : `${josa(L, '에게')} 공개하기`, st.ok ? '바꾼 내용을 학습자 사이트에 다시 게시합니다' : st.how, 'send']];
+    const st = pubState(c); const hold = !!(c.crs && c.crs.hold);
+    /* v38 A-6: 3번은 사이트 게시(또는 이미 공개면 사이트 열기)로 — 예전에는 게시하고 차시 탭으로 가 엉뚱한 화면이 열렸다. 콘텐츠가 없으면(준비 중) 먼저 채우기 */
+    const nx = [['fill', nE ? `빈 ${u} ${nE}개 채우기` : `${u} 내용 확인하기`, nE ? `${u}마다 영상 · 교안 · 퀴즈를 넣습니다. [AI로 콘텐츠 채우기]를 누르면 초안이 한 번에 들어갑니다` : '넣은 영상 · 교안 · 퀴즈를 확인하고 바꿉니다', 'grid'],
+      ['enroll', `${L} 수강 배정 · 초대`, hold ? `내용을 채워 공개한 뒤에 배정하면 ${josa(L, '이')} 바로 들을 수 있습니다` : `이 ${josa(T('cls'), '에')} ${josa(L, '을')} 배정하거나 초대 링크를 보냅니다`, 'users'],
+      hold ? ['fill', `${josa(L, '에게')} 공개하기 — 내용을 넣은 뒤`, `${u}에 콘텐츠를 하나 이상 넣으면 [운영 시작하기 · 전체 공개]로 공개할 수 있습니다`, 'send']
+        : ['site', st.ok ? `공개됨 · ${L} 화면 열기` : `${josa(L, '에게')} 공개하기`, st.ok ? `${josa(L, '이')} 보는 화면을 새 창으로 엽니다` : st.how, 'send']];
+    if (!hold && +c.price > 0 && !payReady()) st.msg = `결제가 아직 연결되지 않아 ${josa(L, '은')} '결제 준비 중'만 보고 신청할 수 없습니다. 설정 › 결제 · 수납에서 결제를 연결하거나, ${T('cls')} 설정에서 ${T('fee')}를 0원(무료 신청)으로 바꾸십시오.`;
+    if (hold) st.msg = `아직 넣은 콘텐츠가 없어 '준비 중(비공개)'으로 만들었습니다. ${josa(L, '에게')} 보이지 않고 알림도 가지 않습니다.`;
     w.innerHTML = `<div class="cf-box cf-done" role="dialog" aria-modal="true" aria-label="개설 완료"><div class="cf-rb"><p class="cf-ok">${typeof ic === 'function' ? ic('check', 28) : '✓'}</p><h2>${esc(c.name)}</h2><p class="cf-sub">${josa(T('cls'), '을')} 만들었습니다. 이제 이렇게 하면 됩니다.</p>
       <p class="cf-pubst ${st.ok ? 'ok' : ''}" role="status">${esc(st.msg)}</p>
       <div class="cf-next">${nx.map(([k, a, b, i], n) => `<button type="button" class="${n ? '' : 'pri'}" data-cfdone="${k}" data-c="${esc(c.id)}" data-go="${k === 'enroll' ? enr : k === 'site' ? site : ''}">${typeof ic === 'function' ? ic(i, 20) : ''}<span><b>${n + 1}. ${esc(a)}</b><small>${esc(b)}</small></span></button>`).join('')}</div>
@@ -540,9 +560,16 @@
     if (o === '지정 회원') return { ok: inPub, msg: `정한 사람만 볼 수 있습니다. [${L} 수강 배정 · 초대]로 ${josa(L, '을')} 배정해 주세요.`, how: '학습자 사이트에 게시합니다' };
     return inPub ? { ok: true, msg: `${josa(L, '이')} 신청 목록에서 볼 수 있습니다.`, how: '' } : { ok: false, msg: `신청 목록에는 보이지만, ${u2(c)} 내용은 학습자 사이트를 다시 게시해야 보입니다.`, how: '학습자 사이트에 게시해 내용까지 보이게 합니다' }; }
   const u2 = c => (c && c.kind === 'episode') ? '회차' : unit({});
+  const audit2 = m => { try { logAudit(m); } catch (e) { } };
+  /* 배울 콘텐츠(오프라인 회차 일정 제외)가 있는가 — 학습자 화면 '준비 중' 판정(lshop prepOf)과 같은 기준 */
+  const hasContent = c => (c && c.kind === 'episode') || ((c && c.curriculum) || []).some(x => x && x.type !== 'offline' && x.type !== 'chapter');
+  function holdIfEmpty(c) { if (!c || hasContent(c) || cfgKey() === 'k12') return false; c.status = '준비중'; c.open = '비공개'; c.crs = Object.assign({}, c.crs || {}, { hold: 1 }); return true; }
+  window.CF_HAS_CONTENT = hasContent;
   /* [학습자에게 공개하기]: 숨김이면 공개로 바꾸고(운영중), 학습자 사이트를 게시한다(cls2.js c2-golive와 같은 규칙) */
-  function publish(id) { const c = typeof C === 'function' ? C(id) : S.classes.find(x => x.id === id); if (!c) return;
+  function publish(id) { const c = typeof C === 'function' ? C(id) : S.classes.find(x => x.id === id); if (!c) return false;
+    if (!hasContent(c)) { toast(`${josa(c.name, '은')} 아직 넣은 콘텐츠가 없어 공개하지 않았습니다. ${u2(c)}에 영상 · 교안 · 퀴즈를 하나 이상 넣은 뒤 공개해 주십시오.`, 'warn'); return false; }
     if ((c.open || '전체') === '비공개') { c.open = '전체'; c.status = '운영중'; }
+    if (c.crs && c.crs.hold) { delete c.crs.hold; try { const P = (c.crs.pendNotify || []).filter(id2 => (c.learners || []).includes(id2)); if (P.length && typeof c2Notify === 'function') P.forEach(id2 => c2Notify(id2, `${c.name} 수강을 시작할 수 있습니다`, '준비하던 학습 내용이 열렸습니다. 지금 바로 수강을 시작할 수 있습니다.')); delete c.crs.pendNotify; } catch (e) { } }
     try { logAudit(`${T('cls')} 공개 — ${c.name}`); } catch (e) { } try { save(); } catch (e) { }
     let ok = false; try { if (typeof smPublish === 'function') { smPublish(); ok = true; } else if (ACT['ls-pub']) { ACT['ls-pub'](); ok = true; } } catch (e) { console.error('publish', e); }
     try { save(); } catch (e) { } if (!ok) toast(`${josa(c.name, '을')} 공개로 바꿨습니다. 사이트 메뉴에서 [게시하기]를 누르면 ${josa(T('learner'), '에게')} 보입니다.`, 'warn'); }
@@ -558,7 +585,7 @@
   /* 생성 함수(단일): d → course. makeCourse와 같은 스키마 + cls2 필드. 저장(save)과 화면 이동은 부른 쪽이 한다. */
   function create(d) {
     d = { ...(d || {}) }; if (!(Array.isArray(d.weekPlan) && d.weekPlan.length) && Array.isArray(d.outline) && d.outline.length) d.weekPlan = d.outline.map(w => typeof w === 'string' ? { title: w } : w); if (!Array.isArray(d.curriculum) && Array.isArray(d.items)) d.curriculum = d.items; const Uv = U(); const D = defs(); const c0 = cfgOf();
-    const name = (clean ? clean(d.name || d.topic) : String(d.name || d.topic || '').trim()) || '새 과정';
+    const name = String(d.name || d.topic || '').replace(/\s+/g, ' ').trim() || '새 과정'; /* v38: '[비교과] …' · '…(스마트폰 · 키오스크)'처럼 적은 이름 그대로(괄호 · 대괄호를 지우던 문제 U-5 · P-24). 주제어는 AI.design이 clean으로 따로 뽑는다 */
     const U1 = unit(d); let plan = {}; try { if (c0 && typeof c0.plan === 'function') plan = c0.plan(d) || {}; } catch (e) { }
     const EAc = eachOn(d); let WP = Array.isArray(d.weekPlan) && d.weekPlan.length ? d.weekPlan.map((w, i) => ({ w: i + 1, title: String(w.title || `${i + 1}${U1}`).trim(), goal: w.goal || '', ...(EAc ? { mins: wMins(d, w) } : {}) })) : null;
     const n = clamp(+(WP ? WP.length : (d._n || plan.weeks || d.sessions || d.weeks || (Uv ? 15 : 6))), 1, 60);
@@ -608,7 +635,7 @@
         else if (a === 'resume') { const o = CF._pending || {}; open({ ...o, resume: true, _asked: true }); }
         else if (a === 'fresh') { const o = CF._pending || {}; const old = S.crsDraft; dropDraft(); open({ ...o, fresh: true, _asked: true }); if (F && old) F.undo.push({ label: '이전 초안', d: JSON.stringify(old.d), step: Math.max(0, stepIds().indexOf(old.step)) }); paint(); }
         return; }
-      if (!F) { if ((el = g('[data-cfdone]'))) { const k = el.dataset.cfdone; const id = el.dataset.c; if (k === 'pv') { preview(id); emit('done', { action: k, id }); return; } close(false); if (k === 'fill' || k === 'close' || k === 'enroll') { UI.cls = id; UI.clsT = k === 'enroll' ? 'learners' : 'curriculum'; if (typeof UI.slaClsHome !== 'undefined') UI.slaClsHome = k !== 'fill' ? { id, t: 'learners' } : null; go('class'); if (k === 'enroll') setTimeout(() => { const b = $('#main [data-act=cls-grant]'); if (b) { b.classList.add('cf-hl'); try { b.focus(); } catch (e) { } } toast(`[수강 권한 부여]를 누르면 ${josa(T('learner'), '을')} 이 ${josa(T('cls'), '에')} 배정합니다. 새 ${josa(T('learner'), '은')} 학생 메뉴에서 초대합니다.`, 'ok'); }, 120); } else if (k === 'site') { publish(id); UI.cls = id; UI.clsT = 'curriculum'; go('class'); } else if (el.dataset.go) go(el.dataset.go); emit('done', { action: k, id }); } return; }
+      if (!F) { if ((el = g('[data-cfdone]'))) { const k = el.dataset.cfdone; const id = el.dataset.c; if (k === 'pv') { preview(id); emit('done', { action: k, id }); return; } close(false); if (k === 'fill' || k === 'close' || k === 'enroll') { UI.cls = id; UI.clsT = k === 'enroll' ? 'learners' : 'curriculum'; if (typeof UI.slaClsHome !== 'undefined') UI.slaClsHome = k !== 'fill' ? { id, t: 'learners' } : null; go('class'); if (k === 'enroll') setTimeout(() => { const b = $('#main [data-act=cls-grant]'); if (b) { b.classList.add('cf-hl'); try { b.focus(); } catch (e) { } } toast(`[수강 권한 부여]를 누르면 ${josa(T('learner'), '을')} 이 ${josa(T('cls'), '에')} 배정합니다. 새 ${josa(T('learner'), '은')} 학생 메뉴에서 초대합니다.`, 'ok'); }, 120); } else if (k === 'site') { const c1 = typeof C === 'function' ? C(id) : null; if (c1 && pubState(c1).ok && ACT['d26-view0']) { try { ACT['d26-view0']({ dataset: { v: id } }); } catch (e2) { } UI.cls = id; UI.clsT = 'curriculum'; go('class'); } else if (publish(id) !== false) { const sg = el.dataset.go || 'site'; try { go(sg); } catch (e2) { UI.cls = id; go('class'); } toast(`${josa(T('learner'), '에게')} 공개했습니다. 학습자 사이트를 게시해 신청 목록에 보입니다.`, 'ok'); } else { UI.cls = id; UI.clsT = 'curriculum'; go('class'); } } else if (el.dataset.go) go(el.dataset.go); emit('done', { action: k, id }); } return; }
       if ((el = g('[data-cfjump]'))) { jump(+el.dataset.cfjump); return; }
       if ((el = g('[data-cfset]'))) { readBody(); const k = el.dataset.cfset; let v = el.dataset.v; v = v === 'true' ? true : v === 'false' ? false : el.dataset.n ? +v : v; if (k === '_vsrc') { F.d.auto = { ...(F.d.auto || {}), video: v }; } else F.d[k] = v; { const c0 = cfgOf(); if (c0 && typeof c0.onSet === 'function') try { c0.onSet(k, v, F.d); } catch (e2) { console.error('cfg.onSet', e2); } } if (['grade', 'subject', 'target'].includes(k)) syncGoal(F.d); emit('change', { step: F.ids[F.step], field: k, d: F.d }); saveDraft(); paint(); return; }
       if ((el = g('[data-cfday]'))) { readBody(); const k = el.dataset.cfday, v = +el.dataset.v; const L = Array.isArray(F.d[k]) ? F.d[k] : []; F.d[k] = L.includes(v) ? L.filter(x => x !== v) : [...L, v].sort(); saveDraft(); paint(); return; }
@@ -662,6 +689,37 @@
             <ul class="cf-gl"><li><b>학번으로 ${L} 등록하기</b> — 학번 · 학과만 적으면 접근코드가 나옵니다. 이름 · 연락처는 받지 않습니다.</li><li><b>초대 링크 만들기</b> — 링크로 가입하면 ${L} 명단에 들어옵니다.</li></ul>${wait ? `<p class="mini">가입 승인을 기다리는 ${L} ${wait}명이 있습니다. ${L} 메뉴에서 승인하면 배정할 수 있습니다.</p>` : ''}</div>`,
             [{ id: 'c', label: '닫기' }, { id: 'inv', label: '초대 링크 만들기', run: () => { if (ACT['mem-invite']) ACT['mem-invite']({ dataset: {} }); else go('members'); } }, { id: 'sid', label: `학번으로 ${L} 등록하기`, kind: 'pri', run: () => { if (typeof SL !== 'undefined' && SL && SL.sheet && ACT['sla-codes']) { setTimeout(() => ACT['sla-codes']({ dataset: {} }), 0); return; } go(can('enroll') ? 'enroll' : 'members'); } }]);
           return; } } } catch (e) { console.error('cls-grant empty', e); } return base(el, ...r); }; }
+
+  /* v38: 콘텐츠 없는 과정은 [운영 시작하기 · 전체 공개]도 막고 무엇을 채우면 되는지 알린다(U-3 · A-5 · P-4) */
+  { const base = ACT['c2-golive']; if (base) ACT['c2-golive'] = (el, ...r) => { const c = typeof C === 'function' ? C(el && el.dataset && el.dataset.v) : null; if (c && !hasContent(c)) { toast(`${josa(c.name, '은')} 아직 넣은 콘텐츠가 없어 공개하지 않았습니다. ${u2(c)}에 영상 · 교안 · 퀴즈를 하나 이상 넣거나 [AI로 콘텐츠 채우기]를 누른 뒤 공개하십시오.`, 'warn'); UI.clsT = 'curriculum'; try { render(); } catch (e) { } return; }
+      const r0 = base(el, ...r); try { if (c && c.crs && c.crs.hold) { delete c.crs.hold; const P = (c.crs.pendNotify || []).filter(id2 => (c.learners || []).includes(id2)); if (P.length && typeof c2Notify === 'function') P.forEach(id2 => c2Notify(id2, `${c.name} 수강을 시작할 수 있습니다`, '준비하던 학습 내용이 열렸습니다. 지금 바로 수강을 시작할 수 있습니다.')); delete c.crs.pendNotify; save(); } } catch (e) { } return r0; }; }
+  /* v38 A-5: 운영자 카드 · 상세의 판매 표시도 학습자 화면과 같게 — 콘텐츠가 없으면 '준비 중 · 신청 불가' */
+  if (typeof c2SaleLabel === 'function') { const base = c2SaleLabel; window.c2SaleLabel = c2SaleLabel = function (c) { try { if (c && !hasContent(c) && cfgKey() !== 'k12') return '준비 중 · 신청 불가'; } catch (e) { } return base.apply(this, arguments); }; }
+  if (typeof AFTER !== 'undefined' && Array.isArray(AFTER)) AFTER.push(() => { try { if (!CUR || CUR.tab !== 'class' || !UI.cls) return; const c = C(UI.cls); const n = document.querySelector('#main .c2ready'); if (!c || !n || hasContent(c) || n.dataset.cf38) return; n.dataset.cf38 = '1';
+      n.innerHTML = `<p><b>준비 중(비공개) — 아직 넣은 콘텐츠가 없어 ${esc(josa(T('learner'), '에게'))} 보이지 않습니다.</b> ${esc(josa(u2(c), '에'))} 영상 · 교안 · 퀴즈를 하나 이상 넣으면 공개할 수 있습니다. </p><p style="margin-top:8px"><button class="btn pri" style="min-height:44px" data-act="ai-fill" data-v="${esc(c.id)}">AI로 콘텐츠 채우기</button>`; } catch (e) { console.error(e); } });
+  if (typeof AFTER !== 'undefined' && Array.isArray(AFTER)) AFTER.push(() => { try { document.querySelectorAll('#main .tag.g').forEach(x => { if (x.textContent.trim() === '준비 중 · 신청 불가') x.className = 'tag y'; }); } catch (e) { } });
+
+  /* v38 P-17 · U-11: 복사본은 '준비 중(비공개)'으로, 이름은 '○○ 2기'처럼 기수를 올린다('(복사)'가 학습자 목록에 바로 보이던 문제). 과정 상세 머리에 [복사해 다음 기수 만들기] */
+  const nextName = nm => { const b = String(nm || '').replace(/\s*\(복사\)$/, '').trim(); const m = b.match(/^(.*?)(\d+)\s*기$/); let n = m ? `${m[1].trim()} ${+m[2] + 1}기` : `${b} 2기`; const has = x => (S.classes || []).some(c => c.name === x); let k = m ? +m[2] + 1 : 2; while (has(n) && k < 99) { k++; n = `${(m ? m[1] : b).trim()} ${k}기`; } return n.slice(0, 50); };
+  { const base = ACT['cls-copy']; if (base) ACT['cls-copy'] = (el, ...r) => { const src = typeof C === 'function' ? C(el && el.dataset && el.dataset.v) : null; const before = (S.classes || []).slice(); const t0 = window.toast; let r0; try { window.toast = () => { }; r0 = base(el, ...r); } finally { window.toast = t0; }
+      const n = (S.classes || []).find(c => !before.includes(c)); if (n && src) { n.name = nextName(src.name); n.open = '비공개'; n.status = '준비중'; n.crs = Object.assign({}, n.crs || {}, { copyOf: src.id }); delete n.crs.hold; delete n.crs.pendNotify; const i = S.classes.indexOf(n); if (i > 0) { S.classes.splice(i, 1); S.classes.unshift(n); } try { save(); } catch (e) { } try { render(); } catch (e) { }
+        toast(`${josa(n.name, '을')} 만들었습니다. 지금은 '준비 중(비공개)'이라 ${josa(T('learner'), '에게')} 보이지 않습니다. 기간 · 신청 기간을 확인하고 [운영 시작하기]를 누르면 공개됩니다.`, 'ok'); } else if (t0) t0('복사본을 만들었습니다.', 'ok'); return r0; }; }
+  if (typeof AFTER !== 'undefined' && Array.isArray(AFTER)) AFTER.push(() => { try { if (!CUR || CUR.tab !== 'class' || !UI.cls) return; const c = C(UI.cls); if (!c) return; const phr = [...document.querySelectorAll('#main .ph .phr')].find(x => x.offsetParent); if (!phr || phr.querySelector('[data-act=cls-copy]')) return;
+      phr.insertAdjacentHTML('beforeend', `<button type="button" class="btn sm ghost cf-copyb" data-act="cls-copy" data-v="${esc(c.id)}">${typeof ic === 'function' ? ic('copy', 14) : ''} 복사해 ${U() ? '다음 학기용' : '다음 기수'} 만들기</button>`); } catch (e) { console.error(e); } });
+
+  /* v38 L-2: 대기자 — 학습자 [대기 신청하기](lshop → LPX 'wait-req') → 과정 상세 '대기자' 명단 → [올리기](정원이 차 있으면 1명 늘릴지 묻고) + 알림 */
+  if (typeof LPX === 'object' && LPX) LPX['wait-req'] = x => { const d = x.data || {}; const c = typeof C === 'function' ? C(d.cls) : null; const m = (S.members || []).find(y => y.sid === x.who || y.id === x.who) || (typeof cmWho === 'function' ? cmWho(x.who) : null); if (!c || !m) return;
+    c.waits = c.waits || []; if ((c.learners || []).includes(m.id) || c.waits.some(w => w.id === m.id)) return; c.waits.push({ id: m.id, at: typeof nowStr === 'function' ? nowStr() : new Date().toISOString() }); audit2(`대기 신청 — ${c.name} · ${m.name || m.sid || m.id}`); try { save(); } catch (e) { } };
+  const capOf = c => +((c && c.recruit) || {}).cap || 0;
+  function waitUp(cid, mid) { const c = C(cid); if (!c) return; const m = (S.members || []).find(y => y.id === mid); const doUp = () => { c.learners = c.learners || []; if (!c.learners.includes(mid)) { c.learners.push(mid); c.prog = c.prog || {}; c.prog[mid] = c.prog[mid] || { p: 0, exam: null, assign: 'none', att: 100 }; c.enr = c.enr || {}; c.enr[mid] = { at: today(), end: null, src: 'wait', status: 'active', paid: null }; }
+      c.waits = (c.waits || []).filter(w => w.id !== mid); if (typeof c2Notify === 'function') c2Notify(mid, `${c.name} 자리가 났습니다`, '대기 신청한 강의에 자리가 나서 지금 바로 수강할 수 있습니다.'); audit2(`대기자 올리기 — ${c.name} · ${(m && (m.name || m.sid)) || mid}`); try { save(); } catch (e) { } try { render(); } catch (e) { } toast(`${(m && (m.name || m.sid)) || '대기자'}님을 수강생으로 올리고 알림을 보냈습니다.`, 'ok'); };
+    const cap = capOf(c); if (cap && (c.learners || []).length >= cap) { modal('정원이 찼습니다', `<p style="font-size:16px">${esc(c.name)}의 정원 ${cap}명이 모두 찼습니다. 정원을 ${cap + 1}명으로 1명 늘리고 올릴까요?</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '정원 늘리고 올리기', kind: 'pri', run: () => { c.recruit.cap = cap + 1; doUp(); } }]); return; } doUp(); }
+  ACT['cf-wait-up'] = el => waitUp(el.dataset.c, el.dataset.v);
+  ACT['cf-wait-del'] = el => { const c = C(el.dataset.c); if (!c) return; c.waits = (c.waits || []).filter(w => w.id !== el.dataset.v); try { save(); render(); } catch (e) { } };
+  if (typeof AFTER !== 'undefined' && Array.isArray(AFTER)) AFTER.push(() => { try { if (!CUR || CUR.tab !== 'class' || !UI.cls || (UI.clsT || 'learners') !== 'learners') return; const c = C(UI.cls); const W0 = (c && c.waits) || []; const v = document.querySelector('#main .bview'); if (!c || !W0.length || !v || v.querySelector('.cf-waits')) return;
+      const cap = capOf(c); const nm = id => { const m = (S.members || []).find(y => y.id === id); return m ? (m.name || m.sid || m.nick || id) : id; }; const tw = v.querySelector('.c2lt, .tw, table');
+      const html = `<div class="card cf-waits"><div class="ch"><b>대기자 ${W0.length}명</b><small>${cap ? `정원 ${cap}명 중 ${(c.learners || []).length}명 수강 중` : '정원 제한 없음'} · 신청한 순서대로 올리면 바로 알림이 갑니다</small></div><ol class="cf-wl">${W0.map(w => `<li><span>${esc(nm(w.id))}</span><small>${esc(String(w.at || '').slice(0, 16))}</small><button type="button" class="btn sm pri" data-act="cf-wait-up" data-c="${esc(c.id)}" data-v="${esc(w.id)}">수강생으로 올리기</button><button type="button" class="btn sm ghost" data-act="cf-wait-del" data-c="${esc(c.id)}" data-v="${esc(w.id)}">빼기</button></li>`).join('')}</ol></div>`;
+      if (tw) tw.insertAdjacentHTML('beforebegin', html); else v.insertAdjacentHTML('beforeend', html); } catch (e) { console.error(e); } });
 
   /* ───────── 생성 함수 통일 ───────── */
   if (typeof makeCourse === 'function') { const old = makeCourse; makeCourse = function (x) { x = x || {}; if (x.legacy) return old(x); /* 기존 호출자(SAM · 저니 · 에이전트) 호환: topic · weeks · aud · fee · docs · vsrc · quiz · assign · exam · level */

@@ -64,7 +64,8 @@
   const prepOf = c => !!c && c.items != null && +c.items === 0 && !(+c.sessions > 0) && c.kind !== 'pack';
   function recruitState(c) { if (prepOf(c)) return { ok: false, label: '준비 중', prep: true }; const R = c.recruit; const t = today();
     if (c.saleEnd && c.saleEnd <= t) return { ok: false, label: '판매 종료' };
-    if (R && R.on) { if (R.from && t < R.from) return { ok: false, label: `모집 예정 · ${R.from}부터` }; if (R.to && t > R.to) return { ok: false, label: '모집 마감' }; if (R.cap && (c.n || 0) >= +R.cap) return { ok: false, label: `정원 마감(${R.cap}명)` }; return { ok: true, label: `모집 중${R.to ? ` · ${R.to}까지` : ''}${R.cap ? ` · 잔여 ${Math.max(0, R.cap - (c.n || 0))}석` : ''}` }; }
+    if (R && R.on) { if (R.from && t < R.from) return { ok: false, label: `모집 예정 · ${R.from}부터` }; if (R.to && t > R.to) return { ok: false, label: '모집 마감' }; if (R.cap && (c.n || 0) >= +R.cap) return { ok: false, label: `정원 마감(${R.cap}명)`, full: true }; return { ok: true, label: `모집 중${R.to ? ` · ${R.to}까지` : ''}${R.cap ? ` · 잔여 ${Math.max(0, R.cap - (c.n || 0))}석` : ''}` }; }
+    if (R && !R.on && +R.cap > 0 && (c.n || 0) >= +R.cap) return { ok: false, label: `정원 마감(${R.cap}명)`, full: true }; /* v38 L-1: 신청 기간을 정하지 않아도 정원은 지킨다 */
     const P = c.period; if (P && P.mode !== 'days' && P.end && P.end < t) return { ok: false, label: '수강 기간 종료' };
     try { const sh = SHOP(); if (sh && sh.pg && sh.pg.use === 'none' && priceOf(c) > 0) return { ok: true, label: '결제 준비 중', pend: true }; } catch (e) { } /* v25.1: 결제 미연결 유료 강좌에 '수강 신청 가능'이 함께 뜨던 문제 */
     return { ok: true, label: '수강 신청 가능' }; }
@@ -103,6 +104,13 @@
         return `<a class="shp-card" href="#class/${esc(c.id)}" data-s="${esc((c.name + ' ' + (c.teachers || []).join(' ') + ' ' + (c.desc || '')).toLowerCase())}">${thumb(c)}<div class="shp-cb"><div class="shp-tags"><span class="tg">${esc(KIND[c.kind] || '기간')}${c.sub ? ' · ' + esc(SUBN[c.sub] || c.sub) : ''}</span>${c.legal ? '<span class="tg r">법정</span>' : ''}${st === 'active' ? '<span class="tg g">수강 중</span>' : ''}</div><h3>${esc(c.name)}</h3><p class="mini">${esc((c.teachers || []).join(', '))}${periodTxt(c) ? ' · ' + esc(periodTxt(c)) : ''}</p>${priceHTML(c) ? `<div class="shp-pr">${priceHTML(c)}</div>` : ''}<small class="shp-rs ${rs.ok ? '' : 'off'}">${esc(rs.label)}</small></div></a>`; }).join('') || `<div class="empty shp-empty"><p>${LR.me ? '지금 신청할 수 있는 클래스가 없습니다. 배정받은 과정은 「내 학습」에서 바로 볼 수 있습니다.' : '지금 신청할 수 있는 클래스가 없습니다. 로그인하면 배정받은 과정을 볼 수 있습니다.'}</p><a class="lbtn sm ${LR.me ? 'pri' : 'ghost'}" href="${LR.me ? '#my' : '#login'}">${LR.me ? '내 학습으로 가기' : '로그인'}</a></div>`}</div><p class="empty" id="shpNo" hidden>검색 결과가 없습니다.</p>`); }
 
   /* ── 클래스 상세 ── */
+  /* v38 L-2 대기 신청: 운영자 대기자 명단(LPX 'wait-req')에 올리고, 자리가 나면 운영자가 올리면서 알림을 보낸다 */
+  const waitKey = id => `didisam.wait.${(LR.me && (LR.me.sid || LR.me.id)) || 'x'}.${id}`;
+  const waited = id => { try { return !!localStorage.getItem(waitKey(id)); } catch (e) { return false; } };
+  const waitCta = (id, label) => waited(id) ? `<button class="lbtn blk" disabled>대기 신청했어요</button><p class="mini">${esc(label)} — 자리가 나면 알림으로 알려 드려요.</p>` : `<button type="button" class="lbtn pri blk" data-lwait="${esc(id)}">대기 신청하기</button><p class="mini">${esc(label)}이에요. 대기 신청하면 자리가 났을 때 알림으로 알려 드려요.</p>`;
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-lwait]'); if (!b) return; e.preventDefault(); const id = b.dataset.lwait; const c = ((SHOP() || {}).classes || []).find(x => x.id === id);
+    try { if (typeof lpxPush === 'function') lpxPush('wait-req', { cls: id, name: c ? c.name : '' }); } catch (er) { console.error(er); } try { localStorage.setItem(waitKey(id), new Date().toISOString()); } catch (er) { }
+    b.outerHTML = `<button class="lbtn blk" disabled>대기 신청했어요</button>`; try { if (typeof ltoast === 'function') ltoast('대기 신청했어요. 자리가 나면 알려 드려요.'); } catch (er) { } });
   function viewClass(id) { const sh = SHOP(); if (!sh) return noShop(); const c = sh.classes.find(x => x.id === id); const R = mine();
     if (!c || !visible(c, R)) return sec('클래스', '<p class="empty">클래스를 찾지 못했거나 공개되지 않은 클래스입니다.</p>', '<a href="#shop">클래스</a>');
     const base = ((SITE().classes || []).find(x => x.id === id) || {}); const items = base.items || []; const st = enrState(c, R); const rs = recruitState(c); const f = payOff() ? 0 : priceOf(c);
@@ -114,6 +122,7 @@
     else if (st === 'hold') cta = `<div class="shp-warn">환불 신청 중입니다. 신청한 순간부터 이 클래스는 수강할 수 없습니다.</div><a class="lbtn ghost blk" href="#mypay/refund">환불 내역 보기</a>`;
     else if (st === 'ended' && !(c.kind === 'sub' && (!cnt || (sub && sub.n < cnt)))) cta = `<div class="shp-warn">수강 기간이 종료되었습니다. 같은 클래스는 다시 신청 · 결제할 수 없습니다. 연장이 필요하면 운영자에게 문의하세요.</div>`;
     else if (c.kind === 'sub' && cnt && sub && sub.n >= cnt && sub.status === '해지') cta = `<div class="shp-warn">설정된 구독 회차(${cnt}회)를 모두 이용했습니다.</div>`;
+    else if (!rs.ok && rs.full) cta = waitCta(id, rs.label); /* v38 L-2: 정원이 차면 대기 신청 */
     else if (!rs.ok) cta = `<button class="lbtn blk" disabled>${esc(rs.label)}</button>`;
     else if (gradeBlock(R) && f > 0) cta = `<div class="shp-warn">${esc(gradeBlock(R))}</div>`;
     else if (f > 0 && sh.pg.use === 'none') cta = `<button class="lbtn blk" disabled>결제 준비 중</button><p class="mini">운영자가 결제(PG) 연결을 마치면 신청할 수 있습니다.</p>`;

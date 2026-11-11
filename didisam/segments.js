@@ -102,7 +102,7 @@ ${sign}<h1>${esc(title)}</h1><p class="m">${esc(S.org.name)} · ${esc(TYPES[ty].
   logAudit(`보고서 내려받기 — ${title}`); toast(`「${title}」을 내려받았습니다. 한글 · Word에서 열 수 있습니다.`, 'ok'); }
 ACT['seg-report'] = () => segReport();
 AFTER.push(() => { const k = $('[data-act="kpi-csv"]'); if (k && !$('[data-act="seg-report"]')) k.insertAdjacentHTML('afterend', `<button class="btn" data-act="seg-report">${ic('book', 16)} ${esc((SEG_REP[S.org.type] || '교육 운영 현황 보고').replace(/\(.*\)/, ''))} 내려받기</button>`); });
-{ const base = answer; answer = (q, ...r) => { if (/(실적|이수 현황|결재).*(보고서)|보고서.*(내려받|다운|결재)/.test(q) && !/주간/.test(q)) { setTimeout(segReport, 50); return { text: `${SEG_REP[S.org.type] || '교육 운영 현황 보고'}를 지금 집계해 내려받습니다(한글 · Word에서 열리는 문서). 요약 · ${t('group')}별 · ${t('cls')}별 현황과 특이사항이 들어 있습니다.${S.org.type === 'public' ? ' 결재란(담당 · 팀장 · 과장)이 포함되어 있습니다.' : ''}` }; } return base(q, ...r); }; }
+{ const base = answer; answer = (q, ...r) => { if (/(실적|이수 현황|결재).*(보고서)|보고서.*(내려받|다운|결재)/.test(q) && !/주간/.test(q)) { setTimeout(segReport, 50); return { text: `${SEG_REP[S.org.type] || '교육 운영 현황 보고'}를 집계해 내려받기를 시작했습니다(한글 · Word에서 열리는 .doc 문서). 요약 · ${t('group')}별 · ${t('cls')}별 현황과 특이사항이 들어 있습니다.${S.org.type === 'public' ? ' 결재란(담당 · 팀장 · 과장)이 포함되어 있습니다.' : ''}\n파일이 받아지지 않았으면 아래 [보고서 내려받기]를 누르십시오.`, btn: { act: 'seg-report', label: '보고서 내려받기' } }; } /* v38 P-18: 자동 내려받기가 막혀도 누를 버튼 */ return base(q, ...r); }; }
 
 /* ── ⑦ 공공 도입 점검(현황) ── */
 AFTER.push(cur => { if (!S || S.org.type !== 'public' || cur.ws !== 'dash' || $('#segPub')) return; const v = $('.bview') || $('main#main'); if (!v) return;
