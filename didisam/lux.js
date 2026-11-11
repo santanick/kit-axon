@@ -105,7 +105,7 @@
   function onePrimary(scope, keep) { if (!scope) return; [...scope.querySelectorAll('.lbtn.pri, .lbtn.dark, .lbtn:not(.ghost):not(.wht):not(.sm)')].filter(b => b !== keep && !b.closest('.lux-cont, .shp-mw, #shpModal, .gate, form, .lux-sheet, header, .shp-side, .lt')).forEach(b => { b.classList.remove('pri', 'dark'); b.classList.add('ghost'); }); }
   function pageFix() { const r = route(); const lm = document.getElementById('lm'); if (!lm) return; const parts = decodeURIComponent(location.hash.slice(1)).split('/');
     /* 강좌 상세: 비회원 '수강 신청' → 간편가입(끝나면 결제로 바로) */
-    if (r.a === 'class' && !LR.me) { const id = parts[1]; const a = lm.querySelector(`a[href="#login/class/${CSS.escape(id)}"]`);
+    if (r.a === 'class' && !LR.me) { const id = parts[1]; const a = lm.querySelector(`a[href="#login/class/${CSS.escape(id)}"]:not([data-lwg])`); /* v38 L-2: 정원 마감의 '로그인하고 대기 신청하기'는 그대로 */
       if (a) { const c = ((typeof shInfo === 'function' && shInfo()) || { classes: [] }).classes.find(x => x.id === id) || {}; const paid = (typeof shPrice === 'function' ? shPrice(id) : +c.price || 0) > 0; const back = c.kind === 'sub' ? 'pay/sub/' + id : paid ? 'pay/class/' + id : 'class/' + id;
         const canJoin = !!document.querySelector('.la-join') || (SITE().acct && SITE().acct.mode === 'open');
         a.textContent = '수강 신청하기'; a.dataset.luxBack = back; a.setAttribute('href', canJoin ? '#join' : '#login/' + back);

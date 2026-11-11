@@ -208,6 +208,8 @@
   /* 과정 하나만 만드는 말인가(여러 단계 의도 · 기존 과정 편집은 아님) */
   function isOne(q) { const s = String(q || '').replace(/\s+/g, ' ').trim(); if (!s || s.length > 200) return false;
     if (!(MK.test(s) || MK15.test(s) || MKF.test(s))) return false;
+    /* v38 C-14: '업무 자동화 기초 6차시 과정 만들어줘'처럼 과정 이름 + 차시 + 만들어줘 한 문장이면 이름 속 낱말(자동화 · 공지 등)로 다른 일을 끼우지 않는다 */
+    if (/^[^,.!?]{2,40}?\s*\d+\s*(차시|주차?|회차|강)\s*(짜리\s*)?(과정|교과목|강좌|교육과정|훈련과정|프로그램|수업)?\s*(을|를|으로|로)?\s*(새로\s*)?(만들어|만들|개설해|개설|열어)\s*(줘|주세요|주십시오)\.?$/.test(s)) return true;
     const nm = s.match(/(\d+)\s*개/); if (nm && +nm[1] > 1) return false;
     if (/(홈페이지|사이트|포털|공지|초대|명단|엑셀\s*(로|파일)|csv|진단|배지|저니|로드맵|메시지|문자|보내|발송|청구|수료증|공개|게시|올려|루브릭|채점|교재|전자책|디지털북|문항\s*은행|설문|라이브|레시피|복사|삭제|지워|수정|바꿔|화면\s*열)/i.test(s) || /(학과|부서|그룹|반)\s*(을|를)?\s*(\d+\s*개\s*)?(만들|추가)/.test(s)) return false;
     try { if (typeof siPlan === 'function') { const P = siPlan(s); if (P.steps.some(x => x.did !== 'course')) return false; } } catch (e) { }
@@ -216,7 +218,7 @@
   SAM.isOne = isOne;
   function openFlow(q, from, chip) { const F = cf(); if (!F) return false; const p = typeof q === 'string' ? parse(q) : (q || {}); const pre = {}; Object.keys(p).forEach(k => { if (k !== 'q' && p[k] !== '' && p[k] != null) pre[k] = p[k]; });
     /* 추천 칩(사용자가 직접 쓰지 않은 문장)이면 이름 · 대상 · 목표는 채우지 않는다 */
-    if (chip) { ['name', 'topic', 'goal', 'target'].forEach(k => delete pre[k]); pre._chip = 1; }
+    if (chip && !pre.name) pre._chip = 1; /* v38 V-11: 칩 문장에 과정 이름이 있으면(용접기능사 실기 20차시 등) 그대로 채운다 — 분류 낱말(비교과 등)은 parse가 이름에서 뺀다 */
     /* 흐름(C1)의 자동 넣기 설정 d.auto로 옮긴다 */
     if (pre.vsrc || pre.docs || pre.quiz === false) { let A = {}; try { A = { ...((F.defaults && F.defaults().auto) || {}) }; } catch (e) { } if (pre.vsrc) A.video = pre.vsrc; if (pre.docs) A.docs = true; if (pre.quiz === false) { A.quiz = false; A.exam = false; A.assign = false; } pre.auto = A; }
     if (innerWidth <= 860 && document.getElementById('drawer') && ACT['chat-close']) { try { ACT['chat-close'](); } catch (e) { } }
@@ -227,7 +229,7 @@
   { const b = ACT['chat-q']; if (b) ACT['chat-q'] = (el, ...r) => { SAM.viaChip = true; try { return b(el, ...r); } finally { SAM.viaChip = false; } }; }
   ACT['csam-open'] = el => openFlow(el.dataset.v || '', 'sam');
   const card = (q, chip) => { const p = parse(q); const n = p.sessions || (U() ? 15 : 6); const unit = U() ? '주' : '차시';
-    if (chip) return { title: `${T('cls')} 만들기`, text: `${T('cls')} 만들기 화면을 열었습니다. 이름은 비워 두었습니다. 화면의 예시 카드를 누르거나 직접 적고 [다음]을 누르세요. 막히면 [AI SAM에게 맡기기]를 누르면 됩니다.`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' };
+    if (chip && !p.name) return { title: `${T('cls')} 만들기`, text: `${T('cls')} 만들기 화면을 열었습니다. 이름은 비워 두었습니다. 화면의 예시 카드를 누르거나 직접 적고 [다음]을 누르세요. 막히면 [AI SAM에게 맡기기]를 누르면 됩니다.`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' };
     const got = [p.name ? `이름 「${p.name}」` : '', p.target ? `대상 ${p.target}` : '', `${n}${unit}`, p.price ? `수강료 ${won(p.price)}` : '', ...extraGot(p)].filter(Boolean).join(' · ');
     return { title: `${T('cls')} 만들기`, text: `${T('cls')} 만들기 화면을 열고 말씀하신 내용(${got})을 미리 채워 두었습니다. 화면에서 확인만 하고 [다음]을 누르세요. 막히면 [AI SAM에게 맡기기]를 누르면 됩니다.${p.name ? '' : `\n이름은 비어 있습니다. 예: 「${sugg()[0]}」`}`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' }; };
   /* 흐름이 열려 있을 때 대화창에서 '이 단계 채워줘' · '어려워요' */
@@ -253,7 +255,7 @@
     const tp = `${nmQ} ${wt}`.trim(); const add = [];
     for (let i = 0; i < Math.min(nv, 5); i++) add.push({ id: uid('it'), type: 'video', title: `${wt || nmQ} 영상 ${i + 1}`.trim(), week: wk, src: 'youtube', q: `${tp} 강의`, url: '' });
     for (let i = 0; i < Math.min(nd, 5); i++) add.push({ id: uid('it'), type: 'doc', title: `${wk}${u === '주차' ? '주' : u} 교안${nd > 1 ? ' ' + (i + 1) : ''}`, week: wk, topic: tp, doc: AI.material(tp, { name: c.name }) });
-    for (let i = 0; i < Math.min(nq, 5); i++) add.push({ id: uid('it'), type: 'quiz', title: `${wk}${u === '주차' ? '주' : u} 확인 퀴즈${nq > 1 ? ' ' + (i + 1) : ''}`, week: wk, qs: AI.questions(nmQ, 5), time: 0, retake: 98, autoGen: 1 });
+    for (let i = 0; i < Math.min(nq, 5); i++) add.push({ id: uid('it'), type: 'quiz', title: `${wk}${u === '주차' ? '주' : u} 확인 퀴즈${nq > 1 ? ' ' + (i + 1) : ''}`, week: wk, qs: AI.questions(nmQ, 5, '보통', undefined, (+wk || 1) - 1 + i), time: 0, retake: 98, autoGen: 1 });
     const what = [nv ? `영상 ${nv}개` : '', nd ? `교안 ${nd}개` : '', nq ? `확인 퀴즈 ${nq}개` : ''].filter(Boolean).join(' · ');
     return { a: { title: `${T('cls')}에 넣기`, text: `「${c.name}」 ${wk}${u === '주차' ? '주차' : u}에 ${what}를 넣었습니다.${nv ? ' 영상은 검색어만 준비했습니다. 항목을 눌러 YouTube 주소를 붙이거나 파일을 올리세요.' : ''}`, via: 'AI SAM' },
       run: () => { c.curriculum = (c.curriculum || []).concat(add).sort((a, b) => (+a.week || 0) - (+b.week || 0)); try { S.ai.usage++; } catch (e) { } save(); UI.cls = c.id; UI.clsT = 'curriculum'; go('class'); toast(`${what}를 넣었습니다.`, 'ok'); } }; }

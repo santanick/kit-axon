@@ -90,9 +90,9 @@
       make: (s, V) => { const n = Math.min(12, Math.max(1, +(s.match(/(\d+)\s*개/) || [])[1] || 1)); const wk = (s.match(typeof SESS_RE !== 'undefined' ? SESS_RE : /(\d+)\s*(?:차시|회차|주)/) || [])[1]; const fee = typeof aiFee === 'function' ? aiFee(s) : null;
         let name = (typeof feeStrip === 'function' ? feeStrip(s) : s).replace(typeof SESS_RE !== 'undefined' ? new RegExp(SESS_RE.source, 'g') : /x^/, ' ').replace(/(이번|다음)\s*(학기|달|주|분기)|\d+\s*개|새로?\s|신규\s/g, ' ').replace(new RegExp(`${CLS_W}\\S*`, 'g'), ' ').replace(/(만들|열|개설|생성|추가|설계)\S*/g, ' ').replace(/\s+/g, ' ').trim();
         if (/^(평생\s*교육|평생|비교과(\s*프로그램)?|프로그램|교양|전공|직무|법정(\s*의무)?(\s*교육)?|훈련|직업\s*훈련|기업|공공|사내|성인|학원|온라인|오프라인|무료|유료|정규|단기|특강)$/.test(name)) name = ''; /* v38 L-11: 분류 낱말만 있으면 이름이 아니다('평생교육 1 · 2 · 3'이 되던 문제) → 이름을 묻는다(유형별 예시 채움) */
-        const names = V.names && V.names.length ? V.names.slice(0, n) : name && n === 1 ? [name] : name ? Array.from({ length: n }, (_, i) => `${name} ${i + 1}`) : null;
+        let names = V.names && V.names.length ? V.names.slice(0, n) : name && n === 1 ? [name] : name ? Array.from({ length: n }, (_, i) => `${name} ${i + 1}`) : null;
         const price = V.price != null ? V.price : fee && fee.price != null ? fee.price : null; const need = [];
-        if (!names) need.push({ key: 'names', label: `${K_()} 이름${n > 1 ? ` ${n}개(한 줄에 하나)` : ''}`, type: 'lines', def: (SUG[S.org.type] || SUG.adult).slice(0, n).concat(Array.from({ length: Math.max(0, n - 3) }, (_, i) => `새 ${K_()} ${i + 4}`)).join('\n') });
+        if (!names) names = (SUG[S.org.type] || SUG.adult).slice(0, n).concat(Array.from({ length: Math.max(0, n - 3) }, (_, i) => `새 ${K_()} ${i + 4}`)); /* v38 L-11: 이름을 따로 묻지 않고 유형별 예시 이름으로 계획 카드를 바로 보여 준다([승인하고 실행]) — 이름은 만든 뒤 바꾼다 */
         if (fee && fee.amb && V.price == null) need.push({ key: 'price', label: `${t('fee')}(원)`, type: 'num', def: (fee.opts || [])[0] || 0, hint: fee.amb });
         const wks = +wk || +V.weeks || (S.org.type === 'univ' ? 15 : 6);
         return { l: `${K_()} ${n}개 만들기${names ? ` — ${names.join(' · ')}` : ''}`, k: 'make', est: `${n}개 · ${wks}${S.org.type === 'univ' ? '주' : '차시'}${price ? ` · ${won(price)}` : price === 0 ? ' · 무료' : ''}`, go: 'class', need,
@@ -125,8 +125,8 @@
     const risky = P.steps.filter(s => KIND[s.k]); const pid = uid('p'); const go2 = (P.steps[P.steps.length - 1] || {}).go || '';
     PLANS[pid] = { run: () => siExec(P), go: go2, si: true, risky: risky.map(s => `${KIND[s.k][0]} · ${s.l} · ${s.est}`) };
     const multi = P.steps.length > 1;
-    return { title: multi ? `${P.steps.length}단계 실행 계획` : P.steps[0].l, text: `${multi ? `요청을 ${P.steps.length}단계로 나눴습니다. ` : ''}${risky.length ? `금액 · 발송 단계는 [${multi ? '모두 실행' : '실행'}]을 누른 뒤 한 번 더 확인합니다.` : '확인하고 실행을 눌러 주세요.'}${P.skip.length ? `\n이해하지 못한 부분: 「${P.skip.join('」 「')}」 — 화면에서 직접 하거나 다시 말씀해 주세요.` : ''}`,
-      si: rows, plan: pid, state: 'pending', cta: multi ? '모두 실행' : '실행', via: 'AI SAM 계획' }; }
+    return { title: multi ? `${P.steps.length}단계 실행 계획` : P.steps[0].l, text: `${multi ? `요청을 ${P.steps.length}단계로 나눴습니다. ` : ''}${risky.length ? `금액 · 발송 단계는 [승인하고 실행]을 누른 뒤 한 번 더 확인합니다.` : '확인하고 [승인하고 실행]을 눌러 주세요.'}${P.skip.length ? `\n이해하지 못한 부분: 「${P.skip.join('」 「')}」 — 화면에서 직접 하거나 다시 말씀해 주세요.` : ''}`,
+      si: rows, plan: pid, state: 'pending', cta: '승인하고 실행', via: 'AI SAM 계획' }; }
   let SI_LAST = null;
   function siExec(P) { const X = { made: [], q: P.q }; const out = []; let stop = false;
     P.steps.forEach(s => { if (stop) { out.push({ l: s.l, msg: '앞 단계가 실패해 건너뜀', bad: true }); return; } try { const r = s.run(X) || {}; out.push({ l: s.l, n: r.n || 0, msg: r.msg || '완료', go: r.go || s.go }); } catch (e) { console.error(e); out.push({ l: s.l, msg: '실패 — ' + String(e.message || e).slice(0, 80), bad: true }); stop = true; } });

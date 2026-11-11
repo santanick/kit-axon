@@ -238,7 +238,9 @@ ACT['lib-up'] = el => { [...el.files].forEach(f => { const big = f.type.startsWi
 ACT['lib-del'] = el => { const l = S.lib.find(x => x.id === el.dataset.v); if (l.used) { toast('사용 중인 파일은 삭제할 수 없습니다.', 'warn'); return; } S.lib = S.lib.filter(x => x !== l); save(); render(); };
 
 /* ═════════ 유형 전용: 기업 법정의무교육 ═════════ */
-const legalUndone = () => S.classes.filter(c => c.legal).flatMap(c => c.learners.filter(id => !clsDone(c, id)).map(id => ({ c, id })));
+/* v38 C-R1: 학습자에게 열린 과정인가 — 준비 중 · 비공개 과정은 배정 알림 · 독려 · 자동화 대상에서 뺀다(공개할 때 보류 알림을 보낸다) */
+function clsLive(c) { return !!c && c.status !== '준비중' && c.status !== '종료' && (c.open || '전체') !== '비공개'; }
+const legalUndone = () => S.classes.filter(c => c.legal && clsLive(c)).flatMap(c => c.learners.filter(id => !clsDone(c, id)).map(id => ({ c, id })));
 VIEWS.compliance = () => {
   const L = S.classes.filter(c => c.legal);
   return head('법정의무교육', `${L.length ? L.map(c => c.name.replace(/\s*교육.*$/, '')).join(' · ') : '법정 의무교육'} — 연 1회 이상 이수 관리`, `<button class="btn" data-act="comp-report">이수 증빙 보고서</button><button class="btn ai" data-act="legal-nudge">✦ 미이수자 독려 실행</button>`) +

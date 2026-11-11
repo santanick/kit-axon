@@ -302,7 +302,7 @@ EXQ.corp[0] = '신규 입사자 온보딩 6차시 과정 만들고 AI 강의 영
 EXQ.k12[2] = '겨울방학 특강 4차시 과정 만들고 공지까지 써줘';
 EXQ.adult[1] = '엑셀 실무 마스터 8차시 과정 만들고 강의자료 · 퀴즈까지 채워줘';
 EXQ.lifelong[1] = '바리스타 입문 과정 만들고 모집 공지 써줘';
-EXQ.voc[1] = '웹개발 기초 과정에 퀴즈 5문항이랑 강의자료 만들어줘';
+EXQ.voc[1] = '용접기능사 실기 과정에 퀴즈 5문항이랑 강의자료 만들어줘'; /* v38 V-11: 직업훈련 예시 */
 
 /* 과정 만들기(흐름 · 저니 공용) */
 function makeCourse(x) {
@@ -326,7 +326,7 @@ const FILL = [
   { id: 'doc', absorb: 1, re: /강의\s*자료|교안|핸드아웃|학습\s*자료|수업\s*자료/, label: () => '강의자료', line: x => `「${x.target()}」 차시별 강의자료(교안) 생성`,
     run: x => { const c = x.tc(); let n = 0; if (c.weekly) c.weekPlan.forEach(w => { if (/고사|최종 평가/.test(w.title) || c.curriculum.some(i => i.type === 'doc' && i.week === w.w) || n >= 15) return; const v = c.curriculum.find(i => i.type === 'video' && i.week === w.w && i.ai?.scenes); pushItem(c, { type: 'doc', title: `${w.w}주 강의자료 — ${w.title}`, week: w.w, topic: `${clean(c.name)} ${w.title}`, doc: AI.material(`${clean(c.name)} ${w.title}`, c, v?.ai?.scenes) }); n++; });
       else { pushItem(c, { type: 'doc', title: `${clean(c.name)} 강의자료`, topic: clean(c.name), doc: AI.material(c.name, c) }); n = 1; } return `「${c.name}」 강의자료 ${n}건`; }, open: x => ({ go: 'class', cls: x.tc().id }) },
-  { id: 'quiz', absorb: 1, re: /퀴즈/, label: () => '퀴즈', line: x => `「${x.target()}」 퀴즈 ${x.n || 5}문항`, run: x => { const c = x.tc(); pushItem(c, { type: 'quiz', title: `${String(x.topic || clean(c.name)).replace(/\s*확인$/, '')} 확인 퀴즈`, qs: AI.questions(x.topic || c.name, x.n || 5), time: 0, retake: 98 }); return `퀴즈 ${x.n || 5}문항`; }, open: x => ({ go: 'class', cls: x.tc().id }) },
+  { id: 'quiz', absorb: 1, re: /퀴즈/, label: () => '퀴즈', line: x => `「${x.target()}」 퀴즈 ${x.n || 5}문항`, run: x => { const c = x.tc(); pushItem(c, { type: 'quiz', title: `${String(x.topic || clean(c.name)).replace(/\s*확인$/, '')} 확인 퀴즈`, qs: AI.questions(x.topic || c.name, x.n || 5, '보통', undefined, (c.curriculum || []).filter(i => i.type === 'quiz').length), time: 0, retake: 98 }); return `퀴즈 ${x.n || 5}문항`; }, open: x => ({ go: 'class', cls: x.tc().id }) },
   { id: 'exam', absorb: 1, re: /시험|고사/, label: () => '시험', line: x => `「${x.target()}」 시험 ${x.n || 10}문항(배점 100)`, run: x => { const c = x.tc(); pushItem(c, { type: 'exam', title: `${clean(c.name)} 평가 시험`, qs: AI.questions(x.topic || c.name, x.n || 10, '보통', ['mc', 'mc', 'ox', 'short', 'essay']), time: 60, retake: 1 }); return `시험 ${x.n || 10}문항`; }, open: x => ({ go: 'class', cls: x.tc().id }) },
   { id: 'assign', absorb: 1, re: /과제(?!\s*(채점\s*)?(루브릭|채점\s*기준))/, label: () => '과제 + 루브릭', line: x => `「${x.target()}」 과제 안내 + 채점 루브릭`, run: x => { const c = x.tc(); const rb = AI.rubric(`${clean(c.name)} 과제`); S.rubrics.push(rb); pushItem(c, { type: 'assign', title: `${clean(c.name)} 실습 과제`, ...AI.assignment(c.name), rubric: rb.id }); return '과제 1건 + 루브릭'; }, open: x => ({ go: 'class', cls: x.tc().id }) },
   { id: 'rubric', go: 'assess', re: /루브릭|채점\s*기준/, label: () => '루브릭', line: x => `「${x.topic || '과제'}」 루브릭(기준 4 · 배점 100 · 수준 3단계)`, run: x => { const rb = AI.rubric(x.topic || '과제'); S.rubrics.push(rb); UI.asF = 'rubric'; return `「${rb.name}」`; } },

@@ -7,7 +7,7 @@ const clean = s => String(s || '').replace(/\(.*?\)|\[.*?\]/g, '').trim();
 
 /* ═════════ AI 생성기(데모 규칙) ═════════ */
 const WEEK15 = ['오리엔테이션 · 과목 소개', '기본 개념과 용어', '핵심 원리 Ⅰ', '핵심 원리 Ⅱ', '도구와 실습 환경', '실습 Ⅰ: 따라 하기', '사례 분석', '중간고사', '심화 Ⅰ', '심화 Ⅱ', '프로젝트 기획', '프로젝트 실습', '프로젝트 피드백', '결과 발표 · 공유', '기말고사'];
-const MOD = ['시작하기', '핵심 개념', '원리 이해', '실습 따라 하기', '사례로 배우기', '응용하기', '심화', '정리 · 평가'];
+const MOD = ['시작하기', '핵심 개념', '원리 이해', '실습 따라 하기', '사례로 배우기', '응용하기', '심화', '문제 풀이', '종합 실습', '복습 · 점검', '실전 연습', '프로젝트 기획', '프로젝트 실습', '결과 공유', '심화 응용', '핵심 다지기']; /* v38 A-12: 16차시까지 겹치지 않는 제목(예전 8개 → '시작하기 2'가 생겼다) */
 const QBANK = [
   { re: /일차\s*함수|기울기|y\s*절편/, mc: [['일차함수 y = 2x + 3의 그래프의 기울기는?', ['2', '3', '-2', '5'], 'y = ax + b에서 x의 계수 a가 기울기입니다.'], ['일차함수 y = 2x + 3의 그래프의 y절편은?', ['3', '2', '-3', '0'], 'x = 0일 때의 y값(상수항 b)이 y절편입니다.'], ['일차함수 y = -x + 1의 그래프에 대한 설명으로 옳은 것은?', ['x가 커지면 y는 작아진다', 'x가 커지면 y도 커진다', '원점을 지난다', 'x축과 평행하다'], '기울기가 음수(-1)이면 오른쪽 아래로 내려가는 직선입니다.']], ox: [['일차함수 y = ax + b(a ≠ 0)의 그래프는 직선이다.', 'O', '일차함수의 그래프는 항상 직선입니다.']] },
   { re: /방정식|일차식|연립/, mc: [['방정식 2x + 4 = 10의 해는?', ['x = 3', 'x = 2', 'x = 7', 'x = 5'], '양변에서 4를 빼면 2x = 6, 양변을 2로 나누면 x = 3입니다.'], ['방정식 x - 5 = 3의 해는?', ['x = 8', 'x = 2', 'x = -2', 'x = 15'], '양변에 5를 더하면 x = 8입니다.']], ox: [['등식의 양변에 같은 수를 더해도 등식은 성립한다.', 'O', '등식의 성질입니다.']] },
@@ -95,10 +95,11 @@ Object.assign(AI, {
         [`${T}에서 다른 사람의 피드백은 결과물을 개선하는 데 도움이 된다.`, 'O', '피드백은 놓친 부분을 찾게 해 줍니다.']],
       short: [[`${T}${J('을')} 시작할 때 정해야 하는 세 가지를 쓰시오.`, '목표, 조건, 평가 기준', '목표 · 조건 · 평가 기준을 정해야 결과를 판단할 수 있습니다.']],
       essay: [`${T}${J('을')} 자신의 전공 또는 업무에 적용하는 방법을 사례와 함께 서술하시오.`, `${T}${J('을')} 배우기 전과 후에 달라진 점을 구체적인 예를 들어 서술하시오.`, `${T}에서 가장 어려웠던 부분과 그것을 해결한 방법을 서술하시오.`] }; },
-  questions(topic, n = 5, lv = '보통', mix = ['mc', 'mc', 'ox', 'short', 'mc', 'essay']) {
+  questions(topic, n = 5, lv = '보통', mix = ['mc', 'mc', 'ox', 'short', 'mc', 'essay'], off = 0) { /* v38: off(차시 번호 등)만큼 문항 순서를 돌려 퀴즈마다 다른 문항이 먼저 나오게 */
     topic = AI.qTopic(topic) || clean(topic) || '핵심 개념'; const per = Math.floor(100 / n), rest = 100 - per * n;
     let bank = AI.qbank(topic); const cx = AI.qctx(topic); if (!bank.length && cx) bank = [cx]; const cxT = bank.includes(cx) || !cx ? { mc: [], ox: [] } : cx; /* v38: 주제 문항 → 일반 문항 → 과정 구성 문항 순(큰 문제 은행도 뜻이 통하는 문항으로 채움) */
     const G = AI.genPool(topic); const MC = [...bank.flatMap(b => b.mc || []), ...G.mc, ...(cxT.mc || [])], OX = [...bank.flatMap(b => b.ox || []), ...G.ox, ...(cxT.ox || [])], SH = [...G.short]; const nB = bank.flatMap(b => b.mc || []).length + bank.flatMap(b => b.ox || []).length;
+    { const k = Math.max(0, Math.round(+off || 0)); const rot = (A, m) => { if (!A.length || !m) return A; const r = m % A.length; return A.slice(r).concat(A.slice(0, r)); }; if (k) { const a = rot(MC, k * 3), b = rot(OX, k * 2); MC.length = 0; MC.push(...a); OX.length = 0; OX.push(...b); } }
     let im = 0, io = 0, is = 0, ie = 0;
     return Array.from({ length: n }, (_, i) => {
       let t = mix[i % mix.length]; const pts = per + (i < rest ? 1 : 0);
@@ -165,7 +166,7 @@ Object.assign(AI, {
 function itemsFromDesign(W, o) {
   const items = []; let crb = o.rubric || null; W.forEach(wk => wk.items.forEach(x => { const it = { id: uid('it'), type: x.type, title: x.title, week: wk.w };
     if (x.type === 'video') { if (o.vsrc === 'ai') { it.src = 'ai'; it.ai = { scenes: AI.lecture(x.title, 5, o.level), mins: 5, voice: 'f' }; it.url = 'ai:' + it.id; } else { it.src = 'youtube'; it.q = x.q; it.url = ''; } }
-    if (x.gen && ['quiz', 'exam'].includes(x.type)) { it.qs = AI.questions(o.topic, x.gen.n, x.gen.lv || '보통'); it.time = x.type === 'exam' ? 60 : 0; it.retake = x.type === 'exam' ? 1 : 98; /* v38: 확인 퀴즈는 연습 — 시간 제한 없음 · 다시 풀기 제한 없음(98회 = 최대) */ it.autoGen = 1; /* 사용자가 직접 만들지 않은 자동 초안 표시(규정 게이트에서 구분) */ }
+    if (x.gen && ['quiz', 'exam'].includes(x.type)) { it.qs = AI.questions(o.topic, x.gen.n, x.gen.lv || '보통', undefined, x.type === 'quiz' ? wk.w - 1 : 0); it.time = x.type === 'exam' ? 60 : 0; it.retake = x.type === 'exam' ? 1 : 98; /* v38: 확인 퀴즈는 연습 — 시간 제한 없음 · 다시 풀기 제한 없음(98회 = 최대) */ it.autoGen = 1; /* 사용자가 직접 만들지 않은 자동 초안 표시(규정 게이트에서 구분) */ }
     if (x.type === 'assign') { Object.assign(it, AI.assignment(x.title)); if (!crb) { const rb = AI.rubric(clean(o.topic) + ' 과제'); S.rubrics.push(rb); crb = rb.id; } it.rubric = crb; }
     items.push(it); if (o.docs && x.type === 'video' && !wk.items.slice(0, wk.items.indexOf(x)).some(y => y.type === 'video')) items.push({ id: uid('it'), type: 'doc', title: `${wk.w}${o.univ ? '주' : AI.unitW(o)} 강의자료 — ${wk.title}`, week: wk.w, topic: `${clean(o.topic)} ${wk.title}`, doc: AI.material(`${clean(o.topic)} ${wk.title}`, { name: o.topic, goal: wk.goal }) }); })); return items;
 }
@@ -222,10 +223,10 @@ function fillEmptyWeeks(c) { const E = emptyWeeks(c); if (!E.length) return 0; c
     if (/고사|최종\s*평가|정리\s*·\s*(최종\s*)?평가/.test(wt)) { c.curriculum.push({ id: uid('it'), type: 'exam', title: `${nm} ${wt}`.slice(0, 80), week: w.w, qs: AI.questions(nm, 15), time: 60, retake: 1, autoGen: 1 }); k++; return; }
     c.curriculum.push({ id: uid('it'), type: 'video', title: wt, week: w.w, src: 'youtube', q: `${tp} 강의`, url: '' },
       { id: uid('it'), type: 'doc', title: `${w.w}${un} 교안 — ${wt}`.slice(0, 80), week: w.w, topic: tp, doc: AI.material(tp, { name: c.name, goal: w.goal }) },
-      { id: uid('it'), type: 'quiz', title: `${w.w}${un} 확인 퀴즈`, week: w.w, qs: AI.questions(nm, 5), time: 0, retake: 98, autoGen: 1 }); k++; });
+      { id: uid('it'), type: 'quiz', title: `${w.w}${un} 확인 퀴즈`, week: w.w, qs: AI.questions(nm, 5, '보통', undefined, (+w.w || 1) - 1), time: 0, retake: 98, autoGen: 1 }); k++; });
   c.curriculum.sort((a, b) => (+a.week || 0) - (+b.week || 0)); return k; }
 ACT['ai-fill'] = el => { const c = C(el.dataset.v); let q = 0, a = 0, v = 0; const ew = fillEmptyWeeks(c); const nmQ = clean(c.name) || c.name;
-  c.curriculum.forEach(it => { if (['quiz', 'exam'].includes(it.type) && !(it.qs || []).length) { it.qs = AI.questions(nmQ, it.type === 'exam' ? 15 : 5); it.time = it.type === 'exam' ? 60 : 0; if (it.type === 'quiz' && it.retake == null) it.retake = 98; q++; }
+  c.curriculum.forEach(it => { if (['quiz', 'exam'].includes(it.type) && !(it.qs || []).length) { it.qs = AI.questions(nmQ, it.type === 'exam' ? 15 : 5, '보통', undefined, it.type === 'quiz' ? (+it.week || 1) - 1 : 0); it.time = it.type === 'exam' ? 60 : 0; if (it.type === 'quiz' && it.retake == null) it.retake = 98; q++; }
     if (it.type === 'assign' && !it.rubric) { Object.assign(it, AI.assignment(it.title), { desc: it.desc || AI.assignment(it.title).desc }); const rb = AI.rubric(it.title); S.rubrics.push(rb); it.rubric = rb.id; a++; }
     if (it.type === 'video' && it.src === 'ai' && !(it.ai?.scenes || []).length) { it.ai = { scenes: AI.lecture(it.title, 5), mins: 5, voice: 'f' }; it.url = 'ai:' + it.id; v++; }
     if (it.type === 'video' && !it.url && !it.q) { it.q = `${clean(c.name)} ${it.title}`; }

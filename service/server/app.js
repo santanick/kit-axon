@@ -9,6 +9,7 @@ const { inTenant } = require('./db');
 const { createMcp } = require('./mcp');
 const { createPii, piiKeys } = require('./pii');
 const { createCompliance } = require('./compliance');
+const coupon = require('./coupon'); /* v38 A-17 쿠폰 · 할인 코드 */
 const { benchmark } = require('./bench');
 const { createMedia } = require('./media');
 const { cleanCal } = require('./lpcal');
@@ -210,7 +211,12 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     const type = String(b.type || ''); if (!/^[a-z0-9-]{2,24}$/.test(type) || EV_SERVER.has(type)) throw new HttpErr(400, '보낼 수 없는 요청입니다.', 'type');
     if (!s && !EV_GUEST.has(type)) throw new HttpErr(401, '로그인이 필요합니다.', 'auth');
     limit('lev:' + ip(req), 60, 600e3); limit('levt:' + tid, 600, 3600e3); if (s) limit(`levs:${tid}:${s.sid}`, 120, 600e3);
-    const data = pii.redactDeep(b.data && typeof b.data === 'object' && !Array.isArray(b.data) ? b.data : {}); const j = JSON.stringify(data); if (j.length > 12 * 1024) throw new HttpErr(413, '요청 내용이 너무 큽니다.', 'too_large');
+    const data = pii.redactDeep(b.data && typeof b.data === 'object' && !Array.isArray(b.data) ? b.data : {});
+    /* v38 A-17: 쿠폰을 쓴 결제는 서버가 쿠폰 · 금액을 다시 계산해 맞을 때만 받는다 */
+    if (type === 'pay' && data.cpn) { if (data.itemType && data.itemType !== 'class') throw new HttpErr(400, '쿠폰은 강좌 결제에만 쓸 수 있습니다.', 'coupon');
+      const R = await inTenant(pool, tid, c => coupon.check(c, tid, data.cpn, String(data.ref || ''))); if (!R.ok) throw new HttpErr(400, R.msg, 'coupon');
+      if (Math.round(+data.amount) !== R.final) throw new HttpErr(400, '결제 금액이 쿠폰 할인 금액과 맞지 않습니다. 쿠폰을 다시 적용해 주세요.', 'coupon_amount'); data.cpn = R.code; data.cpnOff = R.off; data.cpnOk = true; }
+    const j = JSON.stringify(data); if (j.length > 12 * 1024) throw new HttpErr(413, '요청 내용이 너무 큽니다.', 'too_large');
     const xid = /^[\w-]{4,40}$/.test(String(b.id || '')) ? String(b.id) : null;
     const id = await inTenant(pool, tid, async c => { if (!(await c.query('select 1 from tenant_state where tenant_id = $1', [tid])).rows[0]) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
       if (Math.random() < 0.02) await c.query("delete from learner_events where tenant_id = $1 and at < now() - interval '90 days'", [tid]);
@@ -245,6 +251,8 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (!s && key === 'POST tutor') return tutorRoute(req, tid, null, ip(req)); /* v23.4 방문자(로그인 전) 튜터 */
     if (!s) throw new HttpErr(401, '로그인이 필요합니다.', 'auth');
     if (pii.pubAuth[key]) return pii.pubAuth[key](req, res, tid, s);
+    if (key === 'POST coupon') { const b = await readBody(req, 1024); limit(`lcp:${tid}:${s.sid}`, 20, 600e3); /* 코드 맞히기 막기 */ const code = String(b.code || '').slice(0, 40), cls = String(b.cls || '').slice(0, 60);
+      const R = await inTenant(pool, tid, c => coupon.check(c, tid, code, cls)); return R.ok ? { ok: true, code: R.code, off: R.off, final: R.final, label: R.label } : { ok: false, msg: R.msg }; } /* v38 A-17 */
     if (key === 'GET me') return inTenant(pool, tid, c => learnerOut(c, tid, s.sid));
     if (key === 'PUT progress') { const b = await readBody(req, LP_MAX); const lp = cleanLP(b.lp); const j = JSON.stringify(lp); if (j.length > LP_MAX) throw new HttpErr(413, '학습 기록이 너무 큽니다.', 'too_large');
       await inTenant(pool, tid, c => c.query('insert into learner_progress (tenant_id, sid, lp, bytes) values ($1, $2, $3, $4) on conflict (tenant_id, sid) do update set lp = excluded.lp, bytes = excluded.bytes, updated_at = now()', [tid, s.sid, j, j.length])); return { ok: true }; }
@@ -543,7 +551,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname.startsWith('/api/') && !M.apiAllowed(mod, req.method, url.pathname)) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
       if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent)$/);
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon)$/);
         const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key] || media.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처

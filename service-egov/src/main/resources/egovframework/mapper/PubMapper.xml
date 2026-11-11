@@ -36,6 +36,9 @@
   <select id="selectEvents" resultType="java.util.LinkedHashMap">
     select id, sid, type, xid, data::text data, to_char(at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from learner_events where tenant_id = #{tid} and id &gt; #{after} order by id limit 200
   </select>
+  <!-- v38 A-17 쿠폰 · 할인 코드 -->
+  <select id="selectCouponCtx" resultType="java.util.LinkedHashMap">select (doc->'coupons')::text cp, (doc->'lsite'->'pub'->'classes')::text cl, (doc->'lsite'->'pub'->'pay')::text pay from tenant_state where tenant_id = #{tid}</select>
+  <select id="countCouponUse" resultType="int">select count(*)::int from learner_events where tenant_id = #{tid} and type = 'pay' and upper(data->>'cpn') = #{code}</select>
   <select id="insertEventX" resultType="long" flushCache="true" useCache="false">
     insert into learner_events (tenant_id, sid, type, xid, data) values (#{tid}, #{sid}, #{type}, #{xid}, #{data}::jsonb) returning id
   </select>
