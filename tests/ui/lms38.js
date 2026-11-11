@@ -193,6 +193,24 @@ const go = async (p, h, w = 1000) => { await p.evaluate(h => { location.hash = h
   { const { ctx: c2, op: o2 } = await mkOrg(true); const n0 = errs.length; const p = await c2.newPage(); watch(p, '게시 전 학습자'); const tid = await o2.evaluate(() => DREG.cur()); await p.goto(base + `learner.html?t=${encodeURIComponent(tid)}#home`); await p.waitForTimeout(1500);
     ok(!errs.slice(n0).some(e => /lcal decorate|reading 'org'/.test(e)), '#16 게시 전 학습자 페이지: lcal 오류 없음'); await c2.close(); }
 
+  /* 4차 운영 서버 모드(LIVE.user): 화면 칩 답은 /api/lms/* 조회 값으로(응답은 고정값으로 대신), 실패하면 「지금 불러오지 못했습니다 — [화면 열기]」 */
+  { const { ctx: c4, op: o4 } = await mkOrg(true); const calls = [];
+    await o4.route('**/api/**', r => { const u = r.request().url().replace(/^https?:\/\/[^/]+/, ''); calls.push(u); const ok2 = b => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+      if (u.startsWith('/api/lms/a/overview')) return ok2({ terms: [], units: [], courses: [], sections: [], runs: [{ run_id: 7, at: '2026-11-10T01:00:00Z', scope: 'enrollment', counts: { inserted: 5, skipped: 0, error: 2 }, errors_n: 2 }], me: { admin: true } });
+      if (u.startsWith('/api/lms/e/sections')) return ok2({ sections: [{ section_id: 'L1', course_name: '운영 교과목', section_no: '01' }] });
+      if (u.startsWith('/api/lms/e/list')) return ok2({ assignments: [{ asg_id: 'g1', title: '운영 과제', status: 'published', due_at: new Date(Date.now() + 864e5).toISOString(), submitted: 3, targets: 10 }] });
+      if (u.startsWith('/api/lms/l/cal/list')) return ok2({ items: [{ id: 'e1', scope: 'academic', title: '운영 중간고사', starts_at: new Date(Date.now() + 2 * 864e5).toISOString() }] });
+      if (u.startsWith('/api/lms/m/users/list')) return r.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"x","message":"서버 오류"}' });
+      return ok2({}); });
+    await o4.evaluate(() => { window.LIVE = { user: { email: 'a@b.c', role: 'owner' }, cfg: { live: true }, tenant: 't-live', rev: 1, doc: null }; window.api = async (m, url, b) => { const r = await fetch(url, { method: m, headers: { 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.message || 'x'); return j; }; });
+    const runChip = async k => o4.evaluate(async k => { CUR.ws = (MENU[k] || {}).ws || CUR.ws; CUR.tab = k; const c = scxChips(k).find(x => /^md-/.test(x.id)) || scxChips(k)[0]; scxRun(c.id); await new Promise(r => setTimeout(r, 1800)); const m = S.chat.filter(x => x.role === 'ai').pop() || {}; return { text: m.text || '', btn: m.btn ? m.btn.v + ':' + m.btn.label : '' }; }, k);
+    const r1 = await runChip('sis'); ok(/마지막 동기화 .*최근 오류 2건\(운영 서버\)/.test(r1.text) && /^sis:/.test(r1.btn), `4차 운영: 학적 연동 칩 = 서버 개요(runs) 값 (${r1.text} / ${r1.btn})`);
+    const r2 = await runChip('lmse'); ok(/공개 과제 1개 · 3일 안 마감 1개 · 미제출 합계 7건입니다\(운영 서버\)/.test(r2.text) && /^lmse:/.test(r2.btn), `4차 운영: 과제 칩 = /api/lms/e/sections · list 값 (${r2.text})`);
+    const r3 = await runChip('lmsl-cal'); ok(/앞으로 2주 일정 1건입니다\(운영 서버\)/.test(r3.text) && /^lmsl-cal:/.test(r3.btn), `4차 운영: 통합 달력 칩 = /api/lms/l/cal/list 값 (${r3.text})`);
+    const r4 = await runChip('lmsm'); ok(/지금 불러오지 못했습니다/.test(r4.text) && /^lmsm:.*화면 열기/.test(r4.btn), `4차 운영: 불러오기 실패 → 「지금 불러오지 못했습니다 — [화면 열기]」 (${r4.text} / ${r4.btn})`);
+    ok(calls.some(u => u.startsWith('/api/lms/a/overview')) && calls.some(u => u.startsWith('/api/lms/e/list')) && !(await o4.evaluate(() => S.chat.some(m => /분반 \d+개 · 수강생/.test(m.text || '')))), '4차 운영: 칩이 데모 S.lms 대신 서버 조회를 씀');
+    await c4.close(); }
+
   /* ═════════ C. 샘플 기관(빈 스튜디오 끔) ═════════ */
   { const { ctx: c3, op: o3 } = await mkOrg(false);
     const SM = await o3.evaluate(() => { go('lmse'); const A = lmsaEns(); return { secs: A.sections.length, rooms: LMSX.db().sections.filter(r => r.lmsa).length, w3: W3.D().sections.length }; }); await o3.waitForTimeout(800);
