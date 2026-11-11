@@ -132,3 +132,8 @@
   body .slg-i,body .sl-i,body button.x,body [data-act=modal-close],body .ap-ib{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
   body .slg-i::after,body .sl-i::after{display:none}
 }
+/* v38 F5 R2(U14 · UL15): 스튜디오 휴대폰의 단계 표시 숫자 · 종류 글자 · 보조 글 12px 이상 — 측정(getComputedStyle font-size<12)으로 찾은 것 전수 */
+@media (max-width:860px){
+  body .wkh .wn,body li .ty,body .chap .ty,body .ob1 em,body .ob1 i,body kbd,body .scxt small,body .agl,body .stepper span,body .lsnum,body .hps-steps li,body .tdots li,body .smck small,body .cn-steps small,body .bst small,body .bst i,body .bmseg em,body .c2b small,body .c2b b,body .c2hl,body .d26-calg small,body .gdt small,body .gdrec small,body .gdc small,body .lmsb-cols small,body .lmsb-kind,body .efh-hist small,body .efh-demo,body .lmp-ev,body .lmp-room em,body .lmp-msg small,body .lw-pill,body .lw-demo,body .lmp-todo .lmp-demo,body .lv-msg small,body .brail .ri em,body .hps-tab i{font-size:12px!important}
+  body .lsnum{width:26px;height:26px}
+}
