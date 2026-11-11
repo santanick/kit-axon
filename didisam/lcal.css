@@ -101,3 +101,11 @@ body .ltoast,body.lapp .ltoast,body.ap-homeon .ltoast{top:calc(env(safe-area-ins
 .lt-hint{pointer-events:none;animation:f5HintOut .4s 4s forwards}@keyframes f5HintOut{to{opacity:0;visibility:hidden}}
 /* v38 F5 L4: 앱 홈 보조 글자 13px 이상 */
 body.lapp .ap-scroll small,body.lapp .ap-home .ap-sub{font-size:13px}
+/* v38 F5 R2(V · L): 휴대폰 · 앱 게시판은 위쪽 [글쓰기]를 보이고 옆 패널의 같은 버튼은 숨긴다 — 앞에 있는 버튼이 숨겨져 '보이지 않음'으로 눌리지 않던 것 */
+@media (max-width:900px){.lcsec:has(.lc26w.bd) .lcbar .lbtn.pri{display:inline-flex!important;min-height:44px}.lc26bd>a.lbtn.pri[href^="#write"]{display:none!important}}
+/* v38 F5 R2 공통 크기 규칙(학습자): 휴대폰 폭에서 작은 버튼도 44px(앱 · 웹 같은 기준), 밀집 표 안 보조 버튼은 32px + 누를 자리 44px */
+@media (max-width:900px){body #lm .lbtn.sm,body.lapp #lm .lbtn.sm,body .ap-chip{min-height:44px}
+  #lm table .lbtn.sm,#lm .py26t .lbtn.sm{min-height:32px;position:relative}#lm table .lbtn.sm::after,#lm .py26t .lbtn.sm::after{content:'';position:absolute;inset:-6px -2px}
+  #lm small,#lm .mini,.ap-scroll small{font-size:max(13px,1em)}}
+/* v38 F5 A9: '내 학습'(#my) 첫 화면에서는 떠 있는 튜터 버튼이 [이어서] · [시작] 버튼을 가리지 않게 숨기고, 아래로 내리면 보인다(홈과 같은 방식) */
+body[data-luxr=my]:not(.f5-scr) #ltut .lt-fab{opacity:0!important;visibility:hidden!important;pointer-events:none!important}

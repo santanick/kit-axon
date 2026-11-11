@@ -21,11 +21,11 @@
     lm.querySelectorAll('.lt-coach p, .lt-coach .lt-ch > div > b, .lt-coach .lt-ch b, .mycard p').forEach(p => { if (/추천 튜토리얼/.test(T(p)) && !p.querySelector('.mycard')) hide(p); });
     lm.querySelectorAll('.lai-sec').forEach(s => { const rows = s.querySelectorAll('.lai-row, .lai-l > li'); if (rows.length && [...rows].every(r => r.hidden)) hide(s); });
     /* 일반 과정이 없을 때의 '첫 강좌를 골라 보세요 · 강좌 둘러보기' → 이번 학기 수강 분반 안내 */
-    lm.querySelectorAll('.mycard.lux-wide, .mycard').forEach(c => { if (/아직 수강 중인 (강좌|교과목)(이|가) 없/.test(T(c)) && !c.querySelector('[data-ulms-lead]')) hide(c); });
+    lm.querySelectorAll('.mycard.lux-wide, .mycard').forEach(c => { if (/아직 (수강 중인|신청한) (강좌|교과목)(이|가) 없/.test(T(c)) && !c.querySelector('[data-ulms-lead]')) hide(c); });
     lm.querySelectorAll('section.lux-cont').forEach(s => { if (!s.querySelector('.lux-cc.empty') || s.querySelector('[data-ulms-lead]')) return; const n = mySecs(); const inn = s.querySelector('.in') || s;
       inn.innerHTML = `<div class="lux-cc" data-ulms-lead="1"><b>${n ? `이번 학기 수강 분반 ${n}개` : '이번 학기 수강 분반'}</b><p class="mini">${n ? '과제 · 시험 · 성적과 출석, 강의실을 「내 학습」에서 바로 볼 수 있어요.' : '학교가 수강 등록을 마치면 이곳에 이번 학기 강의가 보여요.'}</p><div class="lbtns"><a class="lbtn pri" href="#my">내 학습</a><a class="lbtn ghost" href="#lms">과제 · 시험 · 성적</a></div></div>`; });
     /* 앱 「나」 머리: '아직 수강 중인 강좌가 없어요 · 강좌 둘러보기' → 수강 분반 안내 */
-    lm.querySelectorAll('.ap-myh').forEach(h => { if (!/아직 수강 중인 (강좌|교과목)(이|가) 없/.test(T(h)) || h.querySelector('[data-ulms-lead]')) return; const n = mySecs(); const p = [...h.querySelectorAll('p, b, strong, h1, h2, span')].find(x => /아직 수강 중인/.test(x.textContent) && !x.children.length) || null;
+    lm.querySelectorAll('.ap-myh').forEach(h => { if (!/아직 (수강 중인|신청한) (강좌|교과목)(이|가) 없/.test(T(h)) || h.querySelector('[data-ulms-lead]')) return; const n = mySecs(); const p = [...h.querySelectorAll('p, b, strong, h1, h2, span')].find(x => /아직 수강 중인/.test(x.textContent) && !x.children.length) || null;
       const txt = n ? `이번 학기 수강 분반 ${n}개 — 아래 「과제 · 시험 · 성적」 · 「내 강의실」에서 바로 시작해요.` : '학교가 수강 등록을 마치면 이번 학기 강의가 여기에 보여요.'; if (p) { p.textContent = `${(typeof LR !== 'undefined' && LR.me && LR.me.sid) || ''}님, ${txt}`; p.setAttribute('data-ulms-lead', '1'); } else h.insertAdjacentHTML('beforeend', `<p data-ulms-lead="1">${txt}</p>`); });
     lm.querySelectorAll('a, button').forEach(a => { if (/^(강좌|교과목) 둘러보기$/.test(T(a))) hide(a); });
     /* v38 2차 #11 앱 홈: 배지 수 · 추천 튜토리얼 카드 · 튜터 추천 행 */

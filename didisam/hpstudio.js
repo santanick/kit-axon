@@ -241,12 +241,14 @@
 .hpe-add:hover button,.hpe-add button:focus-visible,[data-hpe]:hover+.hpe-add button,.hpe-add:first-child button,.hpe-add:last-child button{opacity:1!important}
 .hpe-add::before{content:'';position:absolute;left:0;right:0;top:0;border-top:2px dashed transparent}.hpe-add:first-child button{transform:translateY(8px)} /* v38 F5 A20: 맨 위 '+ 섹션 추가'가 미리보기 머리 바에 반쯤 가려지지 않게 */.hpe-add:hover::before{border-top-color:#5C74F6}
 /* v36 R4 맨 위 '+ 섹션 추가'(늘 보임)가 첫 섹션 사진의 '샘플' 표시와 겹치던 것(휴대폰) — 첫 섹션의 샘플 표시를 버튼 아래로 */
-.hpe-add:first-child+[data-hpi-stock]::before,.hpe-add:first-child+* [data-hpi-stock]::before,.hpe-add:first-child+*>[data-hpi-stock]::before{top:34px!important}
+.hpe-add:first-child+[data-hpi-stock]::before,.hpe-add:first-child+* [data-hpi-stock]::before,.hpe-add:first-child+*>[data-hpi-stock]::before{top:52px!important}
 [data-hpe-f].hps-pick,[data-hpi-img].hps-pick{outline:2px solid #5C74F6!important;outline-offset:3px;background-color:rgba(92,116,246,.06)}`;
   const bound = new WeakSet();
   function bindCanvas(f) {
     let doc; try { doc = f.contentDocument; } catch (e) { return; } if (!doc || bound.has(doc)) return; bound.add(doc); const win = doc.defaultView; if (!win) return;
     const st = doc.createElement('style'); st.textContent = ICSS; (doc.head || doc.documentElement).appendChild(st);
+    /* v38 F5 L16: '전화로 신청하기 · 전화 상담' 버튼은 기본 정보의 대표 전화로 전화를 건다 — 번호가 없으면 미리보기에서만 '대표 전화를 넣어 주세요' */
+    try { const tel = String(((S.settings || {}).footer || {}).tel || '').replace(/[^\d+]/g, ''); doc.querySelectorAll('a').forEach(a => { if (!/전화로 (신청|문의)|전화 (상담|신청)/.test(a.textContent) || a.dataset.f5tel) return; a.dataset.f5tel = 1; if (tel.length >= 7) a.setAttribute('href', 'tel:' + tel); else a.insertAdjacentHTML('beforeend', '<small style="display:block;font-size:12px;opacity:.85;font-weight:600">대표 전화를 넣어 주세요(기본 정보)</small>'); }); } catch (e) { }
     let pass = false;
     const pickable = t => { if (!t || !t.closest) return null; if (t.closest('.hpe-tb,.hpe-add,[data-hpe-act],.hps-dd')) return null; const ed = t.closest('[data-hpe-f]'); const im = t.closest('[data-hpi-img],[data-hpe-img]');
       if (ed && ed.isContentEditable) return null; return ed && (!im || im.contains(ed)) && !(im && im.tagName === 'A') ? ed : im || ed || null; };

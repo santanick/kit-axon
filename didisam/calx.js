@@ -104,20 +104,22 @@
     const S1 = fv2(w, 'cxS'), E1 = fv2(w, 'cxE'); if (S1 && E1 && E1 <= S1) { toast('종료 시간이 시작 시간보다 빠릅니다.', 'warn'); return; }
     const o = { title: T.slice(0, 60), date: D, time: S1, end: E1, kind: fv2(w, 'cxK') || kinds()[0], cls: fv2(w, 'cxC'), memo: fv2(w, 'cxM').slice(0, 120), pub: !!(w.querySelector('[name="cxP"]') || {}).checked };
     const L = store().ev; const id = el.dataset.v; if (id) { const u = L.find(x => x.id === id); if (!u) return; Object.assign(u, o); logAudit(`일정 수정 — ${o.title}`); } else { L.push({ id: uid('cx'), ...o }); logAudit(`일정 추가 — ${o.title}`); }
-    UI.cxSel = D; save(); slClose(); render(); toast(id ? '일정을 저장했습니다.' : `${fmt(D)}에 일정을 추가했습니다.`, 'ok'); };
+    const pb = pubCal(); UI.cxSel = D; save(); slClose(); render(); toast(`${id ? '일정을 저장했습니다.' : `${fmt(D)}에 일정을 추가했습니다.`}${o.pub ? (pb ? ` ${t('learner')} 캘린더에도 바로 보입니다.` : ` 사이트를 게시하면 ${t('learner')} 캘린더에 보입니다.`) : ''}`, 'ok'); };
+  /* v38 F5 A7: 이미 게시한 기관은 일정 저장 · 삭제 · 이동 때 게시본의 일정(calx)만 바로 고친다 — 사이트를 다시 게시하지 않아도 학습자 캘린더에 반영 */
+  function pubCal() { try { if (S && S.lsite && S.lsite.pub) { S.lsite.pub.calx = cxPub(); return true; } } catch (e) { } return false; }
   ACT['cx-del'] = el => { const L = store().ev; const i = L.findIndex(x => x.id === el.dataset.v); if (i < 0) return; const u = L[i];
-    modal('일정 삭제', `<p>「${esc(u.title)}」(${esc(fmt(u.date))}) 일정을 삭제할까요?</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '삭제', kind: 'red', run: () => { L.splice(i, 1); logAudit(`일정 삭제 — ${u.title}`); save(); slClose(); render(); toast('일정을 삭제했습니다.', 'ok'); } }]); };
+    modal('일정 삭제', `<p>「${esc(u.title)}」(${esc(fmt(u.date))}) 일정을 삭제할까요?</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '삭제', kind: 'red', run: () => { L.splice(i, 1); logAudit(`일정 삭제 — ${u.title}`); pubCal(); save(); slClose(); render(); toast('일정을 삭제했습니다.', 'ok'); } }]); };
   ACT['cx-cls'] = el => { slClose(); if (ACT['cls-open']) ACT['cls-open']({ dataset: { v: el.dataset.v } }); else go('class'); };
   ACT['cx-sedit'] = el => { const [, cid, sid] = String(el.dataset.v).split(':'); slClose(); if (ACT['w2-sedit']) ACT['w2-sedit']({ dataset: { c: cid, s: sid } }); };
   ACT['cx-smv'] = el => { if (!cxMove(el.dataset.v, el.value)) el.value = (find(el.dataset.v) || {}).date || ''; else slClose(); };
 
   /* ── 날짜 옮기기(끌어 놓기 · 날짜 칸) ── */
   function cxMove(id, d) { if (!okD(d)) { toast('날짜를 확인하세요.', 'warn'); return false; } const e = find(id); if (!e) return false; if (e.date === d) return false;
-    if (e.user) { const u = store().ev.find(x => x.id === e.uid); if (!u) return false; u.date = d; logAudit(`일정 날짜 변경 — ${u.title} → ${d}`); save(); render(); toast(`「${u.title}」을(를) ${fmt(d)}로 옮겼습니다.`, 'ok'); return true; }
+    if (e.user) { const u = store().ev.find(x => x.id === e.uid); if (!u) return false; u.date = d; logAudit(`일정 날짜 변경 — ${u.title} → ${d}`); pubCal(); save(); render(); toast(`「${u.title}」을(를) ${fmt(d)}로 옮겼습니다.`, 'ok'); return true; }
     if (e.sid) { const c = clsOf(e.cls); const s = c && (c.sessions || []).find(x => x.id === e.sid); if (!s) return false;
       if ((c.sessions || []).some(x => x.date === d && x.id !== s.id)) { toast('이미 회차가 있는 날짜입니다. 다른 날짜를 고르세요.', 'warn'); return false; }
       const old = s.date; s.date = d; try { if (typeof W2 !== 'undefined') { W2.renum && W2.renum(c); W2.period && W2.period(c); W2.dateChanged && W2.dateChanged(c, s, old); W2.sync && W2.sync(c); } } catch (x) { console.error(x); }
-      logAudit(`${c.name} 회차 날짜 변경 ${old} → ${d}`); save(); render(); toast(`회차를 ${fmt(d)}로 옮겼습니다.${(c.learners || []).length ? ` ${t('learner')}에게 일정 변경 알림을 보냈습니다.` : ''}`, 'ok'); return true; }
+      logAudit(`${c.name} 회차 날짜 변경 ${old} → ${d}`); pubCal(); save(); render(); toast(`회차를 ${fmt(d)}로 옮겼습니다.${(c.learners || []).length ? ` ${t('learner')}에게 일정 변경 알림을 보냈습니다.` : ''}`, 'ok'); return true; }
     toast(`${t('cls')}에서 들어온 일정은 ${t('cls')} 설정에서 날짜를 바꿉니다.`, 'warn'); return false; }
   window.cxMove = cxMove;
   document.addEventListener('dragstart', e => { const x = e.target.closest && e.target.closest('[data-cxdrag]'); if (!x) return; e.dataTransfer.setData('text/plain', 'cx:' + x.dataset.cxdrag); e.dataTransfer.effectAllowed = 'move'; x.classList.add('drag'); });

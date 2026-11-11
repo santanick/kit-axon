@@ -289,7 +289,7 @@ document.addEventListener('keydown', e => { if (e.target.id === 'ltq' && e.key =
 /* ── 마이페이지: 'AI 튜터 코칭' 카드(맡긴 계획 · 선생님 답변 · 맡기기 버튼) ── */
 { const base = MYR.next; MYR.next = st => { let card = '';
   try { if (TCFG().enabled) { const T = ltTutor(); const A = ltTodo(); const qa = ltQA(); const C = TCFG(); const fb = st.courses.some(x => x.fb);
-    const line = A.length ? `오늘 할 일 ${A.length}가지 중 「${A[0].h}」부터 하면 좋겠습니다.` : '오늘 급한 일은 없습니다. 다음 수준 튜토리얼에 도전해 볼까요?';
+    const line = A.length ? `오늘 할 일 ${A.length}가지 중 「${A[0].h}」부터 하면 좋겠습니다.` : (((SITE() || {}).tuts || []).some(t => t.yt) ? '오늘 급한 일은 없습니다. 다음 수준 튜토리얼에 도전해 볼까요?' : '오늘 급한 일은 없습니다. 지난 내용을 가볍게 복습해 볼까요?') /* v38 F5 V12 · L18: 실습 영상이 없는 기관은 영상 도전을 권하지 않는다 */;
     card = `<div class="mycard wide lt-coach" id="m-tutor"><div class="lt-ch"><span class="lt-orb" aria-hidden="true"></span><div><small>${esc(C.name)} · 내 AI 학습 비서</small><b>${esc(line)}</b><span>평균 진도 ${st.avg}% · 연속 ${st.streak}일 · 배지 ${LR.mine.badges.length}개${st.myType ? ' · 유형 ' + esc(st.myType) : ''}</span></div></div>
       <div class="lt-qs">${[['이번 주 계획 맡기기', '이번 주 학습 계획 짜줘'], ['복습 퀴즈', '복습 퀴즈 내줘'], ...(fb ? [['피드백 해설', '과제 피드백 해설해줘']] : []), ['내 학습 리포트', '내 학습 리포트 보여줘']].map(([l, q]) => `<button type="button" class="lt-chip" data-tact="mq" data-v="${esc(q)}">${ico('spark', 13)} ${esc(l)}</button>`).join('')}</div>
       ${T.plan.length ? `<div class="lt-saved"><div class="lt-sh"><b>맡긴 이번 주 계획</b><button type="button" class="lt-link" data-tact="plan-clear">지우기</button></div>${ltPlanHTML(T.plan, true)}</div>` : ''}

@@ -41,7 +41,8 @@
   function menuFix() { const D = MNT[org().type]; if (!D || !document.body) return; const bh = (typeof browseHref === 'function' && browseHref()) || '#shop';
     const swap = (el, href) => { const tn = [...el.childNodes].find(x => x.nodeType === 3 && x.nodeValue.trim()) || null; const sp = tn ? null : el.querySelector('span:not(.av)'); const cur = (tn ? tn.nodeValue : sp ? sp.textContent : '').replace('▾', '').trim(); if (!MDEF[href].includes(cur)) return; const t = menuLbl(href, cur); if (t === cur) return; if (tn) tn.nodeValue = tn.nodeValue.replace(cur, t); else if (sp) sp.textContent = t; };
     Object.keys(D).forEach(h => { const hs = h === '#shop' ? [h, bh] : [h]; hs.forEach(x => document.querySelectorAll(`header.lh nav.ln a[href="${x}"], nav.tabbar a[href="${x}"], nav.ap-nav a[href="${x}"], .lux-shl a[href="${x}"], .crumb a[href="${x}"], .lctabs a[href="${x}"]`).forEach(a => swap(a, h))); });
-    const r = (location.hash.slice(1) || 'home').split('/')[0]; if (r === 'notice') document.querySelectorAll('#lm section.sub .crumb, #lm section.sub h1').forEach(el => { const tn = [...el.childNodes].reverse().find(x => x.nodeType === 3 && /공지사항/.test(x.nodeValue)); if (tn) tn.nodeValue = tn.nodeValue.replace('공지사항', menuLbl('#notice', '공지사항')); }); }
+    const r = (location.hash.slice(1) || 'home').split('/')[0]; const PG = { notice: ['#notice', /공지사항|^공지$/], comm: ['#comm', /커뮤니티/], shop: ['#shop', /^(교육과정|강좌)( 목록)?$/] }[r];
+    if (PG) document.querySelectorAll('#lm section.sub .crumb, #lm section.sub h1, #lm .lcsub h1, .ap-bar .ap-tt').forEach(el => { const tn = [...el.childNodes].reverse().find(x => x.nodeType === 3 && PG[1].test(x.nodeValue.trim())); if (tn) tn.nodeValue = tn.nodeValue.replace(PG[1], menuLbl(PG[0], tn.nodeValue.trim())); }); /* v38 F5 R2 P10: 앱 머리 제목 · 웹 제목도 머리 메뉴 이름 */ }
   /* v38 F5 L4: 학습자 웹 · 앱 전체 '글자 크게'(교안 본문만이 아니라 모든 화면) — 이 기기에 저장, '나' · 계정 탭에서 켜고 끈다 */
   const FSK = 'didisam.learner.fs'; const fsOn = () => { try { return localStorage.getItem(FSK) === '1'; } catch (e) { return false; } };
   const fsApply = () => { document.documentElement.classList.toggle('lfs-lg', fsOn()); };
@@ -49,13 +50,27 @@
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-lfs="toggle"]'); if (!b) return; e.preventDefault(); try { localStorage.setItem(FSK, fsOn() ? '0' : '1'); } catch (x) { } fsApply(); document.querySelectorAll('[data-lfs="toggle"]').forEach(x => { x.outerHTML = window.lFsRow(); }); });
   fsApply();
   function fsSlot() { if (!LR || !LR.site) return; const r = (location.hash.slice(1) || 'home').split('/')[0]; if (!['acct', 'my'].includes(r) || document.querySelector('[data-lfs]')) return;
-    const at = document.querySelector('.ls-me .ls-list') || document.querySelector('#lm .lux-acct .shp-list') || document.querySelector('#lm .mypage .in, #lm section.sec .in'); if (!at) return;
+    const at = document.querySelector('.ls-me .ls-list') || document.querySelector('#lm .lux-acct .shp-list') || (r === 'acct' ? document.querySelector('#lm .mypage .in, #lm section.sec .in') : null); if (!at) return; /* #my는 '계정' 탭 목록에만(본문 맨 위에 끼워 넣어 아래 내용을 밀지 않게) */
     if (at.classList.contains('ls-list')) at.insertAdjacentHTML('beforeend', window.lFsRow()); else if (at.classList.contains('shp-list')) at.insertAdjacentHTML('afterbegin', `<li>${window.lFsRow()}</li>`); else at.insertAdjacentHTML('afterbegin', window.lFsRow()); }
   /* v38 F5 L: 평생교육원은 운영자 화면 · 평생교육법 용어 '학습비 반환'을 학습자에게도 같은 말로 — 메뉴 · 제목은 '학습비 반환(환불)', 본문은 '학습비 반환' */
   function refundTerm() { if (org().type !== 'lifelong' || !document.body) return; const W = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n => !/환불/.test(n.nodeValue) || /학습비 반환/.test(n.nodeValue) || (n.parentElement && n.parentElement.closest('script,style,textarea,input,[contenteditable]')) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }); const L = []; let n; while ((n = W.nextNode())) L.push(n);
     L.forEach(n => { const head = n.parentElement && n.parentElement.closest('h1,h2,h3,nav,a,button,.ls-tx b,summary,th'); n.nodeValue = n.nodeValue.replace(/환불/g, head ? '학습비 반환(환불)' : '학습비 반환').replace(/학습비 반환(\(환불\))?로(?![가-힣])/g, '학습비 반환$1으로'); }); }
+  /* v38 F5 R2 A8 · V12 · L17 · P8: 기관이 쓰지 않는 기능(배지 0종 · 실습 영상 없음 · 디지털북 페이지 없음)은 학습자 #my · 앱 '내 학습'에서 탭 · 카드 · 로드맵을 감춘다(대학은 별도 시나리오) */
+  function featFix() { const st = SITE() || {}; const ty = (st.org || {}).type; if (!document.body || ty === 'univ') return;
+    const noBadge = !(st.badges || []).length, noVid = !(st.tuts || []).some(t => t.yt), noBook = !(st.pages || []).some(p => p.id === 'books') || !(st.dbooks || []).some(b => b.url || (b.pages || []).length);
+    if (!noBadge && !noVid && !noBook) return; const TX = el => (el && el.textContent || '').replace(/\s+/g, ' ').trim(); const hide = el => { if (el && !el.hasAttribute('data-f5off')) { el.setAttribute('data-f5off', '1'); el.style.setProperty('display', 'none', 'important'); } };
+    const lm = document.getElementById('lm'); if (!lm) return;
+    lm.querySelectorAll('nav.mytab a').forEach(a => { const t = TX(a); if ((noBook && t === '디지털북') || (noBadge && t === '배지')) hide(a); });
+    if (noBadge) lm.querySelectorAll('.myhg, .mylv, .ap-badge, .ap-lv, section.prog').forEach(hide); /* 배지 로드맵('0종 모두 받으면 … 인증') */
+    lm.querySelectorAll('.mpn > div').forEach(d => { const t = TX(d); if ((noBadge && /획득 배지/.test(t)) || (noVid && /튜토리얼 완료|실습 영상/.test(t))) hide(d); });
+    lm.querySelectorAll('.mycard, .ap-card, section.prog').forEach(c => { const h = TX(c.querySelector('.ls-fh .ls-tx b, .mh h3, .mh, .myhead, h2, h3')); if ((noBadge && /^(배지 지갑|내 배지)/.test(h)) || (noBadge && noVid && /^수준 로드맵/.test(h)) || (noVid && /^(튜토리얼 기록|실습 영상 기록)/.test(h)) || (noBook && /^(디지털북|내 디지털북)/.test(h))) hide(c); });
+    lm.querySelectorAll('.chips2 > *').forEach(c => { if (noBadge && noVid && /LEVEL|Explorer|Builder|Master|진단 전/.test(TX(c)) && !(st.diags || []).length) hide(c); }); }
+  /* v38 F5 U20: 없는 주소(#noti · #me · #settings)는 배지 화면 대신 알림 · 계정으로 */
+  const ALIAS = { noti: '#inbox', notifications: '#inbox', alarm: '#inbox', me: '#acct', settings: '#acct', setting: '#acct', profile: '#acct', certs: '#badges', certificates: '#badges' };
+  const aliasGo = () => { const h = location.hash.slice(1) || ''; const r = h.split('/')[0]; if (ALIAS[r] && !h.includes('/')) location.replace(ALIAS[r]); }; aliasGo(); addEventListener('hashchange', aliasGo);
+  addEventListener('scroll', () => { if (document.body) document.body.classList.toggle('f5-scr', scrollY > 120); }, { passive: true }); /* v38 F5 A9 */
   window.lFixClsTerm = fixCls;
-  let q = false; const kick = () => { if (q) return; q = true; requestAnimationFrame(() => { q = false; apply(); try { fixCls(); } catch (e) { } try { menuFix(); } catch (e) { } try { fsSlot(); } catch (e) { } try { refundTerm(); } catch (e) { } setTimeout(() => { try { fixCls(); } catch (e) { } }, 250); /* v37 L2: 바닥 Shadow DOM은 lmerge가 다음 프레임에 붙이므로 한 번 더 */ }); };
+  let q = false; const kick = () => { if (q) return; q = true; requestAnimationFrame(() => { q = false; apply(); try { fixCls(); } catch (e) { } try { menuFix(); } catch (e) { } try { fsSlot(); } catch (e) { } try { refundTerm(); } catch (e) { } try { featFix(); } catch (e) { } setTimeout(() => { try { fixCls(); } catch (e) { } }, 250); /* v37 L2: 바닥 Shadow DOM은 lmerge가 다음 프레임에 붙이므로 한 번 더 */ }); };
   const start = () => { new MutationObserver(kick).observe(document.body, { childList: true, subtree: true }); kick(); };
   if (document.body) start(); else addEventListener('DOMContentLoaded', start);
   addEventListener('hashchange', kick);
