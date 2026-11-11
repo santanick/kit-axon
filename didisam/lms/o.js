@@ -349,6 +349,7 @@
     return L.o;
   }
   /* 데모 샘플(빈 화면 없애기): 묶음 A 학기 · 분반 · 수강생을 쓰고, 질문 대화 · 검토 대기 · 번역 · 자막방 · 채점 기록을 하나씩 둔다 */
+  window.lmsoEns = () => D(); /* v38 AI SAM 화면 칩이 현황을 읽을 때(데모) */
   function seedMore(o, s1, doc) {
     const A = window.LMP && LMP.demoA ? LMP.demoA() : null; const hsh = t => { let h = 7; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) % 9973; return h; };
     if (A && A.sections.length) {
