@@ -63,10 +63,17 @@ const SET = {
         const m = S.chat.filter(x => x.plan).pop(); return { tool: !!(AG_TOOLS || []).find(x => x.name === 'run_intent'), steps: m && m.si ? m.si.length : 0 }; });
       if (r.tool && r.steps === 2) claude = 'Claude 경로(run_intent) 계획 카드 확인'; else bad.push('adult · Claude run_intent ' + JSON.stringify(r)); }
     /* 화면 추천 칩: 홈 + 필수 메뉴 화면마다 3개, 모두 답을 내야 한다 */
-    const cr = await p.evaluate(() => { const out = { n: 0, ok: 0, bad: [], home: (typeof aihChips === 'function' ? aihChips() : []).length };
+    /* v38 학사 LMS: 화면 칩이 그 질문에 맞는 실제 데이터 답(키워드)과 바로 가기(btn: go 화면)를 내는지까지 본다 */
+    const EXP = ty === 'univ_lms' ? { sis: [/마지막 동기화|동기화 · 업로드 기록/, /^(sis)$/], lmsb: [/강의실 \d+곳|빈 주차|이번 학기 강의실/, /^(lmsb|lmsa)$/], lmsc: [/토론|위키|팀/, /^lmsc$/], lmsi: [/진도|강의 영상/, /^(lmsi|lmsv)$/],
+      lmse: [/과제/, /^lmse$/], lmsj: [/결석|수강생/, /^(lmsj|lmsa)$/], groups: [/학과/, /^groups$/], lmsd: [/공지|Q&A|게시판/, /^lmsd$/], 'lmsl-cal': [/일정/, /^lmsl-cal$/], 'lmsl-noti': [/알림 규칙/, /^lmsl-noti$/],
+      admins: [/운영자 \d+명/, /^admins$/], lmsm: [/사용자/, /^(lmsm|enroll)$/], lmso: [/AI 참고 자료|강의자료/, /^lmso$/], aigov: [/AI 사용 \d+회/, /^aigov$/], lmsg: [/출결 분반|출결을 받을 분반/, /^(lmsg|lmsa)$/], grade: [/평가 항목/, /^grade$/] } : {};
+    const cr = await p.evaluate(EXP0 => { const EXP = Object.fromEntries(Object.entries(EXP0).map(([k, [a, b]]) => [k, [new RegExp(a), new RegExp(b)]])); const out = { n: 0, ok: 0, bad: [], home: (typeof aihChips === 'function' ? aihChips() : []).length, chk: 0 };
       ['dash', ...slimEss()].forEach(k => { let L = []; try { CUR.ws = k === 'dash' ? 'dash' : (MENU[k] || {}).ws || CUR.ws; CUR.tab = k === 'dash' ? '' : k; L = scxChips(k).slice(0, 3); } catch (e) { out.bad.push(k + ' ERR'); }
         L.forEach(c => { out.n++; let r = null; try { r = c.run() || {}; } catch (e) { out.bad.push(`${k}:${c.l} 오류 ${e.message}`); return; } if (r.plan && PLANS[r.plan]) delete PLANS[r.plan];
-          if (/이해하지 못했습니다|처리할 수 없는/.test(r.text || '')) out.bad.push(`${k}:${c.l}`); else out.ok++; }); }); return out; });
+          if (/이해하지 못했습니다|처리할 수 없는/.test(r.text || '')) out.bad.push(`${k}:${c.l}`); else out.ok++;
+          if (EXP[k] && /^md-|알려줘|상태|보여줘|현황|나눠줘|추가해줘/.test(c.id + ' ' + c.l) && r.btn && r.btn.act === 'go') { out.chk++; if (!EXP[k][0].test(r.text || '') || !EXP[k][1].test(r.btn.v || '')) out.bad.push(`${k}:${c.l} 답 내용 「${String(r.text).slice(0, 40)}」 바로 가기 ${r.btn.v}`); } }); });
+        return out; }, Object.fromEntries(Object.entries(EXP).map(([k, [a, b]]) => [k, [a.source, b.source]])));
+    if (ty === 'univ_lms' && cr.chk < 14) bad.push(`univ_lms · 칩 답 내용 점검 ${cr.chk}건(14건 이상이어야 함)`);
     chipN += cr.n; chipOk += cr.ok; cr.bad.forEach(b => bad.push(`${ty} · 칩 ${b}`)); if (cr.home !== 3) bad.push(`${ty} · 홈 칩 ${cr.home}개(3개여야 함)`);
     await p.close();
   }
