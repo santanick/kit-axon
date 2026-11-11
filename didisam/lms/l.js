@@ -89,7 +89,7 @@
   LMP.demo.l = {
     'cal.list': q => ({ items: ens().ev.filter(e => (e.scope !== 'personal' || e.owner === ME()) && (!q.scope || e.scope === q.scope) && (!q.from || String(e.starts_at).slice(0, 10) >= q.from) && (!q.to || String(e.starts_at).slice(0, 10) < q.to)).sort((a, b) => a.starts_at.localeCompare(b.starts_at)).map(e => ({ ...e, mine: e.scope === 'personal', src: 'event' })) }),
     'cal.add': q => { need(['academic', 'course', 'personal'].includes(q.scope), '구분은 학사 · 강좌 · 개인 중 하나입니다.'); need(q.title, 'title 값을 입력하세요.'); need(q.starts_at, 'starts_at 일시를 입력하세요.'); if (q.scope === 'academic') need(LMP.isAdm(), '학사 일정은 관리자만 등록할 수 있습니다.');
-      const e = { id: LMP.uuid(), scope: q.scope, title: String(q.title).slice(0, 120), kind: (q.kind === 'event' || !q.kind) && /(중간|기말)\s*고사|시험/.test(String(q.title)) ? 'exam' : (q.kind || 'event'), /* 3차: 제목이 시험이면 종류도 시험 */ starts_at: LMP.iso(q.starts_at), all_day: !!q.all_day, done: false, owner: q.scope === 'personal' ? ME() : null }; ens().ev.push(e); logAudit('통합 달력 일정 등록'); return { ok: true, item: e }; },
+      const e = { id: LMP.uuid(), scope: q.scope, title: String(q.title).slice(0, 120), kind: q.kind || 'event', starts_at: LMP.iso(q.starts_at), all_day: !!q.all_day, done: false, owner: q.scope === 'personal' ? ME() : null }; ens().ev.push(e); logAudit('통합 달력 일정 등록'); return { ok: true, item: e }; },
     'cal.done': q => { const e = ens().ev.find(x => x.id === q.id); need(e, '없는 일정입니다.'); e.done = q.done == null ? !e.done : !!q.done; return { ok: true, item: e }; },
     'cal.del': q => { const L = ens(); const n = L.ev.length; L.ev = L.ev.filter(x => x.id !== q.id); need(L.ev.length < n, '없는 일정입니다.'); return { ok: true }; },
     'cal.d1': () => { need(LMP.isAdm(), '관리자만 사용할 수 있습니다.'); let n = 0, h = 0; ['p:20261001', 'p:20261004'].forEach(p => { enq(p, 'push', '[D-1] 4차시 온라인 학습 미이수', '학습 인정 기간이 내일 끝납니다.') === 'held_quiet' ? h++ : n++; }); return { queued: n, held: h }; },
@@ -130,7 +130,17 @@
   const SC = { academic: ['학사', 'r'], course: ['강좌', ''], personal: ['개인', 'y'] };
   const KD = { event: '일정', deadline: '마감', exam: '시험', holiday: '휴일', todo: 'To-do' };
   const ym = () => UI.lmslYm || new Date().toISOString().slice(0, 7);
-  VIEWS['lmsl-cal'] = LMP.guard(() => {
+  /* 3차: 예전 기본값 '개인'으로 저장됐지만 학사 · 시험처럼 보이는 일정 — 운영자가 한 번 골라 '학사'로 바꾼다(데모 저장소 기준, 고르지 않으면 그대로 개인) */
+  const LOOKS = /(중간|기말)\s*고사|시험\s*(기간|일정)|개강|종강|수강\s*(신청|정정)|휴강|보강|학사\s*일정/;
+  const migL = () => { if (LMP.live() || !LMP.isAdm()) return []; const L = (S.lms && S.lms.l) || null; if (!L || L.migAsk38) return []; return (L.ev || []).filter(e => e.scope === 'personal' && e.kind !== 'todo' && LOOKS.test(String(e.title || ''))); };
+  const migCard = () => { const M = migL(); if (!M.length) return ''; const d = e => String(e.starts_at || '').slice(5, 10).replace('-', '/');
+    return `<div class="card lmsl-mig" role="status"><b>학생에게도 보여야 할 일정일 수 있습니다: ${esc(M[0].title)}(${esc(d(M[0]))})${M.length > 1 ? ` 외 ${M.length - 1}건` : ''}</b><p class="mini">예전에는 일정 추가의 기본 구분이 「개인」이라 학생 캘린더에 나가지 않았습니다. 학생에게 보일 일정만 골라 주세요(고르지 않은 일정은 운영자에게만 보입니다).</p>
+      <ul class="lmsl-migl">${M.map(e => `<li><label class="ul-ck"><input type="checkbox" class="lmsl-migck" value="${esc(e.id)}"> ${esc(e.title)} <small>${esc(d(e))}</small></label></li>`).join('')}</ul>
+      <div class="bar2"><button class="btn sm pri" data-act="lmsl-mig-yes">학생에게 보이기</button><button class="btn sm" data-act="lmsl-mig-no">그대로 두기</button></div></div>`; };
+  ACT['lmsl-mig-yes'] = () => { const ids = [...document.querySelectorAll('.lmsl-migck:checked')].map(x => x.value); if (!ids.length) return toast('학생에게 보일 일정을 고르세요.', 'warn'); const L = S.lms.l;
+    (L.ev || []).forEach(e => { if (ids.includes(e.id)) { e.scope = 'academic'; e.owner = null; } }); L.migAsk38 = 1; logAudit(`통합 달력 — 예전 개인 일정 ${ids.length}건을 학사 일정으로(학생 공개)`); save(); try { LMP.drop && LMP.drop('l:'); } catch (e) { } render(); toast(`${ids.length}건을 학사 일정으로 바꿨습니다. 홈페이지 · 학습 사이트를 게시하면 학생 캘린더에 보입니다.`, 'ok'); };
+  ACT['lmsl-mig-no'] = () => { S.lms.l.migAsk38 = 1; save(); render(); };
+  VIEWS['lmsl-cal'] = LMP.guard(() => migCard() + (() => {
     const m = ym(); const [Y, M] = m.split('-').map(Number); const first = new Date(Y, M - 1, 1); const from = `${m}-01`; const nx = new Date(Y, M, 1); const to = `${nx.getFullYear()}-${String(nx.getMonth() + 1).padStart(2, '0')}-01`;
     const sc = UI.lmslSc || ''; const key = `l:cal:${from}:${sc}`; const d = LMP.load(key, 'l', 'cal.list', { from, to, scope: sc }); const items = (d && d.items) || [];
     const days = []; const start = new Date(first); start.setDate(1 - first.getDay()); for (let i = 0; i < 42; i++) { const x = new Date(start); x.setDate(start.getDate() + i); days.push(x); }
@@ -150,13 +160,16 @@
       `<div class="grid g2"><div class="card"><div class="ch"><b>To-do · 마감</b><small>체크하면 완료로 표시합니다</small></div>${todos.length ? todos.map(e => `<div class="row"><label class="ul-ck"><input type="checkbox" ${e.done ? 'checked' : ''} ${e.src === 'event' ? '' : 'disabled'} data-chg="lmsl-done" data-id="${esc(e.id)}"> ${esc(e.title)}</label><span class="mini">${tag(SC[e.scope][0], SC[e.scope][1])} ${esc(LMP.ts(e.starts_at))}</span></div>`).join('') : '<p class="mini">이번 달 To-do · 마감이 없습니다. 「일정 추가」로 넣을 수 있습니다.</p>'}</div>
       <div class="card"><div class="ch"><b>이번 달 일정</b><small>${items.length}건</small></div>${items.slice(0, 12).map(e => `<div class="row"><span>${tag(SC[e.scope][0], SC[e.scope][1])} ${esc(e.title)} <small class="mini">${esc(KD[e.kind] || e.kind)}</small></span><span class="mini">${esc(LMP.ts(e.starts_at))} ${e.src === 'event' && (e.mine || LMP.isAdm()) ? `<button class="btn sm ghost" data-act="lmsl-del" data-id="${esc(e.id)}" aria-label="일정 삭제" title="일정 삭제">✕</button>` : ''}</span></div>`).join('') || '<div class="empty">일정이 없습니다.</div>'}
       <p class="mini">Google 캘린더 양방향 연결은 연동 후 동작합니다(지금은 ⋯ › iCal 내보내기).</p></div></div>`;
-  });
+  })());
   ACT.lmslSc = el => { UI.lmslSc = el.dataset.v; render(); };
   ACT['lmsl-mon'] = el => { const [Y, M] = ym().split('-').map(Number); const d = new Date(Y, M - 1 + (+el.dataset.d), 1); UI.lmslYm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; render(); };
   ACT['lmsl-add'] = () => modal('일정 추가', `<label class="fl">구분<select name="scope">${LMP.isAdm() ? '<option value="academic" selected>학사(학생 캘린더에도 보임)</option>' : ''}<option value="personal" ${LMP.isAdm() ? '' : 'selected'}>개인(나만 보기)</option></select></label>
-    <label class="fl">제목<input name="title" maxlength="120" placeholder="예: 기말 보고서 제출"></label><label class="fl">종류<select name="kind">${Object.entries(KD).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
+    <label class="fl">제목<input name="title" maxlength="120" placeholder="예: 기말 보고서 제출" data-chg="lmsl-title"></label><label class="fl">종류<select name="kind">${Object.entries(KD).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
     <label class="fl">시작<input name="starts_at" type="datetime-local" value="${new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16)}"></label><label class="ul-ck"><input type="checkbox" name="all_day"> 하루 종일</label>
     <p class="mini">강좌 일정(차시 · 과제 마감)은 강의실에서 등록하면 자동으로 달력에 들어옵니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '추가', kind: 'pri', run: async w => { const r = await LMP.run('l', 'cal.add', { scope: fv(w, 'scope'), title: fv(w, 'title'), kind: fv(w, 'kind'), starts_at: fv(w, 'starts_at'), all_day: fv(w, 'all_day') }, '일정을 추가했습니다.', 'l:cal'); return !!r; } }]);
+  /* 3차: 제목이 고사 · 시험이면 종류를 '시험'으로 미리 골라 둔다(구분 학사/개인은 운영자가 화면에서 고름) */
+  ACT['lmsl-title'] = el => { const w = el.closest('#modal'); const k = w && w.querySelector('[name=kind]'); if (k && k.value === 'event' && /(중간|기말)\s*고사|시험/.test(el.value)) { k.value = 'exam'; toast('종류를 「시험」으로 골라 두었습니다. 학생에게 보이려면 구분을 「학사」로 두세요.'); } };
+  document.addEventListener('input', e => { const t = e.target; if (t && t.name === 'title' && t.dataset.chg === 'lmsl-title') ACT['lmsl-title'](t); });
   ACT['lmsl-done'] = el => LMP.run('l', 'cal.done', { id: el.dataset.id, done: el.checked }, null, 'l:cal');
   ACT['lmsl-del'] = el => LMP.run('l', 'cal.del', { id: el.dataset.id }, '일정을 지웠습니다.', 'l:cal');
   ACT['lmsl-d1'] = () => LMP.run('l', 'cal.d1', {}, r => `미이수 D-1 알림: 대기열 ${r.queued}건 · 방해금지 보류 ${r.held}건(연동 후 발송)`, 'l:');

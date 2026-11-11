@@ -38,9 +38,9 @@
      → 학습자 캘린더 「기관 일정」 · 공지(#notice) · 홈에 보인다. 개인 일정 · 비공개 글 · 강좌 일정(분반 소속 미확인)은 넣지 않는다. */
   if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = function () { const snap = base.apply(this, arguments); // eslint-disable-line no-global-assign
     try { if (!UL() || !snap) return snap; const L = S.lms || {};
-      /* 3차 결정: 학사 일정 · 시험 종류는 구분 값(예전 기본 '개인')과 무관하게 학습자에게, 그 밖의 개인 일정 · To-do는 운영자에게만.
-         예전 저장 기관에서 종류를 고르지 않고 넣은 「중간고사」 · 「기말고사」 · 「개강」 등은 제목으로 시험 · 학사 일정으로 본다 */
-      const pubEv = e => e && e.starts_at && e.title && e.kind !== 'todo' && (e.scope === 'academic' || e.kind === 'exam' || /(중간|기말)\s*고사|시험\s*(기간|일정)|개강|종강|수강\s*(신청|정정)|휴강|보강|학사\s*일정/.test(String(e.title)));
+      /* 결정(3차 재검토): 구분이 '학사'인 일정만 학습자에게. '개인'은 제목과 상관없이 절대 게시하지 않는다(시험 출제 메모 등 유출 방지).
+         예전 기본값 '개인'으로 저장된 학사 같은 일정은 통합 달력 위 확인 카드에서 운영자가 골라 '학사'로 바꾼다(lms/l.js) */
+      const pubEv = e => e && e.scope === 'academic' && e.starts_at && e.title;
       const ev = ((L.l && L.l.ev) || []).filter(pubEv).slice(0, 200).map(e => ({ id: 'lmsl-' + e.id, title: String(e.title).slice(0, 60), date: String(e.starts_at).slice(0, 10), time: e.all_day ? '' : String(e.starts_at).slice(11, 16), end: '', kind: '학사 일정', cls: '' }));
       if (ev.length) snap.calx = [...(Array.isArray(snap.calx) ? snap.calx : []), ...ev.filter(e => !(snap.calx || []).some(x => x.id === e.id))];
       const B = L.bcd; if (B && B.d && Array.isArray(B.d.posts)) { const room = id => (B.sections || []).find(r => r.id === id);

@@ -2,6 +2,7 @@
 /* v38 학사 LMS 화면 칩(운영 서버 모드) 응답 키 대조 — 칩 답(scn-univ-lms.js ULV)이 읽는 키가 실제 /api/lms/* 응답에 있는지 Node 서버로 한 번씩 호출해 확인한다.
    (Java 전자정부 서버는 같은 SQL을 쓴다 — 묶음별 대조 테스트(service-egov/test/lms-*.js)의 sqlParity가 Node mod-*.js ↔ lms_*.xml SQL 동일성을 지킨다)
    DATABASE_URL=postgres://… node --test service/test/lms-chip38.test.js */
+process.env.COOKIE_SECURE = process.env.COOKIE_SECURE || '0'; /* 학습자 쿠키 이름 dd_lsid */
 const test = require('node:test'); const assert = require('node:assert/strict');
 const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app');
 const keys = o => o && typeof o === 'object' && !Array.isArray(o) ? Object.keys(o).sort().join(',') : Array.isArray(o) ? `array(${o.length})${o[0] && typeof o[0] === 'object' ? '[' + Object.keys(o[0]).sort().join(',') + ']' : ''}` : String(o);
@@ -10,6 +11,7 @@ test('학사 LMS 화면 칩 — 운영 조회 응답 키', async t => {
   const pool = poolFrom(process.env); await migrate(pool);
   const app = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP: 'on' }, log: {} });
   await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
+  try {
   const call = async (m, p, body, ck) => { const h = { 'x-didisam': '1' }; if (ck) h.cookie = ck; if (body) h['content-type'] = 'application/json'; const r = await fetch(U + p, { method: m, headers: h, body: body ? JSON.stringify(body) : undefined }); const tx = await r.text(); let j = null; try { j = JSON.parse(tx); } catch { } return { st: r.status, j, ck: (r.headers.get('set-cookie') || '').split(';')[0] }; };
   const su = await call('POST', '/api/signup', { email: `chip38_${Date.now()}@example.com`, password: 'Chip38test2026x', orgName: '칩 대조 대학', type: 'univ' }); const ck = su.ck; assert.equal(su.st, 200, JSON.stringify(su.j));
   await call('PUT', '/api/state', { doc: { org: { name: '칩 대조 대학', type: 'univ', ed: 'lms', room: { mode: 'saas' } }, classes: [] }, rev: 0 }, ck);
@@ -54,5 +56,18 @@ test('학사 LMS 화면 칩 — 운영 조회 응답 키', async t => {
   has(R.lc.j, 'items', '통합 달력(lmsl-cal) /l/cal/list'); each(R.lc.j.items, ['scope', 'starts_at'], '달력 items');
   has(R.ln.j, 'items', '알림 규칙(lmsl-noti) /l/noti/rules'); each(R.ln.j.items, ['enabled'], '알림 규칙 items');
   has(R.m.j, 'total', '시스템 관리(lmsm) /m/users/list'); has(R.od.j, 'docs', 'AI 학습 지원(lmso) /o/rag/docs'); has(R.of.j, 'faq', 'AI 학습 지원 /o/qa/faq');
-  await new Promise(ok => app.close(ok)); await pool.end();
+  /* 3차: 학습자 세션으로 통합 달력 학사 일정 조회 — 학사만, 운영자 '개인' 일정(시험 출제 메모 등)은 제목과 상관없이 안 보임. JAVA_URL을 주면 Java 서버도 같은 결과인지 대조 */
+  const crypto = require('node:crypto'); const tid = (await G('/api/me')).j.tenant.tid; const hh = x => crypto.createHash('sha256').update(x).digest('hex');
+  const at = d => new Date(Date.now() + d * 864e5).toISOString().slice(0, 16);
+  const add1 = await call('POST', '/api/lms/l/cal/add', { scope: 'academic', title: '중간고사(학사)', kind: 'exam', starts_at: at(3), all_day: true }, ck); assert.equal(add1.st, 200, JSON.stringify(add1.j));
+  const add2 = await call('POST', '/api/lms/l/cal/add', { scope: 'personal', title: '기말고사 문제 출제', kind: 'exam', starts_at: at(4) }, ck); assert.equal(add2.st, 200, JSON.stringify(add2.j));
+  const lt = crypto.randomBytes(32).toString('base64url'); await pool.query("insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval '1 hour')", [hh(lt), tid, '20268801']);
+  const qp = `/api/lms/l/cal/list?scope=academic&from=${encodeURIComponent(new Date(Date.now() - 864e5).toISOString())}&to=${encodeURIComponent(new Date(Date.now() + 60 * 864e5).toISOString())}`;
+  const shape = j => ((j && j.items) || []).filter(e => e.src !== 'term').map(e => `${e.scope}|${e.kind}|${e.title}`).sort();
+  for (const [name, base] of [['Node', U], ...(process.env.JAVA_URL ? [['Java', process.env.JAVA_URL]] : [])]) {
+    const r = await fetch(base + qp, { headers: { cookie: 'dd_lsid=' + lt } }); const j = await r.json().catch(() => null);
+    assert.equal(r.status, 200, `${name} 학습자 학사 일정 조회 ${r.status} ${JSON.stringify(j).slice(0, 200)}`);
+    assert.deepEqual(shape(j), ['academic|exam|중간고사(학사)'], `${name}: 학사 일정만(개인 「기말고사 문제 출제」 제외) ${JSON.stringify(shape(j))}`); }
+  const own = await G(qp.replace('scope=academic', 'scope=personal')); assert.ok(shape(own.j).some(x => /기말고사 문제 출제/.test(x)), '운영자 본인에게는 개인 일정이 보임');
+  } finally { await new Promise(ok => app.close(ok)); await pool.end(); }
 });
