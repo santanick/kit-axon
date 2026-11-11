@@ -108,6 +108,7 @@
   <insert id="insertLearnerSession">
     insert into learner_sessions (id, tenant_id, sid, expires_at) values (#{id}, #{tid}, #{sid}, now() + interval '30 days')
   </insert>
+  <insert id="insertLearnerSessionShort">insert into learner_sessions (id, tenant_id, sid, expires_at) values (#{id}, #{tid}, #{sid}, now() + interval '12 hours')</insert>
   <delete id="deleteLearnerSessionsOf">delete from learner_sessions where tenant_id = #{tid} and sid = #{sid}</delete>
   <select id="selectTenantIds" resultType="string">select id from tenants</select>
   <delete id="deleteExpiredSessions">delete from sessions where expires_at &lt; now()</delete>

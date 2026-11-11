@@ -103,6 +103,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
 
     private Object login(HttpServletRequest req, HttpServletResponse res, String tid, byte[] body) throws Exception {
         JsonNode b = DdWeb.readBody(body, props.getInt("body.piiMax"));
+        { JsonNode kp = get(b, "keep"); if (kp != null && kp.isBoolean() && !kp.booleanValue()) req.setAttribute("ddKeep", Boolean.FALSE); } /* v38 공용 PC: 로그인 유지 끔(Node app.js와 같음) */
         if (truthy(get(b, "via"))) { String lid = pii.login(req, res, tid, b); return tx.inTenant(tid, () -> learnerOut(tid, lid)); }
         String sid = trim(sOr(get(b, "sid"))); String codeRaw = trim(sOr(get(b, "code"))); String code = codeRaw.toUpperCase(Locale.ROOT);
         rl.limit("ll:" + web.ip(req), props.getInt("rate.ll.max"), props.getLong("rate.ll.winMs"));

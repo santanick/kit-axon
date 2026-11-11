@@ -24,7 +24,7 @@ window.addEventListener('keydown', e => { if (e.key === 'Escape' && C2.ov.length
 const c2Teams = () => (Array.isArray(S.teams) && S.teams.length ? S.teams : (S.groups || []));
 const c2InTeam = (m, tid) => m.team === tid || m.group === tid;
 const c2Priv = () => S?.org?.type === 'univ';
-const c2MLabel = m => !m ? '—' : c2Priv() ? `${m.extra?.['학번'] || m.sid || m.name}${m.extra?.['학과'] ? ' · ' + m.extra['학과'] : ''}` : `${m.name}${m.nick ? ' (' + m.nick + ')' : ''}${m.phone ? ' · ' + String(m.phone).slice(-4) : ''}`;
+const c2MLabel = m => !m ? '—' : c2Priv() ? `${m.extra?.['학번'] || m.sid || m.name}${m.extra?.['학과'] ? ' · ' + m.extra['학과'] : ''}` : `${m.name}${m.nick && m.nick !== m.name ? ' (' + m.nick + ')' : ''}${m.phone ? ' · ' + String(m.phone).slice(-4) : ''}`;
 const c2TName = id => { const g = c2Teams().find(x => x.id === id) || (S.groups || []).find(x => x.id === id); return g ? g.name : ''; };
 
 /* 공용 회원 · 팀 선택기 — 다른 담당 모듈도 사용(교재 · 홈페이지 메뉴 공개 대상 등)
@@ -332,8 +332,9 @@ ACT['cls-grant'] = el => { const c = c2Ensure(C(el.dataset.v)); const sub = c.ki
     const after = rounds => { add.forEach(id => { c.learners.push(id); c.prog[id] = c.prog[id] || { p: 0, exam: null, assign: 'none', att: 100 }; c.enr[id] = { at: today(), end: null, src: 'admin', status: 'active', paid: null, ...(sub ? { rounds } : {}) }; if (empty) { c.crs = c.crs || {}; c.crs.pendNotify = [...new Set([...(c.crs.pendNotify || []), id])]; } else c2Notify(id, `${c.name} 수강 권한이 부여되었습니다`, `지금 바로 수강을 시작할 수 있습니다.${sub ? ` 부여 회차: ${rounds}회차` : ''}`); });
       /* v38 U-3: 콘텐츠가 없는 과정은 '지금 바로 수강' 알림을 보내지 않고, 공개할 때 보낸다 */
       logAudit(`${c.name} 수강 권한 부여 ${add.length}명${sub ? ` · ${rounds}회차` : ''} (${empty ? '알림 보류 — 콘텐츠 없음' : '알림 발송'})`); save(); toast(empty ? `${add.length}명에게 권한을 부여했습니다. 아직 넣은 콘텐츠가 없어 알림은 보내지 않았습니다. 내용을 넣고 공개하면 그때 알림이 갑니다.` : `${add.length}명에게 권한을 부여하고 알림을 보냈습니다.`, empty ? 'warn' : 'ok'); render(); };
-    if (!sub && !c.price) { after(0); return; }
-    c2ov('수강 권한 부여 확인', `${c.price ? `<div class="warn">유료 ${esc(t('cls'))}입니다. 권한을 직접 부여하면 결제 없이 수강할 수 있습니다.</div>` : ''}<p>${add.length}명에게 권한을 부여합니다. 부여 즉시 알림이 발송되고 바로 수강할 수 있습니다.</p>${sub ? '<label class="fl">부여할 구독 회차(1~999)<input name="r" type="number" min="1" max="999" value="1"></label>' : ''}`,
+    const cap = +((c.recruit && c.recruit.cap) || c.cap || 0), over = cap && c.learners.length + add.length > cap ? c.learners.length + add.length - cap : 0; /* v38 정원 초과 경고(직접 · 팀 단위 배정 모두, QA L10) */
+    if (!sub && !c.price && !over) { after(0); return; }
+    c2ov('수강 권한 부여 확인', `${c.price ? `<div class="warn">유료 ${esc(t('cls'))}입니다. 권한을 직접 부여하면 결제 없이 수강할 수 있습니다.</div>` : ''}${over ? `<div class="warn">정원 ${cap}명 중 ${c.learners.length}명이 수강 중입니다. ${add.length}명을 배정하면 정원을 ${over}명 넘습니다. 그래도 배정하려면 [부여]를 누르세요.</div>` : ''}<p>${add.length}명에게 권한을 부여합니다. 부여 즉시 알림이 발송되고 바로 수강할 수 있습니다.</p>${sub ? '<label class="fl">부여할 구독 회차(1~999)<input name="r" type="number" min="1" max="999" value="1"></label>' : ''}`,
       [{ id: 'c', label: '취소' }, { id: 'ok', label: '부여', kind: 'pri', run: w => { const r = sub ? Math.round(+w.querySelector('[name=r]').value || 0) : 0; if (sub && !(r >= 1 && r <= 999)) { toast('회차는 1~999 사이로 입력하세요.', 'warn'); return false; } after(r); } }]); };
   pickTargets(`수강 권한 부여 — ${c.name}`, [], go2, { filter: m => !c.learners.includes(m.id) && m.grade !== '승인 대기' && m.grade !== '거절' }); };
 /* 권한 제외: 결제자 차단, 구독은 이번 회차 후 만료 */

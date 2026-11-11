@@ -62,6 +62,7 @@ public interface PiiMapper {
     List<String> purgeGuardians(@Param("tid") String tid);
     /* plain */
     void insertLearnerSession(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
+    void insertLearnerSessionShort(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
     int deleteLearnerSessionsOf(@Param("tid") String tid, @Param("sid") String sid);
     List<String> selectTenantIds();
     int deleteExpiredSessions();

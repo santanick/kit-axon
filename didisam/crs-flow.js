@@ -77,7 +77,7 @@
   const optLabel = (k, v) => { const f = (askOf('basic') || []).find(x => x.k === k); const o = f && (f.opts || []).find(x => String(x[0]) === String(v)); return o ? o[1] : ''; };
   /* 교육 목표(유형별 문장). ai.js AI.goal은 기업 · 실무 문장이라 흐름에서는 이것을 쓴다 */
   const goalFor = (name, target) => {
-    const ty = (S && S.org && S.org.type) || 'adult'; const core = (ty === 'k12' ? topicCore({ name, subject: F && F.d && F.d.subject }) : '') || String(name || '').replace(/\(.*?\)|\[.*?\]/g, '').trim() || T('cls'); /* 학원: '내신반' 같은 반 이름 꼬리 없이 과목 · 주제로 */ const who = String(target || '').trim() || T('learner');
+    const ty = (S && S.org && S.org.type) || 'adult'; let core = (ty === 'k12' ? topicCore({ name, subject: F && F.d && F.d.subject }) : '') || String(name || '').replace(/\(.*?\)|\[.*?\]/g, '').trim() || T('cls'); if (core.length < 2 || /^새\s*(과정|수업|반|강좌|교과목)?$/.test(String(name || '').trim())) core = T('cls'); /* v38 기본 이름 '새 과정'에서 '새에서 배우는'이 나오던 문제(QA K17) */ /* 학원: '내신반' 같은 반 이름 꼬리 없이 과목 · 주제로 */ const who = String(target || '').trim() || T('learner');
     const L = { k12: [`${josa(who, '이')} ${josa(core, '에서')} 배우는 개념을 정확히 이해하고 스스로 문제를 풀 수 있습니다.`, '회차마다 확인 문제로 부족한 부분을 찾아 보완합니다.'],
       univ: [`${josa(who, '이')} ${core}의 핵심 개념을 이해하고 자기 말로 설명할 수 있습니다.`, `학기 말에 ${josa(core, '을')} 활용한 결과물 1건을 완성합니다.`],
       voc: [`${josa(who, '이')} ${core} 직무에 필요한 지식과 기술을 익힙니다.`, '실습 과제를 통해 현장에서 바로 쓸 수 있는 수준에 이릅니다.'],
@@ -686,8 +686,8 @@
       if (c) { const M0 = (S.members || []).filter(m => m.grade !== '거절'); const avail = M0.filter(m => !(c.learners || []).includes(m.id) && m.grade !== '승인 대기'); const grp = (S.groups || []).some(g => M0.some(m => m.group === g.id && !(c.learners || []).includes(m.id)));
         if (!avail.length && !grp) { const L = T('learner'); const wait = M0.filter(m => m.grade === '승인 대기').length; const can = k => typeof menuOn !== 'function' || menuOn(k);
           modal(`수강 배정 — ${c.name}`, `<div class="cf-gempty"><p class="cf-gt"><b>${M0.length ? `등록된 ${josa(L, '이')} 모두 이미 수강 중입니다.` : `아직 등록된 ${josa(L, '이')} 없습니다.`}</b></p><p>먼저 ${josa(L, '을')} 등록하거나 초대 링크를 보내 주십시오. 등록하면 이 화면에서 바로 배정할 수 있습니다.</p>
-            <ul class="cf-gl"><li><b>학번으로 ${L} 등록하기</b> — 학번 · 학과만 적으면 접근코드가 나옵니다. 이름 · 연락처는 받지 않습니다.</li><li><b>초대 링크 만들기</b> — 링크로 가입하면 ${L} 명단에 들어옵니다.</li></ul>${wait ? `<p class="mini">가입 승인을 기다리는 ${L} ${wait}명이 있습니다. ${L} 메뉴에서 승인하면 배정할 수 있습니다.</p>` : ''}</div>`,
-            [{ id: 'c', label: '닫기' }, { id: 'inv', label: '초대 링크 만들기', run: () => { if (ACT['mem-invite']) ACT['mem-invite']({ dataset: {} }); else go('members'); } }, { id: 'sid', label: `학번으로 ${L} 등록하기`, kind: 'pri', run: () => { if (typeof SL !== 'undefined' && SL && SL.sheet && ACT['sla-codes']) { setTimeout(() => ACT['sla-codes']({ dataset: {} }), 0); return; } go(can('enroll') ? 'enroll' : 'members'); } }]);
+            <ul class="cf-gl">${S.org.type === 'univ' ? `<li><b>학번으로 ${L} 등록하기</b> — 학번 · 학과만 적으면 접근코드가 나옵니다. 이름 · 연락처는 받지 않습니다.</li>` : `<li><b>엑셀 일괄 등록</b> — 이메일 · 이름 · ${esc(T('group'))}을 한 번에 올리면 사람마다 개인 초대 링크가 만들어집니다.</li>`}<li><b>초대 링크 만들기</b> — 링크로 가입하면 ${L} 명단에 들어옵니다.</li></ul>${wait ? `<p class="mini">가입 승인을 기다리는 ${L} ${wait}명이 있습니다. ${L} 메뉴에서 승인하면 배정할 수 있습니다.</p>` : ''}</div>`,
+            [{ id: 'c', label: '닫기' }, { id: 'inv', label: '초대 링크 만들기', run: () => { if (ACT['mem-invite']) ACT['mem-invite']({ dataset: {} }); else go('members'); } }, S.org.type !== 'univ' ? { id: 'bulk', label: '엑셀 일괄 등록', kind: 'pri', run: () => { setTimeout(() => ACT['mem-bulk'] && ACT['mem-bulk']({ dataset: {} }), 0); } } : { id: 'sid', label: `학번으로 ${L} 등록하기`, kind: 'pri', run: () => { if (typeof SL !== 'undefined' && SL && SL.sheet && ACT['sla-codes']) { setTimeout(() => ACT['sla-codes']({ dataset: {} }), 0); return; } go(can('enroll') ? 'enroll' : 'members'); } }]);
           return; } } } catch (e) { console.error('cls-grant empty', e); } return base(el, ...r); }; }
 
   /* v38: 콘텐츠 없는 과정은 [운영 시작하기 · 전체 공개]도 막고 무엇을 채우면 되는지 알린다(U-3 · A-5 · P-4) */
@@ -726,4 +726,12 @@
       return create({ name: x.topic, sessions: x.weeks, _n: clamp(+x.weeks || (U() ? 15 : 6), 1, 30), target: x.aud || '', fee: x.fee, docs: !!x.docs, vsrc: x.vsrc || 'youtube', quiz: x.quiz !== false, assign: x.assign !== false, exam: x.exam !== false, level: x.level, open: '비공개', status: '준비중', days: (clamp(+x.weeks || (U() ? 15 : 6), 1, 30)) * 7, audit: 'AI 과정 생성', from: 'sam' }); }; CF._makeCourseOld = old; }
   if (typeof dsCreate === 'function') { const old = dsCreate; dsCreate = function (...a) { const n0 = S.classes[0]; const r = old.apply(this, a); const c = S.classes[0]; if (c && c !== n0) { c.criteria = { ...defs().criteria }; emit('create', { course: c, d: null, id: c.id, name: c.name }); try { save(); } catch (e) { } } return r; }; }
   if (typeof wzSave === 'function') { const old = wzSave; wzSave = function (...a) { const n0 = S.classes[0]; const r = old.apply(this, a); const c = S.classes[0]; if (r !== false && c && c !== n0) { c.criteria = { ...defs().criteria, ...(cfgOf() && cfgOf().defaults && cfgOf().defaults.criteria || {}) }; emit('create', { course: c, d: null, id: c.id, name: c.name }); try { save(); } catch (e) { } } return r; }; }
+  /* v38 이름을 바꾸면 만들 때 이름에서 나온 문구(교육 목표 · 항목 제목)도 바꾼다 — '새 과정 정리 · 최종 평가' · '원생이 새에서 배우는'이 남던 문제(QA K17) */
+  const renSync = c => { if (!c || !c.name) return false; if (!c._nm) { c._nm = c.name; return false; } if (c._nm === c.name) return false; const o = c._nm, n = c.name; c._nm = n;
+    const oc = topicCore({ name: o }) || o, nc = topicCore({ name: n }) || n; const er = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const fix = v => typeof v !== 'string' ? v : v.split(o).join(n).replace(new RegExp(`(^|[\\s「'"])${er(oc)}(?=[\\s:·」'"]|에서|을|를|이|가|의|과|와|$)`, 'g'), (m, a) => a + (nc.length >= 2 ? nc : T('cls')));
+    ['goal', 'desc', 'intro', 'summary'].forEach(k => { if (typeof c[k] === 'string') c[k] = fix(c[k]); }); (c.curriculum || []).forEach(it => { if (it && typeof it.title === 'string') it.title = fix(it.title); }); return true; };
+  window.crsRenSync = renSync;
+  if (typeof AFTER !== 'undefined') AFTER.push(() => { try { if (S && Array.isArray(S.classes) && S.classes.map(renSync).some(Boolean)) save(); } catch (e) { console.error(e); } });
+  if (typeof lsSnapshot === 'function') { const b = lsSnapshot; lsSnapshot = (...a) => { try { (S.classes || []).forEach(renSync); } catch (e) { } return b(...a); }; }
 })();

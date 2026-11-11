@@ -186,8 +186,9 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   const cplAfterLogin = (req, tid, sid, keep) => cpl.afterLogin(req, tid, sid, keep);
   async function newLearnerSession(res, tid, sid) {
     const token = crypto.randomBytes(32).toString('base64url');
-    await pool.query('insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval \'30 days\')', [sha(token), tid, sid]);
-    res.setHeader('set-cookie', `${lcookieName}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${30 * 86400}${secure ? '; Secure' : ''}`);
+    const keep = res.ddKeep !== false; /* v38 '이 기기에서 로그인 유지'를 끄면(공용 PC) 브라우저를 닫을 때 끝나는 쿠키 · 서버 세션 12시간 */
+    await pool.query(`insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval '${keep ? '30 days' : '12 hours'}')`, [sha(token), tid, sid]);
+    res.setHeader('set-cookie', `${lcookieName}=${token}; Path=/; HttpOnly; SameSite=Strict${keep ? `; Max-Age=${30 * 86400}` : ''}${secure ? '; Secure' : ''}`);
     if (res.req) await cplAfterLogin(res.req, tid, sid, sha(token));
   }
   /* v23 간편가입 · 개인정보 분리(pii.js) — 학습 경로는 가명 learner_id만 쓴다 */
@@ -228,7 +229,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
       return { site: site.pub };
     }
     if (key === 'POST login') {
-      const b = await readBody(req, 2048);
+      const b = await readBody(req, 2048); if (b.keep === false) res.ddKeep = false;
       if (b.via) { const lid = await pii.login(req, res, tid, b); return inTenant(pool, tid, c => learnerOut(c, tid, lid)); }
       const sid = String(b.sid || '').trim(); const code = String(b.code || '').trim().toUpperCase();
       limit('ll:' + ip(req), 40, 600e3); limit(`lls:${tid}:${sid}`, 8, 600e3);

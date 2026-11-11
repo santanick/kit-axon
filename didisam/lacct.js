@@ -101,12 +101,12 @@ const laMember = () => { const r = laRoom(); if (!r || !LR.me) return null; retu
 const laPacct = () => { const r = laRoom(); if (!r || !LR.me) return null; return (r.pacct || []).find(x => x.sid === LR.me.sid) || null; };
 const laAcctUser = () => !!(LR.me && LR.me.acct && LR.me.acct !== 'code');
 function laSetMe(acc) { LR.me = { sid: acc.sid, dept: acc.dept || '', acct: acc.login || 'email', id: acc.sid, nick: acc.nick || '', kind: acc.kind || 'learner', grade: acc.grade || '' };
-  try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); sessionStorage.setItem('didisam.lg.' + (LR.tid || 'x'), '0'); } catch (e) { }
+  try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); sessionStorage.setItem('didisam.lg.' + (LR.tid || 'x'), '0'); } catch (e) { } lKeepSave(LR.me);
   try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[acc.sid] || {}) }; } catch (e) { }
   if (LR.mode === 'demo') LR.mine = demoMine(demoRoom()); }
 function laRefreshMe() { if (!laAcctUser() || !laCanAcct()) return; const acc = laFind(LR.me.sid || LR.me.id);
-  if (!acc || ['승인 대기', '거절'].includes(acc.grade) || acc.status === 'guardian_pending') { LR.me = null; try { sessionStorage.removeItem(SESS + LR.tid); } catch (e) { } return; }
-  if (acc.grade !== LR.me.grade || acc.nick !== LR.me.nick) { LR.me.grade = acc.grade; LR.me.nick = acc.nick; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { } } }
+  if (!acc || ['승인 대기', '거절'].includes(acc.grade) || acc.status === 'guardian_pending') { LR.me = null; try { sessionStorage.removeItem(SESS + LR.tid); } catch (e) { } lKeepSave(null); return; }
+  if (acc.grade !== LR.me.grade || acc.nick !== LR.me.nick) { LR.me.grade = acc.grade; LR.me.nick = acc.nick; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); if (window.lKeepLoad && lKeepLoad()) lKeepSave(LR.me); } catch (e) { } } }
 const laGrade = (cfg, inv) => inv ? '정회원' : (cfg.mode === 'invite' || cfg.approve === 'manual') ? '승인 대기' : '정회원';
 const laInv = tok0 => { const tok = String(tok0 || '').replace(/^par-/, ''); const r = laRoom(); const iv = r && (r.invites || []).find(i => i.token === tok); if (iv) return iv.active ? iv : null; if (!r || !tok) return null;
   /* v38 개인 초대 링크(운영자가 등록한 사람마다) · 보호자 동의 뒤 가족 연결(fam-F000000) — 가입하면 등록한 행에 계정이 붙는다(QA K1 · K2 · K8 · C2) */
@@ -117,8 +117,9 @@ const laInv = tok0 => { const tok = String(tok0 || '').replace(/^par-/, ''); con
 /* 토큰 없이 가입해도: 같은 이메일로 등록된 미가입 회원 · 만 14세 미만 보호자 연락처가 등록된 원생이면 그 행에 붙도록 증명값만 보낸다(이메일 · 번호 원문은 보내지 않음) */
 function laLinkOf(o) { const r = laRoom() || {}; if (laUniv()) return null; const freeM = m => !m.withdrawn && m.src !== 'manual' && (!m.acct || !m.acct.consent);
   if (o.email) { const m = (r.members || []).find(x => freeM(x) && String(x.email || (x.acct && x.acct.email) || '').toLowerCase() === o.email); if (m) return { mid: m.id, by: 'email', k: 'u' + laHash('sid|' + o.email).slice(0, 12) }; }
-  const g = String(o.gcontact || '').replace(/\D/g, ''); if (g.length >= 10) { const nk = String(o.nick || '').replace(/(님|이)$/, ''); const C = (r.members || []).filter(x => freeM(x) && (r.parents || []).some(p => p.child === x.id && String(p.phone || '').replace(/\D/g, '') === g));
-    const one = C.length === 1 ? C[0] : C.filter(x => nk.length >= 2 && String(x.name || '').replace(/^\[샘플\]\s*/, '').endsWith(nk)).length === 1 ? C.find(x => nk.length >= 2 && String(x.name || '').replace(/^\[샘플\]\s*/, '').endsWith(nk)) : null;
+  const g = String(o.gcontact || o.gmatch || '').replace(/\D/g, ''); if (g.length >= 10) { const nk = String(o.nick || '').replace(/(님|이)$/, ''); const C = (r.members || []).filter(x => freeM(x) && (r.parents || []).some(p => p.child === x.id && String(p.phone || '').replace(/\D/g, '') === g));
+    const byName = C.filter(x => nk.length >= 2 && String(x.name || '').replace(/^\[샘플\]\s*/, '').endsWith(nk)); /* 동의 없이 적은 연락처(gmatch)는 이름도 맞아야 연결(QA K 새: 반 공용 링크) */
+    const one = !o.gcontact ? (byName.length === 1 ? byName[0] : null) : C.length === 1 ? C[0] : C.filter(x => nk.length >= 2 && String(x.name || '').replace(/^\[샘플\]\s*/, '').endsWith(nk)).length === 1 ? C.find(x => nk.length >= 2 && String(x.name || '').replace(/^\[샘플\]\s*/, '').endsWith(nk)) : null;
     if (one) return { mid: one.id, by: 'gphone', k: 'g' + laHash('gp|' + g).slice(0, 12) }; }
   return null; }
 const laCode = () => String(Math.floor(100000 + Math.random() * 900000));
@@ -140,14 +141,14 @@ const laPrivV = () => laSec('개인정보 처리방침 요약', laPolicyHTML(laU
 /* ═════════ 로그인 화면 ═════════ */
 { const base = viewLogin; viewLogin = back => { const h = base(back); const cfg = laCfg(); const U = laUniv();
   const sso = U ? `<button type="button" class="lbtn ghost blk la-sso" data-ac="sso">${ico('home', 16)} 학교 SSO로 로그인 <small class="la-tag">준비 중</small></button>` : '';
-  if (!laAcctOn() || cfg.mode === 'code') return h.replace(/(<p class="mini">접근코드를 모르면[^<]*<\/p>)/, `$1${sso}<p class="mini la-links"><a href="#find/code">접근코드 받기 · 재발급 요청</a></p>`);
-  const form = (h.match(/<form id="li"[\s\S]*?<\/form>/) || [''])[0]; const pwMode = U || LA.lmode === 'pw';
+  if (!laAcctOn() || cfg.mode === 'code') return h.replace(/(<form id="li"[\s\S]*?)(<button[^>]*type="submit")/, (m, a, b) => a + lKeepHTML() + b).replace(/(<p class="mini">접근코드를 모르면[^<]*<\/p>)/, `$1${sso}<p class="mini la-links"><a href="#find/code">접근코드 받기 · 재발급 요청</a></p>`);
+  const form = ((h.match(/<form id="li"[\s\S]*?<\/form>/) || [''])[0]).replace(/(<button[^>]*type="submit")/, m => lKeepHTML() + m); const pwMode = U || LA.lmode === 'pw';
   const lgr = `<div class="lgr"><h2>로그인</h2>
     ${U ? `<p class="mini">학번과 비밀번호로 로그인하세요.</p>` : `${laSoc(cfg, 'soclogin')}${cfg.social.length ? '<p class="la-or"><span>또는 이메일로</span></p>' : ''}`}
     <form id="laLogin" data-back="${esc(back || 'my')}"><label class="fl">${U ? '학번' : '이메일'}<input name="lid" ${U ? 'inputmode="numeric"' : 'type="email"'} autocomplete="username" required maxlength="80" value="${esc((LA.lv && LA.lv.email) || '')}"></label>
       ${U ? '' : `<div class="la-seg sm">${[['otp', '인증번호로 로그인'], ['pw', '비밀번호로 로그인']].map(([k, l]) => `<button type="button" class="${(pwMode ? 'pw' : 'otp') === k ? 'on' : ''}" data-ac="lmode" data-v="${k}">${l}</button>`).join('')}</div>`}
       ${pwMode ? '<label class="fl">비밀번호<input name="pw" type="password" autocomplete="current-password" maxlength="20"></label>' : laOtpBox('lv')}
-      <p class="err" id="laErr" role="alert"></p><button class="lbtn pri blk" type="submit">로그인 ${ico('arrow', 16)}</button></form>
+      ${lKeepHTML()}<p class="err" id="laErr" role="alert"></p><button class="lbtn pri blk" type="submit">로그인 ${ico('arrow', 16)}</button></form>
     ${sso}<p class="la-links">${cfg.mode === 'open' ? '<a href="#join">회원가입</a> · ' : ''}<a href="#find/id">로그인 도움</a> · <a href="#find/inq">문의</a> · <a href="#privacy">개인정보 처리방침</a></p>${cfg.mode === 'invite' ? '<p class="mini">이 기관은 초대받은 회원만 가입할 수 있습니다. 받은 초대 링크로 접속해 가입하세요.</p>' : ''}
     ${form ? `<details class="la-code" ${(LR._codes || []).length ? 'open' : ''}><summary>${esc(lIdLabel())} · 접근코드로 로그인</summary>${form}<p class="mini"><a href="#find/code">접근코드 받기 · 재발급 요청</a></p></details>` : ''}</div>`;
   let out = h.replace(/<div class="lgr">[\s\S]*<\/div><\/div><\/div><\/section>\s*$/, lgr + '</div></div></section>');
@@ -158,7 +159,7 @@ async function laLogin(f) { laFresh(); const U = laUniv(); const id = String(f.e
     if (U) body = { via: 'univ', student_no: id, pw: pe ? pe.value : '' };
     else if (pe) body = { via: 'email', email: id, pw: pe.value };
     else { const s = LA.lv || {}; if (!s.sent) throw new Error('먼저 인증번호를 받으세요.'); if (s.email !== id) throw new Error('인증번호를 받은 이메일과 다릅니다.'); const vc = String(f.elements.vcode && f.elements.vcode.value || '').trim(); if (!/^\d{6}$/.test(vc)) throw new Error('이메일로 받은 인증번호 6자리를 입력하세요.'); body = { via: 'email', email: id, code: vc }; }
-    let r; try { r = await api('POST', laP('login'), body); } catch (x) { if (x.code === 'pending') { LA.pend = 'live'; laPendKeep('live'); location.hash = '#pending'; return; } if (x.status === 401 && x.code === 'login' && body.code) throw new Error('가입한 계정이 없습니다. [회원가입]에서 먼저 가입해 주세요.'); throw x; }
+    let r; try { r = await api('POST', laP('login'), { ...body, keep: lKeepOn() }); } catch (x) { if (x.code === 'pending') { LA.pend = 'live'; laPendKeep('live'); location.hash = '#pending'; return; } if (x.status === 401 && x.code === 'login' && body.code) throw new Error('가입한 계정이 없습니다. [회원가입]에서 먼저 가입해 주세요.'); throw x; }
     LA.lv = null; laLiveMe(r); try { localStorage.removeItem('didisam.app.pend.' + (LR.tid || '')); } catch (e) { } toast(`${LR.me.nick || '회원'}님, 반갑습니다.`, 'ok'); location.hash = '#' + (back || 'my'); lrender(); return; }
   const bad = U ? '학번 또는 비밀번호가 올바르지 않습니다.' : '이메일 또는 비밀번호가 올바르지 않습니다.';
   const pwEl = f.elements.pw; const acc = laFind(id);
@@ -183,7 +184,9 @@ function laDlg(html) { laDlgX(); const d = document.createElement('div'); d.clas
 const laDlgX = () => { const d = $('#laDlg'); d && d.remove(); };
 
 /* ═════════ 간편가입(#join · #join/<초대 토큰>) — 한 화면 ═════════ */
-function laJoinState(tok, inv) { if (!LA.j || LA.j.tok !== tok) LA.j = { tok, inv: inv ? { target: inv.target, cls: inv.cls || '' } : null, kind: inv && inv.target === 'parent' ? 'parent' : 'learner', sns: null, done: null, keep: {} }; return LA.j; }
+/* v38 기업: 초대 링크에 부서가 지정되지 않았으면 '부서'(소속) 질문을 필수로 — 부서별 이수율이 비지 않게(QA C3) */
+const laQs = (J, cfg, U) => { if (J.kind === 'parent') return []; const corp = ((SITE() && SITE().org) || {}).type === 'corp'; return cfg.extraQ.filter(q => !(U && ['학번', '학과'].includes(q.q))).map(q => corp && /^(부서|소속)$/.test(String(q.q).trim()) && !(J.inv && (J.inv.grp || J.inv.personal)) && !J.skipDept ? { ...q, req: true } : q); }; /* 등록된 사람(개인 초대 · 같은 이메일)은 등록한 부서가 있으므로 묻지 않음 */
+function laJoinState(tok, inv) { if (!LA.j || LA.j.tok !== tok) LA.j = { tok, inv: inv ? { target: inv.target, cls: inv.cls || '', grp: inv.grp || '', personal: !!inv.personal } : null, kind: inv && inv.target === 'parent' ? 'parent' : 'learner', sns: null, done: null, keep: {} }; return LA.j; }
 /* v38 기관이 가입 때 추가로 받는 항목(예: 직업훈련 생년월일 · 성별)을 동의 · 안내 문구에 그대로 적는다 — 입력 칸과 '받지 않습니다' 안내가 어긋나던 것(QA V10) */
 function laXQNames(J, U) { try { if (J && J.kind === 'parent') return []; return laCfg().extraQ.filter(q => !(U && ['학번', '학과'].includes(q.q))).map(q => String(q.q || '').trim()).filter(Boolean).slice(0, 8); } catch (e) { return []; } }
 function laJoinNote(J, U) { const X = laXQNames(J, U); const bio = X.filter(x => /생년월일|성별/.test(x)); const not = ['실명', '휴대폰 번호', '생년월일', '성별'].filter(x => !X.some(q => q.includes(x))).join(' · ');
@@ -205,7 +208,7 @@ function laJoin(r) { const cfg = laCfg(); const tok = (r.b || '').replace(/[^\w-
   if (J.done) return laSec(J.kind === 'parent' ? '보호자 회원가입' : '회원가입', laJoinDone(J));
   const head = `${inv ? `<p class="la-inv">${ico('link', 15)} ${inv.fam ? '보호자 동의를 마쳤습니다 — 보호자 계정을 만들면 자녀와 바로 연결됩니다.' : inv.personal && inv.who ? `<b>${esc(inv.who)}</b>님을 위한 초대 링크입니다 — 가입하면 ${esc(SITE().org.name)}에 등록된 정보${inv.child ? `(자녀 ${esc(inv.child)})` : ''}에 바로 연결됩니다.` : `초대 링크로 가입합니다 — 승인 없이 바로 가입됩니다${inv.target === 'parent' ? ' · 보호자 계정' : inv.target === 'admin' ? ' · 운영자 초대' : ''}.`}</p>` : cfg.approve === 'manual' ? '<p class="la-inv y">이 기관은 운영자 승인 후 이용할 수 있습니다.</p>' : ''}`;
   const kindSeg = cfg.parent && !inv ? `<div class="fl"><span>회원 유형</span><div class="la-seg">${[['learner', esc(lTerm('learner'))], ['parent', '보호자(가족 연결)']].map(([k, l]) => `<button type="button" class="${J.kind === k ? 'on' : ''}" data-ac="jkind" data-v="${k}">${l}</button>`).join('')}</div></div>` : '';
-  const Q = J.kind === 'parent' ? [] : cfg.extraQ.filter(q => !(U && ['학번', '학과'].includes(q.q)));
+  const Q = laQs(J, cfg, U);
   const xq = Q.length ? `<details class="la-q" ${Q.some(q => q.req) || laPvJoin() ? 'open' : ''}><summary>${esc(SITE().org.name)} 추가 질문 ${Q.some(q => q.req) ? '<b class="req">*</b>' : '<small>(선택)</small>'}</summary>${Q.map((q, i) => laXQField(q, i, (J.keep && J.keep.xq || {})[i])).join('')}${Q.some(q => q.type === 'file') ? '<small class="mini">첨부 파일: PDF · 이미지 · 한글 · 워드 · ZIP, 10MB 이하</small>' : ''}<small class="mini">기관이 정한 질문입니다. 꼭 필요한 내용만 적어 주세요.</small></details>` : '';
   const k = J.keep || {};
   if (U) return laSec('회원가입', head + `<form id="laJoin" class="la-one">${laConsentHTML(J, true)}
@@ -223,14 +226,14 @@ function laJoin(r) { const cfg = laCfg(); const tok = (r.b || '').replace(/[^\w-
       <label class="fl">닉네임<input name="nick" maxlength="20" placeholder="2~20자 한글 · 영문 · 숫자 · - _" value="${esc(k.nick || '')}"></label>
       <details class="la-pwopt"><summary>비밀번호도 만들기 <small>(선택 — 없어도 이메일 인증번호로 로그인)</small></summary><div class="form2"><label class="fl">비밀번호<input name="pw" type="password" maxlength="20" autocomplete="new-password"></label><label class="fl">비밀번호 확인<input name="pw2" type="password" maxlength="20" autocomplete="new-password"></label></div><small class="mini">영문 · 숫자 · 특수문자(~!@#$%^&*) 조합 8~20자</small></details>`;
   return laSec(J.kind === 'parent' ? '보호자 간편가입' : '간편가입', head + kindSeg + snsB + `<form id="laJoin" class="la-one">${laConsentHTML(J, false)}${J.kind === 'parent' ? '<input type="hidden" name="age14" value="1">' : age}
-    ${J.sns ? '' : `${laSoc(cfg, 'jsns', '로 간편가입')}${cfg.social.length ? '<p class="la-or"><span>또는 이메일로 가입</span></p>' : ''}`}${emailBlk}${xq}
+    ${J.sns ? '' : `${laSoc(cfg, 'jsns', '로 간편가입')}${cfg.social.length ? '<p class="la-or"><span>또는 이메일로 가입</span></p>' : ''}`}${emailBlk}${J.kind !== 'parent' && !(inv && inv.personal) && cfg.parent ? `<label class="fl la-gm">학원에 등록된 원생이면 보호자 휴대폰 번호 <small>(선택 · 등록 정보와 맞춰 보는 데만 쓰고 저장하지 않아요)</small><input name="gmatch" inputmode="tel" maxlength="13" placeholder="010-0000-0000" value="${esc(k.gmatch || '')}"></label>` : ''}${xq}
     <p class="err" id="laJErr" role="alert"></p><button class="lbtn pri blk" type="submit">${J.sns ? `동의하고 ${esc(LA_SN[J.sns.prov])}로 가입` : '이메일로 가입하기'} ${ico('arrow', 16)}</button>${J.sns ? '<button type="button" class="lbtn ghost blk" data-ac="jsnsx">다른 방법으로 가입</button>' : ''}</form>
     <p class="mini">${esc(laJoinNote(J, false))} <a href="#privacy">처리방침 요약</a></p><p class="la-links">이미 계정이 있나요? <a href="#login">로그인</a></p>`, J.kind === 'parent' ? '보호자 계정은 자녀의 출결 · 수업 알림을 받고 가족 연결에 씁니다.' : ''); }
 function laJoinDone(J) { const d = J.done;
   if (d.status === 'guardian_pending') return `<div class="gate">${ico('clock', 28)}<h2>보호자 동의를 기다리고 있습니다</h2><p class="lead">보호자(${esc(d.gmask)})에게 동의 링크를 보냈습니다. 보호자가 동의하면 바로 로그인할 수 있습니다. 7일 안에 동의가 없으면 가입 정보는 자동으로 삭제됩니다.</p><div class="cta">${d.gtok ? `<a class="lbtn ghost" href="#guardian/${esc(d.gtok)}" data-demo="1">보호자 동의 화면 열기(${laLive() ? '개발용' : '데모'})</a>` : ''}${btn('홈으로', '#home', laLive() ? 'pri' : 'ghost')}</div>${laLive() ? '' : '<p class="mini">운영: 보호자에게 이메일 또는 알림톡으로 learner.html?t=…#guardian/… 링크를 발송합니다.</p>'}</div>`;
   if (d.grade === '승인 대기') return `<div class="gate">${ico('clock', 28)}<h2>가입 신청이 접수되었습니다</h2><p class="lead">운영자 승인 후 이용할 수 있습니다. 승인되면 알림으로 안내합니다.</p><div class="cta"><a class="lbtn pri" href="#pending">승인 상태 확인</a>${btn('홈으로', '#home', 'ghost')}</div></div>`;
   return `<div class="gate">${ico('check', 28)}<h2>가입이 완료되었습니다</h2><p class="lead">${esc(SITE().org.name)}에 오신 것을 환영합니다, <b>${esc(d.nick)}</b>님.</p><div class="cta">${btn(J.kind === 'parent' ? '가족 연결하기' : '학습 시작', J.kind === 'parent' ? '#family' : '#my', 'pri')}</div></div>`; }
-function laJoinKeep(f) { const J = LA.j; if (!J || !f) return; const g = n => f.elements[n]; J.keep = { ...(J.keep || {}), ...Object.fromEntries(['tos', 'privacy', 'third', 'mkt'].filter(n => g(n)).map(n => [n, g(n).checked])), ...Object.fromEntries(['email', 'nick', 'gcontact', 'sid', 'dept'].filter(n => g(n)).map(n => [n, g(n).value])), ...(g('age14') && g('age14').type === 'checkbox' ? { age14: g('age14').checked } : {}) };
+function laJoinKeep(f) { const J = LA.j; if (!J || !f) return; const g = n => f.elements[n]; J.keep = { ...(J.keep || {}), ...Object.fromEntries(['tos', 'privacy', 'third', 'mkt'].filter(n => g(n)).map(n => [n, g(n).checked])), ...Object.fromEntries(['email', 'nick', 'gcontact', 'gmatch', 'sid', 'dept'].filter(n => g(n)).map(n => [n, g(n).value])), ...(g('age14') && g('age14').type === 'checkbox' ? { age14: g('age14').checked } : {}) };
   try { const U = laUniv(); const Q = J.kind === 'parent' ? [] : laCfg().extraQ.filter(q => !(U && ['학번', '학과'].includes(q.q))); J.keep.xq = Object.fromEntries(Q.map((q, i) => [i, q.type === 'file' ? '' : (laXQRead(f, { ...q, req: false }, i).v || '')])); } catch (e) { } }
 /* 동의 · 나이 확인(가입 버튼 · SNS 버튼 공통) */
 function laJoinCheck(f, err) { const cfg = laCfg(); const J = LA.j; const U = laUniv(); const ck = n => !!(f.elements[n] && f.elements[n].checked);
@@ -239,7 +242,7 @@ function laJoinCheck(f, err) { const cfg = laCfg(); const J = LA.j; const U = la
   const age14 = ck('age14'); let gc = '';
   if (!age14) { if (!cfg.under14) return err('이 기관은 만 14세 이상만 가입할 수 있습니다.'); gc = String(f.elements.gcontact && f.elements.gcontact.value || '').trim(); const ph = laPhone(gc); if (!LA_MAIL_RE.test(gc) && !LA_PHONE_RE.test(ph)) return err('보호자 이메일 또는 휴대폰 번호를 정확히 입력하세요.'); if (LA_PHONE_RE.test(ph)) gc = ph; }
   return { age14, gcontact: gc, consent: { tos: true, privacy: true, ...(ck('third') ? { third: true } : {}), mkt: ck('mkt') } }; }
-function laExtra(f, err) { const cfg = laCfg(); const U = laUniv(); const J = LA.j; const Q = J.kind === 'parent' ? [] : cfg.extraQ.filter(q => !(U && ['학번', '학과'].includes(q.q))); const extra = {};
+function laExtra(f, err) { const cfg = laCfg(); const U = laUniv(); const J = LA.j; const Q = laQs(J, cfg, U); const extra = {};
   for (let i = 0; i < Q.length; i++) { const q = Q[i]; const r = laXQRead(f, q, i); if (r.err) return err(r.err); if (r.file) extra[q.q] = r.file; /* 운영: 파일 서버 업로드 후 메타데이터만 저장 */ else if (r.v) extra[q.q] = r.v; }
   return extra; }
 /* 계정 만들기: 신원은 PII 저장소에만, 계정 상태 · 운영자 큐에는 가명 sid · 닉네임 · 가린 이메일만 */
@@ -265,12 +268,13 @@ function laJoinSubmit(f) { const J = LA.j; const U = laUniv(); const err = m => 
       const p1 = f.elements.pw.value; if (!LA_PW_RE.test(p1)) return err('비밀번호는 영문 · 숫자 · 특수문자(~!@#$%^&*) 조합 8~20자입니다.'); if (p1 !== f.elements.pw2.value) return err('비밀번호가 서로 다릅니다.');
       if (!(extra = X())) return; if (laLive()) return laJoinLive(f, { via: 'univ', student_no: stu, dept, nickname: nick, pw: p1, consent: c.consent, age14: true, extra }, err); return laCreate({ stu, dept, nick, pw: p1, consent: c.consent, extra, age14: true }); }
     const nick = fd('nick').replace(/(.{2,})님$/, '$1'); /* v32.9: 호칭 '님'은 화면이 붙임 */ if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.');
-    if (J.sns) { if (!(extra = X())) return; return laCreate({ login: J.sns.prov, sub: J.sns.sub, nick, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact }); }
+    if (J.sns) { if (!(extra = X())) return; return laCreate({ login: J.sns.prov, sub: J.sns.sub, nick, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact, gmatch: fd('gmatch') }); }
     const email = fd('email').toLowerCase(); if (!LA_MAIL_RE.test(email)) return err('이메일을 입력하세요. SNS로 가입하려면 위의 SNS 버튼을 누르세요.'); const s = LA.jv || {};
     const LV = laLive(); if (LV ? (!s.sent || s.email !== email) : (!s.code || s.email !== email)) return err('이메일 인증번호를 먼저 받으세요.'); if (LV ? !/^\d{6}$/.test(fd('vcode')) : fd('vcode') !== s.code) return err(LV ? '이메일로 받은 인증번호 6자리를 입력하세요.' : '인증번호가 올바르지 않습니다.');
     let pw = ''; const p1 = f.elements.pw ? f.elements.pw.value : ''; if (p1) { if (!LA_PW_RE.test(p1)) return err('비밀번호는 영문 · 숫자 · 특수문자(~!@#$%^&*) 조합 8~20자입니다(선택 항목 — 비워 두어도 됩니다).'); if (p1 !== f.elements.pw2.value) return err('비밀번호가 서로 다릅니다.'); pw = p1; }
+    { const lk0 = !LV && laLinkOf({ email }); const rm = lk0 && ((laRoom() || {}).members || []).find(m => m.id === lk0.mid); J.skipDept = !!(rm && rm.group); }
     if (!(extra = X())) return; if (LV) return laJoinLive(f, { via: 'email', email, code: fd('vcode'), nickname: nick, ...(pw ? { pw } : {}), consent: c.consent, age14: c.age14, ...(c.gcontact ? { guardian: { contact: c.gcontact } } : {}), extra }, err);
-    LA.jv = null; return laCreate({ login: 'email', email, nick, pw, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact });
+    LA.jv = null; return laCreate({ login: 'email', email, nick, pw, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact, gmatch: fd('gmatch') });
   } catch (x) { return err(x.message); } }
 
 /* v33 운영 가입: 서버가 이메일 · 닉네임만 저장(신원은 암호화 pii 저장소), 운영자 요청함에는 가명 번호 · 닉네임 · 가린 이메일만 */
@@ -413,7 +417,7 @@ const laISet = (k, v) => { try { localStorage.setItem(laIK(k), JSON.stringify(v)
 function laItems() { const k = laInboxKey(); const r = laRoom(); if (!k || !r) return { k, L: [] }; const st = laIS(k); const L = ((r.inbox || {})[k] || []).filter(n => !st.del.includes(n.id)).map(n => ({ ...n, read: n.read || st.read.includes(n.id) })); return { k, L }; }
 const laYmd = at => { const m = String(at || '').match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
 const laAt = at => { const m = String(at || '').match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})\D+?(?:(오전|오후)\s*)?(\d{1,2})(?::|시\s*)(\d{1,2})/); if (!m) return null; let h = +m[5]; if (m[4] === '오후' && h < 12) h += 12; if (m[4] === '오전' && h === 12) h = 0; return new Date(+m[1], +m[2] - 1, +m[3], h, +m[6]); };
-const laAgo = at => { const d = laAt(at); if (!d) return esc(at || ''); const s = Math.max(0, (Date.now() - d) / 1e3); return s < 60 ? '방금 전' : s < 3600 ? Math.floor(s / 60) + '분 전' : s < 86400 ? Math.floor(s / 3600) + '시간 전' : s < 86400 * 7 ? Math.floor(s / 86400) + '일 전' : esc(at); };
+const laAgo = at => { const d = laAt(at); if (!d) return esc(at || ''); const s = Math.max(0, (Date.now() - d) / 1e3); return s < 60 ? '방금 전' : s < 3600 ? Math.floor(s / 60) + '분 전' : s < 86400 ? Math.floor(s / 3600) + '시간 전' : s < 86400 * 7 ? Math.floor(s / 86400) + '일 전' : esc(lLocal(at).slice(0, 16)); };
 /* v26.7 알림(피그마 My Page › 알림): 읽지 않은 알림 N개 · [읽은 알림 삭제] [전체 삭제] · 날짜별 묶음 · 안 읽음 점 · 상대 시각 · × 삭제 */
 function laInboxV() { if (!LR.me) return needLogin('inbox'); const { L } = laItems(); const un = L.filter(n => !n.read).length; const rd = L.length - un;
   const W = ['일', '월', '화', '수', '목', '금', '토']; const G = []; L.forEach(n => { const d = laYmd(n.at); const k = d ? `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${W[d.getDay()]})` : '이전 알림'; const g = G.find(x => x.k === k); g ? g.L.push(n) : G.push({ k, L: [n] }); });

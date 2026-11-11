@@ -42,8 +42,10 @@ public class DdWeb {
         for (Cookie c : cs) if (p.lcookieName.equals(c.getName())) return c.getValue();
         return null;
     }
-    public void setLsid(HttpServletResponse res, String token) {
-        res.setHeader("set-cookie", p.lcookieName + "=" + token + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=" + (LSESSION_DAYS * 86400) + (p.secure ? "; Secure" : ""));
+    public void setLsid(HttpServletResponse res, String token) { setLsid(res, token, true); }
+    /** v38 keep=false(공용 PC · '이 기기에서 로그인 유지' 끔): 브라우저를 닫으면 끝나는 쿠키(Node app.js와 같음) */
+    public void setLsid(HttpServletResponse res, String token, boolean keep) {
+        res.setHeader("set-cookie", p.lcookieName + "=" + token + "; Path=/; HttpOnly; SameSite=Strict" + (keep ? "; Max-Age=" + (LSESSION_DAYS * 86400) : "") + (p.secure ? "; Secure" : ""));
     }
     public void clearLsid(HttpServletResponse res) {
         res.setHeader("set-cookie", p.lcookieName + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" + (p.secure ? "; Secure" : ""));

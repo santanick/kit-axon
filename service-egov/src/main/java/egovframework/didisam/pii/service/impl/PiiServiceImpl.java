@@ -118,8 +118,9 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
     }
 
     @Override public void newLearnerSession(HttpServletResponse res, String tid, String sid) throws Exception {
-        String token = DdCrypto.newToken(); mapper.insertLearnerSession(DdCrypto.sha(token), tid, sid); web.setLsid(res, token);
         org.springframework.web.context.request.RequestAttributes ra = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        boolean keep = !(ra instanceof org.springframework.web.context.request.ServletRequestAttributes sa0 && Boolean.FALSE.equals(sa0.getRequest().getAttribute("ddKeep")));
+        String token = DdCrypto.newToken(); if (keep) mapper.insertLearnerSession(DdCrypto.sha(token), tid, sid); else mapper.insertLearnerSessionShort(DdCrypto.sha(token), tid, sid); web.setLsid(res, token, keep);
         if (ra instanceof org.springframework.web.context.request.ServletRequestAttributes sa) cpl.afterLogin(sa.getRequest(), tid, sid, DdCrypto.sha(token));
     }
 

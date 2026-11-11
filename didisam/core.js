@@ -11,10 +11,10 @@ const uid = (p = 'x') => p + Math.random().toString(36).slice(2, 9);
 function ymdL(d) { d = d instanceof Date ? d : new Date(d == null ? Date.now() : d); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; } /* v38 현지(Asia/Seoul) 날짜 하나로 — toISOString().slice(0, 10)은 UTC라 오전 9시 전에 하루 전이 됨 */
 const today = () => ymdL(new Date());
 /* v38 학습자 큐에서 온 UTC 시각(…Z)을 현지 'YYYY-MM-DD HH:mm'으로(그 밖의 값은 그대로) */
-function atL(v) { const s = String(v == null ? '' : v); if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s)) return s.replace('T', ' '); const d = new Date(s); if (isNaN(d)) return s; const p = n => String(n).padStart(2, '0'); return `${ymdL(d)} ${p(d.getHours())}:${p(d.getMinutes())}`; } /* v22 현지 날짜(자정~09시 KST에 전날로 찍히던 문제) */
+function atL(v) { const s0 = String(v == null ? '' : v); const k = s0.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*(?:(오전|오후)\s*)?(\d{1,2})(?:시\s*|:)(\d{1,2})/); if (k) { let h = +k[5]; if (k[4] === '오후' && h < 12) h += 12; if (k[4] === '오전' && h === 12) h = 0; const p = n => String(n).padStart(2, '0'); return `${k[1]}-${p(k[2])}-${p(k[3])} ${p(h)}:${p(k[6])}`; } const s = s0; if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s)) return s.replace('T', ' '); const d = new Date(s); if (isNaN(d)) return s; const p = n => String(n).padStart(2, '0'); return `${ymdL(d)} ${p(d.getHours())}:${p(d.getMinutes())}`; } /* v22 현지 날짜(자정~09시 KST에 전날로 찍히던 문제) */
 const addDays = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return ymdL(t); };
 const daysAgo = d => Math.max(0, Math.round((Date.now() - new Date(d)) / 864e5));
-const nowStr = () => new Date().toLocaleString('ko-KR', { hour12: false });
+const nowStr = () => { const d = new Date(); return `${ymdL(d)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }; /* v38 시각 표기 하나로 'YYYY-MM-DD HH:mm'(이전 '2026. 11. 11. 5시 30분 0초') */
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 let RNG = 7; const rnd = () => (RNG = (RNG * 16807) % 2147483647) / 2147483647;
 const pick = a => a[Math.floor(rnd() * a.length)];
