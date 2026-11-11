@@ -28,6 +28,7 @@ const SESSION_DAYS = 14;
 const STATE_MAX = 8 * 1024 * 1024;      // 기관 상태 최대 8MB(JSON)
 const M = require('./modules');
 const OG = require('./ogmeta'); /* v37 L2 링크 공유 미리보기 */
+const commlive = require('./commlive'); /* v38 C#17 학습자 글 · 댓글 즉시 게시 */
 const { createStateCrypto } = require('./statecrypt');
 const { createOAuth } = require('./oauth');
 const COOKIE = '__Host-dd_sid';
@@ -201,6 +202,10 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   /* v33 대학 첫 로그인 동의(학번 · 접근코드 계정): 동의 여부 · 일시만 learners.consent에 둔다 */
   const consentFlag = async (c, tid, sid, doc) => { if (!doc || !doc.org || doc.org.type !== 'univ') return {}; const L = (await c.query('select consent from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; return L && !L.consent ? { needConsent: true } : L && L.consent ? { consentAt: L.consent.at || '' } : {}; };
   /* v33 학습자 → 운영자 요청함: 로그인 없이 보낼 수 있는 것은 문의 · 코드 재발급 요청뿐. 신원을 바꾸는 종류는 서버만 만든다 */
+  /* v38 C#17 학습자 글 · 댓글 즉시 게시(commlive.js): 운영자 화면이 반영한 지점(doc.lpxSeq) 뒤의 게시 모양만 합친다 */
+  const SEQ_SQL = "case when doc->>'lpxSeq' ~ '^[0-9]{1,15}$' then (doc->>'lpxSeq')::bigint else 0 end";
+  const COMM_Q = `select doc->'lsite'->'pub'->'comm' comm, doc->'org'->>'type' type, ${SEQ_SQL} seq, (select m from jsonb_array_elements(case when jsonb_typeof(doc->'members') = 'array' then doc->'members' else '[]'::jsonb end) m where m->>'sid' = $2 or m->>'id' = $2 limit 1) m from tenant_state where tenant_id = $1`;
+  const COMM_LIVE_Q = "select data->'_cm' cm from learner_events where tenant_id = $1 and id > $2 and type in ('post-new', 'post-cmt') and data->'_cm' is not null and at > now() - interval '30 days' order by id limit 300";
   const EV_GUEST = new Set(['acct-inq', 'code-req']); const EV_SERVER = new Set(['acct-join', 'acct-pw', 'acct-verify', 'acct-idv']);
   async function eventsRoute(req, res, tid, key) {
     if (key === 'GET events') { const a = await needStaff(req); if (a.tid !== tid) throw new HttpErr(403, '다른 기관의 요청함입니다.', 'tenant');
@@ -217,11 +222,14 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (type === 'pay' && data.cpn) { if (data.itemType && data.itemType !== 'class') throw new HttpErr(400, '쿠폰은 강좌 결제에만 쓸 수 있습니다.', 'coupon');
       const R = await inTenant(pool, tid, c => coupon.check(c, tid, data.cpn, String(data.ref || ''))); if (!R.ok) throw new HttpErr(400, R.msg, 'coupon');
       if (Math.round(+data.amount) !== R.final) throw new HttpErr(400, '결제 금액이 쿠폰 할인 금액과 맞지 않습니다. 쿠폰을 다시 적용해 주세요.', 'coupon_amount'); data.cpn = R.code; data.cpnOff = R.off; data.cpnOk = true; }
-    const j = JSON.stringify(data); if (j.length > 12 * 1024) throw new HttpErr(413, '요청 내용이 너무 큽니다.', 'too_large');
+    delete data._cm; /* v38 C#17 게시 모양은 서버만 만든다 */ const CM = s && (type === 'post-new' || type === 'post-cmt'); if (CM) limit(`lcm:${tid}:${s.sid}`, type === 'post-new' ? 10 : 30, 600e3);
+    if (JSON.stringify(data).length > 12 * 1024) throw new HttpErr(413, '요청 내용이 너무 큽니다.', 'too_large');
     const xid = /^[\w-]{4,40}$/.test(String(b.id || '')) ? String(b.id) : null;
-    const id = await inTenant(pool, tid, async c => { if (!(await c.query('select 1 from tenant_state where tenant_id = $1', [tid])).rows[0]) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
+    const id = await inTenant(pool, tid, async c => { const T = (await c.query(CM ? COMM_Q : 'select 1 from tenant_state where tenant_id = $1', CM ? [tid, s.sid] : [tid])).rows[0]; if (!T) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
+      if (CM && T.comm) { const live = (await c.query(COMM_LIVE_Q, [tid, T.seq])).rows.map(r => r.cm); const m = T.m ? crypt.open({ members: [T.m] }, tid).members[0] : null;
+        const cm = commlive.accept(T.comm, { tid, sid: s.sid, m, orgType: T.type, live }, type, data); if (cm) data._cm = cm; }
       if (Math.random() < 0.02) await c.query("delete from learner_events where tenant_id = $1 and at < now() - interval '90 days'", [tid]);
-      return (await c.query('insert into learner_events (tenant_id, sid, type, xid, data) values ($1, $2, $3, $4, $5) returning id', [tid, s ? s.sid : '', type, xid, j])).rows[0].id; });
+      return (await c.query('insert into learner_events (tenant_id, sid, type, xid, data) values ($1, $2, $3, $4, $5) returning id', [tid, s ? s.sid : '', type, xid, JSON.stringify(data)])).rows[0].id; });
     return { ok: true, seq: +id };
   }
   async function pubRoute(req, res, m) {
@@ -230,9 +238,9 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (pii.pubOpen[key]) return pii.pubOpen[key](req, res, tid);
     if (key === 'GET events' || key === 'POST events') return eventsRoute(req, res, tid, key);
     if (key === 'GET site') {
-      const site = await inTenant(pool, tid, async c => (await c.query("select doc->'lsite'->'pub' pub from tenant_state where tenant_id = $1", [tid])).rows[0]);
+      const site = await inTenant(pool, tid, async c => { const r = (await c.query(`select doc->'lsite'->'pub' pub, ${SEQ_SQL} seq from tenant_state where tenant_id = $1`, [tid])).rows[0]; if (r && r.pub && r.pub.comm) r.live = (await c.query(COMM_LIVE_Q, [tid, r.seq])).rows.map(x => x.cm); return r; });
       if (!site || !site.pub) throw new HttpErr(404, '아직 게시되지 않은 학습자 사이트입니다.', 'unpublished');
-      return { site: site.pub };
+      return { site: commlive.merge(site.pub, site.live) }; /* v38 C#17 운영자 화면이 아직 반영하지 않은 학습자 글 · 댓글 */
     }
     if (key === 'POST login') {
       const b = await readBody(req, 2048); if (b.keep === false) res.ddKeep = false;

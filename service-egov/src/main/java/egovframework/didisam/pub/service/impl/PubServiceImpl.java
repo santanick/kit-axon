@@ -51,10 +51,12 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             case "POST guardian": return pii.guardian(req, body, tid);
             case "GET events": case "POST events": return events(req, body, tid, key);
             case "GET site": {
-                Map<String, Object> site = tx.inTenant(tid, () -> mapper.selectSitePub(tid));
-                JsonNode pub = site == null || site.get("pub") == null ? null : parse((String) site.get("pub"));
+                Object[] sl = tx.inTenant(tid, () -> { Map<String, Object> r = mapper.selectSitePub(tid); if (r == null || r.get("pub") == null) return null; JsonNode pb = parse((String) r.get("pub"));
+                    List<JsonNode> live = new ArrayList<>(); if (pb != null && isObj(pb.get("comm"))) for (String c : mapper.selectCommLive(tid, ((Number) r.get("seq")).longValue())) live.add(parse(c)); return new Object[]{ pb, live }; });
+                JsonNode pub = sl == null ? null : (JsonNode) sl[0];
                 if (!truthy(pub)) throw processException("dd.404.unpublished");
-                Map<String, Object> o = new LinkedHashMap<>(); o.put("site", pub); return o;
+                @SuppressWarnings("unchecked") List<JsonNode> live = (List<JsonNode>) sl[1];
+                Map<String, Object> o = new LinkedHashMap<>(); o.put("site", PubCommLive.merge(pub, live)); return o; /* v38 C#17 운영자 화면이 아직 반영하지 않은 학습자 글 · 댓글 */
             }
             case "POST login": return login(req, res, tid, body);
             default:
@@ -150,12 +152,18 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             JsonNode am = get(data, "amount"); double a = am == null ? Double.NaN : am.isNumber() ? am.asDouble() : parseD(am.asText(""));
             if (Double.isNaN(a) || Math.floor(a + 0.5) != ((Number) R.get("final")).longValue()) throw new DdException(400, "결제 금액이 쿠폰 할인 금액과 맞지 않습니다. 쿠폰을 다시 적용해 주세요.", "coupon_amount");
             ObjectNode dn = (ObjectNode) data; dn.put("cpn", (String) R.get("code")); dn.put("cpnOff", ((Number) R.get("off")).longValue()); dn.put("cpnOk", true); }
-        String j = stringify(data);
-        if (j.length() > 12 * 1024) throw processException("dd.413.too_large.ev");
+        if (data.isObject()) ((ObjectNode) data).remove("_cm"); /* v38 C#17 게시 모양은 서버만 만든다(Node eventsRoute와 같음) */
+        boolean cmEv = s != null && ("post-new".equals(type) || "post-cmt".equals(type)); if (cmEv) rl.limit("lcm:" + tid + ":" + s.get("sid"), "post-new".equals(type) ? 10 : 30, 600_000L);
+        if (stringify(data).length() > 12 * 1024) throw processException("dd.413.too_large.ev");
         String xid0 = sOr(get(b, "id")); String xid = EV_XID.matcher(xid0).matches() ? xid0 : null; String sid = s == null ? "" : (String) s.get("sid");
+        JsonNode dataF = data;
         Long id = tx.inTenant(tid, () -> { if (mapper.tenantStateExists(tid) == 0) throw processException("dd.404.tenant");
+            if (cmEv && dataF.isObject()) { Map<String, Object> T = mapper.selectCommCtx(tid, sid); JsonNode comm = T == null || T.get("comm") == null ? null : parse((String) T.get("comm"));
+                if (comm != null && comm.isObject()) { List<JsonNode> live = new ArrayList<>(); for (String c : mapper.selectCommLive(tid, ((Number) T.get("seq")).longValue())) live.add(parse(c));
+                    JsonNode m = null; if (T.get("m") != null) { ObjectNode one = F.objectNode(); one.set("members", F.arrayNode().add(parse((String) T.get("m")))); m = crypt.open(one, tid).get("members").get(0); }
+                    ObjectNode cm = PubCommLive.accept(comm, tid, sid, m, (String) T.get("type"), live, type, dataF); if (cm != null) ((ObjectNode) dataF).set("_cm", cm); } }
             if (Math.random() < 0.02) mapper.deleteOldEvents(tid);
-            return mapper.insertEventX(tid, sid, type, xid, j); });
+            return mapper.insertEventX(tid, sid, type, xid, stringify(dataF)); });
         Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); o.put("seq", id); return o;
     }
     private static double parseD(String s) { try { return Double.parseDouble(s); } catch (NumberFormatException e) { return Double.NaN; } }
