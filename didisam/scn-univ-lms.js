@@ -58,4 +58,14 @@
     if (['members', 'enroll', 'groups'].includes(tab)) main.querySelectorAll('table').forEach(tb => { const hs = [...tb.querySelectorAll('thead th, tr:first-child th')]; hs.forEach((th, i) => { if (/진단/.test(th.textContent)) { tb.querySelectorAll('tr').forEach(tr => { const c = tr.children[i]; if (c) c.hidden = true; }); } }); });
     if (['admins', 'lmsm', 'org'].includes(tab)) main.querySelectorAll('table tr').forEach(tr => { const c = tr.firstElementChild; if (c && /^\s*(매출|plan|요금제|결제 · 수납)\s*$/.test(c.textContent)) tr.hidden = true; });
   } catch (e) { console.error('univ-lms hide', e); } });
+
+  /* v38 학사 LMS 화면 추천 칩: 규칙 엔진이 모르는 「○○ 알려줘 · 상태」 칩은 그 화면의 이번 학기 현황(학기 · 강좌 데이터)으로 답한다(모르는 말이라고 답하지 않게) */
+  document.addEventListener('DOMContentLoaded', () => { if (typeof scxDefs !== 'function') return; const base = scxDefs;
+    const NO = /이해하지 못했습니다|처리할 수 없는/;
+    const brief = k => { const L = typeof mlabel === 'function' ? mlabel(k) : k; let hub = null; try { const f = window.LMSNAV && LMSNAV.find(LMSNAV.tree(), k); hub = f && f.h; } catch (e) { }
+      let st = ''; try { const A = window.lmsaEns && lmsaEns(); if (A) { const T = A.terms.find(t => t.is_operating) || A.terms[0] || {}; const secs = A.sections.filter(x => x.term_id === T.term_id && !x.hidden && x.status !== 'archived');
+        const stu = new Set(A.enr.filter(e => e.status === 'enrolled' && secs.some(x => x.section_id === e.section_id)).map(e => e.member_no)).size; st = `${T.name || '이번 학기'} 분반 ${secs.length}개 · 수강생 ${stu}명`; } } catch (e) { }
+      return { text: `「${L}」 화면입니다. ${hub && hub.desc ? hub.desc + '. ' : ''}${st ? `지금 ${st}입니다.` : ''}`.trim(), html: '', go: k }; };
+    scxDefs = function (k) { const D = base.apply(this, arguments) || []; if (!UL()) return D;
+      return D.map(c => { if (!Array.isArray(c) || typeof c[2] !== 'function') return c; const run = c[2]; return [c[0], c[1], (...a) => { const r = run(...a); return r && !r.plan && NO.test(r.text || '') ? brief(k) : r; }, c[3]]; }); }; }); // eslint-disable-line no-global-assign
 })();
