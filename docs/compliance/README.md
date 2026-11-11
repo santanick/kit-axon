@@ -147,4 +147,4 @@
 - 규정 준수 과정의 최종평가는 시험 규칙에 통과 점수가 없어도 `pass`를 통과 점수로 안내하고, 수료 기준 문구에 평가 · 출석 기준을 함께 적습니다.
 - 평가(시험)가 없는 운영 중 직업훈련 과정은 점검표(`e-eval`) · 한눈에 · 게시 전 확인 창에서 알립니다(평가 점수가 수료 기준이므로).
 - HRD-Net 화면의 부정훈련 의심은 실제 학습 기록(여러 IP 접속 · 하루 학습시간 한도 초과)에서만 만들고, 없으면 '없음'으로 표시합니다.
-- 실서버의 `GET /api/cpl/completion`(진도 · 평가)은 출결을 보지 않습니다. 화면 판정은 서버 판정 위에 출석률 기준을 더해 계산합니다. 서버 판정에 출결을 넣는 것은 후속 과제입니다.
+- (반영) 실서버의 `GET /api/cpl/completion`도 같은 출결 기준을 씁니다. Node `attRate`(service/server/compliance.js) · Java `CplServiceImpl.attRate`가 화면 `DDAtt`와 같은 식으로 출석률(`att`)을 계산하고, 고용노동부 프로필은 `att`가 80 미만이면 `done: false`입니다(출결 수업이 없으면 `att: null`). 대조: `service/test/cpl-att38.test.js`(Node = 화면), `service-egov/test/contract-cpl.js`(Node = Java). 정책에 `rate` · `pass`가 없으면 두 서버 모두 0으로 봅니다(Java가 NaN으로 수료를 막던 차이를 맞춤).

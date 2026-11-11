@@ -281,7 +281,7 @@
     const card = (x, ex) => { const href = x.next ? `#c/${x.c.id}/${x.next.id}` : `#c/${x.c.id}`; const warn = x.st === 'returned';
       return `<a class="ap-cc ${x.done ? 'done' : ''} ${warn ? 'warn' : ''}${ex ? ' exp' : ''}" href="${esc(href)}">${x.c.thumb ? `<span class="ap-thw"><img class="ap-th" src="${esc(x.c.thumb)}" alt="" loading="lazy">${ring(x.p)}</span>` : anyTh ? `<span class="ap-thw"><span class="ap-th ap-th0" aria-hidden="true">${esc(String(x.c.name || '').slice(0, 4))}</span>${ring(x.p)}</span>` : ring(x.p)}<span class="ap-cm"><b>${esc(x.c.name)}</b><small>${ex ? '학습 기간이 끝났어요 · 기록만 볼 수 있어요' : x.done ? '수료 · 다시 보기' : warn ? '재제출 요청 · 피드백 확인' : x.next ? '다음 · ' + esc(x.next.title) : '시작하기'}</small>${ex ? '<em class="ap-exp">만료됨</em>' : x.c.end && !x.done ? `<em>${esc(x.c.end)} 마감</em>` : ''}</span><i>${x.done ? ico('check', 16) : ico('play', 16)}</i></a>`; };
     const today = ymdL(new Date()); const exp = x => !x.done && x.c.end && String(x.c.end).slice(0, 10) < today;
-    const stOf = x => exp(x) ? 'exp' : x.done ? 'done' : x.p > 0 ? 'ing' : 'pre'; const F = AP.myf || 'all'; const SO = AP.mys || 'recent';
+    const stOf = x => exp(x) ? 'exp' : x.done ? 'done' : x.p > 0 || x.started ? 'ing' : 'pre'; const F = AP.myf || 'all'; const SO = AP.mys || 'recent';
     const live = C.filter(x => !exp(x)); const cntOf = k => k === 'all' ? live.length : live.filter(x => stOf(x) === k).length;
     let V = F === 'all' ? live : live.filter(x => stOf(x) === F); const seen = srSeen(); const rk = x => { const i = seen.indexOf(x.c.id); return i < 0 ? 999 : i; };
     V = SO === 'name' ? [...V].sort((a, b) => a.c.name.localeCompare(b.c.name, 'ko')) : [...V].sort((a, b) => rk(a) - rk(b));

@@ -16,7 +16,7 @@ function myStats() {
   const clsIds = [...new Set([...Object.keys(lp.cls || {}), ...Object.keys(mine.cls || {}), ...enrIds])].filter(id => S2.classes.some(c => c.id === id && (c.items || []).length));
   const courses = clsIds.map(id => { const c = S2.classes.find(x => x.id === id); const r = (lp.cls || {})[id] || { items: {} }; const m = (mine.cls || {})[id] || {};
     const LI = c.items.filter(x => x.type !== 'chapter'); const L0 = LI.length ? LI : c.items; const doneN = L0.filter(x => ((r.items || {})[x.id] || {}).done).length; const pLocal = Math.round(doneN / Math.max(1, L0.length) * 100); const p = Math.max(pLocal, m.p || 0);
-    const next = L0.find(x => !((r.items || {})[x.id] || {}).done); return { c, p, doneN, next, st: m.st || (r.sub ? 'submitted' : 'none'), fb: m.fb || '', score: m.score, done: m.done || p >= (c.thr || 80) }; });
+    const next = L0.find(x => !((r.items || {})[x.id] || {}).done); const started = p > 0 || Object.values(r.items || {}).some(x => x && (x.done || x.w || x.sec || x.score != null)) || !!((((lp.cls || {})._cpl || {}).ack || {})[id]); /* v38 입과(유의사항 확인) · 학습 기록이 있으면 '수강 중'(QA V15) */ return { c, p, doneN, next, started, st: m.st || (r.sub ? 'submitted' : 'none'), fb: m.fb || '', score: m.score, done: m.done || p >= (c.thr || 80) }; });
   const tuts = S2.tuts.map(t => ({ t, r: (lp.tut || {})[t.id] })).filter(x => x.r);
   const diag = Object.entries(lp.diag || {}).map(([id, r]) => ({ d: (S2.diags || []).find(x => x.id === id), r })).filter(x => x.d);
   const myType = diag.length ? diag.sort((a, b) => String(b.r.at || '').localeCompare(String(a.r.at || '')))[0].r.out : '';
