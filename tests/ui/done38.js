@@ -27,7 +27,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; } else { fail++;
     /* 평가 없는 과정 경고(V13) */ S.classes.push({ id: 'c2', name: '평가 없는 과정', kind: 'period', status: '운영중', start: today(), end: addDays(today(), 30), curriculum: [{ id: 'v9', type: 'video', title: '1차시' }], learners: [], prog: {}, criteria: { threshold: 80 }, hours: 1, enr: {} });
     r.noEval = cplNoEval().map(x => x.id); r.req = (cplReqList().find(x => /평가\(시험\) 1개 이상/.test(x.label)) || {}).st; S.classes.pop();
     /* 엑셀: 과제 없는 과정은 '—', 출석률은 clsAtt(C11 · V4) */ const cols = OPS36.lCols(c); const iA = cols.indexOf('과제'), iT = cols.indexOf('출석률(%)'); r.xls = c.learners.map(id => OPS36.lRow(c, id)).map(x => [x[iA], x[iT]]);
-    /* 자동 발급 대장(C10): 학습 기록 반영 때 수료자만 발급 */ S.certs = []; lpApply(); await new Promise(k => setTimeout(k, 10)); r.certs = S.certs.map(x => x.who).sort();
+    /* 자동 발급 대장(C10): 학습 기록 반영 때 수료자만 발급 */ S.certs = []; localStorage.setItem(lpKey(), JSON.stringify(Object.fromEntries(S.members.map(m => [m.sid, { cls: { c1: { items: { v1: { done: true } } } }, at: new Date().toISOString() }])))); lpApply(); await new Promise(k => setTimeout(k, 10)); /* 학습 기록이 들어온 훈련생만 자동 발급 */ r.certs = S.certs.map(x => x.who).sort();
     return r; });
   ok(JSON.stringify(R.att) === '[100,80,60]', '출석률 공용 계산 ' + R.att);
   ok(JSON.stringify(R.done) === '[true,true,false]', 'V3 출석 60%는 수료 아님(진도 100 · 평가 90) ' + R.done);
