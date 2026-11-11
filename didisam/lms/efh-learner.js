@@ -313,6 +313,6 @@
   { const base = viewPage; viewPage = function (id, ...r) { if (id === 'lms' && on()) { try { return page(); } catch (e) { console.error('efh learner', e); return '<p>화면을 그리지 못했습니다.</p>'; } } return base.call(this, id, ...r); }; } // eslint-disable-line no-global-assign
   if (typeof viewMy === 'function') { const base = viewMy; viewMy = function (...a) { const h = base.apply(this, a); if (!on() || !LR.me) return h; const c = `<div class="mycard" id="eflMy"><div class="myhead"><h2>과제 · 시험 · 성적</h2></div><p class="mini">수강 분반의 과제 제출, 시험 응시, 성적과 피드백을 확인합니다.</p><a class="lbtn sm" href="#lms">바로 가기</a></div>`; return h.includes('<div class="mygrid">') ? h.replace('<div class="mygrid">', '<div class="mygrid">' + c) : c + h; }; } // eslint-disable-line no-global-assign
   window.addEventListener('hashchange', () => { if (!location.hash.startsWith('#lms')) { clearInterval(tick); if (PM.on) { pmEv('hidden', { why: '다른 화면으로 이동' }); pmStop(); L.paper = null; } if (L.pc) pcClose(); } });
-  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/efh-learner.css?v=30.0'; document.head.appendChild(l); } catch (e) { }
+  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/efh-learner.css?v=38.1'; document.head.appendChild(l); } catch (e) { }
   window.EFHL = { L, call, drop };
 })();
