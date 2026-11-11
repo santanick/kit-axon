@@ -1,6 +1,6 @@
 /* 디디쌤 학습자 앱 서비스 워커 v27 — 설치(iOS · Android) · 오프라인 첫 화면.
    네트워크 우선(배포 즉시 새 버전), 실패할 때만 저장본. API · 외부 도메인 · POST는 건드리지 않는다. */
-const C = 'didisam-app-v38.1';
+const C = 'didisam-app-v38.2';
 const SHELL = ['learner.html', 'learner.css', 'lapp.css', 'ldads.css', 'lapp.js', 'manifest.webmanifest', 'app-icon-192.png'];
 /* v34.5 X2 런타임 캐시: 이름이 바뀌지 않는 파일(img/stock · fonts · /api/media/<내용 해시>)만. 최대 160개 · 약 40MB, 오래 안 쓴 것부터 지움(LRU) */
 const RTC = 'didisam-rt-media', RT = /\/(img\/stock\/[\w-]+\.webp|fonts\/(?:[\w-]+\/)?[\w.-]+\.(?:woff2|css)|api\/media\/[\w.-]+)$/, RT_N = 300, RT_B = 40 << 20;
