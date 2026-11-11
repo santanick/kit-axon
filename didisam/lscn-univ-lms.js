@@ -40,7 +40,17 @@
     document.querySelectorAll('.lt-b p').forEach(p => { if (p.textContent.includes('가격을 바로 물어보세요')) p.textContent = p.textContent.replace('강좌 · 수강 방법 · 가격을 바로 물어보세요.', '수업 · 과제 · 출석 · 학사 일정을 바로 물어보세요.'); });
   }
   /* v38 2차 #7 학습 캘린더에 내 수강 분반의 과제 마감 · 시험(데모: 기관 데이터룸 S.lms.efh)을 기관 일정으로 넣는다(게시본 calx에 이 기기 화면에서만 덧붙임) */
-  function addDue() { try { if (!on() || typeof LR === 'undefined' || !LR || !LR.me || LR.mode === 'live' || !LR.site) return; const r = typeof demoRoom === 'function' ? demoRoom() : null; const A = r && r.lms && r.lms.a; const X = r && r.lms && r.lms.efh; if (!A || !X) return;
+  /* 운영 서버: 기존 학습자 API(GET /api/lms/a/my → 분반마다 /api/lms/e/my · /api/lms/f/my)로 받아 5분 동안 쓴다 */
+  const LV = { at: 0, sid: '', busy: false, items: [] };
+  const kstOf = t => { const d = new Date(Date.parse(t) + 9 * 3600e3).toISOString(); return { date: d.slice(0, 10), time: d.slice(11, 16) }; };
+  function liveDue() { if (LV.busy || (LV.sid === String(LR.me.sid) && Date.now() - LV.at < 300e3) || typeof api !== 'function') return; LV.busy = true;
+    (async () => { const my = await api('GET', '/api/lms/a/my'); const secs = ((my && my.sections) || []).filter(x => x.kind !== 'ta'); const out = [];
+      for (const sc of secs.slice(0, 20)) { const nm = `${sc.course_name || sc.title || ''} ${sc.section_no || ''}분반`.trim();
+        try { const e = await api('GET', '/api/lms/e/my?section=' + encodeURIComponent(sc.section_id)); ((e && e.assignments) || []).filter(g => g.due_at).forEach(g => { const k = kstOf(g.due_at); out.push({ id: 'lmse-' + g.asg_id, title: `과제 마감 — ${g.title} · ${nm}`.slice(0, 60), date: k.date, time: k.time, end: '', kind: '과제 마감', cls: '' }); }); } catch (x) { }
+        try { const f = await api('GET', '/api/lms/f/my?section=' + encodeURIComponent(sc.section_id)); ((f && f.exams) || []).filter(x => x.open_at).forEach(x => { const k = kstOf(x.open_at); out.push({ id: 'lmsf-' + x.exam_id, title: `시험 — ${x.title} · ${nm}`.slice(0, 60), date: k.date, time: k.time, end: x.close_at ? kstOf(x.close_at).time : '', kind: '시험', cls: '' }); }); } catch (x) { } }
+      LV.items = out; })().catch(() => { LV.items = []; }).finally(() => { LV.busy = false; LV.at = Date.now(); LV.sid = String(LR.me && LR.me.sid || ''); try { lrender(); } catch (e) { } }); }
+  function addDue() { try { if (!on() || typeof LR === 'undefined' || !LR || !LR.me || !LR.site) return;
+      if (LR.mode === 'live') { liveDue(); const C0 = Array.isArray(LR.site.calx) ? LR.site.calx : (LR.site.calx = []); LV.items.forEach(e => { const i = C0.findIndex(x => x.id === e.id); if (i < 0) C0.push(e); else C0[i] = e; }); return; } const r = typeof demoRoom === 'function' ? demoRoom() : null; const A = r && r.lms && r.lms.a; const X = r && r.lms && r.lms.efh; if (!A || !X) return;
       const m = String(LR.me.sid || ''); const rep = id => { const s0 = A.sections.find(x => x.section_id === id); return s0 && s0.rep_section_id ? s0.rep_section_id : id; };
       const my = new Set(A.enr.filter(e => e.member_no === m && e.status === 'enrolled').map(e => rep(e.section_id))); if (!my.size) return;
       const nm = id => { const s0 = A.sections.find(x => x.section_id === id) || {}; return ((A.courses.find(c => c.course_code === s0.course_code) || {}).name || '') + (s0.section_no ? ` ${s0.section_no}분반` : ''); };
