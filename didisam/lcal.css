@@ -107,5 +107,5 @@ body.lapp .ap-scroll small,body.lapp .ap-home .ap-sub{font-size:13px}
 @media (max-width:900px){body #lm .lbtn.sm,body.lapp #lm .lbtn.sm,body .ap-chip{min-height:44px}
   #lm table .lbtn.sm,#lm .py26t .lbtn.sm{min-height:32px;position:relative}#lm table .lbtn.sm::after,#lm .py26t .lbtn.sm::after{content:'';position:absolute;inset:-6px -2px}
   #lm small,#lm .mini,.ap-scroll small{font-size:max(13px,1em)}}
-/* v38 F5 A9: '내 학습'(#my)에는 AI 학습 비서 카드가 있으므로 떠 있는 튜터 버튼을 숨겨 [이어서] · [시작] 버튼을 가리지 않게(전체 메뉴 › 도움에서 열 수 있음) */
-body[data-luxr=my] #ltut .lt-fab,body[data-luxr=my] .lt-fab{display:none!important}
+/* v38 F5 A9: '내 학습'(#my) 첫 화면에서는 떠 있는 튜터 버튼이 [이어서] · [시작] 버튼을 가리지 않게 숨기고, 아래로 내리면 보인다(홈과 같은 방식) */
+body[data-luxr=my]:not(.f5-scr) #ltut .lt-fab{opacity:0!important;visibility:hidden!important;pointer-events:none!important}

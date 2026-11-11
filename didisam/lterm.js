@@ -68,6 +68,7 @@
   /* v38 F5 U20: 없는 주소(#noti · #me · #settings)는 배지 화면 대신 알림 · 계정으로 */
   const ALIAS = { noti: '#inbox', notifications: '#inbox', alarm: '#inbox', me: '#acct', settings: '#acct', setting: '#acct', profile: '#acct', certs: '#badges', certificates: '#badges' };
   const aliasGo = () => { const h = location.hash.slice(1) || ''; const r = h.split('/')[0]; if (ALIAS[r] && !h.includes('/')) location.replace(ALIAS[r]); }; aliasGo(); addEventListener('hashchange', aliasGo);
+  addEventListener('scroll', () => { if (document.body) document.body.classList.toggle('f5-scr', scrollY > 120); }, { passive: true }); /* v38 F5 A9 */
   window.lFixClsTerm = fixCls;
   let q = false; const kick = () => { if (q) return; q = true; requestAnimationFrame(() => { q = false; apply(); try { fixCls(); } catch (e) { } try { menuFix(); } catch (e) { } try { fsSlot(); } catch (e) { } try { refundTerm(); } catch (e) { } try { featFix(); } catch (e) { } setTimeout(() => { try { fixCls(); } catch (e) { } }, 250); /* v37 L2: 바닥 Shadow DOM은 lmerge가 다음 프레임에 붙이므로 한 번 더 */ }); };
   const start = () => { new MutationObserver(kick).observe(document.body, { childList: true, subtree: true }); kick(); };

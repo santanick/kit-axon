@@ -110,7 +110,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     await go(p, '#noti', 500); ok(await p.evaluate(() => location.hash === '#inbox'), 'U20: #noti → 알림(#inbox)');
     await go(p, '#calendar', 300);
     await p.evaluate(() => { const k = 'didisam.room.' + LR.tid + '.lpx'; const Q = JSON.parse(localStorage.getItem(k) || '[]'); Q.push({ id: 'xr2', type: 'post-new', at: new Date().toISOString(), who: 'other-learner', data: { id: 'po_r2', board: '커뮤니티', kind: '이야기', title: 'R2 다른 학습자 글', body: '안녕하세요' } }); localStorage.setItem(k, JSON.stringify(Q)); });
-    ok(await p.evaluate(() => lcPosts().some(x => x.title === 'R2 다른 학습자 글')), 'C17: 데모에서 같은 기관 다른 학습자 글이 바로 보임');
+    { const r = await p.evaluate(() => ({ ok: lcPosts().some(x => x.title === 'R2 다른 학습자 글'), mode: LR.mode, me: LR.me && LR.me.sid, n: lcPosts().length })); ok(r.ok, 'C17: 데모에서 같은 기관 다른 학습자 글이 바로 보임 ' + (r.ok ? '' : JSON.stringify(r))); }
     const a = await ctx.newPage(); await a.setViewportSize({ width: 390, height: 844 }); await a.goto(base + `learner.html?t=${tid}&app=1#home`); await a.waitForFunction(() => typeof LR !== 'undefined' && LR.site); await login(a, code); await go(a, '#comm', 800);
     const w = a.locator('a[href^="#write"]', { hasText: '글쓰기' }).first(); ok(await w.isVisible(), 'V · L: 앱 게시판 첫 [글쓰기] 버튼이 보임'); await w.click({ timeout: 3000 }); await a.waitForTimeout(300); ok(await a.evaluate(() => /^#write/.test(location.hash)), '앱 [글쓰기] 누르면 글쓰기 화면');
     ok(await a.evaluate(() => !/커뮤니티/.test((document.querySelector('.ap-bar .ap-tt') || {}).textContent || '')), 'P10: 앱 참여마당 화면 제목 ' + await a.evaluate(() => (document.querySelector('.ap-bar .ap-tt') || {}).textContent));
