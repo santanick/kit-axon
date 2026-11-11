@@ -42,7 +42,7 @@ LR.api = {
     if (Q.get('preview') === '1') {
       try { const P = window.parent; if (P !== window && P.lsSnapshot) { LR.mode = 'preview'; LR.tid = P.DREG && P.DREG.cur(); LR.site = P.lsSnapshot(); LR._codes = (P.S && P.S.codes) || []; } } catch (e) { }
     }
-    if (!LR.site) { try { const c = await fetch('/api/config', { credentials: 'same-origin' }); const j = c.ok ? await c.json() : null; if (j && j.live) { LR.mode = 'live'; try { Object.keys(localStorage).filter(k => /^didisam\.(?:claude$|app\.claude\.|room\..*\.claude$)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) { } } /* v25 운영에서는 브라우저에 AI 키를 남기지 않는다 */ } catch (e) { } }
+    if (!LR.site && !Q.get('demo')) { try { const c = await fetch('/api/config', { credentials: 'same-origin' }); const j = c.ok ? await c.json() : null; if (j && j.live) { LR.mode = 'live'; try { Object.keys(localStorage).filter(k => /^didisam\.(?:claude$|app\.claude\.|room\..*\.claude$)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) { } } /* v25 운영에서는 브라우저에 AI 키를 남기지 않는다 */ } catch (e) { } }
     if (LR.mode === 'live') {
       if (!LR.tid) { LR.err = '학습자 사이트 주소에 기관 정보(t=)가 없습니다.'; return; }
       try { LR.site = (await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/site`)).site; } catch (e) { LR.err = e.status === 404 ? '아직 게시되지 않은 학습자 사이트입니다.' : e.message; return; }
@@ -51,7 +51,7 @@ LR.api = {
       const st = demoRoom(); LR.site = st && st.lsite && st.lsite.pub; LR._codes = (st && st.codes) || [];
       if (!LR.site && st) { LR.err = '아직 게시되지 않은 사이트입니다. 스튜디오 › 사이트 › 홈페이지 · 학습 사이트에서 [게시하기]를 누르면 학습자에게 열립니다.'; return; } /* v32.8 이 기관의 데이터가 있는데 게시 전이면 다른 기관 샘플을 보여 주지 않는다(QA U1) */
       if (!LR.site) { /* 이 브라우저에 게시본이 없으면(다른 기기 · 처음 방문) 체험용 샘플 사이트로 */
-        try { const r = await fetch('learner-demo.json', { cache: 'no-cache' }); const j = r.ok ? await r.json() : null; if (j && j.pages) { LR.site = j; LR.sample = j.demo || null; LR.tid = 'sample'; LR._codes = j.demo ? [{ sid: j.demo.sid, code: j.demo.code, dept: j.demo.dept }] : []; } } catch (e) { }
+        try { const dm = String(Q.get('demo') || '').replace(/[^a-z0-9]/g, ''); const r = await fetch(dm && dm !== '1' ? `learner-demo-${dm}.json` : 'learner-demo.json', { cache: 'no-cache' }); /* v38.3 ?demo=1 · ?demo=adult: 운영 서버에서도 서버를 쓰지 않는 체험판(기록은 이 기기에만) */ const j = r.ok ? await r.json() : null; if (j && j.pages) { LR.site = j; LR.sample = j.demo || null; LR.tid = 'sample'; LR._codes = j.demo ? [{ sid: j.demo.sid, code: j.demo.code, dept: j.demo.dept }] : []; } } catch (e) { }
         if (!LR.site) { LR.err = '아직 게시되지 않았습니다. 스튜디오 › 사이트 › 홈페이지 · 학습 사이트에서 [게시하기]를 누르세요.'; return; }
       }
     }
