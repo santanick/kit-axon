@@ -116,10 +116,56 @@
     };
     return M; })();
   window.ulmsChipAns = ULC;
+  /* v38 운영 서버 모드(LIVE.user): 칩 답은 데모 S.lms가 아니라 각 화면이 운영에서 쓰는 /api/lms/* 조회(묶음별 호출기 lmsaX · LMSX.call · EFH.call · W3.call · LMP.call)로 만든다.
+     먼저 「불러오는 중」을 남기고, 받으면 그 대화 말풍선을 고친다. 실패하면 「지금 불러오지 못했습니다 — [화면 열기]」 */
+  const LIVE_U = () => typeof LIVE !== 'undefined' && !!(LIVE && LIVE.user);
+  const ULV = (() => {
+    const go = (v, label) => ({ act: 'go', v, label }); const A = (text, v, label) => ({ text, html: '', btn: go(v, label) });
+    const ex = async (L, n, f) => { const out = []; for (const x of (L || []).slice(0, n)) { try { out.push(await f(x)); } catch (e) { out.push(null); } } return out; };
+    const efhSecs = async () => ((await EFH.call('GET', '/api/lms/e/sections')) || {}).sections || [];
+    const w3Secs = async () => (await W3.call('GET', '/api/lms/g/sections', {})) || [];
+    const kst = t => { const d = new Date(t); return isNaN(d) ? '-' : d.toLocaleString('ko-KR', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+    return {
+      sis: async () => { const ov = await window.lmsaX('overview', null, true); const R = ((ov && ov.runs) || []).slice().sort((a, b) => b.run_id - a.run_id); if (!R.length) return A('아직 학사 동기화 · 업로드 기록이 없습니다.', 'sis', '학사 연동 열기');
+        const e = R.slice(0, 10).reduce((n, r) => n + (r.errors_n || 0), 0); return A(`마지막 동기화 ${kst(R[0].at)} · 최근 오류 ${e}건(운영 서버).`, 'sis', '학사 연동 열기'); },
+      groups: async () => { const ov = await window.lmsaX('overview', null, true); const U = ((ov && ov.units) || []).filter(u => u.kind === 'dept' || u.kind === 'major'); return U.length ? A(`학과 ${U.length}개입니다(운영 서버).`, 'groups', '학과 화면 열기') : A('아직 등록된 학과가 없습니다.', 'groups', '학과 만들기'); },
+      lmsb: async () => { const r = await LMSX.call('b', 'sections', {}); const L = (r && r.sections) || []; if (!L.length) return A('아직 이번 학기 강의실이 없습니다.', 'lmsa', '분반 개설하기');
+        return A(`강의실 ${L.length}곳 · 학습 자원이 없는 강의실 ${L.filter(x => !x.resources).length}곳입니다(운영 서버).`, 'lmsb', '강의실 열기'); },
+      lmsc: async () => { const r = await LMSX.call('b', 'sections', {}); const L = (r && r.sections) || []; const F = await ex(L, 10, x => LMSX.call('c', 'forums', { section: x.id })); const n = F.reduce((a, f) => a + (((f && (f.forums || f.items)) || []).length), 0);
+        return n ? A(`토론 ${n}개입니다(운영 서버).`, 'lmsc', '학습활동 열기') : A('아직 토론 · 위키 · 팀 활동이 없습니다.', 'lmsc', '학습활동 만들기'); },
+      lmse: async () => { const S0 = await efhSecs(); const G = (await ex(S0, 10, x => EFH.call('GET', '/api/lms/e/list', { section: x.section_id }))).flatMap(r => (r && r.assignments) || []).filter(g => g.status === 'published');
+        if (!G.length) return A('아직 공개한 과제가 없습니다.', 'lmse', '과제 만들기'); const now = Date.now(); const soon = G.filter(g => g.due_at && Date.parse(g.due_at) > now && Date.parse(g.due_at) - now < 3 * 864e5).length; const miss = G.reduce((a, g) => a + Math.max(0, (g.targets || 0) - (g.submitted || 0)), 0);
+        return A(`공개 과제 ${G.length}개 · 3일 안 마감 ${soon}개 · 미제출 합계 ${miss}건입니다(운영 서버).`, 'lmse', '과제 화면 열기'); },
+      grade: async () => { const S0 = await efhSecs(); const B = (await ex(S0, 10, x => EFH.call('GET', '/api/lms/h/board', { section: x.section_id }))).filter(Boolean); const items = B.reduce((a, b) => a + ((b.items || []).length), 0);
+        return items ? A(`평가 항목이 있는 분반 ${B.filter(b => (b.items || []).length).length}개 · 항목 ${items}개입니다(운영 서버).`, 'grade', '성적 화면 열기') : A('아직 평가 항목이 없습니다.', 'grade', '평가 비율 등록하기'); },
+      lmsg: async () => { const L = await w3Secs(); if (!L.length) return A('아직 출결을 받을 분반이 없습니다.', 'lmsa', '분반 개설하기'); const now = Date.now();
+        const T = (await ex(L, 10, x => W3.call('GET', '/api/lms/g/sessions', { section_id: x.section_id }))).flatMap(r => r || []).filter(x => Math.abs(Date.parse(x.starts_at) - now) < 12 * 36e5);
+        return A(`출결 분반 ${L.length}개 · 오늘 차시 ${T.length}개입니다(운영 서버).`, 'lmsg', '출결 화면 열기'); },
+      lmsi: async () => { const L = await w3Secs(); const P = (await ex(L, 10, x => W3.call('GET', '/api/lms/i/progress', { section_id: x.section_id }))).filter(Boolean); const C = P.reduce((a, p) => a + ((p.contents || []).length), 0); if (!C) return A('아직 올린 강의 영상이 없습니다.', 'lmsv', '영상 올리기');
+        const low = new Set(); P.forEach(p => (p.students || []).forEach(st => { const v = st.avg_pct != null ? st.avg_pct : Array.isArray(st.pct) ? st.pct.reduce((a, b) => a + (+b || 0), 0) / Math.max(1, st.pct.length) : st.pct; if (v != null && v < 50) low.add(st.member_no); }));
+        return A(`강의 영상 ${C}개 · 평균 진도 50% 미만 학생 ${low.size}명입니다(운영 서버).`, 'lmsi', '진도 화면 열기'); },
+      lmsj: async () => { const L = await w3Secs(); const R = (await ex(L, 10, x => W3.call('GET', '/api/lms/j/risk', { section_id: x.section_id }))).filter(Boolean); const d = R.reduce((a, r) => a + ((r.summary || {}).danger || 0) + ((r.summary || {}).warn || 0), 0);
+        return R.length ? A(`위험 · 주의 학생 ${d}명입니다(운영 서버).`, 'lmsj', '학습 분석 열기') : A('아직 분석할 수강생이 없습니다.', 'lmsa', '수강생 등록하기'); },
+      lmsd: async () => { const r = await LMSX.call('b', 'sections', {}); const B = (await ex((r && r.sections) || [], 10, x => LMSX.call('d', 'boards', { section: x.id }))).filter(Boolean).flatMap(b => b.boards || []);
+        if (!B.some(b => b.posts)) return A('아직 강의 게시판 글이 없습니다.', 'lmsd', '공지 쓰기'); return A(`게시판 글 ${B.reduce((a, b) => a + (b.posts || 0), 0)}건 · 답변 기다리는 글 ${B.reduce((a, b) => a + (b.open || 0), 0)}건입니다(운영 서버).`, 'lmsd', '강의 게시판 열기'); },
+      'lmsl-cal': async () => { const r = await LMP.call('l', 'cal.list', {}, true); const E = ((r && r.items) || []).filter(e => e.scope !== 'personal'); const now = new Date().toISOString().slice(0, 10), to = new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
+        if (!E.length) return A('아직 학사 · 강좌 일정이 없습니다.', 'lmsl-cal', '일정 추가하기'); return A(`앞으로 2주 일정 ${E.filter(e => String(e.starts_at).slice(0, 10) >= now && String(e.starts_at).slice(0, 10) <= to).length}건입니다(운영 서버).`, 'lmsl-cal', '통합 달력 열기'); },
+      'lmsl-noti': async () => { const r = await LMP.call('l', 'noti.rules', {}, true); const R = (r && r.items) || []; return R.length ? A(`알림 규칙 ${R.length}개 중 ${R.filter(x => x.enabled).length}개 켜짐입니다(운영 서버).`, 'lmsl-noti', '알림 규칙 열기') : A('아직 알림 규칙이 없습니다.', 'lmsl-noti', '규칙 추가하기'); },
+      lmsm: async () => { const r = await LMP.call('m', 'users.list', {}, true); const n = (r && r.total) || 0; return n ? A(`사용자 ${n}명입니다(운영 서버).`, 'lmsm', '시스템 관리 열기') : A('아직 등록된 사용자가 없습니다.', 'enroll', '학번 등록하기'); },
+      lmso: async () => { const d = await api('GET', '/api/lms/o/rag/docs'); const f = await api('GET', '/api/lms/o/qa/faq').catch(() => null); const nd = ((d && (d.docs || d.items)) || []).length, nf = ((f && (f.faq || f.items)) || []).length;
+        return nd || nf ? A(`AI 참고 자료 ${nd}개 · 자주 묻는 질문 ${nf}개입니다(운영 서버).`, 'lmso', 'AI 학습 지원 열기') : A('아직 AI가 참고할 강의자료가 없습니다.', 'lmso', '강의자료 올리기'); }
+    }; })();
+  /* 받은 답을 그 말풍선에 반영 */
+  let ulReq = 0;
+  function ulLive(k) { const id = 'ul' + (++ulReq) + Date.now().toString(36); const L0 = typeof mlabel === 'function' ? mlabel(k) : k;
+    const put = r => { let n = 0; const tick = () => { const m = (S.chat || []).find(x => x && x.ulmsReq === id); if (!m) { if (n++ < 40) setTimeout(tick, 100); return; } delete m.typing; Object.assign(m, { text: r.text, html: r.html || '', btn: r.btn }); delete m.ulmsReq; try { save(); } catch (e) { } try { renderThreads(); } catch (e) { try { render(); } catch (x) { } } }; tick(); };
+    Promise.resolve().then(() => ULV[k]()).then(put, () => put({ text: '지금 불러오지 못했습니다.', btn: { act: 'go', v: k, label: `${L0} 화면 열기` } }));
+    return { text: '운영 서버에서 불러오는 중입니다…', html: '', ulmsReq: id }; }
+  window.ulmsLiveAns = ULV;
   document.addEventListener('DOMContentLoaded', () => { if (typeof scxDefs !== 'function') return; const base = scxDefs;
     const NO = /이해하지 못했습니다|처리할 수 없는/; const WEAK = /^운영 현황 요약$/;
     const brief = k => { const L0 = typeof mlabel === 'function' ? mlabel(k) : k; let hub = null; try { const f = window.LMSNAV && LMSNAV.find(LMSNAV.tree(), k); hub = f && f.h; } catch (e) { }
       return { text: `「${L0}」 화면입니다. ${hub && hub.desc ? hub.desc + '.' : ''}`.trim(), html: '', btn: { act: 'go', v: k, label: `${L0} 열기` } }; };
     scxDefs = function (k) { const D = base.apply(this, arguments) || []; if (!UL()) return D;
-      return D.map(c => { if (!Array.isArray(c) || typeof c[2] !== 'function') return c; const run = c[2]; return [c[0], c[1], (...a) => { const r = run(...a); if (!r || r.plan || !(NO.test(r.text || '') || WEAK.test(r.text || ''))) return r; try { if (ULC[k]) return ULC[k](); } catch (e) { console.error('ulms chip', e); } return brief(k); }, c[3]]; }); }; }); // eslint-disable-line no-global-assign
+      return D.map(c => { if (!Array.isArray(c) || typeof c[2] !== 'function') return c; const run = c[2]; return [c[0], c[1], (...a) => { const r = run(...a); if (!r || r.plan || !(NO.test(r.text || '') || WEAK.test(r.text || ''))) return r; try { if (LIVE_U()) { if (ULV[k]) return ulLive(k); if (!['admins', 'aigov'].includes(k)) return brief(k); } if (ULC[k]) return ULC[k](); } catch (e) { console.error('ulms chip', e); } return brief(k); }, c[3]]; }); }; }); // eslint-disable-line no-global-assign
 })();
