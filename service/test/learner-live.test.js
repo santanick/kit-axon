@@ -81,7 +81,7 @@ test('운영 학습자 계정 · 요청함', async t => {
     assert.equal((await call('S', 'POST', UP('consent'), { tos: true })).status, 400);
     const c = await call('S', 'POST', UP('consent'), { tos: true, privacy: true, ver: 'v33' }); assert.equal(c.status, 200);
     const me = (await call('S', 'GET', UP('me'))).j.me; assert.equal(me.needConsent, undefined); assert.ok(me.consentAt);
-    const row = (await pool.query('select consent from learners where tenant_id = $1 and sid = $2', [U2.tid, '20261234'])).rows[0].consent; assert.deepEqual(Object.keys(row).sort(), ['at', 'privacy', 'tos', 'ver']);
+    const cx = await pool.connect(); let row; try { await cx.query('begin'); await cx.query("select set_config('app.tenant', $1, true)", [U2.tid]); row = (await cx.query('select consent from learners where tenant_id = $1 and sid = $2', [U2.tid, '20261234'])).rows[0].consent; await cx.query('commit'); } finally { cx.release(); } /* v38: learners는 FORCE RLS — 기관 문맥(app.tenant) 없이 읽으면 0행이라 테스트가 잘못 실패하던 문제 */ assert.deepEqual(Object.keys(row).sort(), ['at', 'privacy', 'tos', 'ver']);
     assert.equal((await call('Z', 'POST', UP('consent'), { tos: true, privacy: true })).status, 401);
   });
   for (const x of [dev, prod, mailOn]) if (x) x.app.close(); hook.close(); await pool.end();

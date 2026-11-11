@@ -57,7 +57,7 @@
   /* ── 개인 초대 링크 복사 · 보내기 ── */
   const copy = (u, msg) => (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast(msg || '초대 링크를 복사했습니다. 문자 · 카카오톡으로 보내 주세요.', 'ok'), () => { modal('초대 링크', `<label class="fl">링크<input readonly value="${esc(u)}" onfocus="this.select()"></label>`, [{ id: 'c', label: '닫기' }]); });
   ACT['al-inv'] = el => { mbEnsure(); const k = el.dataset.k || 'm'; const x = k === 'p' ? (S.parents || []).find(p => p.id === el.dataset.v) : M(el.dataset.v); if (!x || !x.itok) { toast('이미 가입해 연결된 사람입니다.', 'warn'); return; }
-    S.inviteSent.unshift({ at: nowStr(), ch: '개인 초대 링크', kind: k === 'p' ? '보호자 초대' : '개인 초대', name: x.name || '', to: x.phone || x.email || '' }); logAudit(`개인 초대 링크 — ${x.name || ''}`); save(); copy(url(x.itok)); };
+    S.inviteSent.unshift({ at: nowStr(), ch: '개인 초대 링크', kind: k === 'p' ? '보호자 초대' : '개인 초대', name: x.name || '', to: x.phone || x.email || '' }); logAudit(`개인 초대 링크 — ${x.name || ''}`); save(); copy(url((k === 'p' ? 'par-' : '') + x.itok)); };
   ACT['al-invall'] = () => { mbEnsure(); const L = S.members.filter(free); if (!L.length) { toast('가입 전인 등록 회원이 없습니다.', 'warn'); return; }
     S.inviteSent.unshift({ at: nowStr(), ch: '알림톡 · 이메일', kind: '개인 초대 링크 일괄', n: L.length }); logAudit(`개인 초대 링크 일괄 발송 ${L.length}명`); save(); render();
     toast(`${L.length}명에게 각자의 초대 링크를 보냈습니다(데모 — 운영: 알림톡 · 이메일). 링크로 가입하면 등록한 정보에 바로 연결됩니다.`, 'ok'); };
@@ -95,12 +95,13 @@
     if (d.token) { const m = S.members.find(x => x.itok === d.token && free(x)); if (m) return [m, 'invite']; }
     const L = d.link; if (L && L.mid) { const m = M(L.mid); if (free(m)) {
       if (L.by === 'email' && m.email && mbSid(String(m.email).toLowerCase()) === L.k) return [m, 'email'];
+      if (L.by === 'email' && L.ebx && m.ebx && m.ebx === L.ebx) return [m, 'email']; /* 운영: 서버가 이메일 블라인드 인덱스(ebx)로 찾은 등록 회원 */
       if (L.by === 'gphone' && (S.parents || []).some(p => p.child === m.id && dig(p.phone) && gk(dig(p.phone)) === L.k)) return [m, 'gphone']; } }
     return null; }
   function parentJoin(x, base) { const d = x.data || {}; const prow = d.token ? (S.parents || []).find(p => p.itok === d.token && pfree(p)) : null;
     base(x); const pa = (S.pacct || []).find(p => p.sid === d.sid); if (!pa) return; const rows = [];
     if (prow) { rows.push(prow); const g = dig(prow.phone); if (g) S.parents.forEach(p => { if (p !== prow && pfree(p) && dig(p.phone) === g) rows.push(p); }); if (prow.name) pa.name = prow.name; }
-    if (/^F[0-9A-Z]{6}$/.test(String(d.fam || ''))) { const ch = S.members.find(m => m.sid && !m.withdrawn && pvFam(m.sid) === d.fam);
+    if (/^F[0-9A-Z]{6}$/.test(String(d.fam || '')) || d.famSid) { const ch = d.famSid ? mbBySid(d.famSid) : S.members.find(m => m.sid && !m.withdrawn && pvFam(m.sid) === d.fam); /* 운영: 서버가 보호자 동의 토큰으로 확인한 자녀(famSid) */
       if (ch && !rows.some(p => p.child === ch.id) && !S.parents.some(p => p.child === ch.id && p.acct === pa.id)) { const r0 = S.parents.find(p => p.child === ch.id && pfree(p)); if (r0) rows.push(r0); else { const r = { id: uid('p'), child: ch.id, name: pa.nick || pa.name, phone: '', rel: ['모', '부', '조부모', '기타 보호자'].includes(d.rel) ? d.rel : '보호자', status: '연결 요청', by: 'guardian', at: today(), acct: '' }; S.parents.push(r); rows.push(r); } } }
     rows.forEach(p => { p.acct = pa.id; p.status = '연결 완료'; p.resAt = today(); delete p.itok; mbParSync(p.child); const cn = (M(p.child) || {}).name || '';
       mbInbox(p.child, '가족이 연결되었습니다', `${p.name || pa.nick}님과 연결되었습니다.`); mbInbox(pa.id, '가족이 연결되었습니다', `${cn}님과 연결되었습니다. 자녀의 수업 · 출결 · 청구서를 확인할 수 있습니다.`, { href: '#family', child: cn }); });

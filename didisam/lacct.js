@@ -108,7 +108,7 @@ function laRefreshMe() { if (!laAcctUser() || !laCanAcct()) return; const acc = 
   if (!acc || ['승인 대기', '거절'].includes(acc.grade) || acc.status === 'guardian_pending') { LR.me = null; try { sessionStorage.removeItem(SESS + LR.tid); } catch (e) { } return; }
   if (acc.grade !== LR.me.grade || acc.nick !== LR.me.nick) { LR.me.grade = acc.grade; LR.me.nick = acc.nick; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { } } }
 const laGrade = (cfg, inv) => inv ? '정회원' : (cfg.mode === 'invite' || cfg.approve === 'manual') ? '승인 대기' : '정회원';
-const laInv = tok => { const r = laRoom(); const iv = r && (r.invites || []).find(i => i.token === tok); if (iv) return iv.active ? iv : null; if (!r || !tok) return null;
+const laInv = tok0 => { const tok = String(tok0 || '').replace(/^par-/, ''); const r = laRoom(); const iv = r && (r.invites || []).find(i => i.token === tok); if (iv) return iv.active ? iv : null; if (!r || !tok) return null;
   /* v38 개인 초대 링크(운영자가 등록한 사람마다) · 보호자 동의 뒤 가족 연결(fam-F000000) — 가입하면 등록한 행에 계정이 붙는다(QA K1 · K2 · K8 · C2) */
   const fm = /^fam-(F[0-9A-Z]{6})$/.exec(tok); if (fm) return laCfg().parent ? { token: '', target: 'parent', fam: fm[1], active: true, personal: true } : null;
   const freeM = m => !m.withdrawn && (!m.acct || !m.acct.consent); const m = (r.members || []).find(x => x.itok === tok && freeM(x)); if (m) return { token: tok, target: 'student', cls: '', active: true, personal: true, who: m.name || '' };
@@ -197,7 +197,7 @@ function laConsentHTML(J, U) { const k = J.keep || {}; const ck = n => k[n] ? 'c
 function laJoin(r) { const cfg = laCfg(); const tok = (r.b || '').replace(/[^\w-]/g, ''); const U = laUniv();
   if (LR.me && !(LA.j && LA.j.done)) return laSec('이미 로그인했습니다', `<div class="cta">${btn('마이페이지', '#my', 'pri')}</div>`);
   if (!laAcctOn() && !laPvJoin()) return laGate('회원가입', LR.mode === 'preview' ? '미리보기에서는 가입할 수 없습니다. 게시한 학습자 사이트에서 가입해 보세요.' : '게시된 학습자 사이트에서 가입할 수 있습니다.');
-  const inv = tok && !laPvJoin() ? (laLive() ? (/^fam-/.test(tok) ? null : { token: tok, target: 'student', active: true, live: true }) : laInv(tok)) : null; /* v38 운영: 토큰은 서버가 가입할 때 검사(/api/pub/<tid>/signup { token }) */
+  const inv = tok && !laPvJoin() ? (laLive() ? (/^fam-/.test(tok) ? null : /^(pfam|par)-/.test(tok) ? { token: '', target: 'parent', active: true, live: true, personal: /^par-/.test(tok), pfam: /^pfam-/.test(tok) } : { token: tok, target: 'student', active: true, live: true }) : laInv(tok)) : null; /* v38 운영: 토큰은 서버가 가입할 때 검사(/api/pub/<tid>/signup { token }) */
   if (tok && !inv) return laGate('사용할 수 없는 초대 링크입니다', '링크가 재생성되었거나 만료되었습니다. 운영자에게 새 초대 링크를 요청하세요.');
   if (!inv && cfg.mode === 'code' && !laPvJoin()) return laGate('접근코드로 로그인하는 기관입니다', `이 기관은 회원가입 없이 기관에서 받은 ${esc(lIdLabel())}${laWa(lIdLabel())} 접근코드로 로그인합니다.${U ? ' 학교 SSO 연동은 준비 중입니다.' : ''}`).replace('<div class="cta">', `<p class="mini">코드를 받은 적이 없거나 명단에 없다면 ${esc(lIdLabel())}${laWa(lIdLabel())} ${U ? '학과' : '소속'}을 적어 <b>접근코드 받기</b>를 요청하세요.</p><div class="cta"><a class="lbtn pri" href="#find/code">접근코드 받기 요청</a>`);
   if (!inv && cfg.mode === 'invite' && !laPvJoin()) return laGate('초대받은 회원만 가입할 수 있습니다', '운영자에게 받은 초대 링크(알림톡 · 이메일 · 메신저)로 접속해 가입하세요.');
@@ -274,7 +274,7 @@ function laJoinSubmit(f) { const J = LA.j; const U = laUniv(); const err = m => 
   } catch (x) { return err(x.message); } }
 
 /* v33 운영 가입: 서버가 이메일 · 닉네임만 저장(신원은 암호화 pii 저장소), 운영자 요청함에는 가명 번호 · 닉네임 · 가린 이메일만 */
-async function laJoinLive(f, body, err) { const J = LA.j; const b = f.querySelector('button[type=submit]'); if (b) b.disabled = true; if (J && J.tok && !/^fam-/.test(J.tok)) body = { ...body, token: J.tok };
+async function laJoinLive(f, body, err) { const J = LA.j; const b = f.querySelector('button[type=submit]'); if (b) b.disabled = true; if (J) { const t0 = J.tok || ''; if (/^pfam-/.test(t0)) body = { ...body, kind: 'parent', gtok: t0.slice(5), age14: true }; else if (/^par-/.test(t0)) body = { ...body, kind: 'parent', token: t0.slice(4), age14: true }; else if (t0 && !/^fam-/.test(t0)) body = { ...body, token: t0 }; if (J.kind === 'parent') body = { ...body, kind: 'parent', age14: true }; } /* v38 운영: 보호자 계정 · 개인 초대 · 보호자 동의 연결 토큰 */
   try { const r = await api('POST', laP('signup'), body); const me = r.me || {}; LA.jv = null; const gc = (body.guardian && body.guardian.contact) || '';
     J.done = { sid: me.sid, nick: me.nickname || body.nickname, grade: me.status === 'pending' ? '승인 대기' : '정회원', status: me.status === 'guardian_pending' ? 'guardian_pending' : 'active', gtok: r.dev_token || '', gmask: gc ? (gc.includes('@') ? laMask(gc) : gc.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, '$1-****-$3')) : '' };
     if (me.status === 'active') { try { laLiveMe(await api('GET', laP('me'))); } catch (e) { } } else if (me.status === 'pending') { LA.pend = 'live'; laPendKeep('live'); }
@@ -282,12 +282,18 @@ async function laJoinLive(f, body, err) { const J = LA.j; const b = f.querySelec
   catch (x) { if (b) b.disabled = false; err(x.code === 'otp_tries' || x.code === 'otp_expired' ? x.message + ' [인증번호 다시 받기]를 누르세요.' : x.message); } }
 
 /* ═════════ 보호자 동의(#guardian/<토큰>) — 본인인증(PASS) 없이 링크 동의. 운영: POST /api/pub/<tid>/guardian { token, ok } ═════════ */
-function laGuardV(r) { const tok = String(r.b || ''); const V = laV(); const sid = Object.keys(V.ids).find(k => V.ids[k].guardian && tok && (V.ids[k].guardian.token === tok || V.ids[k].guardian.used === tok)); /* v33 처리한 링크도 결과를 보여 준다(QA #57, R2) */
+function laGuardV(r) { if (laLive()) return laGuardLive(r); const tok = String(r.b || ''); const V = laV(); const sid = Object.keys(V.ids).find(k => V.ids[k].guardian && tok && (V.ids[k].guardian.token === tok || V.ids[k].guardian.used === tok)); /* v33 처리한 링크도 결과를 보여 준다(QA #57, R2) */
   if (!sid && tok && (LA.gNo || {})[tok]) return laSec('보호자 동의 거부', '<p class="lead">동의하지 않아 가입 정보를 삭제했습니다. 자녀가 다시 가입하려면 처음부터 다시 신청해야 합니다.</p>'); const g = sid && V.ids[sid].guardian; const c = sid ? laCache()[sid] || {} : {};
   if (!g) return laSec('보호자 동의', '<p class="lead">사용할 수 없는 동의 링크입니다. 만료되었거나 이미 처리했습니다.</p>');
   if (g.status === 'ok') { const man = laCfg().approve === 'manual'; const par = laCfg().parent; return laSec('보호자 동의 완료', `<p class="lead">${esc(c.nick || '')} 회원의 가입에 동의하셨습니다. ${man ? '기관 운영자가 가입을 승인하면 로그인해 이용할 수 있습니다.' : '이제 자녀가 로그인해 이용할 수 있습니다.'}</p>${par ? `<p>보호자 계정을 만들면 ${esc(c.nick || '자녀')}의 출결 · 수업 · 청구서 알림을 함께 받을 수 있어요. 따로 연결 코드를 넣지 않아도 바로 연결됩니다.</p>` : ''}<div class="cta">${par ? `<a class="lbtn pri" href="#join/fam-${esc(laFamCode(sid))}">보호자 계정 만들고 연결하기</a>` : ''}${btn(man ? '승인 후 로그인' : '자녀 로그인', '#login', par ? 'ghost' : 'pri')}</div>`); }
   return laSec('보호자(법정대리인) 동의', `<p class="lead">만 14세 미만 회원 <b>${esc(c.nick || '')}</b>${c.nick ? lJ(c.nick, '이', '가') : ''} ${esc(SITE().org.name)} 학습 사이트에 가입하려고 합니다. 아래 내용을 확인하고 동의 여부를 선택해 주세요.</p>${laPolicyHTML(false, true)}
     <p class="mini">동의하지 않으면 가입 정보는 즉시 삭제됩니다. 동의 후에도 자녀의 개인정보 열람 · 삭제를 언제든 요청할 수 있습니다.</p><div class="cta"><button class="lbtn pri" data-ac="gok" data-v="${esc(tok)}">동의합니다</button><button class="lbtn ghost" data-ac="gno" data-v="${esc(tok)}">동의하지 않습니다</button></div>`); }
+/* v38 운영: 보호자 동의(POST /api/pub/<tid>/guardian) — 동의하면 서버가 1회용 보호자 계정 연결 토큰(parent_token)을 돌려준다 */
+function laGuardLive(r) { const tok = String(r.b || ''); const R = (LA.gl || {})[tok];
+  if (R && R.status === 'refused') return laSec('보호자 동의 거부', '<p class="lead">동의하지 않아 가입 정보를 삭제했습니다. 자녀가 다시 가입하려면 처음부터 다시 신청해야 합니다.</p>');
+  if (R && R.status === 'active') return laSec('보호자 동의 완료', `<p class="lead">자녀의 가입에 동의하셨습니다. 이제 자녀가 로그인해 이용할 수 있습니다.</p>${R.parent_token ? '<p>보호자 계정을 만들면 자녀의 출결 · 수업 · 청구서 알림을 함께 받을 수 있어요. 따로 연결 코드를 넣지 않아도 바로 연결됩니다.</p>' : ''}<div class="cta">${R.parent_token ? `<a class="lbtn pri" href="#join/pfam-${esc(R.parent_token)}">보호자 계정 만들고 연결하기</a>` : ''}${btn('자녀 로그인', '#login', R.parent_token ? 'ghost' : 'pri')}</div>`);
+  return laSec('보호자(법정대리인) 동의', `<p class="lead">만 14세 미만 자녀가 ${esc(SITE().org.name)} 학습 사이트에 가입하려고 합니다. 아래 내용을 확인하고 동의 여부를 선택해 주세요.</p>${laPolicyHTML(false, true)}<p class="mini">동의하지 않으면 가입 정보는 즉시 삭제됩니다.</p><div class="cta"><button class="lbtn pri" data-ac="gok" data-v="${esc(tok)}">동의합니다</button><button class="lbtn ghost" data-ac="gno" data-v="${esc(tok)}">동의하지 않습니다</button></div>`); }
+async function laGuardLiveRes(tok, ok) { try { const r = await api('POST', laP('guardian'), { token: tok, ok }); LA.gl = { ...(LA.gl || {}), [tok]: r }; toast(ok ? '동의를 완료했습니다.' : '동의하지 않아 가입 정보를 삭제했습니다.', 'ok'); lrender(); } catch (x) { toast(x.message, 'bad'); } }
 function laGuardRes(tok, ok) { const V = laV(); const sid = Object.keys(V.ids).find(k => V.ids[k].guardian && V.ids[k].guardian.token === tok); if (!sid) return; const c = laCache()[sid] || {};
   if (ok) { V.ids[sid].guardian = { ...V.ids[sid].guardian, status: 'ok', at: new Date().toISOString(), token: '', used: tok }; laVLog(V, 'consent', sid, 'guardian_consent', []); laVSave(V); laCacheSet(sid, { status: 'active', pendPub: null });
     if (c.pendPub) lpxPush('acct-join', { ...c.pendPub, guardian: { ok: true, at: new Date().toISOString() } }); toast(laCfg().approve === 'manual' ? '동의를 완료했습니다. 운영자 승인 후 이용할 수 있습니다.' : '동의를 완료했습니다. 이제 로그인해 이용할 수 있습니다.', 'ok'); }
@@ -460,7 +466,7 @@ document.addEventListener('click', async e => { const el = e.target.closest('[da
     if (v === 'jv') laJoinKeep(f); laRekeep(f.id, lrender); toast('인증번호를 보냈습니다(데모: 화면에 표시).'); }
   if (k === 'soclogin') laSocDlg(v, 'login');
   if (k === 'pendchk') { laFresh(); lrender(); }
-  if (k === 'gok' || k === 'gno') laGuardRes(v, k === 'gok');
+  if (k === 'gok' || k === 'gno') { if (laLive()) laGuardLiveRes(v, k === 'gok'); else laGuardRes(v, k === 'gok'); }
   if (k === 'codechg') { lpxPush('code-req', { sid: LR.me && LR.me.sid, body: '학습자 마이페이지 요청' }); toast('접근코드 변경 요청을 보냈습니다. 운영자가 새 코드를 알려 드립니다.', 'ok'); }
   if (k === 'photodel' && LR.me) { lpxPush('acct-profile', { sid: LR.me.sid, photo: '' }); laCacheSet(LR.me.sid, { photo: '' }); lrender(); }
   if (k === 'piiview' && LR.me) { const V = laV(); const p = V.ids[LR.me.sid] || {}; laVLog(V, 'view', LR.me.sid, 'self_access', ['email', 'name', 'phone']); laVSave(V); /* 운영: GET /api/pub/<tid>/pii(열람 기록) */

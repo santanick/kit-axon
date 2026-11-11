@@ -61,6 +61,9 @@ const only = (process.env.ONLY || 'corp,k12,univ,pub,life,date').split(',');
     ok(mg.pairs.includes('최도윤↔도윤') && !mg.e && mg.n === 1 && mg.bill && mg.inbox === 1 && mg.sid && mg.acct, `중복 안내 · 같은 사람 합치기(청구서 · 알림 · 계정 이동) ${JSON.stringify(mg)}`);
     await op.evaluate(() => { const m = S.members.find(x => x.name === '박예린'); UI.mem = m.id; UI.memT = 'info'; go('members'); render(); }); const card = await op.evaluate(() => (document.querySelector('.al-card') || {}).textContent || '');
     ok(/가입 연결/.test(card) && /같은 사람 합치기/.test(card), '회원 상세 · 가입 연결 카드');
+    /* 운영: 서버가 이메일 블라인드 인덱스(ebx)로 찾은 등록 회원 · 보호자 동의 연결(famSid) 이벤트 처리 */
+    const sv = await op.evaluate(() => { const m = { id: uid('m'), sid: 'u-srv', name: '한태준', nick: '한태준', email: 'tj@ex.kr', ebx: 'EBX1', phone: '', group: '', grade: '정회원', joined: today(), last: '', extra: {}, src: 'bulk', acct: { login: 'email', email: 'tj@ex.kr', links: ['email'] } }; S.members.push(m); mbEnsure(); const n0 = S.members.length; LPX['acct-join']({ at: new Date().toISOString(), who: 'lid-1', data: { kind: 'learner', login: 'email', sid: 'lid-1', nick: '태준', consent: { tos: true, privacy: true }, link: { mid: m.id, by: 'email', ebx: 'BAD' } } }); const bad = S.members.length; LPX['acct-join']({ at: new Date().toISOString(), who: 'lid-2', data: { kind: 'learner', login: 'email', sid: 'lid-2', nick: '태준2', consent: { tos: true, privacy: true }, link: { mid: m.id, by: 'email', ebx: 'EBX1' } } }); return { n0, bad, n2: S.members.length, linked: m.acct && m.acct.linked && m.acct.linked.by, sid: m.sid }; });
+    ok(sv.bad === sv.n0 + 1 && sv.n2 === sv.n0 + 1 && sv.linked === 'email' && sv.sid === 'lid-2', `운영 이벤트: ebx가 맞을 때만 등록 행에 연결(틀린 값은 새 회원) ${JSON.stringify(sv)}`);
     await shot(op, 'corp_detail'); await ctx.close(); }
 
   if (only.includes('k12')) { const { ctx, op } = await mk('k12');
@@ -103,6 +106,8 @@ const only = (process.env.ONLY || 'corp,k12,univ,pub,life,date').split(',');
     await pp.evaluate(() => lpxPush('msg-ask', { id: 'qa1', body: '숙제가 어디 있나요?' })); await pull(op);
     const k5 = await op.evaluate(() => ({ n: S.members.length, who: ((S.tq || []).find(x => x.id === 'qa1') || {}).sid })); ok(k5.n === 2 && /이은영 보호자/.test(k5.who || ''), `K5: 보호자 질문 · 원생 목록 그대로 ${JSON.stringify(k5)}`);
     await pp.close();
+    const fs1 = await op.evaluate(() => { const ch = S.members.find(m => m.name === '박민준'); const n0 = S.parents.length; LPX['acct-join']({ at: new Date().toISOString(), who: 'plid', data: { kind: 'parent', login: 'email', sid: 'plid', nick: '민준아빠', famSid: ch.sid, consent: { tos: true, privacy: true } } }); const pa = S.pacct.find(p => p.sid === 'plid'); const row = S.parents.find(p => p.acct === (pa || {}).id && p.child === ch.id); return { added: S.parents.length - n0, st: row && row.status }; });
+    ok(fs1.st === '연결 완료', `운영 이벤트: 보호자 동의 연결 토큰(famSid)으로 가입한 보호자 → 자녀와 연결 ${JSON.stringify(fs1)}`);
     /* K1 중복이 이미 생긴 경우: 공용 링크로 박서연 대신 '서연이' 가입 → 합치기 안내 */
     const s2 = await lp(ctx, tid, urls.pub.slice(urls.pub.indexOf('#'))); await join(s2, 'seoyeon@ex.kr', '서연이'); await pull(op); await s2.close();
     const k1b = await op.evaluate(() => { go('crmstu'); UI.crmId = null; render(); const note = (document.querySelector('.al-dup') || {}).textContent || ''; const reg = S.members.find(m => m.name === '박서연'); const acc = S.members.find(m => m.nick === '서연이'); const e = alMerge(reg.id, acc.id); save(); return { note, e, n: S.members.length, par: S.parents.filter(p => p.child === reg.id).length, acct: !!(reg.acct && reg.acct.consent) }; });
