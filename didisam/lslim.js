@@ -21,6 +21,7 @@
       ...(P ? [{ href: '#mypay/bill', i: 'layers', c: '#00C53B', n: '청구서 · 결제', s: '결제 대기 · 내역' }] : typeof lPayOff === 'function' && lPayOff() ? [] /* v38 F5 결제 꺼진 기관은 결제 줄을 감춘다 */ : [{ href: '#mypay/pay', i: 'layers', c: '#00C53B', n: '결제 · 환불 내역', s: '결제 · 환불 · 구독 · 청구서' }]),
       ...(P ? [{ href: '#family', i: 'user', c: '#E5487A', n: '자녀', s: '출결 · 수강 현황' }] : [{ href: '#connect', i: 'clock', c: '#7C5CF2', n: '연결 · 알림', s: '앱 알림 · 캘린더 · 리마인더' }, { ap: 'tsheet', i: 'sparkle', c: '#5C74F6', n: '선생님 · 앱 설정', s: '선생님 바꾸기 · AI 연결 · 화면' }]),
       { ap: 'orgs', i: 'grid', c: '#6C6C6C', n: '내 기관', s: org },
+      ...(LR.me ? [{ href: '#who', i: 'user', c: '#6C6C6C', n: '계정 바꾸기', s: '이 기기의 다른 계정으로 열기' }] : []) /* v38 K12 */,
       ...(LR.me ? [{ la: 'logout', i: 'out', c: '#6C6C6C', n: '로그아웃', s: '공용 기기라면 꼭 로그아웃하세요' }] : []) /* v38 F5 U13 로그아웃을 '나'에서 바로 */
     ];
     return `<div class="ls-me" aria-label="나">${(LR.me ? `<div class="ls-prof"><span class="ls-av">${esc([...String(LR.me.nick || LR.me.sid || '나')][0])}</span><span><b>${esc(LR.me.nick || LR.me.sid || '')}</b><small>${esc(LR.me.grade || (P ? '보호자 계정' : '회원'))}</small></span></div>` : '')}<nav class="ls-list">${R.map(row).join('')}</nav><h2 class="ls-gh">회원정보</h2></div>`; }

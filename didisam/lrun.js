@@ -57,6 +57,7 @@ LR.api = {
     }
     try { const s = JSON.parse(sessionStorage.getItem(SESS + LR.tid) || 'null') || lKeepLoad(); if (s && LR.mode !== 'live') { LR.me = s; sessionStorage.setItem(SESS + LR.tid, JSON.stringify(s)); } } catch (e) { }
     if (LR.me && LR.mode !== 'live') { try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[LR.me.sid] || {}) }; } catch (e) { } if (LR.mode === 'demo') LR.mine = demoMine(demoRoom()); }
+    try { LR.whoBoot = !sessionStorage.getItem('didisam.tab.' + LR.tid); sessionStorage.setItem('didisam.tab.' + LR.tid, '1'); } catch (e) { } /* v38 K12 이 창에서 처음 열 때만 계정 고르기 카드(lacct.js laWhoV) */
   },
   async login(sid, code) {
     if (LR.mode === 'live') { const r = await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/login`, { sid, code, keep: lKeepOn() }); LR.me = r.me; LR.lp = r.lp || LR.lp; LR.mine = r.mine || LR.mine; return; }

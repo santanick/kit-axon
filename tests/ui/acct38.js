@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const http = require('http'), fs = r
 const ROOT = path.resolve(__dirname, '../../didisam'); const OUT = process.env.SHOTS || '';
 const MT = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/json' };
 const R = []; const ok = (c, m) => { R.push([!!c, m]); console.log(c ? '✓' : '✗', m); };
-const only = (process.env.ONLY || 'corp,k12,k12b,univ,pub,life,date,r2').split(',');
+const only = (process.env.ONLY || 'corp,k12,k12b,univ,pub,life,date,r2,c3,c17,who').split(',');
 (async () => {
   const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]); const f = path.join(ROOT, u === '/' ? 'index.html' : u); if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': MT[path.extname(f)] || 'application/octet-stream' }); r.end(fs.readFileSync(f)); }).listen(0);
   await new Promise(o => srv.once('listening', o)); const base = `http://127.0.0.1:${srv.address().port}/`;
@@ -216,6 +216,70 @@ const only = (process.env.ONLY || 'corp,k12,k12b,univ,pub,life,date,r2').split('
     await op.evaluate(() => { S.settings.acct.extraQ = [{ q: '생년월일', type: 'date', req: false, opts: [] }]; ACT['mem-bulk'](); }); await op.setInputFiles('#mbBkF', csv); await op.waitForSelector('.mbk-ok', { timeout: 6000 }).catch(() => {});
     const pv = await op.evaluate(() => (document.querySelector('.mbk-ok') || {}).innerText || ''); ok(/생년월일/.test(pv) && /1990-01-01/.test(pv), `V19: 일괄 등록 미리보기에 추가 질문 열 ${pv.slice(0, 100)}`);
     await ctx.close(); }
+
+  /* ── 3차 보완 C#3: 부서를 하나도 만들지 않은 기업 → 안내 + 가입 답(부서)으로 자동 집계 ── */
+  if (only.includes('c3')) { const { ctx, op } = await mk('corp');
+    const r = await op.evaluate(() => { S.groups = []; const mk2 = (n, dep) => { const m = { id: uid('m'), sid: uid('s'), name: n, nick: n, email: '', phone: '', group: '', grade: '정회원', joined: today(), last: '', extra: dep ? { 부서: dep } : {} }; S.members.push(m); return m.id; };
+      const ids = [mk2('가', '영업팀'), mk2('나', '영업팀'), mk2('다', '개발팀'), mk2('라', '')]; let c = S.classes.find(x => x.legal); if (!c) { c = { id: 'cL38', name: '성희롱 예방교육', legal: true, open: '전체', end: '2026-12-31', learners: [], prog: {}, curriculum: [], items: [] }; S.classes.push(c); } c.status = '진행중'; c.learners = ids; c.prog = c.prog || {}; ids.forEach((id, i) => { c.prog[id] = { p: i === 0 ? 100 : 10, done: i === 0 }; });
+      go('compliance'); const t1 = document.querySelector('#main').innerText; const hint = !!document.querySelector('[data-cmp-dept-hint] [data-act=grp-new]');
+      const rows = [...document.querySelectorAll('#main table tbody tr')].map(tr => tr.innerText.split('\t')[0].trim());
+      S.groups.push({ id: 'g1', name: '영업팀', lead: '', at: today() }); S.members.find(m => m.name === '가').group = 'g1'; go('compliance'); const t2 = document.querySelector('#main').innerText;
+      return { t1, hint, rows, noData: /데이터가 없습니다/.test(t1), hint2: !!document.querySelector('[data-cmp-dept-hint]'), rows2: [...document.querySelectorAll('#main table tbody tr')].map(tr => tr.innerText.split('\t')[0].trim()) }; });
+    ok(r.hint && /부서를 만들면 부서별 이수율을 볼 수 있습니다/.test(r.t1) && !r.noData, `C3: 부서 없음 → 안내 + [부서 만들기] (데이터 없음 문구 없음)`);
+    ok(r.rows.includes('영업팀') && r.rows.includes('개발팀') && r.rows.includes('부서 미입력') && /가입 답 기준/.test(r.t1), `C3: 가입 때 답한 부서로 자동 집계 ${JSON.stringify(r.rows)}`);
+    ok(!r.hint2 && r.rows2.includes('영업팀') && r.rows2.includes('부서 미지정'), `C3: 부서를 만들면 부서별 + 미지정 ${JSON.stringify(r.rows2)}`);
+    await op.setViewportSize({ width: 390, height: 844 }); await op.evaluate(() => go('compliance')); await shot(op, 'c3_390'); const ov = await op.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1); ok(!ov, 'C3: 390 가로 넘침 없음');
+    await ctx.close(); }
+
+  /* ── 3차 보완 C#17: 학습자 A가 쓴 글이 학습자 B에게 바로 보임(데모 · 운영 고정 응답) ── */
+  if (only.includes('c17')) { const { ctx, op } = await mk('adult');
+    await op.evaluate(() => { S.codes = [{ sid: 'LA0001', code: 'AAA234', dept: '' }, { sid: 'LB0001', code: 'BBB234', dept: '' }]; ['LA0001', 'LB0001'].forEach((sid, i) => S.members.push({ id: 'mc' + i, sid, name: i ? '이영희' : '김철수', nick: i ? '영희' : '철수', email: '', phone: '', group: '', grade: '정회원', joined: today(), last: '', extra: {} })); save(); });
+    const tid = await pub(op); const bid = await op.evaluate(() => (S.boards.find(b => b.write !== 'admin' && (!b.perm || !b.perm.type || b.perm.type === 'all')) || {}).id);
+    const write = async (p, title) => { await p.evaluate(h => { location.hash = h; }, '#write/b:' + encodeURIComponent(bid)); await p.waitForSelector('#lcW', { timeout: 5000 }); const t = await p.$('#lcW [name=title]'); if (t) await t.fill(title); await p.fill('#lcW [name=body]', title + ' 본문입니다'); await p.click('#lcW button[type=submit]'); await p.waitForTimeout(500); };
+    const login = async (p, sid, code) => { await p.evaluate(async ([a, b]) => { await LR.api.login(a, b); lrender(); }, [sid, code]); await p.waitForTimeout(200); };
+    const A = await lp(ctx, tid, '#comm'); await login(A, 'LA0001', 'AAA234'); const B = await lp(ctx, tid, '#comm'); await login(B, 'LB0001', 'BBB234');
+    await write(A, '데모 즉시 글'); await B.evaluate(() => { location.hash = '#comm'; lrender(); }); await B.waitForTimeout(300);
+    ok(/데모 즉시 글/.test(await B.evaluate(() => document.body.innerText)), 'C17 데모: A가 쓴 글이 운영자 화면 반영 전에 B에게 바로 보임');
+    await shot(B, 'c17_demo');
+    /* 운영(고정 응답): 서버 commlive.js(Node와 같은 규칙)로 받은 이벤트를 게시본에 합쳐 돌려준다 */
+    const CL = require('../../service/server/commlive'); const LT = 'tn_c17test0001'; const pubJ = await op.evaluate(() => JSON.parse(JSON.stringify(S.lsite.pub))); pubJ.comm = { ...pubJ.comm, tid: LT }; const live = []; const evs = [];
+    const mkLive = async (sid, nick) => { const c = await br.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Seoul' }); await c.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
+      await c.route(/\/api\//, async rt => { const u = new URL(rt.request().url()); const m = rt.request().method(); const J = o => rt.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
+        if (u.pathname === '/api/config') return J({ live: true });
+        if (u.pathname.endsWith('/site')) return J({ site: CL.merge(pubJ, live) });
+        if (u.pathname.endsWith('/me')) return J({ me: { sid, nick, status: 'active' }, lp: null, mine: { badges: [], cls: {} } });
+        if (u.pathname.endsWith('/events') && m === 'POST') { const b = JSON.parse(rt.request().postData() || '{}'); evs.push(b.type); const cm = CL.accept(pubJ.comm, { tid: LT, sid, m: { nick }, orgType: 'adult', live }, b.type, b.data || {}); if (cm) live.push(cm); return J({ ok: true, seq: evs.length }); }
+        return J({ ok: true }); });
+      const p = await c.newPage(); p.on('pageerror', e => errs.push('c17 live: ' + e.message)); await p.goto(base + `learner.html?t=${LT}&app=1#comm`); await p.waitForTimeout(900); return { c, p }; };
+    const LA = await mkLive('LA0001', '철수'), LB = await mkLive('LB0001', '영희');
+    await write(LA.p, '운영 즉시 글'); await LB.p.reload(); await LB.p.waitForTimeout(900); await LB.p.evaluate(() => { location.hash = '#comm'; }); await LB.p.waitForTimeout(500);
+    const tb = await LB.p.evaluate(() => document.body.innerText);
+    ok(evs.includes('post-new') && live.length === 1 && /운영 즉시 글/.test(tb), `C17 운영(고정 응답): A 글 → 서버 게시 모양 → B 화면에 바로 보임 (이벤트 ${evs.join(',')})`);
+    const pid = live[0] && live[0].p.id; await LB.p.evaluate(h => { location.hash = h; }, '#post/' + encodeURIComponent(pid || '')); await LB.p.waitForTimeout(500);
+    const cf = await LB.p.$('#lcC [name=b]'); if (cf) { await cf.fill('운영 즉시 댓글'); await LB.p.click('#lcC button[type=submit]'); await LB.p.waitForTimeout(500); }
+    await LA.p.reload(); await LA.p.waitForTimeout(900); await LA.p.evaluate(h => { location.hash = h; }, '#post/' + encodeURIComponent(pid || '')); await LA.p.waitForTimeout(600);
+    ok(/운영 즉시 댓글/.test(await LA.p.evaluate(() => document.body.innerText)), 'C17 운영(고정 응답): B 댓글 → A 화면에 바로 보임'); await shot(LA.p, 'c17_live_390');
+    await LA.c.close(); await LB.c.close(); await ctx.close(); }
+
+  /* ── K12 한 기기 여러 계정: 둘 이상이면 '○○님으로 계속하기 / 다른 계정으로' 카드, '나'에 [계정 바꾸기] ── */
+  if (only.includes('who')) { const { ctx, op } = await mk('adult');
+    await op.evaluate(() => { S.codes = [{ sid: 'KP0001', code: 'PPP234', dept: '' }, { sid: 'KC0001', code: 'CCC234', dept: '' }]; save(); }); const tid = await pub(op);
+    const open = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push('who: ' + e.message)); await p.setViewportSize({ width: 390, height: 844 }); await p.goto(base + `learner.html?t=${tid}&app=1`); await p.waitForTimeout(800); return p; };
+    const lin = async (p, sid, code, nick) => p.evaluate(async ([a, b, n]) => { await LR.api.login(a, b); LR.me.nick = n; sessionStorage.setItem('didisam.learner.' + LR.tid, JSON.stringify(LR.me)); lKeepSave(LR.me); lrender(); }, [sid, code, nick]);
+    let p = await open(); await lin(p, 'KP0001', 'PPP234', '엄마'); await p.close();
+    p = await open(); const one = await p.evaluate(() => ({ who: !!document.querySelector('[data-la-who]'), me: LR.me && LR.me.sid }));
+    ok(!one.who && one.me === 'KP0001', `K12: 계정 하나 → 카드 없이 바로 열림 (${one.me})`);
+    await p.evaluate(async () => { LA.whoKeep = 1; await LR.api.logout(); }); await lin(p, 'KC0001', 'CCC234', '민준'); await p.close();
+    p = await open(); const two = await p.evaluate(() => ({ who: !!document.querySelector('[data-la-who]'), txt: (document.querySelector('[data-la-who]') || {}).innerText || '', keys: Object.keys(localStorage).filter(k => k.startsWith('didisam.accts.')).map(k => localStorage.getItem(k)).join('') }));
+    ok(two.who && /민준님으로 계속하기/.test(two.txt) && /엄마/.test(two.txt) && /다른 계정으로/.test(two.txt), 'K12: 계정 둘 → 앱을 열면 「민준님으로 계속하기 / 다른 계정」 카드');
+    ok(!/PPP234|CCC234|name|phone|email/.test(two.keys), 'K12: 기억 항목은 닉네임 · 세션뿐(코드 · 이름 · 연락처 없음)'); await shot(p, 'who_390');
+    const ov = await p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1); ok(!ov, 'K12: 카드 390 가로 넘침 없음');
+    await p.click('[data-ac=who-sw][data-v=KP0001]'); await p.waitForTimeout(900); const sw = await p.evaluate(() => ({ me: LR.me && LR.me.sid, who: !!document.querySelector('[data-la-who]') }));
+    ok(sw.me === 'KP0001' && !sw.who, `K12: 한 번 눌러 엄마 계정으로 바로 진행 (${sw.me})`);
+    await p.evaluate(() => { location.hash = '#acct'; }); await p.waitForTimeout(600); const my = await p.evaluate(() => [...document.querySelectorAll('.ls-me a[href="#who"]')].length);
+    ok(my > 0, `K12: '나'에 [계정 바꾸기] (${my})`); await p.click('.ls-me a[href="#who"]'); await p.waitForTimeout(400); ok(await p.$('[data-la-who]'), 'K12: [계정 바꾸기] → 계정 고르기 카드');
+    await p.click('[data-ac=who-go]'); await p.waitForTimeout(400); ok(!(await p.$('[data-la-who]')), 'K12: 계속하기 → 바로 진행');
+    await p.close(); await ctx.close(); }
 
   if (only.includes('date')) { const ctx = await br.newContext({ timezoneId: 'Asia/Seoul' }); const p = await ctx.newPage(); await p.goto(base + 'learner.html?t=sample'); await p.waitForTimeout(400);
     const d = await p.evaluate(() => ({ a: lLocal('2026-11-10T21:04:00.000Z'), b: lLocal('2026-11-11'), c: ymdL(new Date('2026-11-10T20:30:00Z')) }));
