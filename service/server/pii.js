@@ -63,7 +63,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
   const plog = (P, tid, actor, action, lid, purpose, fields) => P('insert into pii.access_log (tid, actor, action, learner_id, purpose, fields) values ($1, $2, $3, $4, $5, $6)', [tid, String(actor).slice(0, 80), action, lid || null, purpose || null, fields || []]);
   async function orgOf(L, tid) {
     const d = (await L("select doc->'org'->>'type' type, doc->'settings'->'acct' acct, doc->'org'->'cpl' cpl from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
-    const a = d.acct || {}; return { approve: a.approve === 'manual' ? 'manual' : 'auto', strictPw: !!(d.cpl && d.cpl.on && /^moel-/.test(String(d.cpl.profile || ''))), type: d.type || '', mode: a.mode || 'open', under14: !!a.under14, social: Array.isArray(a.social) ? a.social : PROVIDERS, idv: a.idv && a.idv.on ? { on: true, reason: String(a.idv.reason || '') } : { on: false } };
+    const a = d.acct || {}; return { parent: d.type === 'k12' && !!a.parent, approve: a.approve === 'manual' ? 'manual' : 'auto', strictPw: !!(d.cpl && d.cpl.on && /^moel-/.test(String(d.cpl.profile || ''))), type: d.type || '', mode: a.mode || 'open', under14: !!a.under14, social: Array.isArray(a.social) ? a.social : PROVIDERS, idv: a.idv && a.idv.on ? { on: true, reason: String(a.idv.reason || '') } : { on: false } };
   }
 
   /* SNS 식별자 → 해시. 운영: 공급자 토큰을 서버에서 검증해 sub(회원 번호)를 받는다.
@@ -99,6 +99,10 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
     return { ok: true, ttl: 600, ...(devCode ? { dev_code: code } : {}) };
   }
 
+  /* v38 같은 이메일로 등록된(가입 전) 회원: 기관 문서 members[].ebx(= 정규화 이메일의 HMAC 블라인드 인덱스, statecrypt.seal이 저장)와 가입 이메일의 bidx를 맞춘다.
+     이메일 원문은 풀지 않는다. 한 명일 때만 연결 — 요청함에는 { mid, by, ebx }만 실린다 */
+  async function linkOf(L, tid, eb) { const r = (await L(`select m->>'id' id from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'members') = 'array' then t.doc->'members' else '[]'::jsonb end) m where t.tenant_id = $1 and m->>'ebx' = $2 and coalesce(m->'acct'->'consent', 'null'::jsonb) = 'null'::jsonb and coalesce(m->>'withdrawn', '') = '' and coalesce(m->>'src', '') <> 'manual' limit 2`, [tid, eb])).rows; return r.length === 1 ? { mid: r[0].id, by: 'email', ebx: eb } : null; }
+
   async function signup(req, res, tid) {
     limit('lsu:' + ip(req), 20, 3600e3);
     const b = await readBody(req, 8192); const via = String(b.via || '');
@@ -109,11 +113,17 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       if (org.mode === 'code' && !univ) throw new HttpErr(403, '이 기관은 접근코드로만 로그인합니다.', 'mode');
       /* v38 초대 링크(공용 · 개인): 토큰이 기관 문서의 초대(학습자 대상 · 사용 중) 또는 아직 가입하지 않은 등록 회원(itok)과 맞아야 한다.
          맞으면 초대제 기관도 가입할 수 있고 승인 없이 정회원 — 운영자 요청함(acct-join)에 token을 실어 그 등록 행에 계정을 붙인다(QA K1 · C2) */
+      /* v38 보호자 계정(학원 초중고 · 보호자 가입 켜짐)도 같은 가입 경로 — learner_accounts.kind = 'parent'(표 · 권한은 그대로, 종류만 다름) */
+      const kind = b.kind === 'parent' ? 'parent' : 'learner'; if (kind === 'parent' && (univ || !org.parent)) throw new HttpErr(403, '이 기관은 보호자 계정을 쓰지 않습니다.', 'kind');
       const tok = String(b.token || '').trim(); let tokOk = false;
       if (tok) { if (!/^[\w-]{6,40}$/.test(tok)) throw new HttpErr(403, '사용할 수 없는 초대 링크입니다. 운영자에게 새 링크를 요청하세요.', 'invite_bad');
-        tokOk = (await L(`select exists(select 1 from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'invites') = 'array' then t.doc->'invites' else '[]'::jsonb end) i where t.tenant_id = $1 and i->>'token' = $2 and i->>'active' = 'true' and coalesce(nullif(i->>'target', ''), 'student') = 'student')
-          or exists(select 1 from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'members') = 'array' then t.doc->'members' else '[]'::jsonb end) m where t.tenant_id = $1 and m->>'itok' = $2) ok`, [tid, tok])).rows[0].ok;
+        tokOk = (await L(`select exists(select 1 from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'invites') = 'array' then t.doc->'invites' else '[]'::jsonb end) i where t.tenant_id = $1 and i->>'token' = $2 and i->>'active' = 'true' and coalesce(nullif(i->>'target', ''), 'student') = $3)
+          or exists(select 1 from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->$4) = 'array' then t.doc->$4 else '[]'::jsonb end) m where t.tenant_id = $1 and m->>'itok' = $2) ok`, [tid, tok, kind === 'parent' ? 'parent' : 'student', kind === 'parent' ? 'parents' : 'members'])).rows[0].ok;
         if (!tokOk) throw new HttpErr(403, '사용할 수 없는 초대 링크입니다. 운영자에게 새 링크를 요청하세요.', 'invite_bad'); }
+      /* v38 보호자 동의를 마친 보호자가 받은 1회용 연결 토큰(gtok) → 그 자녀와 바로 연결(요청함에 famSid) */
+      let famSid = '';
+      if (kind === 'parent' && b.gtok) { const g = (await P("update pii.guardian set parent_tok_hash = null where tid = $1 and parent_tok_hash = $2 and status = 'ok' returning learner_id", [tid, crypto.createHash('sha256').update(String(b.gtok)).digest('hex')])).rows[0];
+        if (!g) throw new HttpErr(403, '사용할 수 없는 연결 링크입니다. 이미 썼거나 만료되었습니다.', 'gtok_bad'); famSid = g.learner_id; tokOk = true; }
       if (org.mode === 'invite' && !tokOk) throw new HttpErr(403, '초대받은 회원만 가입할 수 있습니다.', 'mode');
       let nick = String(b.nickname || '').trim(); let login = via, sub = null, email = '', stu = null, dept = '';
       if (univ) { if (via !== 'univ') throw new HttpErr(400, '대학 계정은 학번으로 가입합니다.', 'via');
@@ -124,7 +134,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       else if (via === 'sns') { const s = await snsSub(b); if (!org.social.includes(s.prov)) throw new HttpErr(403, '이 기관에서 쓰지 않는 로그인 방식입니다.', 'provider'); login = s.prov; sub = bidx(tid, 'sub:' + s.prov, s.sub); }
       else throw new HttpErr(400, '가입 방법을 고르세요.', 'via');
       if (!NICK_RE.test(nick)) throw new HttpErr(400, '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.', 'nickname');
-      const minor = !univ && b.age14 !== true; let gContact = '';
+      const minor = !univ && kind !== 'parent' && b.age14 !== true; let gContact = '';
       if (minor) { if (!org.under14) throw new HttpErr(403, '이 기관은 만 14세 이상만 가입할 수 있습니다.', 'age');
         gContact = String((b.guardian && b.guardian.contact) || '').trim(); const ph = normPhone(gContact);
         if (!MAIL_RE.test(gContact) && !PHONE_RE.test(ph || '-')) throw new HttpErr(400, '보호자 이메일 또는 휴대폰 번호를 입력하세요.', 'guardian'); if (ph) gContact = ph; }
@@ -132,7 +142,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       const pw = b.pw ? (String(b.pw).length >= 8 && String(b.pw).length <= 64 ? await hashPw(String(b.pw)) : (() => { throw new HttpErr(400, '비밀번호는 8~64자입니다.', 'pw'); })()) : null;
       const st = minor ? 'guardian_pending' : 'active'; const pend = !minor && org.approve === 'manual' && !tokOk;
       let lid;
-      try { lid = (await L('insert into learner_accounts (tenant_id, kind, login, nickname, student_no, dept, status, minor, mkt) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning learner_id', [tid, 'learner', univ ? 'univ' : login, nick, stu, dept, st, minor, !!consent.mkt])).rows[0].learner_id; }
+      try { lid = (await L('insert into learner_accounts (tenant_id, kind, login, nickname, student_no, dept, status, minor, mkt) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning learner_id', [tid, kind, univ ? 'univ' : login, nick, stu, dept, st, minor, !!consent.mkt])).rows[0].learner_id; }
       catch (e) { if (e.code === '23505') throw new HttpErr(409, '이미 가입한 학번입니다. 로그인하거나 비밀번호를 찾으세요.', 'exists'); throw e; }
       const cons = { tos: true, privacy: true, ...(consent.third ? { third: true } : {}), mkt: !!consent.mkt, ver: String(consent.ver || 'v23').slice(0, 20), at: new Date().toISOString() };
       try { await P('insert into pii.identity (tid, learner_id, provider, provider_sub_hash, email_bidx, email_enc, email_mask, pw_hash, consent) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [tid, lid, univ ? 'univ' : login, sub, email ? bidx(tid, 'email', email) : null, email ? enc(email, aad(tid, lid, 'email')) : null, email ? maskEmail(email) : null, pw, JSON.stringify(cons)]); }
@@ -143,7 +153,9 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       await plog(P, tid, 'self', 'create', lid, 'signup', [email ? 'email' : '', sub ? 'provider_sub' : '', pw ? 'pw' : '', minor ? 'guardian' : ''].filter(Boolean));
       await L('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, 'learner:' + lid, 'learner.signup', JSON.stringify({ login: univ ? 'univ' : login, minor })]);
       /* v33 운영자 요청함으로 가입 알림(가명 sid · 닉네임 · 가린 이메일만). 보호자 동의가 필요한 가입은 동의 후에 보낸다 */
-      const jd = { kind: 'learner', login: univ ? 'univ' : login, sid: lid, nick, emailMask: email ? maskEmail(email) : '', dept, minor, consent: { tos: true, privacy: true, mkt: !!consent.mkt, at: cons.at }, extra: cleanExtra(b.extra), ...(tokOk ? { token: tok } : {}) };
+      if (minor && tokOk && tok) await L('update learner_accounts set invite_token = $3 where tenant_id = $1 and learner_id = $2', [tid, lid, tok]); /* 보호자 동의 뒤 요청함에 실어 보낸다 */
+      const lk = kind === 'learner' && email && !univ ? await linkOf(L, tid, bidx(tid, 'email', email)) : null;
+      const jd = { kind, login: univ ? 'univ' : login, sid: lid, nick, emailMask: email ? maskEmail(email) : '', dept, minor, consent: { tos: true, privacy: true, mkt: !!consent.mkt, at: cons.at }, extra: cleanExtra(b.extra), ...(tokOk && tok ? { token: tok } : {}), ...(famSid ? { famSid } : {}), ...(lk ? { link: lk } : {}) };
       if (!minor) await evIns(L, tid, lid, 'acct-join', jd);
       return { lid, st, nick, login: univ ? 'univ' : login, gtok, pend };
     });
@@ -158,11 +170,13 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       if (!g) throw new HttpErr(404, '사용할 수 없는 동의 링크입니다. 만료되었거나 이미 처리했습니다.', 'token');
       if (b.ok !== true) { await P('delete from pii.guardian where id = $1', [g.id]); await P('delete from pii.identity where tid = $1 and learner_id = $2', [tid, g.learner_id]); await plog(P, tid, 'guardian', 'delete', g.learner_id, 'guardian_refused', ['all']);
         await L("update learner_accounts set status = 'withdrawn', nickname = '탈퇴 회원', withdrawn_at = now() where tenant_id = $1 and learner_id = $2", [tid, g.learner_id]); return { ok: true, status: 'refused' }; }
-      await P("update pii.guardian set status = 'ok', confirmed_at = now() where id = $1", [g.id]); await plog(P, tid, 'guardian', 'consent', g.learner_id, 'guardian_consent', []);
+      const ptok = crypto.randomBytes(24).toString('base64url'); /* v38 동의한 보호자만 받는 1회용 보호자 계정 연결 토큰 */
+      await P("update pii.guardian set status = 'ok', confirmed_at = now(), parent_tok_hash = $2 where id = $1", [g.id, crypto.createHash('sha256').update(ptok).digest('hex')]); await plog(P, tid, 'guardian', 'consent', g.learner_id, 'guardian_consent', []);
       await L("update learner_accounts set status = 'active' where tenant_id = $1 and learner_id = $2 and status = 'guardian_pending'", [tid, g.learner_id]);
-      const a = (await L('select login, nickname, dept, mkt from learner_accounts where tenant_id = $1 and learner_id = $2', [tid, g.learner_id])).rows[0] || {}; const im = (await P('select email_mask from pii.identity where tid = $1 and learner_id = $2', [tid, g.learner_id])).rows[0] || {};
-      await evIns(L, tid, g.learner_id, 'acct-join', { kind: 'learner', login: a.login || 'email', sid: g.learner_id, nick: a.nickname || '', emailMask: im.email_mask || '', dept: a.dept || '', minor: true, consent: { tos: true, privacy: true, mkt: !!a.mkt, at: new Date().toISOString() }, extra: {}, guardian: { ok: true, at: new Date().toISOString() } });
-      return { ok: true, status: 'active' };
+      const a = (await L('select login, nickname, dept, mkt, invite_token from learner_accounts where tenant_id = $1 and learner_id = $2', [tid, g.learner_id])).rows[0] || {}; const im = (await P('select email_mask, email_bidx from pii.identity where tid = $1 and learner_id = $2', [tid, g.learner_id])).rows[0] || {};
+      const lk = im.email_bidx ? await linkOf(L, tid, im.email_bidx) : null;
+      await evIns(L, tid, g.learner_id, 'acct-join', { kind: 'learner', login: a.login || 'email', sid: g.learner_id, nick: a.nickname || '', emailMask: im.email_mask || '', dept: a.dept || '', minor: true, consent: { tos: true, privacy: true, mkt: !!a.mkt, at: new Date().toISOString() }, extra: {}, guardian: { ok: true, at: new Date().toISOString() }, ...(a.invite_token ? { token: a.invite_token } : {}), ...(lk ? { link: lk } : {}) });
+      const org = await orgOf(L, tid); return { ok: true, status: 'active', ...(org.parent ? { parent_token: ptok } : {}) };
     });
   }
 

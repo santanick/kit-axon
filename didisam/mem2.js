@@ -205,7 +205,7 @@ document.addEventListener('input', e => { if (!e.target || !['mbGq', 'mbAq'].inc
 
 /* ═════════ 초대(연락처 · 링크 · 이메일 · 수동 계정 · 일괄) ═════════ */
 function mbInvite(target, cls, role) { let iv = S.invites.find(i => i.active && i.target === target && (i.cls || '') === (cls || '') && (target !== 'admin' || i.role === role)); if (!iv) { iv = { id: uid('iv'), token: mbTok(), target, cls: cls || '', role: target === 'admin' ? role || 'sub' : '', uses: 0, active: true, at: today() }; S.invites.push(iv); save(); } return iv; }
-const mbInvURL = iv => `${mbLURL()}#join/${iv.token}`;
+const mbInvURL = iv => `${mbLURL()}#join/${iv.target === 'parent' ? 'par-' : ''}${iv.token}`; /* v38 보호자 초대는 par- 표시(운영 서버가 보호자 계정으로 가입) */
 const MB_IT = () => [['phone', '연락처(알림톡)'], ['link', '링크'], ['email', '이메일'], ['manual', '수동 계정'], ['bulk', '엑셀 일괄 등록']]; /* v38 같은 일은 한 이름(QA C12) */
 function mbLinkPanel() { const tg = UI.mbInvT || 'student', cls = UI.mbInvC || '', role = UI.mbInvR || 'sub'; const A = S.settings.acct; const iv = mbInvite(tg, tg === 'student' ? cls : '', role); const url = mbInvURL(iv);
   return `<div class="form2"><label>초대 대상<select data-chg="mb-invset" data-k="mbInvT"><option value="student" ${tg === 'student' ? 'selected' : ''}>${esc(t('learner'))}</option>${A.parent && mbGuardOn() ? `<option value="parent" ${tg === 'parent' ? 'selected' : ''}>보호자</option>` : ''}<option value="admin" ${tg === 'admin' ? 'selected' : ''}>운영자 · ${esc(t('teacher'))}</option></select></label>
