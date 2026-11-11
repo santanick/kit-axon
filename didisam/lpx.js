@@ -5,8 +5,9 @@
 const LPX = {};
 const lpxKey = () => 'didisam.room.' + (typeof DREG !== 'undefined' && DREG.cur ? DREG.cur() : '') + '.lpx';
 function lpxPull() { if (typeof S === 'undefined' || !S || !S.org) return 0; let Q = []; try { Q = JSON.parse(localStorage.getItem(lpxKey()) || '[]'); } catch (e) { return 0; } if (!Q.length) return 0;
-  let n = 0; const left = []; Q.forEach(x => { const f = LPX[x.type]; if (!f) { left.push(x); return; } try { f(x); n++; } catch (e) { console.error('lpx', x.type, e); } });
-  try { localStorage.setItem(lpxKey(), JSON.stringify(left)); } catch (e) { } if (n) { save(); try { render(); } catch (e) { } } return n; }
+  let n = 0; const used = new Set(); Q.forEach(x => { const f = LPX[x.type]; if (!f) return; used.add(x.id); try { f(x); n++; } catch (e) { console.error('lpx', x.type, e); } });
+  /* v38 R2 처리한 항목만 지운다 — 처리하는 동안 학습자 창이 새로 넣은 항목(예: 이름 저장 직후 수료증 인쇄)이 덮어써져 사라지던 것 */
+  try { const now = JSON.parse(localStorage.getItem(lpxKey()) || '[]'); localStorage.setItem(lpxKey(), JSON.stringify(now.filter(x => !used.has(x.id)))); } catch (e) { } if (n) { save(); try { render(); } catch (e) { } } return n; }
 addEventListener('storage', e => { if (e.key && e.key === lpxKey()) lpxPull(); });
 addEventListener('focus', () => lpxPull());
 AFTER.push(() => { if (!lpxPull.ran) { lpxPull.ran = 1; setTimeout(lpxPull, 300); } });
