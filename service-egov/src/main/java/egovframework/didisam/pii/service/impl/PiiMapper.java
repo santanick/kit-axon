@@ -12,7 +12,13 @@ public interface PiiMapper {
     void updateIdentityPw(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("lid") String lid, @org.apache.ibatis.annotations.Param("hash") String hash);
     /* L */
     Map<String, Object> selectOrg(@Param("tid") String tid);
-    String insertAccount(@Param("tid") String tid, @Param("login") String login, @Param("nick") String nick, @Param("stu") String stu, @Param("dept") String dept,
+    boolean selectInviteOk(@Param("tid") String tid, @Param("tok") String tok, @Param("target") String target, @Param("arr") String arr);
+    List<String> selectLinkMid(@Param("tid") String tid, @Param("eb") String eb);
+    int updateInviteToken(@Param("tid") String tid, @Param("lid") String lid, @Param("tok") String tok);
+    String selectInviteToken(@Param("tid") String tid, @Param("lid") String lid);
+    String useParentTok(@Param("tid") String tid, @Param("th") String th);
+    int setParentTok(@Param("id") String id, @Param("th") String th);
+    String insertAccount(@Param("tid") String tid, @Param("kind") String kind, @Param("login") String login, @Param("nick") String nick, @Param("stu") String stu, @Param("dept") String dept,
                          @Param("st") String st, @Param("minor") boolean minor, @Param("mkt") boolean mkt);
     int withdrawRefused(@Param("tid") String tid, @Param("lid") String lid);
     int activateGuardian(@Param("tid") String tid, @Param("lid") String lid);

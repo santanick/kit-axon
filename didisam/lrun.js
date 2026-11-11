@@ -7,6 +7,10 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const nl = s => esc(s).replace(/\n/g, '<br>');
 const ytOK = id => /^[\w-]{11}$/.test(id || '');
 const nowISO = () => new Date().toISOString();
+function ymdL(d) { d = d instanceof Date ? d : new Date(d == null ? Date.now() : d); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; } /* v38 현지(Asia/Seoul) 날짜 하나로 — toISOString().slice(0, 10)은 UTC라 오전 9시 전에 하루 전이 됨 */
+/* v38 학습자 화면의 날짜 · 시각은 현지(Asia/Seoul) 기준 — UTC 시각(…Z)을 그대로 잘라 하루 전으로 보이던 문제(QA U8 · K11). 'YYYY-MM-DD HH:mm' */
+const lLocal = v => { const s = String(v == null ? '' : v); if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s)) return s.replace('T', ' '); const d = new Date(s); if (isNaN(d)) return s.replace('T', ' '); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+window.lLocal = lLocal;
 const Q = new URLSearchParams(location.search);
 const LR = { mode: 'demo', tid: Q.get('t') || '', site: null, me: null, lp: { tut: {}, cls: {}, diag: {}, book: {} }, mine: { badges: [], cls: {}, bk: {} }, timer: 0, err: '' };
 

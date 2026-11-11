@@ -8,7 +8,7 @@
 'use strict';
 (() => {
   const ST = () => S.settings;
-  const addMonths = (d, n) => { const x = new Date(d); x.setMonth(x.getMonth() + n); return x.toISOString().slice(0, 10); };
+  const addMonths = (d, n) => { const x = new Date(d); x.setMonth(x.getMonth() + n); return ymdL(x); };
   const dayDiff = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
   const sum = (a, f) => a.reduce((s, x) => s + (+f(x) || 0), 0);
   const BANKS = ['KB국민', '신한', '우리', '하나', 'NH농협', 'IBK기업', 'SC제일', '카카오뱅크', '토스뱅크', '케이뱅크', '부산', '대구', '경남', '광주', '전북', '제주', '새마을금고', '신협', '우체국', '수협'];
@@ -437,7 +437,7 @@
   LPX.enroll = x => { sl2Ensure(); const m = who(x); const c = C(x.data.cls); if (!m || !c) return; if (finalPrice(c) > 0) return; const R = c.recruit; if (R && R.on && R.cap && (c.learners || []).length >= +R.cap && !(c.learners || []).includes(m.id)) return; enrollGrant(c, m.id, 'self', null); logAudit(`수강 신청(무료) — ${m.name} · ${c.name}`); };
   LPX.pay = x => { sl2Ensure(); const m = who(x); const d = x.data || {}; if (!m || S.pays.some(p => p.id === d.payId)) return;
     const it = d.itemType === 'book' ? S.books.find(b => b.id === d.ref) : C(d.ref); if (!it) return;
-    const p = { id: d.payId || uid('pay'), at: String(x.at || today()).slice(0, 10), who: m.id, item: it.name, itemType: d.itemType || 'class', ref: d.ref, amount: finalPrice(it), /* 금액은 운영 측 가격 기준(학습자 값 무시) */ method: d.method || '신용카드', status: d.status === '결제 대기' ? '결제 대기' : '결제 완료', pg: payPG(), ship: d.ship || '', vacct: d.vacct || null };
+    const p = { id: d.payId || uid('pay'), at: atL(x.at || today()).slice(0, 10), who: m.id, item: it.name, itemType: d.itemType || 'class', ref: d.ref, amount: finalPrice(it), /* 금액은 운영 측 가격 기준(학습자 값 무시) */ method: d.method || '신용카드', status: d.status === '결제 대기' ? '결제 대기' : '결제 완료', pg: payPG(), ship: d.ship || '', vacct: d.vacct || null };
     /* 운영: PG 승인 결과(paymentKey)를 서버가 검증한 뒤 기록 — 금액은 서버 가격과 대조 */
     S.pays.unshift(p);
     if (p.status === '결제 완료') { if (p.itemType === 'sub') subStart(p, d); else grantFor(p, true); }

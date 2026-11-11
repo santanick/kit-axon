@@ -81,21 +81,22 @@
   function noticeOf(s) { const n = s && s.hps && s.hps.notice;
     if (n && n.on === false) return null;
     if (n && val(n.text)) return { t: val(n.text).slice(0, 80), link: n.link || '' };
-    try { const d = typeof today === 'function' ? today() : new Date().toISOString().slice(0, 10);
+    try { const d = typeof today === 'function' ? today() : (typeof ymdL === 'function' ? ymdL(new Date()) : new Date().toISOString().slice(0, 10));
       const p = ((S.settings && S.settings.popups) || []).find(p => p && p.on !== false && (!p.s || p.s <= d) && (!p.e || p.e >= d) && val(p.t));
       return p ? { t: val(p.t).slice(0, 80), link: p.link || '' } : null; } catch (e) { return null; } }
   const linkHref = v => { v = String(v || ''); if (!v) return ''; if (v.startsWith('learn:')) return '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice' }[v.slice(6)] || 'home');
     if (v.startsWith('page:')) return '#p-' + v.slice(5); if (v.startsWith('cls:')) return '#p-c-' + v.slice(4); if (v.startsWith('url:')) return typeof safeURL === 'function' ? safeURL(v.slice(4)) || '' : (/^https:\/\//.test(v.slice(4)) ? v.slice(4) : ''); return ''; };
   const aAttr = h => `href="${E(h)}"${/^https?:/.test(h) ? ' target="_blank" rel="noopener"' : ''}`;
 
+  HPS.inviteOnly = () => { try { if (typeof S !== 'undefined' && S && S.settings) { const A = S.settings.acct; return A ? A.mode === 'invite' : S.settings.join === '운영자 초대만'; } if (typeof SITE === 'function') { const a = (SITE() || {}).acct; return !!(a && a.mode === 'invite'); } } catch (e) { } return false; };
   HPS.ctaWord = ty => (['k12', 'adult', 'voc'].includes(ty || typeKey()) ? '수강신청' : '신청하기');
   /* ── 실제 행동 바로가기(R1 M4 · FIXLIST 2 · 18): 머리글 메뉴를 되풀이하지 않고 신청 · 일정 · 상담 · 공지로. 실제 데이터 · 설정값이 있는 것만 ── */
   HPS.actions = (s, n) => { s = s || {}; const ty = typeKey(); const R = []; const f = ft(); const menu = k => (s.menus || []).find(m => m.kind === k && m.on !== false && m.access !== '비공개');
     const mh = m => (m.link ? linkHref(m.link) : '') || '#p-m-' + m.id; const dot = d => String(d || '').slice(5, 10).replace('-', '.');
     let C = []; try { C = (S.classes || []).filter(c => (c.open === '전체' || c.open == null) && c.status !== '종료'); } catch (e) { }
     const cl = (typeof t === 'function' ? t('cls') : '강좌'); const cta = ctaOf(s);
-    R.push({ k: 'apply', ic: 'check', l: HPS.ctaWord(ty), sub: C.length ? `${cl} ${C.length}개 모집 중` : '', h: cta.href });
-    const T0 = new Date().toISOString().slice(0, 10); const nx = C.filter(c => c.start && c.start >= T0).sort((a, b) => String(a.start).localeCompare(b.start))[0];
+    R.push({ k: 'apply', ic: 'check', l: HPS.inviteOnly() ? '초대받은 분 로그인' : HPS.ctaWord(ty), sub: HPS.inviteOnly() ? '' : C.length ? `${cl} ${C.length}개 모집 중` : '', h: cta.href });
+    const T0 = typeof today === 'function' ? today() : (typeof ymdL === 'function' ? ymdL(new Date()) : new Date().toISOString().slice(0, 10)); const nx = C.filter(c => c.start && c.start >= T0).sort((a, b) => String(a.start).localeCompare(b.start))[0];
     const cm = menu('class'); if (nx) R.push({ k: 'cal', ic: 'cal', l: ty === 'univ' ? '프로그램 일정' : ['k12', 'adult', 'voc'].includes(ty) ? '개강 일정' : '교육 일정', sub: `${dot(nx.start)} ${nx.name}`.slice(0, 26), h: cm ? mh(cm) : '#p-c-' + nx.id });
     const tel = val(f.tel), em = /@/.test(val(f.email)) ? val(f.email) : ''; const ask = ['k12', 'adult', 'voc'].includes(ty) ? '상담' : '문의';
     if (tel) R.push({ k: 'ask', ic: 'phone', l: `전화 ${ask}`, sub: tel, h: telHref(tel) }); else if (em) R.push({ k: 'ask', ic: 'mail', l: `메일 ${ask}`, sub: em, h: 'mailto:' + em });
@@ -106,6 +107,7 @@
   /* ── 신청 버튼: 강좌 메뉴 → 첫 공개 강좌 → 홈 ── */
   function ctaOf(s, lang) { const c = (s.hps && s.hps.cta) || {}; const ty = typeKey();
     const def = HPS.ctaWord(ty); /* FIXLIST 5: 머리글 · 행동 줄 · 휴대폰 메뉴 같은 낱말 */
+    if (!val(c.l) && !c.link && HPS.inviteOnly()) return { l: LXk('초대받은 분 로그인', lang), href: '#login' }; /* v38 초대제(초대받은 회원만 가입)면 '신청하기' 대신 로그인(QA C · F5 이관) */
     let href = linkHref(c.link);
     if (!href) { const m = (s.menus || []).find(m => m.kind === 'class' && m.on !== false); if (m && m.id) href = '#p-m-' + m.id; }
     if (!href) { try { const C = (S.classes || []).find(c => (c.open === '전체' || c.open == null) && c.status !== '종료'); if (C) href = '#p-c-' + C.id; } catch (e) { } }

@@ -8,8 +8,11 @@ const won = n => (Number(n) || 0).toLocaleString('ko-KR') + '원';
 const pct = n => Math.round(Number(n) || 0) + '%';
 const num = n => (Number(n) || 0).toLocaleString('ko-KR');
 const uid = (p = 'x') => p + Math.random().toString(36).slice(2, 9);
-const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }; /* v22 현지 날짜(자정~09시 KST에 전날로 찍히던 문제) */
-const addDays = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
+function ymdL(d) { d = d instanceof Date ? d : new Date(d == null ? Date.now() : d); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; } /* v38 현지(Asia/Seoul) 날짜 하나로 — toISOString().slice(0, 10)은 UTC라 오전 9시 전에 하루 전이 됨 */
+const today = () => ymdL(new Date());
+/* v38 학습자 큐에서 온 UTC 시각(…Z)을 현지 'YYYY-MM-DD HH:mm'으로(그 밖의 값은 그대로) */
+function atL(v) { const s = String(v == null ? '' : v); if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s)) return s.replace('T', ' '); const d = new Date(s); if (isNaN(d)) return s; const p = n => String(n).padStart(2, '0'); return `${ymdL(d)} ${p(d.getHours())}:${p(d.getMinutes())}`; } /* v22 현지 날짜(자정~09시 KST에 전날로 찍히던 문제) */
+const addDays = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return ymdL(t); };
 const daysAgo = d => Math.max(0, Math.round((Date.now() - new Date(d)) / 864e5));
 const nowStr = () => new Date().toLocaleString('ko-KR', { hour12: false });
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));

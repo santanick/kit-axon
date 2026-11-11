@@ -7,8 +7,8 @@
   const CF = window.CF = window.CF || {};
   CF.cfg = CF.cfg || {};
   const N = v => (v === '' || v == null || isNaN(+v)) ? 0 : +v;
-  const td = () => (typeof today === 'function' ? today() : new Date().toISOString().slice(0, 10));
-  const plus = (d, n) => { try { if (typeof addDays === 'function') return addDays(d, n); } catch (e) { } const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+  const td = () => (typeof today === 'function' ? today() : ymdL(new Date()));
+  const plus = (d, n) => { try { if (typeof addDays === 'function') return addDays(d, n); } catch (e) { } const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return ymdL(x); };
   const wn = n => (typeof won === 'function' ? won(n) : (+n || 0).toLocaleString('ko-KR') + '원');
   const hm = m => { m = Math.round(N(m)); const h = Math.floor(m / 60), r = m % 60; return h ? `${h}시간${r ? ' ' + r + '분' : ''}` : `${r}분`; };
   /* 받침에 맞는 조사: josa('훈련과정', '이') → '훈련과정이' · josa('강좌', '이') → '강좌가' (이/가 · 을/를 · 은/는 · 과/와 · 으로/로, ㄹ 받침 + 으로 → 로) */
@@ -111,7 +111,9 @@
       setup: [F.start('수강 시작일(개강일)'), { k: 'uend', label: '수강 끝나는 날', kind: 'choice', def: 'auto', opts: [['auto', '주차 수에 맞춰', '개강일부터 주차 수만큼'], ['custom', '직접 정하기', '학기 종료일(종강일)']], ex: '예: 기말고사 주 금요일까지' }, { k: 'endD', sub: 'uend', label: '종강일(수강 끝나는 날)', kind: 'date', ex: '예: 2026-12-18 — 이 날 밤 12시까지 들을 수 있습니다', show: d => d.uend === 'custom' }, { k: 'openTo', label: '누가 볼 수 있나요', kind: 'choice', ex: '예: 우리 학교 학생만', def: 'member', opts: [['member', '우리 학교 학생만'], ['all', '누구나']], later: true }]
     },
     defaults: { sessions: 15, per: 3, credit: 3, mins: 50, umin: 50, price: 0, openTo: 'member', uend: 'auto' },
-    onSet: (k, v, d) => { if (k === 'per') d._perSet = 1; if (k === 'credit' && !d._perSet) d.per = Math.max(1, Math.min(4, N(v) || 1)); },
+    onSet: (k, v, d) => { if (k === 'per') d._perSet = 1; if (k === 'sessions') d._sessSet = 1; if (k === 'credit') d._crSet = 1; if (k === 'credit' && !d._perSet) d.per = Math.max(1, Math.min(4, N(v) || 1)); },
+    /* v38 U-2 · U-6: 이름에 비교과 · 특강 · 연수 · 클리닉 · 워크숍 · 캠프가 있으면 4주 · 학점 없음 · 주 1차시로 시작(15주 · 3학점 · 45시간으로 채우던 문제). 직접 고른 값 · 대화로 말한 주 수 · 템플릿은 그대로 */
+    onNext: (id, d) => { if (id !== 'basic' || d._sessSet || d._crSet || d.tpl || (d.weekPlan || []).length) return; if (!/(비교과|특강|연수|클리닉|워크숍|워크샵|캠프|세미나|부트캠프)/.test(String(d.name || '') + ' ' + String(d.target || ''))) return; if (N(d.sessions) === 15) d.sessions = 4; d.credit = 0; if (!d._perSet) d.per = 1; },
     totLine: d => { const w = N(d.sessions) || 15, per = N(d.per) || 3, m = uMin(d); const cr = N(d.credit); return `주당 ${per}차시 × ${m}분 = <b>주 ${hm(per * m)}</b> · ${w}주 합계 <b>${uHrs(d)}시간</b>(대학 1시간 = 50분 수업 기준)${cr ? ` · ${cr}학점 기준 ${cr * 15}시간` : ''}`; },
     required: ['name', 'sessions'],
     examples: { name: '예: AI 리터러시와 글쓰기', sessions: '예: 15주' },
@@ -132,7 +134,7 @@
       return R;
     },
     summary: d => [['구성', `${N(d.sessions) || 15}주 × 주 ${N(d.per) || 3}차시(1차시 ${uMin(d)}분) = ${uHrs(d)}시간`], ...(d.start || (d.uend === 'custom' && d.endD) ? [['수강 기간', `${d.start || '개설일'} ~ ${d.uend === 'custom' && d.endD ? d.endD : d.start ? plus(d.start, (N(d.sessions) || 15) * 7 - 1) : `${N(d.sessions) || 15}주 뒤`}`]] : []), ['학점', N(d.credit) ? N(d.credit) + '학점' : '학점 없음(비교과 · 연수)'], ['대상', d.target || '나중에 입력']],
-    apply: (c, d) => { baseApply(c, Object.assign({}, d, { sessions: 0, mins: uMin(d) })); const w = N(d.sessions) || 15; c.credit = N(d.credit) || 0; c.hours = uHrs(d); c.perWeek = N(d.per) || 3; c.sessMin = uMin(d); if (d.start) { c.start = d.start; c.end = plus(d.start, w * 7 - 1); } if (d.uend === 'custom' && d.endD) { c.start = c.start || d.start || td(); c.end = d.endD; c.period = Object.assign({}, c.period || {}, { mode: 'range', start: c.start, end: d.endD }); } if (d.openTo === 'member') c.open = c.open === '전체' ? '회원' : c.open; return c; }
+    apply: (c, d) => { baseApply(c, Object.assign({}, d, { sessions: 0, mins: uMin(d) })); const w = N(d.sessions) || 15; c.credit = N(d.credit) || 0; c.hours = uHrs(d); c.perWeek = N(d.per) || 3; c.sessMin = uMin(d); { const st0 = d.start || c.start || td(); c.start = st0; c.end = plus(st0, w * 7 - 1); c.period = Object.assign({}, c.period || {}, { mode: 'range', start: st0, end: c.end, days: w * 7 }); } /* v38 U-6: 개강일을 비워도 수강 기간은 주차 수만큼(예전에는 '신청 후 90일'로 저장) */ if (d.uend === 'custom' && d.endD) { c.start = c.start || d.start || td(); c.end = d.endD; c.period = Object.assign({}, c.period || {}, { mode: 'range', start: c.start, end: d.endD }); } if (d.openTo === 'member') c.open = c.open === '전체' ? '회원' : c.open; return c; }
   };
   /* 학사 LMS는 기존 lms/* 체계 — 진입만 연결 */
   CF.cfg.univ_lms = {
@@ -224,11 +226,12 @@
     examples: { name: '예: 시니어를 위한 스마트폰 활용', price: '예: 120,000원' },
     templates: [
       { id: 'l-phone', name: '시니어 스마트폰 활용', icon: 'chat', desc: '무료 · 10차시 · 교실', prefill: { name: '시니어를 위한 스마트폰 활용', target: '60세 이상 지역 주민', sessions: 10, mins: 120, price: 0, cap: 20 } },
-      { id: 'l-barista', name: '바리스타 자격 준비', icon: 'award', desc: '유료 · 15차시 · 30시간', prefill: { name: '바리스타 2급 자격 준비', target: '창업 · 취업 준비 성인', sessions: 15, mins: 120, cap: 12 } },
+      /* v38 L-9: '유료' 템플릿은 학습비 예시를 채운다(0원 무료로 개설되던 문제) — 기관 기준에 맞게 고치면 된다 */
+      { id: 'l-barista', name: '바리스타 자격 준비', icon: 'award', desc: '유료 · 15차시 · 30시간', prefill: { name: '바리스타 2급 자격 준비', target: '창업 · 취업 준비 성인', sessions: 15, mins: 120, cap: 12, price: 180000 } },
       { id: 'l-cb-sw', name: '사회복지학개론(학점은행)', icon: 'book', desc: '3학점 · 15차시 · 온라인', prefill: { name: '사회복지학개론', target: '학점은행제 학습자', cb: true, credit: 3, sessions: 15, mins: 180 } },
-      { id: 'l-human', name: '인문학 교양 강좌', icon: 'doc', desc: '유료 · 10차시 · 30시간', prefill: { name: '고전으로 읽는 인문학', target: '지역 주민', sessions: 10, mins: 180, cap: 30 } },
-      { id: 'l-paint', name: '수채화 취미반', icon: 'edit', desc: '유료 · 15차시 · 30시간', prefill: { name: '처음 배우는 수채화', target: '그림이 처음인 성인', sessions: 15, mins: 120, cap: 15 } },
-      { id: 'l-eng', name: '생활 영어 회화', icon: 'chat', desc: '유료 · 15차시 · 30시간', prefill: { name: '여행에서 바로 쓰는 생활 영어 회화', target: '영어를 다시 시작하는 성인', sessions: 15, mins: 120, cap: 20 } },
+      { id: 'l-human', name: '인문학 교양 강좌', icon: 'doc', desc: '유료 · 10차시 · 30시간', prefill: { name: '고전으로 읽는 인문학', target: '지역 주민', sessions: 10, mins: 180, cap: 30, price: 90000 } },
+      { id: 'l-paint', name: '수채화 취미반', icon: 'edit', desc: '유료 · 15차시 · 30시간', prefill: { name: '처음 배우는 수채화', target: '그림이 처음인 성인', sessions: 15, mins: 120, cap: 15, price: 150000 } },
+      { id: 'l-eng', name: '생활 영어 회화', icon: 'chat', desc: '유료 · 15차시 · 30시간', prefill: { name: '여행에서 바로 쓰는 생활 영어 회화', target: '영어를 다시 시작하는 성인', sessions: 15, mins: 120, cap: 20, price: 120000 } },
       { id: 'l-town', name: '우리 동네 역사 탐방', icon: 'building', desc: '무료 · 6차시 · 현장 답사', prefill: { name: '우리 동네 역사 탐방', target: '지역 주민 · 가족', sessions: 6, mins: 120, price: 0, cap: 25 } }
     ],
     plan: d => ({ weeks: Math.min(30, N(d.sessions) || 15), per: 1, mins: N(d.mins) || 120, hours: Math.round(totalMin(d) / 60) }),

@@ -183,7 +183,7 @@ function targets(a) {
     case 'nudge-away': return S.members.filter(m => m.last <= addDays(today(), -30)).map(m => m.id);
     case 'qna-draft': return S.posts.filter(p => p.kind === '질문' && !p.replies).map(p => p.id);
     case 'grade-draft': return pend().map(x => x.id);
-    case 'legal-d7': { const lim = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10); return [...new Set(legalUndone().filter(x => !x.c.end || String(x.c.end).slice(0, 10) <= lim).map(x => x.id))]; } /* v32.8 마감 7일 이내만(QA U3) */
+    case 'legal-d7': { const lim = addDays(today(), 7); return [...new Set(legalUndone().filter(x => !x.c.end || String(x.c.end).slice(0, 10) <= lim).map(x => x.id))]; } /* v32.8 마감 7일 이내만(QA U3) */
     case 'unpaid': return S.bills.filter(b => b.status === '미납').map(b => b.who);
     case 'att-warn': return [...new Set(lowAtt().map(x => x.id))];
     case 'refund5': case 'refund-route': return S.pays.filter(p => p.status === '환불 신청').map(p => p.who);

@@ -12,7 +12,7 @@
   const tutor = () => { try { const p = typeof window.ltPersona === 'function' ? window.ltPersona() : null; if (p && p.n) return p.n; return typeof TCFG === 'function' && TCFG().name ? TCFG().name : ''; } catch (e) { return ''; } };
   const setTxt = (el, t) => { if (el && t && el.textContent !== t) el.textContent = t; };
   function apply() { if (!document.body || document.body.classList.contains('lapp')) return; if (typeof LR === 'undefined' || !LR || !LR.site) return;
-    const [learn, find] = labels(); const tb = document.querySelector('nav.tabbar'); if (tb) { const A = [...tb.querySelectorAll('a')]; const my = A.find(a => /^#(login\/)?my$/.test(a.getAttribute('href') || '')); if (my) setTxt(my.querySelector('span'), learn); const fi = A[1] && A[1] !== my ? A[1] : null; if (fi) setTxt(fi.querySelector('span'), find); }
+    const [learn, find] = labels(); const tb = document.querySelector('nav.tabbar'); if (tb && !(LR.me && LR.me.kind === 'parent')) { /* v38 보호자 탭은 그대로 */ const A = [...tb.querySelectorAll('a')]; const my = A.find(a => /^#(login\/)?my$/.test(a.getAttribute('href') || '')); if (my) setTxt(my.querySelector('span'), learn); const fi = A[1] && A[1] !== my ? A[1] : null; if (fi) setTxt(fi.querySelector('span'), find); }
     const back = document.querySelector('.ap-back [data-ap="modern"]'); const n = tutor(); if (back && n) { const tn = [...back.childNodes].filter(x => x.nodeType === 3).pop(); const t = ` ${n} 앱 화면으로 보기`; if (tn && tn.nodeValue !== t) tn.nodeValue = t; } }
   /* v35 F2b: 학습자 화면의 일반 명칭 '클래스'를 기관 유형 용어(SITE().terms.cls — 교과목 · 수업 · 강좌 · 교육과정 · 훈련과정)로 바꾼다.
      강좌 이름에 '클래스'가 들어간 경우(예: 원데이 클래스)는 그 글을 건드리지 않는다. 조사는 받침에 맞춘다. */
@@ -51,8 +51,11 @@
   function fsSlot() { if (!LR || !LR.site) return; const r = (location.hash.slice(1) || 'home').split('/')[0]; if (!['acct', 'my'].includes(r) || document.querySelector('[data-lfs]')) return;
     const at = document.querySelector('.ls-me .ls-list') || document.querySelector('#lm .lux-acct .shp-list') || document.querySelector('#lm .mypage .in, #lm section.sec .in'); if (!at) return;
     if (at.classList.contains('ls-list')) at.insertAdjacentHTML('beforeend', window.lFsRow()); else if (at.classList.contains('shp-list')) at.insertAdjacentHTML('afterbegin', `<li>${window.lFsRow()}</li>`); else at.insertAdjacentHTML('afterbegin', window.lFsRow()); }
+  /* v38 F5 L: 평생교육원은 운영자 화면 · 평생교육법 용어 '학습비 반환'을 학습자에게도 같은 말로 — 메뉴 · 제목은 '학습비 반환(환불)', 본문은 '학습비 반환' */
+  function refundTerm() { if (org().type !== 'lifelong' || !document.body) return; const W = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n => !/환불/.test(n.nodeValue) || /학습비 반환/.test(n.nodeValue) || (n.parentElement && n.parentElement.closest('script,style,textarea,input,[contenteditable]')) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }); const L = []; let n; while ((n = W.nextNode())) L.push(n);
+    L.forEach(n => { const head = n.parentElement && n.parentElement.closest('h1,h2,h3,nav,a,button,.ls-tx b,summary,th'); n.nodeValue = n.nodeValue.replace(/환불/g, head ? '학습비 반환(환불)' : '학습비 반환').replace(/학습비 반환(\(환불\))?로(?![가-힣])/g, '학습비 반환$1으로'); }); }
   window.lFixClsTerm = fixCls;
-  let q = false; const kick = () => { if (q) return; q = true; requestAnimationFrame(() => { q = false; apply(); try { fixCls(); } catch (e) { } try { menuFix(); } catch (e) { } try { fsSlot(); } catch (e) { } setTimeout(() => { try { fixCls(); } catch (e) { } }, 250); /* v37 L2: 바닥 Shadow DOM은 lmerge가 다음 프레임에 붙이므로 한 번 더 */ }); };
+  let q = false; const kick = () => { if (q) return; q = true; requestAnimationFrame(() => { q = false; apply(); try { fixCls(); } catch (e) { } try { menuFix(); } catch (e) { } try { fsSlot(); } catch (e) { } try { refundTerm(); } catch (e) { } setTimeout(() => { try { fixCls(); } catch (e) { } }, 250); /* v37 L2: 바닥 Shadow DOM은 lmerge가 다음 프레임에 붙이므로 한 번 더 */ }); };
   const start = () => { new MutationObserver(kick).observe(document.body, { childList: true, subtree: true }); kick(); };
   if (document.body) start(); else addEventListener('DOMContentLoaded', start);
   addEventListener('hashchange', kick);

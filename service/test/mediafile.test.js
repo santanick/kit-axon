@@ -103,8 +103,10 @@ test('/api/media/f', async t => {
   await t.test('삭제', async () => {
     const r = await call('A', 'DELETE', V.url); assert.equal(r.status, 200); assert.equal((await call('nobody', 'GET', V.url)).status, 404);
     assert.equal((await call('A', 'DELETE', V.url)).status, 404);
-    const n = await pool.query("select count(*)::int n from media_part where id = $1", [V.id.split('.')[1]]); assert.equal(n.rows[0].n, 0);
-    const au = await pool.query("select action from audit_log where tenant_id = $1 and action like 'media.%' order by id", [A.tid]); assert.ok(au.rows.some(x => x.action === 'media.file') && au.rows.some(x => x.action === 'media.delete'));
+    /* v38: media_part · audit_log는 FORCE RLS — 기관 문맥(app.tenant)을 세우고 읽는다(문맥 없이 읽으면 0행이라 감사 기록이 없는 것처럼 실패) */
+    const tq = async (q, a) => { const c = await pool.connect(); try { await c.query('begin'); await c.query("select set_config('app.tenant', $1, true)", [A.tid]); const r = await c.query(q, a); await c.query('commit'); return r; } finally { c.release(); } };
+    const n = await tq("select count(*)::int n from media_part where id = $1", [V.id.split('.')[1]]); assert.equal(n.rows[0].n, 0);
+    const au = await tq("select action from audit_log where tenant_id = $1 and action like 'media.%' order by id", [A.tid]); assert.ok(au.rows.some(x => x.action === 'media.file') && au.rows.some(x => x.action === 'media.delete'));
   });
   await new Promise(ok => app.close(ok)); await pool.end();
 });

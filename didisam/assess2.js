@@ -380,12 +380,12 @@ ACT['a2-cert-view'] = el => { const x = S.certs.find(y => y.id === el.dataset.v)
 ACT['a2-cert-dl'] = el => { const x = S.certs.find(y => y.id === el.dataset.v); if (!x) return; const c = C(x.cls); const T = a2Tpl(c); if (x.design) T.design = x.design; const d = a2CertData(c, x.who, x); a2CertFile(T, d, `수료증_${d.name}_${x.no}.html`); x.opDl = (x.opDl || 0) + 1; logAudit(`수료증 내려받기(운영자) — ${x.no}`); save(); toast('수료증 파일을 내려받았습니다. 열어서 인쇄 · PDF로 저장해 전달하세요.', 'ok'); };
 
 /* ═════════ 디지털 배지: 만료일 · 연결 클래스 수강생 선택 · 취소 불가 정책 · 발급 상세 ═════════ */
-const a2AddM = (d, m) => { const x = new Date(d); x.setMonth(x.getMonth() + +m); return x.toISOString().slice(0, 10); };
+const a2AddM = (d, m) => { const x = new Date(d); x.setMonth(x.getMonth() + +m); return ymdL(x); };
 const a2BdExp = (b, i) => i.exp || (b.validM ? a2AddM(i.at, b.validM) : '');
 const a2BdSt = (b, i) => i.st !== '유효' ? i.st : (a2BdExp(b, i) && a2BdExp(b, i) < today() ? '만료' : '유효');
 const a2Verify = no => `https://${(S.org.domain || 'my.didisam.com')}/badge/verify/${encodeURIComponent(orgShort() + '-' + no)}`;
 function a2BdLedger() { const fb = UI.bdB || '', fs = UI.bdS || ''; const NR = !!S.settings.badgeNoRevoke; const q = String(UI.bdQ || '').trim().toLowerCase(); const F = UI.bdF || {};
-  const all = S.badges.flatMap(b => b.issued.map(i => ({ b, i }))); const ym = new Date().toISOString().slice(0, 7);
+  const all = S.badges.flatMap(b => b.issued.map(i => ({ b, i }))); const ym = today().slice(0, 7);
   const nameOf = i => (S.org.type === 'univ' ? (M(i.who)?.extra?.학번 || '') + ' ' : '') + ((M(i.who) || {}).name || '') + ' ' + ((M(i.who) || {}).nick || '');
   const rows = all.filter(x => (!fb || x.b.id === fb) && (!fs || a2BdSt(x.b, x.i) === fs)).filter(x => !q || (x.b.name + ' ' + ((C(x.b.cls) || {}).name || '') + ' ' + nameOf(x.i)).toLowerCase().includes(q))
     .filter(x => { const at = String(x.i.at || '').slice(0, 10), ex = a2BdExp(x.b, x.i) || ''; return (!F.af || at >= F.af) && (!F.at || at <= F.at) && (!F.perm || !ex) && (F.perm || ((!F.ef || (ex && ex >= F.ef)) && (!F.et || (ex && ex <= F.et)))); })
@@ -499,7 +499,7 @@ function a2SyncSubs() { S.classes.forEach(c => { const it = (c.curriculum || [])
 
 /* ═════════ 학습자 → 운영자 반영(LPX) ═════════ */
 const a2X = x => { const d = x.data || {}; const c = C(d.cls); if (!c) return [null, null, d]; const m = a2Mem(x.who); if (!m) return [null, null, d]; a2c(c); if (!c.learners.includes(m.id)) c.learners.push(m.id); c.prog[m.id] = c.prog[m.id] || { p: 0, exam: null, assign: 'none', att: 0 }; m.last = today(); return [c, m, d]; };
-const a2At = x => String(x.at || new Date().toISOString()).slice(0, 16).replace('T', ' ');
+const a2At = x => atL(x.at || new Date().toISOString()).slice(0, 16); /* v38 현지 시각 */
 LPX['a2-try'] = x => { const [c, m, d] = a2X(x); if (!c) return; const it = c.curriculum.find(i => i.id === d.item); if (!it) return; a2Rules(it); const ans = (Array.isArray(d.ans) ? d.ans : []).slice(0, 60).map(v => Array.isArray(v) ? v : String(v ?? '').slice(0, 1000)); const ord = Array.isArray(d.ord) ? d.ord.slice(0, 60).map(Number).filter(k => k >= 0 && k < (it.qs || []).length) : null; const r = a2Score(it, ans, ord);
   const L = c.tries[it.id] = c.tries[it.id] || []; L.push({ who: m.id, at: a2At(x), score: r.score, pass: it.rules.pass.on ? r.score >= it.rules.pass.v : null, ans, ...(ord && ord.length ? { ord } : {}), n: L.filter(t => t.who === m.id).length + 1, sec: +d.sec || 0 });
   const sc = c.curriculum.filter(a2Exam).map(i => a2Best(c, i, m.id)).filter(v => v != null); if (sc.length) c.prog[m.id].exam = Math.round(sc.reduce((a, b) => a + b, 0) / sc.length); a2AutoCert(c, m.id); };

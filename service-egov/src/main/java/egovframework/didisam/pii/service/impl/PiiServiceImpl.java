@@ -58,7 +58,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
     private void plog(String tid, String actor, String action, String lid, String purpose, List<String> fields) {
         mapper.insertLog(tid, cut(String.valueOf(actor), 80), action, lid, purpose, String.join(",", fields));
     }
-    record Org(String type, JsonNode mode, boolean under14, JsonNode social, boolean idvOn, String idvReason, boolean manual) {}
+    record Org(String type, JsonNode mode, boolean under14, JsonNode social, boolean idvOn, String idvReason, boolean manual, boolean parent) {}
     /** v33 메일 미설정: 운영(NODE_ENV=production)은 '발송 미설정' 안내(503), 개발은 응답에 인증번호(dev_code) */
     private boolean devCode() { return p.devOtp || (!mail.on && !p.prod); }
     /** v33 학습자 → 운영자 요청함 기록(가명 sid만) — L 역할 안에서 호출 */
@@ -95,7 +95,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         JsonNode a = or(acct, F.objectNode());
         JsonNode soc = get(a, "social"); JsonNode idv = get(a, "idv");
         boolean on = truthy(idv) && truthy(get(idv, "on"));
-        return new Org(type, or(get(a, "mode"), t("open")), truthy(get(a, "under14")), soc != null && soc.isArray() ? soc : arrNode(PROVIDERS.stream().map(Js::t).toList()), on, on ? sOr(get(idv, "reason")) : null, strictEq(get(a, "approve"), "manual"));
+        return new Org(type, or(get(a, "mode"), t("open")), truthy(get(a, "under14")), soc != null && soc.isArray() ? soc : arrNode(PROVIDERS.stream().map(Js::t).toList()), on, on ? sOr(get(idv, "reason")) : null, strictEq(get(a, "approve"), "manual"), "k12".equals(type) && truthy(get(a, "parent")));
     }
 
     /** SNS 식별자 → 해시. 운영: 공급자 토큰을 서버에서 검증해 sub를 받는다(카카오 · 네이버 · 구글 · 애플). */
@@ -148,7 +148,15 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             Org org = r.L(() -> orgOf(tid)); boolean univ = "univ".equals(org.type());
             if (r.L(() -> strictPw(tid)) && !truthy(get(consent, "third"))) throw processException("dd.400.consent_third");
             if (strictEq(org.mode(), "code") && !univ) throw processException("dd.403.mode.code");
-            if (strictEq(org.mode(), "invite")) throw processException("dd.403.mode.invite");
+            /* v38 초대 링크(공용 · 개인 itok) — Node pii.js와 같은 규칙: 맞는 토큰이면 초대제 기관도 가입 · 승인 없이 정회원, 요청함에 token */
+            /* v38 보호자 계정(학원 초중고 · 보호자 가입 켜짐) — learner_accounts.kind = 'parent' */
+            String kind = "parent".equals(sOr(get(b, "kind"))) ? "parent" : "learner"; if ("parent".equals(kind) && (univ || !org.parent())) throw processException("dd.403.kind");
+            String tok = trim(sOr(get(b, "token"))); boolean tokOk = false;
+            if (!tok.isEmpty()) { if (!tok.matches("[\\w-]{6,40}")) throw processException("dd.403.invite_bad"); String ft = tok, fk = kind; tokOk = r.L(() -> mapper.selectInviteOk(tid, ft, "parent".equals(fk) ? "parent" : "student", "parent".equals(fk) ? "parents" : "members")); if (!tokOk) throw processException("dd.403.invite_bad"); }
+            /* v38 보호자 동의를 마친 보호자의 1회용 연결 토큰(gtok) → 그 자녀와 바로 연결(요청함에 famSid) */
+            String famSid = "";
+            if ("parent".equals(kind) && !sOr(get(b, "gtok")).isEmpty()) { String gth = DdCrypto.sha(sOr(get(b, "gtok"))); String f = r.P(() -> mapper.useParentTok(tid, gth)); if (f == null) throw processException("dd.403.gtok_bad"); famSid = f; tokOk = true; }
+            if (strictEq(org.mode(), "invite") && !tokOk) throw processException("dd.403.mode.invite");
             String nick = trim(sOr(get(b, "nickname"))); String login = via, sub = null, email = "", stu = null, dept = "";
             if (univ) {
                 if (!"univ".equals(via)) throw processException("dd.400.via.univ");
@@ -165,7 +173,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
                 login = s.prov(); sub = bidx(tid, "sub:" + s.prov(), s.sub());
             } else throw processException("dd.400.via");
             if (!NICK_RE.matcher(nick).matches()) throw processException("dd.400.nickname");
-            boolean minor = !univ && !(get(b, "age14") != null && get(b, "age14").isBoolean() && get(b, "age14").booleanValue()); String gContact = "";
+            boolean minor = !univ && !"parent".equals(kind) && !(get(b, "age14") != null && get(b, "age14").isBoolean() && get(b, "age14").booleanValue()); String gContact = "";
             if (minor) {
                 if (!org.under14()) throw processException("dd.403.age");
                 gContact = trim(sOr(get(get(b, "guardian") == null || !truthy(get(b, "guardian")) ? null : get(b, "guardian"), "contact")));
@@ -175,10 +183,10 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             }
             String pw = null; JsonNode pwN = get(b, "pw");
             if (truthy(pwN)) { String ps = str(pwN); if (r.L(() -> strictPw(tid)) && !egovframework.didisam.cmm.DdModule.pwRule(ps)) throw processException("dd.400.pw_rule"); if (ps.length() >= 8 && ps.length() <= 64) pw = DdCrypto.hashPw(ps); else throw processException("dd.400.pw.range"); }
-            String st = minor ? "guardian_pending" : "active"; boolean pend = !minor && org.manual();
+            String st = minor ? "guardian_pending" : "active"; boolean pend = !minor && org.manual() && !tokOk;
             String acctLogin = univ ? "univ" : login; String fstu = stu, fdept = dept, fnick = nick; boolean fminor = minor;
             String lid;
-            try { lid = r.L(() -> mapper.insertAccount(tid, acctLogin, fnick, fstu, fdept, st, fminor, truthy(get(consent, "mkt")))); }
+            try { String fkind = kind; lid = r.L(() -> mapper.insertAccount(tid, fkind, acctLogin, fnick, fstu, fdept, st, fminor, truthy(get(consent, "mkt")))); }
             catch (DuplicateKeyException e) { throw processException("dd.409.exists.stuno"); }
             ObjectNode cons = F.objectNode(); cons.put("tos", true); cons.put("privacy", true); if (truthy(get(consent, "third"))) cons.put("third", true); cons.put("mkt", truthy(get(consent, "mkt")));
             cons.put("ver", cut(str(or(get(consent, "ver"), t("v23"))), 20)); cons.put("at", isoNow());
@@ -199,8 +207,10 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             ObjectNode det = F.objectNode(); det.put("login", acctLogin); det.put("minor", minor);
             r.L(() -> { txm.insertAudit(tid, "learner:" + lid, "learner.signup", stringify(det)); return null; });
             /* v33 운영자 요청함으로 가입 알림(가명 sid · 닉네임 · 가린 이메일만). 보호자 동의가 필요한 가입은 동의 후에 보낸다 */
-            if (!minor) { ObjectNode jd = F.objectNode(); jd.put("kind", "learner"); jd.put("login", acctLogin); jd.put("sid", lid); jd.put("nick", nick); jd.put("emailMask", email.isEmpty() ? "" : maskEmail(email)); jd.put("dept", dept); jd.put("minor", false);
-                ObjectNode jc = jd.putObject("consent"); jc.put("tos", true); jc.put("privacy", true); jc.put("mkt", truthy(get(consent, "mkt"))); jc.put("at", cons.get("at").textValue()); jd.set("extra", cleanExtra(get(b, "extra")));
+            if (minor && tokOk && !tok.isEmpty()) { String ft2 = tok; r.L(() -> mapper.updateInviteToken(tid, lid, ft2)); }
+            String lkEb = "learner".equals(kind) && !email.isEmpty() && !univ ? K.bidx(tid, "email", email) : null; ObjectNode lk = lkEb == null ? null : linkOf(r, tid, lkEb);
+            if (!minor) { ObjectNode jd = F.objectNode(); jd.put("kind", kind); jd.put("login", acctLogin); jd.put("sid", lid); jd.put("nick", nick); jd.put("emailMask", email.isEmpty() ? "" : maskEmail(email)); jd.put("dept", dept); jd.put("minor", false);
+                ObjectNode jc = jd.putObject("consent"); jc.put("tos", true); jc.put("privacy", true); jc.put("mkt", truthy(get(consent, "mkt"))); jc.put("at", cons.get("at").textValue()); jd.set("extra", cleanExtra(get(b, "extra"))); if (tokOk && !tok.isEmpty()) jd.put("token", tok); if (!famSid.isEmpty()) jd.put("famSid", famSid); if (lk != null) jd.set("link", lk);
                 r.L(() -> { evIns(tid, lid, "acct-join", jd); return null; }); }
             return new String[]{ lid, st, nick, acctLogin, gtok, pend ? "1" : "" };
         });
@@ -211,6 +221,9 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         if ("guardian_pending".equals(out[1])) { o.put("guardian", "sent"); if (devCode()) o.put("dev_token", out[4]); }
         return o;
     }
+
+    /** v38 같은 이메일로 등록된 가입 전 회원(members[].ebx) — 한 명일 때만 { mid, by, ebx }. 이메일 원문은 풀지 않음(Node linkOf와 같음) */
+    private ObjectNode linkOf(PiiTx.Roles r, String tid, String eb) throws Exception { List<String> L = r.L(() -> mapper.selectLinkMid(tid, eb)); if (L == null || L.size() != 1) return null; ObjectNode o = F.objectNode(); o.put("mid", L.get(0)); o.put("by", "email"); o.put("ebx", eb); return o; }
 
     @Override public Map<String, Object> guardian(HttpServletRequest req, byte[] body, String tid) throws Exception {
         JsonNode b = DdWeb.readBody(body, props.getInt("body.piiMax")); limit("lg:" + web.ip(req), "rate.lg.max", "rate.lg.winMs");
@@ -225,14 +238,17 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
                 r.P(() -> { mapper.deleteGuardianById(gid); mapper.deleteIdentity(tid, lid); plog(tid, "guardian", "delete", lid, "guardian_refused", List.of("all")); return null; });
                 r.L(() -> mapper.withdrawRefused(tid, lid)); o.put("status", "refused"); return o;
             }
-            r.P(() -> { mapper.guardianOk(gid); plog(tid, "guardian", "consent", lid, "guardian_consent", List.of()); return null; });
+            byte[] pb = new byte[24]; DdCrypto.RND.nextBytes(pb); String ptok = Base64.getUrlEncoder().withoutPadding().encodeToString(pb); String pth = DdCrypto.sha(ptok); /* v38 동의한 보호자만 받는 1회용 보호자 계정 연결 토큰 */
+            r.P(() -> { mapper.guardianOk(gid); mapper.setParentTok(gid, pth); plog(tid, "guardian", "consent", lid, "guardian_consent", List.of()); return null; });
             r.L(() -> mapper.activateGuardian(tid, lid));
             Map<String, Object> a = r.L(() -> mapper.selectAcctBrief(tid, lid)); String em = r.P(() -> mapper.selectEmailMask(tid, lid));
             ObjectNode jd = F.objectNode(); jd.put("kind", "learner"); jd.put("login", a == null || a.get("login") == null ? "email" : (String) a.get("login")); jd.put("sid", lid); jd.put("nick", a == null || a.get("nickname") == null ? "" : (String) a.get("nickname"));
             jd.put("emailMask", em == null ? "" : em); jd.put("dept", a == null || a.get("dept") == null ? "" : (String) a.get("dept")); jd.put("minor", true); String now = isoNow();
             ObjectNode jc = jd.putObject("consent"); jc.put("tos", true); jc.put("privacy", true); jc.put("mkt", a != null && Boolean.TRUE.equals(a.get("mkt"))); jc.put("at", now); jd.putObject("extra"); ObjectNode jg = jd.putObject("guardian"); jg.put("ok", true); jg.put("at", now);
+            String itok = r.L(() -> mapper.selectInviteToken(tid, lid)); if (itok != null && !itok.isEmpty()) jd.put("token", itok);
+            Map<String, Object> ebm = r.P(() -> mapper.selectEmailBidx(tid, lid)); String eb = ebm == null ? null : (String) ebm.get("email_bidx"); ObjectNode lk = eb == null ? null : linkOf(r, tid, eb); if (lk != null) jd.set("link", lk);
             r.L(() -> { evIns(tid, lid, "acct-join", jd); return null; });
-            o.put("status", "active"); return o;
+            Org org = r.L(() -> orgOf(tid)); o.put("status", "active"); if (org.parent()) o.put("parent_token", ptok); return o;
         });
     }
 

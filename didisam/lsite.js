@@ -140,7 +140,7 @@ function lpApply() {
     if (!/^[\w-]{4,20}$/.test(sid) || !p) return;
     let m = S.members.find(x => x.sid === sid || (univ && x.name === sid));
     if (!m) { const code = (S.codes || []).find(c => c.sid === sid); m = { id: uid('m'), name: univ ? sid : `학습자 ${sid}`, nick: '', email: '', phone: '', sid, group: S.groups[0]?.id || '', grade: '정회원', joined: today(), last: today(), extra: { 학번: sid, 학과: code?.dept || '' } }; S.members.push(m); }
-    if (p.at) m.last = String(p.at).slice(0, 10);
+    if (p.at) { const d = new Date(p.at); m.last = /T.*(Z|[+-]\d\d:?\d\d)$/.test(String(p.at)) && !isNaN(d) ? new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) : String(p.at).slice(0, 10); } /* v38 현지 날짜(최근 접속이 가입일보다 하루 앞서던 문제, QA C11 · U8) */
     Object.entries(p.diag || {}).forEach(([dg, r]) => { const d = (S.diags || []).find(x => x.id === dg); if (d && r && r.out) { d.res = d.res || {}; d.res[m.id] = { out: r.out, score: r.score, at: r.at }; m.diag = r.out; n++; } });
     Object.entries(p.cls || {}).forEach(([cid, r]) => { const c = C(cid); if (!c || !r) return; if (!c.learners.includes(m.id)) c.learners.push(m.id); const tot = Math.max(1, (c.curriculum || []).length); const done = Object.values(r.items || {}).filter(x => x && x.done).length; c.prog[m.id] = { ...(c.prog[m.id] || { exam: null, assign: 'none', att: 0 }), p: Math.max(+((c.prog[m.id] || {}).p) || 0, Math.min(100, Math.round(done / tot * 100))) }; /* v32.8 진도는 줄지 않는다(QA U6) */ if (r.sub && r.sub.text && (c.prog[m.id].assign === 'none' || !c.prog[m.id].assign)) { c.prog[m.id].assign = 'submitted'; c.prog[m.id].sub = String(r.sub.text).slice(0, 4000); c.prog[m.id].subAt = String(r.sub.at || today()).slice(0, 10); } n++; });
     Object.entries(p.tut || {}).forEach(([tid, r]) => { const t = (S.tuts || []).find(x => x.id === tid); if (t && r) { t.stat = t.stat || {}; t.stat[m.id] = { w: r.w || 0, steps: (r.steps || []).filter(Boolean).length, mission: r.mission ? String(r.mission).slice(0, 2000) : '', at: r.at }; n++; } });
@@ -149,5 +149,10 @@ function lpApply() {
 }
 /* v38 F5 L · U: 운영자가 꺼 둔 기능(배지 · 디지털북)과 영상 없는 예시 튜토리얼은 게시본에서 빼 학습자에게 보이지 않게 한다 */
 { const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); try { if (r && typeof menuOn === 'function') { const on = id => !MENU[id] || menuOn(id);
+  r.f538 = 1; /* 이 표시가 없는 옛 게시본이면 사이트 화면에 '다시 게시' 안내 */
   if (!on('badge')) r.badges = [];
   r.pages = (r.pages || []).filter(p => !(p.id === 'books' && !on('dbook') && !on('library')) && !(p.id === 'tutorials' && !(r.tuts || []).some(t => t.yt)) && !(p.id === 'courses' && !(r.tracks || []).length && !(r.classes || []).length)); } } catch (e) { console.error(e); } return r; }; }
+/* v38 F5: v38 이전 게시본(결제 · '무료' · 메뉴 이름 정리 전)이면 사이트 화면 위에 '다시 게시하면 반영됩니다' 안내 */
+if (typeof AFTER !== 'undefined') AFTER.push(() => { try { if (!S || !S.org || typeof CUR === 'undefined' || CUR.tab !== 'site') return; const pub = S.lsite && S.lsite.pub; const m = document.querySelector('#main'); if (!pub || pub.f538 || !m || m.querySelector('.f5-repub')) return;
+  m.insertAdjacentHTML('afterbegin', `<div class="note f5-repub" role="status" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px">${typeof ic === 'function' ? ic('info', 16) : ''}<span style="flex:1;min-width:200px">학습자 화면 문구(결제 · '무료' 표시, 메뉴 이름)가 바뀌었습니다. 다시 게시하면 학습자 사이트에 반영됩니다.</span><button type="button" class="btn sm pri" data-act="f5-repub">다시 게시하기</button></div>`); } catch (e) { } });
+if (typeof ACT !== 'undefined') ACT['f5-repub'] = () => { (typeof smPublish === 'function' ? smPublish : ACT['ls-pub'])(); };

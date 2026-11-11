@@ -12,13 +12,26 @@
   <select id="selectOrg" resultType="java.util.LinkedHashMap">
     select doc->'org'->>'type' type, (doc->'settings'->'acct')::text acct, (doc->'org'->'cpl')::text cpl from tenant_state where tenant_id = #{tid}
   </select>
+  <!-- v38 초대 토큰(공용 초대 · 등록 회원 개인 초대 itok) 확인 — Node pii.js signup과 같은 조건 -->
+  <select id="selectInviteOk" resultType="boolean">
+    select exists(select 1 from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'invites') = 'array' then t.doc->'invites' else '[]'::jsonb end) i where t.tenant_id = #{tid} and i->>'token' = #{tok} and i->>'active' = 'true' and coalesce(nullif(i->>'target', ''), 'student') = #{target})
+      or exists(select 1 from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->#{arr}) = 'array' then t.doc->#{arr} else '[]'::jsonb end) m where t.tenant_id = #{tid} and m->>'itok' = #{tok})
+  </select>
   <select id="insertAccount" resultType="string" flushCache="true" useCache="false">
     insert into learner_accounts (tenant_id, kind, login, nickname, student_no, dept, status, minor, mkt)
-    values (#{tid}, 'learner', #{login}, #{nick}, #{stu}, #{dept}, #{st}, #{minor}, #{mkt}) returning learner_id::text
+    values (#{tid}, #{kind}, #{login}, #{nick}, #{stu}, #{dept}, #{st}, #{minor}, #{mkt}) returning learner_id::text
   </select>
   <update id="withdrawRefused">
     update learner_accounts set status = 'withdrawn', nickname = '탈퇴 회원', withdrawn_at = now() where tenant_id = #{tid} and learner_id = cast(#{lid} as uuid)
   </update>
+  <!-- v38 같은 이메일로 등록된 가입 전 회원(members[].ebx = 이메일 블라인드 인덱스) — Node pii.js linkOf와 같은 조건 -->
+  <select id="selectLinkMid" resultType="string">
+    select m->>'id' from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'members') = 'array' then t.doc->'members' else '[]'::jsonb end) m where t.tenant_id = #{tid} and m->>'ebx' = #{eb} and coalesce(m->'acct'->'consent', 'null'::jsonb) = 'null'::jsonb and coalesce(m->>'withdrawn', '') = '' and coalesce(m->>'src', '') &lt;&gt; 'manual' limit 2
+  </select>
+  <update id="updateInviteToken">update learner_accounts set invite_token = #{tok} where tenant_id = #{tid} and learner_id = cast(#{lid} as uuid)</update>
+  <select id="selectInviteToken" resultType="string">select invite_token from learner_accounts where tenant_id = #{tid} and learner_id = cast(#{lid} as uuid)</select>
+  <select id="useParentTok" resultType="string" flushCache="true" useCache="false">update pii.guardian set parent_tok_hash = null where tid = #{tid} and parent_tok_hash = #{th} and status = 'ok' returning learner_id::text</select>
+  <update id="setParentTok">update pii.guardian set parent_tok_hash = #{th} where id = cast(#{id} as uuid)</update>
   <update id="activateGuardian">
     update learner_accounts set status = 'active' where tenant_id = #{tid} and learner_id = cast(#{lid} as uuid) and status = 'guardian_pending'
   </update>

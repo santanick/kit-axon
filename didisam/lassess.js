@@ -6,7 +6,7 @@
 const A2L = { run: null, vp: null, cue: null, last: null };
 const a2lT = v => { if (!v) return null; const t = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(v) ? v + 'T00:00' : v); return Number.isFinite(t) ? t : null; };
 const a2lEnd = v => { if (!v) return null; return /^\d{4}-\d{2}-\d{2}$/.test(v) ? a2lT(v + 'T23:59:59') : a2lT(v); };
-const a2lDT = v => String(v || '').replace('T', ' ');
+const a2lDT = v => lLocal(v); /* v38 현지 시각 */
 const a2lmmss = s => { s = Math.max(0, Math.floor(+s || 0)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
 const a2lSize = b => !b ? '' : b >= 1024 ** 2 ? (b / 1024 ** 2).toFixed(1) + 'MB' : Math.max(1, Math.round(b / 1024)) + 'KB';
 const a2lRoom = () => { try { return LR.mode === 'demo' && LR.tid ? JSON.parse(localStorage.getItem('didisam.room.' + LR.tid) || 'null') : null; } catch (e) { return null; } };

@@ -17,7 +17,7 @@
   const live = () => typeof LIVE !== 'undefined' && !!(LIVE && LIVE.user);
   const td = () => today();
   const dday = d => { if (!d) return null; return Math.round((new Date(d + 'T00:00:00') - new Date(td() + 'T00:00:00')) / 864e5); };
-  const plus = (d, n) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+  const plus = (d, n) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return ymdL(x); };
   const WD = '일월화수목금토';
   /* 내가 볼 강좌: 교수자는 담당 강좌만 */
   const myCls = () => { const L = arr(S.classes).filter(c => c.status !== '종료'); if (!isT() || typeof tCls !== 'function') return L; const T = new Set(tCls().map(c => c.id)); return L.filter(c => T.has(c.id)); };
@@ -79,7 +79,7 @@
     p_apply: { n: '신청', u: '명', v: () => { const M = arr(S.members).filter(m => !m.withdrawn); const n = M.filter(m => m.joined && daysAgo(m.joined) <= 30).length; const w = M.filter(m => m.grade === '승인 대기').length; return { v: n, sub: `최근 30일 · 승인 대기 ${N(w)}명`, tone: w ? 'w' : '' }; }, act: ['enroll', 'members'], b: '신청 처리' },
     p_done: { n: '수료', u: '%', v: () => { let all = 0, dn = 0; myCls().forEach(c => { all += (c.learners || []).length; dn += doneN(c); }); /* v36 R1 이수 판정 한 곳(clsDone) */ return { v: all ? Math.round(dn / all * 100) : 0, sub: `${t('done')} ${N(dn)}명 / 수강 ${N(all)}명` }; }, act: ['cert', 'class'], b: () => `${t('done')} 처리` },
     p_sat: { n: '만족도', u: '점', v: () => { const R = arr(S.reviews).filter(r => !r.hidden && +r.stars > 0); const V = R.map(r => +r.stars); myCls().forEach(c => Object.values(c.svres || {}).forEach(x => { const s = +((x && (x.score || x.stars)) || 0); if (s > 0 && s <= 5) V.push(s); })); return { v: V.length ? (Math.round(V.reduce((a, b) => a + b, 0) / V.length * 10) / 10).toFixed(1) : '—', sub: V.length ? `5점 만점 · 응답 ${N(V.length)}건` : '아직 응답이 없습니다' }; }, act: ['community', 'assess', 'class'], b: '후기 · 설문 보기' },
-    p_legal: { n: '법정의무교육 미이수', u: '명', v: () => { const n = typeof legalUndone === 'function' ? new Set(legalUndone().map(x => x.id)).size : 0; return { v: n, sub: '마감 전 안내가 필요합니다', tone: n ? 'w' : '' }; }, act: ['compliance', 'members'], b: '미이수자 보기' },
+    p_legal: { n: '법정의무교육 미이수', u: '명', v: () => { const n = typeof legalUndone === 'function' ? new Set(legalUndone().map(x => x.id)).size : 0; const has = (S.classes || []).some(c => c && c.legal); return { v: n, sub: !has ? '법정의무 과정이 아직 없습니다' : n ? '마감 전 안내가 필요합니다' : '모두 이수했습니다', tone: n ? 'w' : '' }; } /* v38 P-16: 법정 과정이 없거나 미이수 0명이면 '안내 필요'라고 하지 않는다 */, act: ['compliance', 'members'], b: '미이수자 보기' },
     l_refund: { n: '학습비 반환 신청', u: '건', v: () => { const n = arr(S.pays).filter(p => p.status === '환불 신청').length; return { v: n, sub: n ? '반환 기한 안에 처리합니다' : '처리할 신청이 없습니다', tone: n ? 'w' : '' }; }, act: ['lifelong', 'sales'], b: '반환 처리' },
     u_diag: { n: 'AI 진단 미완료', u: '명', v: () => { const n = arr(S.members).filter(m => !m.withdrawn && !m.diag).length; return { v: n, sub: `전체 ${t('learner')} ${N(arr(S.members).length)}명 중` }; }, act: ['diag', 'members'], b: '진단 안내' },
 

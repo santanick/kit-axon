@@ -43,7 +43,7 @@ const TST = [
   { id: 'operate', n: '강의 운영', d: '질문 답변 · 채점 · 진도 독려', done: c => c.status === '운영중' && Date.parse(c.end) < Date.now() && !tPend(c) && !tQs(c).length, st: c => c.status === '운영중' ? `채점 ${tPend(c)} · 질문 ${tQs(c).length}` : '개설 후' },
   { id: 'report', n: '성과 · 개선', d: '이수 · 성적 · 다음 학기 개선점', done: c => !!c.rep, st: c => c.rep ? '리포트 완료' : '학기 말' }
 ];
-const tStageOf = c => (TST.find(s => !s.done(c)) || TST[TST.length - 1]);
+const tStageOf = c => { if (c.status === '운영중' && (c.learners || []).length) { const i = TST.findIndex(s => s.id === 'operate'); return TST.slice(i).find(s => !s.done(c)) || TST[TST.length - 1]; } /* v38 F5 L23: 수강생이 있는 운영 중 강좌는 실제 운영 상태(강의 운영 · 성과)로 표시한다 — 비어 있는 차시는 '콘텐츠 채우기'로 따로 안내 */ return TST.find(s => !s.done(c)) || TST[TST.length - 1]; };
 const tQ = (sid, c) => { const n = c ? `「${c.name}」 ` : ''; return ({
   design: [(typeof FILLQ === 'function' && FILLQ().class) || 'AI 리터러시 15주 교과목 설계해줘', '데이터 분석 기초 8주 과정 설계해줘'],
   develop: [`${n}빈 항목 AI로 채워줘`, `${n}3차시 강의자료 만들어줘`],

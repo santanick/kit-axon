@@ -24,6 +24,7 @@ public class DdStateCrypto extends EgovAbstractServiceImpl {
         if (!c.ready() || doc == null || !doc.isObject()) return doc; ObjectNode out = ((ObjectNode) doc).deepCopy();
         for (String kind : SET.keySet()) { JsonNode arr = out.get(kind); if (arr == null || !arr.isArray()) continue;
             for (JsonNode n : (ArrayNode) arr) { if (!n.isObject()) continue; ObjectNode x = (ObjectNode) n;
+                if ("members".equals(kind)) { JsonNode em = x.get("email"); if (em != null && em.isTextual() && !em.asText().isEmpty() && !em.asText().startsWith(PFX)) x.put("ebx", c.bidx(tid, "email", em.asText())); else if (em == null || !em.isTextual() || em.asText().isEmpty()) x.remove("ebx"); } /* v38 이메일 블라인드 인덱스(Node statecrypt와 같음) */
                 for (String f : SET.get(kind)) { JsonNode v = x.get(f); if (v != null && v.isTextual() && !v.asText().isEmpty()) x.put(f, PFX + c.enc(v.asText(), aad(tid, kind, x, f))); }
                 for (String jf : JSON_FIELDS.getOrDefault(kind, List.of())) { JsonNode e = x.get(jf); if (e != null && (e.isObject() || e.isArray()) && !e.isEmpty()) x.put(jf, PFX + c.enc(e.toString(), aad(tid, kind, x, jf))); }
             } }

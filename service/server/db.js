@@ -349,6 +349,9 @@ const MIGRATIONS = [
    create policy tenant_iso on media_part using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
    grant update (status) on media to didisam_tenant;
    grant select, insert, update, delete on media_part to didisam_tenant;`,
+  /* v38 계정 연결: 14세 미만 가입의 초대 토큰(보호자 동의 뒤 요청함에 실음, 개인정보 아님) · 동의한 보호자의 1회용 보호자 계정 연결 토큰(해시) */
+  `alter table learner_accounts add column if not exists invite_token text;
+   alter table pii.guardian add column if not exists parent_tok_hash text;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).
