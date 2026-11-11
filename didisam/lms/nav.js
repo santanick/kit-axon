@@ -56,6 +56,7 @@
 .lmsnav-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 16px}
 .lmsnav-sub .lnd{flex:1 1 100%;margin:0 0 2px;color:var(--mut,#64748b);font-size:13px}
 .lmsnav-sub button{border:1px solid var(--line,#e2e8f0);background:var(--card,#fff);color:inherit;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+@media (max-width:600px){.lmsnav-sub button{min-height:44px;padding:10px 14px}} /* v38 390 하위 탭 44px */
 .lmsnav-sub button.on{background:var(--pri,#5C74F6);border-color:var(--pri,#5C74F6);color:#fff}
 .lmsnav-sub button.more{border-style:dashed}
 .side .ri .nvn{display:none}`; document.head.appendChild(st); }

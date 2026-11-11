@@ -174,7 +174,7 @@ function bComposer() {
   </header>
   <div class="bmseg" role="tablist" aria-label="화면 전환"><button role="tab" type="button" data-act="bld-pane" data-v="chat" aria-selected="${!document.body.classList.contains('b-pv')}">대화</button><button role="tab" type="button" data-act="bld-pane" data-v="pv" aria-selected="${document.body.classList.contains('b-pv')}">미리보기${UI.bnew ? `<em>${UI.bnew}</em>` : ''}</button></div>
   <div class="bx">
-    <nav class="brail" aria-label="작업 공간">${rail()}<button class="ri ${w === 'settings' ? 'on' : ''}" data-act="go" data-v="settings">${ic('gear')}<span>설정</span></button></nav>
+    <nav class="brail" aria-label="작업 공간">${rail()}${S.me.role === 'teacher' ? '' : `<button class="ri ${w === 'settings' ? 'on' : ''}" data-act="go" data-v="settings">${ic('gear')}<span>설정</span></button>`}</nav>
     <section class="bchat" aria-label="AI SAM 대화">
       <div class="bch"><span class="orb">${ic('spark', 18)}</span><div><b>AI SAM</b><small>${esc(S.org.name)} 운영 비서</small></div><span class="sp"></span>${typeof clBadge === 'function' ? clBadge() : ''}<button class="btn sm ghost" data-act="bld-clear" title="대화 지우기">새 대화</button></div>
       <div class="thread" aria-live="polite">${threadHTML()}</div>${bComposer()}
