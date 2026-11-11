@@ -14,7 +14,7 @@ function BRIEF() {
   if (ty === 'corp') L.unshift({ k: 'legal', label: '법정교육 미이수', n: new Set(legalUndone().map(x => x.id)).size, q: '법정교육 미이수자에게 마감 안내 보내줘', unit: '명' });
   if (ty === 'voc') L.unshift({ k: 'att', label: '출석률 80% 미만', n: new Set(lowAtt().map(x => x.id)).size, q: '출석률 80% 미만 훈련생에게 경고 보내줘', unit: '명' });
   if (ty === 'lifelong' || ty === 'adult') L.unshift({ k: 'refund', label: ty === 'lifelong' ? '학습비 반환 신청' : '환불 신청', n: S.pays.filter(p => p.status === '환불 신청').length, q: '환불 신청 기한 확인해줘', unit: '건' });
-  if (ty === 'univ') L.unshift({ k: 'diag', label: 'AI 진단 미완료', n: S.members.filter(m => !m.diag).length, q: 'AI 진단 안 한 학생에게 안내 보내줘', unit: '명' });
+  if (ty === 'univ' && S.org.ed !== 'lms') L.unshift({ k: 'diag', label: 'AI 진단 미완료', n: S.members.filter(m => !m.diag).length, q: 'AI 진단 안 한 학생에게 안내 보내줘', unit: '명' });
   return L.slice(0, 4);
 }
 const EXQ = {

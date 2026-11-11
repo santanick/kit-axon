@@ -100,6 +100,35 @@ const go = async (p, h, w = 1000) => { await p.evaluate(h => { location.hash = h
   await op.evaluate(async sid => { await EFH.call('POST', '/api/lms/e/save', { section: sid, section_id: sid, title: '1주차 과제', status: 'published', due_at: new Date(Date.now() + 5 * 864e5).toISOString() }); }, S1.sid);
   const ymd = await op.evaluate(() => { const d = new Date(Date.now() + 3 * 864e5); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
   await op.evaluate(d => { LMP.demo.l['cal.add']({ scope: 'academic', title: '중간고사 기간', kind: 'exam', starts_at: d + 'T09:00', all_day: true }); const r = LMSX.db().sections[0]; LMSX.notice(r.id, '1주차 수업 안내', '강의실에서 1주차 자료를 확인하세요.', '', { pid: null, label: '교수자' }); save(); }, ymd);
+  /* 2차 #7 통합 달력 [일정 추가] 기본 구분 = 학사(운영자) → 학생 캘린더에 보임 */
+  await op.evaluate(() => go('lmsl-cal')); await op.waitForTimeout(600); await op.evaluate(() => ACT['lmsl-add']()); await op.waitForTimeout(300);
+  ok((await op.$eval('#modal [name=scope]', e => e.value)) === 'academic', '2차 #7 운영자 일정 추가 창의 기본 구분 = 학사');
+  await op.fill('#modal [name=title]', '중간고사 (AI와 데이터 리터러시)'); await op.fill('#modal [name=starts_at]', ymd + 'T10:00'); await op.click('#modal [data-mact=ok]'); await op.waitForTimeout(600);
+  /* 2차 #8 AI SAM 이름 목록(모든 유형 공통 파서) */
+  const NL = await op.evaluate(() => ['이번 학기 교과목 3개 열어줘: 데이터베이스, 웹프로그래밍, 인공지능개론', '데이터베이스 · 웹프로그래밍과 인공지능개론 교과목 만들어줘', '회계 과정 만들어줘, 공지 써줘'].map(q => { const P = siPlan(q); return P.steps.map(x => x.l).join(' | ') + (P.skip.length ? ' skip:' + P.skip.join('/') : ''); }));
+  ok(/데이터베이스 · 웹프로그래밍 · 인공지능개론/.test(NL[0]) && !/skip/.test(NL[0]) && /데이터베이스 · 웹프로그래밍 · 인공지능개론/.test(NL[1]) && /공지/.test(NL[2]), `2차 #8 AI SAM 이름 목록(쉼표 · 가운뎃점 · 와/과) 각각 · 여러 단계는 그대로 (${NL.join(' / ')})`);
+  /* 3차 이름 목록 경계 사례(공통 파서 siNames): '와/과'는 목록 신호(개수 · 콜론 · 쉼표/가운뎃점/빗금)가 있을 때만, 개수가 있으면 수가 맞을 때만 나눈다 */
+  const NC = [['이번 학기 교과목 3개 열어줘: 데이터베이스, 웹프로그래밍, 인공지능개론', '데이터베이스|웹프로그래밍|인공지능개론'], ['데이터베이스 · 웹프로그래밍과 인공지능개론 교과목 만들어줘', '데이터베이스|웹프로그래밍|인공지능개론'],
+    ['회계와 세무 과정 만들어줘', null], ['데이터와 AI 과정 만들어줘', null], ['회계와 세무, 엑셀 실무 과정 2개 만들어줘', '회계와 세무|엑셀 실무'], ['과정 2개 만들어줘: 회계와 세무, 데이터와 AI', '회계와 세무|데이터와 AI'],
+    ['과정 2개 만들어줘: 회계와 세무', '회계|세무'], ['과정 3개 만들어줘: 회계와 세무, 엑셀', '회계|세무|엑셀'], ['회계와 세무 과정 2개 만들어줘', '회계|세무'], ['회계와 세무 과정 1개 만들어줘', null],
+    ['엑셀 과정 3개 만들어줘', null], ['회계 과정 만들어줘, 공지 써줘', null], ['교과목 2개 열어줘: 데이터베이스, 웹, 인공지능', null], ['파이썬/자바 과정 만들어줘', '파이썬|자바']];
+  const NR = await op.evaluate(C => C.map(([q]) => { const N = siNames(q); return N ? N.names.join('|') : null; }), NC);
+  NC.forEach(([q, want], i) => ok(NR[i] === want, `3차 이름 목록 「${q}」 → ${want || '목록 아님(한 이름 · 기존 규칙)'} (${NR[i]})`));
+  ok(/회계와 세무/.test(await op.evaluate(() => siPlan('회계와 세무 과정 만들어줘').steps.map(x => x.l).join(''))), '3차 「회계와 세무 과정 만들어줘」 계획 = 과정 1개 「회계와 세무」');
+  /* 2차 #3 · #4 요약 · 감사 로그 */
+  await op.evaluate(() => go('lmsa')); await op.waitForTimeout(500);
+  ok(!/강의실이 연결되지 않은 분반/.test(await txt(op, '#main')), '2차 #3 학기 · 강좌 요약에 「강의실이 연결되지 않은 분반」 없음(15주 강의실 있음)');
+  ok(!(await op.evaluate(() => S.audit.some(a => /^표준 문서 생성/.test(a.what)))), '2차 #4 빈 스튜디오 감사 로그에 샘플 문서 생성 기록 없음');
+  ok(!(await op.evaluate(() => typeof BRIEF === 'function' && BRIEF().some(b => /AI 진단/.test(b.label || '')))), '2차 #11 학사 LMS 홈 할 일에 「AI 진단 미완료」 없음');
+  /* 2차 #15 390 하위 탭 44px · i 버튼 32px */
+  await op.setViewportSize({ width: 390, height: 844 }); await op.evaluate(() => go('lmse')); await op.waitForTimeout(700);
+  const SZ = await op.evaluate(() => ({ sub: Math.min(...[...document.querySelectorAll('.lmsnav-sub button')].filter(b => b.offsetParent).map(b => b.getBoundingClientRect().height)), i: (() => { const b = document.querySelector('#main .slg-i'); return b ? b.getBoundingClientRect().height : 99; })() }));
+  ok(SZ.sub >= 44 && SZ.i >= 32, `2차 #15 390 하위 탭 ${SZ.sub}px(≥44) · i 버튼 ${SZ.i}px(≥32)`); await op.setViewportSize({ width: 1280, height: 900 });
+  /* 2차 #13 예전 저장 기관(slim 정리 뒤 학사 화면이 꺼진 상태) → 한 번 켬 */
+  const RN = await op.evaluate(async () => { Object.values(S.nav.tabs).forEach(L => L.forEach(x => { if (['lmse', 'grade', 'lmsg'].includes(x.id)) x.on = false; })); delete S.nav.ul38b; render(); await new Promise(r => setTimeout(r, 300)); return ['lmse', 'grade', 'lmsg'].every(id => menuOn(id)); });
+  await op.evaluate(() => go('grade')); await op.waitForTimeout(600); const subG = await op.evaluate(() => [...document.querySelectorAll('#main [data-act=go]')].slice(0, 6).map(b => b.dataset.v).join(','));
+  ok(RN && /h-acad/.test(subG) && !/assess|calendar/.test(subG), `2차 #13 예전 저장 기관도 학사 메뉴 켜짐 · 성적 하위 메뉴 = 학사 묶음 (${subG})`);
+
   /* AI SAM 교과목(학사) */
   const AI = await op.evaluate(() => { const n0 = S.classes.length; const k = makeCourse({ topic: '데이터베이스', weeks: 15 }); const A = lmsaEns(); const c = A.courses.find(x => x.name === '데이터베이스'); return { cls: S.classes.length - n0, course: !!c, sec: !!(c && A.sections.some(s => s.course_code === c.course_code)), id: k.id }; });
   ok(AI.cls === 0 && AI.course && AI.sec, `#8 AI SAM 교과목 만들기(학사 LMS) → 학기 · 강좌 교과목 + 01분반, 일반 과정 0 (${JSON.stringify(AI)})`);
@@ -109,15 +138,18 @@ const go = async (p, h, w = 1000) => { await p.evaluate(h => { location.hash = h
   const TC = await op.evaluate(async () => { const opts = [...document.querySelectorAll('#main select[data-chg=lmse-sec] option')].map(o => o.textContent); let blocked = ''; const other = lmsaEns().sections.find(s => !lmsaEns().staff.some(t => t.section_id === s.section_id && t.member_no === 'P0001'));
     try { await EFH.call('GET', '/api/lms/e/list', { section: other.section_id }); blocked = 'no'; } catch (e) { blocked = e.message; } return { opts, blocked }; });
   ok(TC.opts.length === 1 && /AI와 데이터 리터러시/.test(TC.opts[0]) && /담당 분반이 아닙니다/.test(TC.blocked), `#5 교수 화면: 내 담당 분반만 · 다른 분반 직접 조회 차단 (${TC.opts.join('|')} / ${TC.blocked})`);
+  const TG = await op.evaluate(async () => { const L = await W3.call('GET', '/api/lms/g/sections', {}); let blk = ''; const other = lmsaEns().sections.find(s => !lmsaEns().staff.some(t => t.section_id === s.section_id && t.member_no === 'P0001')); try { await W3.call('GET', '/api/lms/g/sessions', { section_id: other.section_id }); blk = 'no'; } catch (e) { blk = e.message; } return { n: L.length, t: L.map(x => x.title).join('|'), blk }; });
+  ok(TG.n === 1 && /AI와 데이터 리터러시/.test(TG.t) && /권한/.test(TG.blk), `2차 #5 교수 화면 출결 분반도 담당만 · 다른 분반 차단 (${TG.t} / ${TG.blk})`);
   await op.evaluate(() => go('home')); await op.waitForTimeout(900);
   ok(/내 분반 1개/.test(await txt(op, '#main')), '#5 교수 홈 「내 분반」 숫자 = 학기 · 강좌 담당 분반');
+  ok(!(await op.evaluate(() => [...document.querySelectorAll('[data-act=go][data-v=settings]')].some(b => b.offsetParent && b.closest('nav, .rail, aside, .brail')))), '2차 #17 교수 화면 레일에 「설정」 없음');
   await op.evaluate(() => { S.me.role = 'owner'; save(); go('members'); }); await op.waitForTimeout(700);
   ok(!(await op.evaluate(() => [...document.querySelectorAll('#main th')].some(th => /진단/.test(th.textContent) && th.offsetParent))), '#11 학생 명단에 AI 진단 열 없음');
   await shot(op, 'lms38_admin_lmsa');
   await publish(op);
   const codes = await op.evaluate(() => Object.fromEntries(S.codes.map(c => [c.sid, c.code])));
   const snap = await op.evaluate(() => { const s = S.lsite && S.lsite.pub; return { cal: ((s && s.calx) || []).filter(e => e.kind === '학사 일정').length, nt: ((s && s.notices) || []).filter(n => /1주차 수업 안내/.test(n.title)).length }; });
-  ok(snap.cal === 1 && snap.nt === 1, `#7 게시본에 학사 일정 · 강의 공지 포함 (${JSON.stringify(snap)})`);
+  ok(snap.cal === 2 && snap.nt === 1, `#7 게시본에 학사 일정(2차: 일정 추가 창 기본 학사 1건 더해 2건) · 강의 공지 포함 (${JSON.stringify(snap)})`);
 
   /* ═════════ B. 학습자 ═════════ */
   for (const [app, w] of [[false, 1280], [true, 390]]) { const tag = app ? '앱 390' : '웹 1280';
@@ -133,12 +165,25 @@ const go = async (p, h, w = 1000) => { await p.evaluate(h => { location.hash = h
     ok(!/3차시 대면 수업 자막|자료구조\(01\)/.test(M1), `[${tag}] 빈 스튜디오 기관에 실시간 수업 데모 샘플(자막 · 자료구조) 없음`);
     ok(!(await g.evaluate(() => [...document.querySelectorAll('.lg, .l26logo')].some(e => e.offsetParent && e.textContent.trim() === 'e'))), `[${tag}] 로고 글자가 「e」가 아님`);
     ok(!/e교과목/.test(M1), `#14 [${tag}] 기관명 「e클래스」가 바뀌지 않음 (${(M1.match(/.{20}e교과목.{10}/) || [''])[0]})`);
-    await go(g, '#home', 1300); const H1 = await txt(g, 'body'); ok(!/님, 반갑습니다|첫 강좌를 골라 보세요/.test(H1), `#12 [${tag}] 홈에 빈 이름 · 「첫 강좌를 골라 보세요」 없음`);
-    await go(g, '#cal', 1300); ok(/중간고사 기간/.test(await txt(g, 'body')), `#7 [${tag}] 학습자 캘린더에 학사 일정`);
+    await go(g, '#home', 1300); const H1 = await txt(g, 'body'); ok(!/배지 0개|추천 튜토리얼|AI Explorer/.test(H1), `2차 #11 [${tag}] 홈에 배지 수 · 추천 튜토리얼 · AI Explorer 없음 (${(H1.match(/.{10}(배지 0개|추천 튜토리얼|AI Explorer).{10}/) || [''])[0]})`); ok(!/님, 반갑습니다|첫 강좌를 골라 보세요/.test(H1), `#12 [${tag}] 홈에 빈 이름 · 「첫 강좌를 골라 보세요」 없음`);
+    await go(g, '#cal', 1300); const C1 = await txt(g, 'body'); ok(/중간고사 기간/.test(C1), `#7 [${tag}] 학습자 캘린더에 학사 일정`);
+    ok(/중간고사 \(AI와/.test(C1) && /과제 마감 — 1주차 과제/.test(C1), `2차 #7 [${tag}] 캘린더에 통합 달력 일정(기본 학사) · 과제 마감`);
+    ok(!/아직 수강 중인 교과목이 없어요/.test(C1), `2차 #12 [${tag}] 캘린더에 「아직 수강 중인 교과목이 없어요」 없음`);
     await go(g, '#notice', 1200); ok(/1주차 수업 안내/.test(await txt(g, 'body')), `#7 [${tag}] 공지에 강의 게시판 공지`);
     const over = await g.evaluate(() => document.documentElement.scrollWidth - innerWidth); ok(over <= 1, `[${tag}] 가로 넘침 0 (${over})`);
     await go(g, '#my', 1200); await shot(g, `lms38_learner_${app ? 'app390' : 'web1280'}`, true);
     await g.close(); }
+  { const g2 = await learner(ctx, op, '20261102', codes['20261102']); await go(g2, '#lms', 1300); const gt2 = await g2.$('#lm [data-lact=efl-tab][data-v=grade]'); if (gt2) { await gt2.click(); await g2.waitForTimeout(800); } const T2 = await txt(g2);
+    ok(/성적 없음/.test(T2) && !/등급 F/.test(T2), `2차 R1 채점 전 학생 성적: 「성적 없음」(총점 0 · F 아님)`); await g2.close(); }
+  /* 3차 #7 운영 서버 모드: 학습자 API(/api/lms/a/my → e/my · f/my)로 받은 과제 마감 · 시험을 캘린더에 넣는다(응답은 고정값으로 대신) */
+  { const g3 = await learner(ctx, op, '20261101', codes['20261101']); const calls = [];
+    const due = new Date(Date.now() + 2 * 864e5).toISOString(), op3 = new Date(Date.now() + 4 * 864e5).toISOString();
+    await g3.route('**/api/**', r => { const u = r.request().url(); calls.push(u.replace(/^https?:\/\/[^/]+/, '')); const J = /\/api\/lms\/a\/my/.test(u) ? { me: { member_no: '20261101' }, sections: [{ section_id: 's-live-1', course_name: '운영 교과목', section_no: '01', kind: 'regular' }], requests: [], open: [] }
+      : /\/api\/lms\/e\/my/.test(u) ? { now: new Date().toISOString(), assignments: [{ asg_id: 'a1', title: '운영 과제', due_at: due, status: 'published' }] } : /\/api\/lms\/f\/my/.test(u) ? { now: new Date().toISOString(), exams: [{ exam_id: 'x1', title: '운영 중간고사', open_at: op3, close_at: op3, status: 'published' }] } : {};
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(J) }); });
+    await g3.evaluate(() => { LR.mode = 'live'; }); await go(g3, '#cal', 2000); const CL = await txt(g3, 'body');
+    ok(calls.some(u => u.startsWith('/api/lms/a/my')) && calls.some(u => u.startsWith('/api/lms/e/my?section=s-live-1')) && calls.some(u => u.startsWith('/api/lms/f/my?section=s-live-1')), `3차 #7 운영: 학습자 API 호출(a/my · e/my · f/my) (${calls.filter(u => /lms\/[aef]\/my/.test(u)).slice(0, 3).join(' ')})`);
+    ok(/과제 마감 — 운영 과제/.test(CL) && /시험 — 운영 중간고사/.test(CL), '3차 #7 운영: 학습자 캘린더에 과제 마감 · 시험'); await g3.close(); }
   const ta = await learner(ctx, op, '20261105', codes['20261105']); await go(ta, '#my', 1400);
   ok(/조교/.test(await txt(ta, '#lmsaMy')), '#17 조교로 지정된 학번: 수강 분반 카드에 「조교」 표시'); await ta.close();
   const nb = await learner(ctx, op, '20261103', codes['20261103'], { app: true, w: 390 }); await go(nb, '#lms', 1400); ok(/AI와 데이터 리터러시 01분반/.test(await txt(nb)), '#10 간호학과 학번(학과명 등록)도 학사 구성원으로 #lms 진입'); await nb.close();

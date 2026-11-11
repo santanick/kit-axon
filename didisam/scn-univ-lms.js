@@ -11,10 +11,10 @@
 
   /* v38 #13 학사 LMS 기본 메뉴: 업무 단위 메뉴(lms/nav.js — 수업 · 학생 · 소통 · 사이트 · 운영)에 묶인 학사 화면을 켠다.
      slim.js는 학사 LMS일 때 「지금 켜진 탭 앞 7개」만 남겨 학생 명단 · 사이트 · 과제 · 강의실이 꺼졌다. 일반 화면(과정 · 평가 · 출결 · 캘린더)은 학사 화면과 겹치므로 기본으로 끈다. */
-  const ESS = ['lmsa', 'sis', 'lmsb', 'lmsc', 'lmsi', 'lmse', 'lmsf', 'lmsg', 'grade', 'lmsj', 'members', 'enroll', 'groups', 'lmsd', 'community', 'message', 'lmsl-cal', 'lmsl-noti', 'site', 'admins', 'lmsm', 'lmso', 'aigov', 'auto'];
-  const ess = () => ESS.filter(id => window.MENU && MENU[id]);
+  const ESS = ['lmsa', 'sis', 'class', 'clib', 'lmsb', 'lmsc', 'lmsi', 'lmse', 'lmsf', 'lmsg', 'grade', 'lmsj', 'members', 'enroll', 'groups', 'lmsd', 'community', 'message', 'lmsl-cal', 'lmsl-noti', 'site', 'admins', 'lmsm', 'lmso', 'aigov', 'auto'];
+  const ess = () => ESS.filter(id => typeof MENU !== 'undefined' && MENU[id]); /* MENU는 전역 const(window 속성 아님) */
   document.addEventListener('DOMContentLoaded', () => { const base = window.slimEss; if (typeof base !== 'function') return; window.slimEss = (...a) => UL() ? ess() : base(...a); });
-  if (typeof AFTER !== 'undefined') AFTER.push(() => { try { if (!UL() || !S.nav || !S.nav.tabs || S.nav.ul38) return; S.nav.ul38 = 1;
+  if (typeof AFTER !== 'undefined') AFTER.push(() => { try { if (!UL() || !S.nav || !S.nav.tabs || !S.slim34 || S.nav.ul38b) return; S.nav.ul38b = 1; /* slim.js 정리(slim34)가 끝난 뒤에 한 번 — 순서가 바뀌면 다시 꺼지던 문제(2차 #13) */
     ess().forEach(id => { if (typeof navAdd === 'function') navAdd(id, true); Object.values(S.nav.tabs).forEach(A => (A || []).forEach(x => { if (x.id === id) x.on = true; })); });
     if (typeof save === 'function') save(); setTimeout(() => { try { render(); } catch (e) { } }, 0); } catch (e) { console.error('univ-lms nav', e); } });
 

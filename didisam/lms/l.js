@@ -153,7 +153,7 @@
   });
   ACT.lmslSc = el => { UI.lmslSc = el.dataset.v; render(); };
   ACT['lmsl-mon'] = el => { const [Y, M] = ym().split('-').map(Number); const d = new Date(Y, M - 1 + (+el.dataset.d), 1); UI.lmslYm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; render(); };
-  ACT['lmsl-add'] = () => modal('일정 추가', `<label class="fl">구분<select name="scope">${LMP.isAdm() ? '<option value="academic">학사</option>' : ''}<option value="personal" selected>개인</option></select></label>
+  ACT['lmsl-add'] = () => modal('일정 추가', `<label class="fl">구분<select name="scope">${LMP.isAdm() ? '<option value="academic" selected>학사(학생 캘린더에도 보임)</option>' : ''}<option value="personal" ${LMP.isAdm() ? '' : 'selected'}>개인(나만 보기)</option></select></label>
     <label class="fl">제목<input name="title" maxlength="120" placeholder="예: 기말 보고서 제출"></label><label class="fl">종류<select name="kind">${Object.entries(KD).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
     <label class="fl">시작<input name="starts_at" type="datetime-local" value="${new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16)}"></label><label class="ul-ck"><input type="checkbox" name="all_day"> 하루 종일</label>
     <p class="mini">강좌 일정(차시 · 과제 마감)은 강의실에서 등록하면 자동으로 달력에 들어옵니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '추가', kind: 'pri', run: async w => { const r = await LMP.run('l', 'cal.add', { scope: fv(w, 'scope'), title: fv(w, 'title'), kind: fv(w, 'kind'), starts_at: fv(w, 'starts_at'), all_day: fv(w, 'all_day') }, '일정을 추가했습니다.', 'l:cal'); return !!r; } }]);

@@ -410,7 +410,7 @@
         ['course', '교과목', `${(ov.courses || []).length}개`, (ov.courses || []).length > 0],
         ['section', '분반', `${nSec}개${secs.length - nSec ? ` · 합반 ${secs.length - nSec}` : ''}`, nSec > 0],
         ['enr', '수강생', `${nEnr}명${nAud ? ` · 청강 ${nAud}` : ''}`, nEnr > 0]];
-      const nx = ST.find(s => !s[3]); const noCls = secs.filter(s => !s.hidden && !s.class_id).length;
+      const nx = ST.find(s => !s[3]); const noCls = secs.filter(s => !s.hidden && !s.class_id && !roomOf(s.section_id)).length; /* v38 2차 #3 학사 강의실(15주)이 있으면 연결된 것으로 */
       const NEXT = { term: ['학기 추가', 'lmsa-term-new', ''], course: ['교과목 추가', 'lmsa-course-new', ''], section: ['분반 개설', 'lmsa-sec-new', ''], enr: ['수강생 엑셀로 올리기', 'lmsa-goimp', 'enrollment'] };
       const todo = nx ? `<span>${ic('spark', 16)} 다음 할 일: <b>${nx[1]}</b> 준비</span><button class="btn sm pri" data-act="${NEXT[nx[0]][1]}" data-v="${NEXT[nx[0]][2]}">${NEXT[nx[0]][0]}</button>`
         : nReq ? `<span>${ic('check', 16)} 이번 학기 준비 완료 · 처리할 조교 · 청강 신청 <b>${nReq}</b>건</span><button class="btn sm pri" data-act="tab" data-key="lmsaT" data-v="req">신청 처리하기</button>`

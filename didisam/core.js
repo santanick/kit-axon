@@ -203,7 +203,7 @@ function render() {
     <nav class="side" aria-label="작업 공간">
       <div class="rgrp">${rail()}</div>
       <div class="rfoot">
-        <button class="ri ${w === 'settings' ? 'on' : ''}" data-act="go" data-v="settings">${ic('gear')}<span>설정</span></button>
+        ${S.me.role === 'teacher' ? '' : `<button class="ri ${w === 'settings' ? 'on' : ''}" data-act="go" data-v="settings">${ic('gear')}<span>설정</span></button>`}
         <div class="orgcard">${ticon(ty.icon)}<div><b>${esc(ty.name)}</b><small>맞춤 구성 · 데모 모드</small></div></div>
       </div>
     </nav>

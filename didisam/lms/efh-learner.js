@@ -118,7 +118,8 @@
     if (r === undefined) return wait; if (!r) return box(k, '');
     if (r.audit) return `<div class="efl-card"><p>${esc(r.message)}</p></div>`;
     if (r.hidden) return `<div class="efl-card"><p>${esc(r.message)}</p><ul class="efl-items">${r.items.map(i => `<li>${esc(i.name)} <small>${i.weight_pct}%</small></li>`).join('')}</ul></div>`;
-    return `<div class="efl-card"><div class="efl-kpi"><div><small>총점</small><b>${r.total ?? '-'}</b></div><div><small>등급</small><b>${esc(r.letter || '-')}</b></div><div><small>상태</small><b>${r.confirmed ? '확정' : '산출 중'}</b></div></div>
+    const none = !r.confirmed && !(r.items || []).some(i => i.score != null); /* v38 2차 R1 점수가 하나도 없으면 '총점 0 · F' 대신 '성적 없음' */
+    return `<div class="efl-card"><div class="efl-kpi"><div><small>총점</small><b>${none ? '-' : r.total ?? '-'}</b></div><div><small>등급</small><b>${none ? '-' : esc(r.letter || '-')}</b></div><div><small>상태</small><b>${r.confirmed ? '확정' : none ? '성적 없음' : '산출 중'}</b></div></div>${none ? '<p class="mini">아직 채점된 항목이 없어요. 과제 · 시험이 채점되면 점수가 보여요.</p>' : ''}
       <ul class="efl-items">${r.items.map(i => `<li><span>${esc(i.name)} <small>${i.weight_pct}%</small></span><b>${i.score == null ? '-' : `${i.score} / ${i.max_score}`}</b>${i.feedback ? `<p class="mini">${esc(i.feedback)}</p>` : ''}</li>`).join('')}</ul></div>`;
   }
 

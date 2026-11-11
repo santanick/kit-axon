@@ -25,3 +25,4 @@
 .efl-items{list-style:none;padding:0;display:grid;gap:8px}.efl-items li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;border-bottom:1px solid var(--line,#eee);padding:6px 0}
 .efl-items li p{flex-basis:100%;margin:0}
 .efl-note{margin-top:18px}
+@media (max-width:600px){.efl .lbtn.sm,.efl .efl-acts .lbtn,.efl .efl-files .lbtn{min-height:44px;display:inline-flex;align-items:center}} /* v38 390 과제 제출 · 파일 첨부 44px */
