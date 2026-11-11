@@ -443,8 +443,35 @@ function laDecor() { const app = $('#lapp'); if (!app || !SITE()) return; const 
 window.laNeedName = purpose => { const acc = LR.me && laFind(LR.me.sid); if (acc && acc.named) return true; location.hash = '#acct/name'; toast(`${purpose === 'refund' ? '결제 · 환불 처리' : '수료증 발급'}에 이름이 필요합니다. 이름을 입력해 주세요.`); return false; };
 window.laIdvOK = () => { const cfg = laCfg(); if (!cfg.idv.on || !LR.me) return true; const acc = laFind(LR.me.sid); return !!(acc && acc.idv); };
 
-const LA_R = { join: laJoin, find: laFindV, acct: laAcctV, family: laFamV, inbox: laInboxV, pending: laPendV, guardian: laGuardV, privacy: laPrivV };
+/* ═════════ v38 K12 한 기기 여러 계정(보호자 · 자녀가 같은 기기) ═════════
+   이 기기에서 로그인한 계정을 닉네임 · 세션만 기억한다(이름 · 연락처 없음). 둘 이상이면 창을 처음 열 때 '○○님으로 계속하기 / 다른 계정으로' 카드를 먼저 보인다.
+   데모: 세션(me) 그대로 바꿔 연다. 운영: 서버 세션 쿠키가 기기에 하나라 다른 계정은 다시 로그인한다(닉네임만 기억) */
+const laWhoK = () => 'didisam.accts.' + (LR.tid || 'x') + (lKeepApp() ? '.app' : '.web');
+function laAccts() { try { const L = JSON.parse(localStorage.getItem(laWhoK()) || '[]'); const A = (Array.isArray(L) ? L : []).filter(x => x && x.sid && x.exp > Date.now()); return A.slice(0, 5); } catch (e) { return []; } }
+function laAcctPut(L) { try { if (L.length) localStorage.setItem(laWhoK(), JSON.stringify(L.slice(0, 5))); else localStorage.removeItem(laWhoK()); } catch (e) { } }
+function laAcctNote(me) { if (!me || !me.sid || LR.mode === 'preview') return; const L = laAccts(); const i = L.findIndex(x => x.sid === me.sid); const nick = String(me.nick || '').slice(0, 20);
+  const x = { sid: me.sid, nick, kind: me.kind === 'parent' ? 'parent' : '', me: LR.mode === 'live' ? null : { ...me }, exp: Date.now() + 30 * 864e5 };
+  if (i >= 0) { const o = L[i]; if (o.nick === x.nick && o.kind === x.kind && JSON.stringify(o.me) === JSON.stringify(x.me) && o.exp - Date.now() > 29 * 864e5) return; L.splice(i, 1); } L.unshift(x); laAcctPut(L); }
+const laAcctDrop = sid => laAcctPut(laAccts().filter(x => x.sid !== sid));
+const laWhoName = x => x.nick || (x.kind === 'parent' ? '보호자' : '회원 ' + String(x.sid).slice(-4));
+{ const base = lKeepSave; lKeepSave = me => { base(me); try { if (me && lKeepOn()) laAcctNote(me); } catch (e) { } }; window.lKeepSave = lKeepSave; }
+{ const base = LR.api.logout; LR.api.logout = async (...a) => { const sid = LR.me && LR.me.sid; const r = await base(...a); if (sid && !LA.whoKeep) laAcctDrop(sid); LA.whoKeep = 0; return r; }; }
+function laWhoV() { const me = LR.me; const L = laAccts(); const cur = me && L.find(x => x.sid === me.sid); const others = L.filter(x => !me || x.sid !== me.sid);
+  const row = (x, on) => `<div class="la-who-r"><span class="la-who-av" aria-hidden="true">${esc([...laWhoName(x)][0])}</span><span class="la-who-n"><b>${esc(laWhoName(x))}</b><small>${x.kind === 'parent' ? '보호자 계정' : '회원 계정'}${on ? ' · 지금 열린 계정' : LR.mode === 'live' ? ' · 다시 로그인' : ''}</small></span>${on ? '' : `<button type="button" class="lbtn sm" data-ac="who-sw" data-v="${esc(x.sid)}">이 계정으로</button><button type="button" class="lbtn sm ghost" data-ac="who-del" data-v="${esc(x.sid)}" aria-label="${esc(laWhoName(x))} 이 기기에서 지우기">지우기</button>`}</div>`;
+  return laSec('어느 계정으로 열까요?', `<style>.la-who{display:grid;gap:12px}.la-who-h{font-size:14px;margin:8px 0 0}.la-who-r{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line,#e5e7eb);border-radius:12px;min-height:56px}.la-who-av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--soft,#eef2ff);font-weight:700;flex:none}.la-who-n{flex:1;min-width:0;display:grid}.la-who-n b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.la-who-n small{color:var(--mute,#6b7280);font-size:13px}.la-who .lbtn{min-height:44px}</style><div class="la-who" data-la-who>${me ? `<button type="button" class="lbtn pri blk" data-ac="who-go">${esc(laWhoName(cur || { sid: me.sid, nick: me.nick, kind: me.kind }))}님으로 계속하기</button>` : ''}
+    ${others.length ? `<h2 class="la-who-h">이 기기에서 로그인한 다른 계정</h2>${others.map(x => row(x, false)).join('')}` : ''}
+    <button type="button" class="lbtn ghost blk" data-ac="who-new">다른 계정으로 로그인</button><p class="mini">이 기기에는 계정의 닉네임과 로그인 상태만 기억합니다. 공용 기기라면 [지우기]나 로그아웃을 쓰세요.</p></div>`, '가족이 한 기기를 함께 쓰면 계정을 골라 엽니다.'); }
+async function laWhoAct(k, v) { LR.whoBoot = 0; const tid = LR.tid;
+  if (k === 'who-go') { location.hash = '#home'; lrender(); return; }
+  if (k === 'who-del') { laAcctDrop(v); lrender(); return; }
+  if (k === 'who-new') { LA.whoKeep = 1; await LR.api.logout(); location.hash = '#login'; lrender(); return; }
+  if (k === 'who-sw') { const x = laAccts().find(y => y.sid === v); if (!x) return;
+    if (LR.mode !== 'live' && x.me) { LA.whoKeep = 1; await LR.api.logout(); try { sessionStorage.setItem(SESS + tid, JSON.stringify(x.me)); if (lKeepOn()) localStorage.setItem(lKeepK(), JSON.stringify({ me: x.me, exp: Date.now() + 30 * 864e5 })); } catch (e) { } location.hash = '#home'; location.reload(); return; }
+    LA.whoKeep = 1; await LR.api.logout(); LA.whoHint = laWhoName(x); location.hash = '#login'; lrender(); toast(`${laWhoName(x)} 계정으로 다시 로그인해 주세요.`); } }
+const LA_R = { join: laJoin, find: laFindV, acct: laAcctV, family: laFamV, inbox: laInboxV, pending: laPendV, guardian: laGuardV, privacy: laPrivV, who: laWhoV };
 { const base = lrender; lrender = () => { if (!SITE()) return base(); try { laRefreshMe(); } catch (e) { console.error(e); } const r = route(); let a = r.a; if (LR.me && LR.me.kind === 'parent' && (a === 'my' || a === 'login')) a = 'family'; if (a !== 'join' && LA.j && LA.j.done) LA.j = null;
+  if (LR.me) { try { if (LR.mode === 'live' ? lKeepApp() : (lKeepLoad() || {}).sid === LR.me.sid) laAcctNote(LR.me); } catch (e) { } } /* v38 K12 */
+  if (LR.whoBoot) { LR.whoBoot = 0; if (LR.me && (!a || a === 'home') && laAccts().length >= 2) { try { history.replaceState(null, '', '#who'); } catch (e) { } a = 'who'; } }
   if (LA_R[a]) { if (PLAYER && PLAYER.stop) PLAYER.stop(); PLAYER = null; if (typeof bkStop === 'function') bkStop(); let inner = ''; try { inner = LA_R[a](r); } catch (e) { console.error(e); inner = laSec('계정', '<p class="lead">화면을 그리지 못했습니다. 새로 고침해 주세요.</p>'); }
     document.body.className = 'look-' + (SITE().look || 'clean') + (LR.mode === 'preview' ? ' pv' : ''); $('#lapp').innerHTML = shell(inner, 'my'); document.title = `${SITE().org.name} · 계정`; }
   else base();
@@ -453,6 +480,7 @@ const LA_R = { join: laJoin, find: laFindV, acct: laAcctV, family: laFamV, inbox
 /* ═════════ 이벤트 ═════════ */
 function laRekeep(fid, fn) { const f = fid && $('#' + fid); const keep = f ? Object.fromEntries([...f.elements].filter(x => x.name && x.type !== 'file' && x.type !== 'password' && x.name !== 'vcode').map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])) : {}; fn(); const f2 = fid && $('#' + fid); if (f2) Object.entries(keep).forEach(([n, val]) => { const x = f2.elements[n]; if (x && x.type !== 'hidden') { if (x.type === 'checkbox') x.checked = val; else x.value = val; } }); }
 document.addEventListener('click', async e => { const el = e.target.closest('[data-ac]'); if (!el) return; const k = el.dataset.ac, v = el.dataset.v; if (el.tagName !== 'INPUT') e.preventDefault(); const J = LA.j;
+  if (k && k.startsWith('who-')) { await laWhoAct(k, v); return; }
   if (k === 'dlgx') laDlgX();
   if (k === 'jkind' && J) { laJoinKeep($('#laJoin')); J.kind = v; lrender(); }
   if (k === 'jall') { const f = el.closest('form'); ['tos', 'privacy', 'third', 'mkt'].forEach(n => { if (f.elements[n]) f.elements[n].checked = el.checked; }); }

@@ -241,14 +241,25 @@ ACT['lib-del'] = el => { const l = S.lib.find(x => x.id === el.dataset.v); if (l
 /* v38 C-R1: 학습자에게 열린 과정인가 — 준비 중 · 비공개 과정은 배정 알림 · 독려 · 자동화 대상에서 뺀다(공개할 때 보류 알림을 보낸다) */
 function clsLive(c) { return !!c && c.status !== '준비중' && c.status !== '종료' && (c.open || '전체') !== '비공개'; }
 const legalUndone = () => S.classes.filter(c => c.legal && clsLive(c)).flatMap(c => c.learners.filter(id => !clsDone(c, id)).map(id => ({ c, id })));
+/* v38 C#3 부서별 이수율: 부서가 있으면 부서별(+ 미지정 줄), 부서를 하나도 만들지 않았으면 가입 때 답한 부서(소속) 값으로 묶어 보이고 [부서 만들기]를 안내한다 */
+const compAns = id => { const x = (M(id) || {}).extra || {}; return String(x['부서'] || x['소속'] || '').trim().slice(0, 30); };
+function compDeptCard(L) {
+  const G = t('group'); const noG = !S.groups.length; const valid = id => { const m = M(id) || {}; return m.group && S.groups.some(g => g.id === m.group); };
+  const ids = [...new Set(L.flatMap(c => c.learners))];
+  const rows = noG ? [...new Set(ids.map(compAns).filter(Boolean))].sort().map(v => ({ name: v, f: id => compAns(id) === v })).concat(ids.some(id => !compAns(id)) ? [{ name: `${G} 미입력`, f: id => !compAns(id) }] : [])
+    : [...S.groups.map(g => ({ name: g.name, f: id => (M(id) || {}).group === g.id })), ...(ids.some(id => !valid(id)) ? [{ name: `${G} 미지정`, f: id => !valid(id) }] : [])];
+  const body = rows.map(g => { const r = L.map(c => { const I = c.learners.filter(g.f); return I.length ? I.filter(id => clsDone(c, id)).length / I.length * 100 : 0; }); return [esc(g.name), ...r.map(v => `<span class="${v < 70 ? 'r' : ''}">${pct(v)}</span>`), `<b>${pct(avgOf(r))}</b>`]; });
+  const hint = noG ? `<div class="cmp-dh" data-cmp-dept-hint style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px"><p class="mini">${esc(tj('group', '을'))} 만들면 ${esc(G)}별 이수율을 볼 수 있습니다.${rows.length && rows.some(r => !/미입력$/.test(r.name)) ? ` 지금은 가입할 때 답한 ${esc(G)} 값으로 묶어 보여 줍니다.` : ''}</p><button type="button" class="btn sm" data-act="grp-new">${esc(G)} 만들기</button></div>` : '';
+  return `<div class="card"><div class="ch"><b>${esc(G)}별 이수율</b><small>법정교육 ${L.length}종 평균${noG && rows.length ? ` · 가입 답 기준` : ''}</small></div>${hint}${table([G, ...L.map(c => c.name.replace(/\s*교육.*$/, '').slice(0, 12)), '평균'], body, noG ? `${G}별로 볼 ${t('learner')}이 아직 없습니다.` : '데이터가 없습니다.')}</div>`;
+}
 VIEWS.compliance = () => {
   const L = S.classes.filter(c => c.legal);
   return head('법정의무교육', `${L.length ? L.map(c => c.name.replace(/\s*교육.*$/, '')).join(' · ') : '법정 의무교육'} — 연 1회 이상 이수 관리`, `<button class="btn" data-act="comp-report">이수 증빙 보고서</button><button class="btn ai" data-act="legal-nudge">✦ 미이수자 독려 실행</button>`) +
     `<section class="grid g4">${L.map(c => kpi(c.name.replace(/교육.*$/, ''), pct(doneN(c) / Math.max(1, c.learners.length) * 100), `미이수 ${c.learners.length - doneN(c)}명 · 마감 ${c.end}`, doneN(c) / c.learners.length > .9 ? 'g' : 'y')).join('')}</section>` +
-    `<div class="card"><div class="ch"><b>${esc(t('group'))}별 이수율</b><small>법정교육 ${L.length}종 평균</small></div>${table([t('group'), ...L.map(c => c.name.replace(/\s*교육.*$/, '').slice(0, 12)), '평균'], [...S.groups, ...(L.some(c => c.learners.some(id => !(M(id) || {}).group || !S.groups.some(g => g.id === M(id).group))) ? [{ id: '', name: `${t('group')} 미지정` }] : [])].map(g => { const r = L.map(c => { const ids = c.learners.filter(id => g.id ? M(id)?.group === g.id : !(M(id) || {}).group || !S.groups.some(x => x.id === M(id).group)); return ids.length ? ids.filter(id => clsDone(c, id)).length / ids.length * 100 : 0; }); return [esc(g.name), ...r.map(v => `<span class="${v < 70 ? 'r' : ''}">${pct(v)}</span>`), `<b>${pct(avgOf(r))}</b>`]; }) /* v38 부서가 없는 사람도 '부서 미지정' 줄로 집계(QA C3) */)}</div>` +
+    compDeptCard(L) +
     `<p class="mini">※ 이수 기준·주기는 관계 법령과 ${S.org.type === 'public' ? '기관 규정을 따르며, 실제 운영 전 교육 담당 부서' : '사내 규정을 따르며, 실제 운영 전 HR 담당'} 확인이 필요합니다.</p>`;
 };
-ACT['comp-report'] = () => downloadCSV(`법정의무교육_이수현황_${today()}.csv`, ['교육', '이름', t('group'), '진도', '이수'], S.classes.filter(c => c.legal).flatMap(c => c.learners.map(id => [c.name, M(id)?.name, S.groups.find(g => g.id === M(id)?.group)?.name, c.prog[id].p, clsDone(c, id) ? 'Y' : 'N'])));
+ACT['comp-report'] = () => downloadCSV(`법정의무교육_이수현황_${today()}.csv`, ['교육', '이름', t('group'), '진도', '이수'], S.classes.filter(c => c.legal).flatMap(c => c.learners.map(id => [c.name, M(id)?.name, S.groups.find(g => g.id === M(id)?.group)?.name || compAns(id), c.prog[id].p, clsDone(c, id) ? 'Y' : 'N'])));
 
 /* ═════════ 유형 전용: 대학 학사 · 비교과 ═════════ */
 VIEWS.academic = () => {
