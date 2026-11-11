@@ -23,8 +23,12 @@
       const r = base(...a);
       try { if (k0 && k0 === sig() && (my > 0 || wy > 0)) { const put = () => { const m = document.getElementById('main'); if (m && my > 0 && Math.abs(m.scrollTop - my) > 1) m.scrollTop = my; if (wy > 0 && Math.abs(window.scrollY - wy) > 1) window.scrollTo(0, wy);
             B.forEach(([k, y]) => { const e = m && [...m.querySelectorAll('[data-keep-scroll], .hps-canvas, .hpst-canvas, .ct-pv, .bk-pv, .s2tree, .sl-list')].find(x => (x.id || x.className) === k); if (e) e.scrollTop = y; }); };
-          put(); requestAnimationFrame(put); setTimeout(put, 60); } } catch (e) { }
+          put(); const g0 = window.__slAct || 0;
+          /* v38 F5: 늦은 복원(다음 프레임 · 60ms)은 그 사이 사용자가 다른 동작(누름 · 키 · 휠 · 터치)을 하지 않았을 때만 — 다른 버튼을 누른 뒤 예전 위치로 되돌리던 것(scroll-keep '390 k12 crmstu' 간헐 실패: 40ms 뒤 스크롤해 누른 위치가 60ms 복원으로 99px 튐) */
+          const late = () => { if ((window.__slAct || 0) !== g0) return; put(); };
+          requestAnimationFrame(late); setTimeout(late, 60); } } catch (e) { }
       return r; }; }
+  ['click', 'keydown', 'wheel', 'touchstart'].forEach(t => document.addEventListener(t, () => { window.__slAct = (window.__slAct || 0) + 1; }, { capture: true, passive: true }));
   /* 버튼처럼 쓰는 href="#" 링크가 주소를 바꾸며 맨 위로 가지 않게(ACT가 없는 링크 포함) */
   document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a[href="#"]'); if (a && !a.closest('.lhp, iframe')) e.preventDefault(); }, true);
 

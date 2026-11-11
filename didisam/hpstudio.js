@@ -167,7 +167,7 @@
   function flowHTML() { const s = site(); const D = stepDone(); if (s.hpsFlowOff || STEPS.every(([k]) => D[k])) return '';
     const cur = (STEPS.find(([k]) => !D[k]) || STEPS[3])[0];
     const tip = { tpl: '마음에 드는 템플릿을 먼저 고르세요. 고른 뒤에도 글 · 사진 · 색은 모두 바꿀 수 있습니다.', ai: `아래 입력줄에 원하는 모습을 적거나 코드 블록을 붙여 넣으세요. 지금 보이는 페이지가 바로 바뀝니다.`, basic: '기관명 · 연락처 · 로고 · 대표 색만 넣으면 모든 페이지에 들어갑니다.', pub: '확인했으면 [게시하기]를 누르세요. 학습 사이트와 같은 주소에 함께 올라갑니다.' }[cur];
-    return `<div class="hps-flow" role="group" aria-label="홈페이지 완성 순서"><ol>${STEPS.map(([k, n], i) => `<li class="${D[k] ? 'done' : ''}${k === cur ? ' cur' : ''}"><button type="button" data-act="hps-step" data-v="${k}" aria-current="${k === cur ? 'step' : 'false'}"><i>${D[k] ? SV(P.ok, 13, 2.6) : i + 1}</i>${n}</button></li>`).join('')}</ol>
+    return `<div class="hps-flow" role="group" aria-label="홈페이지 완성 순서"><ol>${STEPS.map(([k, n], i) => `<li class="${D[k] ? 'done' : ''}${k === cur ? ' cur' : ''}"><button type="button" data-act="hps-step" data-v="${k}" aria-current="${k === cur ? 'step' : 'false'}"><i>${i + 1}</i>${n}${D[k] ? ` <span class="hps-fok" aria-label="완료">${SV(P.ok, 13, 2.6)}</span>` : k === cur ? ' <span class="sr">(지금 단계)</span>' : ''}</button></li>` /* v38 F5 A20: 단계마다 같은 형식(번호 + 이름), 끝난 단계는 이름 뒤 ✓, 지금 단계는 강조 */).join('')}</ol>
       <p>${E(tip)}${cur === 'ai' ? ` <button type="button" class="hps-ln" data-act="hpai-open">시안 3개로 새로 만들기</button>` : ''}</p><button type="button" class="hps-fx" data-act="hps-flowoff" aria-label="완성 순서 닫기">${SV(P.x, 14, 2)}</button></div>`; }
   ACT['hps-step'] = el => { const k = el.dataset.v;
     if (k === 'tpl') return ACT['tpl-gallery']();

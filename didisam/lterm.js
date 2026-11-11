@@ -56,8 +56,8 @@
   function refundTerm() { if (org().type !== 'lifelong' || !document.body) return; const W = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n => !/환불/.test(n.nodeValue) || /학습비 반환/.test(n.nodeValue) || (n.parentElement && n.parentElement.closest('script,style,textarea,input,[contenteditable]')) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }); const L = []; let n; while ((n = W.nextNode())) L.push(n);
     L.forEach(n => { const head = n.parentElement && n.parentElement.closest('h1,h2,h3,nav,a,button,.ls-tx b,summary,th'); n.nodeValue = n.nodeValue.replace(/환불/g, head ? '학습비 반환(환불)' : '학습비 반환').replace(/학습비 반환(\(환불\))?로(?![가-힣])/g, '학습비 반환$1으로'); }); }
   /* v38 F5 R2 A8 · V12 · L17 · P8: 기관이 쓰지 않는 기능(배지 0종 · 실습 영상 없음 · 디지털북 페이지 없음)은 학습자 #my · 앱 '내 학습'에서 탭 · 카드 · 로드맵을 감춘다(대학은 별도 시나리오) */
-  function featFix() { const st = SITE() || {}; const ty = (st.org || {}).type; if (!document.body || ty === 'univ') return;
-    const noBadge = !(st.badges || []).length, noVid = !(st.tuts || []).some(t => t.yt), noBook = !(st.pages || []).some(p => p.id === 'books') || !(st.dbooks || []).some(b => b.url || (b.pages || []).length);
+  function featFix() { const st = SITE() || {}; const ty = (st.org || {}).type; if (!document.body) return; const U = ty === 'univ'; /* 대학은 배지만(실습 영상 · 디지털북은 대학 시나리오가 정한다) */
+    const noBadge = !(st.badges || []).length || (U && (st.org || {}).ed === 'lms'), noVid = !U && !(st.tuts || []).some(t => t.yt), noBook = !U && (!(st.pages || []).some(p => p.id === 'books') || !(st.dbooks || []).some(b => b.url || (b.pages || []).length));
     if (!noBadge && !noVid && !noBook) return; const TX = el => (el && el.textContent || '').replace(/\s+/g, ' ').trim(); const hide = el => { if (el && !el.hasAttribute('data-f5off')) { el.setAttribute('data-f5off', '1'); el.style.setProperty('display', 'none', 'important'); } };
     const lm = document.getElementById('lm'); if (!lm) return;
     lm.querySelectorAll('nav.mytab a').forEach(a => { const t = TX(a); if ((noBook && t === '디지털북') || (noBadge && t === '배지')) hide(a); });

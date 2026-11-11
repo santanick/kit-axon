@@ -90,7 +90,7 @@
 
   /* 시안 3개의 조합(계열 · 팔레트 · 첫 화면 사진이 서로 다름) */
   function plan(o) {
-    o = o || {}; const ty = o.type || tyKey(); const r = Math.max(0, o.round || 0); const n = o.n || 3; const scene = [o.brief || '', ...pubNames()].join(' ').slice(0, 300);
+    o = o || {}; const ty = o.type || tyKey(); const r = Math.max(0, o.round || 0); const n = o.n || 3; const scene = [o.brief || '', /상담|심리|진로/.test((S && S.org && S.org.name) || '') ? S.org.name : '', ...pubNames()].join(' ').slice(0, 300); /* v38 F5 U19: 상담센터 · 진로센터는 기관명으로 상담 장면 사진을 고른다 */
     const LC = layoutCands(ty); const refs = tplRefs(ty); const CD = A(o.claude);
     const used = { layout: [], theme: [], pal: [], hero: [], photo: [], hk: [], card: [] }; const out = [];
     /* 다시 만들 때는 계열 후보를 세 칸씩 밀어 다른 조합을 보여 준다 */

@@ -94,6 +94,12 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     await op.evaluate(() => { const L = (S.cal || CAL()).ev || (S.cal.ev = []); }); 
     const calOk = await op.evaluate(() => { try { ACT['cx-add']({ dataset: { v: today() } }); const w = document.querySelector('#slSheet'); w.querySelector('[name=cxT]').value = 'R2 공개 일정'; const c = w.querySelector('[name="cxP"]'); if (c) c.checked = true; ACT['cx-save']({ dataset: { v: '' } }); return (S.lsite.pub.calx || []).some(e => e.title === 'R2 공개 일정'); } catch (e) { return 'ERR ' + e.message; } });
     ok(calOk === true, 'A7: 게시 뒤 추가한 수강생 공개 일정이 게시본 일정에 바로 반영 ' + (calOk === true ? '' : calOk));
+    { await op.setViewportSize({ width: 1280, height: 800 }); await op.evaluate(() => { go('home'); render(); }); await op.waitForTimeout(400);
+      const top = await op.evaluate(() => [...document.querySelectorAll('.topr .uxfind, .topr .btn, .topr > button, .bprog, .aih-chips .chip')].filter(b => b.getBoundingClientRect().width > 0).map(b => Math.round(b.getBoundingClientRect().height)));
+      ok(top.length && Math.min(...top) >= 40, 'R3 U14: PC 스튜디오 머리 · 홈 주 버튼 40px 이상 ' + top.join(','));
+      await op.evaluate(() => { go('site'); render(); }); await op.waitForTimeout(700);
+      const st = await op.evaluate(() => [...document.querySelectorAll('.hps-flow li button')].map(b => ({ n: (b.querySelector('i') || {}).textContent, t: b.textContent.trim() })));
+      ok(!st.length || st.every((x, i) => x.n === String(i + 1)), 'R3 A20: 사이트 편집기 단계는 모두 번호 + 이름 ' + st.map(x => x.t).join(' · ')); }
     await op.setViewportSize({ width: 390, height: 844 }); await op.evaluate(() => { go('members'); render(); }); await op.waitForTimeout(400);
     const un = await op.evaluate(() => [...document.querySelectorAll('#main button, #main a.btn')].filter(b => b.getBoundingClientRect().width > 0 && !b.getAttribute('aria-label') && !b.title && !(b.textContent || '').replace(/\s+/g, '').length).map(b => b.dataset.act || b.className));
     ok(!un.length, 'C12: 명단 화면 아이콘 버튼 모두 이름 있음 ' + un.join(','));
@@ -109,10 +115,14 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     ok(!my.tabs.includes('디지털북') && !my.tabs.includes('배지') && !/배지 지갑|0종 모두 받으면/.test(my.txt), 'R2 노출: 배지 · 디지털북 없는 기관 #my 탭 · 배지 지갑 숨김 ' + my.tabs.join(' · '));
     await go(p, '#noti', 500); ok(await p.evaluate(() => location.hash === '#inbox'), 'U20: #noti → 알림(#inbox)');
     await go(p, '#calendar', 300);
-    await p.evaluate(() => { const k = 'didisam.room.' + LR.tid + '.lpx'; const Q = JSON.parse(localStorage.getItem(k) || '[]'); Q.push({ id: 'xr2', type: 'post-new', at: new Date().toISOString(), who: 'other-learner', data: { id: 'po_r2', board: '커뮤니티', kind: '이야기', title: 'R2 다른 학습자 글', body: '안녕하세요' } }); localStorage.setItem(k, JSON.stringify(Q)); });
-    { const r = await p.evaluate(() => ({ ok: lcPosts().some(x => x.title === 'R2 다른 학습자 글'), mode: LR.mode, me: LR.me && LR.me.sid, n: lcPosts().length })); ok(r.ok, 'C17: 데모에서 같은 기관 다른 학습자 글이 바로 보임 ' + (r.ok ? '' : JSON.stringify(r))); }
+    await p.evaluate(() => { const k = 'didisam.room.' + LR.tid + '.lpx'; const Q = JSON.parse(localStorage.getItem(k) || '[]'); Q.push({ id: 'xr2', type: 'post-new', at: new Date().toISOString(), who: 'other-learner', data: { id: 'po_r2', board: '커뮤니티', kind: '이야기', title: 'R2 다른 학습자 글', body: '안녕하세요' } }); localStorage.setItem(k, JSON.stringify(Q)); window.__c17 = lcPosts().some(x => x.title === 'R2 다른 학습자 글'); }); /* 같은 기관 운영자 창이 열려 있으면 요청함을 곧바로 가져가므로 넣은 직후에 본다 */
+    { const r = await p.evaluate(() => ({ ok: window.__c17, mode: LR.mode, me: LR.me && LR.me.sid, n: lcPosts().length })); ok(r.ok, 'C17: 데모에서 같은 기관 다른 학습자 글이 바로 보임 ' + (r.ok ? '' : JSON.stringify(r))); }
     const a = await ctx.newPage(); await a.setViewportSize({ width: 390, height: 844 }); await a.goto(base + `learner.html?t=${tid}&app=1#home`); await a.waitForFunction(() => typeof LR !== 'undefined' && LR.site); await login(a, code); await go(a, '#comm', 800);
     const w = a.locator('a[href^="#write"]', { hasText: '글쓰기' }).first(); ok(await w.isVisible(), 'V · L: 앱 게시판 첫 [글쓰기] 버튼이 보임'); await w.click({ timeout: 3000 }); await a.waitForTimeout(300); ok(await a.evaluate(() => /^#write/.test(location.hash)), '앱 [글쓰기] 누르면 글쓰기 화면');
+    await go(a, '#home', 600); { const ch = await a.evaluate(() => [...document.querySelectorAll('.ap-chip')].filter(b => b.getBoundingClientRect().height > 0).map(b => Math.round(b.getBoundingClientRect().height))); ok(ch.length && Math.min(...ch) >= 48, 'R3 U14: 앱 주 버튼(칩) 48px ' + ch.join(',')); }
+    ok(await a.evaluate(() => !/배지 \d+개/.test((document.querySelector('.ap-st') || {}).textContent || '')), 'R3 UL11: 배지 없는 기관 앱 홈에 배지 수 없음');
+    await go(a, '#acct', 600); ok(await a.evaluate(() => !/선생님 바꾸기/.test(document.body.innerText)), 'R3 U16: 앱 「나」에 \'선생님 바꾸기\' 없음');
+    await go(a, '#comm', 800);
     ok(await a.evaluate(() => !/커뮤니티/.test((document.querySelector('.ap-bar .ap-tt') || {}).textContent || '')), 'P10: 앱 참여마당 화면 제목 ' + await a.evaluate(() => (document.querySelector('.ap-bar .ap-tt') || {}).textContent));
     await ctx.close(); }
 
