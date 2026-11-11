@@ -52,7 +52,7 @@ LR.api = {
   async login(sid, code) {
     if (LR.mode === 'live') { const r = await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/login`, { sid, code }); LR.me = r.me; LR.lp = r.lp || LR.lp; LR.mine = r.mine || LR.mine; return; }
     const c = (LR._codes || []).find(x => x.sid === sid && String(x.code).toUpperCase() === String(code).toUpperCase());
-    if (!c) throw new Error('번호 또는 접근코드가 올바르지 않습니다.');
+    if (!c) throw new Error(`${(LR.site && LR.site.org && LR.site.org.type === 'univ') ? '학번' : '회원 번호'} 또는 접근코드가 올바르지 않습니다.`); /* v38 F5 U17 */
     LR.me = { sid, dept: c.dept || '' }; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { }
     try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[sid] || {}) }; } catch (e) { }
     if (LR.mode === 'demo') LR.mine = demoMine(demoRoom());

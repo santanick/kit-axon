@@ -287,13 +287,14 @@
     V = SO === 'name' ? [...V].sort((a, b) => a.c.name.localeCompare(b.c.name, 'ko')) : [...V].sort((a, b) => rk(a) - rk(b));
     const EX = C.filter(exp);
     const ing = C.filter(x => !x.done), dn = C.filter(x => x.done);
+    const CW = (w => w && w !== '클래스' ? w : '강좌')((SITE().terms || {}).cls); /* v38 F5 U16: 기관 유형 용어(교과목 · 교육과정 …) */
     return `<section class="ap-my" style="--pc:${P ? P.c : 'var(--pri)'}"><div class="ap-pw2">
-      <div class="ap-myh">${av(P)}<p>${C.length ? `${esc(who())}, 수강 전 ${cntOf('pre')}개 · 수강 중 ${cntOf('ing')}개 · 수료 ${cntOf('done')}개예요.${ing[0] && ing[0].next ? ` 「${esc(ing[0].next.title)}」부터 이어 가요.` : ''}` : `${esc(who())}, 아직 수강 중인 강좌가 없어요. 둘러보고 시작해 볼까요?`}</p></div>
+      <div class="ap-myh">${av(P)}<p>${C.length ? `${esc(who())}, 수강 전 ${cntOf('pre')}개 · 수강 중 ${cntOf('ing')}개 · 수료 ${cntOf('done')}개예요.${ing[0] && ing[0].next ? ` 「${esc(ing[0].next.title)}」부터 이어 가요.` : ''}` : `${esc(who())}, 아직 수강 중인 ${esc(CW)}${lJ(CW, '이', '가')} 없어요. 둘러보고 시작해 볼까요?`}</p></div>
       ${C.length ? `<div class="ap-mf"><div class="ap-fc" role="tablist" aria-label="수강 상태">${[['all', '전체'], ['pre', '수강 전'], ['ing', '수강 중'], ['done', '수강 완료']].map(([k, l]) => `<button type="button" role="tab" class="ap-fch${F === k ? ' on' : ''}" aria-selected="${F === k}" data-ap="myf" data-v="${k}">${l} <i>${cntOf(k)}</i></button>`).join('')}</div>
         <button type="button" class="ap-srt" data-ap="mys" aria-label="정렬 바꾸기 — 지금 ${SO === 'name' ? '제목순' : '최근 수강순'}">${ico('sortk', 14)}${SO === 'name' ? '제목순' : '최근 수강순'}</button></div>
-        <div class="ap-cl">${V.length ? V.map(x => card(x)).join('') : `<p class="ap-empty">${F === 'pre' ? '아직 시작하지 않은 강좌가 없어요.' : F === 'done' ? '아직 완료한 강좌가 없어요. 조금만 더 힘내요!' : '해당하는 강좌가 없어요.'}</p>`}</div>
+        <div class="ap-cl">${V.length ? V.map(x => card(x)).join('') : `<p class="ap-empty">${F === 'pre' ? `아직 시작하지 않은 ${CW}${lJ(CW, '이', '가')} 없어요.` : F === 'done' ? `아직 완료한 ${CW}${lJ(CW, '이', '가')} 없어요. 조금만 더 힘내요!` : `해당하는 ${CW}${lJ(CW, '이', '가')} 없어요.`}</p>`}</div>
         ${EX.length ? `<h2 class="ap-h2">기간 만료 <small>${EX.length}</small></h2><div class="ap-cl">${EX.map(x => card(x, 1)).join('')}</div>` : ''}`
-        : `<a class="ap-go sm" href="${esc(browse())}">강좌 둘러보기</a>`}
+        : `<a class="ap-go sm" href="${esc(browse())}">${esc(CW)} 둘러보기</a>`}
       <div class="ap-qk"><button type="button" class="ap-chip" data-ap="ask" data-v="이번 주 학습 계획 짜줘">${ico('sparkle', 14)} 이번 주 계획 맡기기</button><button type="button" class="ap-chip" data-ap="ask" data-v="복습 퀴즈 내줘">복습 퀴즈</button><a class="ap-chip" href="#connect">${ico('cal', 14)} 캘린더에 넣기</a></div>
       <h2 class="ap-h2">전체 학습 기록</h2></div></section>`; }
 
@@ -326,7 +327,7 @@
 
   function tsheet() { const P = persona(); closeSheet(); const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
     w.innerHTML = `<div class="ap-sh" role="dialog" aria-modal="true" aria-labelledby="apShT">${av(P, true)}<h2 id="apShT">${esc(isPar() ? SITE().org.name : tName())}</h2><p>${esc(isPar() ? '보호자 계정' : P ? `${P.t} · ${P.d}` : '내 AI 학습 비서')}</p>
-      <nav>${LR.me && !isPar() ? `<button type="button" data-ap="pick">${ico('sparkle', 18)}선생님 바꾸기 · 이름 바꾸기</button>` : ''}${LR.me && !isPar() ? `<a href="#connect" data-ap="sheet-x">${ico('cal', 18)}캘린더 · 알림 연결</a>` : ''}${LR.mode !== 'live' && !isPar() ? `<button type="button" data-ap="ai">${ico('sparkle', 18)}Claude 연결 <small class="ap-shs">${esc(aiSt().t)}</small></button>` : ''}<button type="button" data-ap="orgs">${ico('grid', 18)}내 기관 · 기관 바꾸기 <small class="ap-shs">${orgs().length}곳</small></button><button type="button" data-ap="install">${ico('install', 18)}${standalone() ? '앱으로 실행 중' : '홈 화면에 앱으로 설치'}</button><button type="button" data-ap="classic">${ico('grid', 18)}기존 화면으로 보기</button>${LR.me ? `<button type="button" data-lact="logout" data-ap="sheet-x">${ico('out', 18)}로그아웃</button>` : ''}<button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
+      <nav>${LR.me && !isPar() ? `<button type="button" data-ap="pick">${ico('sparkle', 18)}${esc(tName())} 바꾸기 · 이름 바꾸기</button>` : ''}${LR.me && !isPar() ? `<a href="#connect" data-ap="sheet-x">${ico('cal', 18)}캘린더 · 알림 연결</a>` : ''}${LR.mode !== 'live' && !isPar() ? `<button type="button" data-ap="ai">${ico('sparkle', 18)}Claude 연결 <small class="ap-shs">${esc(aiSt().t)}</small></button>` : ''}<button type="button" data-ap="orgs">${ico('grid', 18)}내 기관 · 기관 바꾸기 <small class="ap-shs">${orgs().length}곳</small></button><button type="button" data-ap="install">${ico('install', 18)}${standalone() ? '앱으로 실행 중' : '홈 화면에 앱으로 설치'}</button><button type="button" data-ap="classic">${ico('grid', 18)}기존 화면으로 보기</button>${LR.me ? `<button type="button" data-lact="logout" data-ap="sheet-x">${ico('out', 18)}로그아웃</button>` : ''}<button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
     document.body.appendChild(w); const f = w.querySelector('nav button'); f && f.focus(); }
   const srRecent = () => { try { const v = JSON.parse(ls.get('srq.' + LR.tid) || '[]'); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (e) { return []; } };
   const srSeen = () => { try { const v = JSON.parse(ls.get('srv.' + LR.tid) || '[]'); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (e) { return []; } };

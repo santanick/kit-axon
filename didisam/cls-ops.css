@@ -121,3 +121,14 @@
   .aih-chips{flex-wrap:wrap!important;overflow:visible!important;-webkit-mask:none!important;mask:none!important}
 }
 @media (max-width:860px){.scxbt small{font-size:12px!important}.uxpop .btn,.uxpop button{min-height:44px}}
+/* v38 F5 R2 공통 크기 규칙(스튜디오 휴대폰 ≤860px) — 한 곳에서:
+   ① 글자 13px 이상(레일 · 하위 탭 · 사이트 편집기 아래 레일 · 보조 글) ② 누르는 것 44px 이상 ③ 밀집 표 안 보조 버튼은 보이는 크기 32px + 누를 자리 44px ④ 도움말 i · 닫기 같은 아이콘 버튼은 실제 44px */
+@media (max-width:860px){
+  body .brail .ri,body .brail .ri span,body small,body .mini,body .uxacs small,body .scxbt small,body .hps-rail span,body .hps-tab,body .bsub a,body .bsub button{font-size:max(13px,1em)}
+  body .brail .ri{font-size:13px}
+  body button:not(.sl-sw):not([role=switch]):not(.ri),body .btn,body a.btn,body [role=tab],body .chip,body select,body .uxfind,body .tabs button,body .hps-rail button,body .bsub a{min-height:44px}
+  body table .btn,body table button:not(.sl-sw),body .tbl .btn,body td .btn{min-height:32px;position:relative}
+  body table .btn::after,body table button:not(.sl-sw)::after,body td .btn::after{content:'';position:absolute;inset:-6px -2px}
+  body .slg-i,body .sl-i,body button.x,body [data-act=modal-close],body .ap-ib{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  body .slg-i::after,body .sl-i::after{display:none}
+}

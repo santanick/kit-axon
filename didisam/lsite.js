@@ -99,9 +99,9 @@ function lsDefault(ty) {
 /* v38 영상도 내용도 넣지 않은 기본 실습 칸(샘플)은 학습자에게 게시하지 않는다 — 기관에 없는 '실습 영상 0/3' · '추천 · ○○ 첫 실습'이 뜨던 것(QA A8 · V12) */
 const lsTutPlaceholder = t => !!t && !t.yt && !t.ch && !t.tool && Array.isArray(t.steps) && t.steps[0] === '영상을 보며 준비물을 확인합니다' && /첫 실습$/.test(String(t.title || ''));
 function lsSeedTuts(ty) {
-  if (ty === 'univ' && typeof LSEED_UNIV_TUTS !== 'undefined') return LSEED_UNIV_TUTS.map(t => ({ id: 'tu' + t.id, title: t.title, ch: t.ch, tool: t.tool, level: t.lv - 1, type: t.type, yt: t.vid, steps: t.steps.slice(0, 3), mission: t.mission, badge: '', on: true, at: today() }));
+  if (ty === 'univ' && typeof LSEED_UNIV_TUTS !== 'undefined') return LSEED_UNIV_TUTS.map(t => ({ id: 'tu' + t.id, title: t.title, ch: t.ch, tool: t.tool, level: t.lv - 1, type: t.type, yt: t.vid, steps: t.steps.slice(0, 3), mission: t.mission, badge: '', on: true, at: today(), seed: 1 }));
   const T = (LS_TYPES[ty] || LS_TYPES.corp);
-  return T.slice(0, 3).map(([k, name], i) => ({ id: uid('tu'), title: `${name} 첫 실습`, ch: '', tool: '', level: 0, type: k, yt: '', steps: ['영상을 보며 준비물을 확인합니다', '영상 속 예시를 그대로 따라 합니다', '내 주제로 바꿔 결과물을 저장합니다'], mission: `${name} 결과물 1건 완성`, badge: '', on: true, at: today() }));
+  return T.slice(0, 3).map(([k, name], i) => ({ id: uid('tu'), title: `${name} 첫 실습`, ch: '', tool: '', level: 0, type: k, yt: '', steps: ['영상을 보며 준비물을 확인합니다', '영상 속 예시를 그대로 따라 합니다', '내 주제로 바꿔 결과물을 저장합니다'], mission: `${name} 결과물 1건 완성`, badge: '', on: true, at: today(), seed: 1 }));
 }
 /* 코스웨어 표 기본: 과정의 level(0~2) × 유형을 순서대로 채움 */
 function lsGridAuto() { const L = S.lsite; const g = {}; S.classes.forEach((c, i) => { const lv = Math.min(L.levels.length - 1, c.level || 0); const ty = c.ctype || L.types[i % L.types.length].k; const key = lv + ':' + ty; if (!g[key]) g[key] = c.id; }); return g; }
@@ -149,10 +149,19 @@ function lpApply() {
 }
 /* v38 F5 L · U: 운영자가 꺼 둔 기능(배지 · 디지털북)과 영상 없는 예시 튜토리얼은 게시본에서 빼 학습자에게 보이지 않게 한다 */
 { const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); try { if (r && typeof menuOn === 'function') { const on = id => !MENU[id] || menuOn(id);
-  r.f538 = 1; /* 이 표시가 없는 옛 게시본이면 사이트 화면에 '다시 게시' 안내 */
+  r.f538 = 1; if (S.org && S.org.empty) { const ST = new Set((typeof LSEED_UNIV_TUTS !== 'undefined' ? LSEED_UNIV_TUTS : []).map(t => t.title)); r.tuts = (r.tuts || []).filter(t => !t.seed && !ST.has(t.title)); } /* v38 F5 U19: 빈 스튜디오는 예시 튜토리얼(ChatGPT 디자인 이미지 등)을 학습자에게 추천하지 않는다 */ /* 이 표시가 없는 옛 게시본이면 사이트 화면에 '다시 게시' 안내 */
   if (!on('badge')) r.badges = [];
   r.pages = (r.pages || []).filter(p => !(p.id === 'books' && !on('dbook') && !on('library')) && !(p.id === 'tutorials' && !(r.tuts || []).some(t => t.yt)) && !(p.id === 'courses' && !(r.tracks || []).length && !(r.classes || []).length)); } } catch (e) { console.error(e); } return r; }; }
 /* v38 F5: v38 이전 게시본(결제 · '무료' · 메뉴 이름 정리 전)이면 사이트 화면 위에 '다시 게시하면 반영됩니다' 안내 */
 if (typeof AFTER !== 'undefined') AFTER.push(() => { try { if (!S || !S.org || typeof CUR === 'undefined' || CUR.tab !== 'site') return; const pub = S.lsite && S.lsite.pub; const m = document.querySelector('#main'); if (!pub || pub.f538 || !m || m.querySelector('.f5-repub')) return;
   m.insertAdjacentHTML('afterbegin', `<div class="note f5-repub" role="status" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px">${typeof ic === 'function' ? ic('info', 16) : ''}<span style="flex:1;min-width:200px">학습자 화면 문구(결제 · '무료' 표시, 메뉴 이름)가 바뀌었습니다. 다시 게시하면 학습자 사이트에 반영됩니다.</span><button type="button" class="btn sm pri" data-act="f5-repub">다시 게시하기</button></div>`); } catch (e) { } });
 if (typeof ACT !== 'undefined') ACT['f5-repub'] = () => { (typeof smPublish === 'function' ? smPublish : ACT['ls-pub'])(); };
+/* v38 F5 R2 C12: 글자 없는 아이콘 버튼에 이름(aria-label · title)을 붙인다 — 화면 낭독기 · 길게 누르기 안내. 이름은 동작(data-act) 기준 한 곳 사전 */
+const F5_BTN_NAME = { 'mem-bulk': '엑셀 일괄 등록', 'mem-xls': '명단 엑셀 내려받기', 'mem-q': '가입 질문 설정', 'mb-acct': '가입 설정', 'cm-mem-msg': '선택한 회원에게 메시지', 'mb-adv': '상세검색', 'ux-find': '메뉴 찾기', 'modal-close': '닫기', 'slg-open': '이 화면 도움말', 'sl-tip': '도움말', 'cls-back': '목록으로', 'sheet-x': '닫기', 'chat-open': 'AI SAM 열기', 'fab-open': 'AI SAM 열기', 'cls-dl': '이수 현황 엑셀', 'cls-grant': '수강 권한 부여', 'cls-extend': '수강 기간 연장', 'go': '열기', 'tab': '보기 바꾸기', 'mem-del': '삭제', 'mem-edit': '수정', 'cls-copy': '복사', 'cls-del': '삭제', 'cx-add': '일정 추가', 'cx-prev': '이전 달', 'cx-next': '다음 달', 'sl-close': '닫기', 'more': '더 보기' };
+function f5NameButtons(root) { (root || document).querySelectorAll('button, a.btn, [role=button]').forEach(b => { if (b.getAttribute('aria-label') || b.title || (b.textContent || '').replace(/\s+/g, '').length) return; const k = b.dataset.act || ''; const v = b.dataset.v ? (typeof MENU !== 'undefined' && MENU[b.dataset.v] && typeof mlabel === 'function' ? mlabel(b.dataset.v) : '') : '';
+  const n = (k === 'go' && v) ? `${v} 열기` : F5_BTN_NAME[k] || (b.querySelector('svg') ? (b.closest('.uxpop, .uxmore') ? '다른 작업' : '') : ''); if (n) { b.setAttribute('aria-label', n); b.title = n; } }); }
+if (typeof AFTER !== 'undefined') AFTER.push(() => { try { f5NameButtons(); } catch (e) { } });
+if (typeof modal === 'function') { const base = modal; modal = (...a) => { const r = base(...a); try { f5NameButtons(document.getElementById('modal') || document); } catch (e) { } return r; }; }
+/* v38 F5 L16: 게시본 HTML의 '전화로 신청하기' 링크를 대표 전화(tel:)로 — 모든 감싸기(sitemerge r.hp) 뒤에 적용 */
+addEventListener('DOMContentLoaded', () => { if (typeof lsSnapshot !== 'function') return; const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); try { const tel = String(((S.settings || {}).footer || {}).tel || '').replace(/[^\d+]/g, ''); if (r && r.hp && tel.length >= 7) { const fix = h => typeof h === 'string' ? h.replace(/<a\b([^>]*?)href="[^"]*"([^>]*)>((?:(?!<\/a>)[\s\S])*?(?:전화로 (?:신청|문의)|전화 (?:상담|신청))(?:(?!<\/a>)[\s\S])*?)<\/a>/g, (m, x, y, t) => `<a${x}href="tel:${tel}"${y}>${t}</a>`) : h;
+  r.hp.home = fix(r.hp.home); r.hp.foot = fix(r.hp.foot); Object.values(r.hp.pages || {}).forEach(pg => { if (pg && pg.html) pg.html = fix(pg.html); }); } } catch (e) { console.error(e); } return r; }; });
