@@ -33,18 +33,18 @@
 
   /* ═════════ 데모 경로 ═════════ */
   W3.seedI = sid => { const d = D(); const reg = d.persons.filter(p => p.ekind === 'regular' && (p.secs || []).includes(sid));
-    d.sessions.filter(s => s.section_id === sid && s.seq === 1 && s.kind !== 'holiday').forEach(s => d.contents.push({ content_id: W3.uid(), session_id: s.session_id, title: `${s.week_no}주차 강의 영상`, duration_sec: 1500, src: `demo:lecture-${s.week_no}`, qualities: ['auto', '360p', '720p', '1080p'], check_at_sec: 1200 }));
+    d.sessions.filter(s => s.section_id === sid && s.seq === 1 && s.kind !== 'holiday').forEach(s => d.contents.push({ content_id: W3.uid(), session_id: s.session_id, title: `${s.week_no}차시 강의 영상`, duration_sec: 1500, src: `demo:lecture-${s.week_no}`, qualities: ['auto', '360p', '720p', '1080p'], check_at_sec: 1200 }));
     secCts(sid).forEach(({ c, s }) => { if (Date.parse(s.starts_at) > now()) return; reg.forEach((p, j) => { const pct = j === 6 ? (s.week_no * 17) % 60 : Math.min(100, 70 + ((s.week_no * 11 + j * 7) % 40)); const w = Math.round(c.duration_sec * pct / 100);
       d.prog[pgK(c.content_id, p.person_id)] = { segments: w ? [[0, w]] : [], watched_sec: w, last_pos: w, pct, completed_at: pct >= 90 ? W3.ts(Date.parse(s.starts_at) + 2 * 864e5) : null }; }); });
     const c1 = secCts(sid)[0]; const c3 = secCts(sid)[2]; const P = n => reg[n].person_id;
     if (c1) { ev(null, c1.c.content_id, P(6), 'rate', 300, null, 200); ev(null, c1.c.content_id, P(6), 'seek', 900, 120, 100); ev(null, c3.c.content_id, P(6), 'blocked', 0); ev(null, c3.c.content_id, P(3), 'seek', 700, 200, 100);
-      d.subs[c1.c.content_id + '|ko'] = { format: 'vtt', cues: [{ s: 1, e: 5, t: '안녕하세요. 데이터와 인공지능 기초 1주차입니다.' }, { s: 5.5, e: 10, t: '오늘은 데이터의 종류와 수집 방법을 배웁니다.' }, { s: 10.5, e: 16, t: '먼저 정형 데이터와 비정형 데이터를 구분해 보겠습니다.' }, { s: 16.5, e: 22, t: '표 형태로 정리되는 데이터를 정형 데이터라고 합니다.' }], updated_at: W3.ts(now()) };
+      d.subs[c1.c.content_id + '|ko'] = { format: 'vtt', cues: [{ s: 1, e: 5, t: '안녕하세요. 데이터와 인공지능 기초 1차시입니다.' }, { s: 5.5, e: 10, t: '오늘은 데이터의 종류와 수집 방법을 배웁니다.' }, { s: 10.5, e: 16, t: '먼저 정형 데이터와 비정형 데이터를 구분해 보겠습니다.' }, { s: 16.5, e: 22, t: '표 형태로 정리되는 데이터를 정형 데이터라고 합니다.' }], updated_at: W3.ts(now()) };
       d.subs[c1.c.content_id + '|en'] = { format: 'srt', cues: [{ s: 1, e: 5, t: 'Hello, this is week 1 of Data and AI Basics.' }, { s: 5.5, e: 10, t: 'Today we learn data types and collection.' }], updated_at: W3.ts(now()) };
       d.quizzes.push({ quiz_id: W3.uid(), content_id: c1.c.content_id, at_sec: 20, question: '표 형태로 정리되는 데이터는?', options: ['정형 데이터', '비정형 데이터', '스트리밍 데이터'], answer: 0, points: 1 }); }
     reg.forEach((p, j) => { if (c1) d.plays.push({ play_id: W3.uid(), content_id: c1.c.content_id, person_id: p.person_id, device: j % 3 ? 'desktop' : 'mobile', ip_masked: `10.20.${j}.*`, started_at: W3.ts(Date.parse(c1.s.starts_at) + 36e5 * (j + 1)), ended_at: W3.ts(Date.parse(c1.s.starts_at) + 36e5 * (j + 1) + 1500e3), last_beat_at: W3.ts(Date.parse(c1.s.starts_at) + 36e5 * (j + 1) + 1500e3), last_pos: 1500, rate_x100: 100, watched_sec: 1400 + j * 10 });
-      d.acts.push({ section_id: sid, person_id: p.person_id, kind: ['view_material', 'download', 'post', 'submit_assignment'][j % 4], ref: '1주차', device: 'desktop', ip_masked: `10.20.${j}.*`, at: W3.ts(Date.parse(c1 ? c1.s.starts_at : now()) + 864e5) }); });
+      d.acts.push({ section_id: sid, person_id: p.person_id, kind: ['view_material', 'download', 'post', 'submit_assignment'][j % 4], ref: '1차시', device: 'desktop', ip_masked: `10.20.${j}.*`, at: W3.ts(Date.parse(c1 ? c1.s.starts_at : now()) + 864e5) }); });
   };
-  L['POST /api/lms/i/seed'] = b => { if (!D().sections.find(s => s.section_id === b.section_id)) throw W3.err('not_found'); const n0 = D().contents.length; if (!secCts(b.section_id).length) W3.seedI(b.section_id); return { created: D().contents.length - n0 }; };
+  L['POST /api/lms/i/seed'] = b => { if (!D().sections.find(s => s.section_id === b.section_id)) throw W3.err('not_found'); const n0 = D().contents.length; if (!secCts(b.section_id).length && !(S && S.org && S.org.empty)) W3.seedI(b.section_id); return { created: D().contents.length - n0 }; };
   L['GET /api/lms/i/contents'] = b => { if (!D().sections.find(s => s.section_id === b.section_id)) throw W3.err('not_found'); return secCts(b.section_id).map(cj); };
   L['POST /api/lms/i/content'] = b => { const s = sesOf(b.session_id); if (!s) throw W3.err('not_found'); if (!b.title || !(+b.duration_sec >= 1)) throw W3.err('bad_input');
     const c = { content_id: W3.uid(), session_id: s.session_id, title: String(b.title).slice(0, 120), duration_sec: +b.duration_sec, src: b.src || null, qualities: ['auto', '360p', '720p', '1080p'], check_at_sec: b.check_at_sec != null ? Math.min(+b.check_at_sec, +b.duration_sec) : null }; D().contents.push(c); return cj({ c, s }); };
@@ -111,6 +111,7 @@
     W3.css('w3'); if (!ULMS_()) return '<div class="empty">대학(학사 LMS) 에디션에서 쓰는 화면입니다.</div>';
     const sec = W3.section(); if (sec === undefined) return W3.loading; if (sec.__err) return `<div class="empty">${esc(sec.__err)}</div>`;
     const C = W3.get('contents:' + sec.section_id, 'GET', '/api/lms/i/contents', { section_id: sec.section_id }); if (C === undefined) return W3.loading; if (C.__err) return `<div class="empty">${esc(C.__err)}</div>`;
+    if (!C.length && (S && S.org && S.org.empty)) return `<div class="empty">이 분반에 올린 강의 영상이 없습니다.<small class="efh-note">강의 영상 관리에서 영상을 올리고 차시에 배치하면 진도 · 학습시간이 기록됩니다.</small><button class="btn sm" data-act="go" data-v="lmsv">강의 영상 관리로 가기</button></div>`;
     if (!C.length && !W3.busy.iseed) { W3.busy.iseed = 1; W3.call('POST', '/api/lms/i/seed', { section_id: sec.section_id }).finally(() => { delete W3.busy.iseed; W3.drop('contents:'); render(); }); return W3.loading; }
     const t = UI.w3iT || 'player'; if (t !== 'player' && P.st) endPlay(true);
     UI.w3iC = UI.w3iC && C.find(c => c.content_id === UI.w3iC) ? UI.w3iC : C[0]?.content_id;
@@ -118,7 +119,7 @@
     /* 2단계(UX): 탭 6개 → 4개 + 더보기(학습분량 점검 · 학습 이력), 연동 안내는 한 줄 작은 글로 */
     const TB = [['player', '플레이어'], ['prog', '진도 현황'], ['quiz', '영상 퀴즈'], ['subs', '자막'], ['load', '학습분량 점검'], ['hist', '학습 이력']];
     const tb4 = window.LMSX && typeof LMSX.tabs4 === 'function' ? LMSX.tabs4('w3iT', TB, t) : tabs('w3iT', TB, t);
-    return head('동영상 · 진도', `${esc(sec.title)} · 영상 ${C.length}개를 주차별로 재생하고 진도를 확인합니다. <small class="w3-mini">영상 서버 연결 · 화질 변환은 연동 후 동작</small>`, `${W3.secPick()} ${W3.mode()}`)
+    return head('동영상 · 진도', `${esc(sec.title)} · 영상 ${C.length}개를 차시별로 재생하고 진도를 확인합니다. <small class="w3-mini">영상 서버 연결 · 화질 변환은 연동 후 동작</small>`, `${W3.secPick()} ${W3.mode()}`)
       + tb4
       + ({ player: iPlayer, prog: iProg, subs: iSubs, quiz: iQuiz, load: iLoad, hist: iHist }[t])(sec, C, csel);
   };
@@ -127,13 +128,14 @@
   /* ── 플레이어 ── */
   function iPlayer(sec, C, csel) {
     const c = C.find(x => x.content_id === UI.w3iC) || {}; const s = P.st && P.st.content_id === c.content_id ? P.st : null;
-    const real = s && (P.blob || /^(https?:|blob:)/.test(s.src || ''));
+    const med = s && !P.blob && window.DDMEDIA && DDMEDIA.playable(s.src); /* v32 학교 서버 스트리밍(media:키, lms/media-play.js) */
+    const real = s && (P.blob || /^(https?:|blob:)/.test(s.src || '') || med);
     setTimeout(paint, 0);
     return `<div class="card"><div class="ch"><b>HTML5 플레이어</b>${csel}</div>
       <div class="form2"><label>학번(학생 화면으로 재생)<input id="w3imno" maxlength="20" value="${esc(UI.w3iMno || '20269001')}"></label><label>내 컴퓨터 영상으로 미리보기<input type="file" id="w3ifile" accept="video/*" data-chg="w3i-file"></label></div>
       ${P.msg ? `<div class="w3-res bad" role="alert">${esc(P.msg)}</div>` : ''}
       <div class="w3-player"><div>
-        <div class="w3-vid">${real ? `<video id="w3v" src="${esc(P.blob || s.src)}" playsinline preload="metadata"></video>` : `<div class="w3-sim" id="w3sim">${s ? '가상 영상(시간만 흐름) — 실제 영상은 CDN 연동 후 재생됩니다' : '「재생 시작」을 누르면 서버에 재생 세션을 엽니다(이어보기 · 동시 재생 확인)'}</div>`}
+        <div class="w3-vid">${real ? (med ? `<video id="w3v" data-media="${esc(s.src)}" playsinline preload="metadata"></video>` : `<video id="w3v" src="${esc(P.blob || s.src)}" playsinline preload="metadata"></video>`) : `<div class="w3-sim" id="w3sim">${s ? '가상 영상(시간만 흐름) — 실제 영상은 CDN 연동 후 재생됩니다' : '「재생 시작」을 누르면 서버에 재생 세션을 엽니다(이어보기 · 동시 재생 확인)'}</div>`}
           <div class="w3-cap" id="w3cap" aria-live="polite"></div>${P.quiz ? quizBox(P.quiz) : ''}</div>
         <div class="w3-seg" id="w3seg" aria-hidden="true"></div>
         <input type="range" id="w3pos" min="0" max="${c.duration_sec || 1}" value="${Math.floor(P.pos)}" data-chg="w3i-seek" aria-label="재생 위치" style="width:100%" ${s ? '' : 'disabled'}>
@@ -251,10 +253,10 @@
     const DV = { desktop: 'PC', mobile: '모바일', tablet: '태블릿', unknown: '알 수 없음' };
     return `<div class="card"><div class="ch"><b>진도 · 학습 이력</b><input id="w3ihm" maxlength="20" placeholder="학번(비우면 전체)" value="${esc(UI.w3iHm || '')}" style="max-width:160px" aria-label="학번 필터"><button class="btn sm" data-act="w3i-hf">조회</button><button class="btn sm" data-act="w3i-hcsv">CSV</button></div>
       <p class="mini">재생 로그 ${Object.entries(R.events).map(([k, v]) => `${esc({ start: '시작', end: '종료', seek: '이동', rate: '배속', blocked: '동시 재생 차단', quiz: '퀴즈', beat: '박동' }[k] || k)} ${v}`).join(' · ') || '없음'} · IP는 끝자리를 가립니다.</p>
-      ${table(['학번', '주차', '콘텐츠', '기기', 'IP', '시작', '종료', '시청'], R.plays.slice(0, 200).map(p => [esc(p.member_no), p.week_no + '주', esc(p.content_title), esc(DV[p.device] || p.device || ''), esc(p.ip_masked || ''), esc(W3.fmt(p.started_at)), esc(p.ended_at ? W3.fmt(p.ended_at) : '재생 중'), mmss(p.watched_sec)]), '재생 이력이 없습니다.')}</div>
+      ${table(['학번', '차시', '콘텐츠', '기기', 'IP', '시작', '종료', '시청'], R.plays.slice(0, 200).map(p => [esc(p.member_no), p.week_no + '주', esc(p.content_title), esc(DV[p.device] || p.device || ''), esc(p.ip_masked || ''), esc(W3.fmt(p.started_at)), esc(p.ended_at ? W3.fmt(p.ended_at) : '재생 중'), mmss(p.watched_sec)]), '재생 이력이 없습니다.')}</div>
       <div class="card"><div class="ch"><b>강좌 내 행동 기록</b><button class="btn sm" data-act="w3i-actdemo">행동 기록 남기기(예: 자료 내려받기)</button></div>${table(['학번', '행동', '대상', '기기', 'IP', '시각'], R.activities.slice(0, 200).map(a => [esc(a.member_no), esc({ view_notice: '공지 열람', view_material: '자료 열람', download: '내려받기', submit_assignment: '과제 제출', post: '글쓰기', comment: '댓글', quiz: '퀴즈', exam: '시험', live_join: '화상 입장', page: '페이지' }[a.kind] || a.kind), esc(a.ref || ''), esc(DV[a.device] || a.device || ''), esc(a.ip_masked || ''), esc(W3.fmt(a.at))]), '행동 기록이 없습니다.')}</div>`;
   }
   ACT['w3i-hf'] = () => { UI.w3iHm = ($('#w3ihm').value || '').trim(); render(); };
-  ACT['w3i-hcsv'] = () => { const R = W3.cache['hist:' + UI.w3sec + ':' + (UI.w3iHm || '')]; if (!R) return; downloadCSV(`학습이력_${today()}.csv`, ['학번', '주차', '콘텐츠', '기기', 'IP', '시작', '종료', '시청(초)', '배속'], R.plays.map(p => [p.member_no, p.week_no, p.content_title, p.device, p.ip_masked, p.started_at, p.ended_at || '', p.watched_sec, p.rate])); };
+  ACT['w3i-hcsv'] = () => { const R = W3.cache['hist:' + UI.w3sec + ':' + (UI.w3iHm || '')]; if (!R) return; downloadCSV(`학습이력_${today()}.csv`, ['학번', '차시', '콘텐츠', '기기', 'IP', '시작', '종료', '시청(초)', '배속'], R.plays.map(p => [p.member_no, p.week_no, p.content_title, p.device, p.ip_masked, p.started_at, p.ended_at || '', p.watched_sec, p.rate])); };
   ACT['w3i-actdemo'] = () => W3.act(() => W3.call('POST', '/api/lms/i/activity', { section_id: UI.w3sec, member_no: UI.w3iHm || '20269001', kind: 'download', ref: '강의자료.pdf' }), '행동을 기록했습니다.').then(() => { W3.drop('hist:'); render(); });
 })();

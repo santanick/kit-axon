@@ -59,7 +59,7 @@ function compare(RA, RB, shapeOnly = []) {
     const na = normalizer(), nb = normalizer(); /* 응답마다 새로 번호(공유 시퀀스 · DB 상태와 무관) */
     const a = RA[k], b = RB[k]; if (!b) { fail++; errs.push(k + ': Java 응답 없음'); continue; }
     const ja = shapeOnly.includes(k) ? shape(a.j) : JSON.stringify(na(a.j)), jb = shapeOnly.includes(k) ? shape(b.j) : JSON.stringify(nb(b.j));
-    if (a.st === b.st && ja === jb && a.ct === b.ct) pass++; else { fail++; errs.push(`${k}: Node ${a.st} ${a.ct} ${ja.slice(0, 300)}\n      Java ${b.st} ${b.ct} ${jb.slice(0, 300)}`); }
+    if (a.st === b.st && ja === jb && a.ct === b.ct) pass++; else { fail++; errs.push(`${k}: Node ${a.st} ${a.ct} ${(process.env.FULLDIFF ? ja : ja.slice(0, 300))}\n      Java ${b.st} ${b.ct} ${(process.env.FULLDIFF ? jb : jb.slice(0, 300))}`); }
   }
   return { pass, fail, errs };
 }

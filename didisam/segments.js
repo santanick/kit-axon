@@ -18,13 +18,13 @@ SAMPLE.public = { cls: [['신규 임용자 기본교육', 'period'], ['4대 폭�
   D.members.forEach((m, i) => { m.extra = { 소속: (D.groups.find(g => g.id === m.group) || {}).name || '', 직급: ['주무관', '주무관', '팀장', '과장'][i % 4] }; });
   D.classes.forEach(c => { c.price = 0; c.open = '지정 회원'; if (c.status === '준비중') c.status = '운영중'; }); D.pays = [];
   D.orgs = [{ id: 'o0', name: '산하기관 교육 담당', mgr: '기관 담당자', n: 14, done: 9, job: 0 }];
-  Object.assign(D.settings, { join: '운영자 초대만', siteOpen: 'private', extraQ: ['소속', '직급'] }); return D; }; }
+  Object.assign(D.settings, { join: '자동 수락', siteOpen: 'public', extraQ: ['소속'] }); return D; }; } /* v38 공공: 전체 공개와 짝으로 누구나 가입(간편가입), 가입 질문은 시민 · 재직자 공통 '소속'만(QA P1 · P8) */
 { const base = defaultAutos; defaultAutos = type => base(type === 'public' ? 'corp' : type).map(a => type === 'public' ? JSON.parse(JSON.stringify(a).replace(/부서장/g, '소속 부서장').replace(/신규 입사자/g, '신규 임용자').replace(/입사/g, '임용')) : a); }
 EX.public = ['법정의무교육 미이수자에게 마감 안내 보내줘', '소속별 이번 달 수료 현황 요약해줘', '신규 임용자 기본교육 커리큘럼 만들어줘', '교육 실적 보고서 만들어줘'];
 EXQ.public = ['생성형 AI 행정 활용 6차시 과정 설계해줘', '법정의무교육 미이수 소속 3곳', '교육 실적 결재용 보고서 만들어줘', '매주 금요일 소속 부서장에게 수료 현황 보내는 자동화 만들어줘'];
 ONB.public = ONB.corp.map(([id, l, d]) => [id, l.replace('사내 교육포털', '교육포털').replace('교육과정 준비', '교육과정 · 기수 준비'), d.replace('부서·직급', '소속·직급').replace('부서', '소속')]);
 HERO.public = ['공직 역량, 필요한 교육을 한 곳에서', '법정의무교육부터 직무 · AI 행정 교육까지 수강하고 수료 실적을 관리합니다.', '교육과정 보기'];
-LS_LEVELS.public = [['기본', '기본', '#1D4ED8', '공직자 기본 소양과 법정의무교육을 마칩니다.'], ['실무', '실무', '#0F766E', '직무 · 민원 · AI 행정 실무를 익힙니다.'], ['전문', '전문', '#2A2B2B', '정책 기획 · 데이터 활용 역량을 갖춥니다.']];
+LS_LEVELS.public = [['기본', '기본', '#1D4ED8', '기본 교육과 꼭 들어야 할 필수교육을 마칩니다.'], ['실무', '실무', '#0F766E', '생활 · 업무에 바로 쓰는 디지털 · AI 실무를 익힙니다.'], ['전문', '전문', '#2A2B2B', '데이터 · AI 활용 역량을 갖춥니다.']]; /* v38 F5 P8: 공공 교육생에는 시민도 있으므로 공무원 전제 문구를 쓰지 않는다 */
 LS_TYPES.public = [['ADM', '행정 · 기획', '#1D4ED8', '문서 · 보고'], ['SVC', '민원 · 소통', '#0F766E', '응대 · 안내'], ['DATA', '데이터 · AI', '#5C74F6', '분석 · 자동화'], ['LAW', '법정 · 윤리', '#B45309', '청렴 · 폭력예방'], ['LEAD', '리더십', '#2A2B2B', '조직 · 성과']];
 LS_TRACKS.public = [['공직 기본 트랙', 'BASIC TRACK', '#1D4ED8', '법정의무교육과 신규 임용자 기본교육을 기한 안에 마칩니다.', ['기본 · 법정의무교육', '실무 · 직무 기본', '수료 · 실적 반영'], '교육과정 보기'], ['AI 행정 트랙', 'AX TRACK', '#5C74F6', '생성형 AI로 문서 · 민원 · 데이터 업무를 바꿉니다.', ['기본 · AI 이해', '실무 · 내 업무 적용', '전문 · 부서 확산'], '트랙 시작하기']];
 ALLT.push('public'); DTPL.forEach(d => { if ((d.types.includes('corp') || d.types.includes('lifelong')) && !d.types.includes('public')) d.types.push('public'); });
@@ -49,6 +49,9 @@ function segSite(L, ty) { const P = SEG_PAGES[ty]; if (!P || !L || !L.pages) ret
   L.segV = 1; return L; }
 { const base = lsDefault; lsDefault = ty => segSite(base(ty), ty); }
 { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.lsite && !S.lsite.segV) { segSite(S.lsite, S.org.type); S.lsite.segV = 1; } } catch (e) { console.error(e); } return r; }; }
+{ const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org && S.org.type === 'public' && S.settings && !S.settings.open37) { if (S.settings.siteOpen === 'private') S.settings.siteOpen = 'public'; S.settings.open37 = 1; }
+  if (S && S.org && S.org.type === 'public' && S.settings && !S.settings.join38) { const A = S.settings.acct; if (S.settings.join === '운영자 초대만') S.settings.join = '자동 수락'; if (A && A.mode === 'invite') A.mode = 'open'; if (A && Array.isArray(A.extraQ)) { const ans = (S.members || []).some(m => m.extra && m.extra['직급'] && m.acct && m.acct.consent); if (!ans) A.extraQ = A.extraQ.filter(x => x.q !== '직급'); } if (Array.isArray(S.settings.extraQ) && !(A && A.extraQ)) S.settings.extraQ = S.settings.extraQ.filter(q => q !== '직급'); S.settings.join38 = 1; } /* v38 공공 1회 이전: 초대제 → 누구나 가입(대표 결정 2026-11-11). 이후 운영자가 고른 값은 그대로 */
+  } catch (e) { console.error(e); } return r; }; } /* v37.2: 공공도 처음에는 전체 공개(대표 결정 2026-11-10). 기존 공공 기관은 한 번만 바꾸고, 이후 운영자가 고른 값은 그대로 */
 /* 게시본: 기관 용어 전체 · 필수(법정)교육 표시 */
 { const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); r.terms = { ...(TERMS[S.org.type] || {}), ...(r.terms || {}) }; (r.classes || []).forEach(x => { const c = C(x.id); if (c && c.legal) x.legal = true; }); return r; }; }
 
@@ -79,7 +82,7 @@ AFTER.push(cur => { if (!S || !S.org) return; const T = typeof scn === 'function
 /* ── ⑥ 보고서 내려받기(한글 · Word에서 열리는 .doc) ── */
 const SEG_REP = { corp: '부서별 교육 이수 현황 보고', univ: '사업단 교육 운영 실적 보고(비교과 · 진단 · 배지)', public: '교육 운영 실적 보고(결재용)' };
 function segReport() {
-  const ty = S.org.type; const L = S.classes.filter(c => c.learners.length); const done = c => c.learners.filter(id => (c.prog[id]?.p || 0) >= (c.criteria?.threshold || 80)).length;
+  const ty = S.org.type; const L = S.classes.filter(c => c.learners.length); const done = c => doneN(c);
   const all = L.reduce((a, c) => a + c.learners.length, 0), fin = L.reduce((a, c) => a + done(c), 0); const avg = all ? Math.round(L.reduce((a, c) => a + c.learners.reduce((x, id) => x + (c.prog[id]?.p || 0), 0), 0) / all) : 0;
   const lg = S.classes.filter(c => c.legal); const lgAll = lg.reduce((a, c) => a + c.learners.length, 0), lgFin = lg.reduce((a, c) => a + c.learners.filter(id => (c.prog[id]?.p || 0) >= 100).length, 0);
   const grp = S.groups.map(g => { const ids = new Set(S.members.filter(m => m.group === g.id).map(m => m.id)); let n = 0, f = 0, p = 0; L.forEach(c => c.learners.filter(id => ids.has(id)).forEach(id => { n++; p += c.prog[id]?.p || 0; if ((c.prog[id]?.p || 0) >= (c.criteria?.threshold || 80)) f++; })); return [g.name, ids.size, n ? Math.round(p / n) : 0, f, n ? Math.round(f / n * 100) : 0]; });
@@ -99,7 +102,7 @@ ${sign}<h1>${esc(title)}</h1><p class="m">${esc(S.org.name)} · ${esc(TYPES[ty].
   logAudit(`보고서 내려받기 — ${title}`); toast(`「${title}」을 내려받았습니다. 한글 · Word에서 열 수 있습니다.`, 'ok'); }
 ACT['seg-report'] = () => segReport();
 AFTER.push(() => { const k = $('[data-act="kpi-csv"]'); if (k && !$('[data-act="seg-report"]')) k.insertAdjacentHTML('afterend', `<button class="btn" data-act="seg-report">${ic('book', 16)} ${esc((SEG_REP[S.org.type] || '교육 운영 현황 보고').replace(/\(.*\)/, ''))} 내려받기</button>`); });
-{ const base = answer; answer = (q, ...r) => { if (/(실적|이수 현황|결재).*(보고서)|보고서.*(내려받|다운|결재)/.test(q) && !/주간/.test(q)) { setTimeout(segReport, 50); return { text: `${SEG_REP[S.org.type] || '교육 운영 현황 보고'}를 지금 집계해 내려받습니다(한글 · Word에서 열리는 문서). 요약 · ${t('group')}별 · ${t('cls')}별 현황과 특이사항이 들어 있습니다.${S.org.type === 'public' ? ' 결재란(담당 · 팀장 · 과장)이 포함되어 있습니다.' : ''}` }; } return base(q, ...r); }; }
+{ const base = answer; answer = (q, ...r) => { if (/(실적|이수 현황|결재).*(보고서)|보고서.*(내려받|다운|결재)/.test(q) && !/주간/.test(q)) { setTimeout(segReport, 50); return { text: `${SEG_REP[S.org.type] || '교육 운영 현황 보고'}를 집계해 내려받기를 시작했습니다(한글 · Word에서 열리는 .doc 문서). 요약 · ${t('group')}별 · ${t('cls')}별 현황과 특이사항이 들어 있습니다.${S.org.type === 'public' ? ' 결재란(담당 · 팀장 · 과장)이 포함되어 있습니다.' : ''}\n파일이 받아지지 않았으면 아래 [보고서 내려받기]를 누르십시오.`, btn: { act: 'seg-report', label: '보고서 내려받기' } }; } /* v38 P-18: 자동 내려받기가 막혀도 누를 버튼 */ return base(q, ...r); }; }
 
 /* ── ⑦ 공공 도입 점검(현황) ── */
 AFTER.push(cur => { if (!S || S.org.type !== 'public' || cur.ws !== 'dash' || $('#segPub')) return; const v = $('.bview') || $('main#main'); if (!v) return;

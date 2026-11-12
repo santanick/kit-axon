@@ -20,7 +20,7 @@
 .ob1{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:99px;padding:4px 10px 4px 4px;font-size:12px;font-weight:700;background:var(--soft);color:var(--muted);cursor:pointer}
 .ob1 i{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#fff;font:700 10.5px/1 inherit;font-style:normal;color:var(--muted)}
 .ob1 em{font-style:normal;font-weight:600;font-size:10.5px;opacity:.7;margin-left:2px}
-.ob1.ok{background:#EAF7EF;color:#16804D}.ob1.ok i{background:#16A35A;color:#fff}
+.ob1.ok{background:#EAF7EF;color:var(--t-ok,#007A29)}.ob1.ok i{background:#16A35A;color:#fff}
 .ob1.cur{background:var(--ink);color:#fff}.ob1.cur i{background:#5C74F6;color:#fff}
 .ob1:hover{box-shadow:inset 0 0 0 1.5px var(--ink)}
 .obc{padding:10px 12px 12px}.obc b{display:block;font-size:14px;margin-bottom:2px}.obc p{margin:0 0 10px;font-size:12.5px;line-height:1.55;color:var(--muted)}

@@ -71,7 +71,12 @@
   /* Shadow DOM에 홈페이지 HTML 넣기 */
   function mount(root) { const H = HP(); if (!H) return; (root || document).querySelectorAll('.smhost:not([data-ok])').forEach(el => { el.dataset.ok = '1'; const k = el.dataset.smk;
     const html = k === 'home' ? H.home : k === 'foot' ? H.foot : ((H.pages[k] || {}).html || '');
-    const sr = el.shadowRoot || el.attachShadow({ mode: 'open' }); sr.innerHTML = `<style>${safeCSS(H.css)}.smr{background:transparent;min-height:0}</style><div class="smr lk-${esc(H.look || 'campus')}">${safeHTML(html, { data: true, code: true })}</div>`; /* v25 게시본도 다시 정화(서버 API로 직접 넣은 HTML 대비) */ }); }
+    const sr = el.shadowRoot || el.attachShadow({ mode: 'open' }); sr.innerHTML = `<style>${safeCSS(H.css)}.smr{background:transparent;min-height:0}.hpl-bu-top>div,.pt-2>*{min-width:0}@media(max-width:900px){.hpl-bu-top,.pt-2{grid-template-columns:minmax(0,1fr)!important}.hpl-bu-find b{white-space:normal;text-align:center;line-height:1.3}.hpl-bulletin h1{overflow-wrap:anywhere;word-break:keep-all}}</style><div class="smr lk-${esc(H.look || 'campus')}">${safeHTML(html, { data: true, code: true })}</div>`; /* v25 게시본도 다시 정화(서버 API로 직접 넣은 HTML 대비) */ }); try { const fm = String(H.foot || '').match(/href="tel:([+\d\-\s()]{6,20})"/) || String(H.foot || '').match(/(0\d{1,2}-\d{3,4}-\d{4}|1[5-8]\d{2}-\d{4})/); if (fm) sr.querySelectorAll('a').forEach(a => { if (/전화로 (신청|문의)|전화 (상담|신청)/.test(a.textContent)) a.setAttribute('href', 'tel:' + fm[1].replace(/[^\d+]/g, '')); }); } catch (e) { } /* v38 F5 L: '전화로 신청하기'는 바닥글 대표번호로 전화를 건다(#shop으로 가지 않음) */
+    /* v34.5 G1 웹폰트: Shadow DOM 안의 @font-face는 브라우저가 무시하므로 문서 머리에 한 번 올린다(같은 출처 fonts/만) */
+    try { const ff = (safeCSS(H.css).match(/@font-face\{[^}]*url\('fonts\/[\w.-]+\.woff2'\)[^}]*\}/g) || []).join(''); let st = document.getElementById('hp-ff'); if (ff && (!st || st.textContent !== ff)) { if (!st) { st = document.createElement('style'); st.id = 'hp-ff'; document.head.appendChild(st); } st.textContent = ff; } } catch (e) { }
+    /* v34.5 F2 분할 웹폰트: 표식 --hpf(글꼴 CSS) · --hpf-pre(첫 화면 제목 조각)를 문서 머리 link로(같은 출처 fonts/ · jsdelivr만) */
+    try { const C = safeCSS(H.css); const g = n => ((C.match(new RegExp(`--${n}:"([^"]*)"`)) || [])[1] || '').split('|').filter(u => /^(fonts\/[\w-]+\/[\w.-]+(\?[vh]=\w+)?|https:\/\/cdn\.jsdelivr\.net\/[\w@./-]+)$/.test(u));
+      [...g('hpf').map(u => ['stylesheet', u]), ...g('hpf-pre').map(u => ['preload', u])].forEach(([r, u]) => { if (document.querySelector(`link[data-hpf="${u}"]`)) return; const l = document.createElement('link'); l.rel = r; l.href = u; l.dataset.hpf = u; if (r === 'preload') { l.as = 'font'; l.type = 'font/woff2'; l.crossOrigin = 'anonymous'; } document.head.appendChild(l); }); } catch (e) { } }
   window.lmMount = mount;
   { let q = 0; new MutationObserver(() => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { mount(); } catch (e) { } }); }).observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); }
 
@@ -82,6 +87,9 @@
     if (/^#?(home)?$/.test(location.hash)) title = S0.title || H.name;
     else if (r.a === 'hp') { const pg = H.pages[decodeURIComponent(location.hash.slice(1)).split('/')[1] || '']; if (pg) { title = `${(pg.seo && pg.seo.title) || pg.name} · ${H.name}`; desc = (pg.seo && pg.seo.desc) || desc; kw = (pg.seo && pg.seo.kw) || kw; } }
     if (title) document.title = title; meta('description', desc); meta('keywords', kw);
+    /* v37 P4: 링크 공유 미리보기(og) — 제목 · 설명 · 공유 이미지 */
+    const og = (p2, v) => { let m = document.querySelector(`meta[property="${p2}"]`); if (!v && !m) return; if (!m) { m = document.createElement('meta'); m.setAttribute('property', p2); document.head.appendChild(m); } m.content = v || ''; };
+    og('og:title', title || document.title); og('og:description', desc); og('og:image', /^data:image\/|^https:\/\//.test(S0.img || '') && !/^data:/.test(S0.img) ? S0.img : '');
     if (LR.mode === 'live' && S0.index !== false) meta('robots', 'index,follow');
     if (H.favicon) { const l = document.querySelector('link[rel="icon"]'); if (l && l.getAttribute('href') !== H.favicon) l.setAttribute('href', H.favicon); } }
 

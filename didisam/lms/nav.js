@@ -8,7 +8,7 @@
   const G = [
     ['g-class', '수업', 'book', [
       ['h-acad', '학기 · 강좌', '학기 · 교과목 · 분반 · 수강생을 준비합니다', ['lmsa', 'sis', '…', 'academic']],
-      ['h-room', '강의실', '주차별 자료 · 영상 · 학습활동을 구성합니다', ['lmsb', 'lmsc', 'lmsi', 'class', '…', 'library', 'dbook', 'tutorial']],
+      ['h-room', '강의실', '차시별 자료 · 영상 · 학습활동을 구성합니다', ['lmsb', 'lmsc', 'lmsi', 'class', '…', 'library', 'dbook', 'tutorial']],
       ['h-eval', '과제 · 시험', '과제와 시험을 내고 채점합니다', ['lmse', 'lmsf', '…', 'assess']],
       ['h-att', '출결', '출석을 받고 출결을 확인합니다', ['lmsg', 'lmsp-app', '…', 'attend']],
       ['h-grade', '성적', '성적을 계산하고 확정합니다', ['grade']],
@@ -56,6 +56,7 @@
 .lmsnav-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 16px}
 .lmsnav-sub .lnd{flex:1 1 100%;margin:0 0 2px;color:var(--mut,#64748b);font-size:13px}
 .lmsnav-sub button{border:1px solid var(--line,#e2e8f0);background:var(--card,#fff);color:inherit;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+@media (max-width:600px){.lmsnav-sub button{min-height:44px;padding:10px 14px}} /* v38 390 하위 탭 44px */
 .lmsnav-sub button.on{background:var(--pri,#5C74F6);border-color:var(--pri,#5C74F6);color:#fff}
 .lmsnav-sub button.more{border-style:dashed}
 .side .ri .nvn{display:none}`; document.head.appendChild(st); }

@@ -78,7 +78,7 @@
   LW4.need = (actor, roles) => { if (!roles.includes(actor.role)) LW4.err(403, '이 작업을 할 권한이 없습니다.'); };
 
   /* ═════════ 데모 엔진(서버 lms_k_* 함수와 같은 규칙) ═════════ */
-  const ens = () => { S.lms = S.lms || {}; const K = S.lms.k = S.lms.k || { surveys: [], remind: [] }; if (!K.seeded) { K.seeded = true; seedK(K); } return K; };
+  const ens = () => { S.lms = S.lms || {}; const K = S.lms.k = S.lms.k || { surveys: [], remind: [] }; if (!K.seeded) { K.seeded = true; if (!(S && S.org && S.org.empty)) seedK(K); } return K; };
   const LIK5 = [['전혀 그렇지 않다', 'Strongly disagree'], ['그렇지 않다', 'Disagree'], ['보통이다', 'Neutral'], ['그렇다', 'Agree'], ['매우 그렇다', 'Strongly agree']].map(([ko, en]) => ({ ko, en }));
   const tx = (j, lang) => (j && (j[lang] || j.ko)) || '';
   const getS = id => { const s = ens().surveys.find(x => x.survey_id === id); if (!s) LW4.err(404, '설문을 찾을 수 없습니다.'); return s; };

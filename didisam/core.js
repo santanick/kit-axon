@@ -8,10 +8,13 @@ const won = n => (Number(n) || 0).toLocaleString('ko-KR') + '원';
 const pct = n => Math.round(Number(n) || 0) + '%';
 const num = n => (Number(n) || 0).toLocaleString('ko-KR');
 const uid = (p = 'x') => p + Math.random().toString(36).slice(2, 9);
-const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }; /* v22 현지 날짜(자정~09시 KST에 전날로 찍히던 문제) */
-const addDays = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
+function ymdL(d) { d = d instanceof Date ? d : new Date(d == null ? Date.now() : d); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; } /* v38 현지(Asia/Seoul) 날짜 하나로 — toISOString().slice(0, 10)은 UTC라 오전 9시 전에 하루 전이 됨 */
+const today = () => ymdL(new Date());
+/* v38 학습자 큐에서 온 UTC 시각(…Z)을 현지 'YYYY-MM-DD HH:mm'으로(그 밖의 값은 그대로) */
+function atL(v) { const s0 = String(v == null ? '' : v); const k = s0.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*(?:(오전|오후)\s*)?(\d{1,2})(?:시\s*|:)(\d{1,2})/); if (k) { let h = +k[5]; if (k[4] === '오후' && h < 12) h += 12; if (k[4] === '오전' && h === 12) h = 0; const p = n => String(n).padStart(2, '0'); return `${k[1]}-${p(k[2])}-${p(k[3])} ${p(h)}:${p(k[6])}`; } const s = s0; if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s)) return s.replace('T', ' '); const d = new Date(s); if (isNaN(d)) return s; const p = n => String(n).padStart(2, '0'); return `${ymdL(d)} ${p(d.getHours())}:${p(d.getMinutes())}`; } /* v22 현지 날짜(자정~09시 KST에 전날로 찍히던 문제) */
+const addDays = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return ymdL(t); };
 const daysAgo = d => Math.max(0, Math.round((Date.now() - new Date(d)) / 864e5));
-const nowStr = () => new Date().toLocaleString('ko-KR', { hour12: false });
+const nowStr = () => { const d = new Date(); return `${ymdL(d)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }; /* v38 시각 표기 하나로 'YYYY-MM-DD HH:mm'(이전 '2026. 11. 11. 5시 30분 0초') */
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 let RNG = 7; const rnd = () => (RNG = (RNG * 16807) % 2147483647) / 2147483647;
 const pick = a => a[Math.floor(rnd() * a.length)];
@@ -62,7 +65,7 @@ const TERMS = {
   univ: { learner: '학생', cls: '교과목', group: '학과', teacher: '교수', done: '이수', site: '학습 포털', fee: '수강료' },
   k12: { learner: '원생', cls: '수업', group: '반', teacher: '강사', done: '수료', site: '학원 홈페이지', fee: '수강료' },
   adult: { learner: '수강생', cls: '강좌', group: '기수', teacher: '강사', done: '수료', site: '홈페이지', fee: '수강료' },
-  lifelong: { learner: '학습자', cls: '강좌', group: '기수', teacher: '강사', done: '수료', site: '평생교육원 홈페이지', fee: '학습비' },
+  lifelong: { learner: '수강생', cls: '강좌', group: '기수', teacher: '강사', done: '수료', site: '평생교육원 홈페이지', fee: '학습비' },
   voc: { learner: '훈련생', cls: '훈련과정', group: '훈련반', teacher: '훈련교사', done: '수료', site: '훈련기관 홈페이지', fee: '훈련비' }
 };
 const t = k => (TERMS[S?.org?.type] || TERMS.adult)[k] || k;
@@ -120,21 +123,21 @@ function presetNav(type, ed) {
   /* v29 대학은 도입 형태(에디션)로 나뉜다 — lite: 사업단 · 센터, lms: 학사 LMS(전교생 메인) */
   if (ed === undefined && type === 'univ' && S && S.org && S.org.type === 'univ') ed = S.org.ed;
   const P = PRESET[type === 'univ' && ed === 'lms' && PRESET.univ_lms ? 'univ_lms' : type]; const tabs = {}; P.ws.forEach(w => tabs[w] = []);
-  P.on.forEach(id => tabs[MENU[id].ws].push({ id, on: true })); P.off.forEach(id => tabs[MENU[id].ws].push({ id, on: false }));
+  P.on.forEach(id => tabs[MENU[id].ws].push({ id, on: true })); P.off.filter(id => !MENU[id].only || MENU[id].only === type).forEach(id => tabs[MENU[id].ws].push({ id, on: false })); /* v32.8 다른 유형 전용 탭은 꺼진 목록에도 넣지 않는다 */
   return { ws: [...P.ws], tabs };
 }
 const menuOn = id => !!S.nav.tabs[MENU[id]?.ws]?.find(x => x.id === id && x.on);
 const wsTabs = w => (S.nav.tabs[w] || []).filter(x => x.on && MENU[x.id] && !(MENU[x.id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(x.id))).map(x => x.id);
 
 /* ───────── 공용 UI ───────── */
-function toast(msg, kind = '') { const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; $('#toasts').appendChild(el); setTimeout(() => el.classList.add('out'), 2600); setTimeout(() => el.remove(), 3000); }
+function toast(msg, kind = '') { const box = $('#toasts'); if (box) [...box.children].forEach(x => x.remove()); /* v38 F5 P21 · C15: 안내는 한 번에 하나만 — '[게시하기]를 누르세요'와 '게시했습니다'가 겹치지 않게 */ const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; $('#toasts').appendChild(el); setTimeout(() => el.classList.add('out'), 2600); setTimeout(() => el.remove(), 3000); }
 function modal(title, body, actions = [], wide = false) {
   closeModal();
   const w = document.createElement('div'); w.className = 'mwrap'; w.id = 'modal';
   w.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mh"><b>${esc(title)}</b><button class="x" data-act="modal-close" aria-label="닫기">${ic('x', 18)}</button></div><div class="mb">${body}</div><div class="mf">${actions.map(a => `<button class="btn ${a.kind || ''}" data-mact="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</div></div>`;
   document.body.appendChild(w);
   w.addEventListener('click', e => { if (e.target === w) closeModal(); const b = e.target.closest('[data-mact]'); if (!b) return; const a = actions.find(x => x.id === b.dataset.mact); if (a && a.run) { if (a.run(w) !== false) closeModal(); } else closeModal(); });
-  const f = w.querySelector('input,select,textarea,button.btn'); f && f.focus(); return w;
+  const f = w.querySelector('input,select,textarea,button.btn'); f && f.focus({ preventScroll: true }); return w;
 }
 const closeModal = () => { const m = $('#modal'); m && m.remove(); };
 const fv = (w, n) => { const el = w.querySelector(`[name="${n}"]`); return el ? (el.type === 'checkbox' ? el.checked : el.value.trim()) : ''; };
@@ -164,9 +167,10 @@ function resolve(id) {
   if (id === 'settings') return { ws: 'settings', tab: '' };
   if (WS[id]) { const tb = wsTabs(id); return { ws: id, tab: (UI['tab_' + id] && tb.includes(UI['tab_' + id])) ? UI['tab_' + id] : tb[0] || '' }; }
   if (MENU[id]) return { ws: MENU[id].ws, tab: id };
+  if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id)) { UI.settings = id; return { ws: 'settings', tab: '' }; } /* v32.8 설정 하위 화면 바로가기(현황 › 요금제 [업그레이드] 등) */
   return { ws: 'home', tab: '' };
 }
-const TEACH_NO = ['site', 'sales', 'billing', 'admins', 'org', 'auto'];
+const TEACH_NO = ['site', 'sales', 'billing', 'admins', 'org', 'auto', 'settings', 'dash']; /* v32.8 설정 · 기관 현황은 교수자 직접 이동도 막음(QA U4) */
 function go(id, keep) {
   let r = resolve(id);
   if (r.tab && MENU[r.tab]?.owner && S.me.role !== 'owner') { toast('정운영자만 볼 수 있는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; }
@@ -199,7 +203,7 @@ function render() {
     <nav class="side" aria-label="작업 공간">
       <div class="rgrp">${rail()}</div>
       <div class="rfoot">
-        <button class="ri ${w === 'settings' ? 'on' : ''}" data-act="go" data-v="settings">${ic('gear')}<span>설정</span></button>
+        ${S.me.role === 'teacher' ? '' : `<button class="ri ${w === 'settings' ? 'on' : ''}" data-act="go" data-v="settings">${ic('gear')}<span>설정</span></button>`}
         <div class="orgcard">${ticon(ty.icon)}<div><b>${esc(ty.name)}</b><small>맞춤 구성 · 데모 모드</small></div></div>
       </div>
     </nav>
@@ -259,10 +263,11 @@ function renderSignup() {
 }
 function createOrg(type, name, ed) {
   RNG = 7 + Object.keys(TYPES).indexOf(type) * 13;
-  S = { v: 2, org: { name, type, created: today(), domain: (name.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'myschool') + '.didisam.com', plan: 'premium', ...(type === 'univ' ? { ed: ed === 'lms' ? 'lms' : 'lite' } : {}) }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type, type === 'univ' ? (ed === 'lms' ? 'lms' : 'lite') : undefined), audit: [], runs: [], ai: { usage: 0 }, chat: [] };
+  S = { v: 2, org: { name, type, created: today(), domain: ((a => a.length >= 3 ? a : 'org-' + Math.random().toString(36).slice(2, 8))(name.replace(/[^a-z0-9]/gi, '').toLowerCase())) + '.didisam.com', /* v38 한글 이름(영문 3자 미만)은 'e.didisam.com' 대신 기관별 기본 주소 — 홈페이지 › 도메인에서 바꿈 */ plan: 'premium', ...(type === 'univ' ? { ed: ed === 'lms' ? 'lms' : 'lite' } : {}) }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type, type === 'univ' ? (ed === 'lms' ? 'lms' : 'lite') : undefined), audit: [], runs: [], ai: { usage: 0 }, chat: [] };
   Object.assign(S, seed(type));
   if (typeof postSeed === 'function') postSeed(type);
   logAudit(`기관 생성 — 유형 ${TYPES[type].name}`); save(); CUR = { ws: 'home', tab: '' };
+  if (/^org-/.test(S.org.domain)) setTimeout(() => { try { toast(`홈페이지 주소를 임시로 ${S.org.domain}로 정했습니다. 나중에 홈페이지 › 도메인에서 영문 주소로 바꿀 수 있습니다.`); } catch (e) { } }, 1500); /* v38 */
   $('#app').innerHTML = `<div class="gen"><div class="spin"></div><b>${esc(TYPES[type].name)} 맞춤 어드민을 준비하고 있습니다</b><p>메뉴 구성 · 용어 · 자동화 레시피 · 샘플 데이터</p></div>`;
   setTimeout(() => { render(); }, 800);
 }
@@ -270,7 +275,7 @@ function createOrg(type, name, ed) {
 /* ───────── 샘플 데이터 (가상 이름 · 010-0000 번호 · example.com) ───────── */
 const SAMPLE = {
   corp: { cls: [['신입사원 온보딩', 'period'], ['직장 내 성희롱 예방교육', 'period', 'legal'], ['개인정보보호 교육', 'period', 'legal'], ['장애인 인식개선 교육', 'period', 'legal'], ['산업안전보건교육(정기)', 'period', 'legal'], ['생성형 AI 업무 활용', 'period'], ['신임 팀장 리더십', 'episode']], grp: ['경영지원팀', '영업1팀', '생산기술팀', 'R&D센터', '고객지원팀'], lv: ['입문', '실무', '리더'] },
-  univ: { cls: [['AI 리터러시(교양)', 'period'], ['프롬프트 엔지니어링', 'period'], ['데이터 분석 기초', 'period'], ['캡스톤디자인', 'episode'], ['취업역량 특강', 'episode'], ['비교과: AX 챌린지', 'period']], grp: ['컴퓨터공학과', '경영학과', '간호학과', '디자인학과', '기계공학과'], lv: ['Explorer', 'Builder', 'Master'] },
+  univ: { cls: [['AI 리터러시(교양)', 'period'], ['AI에게 질문하는 글쓰기', 'period'], ['데이터 분석 기초', 'period'], ['캡스톤디자인', 'episode'], ['취업역량 특강', 'episode'], ['비교과: AX 챌린지', 'period']], grp: ['컴퓨터공학과', '경영학과', '간호학과', '디자인학과', '기계공학과'], lv: ['Explorer', 'Builder', 'Master'] },
   k12: { cls: [['중2 수학 A반', 'episode', '요일반'], ['고1 영어 내신반', 'episode', '요일반'], ['수학 온라인 보강', 'period'], ['겨울방학 과학 특강', 'episode', '특강반'], ['국어 독해 10회권', 'episode', '회차 차감반'], ['주간 단어 테스트 구독', 'sub']], grp: ['중2-A반', '중2-B반', '고1 영어반', '초6 심화반'], lv: ['기초', '심화', '최상위'] },
   adult: { cls: [['엑셀 실무 마스터', 'period'], ['컴활 1급 필기 완성', 'period'], ['생성형 AI 영상 제작', 'period'], ['노션 업무 자동화', 'period'], ['주말 오프라인 원데이 클래스', 'episode', '특강반'], ['실무 템플릿 월간 구독', 'sub']], grp: ['26년 10월 기수', '26년 11월 기수'], lv: ['입문', '실무', '전문가'] },
   lifelong: { cls: [['시니어 스마트폰 활용', 'episode', '요일반'], ['바리스타 2급 자격과정', 'episode', '요일반'], ['인문학 아카데미', 'period'], ['사회복지 실무 이해', 'period'], ['AI 활용 1인 창업', 'period']], grp: ['2026-2학기 1기', '2026-2학기 2기', '원격과정'], lv: ['입문', '심화', '수료'] },
@@ -281,15 +286,16 @@ const t2 = (type, k) => TERMS[type][k];
 function seed(type) {
   const sm = SAMPLE[type]; const groups = sm.grp.map((n, i) => ({ id: 'g' + i, name: n, lead: i % 2 ? '' : '담당 ' + pick(SUR) + '○○' }));
   const members = Array.from({ length: 48 }, (_, i) => {
-    const n = SUR[i % SUR.length] + GIV[(i * 7) % GIV.length]; const g = groups[i % groups.length].id; const grade = i < 40 ? '정회원' : i < 44 ? '준회원' : '승인 대기';
+    const n = SUR[i % SUR.length] + GIV[(i * 7 + Math.floor(i / SUR.length) * 3) % GIV.length]; /* v36 R1 성 · 이름 주기가 같아(20) 20명마다 같은 이름이 반복되던 것 — 바퀴마다 이름을 밀어 48명 모두 다르게 */ const g = groups[i % groups.length].id; const grade = i < 40 ? '정회원' : i < 44 ? '준회원' : '승인 대기';
     return { id: 'm' + i, name: n, nick: n.slice(1), email: `user${i + 1}@example.com`, phone: `010-0000-${String(1000 + i * 37).slice(-4)}`, group: g, grade, joined: addDays(today(), -Math.floor(rnd() * 180)), last: addDays(today(), -Math.floor(rnd() * (i % 7 === 0 ? 95 : 16))),
-      extra: type === 'corp' ? { 부서: groups[i % groups.length].name, 직급: pick(['사원', '대리', '과장', '차장']) } : type === 'univ' ? { 학번: '2026' + String(1000 + i), 학과: groups[i % groups.length].name } : type === 'voc' ? { 훈련생구분: pick(['내일배움카드', '사업주위탁', '실업자']) } : {}, diag: type === 'univ' && i < 38 ? pick(['EYE', 'PEN', 'LENS', 'STORY', 'MAP']) : '' };
+      extra: type === 'corp' ? { 부서: groups[i % groups.length].name, 직급: pick(['사원', '대리', '과장', '차장']) } : type === 'univ' ? { 학번: '2026' + String(1000 + i), 학과: groups[i % groups.length].name } : type === 'voc' ? { 훈련생구분: pick(['내일배움카드', '사업주위탁', '실업자']) } : {}, diag: type === 'univ' && i < 38 ? pick(['EYE', 'PEN', 'LENS', 'STORY', 'MAP']) : '', ...(type === 'k12' ? { crm: (gy => ({ gy, school: gy[0] === '초' ? '해운초등학교' : gy[0] === '중' ? '해운중학교' : '센텀고등학교' }))((groups[i % groups.length].name.match(/[초중고]\d/) || ['중2'])[0]) } : {}) }; /* v36 R1 학원 샘플 원생에 학년 · 학교 */
   });
   const parents = type === 'k12' ? members.slice(0, 30).map((m, i) => ({ id: 'p' + i, child: m.id, name: m.name[0] + '○○ 보호자', phone: `010-1111-${String(2000 + i * 13).slice(-4)}`, status: i % 6 === 5 ? '연결 대기 중' : '연결 완료' })) : [];
   const classes = sm.cls.map(([name, kind, x], i) => {
     const legal = x === 'legal'; const sub = kind === 'episode' ? (x || '요일반') : '';
     const price = ['corp', 'univ'].includes(type) || legal ? 0 : kind === 'sub' ? 29000 : type === 'k12' ? 280000 : type === 'voc' ? 0 : [99000, 149000, 199000, 59000][i % 4];
-    const lr = members.filter((m, j) => m.grade !== '승인 대기' && (legal || j % (i + 2) !== 1)).map(m => m.id).slice(0, legal ? 44 : 14 + (i * 5) % 22);
+    const gyC = type === 'k12' ? (name.match(/[초중고]\d/) || [])[0] : ''; /* v36 R1 학원: 학년이 붙은 반(중2 · 고1)은 그 학년 원생만 */
+    const lr = members.filter((m, j) => m.grade !== '승인 대기' && (legal || j % (i + 2) !== 1) && (!gyC || (m.crm || {}).gy === gyC)).map(m => m.id).slice(0, legal ? 44 : 14 + (i * 5) % 22);
     const prog = {}; lr.forEach((id, j) => { const p = clamp(Math.round(rnd() * 118 - (j % 5 === 0 ? 40 : 0)), 0, 100); prog[id] = { p, exam: p > 60 ? Math.round(55 + rnd() * 45) : null, assign: p > 70 ? (rnd() > .45 ? 'graded' : 'submitted') : 'none', subAt: addDays(today(), -Math.floor(rnd() * 9)), att: Math.round(70 + rnd() * 30) }; });
     return { id: 'c' + i, name, kind, sub, legal, level: i % 3, status: i === sm.cls.length - 1 && type !== 'corp' ? '준비중' : '운영중', price, open: type === 'corp' ? '지정 회원' : '전체', start: addDays(today(), -30 + i * 3), end: addDays(today(), 60 + i * 10),
       teacher: t2(type, 'teacher') + ' ' + pick(SUR) + '○○', group: kind === 'episode' ? groups[i % groups.length].id : '', learners: lr, prog,
@@ -301,12 +307,12 @@ function seed(type) {
   const consults = Array.from({ length: type === 'corp' ? 3 : 9 }, (_, i) => ({ id: uid('cs'), at: addDays(today(), -i * 2), who: members[i * 3].id, ch: pick(['채널톡 전화', '채널톡 채팅', '대면 상담']), cat: pick(type === 'k12' ? ['입학 문의', '성적 상담', '수강료'] : type === 'voc' ? ['훈련 신청', '출결 문의', '취업 상담'] : ['수강 문의', '결제 · 환불', '학습 상담']), title: pick(['수강 일정 문의', '진도 상담', '환불 규정 문의', '레벨 테스트 결과 상담', '수료 기준 문의']), summary: '', status: i < 2 ? '진행 중' : '완료' }));
   const posts = Array.from({ length: 12 }, (_, i) => ({ id: uid('po'), kind: i % 3 === 0 ? '질문' : pick(['질문', '이야기']), board: pick(['커뮤니티', '커뮤니티', '게시판', '학습노트', '수강후기']), who: members[i * 2].id, title: pick(['과제 제출 형식 질문', '오늘 수업 정리', '퀴즈 3번 해설 부탁드립니다', '수강 후기 남깁니다', '영상이 끊겨요']), at: addDays(today(), -i), replies: i % 3 ? 1 : 0, views: 10 + i * 7, hidden: false }));
   const books = ['k12', 'adult', 'lifelong'].includes(type) ? [{ id: 'bk0', name: type === 'k12' ? '중2 수학 개념서' : '실무 워크북(PDF)', kind: type === 'k12' ? '실물' : '전자책', price: 18000, sold: 23, delivered: 18, open: '전체' }, { id: 'bk1', name: '기출 문제집', kind: '전자책', price: 12000, sold: 41, delivered: 0, open: '전체' }] : [];
-  const lib = [['오리엔테이션.mp4', '동영상', '12:30', ['c0']], ['1강 핵심 개념.mp4', '동영상', '48:10', ['c0', 'c1']], ['실습 따라하기.mp4', '동영상', '22:05', ['c1']], ['https://youtu.be/dQw4w9WgXcQ', 'YouTube', '03:33', []], ['강의자료_1주차.pdf', '문서', '2.1MB', ['c0']], ['실습 템플릿.xlsx', '문서', '310KB', []]].map(([n, k, s, u], i) => ({ id: 'l' + i, name: n, kind: k, size: s, used: u.length, cls: u, at: addDays(today(), -i * 5), views: Math.round(40 + rnd() * 400), drop: Math.round(10 + rnd() * 35) }));
+  const lib = [['오리엔테이션.mp4', '동영상', '12:30', ['c0']], ['1강 핵심 개념.mp4', '동영상', '48:10', ['c0', 'c1']], ['실습 따라하기.mp4', '동영상', '22:05', ['c1']], ['https://youtu.be/dQw4w9WgXcQ', 'YouTube', '03:33', []], ['강의자료_1차시.pdf', '문서', '2.1MB', ['c0']], ['실습 템플릿.xlsx', '문서', '310KB', []]].map(([n, k, s, u], i) => ({ id: 'l' + i, name: n, kind: k, size: s, used: u.length, cls: u, at: addDays(today(), -i * 5), views: Math.round(40 + rnd() * 400), drop: Math.round(10 + rnd() * 35) }));
   const admins = [{ id: 'a0', name: '정운영자', email: 'owner@demo', role: 'owner', classes: [] }, { id: 'a1', name: '운영 담당', email: 'staff@demo', role: 'sub', classes: [] }, { id: 'a2', name: t2(type, 'teacher') + ' 김○○', email: 'teacher@demo', role: 'teacher', classes: ['c0', 'c1'] }];
   const COL = [['#E63295', '#4257D7', '#F5B5D2'], ['#4C77C5', '#2E4F8F', '#B9CCEB'], ['#E8A317', '#A86F00', '#F6D58A']];
   const badges = sm.lv.map((lv, i) => ({ id: 'bd' + i, name: `${lv}`, key: String(i + 1), cls: classes[i]?.id || 'c0', method: i === 2 ? 'manual' : 'pass', special: false, fill: COL[i][0], ring: COL[i][1], rib: COL[i][2], issued: (classes[i]?.learners || []).filter(id => classes[i].prog[id].p >= 80).slice(0, 14 - i * 5).map((id, j) => ({ who: id, at: addDays(today(), -j), no: `${String(i + 1)}-${String(j + 1).padStart(4, '0')}`, how: i === 2 ? '수동' : '자동', st: '유효', reason: '' })) }));
   badges.push({ id: 'bdx', name: '우수 프로젝트', key: '★', cls: '', method: 'manual', special: true, fill: '#2A2B2B', ring: '#1F2020', rib: '#5C74F6', issued: [] });
-  const certs = classes[0].learners.slice(0, 8).map((id, i) => ({ id: uid('ct'), cls: 'c0', who: id, at: addDays(today(), -i), no: `${today().slice(0, 4)}-${String(i + 1).padStart(4, '0')}`, dl: i % 2 === 0, manual: false }));
+  const certs = classes[0].learners.filter(id => (classes[0].prog[id] || {}).p >= classes[0].criteria.threshold).slice(0, 8).map((id, i) => /* v36 R1 샘플 수료증도 이수 기준을 채운 사람에게만 */ ({ id: uid('ct'), cls: 'c0', who: id, at: addDays(today(), -i), no: `${today().slice(0, 4)}-${String(i + 1).padStart(4, '0')}`, dl: i % 2 === 0, manual: false }));
   const msgs = [{ id: uid('ms'), at: addDays(today(), -2), to: '전체', title: '이번 주 운영 안내', ch: '앱 푸시 + 이메일', n: members.length }];
   const orgs = ['corp', 'univ', 'lifelong', 'voc'].includes(type) ? [{ id: 'o0', name: type === 'voc' ? '협약기업 A사' : type === 'univ' ? '취업지원센터' : type === 'corp' ? '계열사 B' : '구청 평생학습관', mgr: '기관 담당자', n: 14, done: 9, job: type === 'voc' ? 6 : 0 }] : [];
   const journey = sm.lv.map((lv, i) => ({ id: 'j' + i, name: lv, cls: classes.filter(c => c.level === i).map(c => c.id), unlock: i === 0 ? '바로 열림' : `${sm.lv[i - 1]} 배지 획득`, badge: 'bd' + i }));
@@ -337,7 +343,7 @@ ACT['modal-close'] = () => closeModal();
 ACT.tab = el => { UI[el.dataset.key] = el.dataset.v; render(); };
 ACT['su-ed'] = el => { SU.ed = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; renderSignup(); };
 ACT['su-type'] = el => { if (el.dataset.v !== SU.type) SU.ed = el.dataset.v === 'univ' ? 'lite' : ''; SU.type = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; renderSignup(); };
-document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; const f = ACT[el.dataset.act]; if (f) { e.preventDefault(); f(el, e); } });
+document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; const f = ACT[el.dataset.act]; if (f) { if (el.tagName !== 'SUMMARY') e.preventDefault(); f(el, e); } }); /* v32.8 summary는 기본 접기 · 펼치기를 살린다 */
 document.addEventListener('change', e => {
   if (e.target.id === 'roleSel') { S.me.role = e.target.value; save(); toast(`${roleName(S.me.role)} 권한으로 보는 화면입니다.`); go(CUR.tab || CUR.ws); return; }
   const el = e.target.closest('[data-chg]'); if (el && ACT[el.dataset.chg]) ACT[el.dataset.chg](el, e);

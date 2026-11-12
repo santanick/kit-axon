@@ -9,10 +9,10 @@
   const shop = () => { try { return (typeof shMine === 'function' && shMine()) || null; } catch (e) { return null; } };
   const books = () => { try { const R = shop(); const I = (typeof shInfo === 'function' && shInfo()) || {}; return Object.entries((R && R.books) || {}).map(([id, g]) => ({ id, g, b: (I.books || []).find(x => x.id === id) })).filter(x => x.b).sort((a, b) => String(b.g.at || '').localeCompare(String(a.g.at || ''))); } catch (e) { return []; } };
   function counts(st) { const R = shop(); const enr = (R && R.enr) || {}; const t = td(); const k = { pre: 0, on: 0, done: 0, exp: 0 };
-    (st.courses || []).forEach(x => { const e = enr[x.c.id] || {}; const end = e.end || x.c.end || ''; if (x.done) k.done++; else if ((end && end < t) || e.status === 'ended') k.exp++; else if (!x.p && ((e.at || x.c.start || '') > t || !x.doneN)) k.pre++; else k.on++; });
+    (st.courses || []).forEach(x => { const e = enr[x.c.id] || {}; const end = e.end || x.c.end || ''; if (x.done) k.done++; else if ((end && end < t) || e.status === 'ended') k.exp++; else if (!x.p && !x.started && ((e.at || x.c.start || '') > t || !x.doneN)) k.pre++; else k.on++; });
     return { ...k, bk: books().length }; }
   function statusBar(st) { const k = counts(st); const cls = (typeof lcTerm === 'function' ? lcTerm('cls') : '') || '클래스';
-    const it = [['수강 전', k.pre, 'm-courses'], ['수강 중', k.on, 'm-courses'], ['수료', k.done, 'm-courses'], ['기간 만료', k.exp, 'm-courses'], ['교재/교구', k.bk, 'm-books']];
+    const it = [['수강 전', k.pre, 'm-courses'], ['수강 중', k.on, 'm-courses'], ['수료', k.done, 'm-courses'], ['기간 만료', k.exp, 'm-courses'], ...(!k.bk && ((typeof lPayOff === 'function' && lPayOff()) || !(((typeof shInfo === 'function' && shInfo()) || {}).books || []).length) ? [] : [['교재/교구', k.bk, 'm-books']])]; /* v38 F5 결제 꺼진 기관은 교재/교구 칸을 감춘다 */
     return `<div class="mycard wide my26-stat" role="list" aria-label="내 ${E(cls)} 현황">${it.map(([l, n, j]) => `<a role="listitem" href="#" data-lact="myjump" data-v="${j}"><span>${E(l)}${l === '교재/교구' ? '' : ' ' + E(cls)}</span><b>${n}</b></a>`).join('')}</div>`; }
   function booksCard() { const L = books().slice(0, 3); if (!L.length) return '';
     return `<div class="mycard wide my26-list" id="m-books"><div class="mh"><h3>최근 구매한 교재/교구</h3><a class="my26-more" href="#mybooks">내 교재/교구 전체보기 ›</a></div><ul>${L.map(x => `<li><a href="#tb/${E(x.id)}">${E(x.b.name)}</a><small>${E(x.b.kind || '')}${x.g.until && x.b.kind === '전자책' ? ` · ${E(x.g.until)}까지` : ''}</small></li>`).join('')}</ul></div>`; }

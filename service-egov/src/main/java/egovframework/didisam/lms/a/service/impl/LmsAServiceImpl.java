@@ -247,14 +247,18 @@ public class LmsAServiceImpl extends EgovAbstractServiceImpl implements LmsAServ
         java.util.function.BiFunction<List<String>, String, String> g = (r, n) -> { int i = head.indexOf(n); return i >= 0 && i < r.size() ? r.get(i) : ""; };
         if (kind.equals("person")) {
             Set<String> have = new HashSet<>(m.selectMemberNos());
+            /* v38 학과코드 자리에 학과 이름도 받는다(Node mod-a.js와 같은 규칙) */
+            Map<String, String> byName = new HashMap<>(); for (Map<String, Object> r : m.selectUnitNames()) byName.putIfAbsent(String.valueOf(r.get("name")), String.valueOf(r.get("unit_code")));
             for (int i = 0; i < rows.size(); i++) { List<String> r = rows.get(i);
                 String mn = g.apply(r, "학번"), dk = g.apply(r, "구분"), du = g.apply(r, "학과코드"), ds = g.apply(r, "학적"), dg = g.apply(r, "학년"); String msg = ""; String st = "error";
                 String kd = dk.isEmpty() ? "student" : M_KIND.getOrDefault(dk, null); String ss = ds.isEmpty() ? "active" : M_STATUS.getOrDefault(ds, null); Integer gy = dg.isEmpty() ? null : mt(RE_YEAR, dg) ? Integer.valueOf(dg) : Integer.valueOf(-1);
+                String uname = null; if (!du.isEmpty() && !unitSet.contains(du)) { if (byName.containsKey(du)) du = byName.get(du); else if (du.matches(".*[가-힣].*") && du.codePointCount(0, du.length()) <= 60 && x.units == null) { uname = du; du = ""; } }
                 if (!mt(RE_MNO, mn)) msg = R_MNO; else if (kd == null) msg = R_KIND; else if (kd.equals("student") && !mt(RE_STU, mn)) msg = R_STU; else if (ss == null) msg = R_STAT; else if (gy != null && gy == -1) msg = R_YEAR;
                 else if (!du.isEmpty() && !unitSet.contains(du)) msg = R_UNIT; else if (x.units != null && !(!du.isEmpty() && inUnits(x, du, units.get(du)))) msg = R_SCOPE;
                 else if (seen.contains(mn)) msg = R_DUPF; else if (have.contains(mn)) { st = "skip"; msg = R_EXIST_P; } else st = "ok";
                 if (!st.equals("error") || !msg.equals(R_MNO)) seen.add(mn);
-                Row o = new Row(); o.line = i + 2; o.st = st; o.msg = msg; o.data = dataObj("member_no", mn, "kind", kd, "unit_code", du.isEmpty() ? null : du, "status", ss, "grade_year", gy != null && gy == -1 ? null : gy); out.add(o); }
+                if (uname != null && st.equals("ok")) msg = "새 학과 「" + uname + "」를 함께 만듭니다.";
+                Row o = new Row(); o.line = i + 2; o.st = st; o.msg = msg; o.data = dataObj("member_no", mn, "kind", kd, "unit_code", du.isEmpty() ? null : du, "status", ss, "grade_year", gy != null && gy == -1 ? null : gy); if (uname != null) o.data.put("unit_name", uname); out.add(o); }
             return out;
         }
         Map<String, Map<String, Object>> secs = new HashMap<>(); for (Map<String, Object> r : m.selectSecsTerm(term)) secs.put(r.get("course_code") + "|" + r.get("section_no"), r);
@@ -298,10 +302,13 @@ public class LmsAServiceImpl extends EgovAbstractServiceImpl implements LmsAServ
         ArrayNode ra = out.putArray("rows"); for (int i = 0; i < rows.size() && i < 300; i++) { Row r = rows.get(i); ObjectNode o = ra.addObject(); o.put("line", r.line); o.put("st", r.st); o.put("msg", r.msg); o.set("data", r.data); }
         out.set("errors", errors);
         if (!isTrue(Js.get(b, "apply"))) return out;
-        int ins = 0;
+        int ins = 0; ArrayNode students = Js.F.arrayNode();
         for (Row r : rows) {
             if (!r.st.equals("ok")) continue; ObjectNode d = r.data;
-            if (kind.equals("person")) m.insertPerson(x.tid, d.get("member_no").asText(), d.get("kind").asText(), d.get("unit_code").isNull() ? null : d.get("unit_code").asText(), d.get("status").asText(), d.get("grade_year").isNull() ? null : d.get("grade_year").asInt());
+            if (kind.equals("person")) { String uc = d.get("unit_code").isNull() ? null : d.get("unit_code").asText(); String un = d.has("unit_name") ? d.get("unit_name").asText() : null;
+                if (un != null) { String u0 = m.selectUnitByName(un); if (u0 != null) uc = u0; else { int n = m.countUnits() + 1; String code; do { code = "D" + String.format("%03d", n++); } while (m.selectUnit(code) != null); m.upsertUnit(x.tid, code, un, "dept", null); uc = code; } }
+                m.insertPerson(x.tid, d.get("member_no").asText(), d.get("kind").asText(), uc, d.get("status").asText(), d.get("grade_year").isNull() ? null : d.get("grade_year").asInt());
+                if ("student".equals(d.get("kind").asText())) { String dn = un != null ? un : uc == null ? "" : m.selectUnitName(uc); students.addObject().put("member_no", d.get("member_no").asText()).put("dept", dn == null ? "" : dn); } }
             else if (kind.equals("section")) {
                 Double cr = d.get("credits").isNull() ? null : d.get("credits").asDouble(); String unit = d.get("unit_code").isNull() ? null : d.get("unit_code").asText(); String cat = d.get("category").isNull() ? null : d.get("category").asText();
                 m.upsertCourseImp(x.tid, d.get("course_code").asText(), d.get("name").asText(), cr, unit, cat);
@@ -312,7 +319,7 @@ public class LmsAServiceImpl extends EgovAbstractServiceImpl implements LmsAServ
         ObjectNode counts = Js.F.objectNode(); counts.put("inserted", ins); counts.put("skipped", skip); counts.put("error", errN);
         int runId = m.insertRun(x.tid, term, kind, counts.toString(), errors.toString());
         audit(x, "lms.import", det("kind", kind, "term_id", term, "inserted", ins, "skipped", skip, "error", errN));
-        out.put("applied", true); out.put("run_id", runId); out.set("counts", counts); return out; }); }
+        out.put("applied", true); out.put("run_id", runId); out.set("counts", counts); if (kind.equals("person")) out.set("students", students); return out; }); }
 
     /* ── 분반 동기화(SFR-018) ── */
     static ObjectNode findClass(JsonNode CL, Object id, JsonNode not) { if (id == null || CL == null || !CL.isArray()) return null; for (JsonNode k : CL) if (k.isObject() && k != not && Js.strictEq(k.get("id"), String.valueOf(id))) return (ObjectNode) k; return null; }

@@ -74,10 +74,10 @@
       <label class="ul-ck"><input type="checkbox" ${L.sis.enrollAuto ? 'checked' : ''} data-chg="sis-set" data-k="enrollAuto" ${SIS_EDIT() ? '' : 'disabled'}> 수강신청 기간에는 실시간으로 자동 동기화</label></div>` +
       `<div class="card"><div class="ch"><b>받는 데이터 · 보내는 데이터</b></div>${table(['방향', '항목', '디디쌤 필드', '비고'], [
         ['받기', '구성원(교수 · 조교 · 직원 · 학생)', '학번/사번 · 소속 · 역할 · 학적 상태', '이름 · 연락처는 저장하지 않음'],
-        ['받기', '조직 · 학사 일정', '학과 · 학기 · 주차', '달력 · 알림에 반영'],
+        ['받기', '조직 · 학사 일정', '학과 · 학기 · 차시', '달력 · 알림에 반영'],
         ['받기', '강의 정보 · 수업계획서', '교과목 · 학수번호 · 분반 · 담당교수 · 평가 비율', '평가 비율은 성적 기준으로 자동 등록'],
         ['받기', '수강 정보', '수강생 · 청강생 · 수강 취소', '청강생은 성적 처리에서 제외'],
-        ['보내기', '출석', '주차 · 차시별 출석 · 지각 · 결석 · 공결', '휴 · 보강 포함'],
+        ['보내기', '출석', '차시별 출석 · 지각 · 결석 · 공결', '휴 · 보강 포함'],
         ['보내기', '성적', '항목별 점수 · 총점 · 등급', '교수 확정 후 전송']].map(r => r.map((x, i) => i === 0 ? tag(x, x === '받기' ? '' : 'y') : esc(x))))}</div>` +
       `<div class="card"><div class="ch"><b>기간계 연계</b></div><p class="mini">메일 · SMS · 카카오 알림톡(독려 · 휴보강 알림), 강의 녹화 시스템(녹화본 자동 탑재), 화상강의(출석 연동), 성장마루(비교과) · KOCW · MOOC는 모듈별로 켜고 끕니다.</p></div>`;
     if (tb === 'sec') b = `<div class="card"><div class="ch"><b>교과목 · 분반</b><small>학사 기준 자동 개설 · 같은 과목 분반에 원클릭 동기화</small></div>${table(['학수번호', t('cls'), '분반', '수강', '합반', ''], S.classes.map((c, i) => { const x = sx[c.id] || {}; return [esc(x.code || code(c, i)), esc(c.name), (x.secs || []).map(s => tag(s)).join(' ') || '—', c.learners.length + '명', x.merged ? tag('대표 ' + esc(x.merged)) : '—', (x.secs || []).length > 1 && SIS_EDIT() ? `<button class="btn sm" data-act="sec-sync" data-c="${c.id}">분반 동기화</button>` : '']; }), '동기화된 교과목이 없습니다. 연동 구성에서 지금 동기화를 누르세요.')}</div>
@@ -102,7 +102,7 @@
     if (S.members.length > 3) L.sis.log.unshift({ at, k: '정합성', ok: false, what: `학적 상태 '휴학'인데 수강 등록된 1건 — 학사과 확인 요청` });
     L.sis.log = L.sis.log.slice(0, 60); logAudit('학사 동기화 실행(데모)'); save(); render(); toast('학사 동기화를 마쳤습니다(데모 데이터).', 'ok');
   };
-  ACT['sec-sync'] = el => { const L = ens(); const c = C(el.dataset.c); if (!c) return; const x = L.sec[c.id]; L.secLog = L.secLog || []; L.secLog.unshift({ at: nowStr(), c: `${c.name} (${(x.secs || []).join(' · ')})`, what: '공지 · 자료실 · 주차 학습 · 과제 · 토론 · 시험을 대표 분반 기준으로 동기화(개별 수정 항목 제외)' }); logAudit('분반 동기화 — ' + c.name); save(); render(); toast('같은 과목의 모든 분반에 반영했습니다.', 'ok'); };
+  ACT['sec-sync'] = el => { const L = ens(); const c = C(el.dataset.c); if (!c) return; const x = L.sec[c.id]; L.secLog = L.secLog || []; L.secLog.unshift({ at: nowStr(), c: `${c.name} (${(x.secs || []).join(' · ')})`, what: '공지 · 자료실 · 차시 학습 · 과제 · 토론 · 시험을 대표 분반 기준으로 동기화(개별 수정 항목 제외)' }); logAudit('분반 동기화 — ' + c.name); save(); render(); toast('같은 과목의 모든 분반에 반영했습니다.', 'ok'); };
   ACT['mig-run'] = () => { const L = ens(); L.mig.items = L.mig.items.map(([n, p], i) => [n, Math.min(100, p + [60, 45, 70, 55, 80, 35][i])]); logAudit('데이터 이관 리허설(데모)'); save(); render(); };
 
   /* ═════════ 성적(SFR-032) ═════════ */
@@ -141,7 +141,7 @@
     const shortWeeks = S.classes.slice(0, 3).map(c => ({ c, n: (c.curriculum || []).filter((u, i) => i % 5 === 3).length })).filter(x => x.n);
     return `<div class="card"><div class="ch"><b>스마트 출석 규칙</b><small>온 · 오프라인 통합 출석부 · 동시 접속 ${A.conc.toLocaleString()}명 기준</small></div>
       <div class="ul-cols"><div><p class="mini"><b>오프라인 · 화상 수업 출석 방식</b></p>${ck('code', '인증번호')}${ck('photo', '사진 등록 · 인증(촬영 위치 · 일시 저장)')}${ck('bio', '생체 인증(앱 · 얼굴 · 지문)')}${ck('otp', 'OTP')}${ck('sms', 'SMS 본인 인증')}${ck('email', '이메일 본인 인증')}${ck('kakao', '카카오톡 인증')}</div>
-      <div><p class="mini"><b>온라인 출석 인정</b></p><div class="form2"><label>진도율(%)<input type="number" min="50" max="100" step="5" value="${A.onlinePct}" data-chg="att-set" data-k="onlinePct"></label><label>지각 기준(분)<input type="number" min="0" max="60" value="${A.lateMin}" data-chg="att-set" data-k="lateMin"></label></div>${ck('inWeek', '해당 주차 학습 기간 안에 들어야 출석 인정')}<label class="ul-ck"><input type="checkbox" ${A.multiPlay === 'block' ? 'checked' : ''} data-chg="att-set" data-k="multiPlay"> 여러 강의 동시 재생 차단</label></div></div>
+      <div><p class="mini"><b>온라인 출석 인정</b></p><div class="form2"><label>진도율(%)<input type="number" min="50" max="100" step="5" value="${A.onlinePct}" data-chg="att-set" data-k="onlinePct"></label><label>지각 기준(분)<input type="number" min="0" max="60" value="${A.lateMin}" data-chg="att-set" data-k="lateMin"></label></div>${ck('inWeek', '해당 차시 학습 기간 안에 들어야 출석 인정')}<label class="ul-ck"><input type="checkbox" ${A.multiPlay === 'block' ? 'checked' : ''} data-chg="att-set" data-k="multiPlay"> 여러 강의 동시 재생 차단</label></div></div>
       <p class="mini">출석 · 지각 · 결석 · 공결(사유 입력), 휴 · 보강 설정과 학생 푸시 알림, 학교 출석부 양식 엑셀 다운로드, 학사 출석 전송을 지원합니다.</p></div>
       <div class="card"><div class="ch"><b>원격수업 학습 분량 점검</b><small>원격수업 운영지침 · 차시별 재생 시간 · 활동 시간 합산</small></div>${shortWeeks.length ? shortWeeks.map(x => `<div class="row"><span>${esc(x.c.name)}</span>${tag(`학습 시간 부족 차시 ${x.n}개`, 'y')}</div>`).join('') : '<div class="empty">부족한 차시가 없습니다.</div>'}</div>` + h; };
   ACT['att-set'] = el => { const A = ens().att; const k = el.dataset.k; A[k] = k === 'multiPlay' ? (el.checked ? 'block' : 'allow') : el.type === 'checkbox' ? el.checked : +el.value; save(); render(); };

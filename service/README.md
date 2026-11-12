@@ -18,6 +18,9 @@
 - 변경 요청은 `x-didisam: 1` 헤더 + SameSite=Strict 세션 쿠키(HttpOnly · `__Host-`) + 같은 출처 확인
 - 상태 저장은 `rev` 낙관적 잠금(다른 창이 먼저 저장하면 409 → 화면이 최신본을 다시 불러옴), 기관당 최대 8MB
 - AI는 서버 키로만 호출, 기관 데이터룸 정책(AI 경로 · 외부 연결)과 하루 한도(`AI_DAILY_CALLS`)를 서버에서 확인
+- v33 학습자 계정 · 요청함: `POST /api/pub/<tid>/otp · signup · login{via}`(이메일 인증번호 10분 · 5회), 승인제 기관은 스튜디오 회원 등급(승인 대기 · 거절)으로 로그인 판단, `POST|GET /api/pub/<tid>/events`(학습자 → 운영자 요청함, 본문 개인정보 가림 · 12KB · 기관별 시간당 600건, GET은 운영자 세션), `POST /api/pub/<tid>/consent`(대학 첫 로그인 동의 — 여부 · 일시만)
+- 메일 발송: `MAIL_PROVIDER=webhook`(`MAIL_WEBHOOK_URL` · `MAIL_WEBHOOK_TOKEN`) 또는 `smtp`(`SMTP_URL`), `MAIL_FROM`. 미설정이면 운영(`NODE_ENV=production`)은 인증번호 요청에 503 `mail_unset`("메일 발송이 아직 설정되지 않았습니다 · 기관에 문의"), 개발은 응답에 `dev_code`
+  - 운영 등록: `bash service/gcp/mail.sh <프로젝트ID> smtp`(또는 `webhook` · `off`) — 값은 화면에 보이지 않게 입력받아 Secret Manager(`didisam-mail-*`)에 넣고 서버에 바로 반영한다. `deploy.sh`가 다음 배포부터 자동으로 읽는다.
 
 ## 처음 설정(한 번)
 1. Google Cloud Shell에서 `bash service/setup-gcp.sh <프로젝트ID> studio.aisam.com`

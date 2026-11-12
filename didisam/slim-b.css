@@ -1,0 +1,30 @@
+/* v34 단순화 R2(slim-b) — 소통 · 운영 · 사이트 · 현황 · 설정 하위 화면. 토큰은 DDS 그대로(새 색 없음). */
+.sb-n{color:var(--t-sub);font-weight:600;font-size:15px;white-space:nowrap}
+.sb-n b{color:var(--g900);font-size:17px;font-weight:800;margin-right:2px}
+.sb-n.w,.sb-n.w b{color:var(--t-warn)}
+.sl-r .btn.sm{min-height:36px}
+.sb-st.w{background:var(--warnl)}
+.sb-st.w .sl-ni{color:var(--t-warn)}
+/* AI SAM 추천 명령 */
+.sb-ai{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+.sb-cmd{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--g300);background:#fff;color:var(--g800);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.sb-cmd:hover{border-color:var(--s400);color:var(--s600,var(--s500))}
+.sb-cmd .ic{color:var(--s500)}
+/* 빈 화면: 하는 일 한 줄 + 첫 할 일 + 추천 명령 */
+.sb-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:36px 16px 24px;border-radius:20px;background:var(--g100);margin:8px 0 12px}
+.sb-empty .sb-ei{width:56px;height:56px;border-radius:18px;background:#fff;display:grid;place-items:center;color:var(--s500)}
+.sb-empty>b{font-size:17px;font-weight:700}
+.sb-empty .sb-ai{justify-content:center;margin-top:4px}
+.sb-row1{margin:0 0 12px;display:flex;justify-content:flex-end}
+.sl-ic img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+/* 첫 화면 ↔ 자세히(기존 화면) 돌아가기: 기존 화면은 전체 폭이므로 왼쪽 정렬 */
+main:not(:has(.sl-page)) .sl-back{max-width:none;margin:0 0 10px}
+.sb-setback .sb-cur{margin-left:6px;font-weight:800;color:var(--g900)}
+/* 설정 하위: 탭 한 줄 */
+@media (max-width:700px){
+  .sl-h{flex-wrap:wrap}
+  .sl-hr{width:100%}
+  .sl-hr .btn{flex:1 1 auto;justify-content:center}
+  .sl-r .sb-n{font-size:14px}
+  .sb-empty{padding:28px 12px 20px}
+}

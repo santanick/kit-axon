@@ -270,6 +270,88 @@ const MIGRATIONS = [
    alter table cpl_log add constraint cpl_log_kind_check check (kind in ('login','beat','attend','verify-phone','verify-motp','review','group-pw'));`,
   /* 13 — v31.6 무활동 세션 만료: 마지막 활동 시각 */
   `alter table learner_sessions add column if not exists last_at timestamptz not null default now();`,
+  /* 14 — v32.4 운영자 소셜 로그인: 제공자 회원 번호만 저장(이름 · 사진 · 전화번호 없음) */
+  `create table if not exists user_oauth (
+     provider text not null check (provider in ('google','kakao')),
+     sub text not null check (length(sub) between 1 and 200),
+     user_id uuid not null references users(id) on delete cascade,
+     created_at timestamptz not null default now(),
+     primary key (provider, sub)
+   );
+   create index if not exists user_oauth_user on user_oauth (user_id);`,
+  /* 15 — v33 학습자 → 운영자 요청함(문의 · 수강 취소 · 가족 연결 · 코드 재발급 · 커뮤니티 등). 본문은 개인정보를 가린 뒤 저장, 90일 보관.
+        대학 첫 로그인 동의: 동의 여부 · 일시만(학번 · 학과 외 항목 없음) */
+  `alter table learners add column if not exists consent jsonb;
+   create table if not exists learner_events (
+     id bigserial primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null default '',
+     type text not null check (type ~ '^[a-z0-9-]{2,24}$'),
+     xid text,
+     data jsonb not null default '{}',
+     at timestamptz not null default now()
+   );
+   create index if not exists levents_tid on learner_events (tenant_id, id);
+   alter table learner_events enable row level security;
+   alter table learner_events force row level security;
+   drop policy if exists tenant_iso on learner_events;
+   create policy tenant_iso on learner_events using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert, delete on learner_events to didisam_tenant;
+   grant usage, select on sequence learner_events_id_seq to didisam_tenant;`,
+  /* 16 — v34.5 홈페이지 이미지(/api/media, media.js): 기관별 바이트 저장(Cloud Run 디스크 · GCS 미사용). id = 정화 후 내용 sha256 앞 40자.
+        메타데이터(EXIF 등)는 저장 전에 지운다. 기관 삭제 시 함께 삭제 */
+  `create table if not exists media (
+     tenant_id text not null references tenants(id) on delete cascade,
+     id text not null check (id ~ '^[a-f0-9]{40}$'),
+     mime text not null check (mime in ('image/png','image/jpeg','image/webp','image/svg+xml')),
+     bytes integer not null check (bytes between 1 and 2097152),
+     w integer, h integer,
+     name text not null default '' check (length(name) <= 80),
+     data bytea not null,
+     created_by text not null default '',
+     created_at timestamptz not null default now(),
+     primary key (tenant_id, id)
+   );
+   create index if not exists media_tenant_at on media (tenant_id, created_at desc);
+   alter table media enable row level security;
+   alter table media force row level security;
+   drop policy if exists tenant_iso on media;
+   create policy tenant_iso on media using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert, delete on media to didisam_tenant;`,
+  /* 17 — v35 강의 파일(/api/media/f, mediafile.js): 같은 media 표에 kind(doc · video · audio) · status(up = 올리는 중 · ok)를 더하고
+        바이트는 media_part(조각, 기본 8MB, 저장 방식 external — Range 응답이 필요한 부분만 읽음)에 둔다. 이미지는 그대로(2MB · data 열). */
+  `alter table media drop constraint if exists media_mime_check;
+   alter table media drop constraint if exists media_bytes_check;
+   alter table media add column if not exists kind text not null default 'image';
+   alter table media add column if not exists status text not null default 'ok';
+   alter table media add column if not exists parts integer not null default 0;
+   alter table media add column if not exists chunk integer not null default 0;
+   alter table media alter column data drop not null;
+   alter table media drop constraint if exists media_kind_ck;
+   alter table media add constraint media_kind_ck check (
+     (kind = 'image' and status = 'ok' and data is not null and bytes between 1 and 2097152 and mime in ('image/png','image/jpeg','image/webp','image/svg+xml'))
+     or (kind = 'doc' and data is null and status in ('up','ok') and bytes between 1 and 1073741824 and mime in ('application/pdf','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/x-hwp','application/hwp+zip'))
+     or (kind = 'video' and data is null and status in ('up','ok') and bytes between 1 and 2147483647 and mime in ('video/mp4','video/webm'))
+     or (kind = 'audio' and data is null and status in ('up','ok') and bytes between 1 and 1073741824 and mime in ('audio/mpeg','audio/mp4')));
+   create index if not exists media_tenant_kind on media (tenant_id, kind, created_at desc);
+   create table if not exists media_part (
+     tenant_id text not null,
+     id text not null,
+     seq integer not null check (seq between 0 and 200000),
+     data bytea not null,
+     primary key (tenant_id, id, seq),
+     foreign key (tenant_id, id) references media (tenant_id, id) on delete cascade
+   );
+   alter table media_part alter column data set storage external;
+   alter table media_part enable row level security;
+   alter table media_part force row level security;
+   drop policy if exists tenant_iso on media_part;
+   create policy tenant_iso on media_part using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant update (status) on media to didisam_tenant;
+   grant select, insert, update, delete on media_part to didisam_tenant;`,
+  /* v38 계정 연결: 14세 미만 가입의 초대 토큰(보호자 동의 뒤 요청함에 실음, 개인정보 아님) · 동의한 보호자의 1회용 보호자 계정 연결 토큰(해시) */
+  `alter table learner_accounts add column if not exists invite_token text;
+   alter table pii.guardian add column if not exists parent_tok_hash text;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).

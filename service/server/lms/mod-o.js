@@ -360,6 +360,7 @@ module.exports = ctx => {
     return { text, ai: { provider: p.kind, model, usage: { input_tokens: r.tin, output_tokens: r.tout }, ...(G.hitN(RM.hits) ? { redacted: RM.hits } : {}) } };
   }
 
+  ctx.lmsoLlm = llm; /* x2 실시간 자막 번역 · 요약(mod-live.js)이 같은 LLM 경로(제공자 · 한도 · 가림 · 기록)를 쓴다 */
   const body = (req, max) => readBody(req, max || 64 * 1024);
   const genOut = async (a, kind, f) => { const id = await T(a, c => run(c, 'gen_add', { tid: a.tid, kind, email: a.email, ...f, params: JSON.stringify(f.params), output: JSON.stringify(f.output) })); return T(a, c => run(c, 'gen_get', { tid: a.tid, id })); };
   const docText = async (a, docId) => { const d = notFound(await T(a, c => run(c, 'doc_get', { tid: a.tid, id: docId })), '문서를 찾을 수 없습니다.', 'doc'); return d; };

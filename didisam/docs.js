@@ -25,7 +25,7 @@ const DTPL = [
 | 담당 강사 | {강사} |
 
 ## 3. 세부 운영 일정
-{주차별일정}
+{차시별일정}
 
 ## 4. 평가 및 이수 기준
 - 진도율 80% 이상, 과제 · 평가 통과 시 이수 처리
@@ -53,8 +53,8 @@ const DTPL = [
 - 실습 과제를 스스로 완성할 수 있다.
 - 배운 내용을 자신의 업무 · 학습에 적용할 수 있다.
 
-## 3. 주차별 계획
-{주차별일정}
+## 3. 차시별 계획
+{차시별일정}
 
 ## 4. 평가 방법
 | 평가 항목 | 비율 |
@@ -63,7 +63,7 @@ const DTPL = [
 | 시험 | 40% |
 
 ## 5. 교재 및 참고 자료
-- 디디쌤 강의 영상 · 강의자료(주차별 제공)`, '과정 소개 · 학습 목표 · 주차 계획 · 평가 비율'),
+- 디디쌤 강의 영상 · 강의자료(차시별 제공)`, '과정 소개 · 학습 목표 · 차시 계획 · 평가 비율'),
   DT('budget', '교육 예산 계획서', '계획', ALLT, /예산\s*(계획|안)/, `
 # {과정명} 예산 계획서
 {기관명} · {작성일}
@@ -128,7 +128,7 @@ const DTPL = [
 
 ## 처음 하실 일
 - 로그인 후 '내 강의실'에서 {과정명}을 엽니다.
-- 1주차 영상을 시청하고 확인 퀴즈를 풉니다.
+- 1차시 영상을 시청하고 확인 퀴즈를 풉니다.
 - 캘린더 연결을 켜면 마감 전에 AI 튜터가 알려 드립니다.
 
 문의: {담당자} · {연락처}`, '기간 · 방법 · 이수 기준 · 첫 할 일'),
@@ -284,11 +284,11 @@ const DTPL = [
 # 신규 입사자 교육 체크리스트
 입사자: ________ · 입사일: ________ · 멘토: ________
 
-| 주차 | 내용 | 완료 |
-| 1주차 | 회사 소개 · 조직 문화 | □ |
-| 1주차 | 법정의무교육 4종 | □ |
-| 2주차 | 업무 도구 · 보안 교육 | □ |
-| 3~4주차 | 직무 기초 · 멘토 미팅 | □ |`, '주차별 온보딩 항목 체크'),
+| 차시 | 내용 | 완료 |
+| 1차시 | 회사 소개 · 조직 문화 | □ |
+| 1차시 | 법정의무교육 4종 | □ |
+| 2차시 | 업무 도구 · 보안 교육 | □ |
+| 3~4차시 | 직무 기초 · 멘토 미팅 | □ |`, '차시별 온보딩 항목 체크'),
   /* 대학 */
   DT('univ-extra-plan', '비교과 프로그램 운영계획서', '계획', ['univ'], /비교과.*계획서?/, `
 # 비교과 프로그램 운영계획서
@@ -302,7 +302,7 @@ const DTPL = [
 | 연계 핵심역량 | 디지털 · 문제해결 |
 
 ## 2. 운영 내용
-{주차별일정}
+{차시별일정}
 
 ## 3. 성과 측정
 - 사전 · 사후 역량 진단(AI 진단) 비교
@@ -460,15 +460,68 @@ const DTPL = [
 | 훈련 인원 | {인원}명 |
 | 수료 인원 | {이수인원}명 |
 
-- 고용보험 환급 서류를 함께 송부합니다.`, '훈련 인원 · 수료 인원 · 환급 서류')
+- 고용보험 환급 서류를 함께 송부합니다.`, '훈련 인원 · 수료 인원 · 환급 서류'),
+  /* v36 H: 유형별 업무에 빠져 있던 문서 */
+  DT('voc-hrd', '훈련 실시 현황 보고(HRD-Net 입력용)', '결과 보고', ['voc'], /훈련\s*실시\s*(현황|보고)|HRD\s*-?\s*Net\s*입력/i, `
+# 훈련 실시 현황 보고(HRD-Net 입력용)
+{기관명} · 훈련과정 {과정명} · 작성일 {작성일}
+
+## 1. 과정 정보
+| 항목 | 내용 |
+| 훈련 기간 | {시작일} ~ {종료일} |
+| 훈련 시간 | 총 {교육시간}시간 |
+| 훈련 교사 | {강사} |
+
+## 2. 훈련생 현황
+| 재적 | 수료 | 평균 진도 | 수료율 |
+| {인원}명 | {이수인원}명 | {평균진도} | {이수율} |
+
+## 3. 출결 · 진도 확인
+- 출결 · 진도 원자료는 '인가 · 규정 준수 → 보고'에서 파일로 내려받아 HRD-Net에 입력합니다.
+- 출석입력 요청과 결석 사유서는 증빙과 함께 보관합니다.
+
+## 4. 특이 사항
+- 중도 탈락 · 조기 취업:
+- 확인: {담당자}`, '과정 정보 · 훈련생 현황 · 출결 · 진도 확인'),
+  DT('univ-acad', '학사 공문(휴강 · 보강 · 성적 제출)', '공문 · 행정', ['univ'], /학사\s*공문|휴강|성적\s*제출/, `
+# 학사 안내
+수신: 각 학과(부)장 · 담당 교수님
+발신: {기관명}
+제목: {과정명} 학사 일정 안내(휴강 · 보강 · 성적 제출)
+
+1. 귀 학과의 무궁한 발전을 기원합니다.
+2. {과정명}의 학사 일정을 다음과 같이 안내드립니다.
+
+| 구분 | 일정 | 비고 |
+| 수업 기간 | {시작일} ~ {종료일} | |
+| 휴강 · 보강 | | 보강 일정은 학습 포털에 공지 |
+| 성적 입력 | | 학습 포털 성적 화면 |
+| 성적 확인 · 정정 | | |
+
+3. 성적은 학번 · 학과 기준으로 제출합니다.
+4. 문의: {담당자} ({연락처})`, '휴강 · 보강 · 성적 입력 · 정정 일정')
 ];
+/* v36 H: 기관 유형별 문서 — 그 유형의 업무 순서(단계)대로, 필요한 문서만. [id, 그 유형에서 부르는 이름] 형식 허용.
+   다른 유형 문서는 '다른 유형 문서 보기'에서만 보인다. d.types는 이 표에서 다시 계산한다(segments.js의 공공 추가보다 우선). */
+const DOC_FLOW = {
+  univ: [['학기 준비', ['syllabus', 'plan', 'univ-extra-plan', 'budget']], ['학사 공문 · 행정', ['univ-acad', 'univ-prof-req', 'lecturer-req', 'lecturer-pay']], ['수업 · 출석', ['open-notice', 'attendance', 'journal', 'privacy', 'photo']], ['성적 · 평가', [['score', '성적 평가 결과표'], 'survey', 'univ-diag']], ['결과 보고 · 이수', ['univ-extra-result', 'result', 'cert-confirm']]],
+  voc: [['훈련 준비', [['plan', '훈련 운영 계획서'], ['syllabus', '훈련 교과 계획서'], 'budget', ['adult-apply', '훈련 수강 신청서'], 'privacy', 'refund']], ['훈련 운영 · 출결', [['attendance', '훈련 출석부'], 'voc-journal', 'voc-absence', ['open-notice', '훈련 개강 안내문']]], ['평가', [['score', '훈련 평가 결과표'], 'survey']], ['HRD 보고 · 수료', ['voc-hrd', 'voc-employer', ['cert-confirm', '수료 확인서'], ['result', '훈련 결과 보고서']]], ['행정', ['lecturer-req', 'lecturer-pay', 'photo']]],
+  corp: [['연간 계획', ['corp-annual', 'plan', 'budget']], ['교육 준비', ['open-notice', 'corp-external', 'lecturer-req', 'lecturer-pay', 'privacy']], ['교육 운영', ['attendance', 'corp-onboard', 'journal']], ['평가', ['survey', 'score']], ['결과 보고 · 이수증', ['result', 'corp-legal', ['cert-confirm', '이수증(이수 확인서)'], 'voc-employer']]],
+  public: [['연간 계획', [['corp-annual', '연간 교육훈련 계획(품의)'], 'plan', 'budget']], ['교육 준비', ['open-notice', 'lecturer-req', 'lecturer-pay', 'corp-external', 'privacy']], ['교육 운영', ['attendance', 'journal']], ['평가', ['survey', 'score']], ['실적 보고 · 수료', [['result', '교육 실적 보고서'], 'corp-legal', ['cert-confirm', '수료 확인서']]]],
+  lifelong: [['강좌 개설 · 신고', ['life-report', 'plan', 'syllabus', 'budget', 'lecturer-req', 'lecturer-pay']], ['모집 · 접수', ['open-notice', 'adult-apply', 'privacy', 'photo', 'refund']], ['강좌 운영', ['attendance', 'journal']], ['평가', ['survey', 'score']], ['수료 · 반환 · 결과', [['cert-confirm', '수료 확인서'], 'life-refund', 'result']]],
+  k12: [['수업 준비', [['syllabus', '수업 계획서'], ['plan', '반 운영 계획서'], 'open-notice', 'privacy', 'photo', 'refund']], ['보호자 안내', ['k12-letter', 'k12-makeup']], ['수업 운영', ['attendance', 'k12-consult', 'journal']], ['평가 · 리포트', [['score', '성적표'], 'k12-report', 'survey']]],
+  adult: [['강좌 준비', ['syllabus', 'plan', 'open-notice', 'refund', 'privacy', 'photo']], ['수강 운영', ['adult-apply', 'attendance', 'journal']], ['평가 · 후기', ['survey', 'adult-review', 'score']], ['수료', [['cert-confirm', '수료 확인서'], 'result']]]
+};
+const docFlow = ty => (DOC_FLOW[ty] || DOC_FLOW.corp).map(([stage, L]) => [stage, L.map(x => Array.isArray(x) ? x : [x, '']).map(([id, nm]) => { const d = DTPL.find(t => t.id === id); return d ? { d, stage, name: nm || d.name } : null; }).filter(Boolean)]);
+function docSync() { DTPL.forEach(d => { const T = Object.keys(DOC_FLOW).filter(ty => DOC_FLOW[ty].some(([, L]) => L.some(x => (Array.isArray(x) ? x[0] : x) === d.id))); if (T.length) d.types = T; }); }
+const docName = (d, ty = S && S.org && S.org.type) => { const e = docFlow(ty).flatMap(x => x[1]).find(x => x.d === d); return e ? e.name : d.name; };
 const DOCS = () => S.docs || (S.docs = []);
 const DVARS = ['기관명', '과정명', '시작일', '종료일', '교육시간', '대상', '인원', '담당자', '강사', '장소', '연락처', '작성일', '교육비', '연도', '월', '회신기한', '수집항목', '총인원', '평균진도', '이수인원', '이수율', '제출수', '배지수', '학습자'];
 
 /* 과정 데이터로 변수 채우기(이름 대신 ID · 학번만) */
 function docVals(c) {
   const v = { 기관명: S.org.name, 작성일: today(), 담당자: S.me.name || '교육 담당자', 연락처: S.settings.footer?.tel || '', 장소: S.settings.footer?.addr || '온라인(디디쌤)', 연도: today().slice(0, 4), 월: String(+today().slice(5, 7)), 회신기한: addDays(today(), 7), 수집항목: S.org.type === 'univ' ? '학번, 학과' : '이름, 연락처(ID)', 총인원: String(S.members.length), 대상: t('learner') };
-  if (c) { const P = Object.values(c.prog || {}); const done = P.filter(p => p.p >= (c.criteria?.threshold || 80)).length; const tch = S.admins.find(a => a.role === 'teacher' && (a.classes || []).includes(c.id));
+  if (c) { const P = Object.values(c.prog || {}); const done = doneN(c); const tch = S.admins.find(a => a.role === 'teacher' && (a.classes || []).includes(c.id));
     Object.assign(v, { 과정명: c.name, 시작일: c.start || '', 종료일: c.end || '', 교육시간: String(c.hours || ''), 인원: String(c.learners?.length || P.length), 강사: tch?.name || t('teacher'), 교육비: c.price ? Number(c.price).toLocaleString() + '원' : '무료', 평균진도: String(Math.round(P.reduce((a, p) => a + (p.p || 0), 0) / Math.max(1, P.length))), 이수인원: String(done), 이수율: String(Math.round(done / Math.max(1, P.length) * 100)), 제출수: String(P.filter(p => p.assign && p.assign !== 'none').length), 배지수: String((S.badges || []).reduce((a, b) => a + (b.issued || []).filter(x => c.learners?.includes(x.who)).length, 0)) }); }
   return v;
 }
@@ -478,9 +531,9 @@ function docBlocks(c) {
   const W = c.weekly && c.weekPlan?.length ? c.weekPlan.map(w => [`${w.w}주`, w.title, c.curriculum.filter(i => i.week === w.w).map(i => ITEMX[i.type]).join(' · ')]) : c.curriculum.filter(i => i.type !== 'chapter').slice(0, 15).map((i, k) => [`${k + 1}차시`, i.title, ITEMX[i.type]]);
   const L = (c.learners || []).slice(0, 30); const n = Math.min(8, c.weekly ? (c.weekPlan || []).length : 8) || 8;
   return {
-    주차별일정: ['| 주차 | 주제 | 학습 활동 |', ...W.map(r => `| ${r.join(' | ')} |`)].join('\n'),
+    차시별일정: ['| 차시 | 주제 | 학습 활동 |', ...W.map(r => `| ${r.join(' | ')} |`)].join('\n'),
     출석표: [`| ID | ${Array.from({ length: n }, (_, i) => `${i + 1}회`).join(' | ')} | 출석률 |`, ...L.map(id => { const a = c.prog[id]?.att ?? 90; return `| ${mid(id)} | ${Array.from({ length: n }, (_, i) => (i * 13 + a) % 10 < a / 10 ? '○' : '×').join(' | ')} | ${a}% |`; })].join('\n'),
-    성적표: ['| ID | 진도 | 과제 | 시험 | 이수 |', ...L.map(id => { const p = c.prog[id] || {}; return `| ${mid(id)} | ${p.p ?? 0}% | ${p.score ?? '-'} | ${p.exam ?? '-'} | ${(p.p || 0) >= (c.criteria?.threshold || 80) ? '이수' : '미이수'} |`; })].join('\n'),
+    성적표: ['| ID | 진도 | 과제 | 시험 | 이수 |', ...L.map(id => { const p = c.prog[id] || {}; return `| ${mid(id)} | ${p.p ?? 0}% | ${p.score ?? '-'} | ${p.exam ?? '-'} | ${clsDone(c, id) ? '이수' : '미이수'} |`; })].join('\n'),
     진단분포: (() => { const d = (S.diags || [])[0]; if (!d) return '- 진행한 진단이 없습니다.'; const R = Object.values(d.res || {}); return [`- 진단: ${d.name} · 응시 ${R.length}명`, '| 결과 | 인원 |', ...(d.outs || []).map(o => `| ${o.l} | ${R.filter(r => r.out === o.k).length} |`)].join('\n'); })()
   };
 }
@@ -557,23 +610,32 @@ function standardize(body) { let b = body, n = 0; const sw = (a, k) => { if (a &
 /* ── 화면 ── */
 MENU.docs = { label: '표준 문서', ws: 'ops' };
 Object.values(PRESET).forEach(p => { if (!p.on.includes('docs')) p.on.push('docs'); });
-const dtFor = ty => DTPL.filter(d => d.types.includes(ty));
+const dtFor = ty => { docSync(); return docFlow(ty).flatMap(x => x[1].map(e => e.d)); };
+const dtOther = ty => { docSync(); return DTPL.filter(d => !d.types.includes(ty)); };
+const dcard = (d, nm, sub) => `<div class="card dcard">${sub ? `<span class="dcat">${esc(sub)}</span>` : ''}<b>${esc(nm)}</b><small>${esc(d.desc)}</small><div class="mini">빈 칸 ${unfilled(d.body).length}개 · 과정 데이터로 채웁니다</div><div class="bar2"><button class="btn sm" data-act="doc-pv" data-v="${d.id}">미리 보기</button><button class="btn sm ink" data-act="doc-use" data-v="${d.id}">${ic('spark', 14)} 내 문서로 만들기</button></div></div>`;
+function docTplView(ty) { const q = (UI.docQ || '').trim(); const F = docFlow(ty); const hit = (d, nm) => !q || (nm + d.name + d.desc).includes(q);
+  const search = `<input id="docQ" class="dsearch" placeholder="문서 검색" value="${esc(q)}" aria-label="문서 검색">`;
+  if (UI.docS === 'other') { const O = dtOther(ty).filter(d => hit(d, d.name)); const by = DCAT.map(c => [c, O.filter(d => d.cat === c)]).filter(x => x[1].length);
+    return `<div class="bar2 dbar"><button class="btn" data-act="doc-scope" data-v="mine">‹ ${esc(TYPES[ty].name)} 문서로 돌아가기</button>${search}</div><p class="mini">다른 기관 유형에서 주로 쓰는 문서입니다. 필요할 때만 꺼내 쓰십시오.</p>` +
+      (by.length ? by.map(([c, L]) => `<h3 class="dstage">${esc(c)}<small>${L.length}종</small></h3><div class="dgrid">${L.map(d => dcard(d, d.name, d.types.map(k => (TYPES[k] || {}).name || k).join(' · '))).join('')}</div>`).join('') : '<div class="empty">조건에 맞는 문서가 없습니다.</div>'); }
+  const f = F.some(x => x[0] === UI.docF) ? UI.docF : '전체'; const nO = dtOther(ty).length;
+  const S2 = F.map(([st, L], i) => [i + 1, st, L.filter(e => (f === '전체' || f === st) && hit(e.d, e.name))]).filter(x => x[2].length);
+  return `<div class="bar2 dbar">${search}<span class="sp"></span>${nO ? `<button class="btn ghost" data-act="doc-scope" data-v="other">다른 유형 문서 보기 ${nO}</button>` : ''}</div>
+    <div class="lchips dsteps">${['전체', ...F.map(x => x[0])].map((c, i) => `<button class="chip ${f === c ? 'on' : ''}" data-act="doc-f" data-v="${esc(c)}">${i ? `<i>${i}</i>` : ''}${esc(c)}</button>`).join('')}</div>` +
+    (S2.length ? S2.map(([n, st, L]) => `<h3 class="dstage"><i>${n}</i>${esc(st)}<small>${L.length}종</small></h3><div class="dgrid">${L.map(e => dcard(e.d, e.name, '')).join('')}</div>`).join('') : `<div class="empty">조건에 맞는 문서가 없습니다.${nO ? ' 다른 유형 문서에서 찾아보십시오.' : ''}</div>`); }
 VIEWS.docs = () => { const tb = UI.docT || 'tpl'; const ty = S.org.type; const mine = DOCS();
   let body = '';
-  if (tb === 'tpl') { const f = UI.docF || '전체'; const scope = UI.docS || 'mine'; const q = (UI.docQ || '').trim();
-    const L = (scope === 'mine' ? dtFor(ty) : DTPL).filter(d => (f === '전체' || d.cat === f) && (!q || (d.name + d.desc).includes(q)));
-    body = `<div class="bar2"><div class="seg2"><button class="${scope === 'mine' ? 'on' : ''}" data-act="doc-scope" data-v="mine">${esc(TYPES[ty].name)} 추천 ${dtFor(ty).length}</button><button class="${scope === 'all' ? 'on' : ''}" data-act="doc-scope" data-v="all">전체 ${DTPL.length}</button></div><input id="docQ" class="dsearch" placeholder="문서 검색" value="${esc(q)}" aria-label="문서 검색"></div>
-      <div class="lchips">${['전체', ...DCAT].map(c => `<button class="chip ${f === c ? 'on' : ''}" data-act="doc-f" data-v="${c}">${c}</button>`).join('')}</div>
-      <div class="dgrid">${L.map(d => `<div class="card dcard"><span class="dcat">${esc(d.cat)}</span><b>${esc(d.name)}</b><small>${esc(d.desc)}</small><div class="mini">${d.types.length === 6 ? '모든 기관' : d.types.map(k => TYPES[k].name).join(' · ')} · 빈 칸 ${unfilled(d.body).length}개</div><div class="bar2"><button class="btn sm" data-act="doc-pv" data-v="${d.id}">미리 보기</button><button class="btn sm ink" data-act="doc-use" data-v="${d.id}">${ic('spark', 14)} 내 문서로 만들기</button></div></div>`).join('') || '<div class="empty">조건에 맞는 문서가 없습니다.</div>'}</div>`; }
+  if (tb === 'tpl') body = docTplView(ty);
   if (tb === 'mine') body = `<div class="bar2"><label class="btn ink">${'+'} 문서 올리기(.docx · .pdf · .txt · .md · .html · .csv)<input type="file" id="docUp" accept=".docx,.pdf,.txt,.md,.html,.htm,.csv" hidden></label><button class="btn" data-act="doc-blank">빈 문서</button><span class="mini">올린 파일은 이 브라우저에서 읽어 텍스트로 바꿉니다(서버로 보내지 않음). 한글(hwp)은 PDF · Word로 저장해 올려 주세요.</span></div>` +
     (mine.length ? `<div class="card">${table(['문서', '분류', '출처', '공개 범위', '수정', ''], mine.map(d => [`<button class="link" data-act="doc-open" data-v="${d.id}">${esc(d.name)}</button>${unfilled(d.body).length ? ' ' + tag(`빈 칸 ${unfilled(d.body).length}`, 'y') : ''}`, esc(d.cat), esc({ tpl: '표준 템플릿', upload: '업로드', ai: 'AI 생성', blank: '직접 작성' }[d.src] || d.src), tag(d.vis, d.vis === '내부' ? '' : 'g'), esc(d.at), `<button class="btn sm ghost" data-act="doc-open" data-v="${d.id}">편집</button><button class="btn sm ghost" data-act="doc-share" data-v="${d.id}">제공</button><button class="btn sm ghost" data-act="doc-del" data-v="${d.id}" aria-label="삭제">${ic('x', 14)}</button>`]))}</div>` : '<div class="empty">아직 문서가 없습니다. 표준 문서 템플릿에서 만들거나 기관 문서를 올리세요.</div>');
   if (tb === 'sent') { const R = mine.flatMap(d => (d.sent || []).map(s => [esc(s.at), esc(d.name), esc(s.to), esc(s.how), String(s.n)])); body = `<div class="card">${table(['일시', '문서', '대상', '방법', '인원'], R, '아직 제공한 문서가 없습니다.')}</div>`; }
-  return head('', `교육 담당자에게 필요한 표준 문서를 고르고, 과정 데이터로 채운 뒤 AI에게 말로 고쳐 바로 씁니다. 완성한 문서는 ${t('teacher')} · ${t('learner')}에게 제공할 수 있습니다.`, `<button class="btn ink" data-act="doc-ai-new">${ic('spark', 14)} AI로 문서 만들기</button>`) + tabs('docT', [['tpl', '표준 문서'], ['mine', '우리 기관 문서'], ['sent', '제공 내역']], tb) + body; };
-ACT['doc-scope'] = el => { UI.docS = el.dataset.v; render(); };
+  return head('', `${esc(TYPES[ty].name)} 업무 순서대로 필요한 문서만 보여 드립니다. 고르면 과정 데이터로 채워지고, AI에게 말로 고쳐 바로 씁니다.`, `<button class="btn ink" data-act="doc-ai-new">${ic('spark', 14)} AI로 문서 만들기</button>`) + tabs('docT', [['tpl', '문서 서식'], ['mine', '우리 기관 문서'], ['sent', '제공 내역']], tb) + body; };
+if (typeof document !== 'undefined' && !document.getElementById('docFlowCss')) { const st = document.createElement('style'); st.id = 'docFlowCss'; st.textContent = '.dbar{flex-wrap:wrap;gap:8px}.dbar .dsearch{flex:1 1 220px;min-width:0;max-width:360px}.dsteps .chip i,.dstage i{font-style:normal;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:99px;background:var(--magl,#fde7f0);color:var(--magd,#a3134f);font-size:12px;font-weight:700;margin-right:6px}.dstage{display:flex;align-items:center;gap:2px;font-size:17px;margin:22px 0 10px}.dstage small{margin-left:8px;color:var(--muted);font-weight:500;font-size:13px}'; (document.head || document.documentElement).appendChild(st); }
+ACT['doc-scope'] = el => { UI.docS = el.dataset.v; UI.docQ = ''; render(); scrollTo(0, 0); };
 ACT['doc-f'] = el => { UI.docF = el.dataset.v; render(); };
 document.addEventListener('input', e => { if (e.target.id === 'docQ') { UI.docQ = e.target.value; clearTimeout(UI._dq); UI._dq = setTimeout(() => { render(); const i = $('#docQ'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); } });
-ACT['doc-pv'] = el => { const d = DTPL.find(x => x.id === el.dataset.v); const w = overlay(`미리 보기 — ${d.name}`, `<div class="dpaper">${docHTML(d.body)}</div><p class="mini"><mark>{노란 칸}</mark>은 과정 데이터나 직접 입력으로 채우는 칸입니다.</p><div class="bar2"><button class="btn ink" data-act="doc-use" data-v="${d.id}">${ic('spark', 14)} 내 문서로 만들기</button></div>`); w.addEventListener('click', e => { if (e.target.closest('[data-x]') || e.target === w || e.target.closest('[data-act=doc-use]')) setTimeout(() => w.remove()); }); };
-function newDoc(tp, c, src = 'tpl') { const r = fillDoc(tp.body, c); const d = { id: uid('dc'), tpl: tp.id, name: tp.name + (c ? ` — ${clean(c.name)}` : ''), cat: tp.cat, body: r.body, src, cls: c?.id || '', vis: '내부', at: nowStr(), vers: [], sent: [] }; DOCS().unshift(d); logAudit(`표준 문서 생성 — ${d.name}`); return d; }
+ACT['doc-pv'] = el => { const d = DTPL.find(x => x.id === el.dataset.v); const w = overlay(`미리 보기 — ${docName(d)}`, `<div class="dpaper">${docHTML(d.body)}</div><p class="mini"><mark>{노란 칸}</mark>은 과정 데이터나 직접 입력으로 채우는 칸입니다.</p><div class="bar2"><button class="btn ink" data-act="doc-use" data-v="${d.id}">${ic('spark', 14)} 내 문서로 만들기</button></div>`); w.addEventListener('click', e => { if (e.target.closest('[data-x]') || e.target === w || e.target.closest('[data-act=doc-use]')) setTimeout(() => w.remove()); }); };
+function newDoc(tp, c, src = 'tpl') { const r = fillDoc(tp.body, c); const d = { id: uid('dc'), tpl: tp.id, name: docName(tp) + (c ? ` — ${clean(c.name)}` : ''), cat: tp.cat, body: r.body, src, cls: c?.id || '', vis: '내부', at: nowStr(), vers: [], sent: [] }; DOCS().unshift(d); logAudit(`표준 문서 생성 — ${d.name}`); return d; }
 const curCls = () => C(UI.cls) || S.classes.find(c => c.status === '운영중') || S.classes[0];
 ACT['doc-use'] = el => { const tp = DTPL.find(x => x.id === el.dataset.v); const d = newDoc(tp, curCls()); save(); UI.docT = 'mine'; go('docs'); openDoc(d.id); toast(`「${d.name}」을 만들고 과정 데이터를 채웠습니다.`, 'ok'); };
 ACT['doc-blank'] = () => { const d = { id: uid('dc'), name: '새 문서', cat: '운영', body: '# 새 문서\n{기관명} · {작성일}\n\n## 1. 내용\n- ', src: 'blank', vis: '내부', at: nowStr(), vers: [], sent: [] }; DOCS().unshift(d); save(); render(); openDoc(d.id); };
@@ -619,8 +681,8 @@ ACT['doc-share'] = el => { const d = DOCS().find(x => x.id === el.dataset.v); co
     [{ id: 'c', label: '취소' }, { id: 'ok', label: '적용', kind: 'pri', run: () => { d.vis = $('#dsV').value; const tg = $('#dsT').value; if (tg !== 'none') { const n = tg === 'cls' ? c.learners.length : tg === 'all' ? S.members.length : S.admins.filter(a => a.role === 'teacher').length; const to = tg === 'cls' ? `${c.name} ${t('learner')}` : tg === 'all' ? `전체 ${t('learner')}` : t('teacher'); S.msgs.unshift({ id: uid('ms'), at: nowStr(), to, title: `[문서] ${d.name}`, ch: '알림함', n }); d.sent = [{ at: nowStr(), to, how: '알림함', n }, ...(d.sent || [])]; logAudit(`문서 제공 — ${d.name} → ${to} ${n}명`); toast(`${to} ${n}명에게 「${d.name}」을 제공했습니다(데모).`, 'ok'); } else toast(`공개 범위를 '${d.vis}'로 바꿨습니다.`, 'ok'); save(); render(); } }]); };
 
 /* ── AI로 문서 만들기(말로) ── */
-function docMatch(q) { const H = DTPL.map(d => { const m = q.match(d.kw); return m ? { d, s: m.index, e: m.index + m[0].length } : null; }).filter(Boolean); return H.filter(h => !H.some(o => o !== h && o.s <= h.s && o.e >= h.e && o.e - o.s > h.e - h.s)).map(h => h.d).sort((a, b) => (b.types.includes(S.org.type) ? 1 : 0) - (a.types.includes(S.org.type) ? 1 : 0)); }
-ACT['doc-ai-new'] = () => modal('AI로 문서 만들기', `<label class="fl">어떤 문서가 필요하신가요?<textarea id="dnQ" rows="3" placeholder="예: 생성형 AI 활용 과정 결과 보고서를 공문체로, 향후 계획 항목 추가"></textarea></label><div class="lchips">${dtFor(S.org.type).slice(0, 8).map(d => `<button type="button" class="chip" data-dn="${esc(d.name)}">${esc(d.name)}</button>`).join('')}</div><p class="mini">표준 문서를 골라 과정 데이터로 채운 뒤, 지시한 수정까지 한 번에 적용합니다.</p>`,
+function docMatch(q) { docSync(); const H = DTPL.map(d => { const m = q.match(d.kw); return m ? { d, s: m.index, e: m.index + m[0].length } : null; }).filter(Boolean); return H.filter(h => !H.some(o => o !== h && o.s <= h.s && o.e >= h.e && o.e - o.s > h.e - h.s)).map(h => h.d).sort((a, b) => (b.types.includes(S.org.type) ? 1 : 0) - (a.types.includes(S.org.type) ? 1 : 0)); }
+ACT['doc-ai-new'] = () => modal('AI로 문서 만들기', `<label class="fl">어떤 문서가 필요하신가요?<textarea id="dnQ" rows="3" placeholder="예: 생성형 AI 활용 과정 결과 보고서를 공문체로, 향후 계획 항목 추가"></textarea></label><div class="lchips">${dtFor(S.org.type).slice(0, 8).map(d => `<button type="button" class="chip" data-dn="${esc(docName(d))}">${esc(docName(d))}</button>`).join('')}</div><p class="mini">표준 문서를 골라 과정 데이터로 채운 뒤, 지시한 수정까지 한 번에 적용합니다.</p>`,
   [{ id: 'c', label: '취소' }, { id: 'ok', label: '만들기', kind: 'pri', run: () => { const q = $('#dnQ').value.trim(); if (!q) return false; docFromText(q).then(r => { if (!r.docs.length) { toast('맞는 표준 문서를 찾지 못했습니다. 예: "출석부", "결과 보고서", "가정통신문"', 'warn'); return; } save(); UI.docT = 'mine'; go('docs'); openDoc(r.docs[0].id); }); } }]);
 document.addEventListener('click', e => { const b = e.target.closest('[data-dn]'); if (b) { const t2 = $('#dnQ'); t2.value = (t2.value ? t2.value + ', ' : '') + b.dataset.dn; } });
 async function docFromText(q, c) { const T = docMatch(q).slice(0, 4); const cls = c || S.classes.find(x => q.includes(clean(x.name)) && clean(x.name).length >= 2) || curCls(); const docs = [];
@@ -628,7 +690,7 @@ async function docFromText(q, c) { const T = docMatch(q).slice(0, 4); const cls 
   S.ai.usage += docs.length; return { docs, cls }; }
 
 /* ── 대화 흐름 연결 ── */
-const DOCRE = /(공문|운영\s*계획서|교육\s*계획서|강의\s*계획서|결과\s*보고서|품의서?|동의서|가정\s*통신문|안내문|표준\s*문서|출석부|만족도\s*설문지|훈련\s*일지|상담\s*일지|이수\s*확인서|수료\s*확인서|신청서|환불\s*규정|사유서|체크리스트|결과\s*통보서|학습\s*리포트|예산\s*계획)/;
+const DOCRE = /(공문|운영\s*계획서|교육\s*계획서|강의\s*계획서|결과\s*보고서|품의서?|동의서|가정\s*통신문|안내문|표준\s*문서|출석부|만족도\s*설문지|훈련\s*일지|상담\s*일지|이수\s*확인서|수료\s*확인서|신청서|환불\s*규정|사유서|체크리스트|결과\s*통보서|학습\s*리포트|예산\s*계획|학사\s*공문|훈련\s*실시\s*(현황|보고))/;
 { const f = FILL.find(x => x.id === 'survey'); if (f) f.re = /설문(?!지)/; const m = FILL.find(x => x.id === 'message'); if (m) m.re = /(안내(?!문)|알림|메시지|문자)\S*\s*(을|를|도|까지)?\s*(보내|발송|준비|작성|써)/; }
 FILL.push({ id: 'docstd', go: 'docs', re: DOCRE, label: () => '표준 문서', line: x => { const T = docMatch(x.q); return `${T.length ? T.slice(0, 4).map(d => `「${d.name}」`).join(' · ') : '표준 문서'} 생성 → ${x.cls || x.willCourse ? `「${x.target()}」` : '현재 과정'} 데이터로 채움${/(보내|발송|제공)/.test(x.q) ? ` → ${t('learner')}에게 제공` : ''}`; },
   run: x => { const T = docMatch(x.q).slice(0, 4); const cls = x.cls || curCls(); const D = T.map(tp => newDoc(tp, cls, 'ai')); const rest = x.q.replace(DOCRE, ''); if (/격식|공문체|짧게|간결|추가|표로|번호|친근/.test(rest)) D.forEach(d => docEdit(d, rest.replace(/(영어|일본어|중국어)[^,]*번역/, ''), null));

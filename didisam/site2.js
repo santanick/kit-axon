@@ -50,14 +50,18 @@
   window.s2norm = s2norm;
 
   /* ── 페이지 목록 ── */
+  /* v36 R3(2-2): 페이지 이름은 유형별 메뉴 이름으로 보인다(대학 '클래스' → '교육과정' 등 — 캔버스 머리글 · 게시본과 같은 HPS.menuName). 저장된 m.l은 그대로 */
+  const mN = l => { try { return window.HPS && typeof HPS.menuName === 'function' ? HPS.menuName(l) : l; } catch (e) { return l; } };
   function s2pages(s) {
     const P = [];
     s.menus.forEach(m => {
       if (m.kind === 'home') { P.unshift({ key: 'home', label: m.l || '홈', name: m.l || '홈', kind: 'home', m, sections: s.sections }); return; }
-      P.push({ key: 'm-' + m.id, label: m.l, name: m.l, kind: m.kind, m, sections: m.kind === 'custom' ? m.sections : null });
-      if (m.subOn && Array.isArray(m.subs)) m.subs.forEach(sb => P.push({ key: `s-${m.id}-${sb.id}`, label: `${m.l} › ${sb.l}`, name: sb.l, kind: 'sub', m, sb, sections: sb.sections }));
+      P.push({ key: 'm-' + m.id, label: mN(m.l), name: mN(m.l), kind: m.kind, m, sections: m.kind === 'custom' ? m.sections : null });
+      if (m.subOn && Array.isArray(m.subs)) m.subs.forEach(sb => P.push({ key: `s-${m.id}-${sb.id}`, label: `${mN(m.l)} › ${sb.l}`, name: sb.l, kind: 'sub', m, sb, sections: sb.sections }));
     });
     if (!P.length || P[0].key !== 'home') P.unshift({ key: 'home', label: '홈', name: '홈', kind: 'home', sections: s.sections });
+    /* v37 P2: 학습 페이지로 가는 메뉴도 홈페이지와 같은 섹션 편집(hpstudio s2pagesHook — p.sections = 메뉴의 lsecs, p.learn = 학습 주소) */
+    try { if (typeof window.s2pagesHook === 'function') window.s2pagesHook(P, s); } catch (e) { console.error('s2pages hook', e); }
     return P;
   }
   const curPg = s => { const P = s2pages(s); return P.find(p => p.key === UI.sitePage) || P[0]; };
@@ -220,7 +224,7 @@
       case 'catBrowse': {
         let L = pubCls(); if ((d.cats || []).length) L = L.filter(c => d.cats.includes(c.cat) || (S.cats || []).some(x => x.id === c.cat && d.cats.includes(x.parent)));
         const G = catGroups(L);
-        return `<section class="sec"><div class="wrap">${SH(d, 'CATEGORY')}<div class="s2chips">${G.map(([n, l], k) => `<a href="#${id}-${k}">${esc(n)} <small>${l.length}</small></a>`).join('')}</div>${G.map(([n, l], k) => `<div class="s2cg" id="${id}-${k}"><h3>${esc(n)}</h3><div class="cls">${l.slice(0, +d.per || 4).map((c, j) => clsCard(c, j, s, lk)).join('')}</div></div>`).join('') || `<p class="emp">전체 공개 ${esc(t('cls'))}이 카테고리별로 표시됩니다.</p>`}</div></section>`;
+        return `<section class="sec"><div class="wrap">${SH(d, 'CATEGORY')}<div class="s2chips">${G.map(([n, l], k) => `<a href="#${id}-${k}">${esc(n)} <small>${l.length}</small></a>`).join('')}</div>${G.map(([n, l], k) => `<div class="s2cg" id="${id}-${k}"><h3>${esc(n)}</h3><div class="cls">${l.slice(0, +d.per || 4).map((c, j) => clsCard(c, j, s, lk)).join('')}</div></div>`).join('') || `<p class="emp">전체 공개 ${esc(tj('cls', '이'))} 카테고리별로 표시됩니다.</p>`}</div></section>`;
       }
     }
     return null;
@@ -266,7 +270,7 @@
     const lab = l => (lang && lang !== 'ko' && typeof LX === 'function') ? LX(l, lang) : l;
     const visible = m => m.on !== false && !(full && m.access === '지정 회원' && m.hide && (m.targets || []).length);
     const lock = m => m.access !== '공개' ? ` <i class="s2lock">${m.access === '비공개' ? '비공개' : `지정 ${(m.targets || []).length}`}</i>` : '';
-    const href = (m, key) => m.link ? linkAttr(m.link) : `href="#p-${esc(key)}"`;
+    const href = (m, key) => m.link && !(live && !full && /^(learn:(?!home$)|cls:)/.test(m.link)) ? linkAttr(m.link) : `href="#p-${esc(key)}"`; /* v37: 편집 화면에서는 학습 페이지 메뉴도 그 메뉴의 페이지(같은 캔버스)로 */
     const items = s.menus.filter(visible).map(m => {
       const key = m.kind === 'home' ? 'home' : 'm-' + m.id; const subs = m.subOn && Array.isArray(m.subs) ? m.subs.filter(visible) : [];
       return `<div class="s2-mi"><a ${href(m, key)}>${esc(lab(m.l))}${live && !full ? lock(m) : ''}${subs.length ? ' <small class="s2car">▾</small>' : ''}</a>${subs.length ? `<div class="s2-dd">${subs.map(sb => `<a ${href(sb, `s-${m.id}-${sb.id}`)}>${esc(sb.l)}${live && !full ? lock(sb) : ''}</a>`).join('')}</div>` : ''}</div>`;
@@ -324,7 +328,7 @@
         else if (p.sections) { inner = p.sections.map((x, i) => proSec(x, i, sx, lk)).join(''); if (!inner && p.kind === 'custom' && m.subOn) inner = `<section class="sec"><div class="wrap"><div class="s2sublist">${m.subs.filter(x => x.on !== false).map(sb => `<a href="#p-s-${esc(m.id)}-${esc(sb.id)}">${esc(sb.l)} →</a>`).join('')}</div></div></section>`; if (!inner) inner = `<section class="sec"><div class="wrap"><p class="emp">섹션을 추가해 페이지를 구성하세요.</p></div></section>`; }
         else inner = basePage(p, sx, lk);
         const note = !full && it.access !== '공개' ? `<div class="s2note">운영자 미리보기 — 접근 권한: ${esc(it.access)}${it.access === '지정 회원' ? ` ${(it.targets || []).length}명/팀${it.hide ? ' · 지정 회원 외 메뉴 숨김' : ''}` : ''} (권한이 없는 회원에게는 접근 불가 안내가 표시됩니다)</div>` : '';
-        pages.push(`<main class="s2pg" id="p-${esc(p.key)}">${note}${pageHead(p, sx, crumbs)}${inner}</main>`);
+        pages.push(`<main class="s2pg" id="p-${esc(p.key)}">${note}${p.learn ? '' : pageHead(p, sx, crumbs)}${inner}</main>`); /* v37: 학습 페이지는 머리글 섹션(lshead)이 제목을 그린다 */
       });
       pubCls().forEach(c => pages.push(clsPage(c, sx, lk)));
       const tm = S.settings.terms || {};
@@ -475,7 +479,7 @@
       <div class="row"><span>배경색</span><span class="sp"></span><label class="ckl"><input type="checkbox" data-chg="s2-gbgon" ${g.bg ? 'checked' : ''}> 사용</label><input type="color" value="${esc(g.bg || '#FFFFFF')}" data-chg="s2-gbg" aria-label="GNB 배경색"></div>
       <div class="row"><span>메뉴 정렬</span><span class="sp"></span><div class="seg">${[['left', '왼쪽'], ['center', '가운데'], ['right', '오른쪽']].map(([k, l]) => `<button class="${g.align === k ? 'on' : ''}" data-act="s2-galign" data-v="${k}">${l}</button>`).join('')}</div></div>
       <div class="row"><span>하위 메뉴 스타일</span><span class="sp"></span><div class="seg">${[['vertical', '세로형 · 최대 12'], ['wide', '와이드형 · 최대 24']].map(([k, l]) => `<button class="${g.sub === k ? 'on' : ''}" data-act="s2-gsub" data-v="${k}">${l}</button>`).join('')}</div></div></div>`;
-    const li = (m, i) => { const key = m.kind === 'home' ? 'home' : 'm-' + m.id; return `<li draggable="${m.kind === 'home' ? 'false' : 'true'}" data-g="top" data-i="${i}" class="${cur.key === key ? 'cur' : ''}"><span class="s2h" aria-hidden="true">⠿</span><button class="btn sm ghost s2eye ${m.on === false ? 'off' : ''}" data-act="s2-eye" data-m="${esc(m.id)}" ${m.kind === 'home' ? 'disabled title="홈은 항상 노출됩니다"' : ''} aria-label="${m.on === false ? '숨김 — 눌러서 노출' : '노출 중 — 눌러서 숨김'}">${m.on === false ? '◌' : '👁'}</button><a href="#" data-act="s2-go" data-v="${esc(key)}"><b>${esc(m.l)}</b></a>${m.kind === 'custom' ? tag('추가', 'b') : ''}${accTag(m)}${m.link ? tag('이동 경로', '') : ''}<span class="sp"></span><button class="btn sm ghost" data-act="s2-medit" data-m="${esc(m.id)}">수정</button><button class="btn sm ghost" data-act="s2-mmv" data-m="${esc(m.id)}" data-d="-1" aria-label="위로">↑</button><button class="btn sm ghost" data-act="s2-mmv" data-m="${esc(m.id)}" data-d="1" aria-label="아래로">↓</button>
+    const li = (m, i) => { const key = m.kind === 'home' ? 'home' : 'm-' + m.id; return `<li draggable="${m.kind === 'home' ? 'false' : 'true'}" data-g="top" data-i="${i}" class="${cur.key === key ? 'cur' : ''}"><span class="s2h" aria-hidden="true">⠿</span><button class="btn sm ghost s2eye ${m.on === false ? 'off' : ''}" data-act="s2-eye" data-m="${esc(m.id)}" ${m.kind === 'home' ? 'disabled title="홈은 항상 노출됩니다"' : ''} aria-label="${m.on === false ? '숨김 — 눌러서 노출' : '노출 중 — 눌러서 숨김'}">${m.on === false ? '◌' : '👁'}</button><a href="#" data-act="s2-go" data-v="${esc(key)}"><b>${esc(mN(m.l))}</b></a>${m.kind === 'custom' ? tag('추가', 'b') : ''}${accTag(m)}${m.link ? tag('이동 경로', '') : ''}<span class="sp"></span><button class="btn sm ghost" data-act="s2-medit" data-m="${esc(m.id)}">수정</button><button class="btn sm ghost" data-act="s2-mmv" data-m="${esc(m.id)}" data-d="-1" aria-label="위로">↑</button><button class="btn sm ghost" data-act="s2-mmv" data-m="${esc(m.id)}" data-d="1" aria-label="아래로">↓</button>
       ${m.subOn && Array.isArray(m.subs) ? `<ul class="s2sub">${m.subs.map((sb, j) => `<li draggable="true" data-g="${esc(m.id)}" data-i="${j}" class="${cur.key === `s-${m.id}-${sb.id}` ? 'cur' : ''}"><span class="s2h" aria-hidden="true">⠿</span><button class="btn sm ghost s2eye ${sb.on === false ? 'off' : ''}" data-act="s2-eye" data-m="${esc(m.id)}" data-s="${esc(sb.id)}" aria-label="${sb.on === false ? '숨김' : '노출 중'}">${sb.on === false ? '◌' : '👁'}</button><a href="#" data-act="s2-go" data-v="s-${esc(m.id)}-${esc(sb.id)}">${esc(sb.l)}</a>${accTag(sb)}${sb.link ? tag('이동 경로', '') : ''}<span class="sp"></span><button class="btn sm ghost" data-act="s2-medit" data-m="${esc(m.id)}" data-s="${esc(sb.id)}">수정</button><button class="btn sm ghost" data-act="s2-mmv" data-m="${esc(m.id)}" data-s="${esc(sb.id)}" data-d="-1" aria-label="위로">↑</button><button class="btn sm ghost" data-act="s2-mmv" data-m="${esc(m.id)}" data-s="${esc(sb.id)}" data-d="1" aria-label="아래로">↓</button></li>`).join('')}<li class="s2addsub"><button class="btn sm" data-act="s2-subadd" data-m="${esc(m.id)}" ${m.subs.length >= mx ? 'disabled' : ''}>+ 하위 메뉴 추가 (${m.subs.length}/${mx})</button></li></ul>` : ''}</li>`; };
     const menus = `<div class="card s2card"><div class="ch"><b>메뉴 · 페이지</b><small>드래그로 순서 변경 · 눈 아이콘으로 노출</small></div>
       <label class="fl">메뉴 선택하기(편집할 페이지)<select data-chg="s2-page" aria-label="편집할 메뉴 선택">${P.map(p => `<option value="${esc(p.key)}" ${p.key === cur.key ? 'selected' : ''}>${esc(p.label)}${p.sections ? '' : ' (기본 레이아웃)'}</option>`).join('')}</select></label>

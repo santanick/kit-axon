@@ -29,19 +29,22 @@
     let R = null; try { R = typeof shMine === 'function' ? shMine() : null; } catch (e) { }
     const enr = (R && R.enr) || {}; const t = dayStr(); const lp = LR.lp.cls || {}; const mc = LR.mine.cls || {};
     const ids = new Set([...Object.keys(enr).filter(id => { const e = enr[id]; return e && e.status === 'active' && !(e.end && e.end < t); }), ...Object.keys(mc), ...Object.keys(lp).filter(id => Object.values((lp[id] || {}).items || {}).some(x => x && (x.done || x.w)))]);
+    let MS = []; try { MS = typeof myStats === 'function' ? myStats().courses : []; } catch (e) { MS = []; }
     const out = []; ids.forEach(id => { const c = (S2.classes || []).find(x => x.id === id); if (!c || !(c.items || []).length) return; if (enr[id] && (enr[id].status === 'hold' || enr[id].hold)) return;
       const r = (lp[id] || {}).items || {}; const its = c.items.filter(i => i.type !== 'chapter'); const L = its.length ? its : c.items; const done = L.filter(i => (r[i.id] || {}).done).length;
       const p = Math.min(100, Math.max(Math.round(done / Math.max(1, L.length) * 100), (mc[id] || {}).p || 0)); const nx = L.find(i => !(r[i.id] || {}).done) || L[0];
-      out.push({ c, p, done, n: L.length, nx, started: done > 0 || Object.values(r).some(x => x && x.w) }); });
+      const ms = MS.find(y => y.c.id === id); /* v33 진도 · 다음 항목은 myStats 하나로 맞춘다(규정 준수 기관의 차시 인정 포함, QA #32) */
+      out.push({ c, p: ms ? ms.p : p, done: ms && ms.doneN != null ? ms.doneN : done, n: L.length, nx: ms ? (ms.next || nx) : nx, fin: ms ? !!ms.done : p >= (c.thr || 80), started: done > 0 || (ms ? ms.p > 0 : false) || Object.values(r).some(x => x && x.w) }); });
     return out.sort((a, b) => ((a.p >= 100) - (b.p >= 100)) || (b.started - a.started) || (b.p - a.p)); }
   const nextHref = x => `#c/${encodeURIComponent(x.c.id)}${x.nx ? '/' + encodeURIComponent(x.nx.id) : ''}`;
   const shopHas = () => { try { const sh = typeof shInfo === 'function' ? shInfo() : null; return !!(sh && sh.classes && sh.classes.length); } catch (e) { return false; } };
+  const cw = () => { const w = typeof lcTerm === 'function' ? lcTerm('cls') : ''; return w && w !== '클래스' ? w : '강좌'; }; const lj = (w, a, b) => (typeof lJ === 'function' ? lJ(w, a, b) : b);
   const browseHref = () => shopHas() ? '#shop' : ((SITE().pages || []).some(p => p.id === 'courses') ? '#courses' : '#home');
   function contHTML(compact) { const L = myCourses(); const x = L.find(y => y.p < 100) || L[0];
-    if (!x) return `<section class="lux-cont"><div class="in"><div class="lux-cc empty"><div><p class="lux-ey">${esc(LR.me.nick || '')}님, 반갑습니다</p><h2>첫 강좌를 골라 보세요</h2><p class="lux-sub">강좌를 신청하면 이 자리에서 바로 이어서 학습할 수 있습니다.</p></div><a class="lbtn pri" href="${browseHref()}">강좌 둘러보기 ${ico('arrow', 16)}</a></div></div></section>`;
+    if (!x) { const W = cw(); return `<section class="lux-cont"><div class="in"><div class="lux-cc empty"><div><p class="lux-ey">${LR.me.nick ? `${esc(LR.me.nick)}님, 반갑습니다` : '반갑습니다'}</p><h2>첫 ${esc(W)}${lj(W, '을', '를')} 골라 보세요</h2><p class="lux-sub">${esc(W)}${lj(W, '을', '를')} 신청하면 이 자리에서 바로 이어서 학습할 수 있습니다.</p></div><a class="lbtn pri" href="${browseHref()}">${esc(W)} 둘러보기 ${ico('arrow', 16)}</a></div></div></section>`; } /* v38 F5: 이름이 없으면 인사에서 빼고, 기관 유형 용어(교과목 · 교육과정)를 쓴다 */
     const rest = L.filter(y => y !== x).slice(0, 3);
     return `<section class="lux-cont${compact ? ' sm' : ''}"><div class="in"><div class="lux-cc"><div class="lux-cm"><p class="lux-ey">${x.started ? '이어서 학습하기' : '바로 시작하기'}</p><h2>${esc(x.c.name)}</h2><p class="lux-sub">${x.nx ? `다음 강의 · ${esc(x.nx.title)}${ITN[x.nx.type] ? ` <span class="lux-ty">${esc(ITN[x.nx.type])}</span>` : ''}` : ''}</p>
-      <div class="lux-bar" role="progressbar" aria-valuenow="${x.p}" aria-valuemin="0" aria-valuemax="100" aria-label="진도"><i style="width:${x.p}%"></i></div><small class="lux-pc">진도 ${x.p}%${Math.round(x.done / Math.max(1, x.n) * 100) === x.p ? ` · ${x.done}/${x.n} 완료` : ''}${x.p >= (x.c.thr || 80) ? ' · 수료 기준 달성' : ''}</small></div>
+      <div class="lux-bar" role="progressbar" aria-valuenow="${x.p}" aria-valuemin="0" aria-valuemax="100" aria-label="진도"><i style="width:${x.p}%"></i></div><small class="lux-pc">진도 ${x.p}%${Math.round(x.done / Math.max(1, x.n) * 100) === x.p ? ` · ${x.done}/${x.n} 완료` : ''}${x.fin ? ' · 수료 기준 달성' : ''}</small></div>
       <a class="lbtn pri lux-go" href="${nextHref(x)}">${x.p >= 100 ? '다시 보기' : x.started ? '이어서 학습하기' : '학습 시작하기'} ${ico('arrow', 16)}</a></div>
       ${rest.length ? `<ul class="lux-ol">${rest.map(y => `<li><a href="${nextHref(y)}"><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>${y.p}%</small>${ico('arrow', 14)}</a></li>`).join('')}</ul>` : ''}</div></section>`; }
 
@@ -70,19 +73,21 @@
   const SEC = { home: 'home', shop: 'shop', class: 'shop', pay: 'shop', payok: 'shop', courses: 'shop', textbooks: 'shop', tb: 'shop', c: 'my', my: 'my', cert: 'my', badge: 'my', mypay: 'my', payd: 'my', mybooks: 'my', acct: 'my', inbox: 'my', family: 'my', login: 'my', join: 'my', comm: 'comm', post: 'comm', write: 'comm', msg: 'my', notice: 'comm' };
   function bottomNav() { const tb = document.querySelector('nav.tabbar'); if (!tb) return; const a = route().a; const s = SEC[a] || (a === 'hp' ? 'home' : '');
     const hasComm = (SITE().pages || []).some(p => p.id === 'comm') || !!document.querySelector('header .ln a[href="#comm"]') || typeof lcCommHTML === 'function';
-    const it = [['home', '#home', 'home', '홈'], ['shop', browseHref(), 'grid', '강좌'], ['my', LR.me ? '#my' : '#login/my', 'user', '내 학습'], hasComm ? ['comm', '#comm', 'msg', '커뮤니티'] : ['comm', '#notice', 'bell', '공지']];
+    const par = !!(LR.me && LR.me.kind === 'parent'); /* v38 보호자 웹 휴대폰: 앱과 같은 보호자 탭(홈 · 자녀 · 메시지 · 결제) — 학생 탭(수업 찾기 · 내 학습) 대신(QA K13) */
+    const ps = { home: 'home', hp: 'home', family: 'kids', msg: 'msg', inbox: 'msg', mypay: 'pay', payd: 'pay' }[a] || '';
+    const it = par ? [['home', '#home', 'home', '홈'], ['kids', '#family', 'user', '자녀'], ['msg', '#msg', 'msg', '메시지'], ['pay', '#mypay/bill', 'grid', '결제']] : [['home', '#home', 'home', '홈'], ['shop', browseHref(), 'grid', cw()], ['my', LR.me ? '#my' : '#login/my', 'user', '내 학습'], hasComm ? ['comm', '#comm', 'msg', '커뮤니티'] : ['comm', '#notice', 'bell', '공지']];
     tb.className = 'tabbar lux-bn'; tb.setAttribute('aria-label', '아래 메뉴');
-    tb.innerHTML = it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 21)}<span>${l}</span></a>`).join('') + `<button type="button" data-lux="menu" aria-haspopup="dialog" aria-expanded="false">${ico('menu', 21)}<span>메뉴</span></button>`; }
+    const on = par ? ps : s; tb.innerHTML = it.map(([k, h, i, l]) => `<a href="${h}" class="${on === k ? 'on' : ''}"${on === k ? ' aria-current="page"' : ''}>${ico(i, 21)}<span>${l}</span></a>`).join('') + `<button type="button" data-lux="menu" aria-haspopup="dialog" aria-expanded="false">${ico('menu', 21)}<span>메뉴</span></button>`; }
   function sheetOpen() { sheetClose(); const links = []; const seen = new Set();
     document.querySelectorAll('header.lh nav.ln a').forEach(a => { const h = a.getAttribute('href'); if (!h || seen.has(h)) return; seen.add(h); links.push(`<a href="${esc(h)}"${a.target ? ' target="_blank" rel="noopener"' : ''}>${esc(a.textContent.replace('▾', '').trim())}</a>`); });
     const fam = !!document.querySelector('.la-acp a[href="#family"]'); const T = typeof TCFG === 'function' && TCFG().enabled ? TCFG().name : '';
-    const mine = LR.me ? [['#my', '내 학습'], ['#mypay/pay', '결제 · 환불 내역'], ['#mybooks', '내 교재/교구'], ['#msg', '메시지'], ['#inbox', '알림'], ['#acct', '회원정보 · 개인정보'], ...(fam ? [['#family', '가족']] : [])] : [];
+    const pOff = typeof lPayOff === 'function' && lPayOff(); const mine = LR.me ? [['#my', '내 학습'], ...(pOff ? [] : [['#mypay/pay', '결제 · 환불 내역'], ['#mybooks', '내 교재/교구']]), ['#msg', '메시지'], ['#inbox', '알림'], ['#acct', '회원정보 · 개인정보'], ...(fam ? [['#family', '가족']] : [])] : [];
     const w = document.createElement('div'); w.className = 'lux-sheet'; w.id = 'luxSheet';
     w.innerHTML = `<div class="lux-sh" role="dialog" aria-modal="true" aria-label="전체 메뉴"><div class="lux-shh"><b>${esc(SITE().org.name)}</b><button type="button" data-lux="close" aria-label="메뉴 닫기">${ico('x', 20)}</button></div>
       ${LR.me ? `<p class="lux-who"><b>${esc(LR.me.nick || LR.me.sid)}</b>님</p>` : `<div class="lux-shc"><a class="lbtn pri blk" href="#join">무료 가입</a><a class="lbtn ghost blk" href="#login">로그인</a></div>`}
       <p class="lux-shg">둘러보기</p><nav class="lux-shl">${links.join('')}</nav>
       ${mine.length ? `<p class="lux-shg">내 학습</p><nav class="lux-shl">${mine.map(([h, l]) => `<a href="${h}">${l}</a>`).join('')}</nav>` : ''}
-      ${T || LR.me ? `<p class="lux-shg">도움</p><nav class="lux-shl">${T ? `<button type="button" data-tact="open" data-lux="close">${esc(T)}에게 묻기 · 내 AI 학습 비서</button>` : ''}${LR.me ? '<button type="button" data-lact="logout" data-lux="close">로그아웃</button>' : ''}</nav>` : ''}</div>`;
+      ${T || LR.me ? `<p class="lux-shg">도움</p><nav class="lux-shl">${T && !(LR.me && LR.me.kind === 'parent') ? `<button type="button" data-tact="open" data-lux="close">${esc(T)}에게 묻기 · 내 AI 학습 비서</button>` : ''}${LR.me ? '<button type="button" data-lact="logout" data-lux="close">로그아웃</button>' : ''}</nav>` : ''}</div>`;
     document.body.appendChild(w); document.body.classList.add('luxsheet'); const b = document.querySelector('[data-lux="menu"]'); if (b) b.setAttribute('aria-expanded', 'true'); const f = w.querySelector('.lux-sh button, .lux-sh a'); if (f) f.focus(); }
   function sheetClose() { const w = document.getElementById('luxSheet'); if (w) w.remove(); document.body.classList.remove('luxsheet'); const b = document.querySelector('[data-lux="menu"]'); if (b) b.setAttribute('aria-expanded', 'false'); }
   window.luxSheet = sheetOpen;
@@ -100,7 +105,7 @@
   function onePrimary(scope, keep) { if (!scope) return; [...scope.querySelectorAll('.lbtn.pri, .lbtn.dark, .lbtn:not(.ghost):not(.wht):not(.sm)')].filter(b => b !== keep && !b.closest('.lux-cont, .shp-mw, #shpModal, .gate, form, .lux-sheet, header, .shp-side, .lt')).forEach(b => { b.classList.remove('pri', 'dark'); b.classList.add('ghost'); }); }
   function pageFix() { const r = route(); const lm = document.getElementById('lm'); if (!lm) return; const parts = decodeURIComponent(location.hash.slice(1)).split('/');
     /* 강좌 상세: 비회원 '수강 신청' → 간편가입(끝나면 결제로 바로) */
-    if (r.a === 'class' && !LR.me) { const id = parts[1]; const a = lm.querySelector(`a[href="#login/class/${CSS.escape(id)}"]`);
+    if (r.a === 'class' && !LR.me) { const id = parts[1]; const a = lm.querySelector(`a[href="#login/class/${CSS.escape(id)}"]:not([data-lwg])`); /* v38 L-2: 정원 마감의 '로그인하고 대기 신청하기'는 그대로 */
       if (a) { const c = ((typeof shInfo === 'function' && shInfo()) || { classes: [] }).classes.find(x => x.id === id) || {}; const paid = (typeof shPrice === 'function' ? shPrice(id) : +c.price || 0) > 0; const back = c.kind === 'sub' ? 'pay/sub/' + id : paid ? 'pay/class/' + id : 'class/' + id;
         const canJoin = !!document.querySelector('.la-join') || (SITE().acct && SITE().acct.mode === 'open');
         a.textContent = '수강 신청하기'; a.dataset.luxBack = back; a.setAttribute('href', canJoin ? '#join' : '#login/' + back);
@@ -134,23 +139,27 @@
     const fam = !!document.querySelector('.la-acp a[href="#family"]');
     const acct = `<div class="mycard lux-acct" data-lux-g="acct"><div class="mh"><h3>계정</h3></div><ul class="shp-list sm"><li><a href="#acct"><span>회원정보 · 개인정보</span>${ico('arrow', 14)}</a></li><li><a href="#inbox"><span>알림</span>${ico('arrow', 14)}</a></li><li><a href="#msg"><span>메시지</span>${ico('arrow', 14)}</a></li>${fam ? `<li><a href="#family"><span>가족</span>${ico('arrow', 14)}</a></li>` : ''}<li><a href="#" data-lact="logout"><span>로그아웃</span>${ico('out', 14)}</a></li></ul></div>`;
     const grid = mp.querySelector('.mygrid'); if (grid) { grid.insertAdjacentHTML('beforeend', acct); grid.insertAdjacentHTML('afterbegin', `<div class="mycard lux-wide" data-lux-g="learn">${myListHTML()}</div>`); }
-    const tab = ['learn', 'pay', 'acct'].includes(want) ? want : (ss.get(TABK()) || 'learn');
-    const anchor = mp.querySelector('.in'); anchor.insertAdjacentHTML('afterbegin', `<div class="lux-tabs" role="tablist" aria-label="내 학습 나누어 보기">${[['learn', '학습'], ['pay', '결제'], ['acct', '계정']].map(([k, l]) => `<button type="button" role="tab" data-lux-tab="${k}" aria-selected="${k === tab}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`);
+    const pOff = typeof lPayOff === 'function' && lPayOff(); const TABS = [['learn', '학습'], ...(pOff ? [] : [['pay', '결제']]), ['acct', '계정']]; let tab = ['learn', 'pay', 'acct'].includes(want) ? want : (ss.get(TABK()) || 'learn'); if (pOff && tab === 'pay') tab = 'learn';
+    const anchor = mp.querySelector('.in'); anchor.insertAdjacentHTML('afterbegin', `<div class="lux-tabs" role="tablist" aria-label="내 학습 나누어 보기">${TABS.map(([k, l]) => `<button type="button" role="tab" data-lux-tab="${k}" aria-selected="${k === tab}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`);
     lm.dataset.luxtab = tab;
     /* 같은 뜻의 빈 카드('아직 시작한 과정이 없습니다')는 수강 중인 강좌가 있으면 숨김 · 주 버튼은 수강 중인 강좌 하나 */
     if (myCourses().length) lm.querySelectorAll('.mycard').forEach(c => { if (!c.classList.contains('lux-wide') && /^내 과정/.test(((c.querySelector('h3') || {}).textContent || '').trim()) && /아직 시작한 과정이 없습니다/.test(c.textContent)) c.hidden = true; });
     const keep = lm.querySelector('.lux-wide .lbtn.pri'); if (keep) [...lm.querySelectorAll('.mypage .lbtn.pri, .mypage .lbtn:not(.ghost):not(.sm):not(.wht)')].filter(b => b !== keep && !b.closest('.lux-wide, form, .lux-tabs')).forEach(b => { b.classList.remove('pri', 'dark'); b.classList.add('ghost'); }); }
   function myListHTML() { const L = myCourses(); const x = L.find(y => y.p < 100) || L[0];
-    if (!L.length) return `<div class="mh"><h3>수강 중인 강좌</h3></div><p class="mini">아직 수강 중인 강좌가 없습니다.</p><a class="lbtn pri sm" href="${browseHref()}">강좌 둘러보기</a>`;
-    return `<div class="mh"><h3>수강 중인 강좌 <small>${L.length}개</small></h3></div><ul class="lux-ml">${L.map(y => `<li><div><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>진도 ${y.p}%${Math.round(y.done / Math.max(1, y.n) * 100) === y.p ? ` · ${y.done}/${y.n}` : ''}${y.nx && y.p < 100 ? ` · 다음 ${esc(y.nx.title)}` : ''}</small></div><span class="lux-mla">${y.p >= (y.c.thr || 80) ? `<a class="lbtn ghost sm" href="#cert/${esc(y.c.id)}">수료증</a>` : ''}<a class="lbtn ${y === x ? 'pri' : 'ghost'} sm" href="${nextHref(y)}">${y.p >= 100 ? '다시 보기' : y.started ? '이어서' : '시작'}</a></span></li>`).join('')}</ul>`; }
+    const W = cw(); if (!L.length) return `<div class="mh"><h3>내 ${esc(W)}</h3></div><p class="mini">아직 신청한 ${esc(W)}${lj(W, '이', '가')} 없습니다.</p><a class="lbtn pri sm" href="${browseHref()}">${esc(W)} 둘러보기</a>`;
+    return `<div class="mh"><h3>내 ${esc(W)} <small>${L.length}개</small></h3></div><ul class="lux-ml">${L.map(y => `<li>${y.c.thumb ? `<img class="lux-mth" src="${esc(y.c.thumb)}" alt="" loading="lazy">` : L.some(z => z.c.thumb) ? `<span class="lux-mth lux-mth0" aria-hidden="true">${esc(String(y.c.name || '').slice(0, 4))}</span>` : ''}<div><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>진도 ${y.p}%${Math.round(y.done / Math.max(1, y.n) * 100) === y.p ? ` · ${y.done}/${y.n}` : ''}${y.nx && y.p < 100 ? ` · 다음 ${esc(y.nx.title)}` : ''}</small></div><span class="lux-mla">${y.fin ? `<a class="lbtn ghost sm" href="#cert/${esc(y.c.id)}">수료증</a>` : ''}<a class="lbtn ${y === x ? 'pri' : 'ghost'} sm" href="${nextHref(y)}">${y.p >= 100 ? '다시 보기' : y.started ? '이어서' : '시작'}</a></span></li>`).join('')}</ul>`; }
   function setTab(k) { const lm = document.getElementById('lm'); if (!lm) return; lm.dataset.luxtab = k; ss.set(TABK(), k); lm.querySelectorAll('[data-lux-tab]').forEach(b => { const on = b.dataset.luxTab === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); }
 
   /* ── 튜터: 사람이 열 때만 ── */
   function tutorQuiet() { try { if (typeof LT === 'object' && LT) { LT.auto = true; if (mob() || route().a === 'c' || ['pay', 'join', 'login'].includes(route().a)) LT.nudge = ''; } } catch (e) { } }
 
+  /* v38 학사 LMS 수강 분반이 있으면 '아직 수강 중인 강좌가 없어요' 빈 안내를 분반 안내로 바꾼다 — 한 화면에 상태 두 가지가 나오던 것(QA UL12) */
+  function lmsMyFix() { const n = document.querySelectorAll('#lmsaMy .lmsa-ul li > b').length; if (!n) return; const msg = `이번 학기 수강 분반 ${n}개는 「이번 학기 수강 분반」에서 확인해요.`;
+    document.querySelectorAll('.lux-wide p.mini, .ap-myh p').forEach(p => { if (/아직 (수강 중인|신청한) (강좌|교과목)(이|가) 없/.test(p.textContent)) p.textContent = msg; });
+    document.querySelectorAll('.lux-wide a.lbtn.pri[href*="shop"], .lux-wide a.lbtn.pri[href*="courses"]').forEach(a => { if (/둘러보기/.test(a.textContent) && a.closest('.lux-wide').querySelector('.lux-ml') == null) a.hidden = true; }); }
   /* ── 렌더 감싸기(가장 바깥) ── */
   { const base = lrender; lrender = (...a) => { tutorQuiet(); base(...a); if (!SITE()) return;
-      try { navFix(route().a); acctFix(); bottomNav(); if (pageFix() === 'redirect') return; hpFix(); plain(document.getElementById('lm')); plain(document.querySelector('header.lh')); document.body.dataset.luxr = route().a; } catch (e) { console.error('lux', e); }
+      try { navFix(route().a); acctFix(); bottomNav(); if (pageFix() === 'redirect') return; hpFix(); lmsMyFix(); plain(document.getElementById('lm')); plain(document.querySelector('header.lh')); document.body.dataset.luxr = route().a; } catch (e) { console.error('lux', e); }
       requestAnimationFrame(() => { try { hpFix(); } catch (e) { } }); }; }
 
   /* ── 이벤트 ── */
@@ -164,8 +173,19 @@
     if (t.classList && t.classList.contains('lux-sheet')) sheetClose();
     const tb = t.closest && t.closest('[data-lux-tab]'); if (tb) { e.preventDefault(); setTab(tb.dataset.luxTab); }
     const j = t.closest && t.closest('[data-lact="myjump"]'); if (j) { const el = document.getElementById(j.dataset.v); const g = el && el.closest('[data-lux-g]'); if (g) setTab(g.dataset.luxG); }
-    if (t.closest && t.closest('[data-lact="logout"]')) ss.set(BK(), null);
+    if (t.closest && t.closest('[data-lact="logout"]')) { ss.set(BK(), null); ss.set(TABK(), null); }
   }, true);
   document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (document.getElementById('luxSheet')) { sheetClose(); const b = document.querySelector('[data-lux="menu"]'); if (b) b.focus(); } const m = document.querySelector('.lux-more.open'); if (m) { m.classList.remove('open'); const b = m.querySelector('.lux-mb'); b.setAttribute('aria-expanded', 'false'); b.focus(); } });
   window.addEventListener('hashchange', sheetClose);
+  /* v33 R2(레이아웃 경고): 휴대폰(≤600) 기존 웹에서 떠 있는 AI 버튼이 본문 버튼 · 링크를 덮지 않게 한다.
+     본문 끝은 #lm 아래 여백(140px)으로 비워 두고, 화면 중간에서 겹치면 겹치지 않는 빈 줄까지 버튼을 위로 올린다. */
+  (() => { let tk = 0;
+    const run = () => { tk = 0; const f = document.querySelector('#ltut .lt-fab'); if (!f) return; f.style.translate = ''; if (innerWidth > 600 || document.body.classList.contains('lapp') || document.body.classList.contains('lt-on')) return;
+      const fr = f.getBoundingClientRect(); if (!fr.width) return;
+      const E = [...document.querySelectorAll('#lm a, #lm button, #lm input, #lm select, #lm textarea, #lm [role="button"], #lm [tabindex="0"]')].map(e => e.getBoundingClientRect()).filter(r => r.width && r.height && r.bottom > 0 && r.top < innerHeight);
+      const hit = dy => E.some(r => r.left < fr.right + 4 && r.right > fr.left - 4 && r.top < fr.bottom - dy + 4 && r.bottom > fr.top - dy - 4);
+      for (const dy of [0, 56, 112, 168, 224, 280, 336, 392]) if (!hit(dy) && fr.top - dy > 80) { if (dy) f.style.translate = `0 -${dy}px`; return; } };
+    const q = () => { if (!tk) tk = requestAnimationFrame(run); };
+    addEventListener('scroll', q, { passive: true }); addEventListener('resize', q); addEventListener('hashchange', () => setTimeout(q, 60));
+    try { new MutationObserver(q).observe(document.body, { childList: true, subtree: true }); } catch (e) { } })();
 })();

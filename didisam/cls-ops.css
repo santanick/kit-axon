@@ -1,0 +1,151 @@
+/* v36 A — 운영현황 시트 · 이수 현황 엑셀 · 진도율 · 카테고리 · 수료증 디자인 */
+/* 카드 보기 썸네일 = 운영현황 버튼 */
+.d26-th{position:relative}
+.ops-thb{position:absolute;inset:0;z-index:1;border:0;padding:0;margin:0;background:transparent;cursor:pointer;display:flex;align-items:flex-end;justify-content:flex-end;border-radius:inherit}
+.ops-thb>span{display:inline-flex;align-items:center;gap:6px;margin:10px;padding:6px 12px;border-radius:999px;background:rgba(31,32,32,.78);color:#fff;font-size:13px;font-weight:600;opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s}
+.ops-thb:hover>span,.ops-thb:focus-visible>span{opacity:1;transform:none}
+.ops-thb:focus-visible{outline:3px solid var(--s400,#5C74F6);outline-offset:-3px}
+@media (hover:none){.ops-thb>span{opacity:1;transform:none}}
+.d26-th .d26-ck,.d26-th .d26-kind,.d26-th .d26-rib{z-index:2}
+.d26-th .d26-kind{pointer-events:none}
+.d26-th .d26-ck{pointer-events:auto}
+.ops-xbtn{white-space:nowrap}
+.c2lbar .ops-xbtn{min-height:40px}
+/* 운영현황 시트 */
+.ops-w .sl-sheet{width:min(560px,100%)}
+.ops{display:flex;flex-direction:column;gap:14px}
+.ops-hd{display:flex;gap:12px;align-items:center}
+.ops-hd img,.ops-th0{width:72px;height:48px;border-radius:10px;object-fit:cover;flex:none}
+.ops-th0{display:grid;place-items:center;background:var(--s50,#EEF1FE);color:var(--s500,#3C4FC9);font-weight:800;font-size:18px}
+.ops-th0.sm{width:44px;height:32px;font-size:14px;border-radius:8px}
+.ops-hd b{display:block;font-size:17px;line-height:1.35}
+.ops-hd small{color:var(--g600,#6C6C6C);font-size:13px}
+.ops-ts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.ops-t{background:var(--g50,#F6F6F7);border-radius:12px;padding:10px 10px 9px;min-width:0}
+.ops-t small{display:block;color:var(--g600,#6C6C6C);font-size:12px;white-space:nowrap}
+.ops-t b{display:block;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.25}
+.ops-t b i{font-style:normal;font-size:12px;font-weight:500;margin-left:2px;color:var(--g600,#6C6C6C)}
+.ops-t span{display:block;font-size:11px;color:var(--g600,#6C6C6C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ops-t.g b{color:#00873D}.ops-t.w b{color:#C26A00}.ops-t.p b{color:#C2185B}
+.ops-bar{display:flex;height:10px;border-radius:99px;background:var(--g100,#EBEBEC);overflow:hidden}
+.ops-bar i{display:block;height:100%}.ops-bar .g{background:#00A651}.ops-bar .b{background:#5C74F6}
+.ops-lg{display:flex;gap:14px;margin:-6px 0 0;font-size:12px;color:var(--g600,#6C6C6C)}
+.ops-lg span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--g200,#D5D6D8);margin-right:5px}
+.ops-lg .g::before{background:#00A651}.ops-lg .b::before{background:#5C74F6}
+.ops .sl-gh{margin:6px 0 -4px}
+.ops-todo,.ops-low,.ops-crl{display:flex;flex-direction:column;gap:2px}
+.ops-tr,.ops-cr{display:flex;align-items:center;gap:12px;min-height:56px;padding:6px 4px;border-radius:12px}
+.ops-tr:hover,.ops-cr:hover{background:var(--g50,#F6F6F7)}
+.ops-ti{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--s50,#EEF1FE);color:var(--s500,#3C4FC9);flex:none}
+.ops-tx{flex:1;min-width:0}
+.ops-tx b{display:block;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ops-tx small{display:block;font-size:12.5px;color:var(--g600,#6C6C6C);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ops-tr .btn,.ops-cr .btn{min-height:40px;flex:none}
+.ops-none{color:var(--g600,#6C6C6C);font-size:14px;margin:4px 0}
+.ops-lr{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(60px,1fr) 44px 64px;gap:10px;align-items:center;min-height:40px;font-size:14px}
+.ops-lr>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ops-lr b{text-align:right;font-variant-numeric:tabular-nums}
+.ops-lr small{color:var(--g600,#6C6C6C);font-size:12px;text-align:right}
+.ops-pb{display:inline-block;width:72px;height:6px;background:var(--g100,#EBEBEC);border-radius:9px;overflow:hidden;vertical-align:middle}
+.ops-lr .ops-pb{width:100%}
+.ops-pb i{display:block;height:100%;background:#5C74F6;border-radius:9px}
+.ops-pb i.r{background:#E5484D}
+@media (max-width:560px){.ops-ts{grid-template-columns:repeat(3,minmax(0,1fr))}.ops-lr{grid-template-columns:minmax(0,1fr) 54px 44px}.ops-lr small{display:none}}
+/* 진도율 카드(출결) */
+.ops-prog{margin-top:16px}
+.ops-prog .ch{flex-wrap:wrap;gap:8px}
+.ops-prog .sl-chips{margin:8px 0 10px}
+/* 카테고리 */
+.ops-one{margin:0 0 10px;color:var(--g600,#6C6C6C);font-size:14px}
+.ops-catadd{display:flex;gap:8px;margin-top:14px}
+.ops-catadd input{flex:1;min-height:44px}
+.ops-sug{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
+.ops-sug small{color:var(--g600,#6C6C6C);margin-right:4px}
+.ops-sug .chip{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--g200,#D5D6D8);background:#fff;cursor:pointer;font-size:13px}
+.ops-sug .chip:hover{border-color:var(--s400,#5C74F6);color:var(--s500,#3C4FC9)}
+.ops-catempty{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding:28px}
+.ops-catempty>b{font-size:17px}
+.ops-cats .ops-q{width:100%;min-height:44px;margin:8px 0}
+.ops-cats .ch{display:flex;align-items:center;gap:8px}
+.ops-cr img{width:44px;height:32px;border-radius:8px;object-fit:cover;flex:none}
+.ops-cfcat{margin:0 0 18px;padding:14px 16px;border-radius:12px;background:var(--g50,#F6F6F7)}
+.ops-cfcat .cf-lb{display:block;font-weight:700;margin-bottom:8px}
+.ops-cfcat .cf-lb small{font-weight:400;color:var(--g600,#6C6C6C);margin-left:6px}
+.ops-cat{display:flex;gap:8px;flex-wrap:wrap}
+.ops-cat select,.ops-cat input{min-height:44px;min-width:220px;flex:1}
+/* 수료증 디자인 */
+.ck-gwrap{margin-bottom:16px}
+.ck-gwrap .ch{display:flex;align-items:center;gap:8px}
+.ck-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.ck-card{display:flex;flex-direction:column;gap:4px;align-items:stretch;text-align:left;padding:8px 8px 10px;border:1.5px solid var(--g100,#EBEBEC);border-radius:14px;background:#fff;cursor:pointer;min-width:0}
+.ck-card:hover{border-color:var(--g300,#AAABAB)}
+.ck-card.on{border-color:var(--s400,#5C74F6);box-shadow:0 0 0 3px rgba(92,116,246,.16)}
+.ck-card b{font-size:14px;padding:0 2px}.ck-card small{font-size:12px;color:var(--g600,#6C6C6C);padding:0 2px}
+.ck-mini{display:block;position:relative;width:100%;aspect-ratio:1.414;overflow:hidden;border-radius:8px;background:#F4F2EC;container-type:inline-size}
+.ck-mini-in{position:absolute;left:0;top:0;width:760px;transform-origin:0 0;transform:scale(.2);pointer-events:none}
+.ck-mini-in .certpv,.ck-mini-in .a2cert{margin:0!important;width:760px!important;max-width:none!important;box-shadow:none}
+.ck-up{display:grid;place-items:center;align-content:center;gap:6px;color:var(--g600,#6C6C6C);font-size:13px;background:repeating-linear-gradient(45deg,#F6F6F7,#F6F6F7 8px,#fff 8px,#fff 16px);border:1.5px dashed var(--g200,#D5D6D8)}
+.ck-curl b{display:block;padding:10px 0;font-weight:600}
+/* 내 이미지 편집기 */
+.ck-ed{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:18px;align-items:start}
+.ck-stage{background:#F4F2EC;border-radius:12px;padding:12px}
+.ck-stage .ck.img{box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.ck-edr{display:flex;flex-direction:column;gap:10px}
+.ck-upl{justify-content:center;min-height:44px}
+.ck-keys{display:flex;flex-direction:column;gap:2px;max-height:260px;overflow:auto}
+.ck-key{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 6px;border-radius:8px}
+.ck-key.on{background:var(--s50,#EEF1FE)}
+.ck-key>button{flex:1;text-align:left;border:0;background:none;min-height:36px;font-weight:600;cursor:pointer}
+.ck-key .sl-swl{font-size:12px;color:var(--g600,#6C6C6C);display:flex;gap:4px;align-items:center}
+.ck-props{border:1px solid var(--g100,#EBEBEC);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ck-props legend{font-weight:700;padding:0 4px}
+.ck-props label{display:flex;flex-direction:column;font-size:12px;gap:4px;color:var(--g600,#6C6C6C)}
+.ck-props input[type=number],.ck-props select{min-height:36px}
+.ck-props input[type=color]{width:100%;height:36px;padding:2px}
+.ck-props .sl-swl{flex-direction:row;align-items:center;align-self:end;min-height:36px}
+@media (max-width:760px){.ck-ed{grid-template-columns:1fr}.ck-keys{max-height:none;display:grid;grid-template-columns:1fr 1fr}}
+/* v38 F5 디자인 크기(스튜디오 휴대폰 공통 부품): 레일 · 아래 메뉴 글자 12px 이상, 버튼 44px 이상, 작은 i · 닫기 · 뒤로는 누를 자리 44px */
+@media (max-width:860px){
+  .brail .ri{font-size:12px;letter-spacing:-.03em}.brail .ri span{max-width:64px}
+  .uxacs small,.acp small,.scxbt small{font-size:12px}
+  .topr .uxfind,.topr>button,.topr>a.btn,.btn.sm,.chip,.acp button{min-height:44px}
+  #modal .mh .x,.lmodal .x{min-width:44px;min-height:44px}
+  .slg-i,.sl-i,.link.back{position:relative}
+  .slg-i::after,.sl-i::after{content:'';position:absolute;inset:-12px}
+  .link.back{min-height:44px;display:inline-flex;align-items:center}
+  .bview,.bhd+*{padding-bottom:84px} /* AI SAM 떠 있는 버튼이 마지막 줄 버튼('반 설정' · '진도 30% 미만 독려')을 가리지 않게 */
+}
+/* v38 F5 A11 · UL15: 390 홈 AI 입력칸 예시 문구가 두 줄로 잘리지 않게(한 줄 말줄임) · 추천 칩은 잘리지 않고 줄바꿈 */
+@media (max-width:860px){
+  .aih-comp textarea{font-size:15px}.aih-comp textarea::placeholder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .aih-chips{flex-wrap:wrap!important;overflow:visible!important;-webkit-mask:none!important;mask:none!important}
+}
+@media (max-width:860px){.scxbt small{font-size:12px!important}.uxpop .btn,.uxpop button{min-height:44px}}
+/* v38 F5 R2 공통 크기 규칙(스튜디오 휴대폰 ≤860px) — 한 곳에서:
+   ① 글자 13px 이상(레일 · 하위 탭 · 사이트 편집기 아래 레일 · 보조 글) ② 누르는 것 44px 이상 ③ 밀집 표 안 보조 버튼은 보이는 크기 32px + 누를 자리 44px ④ 도움말 i · 닫기 같은 아이콘 버튼은 실제 44px */
+@media (max-width:860px){
+  body .brail .ri,body .brail .ri span,body small,body .mini,body .uxacs small,body .scxbt small,body .hps-rail span,body .hps-tab,body .bsub a,body .bsub button{font-size:max(13px,1em)}
+  body .brail .ri{font-size:13px}
+  body button:not(.sl-sw):not([role=switch]):not(.ri),body .btn,body a.btn,body [role=tab],body .chip,body select,body .uxfind,body .tabs button,body .hps-rail button,body .bsub a{min-height:44px}
+  body table .btn,body table button:not(.sl-sw),body .tbl .btn,body td .btn{min-height:32px;position:relative}
+  body table .btn::after,body table button:not(.sl-sw)::after,body td .btn::after{content:'';position:absolute;inset:-6px -2px}
+  body .slg-i,body .sl-i,body button.x,body [data-act=modal-close],body .ap-ib{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  body .slg-i::after,body .sl-i::after{display:none}
+}
+/* v38 F5 R2(U14 · UL15): 스튜디오 휴대폰의 단계 표시 숫자 · 종류 글자 · 보조 글 12px 이상 — 측정(getComputedStyle font-size<12)으로 찾은 것 전수 */
+@media (max-width:860px){
+  body .wkh .wn,body li .ty,body .chap .ty,body .ob1 em,body .ob1 i,body kbd,body .scxt small,body .agl,body .stepper span,body .lsnum,body .hps-steps li,body .tdots li,body .smck small,body .cn-steps small,body .bst small,body .bst i,body .bmseg em,body .c2b small,body .c2b b,body .c2hl,body .d26-calg small,body .gdt small,body .gdrec small,body .gdc small,body .lmsb-cols small,body .lmsb-kind,body .efh-hist small,body .efh-demo,body .lmp-ev,body .lmp-room em,body .lmp-msg small,body .lw-pill,body .lw-demo,body .lmp-todo .lmp-demo,body .lv-msg small,body .brail .ri em,body .hps-tab i{font-size:12px!important}
+  body .lsnum{width:26px;height:26px}
+}
+/* v38 F5 R3 U14: PC에서도 스튜디오 머리 · 홈 주 버튼 40px 이상(DDS 기준) — 메뉴 찾기 · 사이트 열기 · 시작 가이드 · 맡기기 */
+.topr .uxfind,.topr .btn,.topr>button,.topr>a,.bprog,.uxt .btn,.uxt button,.aih-chips .chip{min-height:40px}
+/* v38 F5 R3 U14 · C13: 사이트 편집기 아래 레일 · 시안 카드 · 단계 표시의 작은 글자 12px 이상(PC · 390) */
+body .hps-ri{font-size:12px}body .hps-steps li,body .hps-cnt,body .hps-og small,body .hpw-rec,body .hpw-db em,body .hpw-qi,body .hpai-via,body .hpe-bar #hpeUndo em,body .hps-tab i,body .hps-lsxh summary b::after{font-size:12px!important}
+@media (max-width:860px){body .hps-ri{font-size:13px;min-height:56px}}
+.hps-flow .hps-fok{display:inline-flex;align-items:center;margin-left:2px;color:#16A34A}.hps-flow li.done button i{background:#16A34A;color:#fff}
+/* v38 F5 R3 K14: 390 초대 창 등 창 안 명단의 이름 링크는 줄 전체 높이 44px로 누른다 */
+@media (max-width:860px){#modal td a,#modal li a,#modal .row a,#modal a[data-act=mem-open],#main td a[data-act=mem-open]{display:inline-flex;align-items:center;min-height:44px}}
+@media (max-width:860px){body .cbox button,body .rg-att,body .hpi-att,body .aih-comp button{min-width:44px;min-height:44px}}
+/* v38 F5 R3 UL15: 학사 LMS 하위 탭 · 단계 숫자(em) · 자동화 흐름 글자 12px 이상(390), PC 레일 · 계정 메뉴 보조 글 12px */
+@media (max-width:860px){body #main em,body header em,body .bsub em{font-size:max(12px,1em)!important}body .cn-tflow span{font-size:12px!important}}
+@media (min-width:861px){body .brail .ri{font-size:12px}}body .acn small,body .uxacs small,body .acp small,body .uxacs label{font-size:12px}

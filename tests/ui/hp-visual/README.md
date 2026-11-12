@@ -1,0 +1,82 @@
+# hp-visual — 홈페이지 템플릿 시각 품질 자동 점검
+
+템플릿마다 **게시본(학습자 홈)** 을 PC 1280 · 휴대폰 390으로 찍고 지표를 표로 만든다. 유사한 짝을 찾고, 유형별 모음 시트를 만든다.
+
+## 실행
+```bash
+SP=<scratchpad>; OUT=$SP/fix6/tools/<내 폴더>
+# 1) 촬영 · 지표 (실행기 안에서, 1회 280초 → 기본 예산 240초. 남으면 exit 3 → 같은 명령 다시 실행 = 이어서)
+QA_APP=1 $SP/qa20/qa-run.sh tests/ui/hp-visual/run.js --out $OUT [--type k12] [--ids a,b] [--force] [--port 9830]
+# 끝날 때까지 자동 반복 + 유사 · 시트까지 한 번에
+QA_RUN=$SP/qa20/qa-run.sh tests/ui/hp-visual/run-all.sh $OUT --type k12
+# 2) 유사 짝 (브라우저 불필요)
+node tests/ui/hp-visual/similar.js --in $OUT [--th 12] [--type k12] [--near] [--cross]
+# 3) 유형별 모음 시트 (브라우저 불필요)
+node tests/ui/hp-visual/sheet.js --in $OUT [--type k12] [--full | --low]
+# 4) 유형별 집계: 번호 단계 비율 · 보이는 섹션 · 강좌 카드 · 품질 분포 (브라우저 불필요, --vs로 전 → 후)
+node tests/ui/hp-visual/stats.js --in $OUT [--vs <이전 폴더>] [--type k12]
+```
+- **기관 상태 `--state`(v34.5)**: `both`(기본) = **채워진 기관**(공개 강좌 6 · 공지 4 · 후기 3 · 연락처) → `$OUT/`, **빈 기관**(빈 스튜디오, 예전 도구의 점검 기관과 같음) → `$OUT/empty/`. 빨리 보려면 `--state filled`(또는 `empty`) 하나만. 유사 · 판정 · 시트는 `$OUT/`(채워진 기관) 기준이고, 빈 기관 시트는 `$OUT/empty/sheets/`.
+- 촬영 전에 페이지를 끝까지 내려 지연 불러오기 사진을 깨우고, 모든 사진이 뜰(decode) 때까지 기다린다(최대 4초, 남은 수 = `imgPending`).
+- 템플릿을 고친 뒤에는 `--force`(전부) 또는 `--ids`(고친 것만) + `--force`로 다시 찍는다. 다른 템플릿 결과는 그대로 남는다.
+- 기본은 `hidden: true` 템플릿을 뺀다(`--all`이면 포함). 유형은 `types[0]`(대표 유형) 기준이다.
+- 기관은 유형 · 상태마다 하나 만들고(결제 승인), 템플릿을 `siteFromTpl`로 적용 → `smPublish` → `learner.html?t=…#home`을 연다.
+
+## 결과 (`--out` 폴더)
+| 파일 | 내용 |
+|---|---|
+| `summary.json` · `summary.csv` | 템플릿별 지표(아래) |
+| `rows/<id>.json` | 템플릿 1종 결과(이어서 실행 기준) |
+| `shots/<id>_pc.jpg` · `_m.jpg` | 게시본 전체 화면 |
+| `shots/<id>_hero.jpg` · `_hero_m.jpg` | 첫 화면(홈페이지 시작 위치부터 한 화면) |
+| `shots/<id>_low.jpg` · `_low_m.jpg` | 첫 화면 아래 2개 화면(두 번째 · 세 번째 화면, R2 N2) |
+| `similar/similar.json` · `.csv` · `heat_<유형>.png` · `pairs_<유형>_<n>.jpg` | 유사 짝 · 거리 행렬 · 나란히 보기 |
+| `sheets/sheet_<유형>.jpg` · `_low.jpg` | 유형별 모음 시트(`--low`: 첫 화면 아래 2개 화면 + 아래 섹션 모양) |
+
+## 지표
+| 키 | 뜻 |
+|---|---|
+| `dh` · `dh_m` | 첫 화면 dHash(64비트, 16진). 첫 화면 = 첫 `.smhost` 위치부터 한 화면(PC 1280×800 · 휴대폰 390×844) |
+| `sig` | 섹션 구조 서명 `계열|banner@첫화면>type:variant>…|아래 섹션 모양`(보이는 섹션만, 순서대로) |
+| `low` | 아래 섹션 모양(R2 N2): 숫자 · 일정 · 후기 · FAQ · 오시는 길 · 공지 블록의 `블록:변형` 순서(`HPS.blockSig`). 계열 자체 렌더러는 `블록:fam-<계열>` |
+| `dh2` · `dh2_m` | 첫 화면 아래 2개 화면의 dHash(첫 화면 바로 아래부터 두 화면 높이) |
+| `gap` · `gap_m` · `gapAt` | 첫 화면 아래 ~ 문서 끝 0.5화면 전에서 가장 긴 빈 띠(한 가지 색 가로줄이 이어지는 길이, CSS px)와 시작 위치(R2 M6) |
+| `cmin` · `cminTxt` · `cfail` · `cworst` | 글자 대비 최소값 · 그 글 · 4.5 미만 개수 · 하위 목록. 단색 바탕은 계산, 사진 · 그라데이션 위(`cfailPx`)는 화면 픽셀로 근사 |
+| `auditMin` | `HPT.audit` 이론 대비 최소값 |
+| `ov_pc` · `ov_m` · `wide_m` | 가로 넘침(px) · 넘치는 요소 |
+| `emptyDom` · `ph` | 화면에서 빈 섹션 · 자리 문구/오류 흔적(입력하세요 · undefined 등) |
+| `numSus` | 단위 붙은 숫자(%, 명, 점, 위, 배, 년 전통 …) 중 실제 데이터(HPT.facts · 가격)에 없는 것 — 지어낸 숫자 의심 |
+| `q` · `qMiss` | `hpwQuality` 점수 · 못 채운 항목 |
+| `photos` · `stock` · `stockRatio` · `art` | 사진 수(img + 배경 사진) · 그중 샘플 사진(img/stock) · 비율 · 아트 대체 자리 |
+| `nVis` · `numSec` | 화면에 보이는 최상위 섹션 수 · 번호 단계(1 · 2 · 3 / 01 · 02 · 03 표시)가 있는 섹션 수 |
+| `clsVis` · `emptyCls` | 강좌 카드가 보이는 섹션 수 · '개설 준비 중'(강좌 0개) 섹션 수 |
+| `heroPh` | 첫 화면 샘플 사진 `{id, long(긴 변), slot(hero 슬롯 여부), ok}` — hero 슬롯이고 긴 변 1200 이상이면 ok |
+| `state` · `imgPending` | 기관 상태(filled · empty) · 촬영 때까지 안 뜬 사진 수 |
+
+## 유사 판정 (통합 결정 12:00)
+- **유형 묶음**: `types`에 그 유형이 포함된 템플릿은 모두 그 유형으로 센다(includes). 유형마다 15종 미만이면 경고한다.
+- **① 엄격**: 같은 유형 안에서 첫 화면 dHash ≤ 12(`--th`) **이고** 섹션 종류 순서가 같음(variant · 첫 화면 배치는 보지 않음).
+- **② 첫 화면 닮음**: 구조와 관계없이 dHash ≤ 8(`--look`).
+- **③ 아래 닮음**(R2 N2 · v34.5 3차): 첫 화면 아래 2개 화면 dHash(`dh2`) ≤ 12(`--low`)이고 아래 섹션 모양(`low`)이 같음, 또는 `dh2` ≤ 5(`--lowlook`). 짝 보기 이미지에는 아래 화면(`_low`)이 나온다.
+- **빈 띠**: `gap` · `gap_m` 중 큰 값이 200px(`--gap`)을 넘는 템플릿 수를 '공백'으로 센다(R2 M6).
+- 시트 · 히트맵 테두리: 빨강 = ①, 주황 = ②만. 히트맵의 파란 점 = 섹션 종류 순서만 같음.
+- **판정 요약 한 줄**(`similar/verdict.txt`, run-all.sh 마지막 줄): `판정 2/7 통과 | k12 OK ①0 ②0 대비0 숫자0 사진0 단계6/16 16종 | …`
+  - 유형마다 ① · ② · ③ 짝 수, 빈 띠 200px 초과 템플릿 수, 대비 4.5 미만 템플릿 수, 지어낸 숫자 의심 템플릿 수, **첫 화면 사진 미달**(hero 슬롯이 아니거나 긴 변 1200 미만, R1 H6) 수가 모두 0이고, **번호 단계 섹션이 있는 템플릿이 절반 이하**(넘으면 `단계n/m!`, R1 H3)이며 15종 이상이면 OK. run-all.sh는 NG가 있으면 exit 4.
+  - 예전 결과(rows에 `numSec` · `heroPh`가 없는 것)는 사진 · 단계 판정을 건너뛴다.
+- 촬영은 템플릿마다 한 번(대표 유형 `types[0]` 기관으로 게시)이고, 묶음만 includes로 센다.
+
+## 아래 공통 블록 변형 (R2 N2 · v34.5 3차 H1)
+`didisam/hpsec-trust.js`가 숫자 · 일정 · 후기 · FAQ · 오시는 길 · 공지를 변형 4개씩 그린다(첫 번째 = 기존 모양).
+
+| 블록 | 변형 |
+|---|---|
+| facts | row(4칸) · line(한 줄 문장형) · one(큰 숫자 하나 + 곁 표) · table(운영 현황 표) |
+| sched | list(D-day 줄) · cal(달력 날짜 칸) · cards(접수 진행 막대 카드) · table(모집 표) |
+| reviews | split(왼쪽 요약 + 인용) · wall(3단 후기 벽) · big(어두운 띠 큰 인용) · strip(가로 카드 줄) |
+| faq | side(왼쪽 문의 상자) · one(가운데 한 단) · grid(펼친 질문 2단 + 문의 띠) · list(2단 아코디언) |
+| map | split(주소 + 지명 글자 판) · card(가운데 주소 카드) · band(어두운 연락 띠) · cols(안내 표) — 그림 지도 없음, 지도 앱 링크(R2 N9) |
+| notices | rows(목록) · cards(날짜 카드) · feat(대표 공지 + 목록) · line(한 줄 압축 띠) |
+
+- 배정: 섹션 `data.bv` > 템플릿 `blocks: { facts, sched, reviews, faq, map, notices }`(→ `site.blocks`) > 유형 기본표 × 계열 회전(`HPS.blockVar(블록, site)`). 유형별 분포는 `HPS.blockPlan()`.
+- 게시본 섹션에 `data-hpb="블록:변형"` · `hpb-<블록>-<변형>` 클래스가 붙는다.
+- 같은 바탕 섹션이 이어지면 앞 섹션 아래 여백 × 0.65, 뒤 섹션 위 여백 × 0.45(`hps-flowb` · `hps-flow`)로 빈 띠를 줄인다(R2 M6).

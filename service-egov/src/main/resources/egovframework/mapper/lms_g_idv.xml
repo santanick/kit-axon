@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- x3 · SFR-016 본인 확인(패스키 · 인증 앱 · 이메일 어댑터): 업무 함수(sql/a3_integrity.sql lms_g_*)를 부른다. 함수 이름은 고정 라우트 표에서만(${fn}) -->
+<mapper namespace="egovframework.didisam.lms.g.service.impl.LmsGIdvMapper">
+  <select id="call" resultType="string" flushCache="true" useCache="false">select ${fn}(cast(#{ctx} as jsonb), cast(#{a} as jsonb))::text</select>
+</mapper>

@@ -7,10 +7,14 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const nl = s => esc(s).replace(/\n/g, '<br>');
 const ytOK = id => /^[\w-]{11}$/.test(id || '');
 const nowISO = () => new Date().toISOString();
+function ymdL(d) { d = d instanceof Date ? d : new Date(d == null ? Date.now() : d); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; } /* v38 현지(Asia/Seoul) 날짜 하나로 — toISOString().slice(0, 10)은 UTC라 오전 9시 전에 하루 전이 됨 */
+/* v38 학습자 화면의 날짜 · 시각은 현지(Asia/Seoul) 기준 — UTC 시각(…Z)을 그대로 잘라 하루 전으로 보이던 문제(QA U8 · K11). 'YYYY-MM-DD HH:mm' */
+const lLocal = v => { const s0 = String(v == null ? '' : v); const k = s0.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*(?:(오전|오후)\s*)?(\d{1,2})(?:시\s*|:)(\d{1,2})/); if (k) { let h = +k[5]; if (k[4] === '오후' && h < 12) h += 12; if (k[4] === '오전' && h === 12) h = 0; const p = n => String(n).padStart(2, '0'); return `${k[1]}-${p(k[2])}-${p(k[3])} ${p(h)}:${p(k[6])}`; } const s = s0; /* v38 옛 한국어 시각 표기도 YYYY-MM-DD HH:mm */ if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s)) return s.replace('T', ' '); const d = new Date(s); if (isNaN(d)) return s.replace('T', ' '); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+window.lLocal = lLocal;
 const Q = new URLSearchParams(location.search);
 const LR = { mode: 'demo', tid: Q.get('t') || '', site: null, me: null, lp: { tut: {}, cls: {}, diag: {}, book: {} }, mine: { badges: [], cls: {}, bk: {} }, timer: 0, err: '' };
 
-function toast(msg, kind = '') { const t = document.createElement('div'); t.className = 'ltoast ' + kind; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100); }
+function toast(msg, kind = '') { document.querySelectorAll('.ltoast').forEach(x => x.remove()); /* v38 F5: 안내는 한 번에 하나만(겹쳐 버튼을 가리지 않게) */ const t = document.createElement('div'); t.className = 'ltoast ' + kind; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100); }
 const api = async (method, url, body) => { const r = await fetch(url, { method, credentials: 'same-origin', headers: { 'x-didisam': '1', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined }); const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.message || `오류 ${r.status}`); e.status = r.status; e.code = j.error; throw e; } return j; };
 
 /* ── 데이터 포트 ── */
@@ -21,38 +25,49 @@ const mineFrom = (doc, sid) => { const own = (o, k) => o && typeof o === 'object
   const qa = (Array.isArray(doc.tq) ? doc.tq : []).filter(x => x && x.sid === sid && x.st === 'answered' && x.a).slice(0, 30).map(x => ({ id: String(x.id || ''), q: String(x.q || '').slice(0, 400), a: String(x.a || '').slice(0, 2000), cls: String(x.cls || '').slice(0, 60), at: String(x.aAt || x.at || '').slice(0, 25) }));
   const m = (doc.members || []).find(x => x && (x.sid === sid || x.name === sid)); if (!m) return { badges: [], cls: {}, bk, qa };
   return { bk, qa, badges: (doc.badges || []).flatMap(b => (b.issued || []).filter(i => i.who === m.id && i.st === '유효').map(i => ({ id: b.id, name: b.name, at: i.at, no: i.no }))),
-    cls: Object.fromEntries((doc.classes || []).filter(c => c.prog && c.prog[m.id]).map(c => { const g = c.prog[m.id]; const thr = (c.criteria && c.criteria.threshold) || 80; return [c.id, { p: Math.round(+g.p || 0), st: g.assign || 'none', fb: String(g.fb || '').slice(0, 1000), score: g.score ?? null, done: (+g.p || 0) >= thr }]; })) }; };
+    cls: Object.fromEntries((doc.classes || []).filter(c => c.prog && c.prog[m.id]).map(c => { const g = c.prog[m.id]; const thr = (c.criteria && c.criteria.threshold) || 80; return [c.id, { p: Math.round(+g.p || 0), st: g.assign || 'none', fb: String(g.fb || '').slice(0, 1000), score: g.score ?? null, exam: g.exam ?? null, done: (+g.p || 0) >= thr }]; })) }; };
 const demoMine = st => (!st || !LR.me) ? { badges: [], cls: {} } : mineFrom(st, LR.me.sid);
 const SESS = 'didisam.learner.' ;
+/* v38 로그인 유지(QA K12): 앱은 기본으로 이 기기에 30일 기억(localStorage + 만료), 웹은 로그인 화면의 '이 기기에서 로그인 유지'를 고를 때만(공용 PC 대비). 운영 서버는 keep:false면 브라우저를 닫을 때 끝나는 쿠키 */
+const lKeepApp = () => { try { return document.body.classList.contains('lapp') || Q.get('app') === '1' || matchMedia('(display-mode: standalone)').matches; } catch (e) { return false; } };
+const lKeepDef = () => lKeepApp(); /* 앱은 기본으로 기억, 웹은 '로그인 유지'를 고를 때만 */
+const lKeepOn = () => { const K = [...document.querySelectorAll('form#laLogin [name=keep], form#li [name=keep]')]; return K.length ? K.some(k => k.checked) : lKeepDef(); };
+const lKeepK = () => 'didisam.keep.' + (LR.tid || 'x') + (lKeepApp() ? '.app' : '.web'); /* 앱 · 웹 따로 기억 */
+function lKeepSave(me) { try { if (me && LR.mode !== 'live' && lKeepOn()) localStorage.setItem(lKeepK(), JSON.stringify({ me, exp: Date.now() + 30 * 864e5 })); else localStorage.removeItem(lKeepK()); } catch (e) { } }
+function lKeepLoad() { try { const v = JSON.parse(localStorage.getItem(lKeepK()) || 'null'); if (!v || !v.me || !(v.exp > Date.now())) { localStorage.removeItem(lKeepK()); return null; } return v.me; } catch (e) { return null; } }
+const lKeepHTML = () => `<label class="ckl la-keep"><input type="checkbox" name="keep" ${lKeepDef() ? 'checked' : ''}> 이 기기에서 로그인 유지 <small>공용 PC에서는 끄세요</small></label>`;
+Object.assign(window, { lKeepSave, lKeepLoad, lKeepOn, lKeepHTML });
 LR.api = {
   async load() {
     if (Q.get('preview') === '1') {
       try { const P = window.parent; if (P !== window && P.lsSnapshot) { LR.mode = 'preview'; LR.tid = P.DREG && P.DREG.cur(); LR.site = P.lsSnapshot(); LR._codes = (P.S && P.S.codes) || []; } } catch (e) { }
     }
-    if (!LR.site) { try { const c = await fetch('/api/config', { credentials: 'same-origin' }); const j = c.ok ? await c.json() : null; if (j && j.live) { LR.mode = 'live'; try { Object.keys(localStorage).filter(k => /^didisam\.(?:claude$|app\.claude\.|room\..*\.claude$)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) { } } /* v25 운영에서는 브라우저에 AI 키를 남기지 않는다 */ } catch (e) { } }
+    if (!LR.site && !Q.get('demo')) { try { const c = await fetch('/api/config', { credentials: 'same-origin' }); const j = c.ok ? await c.json() : null; if (j && j.live) { LR.mode = 'live'; try { Object.keys(localStorage).filter(k => /^didisam\.(?:claude$|app\.claude\.|room\..*\.claude$)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) { } } /* v25 운영에서는 브라우저에 AI 키를 남기지 않는다 */ } catch (e) { } }
     if (LR.mode === 'live') {
       if (!LR.tid) { LR.err = '학습자 사이트 주소에 기관 정보(t=)가 없습니다.'; return; }
       try { LR.site = (await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/site`)).site; } catch (e) { LR.err = e.status === 404 ? '아직 게시되지 않은 학습자 사이트입니다.' : e.message; return; }
       try { const me = await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/me`); LR.me = me.me; LR.lp = me.lp || LR.lp; LR.mine = me.mine || LR.mine; } catch (e) { }
     } else if (LR.mode === 'demo') {
       const st = demoRoom(); LR.site = st && st.lsite && st.lsite.pub; LR._codes = (st && st.codes) || [];
+      if (!LR.site && st) { LR.err = '아직 게시되지 않은 사이트입니다. 스튜디오 › 사이트 › 홈페이지 · 학습 사이트에서 [게시하기]를 누르면 학습자에게 열립니다.'; return; } /* v32.8 이 기관의 데이터가 있는데 게시 전이면 다른 기관 샘플을 보여 주지 않는다(QA U1) */
       if (!LR.site) { /* 이 브라우저에 게시본이 없으면(다른 기기 · 처음 방문) 체험용 샘플 사이트로 */
-        try { const r = await fetch('learner-demo.json', { cache: 'no-cache' }); const j = r.ok ? await r.json() : null; if (j && j.pages) { LR.site = j; LR.sample = j.demo || null; LR.tid = 'sample'; LR._codes = j.demo ? [{ sid: j.demo.sid, code: j.demo.code, dept: j.demo.dept }] : []; } } catch (e) { }
+        try { const dm = String(Q.get('demo') || '').replace(/[^a-z0-9]/g, ''); const r = await fetch(dm && dm !== '1' ? `learner-demo-${dm}.json` : 'learner-demo.json', { cache: 'no-cache' }); /* v38.3 ?demo=1 · ?demo=adult: 운영 서버에서도 서버를 쓰지 않는 체험판(기록은 이 기기에만) */ const j = r.ok ? await r.json() : null; if (j && j.pages) { LR.site = j; LR.sample = j.demo || null; LR.tid = 'sample'; LR._codes = j.demo ? [{ sid: j.demo.sid, code: j.demo.code, dept: j.demo.dept }] : []; } } catch (e) { }
         if (!LR.site) { LR.err = '아직 게시되지 않았습니다. 스튜디오 › 사이트 › 홈페이지 · 학습 사이트에서 [게시하기]를 누르세요.'; return; }
       }
     }
-    try { const s = JSON.parse(sessionStorage.getItem(SESS + LR.tid) || 'null'); if (s && LR.mode !== 'live') LR.me = s; } catch (e) { }
+    try { const s = JSON.parse(sessionStorage.getItem(SESS + LR.tid) || 'null') || lKeepLoad(); if (s && LR.mode !== 'live') { LR.me = s; sessionStorage.setItem(SESS + LR.tid, JSON.stringify(s)); } } catch (e) { }
     if (LR.me && LR.mode !== 'live') { try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[LR.me.sid] || {}) }; } catch (e) { } if (LR.mode === 'demo') LR.mine = demoMine(demoRoom()); }
+    try { LR.whoBoot = !sessionStorage.getItem('didisam.tab.' + LR.tid); sessionStorage.setItem('didisam.tab.' + LR.tid, '1'); } catch (e) { } /* v38 K12 이 창에서 처음 열 때만 계정 고르기 카드(lacct.js laWhoV) */
   },
   async login(sid, code) {
-    if (LR.mode === 'live') { const r = await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/login`, { sid, code }); LR.me = r.me; LR.lp = r.lp || LR.lp; LR.mine = r.mine || LR.mine; return; }
+    if (LR.mode === 'live') { const r = await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/login`, { sid, code, keep: lKeepOn() }); LR.me = r.me; LR.lp = r.lp || LR.lp; LR.mine = r.mine || LR.mine; return; }
     const c = (LR._codes || []).find(x => x.sid === sid && String(x.code).toUpperCase() === String(code).toUpperCase());
-    if (!c) throw new Error('번호 또는 접근코드가 올바르지 않습니다.');
-    LR.me = { sid, dept: c.dept || '' }; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { }
+    if (!c) throw new Error(`${(LR.site && LR.site.org && LR.site.org.type === 'univ') ? '학번' : '회원 번호'} 또는 접근코드가 올바르지 않습니다.`); /* v38 F5 U17 */
+    LR.me = { sid, dept: c.dept || '' }; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { } lKeepSave(LR.me);
     try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[sid] || {}) }; } catch (e) { }
     if (LR.mode === 'demo') LR.mine = demoMine(demoRoom());
   },
-  async logout() { if (LR.mode === 'live') { try { await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/logout`); } catch (e) { } } try { sessionStorage.removeItem(SESS + LR.tid); } catch (e) { } LR.me = null; LR.lp = { tut: {}, cls: {}, diag: {} }; LR.mine = { badges: [], cls: {} }; },
+  async logout() { if (LR.mode === 'live') { try { await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/logout`); } catch (e) { } } try { sessionStorage.removeItem(SESS + LR.tid); localStorage.removeItem(lKeepK()); } catch (e) { } LR.me = null; LR.lp = { tut: {}, cls: {}, diag: {} }; LR.mine = { badges: [], cls: {} }; },
   save() {
     if (!LR.me) return; LR.lp.at = nowISO(); clearTimeout(LR.timer);
     const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); LR.lp.days = LR.lp.days || {}; LR.lp.days[day] = Math.min(999, (LR.lp.days[day] || 0) + 1); const ks = Object.keys(LR.lp.days).sort(); if (ks.length > 370) ks.slice(0, ks.length - 370).forEach(k => delete LR.lp.days[k]);
@@ -65,7 +80,7 @@ LR.api = {
 };
 
 /* ── 공통 조각(v11 디자인 — KIT AX ON 수준) ── */
-const SITE = () => LR.site; const lvOf = i => SITE().levels[i] || { name: '', color: '#666' }; const tyOf = k => SITE().types.find(x => x.k === k) || { name: k || '', color: '#666' };
+const SITE = () => LR.site; window.lPayOff = () => { try { const st = LR.site || {}; return typeof st.pay === 'boolean' ? !st.pay : ['univ', 'corp', 'public'].includes((st.org || {}).type); } catch (e) { return false; } }; /* v38 F5 결제를 쓰지 않는 기관(게시본 pay:false · 대학 · 기업 · 공공 기본)은 학습자 화면의 결제 · 교재 · 구독 흔적을 감춘다 */ const lvOf = i => SITE().levels[i] || { name: '', color: '#666' }; const tyOf = k => SITE().types.find(x => x.k === k) || { name: k || '', color: '#666' };
 const ICP = { arrow: 'M5 12h14M13 6l6 6-6 6', play: 'M8 5v14l11-7z', check: 'M5 12l5 5L20 7', lock: 'M7 11V8a5 5 0 0110 0v3M5 11h14v10H5z', pin: 'M12 22s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z', book: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19a2 2 0 012-2h13', star: 'M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.3L12 17.5 6.5 20.4l1-6.3L3 9.7l6.2-.9z', link: 'M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1', layers: 'M12 3l9 5-9 5-9-5zM3 13l9 5 9-5', brief: 'M4 8h16v11H4zM9 8V5h6v3', award: 'M12 15a6 6 0 100-12 6 6 0 000 12zM8.5 14L7 22l5-3 5 3-1.5-8', bell: 'M6 16V11a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0', user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0', home: 'M3 11l9-7 9 7v9h-6v-6H9v6H3z', grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', compass: 'M12 21a9 9 0 100-18 9 9 0 000 18zM15.5 8.5l-2 5-5 2 2-5z', menu: 'M4 7h16M4 12h16M4 17h16', x: 'M6 6l12 12M18 6L6 18', clock: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2', spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6', video: 'M3 6h12v12H3zM15 10l6-3v10l-6-3', edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', target: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 16a4 4 0 100-8 4 4 0 000 8z', down: 'M6 9l6 6 6-6', out: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11' };
 const ico = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${n === 'play' || n === 'star' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICP[n] || ''}"/></svg>`;
 /* 육각 메달(배지) — 수준 번호 · 리본 */
@@ -89,7 +104,7 @@ function meNow() {
     if (rc) next = { h: `재제출 요청 · ${rc.name}`, d: ret[1].fb || '운영자 피드백을 확인하고 다시 제출하세요.', href: '#c/' + rc.id, cta: '다시 제출', warn: 1 };
     if (!next) { const c = cls.map(id => S2.classes.find(x => x.id === id)).find(c => c.items.some(i => !((lp.cls[c.id].items || {})[i.id] || {}).done)); if (c) { const it = c.items.find(i => !((lp.cls[c.id].items || {})[i.id] || {}).done); next = { h: `이어서 학습 · ${c.name}`, d: it.title, href: `#c/${c.id}/${it.id}`, cta: '이어서 학습' }; } }
     if (!next) { const t = tStarted.find(t => !tutDone(t)); if (t) next = { h: `이어서 따라 하기 · ${t.title}`, d: `${(lp.tut[t.id].steps || []).filter(Boolean).length}/3단계 완료`, href: '#t/' + t.id, cta: '이어서 하기' }; }
-    if (!next) { const t = S2.tuts.find(t => !tutDone(t) && (!myType || t.type === myType) && t.level <= level) || S2.tuts.find(t => !tutDone(t)); if (t) next = { h: `추천 튜토리얼 · ${t.title}`, d: `${tyOf(t.type).name} · ${lvOf(t.level).name} · 영상 보고 3단계 따라 하기`, href: '#t/' + t.id, cta: '시작하기', yt: t.yt }; } }
+    if (!next) { const TV = S2.tuts.filter(t => t.yt); /* v38 F5 V12 · A8: 영상이 없는 기본 예시 튜토리얼('웹개발 첫 실습' 등)은 추천하지 않는다 */ const t = TV.find(t => !tutDone(t) && (!myType || t.type === myType) && t.level <= level) || TV.find(t => !tutDone(t)); if (t) next = { h: `추천 튜토리얼 · ${t.title}`, d: `${tyOf(t.type).name} · ${lvOf(t.level).name} · 영상 보고 3단계 따라 하기`, href: '#t/' + t.id, cta: '시작하기', yt: t.yt }; } }
   return { dg, dres, myType, step, level, earned, tStarted, tDone, cls, next };
 }
 const toolsOf = k => [...new Set(SITE().tuts.filter(t => t.type === k).map(t => t.tool).filter(Boolean))].slice(0, 4);
@@ -139,8 +154,8 @@ const SECR = {
   books(d) { return ''; },
   campus(d) { const I = d.items || []; return `<section class="sec"><div class="in">${secHead(d)}<div class="campus">${I.length ? `<div class="cp big"><span class="pill">${esc(SITE().org.short || '메인')}</span><b>${esc(I[0].h)}</b><p>${esc(I[0].d)}</p><div class="cpz">${['진단', '튜토리얼', '실습', '상담'].map(x => `<span>${x}</span>`).join('')}</div></div>` : ''}<div class="cps">${I.slice(1).map(p => `<div class="cp">${ico('pin', 18)}<b>${esc(p.h)}</b><p>${esc(p.d)}</p></div>`).join('')}</div></div></div></section>`; },
   notices(d) { const all = SITE().notices; const N = all.slice(0, +d.n || 4); const P = N.filter(n => n.pin).slice(0, 2); const R = (+d.n || 4) > 6 ? N : N.filter(n => !P.includes(n));
-    const row = n => `<details class="nt"><summary>${n.cls ? `<span class="tcat">${esc(n.cls)}</span>` : n.pin ? '<span class="tcat">공지</span>' : ''}<b>${esc(n.title)}</b>${isNew(n.at) ? '<em class="new">NEW</em>' : ''}<time>${esc(n.at)}</time></summary>${n.body ? `<p>${nl(n.body)}</p>` : '<p class="mini">내용이 없습니다.</p>'}</details>`;
-    return `<section class="sec"><div class="in">${secHead(d, (+d.n || 4) < all.length ? btn('공지사항 전체 보기', '#notice', 'dark', 'arrow') : '')}${N.length ? ((+d.n || 4) > 6 ? `<div class="nlist">${R.map(row).join('')}</div>` : `<div class="notices">${P.length ? `<div class="npin">${P.map(n => `<details class="ncard"><summary><span class="pin">${ico('pin', 12)} 고정</span>${n.cls ? `<span class="tcat">${esc(n.cls)}</span>` : ''}<b>${esc(n.title)}</b><p>${esc(String(n.body || '').slice(0, 90))}</p><time>${esc(n.at)}</time></summary>${n.body && n.body.length > 90 ? `<p>${nl(n.body)}</p>` : ''}</details>`).join('')}</div>` : ''}<div class="nlist">${R.map(row).join('') || '<p class="empty">새 공지가 없습니다.</p>'}</div></div>`) : '<p class="empty">공지가 없습니다.</p>'}</div></section>`; },
+    const row = n => `<details class="nt"><summary>${n.cls ? `<span class="tcat">${esc(n.cls)}</span>` : n.pin ? '<span class="tcat">공지</span>' : ''}<b>${esc(n.title)}</b>${isNew(n.at) ? '<em class="new">NEW</em>' : ''}<time>${esc(n.at)}</time></summary>${window.lcNBody ? window.lcNBody(n) : n.body ? `<p>${nl(n.body)}</p>` : '<p class="mini">내용이 없습니다.</p>'}</details>`;
+    return `<section class="sec"><div class="in">${secHead(d, (+d.n || 4) < all.length ? btn('공지사항 전체 보기', '#notice', 'dark', 'arrow') : '')}${N.length ? ((+d.n || 4) > 6 ? `<div class="nlist">${R.map(row).join('')}</div>` : `<div class="notices">${P.length ? `<div class="npin">${P.map(n => `<details class="ncard"><summary><span class="pin">${ico('pin', 12)} 고정</span>${n.cls ? `<span class="tcat">${esc(n.cls)}</span>` : ''}<b>${esc(n.title)}</b><p>${esc(String(n.txt || n.body || '').slice(0, 90))}</p><time>${esc(n.at)}</time></summary>${n.body && (n.fmt || n.body.length > 90) ? (window.lcNBody ? window.lcNBody(n) : `<p>${nl(n.body)}</p>`) : ''}</details>`).join('')}</div>` : ''}<div class="nlist">${R.map(row).join('') || '<p class="empty">새 공지가 없습니다.</p>'}</div></div>`) : '<p class="empty">공지가 없습니다.</p>'}</div></section>`; },
   cta(d) { const dg = diagFirst(); return `<section class="sec ctaw"><div class="in"><div class="ctab"><div><p>START IN ${dg ? Math.max(3, Math.round(dg.items.length / 2)) : 5} MINUTES</p><h2>${nl(d.title || '')}</h2></div>${d.cta ? btn(d.cta, dg ? '#dg/' + dg.id : '#courses', 'wht') : ''}</div></div></section>`; },
   text(d) { return `<section class="sec"><div class="in">${secHead(d)}${d.body ? `<div class="body">${nl(d.body)}</div>` : ''}</div></section>`; },
   faq(d) { return `<section class="sec"><div class="in">${secHead(d)}<div class="nlist faq">${(d.items || []).map(x => `<details class="nt"><summary><span class="tcat">Q</span><b>${esc(x.q)}</b></summary><p>${nl(x.a)}</p></details>`).join('')}</div></div></section>`; }

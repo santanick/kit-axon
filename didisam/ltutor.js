@@ -57,9 +57,9 @@ const ltLinks = A => `<div class="lt-acts">${A.map(a => `<a class="lt-act ${a.k 
 const ltBtns = L => `<div class="lt-qs">${L.map(([l, q, k]) => `<button type="button" class="lt-chip ${k || ''}" data-tact="${k === 'esc' ? 'esc' : 'q'}" data-v="${esc(q || l)}">${esc(l)}</button>`).join('')}</div>`;
 function ltBrief() {
   const C = TCFG();
-  if (!LR.me) return { t: `안녕하세요, 내 AI 학습 비서 ${C.name}입니다.\n로그인하지 않아도 강좌 내용 · 수강 방법 · 가격 · 가입 방법을 바로 물어보실 수 있습니다. 로그인하면 내 진도 · 과제 피드백에 맞춰 학습 계획과 복습까지 도와 드립니다.`, h: `<div class="lt-acts"><a class="lt-act" href="#login" data-tact="go"><b>로그인하기</b><small>${SITE().org.type === 'univ' ? '학번' : '번호'} + 접근코드</small>${ico('arrow', 15)}</a>${diagFirst() ? `<a class="lt-act" href="#dg/${esc(diagFirst().id)}" data-tact="go"><b>3분 진단 먼저 해 보기</b><small>나에게 맞는 과정이 열립니다</small>${ico('arrow', 15)}</a>` : ''}</div>` };
+  if (!LR.me) return { t: `안녕하세요, 내 AI 학습 비서 ${C.name}입니다.\n로그인하지 않아도 강좌 내용 · 수강 방법 · ${typeof lPayOff === 'function' && lPayOff() ? '' : '가격 · '}가입 방법을 바로 물어보실 수 있습니다. 로그인하면 내 진도 · 과제 피드백에 맞춰 학습 계획과 복습까지 도와 드립니다.`, h: `<div class="lt-acts"><a class="lt-act" href="#login" data-tact="go"><b>로그인하기</b><small>${SITE().org.type === 'univ' ? '학번' : '번호'} + 접근코드</small>${ico('arrow', 15)}</a>${diagFirst() ? `<a class="lt-act" href="#dg/${esc(diagFirst().id)}" data-tact="go"><b>3분 진단 먼저 해 보기</b><small>나에게 맞는 과정이 열립니다</small>${ico('arrow', 15)}</a>` : ''}</div>` };
   const A = ltTodo(); const st = myStats(); const qa = ltQA().filter(x => !LT.q['seen' + x.id]);
-  const lines = [`${lCall()}님, 내 학습 기록을 보고 ${A.length ? `오늘 할 일 ${A.length}가지를 정리했습니다.` : '오늘 급한 일은 없습니다.'}`];
+  const lines = [`${lCall()}${/님$/.test(lCall()) ? "" : "님"}, 내 학습 기록을 보고 ${A.length ? `오늘 할 일 ${A.length}가지를 정리했습니다.` : '오늘 급한 일은 없습니다.'}`];
   if (st.streak >= 2) lines.push(`${st.streak}일 연속 학습 중입니다. 오늘도 이어 가 볼까요?`); else if (st.active) lines.push('오늘 10분만 해도 연속 학습이 시작됩니다.');
   if (qa.length) lines.push(`선생님 답변 ${qa.length}건이 도착했습니다.`);
   return { t: lines.join('\n'), h: (qa.length ? `<div class="lt-qa">${qa.slice(0, 2).map(x => `<div><small>선생님 답변 · ${esc(x.cls || '')}</small><b>Q. ${esc(x.q)}</b><p>${nl(x.a)}</p></div>`).join('')}</div>` : '') + (A.length ? ltLinks(A) : '') + ltBtns([['이번 주 학습 계획 맡기기', '이번 주 학습 계획 짜줘'], ['복습 퀴즈', '복습 퀴즈 내줘'], ...(st.courses.some(x => x.fb) ? [['피드백 해설', '과제 피드백 해설해줘']] : [])]) };
@@ -289,7 +289,7 @@ document.addEventListener('keydown', e => { if (e.target.id === 'ltq' && e.key =
 /* ── 마이페이지: 'AI 튜터 코칭' 카드(맡긴 계획 · 선생님 답변 · 맡기기 버튼) ── */
 { const base = MYR.next; MYR.next = st => { let card = '';
   try { if (TCFG().enabled) { const T = ltTutor(); const A = ltTodo(); const qa = ltQA(); const C = TCFG(); const fb = st.courses.some(x => x.fb);
-    const line = A.length ? `오늘 할 일 ${A.length}가지 중 「${A[0].h}」부터 하면 좋겠습니다.` : '오늘 급한 일은 없습니다. 다음 수준 튜토리얼에 도전해 볼까요?';
+    const line = A.length ? `오늘 할 일 ${A.length}가지 중 「${A[0].h}」부터 하면 좋겠습니다.` : (((SITE() || {}).tuts || []).some(t => t.yt) ? '오늘 급한 일은 없습니다. 다음 수준 튜토리얼에 도전해 볼까요?' : '오늘 급한 일은 없습니다. 지난 내용을 가볍게 복습해 볼까요?') /* v38 F5 V12 · L18: 실습 영상이 없는 기관은 영상 도전을 권하지 않는다 */;
     card = `<div class="mycard wide lt-coach" id="m-tutor"><div class="lt-ch"><span class="lt-orb" aria-hidden="true"></span><div><small>${esc(C.name)} · 내 AI 학습 비서</small><b>${esc(line)}</b><span>평균 진도 ${st.avg}% · 연속 ${st.streak}일 · 배지 ${LR.mine.badges.length}개${st.myType ? ' · 유형 ' + esc(st.myType) : ''}</span></div></div>
       <div class="lt-qs">${[['이번 주 계획 맡기기', '이번 주 학습 계획 짜줘'], ['복습 퀴즈', '복습 퀴즈 내줘'], ...(fb ? [['피드백 해설', '과제 피드백 해설해줘']] : []), ['내 학습 리포트', '내 학습 리포트 보여줘']].map(([l, q]) => `<button type="button" class="lt-chip" data-tact="mq" data-v="${esc(q)}">${ico('spark', 13)} ${esc(l)}</button>`).join('')}</div>
       ${T.plan.length ? `<div class="lt-saved"><div class="lt-sh"><b>맡긴 이번 주 계획</b><button type="button" class="lt-link" data-tact="plan-clear">지우기</button></div>${ltPlanHTML(T.plan, true)}</div>` : ''}
@@ -319,3 +319,5 @@ setInterval(() => lsyncMine(), 30000);
 window.addEventListener('focus', () => lsyncMine(true));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) lsyncMine(true); });
 window.addEventListener('storage', e => { if (LR.mode === 'demo' && e.key && e.key === 'didisam.room.' + LR.tid) lsyncMine(true); });
+/* v32.9: 휴대폰 폭에서는 튜터 창이 화면 전체를 덮으므로, 화면(주소)이 바뀌면 닫는다 — 뒤로 가기로 빠져나올 수 있게 */
+window.addEventListener('hashchange', () => { if (innerWidth <= 600 && typeof LT !== 'undefined' && LT.open) { LT.open = false; document.body.classList.remove('lt-on'); try { sessionStorage.setItem(LTK(), '0'); } catch (e) { } setTimeout(ltRender, 0); } });

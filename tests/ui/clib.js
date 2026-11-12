@@ -1,0 +1,115 @@
+'use strict';
+/* v35 콘텐츠 라이브러리(clib) 검증(C7).
+   ① 전 유형(7) 라이브러리 메뉴 기본 노출(새 기관 · 기존 저장 사용자 upgradeState) · 사이드바에 보임 · 렌더 오류 0 · 390 넘침 0
+   ② 만들기(CT.kinds 중 'lib' 제외) 각각 라이브러리에서 열어 결과 저장(S.clib · CLIB.all)
+   ③ [과정에 넣기] → 과정 curriculum에 항목 · usedIn · CLIB.use
+   ④ 기존 library(S.lib) · dbook(S.lsite.dbooks) 데이터 보존 · 기존 메뉴 링크(go('library') · go('dbook')) 유지
+   사용: node tests/ui/clib.js   (CRS_ONLY=adult,voc 로 일부 유형) */
+const path = require('node:path'); const fs = require('node:fs');
+const { chromium } = require('playwright');
+const F = require('./crs-flow.js');
+const MAKE = ['upload', 'doc', 'aivideo', 'quiz', 'assign', 'book', 'youtube'];
+
+async function openLib(p, C) { /* 사이드바(레일 → 라이브러리) 실제 클릭 */
+  const direct = p.locator('[data-act=go][data-v=clib]').filter({ visible: true }).first();
+  if (await direct.count()) { await C.clk(direct, '라이브러리'); return true; }
+  const rail = p.locator('[data-act=go][data-v=learn]').filter({ visible: true }).first(); if (await rail.count()) await C.clk(rail, '레일');
+  const tab = p.locator('[data-act=go][data-v=clib], [data-v=clib]').filter({ visible: true }).first(); if (await tab.count()) { await C.clk(tab, '라이브러리 탭'); return true; }
+  const byTxt = p.locator('a, button').filter({ visible: true }).filter({ hasText: /^\s*(콘텐츠 )?라이브러리\s*$/ }).first(); if (await byTxt.count()) { await C.clk(byTxt, '라이브러리(문구)'); return true; }
+  return false; }
+
+/* 라이브러리 안에서 kind 하나 만들기: 카드 [data-ct=kind] → 결과 확인 버튼 몇 번 */
+async function makeOne(p, kind, log) { const ids0 = await p.evaluate(() => [...(S.clib || []).map(x => x.id), ...((S.lsite || {}).dbooks || []).map(b => b.id)]); let clicks = 0;
+  const mk = p.locator('#main [data-act=clb-make]').filter({ visible: true }).first();
+  if (await mk.count()) { await mk.click(); clicks++; await p.waitForTimeout(300); } else log.push('[만들기](clb-make) 버튼 없음');
+  const card = p.locator(`#modal [data-act=clb-mk][data-v=${kind}], .ct-sh .ct-kind[data-k=${kind}]`).filter({ visible: true }).first();
+  if (!(await card.count())) { log.push(`${kind}: 카드 없음 → CT.open 직접`); await p.evaluate(() => { try { closeModal(); } catch (e) { } }); const ok = await p.evaluate(k => { if (!window.CT) return false; CT.open(k, { from: 'lib', onDone: x => { if (window.CLIB) CLIB.add(x); } }); return true; }, kind); if (!ok) return { err: 'CT 없음' }; }
+  else { await card.click(); clicks++; }
+  await p.waitForTimeout(500);
+  if (kind === 'upload') { const fi = p.locator('.ct-sh input[type=file]').first(); if (await fi.count()) await fi.setInputFiles({ name: '1차시 강의자료.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF') }); else log.push('upload: 파일 칸 없음'); await p.waitForTimeout(1200); }
+  if (kind === 'youtube') { const u = p.locator('input[type=url]:visible, input[name*=url]:visible, input[placeholder*=youtu]:visible').first(); const any = (await u.count()) ? u : p.locator('.ct-sh input:visible').first(); if (await any.count()) { await any.fill('https://youtu.be/dQw4w9WgXcQ'); await p.waitForTimeout(800); } else log.push('youtube: 주소 칸 없음'); }
+  const topic = p.locator('.ct-sh input:not([type=file]):not([type=checkbox]):not([type=radio]):not([type=hidden]):visible, .ct-sh textarea:visible').first(); if (!['youtube', 'upload'].includes(kind) && await topic.count() && !(await topic.inputValue())) await topic.fill('엑셀 함수 기초');
+  for (let k = 0; k < 5; k++) { if ((await p.evaluate(i0 => [...(S.clib || []), ...((S.lsite || {}).dbooks || [])].some(x => !i0.includes(x.id)), ids0))) break;
+    const ok = p.locator('.ct-sh .ct-pri').filter({ visible: true }).last(); let wait = 0; while ((!(await ok.count()) || await ok.isDisabled()) && wait < 30 && await p.locator('.ct-sh').filter({ visible: true }).count()) { await p.waitForTimeout(1000); wait++; } if (wait) log.push(`${kind}: 생성 기다림 ${wait}초`); if (!(await ok.count()) || await ok.isDisabled()) { log.push(`${kind}: 확인 버튼 없음/꺼짐`); break; } await ok.click({ timeout: 4000 }).catch(() => {}); clicks++; await p.waitForTimeout(1100); }
+  const r = await p.evaluate(i0 => { const x = [...(S.clib || []), ...((S.lsite || {}).dbooks || []).map(b => ({ ...b, kind: 'book', book: b.id }))].find(y => !i0.includes(y.id)); const all = window.CLIB ? JSON.stringify(CLIB.all()) : ''; return { n: x ? 1 : 0, rec: x && { id: x.id, kind: x.kind, title: x.title, has: !!(x.url || x.fileId || x.doc || x.ai || (x.qs || []).length || x.book || x.src) }, inAll: x ? all.includes(x.id) : false }; }, ids0);
+  if (process.env.CRS_SHOTS) await p.screenshot({ path: require('node:path').join(process.env.CRS_SHOTS, `clib_make_${kind}.png`) });
+  const left = await p.evaluate(() => { const o = [...document.querySelectorAll('.ct-sh, #modal')].filter(e => e.getClientRects().length).map(e => (e.getAttribute('aria-label') || e.querySelector('b,h2,h3')?.innerText || e.id).slice(0, 20)); try { closeModal(); } catch (e) { } try { CT.close(); } catch (e) { } document.querySelectorAll('dialog[open]').forEach(d => d.close()); return o; });
+  if (left.length) log.push(`${kind}: 저장 뒤 남은 창 ${left.join(',')}`); if (left.some(x => /넣기/.test(x))) log.push(`${kind}: 저장 직후 [과정에 넣기] 창이 자동으로 뜸`);
+  return { ...r, clicks, left }; }
+
+(async () => {
+  const only = (process.env.CRS_ONLY || '').split(',').filter(Boolean); const shots = process.env.CRS_SHOTS || ''; if (shots) fs.mkdirSync(shots, { recursive: true });
+  const { srv, base } = await F.serve(); const br = await chromium.launch(); let FAIL = 0; const kindRes = {};
+  const cases = F.TYPES.filter(([t, e]) => !only.length || only.includes(t));
+  for (const tc of cases) { const [type, ed] = tc; const label = ed ? `${type}/${ed}` : type;
+    for (const empty of [false, true]) { const errs = [], P = [], W = [], log = [];
+      const { ctx, p } = await F.openOrg(br, base, tc, { empty, errs }); p.setDefaultTimeout(6000); const C = F.clicker(p, log);
+      try {
+        /* 예전 데이터 심기(시드에는 S.lib · 과정 항목이 없음): 영상 · 자료 보관함 2개 + 과정 항목 1개 → 저장 → 새로고침 */
+        if (!empty) { await p.evaluate(() => { S.lib = [{ id: 'lq1', name: '오리엔테이션.mp4', kind: '동영상', size: '12:30', used: 0, cls: [], at: today(), views: 0, drop: 0 }, { id: 'lq2', name: 'https://youtu.be/dQw4w9WgXcQ', kind: 'YouTube', size: '03:33', used: 0, cls: [], at: today(), views: 0, drop: 0 }];
+          const c = S.classes[0]; if (c) { c.curriculum = c.curriculum || []; c.curriculum.push({ id: 'itq1', type: 'doc', title: '기존 강의자료 1차시', week: 1, src: 'ai', doc: { goals: ['g'], secs: [{ h: 'h', body: 'b' }], act: '', check: [] } }); } save(); }); await p.reload(); await p.waitForFunction(() => window.S && S.org); await p.waitForTimeout(600); }
+        const pre = await p.evaluate(() => ({ lib: JSON.stringify(S.lib || []), books: JSON.stringify(((S.lsite || {}).dbooks || []).map(b => ({ id: b.id, title: b.title }))) }));
+        const m = await p.evaluate(() => ({ menu: !!MENU.clib, on: typeof menuOn === 'function' && menuOn('clib'), CT: !!window.CT, CLIB: !!window.CLIB, kinds: window.CT && CT.kinds ? CT.kinds.map(k => k.k || k.id || k.kind) : [] }));
+        if (!m.menu) P.push('MENU.clib 없음'); else if (!m.on) P.push('라이브러리 메뉴 기본 꺼짐');
+        if (!m.CLIB) P.push('window.CLIB 없음'); if (!m.CT) P.push('window.CT 없음');
+        /* 기존 저장 사용자: clib 탭이 없는 상태로 저장 → 새로고침 → upgradeState가 켬 */
+        if (m.menu) { await p.evaluate(() => { Object.keys(S.nav.tabs).forEach(w => { S.nav.tabs[w] = (S.nav.tabs[w] || []).filter(x => x.id !== 'clib'); }); delete S.clib; save(); }); await p.reload(); await p.waitForFunction(() => window.S && S.org); await p.waitForTimeout(700);
+          if (!(await p.evaluate(() => menuOn('clib')))) P.push('기존 저장 사용자(upgradeState)에서 라이브러리 꺼짐'); }
+        const opened = await openLib(p, C); if (!opened) P.push('사이드바에서 라이브러리 찾기 실패'); await p.waitForTimeout(400);
+        const v = await p.evaluate(() => ({ cur: CUR.tab, warn: /화면을 표시하는 중 문제가 생겼습니다/.test(document.querySelector('#main')?.innerText || ''), text: (document.querySelector('#main')?.innerText || '').slice(0, 2000) }));
+        if (opened && v.cur !== 'clib') P.push('라이브러리 화면 아님 CUR.tab=' + v.cur); if (v.warn) P.push('라이브러리 렌더 오류');
+        if (shots) await p.screenshot({ path: path.join(shots, `clib_${type}_${empty ? 'e' : 'f'}_pc.png`) });
+        const ms = await F.measure(p, '#main'); if (ms.over > 0) P.push(`PC 가로 넘침 ${ms.over}`); if (ms.jargon.length) W.push('어려운 말 ' + ms.jargon.join(','));
+        /* 기존 데이터 보존 */
+        const post = await p.evaluate(() => ({ lib: JSON.stringify(S.lib || []), books: JSON.stringify(((S.lsite || {}).dbooks || []).map(b => ({ id: b.id, title: b.title }))), all: window.CLIB ? JSON.stringify(CLIB.all()) : '', libIds: [...(S.lib || []).map(l => l.id), ...(S.classes[0] && (S.classes[0].curriculum || []).some(i => i.id === 'itq1') ? ['itq1'] : [])], bkIds: ((S.lsite || {}).dbooks || []).map(b => b.id) }));
+        if (post.lib !== pre.lib) P.push('S.lib(영상 · 자료)가 바뀜'); if (post.books !== pre.books) P.push('디지털북 목록이 바뀜');
+        if (m.CLIB) { const miss = [...post.libIds, ...post.bkIds].filter(id => !post.all.includes(id)); if (miss.length) P.push(`CLIB.all()에 기존 자료 ${miss.length}개 안 보임(${miss.slice(0, 3).join(',')})`); }
+        /* v37: 예전 '영상 · 자료' · '디지털북' 메뉴를 메뉴 구성에서 다시 켠 채 저장해도 새로고침하면 빠지고, 레일 · 탭 · 메뉴 찾기에 두 번째 콘텐츠 화면이 없다 */
+        await p.evaluate(() => { (S.nav.tabs.learn = S.nav.tabs.learn || []).push({ id: 'library', on: true }, { id: 'dbook', on: true }); save(); }); await p.reload(); await p.waitForFunction(() => window.S && S.org); await p.waitForTimeout(500);
+        const dup = await p.evaluate(() => { const T = Object.values(S.nav.tabs).flat().filter(x => ['library', 'dbook'].includes(x.id)).map(x => x.id); const tabsTxt = [...document.querySelectorAll('[data-act=go]')].filter(e => e.getClientRects().length).map(e => e.innerText.trim()).filter(x => /^영상\s*·?\s*자료$|^디지털북$/.test(x)); let finder = []; try { finder = uxRoutes().map(r => r[0]).filter(id => ['library', 'dbook'].includes(id)); } catch (e) { } return { T, tabsTxt, finder }; });
+        if (dup.T.length) P.push('예전 메뉴가 탭에 남음 ' + dup.T.join(',')); if (dup.tabsTxt.length) P.push('화면에 예전 메뉴 이름 ' + dup.tabsTxt.join(',')); if (dup.finder.length) P.push('메뉴 찾기에 예전 메뉴 ' + dup.finder.join(','));
+        /* v38 A-8: 빈 스튜디오에는 샘플 디지털북 3권이 더 이상 없어(의도한 변경) 콘텐츠 0개면 종류 칩 · 카드/목록 전환이 없다 → 점검용 영상 1개를 넣고 본다 */
+        if (empty) await p.evaluate(() => { (S.lib = S.lib || []).push({ id: 'lbx38', kind: 'YouTube', name: '점검용 영상', url: 'https://youtu.be/dQw4w9WgXcQ', size: '' }); save(); });
+        const toVid = await p.evaluate(() => { go('library'); render(); return { cur: CUR.tab, t: UI.clibT, sel: !!document.querySelector('#main .clb-tabs button.on[data-v=video]') }; }); if (toVid.cur !== 'clib' || !toVid.sel) P.push(`go('library') → 통합 화면 '영상' 칩 아님 ${JSON.stringify(toVid)}`);
+        for (const old of ['library', 'dbook']) { const ok = await p.evaluate(id => { try { go(id); render(); return !/화면을 표시하는 중 문제가 생겼습니다/.test(document.querySelector('#main').innerText) && document.querySelector('#main').innerText.length > 30; } catch (e) { return false; } }, old); if (!ok) P.push(`기존 메뉴 링크 go('${old}') 깨짐`); }
+        /* 만들기(채운 기관 · 전 유형, 빈 기관은 adult만 전 종류) */
+        if (m.CT && (!empty || type === 'adult')) { await p.evaluate(() => { go('clib'); render(); });
+          const mkb = p.locator('#main [data-act=clb-make]').filter({ visible: true }).first(); let kinds = []; if (await mkb.count()) { await mkb.click(); await p.waitForTimeout(300); kinds = await p.$$eval('#modal [data-act=clb-mk]', b => [...new Set(b.map(x => x.dataset.v))]); await p.evaluate(() => { try { closeModal(); } catch (e) { } }); } if (!kinds.length) kinds = (m.kinds.length ? m.kinds : MAKE).filter(k => k !== 'lib');
+          if (kinds.length < 6) P.push(`만들기 종류 ${kinds.length}개(<6): ${kinds.join(',')}`);
+          for (const k of kinds) { await p.evaluate(() => { go('clib'); render(); }); const r = await makeOne(p, k, log); kindRes[k] = kindRes[k] || []; kindRes[k].push(r.n > 0 ? r.clicks : 'X');
+            if (r.err) P.push(`${k}: ${r.err}`); else if (r.n <= 0) P.push(`${k}: 결과가 라이브러리(S.clib · 디지털북)에 저장 안 됨`); else { if (!r.inAll) P.push(`${k}: CLIB.all()에 없음`); if (!r.rec.has) W.push(`${k}: 저장본에 내용(url · doc · ai · qs · book) 없음`); if (r.clicks > 4) W.push(`${k}: 클릭 ${r.clicks}회(>3)`); } }
+          /* [과정에 넣기] */
+          const put = await p.evaluate(async () => { const rec = (S.clib || []).find(r => r.kind === 'doc') || (S.clib || [])[0]; if (!rec) return { err: '라이브러리 항목 없음' }; if (!S.classes.length) return { skip: 1 }; go('clib'); render(); return { id: rec.id, cls: S.classes[0].id, n0: (S.classes[0].curriculum || []).length }; });
+          if (put.id) { const title = await p.evaluate(id => S.clib.find(r => r.id === id).title, put.id);
+            /* v37: 카드를 누르면 오른쪽 미리보기 패널 → 패널의 [과정에 넣기] */
+            const cardSel = p.locator(`#main [data-act=clb-sel][data-v="cl:${put.id}"]`).first(); let any = null; let nb = 0;
+            if (await cardSel.count()) { await cardSel.click(); await p.waitForTimeout(300); const pb = p.locator('#clbPanel [data-act=clb-put]').filter({ visible: true }); nb = await pb.count(); if (nb) any = pb.first();
+              const pa = await p.evaluate(() => [...document.querySelectorAll('#clbPanel [data-act]')].map(b => b.dataset.act)); for (const a of ['clb-edit', 'clb-put', 'clb-dup', 'clb-del']) if (!pa.includes(a)) P.push(`미리보기 패널에 ${a} 없음`); }
+            else P.push('콘텐츠 카드(clb-sel) 없음');
+            if (!any) P.push(`[과정에 넣기] 버튼 없음(패널 clb-put ${nb}개)`); else { await any.click(); await p.waitForTimeout(400);
+              const pickC = p.locator(`#modal [data-clbc="${put.cls}"]`).first(); if (await pickC.count()) { await pickC.click(); await p.waitForTimeout(250); }
+              const ok = p.locator('#modal [data-mact=ok]').first(); if (await ok.count()) { await ok.click(); await p.waitForTimeout(500); } else P.push('[과정에 넣기] 창에 [넣기] 없음');
+              const res = await p.evaluate(put => { const c = S.classes.find(x => x.id === put.cls); const rec = S.clib.find(r => r.id === put.id); const use = window.CLIB && CLIB.use ? CLIB.use(rec) : null;
+                return { grew: (c.curriculum || []).length > put.n0, usedIn: (rec.usedIn || []).includes(put.cls), use: use ? JSON.stringify(use).slice(0, 120) : '' }; }, put);
+              if (!res.grew) P.push('[과정에 넣기] 뒤 과정에 항목이 안 늘어남'); if (!res.usedIn) P.push('usedIn 갱신 안 됨'); if (!res.use || res.use === '[]') W.push('CLIB.use() 사용처 비어 있음'); } }
+          else if (put.err) P.push(put.err);
+          /* 저장 → 새로고침 → 유지 */
+          const n1 = await p.evaluate(() => (S.clib || []).length); await p.reload(); await p.waitForFunction(() => window.S && S.org); await p.waitForTimeout(500); const n2 = await p.evaluate(() => (S.clib || []).length); if (n2 !== n1) P.push(`새로고침 뒤 S.clib ${n1}→${n2}`);
+        }
+        /* v37: 목록 보기 · 복제 · 삭제(사용 중이 아닌 것만) */
+        { const r = await p.evaluate(() => { go('clib'); UI.clibT = 'all'; render(); const b = document.querySelector('[data-act=clb-view][data-v=list]'); if (!b) return { err: '카드/목록 전환 없음' }; b.click(); const list = !!document.querySelector('#main .clb-list [data-act=clb-sel]'); document.querySelector('[data-act=clb-view][data-v=card]').click();
+            const rec = (S.clib || []).find(x => !(x.usedIn || []).length && !(CLIB.use(x) || []).length); if (!rec) return { list };
+            const n0 = S.clib.length; ACT['clb-dup']({ dataset: { v: 'cl:' + rec.id } }); const n1 = S.clib.length; const cp = S.clib.find(x => x.id !== rec.id && /\(사본\)$/.test(x.title));
+            if (cp) { ACT['clb-del']({ dataset: { v: 'cl:' + cp.id } }); const ok = document.querySelector('#modal [data-mact=ok]'); ok && ok.click(); }
+            return { list, dup: n1 === n0 + 1, del: S.clib.length === n0 }; });
+          if (r.err) P.push(r.err); else { if (!r.list) P.push('목록 보기에 항목 없음'); if (r.dup === false) P.push('복제 안 됨'); if (r.del === false) P.push('사본 삭제 안 됨'); } }
+        /* 휴대폰 */
+        await p.setViewportSize({ width: 390, height: 844 }); await p.evaluate(() => { go('clib'); render(); }); await p.waitForTimeout(400); const mm = await F.measure(p, '#main'); if (mm.over > 0) P.push(`390 가로 넘침 ${mm.over}`); if (mm.cut.length) P.push('390 잘림 ' + mm.cut.join(' '));
+        if (shots) await p.screenshot({ path: path.join(shots, `clib_${type}_${empty ? 'e' : 'f'}_m.png`) });
+      } catch (e) { P.push('예외 ' + e.message.split('\n')[0] + ' @' + ((e.stack || '').match(/clib\.js:(\d+)/) || [])[1] + ' 경로 ' + log.slice(-4).join(' › ')); }
+      if (errs.length) P.push('pageerror ' + [...new Set(errs)].slice(0, 3).join(' / ')); await ctx.close();
+      console.log(`${P.length ? '✗' : '✓'} ${label} ${empty ? '빈' : '채움'}`); P.forEach(x => console.log('   ✗ ' + x)); W.forEach(x => console.log('   △ ' + x)); if (P.length) FAIL++; }
+  }
+  console.log('만들기 종류별 클릭 수(X=저장 실패):', JSON.stringify(kindRes));
+  await br.close(); srv.close(); console.log(FAIL ? `✗ clib 실패 ${FAIL}` : '✓ clib 통과'); process.exit(FAIL ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });

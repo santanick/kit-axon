@@ -59,10 +59,10 @@ function bGuideText(id) {
   return ({
     org: '메뉴를 찾아다니지 않아도 되도록, 운영 시작까지 하나씩 같이 만들겠습니다.\n화면에서 기관 정보와 만들 단계를 확인하세요. 필요 없는 선택 단계(예: 디지털북)는 끄거나 "디지털북 단계 빼줘"라고 말씀하시면 됩니다.',
     site: '화면에 홈페이지 빌더가 열렸습니다. 원하는 분위기와 강조할 내용을 말씀하시면 템플릿 · 문구를 만들어 바로 보여 드립니다. 고칠 곳도 말로 지시하시고, 마음에 들면 "홈페이지 게시해줘"라고 하세요.',
-    course: '첫 과정을 만듭니다. 주제 · 주차 수 · 대상을 말씀하시면 커리큘럼 · 영상 · 퀴즈 · 과제까지 채운 초안을 보여 드립니다. 만든 뒤에도 "3주차 영상 바꿔줘"처럼 말로 고치면 됩니다.',
+    course: '첫 과정을 만듭니다. 주제 · 차시 수 · 대상을 말씀하시면 커리큘럼 · 영상 · 퀴즈 · 과제까지 채운 초안을 보여 드립니다. 만든 뒤에도 "3차시 영상 바꿔줘"처럼 말로 고치면 됩니다.',
     book: '디지털북은 선택 단계입니다. 방금 만든 과정을 책으로 바꾸거나, 주제로 새 책 초안을 만들 수 있습니다. 필요 없으면 "디지털북 단계 빼줘"라고 하세요.',
     diag: 'AI 진단 문항과 결과별 러닝 저니를 만듭니다. 진단 결과에 따라 학생마다 다른 과정이 추천됩니다.',
-    lsite: `${t('learner')}이 보게 될 학습자 사이트입니다. 화면에서 페이지 · 섹션을 확인하고 "학습자 사이트 게시해줘"로 공개하세요.`,
+    lsite: `${tj('learner', '이')} 보게 될 학습자 사이트입니다. 화면에서 페이지 · 섹션을 확인하고 "학습자 사이트 게시해줘"로 공개하세요.`,
     people: `${t('learner')} 명단(CSV)을 올리거나 초대 링크로 등록합니다.${U ? ' 대학은 학번 · 학과만 저장하고 이름 · 연락처는 받지 않습니다.' : ''}`,
     badge: '수료 기준과 디지털 배지를 정합니다. 기준을 채우면 배지가 자동으로 발급됩니다.',
     auto: '반복 업무를 자동화 레시피로 만듭니다. 실행은 항상 운영자 승인 뒤에 처리됩니다.',
@@ -111,7 +111,7 @@ const bFp = () => { let bk = 0; try { bk = bkL().length; } catch (e) { } return 
     const tp = (s.match(/「([^」]{2,40})」/) || [])[1] || s.replace(/디지털\s*북[\s\S]*$/, '').replace(/[「」"']/g, '').trim() || 'AI 리터러시';
     const n = clamp(+(s.match(/(\d+)\s*단원/) || [])[1] || 3, 1, 8); const pid = uid('p');
     PLANS[pid] = { run: () => { lsEnsure(); const b = c ? bkFromCourse(c) : bkAIDraft(tp, n, {}); bkL().push(b); S.ai.usage++; logAudit(`디지털북 생성(AI SAM) — ${b.title}`); UI.bkId = b.id; UI.bkCh = 0; UI.bkT = 'edit'; return `「${b.title}」 ${b.chs.length}단원을 만들었습니다. 화면에서 블록을 확인하고, 고칠 곳은 블록을 눌러 바꾸세요.`; }, go: 'dbook' };
-    return { title: '디지털북', text: c ? `「${c.name}」 과정을 디지털북으로 바꾸겠습니다. 장(없으면 주차)으로 단원을 나누고 영상 · 퀴즈 · 과제를 연결합니다.` : `「${tp}」 디지털북 ${n}단원 초안을 만들겠습니다. 단원마다 설명 · 핵심 박스 · 펼쳐보기 · 확인 문제를 넣습니다.`, steps: c ? ['과정 항목을 단원으로 묶기', '읽을거리 · 핵심 정리 채우기', '영상 · 퀴즈 · 과제 연결', '디지털북 편집기에서 확인'] : ['단원 구성', '설명 · 핵심 박스 · 펼쳐보기 · 확인 문제', '디지털북 편집기에서 확인'], plan: pid, state: 'pending', cta: '디지털북 만들기' };
+    return { title: '디지털북', text: c ? `「${c.name}」 과정을 디지털북으로 바꾸겠습니다. 장(없으면 차시)으로 단원을 나누고 영상 · 퀴즈 · 과제를 연결합니다.` : `「${tp}」 디지털북 ${n}단원 초안을 만들겠습니다. 단원마다 설명 · 핵심 박스 · 펼쳐보기 · 확인 문제를 넣습니다.`, steps: c ? ['과정 항목을 단원으로 묶기', '읽을거리 · 핵심 정리 채우기', '영상 · 퀴즈 · 과제 연결', '디지털북 편집기에서 확인'] : ['단원 구성', '설명 · 핵심 박스 · 펼쳐보기 · 확인 문제', '디지털북 편집기에서 확인'], plan: pid, state: 'pending', cta: '디지털북 만들기' };
   }
   if (/자동화/.test(s) && /(매주|매일|매월|마다)/.test(s) && !/(단계|스텝)/.test(s)) { const P = interpret(s); if (P.run) { const pid = uid('p'); PLANS[pid] = { run: P.run, go: P.go || 'auto' }; return { title: P.title, text: P.title + '. 아래 계획으로 진행할까요?', steps: P.steps, html: P.preview || '', plan: pid, state: 'pending', cta: P.cta || '자동화 만들기' }; } }
   if (/홈페이지/.test(s) && /(게시|공개|오픈)/.test(s) && !/학습자/.test(s)) { if (!S.site) return { text: '아직 홈페이지가 없습니다. 먼저 원하는 분위기를 말씀해 주시면 만들어 드리겠습니다.', nav: 'site' }; ACT['site-pub'](); return { text: `홈페이지를 게시했습니다 — ${S.org.domain} (데모). 화면에서 확인하세요.`, nav: 'site' }; }
@@ -174,7 +174,7 @@ function bComposer() {
   </header>
   <div class="bmseg" role="tablist" aria-label="화면 전환"><button role="tab" type="button" data-act="bld-pane" data-v="chat" aria-selected="${!document.body.classList.contains('b-pv')}">대화</button><button role="tab" type="button" data-act="bld-pane" data-v="pv" aria-selected="${document.body.classList.contains('b-pv')}">미리보기${UI.bnew ? `<em>${UI.bnew}</em>` : ''}</button></div>
   <div class="bx">
-    <nav class="brail" aria-label="작업 공간">${rail()}<button class="ri ${w === 'settings' ? 'on' : ''}" data-act="go" data-v="settings">${ic('gear')}<span>설정</span></button></nav>
+    <nav class="brail" aria-label="작업 공간">${rail()}${S.me.role === 'teacher' ? '' : `<button class="ri ${w === 'settings' ? 'on' : ''}" data-act="go" data-v="settings">${ic('gear')}<span>설정</span></button>`}</nav>
     <section class="bchat" aria-label="AI SAM 대화">
       <div class="bch"><span class="orb">${ic('spark', 18)}</span><div><b>AI SAM</b><small>${esc(S.org.name)} 운영 비서</small></div><span class="sp"></span>${typeof clBadge === 'function' ? clBadge() : ''}<button class="btn sm ghost" data-act="bld-clear" title="대화 지우기">새 대화</button></div>
       <div class="thread" aria-live="polite">${threadHTML()}</div>${bComposer()}

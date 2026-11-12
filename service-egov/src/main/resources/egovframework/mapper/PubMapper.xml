@@ -2,7 +2,12 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <!-- 학습자 포털(/api/pub/{tid}/…) — 기관 범위(inTenant) 쿼리와 학습자 세션(plain) -->
 <mapper namespace="egovframework.didisam.pub.service.impl.PubMapper">
-  <select id="selectSitePub" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub')::text pub from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectSitePub" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub')::text pub, case when doc->>'lpxSeq' ~ '^[0-9]{1,15}$' then (doc->>'lpxSeq')::bigint else 0 end seq from tenant_state where tenant_id = #{tid}</select>
+  <!-- v38 C#17 학습자 글 · 댓글 즉시 게시(Node app.js COMM_Q · COMM_LIVE_Q와 같음): 운영자 화면이 반영한 지점(lpxSeq) 뒤의 게시 모양만 -->
+  <select id="selectCommCtx" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub'->'comm')::text comm, doc->'org'->>'type' type, case when doc->>'lpxSeq' ~ '^[0-9]{1,15}$' then (doc->>'lpxSeq')::bigint else 0 end seq, (select m from jsonb_array_elements(case when jsonb_typeof(doc->'members') = 'array' then doc->'members' else '[]'::jsonb end) m where m->>'sid' = #{sid} or m->>'id' = #{sid} limit 1)::text m from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectCommLive" resultType="string">select (data->'_cm')::text cm from learner_events where tenant_id = #{tid} and id &gt; #{seq} and type in ('post-new', 'post-cmt') and data->'_cm' is not null and at &gt; now() - interval '30 days' order by id limit 300</select>
+  <!-- v37 L2 링크 공유 미리보기(og): 게시본의 검색 노출 값 · 사이트 이름만(Node app.js serveStatic과 같은 열) -->
+  <select id="selectOg" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub'->'hp'->'seo')::text seo, doc->'lsite'->'pub'->'hp'->>'name' name, (doc->'lsite'->'pub'->'org')::text org from tenant_state where tenant_id = #{tid}</select>
   <select id="selectLearner" resultType="java.util.LinkedHashMap">select sid, dept, code_hash, pw_hash from learners where tenant_id = #{tid} and sid = #{sid}</select>
   <select id="selectLearnerDept" resultType="java.util.LinkedHashMap">select dept, pw_hash from learners where tenant_id = #{tid} and sid = #{sid}</select>
   <update id="touchLearner">update learners set last_login = now() where tenant_id = #{tid} and sid = #{sid}</update>
@@ -30,4 +35,18 @@
   <select id="selectIdleH" resultType="java.lang.String">select doc->'org'->'cpl'->>'idleH' from tenant_state where tenant_id = #{tid} and (doc->'org'->'cpl'->>'on')::boolean</select>
   <update id="touchLearnerSession">update learner_sessions set last_at = now() where id = #{id}</update>
   <delete id="deleteLearnerSession">delete from learner_sessions where id = #{id}</delete>
+  <!-- v33 학습자 → 운영자 요청함 · 대학 첫 로그인 동의 -->
+  <select id="selectEvents" resultType="java.util.LinkedHashMap">
+    select id, sid, type, xid, data::text data, to_char(at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at from learner_events where tenant_id = #{tid} and id &gt; #{after} order by id limit 200
+  </select>
+  <!-- v38 A-17 쿠폰 · 할인 코드 -->
+  <select id="selectCouponCtx" resultType="java.util.LinkedHashMap">select (doc->'coupons')::text cp, (doc->'lsite'->'pub'->'classes')::text cl, (doc->'lsite'->'pub'->'pay')::text pay from tenant_state where tenant_id = #{tid}</select>
+  <select id="countCouponUse" resultType="int">select count(*)::int from learner_events where tenant_id = #{tid} and type = 'pay' and upper(data->>'cpn') = #{code}</select>
+  <select id="insertEventX" resultType="long" flushCache="true" useCache="false">
+    insert into learner_events (tenant_id, sid, type, xid, data) values (#{tid}, #{sid}, #{type}, #{xid}, #{data}::jsonb) returning id
+  </select>
+  <select id="tenantStateExists" resultType="int">select count(*) from tenant_state where tenant_id = #{tid}</select>
+  <delete id="deleteOldEvents">delete from learner_events where tenant_id = #{tid} and at &lt; now() - interval '90 days'</delete>
+  <select id="selectConsent" resultType="java.util.LinkedHashMap">select consent::text consent, true has from learners where tenant_id = #{tid} and sid = #{sid}</select>
+  <update id="setConsent">update learners set consent = #{v}::jsonb where tenant_id = #{tid} and sid = #{sid} and consent is null</update>
 </mapper>

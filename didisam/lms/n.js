@@ -11,7 +11,7 @@
   const PAY = { free: '무료', pending: '결제 대기(PG 연동 후)', paid: '결제 완료', refund_req: '환불 요청(PG 연동 후)' };
 
   /* ═════════ 데모 엔진(서버 lms_n_* 와 같은 규칙) ═════════ */
-  const ens = () => { S.lms = S.lms || {}; const N = S.lms.n = S.lms.n || { courses: [], cohorts: [], enrolls: [], wish: [], diags: [], results: [] }; if (!N.seeded) { N.seeded = true; seed(N); } return N; };
+  const ens = () => { S.lms = S.lms || {}; const N = S.lms.n = S.lms.n || { courses: [], cohorts: [], enrolls: [], wish: [], diags: [], results: [] }; if (!N.seeded) { N.seeded = true; if (!(S && S.org && S.org.empty)) seed(N); } return N; };
   const getC = id => { const c = ens().courses.find(x => x.course_id === id); if (!c) LW4.err(404, '과정을 찾을 수 없습니다.'); return c; };
   const getH = id => { const h = ens().cohorts.find(x => x.cohort_id === id); if (!h) LW4.err(404, '기수를 찾을 수 없습니다.'); return h; };
   const own = (actor, c) => { if (actor.role === 'teacher' && c.owner_email !== actor.email) LW4.err(403, '담당 교수자만 다룰 수 있는 과정입니다.'); };

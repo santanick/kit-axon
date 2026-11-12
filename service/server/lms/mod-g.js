@@ -92,7 +92,10 @@ function engine(ctx, SPEC, SQL) {
         let out = null;
         for (const st of r.stmts) {
           const q = compiled[st]; if (!q) throw new Error('SQL 없음: ' + st);
-          const { rows } = await c.query(q.text, q.names.map(n => P[n] === undefined ? null : P[n]));
+          let rows;
+          /* x3: 트리거 업무 오류(raise … detail 'dd:상태:코드', 예: 출석 본인 확인 428 idv_needed) → {error, message} */
+          try { ({ rows } = await c.query(q.text, q.names.map(n => P[n] === undefined ? null : P[n]))); }
+          catch (e) { const m = /^dd:(\d{3}):([a-z_]+)$/.exec(e.detail || ''); if (m) throw new HttpErr(+m[1], e.message, m[2]); throw e; }
           const raw = rows[0] ? rows[0][Object.keys(rows[0])[0]] : null;
           out = raw == null ? null : JSON.parse(raw);
           if (out && typeof out === 'object' && !Array.isArray(out) && out.err) throw bad(out.err);

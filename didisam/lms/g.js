@@ -1,6 +1,6 @@
 /* v30 학사 LMS 묶음 G — 출결 관리(SFR-010 · 016 · 031 · 033 · 048 · 068 · 088)
    인증번호 · 회전 QR · NFC · BLE · 사진(위치 · 일시만) 출석, 본인 재인증 호출 지점, 교수 수동 출결(출석 · 지각 · 결석 · 공결 + 사유 · 증빙),
-   휴강 · 보강, 장애 시 일괄 조정, 연강 자동 복사, 온라인 출석 인정(진도율 · 주차 기간) + 오프라인 통합, 청강생 제외, 학교 양식 CSV · 인쇄, 비정상 학습행동.
+   휴강 · 보강, 장애 시 일괄 조정, 연강 자동 복사, 온라인 출석 인정(진도율 · 차시 기간) + 오프라인 통합, 청강생 제외, 학교 양식 CSV · 인쇄, 비정상 학습행동.
    운영(서버) 모드: /api/lms/g/... 호출. 데모 모드: 같은 경로를 브라우저 안 W3.LOCAL이 흉내 낸다(S.lms.w3).
    W3(공용 호출 · 데모 저장소)는 묶음 I · J 화면도 같이 쓴다. */
 (function () {
@@ -21,13 +21,33 @@
     err(code) { const e = new Error(ERRM[code] || '요청을 처리할 수 없습니다.'); e.code = code; return e; },
     uid() { return (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => (Math.random() * 16 | 0).toString(16))); },
     ts(t) { return t == null ? null : new Date(t).toISOString(); },
-    D() { S.lms = S.lms || {}; const D = S.lms.w3 = S.lms.w3 || {}; ['sections', 'sessions', 'persons', 'beacons', 'log', 'contents', 'plays', 'events', 'quizzes', 'acts', 'rules', 'snaps', 'refl', 'fb'].forEach(k => D[k] = D[k] || []); ['att', 'codes', 'prog', 'subs', 'answers', 'grades', 'rule'].forEach(k => D[k] = D[k] || {}); return D; },
+    D() { S.lms = S.lms || {}; const D = S.lms.w3 = S.lms.w3 || {}; ['sections', 'sessions', 'persons', 'beacons', 'log', 'contents', 'plays', 'events', 'quizzes', 'acts', 'rules', 'snaps', 'refl', 'fb'].forEach(k => D[k] = D[k] || []); ['att', 'codes', 'prog', 'subs', 'answers', 'grades', 'rule'].forEach(k => D[k] = D[k] || {}); if (typeof window.lmsaPoke === 'function') window.lmsaPoke(); return D; },
+    /* v38 학사(강좌 · 분반, S.lms.a) → 출결 · 강의 · 성찰: 같은 분반 번호 · 학번. 차시는 학기 시작일 · 강의 시간표로 15주를 만든다(샘플 출결 없음) */
+    syncA(A) {
+      const d = S.lms.w3 || W3.D(); if (!(S.org && S.org.empty) && !d.sections.length && !d.seeded && W3.LOCAL['POST /api/lms/g/seed']) { d.seeded = 1; try { W3.LOCAL['POST /api/lms/g/seed']({}); } catch (e) { } }
+      d.seeded = 1; const DAY = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 }; const live = new Set(); const rep = id => { const s = A.sections.find(x => x.section_id === id); return s && s.rep_section_id ? s.rep_section_id : id; };
+      A.sections.forEach(s0 => { if (s0.status === 'archived' || s0.rep_section_id) return; live.add(s0.section_id); const co = A.courses.find(c => c.course_code === s0.course_code) || {};
+        let w = d.sections.find(x => x.section_id === s0.section_id); const fresh = !w; if (!w) { w = { section_id: s0.section_id, lmsa: 1 }; d.sections.push(w); }
+        Object.assign(w, { term_id: s0.term_id, course_code: s0.course_code, section_no: s0.section_no, title: `${co.name || s0.course_code} (${s0.section_no}분반)`, mode: s0.mode });
+        if (fresh && !d.sessions.some(x => x.section_id === s0.section_id)) { const t = A.terms.find(x => x.term_id === s0.term_id) || {}; const sc = (s0.schedule || [])[0] || {};
+          const st = t.starts_on ? Date.parse(t.starts_on + 'T00:00:00+09:00') : Date.now(); const dow = DAY[sc.day]; const first = st + (dow == null ? 0 : ((dow - new Date(st).getDay() + 7) % 7)) * 864e5;
+          const per = parseInt(String(sc.period || '1'), 10) || 1; const h = 8 + per; const kind = s0.mode === 'online' ? 'online' : 'class';
+          for (let n = 1; n <= 15; n++) { const t0 = first + (n - 1) * 7 * 864e5 + h * 36e5; d.sessions.push({ session_id: W3.uid(), section_id: s0.section_id, week_no: n, seq: 1, kind, starts_at: W3.ts(t0), ends_at: W3.ts(t0 + 75 * 6e4), open_at: W3.ts(t0), close_at: W3.ts(t0 + 7 * 864e5), room: sc.room || '', required_sec: 0, extra_study_sec: 0 }); } } });
+      d.sections = d.sections.filter(x => !x.lmsa || live.has(x.section_id)); d.sessions = d.sessions.filter(x => d.sections.some(y => y.section_id === x.section_id));
+      const pm = new Map(d.persons.map(p => [p.member_no, p]));
+      A.persons.filter(p => p.kind === 'student' || A.enr.some(e => e.member_no === p.member_no)).forEach(p => { const my = A.enr.filter(e => e.member_no === p.member_no && e.status === 'enrolled');
+        const reg = [...new Set(my.filter(e => e.kind !== 'audit').map(e => rep(e.section_id)))].filter(id => live.has(id)); const aud = [...new Set(my.filter(e => e.kind === 'audit').map(e => rep(e.section_id)))].filter(id => live.has(id) && !reg.includes(id));
+        let q = pm.get(p.member_no); if (!q) { q = { person_id: W3.uid(), member_no: p.member_no, lmsa: 1 }; d.persons.push(q); pm.set(p.member_no, q); }
+        if (!q.lmsa) { q.secs = [...new Set([...(q.secs || []).filter(id => !A.sections.some(x => x.section_id === id)), ...reg])]; return; }
+        Object.assign(q, { unit_code: p.unit_code || '', grade_year: p.grade_year || null, ekind: reg.length || !aud.length ? 'regular' : 'audit', secs: reg.length ? reg : aud }); });
+    },
     async call(m, p, b) {
       if (W3.live()) {
         if (m === 'GET') { const q = new URLSearchParams(Object.entries(b || {}).filter(([, v]) => v != null && v !== '')).toString(); return api('GET', p + (q ? '?' + q : '')); }
         return api(m, p, b || {});
       }
       const f = W3.LOCAL[m + ' ' + p]; if (!f) throw W3.err('not_found');
+      { const M = W3.mine && W3.mine(); const sid = b && b.section_id; if (M && sid && !M.has(sid)) throw W3.err('role'); }
       const out = f(b || {}); if (m !== 'GET') save(); return JSON.parse(JSON.stringify(out == null ? null : out));
     },
     /* 화면 캐시: 키별로 한 번 불러와 render() — 화면 함수는 동기라 캐시만 읽는다 */
@@ -43,6 +63,7 @@
     section() {
       const L = W3.get('sections', 'GET', '/api/lms/g/sections'); if (L === undefined) return undefined;
       if (L.__err) return L;
+      if (!L.length && S.org && S.org.empty) return { __err: '이번 학기에 개설된 분반이 없습니다. 학기 · 강좌에서 교과목과 분반을 먼저 개설하세요.' };
       if (!L.length) { if (!W3.busy.seed) { W3.busy.seed = 1; W3.call('POST', '/api/lms/g/seed', {}).catch(e => toast(e.message, 'warn')).finally(() => { delete W3.busy.seed; W3.drop(); render(); }); } return undefined; }
       UI.w3sec = UI.w3sec && L.find(s => s.section_id === UI.w3sec) ? UI.w3sec : L[0].section_id; return L.find(s => s.section_id === UI.w3sec);
     },
@@ -71,13 +92,14 @@
   /* ═════════ 데모 경로(서버 SQL과 같은 규칙을 단순화) ═════════ */
   const L = W3.LOCAL;
   L['POST /api/lms/g/seed'] = () => {
-    const d = D(); if (d.sections.length) return { section_id: d.sections[0].section_id, sessions: d.sessions.length, students: regular(d.sections[0].section_id).length, rule: 0, beacons: 0 };
+    const d = D(); if (S.org && S.org.empty) return { section_id: null, sessions: 0, students: 0, rule: 0, beacons: 0, empty: true };
+    if (d.sections.length) return { section_id: d.sections[0].section_id, sessions: d.sessions.length, students: regular(d.sections[0].section_id).length, rule: 0, beacons: 0 };
     const sec = { section_id: W3.uid(), term_id: '2026-2', course_code: 'DEMO1001', section_no: '01', title: '데이터와 인공지능 기초 (01분반)', mode: 'hyflex' }; d.sections.push(sec);
     const base = Date.parse('2026-09-07T00:00:00Z'); /* 09:00 KST */
     for (let w = 1; w <= 15; w++) for (const seq of (w === 10 ? [1, 2] : [1])) { const t = base + (w - 1) * 7 * 864e5 + (seq - 1) * 90 * 6e4; d.sessions.push({ session_id: W3.uid(), section_id: sec.section_id, week_no: w, seq, kind: [3, 7, 12].includes(w) ? 'online' : 'class', starts_at: W3.ts(t), ends_at: W3.ts(t + 75 * 6e4), open_at: W3.ts(t), close_at: W3.ts(t + 7 * 864e5), room: '공학관 301', required_sec: 0, extra_study_sec: 0 }); }
     for (let i = 1; i <= 9; i++) d.persons.push({ person_id: W3.uid(), member_no: String(20269000 + i), unit_code: ['CSE', 'BIZ', 'EDU'][i % 3], grade_year: 1 + i % 4, ekind: i === 9 ? 'audit' : 'regular', secs: [sec.section_id] });
     d.beacons.push({ beacon_id: 'NFC-ENG301', kind: 'nfc', room: '공학관 301', active: true }, { beacon_id: 'BLE-ENG301', kind: 'ble', room: '공학관 301', active: true });
-    /* 지난 주차 출결 · 학습 데모(결정적) */
+    /* 지난 차시 출결 · 학습 데모(결정적) */
     const reg = regular(sec.section_id); const M = ['code', 'qr', 'nfc', 'ble', 'photo'];
     secSessions(sec.section_id).filter(s => Date.parse(s.starts_at) < now() && s.kind !== 'online').forEach(s => reg.forEach((p, j) => { const r = (s.week_no * 7 + j * 13) % 23; const st = j === 6 ? (r < 9 ? 'absent' : r < 13 ? 'late' : 'present') : r === 0 ? 'absent' : r < 3 ? 'late' : r === 3 ? 'excused' : 'present';
       d.att[attK(s.session_id, p.person_id)] = { status: st, method: st === 'excused' ? 'manual' : M[(s.week_no + j) % 5], evidence: { at: s.starts_at }, reason: st === 'excused' ? '병결(진단서 제출)' : null }; }));
@@ -85,7 +107,10 @@
     if (typeof W3.seedJ === 'function') W3.seedJ(sec.section_id);
     return { section_id: sec.section_id, sessions: d.sessions.length, students: reg.length, rule: 1, beacons: 2 };
   };
-  L['GET /api/lms/g/sections'] = () => D().sections.map(s => ({ ...s, students: regular(s.section_id).length }));
+  /* v38 교수 화면(데모: 역할 = 교수)은 학기 · 강좌에서 내가 담당인 분반만 — 과제 · 성적(e.js mineOnly)과 같은 규칙 */
+  W3.mine = () => { try { if (!(S && S.me && S.me.role === 'teacher') || typeof window.lmsaEns !== 'function' || !(typeof ULMS === 'function' && ULMS())) return null; const A = window.lmsaEns(); const me = A.scopes && A.scopes.teacher && A.scopes.teacher.member_no;
+    return new Set(me ? A.staff.filter(t => t.member_no === me && t.status === 'active').map(t => t.section_id) : []); } catch (e) { return null; } };
+  L['GET /api/lms/g/sections'] = () => { const M = W3.mine(); return D().sections.filter(s => !M || M.has(s.section_id)).map(s => ({ ...s, students: regular(s.section_id).length })); };
   L['GET /api/lms/g/sessions'] = b => secSessions(b.section_id).map(sessJ);
   L['POST /api/lms/g/session'] = b => { const s = sesOf(b.session_id); if (!s) throw W3.err('not_found'); ['starts_at', 'ends_at', 'open_at', 'close_at', 'room', 'kind', 'note', 'required_sec', 'extra_study_sec'].forEach(k => { if (b[k] != null && b[k] !== '') s[k] = /_at$/.test(k) ? W3.ts(b[k]) : /_sec$/.test(k) ? +b[k] : b[k]; }); return sessJ(s); };
   L['POST /api/lms/g/makeup'] = b => { const o = sesOf(b.session_id); if (!o) throw W3.err('not_found'); if (!b.starts_at) throw W3.err('required'); const t = Date.parse(b.starts_at); const dur = o.ends_at ? Date.parse(o.ends_at) - Date.parse(o.starts_at) : 75 * 6e4;
@@ -207,7 +232,7 @@
     const t = UI.w3gT || 'board'; if (t !== 'live') stopQR();
     const T4 = window.EFH ? EFH.tabs4 : (k, a, c, m) => tabs(k, [...a, ...(m || [])], c);
     const top = head('출결 관리', `${esc(sec.title)} · ${esc(sec.term_id)} · 수업 방식 ${esc({ hyflex: '하이플렉스', blended: '블렌디드', online: '온라인', offline: '대면' }[sec.mode] || sec.mode)}`, `${W3.secPick()} ${W3.mode()}`)
-      + T4('w3gT', [['board', '출석부'], ['live', '출석 진행(인증번호 · QR)'], ['anom', '비정상 학습행동']], t, [['check', '학생 출석 화면(미리보기)'], ['rule', '출석 규칙 · 장비']]);
+      + T4('w3gT', [['board', '출석부'], ['live', '출석 진행(인증번호 · QR)'], ['anom', '비정상 학습행동']], t, [['check', '학생 출석 화면(미리보기)'], ['rule', '출석 규칙 · 본인 확인 · 장비']]);
     const body = { board: gBoard, live: gLive, check: gCheck, rule: gRule, anom: gAnom }[t](sec);
     return top + body;
   };
@@ -232,7 +257,7 @@
     const secRows = SL.map(s => { const Q = s.section_id === sec.section_id ? R : W3.get('roster:' + s.section_id, 'GET', '/api/lms/g/roster', { section_id: s.section_id }); const ok = Q && !Q.__err;
       const t2 = ok ? Q.students.reduce((a, x) => { const u = x.sum; a.p += u.present + u.late + u.excused; a.past += u.past; a.risk += u.past && (u.absent + u.unrecorded + Math.floor(u.late / 3)) >= Math.ceil(u.past / 4) ? 1 : 0; return a; }, { p: 0, past: 0, risk: 0 }) : null;
       return [`<b>${esc(s.title)}</b>`, ok ? Q.students.length + '명' : '…', t2 ? (t2.past ? Math.round(100 * t2.p / t2.past) : 100) + '%' : '…', t2 ? (t2.risk ? tag(t2.risk + '명', 'r') : '0') : '…', s.section_id === sec.section_id ? tag('보는 중', 'g') : `<button class="btn sm" data-act="w3g-secgo" data-v="${esc(s.section_id)}">열기</button>`]; });
-    const secCard = `<div class="card"><div class="ch"><b>분반별 출석</b><small>${esc(sec.term_id)} 학기</small><span class="efh-acts">${dots([mi('w3g-online', '온라인 출석 반영(진도율 · 주차 기간)'), mi('w3g-csv', '학교 양식 엑셀(CSV) 내려받기'), mi('w3g-print', '출석부 인쇄'), mi('w3g-full', UI.w3gFull ? '학기 전체 출석부 닫기' : '학기 전체 출석부 보기')], '분반 출석 다른 작업')}</span></div>${table(['분반', '수강생', '평균 출석률', '결석 1/4 이상', ''], secRows)}</div>`;
+    const secCard = `<div class="card"><div class="ch"><b>분반별 출석</b><small>${esc(sec.term_id)} 학기</small><span class="efh-acts">${dots([mi('w3g-online', '온라인 출석 반영(진도율 · 차시 기간)'), mi('w3g-csv', '학교 양식 엑셀(CSV) 내려받기'), mi('w3g-print', '출석부 인쇄'), mi('w3g-full', UI.w3gFull ? '학기 전체 출석부 닫기' : '학기 전체 출석부 보기')], '분반 출석 다른 작업')}</span></div>${table(['분반', '수강생', '평균 출석률', '결석 1/4 이상', ''], secRows)}</div>`;
     /* 차시 고르기 */
     const recent = past.slice(-4).reverse();
     const sel = `<select data-chg="w3g-ses" aria-label="차시 선택"><option value="">다른 차시 고르기 (${ss.length}개)</option>${ss.map(s => `<option value="${esc(s.session_id)}">${s.week_no}주 ${s.seq}차 · ${W3.fmt(s.starts_at)}${s.kind === 'holiday' ? ' (휴강)' : ''}${s.makeup_of ? ' (보강)' : ''}</option>`).join('')}</select>`;
@@ -323,6 +348,7 @@
       <label class="fl">학번<input id="w3mno" maxlength="20" value="${esc(UI.w3gMno || '20269001')}"></label>
       <div class="seg2" role="tablist">${ms.map(([k, l]) => `<button role="tab" aria-selected="${k === m}" class="${k === m ? 'on' : ''}" data-act="w3g-m" data-v="${k}">${l}</button>`).join('')}</div>
       ${extra || ''}
+      ${(m => m !== 'none' ? `<p class="mini">이 분반은 출석 전 본인 확인(${esc((IDVM.find(x => x[0] === m) || [, m])[1])})이 필요합니다. 학생은 본인 기기에서 확인한 뒤 출석합니다.</p>${W3.live() ? '' : '<label class="ul-ck"><input type="checkbox" id="w3idvd"> 데모: 학생 기기에서 본인 확인을 마친 것으로 표시</label>'}` : '')(W3.live() ? 'none' : idvOf(sec.section_id))}
       ${R.require_identity ? `<label class="ul-ck"><input type="checkbox" id="w3idv"> 본인 재인증 완료(SSO 재인증 호출 — 연동 후 동작, 데모는 확인 표시)</label>` : ''}
       <button class="btn pri" data-act="w3g-go">출석하기</button>
       ${r ? `<div class="w3-res ${r.ok ? 'ok' : 'bad'}" role="status">${r.ok ? `${esc(ST[r.status][0])} 처리되었습니다 · ${esc(MTH[r.method])} · ${esc(W3.fmt(r.evidence.at))}` : esc(r.msg)}</div>` : ''}</div>`;
@@ -336,7 +362,7 @@
     const b = { session_id: UI.w3gL, member_no: mno, method: m };
     if (m === 'code') b.code = v; if (m === 'qr') b.qr = v; if (m === 'nfc' || m === 'ble') b.tag_id = v;
     if (m === 'photo') { const la = $('#w3lat')?.value.trim(), lo = $('#w3lng')?.value.trim(); if (la) b.lat = +la; if (lo) b.lng = +lo; const f = $('#w3ph')?.files?.[0]; b.taken_at = new Date(f && f.lastModified ? f.lastModified : Date.now()).toISOString(); }
-    if ($('#w3idv')?.checked) b.idv = 'sso-reauth-pending';
+    if ($('#w3idv')?.checked) b.idv = 'sso-reauth-pending'; if ($('#w3idvd')?.checked) b.idv_demo = 1;
     try { const r = await W3.call('POST', '/api/lms/g/checkin', b); UI.w3gR = { ok: 1, ...r }; W3.drop('roster:'); } catch (e) { UI.w3gR = { ok: 0, msg: e.message }; }
     render();
   };
@@ -346,7 +372,7 @@
     if (R.__err) return `<div class="empty">${esc(R.__err)}</div>`;
     const ck = (k, l) => `<label class="ul-ck"><input type="checkbox" name="m_${k}" ${R.methods.includes(k) ? 'checked' : ''}> ${esc(l)}</label>`;
     const bk = (k, l) => `<label class="ul-ck"><input type="checkbox" name="${k}" ${R[k] ? 'checked' : ''}> ${esc(l)}</label>`;
-    return `<div class="card" id="w3rule"><div class="ch"><b>분반 출석 규칙</b><small>SFR-010 · 016 · 068</small></div><div class="ul-cols"><div><p class="mini"><b>허용 방식</b></p>${ck('code', '인증번호')}${ck('qr', '회전 QR')}${ck('nfc', 'NFC 태그')}${ck('ble', 'BLE 비콘')}${ck('photo', '사진(위치 · 일시)')}${ck('online', '온라인(진도율)')}${ck('manual', '교수 수동')}</div>
+    return gIdv(sec) + `<div class="card" id="w3rule"><div class="ch"><b>분반 출석 규칙</b><small>SFR-010 · 016 · 068</small></div><div class="ul-cols"><div><p class="mini"><b>허용 방식</b></p>${ck('code', '인증번호')}${ck('qr', '회전 QR')}${ck('nfc', 'NFC 태그')}${ck('ble', 'BLE 비콘')}${ck('photo', '사진(위치 · 일시)')}${ck('online', '온라인(진도율)')}${ck('manual', '교수 수동')}</div>
       <div><div class="form2"><label>지각 기준(분)<input type="number" name="late" min="0" max="120" value="${R.late_after_min}"></label><label>출석 마감(분)<input type="number" name="abs" min="0" max="240" value="${R.absent_after_min}"></label><label>온라인 인정 진도율(%)<input type="number" name="pct" min="10" max="100" value="${R.online_min_pct}"></label></div>
       ${bk('require_identity', '출석 전 본인 재인증(SSO 재인증 — 연동 후 동작)')}${bk('block_concurrent', '여러 기기 · 창 동시 재생 차단')}${bk('hyflex_online', '하이플렉스: 대면 차시도 온라인 진도 기준 충족 시 출석 인정')}</div></div>
       <button class="btn pri" data-act="w3g-rule">규칙 저장</button></div>
@@ -364,7 +390,34 @@
     const c = k => A.filter(a => a.kind === k).reduce((n, a) => n + a.n, 0);
     return `<div class="kpis">${kpi('진도 체크 전 배속', c('speed_before_check') + '건')}${kpi('건너뛰기', c('skip') + '건')}${kpi('다중 접속 · 동시 재생', c('concurrent') + '건', '', c('concurrent') ? 'warn' : '')}</div>
       <div class="card"><div class="ch"><b>비정상 학습행동</b><small>재생 로그(동영상 · 진도) 기준 · 출석 인정 전 교수 확인용</small><button class="btn sm" data-act="w3g-anom-csv">CSV</button></div>
-      ${table(['학번', '학과', '주차', '콘텐츠', '유형', '횟수', '최근'], A.map(a => [esc(a.member_no), esc(a.unit_code || ''), a.week_no + '주', esc(a.content_title), tag(KN[a.kind] || a.kind, a.kind === 'concurrent' ? 'r' : 'y'), a.n, esc(W3.fmt(a.last_at))]), '감지된 비정상 학습행동이 없습니다.')}</div>`;
+      ${table(['학번', '학과', '차시', '콘텐츠', '유형', '횟수', '최근'], A.map(a => [esc(a.member_no), esc(a.unit_code || ''), a.week_no + '주', esc(a.content_title), tag(KN[a.kind] || a.kind, a.kind === 'concurrent' ? 'r' : 'y'), a.n, esc(W3.fmt(a.last_at))]), '감지된 비정상 학습행동이 없습니다.')}</div>`;
   }
-  ACT['w3g-anom-csv'] = () => { const A = W3.cache['anom:' + UI.w3sec] || []; downloadCSV(`비정상학습행동_${today()}.csv`, ['학번', '학과', '주차', '콘텐츠', '유형', '횟수', '최근'], A.map(a => [a.member_no, a.unit_code || '', a.week_no, a.content_title, KN[a.kind] || a.kind, a.n, a.last_at])); };
+  ACT['w3g-anom-csv'] = () => { const A = W3.cache['anom:' + UI.w3sec] || []; downloadCSV(`비정상학습행동_${today()}.csv`, ['학번', '학과', '차시', '콘텐츠', '유형', '횟수', '최근'], A.map(a => [a.member_no, a.unit_code || '', a.week_no, a.content_title, KN[a.kind] || a.kind, a.n, a.last_at])); };
+  /* ═════════ x3 · SFR-016 대리출석 방지: 분반별 출석 전 본인 확인(패스키 · 인증 앱 · 이메일 어댑터) ═════════
+     운영: /api/lms/g/idv-rule · idv-report(서버 트리거가 학생 출석마다 확인 표를 소비). 데모: S.lms.w3.idvRule · 학생 등록 현황은 예시 값. */
+  const IDVM = [['none', '확인 안 함'], ['webauthn', '패스키(지문 · 얼굴 인식)'], ['totp', '인증 앱 6자리'], ['any', '패스키 또는 인증 앱'], ['email', '이메일 인증번호(메일 게이트웨이 연동 후)']];
+  const IDVN = 'none webauthn totp any email'.split(' ');
+  ERRM.idv_needed = '출석 전 본인 확인(패스키 · 인증 앱)이 필요합니다.';
+  const idvOf = sid => { const d = D(); d.idvRule = d.idvRule || {}; return d.idvRule[sid] || 'none'; };
+  L['GET /api/lms/g/idv-rule'] = b => { if (!secOf(b.section_id)) throw W3.err('not_found'); return { section_id: b.section_id, method: idvOf(b.section_id), methods: IDVM, note: '학생이 출석 직전 본인 기기로 확인합니다. 생체 정보는 학생 기기 밖으로 나오지 않고, 서버에는 공개키만 저장합니다. 문자(SMS) 인증은 학교 문자 게이트웨이 연동 후 동작합니다.' }; };
+  L['POST /api/lms/g/idv-rule'] = b => { if (!secOf(b.section_id)) throw W3.err('not_found'); if (!IDVN.includes(b.method)) throw W3.err('bad_input'); const d = D(); d.idvRule = d.idvRule || {}; d.idvRule[b.section_id] = b.method; return L['GET /api/lms/g/idv-rule'](b); };
+  L['GET /api/lms/g/idv-report'] = b => { if (!secOf(b.section_id)) throw W3.err('not_found'); const h = s => { let x = 2166136261; for (const c of String(s)) x = Math.imul(x ^ c.charCodeAt(0), 16777619) >>> 0; return x; };
+    const P = D().persons.filter(p => (p.secs || []).includes(b.section_id) && p.ekind !== 'audit').sort((p, q) => p.member_no < q.member_no ? -1 : 1);
+    const st = P.map(p => { const v = h(p.member_no + b.section_id) % 100; const pk = v < 62 ? 1 + v % 2 : 0; const tt = v >= 50 && v < 85; const n = Object.entries(D().att).filter(([k, a]) => k.endsWith('|' + p.person_id) && a.evidence && ['webauthn', 'totp', 'email'].includes(a.evidence.idv)).length;
+      return { member_no: p.member_no, passkeys: pk, totp: tt, checkins: n, last_method: n ? 'webauthn' : null }; });
+    return { section_id: b.section_id, method: idvOf(b.section_id), students: st, demo: true, summary: { n: st.length, passkey: st.filter(x => x.passkeys).length, totp: st.filter(x => x.totp).length, none: st.filter(x => !x.passkeys && !x.totp).length } }; };
+  { const base = L['POST /api/lms/g/checkin']; L['POST /api/lms/g/checkin'] = b => { const s = sesOf(b.session_id); const m = s ? idvOf(s.section_id) : 'none';
+      if (m !== 'none' && ['code', 'qr', 'nfc', 'ble', 'photo'].includes(b.method) && !b.idv_demo) { const e = W3.err('idv_needed'); e.message = { webauthn: '출석 전 패스키(지문 · 얼굴 인식)로 본인 확인을 하세요.', totp: '출석 전 인증 앱의 6자리 번호로 본인 확인을 하세요.', email: '출석 전 이메일 인증번호로 본인 확인을 하세요.' }[m] || '출석 전 본인 확인(패스키 또는 인증 앱)을 하세요.'; throw e; }
+      const r = base(b); if (m !== 'none' && b.idv_demo) { r.evidence.idv = m === 'any' ? 'webauthn' : m; const k = Object.keys(D().att).find(x => x.startsWith(b.session_id + '|') && D().att[x].evidence.at === r.evidence.at); if (k) D().att[k].evidence.idv = r.evidence.idv; } return r; }; }
+  function gIdv(sec) {
+    const R = W3.get('idvrule:' + sec.section_id, 'GET', '/api/lms/g/idv-rule', { section_id: sec.section_id }); const P = W3.get('idvrep:' + sec.section_id, 'GET', '/api/lms/g/idv-report', { section_id: sec.section_id });
+    if (R === undefined || P === undefined) return W3.loading; if (R.__err) return `<div class="empty">${esc(R.__err)}</div>`; const m = P.summary || { n: 0, passkey: 0, totp: 0, none: 0 };
+    return `<div class="card" id="w3idv"><div class="ch"><b>대리출석 방지 — 출석 전 본인 확인</b><small>SFR-016 · 원격수업 운영지침</small></div><p class="mini">${esc(R.note)}</p>
+      <div class="bar2"><label class="efh-lab">이 분반 확인 방식 <select id="w3idvm" aria-label="본인 확인 방식">${R.methods.map(([k, l]) => `<option value="${k}" ${R.method === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label><button class="btn sm pri" data-act="w3g-idv">저장</button></div>
+      <div class="kpis">${kpi('수강생', m.n)}${kpi('패스키 등록', m.passkey)}${kpi('인증 앱 등록', m.totp)}${kpi('확인 수단 없음', m.none, '', m.none && R.method !== 'none' ? 'warn' : '')}</div>
+      ${P.demo ? '<p class="mini">데모: 학생 등록 현황은 예시 값입니다.</p>' : ''}
+      <details class="efh-set"><summary>학생별 등록 현황 ${m.n}명</summary>${table(['학번', '패스키', '인증 앱', '확인 출석'], (P.students || []).map(x => [esc(x.member_no), x.passkeys ? tag(x.passkeys + '개', 'g') : '-', x.totp ? tag('등록', 'g') : '-', String(x.checkins)]), '수강생이 없습니다.')}</details></div>`;
+  }
+  ACT['w3g-idv'] = () => W3.act(() => W3.call('POST', '/api/lms/g/idv-rule', { section_id: UI.w3sec, method: $('#w3idvm').value }), '본인 확인 방식을 저장했습니다.').then(r => { if (r) { W3.drop('idvrule:'); W3.drop('idvrep:'); render(); } });
+
 })();

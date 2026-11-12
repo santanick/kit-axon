@@ -3,7 +3,7 @@
 .c2pt{margin-bottom:10px}
 .c2pkbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}.c2pkbar input{flex:1;min-width:180px;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:6px;padding:9px 12px}
 .c2pkl{max-height:320px;overflow:auto;background:var(--paper);border-radius:6px;padding:8px;display:grid;gap:4px}
-.c2pk{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:#fff;font-size:13.5px;cursor:pointer}.c2pk small{margin-left:auto;color:var(--muted);font-size:12px}
+.c2pk{display:flex;align-items:center;gap:12px;padding:10px 12px;min-height:48px;border-radius:8px;background:#fff;font-size:16px;cursor:pointer}.c2pk input[type=checkbox]{width:24px;height:24px;flex:none;margin:0}.c2pk small{margin-left:auto;color:var(--muted);font-size:12px}
 .c2inl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}.c2inl input,.c2inl select{width:auto!important;display:inline-block!important;margin:0!important;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:6px;padding:8px 10px;background:#fff;max-width:100%}
 .c2inl input[type=number]{width:96px!important}.c2inl input[name=nk]{min-width:160px}
 .c2inl .btn.on,.c2pf .btn.on{background:var(--ink);color:#fff}
@@ -23,7 +23,7 @@
 .c2set{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.c2set>.card{margin:0}.c2set{margin-bottom:14px}.c2tail:empty{display:none}
 .c2mt{margin-top:16px}
 .c2note{margin:-4px 0 10px}
-.c2eb{color:var(--mag);font-weight:700}
+.c2eb{color:var(--t-mag,var(--mag));font-weight:700}
 .c2lbar .sp{flex:1}
 .c2cats .cur li{cursor:default}.c2cats .cur li.on{box-shadow:0 0 0 2px var(--ink)}.c2cats .cur li.c2sub{margin-left:22px}.c2cats .cur li a{text-decoration:none;color:inherit}
 .c2ext{max-height:260px;overflow:auto}
@@ -37,3 +37,4 @@
 .c2dash .rk{display:inline-block;min-width:20px;color:var(--muted)}
 @media (max-width:900px){.c2set{grid-template-columns:1fr}.c2th.lg{width:100%;height:auto;aspect-ratio:16/9}.c2gal{max-width:none}}
 @media (max-width:560px){.c2inl input[type=date]{width:100%!important}.c2bars{gap:3px}.c2b small{font-size:9.5px}}
+.c2sup{display:inline-block;font-size:13px;font-weight:700;color:var(--blue,#1e40af);line-height:1.35} /* v36 R4 직업훈련 훈련비 지원 구분 */

@@ -27,7 +27,7 @@
   }
   if (typeof BWORD !== 'undefined') BWORD.forEach(w => { if (w[0] === 'lsite') w[0] = 'site'; });
   if (typeof bQ === 'function') { const base = bQ; bQ = id => id === 'site' || id === 'lsite' ? [...base('site').filter(x => !/게시/.test(x)), '홈페이지 게시해줘'] : base(id); }
-  if (typeof bGuideText === 'function') { const base = bGuideText; bGuideText = id => id === 'site' || id === 'lsite' ? `홈페이지와 학습 사이트는 이제 하나의 사이트입니다. 화면에서 메뉴 · 첫 화면 섹션 · 학습 페이지(진단 · 튜토리얼 · 마이페이지 등)를 함께 고치고, "홈페이지 게시해줘"라고 하시면 ${t('learner')}이 같은 주소에서 바로 보게 됩니다.` : base(id); }
+  if (typeof bGuideText === 'function') { const base = bGuideText; bGuideText = id => id === 'site' || id === 'lsite' ? `홈페이지와 학습 사이트는 이제 하나의 사이트입니다. 화면에서 메뉴 · 첫 화면 섹션 · 학습 페이지(진단 · 튜토리얼 · 마이페이지 등)를 함께 고치고, "홈페이지 게시해줘"라고 하시면 ${tj('learner', '이')} 같은 주소에서 바로 보게 됩니다.` : base(id); }
 
   /* 사용 가이드(guide.js): 'lsite' 방문 = 통합 화면 방문, 문구 갱신 */
   if (typeof gdVisit === 'function') { const base = gdVisit; gdVisit = v => { const x = typeof gdVal === 'function' ? gdVal(v) : v; return x === 'lsite' ? CUR.tab === 'site' : base(v); }; }
@@ -90,7 +90,7 @@
       if (key.startsWith('m-')) { const id = key.slice(2); const m = s0.menus.find(x => x.id === id) || s0.menus.find(x => id.startsWith(x.id + '-')); return m ? menuHref(m) : '#hp/' + key; }
       return '#hp/' + key;
     };
-    function linkOf(v) { v = String(v || ''); if (v.startsWith('learn:')) { const r = v.slice(6); return ['home', 'shop', 'comm', 'notice', 'textbooks', 'my', 'courses'].includes(r) ? '#' + r : '#home'; } /* v24 학습 페이지 연결 */ if (v.startsWith('page:')) return keyHref(v.slice(5)); if (v.startsWith('cls:')) return '#class/' + v.slice(4); if (v.startsWith('url:') && /^https?:\/\//.test(v.slice(4))) return v.slice(4); return '#home'; }
+    function linkOf(v) { v = String(v || ''); if (v.startsWith('learn:comm/')) return '#comm/' + encodeURIComponent(v.slice(11)); /* v37 게시판 하나로 가는 메뉴 */ if (v.startsWith('learn:')) { const r = v.slice(6); return ['home', 'shop', 'comm', 'notice', 'textbooks', 'my', 'courses'].includes(r) ? '#' + r : '#home'; } /* v24 학습 페이지 연결 */ if (v.startsWith('page:')) return keyHref(v.slice(5)); if (v.startsWith('cls:')) return '#class/' + v.slice(4); if (v.startsWith('url:') && /^https?:\/\//.test(v.slice(4))) return v.slice(4); return '#home'; }
     const fix = html => String(html || '').replace(/href="#p-([^"]*)"/g, (_, k) => `href="${esc(keyHref(k))}"`);
     const pages = {}; let home = '';
     const re = /<main class="s2pg" id="p-([^"]+)">/g; let mm; const idx = [];
@@ -105,10 +105,13 @@
     const menus = s0.menus.filter(m => m.on !== false).map(m => ({ id: m.id, kind: m.kind, l: m.l, access: m.access || '공개', hide: !!m.hide, allow: allowOf(m), href: menuHref(m),
       subs: m.subOn && Array.isArray(m.subs) ? m.subs.filter(sb => sb.on !== false).map(sb => ({ id: sb.id, l: sb.l, access: sb.access || '공개', hide: !!sb.hide, allow: allowOf(sb), href: sb.link ? linkOf(sb.link) : '#hp/s-' + m.id + '-' + sb.id })) : [] }));
     const st = S.settings || {}; const seo = st.seo || {}; const cb = st.chatbot || {}; const g = s0.gnb || {};
+    /* v34.5 L1: 홈페이지 머리글(HPS · S1 — 공지 띠 · 휴대폰 메뉴 포함)과 공지 한 줄을 게시본에 싣는다 → 학습자 홈 방문자 화면이 셸 머리글 대신 쓴다(lhpshell.js) */
+    const ha = h.indexOf('<input type="checkbox" id="hps-mt"'), hm = ha < 0 ? -1 : h.indexOf('class="hps-mf"', ha), he = hm < 0 ? -1 : h.indexOf('</div></div></div>', hm); const head = he > 0 ? fix(h.slice(ha, he + 18)) : '';
+    const ntT = (head.match(/class="hps-ntt"[^>]*>\s*<span>([^<]{1,200})<\/span>/) || [])[1], ntH = (head.match(/<a class="hps-ntt"[^>]*?href="(#[^"]*)"/) || [])[1]; const notice = ntT ? { t: ntT.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').slice(0, 80), href: ntH || '' } : null;
     const dark = c => { try { return /^#[0-9a-f]{6}$/i.test(c) && lum(c) < .35; } catch (e) { return false; } };
-    return { v: 1, at: nowStr(), name: S.org.name, look: typeof lookOf === 'function' ? lookOf(s0) : 'campus', color: s0.color || '', css: shadowCSS(css), home, pages, foot, menus,
+    return { v: 1, at: nowStr(), name: S.org.name, look: typeof lookOf === 'function' ? lookOf(s0) : 'campus', color: s0.color || '', css: shadowCSS(css), home, pages, foot, menus, head, notice,
       mode: cfg().home, logo: /^data:image\/|^https:\/\//.test(g.logo || '') ? g.logo : '', gnbBg: /^#[0-9a-f]{3,8}$/i.test(g.bg || '') ? g.bg : '', gnbDark: dark(g.bg || ''),
-      seo: { title: String(seo.title || '').slice(0, 120), desc: String(seo.desc || '').slice(0, 300), kw: String(seo.kw || seo.keywords || '').slice(0, 300), index: seo.noindex ? false : true },
+      seo: { title: String(seo.title || '').slice(0, 120), desc: String(seo.desc || '').slice(0, 300), kw: String(seo.kw || seo.keywords || '').slice(0, 300), index: seo.noindex ? false : true, img: /^data:image\/(png|jpe?g|webp);base64,|^https:\/\//.test(seo.img || '') ? seo.img : '' }, /* v37 P4 공유 이미지(og:image) */
       favicon: /^data:image\/|^https:\/\//.test(st.favicon || '') ? st.favicon : '',
       chat: cb.type && cb.type !== 'none' ? { type: cb.type, kakaoUrl: /^https:\/\//.test(cb.kakaoUrl || '') ? cb.kakaoUrl : '', ctKey: String(cb.ctKey || '').slice(0, 80), label: String(cb.label || '상담하기').slice(0, 20), pos: cb.pos === 'left' ? 'left' : 'right' } : null };
   }

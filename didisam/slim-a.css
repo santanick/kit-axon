@@ -1,0 +1,40 @@
+/* v34 slim-a — 학습 · 사람 공간 목록 화면(공통 틀 SL 보강) */
+/* 빈 화면: 하는 일 한 줄 + 첫 할 일 버튼 + AI SAM 추천 명령 */
+.sla-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:40px 16px 28px;margin:4px 0 12px;border-radius:20px;background:var(--g100)}
+.sla-ei{width:56px;height:56px;border-radius:18px;background:#fff;display:grid;place-items:center;color:var(--s500)}
+.sla-empty>b{font-size:17px;font-weight:700;max-width:420px;line-height:1.45}
+.sla-links{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.sla-links .linkb{background:none;border:0;color:var(--g700);text-decoration:underline;font:inherit;font-size:14px;cursor:pointer;min-height:36px}
+.sla-ai{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:4px}
+.sla-q{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--g300);background:#fff;color:var(--g800);font:inherit;font-size:14px;cursor:pointer;max-width:100%}
+.sla-q span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sla-q:hover{border-color:var(--s400);color:var(--s500)}
+/* 「⋯」 버튼 · 업로드 라벨 */
+.sla-dots{min-width:44px;padding:0 10px;font-size:18px;letter-spacing:1px}
+.sla-up{cursor:pointer}
+/* 목록 아이콘에 사진 · 숫자 */
+.sl-ic img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.sl-r code{font-size:13px;background:var(--g100);padding:4px 8px;border-radius:8px}
+.sla-text{white-space:pre-wrap;line-height:1.6;font-size:15px;margin:8px 4px}
+/* 기존 화면 본문을 공통 틀 안에 둘 때 */
+.sla-old>.ph:empty{display:none}
+.sla-old .card{max-width:100%}
+.sla-part .card{border:0;box-shadow:none;padding:0;background:none}
+/* 시트 안에서 기존 동작이 모달을 열면 시트 위에 */
+body:has(#slSheet) .mwrap{z-index:96}
+/* 출석부(학원) — 휴대폰에서는 줄마다 이름 · 출결 버튼 · 사유를 쌓아 보이게 */
+@media (max-width:700px){
+  .sla-att .k-attc table,.sla-att .k-attc tbody,.sla-att .k-attc tr,.sla-att .k-attc td{display:block;width:100%}
+  .sla-att .k-attc thead{display:none}
+  .sla-att .k-attc tr{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:10px 0;border-bottom:1px solid var(--g200)}
+  .sla-att .k-attc td{width:auto;padding:0;border:0}
+  .sla-att .k-attc td:first-child{flex:1 1 100%;font-weight:700}
+  .sla-att .k-attc td input[type=text],.sla-att .k-attc td input:not([type]){width:100%}
+  .sla-att .k-attc .ch{flex-wrap:wrap;gap:8px}
+  .sla-empty{padding:28px 12px 20px}
+  .sl-page .sl-h{gap:8px}
+  .sl-page .sl-h h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sl-page .sl-hr{flex-wrap:nowrap;gap:6px}
+  .sl-page .sl-hr .btn{padding:0 12px;min-height:44px;white-space:nowrap}
+  .sl-page .sl-hr .sla-dots{min-width:40px;padding:0 6px}
+}

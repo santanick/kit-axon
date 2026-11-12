@@ -26,7 +26,23 @@ const ROUTES = [
   ['POST /api/lms/f/retry', 'lms_f_retry', 'learner', 65536],
   ['GET /api/lms/f/settings', 'lms_f_settings', 'staff'],
   ['POST /api/lms/f/settings', 'lms_f_settings_save', 'staff', 4096],
-  ['POST /api/lms/f/ip-mask', 'lms_f_ip_mask', 'staff', 4096]
+  ['POST /api/lms/f/ip-mask', 'lms_f_ip_mask', 'staff', 4096],
+  /* x3 · SFR-089 웹 시험 감독(sql/a3_integrity.sql): 학습자 = 감독 안내 · 시작(동의 · 장치 확인 · 1기기 · 본인 확인 표) · 화면 사건 · 웹캠 사진,
+     교수자 = 감독 설정 · 응시별 위험 점수 · 타임라인 · 사진(열람 기록) · 판정 · 열람 기록 · 사진 보존 기간 · 파기 */
+  ['GET /api/lms/f/proctor', 'lms_f_proctor', 'learner'],
+  ['POST /api/lms/f/proctor-begin', 'lms_f_proctor_begin', 'learner', 8192],
+  ['POST /api/lms/f/proctor-event', 'lms_f_proctor_event', 'learner', 65536],
+  ['POST /api/lms/f/proctor-snap', 'lms_f_proctor_snap', 'learner', 300000],
+  ['GET /api/lms/f/proctor-cfg', 'lms_f_proctor_cfg', 'staff'],
+  ['POST /api/lms/f/proctor-cfg', 'lms_f_proctor_cfg_save', 'staff', 4096],
+  ['GET /api/lms/f/proctor-review', 'lms_f_proctor_review', 'staff'],
+  ['GET /api/lms/f/proctor-timeline', 'lms_f_proctor_timeline', 'staff'],
+  ['GET /api/lms/f/proctor-photo', 'lms_f_proctor_photo', 'staff'],
+  ['POST /api/lms/f/proctor-decide', 'lms_f_proctor_decide', 'staff', 4096],
+  ['GET /api/lms/f/proctor-views', 'lms_f_proctor_views', 'staff'],
+  ['GET /api/lms/f/proctor-settings', 'lms_f_proctor_settings', 'staff'],
+  ['POST /api/lms/f/proctor-settings', 'lms_f_proctor_settings_save', 'staff', 4096],
+  ['POST /api/lms/f/proctor-purge', 'lms_f_proctor_purge', 'staff', 4096]
 ];
 module.exports = ctx => require('./efh_lib')(ctx, ROUTES);
 module.exports.ROUTES = ROUTES;

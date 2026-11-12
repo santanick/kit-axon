@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v34.5 홈페이지 이미지(media 표, RLS · inTenant) — Node media.js와 같은 SQL -->
+<mapper namespace="egovframework.didisam.media.service.impl.MediaMapper">
+  <select id="selectMeta" resultType="java.util.LinkedHashMap">select mime, bytes, w, h from media where tenant_id = #{tid} and id = #{id} and kind = 'image'</select>
+  <select id="selectUsage" resultType="java.util.LinkedHashMap">select coalesce(sum(bytes), 0)::bigint used, count(*)::int n from media where tenant_id = #{tid} and kind = 'image'</select>
+  <insert id="insertMedia">insert into media (tenant_id, id, mime, bytes, w, h, name, data, created_by) values (#{tid}, #{id}, #{mime}, #{bytes}, #{w,jdbcType=INTEGER}, #{h,jdbcType=INTEGER}, #{name}, #{data,jdbcType=BINARY}, #{by}) on conflict (tenant_id, id) do nothing</insert>
+  <select id="selectList" resultType="java.util.LinkedHashMap">
+    select id, mime, bytes, w, h, name, to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at
+      from media where tenant_id = #{tid} and kind = 'image' order by created_at desc, id limit #{n}
+  </select>
+  <select id="selectData" resultType="java.util.LinkedHashMap">select mime, data from media where tenant_id = #{tid} and id = #{id} and kind = 'image'</select>
+  <delete id="deleteMedia">delete from media where tenant_id = #{tid} and id = #{id} and kind = 'image'</delete>
+  <!-- v35 강의 파일(kind doc · video · audio, 조각은 media_part) — Node mediafile.js와 같은 SQL -->
+  <delete id="fileDeleteStale">delete from media where tenant_id = #{tid} and status = 'up' and created_at &lt; now() - interval '1 day'</delete>
+  <select id="fileUsage" resultType="java.util.LinkedHashMap">select coalesce(sum(bytes), 0)::bigint used, count(*)::int n from media where tenant_id = #{tid} and kind &lt;&gt; 'image'</select>
+  <insert id="fileInsert">insert into media (tenant_id, id, mime, bytes, name, kind, status, parts, chunk, created_by) values (#{tid}, #{id}, #{mime}, #{bytes}, #{name}, #{kind}, 'up', #{parts}, #{chunk}, #{by})</insert>
+  <select id="fileMeta" resultType="java.util.LinkedHashMap">select mime, bytes, name, kind, parts, chunk, status, created_by from media where tenant_id = #{tid} and id = #{id} and kind &lt;&gt; 'image'</select>
+  <insert id="partUpsert">insert into media_part (tenant_id, id, seq, data) values (#{tid}, #{id}, #{seq}, #{data,jdbcType=BINARY}) on conflict (tenant_id, id, seq) do update set data = excluded.data</insert>
+  <select id="partStat" resultType="java.util.LinkedHashMap">select count(*)::int n, coalesce(sum(length(data)), 0)::bigint b from media_part where tenant_id = #{tid} and id = #{id}</select>
+  <select id="partSlice" resultType="java.util.LinkedHashMap">select substring(data from #{off} for #{len}) d from media_part where tenant_id = #{tid} and id = #{id} and seq = #{seq}</select>
+  <select id="partData" resultType="java.util.LinkedHashMap">select data from media_part where tenant_id = #{tid} and id = #{id} and seq = #{seq}</select>
+  <update id="fileOk">update media set status = 'ok' where tenant_id = #{tid} and id = #{id}</update>
+  <delete id="fileDrop">delete from media where tenant_id = #{tid} and id = #{id}</delete>
+  <select id="fileList" resultType="java.util.LinkedHashMap">
+    select id, mime, bytes, name, kind, to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at
+      from media where tenant_id = #{tid} and kind &lt;&gt; 'image' and status = 'ok' order by created_at desc, id limit #{n}
+  </select>
+</mapper>

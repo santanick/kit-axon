@@ -5,8 +5,8 @@
 'use strict';
 (() => {
   const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }; /* v22 현지 날짜(자정~09시 KST에 전날로 찍히던 문제) */
-  const addD = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
-  const addM = (d, n) => { const t = new Date(d); t.setMonth(t.getMonth() + n); return t.toISOString().slice(0, 10); };
+  const addD = (d, n) => { const t = new Date(d); t.setDate(t.getDate() + n); return ymdL(t); };
+  const addM = (d, n) => { const t = new Date(d); t.setMonth(t.getMonth() + n); return ymdL(t); };
   const won = n => (Number(n) || 0).toLocaleString('ko-KR') + '원';
   const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
   const rid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -16,8 +16,8 @@
 
   /* ── 데이터 ── */
   const roomDoc = () => { if (!['demo', 'preview'].includes(LR.mode) || !LR.tid || LR.tid === 'sample') return null; try { return JSON.parse(localStorage.getItem('didisam.room.' + LR.tid) || 'null'); } catch (e) { return null; } };
-  const SHOP = () => { const d = roomDoc(); return (d && d.lsite && d.lsite.pub && d.lsite.pub.shop) || (LR.site && LR.site.shop) || null; };
-  const meKeys = () => LR.me ? [LR.me.sid, LR.me.id, LR.me.email].filter(Boolean).map(String) : [];
+  const SHOP = () => { const d = LR.mode === 'preview' && LR.site && LR.site.shop ? null : roomDoc(); /* 운영자 미리보기는 어드민 초안(lsSnapshot)의 판매 정보를 쓴다 */ return (d && d.lsite && d.lsite.pub && d.lsite.pub.shop) || (LR.site && LR.site.shop) || null; };
+  const meKeys = () => LR.me ? [LR.me.sid, LR.me.id, LR.me.pid, LR.me.email, ...(typeof laPacct === 'function' && LR.me.kind === 'parent' ? [(laPacct() || {}).id] : [])].filter(Boolean).map(String) : []; /* v32.8 보호자는 가족 연결 id로도 찾는다(QA U8) */
   const meM = doc => { const K = meKeys(); if (!K.length || !doc) return null; return (doc.members || []).find(m => [m.id, m.sid, m.email, m.extra && m.extra.학번, m.acct && m.acct.email].some(v => v && K.includes(String(v)))) || null; };
   const qAll = () => { try { return JSON.parse(localStorage.getItem('didisam.room.' + LR.tid + '.lpx') || '[]'); } catch (e) { return []; } };
   const priceOf = x => { if (!x) return 0; let p = +x.price || 0; const d = x.discount; if (d && d.on && (!d.until || today() <= d.until)) p -= d.type === 'amount' ? (+d.v || 0) : Math.round(p * (+d.v || 0) / 100); const e = x.recruit && x.recruit.early; if (e && e.on && (!e.until || today() <= e.until)) p -= Math.round(p * (+e.rate || 0) / 100); return Math.max(0, Math.round(p)); };
@@ -31,13 +31,13 @@
       (doc.classes || []).forEach(c => { const e = c.enr && c.enr[id]; if (e) R.enr[c.id] = { ...e }; else if ((c.learners || []).includes(id)) R.enr[c.id] = { status: 'active', at: c.start, end: c.end || null, src: 'admin' }; });
       (doc.books || []).forEach(b => { const g = (b.grants || []).find(x => x.who === id && !x.off); if (g) R.books[b.id] = { ...g, until: addD(g.at, (b.dl && +b.dl.days) || 30) }; const s = (b.ship || []).find(x => x.who === id); if (s) R.ship[b.id] = { ...s }; });
     }
-    if (doc && !id) { const K0 = meKeys(); const par = (doc.parents || []).find(p => K0.includes(String(p.id))); if (par) R.bills = (doc.bills || []).filter(b => (b.to || []).some(t => t.who === par.id) || b.who === par.child).map(b => ({ ...b })); } /* 보호자 계정: 자녀 청구서 */
+    if (doc && !id) { const K0 = meKeys(); const P = (doc.parents || []).filter(p => (K0.includes(String(p.id)) || K0.includes(String(p.acct || ''))) && (!p.acct || /연결 완료/.test(p.status || ''))); if (P.length) { const kids = new Set(P.map(p => p.child)), pids = new Set(P.map(p => p.id)); R.bills = (doc.bills || []).filter(b => kids.has(b.who) || (b.to || []).some(t => pids.has(t.who) || kids.has(t.who))).map(b => ({ ...b })); } } /* 보호자 계정: 연결된 모든 자녀의 청구서(v38 — 행 id가 아니라 보호자 계정 id로 찾음, QA K4) */
     if (LR.mode === 'live' && LR.mine && LR.mine.shop) Object.assign(R, LR.mine.shop); /* 운영: 서버가 내 판매 데이터를 내려줌 */
     const K = meKeys();
     const grant = (type, ref, at, payId, ship) => { if (type === 'class') R.enr[ref] = { status: 'active', at, end: null, src: 'pay', paid: payId, pending: true };
       if (type === 'book') { const b = shop.books.find(x => x.id === ref); R.books[ref] = { who: id, at, dl: 0, pay: payId, until: addD(at, (b && b.dl && +b.dl.days) || 30), pending: true }; if (b && b.kind !== '전자책') R.ship[ref] = { done: false, memo: ship || '' }; }
       if (type === 'sub') { let s = R.subs.find(x => x.cls === ref && x.status !== '해지'); if (!s) { s = { id: rid('sb'), cls: ref, status: '구독중', n: 0, start: at }; R.subs.push(s); } s.status = '구독중'; s.n = (s.n || 0) + 1; s.next = addM(at, 1); s.pay = payId; s.pending = true; R.enr[ref] = { status: 'active', at, end: s.next, src: 'pay', pending: true }; } };
-    qAll().filter(x => K.includes(String(x.who)) || (x.type === 'bill-pay' && R.bills.some(b => b.id === (x.data || {}).billId))).forEach(x => { const d = x.data || {}; const at = String(x.at || '').slice(0, 10) || today(); const P = R.pays.find(p => p.id === d.payId);
+    qAll().filter(x => K.includes(String(x.who)) || (x.type === 'bill-pay' && R.bills.some(b => b.id === (x.data || {}).billId))).forEach(x => { const d = x.data || {}; const at = lLocal(x.at).slice(0, 10) || today(); const P = R.pays.find(p => p.id === d.payId);
       if (x.type === 'pay' && !P) { const it = d.itemType === 'book' ? shop.books.find(b => b.id === d.ref) : shop.classes.find(c => c.id === d.ref); R.pays.unshift({ id: d.payId, at, item: (it && it.name) || d.item || '', itemType: d.itemType, ref: d.ref, amount: priceOf(it), method: d.method, status: d.status, vacct: d.vacct || null, ship: d.ship || '', pending: true }); if (d.status === '결제 완료') grant(d.itemType, d.ref, at, d.payId, d.ship); }
       if (x.type === 'vacct-paid' && P && P.status === '결제 대기') { P.status = '결제 완료'; P.pending = true; grant(P.itemType, P.ref, at, P.id, P.ship); }
       if (x.type === 'pay-cancel' && P && P.status === '결제 대기') { P.status = '취소'; P.pending = true; }
@@ -58,19 +58,26 @@
   window.shState = id => { try { const sh = SHOP(); const c = sh && sh.classes.find(x => x.id === id); return c ? enrState(c, mine()) : 'none'; } catch (e) { return 'none'; } };
   window.shPrice = id => { const sh = SHOP(); const c = sh && sh.classes.find(x => x.id === id); return c ? priceOf(c) : 0; };
   window.shInfo = () => SHOP();
-  const visible = (x, R) => { const o = x.open || '전체'; if (o === '전체') return true; if (o === '비공개') return false; const m = R && R.m; return !!(m && (x.openTo || []).some(v => v === m.id || v === m.team || v === m.group)); };
+  const visible = (x, R) => { const o = x.open || '전체'; if (o === '전체') return true; if (o === '비공개') return false; if (o === '회원') return !!(R && R.m) || !!LR.me || LR.mode === 'preview'; /* v35 대학 '우리 학교 학생만'(crs-scn univ) = 로그인한 회원 */ const m = R && R.m; return !!(m && (x.openTo || []).some(v => v === m.id || v === m.team || v === m.group)); };
   const enrState = (c, R) => { const e = R.enr[c.id]; if (!e) return 'none'; if (e.status === 'hold' || e.hold) return 'hold'; if (e.status !== 'active') return 'none'; if (e.end && e.end < today()) return 'ended'; return 'active'; };
-  function recruitState(c) { const R = c.recruit; const t = today();
+  /* v35.3: 강의가 하나도 없는 과정(회차 일정 · 묶음 제외)은 '준비 중' — 신청 버튼 대신 안내 */
+  const prepOf = c => !!c && c.items != null && +c.items === 0 && !(+c.sessions > 0) && c.kind !== 'pack';
+  function recruitState(c) { if (prepOf(c)) return { ok: false, label: '준비 중', prep: true }; const R = c.recruit; const t = today();
     if (c.saleEnd && c.saleEnd <= t) return { ok: false, label: '판매 종료' };
-    if (R && R.on) { if (R.from && t < R.from) return { ok: false, label: `모집 예정 · ${R.from}부터` }; if (R.to && t > R.to) return { ok: false, label: '모집 마감' }; if (R.cap && (c.n || 0) >= +R.cap) return { ok: false, label: `정원 마감(${R.cap}명)` }; return { ok: true, label: `모집 중${R.to ? ` · ${R.to}까지` : ''}${R.cap ? ` · 잔여 ${Math.max(0, R.cap - (c.n || 0))}석` : ''}` }; }
+    if (R && R.on) { if (R.from && t < R.from) return { ok: false, label: `모집 예정 · ${R.from}부터` }; if (R.to && t > R.to) return { ok: false, label: '모집 마감' }; if (R.cap && (c.n || 0) >= +R.cap) return { ok: false, label: `정원 마감(${R.cap}명)`, full: true }; return { ok: true, label: `모집 중${R.to ? ` · ${R.to}까지` : ''}${R.cap ? ` · 잔여 ${Math.max(0, R.cap - (c.n || 0))}석` : ''}` }; }
+    if (R && !R.on && +R.cap > 0 && (c.n || 0) >= +R.cap) return { ok: false, label: `정원 마감(${R.cap}명)`, full: true }; /* v38 L-1: 신청 기간을 정하지 않아도 정원은 지킨다 */
     const P = c.period; if (P && P.mode !== 'days' && P.end && P.end < t) return { ok: false, label: '수강 기간 종료' };
     try { const sh = SHOP(); if (sh && sh.pg && sh.pg.use === 'none' && priceOf(c) > 0) return { ok: true, label: '결제 준비 중', pend: true }; } catch (e) { } /* v25.1: 결제 미연결 유료 강좌에 '수강 신청 가능'이 함께 뜨던 문제 */
     return { ok: true, label: '수강 신청 가능' }; }
-  const periodTxt = c => { const P = c.period; if (!P) return ''; return P.mode === 'days' ? `수강 신청 후 ${P.days}일` : `${P.start || ''} ~ ${P.end || ''}`; };
-  const priceHTML = x => { const f = priceOf(x); if (!+x.price) return '<b class="shp-free">무료</b>'; return f < x.price ? `<s>${won(x.price)}</s> <b>${won(f)}</b>${x.kind === 'sub' ? '<small>/월</small>' : ''}` : `<b>${won(f)}</b>${x.kind === 'sub' ? '<small>/월</small>' : ''}`; };
+  const periodTxt = c => { const P = c.period; if (Array.isArray(c.span) && c.span[0]) return `${c.span[0]} ~ ${c.span[1]}`; /* v38 회차 수업은 실제 수업 기간(QA K17) */ if (!P) return ''; return P.mode === 'days' ? `수강 신청 후 ${P.days}일` : `${P.start || ''} ~ ${P.end || ''}`; };
+  /* v37 L1: 결제를 쓰지 않는 기관(대학 · 기업 · 공공 기본, 운영자 설정 S.settings.payOn → 게시본 pay:false)은 강좌 가격 · '무료' 표시 · 결제 단계를 감춘다 */
+  const payOff = () => { try { return SITE().pay === false; } catch (e) { return false; } };
+  const critOf = c => { try { const b = (SITE().classes || []).find(x => x.id === c.id) || c; return typeof a2lCritTxt === 'function' ? a2lCritTxt({ ...b, thr: b.thr || c.thr }) : { s: `진도 ${c.thr || 80}%`, l: `진도 ${c.thr || 80}% 이상` }; } catch (e) { return { s: `진도 ${c.thr || 80}%`, l: `진도 ${c.thr || 80}% 이상` }; } };
+  const priceHTML = x => { const f = priceOf(x); if (payOff() && ['period', 'episode', 'sub', 'pack'].includes(x.kind || 'period')) return ''; if (!+x.price) return '<b class="shp-free">무료</b>'; return f < x.price ? `<s>${won(x.price)}</s> <b>${won(f)}</b>${x.kind === 'sub' ? '<small>/월</small>' : ''}` : `<b>${won(f)}</b>${x.kind === 'sub' ? '<small>/월</small>' : ''}`; };
   const thumb = (x, cls = '') => x.thumb ? `<img class="shp-th ${cls}" src="${esc(x.thumb)}" alt="">` : `<span class="shp-th shp-th0 ${cls}" aria-hidden="true">${esc(String(x.name || '').slice(0, 6))}</span>`;
   const sec = (h, inner, crumb) => `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › ${crumb || esc(h)}</p><h1>${esc(h)}</h1></div></section><section class="sec shp"><div class="in">${inner}</div></section>`;
-  const noShop = () => sec('클래스', '<p class="empty">아직 판매 정보가 게시되지 않았습니다. 운영자가 학습자 사이트를 게시하면 보입니다.</p>');
+  const shopT = () => (typeof LAPP_FIND === 'function' && LAPP_FIND()) || '클래스';
+  const noShop = () => sec(shopT(), '<p class="empty">아직 판매 정보가 게시되지 않았습니다. 운영자가 학습자 사이트를 게시하면 보입니다.</p>');
   const gradeBlock = R => { const g = R.m && R.m.grade; if (g === '준회원') return '정회원만 결제할 수 있습니다. 본인인증 후 정회원이 되면 결제할 수 있습니다.'; if (g === '승인 대기') return '가입 승인 후 이용할 수 있습니다.'; if (g === '거절') return '가입이 거절된 계정입니다. 운영자에게 문의하세요.'; return ''; };
   const pv = () => { if (LR.mode === 'preview') { toast('미리보기에서는 신청 · 결제를 할 수 없습니다.', 'warn'); return true; } return false; };
 
@@ -89,44 +96,58 @@
     const parentOf = F.cat ? ((sh.cats || []).find(x => x.id === F.cat) || {}).parent : null;
     const chip = (k, v, l, on) => `<button type="button" class="shp-chip ${on ? 'on' : ''}" data-shf="${k}" data-v="${esc(v)}">${esc(l)}</button>`;
     const kinds = [...new Set(sh.classes.map(c => c.kind))];
-    return sec('클래스', `<div class="shp-filt"><input type="search" id="shpQ" placeholder="클래스 · 강사 검색" value="${esc(F.q || '')}" aria-label="클래스 검색">
+    return sec(shopT(), `<div class="shp-filt"><input type="search" id="shpQ" placeholder="클래스 · 강사 검색" value="${esc(F.q || '')}" aria-label="클래스 검색">
       ${top.length ? `<div class="shp-chips" aria-label="카테고리">${chip('cat', '', '전체', !F.cat)}${top.map(x => chip('cat', x.id, x.name, F.cat === x.id || parentOf === x.id)).join('')}</div>` : ''}
       ${(parentOf || subs.length) ? `<div class="shp-chips sub">${(sh.cats || []).filter(x => x.parent === (parentOf || F.cat)).map(x => chip('cat', x.id, x.name, F.cat === x.id)).join('')}</div>` : ''}
       ${kinds.length > 1 ? `<div class="shp-chips">${chip('kind', '', '모든 유형', !F.kind)}${kinds.map(k => chip('kind', k, KIND[k] || k, F.kind === k)).join('')}</div>` : ''}</div>
       <div class="shp-grid">${L.map(c => { const rs = recruitState(c); const st = enrState(c, R);
-        return `<a class="shp-card" href="#class/${esc(c.id)}" data-s="${esc((c.name + ' ' + (c.teachers || []).join(' ') + ' ' + (c.desc || '')).toLowerCase())}">${thumb(c)}<div class="shp-cb"><div class="shp-tags"><span class="tg">${esc(KIND[c.kind] || '기간')}${c.sub ? ' · ' + esc(SUBN[c.sub] || c.sub) : ''}</span>${c.legal ? '<span class="tg r">법정</span>' : ''}${st === 'active' ? '<span class="tg g">수강 중</span>' : ''}</div><h3>${esc(c.name)}</h3><p class="mini">${esc((c.teachers || []).join(', '))}${periodTxt(c) ? ' · ' + esc(periodTxt(c)) : ''}</p><div class="shp-pr">${priceHTML(c)}</div><small class="shp-rs ${rs.ok ? '' : 'off'}">${esc(rs.label)}</small></div></a>`; }).join('') || `<div class="empty shp-empty"><p>${LR.me ? '지금 신청할 수 있는 클래스가 없습니다. 배정받은 과정은 「내 학습」에서 바로 볼 수 있습니다.' : '지금 신청할 수 있는 클래스가 없습니다. 로그인하면 배정받은 과정을 볼 수 있습니다.'}</p><a class="lbtn sm ${LR.me ? 'pri' : 'ghost'}" href="${LR.me ? '#my' : '#login'}">${LR.me ? '내 학습으로 가기' : '로그인'}</a></div>`}</div><p class="empty" id="shpNo" hidden>검색 결과가 없습니다.</p>`); }
+        return `<a class="shp-card" href="#class/${esc(c.id)}" data-s="${esc((c.name + ' ' + (c.teachers || []).join(' ') + ' ' + (c.desc || '')).toLowerCase())}">${thumb(c)}<div class="shp-cb"><div class="shp-tags"><span class="tg">${esc(KIND[c.kind] || '기간')}${c.sub ? ' · ' + esc(SUBN[c.sub] || c.sub) : ''}</span>${c.legal ? '<span class="tg r">법정</span>' : ''}${st === 'active' ? '<span class="tg g">수강 중</span>' : ''}</div><h3>${esc(c.name)}</h3><p class="mini">${[esc((c.teachers || []).filter(n => !/^(관리자|운영자|기관 담당자)$/.test(String(n).trim())).join(', ')), periodTxt(c) ? esc(periodTxt(c)) : ''].filter(Boolean).join(' · ')}</p>${priceHTML(c) ? `<div class="shp-pr">${priceHTML(c)}</div>` : ''}<small class="shp-rs ${rs.ok ? '' : 'off'}">${esc(rs.label)}</small></div></a>`; }).join('') || `<div class="empty shp-empty"><p>${LR.me ? '지금 신청할 수 있는 클래스가 없습니다. 배정받은 과정은 「내 학습」에서 바로 볼 수 있습니다.' : '지금 신청할 수 있는 클래스가 없습니다. 로그인하면 배정받은 과정을 볼 수 있습니다.'}</p><a class="lbtn sm ${LR.me ? 'pri' : 'ghost'}" href="${LR.me ? '#my' : '#login'}">${LR.me ? '내 학습으로 가기' : '로그인'}</a></div>`}</div><p class="empty" id="shpNo" hidden>검색 결과가 없습니다.</p>`); }
 
   /* ── 클래스 상세 ── */
+  /* v38 L-2 대기 신청: 운영자 대기자 명단(LPX 'wait-req')에 올리고, 자리가 나면 운영자가 올리면서 알림을 보낸다 */
+  const waitKey = id => `didisam.wait.${(LR.me && (LR.me.sid || LR.me.id)) || 'x'}.${id}`;
+  const waited = id => { try { return !!localStorage.getItem(waitKey(id)); } catch (e) { return false; } };
+  const waitCta = (id, label) => waited(id) ? `<button class="lbtn blk" disabled>대기 신청했어요</button><p class="mini">${esc(label)} — 자리가 나면 알림으로 알려 드려요.</p>` : `<button type="button" class="lbtn pri blk" data-lwait="${esc(id)}">대기 신청하기</button><p class="mini">${esc(label)}이에요. 대기 신청하면 자리가 났을 때 알림으로 알려 드려요.</p>`;
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-lwait]'); if (!b) return; e.preventDefault(); const id = b.dataset.lwait; const c = ((SHOP() || {}).classes || []).find(x => x.id === id);
+    try { if (typeof lpxPush === 'function') lpxPush('wait-req', { cls: id, name: c ? c.name : '' }); } catch (er) { console.error(er); } try { localStorage.setItem(waitKey(id), new Date().toISOString()); } catch (er) { }
+    b.outerHTML = `<button class="lbtn blk" disabled>대기 신청했어요</button>`; try { if (typeof ltoast === 'function') ltoast('대기 신청했어요. 자리가 나면 알려 드려요.'); } catch (er) { } });
+  /* v38 C-16: 소개 글의 '[교육 목표]' 머리 · '- ' 줄을 제목 · 목록으로(마크다운 기호가 그대로 보이던 문제) */
+  const mdLite = t => { const L = String(t || '').split(/\r?\n/); let h = '', ul = []; const flush = () => { if (ul.length) { h += `<ul class="shp-dl">${ul.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`; ul = []; } };
+    L.forEach(x => { const s = x.trim(); if (!s) { flush(); return; } const m = s.match(/^[-•·*]\s+(.+)$/); if (m) { ul.push(m[1]); return; } flush(); const hd = s.match(/^\[(.+?)\]$/) || s.match(/^#{1,4}\s+(.+)$/); h += hd ? `<p><b>${esc(hd[1])}</b></p>` : `<p>${esc(s)}</p>`; }); flush(); return h; };
   function viewClass(id) { const sh = SHOP(); if (!sh) return noShop(); const c = sh.classes.find(x => x.id === id); const R = mine();
     if (!c || !visible(c, R)) return sec('클래스', '<p class="empty">클래스를 찾지 못했거나 공개되지 않은 클래스입니다.</p>', '<a href="#shop">클래스</a>');
-    const base = ((SITE().classes || []).find(x => x.id === id) || {}); const items = base.items || []; const st = enrState(c, R); const rs = recruitState(c); const f = priceOf(c);
+    const base = ((SITE().classes || []).find(x => x.id === id) || {}); const items = base.items || []; const st = enrState(c, R); const rs = recruitState(c); const f = payOff() ? 0 : priceOf(c);
     const sub = R.subs.find(s => s.cls === id && s.status !== '해지') || R.subs.find(s => s.cls === id); const cnt = c.subsc ? +c.subsc.count || 0 : 0;
     let cta = '';
-    if (!LR.me) cta = f > 0 && sh.pg.use === 'none' ? `<button class="lbtn blk" disabled>결제 준비 중</button><p class="mini">운영자가 결제 연결을 마치면 이 화면에서 바로 신청할 수 있습니다.</p>` : `<a class="lbtn pri blk" href="#login/class/${esc(id)}">로그인하고 수강 신청</a>`; /* v25: 결제 연결 전에는 방문자도 '결제 준비 중'(가입 후 막다른 길 방지) */
+    if (rs.prep && st !== 'active') cta = `<button class="lbtn blk" disabled>준비 중</button><p class="mini">강의를 준비하고 있어요. 준비가 끝나면 이 화면에서 신청할 수 있어요.</p>`;
+    else if (!LR.me && rs.full) cta = `<button class="lbtn blk" disabled>${esc(rs.label)}</button><a class="lbtn pri blk" data-lwg="1" href="#login/class/${esc(id)}">로그인하고 대기 신청하기</a><p class="mini">자리가 나면 알림으로 알려 드려요.</p>`; /* v38 L-1 · L-2: 방문자도 목록과 같은 정원 판정 + 대기 신청 길 */
+    else if (!LR.me && !rs.ok && !rs.pend) cta = `<button class="lbtn blk" disabled>${esc(rs.label)}</button>`;
+    else if (!LR.me) cta = f > 0 && sh.pg.use === 'none' ? `<button class="lbtn blk" disabled>결제 준비 중</button><p class="mini">운영자가 결제 연결을 마치면 이 화면에서 바로 신청할 수 있습니다.</p>` : `<a class="lbtn pri blk" href="#login/class/${esc(id)}">로그인하고 수강 신청</a>`; /* v25: 결제 연결 전에는 방문자도 '결제 준비 중'(가입 후 막다른 길 방지) */
     else if (st === 'active') cta = `<a class="lbtn pri blk" href="#c/${esc(id)}">이어서 수강하기</a>${items[0] ? `<a class="lbtn ghost blk" href="#c/${esc(id)}/${esc(items[0].id)}">처음부터 수강하기</a>` : ''}${c.kind === 'sub' && sub ? `<p class="mini">구독 ${sub.status} · ${sub.n || 1}회차${cnt ? `/${cnt}` : ''} · 다음 결제일 ${esc(sub.next || '')}</p>` : ''}`;
     else if (st === 'hold') cta = `<div class="shp-warn">환불 신청 중입니다. 신청한 순간부터 이 클래스는 수강할 수 없습니다.</div><a class="lbtn ghost blk" href="#mypay/refund">환불 내역 보기</a>`;
     else if (st === 'ended' && !(c.kind === 'sub' && (!cnt || (sub && sub.n < cnt)))) cta = `<div class="shp-warn">수강 기간이 종료되었습니다. 같은 클래스는 다시 신청 · 결제할 수 없습니다. 연장이 필요하면 운영자에게 문의하세요.</div>`;
     else if (c.kind === 'sub' && cnt && sub && sub.n >= cnt && sub.status === '해지') cta = `<div class="shp-warn">설정된 구독 회차(${cnt}회)를 모두 이용했습니다.</div>`;
+    else if (!rs.ok && rs.full) cta = waitCta(id, rs.label); /* v38 L-2: 정원이 차면 대기 신청 */
     else if (!rs.ok) cta = `<button class="lbtn blk" disabled>${esc(rs.label)}</button>`;
     else if (gradeBlock(R) && f > 0) cta = `<div class="shp-warn">${esc(gradeBlock(R))}</div>`;
     else if (f > 0 && sh.pg.use === 'none') cta = `<button class="lbtn blk" disabled>결제 준비 중</button><p class="mini">운영자가 결제(PG) 연결을 마치면 신청할 수 있습니다.</p>`;
     else if (c.kind === 'sub') cta = `<a class="lbtn pri blk" href="#pay/sub/${esc(id)}">구독 신청 · 월 ${won(f)}</a><p class="mini">결제 수단을 등록하면 매월 같은 날 자동 결제됩니다.${cnt ? ` 최대 ${cnt}회차.` : ' 회차 제한 없음.'}${sub && sub.status === '해지' ? ` 지난 진도율은 유지됩니다.` : ''}</p>`;
     else if (f > 0) cta = `<a class="lbtn pri blk" href="#pay/class/${esc(id)}">결제하고 수강 신청 · ${won(f)}</a>`;
-    else cta = `<button class="lbtn pri blk" data-shact="enroll" data-v="${esc(id)}">수강 신청(무료)</button>`;
+    else cta = `<button class="lbtn pri blk" data-shact="enroll" data-v="${esc(id)}">${payOff() ? '수강 신청하기' : '수강 신청(무료)'}</button>`;
     const vmin = c.vmin || items.filter(i => i.type === 'video').reduce((a, i) => a + (+i.time || 0), 0);
     return sec(c.name, `<div class="shp-det"><div class="shp-main">${thumb(c, 'big')}
-        <div class="shp-box"><div><small>강의 수</small><b>${c.items || items.length}개</b></div><div><small>총 영상 시간</small><b>${vmin ? (vmin >= 60 ? Math.floor(vmin / 60) + '시간 ' + (vmin % 60) + '분' : vmin + '분') : '—'}</b></div><div><small>수료 기준</small><b>진도 ${c.thr || 80}%</b></div><div><small>수강 기간</small><b>${esc(periodTxt(c) || '상시')}</b></div></div>
+        <div class="shp-box">${(() => { const n = c.items != null ? +c.items : items.filter(i => i.type !== 'chapter' && i.type !== 'offline').length; const off = +c.off || items.filter(i => i.type === 'offline').length; return !n && +c.sessions > 0 ? `<div><small>수업</small><b>${+c.sessions}회</b></div>` : `<div><small>강의 수</small><b>${n ? n + '개' : off ? '없음' : '준비 중'}</b></div>${off ? `<div><small>오프라인 수업</small><b>${off}회</b></div>` : ''}`; })()}${vmin ? `<div><small>총 영상 시간</small><b>${vmin >= 60 ? Math.floor(vmin / 60) + '시간 ' + (vmin % 60) + '분' : vmin + '분'}</b></div>` : ''}<div><small>수료 기준</small><b>${esc(critOf(c).s)}</b></div><div><small>수강 기간</small><b>${esc(periodTxt(c) || '상시')}</b></div></div>
         <nav class="shp-tabs" aria-label="클래스 안내"><a href="#" data-l26jump="shp-intro" class="on">클래스 소개</a><a href="#" data-l26jump="shp-curx">커리큘럼</a><a href="#" data-l26jump="shp-extx">수강후기 · 커뮤니티</a></nav>
-        <div id="shp-intro"></div>${c.desc ? `<h2>✍️ 클래스에서 배울 수 있는 내용이에요</h2><p>${nl(c.desc)}</p>` : ''}
-        ${(c.intro || []).length ? `<h2>✨ 담당 강사님을 소개합니다</h2><div class="shp-ins">${c.intro.map(i => `<div>${i.photo ? `<img src="${esc(i.photo)}" alt="">` : ''}<b>${esc(i.name)}</b><p class="mini">${nl(i.bio || '')}</p></div>`).join('')}</div>` : (c.teachers || []).length ? `<p class="mini">담당 강사: ${esc(c.teachers.join(', '))}</p>` : ''}
+        <div id="shp-intro"></div>${c.desc ? `<h2>✍️ 클래스에서 배울 수 있는 내용이에요</h2>${mdLite(c.desc)}` : ''}
+        ${(c.intro || []).length ? `<h2>✨ 담당 강사님을 소개합니다</h2><div class="shp-ins">${c.intro.map(i => `<div>${i.photo ? `<img src="${esc(i.photo)}" alt="">` : ''}<b>${esc(i.name)}</b><p class="mini">${nl(i.bio || '')}</p></div>`).join('')}</div>` : (c.teachers || []).filter(n => !/^(관리자|운영자|기관 담당자)$/.test(String(n).trim())).length ? `<p class="mini">담당 ${esc((typeof lcTerm === 'function' && lcTerm('teacher')) || '강사')}: ${esc(c.teachers.filter(n => !/^(관리자|운영자|기관 담당자)$/.test(String(n).trim())).join(', '))}</p>` : ''}
         <h2 id="shp-curx">📚 커리큘럼 <small class="mini">${items.length}개</small></h2><ol class="shp-cur">${items.map(i => `<li>${st === 'active' ? '' : ico('lock', 14)} ${esc(i.title)}</li>`).join('') || '<li class="mini">커리큘럼을 준비 중입니다.</li>'}</ol>
         <div id="shp-extx"></div>${['lcNoticeHTML', 'lcCommHTML', 'lcReviewsHTML'].map(f => { try { return typeof window[f] === 'function' ? `<div class="shp-ext">${window[f](id) || ''}</div>` : ''; } catch (e) { console.error(e); return ''; } }).join('')}
         <p class="mini">클래스 유형: ${esc(KIND[c.kind] || '기간')} ${c.kind === 'sub' ? '— 기간 클래스와 커리큘럼이 같고 매월 정기 결제됩니다.' : c.kind === 'episode' ? '— 정해진 회차(일정)에 맞춰 수업합니다.' : c.kind === 'pack' ? '— 여러 클래스를 묶은 과정입니다.' : '— 정해진 기간 동안 온라인으로 수강합니다.'}</p></div>
-      <aside class="shp-side"><h3 class="shp-sname">${esc(c.name)}</h3><div class="shp-pr big">${priceHTML(c)}</div>${c.discount && c.discount.on && c.discount.until ? `<small class="mini">할인 ${esc(c.discount.until)}까지</small>` : ''}${c.recruit && c.recruit.early && c.recruit.early.on && (!c.recruit.early.until || today() <= c.recruit.early.until) ? `<small class="shp-rs">얼리버드 ${c.recruit.early.rate}% 할인${c.recruit.early.until ? ` · ${esc(c.recruit.early.until)}까지` : ''}</small>` : ''}
-        <ul class="shp-meta"><li>수강 신청: ${esc(rs.label)}</li>${c.recruit && c.recruit.on ? `<li>신청 기간: ${esc(c.recruit.from || '상시')} ~ ${esc(c.recruit.to || '상시')}</li><li>정원: ${c.recruit.cap ? `${c.n || 0} / ${c.recruit.cap}명` : '제한 없음'}</li>` : ''}${c.sessions ? `<li>회차: ${c.sessions}회</li>` : ''}<li>수강 기간: ${esc(periodTxt(c) || '상시')}</li><li>수료 기준: 진도 ${c.thr || 80}% 이상</li></ul>${cta}<button type="button" class="lbtn ghost blk shp-share" data-l26share="${esc(id)}">공유하기</button></aside></div>`, '<a href="#shop">클래스</a> › ' + esc(c.name)); }
+      <aside class="shp-side"><h3 class="shp-sname">${esc(c.name)}</h3>${priceHTML(c) ? `<div class="shp-pr big">${priceHTML(c)}</div>` : ''}${c.discount && c.discount.on && c.discount.until ? `<small class="mini">할인 ${esc(c.discount.until)}까지</small>` : ''}${c.recruit && c.recruit.early && c.recruit.early.on && (!c.recruit.early.until || today() <= c.recruit.early.until) ? `<small class="shp-rs">얼리버드 ${c.recruit.early.rate}% 할인${c.recruit.early.until ? ` · ${esc(c.recruit.early.until)}까지` : ''}</small>` : ''}
+        <ul class="shp-meta"><li>수강 신청: ${esc(rs.label)}</li>${c.recruit && c.recruit.on ? `<li>신청 기간: ${esc(c.recruit.from || '상시')} ~ ${esc(c.recruit.to || '상시')}</li><li>정원: ${c.recruit.cap ? `${c.n || 0} / ${c.recruit.cap}명` : '제한 없음'}</li>` : ''}${c.sessions ? `<li>회차: ${c.sessions}회</li>` : ''}<li>수강 기간: ${esc(periodTxt(c) || '상시')}</li><li>수료 기준: ${esc(critOf(c).l)}</li></ul>${cta}<button type="button" class="lbtn ghost blk shp-share" data-l26share="${esc(id)}">공유하기</button></aside></div>`, '<a href="#shop">클래스</a> › ' + esc(c.name)); }
 
   /* ── 결제 화면 ── */
-  function viewPay(kind, id) { const sh = SHOP(); if (!sh) return noShop(); if (!LR.me) return needLogin(`pay/${kind}/${id}`); const R = mine();
+  function viewPay(kind, id) { const sh = SHOP(); if (!sh) return noShop(); if (kind !== 'book' && payOff()) return sec('수강 신청', `<p class="lead">이 기관은 결제 없이 수강 신청해요.</p><a class="lbtn pri" href="#class/${esc(id)}">강좌 안내로 돌아가기</a>`); /* v37 L1 */ if (!LR.me) return needLogin(`pay/${kind}/${id}`); const R = mine();
     const x = kind === 'book' ? sh.books.find(b => b.id === id) : sh.classes.find(c => c.id === id); if (!x || !visible(x, R)) return sec('결제', '<p class="empty">결제할 상품을 찾지 못했습니다.</p>');
     const f = priceOf(x); const gb = gradeBlock(R); const back = kind === 'book' ? `#tb/${id}` : `#class/${id}`;
     if (gb) return sec('결제', `<div class="shp-warn">${esc(gb)}</div><a class="lbtn ghost" href="${back}">돌아가기</a>`);
@@ -147,6 +168,7 @@
       ${sub ? `<label class="fl">구독 시작일(비우면 결제 즉시 시작)<input type="date" name="start" min="${today()}"></label><p class="mini">결제 수단을 등록하면 매월 같은 날 ${won(f)}이 자동 결제됩니다. 구독을 취소하면 남은 기간은 수강할 수 있고 다음 달부터 결제되지 않습니다. 결제가 실패하면 재시도 기간 동안 수강 권한이 유지되고, 끝내 실패하면 자동 만료됩니다.</p>` : ''}
       <h2 class="p26h">결제 금액</h2>
       <dl class="shp-sum p26amt"><dt>상품 금액</dt><dd>${won(x.price)}</dd><dt>할인 금액</dt><dd>${disc ? '-' + won(disc) : '0원'}</dd><dt class="tot">최종 결제 금액</dt><dd class="tot"><b>${won(f)}</b>${sub ? '/월' : ''}</dd></dl>
+      ${kind === 'class' && f > 0 && typeof cpnCalc === 'function' ? `<div class="p26cp"><label class="fl" for="p26cpn">쿠폰 · 할인 코드(있으면)</label><div class="cpn-row"><input id="p26cpn" name="cpn" maxlength="20" autocomplete="off" placeholder="예: WELCOME10" style="text-transform:uppercase"><button type="button" class="lbtn ghost" data-lcpn="1">적용</button></div><p class="mini" id="p26cpm" role="status" aria-live="polite"></p></div>` : ''}
       <h2 class="p26h" id="p26mh">결제 방식</h2>
       <div class="shp-mth p26m" role="radiogroup" aria-labelledby="p26mh">${methods.map(([v], i) => `<label class="p26t"><input type="radio" name="m" value="${v}" ${i === 0 ? 'checked' : ''}><b>${esc(MD[v] || v)}</b><small>${esc(MS[v] || '')}</small></label>`).join('')}</div>
       <h2 class="p26h">유의사항</h2>
@@ -161,8 +183,10 @@
   function payFail() { shModal('결제가 완료되지 않았습니다', `<p class="mini">다음을 먼저 확인해 주세요.</p><ul class="shp-chk"><li>팝업 차단 해제 — 결제창은 팝업으로 열립니다.</li><li>크롬(Chrome) 브라우저 권장</li><li>방문 기록 · 쿠키(캐시) 삭제 후 다시 시도</li><li>카드 한도 초과 · 잔액 부족 여부</li><li>카드 유효기간 만료 여부</li><li>법인카드는 개인 결제 제한 여부</li><li>해외 카드는 국내 결제 모듈에서 결제가 어려울 수 있습니다${(SHOP() || { pg: {} }).pg.intl ? '(이 홈페이지는 VISA · Master 해외카드 결제를 지원합니다)' : ''}.</li></ul><p class="mini">해결되지 않으면 홈페이지 운영자에게 오류 내용을 알려 주세요.</p>`, [{ label: '닫기', kind: 'pri' }]); }
 
   /* ── 결제 완료 · 결제 상세 · 결제 관리 ── */
+  /* v33 R2(#20): 결제 직후 첫 강의(단원 머리 제외)로 바로 간다 */
+  const firstHref = ref => { const c = ((typeof SITE === 'function' ? SITE() : LR.site) || {}).classes; const lc = (c || []).find(x => x.id === ref); const L = ((lc && lc.items) || []).filter(x => x.type !== 'chapter'); const r = (((LR.lp || {}).cls || {})[ref] || {}).items || {}; const fi = L.find(x => !(r[x.id] || {}).done) || L[0]; return '#c/' + ref + (fi ? '/' + fi.id : ''); };
   function viewPayOk(pid) { const R = mine(); const p = R.pays.find(x => x.id === pid); if (!p) return sec('결제 결과', '<p class="empty">결제 정보를 찾지 못했습니다.</p>');
-    const go = p.itemType === 'book' ? `<a class="lbtn pri" href="#mybooks">내 교재/교구</a>` : p.itemType === 'bill' ? '' : `<a class="lbtn pri" href="#c/${esc(p.ref)}">강의 보러 가기</a>`;
+    const go = p.itemType === 'book' ? `<a class="lbtn pri" href="#mybooks">내 교재/교구</a>` : p.itemType === 'bill' ? '' : `<a class="lbtn pri" href="${esc(firstHref(p.ref))}">강의 보러 가기</a>`;
     return sec(p.status === '결제 대기' ? '입금을 기다리고 있습니다' : '결제가 완료되었습니다', `<div class="shp-done">${p.status === '결제 대기' && p.vacct ? `<p>아래 가상계좌로 <b>${esc(p.vacct.until)}</b>까지 ${won(p.amount)}을 입금해야 결제가 완료됩니다.</p><p class="shp-acct">${esc(p.vacct.bank)} <b>${esc(p.vacct.no)}</b> (예금주 ${esc(SITE().org.name)})</p><div class="shp-row"><button class="lbtn ghost sm" data-shact="vpaid" data-v="${esc(p.id)}">입금 완료(데모)</button></div>` : `<p>${esc(p.item)} · ${won(p.amount)} · ${esc(p.method || '')}</p>`}<div class="shp-row">${p.status === '결제 완료' ? go : ''}<a class="lbtn ghost" href="#payd/${esc(p.id)}">결제 상세</a><a class="lbtn ghost" href="#mypay">결제 관리</a></div></div>`); }
   function refundBlock(p, R) { const sh = SHOP() || { books: [] };
     if (p.refund && p.refund.state === '거절') return '환불이 거절된 건은 다시 신청할 수 없습니다. 운영자에게 문의하세요.';
@@ -178,8 +202,8 @@
     return sec('결제 상세', `<div class="shp-card2"><div class="shp-row sp"><b>${esc(p.item)}</b><span>${acts}</span></div>
       <dl class="shp-dl"><dt>결제 금액</dt><dd>${won(p.amount)}</dd><dt>결제 일시</dt><dd>${esc(p.at)}${p.refund && p.refund.at ? `<br><small class="mini">환불 신청일 ${esc(p.refund.at)}</small>` : ''}</dd><dt>결제 수단</dt><dd>${esc(p.method || '')}</dd><dt>결제 상태</dt><dd>${stTag(p)}</dd>${p.vacct ? `<dt>가상계좌</dt><dd>${esc(p.vacct.bank)} ${esc(p.vacct.no)} · ${esc(p.vacct.until)}까지</dd>` : ''}${p.ship ? `<dt>요청사항</dt><dd>${esc(p.ship)}</dd>` : ''}${p.refund ? `<dt>환불 사유</dt><dd>${esc(p.refund.reason || '')}</dd>${p.refund.state === '승인' ? `<dt>환불 금액</dt><dd>${won(p.refund.amount)} · ${esc(p.refund.done || '')}</dd>` : ''}${p.refund.note ? `<dt>거절 사유</dt><dd>${esc(p.refund.note)}</dd>` : ''}` : ''}</dl>
       ${rb ? `<p class="mini">${esc(rb)}</p>` : ''}${p.refund && p.refund.state === '신청' ? '<p class="mini">운영자가 승인하면 환불이 완료됩니다. 카드 결제 취소 · 금액 반환은 영업일 기준 며칠 걸릴 수 있습니다.</p>' : ''}</div>`, '<a href="#mypay">결제 관리</a> › 결제 상세'); }
-  function viewMyPay(tb) { if (!LR.me) return needLogin('mypay'); tb = tb || 'pay'; const R = mine(); const sh = SHOP() || { classes: [] };
-    const tabs = [['pay', '결제 내역'], ['refund', '환불 내역'], ['sub', '구독 관리'], ['bill', '청구서']];
+  function viewMyPay(tb) { if (!LR.me) return needLogin('mypay'); tb = tb || (LR.me.kind === 'parent' ? 'bill' : 'pay'); const R = mine(); const sh = SHOP() || { classes: [] };
+    const par = LR.me.kind === 'parent'; if (par && !['bill', 'pay', 'refund'].includes(tb)) tb = 'bill'; const tabs = par ? [['bill', '청구서'], ['pay', '결제 내역'], ['refund', '환불 내역']] : [['pay', '결제 내역'], ['refund', '환불 내역'], ['sub', '구독 관리'], ['bill', '청구서']]; /* v38 보호자: 청구서 먼저, 구독 관리 없음(QA K13) */
     const nm = id => ((sh.classes.find(c => c.id === id) || {}).name) || '구독 클래스';
     let body = '';
     if (tb === 'pay') { const pend = R.bills.filter(b => b.status === '미납');
@@ -226,18 +250,25 @@
   /* ── 동작 ── */
   function push(type, data) { if (typeof lpxPush !== 'function') { toast('지금은 요청을 보낼 수 없습니다.', 'bad'); return null; } return lpxPush(type, data); }
   const vacct = () => ({ bank: ['우리은행', '신한은행', 'KB국민은행'][Math.floor(Math.random() * 3)], no: '5' + String(Math.floor(Math.random() * 1e12)).padStart(12, '0').replace(/(\d{3})(\d{6})(\d{3})/, '$1-$2-$3'), until: addD(today(), 3) });
+  /* v38 A-17 쿠폰 적용: 데모는 이 브라우저의 기관 데이터, 운영은 서버가 확인(코드 목록은 학습자에게 보내지 않는다) */
+  document.addEventListener('click', async e => { const b = e.target.closest && e.target.closest('[data-lcpn]'); if (!b) return; e.preventDefault(); const f = b.closest('#shpPay'); if (!f) return; const id = f.dataset.id; const sh = SHOP(); const x = sh && sh.classes.find(c => c.id === id); if (!x) return;
+    const msg = (t, ok) => { const m = f.querySelector('#p26cpm'); if (m) { m.textContent = t; m.className = 'mini ' + (ok ? 'ok' : 'bad'); } }; const code = (f.querySelector('[name=cpn]') || {}).value || ''; const base = priceOf(x); let R;
+    try { if (LR.mode === 'live') R = await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/coupon`, { code, cls: id }); else { const doc = roomDoc() || {}; const k = cpnNorm(code); const used = (doc.pays || []).filter(p => p && cpnNorm(p.cpn) === k && !/취소/.test(p.status || '')).length; R = cpnCalc(doc.coupons || [], code, id, base, used, today()); } } catch (er) { R = { ok: false, msg: er.message || '쿠폰을 확인하지 못했어요. 잠시 뒤 다시 해 주세요.' }; }
+    const dd = f.querySelectorAll('.p26amt dd'); if (!R || !R.ok) { delete f.dataset.cpn; delete f.dataset.final; if (dd[1]) dd[1].textContent = (+x.price || 0) - base ? '-' + won((+x.price || 0) - base) : '0원'; if (dd[2]) dd[2].innerHTML = `<b>${won(base)}</b>`; msg((R && R.msg) || '쓸 수 없는 쿠폰이에요.', false); return; }
+    f.dataset.cpn = R.code; f.dataset.final = String(R.final); if (dd[1]) dd[1].textContent = '-' + won((+x.price || 0) - base + R.off); if (dd[2]) dd[2].innerHTML = `<b>${won(R.final)}</b>`; msg(`쿠폰 ${R.code} 적용 — ${R.label} · ${won(R.off)} 할인돼요.`, true); });
+  document.addEventListener('input', e => { const i = e.target; if (!i || i.name !== 'cpn') return; const f = i.closest('#shpPay'); if (f && f.dataset.cpn) { delete f.dataset.cpn; delete f.dataset.final; const m = f.querySelector('#p26cpm'); if (m) m.textContent = '코드를 바꿨어요. [적용]을 다시 눌러 주세요.'; const x = ((SHOP() || {}).classes || []).find(c => c.id === f.dataset.id); const dd = f.querySelectorAll('.p26amt dd'); if (x) { const b0 = priceOf(x); if (dd[1]) dd[1].textContent = (+x.price || 0) - b0 ? '-' + won((+x.price || 0) - b0) : '0원'; if (dd[2]) dd[2].innerHTML = `<b>${won(b0)}</b>`; } } });
   document.addEventListener('submit', e => { const f = e.target; if (f.id !== 'shpPay') return; e.preventDefault(); e.stopImmediatePropagation(); if (pv()) return;
     const kind = f.dataset.kind, id = f.dataset.id; const sh = SHOP(); const x = kind === 'book' ? sh.books.find(b => b.id === id) : sh.classes.find(c => c.id === id); if (!x) return;
     if (!f.agree.checked) { const er = f.querySelector('.p26err'); if (er) { er.hidden = false; f.agree.focus(); } else toast('결제 동의에 체크하세요.', 'warn'); return; }
     const ship = f.ship ? f.ship.value.trim() : ''; if (f.ship && x.req && x.req.must && !ship) { toast('배송지 · 요청사항을 입력하세요.', 'warn'); f.ship.focus(); return; }
-    const method = (f.querySelector('[name=m]:checked') || {}).value || '신용카드'; const amount = priceOf(x); const payId = rid('pay'); const itemType = kind === 'book' ? 'book' : kind === 'sub' ? 'sub' : 'class';
-    const data = { payId, itemType, ref: id, item: x.name, amount, method, ship, start: f.start ? f.start.value : '', subId: kind === 'sub' ? rid('sb') : '' };
+    const method = (f.querySelector('[name=m]:checked') || {}).value || '신용카드'; const cpn = kind === 'class' && f.dataset.cpn ? f.dataset.cpn : ''; const amount = cpn ? Math.max(0, +f.dataset.final || 0) : priceOf(x); /* v38 A-17: 적용한 쿠폰 — 운영 서버 · 운영자 화면이 다시 계산해 확인한다 */ const payId = rid('pay'); const itemType = kind === 'book' ? 'book' : kind === 'sub' ? 'sub' : 'class';
+    const data = { payId, itemType, ref: id, item: x.name, amount, method, ship, ...(cpn ? { cpn } : {}), start: f.start ? f.start.value : '', subId: kind === 'sub' ? rid('sb') : '' };
     pgWindow(x.name, amount, () => { if (method === '가상계좌') { data.status = '결제 대기'; data.vacct = vacct(); } else data.status = '결제 완료'; push('pay', data); toast(data.status === '결제 대기' ? '가상계좌가 발급되었습니다. 기한 안에 입금하세요.' : '결제가 완료되었습니다.', 'ok'); location.hash = '#payok/' + payId; });
   }, true);
   document.addEventListener('click', e => { const el = e.target.closest('[data-shact],[data-shf]'); if (!el) return; e.preventDefault();
     if (el.dataset.shf) { LR.shopF = { ...(LR.shopF || {}), [el.dataset.shf]: el.dataset.v, q: ($('#shpQ') || {}).value || '' }; lrender(); return; }
     const k = el.dataset.shact, v = el.dataset.v; if (pv()) return;
-    if (k === 'enroll') { if (!LR.me) { location.hash = '#login/class/' + v; return; } push('enroll', { cls: v }); toast('수강 신청이 완료되었습니다.', 'ok'); lrender(); }
+    if (k === 'enroll') { if (!LR.me) { location.hash = '#login/class/' + v; return; } push('enroll', { cls: v }); const on = (() => { try { const e = (mine().enr || {})[v]; return !!(e && e.status === 'active'); } catch (x) { return false; } })(); toast(on ? '수강 신청이 완료되었습니다. 바로 학습을 시작할 수 있어요.' : '수강 신청이 완료되었습니다.', 'ok'); if (on) { location.hash = '#c/' + encodeURIComponent(v); return; } lrender(); } /* v38 신청 뒤 같은 상세 화면에 머물던 것 → 바로 강좌로(QA V15) */
     if (k === 'vpaid') { push('vacct-paid', { payId: v }); toast('입금이 확인되었습니다(데모).', 'ok'); lrender(); }
     if (k === 'pcancel') shModal('결제 취소', `<label class="fl">취소 사유<select name="r"><option>결제 수단 변경</option><option>단순 변심</option><option>중복 주문</option><option>기타</option></select></label>`, [{ label: '닫기' }, { label: '결제 취소', kind: 'pri', run: w => { push('pay-cancel', { payId: v, reason: w.querySelector('[name=r]').value }); toast('결제를 취소했습니다.', 'ok'); setTimeout(lrender, 0); } }]);
     if (k === 'refund') { const R = mine(); const p = R.pays.find(x => x.id === v); if (!p) return; const rb = refundBlock(p, R); if (rb) { toast(rb, 'warn'); return; } const sh = SHOP() || {};

@@ -14,7 +14,7 @@ function BRIEF() {
   if (ty === 'corp') L.unshift({ k: 'legal', label: '법정교육 미이수', n: new Set(legalUndone().map(x => x.id)).size, q: '법정교육 미이수자에게 마감 안내 보내줘', unit: '명' });
   if (ty === 'voc') L.unshift({ k: 'att', label: '출석률 80% 미만', n: new Set(lowAtt().map(x => x.id)).size, q: '출석률 80% 미만 훈련생에게 경고 보내줘', unit: '명' });
   if (ty === 'lifelong' || ty === 'adult') L.unshift({ k: 'refund', label: ty === 'lifelong' ? '학습비 반환 신청' : '환불 신청', n: S.pays.filter(p => p.status === '환불 신청').length, q: '환불 신청 기한 확인해줘', unit: '건' });
-  if (ty === 'univ') L.unshift({ k: 'diag', label: 'AI 진단 미완료', n: S.members.filter(m => !m.diag).length, q: 'AI 진단 안 한 학생에게 안내 보내줘', unit: '명' });
+  if (ty === 'univ' && S.org.ed !== 'lms') L.unshift({ k: 'diag', label: 'AI 진단 미완료', n: S.members.filter(m => !m.diag).length, q: 'AI 진단 안 한 학생에게 안내 보내줘', unit: '명' });
   return L.slice(0, 4);
 }
 const EXQ = {
@@ -23,7 +23,7 @@ const EXQ = {
   k12: ['중2-A반 이번 주 출결 요약해줘', '결석한 원생에게 보강 영상 배정하는 자동화 만들어줘', '겨울방학 특강 공지 써줘', '이번 달 매출 요약해줘'],
   adult: ['이번 달 매출 요약해줘', '엑셀 실무 마스터 커리큘럼 다시 짜줘', '수료한 수강생에게 후기 요청 보내는 자동화 만들어줘', '가입률 낮은 기수'],
   lifelong: ['30시간 미만 강좌 찾아줘', '바리스타 과정 모집 공지 써줘', '사전 수강신청 10명 미만 강좌 알리는 자동화 만들어줘', '이번 주 운영 현황 요약'],
-  voc: ['이번 주 HRD-Net 보고 자료 만들어줘', '웹개발 과정 퀴즈 5문항 만들어줘', '매일 부정훈련 의심 건을 담당자에게 알리는 자동화 만들어줘', '가입률 낮은 훈련반']
+  voc: ['이번 주 HRD-Net 보고 자료 만들어줘', '용접기능사 실기 과정 퀴즈 5문항 만들어줘', '매일 부정훈련 의심 건을 담당자에게 알리는 자동화 만들어줘', '가입률 낮은 훈련반']
 };
 const CTXQ = { assess: '검수 대기 오래된 순으로', badge: '이번 주 배지 발급 현황 요약', members: `14일 미접속 ${''}독려 메시지 보내줘`, class: '진도 30% 미만 학생에게 독려 메시지 보내줘', billing: '미납 보호자에게 청구서 다시 알려줘', site: '홈페이지를 신뢰감 있는 분위기로 다시 만들어줘', auto: '매주 금요일 주간 보고서 보내는 자동화 만들어줘', dash: '주간 보고서 만들어 줘' };
 
@@ -56,7 +56,7 @@ function aiBody(m) {
   if (m.steps) h += `<ol class="msteps">${m.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>`;
   if (m.plan) {
     const live = PLANS[m.plan] && m.state === 'pending';
-    h += `<div class="mact">${live ? `<button class="btn sm ink" data-act="plan-ok" data-v="${m.plan}">${esc(m.cta || '승인하고 실행')}</button><button class="btn sm ghost" data-act="plan-no" data-v="${m.plan}">취소</button>` : m.state === 'done' ? tag('실행 완료', 'g') : m.state === 'cancel' ? tag('취소함') : tag('만료됨 — 다시 요청해 주세요')}</div>`;
+    h += `<div class="mact">${live ? `<button class="btn sm ink" data-act="plan-ok" data-v="${m.plan}"${m.cta && m.cta !== '승인하고 실행' ? ` title="${esc(m.cta)}"` : ''}>승인하고 실행</button><button class="btn sm ghost" data-act="plan-no" data-v="${m.plan}">취소</button>` : m.state === 'done' ? tag('실행 완료', 'g') : m.state === 'cancel' ? tag('취소함') : tag('만료됨 — 다시 요청해 주세요')}</div>`;
   }
   if (m.go) h += `<div class="mact"><button class="btn sm" data-act="go" data-v="${esc(m.go)}">${esc(mlabel(m.go))} 열기 ${ic('arrow', 14)}</button></div>`;
   if (m.btn) h += `<div class="mact"><button class="btn sm ink" data-act="${esc(m.btn.act)}" data-v="${esc(m.btn.v || '')}">${ic('spark', 14)} ${esc(m.btn.label)}</button></div>`;
@@ -109,7 +109,7 @@ function answer(q) {
   }
   // 2) 그룹별 가입률
   if (/가입률/.test(q) || (/(낮은|저조)/.test(q) && /(학과|부서|반|기수|훈련반|그룹)/.test(q))) {
-    const n = +(q.match(/(\d+)\s*(곳|개)/) || [])[1] || 5; if (!(S.groups || []).length) return { text: `아직 ${t('group')}이(가) 없습니다. ${t('learner')} 화면에서 ${t('group')}을(를) 만들면 ${t('group')}별 가입률을 볼 수 있습니다.` };
+    const n = +(q.match(/(\d+)\s*(곳|개)/) || [])[1] || 5; if (!(S.groups || []).length) return { text: `아직 ${tj('group', '이')} 없습니다. ${t('learner')} 화면에서 ${tj('group', '을')} 만들면 ${t('group')}별 가입률을 볼 수 있습니다.` };
     const R = S.groups.map(g => { const ms = S.members.filter(m => m.group === g.id); return { g, n: ms.length, j: ms.filter(m => m.grade === '정회원').length / Math.max(1, ms.length) * 100, p: avgOf(S.classes.flatMap(c => ms.filter(m => c.prog[m.id]).map(m => c.prog[m.id].p))) }; }).sort((a, b) => a.j - b.j).slice(0, n);
     return { text: `가입률이 낮은 ${t('group')} ${R.length}곳입니다. 가장 낮은 곳은 ${R[0].g.name}(${pct(R[0].j)})입니다.`, html: table([t('group'), '인원', '가입률', '평균 진도'], R.map(r => [esc(r.g.name), r.n, pct(r.j), pct(r.p)])), go: 'dash' };
   }
@@ -129,7 +129,7 @@ function answer(q) {
   if ((sid || byName) && /(상황|현황|어때|리포트|정보)/.test(q)) {
     const m = sid ? S.members.find(x => x.extra?.학번 === sid) : byName; if (!m) return { text: `${sid} 학번을 찾지 못했습니다. 등록 · 초대 화면에서 확인해 주세요.`, go: 'enroll' };
     const cs = S.classes.filter(c => c.prog[m.id]);
-    return { text: AI.report(m), html: table([t('cls'), '진도', '과제', t('done')], cs.map(c => [esc(c.name), pct(c.prog[m.id].p), { none: '미제출', submitted: '검수 대기', graded: '통과', returned: '재제출', failed: '미통과' }[c.prog[m.id].assign] || '—', c.prog[m.id].p >= c.criteria.threshold ? 'Y' : '—'])), go: 'members' };
+    return { text: AI.report(m), html: table([t('cls'), '진도', '과제', t('done')], cs.map(c => [esc(c.name), pct(c.prog[m.id].p), { none: '미제출', submitted: '검수 대기', graded: '통과', returned: '재제출', failed: '미통과' }[c.prog[m.id].assign] || '—', clsDone(c, m.id) ? 'Y' : '—'])), go: 'members' };
   }
   // 6) 진단 미완료
   if (/진단/.test(q) && /(안 한|미완료|안내)/.test(q)) {
@@ -140,9 +140,9 @@ function answer(q) {
   // 7) 배지 현황
   if (/배지/.test(q) && /(현황|요약|몇)/.test(q)) { const R = S.badges.map(b => [esc(b.name), b.issued.filter(i => i.st === '유효').length, b.issued.filter(i => i.at >= addDays(today(), -7)).length]); return { text: '배지 발급 현황입니다.', html: table(['배지', '유효', '최근 7일'], R), go: 'badge' }; }
   // 8) 14일 미접속(숫자 일수 지원)
-  if (/미접속/.test(q)) { const d = +(q.match(/(\d+)\s*일/) || [])[1] || 14; const L = S.members.filter(m => daysAgo(m.last) >= d); const msg = AI.msg('학습 복귀 안내'); const pid = uid('p'); PLANS[pid] = { run: () => { S.msgs.unshift({ id: uid('ms'), at: nowStr(), to: `${d}일 미접속`, title: msg.title, ch: '앱 푸시 + 이메일', n: L.length }); return `${L.length}명에게 발송했습니다(데모).`; }, go: 'message' }; return { title: '미접속 독려', text: `${d}일 이상 접속하지 않은 ${t('learner')}은 ${L.length}명입니다. 아래 메시지로 독려할까요?`, html: `<div class="pvmsg"><b>${esc(msg.title)}</b><p>${esc(msg.body).replace(/\n/g, '<br>')}</p><small>대상: ${L.slice(0, 8).map(m => esc(m.name)).join(', ')}${L.length > 8 ? ` 외 ${L.length - 8}명` : ''}</small></div>`, plan: L.length ? pid : '', state: 'pending', cta: `${L.length}명에게 보내기` }; }
+  if (/미접속/.test(q)) { const d = +(q.match(/(\d+)\s*일/) || [])[1] || 14; const L = S.members.filter(m => daysAgo(m.last) >= d); const msg = AI.msg('학습 복귀 안내'); const pid = uid('p'); PLANS[pid] = { run: () => { S.msgs.unshift({ id: uid('ms'), at: nowStr(), to: `${d}일 미접속`, title: msg.title, ch: '앱 푸시 + 이메일', n: L.length }); return `${L.length}명에게 발송했습니다(데모).`; }, go: 'message' }; return { title: '미접속 독려', text: `${d}일 이상 접속하지 않은 ${tj('learner', '은')} ${L.length}명입니다. 아래 메시지로 독려할까요?`, html: `<div class="pvmsg"><b>${esc(msg.title)}</b><p>${esc(msg.body).replace(/\n/g, '<br>')}</p><small>대상: ${L.slice(0, 8).map(m => esc(m.name)).join(', ')}${L.length > 8 ? ` 외 ${L.length - 8}명` : ''}</small></div>`, plan: L.length ? pid : '', state: 'pending', cta: `${L.length}명에게 보내기` }; }
   // 9) 과정 설계 · 루브릭 · AI 평가 · 진단 만들기
-  if (/(설계|강의\s*계획|주차별|15주)/.test(q)) { const tp = q.replace(/(과정|교과목|강좌|과목)?\s*(AI로|으로|로)?\s*(설계|강의\s*계획서?|주차별|15주|편성|만들어|해\s*줘|줘|짜\s*줘|해주세요)/g, ' ').replace(/\s+/g, ' ').trim(); return { text: `「${tp || '새 과정'}」 과정을 설계하겠습니다. 주차 수 · 대상 · 옵션(YouTube 영상 자동 추천 · 퀴즈 · 과제 · 시험)을 확인해 주세요.`, btn: { act: 'ai-design', v: tp, label: 'AI 과정 설계 열기' } }; }
+  if (/(설계|강의\s*계획|(?:주차|차시)별|15주)/.test(q)) { const tp = q.replace(/(과정|교과목|강좌|과목)?\s*(AI로|으로|로)?\s*(설계|강의\s*계획서?|(?:주차|차시)별|15주|편성|만들어|해\s*줘|줘|짜\s*줘|해주세요)/g, ' ').replace(/\s+/g, ' ').trim(); return { text: `「${tp || '새 과정'}」 과정을 설계하겠습니다. 주차 수 · 대상 · 옵션(YouTube 영상 자동 추천 · 퀴즈 · 과제 · 시험)을 확인해 주세요.`, btn: { act: 'ai-design', v: tp, label: 'AI 과정 설계 열기' } }; }
   if (/루브릭/.test(q)) { const nm = q.replace(/루브릭|만들어|줘|생성|해/g, '').trim() || '과제'; const rb = AI.rubric(nm); const pid = uid('p'); PLANS[pid] = { run: () => { S.rubrics.push(rb); UI.asF = 'rubric'; return `「${rb.name}」을(를) 루브릭 라이브러리에 저장했습니다.`; }, go: 'assess' }; return { title: '루브릭', text: `「${rb.name}」 초안입니다. 저장할까요?`, html: rubricTable(rb), plan: pid, state: 'pending', cta: '루브릭 저장' }; }
   if (/(AI\s*평가|AI로\s*채점|채점\s*해)/i.test(q)) { const P = pend(); const pid = uid('p'); PLANS[pid] = { run: () => { P.forEach(({ c, id }) => aiEval(c, id)); return `${P.length}건 AI 평가를 마쳤습니다. 평가 화면에서 확정하세요.`; }, go: 'assess' }; return { title: 'AI 평가', text: `채점 대기 ${P.length}건을 루브릭 기준으로 AI 평가합니다. 기준별 점수와 근거가 붙고, 확정은 운영자가 합니다.`, plan: P.length ? pid : '', state: 'pending', cta: 'AI 평가 실행' }; }
   if (/진단/.test(q) && /(만들|생성|새로|설계)/.test(q)) return { text: '진단을 만들겠습니다. AI로 문항을 생성하거나 자료(PDF · 텍스트)를 올려 만들 수 있습니다.', btn: { act: 'dg-new', label: '새 진단 만들기' } };

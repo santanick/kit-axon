@@ -1,0 +1,12 @@
+# Cloud Build: 저장소 루트를 컨텍스트로 service/Dockerfile 이미지를 만들어 Artifact Registry에 올린다(deploy.sh가 호출).
+steps:
+  - name: gcr.io/cloud-builders/docker
+    env: ['DOCKER_BUILDKIT=1']
+    args: ['build', '-f', '${_DOCKERFILE}', '-t', '${_IMAGE}', '.']
+images: ['${_IMAGE}']
+timeout: 3600s
+options:
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY
+substitutions:
+  _DOCKERFILE: service/Dockerfile

@@ -149,7 +149,7 @@
 
   /* 2단계(UX) 데모 샘플: 이번 학기 강의실에 토론 · 설문 · 사전 과제를 미리 넣어 처음 연 화면이 비어 있지 않게 한다(운영 모드 영향 없음) */
   X.seedHooks.push(L => { L.sections.filter(s => s.term === '2026-2').forEach(s => { try {
-    const sec = s.id; const fo = D['forum-save']({ section: sec, kind: 'free', layout: 'thread', title: '1주차 — 이번 학기에 기대하는 점', prompt: '이 과목에서 가장 배우고 싶은 것을 한두 문장으로 남겨 주세요.' });
+    const sec = s.id; const fo = D['forum-save']({ section: sec, kind: 'free', layout: 'thread', title: '1차시 — 이번 학기에 기대하는 점', prompt: '이 과목에서 가장 배우고 싶은 것을 한두 문장으로 남겨 주세요.' });
     [['20261001', '실무 사례를 많이 다뤘으면 좋겠습니다.'], ['20261002', '프로젝트로 직접 만들어 보고 싶습니다.'], ['20261004', '시험 준비 방법이 궁금합니다.']].forEach(([no, body]) => D.post({ as: no, forum: fo.id, body }));
     const pl = D['poll-save']({ section: sec, question: '지난 수업 난이도는 어땠나요?', options: ['쉬웠다', '적당했다', '어려웠다'] });
     [['20261001', 1], ['20261002', 1], ['20261003', 2], ['20261004', 0]].forEach(([no, c]) => D['poll-vote']({ as: no, poll: pl.id, choices: [c] }));

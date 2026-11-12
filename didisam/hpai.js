@@ -107,7 +107,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     if (ty === 'classes') return S2('classes', { eyebrow: str(o.eyebrow, 40), title: str(o.title, 60) || `지금 모집 중인 ${t('cls')}`, sub: str(o.sub, 140), ids: pubList().slice(0, 4).map(c => c.id), layout: 'grid', auto: true });
     if (ty === 'notices') return S2('notices', { title: str(o.title, 60) || '공지사항', n: 3 });
     if (ty === 'reviews') return S2('reviews', { title: str(o.title, 60) || '수강후기' });
-    if (ty === 'map') return S2('map', { title: str(o.title, 60) || '오시는 길 · 문의', addr: ft.addr || '주소를 입력하세요', tel: ft.tel || '연락처를 입력하세요', hours: str(o.hours, 60) || '평일 09:00 ~ 18:00' });
+    if (ty === 'map') return S2('map', { title: str(o.title, 60) || '오시는 길 · 문의', addr: ft.addr || '주소를 입력하세요', tel: ft.tel || '연락처를 입력하세요', hours: str(o.hours, 60) || str(ft.hours, 60) /* v34.2 지어낸 운영 시간을 넣지 않는다 — 설정값만 */ });
     if (ty === 'image') return S2('image', { title: str(o.title, 60), alt: str(o.alt, 80) || str(o.title, 60) });
     if (ty === 'video') return S2('video', { title: str(o.title, 60) || '소개 영상', url: '' });
     return null;
@@ -145,15 +145,17 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
 
   /* ── 기본 설계(Claude 없이): 기관 유형 · 이름 · 공개 강좌로 ── */
   const LTY = {
-    corp: { look: 'corpPortal', color: '#1E3A8A', ey: 'LEARNING PORTAL', hero: n => [`${n} 교육 포털`, '필요한 교육을 필요한 때에 이수하고 기록합니다.'], about: '교육 안내', feat: [['직무 교육', '부서 · 직급별 필수 과정'], ['리더십', '단계별 리더 과정'], ['법정의무교육', '마감 전 이수 · 이수증 발급'], ['AI · 디지털', '업무에 바로 쓰는 실습']], steps: [['과정 확인', '나에게 배정된 과정을 확인합니다'], ['학습', '영상 · 실습 · 퀴즈로 배웁니다'], ['이수', '기준을 채우면 이수증이 발급됩니다']] },
-    univ: { look: 'campus', color: '#2A2B2B', ey: 'LEARNING CENTER', hero: n => [`${n}\n배움이 역량이 되는 곳`, '교과 · 비교과 학습과 디지털 배지를 한 곳에서 관리합니다.'], about: '센터 소개', feat: [['교과 연계', '수업과 이어지는 온라인 학습'], ['비교과', '특강 · 프로그램 신청'], ['디지털 배지', '이수한 역량을 증명'], ['학습 기록', '내 학습 이력 한눈에']], steps: [['로그인', '학번으로 로그인합니다'], ['신청', '원하는 과정을 신청합니다'], ['이수', '이수하면 배지를 받습니다']] },
+    corp: { look: 'corpPortal', color: '#1E3A8A', ey: 'LEARNING PORTAL', hero: n => [`${String(n || '').replace(/\s*교육$/, '')} 교육 포털`, '필요한 교육을 필요한 때에 이수하고 기록합니다.'], about: '교육 안내', feat: [['직무 교육', '부서 · 직급별 필수 과정'], ['리더십', '단계별 리더 과정'], ['법정의무교육', '마감 전 이수 · 이수증 발급'], ['AI · 디지털', '업무에 바로 쓰는 실습']], steps: [['과정 확인', '나에게 배정된 과정을 확인합니다'], ['학습', '영상 · 실습 · 퀴즈로 배웁니다'], ['이수', '기준을 채우면 이수증이 발급됩니다']] },
+    univ: { look: 'campus', color: '#2A2B2B', get ey() { return /상담|심리/.test(((typeof S !== 'undefined' && S && S.org) || {}).name || '') ? 'COUNSELING CENTER' : 'LEARNING CENTER'; }, hero: n => /상담|심리/.test(n) ? [`${n}\n마음을 함께 돌보는 곳`, '상담 · 심리 프로그램을 신청하고 참여 기록을 한 곳에서 확인합니다.'] : [`${n}\n배움이 역량이 되는 곳`, `교과 · 비교과 학습${typeof menuOn === 'function' && menuOn('badge') ? '과 디지털 배지를' : '을'} 한 곳에서 관리합니다.`], /* v38 F5 U19: 상담센터 · 배지 끈 기관 문구 */ about: '센터 소개', feat: [['교과 연계', '수업과 이어지는 온라인 학습'], ['비교과', '특강 · 프로그램 신청'], ['디지털 배지', '이수한 역량을 증명'], ['학습 기록', '내 학습 이력 한눈에']], steps: [['로그인', '학번으로 로그인합니다'], ['신청', '원하는 과정을 신청합니다'], ['이수', '이수하면 배지를 받습니다']] },
     k12: { look: 'brandBold', color: '#2563EB', ey: 'ACADEMY', hero: n => [`${n}\n매일 관리하는 공부`, '반별 수업 · 출결 · 테스트를 보호자와 함께 확인합니다.'], about: '학원 소개', feat: [['반별 수업', '수준에 맞춘 소수 정예 수업'], ['매 회차 테스트', '배운 내용을 바로 확인'], ['보호자 소통', '출결 · 성적 알림'], ['온라인 보강', '빠진 수업도 영상으로']], steps: [['상담 신청', '전화나 온라인으로 신청합니다'], ['레벨 확인', '수준에 맞는 반을 정합니다'], ['수업 시작', '첫 수업부터 기록을 남깁니다']] },
-    adult: { look: 'mintSoft', color: '#5C74F6', ey: 'ONLINE CLASS', hero: n => [`${n}\n실무에 바로 쓰는 강좌`, '짧은 강의와 실습으로 오늘 배운 것을 내일 바로 씁니다.'], about: '소개', feat: [['짧은 강의', '바쁜 일정에도 완주할 수 있게'], ['실습 과제', '손으로 익히는 실무'], ['질문 답변', '막히면 바로 물어보세요'], ['수료증', '완주하면 수료증 발급']], steps: [['강좌 고르기', '목표에 맞는 강좌를 고릅니다'], ['수강 신청', '가입하고 바로 신청합니다'], ['학습 · 수료', '끝까지 완주하면 수료증을 받습니다']] },
+    adult: { look: 'mintSoft', color: '#5C74F6', ey: 'ONLINE CLASS', hero: n => typeof adultSenior === 'function' && adultSenior() ? [`${n}\n천천히 함께 배우는 디지털 교실`, '한 단계씩 따라 하며 생활에 바로 씁니다. 모르면 언제든 다시 물어보세요.'] : [`${n}\n실무에 바로 쓰는 강좌`, '짧은 강의와 실습으로 오늘 배운 것을 내일 바로 씁니다.'], about: '소개', feat: [['짧은 강의', '바쁜 일정에도 완주할 수 있게'], ['실습 과제', '손으로 익히는 실무'], ['질문 답변', '막히면 바로 물어보세요'], ['수료증', '완주하면 수료증 발급']], steps: [['강좌 고르기', '목표에 맞는 강좌를 고릅니다'], ['수강 신청', '가입하고 바로 신청합니다'], ['학습 · 수료', '끝까지 완주하면 수료증을 받습니다']] },
     lifelong: { look: 'senior', color: '#2F6FE4', ey: 'LIFELONG LEARNING', hero: n => [`${n}\n배움에는 끝이 없습니다`, '생활 · 직업 · 인문 강좌를 온라인과 오프라인으로 만나 보세요.'], about: '학습관 소개', feat: [['생활 강좌', '일상에 도움이 되는 배움'], ['직업 강좌', '새로운 일을 위한 준비'], ['인문 · 문화', '함께 읽고 나누는 시간'], ['큰 글씨 화면', '누구나 쉽게 신청']], steps: [['강좌 보기', '관심 있는 강좌를 찾습니다'], ['신청', '온라인이나 전화로 신청합니다'], ['참여', '정해진 날 함께 배웁니다']] },
     voc: { look: 'publicTiles', color: '#1E40AF', ey: 'TRAINING', hero: n => [`${n}\n취업까지 이어지는 훈련`, '훈련 과정부터 수료 후 취업 준비까지 함께합니다.'], about: '기관 소개', feat: [['국비 과정', '국민내일배움카드로 수강'], ['실무 훈련', '현장에서 쓰는 기술'], ['취업 지원', '이력서 · 면접 준비'], ['출결 관리', '훈련 기록을 정확하게']], steps: [['과정 상담', '나에게 맞는 과정을 찾습니다'], ['수강 신청', '카드 확인 후 신청합니다'], ['훈련 · 수료', '수료 후 취업을 준비합니다']] }
   };
+  /* v38 대학 학사 LMS(전교생 메인 LMS): 배지 · 신청 중심의 사업단 문구 대신 수업 · 과제 · 출석 문구 */
+  const LTY_ULMS = Object.assign({}, LTY.univ, { ey: 'LEARNING MANAGEMENT', hero: n => [`${n}\n수업과 학습을 한 곳에서`, '강의 자료 · 과제 · 시험 · 출석 · 공지를 학기 단위로 확인합니다.'], about: '이용 안내', feat: [['강의실', '주차별 수업 자료와 공지'], ['과제 · 시험', '제출 · 응시 · 피드백을 온라인으로'], ['출석', '인증번호 · QR로 출석하고 바로 확인'], ['성적', '항목별 점수와 피드백']], steps: [['로그인', '학번과 접근코드로 로그인합니다'], ['강의실 입장', '이번 학기 수강 분반이 바로 보입니다'], ['과제 · 시험', '마감 전에 제출하고 결과를 확인합니다']] });
   function hpLocal(brief, o) {
-    o = o || {}; const ty = LTY[S.org.type] || LTY.adult; const n = N(); const b = String(brief || '');
+    o = o || {}; const ty = (S.org.type === 'univ' && S.org.ed === 'lms' ? LTY_ULMS : null) || LTY[S.org.type] || LTY.adult; const n = N(); const b = String(brief || '');
     const tone = TONES[o.tone] ? o.tone : (Object.keys(TONES).find(k => b.includes(k)) || '신뢰');
     const color = /파랑|블루|blue/i.test(b) ? '#2563EB' : /보라|퍼플/.test(b) ? '#5C74F6' : /주황|오렌지/.test(b) ? '#EA580C' : /네이비|남색/.test(b) ? '#1E3A8A' : /초록|그린|green/i.test(b) ? '#15803D' : ty.color;
     const focus = (b.match(/([가-힣A-Za-z0-9 ]{2,20})\s*(을|를)?\s*(강조|중심|위주)/) || [])[1];
@@ -161,14 +163,14 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     const must = [...(o.must || []), b].join(' ');
     const secs = [{ type: 'banner', eyebrow: ty.ey, title: focus ? `${focus.trim()},\n${n}에서` : h1, sub: h2, cta: `${t('cls')} 둘러보기`, cta2: '문의하기' },
       { type: 'text', variant: 'features', eyebrow: 'ABOUT', title: `${n}은(는) 이렇게 가르칩니다`, body: '', cols: ty.feat },
-      { type: 'classes', eyebrow: 'CLASSES', title: C.length ? `지금 신청할 수 있는 ${t('cls')}` : `${t('cls')} 안내`, sub: C.length ? C.slice(0, 3).map(c => c.name).join(' · ') : `공개한 ${t('cls')}이 이곳에 자동으로 표시됩니다.` },
+      { type: 'classes', eyebrow: 'CLASSES', title: C.length ? `지금 신청할 수 있는 ${t('cls')}` : `${t('cls')} 안내`, sub: C.length ? C.slice(0, 3).map(c => c.name).join(' · ') : `공개한 ${tj('cls', '이')} 이곳에 자동으로 표시됩니다.` },
       { type: 'text', variant: 'steps', eyebrow: 'HOW', title: '이렇게 시작합니다', cols: ty.steps }];
     if (/후기|리뷰/.test(must)) secs.push({ type: 'reviews', title: '수강후기' });
     if (/일정|스케줄/.test(must)) secs.push({ type: 'text', variant: 'timeline', title: '주요 일정', cols: [['모집', '상시 모집'], ['개강', '강좌별 안내'], ['수료', '기준 충족 시']] });
     secs.push({ type: 'notices', title: '공지사항' });
-    secs.push(/오시는|지도|위치|주소/.test(must) || S.settings.footer?.addr ? { type: 'map', title: '오시는 길 · 문의' } : { type: 'text', variant: 'cta', title: '궁금한 점이 있으신가요?', body: `${n}에 편하게 문의해 주세요.`, cta: '문의하기', cols: [['운영 시간', '평일 09:00 ~ 18:00']] });
+    secs.push(/오시는|지도|위치|주소/.test(must) || S.settings.footer?.addr ? { type: 'map', title: '오시는 길 · 문의' } : { type: 'text', variant: 'cta', title: '궁금한 점이 있으신가요?', body: `${n}에 편하게 문의해 주세요.`, cta: '문의하기', cols: ((S.settings && S.settings.footer && S.settings.footer.hours) ? [['운영 시간', S.settings.footer.hours]] : []) });
     const menus = [{ label: '홈', link: 'learn:home' },
-      { label: ty.about, link: 'page', page: [{ type: 'text', variant: 'features', eyebrow: 'ABOUT', title: `${n} 소개`, body: `${n}이(가) 하는 일을 소개합니다.`, cols: ty.feat.slice(0, 3) }], subs: [{ label: '인사말', link: 'page', page: [{ type: 'text', title: '인사말', body: `${n}을(를) 찾아 주셔서 감사합니다. 배우는 모든 분이 끝까지 완주할 수 있도록 돕겠습니다.` }] }, { label: '오시는 길', link: 'page', page: [{ type: 'map', title: '오시는 길' }] }] },
+      { label: ty.about, link: 'page', page: [{ type: 'text', variant: 'features', eyebrow: 'ABOUT', title: `${n} 소개`, body: `${n}${AI.j(n, '이')} 하는 일을 소개합니다.`, cols: ty.feat.slice(0, 3) }], subs: [{ label: '인사말', link: 'page', page: [{ type: 'text', title: '인사말', body: `${n}을(를) 찾아 주셔서 감사합니다. 배우는 모든 분이 끝까지 완주할 수 있도록 돕겠습니다.` }] }, { label: '오시는 길', link: 'page', page: [{ type: 'map', title: '오시는 길' }] }] },
       { label: t('cls'), link: 'learn:shop', subs: C.slice(0, 4).map(c => ({ label: c.name.slice(0, 20), link: 'cls:' + c.id })) },
       { label: '커뮤니티', link: 'learn:comm', subs: [{ label: '공지사항', link: 'learn:notice' }] },
       { label: '내 학습', link: 'learn:my' }];
@@ -255,7 +257,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     n.id = x.id; ['dstyle', 'bg', 'align', 'img', 'imgs', 'link', 'link2', 'auto', 'ids', 'layout', 'addr', 'tel'].forEach(k => { if (d[k] !== undefined && n.data[k] === undefined) n.data[k] = d[k]; }); if (x.hide) n.hide = true; return n; }
   function hpApply() {
     const D = HPE.draft; if (!D) return; const cur = site(); hpPush(); const ns = D.site; ns.published = !!cur.published; ns.at = cur.at;
-    S.site = ns; if (ns.aiSeo) { S.settings.seo = S.settings.seo || {}; ['title', 'desc', 'kw'].forEach(k => { if (ns.aiSeo[k] && !S.settings.seo[k]) S.settings.seo[k] = ns.aiSeo[k]; }); }
+    S.site = ns; seoSync(ns); /* v34.5 FZ(FIXLIST 19): 빈 칸에 한 번만 복사하던 것을 출처 표시(auto) 방식으로 — 아래 seoSync */
     S.ai.usage = (S.ai.usage || 0) + 1; logAudit(`AI 홈페이지 만들기${ns.ai.url ? ' — 참고 사이트 구성 참고' : ''}`); save(); HPE.draft = null; closeModal(); UI.smT = 'home'; UI.sitePage = 'home';
     if (CUR.tab !== 'site') go('site'); else render();
     toast('새 홈페이지를 적용했습니다. 글자를 눌러 바로 고치고, 마음에 들면 [게시하기]를 누르세요.', 'ok');
@@ -304,7 +306,7 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     let w = $('#hpe'); if (!w) { w = document.createElement('div'); w.id = 'hpe'; w.className = 'hpe'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', '화면에서 바로 고치기'); document.body.appendChild(w); }
     document.body.classList.add('hpe-open'); hpChrome(); hpPaint();
   }
-  window.hpEdit = hpEdit;
+  window.hpEdit = hpEdit; window.hpPaint = hpPaint; /* v34.5 hpimg: 스크롤을 지키며 다시 그리기 */
   function hpChrome() {
     const w = $('#hpe'); if (!w) return; const P = pagesOf(site());
     w.innerHTML = `<div class="hpe-bar"><div class="hpe-t"><b>화면에서 바로 고치기</b><small>글자를 누르면 바로 고칩니다 · Enter 저장 · Esc 취소 · 이미지를 누르면 바꿉니다</small></div>
@@ -395,7 +397,7 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     const n = N(); const D = { banner: { type: 'banner', title: n, sub: '한 문장 소개를 입력하세요.', cta: '자세히 보기' }, features: { type: 'text', variant: 'features', eyebrow: 'ABOUT', title: '이런 점이 좋습니다', cols: [['첫 번째 장점', '설명을 입력하세요'], ['두 번째 장점', '설명을 입력하세요'], ['세 번째 장점', '설명을 입력하세요']] },
       stats: { type: 'text', variant: 'stats', cols: [['숫자', '설명'], ['숫자', '설명'], ['숫자', '설명']] }, steps: { type: 'text', variant: 'steps', title: '이렇게 시작합니다', cols: [['1단계', '설명'], ['2단계', '설명'], ['3단계', '설명']] },
       classes: { type: 'classes', title: `지금 신청할 수 있는 ${t('cls')}` }, image: { type: 'image', title: '사진', alt: '사진 설명' }, video: { type: 'video', title: '소개 영상' }, notices: { type: 'notices', title: '공지사항' }, reviews: { type: 'reviews', title: '수강후기' }, map: { type: 'map', title: '오시는 길' },
-      cta: { type: 'text', variant: 'cta', title: '궁금한 점이 있으신가요?', body: '편하게 문의해 주세요.', cta: '문의하기', cols: [['운영 시간', '평일 09:00 ~ 18:00']] }, plain: { type: 'text', title: '제목', body: '내용을 입력하세요.' } };
+      cta: { type: 'text', variant: 'cta', title: '궁금한 점이 있으신가요?', body: '편하게 문의해 주세요.', cta: '문의하기', cols: ((S.settings && S.settings.footer && S.settings.footer.hours) ? [['운영 시간', S.settings.footer.hours]] : []) }, plain: { type: 'text', title: '제목', body: '내용을 입력하세요.' } };
     const x = secFrom(D[k]); if (!x) return; if (k === 'stats') x.data.variant = 'stats'; const L = secList(HPE.key); hpPush(); L.splice(Math.min(at, L.length), 0, x); save(); hpPaint(); toast('섹션을 넣었습니다. 글자를 눌러 고치세요.', 'ok'); }
   function imgPick(si, fld, k) {
     const x = secList(HPE.key)[si]; if (!x) return;
@@ -426,6 +428,8 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     const w = modal('메뉴 편성', `<div id="hpmBox"></div>`, [{ id: 'pv', label: '화면에서 확인', run: () => { hpEdit('home'); } }, { id: 'ok', label: '완료', kind: 'pri' }], true); w.classList.add('hpm-m'); hpmPaint();
   }
   window.hpMenus = hpMenus;
+  /* v36 R3(2-2): 기본 메뉴 이름은 유형별 이름으로 보인다(대학 '클래스' → '교육과정' — 사이트에 보이는 이름과 같게). 칸을 고치면 고친 이름이 저장된다 */
+  const hpmN = l => { try { return window.HPS && typeof HPS.menuName === 'function' ? HPS.menuName(l) : l; } catch (e) { return l; } };
   function hpmRow(m, par, i, n) {
     const isSub = !!par; const ty = menuType(m, isSub); const home = !isSub && m.kind === 'home'; const id = esc(m.id);
     const baseNm = !isSub && m.kind !== 'custom' ? ({ home: '홈', class: `${t('cls')} 목록`, book: '교재 · 교구', community: '커뮤니티', notice: '공지사항', board: '게시판' })[m.kind] || '기본' : '';
@@ -437,18 +441,18 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     const subs = !isSub ? (m.subs || []) : [];
     return `<li class="hpm-i${isSub ? ' sub' : ''}${m.on === false ? ' off' : ''}" data-id="${id}" ${home ? '' : 'draggable="true"'}>
       <div class="hpm-r"><span class="hpm-h" aria-hidden="true" title="끌어서 옮기기">⠿</span>
-        <input class="hpm-n" data-hpm="name" data-id="${id}" value="${esc(m.l)}" maxlength="20" aria-label="${isSub ? '하위' : '상위'} 메뉴 이름">
+        <input class="hpm-n" data-hpm="name" data-id="${id}" value="${esc(isSub ? m.l : hpmN(m.l))}" maxlength="20" aria-label="${isSub ? '하위' : '상위'} 메뉴 이름">
         <select data-hpm="type" data-id="${id}" aria-label="${esc(m.l)} 연결 방식" ${home ? 'disabled' : ''}>${opts.map(([k, l]) => `<option value="${k}" ${ty === k || (ty === 'pagelink' && k === 'page') ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${second}
         <span class="hpm-bt"><button type="button" class="btn sm ghost" data-hpm="eye" data-id="${id}" ${home ? 'disabled' : ''} aria-pressed="${m.on !== false}" aria-label="${esc(m.l)} ${m.on === false ? '숨김 — 눌러서 보이기' : '보임 — 눌러서 숨기기'}">${m.on === false ? '숨김' : '보임'}</button>
         <button type="button" class="btn sm ghost" data-hpm="up" data-id="${id}" ${home || i === 0 || (!isSub && i === 1 && site().menus[0].kind === 'home') ? 'disabled' : ''} aria-label="${esc(m.l)} 위로">↑</button><button type="button" class="btn sm ghost" data-hpm="down" data-id="${id}" ${home || i === n - 1 ? 'disabled' : ''} aria-label="${esc(m.l)} 아래로">↓</button>
         ${isSub ? `<button type="button" class="btn sm ghost" data-hpm="out" data-id="${id}" aria-label="${esc(m.l)} 상위 메뉴로 꺼내기" title="상위 메뉴로">← 꺼내기</button>` : `<button type="button" class="btn sm ghost" data-hpm="in" data-id="${id}" ${home || i === 0 || subs.length ? 'disabled' : ''} aria-label="${esc(m.l)} 위 메뉴의 하위 메뉴로 넣기" title="하위 메뉴로">→ 하위로</button>`}
         <button type="button" class="btn sm ghost" data-hpm="more" data-id="${id}" ${par ? `data-p="${esc(par.id)}"` : ''} aria-label="${esc(m.l)} 세부 설정(권한 · SEO · 헤더 이미지)">⋯</button>${(!isSub && m.kind !== 'custom') ? '' : `<button type="button" class="btn sm ghost red" data-hpm="del" data-id="${id}" aria-label="${esc(m.l)} 삭제">✕</button>`}</span></div>
-      ${!isSub ? `<ol class="hpm-s" data-p="${id}">${subs.map((sb, j) => hpmRow(sb, m, j, subs.length)).join('')}${home ? '' : `<li class="hpm-dz" data-p="${id}"><button type="button" class="btn sm ghost" data-hpm="subadd" data-id="${id}">+ 「${esc(m.l)}」 하위 메뉴</button><span class="mini">여기로 끌어 놓으면 하위 메뉴가 됩니다</span></li>`}</ol>` : ''}</li>`;
+      ${!isSub ? `<ol class="hpm-s" data-p="${id}">${subs.map((sb, j) => hpmRow(sb, m, j, subs.length)).join('')}${home ? '' : `<li class="hpm-dz" data-p="${id}"><button type="button" class="btn sm ghost" data-hpm="subadd" data-id="${id}">+ 「${esc(hpmN(m.l))}」 하위 메뉴</button><span class="mini">여기로 끌어 놓으면 하위 메뉴가 됩니다</span></li>`}</ol>` : ''}</li>`;
   }
   function hpmPaint() {
     const box = $('#hpmBox'); if (!box) return; const s = site(); const P = HPE.mprop;
     box.innerHTML = `<div class="hpm-top"><p class="mini">상위 메뉴 아래에 하위 메뉴를 둘 수 있습니다(2단계). ⠿를 끌어 옮기거나 ↑ ↓ · 「→ 하위로」 · 「← 꺼내기」 버튼을 쓰세요. 이름은 칸에서 바로 고칩니다. 바꾼 내용은 바로 저장되고 [게시하기]를 누르면 사이트에 반영됩니다.</p>
-      <div class="hpm-ai"><input id="hpmQ" maxlength="300" placeholder="예: 기관 소개 · 강좌 · 커뮤니티 중심으로, 하위 메뉴까지" aria-label="AI에게 메뉴 요청" value="${esc(HPE.mq || '')}"><button type="button" class="btn sm ai" data-hpm="ai">${ic('spark', 13)} AI로 메뉴 짜기</button><button type="button" class="btn sm ghost" data-hpm="undo" ${HPE.undo.length ? '' : 'disabled'}>↶ 되돌리기</button></div></div>
+      <div class="hpm-ai"><input id="hpmQ" maxlength="300" placeholder="예: 기관 소개 · ${esc(t('cls'))} · 커뮤니티 중심으로, 하위 메뉴까지" aria-label="AI에게 메뉴 요청" value="${esc(HPE.mq || '')}"><button type="button" class="btn sm ai" data-hpm="ai">${ic('spark', 13)} AI로 메뉴 짜기</button><button type="button" class="btn sm ghost" data-hpm="undo" ${HPE.undo.length ? '' : 'disabled'}>↶ 되돌리기</button></div></div>
       ${P ? `<div class="hpm-prop"><b>AI가 제안한 메뉴</b><ol>${P.filter(m => m.on !== false).map(m => `<li>${esc(m.l)}${(m.subs || []).length ? `<ul>${m.subs.map(sb => `<li>${esc(sb.l)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ol><div class="bar2"><button type="button" class="btn sm pri" data-hpm="take">이대로 바꾸기</button><button type="button" class="btn sm ghost" data-hpm="drop">그대로 두기</button></div></div>` : ''}
       <ol class="hpm-l">${s.menus.map((m, i) => hpmRow(m, null, i, s.menus.length)).join('')}<li class="hpm-dz top" data-p=""><button type="button" class="btn sm" data-hpm="topadd">+ 상위 메뉴 추가</button></li></ol>`;
     box.querySelectorAll('[data-hpm]').forEach(el => { const ev = el.tagName === 'BUTTON' ? 'click' : 'change'; el.addEventListener(ev, e => { e.preventDefault(); hpmAct(el.dataset.hpm, el); }); });
@@ -560,6 +564,22 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     const HP_RULE = '\n홈페이지: 홈페이지 만들기 · 꾸미기 · 리뉴얼 · 다른 사이트 참고(벤치마크) · 메뉴 구성 요청은 build_homepage로 계획 카드를 만듭니다(설명은 brief, 주소는 benchmark_url). 다른 사이트의 글 · 이미지는 쓰지 않고 구성과 분위기만 참고한다고 안내합니다. 이미 만든 홈페이지의 글자 수정은 사이트 화면의 「화면에서 바로 고치기」를 안내합니다.';
     const cb = CL.call; CL.call = function (o) { try { if (o && typeof o.system === 'string' && Array.isArray(o.tools) && o.tools.some(t2 => t2.name === 'build_homepage')) o = { ...o, system: o.system + HP_RULE }; } catch (e) { } return cb.call(CL, o); };
   }
+  /* ── v34.5 FZ(FIXLIST 19 · 28): 검색 제목 · 설명 자동 갱신 ──
+     자동으로 채운 값은 S.settings.seo.auto[k]에 그 값을 함께 적어 둔다(출처 표시). 지금 값이 auto와 같거나 비어 있으면 '자동'으로 보고,
+     템플릿 · AI 만들기 · 시안 적용 · 말로 고치기로 사이트가 바뀔 때마다(저장 시점) 새 사이트 기준(s.aiSeo, 없으면 첫 화면 설명)으로 다시 맞춘다.
+     운영자가 설정 · 메뉴 · AI 제안 [적용]으로 쓴 값은 auto와 달라지므로 그대로 둔다(그 칸의 auto 표시는 지운다). */
+  function seoWant(s) { const a = (s && s.aiSeo) || {}; const bn = (Array.isArray(s && s.sections) ? s.sections : []).find(x => x && x.type === 'banner' && !x.hide);
+    const sub = String((bn && bn.data && bn.data.sub) || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    return { title: String(a.title || '').slice(0, 60), desc: String(a.desc || (sub.length >= 20 ? sub : '')).slice(0, 160), kw: String(a.kw || '').slice(0, 200) }; }
+  function seoSync(s, st) { st = st || S; s = s || (st && st.site); if (!s || !st || !st.settings) return false; const se = st.settings.seo = st.settings.seo || {};
+    const fresh = !(se.auto && typeof se.auto === 'object'); const au = se.auto = fresh ? {} : se.auto; const w = seoWant(s); let ch = false;
+    /* 처음 한 번(이전 저장본): 지금 사이트의 aiSeo를 그대로 복사해 둔 값은 자동으로 본다 */
+    if (fresh) ['title', 'desc', 'kw'].forEach(k => { if (se[k] && s.aiSeo && se[k] === s.aiSeo[k]) au[k] = se[k]; });
+    ['title', 'desc', 'kw'].forEach(k => { const cur = String(se[k] || ''); if (cur && cur !== String(au[k] || '')) { if (k in au) { delete au[k]; ch = true; } return; }
+      const v = w[k] || ''; if (cur !== v) { se[k] = v; ch = true; } if (v) { if (au[k] !== v) { au[k] = v; ch = true; } } else if (k in au) { delete au[k]; ch = true; } });
+    return ch; }
+  { const b0 = Store.set; Store.set = function (v) { try { if (v && v === S && v.site) seoSync(v.site, v); } catch (e) { console.error('seoSync', e); } return b0.apply(this, arguments); }; }
+  window.HPSEO = { sync: seoSync, want: seoWant };
   window.hpLocal = hpLocal; window.hpMake = hpMake; window.hpGenerate = hpGenerate; window.hpBenchURL = benchURL;
   if (typeof COVER !== 'undefined') COVER.push(['[신규] AI로 홈페이지 만들기(설명 · 참고 사이트) · 화면에서 바로 고치기 · 메뉴 편성(상위 · 하위)', 'site', '']);
 })();

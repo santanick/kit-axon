@@ -138,13 +138,13 @@ function uxHead() {
   const b = hd.querySelector('.bhdl b'); if (b) b.textContent = key === 'home' ? '오늘의 운영' : key === 'dash' ? '현황' : key === 'settings' ? '설정' : mlabel(key);
   const d = UX_DESC()[key]; const hl = hd.querySelector('.bhdl'); if (d && hl && !hl.querySelector('.uxdesc')) hl.insertAdjacentHTML('beforeend', `<p class="uxdesc">${esc(d)}</p>`);
   const f = hd.querySelector('[data-act=chat-q]'); if (f) { f.innerHTML = `${ic('spark', 14)} AI SAM에게 맡기기`; f.title = f.dataset.v; }
-  if (w === 'home' || w === 'dash') hd.insertAdjacentHTML('afterend', `<div class="seg2 wtabs uxhd" role="tablist"><button role="tab" aria-selected="${w === 'home'}" class="${w === 'home' ? 'on' : ''}" data-act="go" data-v="home">오늘 할 일</button><button role="tab" aria-selected="${w === 'dash'}" class="${w === 'dash' ? 'on' : ''}" data-act="go" data-v="dash">현황</button></div>`);
+  if ((w === 'home' || w === 'dash') && S.me.role !== 'teacher') hd.insertAdjacentHTML('afterend', `<div class="seg2 wtabs uxhd" role="tablist"><button role="tab" aria-selected="${w === 'home'}" class="${w === 'home' ? 'on' : ''}" data-act="go" data-v="home">오늘 할 일</button><button role="tab" aria-selected="${w === 'dash'}" class="${w === 'dash' ? 'on' : ''}" data-act="go" data-v="dash">현황</button></div>`);
 }
 function uxEmpty(keep) {
   const v = document.querySelector('#main .bview'); if (!v || CUR.ws === 'home') return; const e = [...v.querySelectorAll('.empty')].find(x => x.offsetParent && !x.closest('.modal'));
   if (!e || e.dataset.ux || e.querySelector('button,a.btn')) return; e.dataset.ux = 1; e.classList.add('uxempty');
   const fq = typeof FILLQ === 'function' ? FILLQ()[CUR.tab] : ''; let h = '';
-  if (keep) { const c = keep.cloneNode(true); c.classList.remove('uxkeep'); c.classList.add('pri'); h += c.outerHTML; }
+  if (keep && /(만들|추가|등록|새 |올리|작성|개설|초대|가져오|발급)/.test(keep.textContent)) { const c = keep.cloneNode(true); c.classList.remove('uxkeep'); c.classList.add('pri'); h += c.outerHTML; }
   if (fq) h += `<button type="button" class="btn ghost" data-act="chat-q" data-v="${esc(fq)}">${ic('spark', 14)} AI SAM에게 맡기기</button>`;
   if (h) e.insertAdjacentHTML('beforeend', `<div class="uxecta">${h}</div>`);
 }
@@ -181,8 +181,8 @@ function uxRoutes() { const R = [];
 ACT['ux-find'] = () => {
   const R = uxRoutes(); const D = UX_DESC();
   const w = modal('메뉴 찾기', `<input class="uxq" type="search" placeholder="예: 출결, 청구서, 수료증" aria-label="메뉴 이름으로 찾기"><div class="uxfl" role="list">${R.map(([id, n, g]) => `<button type="button" role="listitem" data-act="go" data-v="${esc(id)}" data-k="${esc((n + ' ' + g + ' ' + (D[id] || '')).toLowerCase())}"><b>${esc(n)}</b><small>${esc(g)}${D[id] ? ' · ' + esc(D[id]) : ''}</small></button>`).join('')}</div><p class="mini">찾는 기능이 없으면 AI SAM에게 "○○ 화면 열어줘"라고 말씀하세요. 꺼 둔 메뉴는 설정 › 메뉴 구성에서 켭니다.</p>`, [{ id: 'c', label: '닫기' }]);
-  const q = w.querySelector('.uxq'); q.focus();
-  q.addEventListener('input', () => { const v = q.value.trim().toLowerCase(); w.querySelectorAll('.uxfl button').forEach(b => { b.hidden = !!v && !b.dataset.k.includes(v); }); });
+  const q = w.querySelector('.uxq'); q.focus({ preventScroll: true });
+  q.addEventListener('input', () => { const v = q.value.trim().toLowerCase(); let n = 0; w.querySelectorAll('.uxfl button').forEach(b => { b.hidden = !!v && !b.dataset.k.includes(v); b.style.display = b.hidden ? 'none' : ''; if (!b.hidden) n++; }); /* v35: 버튼 display 규칙이 hidden을 덮어 걸러지지 않던 문제 */ let e0 = w.querySelector('.uxfl .uxnone'); if (!n && v) { if (!e0) w.querySelector('.uxfl').insertAdjacentHTML('beforeend', '<p class="uxnone mini" style="padding:12px">찾는 메뉴가 없습니다. 다른 말로 찾거나 AI SAM에게 물어보세요.</p>'); } else if (e0) e0.remove(); });
   q.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = [...w.querySelectorAll('.uxfl button')].find(x => !x.hidden); if (b) { closeModal(); go(b.dataset.v); } } });
   w.querySelector('.uxfl').addEventListener('click', e => { if (e.target.closest('[data-act=go]')) closeModal(); });
 };

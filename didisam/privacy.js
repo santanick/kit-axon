@@ -8,6 +8,7 @@
 const PV_IDV = { refund: '고용보험 환급 과정(직업능력개발훈련)', adult: '성인 인증이 필요한 콘텐츠', credit: '학점 인정 과정' };
 const PV_PURPOSE = { cert: '수료증 발급', refund: '결제 · 환불 처리', legal: '법령상 요청' };
 const pvFam = sid => 'F' + mbHash('fam|' + sid).slice(0, 6).toUpperCase();
+const pvMaskE = e => { const [a, b] = String(e || '').split('@'); if (!b) return String(e || ''); const [d, ...t] = b.split('.'); return `${a.slice(0, 2)}${'*'.repeat(Math.max(2, a.length - 2))}@${d.slice(0, 1)}${'*'.repeat(Math.max(2, d.length - 1))}.${t.join('.')}`; };
 const pvVault = () => { try { const v = JSON.parse(localStorage.getItem('didisam.room.' + ((typeof DREG !== 'undefined' && DREG.cur && DREG.cur()) || '') + '.pii') || 'null'); return v && v.ids ? v : null; } catch (e) { return null; } };
 const pvVaultSave = v => { try { localStorage.setItem('didisam.room.' + DREG.cur() + '.pii', JSON.stringify(v)); } catch (e) { } };
 
@@ -41,13 +42,13 @@ ACT['pv-idv'] = () => { mbEnsure(); const A = S.settings.acct;
 ACT['pv-log'] = () => { const v = pvVault(); const nm = sid => { const m = S.members.find(x => x.sid === sid) || (S.pacct || []).find(x => x.sid === sid); return m ? (m.nick || m.name) : sid ? '탈퇴 · 미반영 회원' : '—'; };
   const A = { create: '수집', update: '입력 · 변경', view: '열람', erase: '삭제', delete: '완전 삭제', consent: '보호자 동의', idv: '본인확인', list_masked: '목록 조회' };
   const L = ((v && v.log) || []).slice(0, 100);
-  modal('개인정보 처리 기록', `<p class="mini">수집 · 열람 · 삭제가 일어날 때마다 남는 기록입니다(값은 기록하지 않음). 운영: GET /api/learners/pii-log</p>${L.length ? `<div class="tblw"><table class="tbl"><thead><tr><th>일시</th><th>누가</th><th>처리</th><th>대상</th><th>목적</th><th>항목</th></tr></thead><tbody>${L.map(x => `<tr><td>${esc(String(x.at || '').slice(0, 16).replace('T', ' '))}</td><td>${esc(x.actor === 'self' ? '본인' : x.actor || '')}</td><td>${esc(A[x.action] || x.action)}</td><td>${esc(nm(x.sid))}</td><td>${esc(x.purpose || '')}</td><td>${esc((x.fields || []).join(', '))}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">기록이 없습니다.</p>'}`, [{ id: 'c', label: '닫기' }], true); };
+  modal('개인정보 처리 기록', `<p class="mini">수집 · 열람 · 삭제가 일어날 때마다 남는 기록입니다(값은 기록하지 않음). 운영: GET /api/learners/pii-log</p>${L.length ? `<div class="tblw"><table class="tbl"><thead><tr><th>일시</th><th>누가</th><th>처리</th><th>대상</th><th>목적</th><th>항목</th></tr></thead><tbody>${L.map(x => `<tr><td>${esc(atL(x.at).slice(0, 16))}</td><td>${esc(x.actor === 'self' ? '본인' : x.actor || '')}</td><td>${esc(A[x.action] || x.action)}</td><td>${esc(nm(x.sid))}</td><td>${esc(x.purpose || '')}</td><td>${esc((x.fields || []).join(', '))}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">기록이 없습니다.</p>'}`, [{ id: 'c', label: '닫기' }], true); };
 
 /* ── 회원 목록: 이메일 · 연락처 열 → 가린 이메일 · 알림톡 ── */
 { const base = mbList; mbList = (...a) => base(...a).replace('정회원 · 준회원(본인인증 전) · 승인 대기', '정회원 · 승인 대기 · 가입 때 실명 · 휴대폰 미수집').replace('<button class="btn sm" data-act="mb-vreq">본인인증 안내</button>', ''); }
 AFTER.push(() => { try { if (!S || !S.members || mbUniv()) return; const tb = [...document.querySelectorAll('#main table')].find(t => [...t.querySelectorAll('th')].some(th => th.textContent === '이메일') && t.querySelector('a[data-act=mem-open]')); if (!tb) return;
   tb.querySelectorAll('th').forEach(th => { if (th.textContent === '이메일') th.textContent = '이메일(일부)'; if (th.textContent === '연락처') th.textContent = '알림톡'; });
-  tb.querySelectorAll('tbody tr').forEach(tr => { const a = tr.querySelector('a[data-act=mem-open]'); const m = a && M(a.dataset.v); if (!m || !tr.children[3]) return; if (!m.email && m.acct && m.acct.emailMask) tr.children[2].textContent = m.acct.emailMask; if (!m.phone) tr.children[3].textContent = m.acct && m.acct.alimtalk ? '수신' : '—'; }); } catch (e) { console.error(e); } });
+  tb.querySelectorAll('tbody tr').forEach(tr => { const a = tr.querySelector('a[data-act=mem-open]'); const m = a && M(a.dataset.v); if (!m || !tr.children[3]) return; if (!m.email && m.acct && m.acct.emailMask) tr.children[2].textContent = m.acct.emailMask; else if (m.email) tr.children[2].textContent = pvMaskE(m.email); /* v38 등록 경로와 상관없이 같은 가림(QA P13) */ tr.children[3].textContent = m.phone ? String(mbPhone(m.phone)).replace(/^(\d{3})-?\d{3,4}-?(\d{4})$/, '$1-****-$2') : m.acct && m.acct.alimtalk ? '수신' : '—'; }); } catch (e) { console.error(e); } });
 
 /* ── 회원 상세: 본인인증 → 선택 본인확인, 개인정보 카드(목적 열람) ── */
 { const base = memberDetail; memberDetail = m => { let h = base(m); if ((UI.memT || 'info') !== 'info' || !m) return h; const a = m.acct || {}; const U = mbUniv(); const A = S.settings.acct || {};

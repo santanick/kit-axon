@@ -7,6 +7,9 @@ import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 @EgovMapper
 public interface PubMapper {
     Map<String, Object> selectSitePub(@Param("tid") String tid);
+    Map<String, Object> selectCommCtx(@Param("tid") String tid, @Param("sid") String sid); /* v38 C#17 */
+    java.util.List<String> selectCommLive(@Param("tid") String tid, @Param("seq") long seq);
+    Map<String, Object> selectOg(@Param("tid") String tid); /* v37 L2 og 메타 */
     Map<String, Object> selectLearner(@Param("tid") String tid, @Param("sid") String sid);
     String selectIdleH(@Param("tid") String tid);
     void touchLearnerSession(@Param("id") String id);
@@ -22,4 +25,14 @@ public interface PubMapper {
     void insertLearnerSession(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
     Map<String, Object> selectLearnerSession(@Param("id") String id);
     int deleteLearnerSession(@Param("id") String id);
+    /* v33 요청함 · 첫 로그인 동의 */
+    java.util.List<java.util.Map<String, Object>> selectEvents(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("after") long after);
+    Long insertEventX(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("sid") String sid, @org.apache.ibatis.annotations.Param("type") String type, @org.apache.ibatis.annotations.Param("xid") String xid, @org.apache.ibatis.annotations.Param("data") String data);
+    /* v38 A-17 쿠폰 */
+    java.util.Map<String, Object> selectCouponCtx(@org.apache.ibatis.annotations.Param("tid") String tid);
+    int countCouponUse(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("code") String code);
+    int tenantStateExists(@org.apache.ibatis.annotations.Param("tid") String tid);
+    int deleteOldEvents(@org.apache.ibatis.annotations.Param("tid") String tid);
+    java.util.Map<String, Object> selectConsent(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("sid") String sid);
+    int setConsent(@org.apache.ibatis.annotations.Param("tid") String tid, @org.apache.ibatis.annotations.Param("sid") String sid, @org.apache.ibatis.annotations.Param("v") String v);
 }

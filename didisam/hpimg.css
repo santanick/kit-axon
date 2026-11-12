@@ -1,0 +1,75 @@
+/* v34.5 hpimg — 바로 고치기 글자 툴바 · 사진 패널 · 로고 색 제안 · AI SAM 사진 첨부(DDS Indigo · Pretendard) */
+.hpi-tb{position:fixed;z-index:59;display:block;background:#2A2B2B;color:#fff;border-radius:12px;box-shadow:0 12px 32px rgba(31,32,32,.32);font:600 13px/1 "Pretendard Variable",Pretendard,system-ui,sans-serif;max-width:calc(100vw - 16px)}
+.hpi-row{display:flex;align-items:center;gap:2px;padding:4px;flex-wrap:wrap}
+.hpi-tb button{border:0;background:transparent;color:#fff;min-height:32px;padding:0 9px;border-radius:8px;cursor:pointer;font:inherit;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.hpi-tb button:hover,.hpi-tb button:focus-visible{background:rgba(255,255,255,.16);outline:none}
+.hpi-tb button.on,.hpi-tb button[aria-expanded="true"]{background:rgba(125,144,249,.32)}
+.hpi-tb button:disabled{opacity:.4;cursor:default}
+.hpi-tb .ai{color:#C9C2FF}
+.hpi-ffb span{max-width:84px;overflow:hidden;text-overflow:ellipsis}
+.hpi-sz{display:inline-flex;align-items:center;background:rgba(255,255,255,.08);border-radius:8px;margin:0 2px}
+.hpi-sz b{min-width:24px;text-align:center;font-size:12px;letter-spacing:.02em}
+.hpi-sz button{padding:0 8px;font-size:16px}
+.hpi-b b{font-weight:900}.hpi-i i{font-family:Georgia,serif;font-size:15px}
+.hpi-dot{width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.7);display:inline-block}
+.hpi-pop{border-top:1px solid rgba(255,255,255,.12);padding:10px;display:flex;flex-direction:column;gap:8px;max-width:min(460px,calc(100vw - 16px))}
+.hpi-seg{display:flex;gap:2px;background:rgba(255,255,255,.08);border-radius:9px;padding:2px}
+.hpi-seg button{flex:1;justify-content:center;min-height:30px;font-size:12.5px}
+.hpi-ffl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.hpi-ffl button{flex-direction:column;align-items:flex-start;gap:4px;padding:9px 10px;min-height:0;background:rgba(255,255,255,.06);border-radius:10px;white-space:normal}
+.hpi-ffl button span{font-size:18px;font-weight:700;line-height:1.2;letter-spacing:0}
+.hpi-ffl button small{font-size:11.5px;color:#C8C9C9;font-family:"Pretendard Variable",Pretendard,system-ui,sans-serif}
+.hpi-note{margin:0;font-size:11.5px;line-height:1.5;color:#C8C9C9;font-weight:500}
+.hpi-sw{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hpi-sw>button:not(.hpi-c0){width:28px;height:28px;min-height:28px;padding:0;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.55)}
+.hpi-sw>button:not(.hpi-c0):hover,.hpi-sw>button:not(.hpi-c0):focus-visible{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px #7D90F9}
+.hpi-cc{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px}
+.hpi-cc input{width:30px;height:28px;border:0;padding:0;background:transparent;cursor:pointer}
+.hpi-alp{flex-direction:row;flex-wrap:wrap}
+.hpi-lnl{display:flex;flex-wrap:wrap;gap:4px}.hpi-lnl button{background:rgba(255,255,255,.06)}
+.hpi-lnu{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#C8C9C9}
+.hpi-lnu input{height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#1F2020;color:#fff;padding:0 10px;font:inherit;font-size:13px}
+.hpi-tb .hpi-ok{align-self:flex-end;background:#5C74F6}
+.hpi-aip button{white-space:normal;text-align:left;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.06);justify-content:flex-start}
+/* 사진 패널 */
+.hpi-ip{position:fixed;z-index:59;width:320px;max-height:calc(100vh - 16px);overflow:auto;background:#fff;color:var(--g900,#2A2B2B);border-radius:12px;box-shadow:var(--e24,0 16px 48px rgba(42,43,43,.2));padding:14px;display:flex;flex-direction:column;gap:10px;font-family:"Pretendard Variable",Pretendard,system-ui,sans-serif}
+.hpi-ih{display:flex;align-items:center;justify-content:space-between}.hpi-ih b{font-size:15px}
+.hpi-x{border:0;background:transparent;width:32px;height:32px;border-radius:8px;cursor:pointer;color:var(--g700,#6C6C6C);font-size:15px}.hpi-x:hover{background:var(--g200,#F1F2F2)}
+.hpi-pv{flex:none;position:relative;aspect-ratio:16/10;border-radius:10px;overflow:hidden;background:var(--g200,#F1F2F2);cursor:crosshair;touch-action:none;user-select:none}
+.hpi-pv img{width:100%;height:100%;display:block;pointer-events:none}
+.hpi-pv.logo{aspect-ratio:3/1;cursor:default;background:repeating-conic-gradient(#F1F2F2 0 25%,#fff 0 50%) 0 0/16px 16px}
+.hpi-pv.empty{display:grid;place-items:center;cursor:default;border:1.5px dashed var(--s200,#A5B0FA);background:var(--s50,#EAEDFF)}
+.hpi-pv.empty span{font-size:13px;color:var(--t-mag,#3F55D0);font-weight:600;padding:0 12px;text-align:center}
+.hpi-fp{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #5C74F6,0 4px 10px rgba(0,0,0,.35);pointer-events:none}
+.hpi-ip .hpi-note{color:var(--t-sub,#666767);font-size:12px}
+.hpi-ia{display:flex;flex-direction:column;gap:6px}.hpi-ia .btn{align-self:flex-start;cursor:pointer}.hpi-ia small{font-size:12px;color:var(--t-sub,#666767)}
+.hpi-fit{display:flex;align-items:center;gap:4px;font-size:13px}.hpi-fit span{margin-right:6px;color:var(--t-sub,#666767);font-weight:600}
+.hpi-fit button{border:1px solid var(--line,#EAEBEB);background:#fff;border-radius:8px;min-height:32px;padding:0 12px;font:inherit;font-size:13px;cursor:pointer}
+.hpi-fit button.on{border-color:var(--s400,#5C74F6);background:var(--s50,#EAEDFF);color:var(--t-mag,#3F55D0);font-weight:700}
+.hpi-fit button:disabled{opacity:.45;cursor:default}
+.hpi-alt{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}.hpi-alt small{font-weight:500;color:var(--t-sub,#666767);font-size:11.5px}
+.hpi-alt input{height:36px;border:1px solid var(--g400,#C8C9C9);border-radius:6px;padding:0 10px;font:inherit;font-size:14px;font-weight:500}
+.hpi-alt input:focus{outline:2px solid var(--s400,#5C74F6);outline-offset:-1px}
+.hpi-ib{display:flex;gap:6px;flex-wrap:wrap}
+.hpi-sug{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:600}
+.hpi-sgc{width:26px;height:26px;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 2px rgba(255,255,255,.7),0 0 0 1px var(--g400,#C8C9C9)}
+.hpi-sgc.on{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px var(--s400,#5C74F6)}
+.hpi-sugw{padding:8px 14px;background:#FFF8E6;border-bottom:1px solid #F3DFA8}
+/* 말로 고치기 줄 */
+.hpi-tclip{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#fff;border:1.5px solid var(--s200,#A5B0FA);color:var(--t-mag,#3F55D0);cursor:pointer;flex:none}
+.hpi-tclip:hover,.hpi-tclip:focus-within{border-color:var(--s400,#5C74F6)}
+.hpi-tg{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hpi-tgt{font-size:12.5px;font-weight:700;color:var(--t-mag,#3F55D0);background:#fff;border:1px solid var(--s200,#A5B0FA);border-radius:99px;padding:5px 10px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hpw-talk.hpi-dz,.composer.hpi-dz{outline:2px dashed var(--s400,#5C74F6);outline-offset:2px}
+/* AI SAM 첨부 */
+.hpi-att{cursor:pointer}
+.hpi-abar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 6px}
+.hpi-chip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line,#EAEBEB);border-radius:99px;padding:3px 4px 3px 3px;font-size:12px;max-width:220px}
+.hpi-chip img{width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none}
+.hpi-chip em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.hpi-chip button{border:0;background:var(--g200,#F1F2F2);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:11px;color:var(--g800,#4C4D4D);flex:none}
+.hpi-chip.sm{padding:2px}.hpi-chip.sm img{width:28px;height:28px}
+.hpi-aq{display:inline-flex;gap:4px;flex-wrap:wrap}
+.hpi-ask,.hpi-cb{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.hpi-ps{margin:0 0 10px}
+@media (max-width:700px){.hpi-ffl{grid-template-columns:repeat(2,minmax(0,1fr))}.hpi-tb{font-size:12.5px}.hpi-tb button{padding:0 7px}}

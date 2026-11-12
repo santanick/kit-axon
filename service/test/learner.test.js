@@ -34,6 +34,14 @@ test('학습자 사이트 API', async t => {
     assert.equal((await call('L', 'PUT', `/api/pub/${A.tid}/progress`, { lp })).j.ok, true);
     const me = await call('L', 'GET', `/api/pub/${A.tid}/me`); assert.equal(me.j.lp.diag.dg0.out, 'MAP'); assert.equal(me.j.lp.evil, undefined); assert.deepEqual(me.j.lp.days, { '2026-10-29': 3 }); assert.equal(me.j.mine.cls.c0.p, 40);
   });
+  await t.test('학습 캘린더 내 일정(lp.cal) 저장 · 정리', async () => {
+    const prev = (await call('L', 'GET', `/api/pub/${A.tid}/me`)).j.lp;
+    const cal = [{ id: 'lc1', title: '스터디', date: '2026-11-11', time: '19:00', end: '21:00', memo: '도서관', cls: 'c0', at: '2026-11-10T10:00:00Z', name: '홍길동', phone: '010-0000-0000' }, { id: 'bad id', title: 'x', date: '2026-11-11' }, { id: 'lc2', title: '', date: '2026-11-11' }];
+    await call('L', 'PUT', `/api/pub/${A.tid}/progress`, { lp: { ...prev, cal } });
+    const me = await call('L', 'GET', `/api/pub/${A.tid}/me`); assert.deepEqual(me.j.lp.cal, [{ id: 'lc1', title: '스터디', date: '2026-11-11', time: '19:00', end: '21:00', memo: '도서관', cls: 'c0', at: '2026-11-10T10:00:00Z' }]);
+    assert.equal(me.j.lp.diag.dg0.out, 'MAP');
+    await call('L', 'PUT', `/api/pub/${A.tid}/progress`, { lp: { ...me.j.lp, cal: 'x' } }); assert.equal((await call('L', 'GET', `/api/pub/${A.tid}/me`)).j.lp.cal, undefined);
+  });
   await t.test('디지털북 기록 · 채점(mine.bk)', async () => {
     const prev = (await call('L', 'GET', `/api/pub/${A.tid}/me`)).j.lp; const lp = { ...prev, book: { bk1: { r: { ch1: 1 }, b: { b1: { done: true, score: 80 }, w1: { done: true, ans: '내 생각' } }, last: 0 }, '../x': { r: {} } } };
     await call('L', 'PUT', `/api/pub/${A.tid}/progress`, { lp });

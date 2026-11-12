@@ -43,6 +43,8 @@ async function scenario(base, tag) {
   await G('statsPast', '/api/lms/m/stats?from=2020-01-01&to=2020-02-01');
   await G('statsBad', '/api/lms/m/stats?from=2020-01-01&to=2026-01-01');
   await G('logs', '/api/lms/m/logs');
+  /* 같은 초에 생긴 기록은 실행마다 순서가 달라질 수 있어(Node · Java 실행 시점 차이) 비교 전에 정렬한다 */
+  if (R.logs && R.logs.j && Array.isArray(R.logs.j.items)) R.logs.j.items.sort((a, b) => JSON.stringify([a.src, a.kind, a.what]).localeCompare(JSON.stringify([b.src, b.kind, b.what])));
   await G('logsImp', '/api/lms/m/logs?kind=admin');
   await G('logsUp', '/api/lms/m/logs?kind=upload');
   await G('logsBad', '/api/lms/m/logs?kind=xx');
