@@ -25,6 +25,7 @@
     shorts: s => SV('<rect x="6" y="3" width="12" height="18" rx="3"/><path d="M11 9l4 3-4 3z" fill="currentColor"/>', s),
     spark: s => SV('<path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z" fill="currentColor" stroke="none"/>', s),
     course: s => SV('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18"/>', s),
+    menu: s => SV('<path d="M4 7h16M4 12h16M4 17h16"/>', s),
     me: s => SV('<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>', s),
     back: s => SV('<path d="M15 5l-7 7 7 7"/>', s),
     up: s => SV('<path d="M12 19V5M5 12l7-7 7 7"/>', s),
@@ -36,11 +37,15 @@
   const isPar = () => !!(LR.me && LR.me.kind === 'parent');
   /* 규정 대상: 직업훈련 · 학사 LMS · 고용노동부 원격훈련 프로필 — 짧게 복습 · 챕터 건너뛰기 없음 */
   const strict = () => { try { const c = SITE().cpl; return ty() === 'voc' || (ty() === 'univ' && ed() === 'lms') || !!(c && c.on && /^moel-/.test(String(c.profile || ''))); } catch (e) { return ty() === 'voc'; } };
-  const on = () => { try { return document.body.classList.contains('lapp') && !!LR.me && !isPar() && LR.mode !== 'preview' && !!SITE(); } catch (e) { return false; } };
+  const on = () => { try { return document.body.classList.contains('lapp') && !!LR.me && !isPar() && !!SITE(); /* 어드민 학습자 화면 미리보기에서도 같은 화면 */ } catch (e) { return false; } };
   window.tubeOn = on;
   const day = (d = new Date()) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 10);
   const mmss = s => { s = Math.max(0, Math.floor(+s || 0)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
   const unit = () => (ty() === 'k12' ? '회차' : '차시');
+  /* 관리자 설정 · 유형 용어: 튜터 켜기(tutor.enabled) · 튜터 이름(학습자가 고른 선생님 → 기관 튜터 이름) · 유형별 탭 이름 · 둘러보기 · 커뮤니티/공지 */
+  const info = () => { try { return window.lappInfo ? window.lappInfo() : {}; } catch (e) { return {}; } };
+  const tOn = () => { try { return TCFG().enabled !== false; } catch (e) { return true; } };
+  const tNm = () => String(info().tName || (typeof TCFG === 'function' && TCFG().name) || 'AI 튜터');
 
   /* ── 학습 기록(lp.tube) ── */
   const rec = () => { const L = LR.lp || (LR.lp = {}); const t = L.tube && typeof L.tube === 'object' ? L.tube : (L.tube = {}); ['sec', 'sh', 'qr', 'qn'].forEach(k => { if (!t[k] || typeof t[k] !== 'object') t[k] = {}; }); return t; };
@@ -89,11 +94,11 @@
   function headHTML() { let n = 0; try { n = typeof laItems === 'function' ? laItems().L.filter(x => !x.read).length : 0; } catch (e) { }
     const org = (SITE().org || {}).name || '';
     return `<header class="tb-head"><div class="tb-hr"><button type="button" class="tb-brand" data-ap="orgs" aria-label="기관 바꾸기 — 지금 ${esc(org)}"><span class="tb-logo">${I.play(10)}</span><b>디디쌤</b><small>${esc(org)}</small></button>
-      <a class="tb-ib" href="#inbox" aria-label="알림${n ? ` · 새 알림 ${n}개` : ''}">${I.bell(24)}${n ? `<i>${n > 99 ? '99+' : n}</i>` : ''}</a><button type="button" class="tb-ib" data-ap="srch" aria-label="검색">${I.search(24)}</button></div>
+      <a class="tb-ib" href="#inbox" aria-label="알림${n ? ` · 새 알림 ${n}개` : ''}">${I.bell(24)}${n ? `<i>${n > 99 ? '99+' : n}</i>` : ''}</a><button type="button" class="tb-ib" data-ap="srch" aria-label="검색">${I.search(24)}</button><button type="button" class="tb-ib" data-lux="menu" aria-haspopup="dialog" aria-expanded="false" aria-label="전체 메뉴 — 공지 · 둘러보기 · 기관 메뉴">${I.menu(24)}</button></div>
       <div class="tb-chips" role="tablist" aria-label="보기">${CH().map(([k, l]) => `<button type="button" role="tab" class="tb-chip${TB.f === k ? ' on' : ''}" aria-selected="${TB.f === k}" data-tb="f" data-v="${k}">${esc(l)}</button>`).join('')}</div></header>`; }
   function goalHTML() { const g = goal(), m = Math.min(minToday(), 999), p = Math.min(100, Math.round(m / g * 100)); const done = m >= g;
     return `<section class="tb-goal${done ? ' done' : ''}" aria-label="오늘 목표"><button type="button" class="tb-gb" data-tb="goal" aria-label="오늘 목표 ${g}분 중 ${m}분 · 목표 바꾸기"><span class="tb-gl"><small>오늘 목표 ${g}분</small><span class="tb-bar" aria-hidden="true"><i style="width:${p}%"></i></span></span><b>${m}<small>/${g}분</small></b></button>${done ? `<a class="tb-gd" href="#done">완료 보기</a>` : ''}</section>`; }
-  function contHTML() { const k = cont(); if (!k) return `<a class="tb-empty" href="${esc(typeof LAPP_FIND === 'function' ? '#shop' : '#shop')}"><b>첫 과정을 골라 볼까요?</b><small>수강을 시작하면 이어 볼 차시가 여기에 나와요.</small></a>`;
+  function contHTML() { const k = cont(); if (!k) { const lms = ty() === 'univ' && ed() === 'lms'; const f = info(); return lms ? `<a class="tb-empty" href="#lms"><b>이번 학기 수강 분반 보기</b><small>강의실에서 차시를 열면 이어 볼 차시가 여기에 나와요.</small></a>` : `<a class="tb-empty" href="${esc(f.browse && f.browse !== '#home' ? f.browse : '#my')}"><b>${esc(f.find && f.browse !== '#home' ? f.find : (f.learn || '내 과정'))}에서 시작해 볼까요?</b><small>수강을 시작하면 이어 볼 ${unit()}가 여기에 나와요.</small></a>`; }
     const { x, it } = k; const c = x.c; const r = lpItem(c.id, it.id); const d = durOf(c, it); const pos = Math.min(+r.pos || 0, d || +r.pos || 0); const w = d ? Math.round(pos / d * 100) : Math.round((+r.w || 0) * 100);
     const left = d && pos ? Math.max(1, Math.round((d - pos) / 60)) : 0; const n = nOf(c, it);
     return `<a class="tb-cont" href="${esc(hrefOf(c, it))}"><span class="tb-ct" style="--bg:${colOf(c.name)}">${c.thumb ? `<img src="${esc(c.thumb)}" alt="" loading="lazy">` : ''}<em class="tb-tag">이어 보기 · ${n}${unit()}</em>${d ? `<em class="tb-time">${mmss(pos)} / ${mmss(d)}</em>` : ''}<b>${esc(it.title || '')}</b><span class="tb-pb" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, w))}%"></i></span></span>
@@ -107,7 +112,15 @@
     if (q) { const sh = shortsFor(q.x.c)[0]; return { t: `<b>${esc(q.it.title)}</b>에서 ${q.r.score}점을 받았어요. ${sh && !strict() ? '틀린 부분만 짧게 다시 볼까요?' : '틀린 부분을 같이 짚어 볼까요?'}`, h: sh && !strict() ? '#review' : '', ask: `「${q.it.title}」에서 헷갈린 개념을 쉽게 다시 설명해줘` }; }
     if (v) return { t: `<b>${esc(v.it.title)}</b> ${mmss(v.r.pos)}에서 멈췄어요. 그 장면부터 이어 볼까요?`, h: hrefOf(v.x.c, v.it) };
     return null; }
-  function sugHTML() { const s = suggest(); if (!s) return '';
+  /* 유형별 AI 튜터 바로 묻기(기존 앱 첫 화면 칩: 출석 확인 · 필수교육 마감 · 오늘 학습 한도 등) */
+  function askHTML() { if (!tOn()) return ''; const C = (info().chips || []).slice(0, 3); if (!C.length) return '';
+    return `<section class="tb-askr" aria-label="${esc(tNm())}에게 바로 묻기"><h2 class="sr">${esc(tNm())}에게 바로 묻기</h2>${C.map(([l, q]) => `<button type="button" data-tb="ask" data-v="${esc(q)}">${I.spark(14)}${esc(l)}</button>`).join('')}</section>`; }
+  /* 바로가기: 둘러보기(유형 이름) · 커뮤니티 또는 공지 — 하단 탭 4칸에서 빠진 경로 */
+  function linksHTML() { const f = info(); const L = []; if (f.browse && f.browse !== '#home' && !(ty() === 'univ' && ed() === 'lms' && f.browse === '#shop' && !(SITE().shop && (SITE().shop.classes || []).length))) L.push([f.browse, f.find || '둘러보기']); if (ty() === 'univ' && ed() === 'lms') L.unshift(['#lms', '수강 분반']); if (f.comm) L.push(f.comm); if ((SITE().pages || []).some(p => p.id === 'notice')) L.push(['#notice', '공지']); /* 관리자 메뉴 설정에서 켠 것만 */
+    const seen = new Set(); const U = L.filter(([h]) => !seen.has(h) && seen.add(h)); if (!U.length) return '';
+    return `<nav class="tb-links" aria-label="바로가기">${U.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>`; }
+  function instHTML() { const f = info(); if (!f.inst) return ''; return `<div class="tb-inst ap-inst" role="note"><span><b>홈 화면에 앱으로 설치</b><small>${f.ios ? '공유 버튼 → 「홈 화면에 추가」' : '한 번 누르면 앱처럼 바로 열려요'}</small></span><button type="button" class="tb-go" data-ap="install">설치</button><button type="button" class="tb-ib" data-ap="inst-x" aria-label="설치 안내 닫기">${SV('<path d="M6 6l12 12M18 6L6 18"/>', 18)}</button></div>`; }
+  function sugHTML() { const s = suggest(); if (!s || (!tOn() && !s.h)) return '';
     return `<section class="tb-sug" aria-label="AI 튜터 제안"><span class="tb-sp" aria-hidden="true">${I.spark(16)}</span><p>${s.t}</p>${s.h ? `<a class="tb-go" href="${esc(s.h)}">보기</a>` : `<button type="button" class="tb-go" data-tb="ask" data-v="${esc(s.ask || '')}">보기</button>`}</section>`; }
   function nextTiles() { const out = []; const k = cont();
     stats().courses.filter(x => !x.done).forEach(x => { const S0 = seq(x.c); const i0 = k && k.x.c.id === x.c.id ? S0.indexOf(k.it) + 1 : S0.indexOf(x.next); S0.slice(Math.max(0, i0)).filter(it => !lpItem(x.c.id, it.id).done && !['survey'].includes(it.type)).slice(0, 2).forEach(it => out.push({ c: x.c, it })); });
@@ -123,12 +136,12 @@
     if (f === 'cert') return `<section class="tb-list" aria-label="자격증">${L.filter(x => /자격|시험|필기|실기/.test(x.c.name || '') || (x.c.items || []).some(i => i.type === 'exam')).map(x => { const ex = (x.c.items || []).find(i => i.type === 'exam' || i.type === 'quiz'); return `<a class="tb-row" href="${esc(ex ? hrefOf(x.c, ex) : '#c/' + encodeURIComponent(x.c.id))}">${thumbBlock(x.c, null, 'tb-rt')}<span><b>${esc(x.c.name)}</b><small>진도 ${x.p}%${ex ? ` · ${esc(ex.title)}` : ''}</small></span></a>`; }).join('')}</section>`;
     return ''; }
   function homeHTML() { const f = CH().some(x => x[0] === TB.f) ? TB.f : (TB.f = 'all');
-    const body = f === 'all' ? goalHTML() + contHTML() + sugHTML() + weekHTML() : f === 'cont' ? goalHTML() + contHTML() + sugHTML() : listHTML(f);
+    const body = f === 'all' ? instHTML() + goalHTML() + contHTML() + sugHTML() + askHTML() + weekHTML() + linksHTML() : f === 'cont' ? goalHTML() + contHTML() + sugHTML() : listHTML(f);
     return `<div class="tb-home">${headHTML()}<div class="tb-main">${body}</div></div>`; }
 
   /* ── 하단 탭 ── */
   function navHTML() { const a = route().a; const cur = { home: 'home', review: 'home', cal: 'cal', ai: 'home', done: 'home', my: 'my', c: 'my', cert: 'my', badge: 'my', acct: 'me', inbox: 'me', msg: 'me', mypay: 'me', connect: 'me', payd: 'me' }[a] || '';
-    const it = [['home', '#home', cur === 'home' ? I.home(24) : I.homeO(24), '홈'], ['cal', '#cal', I.cal(24), '일정'], ['my', '#my', I.course(24), '내 과정'], ['me', '#acct', I.me(24), '나']];
+    const it = [['home', '#home', cur === 'home' ? I.home(24) : I.homeO(24), '홈'], ['cal', '#cal', I.cal(24), '일정'], ['my', '#my', I.course(24), info().learn || '내 과정'], ['me', '#acct', I.me(24), '나']];
     return it.map(([k, h, i, l]) => `<a href="${h}" class="tb-n-${k}${cur === k ? ' on' : ''}"${cur === k ? ' aria-current="page"' : ''}>${i}<span>${l}</span></a>`).join(''); }
 
   /* ── 오늘 목표 설정 시트 ── */
@@ -196,12 +209,12 @@
       <section class="tbw-tu${TB.open ? ' open' : ''}" id="tbwTu" role="dialog" aria-modal="false" aria-label="AI 튜터 — 이 장면 질문" ${TB.open ? '' : 'hidden'}><div class="tbw-th"><span class="tb-sp" aria-hidden="true">${I.spark(14)}</span><b>AI 튜터</b><em class="tbw-now" aria-live="off">${t != null ? `${mmss(t)} 장면을 보고 있어요` : '영상을 재생하면 그 장면을 함께 봐요'}</em><button type="button" class="tbw-x" data-tb="sheet-x" aria-label="AI 튜터 닫기">${SV('<path d="M6 6l12 12M18 6L6 18"/>', 20)}</button></div>
       <div class="tbw-ms" aria-live="polite">${M.map(msgHTML).join('')}${TB.busy ? '<div class="tbw-m"><span class="lt-dots"><i></i><i></i><i></i></span></div>' : ''}</div>
       <div class="tbw-qc">${['이 장면 다시 설명', '3줄 요약', '퀴즈 1문제'].map(x => `<button type="button" data-tb="wq" data-v="${x}">${x}</button>`).join('')}</div>
-      <form class="tbw-f" id="tbwF"><label class="sr" for="tbwQ">질문 입력</label><input id="tbwQ" maxlength="400" autocomplete="off" placeholder="이 장면에 대해 물어보세요"><button type="submit" aria-label="보내기">${I.up(20)}</button></form>
+      <form class="tbw-f" id="tbwF"><label class="sr" for="tbwQ">질문 입력</label><input id="tbwQ" maxlength="400" autocomplete="off" placeholder="이 장면에 대해 물어보세요">${micBtn('tbwQ')}<button type="submit" aria-label="보내기">${I.up(20)}</button></form>
       <p class="tbw-note">과제 답은 대신 쓰지 않고 함께 풀어요 · 대화는 저장하지 않아요</p></section></section>`; }
   /* ── 늘 떠 있는 AI 튜터 아이콘 ── */
-  function fab() { let b = document.getElementById('tbFab'); if (!on()) { if (b) b.remove(); return; } const v = !!cur();
-    const lab = v ? 'AI 튜터 — 이 장면 질문하기' : 'AI 튜터 열기'; if (!b) { b = document.createElement('button'); b.type = 'button'; b.id = 'tbFab'; b.className = 'tb-fab'; b.dataset.tb = 'fab'; document.body.appendChild(b); }
-    const h = `${I.spark(24)}<span>${v ? '이 장면 질문' : 'AI 튜터'}</span>`; if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; } b.setAttribute('aria-label', lab); b.setAttribute('aria-expanded', v ? String(!!TB.open) : String(!!(typeof LT === 'object' && LT.open))); }
+  function fab() { let b = document.getElementById('tbFab'); if (!on() || !tOn()) { if (b) b.remove(); return; } const v = !!cur(); const nm = tNm(); const short = [...nm].length <= 6 ? nm : 'AI 튜터';
+    const lab = v ? `${nm}(AI 튜터) — 이 장면 질문하기` : `${nm}(AI 튜터) 열기`; if (!b) { b = document.createElement('button'); b.type = 'button'; b.id = 'tbFab'; b.className = 'tb-fab'; b.dataset.tb = 'fab'; document.body.appendChild(b); }
+    const h = `${I.spark(24)}<span>${v ? '이 장면 질문' : esc(short)}</span>`; if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; } b.setAttribute('aria-label', lab); b.setAttribute('aria-expanded', v ? String(!!TB.open) : String(!!(typeof LT === 'object' && LT.open))); }
   function sheet(o) { TB.open = o; const t = document.getElementById('tbwTu'); if (t) { t.hidden = !o; t.classList.toggle('open', o); } document.body.classList.toggle('tb-sheet', o); fab(); if (o) { const ms = t && t.querySelector('.tbw-ms'); if (ms) ms.scrollTop = ms.scrollHeight; setTimeout(() => { const i = document.getElementById('tbwQ'); i && i.focus(); }, 30); } else { const b = document.getElementById('tbFab'); b && b.focus(); } }
   const WQ = { '이 장면 다시 설명': t => `지금 ${t != null ? mmss(t) + ' ' : ''}장면에서 설명한 내용을 쉬운 말로 다시 설명해줘`, '3줄 요약': () => '이 레슨 내용을 3줄로 요약해줘', '퀴즈 1문제': () => '이 장면 내용으로 확인 퀴즈 1문제 내줘(정답은 내가 답한 뒤에 알려줘)' };
   async function ask(q, label) { const k = cur(); if (!k || TB.busy) return; q = String(q || '').trim(); if (!q) return; const C = TCFG(); const t = nowT(); const M = thread(k.it.id);
@@ -213,9 +226,9 @@
     else { try { r = (typeof ltRule === 'function' && (ltRule(q) || ltRule('?'))) || null; } catch (e) { r = null; } if (!r) r = { t: '지금은 답을 만들지 못했어요. 잠시 후 다시 물어봐 주세요.' }; ev = t != null ? `${mmss(t)} 장면 기준 · 기본 안내` : '기본 안내'; }
     M.push({ t: String(r.t || '').slice(0, 2000), ev, h: '' }); TB.busy = false; paint(); }
   function paint() { const k = cur(); const box = $('#lm .tbw'); if (!k || !box) return; const ms = box.querySelector('.tbw-ms'); if (ms) { ms.innerHTML = thread(k.it.id).map(msgHTML).join('') + (TB.busy ? '<div class="tbw-m"><span class="lt-dots"><i></i><i></i><i></i></span></div>' : ''); ms.scrollTop = ms.scrollHeight; } }
-  function mountWatch() { const k = cur(); if (!k) return; const lm = $('#lm'); if (!lm || lm.querySelector('.tbw')) return;
+  function mountWatch() { const k = cur(); if (!k) return; if (!tOn() && !chapsOf(k.it).length) return; const lm = $('#lm'); if (!lm || lm.querySelector('.tbw')) return;
     const anchor = ['.imain .lw-rule', '.imain #wtxt', '.imain .wbar', '.imain .vbox', '.imain .novid', '.imain .lc'].map(q => lm.querySelector(q)).find(Boolean); const main = lm.querySelector('.imain');
-    const html = panelHTML(k.c, k.it); if (anchor && anchor.parentElement) anchor.insertAdjacentHTML('afterend', html); else if (main) main.insertAdjacentHTML('beforeend', html); else return;
+    const html = panelHTML(k.c, k.it); if (anchor && anchor.parentElement) anchor.insertAdjacentHTML('afterend', html); else if (main) main.insertAdjacentHTML('beforeend', html); else return; if (!tOn()) { const t = lm.querySelector('#tbwTu'); t && t.remove(); } /* 관리자가 AI 튜터를 끄면 챕터만 */
     document.body.classList.add('tb-watch'); }
   /* 재생 시각 배지 · 현재 챕터 표시는 1초마다(대화는 다시 그리지 않음) */
   setInterval(() => { if (!on()) return; const k = cur(); const box = $('#lm .tbw'); if (!k || !box) return; const t = nowT(); const em = box.querySelector('.tbw-now'); if (em && t != null) em.textContent = `${mmss(t)} 장면을 보고 있어요`;
@@ -227,13 +240,18 @@
     if (B.classList.contains('ap-pickon')) return; /* 선생님 고르기 화면은 그대로 */
     B.classList.add('tube');
     if (a === 'home') { const cal = lm.querySelector('a.lq-hc'); const calH = cal ? cal.outerHTML : ''; lm.innerHTML = homeHTML(); if (calH && TB.f === 'all') { const mn = lm.querySelector('.tb-main'); mn && mn.insertAdjacentHTML('beforeend', calH); } /* 학습 캘린더(lcal.js) 카드는 피드 끝에 그대로 */ B.classList.remove('ap-homeon'); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
-    else if (a === 'review') { lm.innerHTML = shortsHTML(); B.classList.add('tb-full', 'tb-dark'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
+    else if (a === 'review') { lm.innerHTML = shortsHTML(); if (!tOn()) lm.querySelectorAll('[data-tb="sh-ask"]').forEach(x => x.remove()); B.classList.add('tb-full', 'tb-dark'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     else if (a === 'done') { lm.innerHTML = doneHTML(); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     if (a !== 'review') B.classList.remove('tb-dark');
     if (a === 'c') mountWatch(); if (!cur() && TB.open) { TB.open = false; B.classList.remove('tb-sheet'); }
     const nav = app.querySelector('.ap-nav'); if (nav) { nav.classList.add('tb-nav'); nav.classList.remove('lq-n6'); nav.setAttribute('aria-label', '아래 탭'); const h = navHTML(); if (nav.dataset.tb !== h) { nav.innerHTML = h; nav.dataset.tb = h; } } }
   { const base = lrender; lrender = (...x) => { const r = base(...x); try { apply(); fab(); } catch (e) { console.error('ltube', e); } return r; }; }
-  if (typeof ltRender === 'function') { const base = ltRender; ltRender = (...x) => { const r = base(...x); try { fab(); } catch (e) { } return r; }; } /* 대화 창을 열고 닫을 때 아이콘 상태(aria-expanded) */
+  /* 말로 묻기(기존 앱 첫 화면 마이크) — 대화 창 · 장면 튜터 입력칸 옆. 브라우저 음성 인식이 있을 때만 */
+  const SRc = () => window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = id => SRc() ? `<button type="button" class="tb-mic" data-tb="mic" data-v="${id}" aria-label="말로 묻기">${SV('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>', 20)}</button>` : '';
+  function mic(btn) { const SR = SRc(); const inp = document.getElementById(btn.dataset.v); if (!SR || !inp) return; try { const r = new SR(); r.lang = 'ko-KR'; r.interimResults = false; btn.classList.add('on'); btn.setAttribute('aria-label', '듣는 중 — 말씀하세요');
+    r.onresult = e => { inp.value = (e.results[0] && e.results[0][0] && e.results[0][0].transcript) || ''; inp.focus(); }; r.onend = () => { btn.classList.remove('on'); btn.setAttribute('aria-label', '말로 묻기'); }; r.onerror = r.onend; r.start(); } catch (e) { btn.classList.remove('on'); } }
+  if (typeof ltRender === 'function') { const base = ltRender; ltRender = (...x) => { const r = base(...x); try { fab(); if (on()) { const f = document.getElementById('ltf'); const q = document.getElementById('ltq'); if (f && q && !f.querySelector('.tb-mic') && SRc()) q.insertAdjacentHTML('afterend', micBtn('ltq')); } } catch (e) { } return r; }; } /* 대화 창을 열고 닫을 때 아이콘 상태(aria-expanded) */
   window.tubeApply = apply;
 
   /* ── 이벤트 ── */
@@ -244,6 +262,7 @@
     if (k === 'ask') { try { ltAsk(el.dataset.v); } catch (x) { } return; } /* 대화 창(아이콘과 같은 창)에서 바로 묻는다 */
     if (k === 'fab') { if (cur()) return sheet(!TB.open); if (typeof LT === 'object' && LT.open) { const x = document.querySelector('[data-tact="close"]'); if (x) x.click(); return; } if (route().a === 'ai') { const q = document.getElementById('apQ'); if (q) { q.focus(); return; } } if (typeof ltOpen === 'function') ltOpen(); return; }
     if (k === 'sheet-x') return sheet(false);
+    if (k === 'mic') return mic(el);
     if (k === 'sh-next') { TB.sh++; shCount(); lrender(); const s = $('.tbs'); s && s.focus && s.focus(); return; }
     if (k === 'sh-ask') { try { ltAsk(el.dataset.v); } catch (x) { } return; }
     if (k === 'sh-q') return shAnswer(el);

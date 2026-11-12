@@ -199,3 +199,14 @@ body.tube #lm{padding-bottom:calc(var(--ap-nav,64px) + var(--ap-sb,0px) + 96px)}
 .tbw-x{flex:none;width:44px;height:44px;margin:-8px -10px -8px 0;border:0;background:none;border-radius:10px;display:grid;place-items:center;color:var(--tb-mute);cursor:pointer}
 .tbw-th .tbw-now{margin-left:auto}
 @media (min-width:900px){.tbw-tu.open{left:auto;right:24px;bottom:24px;width:420px;border-radius:16px}}
+
+/* 점검 보완(2026-11-13): 유형별 AI 바로 묻기 · 바로가기 · 설치 안내 */
+.tb-askr{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:-4px -16px 0;padding:0 16px}
+.tb-askr::-webkit-scrollbar{display:none}
+.tb-askr button{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid #c5eec7;background:#fff;color:var(--tb-gd);font-size:14px;font-weight:600;cursor:pointer}
+.tb-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px}
+.tb-links a{min-height:48px;display:grid;place-items:center;border-radius:8px;background:#fff;border:1px solid var(--tb-line);color:var(--tb-ink);font-size:14px;font-weight:600;text-decoration:none;text-align:center;padding:0 6px}
+.tb-inst{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--tb-line);border-radius:8px;padding:6px 4px 6px 14px}
+.tb-inst>span{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}.tb-inst b{font-size:14px}.tb-inst small{font-size:12px;color:var(--tb-mute)}
+.tb-mic{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--tb-line,#eaebeb);background:#fff;color:#212121;display:grid;place-items:center;cursor:pointer}
+.tb-mic.on{background:#ec5a3d;color:#fff;border-color:#ec5a3d}

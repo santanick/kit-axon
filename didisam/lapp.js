@@ -60,6 +60,8 @@
   const scnExt = () => { for (const f of window.LSCN_PICK || []) { try { const x = f(oTy(), oEd()); if (x) return x; } catch (e) { console.error(e); } } return null; };
   const scn = () => scnExt() || (oTy() === 'univ' && oEd() === 'lms' ? SCN.univ_lms : SCN[oTy()]) || SCN.adult;
   window.lappScn = () => scn(); /* v33: 기존 웹(lterm.js)이 같은 용어를 쓰도록 내보냄 */
+  /* v39 디디쌤 튜브(ltube.js)가 기존 앱과 같은 유형 용어 · 튜터 이름 · 둘러보기 · 커뮤니티 경로 · 설치 안내를 쓰도록 내보냄 */
+  window.lappInfo = () => ({ tName: tName(), learn: scn().learn, find: scn().find, chips: scn().chips || [], browse: browse(), comm: hasComm() ? ['#comm', '커뮤니티'] : ['#notice', '공지'], inst: !standalone() && ls.get('instx') !== '1', ios: IOS });
   /* v32.7 기관 유형별 가입 방식 — 학습자는 '특정 기관'에 가입한다(레거시 앱: 홈페이지 검색 → 홈페이지 가입(가입 질문 · 자동 수락/승인) · 일괄가입 최초 로그인).
      기본 안내는 유형별로 두고, 운영자가 설정한 실제 방식(laCfg: open · invite · code, 승인 · 만 14세 미만 · 본인인증)을 우선한다. */
   const JOIN = {

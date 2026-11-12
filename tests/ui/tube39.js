@@ -29,8 +29,8 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
   const browser = await chromium.launch(); const fails = []; const ok = (c, m) => { console.log(`${c ? '✓' : '✗'} ${m}`); if (!c) fails.push(m); };
   const open = async (hash, o = {}) => { const ctx = await browser.newContext({ viewport: { width: o.w || 390, height: 844 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
     await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
-    await p.route(/learner-demo-adult\.json/, r => { const j = JSON.parse(fs.readFileSync(ROOT + '/learner-demo-adult.json', 'utf8')); r.fulfill({ contentType: 'application/json', body: JSON.stringify(fixture(j, o.type || 'adult', o.ed)) }); });
-    if (!o.guest) await p.addInitScript(lp => { try { sessionStorage.setItem('didisam.learner.sample', JSON.stringify({ sid: '20269000', dept: '26년 10월 기수', id: '20269000' })); localStorage.setItem('didisam.room.sample.lp', JSON.stringify({ '20269000': lp })); } catch (e) { } }, o.lp || LP);
+    await p.route(/learner-demo-adult\.json/, r => { const j = fixture(JSON.parse(fs.readFileSync(ROOT + '/learner-demo-adult.json', 'utf8')), o.type || 'adult', o.ed); if (o.patch) o.patch(j); r.fulfill({ contentType: 'application/json', body: JSON.stringify(j) }); });
+    if (!o.guest) await p.addInitScript(([lp, inst]) => { try { sessionStorage.setItem('didisam.learner.sample', JSON.stringify({ sid: '20269000', dept: '26년 10월 기수', id: '20269000' })); localStorage.setItem('didisam.room.sample.lp', JSON.stringify({ '20269000': lp })); if (!inst) localStorage.setItem('didisam.app.instx', '1'); } catch (e) { } }, [o.lp || LP, !!o.inst]);
     await p.goto(`${base}/learner.html?demo=adult&app=1${hash}`, { waitUntil: 'load' }); await p.waitForTimeout(700); return { ctx, p, errs }; };
   const tube = p => p.evaluate(() => JSON.parse(JSON.stringify(LR.lp.tube || {})));
 
@@ -45,9 +45,9 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     ok(/itcd8rdl0/.test(r.cont) && /이어 보기 · 2차시/.test(r.contTx) && /12:34 \/ 18:00/.test(r.contTx) && /남은 시간 5분/.test(r.contTx), `홈: 이어 보기 카드(재생 위치 · 남은 시간) — ${r.contTx.replace(/\s+/g, ' ').slice(0, 90)}`);
     ok(/VLOOKUP 퀴즈/.test(r.sug) && /40점/.test(r.sug), `홈: AI 튜터 제안(틀린 퀴즈 근거) — ${r.sug.replace(/\s+/g, ' ')}`);
     ok(r.week >= 2, `홈: 이번 주 차시 ${r.week}개`);
-    ok(r.tabs.join() === '홈,일정,내 과정,나' && r.on === '홈', `홈: 하단 탭 4칸 — ${r.tabs.join(' · ')} (선택 ${r.on})`);
+    ok(r.tabs.join() === '홈,일정,내 강의,나' && r.on === '홈', `홈: 하단 탭 4칸 — ${r.tabs.join(' · ')} (선택 ${r.on})`);
     const fb = await p.evaluate(() => { const b = document.getElementById('tbFab'); if (!b) return null; const R = b.getBoundingClientRect(); const n = document.querySelector('.ap-nav.tb-nav').getBoundingClientRect(); return { t: b.textContent.trim(), l: b.getAttribute('aria-label'), w: R.width, above: R.bottom <= n.top, fixed: getComputedStyle(b).position }; });
-    ok(fb && fb.t === 'AI 튜터' && fb.w >= 56 && fb.above && fb.fixed === 'fixed', `홈: AI 튜터 아이콘이 아래 탭 위에 떠 있음 — ${JSON.stringify(fb)}`);
+    ok(fb && fb.t === 'AX 튜터' && /AX 튜터\(AI 튜터\) 열기/.test(fb.l) && fb.w >= 56 && fb.above && fb.fixed === 'fixed', `홈: AI 튜터 아이콘이 아래 탭 위에 떠 있음 — ${JSON.stringify(fb)}`);
     await p.click('#tbFab'); await p.waitForTimeout(250);
     const op = await p.evaluate(() => ({ on: document.body.classList.contains('lt-on'), fabHidden: getComputedStyle(document.getElementById('tbFab')).display === 'none' }));
     ok(op.on && op.fabHidden, `홈: 아이콘을 누르면 AI 튜터 창이 열림(아이콘은 숨김) ${JSON.stringify(op)}`);
@@ -97,7 +97,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
   { const { ctx, p, errs } = await open('#c/c0/itcd8rdl0');
     const w = await p.evaluate(() => ({ h: (document.querySelector('.tbw-hd h2') || {}).textContent, ch: [...document.querySelectorAll('.tbw-c')].map(x => x.tagName + ':' + x.textContent.trim()), on: (document.querySelector('.tbw-c.on') || {}).textContent, now: (document.querySelector('.tbw-now') || {}).textContent, tab: (document.querySelector('.ap-nav a.on') || {}).textContent }));
     ok(/^2차시 · 피벗/.test(w.h || '') && w.ch.length === 4 && w.ch.slice(0, 3).every(x => x.startsWith('BUTTON')) && w.ch[3].startsWith('SPAN') && /값 요약 방식/.test(w.on || ''), `영상: 챕터 칩 4개(본 구간까지만 버튼, 과정 규칙 watched) · 현재 챕터 ${w.on} — ${w.ch.join(' | ')}`);
-    ok(/영상을 재생하면/.test(w.now) && /내 과정/.test(w.tab), `영상: 재생 전 안내 · 탭 내 과정 — ${w.now}`);
+    ok(/영상을 재생하면/.test(w.now) && /내 강의/.test(w.tab), `영상: 재생 전 안내 · 탭 내 강의(유형 용어) — ${w.now}`);
     const sh0 = await p.evaluate(() => ({ hid: document.getElementById('tbwTu').hidden, fab: document.getElementById('tbFab').textContent.trim() }));
     ok(sh0.hid && sh0.fab === '이 장면 질문', `영상: 튜터는 처음엔 닫혀 있고 아이콘이 '이 장면 질문' — ${JSON.stringify(sh0)}`);
     await p.click('#tbFab'); await p.waitForTimeout(200);
@@ -120,7 +120,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
   for (const [type, ed] of [['voc', ''], ['univ', 'lms']]) { const label = type + (ed ? '/' + ed : '');
     const { ctx, p, errs } = await open('#home', { type, ed });
     const tabs = await p.$$eval('.ap-nav.tb-nav a', A => A.map(x => x.textContent.trim()));
-    ok(tabs.join() === '홈,일정,내 과정,나' && await p.$('#tbFab') !== null, `${label}: 탭 4칸 · AI 튜터 아이콘 — ${tabs.join(' · ')}`);
+    ok(tabs.join() === (type === 'voc' ? '홈,일정,내 훈련,나' : '홈,일정,이번 학기 강의,나') && await p.$('#tbFab') !== null, `${label}: 탭 4칸 · AI 튜터 아이콘 — ${tabs.join(' · ')}`);
     await p.evaluate(() => { location.hash = '#review'; }); await p.waitForTimeout(250);
     const off = await p.evaluate(() => (document.querySelector('.tb-off h1') || {}).textContent || '');
     ok(/짧게 복습은 이 기관에서 쓰지 않아요/.test(off), `${label}: #review 안내 — ${off}`);
@@ -158,6 +158,27 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     const r = await p.evaluate(([cid, iid]) => { const it = C(cid).curriculum.find(x => x.id === iid); const pub = lsSnapshot(); const y = ((pub.classes.find(x => x.id === cid) || {}).items || []).find(x => x.id === iid); return { saved: it.chaps, tx: 'chapsTx' in it, pub: y && y.chaps }; }, [info.cid, info.iid]);
     ok(JSON.stringify(r.saved) === JSON.stringify([{ t: 0, n: '데이터 준비' }, { t: 600, n: '값 요약 방식' }, { t: 3723, n: 'b긴 영상/b' }]) && !r.tx && JSON.stringify(r.pub) === JSON.stringify(r.saved), `스튜디오: 챕터 저장 · 게시본 반영 — ${JSON.stringify(r.pub)}`);
     ok(!errs.length, `스튜디오: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
+
+  /* 9) 관리자 설정 · 유형 시나리오 반영(2026-11-13 대표 점검 지시) */
+  { const { ctx, p, errs } = await open('#home', { inst: true });
+    const r = await p.evaluate(() => ({ ask: [...document.querySelectorAll('.tb-askr button')].map(b => b.textContent.trim()), links: [...document.querySelectorAll('.tb-links a')].map(a => a.getAttribute('href') + ':' + a.textContent.trim()), inst: !!document.querySelector('.tb-inst'), menu: !!document.querySelector('.tb-head [data-lux="menu"]') }));
+    ok(r.ask.join() === '이번 주 계획,자격증 준비,복습 퀴즈', `성인: 유형별 AI 바로 묻기 — ${r.ask.join(' · ')}`);
+    ok(r.links.join() === '#shop:둘러보기,#comm:커뮤니티,#notice:공지', `성인: 바로가기(하단 탭에서 빠진 둘러보기 · 커뮤니티 · 공지) — ${r.links.join(' ')}`);
+    ok(r.inst && r.menu, '성인: 앱 설치 안내 · 전체 메뉴 버튼');
+    await p.click('.tb-head [data-lux="menu"]'); await p.waitForTimeout(200);
+    const m = await p.evaluate(() => [...document.querySelectorAll('#luxSheet a, #luxSheet button')].map(a => a.textContent.trim()).filter(Boolean));
+    ok(m.some(x => /공지/.test(x)) && m.some(x => /진단|배지|강좌|둘러보기/.test(x)), `성인: 전체 메뉴 = 관리자 사이트 메뉴 — ${m.slice(0, 8).join(' · ')}`);
+    await p.keyboard.press('Escape'); await p.click('.tb-inst [data-ap="inst-x"]'); await p.waitForTimeout(150); ok(!(await p.$('.tb-inst')), '성인: 설치 안내 닫기');
+    await p.click('.tb-askr button'); await p.waitForTimeout(400); ok(await p.evaluate(() => document.body.classList.contains('lt-on') && /이번 주 학습 계획/.test(document.body.textContent)), '성인: AI 바로 묻기 → 대화 창에서 질문');
+    ok(!errs.length, `관리자 설정: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
+  { const { ctx, p } = await open('#home', { type: 'voc' }); const a = await p.$$eval('.tb-askr button', B => B.map(b => b.textContent.trim())); ok(a.join() === '출석 확인,수료 기준,오늘 학습 한도', `직업훈련: AI 바로 묻기 — ${a.join(' · ')}`); await ctx.close(); }
+  { const { ctx, p } = await open('#home', { type: 'univ', ed: 'lms' }); const l = await p.$$eval('.tb-links a', A => A.map(a => a.getAttribute('href'))); ok(l[0] === '#lms', `학사 LMS: 바로가기 첫 칸 수강 분반 — ${l.join(' ')}`); await ctx.close(); }
+  { const { ctx, p, errs } = await open('#home', { patch: j => { j.tutor.enabled = false; j.pages = (j.pages || []).filter(x => x.id !== 'notice'); } });
+    const r = await p.evaluate(() => ({ fab: !!document.getElementById('tbFab'), ask: !!document.querySelector('.tb-askr'), links: [...document.querySelectorAll('.tb-links a')].map(a => a.getAttribute('href')) }));
+    ok(!r.fab && !r.ask && !r.links.includes('#notice'), `튜터 끔 · 공지 메뉴 끔: 아이콘 · 바로 묻기 · 공지 바로가기 없음 ${JSON.stringify(r)}`);
+    await p.evaluate(() => { location.hash = '#c/c0/itcd8rdl0'; }); await p.waitForTimeout(400);
+    const w = await p.evaluate(() => ({ ch: document.querySelectorAll('.tbw-c').length, tu: !!document.getElementById('tbwTu'), fab: !!document.getElementById('tbFab') }));
+    ok(w.ch === 4 && !w.tu && !w.fab, `튜터 끔: 영상은 챕터만 ${JSON.stringify(w)}`); ok(!errs.length, `튜터 끔: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
 
   await browser.close(); srv.close();
   if (fails.length) { console.error(`실패 ${fails.length}건`); process.exit(1); }
