@@ -171,7 +171,9 @@ AFTER.push(cur => {
   if (!LIVE.user) return;
   /* v37: 머리(상단 · 레일 아래)에 로그인 아이디 · 비밀번호 변경 · 로그아웃을 넣지 않는다(대표님 2026-11-10 — v36은 slim.js에서 숨겼지만
      live.js가 slim.js보다 늦게 읽혀 매 렌더마다 다시 넣어 운영 서버에서 그대로 보였다). 두 기능은 설정 › 계정 카드에만 있다. */
-  { const old = $('#liveAcct'); if (old) old.remove(); }
+  /* v38.4: 설정에 못 들어가는 교강사는 설정 › 계정 카드를 볼 수 없으므로, 교강사에게만 머리에 비밀번호 변경 · 로그아웃을 남긴다(운영자는 v37대로 설정에만). */
+  { const old = $('#liveAcct'); const tch = S && S.me && S.me.role === 'teacher'; if (!tch) { if (old) old.remove(); }
+    else if (!old) { const foot = $('.side .rfoot') || $('.top .topr') || $('header.top'); if (foot) foot.insertAdjacentHTML('beforeend', `<div id="liveAcct" class="lvacct"><small title="${esc(LIVE.user.email || '')}">${esc(LIVE.user.email || '')}</small><button class="btn sm ghost" data-act="live-pw">비밀번호 변경</button><button class="btn sm ghost" data-act="live-logout">로그아웃</button></div>`); } }
   if (LIVE.user.role !== 'owner' || (LIVE.cfg && LIVE.cfg.module)) { const rs = $('#roleSel'); if (rs) rs.remove(); }
   if (LIVE.user.role === 'teacher') document.querySelectorAll('[data-act="tst-new"], [data-act="cls-new"]').forEach(x => x.remove());
   if (cur.ws === 'settings' && UI.settings === 'room') {

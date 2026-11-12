@@ -167,7 +167,7 @@ async function laLogin(f) { laFresh(); const U = laUniv(); const id = String(f.e
   const s = LA.lv || {}; if (!s.code) throw new Error('먼저 인증번호를 받으세요.'); if (s.email !== id) throw new Error('인증번호를 받은 이메일과 다릅니다.'); if (String(f.elements.vcode && f.elements.vcode.value || '').trim() !== s.code) throw new Error('인증번호가 올바르지 않습니다.');
   if (!acc) throw new Error('이 이메일로 가입한 계정이 없습니다. 위의 [30초 간편가입]으로 바로 가입할 수 있어요.'); LA.lv = null; return laAfterAuth(acc, back); }
 /* v38 운영자가 만든 임시 비밀번호로 처음 로그인하면 비밀번호 바꾸기로 안내(QA L14) */
-function laTempPw() { const m = laMember(); if (!m || !m.acct || !m.acct.pwTemp || (laCache()[m.sid] || {}).pwChanged) return; setTimeout(() => { location.hash = '#acct'; toast('임시 비밀번호로 로그인했어요. 아래 「비밀번호」에서 새 비밀번호로 바꿔 주세요.', 'warn'); setTimeout(() => { const f = $('#laPw'); if (f) { f.scrollIntoView({ block: 'center' }); const i = f.querySelector('input'); if (i) i.focus({ preventScroll: true }); } }, 450); }, 60); }
+function laTempPw() { const m = laMember(); if (!m || !m.acct || !m.acct.pwTemp || (laCache()[m.sid] || {}).pwChanged) return; setTimeout(() => { location.hash = '#acct'; toast('임시 비밀번호로 로그인했어요. 아래 「비밀번호」에서 새 비밀번호로 바꿔 주세요.', 'warn'); setTimeout(() => { const f = $('#laPw'); const fc = f && f.closest('.ls-fold:not(.ls-open)'); if (fc) { const fb = fc.querySelector('.ls-fh'); if (fb) fb.click(); } if (f) { f.scrollIntoView({ block: 'center' }); const i = f.querySelector('input'); if (i) i.focus({ preventScroll: true }); } }, 450); }, 60); }
 function laAfterAuth(acc, back) {
   if (acc.status === 'guardian_pending') throw new Error('보호자 동의를 기다리고 있습니다. 보호자에게 보낸 동의 링크를 확인해 주세요.');
   if (acc.grade === '승인 대기') { LA.pend = acc.sid; laPendKeep(acc.sid); location.hash = '#pending'; return; }
