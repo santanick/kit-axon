@@ -389,14 +389,15 @@
     if (!on) { if (LR.me && route().a === 'home' && ls.get('classic') === '1' && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
     const a = route().a; document.body.classList.toggle('ap-play', a === 'c' && decodeURIComponent(location.hash.slice(1)).split('/').length > 2); /* PC 강의 화면: 떠 있는 아래 메뉴가 본문을 가리지 않게(lapp.css) */ if (LR.me && (a === 'login' || a === 'join')) { location.replace('#home'); return; } /* v32.8 로그인한 뒤 로그인 · 가입 화면은 홈으로 */
     if (!LR.me && ['connect', 'books'].includes(a) && typeof needLogin === 'function' && !lm.textContent.trim()) lm.innerHTML = needLogin(a);
-    if (LR.me && !isPar() && LR.lp && !persona() && !AP.pick && a === 'home') { try { tutorRec().persona = { k: 'warm', n: (TCFG().orgName || TCFG().name || '').replace(/^AI 튜터$/, '') || PERS[0].n, at: new Date().toISOString(), auto: 1 }; LR.api.save(); } catch (e) { } } /* v38 F5 P19 · A14: 가입 직후 '선생님 고르기'를 먼저 띄우지 않고 기본 선생님으로 바로 홈 — 바꾸기는 '나 › 선생님 · 앱 설정' */
-    const needPick = LR.me && !isPar() && (!persona() || AP.pick) && a === 'home';
+    const hm = a === 'home' || (a === 'ai' && !isPar()); /* v39 디디쌤 튜브: 홈은 피드(ltube.js), 선생님과의 대화는 #ai(AI 튜터 탭) */
+    if (LR.me && !isPar() && LR.lp && !persona() && !AP.pick && hm) { try { tutorRec().persona = { k: 'warm', n: (TCFG().orgName || TCFG().name || '').replace(/^AI 튜터$/, '') || PERS[0].n, at: new Date().toISOString(), auto: 1 }; LR.api.save(); } catch (e) { } } /* v38 F5 P19 · A14: 가입 직후 '선생님 고르기'를 먼저 띄우지 않고 기본 선생님으로 바로 홈 — 바꾸기는 '나 › 선생님 · 앱 설정' */
+    const needPick = LR.me && !isPar() && (!persona() || AP.pick) && hm;
     if (needPick) { lm.innerHTML = pickHTML(); document.body.classList.add('ap-pickon'); }
     else if (a === 'connect' && LR.me) { lm.innerHTML = connectHTML(); }
     else if (a === 'home' && isPar()) { lm.innerHTML = parHomeHTML(); }
-    else if (a === 'home') { if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } lm.innerHTML = homeHTML(); document.body.classList.add('ap-homeon'); const sc = document.getElementById('apScroll'); if (sc && (LT.msgs || []).some(m => !m.sys)) sc.scrollTop = sc.scrollHeight; }
+    else if (hm) { if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } lm.innerHTML = homeHTML(); document.body.classList.add('ap-homeon'); const sc = document.getElementById('apScroll'); if (sc && (LT.msgs || []).some(m => !m.sys)) sc.scrollTop = sc.scrollHeight; }
     if (a === 'my' && LR.me && !isPar() && !lm.querySelector('.ap-my')) { const h = lm.querySelector('section.myh'); if (h) h.hidden = true; lm.insertAdjacentHTML('afterbegin', myTopHTML()); }
-    if (a !== 'home' && !needPick) { const ob = app.querySelector('.ap-bar'); if (!ob) app.insertAdjacentHTML('afterbegin', barHTML()); else if (ob.dataset.a !== a) ob.outerHTML = barHTML(); }
+    if (!hm && !needPick) { const ob = app.querySelector('.ap-bar'); if (!ob) app.insertAdjacentHTML('afterbegin', barHTML()); else if (ob.dataset.a !== a) ob.outerHTML = barHTML(); }
     if (LR.me && !needPick && !isPar()) dailyNudge();
     if (!app.querySelector('.ap-nav') && !needPick) app.insertAdjacentHTML('beforeend', navHTML());
   }
@@ -432,7 +433,7 @@
     if (k === 'push-on') return pushEnable();
     if (k === 'push-off') { if (conn().push) conn().push.on = false; LR.api.save(); toast('앱 알림을 껐습니다.', 'ok'); lrender(); return; }
     if (k === 'push-test') { notify(tName(), '테스트 알림이에요. 이렇게 알려 드릴게요.', 'test').then(ok => toast(ok ? '테스트 알림을 보냈습니다.' : '알림을 보내지 못했습니다.', ok ? 'ok' : '')); return; }
-    if (k === 'ask') { location.hash = '#home'; setTimeout(() => ltAsk(el.dataset.v), 250); return; }
+    if (k === 'ask') { location.hash = typeof tubeOn === 'function' && tubeOn() ? '#ai' : '#home'; setTimeout(() => ltAsk(el.dataset.v), 250); return; }
   });
   document.addEventListener('change', e => { const f = e.target.form; if (!f || f.id !== 'apPickF' || e.target.name !== 'pk') return; const nm = f.querySelector('[name=nm]'); const prev = PERS.find(x => x.k === AP.sel) || null;
     AP.sel = e.target.value; const B = PERS.find(x => x.k === AP.sel); if (!nm.value.trim() || (prev && nm.value === prev.n) || PERS.some(x => x.n === nm.value) || (tutorRec().persona || {}).auto && nm.value === ((tutorRec().persona || {}).n || '')) AP.nm = B.n; /* v38 F5: 자동으로 정한 기본 선생님 이름은 스타일을 고르면 그 스타일 이름으로 바뀐다 */ else AP.nm = nm.value; lrender(); setTimeout(() => { const r = document.querySelector(`#apPickF input[value="${AP.sel}"]`); r && r.focus(); }, 0); });

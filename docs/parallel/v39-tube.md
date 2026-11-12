@@ -27,3 +27,15 @@
 - 버전: 바뀐 파일 ?v=39.0, sw 캐시 didisam-app-v39.0.
 - 배포: PR을 main에 병합하면 GitHub Actions가 자동 배포(docs/deploy.md). 병합은 대표님 「배포해」 뒤에만, 버전이 바뀌면 다시 승인.
 - 토큰: didisam-dev-token-diet 규칙(요원 최소, 스크린샷 대신 텍스트, 보고 20줄).
+
+## 1차 구현 기록(2026-11-13, core/v39)
+- 학습자: `didisam/ltube.js` · `ltube.css`(learner.html, lkeep.js 다음 · 모든 lrender 감싸기의 가장 바깥). 로그인한 학습자(보호자 · 방문자 · 미리보기 제외)에만 `body.tube`.
+  - `#home` 피드 · `#shorts` 쇼츠 · `#done` 오늘 목표 완료 · `#ai` 선생님과의 대화(기존 lapp 첫 화면을 AI 튜터 탭으로 옮김, lapp.js `hm`).
+  - 영상 레슨 `#c/과정/항목`: 플레이어 아래 챕터 칩 + AI 튜터 패널. 챕터 이동은 과정 재생 규칙(`c.skip`: free 어디든 · watched 본 구간까지)을 따르고, 규정 대상(voc · univ/lms · moel 프로필)은 이동 없음 · 쇼츠 탭 없음.
+  - 기록 `LR.lp.tube = { goal, sec, sh, qr, qn }` — 서버 `cleanTube`(Node app.js · Java PubServiceImpl) 같은 규칙. 재생 중(YouTube LW.yp 상태 1 · 업로드 video · 쇼츠)일 때만 5초마다 학습 초를 센다.
+  - 학습 캘린더(lcal.js) 카드는 피드 끝에 그대로, 캘린더 탭은 튜브 탭으로 대체.
+- 튜터 장면: 요청 본문 `t`(초, 숫자만) → 서버 `sceneLine`(Node · Java 동일 문장) — 「지금 재생 위치 mm:ss (챕터 …)」 + 근거 구간 지시. 체험(브라우저 키)도 `ltSceneLine`으로 같은 문장. 클라이언트 `ltSceneT()`.
+- 스튜디오: `didisam/tube-admin.js`(index.html, boot.js 앞) — 영상 편집 창 「챕터(구간)」 칸(분:초 제목), 게시본 `chaps [{t, n}]`.
+- 테스트: `tests/ui/tube39.js`(새 보기), `service/test/tutor.test.js` · `learner.test.js`에 t · lp.tube 추가. 기존 보기 테스트 조정: `f5-38.js`(추천 칩은 #ai), `lcal.js`(튜브면 탭 · 캘린더 카드 기준).
+- 회귀(로컬): smoke · acct38 · live-head · compliance · scn-k12 · lcal · f5-38 · done38 · scroll-keep · comm-board · mem36 · calendar-x · clib · crs-* · home-persona · hp-* · lms38 · sam-intent · thumb 통과, API 6종 · 운영 모드 3종(compliance-live · module-live · scn-k12-live, 로컬 Postgres 5544) 통과. `dashx`의 teacher 현황 위젯 8건은 main(v38.5)에서도 같은 실패(이번 변경과 무관).
+- 남은 일(2차): 시안처럼 영상 화면에서 플레이어를 맨 위로(기존 강의 머리 정리), 「노트에 저장」 · 「많이 멈춘 구간」, AI 자동 챕터 · 자동 컷(요금제 반영 후), 쇼츠 업로드 영상 구간 재생, 운영 서버 체험(`learner.html?demo=adult&app=1`) 샘플에 챕터 데이터 넣기.

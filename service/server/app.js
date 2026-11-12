@@ -1,4 +1,14 @@
 'use strict';
+/* v39 영상 장면 튜터: 학습자가 보낸 재생 위치(t, 초)와 그 위치의 챕터(it.chaps: [{ t: 초, n: 제목 }])를 지시에 넣는다 — Java PubServiceImpl.sceneLine과 같은 규칙 */
+const mmss = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+/* v39 학습자 기록 lp.tube: goal(하루 목표 분 5~180) · sec(날짜→학습 초) · sh(날짜→쇼츠 수) · qr · qn(날짜→퀴즈 정답 · 푼 수), 날짜 맵은 최근 40일 */
+function cleanTube(t) { if (!t || typeof t !== 'object' || Array.isArray(t)) return null; const o = {}; const g = Math.round(+t.goal); if (Number.isFinite(g) && g >= 5 && g <= 180) o.goal = g;
+  const day = (m, max) => Object.fromEntries(Object.entries(m && typeof m === 'object' && !Array.isArray(m) ? m : {}).filter(([d, n]) => /^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(+n)).sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-40).map(([d, n]) => [d, Math.min(max, Math.max(0, Math.round(+n)))]));
+  o.sec = day(t.sec, 86400); o.sh = day(t.sh, 999); o.qr = day(t.qr, 999); o.qn = day(t.qn, 999); return o; }
+function sceneLine(it, t) { const s = Number(t); if (!it || typeof t !== 'number' || !Number.isFinite(s) || s < 0 || s > 86400) return '';
+  const C = (Array.isArray(it.chaps) ? it.chaps : []).filter(c => c && Number.isFinite(Number(c.t))).map(c => ({ t: Math.max(0, Math.floor(Number(c.t))), n: String(c.n || '').replace(/[\r\n]/g, ' ').slice(0, 40) })).sort((a, b) => a.t - b.t);
+  const i = C.reduce((k, c, j) => (c.t <= s ? j : k), -1); const ch = i >= 0 ? C[i] : null; const end = ch && C[i + 1] ? C[i + 1].t : null;
+  return `\n지금 재생 위치: ${mmss(s)}${ch ? ` (챕터 「${ch.n}」 ${mmss(ch.t)}~${end != null ? mmss(end) : ''})` : ''}\n이 장면에 대한 질문이면 이 위치를 기준으로 답하고, 마지막 줄에 「근거: 레슨 이름 mm:ss~mm:ss」 형식으로 근거 구간을 적습니다. 영상에서 확인할 수 없는 내용은 추측이라고 밝힙니다.`; }
 /* 디디쌤 스튜디오 운영 서버 — 정적 화면 + /api 를 한 컨테이너에서 제공한다(같은 출처 → 쿠키 세션 · CSRF 단순화).
    의존성: pg 하나. Node.js 22 내장 http · crypto · fetch만 쓴다. */
 const http = require('node:http');
@@ -183,6 +193,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   }
   const cleanLP = lp => { const o = { tut: {}, cls: {}, diag: {}, at: new Date().toISOString() }; if (!lp || typeof lp !== 'object') return o; for (const k of ['tut', 'cls', 'diag', 'book']) if (lp[k] && typeof lp[k] === 'object' && !Array.isArray(lp[k])) o[k] = Object.fromEntries(Object.entries(lp[k]).filter(([id]) => /^[\w-]{1,40}$/.test(id)).slice(0, 500)); if (lp.days && typeof lp.days === 'object') o.days = Object.fromEntries(Object.entries(lp.days).filter(([d, n]) => /^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(+n)).slice(-370).map(([d, n]) => [d, Math.min(999, Math.max(0, Math.round(+n)))]));
     const T = lp.tutor; if (T && typeof T === 'object') { const str = (v, n) => String(v == null ? '' : v).slice(0, n); const plan = (Array.isArray(T.plan) ? T.plan : []).slice(0, 14).filter(x => x && typeof x === 'object').map(x => ({ d: str(x.d, 20), t: str(x.t, 80), m: Math.min(240, Math.max(0, Math.round(+x.m || 0))), h: /^#[\w/%-]{0,120}$/.test(String(x.h || '')) ? String(x.h) : '' })); const ask = (Array.isArray(T.ask) ? T.ask : []).slice(0, 30).filter(x => x && typeof x === 'object' && /^[\w-]{1,24}$/.test(String(x.id || ''))).map(x => ({ id: String(x.id), q: str(x.q, 400), cls: str(x.cls, 60), cid: /^[\w-]{1,40}$/.test(String(x.cid || '')) ? String(x.cid) : '', where: str(x.where, 80), at: str(x.at, 30) })); o.tutor = { plan, ask, planAt: str(T.planAt, 30) }; }
+    { const tb = cleanTube(lp.tube); if (tb) o.tube = tb; } /* v39 디디쌤 튜브 오늘 목표 · 학습 초 · 쇼츠 · 퀴즈(PubServiceImpl.cleanTube와 같은 규칙) */
     { const cal = cleanCal(lp.cal); if (cal) o.cal = cal; } /* v37.4 학습 캘린더 '내 일정'(lpcal.js) */
     return o; };
   const cplAfterLogin = (req, tid, sid, keep) => cpl.afterLogin(req, tid, sid, keep);
@@ -299,7 +310,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     const own = Object.entries(ctx.lp.cls || {}).map(([id, r]) => { const k = L.find(x => x.id === id); if (!k) return ''; const dn = Object.values((r && r.items) || {}).filter(x => x && x.done).length; const nx = (k.items || []).find(i => !(((r && r.items) || {})[i.id] || {}).done); return `${k.name}: 완료 ${dn}/${(k.items || []).length}${nx ? ` · 다음 「${nx.title}」` : ''}`; }).filter(Boolean).slice(0, 12);
     const dg = Object.values(ctx.lp.diag || {}).map(r => r && r.out).filter(Boolean)[0] || ''; const ty = types.find(x => x.k === dg);
     const w = b.where && typeof b.where === 'object' ? b.where : {}; const wc = L.find(x => x.id === String(w.c || '')); const wi = wc && (wc.items || []).find(i => i.id === String(w.it || '')); const wt = (P.tuts || []).find(x => x.id === String(w.t || ''));
-    const here = wi ? `지금 보는 레슨: ${wc.name} › ${wi.title}${wi.desc ? `\n레슨 설명: ${String(wi.desc).slice(0, 600)}` : ''}` : wt ? `지금 보는 튜토리얼: ${wt.title}\n단계: ${(wt.steps || []).slice(0, 3).join(' / ')}\n미션: ${String(wt.mission || '').slice(0, 300)}` : wc ? `지금 보는 과정: ${wc.name}` : '';
+    const here = wi ? `지금 보는 레슨: ${wc.name} › ${wi.title}${wi.desc ? `\n레슨 설명: ${String(wi.desc).slice(0, 600)}` : ''}${sceneLine(wi, b.t)}` : wt ? `지금 보는 튜토리얼: ${wt.title}\n단계: ${(wt.steps || []).slice(0, 3).join(' / ')}\n미션: ${String(wt.mission || '').slice(0, 300)}` : wc ? `지금 보는 과정: ${wc.name}` : '';
     const hint = ctx.tu.help === 'hint';
     const won = n => (+n || 0) ? (+n).toLocaleString('ko-KR') + '원' : '무료'; const SH = (P.shop && P.shop.classes) || [];
     const gsys = `당신은 ${String((P.org || {}).name || '교육기관').slice(0, 40)} 홈페이지의 AI 튜터 「${String(ctx.tu.name || 'AI 튜터').slice(0, 12)}」입니다. 지금 대화 상대는 로그인하지 않은 방문자입니다.

@@ -1,0 +1,247 @@
+/* v39 디디쌤 튜브 — 학습자 앱(body.lapp)의 기준 화면(대표님 2026-11-13 「이걸로 디자인 바꾸자」, 시안 Design 캔버스 9BQuDutXVxyUDeK6kaHV1w)
+   - 로그인한 학습자: 홈 피드(흰 머리 · 칩 · 오늘 목표 · 이어 보기 · AI 튜터 제안 · 이번 주 차시) + 하단 탭 5칸(홈 · 쇼츠 · AI 튜터 · 내 과정 · 나)
+   - 영상 레슨(#c/과정/항목): 플레이어 아래 챕터 칩 + AI 튜터 패널(지금 재생 위치 t를 서버에 함께 보냄 → 근거 구간)
+   - 쇼츠(#shorts): 강사가 넣은 챕터 구간(it.chaps)을 세로 화면으로 + 끝에 그 과정 퀴즈 1문제. 하루 5개까지(끝없는 스크롤 금지)
+   - 오늘 목표(#done): 하루 목표(분)를 채우면 완료 화면(이번 주 연속 · 내일 시작 지점)
+   - 직업훈련(voc) · 대학 학사 LMS(univ/lms) · 고용노동부 규정 프로필: 쇼츠 탭 · 챕터 이동(건너뛰기)을 끈다(docs/compliance). 배속은 기존 과정 규칙(lcls.js) 그대로.
+   - 보호자 · 방문자 · 기존 화면(classic)은 손대지 않는다. 기록은 LR.lp.tube(서버 cleanTube와 같은 모양)에만.
+   learner.html에서 lkeep.js 다음, lboot.js 바로 앞(모든 lrender 감싸기의 가장 바깥). */
+'use strict';
+(() => {
+  if (typeof lrender !== 'function') return;
+  const TB = { f: 'all', msgs: {}, busy: false, sh: 0, shT: null, lastSave: 0, doneShown: '' };
+  window.TUBE = TB;
+  const $ = (s, r) => (r || document).querySelector(s);
+  const SV = (d, s, o) => `<svg width="${s || 24}" height="${s || 24}" viewBox="0 0 24 24" aria-hidden="true" ${o || 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'}>${d}</svg>`;
+  const I = {
+    play: s => SV('<path d="M7 4l13 8-13 8z" fill="currentColor" stroke="none"/>', s),
+    bell: s => SV('<path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 20a2 2 0 004 0"/>', s),
+    search: s => SV('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>', s),
+    home: s => SV('<path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z" fill="currentColor" stroke="none"/>', s),
+    homeO: s => SV('<path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/>', s),
+    shorts: s => SV('<rect x="6" y="3" width="12" height="18" rx="3"/><path d="M11 9l4 3-4 3z" fill="currentColor"/>', s),
+    spark: s => SV('<path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z" fill="currentColor" stroke="none"/>', s),
+    course: s => SV('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18"/>', s),
+    me: s => SV('<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>', s),
+    back: s => SV('<path d="M15 5l-7 7 7 7"/>', s),
+    up: s => SV('<path d="M12 19V5M5 12l7-7 7 7"/>', s),
+    check: s => SV('<path d="M5 12l5 5 9-10"/>', s, 'fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"'),
+    film: s => SV('<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M10 9l5 3-5 3z" fill="currentColor"/>', s)
+  };
+  const ty = () => (SITE() && SITE().org && SITE().org.type) || 'adult';
+  const ed = () => (SITE() && SITE().org && SITE().org.ed) || '';
+  const isPar = () => !!(LR.me && LR.me.kind === 'parent');
+  /* 규정 대상: 직업훈련 · 학사 LMS · 고용노동부 원격훈련 프로필 — 쇼츠 · 챕터 건너뛰기 없음 */
+  const strict = () => { try { const c = SITE().cpl; return ty() === 'voc' || (ty() === 'univ' && ed() === 'lms') || !!(c && c.on && /^moel-/.test(String(c.profile || ''))); } catch (e) { return ty() === 'voc'; } };
+  const on = () => { try { return document.body.classList.contains('lapp') && !!LR.me && !isPar() && LR.mode !== 'preview' && !!SITE(); } catch (e) { return false; } };
+  window.tubeOn = on;
+  const day = (d = new Date()) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 10);
+  const mmss = s => { s = Math.max(0, Math.floor(+s || 0)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
+  const unit = () => (ty() === 'k12' ? '회차' : '차시');
+
+  /* ── 학습 기록(lp.tube) ── */
+  const rec = () => { const L = LR.lp || (LR.lp = {}); const t = L.tube && typeof L.tube === 'object' ? L.tube : (L.tube = {}); ['sec', 'sh', 'qr', 'qn'].forEach(k => { if (!t[k] || typeof t[k] !== 'object') t[k] = {}; }); return t; };
+  const goal = () => { const g = +rec().goal; return g >= 5 && g <= 180 ? g : 20; };
+  const secToday = () => +rec().sec[day()] || 0;
+  const minToday = () => Math.floor(secToday() / 60);
+  const reached = d => (+rec().sec[d] || 0) >= goal() * 60;
+  const trim = m => { const k = Object.keys(m).sort(); k.slice(0, Math.max(0, k.length - 40)).forEach(x => delete m[x]); };
+  function addSec(n) { const t = rec(); const d = day(); const before = reached(d); t.sec[d] = Math.min(86400, (+t.sec[d] || 0) + n); trim(t.sec);
+    const now = Date.now(); if (now - TB.lastSave > 30000) { TB.lastSave = now; try { LR.api.save(); } catch (e) { } }
+    if (!before && reached(d)) onGoal(); }
+  function onGoal() { try { LR.api.save(); } catch (e) { } if (TB.doneShown === day()) return; TB.doneShown = day(); const a = route().a;
+    if (a === 'home' || a === 'shorts') { location.hash = '#done'; return; }
+    toast(`오늘 목표 ${goal()}분을 채웠어요. 오늘은 여기서 쉬어도 좋아요.`, 'ok'); }
+
+  /* 재생 중인지(YouTube LW.yp · 업로드 영상 · 쇼츠) — 화면이 보일 때만 5초마다 센다 */
+  function playing() { try { if (document.visibilityState !== 'visible') return false; const p = typeof LW === 'object' && LW && LW.yp;
+    if (/^#c\//.test(location.hash) && p && typeof p.getPlayerState === 'function' && p.getPlayerState() === 1) return true;
+    const v = $('#lm video'); if (v && !v.paused && !v.ended) return true; return route().a === 'shorts' && !!$('.tbs-v[data-play="1"]'); } catch (e) { return false; } }
+  setInterval(() => { if (on() && playing()) addSec(5); }, 5000);
+
+  /* ── 데이터: 내 과정 · 다음 차시 · 챕터 ── */
+  const stats = () => { try { return myStats(); } catch (e) { return { courses: [] }; } };
+  const lpItem = (cid, iid) => ((((LR.lp || {}).cls || {})[cid] || {}).items || {})[iid] || {};
+  const seq = c => (c.items || []).filter(x => x.type !== 'chapter');
+  const nOf = (c, it) => seq(c).indexOf(it) + 1;
+  const durOf = (c, it) => { const r = lpItem(c.id, it.id); const t = +it.time > 0 ? it.time * 60 : 0; return Math.max(t, +r.max || 0, +r.dur || 0); };
+  const chapsOf = it => (Array.isArray(it && it.chaps) ? it.chaps : []).filter(x => x && Number.isFinite(+x.t)).map(x => ({ t: Math.max(0, Math.floor(+x.t)), n: String(x.n || '').slice(0, 40) })).sort((a, b) => a.t - b.t);
+  const COL = ['#7c5ecf', '#2946c3', '#de7080', '#007200', '#f19d38', '#109bf1'];
+  const colOf = s => COL[[...String(s || '')].reduce((a, ch) => a + ch.charCodeAt(0), 0) % COL.length];
+  /* 이어 볼 것: 최근 학습한(재생 위치가 있는) 영상 → 진행 중 과정의 다음 항목 */
+  function cont() { const C = stats().courses.filter(x => !x.done); let best = null;
+    C.forEach(x => seq(x.c).forEach(it => { if (it.type !== 'video') return; const r = lpItem(x.c.id, it.id); if (r.done || !(+r.pos > 0)) return; const at = String(r.at || ''); if (!best || at > best.at) best = { x, it, at }; }));
+    if (best) return best; const x = C.find(y => y.next) || null; return x ? { x, it: x.next, at: '' } : null; }
+  function hrefOf(c, it) { return `#c/${encodeURIComponent(c.id)}/${encodeURIComponent(it.id)}`; }
+  function thumbBlock(c, it, cls) { const bg = colOf(c.name); return c.thumb ? `<span class="${cls} img" style="--bg:${bg}"><img src="${esc(c.thumb)}" alt="" loading="lazy"></span>` : `<span class="${cls}" style="--bg:${bg}" aria-hidden="true"></span>`; }
+
+  /* ── 홈 피드 ── */
+  const CH = () => { const L = stats().courses; const live = liveSoon().length; const cert = L.some(x => /자격|시험|필기|실기/.test(x.c.name || '') || (x.c.items || []).some(i => i.type === 'exam'));
+    return [['all', '전체', 1], ['cont', '이어 보기', !!cont()], ['mine', '내 과정', L.length > 0], ['live', '라이브', live > 0], ['cert', '자격증', cert && ty() !== 'univ']].filter(x => x[2]); };
+  function liveSoon() { const t0 = day(), t7 = day(new Date(Date.now() + 6 * 864e5)); const out = [];
+    try { (SITE().classes || []).forEach(c => { const x = typeof lwCls === 'function' ? lwCls(c.id) : null; if (!x || x.enrolled === false) return; if (!stats().courses.some(y => y.c.id === c.id) && !x.enrolled) return; lwUnits(x).filter(u => u.date && u.date >= t0 && u.date <= t7 && (u.type === 'live' || u.link || x.kind === 'episode')).forEach(u => out.push({ c, u })); }); } catch (e) { }
+    return out.sort((a, b) => (a.u.date + (a.u.from || '')).localeCompare(b.u.date + (b.u.from || ''))); }
+  const WD = ['일', '월', '화', '수', '목', '금', '토'];
+  const wdOf = d => WD[new Date(d + 'T00:00:00Z').getUTCDay()];
+  function headHTML() { let n = 0; try { n = typeof laItems === 'function' ? laItems().L.filter(x => !x.read).length : 0; } catch (e) { }
+    const org = (SITE().org || {}).name || '';
+    return `<header class="tb-head"><div class="tb-hr"><button type="button" class="tb-brand" data-ap="orgs" aria-label="기관 바꾸기 — 지금 ${esc(org)}"><span class="tb-logo">${I.play(10)}</span><b>디디쌤</b><small>${esc(org)}</small></button>
+      <a class="tb-ib" href="#inbox" aria-label="알림${n ? ` · 새 알림 ${n}개` : ''}">${I.bell(24)}${n ? `<i>${n > 99 ? '99+' : n}</i>` : ''}</a><button type="button" class="tb-ib" data-ap="srch" aria-label="검색">${I.search(24)}</button></div>
+      <div class="tb-chips" role="tablist" aria-label="보기">${CH().map(([k, l]) => `<button type="button" role="tab" class="tb-chip${TB.f === k ? ' on' : ''}" aria-selected="${TB.f === k}" data-tb="f" data-v="${k}">${esc(l)}</button>`).join('')}</div></header>`; }
+  function goalHTML() { const g = goal(), m = Math.min(minToday(), 999), p = Math.min(100, Math.round(m / g * 100)); const done = m >= g;
+    return `<section class="tb-goal${done ? ' done' : ''}" aria-label="오늘 목표"><button type="button" class="tb-gb" data-tb="goal" aria-label="오늘 목표 ${g}분 중 ${m}분 · 목표 바꾸기"><span class="tb-gl"><small>오늘 목표 ${g}분</small><span class="tb-bar" aria-hidden="true"><i style="width:${p}%"></i></span></span><b>${m}<small>/${g}분</small></b></button>${done ? `<a class="tb-gd" href="#done">완료 보기</a>` : ''}</section>`; }
+  function contHTML() { const k = cont(); if (!k) return `<a class="tb-empty" href="${esc(typeof LAPP_FIND === 'function' ? '#shop' : '#shop')}"><b>첫 과정을 골라 볼까요?</b><small>수강을 시작하면 이어 볼 차시가 여기에 나와요.</small></a>`;
+    const { x, it } = k; const c = x.c; const r = lpItem(c.id, it.id); const d = durOf(c, it); const pos = Math.min(+r.pos || 0, d || +r.pos || 0); const w = d ? Math.round(pos / d * 100) : Math.round((+r.w || 0) * 100);
+    const left = d && pos ? Math.max(1, Math.round((d - pos) / 60)) : 0; const n = nOf(c, it);
+    return `<a class="tb-cont" href="${esc(hrefOf(c, it))}"><span class="tb-ct" style="--bg:${colOf(c.name)}">${c.thumb ? `<img src="${esc(c.thumb)}" alt="" loading="lazy">` : ''}<em class="tb-tag">이어 보기 · ${n}${unit()}</em>${d ? `<em class="tb-time">${mmss(pos)} / ${mmss(d)}</em>` : ''}<b>${esc(it.title || '')}</b><span class="tb-pb" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, w))}%"></i></span></span>
+      <span class="tb-cm"><span class="tb-av" aria-hidden="true">${esc([...String(c.name || '과')][0])}</span><span><b>${esc(c.name)} · ${n}${unit()}</b><small>${[c.teacher, `과정 진도 ${x.p}%`, left ? `남은 시간 ${left}분` : ''].filter(Boolean).map(esc).join(' · ')}</small></span></span></a>`; }
+  /* AI 튜터 제안: 틀린 퀴즈 → 멈춘 차시. 근거가 없으면 숨긴다 */
+  function suggest() { const C = stats().courses; let q = null, v = null;
+    C.forEach(x => (x.c.items || []).forEach(it => { const r = lpItem(x.c.id, it.id);
+      if ((it.type === 'quiz' || it.type === 'exam') && r.score != null && +r.score < 70 && (!q || String(r.at || '') > String(q.r.at || ''))) q = { x, it, r };
+      if (it.type === 'video' && !r.done && +r.pos > 30 && (!v || String(r.at || '') > String(v.r.at || ''))) v = { x, it, r }; }));
+    const k = cont(); if (v && k && k.it === v.it) v = null; /* 이어 보기 카드와 같은 것이면 제안하지 않는다 */
+    if (q) { const sh = shortsFor(q.x.c)[0]; return { t: `<b>${esc(q.it.title)}</b>에서 ${q.r.score}점을 받았어요. ${sh && !strict() ? '짧은 쇼츠로 다시 볼까요?' : '틀린 부분을 같이 짚어 볼까요?'}`, h: sh && !strict() ? '#shorts' : '', ask: `「${q.it.title}」에서 헷갈린 개념을 쉽게 다시 설명해줘` }; }
+    if (v) return { t: `<b>${esc(v.it.title)}</b> ${mmss(v.r.pos)}에서 멈췄어요. 그 장면부터 이어 볼까요?`, h: hrefOf(v.x.c, v.it) };
+    return null; }
+  function sugHTML() { const s = suggest(); if (!s) return '';
+    return `<section class="tb-sug" aria-label="AI 튜터 제안"><span class="tb-sp" aria-hidden="true">${I.spark(16)}</span><p>${s.t}</p>${s.h ? `<a class="tb-go" href="${esc(s.h)}">보기</a>` : `<button type="button" class="tb-go" data-tb="ask" data-v="${esc(s.ask || '')}">보기</button>`}</section>`; }
+  function nextTiles() { const out = []; const k = cont();
+    stats().courses.filter(x => !x.done).forEach(x => { const S0 = seq(x.c); const i0 = k && k.x.c.id === x.c.id ? S0.indexOf(k.it) + 1 : S0.indexOf(x.next); S0.slice(Math.max(0, i0)).filter(it => !lpItem(x.c.id, it.id).done && !['survey'].includes(it.type)).slice(0, 2).forEach(it => out.push({ c: x.c, it })); });
+    const L = liveSoon().slice(0, 2).map(({ c, u }) => ({ c, u })); return { L, V: out.slice(0, 4 - Math.min(2, L.length)) }; }
+  function weekHTML() { const { L, V } = nextTiles(); if (!L.length && !V.length) return '';
+    const TY = { video: '영상', doc: '자료', quiz: '퀴즈', assign: '과제', exam: '시험', live: '라이브', offline: '오프라인' };
+    const tV = ({ c, it }) => { const d = durOf(c, it); return `<a class="tb-tile" href="${esc(hrefOf(c, it))}"><span class="tb-tt" style="--bg:${colOf(c.name + it.id)}"><b>${esc(it.title)}</b><em>${esc(TY[it.type] || '')}</em></span><span class="tb-tl">${nOf(c, it)}${unit()}${d ? ` · ${Math.max(1, Math.round(d / 60))}분` : ''} · ${esc(c.name)}</span></a>`; };
+    const tL = ({ c, u }) => `<a class="tb-tile" href="#c/${esc(encodeURIComponent(c.id))}"><span class="tb-tt" style="--bg:#de7080"><b>${esc(u.title || '라이브')}</b><em>라이브 ${esc(wdOf(u.date))} ${esc(u.from || '')}</em></span><span class="tb-tl">${esc(c.name)} · 입장 · 출결</span></a>`;
+    return `<section class="tb-week" aria-labelledby="tbWk"><div class="tb-sh"><h2 id="tbWk">이번 주 볼 ${unit()}</h2><a href="#my">전체 보기</a></div><div class="tb-grid">${[...V.map(tV), ...L.map(tL)].join('')}</div></section>`; }
+  function listHTML(f) { const L = stats().courses;
+    if (f === 'mine') return `<section class="tb-list" aria-label="내 과정">${L.map(x => `<a class="tb-row" href="${esc(x.next ? hrefOf(x.c, x.next) : '#c/' + encodeURIComponent(x.c.id))}">${thumbBlock(x.c, null, 'tb-rt')}<span><b>${esc(x.c.name)}</b><small>${x.done ? '이수' : `진도 ${x.p}%${x.next ? ` · 다음 「${esc(x.next.title)}」` : ''}`}</small></span></a>`).join('')}</section>`;
+    if (f === 'live') return `<section class="tb-list" aria-label="라이브">${liveSoon().map(({ c, u }) => `<a class="tb-row" href="#c/${esc(encodeURIComponent(c.id))}"><span class="tb-rt" style="--bg:#de7080" aria-hidden="true"></span><span><b>${esc(u.title || c.name)}</b><small>${esc(wdOf(u.date))} ${esc(u.date.slice(5).replace('-', '.'))} ${esc(u.from || '')} · ${esc(c.name)}</small></span></a>`).join('')}</section>`;
+    if (f === 'cert') return `<section class="tb-list" aria-label="자격증">${L.filter(x => /자격|시험|필기|실기/.test(x.c.name || '') || (x.c.items || []).some(i => i.type === 'exam')).map(x => { const ex = (x.c.items || []).find(i => i.type === 'exam' || i.type === 'quiz'); return `<a class="tb-row" href="${esc(ex ? hrefOf(x.c, ex) : '#c/' + encodeURIComponent(x.c.id))}">${thumbBlock(x.c, null, 'tb-rt')}<span><b>${esc(x.c.name)}</b><small>진도 ${x.p}%${ex ? ` · ${esc(ex.title)}` : ''}</small></span></a>`; }).join('')}</section>`;
+    return ''; }
+  function homeHTML() { const f = CH().some(x => x[0] === TB.f) ? TB.f : (TB.f = 'all');
+    const body = f === 'all' ? goalHTML() + contHTML() + sugHTML() + weekHTML() : f === 'cont' ? goalHTML() + contHTML() + sugHTML() : listHTML(f);
+    return `<div class="tb-home">${headHTML()}<div class="tb-main">${body}</div></div>`; }
+
+  /* ── 하단 탭 ── */
+  function navHTML() { const a = route().a; const cur = { home: 'home', shorts: 'shorts', ai: 'ai', done: 'home', my: 'my', c: 'my', cert: 'my', badge: 'my', acct: 'me', inbox: 'me', msg: 'me', mypay: 'me', connect: 'me', payd: 'me' }[a] || '';
+    const it = [['home', '#home', cur === 'home' ? I.home(24) : I.homeO(24), '홈'], ...(strict() ? [] : [['shorts', '#shorts', I.shorts(24), '쇼츠']]), ['ai', '#ai', `<i class="tb-pill">${I.spark(18)}</i>`, 'AI 튜터'], ['my', '#my', I.course(24), '내 과정'], ['me', '#acct', I.me(24), '나']];
+    return it.map(([k, h, i, l]) => `<a href="${h}" class="tb-n-${k}${cur === k ? ' on' : ''}"${cur === k ? ' aria-current="page"' : ''}>${i}<span>${l}</span></a>`).join(''); }
+
+  /* ── 오늘 목표 설정 시트 ── */
+  function goalSheet() { const g = goal(); const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
+    w.innerHTML = `<div class="ap-sh tb-gsh" role="dialog" aria-modal="true" aria-labelledby="tbGT"><h2 id="tbGT">하루 목표</h2><p>하루에 몇 분 공부할까요? 채우면 오늘은 쉬어도 좋다고 알려 드려요.</p>
+      <div class="tb-gopt" role="radiogroup" aria-label="하루 목표 분">${[10, 20, 30, 60].map(m => `<button type="button" role="radio" aria-checked="${m === g}" class="${m === g ? 'on' : ''}" data-tb="goal-set" data-v="${m}">${m}분</button>`).join('')}</div>
+      <nav><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
+    document.body.appendChild(w); const b = w.querySelector('.tb-gopt .on') || w.querySelector('.tb-gopt button'); b && b.focus(); }
+
+  /* ── 오늘 목표 완료(#done) ── */
+  function doneHTML() { const t = rec(), d = day(); const m = minToday(), g = goal(); const sh = +t.sh[d] || 0, qr = +t.qr[d] || 0, qn = +t.qn[d] || 0;
+    const now = new Date(Date.now() + 9 * 3600e3); const dow = (now.getUTCDay() + 6) % 7; const mon = new Date(now.getTime() - dow * 864e5);
+    const wk = [...Array(7)].map((_, i) => { const di = new Date(mon.getTime() + i * 864e5).toISOString().slice(0, 10); return { di, l: '월화수목금토일'[i], ok: reached(di), today: di === d, fut: di > d }; });
+    let streak = 0; for (let k = 0; k < 400; k++) { const di = day(new Date(Date.now() - k * 864e5)); if (reached(di)) streak++; else if (k > 0 || di !== d) break; }
+    const k = cont(); const ok = m >= g; const S = strict();
+    return `<section class="tb-done" aria-labelledby="tbDT"><div class="tb-dh"><span class="tb-ring${ok ? '' : ' part'}" style="--p:${Math.min(100, Math.round(m / g * 100))}"><i>${ok ? I.check(40) : `<b>${m}</b><small>/${g}분</small>`}</i></span>
+      <h1 id="tbDT">${ok ? '오늘 목표를 다 했어요' : `오늘 목표까지 ${g - m}분 남았어요`}</h1><p>${[`${m}분 학습`, S ? '' : `쇼츠 ${sh}개`, qn ? `퀴즈 ${qr}/${qn} 정답` : ''].filter(Boolean).join(' · ')}<br>${ok ? '오늘은 여기서 쉬어도 좋아요.' : '조금만 더 하면 오늘 목표를 채워요.'}</p></div>
+      <section class="tb-wk" aria-label="이번 주"><div class="tb-wkh"><b>이번 주</b>${streak ? `<em>${streak}일 연속</em>` : ''}</div><ol>${wk.map(x => `<li><small>${x.l}</small><span class="${x.ok ? 'ok' : ''}${x.today ? ' td' : ''}" aria-label="${x.l}요일 ${x.ok ? '목표 달성' : x.fut ? '예정' : '미달성'}"></span></li>`).join('')}</ol></section>
+      ${k ? `<section class="tb-tip" aria-label="AI 튜터 한마디"><span class="tb-sp" aria-hidden="true">${I.spark(14)}</span><p>${ok ? '내일은' : '다음은'} <b>${nOf(k.x.c, k.it)}${unit()} ${esc(k.it.title)}</b>부터 시작해요.${k.at && lpItem(k.x.c.id, k.it.id).pos ? ` ${mmss(lpItem(k.x.c.id, k.it.id).pos)} 장면부터 이어져요.` : ''}</p></section>` : ''}
+      <div class="tb-da">${ok ? `<a class="tb-pri" href="#connect">내일 알림 받고 마치기</a>` : ''}<a class="${ok ? 'tb-sec' : 'tb-pri'}" href="${k ? esc(hrefOf(k.x.c, k.it)) : '#home'}">${ok ? '조금 더 볼래요' : '이어서 보기'}</a>${ok ? '' : '<a class="tb-sec" href="#home">홈으로</a>'}</div></section>`; }
+
+  /* ── 쇼츠(#shorts): 챕터 구간 + 퀴즈 1문제, 하루 5개 ── */
+  const SH_MAX = 5;
+  function shortsFor(c) { const out = []; seq(c).forEach(it => { if (it.type !== 'video') return; const C = chapsOf(it); const d = durOf(c, it);
+      C.forEach((ch, i) => { const end = C[i + 1] ? C[i + 1].t : (d || ch.t + 90); const len = Math.min(180, Math.max(20, end - ch.t)); out.push({ c, it, ch, s: ch.t, e: ch.t + len, i }); }); });
+    return out; }
+  function shortsAll() { const L = stats().courses; const out = []; L.forEach(x => shortsFor(x.c).forEach(s => out.push(s)));
+    /* 틀린 퀴즈가 있는 과정의 구간을 먼저 */
+    const weak = new Set(L.filter(x => (x.c.items || []).some(it => { const r = lpItem(x.c.id, it.id); return it.type === 'quiz' && r.score != null && +r.score < 70; })).map(x => x.c.id));
+    return out.sort((a, b) => (weak.has(b.c.id) ? 1 : 0) - (weak.has(a.c.id) ? 1 : 0)); }
+  function quizFor(c, it) { const S0 = seq(c); const i0 = S0.indexOf(it); const Q = [...S0.slice(i0 + 1), ...S0.slice(0, i0)].find(x => x.type === 'quiz' && (x.qs || []).some(q => ['mc', 'ox'].includes(q.t || 'mc') && (q.t === 'ox' || (q.opts || []).length >= 2)));
+    if (!Q) return null; const q = Q.qs.find(q => ['mc', 'ox'].includes(q.t || 'mc') && (q.t === 'ox' || (q.opts || []).length >= 2)); const opts = q.t === 'ox' ? ['O', 'X'] : q.opts.slice(0, 4);
+    const ans = q.t === 'ox' ? (String(q.a).toUpperCase() === 'X' || q.a === false || q.a === 1 ? 'X' : 'O') : (typeof q.a === 'number' ? opts[q.a] : String(q.a)); return { Q, q, opts, ans }; }
+  function mediaHTML(s) { const yt = s.it.yt || ''; if (yt && /^[\w-]{11}$/.test(yt)) return `<iframe class="tbs-v" data-play="1" title="${esc(s.it.title)} ${esc(s.ch.n)} 구간" allow="autoplay; encrypted-media; picture-in-picture" src="https://www.youtube-nocookie.com/embed/${esc(yt)}?start=${s.s}&end=${s.e}&autoplay=1&playsinline=1&rel=0&modestbranding=1"></iframe>`;
+    return `<div class="tbs-v tbs-ph" data-play="1" aria-hidden="true"></div>`; }
+  function shortsHTML() { if (strict()) return `<section class="tb-off"><h1>쇼츠는 이 기관에서 쓰지 않아요</h1><p>훈련 · 학사 과정은 정해진 순서와 학습 시간을 지켜야 해서 영상을 잘라 보지 않아요.</p><a class="tb-pri" href="#my">내 과정으로</a></section>`;
+    const L = shortsAll(); const t = rec(), d = day(); const seen = +t.sh[d] || 0;
+    const top = `<div class="tbs-top"><a class="tbs-ib" href="#home" aria-label="뒤로">${I.back(24)}</a><b>쇼츠</b><em>오늘 ${Math.min(seen, SH_MAX)} / ${SH_MAX}개</em></div>`;
+    if (!L.length) return `<section class="tbs tbs-empty">${top}<div class="tbs-c"><h1>아직 쇼츠가 없어요</h1><p>강사가 영상에 챕터(구간)를 넣으면 그 구간이 1~3분짜리 쇼츠로 만들어져요.</p><a class="tb-pri" href="#my">내 과정 보기</a></div></section>`;
+    if (seen >= SH_MAX) return `<section class="tbs tbs-empty">${top}<div class="tbs-c"><h1>오늘 쇼츠 ${SH_MAX}개를 다 봤어요</h1><p>짧게 여러 개보다 한 차시를 끝까지 보는 게 더 오래 남아요.</p><a class="tb-pri" href="#done">오늘 학습 보기</a></div></section>`;
+    const s = L[TB.sh % L.length]; const qz = quizFor(s.c, s.it); const bg = colOf(s.c.name + s.it.id);
+    return `<section class="tbs" style="--bg:${bg}" aria-label="쇼츠">${top}
+      <div class="tbs-body"><span class="tbs-tag">${nOf(s.c, s.it)}${unit()} ${mmss(s.s)}부터 ${Math.round((s.e - s.s) / 6) / 10}분</span><h1>${esc(s.ch.n || s.it.title)}</h1><p class="tbs-from">${esc(s.c.name)} · ${esc(s.it.title)}</p>${mediaHTML(s)}</div>
+      <div class="tbs-side"><button type="button" data-tb="sh-ask" data-v="${esc(`「${s.it.title}」 ${s.ch.n ? `「${s.ch.n}」 ` : ''}구간 내용을 쉽게 다시 설명해줘`)}" aria-label="튜터에게 질문"><span class="g">${I.spark(20)}</span>질문</button><a href="${esc(hrefOf(s.c, s.it))}" aria-label="원래 ${unit()}로"><span>${I.film(20)}</span>${unit()}로</a><button type="button" data-tb="sh-next" aria-label="다음 쇼츠"><span>${SV('<path d="M6 9l6 6 6-6"/>', 20)}</span>다음</button></div>
+      ${qz ? `<section class="tbs-q" aria-label="확인 퀴즈"><div class="tbs-qh"><small>확인 퀴즈</small><em>맞히면 오늘 목표 +1분</em></div><p>${esc(qz.q.q)}</p><div class="tbs-qo">${qz.opts.map(o => `<button type="button" data-tb="sh-q" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div><p class="tbs-qr" role="status" aria-live="polite"></p></section>` : ''}</section>`; }
+  function shCount() { const t = rec(), d = day(); t.sh[d] = Math.min(999, (+t.sh[d] || 0) + 1); trim(t.sh); try { LR.api.save(); } catch (e) { } }
+  function shAnswer(btn) { const L = shortsAll(); const s = L[TB.sh % L.length]; const qz = s && quizFor(s.c, s.it); if (!qz) return; const box = btn.closest('.tbs-q'); if (box.dataset.done) return; box.dataset.done = 1;
+    const ok = btn.dataset.v === qz.ans; const t = rec(), d = day(); t.qn[d] = Math.min(999, (+t.qn[d] || 0) + 1); if (ok) t.qr[d] = Math.min(999, (+t.qr[d] || 0) + 1); trim(t.qn); trim(t.qr);
+    box.querySelectorAll('button').forEach(b => { b.disabled = true; if (b.dataset.v === qz.ans) b.classList.add('ok'); else if (b === btn) b.classList.add('no'); });
+    box.querySelector('.tbs-qr').textContent = ok ? '정답이에요! 오늘 목표에 1분을 더했어요.' : `정답은 「${qz.ans}」예요. 원래 ${unit()}에서 이 부분을 다시 볼 수 있어요.`;
+    if (ok) addSec(60); else try { LR.api.save(); } catch (e) { } }
+
+  /* ── 영상 레슨: 챕터 칩 + AI 튜터 패널 ── */
+  const nowT = () => (typeof ltSceneT === 'function' ? ltSceneT() : null);
+  function cur() { const m = /^#c\/([^/]+)\/([^/?#]+)/.exec(location.hash); if (!m) return null; const c = (SITE().classes || []).find(x => x.id === decodeURIComponent(m[1])); const it = c && (c.items || []).find(x => x.id === decodeURIComponent(m[2])); return it && it.type === 'video' ? { c, it } : null; }
+  /* 챕터 이동은 과정 재생 규칙(lcls.js c.skip)을 따른다: free = 어디든 · watched = 본 구간 안만 · 그 밖 · 규정 대상 = 이동 없음 */
+  const maxW = (c, it) => { const r = lpItem(c.id, it.id); return Math.max(+r.max || 0, +r.pos || 0); };
+  const seekOK = (c, it, t) => { if (strict()) return false; const sk = c.skip || 'free'; return sk === 'free' || (sk === 'watched' && it != null && t <= maxW(c, it) + 1); };
+  function chapHTML(c, it) { const C = chapsOf(it); if (!C.length) return ''; const t = nowT() || +lpItem(c.id, it.id).pos || 0; const ci = C.reduce((k, x, j) => (x.t <= t ? j : k), -1); const anyK = C.some(x => seekOK(c, it, x.t));
+    return `<div class="tbw-ch" role="list" aria-label="챕터">${C.map((x, j) => seekOK(c, it, x.t) ? `<button type="button" role="listitem" class="tbw-c${j === ci ? ' on' : ''}" data-tb="seek" data-v="${x.t}" aria-label="${esc(x.n)} ${mmss(x.t)}로 이동">${String(j + 1).padStart(2, '0')} ${esc(x.n)}${j === ci ? ' ▶' : ''}</button>` : `<span role="listitem" class="tbw-c${j === ci ? ' on' : ''}">${String(j + 1).padStart(2, '0')} ${esc(x.n)}</span>`).join('')}</div><p class="tbw-cn">강사가 넣은 챕터예요${anyK ? (C.every(x => seekOK(c, it, x.t)) ? '' : ' · 본 구간까지만 이동할 수 있어요') : ' · 이 과정은 앞으로 건너뛸 수 없어요'}</p>`; }
+  const thread = iid => (TB.msgs[iid] = TB.msgs[iid] || []);
+  function msgHTML(m) { return m.me ? `<div class="tbw-m me">${esc(m.t)}</div>` : `<div class="tbw-m">${nl(esc(m.t)).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')}${m.ev ? `<small class="tbw-ev">${esc(m.ev)}</small>` : ''}${m.h || ''}</div>`; }
+  const nl = s => String(s).replace(/\n/g, '<br>');
+  function panelHTML(c, it) { const t = nowT(); const M = thread(it.id);
+    return `<section class="tbw" aria-label="${unit()} 정보와 AI 튜터"><div class="tbw-hd"><h2>${nOf(c, it)}${unit()} · ${esc(it.title)}</h2>${chapHTML(c, it)}</div>
+      <section class="tbw-tu" aria-label="AI 튜터"><div class="tbw-th"><span class="tb-sp" aria-hidden="true">${I.spark(14)}</span><b>AI 튜터</b><em class="tbw-now" aria-live="off">${t != null ? `${mmss(t)} 장면을 보고 있어요` : '영상을 재생하면 그 장면을 함께 봐요'}</em></div>
+      <div class="tbw-ms" aria-live="polite">${M.map(msgHTML).join('')}${TB.busy ? '<div class="tbw-m"><span class="lt-dots"><i></i><i></i><i></i></span></div>' : ''}</div>
+      <div class="tbw-qc">${['이 장면 다시 설명', '3줄 요약', '퀴즈 1문제'].map(x => `<button type="button" data-tb="wq" data-v="${x}">${x}</button>`).join('')}</div>
+      <form class="tbw-f" id="tbwF"><label class="sr" for="tbwQ">질문 입력</label><input id="tbwQ" maxlength="400" autocomplete="off" placeholder="이 장면에 대해 물어보세요"><button type="submit" aria-label="보내기">${I.up(20)}</button></form>
+      <p class="tbw-note">과제 답은 대신 쓰지 않고 함께 풀어요 · 대화는 저장하지 않아요</p></section></section>`; }
+  const WQ = { '이 장면 다시 설명': t => `지금 ${t != null ? mmss(t) + ' ' : ''}장면에서 설명한 내용을 쉬운 말로 다시 설명해줘`, '3줄 요약': () => '이 레슨 내용을 3줄로 요약해줘', '퀴즈 1문제': () => '이 장면 내용으로 확인 퀴즈 1문제 내줘(정답은 내가 답한 뒤에 알려줘)' };
+  async function ask(q, label) { const k = cur(); if (!k || TB.busy) return; q = String(q || '').trim(); if (!q) return; const C = TCFG(); const t = nowT(); const M = thread(k.it.id);
+    const lim = +C.daily || 20; if (typeof ltUsed === 'function' && ltUsed() >= lim) { M.push({ me: 1, t: label || q }, { t: `오늘 질문 한도(${lim}회)를 모두 썼어요. 내일 다시 이어 가거나, 급한 질문은 선생님께 넘겨 주세요.` }); paint(); return; }
+    M.push({ me: 1, t: label || q }); if (M.length > 20) M.splice(0, M.length - 20); try { typeof ltUse === 'function' && ltUse(); } catch (e) { } TB.busy = true; paint();
+    let r = null; try { r = typeof ltAI === 'function' ? await ltAI(q) : null; } catch (e) { r = null; }
+    let ev = ''; const ch = t != null && typeof ltChap === 'function' ? ltChap(k.it, t) : null;
+    if (r && r.t) { const m = /\n?\s*근거\s*[:：]\s*([^\n]+)\s*$/.exec(r.t); if (m) { ev = '근거: ' + m[1].trim(); r.t = r.t.slice(0, m.index).trim(); } else if (ch && ch.ch) ev = `근거: ${nOf(k.c, k.it)}${unit()} ${mmss(ch.ch.t)}~${ch.end != null ? mmss(ch.end) : ''} 「${ch.ch.n}」 구간`; }
+    else { try { r = (typeof ltRule === 'function' && (ltRule(q) || ltRule('?'))) || null; } catch (e) { r = null; } if (!r) r = { t: '지금은 답을 만들지 못했어요. 잠시 후 다시 물어봐 주세요.' }; ev = t != null ? `${mmss(t)} 장면 기준 · 기본 안내` : '기본 안내'; }
+    M.push({ t: String(r.t || '').slice(0, 2000), ev, h: '' }); TB.busy = false; paint(); }
+  function paint() { const k = cur(); const box = $('#lm .tbw'); if (!k || !box) return; const ms = box.querySelector('.tbw-ms'); if (ms) { ms.innerHTML = thread(k.it.id).map(msgHTML).join('') + (TB.busy ? '<div class="tbw-m"><span class="lt-dots"><i></i><i></i><i></i></span></div>' : ''); ms.scrollTop = ms.scrollHeight; } }
+  function mountWatch() { const k = cur(); if (!k) return; const lm = $('#lm'); if (!lm || lm.querySelector('.tbw')) return;
+    const anchor = ['.imain .lw-rule', '.imain #wtxt', '.imain .wbar', '.imain .vbox', '.imain .novid', '.imain .lc'].map(q => lm.querySelector(q)).find(Boolean); const main = lm.querySelector('.imain');
+    const html = panelHTML(k.c, k.it); if (anchor && anchor.parentElement) anchor.insertAdjacentHTML('afterend', html); else if (main) main.insertAdjacentHTML('beforeend', html); else return;
+    document.body.classList.add('tb-watch'); }
+  /* 재생 시각 배지 · 현재 챕터 표시는 1초마다(대화는 다시 그리지 않음) */
+  setInterval(() => { if (!on()) return; const k = cur(); const box = $('#lm .tbw'); if (!k || !box) return; const t = nowT(); const em = box.querySelector('.tbw-now'); if (em && t != null) em.textContent = `${mmss(t)} 장면을 보고 있어요`;
+    const C = chapsOf(k.it); if (!C.length || t == null) return; const ci = C.reduce((a, x, j) => (x.t <= t ? j : a), -1); box.querySelectorAll('.tbw-c').forEach((b, j) => { const o = j === ci; if (b.classList.contains('on') !== o) { b.classList.toggle('on', o); b.textContent = `${String(j + 1).padStart(2, '0')} ${C[j].n}${o ? ' ▶' : ''}`; } }); }, 1000);
+  function seek(t) { const k = cur(); if (!k || !seekOK(k.c, k.it, t)) return; try { const p = typeof LW === 'object' && LW && LW.yp; if (p && typeof p.seekTo === 'function') { p.seekTo(t, true); if (p.playVideo) p.playVideo(); return; } const v = $('#lm video'); if (v) { v.currentTime = t; v.play && v.play().catch(() => { }); } } catch (e) { } }
+
+  /* ── 그리기(가장 바깥 감싸기) ── */
+  function apply() { const B = document.body; B.classList.remove('tube', 'tb-full', 'tb-watch'); if (!on()) return; const a = route().a; const lm = $('#lm'), app = $('#lapp'); if (!lm || !app) return;
+    if (B.classList.contains('ap-pickon')) return; /* 선생님 고르기 화면은 그대로 */
+    B.classList.add('tube');
+    if (a === 'home') { const cal = lm.querySelector('a.lq-hc'); const calH = cal ? cal.outerHTML : ''; lm.innerHTML = homeHTML(); if (calH && TB.f === 'all') { const mn = lm.querySelector('.tb-main'); mn && mn.insertAdjacentHTML('beforeend', calH); } /* 학습 캘린더(lcal.js) 카드는 피드 끝에 그대로 */ B.classList.remove('ap-homeon'); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
+    else if (a === 'shorts') { lm.innerHTML = shortsHTML(); B.classList.add('tb-full', 'tb-dark'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
+    else if (a === 'done') { lm.innerHTML = doneHTML(); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
+    if (a !== 'shorts') B.classList.remove('tb-dark');
+    if (a === 'c') mountWatch();
+    const nav = app.querySelector('.ap-nav'); if (nav) { nav.classList.add('tb-nav'); nav.classList.remove('lq-n6'); nav.setAttribute('aria-label', '아래 탭'); const h = navHTML(); if (nav.dataset.tb !== h) { nav.innerHTML = h; nav.dataset.tb = h; } } }
+  { const base = lrender; lrender = (...x) => { const r = base(...x); try { apply(); } catch (e) { console.error('ltube', e); } return r; }; }
+  window.tubeApply = apply;
+
+  /* ── 이벤트 ── */
+  document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-tb]'); if (!el || !on()) return; const k = el.dataset.tb; e.preventDefault();
+    if (k === 'f') { TB.f = el.dataset.v; lrender(); return; }
+    if (k === 'goal') return goalSheet();
+    if (k === 'goal-set') { const g = Math.max(5, Math.min(180, +el.dataset.v || 20)); rec().goal = g; try { LR.api.save(); } catch (x) { } const w = $('#apSheet'); w && w.remove(); toast(`하루 목표를 ${g}분으로 정했어요.`, 'ok'); lrender(); return; }
+    if (k === 'ask') { location.hash = '#ai'; setTimeout(() => { try { ltAsk(el.dataset.v); } catch (x) { } }, 250); return; }
+    if (k === 'sh-next') { TB.sh++; shCount(); lrender(); const s = $('.tbs'); s && s.focus && s.focus(); return; }
+    if (k === 'sh-ask') { location.hash = '#ai'; setTimeout(() => { try { ltAsk(el.dataset.v); } catch (x) { } }, 250); return; }
+    if (k === 'sh-q') return shAnswer(el);
+    if (k === 'seek') return seek(+el.dataset.v);
+    if (k === 'wq') { const f = WQ[el.dataset.v]; return ask(f ? f(nowT()) : el.dataset.v, el.dataset.v); } });
+  document.addEventListener('submit', e => { if (e.target.id !== 'tbwF') return; e.preventDefault(); const i = e.target.querySelector('input'); const v = i.value; i.value = ''; ask(v); });
+  /* 쇼츠: 위로 밀면 다음(휴대폰) */
+  let ty0 = null; document.addEventListener('touchstart', e => { ty0 = route().a === 'shorts' && on() && !e.target.closest('.tbs-q, .tbs-side') ? e.touches[0].clientY : null; }, { passive: true });
+  document.addEventListener('touchend', e => { if (ty0 == null) return; const dy = ty0 - e.changedTouches[0].clientY; ty0 = null; if (dy > 80) { TB.sh++; shCount(); lrender(); } }, { passive: true });
+  addEventListener('hashchange', () => { if (route().a !== 'shorts') return; });
+})();
