@@ -2,11 +2,12 @@
 /* v39 영상 장면 튜터: 학습자가 보낸 재생 위치(t, 초)와 그 위치의 챕터(it.chaps: [{ t: 초, n: 제목 }])를 지시에 넣는다 — Java PubServiceImpl.sceneLine과 같은 규칙 */
 const mmss = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 /* v39 학습자 기록 lp.tube: goal(하루 목표 분 5~180) · sec(날짜→학습 초) · sh(날짜→쇼츠 수) · qr · qn(날짜→퀴즈 정답 · 푼 수), 날짜 맵은 최근 40일 */
-function cleanTube(t) { if (!t || typeof t !== 'object' || Array.isArray(t)) return null; const o = {}; const g = Math.round(+t.goal); if (Number.isFinite(g) && g >= 5 && g <= 180) o.goal = g;
-  const day = (m, max) => Object.fromEntries(Object.entries(m && typeof m === 'object' && !Array.isArray(m) ? m : {}).filter(([d, n]) => /^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(+n)).sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-40).map(([d, n]) => [d, Math.min(max, Math.max(0, Math.round(+n)))]));
+const isNum = v => (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '')) && Number.isFinite(+v); /* Java PubServiceImpl과 같은 판정: 숫자 · 숫자 문자열만(null · true · 배열 제외) */
+function cleanTube(t) { if (!t || typeof t !== 'object' || Array.isArray(t)) return null; const o = {}; const g = isNum(t.goal) ? Math.round(+t.goal) : NaN; if (Number.isFinite(g) && g >= 5 && g <= 180) o.goal = g;
+  const day = (m, max) => Object.fromEntries(Object.entries(m && typeof m === 'object' && !Array.isArray(m) ? m : {}).filter(([d, n]) => /^\d{4}-\d{2}-\d{2}$/.test(d) && isNum(n)).sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-40).map(([d, n]) => [d, Math.min(max, Math.max(0, Math.round(+n)))]));
   o.sec = day(t.sec, 86400); o.sh = day(t.sh, 999); o.qr = day(t.qr, 999); o.qn = day(t.qn, 999); return o; }
 function sceneLine(it, t) { const s = Number(t); if (!it || typeof t !== 'number' || !Number.isFinite(s) || s < 0 || s > 86400) return '';
-  const C = (Array.isArray(it.chaps) ? it.chaps : []).filter(c => c && Number.isFinite(Number(c.t))).map(c => ({ t: Math.max(0, Math.floor(Number(c.t))), n: String(c.n || '').replace(/[\r\n]/g, ' ').slice(0, 40) })).sort((a, b) => a.t - b.t);
+  const C = (Array.isArray(it.chaps) ? it.chaps : []).filter(c => c && typeof c === 'object' && isNum(c.t)).map(c => ({ t: Math.max(0, Math.floor(Number(c.t))), n: String(c.n == null ? '' : c.n).replace(/[\r\n]/g, ' ').slice(0, 40) })).sort((a, b) => a.t - b.t);
   const i = C.reduce((k, c, j) => (c.t <= s ? j : k), -1); const ch = i >= 0 ? C[i] : null; const end = ch && C[i + 1] ? C[i + 1].t : null;
   return `\n지금 재생 위치: ${mmss(s)}${ch ? ` (챕터 「${ch.n}」 ${mmss(ch.t)}~${end != null ? mmss(end) : ''})` : ''}\n이 장면에 대한 질문이면 이 위치를 기준으로 답하고, 마지막 줄에 「근거: 레슨 이름 mm:ss~mm:ss」 형식으로 근거 구간을 적습니다. 영상에서 확인할 수 없는 내용은 추측이라고 밝힙니다.`; }
 /* 디디쌤 스튜디오 운영 서버 — 정적 화면 + /api 를 한 컨테이너에서 제공한다(같은 출처 → 쿠키 세션 · CSRF 단순화).

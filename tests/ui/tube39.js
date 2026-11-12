@@ -40,7 +40,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
       cont: (document.querySelector('.tb-cont') || {}).getAttribute && document.querySelector('.tb-cont').getAttribute('href'), contTx: (document.querySelector('.tb-cont') || {}).textContent || '', sug: (document.querySelector('.tb-sug') || {}).textContent || '',
       week: document.querySelectorAll('.tb-tile').length, tabs: [...document.querySelectorAll('.ap-nav.tb-nav a')].map(x => x.textContent.trim()), on: (document.querySelector('.ap-nav a.on') || {}).textContent || '', bar: !!document.querySelector('.ap-bar') }));
     ok(r.tube && !r.bar, `홈: 튜브 보기 · 앱 머리 막대 없음`);
-    ok(r.chips[0] === '전체' && r.chips.includes('이어 보기') && r.chips.includes('내 과정'), `홈: 칩 — ${r.chips.join(' · ')}`);
+    ok(r.chips[0] === '전체' && r.chips.includes('이어 보기') && r.chips.includes('내 강의'), `홈: 칩 — ${r.chips.join(' · ')}`);
     ok(/오늘 목표 20분/.test(r.goal) && /12\/20분/.test(r.goal), `홈: 오늘 목표 12/20분 — ${r.goal.replace(/\s+/g, ' ')}`);
     ok(/itcd8rdl0/.test(r.cont) && /이어 보기 · 2차시/.test(r.contTx) && /12:34 \/ 18:00/.test(r.contTx) && /남은 시간 5분/.test(r.contTx), `홈: 이어 보기 카드(재생 위치 · 남은 시간) — ${r.contTx.replace(/\s+/g, ' ').slice(0, 90)}`);
     ok(/VLOOKUP 퀴즈/.test(r.sug) && /40점/.test(r.sug), `홈: AI 튜터 제안(틀린 퀴즈 근거) — ${r.sug.replace(/\s+/g, ' ')}`);
@@ -87,7 +87,8 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     const sec0 = (await tube(p)).sec[today] || 0;
     await p.click('.tbs-qo button[data-v="FALSE"]'); await p.waitForTimeout(150);
     const a = await p.evaluate(() => ({ ok: !!document.querySelector('.tbs-qo button.ok[data-v="FALSE"]'), msg: document.querySelector('.tbs-qr').textContent }));
-    const t = await tube(p); ok(a.ok && /정답이에요/.test(a.msg) && t.qr[today] === 1 && t.qn[today] === 1 && t.sec[today] === sec0 + 60, `짧게 복습 퀴즈: 정답 기록 · 목표 +1분 — ${a.msg}`);
+    const t = await tube(p); ok(a.ok && /정답이에요/.test(a.msg) && t.qr[today] === 1 && t.qn[today] === 1 && t.sec[today] === sec0, `짧게 복습 퀴즈: 정답 기록 · 학습 시간은 늘리지 않음 — ${a.msg}`);
+    await p.waitForTimeout(5600); ok(((await tube(p)).sec[today] || 0) === sec0, '짧게 복습: 화면만 열어 두면 학습 시간이 늘지 않음');
     for (let i = 0; i < 5; i++) { const b = await p.$('[data-tb="sh-next"]'); if (b) { await b.click(); await p.waitForTimeout(120); } }
     const end = await p.evaluate(() => (document.querySelector('.tbs h1') || {}).textContent);
     ok(/오늘 짧게 복습 5개를 다 했어요/.test(end) && (await tube(p)).sh[today] === 5, `짧게 복습: 하루 5개에서 멈춤 — ${end}`);
@@ -163,7 +164,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
   { const { ctx, p, errs } = await open('#home', { inst: true });
     const r = await p.evaluate(() => ({ ask: [...document.querySelectorAll('.tb-askr button')].map(b => b.textContent.trim()), links: [...document.querySelectorAll('.tb-links a')].map(a => a.getAttribute('href') + ':' + a.textContent.trim()), inst: !!document.querySelector('.tb-inst'), menu: !!document.querySelector('.tb-head [data-lux="menu"]') }));
     ok(r.ask.join() === '이번 주 계획,자격증 준비,복습 퀴즈', `성인: 유형별 AI 바로 묻기 — ${r.ask.join(' · ')}`);
-    ok(r.links.join() === '#shop:둘러보기,#comm:커뮤니티,#notice:공지', `성인: 바로가기(하단 탭에서 빠진 둘러보기 · 커뮤니티 · 공지) — ${r.links.join(' ')}`);
+    ok(r.links.join() === '#shop:둘러보기,#comm:커뮤니티,#badges:수료 · 배지,#notice:공지사항', `성인: 바로가기(관리자 메뉴 이름 그대로 · 하단 탭에서 빠진 경로) — ${r.links.join(' ')}`);
     ok(r.inst && r.menu, '성인: 앱 설치 안내 · 전체 메뉴 버튼');
     await p.click('.tb-head [data-lux="menu"]'); await p.waitForTimeout(200);
     const m = await p.evaluate(() => [...document.querySelectorAll('#luxSheet a, #luxSheet button')].map(a => a.textContent.trim()).filter(Boolean));
@@ -179,6 +180,24 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     await p.evaluate(() => { location.hash = '#c/c0/itcd8rdl0'; }); await p.waitForTimeout(400);
     const w = await p.evaluate(() => ({ ch: document.querySelectorAll('.tbw-c').length, tu: !!document.getElementById('tbwTu'), fab: !!document.getElementById('tbFab') }));
     ok(w.ch === 4 && !w.tu && !w.fab, `튜터 끔: 영상은 챕터만 ${JSON.stringify(w)}`); ok(!errs.length, `튜터 끔: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
+
+  /* 10) 요원 검수 보완 */
+  { const { ctx, p, errs } = await open('#home', { patch: j => { j.pages = (j.pages || []).filter(x => x.id !== 'comm'); j.comm.boards = []; j.notices[0].pin = true; (j.shop.classes || []).forEach(c => { c.sale = false; }); } });
+    const r = await p.evaluate(() => ({ links: [...document.querySelectorAll('.tb-links a')].map(a => a.getAttribute('href')), pin: (document.querySelector('.tb-pin') || {}).textContent || '' }));
+    ok(!r.links.includes('#comm') && !r.links.includes('#shop') && r.links.includes('#badges') && /공지/.test(r.pin), `커뮤니티 끔 · 판매 중지 · 고정 공지: 바로가기 ${r.links.join(' ')} · ${r.pin.replace(/\s+/g, ' ')}`); ok(!errs.length, `보완: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
+  { const { ctx, p } = await open('#home', { type: 'k12' }); const c = await p.$$eval('.tb-chip', C => C.map(x => x.textContent.trim())); ok(!c.includes('자격증') && c.includes('내 수업'), `학원: 자격증 칩 없음 · 유형 칩 이름 — ${c.join(' · ')}`); await ctx.close(); }
+  { const { ctx, p } = await open('#home', { type: 'corp', patch: j => { j.classes[0].legal = true; j.classes[0].skip = 'none'; } });
+    const r = await p.evaluate(() => ({ sug: (document.querySelector('.tb-sug a, .tb-sug button') || {}).getAttribute ? (document.querySelector('.tb-sug a') || {}).getAttribute && (document.querySelector('.tb-sug a') || { getAttribute: () => '' }).getAttribute('href') : '' }));
+    await p.evaluate(() => { location.hash = '#review'; }); await p.waitForTimeout(250); const h = await p.evaluate(() => (document.querySelector('.tbs h1') || {}).textContent || '');
+    ok(r.sug !== '#review' && /다시 볼 부분이 없어요/.test(h), `법정교육(건너뛰기 금지): 짧게 복습 구간 없음 — ${h}`); await ctx.close(); }
+  { const { ctx, p } = await open('#home', { type: 'voc' }); const r = await p.evaluate(() => ({ g: document.querySelector('.tb-gl small').textContent, tiles: [...document.querySelectorAll('.tb-tile')].map(a => a.getAttribute('href')) }));
+    const lockedHrefs = await p.evaluate(() => { const c = SITE().classes[0]; return (c.items || []).filter(it => typeof CPLL === 'object' && CPLL.lockBy && CPLL.lockBy(c, it)).map(it => `#c/c0/${it.id}`); });
+    ok(/참고용/.test(r.g) && !r.tiles.some(h => lockedHrefs.includes(h)), `직업훈련: 목표는 참고용 표기 · 잠긴 차시 타일 없음 — ${r.g} / ${r.tiles.join(' ')}`);
+    await p.evaluate(() => { location.hash = '#done'; }); await p.waitForTimeout(250); ok(await p.evaluate(() => /참고용 목표/.test(document.querySelector('.tb-dh p').textContent)), '직업훈련: 완료 화면도 참고용 목표 안내'); await ctx.close(); }
+  { const { ctx, p } = await open('#home', { type: 'univ', ed: 'lms' }); await p.click('.tb-head [data-lux="menu"]'); await p.waitForTimeout(250);
+    const m = await p.evaluate(() => [...document.querySelectorAll('#luxSheet a, #luxSheet .lux-shg')].map(a => a.textContent.trim()));
+    ok(!m.some(x => /진단|배지|결제|교재|단계별 코스/.test(x)) && m.includes('이번 학기 강의'), `학사 LMS: 전체 메뉴에서 꺼진 기능 숨김 · 유형 이름 — ${m.slice(0, 10).join(' · ')}`);
+    await p.keyboard.press('Escape'); await p.evaluate(() => { location.hash = '#acct'; }); await p.waitForTimeout(300); ok(await p.evaluate(() => ![...document.querySelectorAll('#lm a[href^="#mypay"]')].some(a => a.offsetParent)), '학사 LMS: 나 화면 결제 · 환불 행 숨김'); await ctx.close(); }
 
   await browser.close(); srv.close();
   if (fails.length) { console.error(`실패 ${fails.length}건`); process.exit(1); }

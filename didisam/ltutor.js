@@ -165,7 +165,7 @@ function ltKey() { const rd = k => { try { const v = JSON.parse(localStorage.get
 function ltSceneT() { try { if (!/^#c\/[^/]+\/[^/]+/.test(location.hash)) return null; const p = typeof LW === 'object' && LW && LW.yp; let t = p && typeof p.getCurrentTime === 'function' ? +p.getCurrentTime() : NaN;
   if (!Number.isFinite(t)) { const v = document.querySelector('#lm video'); t = v ? +v.currentTime : NaN; } return Number.isFinite(t) && t >= 0 ? Math.round(t * 10) / 10 : null; } catch (e) { return null; } }
 /* 서버 sceneLine(app.js · PubServiceImpl)과 같은 문장 — 체험(브라우저 Claude 키)에서도 장면 기준으로 답하게 */
-function ltChap(it, t) { const C = (Array.isArray(it && it.chaps) ? it.chaps : []).filter(c => c && Number.isFinite(Number(c.t))).map(c => ({ t: Math.max(0, Math.floor(Number(c.t))), n: String(c.n || '').replace(/[\r\n]/g, ' ').slice(0, 40) })).sort((a, b) => a.t - b.t);
+function ltChap(it, t) { const C = (Array.isArray(it && it.chaps) ? it.chaps : []).filter(c => c && typeof c === 'object' && (typeof c.t === 'number' || (typeof c.t === 'string' && c.t.trim() !== '')) && Number.isFinite(Number(c.t))).map(c => ({ t: Math.max(0, Math.floor(Number(c.t))), n: String(c.n == null ? '' : c.n).replace(/[\r\n]/g, ' ').slice(0, 40) })).sort((a, b) => a.t - b.t);
   const i = C.reduce((k, c, j) => (c.t <= t ? j : k), -1); return { C, i, ch: i >= 0 ? C[i] : null, end: i >= 0 && C[i + 1] ? C[i + 1].t : null }; }
 const ltMmss = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 function ltSceneLine(it, t) { if (!it || typeof t !== 'number' || !Number.isFinite(t) || t < 0 || t > 86400) return ''; const { ch, end } = ltChap(it, t);
