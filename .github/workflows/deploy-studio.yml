@@ -1,8 +1,7 @@
-# 디디쌤 스튜디오 운영 서비스 — 테스트 → 이미지 빌드 → Cloud Run(서울) 배포
-# 처음 한 번: service/setup-gcp.sh 를 Cloud Shell에서 실행하고, 출력된 값을
-#   저장소 Settings › Secrets and variables › Actions › Variables 에 넣는다:
-#   GCP_PROJECT · GCP_REGION · WIF_PROVIDER · DEPLOY_SA · RUN_SA · SQL_INSTANCE
-# 변수가 없으면 테스트만 돌고 배포는 건너뛴다(데모 사이트 GitHub Pages에는 영향 없음).
+# 디디쌤 스튜디오 운영 서비스 — main에 병합되면 테스트 → service/gcp/deploy.sh(Cloud Build → Cloud Run 서울) 자동 배포
+# 처음 한 번: Cloud Shell에서 bash service/gcp/github-deploy-setup.sh didisam-studio 를 실행하고,
+#   출력된 GCP_PROJECT · WIF_PROVIDER · DEPLOY_SA 를 저장소 Settings › Secrets and variables › Actions › Variables 에 넣는다.
+# 변수가 없으면 테스트만 돌고 배포는 건너뛴다. 수동 재배포: Actions › deploy-studio › Run workflow(main).
 name: deploy-studio
 on:
   push:
@@ -40,35 +39,26 @@ jobs:
 
   deploy:
     needs: test
-    if: ${{ vars.GCP_PROJECT != '' && github.ref == 'refs/heads/main' }}
+    # v38.4: Cloud Shell 수동 배포와 같은 스크립트(service/gcp/deploy.sh)를 그대로 쓴다 — 비밀값 · 메일 · 소셜 로그인 · 도메인 설정이 한 곳에서 관리된다.
+    # 한 번만 준비: Cloud Shell에서 bash service/gcp/github-deploy-setup.sh <프로젝트ID> → 출력된 변수 3개(GCP_PROJECT · WIF_PROVIDER · DEPLOY_SA)를 GitHub 저장소 Variables에 넣는다.
+    if: ${{ vars.GCP_PROJECT != '' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     environment: production
-    env:
-      REGION: ${{ vars.GCP_REGION || 'asia-northeast3' }}
-      IMAGE: ${{ vars.GCP_REGION || 'asia-northeast3' }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/didisam/studio:${{ github.sha }}
+    permissions: { contents: read, id-token: write }
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ vars.WIF_PROVIDER }}
           service_account: ${{ vars.DEPLOY_SA }}
       - uses: google-github-actions/setup-gcloud@v2
-      - name: 이미지 빌드 · 푸시
+      - name: 배포(테스트 → Cloud Build → Cloud Run 서울)
+        run: bash service/gcp/deploy.sh "${{ vars.GCP_PROJECT }}"
+      - name: 새 버전 확인(sw 캐시 이름)
         run: |
-          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
-          docker build -f service/Dockerfile -t "$IMAGE" .
-          docker push "$IMAGE"
-      - name: Cloud Run 배포
-        run: |
-          gcloud run deploy didisam-studio \
-            --project "${{ vars.GCP_PROJECT }}" --region "$REGION" --image "$IMAGE" \
-            --service-account "${{ vars.RUN_SA }}" \
-            --add-cloudsql-instances "${{ vars.SQL_INSTANCE }}" \
-            --set-secrets "DATABASE_URL=didisam-db-url:latest,ANTHROPIC_API_KEY=didisam-anthropic-key:latest,SIGNUP_CODE=didisam-signup-code:latest,SESSION_PEPPER=didisam-session-pepper:latest,PII_KEY=didisam-pii-key:latest" \
-            --set-env-vars "DB_POOL=5,AI_DAILY_CALLS=400" \
-            --ingress internal-and-cloud-load-balancing --allow-unauthenticated \
-            --cpu 1 --memory 512Mi --min-instances 0 --max-instances 4 --concurrency 60 --timeout 120 \
-            --quiet
-      - name: 실주소 확인
-        continue-on-error: true
-        run: curl -fsS --retry 6 --retry-delay 10 https://${{ vars.STUDIO_DOMAIN || 'studio.aisam.com' }}/api/health
+          URL=$(gcloud run services describe didisam-studio --project "${{ vars.GCP_PROJECT }}" --region asia-northeast3 --format='value(status.url)')
+          WANT=$(grep -o "didisam-app-v[0-9.]*" didisam/sw.js)
+          for i in 1 2 3 4 5 6; do GOT=$(curl -fsS "$URL/sw.js" | grep -o "didisam-app-v[0-9.]*" || true); [ "$GOT" = "$WANT" ] && { echo "✅ $GOT"; exit 0; }; sleep 10; done
+          echo "운영 sw.js=$GOT, 기대=$WANT"; exit 1
