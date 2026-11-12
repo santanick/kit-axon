@@ -143,7 +143,7 @@ body.tb-dark #lm{background:#111;padding-bottom:0}
 .tbs-side>*{width:56px;border:0;background:none;color:#fff;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;text-decoration:none;cursor:pointer;padding:0}
 .tbs-side span{width:44px;height:44px;border-radius:50%;background:#ffffff33;display:grid;place-items:center}
 .tbs-side span.g{background:var(--tb-g)}
-.tbs-q{margin:auto 12px 0;background:#fff;color:var(--tb-ink);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 16px 24px 2px #00000024}
+.tbs-q{margin:auto 12px 76px;background:#fff;color:var(--tb-ink);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 16px 24px 2px #00000024}
 .tbs-qh{display:flex;justify-content:space-between;align-items:center}.tbs-qh small{font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--tb-mute)}.tbs-qh em{font-style:normal;font-size:12px;color:var(--tb-gd);font-weight:600}
 .tbs-q>p{margin:0;font-size:16px;font-weight:600;line-height:24px}
 .tbs-qo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -181,3 +181,21 @@ span.tbw-c{cursor:default}
 .tbw-f button{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--tb-ink);color:#fff;display:grid;place-items:center;cursor:pointer}
 .tbw-note{margin:0;padding:0 16px 12px;font-size:12px;color:var(--tb-mute)}
 @media (prefers-reduced-motion:reduce){.tube *{transition:none!important;animation:none!important}}
+
+/* 늘 떠 있는 AI 튜터 아이콘(대표님 2026-11-13: 누르면 활성화 · 앱에 상시) */
+.tb-fab{position:fixed;right:16px;bottom:calc(var(--ap-nav,64px) + var(--ap-sb,0px) + 16px);z-index:46;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:64px;height:64px;border:0;border-radius:50%;background:var(--tb-g,#00c53b);color:#fff;box-shadow:0 8px 20px -6px #007200aa,0 2px 6px #0003;cursor:pointer;font:700 12px/1.1 Pretendard,"Noto Sans CJK KR",sans-serif;letter-spacing:-.03em;padding:0}
+.tb-fab span{white-space:nowrap;font-size:12px}
+.tb-fab:active{transform:scale(.96)}
+.tb-fab:focus-visible{outline:3px solid #9ee3a3;outline-offset:3px}
+body.lt-on .tb-fab,body.tb-sheet .tb-fab,body.ap-pickon .tb-fab{display:none}
+body.tube .ap-call{display:none}
+body.tube #lm{padding-bottom:calc(var(--ap-nav,64px) + var(--ap-sb,0px) + 96px)}
+@media (min-width:900px){.tb-fab{right:28px;bottom:28px}}
+
+/* 영상 레슨: 장면 튜터 시트(아이콘으로 열기) */
+.tbw-tu[hidden]{display:none!important}
+.tbw-tu.open{position:fixed;left:0;right:0;bottom:0;z-index:47;max-height:72dvh;border-radius:16px 16px 0 0;box-shadow:0 -8px 30px #00000033;padding-bottom:var(--ap-sb,0px)}
+.tbw-tu.open .tbw-ms{flex:1;max-height:none;min-height:80px}
+.tbw-x{flex:none;width:44px;height:44px;margin:-8px -10px -8px 0;border:0;background:none;border-radius:10px;display:grid;place-items:center;color:var(--tb-mute);cursor:pointer}
+.tbw-th .tbw-now{margin-left:auto}
+@media (min-width:900px){.tbw-tu.open{left:auto;right:24px;bottom:24px;width:420px;border-radius:16px}}

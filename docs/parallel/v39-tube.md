@@ -39,3 +39,7 @@
 - 테스트: `tests/ui/tube39.js`(새 보기), `service/test/tutor.test.js` · `learner.test.js`에 t · lp.tube 추가. 기존 보기 테스트 조정: `f5-38.js`(추천 칩은 #ai), `lcal.js`(튜브면 탭 · 캘린더 카드 기준).
 - 회귀(로컬): smoke · acct38 · live-head · compliance · scn-k12 · lcal · f5-38 · done38 · scroll-keep · comm-board · mem36 · calendar-x · clib · crs-* · home-persona · hp-* · lms38 · sam-intent · thumb 통과, API 6종 · 운영 모드 3종(compliance-live · module-live · scn-k12-live, 로컬 Postgres 5544) 통과. `dashx`의 teacher 현황 위젯 8건은 main(v38.5)에서도 같은 실패(이번 변경과 무관).
 - 남은 일(2차): 시안처럼 영상 화면에서 플레이어를 맨 위로(기존 강의 머리 정리), 「노트에 저장」 · 「많이 멈춘 구간」, AI 자동 챕터 · 자동 컷(요금제 반영 후), 쇼츠 업로드 영상 구간 재생, 운영 서버 체험(`learner.html?demo=adult&app=1`) 샘플에 챕터 데이터 넣기.
+
+## 대표님 조정(2026-11-13 04:08~04:10)
+- 「쇼츠가 디디쌤 시나리오에 맞아?」 → 쇼츠 탭 제외. 기관 수강은 진도 · 출결 · 수료 중심이므로, 틀린 퀴즈가 있는 과정의 챕터 구간만 AI 튜터 제안 카드에서 「짧게 복습」(#review)으로 연다(하루 5개 · 진도 미반영 안내 · 규정 대상은 끔).
+- 「AI 튜터는 아이콘 누르면 활성화, 앱에 상시로 떠 있어야」 → 하단 탭 4칸(홈 · 일정 · 내 과정 · 나) + 모든 화면 오른쪽 아래 AI 튜터 아이콘(#tbFab). 영상 레슨에서는 「이 장면 질문」 → 장면 튜터 시트, 그 밖에서는 선생님 대화 창(ltOpen). #ai(선생님 대화 화면)는 주소로만 남김.

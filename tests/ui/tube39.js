@@ -1,10 +1,10 @@
 'use strict';
 /* v39 디디쌤 튜브(학습자 앱 새 보기) 점검 — 기존 앱 보기 테스트와 나눈다(docs/parallel/v39-tube.md).
-   1) 홈 피드: 칩 · 오늘 목표 · 이어 보기(재생 위치 · 남은 시간) · AI 튜터 제안(틀린 퀴즈) · 이번 주 차시 · 하단 탭 5칸
+   1) 홈 피드: 칩 · 오늘 목표 · 이어 보기(재생 위치 · 남은 시간) · AI 튜터 제안(틀린 퀴즈) · 이번 주 차시 · 하단 탭 4칸(홈 · 일정 · 내 과정 · 나) · 늘 떠 있는 AI 튜터 아이콘
    2) 오늘 목표 시트 → lp.tube.goal 저장, 완료 화면(#done)
-   3) 쇼츠: 챕터 구간 + 퀴즈 1문제(정답 → 정답 · 푼 수 기록, 목표 +1분), 하루 5개 제한
-   4) 영상 레슨: 챕터 칩 이동 · AI 튜터 패널(키 없으면 기본 안내 + 장면 기준 표시), 재생 위치 문장(ltSceneLine)
-   5) 직업훈련 · 학사 LMS: 쇼츠 탭 없음 · #shorts 안내 · 챕터는 이동 버튼이 아님
+   3) 짧게 복습(#review): 틀린 퀴즈 과정의 챕터 구간 + 퀴즈 1문제(정답 → 기록, 목표 +1분), 하루 5개 제한, 진도 미반영 안내
+   4) 영상 레슨: 챕터 칩 이동 · 아이콘으로 여는 장면 튜터 시트(키 없으면 기본 안내 + 장면 기준 표시), 재생 위치 문장(ltSceneLine)
+   5) 직업훈련 · 학사 LMS: #review 안내 · 챕터는 이동 버튼이 아님
    6) 방문자(로그인 전)는 기존 화면 그대로 · 누르는 곳 44px · 글자 12px 이상(390px)
    7) 서버 sceneLine · cleanTube(Node) 규칙
    사용: node tests/ui/tube39.js */
@@ -45,7 +45,13 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     ok(/itcd8rdl0/.test(r.cont) && /이어 보기 · 2차시/.test(r.contTx) && /12:34 \/ 18:00/.test(r.contTx) && /남은 시간 5분/.test(r.contTx), `홈: 이어 보기 카드(재생 위치 · 남은 시간) — ${r.contTx.replace(/\s+/g, ' ').slice(0, 90)}`);
     ok(/VLOOKUP 퀴즈/.test(r.sug) && /40점/.test(r.sug), `홈: AI 튜터 제안(틀린 퀴즈 근거) — ${r.sug.replace(/\s+/g, ' ')}`);
     ok(r.week >= 2, `홈: 이번 주 차시 ${r.week}개`);
-    ok(r.tabs.join() === '홈,쇼츠,AI 튜터,내 과정,나' && r.on === '홈', `홈: 하단 탭 — ${r.tabs.join(' · ')} (선택 ${r.on})`);
+    ok(r.tabs.join() === '홈,일정,내 과정,나' && r.on === '홈', `홈: 하단 탭 4칸 — ${r.tabs.join(' · ')} (선택 ${r.on})`);
+    const fb = await p.evaluate(() => { const b = document.getElementById('tbFab'); if (!b) return null; const R = b.getBoundingClientRect(); const n = document.querySelector('.ap-nav.tb-nav').getBoundingClientRect(); return { t: b.textContent.trim(), l: b.getAttribute('aria-label'), w: R.width, above: R.bottom <= n.top, fixed: getComputedStyle(b).position }; });
+    ok(fb && fb.t === 'AI 튜터' && fb.w >= 56 && fb.above && fb.fixed === 'fixed', `홈: AI 튜터 아이콘이 아래 탭 위에 떠 있음 — ${JSON.stringify(fb)}`);
+    await p.click('#tbFab'); await p.waitForTimeout(250);
+    const op = await p.evaluate(() => ({ on: document.body.classList.contains('lt-on'), fabHidden: getComputedStyle(document.getElementById('tbFab')).display === 'none' }));
+    ok(op.on && op.fabHidden, `홈: 아이콘을 누르면 AI 튜터 창이 열림(아이콘은 숨김) ${JSON.stringify(op)}`);
+    await p.click('[data-tact="close"]'); await p.waitForTimeout(200); ok(await p.evaluate(() => !document.body.classList.contains('lt-on') && getComputedStyle(document.getElementById('tbFab')).display !== 'none'), '홈: 창을 닫으면 아이콘이 다시 보임');
     const small = await p.evaluate(() => { const bad = []; document.querySelectorAll('.tb-home a, .tb-home button, .ap-nav.tb-nav a').forEach(e => { const b = e.getBoundingClientRect(); if (b.width && (b.height < 36 || (b.height < 44 && !e.classList.contains('tb-chip')))) bad.push(`${e.className || e.tagName}:${Math.round(b.height)}`); });
       document.querySelectorAll('.tb-home *, .ap-nav.tb-nav *').forEach(e => { if (!e.childElementCount && e.textContent.trim() && parseFloat(getComputedStyle(e).fontSize) < 12) bad.push(`글자 ${e.className || e.tagName} ${getComputedStyle(e).fontSize}`); });
       return bad.concat(document.documentElement.scrollWidth > 390 ? ['가로 넘침 ' + document.documentElement.scrollWidth] : []); });
@@ -73,25 +79,29 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     ok(/2차시/.test(d.tip) && d.btn.join() === '내일 알림 받고 마치기,조금 더 볼래요', `완료 화면: 내일 시작 지점 · 버튼 — ${d.tip.replace(/\s+/g, ' ')}`);
     ok(!errs.length, `완료: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
 
-  /* 3) 쇼츠 */
-  { const { ctx, p, errs } = await open('#shorts');
+  /* 3) 짧게 복습 */
+  { const { ctx, p, errs } = await open('#review');
     const s = await p.evaluate(() => ({ h: (document.querySelector('.tbs h1') || {}).textContent, tag: (document.querySelector('.tbs-tag') || {}).textContent, q: (document.querySelector('.tbs-q p') || {}).textContent, n: (document.querySelector('.tbs-top em') || {}).textContent, on: (document.querySelector('.ap-nav a.on') || {}).textContent }));
-    ok(s.h === '데이터 준비' && /2차시 00:00부터 3분/.test(s.tag) && /마지막 인수/.test(s.q || ''), `쇼츠: 틀린 퀴즈 과정의 챕터 구간 먼저 · 퀴즈 — ${s.h} / ${s.tag}`);
-    ok(/오늘 0 \/ 5개/.test(s.n) && /쇼츠/.test(s.on), `쇼츠: 오늘 개수 · 탭 선택 — ${s.n}`);
+    ok(s.h === '데이터 준비' && /2차시 00:00부터 3분/.test(s.tag) && /마지막 인수/.test(s.q || '') && await p.evaluate(() => /진도에는 들어가지 않아요/.test(document.querySelector('.tbs-from').textContent)), `짧게 복습: 틀린 퀴즈 과정 구간 · 퀴즈 · 진도 미반영 안내 — ${s.h} / ${s.tag}`);
+    ok(/오늘 0 \/ 5개/.test(s.n), `짧게 복습: 오늘 개수 — ${s.n}`);
     const sec0 = (await tube(p)).sec[today] || 0;
     await p.click('.tbs-qo button[data-v="FALSE"]'); await p.waitForTimeout(150);
     const a = await p.evaluate(() => ({ ok: !!document.querySelector('.tbs-qo button.ok[data-v="FALSE"]'), msg: document.querySelector('.tbs-qr').textContent }));
-    const t = await tube(p); ok(a.ok && /정답이에요/.test(a.msg) && t.qr[today] === 1 && t.qn[today] === 1 && t.sec[today] === sec0 + 60, `쇼츠 퀴즈: 정답 기록 · 목표 +1분 — ${a.msg}`);
+    const t = await tube(p); ok(a.ok && /정답이에요/.test(a.msg) && t.qr[today] === 1 && t.qn[today] === 1 && t.sec[today] === sec0 + 60, `짧게 복습 퀴즈: 정답 기록 · 목표 +1분 — ${a.msg}`);
     for (let i = 0; i < 5; i++) { const b = await p.$('[data-tb="sh-next"]'); if (b) { await b.click(); await p.waitForTimeout(120); } }
     const end = await p.evaluate(() => (document.querySelector('.tbs h1') || {}).textContent);
-    ok(/오늘 쇼츠 5개를 다 봤어요/.test(end) && (await tube(p)).sh[today] === 5, `쇼츠: 하루 5개에서 멈춤 — ${end}`);
-    ok(!errs.length, `쇼츠: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
+    ok(/오늘 짧게 복습 5개를 다 했어요/.test(end) && (await tube(p)).sh[today] === 5, `짧게 복습: 하루 5개에서 멈춤 — ${end}`);
+    ok(!errs.length, `짧게 복습: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
 
   /* 4) 영상 레슨: 챕터 · 튜터 패널 */
   { const { ctx, p, errs } = await open('#c/c0/itcd8rdl0');
     const w = await p.evaluate(() => ({ h: (document.querySelector('.tbw-hd h2') || {}).textContent, ch: [...document.querySelectorAll('.tbw-c')].map(x => x.tagName + ':' + x.textContent.trim()), on: (document.querySelector('.tbw-c.on') || {}).textContent, now: (document.querySelector('.tbw-now') || {}).textContent, tab: (document.querySelector('.ap-nav a.on') || {}).textContent }));
     ok(/^2차시 · 피벗/.test(w.h || '') && w.ch.length === 4 && w.ch.slice(0, 3).every(x => x.startsWith('BUTTON')) && w.ch[3].startsWith('SPAN') && /값 요약 방식/.test(w.on || ''), `영상: 챕터 칩 4개(본 구간까지만 버튼, 과정 규칙 watched) · 현재 챕터 ${w.on} — ${w.ch.join(' | ')}`);
     ok(/영상을 재생하면/.test(w.now) && /내 과정/.test(w.tab), `영상: 재생 전 안내 · 탭 내 과정 — ${w.now}`);
+    const sh0 = await p.evaluate(() => ({ hid: document.getElementById('tbwTu').hidden, fab: document.getElementById('tbFab').textContent.trim() }));
+    ok(sh0.hid && sh0.fab === '이 장면 질문', `영상: 튜터는 처음엔 닫혀 있고 아이콘이 '이 장면 질문' — ${JSON.stringify(sh0)}`);
+    await p.click('#tbFab'); await p.waitForTimeout(200);
+    ok(await p.evaluate(() => { const t = document.getElementById('tbwTu'); return !t.hidden && getComputedStyle(t).position === 'fixed' && document.activeElement && document.activeElement.id === 'tbwQ'; }), '영상: 아이콘을 누르면 장면 튜터 시트가 열리고 입력칸에 초점');
     let seekTo = null; await p.exposeFunction('__seek', t => { seekTo = t; });
     await p.evaluate(() => { LW.yp = { getPlayerState: () => 2, getCurrentTime: () => 754, seekTo: t => window.__seek(t), playVideo() { } }; });
     await p.waitForTimeout(1100); const now = await p.$eval('.tbw-now', e => e.textContent); ok(now === '12:34 장면을 보고 있어요', `영상: 재생 시각 배지 — ${now}`);
@@ -103,16 +113,17 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     ok(m.length >= 2 && /me\|3줄 요약/.test(m[0]) && /12:34 장면 기준 · 기본 안내/.test(m[1]), `영상: 튜터 패널 대화(키 없음 → 기본 안내) — ${m.join(' / ')}`);
     await p.fill('#tbwQ', '<img src=x onerror=alert(1)> 이건 왜 평균이에요?'); await p.press('#tbwQ', 'Enter'); await p.waitForTimeout(400);
     const inj = await p.evaluate(() => !!document.querySelector('.tbw-ms img')); ok(!inj, '영상: 질문 글은 글자로만(HTML 실행 없음)');
+    await p.click('[data-tb="sheet-x"]'); await p.waitForTimeout(150); ok(await p.evaluate(() => document.getElementById('tbwTu').hidden && document.activeElement && document.activeElement.id === 'tbFab'), '영상: 닫기 → 시트 닫힘 · 초점은 아이콘으로');
     ok(!errs.length, `영상: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
 
   /* 5) 규정 대상: 직업훈련 · 학사 LMS */
   for (const [type, ed] of [['voc', ''], ['univ', 'lms']]) { const label = type + (ed ? '/' + ed : '');
     const { ctx, p, errs } = await open('#home', { type, ed });
     const tabs = await p.$$eval('.ap-nav.tb-nav a', A => A.map(x => x.textContent.trim()));
-    ok(!tabs.includes('쇼츠') && tabs.includes('AI 튜터') && tabs.includes('내 과정'), `${label}: 쇼츠 탭 없음 — ${tabs.join(' · ')}`);
-    await p.evaluate(() => { location.hash = '#shorts'; }); await p.waitForTimeout(250);
+    ok(tabs.join() === '홈,일정,내 과정,나' && await p.$('#tbFab') !== null, `${label}: 탭 4칸 · AI 튜터 아이콘 — ${tabs.join(' · ')}`);
+    await p.evaluate(() => { location.hash = '#review'; }); await p.waitForTimeout(250);
     const off = await p.evaluate(() => (document.querySelector('.tb-off h1') || {}).textContent || '');
-    ok(/쇼츠는 이 기관에서 쓰지 않아요/.test(off), `${label}: #shorts 안내 — ${off}`);
+    ok(/짧게 복습은 이 기관에서 쓰지 않아요/.test(off), `${label}: #review 안내 — ${off}`);
     await p.evaluate(() => { location.hash = '#c/c0/itcd8rdl0'; }); await p.waitForTimeout(400);
     const ch = await p.evaluate(() => ({ tags: [...document.querySelectorAll('.tbw-c')].map(x => x.tagName), note: (document.querySelector('.tbw-cn') || {}).textContent || '' }));
     ok(!ch.tags.length || (ch.tags.every(t => t === 'SPAN') && /건너뛸 수 없어요/.test(ch.note)), `${label}: 챕터는 이동 버튼 아님 — ${ch.tags.join(',') || '(레슨 잠김/없음)'}`);
@@ -121,7 +132,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
   /* 6) 방문자 · PC */
   { const { ctx, p, errs } = await open('#home', { guest: true });
     const r = await p.evaluate(() => ({ tube: document.body.classList.contains('tube'), feed: !!document.querySelector('.tb-home'), app: document.body.classList.contains('lapp') }));
-    ok(!r.tube && !r.feed, `방문자: 기존 앱 첫 화면 그대로(튜브 아님, lapp=${r.app})`); ok(!errs.length, `방문자: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
+    ok(!r.tube && !r.feed && !(await p.$('#tbFab')), `방문자: 기존 앱 첫 화면 그대로(튜브 · 아이콘 없음, lapp=${r.app})`); ok(!errs.length, `방문자: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
   { const { ctx, p, errs } = await open('#home', { w: 1280 });
     const r = await p.evaluate(() => ({ feed: !!document.querySelector('.tb-home'), w: Math.round(document.querySelector('.tb-home').getBoundingClientRect().width), sw: document.documentElement.scrollWidth }));
     ok(r.feed && r.w <= 640 && r.sw <= 1280, `PC 1280: 피드 폭 ${r.w}px · 넘침 없음`); ok(!errs.length, `PC: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
