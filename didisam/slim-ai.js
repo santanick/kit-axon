@@ -219,10 +219,10 @@
         if (!owner()) return { text: '외부 연결은 정운영자만 관리할 수 있습니다.' };
         setTimeout(() => { try { ACT['cn-open']({ dataset: { v: id } }); } catch (e) { console.error(e); } }, 120);
         return { title: `${CN[id].name.replace(/\(.*\)/, '').trim()} 연결 창을 열었습니다`, text: '연결 창에서 순서대로 진행하세요. 키 · 토큰은 대화창에 붙여 넣지 말고 연결 창에만 입력해 주세요.', via: 'AI SAM 설정' }; } }
-    /* 자동 운영 */
-    if (/자동\s*(운영|화)/.test(s) && /(상태|현황|목록|뭐|보여)/.test(s) && !/(켜|꺼|끄|만들)/.test(s)) { const A = S.autos || []; return { title: `자동 운영 ${A.filter(a => a.on).length}/${A.length}개 켜짐`, text: A.length ? A.slice(0, 12).map(a => `${a.on ? '● ' : '○ '}${a.name}`).join('\n') : '아직 자동 운영이 없습니다.', go: 'auto', via: 'AI SAM 설정' }; }
+    /* 자동 운영 — v38.4 학원(초중고)의 '자동 운영'은 scn-k12 규칙(수납 · 출결 자동화)이 답한다 */
+    if (!(S.org && S.org.type === 'k12' && /자동\s*운영/.test(s)) && /자동\s*(운영|화)/.test(s) && /(상태|현황|목록|뭐|보여)/.test(s) && !/(켜|꺼|끄|만들)/.test(s)) { const A = S.autos || []; return { title: `자동 운영 ${A.filter(a => a.on).length}/${A.length}개 켜짐`, text: A.length ? A.slice(0, 12).map(a => `${a.on ? '● ' : '○ '}${a.name}`).join('\n') : '아직 자동 운영이 없습니다.', go: 'auto', via: 'AI SAM 설정' }; }
     const am = s.match(/(?:자동\s*(?:운영|화)\s*)?(.{1,30}?)\s*(?:자동\s*(?:운영|화))?\s*(?:을|를)?\s*(다시\s*)?(켜|꺼|끄|멈춰|중지|시작)/);
-    if (am && /자동\s*(운영|화)/.test(s) && !/(만들|설계|매주|매일|매월|마다)/.test(s)) { if (teacher()) return { text: `${t('teacher')} 권한으로는 자동 운영을 바꿀 수 없습니다.` }; const on = /(켜|시작)/.test(am[3]); const k = norm(am[1].replace(/자동\s*(운영|화)?/g, '')); const A = S.autos || [];
+    if (am && !(S.org && S.org.type === 'k12' && /자동\s*운영/.test(s)) && /자동\s*(운영|화)/.test(s) && !/(만들|설계|매주|매일|매월|마다)/.test(s)) { if (teacher()) return { text: `${t('teacher')} 권한으로는 자동 운영을 바꿀 수 없습니다.` }; const on = /(켜|시작)/.test(am[3]); const k = norm(am[1].replace(/자동\s*(운영|화)?/g, '')); const A = S.autos || [];
       const w = AUTO_W.filter(([re]) => re.test(am[1])).map(x => x[1]); const sc = a => (k && norm(a.name).includes(k) ? 10 : 0) + w.filter(x => (a.key || '').includes(x) || (x === 'qna' && /답변/.test(a.name)) || (x === 'weekly' && /주간|리포트/.test(a.name)) || (x === 'att' && /출석/.test(a.name)) || (x === 'legal' && /법정/.test(a.name)) || (x === 'unpaid' && /미납/.test(a.name)) || (x === 'absent' && /결석/.test(a.name))).length * 3 + [...new Set(norm(am[1]))].filter(ch => /[가-힣]/.test(ch) && norm(a.name).includes(ch)).length * .2;
       const a = A.map(a => [a, sc(a)]).sort((x, y) => y[1] - x[1]).find(x => x[1] >= 1.2);
       if (!a) return { text: `「${am[1].trim() || '자동 운영'}」에 맞는 자동 운영을 찾지 못했습니다. 지금 있는 것: ${A.map(x => x.name).slice(0, 8).join(' · ') || '없음'}.`, go: 'auto' };

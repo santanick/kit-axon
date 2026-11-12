@@ -344,7 +344,7 @@
     const g = R.querySelector('.aih-guide'); if (g && g.textContent.trim()) { const cur = g.querySelector('.obd b, .obd h3, .obd .obd-t'); const m = /(\d)\s*\/\s*(\d)/.exec(g.textContent); const nx = (/\d단계\s*([^·|\n]+)/.exec(g.textContent) || [])[1] || '';
       if (m && m[1] !== m[2]) { const s = document.createElement('div'); s.innerHTML = SL.sum(`<span>시작 가이드</span><span class="sl-sub">다음: ${esc(nx.trim())}</span><span class="sl-n">${m[1]}/${m[2]}</span>`, 'sl-guide', ''); g.before(s.firstElementChild); }
       g.hidden = !UI.slGuideOpen; }
-    const two = R.querySelector('.aih-two'); if (two) { const on = (typeof CN_IDS !== 'undefined' ? CN_IDS.filter(id => cnStatus(id).st === CN_ST.on) : []); const au = (S.autos || []).filter(a => a.on).length;
+    const two = R.querySelector('.aih-two'); if (two && !two.querySelector('#aihK12')) { /* v38.4 학원(초중고) 자동 운영 카드(스위치)는 홈에 그대로 둔다 — main v32.3 기능 병합 */ const on = (typeof CN_IDS !== 'undefined' ? CN_IDS.filter(id => cnStatus(id).st === CN_ST.on) : []); const au = (S.autos || []).filter(a => a.on).length;
       const box = document.createElement('div'); box.className = 'sl-homesum';
       box.innerHTML = (typeof CN_IDS !== 'undefined' && S.me.role === 'owner' ? SL.sum(`<span>연결</span><span class="sl-logos">${on.map(id => typeof brandLogo === 'function' ? brandLogo(id, 26, CN[id].name) : `<i style="background:${CN[id].col}">${esc(CN[id].logo)}</i>`).join('')}</span><span class="sl-n">${on.length}/${CN_IDS.length}</span>`, 'sl-goconn', '') : '') +
         (S.me.role !== 'teacher' ? SL.sum(`<span>자동 운영</span><span class="sl-n">${au}개 켜짐</span>`, 'sl-goauto', '') : '');
