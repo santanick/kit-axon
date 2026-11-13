@@ -30,6 +30,7 @@ COPY --from=build /w/server/node_modules ./server/node_modules
 COPY service/server/*.js service/server/package.json ./server/
 COPY service/server/lms ./server/lms
 COPY service/server/fac ./server/fac
+COPY service/server/ledger ./server/ledger
 COPY --from=build /w/public ./public
 USER node
 EXPOSE 8080
