@@ -73,9 +73,11 @@
     for (let d = 2; d <= 6; d++) { const day = dPlus(td, -d); leaf.forEach(u => { const s = sysCash(D, u.id, day); if (s.cash || s.card) D.closes.push({ id: id8('lk_'), unitId: u.id, day, cashSystem: s.cash, cashCounted: s.cash, cardSystem: s.card, cardCounted: s.card, diffReason: '', closedBy: '데스크', closedAt: day + ' 18:30' }); }); }
     D.devices.push({ id: 'ld_demo', unitId: (leaf[0] || root).id, label: '데스크 1번 단말(모의)', mode: 'mock', lastSeen: td + ' 08:55' });
   }
-  function ledDefault(type) { const D = { v: 41, on: true, flavor: flavorFor(type), units: [], charges: [], receipts: [], allocs: [], refunds: [], closes: [], links: [], imports: [], devices: [], notes: [] }; seedDemo(D); return D; }
+  function ledDefault(type) { const D = { v: 41, on: true, flavor: flavorFor(type), units: [], charges: [], receipts: [], allocs: [], refunds: [], closes: [], links: [], imports: [], devices: [], notes: [] }; if (LIVEON()) D.live = 1; else seedDemo(D); return D; }
   function ensure() { if (!S || !S.org) return null; if (!S.ledger || !Array.isArray(S.ledger.units)) S.ledger = ledDefault(S.org.type); const D = S.ledger;
-    ['units', 'charges', 'receipts', 'allocs', 'refunds', 'closes', 'links', 'imports', 'devices', 'notes'].forEach(k => { if (!Array.isArray(D[k])) D[k] = []; }); if (!FLAV[D.flavor]) D.flavor = flavorFor(S.org.type);
+    ['units', 'charges', 'receipts', 'allocs', 'refunds', 'closes', 'links', 'imports', 'devices', 'notes'].forEach(k => { if (!Array.isArray(D[k])) D[k] = []; });
+    /* 운영 모드: 기관 문서에는 켜짐 · 기관 성격만 둔다(원장 기록은 서버 표가 주인, 시연 데이터를 문서에 싣지 않음) */
+    if (LIVEON() && !D.live) { ['charges', 'receipts', 'allocs', 'refunds', 'closes', 'links', 'imports', 'devices', 'notes'].forEach(k => { D[k] = []; }); D.units = []; D.live = 1; } if (!FLAV[D.flavor]) D.flavor = flavorFor(S.org.type);
     if (!D.units.some(u => !u.parentId)) D.units.unshift({ id: 'lu_root', parentId: null, kind: 'hq', name: S.org.name || '본사', shareRateBp: 40, active: true, sort: 0 }); return D; }
   window.ledgerEnsure = ensure;
   const L = () => ensure();
@@ -159,11 +161,11 @@
       ...D.receipts.map(r => ({ kind: 'receipt', id: r.id, unit: r.unitId, day: String(r.paidAt).slice(0, 10), amount: r.amount, method: r.method, status: r.status, shareEligible: r.shareEligible })),
       ...D.refunds.map(f => ({ kind: 'refund', id: f.id, unit: (rcp[f.receiptId] || {}).unitId, day: String(f.at).slice(0, 10), amount: f.amount, status: f.status, receipt: f.receiptId, shareEligible: !!(rcp[f.receiptId] || {}).shareEligible }))]; }
   function demoSum(unit, roll) { const P = per(); return LC().summary(demoRows(), { from: P.from, to: P.to, unit, rollup: roll, units: calcUnits() }); }
-  function summary() { if (LIVEON()) { const s = LV.d.sum || {}; return { net: +s.net || 0, paid: +s.paid || 0, refund: +s.refund || 0, unpaid: +s.unpaid || 0, collectRate: +s.collectRate || 0, byMethod: s.byMethod || {}, byItem: s.byItem || {}, byUnit: s.byUnit || {}, daily: s.daily || [], share: s.share || { eligible: 0, estimate: 0 }, charged: +s.charged || 0 }; }
+  function summary() { if (LIVEON()) { const s = LV.d.sum || {}; return { net: +s.net || 0, paid: +s.paid || 0, refund: +s.refund || 0, unpaid: +s.unpaid || 0, collectRate: +s.collectRate || 0, byMethod: s.byMethod || {}, byItem: s.byItem || {}, byUnit: s.byUnit || {}, daily: s.daily || [], share: s.share || { eligible: 0, estimate: 0 }, charged: +s.charged || 0, byUnitDetail: s.byUnitDetail || [] }; }
     return demoSum(curUnit(), rollup()); }
   /* 미납자(학습자별, 납기 지난 잔액) */
   function unpaidList() { const td = today(); let C;
-    if (LIVEON()) C = entL('ent').filter(c => c.kind === 'charge' && inScope(c.unitId) && c.status !== 'paid' && c.status !== 'void').map(c => ({ ...c, bal: c.balance != null ? c.balance : c.amount }));
+    if (LIVEON()) C = entL('ent').filter(c => c.kind === 'charge' && inScope(c.unitId) && c.status !== 'void' && +c.balance > 0).map(c => ({ ...c, bal: +c.balance }));
     else { const D = L(); const B = balMap(D, D.charges.filter(c => c.status !== 'void')).byCharge; C = D.charges.filter(c => inScope(c.unitId) && c.status !== 'paid' && c.status !== 'void').map(c => ({ ...c, bal: B[c.id] })); }
     const by = {}; C.forEach(c => { const k = c.unitId + '|' + c.sid; const x = by[k] = by[k] || { sid: c.sid, unitId: c.unitId, bal: 0, due: '9999', ids: [] }; x.bal += c.bal; x.ids.push(c.id); if (c.amount > 0 && c.dueDate && c.dueDate < x.due) x.due = c.dueDate; });
     return Object.values(by).filter(x => x.bal > 0).map(x => { const days = x.due < '9999' ? dDiff(x.due, td) : 0; const s = STG.find(g => days >= g[2] && days <= g[3]); return { ...x, days, stage: days > 0 && s ? s[0] : '' }; }).sort((a, b) => b.days - a.days || b.bal - a.bal); }
@@ -197,7 +199,7 @@
 
   /* 단위 비교(본사 → 가맹점 · 부서): 시안 1 「가맹점 비교」 */
   function unitCompare(sm) { const kids = units().filter(u => u.parentId === curUnit()); if (!kids.length) return ''; const y = dPlus(today(), -1); const srt = UI.ledCmp || 'rate';
-    const R = kids.map(u => { if (LIVEON()) return { u, net: +((sm.byUnit || {})[u.id]) || 0 }; const x = demoSum(u.id, true); const on = (x.byMethod.online_card || 0) + (x.byMethod.online_transfer || 0); const D = L(); const lf = [...descend(units(), u.id)];
+    const R = kids.map(u => { if (LIVEON()) { const x = (sm.byUnitDetail || []).find(d => d.unitId === u.id) || {}; return { u, charged: +x.charged || 0, paid: +x.paid || 0, rate: +x.charged > 0 ? +x.collectRate : null, unpaid: +x.unpaid || 0, net: +x.net || 0, online: null, closed: null }; } const x = demoSum(u.id, true); const on = (x.byMethod.online_card || 0) + (x.byMethod.online_transfer || 0); const D = L(); const lf = [...descend(units(), u.id)];
       const need = lf.filter(id => { const c = sysCash(D, id, y); return c.cash || c.card; }); const closed = need.every(id => D.closes.some(k => k.unitId === id && k.day === y));
       return { u, charged: x.charged, paid: x.paid, rate: x.charged > 0 ? x.collectRate : null, unpaid: x.unpaid, net: x.net, online: x.paid ? Math.round(on * 100 / x.paid) : 0, closed: need.length ? closed : null }; });
     R.sort((a, b) => srt === 'name' ? a.u.name.localeCompare(b.u.name) : srt === 'net' ? b.net - a.net : (a.rate == null ? 0 : a.rate) - (b.rate == null ? 0 : b.rate));
@@ -232,7 +234,7 @@
   const KN = { charge: '청구', receipt: '수납', refund: '환불' };
   function vBook(sm) { const R = bookRows(); const ty = UI.ledT || ''; const pg = Math.max(1, +UI.ledPg || 1), N = 40; const V = LIVEON() ? R : R.slice((pg - 1) * N, pg * N);
     const kidU = units().filter(u => scope().has(u.id) && u.id !== curUnit() || (!rollup() && u.id === curUnit()));
-    const byU = flavor() === 'univ' || rollup() ? `<div class="lg-card"><div class="lg-ch"><b>${flavor() === 'univ' ? '부서별 정산' : '단위별 합계'}</b><small>${esc(per().label)}</small></div>${table(['단위', '청구', '수납', '환불', '순매출', '미수'], kidU.map(u => { const x = LIVEON() ? { net: +((sm.byUnit || {})[u.id]) || 0 } : demoSum(u.id, true); const f = v => v == null ? '—' : won(v); return [esc(u.name) + ` <small>${esc(UKIND[u.kind] || '')}</small>`, f(x.charged), f(x.paid), f(x.refund), `<b>${won(x.net)}</b>`, f(x.unpaid)]; }), '하위 단위가 없습니다.')}</div>` : '';
+    const byU = flavor() === 'univ' || rollup() ? `<div class="lg-card"><div class="lg-ch"><b>${flavor() === 'univ' ? '부서별 정산' : '단위별 합계'}</b><small>${esc(per().label)}</small></div>${table(['단위', '청구', '수납', '환불', '순매출', '미수'], kidU.map(u => { const x = LIVEON() ? ((sm.byUnitDetail || []).find(d => d.unitId === u.id) || { net: +((sm.byUnit || {})[u.id]) || 0 }) : demoSum(u.id, true); const f = v => v == null ? '—' : won(v); return [esc(u.name) + ` <small>${esc(UKIND[u.kind] || '')}</small>`, f(x.charged), f(x.paid), f(x.refund), `<b>${won(x.net)}</b>`, f(x.unpaid)]; }), '하위 단위가 없습니다.')}</div>` : '';
     const chip = (k, l) => `<button class="lg-chip ${ty === k ? 'on' : ''}" data-act="led-ty" data-v="${k}" aria-pressed="${ty === k}">${l}</button>`;
     const rows = V.map(x => [esc(String(x.at).slice(0, 16)), esc(uname(x.unitId)), `<span class="lg-k ${x.kind}">${KN[x.kind] || x.kind}</span>`, esc(who(x.sid)), esc(x.kind === 'charge' ? (x.title || ITEM[x.itemType] || '') + (x.periodYm ? ` · ${x.periodYm}` : '') : (METH[x.method] || x.method || '') + (x.approvalNo ? ` · 승인 ${x.approvalNo}` : '')), `<span class="lg-amt ${x.kind === 'refund' || x.amount < 0 ? 'neg' : ''}">${x.kind === 'refund' ? '−' : ''}${won(Math.abs(x.amount))}</span>`, st(x.kind === 'charge' ? CST : x.kind === 'refund' ? FST : RST, x.status),
       x.kind === 'receipt' && x.status === 'paid' && !ro() ? `${B('led-ref-new', '환불', x.id)}${B('led-correct', '정정', x.id)}` : '']);
@@ -302,7 +304,7 @@
 
   /* 5. 현장 수납(Lv0 수기 + 승인번호 · Lv2 모의 단말) */
   function vDesk() { const sid = UI.ledDeskSid || ''; const u = UI.ledDeskU && inScope(UI.ledDeskU) ? UI.ledDeskU : curUnit();
-    let open = [], bal = 0; if (sid) { if (LIVEON()) { open = entL('ent').filter(c => c.kind === 'charge' && String(c.sid).endsWith(sid) && c.status !== 'paid'); bal = open.reduce((s, c) => s + (c.balance != null ? c.balance : c.amount), 0); } else { const D = L(); open = openOf(D, sid).filter(c => inScope(c.unitId)); const Bm = balMap(D, open); open = open.map(c => ({ ...c, balance: Bm.byCharge[c.id] })).filter(c => c.balance > 0); bal = Bm.total; } }
+    let open = [], bal = 0; if (sid) { if (LIVEON()) { open = entL('ent').filter(c => c.kind === 'charge' && inScope(c.unitId) && String(c.sid) === sid && c.status !== 'void' && +c.balance > 0); bal = open.reduce((s, c) => s + +c.balance, 0); } else { const D = L(); open = openOf(D, sid).filter(c => inScope(c.unitId)); const Bm = balMap(D, open); open = open.map(c => ({ ...c, balance: Bm.byCharge[c.id] })).filter(c => c.balance > 0); bal = Bm.total; } }
     const u2 = open.length ? (open.find(c => c.amount > 0) || open[0]).unitId : u; UI.ledDeskIds = open.map(c => c.id);
     const m = UI.ledDeskM || 'desk_card'; const dev = (LIVEON() ? ((LV.d.dev && LV.d.dev.devices) || []) : L().devices).find(d => d.mode === 'mock' || d.mode === 'ksnet' || d.mode === 'nice');
     const meth = ['desk_card', 'cash', 'transfer', 'voucher'].map(k => `<button class="lg-chip ${m === k ? 'on' : ''}" data-act="led-dm" data-v="${k}" aria-pressed="${m === k}">${esc(METH[k])}</button>`).join('');
