@@ -112,6 +112,35 @@ const SID = '20269000';
     await p.goto(base + '/learner.html?t=T1&bill=used'); await p.waitForTimeout(900); ok(/이미 결제한/.test(await txt(p, '#lgBill')), '운영 링크 409 사용됨');
     ok(!errs.length, `운영 링크 pageerror 0 ${errs.join('|')}`); await ctx.close(); }
 
+  /* 시연판 왕복: 스튜디오 S.ledger(ledger.js) → 학습자 결제 · 링크 결제 · 환불 요청(lpx ledger-*) → 스튜디오 원장 반영 · 학습자 중복 없음 */
+  { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); const errs = []; const st = await ctx.newPage(); st.on('pageerror', e => errs.push('studio ' + e.message)); await st.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
+    await st.goto(base + '/index.html', { waitUntil: 'load' }); await st.waitForTimeout(500);
+    const TOK = 'tokroundtrip1234567890';
+    const tid = await st.evaluate(([site, sid, tok]) => { createOrg('k12', '산타 수학 본사'); S.me.role = 'owner'; const D = window.ledgerEnsure(); const u = D.units.find(x => x.parentId) || D.units[0]; const ym = today().slice(0, 7);
+      const C = (id, bill, t, title, a) => ({ id, unitId: u.id, sid, itemType: t, title, amount: a, periodYm: ym, dueDate: ym + '-28', srcType: 'manual', srcId: '', status: 'open', createdAt: today() + ' 09:00', bill });
+      D.charges.push(C('lc_rt1', 'b_rt1', 'tuition', '원비', 200000), C('lc_rt2', 'b_rt1', 'etc', '형제 할인', -20000), C('lc_rt3', 'b_rt2', 'book', '교재비', 30000));
+      const h = s => { let x = 2166136261; for (const c of String(s)) { x ^= c.charCodeAt(0); x = Math.imul(x, 16777619); } return ('0000000' + (x >>> 0).toString(16)).slice(-8); };
+      D.links.push({ tokenHash: h(tok), chargeIds: ['lc_rt3'], sid, expiresAt: today(), usedAt: '' });
+      S.lsite = S.lsite || {}; S.lsite.pub = site; S.codes = [{ sid, code: 'ABC123' }]; save(); return DREG.cur(); }, [SITEJ, SID, TOK]);
+    const doc = await st.evaluate(t => !!(JSON.parse(localStorage.getItem('didisam.room.' + t) || '{}').ledger || {}).charges, tid); ok(doc, `스튜디오 문서에 S.ledger 저장(${tid})`);
+    const lp = await ctx.newPage(); lp.on('pageerror', e => errs.push('learner ' + e.message)); await lp.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
+    await lp.addInitScript(([t, sid]) => { try { sessionStorage.setItem('didisam.learner.' + t, JSON.stringify({ sid, id: sid })); localStorage.setItem('didisam.app.instx', '1'); } catch (e) { } }, [tid, SID]);
+    await lp.goto(`${base}/learner.html?t=${tid}&app=1#ledger`, { waitUntil: 'load' }); await lp.waitForTimeout(900);
+    const L1 = await lp.evaluate(() => ({ n: document.querySelectorAll('.lg-main > .lg-in > .lg-bill').length, sum: (document.querySelector('.lg-sum b') || {}).textContent, b: [...document.querySelectorAll('[data-lg="pay"]')].map(x => x.textContent) }));
+    ok(L1.n === 2 && L1.sum === '210,000원' && L1.b.some(t => /180,000원/.test(t)), `학습자가 스튜디오 청구(bill 묶음 · 할인)를 읽음 ${JSON.stringify(L1)}`);
+    await lp.click('[data-lg="pay"]:has-text("180,000")'); await lp.waitForTimeout(300); await lp.click('#shpModal [data-shm="1"]'); await lp.waitForTimeout(400);
+    const rid = await lp.evaluate(() => location.hash.split('/').pop());
+    await lp.goto(`${base}/learner.html?t=${tid}&app=1#ledger/rf`); await lp.waitForTimeout(800); await lp.selectOption('#lgRfR', rid); await lp.fill('#lgRfW', '반 변경'); await lp.click('#lgRf button[type=submit]'); await lp.waitForTimeout(300);
+    const bp = await ctx.newPage(); await bp.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await bp.goto(`${base}/learner.html?bill=${TOK}`, { waitUntil: 'load' }); await bp.waitForTimeout(900);
+    ok(/30,000원/.test(await txt(bp, '#lgBill')) && !/기간이 지났어요/.test(await txt(bp, '#lgBill')), '스튜디오 링크(해시 · 날짜 만료일 당일) 열림');
+    await bp.click('[data-lg="bpay"]'); await bp.waitForTimeout(300); await bp.click('#shpModal [data-shm="1"]'); await bp.waitForTimeout(400); ok(/결제가 끝났어요/.test(await txt(bp, '#lgBill')), '스튜디오 링크 결제 완료');
+    const R = await st.evaluate(([rid]) => { lpxPull(); const D = S.ledger; const r = D.receipts.find(x => x.id === rid); const st = id => (D.charges.find(c => c.id === id) || {}).status; return { r: !!r, amt: r && r.amount, s1: st('lc_rt1'), s3: st('lc_rt3'), link: (D.links.find(l => l.chargeIds.includes('lc_rt3')) || {}).usedAt, note: (D.notes.find(n => n.stage === 'refund_req') || {}).text || '', q: JSON.parse(localStorage.getItem('didisam.room.' + DREG.cur() + '.lpx') || '[]').length }; }, [rid]);
+    ok(R.r && R.amt === 180000 && R.s1 === 'paid', `스튜디오 원장에 학습자 결제 반영(같은 수납 번호) ${JSON.stringify(R)}`);
+    ok(R.s3 === 'paid' && !!R.link, '스튜디오: 링크 결제 반영 · 링크 사용 처리'); ok(/환불 요청/.test(R.note) && /반 변경/.test(R.note), '스튜디오: 환불 요청 메모'); ok(R.q === 0, '요청함 비움');
+    await lp.goto(`${base}/learner.html?t=${tid}&app=1#ledger/hist`); await lp.waitForTimeout(900);
+    const H = await lp.evaluate(() => [...document.querySelectorAll('.lg-row b')].map(x => x.textContent)); ok(H.filter(x => x === '180,000원').length === 1 && H.includes('30,000원'), `반영 뒤 학습자 결제 내역 중복 없음(${H.join(',')})`);
+    ok(!errs.length, `왕복 pageerror 0 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
+
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
