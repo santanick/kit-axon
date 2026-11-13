@@ -31,11 +31,11 @@ jobs:
         run: cd service/server && npm ci --no-fund
       - name: API 테스트
         env: { DATABASE_URL: 'postgresql://didisam:ci-only-pw@localhost:5432/didisam' }
-        run: node --test service/test/api.test.js service/test/learner.test.js service/test/tutor.test.js service/test/mcp.test.js service/test/compliance.test.js service/test/module.test.js
+        run: node --test service/test/api.test.js service/test/learner.test.js service/test/tutor.test.js service/test/mcp.test.js service/test/compliance.test.js service/test/module.test.js service/test/ledger41.test.js
       - name: 공통 화면 회귀
         run: |
           mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i playwright@1 --no-fund >/dev/null && npx playwright install --with-deps chromium >/dev/null
-          cd "$GITHUB_WORKSPACE" && NODE_PATH=/tmp/pw/node_modules node tests/ui/smoke.js && NODE_PATH=/tmp/pw/node_modules node tests/ui/compliance.js && NODE_PATH=/tmp/pw/node_modules node tests/ui/scn-k12.js
+          cd "$GITHUB_WORKSPACE" && NODE_PATH=/tmp/pw/node_modules node tests/ui/smoke.js && NODE_PATH=/tmp/pw/node_modules node tests/ui/compliance.js && NODE_PATH=/tmp/pw/node_modules node tests/ui/scn-k12.js && NODE_PATH=/tmp/pw/node_modules node tests/ui/ledger41-admin.js && NODE_PATH=/tmp/pw/node_modules node tests/ui/ledger41-learner.js
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17', cache: maven }
       - name: Java 서버 빌드 · 기동
