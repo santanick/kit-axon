@@ -1,0 +1,132 @@
+{
+  "version": "v40.1",
+  "notes": [
+    "시설 · 장비 예약 계산 기준값 — 화면 didisam/fac-core.js(window.facCalc) · Node service/server/fac/calc.js · Java DdFac가 모두 같은 값을 내야 합니다.",
+    "입력의 fac · product가 문자열이면 아래 facilities · products의 같은 이름 항목입니다. 시각은 KST(+09:00) ISO 문자열입니다.",
+    "금액은 원 단위 정수. 할인 · 수수료 · 비율 환불은 10원 미만 내림(floor). discountRate · feeRate · rate는 퍼센트(0~100)입니다.",
+    "quote: out에 적힌 칸만 비교합니다(lines 문구는 비교하지 않음). error가 있으면 그 코드만 비교합니다.",
+    "refund pass-period(결정 4): 사용 횟수 구간 tiers 기본 [{max:0,deduct:0},{max:5,deduct:5},{max:10,deduct:10}], 그보다 많으면 0. 환불 = 결제액 − 일일권 × deduct − floor10(결제액 × feeRate%), 0 미만은 0, 10원 내림.",
+    "refund pass-count: tiers가 없으면 결제액 − 단가 × 사용 횟수 − 수수료. time: steps 위에서부터 '시작까지 남은 시간(h) ≥ beforeH'인 첫 구간, 시작 시각이 지났으면 0.",
+    "suspension(결정 3): 노쇼 날짜를 오름차순으로 세어 strikes번째 날부터 days일(그날 포함) 정지, 정지 중의 노쇼는 세지 않고 정지 뒤 다시 0부터. until = 정지 마지막 날.",
+    "refund의 rule이 문자열이면 facilities[그 이름].refund입니다. slotTime의 시각은 같은 순간인지(epoch)로 비교합니다. noShow · dupSame의 out은 true/false입니다.",
+    "openState: out에 적힌 칸(ok · code · opensAt · lastDay)만 비교. 오픈 판정은 now의 KST 날짜 · 시각 기준, open.at 이전이면 daysAhead−1일 뒤까지."
+  ],
+  "facilities": {
+    "golf": { "id": "f_golf", "name": "골프연습장", "kind": "time",
+      "hours": { "0": null, "1": ["06:00", "22:00"], "2": ["06:00", "22:00"], "3": ["06:00", "22:00"], "4": ["06:00", "22:00"], "5": ["06:00", "22:00"], "6": ["06:00", "22:00"] },
+      "closed": [{ "id": "c1", "from": "2026-11-25", "to": "2026-11-25", "reason": "시설 점검" }, { "id": "c2", "from": "2026-11-16", "repeat": "weekly", "reason": "정기 휴장(월)" }],
+      "slotMin": 60, "minSlots": 1, "maxSlots": 2, "capacity": { "res": 12, "perSlot": 1 },
+      "open": { "daysAhead": 7, "at": "09:00" }, "windows": [],
+      "approval": false, "pay": "online", "audience": ["student", "staff", "public"], "verify": "sid",
+      "prices": { "student": { "slot": 3000 }, "staff": { "slot": 4000 }, "public": { "slot": 6000 } },
+      "rules": { "dupSame": true, "exclGroup": "golf", "noShowMin": 15, "noShowStrikes": 3, "suspendDays": 30 },
+      "refund": { "type": "time", "steps": [{ "beforeH": 48, "rate": 100 }, { "beforeH": 24, "rate": 50 }, { "rate": 0 }] } },
+    "room": { "id": "f_room", "name": "세미나실", "kind": "time",
+      "hours": { "1": ["09:00", "18:00"], "2": ["09:00", "18:00"], "3": ["09:00", "18:00"], "4": ["09:00", "18:00"], "5": ["09:00", "18:00"] },
+      "slotMin": 30, "minSlots": 1, "maxSlots": 6, "approval": true, "pay": "free", "audience": ["student", "staff"], "verify": "sid",
+      "prices": { "student": { "slot": 0 }, "staff": { "slot": 0 } } },
+    "gym": { "id": "f_gym", "name": "체육관", "kind": "time",
+      "hours": { "1": ["09:00", "21:00"], "2": ["09:00", "21:00"], "3": ["09:00", "21:00"], "4": ["09:00", "21:00"], "5": ["09:00", "21:00"], "6": ["09:00", "21:00"] },
+      "slotMin": 60, "minSlots": 1, "maxSlots": 4, "pay": "free", "audience": ["student", "staff", "public"], "verify": "none",
+      "prices": { "public": { "slot": 5000 } }, "windows": [{ "id": "w1", "name": "신규 신청", "from": "2026-12-01", "to": "2026-12-10" }] }
+  },
+  "products": {
+    "m1": { "id": "p_m1", "fac": "f_golf", "type": "pass-period", "name": "월이용권 1개월", "days": 30, "prices": { "public": 150000, "student": 120000 }, "discountRate": 0 },
+    "m3": { "id": "p_m3", "fac": "f_golf", "type": "pass-period", "name": "월이용권 3개월", "days": 90, "prices": { "public": 450000, "student": 360000 }, "discountRate": 10 },
+    "m6": { "id": "p_m6", "fac": "f_golf", "type": "pass-period", "name": "월이용권 6개월", "days": 180, "prices": { "public": 900000 }, "discountRate": 15 },
+    "odd": { "id": "p_odd", "fac": "f_golf", "type": "pass-period", "name": "할인 끝전", "days": 30, "prices": { "public": 99990 }, "discountRate": 15 },
+    "d10": { "id": "p_d10", "fac": "f_golf", "type": "pass-count", "name": "일일권 10매", "count": 10, "days": 10, "expireDays": 90, "unitPrice": { "public": 12000 }, "discountRate": 5 },
+    "laptop": { "id": "p_lt", "fac": "f_golf", "type": "rent", "name": "노트북 7일", "days": 7, "deposit": 50000, "lateFeePerDay": 2000, "prices": { "public": 10000, "student": 0 } }
+  },
+  "quote": [
+    { "name": "학생 2칸", "in": { "fac": "golf", "aud": "student", "day": "2026-11-18", "startSlot": 2, "slots": 2 }, "out": { "list": 6000, "off": 0, "final": 6000, "deposit": 0, "needVerify": true, "pay": "online", "approval": false } },
+    { "name": "일반 2칸", "in": { "fac": "golf", "aud": "public", "day": "2026-11-18", "startSlot": 0, "slots": 2 }, "out": { "list": 12000, "off": 0, "final": 12000, "needVerify": false } },
+    { "name": "교직원 1칸", "in": { "fac": "golf", "aud": "staff", "day": "2026-11-18", "startSlot": 15, "slots": 1 }, "out": { "list": 4000, "final": 4000, "needVerify": true } },
+    { "name": "대학 강의실 무료 + 승인제", "in": { "fac": "room", "aud": "student", "day": "2026-11-18", "startSlot": 0, "slots": 4 }, "out": { "list": 0, "off": 0, "final": 0, "pay": "free", "approval": true, "needVerify": true } },
+    { "name": "무료 시설은 요금표가 있어도 0원", "in": { "fac": "gym", "aud": "public", "day": "2026-11-18", "startSlot": 0, "slots": 1 }, "out": { "list": 5000, "off": 5000, "final": 0, "needVerify": false } },
+    { "name": "허용하지 않는 신청자 구분", "in": { "fac": "room", "aud": "public", "day": "2026-11-18", "startSlot": 0, "slots": 1 }, "out": { "error": "aud" } },
+    { "name": "최대 칸 초과", "in": { "fac": "golf", "aud": "public", "day": "2026-11-18", "startSlot": 0, "slots": 3 }, "out": { "error": "slots" } },
+    { "name": "운영 시간 밖", "in": { "fac": "golf", "aud": "public", "day": "2026-11-18", "startSlot": 15, "slots": 2 }, "out": { "error": "slot" } },
+    { "name": "월이용권 1개월 일반", "in": { "fac": "golf", "aud": "public", "product": "m1" }, "out": { "list": 150000, "off": 0, "final": 150000, "deposit": 0 } },
+    { "name": "월이용권 1개월 학생", "in": { "fac": "golf", "aud": "student", "product": "m1" }, "out": { "list": 120000, "off": 0, "final": 120000, "needVerify": true } },
+    { "name": "기간권 3개월 10% 할인", "in": { "fac": "golf", "aud": "public", "product": "m3" }, "out": { "list": 450000, "off": 45000, "final": 405000 } },
+    { "name": "기간권 3개월 학생 10% 할인", "in": { "fac": "golf", "aud": "student", "product": "m3" }, "out": { "list": 360000, "off": 36000, "final": 324000 } },
+    { "name": "기간권 6개월 15% 할인", "in": { "fac": "golf", "aud": "public", "product": "m6" }, "out": { "list": 900000, "off": 135000, "final": 765000 } },
+    { "name": "할인 10원 미만 내림", "in": { "fac": "golf", "aud": "public", "product": "odd" }, "out": { "list": 99990, "off": 15000, "final": 84990 } },
+    { "name": "상품 가격표에 없는 구분", "in": { "fac": "golf", "aud": "staff", "product": "m6" }, "out": { "error": "price" } },
+    { "name": "일일권 10매 = 단가 × 일수 − 5%", "in": { "fac": "golf", "aud": "public", "product": "d10" }, "out": { "list": 120000, "off": 6000, "final": 114000 } },
+    { "name": "장비 대여 + 보증금", "in": { "fac": "golf", "aud": "public", "product": "laptop" }, "out": { "list": 10000, "off": 0, "final": 10000, "deposit": 50000 } }
+  ],
+  "slots": [
+    { "name": "골프 수요일 칸", "in": { "fac": "golf", "day": "2026-11-18" }, "out": { "count": 16, "first": { "slot": 0, "from": "06:00", "to": "07:00" }, "last": { "slot": 15, "from": "21:00", "to": "22:00" } } },
+    { "name": "골프 일요일 휴무", "in": { "fac": "golf", "day": "2026-11-22" }, "out": { "count": 0 } },
+    { "name": "세미나실 30분 칸", "in": { "fac": "room", "day": "2026-11-18" }, "out": { "count": 18, "first": { "slot": 0, "from": "09:00", "to": "09:30" }, "last": { "slot": 17, "from": "17:30", "to": "18:00" } } }
+  ],
+  "slotTime": [
+    { "in": { "fac": "golf", "day": "2026-11-18", "startSlot": 2, "slots": 2 }, "out": { "startAt": "2026-11-18T08:00:00+09:00", "endAt": "2026-11-18T10:00:00+09:00" } },
+    { "in": { "fac": "room", "day": "2026-11-18", "startSlot": 3, "slots": 3 }, "out": { "startAt": "2026-11-18T10:30:00+09:00", "endAt": "2026-11-18T12:00:00+09:00" } }
+  ],
+  "openState": [
+    { "name": "오픈 시각 전 · 범위 안", "in": { "fac": "golf", "day": "2026-11-21", "now": "2026-11-17T08:00:00+09:00" }, "out": { "ok": true, "lastDay": "2026-11-23" } },
+    { "name": "오픈 시각 전 · 범위 밖", "in": { "fac": "golf", "day": "2026-11-24", "now": "2026-11-17T08:00:00+09:00" }, "out": { "ok": false, "code": "not_open", "opensAt": "2026-11-17T09:00+09:00" } },
+    { "name": "오픈 시각 지난 뒤 열림", "in": { "fac": "golf", "day": "2026-11-24", "now": "2026-11-17T09:00:00+09:00" }, "out": { "ok": true, "lastDay": "2026-11-24" } },
+    { "name": "일요일 운영 안 함", "in": { "fac": "golf", "day": "2026-11-22", "now": "2026-11-17T10:00:00+09:00" }, "out": { "ok": false, "code": "closed" } },
+    { "name": "매주 월요일 휴장", "in": { "fac": "golf", "day": "2026-11-23", "now": "2026-11-17T10:00:00+09:00" }, "out": { "ok": false, "code": "closed" } },
+    { "name": "하루 휴관", "in": { "fac": "golf", "day": "2026-11-25", "now": "2026-11-18T10:00:00+09:00" }, "out": { "ok": false, "code": "closed" } },
+    { "name": "지난 날", "in": { "fac": "golf", "day": "2026-11-16", "now": "2026-11-17T10:00:00+09:00" }, "out": { "ok": false, "code": "past" } },
+    { "name": "오늘(자정 직후 KST)", "in": { "fac": "golf", "day": "2026-11-17", "now": "2026-11-16T15:30:00Z" }, "out": { "ok": true, "lastDay": "2026-11-23" } },
+    { "name": "신청 기간 전", "in": { "fac": "gym", "day": "2026-11-18", "now": "2026-11-17T10:00:00+09:00" }, "out": { "ok": false, "code": "window", "opensAt": "2026-12-01T00:00+09:00" } },
+    { "name": "신청 기간 안", "in": { "fac": "gym", "day": "2026-12-05", "now": "2026-12-02T10:00:00+09:00" }, "out": { "ok": true } }
+  ],
+  "refund": [
+    { "name": "시간 예약 72시간 전 100%", "in": { "rule": { "type": "time", "steps": [{ "beforeH": 48, "rate": 100 }, { "beforeH": 24, "rate": 50 }, { "rate": 0 }] }, "paid": 20000, "startAt": "2026-11-20T10:00:00+09:00", "now": "2026-11-17T10:00:00+09:00" }, "out": { "auto": 20000 } },
+    { "name": "시간 예약 정확히 48시간 전 100%", "in": { "rule": "golf", "paid": 20000, "startAt": "2026-11-20T10:00:00+09:00", "now": "2026-11-18T10:00:00+09:00" }, "out": { "auto": 20000 } },
+    { "name": "시간 예약 46시간 전 50%", "in": { "rule": "golf", "paid": 20000, "startAt": "2026-11-20T10:00:00+09:00", "now": "2026-11-18T12:00:00+09:00" }, "out": { "auto": 10000 } },
+    { "name": "시간 예약 50% 10원 내림", "in": { "rule": "golf", "paid": 15550, "startAt": "2026-11-20T10:00:00+09:00", "now": "2026-11-18T12:00:00+09:00" }, "out": { "auto": 7770 } },
+    { "name": "시간 예약 22시간 전 0%", "in": { "rule": "golf", "paid": 20000, "startAt": "2026-11-20T10:00:00+09:00", "now": "2026-11-19T12:00:00+09:00" }, "out": { "auto": 0 } },
+    { "name": "시간 예약 시작 후 0", "in": { "rule": "golf", "paid": 20000, "startAt": "2026-11-20T10:00:00+09:00", "now": "2026-11-20T10:05:00+09:00" }, "out": { "auto": 0 } },
+    { "name": "월이용권 미사용(당일) = 구매액 − 10%", "in": { "rule": { "type": "pass-period", "unitPrice": 12000, "feeRate": 10 }, "paid": 150000, "used": 0 }, "out": { "auto": 135000 } },
+    { "name": "월이용권 1회 = 구매액 − 일일권 × 5 − 10%", "in": { "rule": { "type": "pass-period", "unitPrice": 12000, "feeRate": 10 }, "paid": 150000, "used": 1 }, "out": { "auto": 75000 } },
+    { "name": "월이용권 5회", "in": { "rule": { "type": "pass-period", "unitPrice": 12000, "feeRate": 10 }, "paid": 150000, "used": 5 }, "out": { "auto": 75000 } },
+    { "name": "월이용권 6회 = 구매액 − 일일권 × 10 − 10%", "in": { "rule": { "type": "pass-period", "unitPrice": 12000, "feeRate": 10 }, "paid": 150000, "used": 6 }, "out": { "auto": 15000 } },
+    { "name": "월이용권 10회", "in": { "rule": { "type": "pass-period", "unitPrice": 12000, "feeRate": 10 }, "paid": 150000, "used": 10 }, "out": { "auto": 15000 } },
+    { "name": "월이용권 11회 이상 환불 없음", "in": { "rule": { "type": "pass-period", "unitPrice": 12000, "feeRate": 10 }, "paid": 150000, "used": 11 }, "out": { "auto": 0 } },
+    { "name": "월이용권 0 미만은 0", "in": { "rule": { "type": "pass-period", "unitPrice": 12000, "feeRate": 10 }, "paid": 120000, "used": 7 }, "out": { "auto": 0 } },
+    { "name": "3개월권 3회", "in": { "rule": { "type": "pass-period", "unitPrice": 12000, "feeRate": 10 }, "paid": 405000, "used": 3 }, "out": { "auto": 304500 } },
+    { "name": "설정값 구간 · 수수료율 5%", "in": { "rule": { "type": "pass-period", "unitPrice": 10000, "feeRate": 5, "tiers": [{ "max": 0, "deduct": 0 }, { "max": 3, "deduct": 3 }] }, "paid": 100000, "used": 2 }, "out": { "auto": 65000 } },
+    { "name": "일일권 10매 3회 사용", "in": { "rule": { "type": "pass-count", "unitPrice": 12000, "feeRate": 10 }, "paid": 114000, "used": 3 }, "out": { "auto": 66600 } },
+    { "name": "일일권 수수료 0 미사용", "in": { "rule": { "type": "pass-count", "unitPrice": 12000, "feeRate": 0 }, "paid": 114000, "used": 0 }, "out": { "auto": 114000 } },
+    { "name": "대여 보증금 − 연체료 − 파손", "in": { "rule": { "type": "rent" }, "deposit": 50000, "lateFee": 6000, "deductions": 10000 }, "out": { "auto": 34000 } },
+    { "name": "대여 보증금보다 큰 차감은 0", "in": { "rule": { "type": "rent" }, "deposit": 10000, "lateFee": 20000 }, "out": { "auto": 0 } },
+    { "name": "휴관 전액 환불", "in": { "rule": { "type": "full" }, "paid": 12000 }, "out": { "auto": 12000 } }
+  ],
+  "lateFee": [
+    { "in": { "dueDay": "2026-11-20", "returnDay": "2026-11-23", "perDay": 2000, "cap": 50000 }, "out": { "days": 3, "fee": 6000 } },
+    { "in": { "dueDay": "2026-11-20", "returnDay": "2026-11-20", "perDay": 2000, "cap": 50000 }, "out": { "days": 0, "fee": 0 } },
+    { "in": { "dueDay": "2026-11-20", "returnDay": "2026-11-18", "perDay": 2000, "cap": 50000 }, "out": { "days": 0, "fee": 0 } },
+    { "in": { "dueDay": "2026-11-01", "returnDay": "2026-12-11", "perDay": 2000, "cap": 50000 }, "out": { "days": 40, "fee": 50000 } },
+    { "in": { "dueDay": "2026-11-01", "returnDay": "2026-11-11", "perDay": 1000, "cap": null }, "out": { "days": 10, "fee": 10000 } }
+  ],
+  "noShow": [
+    { "name": "14분: 아직", "in": { "status": "confirmed", "checkedIn": false, "startAt": "2026-11-18T10:00:00+09:00", "noShowMin": 15, "now": "2026-11-18T10:14:59+09:00" }, "out": false },
+    { "name": "15분: 노쇼", "in": { "status": "confirmed", "checkedIn": false, "startAt": "2026-11-18T10:00:00+09:00", "noShowMin": 15, "now": "2026-11-18T10:15:00+09:00" }, "out": true },
+    { "name": "입장함", "in": { "status": "confirmed", "checkedIn": true, "startAt": "2026-11-18T10:00:00+09:00", "noShowMin": 15, "now": "2026-11-18T11:00:00+09:00" }, "out": false },
+    { "name": "승인 대기는 대상 아님", "in": { "status": "requested", "checkedIn": false, "startAt": "2026-11-18T10:00:00+09:00", "noShowMin": 15, "now": "2026-11-18T11:00:00+09:00" }, "out": false },
+    { "name": "규칙 끔(0분)", "in": { "status": "confirmed", "checkedIn": false, "startAt": "2026-11-18T10:00:00+09:00", "noShowMin": 0, "now": "2026-11-18T11:00:00+09:00" }, "out": false }
+  ],
+  "suspension": [
+    { "name": "3회째 날부터 30일", "in": { "noShowDays": ["2026-10-20", "2026-10-01", "2026-10-10"], "strikes": 3, "days": 30, "today": "2026-11-05" }, "out": { "suspended": true, "until": "2026-11-18", "count": 0 } },
+    { "name": "정지 끝난 다음 날", "in": { "noShowDays": ["2026-10-01", "2026-10-10", "2026-10-20"], "strikes": 3, "days": 30, "today": "2026-11-19" }, "out": { "suspended": false, "until": "2026-11-18", "count": 0 } },
+    { "name": "2회는 정지 아님", "in": { "noShowDays": ["2026-10-01", "2026-10-10"], "strikes": 3, "days": 30, "today": "2026-10-11" }, "out": { "suspended": false, "until": null, "count": 2 } },
+    { "name": "정지 중 노쇼는 세지 않음", "in": { "noShowDays": ["2026-10-01", "2026-10-10", "2026-10-20", "2026-10-25"], "strikes": 3, "days": 30, "today": "2026-11-05" }, "out": { "suspended": true, "until": "2026-11-18", "count": 0 } },
+    { "name": "정지 뒤 다시 0부터", "in": { "noShowDays": ["2026-01-01", "2026-02-01", "2026-03-01", "2026-05-01"], "strikes": 3, "days": 30, "today": "2026-05-02" }, "out": { "suspended": false, "until": "2026-03-30", "count": 1 } }
+  ],
+  "dupSame": [
+    { "in": { "existing": [{ "sid": "a", "day": "2026-11-18", "startSlot": 2, "slots": 2, "group": "golf" }], "req": { "sid": "a", "day": "2026-11-18", "startSlot": 3, "slots": 1, "group": "golf" } }, "out": true },
+    { "in": { "existing": [{ "sid": "a", "day": "2026-11-18", "startSlot": 2, "slots": 2, "group": "golf" }], "req": { "sid": "a", "day": "2026-11-18", "startSlot": 1, "slots": 2, "group": "golf" } }, "out": true },
+    { "in": { "existing": [{ "sid": "a", "day": "2026-11-18", "startSlot": 2, "slots": 2, "group": "golf" }], "req": { "sid": "a", "day": "2026-11-18", "startSlot": 4, "slots": 1, "group": "golf" } }, "out": false },
+    { "in": { "existing": [{ "sid": "a", "day": "2026-11-18", "startSlot": 2, "slots": 2, "group": "golf" }], "req": { "sid": "b", "day": "2026-11-18", "startSlot": 2, "slots": 1, "group": "golf" } }, "out": false },
+    { "in": { "existing": [{ "sid": "a", "day": "2026-11-18", "startSlot": 2, "slots": 2, "group": "golf" }], "req": { "sid": "a", "day": "2026-11-18", "startSlot": 2, "slots": 1, "group": "tennis" } }, "out": false },
+    { "in": { "existing": [{ "sid": "a", "day": "2026-11-18", "startSlot": 2, "slots": 2, "group": "golf" }], "req": { "sid": "a", "day": "2026-11-19", "startSlot": 2, "slots": 1, "group": "golf" } }, "out": false }
+  ]
+}

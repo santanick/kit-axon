@@ -38,6 +38,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     private final DdStateCrypto crypt;
     private final PubMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final PiiService pii; private final DdAiClient ai; private final egovframework.didisam.cpl.service.CplService cpl;
     private final egovframework.didisam.auth.service.AuthService auth; private final TenantTxMapper txm;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.fac.service.FacService fac;
     public PubServiceImpl(PubMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, PiiService pii, DdAiClient ai, egovframework.didisam.cpl.service.CplService cpl, DdStateCrypto crypt, egovframework.didisam.auth.service.AuthService auth, TenantTxMapper txm) { this.crypt = crypt; this.auth = auth; this.txm = txm;
         this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.pii = pii; this.ai = ai; this.cpl = cpl;
     }
@@ -61,6 +62,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             case "POST login": return login(req, res, tid, body);
             default:
         }
+        if (act.startsWith("fac-")) return fac.pub(req, res, tid, key, body, () -> lauth(req, tid)); /* v40 시설 · 장비 예약 */
         Map<String, Object> s = lauth(req, tid);
         if (s == null && "POST tutor".equals(key)) return tutor(req, body, tid, null, web.ip(req)); /* 방문자(로그인 전) 튜터 */
         if (s == null) throw processException("dd.401.auth");

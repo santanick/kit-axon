@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v40 시설 · 장비 예약 — 모두 기관 범위(inTenant, RLS) 쿼리. 표 정의는 service/server/fac/sql/10_fac.sql(Node 마이그레이션). -->
+<mapper namespace="egovframework.didisam.fac.service.impl.FacMapper">
+  <sql id="ts">'YYYY-MM-DD"T"HH24:MI:SS"+09:00"'</sql>
+  <sql id="bk">b.id, b.fac_id as "facId", b.res_id as "resId", b.sid, b.aud, b.day::text as day, b.start_slot as "slot", b.slots, b.status, b.pay_mode as "payMode", b.amount, b.pay_status as "payStatus", b.pass_id as "passId", b.note, b.cancel_reason as "cancelReason",
+    to_char(b.hold_until at time zone 'Asia/Seoul', <include refid="ts"/>) as "holdUntil", to_char(b.created_at at time zone 'Asia/Seoul', <include refid="ts"/>) as "createdAt",
+    exists (select 1 from fac_checkin c where c.tenant_id = b.tenant_id and c.booking_id = b.id) as "checkedIn"</sql>
+
+  <select id="selectDoc" resultType="string">select doc::text from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectTenantIds" resultType="string">select id from tenants</select>
+  <select id="lock" resultType="string">select pg_advisory_xact_lock(hashtext(#{k}))::text</select>
+
+  <!-- 예약 -->
+  <insert id="insertBooking">insert into fac_booking (tenant_id, id, fac_id, res_id, sid, aud, member_no, day, start_slot, slots, start_at, end_at, noshow_min, status, pay_mode, amount, pay_status, pass_id, note, by_staff, extra, purge_at, hold_until)
+    values (#{tid}, #{id}, #{fac}, #{res}, #{sid}, #{aud}, #{memberNo}, #{day}::date, #{slot}, #{slots}, to_timestamp(#{startAt}::bigint / 1000.0), to_timestamp(#{endAt}::bigint / 1000.0), #{noShowMin}::smallint, #{status}, #{payMode}, #{amount}, #{payStatus}, #{passId}, #{note}, #{byStaff}, #{extra}::jsonb,
+    case when #{extra}::text is null then null else ((#{extra}::jsonb->>'purge_at')::date + time '00:00') at time zone 'Asia/Seoul' end,
+    case when #{holdMin}::int > 0 then now() + make_interval(mins => #{holdMin}::int) end) on conflict (tenant_id, id) do nothing</insert>
+  <select id="selectBooking" resultType="java.util.LinkedHashMap">select <include refid="bk"/> from fac_booking b where b.tenant_id = #{tid} and b.id = #{id}</select>
+  <insert id="insertSlot">insert into fac_slot (tenant_id, fac_id, res_id, day, slot, seat, booking_id, sid, excl_group) values (#{tid}, #{fac}, #{res}, #{day}::date, #{slot}, #{seat}, #{bk}, #{sid}, #{excl})
+    on conflict (tenant_id, res_id, day, slot, seat) do nothing</insert>
+  <delete id="deleteSlots">delete from fac_slot where tenant_id = #{tid} and booking_id = #{bk}</delete>
+  <select id="selectTaken" resultType="java.util.LinkedHashMap">select res_id as "res", slot, count(*)::int as n from fac_slot where tenant_id = #{tid} and fac_id = #{fac} and day = #{day}::date group by res_id, slot</select>
+  <update id="updateBooking">update fac_booking set updated_at = now(), status = #{status}, pay_status = coalesce(#{pay}, pay_status), cancel_reason = coalesce(#{reason}, cancel_reason),
+    hold_until = case when #{holdMin}::int > 0 then now() + make_interval(mins => #{holdMin}::int) when #{holdMin}::int &lt; 0 then null else hold_until end
+    where tenant_id = #{tid} and id = #{id}</update>
+  <select id="countActive" resultType="int">select count(*)::int from fac_booking where tenant_id = #{tid} and sid = #{sid} and status in ('requested','approved','confirmed') and day &gt;= (now() at time zone 'Asia/Seoul')::date</select>
+  <select id="selectNoShowDays" resultType="string">select day::text from fac_booking where tenant_id = #{tid} and sid = #{sid} and status = 'no_show' order by day</select>
+  <select id="selectMine" resultType="java.util.LinkedHashMap">select <include refid="bk"/> from fac_booking b where b.tenant_id = #{tid} and b.sid = #{sid}
+    and <choose><when test="past">(b.day &lt; (now() at time zone 'Asia/Seoul')::date or b.status not in ('requested','approved','confirmed','checked_in'))</when>
+    <otherwise>b.day &gt;= (now() at time zone 'Asia/Seoul')::date and b.status in ('requested','approved','confirmed','checked_in')</otherwise></choose>
+    order by b.day <if test="past">desc</if>, b.start_slot limit 100</select>
+  <select id="selectBookings" resultType="java.util.LinkedHashMap">select <include refid="bk"/> from fac_booking b where b.tenant_id = #{tid}
+    <if test="from != null"> and b.day &gt;= #{from}::date</if><if test="to != null"> and b.day &lt;= #{to}::date</if>
+    <if test="fac != null"> and b.fac_id = #{fac}</if><if test="status != null"> and b.status = #{status}</if>
+    <if test="facs != null"> and b.fac_id in <foreach collection="facs" item="f" open="(" separator="," close=")">#{f}</foreach></if>
+    <if test="q != null"> and (b.id = #{q} or right(b.sid, 4) = #{q})</if>
+    order by b.day, b.start_slot, b.res_id limit 500</select>
+  <select id="selectSweep" resultType="java.util.LinkedHashMap">select <include refid="bk"/>, (b.hold_until &lt; now()) as "holdOver" from fac_booking b where b.tenant_id = #{tid} and b.fac_id = #{fac} and b.day = #{day}::date and b.status in ('approved','confirmed') limit 200</select>
+  <select id="selectSweepDays" resultType="java.util.LinkedHashMap">select distinct fac_id as fac, day::text as day from fac_booking where tenant_id = #{tid} and status in ('approved','confirmed') and day between (now() at time zone 'Asia/Seoul')::date - 1 and (now() at time zone 'Asia/Seoul')::date</select>
+  <select id="selectAffected" resultType="java.util.LinkedHashMap">select <include refid="bk"/> from fac_booking b where b.tenant_id = #{tid} and b.fac_id = #{fac} and b.day between #{from}::date and #{to}::date and b.status in ('requested','approved','confirmed')</select>
+
+  <!-- 이용권 -->
+  <insert id="insertPass">insert into fac_pass (tenant_id, id, sid, aud, product_id, fac_id, kind, total, starts_on, ends_on, status, amount, cls_id) values (#{tid}, #{id}, #{sid}, #{aud}, #{product}, #{fac}, #{kind}, #{total}, #{starts}::date, #{ends}::date, #{status}, #{amount}, #{cls}) on conflict (tenant_id, id) do nothing</insert>
+  <select id="selectPass" resultType="java.util.LinkedHashMap">select id, sid, product_id as "productId", fac_id as "facId", kind, total, used, starts_on::text as "startsOn", ends_on::text as "endsOn", status, pay_id as "payId" from fac_pass where tenant_id = #{tid} and id = #{id}</select>
+  <select id="selectMyPasses" resultType="java.util.LinkedHashMap">select id, product_id as "productId", fac_id as "facId", kind, total, used, greatest(total - used, 0) as "left", starts_on::text as "startsOn", ends_on::text as "endsOn", status from fac_pass where tenant_id = #{tid} and sid = #{sid} order by created_at desc limit 50</select>
+  <update id="usePass">update fac_pass set used = used + 1 where tenant_id = #{tid} and id = #{id} and status = 'active' and (kind = 'period' or used &lt; total)</update>
+  <update id="unusePass">update fac_pass set used = greatest(used - 1, 0) where tenant_id = #{tid} and id = #{id}</update>
+  <update id="adjustPass">update fac_pass set total = greatest(total + #{delta}, used) where tenant_id = #{tid} and id = #{id}</update>
+  <update id="updatePass">update fac_pass set status = #{status}, pay_id = coalesce(#{payId}, pay_id) where tenant_id = #{tid} and id = #{id}</update>
+  <update id="extendPasses">update fac_pass set ends_on = ends_on + #{days}::int where tenant_id = #{tid} and fac_id = #{fac} and kind = 'period' and status = 'active' and ends_on &gt;= #{from}::date and starts_on &lt;= #{to}::date</update>
+
+  <!-- 입장 -->
+  <insert id="insertCheckin">insert into fac_checkin (tenant_id, booking_id, pass_id, rental_id, sid, fac_id, day, via, by_staff, token_jti) values (#{tid}, #{bk}, #{pass}, #{rental}, #{sid}, #{fac}, #{day}::date, #{via}, #{by}, #{jti})</insert>
+  <select id="countCheckins" resultType="int">select count(*)::int from fac_checkin where tenant_id = #{tid} and day = (now() at time zone 'Asia/Seoul')::date</select>
+
+  <!-- 대여 -->
+  <insert id="insertRental">insert into fac_rental (tenant_id, id, sid, aud, fac_id, res_id, product_id, from_day, due_day, deposit, deposit_status, amount, status, pay_mode, pay_status) values (#{tid}, #{id}, #{sid}, #{aud}, #{fac}, #{res}, #{product}, #{from}::date, #{due}::date, #{deposit}, coalesce(#{depStatus}, 'none'), #{amount}, #{status}, #{payMode}, #{payStatus}) on conflict (tenant_id, id) do nothing</insert>
+  <sql id="rt">id, sid, fac_id as "facId", res_id as "resId", product_id as "productId", from_day::text as "fromDay", due_day::text as "dueDay", deposit, deposit_status as "depositStatus", late_fee as "lateFee", amount, status, condition_note as "condition",
+    to_char(returned_at at time zone 'Asia/Seoul', <include refid="ts"/>) as "returnedAt"</sql>
+  <select id="selectRental" resultType="java.util.LinkedHashMap">select <include refid="rt"/> from fac_rental where tenant_id = #{tid} and id = #{id}</select>
+  <select id="selectMyRentals" resultType="java.util.LinkedHashMap">select <include refid="rt"/> from fac_rental where tenant_id = #{tid} and sid = #{sid} order by created_at desc limit 50</select>
+  <select id="selectRentedRes" resultType="string">select res_id from fac_rental where tenant_id = #{tid} and fac_id = #{fac} and status in ('approved','lent','overdue')</select>
+  <update id="updateRental">update fac_rental set status = #{status}, late_fee = coalesce(#{lateFee}, late_fee), deposit_status = coalesce(#{depStatus}, deposit_status), condition_note = coalesce(#{note}, condition_note),
+    returned_at = case when #{status} = 'returned' then now() else returned_at end where tenant_id = #{tid} and id = #{id}</update>
+  <update id="markOverdue">update fac_rental set status = 'overdue' where tenant_id = #{tid} and status = 'lent' and due_day &lt; (now() at time zone 'Asia/Seoul')::date</update>
+
+  <!-- 결제 · 환불 -->
+  <insert id="insertPayment">insert into fac_payment (tenant_id, id, booking_id, pass_id, rental_id, method, amount, list_amount, toss_order_id, receipt_no, recorded_by, note, status)
+    values (#{tid}, #{id}, #{bk}, #{pass}, #{rental}, #{method}, #{amount}, coalesce(#{list}::int, 0), #{order}, #{receipt}, #{by}, #{note}, #{status})</insert>
+  <select id="selectPayment" resultType="java.util.LinkedHashMap">select id, booking_id as "bookingId", pass_id as "passId", rental_id as "rentalId", method, amount, list_amount as "listAmount", toss_key as "tossKey", toss_order_id as "orderId", status, receipt_no as "receiptNo" from fac_payment where tenant_id = #{tid} and (id = #{id} or toss_order_id = #{id})</select>
+  <select id="selectPaymentFor" resultType="java.util.LinkedHashMap">select id, method, amount, status, toss_key as "tossKey", toss_order_id as "orderId" from fac_payment where tenant_id = #{tid} and (booking_id = #{ref} or pass_id = #{ref} or rental_id = #{ref}) order by at desc limit 1</select>
+  <update id="updatePayment">update fac_payment set status = #{status}, toss_key = coalesce(#{key}, toss_key), at = now() where tenant_id = #{tid} and id = #{id}</update>
+  <insert id="insertRefund">insert into fac_refund (tenant_id, id, payment_id, target, rule_type, calc, auto_amount, amount, edit_reason, by_staff, toss_cancel_key, status)
+    values (#{tid}, #{id}, #{payment}, #{target}, #{rule}, #{calc}::jsonb, #{auto}, #{amount}, #{reason}, #{by}, #{cancelKey}, #{status})</insert>
+  <select id="selectRefunds" resultType="java.util.LinkedHashMap">select id, payment_id as "paymentId", target, rule_type as "rule", calc::text as calc, auto_amount as "auto", amount, edit_reason as "editReason", by_staff as "by", status,
+    to_char(at at time zone 'Asia/Seoul', <include refid="ts"/>) as at from fac_refund where tenant_id = #{tid} <if test="status != null"> and status = #{status}</if> order by at desc limit 200</select>
+
+  <!-- 현황 · 통계 -->
+  <select id="selectOverview" resultType="java.util.LinkedHashMap">select
+    (select count(*)::int from fac_booking where tenant_id = #{tid} and status = 'requested') as "pendingApprovals",
+    (select count(*)::int from fac_rental where tenant_id = #{tid} and status = 'lent' and due_day = (now() at time zone 'Asia/Seoul')::date) as "dueReturns",
+    (select count(*)::int from fac_rental where tenant_id = #{tid} and status = 'overdue') as overdue,
+    (select count(*)::int from fac_booking where tenant_id = #{tid} and status = 'no_show' and day = (now() at time zone 'Asia/Seoul')::date) as "noShow",
+    (select count(*)::int from fac_booking where tenant_id = #{tid} and day = (now() at time zone 'Asia/Seoul')::date and status in ('approved','confirmed','checked_in','done')) as "todayBookings"</select>
+  <select id="selectStats" resultType="java.util.LinkedHashMap">select b.fac_id as fac, count(*)::int as bookings,
+    count(*) filter (where b.status = 'no_show')::int as "noShow", count(*) filter (where b.status in ('checked_in','done') or exists (select 1 from fac_checkin c where c.tenant_id = b.tenant_id and c.booking_id = b.id))::int as used,
+    coalesce(sum(b.slots) filter (where b.status in ('confirmed','checked_in','done')), 0)::int as "slotsUsed"
+    from fac_booking b where b.tenant_id = #{tid} and b.day between #{from}::date and #{to}::date group by b.fac_id order by b.fac_id</select>
+  <select id="selectRevenue" resultType="java.util.LinkedHashMap">select
+    coalesce(sum(amount) filter (where status = 'paid' and method = 'toss'), 0)::int as online,
+    coalesce(sum(amount) filter (where status = 'paid' and method in ('card_onsite','cash','bank')), 0)::int as onsite,
+    (select coalesce(sum(r.amount), 0)::int from fac_refund r where r.tenant_id = #{tid} and (r.at at time zone 'Asia/Seoul')::date between #{from}::date and #{to}::date) as refunds
+    from fac_payment where tenant_id = #{tid} and (at at time zone 'Asia/Seoul')::date between #{from}::date and #{to}::date</select>
+</mapper>
