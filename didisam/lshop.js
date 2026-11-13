@@ -180,6 +180,7 @@
   function pgWindow(title, amount, done, onFail) { const sh = SHOP() || { pg: {} };
     shModal(`토스페이먼츠 결제창(데모)`, `<p><b>${esc(title)}</b></p><p class="shp-amt">${won(amount)}</p><p class="mini">실제 운영에서는 PG사 결제창(팝업)이 열립니다. <!-- 운영: TossPayments.requestPayment / 나이스 결제창 --> 데모에서는 승인 결과를 고릅니다.</p>`,
       [{ label: '결제 실패 테스트', run: () => { setTimeout(() => (onFail || payFail)(), 0); } }, { label: '결제 승인', kind: 'pri', run: () => { setTimeout(done, 0); } }]); }
+  window.lshopPG = pgWindow; /* v40 시설 예약(lfac.js)도 같은 결제창 흐름을 쓴다 */
   function payFail() { shModal('결제가 완료되지 않았습니다', `<p class="mini">다음을 먼저 확인해 주세요.</p><ul class="shp-chk"><li>팝업 차단 해제 — 결제창은 팝업으로 열립니다.</li><li>크롬(Chrome) 브라우저 권장</li><li>방문 기록 · 쿠키(캐시) 삭제 후 다시 시도</li><li>카드 한도 초과 · 잔액 부족 여부</li><li>카드 유효기간 만료 여부</li><li>법인카드는 개인 결제 제한 여부</li><li>해외 카드는 국내 결제 모듈에서 결제가 어려울 수 있습니다${(SHOP() || { pg: {} }).pg.intl ? '(이 홈페이지는 VISA · Master 해외카드 결제를 지원합니다)' : ''}.</li></ul><p class="mini">해결되지 않으면 홈페이지 운영자에게 오류 내용을 알려 주세요.</p>`, [{ label: '닫기', kind: 'pri' }]); }
 
   /* ── 결제 완료 · 결제 상세 · 결제 관리 ── */

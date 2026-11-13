@@ -247,6 +247,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   async function pubRoute(req, res, m) {
     const [, tid, act] = m; if (!TID_RE.test(tid)) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
     const key = `${req.method} ${act}`;
+    if (act.startsWith('fac-')) return fac.pub(req, res, tid, act); /* v40 */
     if (pii.pubOpen[key]) return pii.pubOpen[key](req, res, tid);
     if (key === 'GET events' || key === 'POST events') return eventsRoute(req, res, tid, key);
     if (key === 'GET site') {
@@ -363,7 +364,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     'POST /api/keys': async req => mcp.createKey(await needStaff(req), req),
     'POST /api/keys/revoke': async req => mcp.revokeKey(await needStaff(req), req),
     'GET /api/health': async () => { await pool.query('select 1'); return { ok: true }; },
-    'GET /api/config': async () => ({ live: true, ...(mod ? { module: mod } : {}), signup: allowSignup && (!mod || mod === 'admin'), signupCode: !!signupCode, oauth: (!mod || mod === 'admin') ? oauth.providers : [], ai: !!aiKey, models: MODELS, aiDaily }),
+    'GET /api/config': async () => ({ live: true, ...(mod ? { module: mod } : {}), signup: allowSignup && (!mod || mod === 'admin'), signupCode: !!signupCode, oauth: (!mod || mod === 'admin') ? oauth.providers : [], ai: !!aiKey, models: MODELS, aiDaily, ...fac.config() }),
 
     'POST /api/signup': async (req, res) => {
       if (!allowSignup) throw new HttpErr(403, '지금은 새 기관 가입을 받지 않습니다.', 'signup_off');
@@ -537,6 +538,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   };
   /* v30 학사 LMS 묶음 라우트(lms/mod-*.js) — 핵심 라우트와 이름이 겹치면 기동을 멈춘다 */
   for (const [k, fn] of Object.entries(require('./lms').loadRoutes({ pool, inTenant, need, readBody, HttpErr, audit, today, limit, log }))) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
+  /* v40 시설 · 장비 예약(fac/): 공개 fac-* 와 운영자 /api/fac/* */
+  const fac = require('./fac').createFac({ mail: pii.mailTo, pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
 
   /* ── 정적 파일 ── */
   function serveStatic(req, res, pathname) {
@@ -572,8 +575,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname.startsWith('/api/') && !M.apiAllowed(mod, req.method, url.pathname)) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
       if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon)$/);
-        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key] || media.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-[a-z]{2,6}(?:-[a-z]{2,8})?)$/);
+        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처
           if (req.headers['x-didisam'] !== '1') throw new HttpErr(403, '허용되지 않은 요청입니다.', 'csrf');
@@ -586,12 +589,12 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'method');
       return serveStatic(req, res, url.pathname);
     } catch (e) {
-      if (e instanceof HttpErr) return send(res, e.status, { error: e.code || 'error', message: e.message });
+      if (e instanceof HttpErr) return send(res, e.status, { error: e.code || 'error', message: e.message, ...(e.extra || {}) });
       log.error && log.error('api error', key, e && e.message);
       return send(res, 500, { error: 'server', message: '서버 오류가 발생했습니다.' });
     }
   });
-  srv.piiPurge = pii.purge; // 보존 기간 정리(index.js가 매시간 호출)
+  srv.piiPurge = pii.purge; srv.facTick = fac.tick; /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
   return srv;
 }
 

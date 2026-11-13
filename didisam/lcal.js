@@ -30,7 +30,7 @@
   const U = () => ty() === 'univ';
   const isPar = () => !!(LR.me && LR.me.kind === 'parent');
   const appOn = () => document.body.classList.contains('lapp');
-  const COL = { 시작: '#00A224', 종료: '#A84A00', 차시: '#3BA875', 주차: '#3BA875', 회차: '#4C77C5', 라이브: '#7D5CB5', 시험: '#C4001D', 과제: '#5C74F6', 설문: '#E8622A', 기관: '#14A3A3', 내일정: '#E5487A' };
+  const COL = { 시작: '#00A224', 종료: '#A84A00', 차시: '#3BA875', 주차: '#3BA875', 회차: '#4C77C5', 라이브: '#7D5CB5', 시험: '#C4001D', 과제: '#5C74F6', 설문: '#E8622A', 기관: '#14A3A3', 내일정: '#E5487A', 예약: '#007200' };
   const LBL = { 시작: '수강 시작', 종료: '수강 종료', 차시: '차시 열림', 주차: '주차 수업', 회차: '회차', 라이브: '라이브', 시험: '시험', 과제: '과제 마감', 설문: '설문', 기관: '기관 일정', 내일정: '내 일정' };
   const col = e => COL[e.k] || '#6C6C6C';
 
@@ -90,6 +90,7 @@
     (Array.isArray(SITE().calx) ? SITE().calx : []).forEach(x => { if (!x || !okD(x.date) || !x.title) return; if (x.cls && !myIds.has(x.cls)) return; const c = x.cls ? (SITE().classes || []).find(y => y.id === x.cls) : null;
       add({ id: 'o:' + x.id, date: x.date, time: okT(x.time) ? x.time : '', end: okT(x.end) ? x.end : '', k: '기관', kind2: x.kind || '', title: String(x.title).slice(0, 60), cls: c ? c.id : '', cn: c ? c.name : '', src: 'org', place: x.place || '' }); });
     if (LR.me) mine().forEach(u => add({ id: 'u:' + u.id, uid: u.id, date: u.date, time: okT(u.time) ? u.time : '', end: okT(u.end) ? u.end : '', k: '내일정', title: u.title, note: u.memo || '', cls: u.cls || '', cn: ((SITE().classes || []).find(c => c.id === u.cls) || {}).name || '', src: 'me' }));
+    (window.LCAL_SRC || []).forEach(fn => { try { (fn() || []).forEach(add); } catch (x) { } }); /* v40 다른 모듈 일정(시설 예약 lfac.js 등) */
     return E.sort((a, b) => (a.date + (a.time || '99')).localeCompare(b.date + (b.time || '99'))); }
   window.lcalEvents = events;
   const byDate = E => { const m = {}; E.forEach(e => (m[e.date] = m[e.date] || []).push(e)); return m; };
@@ -144,6 +145,7 @@
   const itemName = { video: '영상', doc: '자료', assign: '과제', exam: '시험', quiz: '퀴즈', survey: '설문', live: '라이브', offline: '수업', rate: '평가' };
   function evOpen(id) { const e = events().find(x => x.id === id); if (!e) { toast('일정을 찾지 못했어요.', 'warn'); return; }
     if (e.src === 'me') return formOpen(e);
+    if (e.href) return dlg(e.title, `<div class="lq-kv"><div><span>날짜</span><b>${esc(fmt(e.date) + (e.time ? ` ${e.time}${e.end ? '~' + e.end : ''}` : '') + ` · ${dday(e.date)}`)}</b></div>${e.place ? `<div><span>장소</span><b>${esc(e.place)}</b></div>` : ''}${e.note ? `<div><span>안내</span><b>${esc(e.note)}</b></div>` : ''}</div>`, `<a class="lbtn pri" href="${esc(e.href)}" data-lcal="go">${esc(e.hrefL || '열기')}</a>`); /* v40 예약 일정(lfac.js) */
     const c = e.cls ? (SITE().classes || []).find(x => x.id === e.cls) : null; const it = c && e.iid ? (c.items || []).find(y => y.id === e.iid) : null;
     const kv = [['종류', kindTag(e) + (e.src === 'org' ? ' · 기관 일정' : '')], ['날짜', fmt(e.date) + (e.time && e.time !== '23:59' ? ` ${e.time}${e.end ? '~' + e.end : ''}` : e.k === '과제' ? ' 자정까지' : '') + ` · ${dday(e.date)}`], ...(e.who ? [['자녀', e.who]] : []), ...(c ? [[T('cls'), c.name]] : []), ...(e.place ? [['장소', e.place]] : []), ...(e.note ? [['안내', e.note]] : []), ...(e.iid && !e.who ? [['상태', e.done ? '완료했어요' : '아직 안 했어요']] : [])];
     const go = [];

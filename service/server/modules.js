@@ -2,9 +2,9 @@
 /* v31 환급 에디션 모듈 분리: MODULE=learner|tutor|admin 이면 서비스마다 화면 · API · 역할을 나눈다.
    MODULE이 비어 있으면 기존처럼 한 서비스로 동작한다. Java: cmm/DdModule.java와 같은 규칙. */
 const PAGE = { learner: 'learner.html', tutor: 'tutor.html', admin: 'index.html' };
-const PUB = /^\/api\/pub\/[^/]+\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl)$/;
+const PUB = /^\/api\/pub\/[^/]+\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel))$/;
 const MEDIA_PUB = /^\/api\/media\/(?:f\/)?[^/]+$/; /* v35: 강의 파일 /api/media/f/:id 도 공개 조회 */
-const TUTOR_API = new Set(['GET /api/health', 'GET /api/config', 'POST /api/login', 'POST /api/logout', 'POST /api/password', 'GET /api/me', 'GET /api/state', 'PUT /api/state', 'POST /api/ai/messages', 'GET /api/ai/usage', 'GET /api/learners/progress', 'GET /api/cpl/summary', 'GET /api/cpl/exams', 'GET /api/cpl/logs', 'GET /api/cpl/exam-copy', 'GET /api/cpl/completion']);
+const TUTOR_API = new Set(['GET /api/health', 'GET /api/config', 'POST /api/login', 'POST /api/logout', 'POST /api/password', 'GET /api/me', 'GET /api/state', 'PUT /api/state', 'POST /api/ai/messages', 'GET /api/ai/usage', 'GET /api/learners/progress', 'GET /api/cpl/summary', 'GET /api/cpl/exams', 'GET /api/cpl/logs', 'GET /api/cpl/exam-copy', 'GET /api/cpl/completion', 'GET /api/fac/overview', 'GET /api/fac/bookings', 'POST /api/fac/checkin']);
 const moduleOf = env => { const m = String(env.MODULE || '').trim(); if (m && !PAGE[m]) throw new Error('MODULE은 learner, tutor, admin 중 하나여야 합니다.'); return m; };
 function apiAllowed(mod, method, path) {
   if (!mod) return true;
