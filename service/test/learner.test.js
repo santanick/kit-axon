@@ -42,6 +42,12 @@ test('학습자 사이트 API', async t => {
     assert.equal(me.j.lp.diag.dg0.out, 'MAP');
     await call('L', 'PUT', `/api/pub/${A.tid}/progress`, { lp: { ...me.j.lp, cal: 'x' } }); assert.equal((await call('L', 'GET', `/api/pub/${A.tid}/me`)).j.lp.cal, undefined);
   });
+  await t.test('v39 디디쌤 튜브 기록(lp.tube) 저장 · 정리', async () => {
+    const prev = (await call('L', 'GET', `/api/pub/${A.tid}/me`)).j.lp;
+    await call('L', 'PUT', `/api/pub/${A.tid}/progress`, { lp: { ...prev, tube: { goal: 30, sec: { '2026-11-13': 1260, '2026-11-12': 1e9, bad: 5 }, sh: { '2026-11-13': 3 }, qr: { '2026-11-13': 2 }, qn: { '2026-11-13': 2.6 }, evil: { a: 1 } } } });
+    const me = await call('L', 'GET', `/api/pub/${A.tid}/me`); assert.deepEqual(me.j.lp.tube, { goal: 30, sec: { '2026-11-12': 86400, '2026-11-13': 1260 }, sh: { '2026-11-13': 3 }, qr: { '2026-11-13': 2 }, qn: { '2026-11-13': 3 } });
+    await call('L', 'PUT', `/api/pub/${A.tid}/progress`, { lp: { ...me.j.lp, tube: [1, 2] } }); assert.equal((await call('L', 'GET', `/api/pub/${A.tid}/me`)).j.lp.tube, undefined);
+  });
   await t.test('디지털북 기록 · 채점(mine.bk)', async () => {
     const prev = (await call('L', 'GET', `/api/pub/${A.tid}/me`)).j.lp; const lp = { ...prev, book: { bk1: { r: { ch1: 1 }, b: { b1: { done: true, score: 80 }, w1: { done: true, ans: '내 생각' } }, last: 0 }, '../x': { r: {} } } };
     await call('L', 'PUT', `/api/pub/${A.tid}/progress`, { lp });

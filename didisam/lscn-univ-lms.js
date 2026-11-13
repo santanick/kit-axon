@@ -13,6 +13,7 @@
   function fix() {
     if (!on()) return; if (!document.getElementById('ulmsCss')) { const st = document.createElement('style'); st.id = 'ulmsCss'; st.textContent = '[data-ulms-off]{display:none!important}body.lapp .ap-call{white-space:nowrap}'; /* v38 #15 앱 머리 「물어보기」 줄바꿈 */ document.head.appendChild(st); } const lm = document.getElementById('lm') || document.body; if (!lm) return;
     /* 진단 · 수준 · 배지 · 디지털북 · 결제 · 튜토리얼 */
+    lm.querySelectorAll('a[href^="#mypay"], a[href^="#mybooks"]').forEach(a => hide(a.closest('li') && a.closest('li').childElementCount === 1 ? a.closest('li') : a)); /* v39 점검: 나(#acct)의 결제 · 환불 · 교재 행도 숨김 */
     lm.querySelectorAll('.chips2 > *').forEach(c => { if (/진단|단계부터|LEVEL|Explorer|Builder|Master/.test(T(c))) hide(c); });
     lm.querySelectorAll('.myhg, .mylv, .mpn, .my26-stat, section.prog, .ap-lv, .ap-badge, .ap-roadmap').forEach(hide);
     lm.querySelectorAll('nav.mytab a, nav.mytab button, .lux-tabs a, .lux-tabs button, .ap-seg a, .ap-seg button').forEach(a => { if (OFF_TAB.test(T(a))) hide(a); });

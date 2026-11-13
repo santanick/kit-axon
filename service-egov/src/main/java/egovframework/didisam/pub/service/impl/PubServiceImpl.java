@@ -252,6 +252,22 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     static void setIf(ObjectNode o, String k, JsonNode v) { if (!undef(v)) o.set(k, v); }
 
     /** 학습 기록 정리(허용한 키 · 크기만) */
+    /** v39 lp.tube: goal(5~180분) · sec · sh · qr · qn(날짜→정수, 최근 40일) — Node app.js cleanTube와 같은 규칙 */
+    static ObjectNode cleanTube(JsonNode t) {
+        if (t == null || !t.isObject()) return null;
+        ObjectNode o = F.objectNode(); JsonNode gn = t.get("goal");
+        if (gn != null && (gn.isNumber() || gn.isTextual())) { double g = Math.round(gn.asDouble(Double.NaN)); if (!Double.isNaN(g) && g >= 5 && g <= 180) o.put("goal", (long) g); }
+        String[][] ks = { { "sec", "86400" }, { "sh", "999" }, { "qr", "999" }, { "qn", "999" } };
+        for (String[] k : ks) {
+            JsonNode m = t.get(k[0]); TreeMap<String, Long> tm = new TreeMap<>(); long max = Long.parseLong(k[1]);
+            if (m != null && m.isObject()) m.fields().forEachRemaining(e -> { JsonNode v = e.getValue(); double n = v != null && (v.isNumber() || v.isTextual()) ? v.asDouble(Double.NaN) : Double.NaN;
+                if (DAY.matcher(e.getKey()).matches() && Double.isFinite(n)) tm.put(e.getKey(), Math.min(max, Math.max(0, Math.round(n)))); });
+            ObjectNode y = o.putObject(k[0]); List<String> keys = new ArrayList<>(tm.keySet());
+            for (String d : keys.subList(Math.max(0, keys.size() - 40), keys.size())) y.put(d, tm.get(d));
+        }
+        return o;
+    }
+
     static ObjectNode cleanLP(JsonNode lp) {
         ObjectNode o = F.objectNode(); o.putObject("tut"); o.putObject("cls"); o.putObject("diag"); o.put("at", isoNow());
         if (!truthy(lp) || !isObj(lp)) return o;
@@ -286,6 +302,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             tu.put("planAt", cut(S(get(T, "planAt")), 30));
             o.set("tutor", tu);
         }
+        { ObjectNode tb = cleanTube(get(lp, "tube")); if (tb != null) o.set("tube", tb); } /* v39 디디쌤 튜브 — Node cleanTube와 같은 규칙 */
         { ArrayNode cal = cleanCal(get(lp, "cal")); if (cal != null) o.set("cal", cal); } /* v37.4 학습 캘린더 '내 일정' — Node lpcal.js와 같은 규칙 */
         return o;
     }
@@ -321,6 +338,25 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     static JsonNode find(List<JsonNode> l, java.util.function.Predicate<JsonNode> f) { for (JsonNode x : l) if (f.test(x)) return x; return null; }
 
     /** 학습자 AI 튜터 — 로그인 학습자(sid) 또는 방문자(sid = null, gip = 접속 IP) */
+    /** v39 영상 장면 튜터 — Node app.js sceneLine과 같은 규칙: 재생 위치 t(초, 숫자만)와 그 위치의 챕터(it.chaps [{t, n}])를 지시에 넣는다. */
+    static String mmss(double s) { long v = (long) Math.floor(s); return String.format("%02d:%02d", v / 60, v % 60); }
+    static String sceneLine(JsonNode it, JsonNode tn) {
+        if (it == null || tn == null || !tn.isNumber()) return "";
+        double s = tn.asDouble(); if (!Double.isFinite(s) || s < 0 || s > 86400) return "";
+        List<long[]> ts = new ArrayList<>(); List<String> ns = new ArrayList<>();
+        JsonNode cs = it.get("chaps");
+        if (cs != null && cs.isArray()) {
+            List<JsonNode> L = new ArrayList<>(); cs.forEach(L::add);
+            L.removeIf(c -> c == null || !c.isObject() || c.get("t") == null || !(c.get("t").isNumber() || c.get("t").isTextual()) || !Double.isFinite(c.get("t").asDouble(Double.NaN)));
+            L.sort((a, b2) -> Double.compare(Math.max(0, a.get("t").asDouble()), Math.max(0, b2.get("t").asDouble())));
+            for (JsonNode c : L) { ts.add(new long[]{ (long) Math.floor(Math.max(0, c.get("t").asDouble())) }); String n = c.get("n") == null || c.get("n").isNull() ? "" : c.get("n").asText(); n = n.replaceAll("[\\r\\n]", " "); ns.add(n.length() > 40 ? n.substring(0, 40) : n); }
+        }
+        int i = -1; for (int j = 0; j < ts.size(); j++) if (ts.get(j)[0] <= s) i = j;
+        String ch = "";
+        if (i >= 0) ch = " (챕터 「" + ns.get(i) + "」 " + mmss(ts.get(i)[0]) + "~" + (i + 1 < ts.size() ? mmss(ts.get(i + 1)[0]) : "") + ")";
+        return "\n지금 재생 위치: " + mmss(s) + ch + "\n이 장면에 대한 질문이면 이 위치를 기준으로 답하고, 마지막 줄에 「근거: 레슨 이름 mm:ss~mm:ss」 형식으로 근거 구간을 적습니다. 영상에서 확인할 수 없는 내용은 추측이라고 밝힙니다.";
+    }
+
     private Map<String, Object> tutor(HttpServletRequest req, byte[] body, String tid, String sid, String gip) throws Exception {
         boolean guest = sid == null;
         if (!p.ai) throw processException("dd.503.ai_off");
@@ -390,7 +426,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         JsonNode wc = find(L, x -> strictEq(get(x, "id"), wcId));
         JsonNode wi = wc == null ? null : find(arr(or(get(wc, "items"), F.arrayNode())), i -> strictEq(get(i, "id"), wiId));
         JsonNode wt = find(arr(or(get(P, "tuts"), F.arrayNode())), x -> strictEq(get(x, "id"), wtId));
-        String here = wi != null ? "지금 보는 레슨: " + str(get(wc, "name")) + " › " + str(get(wi, "title")) + (truthy(get(wi, "desc")) ? "\n레슨 설명: " + cut(str(get(wi, "desc")), 600) : "")
+        String here = wi != null ? "지금 보는 레슨: " + str(get(wc, "name")) + " › " + str(get(wi, "title")) + (truthy(get(wi, "desc")) ? "\n레슨 설명: " + cut(str(get(wi, "desc")), 600) : "") + sceneLine(wi, get(b, "t"))
             : wt != null ? "지금 보는 튜토리얼: " + str(get(wt, "title")) + "\n단계: " + join(head(arr(or(get(wt, "steps"), F.arrayNode())), 3), " / ") + "\n미션: " + cut(sOr(get(wt, "mission")), 300)
             : wc != null ? "지금 보는 과정: " + str(get(wc, "name")) : "";
         boolean hint = strictEq(get(tu, "help"), "hint");
