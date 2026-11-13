@@ -43,12 +43,45 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
     static final List<String> AUD = List.of("student", "staff", "public");
     private final FacMapper m; private final TenantTx tx; private final DdRateLimiter rl; private final DdStateCrypto crypt; private final AuthService auth; private final DdWeb web;
     private final DdFacQr qr; private final String toss;
+    @Value("${FAC_SWEEP_MS:60000}") private long sweepMs = 60000; /* Node와 같은 env: 같은 시설 · 날 정리 간격(0이면 매번) */
     private final Map<String, Long> swept = new ConcurrentHashMap<>(); private static final SecureRandom RND = new SecureRandom();
     private final HttpClient http = HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).connectTimeout(java.time.Duration.ofSeconds(10)).build();
 
     public FacServiceImpl(FacMapper m, TenantTx tx, DdRateLimiter rl, DdStateCrypto crypt, AuthService auth, DdWeb web,
                           @Value("${FAC_QR_KEY:}") String qrKey, @Value("${PII_KEY:}") String piiKey, @Value("${TOSS_SECRET_KEY:}") String toss) {
         this.m = m; this.tx = tx; this.rl = rl; this.crypt = crypt; this.auth = auth; this.web = web; this.qr = new DdFacQr(qrKey, piiKey); this.toss = toss == null ? "" : toss.trim();
+    }
+
+    // ── 알림(Node index.js note · MAILS와 같음): learner_events 'fac-note' + 일부 종류는 커밋 뒤 메일 ─────
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.pii.service.PiiService pii;
+    private static final ThreadLocal<List<Object[]>> MAILQ = ThreadLocal.withInitial(ArrayList::new);
+    static String mailText(String kind, Map<String, Object> d) {
+        java.util.function.Function<String, String> g = k -> d.get(k) == null ? "" : String.valueOf(d.get(k)); String fn = g.apply("facName").isEmpty() ? "시설" : g.apply("facName");
+        switch (kind) {
+            case "confirmed": return "예약이 확정됐어요\n" + fn + " " + g.apply("day") + " " + g.apply("from") + "~" + g.apply("to") + " 예약이 확정됐어요.\n예약 번호: " + g.apply("booking") + "\n이용 당일 앱의 「오늘 예약」에서 입장 QR을 열어 주세요.";
+            case "approved": return "신청이 승인됐어요\n" + fn + " 신청이 승인됐어요.\n신청 번호: " + (d.get("booking") != null ? g.apply("booking") : g.apply("rental")) + "\n결제가 필요하면 앱의 「내 예약」에서 이어서 진행해 주세요.";
+            case "rejected": return "신청이 반려됐어요\n" + fn + " 신청이 반려됐어요.\n신청 번호: " + (d.get("booking") != null ? g.apply("booking") : g.apply("rental")) + "\n사유: " + (g.apply("reason").isEmpty() ? "-" : g.apply("reason"));
+            case "suspended": return "예약이 잠시 정지됐어요\n노쇼(미입장 자동 취소)가 " + g.apply("strikes") + "회 쌓여 " + g.apply("until") + "까지 " + fn + " 예약을 할 수 없어요.";
+            case "refund": return "환불이 처리됐어요\n" + String.format("%,d", lng(d.get("amount"))) + "원 환불이 접수됐어요. 입금까지 영업일 기준 3~5일 걸려요.";
+            default: return null;
+        }
+    }
+    /** 기관 범위 트랜잭션 안에서 부른다. 메일은 요청이 끝난 뒤(flushMail) 보낸다 */
+    void note(String tid, Object sid0, String kind, Map<String, Object> data) {
+        String sid = sid0 == null ? "" : String.valueOf(sid0); if (sid.isEmpty() || sid.startsWith("walkin-")) return;
+        Map<String, Object> d = new LinkedHashMap<>(); d.put("kind", kind); d.putAll(data);
+        Object x = data.get("booking") != null ? data.get("booking") : data.get("pass") != null ? data.get("pass") : data.get("rental") != null ? data.get("rental") : "";
+        m.insertNote(tid, sid, cut(String.valueOf(x), 40), DdWeb.JSON.valueToTree(d).toString());
+        if (mailText(kind, data) != null) MAILQ.get().add(new Object[]{ tid, sid, kind, data });
+    }
+    boolean note0(String tid, Object sid, String kind, Map<String, Object> d) { note(tid, sid, kind, d); return true; }
+    void flushMail() {
+        List<Object[]> q = new ArrayList<>(MAILQ.get()); MAILQ.get().clear(); if (q.isEmpty() || pii == null) return;
+        java.util.concurrent.CompletableFuture.runAsync(() -> { for (Object[] j : q) try { @SuppressWarnings("unchecked") String t = mailText((String) j[2], (Map<String, Object>) j[3]); int i = t.indexOf('\n'); pii.mailTo((String) j[0], (String) j[1], "[디디쌤 시설 예약] " + t.substring(0, i), t.substring(i + 1)); } catch (Exception e) { /* 메일 실패는 예약에 영향 없음 */ } });
+    }
+    Map<String, Object> bkMail(Cfg c, Map<String, Object> b) {
+        JsonNode f = facOf(c, (String) b.get("facId")); int s = ((Number) b.get("slot")).intValue(), n = ((Number) b.get("slots")).intValue(); String d = (String) b.get("day");
+        return map("booking", b.get("id"), "fac", b.get("facId"), "facName", f == null ? "" : S(get(f, "name")), "day", d, "from", f == null ? "" : hmOf(f, d, s), "to", f == null ? "" : hmOf(f, d, s + n));
     }
 
     // ── 공통 ───────────────────────────────────────────────
@@ -93,6 +126,9 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
 
     // ── 학습자 /api/pub/{tid}/fac-* ─────────────────────────
     @Override public Object pub(HttpServletRequest req, HttpServletResponse res, String tid, String key, byte[] body, LAuth lauth) throws Exception {
+        MAILQ.get().clear(); try { Object o = pub0(req, res, tid, key, body, lauth); flushMail(); return o; } finally { MAILQ.get().clear(); }
+    }
+    Object pub0(HttpServletRequest req, HttpServletResponse res, String tid, String key, byte[] body, LAuth lauth) throws Exception {
         switch (key) {
             case "GET fac-list": rl.limit("facv:" + web.ip(req), 120, 600_000L); return tx.inTenant(tid, () -> list(cfg(tid)));
             case "GET fac-avail": rl.limit("facv:" + web.ip(req), 120, 600_000L); return avail(res, tid, req.getParameter("fac"), req.getParameter("day"));
@@ -228,6 +264,7 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
                 if (!passId.isEmpty() && m.usePass(tid, passId) == 0) throw err(409, "pass", "이용권 남은 횟수가 없어요.");
                 m.insertBooking(tid, bk, fid, got, sid, aud, memberNo, d, slot, slots, DdFac.slotStart(f, d, slot).toEpochMilli(), DdFac.slotStart(f, d, slot + slots).toEpochMilli(), R != null && R.has("noShowMin") ? Integer.valueOf(intOf(R, "noShowMin", 15)) : null, admin == null ? null : (String) admin.get("email"), (String) plan[0], (String) plan[2], amt0, (String) plan[1], passId.isEmpty() ? null : passId, admin == null ? null : cut(S(get(b, "note")), 200), extra, (Integer) plan[4]);
                 if (order != null) m.insertPayment(tid, rid("fp_"), bk, null, null, "toss", amt0, list0, order, null, null, null, "ready");
+                Map<String, Object> made = m.selectBooking(tid, bk); if (admin == null && "confirmed".equals(made.get("status")) && !"online".equals(made.get("payMode"))) note(tid, sid, "confirmed", bkMail(c, made));
                 if (admin != null) tx.audit(tid, (String) admin.get("email"), "fac.book", DdWeb.JSON.createObjectNode().put("id", bk).put("fac", fid).put("day", d).toString());
                 return m.selectBooking(tid, bk);
             });
@@ -267,6 +304,7 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
         String id = (String) bk.get("id"); JsonNode f = facOf(c, (String) bk.get("facId")); long paid = "paid".equals(bk.get("payStatus")) ? lng(bk.get("amount")) : 0;
         Map<String, Object> rf = paid > 0 && f != null ? refundCalc(f, bk, paid) : map("auto", 0L, "lines", List.of("결제한 금액이 없어 환불할 금액이 없습니다."));
         tx.inTenant(tid, () -> { m.updateBooking(tid, id, "cancelled", null, cut(reason, 200), -1); m.deleteSlots(tid, id); if (bk.get("passId") != null) m.unusePass(tid, (String) bk.get("passId"));
+            note(tid, bk.get("sid"), "cancelled", map("booking", id, "fac", bk.get("facId"), "refund", lng(rf.get("auto"))));
             tx.audit(tid, actor, "fac.cancel", DdWeb.JSON.createObjectNode().put("id", id).put("auto", lng(rf.get("auto"))).toString()); return null; });
         return rf;
     }
@@ -365,7 +403,7 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
         catch (Exception e) { throw err(502, "pg", "결제사 연결에 실패했어요. 잠시 후 다시 시도해 주세요."); }
         JsonNode j = parse(r.body()); if (r.statusCode() >= 300 || num(get(j, "totalAmount")) != want) throw err(r.statusCode() >= 300 ? 502 : 400, r.statusCode() >= 300 ? "pg" : "amount_mismatch", "결제 승인에 실패했어요.");
         tx.inTenant(tid, () -> { m.updatePayment(tid, (String) p.get("id"), "paid", key);
-            if (bk != null) m.updateBooking(tid, bkId, "confirmed", "paid", null, -1); if (ps != null) m.updatePass(tid, psId, "active", (String) p.get("id")); return null; });
+            if (bk != null) { m.updateBooking(tid, bkId, "confirmed", "paid", null, -1); note(tid, bk.get("sid"), "confirmed", bkMail(cfg(tid), bk)); } if (ps != null) m.updatePass(tid, psId, "active", (String) p.get("id")); return null; });
         return map("ok", true, "status", "confirmed");
     }
 
@@ -378,13 +416,13 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
                 String end = days > 0 ? LocalDate.parse(td).plusDays(days - 1).toString() : DAY.matcher(e).matches() && e.compareTo(td) >= 0 ? e : LocalDate.parse(td).plusDays(364).toString();
                 int cnt = intOf(p, "count", 0); long total = cnt > 0 ? cnt : java.time.temporal.ChronoUnit.DAYS.between(LocalDate.parse(td), LocalDate.parse(end)) + 1;
                 String id = idemId("ps_", tid, sid, "course|" + S(get(p, "id")));
-                if (m.insertPass(tid, id, sid, "student", 0, S(get(p, "id")), S(get(p, "fac")), "course", total, td, end, "active", cid) > 0) tx.audit(tid, "system", "fac.pass.course", DdWeb.JSON.createObjectNode().put("pass", id).put("cls", cid).toString()); }
+                if (m.insertPass(tid, id, sid, "student", 0, S(get(p, "id")), S(get(p, "fac")), "course", total, td, end, "active", cid) > 0 && note0(tid, sid, "pass", map("pass", id))) tx.audit(tid, "system", "fac.pass.course", DdWeb.JSON.createObjectNode().put("pass", id).put("cls", cid).toString()); }
             return null; });
     }
 
     // ── 정리(노쇼 · 보류 만료) — 크론 없이 요청 때 + 1시간 tick(02 명세 5-6) ─────────
     void sweep(String tid, Cfg c, String fid, String d) {
-        String k = tid + "|" + fid + "|" + d; long now = System.currentTimeMillis(); Long last = swept.get(k); if (last != null && now - last < 60_000) return; swept.put(k, now);
+        String k = tid + "|" + fid + "|" + d; long now = System.currentTimeMillis(); Long last = swept.get(k); if (sweepMs > 0 && last != null && now - last < sweepMs) return; swept.put(k, now);
         if (swept.size() > 5000) swept.entrySet().removeIf(e -> now - e.getValue() > 60_000);
         JsonNode f = facOf(c, fid); if (f == null) return; int nsMin = intOf(rules(f), "noShowMin", 15);
         try {
@@ -394,7 +432,7 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
                     if (Boolean.TRUE.equals(b.get("holdOver")) && "pending".equals(b.get("payStatus")) && "online".equals(b.get("payMode"))) { m.updateBooking(tid, id, "expired", null, "결제 대기 시간 만료", -1); m.deleteSlots(tid, id); }
                     else if (nsMin > 0 && "confirmed".equals(b.get("status")) && b.get("holdUntil") == null && DdFac.noShow(DdFac.slotStart(f, d, ((Number) b.get("slot")).intValue()), t, nsMin, Boolean.TRUE.equals(b.get("checkedIn")))) {
                         m.updateBooking(tid, id, "no_show", null, "미입장 자동 취소", -1); m.deleteSlots(tid, id); if (b.get("passId") != null) m.unusePass(tid, (String) b.get("passId"));
-                        tx.audit(tid, "system", "fac.noshow", DdWeb.JSON.createObjectNode().put("id", id).toString());
+                        tx.audit(tid, "system", "fac.noshow", DdWeb.JSON.createObjectNode().put("id", id).toString()); { JsonNode R0 = rules(f); int ks = intOf(R0, "noShowStrikes", 3); if (ks > 0) { Map<String, Object> bn = DdFac.ban(m.selectNoShowDays(tid, (String) b.get("sid")), ks, intOf(R0, "suspendDays", 30), today()); if (Boolean.TRUE.equals(bn.get("banned"))) note(tid, b.get("sid"), "suspended", map("fac", fid, "facName", S(get(f, "name")), "until", bn.get("until"), "strikes", ks)); } }
                     }
                 }
                 return null; });
@@ -407,11 +445,15 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
             List<Map<String, Object>> days = tx.inTenant(tid, () -> { m.markOverdue(tid); m.sweepLeave(tid); m.sweepPassUnpaid(tid); return m.selectSweepDays(tid); });
             if (days.isEmpty()) continue; Cfg c = tx.inTenant(tid, () -> cfg(tid)); for (Map<String, Object> x : days) sweep(tid, c, (String) x.get("fac"), (String) x.get("day"));
         } catch (Exception ignore) { }
+        flushMail();
     }
 
     // ── 운영자 /api/fac/* ─────────────────────────────────
     static final List<String> TEACHER_OK = List.of("GET overview", "GET bookings", "POST checkin", "POST rentals/return", "GET rentals");
     @Override public Object admin(HttpServletRequest req, HttpServletResponse res, String op, String id, byte[] body) throws Exception {
+        MAILQ.get().clear(); try { Object o = admin0(req, res, op, id, body); flushMail(); return o; } finally { MAILQ.get().clear(); }
+    }
+    Object admin0(HttpServletRequest req, HttpServletResponse res, String op, String id, byte[] body) throws Exception {
         JsonNode b = req.getMethod().equals("GET") ? null : DdWeb.readBody(body, 64 * 1024);
         if ("POST checkin".equals(op) && b != null && !S(get(b, "kiosk")).isEmpty() && req.getHeader("cookie") == null) return kioskCheckin(req, b);
         Map<String, Object> a = auth.need(req); String tid = (String) a.get("tid"), role = (String) a.get("role"), email = (String) a.get("email");
@@ -435,7 +477,7 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
                 Map<String, Object> o = decorate(c, bk, false); o.put("payment", tx.inTenant(tid, () -> m.selectPaymentFor(tid, id))); return o;
             }
             case "POST bookings": {
-                String sid = !S(get(b, "sid")).isEmpty() ? cut(S(get(b, "sid")), 60) : "walkin:" + cut(S(get(b, "walkin")).isEmpty() ? "현장" : S(get(b, "walkin")), 40);
+                String sid = !S(get(b, "sid")).isEmpty() ? cut(S(get(b, "sid")), 60) : "walkin-" + rid("").substring(0, 8);
                 return book(res, tid, sid, b, a);
             }
             case "POST bookings/approve": {
@@ -444,14 +486,14 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
                 String st = "confirmed"; boolean hold = amt > 0 && "online".equals(pm) && tossOn(); String ps = amt == 0 ? "none" : "pending";
                 String order = hold ? "fo_" + id.substring(3) + "_" + rid("").substring(0, 6) : null;
                 tx.inTenant(tid, () -> { m.updateBooking(tid, id, st, ps, null, hold ? 1440 : 0); if (order != null) m.insertPayment(tid, rid("fp_"), id, null, null, "toss", amt, null, order, null, null, null, "ready");
-                    tx.audit(tid, email, "fac.approve", DdWeb.JSON.createObjectNode().put("id", id).toString()); return null; });
+                    note(tid, bk.get("sid"), "approved", map("booking", id, "facName", S(get(facOf(c, (String) bk.get("facId")), "name")))); tx.audit(tid, email, "fac.approve", DdWeb.JSON.createObjectNode().put("id", id).toString()); return null; });
                 Map<String, Object> o = map("status", st); if (order != null) o.put("orderId", order); return o;
             }
             case "POST bookings/reject": {
                 Map<String, Object> bk = needBk(tid, id); if (!"requested".equals(bk.get("status"))) throw err(409, "state", "승인 대기 상태가 아닙니다.");
                 String reason = cut(S(get(b, "reason")), 200); if (reason.isEmpty()) throw err(400, "reason", "반려 사유를 입력해 주십시오.");
                 tx.inTenant(tid, () -> { m.updateBooking(tid, id, "rejected", null, reason, -1); m.deleteSlots(tid, id); if (bk.get("passId") != null) m.unusePass(tid, (String) bk.get("passId"));
-                    tx.audit(tid, email, "fac.reject", DdWeb.JSON.createObjectNode().put("id", id).toString()); return null; });
+                    note(tid, bk.get("sid"), "rejected", map("booking", id, "reason", reason, "facName", S(get(facOf(c, (String) bk.get("facId")), "name")))); tx.audit(tid, email, "fac.reject", DdWeb.JSON.createObjectNode().put("id", id).toString()); return null; });
                 return map("status", "rejected");
             }
             case "POST bookings/cancel": {
@@ -474,7 +516,7 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
             case "GET passes": return map("passes", tx.inTenant(tid, () -> m.selectPasses(tid)));
             case "POST rentals/approve": {
                 Map<String, Object> r = needRt(tid, id); if (!"requested".equals(r.get("status"))) throw err(409, "state", "처리할 수 없는 상태입니다.");
-                try { tx.inTenant(tid, () -> { m.updateRental(tid, id, "approved", null, null, null); tx.audit(tid, email, "fac.approve", DdWeb.JSON.createObjectNode().put("rental", id).toString()); return null; }); }
+                try { tx.inTenant(tid, () -> { m.updateRental(tid, id, "approved", null, null, null); note(tid, r.get("sid"), "approved", map("rental", id)); tx.audit(tid, email, "fac.approve", DdWeb.JSON.createObjectNode().put("rental", id).toString()); return null; }); }
                 catch (DuplicateKeyException e) { throw err(409, "taken", "이 물품은 이미 대여 중입니다."); }
                 return map("status", "approved");
             }
@@ -500,7 +542,7 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
                 String kind = "pass-count".equals(S(get(p, "type"))) ? "count" : "pass-course".equals(S(get(p, "type"))) ? "course" : "period", pidN = rid("ps_"), td = today();
                 JsonNode per = DdFac.passPeriod(p, td, null); long total = per.get("total").asLong();
                 tx.inTenant(tid, () -> { m.insertPass(tid, pidN, sid, S(get(b, "aud")).isEmpty() ? "public" : S(get(b, "aud")), 0L, pid, S(get(p, "fac")), kind, total, per.get("startsOn").asText(), per.get("endsOn").asText(), "active", S(get(p, "cls")).isEmpty() ? null : S(get(p, "cls")));
-                    tx.audit(tid, email, "fac.pass.grant", DdWeb.JSON.createObjectNode().put("id", pidN).put("product", pid).toString()); return null; });
+                    note(tid, sid, "pass", map("pass", pidN)); tx.audit(tid, email, "fac.pass.grant", DdWeb.JSON.createObjectNode().put("id", pidN).put("product", pid).toString()); return null; });
                 return map("ok", true, "pass", tx.inTenant(tid, () -> m.selectPass(tid, pidN)));
             }
             case "POST passes/adjust": {
@@ -557,7 +599,7 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
     Object closures(String tid, Cfg c, JsonNode b, String email) throws Exception {
         String fid = S(get(b, "fac")); needFac(c, fid); String from = day(b, "from"), to = S(get(b, "to")).isEmpty() ? from : day(b, "to"); if (to.compareTo(from) < 0) throw err(400, "date", "기간이 올바르지 않습니다.");
         List<Map<String, Object>> aff = tx.inTenant(tid, () -> m.selectAffected(tid, fid, from, to)); int cancelled = 0, refunds = 0;
-        if (truthy(get(b, "cancelBookings"))) for (Map<String, Object> bk : aff) { cancelCore(tid, c, bk, cut(S(get(b, "reason")).isEmpty() ? "휴관" : "휴관: " + S(get(b, "reason")), 200), email); cancelled++; if ("paid".equals(bk.get("payStatus"))) refunds++; }
+        if (truthy(get(b, "cancelBookings"))) for (Map<String, Object> bk : aff) { cancelCore(tid, c, bk, cut(S(get(b, "reason")).isEmpty() ? "휴관" : "휴관: " + S(get(b, "reason")), 200), email); cancelled++; tx.inTenant(tid, () -> { note(tid, bk.get("sid"), "closure", map("booking", bk.get("id"), "fac", fid, "from", from, "to", to)); return null; }); if ("paid".equals(bk.get("payStatus"))) refunds++; }
         int ext = 0; if ("extend".equals(S(get(b, "pass")))) { int days = (int) ChronoUnit.DAYS.between(LocalDate.parse(from), LocalDate.parse(to)) + 1; ext = tx.inTenant(tid, () -> m.extendPasses(tid, fid, from, to, days)); }
         tx.audit(tid, email, "fac.closure", DdWeb.JSON.createObjectNode().put("fac", fid).put("from", from).put("to", to).put("cancelled", cancelled).toString());
         return map("affected", aff.size(), "cancelled", cancelled, "refundsPending", refunds, "passesExtended", ext);
@@ -673,6 +715,7 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
         String cj = DdWeb.JSON.valueToTree(calc.get("lines")).toString();
         tx.inTenant(tid, () -> { m.updateRental(tid, id, "cancelled", null, lng(r.get("deposit")) > 0 ? "returned" : null, null); m.cancelReadyFor(tid, id);
             if (p != null) m.insertRefund(tid, rid("fr_"), (String) p.get("id"), "rental:" + id, "full", cj, auto, auto, null, null, null, "pending");
+            note(tid, sid, "cancelled", map("rental", id, "refund", auto));
             tx.audit(tid, "learner:" + sid, "fac.rent.cancel", DdWeb.JSON.createObjectNode().put("rental", id).put("refund", auto).toString()); return null; });
         return map("ok", true, "status", "cancelled", "refund", map("auto", auto, "lines", calc.get("lines")));
     }
@@ -699,6 +742,8 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
         tx.inTenant(tid, () -> { m.cancelPendingRefund(tid, pid); m.insertRefund(tid, rid, pid, tgt, rl0, cj, auto, amt, amt == auto ? null : reason, email, null, "done"); if (amt == paid) m.updatePayment(tid, pid, "cancelled", null);
             if (p.get("bookingId") != null) { Map<String, Object> bk = m.selectBooking(tid, (String) p.get("bookingId")); m.updateBooking(tid, (String) bk.get("id"), (String) bk.get("status"), amt == paid ? "refunded" : "partial", null, 0); }
             if (p.get("passId") != null) m.updatePass(tid, (String) p.get("passId"), "refunded", null);
+            String who = p.get("bookingId") != null ? (String) m.selectBooking(tid, (String) p.get("bookingId")).get("sid") : p.get("passId") != null ? (String) m.selectPass(tid, (String) p.get("passId")).get("sid") : (String) m.selectRental(tid, (String) p.get("rentalId")).get("sid");
+            note(tid, who, "refund", map("payment", pid, "amount", amt));
             tx.audit(tid, email, "fac.refund", DdWeb.JSON.createObjectNode().put("id", rid).put("payment", pid).put("auto", auto).put("amount", amt).toString()); return null; });
         return map("ok", true, "refund", map("id", rid, "auto", auto, "amount", amt, "calc", calc));
     }
