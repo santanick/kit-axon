@@ -11,9 +11,12 @@ const ok = (c, m) => { if (c) pass++; else { fail++; errs.push(m); } };
 async function call(base, method, path, { body, cookie, csrf = true, origin, raw } = {}) {
   const h = {}; if (csrf && method !== 'GET') h['x-didisam'] = '1'; if (cookie) h.cookie = cookie; if (origin) h.origin = origin;
   if (body !== undefined) h['content-type'] = 'application/json';
+  /* 서버를 SIGNUP_CODE로 띄웠으면 가입 요청에 같은 코드를 넣는다(없으면 가입이 모두 403이 되어 쿠키가 없다) */
+  if (path === '/api/signup' && body && typeof body === 'object' && body.code === undefined && process.env.SIGNUP_CODE) body = { ...body, code: process.env.SIGNUP_CODE };
   const r = await fetch(base + path, { method, headers: h, body: raw !== undefined ? raw : body !== undefined ? JSON.stringify(body) : undefined, redirect: 'manual' });
   const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch {}
-  const sc = r.headers.get('set-cookie'); const ck = sc ? sc.split(';')[0] : null;
+  const all = typeof r.headers.getSetCookie === 'function' ? r.headers.getSetCookie() : []; /* 쿠키가 여러 개면 get()은 쉼표로 합친다 → 첫 쿠키만 */
+  const sc = all[0] || r.headers.get('set-cookie'); const ck = sc ? sc.split(';')[0] : null;
   return { st: r.status, j, h: r.headers, ck, sc };
 }
 const shape = v => v === null ? 'null' : Array.isArray(v) ? '[' + (v.length ? shape(v[0]) : '') + ']' : typeof v === 'object' ? '{' + Object.keys(v).sort().map(k => k + ':' + shape(v[k])).join(',') + '}' : typeof v;
@@ -408,13 +411,13 @@ async function stage2All(a1, b1) {
     if (x.j && x.j.error) ok(x.j.error === (y.j && y.j.error) && x.j.message === y.j.message, `${k}: 오류 코드/문구 다름 N ${x.j.error}/${x.j.message} J ${y.j && y.j.error}/${y.j && y.j.message}`);
     for (const hk of HDR) ok(x.h.get(hk) === y.h.get(hk), `${k}: 헤더 ${hk} N ${x.h.get(hk)} J ${y.h.get(hk)}`);
   }
-  for (const k of ['signup', 'login', 'logout']) ok(a.R[k].sc.replace(/=[^;]*;/, '=;') === b.R[k].sc.replace(/=[^;]*;/, '=;'), `${k}: set-cookie 속성 다름 N ${a.R[k].sc} J ${b.R[k].sc}`);
+  for (const k of ['signup', 'login', 'logout']) ok(a.R[k].sc && b.R[k].sc && a.R[k].sc.replace(/=[^;]*;/, '=;') === b.R[k].sc.replace(/=[^;]*;/, '=;'), `${k}: set-cookie 속성 다름 N ${a.R[k].sc} J ${b.R[k].sc}`);
   ok(a.R.static.h.get('content-security-policy') === b.R.static.h.get('content-security-policy'), 'static: CSP 다름');
   /* 기대값 자체 */
   const E = { health: 200, nf: 404, nfPost: 404, wrongMethod: 404, csrf: 403, origin: 403, badJson: 400, badEmail: 400, badPw: 400, badName: 400, badType: 400, signup: 200, dup: 409, me: 200, meNo: 401, st0: 200, putBad: 400, putX: 403, put1: 200, put1again: 409, put2: 200, putStale: 409, st2: 200, loginBad: 401, login: 200, logout: 200, meAfter: 401 };
   for (const [k, s] of Object.entries(E)) ok(b.R[k].st === s, `Java ${k}: 기대 ${s} 실제 ${b.R[k].st}`);
   ok(b.R.st2.j && b.R.st2.j.rev === 2 && b.R.st2.j.doc.note === '한글 ✓ "quote"' && b.R.st2.j.doc.org.room.tid === b.R.signup.j.tenant.tid, 'Java 상태 저장 · 기관 tid 고정');
-  ok(b.R.signup.j.user.email === b.em, 'Java 이메일 소문자 정규화');
+  ok(((b.R.signup.j || {}).user || {}).email === b.em, 'Java 이메일 소문자 정규화');
   ok(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(b.R.st2.j.at || ''), 'Java at 형식(ISO, ms, Z)');
 
   /* ② 서버 간 호환 */

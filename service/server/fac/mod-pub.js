@@ -40,7 +40,7 @@ module.exports = (ctx, S) => {
         return { list: q.list, off: q.off, final: q.final, deposit: q.deposit, lines: q.lines, pay: q.final ? (q.pay === 'online' && !S.pay.online() ? 'onsite' : q.pay) : 'free', needVerify: q.needVerify, approval: q.approval }; }); },
 
     'POST fac-book': async (req, res, tid) => { const w = await who(req, tid); limit(`fb:${tid}:${w.sid}`, 30, 600e3); const b = await readBody(req, 4096);
-      return inTenant(pool, tid, async c => { await S.sweepNow(c, tid, str(b.fac, 40)); return S.book(c, tid, w, b); }); },
+      return inTenant(pool, tid, async c => { await S.sweepNow(c, tid, str(b.fac, 40)); await S.ensureCourse(c, tid, w.sid, await S.cfg(c, tid)); return S.book(c, tid, w, b); }); },
 
     'POST fac-pay': async (req, res, tid) => { const w = await who(req, tid); limit(`fp:${tid}:${w.sid}`, 30, 600e3); const b = await readBody(req, 2048);
       if (!S.pay.online()) throw E(409, 'onsite_only', '지금은 현장 결제만 가능해요.');
@@ -58,14 +58,14 @@ module.exports = (ctx, S) => {
       if (r.amount !== p.amount) { await S.pay.cancel({ paymentKey, reason: '금액 불일치', idem: 'mm-' + orderId }); throw E(400, 'amount_mismatch', '결제 금액이 예약 금액과 달라 승인을 취소했어요.'); }
       return inTenant(pool, tid, async c => {
         await c.query("update fac_payment set status = 'paid', toss_key = $3, at = now() where tenant_id = $1 and id = $2", [tid, p.id, paymentKey]);
-        if (p.booking_id) await c.query("update fac_booking set pay_status = 'paid', hold_until = null, updated_at = now() where tenant_id = $1 and id = $2", [tid, p.booking_id]);
+        if (p.booking_id) { const bk = (await c.query("update fac_booking set pay_status = 'paid', hold_until = null, updated_at = now() where tenant_id = $1 and id = $2 returning *, to_char(day, 'YYYY-MM-DD') as day", [tid, p.booking_id])).rows[0]; if (bk) await S.note(c, tid, bk.sid, 'confirmed', S.bkMail(await S.cfg(c, tid), bk)); }
         if (p.pass_id) await c.query("update fac_pass set status = 'active', pay_id = $3 where tenant_id = $1 and id = $2 and status = 'pending'", [tid, p.pass_id, p.id]);
         if (p.rental_id) await c.query("update fac_rental set pay_status = 'paid' where tenant_id = $1 and id = $2", [tid, p.rental_id]);
         await audit(c, tid, 'learner:' + w.sid, 'fac.pay', { payment: p.id, amount: p.amount });
         return { ok: true, status: p.booking_id ? 'confirmed' : 'active' }; }); },
 
     'GET fac-my': async (req, res, tid) => { const w = await who(req, tid); const scope = new URL(req.url, 'http://x').searchParams.get('scope') === 'past' ? 'past' : 'upcoming';
-      return inTenant(pool, tid, async c => { const C = await S.cfg(c, tid); await S.sweepNow(c, tid, null);
+      return inTenant(pool, tid, async c => { const C = await S.cfg(c, tid); await S.sweepNow(c, tid, null); await S.ensureCourse(c, tid, w.sid, C);
         const bk = (await c.query(`select *, ${dcols('day')} from fac_booking where tenant_id = $1 and sid = $2 and ${scope === 'past' ? "(end_at <= now() or status not in ('requested','approved','confirmed','checked_in'))" : "end_at > now() and status in ('requested','approved','confirmed','checked_in')"} order by start_at ${scope === 'past' ? 'desc' : ''} limit 100`, [tid, w.sid])).rows;
         const ps = (await c.query(`select *, ${dcols('starts_on', 'ends_on')} from fac_pass where tenant_id = $1 and sid = $2 order by created_at desc limit 50`, [tid, w.sid])).rows;
         const rt = (await c.query(`select *, ${dcols('from_day', 'due_day')} from fac_rental where tenant_id = $1 and sid = $2 order by created_at desc limit 50`, [tid, w.sid])).rows;
@@ -78,7 +78,7 @@ module.exports = (ctx, S) => {
     'POST fac-qr': async (req, res, tid) => { const w = await who(req, tid); if (!S.qr.ready()) throw E(503, 'qr_key', '입장 QR을 만들 수 없습니다(서버 키 미설정).'); const b = await readBody(req, 1024);
       return inTenant(pool, tid, async c => { const today = calc.kstDay(Date.now()); let o, nbf, exp;
         if (b.booking) { const x = (await c.query(`select *, ${dcols('day')} from fac_booking where tenant_id = $1 and id = $2 and sid = $3`, [tid, str(b.booking, 40), w.sid])).rows[0]; if (!x) throw E(404, 'booking', '예약을 찾지 못했어요.');
-          if (x.day !== today) throw E(409, 'not_today', '입장 QR은 이용 당일에 열려요.'); if (x.status !== 'confirmed' || (x.pay_status === 'pending' && x.pay_mode === 'online')) throw E(409, 'not_ready', x.status === 'requested' ? '승인을 기다리고 있어요.' : '입장할 수 있는 예약이 아니에요.');
+          if (x.day !== today) throw E(409, 'not_today', '입장 QR은 이용 당일에 열려요.'); if (!(x.status === 'confirmed' || (x.status === 'checked_in' && x.left_at)) || (x.pay_status === 'pending' && x.pay_mode === 'online')) throw E(409, 'not_ready', x.status === 'requested' ? '승인을 기다리고 있어요.' : '입장할 수 있는 예약이 아니에요.');
           o = { b: x.id, f: x.fac_id, d: today }; nbf = new Date(x.start_at).getTime() - 30 * 60e3; exp = new Date(x.end_at).getTime() + 15 * 60e3; }
         else if (b.passId) { const x = (await c.query(`select *, ${dcols('starts_on', 'ends_on')} from fac_pass where tenant_id = $1 and id = $2 and sid = $3`, [tid, str(b.passId, 40), w.sid])).rows[0]; if (!x) throw E(404, 'pass', '이용권을 찾지 못했어요.');
           if (x.status !== 'active') throw E(409, 'not_ready', '쓸 수 있는 이용권이 아니에요.'); if (x.starts_on > today || x.ends_on < today) throw E(409, 'not_today', '이용 기간이 아니에요.');
@@ -121,6 +121,28 @@ module.exports = (ctx, S) => {
         const row = (await c.query(`insert into fac_pass (tenant_id, id, sid, product_id, fac_id, aud, kind, total, starts_on, ends_on, status, amount) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *, ${dcols('starts_on', 'ends_on')}`, [tid, id, w.sid, p.id, f.id, aud, per.kind, per.total, per.startsOn, per.endsOn, mode === 'free' ? 'active' : 'pending', q.final])).rows[0];
         const orderId = mode === 'online' ? await S.newOrder(c, tid, { pass_id: id }, q.final, q.list) : undefined;
         await audit(c, tid, 'learner:' + w.sid, 'fac.buy', { pass: id, product: p.id, amount: q.final, mode });
-        return { ok: true, pass: myPass(row), next: mode === 'free' ? 'done' : mode === 'online' ? 'pay' : 'onsite', ...(orderId ? { orderId } : {}) }; }); }
+        return { ok: true, pass: myPass(row), next: mode === 'free' ? 'done' : mode === 'online' ? 'pay' : 'onsite', ...(orderId ? { orderId } : {}) }; }); },
+
+    /* v40.1 이용권 환불 신청: 결제된 유효 이용권 → 환불 대기(fac_refund pending, 금액 = 공식 미리보기). 확정은 운영자 POST /api/fac/refunds */
+    'POST fac-pass-refund': async (req, res, tid) => { const w = await who(req, tid); limit(`fb:${tid}:${w.sid}`, 30, 600e3); const b = await readBody(req, 1024);
+      return inTenant(pool, tid, async c => { const ps = (await c.query('select * from fac_pass where tenant_id = $1 and id = $2 and sid = $3 for update', [tid, str(b.passId, 40), w.sid])).rows[0]; if (!ps) throw E(404, 'pass', '이용권을 찾지 못했어요.');
+        const P = (await c.query("select * from fac_payment where tenant_id = $1 and pass_id = $2 and status = 'paid' and amount > 0 order by at desc limit 1", [tid, ps.id])).rows[0];
+        if (ps.status !== 'active' || !P) throw E(409, 'not_refundable', '환불을 신청할 수 있는 이용권이 아니에요.');
+        if ((await c.query("select 1 from fac_refund where tenant_id = $1 and payment_id = $2 and status <> 'cancelled'", [tid, P.id])).rowCount) throw E(409, 'requested', '이미 환불을 신청했어요.');
+        const C = await S.cfg(c, tid); const pr = C.prods.find(x => x.id === ps.product_id) || {}; const rule = S.passRule(pr, ps.aud); const r = calc.refund({ rule, paid: P.amount, used: ps.used }); const id = S.rid('fr_');
+        await c.query("insert into fac_refund (tenant_id, id, payment_id, target, rule_type, calc, auto_amount, amount, edit_reason, status) values ($1,$2,$3,$4,$5,$6,$7,$7,$8,'pending')", [tid, id, P.id, 'pass:' + ps.id, rule.type, JSON.stringify(r.lines), r.auto, str(b.reason, 200) || null]);
+        await audit(c, tid, 'learner:' + w.sid, 'fac.pass.refund_req', { pass: ps.id, auto: r.auto });
+        return { ok: true, refund: { id, pass: ps.id, paid: P.amount, used: ps.used, auto: r.auto, lines: r.lines, status: 'pending' } }; }); },
+
+    /* v40.1 대여 취소: 수령 전(신청 · 승인 상태)만. 결제했으면 전액 환불 대기 */
+    'POST fac-rent-cancel': async (req, res, tid) => { const w = await who(req, tid); limit(`fb:${tid}:${w.sid}`, 30, 600e3); const b = await readBody(req, 1024);
+      return inTenant(pool, tid, async c => { const rt = (await c.query('select * from fac_rental where tenant_id = $1 and id = $2 and sid = $3 for update', [tid, str(b.rental, 40), w.sid])).rows[0]; if (!rt) throw E(404, 'rental', '대여 신청을 찾지 못했어요.');
+        if (!['requested', 'approved'].includes(rt.status)) throw E(409, 'not_cancelable', '물품을 받은 뒤에는 취소할 수 없어요. 반납해 주세요.');
+        await c.query("update fac_rental set status = 'cancelled', deposit_status = case when deposit > 0 then 'returned' else deposit_status end where tenant_id = $1 and id = $2", [tid, rt.id]);
+        await c.query("update fac_payment set status = 'cancelled' where tenant_id = $1 and rental_id = $2 and status = 'ready'", [tid, rt.id]);
+        const P = (await c.query("select * from fac_payment where tenant_id = $1 and rental_id = $2 and status = 'paid' and amount > 0 order by at desc limit 1", [tid, rt.id])).rows[0]; let r = { auto: 0, lines: [] };
+        if (P) { r = calc.refund({ rule: { type: 'full' }, paid: P.amount }); await c.query("insert into fac_refund (tenant_id, id, payment_id, target, rule_type, calc, auto_amount, amount, status) values ($1,$2,$3,$4,'full',$5,$6,$6,'pending') on conflict do nothing", [tid, S.rid('fr_'), P.id, 'rental:' + rt.id, JSON.stringify(r.lines), r.auto]); }
+        await audit(c, tid, 'learner:' + w.sid, 'fac.rent.cancel', { rental: rt.id, refund: r.auto }); await S.note(c, tid, w.sid, 'cancelled', { rental: rt.id, refund: r.auto });
+        return { ok: true, status: 'cancelled', refund: { auto: r.auto, lines: r.lines } }; }); }
   };
 };

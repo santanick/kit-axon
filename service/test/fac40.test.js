@@ -28,8 +28,9 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
   const NOW = Date.now(); const today = calc.kstDay(NOW); const hour = Math.floor(calc.kstMin(NOW) / 60); const plus = n => calc.addDays(today, n);
   const all = ['00:00', '24:00']; const hours = Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(d => [d, all]));
   const F = { on: true, facilities: [{ id: 'f_t', name: '테니스 코트', kind: 'time', hours, slotMin: 60, minSlots: 1, maxSlots: 2, capacity: { res: 2, perSlot: 1 }, open: { daysAhead: 7, at: '00:00' }, pay: 'online', audience: ['student', 'public'], verify: 'sid',
-    prices: { student: { slot: 3000 }, public: { slot: 6000 } }, rules: { dupSame: true, noShowMin: 15, noShowStrikes: 3, suspendDays: 30 }, refund: V.facilities.golf.refund, resources: [{ id: 'r1', name: '1번 코트' }, { id: 'r2', name: '2번 코트' }] }],
+    prices: { student: { slot: 3000 }, public: { slot: 6000 } }, rules: { dupSame: true, noShowMin: 15, noShowStrikes: 3, suspendDays: 30, leaveMin: 15 }, refund: V.facilities.golf.refund, resources: [{ id: 'r1', name: '1번 코트' }, { id: 'r2', name: '2번 코트' }] }],
     products: [{ id: 'p_m1', fac: 'f_t', type: 'pass-period', name: '월이용권', days: 30, prices: { public: 150000 }, discountRate: 0, refund: { type: 'pass-period', unitPrice: { public: 12000 }, feeRate: 10 } },
+      { id: 'p_c1', fac: 'f_t', type: 'pass-course', name: '수강생 자율이용권', cls: 'c1', count: 20, days: 60 },
       { id: 'p_lt', fac: 'f_t', type: 'rent', name: '라켓 3일', days: 3, deposit: 10000, lateFeePerDay: 1000, prices: { public: 2000 } }] };
   const docOf = (name, extra) => ({ org: { name, type: 'adult', room: { mode: 'saas' } }, settings: { acct: { mode: 'open', social: [], under14: false, approve: 'auto' } }, members: [], fac: { roster: [], settings: { kioskPin: '4321' }, ...extra }, lsite: { pub: { org: { name }, pages: [], fac: F } } });
   const A = (await call('A', 'POST', '/api/signup', { email: `fa${sfx}@a.kr`, password: 'Passw0rd-aaa', orgName: '스포츠센터', type: 'adult', code: 'C0DE' })).j.tenant;
@@ -88,6 +89,7 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
     const la = await call('A', 'GET', `/api/fac/bookings?from=${today}&to=${plus(7)}`); assert.ok(la.j.bookings.length >= 5); assert.ok(la.j.bookings.every(b => b.sidTail.length <= 4));
   });
 
+  let qrBk;
   await t.test('QR: 당일 발급 · 1회용 · 위조 · 다른 기관 거부', async () => {
     const b = await call('L3', 'POST', P('fac-book'), { fac: 'f_t', res: 'r1', day: today, slot: hour, slots: 1, aud: 'public' }); assert.equal(b.status, 200, JSON.stringify(b.j));
     assert.equal((await call('L3', 'POST', P('fac-qr'), { booking: mine[0].id })).status, 404); /* 남의 예약 */
@@ -101,7 +103,25 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
     assert.equal((await call('A', 'POST', '/api/fac/kiosk/start', { fac: 'f_t', pin: '0000' })).j.error, 'pin');
     const k = await call('A', 'POST', '/api/fac/kiosk/start', { fac: 'f_t', pin: '4321' }); assert.ok(k.j.kioskToken);
     assert.equal((await call('K', 'POST', '/api/fac/checkin', { kiosk: k.j.kioskToken, tid: A.tid, token: q.j.token })).j.error, 'used');
+    qrBk = b.j.booking.id;
     const d1 = await call('L3', 'POST', P('fac-book'), { fac: 'f_t', day: D1, slot: 5, slots: 1, aud: 'public' }); assert.equal((await call('L3', 'POST', P('fac-qr'), { booking: d1.j.booking.id })).j.error, 'not_today');
+  });
+
+  await t.test('이탈 자동 취소 · 미결제 현장 이용권 7일 취소 · 수강생 자율이용권 자동 발급', async () => {
+    const o1 = await call('A', 'POST', '/api/fac/checkin', { booking: qrBk, out: true }); assert.equal(o1.status, 200, JSON.stringify(o1.j)); assert.equal(o1.j.out, true); assert.equal(o1.j.leaveMin, 15);
+    const q = await call('L3', 'POST', P('fac-qr'), { booking: qrBk }); assert.equal(q.status, 200); /* 퇴장 중에는 재입장 QR */
+    const re = await call('A', 'POST', '/api/fac/checkin', { token: q.j.token }); assert.equal(re.j.reentry, true);
+    assert.equal((await call('A', 'POST', '/api/fac/checkin', { booking: qrBk, out: true })).status, 200);
+    await pool.query("update fac_booking set left_at = now() - interval '16 minutes' where tenant_id = $1 and id = $2", [A.tid, qrBk]);
+    await call('A', 'GET', '/api/fac/overview');
+    const bk = (await pool.query('select status, cancel_reason from fac_booking where tenant_id = $1 and id = $2', [A.tid, qrBk])).rows[0]; assert.deepEqual([bk.status, bk.cancel_reason], ['cancelled', '이탈 자동 취소']);
+    const p = await call('L1', 'POST', P('fac-buy'), { productId: 'p_m1', aud: 'public' }); assert.equal(p.j.pass.status, 'pending');
+    await pool.query("update fac_pass set created_at = now() - interval '8 days' where tenant_id = $1 and id = $2", [A.tid, p.j.pass.id]); await call('A', 'GET', '/api/fac/overview');
+    assert.equal((await pool.query('select status from fac_pass where tenant_id = $1 and id = $2', [A.tid, p.j.pass.id])).rows[0].status, 'cancelled');
+    rev = (await call('A', 'PUT', '/api/state', { doc: { ...docOf('스포츠센터', { roster: ['20260001'] }), members: [{ id: 'm9', sid: L.L4 }], classes: [{ id: 'c1', name: '테니스 기초', learners: ['m9'] }] }, rev })).j.rev;
+    const my = await call('L4', 'GET', P('fac-my')); const cp = my.j.passes.filter(x => x.productId === 'p_c1'); assert.equal(cp.length, 1); assert.equal(cp[0].kind, 'course'); assert.equal(cp[0].total, 20); assert.equal(cp[0].status, 'active');
+    assert.equal((await call('L4', 'GET', P('fac-my'))).j.passes.filter(x => x.productId === 'p_c1').length, 1); /* 한 번만 */
+    assert.equal((await call('L3', 'GET', P('fac-my'))).j.passes.filter(x => x.productId === 'p_c1').length, 0); /* 수강생 아님 */
   });
 
   await t.test('노쇼: 요청 시 정리 → 칸 해제, 3회 누적 30일 정지', async () => {
@@ -111,7 +131,7 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
     const st = (await pool.query('select status from fac_booking where tenant_id = $1 and id = $2', [A.tid, b.j.booking.id])).rows[0].status; assert.equal(st, 'no_show');
     assert.equal((await pool.query('select count(*)::int n from fac_slot where tenant_id = $1 and booking_id = $2', [A.tid, b.j.booking.id])).rows[0].n, 0);
     const ns = await call('A', 'GET', '/api/fac/noshow'); assert.ok(ns.j.bookings.some(x => x.id === b.j.booking.id));
-    const ev = (await pool.query("select data from learner_events where tenant_id = $1 and type = 'fac-note' and xid = $2", [A.tid, b.j.booking.id])).rows; assert.equal(ev[0].data.kind, 'no_show');
+    const ev = (await pool.query("select data from learner_events where tenant_id = $1 and type = 'fac-note' and xid = $2", [A.tid, b.j.booking.id])).rows; assert.ok(ev.some(e => e.data.kind === 'no_show'));
     /* 노쇼 2건 더(지난 날) → 3회 → 정지 */
     for (const n of [1, 2]) await pool.query("insert into fac_booking (tenant_id, id, fac_id, res_id, sid, aud, day, start_slot, slots, start_at, end_at, status, pay_mode) values ($1, $2, 'f_t', 'r1', $3, 'public', $4, 3, 1, now() - interval '3 days', now() - interval '3 days', 'no_show', 'onsite')", [A.tid, 'bk_nsx' + n + sfx.slice(-8).padStart(8, '0'), L.L4, plus(-n)]);
     const s = await call('L4', 'POST', P('fac-book'), { fac: 'f_t', day: D3, slot: 20, slots: 1, aud: 'public' }); assert.equal(s.status, 403); assert.equal(s.j.error, 'suspended'); assert.equal(s.j.until, calc.addDays(today, 29));
@@ -150,9 +170,75 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
     const r = await call('A', 'POST', `/api/fac/rentals/${one.j.rental.id}/return`, { condition: '양호' }); assert.equal(r.status, 200); assert.equal(r.j.lateDays, 3); assert.equal(r.j.lateFee, 3000); assert.equal(r.j.depositReturn, 7000);
   });
 
+  await t.test('이용자 이용권 환불 신청 · 대여 취소', async () => {
+    const p = await call('L1', 'POST', P('fac-buy'), { productId: 'p_m1', aud: 'public' }); assert.equal((await call('A', 'POST', '/api/fac/payments', { pass: p.j.pass.id, method: 'cash', amount: 150000 })).status, 200);
+    const r = await call('L1', 'POST', P('fac-pass-refund'), { passId: p.j.pass.id, reason: '이사' }); assert.equal(r.status, 200, JSON.stringify(r.j));
+    assert.equal(r.j.refund.auto, V.refund.find(x => x.name.startsWith('월이용권 미사용')).out.auto); assert.equal(r.j.refund.status, 'pending'); assert.equal(r.j.refund.used, 0);
+    assert.equal((await call('L1', 'POST', P('fac-pass-refund'), { passId: p.j.pass.id })).j.error, 'requested');
+    assert.equal((await call('L2', 'POST', P('fac-pass-refund'), { passId: p.j.pass.id })).status, 404);
+    const pend = (await call('A', 'GET', '/api/fac/refunds?status=pending')).j.refunds.find(x => x.target === 'pass:' + p.j.pass.id); assert.equal(pend.auto, 135000);
+    const done = await call('A', 'POST', '/api/fac/refunds', { payment: pend.payment }); assert.equal(done.j.refund.amount, 135000);
+    const rt = await call('L3', 'POST', P('fac-rent'), { fac: 'f_t', productId: 'p_lt', aud: 'public' }); assert.equal(rt.status, 200, JSON.stringify(rt.j));
+    assert.equal((await call('A', 'POST', '/api/fac/payments', { rental: rt.j.rental.id, method: 'cash', amount: 12000 })).status, 200);
+    const c = await call('L3', 'POST', P('fac-rent-cancel'), { rental: rt.j.rental.id }); assert.equal(c.status, 200); assert.equal(c.j.status, 'cancelled'); assert.equal(c.j.refund.auto, 12000);
+    assert.equal((await call('L3', 'POST', P('fac-rent-cancel'), { rental: rt.j.rental.id })).j.error, 'not_cancelable');
+  });
+
   await t.test('통계 · 교강사 제한', async () => {
     const s = await call('A', 'GET', `/api/fac/stats?from=${today}&to=${plus(7)}&group=fac`); assert.equal(s.status, 200); assert.ok(s.j.rows[0].booked >= 1); assert.ok(s.j.sales.onsite >= 156000);
     assert.equal((await call('G', 'GET', '/api/fac/overview')).status, 401);
   });
   app.close(); await pool.end();
+});
+
+test('운영 서버: 토스 승인 · 취소(가짜 토스 서버) · 알림 메일', { skip: !process.env.DATABASE_URL }, async t => {
+  const http = require('node:http'); const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app');
+  /* 가짜 토스: confirm은 받은 금액을 돌려주고(paymentKey가 pk_bad면 1원 많게), cancel은 거래 키를 돌려준다. 메일 웹훅은 받은 메일을 모은다 */
+  const toss = [], mails = []; const body = rq => new Promise(ok => { let s = ''; rq.on('data', d => s += d); rq.on('end', () => ok(s ? JSON.parse(s) : {})); });
+  const fake = http.createServer(async (rq, rs) => { const b = await body(rq);
+    if (rq.url === '/mail') { mails.push(b); rs.end('{}'); return; }
+    toss.push({ url: rq.url, auth: rq.headers.authorization, idem: rq.headers['idempotency-key'], b });
+    rs.setHeader('content-type', 'application/json');
+    if (rq.url === '/v1/payments/confirm') { if (b.paymentKey === 'pk_fail') { rs.statusCode = 400; rs.end(JSON.stringify({ code: 'REJECT_CARD_PAYMENT' })); return; } rs.end(JSON.stringify({ status: 'DONE', method: '카드', totalAmount: b.paymentKey === 'pk_bad' ? b.amount + 1 : b.amount })); return; }
+    const m = /^\/v1\/payments\/([^/]+)\/cancel$/.exec(rq.url); if (m) { rs.end(JSON.stringify({ status: 'CANCELED', cancels: [{ transactionKey: 'tx_' + m[1], cancelAmount: b.cancelAmount }] })); return; }
+    rs.statusCode = 404; rs.end('{}'); });
+  await new Promise(ok => fake.listen(0, ok)); const FU = `http://127.0.0.1:${fake.address().port}`;
+  const pool = poolFrom(process.env); await migrate(pool);
+  const app = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', PII_KEY: crypto.randomBytes(32).toString('hex'), PII_DEV_OTP: '1', FAC_SWEEP_MS: '0', TOSS_SECRET_KEY: 'test_sk_fake', TOSS_URL: FU, MAIL_PROVIDER: 'webhook', MAIL_WEBHOOK_URL: FU + '/mail' }, log: {} });
+  await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
+  const jar = {}; const call = async (who, method, p, b) => { const r = await fetch(U + p, { method, headers: { 'x-didisam': '1', ...(b ? { 'content-type': 'application/json' } : {}), ...(jar[who] ? { cookie: jar[who] } : {}) }, body: b ? JSON.stringify(b) : undefined });
+    const c = r.headers.get('set-cookie'); if (c) jar[who] = c.split(';')[0]; return { status: r.status, j: await r.json().catch(() => ({})) }; };
+  const sfx = 't' + Date.now().toString(36); const today = calc.kstDay(Date.now()); const D3 = calc.addDays(today, 3);
+  const hours = Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(d => [d, ['00:00', '24:00']]));
+  const F = { on: true, facilities: [{ id: 'f_g', name: '골프', kind: 'time', hours, slotMin: 60, minSlots: 1, maxSlots: 2, open: { daysAhead: 7, at: '00:00' }, pay: 'online', audience: ['public'], verify: 'none', prices: { public: { slot: 7000 } }, refund: V.facilities.golf.refund, resources: [{ id: 'r1', name: '1' }, { id: 'r2', name: '2' }] }] };
+  const A = (await call('A', 'POST', '/api/signup', { email: `tz${sfx}@a.kr`, password: 'Passw0rd-aaa', orgName: '토스센터', type: 'adult', code: 'C0DE' })).j.tenant;
+  await call('A', 'PUT', '/api/state', { doc: { org: { name: '토스센터', type: 'adult', room: { mode: 'saas' } }, settings: { acct: { mode: 'open', social: [], under14: false, approve: 'auto' } }, members: [], fac: {}, lsite: { pub: { org: { name: '토스센터' }, pages: [], fac: F } } }, rev: 0 });
+  const P = p => `/api/pub/${A.tid}/${p}`; const email = `pay${sfx}@ex.com`;
+  const o = await call('X', 'POST', P('otp'), { email, purpose: 'signup' }); assert.equal((await call('L', 'POST', P('signup'), { via: 'email', email, code: o.j.dev_code, nickname: 'pay', consent: { tos: true, privacy: true }, age14: true })).status, 200);
+
+  await t.test('키가 있으면 payOnline:true · 온라인 예약은 결제 대기(보류)', async () => {
+    assert.equal((await call('G', 'GET', '/api/config')).j.payOnline, true); assert.equal((await call('G', 'GET', P('fac-list'))).j.facilities[0].pay, 'online');
+  });
+  await t.test('승인: 금액 위조는 토스 호출 전 거절, 정상 승인 · 응답 금액 불일치는 취소 후 거절', async () => {
+    const b = await call('L', 'POST', P('fac-book'), { fac: 'f_g', res: 'r1', day: D3, slot: 9, slots: 1, aud: 'public', payMode: 'online' }); assert.equal(b.j.next, 'pay'); assert.match(b.j.orderId, /^fo_/); assert.ok(b.j.booking.holdUntil);
+    const n0 = toss.length; const w = await call('L', 'POST', P('fac-pay'), { booking: b.j.booking.id, orderId: b.j.orderId, paymentKey: 'pk_1', amount: 100 }); assert.equal(w.j.error, 'amount_mismatch'); assert.equal(toss.length, n0);
+    const f = await call('L', 'POST', P('fac-pay'), { booking: b.j.booking.id, orderId: b.j.orderId, paymentKey: 'pk_fail', amount: 7000 }); assert.equal(f.status, 502); assert.equal(f.j.error, 'pg');
+    const ok = await call('L', 'POST', P('fac-pay'), { booking: b.j.booking.id, orderId: b.j.orderId, paymentKey: 'pk_1', amount: 7000 }); assert.equal(ok.status, 200); assert.equal(ok.j.status, 'confirmed');
+    const cf = toss.filter(x => x.url === '/v1/payments/confirm').pop(); assert.deepEqual(cf.b, { paymentKey: 'pk_1', orderId: b.j.orderId, amount: 7000 }); assert.equal(cf.auth, 'Basic ' + Buffer.from('test_sk_fake:').toString('base64')); assert.equal(cf.idem, 'cf-' + b.j.orderId);
+    assert.equal((await call('L', 'POST', P('fac-pay'), { booking: b.j.booking.id, orderId: b.j.orderId, paymentKey: 'pk_1', amount: 7000 })).j.status, 'confirmed'); /* 재전송은 그대로 */
+    const my = (await call('L', 'GET', P('fac-my'))).j.bookings.find(x => x.id === b.j.booking.id); assert.equal(my.payStatus, 'paid');
+    const b2 = await call('L', 'POST', P('fac-book'), { fac: 'f_g', res: 'r1', day: D3, slot: 11, slots: 1, aud: 'public', payMode: 'online' });
+    const bad = await call('L', 'POST', P('fac-pay'), { booking: b2.j.booking.id, orderId: b2.j.orderId, paymentKey: 'pk_bad', amount: 7000 }); assert.equal(bad.status, 400); assert.equal(bad.j.error, 'amount_mismatch');
+    assert.ok(toss.some(x => x.url === '/v1/payments/pk_bad/cancel'));
+    /* 취소(48시간 전 = 100%) → 토스 취소 즉시 · 환불 메일 */
+    const c = await call('L', 'POST', P('fac-cancel'), { booking: b.j.booking.id }); assert.equal(c.j.status, 'refunded'); assert.equal(c.j.refund.auto, 7000);
+    const cx = toss.filter(x => x.url === '/v1/payments/pk_1/cancel').pop(); assert.equal(cx.b.cancelAmount, 7000);
+    assert.equal((await call('A', 'GET', '/api/fac/refunds?status=done')).j.refunds[0].amount, 7000);
+  });
+  await t.test('알림 메일: 확정 · 환불 메일이 가입 이메일로(개인정보 없이)', async () => {
+    for (let i = 0; i < 100 && !(mails.some(m => /확정/.test(m.subject)) && mails.some(m => /환불/.test(m.subject))); i++) await new Promise(r => setTimeout(r, 50));
+    const mine = mails.filter(m => m.to === email); assert.ok(mine.some(m => /확정/.test(m.subject)), JSON.stringify(mails.map(m => m.subject))); assert.ok(mine.some(m => /환불/.test(m.subject)), JSON.stringify(mails.map(m => [m.to === email, m.subject])));
+    assert.ok(mine.every(m => !m.text.includes(email)));
+  });
+  app.close(); fake.close(); await pool.end();
 });

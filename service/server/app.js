@@ -539,7 +539,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   /* v30 학사 LMS 묶음 라우트(lms/mod-*.js) — 핵심 라우트와 이름이 겹치면 기동을 멈춘다 */
   for (const [k, fn] of Object.entries(require('./lms').loadRoutes({ pool, inTenant, need, readBody, HttpErr, audit, today, limit, log }))) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
   /* v40 시설 · 장비 예약(fac/): 공개 fac-* 와 운영자 /api/fac/* */
-  const fac = require('./fac').createFac({ pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
+  const fac = require('./fac').createFac({ mail: pii.mailTo, pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
 
   /* ── 정적 파일 ── */
   function serveStatic(req, res, pathname) {
@@ -575,7 +575,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname.startsWith('/api/') && !M.apiAllowed(mod, req.method, url.pathname)) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
       if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-[a-z]{2,8})$/);
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-[a-z]{2,6}(?:-[a-z]{2,8})?)$/);
         const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처
