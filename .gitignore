@@ -3,3 +3,6 @@ node_modules/
 service/server/node_modules/
 service/public/
 crs-sheets/
+
+# fac40-admin.js 점검이 저장소 루트에 남기는 캡처
+/fac-*.png
