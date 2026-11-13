@@ -81,3 +81,12 @@ led_device  (tenant_id, id 'ld_', unit_id, label, agent_key_hash, last_seen, mod
 - UI: `tests/ui/ledger41-admin.js`, `tests/ui/ledger41-learner.js`, 운영 모드 `tests/ui/ledger41-live.js`(로컬 Postgres 5544).
 - 회귀: contract.js · contract-fac40 · fac40 계열 · smoke · compliance · scn-k12 · module-live. 시설 숫자 불변.
 - 버전: v41.0, sw 캐시 didisam-app-v41.0 (통합 담당이 올림).
+
+## 7. 계약 변경 반영 (Node 구현 기준 · 2026-11-14)
+- 오류 응답은 기존 서버 형식 `{error, message}`(ok:false 없음). 성공 응답은 기존처럼 객체 그대로.
+- 루트 단위 id `lu_root` 고정. 기관 플래그: `doc.ledger.on` 또는 `doc.org.ledger_on`.
+- 링크 URL `/learner.html?t=<tid>&bill=<token>`. 단말 키 형식 `<tid>.<비밀>`.
+- 열 추가: led_charge `bill_id · idem_key`, led_receipt `charge_ids · link_hash · corrects`, led_refund `reason · toss_cancel_key · idem_key · legacy_ref · done_at`, led_unit `toss_client_key`, led_import `meta`.
+- 시설(v40) 이중 기록은 DB 트리거(fac_payment paid · fac_refund done → 원장 1줄, legacy_ref 유일) — Node · Java 공통.
+- import는 1차에 JSON `{kind, csv}`만(멀티파트 2차). ledger-my 보호자 연결 2차. v41 이전 시설 결제 이관 스크립트 별도.
+- 단위 테스트 위치 `service/test/`(기존 관례). 학원법 환불 비율은 원문 미확인 → 결과에 `lawCheck:true`.
