@@ -356,7 +356,7 @@ const MIGRATIONS = [
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).
    기본 MIGRATIONS 배열 끝에 새 항목을 더해도 LMS 파일 적용 기록이 밀리지 않는다. */
-const LMS_SQL = require('./lms').sqlMigrations();
+const LMS_SQL = [...require('./lms').sqlMigrations(), ...require('./fac').sqlMigrations()]; /* v40 시설 예약 표(fac/sql) */
 
 async function migrate(pool) {
   const c = await pool.connect();
