@@ -38,7 +38,7 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */
     public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy))\\z");
     /** v40 시설 · 장비 예약 운영자 경로(/api/fac/*, :id 포함) — Node fac/mod-admin과 같은 목록 */
-    public static final java.util.regex.Pattern FAC = java.util.regex.Pattern.compile("^/api/fac/(?:overview|bookings|bookings/[\\w-]{1,80}(?:/(?:approve|reject|cancel))?|closures|checkin|kiosk/start|payments|refunds|rentals/[\\w-]{1,80}/(?:lend|return)|passes|passes/[\\w-]{1,80}/adjust|noshow|noshow/[\\w-]{1,80}/restore|stats|export)\\z");
+    public static final java.util.regex.Pattern FAC = java.util.regex.Pattern.compile("^/api/fac/(?:overview|bookings|bookings/[\\w-]{1,80}(?:/(?:approve|reject|cancel))?|closures|checkin|kiosk/start|payments|refunds|rentals|rentals/[\\w-]{1,80}/(?:lend|return|approve)|passes|passes/[\\w-]{1,80}/adjust|noshow|noshow/[\\w-]{1,80}/restore|stats|export)\\z");
     /** v34.5 홈페이지 이미지: GET /api/media/{id}(공개) · DELETE /api/media/{id}(운영자) — Node media.match와 같음 */
     public static final java.util.regex.Pattern MEDIA = java.util.regex.Pattern.compile("^/api/media/(?:f/)?[^/]+\\z"); /* v35: 강의 파일 /api/media/f/{id} 포함 */
     static boolean mediaRoute(String m, String path) {

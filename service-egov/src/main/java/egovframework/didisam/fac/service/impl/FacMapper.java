@@ -30,6 +30,10 @@ public interface FacMapper {
 
     int insertPass(@Param("tid") String tid, @Param("id") String id, @Param("sid") String sid, @Param("aud") String aud, @Param("amount") long amount, @Param("product") String product, @Param("fac") String fac, @Param("kind") String kind, @Param("total") long total,
                    @Param("starts") String starts, @Param("ends") String ends, @Param("status") String status, @Param("cls") String cls);
+    String selectLastEnd(@Param("tid") String tid, @Param("sid") String sid, @Param("product") String product);
+    List<Map<String, Object>> selectRentals(@Param("tid") String tid, @Param("status") String status, @Param("facs") List<String> facs);
+    List<Map<String, Object>> selectPasses(@Param("tid") String tid);
+    String selectSubRefund(@Param("tid") String tid);
     Map<String, Object> selectPass(@Param("tid") String tid, @Param("id") String id);
     List<Map<String, Object>> selectMyPasses(@Param("tid") String tid, @Param("sid") String sid);
     int usePass(@Param("tid") String tid, @Param("id") String id);

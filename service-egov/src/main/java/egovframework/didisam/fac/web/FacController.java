@@ -24,7 +24,9 @@ public class FacController {
     @PostMapping("/payments") public Object payments(@RequestBody(required = false) byte[] b, HttpServletRequest q, HttpServletResponse r) throws Exception { return go(q, r, "POST payments", null, b); }
     @GetMapping("/refunds") public Object refunds(HttpServletRequest q, HttpServletResponse r) throws Exception { return go(q, r, "GET refunds", null, null); }
     @PostMapping("/refunds") public Object refund(@RequestBody(required = false) byte[] b, HttpServletRequest q, HttpServletResponse r) throws Exception { return go(q, r, "POST refunds", null, b); }
-    @PostMapping("/rentals/{id}/{act:lend|return}") public Object rental(@PathVariable String id, @PathVariable String act, @RequestBody(required = false) byte[] b, HttpServletRequest q, HttpServletResponse r) throws Exception { return go(q, r, "POST rentals/" + act, id, b); }
+    @GetMapping("/rentals") public Object rentals(HttpServletRequest q, HttpServletResponse r) throws Exception { return go(q, r, "GET rentals", null, null); }
+    @GetMapping("/passes") public Object passList(HttpServletRequest q, HttpServletResponse r) throws Exception { return go(q, r, "GET passes", null, null); }
+    @PostMapping("/rentals/{id}/{act:lend|return|approve}") public Object rental(@PathVariable String id, @PathVariable String act, @RequestBody(required = false) byte[] b, HttpServletRequest q, HttpServletResponse r) throws Exception { return go(q, r, "POST rentals/" + act, id, b); }
     @PostMapping("/passes") public Object passes(@RequestBody(required = false) byte[] b, HttpServletRequest q, HttpServletResponse r) throws Exception { return go(q, r, "POST passes", null, b); }
     @PostMapping("/passes/{id}/adjust") public Object adjust(@PathVariable String id, @RequestBody(required = false) byte[] b, HttpServletRequest q, HttpServletResponse r) throws Exception { return go(q, r, "POST passes/adjust", id, b); }
     @GetMapping("/noshow") public Object noshow(HttpServletRequest q, HttpServletResponse r) throws Exception { return go(q, r, "GET noshow", null, null); }
