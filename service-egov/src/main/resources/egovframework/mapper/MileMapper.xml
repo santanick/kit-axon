@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v42 학습 마일리지 — 모두 기관 범위(inTenant, RLS) 쿼리. 표 · 업무 규칙 함수(mil_*)는 service/server/mileage/sql/*(Node 마이그레이션 소유).
+     Java는 규칙을 다시 구현하지 않고 같은 함수를 부른다(04-data-api 1절). -->
+<mapper namespace="egovframework.didisam.mileage.service.impl.MileMapper">
+  <select id="selectTenantIds" resultType="string">select id from tenants</select>
+  <select id="selectOn" resultType="java.util.LinkedHashMap">select coalesce(doc->'mileage'->>'on', doc->'org'->>'mileage_on') as v from tenant_state where tenant_id = #{tid}</select>
+  <select id="call" resultType="string">select ${fn}(#{tid}, #{a}::jsonb)::text</select>
+</mapper>

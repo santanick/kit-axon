@@ -40,6 +40,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     private final egovframework.didisam.auth.service.AuthService auth; private final TenantTxMapper txm;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.fac.service.FacService fac;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.ledger.service.LedgerService ledger;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.mileage.service.MileService mile;
     public PubServiceImpl(PubMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, PiiService pii, DdAiClient ai, egovframework.didisam.cpl.service.CplService cpl, DdStateCrypto crypt, egovframework.didisam.auth.service.AuthService auth, TenantTxMapper txm) { this.crypt = crypt; this.auth = auth; this.txm = txm;
         this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.pii = pii; this.ai = ai; this.cpl = cpl;
     }
@@ -65,6 +66,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             default:
         }
         if (act.startsWith("ledger-")) return ledger.pub(req, res, tid, key, body, () -> lauth(req, tid)); /* v41 통합 수납 원장 */
+        if (act.startsWith("mile-")) return mile.pub(req, res, tid, key, body, () -> lauth(req, tid)); /* v42 학습 마일리지 */
         if (act.startsWith("fac-")) return fac.pub(req, res, tid, key, body, () -> lauth(req, tid)); /* v40 시설 · 장비 예약 */
         Map<String, Object> s = lauth(req, tid);
         if (s == null && "POST tutor".equals(key)) return tutor(req, body, tid, null, web.ip(req)); /* 방문자(로그인 전) 튜터 */
