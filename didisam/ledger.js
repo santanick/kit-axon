@@ -81,6 +81,16 @@
     if (!D.units.some(u => !u.parentId)) D.units.unshift({ id: 'lu_root', parentId: null, kind: 'hq', name: S.org.name || '본사', shareRateBp: 40, active: true, sort: 0 }); return D; }
   window.ledgerEnsure = ensure;
   const L = () => ensure();
+  /* 시연판 학습자 이벤트(lledger.js lpxPush) → 원장. 수납 번호는 학습자 화면과 같게 두어 학습자 쪽에서 중복으로 보이지 않게 한다 */
+  if (typeof LPX !== 'undefined') {
+    const payIn = (x, link) => { const D = L(); if (!D || D.live) return; const d = x.data || {}; const rid = String(d.receiptId || ''); if (!rid || D.receipts.some(r => r.id === rid)) return;
+      const ids = (d.chargeIds || []).map(String).filter(id => D.charges.some(c => c.id === id)); if (!ids.length) return; const c0 = D.charges.find(c => c.id === ids[0]);
+      const R = postReceipt(D, { unitId: c0.unitId, sid: c0.sid, method: 'online_card', amount: Math.round(+d.amount || 0), chargeIds: ids, paidAt: String(x.at || '').replace('T', ' ').slice(0, 16) || nowStr(), recordedBy: link ? '청구서 링크' : '학습자 앱', idem: 'lpx_' + rid });
+      if (R.receipt && !R.dup) { const old = R.receipt.id; R.receipt.id = rid; D.allocs.forEach(a => { if (a.receiptId === old) a.receiptId = rid; }); }
+      if (link && d.tokenHash) D.links.forEach(l => { if (l.tokenHash === d.tokenHash && !l.usedAt) l.usedAt = nowStr(); }); };
+    LPX['ledger-pay'] = x => payIn(x, false); LPX['ledger-bill-pay'] = x => payIn(x, true);
+    LPX['ledger-refund-req'] = x => { const D = L(); if (!D || D.live) return; const d = x.data || {}; const r = D.receipts.find(z => z.id === String(d.receiptId || '')); if (!r) return; D.notes.unshift({ at: nowStr(), sid: r.sid || x.who || '', stage: 'refund_req', text: `학습자 환불 요청 — 수납 ${r.id} · ${won(r.amount)}${d.reason ? ` · 사유: ${String(d.reason).slice(0, 300)}` : ''} (환불 탭에서 계산 후 확정)` }); };
+  }
 
   /* 시연판 기록(서버 mod-admin과 같은 규칙: 잔액 초과 거절 · 오래된 청구부터 배분 · 상태 갱신) */
   /* ledgercalc 입력 형식(09 문서 4절 · ledgercalc.js 머리말)으로 바꾸는 곳은 여기 한 곳 */
