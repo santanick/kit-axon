@@ -25,14 +25,27 @@ const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const ACTIVE = ['requested', 'approved', 'confirmed', 'checked_in'];
+const COURSE_Q = `select c->>'id' id, c->>'end' e from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'classes') = 'array' then t.doc->'classes' else '[]'::jsonb end) c
+  where t.tenant_id = $1 and jsonb_typeof(c->'learners') = 'array' and exists (select 1 from jsonb_array_elements(case when jsonb_typeof(t.doc->'members') = 'array' then t.doc->'members' else '[]'::jsonb end) m where m->>'sid' = $2 and c->'learners' @> jsonb_build_array(m->'id'))`;
 
 function createFac(ctx) {
-  const { pool, inTenant, HttpErr, audit, env = process.env } = ctx;
+  const { pool, HttpErr, audit, env = process.env } = ctx;
+  /* 기관 범위 트랜잭션 + 알림 메일: 트랜잭션 안에서 모은 메일은 커밋된 뒤에만 보낸다(롤백되면 버림). 메일 미설정이면 mail()이 false */
+  const baseTx = ctx.inTenant; const inTenant = async (p, tid, fn) => { const jobs = []; const r = await baseTx(p, tid, async c => { c.facMail = jobs; try { return await fn(c); } finally { c.facMail = null; } }); if (jobs.length) flushMail(tid, jobs); return r; };
+  ctx = { ...ctx, inTenant };
+  const MAILS = {
+    confirmed: d => ['예약이 확정됐어요', `${d.facName || '시설'} ${d.day || ''} ${d.from || ''}~${d.to || ''} 예약이 확정됐어요.\n예약 번호: ${d.booking}\n이용 당일 앱의 「오늘 예약」에서 입장 QR을 열어 주세요.`],
+    approved: d => ['신청이 승인됐어요', `${d.facName || '시설'} 신청이 승인됐어요.\n신청 번호: ${d.booking || d.rental}\n결제가 필요하면 앱의 「내 예약」에서 이어서 진행해 주세요.`],
+    rejected: d => ['신청이 반려됐어요', `${d.facName || '시설'} 신청이 반려됐어요.\n신청 번호: ${d.booking || d.rental}\n사유: ${d.reason || '-'}`],
+    suspended: d => ['예약이 잠시 정지됐어요', `노쇼(미입장 자동 취소)가 ${d.strikes}회 쌓여 ${d.until}까지 ${d.facName || '시설'} 예약을 할 수 없어요.`],
+    refund: d => ['환불이 처리됐어요', `${Number(d.amount || 0).toLocaleString('ko-KR')}원 환불이 접수됐어요. 입금까지 영업일 기준 3~5일 걸려요.`]
+  };
+  function flushMail(tid, jobs) { if (typeof ctx.mail !== 'function') return; for (const j of jobs) { const M = MAILS[j.kind]; if (!M) continue; const [sub, text] = M(j.data); Promise.resolve().then(() => ctx.mail(tid, j.sid, `[디디쌤 시설 예약] ${sub}`, text)).catch(e => ctx.log && ctx.log.error && ctx.log.error('fac mail', e && e.message)); } }
   const qr = createQr(env); const pay = createPay(env, ctx.fetch);
   const E = (status, code, message, extra) => { const e = new HttpErr(status, message, code); if (extra) e.extra = extra; return e; };
   const sweepMs = env.FAC_SWEEP_MS != null ? Math.max(0, +env.FAC_SWEEP_MS) : 60e3; const lastSweep = new Map();
   /* 요청 시 정리: 같은 기관 · 시설 1분에 한 번 */
-  async function sweepNow(c, tid, fac) { const k = tid + '|' + (fac || '*'); const t = lastSweep.get(k) || 0; if (sweepMs && Date.now() - t < sweepMs) return null; lastSweep.set(k, Date.now()); if (lastSweep.size > 5000) lastSweep.clear(); return sweep(c, tid, audit, { fac }); }
+  async function sweepNow(c, tid, fac) { const k = tid + '|' + (fac || '*'); const t = lastSweep.get(k) || 0; if (sweepMs && Date.now() - t < sweepMs) return null; lastSweep.set(k, Date.now()); if (lastSweep.size > 5000) lastSweep.clear(); return sweep(c, tid, audit, { fac }, { note, onNoShow }); }
 
   /* 설정 읽기: 게시본 우선, 학번 명단 · 키오스크 PIN은 운영자 문서에서만(게시하지 않음) */
   async function cfg(c, tid) {
@@ -46,7 +59,22 @@ function createFac(ctx) {
   const resList = f => (Array.isArray(f.resources) && f.resources.length ? f.resources : [{ id: 'r1', name: f.name || '자원 1' }]).filter(r => r && r.on !== false && ID_RE.test(String(r.id || '')));
   const resName = (C, fid, r) => { const f = C.facs.find(x => x.id === fid); const x = f && resList(f).find(y => y.id === r); return x ? String(x.name || r) : r; };
   const rules = f => ({ dupSame: true, noShowMin: 15, noShowStrikes: 3, suspendDays: 30, holdMin: 10, maxActive: 0, ...(f.rules || {}) });
-  const note = (c, tid, sid, kind, data) => sid && !String(sid).startsWith('walkin-') ? c.query("insert into learner_events (tenant_id, sid, type, xid, data) values ($1, $2, 'fac-note', $3, $4)", [tid, sid, str(data.booking || data.pass || data.rental || '', 40), JSON.stringify({ kind, ...data })]) : null;
+  const note = (c, tid, sid, kind, data) => { if (!sid || String(sid).startsWith('walkin-')) return null; if (MAILS[kind] && c.facMail) c.facMail.push({ sid, kind, data }); return c.query("insert into learner_events (tenant_id, sid, type, xid, data) values ($1, $2, 'fac-note', $3, $4)", [tid, sid, str(data.booking || data.pass || data.rental || '', 40), JSON.stringify({ kind, ...data })]); };
+  const bkMail = (C, b) => ({ booking: b.id, fac: b.fac_id, facName: (C.facs.find(x => x.id === b.fac_id) || {}).name || '', day: typeof b.day === 'string' ? b.day : calc.kstDay(b.start_at), from: calc.isoKst(b.start_at).slice(11, 16), to: calc.isoKst(b.end_at).slice(11, 16) });
+  /* 수강생 자율이용권 자동 발급: 게시본 상품 type 'pass-course' + cls(강좌 id) — 이 학습자가 그 강좌 수강생(doc.classes[].learners ∋ members[sid].id)이면 한 번만 발급 */
+  async function ensureCourse(c, tid, sid, C) {
+    const P = C.prods.filter(p => p.type === 'pass-course' && p.cls && C.facs.some(f => f.id === p.fac)); if (!P.length) return 0;
+    const cls = (await c.query(COURSE_Q, [tid, sid])).rows; let n = 0; const today = calc.kstDay(Date.now());
+    for (const p of P) { const k = cls.find(x => x.id === String(p.cls)); if (!k) continue;
+      const end = +p.days > 0 ? calc.addDays(today, Math.round(+p.days) - 1) : DAY_RE.test(k.e || '') && k.e >= today ? k.e : calc.addDays(today, 364);
+      const total = +p.count > 0 ? Math.round(+p.count) : calc.diffDays(today, end) + 1; const id = hid('ps_', `${tid}|${sid}|course|${p.id}`);
+      const r = await c.query("insert into fac_pass (tenant_id, id, sid, product_id, fac_id, aud, kind, total, starts_on, ends_on, status, amount, cls_id, by_staff) values ($1,$2,$3,$4,$5,'student','course',$6,$7,$8,'active',0,$9,'system') on conflict (tenant_id, id) do nothing", [tid, id, sid, p.id, p.fac, total, today, end, String(p.cls)]);
+      if (r.rowCount) { n++; await audit(c, tid, 'system', 'fac.pass.course', { pass: id, product: p.id, cls: String(p.cls) }); await note(c, tid, sid, 'pass', { pass: id }); } }
+    return n;
+  }
+  /* 노쇼가 쌓여 정지되면 메일 · 앱 알림(sweep이 부른다) */
+  async function onNoShow(c, tid, rows) { const C = await cfg(c, tid); for (const x of rows) { const f = C.facs.find(y => y.id === x.fac_id); if (!f) continue; const until = await suspendedOf(c, tid, f, x.sid);
+    if (until) { const R = rules(f); await note(c, tid, x.sid, 'suspended', { fac: f.id, facName: f.name || '', until, strikes: R.noShowStrikes }); } } }
   /* 결제 방식: 이용권 · 0원 → 무료, 온라인은 상점 키가 있을 때만(결정 1) */
   function payModeOf(f, final, want, viaPass) {
     if (viaPass) return 'pass'; if (!final) return 'free';
@@ -117,6 +145,7 @@ function createFac(ctx) {
       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23) returning *`,
       [tid, id, f.id, got.id, sid, aud, ver === 'none' ? null : memberNo, day, slot, slots, new Date(T.startAt), new Date(T.endAt), Math.max(0, Math.round(+R.noShowMin || 0)), status, mode, amount, payStatus, pass ? pass.id : null, str(b.note, 200) || null, who.staff || null,
         X.extra ? JSON.stringify(X.extra) : null, X.extra ? new Date(T.endAt + X.keep * 864e5) : null, hold])).rows[0];
+    if (status === 'confirmed' && mode !== 'online' && !who.staff) await note(c, tid, sid, 'confirmed', bkMail(C, row));
     let orderId; if (mode === 'online' && status === 'confirmed') orderId = await newOrder(c, tid, { booking_id: id }, amount, q.list);
     await audit(c, tid, who.staff || 'learner:' + sid, 'fac.book', { booking: id, fac: f.id, res: got.id, day, slot, slots, amount, mode, status });
     return { ok: true, booking: bkOut(row), next: status === 'requested' ? 'wait' : mode === 'online' ? 'pay' : 'done', ...(orderId ? { orderId } : {}) };
@@ -141,7 +170,7 @@ function createFac(ctx) {
     if (P && P.amount > 0) {
       refund = calc.refund({ rule: rule || f.refund || { type: 'time' }, paid: P.amount, startAt: bk.start_at, now: Date.now() });
       const rf = rid('fr_'); await c.query("insert into fac_refund (tenant_id, id, payment_id, target, rule_type, calc, auto_amount, amount, by_staff, status) values ($1,$2,$3,$4,$5,$6,$7,$7,$8,'pending')", [tid, rf, P.id, 'booking:' + bk.id, (rule || f.refund || { type: 'time' }).type || 'time', JSON.stringify(refund.lines), refund.auto, who.staff || null]);
-      if (P.method === 'toss' && P.toss_key && refund.auto === P.amount) { const r = await pay.cancel({ paymentKey: P.toss_key, reason: reason || '예약 취소', amount: refund.auto, idem: 'rf-' + rf }); if (r.ok) { await c.query("update fac_refund set status = 'done', toss_cancel_key = $3 where tenant_id = $1 and id = $2", [tid, rf, r.cancelKey]); await c.query("update fac_booking set pay_status = 'refunded' where tenant_id = $1 and id = $2", [tid, bk.id]); status = 'refunded'; } }
+      if (P.method === 'toss' && P.toss_key && refund.auto === P.amount) { const r = await pay.cancel({ paymentKey: P.toss_key, reason: reason || '예약 취소', amount: refund.auto, idem: 'rf-' + rf }); if (r.ok) { await c.query("update fac_refund set status = 'done', toss_cancel_key = $3 where tenant_id = $1 and id = $2", [tid, rf, r.cancelKey]); await c.query("update fac_booking set pay_status = 'refunded' where tenant_id = $1 and id = $2", [tid, bk.id]); status = 'refunded'; await note(c, tid, bk.sid, 'refund', { booking: bk.id, amount: refund.auto }); } }
     }
     await note(c, tid, bk.sid, 'cancelled', { booking: bk.id, fac: bk.fac_id, refund: refund.auto });
     await audit(c, tid, who.staff || 'learner:' + bk.sid, 'fac.cancel', { booking: bk.id, refund: refund.auto, reason: str(reason, 200) });
@@ -151,14 +180,14 @@ function createFac(ctx) {
   /* 이용권 · 대여의 상품 규칙 */
   const passRule = (p, aud) => { const r = p.refund || {}; const U = r.unitPrice; return { type: r.type || (p.type === 'pass-count' ? 'pass-count' : 'pass-period'), unitPrice: U && typeof U === 'object' ? (U[aud] != null ? U[aud] : U.public) : U, feeRate: r.feeRate, tiers: r.tiers }; };
 
-  const shared = { E, cfg, facOf, prodOf, resList, resName, rules, note, payModeOf, verifyOf, cleanExtra, book, cancelBooking, freeRes, newOrder, passRule, sweepNow, bkOut, qr, pay, calc, rid, hid, tail, str, DAY_RE, ID_RE, ACTIVE, suspendedOf };
+  const shared = { ensureCourse, bkMail, E, cfg, facOf, prodOf, resList, resName, rules, note, payModeOf, verifyOf, cleanExtra, book, cancelBooking, freeRes, newOrder, passRule, sweepNow, bkOut, qr, pay, calc, rid, hid, tail, str, DAY_RE, ID_RE, ACTIVE, suspendedOf };
   const pubR = require('./mod-pub')(ctx, shared);
   const adm = require('./mod-admin')(ctx, shared);
   return {
     pub: (req, res, tid, act) => { const fn = pubR[`${req.method} ${act}`]; if (!fn) throw E(404, 'not_found', '없는 주소입니다.'); return fn(req, res, tid); },
     match: (method, p) => adm.match(method, p),
     config: () => ({ payOnline: pay.online() }),
-    tick: () => tickAll(pool, inTenant, audit)
+    tick: () => tickAll(pool, inTenant, audit, { note, onNoShow })
   };
 }
 module.exports = { sqlMigrations, createFac };

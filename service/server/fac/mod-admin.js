@@ -35,6 +35,12 @@ module.exports = (ctx, S) => {
     if (bk) {
       if (fac && bk.fac_id !== fac) throw E(409, 'wrong_fac', '다른 시설의 예약입니다.');
       if (bk.day !== today) throw E(409, bk.day > today ? 'early' : 'late', '오늘 예약이 아닙니다.');
+      /* v40.1 퇴장 · 재입장: {out:true}이면 퇴장 기록(시설 rules.leaveMin분 안에 돌아오지 않으면 자동 취소), 퇴장 중에 다시 찍으면 재입장 */
+      if (b.out === true) { if (bk.status !== 'checked_in') throw E(409, 'not_ready', '입장한 예약이 아닙니다.'); const f = C.facs.find(x => x.id === bk.fac_id) || {}; const lm = Math.max(0, Math.round(+((f.rules || {}).leaveMin) || 0)) || null;
+        await c.query('update fac_booking set left_at = now(), leave_min = $3, updated_at = now() where tenant_id = $1 and id = $2', [tid, bk.id, lm]); await audit(c, tid, by, 'fac.leave', { booking: bk.id, via });
+        return { ok: true, kind: 'booking', out: true, booking: bk.id, leaveMin: lm, who: { sidTail: tail(bk.member_no || bk.sid), aud: bk.aud } }; }
+      if (bk.status === 'checked_in' && bk.left_at) { await c.query('update fac_booking set left_at = null, leave_min = null, updated_at = now() where tenant_id = $1 and id = $2', [tid, bk.id]); await audit(c, tid, by, 'fac.reenter', { booking: bk.id, via });
+        return { ok: true, kind: 'booking', reentry: true, booking: bk.id, who: { sidTail: tail(bk.member_no || bk.sid), aud: bk.aud } }; }
       if (bk.status === 'checked_in') throw E(409, 'used', '이미 입장 처리된 예약입니다.');
       if (bk.status !== 'confirmed') throw E(409, 'not_ready', bk.status === 'requested' ? '승인 대기 중인 예약입니다.' : '입장할 수 없는 예약입니다.');
       if (bk.pay_mode === 'online' && bk.pay_status === 'pending') throw E(409, 'not_ready', '결제가 끝나지 않은 예약입니다.');
@@ -191,12 +197,12 @@ module.exports = (ctx, S) => {
       const hold = mode === 'online' && b.amount ? new Date(Date.now() + Math.max(10, +(f.rules || {}).approveHoldMin || 24 * 60) * 60e3) : null;
       await c.query("update fac_booking set status = 'confirmed', pay_mode = $3, hold_until = $4, updated_at = now() where tenant_id = $1 and id = $2", [a.tid, id, mode, hold]);
       const orderId = hold ? await S.newOrder(c, a.tid, { booking_id: id }, b.amount, b.amount) : undefined;
-      await S.note(c, a.tid, b.sid, 'approved', { booking: id }); await audit(c, a.tid, a.email, 'fac.approve', { booking: id }); return { status: 'confirmed', payStatus: b.amount ? 'pending' : 'none', ...(orderId ? { orderId } : {}) }; }); }],
+      await S.note(c, a.tid, b.sid, 'approved', { booking: id, facName: f.name || '' }); await audit(c, a.tid, a.email, 'fac.approve', { booking: id }); return { status: 'confirmed', payStatus: b.amount ? 'pending' : 'none', ...(orderId ? { orderId } : {}) }; }); }],
     ['POST', /^\/api\/fac\/bookings\/(bk_[a-z0-9]{12})\/reject$/, async (req, id) => { const a = await needStaff(req); const body = await readBody(req, 1024); return T(a, async c => { const b = await getBk(c, a.tid, id, true); if (b.status !== 'requested') throw E(409, 'state', '승인 대기 중인 예약이 아닙니다.');
       const reason = str(body.reason, 200).trim(); if (!reason) throw E(400, 'reason', '반려 사유를 입력해 주십시오.');
       await c.query("update fac_booking set status = 'rejected', cancel_reason = $3, updated_at = now() where tenant_id = $1 and id = $2", [a.tid, id, reason]); await c.query('delete from fac_slot where tenant_id = $1 and booking_id = $2', [a.tid, id]);
       if (b.pass_id) await c.query("update fac_pass set used = greatest(0, used - 1) where tenant_id = $1 and id = $2 and kind = 'count'", [a.tid, b.pass_id]);
-      await S.note(c, a.tid, b.sid, 'rejected', { booking: id, reason }); await audit(c, a.tid, a.email, 'fac.reject', { booking: id, reason }); return { status: 'rejected' }; }); }],
+      await S.note(c, a.tid, b.sid, 'rejected', { booking: id, reason, facName: ((await S.cfg(c, a.tid)).facs.find(x => x.id === b.fac_id) || {}).name || '' }); await audit(c, a.tid, a.email, 'fac.reject', { booking: id, reason }); return { status: 'rejected' }; }); }],
     ['POST', /^\/api\/fac\/bookings\/(bk_[a-z0-9]{12})\/cancel$/, async (req, id) => { const a = await needStaff(req); const body = await readBody(req, 1024); return T(a, async c => { const b = await getBk(c, a.tid, id, true); const r = await S.cancelBooking(c, a.tid, b, { staff: a.email }, str(body.reason, 200)); return { status: r.status, refund: r.refund }; }); }],
     ['POST', /^\/api\/fac\/rentals\/(rt_[a-z0-9]{12})\/(lend|return|approve)$/, async (req, id, act) => { const a = act === 'return' ? await staffOrTeacher(req) : await needStaff(req); const body = await readBody(req, 1024);
       return T(a, async c => { const r = (await c.query("select *, to_char(due_day, 'YYYY-MM-DD') as due_day from fac_rental where tenant_id = $1 and id = $2 for update", [a.tid, id])).rows[0]; if (!r) throw E(404, 'rental', '없는 대여입니다.'); inScope(a, r.fac_id);

@@ -5,7 +5,7 @@
   <sql id="ts">'YYYY-MM-DD"T"HH24:MI:SS"+09:00"'</sql>
   <sql id="bk">b.id, b.fac_id as "facId", b.res_id as "resId", b.sid, b.aud, b.day::text as day, b.start_slot as "slot", b.slots, b.status, b.pay_mode as "payMode", b.amount, b.pay_status as "payStatus", b.pass_id as "passId", b.note, b.cancel_reason as "cancelReason",
     to_char(b.hold_until at time zone 'Asia/Seoul', <include refid="ts"/>) as "holdUntil", to_char(b.created_at at time zone 'Asia/Seoul', <include refid="ts"/>) as "createdAt",
-    exists (select 1 from fac_checkin c where c.tenant_id = b.tenant_id and c.booking_id = b.id) as "checkedIn"</sql>
+    exists (select 1 from fac_checkin c where c.tenant_id = b.tenant_id and c.booking_id = b.id) as "checkedIn", (b.left_at is not null) as "left"</sql>
 
   <select id="selectDoc" resultType="string">select doc::text from tenant_state where tenant_id = #{tid}</select>
   <select id="selectTenantIds" resultType="string">select id from tenants</select>
@@ -38,6 +38,19 @@
     order by b.day, b.start_slot, b.res_id limit 500</select>
   <select id="selectSweep" resultType="java.util.LinkedHashMap">select <include refid="bk"/>, (b.hold_until &lt; now()) as "holdOver" from fac_booking b where b.tenant_id = #{tid} and b.fac_id = #{fac} and b.day = #{day}::date and b.status in ('approved','confirmed') limit 200</select>
   <select id="selectSweepDays" resultType="java.util.LinkedHashMap">select distinct fac_id as fac, day::text as day from fac_booking where tenant_id = #{tid} and status in ('approved','confirmed') and day between (now() at time zone 'Asia/Seoul')::date - 1 and (now() at time zone 'Asia/Seoul')::date</select>
+  <!-- v40.1 이탈 자동 취소 · 미결제 현장 이용권 7일 취소 · 수강생 자율이용권(Node fac/sweep.js · index.js와 같은 SQL) -->
+  <select id="selectPaidFor" resultType="java.util.LinkedHashMap">select id, method, amount, toss_key as "tossKey" from fac_payment where tenant_id = #{tid} and (booking_id = #{ref} or pass_id = #{ref} or rental_id = #{ref}) and status = 'paid' and amount &gt; 0 order by at desc limit 1</select>
+  <select id="countOpenRefund" resultType="int">select count(*) from fac_refund where tenant_id = #{tid} and payment_id = #{payment} and status &lt;&gt; 'cancelled'</select>
+  <update id="cancelPendingRefund">update fac_refund set status = 'cancelled' where tenant_id = #{tid} and payment_id = #{payment} and status = 'pending'</update>
+  <update id="cancelReadyFor">update fac_payment set status = 'cancelled' where tenant_id = #{tid} and status = 'ready' and (booking_id = #{ref} or pass_id = #{ref} or rental_id = #{ref})</update>
+  <update id="sweepLeave">with x as (update fac_booking set status = 'cancelled', updated_at = now(), cancel_reason = '이탈 자동 취소' where tenant_id = #{tid} and id in (select id from fac_booking where tenant_id = #{tid} and status = 'checked_in' and left_at is not null and leave_min &gt; 0 and left_at + make_interval(mins => leave_min) &lt;= now() limit 200) returning id)
+    delete from fac_slot where tenant_id = #{tid} and booking_id in (select id from x)</update>
+  <update id="sweepPassUnpaid">with p as (update fac_pass set status = 'cancelled' where tenant_id = #{tid} and id in (select id from fac_pass where tenant_id = #{tid} and status = 'pending' and created_at &lt; now() - interval '7 days' limit 200) returning id)
+    update fac_payment set status = 'cancelled' where tenant_id = #{tid} and status = 'ready' and pass_id in (select id from p)</update>
+  <update id="setLeft">update fac_booking set left_at = now(), leave_min = #{leaveMin}, updated_at = now() where tenant_id = #{tid} and id = #{id}</update>
+  <update id="clearLeft">update fac_booking set left_at = null, leave_min = null, updated_at = now() where tenant_id = #{tid} and id = #{id}</update>
+  <select id="selectCourseClasses" resultType="java.util.LinkedHashMap">select c->>'id' as id, c->>'end' as e from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'classes') = 'array' then t.doc->'classes' else '[]'::jsonb end) c
+    where t.tenant_id = #{tid} and jsonb_typeof(c->'learners') = 'array' and exists (select 1 from jsonb_array_elements(case when jsonb_typeof(t.doc->'members') = 'array' then t.doc->'members' else '[]'::jsonb end) m where m->>'sid' = #{sid} and c->'learners' @> jsonb_build_array(m->'id'))</select>
   <select id="selectAffected" resultType="java.util.LinkedHashMap">select <include refid="bk"/> from fac_booking b where b.tenant_id = #{tid} and b.fac_id = #{fac} and b.day between #{from}::date and #{to}::date and b.status in ('requested','approved','confirmed')</select>
 
   <!-- 이용권 -->

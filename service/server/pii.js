@@ -291,8 +291,12 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
     return n;
   }
 
+  /* v40 시설 예약 알림 메일: 가입 때 저장한 암호화 이메일로만 보낸다(메일 미설정 · 이메일 없는 계정은 건너뜀). 본문에 개인정보를 넣지 않는다 */
+  async function mailTo(tid, lid, subject, text) { if (!mailer.on || !K || !/^[0-9a-f-]{36}$/i.test(String(lid || ''))) return false;
+    const r = await tx(tid, async ({ P }) => (await P('select learner_id, email_enc from pii.identity where tid = $1 and learner_id::text = $2', [tid, String(lid)])).rows[0]); if (!r || !r.email_enc) return false;
+    await mailer.send({ to: dec(r.email_enc, aad(tid, r.learner_id, 'email')), subject, text }); return true; }
   const hasPw = (tid, lid) => tx(tid, async ({ P }) => !!((await P('select pw_hash from pii.identity where tid = $1 and learner_id = $2', [tid, lid])).rows[0] || {}).pw_hash);
-  return { evIns, redactDeep, isAccount, changePw, hasPw, pubOpen: { 'POST otp': otp, 'POST signup': signup, 'POST guardian': guardian }, pubAuth: { 'GET pii': myPii, 'PUT pii': myPii, 'POST withdraw': withdraw, 'POST verify': verify }, login, meExtra, adminList, adminPii, adminLog, purge, maskEmail };
+  return { mailTo, evIns, redactDeep, isAccount, changePw, hasPw, pubOpen: { 'POST otp': otp, 'POST signup': signup, 'POST guardian': guardian }, pubAuth: { 'GET pii': myPii, 'PUT pii': myPii, 'POST withdraw': withdraw, 'POST verify': verify }, login, meExtra, adminList, adminPii, adminLog, purge, maskEmail };
 }
 
 module.exports = { createPii, piiKeys, maskEmail };

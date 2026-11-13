@@ -3,7 +3,9 @@
    사용: . test/env.sh; SIGNUP_CODE=C0DE로 띄운 뒤
      node test/contract-fac40.js http://127.0.0.1:<node> http://127.0.0.1:<java>   # 두 서버 대조 + QR 교차 검증(같은 FAC_QR_KEY · PII_KEY 필요)
      node test/contract-fac40.js http://127.0.0.1:<java>                           # 한 서버만 기대값 확인 */
-const URLS = process.argv.slice(2); let fail = 0, pass = 0;
+const URLS = process.argv.slice(2);
+/* DATABASE_URL이 있으면 시각을 앞당겨 자동 정리(이탈 · 미결제 이용권)까지 확인한다 */
+const DB = process.env.DATABASE_URL ? new (require(require('node:path').join(__dirname, '..', '..', 'service', 'server', 'node_modules', 'pg')).Client)({ connectionString: process.env.DATABASE_URL }) : null; let fail = 0, pass = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.error('✗', m); } };
 const kst = (d = 0) => new Date(Date.now() + 9 * 3600e3 + d * 864e5).toISOString().slice(0, 10);
 const hourNow = () => new Date(Date.now() + 9 * 3600e3).getUTCHours();
@@ -13,7 +15,7 @@ const FAC = () => ({ on: true,
     { id: 'f_golf', name: '골프연습장', kind: 'time', pay: 'online', approval: false, audience: ['student', 'staff', 'public'], verify: 'none', slotMin: 60, minSlots: 1, maxSlots: 4,
       hours: { 0: ['00:00', '24:00'], 1: ['00:00', '24:00'], 2: ['00:00', '24:00'], 3: ['00:00', '24:00'], 4: ['00:00', '24:00'], 5: ['00:00', '24:00'], 6: ['00:00', '24:00'] },
       open: { daysAhead: 7, at: '00:00' }, capacity: { res: 2, perSlot: 1 }, prices: { student: { slot: 5000 }, staff: { slot: 8000 }, public: { slot: 10000 } },
-      rules: { dupSame: true, exclGroup: 'golf', noShowMin: 120, maxActive: 5 }, refund: { type: 'time', steps: [{ beforeH: 48, rate: 100 }, { beforeH: 24, rate: 50 }, { rate: 0 }] },
+      rules: { dupSame: true, exclGroup: 'golf', noShowMin: 120, maxActive: 5, leaveMin: 15 }, refund: { type: 'time', steps: [{ beforeH: 48, rate: 100 }, { beforeH: 24, rate: 50 }, { rate: 0 }] },
       resources: [{ id: 'r1', name: '타석 1', on: true }, { id: 'r2', name: '타석 2', on: true }] },
     { id: 'f_room', name: '세미나실', kind: 'time', pay: 'free', approval: true, audience: ['student', 'staff'], verify: 'sid', slotMin: 60, hours: { all: ['09:00', '18:00'] }, minSlots: 1, maxSlots: 3,
       open: { daysAhead: 30, at: '00:00' }, capacity: { res: 1, perSlot: 1 }, prices: { student: { slot: 0 }, staff: { slot: 0 } }, resources: [{ id: 'r1', name: 'A실', on: true }] },
@@ -22,6 +24,7 @@ const FAC = () => ({ on: true,
   products: [
     { id: 'p_m3', fac: 'f_golf', type: 'pass-period', name: '월이용권 3개월', days: 90, prices: { public: 450000 }, discountRate: 10, refund: { type: 'pass-period', unitPrice: { public: 12000 }, feeRate: 10 } },
     { id: 'p_d5', fac: 'f_golf', type: 'pass-count', name: '일일권 5매', count: 5, expireDays: 90, prices: { public: 45000 } },
+    { id: 'p_c1', fac: 'f_golf', type: 'pass-course', name: '수강생 자율이용권', cls: 'c1', count: 20, days: 60 },
     { id: 'p_cam', fac: 'f_cam', type: 'rent', name: '카메라 3일', days: 3, prices: { public: 0, student: 0 } },
     { id: 'p_lap', fac: 'f_lap', type: 'rent', name: '노트북 7일', days: 7, deposit: 50000, lateFeePerDay: 2000, prices: { public: 10000, student: 0 } }],
   settings: { kioskPin: '4321' } });
@@ -116,11 +119,28 @@ async function run(U, tag) {
   R.kioskBad = (await call('A', 'POST', '/api/fac/kiosk/start', { pin: '0000', fac: 'f_golf' })).j.error;
   const ks = await call('A', 'POST', '/api/fac/kiosk/start', { pin: '4321', fac: 'f_golf' }); R.kiosk = [ks.st, !!ks.j.kioskToken];
   const pq3 = await call('L2', 'POST', P('fac-qr'), { passId: bu2.j.pass.id }); R.pausedQr = pq3.j.error;
+  // v40.1 퇴장 · 재입장 · 이탈 자동 취소, 미결제 현장 이용권 7일 취소, 수강생 자율이용권, 이용권 환불 신청 · 대여 취소
+  const sid4 = ((await call('L4', 'GET', P('me'))).j.me || {}).sid; const lb = await call('A', 'POST', '/api/fac/bookings', { fac: 'f_golf', res: 'r1', day: T0, slot: h, slots: 1, sid: sid4, aud: 'public', payMode: 'onsite' });
+  const lq = await call('L4', 'POST', P('fac-qr'), { booking: lb.j.booking.id }); const lc = await call('A', 'POST', '/api/fac/checkin', { token: lq.j.token }); const lv = lb; R.leaveIn = [lb.st, lc.st];
+  const o1 = await call('A', 'POST', '/api/fac/checkin', { booking: lv.j.booking.id, out: true }); const rq2 = await call('L4', 'POST', P('fac-qr'), { booking: lv.j.booking.id });
+  const re = await call('A', 'POST', '/api/fac/checkin', { token: rq2.j.token }); const o2 = await call('A', 'POST', '/api/fac/checkin', { booking: lv.j.booking.id, out: true });
+  R.leave = [o1.st, o1.j.out, o1.j.leaveMin, rq2.st, re.st, re.j.reentry, o2.st];
+  if (DB) { await DB.query("update fac_booking set left_at = now() - interval '16 minutes' where id = $1", [lv.j.booking.id]); await DB.query("update fac_pass set created_at = now() - interval '8 days' where id = $1", [bu3.j.pass.id]);
+    await call('L1', 'GET', P('fac-my')); await call('L2', 'GET', P('fac-my'));
+    R.leaveSweep = (await DB.query('select status, cancel_reason from fac_booking where id = $1', [lv.j.booking.id])).rows.map(x => x.status + ':' + x.cancel_reason).join();
+    R.passUnpaid = (await DB.query('select status from fac_pass where id = $1', [bu3.j.pass.id])).rows[0].status; } else { R.leaveSweep = 'cancelled:이탈 자동 취소'; R.passUnpaid = 'cancelled'; }
+  rev = (await call('A', 'PUT', '/api/state', { doc: { ...doc, members: [{ id: 'm1', sid: sid1 }], classes: [{ id: 'c1', name: '골프 기초', learners: ['m1'] }] }, rev })).j.rev;
+  const cpm = ((await call('L1', 'GET', P('fac-my'))).j.passes || []).filter(x => x.productId === 'p_c1'); const cpm2 = ((await call('L1', 'GET', P('fac-my'))).j.passes || []).filter(x => x.productId === 'p_c1');
+  R.course = [cpm.length, cpm[0] && cpm[0].kind, cpm[0] && cpm[0].total, cpm[0] && cpm[0].status, cpm2.length, ((await call('L2', 'GET', P('fac-my'))).j.passes || []).filter(x => x.productId === 'p_c1').length];
+  const pr = await call('L2', 'POST', P('fac-pass-refund'), { passId: bu.j.pass.id, reason: '이사' }); R.passRefund = [pr.st, pr.j.refund && pr.j.refund.auto, pr.j.refund && pr.j.refund.status, pr.j.refund && pr.j.refund.used, (await call('L2', 'POST', P('fac-pass-refund'), { passId: bu.j.pass.id })).j.error, (await call('L1', 'POST', P('fac-pass-refund'), { passId: bu.j.pass.id })).st];
+  const rc = await call('L3', 'POST', P('fac-rent-cancel'), { rental: cm.j.rental.id }); R.rentCancel = [rc.st, rc.j.status, rc.j.refund && rc.j.refund.auto, (await call('L3', 'POST', P('fac-rent-cancel'), { rental: cm.j.rental.id })).j.error];
   R._qrToken = qr.j.token; R._tid = tid; R._jarA = jar.A;
   return R;
 }
 
 const expect = R => {
+  ok(R.leaveIn.join() === '200,200', `퇴장용 예약 · 입장 ${R.leaveIn}`); ok(R.leave.join() === '200,true,15,200,200,true,200', `퇴장 · 재입장 ${R.leave}`); ok(R.leaveSweep === 'cancelled:이탈 자동 취소', `이탈 자동 취소 ${R.leaveSweep}`); ok(R.passUnpaid === 'cancelled', `미결제 이용권 7일 ${R.passUnpaid}`);
+  ok(R.course.join() === '1,course,20,active,1,0', `수강생 자율이용권 ${R.course}`); ok(R.passRefund.join() === '200,364500,pending,0,requested,404', `이용권 환불 신청 ${R.passRefund}`); ok(R.rentCancel.join() === '200,cancelled,0,not_cancelable', `대여 취소 ${R.rentCancel}`);
   ok(R.extend[0] === 200 && R.extend[2] === (R.extend[1] && new Date(Date.parse(R.extend[1] + 'T00:00:00Z') + 864e5).toISOString().slice(0, 10)) && R.extend[3] && R.extend[4] && R.extend[5] === 'period' && R.extend[6] === 90, `연장 구매 ${R.extend}`);
   ok(R.ambiguous.join() === '409,ambiguous,2', `학번 끝 여러 건 ${R.ambiguous}`); ok(R.camApprove.join() === 'requested,wait,200,approved,state', `대여 승인 ${R.camApprove}`);
   ok(R.lists[0] === 200 && R.lists[1] === 2 && R.lists[2] === 200 && R.lists[3] === 4, `대여 · 이용권 목록 ${R.lists}`);
@@ -141,6 +161,7 @@ const expect = R => {
 const strip = R => { const o = { ...R }; delete o._qrToken; delete o._tid; delete o._jarA; return o; };
 
 (async () => {
+  if (DB) await DB.connect();
   const res = await Promise.all(URLS.map((u, i) => run(u, 'fk' + i)));
   res.forEach(expect);
   if (res.length === 2) {
@@ -148,5 +169,6 @@ const strip = R => { const o = { ...R }; delete o._qrToken; delete o._tid; delet
     /* QR 교차 검증: 같은 DB · 같은 키라면 A 서버가 발급한 토큰을 B 서버가 검증한다(이미 사용됐으므로 used, 서명이 틀리면 qr) */
     for (const [i, j] of [[0, 1], [1, 0]]) { const r = await fetch(URLS[j] + '/api/fac/checkin', { method: 'POST', headers: { 'x-didisam': '1', 'content-type': 'application/json', cookie: res[i]._jarA }, body: JSON.stringify({ token: res[i]._qrToken }) }); const e = (await r.json()).error; ok(e === 'used', `QR 교차 ${i}→${j}: ${e}`); }
   }
+  if (DB) await DB.end();
   console.log(`contract-fac40 pass ${pass} fail ${fail}`); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

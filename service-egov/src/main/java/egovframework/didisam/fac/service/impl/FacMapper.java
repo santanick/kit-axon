@@ -26,6 +26,15 @@ public interface FacMapper {
     List<Map<String, Object>> selectBookings(@Param("tid") String tid, @Param("from") String from, @Param("to") String to, @Param("fac") String fac, @Param("status") String status, @Param("q") String q, @Param("facs") List<String> facs);
     List<Map<String, Object>> selectSweep(@Param("tid") String tid, @Param("fac") String fac, @Param("day") String day);
     List<Map<String, Object>> selectSweepDays(@Param("tid") String tid);
+    Map<String, Object> selectPaidFor(@Param("tid") String tid, @Param("ref") String ref);
+    int countOpenRefund(@Param("tid") String tid, @Param("payment") String payment);
+    int cancelPendingRefund(@Param("tid") String tid, @Param("payment") String payment);
+    int cancelReadyFor(@Param("tid") String tid, @Param("ref") String ref);
+    int sweepLeave(@Param("tid") String tid);
+    int sweepPassUnpaid(@Param("tid") String tid);
+    int setLeft(@Param("tid") String tid, @Param("id") String id, @Param("leaveMin") Integer leaveMin);
+    int clearLeft(@Param("tid") String tid, @Param("id") String id);
+    List<Map<String, Object>> selectCourseClasses(@Param("tid") String tid, @Param("sid") String sid);
     List<Map<String, Object>> selectAffected(@Param("tid") String tid, @Param("fac") String fac, @Param("from") String from, @Param("to") String to);
 
     int insertPass(@Param("tid") String tid, @Param("id") String id, @Param("sid") String sid, @Param("aud") String aud, @Param("amount") long amount, @Param("product") String product, @Param("fac") String fac, @Param("kind") String kind, @Param("total") long total,
