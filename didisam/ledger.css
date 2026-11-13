@@ -1,0 +1,93 @@
+/* v41 통합 수납 원장 — 스튜디오 「매출 · 수납」(ledger.js). 디디쌤 Design System 토큰(dds.css) 사용. 상태는 색 + 글자, 버튼 44px+, 글자 12px+. */
+.lg{--lg-g:var(--b500,#00C53B);--lg-gt:var(--b900,#007200);--lg-gl:var(--b50,#E7F8E8);display:flex;flex-direction:column;gap:14px;min-width:0;color:var(--ink,#212121)}
+.lg *{box-sizing:border-box}
+.lg .btn,#modal .lg-acts .btn{min-height:44px}
+.lg .btn.sm{min-height:44px;padding:6px 12px;font-size:13px}
+.lg .btn.pri,#modal .btn.pri{background:var(--lg-gt,#007200);color:#fff}
+.lg small{font-size:12px;color:var(--muted)}
+.lg-top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.lg-unit{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;color:var(--muted)}
+.lg-unit select{min-height:44px;min-width:220px;max-width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-weight:700;color:var(--ink);background:#fff}
+.lg-roll{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.lg-roll input{width:20px;height:20px;accent-color:var(--lg-gt)}
+.lg-roll.dim{color:var(--muted)}
+.lg-per{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.lg-chip{min-height:44px;padding:6px 14px;border-radius:8px;border:1px solid transparent;background:var(--soft);font-weight:600;font-size:13px;cursor:pointer;color:var(--ink)}
+.lg-chip.on{background:var(--ink);color:#fff}
+.lg-chip[disabled]{opacity:.6;cursor:default}
+.lg-ai{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-radius:12px;background:var(--lg-gl);border:1px solid var(--b100,#C5EEC7)}
+.lg-ai p{margin:0;flex:1 1 320px;font-size:15px;line-height:1.55}
+.lg-ai-b{font-size:12px;font-weight:800;color:#fff;background:var(--lg-gt);border-radius:999px;padding:3px 10px}
+.lg-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.lg-kpis.two{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:12px}
+.lg-kpi{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#fff;min-width:0}
+.lg-kpi span{font-size:13px;font-weight:700;color:var(--muted)}
+.lg-kpi b{font-size:24px;font-weight:800;letter-spacing:-.01em;overflow-wrap:anywhere}
+.lg-kpi.warn{border-color:#f1d9a0}.lg-kpi.warn b{color:var(--warn)}
+.lg-kpi.bad{border-color:#f1c6c9}.lg-kpi.bad b{color:var(--bad)}
+.lg-err{padding:12px 14px;border-radius:8px;background:var(--badl);color:var(--bad);font-size:14px}
+.lg-ro{margin:0;font-size:13px;color:var(--muted)}
+.lg-body{min-width:0}
+.lg-body .ph{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+.lg-body .phr{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lg-body .ph p{max-width:760px}
+.lg-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.lg-q{min-height:44px;min-width:180px;flex:1 1 220px;max-width:360px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.lg-bar .lg-q{margin-left:auto}
+.lg-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px 16px;margin-bottom:14px;min-width:0}
+.lg-ch{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.lg-ch b{font-size:15px}
+.lg-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.lg-st{display:inline-flex;align-items:center;min-height:24px;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700;background:var(--soft);color:var(--ink);white-space:nowrap}
+.lg-st::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;opacity:.7}
+.lg-st.ok{background:var(--lg-gl);color:var(--lg-gt)}
+.lg-st.warn,.lg-st.wait{background:var(--warnl);color:var(--warn)}
+.lg-st.bad{background:var(--badl);color:var(--bad)}
+.lg-st.off{color:var(--muted)}
+.lg-k{font-size:12px;font-weight:800;padding:2px 8px;border-radius:4px;border:1px solid var(--line)}
+.lg-k.receipt{border-color:var(--b100,#C5EEC7);color:var(--lg-gt)}
+.lg-k.refund{border-color:#f1c6c9;color:var(--bad)}
+.lg-amt{font-weight:700;white-space:nowrap}.lg-amt.neg{color:var(--bad)}
+.lg-li{display:block;font-size:13px}.lg-li.neg{color:var(--bad)}
+.lg-dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.lg-do{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#fff;min-width:0}
+.lg-do>b{font-size:26px;font-weight:800;min-width:44px;text-align:center}
+.lg-do>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lg-do.warn{border-color:#f1d9a0;background:#fffaf0}.lg-do.warn>b{color:var(--warn)}
+.lg-do.bad{border-color:#f1c6c9;background:#fff7f7}.lg-do.bad>b{color:var(--bad)}
+.lg-fl{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted);min-width:0;margin-bottom:10px}
+.lg-fl.inl{flex-direction:row;align-items:center;margin:0}
+.lg-fl input,.lg-fl select,.lg-fl textarea{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-weight:400;color:var(--ink);background:#fff;width:100%}
+.lg-fl textarea{min-height:88px;font-family:var(--num,monospace)}
+.lg-g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.lg-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 12px}
+.lg-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.lg-bal{font-size:15px;margin:10px 0 0}.lg-bal b{font-size:22px;color:var(--lg-gt)}
+.lg-mut{color:var(--muted);font-size:13px}
+.lg-note{font-size:13px;color:var(--muted);background:var(--soft);border-radius:8px;padding:10px 12px}
+.lg-law{display:inline-block;color:var(--warn);font-weight:700}
+.lg-calc{display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:8px;background:var(--lg-gl);margin:8px 0 12px;font-size:13px}
+.lg-calc strong{font-size:16px;color:var(--lg-gt)}
+.lg-msg{padding:12px;border-radius:8px;border:1px dashed var(--line);font-size:14px;margin:8px 0}
+.lg-mini{margin:8px 0;padding-left:18px;font-size:13px}
+.lg-url{width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:13px var(--num,monospace)}
+.lg-term{text-align:center;padding:16px}.lg-term b{display:block;font-size:34px;margin:6px 0;color:var(--lg-gt)}
+.lg-closes{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.lg-close.done{background:#fafdfa}
+.lg-sys{display:flex;flex-direction:column;justify-content:center;gap:2px;margin-bottom:10px}.lg-sys b{font-size:18px}
+.lg-chk{display:flex;gap:8px;align-items:center;min-height:44px;font-size:14px}
+.lg-pg{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:10px;font-size:13px}
+.lg-foot{font-size:12px;color:var(--muted);margin:0}
+.lg .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.lg td .btn.sm+.btn.sm{margin-left:6px}
+@media (max-width:900px){.lg-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.lg-split{grid-template-columns:1fr}.lg-per{margin-left:0}}
+@media (max-width:560px){.lg-dos,.lg-g2,.lg-g3,.lg-kpis.two{grid-template-columns:1fr}.lg-unit{flex:1 1 100%}.lg-unit select{min-width:0;flex:1}.lg-kpi b{font-size:20px}.lg-closes{grid-template-columns:1fr}.lg-q{max-width:none;min-width:0}.lg .seg2{display:flex;flex-wrap:nowrap;overflow-x:auto;max-width:100%}.lg-ai p{flex-basis:100%}}
+.lg-seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.lg-seg button{min-height:44px;padding:6px 14px;border:0;border-radius:8px;background:none;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap}
+.lg-seg button.on{background:var(--ink);color:#fff}
+.lg-seg button[disabled]{opacity:.55;cursor:default}
+.lg-seg.sm{flex-wrap:wrap}
+.lg-rate{display:inline-block;vertical-align:middle;width:56px;height:6px;border-radius:3px;background:var(--soft);margin-right:8px;overflow:hidden}
+.lg-rate i{display:block;height:100%;background:var(--lg-gt)}
+.lg-rate.low i{background:var(--warn)}
+.lg-amt.warnc{color:var(--warn)}
