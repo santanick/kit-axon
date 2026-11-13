@@ -29,7 +29,7 @@ const FAC = { on: true, payOnline: false, facilities: [court('f_ta', '테니스 
   const SH = process.env.SHOTS || ''; if (SH) fs.mkdirSync(SH, { recursive: true });
   const open = async (o = {}) => { const ctx = await browser.newContext({ viewport: { width: o.w || 390, height: 844 }, acceptDownloads: true }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
     await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
-    await p.route(/learner-demo-adult\.json/, r => { const j = JSON.parse(fs.readFileSync(ROOT + '/learner-demo-adult.json', 'utf8')); j.org.type = 'univ'; j.org.name = '창원대 스포츠진흥원(가상)'; delete j.org.ed; if (!o.nofac) j.fac = FAC; r.fulfill({ contentType: 'application/json', body: JSON.stringify(j) }); });
+    await p.route(/learner-demo-adult\.json/, r => { const j = JSON.parse(fs.readFileSync(ROOT + '/learner-demo-adult.json', 'utf8')); j.org.type = 'univ'; j.org.name = '창원대 스포츠진흥원(가상)'; delete j.org.ed; if (!o.nofac) j.fac = o.fac || FAC; r.fulfill({ contentType: 'application/json', body: JSON.stringify(j) }); });
     await p.addInitScript(([now, web]) => { window.__facNow = now; try { sessionStorage.setItem('didisam.learner.sample', JSON.stringify({ sid: '20269000', dept: '체육학과', id: '20269000' })); localStorage.setItem('didisam.app.instx', '1'); if (web) localStorage.setItem('didisam.app.classic', '1'); } catch (e) { } }, [NOW, !!o.web]);
     await p.goto(`${base}/learner.html?demo=adult${o.web ? '' : '&app=1'}#home`, { waitUntil: 'load' }); await p.waitForTimeout(800); return { ctx, p, errs }; };
   const go = async (p, h, ms = 350) => { await p.evaluate(x => { location.hash = x; }, h); await p.waitForTimeout(ms); };
@@ -93,12 +93,27 @@ const FAC = { on: true, payOnline: false, facilities: [court('f_ta', '테니스 
     const pid = decodeURIComponent((await p.evaluate(() => location.hash)).split('/')[2]); await p.evaluate(pid => { const k = Object.keys(localStorage).find(x => x.startsWith('didisam.fac.')); const v = JSON.parse(localStorage.getItem(k)); const x = v.ps.find(z => z.id === pid); x.status = 'active'; x.payStatus = 'paid'; x.used = 3; localStorage.setItem(k, JSON.stringify(v)); FAC_UI.st = null; }, pid); /* 프론트 결제 · 3회 입장 가정 */
     await go(p, '#fac/ps/' + encodeURIComponent(pid), 400); await p.click('[data-fx="cx"]'); await p.waitForTimeout(300); const pr = await txt(p, '.fx-cx');
     ok(/60,000원/.test(pr) && /12,000원 × 5회/.test(pr) && /수수료 10%/.test(pr) && /48,000원/.test(pr), `${tag} 월이용권 환불 예상(120,000 − 12,000×5 − 12,000 = 48,000)`);
+    await p.selectOption('#fxWhy', { index: 1 }); await p.click('[data-fx="cx-go"]'); await p.waitForTimeout(400); ok(/운영자 확인 후 환불돼요/.test(await txt(p, '.fx-it')) && !(await p.$('[data-fx="cx"]')), `${tag} 이용권 환불 신청 → 운영자 확인 대기 상태`);
+    await go(p, '#fac/f_lock/buy/p_lk', 400); await p.check('#fxPay [name=agree]'); await p.fill('#fxPay [name=dept]', '체육학과'); await p.click('#fxPay button[type=submit]'); await p.waitForTimeout(400);
+    const rid = decodeURIComponent((await p.evaluate(() => location.hash)).split('/')[2]); await go(p, '#fac/rt/' + encodeURIComponent(rid), 400); const rb = await txt(p, '[data-fx="cx"]'); await p.click('[data-fx="cx"]'); await p.waitForTimeout(300);
+    const rc = await txt(p, '.fx-cx'); await p.click('[data-fx="cx-go"]'); await p.waitForTimeout(300); ok(/대여 취소/.test(rb) && /환불/.test(rc) && (await p.evaluate(id => { const k = Object.keys(localStorage).find(x => x.startsWith('didisam.fac.')); return JSON.parse(localStorage.getItem(k)).rt.find(z => z.id === id).status; }, rid)) === 'cancelled', `${tag} 대여 취소(수령 전)`);
     for (const r of ['#fac', '#fac/f_ta', '#fac/f_ta/pay', '#fac/my', '#fac/qr/' + pid, '#fac/f_lock', '#fac/f_golf/buy/p_lk', '#cal']) { await go(p, r, 300); const v = await over(p); if (v > 0) ok(false, `${tag} 가로 넘침 ${r} ${v}px`); }
     ok(true, `${tag} 가로 넘침 점검 8화면`);
     await go(p, '#fac/f_ta', 300); const bad = (await a11y(p)).concat(await (async () => { await go(p, '#fac/my', 300); return a11y(p); })()); ok(!bad.length, `${tag} 44px · 12px ${bad.join(' | ')}`);
     ok(!errs.length, `${tag} pageerror 0 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
 
   await flow('앱390', {}); await flow('웹1280', { web: 1, w: 1280 }); await flow('웹390', { web: 1, w: 390 });
+  /* 온라인 결제(payOnline:true): 학습자 결제창 흐름 재사용 — 승인 → 결제 완료, 실패 → 결제 대기 + 다시 결제 */
+  { const { ctx, p, errs } = await open({ fac: { ...FAC, payOnline: true } }); await go(p, '#fac/f_ta', 400); await pickSlot(p, '16:00'); await p.click('[data-fx="next"]'); await p.waitForTimeout(400);
+    const M = await p.evaluate(() => [...document.querySelectorAll('.fx-rad b')].map(x => x.textContent)); ok(M.join() === '온라인 결제,현장 결제' && /4,000원 결제하기/.test(await txt(p, '#fxPay button[type=submit]')), `온라인 결제 켜짐: 방법 2종(${M.join()})`);
+    await p.fill('#fxPay [name=dept]', '체육학과'); await p.check('#fxPay [name=agree]'); await p.click('#fxPay button[type=submit]'); await p.waitForTimeout(600);
+    ok(!!(await p.$('#shpModal')), '결제창(기존 학습자 결제 흐름) 열림'); await p.click('#shpModal button:has-text("결제 승인")'); await p.waitForTimeout(400); ok(/결제 완료/.test(await txt(p, '.fx-kv')), '승인 → 결제 완료 · 확정');
+    await go(p, '#fac/f_ta', 400); await pickSlot(p, '18:00'); await p.click('[data-fx="next"]'); await p.waitForTimeout(300); await p.fill('#fxPay [name=dept]', '체육학과'); await p.check('#fxPay [name=agree]'); await p.click('#fxPay button[type=submit]'); await p.waitForTimeout(600);
+    await p.click('#shpModal button:has-text("결제 실패 테스트")'); await p.waitForTimeout(400); const mm = await p.$('#shpModal button'); if (mm) await p.evaluate(() => { const m = document.getElementById('shpModal'); m && m.remove(); });
+    const bid = decodeURIComponent((await p.evaluate(() => location.hash)).split('/')[2]); ok(/결제 대기/.test(await txt(p, '.fx-kv')), '실패 → 결제 대기');
+    await go(p, '#fac/bk/' + encodeURIComponent(bid), 400); ok(/결제 대기/.test(await txt(p, '.fx-sum')) && !!(await p.$('[data-fx="pay"]')), '결제 대기 예약에 「결제하기」');
+    await p.click('[data-fx="pay"]'); await p.waitForTimeout(400); await p.click('#shpModal button:has-text("결제 승인")'); await p.waitForTimeout(400); ok(/결제 완료/.test(await txt(p, '.fx-kv')) && !(await p.$('[data-fx="pay"]')), '다시 결제 → 결제 완료');
+    ok(!errs.length, `온라인 결제 pageerror 0 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
   /* 모듈이 꺼진 기관: 칩 · 메뉴 없음 */
   { const { ctx, p, errs } = await open({ nofac: 1 }); ok(!(await p.$('a.fx-chip-go')) && !(await p.$('.fx-today')), '시설 예약 꺼짐: 홈 칩 없음'); await go(p, '#fac'); ok(/쓰지 않아요/.test(await txt(p, '#lm')), '꺼짐: #fac 안내'); ok(!errs.length, '꺼짐 pageerror 0'); await ctx.close(); }
   await browser.close(); srv.close();
