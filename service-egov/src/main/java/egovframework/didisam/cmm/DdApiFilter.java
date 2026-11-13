@@ -36,7 +36,9 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** v30 학사 LMS 묶음 경로(/api/lms/**) — 기동 때 DdLmsRoutes가 @RequestMapping에서 자동 수집한다(묶음별 등록 불필요) */
     public static final Set<String> LMS = ConcurrentHashMap.newKeySet();
     /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */
-    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel))\\z");
+    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel)|ledger-(?:my|order|confirm|bill|bill-order|bill-confirm))\\z");
+    /** v41 통합 수납 원장 운영자 경로(/api/ledger/*, :id 포함) — Node ledger/mod-admin과 같은 목록(09 규격 3절) */
+    public static final java.util.regex.Pattern LEDGER = java.util.regex.Pattern.compile("^/api/ledger/(?:units|summary|entries|charges|charges/generate|receipts|receipts/[\\w-]{1,80}/correct|refunds|refunds/[\\w-]{1,80}/confirm|links|import|share|close|today|export|devices|device-push)\\z");
     /** v40 시설 · 장비 예약 운영자 경로(/api/fac/*, :id 포함) — Node fac/mod-admin과 같은 목록 */
     public static final java.util.regex.Pattern FAC = java.util.regex.Pattern.compile("^/api/fac/(?:overview|bookings|bookings/[\\w-]{1,80}(?:/(?:approve|reject|cancel))?|closures|checkin|kiosk/start|payments|refunds|rentals|rentals/[\\w-]{1,80}/(?:lend|return|approve)|passes|passes/[\\w-]{1,80}/adjust|noshow|noshow/[\\w-]{1,80}/restore|stats|export)\\z");
     /** v34.5 홈페이지 이미지: GET /api/media/{id}(공개) · DELETE /api/media/{id}(운영자) — Node media.match와 같음 */
@@ -56,7 +58,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "x-permitted-cross-domain-policies", "none",
         "origin-agent-cluster", "?1");
     static final String CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'";
-    static final String LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com; media-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'self'";
+    static final String LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com https://js.tosspayments.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://*.tosspayments.com; media-src 'self' blob:; connect-src 'self' https://*.tosspayments.com; base-uri 'none'; form-action 'self' https://*.tosspayments.com; object-src 'none'; frame-ancestors 'self'";
 
     private final DdProps props; private final DdWeb web;
     private final DdOgMeta og; private final java.nio.file.Path pubDir; /* v37 L2 learner.html og 메타 */
@@ -70,7 +72,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         if ("admin".equals(props.module) && !("GET".equals(m) && "/api/health".equals(path)) && !DdModule.ipAllowed(props.adminIps, web.ip(req))) { res.setHeader("cache-control", "no-store"); json(res, 403, "ip", "허용되지 않은 접속 위치입니다."); return; }
         if (path.startsWith("/api/")) {
             res.setHeader("cache-control", "no-store");
-            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !FAC.matcher(path).matches() && !mediaRoute(m, path)) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
+            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !mediaRoute(m, path)) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
             if (!"GET".equals(m)) {
                 if (!"1".equals(req.getHeader("x-didisam"))) { json(res, 403, "csrf", "허용되지 않은 요청입니다."); return; }
                 String o = req.getHeader("origin");

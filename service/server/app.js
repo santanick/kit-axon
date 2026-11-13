@@ -95,7 +95,7 @@ const SEC_HEADERS = {
 const CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'";
 
 const LCOOKIE = '__Host-dd_lsid';
-const LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com; media-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'self'";
+const LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com https://js.tosspayments.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://*.tosspayments.com; media-src 'self' blob:; connect-src 'self' https://*.tosspayments.com; base-uri 'none'; form-action 'self' https://*.tosspayments.com; object-src 'none'; frame-ancestors 'self'";
 const LP_MAX = 256 * 1024;
 const TID_RE = /^tn_[a-z0-9]{8,16}$/; const SID_RE = /^[A-Za-z0-9_-]{4,20}$/;
 
@@ -248,12 +248,13 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     const [, tid, act] = m; if (!TID_RE.test(tid)) throw new HttpErr(404, '없는 기관입니다.', 'tenant');
     const key = `${req.method} ${act}`;
     if (act.startsWith('fac-')) return fac.pub(req, res, tid, act); /* v40 */
+    if (act.startsWith('ledger-')) return ledger.pub(req, res, tid, act); /* v41 통합 수납 원장 */
     if (pii.pubOpen[key]) return pii.pubOpen[key](req, res, tid);
     if (key === 'GET events' || key === 'POST events') return eventsRoute(req, res, tid, key);
     if (key === 'GET site') {
-      const site = await inTenant(pool, tid, async c => { const r = (await c.query(`select doc->'lsite'->'pub' pub, ${SEQ_SQL} seq from tenant_state where tenant_id = $1`, [tid])).rows[0]; if (r && r.pub && r.pub.comm) r.live = (await c.query(COMM_LIVE_Q, [tid, r.seq])).rows.map(x => x.cm); return r; });
+      const site = await inTenant(pool, tid, async c => { const r = (await c.query(`select doc->'lsite'->'pub' pub, coalesce(doc->'ledger'->>'on', doc->'org'->>'ledger_on') = 'true' led, ${SEQ_SQL} seq from tenant_state where tenant_id = $1`, [tid])).rows[0]; if (r && r.pub && r.pub.comm) r.live = (await c.query(COMM_LIVE_Q, [tid, r.seq])).rows.map(x => x.cm); return r; });
       if (!site || !site.pub) throw new HttpErr(404, '아직 게시되지 않은 학습자 사이트입니다.', 'unpublished');
-      return { site: commlive.merge(site.pub, site.live) }; /* v38 C#17 운영자 화면이 아직 반영하지 않은 학습자 글 · 댓글 */
+      return { site: { ...commlive.merge(site.pub, site.live), ledger: { on: !!site.led } } }; /* v41 원장 플래그(기관 문서 그대로) · v38 C#17 운영자 화면이 아직 반영하지 않은 학습자 글 · 댓글 */
     }
     if (key === 'POST login') {
       const b = await readBody(req, 2048); if (b.keep === false) res.ddKeep = false;
@@ -540,6 +541,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   for (const [k, fn] of Object.entries(require('./lms').loadRoutes({ pool, inTenant, need, readBody, HttpErr, audit, today, limit, log }))) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
   /* v40 시설 · 장비 예약(fac/): 공개 fac-* 와 운영자 /api/fac/* */
   const fac = require('./fac').createFac({ mail: pii.mailTo, pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
+  /* v41 통합 수납 원장(ledger/): 공개 ledger-* 와 운영자 /api/ledger/* */
+  const ledger = require('./ledger').createLedger({ pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
 
   /* ── 정적 파일 ── */
   function serveStatic(req, res, pathname) {
@@ -575,8 +578,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname.startsWith('/api/') && !M.apiAllowed(mod, req.method, url.pathname)) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
       if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-[a-z]{2,6}(?:-[a-z]{2,8})?)$/);
-        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?)$/);
+        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처
           if (req.headers['x-didisam'] !== '1') throw new HttpErr(403, '허용되지 않은 요청입니다.', 'csrf');
@@ -594,7 +597,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       return send(res, 500, { error: 'server', message: '서버 오류가 발생했습니다.' });
     }
   });
-  srv.piiPurge = pii.purge; srv.facTick = fac.tick; /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
+  srv.piiPurge = pii.purge; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
   return srv;
 }
 

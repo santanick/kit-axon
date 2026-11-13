@@ -39,6 +39,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     private final PubMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final PiiService pii; private final DdAiClient ai; private final egovframework.didisam.cpl.service.CplService cpl;
     private final egovframework.didisam.auth.service.AuthService auth; private final TenantTxMapper txm;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.fac.service.FacService fac;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.ledger.service.LedgerService ledger;
     public PubServiceImpl(PubMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, PiiService pii, DdAiClient ai, egovframework.didisam.cpl.service.CplService cpl, DdStateCrypto crypt, egovframework.didisam.auth.service.AuthService auth, TenantTxMapper txm) { this.crypt = crypt; this.auth = auth; this.txm = txm;
         this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.pii = pii; this.ai = ai; this.cpl = cpl;
     }
@@ -53,15 +54,17 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             case "GET events": case "POST events": return events(req, body, tid, key);
             case "GET site": {
                 Object[] sl = tx.inTenant(tid, () -> { Map<String, Object> r = mapper.selectSitePub(tid); if (r == null || r.get("pub") == null) return null; JsonNode pb = parse((String) r.get("pub"));
-                    List<JsonNode> live = new ArrayList<>(); if (pb != null && isObj(pb.get("comm"))) for (String c : mapper.selectCommLive(tid, ((Number) r.get("seq")).longValue())) live.add(parse(c)); return new Object[]{ pb, live }; });
+                    List<JsonNode> live = new ArrayList<>(); if (pb != null && isObj(pb.get("comm"))) for (String c : mapper.selectCommLive(tid, ((Number) r.get("seq")).longValue())) live.add(parse(c)); return new Object[]{ pb, live, Boolean.TRUE.equals(r.get("led")) }; });
                 JsonNode pub = sl == null ? null : (JsonNode) sl[0];
                 if (!truthy(pub)) throw processException("dd.404.unpublished");
                 @SuppressWarnings("unchecked") List<JsonNode> live = (List<JsonNode>) sl[1];
-                Map<String, Object> o = new LinkedHashMap<>(); o.put("site", PubCommLive.merge(pub, live)); return o; /* v38 C#17 운영자 화면이 아직 반영하지 않은 학습자 글 · 댓글 */
+                JsonNode st = PubCommLive.merge(pub, live); if (st != null && st.isObject()) ((com.fasterxml.jackson.databind.node.ObjectNode) st).putObject("ledger").put("on", Boolean.TRUE.equals(sl[2])); /* v41 원장 플래그(기관 문서 그대로) */
+                Map<String, Object> o = new LinkedHashMap<>(); o.put("site", st); return o; /* v38 C#17 운영자 화면이 아직 반영하지 않은 학습자 글 · 댓글 */
             }
             case "POST login": return login(req, res, tid, body);
             default:
         }
+        if (act.startsWith("ledger-")) return ledger.pub(req, res, tid, key, body, () -> lauth(req, tid)); /* v41 통합 수납 원장 */
         if (act.startsWith("fac-")) return fac.pub(req, res, tid, key, body, () -> lauth(req, tid)); /* v40 시설 · 장비 예약 */
         Map<String, Object> s = lauth(req, tid);
         if (s == null && "POST tutor".equals(key)) return tutor(req, body, tid, null, web.ip(req)); /* 방문자(로그인 전) 튜터 */
