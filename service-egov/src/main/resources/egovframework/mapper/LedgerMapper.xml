@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v41 통합 수납 원장 — 모두 기관 범위(inTenant, RLS) 쿼리. 표 정의는 service/server/ledger/sql/10_ledger.sql(Node 마이그레이션 소유).
+     열 이름은 Node 행(snake_case) 그대로 돌려주고, 시각은 Node JSON(Date.toISOString)과 같은 UTC ISO 문자열로 만든다. -->
+<mapper namespace="egovframework.didisam.ledger.service.impl.LedgerMapper">
+  <sql id="iso">'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'</sql>
+  <sql id="kday">'YYYY-MM-DD'</sql>
+  <sql id="rc">id, unit_id, sid, method, channel, amount, status, to_char(paid_at at time zone 'UTC', <include refid="iso"/>) as paid_at, approval_no, card_issuer, installment, share_eligible, diff_reason, corrects, legacy_ref,
+    toss_payment_key, toss_order_id, link_hash, array_to_json(charge_ids)::text as charge_ids_json, idem_key</sql>
+  <sql id="rf">f.id, f.receipt_id, f.amount, f.auto_amount, f.rule_type, f.edit_reason, f.reason, f.status, f.toss_cancel_ok, f.calc::text as calc_json,
+    to_char(f.at at time zone 'UTC', <include refid="iso"/>) as at, to_char(f.done_at at time zone 'UTC', <include refid="iso"/>) as done_at</sql>
+  <sql id="ids"><foreach collection="ids" item="x" open="(" separator="," close=")">#{x}</foreach></sql>
+
+  <select id="selectTenantIds" resultType="string">select id from tenants</select>
+  <select id="selectOn" resultType="java.util.LinkedHashMap">select coalesce(doc->'ledger'->>'on', doc->'org'->>'ledger_on') as v from tenant_state where tenant_id = #{tid}</select>
+  <select id="lockReceipt" resultType="string">select id from led_receipt where tenant_id = #{tid} and id = #{id} for update</select>
+  <select id="lockRefund" resultType="string">select id from led_refund where tenant_id = #{tid} and id = #{id} for update</select>
+
+  <!-- 단위 -->
+  <insert id="ensureRoot">insert into led_unit (tenant_id, id, kind, name) values (#{tid}, 'lu_root', 'hq', '기관 전체') on conflict do nothing</insert>
+  <select id="selectUnits" resultType="java.util.LinkedHashMap">select id, parent_id, kind, name, toss_mid, toss_client_key, toss_secret_enc, share_rate_bp, active, sort from led_unit where tenant_id = #{tid} order by sort, created_at, id</select>
+  <select id="selectUnit" resultType="java.util.LinkedHashMap">select id, parent_id, kind, name, toss_mid, toss_client_key, toss_secret_enc, share_rate_bp, active, sort from led_unit where tenant_id = #{tid} and id = #{id}</select>
+  <insert id="upsertUnit">insert into led_unit (tenant_id, id, parent_id, kind, name, toss_mid, toss_client_key, toss_secret_enc, share_rate_bp, active, sort)
+    values (#{tid}, #{id}, #{parent}, #{kind}, #{name}, #{mid}, #{ck}, #{sec}, #{bp}, #{act}, #{sort})
+    on conflict (tenant_id, id) do update set parent_id = excluded.parent_id, kind = excluded.kind, name = excluded.name, toss_mid = excluded.toss_mid, toss_client_key = excluded.toss_client_key,
+    toss_secret_enc = excluded.toss_secret_enc, share_rate_bp = excluded.share_rate_bp, active = excluded.active, sort = excluded.sort</insert>
+
+  <!-- 청구 · 잔액 -->
+  <select id="selectBillsByIds" resultType="string">select distinct bill_id from led_charge where tenant_id = #{tid} and id in <include refid="ids"/></select>
+  <select id="selectBillsBySid" resultType="string">select distinct bill_id from led_charge where tenant_id = #{tid} and sid = #{sid}</select>
+  <select id="selectOpenBills" resultType="string">select distinct bill_id from led_charge where tenant_id = #{tid} and status in ('open','partial')</select>
+  <select id="selectChargesOfBills" resultType="java.util.LinkedHashMap">select id, bill_id, unit_id, sid, item_type, title, amount, period_ym, status, idem_key, to_char(due_date, 'YYYY-MM-DD') as due,
+    to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US') as at_s, to_char(created_at at time zone 'UTC', <include refid="iso"/>) as created_at
+    from led_charge where tenant_id = #{tid} and bill_id in <include refid="ids"/></select>
+  <select id="selectAllocSums" resultType="java.util.LinkedHashMap">select charge_id, sum(amount)::int as amount from led_alloc where tenant_id = #{tid} and charge_id in <include refid="ids"/> group by charge_id</select>
+  <update id="updateChargeStatus">update led_charge set status = #{status} where tenant_id = #{tid} and id = #{id}</update>
+  <select id="selectBillByIdem" resultType="string">select bill_id from led_charge where tenant_id = #{tid} and idem_key = #{idem}</select>
+  <insert id="insertCharge">insert into led_charge (tenant_id, id, bill_id, unit_id, sid, item_type, title, amount, period_ym, due_date, src_type, src_id, idem_key)
+    values (#{tid}, #{id}, #{bill}, #{unit}, #{sid}, #{itemType}, #{title}, #{amount}, #{ym}, #{due}::date, #{srcType}, #{srcId}, #{idem})</insert>
+  <select id="selectGenSrc" resultType="java.util.LinkedHashMap">select cl->>'id' as cls, cl->>'name' as name, cl->>'price' as price, m->>'sid' as sid from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'classes') = 'array' then t.doc->'classes' else '[]'::jsonb end) cl,
+    jsonb_array_elements(case when jsonb_typeof(t.doc->'members') = 'array' then t.doc->'members' else '[]'::jsonb end) m
+    where t.tenant_id = #{tid} and jsonb_typeof(cl->'learners') = 'array' and cl->'learners' @&gt; jsonb_build_array(m->'id') and coalesce(m->>'sid', '') &lt;&gt; '' and coalesce(cl->>'status', '') not in ('closed', 'done', '종료')</select>
+  <select id="selectGenHave" resultType="string">select src_id || '|' || sid from led_charge where tenant_id = #{tid} and src_type = 'class' and period_ym = #{ym} and status &lt;&gt; 'void' and amount &gt; 0</select>
+  <insert id="insertGenCharge">insert into led_charge (tenant_id, id, bill_id, unit_id, sid, item_type, title, amount, period_ym, due_date, src_type, src_id)
+    values (#{tid}, #{id}, #{bill}, #{unit}, #{sid}, 'tuition', #{title}, #{amount}, #{ym}, #{due}::date, 'class', #{cls}) on conflict do nothing</insert>
+  <select id="selectBillsOfCharges" resultType="string">select distinct bill_id from led_charge where tenant_id = #{tid} and id in <include refid="ids"/></select>
+
+  <!-- 수납 -->
+  <insert id="insertReceipt">insert into led_receipt (tenant_id, id, unit_id, sid, method, channel, amount, paid_at, status, toss_payment_key, toss_order_id, approval_no, card_issuer, installment, terminal_id, share_eligible, recorded_by, diff_reason, idem_key, charge_ids, link_hash)
+    values (#{tid}, #{id}, #{unit}, #{sid}, #{method}, #{channel}, #{amount}, case when #{paidAt}::text is null then null else #{paidAt}::timestamptz end, #{status}, #{paymentKey}, #{orderId}, #{approvalNo}, #{cardIssuer}, #{installment}::smallint, #{terminalId}, #{share}, #{by}, #{diffReason}, #{idem},
+    case when #{chargeCsv}::text is null then null else string_to_array(#{chargeCsv}, ',') end, #{linkHash})</insert>
+  <insert id="insertAlloc">insert into led_alloc (tenant_id, receipt_id, charge_id, amount) values (#{tid}, #{rc}, #{ch}, #{amount})</insert>
+  <select id="selectReceipt" resultType="java.util.LinkedHashMap">select <include refid="rc"/> from led_receipt where tenant_id = #{tid} and id = #{id}</select>
+  <select id="selectReceiptByIdem" resultType="java.util.LinkedHashMap">select <include refid="rc"/> from led_receipt where tenant_id = #{tid} and idem_key = #{idem}</select>
+  <select id="selectReceiptByOrder" resultType="java.util.LinkedHashMap">select <include refid="rc"/> from led_receipt where tenant_id = #{tid} and toss_order_id = #{order}</select>
+  <select id="countCorrections" resultType="int">select count(*)::int from led_receipt where tenant_id = #{tid} and corrects = #{id}</select>
+  <update id="settleReceipt">update led_receipt set status = 'paid', paid_at = now(), toss_payment_key = #{key}, diff_reason = #{diff} where tenant_id = #{tid} and id = #{id}</update>
+  <update id="failReceipt">update led_receipt set status = 'failed' where tenant_id = #{tid} and id = #{id} <if test="onlyReady"> and status = 'ready'</if></update>
+  <insert id="insertCorrection">insert into led_receipt (tenant_id, id, unit_id, sid, method, channel, amount, paid_at, status, approval_no, share_eligible, recorded_by, diff_reason, idem_key, corrects)
+    select tenant_id, #{nid}, unit_id, sid, method, 'manual', -amount, now(), 'paid', approval_no, share_eligible, #{by}, #{reason}, #{idem}, id from led_receipt where tenant_id = #{tid} and id = #{id}</insert>
+  <select id="selectAllocsOfReceipt" resultType="java.util.LinkedHashMap">select charge_id, amount from led_alloc where tenant_id = #{tid} and receipt_id = #{rc} order by id</select>
+  <select id="countLiveRefunds" resultType="int">select count(*)::int from led_refund where tenant_id = #{tid} and receipt_id = #{rc} and status &lt;&gt; 'cancelled'</select>
+
+  <!-- 환불 -->
+  <select id="selectRefundByIdem" resultType="java.util.LinkedHashMap">select <include refid="rf"/> from led_refund f where f.tenant_id = #{tid} and f.idem_key = #{idem}</select>
+  <select id="selectRefund" resultType="java.util.LinkedHashMap">select <include refid="rf"/> from led_refund f where f.tenant_id = #{tid} and f.id = #{id}</select>
+  <select id="countPendingRefund" resultType="int">select count(*)::int from led_refund where tenant_id = #{tid} and receipt_id = #{rc} and status = 'pending'</select>
+  <select id="sumDoneRefund" resultType="int">select coalesce(sum(amount), 0)::int from led_refund where tenant_id = #{tid} and receipt_id = #{rc} and status = 'done'</select>
+  <insert id="insertRefund">insert into led_refund (tenant_id, id, receipt_id, amount, rule_type, calc, auto_amount, edit_reason, reason, status, by_staff, idem_key)
+    values (#{tid}, #{id}, #{rc}, #{amount}, #{rule}, #{calc}::jsonb, #{auto}, #{edit}, #{reason}, 'pending', #{by}, #{idem})</insert>
+  <update id="doneRefund">update led_refund set status = 'done', amount = #{amount}, edit_reason = #{edit}, toss_cancel_ok = #{ok}, toss_cancel_key = #{key}, done_at = now(), by_staff = #{by} where tenant_id = #{tid} and id = #{id} and status = 'pending'</update>
+  <select id="selectRefunds" resultType="java.util.LinkedHashMap">select <include refid="rf"/>, r.amount as paid, r.method, r.channel, r.sid from led_refund f join led_receipt r on r.tenant_id = f.tenant_id and r.id = f.receipt_id
+    where f.tenant_id = #{tid} and f.status = #{status} order by f.at desc limit 200</select>
+
+  <!-- 집계 재료(summary · share) -->
+  <select id="selectRowCharges" resultType="java.util.LinkedHashMap">select id, bill_id, unit_id, item_type, amount, status, to_char(created_at at time zone 'Asia/Seoul', 'YYYY-MM-DD') as d from led_charge
+    where tenant_id = #{tid} and (created_at at time zone 'Asia/Seoul')::date between #{from}::date and #{to}::date</select>
+  <select id="selectRowReceipts" resultType="java.util.LinkedHashMap">select id, unit_id, amount, method, status, share_eligible, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD') as d from led_receipt
+    where tenant_id = #{tid} and status = 'paid' and (paid_at at time zone 'Asia/Seoul')::date between #{from}::date and #{to}::date</select>
+  <select id="selectRowRefunds" resultType="java.util.LinkedHashMap">select f.id, f.amount, f.status, f.receipt_id, r.unit_id, r.share_eligible, to_char(coalesce(f.done_at, f.at) at time zone 'Asia/Seoul', 'YYYY-MM-DD') as d
+    from led_refund f join led_receipt r on r.tenant_id = f.tenant_id and r.id = f.receipt_id where f.tenant_id = #{tid} and f.status = 'done' and (coalesce(f.done_at, f.at) at time zone 'Asia/Seoul')::date between #{from}::date and #{to}::date</select>
+
+  <!-- 원장 행(entries · export) -->
+  <select id="selectEntryCharges" resultType="java.util.LinkedHashMap">select 'charge' as "type", id, unit_id as "unit", sid, item_type as "itemType", title, amount, status, to_char(created_at at time zone 'UTC', <include refid="iso"/>) as "at",
+    to_char(due_date, 'YYYY-MM-DD') as "dueDate", bill_id as "bill" from led_charge where tenant_id = #{tid} and (created_at at time zone 'Asia/Seoul')::date between #{from}::date and #{to}::date</select>
+  <select id="selectEntryReceipts" resultType="java.util.LinkedHashMap">select 'receipt' as "type", id, unit_id as "unit", sid, method, channel, amount, status, to_char(coalesce(paid_at, created_at) at time zone 'UTC', <include refid="iso"/>) as "at",
+    approval_no as "approvalNo", diff_reason as "diffReason", corrects, legacy_ref as "legacyRef", share_eligible as "shareEligible" from led_receipt
+    where tenant_id = #{tid} and (coalesce(paid_at, created_at) at time zone 'Asia/Seoul')::date between #{from}::date and #{to}::date</select>
+  <select id="selectEntryRefunds" resultType="java.util.LinkedHashMap">select 'refund' as "type", f.id, r.unit_id as "unit", r.sid, f.receipt_id as "receipt", f.amount, f.status, to_char(coalesce(f.done_at, f.at) at time zone 'UTC', <include refid="iso"/>) as "at",
+    f.rule_type as "ruleType", f.legacy_ref as "legacyRef" from led_refund f join led_receipt r on r.tenant_id = f.tenant_id and r.id = f.receipt_id
+    where f.tenant_id = #{tid} and (coalesce(f.done_at, f.at) at time zone 'Asia/Seoul')::date between #{from}::date and #{to}::date</select>
+
+  <!-- 일 마감 -->
+  <select id="selectSysPaid" resultType="java.util.LinkedHashMap">select coalesce(sum(amount) filter (where method = 'cash'), 0)::int as cash, coalesce(sum(amount) filter (where method = 'desk_card'), 0)::int as card from led_receipt
+    where tenant_id = #{tid} and unit_id = #{unit} and status = 'paid' and (paid_at at time zone 'Asia/Seoul')::date = #{day}::date</select>
+  <select id="selectSysRefund" resultType="java.util.LinkedHashMap">select coalesce(sum(f.amount) filter (where r.method = 'cash'), 0)::int as cash, coalesce(sum(f.amount) filter (where r.method = 'desk_card'), 0)::int as card
+    from led_refund f join led_receipt r on r.tenant_id = f.tenant_id and r.id = f.receipt_id where f.tenant_id = #{tid} and r.unit_id = #{unit} and f.status = 'done' and (f.done_at at time zone 'Asia/Seoul')::date = #{day}::date</select>
+  <select id="selectClose" resultType="java.util.LinkedHashMap">select id, unit_id, to_char(day, 'YYYY-MM-DD') as day, cash_system, cash_counted, card_system, card_counted, diff_reason, closed_by, to_char(closed_at at time zone 'UTC', <include refid="iso"/>) as closed_at
+    from led_close where tenant_id = #{tid} and unit_id = #{unit} and day = #{day}::date</select>
+  <insert id="insertClose">insert into led_close (tenant_id, id, unit_id, day, cash_system, cash_counted, card_system, card_counted, diff_reason, closed_by) values (#{tid}, #{id}, #{unit}, #{day}::date, #{cs}, #{cc}, #{ks}, #{kc}, #{why}, #{by})</insert>
+  <update id="closeReceipts">update led_receipt set close_id = #{id} where tenant_id = #{tid} and unit_id = #{unit} and status = 'paid' and close_id is null and (paid_at at time zone 'Asia/Seoul')::date = #{day}::date</update>
+
+  <!-- 오늘 할 일 -->
+  <select id="countUnmatched" resultType="int">select coalesce(sum(jsonb_array_length(unmatched)), 0)::int from led_import where tenant_id = #{tid} and at &gt; now() - interval '30 days'</select>
+  <select id="selectPendingRefunds" resultType="java.util.LinkedHashMap">select count(*)::int as n, coalesce(sum(amount), 0)::int as amt from led_refund where tenant_id = #{tid} and status = 'pending'</select>
+  <select id="selectUnclosed" resultType="java.util.LinkedHashMap">select r.unit_id as "unit", to_char((r.paid_at at time zone 'Asia/Seoul')::date, 'YYYY-MM-DD') as "day" from led_receipt r where r.tenant_id = #{tid} and r.status = 'paid' and r.channel = 'desk' and r.close_id is null
+    and r.paid_at &gt; now() - interval '8 days' and (r.paid_at at time zone 'Asia/Seoul')::date &lt; (now() at time zone 'Asia/Seoul')::date group by 1, 2 order by 2</select>
+  <select id="countOverPaid" resultType="int">select count(*)::int from led_receipt where tenant_id = #{tid} and diff_reason = 'over_paid' and status = 'paid'</select>
+
+  <!-- 청구서 링크 -->
+  <insert id="insertLink">insert into led_link (tenant_id, token_hash, charge_ids, sid, expires_at, created_by) values (#{tid}, #{hash}, string_to_array(#{chargeCsv}, ','), #{sid}, now() + make_interval(hours => #{ttl}::int), #{by})</insert>
+  <select id="selectLinkExpiry" resultType="string">select to_char(expires_at at time zone 'UTC', <include refid="iso"/>) from led_link where tenant_id = #{tid} and token_hash = #{hash}</select>
+  <select id="selectLink" resultType="java.util.LinkedHashMap">select token_hash, array_to_json(charge_ids)::text as charge_ids_json, sid, to_char(expires_at at time zone 'UTC', <include refid="iso"/>) as expires_at, (expires_at &lt; now()) as expired, used_at is not null as used
+    from led_link where tenant_id = #{tid} and token_hash = #{hash}</select>
+  <update id="useLink">update led_link set used_at = now() where tenant_id = #{tid} and token_hash = #{hash}</update>
+
+  <!-- 가져오기 -->
+  <select id="selectVanCands" resultType="java.util.LinkedHashMap">select id, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD') as day, amount, approval_no from led_receipt
+    where tenant_id = #{tid} and method = 'desk_card' and status = 'paid' and approval_no is not null and paid_at &gt; now() - interval '120 days'</select>
+  <select id="selectTossCands" resultType="java.util.LinkedHashMap">select id, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD') as day, amount, toss_order_id, toss_payment_key from led_receipt
+    where tenant_id = #{tid} and channel = 'toss' and status = 'paid' and paid_at &gt; now() - interval '120 days'</select>
+  <select id="selectIdemHave" resultType="string">select idem_key from led_receipt where tenant_id = #{tid} and idem_key in <include refid="ids"/></select>
+  <insert id="insertImport">insert into led_import (tenant_id, id, kind, file_name, rows, matched, unmatched, meta, by_staff) values (#{tid}, #{id}, #{kind}, #{file}, #{rows}, #{matched}, #{unmatched}::jsonb, #{meta}::jsonb, #{by})</insert>
+  <select id="selectSettleMeta" resultType="string">select meta::text from led_import where tenant_id = #{tid} and kind = 'toss_settle' and meta->>'ym' = #{ym} and (meta->>'hasShare')::boolean</select>
+
+  <!-- 단말(Lv2) -->
+  <insert id="insertDevice">insert into led_device (tenant_id, id, unit_id, label, agent_key_hash, mode) values (#{tid}, #{id}, #{unit}, #{label}, #{hash}, #{mode})</insert>
+  <select id="selectDevices" resultType="java.util.LinkedHashMap">select id, unit_id as "unit", label, mode, to_char(last_seen at time zone 'UTC', <include refid="iso"/>) as "lastSeen", to_char(created_at at time zone 'UTC', <include refid="iso"/>) as "createdAt"
+    from led_device where tenant_id = #{tid} order by created_at</select>
+  <select id="selectDeviceByKey" resultType="java.util.LinkedHashMap">select id, unit_id, mode from led_device where tenant_id = #{tid} and agent_key_hash = #{hash}</select>
+  <update id="touchDevice">update led_device set last_seen = now() where tenant_id = #{tid} and id = #{id}</update>
+
+  <!-- 학습자 -->
+  <select id="selectMyReceipts" resultType="java.util.LinkedHashMap">select id, method, channel, amount, status, to_char(paid_at at time zone 'UTC', <include refid="iso"/>) as "paidAt", approval_no is not null as "hasApproval"
+    from led_receipt where tenant_id = #{tid} and sid = #{sid} and status in ('paid') order by paid_at desc limit 100</select>
+  <select id="selectMyRefunds" resultType="java.util.LinkedHashMap">select f.id, f.receipt_id as "receipt", f.amount, f.status, to_char(f.at at time zone 'UTC', <include refid="iso"/>) as "at", to_char(f.done_at at time zone 'UTC', <include refid="iso"/>) as "doneAt"
+    from led_refund f join led_receipt r on r.tenant_id = f.tenant_id and r.id = f.receipt_id where f.tenant_id = #{tid} and r.sid = #{sid} and f.status &lt;&gt; 'cancelled' order by f.at desc limit 100</select>
+  <select id="selectMember" resultType="string">select m::text from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'members') = 'array' then t.doc->'members' else '[]'::jsonb end) m where t.tenant_id = #{tid} and m->>'sid' = #{sid} limit 1</select>
+  <select id="selectOrgName" resultType="string">select coalesce(doc->'lsite'->'pub'->'org'->>'name', doc->'org'->>'name') from tenant_state where tenant_id = #{tid}</select>
+
+  <!-- 정리 -->
+  <select id="sweepReady" resultType="string">update led_receipt set status = 'failed' where tenant_id = #{tid} and id in (select id from led_receipt where tenant_id = #{tid} and status = 'ready' and created_at &lt; now() - interval '30 minutes' limit 200) returning id</select>
+</mapper>
