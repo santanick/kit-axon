@@ -1,0 +1,278 @@
+{
+  "_doc": "v42 마일리지 기준값. 같은 파일을 didisam/milecalc.js(Node · 브라우저 데모 엔진)와 SQL 함수(mil_*, Node · Java 공용)가 돌려 결과가 같아야 한다. 실행: service/test/mileage42.test.js(runVector), Java 계약은 tests/contract-mileage42.js. 기본값: sid 's1', unit 'lu_root', 정책 base(켜짐 · 12개월 만료 · 마일스톤 없음), 규칙 ver 1 · per_src · trustMin C · auto · achievement. 인자 '$이름'은 앞 단계 결과의 줄 · 신청 ID. expect는 부분 일치(배열은 인덱스별), 시각 문자열은 같은 순간이면 같음.",
+  "base": { "policy": { "isOn": true, "expiry": { "mode": "months", "months": 12 }, "streak": { "freezePerWeek": 1, "milestones": [] }, "notice": { "monthsBefore": 6, "daysBefore": [30, 3] } } },
+  "vectors": [
+    { "id": "MV-01", "name": "ever 규칙 같은 사건 2번 → 적립 1줄",
+      "given": { "rules": [{ "id": "mru_signup", "trigger": "signup", "nature": "participation", "once": "ever", "score": { "mode": "fixed", "v": 100 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "signup", "srcType": "acct", "srcId": "s1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "status": "done", "entries": [{ "points": 100, "convertible": false }] } },
+        { "op": "emit", "args": { "trigger": "signup", "srcType": "acct", "srcId": "s1", "trust": "A", "at": "2026-11-02T10:01:00+09:00" }, "expect": { "status": "already" } },
+        { "op": "emit", "args": { "trigger": "signup", "srcType": "acct", "srcId": "s1b", "trust": "A", "at": "2026-11-02T10:02:00+09:00" }, "expect": { "status": "skipped", "reason": "already" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 100, "convertible": 0 } } } },
+    { "id": "MV-02", "name": "per_day KST 23:59 / 00:00 경계 → 2줄",
+      "given": { "rules": [{ "id": "mru_att", "trigger": "attend_day", "nature": "participation", "once": "per_day", "cond": { "minMin": 10 }, "score": { "mode": "fixed", "v": 10 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-02", "value": 30, "trust": "A", "at": "2026-11-02T23:59:00+09:00" }, "expect": { "status": "done" } },
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-03", "value": 30, "trust": "A", "at": "2026-11-03T00:00:00+09:00" }, "expect": { "status": "done" } },
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-03b", "value": 30, "trust": "A", "at": "2026-11-03T09:00:00+09:00" }, "expect": { "status": "skipped", "reason": "already" } },
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-04", "value": 5, "trust": "A", "at": "2026-11-04T09:00:00+09:00" }, "expect": { "status": "skipped", "reason": "cond" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 20 } } } },
+    { "id": "MV-03", "name": "규칙 하루 상한 → 1인 하루 총 상한 순서(남은 만큼만)",
+      "given": { "policy": { "dailyCapTotal": 80 }, "rules": [
+        { "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 30 }, "caps": { "day": 50 } },
+        { "id": "mru_les2", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 20 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "c1/i1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "status": "done", "entries": [{ "points": 30 }, { "points": 20 }] } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "c1/i2", "trust": "A", "at": "2026-11-02T10:10:00+09:00" }, "expect": { "status": "done", "entries": [{ "points": 20 }, { "points": 10 }] } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "c1/i3", "trust": "A", "at": "2026-11-02T10:20:00+09:00" }, "expect": { "status": "skipped", "reason": "cap_day" } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "c1/i4", "trust": "A", "at": "2026-11-03T10:00:00+09:00" }, "expect": { "status": "done", "entries": [{ "points": 30 }, { "points": 20 }] } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 130, "convertible": 130 } } } },
+    { "id": "MV-04", "name": "항목군 학기 한도 초과분 skipped",
+      "given": { "groups": [{ "key": "cert_lang", "caps": { "term": 100 } }], "rules": [
+        { "id": "mru_cert", "trigger": "evidence", "groupKey": "cert_lang", "cond": { "cls": "cert" }, "score": { "mode": "fixed", "v": 60 } },
+        { "id": "mru_lang", "trigger": "evidence", "groupKey": "cert_lang", "cond": { "cls": "lang" }, "score": { "mode": "fixed", "v": 60 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "evidence", "srcType": "pf", "srcId": "1", "cls": "cert", "trust": "B", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "status": "done", "entries": [{ "points": 60, "ruleId": "mru_cert" }] } },
+        { "op": "emit", "args": { "trigger": "evidence", "srcType": "pf", "srcId": "2", "cls": "lang", "trust": "B", "at": "2026-11-03T10:00:00+09:00" }, "expect": { "status": "done", "entries": [{ "points": 40, "ruleId": "mru_lang" }] } },
+        { "op": "emit", "args": { "trigger": "evidence", "srcType": "pf", "srcId": "3", "cls": "cert", "trust": "B", "at": "2026-11-04T10:00:00+09:00" }, "expect": { "status": "skipped", "reason": "group_cap" } },
+        { "op": "emit", "args": { "trigger": "evidence", "srcType": "pf", "srcId": "4", "cls": "cert", "trust": "B", "at": "2027-03-02T10:00:00+09:00" }, "expect": { "status": "done", "entries": [{ "points": 60 }] } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 160 } } } },
+    { "id": "MV-05", "name": "시험 구간 80→90 차액만, 90→80 재응시 없음",
+      "given": { "rules": [{ "id": "mru_exam", "trigger": "exam_score", "score": { "mode": "band", "bands": [[80, 50], [90, 100]] } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "exam_score", "srcType": "exam", "srcId": "c1/q1#1", "value": 82, "trust": "A", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "status": "done", "entries": [{ "points": 50 }] } },
+        { "op": "emit", "args": { "trigger": "exam_score", "srcType": "exam", "srcId": "c1/q1#2", "value": 95, "trust": "A", "at": "2026-11-03T10:00:00+09:00" }, "expect": { "status": "done", "entries": [{ "points": 50 }] } },
+        { "op": "emit", "args": { "trigger": "exam_score", "srcType": "exam", "srcId": "c1/q1#3", "value": 80, "trust": "A", "at": "2026-11-04T10:00:00+09:00" }, "expect": { "status": "skipped", "reason": "already" } },
+        { "op": "emit", "args": { "trigger": "exam_score", "srcType": "exam", "srcId": "c1/q2#1", "value": 70, "trust": "A", "at": "2026-11-04T11:00:00+09:00" }, "expect": { "status": "skipped", "reason": "cond" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 100 } } } },
+    { "id": "MV-06", "name": "승인 필요 적립 pending: 잔액 제외 · 만료 시계 없음 → 승인 시 만료일 계산",
+      "given": { "rules": [{ "id": "mru_crs", "trigger": "course_done", "approval": "manual", "score": { "mode": "fixed", "v": 200 } }] },
+      "steps": [
+        { "op": "emit", "as": "e1", "args": { "trigger": "course_done", "srcType": "cls", "srcId": "c1", "trust": "B", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "status": "done", "entries": [{ "status": "pending" }], "wallet": { "balance": 0, "pending": 200 } } },
+        { "op": "post", "args": { "entry": "$e1", "at": "2026-12-10T09:00:00+09:00" }, "expect": { "ok": true, "wallet": { "balance": 200, "pending": 0, "nextExpire": [{ "at": "2027-12-11T00:00:00+09:00", "points": 200 }] } } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 200, "convertible": 200 } } } },
+    { "id": "MV-07", "name": "건별 만료 lot 3개 · 사용 시 선입선출(만료 빠른 것부터)",
+      "given": { "rules": [
+          { "id": "mru_a", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 }, "expiry": { "mode": "months", "months": 3 } },
+          { "id": "mru_b", "trigger": "course_done", "score": { "mode": "fixed", "v": 100 }, "expiry": { "mode": "months", "months": 1 } },
+          { "id": "mru_c", "trigger": "exam_score", "score": { "mode": "fixed", "v": 100 } }],
+        "rewards": [{ "id": "mrw_goods", "kind": "goods", "title": "굿즈", "cash": false, "approval": "auto" }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "emit", "args": { "trigger": "course_done", "srcType": "cls", "srcId": "c1", "trust": "A", "at": "2026-11-02T10:01:00+09:00" } },
+        { "op": "emit", "args": { "trigger": "exam_score", "srcType": "exam", "srcId": "1", "value": 90, "trust": "A", "at": "2026-11-02T10:02:00+09:00" } },
+        { "op": "redeem", "args": { "reward": "mrw_goods", "points": 150, "idem": "a", "at": "2026-11-03T10:00:00+09:00" }, "expect": { "status": "approved", "wallet": { "balance": 150, "nextExpire": [{ "at": "2027-02-03T00:00:00+09:00", "points": 50 }, { "at": "2027-11-03T00:00:00+09:00", "points": 100 }] } } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 150 } } } },
+    { "id": "MV-08", "name": "만료 sweep 두 번 → expire 1줄",
+      "given": { "rules": [{ "id": "mru_a", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 }, "expiry": { "mode": "months", "months": 1 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "expire", "args": { "at": "2026-12-02T23:59:59+09:00" }, "expect": { "n": 0 } },
+        { "op": "expire", "args": { "at": "2026-12-03T00:00:00+09:00" }, "expect": { "n": 1 } },
+        { "op": "expire", "args": { "at": "2026-12-04T00:00:00+09:00" }, "expect": { "n": 0 } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 0 } }, "kinds": { "s1": ["earn:100", "expire:-100"] } } },
+    { "id": "MV-09", "name": "쓴 lot 취소 → 음수 잔액 → 신청 409 → 다음 적립으로 상계",
+      "given": { "rules": [{ "id": "mru_a", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }], "rewards": [{ "id": "mrw_goods", "kind": "goods", "title": "굿즈", "cash": false, "approval": "auto" }] },
+      "steps": [
+        { "op": "emit", "as": "l1", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "redeem", "args": { "reward": "mrw_goods", "points": 100, "idem": "a", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "status": "approved" } },
+        { "op": "cancel", "args": { "entry": "$l1", "reason": "수료 취소", "at": "2026-11-03T10:00:00+09:00" }, "expect": { "ok": true, "wallet": { "balance": -100 } } },
+        { "op": "redeem", "args": { "reward": "mrw_goods", "points": 10, "idem": "b", "at": "2026-11-03T11:00:00+09:00" }, "expect": { "error": "negative_balance" } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "2", "trust": "A", "at": "2026-11-04T10:00:00+09:00" }, "expect": { "wallet": { "balance": 0, "convertible": 0 } } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "3", "trust": "A", "at": "2026-11-05T10:00:00+09:00" }, "expect": { "wallet": { "balance": 100, "convertible": 100 } } },
+        { "op": "cancel", "args": { "entry": "$l1", "reason": "다시", "at": "2026-11-05T11:00:00+09:00" }, "expect": { "error": "already" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 100, "convertible": 100 } } } },
+    { "id": "MV-10", "name": "현금성 보상: 참여형 · C 신뢰 lot 제외, 전환 가능 P",
+      "given": { "rules": [
+          { "id": "mru_att", "trigger": "attend_day", "nature": "participation", "once": "per_day", "score": { "mode": "fixed", "v": 10 } },
+          { "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }],
+        "rewards": [{ "id": "mrw_cpn", "kind": "coupon", "title": "쿠폰", "cash": true, "approval": "manual", "cost": { "wonPerP": 1 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-02", "value": 30, "trust": "C", "at": "2026-11-02T09:00:00+09:00" }, "expect": { "entries": [{ "convertible": false }] } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "C", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "entries": [{ "convertible": false }] } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "2", "trust": "A", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "entries": [{ "convertible": true }], "wallet": { "balance": 210, "convertible": 100 } } },
+        { "op": "redeem", "args": { "reward": "mrw_cpn", "points": 150, "idem": "a", "at": "2026-11-03T10:00:00+09:00" }, "expect": { "error": "insufficient", "available": 100 } },
+        { "op": "redeem", "args": { "reward": "mrw_cpn", "points": 100, "idem": "b", "at": "2026-11-03T10:01:00+09:00" }, "expect": { "status": "requested", "won": 100, "wallet": { "balance": 110, "convertible": 0 } } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 110, "convertible": 0 } } } },
+    { "id": "MV-11", "name": "신청 → hold → 반려 → release 원복, 승인 후 회수 → 복원",
+      "given": { "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }], "rewards": [{ "id": "mrw_cpn", "kind": "coupon", "title": "쿠폰", "cash": true, "approval": "manual" }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "redeem", "as": "r1", "args": { "reward": "mrw_cpn", "points": 60, "idem": "a", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "status": "requested", "wallet": { "balance": 40 } } },
+        { "op": "decide", "args": { "id": "$r1", "decision": "reject", "at": "2026-11-02T12:00:00+09:00" }, "expect": { "error": "reason" } },
+        { "op": "decide", "args": { "id": "$r1", "decision": "reject", "reason": "재고 없음", "at": "2026-11-02T12:00:00+09:00" }, "expect": { "status": "rejected", "wallet": { "balance": 100, "convertible": 100 } } },
+        { "op": "decide", "args": { "id": "$r1", "decision": "approve", "at": "2026-11-02T12:01:00+09:00" }, "expect": { "error": "state" } },
+        { "op": "redeem", "as": "r2", "args": { "reward": "mrw_cpn", "points": 50, "idem": "b", "at": "2026-11-02T13:00:00+09:00" } },
+        { "op": "decide", "args": { "id": "$r2", "decision": "approve", "at": "2026-11-02T13:01:00+09:00" }, "expect": { "status": "approved", "wallet": { "balance": 50 } } },
+        { "op": "reclaim", "args": { "id": "$r2", "reason": "쿠폰 무효", "at": "2026-11-02T14:00:00+09:00" }, "expect": { "status": "reclaimed", "wallet": { "balance": 100, "convertible": 100 } } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 100 } }, "kinds": { "s1": ["earn:100", "hold:-60", "release:60", "hold:-50", "release:50", "use:-50", "restore:50"] } } },
+    { "id": "MV-12", "name": "같은 잔액으로 두 번 신청 → 1건만, 같은 idem 재전송 → 같은 결과",
+      "given": { "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }], "rewards": [{ "id": "mrw_cpn", "kind": "coupon", "title": "쿠폰", "cash": true, "approval": "manual" }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "redeem", "args": { "reward": "mrw_cpn", "points": 100, "idem": "a", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "status": "requested" } },
+        { "op": "redeem", "args": { "reward": "mrw_cpn", "points": 100, "idem": "b", "at": "2026-11-02T11:00:01+09:00" }, "expect": { "error": "insufficient" } },
+        { "op": "redeem", "args": { "reward": "mrw_cpn", "points": 100, "idem": "a", "at": "2026-11-02T11:00:02+09:00" }, "expect": { "again": true, "status": "requested" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 0 } } } },
+    { "id": "MV-13", "name": "학원비 차감 줄: billPct 30% · 배분 있는 bill · 국비 bill 거절",
+      "given": { "funded": { "c9": true },
+        "rules": [{ "id": "mru_big", "trigger": "course_done", "score": { "mode": "fixed", "v": 100000 } }],
+        "rewards": [{ "id": "mrw_tu", "kind": "tuition", "title": "학원비 차감", "cash": true, "approval": "manual", "cost": { "wonPerP": 1 }, "maxUse": { "billPct": 30 } }],
+        "charges": [
+          { "id": "lc_000000000001", "bill": "b1", "amount": 300000, "srcType": "class", "srcId": "c1" },
+          { "id": "lc_000000000002", "bill": "b2", "amount": 300000, "srcType": "class", "srcId": "c1" },
+          { "id": "lc_000000000003", "bill": "b3", "amount": 300000, "srcType": "class", "srcId": "c9" }],
+        "allocs": [{ "receipt": "lp_000000000002", "charge": "lc_000000000002", "amount": 1000 }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "course_done", "srcType": "cls", "srcId": "c1", "cls": "c1", "trust": "B", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "redeem", "as": "r1", "args": { "reward": "mrw_tu", "points": 95000, "idem": "a", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "status": "requested", "won": 95000 } },
+        { "op": "decide", "args": { "id": "$r1", "decision": "approve", "at": "2026-11-02T11:01:00+09:00" } },
+        { "op": "addLine", "args": { "bill": "b1", "redeem": "$r1", "at": "2026-11-02T11:02:00+09:00" }, "expect": { "error": "over_cap", "max": 90000 } },
+        { "op": "addLine", "args": { "bill": "b2", "redeem": "$r1", "at": "2026-11-02T11:02:00+09:00" }, "expect": { "error": "bill_paid" } },
+        { "op": "addLine", "args": { "bill": "b3", "redeem": "$r1", "at": "2026-11-02T11:02:00+09:00" }, "expect": { "error": "funded_blocked" } },
+        { "op": "reclaim", "args": { "id": "$r1", "reason": "상한 초과", "at": "2026-11-02T11:03:00+09:00" }, "expect": { "status": "reclaimed" } },
+        { "op": "redeem", "as": "r2", "args": { "reward": "mrw_tu", "points": 90000, "idem": "b", "at": "2026-11-02T11:04:00+09:00" } },
+        { "op": "decide", "args": { "id": "$r2", "decision": "approve", "at": "2026-11-02T11:05:00+09:00" } },
+        { "op": "addLine", "args": { "bill": "b1", "redeem": "$r2", "at": "2026-11-02T11:06:00+09:00" }, "expect": { "status": "fulfilled", "fulfil": { "billId": "b1" } } },
+        { "op": "billSum", "args": { "bill": "b1" }, "expect": { "sum": 210000, "lines": 2 } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 10000 } } } },
+    { "id": "MV-14", "name": "과정 전액 환불 → 차감 사용분 복원 + 그 과정 적립 취소",
+      "given": { "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 30000 } }],
+        "rewards": [{ "id": "mrw_tu", "kind": "tuition", "title": "학원비 차감", "cash": true, "approval": "manual", "maxUse": { "billPct": 30 } }],
+        "charges": [{ "id": "lc_000000000001", "bill": "b1", "amount": 300000, "srcType": "class", "srcId": "c1" }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "c1/1", "cls": "c1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "redeem", "as": "r1", "args": { "reward": "mrw_tu", "points": 30000, "idem": "a", "at": "2026-11-02T11:00:00+09:00" } },
+        { "op": "decide", "args": { "id": "$r1", "decision": "approve", "at": "2026-11-02T11:01:00+09:00" } },
+        { "op": "addLine", "args": { "bill": "b1", "redeem": "$r1", "at": "2026-11-02T11:02:00+09:00" }, "expect": { "status": "fulfilled" } },
+        { "op": "alloc", "args": { "receipt": "lp_000000000001", "charge": "lc_000000000001", "amount": 270000 } },
+        { "op": "refund", "args": { "receipt": "lp_000000000001", "ratio": 1, "at": "2026-11-10T10:00:00+09:00" }, "expect": { "restored": 30000, "cancelled": 1 } },
+        { "op": "refund", "args": { "receipt": "lp_000000000001", "ratio": 1, "at": "2026-11-10T10:05:00+09:00" }, "expect": { "restored": 0, "cancelled": 0 } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 0, "convertible": 0 } } } },
+    { "id": "MV-15", "name": "문턱(기준점) 미달 신청 409",
+      "given": { "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 300 } }], "rewards": [{ "id": "mrw_cpn", "kind": "coupon", "title": "쿠폰", "cash": true, "approval": "manual", "threshold": 500, "minUse": 100, "step": 100 }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "redeem", "args": { "reward": "mrw_cpn", "points": 100, "idem": "a", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "error": "below_threshold" } },
+        { "op": "redeem", "args": { "reward": "mrw_cpn", "points": 150, "idem": "b", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "error": "bad_points" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 300 } } } },
+    { "id": "MV-21", "name": "월 예산 소진 후 적립 → convertible=false",
+      "given": { "policy": { "budget": { "monthP": 150 } }, "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "entries": [{ "convertible": true }] } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "2", "trust": "A", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "entries": [{ "convertible": false }] } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "3", "trust": "A", "at": "2026-12-01T11:00:00+09:00" }, "expect": { "entries": [{ "convertible": true }] } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 300, "convertible": 200 } } } },
+    { "id": "MV-22", "name": "수동 지급: 기준 초과 owner 승인 대기, 본인 계정 403, 사유 필수",
+      "given": { "policy": { "grantCfg": { "approveOver": 1000, "staffMonthCap": 3000 } } },
+      "steps": [
+        { "op": "grant", "as": "g1", "args": { "staff": "t@x", "owner": false, "points": 1500, "reason": "칭찬", "idem": "1", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "status": "pending" } },
+        { "op": "grant", "args": { "staff": "t@x", "owner": false, "self": true, "points": 10, "reason": "칭찬", "idem": "2", "at": "2026-11-02T10:01:00+09:00" }, "expect": { "error": "self_grant" } },
+        { "op": "grant", "args": { "staff": "t@x", "owner": false, "points": 500, "reason": "", "idem": "3", "at": "2026-11-02T10:02:00+09:00" }, "expect": { "error": "reason" } },
+        { "op": "grant", "args": { "staff": "t@x", "owner": false, "points": 500, "reason": "칭찬", "idem": "4", "at": "2026-11-02T10:03:00+09:00" }, "expect": { "status": "posted" } },
+        { "op": "grant", "args": { "staff": "t@x", "owner": false, "points": 500, "reason": "칭찬", "idem": "4", "at": "2026-11-02T10:04:00+09:00" }, "expect": { "again": true } },
+        { "op": "grant", "args": { "staff": "t@x", "owner": false, "points": 1001, "reason": "칭찬", "idem": "5", "at": "2026-11-02T10:05:00+09:00" }, "expect": { "error": "staff_cap" } },
+        { "op": "post", "args": { "entry": "$g1", "at": "2026-11-02T12:00:00+09:00" }, "expect": { "ok": true } },
+        { "op": "grant", "args": { "staff": "o@x", "owner": true, "points": -200, "reason": "정정", "idem": "6", "at": "2026-11-02T13:00:00+09:00" }, "expect": { "status": "posted" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 1800, "pending": 0, "convertible": 1800 } } } },
+    { "id": "MV-23", "name": "스트릭 프리즈: 주 1일 빠짐 유지, 같은 주 2일 빠짐 끊김, 마일스톤 1회",
+      "given": { "policy": { "streak": { "freezePerWeek": 1, "milestones": [3] } }, "rules": [
+          { "id": "mru_att", "trigger": "attend_day", "nature": "participation", "once": "per_day", "score": { "mode": "fixed", "v": 10 } },
+          { "id": "mru_stk", "trigger": "streak", "nature": "participation", "score": { "mode": "fixed", "v": 50 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-02", "value": 20, "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-03", "value": 20, "trust": "A", "at": "2026-11-03T10:00:00+09:00" } },
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-05", "value": 20, "trust": "A", "at": "2026-11-05T10:00:00+09:00" }, "expect": { "wallet": { "balance": 80 } } },
+        { "op": "streak", "args": { "day": "2026-11-05" }, "expect": { "n": 3 } },
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-07", "value": 20, "trust": "A", "at": "2026-11-07T10:00:00+09:00" } },
+        { "op": "streak", "args": { "day": "2026-11-07" }, "expect": { "n": 2 } },
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-08", "value": 20, "trust": "A", "at": "2026-11-08T10:00:00+09:00" } },
+        { "op": "emit", "args": { "trigger": "attend_day", "srcType": "day", "srcId": "2026-11-09", "value": 20, "trust": "A", "at": "2026-11-09T10:00:00+09:00" } },
+        { "op": "streak", "args": { "day": "2026-11-09" }, "expect": { "n": 4 } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 110, "convertible": 0 } } } },
+    { "id": "MV-25", "name": "제도 종료: stopEarnAt 이후 skipped, 매월 고지 1회",
+      "given": { "policy": { "sunset": { "noticeAt": "2026-11-01T00:00:00+09:00", "stopEarnAt": "2026-12-01T00:00:00+09:00", "endAt": "2027-03-01T00:00:00+09:00", "mode": "expire" } },
+        "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }], "rewards": [{ "id": "mrw_goods", "kind": "goods", "title": "굿즈", "cash": false, "approval": "auto" }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "status": "done" } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "2", "trust": "A", "at": "2026-12-02T10:00:00+09:00" }, "expect": { "status": "skipped", "reason": "sunset" } },
+        { "op": "notices", "args": { "at": "2026-11-10T09:00:00+09:00" }, "expect": { "kinds": ["sunset"] } },
+        { "op": "notices", "args": { "at": "2026-11-20T09:00:00+09:00" }, "expect": { "kinds": [] } },
+        { "op": "notices", "args": { "at": "2026-12-05T09:00:00+09:00" }, "expect": { "kinds": ["sunset"] } },
+        { "op": "redeem", "args": { "reward": "mrw_goods", "points": 10, "idem": "a", "at": "2027-03-02T10:00:00+09:00" }, "expect": { "error": "sunset" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 100 } } } },
+    { "id": "MV-26", "name": "소멸 고지: 6개월 전부터 매월 + 30 · 3일 전 각 1회",
+      "given": { "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 120 }, "expiry": { "mode": "months", "months": 3 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "notices", "args": { "at": "2026-11-10T09:00:00+09:00" }, "expect": { "kinds": ["expire_month"], "points": [120] } },
+        { "op": "notices", "args": { "at": "2026-11-20T09:00:00+09:00" }, "expect": { "kinds": [] } },
+        { "op": "notices", "args": { "at": "2026-12-01T09:00:00+09:00" }, "expect": { "kinds": ["expire_month"] } },
+        { "op": "notices", "args": { "at": "2027-01-05T09:00:00+09:00" }, "expect": { "kinds": ["expire_d30", "expire_month"] } },
+        { "op": "notices", "args": { "at": "2027-01-31T10:00:00+09:00" }, "expect": { "kinds": ["expire_d3"] } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 120 } } } },
+    { "id": "MV-27", "name": "규칙 수정(버전 2) 후 같은 사건 재수신 → 재적립 없음, 새 사건은 새 버전",
+      "given": { "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "rule", "args": { "id": "mru_les", "ver": 2, "trigger": "lesson_done", "score": { "mode": "fixed", "v": 200 } } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-03T10:00:00+09:00" }, "expect": { "status": "already" } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "2", "trust": "A", "at": "2026-11-03T11:00:00+09:00" }, "expect": { "entries": [{ "points": 200 }] } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 300 } } } },
+    { "id": "MV-29", "name": "D1 국비 · 비국비 동시 수강 → 금전성 보상은 국비 lot 건너뜀",
+      "given": { "funded": { "c9": true }, "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }],
+        "rewards": [{ "id": "mrw_cpn", "kind": "coupon", "title": "쿠폰", "cash": true, "approval": "manual" }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "c9/1", "cls": "c9", "trust": "A", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "entries": [{ "funded": true, "convertible": false }] } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "c1/1", "cls": "c1", "trust": "A", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "entries": [{ "funded": false, "convertible": true }] } },
+        { "op": "redeem", "args": { "reward": "mrw_cpn", "points": 150, "idem": "a", "at": "2026-11-03T10:00:00+09:00" }, "expect": { "error": "insufficient", "available": 100 } },
+        { "op": "redeem", "args": { "reward": "mrw_cpn", "points": 100, "idem": "b", "at": "2026-11-03T10:01:00+09:00" }, "expect": { "status": "requested" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 100, "convertible": 0 } } } },
+    { "id": "MV-30", "name": "D1 국비 과정 대상 금전성 보상 신청 → funded_blocked",
+      "given": { "funded": { "c9": true }, "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }],
+        "rewards": [{ "id": "mrw_cpn", "kind": "coupon", "title": "쿠폰", "cash": true, "approval": "manual", "audience": { "cls": ["c9"] } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "c1/1", "cls": "c1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "redeem", "args": { "reward": "mrw_cpn", "points": 50, "idem": "a", "at": "2026-11-03T10:00:00+09:00" }, "expect": { "error": "funded_blocked" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 100 } } } },
+    { "id": "MV-32", "name": "D2 제도 기본 끔 → 적립 없음, 켠 뒤만(소급 없음)",
+      "given": { "policy": { "isOn": false }, "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" }, "expect": { "status": "skipped", "reason": "off" } },
+        { "op": "policy", "args": { "isOn": true } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "status": "already" } },
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "2", "trust": "A", "at": "2026-11-02T12:00:00+09:00" }, "expect": { "status": "done" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 100 } } } },
+    { "id": "MV-34", "name": "D3 감점: 정책 끔이면 거절, 켜면 1회 · 하루 상한, 사유 필수",
+      "given": { "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "grant", "args": { "staff": "o@x", "owner": true, "penalty": true, "points": 10, "reason": "지각", "idem": "1", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "error": "penalty_off" } },
+        { "op": "policy", "args": { "penalty": { "on": true, "maxOnce": 50, "dayCap": 60 } } },
+        { "op": "grant", "args": { "staff": "o@x", "owner": true, "penalty": true, "points": 60, "reason": "지각", "idem": "2", "at": "2026-11-02T11:01:00+09:00" }, "expect": { "error": "over_cap" } },
+        { "op": "grant", "args": { "staff": "o@x", "owner": true, "penalty": true, "points": 40, "reason": "", "idem": "3", "at": "2026-11-02T11:02:00+09:00" }, "expect": { "error": "reason" } },
+        { "op": "grant", "args": { "staff": "o@x", "owner": true, "penalty": true, "points": 40, "reason": "지각", "idem": "4", "at": "2026-11-02T11:03:00+09:00" }, "expect": { "status": "posted" } },
+        { "op": "grant", "args": { "staff": "o@x", "owner": true, "penalty": true, "points": 30, "reason": "지각", "idem": "5", "at": "2026-11-02T11:04:00+09:00" }, "expect": { "error": "over_cap" } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 60, "convertible": 60 } }, "kinds": { "s1": ["earn:100", "penalty:-40"] } } },
+    { "id": "MV-35", "name": "학원 환불: 정가 300,000 · 차감 −30,000 · 실납부 270,000, 1/2 경과 → 복원 15,000P",
+      "given": { "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 30000 } }],
+        "rewards": [{ "id": "mrw_tu", "kind": "tuition", "title": "학원비 차감", "cash": true, "approval": "auto", "maxUse": { "billPct": 30 } }],
+        "charges": [{ "id": "lc_000000000001", "bill": "b1", "amount": 300000, "srcType": "class", "srcId": "c1" }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "c1/1", "cls": "c1", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "redeem", "as": "r1", "args": { "reward": "mrw_tu", "points": 30000, "idem": "a", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "status": "approved", "won": 30000 } },
+        { "op": "addLine", "args": { "bill": "b1", "redeem": "$r1", "at": "2026-11-02T11:02:00+09:00" }, "expect": { "status": "fulfilled" } },
+        { "op": "billSum", "args": { "bill": "b1" }, "expect": { "sum": 270000 } },
+        { "op": "alloc", "args": { "receipt": "lp_000000000001", "charge": "lc_000000000001", "amount": 270000 } },
+        { "op": "refund", "args": { "receipt": "lp_000000000001", "ratio": 0.5, "at": "2026-11-20T10:00:00+09:00" }, "expect": { "restored": 15000, "cancelled": 0 } }
+      ], "then": { "wallets": { "s1|lu_root": { "balance": 15000, "convertible": 15000 } } } },
+    { "id": "MV-36", "name": "지갑 단위: 가맹점 A lot으로 가맹점 B 보상 신청 → 거절",
+      "given": { "rules": [{ "id": "mru_les", "trigger": "lesson_done", "score": { "mode": "fixed", "v": 100 } }],
+        "rewards": [{ "id": "mrw_b", "kind": "goods", "title": "B 굿즈", "cash": false, "approval": "auto", "link": { "unitId": "lu_b" } }, { "id": "mrw_a", "kind": "goods", "title": "A 굿즈", "cash": false, "approval": "auto", "link": { "unitId": "lu_a" } }] },
+      "steps": [
+        { "op": "emit", "args": { "trigger": "lesson_done", "srcType": "item", "srcId": "1", "unit": "lu_a", "trust": "A", "at": "2026-11-02T10:00:00+09:00" } },
+        { "op": "redeem", "args": { "reward": "mrw_b", "points": 50, "idem": "a", "at": "2026-11-02T11:00:00+09:00" }, "expect": { "error": "insufficient", "available": 0 } },
+        { "op": "redeem", "args": { "reward": "mrw_a", "points": 50, "idem": "b", "at": "2026-11-02T11:01:00+09:00" }, "expect": { "status": "approved" } }
+      ], "then": { "wallets": { "s1|lu_a": { "balance": 50 }, "s1|lu_b": { "balance": 0 } } } }
+  ]
+}
