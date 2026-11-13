@@ -425,7 +425,10 @@ public class LedgerServiceImpl extends EgovAbstractServiceImpl implements Ledger
     List<Map<String, Object>> entries(String tid, HttpServletRequest q) throws Exception {
         String[] R = range(q); String type = qp(q, "type"), st = qp(q, "status"), qq = trim(cut(qp(q, "q"), 40)), unit = qp(q, "unit").isEmpty() ? null : qp(q, "unit");
         return T(tid, () -> { ArrayNode UC = unitCalc(unitsOf(tid)); Set<String> scope = unit != null ? DdLedgerCalc.unitScope(unit, UC, "1".equals(q.getParameter("rollup"))) : null;
-            List<Map<String, Object>> all = new ArrayList<>(); all.addAll(m.selectEntryCharges(tid, R[0], R[1])); all.addAll(m.selectEntryReceipts(tid, R[0], R[1])); all.addAll(m.selectEntryRefunds(tid, R[0], R[1]));
+            List<Map<String, Object>> ch = m.selectEntryCharges(tid, R[0], R[1]);
+            if (!ch.isEmpty()) { Set<String> bills = new LinkedHashSet<>(); for (Map<String, Object> x : ch) bills.add(s(x.get("bill"))); Lines Lb = linesOf(tid, null, new ArrayList<>(bills), null); /* 잔액 = 줄의 낼 금액(할인 반영) − 배분액 */
+                for (Map<String, Object> x : ch) { JsonNode l = Lb.line.get(s(x.get("id"))); x.put("balance", l == null ? 0L : l.get("balance").asLong()); } }
+            List<Map<String, Object>> all = new ArrayList<>(); all.addAll(ch); all.addAll(m.selectEntryReceipts(tid, R[0], R[1])); all.addAll(m.selectEntryRefunds(tid, R[0], R[1]));
             all.removeIf(x -> !((scope == null || scope.contains(s(x.get("unit")))) && (type.isEmpty() || type.equals(x.get("type"))) && (st.isEmpty() || st.equals(x.get("status")))
                 && (qq.isEmpty() || (x.get("sid") == null ? "" : s(x.get("sid"))).contains(qq) || (x.get("title") == null ? "" : s(x.get("title"))).contains(qq) || qq.equals(x.get("id")))));
             all.sort((x, y) -> { int c = s(y.get("at")).compareTo(s(x.get("at"))); return c != 0 ? c : s(y.get("id")).compareTo(s(x.get("id"))); });

@@ -92,11 +92,17 @@ public final class DdLedgerCalc {
         for (JsonNode r : R) if (kind(r, "refund") && st(r, "done")) { long a = I(get(r, "amount")); refund += a; add(byUnit, unitOf(r), -a); }
         for (JsonNode r : R) if (kind(r, "receipt") && st(r, "paid")) { long[] x = dm.computeIfAbsent(S0(get(r, "day")), k -> new long[3]); long a = I(get(r, "amount")); x[0] += a; x[2] += a; }
         for (JsonNode r : R) if (kind(r, "refund") && st(r, "done")) { long[] x = dm.computeIfAbsent(S0(get(r, "day")), k -> new long[3]); long a = I(get(r, "amount")); x[1] += a; x[2] -= a; }
+        TreeMap<String, long[]> ud = new TreeMap<>(); /* 단위별 상세 [charged, paid, refund, net, unpaid] (unitId 문자열 순) */
+        for (JsonNode r : R) if (kind(r, "charge") && !st(r, "void")) { long[] x = ud.computeIfAbsent(unitOf(r), k -> new long[5]); x[0] += I(get(r, "amount")); x[4] += Math.max(0, I(get(r, "balance"))); }
+        for (JsonNode r : R) if (kind(r, "receipt") && st(r, "paid")) { long[] x = ud.computeIfAbsent(unitOf(r), k -> new long[5]); long a = I(get(r, "amount")); x[1] += a; x[3] += a; }
+        for (JsonNode r : R) if (kind(r, "refund") && st(r, "done")) { long[] x = ud.computeIfAbsent(unitOf(r), k -> new long[5]); long a = I(get(r, "amount")); x[2] += a; x[3] -= a; }
+        ArrayNode byUnitDetail = F.arrayNode(); for (Map.Entry<String, long[]> e : ud.entrySet()) { long[] x = e.getValue(); ObjectNode d = byUnitDetail.addObject(); d.put("unitId", e.getKey()); d.put("charged", x[0]); d.put("paid", x[1]); d.put("refund", x[2]); d.put("net", x[3]); d.put("unpaid", x[4]);
+            d.set("collectRate", numNode(x[0] > 0 ? Math.floor((double) (x[0] - x[4]) * 1000 / x[0]) / 10 : 0)); }
         ArrayNode daily = F.arrayNode(); for (Map.Entry<String, long[]> e : dm.entrySet()) { ObjectNode d = daily.addObject(); d.put("day", e.getKey()); d.put("paid", e.getValue()[0]); d.put("refund", e.getValue()[1]); d.put("net", e.getValue()[2]); }
         double rate = charged > 0 ? Math.floor((double) (charged - unpaid) * 1000 / charged) / 10 : 0;
         ObjectNode sh = share(arrNode(R), get(opt, "units"));
         ObjectNode o = F.objectNode(); o.put("net", paid - refund); o.put("paid", paid); o.put("refund", refund); o.put("charged", charged); o.put("unpaid", unpaid); o.set("collectRate", numNode(rate));
-        o.set("byMethod", byMethod); o.set("byItem", byItem); o.set("byUnit", byUnit); o.set("daily", daily);
+        o.set("byMethod", byMethod); o.set("byItem", byItem); o.set("byUnit", byUnit); o.set("byUnitDetail", byUnitDetail); o.set("daily", daily);
         ObjectNode s = o.putObject("share"); s.set("eligible", sh.get("eligible")); s.set("estimate", sh.get("estimate")); return o;
     }
 
