@@ -1,6 +1,6 @@
 /* v41.0 통합 수납 원장 — 계산 공용(브라우저 window.ledgerCalc · Node require). 09 개발 규격 4절.
    Node service/server/ledger(이 파일을 그대로 require) · Java DdLedgerCalc · 화면(ledger.js · lledger.js)이 모두 같은 값을 내야 한다.
-   기준값: tests/ledger-vectors.json. 규칙을 바꾸면 벡터 · Java를 함께 바꾼다.
+   기준값: tests/ledger-vectors.json. (v41.0-b: summary.byUnitDetail 추가) 규칙을 바꾸면 벡터 · Java를 함께 바꾼다.
    - 금액은 원 단위 정수. 환불 비율 계산은 10원 미만 내림(시설 floor10과 같음), PG 쉐어는 원 단위 내림.
    - 청구 줄(charge): {id, bill, amount, due, at, status}. amount 음수 줄 = 할인(같은 bill의 양수 줄에 앞에서부터 먼저 깎는다).
    - 정렬(오래된 순): due(없으면 '9999-12-31') → at → id. */
@@ -75,8 +75,14 @@
     for (const r of rc) { const x = dd(r.day); x.paid += int(r.amount); x.net += int(r.amount); }
     for (const r of rf) { const x = dd(r.day); x.refund += int(r.amount); x.net -= int(r.amount); }
     const daily = Object.keys(dm).sort().map(k => dm[k]);
+    /* 단위별 상세: [{unitId, charged, paid, refund, net, unpaid, collectRate}] (unitId 문자열 순) — 위 전체 값과 같은 규칙 */
+    const ud = {}; const U1 = u => ud[u] || (ud[u] = { unitId: u, charged: 0, paid: 0, refund: 0, net: 0, unpaid: 0, collectRate: 0 });
+    for (const r of ch) { const x = U1(r.unit); x.charged += int(r.amount); x.unpaid += Math.max(0, int(r.balance)); }
+    for (const r of rc) { const x = U1(r.unit); x.paid += int(r.amount); x.net += int(r.amount); }
+    for (const r of rf) { const x = U1(r.unit); x.refund += int(r.amount); x.net -= int(r.amount); }
+    const byUnitDetail = Object.keys(ud).sort().map(k => { const x = ud[k]; x.collectRate = x.charged > 0 ? Math.floor((x.charged - x.unpaid) * 1000 / x.charged) / 10 : 0; return x; });
     const sh = share(R, o.units || []);
-    return { net, paid, refund, charged, unpaid, collectRate, byMethod, byItem, byUnit, daily, share: { eligible: sh.eligible, estimate: sh.estimate } };
+    return { net, paid, refund, charged, unpaid, collectRate, byMethod, byItem, byUnit, byUnitDetail, daily, share: { eligible: sh.eligible, estimate: sh.estimate } };
   }
 
   /* share(rows, units) — PG 쉐어 추정. 단위별 쉐어 대상(share_eligible 수납 paid − 그 수납의 환불 done) × share_rate_bp ÷ 10000, 단위별 원 단위 내림 후 합산.

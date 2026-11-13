@@ -659,6 +659,44 @@
      "lu_b": 123457,
      "lu_root": 2000000
     },
+    "byUnitDetail": [
+     {
+      "unitId": "lu_a",
+      "charged": 270000,
+      "paid": 270000,
+      "refund": 70000,
+      "net": 200000,
+      "unpaid": 0,
+      "collectRate": 100
+     },
+     {
+      "unitId": "lu_b",
+      "charged": 80000,
+      "paid": 123457,
+      "refund": 0,
+      "net": 123457,
+      "unpaid": 80000,
+      "collectRate": 0
+     },
+     {
+      "unitId": "lu_b1",
+      "charged": 150000,
+      "paid": 100000,
+      "refund": 0,
+      "net": 100000,
+      "unpaid": 50000,
+      "collectRate": 66.6
+     },
+     {
+      "unitId": "lu_root",
+      "charged": 0,
+      "paid": 2000000,
+      "refund": 0,
+      "net": 2000000,
+      "unpaid": 0,
+      "collectRate": 0
+     }
+    ],
     "daily": [
      {
       "day": "2026-11-01",
@@ -879,6 +917,26 @@
      "lu_b1": 100000,
      "lu_b": 123457
     },
+    "byUnitDetail": [
+     {
+      "unitId": "lu_b",
+      "charged": 80000,
+      "paid": 123457,
+      "refund": 0,
+      "net": 123457,
+      "unpaid": 80000,
+      "collectRate": 0
+     },
+     {
+      "unitId": "lu_b1",
+      "charged": 150000,
+      "paid": 100000,
+      "refund": 0,
+      "net": 100000,
+      "unpaid": 50000,
+      "collectRate": 66.6
+     }
+    ],
     "daily": [
      {
       "day": "2026-11-02",
@@ -1078,6 +1136,17 @@
     "byUnit": {
      "lu_b": 123457
     },
+    "byUnitDetail": [
+     {
+      "unitId": "lu_b",
+      "charged": 80000,
+      "paid": 123457,
+      "refund": 0,
+      "net": 123457,
+      "unpaid": 80000,
+      "collectRate": 0
+     }
+    ],
     "daily": [
      {
       "day": "2026-11-03",
@@ -1263,6 +1332,7 @@
     "byMethod": {},
     "byItem": {},
     "byUnit": {},
+    "byUnitDetail": [],
     "daily": [],
     "share": {
      "eligible": 0,

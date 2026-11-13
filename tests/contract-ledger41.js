@@ -126,11 +126,13 @@ async function run(U, tag, mock) {
   const fp = await call('A', 'POST', '/api/fac/payments', { booking: fb.j.booking && fb.j.booking.id, method: 'cash', amount: 5000 });
   const ffr = await call('A', 'POST', '/api/fac/refunds', { payment: fp.j.payment && fp.j.payment.id, amount: 2000, editReason: '현장 합의' });
   const en = await call('A', 'GET', `/api/ledger/entries?from=${kst(-1)}&to=${kst(1)}`); const E = en.j.entries || [];
+  const ec = E.filter(x => x.type === 'charge' && x.bill === c1.j.bill.id).sort((x, y) => y.amount - x.amount); R.entryBalance = ec.map(x => x.balance); /* 정정 뒤 c1 잔액 100000, 할인 줄 0 */
   R.facDual = [fp.st, ffr.st, E.filter(x => x.type === 'receipt' && x.legacyRef === 'fac_payment:' + fp.j.payment.id).length, E.filter(x => x.type === 'refund' && x.legacyRef && x.amount === 2000).length];
 
   // 요약 · 쉐어 · 오늘 할 일 · 마감 · 내보내기
   const sm = await call('A', 'GET', `/api/ledger/summary?from=${kst()}&to=${kst()}`); R.summary = [sm.st, sm.j.paid, sm.j.refund, sm.j.net, sm.j.byMethod && sm.j.byMethod.online_card, sm.j.share && sm.j.share.eligible, sm.j.share && sm.j.share.estimate];
   const sr = await call('A', 'GET', `/api/ledger/summary?from=${kst()}&to=${kst()}&unit=lu_branch1&rollup=1`); R.rollup = [sr.j.paid, sr.j.byUnit && sr.j.byUnit.lu_dept1];
+  R.byUnitDetail = (sr.j.byUnitDetail || []).map(x => [x.unitId, x.charged, x.paid, x.refund, x.net, x.unpaid, x.collectRate]);
   const sh = await call('A', 'GET', `/api/ledger/share?ym=${kst().slice(0, 7)}`); R.share = [sh.st, sh.j.eligible, sh.j.estimate, sh.j.actual, sh.j.diff, (sh.j.units || []).map(x => x.unit + ':' + x.rateBp).join(',')];
   const td = await call('A', 'GET', '/api/ledger/today'); R.today = [td.st, td.j.unpaid && td.j.unpaid.people.d8, td.j.refundsPending, td.j.unmatched];
   const cg = await call('A', 'GET', `/api/ledger/close?unitId=lu_dept1&day=${kst()}`); R.closeGet = [cg.st, cg.j.cashSystem, cg.j.cardSystem];
@@ -167,8 +169,8 @@ const EXPECT = {
   link: [200, true], bill: [200, '홍○ 학습자님', 25000, false, false], billBad: 'link', billOrder: [200, 25000], billConfirm: [200, 'paid'], billUsed: 'used', pgFail: [502, 'pg', 'expired'],
   genDry: [200, 1, 250000], gen: [200, 1], genAgain: [0, 1],
   import: [200, 1, 1, 'amount'], importAgain: [0, 1], importCols: 'columns', tossSettle: [200, 1],
-  facDual: [200, 200, 1, 1],
-  summary: [200, 450000, 52000, 398000, 195000, 145000, 605], rollup: [445000, 370000],
+  entryBalance: [100000, 0], facDual: [200, 200, 1, 1],
+  summary: [200, 450000, 52000, 398000, 195000, 145000, 605], rollup: [445000, 370000], byUnitDetail: [["lu_branch1", 34000, 25000, 0, 25000, 9000, 73.5], ["lu_dept1", 520000, 420000, 50000, 370000, 100000, 80.7]],
   share: [200, 145000, 605, 500, -105, 'lu_branch1:50,lu_dept1:40'], today: [200, 1, 1, null], closeGet: [200, 0, 0], closeReason: 'reason', close: [200, 0], close2: 'closed', export: [200, true, true, true],
   device: [200, true, 'mock'], devicePush: [200, 'desk_card', '30012345'], devicePushAgain: true, deviceBad: 401, devices: 1,
   isolation: ['receipt', 0]
