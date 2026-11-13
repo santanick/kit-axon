@@ -252,9 +252,9 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (pii.pubOpen[key]) return pii.pubOpen[key](req, res, tid);
     if (key === 'GET events' || key === 'POST events') return eventsRoute(req, res, tid, key);
     if (key === 'GET site') {
-      const site = await inTenant(pool, tid, async c => { const r = (await c.query(`select doc->'lsite'->'pub' pub, ${SEQ_SQL} seq from tenant_state where tenant_id = $1`, [tid])).rows[0]; if (r && r.pub && r.pub.comm) r.live = (await c.query(COMM_LIVE_Q, [tid, r.seq])).rows.map(x => x.cm); return r; });
+      const site = await inTenant(pool, tid, async c => { const r = (await c.query(`select doc->'lsite'->'pub' pub, coalesce(doc->'ledger'->>'on', doc->'org'->>'ledger_on') = 'true' led, ${SEQ_SQL} seq from tenant_state where tenant_id = $1`, [tid])).rows[0]; if (r && r.pub && r.pub.comm) r.live = (await c.query(COMM_LIVE_Q, [tid, r.seq])).rows.map(x => x.cm); return r; });
       if (!site || !site.pub) throw new HttpErr(404, '아직 게시되지 않은 학습자 사이트입니다.', 'unpublished');
-      return { site: commlive.merge(site.pub, site.live) }; /* v38 C#17 운영자 화면이 아직 반영하지 않은 학습자 글 · 댓글 */
+      return { site: { ...commlive.merge(site.pub, site.live), ledger: { on: !!site.led } } }; /* v41 원장 플래그(기관 문서 그대로) · v38 C#17 운영자 화면이 아직 반영하지 않은 학습자 글 · 댓글 */
     }
     if (key === 'POST login') {
       const b = await readBody(req, 2048); if (b.keep === false) res.ddKeep = false;

@@ -16,7 +16,7 @@ function tossMock(port) {
     const b = d ? JSON.parse(d) : {}; const auth = req.headers.authorization === 'Basic ' + Buffer.from(SK + ':').toString('base64'); calls.push({ path: req.url, body: b, auth, idem: req.headers['idempotency-key'] || '' });
     const send = (st, j) => { res.writeHead(st, { 'content-type': 'application/json' }); res.end(JSON.stringify(j)); };
     if (!auth) return send(401, { code: 'UNAUTHORIZED_KEY' });
-    if (req.url === '/v1/payments/confirm') { if (String(b.paymentKey).startsWith('fail')) return send(400, { code: 'REJECT_CARD_COMPANY' }); return send(200, { totalAmount: b.paymentKey === 'pk_short' ? b.amount - 1 : b.amount, status: 'DONE', method: '카드' }); }
+    if (req.url === '/v1/payments/confirm') { if (String(b.paymentKey).startsWith('fail')) return send(400, { code: 'REJECT_CARD_COMPANY' }); return send(200, { totalAmount: b.paymentKey === 'pk_short' ? b.amount - 1 : b.amount, status: 'DONE', method: '카드', receipt: { url: 'https://dashboard.tosspayments.com/receipt/' + b.paymentKey } }); }
     const m = /^\/v1\/payments\/([^/]+)\/cancel$/.exec(req.url); if (m) return send(200, { cancels: [{ transactionKey: 'tx_' + calls.length, cancelAmount: b.cancelAmount }] });
     send(404, { code: 'NOT_FOUND' }); }); });
   return new Promise(ok => srv.listen(port, '127.0.0.1', () => ok({ srv, calls, port: srv.address().port })));
@@ -40,6 +40,7 @@ async function run(U, tag, mock) {
     members: [{ id: 'm1', sid, name: '홍길동' }], classes: [{ id: 'c1', name: '영어 A반', price: 250000, learners: ['m1'] }], ledger: { on }, fac: FAC(), lsite: { pub: { org: { name: '원장 학원' }, pages: [], fac: FAC() } } });
   let rev = (await call('A', 'GET', '/api/state')).j.rev || 0; rev = (await call('A', 'PUT', '/api/state', { doc: doc(false), rev })).j.rev;
   const off = await call('A', 'GET', '/api/ledger/summary'); R.off = [off.st, off.j.error]; R.offPub = (await call('L1', 'GET', P('ledger-my'))).j.error;
+  R.siteOff = ((await call('G', 'GET', P('site'))).j.site || {}).ledger;
   rev = (await call('A', 'PUT', '/api/state', { doc: doc(true), rev })).j.rev;
 
   // 단위 · 토스 키(비밀키는 응답에 없음)
@@ -77,6 +78,9 @@ async function run(U, tag, mock) {
   const cf2 = await call('L1', 'POST', P('ledger-confirm'), { orderId: od.j.orderId, paymentKey: 'pk_1', amount: 170000 }); R.confirmAgain = [cf2.st, cf2.j.receipt && cf2.j.receipt.id === cf.j.receipt.id];
   R.tossCalls = mock ? mock.calls.filter(x => x.path === '/v1/payments/confirm').length : null;
   const my2 = await call('L1', 'GET', P('ledger-my')); R.my2 = [my2.j.balance, (my2.j.charges || []).map(x => x.status).join(','), (my2.j.receipts || []).length];
+  const rx = (my2.j.receipts || []).find(x => x.id === cf.j.receipt.id) || {}, rcash = (my2.j.receipts || []).find(x => x.id === r1.j.receipt.id) || {};
+  R.myReceipt = [rx.receiptUrl, (rx.chargeIds || []).join(',') === ch1[0] /* 배분된 줄만(할인 줄은 배분 없음) */, rcash.receiptUrl, (rcash.chargeIds || []).length];
+  R.siteFlag = (await call('G', 'GET', P('site'))).j.site.ledger;
   R.paidAgain = (await call('L1', 'POST', P('ledger-order'), { chargeIds: ch1 })).j.error;
 
   // 환불: 토스 부분 취소(확정은 직원) · 합계 초과 · 사유
@@ -163,7 +167,7 @@ const EXPECT = {
   charge: [200, 270000, 2, 270000, 0], chargeIdem: [true, true], chargeBad: 'amount', chargeUnit: 'unit',
   over: 'over_balance', noAppr: 'approval', badMethod: 'method', receipt: [200, 100000, 1, 100000, false], receiptIdem: true,
   my: [200, 170000, 2, true], guest: 401, orderMismatch: 'amount_mismatch', order: [200, 170000, true, 'test_ck_x', true], confirmBad: 'amount_mismatch', confirm: [200, 'paid', 170000], confirmAgain: [200, true], tossCalls: 1,
-  my2: [0, 'paid,paid', 2], paidAgain: 'paid',
+  my2: [0, 'paid,paid', 2], myReceipt: ['https://dashboard.tosspayments.com/receipt/pk_1', true, null, 1], siteFlag: { on: true }, siteOff: { on: false }, paidAgain: 'paid',
   refund: [200, 113330, 'pending', true], refundPending: 'pending', confirmReason: 'reason', confirmOver: 'over_refund', refundDone: [200, 'done', 50000, true], tossCancel: [1, 50000], refundTwice: 'state', refundOver: 120000,
   correct: [200, -100000, true], correct2: 'corrected', correctToss: 'use_refund', balAfterCorrect: 100000,
   link: [200, true], bill: [200, '홍○ 학습자님', 25000, false, false], billBad: 'link', billOrder: [200, 25000], billConfirm: [200, 'paid'], billUsed: 'used', pgFail: [502, 'pg', 'expired'],

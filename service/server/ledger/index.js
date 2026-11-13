@@ -87,10 +87,10 @@ function createLedger(ctx) {
     await refreshStatus(c, tid, bills); return { row, allocs };
   }
   /* 온라인 승인 후 ready 수납을 paid로 바꾸고 배분 */
-  async function settle(c, tid, rc, paymentKey) {
+  async function settle(c, tid, rc, paymentKey, receiptUrl) {
     const L = await linesOf(c, tid, { ids: rc.charge_ids || [] }); const open = L.bal.lines.filter(l => (rc.charge_ids || []).includes(l.id)).map(l => ({ ...l, due: L.by.get(l.id).due, at: L.by.get(l.id).at_s }));
     const A = calc.allocate(rc.amount, open); /* 승인 사이 다른 경로로 일부 납부됐으면 남는 금액은 배분 없이 수납만(환불 대상으로 오늘 할 일에 표시) */
-    await c.query("update led_receipt set status = 'paid', paid_at = now(), toss_payment_key = $3, diff_reason = $4 where tenant_id = $1 and id = $2", [tid, rc.id, paymentKey, A.rest > 0 ? 'over_paid' : null]);
+    await c.query("update led_receipt set status = 'paid', paid_at = now(), toss_payment_key = $3, diff_reason = $4, receipt_url = $5 where tenant_id = $1 and id = $2", [tid, rc.id, paymentKey, A.rest > 0 ? 'over_paid' : null, receiptUrl || null]);
     for (const a of A.allocs) await c.query('insert into led_alloc (tenant_id, receipt_id, charge_id, amount) values ($1,$2,$3,$4)', [tid, rc.id, a.charge, a.amount]);
     await refreshStatus(c, tid, [...new Set(A.allocs.map(a => L.by.get(a.charge).bill_id))]);
   }

@@ -14,7 +14,7 @@ function createPay(env, fetchFn = globalThis.fetch) {
     online: () => !!key,
     /* 반환 { ok, amount, method, raw } | { ok:false, code } */
     async confirm({ paymentKey, orderId, amount }) { if (!key) return { ok: false, code: 'onsite_only' }; const r = await post('/v1/payments/confirm', { paymentKey, orderId, amount }, 'cf-' + orderId);
-      return r.ok ? { ok: true, amount: Math.round(+r.j.totalAmount || 0), status: r.j.status, method: r.j.method || '' } : { ok: false, code: String(r.j.code || 'pg') }; },
+      return r.ok ? { ok: true, amount: Math.round(+r.j.totalAmount || 0), status: r.j.status, method: r.j.method || '', receiptUrl: r.j.receipt && typeof r.j.receipt.url === 'string' ? r.j.receipt.url.slice(0, 500) : null } : { ok: false, code: String(r.j.code || 'pg') }; },
     async cancel({ paymentKey, reason, amount, idem }) { if (!key) return { ok: false, code: 'onsite_only' }; const r = await post(`/v1/payments/${encodeURIComponent(paymentKey)}/cancel`, { cancelReason: String(reason || '고객 요청').slice(0, 200), ...(amount != null ? { cancelAmount: amount } : {}) }, idem);
       const c = r.ok && Array.isArray(r.j.cancels) ? r.j.cancels[r.j.cancels.length - 1] : null; return r.ok ? { ok: true, cancelKey: c && c.transactionKey ? String(c.transactionKey) : 'ok' } : { ok: false, code: String(r.j.code || 'pg') }; }
   };

@@ -37,7 +37,7 @@ module.exports = (ctx, S) => {
     if (!r.ok) { await T(tid, c => c.query("update led_receipt set status = 'failed' where tenant_id = $1 and id = $2 and status = 'ready'", [tid, X.rc.id])); throw E(502, 'pg', '결제 승인에 실패했어요. 잠시 후 다시 시도해 주세요.'); }
     if (r.amount !== X.rc.amount) { await X.P.pay.cancel({ paymentKey, reason: '금액 불일치', idem: 'mm-' + orderId }); await T(tid, c => c.query("update led_receipt set status = 'failed' where tenant_id = $1 and id = $2", [tid, X.rc.id])); throw E(400, 'amount_mismatch', '결제 금액이 달라 승인을 취소했어요.'); }
     return T(tid, async c => { const rc = (await c.query('select * from led_receipt where tenant_id = $1 and id = $2 for update', [tid, X.rc.id])).rows[0]; if (rc.status === 'paid') return out(rc);
-      await S.settle(c, tid, rc, paymentKey); if (linkHash) await c.query('update led_link set used_at = now() where tenant_id = $1 and token_hash = $2', [tid, linkHash]);
+      await S.settle(c, tid, rc, paymentKey, r.receiptUrl && /^https:\/\//.test(r.receiptUrl) ? r.receiptUrl : null); if (linkHash) await c.query('update led_link set used_at = now() where tenant_id = $1 and token_hash = $2', [tid, linkHash]);
       await audit(c, tid, linkHash ? 'link' : 'learner:' + sid, 'ledger.pay', { receipt: rc.id, amount: rc.amount }); return out(rc); });
   }
   /* 링크 토큰 → 청구서(만료 410 expired · 사용 409 used · 없음 404 link) */
@@ -51,7 +51,7 @@ module.exports = (ctx, S) => {
     'GET ledger-my': async (req, res, tid) => { const w = await who(req, tid); return T(tid, async c => { await S.sweepNow(c, tid);
       const L = await S.linesOf(c, tid, { sid: w.sid }); const B = new Map(L.bal.lines.map(l => [l.id, l]));
       const charges = L.charges.filter(x => x.sid === w.sid && x.status !== 'void').sort((a, b) => (new Date(b.created_at) - new Date(a.created_at)) || String(b.id).localeCompare(String(a.id))).map(x => chOut(x, B.get(x.id)));
-      const receipts = (await c.query("select id, method, channel, amount, status, paid_at \"paidAt\", approval_no is not null \"hasApproval\" from led_receipt where tenant_id = $1 and sid = $2 and status in ('paid') order by paid_at desc limit 100", [tid, w.sid])).rows;
+      const receipts = (await c.query("select r.id, r.method, r.channel, r.amount, r.status, r.paid_at \"paidAt\", r.approval_no is not null \"hasApproval\", r.receipt_url \"receiptUrl\", coalesce((select array_agg(distinct a.charge_id) from led_alloc a where a.tenant_id = r.tenant_id and a.receipt_id = r.id), '{}') \"chargeIds\" from led_receipt r where r.tenant_id = $1 and r.sid = $2 and r.status = 'paid' order by r.paid_at desc limit 100", [tid, w.sid])).rows;
       const refunds = (await c.query("select f.id, f.receipt_id receipt, f.amount, f.status, f.at, f.done_at \"doneAt\" from led_refund f join led_receipt r on r.tenant_id = f.tenant_id and r.id = f.receipt_id where f.tenant_id = $1 and r.sid = $2 and f.status <> 'cancelled' order by f.at desc limit 100", [tid, w.sid])).rows;
       let online = false; for (const u of [...new Set(charges.filter(x => x.balance > 0).map(x => x.unit))].concat(['lu_root']).slice(0, 20)) if ((await S.payFor(c, tid, u)).pay.online()) { online = true; break; }
       return { ok: true, charges, receipts, refunds, balance: charges.reduce((s, x) => s + x.balance, 0), payOnline: online }; }); },
