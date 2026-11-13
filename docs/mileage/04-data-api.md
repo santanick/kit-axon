@@ -1,6 +1,7 @@
 # 04. v42 학습 마일리지 — 데이터 · 이벤트 수집 · /api 초안 (R3)
 
-> 상태: **초안 v0.3 (2026-11-14, R3)**, R1 · 대표님 결정 3건(D1 국비 차단 · D2 기관 자율 · 제도 기본 끔 · D3 미성년 순위 · 감점 선택권, 03 §0.1) 반영. 짝 문서: `03-plan.md`. 확정되면 v41 `docs/ledger/09-dev-spec-v41.md`처럼 「단일 계약」으로 승격합니다.
+> 상태: **초안 v0.4 (2026-11-14, R3)**, R1 · 대표님 결정 3건(D1 국비 차단 · D2 기관 자율 · 제도 기본 끔 · D3 미성년 순위 · 감점 선택권, 03 §0.1) · R2(`02-rules-reward-risk.md` §6) 반영.
+> 제품 고정(03 §2.4): 이 계약에는 **충전 · 환급 · 양도 · 기관 밖 사용 경로가 없습니다**. 그런 /api · 표 칸을 추가하지 않습니다(선불전자지급수단 리스크, R2 §2-1). 짝 문서: `03-plan.md`. 확정되면 v41 `docs/ledger/09-dev-spec-v41.md`처럼 「단일 계약」으로 승격합니다.
 > 원칙: 금액 · 포인트는 정수, 서버가 항상 다시 계산(클라이언트 값 불신), 원장 줄은 삭제 · 수정하지 않고 반대 줄로 정정, 개인정보 컬럼 없음(`sid`만, 대학은 학번 · 학과만).
 
 ---
@@ -29,8 +30,9 @@
 ```
 mil_policy  (tenant_id pk, on bool default false,   -- D2: 제도 기본 끔, 마법사로 켬
              ver int, unit_name text, expiry jsonb {mode:'months|term_end|item|none', months:12},
-             notice jsonb {monthsBefore:6, lastDays:7}, budget jsonb {monthP, termP, units:{unitId:P}},
-             daily_cap_total int, league jsonb {on, size:10, reset:'week'}, streak jsonb {minMin, freezePerWeek:1},
+             notice jsonb {monthsBefore:6, daysBefore:[30,3]}   -- 권장값(6개월 전부터 매월 + 30 · 3일 전), 기관 변경 가능, budget jsonb {monthP, termP, units:{unitId:P}},
+             daily_cap_total int, league jsonb {on, size:10, reset:'week'}, streak jsonb {minMin, freezePerWeek:1, repair:{withinH:48, factor:2, perMonth:1}, breakNotice:false},   -- 복구 수단 · 끊김 알림 기본 끔(R2 §5)
+             scope jsonb {mode:'unit', sameBizUnits:[[...]], hqPool:false},   -- 지갑 단위(03 §3.8). hqPool=true는 배포 플래그 없으면 거절
              tiers jsonb [{name, min, color, perks}], tier_window 'm12|term|year',
              cash_lock jsonb {needTrust:'B', achievementOnly:true},     -- 현금성 전환 잠금(03 §2.1-7)
              sunset jsonb null {noticeAt, stopEarnAt, endAt, mode:'expire|convert|migrate'},  -- 제도 종료(03 §3.6)
@@ -54,7 +56,8 @@ mil_group   (tenant_id, key, label, caps jsonb {term, year})                 -- 
 mil_event   (tenant_id, id bigserial, sid, trigger, src_type, src_id, value numeric, trust 'A|B|C',
              occurred_at, received_at, status 'new|done|skipped|held', result jsonb,
              unique (tenant_id, trigger, src_type, src_id, sid))             -- 사건 수신함(멱등 1차)
-mil_entry   (tenant_id, id 'me_', sid, kind 'earn|use|hold|release|expire|cancel|adjust|restore|penalty',
+mil_entry   (tenant_id, id 'me_', sid, scope_unit text not null,   -- 지갑 단위(가맹점 · 같은 사업자 묶음). 단위 간 이전 · 합산 사용 불가
+             kind 'earn|use|hold|release|expire|cancel|adjust|restore|penalty',
              points int,              -- 부호 포함: earn·restore·release·adjust(+) / use·hold·expire·cancel·adjust(-)
              status 'pending|posted|void',
              nature 'achievement|participation', trust 'A|B|C', convertible bool,
@@ -77,13 +80,16 @@ mil_redeem  (tenant_id, id 'mrd_', sid, reward_id, points, won int, status 'requ
              decided_by, decided_at, reason, idem_key, at, unique (tenant_id, idem_key))
 mil_proof   (tenant_id, id 'mpf_', sid, rule_id, item, activity_on date, file_ref, ai jsonb {match, score, note},
              status 'submitted|approved|rejected', reason, decided_by, at, purge_at)   -- 증빙(파일은 media, 보관 후 삭제)
-mil_settle  (tenant_id, id 'mst_', term, mode 'per_point|band|one_won', params jsonb {wonPerPoint, capWon, minPoint,
+mil_settle  (tenant_id, id 'mst_', term, mode 'per_point|band|one_won', pay_form 'outside_tuition|tuition_cut' default 'outside_tuition',
+             -- 지급하지 않음: 명단 · 금액 산정 · 내보내기만. tuition_cut 선택 시 이중지원 경고 확인(ack) 필수
+             params jsonb {wonPerPoint, capWon, minPoint,
              bands:[{name,min,won,seats}], budgetWon, triggers:[...], deduct:true}, status 'draft|review|approved|exported|void',
              reviewed_by, approved_by, at)
 mil_settle_row (tenant_id, settle_id, sid, dept, points, won, band, rank_note, use_entry)
 mil_flag    (tenant_id, id 'mfl_', sid, kind 'velocity|cap_streak|device|referral|retake|progress_jump|staff_grant|self_grant',
              evidence jsonb (해시 · 사건 ID만), held_entries text[], status 'open|cleared|confirmed', resolved_by, at)
-mil_notice  (tenant_id, sid, kind 'expire_month|expire_last|sunset|redeem|hold', ym text, sent_at,
+mil_notice  (tenant_id, sid, kind 'expire_month|expire_d30|expire_d3|sunset|redeem|hold', ym text,   -- 스트릭 끊김 알림 종류 없음(기본 끔, 켜면 'streak_break' 추가)
+             sent_at,
              unique (tenant_id, sid, kind, ym))        -- 매월 고지 중복 방지
 ```
 
@@ -107,6 +113,7 @@ mil_notice  (tenant_id, sid, kind 'expire_month|expire_last|sunset|redeem|hold',
 | 소멸 | `sweep`: `expires_at < now()`이고 남은 양 > 0인 lot마다 `expire` 줄(−남은 양, `ref_entry=lot`) |
 | 마이너스 상계 | 취소(`cancel`)는 그 lot의 원래 적립 전부를 상쇄(−원래 P). 이미 쓴 lot이면 잔액이 음수가 될 수 있고, 다음 `earn`이 확정될 때 자동으로 음수부터 메움(별도 줄 없이 합계로 상계됨). 음수 동안 보상 신청 409 `negative_balance` |
 | 사용 대기 | 보상 신청 = `hold`(−P, posted). 승인 → `hold`를 `release`(+P)로 풀고 같은 트랜잭션에 `use`(−P). 반려 · 취소 → `release`(+P)만 |
+| 지갑 단위 | 잔액 · 선입선출 · 상한 · 보상은 `scope_unit`마다 따로 계산. 사용 · 이전 줄이 다른 단위의 lot을 가리키면 DB 제약 실패. 본사 통합(`hqPool`)은 배포 플래그 `MIL_HQ_POOL_REVIEWED` 없으면 400 `hq_pool_locked`(대표님 결정 대기) |
 | 동시성 | 모든 쓰기는 `mil_wallet` 행 `select … for update`(학습자 단위 잠금) 후 계산. 이중 사용 방지 |
 | 멱등 | 1차 `mil_event` 유일키(트리거 · 원천 · 학습자), 2차 `mil_entry.idem_key`(아래 §4) |
 | 시간대 | 하루 · 주 · 월 경계는 KST(`Asia/Seoul`). 주는 월요일 시작 |
@@ -219,7 +226,7 @@ mil_notice  (tenant_id, sid, kind 'expire_month|expire_last|sunset|redeem|hold',
 | POST /api/mileage/redeems/cancel | `{id, reason, mode:'release|reclaim'}` | 이행 전 취소 = 복원, 이행 후 회수 = 쿠폰 무효 · 청구 줄 void · 배지 회수 |
 | GET /api/mileage/flags · POST /api/mileage/flags/resolve | `{id, decision:'clear|confirm'}` | confirm → 보류 줄 void · 관련 보상 회수 |
 | GET /api/mileage/proofs · POST /api/mileage/proofs/decide | `{id, decision, points?, reason}` | 부결 사유 필수, 학습자에게 표시 |
-| POST /api/mileage/settle | `{term, mode, params}` | 대학 정산안 생성(`draft`) |
+| POST /api/mileage/settle | `{term, mode, payForm, params, ack?}` | 대학 정산안 생성(`draft`). **지급 기능 없음**(명단 · 금액 산정 · CSV까지). `payForm:'tuition_cut'`이면 이중지원 경고 확인(`ack`) 없을 때 400 `ack_required` + 경고 문구 반환 |
 | POST /api/mileage/settle/:id/review · /approve | – | 2단계(담당 → owner). 승인 시 `deduct`면 `use` 줄 일괄 |
 | GET /api/mileage/settle/:id/export | – | CSV(학번 · 학과 · 점수 · 금액 · 등급) |
 | POST /api/mileage/sunset | `{noticeAt, stopEarnAt, endAt, mode}` | 제도 종료 예약(owner). 고지 일정 자동 생성 |
@@ -237,17 +244,18 @@ mil_notice  (tenant_id, sid, kind 'expire_month|expire_last|sunset|redeem|hold',
 | GET mile-league | – | 켠 기관만. `{week, me:{rank, points}, near:[{nick, points}]}`(근접 10명) |
 
 ### 5.3 오류 코드
-`mile_off`(403) · `funded_blocked` · `ack_required` · `bad_rule`(400) · `need_sunset`(409) · `insufficient` · `below_threshold` · `negative_balance` · `out_of_stock` · `already`(409) · `staff_cap` · `self_grant`(403) · `rate`(429) · `amount_mismatch`(400, 클라이언트 계산값 불일치).
+`mile_off`(403) · `funded_blocked` · `ack_required` · `bad_rule` · `hq_pool_locked` · `over_tuition`(400) · `need_sunset`(409) · `insufficient` · `below_threshold` · `negative_balance` · `out_of_stock` · `already`(409) · `staff_cap` · `self_grant`(403) · `rate`(429) · `amount_mismatch`(400, 클라이언트 계산값 불일치).
 
 ---
 
 ## 6. 원장(v41) · 쿠폰 · 인증서 연결 계약
 | 보상 | 이행 | 취소 · 환불 |
 |---|---|---|
-| 학원비 차감 | `led_charge(item_type 'etc', title '마일리지 차감', amount = −won, src_type 'mileage', src_id = mrd id)`. bill 순합 ≥ 0, `billPct` 이하, 수납 배분이 생긴 bill에는 붙이지 않음 | bill void · 줄 void → `release`/`restore`. 환불은 v41 규칙(실제 낸 금액 기준), 차감 P는 정책에 따라 비율 복원 또는 소멸(R2 확인) |
+| 학원비 차감 | 청구서는 **「등록 교습비(정가) 양수 줄 + '마일리지 차감' 음수 줄」** 두 줄로 표시: `led_charge(item_type 'etc', title '마일리지 차감', amount = −won, src_type 'mileage', src_id = mrd id)`. 정가 줄은 등록 교습비 이하(초과 시 `over_tuition`), bill 순합 ≥ 0, `billPct` 이하, 수납 배분이 생긴 bill · 국비 과정 bill(`funded_blocked`) · 평생교육이용권 결제분에는 붙이지 않음 | bill void · 줄 void → `release`/`restore`. **환불**: v41 `ledgercalc.refund({rule, paid, …})`(`didisam/ledgercalc.js` 105행 · Node `ledger/calc.js` · Java `DdLedger` 같은 계산)에 `paid` = 실납부액(차감 줄 제외)을 넣어 환불액 산정 → 환불 비율 `ratio = refund / paid`. `ledger/mod-admin.js` `refundCreate`(18행)가 `done`이 될 때 같은 트랜잭션에서 `mil_on_refund(tid, receiptId, ratio)` 호출 → 차감에 쓴 P × ratio를 `restore` 줄로 복원(10P 단위 내림, 권장값 · 학원 변경 가능). 원 lot 만료 시 새 만료일 없이 기록만(즉시 `expire`) |
 | 개인 쿠폰 | `couponCode` 8자(coupon.js `gen` 문자 집합), 정액 · 정률 · 기한 · 본인 sid · 1회 | 미사용 취소 = 복원, 사용 후 결제 취소 = 정책(복원 기본) |
 | 배지 · 인증서 | 배지 수여 기록 · `certkit` 번호 | 부정 확정 시 회수 · 무효 표시 |
-| 장학 | `mil_settle_row.use_entry` | 정산 void 시 `restore` |
+| 장학 | `mil_settle_row.use_entry`(정산 승인 시 `deduct`면 차감). 디디쌤은 지급하지 않음 — CSV(학번 · 학과 · 점수 · 적립 근거 · 금액 · 지급 형태) 내보내기까지 | 정산 void 시 `restore`. 지급 후 부정 확정은 다음 학기 마이너스 상계 |
+| 기업 리워드 숍(복지포인트형) | 상품권 · 포인트 지급 기록 + **1인별 지급액 내보내기(급여 담당용, 근로소득 과세 안내 G)** | 회수 시 내보내기에 음수 행 |
 
 ---
 
@@ -278,10 +286,10 @@ mil_notice  (tenant_id, sid, kind 'expire_month|expire_last|sunset|redeem|hold',
 | MV-20 | voc 템플릿에 현금성 보상 생성 → 비국비 과정 대상이면 저장(경고), 국비 과정 대상이면 400 `funded_blocked` |
 | MV-21 | 예산 소진 후 적립 → `convertible=false` |
 | MV-22 | 수동 지급: 기준 초과 → owner 승인 대기, 본인 계정 → 403 |
-| MV-23 | 스트릭 프리즈: 주 1일 빠짐 유지, 2일 빠짐 끊김 |
+| MV-23 | 스트릭 프리즈: 주 1일 빠짐 유지, 2일 빠짐 끊김 → 48시간 안 복구 학습으로 이어짐(월 1회), 끊김 알림 0건(기본 끔) |
 | MV-24 | 주간 리그 근접 10명 · 월요일 리셋 · 수동 지급 제외 |
 | MV-25 | 제도 종료: stopEarnAt 이후 적립 `skipped`, 매월 고지 1회(`mil_notice` 유일), endAt 정리 모드별 결과 |
-| MV-26 | 소멸 6개월 전 매월 고지 대상 계산(달 경계 · 만료 6개월 미만 정책) |
+| MV-26 | 소멸 고지 대상 계산: 6개월 전부터 매월 + 30 · 3일 전(달 경계 · 만료 6개월 미만 정책 · 기관이 바꾼 값) |
 | MV-27 | 규칙 수정(버전 2) 후 같은 사건 재수신 → 재적립 없음 |
 | MV-28 | `mil_entry` 합계 = `mil_wallet` 캐시(모든 벡터 끝에 공통 확인) |
 | MV-29 | D1: 국비 · 비국비 과정 동시 수강 → 금전성 보상 소진 시 국비 lot 건너뜀, 쓸 수 있는 P 계산 |
@@ -290,6 +298,10 @@ mil_notice  (tenant_id, sid, kind 'expire_month|expire_last|sunset|redeem|hold',
 | MV-32 | D2: 제도 기본 끔 → 사건 수신해도 적립 없음 · `onoff` 켬 이후만 적립(소급 없음) |
 | MV-33 | D2: 차감 상한 · 유효기간을 권장값 밖으로 저장 → 성공 + `warnings` |
 | MV-34 | D3: 순위 · 감점 켜기 ack 없음 400, ack 있으면 이력 1줄 · 감점 `penalty` 줄 사유 필수 |
+| MV-35 | 학원 환불: 정가 300,000 · 차감 −30,000(30,000P 사용) · 실납부 270,000, hakwon_law 1/2 경과 → 환불 135,000 · 복원 15,000P |
+| MV-36 | 지갑 단위: 가맹점 A lot으로 가맹점 B 보상 신청 → 거절, `hqPool:true` 저장 → `hq_pool_locked` |
+| MV-37 | 장학 `tuition_cut` 선택 ack 없음 → 400, ack 후 정산안 생성 · 이력 |
+| MV-38 | 정가 줄이 등록 교습비 초과 → `over_tuition` |
 
 추가: UI 스모크(`tests/ui/smoke.js`에 마일리지 탭 · 학습자 카드 렌더), 계약 테스트(`contract-mileage42.js`: 모든 /api 응답 형태 Node = Java).
 
