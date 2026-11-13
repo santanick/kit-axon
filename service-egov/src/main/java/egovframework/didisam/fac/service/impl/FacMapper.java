@@ -10,6 +10,7 @@ import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 public interface FacMapper {
     String selectDoc(@Param("tid") String tid);
     List<String> selectTenantIds();
+    int insertNote(@Param("tid") String tid, @Param("sid") String sid, @Param("xid") String xid, @Param("data") String data);
     String lock(@Param("k") String k);
 
     int insertBooking(@Param("tid") String tid, @Param("id") String id, @Param("fac") String fac, @Param("res") String res, @Param("sid") String sid, @Param("aud") String aud, @Param("memberNo") String memberNo, @Param("day") String day,

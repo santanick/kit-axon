@@ -287,6 +287,11 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         return lid;
     }
 
+    @Override public boolean mailTo(String tid, String lid, String subject, String text) throws Exception {
+        if (!mail.on || lid == null || !lid.matches("(?i)^[0-9a-f-]{36}$")) return false;
+        String to = ptx.run(tid, r -> r.P(() -> { Map<String, Object> x = mapper.selectMine(tid, lid); return x == null || x.get("email_enc") == null ? null : dec(x.get("email_enc"), DdPiiCrypto.aad(tid, lid, "email")); }));
+        if (to == null || to.isEmpty()) return false; mail.send(to, subject, text); return true;
+    }
     /* ── 본인 세션 필요 ── */
     @Override public Map<String, Object> myPii(HttpServletRequest req, byte[] body, String tid, String sid) throws Exception {
         if ("GET".equals(req.getMethod())) return ptx.run(tid, r -> r.P(() -> {

@@ -9,6 +9,7 @@
 
   <select id="selectDoc" resultType="string">select doc::text from tenant_state where tenant_id = #{tid}</select>
   <select id="selectTenantIds" resultType="string">select id from tenants</select>
+  <insert id="insertNote">insert into learner_events (tenant_id, sid, type, xid, data) values (#{tid}, #{sid}, 'fac-note', #{xid}, #{data}::jsonb)</insert>
   <select id="lock" resultType="string">select pg_advisory_xact_lock(hashtext(#{k}))::text</select>
 
   <!-- 예약 -->
@@ -43,10 +44,12 @@
   <select id="countOpenRefund" resultType="int">select count(*) from fac_refund where tenant_id = #{tid} and payment_id = #{payment} and status &lt;&gt; 'cancelled'</select>
   <update id="cancelPendingRefund">update fac_refund set status = 'cancelled' where tenant_id = #{tid} and payment_id = #{payment} and status = 'pending'</update>
   <update id="cancelReadyFor">update fac_payment set status = 'cancelled' where tenant_id = #{tid} and status = 'ready' and (booking_id = #{ref} or pass_id = #{ref} or rental_id = #{ref})</update>
-  <update id="sweepLeave">with x as (update fac_booking set status = 'cancelled', updated_at = now(), cancel_reason = '이탈 자동 취소' where tenant_id = #{tid} and id in (select id from fac_booking where tenant_id = #{tid} and status = 'checked_in' and left_at is not null and leave_min &gt; 0 and left_at + make_interval(mins => leave_min) &lt;= now() limit 200) returning id)
-    delete from fac_slot where tenant_id = #{tid} and booking_id in (select id from x)</update>
-  <update id="sweepPassUnpaid">with p as (update fac_pass set status = 'cancelled' where tenant_id = #{tid} and id in (select id from fac_pass where tenant_id = #{tid} and status = 'pending' and created_at &lt; now() - interval '7 days' limit 200) returning id)
-    update fac_payment set status = 'cancelled' where tenant_id = #{tid} and status = 'ready' and pass_id in (select id from p)</update>
+  <update id="sweepLeave">with x as (update fac_booking set status = 'cancelled', updated_at = now(), cancel_reason = '이탈 자동 취소' where tenant_id = #{tid} and id in (select id from fac_booking where tenant_id = #{tid} and status = 'checked_in' and left_at is not null and leave_min &gt; 0 and left_at + make_interval(mins => leave_min) &lt;= now() limit 200) returning id, sid, fac_id),
+    d as (delete from fac_slot where tenant_id = #{tid} and booking_id in (select id from x) returning 1)
+    insert into learner_events (tenant_id, sid, type, xid, data) select #{tid}, sid, 'fac-note', id, jsonb_build_object('kind', 'left', 'booking', id, 'fac', fac_id) from x /* Node sweep.js와 같은 알림 */</update>
+  <update id="sweepPassUnpaid">with p as (update fac_pass set status = 'cancelled' where tenant_id = #{tid} and id in (select id from fac_pass where tenant_id = #{tid} and status = 'pending' and created_at &lt; now() - interval '7 days' limit 200) returning id, sid),
+    q as (update fac_payment set status = 'cancelled' where tenant_id = #{tid} and status = 'ready' and pass_id in (select id from p) returning 1)
+    insert into learner_events (tenant_id, sid, type, xid, data) select #{tid}, sid, 'fac-note', id, jsonb_build_object('kind', 'pass_unpaid', 'pass', id) from p</update>
   <update id="setLeft">update fac_booking set left_at = now(), leave_min = #{leaveMin}, updated_at = now() where tenant_id = #{tid} and id = #{id}</update>
   <update id="clearLeft">update fac_booking set left_at = null, leave_min = null, updated_at = now() where tenant_id = #{tid} and id = #{id}</update>
   <select id="selectCourseClasses" resultType="java.util.LinkedHashMap">select c->>'id' as id, c->>'end' as e from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'classes') = 'array' then t.doc->'classes' else '[]'::jsonb end) c

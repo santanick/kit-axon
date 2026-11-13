@@ -10,6 +10,8 @@ import java.util.Map;
  * 학습 데이터는 가명 learner_id + 닉네임만, 신원(이메일 · SNS 식별자 · 휴대폰 · 이름 · 비밀번호 해시 · 동의)은 pii 스키마에 AES-256-GCM으로.
  */
 public interface PiiService {
+    /** v40 알림 메일: 학습자 암호화 이메일로 발송(Node pii.mailTo와 같음). 메일 꺼짐 · 키 없음 · 이메일 없음이면 false */
+    boolean mailTo(String tid, String lid, String subject, String text) throws Exception;
     /** 학습자 본인 비밀번호 변경 */
     void changePw(String tid, String lid, String cur, String pw) throws Exception;
     boolean hasPw(String tid, String lid) throws Exception;

@@ -71,6 +71,7 @@ async function run(U, tag) {
   const ov = await call('A', 'GET', '/api/fac/overview'); R.overview = [ov.st, ov.j.pendingApprovals];
   const ap = await call('A', 'POST', `/api/fac/bookings/${rq.j.booking.id}/approve`, {}); R.approve = [ap.st, ap.j.status];
   R.rejectNoReason = (await call('A', 'POST', `/api/fac/bookings/${rq.j.booking.id}/reject`, {})).j.error;
+  const rqR = await call('L2', 'POST', P('fac-book'), { fac: 'f_room', day: T1, slot: 1, slots: 1, aud: 'student', idem: 'r2' }); R.reject = [(await call('A', 'POST', `/api/fac/bookings/${rqR.j.booking.id}/reject`, { reason: '정원 초과' })).j.status];
   const ls = await call('A', 'GET', `/api/fac/bookings?from=${T1}&to=${T1}&fac=f_golf`); R.adminList = [ls.st, (ls.j.bookings || []).length, ls.j.bookings && ls.j.bookings[0] && ls.j.bookings[0].sid === undefined && ls.j.bookings[0].sidTail.length];
 
   // 당일 · 체크인(운영자가 대신 예약 → 학습자 QR → 체크인)
@@ -134,11 +135,16 @@ async function run(U, tag) {
   R.course = [cpm.length, cpm[0] && cpm[0].kind, cpm[0] && cpm[0].total, cpm[0] && cpm[0].status, cpm2.length, ((await call('L2', 'GET', P('fac-my'))).j.passes || []).filter(x => x.productId === 'p_c1').length];
   const pr = await call('L2', 'POST', P('fac-pass-refund'), { passId: bu.j.pass.id, reason: '이사' }); R.passRefund = [pr.st, pr.j.refund && pr.j.refund.auto, pr.j.refund && pr.j.refund.status, pr.j.refund && pr.j.refund.used, (await call('L2', 'POST', P('fac-pass-refund'), { passId: bu.j.pass.id })).j.error, (await call('L1', 'POST', P('fac-pass-refund'), { passId: bu.j.pass.id })).st];
   const rc = await call('L3', 'POST', P('fac-rent-cancel'), { rental: cm.j.rental.id }); R.rentCancel = [rc.st, rc.j.status, rc.j.refund && rc.j.refund.auto, (await call('L3', 'POST', P('fac-rent-cancel'), { rental: cm.j.rental.id })).j.error];
+  const evs = (await call('A', 'GET', P('events') + '?after=0')).j.events || [];
+  const norm = v => typeof v === 'string' ? v.replace(/^(bk|ps|rt|fp|fr)_[a-z0-9]{12}$/, '$1_*') : v;
+  R.notes = evs.filter(e => e.type === 'fac-note').map(e => { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; return JSON.stringify([norm(e.xid || ''), Object.keys(d).sort().map(k => [k, norm(d[k])])]); }).sort();
+  R.noteKinds = [...new Set(evs.filter(e => e.type === 'fac-note').map(e => (typeof e.data === 'string' ? JSON.parse(e.data) : e.data).kind))].sort().join();
   R._qrToken = qr.j.token; R._tid = tid; R._jarA = jar.A;
   return R;
 }
 
 const expect = R => {
+  ok(R.noteKinds === (DB ? 'approved,cancelled,closure,confirmed,left,pass,pass_unpaid,refund,rejected' : 'approved,cancelled,closure,confirmed,pass,refund,rejected'), `fac-note 종류 ${R.noteKinds}`); ok(R.notes.length >= 10, `fac-note 건수 ${R.notes.length}`);
   ok(R.leaveIn.join() === '200,200', `퇴장용 예약 · 입장 ${R.leaveIn}`); ok(R.leave.join() === '200,true,15,200,200,true,200', `퇴장 · 재입장 ${R.leave}`); ok(R.leaveSweep === 'cancelled:이탈 자동 취소', `이탈 자동 취소 ${R.leaveSweep}`); ok(R.passUnpaid === 'cancelled', `미결제 이용권 7일 ${R.passUnpaid}`);
   ok(R.course.join() === '1,course,20,active,1,0', `수강생 자율이용권 ${R.course}`); ok(R.passRefund.join() === '200,364500,pending,0,requested,404', `이용권 환불 신청 ${R.passRefund}`); ok(R.rentCancel.join() === '200,cancelled,0,not_cancelable', `대여 취소 ${R.rentCancel}`);
   ok(R.extend[0] === 200 && R.extend[2] === (R.extend[1] && new Date(Date.parse(R.extend[1] + 'T00:00:00Z') + 864e5).toISOString().slice(0, 10)) && R.extend[3] && R.extend[4] && R.extend[5] === 'period' && R.extend[6] === 90, `연장 구매 ${R.extend}`);
@@ -149,7 +155,7 @@ const expect = R => {
   ok(R.amount === 'amount', `금액 불일치 ${R.amount}`); ok(R.pgOff.join() === '409,onsite_only', `토스 키 없음 ${R.pgOff}`); ok(R.book.join() === '200,done,confirmed,pending,10000', `예약 ${R.book}`); ok(R.idem, '같은 idem 한 건');
   ok(R.taken.join() === '409,taken,["r2"]', `같은 칸 ${R.taken}`); ok(R.dup.join() === '409,dup_same', `동일인 중복 ${R.dup}`); ok(R.conc.join() === '2,2', `동시 4건 → 정원 2 ${R.conc}`); ok(R.availAfter.join() === '1,0', `점유 후 ${R.availAfter}`);
   ok(R.my[0] === 200 && R.my[1] >= 1 && R.my[2] === '골프연습장', `내 예약 ${R.my}`); ok(R.qrNotToday === 'not_today', `QR 당일만 ${R.qrNotToday}`); ok(R.cancel.join() === '200,cancelled,0', `취소 ${R.cancel}`); ok(R.cancel2 === 'not_cancelable', `재취소 ${R.cancel2}`);
-  ok(R.req.join() === '200,wait,requested', `승인제 ${R.req}`); ok(R.overview[0] === 200 && R.overview[1] === 1, `현황 ${R.overview}`); ok(R.approve.join() === '200,confirmed', `승인 ${R.approve}`); ok(R.rejectNoReason === 'state', `반려 ${R.rejectNoReason}`);
+  ok(R.req.join() === '200,wait,requested', `승인제 ${R.req}`); ok(R.overview[0] === 200 && R.overview[1] === 1, `현황 ${R.overview}`); ok(R.approve.join() === '200,confirmed', `승인 ${R.approve}`); ok(R.reject[0] === 'rejected', `반려 ${R.reject}`); ok(R.rejectNoReason === 'state', `반려 ${R.rejectNoReason}`);
   ok(R.adminList[0] === 200 && R.adminList[2] === 4, `운영자 목록 마스킹 ${R.adminList}`); ok(R.adminBook.join() === '200,confirmed', `대신 예약 ${R.adminBook}`); ok(R.payWrong.join() === '400,amount,5000', `현장 결제 금액 ${R.payWrong}`); ok(R.payOk.join() === '200,5000,5000', `현장 결제 ${R.payOk}`);
   ok(R.qr[0] === 200 && R.qr[1], `QR 발급 ${R.qr}`); ok(R.forged === 'qr', `위조 QR ${R.forged}`); ok(R.wrongFac === 'wrong_fac', `다른 시설 ${R.wrongFac}`); ok(R.checkin.join() === '200,true,student', `체크인 ${R.checkin}`); ok(R.used === 'used', `QR 1회용 ${R.used}`);
   ok(R.grant.join() === '200,5', `이용권 부여 ${R.grant}`); ok(R.passIn.join() === '200,4', `이용권 입장 ${R.passIn}`); ok(R.once === 'once_per_day', `1일 1회 ${R.once}`); ok(R.adjustNoReason === 'reason', `조정 사유 ${R.adjustNoReason}`);
