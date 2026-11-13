@@ -54,7 +54,7 @@
   <select id="selectReceiptByIdem" resultType="java.util.LinkedHashMap">select <include refid="rc"/> from led_receipt where tenant_id = #{tid} and idem_key = #{idem}</select>
   <select id="selectReceiptByOrder" resultType="java.util.LinkedHashMap">select <include refid="rc"/> from led_receipt where tenant_id = #{tid} and toss_order_id = #{order}</select>
   <select id="countCorrections" resultType="int">select count(*)::int from led_receipt where tenant_id = #{tid} and corrects = #{id}</select>
-  <update id="settleReceipt">update led_receipt set status = 'paid', paid_at = now(), toss_payment_key = #{key}, diff_reason = #{diff} where tenant_id = #{tid} and id = #{id}</update>
+  <update id="settleReceipt">update led_receipt set status = 'paid', paid_at = now(), toss_payment_key = #{key}, diff_reason = #{diff}, receipt_url = #{url} where tenant_id = #{tid} and id = #{id}</update>
   <update id="failReceipt">update led_receipt set status = 'failed' where tenant_id = #{tid} and id = #{id} <if test="onlyReady"> and status = 'ready'</if></update>
   <insert id="insertCorrection">insert into led_receipt (tenant_id, id, unit_id, sid, method, channel, amount, paid_at, status, approval_no, share_eligible, recorded_by, diff_reason, idem_key, corrects)
     select tenant_id, #{nid}, unit_id, sid, method, 'manual', -amount, now(), 'paid', approval_no, share_eligible, #{by}, #{reason}, #{idem}, id from led_receipt where tenant_id = #{tid} and id = #{id}</insert>
@@ -131,8 +131,9 @@
   <update id="touchDevice">update led_device set last_seen = now() where tenant_id = #{tid} and id = #{id}</update>
 
   <!-- 학습자 -->
-  <select id="selectMyReceipts" resultType="java.util.LinkedHashMap">select id, method, channel, amount, status, to_char(paid_at at time zone 'UTC', <include refid="iso"/>) as "paidAt", approval_no is not null as "hasApproval"
-    from led_receipt where tenant_id = #{tid} and sid = #{sid} and status in ('paid') order by paid_at desc limit 100</select>
+  <select id="selectMyReceipts" resultType="java.util.LinkedHashMap">select r.id, r.method, r.channel, r.amount, r.status, to_char(r.paid_at at time zone 'UTC', <include refid="iso"/>) as "paidAt", r.approval_no is not null as "hasApproval", r.receipt_url as "receiptUrl",
+    coalesce((select array_to_json(array_agg(distinct a.charge_id))::text from led_alloc a where a.tenant_id = r.tenant_id and a.receipt_id = r.id), '[]') as "chargeIds"
+    from led_receipt r where r.tenant_id = #{tid} and r.sid = #{sid} and r.status = 'paid' order by r.paid_at desc limit 100</select>
   <select id="selectMyRefunds" resultType="java.util.LinkedHashMap">select f.id, f.receipt_id as "receipt", f.amount, f.status, to_char(f.at at time zone 'UTC', <include refid="iso"/>) as "at", to_char(f.done_at at time zone 'UTC', <include refid="iso"/>) as "doneAt"
     from led_refund f join led_receipt r on r.tenant_id = f.tenant_id and r.id = f.receipt_id where f.tenant_id = #{tid} and r.sid = #{sid} and f.status &lt;&gt; 'cancelled' order by f.at desc limit 100</select>
   <select id="selectMember" resultType="string">select m::text from tenant_state t, jsonb_array_elements(case when jsonb_typeof(t.doc->'members') = 'array' then t.doc->'members' else '[]'::jsonb end) m where t.tenant_id = #{tid} and m->>'sid' = #{sid} limit 1</select>

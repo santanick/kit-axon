@@ -34,7 +34,7 @@ public interface LedgerMapper {
     Map<String, Object> selectReceiptByIdem(@Param("tid") String tid, @Param("idem") String idem);
     Map<String, Object> selectReceiptByOrder(@Param("tid") String tid, @Param("order") String order);
     int countCorrections(@Param("tid") String tid, @Param("id") String id);
-    int settleReceipt(@Param("key") String key, @Param("diff") String diff, @Param("tid") String tid, @Param("id") String id);
+    int settleReceipt(@Param("key") String key, @Param("diff") String diff, @Param("url") String url, @Param("tid") String tid, @Param("id") String id);
     int failReceipt(@Param("tid") String tid, @Param("id") String id, @Param("onlyReady") boolean onlyReady);
     int insertCorrection(@Param("nid") String nid, @Param("by") String by, @Param("reason") String reason, @Param("idem") String idem, @Param("tid") String tid, @Param("id") String id);
     List<Map<String, Object>> selectAllocsOfReceipt(@Param("tid") String tid, @Param("rc") String rc);

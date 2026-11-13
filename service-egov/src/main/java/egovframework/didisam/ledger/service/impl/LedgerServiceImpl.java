@@ -119,8 +119,9 @@ public class LedgerServiceImpl extends EgovAbstractServiceImpl implements Ledger
         }
         /** {ok, amount} | {ok:false, code} */
         Object[] confirm(String paymentKey, String orderId, long amount) {
-            if (!online()) return new Object[]{ false, 0L }; JsonNode r = post("/v1/payments/confirm", F.objectNode().put("paymentKey", paymentKey).put("orderId", orderId).put("amount", amount), "cf-" + orderId);
-            if (!r.get("ok").asBoolean()) return new Object[]{ false, 0L }; double t = round(num(get(r.get("j"), "totalAmount"))); return new Object[]{ true, Double.isFinite(t) ? (long) t : 0L };
+            if (!online()) return new Object[]{ false, 0L, null }; JsonNode r = post("/v1/payments/confirm", F.objectNode().put("paymentKey", paymentKey).put("orderId", orderId).put("amount", amount), "cf-" + orderId);
+            if (!r.get("ok").asBoolean()) return new Object[]{ false, 0L, null }; double t = round(num(get(r.get("j"), "totalAmount"))); JsonNode u = get(r.get("j"), "receipt", "url");
+            return new Object[]{ true, Double.isFinite(t) ? (long) t : 0L, u != null && u.isTextual() ? cut(u.asText(), 500) : null };
         }
         /** 취소 키 또는 null(실패) */
         String cancel(String paymentKey, String reason, Long amount, String idem) {
@@ -176,11 +177,11 @@ public class LedgerServiceImpl extends EgovAbstractServiceImpl implements Ledger
         refreshStatus(tid, bills); return new Object[]{ m.selectReceipt(tid, id), allocs };
     }
     /** 온라인 승인 후 ready 수납 → paid + 배분(승인 사이 다른 경로로 납부됐으면 남는 금액은 over_paid 표시) */
-    void settle(String tid, Map<String, Object> rc, String paymentKey) {
+    void settle(String tid, Map<String, Object> rc, String paymentKey, String receiptUrl) {
         List<String> cids = idsJson(rc.get("charge_ids_json")); Lines L = linesOf(tid, cids, null, null); ArrayNode open = F.arrayNode();
         for (JsonNode l : L.bal.get("lines")) { String id = l.get("id").asText(); if (!cids.contains(id)) continue; ObjectNode o = ((ObjectNode) l).deepCopy(); o.put("due", s(L.by.get(id).get("due"))); o.put("at", s(L.by.get(id).get("at_s"))); open.add(o); }
         ObjectNode A = DdLedgerCalc.allocate(L(rc.get("amount")), open);
-        m.settleReceipt(paymentKey, A.get("rest").asLong() > 0 ? "over_paid" : null, tid, s(rc.get("id")));
+        m.settleReceipt(paymentKey, A.get("rest").asLong() > 0 ? "over_paid" : null, receiptUrl, tid, s(rc.get("id")));
         Set<String> bs = new LinkedHashSet<>(); for (JsonNode a : A.get("allocs")) { m.insertAlloc(tid, s(rc.get("id")), a.get("charge").asText(), a.get("amount").asLong()); bs.add(s(L.by.get(a.get("charge").asText()).get("bill_id"))); }
         refreshStatus(tid, new ArrayList<>(bs));
     }
@@ -535,7 +536,7 @@ public class LedgerServiceImpl extends EgovAbstractServiceImpl implements Ledger
                 List<Map<String, Object>> cs = new ArrayList<>(); for (Map<String, Object> x : L.charges) if (sid.equals(x.get("sid")) && !"void".equals(x.get("status"))) cs.add(x);
                 cs.sort((x, y) -> s(y.get("created_at")).compareTo(s(x.get("created_at")))); List<Map<String, Object>> charges = new ArrayList<>(); long bal = 0;
                 for (Map<String, Object> x : cs) { Map<String, Object> o = chOut(x, L.line.get(s(x.get("id")))); bal += L(o.get("balance")); charges.add(o); }
-                return map("ok", true, "charges", charges, "receipts", m.selectMyReceipts(tid, sid), "refunds", m.selectMyRefunds(tid, sid), "balance", bal, "payOnline", online(tid, charges)); }); }
+                return map("ok", true, "charges", charges, "receipts", myReceipts(tid, sid), "refunds", m.selectMyRefunds(tid, sid), "balance", bal, "payOnline", online(tid, charges)); }); }
             case "POST ledger-order": { String sid = who(lauth); rl.limit("lo:" + tid + ":" + sid, 30, 600_000L); JsonNode b = DdWeb.readBody(body, 4096);
                 return T(tid, () -> { sweepNow(tid); return order(tid, sid, ids(get(b, "chargeIds"), 50), get(b, "amount"), null); }); }
             case "POST ledger-confirm": { String sid = who(lauth); rl.limit("lc:" + tid + ":" + sid, 30, 600_000L); return confirm(tid, sid, DdWeb.readBody(body, 2048), null); }
@@ -557,6 +558,7 @@ public class LedgerServiceImpl extends EgovAbstractServiceImpl implements Ledger
         Set<String> us = new LinkedHashSet<>(); for (Map<String, Object> x : charges) if (L(x.get("balance")) > 0) us.add(s(x.get("unit"))); List<String> l = new ArrayList<>(us); l.add("lu_root");
         for (String u : l.subList(0, Math.min(20, l.size()))) if (payFor(tid, u).online()) return true; return false;
     }
+    List<Map<String, Object>> myReceipts(String tid, String sid) { List<Map<String, Object>> l = m.selectMyReceipts(tid, sid); for (Map<String, Object> x : l) x.put("chargeIds", idsJson(x.get("chargeIds"))); return l; }
     static String who(LAuth lauth) throws Exception { Map<String, Object> s = lauth.get(); if (s == null) throw E(401, "auth", "로그인이 필요해요."); return (String) s.get("sid"); }
     static Map<String, Object> chOut(Map<String, Object> x, JsonNode l) { return map("id", x.get("id"), "bill", x.get("bill_id"), "unit", x.get("unit_id"), "itemType", x.get("item_type"), "title", x.get("title"), "amount", x.get("amount"), "periodYm", x.get("period_ym"), "dueDate", x.get("due"),
         "status", l != null ? l.get("status").asText() : x.get("status"), "due", l != null ? (Object) l.get("due").asLong() : x.get("amount"), "paid", l != null ? l.get("paid").asLong() : 0L, "balance", l != null ? l.get("balance").asLong() : 0L); }
@@ -590,7 +592,7 @@ public class LedgerServiceImpl extends EgovAbstractServiceImpl implements Ledger
         if (!B(r[0])) { tx.inTenant(tid, () -> m.failReceipt(tid, rcId, true)); throw E(502, "pg", "결제 승인에 실패했어요. 잠시 후 다시 시도해 주세요."); }
         if ((Long) r[1] != amt) { P.cancel(paymentKey, "금액 불일치", null, "mm-" + orderId); tx.inTenant(tid, () -> m.failReceipt(tid, rcId, false)); throw E(400, "amount_mismatch", "결제 금액이 달라 승인을 취소했어요."); }
         return T(tid, () -> { m.lockReceipt(tid, rcId); Map<String, Object> cur = m.selectReceipt(tid, rcId); if ("paid".equals(cur.get("status"))) return out(cur);
-            settle(tid, cur, paymentKey); if (linkHash != null) m.useLink(tid, linkHash);
+            settle(tid, cur, paymentKey, r[2] != null && ((String) r[2]).startsWith("https://") ? (String) r[2] : null); if (linkHash != null) m.useLink(tid, linkHash);
             audit(tid, linkHash != null ? "link" : "learner:" + sid, "ledger.pay", map("receipt", rcId, "amount", amt)); return out(cur); });
     }
     static Map<String, Object> out(Map<String, Object> rc) { return map("ok", true, "status", "paid", "receipt", map("id", rc.get("id"), "amount", rc.get("amount"))); }

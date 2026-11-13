@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <!-- 학습자 포털(/api/pub/{tid}/…) — 기관 범위(inTenant) 쿼리와 학습자 세션(plain) -->
 <mapper namespace="egovframework.didisam.pub.service.impl.PubMapper">
-  <select id="selectSitePub" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub')::text pub, case when doc->>'lpxSeq' ~ '^[0-9]{1,15}$' then (doc->>'lpxSeq')::bigint else 0 end seq from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectSitePub" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub')::text pub, coalesce(doc->'ledger'->>'on', doc->'org'->>'ledger_on') = 'true' as led, case when doc->>'lpxSeq' ~ '^[0-9]{1,15}$' then (doc->>'lpxSeq')::bigint else 0 end seq from tenant_state where tenant_id = #{tid}</select>
   <!-- v38 C#17 학습자 글 · 댓글 즉시 게시(Node app.js COMM_Q · COMM_LIVE_Q와 같음): 운영자 화면이 반영한 지점(lpxSeq) 뒤의 게시 모양만 -->
   <select id="selectCommCtx" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub'->'comm')::text comm, doc->'org'->>'type' type, case when doc->>'lpxSeq' ~ '^[0-9]{1,15}$' then (doc->>'lpxSeq')::bigint else 0 end seq, (select m from jsonb_array_elements(case when jsonb_typeof(doc->'members') = 'array' then doc->'members' else '[]'::jsonb end) m where m->>'sid' = #{sid} or m->>'id' = #{sid} limit 1)::text m from tenant_state where tenant_id = #{tid}</select>
   <select id="selectCommLive" resultType="string">select (data->'_cm')::text cm from learner_events where tenant_id = #{tid} and id &gt; #{seq} and type in ('post-new', 'post-cmt') and data->'_cm' is not null and at &gt; now() - interval '30 days' order by id limit 300</select>
