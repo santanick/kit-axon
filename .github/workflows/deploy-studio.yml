@@ -31,6 +31,8 @@ jobs:
         with: { node-version: 22 }
       - name: 서버 의존성
         run: cd service/server && npm ci --no-fund && npm audit --omit=dev --audit-level=high
+      - name: 운영 이미지 폴더 복사
+        run: node scripts/check-dockerfile.js
       - name: 문법 검사
         run: for f in service/server/*.js didisam/*.js; do node --check "$f"; done
       - name: API 테스트(가입 · 저장 · 기관 분리 · RLS · AI 정책 · 학습자)

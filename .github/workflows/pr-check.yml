@@ -23,6 +23,8 @@ jobs:
       - name: 시나리오 범위 · 형식
         env: { BRANCH: '${{ github.head_ref }}' }
         run: node scripts/check-scope.js "origin/${{ github.base_ref }}"
+      - name: 운영 이미지 폴더 복사
+        run: node scripts/check-dockerfile.js
       - name: 문법 검사
         run: for f in service/server/*.js didisam/*.js; do node --check "$f"; done
       - name: 서버 의존성
