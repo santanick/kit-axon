@@ -21,7 +21,7 @@
     if ((e.mode === 'months' || e.mode === 'item') && +e.months > 0) return kstMidnight(addDays(addMonths(d, +e.months), 1));
     if (e.mode === 'term_end' && e.termEnd) return kstMidnight(addDays(e.termEnd, 1)); return null; }
   const LOT = ['earn', 'restore', 'adjust'];
-  const DEFAULT_POLICY = { isOn: false, ver: 0, unitName: 'P', expiry: { mode: 'months', months: 12 }, notice: { monthsBefore: 6, daysBefore: [30, 3] }, budget: {}, dailyCapTotal: null,
+  const DEFAULT_POLICY = { on: false, ver: 0, unitName: 'P', expiry: { mode: 'months', months: 12 }, notice: { monthsBefore: 6, daysBefore: [30, 3] }, budget: {}, dailyCapTotal: null,
     streak: { minMin: 10, freezePerWeek: 1, milestones: [7, 30, 100] }, cashLock: { needTrust: 'B', achievementOnly: true }, sunset: null, penalty: { on: false }, grantCfg: { approveOver: 1000 }, scope: { mode: 'unit', hqPool: false } };
 
   function create(init) {
@@ -65,7 +65,7 @@
       if (S.events.some(e => e.trigger === trig && e.srcType === srcType && e.srcId === srcId && e.sid === sid)) return { status: 'already', reason: 'event' };
       const ev = { id: S.events.length + 1, sid, trigger: trig, srcType, srcId, value, trust, cls: a.cls || null, unit, at, status: 'new' }; S.events.push(ev);
       const pol = S.policy; let reason = null;
-      if (!pol || !pol.isOn) reason = 'off'; else if (pol.sunset && pol.sunset.stopEarnAt && ms(pol.sunset.stopEarnAt) <= at) reason = 'sunset';
+      if (!pol || !pol.on) reason = 'off'; else if (pol.sunset && pol.sunset.stopEarnAt && ms(pol.sunset.stopEarnAt) <= at) reason = 'sunset';
       if (reason) { ev.status = 'skipped'; return { status: 'skipped', reason, entries: [] }; }
       ensureW(sid, unit); const funded = !!a.cls && !cashOk(a.cls); const out = []; let any = false, first = null;
       for (const r of latestRules(trig)) {
@@ -74,6 +74,12 @@
         else if (cond.cls != null && cond.cls !== '*' && (!a.cls || !(Array.isArray(cond.cls) ? cond.cls.includes(a.cls) : cond.cls === a.cls))) reason = 'cond';
         else if (cond.minScore != null && (value || 0) < +cond.minScore) reason = 'cond';
         else if (cond.minMin != null && (value || 0) < +cond.minMin) reason = 'cond';
+        else if (cond.maxScore != null && (value || 0) > +cond.maxScore) reason = 'cond';
+        else if (cond.target != null && (value || 0) < +cond.target) reason = 'cond';
+        else if (cond.srcType != null && srcType !== String(cond.srcType)) reason = 'cond';
+        else if (cond.dueBy != null && day > String(cond.dueBy)) reason = 'cond';
+        else if (cond.improve != null) { const base = srcId.split('#')[0]; const prev = S.events.filter(e => e !== ev && e.sid === sid && e.trigger === trig && e.srcType === srcType && e.srcId.split('#')[0] === base && e.value != null);
+          if (!prev.length || (value || 0) - Math.max(...prev.map(e => e.value)) < +cond.improve) reason = 'cond'; }
         let pts = 0, band = null;
         if (!reason) { const v = value || 0;
           if (score.mode === 'band') { const bs = (score.bands || []).map((b, i) => ({ min: +b[0], p: +b[1], i: i + 1 })).filter(b => v >= b.min).sort((x, y) => y.min - x.min); if (bs.length) { pts = bs[0].p; band = bs[0].i; } }
@@ -128,7 +134,7 @@
     function grant(a) { const at = ms(a.at), unit = a.unit || 'lu_root', idem = `m:${a.staff}:${a.idem}`; let p = Math.round(+a.points); const pol = S.policy;
       if (a.self) return { error: 'self_grant' }; if (!String(a.reason || '').trim()) return { error: 'reason' }; if (!p || Math.abs(p) > 1e6) return { error: 'points' };
       const ex = S.entries.find(e => e.idemKey === idem); if (ex) return { ok: true, again: true, entryId: ex.id, status: ex.status };
-      if (!pol || !pol.isOn) return { error: 'mile_off' };
+      if (!pol || !pol.on) return { error: 'mile_off' };
       if (a.penalty) { const pe = pol.penalty || {}; if (!pe.on) return { error: 'penalty_off' }; if (p > 0) p = -p; if (pe.maxOnce != null && -p > +pe.maxOnce) return { error: 'over_cap' };
         if (pe.dayCap != null && -sumE(e => e.sid === a.sid && e.kind === 'penalty' && kst(e.at) === kst(at)) - p > +pe.dayCap) return { error: 'over_cap' }; }
       const gc = pol.grantCfg || {};
@@ -138,7 +144,7 @@
         expiresAt: st === 'posted' && p > 0 ? expAt(pol.expiry, null, at) : null, at, postedAt: st === 'posted' ? at : null });
       if (st === 'posted') settle(a.sid, unit); return { ok: true, entryId: id, status: st, wallet: sync(a.sid, unit, at) }; }
 
-    function redeemReq(a) { const at = ms(a.at), sid = a.sid, p = a.points == null ? null : Math.round(+a.points); const pol = S.policy; if (!pol || !pol.isOn) return { error: 'mile_off' };
+    function redeemReq(a) { const at = ms(a.at), sid = a.sid, p = a.points == null ? null : Math.round(+a.points); const pol = S.policy; if (!pol || !pol.on) return { error: 'mile_off' };
       const ik = a.idem != null ? `r:${sid}:${a.idem}` : null; const ex = ik && S.redeems.find(d => d.idemKey === ik); if (ex) return { ok: true, again: true, id: ex.id, status: ex.status, points: ex.points, won: ex.won };
       const rw = S.rewards.find(x => x.id === a.reward); if (!rw || rw.active === false) return { error: 'not_found' };
       if (pol.sunset && pol.sunset.endAt && ms(pol.sunset.endAt) <= at) return { error: 'sunset' };
@@ -161,13 +167,26 @@
       return { ok: true, id, status: 'requested', points: p, won, wallet: sync(sid, unit, at) }; }
     function redeemDecide(id, decision, staff, reason, at) { at = ms(at); const d = S.redeems.find(x => x.id === id); if (!d) return { error: 'not_found' }; if (d.status !== 'requested') return { error: 'state', status: d.status };
       if (decision === 'reject' && !String(reason || '').trim()) return { error: 'reason' }; const rw = S.rewards.find(x => x.id === d.reward);
-      const rel = rid('me_'); push({ id: rel, sid: d.sid, unit: d.unit, kind: 'release', points: d.points, redeemId: d.id, refEntry: d.holdEntry, reason, byStaff: staff, idemKey: 'rl:' + d.id, at, postedAt: at });
-      S.lotuse.filter(u => u.entry === d.holdEntry).forEach(u => S.lotuse.push({ entry: rel, lot: u.lot, points: -u.points }));
+      const rel = rid('me_');
+      const net = netHold(d); push({ id: rel, sid: d.sid, unit: d.unit, kind: 'release', points: d.points, redeemId: d.id, refEntry: d.holdEntry, reason, byStaff: staff, idemKey: 'rl:' + d.id, at, postedAt: at });
+      net.forEach(([lot, p]) => S.lotuse.push({ entry: rel, lot, points: -p }));
       if (decision === 'approve') { const use = rid('me_'); push({ id: use, sid: d.sid, unit: d.unit, kind: 'use', points: -d.points, redeemId: d.id, reason: rw.title, byStaff: staff, idemKey: 'u:' + d.id, at, postedAt: at });
         if (take(d.sid, d.unit, use, d.points, rw.cash !== false) !== d.points) throw new Error('take shortfall'); d.status = 'approved'; d.useEntry = use; }
       else { d.status = decision === 'cancel' ? 'cancelled' : 'rejected'; d.reason = reason; }
       d.decidedBy = staff; d.decidedAt = at;
       return { ok: true, id, status: d.status, points: d.points, won: d.won, kind: rw.kind, wallet: sync(d.sid, d.unit, at) }; }
+    /* 신청의 남은 hold lot 소진(조정 release 반영) [[lot, P]] — 나중에 잡은 것이 뒤 */
+    function netHold(d) { const ids = new Set(S.entries.filter(e => e.redeemId === d.id && ['hold', 'release'].includes(e.kind)).map(e => e.id)); const m = new Map(); const last = new Map();
+      S.lotuse.forEach((u, i) => { if (!ids.has(u.entry)) return; m.set(u.lot, (m.get(u.lot) || 0) + u.points); last.set(u.lot, i); });
+      return [...m.entries()].filter(([, p]) => p > 0).sort((a, b) => last.get(b[0]) - last.get(a[0])); }
+    function redeemAdjust(id, points, staff, reason, at) { at = ms(at); const d = S.redeems.find(x => x.id === id); if (!d) return { error: 'not_found' }; if (d.status !== 'requested') return { error: 'state', status: d.status };
+      const rw = S.rewards.find(x => x.id === d.reward); const p = Math.round(+points);
+      if (!(p > 0) || p >= d.points || p < (rw.minUse || 0) || ((rw.step || 1) > 1 && p % rw.step)) return { error: 'bad_points' };
+      const diff = d.points - p; let left = diff; const net = netHold(d); const rel = rid('me_');
+      push({ id: rel, sid: d.sid, unit: d.unit, kind: 'release', points: diff, redeemId: d.id, refEntry: d.holdEntry, reason: reason || '신청 P 조정', byStaff: staff, idemKey: `ra:${d.id}:${p}`, at, postedAt: at });
+      for (const [lot, q] of net) { const x = Math.min(q, left); S.lotuse.push({ entry: rel, lot, points: -x }); left -= x; if (!left) break; }
+      d.points = p; d.won = ['tuition', 'coupon', 'scholar', 'shop'].includes(rw.kind) ? Math.floor(p * ((rw.cost || {}).wonPerP != null ? +rw.cost.wonPerP : 1)) : 0;
+      return { ok: true, id, status: 'requested', points: d.points, won: d.won, wallet: sync(d.sid, d.unit, at) }; }
     function redeemFulfil(id, f) { const d = S.redeems.find(x => x.id === id); if (!d || d.status !== 'approved') return { error: 'state' }; d.status = 'fulfilled'; d.fulfil = Object.assign({}, d.fulfil, f || {}); return { ok: true, id, status: 'fulfilled', fulfil: d.fulfil }; }
     function restore(d, p, reason, staff, idem, at) { if (p <= 0 || S.entries.some(e => e.idemKey === idem)) return null; const used = S.lotuse.filter(u => u.entry === d.useEntry).map(u => E(u.lot));
       const exps = used.map(l => l.expiresAt).filter(x => x != null); const exp = exps.length ? Math.min(...exps) : null; const conv = used.length ? used.every(l => l.convertible) : false; const id = rid('me_');
@@ -201,16 +220,46 @@
         [...g.entries()].sort().forEach(([k, p]) => { const [s, u, e] = k.split('|'); add(s, u, +n >= 7 ? 'expire_d30' : 'expire_d3', kst(+e - 1000) + ':' + n, p, +e); }); }
       const su = pol.sunset; if (su && su.noticeAt && ms(su.noticeAt) <= at && (!su.endAt || ms(su.endAt) > at)) Object.entries(S.wallets).filter(([, w]) => w.balance > 0).sort().forEach(([k, w]) => { const [s, u] = k.split('|'); add(s, u, 'sunset', day.slice(0, 7), w.balance, su.endAt ? ms(su.endAt) : null); });
       return out; }
-    return { S, emit, post, void: voidE, cancel, expire, grant, redeemReq, redeemDecide, redeemFulfil, redeemReclaim, addLine, onRefund, noticeDue, sync, streakCalc, rem, cashOk };
+    return { S, emit, post, void: voidE, cancel, expire, grant, redeemReq, redeemDecide, redeemAdjust, redeemFulfil, redeemReclaim, addLine, onRefund, noticeDue, sync, streakCalc, rem, cashOk };
   }
 
   /* 화면용 순수 함수: 권장값 이탈 경고(D2 — 거절하지 않고 이유 한 줄) */
   const RECOMMEND = { billPct: 30, expiryMonths: 12, dailyCapTotal: 500, noticeMonthsBefore: 6 };
   function warnings(pol, rewards) { const w = []; const p = pol || {};
-    if (p.expiry && p.expiry.mode === 'months' && +p.expiry.months < 6) w.push({ code: 'expiry_short', msg: '유효기간이 6개월보다 짧으면 학습자 불만이 생길 수 있습니다.' });
+    if (p.expiry && p.expiry.mode === 'months' && +p.expiry.months < RECOMMEND.expiryMonths / 2) w.push({ code: 'expiry_short', msg: '유효기간이 6개월보다 짧으면 학습자 불만이 생길 수 있습니다.' });
+    if (p.dailyCapTotal != null && +p.dailyCapTotal > RECOMMEND.dailyCapTotal * 2) w.push({ code: 'day_cap_high', msg: `1인 하루 총 상한이 권장값(${RECOMMEND.dailyCapTotal}P)의 2배를 넘습니다.` });
     if (p.notice && +p.notice.monthsBefore === 0 && !(p.notice.daysBefore || []).length) w.push({ code: 'notice_off', msg: '소멸 고지를 모두 끄면 분쟁이 생길 수 있습니다.' });
     if (!p.budget || (p.budget.monthP == null && p.budget.termP == null)) w.push({ code: 'no_budget', msg: '예산을 입력하지 않으면 과지급을 미리 막을 수 없습니다.' });
-    (rewards || []).forEach(r => { if (r.kind === 'tuition' && r.maxUse && +r.maxUse.billPct > 50) w.push({ code: 'bill_pct', reward: r.id, msg: '청구서의 50%를 넘는 차감은 매출 변동이 커질 수 있습니다.' }); });
+    (rewards || []).forEach(r => { if (r.kind === 'tuition' && r.maxUse && +r.maxUse.billPct > RECOMMEND.billPct) w.push({ code: 'bill_pct', reward: r.id, msg: `청구서의 ${RECOMMEND.billPct}%를 넘는 차감은 매출 변동이 커질 수 있습니다(디디쌤 권장값 ${RECOMMEND.billPct}%).` });
+      if (r.kind === 'tuition' && (!r.maxUse || r.maxUse.billPct == null)) w.push({ code: 'bill_pct_unset', reward: r.id, msg: `차감 상한을 정하지 않으면 권장값 ${RECOMMEND.billPct}%를 적용합니다.` }); });
     return w; }
-  return { create, kst, addMonths, expAt, winStart, termStart, weekStart, trank, warnings, RECOMMEND, DEFAULT_POLICY };
+  /* 기관 유형별 기본 템플릿 8종(03 5장) — 권장값일 뿐, 기관이 모든 값을 바꿀 수 있다(D2). 예산이 없으면 비현금형(보상 없이 배지 · 스트릭) */
+  const TPL = {
+    k12: { label: '학원(초중고)', rank: false, cap: 300, exp: 12, rules: [['attend_day', 'participation', 10, 'per_day'], ['lesson_done', 'achievement', 20, 'per_src', { day: 100 }], ['exam_score', 'achievement', { band: [[80, 50], [90, 100]] }], ['course_done', 'achievement', 300]], rewards: [['tuition', '학원비 차감', { billPct: 30 }], ['goods', '학용품']] },
+    adult: { label: '성인 학원', rank: true, cap: 500, exp: 12, rules: [['attend_day', 'participation', 10, 'per_day'], ['lesson_done', 'achievement', 30, 'per_src', { day: 150 }], ['exam_score', 'achievement', { band: [[80, 50], [90, 100]] }], ['course_done', 'achievement', 500]], rewards: [['coupon', '수강 할인 쿠폰'], ['tuition', '수강료 차감', { billPct: 30 }]] },
+    univ: { label: '대학', rank: false, cap: 500, exp: 'term_end', rules: [['noncredit_done', 'achievement', 'source'], ['evidence', 'achievement', 30, 'per_src', null, 'cert_lang'], ['survey_done', 'participation', 5]], rewards: [['badge', '역량 배지']] },
+    corp: { label: '기업', rank: true, cap: 500, exp: 12, rules: [['lesson_done', 'achievement', 20, 'per_src', { day: 100 }], ['course_done', 'achievement', 300], ['exam_score', 'achievement', { band: [[80, 50], [90, 100]] }], ['tube_goal', 'participation', 10, 'per_day']], rewards: [['shop', '리워드 숍'], ['badge', '학습 배지']] },
+    public: { label: '공공', rank: false, cap: 300, exp: 12, rules: [['lesson_done', 'achievement', 10, 'per_src', { day: 80 }], ['course_done', 'achievement', 200]], rewards: [['cert', '이수 인정서']] },
+    lifelong: { label: '평생교육원', rank: false, cap: 300, exp: 12, rules: [['attend_day', 'participation', 10, 'per_day'], ['course_done', 'achievement', 300], ['review_ok', 'achievement', 50]], rewards: [['coupon', '다음 강좌 할인 쿠폰']] },
+    vocational: { label: '직업훈련(국비)', rank: false, cap: 200, exp: 12, rules: [['attend_day', 'participation', 10, 'per_day'], ['lesson_done', 'achievement', 10, 'per_src', { day: 80 }], ['course_done', 'achievement', 200]], rewards: [['badge', '수료 배지']] },
+    franchise: { label: '프랜차이즈(가맹점별)', rank: false, cap: 300, exp: 12, rules: [['attend_day', 'participation', 10, 'per_day'], ['lesson_done', 'achievement', 20, 'per_src', { day: 100 }], ['course_done', 'achievement', 300]], rewards: [['tuition', '학원비 차감', { billPct: 30 }]] } };
+  const TYPE_MAP = { academy: 'k12', hakwon: 'k12', k12: 'k12', adult: 'adult', univ: 'univ', college: 'univ', corp: 'corp', company: 'corp', enterprise: 'corp', public: 'public', gov: 'public', lifelong: 'lifelong', vocational: 'vocational', training: 'vocational', moel: 'vocational', franchise: 'franchise' };
+  function templateKey(type, ed) { if (ed && TPL[ed]) return ed; return TYPE_MAP[String(type || '').toLowerCase()] || 'adult'; }
+  function template(type, ed, budget) { const k = templateKey(type, ed); const T = TPL[k]; const cash = !!(budget && (budget.monthWon || budget.termWon));
+    const rules = T.rules.map(([trig, nature, sc, once, caps, group]) => ({ id: 'mru_' + trig, ver: 1, trigger: trig, nature, label: '', once: once || (['signup', 'first_login'].includes(trig) ? 'ever' : 'per_src'), caps: caps || {}, groupKey: group || null,
+      trustMin: 'C', approval: trig === 'evidence' ? 'evidence' : 'auto', cond: trig === 'exam_score' ? { minScore: 80 } : trig === 'attend_day' ? { minMin: 10 } : {},
+      score: sc === 'source' ? { mode: 'source' } : sc && sc.band ? { mode: 'band', bands: sc.band } : { mode: 'fixed', v: sc }, active: true }));
+    const rewards = T.rewards.filter(([kind]) => cash || !['tuition', 'coupon', 'shop', 'scholar'].includes(kind)).map(([kind, title, mx], i) => ({ id: `mrw_${kind}${i}`, kind, title, cost: { wonPerP: 1 }, minUse: kind === 'tuition' || kind === 'coupon' ? 1000 : 0,
+      maxUse: mx || {}, step: kind === 'tuition' || kind === 'coupon' ? 100 : 1, threshold: 0, perSid: kind === 'tuition' ? { month: 1 } : {}, approval: 'manual', cash: ['tuition', 'coupon', 'shop', 'goods', 'scholar'].includes(kind), audience: {}, link: {}, active: true }));
+    const policy = Object.assign({}, DEFAULT_POLICY, { template: k, dailyCapTotal: T.cap, expiry: T.exp === 'term_end' ? { mode: 'term_end' } : { mode: 'months', months: T.exp }, budget: budget && budget.monthWon ? { monthP: Math.floor(+budget.monthWon) } : {},
+      streak: Object.assign({}, DEFAULT_POLICY.streak), scope: k === 'franchise' ? { mode: 'unit', sameBizUnits: [], hqPool: false } : DEFAULT_POLICY.scope, league: { on: false, size: 10, reset: 'week' } });
+    return { template: k, label: T.label, policy, rules, rewards, warnings: warnings(policy, rewards) }; }
+  /* 모의 계산: 지난 사건에 규칙을 적용(저장 안 함). events [{sid, trigger, srcType, srcId, value, trust, at, cls}] */
+  function simulate(policy, rules, rewards, events) { const eng = create({ policy: Object.assign({}, policy, { on: true, sunset: null }), rules, rewards: rewards || [] });
+    (events || []).slice().sort((a, b) => ms(a.at) - ms(b.at)).forEach(e => eng.emit(e)); const E2 = eng.S.entries.filter(e => e.kind === 'earn');
+    const by = {}; const per = {}; E2.forEach(e => { by[e.ruleId] = (by[e.ruleId] || 0) + e.points; per[e.sid] = (per[e.sid] || 0) + e.points; });
+    const vals = Object.values(per).sort((a, b) => a - b); const total = vals.reduce((s, x) => s + x, 0); const cash = (rewards || []).find(r => r.cash !== false && (r.cost || {}).wonPerP != null);
+    const conv = E2.filter(e => e.convertible).reduce((s, e) => s + e.points, 0);
+    return { totalP: total, convertibleP: conv, wonEstimate: cash ? Math.floor(conv * +cash.cost.wonPerP) : 0, sids: vals.length, perSidAvg: vals.length ? Math.round(total / vals.length) : 0, p90: vals.length ? vals[Math.min(vals.length - 1, Math.floor(vals.length * 0.9))] : 0, byRule: by }; }
+  return { create, template, templateKey, simulate, TEMPLATES: Object.keys(TPL), kst, addMonths, expAt, winStart, termStart, weekStart, trank, warnings, RECOMMEND, DEFAULT_POLICY };
 });

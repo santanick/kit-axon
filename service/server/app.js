@@ -204,9 +204,12 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     await pool.query(`insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval '${keep ? '30 days' : '12 hours'}')`, [sha(token), tid, sid]);
     res.setHeader('set-cookie', `${lcookieName}=${token}; Path=/; HttpOnly; SameSite=Strict${keep ? `; Max-Age=${30 * 86400}` : ''}${secure ? '; Secure' : ''}`);
     if (res.req) await cplAfterLogin(res.req, tid, sid, sha(token));
+    await inTenant(pool, tid, c => mileage.hook((q, a) => c.query(q, a), tid, sid, 'first_login', 'acct', sid, null, 'A')).catch(() => {}); /* v42 첫 로그인(사건 유일키로 1회) */
   }
   /* v23 간편가입 · 개인정보 분리(pii.js) — 학습 경로는 가명 learner_id만 쓴다 */
-  const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession });
+  /* v42 학습 마일리지(mileage/): 공개 mile-* · 운영자 /api/mileage/* · 수집 훅(가입 · 로그인 · cpl · progress 차이분 · 원장 환불) */
+  const mileage = require('./mileage').createMileage({ pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, env, log });
+  const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook: mileage.hook });
   const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env });
   /* 단체가입 최초 로그인 · 중도탈락 표시 */
   const meFlags = async (c, tid, sid, doc) => { const o0 = await consentFlag(c, tid, sid, doc); const P = doc && doc.org && doc.org.cpl; if (!P || !P.on) return o0; const o = o0; { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (L && !L.pw_hash && P.groupFirst) o.groupFirst = true; if (L && L.pw_hash) o.pwSet = true; } const m = (doc.members || []).find(x => x && x.sid === sid); if (m) { const D = (doc.classes || []).filter(x => x && x.drop && x.drop[m.id]).map(x => x.id); if (D.length) o.dropped = D; } return o; };
@@ -232,7 +235,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     const data = pii.redactDeep(b.data && typeof b.data === 'object' && !Array.isArray(b.data) ? b.data : {});
     /* v38 A-17: 쿠폰을 쓴 결제는 서버가 쿠폰 · 금액을 다시 계산해 맞을 때만 받는다 */
     if (type === 'pay' && data.cpn) { if (data.itemType && data.itemType !== 'class') throw new HttpErr(400, '쿠폰은 강좌 결제에만 쓸 수 있습니다.', 'coupon');
-      const R = await inTenant(pool, tid, c => coupon.check(c, tid, data.cpn, String(data.ref || ''))); if (!R.ok) throw new HttpErr(400, R.msg, 'coupon');
+      const R = await inTenant(pool, tid, c => coupon.check(c, tid, data.cpn, String(data.ref || ''), s ? (k, cl) => mileage.personalCoupon(c, tid, s.sid, k, cl) : null)); if (!R.ok) throw new HttpErr(400, R.msg, 'coupon');
       if (Math.round(+data.amount) !== R.final) throw new HttpErr(400, '결제 금액이 쿠폰 할인 금액과 맞지 않습니다. 쿠폰을 다시 적용해 주세요.', 'coupon_amount'); data.cpn = R.code; data.cpnOff = R.off; data.cpnOk = true; }
     delete data._cm; /* v38 C#17 게시 모양은 서버만 만든다 */ const CM = s && (type === 'post-new' || type === 'post-cmt'); if (CM) limit(`lcm:${tid}:${s.sid}`, type === 'post-new' ? 10 : 30, 600e3);
     if (JSON.stringify(data).length > 12 * 1024) throw new HttpErr(413, '요청 내용이 너무 큽니다.', 'too_large');
@@ -249,6 +252,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     const key = `${req.method} ${act}`;
     if (act.startsWith('fac-')) return fac.pub(req, res, tid, act); /* v40 */
     if (act.startsWith('ledger-')) return ledger.pub(req, res, tid, act); /* v41 통합 수납 원장 */
+    if (act.startsWith('mile-')) return mileage.pub(req, res, tid, act); /* v42 학습 마일리지 */
     if (pii.pubOpen[key]) return pii.pubOpen[key](req, res, tid);
     if (key === 'GET events' || key === 'POST events') return eventsRoute(req, res, tid, key);
     if (key === 'GET site') {
@@ -267,6 +271,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
       const token = crypto.randomBytes(32).toString('base64url');
       await pool.query('insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval \'30 days\')', [sha(token), tid, sid]);
       await cplAfterLogin(req, tid, sid, sha(token));
+      await inTenant(pool, tid, c => mileage.hook((q, a) => c.query(q, a), tid, sid, 'first_login', 'acct', sid, null, 'A')).catch(() => {}); /* v42 */
       res.setHeader('set-cookie', `${lcookieName}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${30 * 86400}${secure ? '; Secure' : ''}`);
       return inTenant(pool, tid, async c => { await c.query('update learners set last_login = now() where tenant_id = $1 and sid = $2', [tid, sid]); const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: L.dept, ...(await meFlags(c, tid, sid, d && d.doc)) }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid, tid) : { badges: [], cls: {} } }; });
     }
@@ -275,10 +280,12 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (!s) throw new HttpErr(401, '로그인이 필요합니다.', 'auth');
     if (pii.pubAuth[key]) return pii.pubAuth[key](req, res, tid, s);
     if (key === 'POST coupon') { const b = await readBody(req, 1024); limit(`lcp:${tid}:${s.sid}`, 20, 600e3); /* 코드 맞히기 막기 */ const code = String(b.code || '').slice(0, 40), cls = String(b.cls || '').slice(0, 60);
-      const R = await inTenant(pool, tid, c => coupon.check(c, tid, code, cls)); return R.ok ? { ok: true, code: R.code, off: R.off, final: R.final, label: R.label } : { ok: false, msg: R.msg }; } /* v38 A-17 */
+      const R = await inTenant(pool, tid, c => coupon.check(c, tid, code, cls, (k, cl) => mileage.personalCoupon(c, tid, s.sid, k, cl))); return R.ok ? { ok: true, code: R.code, off: R.off, final: R.final, label: R.label } : { ok: false, msg: R.msg }; } /* v38 A-17 */
     if (key === 'GET me') return inTenant(pool, tid, c => learnerOut(c, tid, s.sid));
     if (key === 'PUT progress') { const b = await readBody(req, LP_MAX); const lp = cleanLP(b.lp); const j = JSON.stringify(lp); if (j.length > LP_MAX) throw new HttpErr(413, '학습 기록이 너무 큽니다.', 'too_large');
-      await inTenant(pool, tid, c => c.query('insert into learner_progress (tenant_id, sid, lp, bytes) values ($1, $2, $3, $4) on conflict (tenant_id, sid) do update set lp = excluded.lp, bytes = excluded.bytes, updated_at = now()', [tid, s.sid, j, j.length])); return { ok: true }; }
+      await inTenant(pool, tid, async c => { const prev = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2 for update', [tid, s.sid])).rows[0];
+        await c.query('insert into learner_progress (tenant_id, sid, lp, bytes) values ($1, $2, $3, $4) on conflict (tenant_id, sid) do update set lp = excluded.lp, bytes = excluded.bytes, updated_at = now()', [tid, s.sid, j, j.length]);
+        await mileage.emitDiff(c, tid, s.sid, prev && prev.lp, lp); /* v42 새로 생긴 완료 · 목표 달성만(신뢰 C) */ }); return { ok: true }; }
     if (key === 'POST cpl') return cpl.route(req, tid, s.sid);
     if (key === 'POST consent') { const b = await readBody(req, 1024); if (b.tos !== true || b.privacy !== true) throw new HttpErr(400, '필수 항목(이용약관 · 개인정보 수집 · 이용)에 동의해 주세요.', 'consent');
       const at = new Date().toISOString(); const v = JSON.stringify({ tos: true, privacy: true, ver: String(b.ver || 'v33').slice(0, 20), at });
@@ -578,8 +585,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname.startsWith('/api/') && !M.apiAllowed(mod, req.method, url.pathname)) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
       if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?)$/);
-        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?)$/);
+        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처
           if (req.headers['x-didisam'] !== '1') throw new HttpErr(403, '허용되지 않은 요청입니다.', 'csrf');
@@ -597,7 +604,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       return send(res, 500, { error: 'server', message: '서버 오류가 발생했습니다.' });
     }
   });
-  srv.piiPurge = pii.purge; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
+  srv.piiPurge = pii.purge; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
   return srv;
 }
 
