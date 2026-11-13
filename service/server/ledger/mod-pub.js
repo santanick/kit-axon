@@ -50,7 +50,7 @@ module.exports = (ctx, S) => {
   return {
     'GET ledger-my': async (req, res, tid) => { const w = await who(req, tid); return T(tid, async c => { await S.sweepNow(c, tid);
       const L = await S.linesOf(c, tid, { sid: w.sid }); const B = new Map(L.bal.lines.map(l => [l.id, l]));
-      const charges = L.charges.filter(x => x.sid === w.sid && x.status !== 'void').sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).map(x => chOut(x, B.get(x.id)));
+      const charges = L.charges.filter(x => x.sid === w.sid && x.status !== 'void').sort((a, b) => (new Date(b.created_at) - new Date(a.created_at)) || String(b.id).localeCompare(String(a.id))).map(x => chOut(x, B.get(x.id)));
       const receipts = (await c.query("select id, method, channel, amount, status, paid_at \"paidAt\", approval_no is not null \"hasApproval\" from led_receipt where tenant_id = $1 and sid = $2 and status in ('paid') order by paid_at desc limit 100", [tid, w.sid])).rows;
       const refunds = (await c.query("select f.id, f.receipt_id receipt, f.amount, f.status, f.at, f.done_at \"doneAt\" from led_refund f join led_receipt r on r.tenant_id = f.tenant_id and r.id = f.receipt_id where f.tenant_id = $1 and r.sid = $2 and f.status <> 'cancelled' order by f.at desc limit 100", [tid, w.sid])).rows;
       let online = false; for (const u of [...new Set(charges.filter(x => x.balance > 0).map(x => x.unit))].concat(['lu_root']).slice(0, 20)) if ((await S.payFor(c, tid, u)).pay.online()) { online = true; break; }

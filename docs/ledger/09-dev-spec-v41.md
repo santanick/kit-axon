@@ -33,7 +33,7 @@ led_device  (tenant_id, id 'ld_', unit_id, label, agent_key_hash, last_seen, mod
 - 금액은 원 단위 정수. 서버가 항상 재계산(클라이언트 금액 불신, 불일치 400 `amount_mismatch`).
 - 시설(v40) 결제 · 환불은 같은 트랜잭션에서 `legacy_ref='fac_payment:<id>'`로 원장에 한 줄 추가(이중 기록 방지 유일 색인). 시설 계산 · 벡터 불변.
 
-## 3. /api (Node · Java 동일, 응답 `{ok:true,...}` / 오류 `{ok:false,error:'<code>'}`)
+## 3. /api (Node · Java 동일, 오류 `{error:'<code>', message}` — §7)
 ### 운영(직원, 역할: owner · sub · teacher는 조회만)
 | 메서드 · 경로 | 요청 | 응답 · 규칙 |
 |---|---|---|
@@ -90,3 +90,7 @@ led_device  (tenant_id, id 'ld_', unit_id, label, agent_key_hash, last_seen, mod
 - 시설(v40) 이중 기록은 DB 트리거(fac_payment paid · fac_refund done → 원장 1줄, legacy_ref 유일) — Node · Java 공통.
 - import는 1차에 JSON `{kind, csv}`만(멀티파트 2차). ledger-my 보호자 연결 2차. v41 이전 시설 결제 이관 스크립트 별도.
 - 단위 테스트 위치 `service/test/`(기존 관례). 학원법 환불 비율은 원문 미확인 → 결과에 `lawCheck:true`.
+- (추가) `GET /api/ledger/refunds?status` 환불 목록(Node · Java 구현). `device-push`는 CSRF 검사로 `x-didisam` 헤더 필요(에이전트도 전송).
+- 미납 단계 기준: 1단계 기한 경과 1~7일, 2단계 8~30일, 3단계 31일 이상(`today`의 d1 · d8 · d31).
+- `entries` 청구 줄 `balance`(할인 줄 먼저 차감, 할인 줄 자체 0), `summary.byUnitDetail` [{unitId, charged, paid, refund, net, unpaid, collectRate}] unitId 순 · collectRate는 % 소수 1자리 내림.
+- `ledger-my` 청구 정렬은 created_at 시간 내림차순(Node · Java 동일).
