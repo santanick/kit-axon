@@ -84,6 +84,7 @@ module.exports = (ctx, S) => {
         if (bill.paid > 0) out.push({ code: 'bill_paid', block: true, text: '수납이 시작된 청구서입니다. 다른 청구서를 고르십시오.', fixPoints: null });
         const pct = +((rw.max_use || {}).billPct != null ? rw.max_use.billPct : 30); const max = Math.floor(bill.sum * pct / 100);
         if (d.won > max) out.push({ code: 'over_cap', block: true, text: `청구서의 ${pct}%(${max.toLocaleString('ko-KR')}원)를 넘습니다.`, fixPoints: Math.floor(max / wpp / (rw.step || 1)) * (rw.step || 1) }); } }
+    if ((d.fulfil || {}).guardian === 'pending') out.push({ code: 'guardian_pending', block: true, text: '보호자 확인을 기다리는 신청입니다.', fixPoints: null });
     if (rw.stock != null && rw.stock <= 0) out.push({ code: 'out_of_stock', block: true, text: '재고가 없습니다.', fixPoints: null });
     return out; }
   /* 승인 뒤 이행: 쿠폰 코드 · 학원비 차감 줄 · 배지/인증 기록. 굿즈는 전달 확인(handed) 때, 숍은 지급 내보내기 대상 */

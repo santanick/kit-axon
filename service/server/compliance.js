@@ -16,7 +16,7 @@ const attRate = (cl, mid, conv, today) => { if (!cl || !mid) return null; const 
   Object.keys(A).forEach(k => { if (k.startsWith(mid + ':') && typeof A[k] !== 'object') rows.push({ date: '', st: stOf(A[k]) }); });
   let D = 0, abs = 0, late = 0; rows.forEach(r => { if (r.st && r.st !== '미입력' && ATT_OK.includes(r.st)) { D++; if (r.st === '결석') abs++; if (ATT_LATE.includes(r.st)) late++; } else if (!r.st && r.date && r.date < today) { D++; abs++; } });
   if (!D) return null; return Math.round((D - (abs + (conv ? Math.floor(late / 3) : 0))) / D * 100); };
-function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env = {} }) {
+function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env = {}, mileHook }) {
   const KEY_RE = /^[\w-]{1,60}$/;
   /* 시험 답안 포함 요청이 있어 본문 상한을 넉넉히 둔다 */
   const dev = env.IDV_DEV === '1'; const pending = new Map();
@@ -66,7 +66,8 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw
         if (P && P.on && !over) {
           /* 직전 기록 이후 실제로 흐른 시간보다 많이 적립하지 않는다 */
           const el = (await c.query("select extract(epoch from now() - max(at)) e from cpl_log where tenant_id = $1 and sid = $2 and kind = 'beat'", [tid, sid])).rows[0].e;
-          const room = el == null ? secs : Math.ceil(+el) + 5; const add = Math.min(secs, room, max ? max - s : secs); if (add > 0) { await rec(c, tid, sid, 'beat', { cls, item, secs: add, ip: ip(req) }); s += add; }
+          const room = el == null ? secs : Math.ceil(+el) + 5; const add = Math.min(secs, room, max ? max - s : secs); if (add > 0) { await rec(c, tid, sid, 'beat', { cls, item, secs: add, ip: ip(req) }); s += add;
+            if (mileHook && s >= 600 && s - add < 600) await mileHook((q, v) => c.query(q, v), tid, sid, 'attend_day', 'day', new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10), Math.floor(s / 60), 'A', cls); } /* v42 오늘 학습 10분을 넘긴 순간 출석 1회(신뢰 A) */
         }
         return { today: s, max, over: !!max && s >= max }; });
     }
@@ -120,6 +121,7 @@ function createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw
       const late = !!r.ends_at && Date.now() > +new Date(r.ends_at) + 60e3; let sc = 0, tot = 0; const clean = {}; const res = r.qorder.map(i => { const q = it.qs[i] || {}; const p = +q.pts || 1; tot += p; const v = late || A[i] == null ? '' : String(A[i]).slice(0, 2000); clean[i] = v; const ok = right(q, v); if (ok) sc += p; return { i, ok }; });
       const score = Math.round(sc / Math.max(1, tot) * 100); const pass = R.pass && R.pass.on ? score >= +R.pass.v : +P.pass > 0 ? score >= +P.pass : null;
       await c.query('update cpl_exam set submitted_at = now(), answers = $1, score = $2, pass = $3, late = $4 where id = $5', [JSON.stringify(clean), score, pass, late, r.id]);
+      if (mileHook && !late) await mileHook((q, v) => c.query(q, v), tid, sid, 'exam_score', 'exam', `${r.cls}/${r.item}#${r.id}`, score, 'A', r.cls); /* v42 시험마다 최고 구간만(재응시는 #응시번호) */
       const clsEnd = parseT((await classOf(c, tid, r.cls)).end, true); const moel = /^moel-/.test(String(P.profile || '')); const hideRes = R.show === 'never' || R.show === 'end' || (moel && !(clsEnd && Date.now() > clsEnd + 7 * 864e5)); return { score, pass, late, res: hideRes ? [] : res }; }); }
   /* 서술형 답안 베낀 답안 검사: 유사도는 화면의 과제 검사와 같은 3-gram */
   const grams = t => { const x = String(t).replace(/\s+/g, ''); const G = new Set(); for (let i = 0; i + 3 <= x.length; i++) G.add(x.slice(i, i + 3)); return G; };

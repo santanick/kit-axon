@@ -210,7 +210,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   /* v42 학습 마일리지(mileage/): 공개 mile-* · 운영자 /api/mileage/* · 수집 훅(가입 · 로그인 · cpl · progress 차이분 · 원장 환불) */
   const mileage = require('./mileage').createMileage({ pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, env, log });
   const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook: mileage.hook });
-  const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env });
+  const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env, mileHook: mileage.hook });
   /* 단체가입 최초 로그인 · 중도탈락 표시 */
   const meFlags = async (c, tid, sid, doc) => { const o0 = await consentFlag(c, tid, sid, doc); const P = doc && doc.org && doc.org.cpl; if (!P || !P.on) return o0; const o = o0; { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (L && !L.pw_hash && P.groupFirst) o.groupFirst = true; if (L && L.pw_hash) o.pwSet = true; } const m = (doc.members || []).find(x => x && x.sid === sid); if (m) { const D = (doc.classes || []).filter(x => x && x.drop && x.drop[m.id]).map(x => x.id); if (D.length) o.dropped = D; } return o; };
   const learnerOut = (c, tid, sid) => (async () => { const acc = await pii.meExtra(c, tid, sid); const L = acc ? null : (await c.query('select dept from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: acc ? acc.dept : L ? L.dept : '', ...(acc ? { acct: acc } : {}), ...(acc && (await pii.hasPw(tid, sid)) ? { pwSet: true } : {}), ...(await meFlags(c, tid, sid, d && d.doc)) }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid, tid) : { badges: [], cls: {} } }; })();
@@ -549,7 +549,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   /* v40 시설 · 장비 예약(fac/): 공개 fac-* 와 운영자 /api/fac/* */
   const fac = require('./fac').createFac({ mail: pii.mailTo, pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
   /* v41 통합 수납 원장(ledger/): 공개 ledger-* 와 운영자 /api/ledger/* */
-  const ledger = require('./ledger').createLedger({ pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
+  const ledger = require('./ledger').createLedger({ pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log, mileage });
 
   /* ── 정적 파일 ── */
   function serveStatic(req, res, pathname) {

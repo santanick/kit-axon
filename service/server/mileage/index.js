@@ -5,7 +5,7 @@
    - 수집 지점: hook(q, tid, sid, trigger, srcType, srcId, value, trust, cls) — 가입 · 로그인 · cpl · progress 차이분이 같은 트랜잭션의 쿼리 함수로 부른다(세이브포인트, 실패해도 본 작업은 계속).
    - 제품 고정(서버 강제): 국비 과정 금전성 차단(D1, DB 제약 + mil_cash_ok) · 운영자 본인 지급 금지 · 충전 · 환급 · 양도 · 기관 밖 사용 경로 없음. */
 const fs = require('node:fs'); const path = require('node:path'); const crypto = require('node:crypto');
-const MC = require('../../../didisam/milecalc.js');
+const MC = require('./calc'); /* didisam/milecalc.js 사본(이미지에 didisam이 없으므로) — mileage42.test가 동일성 확인 */
 const { piiKeys } = require('../pii');
 const SQL = path.join(__dirname, 'sql');
 function sqlMigrations() { if (!fs.existsSync(SQL)) return []; return fs.readdirSync(SQL).filter(f => /^\d\d_[a-z0-9_]+\.sql$/.test(f)).sort().map(f => ['mileage/' + f, fs.readFileSync(path.join(SQL, f), 'utf8')]); }
@@ -18,7 +18,7 @@ const MSG = { mile_off: '마일리지 제도를 켜지 않은 기관입니다.',
   insufficient: '쓸 수 있는 마일리지가 부족해요.', below_threshold: '아직 기준 점수에 닿지 않았어요.', negative_balance: '마일리지가 음수인 동안에는 신청할 수 없어요.', out_of_stock: '재고가 없어요.', already: '이미 처리했습니다.',
   staff_cap: '이번 달 지급 한도를 넘습니다.', self_grant: '운영자 본인 계정에는 지급할 수 없습니다.', rate: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.', amount_mismatch: '계산 값이 서버 값과 다릅니다.',
   bad_points: '신청 포인트를 확인해 주세요.', reason: '사유를 입력해 주십시오.', points: '포인트를 확인해 주십시오.', penalty_off: '감점 기능을 켜지 않은 기관입니다.', state: '이미 처리했거나 처리할 수 없는 상태입니다.',
-  bill_paid: '수납이 시작된 청구서에는 차감 줄을 붙일 수 없습니다.', bill: '청구서를 찾지 못했습니다.', kind: '이 보상에는 쓸 수 없습니다.', limit: '이번 달 신청 횟수를 넘었어요.', sunset: '제도가 종료되었습니다.', not_found: '찾지 못했습니다.', need_draft: '켜기 마법사를 먼저 완료해 주십시오.' };
+  bill_paid: '수납이 시작된 청구서에는 차감 줄을 붙일 수 없습니다.', bill: '청구서를 찾지 못했습니다.', kind: '이 보상에는 쓸 수 없습니다.', limit: '이번 달 신청 횟수를 넘었어요.', sunset: '제도가 종료되었습니다.', not_found: '찾지 못했습니다.', need_draft: '켜기 마법사를 먼저 완료해 주십시오.', auth: '로그인이 필요해요.', repair_need: '오늘 복구 학습 분량을 먼저 채워 주세요.' };
 
 const AZ = 'abcdefghijklmnopqrstuvwxyz0123456789'; const CP = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const rid = p => p + Array.from(crypto.randomBytes(12), b => AZ[b % 36]).join('');
