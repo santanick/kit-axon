@@ -53,6 +53,7 @@ function runJs(v) {
   const T = v.then || {};
   for (const [k, w] of Object.entries(T.wallets || {})) { const [sid, unit] = k.split('|'); match(w, eng.sync(sid, unit, Date.parse('2026-11-30T00:00:00Z')), `${v.id} wallet ${k}`, bad); }
   for (const [sid, ks] of Object.entries(T.kinds || {})) match([...ks].sort(), kindsOut(eng.S.entries.filter(e => e.sid === sid && e.status !== 'void')), `${v.id} kinds ${sid}`, bad);
+  runJs.eng = eng; /* 마지막 엔진(학습자 시연판 계산 대조용, tests/ui/mil42-learner.js) */
   return bad;
 }
 

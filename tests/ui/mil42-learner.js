@@ -144,6 +144,15 @@ const BAN = /서두르세요|곧 사라져요|놓치지 마세요|끊겨요|꼴�
     await check(p, '운영 보상'); ok(!errs.length, `운영 pageerror 0 ${errs.join('|')}`); await ctx.close(); }
   { const L = LIVE({ off: true }); const { ctx, p, errs } = await openLive(L, '/learner.html?t=T1&app=1#acct'); ok(!(await p.$('.lm-me')) && L.st.my >= 1, '운영 403 mile_off: 카드 없음'); await go(p, '#mile', 600); ok(!(await p.$('.lm')), '운영 403: #mile 경로 없음'); ok(L.st.my === 1, `운영 403: 다시 묻지 않음(${L.st.my})`); ok(!errs.length, 'pageerror 0'); await ctx.close(); }
 
+  /* 기준값 대조(QA v42): 학습자 시연판 계산(LMIL.calc) = 데모 엔진 milecalc.js sync — tests/mileage-vectors.json 전체, 학습자 · 지갑 단위마다 잔액 · 적립 예정 · 전환 가능 */
+  { const RUN = require('../mileage-run.js'); const NOW = '2026-11-30T00:00:00Z'; const iso = x => x == null ? '' : typeof x === 'number' ? new Date(x).toISOString() : String(x); const cases = [];
+    for (const v of RUN.VEC.vectors) { RUN.runJs(v); const eng = RUN.runJs.eng; const keys = [...new Set(eng.S.entries.map(e => e.sid + '|' + (e.unit || 'lu_root')))];
+      for (const k of keys) { const [sid, unit] = k.split('|'); const ent = eng.S.entries.filter(e => e.sid === sid && (e.unit || 'lu_root') === unit).map(e => ({ id: e.id, sid, kind: e.kind, points: e.points, status: e.status, at: iso(e.at), expiresAt: iso(e.expiresAt), convertible: !!e.convertible, funded: !!e.funded, nature: e.nature, refEntry: e.refEntry || e.ref || '', redeemId: e.redeemId || '' }));
+        eng.expire(Date.parse(NOW), sid); const w = eng.sync(sid, unit, Date.parse(NOW)); cases.push({ id: `${v.id} ${k}`, sid, ent, rd: eng.S.redeems.filter(d => d.sid === sid).map(d => ({ id: d.id, sid, rewardId: d.reward, points: d.points, status: d.status, at: iso(d.at) })), rw: eng.S.rewards.map(r => ({ id: r.id, kind: r.kind, cash: r.cash, title: r.title || r.id })), want: { balance: w.balance, pending: w.pending, convertible: w.convertible } }); } }
+    const { ctx, p } = await openDemo(); const got = await p.evaluate(([C, now]) => { window.__lmNow = now; return C.map(c => { const r = LMIL.calc(c.sid, { policy: {}, entries: c.ent, redeems: c.rd, rewards: c.rw }); return { id: c.id, got: { balance: r.balance, pending: r.pending, convertible: r.convertible } }; }); }, [cases, NOW]);
+    const bad = got.map((g, i) => [g, cases[i]]).filter(([g, c]) => JSON.stringify(g.got) !== JSON.stringify(c.want)).map(([g, c]) => `${c.id} 기대 ${JSON.stringify(c.want)} 실제 ${JSON.stringify(g.got)}`);
+    ok(cases.length >= 25 && !bad.length, `기준값 대조: 시연판 계산 = milecalc.js (${cases.length}건)${bad.length ? ' ' + bad.slice(0, 4).join(' / ') : ''}`); await ctx.close(); }
+
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

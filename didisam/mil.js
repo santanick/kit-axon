@@ -190,7 +190,12 @@
     if (LIVEON() && !D.live) { D.entries = []; D.log = []; D.live = 1; } return D; }
   const D = () => ensure();
   const LV = { key: '', d: {}, busy: false, err: '', errAt: 0 };
-  const P = () => LIVEON() && LV.d.cfg && LV.d.cfg.policy ? Object.assign(policyDefault(), LV.d.cfg.policy, { recommended: LV.d.cfg.recommended || LV.d.cfg.policy.recommended || policyDefault().recommended }) : D().policy;
+  const P = () => { if (!(LIVEON() && LV.d.cfg && LV.d.cfg.policy)) return D().policy; const sp = LV.d.cfg.policy; const g = sp.grantCfg || {}; const b = policyDefault(); const nn = Object.fromEntries(Object.entries(sp).filter(([, v]) => v != null));
+    return Object.assign(b, nn, { recommended: LV.d.cfg.recommended && LV.d.cfg.recommended.expiry ? LV.d.cfg.recommended : (sp.recommended && sp.recommended.expiry ? sp.recommended : b.recommended), manualOver: g.approveOver != null ? +g.approveOver : b.manualOver, teacherCap: g.staffMonthCap != null ? +g.staffMonthCap : b.teacherCap, rank: Object.assign({}, b.rank, sp.rank || {}), penalty: Object.assign({}, b.penalty, sp.penalty || {}) }); };
+  /* 운영 서버 POST /api/mileage/config 본문: 서버 정책 칸만(카멜), null 제외. 강사 한도 · 수동 지급 기준은 grantCfg로(04 §8). on · rank · penalty · sunset · shop은 전용 경로 */
+  const PKEYS = ['unitName', 'expiry', 'notice', 'budget', 'dailyCapTotal', 'league', 'streak', 'scope', 'tiers', 'tierWindow', 'cashLock'];
+  const polBody = p => { const o = {}; PKEYS.forEach(k => { const v = p[k]; if (v == null) return; if (k === 'tiers' ? Array.isArray(v) : ['unitName', 'tierWindow', 'dailyCapTotal'].includes(k) || (typeof v === 'object' && !Array.isArray(v))) o[k] = v; });
+    const g = Object.assign({}, p.grantCfg || {}); if (p.manualOver != null) g.approveOver = +p.manualOver; if (p.teacherCap != null) g.staffMonthCap = +p.teacherCap; if (Object.keys(g).length) o.grantCfg = g; return o; };
   const rules = () => LIVEON() && LV.d.cfg ? (LV.d.cfg.rules || []) : D().rules;
   const rewards = () => LIVEON() && LV.d.cfg ? (LV.d.cfg.rewards || []) : D().rewards;
   /* 시연판: S.mileage.entries가 원장. 보상 요원이 따로 둔 S.milrw.entries(hold · release · use)는 통합 전까지 읽기만 합쳐 보인다(같은 id는 한 번) */
@@ -198,7 +203,7 @@
   const isOn = () => !!(P().on || P().isOn);
   const fmtP = v => `${n(v)}${P().ab || 'P'}`;
   const sgn = v => `${v > 0 ? '+' : v < 0 ? '−' : ''}${n(Math.abs(v))}${P().ab || 'P'}`;
-  const mEnt = x => ({ id: x.id, sid: x.sid || '', scopeUnit: x.scopeUnit || x.scope_unit || 'lu_root', kind: x.kind, points: +x.points || 0, status: x.status || 'posted', nature: x.nature, trust: x.trust, convertible: !!x.convertible, funded: !!x.funded, clsId: x.clsId || x.cls_id || null, ruleId: x.ruleId || x.rule_id, ruleVer: x.ruleVer || x.rule_ver, expiresAt: x.expiresAt || x.expires_at || null, reason: x.reason || '', byStaff: x.byStaff || x.by_staff || '', at: String(x.at || '').replace('T', ' ').slice(0, 16), refEntry: x.refEntry || x.ref_entry || null });
+  const mEnt = x => ({ id: x.id, sid: x.sid || '', scopeUnit: x.scopeUnit || x.scope_unit || x.unit || 'lu_root', kind: x.kind, points: +x.points || 0, status: x.status || 'posted', nature: x.nature, trust: x.trust, convertible: !!x.convertible, funded: !!x.funded, clsId: x.clsId || x.cls_id || x.cls || null, ruleId: x.ruleId || x.rule_id, ruleVer: x.ruleVer || x.rule_ver, expiresAt: x.expiresAt || x.expires_at || null, reason: x.reason || '', byStaff: x.byStaff || x.by_staff || '', at: String(x.at || '').replace('T', ' ').slice(0, 16), refEntry: x.refEntry || x.ref_entry || null });
   const logRows = () => LIVEON() ? ((LV.d.log && (LV.d.log.rows || LV.d.log.log || LV.d.log.items)) || []).map(x => ({ at: String(x.at || '').replace('T', ' ').slice(0, 16), by: x.by || x.byStaff || x.by_staff || '', area: x.area, what: x.what || AREA[x.area] || x.area, before: x.before, after: x.after, reason: x.reason || '', note: x.note || '' })) : D().log;
 
   /* 국비 지원 과정(D1): 결제 원천 · 이름으로 자동 판정(끌 수 없음), voc 새 과정은 기본 켬(소유자가 끌 수 있음), 그 밖은 수동 */
@@ -255,7 +260,9 @@
   /* ── 메뉴 · 프리셋 · 기존 저장 사용자 ── */
   MENU.mileage = { label: '마일리지', ws: 'people' };
   Object.keys(PRESET).forEach(k => { const Pp = PRESET[k]; if (!Pp.on.includes('mileage') && !Pp.off.includes('mileage')) Pp.on.push('mileage'); });
-  if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { const E = base(...a) || []; try { if (S && S.org && MENU.mileage && !E.includes('mileage')) return [...E, 'mileage']; } catch (e) { } return E; }; }
+  /* 필수 메뉴(slimEss)에 마일리지 포함. 학사 LMS 시나리오(scn-univ-lms)가 DOMContentLoaded에 slimEss를 바꾸므로 그 뒤에도 한 번 더 감싼다(메뉴 기본 보임 · 제도는 기본 끔, D2) */
+  const essWrap = () => { if (typeof window.slimEss !== 'function' || window.slimEss.mil42) return; const base = window.slimEss; window.slimEss = (...a) => { const E = base(...a) || []; try { if (S && S.org && MENU.mileage && !E.includes('mileage')) return [...E, 'mileage']; } catch (e) { } return E; }; window.slimEss.mil42 = 1; };
+  essWrap(); document.addEventListener('DOMContentLoaded', essWrap);
   if (typeof DICT !== 'undefined') Object.assign(DICT, { '마일리지': 'Mileage|マイレージ|学习积分|Millas|Points|Meilen|Điểm tích lũy|ไมล์สะสม|Баллы' });
   if (typeof postSeed === 'function') { const base = postSeed; postSeed = (...a) => { const r = base(...a); try { ensure(); } catch (e) { console.error('mileage', e); } return r; }; } /* eslint-disable-line no-global-assign */
   if (typeof upgradeState === 'function') { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org) { ensure(); if (typeof navAdd === 'function' && MENU.mileage && !Object.values(S.nav.tabs).some(T => (T || []).some(x => x.id === 'mileage'))) navAdd('mileage', true); } } catch (e) { console.error('mileage', e); } return r; }; } /* eslint-disable-line no-global-assign */
@@ -371,7 +378,7 @@
   ACT['mil-enable'] = () => { if (!owner()) return toast('정운영자만 켤 수 있습니다.', 'warn'); const w = wiz(); const ck = w.checks || {}; if (!ck.a || !ck.b) return toast('확인 두 가지를 체크해 주십시오.', 'warn');
     const d = draft(); const pol = Object.assign(clone(d.policy), { on: true, ver: 1, since: today() }); const RU = d.rules.map(r => Object.assign(clone(r), { ver: 1, createdBy: S.me.name, at: nowStr() })); const RW = d.rewards.map(x => clone(x));
     const ackTxt = [RW.some(x => x.active && x.kind === 'tuition') ? '안내 A' : '', RW.some(x => x.active && x.kind === 'tuition') && minor() ? '안내 B' : '', RW.some((x, i) => x.soft && x.active) ? '안내 C' : ''].filter(Boolean).join(' · ');
-    if (LIVEON()) { const seq = [['POST', '/api/mileage/config', { policy: Object.assign({}, pol, { on: false }) }], ...RU.map(r => ['POST', '/api/mileage/rules', r]), ...RW.map(x => ['POST', '/api/mileage/rewards', x]), ['POST', '/api/mileage/enable', { draftHash: d.hash, ack: ackTxt }]];
+    if (LIVEON()) { const seq = [['POST', '/api/mileage/config', { policy: polBody(pol), reason: '켜기 마법사' }], ...RU.map(r => ['POST', '/api/mileage/rules', r]), ...RW.map(x => ['POST', '/api/mileage/rewards', x]), ['POST', '/api/mileage/enable', { draftHash: d.hash, ack: ackTxt }]];
       return seq.reduce((pr, c) => pr.then(() => api(c[0], c[1], c[2])), Promise.resolve()).then(() => { UI.milW = null; UI.mil = 'home'; invalidate(); toast('마일리지 제도를 켰습니다. 변경 이력에 기록했습니다.', 'ok'); render(); }).catch(e => { toast(ERRN[ecode(e)] || liveErr(e), 'warn'); }); }
     const D0 = D(); D0.policy = pol; D0.rules = RU; D0.rewards = RW.map(x => Object.assign(x, { createdBy: S.me.name })); D0.declined = null; D0.draftHash = d.hash;
     log('onoff', '마일리지 제도 켜기', '끔', '켬 · 규칙 버전 1', `템플릿 ${tpl().name}`, ackTxt ? `확인한 안내 ${ackTxt}` : ''); log('rule', `적립 규칙 ${RU.filter(r => r.active).length}개 저장(버전 1)`, '', RU.filter(r => r.active).map(r => `${r.label} ${scoreTxt(r)}`).join(', '), '');
@@ -388,7 +395,8 @@
     const tch = {}; M.filter(e => e.byStaff && e.kind !== 'cancel').forEach(e => { tch[e.byStaff] = (tch[e.byStaff] || 0) + e.points; });
     return { earn: sum('earn'), use: -sum('use'), expire: -sum('expire'), hold: -(sum('hold') + sum('release')), earnConv, by, wallet: W0, sids, tch, pend: E.filter(e => e.kind === 'earn' && e.status === 'pending').length }; }
   function vHome() { const p = P(); const live = LIVEON(); const s0 = monthStats(); const sm = live && LV.d.sum ? LV.d.sum : null;
-    const st = sm ? { earn: +sm.earn || 0, use: +sm.use || 0, expire: +sm.expire || 0, hold: +sm.hold || 0, earnConv: +sm.earnConvertible || +sm.earn || 0, by: sm.byRule || {}, wallet: { balance: +sm.outstanding || +sm.balance || 0, convertible: +sm.outstandingConvertible || +sm.convertible || 0 }, sids: +sm.participants || 0, tch: sm.byStaff || {}, pend: +sm.pendingEarn || 0 } : s0;
+    const byR = sm && Array.isArray(sm.byRule) ? Object.fromEntries(sm.byRule.map(x => [x.ruleId || (x.trigger === 'manual' ? 'manual' : x.trigger), +x.points || 0])) : sm && sm.byRule || {};
+    const st = sm ? { earn: +sm.earned || +sm.earn || 0, use: +sm.used || +sm.use || 0, expire: +sm.expired || +sm.expire || 0, hold: +sm.hold || 0, earnConv: sm.budget ? +sm.budget.used || 0 : +sm.earned || 0, by: byR, wallet: { balance: +sm.outstanding || 0, convertible: +sm.outstandingConvertible || 0 }, sids: +sm.wallets || 0, tch: sm.byStaff || {}, pend: +((sm.pending || {}).earn) || 0 } : s0;
     const bud = +(p.budget || {}).monthP || 0; const rate = bud ? Math.round(st.earnConv / bud * 100) : 0; const learners = (S.members || []).length;
     const todo = []; if (st.pend) todo.push({ n: st.pend, text: `확인이 필요한 적립 ${st.pend}건을 확인하십시오`, tab: 'ledger', k: 'pending' });
     (window.MIL_TABS || []).forEach(t => { if (t.todo && (!t.roles || t.roles.includes(S.me.role))) (safe(t.todo, []) || []).forEach(x => { if (x && x.n) todo.push(x); }); });
@@ -515,7 +523,7 @@
         const self = S.me && S.me.sid && sids.includes(String(S.me.sid)); if (self) { toast('운영자 본인 계정에는 지급할 수 없습니다(제품 고정).', 'warn'); return false; }
         const over = Math.abs(pts) > (+p.manualOver || 1000) && !owner(); const key = idem();
         setTimeout(() => confirmCard('지급 확인', `<div class="mil-kv"><span class="k">대상</span><b>${sids.length}명</b><span class="mut">${esc(sids.slice(0, 5).map(who).join(', '))}${sids.length > 5 ? ' 외' : ''}</span></div><div class="mil-kv"><span class="k">1인</span><b>${sgn(pts)}</b></div><div class="mil-kv"><span class="k">합계</span><b>${sgn(pts * sids.length)}</b></div><div class="mil-kv"><span class="k">사유</span>${esc(why)}</div>${over ? note('warn', '정운영자 승인 대기', '기준을 넘는 지급이라 정운영자가 확인한 뒤 적립됩니다.') : ''}`, over ? '승인 요청' : '지급', () => {
-          if (LIVEON()) { liveDo('POST', '/api/mileage/grant', { sids, points: pts, reason: why, idem: key }, r => toast(r && r.pending ? '정운영자 승인 대기로 넣었습니다.' : '지급했습니다.', 'ok')).catch(() => {}); return; }
+          if (LIVEON()) { liveDo('POST', '/api/mileage/grant', { sids, points: pts, reason: why, idem: key }, r => { const L = (r && r.results) || []; toast(L.some(x => x.status === 'pending') ? '정운영자 승인 대기로 넣었습니다.' : L.some(x => x.status === 'skipped') ? `지급하지 못한 학습자가 있습니다(${String((L.find(x => x.status === 'skipped') || {}).reason || '한도')}).` : `${L.length || sids.length}명에게 ${pts > 0 ? '지급' : '조정'}했습니다.`, L.some(x => x.status === 'skipped') ? 'warn' : 'ok'); }).catch(() => {}); return; }
           const D0 = D(); sids.forEach(sid => { if (D0.entries.some(e => e.idemKey === `m:${S.me.name}:${key}:${sid}`)) return; D0.entries.push({ id: 'me_' + idem(), sid, scopeUnit: 'lu_root', kind: pts > 0 ? 'earn' : 'adjust', points: pts, status: over ? 'pending' : 'posted', nature: 'achievement', trust: 'B', convertible: pts > 0, funded: false, clsId: null, ruleId: 'manual', ruleVer: 0, expiresAt: pts > 0 && !over ? expOf(P(), null, today()) : null, reason: why, byStaff: S.me.name, idemKey: `m:${S.me.name}:${key}:${sid}`, at: nowStr(), manual: true }); });
           if (typeof logAudit === 'function') logAudit(`마일리지 수동 ${pts > 0 ? '지급' : '조정'} — ${sids.length}명 × ${sgn(pts)} · ${why}`); save(); toast(over ? '정운영자 승인 대기로 넣었습니다.' : `${sids.length}명에게 ${pts > 0 ? '지급' : '조정'}했습니다.`, 'ok'); render(); }), 0); } }]); };
 
@@ -570,7 +578,7 @@
     confirmCard('설정 저장', `${table(['항목', '전', '후'], ch2.map(([k, l]) => [esc(l), `<span class="mut">${esc(valTxt(k, p0[k]))}</span>`, `<b>${esc(valTxt(k, p[k]))}</b>`]))}${warn.map(x => note('warn', x.title, esc(x.text))).join('')}
       ${shorter ? note('warn', '유효기간을 줄입니다', '이미 쌓인 적립의 만료일은 바뀌지 않고, 저장 이후 적립부터 새 유효기간이 적용됩니다.') : ''}<p class="mut">변경은 정책 버전 ${n((p0.ver || 1) + 1)}로 저장되고 변경 이력에 남습니다. 학습자 안내문이 자동으로 바뀝니다.</p>`, '확인하고 저장', () => {
       const np = Object.assign(clone(p), { ver: (+p0.ver || 1) + 1 });
-      if (LIVEON()) { liveDo('POST', '/api/mileage/config', { policy: np }, () => { UI.milSD = null; toast('설정을 저장했습니다.', 'ok'); }).catch(() => {}); return; }
+      if (LIVEON()) { liveDo('POST', '/api/mileage/config', { policy: polBody(np) }, () => { UI.milSD = null; toast('설정을 저장했습니다.', 'ok'); }).catch(() => {}); return; }
       ch2.forEach(([k, l]) => log('policy', l, valTxt(k, p0[k]), valTxt(k, np[k]), '', warn.some(x => (x.k === 'expiry' && k === 'expiry') || (x.k === 'notice' && k === 'notice') || (x.k === 'dayCap' && k === 'dailyCapTotal') || (x.k === 'tCap' && k === 'teacherCap') || (x.k === 'cashLock' && k === 'cashLock') || (x.k === 'budget' && k === 'budget')) ? '권장값 벗어남 · 확인함' : ''));
       D().policy = np; UI.milSD = null; save(); toast('설정을 저장했습니다.', 'ok'); render(); }, true); };
 
@@ -578,7 +586,7 @@
   ACT['mil-fund'] = el => { const c = (S.classes || []).find(x => x.id === el.dataset.v); const on = el.checked; el.checked = !on; if (!c || !owner()) return toast('정운영자만 바꿀 수 있습니다.', 'warn');
     modal(on ? '국비 지원 과정으로 표시' : '국비 지원 과정 표시 끄기', `<div class="mil mil-m"><p>「${esc(c.name)}」을 ${on ? '국비 지원 과정으로 표시합니다. 이후 이 과정의 적립은 배지 · 학습 기록에만 쓰이고 금전성 보상에서 빠집니다.' : '국비 지원 과정에서 뺍니다(오표시 정정). 이미 생긴 국비 과정 적립 줄은 그대로 금전성 보상에 쓸 수 없습니다.'}</p><label class="mil-fld"><span>사유(필수)</span><input name="r" maxlength="80"></label></div>`,
       [{ id: 'c', label: '취소' }, { id: 'ok', label: '확인하고 기록', kind: 'pri', run: w => { const why = fv(w, 'r'); if (!why) { toast('사유를 적어 주십시오.', 'warn'); return false; }
-        if (LIVEON()) { liveDo('POST', '/api/mileage/funded', { clsId: c.id, funded: on, source: 'etc', reason: why }, () => { c.funded = on; toast('국비 지원 과정 표시를 바꿨습니다.', 'ok'); }).catch(() => {}); return; }
+        if (LIVEON()) { liveDo('POST', '/api/mileage/funded', { clsId: c.id, funded: on, source: 'etc', reason: why }, () => { c.funded = on; save(); toast('국비 지원 과정 표시를 바꿨습니다.', 'ok'); }).catch(() => {}); return; }
         D().funded[c.id] = { funded: on, source: 'etc', by: S.me.name, at: nowStr() }; c.funded = on; log('funded', `국비 지원 과정 표시 — ${c.name}`, on ? '끔' : '켬', on ? '켬' : '끔', why); save(); toast('국비 지원 과정 표시를 바꿨습니다.', 'ok'); render(); } }]); };
 
   /* 학습자 안내문 미리보기 */
@@ -636,7 +644,7 @@
     const nv = Object.assign({}, cur, val || {}, { on, ack }); if (on && what !== 'league') nv.checks = [['30일 점검', addD(today(), 30)], ['90일 점검', addD(today(), 90)]];
     const label = { rank: '공개 순위', league: '주간 근접 리그', penalty: '감점' }[what]; const desc = on ? (what === 'penalty' ? `켬 · 1회 ${fmtP(nv.maxOnce)} · 하루 ${fmtP(nv.dayCap)}` : `켬 · ${nv.scope === 'near10' ? '근접 10명' : nv.scope === 'group' ? '반 · 기수' : '전체'} · ${nv.name === 'nick' ? '별명' : nv.name === 'initial' ? '이니셜' : '실명'}`) : '끔';
     const offRec = on && (what !== 'league' || minor()) ? '권장값 벗어남 · 영향 안내 확인함' : '';
-    if (LIVEON()) { const body = { ack: { read: true, reason: why } }; body[what === 'league' ? 'rank' : what] = what === 'league' ? Object.assign({}, p.rank, { league: nv }) : nv; if (what === 'league') { liveDo('POST', '/api/mileage/config', { policy: Object.assign({}, p, { league: nv }) }, () => toast(`${label}를 ${on ? '켰' : '껐'}습니다.`, 'ok')).catch(() => {}); return; }
+    if (LIVEON()) { const body = { ack: { read: true, reason: why } }; body[what === 'league' ? 'rank' : what] = what === 'league' ? Object.assign({}, p.rank, { league: nv }) : nv; if (what === 'league') { liveDo('POST', '/api/mileage/config', { policy: { league: { on: !!nv.on, size: nv.size || 10, reset: nv.reset || 'week' } }, reason: why }, () => toast(`${label}를 ${on ? '켰' : '껐'}습니다.`, 'ok')).catch(() => {}); return; }
       liveDo('POST', '/api/mileage/rank-penalty', body, () => toast(`${label}를 ${on ? '켰' : '껐'}습니다. 변경 이력에 기록했습니다.`, 'ok')).catch(() => {}); return; }
     const D0 = D(); D0.policy[what] = nv; D0.policy.ver = (+D0.policy.ver || 1) + 1; log(what === 'league' ? 'policy' : 'rank_penalty', label, cur && cur.on ? '켬' : '끔', desc, why, offRec);
     if (parentNotice) D0.parentNotice = { at: nowStr(), text: parentNotice, sent: false }; UI.milSD = null; save(); toast(`${label}를 ${on ? '켰' : '껐'}습니다. 변경 이력에 기록했습니다.`, 'ok'); render(); }
@@ -662,4 +670,21 @@
   window.milLedgerAdd = entry => { if (LIVEON()) return null; const D0 = D(); const e = Object.assign({ id: 'me_' + idem(), scopeUnit: 'lu_root', status: 'posted', trust: 'B', convertible: false, funded: false, at: nowStr() }, entry); e.points = Math.round(+e.points || 0);
     if (!KIND[e.kind]) throw new Error('mil kind ' + e.kind); if (e.idemKey) { const old = D0.entries.find(x => x.idemKey === e.idemKey); if (old) return old; } D0.entries.push(e); return e; };
   window.milView = { vHome, vRules, vLedger, vSet, vLog, monthStats, makeDraft };
+  /* 운영 모드: 스튜디오가 반영한 학습자 사건(시험 응시 a2-try · 수료증 자동 발급)을 운영자 확정 사건(신뢰 B)으로 서버에 보낸다(04 §3.1 ② POST /api/mileage/events).
+     서버가 규칙 · 한도 · 국비 과정 · 멱등(mil_event 유일키)을 다시 확인하므로 여러 번 보내도 한 번만 적립된다. 제도가 꺼져 있거나 시연판이면 보내지 않는다. */
+  const EVQ = []; let evT = 0;
+  const evPush = ev => { if (!LIVEON() || !(LV.d.cfg ? isOn() : true) || !ev.sid) return; if (EVQ.length < 200) EVQ.push(ev); clearTimeout(evT); evT = setTimeout(evFlush, 400); };
+  function evFlush() { if (!EVQ.length || typeof api !== 'function') return; const B = EVQ.splice(0, 200); api('POST', '/api/mileage/events', { events: B }).then(() => { LV.key = ''; }).catch(e => { if (e && (e.status >= 500 || !e.status)) EVQ.unshift(...B.slice(0, 200 - EVQ.length)); }); }
+  const memSid = id => { try { const m = (S.members || []).find(x => x.id === id); return m && m.sid ? String(m.sid) : ''; } catch (e) { return ''; } };
+  if (typeof a2AutoCert === 'function') { const base = a2AutoCert; a2AutoCert = (c, id, ...r) => { const ok = base(c, id, ...r); try { if (ok && c) evPush({ trigger: 'course_done', sid: memSid(id), srcType: 'cls', srcId: String(c.id), cls: String(c.id) }); } catch (e) { console.error('mileage ev', e); } return ok; }; } /* eslint-disable-line no-global-assign */
+  if (typeof LPX !== 'undefined' && typeof LPX['a2-try'] === 'function') { const base = LPX['a2-try']; LPX['a2-try'] = x => { base(x); try { const d = x.data || {}; const c = (S.classes || []).find(k => k.id === d.cls); const L = c && c.tries && c.tries[d.item]; const t = L && L[L.length - 1];
+      if (t && t.score != null) evPush({ trigger: 'exam_score', sid: memSid(t.who), srcType: 'exam', srcId: `${c.id}/${d.item}#${t.n || 1}`, value: +t.score, cls: String(c.id) }); } catch (e) { console.error('mileage ev', e); } }; }
+  window.milEvents = { push: evPush, flush: evFlush, q: EVQ };
+  /* 시연판: 학습자 앱 연속 학습 복구(lmil lpxPush 'mile-streak-repair' {days}) → 문서 S.mileage.repairs에 남긴다(학습자 앱이 같은 문서를 읽어 다른 기기에서도 이어짐).
+     운영 모드는 서버 POST mile-streak-repair가 처리하므로 여기서는 받지 않는다. 한 달 perMonth번(기본 1) · 끊긴 날 최대 3일 · 마일리지는 주지 않음(연속 기록만) */
+  if (typeof LPX !== 'undefined') LPX['mile-streak-repair'] = x => { if (LIVEON()) return; const D0 = D(); if (!D0) return; const sid = String((x.data || {}).sid || x.who || ''); if (!sid) return;
+    const days = [...new Set(((x.data || {}).days || []).map(String).filter(d => /^\d{4}-\d\d-\d\d$/.test(d)))].sort().slice(-3); if (!days.length) return;
+    const at = String(x.at || nowStr()); const ym0 = at.slice(0, 7); const per = +(((P().streak || {}).repair || {}).perMonth) || 1; D0.repairs = Array.isArray(D0.repairs) ? D0.repairs : [];
+    if (D0.repairs.filter(r => r.sid === sid && r.ym === ym0).length >= per) return; if (D0.repairs.some(r => r.sid === sid && r.days.join() === days.join())) return;
+    D0.repairs.push({ sid, days, ym: ym0, at }); D0.repairs = D0.repairs.slice(-500); if (typeof logAudit === 'function') logAudit(`마일리지 연속 학습 복구 — 학습자 ${sid} · ${days.join(', ')}`); };
 })();

@@ -220,7 +220,21 @@
         [...g.entries()].sort().forEach(([k, p]) => { const [s, u, e] = k.split('|'); add(s, u, +n >= 7 ? 'expire_d30' : 'expire_d3', kst(+e - 1000) + ':' + n, p, +e); }); }
       const su = pol.sunset; if (su && su.noticeAt && ms(su.noticeAt) <= at && (!su.endAt || ms(su.endAt) > at)) Object.entries(S.wallets).filter(([, w]) => w.balance > 0).sort().forEach(([k, w]) => { const [s, u] = k.split('|'); add(s, u, 'sunset', day.slice(0, 7), w.balance, su.endAt ? ms(su.endAt) : null); });
       return out; }
-    return { S, emit, post, void: voidE, cancel, expire, grant, redeemReq, redeemDecide, redeemAdjust, redeemFulfil, redeemReclaim, addLine, onRefund, noticeDue, sync, streakCalc, rem, cashOk };
+    /* 원장 줄만 있는 곳(학습자 시연판: 스튜디오 문서의 줄)에서 lot 사용을 엔진과 같은 규칙으로 다시 계산한다(v42 QA — 학습자 시연판 계산 = 이 엔진).
+       rows: 원장 줄(시각 순으로 정렬해 넣음), cashOf(redeemId): 그 신청 보상이 금전성인지(hold · use가 전환 가능 lot만 쓰는지) */
+    function replay(rows, o) { const cashOf = (o && o.cashOf) || (() => true);
+      const L = (rows || []).map(e => Object.assign({}, e, { at: ms(e.at), expiresAt: e.expiresAt == null || e.expiresAt === '' ? null : ms(e.expiresAt), unit: e.unit || 'lu_root', status: e.status || 'posted', points: Math.round(+e.points || 0) }))
+        .filter(e => !E(e.id)).sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : 1));
+      for (const e of L) { push(e); if (e.status !== 'posted') continue; const { sid, unit } = e; const p = -e.points;
+        if (e.points > 0 && LOT.includes(e.kind)) { settle(sid, unit); continue; }
+        if (e.kind === 'release') { let left = e.points; for (const [lot, q] of netHold({ id: e.redeemId })) { if (left <= 0) break; const x = Math.min(q, left); S.lotuse.push({ entry: e.id, lot, points: -x }); left -= x; } continue; }
+        if (e.points >= 0) continue;
+        if (e.kind === 'hold' || e.kind === 'use') take(sid, unit, e.id, p, cashOf(e.redeemId) !== false);
+        else if (e.kind === 'cancel' && e.refEntry && E(e.refEntry)) { take(sid, unit, e.id, Math.min(p, rem(e.refEntry)), false, e.refEntry); settle(sid, unit); }
+        else if (e.kind === 'expire' && e.refEntry && E(e.refEntry)) { const x = Math.min(p, rem(e.refEntry)); if (x > 0) S.lotuse.push({ entry: e.id, lot: e.refEntry, points: x }); }
+        else { take(sid, unit, e.id, p, false); settle(sid, unit); } }
+      return S.entries.length; }
+    return { S, emit, post, void: voidE, cancel, expire, grant, redeemReq, redeemDecide, redeemAdjust, redeemFulfil, redeemReclaim, addLine, onRefund, noticeDue, sync, streakCalc, rem, cashOk, replay };
   }
 
   /* 화면용 순수 함수: 권장값 이탈 경고(D2 — 거절하지 않고 이유 한 줄) */

@@ -148,7 +148,7 @@
   const qs = o => Object.entries(o).filter(([, v]) => v != null && v !== '').map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
   function livePull(tab) {
     const need = { cfg: ['GET', '/api/mileage/config'] };
-    if (tab === 'approvals') { need.ap = ['GET', '/api/mileage/approvals?type=redeem']; need.done = ['GET', '/api/mileage/redeems?status=fulfilled']; }
+    if (tab === 'approvals') { need.ap = ['GET', '/api/mileage/approvals?type=redeem']; need.done = ['GET', '/api/mileage/redeems']; }
     if (tab === 'fraud') need.fl = ['GET', '/api/mileage/flags'];
     if (tab === 'rewards' && orgType() === 'corp') need.pay = ['GET', '/api/mileage/shop/payouts?' + qs({ ym: UI.mrwYm || ym0() })];
     const key = JSON.stringify(need); if (LV.busy || (LV.key === key && (!LV.err || Date.now() - LV.errAt < 5000))) return; LV.busy = true; LV.key = key;
@@ -158,10 +158,10 @@
       .catch(e => { LV.err = liveErr(e); LV.errAt = Date.now(); })
       .finally(() => { LV.busy = false; render(); });
   }
-  const liveDo = (method, url, body, ok) => api(method, url, body).then(r => { LV.key = ''; if (ok) ok(r); render(); return r; }).catch(e => { toast(liveErr(e), 'warn'); LV.key = ''; render(); });
+  const liveDo = (method, url, body, ok) => api(method, url, body).then(r => { LV.key = ''; const bad = r && Array.isArray(r.results) ? r.results.filter(x => x && x.ok === false) : []; if (bad.length) toast(`처리하지 못한 신청 ${bad.length}건: ${bad.map(x => ERRN[x.error] || x.message || x.error).filter((v, i, A) => A.indexOf(v) === i).join(' · ')}`, 'warn'); else if (ok) ok(r); render(); return r; }).catch(e => { toast(liveErr(e), 'warn'); LV.key = ''; render(); });
   const mRw = x => ({ id: x.id, kind: x.kind, title: x.title, cost: x.cost || {}, minUse: x.minUse != null ? x.minUse : x.min_use, step: x.step, maxUse: x.maxUse || x.max_use || {}, threshold: x.threshold || 0, stock: x.stock, perSid: x.perSid || x.per_sid || {}, approval: x.approval, cash: x.cash != null ? !!x.cash : CASH[x.kind], audience: x.audience || { all: true }, active: x.active !== false, link: x.link || {}, trust: x.trust || 'AB' });
   const liveRewards = () => ((LV.d.cfg && LV.d.cfg.rewards) || []).map(mRw);
-  const mRd = x => ({ id: x.id, sid: x.sid, grade: x.grade || '', rewardId: x.rewardId || x.reward_id, points: +x.points || 0, won: +x.won || 0, status: x.status || 'requested', guardian: x.guardian || 'na', billId: x.billId || (x.bill && x.bill.id) || '', bill: x.bill || null, checks: x.checks || null, at: x.at || '', fulfil: x.fulfil || {}, qty: x.qty || 1, dept: x.dept || '' });
+  const mRd = x => ({ id: x.id, sid: x.sid, grade: x.grade || '', rewardId: x.rewardId || x.reward_id, points: +x.points || 0, won: +x.won || 0, status: x.status || 'requested', guardian: x.guardian || ({ pending: 'wait', ok: 'ok', no: 'no' }[(x.fulfil || {}).guardian]) || 'na', billId: x.billId || (x.bill && x.bill.id) || '', bill: x.bill || null, checks: x.checks || null, at: x.at || '', fulfil: x.fulfil || {}, qty: x.qty || 1, dept: x.dept || '' });
 
   /* ── 신청 확인할 점(서버 approvals의 checks와 같은 규칙, 시연판 계산) ── */
   const charges = () => (S.ledger && Array.isArray(S.ledger.charges)) ? S.ledger.charges : [];
@@ -274,7 +274,7 @@
       const warns = []; if (k === 'tuition') { if (out.maxUse.billPct !== REC.billPct) warns.push(`차감 상한 ${out.maxUse.billPct}%(권장 ${REC.billPct}%)`); if (out.minUse !== REC.minUse) warns.push(`최소 사용 ${P(out.minUse)}(권장 ${P(REC.minUse)})`); if (out.trust === 'ABC') warns.push('기기 보고(C) 적립 사용(권장 A · B만)'); }
       if (out.perSid && out.perSid.month > REC.perMonth && k !== 'shop') warns.push(`1인 월 ${out.perSid.month}개(권장 ${REC.perMonth}개)`);
       const body2 = { id: out.id, kind: k, title: out.title, cost: out.cost, minUse: out.minUse, maxUse: out.maxUse, step: out.step, threshold: out.threshold || 0, stock: out.stock, perSid: out.perSid, approval: out.approval, audience: out.audience, link: out.link, active: out.active !== false, trust: out.trust };
-      if (LIVEON()) { liveDo('POST', '/api/mileage/rewards', body2, r => toast((r && r.warnings && r.warnings.length ? `저장했습니다. 권장값과 다른 값: ${r.warnings.join(', ')}` : '저장했습니다.'), r && r.warnings && r.warnings.length ? 'warn' : 'ok')); return; }
+      if (LIVEON()) { liveDo('POST', '/api/mileage/rewards', body2, r => toast((r && r.warnings && r.warnings.length ? `저장했습니다. 권장값과 다른 값: ${r.warnings.map(w => (w && (w.msg || w.text || w.title)) || String(w)).join(', ')}` : '저장했습니다.'), r && r.warnings && r.warnings.length ? 'warn' : 'ok')); return; }
       const D = RW(); if (isNew) { out.id = id8('mrw_'); out.active = true; D.rewards.push(out); } else { const i = D.rewards.findIndex(x => x.id === out.id); if (i >= 0) D.rewards[i] = out; }
       policyLog(`${isNew ? '보상 추가' : '보상 변경'} — ${out.title}`, isNew ? null : w0, out, warns.length ? '권장값 벗어남 경고 확인' : ''); save(); render();
       toast(warns.length ? `저장했습니다. 권장값과 다른 값: ${warns.join(', ')}` : '저장했습니다.', warns.length ? 'warn' : 'ok');
@@ -310,7 +310,7 @@
         if (LIVEON()) { liveDo('POST', '/api/mileage/config', { policy: { shop: { on: true, ack } } }, () => toast('리워드 숍을 켰습니다.', 'ok')); return; }
         D.shop = { on: true, ack }; policyLog('리워드 숍 켬(안내 G 확인)', { on: false }, { on: true, ack }, '과세 안내 · 성과 평가 미사용 확인'); save(); render(); toast('리워드 숍을 켰습니다. 변경 이력에 기록했습니다.', 'ok'); } }], true)); };
   function payRows(ym) {
-    if (LIVEON()) { const r = LV.d.pay; return ((r && (r.rows || r.payouts)) || []).map(x => ({ emp: x.empNo || x.emp || x.sid, dept: x.dept || '', item: x.item || x.title || '', qty: +x.qty || 1, day: x.day || x.at || '', amount: +x.amount || 0 })); }
+    if (LIVEON()) { const r = LV.d.pay; return ((r && (r.rows || r.payouts)) || []).map(x => ({ emp: x.empNo || x.emp || x.sid, dept: x.dept || '', item: x.item || x.title || '', qty: +x.qty || 1, day: x.day || x.at || '', amount: x.amount != null ? +x.amount || 0 : (+x.priceWon || 0) * (+x.qty || 1) })); }
     const D = RW(); const rows = [];
     D.redeems.filter(r => ['fulfilled', 'reclaimed'].includes(r.status) && rwOf(r.rewardId).kind === 'shop').forEach(r => { const w = rwOf(r.rewardId), m = mem(r.sid) || {}; const day = (r.fulfil && r.fulfil.handedAt) || String(r.at).slice(0, 10); const emp = (m.extra && (m.extra.사번 || m.extra.empNo)) || ('D-' + (20000 + (+String(r.sid).replace(/\D/g, '') || 0) * 37)); const qty = r.qty || Math.max(1, Math.round(r.points / (w.cost.fixedP || 1)));
       const row = { emp, dept: (m.extra && m.extra.부서) || '', item: w.title, qty, day, amount: ((w.link || {}).priceWon || 0) * qty, rid: r.id };
@@ -344,7 +344,7 @@
   /* ── 탭 2: 신청 · 승인 ── */
   const ST = { requested: ['대기', 'wait'], approved: ['승인 · 수령 대기', 'info'], fulfilled: ['이행 완료', 'ok'], rejected: ['반려', 'bad'], cancelled: ['취소', 'off'], reclaimed: ['회수', 'bad'] };
   function apList() { if (LIVEON()) { const a = LV.d.ap; return ((a && (a.items || a.list || a.approvals)) || []).map(mRd); } return RW().redeems.filter(r => r.status === 'requested').sort((a, b) => a.at < b.at ? -1 : 1); }
-  function doneList() { if (LIVEON()) { const a = LV.d.done; return ((a && (a.redeems || a.items || a.list)) || []).map(mRd); } return RW().redeems.filter(r => r.status !== 'requested').sort((a, b) => a.at < b.at ? 1 : -1).slice(0, 40); }
+  function doneList() { if (LIVEON()) { const a = LV.d.done; return ((a && (a.redeems || a.items || a.list)) || []).map(mRd).filter(r => r.status !== 'requested').slice(0, 40); } return RW().redeems.filter(r => r.status !== 'requested').sort((a, b) => a.at < b.at ? 1 : -1).slice(0, 40); }
   function chkCell(r) {
     const C = checks(r); if (!C.length) return pill('확인할 점 없음', 'ok', 'check');
     return C.map(c => `<div class="mrw-chk c-${c.tone}">${c.code === 'guardian' ? pill('보호자 확인 전', 'off', 'mrwParent') : c.tone === 'block' ? pill(c.code === 'bill_pct' ? '상한 초과' : '승인 불가', 'bad', 'mrwLock') : pill('경고', 'wait', 'mrwWarn')}<small>${esc(c.text)}</small>${c.fix != null && c.fix > 0 && canDecide() ? `<button class="btn sm" data-act="mrw-fit" data-v="${esc(r.id)}" data-p="${c.fix}">${ic('mrwWand', 16)}${P(c.fix)}로 맞춤</button>` : ''}</div>`).join('');
@@ -424,7 +424,7 @@
       logAudit(`마일리지 보상 승인 — ${r.id} ${w.title} ${P(r.points)}${warn.length ? ' (경고 확인: ' + warn.map(c => c.code).join(',') + ')' : ''}`); UI.mrwPick = (UI.mrwPick || []).filter(x => x !== r.id); save(); render(); toast(w.kind === 'coupon' ? `승인했습니다. 쿠폰 ${r.fulfil.couponCode}를 학습자에게 보냈습니다.` : '승인했습니다.', 'ok'); }); };
   ACT['mrw-bulk'] = el => { if (!canDecide()) return; const clean = apList().filter(r => !checks(r).length); const T = el.dataset.v === 'pick' ? clean.filter(r => (UI.mrwPick || []).includes(r.id)) : clean; if (!T.length) return toast('확인할 점 없는 신청이 없습니다.', 'warn');
     ask('일괄 승인', `<p>확인할 점이 없는 <b>${T.length}건 · ${P(T.reduce((s, r) => s + r.points, 0))}</b>을 승인합니다. 확인할 점이 있는 신청은 빠집니다.</p><ul class="mrw-mini">${T.map(r => `<li>${esc(r.id)} · ${esc(who(r))} · ${esc(rwOf(r.rewardId).title)} · ${P(r.points)}</li>`).join('')}</ul>`, `${T.length}건 승인`, () => {
-      if (LIVEON()) { liveDo('POST', '/api/mileage/approvals/decide', { ids: T.map(r => r.id), decision: 'approve', idem: idem() }, x => toast(`${(x && x.done) || T.length}건을 승인했습니다.`, 'ok')); return; }
+      if (LIVEON()) { liveDo('POST', '/api/mileage/approvals/decide', { ids: T.map(r => r.id), decision: 'approve', idem: idem() }, x => toast(`${(x && Array.isArray(x.results) ? x.results.filter(y => y.ok !== false).length : T.length)}건을 승인했습니다.`, 'ok')); return; }
       let n = 0; T.forEach(r => { if (!approveDemo(r).error) n++; }); logAudit(`마일리지 보상 일괄 승인 — ${n}건`); UI.mrwPick = []; save(); render(); toast(`${n}건을 승인했습니다.`, 'ok'); }); };
   ACT['mrw-no'] = el => { const r = findRd(el.dataset.v); if (!r || !canDecide()) return;
     ask('반려', `<p><b>${esc(who(r))}</b> · ${esc(rwOf(r.rewardId).title)} · ${P(r.points)}을 반려합니다. 잡아 둔 마일리지는 바로 돌려줍니다.</p><label class="mrw-fl"><span>반려 사유(필수 · 학습자${minorOrg() ? ' · 보호자' : ''}에게 보입니다)</span><input name="why" maxlength="120"></label>`, '반려하고 돌려주기', m => { const why = fv(m, 'why'); if (!why) { toast('반려 사유를 입력해 주십시오.', 'warn'); return false; }
