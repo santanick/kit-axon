@@ -40,6 +40,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
       cont: (document.querySelector('.tb-cont') || {}).getAttribute && document.querySelector('.tb-cont').getAttribute('href'), contTx: (document.querySelector('.tb-cont') || {}).textContent || '', sug: (document.querySelector('.tb-sug') || {}).textContent || '',
       week: document.querySelectorAll('.tb-tile').length, tabs: [...document.querySelectorAll('.ap-nav.tb-nav a')].map(x => x.textContent.trim()), on: (document.querySelector('.ap-nav a.on') || {}).textContent || '', bar: !!document.querySelector('.ap-bar') }));
     ok(r.tube && !r.bar, `홈: 튜브 보기 · 앱 머리 막대 없음`);
+    { const h0 = await p.evaluate(() => location.hash); await p.click('.ap-nav.tb-nav a.tb-n-cal'); await p.waitForTimeout(400); const h1 = await p.evaluate(() => location.hash); await p.evaluate(h => { location.hash = h; }, h0 || '#home'); await p.waitForTimeout(400); ok(h1 === '#cal', `아래 탭 누르면 이동(일정 → #cal, v42.2 회귀 방지) — ${h0} → ${h1}`); }
     ok(r.chips[0] === '전체' && r.chips.includes('이어 보기') && r.chips.includes('내 강의'), `홈: 칩 — ${r.chips.join(' · ')}`);
     ok(/오늘 목표 20분/.test(r.goal) && /12\/20분/.test(r.goal), `홈: 오늘 목표 12/20분 — ${r.goal.replace(/\s+/g, ' ')}`);
     ok(/itcd8rdl0/.test(r.cont) && /이어 보기 · 2차시/.test(r.contTx) && /12:34 \/ 18:00/.test(r.contTx) && /남은 시간 5분/.test(r.contTx), `홈: 이어 보기 카드(재생 위치 · 남은 시간) — ${r.contTx.replace(/\s+/g, ' ').slice(0, 90)}`);
