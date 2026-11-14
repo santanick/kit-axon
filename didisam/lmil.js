@@ -171,7 +171,7 @@
     const sv0 = r => { const v = r.score ? +r.score.v : +r.v || +r.points || 0; return v > 0 ? `${nf(v)}${UNIT}` : '점수만큼'; };
     const ways = rules.map(r => ({ say: (r.say || `${r.label || '학습'} {P}`).replace('{P}', sv0(r)).trim(), cap: capT(r), nature: r.nature || 'achievement', href: r.href || '', act: r.act || r.label || '', v: r.score && (r.score.mode || 'fixed') === 'fixed' ? +r.score.v || 0 : +r.v || 0, trigger: r.trigger, once: r.once === 'ever' || /1회/.test(capT(r)) }));
     const R = (C.m.rewards || []).map(nR).filter(x => x.active);
-    const hint = need => { const W = ways.filter(w => w.v > 0 && w.nature !== 'participation' && !w.once).map(w => ({ w, n: Math.ceil(need / w.v) })).sort((a, b) => a.n - b.n)[0]; return W ? `${W.w.act} ${W.n}번이면 도달해요` : ''; };
+    const hint = need => { const W = ways.filter(w => w.v > 0 && w.nature !== 'participation' && !w.once).map(w => ({ w, n: Math.ceil(need / w.v) })).sort((a, b) => a.n - b.n)[0]; return W ? `${String(W.w.act).replace(/\s1\s*(?:번|회)(?=\s|$)/, '')} ${W.n}번이면 도달해요` : ''; };
     let goal = null; const g0 = p.goal || null; const gR = g0 && R.find(x => x.id === g0.rewardId);
     if (gR && gR.cost) { const need = Math.max(0, gR.cost - C.convertible); goal = { label: gR.title, need, now: C.convertible, target: gR.cost, pct: Math.min(100, Math.round(C.convertible / gR.cost * 100)), hint: need ? hint(need) : '' }; }
     else if (tier && tier.next) { const nx = tiers.find(x => x.name === tier.next); goal = { label: `${tier.next} 등급`, need: nx.min - C.ew, now: C.ew, target: nx.min, pct: Math.min(100, Math.round(C.ew / nx.min * 100)), hint: hint(nx.min - C.ew), kind: 'tier' }; }
