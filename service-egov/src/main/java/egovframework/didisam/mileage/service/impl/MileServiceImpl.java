@@ -33,8 +33,8 @@ import static egovframework.didisam.cmm.Js.*;
  *  제품 고정(서버 강제): 국비 과정 금전성 차단(D1, DB 제약 + mil_cash_ok) · 운영자 본인 지급 금지 · 충전 · 환급 · 양도 · 기관 밖 사용 경로 없음. */
 @Service("mileService")
 public class MileServiceImpl extends EgovAbstractServiceImpl implements MileService {
-    private final MileMapper m; private final TenantTx tx; private final DdRateLimiter rl; private final AuthService auth; private final DdPiiCrypto pii; private final String hqReviewed;
-    public MileServiceImpl(MileMapper m, TenantTx tx, DdRateLimiter rl, AuthService auth, DdPiiCrypto pii, @Value("${MIL_HQ_POOL_REVIEWED:}") String hq) { this.m = m; this.tx = tx; this.rl = rl; this.auth = auth; this.pii = pii; this.hqReviewed = hq == null ? "" : hq; }
+    private final MileMapper m; private final javax.sql.DataSource ds; private final TenantTx tx; private final DdRateLimiter rl; private final AuthService auth; private final DdPiiCrypto pii; private final String hqReviewed;
+    public MileServiceImpl(MileMapper m, javax.sql.DataSource ds, TenantTx tx, DdRateLimiter rl, AuthService auth, DdPiiCrypto pii, @Value("${MIL_HQ_POOL_REVIEWED:}") String hq) { this.m = m; this.ds = ds; this.tx = tx; this.rl = rl; this.auth = auth; this.pii = pii; this.hqReviewed = hq == null ? "" : hq; }
 
     // ── 오류(Node index.js STATUS · MSG) ─────────────────────
     static final Map<String, Integer> STATUS = Map.ofEntries(Map.entry("mile_off", 403), Map.entry("staff_cap", 403), Map.entry("self_grant", 403), Map.entry("penalty_off", 403), Map.entry("not_found", 404), Map.entry("bill", 404),
@@ -48,7 +48,7 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
         Map.entry("rate", "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."), Map.entry("amount_mismatch", "계산 값이 서버 값과 다릅니다."), Map.entry("bad_points", "신청 포인트를 확인해 주세요."),
         Map.entry("reason", "사유를 입력해 주십시오."), Map.entry("points", "포인트를 확인해 주십시오."), Map.entry("penalty_off", "감점 기능을 켜지 않은 기관입니다."), Map.entry("state", "이미 처리했거나 처리할 수 없는 상태입니다."),
         Map.entry("bill_paid", "수납이 시작된 청구서에는 차감 줄을 붙일 수 없습니다."), Map.entry("bill", "청구서를 찾지 못했습니다."), Map.entry("kind", "이 보상에는 쓸 수 없습니다."), Map.entry("limit", "이번 달 신청 횟수를 넘었어요."),
-        Map.entry("sunset", "제도가 종료되었습니다."), Map.entry("not_found", "찾지 못했습니다."), Map.entry("need_draft", "켜기 마법사를 먼저 완료해 주십시오."));
+        Map.entry("sunset", "제도가 종료되었습니다."), Map.entry("not_found", "찾지 못했습니다."), Map.entry("need_draft", "켜기 마법사를 먼저 완료해 주십시오."), Map.entry("auth", "로그인이 필요해요."), Map.entry("repair_need", "오늘 복구 학습 분량을 먼저 채워 주세요."));
     static DdException E(String code) { return E(code, null, 0); }
     static DdException E(String code, Map<String, Object> extra, int status) { int st = status > 0 ? status : STATUS.getOrDefault(code, 400); String msg = MSG.getOrDefault(code, code);
         return extra == null || extra.isEmpty() ? new DdException(st, msg, code) : new FacErr(st, code, msg, extra); }
@@ -77,6 +77,8 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
     static final List<String> FIXED = List.of("funded_cash", "no_topup", "no_cashout", "no_transfer", "no_outside", "tuition_cap", "ledger_immutable", "self_grant");
     static double dateMs(String s) { if (s == null || s.isEmpty()) return Double.NaN; try { return Instant.parse(s).toEpochMilli(); } catch (Exception e) { } try { return java.time.OffsetDateTime.parse(s).toInstant().toEpochMilli(); } catch (Exception e) { }
         try { return java.time.LocalDate.parse(s).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(); } catch (Exception e) { } try { return java.time.LocalDateTime.parse(s).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(); } catch (Exception e) { return Double.NaN; } }
+    static final java.time.format.DateTimeFormatter ISO = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(java.time.ZoneOffset.UTC);
+    static boolean has(String s) { return s != null && !s.isEmpty(); }
     static String iso(double ms) { return ISO.format(Instant.ofEpochMilli((long) ms)); }
 
     // ── SQL(Node 문장 그대로, $n → #{p.pn}) ──────────────────
@@ -84,7 +86,16 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
     static final Map<String, String> SQLC = new java.util.concurrent.ConcurrentHashMap<>();
     static String my(String sql) { return SQLC.computeIfAbsent(sql, s -> PH.matcher(s).replaceAll("#{p.p$1}")); }
     static Map<String, Object> P(Object... a) { Map<String, Object> o = new HashMap<>(); for (int i = 0; i < a.length; i++) o.put("p" + (i + 1), a[i] instanceof JsonNode ? J((JsonNode) a[i]) : a[i]); return o; }
-    List<ObjectNode> q(String sql, Object... a) { List<ObjectNode> L = new ArrayList<>(); for (Map<String, Object> r : m.rows(my(sql), P(a))) L.add(row(r)); return L; }
+    /** 조회는 현재 트랜잭션 연결(TenantTx · MyBatis와 같은 연결)에서 열 형식을 보고 변환한다 — MyBatis Map 결과는 jsonb를 문자열로 돌려줘 node-postgres 응답과 달라지기 때문 */
+    List<ObjectNode> q(String sql, Object... a) {
+        Matcher mt = PH.matcher(sql); StringBuffer sb = new StringBuffer(); List<Object> args = new ArrayList<>(); while (mt.find()) { mt.appendReplacement(sb, "?"); Object v = a[Integer.parseInt(mt.group(1)) - 1]; args.add(v instanceof JsonNode ? J((JsonNode) v) : v); } mt.appendTail(sb);
+        java.sql.Connection c = org.springframework.jdbc.datasource.DataSourceUtils.getConnection(ds);
+        try (java.sql.PreparedStatement ps = c.prepareStatement(sb.toString())) { for (int i = 0; i < args.size(); i++) ps.setObject(i + 1, args.get(i));
+            List<ObjectNode> L = new ArrayList<>(); if (!ps.execute()) return L; try (java.sql.ResultSet rs = ps.getResultSet()) { java.sql.ResultSetMetaData md = rs.getMetaData();
+                while (rs.next()) { ObjectNode o = F.objectNode(); for (int i = 1; i <= md.getColumnCount(); i++) o.set(md.getColumnLabel(i), val(rs.getObject(i))); L.add(o); } } return L;
+        } catch (java.sql.SQLException e) { throw new org.springframework.jdbc.UncategorizedSQLException("mileage", sb.toString(), e); }
+        finally { org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(c, ds); }
+    }
     ObjectNode q1(String sql, Object... a) { List<ObjectNode> L = q(sql, a); return L.isEmpty() ? null : L.get(0); }
     int x(String sql, Object... a) { return m.exec(my(sql), P(a)); }
     /** select …(…) r 의 r */
@@ -230,6 +241,7 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
                 JsonNode mx = rw.get("max_use"); double pct = truthy(mx) && !nullish(mx.get("billPct")) ? num(mx.get("billPct")) : 30; long max = (long) Math.floor(bill.get("sum").asLong() * pct / 100);
                 double step = truthy(rw.get("step")) ? rw.get("step").asDouble() : 1;
                 if (d.get("won").asLong() > max) out.addObject().put("code", "over_cap").put("block", true).put("text", "청구서의 " + numStr(pct) + "%(" + String.format("%,d", max) + "원)를 넘습니다.").set("fixPoints", numNode(Math.floor(max / wpp / step) * step)); } }
+        if (truthy(d.get("fulfil")) && strictEq(get(d.get("fulfil"), "guardian"), "pending")) out.addObject().put("code", "guardian_pending").put("block", true).put("text", "보호자 확인을 기다리는 신청입니다.").putNull("fixPoints");
         if (!nullish(rw.get("stock")) && rw.get("stock").asLong() <= 0) out.addObject().put("code", "out_of_stock").put("block", true).put("text", "재고가 없습니다.").putNull("fixPoints");
         return out; }
     JsonNode fulfil(Map<String, Object> a, String id, String billId) { String tid = tid(a);
@@ -346,9 +358,9 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
             case "GET summary": return summary(auth.need(req), req);
             case "GET entries": { Map<String, Object> a = auth.need(req); double lm = Id(qp(req, "limit") == null ? null : t(qp(req, "limit"))); int lim = (int) Math.min(Math.max(Double.isNaN(lm) || lm == 0 ? 50 : lm, 1), 200);
                 List<String> cond = new ArrayList<>(List.of("tenant_id = $1")); List<Object> v = new ArrayList<>(); v.add(tid(a));
-                if (truthy(qp(req, "sid"))) { v.add(str(qp(req, "sid"), 80)); cond.add("sid = $" + v.size()); } if (truthy(qp(req, "kind"))) { v.add(str(qp(req, "kind"), 10)); cond.add("kind = $" + v.size()); }
+                if (has(qp(req, "sid"))) { v.add(str(qp(req, "sid"), 80)); cond.add("sid = $" + v.size()); } if (has(qp(req, "kind"))) { v.add(str(qp(req, "kind"), 10)); cond.add("kind = $" + v.size()); }
                 if (day(qp(req, "from"))) { v.add(qp(req, "from")); cond.add("mil_kst(at) >= $" + v.size() + "::date"); } if (day(qp(req, "to"))) { v.add(qp(req, "to")); cond.add("mil_kst(at) <= $" + v.size() + "::date"); }
-                if (truthy(qp(req, "after"))) { String[] af = qp(req, "after").split("\\|", -1); if (!Double.isNaN(dateMs(af[0]))) { v.add(af[0]); v.add(str(af.length > 1 ? af[1] : "undefined", 20)); cond.add("(at, id) < ($" + (v.size() - 1) + "::timestamptz, $" + v.size() + ")"); } }
+                if (has(qp(req, "after"))) { String[] af = qp(req, "after").split("\\|", -1); if (!Double.isNaN(dateMs(af[0]))) { v.add(af[0]); v.add(str(af.length > 1 ? af[1] : "undefined", 20)); cond.add("(at, id) < ($" + (v.size() - 1) + "::timestamptz, $" + v.size() + ")"); } }
                 return T(a, () -> { List<ObjectNode> rows = q("select * from mil_entry where " + String.join(" and ", cond) + " order by at desc, id desc limit " + (lim + 1), v.toArray()); boolean more = rows.size() > lim; List<ObjectNode> L = slice(rows, 0, lim);
                     ObjectNode o = F.objectNode().put("ok", true); o.set("entries", list(L, MileServiceImpl::enOut)); if (more) o.put("after", S(L.get(L.size() - 1).get("at")) + "|" + S(L.get(L.size() - 1).get("id"))); else o.putNull("after"); return o; }); }
             case "GET wallet": { Map<String, Object> a = auth.need(req); String sid = str(qp(req, "sid"), 80); if (sid.isEmpty()) throw E("not_found"); return T(a, () -> walletOf(tid(a), sid)); }
@@ -368,7 +380,7 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
                     for (JsonNode x0 : w0) if (!strictEq(x0.get("code"), "no_budget") || List.of("tuition", "coupon", "shop").contains(k)) w.add(x0);
                     ObjectNode o = F.objectNode().put("ok", true); o.set("reward", rwOut(row)); o.set("warnings", w); return o; }); }
             case "GET redeems": { Map<String, Object> a = auth.need(req); List<Object> v = new ArrayList<>(); v.add(tid(a)); StringBuilder w = new StringBuilder();
-                if (truthy(qp(req, "status"))) { v.add(str(qp(req, "status"), 12)); w.append(" and status = $").append(v.size()); } if (truthy(qp(req, "sid"))) { v.add(str(qp(req, "sid"), 80)); w.append(" and sid = $").append(v.size()); }
+                if (has(qp(req, "status"))) { v.add(str(qp(req, "status"), 12)); w.append(" and status = $").append(v.size()); } if (has(qp(req, "sid"))) { v.add(str(qp(req, "sid"), 80)); w.append(" and sid = $").append(v.size()); }
                 return T(a, () -> { ObjectNode o = F.objectNode().put("ok", true); o.set("redeems", list(q("select * from mil_redeem where tenant_id = $1" + w + " order by at desc limit 300", v.toArray()), MileServiceImpl::rdOut)); return o; }); }
             case "POST redeems/cancel": return redeemCancel(auth.needStaff(req), DdWeb.readBody(body, 2048));
             case "POST redeems/handed": { Map<String, Object> a = auth.needStaff(req); JsonNode b = DdWeb.readBody(body, 1024); String rid0 = str(get(b, "id"), 20);
@@ -447,7 +459,7 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
                 r.setAll((ObjectNode) ok(one("select mil_grant($1,$2,$3,false,$4,$5,$6::int,$7,$8,now(),$9) r", tid, email(a), "owner".equals(a.get("role")), sid, truthy(get(b, "unit")) ? str(get(b, "unit"), 30) : "lu_root", I(get(b, "points")), str(get(b, "reason"), 200), idem + ":" + sid, pen))); out.add(r); }
             Object pts = I(get(b, "points")); audit(tid, email(a), pen ? "mileage.penalty" : "mileage.grant", map("n", sids.size(), "points", pts instanceof Double ? null : pts, "reason", str(get(b, "reason"), 200))); ObjectNode o = F.objectNode().put("ok", true); o.set("results", out); return o; }); }
 
-    Object approvals(Map<String, Object> a, HttpServletRequest req) throws Exception { String type = truthy(qp(req, "type")) ? qp(req, "type") : "redeem";
+    Object approvals(Map<String, Object> a, HttpServletRequest req) throws Exception { String type = has(qp(req, "type")) ? qp(req, "type") : "redeem";
         return T(a, () -> { String tid = tid(a);
             if ("earn".equals(type)) { List<ObjectNode> rows = q("select * from mil_entry where tenant_id = $1 and status = 'pending' order by at limit 200", tid); Set<String> fl = new HashSet<>(); for (ObjectNode f : q("select sid from mil_flag where tenant_id = $1 and status = 'open'", tid)) fl.add(S(f.get("sid")));
                 ArrayNode items = F.arrayNode(); for (ObjectNode e : rows) { ObjectNode x0 = enOut(e); ArrayNode ck = F.arrayNode(); if (fl.contains(S(e.get("sid")))) ck.addObject().put("code", "flag_open").put("block", false).put("text", "부정 의심 기록이 열려 있는 학습자입니다.").putNull("fixPoints"); x0.set("checks", ck); items.add(x0); }
@@ -516,21 +528,7 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
 
     @Override public Object pub(HttpServletRequest req, HttpServletResponse res, String tid, String key, byte[] body, LAuth lauth) throws Exception {
         switch (key) {
-            case "GET mile-my": { String sid = who(lauth); return P(tid, () -> { ObjectNode p = pol(tid); List<ObjectNode> W = wallet(tid, sid); ObjectNode w = W.get(0);
-                List<ObjectNode> rules = new ArrayList<>(); for (ObjectNode r : q("select distinct on (id) * from mil_rule where tenant_id = $1 order by id, ver desc", tid)) if (r.get("active").asBoolean() && !strictEq(r.get("trigger"), "penalty")) rules.add(r);
-                List<ObjectNode> rewards = q("select * from mil_reward where tenant_id = $1 and active order by threshold, min_use", tid); long bal = w.get("balance").asLong(), conv = w.get("convertible").asLong();
-                ObjectNode goal = null; long gneed = 0; for (ObjectNode r : rewards) { JsonNode c = r.get("cost"); long need = Math.max(Math.max(r.get("threshold").asLong(), r.get("min_use").asLong()), truthy(c) && truthy(c.get("fixedP")) ? (long) num(c.get("fixedP")) : 0);
-                    if (need > (r.get("cash").asBoolean() ? conv : bal) && (goal == null || need < gneed)) { goal = r; gneed = need; } }
-                List<ObjectNode> notices = q("select kind, ym, points, due_at, sent_at from mil_notice where tenant_id = $1 and sid = $2 and read_at is null order by sent_at desc limit 10", tid, sid);
-                int funded = n("select coalesce(sum(points), 0)::int r from mil_entry where tenant_id = $1 and sid = $2 and funded and status = 'posted'", tid, sid);
-                ObjectNode o = F.objectNode().put("ok", true).put("on", true); o.set("unitName", p.get("unit_name")); o.set("balance", w.get("balance")); o.set("pending", w.get("pending")); o.set("convertible", w.get("convertible")); o.put("fundedEarned", funded); o.putNull("tier");
-                if (goal != null) { long have = goal.get("cash").asBoolean() ? conv : bal; o.set("nextGoal", F.objectNode().put("label", S(goal.get("title"))).put("need", gneed - have).set("pct", numNode(Math.floor(Math.max(0, have) * 100.0 / gneed)))); } else o.putNull("nextGoal");
-                JsonNode sk = w.get("streak"); JsonNode ps = p.get("streak"); ObjectNode so = F.objectNode(); so.set("n", truthy(sk) && truthy(sk.get("n")) ? sk.get("n") : F.numberNode(0)); so.set("last", truthy(sk) && truthy(sk.get("last")) ? sk.get("last") : F.nullNode());
-                so.set("freezePerWeek", truthy(ps) && truthy(ps.get("freezePerWeek")) ? ps.get("freezePerWeek") : F.numberNode(1)); o.set("streak", so); o.set("expiring", g(w, "nextExpire"));
-                ArrayNode ways = F.arrayNode(); for (ObjectNode r : rules) { ObjectNode y = ways.addObject().put("trigger", S(r.get("trigger"))); String lb = S(r.get("label")); y.put("text", !lb.isEmpty() ? lb : TRIG_KO.getOrDefault(S(r.get("trigger")), S(r.get("trigger")))); y.set("points", pts(r.get("score"))); y.set("nature", r.get("nature")); } o.set("ways", ways);
-                if (W.size() > 1) { ArrayNode ws = F.arrayNode(); for (ObjectNode x0 : W) ws.add(cp(x0, "unit", "unit", "balance", "balance", "convertible", "convertible")); o.set("wallets", ws); }
-                o.set("sunset", truthy(p.get("sunset")) ? p.get("sunset") : F.nullNode());
-                ArrayNode ns = F.arrayNode(); for (ObjectNode nn : notices) ns.add(cp(nn, "kind", "kind", "ym", "ym", "points", "points", "dueAt", "due_at", "at", "sent_at")); o.set("notices", ns); return o; }); }
+            case "GET mile-my": { String sid = who(lauth); return P(tid, () -> myOut(tid, sid)); }
             case "GET mile-list": { String sid = who(lauth); double lm = Id(req.getParameter("limit") == null ? null : t(req.getParameter("limit"))); int lim = (int) Math.min(Math.max(Double.isNaN(lm) || lm == 0 ? 30 : lm, 1), 100);
                 return P(tid, () -> { List<Object> v = new ArrayList<>(List.of(tid, sid)); String w = ""; String[] af = (req.getParameter("after") == null ? "" : req.getParameter("after")).split("\\|", -1);
                     if (!af[0].isEmpty() && !Double.isNaN(dateMs(af[0]))) { v.add(af[0]); v.add(str(af.length > 1 ? af[1] : "undefined", 20)); w = " and (at, id) < ($3::timestamptz, $4)"; }
@@ -548,15 +546,41 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
                     long th = r.get("threshold").asLong(), mu = r.get("min_use").asLong(); String lock = wb < 0 ? "negative_balance" : cash && wc < th ? "below_threshold" : !r.get("stock").isNull() && used >= r.get("stock").asLong() ? "out_of_stock" : usable < Math.max(mu, 1) ? "insufficient" : null;
                     ObjectNode y = cp(r, "id", "id", "kind", "kind", "title", "title", "cost", "cost", "minUse", "min_use", "maxUse", "max_use", "step", "step", "threshold", "threshold", "cash", "cash"); y.set("stockLeft", r.get("stock").isNull() ? F.nullNode() : F.numberNode(Math.max(0, r.get("stock").asLong() - used)));
                     y.put("usable", usable); if (lock == null) y.putNull("locked"); else y.put("locked", lock); y.set("priceWon", truthy(ln) && truthy(ln.get("priceWon")) ? ln.get("priceWon") : F.nullNode()); out.add(y); }
-                ObjectNode o = F.objectNode().put("ok", true); o.set("rewards", out); return o; }); }
+                ArrayNode reqs = F.arrayNode(); for (ObjectNode d : q("select d.*, w.title, w.kind from mil_redeem d join mil_reward w on w.tenant_id = d.tenant_id and w.id = d.reward_id where d.tenant_id = $1 and d.sid = $2 order by d.at desc limit 30", tid, sid)) {
+                    JsonNode f = truthy(d.get("fulfil")) ? d.get("fulfil") : F.objectNode(); String st = S(d.get("status"));
+                    ObjectNode y = cp(d, "id", "id", "rewardId", "reward_id", "title", "title", "kind", "kind", "points", "points", "won", "won", "status", "status"); y.set("guardian", truthy(get(f, "guardian")) ? get(f, "guardian") : F.nullNode());
+                    y.set("code", truthy(get(f, "couponCode")) ? get(f, "couponCode") : F.nullNode()); y.set("until", truthy(get(f, "until")) ? get(f, "until") : F.nullNode()); y.set("reason", List.of("rejected", "cancelled", "reclaimed").contains(st) ? g(d, "reason") : F.nullNode()); y.set("at", d.get("at"));
+                    y.put("cancellable", "requested".equals(st) || ("approved".equals(st) && !(truthy(get(f, "chargeId")) || truthy(get(f, "handedAt")) || truthy(get(f, "couponCode"))))); reqs.add(y); }
+                ObjectNode o = F.objectNode().put("ok", true); o.set("rewards", out); o.set("requests", reqs); return o; }); }
             case "POST mile-redeem": { String sid = who(lauth); JsonNode b = DdWeb.readBody(body, 1024); rl.limit("mrd:" + tid + ":" + sid, 10, 60_000L); rl.limit("mrdt:" + tid, 60, 60_000L);
                 String idem = str(get(b, "idem"), 60); if (!idem.matches("^[A-Za-z0-9_-]{6,60}$")) throw E("bad_points");
                 return P(tid, () -> { JsonNode r = ok(one("select mil_redeem_req($1,$2,$3,$4::int,$5) r", tid, sid, str(get(b, "rewardId"), 34), I(get(b, "points")), idem));
                     if (!nullish(get(b, "won")) && Id(get(b, "won")) != r.path("won").asDouble()) throw E("amount_mismatch", map("won", r.get("won")), 0);
-                    audit(tid, "learner:" + sid, "mileage.redeem", map("id", r.get("id"), "points", r.get("points"), "status", r.get("status"))); return r; }); }
+                    if (!truthy(r.get("again")) && strictEq(r.get("status"), "requested") && hasGuardian(tid, sid)) { x("update mil_redeem set fulfil = fulfil || '{\"guardian\":\"pending\"}' where tenant_id = $1 and id = $2", tid, S(r.get("id"))); r = ((ObjectNode) r).deepCopy().put("guardian", "pending"); }
+                    JsonNode r2 = r; audit(tid, "learner:" + sid, "mileage.redeem", map("id", r2.get("id"), "points", r2.get("points"), "status", r2.get("status"))); return r2; }); }
             case "POST mile-redeem-cancel": { String sid = who(lauth); JsonNode b = DdWeb.readBody(body, 512);
-                return P(tid, () -> { String id = str(get(b, "id"), 20); ObjectNode d = q1("select sid, status from mil_redeem where tenant_id = $1 and id = $2", tid, id); if (d == null || !sid.equals(S(d.get("sid")))) throw E("not_found"); if (!strictEq(d.get("status"), "requested")) throw E("state");
-                    return ok(one("select mil_redeem_decide($1,$2,'cancel',$3,'학습자 취소') r", tid, id, "learner:" + sid)); }); }
+                /* 취소 규칙(L 결정): requested, 또는 approved이면서 이행 전이면 학습자가 취소 → 포인트 복원. 이행 후는 운영자 회수만 */
+                return P(tid, () -> { String id = str(get(b, "id"), 20); ObjectNode d = q1("select sid, status, fulfil from mil_redeem where tenant_id = $1 and id = $2 for update", tid, id); if (d == null || !sid.equals(S(d.get("sid")))) throw E("not_found");
+                    if (strictEq(d.get("status"), "requested")) return ok(one("select mil_redeem_decide($1,$2,'cancel',$3,'학습자 취소') r", tid, id, "learner:" + sid));
+                    JsonNode f = truthy(d.get("fulfil")) ? d.get("fulfil") : F.objectNode(); if (!strictEq(d.get("status"), "approved") || truthy(get(f, "chargeId")) || truthy(get(f, "handedAt")) || truthy(get(f, "couponCode"))) throw E("state");
+                    ObjectNode r = ((ObjectNode) ok(one("select mil_redeem_reclaim($1,$2,'학습자 취소',$3) r", tid, id, "learner:" + sid))).deepCopy(); x("update mil_redeem set status = 'cancelled' where tenant_id = $1 and id = $2", tid, id);
+                    audit(tid, "learner:" + sid, "mileage.redeem.cancel", map("id", id)); r.put("status", "cancelled"); return r; }); }
+            case "POST mile-guardian": { String sid = who(lauth); JsonNode b = DdWeb.readBody(body, 512); rl.limit("mgd:" + tid + ":" + sid, 30, 600_000L);
+                return P(tid, () -> { String id = str(get(b, "id"), 20); ObjectNode d = q1("select sid, status, fulfil from mil_redeem where tenant_id = $1 and id = $2 for update", tid, id);
+                    if (d == null || !kidsOf(tid, sid).contains(S(d.get("sid")))) throw E("not_found"); if (!strictEq(d.get("status"), "requested") || !(truthy(d.get("fulfil")) && strictEq(get(d.get("fulfil"), "guardian"), "pending"))) throw E("state");
+                    boolean okk = strictEq(get(b, "ok"), F.booleanNode(true)); x("update mil_redeem set fulfil = fulfil || $3::jsonb where tenant_id = $1 and id = $2", tid, id, F.objectNode().put("guardian", okk ? "ok" : "no").put("guardianAt", isoNow()));
+                    if (!okk) one("select mil_redeem_decide($1,$2,'reject',$3,'보호자가 동의하지 않았어요') r", tid, id, "guardian:" + sid);
+                    audit(tid, "guardian:" + sid, "mileage.redeem.guardian", map("id", id, "ok", okk)); return o("ok", true, "id", id, "guardian", okk ? "ok" : "no"); }); }
+            case "POST mile-streak-repair": { String sid = who(lauth); rl.limit("msr:" + tid + ":" + sid, 10, 600_000L);
+                return P(tid, () -> { q("select mil_lock($1,$2,$3)", tid, sid, "lu_root"); ObjectNode p = pol(tid); ObjectNode rp = repairOf(tid, sid, p);
+                    if (rp == null) { ObjectNode w = q1("select streak from mil_wallet where tenant_id = $1 and sid = $2 and scope_unit = 'lu_root'", tid, sid); ObjectNode o = F.objectNode().put("ok", true).put("again", true); o.set("streak", w != null && truthy(w.get("streak")) ? w.get("streak") : F.objectNode()); return o; }
+                    ObjectNode lp = q1("select lp from learner_progress where tenant_id = $1 and sid = $2", tid, sid); String today = kstToday(); JsonNode sc = lp == null ? null : get(lp.get("lp"), "tube", "sec");
+                    double sec = truthy(sc) && !nullish(get(sc, today)) ? num(get(sc, today)) : 0; if (Double.isNaN(sec)) sec = 0; long need = rp.get("need").asLong();
+                    if (sec < need * 60) throw E("repair_need", map("need", need, "now", (long) Math.floor(sec / 60)), 409);
+                    for (JsonNode dd : rp.get("missed")) x("insert into mil_event (tenant_id, sid, trigger, src_type, src_id, value, trust, occurred_at, status, result) values ($1,$2,'attend_day','repair',$3,$4::numeric,'C',($3::date + time '12:00') at time zone 'Asia/Seoul','skipped','{\"reason\":\"repair\"}') on conflict do nothing", tid, sid, dd.asText(), String.valueOf(need));
+                    int nn = n("select mil_streak_calc($1,$2,mil_kst(now()),coalesce((select (streak->>'freezePerWeek')::int from mil_policy where tenant_id = $1), 1)) r", tid, sid);
+                    x("update mil_wallet set streak = jsonb_build_object('n', $3::int, 'last', mil_kst(now()), 'repairedAt', now()) where tenant_id = $1 and sid = $2 and scope_unit = 'lu_root'", tid, sid, nn);
+                    audit(tid, "learner:" + sid, "mileage.streak_repair", map("days", rp.get("missed").size())); ObjectNode o = F.objectNode().put("ok", true); o.set("streak", F.objectNode().put("n", nn)); return o; }); }
             case "POST mile-proof": { String sid = who(lauth); JsonNode b = DdWeb.readBody(body, 2048); rl.limit("mpf:" + tid + ":" + sid, 10, 3_600_000L);
                 return P(tid, () -> { ObjectNode rule = q1("select id from mil_rule where tenant_id = $1 and id = $2 and trigger = 'evidence' and active", tid, str(get(b, "ruleId"), 34)); if (rule == null) throw E("not_found");
                     String id = rid("mpf_"); String ao = S(get(b, "activityOn")); String fr = str(get(b, "fileRef"), 200);
@@ -567,13 +591,68 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
         }
     }
 
+
+    // ── 학습자 「나」 카드(Node mod-pub GET mile-my, 8fde9c6) ──
+    static String dAdd(String d, int n) { return java.time.LocalDate.parse(d).plusDays(n).toString(); }
+    static long kmid(String d) { return java.time.LocalDate.parse(d).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli() - 9 * 3600_000L; }
+    /** 연속 학습 복구 가능 여부: 마지막 학습일 L, 오늘 T(KST). T − L ≥ 2이고 끊긴 시각(L+2 0시) + withinH 안, 이번 달 복구 횟수 < perMonth */
+    ObjectNode repairOf(String tid, String sid, ObjectNode p) { JsonNode st = p == null ? null : p.get("streak"); JsonNode R0 = truthy(st) && truthy(get(st, "repair")) ? get(st, "repair") : parse("{\"withinH\":48,\"factor\":2,\"perMonth\":1}"); String today = kstToday();
+        JsonNode L0 = one("select max(mil_kst(occurred_at))::text r from mil_event where tenant_id = $1 and sid = $2 and trigger = 'attend_day'", tid, sid); if (L0 == null || L0.isNull()) return null; String L = L0.asText();
+        long gap = Math.round((java.time.LocalDate.parse(today).toEpochDay() - java.time.LocalDate.parse(L).toEpochDay()) * 1.0); if (gap < 2) return null;
+        double wh = num(get(R0, "withinH")); long until = kmid(dAdd(L, 2)) + (long) ((Double.isNaN(wh) || wh == 0 ? 48 : wh) * 3600e3); if (System.currentTimeMillis() > until) return null;
+        int used = n("select count(*)::int r from mil_event where tenant_id = $1 and sid = $2 and trigger = 'attend_day' and src_type = 'repair' and to_char(received_at at time zone 'Asia/Seoul', 'YYYY-MM') = $3", tid, sid, today.substring(0, 7));
+        double pm = num(get(R0, "perMonth")); if (used >= (Double.isNaN(pm) || pm == 0 ? 1 : pm)) return null;
+        double mm = truthy(st) ? num(get(st, "minMin")) : Double.NaN; double fc = num(get(R0, "factor"));
+        ObjectNode o = F.objectNode().put("until", iso(until)); o.set("need", numNode(round((Double.isNaN(mm) || mm == 0 ? 10 : mm) * (Double.isNaN(fc) || fc == 0 ? 2 : fc)))); o.put("last", L);
+        ArrayNode ms = F.arrayNode(); for (int i = 0; i < gap - 1; i++) ms.add(dAdd(L, i + 1)); o.set("missed", ms); return o; }
+    /** 보호자 계정의 연결된 자녀 sid(기관 문서 parents[] · pacct[], 연결 승인된 것만) */
+    List<String> kidsOf(String tid, String sid) { ObjectNode d = q1("select doc->'parents' pa, doc->'pacct' pc, doc->'members' mb from tenant_state where tenant_id = $1", tid); if (d == null) return List.of();
+        JsonNode acct = null; for (JsonNode x0 : arr(d.get("pc"))) if (truthy(x0) && (strictEq(get(x0, "sid"), sid) || strictEq(get(x0, "lid"), sid))) { acct = x0; break; } if (acct == null) return List.of();
+        Set<String> ids = new HashSet<>(); Pattern okp = Pattern.compile("연결됨|승인|ok", Pattern.CASE_INSENSITIVE);
+        for (JsonNode x0 : arr(d.get("pa"))) if (truthy(x0) && strictEq(get(x0, "acct"), get(acct, "id")) && okp.matcher(nullish(get(x0, "status")) ? "" : egovframework.didisam.cmm.Js.str(get(x0, "status"))).find()) ids.add(egovframework.didisam.cmm.Js.str(get(x0, "child")));
+        List<String> out = new ArrayList<>(); for (JsonNode mb : arr(d.get("mb"))) if (truthy(mb) && ids.contains(egovframework.didisam.cmm.Js.str(get(mb, "id"))) && truthy(get(mb, "sid"))) out.add(egovframework.didisam.cmm.Js.str(get(mb, "sid"))); return out; }
+    boolean hasGuardian(String tid, String sid) { try { return tx.plain(() -> !q("select 1 from pii.guardian where tid = $1 and learner_id::text = $2 and status = 'ok' limit 1", tid, sid).isEmpty()); } catch (Exception e) { return false; } }
+    ObjectNode myOut(String tid, String sid) {
+        ObjectNode p = pol(tid); List<ObjectNode> W = wallet(tid, sid); ObjectNode w = W.get(0);
+        List<ObjectNode> rules = new ArrayList<>(); for (ObjectNode r : q("select distinct on (id) * from mil_rule where tenant_id = $1 order by id, ver desc", tid)) if (r.get("active").asBoolean() && !strictEq(r.get("trigger"), "penalty")) rules.add(r);
+        List<ObjectNode> rewards = q("select * from mil_reward where tenant_id = $1 and active order by threshold, min_use", tid); long bal = w.get("balance").asLong(), conv = w.get("convertible").asLong();
+        ObjectNode goal = null; long gneed = 0; for (ObjectNode r : rewards) { JsonNode c = r.get("cost"); long need = Math.max(Math.max(r.get("threshold").asLong(), r.get("min_use").asLong()), truthy(c) && truthy(c.get("fixedP")) ? (long) num(c.get("fixedP")) : 0);
+            if (need > (r.get("cash").asBoolean() ? conv : bal) && (goal == null || need < gneed)) { goal = r; gneed = need; } }
+        List<ObjectNode> notices = q("select kind, ym, points, due_at, sent_at from mil_notice where tenant_id = $1 and sid = $2 and read_at is null order by sent_at desc limit 10", tid, sid);
+        int funded = n("select coalesce(sum(points), 0)::int r from mil_entry where tenant_id = $1 and sid = $2 and funded and status = 'posted'", tid, sid);
+        String today = kstToday(); Set<String> days = new HashSet<>(); for (ObjectNode r : q("select distinct mil_kst(occurred_at)::text d from mil_event where tenant_id = $1 and sid = $2 and trigger = 'attend_day' and occurred_at > now() - interval '8 days'", tid, sid)) days.add(S(r.get("d")));
+        ObjectNode agg = q1("select coalesce(sum(points) filter (where kind = 'earn' and nature = 'participation' and status = 'posted'), 0)::int part, coalesce(-sum(points) filter (where kind = 'hold'), 0)::int - coalesce(sum(points) filter (where kind = 'release'), 0)::int held, coalesce(sum(points) filter (where kind = 'earn' and status <> 'void' and mil_kst(at) = mil_kst(now())), 0)::int today from mil_entry where tenant_id = $1 and sid = $2", tid, sid);
+        List<JsonNode> tiers = new ArrayList<>(); for (JsonNode t0 : arr(p.get("tiers"))) if (truthy(t0) && truthy(get(t0, "name"))) tiers.add(t0); tiers.sort(Comparator.comparingDouble(t0 -> { double v = num(get(t0, "min")); return Double.isNaN(v) ? 0 : v; }));
+        JsonNode tier = F.nullNode(); double ew = w.path("earnedWindow").asDouble();
+        if (!tiers.isEmpty()) { int i = -1; for (int j = 0; j < tiers.size(); j++) { double mn = num(get(tiers.get(j), "min")); if (ew >= (Double.isNaN(mn) ? 0 : mn)) i = j; } JsonNode nx = i + 1 < tiers.size() ? tiers.get(i + 1) : null;
+            ObjectNode tn = F.objectNode(); tn.set("name", i >= 0 ? get(tiers.get(i), "name") : F.nullNode()); if (nx != null) { double nm = num(get(nx, "min")); tn.set("pct", numNode(Math.min(100, Math.floor(ew * 100 / Math.max(1, Double.isNaN(nm) ? 0 : nm))))); } else tn.put("pct", 100); tn.set("next", nx != null ? get(nx, "name") : F.nullNode()); tier = tn; }
+        ArrayNode badges = F.arrayNode(); for (ObjectNode r : q("select src_id n, min(occurred_at) at from mil_event where tenant_id = $1 and sid = $2 and trigger = 'streak' group by src_id", tid, sid)) { ObjectNode bb = badges.addObject().put("id", "streak-" + S(r.get("n"))).put("name", "연속 학습 " + S(r.get("n")) + "일"); bb.set("at", r.get("at")); }
+        for (ObjectNode r : q("select d.id, w.title, d.decided_at at from mil_redeem d join mil_reward w on w.tenant_id = d.tenant_id and w.id = d.reward_id where d.tenant_id = $1 and d.sid = $2 and w.kind in ('badge','cert') and d.status = 'fulfilled'", tid, sid)) badges.add(cp(r, "id", "id", "name", "title", "at", "at"));
+        ArrayNode recent = F.arrayNode(); for (ObjectNode e : q("select kind, points, reason, trigger, at from mil_entry where tenant_id = $1 and sid = $2 and status = 'posted' and kind in ('earn','adjust','restore','expire','cancel','penalty') order by at desc limit 5", tid, sid)) {
+            String rs = S(e.get("reason")), kind = S(e.get("kind")); ObjectNode y = recent.addObject().put("kind", kind); y.set("points", e.get("points")); String tx0 = !rs.isEmpty() ? rs : TRIG_KO.containsKey(S(e.get("trigger"))) ? TRIG_KO.get(S(e.get("trigger"))) : KIND_KO.get(kind); if (tx0 != null) y.put("text", tx0); y.set("at", e.get("at")); }
+        List<String> kidSids = kidsOf(tid, sid); ArrayNode kids = F.arrayNode(); for (String k : slice(kidSids, 0, 10)) { ObjectNode kw = wallet(tid, k).get(0); ObjectNode ko = kids.addObject().put("sid", k); ko.set("balance", kw.get("balance")); ko.set("convertible", kw.get("convertible"));
+            ArrayNode pend = F.arrayNode(); for (ObjectNode x0 : q("select id, points, at from mil_redeem where tenant_id = $1 and sid = $2 and status = 'requested' and fulfil->>'guardian' = 'pending'", tid, k)) pend.add(cp(x0, "id", "id", "points", "points", "at", "at")); ko.set("guardianPending", pend); }
+        ObjectNode rp = repairOf(tid, sid, p);
+        ObjectNode o = F.objectNode().put("ok", true).put("on", true); o.set("unitName", p.get("unit_name")); o.set("balance", w.get("balance")); o.set("pending", w.get("pending")); o.set("convertible", w.get("convertible")); o.set("held", agg.get("held"));
+        o.put("funded", funded).put("fundedEarned", funded); o.set("participation", agg.get("part")); o.set("earnedWindow", g(w, "earnedWindow")); String tw = S(p.get("tier_window")); o.put("windowLabel", "term".equals(tw) ? "이번 학기" : "year".equals(tw) ? "올해" : "최근 12개월"); o.set("tier", tier);
+        ObjectNode daily = F.objectNode(); daily.set("cap", p.get("daily_cap_total")); daily.set("today", agg.get("today")); o.set("daily", daily); o.set("badges", badges); o.set("recent", recent); if (!kidSids.isEmpty()) o.set("kids", kids);
+        if (goal != null) { long have = goal.get("cash").asBoolean() ? conv : bal; ObjectNode gg = F.objectNode().put("label", S(goal.get("title"))).put("now", Math.max(0, have)).put("target", gneed).put("need", gneed - have); gg.set("pct", numNode(Math.floor(Math.max(0, have) * 100.0 / gneed)));
+            if (goal.get("cash").asBoolean() && bal > conv) gg.put("hint", "참여형 · 국비 과정 적립은 이 보상에 쓰이지 않아요."); else gg.putNull("hint"); o.set("nextGoal", gg); } else o.putNull("nextGoal");
+        JsonNode sk = w.get("streak"); JsonNode ps = p.get("streak"); ObjectNode so = F.objectNode(); so.set("n", truthy(sk) && truthy(sk.get("n")) ? sk.get("n") : F.numberNode(0)); so.set("last", truthy(sk) && truthy(sk.get("last")) ? sk.get("last") : F.nullNode());
+        so.set("freezePerWeek", truthy(ps) && truthy(ps.get("freezePerWeek")) ? ps.get("freezePerWeek") : F.numberNode(1)); ArrayNode wk = F.arrayNode(); for (int i = 0; i < 7; i++) wk.add(days.contains(dAdd(today, i - 6))); so.set("week", wk);
+        if (rp != null) { ObjectNode rr = F.objectNode(); rr.set("until", rp.get("until")); rr.set("need", rp.get("need")); so.set("repair", rr); } else so.putNull("repair"); o.set("streak", so); o.set("expiring", g(w, "nextExpire"));
+        ArrayNode ways = F.arrayNode(); for (ObjectNode r : rules) { ObjectNode y = ways.addObject().put("trigger", S(r.get("trigger"))); String lb = S(r.get("label")); y.put("text", !lb.isEmpty() ? lb : TRIG_KO.getOrDefault(S(r.get("trigger")), S(r.get("trigger")))); y.set("points", pts(r.get("score"))); y.set("nature", r.get("nature")); } o.set("ways", ways);
+        if (W.size() > 1) { ArrayNode ws = F.arrayNode(); for (ObjectNode x0 : W) ws.add(cp(x0, "unit", "unit", "balance", "balance", "convertible", "convertible")); o.set("wallets", ws); }
+        o.set("sunset", truthy(p.get("sunset")) ? p.get("sunset") : F.nullNode());
+        ArrayNode ns = F.arrayNode(); for (ObjectNode nn : notices) ns.add(cp(nn, "kind", "kind", "ym", "ym", "points", "points", "dueAt", "due_at", "at", "sent_at")); o.set("notices", ns); return o; }
+
     // ── 수집 훅(Node index.js hook · emitDiff · personalCoupon) — 다른 서비스가 같은 트랜잭션 안에서 부른다 ──
     /** 제도가 켜진 기관만 mil_emit(세이브포인트: 실패해도 본 작업은 계속) */
-    public JsonNode hook(String tid, String sid, String trigger, String srcType, String srcId, Object value, String trust, String cls, String at) {
+    @Override public JsonNode hook(String tid, String sid, String trigger, String srcType, String srcId, Object value, String trust, String cls, String at) {
         try { x("savepoint mil_hook");
             JsonNode r = one("select case when exists (select 1 from mil_policy where tenant_id = $1 and is_on) then mil_emit($1,$2,$3,$4,$5,$6::numeric,$7,coalesce($8::timestamptz, now()),$9,'lu_root') end r", tid, sid, trigger, srcType, srcId, value == null ? null : String.valueOf(value), trust == null ? "A" : trust, at, cls);
             x("release savepoint mil_hook"); return r;
-        } catch (Exception e) { try { x("rollback to savepoint mil_hook"); } catch (Exception z) { /* 트랜잭션 밖 */ } logger.error("mileage hook " + trigger + " " + e.getMessage()); return null; }
+        } catch (Exception e) { try { x("rollback to savepoint mil_hook"); } catch (Exception z) { /* 트랜잭션 밖 */ } org.slf4j.LoggerFactory.getLogger(MileServiceImpl.class).error("mileage hook " + trigger + " " + e.getMessage()); return null; }
     }
     /** PUT progress 차이분(신뢰 C): 새로 완료된 차시 · 튜브 오늘 목표 달성 · 학습한 날만 */
     static List<String[]> diffLp(JsonNode prev, JsonNode next) { List<String[]> out = new ArrayList<>(); JsonNode P = obj(prev) ? prev : F.objectNode(), N = obj(next) ? next : F.objectNode();
@@ -584,9 +663,10 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
             if (sec >= 60 && before < 60) out.add(new String[]{ "attend_day", "day", e.getKey(), numStr(Math.floor(sec / 60)), null });
             if (goal > 0 && sec >= goal * 60 && before < goal * 60) out.add(new String[]{ "tube_goal", "day", e.getKey(), numStr(Math.floor(sec / 60)), null }); }
         return out.size() > 50 ? out.subList(0, 50) : out; }
-    public int emitDiff(String tid, String sid, JsonNode prev, JsonNode next) { if (!policyOn(tid)) return 0; int k = 0; for (String[] d : diffLp(prev, next)) { JsonNode r = hook(tid, sid, d[0], d[1], d[2], d[3], "C", d[4], null); if (r != null && strictEq(r.get("status"), "done")) k++; } return k; }
+    @Override public JsonNode prevLp(String tid, String sid) { ObjectNode r = q1("select lp from learner_progress where tenant_id = $1 and sid = $2 for update", tid, sid); return r == null ? null : r.get("lp"); }
+    @Override public int emitDiff(String tid, String sid, JsonNode prev, JsonNode next) { if (!policyOn(tid)) return 0; int k = 0; for (String[] d : diffLp(prev, next)) { JsonNode r = hook(tid, sid, d[0], d[1], d[2], d[3], "C", d[4], null); if (r != null && strictEq(r.get("status"), "done")) k++; } return k; }
     /** 개인 쿠폰(1회용, 본인 sid만) — 기관 쿠폰에 없는 코드일 때 coupon 확인이 부른다. null = 해당 없음 */
-    public ObjectNode personalCoupon(String tid, String sid, String code, String cls) {
+    @Override public ObjectNode personalCoupon(String tid, String sid, String code, String cls) {
         ObjectNode d = q1("select d.*, w.audience from mil_redeem d join mil_reward w on w.tenant_id = d.tenant_id and w.id = d.reward_id where d.tenant_id = $1 and d.fulfil->>'couponCode' = $2 and d.status = 'fulfilled'", tid, code);
         if (d == null || !S(d.get("sid")).equals(sid)) return null;
         if (cls != null && !cls.isEmpty() && !one("select mil_cash_ok($1,$2) r", tid, cls).asBoolean()) return F.objectNode().put("ok", false).put("msg", "국비 지원 과정에는 마일리지 쿠폰을 쓸 수 없어요.").put("code", "funded_blocked");
@@ -594,7 +674,7 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
         JsonNode f = d.get("fulfil"); if (truthy(get(f, "until")) && kstToday().compareTo(S(get(f, "until"))) > 0) return F.objectNode().put("ok", false).put("msg", "사용 기한이 지난 쿠폰이에요.");
         long won = d.get("won").asLong(); return F.objectNode().put("ok", true).put("personal", true).put("off", won).put("label", "마일리지 쿠폰 " + String.format("%,d", won) + "원 할인"); }
     /** v41 원장 환불 확정 훅(같은 트랜잭션). ratio = 환불액 / 실납부액 */
-    public JsonNode onRefund(String tid, String receiptId, double ratio) { if (pol(tid) == null) return null;
+    @Override public JsonNode onRefund(String tid, String receiptId, double ratio) { if (pol(tid) == null) return null;
         return one("select mil_on_refund($1,$2,$3::numeric,now(),coalesce((select (grant_cfg->>'restoreRound')::int from mil_policy where tenant_id = $1), 10)) r", tid, receiptId, numStr(ratio)); }
 
     // ── 자동 정리(Node sweep.js, 1시간) ──────────────────────

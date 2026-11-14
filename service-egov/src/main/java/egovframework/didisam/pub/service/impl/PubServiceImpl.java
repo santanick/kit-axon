@@ -87,14 +87,14 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             }
             case "POST coupon": { /* v38 A-17: 이 코드의 결과만(코드 목록은 주지 않음) — Node와 같음 */
                 JsonNode b = DdWeb.readBody(body, 1024); rl.limit("lcp:" + tid + ":" + sid, 20, 600_000L);
-                String code = cut(sOr(get(b, "code")), 40), cls = cut(sOr(get(b, "cls")), 60); Map<String, Object> R = couponCheck(tid, code, cls);
+                String code = cut(sOr(get(b, "code")), 40), cls = cut(sOr(get(b, "cls")), 60); Map<String, Object> R = couponCheck(tid, code, cls, sid);
                 Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", R.get("ok")); if (Boolean.TRUE.equals(R.get("ok"))) { o.put("code", R.get("code")); o.put("off", R.get("off")); o.put("final", R.get("final")); o.put("label", R.get("label")); } else o.put("msg", R.get("msg")); return o;
             }
             case "GET me": return tx.inTenant(tid, () -> learnerOut(tid, sid));
             case "PUT progress": {
                 JsonNode b = DdWeb.readBody(body, LP_MAX); ObjectNode lp = cleanLP(get(b, "lp")); String j = stringify(lp);
                 if (j.length() > LP_MAX) throw processException("dd.413.too_large.lp");
-                tx.inTenant(tid, () -> { mapper.upsertProgress(tid, sid, j, j.length()); return null; });
+                tx.inTenant(tid, () -> { JsonNode prev = mile.prevLp(tid, sid); mapper.upsertProgress(tid, sid, j, j.length()); mile.emitDiff(tid, sid, prev, lp); /* v42 새로 생긴 완료 · 목표 달성만(신뢰 C) */ return null; });
                 return new LinkedHashMap<>(Map.of("ok", true));
             }
             case "POST tutor": return tutor(req, body, tid, sid, null);
@@ -155,7 +155,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         JsonNode d0 = get(b, "data"); JsonNode data = pii.redactDeep(d0 != null && d0.isObject() ? d0 : F.objectNode());
         /* v38 A-17: 쿠폰을 쓴 결제는 서버가 쿠폰 · 금액을 다시 계산해 맞을 때만 받는다(Node eventsRoute와 같음) */
         if ("pay".equals(type) && data.isObject() && !sOr(get(data, "cpn")).isEmpty()) { String it = sOr(get(data, "itemType")); if (!it.isEmpty() && !"class".equals(it)) throw new DdException(400, "쿠폰은 강좌 결제에만 쓸 수 있습니다.", "coupon");
-            Map<String, Object> R = couponCheck(tid, sOr(get(data, "cpn")), sOr(get(data, "ref"))); if (!Boolean.TRUE.equals(R.get("ok"))) throw new DdException(400, String.valueOf(R.get("msg")), "coupon");
+            Map<String, Object> R = couponCheck(tid, sOr(get(data, "cpn")), sOr(get(data, "ref")), s == null ? null : (String) s.get("sid")); if (!Boolean.TRUE.equals(R.get("ok"))) throw new DdException(400, String.valueOf(R.get("msg")), "coupon");
             JsonNode am = get(data, "amount"); double a = am == null ? Double.NaN : am.isNumber() ? am.asDouble() : parseD(am.asText(""));
             if (Double.isNaN(a) || Math.floor(a + 0.5) != ((Number) R.get("final")).longValue()) throw new DdException(400, "결제 금액이 쿠폰 할인 금액과 맞지 않습니다. 쿠폰을 다시 적용해 주세요.", "coupon_amount");
             ObjectNode dn = (ObjectNode) data; dn.put("cpn", (String) R.get("code")); dn.put("cpnOff", ((Number) R.get("off")).longValue()); dn.put("cpnOk", true); }
@@ -175,13 +175,20 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     }
     private static double parseD(String s) { try { return Double.parseDouble(s); } catch (NumberFormatException e) { return Double.NaN; } }
     /** v38 A-17 쿠폰 확인: 쿠폰 · 게시본 강좌 가격 · 사용 횟수 */
-    private Map<String, Object> couponCheck(String tid, String code, String cls) throws Exception {
+    private Map<String, Object> couponCheck(String tid, String code, String cls, String psid) throws Exception {
         Map<String, Object> r = tx.inTenant(tid, () -> mapper.selectCouponCtx(tid)); Map<String, Object> no = new LinkedHashMap<>(); no.put("ok", false);
         if (r == null) { no.put("msg", "없는 기관입니다."); return no; } if ("false".equals(String.valueOf(r.get("pay")))) { no.put("msg", "이 기관은 결제를 받지 않아요."); return no; }
         JsonNode cl = r.get("cl") == null ? null : parse((String) r.get("cl")); JsonNode x = null; if (cl != null && cl.isArray()) for (JsonNode k : cl) if (k != null && cls.equals(sOr(get(k, "id")))) { x = k; break; }
         if (x == null) { no.put("msg", "강좌를 찾지 못했어요."); return no; }
         String k = DdCoupon.norm(code); int used = tx.inTenant(tid, () -> mapper.countCouponUse(tid, k)); String day = DdCoupon.kstDay();
-        return DdCoupon.calc(r.get("cp") == null ? null : parse((String) r.get("cp")), code, cls, DdCoupon.priceOf(x, day), used, day);
+        JsonNode cp = r.get("cp") == null ? null : parse((String) r.get("cp")); Map<String, Object> R = DdCoupon.calc(cp, code, cls, DdCoupon.priceOf(x, day), used, day);
+        /* v42 마일리지 개인 쿠폰(1회용 · 본인 sid만): 기관 쿠폰에 없는 코드일 때만 확인(Node coupon.check personal) */
+        boolean orgHas = false; if (cp != null && cp.isArray()) for (JsonNode c : cp) if (c != null && k.equals(DdCoupon.norm(sOr(get(c, "code"))))) orgHas = true;
+        if (!Boolean.TRUE.equals(R.get("ok")) && psid != null && !k.isEmpty() && !orgHas) { ObjectNode P = tx.inTenant(tid, () -> mile.personalCoupon(tid, psid, k, cls)); if (P != null) {
+            if (!P.path("ok").asBoolean()) { Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", false); o.put("msg", P.path("msg").asText()); if (P.has("code")) o.put("code", P.get("code").asText()); return o; }
+            long pr = DdCoupon.priceOf(x, day); if (pr == 0) { no.put("msg", "결제 금액이 없는 강좌에는 쓸 수 없어요."); return no; } long off = Math.min(pr, Math.max(0, Math.round(P.path("off").asDouble())));
+            Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); o.put("code", k); o.put("off", off); o.put("final", pr - off); o.put("label", P.path("label").asText()); o.put("personal", true); return o; } }
+        return R;
     }
     /** v33 대학 첫 로그인 동의(학번 · 접근코드 계정): 동의 여부 · 일시만 learners.consent */
     private void consentFlag(Map<String, Object> me, String tid, String sid, Map<String, Object> d) {

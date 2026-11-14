@@ -51,7 +51,7 @@ public class MileVectors {
     static void insRule(String tid, JsonNode r0) throws Exception { JsonNode r = ruleDef(r0);
         exec("insert into mil_rule (tenant_id, id, ver, trigger, nature, cond, score, caps, once, group_key, trust_min, approval, approve_over, expiry, starts_on, ends_on, active) values (?,?,?,?,?,?::jsonb,?::jsonb,?::jsonb,?,?,?,?,?,?::jsonb,?::date,?::date,?)",
             tid, s(r.get("id")), r.get("ver").asInt(), s(r.get("trigger")), s(r.get("nature")), J(r.get("cond")), J(r.get("score")), J(r.get("caps")), s(r.get("once")), s(r.get("groupKey")), s(r.get("trustMin")), s(r.get("approval")), num(r.get("approveOver")), J(r.get("expiry")), s(r.get("startsOn")), s(r.get("endsOn")), r.get("active").asBoolean()); }
-    static final Map<String, String> POLCOL = Map.of("isOn", "is_on", "expiry", "expiry", "notice", "notice", "budget", "budget", "dailyCapTotal", "daily_cap_total", "streak", "streak", "cashLock", "cash_lock", "sunset", "sunset", "penalty", "penalty", "grantCfg", "grant_cfg");
+    static final Map<String, String> POLCOL = Map.of("on", "is_on", "expiry", "expiry", "notice", "notice", "budget", "budget", "dailyCapTotal", "daily_cap_total", "streak", "streak", "cashLock", "cash_lock", "sunset", "sunset", "penalty", "penalty", "grantCfg", "grant_cfg");
     static final Set<String> POLJSON = Set.of("expiry", "notice", "budget", "streak", "cashLock", "sunset", "penalty", "grantCfg");
 
     static String setup(JsonNode base, JsonNode v) throws Exception {
@@ -60,7 +60,7 @@ public class MileVectors {
         exec("insert into tenants (id, name, type) values (?, ?, ?)", tid, "mv " + v.get("id").asText(), "academy");
         inTenant(tid, () -> {
             exec("insert into mil_policy (tenant_id, is_on, expiry, notice, budget, daily_cap_total, streak, cash_lock, sunset, penalty, grant_cfg) values (?,?,coalesce(?::jsonb,'{\"mode\":\"months\",\"months\":12}'),coalesce(?::jsonb,'{\"monthsBefore\":6,\"daysBefore\":[30,3]}'),coalesce(?::jsonb,'{}'),?,coalesce(?::jsonb,'{}'),coalesce(?::jsonb,'{\"needTrust\":\"B\",\"achievementOnly\":true}'),?::jsonb,coalesce(?::jsonb,'{\"on\":false}'),coalesce(?::jsonb,'{\"approveOver\":1000}'))",
-                tid, pol.path("isOn").asBoolean(false), J(pol.get("expiry")), J(pol.get("notice")), J(pol.get("budget")), num(pol.get("dailyCapTotal")), J(pol.get("streak")), J(pol.get("cashLock")), J(pol.get("sunset")), J(pol.get("penalty")), J(pol.get("grantCfg")));
+                tid, pol.path("on").asBoolean(false), J(pol.get("expiry")), J(pol.get("notice")), J(pol.get("budget")), num(pol.get("dailyCapTotal")), J(pol.get("streak")), J(pol.get("cashLock")), J(pol.get("sunset")), J(pol.get("penalty")), J(pol.get("grantCfg")));
             for (JsonNode r : g.path("rules")) insRule(tid, r);
             for (JsonNode x : g.path("groups")) exec("insert into mil_group (tenant_id, key, caps) values (?,?,?::jsonb)", tid, s(x.get("key")), x.has("caps") ? x.get("caps").toString() : "{}");
             for (JsonNode r0 : g.path("rewards")) { JsonNode r = rewDef(r0);
@@ -88,6 +88,7 @@ public class MileVectors {
                 case "grant": return one("select mil_grant(?,?,?,?,?,?,?,?,?,?::timestamptz,?)::text", tid, s(a.get("staff")), a.path("owner").asBoolean(false), a.path("self").asBoolean(false), sid, a.has("unit") ? s(a.get("unit")) : "lu_root", num(a.get("points")) == null ? null : ((Number) num(a.get("points"))).intValue(), s(a.get("reason")), s(a.get("idem")), s(a.get("at")), a.path("penalty").asBoolean(false));
                 case "redeem": return one("select mil_redeem_req(?,?,?,?,?,?::timestamptz)::text", tid, sid, s(a.get("reward")), num(a.get("points")) == null ? null : ((Number) num(a.get("points"))).intValue(), s(a.get("idem")), s(a.get("at")));
                 case "decide": return one("select mil_redeem_decide(?,?,?,'staff',?,?::timestamptz)::text", tid, s(a.get("id")), s(a.get("decision")), s(a.get("reason")), s(a.get("at")));
+                case "adjust": return one("select mil_redeem_adjust(?,?,?,'staff',?,?::timestamptz)::text", tid, s(a.get("id")), num(a.get("points")) == null ? null : ((Number) num(a.get("points"))).intValue(), s(a.get("reason")), s(a.get("at")));
                 case "reclaim": return one("select mil_redeem_reclaim(?,?,?,'staff',?::timestamptz)::text", tid, s(a.get("id")), s(a.get("reason")), s(a.get("at")));
                 case "addLine": return one("select mil_add_line(?,?,?,?::timestamptz)::text", tid, s(a.get("bill")), s(a.get("redeem")), s(a.get("at")));
                 case "alloc": exec("insert into led_alloc (tenant_id, receipt_id, charge_id, amount) values (?,?,?,?)", tid, s(a.get("receipt")), s(a.get("charge")), num(a.get("amount"))); return M.createObjectNode().put("ok", true);
@@ -119,6 +120,6 @@ public class MileVectors {
         C = DriverManager.getConnection(a.length > 1 ? a[1] : "jdbc:postgresql://127.0.0.1:5544/m42j", a.length > 2 ? a[2] : "didisam", a.length > 3 ? a[3] : "");
         int n = 0; for (JsonNode v : V.get("vectors")) { n++; try { run(V.get("base"), v); } catch (Exception e) { bad.add(v.get("id").asText() + " 예외 " + e.getMessage()); } }
         bad.forEach(x -> System.out.println("✗ " + x));
-        System.out.println("mileage 기준값(Java JDBC · SQL 함수): 벡터 " + n + " · 통과 " + ok + " · 어긋남 " + bad.size()); if (!bad.isEmpty()) System.exit(1);
+        System.out.println("mileage vectors (Java JDBC, SQL fn) — 기준값(Java JDBC · SQL 함수): 벡터 " + n + " · 통과 " + ok + " · 어긋남 " + bad.size()); if (!bad.isEmpty()) System.exit(1);
     }
 }
