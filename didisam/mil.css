@@ -1,0 +1,156 @@
+/* v42 학습 마일리지 — 스튜디오 「마일리지」(mil.js). 시안 kit.css의 mx-* 를 .mil 범위로 옮김.
+   주 버튼 바탕 #00862D는 마일리지 화면 한정(대표님 결정, 공통 dds.css는 바꾸지 않음). #00C53B는 면 채움 전용.
+   상태색: 황색 = 권장 벗어남 · 대기 / 파랑 = 정보 / 슬레이트 = 제품 고정 잠금 / 빨강 = 오류 · 취소 줄 / 보라 = AI. 글자 12px+, 버튼 44px+. */
+.mil{--g:#00C53B;--g-act:#00862D;--gd:#007200;--gl:#E7F8E8;--gm:#9EE3A3;--wait:#8A5A00;--waitbg:#FFF4D6;--waitln:#F2C14E;--bad:#B3261E;--badbg:#FDECEA;--badln:#F0A39C;--info:#1F5FBF;--infobg:#EAF1FC;--infoln:#A9C4EE;--lock:#3D4A5C;--lockbg:#EEF1F5;--lockln:#B9C2CF;--vio:#6B3FA0;--viobg:#F2ECFA;--track:#ECEEF1;--l2:#EAEBEB;
+  display:flex;flex-direction:column;gap:16px;min-width:0;color:var(--ink,#212121);font-size:14px}
+.mil *{box-sizing:border-box}
+.mil h2{font-size:22px;margin:4px 0 0;line-height:1.3}.mil h3{font-size:18px;margin:4px 0 0}.mil h4{font-size:15px;margin:0}
+.mil p{margin:0;line-height:1.55}.mil hr{border:0;border-top:1px solid var(--l2);margin:4px 0;width:100%}
+.mil .mut{color:#5F5F5F}.mil .sm{font-size:12.5px}.mil small{display:block;font-size:12px;color:#5F5F5F;margin-top:2px;font-weight:400}
+.mil .f1{flex:1 1 0;min-width:0}.mil .ar{justify-content:flex-end}.mil .nw{white-space:nowrap}.mil .num{font-variant-numeric:tabular-nums}.mil .mt{margin-top:10px}
+.mil .gtx{color:var(--gd)}.mil .btx{color:var(--bad)}.mil .wtx{color:var(--wait)}
+.mil .eyebrow{font-size:12px;font-weight:700;color:var(--gd);letter-spacing:.02em}
+.mil .btn,#modal .mil .btn{min-height:44px;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.mil .btn.sm{min-height:44px;padding:6px 12px;font-size:13px}
+.mil .btn.pri,#modal .mf .btn.pri{background:var(--g-act,#00862D);color:#fff;box-shadow:none}
+.mil .btn[disabled]{opacity:.5;cursor:not-allowed}
+.mil .btn.wide{width:100%;margin-top:10px}
+.mil .card{min-width:0}
+.mil-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.mil-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}.mil-row.wrap{flex-wrap:wrap}.mil-row.sb{justify-content:space-between}
+.mil-g2,.mil-g3,.mil-g4,.mil-g21,.mil-g31{display:grid;gap:16px;min-width:0}
+.mil-g2{grid-template-columns:repeat(2,minmax(0,1fr))}.mil-g3{grid-template-columns:repeat(3,minmax(0,1fr))}.mil-g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.mil-g21{grid-template-columns:minmax(0,2fr) minmax(0,1fr);align-items:start}.mil-g31{grid-template-columns:minmax(0,1fr) 406px;align-items:start}
+.mil-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.mil-acts>.mut.f1{flex:1 1 260px}
+/* 상단 탭 */
+.mil-top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.mil-tabs{display:flex;gap:2px;background:var(--soft,#F2F2F2);border-radius:8px;padding:4px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
+.mil-tabs button{min-height:44px;padding:6px 14px;border:0;border-radius:6px;background:transparent;font:inherit;font-weight:600;color:var(--ink,#212121);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.mil-tabs button.on{background:#fff;box-shadow:0 1px 3px #0000001F;color:var(--gd)}
+.mil-tabs em{font-style:normal;font-size:12px;min-width:20px;height:20px;border-radius:10px;background:var(--waitbg);color:var(--wait);display:inline-grid;place-items:center;padding:0 5px}
+.mil-st{display:flex;gap:8px}
+.mil .pill{display:inline-flex;align-items:center;gap:4px;min-height:24px;padding:0 8px;border-radius:4px;font-size:12px;font-weight:600;white-space:nowrap}
+.mil .p-ok{background:var(--gl);color:var(--gd)}.mil .p-wait{background:var(--waitbg);color:var(--wait)}.mil .p-off{background:#F0F0F0;color:#4C4C4C}.mil .p-info{background:var(--infobg);color:var(--info)}.mil .p-lock{background:var(--lockbg);color:var(--lock)}.mil .p-bad{background:var(--badbg);color:var(--bad)}
+.mil-chip{min-height:44px;padding:6px 14px;border-radius:8px;border:1px solid var(--line,#D9D9D9);background:#fff;font:inherit;font-weight:600;font-size:13px;cursor:pointer;color:var(--ink,#212121);display:inline-flex;align-items:center;gap:6px}
+.mil-chip.on{background:var(--ink,#212121);border-color:var(--ink,#212121);color:#fff}
+.mil-chip input{width:16px;height:16px;accent-color:var(--g-act)}
+.mil-lnk{border:0;background:none;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;min-height:24px}.mil-lnk:hover b,.mil-lnk:focus-visible b{text-decoration:underline}
+/* 마법사 */
+.mil-hero{display:flex;gap:24px;align-items:center;flex-wrap:wrap;padding:28px}
+.mil-hero>.ic{color:var(--lock)}
+.mil-mk{width:72px;height:72px;border-radius:20px;background:var(--gl);color:var(--gd);display:grid;place-items:center;flex:none}
+.mil-facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px;width:320px;max-width:100%}
+.mil-facts li,.mil-x li{display:flex;gap:8px;align-items:flex-start}.mil-facts .ic{color:var(--gd)}
+.mil-x{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px}.mil-x.ok .ic{color:var(--gd)}
+.mil-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.mil-steps li{display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:8px;background:#fff;border:1px solid var(--l2);font-size:13px;font-weight:600;min-width:0}
+.mil-steps li .n{width:26px;height:26px;border-radius:13px;display:grid;place-items:center;flex:none;background:#F0F0F0;color:#4C4C4C;font-size:12px;font-weight:700}
+.mil-steps li.on{border-color:var(--gd);box-shadow:inset 0 0 0 1px var(--gd)}.mil-steps li.on .n{background:var(--g-act);color:#fff}
+.mil-steps li.done .n{background:var(--gl);color:var(--gd)}
+.mil-steps.sm li{padding:8px}
+.mil-opt{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:14px 16px;border-radius:8px;border:1px solid var(--line,#D9D9D9);background:#fff;font:inherit;color:inherit;cursor:pointer;width:100%;min-height:44px}
+.mil-opt.on{border-color:var(--gd);box-shadow:inset 0 0 0 1px var(--gd);background:#FAFFFA}
+.mil-opt.as-card{flex-direction:column;cursor:default}
+.mil-optl{display:flex;gap:12px;align-items:flex-start;width:100%;cursor:pointer}
+.mil-opt .rd{width:22px;height:22px;border-radius:11px;border:2px solid var(--line,#D9D9D9);display:grid;place-items:center;flex:none;color:#fff}
+.mil-opt.on .rd{background:var(--g-act);border-color:var(--g-act)}
+.mil-opt input.bx,.mil-opt input[type=radio]{width:22px;height:22px;flex:none;accent-color:var(--g-act);margin:0}
+.mil-opt .t{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-wrap:wrap}
+.mil-opt .t .pill{margin-left:auto}
+.mil-opt .d{display:block;font-size:13px;color:#4C4C4C;margin-top:4px}
+.mil-fld{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;min-width:0}
+.mil-fld input,.mil-fld select,.mil-fld textarea,.mil select,.mil-kv input,.mil-lv input{min-height:44px;padding:8px 12px;border:1px solid var(--line,#D9D9D9);border-radius:8px;font:inherit;font-weight:500;background:#fff;color:var(--ink,#212121);max-width:100%;min-width:0}
+.mil-fld textarea{min-height:72px;resize:vertical}
+.mil-inp{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#D9D9D9);border-radius:8px;background:#fff;padding:0 10px 0 0;min-height:44px;max-width:100%}
+.mil-inp input{border:0;min-height:42px;width:100%;min-width:60px;padding:8px 12px;font:inherit;font-weight:700;background:transparent}
+.mil-inp em{font-style:normal;font-size:13px;color:#5F5F5F;white-space:nowrap}
+.mil-inp.warn{border-color:var(--waitln);background:var(--waitbg)}
+.mil-num{width:96px;min-height:44px;padding:6px 10px;border:1px solid var(--line,#D9D9D9);border-radius:8px;font:inherit;font-weight:700}
+.mil-ck,.mil-check{display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:600;min-height:44px;padding:10px 0;cursor:pointer}
+.mil-ck input,.mil-check input{width:22px;height:22px;flex:none;accent-color:var(--g-act);margin:0}
+.mil-phone{width:390px;max-width:100%;border-radius:28px;border:8px solid #1E1E1E;background:#F5F6F8;overflow:hidden;display:flex;flex-direction:column}
+.mil-phone .ph-top{padding:16px;background:#fff;text-align:center;font-size:15px}
+.mil-phone .ph-b{padding:12px;display:flex;flex-direction:column;gap:10px}
+.mil-phone .ph-c{background:#fff;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.mil-phone .ph-c>b{display:flex;gap:8px;align-items:center;font-size:14px}
+.mil-phone ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}.mil-phone li{display:flex;gap:8px;align-items:flex-start}
+.mil-phone .ph-cta{padding:12px;background:#fff}.mil-phone .ph-cta .btn{width:100%;pointer-events:none}
+.mil-big{font-size:32px;font-weight:800;letter-spacing:-.02em}
+/* 공용 조각 */
+.mil-rec{display:inline-flex;align-items:center;gap:4px;min-height:24px;padding:0 8px;border-radius:12px;border:1px solid var(--line,#D9D9D9);background:#fff;font-size:12px;font-weight:600;color:#4C4C4C;white-space:nowrap;margin-top:4px}
+.mil-rec.same{border-color:var(--gm);color:var(--gd);background:var(--gl)}
+.mil-rec.off{border-color:var(--waitln);background:var(--waitbg);color:var(--wait)}
+.mil-why{font-size:12px;color:var(--wait);display:flex;gap:4px;align-items:flex-start;margin-top:4px;white-space:normal}
+.mil-lock{display:flex;gap:12px;align-items:flex-start;border-radius:8px;padding:12px 14px;background:var(--lockbg);border:1px solid var(--lockln);color:var(--lock)}
+.mil-lock .li{width:32px;height:32px;border-radius:8px;background:var(--lock);color:#fff;display:grid;place-items:center;flex:none}
+.mil-lock b{display:block;font-size:14px;color:var(--ink,#212121)}.mil-lock p{margin:2px 0 0;font-size:13px;color:var(--lock)}
+.mil-lock .fx{display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;font-weight:700}
+.mil-lock.soft{background:#fff;border:1px dashed var(--lockln)}.mil-lock.soft .li{background:#fff;color:var(--lock);box-shadow:inset 0 0 0 1.5px var(--lock)}
+.mil-locktag{display:inline-flex;align-items:center;gap:4px;min-height:24px;padding:0 8px;border-radius:4px;background:var(--lock);color:#fff;font-size:12px;font-weight:700;white-space:nowrap}
+.mil-note{display:flex;gap:10px;align-items:flex-start;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.55;border:1px solid}
+.mil-note>.ic{flex:none;margin-top:1px}.mil-note>div{min-width:0;flex:1}
+.mil-note b{display:block;font-size:14px;color:var(--ink,#212121);margin-bottom:2px}
+.mil-note.info{background:var(--infobg);border-color:var(--infoln);color:#173F7D}.mil-note.info>.ic{color:var(--info)}
+.mil-note.warn{background:var(--waitbg);border-color:var(--waitln);color:#5C3D00}.mil-note.warn>.ic{color:var(--wait)}
+.mil-note.err{background:var(--badbg);border-color:var(--badln);color:#7A1A14}.mil-note.err>.ic{color:var(--bad)}
+.mil-note.ok{background:var(--gl);border-color:var(--gm);color:#0B4D0B}.mil-note.ok>.ic{color:var(--gd)}
+.mil-note .src{display:block;margin-top:4px;font-size:12px}
+.mil-todo{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px}.mil-todo li{line-height:1.6}
+.mil-ai{display:inline-flex;align-items:center;gap:4px;min-height:24px;padding:0 8px;border-radius:12px;background:var(--viobg);color:var(--vio);font-size:12px;font-weight:700;white-space:nowrap}
+.mil-tr{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:#4C4C4C}
+.mil-tr i{font-style:normal;width:18px;height:18px;border-radius:4px;border:1px solid var(--line,#D9D9D9);display:grid;place-items:center;font-size:12px;font-weight:700;line-height:1}
+.mil-kpi{background:#fff;border:1px solid var(--l2);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.mil-kpi .k{font-size:13px;font-weight:600;color:#4C4C4C;display:flex;align-items:center;gap:6px}
+.mil-kpi .v{font-size:24px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.mil-kpi .s{font-size:12px;color:#4C4C4C}
+.mil-ch{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}.mil-ch b{font-size:16px}.mil-ch .r{margin-left:auto}.mil-ch>.ic{color:var(--gd)}
+.mil-col>.mil-ch{margin-bottom:0}
+.mil-bar{position:relative;height:10px;border-radius:5px;background:var(--track)}
+.mil-bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--g);width:calc(var(--p)*1%)}
+.mil-bar>i.pend{background:repeating-linear-gradient(135deg,var(--gm) 0 4px,#fff 4px 7px);border-radius:0 5px 5px 0}
+.mil-bar .tk{position:absolute;top:-3px;width:2px;height:16px;background:#fff;box-shadow:0 0 0 1px #9E9E9E;border-radius:1px}
+.mil-bar.thin{height:6px}
+.mil-barlab{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#4C4C4C;margin-top:6px}
+.mil-hb{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) minmax(0,150px);gap:12px;align-items:center;padding:8px 0;font-size:13px}
+.mil-hb .l{font-weight:600;overflow-wrap:anywhere}.mil-hb .v{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.mil-hb.warn .mil-bar>i{background:var(--waitln)}.mil-hb.warn .v small{color:var(--wait)}
+.mil-empty{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:24px;color:#4C4C4C}
+.mil-airow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+/* 표 · 패널 */
+.mil .tw{overflow-x:auto;max-width:100%}
+.mil-tbl,.mil .tw table{width:100%;border-collapse:collapse;font-size:13px}
+.mil-tbl th,.mil-tbl td{padding:10px 8px;border-bottom:1px solid var(--l2);text-align:left;vertical-align:top}
+.mil-tbl th{font-size:12px;color:#4C4C4C;font-weight:700;white-space:nowrap}
+.mil-tbl tr.sel td{background:#FAFFFA;box-shadow:inset 0 -1px 0 var(--gm)}
+.mil-tbl tr.mil-lockrow td{background:#FAFBFC}
+.mil-split{display:flex;gap:20px;align-items:flex-start;min-width:0}
+.mil-panel{width:380px;flex:none;border:2px solid var(--gd);display:flex;flex-direction:column;gap:2px}
+.mil-panel .ph{padding-bottom:12px;border-bottom:1px solid var(--l2)}.mil-panel .t{font-size:18px}
+.mil-kv{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-bottom:1px solid var(--l2);min-width:0}
+.mil-kv:last-child{border-bottom:0}.mil-kv .k{font-size:12px;font-weight:700;color:#4C4C4C}
+.mil-sim{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.mil-sim>div{background:#FAFAFA;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.mil-sim .k{font-size:12px;color:#4C4C4C;font-weight:600}.mil-sim .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.mil-sim .s{font-size:12px;color:#4C4C4C}
+.mil-srch{display:flex;min-width:180px}.mil-srch input{width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--line,#D9D9D9);border-radius:8px;font:inherit}
+.mil .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* 설정 */
+.mil-set{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1fr);gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--l2)}
+.mil-set:last-of-type{border-bottom:0}.mil-set .k{font-weight:700;font-size:13px}.mil-set .v{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}
+.mil-lv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.mil-lv>div{display:flex;flex-direction:column;gap:6px;background:#FAFAFA;border-radius:8px;padding:10px;min-width:0}
+.mil-lv input{width:100%}
+.mil-ol{margin:8px 0 0;padding-left:20px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.mil-tblw{min-width:0}
+/* 순위 · 감점 시트 */
+.mil-sheet{gap:14px}
+.mil-ref{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--l2);font-size:13px}
+.mil-ref .no{width:24px;height:24px;border-radius:12px;background:var(--lockbg);color:var(--lock);display:grid;place-items:center;font-weight:700;flex:none}
+.mil-ref .s{display:block;font-size:12px;color:#5F5F5F;margin-top:2px}
+.mil-alt{display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:8px;border:1px solid var(--l2);font-size:13px;min-width:0}.mil-alt span{font-size:12px;color:#5F5F5F}.mil-alt>.ic{color:var(--gd)}
+.mil-m{gap:12px}
+#modal .modal .mil-m{font-size:14px}
+/* 휴대폰 · 좁은 화면 */
+@media (max-width:1100px){.mil-g31{grid-template-columns:minmax(0,1fr)}.mil-split{flex-direction:column}.mil-panel{width:100%}.mil-g4{grid-template-columns:repeat(2,minmax(0,1fr))}.mil-sim{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.mil-g21,.mil-g2,.mil-g3{grid-template-columns:minmax(0,1fr)}.mil-steps{grid-template-columns:repeat(5,minmax(0,1fr))}.mil-steps li div{display:none}.mil-steps li{justify-content:center}.mil-steps li.on div{display:block}.mil-steps li.on{grid-column:span 1}}
+@media (max-width:600px){.mil-g4,.mil-sim,.mil-lv{grid-template-columns:minmax(0,1fr)}.mil-hero{padding:18px;gap:14px}.mil-hb{grid-template-columns:minmax(0,1fr);gap:4px}.mil-hb .v{text-align:left}.mil-set{grid-template-columns:minmax(0,1fr)}
+  .mil-steps li.on div{display:none}.mil-tabs{width:100%}.mil-tabs button{flex:1 1 auto;justify-content:center}.mil-acts .btn{flex:1 1 auto}.mil-phone{border-width:4px}.mil h2{font-size:19px}}
