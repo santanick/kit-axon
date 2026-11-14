@@ -18,7 +18,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
   /* 호스트: mil.js가 있으면 그 메뉴를, 없으면 최소 호스트 */
   await p.evaluate(() => { localStorage.setItem('didisam.emptyStart', '0'); });
   await p.evaluate(() => {
-    window.milOpen = (org, ed) => { const eb = document.querySelector('#suEmpty'); if (eb) eb.checked = false; createOrg(org, '점검 기관', ed); S.me.role = 'owner';
+    window.milOpen = (org, ed) => { const eb = document.querySelector('#suEmpty'); if (eb) eb.checked = false; createOrg(org, '점검 기관', ed); S.me.role = 'owner'; if (S.mileage && S.mileage.policy) { S.mileage.policy.on = true; S.mileage.policy.ver = S.mileage.policy.ver || 1; } /* 통합(QA v42): mil.js가 있으면 제도 끔 = 켜기 마법사 화면이므로 보상 탭 점검은 켠 상태에서 */
       if (!VIEWS.mileage) { MENU.mileage = { label: '마일리지', ws: 'ops' }; VIEWS.mileage = () => { const T = window.MIL_TABS.slice().sort((a, b) => (a.order || 0) - (b.order || 0)); const cur = T.find(t => t.id === UI.mil) || T[0]; return `<div class="seg2" role="tablist">${T.map(t => { const n = t.badge ? t.badge() : 0; return `<button role="tab" data-act="tab" data-key="mil" data-v="${t.id}" aria-selected="${t === cur}">${t.label}${n ? ' ' + n : ''}</button>`; }).join('')}</div>${cur.render()}`; }; }
       if (!S.nav.ws.includes('ops')) S.nav.ws.push('ops'); S.nav.tabs.ops = S.nav.tabs.ops || []; if (!S.nav.tabs.ops.some(x => x.id === 'mileage')) S.nav.tabs.ops.push({ id: 'mileage', on: true }); else S.nav.tabs.ops.find(x => x.id === 'mileage').on = true;
       go('mileage'); };
@@ -135,7 +135,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
 
   /* ⑧ 운영 모드 /api/mileage/* */
   const LVR = await p.evaluate(async () => { milOpen('k12'); const calls = []; const wait = () => new Promise(k => setTimeout(k, 120));
-    const R = { '/api/mileage/config': { policy: { shop: { on: false } }, rewards: [{ id: 'mrw_live1', kind: 'tuition', title: '운영 학원비 차감', cost: { wonPerP: 1 }, minUse: 1000, step: 100, maxUse: { billPct: 30 }, approval: 'guardian', active: true }] },
+    const R = { '/api/mileage/config': { policy: { on: true, ver: 1, shop: { on: false } }, rules: [], rewards: [{ id: 'mrw_live1', kind: 'tuition', title: '운영 학원비 차감', cost: { wonPerP: 1 }, minUse: 1000, step: 100, maxUse: { billPct: 30 }, approval: 'guardian', active: true }] },
       '/api/mileage/approvals': { items: [{ id: 'mrd_live1', sid: '9001', rewardId: 'mrw_live1', points: 2000, won: 2000, guardian: 'ok', at: '2026-11-14 09:00', bill: { id: 'b_live', lines: [{ title: '정규반 교습비', amount: 300000 }] }, checks: [] }, { id: 'mrd_live2', sid: '9002', rewardId: 'mrw_live1', points: 500, won: 500, guardian: 'wait', at: '2026-11-14 09:10', checks: [{ code: 'guardian', block: true, text: '보호자 확인 전' }] }] },
       '/api/mileage/redeems': { redeems: [] }, '/api/mileage/flags': { flags: [{ id: 'mfl_l1', kind: 'velocity', title: '몰아 쌓기(속도)', evidence: ['1시간 9건'], heldPoints: 700, status: 'open', at: '2026-11-13' }] } };
     window.LIVE = { tenant: 't1', cfg: {} }; window.api = async (m, u, b) => { calls.push(m + ' ' + u + (b ? ' ' + JSON.stringify(b) : '')); const k = u.split('?')[0]; if (R[k]) return R[k]; if (m === 'POST') return { ok: true, warnings: [] }; const e = new Error('없음'); e.status = 404; e.code = 'not_found'; throw e; };

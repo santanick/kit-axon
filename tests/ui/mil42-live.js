@@ -40,7 +40,7 @@ const wait = ms => new Promise(k => setTimeout(k, ms));
     const me = await (await c.request.get(`${B}/api/pub/${tid}/me`, { headers: H })).json(); const lp = await c.newPage(); lp.on('pageerror', e => errs.push(nick + ' ' + e.message)); await lp.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
     lp.on('dialog', d => d.accept()); return { c, lp, st: sg.status(), sid: String(me.sid || (me.me || {}).sid || '') }; };
   const L = async (who, m, u, b) => { const r = await who.c.request.fetch(`${B}/api/pub/${tid}/${u}`, { method: m, headers: H, data: b }); let j = {}; try { j = await r.json(); } catch (e) { } return { st: r.status(), j }; };
-  const lopen = async (who, h) => { await who.lp.goto(`${B}/learner.html?t=${tid}&app=1${h || '#acct'}`, { waitUntil: 'load' }); await wait(1500); };
+  const lopen = async (who, h) => { await who.lp.goto('about:blank'); await who.lp.goto(`${B}/learner.html?t=${tid}&app=1${h || '#acct'}`, { waitUntil: 'load' }); await wait(1500); };
 
   /* ⓪ 기관 문서: 정규반 · 국비 과정 · 원장 켜기 · 홈페이지 게시 */
   const L0 = await learner(ADM, '원장본인'); /* 운영자와 같은 이메일로 가입한 학습자(본인 지급 금지 확인용) */
@@ -59,6 +59,7 @@ const wait = ms => new Promise(k => setTimeout(k, ms));
   await p.click('[data-act="mil-w-next"][data-v="2"]'); await p.waitForFunction(() => UI.milW && UI.milW.step === 2 && UI.milW.draft, null, { timeout: 10000 }).catch(() => { });
   const W2 = await p.evaluate(() => ({ hash: (UI.milW.draft || {}).hash, rules: ((UI.milW.draft || {}).rules || []).length, sim: !!UI.milSimLive, big: (document.querySelector('.mil-big') || {}).textContent }));
   ok(/^[0-9a-f]{64}$/.test(W2.hash || '') && W2.rules > 0 && W2.sim, '마법사 2단계: 서버 초안(draftHash 64자) · 서버 모의 계산 ' + JSON.stringify(W2));
+  if (!(await p.$('[data-act="mil-w-next"][data-v="3"]'))) { console.error('DIAG', errs, (await p.evaluate(() => document.querySelector('#main').innerText)).slice(0, 600)); }
   await p.click('[data-act="mil-w-next"][data-v="3"]'); await p.check('[data-chg="mil-w-ck"][data-v="a"]'); await p.check('[data-chg="mil-w-ck"][data-v="b"]'); await p.click('[data-act="mil-enable"]');
   await p.waitForFunction(() => document.querySelector('.mil-tabs'), null, { timeout: 15000 }).catch(() => { });
   const C1 = (await A('GET', '/api/mileage/config')).j; const LG1 = (await A('GET', '/api/mileage/log')).j.log || [];
@@ -119,9 +120,9 @@ const wait = ms => new Promise(k => setTimeout(k, ms));
   const goods = C1.rewards.find(r => r.kind === 'goods'); const before = (await L(L1, 'GET', 'mile-my')).j.balance;
   const gq = await L(L1, 'POST', 'mile-redeem', { rewardId: goods.id, points: 500, idem: 'qa-goods-0001' }); const mid = (await L(L1, 'GET', 'mile-my')).j.balance;
   await milTab('approvals'); await p.waitForSelector(`tr[data-rd="${gq.j.id}"] [data-act="mrw-no"]`, { timeout: 8000 }).catch(() => { });
-  await p.click(`tr[data-rd="${gq.j.id}"] [data-act="mrw-no"]`).catch(() => { }); await p.fill('#modal [name="why"]', '재고 소진').catch(() => { }); await mok().catch(() => { }); await wait(1500);
+  const hasNo = !!(await p.$(`tr[data-rd="${gq.j.id}"] [data-act="mrw-no"]`)); await p.click(`tr[data-rd="${gq.j.id}"] [data-act="mrw-no"]`).catch(() => { }); const mtx = await p.evaluate(() => (document.querySelector('#modal') || {}).innerText || ''); await p.fill('#modal [name="why"]', '재고 소진').catch(() => { }); await mok().catch(() => { }); await wait(1500);
   const after = (await L(L1, 'GET', 'mile-my')).j.balance; const gr = ((await L(L1, 'GET', 'mile-rewards')).j.requests || []).find(x => x.id === gq.j.id) || {};
-  ok(gq.st === 200 && mid === before - 500 && after === before && gr.status === 'rejected' && gr.reason === '재고 소진', '반려(UI) → 잡아 둔 500P 복원 · 사유 학습자에게 표시 ' + JSON.stringify({ before, mid, after, st: gr.status, why: gr.reason }));
+  ok(gq.st === 200 && mid === before - 500 && after === before && gr.status === 'rejected' && gr.reason === '재고 소진', '반려(UI) → 잡아 둔 500P 복원 · 사유 학습자에게 표시 ' + JSON.stringify({ before, mid, after, st: gr.status, why: gr.reason, hasNo, mtx: mtx.slice(0, 120), toast: await p.evaluate(() => (document.querySelector('#toasts') || {}).innerText || '') }));
 
   /* ⑦ 국비 과정(D1): 금전성 보상 연결 서버 거절 · 국비 적립은 전환 불가 */
   const fd = await A('POST', '/api/mileage/funded', { clsId: 'c_naeil', funded: true, source: 'naeil', reason: '내일배움카드 과정' });

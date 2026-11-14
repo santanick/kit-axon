@@ -116,7 +116,7 @@
   function engApply(ENG, pol, rules, events, prior) { const engRules = rules.map(r => { const c = Object.assign({}, r); delete c.cond; c.cond = (r.cond && r.cond.minScore != null) ? { minScore: r.cond.minScore } : {}; if (r.score && r.score.range) c.score = { mode: 'source' }; return c; });
     const fund = {}; (pol.fundedCls || []).forEach(id => { fund[id] = true; });
     const E0 = prior.filter(e => e.status !== 'void').map(e => Object.assign({}, e, { unit: e.scopeUnit || 'lu_root', at: toMs(e.at), expiresAt: e.expiresAt ? toMs(e.expiresAt) : null, postedAt: e.postedAt ? toMs(e.postedAt) : null }));
-    const eng = ENG.create({ policy: { isOn: true, ver: pol.ver || 1, expiry: pol.expiry && pol.expiry.mode === 'year' ? { mode: 'months', months: 12 } : pol.expiry, dailyCapTotal: pol.dailyCapTotal || null, cashLock: pol.cashLock, budget: (pol.budget && +pol.budget.monthP) ? { monthP: +pol.budget.monthP } : {}, streak: { freezePerWeek: 1, milestones: [] }, sunset: pol.sunset || null }, rules: engRules, entries: E0, funded: fund });
+    const eng = ENG.create({ policy: { on: true, ver: pol.ver || 1, expiry: pol.expiry && pol.expiry.mode === 'year' ? { mode: 'months', months: 12 } : pol.expiry, dailyCapTotal: pol.dailyCapTotal || null, cashLock: pol.cashLock, budget: (pol.budget && +pol.budget.monthP) ? { monthP: +pol.budget.monthP } : {}, streak: { freezePerWeek: 1, milestones: [] }, sunset: pol.sunset || null }, rules: engRules, entries: E0, funded: fund });
     const n0 = eng.S.entries.length; const skipped = [];
     events.slice().sort((a, b) => String(a.at).localeCompare(String(b.at))).forEach(ev => { eng.S.rules = engRules.filter((r, i) => condOk(rules[i], ev)); const R0 = rules.find(r => r.score && r.score.range && r.trigger === ev.trigger);
       const v = R0 && ev.value != null ? Math.max(R0.score.range[0], Math.min(R0.score.range[1], +ev.value)) : ev.value;
@@ -228,11 +228,11 @@
     if (tab === 'home') need.sum = ['GET', '/api/mileage/summary?' + qs({ from: ym(td) + '-01', to: td })];
     if (tab === 'home' || tab === 'ledger') need.ent = ['GET', '/api/mileage/entries?' + qs({ sid: UI.milQ || '', kind: tab === 'ledger' && UI.milK && UI.milK !== 'funded' && UI.milK !== 'pending' ? UI.milK : '', from: tab === 'home' ? ym(td) + '-01' : '', limit: 200 })];
     if (tab === 'log' || tab === 'set') need.log = ['GET', '/api/mileage/log?' + qs({ area: UI.milA || '' })];
-    const key = JSON.stringify(need); if (LV.busy || (LV.key === key && (!LV.err || Date.now() - LV.errAt < 5000))) return; LV.busy = true; LV.key = key; const K = Object.keys(need);
+    const key = JSON.stringify(need); if (LV.busy || (LV.key === key && Date.now() - (LV.at || 0) < 20000 && (!LV.err || Date.now() - LV.errAt < 5000))) return; LV.busy = true; LV.key = key; LV.at = Date.now(); const K = Object.keys(need);
     Promise.all(K.map(k => api(need[k][0], need[k][1]).catch(e => { if (k === 'cfg') throw e; return null; }))).then(Rr => { const d = {}; K.forEach((k, i) => { d[k] = Rr[i]; }); LV.d = Object.assign({}, LV.d, d); LV.err = ''; })
       .catch(e => { LV.err = liveErr(e); LV.errAt = Date.now(); }).finally(() => { LV.busy = false; if (CUR.tab === 'mileage') render(); }); }
   const liveDo = (method, url, body, ok) => api(method, url, body).then(r => { LV.key = ''; if (ok) ok(r); render(); return r; }).catch(e => { toast(ERRN[ecode(e)] || liveErr(e), 'warn'); throw e; });
-  const invalidate = () => { LV.key = ''; };
+  const invalidate = () => { LV.key = ''; if (typeof window.milrwInvalidate === 'function') window.milrwInvalidate(); };
 
   /* ── 공용 조각(mil.css) ── */
   const rec = (recV, cur, why) => { const same = cur == null || String(cur) === String(recV); return `<span class="mil-rec ${same ? 'same' : 'off'}">${ic(same ? 'mile' : 'warn', 14)}${same ? `권장값 ${esc(recV)}` : `권장 ${esc(recV)} · 현재 ${esc(cur)}`}</span>${!same && why ? `<span class="mil-why">${ic('info', 14)}${esc(why)}</span>` : ''}`; };
@@ -270,7 +270,7 @@
   if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const pub = base(...a); try { if (pub && S && S.mileage) { const p = P(); pub.mileage = { on: !!p.on, ver: p.ver, unitName: p.unitName, ab: p.ab, won: !!p.won, expiry: p.expiry, notice: p.notice, league: { on: !!(p.league || {}).on }, rank: { on: !!(p.rank || {}).on, scope: (p.rank || {}).scope, name: (p.rank || {}).name }, sunset: p.sunset || null, ways: rules().filter(r => r.active).map(r => ({ trigger: r.trigger, say: sayTxt(r), nature: r.nature })), funded: fundedIds() }; } } catch (e) { console.error('mileage pub', e); } return pub; }; } /* eslint-disable-line no-global-assign */
 
   /* ═════════ 화면 ═════════ */
-  VIEWS.mileage = () => { ensure(); if (LIVEON()) livePull(); const p = P();
+  VIEWS.mileage = () => { ensure(); if (LIVEON()) { if (UI.mil !== LV.tab) { LV.tab = UI.mil; invalidate(); } livePull(); } const p = P(); /* 탭을 옮기면 새로 받음(보상 탭 포함) */
     if (LIVEON() && LV.err && !LV.d.cfg) return `<div class="mil">${note('err', '운영 서버 연결', esc(LV.err))}</div>`;
     if (LIVEON() && !LV.d.cfg) return `<div class="mil"><div class="empty">마일리지 설정을 불러오고 있습니다.</div></div>`;
     if (!(p.on || p.isOn)) return `<div class="mil mil-wiz">${vWizard()}</div>`;
@@ -313,7 +313,7 @@
         ${minor() ? note('info', '미성년 학습자 기관 기본값', '공개 순위와 감점은 꺼진 상태로 시작합니다. 켜려면 설정에서 영향 안내를 확인하십시오.') : ''}</div></div>`; }
     const d = draft(); const pol = d.policy;
     if (w.step === 2) { const sim = simOf(pol, d.rules); const bud = +(pol.budget || {}).monthP || 0; const rate = bud ? Math.round(sim.convertibleP / bud * 100) : 0; const warn = MC('warnings')(pol, d.rules, d.rewards); const fc = fundedIds().length;
-      const rows = d.rules.map((r, i) => `<tr><td>${sw(r.active, 'mil-d-on', i, r.label + ' 켜기')}</td><td><b>${esc(r.label)}</b><small>${esc(sayTxt(r))}</small></td><td class="num">${r.score.mode === 'fixed' && !r.score.range ? `<input class="mil-num" type="number" min="0" value="${+r.score.v}" data-chg="mil-d-v" data-v="${i}" aria-label="${esc(r.label)} 배점">` : esc(scoreTxt(r))}<div>${rec(scoreTxt(Object.assign({}, r, { score: pol.recommended.rules[r.id].score })), scoreTxt(r))}</div></td><td>${esc(capTxt(r))}<small>${esc(ONCE[r.once] || r.once)}</small></td><td>${esc(APPR[r.approval] || r.approval)}<small>${trTag(r.trustMin)} · ${esc(NAT[r.nature])}</small></td><td>${esc(expTxt(r, pol))}</td></tr>`).join('');
+      const rows = d.rules.map((r, i) => `<tr><td>${sw(r.active, 'mil-d-on', i, r.label + ' 켜기')}</td><td><b>${esc(r.label)}</b><small>${esc(sayTxt(r))}</small></td><td class="num">${r.score.mode === 'fixed' && !r.score.range ? `<input class="mil-num" type="number" min="0" value="${+r.score.v}" data-chg="mil-d-v" data-v="${i}" aria-label="${esc(r.label)} 배점">` : esc(scoreTxt(r))}<div>${rec(scoreTxt(Object.assign({}, r, { score: ((pol.recommended.rules || {})[r.id] || r).score })), scoreTxt(r))}</div></td><td>${esc(capTxt(r))}<small>${esc(ONCE[r.once] || r.once)}</small></td><td>${esc(APPR[r.approval] || r.approval)}<small>${trTag(r.trustMin)} · ${esc(NAT[r.nature])}</small></td><td>${esc(expTxt(r, pol))}</td></tr>`).join('');
       const pen = `<tr class="mil-lockrow"><td>${sw(false, 'mil-noop', '', '감점 규칙', true)}</td><td><b>감점(결석 · 지각)</b><small>${minor() ? '미성년 학습자 기관 기본 끔' : '권장값 끔'}</small></td><td colspan="4">${lock('감점 규칙은 권장값으로 잠겨 있습니다', '실수 · 결석은 「적립 없음」으로만 처리하는 것을 권장합니다. 켜려면 설정 › 순위 · 감점에서 영향 안내를 확인하십시오.', true)}</td></tr>`;
       return stepBar(['done', 'on', 'todo', 'todo', 'todo']) + ro + `<div class="mil-g21"><div class="card mil-col"><div class="mil-row"><div class="f1"><div class="eyebrow">2단계 · ${STEPS[1]}</div><h3>적립 규칙 초안</h3></div><span class="pill p-info">${ic('book', 14)}템플릿 ${esc(T.name)}</span><span class="mil-ai">${ic('ai', 14)}${LIVEON() ? 'AI 초안' : '규칙 기반 추천'}</span></div>
         <p class="mut">고칠 칸만 누르십시오. 바꾼 값은 「기관 설정」으로 표시되고, 권장값과 다르면 이유가 함께 보입니다.</p>
@@ -366,7 +366,7 @@
     if (w.step === 1 && to === 2) { const bud = +String(w.budget || '').replace(/[^\d]/g, ''); if (w.purpose === 'cash' && !bud && !w.noBudget) toast('예산이 없으면 금전성 보상마다 경고합니다. 예산 없이 계속합니다.', 'warn'); if (LIVEON() && !w.draft) return pullDraft(() => { w.step = 2; render(); }); }
     w.step = to; render(); };
   function pullDraft(done) { const w = wiz(); const bud = +String(w.budget || '').replace(/[^\d]/g, ''); api('POST', '/api/mileage/draft', { budget: w.noBudget || !bud ? { none: true } : { monthWon: bud }, purpose: w.purpose })
-    .then(r => { const base = makeDraft(); const d = { policy: Object.assign(base.policy, (r && r.policy) || {}), rules: (r && r.rules && r.rules.length ? r.rules : base.rules), rewards: (r && r.rewards && r.rewards.length ? r.rewards : base.rewards) }; if (!d.policy.recommended) d.policy.recommended = base.policy.recommended;
+    .then(r => { const base = makeDraft(); const d = { policy: Object.assign(base.policy, (r && r.policy) || {}), rules: (r && r.rules && r.rules.length ? r.rules.map(x => { const t = base.rules.find(y => y.trigger === x.trigger) || {}; const g = TRIG[x.trigger] || []; return Object.assign({}, x, { label: x.label || t.label || g[0] || x.trigger, say: x.say || t.say || g[4] || '' }); }) : base.rules), rewards: (r && r.rewards && r.rewards.length ? r.rewards : base.rewards) }; if (!d.policy.recommended) d.policy.recommended = base.policy.recommended; d.policy.recommended = Object.assign({}, d.policy.recommended, { rules: Object.assign({}, d.policy.recommended.rules || {}) }); d.rules.forEach(x => { if (!d.policy.recommended.rules[x.id]) d.policy.recommended.rules[x.id] = { score: clone(x.score), caps: clone(x.caps || {}), once: x.once, trustMin: x.trustMin, approval: x.approval, active: x.active, nature: x.nature }; });
       d.hash = (r && r.draftHash) || hash(JSON.stringify(d)); UI.milSimLive = r && r.simulate ? Object.assign({ totalP: 0, convertibleP: 0, perSidAvg: 0, p90: 0 }, r.simulate, { convertibleP: r.simulate.convertibleP != null ? r.simulate.convertibleP : (r.simulate.wonEstimate || 0) }) : null; w.draft = d; done(); })
     .catch(e => { toast(ERRN[ecode(e)] || '권장 정책안을 받지 못해 템플릿으로 보여 드립니다.', 'warn'); w.draft = makeDraft(); done(); }); }
   ACT['mil-w-redraft'] = () => { const w = wiz(); w.draft = null; UI.milSimLive = null; if (LIVEON()) return pullDraft(() => render()); toast('권장 정책안으로 되돌렸습니다.'); render(); };
@@ -489,7 +489,7 @@
     const W0 = q ? MC('wallet')(E.filter(e => e.status !== 'void'), q) : null;
     return `<div class="mil-row wrap">${[['all', '전체'], ['earn', '적립'], ['use', '사용'], ['expire', '소멸'], ['fix', '취소 · 조정'], ['pending', '확인 대기'], ['funded', '국비 과정 적립분']].map(([a, b]) => `<button class="mil-chip ${k === a ? 'on' : ''}" data-act="mil-k" data-v="${a}" aria-pressed="${k === a}">${a === 'funded' ? ic('lock', 14) : ''}${esc(b)}</button>`).join('')}
       <label class="mil-srch f1"><span class="sr">학습자 번호 검색</span><input type="search" value="${esc(q)}" placeholder="학습자 번호(뒤 4자리 이상)" data-chg="mil-q" inputmode="numeric"></label>
-      <button class="btn" data-act="mil-csv">${ic('download', 18)}CSV</button>${!LIVEON() ? `<button class="btn" data-act="mil-demo-ev">${ic('play', 18)}시연 사건</button>` : ''}<button class="btn pri" data-act="mil-grant">${ic('plus', 18)}수동 지급 · 조정</button></div>
+      <button class="btn" data-act="mil-csv">${ic('download', 18)}CSV</button>${!LIVEON() ? `<button class="btn" data-act="mil-demo-ev">${ic('play', 18)}시연 사건</button>` : ''}${teacher() && LIVEON() ? '' : `<button class="btn pri" data-act="mil-grant">${ic('plus', 18)}수동 지급 · 조정</button>`}</div>
       ${W0 ? `<div class="mil-g3">${kp('wallet', who(q) + ' 잔액', fmtP(W0.balance))}${kp('clock', '적립 예정(확인 대기)', fmtP(W0.pending))}${kp('gift', '금전성 보상에 쓸 수 있는 양', fmtP(W0.convertible))}</div>` : ''}
       ${k === 'funded' ? `<p class="mut">이 필터의 합계 ${sgn(sumF)} · 등급 · 배지 · 연속 학습에는 반영되고, 금전성 보상 소진 순서에서는 건너뜁니다.</p>` : ''}
       ${table(['일시', '학습자', '종류', '내용', '신뢰', '금전성 보상', '유효기간', '포인트', ''], rows, E.length ? '조건에 맞는 줄이 없습니다.' : '아직 원장 줄이 없습니다. 학습자가 켜진 규칙의 학습을 하면 여기에 쌓입니다.')}
@@ -499,7 +499,7 @@
   ACT['mil-q'] = el => { UI.milQ = el.value.replace(/[^\w-]/g, '').slice(0, 20); UI.milPg = 1; invalidate(); render(); };
   ACT['mil-sid'] = el => { UI.milQ = el.dataset.v; UI.milPg = 1; invalidate(); render(); };
   ACT['mil-pg'] = el => { UI.milPg = +el.dataset.v; render(); };
-  ACT['mil-csv'] = () => { if (LIVEON()) { const a = document.createElement('a'); a.href = (LIVE.base || '') + '/api/mileage/entries?' + qs({ sid: UI.milQ || '', format: 'csv' }); a.download = `마일리지내역_${today()}.csv`; a.click(); return; }
+  ACT['mil-csv'] = () => { /* 운영 모드도 화면에 받은 원장 줄(GET /api/mileage/entries, 최대 200줄)로 만든다 — 서버에 CSV 경로 없음 */
     const RU = rules(); downloadCSV(`마일리지내역_${today()}.csv`, ['일시', '학습자 번호', '종류', '상태', '내용', '신뢰', '국비 과정', '금전성 전환', '유효기간', '포인트'], entries().map(e => [e.at, e.sid, KIND[e.kind] || e.kind, e.status, e.reason || (RU.find(r => r.id === e.ruleId) || {}).label || '', e.trust || '', e.funded ? '예' : '', e.convertible ? '가능' : '', e.expiresAt || '', e.points])); };
   ACT['mil-ok-earn'] = el => { const e = D().entries.find(x => x.id === el.dataset.v); if (!e && !LIVEON()) return;
     confirmCard('적립 확인', `<p>${esc(who(e ? e.sid : ''))}의 「${esc(e ? e.reason : '')}」 적립 ${e ? sgn(e.points) : ''}를 확정합니다. 확정일부터 유효기간이 계산됩니다.</p>`, '확정', () => {
@@ -513,12 +513,12 @@
         if (typeof logAudit === 'function') logAudit(`마일리지 적립 취소 — ${who(e.sid)} ${sgn(-e.points)} · ${why}`); save(); toast('취소 줄을 남겼습니다.', 'ok'); render(); } }]); };
   /* 수동 지급 · 조정: 입력 → 확인 카드 → 실행. 본인 지급 금지(제품 고정) · 강사별 월 한도 · 기준 넘으면 정운영자 승인 대기 */
   ACT['mil-grant'] = () => { const p = P(); const tc = +p.teacherCap || 0; const mine = entries().filter(e => e.byStaff === S.me.name && ym(e.at) === ym(today()) && e.kind !== 'cancel').reduce((s, e) => s + e.points, 0);
-    modal('수동 지급 · 조정', `<div class="mil mil-m"><label class="mil-fld"><span>학습자 번호(쉼표로 여러 명, 최대 50명)</span><input name="sids" placeholder="예: 7100010, 7100023" maxlength="600"></label>
+    modal('수동 지급 · 조정', `<div class="mil mil-m"><label class="mil-fld"><span>학습자 번호(쉼표로 여러 명, 최대 50명)</span><input name="sids" placeholder="예: 7100010, 7100023" maxlength="4200"></label>
       <div class="mil-g2"><label class="mil-fld"><span>포인트(음수 = 차감 조정)</span><input name="pts" type="number" step="10" value="100"></label><label class="mil-fld"><span>사유(필수, 학습자에게 보입니다)</span><input name="why" maxlength="60" placeholder="예: 발표 우수"></label></div>
       ${tc ? `<p class="mut">강사별 월 지급 한도 ${fmtP(tc)} · 이번 달 ${esc(S.me.name)} 지급 ${fmtP(mine)}</p>` : ''}<p class="mut">1회 ${fmtP(p.manualOver || 1000)}을 넘으면 정운영자 승인 대기로 들어갑니다. 수동 지급은 순위 · 리그 집계에서 빠집니다.</p>
       ${lock('운영자 본인 · 가족 계정 지급 금지', '직원 계정과 같은 연락처를 쓰는 학습자에게는 지급할 수 없습니다. 서버가 매번 다시 확인합니다.')}</div>`,
       [{ id: 'c', label: '취소' }, { id: 'ok', label: '다음 · 확인', kind: 'pri', run: w => { const sids = [...new Set(fv(w, 'sids').split(/[,\s]+/).map(x => x.trim()).filter(Boolean))].slice(0, 50); const pts = Math.round(+fv(w, 'pts') || 0); const why = fv(w, 'why');
-        if (!sids.length || sids.some(x => !/^[\w-]{3,20}$/.test(x))) { toast('학습자 번호를 확인해 주십시오. 이름 · 연락처는 넣지 않습니다.', 'warn'); return false; } if (!pts) { toast('포인트를 넣어 주십시오.', 'warn'); return false; } if (!why) { toast('사유를 적어 주십시오.', 'warn'); return false; }
+        if (!sids.length || sids.some(x => !/^[\w.:-]{3,80}$/.test(x) || /@/.test(x))) { toast('학습자 번호를 확인해 주십시오. 이름 · 연락처는 넣지 않습니다.', 'warn'); return false; } if (!pts) { toast('포인트를 넣어 주십시오.', 'warn'); return false; } if (!why) { toast('사유를 적어 주십시오.', 'warn'); return false; }
         if (tc && pts > 0 && mine + pts * sids.length > tc && !owner()) { toast(`강사별 월 지급 한도(${fmtP(tc)})를 넘습니다.`, 'warn'); return false; }
         const self = S.me && S.me.sid && sids.includes(String(S.me.sid)); if (self) { toast('운영자 본인 계정에는 지급할 수 없습니다(제품 고정).', 'warn'); return false; }
         const over = Math.abs(pts) > (+p.manualOver || 1000) && !owner(); const key = idem();
@@ -673,7 +673,7 @@
   /* 운영 모드: 스튜디오가 반영한 학습자 사건(시험 응시 a2-try · 수료증 자동 발급)을 운영자 확정 사건(신뢰 B)으로 서버에 보낸다(04 §3.1 ② POST /api/mileage/events).
      서버가 규칙 · 한도 · 국비 과정 · 멱등(mil_event 유일키)을 다시 확인하므로 여러 번 보내도 한 번만 적립된다. 제도가 꺼져 있거나 시연판이면 보내지 않는다. */
   const EVQ = []; let evT = 0;
-  const evPush = ev => { if (!LIVEON() || !(LV.d.cfg ? isOn() : true) || !ev.sid) return; if (EVQ.length < 200) EVQ.push(ev); clearTimeout(evT); evT = setTimeout(evFlush, 400); };
+  const evPush = ev => { if (!LIVEON() || !ev.sid) return; /* 제도 켜짐 여부 · 규칙은 서버가 판단(꺼져 있으면 적립 없음) */ if (EVQ.length < 200) EVQ.push(ev); clearTimeout(evT); evT = setTimeout(evFlush, 400); };
   function evFlush() { if (!EVQ.length || typeof api !== 'function') return; const B = EVQ.splice(0, 200); api('POST', '/api/mileage/events', { events: B }).then(() => { LV.key = ''; }).catch(e => { if (e && (e.status >= 500 || !e.status)) EVQ.unshift(...B.slice(0, 200 - EVQ.length)); }); }
   const memSid = id => { try { const m = (S.members || []).find(x => x.id === id); return m && m.sid ? String(m.sid) : ''; } catch (e) { return ''; } };
   if (typeof a2AutoCert === 'function') { const base = a2AutoCert; a2AutoCert = (c, id, ...r) => { const ok = base(c, id, ...r); try { if (ok && c) evPush({ trigger: 'course_done', sid: memSid(id), srcType: 'cls', srcId: String(c.id), cls: String(c.id) }); } catch (e) { console.error('mileage ev', e); } return ok; }; } /* eslint-disable-line no-global-assign */

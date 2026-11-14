@@ -122,7 +122,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
     UI.mil = 'home'; render(); const todo = /점검 할 일 2건/.test(document.body.innerText); const order = [...document.querySelectorAll('.mil-tabs [role=tab]')].map(b => b.dataset.v); milGo('zz'); const shown = !!document.querySelector('#zzv');
     const a = milLedgerAdd({ sid: '7100010', kind: 'hold', points: -100, idemKey: 'r:7100010:t1' }); const b = milLedgerAdd({ sid: '7100010', kind: 'hold', points: -100, idemKey: 'r:7100010:t1' }); let bad = false; try { milLedgerAdd({ sid: 'x', kind: 'delete', points: 1 }); } catch (e) { bad = true; }
     MIL_TABS.splice(MIL_TABS.findIndex(t => t.id === 'zz'), 1); return { todo, order, shown, same: a === b, bad, badge: /점검 탭2/.test(order.join()) || true }; });
-  ok(X.todo && X.order.indexOf('zz') === 2 && X.shown && X.same && X.bad, 'MIL_TABS(render · order · todo) · milGo · milLedgerAdd(멱등 · 종류 검사) ' + JSON.stringify(X));
+  ok(X.todo && X.order.indexOf('zz') > X.order.indexOf('rules') && X.order.indexOf('zz') < X.order.indexOf('ledger') && X.shown && X.same && X.bad, 'MIL_TABS(render · order · todo) · milGo · milLedgerAdd(멱등 · 종류 검사) ' + JSON.stringify(X));
 
   /* ⑪ 교강사: 설정 · 이력 탭 없음, 줄 취소 없음 */
   const TC = await p.evaluate(() => { S.me.role = 'teacher'; UI.mil = 'ledger'; render(); const r = { tabs: [...document.querySelectorAll('.mil-tabs [role=tab]')].map(b => b.dataset.v), cancel: document.querySelectorAll('[data-act="mil-cancel"]').length }; S.me.role = 'owner'; return r; });
@@ -181,6 +181,25 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
   const fonts = await p.evaluate(() => [...document.querySelectorAll('.mil *')].filter(e => e.childNodes.length && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(e).fontSize) < 12).map(e => e.className + ':' + getComputedStyle(e).fontSize).slice(0, 5));
   ok(!fonts.length, '글자 12px 이상 ' + fonts.join(','));
   const emo = await p.evaluate(() => /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(document.body.innerText)); ok(!emo, '이모지 없음');
+  /* ⑯ 역할별 점검(QA v42): 기관 유형 8종 × 정운영자 · 부운영자 · 강사 — 메뉴 · 탭 권한 · 쓰기 버튼 누수 · 넘침(390) · 44px · 12px · 운영자 합니다체 · 이모지 · 콘솔 오류 */
+  { const cerr = []; p.on('console', m => { if (m.type() === 'error') cerr.push(m.text().slice(0, 120)); }); await p.setViewportSize({ width: 390, height: 844 });
+    const RM = await p.evaluate(() => { const out = []; const EMO = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u; const YO = /(해요|어요|아요|에요|세요|할게요|드려요)[.!?]?(\s|$)/;
+      for (const [ty, ed] of [['k12'], ['univ', 'lite'], ['univ', 'lms'], ['corp'], ['public'], ['adult'], ['lifelong'], ['voc']]) { createOrg(ty, '역할 점검', ed); const menu = menuOn('mileage');
+        const D0 = S.mileage; const d = milView.makeDraft(); D0.policy = Object.assign(d.policy, { on: true, ver: 1 }); D0.rules = d.rules; D0.rewards = d.rewards;
+        for (const role of ['owner', 'sub', 'teacher']) { S.me.role = role; UI.mil = 'home'; go('mileage'); render(); const tabs = [...document.querySelectorAll('.mil-tabs [role=tab]')].map(b => b.dataset.v); const issues = [];
+          for (const t of tabs) { UI.mil = t; render(); const root = document.querySelector('#main'); if (!root) continue;
+            if (document.documentElement.scrollWidth > innerWidth + 1) issues.push(t + ':넘침');
+            root.querySelectorAll('.mil .btn, .mil-tabs button, .mrw .btn').forEach(b => { const r = b.getBoundingClientRect(); if (r.width && r.height < 43.5) issues.push(t + ':44px ' + b.textContent.trim().slice(0, 8)); });
+            root.querySelectorAll('.mil *, .mrw *').forEach(e => { if (e.closest('.mil-phone, .sr, [aria-hidden="true"]')) return; if ([...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && e.getBoundingClientRect().width && parseFloat(getComputedStyle(e).fontSize) < 12) issues.push(t + ':12px ' + e.textContent.trim().slice(0, 8)); });
+            const txt = [...root.querySelectorAll('.mil-body > *, .mrw > *')].filter(e => !e.closest('.mil-phone') && !e.querySelector('.mil-phone')).map(e => e.innerText).join('\n'); if (EMO.test(root.innerText)) issues.push(t + ':이모지');
+            const yo = txt.split('\n').filter(l => YO.test(l)); if (yo.length) issues.push(t + ':해요체 ' + yo[0].slice(0, 30));
+            if (role === 'teacher') { const w = [...root.querySelectorAll('[data-act="mil-r-save"], [data-act="mrw-rw-new"], [data-act="mrw-ok"], [data-act="mrw-no"], [data-act="mil-s-save"], [data-act="mil-off"], [data-act="mil-ok-earn"], [data-act="mil-cancel"]')].filter(b => !b.disabled).map(b => b.dataset.act); if (w.length) issues.push(t + ':강사 쓰기 버튼 ' + [...new Set(w)].join(',')); } }
+          out.push({ k: ty + (ed || ''), role, menu, tabs, issues: [...new Set(issues)].slice(0, 6) }); } }
+      S.me.role = 'owner'; return out; });
+    const bad = RM.filter(x => x.issues.length || !x.menu || (x.role === 'teacher' && (x.tabs.includes('set') || x.tabs.includes('log'))));
+    ok(!bad.length, `역할별 점검 8유형 × 3역할(${RM.length}) ` + JSON.stringify(bad.slice(0, 6)));
+    ok(RM.find(x => x.k === 'univlms').menu, '학사 LMS: 마일리지 메뉴 기본 보임(제도는 기본 끔)');
+    ok(!cerr.length, '콘솔 오류 0 ' + cerr.slice(0, 3).join(' | ')); }
   ok(!errs.length, 'pageerror 0 ' + errs.slice(0, 3).join(' | '));
   await browser.close(); srv.close(); console.log(`mil42-admin: ${pass} 통과 · ${fail} 실패`); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

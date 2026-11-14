@@ -151,13 +151,14 @@
     if (tab === 'approvals') { need.ap = ['GET', '/api/mileage/approvals?type=redeem']; need.done = ['GET', '/api/mileage/redeems']; }
     if (tab === 'fraud') need.fl = ['GET', '/api/mileage/flags'];
     if (tab === 'rewards' && orgType() === 'corp') need.pay = ['GET', '/api/mileage/shop/payouts?' + qs({ ym: UI.mrwYm || ym0() })];
-    const key = JSON.stringify(need); if (LV.busy || (LV.key === key && (!LV.err || Date.now() - LV.errAt < 5000))) return; LV.busy = true; LV.key = key;
+    const key = JSON.stringify(need); if (LV.busy || (LV.key === key && Date.now() - (LV.at || 0) < 20000 && (!LV.err || Date.now() - LV.errAt < 5000))) return; LV.busy = true; LV.key = key; LV.at = Date.now(); /* 20초 지나면 다시 받음(새 신청이 보이게) */
     const K = Object.keys(need);
     Promise.all(K.map(k => api(need[k][0], need[k][1]).catch(e => { if (k === 'cfg' || k === 'ap' || k === 'fl') throw e; return null; })))
       .then(R => { const d = {}; K.forEach((k, i) => { d[k] = R[i]; }); LV.d = d; LV.err = ''; })
       .catch(e => { LV.err = liveErr(e); LV.errAt = Date.now(); })
       .finally(() => { LV.busy = false; render(); });
   }
+  window.milrwInvalidate = () => { LV.key = ''; };
   const liveDo = (method, url, body, ok) => api(method, url, body).then(r => { LV.key = ''; const bad = r && Array.isArray(r.results) ? r.results.filter(x => x && x.ok === false) : []; if (bad.length) toast(`처리하지 못한 신청 ${bad.length}건: ${bad.map(x => ERRN[x.error] || x.message || x.error).filter((v, i, A) => A.indexOf(v) === i).join(' · ')}`, 'warn'); else if (ok) ok(r); render(); return r; }).catch(e => { toast(liveErr(e), 'warn'); LV.key = ''; render(); });
   const mRw = x => ({ id: x.id, kind: x.kind, title: x.title, cost: x.cost || {}, minUse: x.minUse != null ? x.minUse : x.min_use, step: x.step, maxUse: x.maxUse || x.max_use || {}, threshold: x.threshold || 0, stock: x.stock, perSid: x.perSid || x.per_sid || {}, approval: x.approval, cash: x.cash != null ? !!x.cash : CASH[x.kind], audience: x.audience || { all: true }, active: x.active !== false, link: x.link || {}, trust: x.trust || 'AB' });
   const liveRewards = () => ((LV.d.cfg && LV.d.cfg.rewards) || []).map(mRw);
