@@ -35,6 +35,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
 
     @Resource(name = "propertiesService") private EgovPropertyService props;
     private final PiiMapper mapper; private final PiiTx ptx; private final TenantTxMapper txm; private final DdPiiCrypto K; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.mileage.service.MileService mile; /* v42 수집 훅 */
     private final egovframework.didisam.cpl.service.CplService cpl; private final DdMail mail;
     public PiiServiceImpl(PiiMapper mapper, PiiTx ptx, TenantTxMapper txm, DdPiiCrypto K, DdProps p, DdWeb web, DdRateLimiter rl, egovframework.didisam.cpl.service.CplService cpl, DdMail mail) { this.cpl = cpl; this.mail = mail;
         this.mapper = mapper; this.ptx = ptx; this.txm = txm; this.K = K; this.p = p; this.web = web; this.rl = rl;
@@ -122,6 +123,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         boolean keep = !(ra instanceof org.springframework.web.context.request.ServletRequestAttributes sa0 && Boolean.FALSE.equals(sa0.getRequest().getAttribute("ddKeep")));
         String token = DdCrypto.newToken(); if (keep) mapper.insertLearnerSession(DdCrypto.sha(token), tid, sid); else mapper.insertLearnerSessionShort(DdCrypto.sha(token), tid, sid); web.setLsid(res, token, keep);
         if (ra instanceof org.springframework.web.context.request.ServletRequestAttributes sa) cpl.afterLogin(sa.getRequest(), tid, sid, DdCrypto.sha(token));
+        try { ptx.run(tid, r -> r.L(() -> mile.hook(tid, sid, "first_login", "acct", sid, null, "A", null, null))); } catch (Exception e) { /* v42 첫 로그인(사건 유일키로 1회), 실패해도 로그인은 계속 */ }
     }
 
     /* ── 공개(세션 없음) ── */
@@ -212,7 +214,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             String lkEb = "learner".equals(kind) && !email.isEmpty() && !univ ? K.bidx(tid, "email", email) : null; ObjectNode lk = lkEb == null ? null : linkOf(r, tid, lkEb);
             if (!minor) { ObjectNode jd = F.objectNode(); jd.put("kind", kind); jd.put("login", acctLogin); jd.put("sid", lid); jd.put("nick", nick); jd.put("emailMask", email.isEmpty() ? "" : maskEmail(email)); jd.put("dept", dept); jd.put("minor", false);
                 ObjectNode jc = jd.putObject("consent"); jc.put("tos", true); jc.put("privacy", true); jc.put("mkt", truthy(get(consent, "mkt"))); jc.put("at", cons.get("at").textValue()); jd.set("extra", cleanExtra(get(b, "extra"))); if (tokOk && !tok.isEmpty()) jd.put("token", tok); if (!famSid.isEmpty()) jd.put("famSid", famSid); if (lk != null) jd.set("link", lk);
-                r.L(() -> { evIns(tid, lid, "acct-join", jd); return null; }); }
+                r.L(() -> { evIns(tid, lid, "acct-join", jd); mile.hook(tid, lid, "signup", "acct", lid, null, "A", null, null); /* v42 가입 적립(제도 켠 기관만, 같은 트랜잭션 · 세이브포인트) */ return null; }); }
             return new String[]{ lid, st, nick, acctLogin, gtok, pend ? "1" : "" };
         });
         boolean pend = "1".equals(out[5]);
@@ -248,7 +250,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             ObjectNode jc = jd.putObject("consent"); jc.put("tos", true); jc.put("privacy", true); jc.put("mkt", a != null && Boolean.TRUE.equals(a.get("mkt"))); jc.put("at", now); jd.putObject("extra"); ObjectNode jg = jd.putObject("guardian"); jg.put("ok", true); jg.put("at", now);
             String itok = r.L(() -> mapper.selectInviteToken(tid, lid)); if (itok != null && !itok.isEmpty()) jd.put("token", itok);
             Map<String, Object> ebm = r.P(() -> mapper.selectEmailBidx(tid, lid)); String eb = ebm == null ? null : (String) ebm.get("email_bidx"); ObjectNode lk = eb == null ? null : linkOf(r, tid, eb); if (lk != null) jd.set("link", lk);
-            r.L(() -> { evIns(tid, lid, "acct-join", jd); return null; });
+            r.L(() -> { evIns(tid, lid, "acct-join", jd); mile.hook(tid, lid, "signup", "acct", lid, null, "A", null, null); return null; });
             Org org = r.L(() -> orgOf(tid)); o.put("status", "active"); if (org.parent()) o.put("parent_token", ptok); return o;
         });
     }

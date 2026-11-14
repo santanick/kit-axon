@@ -48,7 +48,8 @@ module.exports = (ctx, S) => {
       if (!r.ok) { await T(a, c => audit(c, a.tid, a.email, 'ledger.refund.pg_fail', { refund: X.f.id, code: r.code })); throw E(502, 'pg', '토스 취소에 실패했습니다. 환불은 대기 상태로 남겨 두었습니다.'); } key = r.cancelKey; }
     return T(a, async c => { const row = (await c.query("update led_refund set status = 'done', amount = $3, edit_reason = $4, toss_cancel_ok = $5, toss_cancel_key = $6, done_at = now(), by_staff = $7 where tenant_id = $1 and id = $2 and status = 'pending' returning *",
       [a.tid, X.f.id, X.amt, X.amt !== X.f.auto_amount ? X.why : null, X.P ? true : null, key, a.email])).rows[0]; if (!row) throw E(409, 'state', '이미 처리한 환불입니다.');
-      await audit(c, a.tid, a.email, 'ledger.refund.confirm', { refund: row.id, amount: X.amt, toss: !!X.P }); return { ok: true, refund: rfOut(row) }; });
+      const mil = ctx.mileage ? await ctx.mileage.onRefund(c, a.tid, X.R.id, X.R.amount > 0 ? X.amt / X.R.amount : 0) : null; /* v42 차감 사용 P 비율 복원 · 전액 환불이면 과정 적립 취소(같은 트랜잭션) */
+      await audit(c, a.tid, a.email, 'ledger.refund.confirm', { refund: row.id, amount: X.amt, toss: !!X.P, ...(mil && (mil.restored || mil.cancelled) ? { mileage: mil } : {}) }); return { ok: true, refund: rfOut(row), ...(mil && (mil.restored || mil.cancelled) ? { mileage: { restored: mil.restored, cancelled: mil.cancelled } } : {}) }; });
   }
 
   const R = {
