@@ -252,7 +252,7 @@
     else if (a === 'done') { lm.innerHTML = doneHTML(); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     if (a !== 'review') B.classList.remove('tb-dark');
     if (a === 'c') mountWatch(); if (!cur() && TB.open) { TB.open = false; B.classList.remove('tb-sheet'); }
-    const nav = app.querySelector('.ap-nav'); if (nav) { nav.classList.add('tb-nav'); nav.classList.remove('lq-n6'); nav.setAttribute('aria-label', '아래 탭'); const h = navHTML(); if (nav.dataset.tb !== h) { nav.innerHTML = h; nav.dataset.tb = h; } } }
+    const nav = app.querySelector('.ap-nav'); if (nav) { nav.classList.add('tb-nav'); nav.classList.remove('lq-n6'); nav.setAttribute('aria-label', '아래 탭'); const h = navHTML(); if (nav.dataset.tbh !== h) { nav.innerHTML = h; nav.dataset.tbh = h; } } }
   { const base = lrender; lrender = (...x) => { const r = base(...x); try { apply(); fab(); } catch (e) { console.error('ltube', e); } return r; }; }
   /* 말로 묻기(기존 앱 첫 화면 마이크) — 대화 창 · 장면 튜터 입력칸 옆. 브라우저 음성 인식이 있을 때만 */
   const SRc = () => window.SpeechRecognition || window.webkitSpeechRecognition;
