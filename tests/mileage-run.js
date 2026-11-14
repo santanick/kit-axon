@@ -36,6 +36,7 @@ function runJs(v) {
       case 'redeem': r = eng.redeemReq({ ...a, sid }); break;
       case 'decide': r = eng.redeemDecide(a.id, a.decision, 'staff', a.reason, a.at); break;
       case 'reclaim': r = eng.redeemReclaim(a.id, a.reason, 'staff', a.at); break;
+      case 'adjust': r = eng.redeemAdjust(a.id, a.points, 'staff', a.reason, a.at); break;
       case 'addLine': r = eng.addLine(a.bill, a.redeem, a.at); break;
       case 'alloc': eng.S.allocs.push({ receipt: a.receipt, charge: a.charge, amount: a.amount }); r = { ok: true }; break;
       case 'refund': r = eng.onRefund(a.receipt, a.ratio, a.at); break;
@@ -61,7 +62,7 @@ async function setup(pool, inTenant, v) {
   await pool.query('insert into tenants (id, name, type) values ($1, $2, $3)', [tid, 'mv ' + v.id, 'academy']);
   await inTenant(pool, tid, async c => { const p = G.pol;
     await c.query(`insert into mil_policy (tenant_id, is_on, expiry, notice, budget, daily_cap_total, streak, cash_lock, sunset, penalty, grant_cfg) values ($1,$2,coalesce($3::jsonb,'{"mode":"months","months":12}'),coalesce($4::jsonb,'{"monthsBefore":6,"daysBefore":[30,3]}'),coalesce($5::jsonb,'{}'),$6,coalesce($7::jsonb,'{}'),coalesce($8::jsonb,'{"needTrust":"B","achievementOnly":true}'),$9,coalesce($10::jsonb,'{"on":false}'),coalesce($11::jsonb,'{"approveOver":1000}'))`,
-      [tid, !!p.isOn, J(p.expiry), J(p.notice), J(p.budget), p.dailyCapTotal == null ? null : p.dailyCapTotal, J(p.streak), J(p.cashLock), J(p.sunset), J(p.penalty), J(p.grantCfg)]);
+      [tid, !!p.on, J(p.expiry), J(p.notice), J(p.budget), p.dailyCapTotal == null ? null : p.dailyCapTotal, J(p.streak), J(p.cashLock), J(p.sunset), J(p.penalty), J(p.grantCfg)]);
     for (const r of G.rules) await insRule(c, tid, r);
     for (const g of G.groups) await c.query('insert into mil_group (tenant_id, key, caps) values ($1,$2,$3)', [tid, g.key, J(g.caps || {})]);
     for (const r of G.rewards) await c.query('insert into mil_reward (tenant_id, id, kind, title, cost, min_use, max_use, step, threshold, stock, per_sid, approval, cash, audience, active, link) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)',
@@ -75,7 +76,7 @@ async function setup(pool, inTenant, v) {
 function insRule(c, tid, r) { r = Object.assign({ ver: 1, once: 'per_src', trustMin: 'C', approval: 'auto', nature: 'achievement', active: true, cond: {}, caps: {} }, r);
   return c.query('insert into mil_rule (tenant_id, id, ver, trigger, nature, cond, score, caps, once, group_key, trust_min, approval, approve_over, expiry, starts_on, ends_on, active) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)',
     [tid, r.id, r.ver, r.trigger, r.nature, J(r.cond), J(r.score), J(r.caps), r.once, r.groupKey || null, r.trustMin, r.approval, r.approveOver == null ? null : r.approveOver, J(r.expiry), r.startsOn || null, r.endsOn || null, r.active]); }
-const POLCOL = { isOn: 'is_on', expiry: 'expiry', notice: 'notice', budget: 'budget', dailyCapTotal: 'daily_cap_total', streak: 'streak', cashLock: 'cash_lock', sunset: 'sunset', penalty: 'penalty', grantCfg: 'grant_cfg' };
+const POLCOL = { on: 'is_on', expiry: 'expiry', notice: 'notice', budget: 'budget', dailyCapTotal: 'daily_cap_total', streak: 'streak', cashLock: 'cash_lock', sunset: 'sunset', penalty: 'penalty', grantCfg: 'grant_cfg' };
 
 async function runSql(pool, inTenant, v) {
   const tid = await setup(pool, inTenant, v); const refs = {}; const bad = []; const one = async (c, q, a) => (await c.query(q, a)).rows[0].r;
@@ -89,6 +90,7 @@ async function runSql(pool, inTenant, v) {
       case 'redeem': return one(c, 'select mil_redeem_req($1,$2,$3,$4,$5,$6) r', [tid, sid, a.reward, a.points, a.idem, a.at]);
       case 'decide': return one(c, "select mil_redeem_decide($1,$2,$3,'staff',$4,$5) r", [tid, a.id, a.decision, a.reason || null, a.at]);
       case 'reclaim': return one(c, "select mil_redeem_reclaim($1,$2,$3,'staff',$4) r", [tid, a.id, a.reason, a.at]);
+      case 'adjust': return one(c, "select mil_redeem_adjust($1,$2,$3,'staff',$4,$5) r", [tid, a.id, a.points, a.reason || null, a.at]);
       case 'addLine': return one(c, 'select mil_add_line($1,$2,$3,$4) r', [tid, a.bill, a.redeem, a.at]);
       case 'alloc': await c.query('insert into led_alloc (tenant_id, receipt_id, charge_id, amount) values ($1,$2,$3,$4)', [tid, a.receipt, a.charge, a.amount]); return { ok: true };
       case 'refund': return one(c, 'select mil_on_refund($1,$2,$3,$4) r', [tid, a.receipt, a.ratio, a.at]);

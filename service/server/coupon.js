@@ -22,11 +22,15 @@ function calc(list, code, cls, price, used, day) {
   return { ok: true, code: k, off, final: p - off, label: c.type === 'amount' ? `${off.toLocaleString('ko-KR')}원 할인` : `${Math.min(100, v)}% 할인` };
 }
 /* c: 기관 범위 트랜잭션 연결. 쿠폰 · 게시본 강좌 · 사용 횟수를 읽어 계산 */
-async function check(c, tid, code, cls) {
+/* personal(code, cls): v42 마일리지 개인 쿠폰(1회용 · 본인 sid만, mileage/index.js personalCoupon). 기관 쿠폰에 없는 코드일 때만 확인한다 */
+async function check(c, tid, code, cls, personal) {
   const r = (await c.query("select doc->'coupons' cp, doc->'lsite'->'pub'->'classes' cl, doc->'lsite'->'pub'->'pay' pay from tenant_state where tenant_id = $1", [tid])).rows[0];
   if (!r) return { ok: false, msg: '없는 기관입니다.' }; if (r.pay === false) return { ok: false, msg: '이 기관은 결제를 받지 않아요.' };
   const x = (Array.isArray(r.cl) ? r.cl : []).find(k => k && k.id === cls); if (!x) return { ok: false, msg: '강좌를 찾지 못했어요.' };
   const used = +((await c.query("select count(*)::int n from learner_events where tenant_id = $1 and type = 'pay' and upper(data->>'cpn') = $2", [tid, norm(code)])).rows[0] || {}).n || 0;
-  return calc(r.cp, code, cls, priceOf(x, kstDay()), used, kstDay());
+  const R = calc(r.cp, code, cls, priceOf(x, kstDay()), used, kstDay());
+  if (!R.ok && personal && norm(code) && !(Array.isArray(r.cp) && r.cp.some(k => k && norm(k.code) === norm(code)))) { const P = await personal(norm(code), cls); if (P) { if (!P.ok) return P;
+    const p = priceOf(x, kstDay()); if (!p) return { ok: false, msg: '결제 금액이 없는 강좌에는 쓸 수 없어요.' }; const off = Math.min(p, Math.max(0, Math.round(+P.off || 0))); return { ok: true, code: norm(code), off, final: p - off, label: P.label, personal: true }; } }
+  return R;
 }
 module.exports = { norm, calc, priceOf, check, kstDay };

@@ -14,8 +14,8 @@
 | Node 경로 | `service/server/mileage/index.js` · `mod-admin.js` · `mod-pub.js` · `sweep.js` | 경로 · 권한 · 감사 · 속도 제한만. `db.js`가 `lms_schema`에 `mileage/<파일>`로 기록하며 이어 붙임(ledger와 같은 `sqlMigrations()`) |
 | Java 경로 | `service-egov/src/main/java/egovframework/didisam/mileage/`(`web/MileController` · `service/MileService` · `impl/MileMapper`) | `cpl` · `ledger` 패키지와 같은 구조 · 같은 오류 코드 · 같은 응답 JSON. SQL 함수를 부르기만 함 |
 | 데모 엔진 | `didisam/milecalc.js`(UMD, 브라우저 · Node 공용) | 데모 모드(`S.mile`)에서 같은 규칙을 돌림. `lms/q.js`의 「데모 엔진(서버와 같은 규칙)」 패턴 |
-| 스튜디오 화면 | `didisam/mile.js` · `mile.css` | 탭 `mileage` 등록(`MENU` · `PRESET` · `VIEWS` · `ACT`, `upgradeState`) |
-| 학습자 화면 | `didisam/lmile.js` · `lmile.css` | 앱 「나」 카드 · `#mile` 경로 · 웹 마이페이지 블록 |
+| 스튜디오 화면 | `didisam/mil.js` · `mil.css` | 탭 `mileage` 등록(`MENU` · `PRESET` · `VIEWS` · `ACT`, `upgradeState`) |
+| 학습자 화면 | `didisam/lmil.js` · `lmil.css` | 앱 「나」 카드 · `#mile` 경로 · 웹 마이페이지 블록 |
 | 모듈 · 플래그 | `modules.js` 키 `mileage`, 기관 플래그 `mileage_on` | 꺼져 있으면 `/api/mileage/*` 403 `mile_off`, 학습자 경로 404 |
 | 공개 경로 | `modules.js` PUB 정규식에 `mile-(?:my|list|rewards|redeem|redeem-cancel|proof|league)` 추가 | ledger와 같은 방식 |
 | 테스트 | `tests/mileage-vectors.json` · `tests/mileage.js`(브라우저 엔진) · `tests/server/mileage-sql.js`(SQL) · `service-egov/test/contract-mileage42.js` | 3벌 동일 결과 확인(§7) |
@@ -306,3 +306,24 @@ mil_notice  (tenant_id, sid, kind 'expire_month|expire_d30|expire_d3|sunset|rede
 추가: UI 스모크(`tests/ui/smoke.js`에 마일리지 탭 · 학습자 카드 렌더), 계약 테스트(`contract-mileage42.js`: 모든 /api 응답 형태 Node = Java).
 
 디디쌤 시사점: 포인트는 작은 숫자 실수도 분쟁이 되므로, v41처럼 「벡터 하나 → 세 엔진」 검증을 출시 조건으로 둡니다.
+
+---
+
+## 8. v42 구현 반영 — 계약 변경 (2026-11-14, 요원 N)
+구현 기준 파일: `service/server/mileage/sql/{10_mileage,15_mileage_fn,16_mileage_adjust,20_mileage_hooks}.sql` · `service/server/mileage/{index,mod-admin,mod-pub,sweep,calc}.js` · `didisam/milecalc.js`(서버 사본 `mileage/calc.js`) · 기준값 `tests/mileage-vectors.json`(29건, JS · SQL 동일) · 계약 `tests/contract-mileage42.js`.
+
+| 항목 | 변경 |
+|---|---|
+| 표 | `mil_policy.on` → 열 이름 `is_on`(예약어). 응답 · milecalc는 `on`으로 통일. `mil_policy.grant_cfg {approveOver, staffMonthCap, restoreRound}` · `shop {on, ack}` 추가. `mil_wallet` 기본키 `(tenant_id, sid, scope_unit)`. `mil_entry.trigger` 추가. `mil_notice` 키에 `scope_unit`, `points · due_at · read_at` 추가 |
+| SQL 함수 | `mil_emit · mil_post · mil_void · mil_cancel · mil_expire · mil_grant(감점 포함) · mil_redeem_req · mil_redeem_decide · mil_redeem_adjust · mil_redeem_fulfil · mil_redeem_reclaim · mil_add_line · mil_on_refund · mil_notice_due · mil_sync · mil_streak_calc · mil_cash_ok · mil_import_q`. 실패는 예외 대신 `{error}` jsonb |
+| 규칙 조건(cond) | `cls · minScore · maxScore(배점 범위) · minMin · target(목표 점수) · srcType(예: 진단 완료 'diag') · dueBy(필수교육 기한, KST) · improve(지난 응시 대비 +n점)`. 재응시는 `srcId` 끝 `#응시번호`(구간은 시험마다 최고 구간만) |
+| 한도 | 규칙 → 항목군 → 1인 하루 총 순서로 **남은 만큼만** 적립(0이면 skipped `cap_<창>` · `group_cap` · `day_cap`). 학기 = 3~8월 · 9~2월 |
+| 모듈 플래그 | 기관 문서 `org.mileage_on === false` 또는 `mileage.on === false`일 때만 꺼짐(D2: 탭 기본 보임). 학습자 경로는 제도(`is_on`)가 꺼져 있으면 404 `mile_off` |
+| 켜기 | `POST draft`가 `draftHash`를 돌려주고 기관 정책에 기록 → 화면이 config · rules · rewards 저장 → `POST enable {draftHash}`(기록된 값과 같아야, 아니면 409 `need_draft`). `enable {draft, draftHash}`로 한 번에 저장 · 켜기도 가능 |
+| 추가 경로(운영) | `GET /api/mileage/log?area` 변경 이력 · `POST /redeems/handed {id}`(굿즈 · 숍 수령 확인) · `GET /shop/payouts?ym → {rows:[{id, sid, dept, item, qty, at, priceWon}], sent}`(이름 없음) · `POST /shop/payouts/send {ym, to}`(owner, 메일 미설정이면 `csv` 반환) |
+| 변경(운영) | `approvals?type=redeem` 항목에 `bill {id, lines[], paid, funded}` · `checks [{code, block, text, fixPoints}]`. `approvals/decide`에 `decision:'adjust', points`(줄이는 방향만, 줄인 뒤 바로 승인) · 결과는 id별 `{ok|error}`. `flags/resolve`는 `reason` 필수. `config.policy.shop {on, ack:{read}}` — 켤 때 ack 없으면 400 `ack_required`, 기록은 `mil_policy_log area 'reward'`. `mil_reward.link.priceWon`(시가). `grant`는 `penalty:true`면 감점(D3, 정책에서 켠 기관만) |
+| 추가 경로(학습자) | `POST mile-guardian {id, ok}`(연결된 보호자만, 거절이면 반려 · 복원) · `POST mile-streak-repair`(끊긴 뒤 48시간 · 월 1회 · 멱등, 오늘 튜브 학습 분 ≥ minMin × factor) · `POST mile-notice-read` |
+| 변경(학습자) | `mile-my`: `held · funded · participation · earnedWindow · windowLabel · tier{name,pct,next} · nextGoal{label,now,target,need,pct,hint} · streak{n,last,week[7],repair{until,need}} · daily{cap,today} · badges[] · recent[] · kids[](보호자) · notices[]`. `mile-rewards`: `requests[{id, status, guardian, code, until, reason, cancellable}]`. `mile-redeem-cancel`: requested 또는 approved이면서 이행 전(차감 줄 · 쿠폰 · 수령 없음)이면 학습자 취소 → 복원 |
+| 오류 코드 추가 | `bad_points`(400) · `reason`(400) · `points`(400) · `over_cap`(400) · `kind`(400) · `penalty_off`(403) · `state` · `limit` · `bill_paid` · `sunset` · `need_draft` · `repair_need`(409) |
+| 수집 지점 | 가입(`pii.js` acct-join · 보호자 동의) · 첫 로그인(`newLearnerSession` · 학번 로그인) · cpl 오늘 학습 10분 도달(attend_day A) · cpl 시험 제출(exam_score A) · PUT progress 차이분(lesson_done · attend_day · tube_goal, C) · 비교과 마감 트리거 · 이관 · v41 환불 확정(`refundConfirm` → `mil_on_refund`, ratio = 환불액/수납액) · 개인 쿠폰(`coupon.check` 5번째 인자) |
+| 범위 밖(v42.2) | 장학 정산(`/settle*`) · 주간 리그(`mile-league`) 경로 없음(404) |

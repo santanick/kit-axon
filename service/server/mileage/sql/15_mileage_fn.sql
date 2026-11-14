@@ -123,7 +123,14 @@ declare pol mil_policy; r record; v_ev bigint; v_day date := mil_kst(p_at); v_fu
     if mil_trank(p_trust) > mil_trank(r.trust_min) then v_reason := 'trust';
     elsif r.cond ? 'cls' and r.cond->>'cls' <> '*' and (p_cls is null or not (case jsonb_typeof(r.cond->'cls') when 'array' then r.cond->'cls' ? p_cls else r.cond->>'cls' = p_cls end)) then v_reason := 'cond';
     elsif r.cond ? 'minScore' and coalesce(p_value, 0) < (r.cond->>'minScore')::numeric then v_reason := 'cond';
-    elsif r.cond ? 'minMin' and coalesce(p_value, 0) < (r.cond->>'minMin')::numeric then v_reason := 'cond'; end if;
+    elsif r.cond ? 'minMin' and coalesce(p_value, 0) < (r.cond->>'minMin')::numeric then v_reason := 'cond';
+    elsif r.cond ? 'maxScore' and coalesce(p_value, 0) > (r.cond->>'maxScore')::numeric then v_reason := 'cond';                    -- 배점 범위(minScore ~ maxScore)
+    elsif r.cond ? 'target' and coalesce(p_value, 0) < (r.cond->>'target')::numeric then v_reason := 'cond';                        -- 목표 점수
+    elsif r.cond ? 'srcType' and p_src_type <> r.cond->>'srcType' then v_reason := 'cond';                                          -- 예: 진단 완료 srcType 'diag'
+    elsif r.cond ? 'dueBy' and v_day > (r.cond->>'dueBy')::date then v_reason := 'cond';                                             -- 필수교육 기한 내(KST)
+    elsif r.cond ? 'improve' and coalesce((select coalesce(p_value, 0) - max(value) from mil_event where tenant_id = p_tid and sid = p_sid and trigger = p_trigger and src_type = p_src_type
+            and split_part(src_id, '#', 1) = split_part(p_src_id, '#', 1) and id <> v_ev and value is not null), -1e9) < (r.cond->>'improve')::numeric then v_reason := 'cond';   -- 지난 응시 대비 +n점
+    end if;
     -- 배점
     pts := 0; v_band := null;
     if v_reason is null then

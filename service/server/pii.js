@@ -36,7 +36,7 @@ const evIns = (L, tid, sid, type, data) => L('insert into learner_events (tenant
 function redactDeep(v, depth = 0, key = '') { if (depth > 6) return null; if (typeof v === 'string') return /mask$/i.test(key) ? v.slice(0, 120) : G.redact(v).text; if (Array.isArray(v)) return v.slice(0, 100).map(x => redactDeep(x, depth + 1)); if (v && typeof v === 'object') { const o = {}; for (const [k, x] of Object.entries(v).slice(0, 60)) { if (!/^[\w.$\-가-힣 ]{1,40}$/.test(k) || ['pw', 'password', 'pw2', 'code', 'email', 'phone', 'name'].includes(k)) continue; o[k] = redactDeep(x, depth + 1, k); } return o; } return typeof v === 'number' || typeof v === 'boolean' || v === null ? v : null; }
 const cleanExtra = x => { if (!x || typeof x !== 'object' || Array.isArray(x)) return {}; const o = {}; for (const [k, v] of Object.entries(x).slice(0, 20)) { const kk = String(k).slice(0, 40); if (typeof v === 'string') o[kk] = G.redact(v.slice(0, 200)).text; /* v36 여러 개 고르기 답(쉼표로 이음)까지 200자 */ else if (v && typeof v === 'object') o[kk] = { name: String(v.name || '').slice(0, 120), size: +v.size || 0, type: String(v.type || '').slice(0, 60) }; } return o; };
 
-function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession }) {
+function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook }) {
   const K = piiKeys(env);
   const devOtp = env.PII_DEV_OTP === '1';     // 개발 · 테스트 전용: 응답에 인증번호 · 보호자 토큰을 돌려준다
   const devOauth = env.OAUTH_DEV === '1';     // 개발 · 테스트 전용: SNS 토큰 대신 dev_sub 허용
@@ -157,6 +157,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       const lk = kind === 'learner' && email && !univ ? await linkOf(L, tid, bidx(tid, 'email', email)) : null;
       const jd = { kind, login: univ ? 'univ' : login, sid: lid, nick, emailMask: email ? maskEmail(email) : '', dept, minor, consent: { tos: true, privacy: true, mkt: !!consent.mkt, at: cons.at }, extra: cleanExtra(b.extra), ...(tokOk && tok ? { token: tok } : {}), ...(famSid ? { famSid } : {}), ...(lk ? { link: lk } : {}) };
       if (!minor) await evIns(L, tid, lid, 'acct-join', jd);
+      if (!minor && mileHook) await mileHook(L, tid, lid, 'signup', 'acct', lid, null, 'A'); /* v42 가입 적립(제도 켠 기관만, 같은 트랜잭션 · 세이브포인트) */
       return { lid, st, nick, login: univ ? 'univ' : login, gtok, pend };
     });
     if (out.st === 'active' && !out.pend) await newLearnerSession(res, tid, out.lid);
@@ -176,6 +177,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       const a = (await L('select login, nickname, dept, mkt, invite_token from learner_accounts where tenant_id = $1 and learner_id = $2', [tid, g.learner_id])).rows[0] || {}; const im = (await P('select email_mask, email_bidx from pii.identity where tid = $1 and learner_id = $2', [tid, g.learner_id])).rows[0] || {};
       const lk = im.email_bidx ? await linkOf(L, tid, im.email_bidx) : null;
       await evIns(L, tid, g.learner_id, 'acct-join', { kind: 'learner', login: a.login || 'email', sid: g.learner_id, nick: a.nickname || '', emailMask: im.email_mask || '', dept: a.dept || '', minor: true, consent: { tos: true, privacy: true, mkt: !!a.mkt, at: new Date().toISOString() }, extra: {}, guardian: { ok: true, at: new Date().toISOString() }, ...(a.invite_token ? { token: a.invite_token } : {}), ...(lk ? { link: lk } : {}) });
+      if (mileHook) await mileHook(L, tid, g.learner_id, 'signup', 'acct', g.learner_id, null, 'A');
       const org = await orgOf(L, tid); return { ok: true, status: 'active', ...(org.parent ? { parent_token: ptok } : {}) };
     });
   }
