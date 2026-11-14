@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v42 학습 마일리지 — 기관 범위(inTenant, RLS) 쿼리. 표 · 업무 규칙 함수(mil_*)는 service/server/mileage/sql/*(Node 마이그레이션 소유).
+     Java는 규칙을 다시 구현하지 않고 Node와 같은 SQL 문장 · 같은 함수를 부른다(04-data-api 1절). 문장은 MileServiceImpl의 고정 문자열이고 값은 #{p.pN} 바인딩이다. -->
+<mapper namespace="egovframework.didisam.mileage.service.impl.MileMapper">
+  <select id="rows" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">${sql}</select>
+  <update id="exec">${sql}</update>
+</mapper>

@@ -54,6 +54,7 @@ public class LedgerServiceImpl extends EgovAbstractServiceImpl implements Ledger
     static final List<String> ITEM = List.of("tuition", "book", "facility", "pass", "rental", "program", "event", "etc"), DESK = List.of("desk_card", "cash", "transfer", "voucher");
     static final String AZ = "abcdefghijklmnopqrstuvwxyz0123456789", PFX = "enc1:";
     private static final SecureRandom RND = new SecureRandom();
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.mileage.service.MileService mile; /* v42 환불 훅 */
     private final LedgerMapper m; private final TenantTx tx; private final DdRateLimiter rl; private final DdStateCrypto crypt; private final DdPiiCrypto pii; private final AuthService auth; private final DdWeb web;
     private final String tossKey, tossUrl, tossClient; private final long sweepMs; private final Map<String, Long> swept = new ConcurrentHashMap<>();
     private final HttpClient http = HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).connectTimeout(Duration.ofSeconds(10)).build();
@@ -388,7 +389,11 @@ public class LedgerServiceImpl extends EgovAbstractServiceImpl implements Ledger
             if (key == null) { tx.inTenant(tid, () -> { audit(tid, email(a), "ledger.refund.pg_fail", map("refund", f.get("id"))); return null; }); throw E(502, "pg", "토스 취소에 실패했습니다. 환불은 대기 상태로 남겨 두었습니다."); } }
         String k = key;
         return T(tid, () -> { int n = m.doneRefund(amt, amt != L(f.get("auto_amount")) ? why : null, P != null ? Boolean.TRUE : null, k, email(a), tid, s(f.get("id"))); if (n == 0) throw E(409, "state", "이미 처리한 환불입니다.");
-            audit(tid, email(a), "ledger.refund.confirm", map("refund", f.get("id"), "amount", amt, "toss", P != null)); return map("ok", true, "refund", rfOut(m.selectRefund(tid, s(f.get("id"))))); });
+            /* v42 차감 사용 P 비율 복원 · 전액 환불이면 과정 적립 취소(같은 트랜잭션, Node ctx.mileage.onRefund) */
+            long ra = L(R.get("amount")); JsonNode mil = mile != null ? mile.onRefund(tid, s(R.get("id")), ra > 0 ? (double) amt / ra : 0) : null;
+            boolean mx = mil != null && (truthy(get(mil, "restored")) || truthy(get(mil, "cancelled")));
+            Map<String, Object> ad = map("refund", f.get("id"), "amount", amt, "toss", P != null); if (mx) ad.put("mileage", mil); audit(tid, email(a), "ledger.refund.confirm", ad);
+            Map<String, Object> o = map("ok", true, "refund", rfOut(m.selectRefund(tid, s(f.get("id"))))); if (mx) o.put("mileage", map("restored", get(mil, "restored"), "cancelled", get(mil, "cancelled"))); return o; });
     }
 
     Object link(Map<String, Object> a, JsonNode b) throws Exception {
