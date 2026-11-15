@@ -46,7 +46,8 @@ VIEWS.dash = () => {
     <div class="card">${isU ? `<div class="ch"><b>AI 진단 유형 분포</b><small>진단 완료 ${diagDone}명</small></div>${prismBars()}` : `<div class="ch"><b>${esc(t('cls'))} Top 5</b><small>수강 인원순</small></div>${[...S.classes].sort((a, b) => b.learners.length - a.learners.length).slice(0, 5).map((c, i) => `<div class="row"><span><b class="rk">${i + 1}</b>${esc(c.name)}</span><span>${c.learners.length}명 · ${pct(avgP(c))}</span></div>`).join('')}`}</div>
   </section>`;
 };
-const PRISM = { EYE: ['#E63295', '관찰형'], PEN: ['#4C77C5', '기록형'], LENS: ['#E8622A', '분석형'], STORY: ['#7D5CB5', '표현형'], MAP: ['#3BA875', '설계형'] };
+/* v43 F1: PRISM 유형 색 = 그린 · 중성 팔레트(lsite.js LS_TYPES.univ · sitepro.js SPZ와 같은 값, 흰 글자 4.5:1 이상) */
+const PRISM = { EYE: ['#00862D', '관찰형'], PEN: ['#3F3A33', '기록형'], LENS: ['#0F766E', '분석형'], STORY: ['#05612A', '표현형'], MAP: ['#5C554B', '설계형'] };
 function prismBars() { const c = {}; S.members.forEach(m => m.diag && (c[m.diag] = (c[m.diag] || 0) + 1)); const tot = Object.values(c).reduce((a, b) => a + b, 0) || 1; return `<div class="funnel">${Object.entries(PRISM).map(([k, [col, l]]) => `<div class="fr"><span>${k} <small>${l}</small></span><i><b style="width:${(c[k] || 0) / tot * 100}%;background:${col}"></b></i><em>${c[k] || 0}</em></div>`).join('')}</div>`; }
 ACT['kpi-csv'] = () => { const L = S.members; downloadCSV(`KPI_${today()}.csv`, ['지표', '값'], [['등록', L.length], ['가입률(%)', Math.round(L.filter(m => m.grade === '정회원').length / L.length * 100)], ['주간 활성', L.filter(m => daysAgo(m.last) <= 7).length], ['평균 진도(%)', Math.round(avgOf(S.classes.flatMap(c => Object.values(c.prog).map(p => p.p))))], ['배지 보유', L.filter(m => hasBadge(m.id)).length], ['검수 대기', pend().length], ['14일 미접속', L.filter(m => daysAgo(m.last) >= 14).length]]); };
 

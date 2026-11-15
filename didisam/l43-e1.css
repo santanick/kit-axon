@@ -10,10 +10,8 @@
 #main.l43 :is([data-act=cm-mc-mode],[data-act=sl-chip],[data-act=sx-sub]){display:inline-flex;align-items:center}
 #main.l43 summary[data-act=cn-gal],#main.l43 .cn-gal>summary{min-height:44px;display:flex;align-items:center}
 /* 글자 12px 이상 */
-#main.l43 :is(.jn,.cmn-pin,.cmn-to,.efh-demo,.flow .fm,.flow .tr,.flow .ac,.flow .cd,.cm26k em,.seg2 em){font-size:12px}
+#main.l43 :is(.cmn-pin,.cmn-to,.efh-demo,.cm26k em){font-size:12px} /* .jn · .flow · .seg2 em 은 v43 F1에서 app.css 원본을 12px로 */
 #main.l43[data-l43=attend] .tw small,#main.l43[data-l43=grade] small,#main.l43[data-l43=consult] small{font-size:12px}
-/* 자동화 흐름 칩: 파랑 → 그린 토큰 */
-#main.l43[data-l43=auto] .flow .tr{background:var(--gr50);color:var(--t-mag)}
 /* 출석 칸 · 보호자 칩 대비(라이트 4.5:1) */
 #main.l43 .att.g,#main.l43 .mb-chip.g{color:var(--t-mag)}
 #main.l43 .att.y,#main.l43 .mb-chip.y{color:var(--t-warn)}

@@ -138,7 +138,7 @@
   body .lsnum{width:26px;height:26px}
 }
 /* v38 F5 R3 U14: PC에서도 스튜디오 머리 · 홈 주 버튼 40px 이상(DDS 기준) — 메뉴 찾기 · 사이트 열기 · 시작 가이드 · 맡기기 */
-.topr .uxfind,.topr .btn,.topr>button,.topr>a,.bprog,.uxt .btn,.uxt button,.aih-chips .chip{min-height:40px}
+.topr .uxfind,.topr .btn,.topr>button,.topr>a,.bprog,.uxt .btn,.uxt button,.aih-chips .chip,#roleSel,#langSel,.topr select{min-height:44px} /* v43: 상단 머리 누르는 것 44px */
 /* v38 F5 R3 U14 · C13: 사이트 편집기 아래 레일 · 시안 카드 · 단계 표시의 작은 글자 12px 이상(PC · 390) */
 body .hps-ri{font-size:12px}body .hps-steps li,body .hps-cnt,body .hps-og small,body .hpw-rec,body .hpw-db em,body .hpw-qi,body .hpai-via,body .hpe-bar #hpeUndo em,body .hps-tab i,body .hps-lsxh summary b::after{font-size:12px!important}
 @media (max-width:860px){body .hps-ri{font-size:13px;min-height:56px}}

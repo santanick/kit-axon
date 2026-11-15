@@ -89,10 +89,10 @@
 #main.l43[data-l43^=lms] small{font-size:max(12px,.85em)}
 /* v43 E2 — 예전 변수(--muted · --ink · --line · --soft · --card)를 쓰는 화면이 다크에서도 4.5:1을 지키게, 담당 화면 범위에서 토큰으로 다시 잇는다 */
 #main.l43:is([data-l43^=lms],[data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat],[data-l43=clib],[data-l43=settings]){--muted:var(--t-sub);--mut:var(--t-sub);--ink:var(--g900);--ink2:var(--g800);--ink3:var(--t-sub);--line:var(--g300);--soft:var(--surface2);--card:var(--surface);--bg2:var(--surface2)}
-#main.l43[data-l43=settings] .sx-card,#main.l43[data-l43=settings] .sl-sheet{background:var(--surface)}
+#main.l43[data-l43=settings] .sl-sheet{background:var(--surface)} /* .sx-card 는 v43 F1에서 slim.css 원본을 --surface로 */
 #main.l43[data-l43=settings] .sl-chips button{min-height:44px}
-/* ux.css(.ux-on small · .mini = #4E5169 고정)가 다크에서 2.3:1이 되므로 담당 화면에서는 토큰 글자색으로 */
-#main.l43:is([data-l43^=lms],[data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat],[data-l43=clib],[data-l43=settings]) :is(.mini,small,.efh-demo,.efh-sub2){color:var(--t-sub)}
+/* .mini · small 글자색은 ux.css 원본이 --t-sub 토큰(v43) — 여기서는 화면 고유 클래스만 */
+#main.l43:is([data-l43^=lms],[data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat],[data-l43=clib],[data-l43=settings]) :is(.efh-demo,.efh-sub2){color:var(--t-sub)}
 #main.l43[data-l43=settings] :is(.seg2,.sl-chips) button.on{background:var(--surface);color:var(--g900);box-shadow:var(--sh1)}
 #main.l43[data-l43=settings] .tr26n :is(li,p,ul){color:var(--g800)}
 #main.l43[data-l43=settings] .tr26v{color:var(--t-sub)}
