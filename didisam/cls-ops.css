@@ -113,7 +113,7 @@
   .slg-i,.sl-i,.link.back{position:relative}
   .slg-i::after,.sl-i::after{content:'';position:absolute;inset:-12px}
   .link.back{min-height:44px;display:inline-flex;align-items:center}
-  .bview,.bhd+*{padding-bottom:84px} /* AI SAM 떠 있는 버튼이 마지막 줄 버튼('반 설정' · '진도 30% 미만 독려')을 가리지 않게 */
+  .bview,.bhd+*:not(.wtabs):not(.btabs){padding-bottom:84px} /* AI SAM 떠 있는 버튼이 마지막 줄 버튼('반 설정' · '진도 30% 미만 독려')을 가리지 않게 */
 }
 /* v38 F5 A11 · UL15: 390 홈 AI 입력칸 예시 문구가 두 줄로 잘리지 않게(한 줄 말줄임) · 추천 칩은 잘리지 않고 줄바꿈 */
 @media (max-width:860px){
