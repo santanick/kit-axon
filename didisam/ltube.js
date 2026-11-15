@@ -104,11 +104,19 @@
   const hsh = s => [...String(s || '')].reduce((a, ch) => a + ch.charCodeAt(0), 0);
   const STK = [[/엑셀|데이터|통계|회계|재무|세무|전산|ERP|빅데이터/i, ['dat-01']], [/코딩|파이썬|프로그래밍|자바스크립트|웹 ?개발|앱 ?개발/i, ['cod-01', 'cod-02', 'cod-03', 'cod-04']], [/영어|토익|토플|어학|일본어|중국어|회화/i, ['lan-01', 'lan-02']],
     [/디자인|포토샵|피그마|일러스트레이터|UX|UI/i, ['dsk-04']], [/법정|의무교육|청렴|윤리|개인정보|성희롱|괴롭힘|컴플라이언스/, ['doc-01']], [/자격증|기출|필기|실기|모의고사|합격/, ['dsk-01', 'dsk-02']]];
-  const stockOf = s => { const t = String(s || ''); const r = STK.find(([re]) => re.test(t)); return r ? r[1][hsh(t) % r[1].length] : ''; };
+  /* v43 Q3: 강좌명 키워드 → 장면이 맞는 사진 후보를 넓힌다(AI · 영상 · 업무 자동화 · 오프라인 실습 · 구독 템플릿 · 요리 · 음악 · 미술 · 정비 · 직무 연수).
+     같은 화면 안에서는 TB.used(그리기 한 번마다 비움)로 같은 사진을 두 번 쓰지 않는다 — 후보가 다 쓰였으면 패턴으로 */
+  STK.push([/생성형|인공지능|\bAI\b|챗GPT|GPT|로봇/i, ['rob-01', 'cod-03']], [/영상|유튜브|촬영|편집|사진|카메라/, ['vid-01', 'pho-02']], [/노션|업무 ?자동화|자동화|생산성|오피스|스마트워크|협업/, ['lap-03', 'lap-06', 'cor-06', 'lap-08']],
+    [/오프라인|원데이|워크숍|실습 ?클래스|세미나|특강/, ['grp-06', 'grp-02', 'cor-02']], [/구독|템플릿|양식/, ['lap-01', 'dsk-09', 'lap-04']], [/요리|조리|한식|양식 ?조리|제과|제빵|베이킹/, ['coo-01', 'coo-02', 'bak-02', 'bak-05']],
+    [/피아노|기타|음악|보컬|악기/, ['mus-08', 'mus-02', 'mus-05']], [/미술|수채화|드로잉|그림|캘리/, ['art-01', 'art-02', 'art-06']], [/정비|자동차|용접|전기|기계|공구/, ['aut-03', 'wrk-07', 'wrk-04']],
+    [/리더십|직무|신입|온보딩|연수|역량|HRD|매니저/, ['cor-01', 'cor-07', 'cor-03']], [/수학|과학|국어|내신|수능|숙제/, ['dsk-03', 'dsk-07', 'dsk-06']]);
+  const stockOf = s => { const t = String(s || ''); const r = STK.find(([re]) => re.test(t)); if (!r) return ''; const L = r[1], u = TB.used || (TB.used = new Set()); const k0 = hsh(t) % L.length;
+    for (let i = 0; i < L.length; i++) { const id = L[(k0 + i) % L.length]; if (!u.has(id)) { u.add(id); return id; } } return ''; };
+  window.tubeStock = stockOf;
   const TYI = { video: 'play', doc: 'doc', quiz: 'quiz', exam: 'quiz', assign: 'edit', live: 'live', offline: 'pin' };
   const patHTML = (seed, ty, cls) => `<span class="${cls} tb-pat p${hsh(seed) % 4}" aria-hidden="true"><i>${I[TYI[ty] || 'film'](28)}</i></span>`;
   /* 사진 있는 썸네일: <img> 한 장(가로 꽉 채움). 없으면 패턴 */
-  const photoOf = c => c.thumb || (stockOf(c.name) ? `img/stock/${stockOf(c.name)}-800.webp` : '');
+  const photoOf = c => { if (c.thumb) return c.thumb; const id = stockOf(c.name); return id ? `img/stock/${id}-800.webp` : ''; };
   function thumbBlock(c, it, cls) { const ph = photoOf(c); return ph ? `<span class="${cls} img"><img src="${esc(ph)}" alt="" loading="lazy"></span>` : patHTML(c.name, it ? it.type : 'video', cls); }
 
   /* ── 홈 피드 ── */
@@ -309,7 +317,7 @@
   const maxW = (c, it) => { const r = lpItem(c.id, it.id); return Math.max(+r.max || 0, +r.pos || 0); };
   const seekOK = (c, it, t) => { if (strict()) return false; const sk = c.skip || 'free'; return sk === 'free' || (sk === 'watched' && it != null && t <= maxW(c, it) + 1); };
   function chapHTML(c, it) { const C = chapsOf(it); if (!C.length) return ''; const t = nowT() || +lpItem(c.id, it.id).pos || 0; const ci = C.reduce((k, x, j) => (x.t <= t ? j : k), -1); const anyK = C.some(x => seekOK(c, it, x.t));
-    return `<div class="tbw-ch" role="list" aria-label="챕터">${C.map((x, j) => seekOK(c, it, x.t) ? `<button type="button" role="listitem" class="tbw-c${j === ci ? ' on' : ''}" data-tb="seek" data-v="${x.t}" aria-label="${esc(x.n)} ${mmss(x.t)}로 이동">${String(j + 1).padStart(2, '0')} ${esc(x.n)}${j === ci ? ' ▶' : ''}</button>` : `<span role="listitem" class="tbw-c${j === ci ? ' on' : ''}">${String(j + 1).padStart(2, '0')} ${esc(x.n)}</span>`).join('')}</div><p class="tbw-cn">강사가 넣은 챕터예요${anyK ? (C.every(x => seekOK(c, it, x.t)) ? '' : ' · 본 구간까지만 이동할 수 있어요') : ' · 이 과정은 앞으로 건너뛸 수 없어요'}</p>`; }
+    return `<div class="tbw-ch" role="list" aria-label="챕터">${C.map((x, j) => seekOK(c, it, x.t) ? `<button type="button" role="listitem" class="tbw-c${j === ci ? ' on' : ''}" data-tb="seek" data-v="${x.t}" aria-label="${esc(x.n)} ${mmss(x.t)}로 이동">${String(j + 1).padStart(2, '0')} ${esc(x.n)}</button>` : `<span role="listitem" class="tbw-c${j === ci ? ' on' : ''}">${String(j + 1).padStart(2, '0')} ${esc(x.n)}</span>`).join('')}</div><p class="tbw-cn">강사가 넣은 챕터예요${anyK ? (C.every(x => seekOK(c, it, x.t)) ? '' : ' · 본 구간까지만 이동할 수 있어요') : ' · 이 과정은 앞으로 건너뛸 수 없어요'}</p>`; }
   const thread = iid => (TB.msgs[iid] = TB.msgs[iid] || []);
   function msgHTML(m) { return m.me ? `<div class="tbw-m me">${esc(m.t)}</div>` : `<div class="tbw-m">${nl(esc(m.t)).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')}${m.ev ? `<small class="tbw-ev">${esc(m.ev)}</small>` : ''}${m.h || ''}</div>`; }
   const nl = s => String(s).replace(/\n/g, '<br>');
@@ -358,22 +366,61 @@
     document.body.classList.add('tb-watch'); }
   /* 재생 시각 배지 · 현재 챕터 표시는 1초마다(대화는 다시 그리지 않음) */
   setInterval(() => { if (!on()) return; const k = cur(); const box = $('#lm .tbw'); if (!k || !box) return; const t = nowT(); const em = box.querySelector('.tbw-now'); if (em && t != null) em.textContent = `${mmss(t)} 장면을 보고 있어요`;
-    const C = chapsOf(k.it); if (!C.length || t == null) return; const ci = C.reduce((a, x, j) => (x.t <= t ? j : a), -1); box.querySelectorAll('.tbw-c').forEach((b, j) => { const o = j === ci; if (b.classList.contains('on') !== o) { b.classList.toggle('on', o); b.textContent = `${String(j + 1).padStart(2, '0')} ${C[j].n}${o ? ' ▶' : ''}`; } }); }, 1000);
+    const C = chapsOf(k.it); if (!C.length || t == null) return; const ci = C.reduce((a, x, j) => (x.t <= t ? j : a), -1); box.querySelectorAll('.tbw-c').forEach((b, j) => { const o = j === ci; if (b.classList.contains('on') !== o) { b.classList.toggle('on', o); b.textContent = `${String(j + 1).padStart(2, '0')} ${C[j].n}`; } }); }, 1000);
   function seek(t) { const k = cur(); if (!k || !seekOK(k.c, k.it, t)) return; try { const p = typeof LW === 'object' && LW && LW.yp; if (p && typeof p.seekTo === 'function') { p.seekTo(t, true); if (p.playVideo) p.playVideo(); return; } const v = $('#lm video'); if (v) { v.currentTime = t; v.play && v.play().catch(() => { }); } } catch (e) { } }
+
+  /* ── v43 Q3 앱 머리 화면 공통: 「작은 히어로(눈썹 · 한 문장 · 요약 숫자 3칸) + 카드 목록」 ──
+     공지 · 메시지 · 알림 · 결제 내역 · 수료 · 배지 · 둘러보기 · 강좌 상세 · 나. 웹 화면의 section.sub(제목 띠)를 앱에서만 진그린 판으로 바꾸고,
+     원래 h1은 그대로 두어 눈썹 글자로 쓴다(테스트 선택자 · 탭 id 유지). 숫자는 이미 그려진 목록과 myStats에서 센다(새 /api 없음). */
+  const nf = n => (+n || 0).toLocaleString('ko-KR');
+  const cnt = s => document.querySelectorAll('#lm ' + s).length;
+  function phData(a) { const C = stats().courses; const run = C.filter(x => !x.done).length, fin = C.filter(x => x.done).length; const avg = C.length ? Math.round(C.reduce((s, x) => s + (+x.p || 0), 0) / C.length) : 0;
+    if (a === 'notice') { const n = cnt('.nlist .nt'), u = cnt('.nlist .nt .lcun'), w = cnt('.nlist .nt .new'); return { h: u ? `안 읽은 공지 <em>${u}건</em>이 있어요` : n ? `공지를 <em>모두 읽었어요</em>` : `아직 올라온 공지가 <em>없어요</em>`, k: [['전체', `${n}건`], ['안 읽음', `${u}건`], ['새 글', `${w}건`]] }; }
+    if (a === 'msg' || a === 'inbox') { let m = [], L = []; try { m = typeof lcInbox === 'function' ? lcInbox() : []; } catch (e) { } try { L = typeof laItems === 'function' ? laItems().L : []; } catch (e) { }
+      const mu = m.filter(x => !x.read).length, lu = L.filter(x => !x.read).length;
+      return a === 'msg' ? { h: mu ? `새 메시지 <em>${mu}개</em>가 왔어요` : `새 메시지가 <em>없어요</em>`, k: [['받은 메시지', `${m.length}개`], ['새 메시지', `${mu}개`], ['새 알림', `${lu}개`]] }
+        : { h: lu ? `읽지 않은 알림 <em>${lu}개</em>` : `알림을 <em>모두 확인했어요</em>`, k: [['전체 알림', `${L.length}개`], ['안 읽음', `${lu}개`], ['새 메시지', `${mu}개`]] }; }
+    if (a === 'mypay' || a === 'ledger') { const R = [...document.querySelectorAll('#lm .py26r:not(.py26hd)')]; const sum = R.reduce((s, r) => { const c = r.children[3]; return s + (+(String(c ? c.textContent : '').replace(/[^\d]/g, '')) || 0); }, 0); const sub = R.filter(r => /정기/.test(r.textContent)).length;
+      return { h: R.length ? `지금까지 <em>${R.length}건</em> 결제했어요` : `아직 결제한 내역이 <em>없어요</em>`, k: [['결제', `${R.length}건`], ['결제 금액', `${nf(sum)}원`], ['정기 결제', `${sub}건`]] }; }
+    if (a === 'badges' || a === 'cert' || a === 'bkcert') return { h: fin ? `수료 <em>${fin}개</em>를 마쳤어요` : run ? `<em>${run}개</em> 강좌가 수료를 향해 가고 있어요` : `수강을 시작하면 <em>수료증</em>이 여기 모여요`, k: [['수강 중', `${run}개`], ['수료', `${fin}개`], ['평균 진도', `${avg}%`]] };
+    if (a === 'shop' || a === 'courses' || a === 'tb') { const n = cnt('.shp-grid .shp-card') || cnt('.cw,.tk'); const ok = [...document.querySelectorAll('#lm .shp-card')].filter(x => /신청 가능|무료/.test(x.textContent)).length;
+      return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : `<em>${n}개</em> 강좌를 둘러볼 수 있어요`, k: [['전체', `${n}개`], ['신청 가능', `${ok}개`], ['수강 중', `${run}개`]] }; }
+    if (a === 'class') { const id = decodeURIComponent(route().b || ''); const c = ((SITE().shop || {}).classes || []).find(x => x.id === id) || (SITE().classes || []).find(x => x.id === id) || {}; const full = (SITE().classes || []).find(x => x.id === id) || c; const n = seq(full).length; const pr = +(c.final != null ? c.final : c.price) || 0;
+      const ph = photoOf({ thumb: c.thumb, name: c.name || full.name || '' }); return { photo: ph, k: [[unit() === '회차' ? '회차' : '강의', `${n}개`], ['수료 기준', `진도 ${(full.cpl && full.cpl.prog) || 80}%`], ['수강료', pr ? (pr >= 10000 ? `${+(pr / 10000).toFixed(1)}만원` : `${nf(pr)}원`) : '무료']] }; }
+    if (a === 'acct') { const me = LR.me || {}; const nm = String(me.nick || me.name || me.sid || '').trim(); const wk = weekDays().filter(x => x.ok).length;
+      return { me: nm, h: `${esc(nm)}님`, k: [['수강 중', `${run}개`], ['수료', `${fin}개`], ['이번 주 목표', `${wk}/7일`]] }; }
+    return { k: [] }; }
+  const kHTML = K => K.length ? `<div class="tb-phk">${K.map(([l, v]) => `<span><small>${esc(l)}</small><b>${esc(v)}</b></span>`).join('')}</div>` : '';
+  function subHero(a) { const lm = $('#lm'); if (!lm || lm.querySelector('.tb-ph')) return; const org = (SITE().org || {}).name || '';
+    if (a === 'acct') { const me = lm.querySelector('.ls-me'); if (!me || !LR.me) return; const D = phData(a); const ini = /^[\d\s-]*$/.test(D.me || '') ? '' : [...D.me.replace(/\s/g, '')].slice(0, /[가-힣]/.test(D.me) ? 1 : 2).join('').toUpperCase(); /* 숫자 계정(수강번호)은 사람 아이콘 */
+      me.insertAdjacentHTML('afterbegin', `<section class="sub tb-ph tb-ph-me" aria-label="내 학습 요약"><div class="in"><div class="tb-phm"><span class="tb-pav" aria-hidden="true">${ini ? esc(ini) : I.me(28)}</span><span><small class="tb-pheb">${esc(org)}</small><b class="tb-phh">${D.h}</b></span></div>${kHTML(D.k)}</div></section>`); return; }
+    if (!lm.querySelector(':scope > section.sub') && a === 'inbox') { const t = (lm.querySelector('.la-ih h1') || {}).textContent || '알림'; lm.insertAdjacentHTML('afterbegin', `<section class="sub tb-ph-new"><div class="in"><p class="tb-pheb">${esc(t)}</p></div></section>`); } /* 알림함은 제목 띠가 없어 앱에서만 만든다(원래 h1은 CSS로 숨김) */
+    const sub = lm.querySelector(':scope > section.sub'); if (!sub) return; const inn = sub.querySelector('.in') || sub; const D = phData(a); sub.classList.add('tb-ph');
+    if (D.photo) { sub.classList.add('tb-ph-photo'); sub.insertAdjacentHTML('afterbegin', `<img class="tb-phi" src="${esc(D.photo)}" alt="" loading="lazy">`); }
+    const h1 = inn.querySelector('h1, p.tb-pheb'); if (h1 && D.h) { h1.classList.add('tb-pheb'); h1.insertAdjacentHTML('afterend', `${h1.hasAttribute('data-ls-hide') ? `<p class="tb-pheb" aria-hidden="true">${esc(h1.textContent)}</p>` : ''}<p class="tb-phh" role="text">${D.h}</p>`); } /* lslim이 앱에서 h1을 숨긴 화면은 눈썹 글자를 따로 */ else if (h1 && !D.photo) inn.insertAdjacentHTML('afterbegin', `<small class="tb-pheb tb-org">${esc(org)}</small>`);
+    const tabs = inn.querySelector('.lctabs'); const k = kHTML(D.k); if (k) { if (tabs) tabs.insertAdjacentHTML('beforebegin', k); else inn.insertAdjacentHTML('beforeend', k); } }
+  /* 빈 목록: 회색 글 한 줄 → 그린 톤 일러스트 + 한 문장(+ 갈 곳이 있으면 주 버튼 1개) */
+  const EMPTY_GO = { mypay: ['#shop', '강좌 둘러보기'], msg: ['', ''], inbox: ['#notice', '공지 보기'] };
+  function emptyUp(a) { document.querySelectorAll('#lm :is(li.empty,p.empty,.empty2):not(.tb-emp):not([hidden])').forEach(e => { if (e.id === 'shpNo') return; e.classList.add('tb-emp'); e.insertAdjacentHTML('afterbegin', emptyArt());
+    const g = EMPTY_GO[a]; if (g && g[0] && !e.querySelector('a')) { const f = info(); const h = g[0] === '#shop' ? (f.browse && f.browse !== '#home' ? f.browse : '#courses') : g[0]; e.insertAdjacentHTML('beforeend', `<a class="tb-pri" href="${esc(h)}">${esc(g[0] === '#shop' ? (f.find || g[1]) : g[1])}</a>`); } }); }
+  /* 둘러보기 · 강좌 상세 사진: 같은 화면에서 같은 사진이 반복되면(LHB 기본 사진) 강좌명 키워드 사진으로 바꾼다 — 키워드가 없으면 그대로 */
+  function photoUp() { const seen = new Set(); document.querySelectorAll('#lm .shp-card .shp-thp, #lm .shp-det .shp-thp, #lm .shp-card img.shp-th').forEach(el => { const card = el.closest('.shp-card,.shp-det'); const nm = ((card && (card.querySelector('.shp-sname') || card.querySelector('h3') || card.querySelector('b'))) || {}).textContent || ''; const src = el.tagName === 'IMG' ? el.getAttribute('src') : el.style.backgroundImage;
+    const dup = seen.has(src); seen.add(src); if (!dup && el.tagName === 'IMG') return; const id = stockOf(nm); if (!id) return; const u = `img/stock/${id}-800.webp`; if (el.tagName === 'IMG') el.src = u; else el.style.backgroundImage = `url('${u}')`; }); }
 
   /* ── 그리기(가장 바깥 감싸기) ── */
   function apply() { const B = document.body; B.classList.remove('tube', 'tb-full', 'tb-watch'); const a0 = route().a;
     if (document.body.classList.contains('lapp') && ['review', 'done'].includes(a0) && !on()) { location.replace('#home'); return; } /* 보호자 · 방문자: 튜브 전용 주소는 홈으로(요원 3) */
     if (!on()) return; if (a0 === 'ai' && !tOn()) { location.replace('#home'); return; } /* 튜터를 끄면 대화 화면 주소도 닫음(요원 2) */ const a = route().a; const lm = $('#lm'), app = $('#lapp'); if (!lm || !app) return;
     if (B.classList.contains('ap-pickon')) return; /* 선생님 고르기 화면은 그대로 */
-    B.classList.add('tube');
+    B.classList.add('tube'); TB.used = new Set(); /* 그리기 한 번 = 한 화면: 사진 중복 막기 */
     if (a === 'home') { const cal = lm.querySelector('a.lq-hc'); const calH = cal ? cal.outerHTML : ''; lm.innerHTML = homeHTML(); if (calH && TB.f === 'all') { const mn = lm.querySelector('.tb-main'); mn && mn.insertAdjacentHTML('beforeend', calH); } /* 학습 캘린더(lcal.js) 카드는 피드 끝에 그대로 */ B.classList.remove('ap-homeon'); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     else if (a === 'review') { lm.innerHTML = shortsHTML(); if (!tOn()) lm.querySelectorAll('[data-tb="sh-ask"]').forEach(x => x.remove()); B.classList.add('tb-full', 'tb-dark'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     else if (a === 'attend') { lm.innerHTML = attHTML(); const tt = app.querySelector('.ap-bar .ap-tt'); if (tt) tt.textContent = '출석'; document.title = `출석 · ${(SITE().org || {}).name || ''}`; }
     else if (a === 'done') { lm.innerHTML = doneHTML(); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     if (a !== 'review') B.classList.remove('tb-dark');
+    if (!['home', 'review', 'done', 'attend', 'c'].includes(a)) { try { photoUp(); subHero(a); emptyUp(a); } catch (e) { console.error('ltube ph', e); } }
     if ((a === 'my' || a === 'cal') && !route().b && !lm.querySelector('.tb-seg')) lm.insertAdjacentHTML('afterbegin', segHTML(a));
-    if (a === 'c') mountWatch(); if (!cur() && TB.open) { TB.open = false; B.classList.remove('tb-sheet'); }
+    if (a === 'c') { mountWatch(); try { const k = cur(); const ph = k ? photoOf(k.c) : ''; lm.style.setProperty('--tb-poster', ph ? `url("${ph}")` : 'none'); } catch (e) { } } /* Q3: 영상이 없거나 준비 중인 검은 상자 → 강좌 사진 포스터 */ if (!cur() && TB.open) { TB.open = false; B.classList.remove('tb-sheet'); }
     const nav = app.querySelector('.ap-nav'); if (nav) { nav.classList.add('tb-nav'); nav.classList.remove('lq-n6'); nav.setAttribute('aria-label', '아래 탭'); const h = navHTML(); if (nav.dataset.tbh !== h) { nav.innerHTML = h; nav.dataset.tbh = h; } } }
   { const base = lrender; lrender = (...x) => { const r = base(...x); try { apply(); fab(); } catch (e) { console.error('ltube', e); } return r; }; }
   /* 말로 묻기(기존 앱 첫 화면 마이크) — 대화 창 · 장면 튜터 입력칸 옆. 브라우저 음성 인식이 있을 때만 */

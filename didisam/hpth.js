@@ -16,7 +16,7 @@
   if (typeof siteHTML !== 'function' || typeof proSec !== 'function') return;
   /* ── 테마 ── */
   const TH = {
-    clean: { name: '모던 클린', desc: '흰 바탕 · 또렷한 포인트색 · 실제 강좌 카드로 꾸민 좌우 분할 첫 화면', acc: '#4F46E5', bg: '#FFFFFF', alt: '#F5F6FA', ink: '#111827', mu: '#4B5263', r: 16, br: 12, hero: 'split', vis: 'mock', illu: 'book', card: 'shadow', look: 'mintSoft', sw2: '#EEF0FF' },
+    clean: { name: '모던 클린', desc: '흰 바탕 · 또렷한 포인트색 · 실제 강좌 카드로 꾸민 좌우 분할 첫 화면', acc: '#00862D', bg: '#FFFFFF', alt: '#F4F7F5', ink: '#111827', mu: '#4B5263', r: 16, br: 12, hero: 'split', vis: 'mock', illu: 'book', card: 'shadow', look: 'mintSoft', sw2: '#ECFDF3' },
     premium: { name: '프리미엄 다크', desc: '짙은 남색 첫 화면 · 금빛 포인트 · 여백이 넉넉한 고급스러운 분위기', acc: '#C8A15A', bg: '#FFFFFF', alt: '#F7F5F0', ink: '#14161F', mu: '#4F525C', r: 10, br: 6, hero: 'dark', hb: '#0B1022', vis: 'mock', illu: 'book', lux: 1, card: 'line', look: 'navyGlow', sw2: '#0B1022' },
     warm: { name: '따뜻한 학원', desc: '크림색 바탕 · 둥근 카드 · 책과 연필 일러스트로 친근하게', acc: '#E0582E', bg: '#FFFBF5', alt: '#FFF1E2', ink: '#2B1D14', mu: '#5E4D42', r: 24, br: 999, hero: 'split', vis: 'illu', illu: 'book', card: 'flat', look: 'brandBold', sw2: '#FFF1E2' },
     official: { name: '공식 기관', desc: '단정한 남색 띠 배너 · 각진 카드 · 바로가기 중심의 신뢰감 있는 배치', acc: '#1D4ED8', bg: '#FFFFFF', alt: '#F3F5F9', ink: '#0F172A', mu: '#475063', r: 6, br: 6, hero: 'band', vis: 'illu', illu: 'doc', card: 'line', look: 'publicTiles', sw2: '#0F2A6B' },

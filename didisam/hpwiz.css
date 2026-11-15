@@ -97,3 +97,16 @@
 .hpw-th.prem .hpw-tn b::before{content:'';display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--gr500,#00C53B);margin-right:8px;vertical-align:2px}
 .hpw-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.hpw-tags em{font-style:normal;font-size:12px;font-weight:650;line-height:1;padding:6px 9px;border-radius:999px;background:var(--g100,#F6F3EE);color:var(--g700,#5C554B)}
 .hpw-tags em.on{background:var(--gr50,#ECFDF3);color:var(--gr800,#066B2A);box-shadow:inset 0 0 0 1px var(--gr200,#A6F0BE)}
+
+/* v43 Q3 AI 마법사(수석 3): 단계 칩 · 테마 카드 · 버튼을 편집기와 같은 문법으로(선택 = 그린 2px 테두리 + 그린 50 꼬리, 버튼 44px) */
+.hpw-m .modal{border-radius:24px;box-shadow:0 2px 4px rgba(16,24,20,.06),0 24px 64px rgba(16,24,20,.22)}
+.hpw-m .mf .btn{min-height:44px;min-width:88px;border-radius:12px;font-weight:800}
+.hpw-sp li{min-height:36px;padding:4px 14px 4px 4px;background:var(--surface2,#FAF8F5);color:var(--t-sub,#5C554B)}
+.hpw-sp li.on{background:var(--gr900,#053D1E);color:#fff}
+.hpw-sp li.on span{background:var(--gr500,#00C53B);color:#04140A}
+.hpw-sp li.done span{background:var(--gr50,#ECFDF3);color:var(--gr800,#066B2A)}
+.hpw-th{border-radius:18px;background:var(--surface,#fff);box-shadow:0 0 0 1px var(--hair,rgba(26,24,20,.06)),0 1px 2px rgba(16,24,20,.05)}
+.hpw-th:hover{transform:translateY(-2px);box-shadow:0 0 0 1px var(--hair,rgba(26,24,20,.06)),0 12px 28px rgba(16,24,20,.10)}
+.hpw-th.on{box-shadow:0 0 0 2px var(--gr600,#00A832),0 12px 28px rgba(0,122,41,.14)}
+.hpw-th.on .hpw-tn{background:var(--gr50,#ECFDF3)}
+.hpw-rec{background:var(--gr700,#007A29);color:#fff}
