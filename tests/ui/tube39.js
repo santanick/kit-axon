@@ -121,7 +121,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
   /* v43 대표님 지시: 학습자 입장 유형별 탭(plan/APP-TABS.md) — 홈 · [내 ○○] · [유형별 핵심] · 나, 시설 켠 기관은 시설을 더해 5칸.
      유형마다 탭을 실제 클릭해 해시 이동 · 선택 표시를 보고, #cal 딥링크가 모든 유형에서 열리는지(일정은 탭이 아니어도 「목록 | 일정」 세그먼트로) 본다. */
   { const FAC = { on: true, facilities: [{ id: 'f_r', name: '스터디룸 A', kind: 'time', place: '2층', hours: Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(d => [d, ['09:00', '22:00']])), slotMin: 60, maxSlots: 2, capacity: { res: 1, perSlot: 4 }, open: { daysAhead: 7, at: '09:00' }, pay: 'free', audience: ['student', 'public'], prices: { student: { slot: 0 }, public: { slot: 0 } } }] };
-    const CASES = [['adult', '', '홈,내 강의,둘러보기,나'], ['k12', '', '홈,내 수업,일정,나'], ['univ', 'lms', '홈,이번 학기 강의,일정,나'], ['voc', '', '홈,내 훈련,일정,나'], ['corp', '', '홈,내 교육,교육과정,나'], ['lifelong', '', '홈,내 강좌,강좌 신청,시설,나', true]];
+    const CASES = [['adult', '', '홈,내 강의,둘러보기,나'], ['k12', '', '홈,내 수업,일정,나'], ['univ', 'lms', '홈,이번 학기 강의,일정,나'], ['voc', '', '홈,내 훈련,출석,나'] /* v43 3단계: 직업훈련 탭 3은 「출석」(#attend) — 출결 · 학습시간 한도가 수료 요건이라 한 번에 닿게(APP-TABS.md). 일정은 「내 훈련」의 「목록 | 일정」 세그먼트 */, ['corp', '', '홈,내 교육,교육과정,나'], ['lifelong', '', '홈,내 강좌,강좌 신청,시설,나', true]];
     for (const [type, ed, want, fac] of CASES) { const tag = `v43 유형별 탭 ${type}${ed ? '/' + ed : ''}${fac ? '+시설' : ''}`;
       const { ctx, p, errs } = await open('#home', { type, ed, patch: fac ? (j => { j.fac = FAC; }) : null });
       const T = await p.$$eval('.ap-nav.tb-nav a', A => A.map(a => ({ t: a.textContent.trim(), h: a.getAttribute('href'), c: a.className.split(' ')[0], hh: Math.round(a.getBoundingClientRect().height) })));
@@ -133,11 +133,21 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
       ok(c.cal && c.seg === '#my,#cal*' && !!c.on, `${tag}: #cal 딥링크 열림 · 「목록 | 일정」 세그먼트 · 선택 탭 ${c.on}`);
       ok(!errs.length, `${tag}: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); } }
 
+  /* v43 3단계: 직업훈련 「출석」 탭(#attend) — 읽기 전용(새 /api · 저장 없음). 오늘 출석 상태 · 이번 달 출석률 · 오늘 학습 시간과 한도(게시 규정 dayMax · dayChasi) · 훈련일지 바로가기 */
+  { const { ctx, p, errs } = await open('#home', { type: 'voc' }); const lp0 = await p.evaluate(() => JSON.stringify(LR.lp));
+    await p.click('.ap-nav.tb-nav a.tb-n-att'); await p.waitForTimeout(400);
+    const r = await p.evaluate(() => ({ h: location.hash, on: ((document.querySelector('.ap-nav.tb-nav a.on') || {}).textContent || '').trim(), tt: ((document.querySelector('.ap-bar .ap-tt') || {}).textContent || '').trim(), h1: ((document.querySelector('.tba .tb-hl h1') || {}).textContent || ''), hero: !!document.querySelector('.tba-hero .tb-ring2'), kpi: [...document.querySelectorAll('.tba-k em')].map(x => x.textContent), links: [...document.querySelectorAll('.tba-links a')].map(a => a.textContent.trim() + '>' + a.getAttribute('href')), qr: !!document.querySelector('.tba-qr'), lp: JSON.stringify(LR.lp) }));
+    ok(r.h === '#attend' && r.on === '출석' && r.tt === '출석' && r.hero && r.qr && r.h1.length > 0, `출석 탭: 이동 · 선택 · 머리 제목 · 출석률 히어로 · QR 안내 — ${r.h} ${r.on} 「${r.h1}」`);
+    ok(r.kpi.some(t => /하루 최대 8시간/.test(t)) && r.kpi.some(t => /하루 최대 8차시/.test(t)), `출석 탭: 학습 한도는 게시 규정(dayMax 8시간 · dayChasi 8차시) — ${r.kpi.join(' / ')}`);
+    ok(r.links.some(x => /^훈련일지>#c\//.test(x)) && r.links.some(x => /^일정>#cal$/.test(x)), `출석 탭: 훈련일지 · 일정 바로가기 — ${r.links.join(' · ')}`);
+    ok(r.lp === lp0, '출석 탭: 화면을 열어도 학습 기록을 바꾸지 않음(읽기 전용)');
+    ok(!errs.length, `출석 탭: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
+
   /* 5) 규정 대상: 직업훈련 · 학사 LMS */
   for (const [type, ed] of [['voc', ''], ['univ', 'lms']]) { const label = type + (ed ? '/' + ed : '');
     const { ctx, p, errs } = await open('#home', { type, ed });
     const tabs = await p.$$eval('.ap-nav.tb-nav a', A => A.map(x => x.textContent.trim()));
-    ok(tabs.join() === (type === 'voc' ? '홈,내 훈련,일정,나' : '홈,이번 학기 강의,일정,나') && await p.$('#tbFab') !== null, `${label}: 탭 4칸(v43 대표님 지시: 학습자 입장 유형별 탭) · AI 튜터 아이콘 — ${tabs.join(' · ')}`);
+    ok(tabs.join() === (type === 'voc' ? '홈,내 훈련,출석,나' /* v43 3단계: 직업훈련은 「출석」 탭(APP-TABS.md) */ : '홈,이번 학기 강의,일정,나') && await p.$('#tbFab') !== null, `${label}: 탭 4칸(v43 대표님 지시: 학습자 입장 유형별 탭) · AI 튜터 아이콘 — ${tabs.join(' · ')}`);
     await p.evaluate(() => { location.hash = '#review'; }); await p.waitForTimeout(250);
     const off = await p.evaluate(() => (document.querySelector('.tb-off h1') || {}).textContent || '');
     ok(/짧게 복습은 이 기관에서 쓰지 않아요/.test(off), `${label}: #review 안내 — ${off}`);

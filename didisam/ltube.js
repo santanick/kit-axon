@@ -45,7 +45,10 @@
     list: s => SV('<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>', s),
     down: s => SV('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>', s),
     next: s => SV('<path d="M9 5l7 7-7 7"/>', s),
-    fac: s => SV('<path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6M3 21h18"/>', s)
+    fac: s => SV('<path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6M3 21h18"/>', s),
+    att: s => SV('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/>', s),
+    qr: s => SV('<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/>', s),
+    clock: s => SV('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', s)
   };
   const ty = () => (SITE() && SITE().org && SITE().org.type) || 'adult';
   const ed = () => (SITE() && SITE().org && SITE().org.ed) || '';
@@ -200,19 +203,55 @@
     T = (Array.isArray(T) && T.length ? T : DEF_TABS).slice(0, 2).map(([k, h, l]) => [String(k), String(h), String(l)]);
     T = T.map(([k, h, l]) => { if (k === 'find') { const b = info().browse; if (b && b !== '#home') h = b; } if (k === 'my') l = info().learn || l; return [k, h, l]; }); /* 찾기 칸은 그 기관에서 실제로 열리는 목록(#shop · #courses) */
     const all = [['home', '#home', '홈'], ...T]; if (facOK() && !T.some(x => x[0] === 'fac')) all.push(['fac', '#fac', '시설']); all.push(['me', '#acct', '나']); return all; }
-  const RT = { home: ['home', 'review', 'ai', 'done'], my: ['my', 'c', 'cert', 'badge', 'lms', 'knq'], cal: ['cal'], fac: ['fac'], me: ['acct', 'inbox', 'msg', 'mypay', 'connect', 'payd', 'mile', 'ledger'] };
+  const RT = { att: ['attend', 'att'], home: ['home', 'review', 'ai', 'done'], my: ['my', 'c', 'cert', 'badge', 'lms', 'knq'], cal: ['cal'], fac: ['fac'], me: ['acct', 'inbox', 'msg', 'mypay', 'connect', 'payd', 'mile', 'ledger'] };
   function curTab(T) { const a = route().a; T = T || tabsOf(); const keys = T.map(x => x[0]);
     const hit = T.find(([k, h]) => k === 'find' && h.slice(1).split('/')[0] === a); if (hit) return 'find';
     for (const k of keys) if ((RT[k] || []).includes(a)) return k;
     if (a === 'cal' || a === 'courses' || a === 'shop') return keys.includes('my') ? 'my' : ''; /* 일정 · 목록이 탭에 없으면 「내 ○○」에 속한다 */
     return ''; }
-  const ICO = { home: null, my: 'course', cal: 'cal', find: 'compass', fac: 'fac', me: 'me' };
+  const ICO = { home: null, my: 'course', cal: 'cal', find: 'compass', fac: 'fac', att: 'att', me: 'me' };
   function navHTML() { const T = tabsOf(); const cur = curTab(T);
     return T.map(([k, h, l]) => { const i = k === 'home' ? (cur === 'home' ? I.home(24) : I.homeO(24)) : I[ICO[k] || 'course'](24);
       return `<a href="${esc(h)}" class="tb-n-${esc(k)}${cur === k ? ' on' : ''}"${cur === k ? ' aria-current="page"' : ''}>${i}<span>${esc(l)}</span></a>`; }).join(''); }
   /* 「내 ○○」 위 세그먼트: 목록(#my) | 일정(#cal) — 두 화면 맨 위(하위 경로 없을 때) */
   function segHTML(a) { const k = a === 'cal' ? 'cal' : 'my';
     return `<nav class="tb-seg" aria-label="${esc(info().learn || '내 과정')}">${[['my', '#my', '목록'], ['cal', '#cal', '일정']].map(([x, h, l]) => `<a href="${h}" class="tb-sg-${x}${x === k ? ' on' : ''}"${x === k ? ' aria-current="page"' : ''}>${l}</a>`).join('')}</nav>`; }
+
+  /* ── v43 직업훈련 「출석」 탭(#attend, plan/APP-TABS.md) — 읽기 전용. 새 /api · 저장 없음.
+     출결: lcls.js lwCls · lwStat(운영자 화면과 같은 attcalc.js DDAtt 식), 학습 시간: lcompliance.js CPLL.todaySec · 게시된 규정(SITE().cpl.dayMax · dayChasi).
+     QR 출석은 강의실 QR(#att/과정/코드, lcompliance.js attendRoute)을 휴대폰 카메라로 찍는 방식이라 안내만 둔다. 훈련일지 화면은 아직 없어 과정 화면의 「과정 안내 · 학습 이력」(차시별 학습일시)으로 보낸다. */
+  function attData() { const t0 = typeof lwToday === 'function' ? lwToday() : day(); const ym = t0.slice(0, 7); const cpl = (SITE() && SITE().cpl) || null; const C = cpl && cpl.on ? cpl : null;
+    const mine = new Set(stats().courses.map(x => x.c.id)); const L = [];
+    try { (SITE().classes || []).forEach(c => { const x = typeof lwCls === 'function' ? lwCls(c.id) : null; if (!x || x.enrolled === false || !(x.enrolled || mine.has(c.id)) || !lwUnits(x).length) return; L.push({ c: x, s: lwStat(x) }); }); } catch (e) { }
+    const att = (x, u) => (typeof DDAtt === 'object' ? DDAtt.stOf(x.c.att[u.id]) : '') || '';
+    const today = L.flatMap(x => x.s.U.filter(u => String(u.date || '').slice(0, 10) === t0).map(u => ({ c: x.c, u, st: att(x, u) }))).sort((a, b) => String(a.u.from || '').localeCompare(String(b.u.from || '')));
+    const rows = L.flatMap(x => x.s.U.filter(u => String(u.date || '').slice(0, 7) === ym).map(u => ({ date: String(u.date).slice(0, 10), st: x.c.att[u.id] })));
+    const M = typeof DDAtt === 'object' ? DDAtt.calc(rows, { conv: DDAtt.convFor(cpl) }) : { n: {}, rate: null, tot: 0, rule: '' };
+    let sec = 0; try { sec = typeof CPLL === 'object' && CPLL.todaySec ? CPLL.todaySec() : 0; } catch (e) { sec = 0; }
+    let n = 0; try { const d = day(); Object.entries((LR.lp || {}).cls || {}).forEach(([k, c]) => { if (k === '_cpl') return; Object.values((c && c.items) || {}).forEach(r => { if (r && r.d && r.d[d]) n++; }); }); } catch (e) { }
+    return { t0, L, today, M, C, sec, n }; }
+  const hm = s => { const h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60); return h ? `${h}시간 ${m}분` : `${m}분`; };
+  const ATT_T = { 출석: 'ok', 지각: 'wn', 조퇴: 'wn', 외출: 'wn', 결석: 'bd' };
+  function attHTML() { const D = attData(); const { M, C } = D; const dt = new Date(Date.now() + 9 * 3600e3); const mo = dt.getUTCMonth() + 1;
+    const eb = `${mo}월 ${dt.getUTCDate()}일 ${WD[dt.getUTCDay()]}요일 · 출석`;
+    const todo = D.today.filter(x => !x.st).length;
+    const h1 = !D.L.length ? `출석을 기록하는 훈련이 <em>아직 없어요</em>` : !D.today.length ? `오늘은 출석할 수업이 <em>없어요</em>` : todo ? `오늘 수업 <em>${todo}개</em>, 출석 전이에요` : `오늘 출석을 <em>모두 마쳤어요</em>`;
+    const rate = M.rate; const okR = rate != null && rate >= DDAtt.MIN; const N = M.n || {};
+    const sub = rate == null ? `이번 달 출결 기록이 아직 없어요` : okR ? `수료 출결 기준(${DDAtt.MIN}%)을 지키고 있어요` : `수료 출결 기준(${DDAtt.MIN}%)보다 낮아요. 남은 수업을 꼭 챙겨요`;
+    const hero = `<section class="tb-goal tb-hero tba-hero" aria-label="이번 달 출석률"><div class="tb-gb"><span class="tb-rg">${ringSVG(rate || 0)}<b class="tb-rn">${rate == null ? '–' : rate}<small>${rate == null ? '기록 전' : '%'}</small></b></span>
+      <span class="tb-gl"><small>${mo}월 출석률 · 기준 ${DDAtt.MIN}% 이상</small><strong>${esc(sub)}</strong></span><span class="tba-ct">${[['출석', N.출석], ['지각 · 조퇴', (N.지각 || 0) + (N.조퇴 || 0) + (N.외출 || 0)], ['결석', (N.결석 || 0) + (N.미입력 || 0)]].map(([l, v]) => `<span>${l}<b>${+v || 0}</b></span>`).join('')}</span></div></section>`;
+    const bar = (v, max) => `<span class="tba-bar" aria-hidden="true"><i style="width:${max ? Math.min(100, Math.round(v / max * 100)) : 0}%"></i></span>`;
+    const lim = C && (C.dayMax || C.dayChasi) ? `<section class="tba-kpi" aria-label="오늘 학습 시간과 한도">
+      <div class="tba-k"><small>${I.clock(18)}오늘 학습 시간</small><b>${hm(D.sec)}</b>${C.dayMax ? `${bar(D.sec, C.dayMax * 3600)}<em>하루 최대 ${C.dayMax}시간 · ${hm(Math.max(0, C.dayMax * 3600 - D.sec))} 남음</em>` : '<em>시간 한도 없음</em>'}</div>
+      <div class="tba-k"><small>${I.play(16)}오늘 들은 ${unit()}</small><b>${D.n}${unit()}</b>${C.dayChasi ? `${bar(D.n, C.dayChasi)}<em>하루 최대 ${C.dayChasi}${unit()} · ${Math.max(0, C.dayChasi - D.n)}${unit()} 남음</em>` : `<em>${unit()} 한도 없음</em>`}</div></section>`
+      : `<section class="tba-kpi" aria-label="오늘 학습 시간"><div class="tba-k"><small>${I.clock(18)}오늘 학습 시간</small><b>${hm(D.sec || secToday())}</b><em>이 기관은 하루 학습 한도가 없어요</em></div></section>`;
+    const list = !D.L.length ? `<section class="tb-empty" aria-label="오늘 수업">${emptyArt()}<b>출석을 부르는 수업이 아직 없어요</b><small>온라인 훈련은 학습 시간과 진도로 참여를 확인해요.</small><a class="tb-pri" href="#my">${esc(info().learn || '내 훈련')} 보기</a></section>`
+      : `<section class="tba-sec" aria-label="오늘 수업"><div class="tb-sh"><h2>오늘 수업</h2><a href="#cal">일정 보기</a></div>${D.today.length ? `<ul class="tba-list">${D.today.map(x => `<li><a class="tba-row" href="#c/${encodeURIComponent(x.c.id)}"><span class="tba-tm">${esc(String(x.u.from || '').replace(/^.*T/, '').slice(0, 5) || '종일')}</span><span class="tba-tx"><b>${esc(x.c.name)}</b><small>${esc(x.u.title || (x.u.n ? x.u.n + '회차' : '수업'))}${x.u.place ? ' · ' + esc(x.u.place) : ''}</small></span><em class="tba-st ${ATT_T[x.st] || 'no'}">${esc(x.st || '출석 전')}</em></a></li>`).join('')}</ul>` : `<p class="tba-none">오늘은 출석할 수업이 없어요. 다음 수업은 일정에서 확인해요.</p>`}</section>`;
+    const S0 = stats().courses; const c0 = ((S0.find(x => !x.done) || S0[0]) || {}).c || (D.L[0] || {}).c; /* 훈련일지 = 진행 중 훈련의 「과정 안내 · 학습 이력」(차시별 학습일시) */ const ch = c0 ? `#c/${encodeURIComponent(c0.id)}` : '#my';
+    const links = `<nav class="tb-links tba-links" aria-label="출석 바로가기">${[[ch, 'doc', '훈련일지'], [D.L[0] ? `#c/${encodeURIComponent(D.L[0].c.id)}` : '#my', 'list', '출결 표'], ['#cal', 'cal', '일정'], ['#my', 'award', '수료 기준']].map(([h, i, l]) => `<a href="${esc(h)}"><span class="tb-li">${I[i](22)}</span>${l}</a>`).join('')}</nav>`;
+    const qr = `<section class="tba-qr" aria-label="QR 출석"><span class="tb-li">${I.qr(22)}</span><span><b>QR 출석</b><small>강의실에 붙은 QR을 휴대폰 카메라로 찍으면 바로 출석으로 기록돼요.</small></span></section>`;
+    const note = `<p class="tba-note">${esc(M.rule || '')}${M.miss ? ` · 지난 미입력 ${M.miss}회는 결석으로 세요` : ''}. 출결 정정은 운영자에게 요청해요.</p>`;
+    return `<div class="tb-main tba"><section class="tb-hl" aria-label="오늘 출석"><small class="tb-eb">${eb}</small><h1>${h1}</h1></section>${hero}${list}${lim}${qr}${links}${D.L.length ? note : ''}</div>`; }
 
   /* ── 오늘 목표 설정 시트 ── */
   function goalSheet() { const g = goal(); const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
@@ -299,6 +338,9 @@
   function fab() { let b = document.getElementById('tbFab'); if (!on() || !tOn()) { if (b) b.remove(); return; } const v = !!cur(); if (cur() && locked(cur().c, cur().it)) { if (b) b.remove(); return; } const nm = tNm(); const short = [...nm].length <= 6 ? nm : 'AI 튜터';
     const lab = v ? `${nm}(AI 튜터) — 이 장면 질문하기` : `${nm}(AI 튜터) 열기`; if (!b) { b = document.createElement('button'); b.type = 'button'; b.id = 'tbFab'; b.className = 'tb-fab'; b.dataset.tb = 'fab'; document.body.appendChild(b); }
     const h = `${I.spark(24)}<span>${v ? '이 장면 질문' : esc(short)}</span>`; if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; } b.setAttribute('aria-label', lab); b.setAttribute('aria-expanded', v ? String(!!TB.open) : String(!!(typeof LT === 'object' && LT.open))); }
+  /* v43: 스크롤하는 동안 떠 있는 튜터 버튼이 카드 오른쪽 끝을 가리지 않게 — 내려가면 작은 원(48px, 아이콘만), 위로 올리거나 맨 위에 오면 원래 크기 */
+  { let y0 = 0; const B = () => document.body; addEventListener('scroll', () => { const y = window.scrollY || 0; if (y > y0 + 4 && y > 40) B().classList.add('tb-fsm'); else if (y < y0 - 4 || y <= 40) B().classList.remove('tb-fsm'); y0 = y; }, { passive: true });
+    addEventListener('hashchange', () => B().classList.remove('tb-fsm')); }
   function sheet(o) { TB.open = o; const t = document.getElementById('tbwTu'); if (t) { t.hidden = !o; t.classList.toggle('open', o); } document.body.classList.toggle('tb-sheet', o); fab(); if (o) { const ms = t && t.querySelector('.tbw-ms'); if (ms) ms.scrollTop = ms.scrollHeight; setTimeout(() => { const i = document.getElementById('tbwQ'); i && i.focus(); }, 30); } else { const b = document.getElementById('tbFab'); b && b.focus(); } }
   const WQ = { '이 장면 다시 설명': t => `지금 ${t != null ? mmss(t) + ' ' : ''}장면에서 설명한 내용을 쉬운 말로 다시 설명해줘`, '3줄 요약': () => '이 레슨 내용을 3줄로 요약해줘', '퀴즈 1문제': () => '이 장면 내용으로 확인 퀴즈 1문제 내줘(정답은 내가 답한 뒤에 알려줘)' };
   async function ask(q, label) { const k = cur(); if (!k || TB.busy) return; q = String(q || '').trim(); if (!q) return; const C = TCFG(); const t = nowT(); const M = thread(k.it.id);
@@ -327,6 +369,7 @@
     B.classList.add('tube');
     if (a === 'home') { const cal = lm.querySelector('a.lq-hc'); const calH = cal ? cal.outerHTML : ''; lm.innerHTML = homeHTML(); if (calH && TB.f === 'all') { const mn = lm.querySelector('.tb-main'); mn && mn.insertAdjacentHTML('beforeend', calH); } /* 학습 캘린더(lcal.js) 카드는 피드 끝에 그대로 */ B.classList.remove('ap-homeon'); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     else if (a === 'review') { lm.innerHTML = shortsHTML(); if (!tOn()) lm.querySelectorAll('[data-tb="sh-ask"]').forEach(x => x.remove()); B.classList.add('tb-full', 'tb-dark'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
+    else if (a === 'attend') { lm.innerHTML = attHTML(); const tt = app.querySelector('.ap-bar .ap-tt'); if (tt) tt.textContent = '출석'; document.title = `출석 · ${(SITE().org || {}).name || ''}`; }
     else if (a === 'done') { lm.innerHTML = doneHTML(); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     if (a !== 'review') B.classList.remove('tb-dark');
     if ((a === 'my' || a === 'cal') && !route().b && !lm.querySelector('.tb-seg')) lm.insertAdjacentHTML('afterbegin', segHTML(a));
@@ -340,7 +383,7 @@
     r.onresult = e => { inp.value = (e.results[0] && e.results[0][0] && e.results[0][0].transcript) || ''; inp.focus(); }; r.onend = () => { btn.classList.remove('on'); btn.setAttribute('aria-label', '말로 묻기'); }; r.onerror = r.onend; r.start(); } catch (e) { btn.classList.remove('on'); } }
   if (typeof ltRender === 'function') { const base = ltRender; ltRender = (...x) => { const r = base(...x); try { fab(); if (on()) { const f = document.getElementById('ltf'); const q = document.getElementById('ltq'); if (f && q && !f.querySelector('.tb-mic') && SRc()) q.insertAdjacentHTML('afterend', micBtn('ltq')); } } catch (e) { } return r; }; } /* 대화 창을 열고 닫을 때 아이콘 상태(aria-expanded) */
   window.tubeApply = apply;
-  /* 선택 탭 다시 맞추기: lfac.js post()가 #fac에서 v39 탭 이름(tb-n-home · tb-n-cal)으로 선택을 바꾸므로 그 감싸기 바깥에서 한 번 더(lfac.js는 D3 담당 — 보고서 「공통 변경 요청」) */
+  /* 선택 탭 다시 맞추기: lfac.js post()도 v43부터 #fac에서 tb-n-fac를 고르지만, 다른 감싸기가 선택을 바꿔도 맞도록 가장 바깥에서 한 번 더 */
   function markNav() { if (!on()) return; const nav = document.querySelector('#lapp .ap-nav.tb-nav'); if (!nav) return; const k = curTab();
     nav.querySelectorAll(':scope > a').forEach(x => { const o = !!k && x.classList.contains('tb-n-' + k); x.classList.toggle('on', o); if (o) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); }); }
   const lateNav = () => { setTimeout(() => { const base = lrender; lrender = (...x) => { const r = base(...x); try { markNav(); } catch (e) { } return r; }; try { markNav(); } catch (e) { } }, 0); };
