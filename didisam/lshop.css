@@ -63,7 +63,7 @@
 /* v38 A-17 쿠폰 입력 */
 .p26cp{margin:12px 0}.cpn-row{display:flex;gap:8px;align-items:center}.cpn-row input{flex:1;min-width:0;min-height:48px}.cpn-row .lbtn{min-height:48px;flex:none;width:auto;margin:0}#p26cpm.ok{color:#15803d;font-weight:600}#p26cpm.bad{color:#b91c1c}
 /* v43 결제(#pay) — 최종 시안: 왼쪽 주문 · 결제 방식, 오른쪽 결제 요약 카드(고정) · 최종 금액 강조 · 주 버튼 var(--pri). 결제 완료(#payok)는 체크 원 · 한 문장 헤드라인 카드. */
-.shp-pay.p26{max-width:1040px}
+form.shp-pay.p26{max-width:1040px}
 .p26 .p26c{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:28px;align-items:start;background:none;border:0;padding:0}
 .p26 .p26l,.p26 .p26r{background:var(--surface,#fff);border:1px solid var(--line);border-radius:20px;padding:26px 28px 28px;box-shadow:var(--sh1)}
 .p26 .p26r{position:sticky;top:88px}
