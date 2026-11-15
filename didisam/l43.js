@@ -57,7 +57,7 @@
     return `<div class="l43-fbar">${ch ? `<div class="l43-fcs" role="tablist">${ch}</div>` : ''}${q}<span class="sp"></span>${o.right || ''}</div>`;
   }
   function photo(words, seed) {
-    try { if (!W.HPSTOCK) return ''; const it = HPSTOCK.pick([].concat(words || []).filter(Boolean), 1, String(seed || words))[0]; return it ? HPSTOCK.url(it, 'sm') : ''; } catch (e) { return ''; }
+    try { if (!W.HPSTOCK) return ''; const L4 = HPSTOCK.pick([].concat(words || []).filter(Boolean), 4, String(seed || words)); const it = L4[hash(seed || words) % Math.max(1, L4.length)]; return it ? HPSTOCK.url(it, 'sm') : ''; } catch (e) { return ''; }
   }
   /* 과정 이름 → 사진 고르기용 단어(hpstock 분류 키워드와 맞춤) */
   const KW = [[/스마트폰|디지털|컴퓨터|엑셀|데이터|AI|코딩|IT|파이썬|프로그래밍/i, 'IT'], [/바리스타|커피|제과|요리|조리/, '요리'], [/인문|독서|문학|역사|철학|국어/, '독서'], [/복지|요양|돌봄|간호|보건/, '돌봄'], [/창업|경영|마케팅|회계|재무/, '경영'], [/영어|일본어|중국어|어학|회화/, '외국어'], [/수학|과학/, '수학'], [/미술|디자인|드로잉/, '미술'], [/음악|피아노|노래/, '음악'], [/안전|성희롱|개인정보|장애인|법정/, '사무'], [/운동|요가|체육|수영/, '운동']];
@@ -81,6 +81,7 @@
       [...(tbl.tBodies[0] || { rows: [] }).rows].forEach(tr => {
         if (ni >= 0 && tr.cells[ni] && !tr.cells[ni].querySelector('.l43-av')) { const n = nameOfCell(tr.cells[ni]); if (n) { tr.cells[ni].classList.add('l43-nc'); tr.cells[ni].insertAdjacentHTML('afterbegin', av(n)); } }
         [...tr.cells].forEach((td, i) => { if (td.querySelector('button,a,input,select,.bar,.l43-pg,svg,img') || td.querySelectorAll('*').length > 2) return; const t = td.textContent.trim(); const m = t.match(/^(\d{1,3})%$/); if (m && !/출석률|대비|증감/.test(H[i] || '')) { td.innerHTML = prog(+m[1]); td.classList.add('l43-pc'); } });
+        [...tr.cells].forEach(td => { const t = td.textContent.trim(); if (t && t.length <= 16 && !td.querySelector('button,.btn')) td.classList.add('l43-nw'); });
         const ck = tr.querySelector('td:first-child input[type=checkbox]'); if (ck) { tr.classList.toggle('l43-sel', ck.checked); ck.addEventListener('change', () => tr.classList.toggle('l43-sel', ck.checked)); }
       });
       /* 정렬: 글자가 있는 머리 칸만(체크 · 버튼 칸 제외) */
@@ -111,7 +112,7 @@
     try { if (R.enhance) R.enhance(main); } catch (e) { console.error(e); }
     try { enhanceEmpty(main, tab); } catch (e) { console.error(e); }
   }
-  const reg = (tab, o) => { REG[tab] = o || {}; };
+  const reg = (tab, o) => { REG[tab] = o || {}; if (o && o.art) ARTOF[tab] = o.art; };
   if (typeof AFTER !== 'undefined') AFTER.push(() => { run(); setTimeout(run, 0); });
   W.L43 = { brief, av, prog, chip, empty, bulk, fbar, photo, wordsOf, reg, run, artSvg, REG };
 
@@ -193,7 +194,7 @@
   reg('hrd', {
     brief: () => {
       const R = (S.hrd && S.hrd.reports) || []; const w = R.filter(r => r.st === '전송 대기').length; let low = 0; try { low = lowAttN(); } catch (e) { }
-      return { eye: 'HRD-Net 보고', title: w ? `보고 대기 <em>${w}건</em>, 출석률 80% 미만 훈련생 ${low}명` : `보고 대기 <em>0건</em> — 출석률 80% 미만 훈련생 ${low}명을 확인하세요`, sub: '수료 요건은 진도율 · 평가 성적 · 출석률을 함께 봅니다.', stats: [[S.members.length + '명', '훈련생'], [low + '명', '출석 80% 미만', low ? 'warn' : ''], [w + '건', '보고 대기', w ? 'warn' : '']] };
+      return { eye: 'HRD-Net 보고', title: w ? `HRD-Net 보고 대기 <em>${w}건</em>, 출석률 80% 미만 훈련생 ${low}명` : `출석률 80% 미만 훈련생 <em>${low}명</em>을 먼저 확인하세요`, sub: `${w ? '' : '전송을 기다리는 보고는 없습니다. '}수료 요건은 진도율 · 평가 성적 · 출석률을 함께 봅니다.`, stats: [[S.members.length + '명', '훈련생'], [low + '명', '출석 80% 미만', low ? 'warn' : ''], [w + '건', '보고 대기', w ? 'warn' : '']] };
     }
   });
   reg('crmstu', {

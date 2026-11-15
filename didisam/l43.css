@@ -14,7 +14,7 @@
 .l43-bl{flex:1 1 460px;min-width:0}
 .l43-eye{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:13px;font-weight:700;color:var(--g700);letter-spacing:-.01em}
 .l43-ai{display:inline-flex;align-items:center;gap:3px;padding:2px 8px 2px 6px;border-radius:99px;background:var(--gr700);color:var(--on-pr);font-size:12px;font-weight:800;letter-spacing:.02em}
-.l43-hl{margin:0;font-size:34px;line-height:1.22;font-weight:800;letter-spacing:-.03em;color:var(--g900);word-break:keep-all}
+.l43-hl{text-wrap:balance;margin:0;font-size:34px;line-height:1.22;font-weight:800;letter-spacing:-.03em;color:var(--g900);word-break:keep-all}
 .l43-hl em{font-style:normal;color:var(--gr700)}
 .l43-sub{margin:10px 0 0;font-size:15px;font-weight:500;color:var(--g700);line-height:1.55;word-break:keep-all}
 .l43-stats{display:flex;gap:10px;margin:0;flex-wrap:wrap}
@@ -51,6 +51,9 @@ th.l43-sort[aria-sort=ascending]::after{transform:translateY(1px) rotate(-135deg
 th.l43-sort[aria-sort=descending]::after{opacity:1;border-color:var(--gr700)}
 th.l43-sort:hover,th.l43-sort:focus-visible{color:var(--g900)}
 .l43-nc{white-space:nowrap}.l43-nc>.l43-av{margin-right:10px}
+.l43-nw{white-space:nowrap}
+.l43-nc :is(small,span:not(.l43-av),em){color:var(--g600);font-weight:500}
+#main.l43 .uxdots>summary{background:var(--surface2);color:var(--g800);border-color:var(--g300)}
 .l43-mute{color:var(--g600);font-size:13px}
 
 /* 아바타(L43.av) — 이름으로 6색 고정 */
@@ -130,6 +133,7 @@ th.l43-sort:hover,th.l43-sort:focus-visible{color:var(--g900)}
 
 /* ── 7b. 학사 LMS 보조 글자 12px 하한 ── */
 #main.l43[data-l43=lmsa] small{font-size:12px}
+#main.l43[data-l43=lmsa] .btn{min-height:44px}
 #main.l43 .lmsnav-sub button{min-height:44px;padding:0 16px;font-size:14px;font-weight:700}
 
 /* ── 8. 반응형 ── */
