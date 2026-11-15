@@ -286,7 +286,7 @@
 
   /* 오른쪽 미리보기 패널 */
   function pvBody(e) { const r = e.ref; const T = e.title; const id = ytOfE(e);
-    if (e.origin === 'book') { const ch = r.chs || []; return `<div class="clb-pbk" style="--bk:${esc(String(r.color || '#5C74F6').replace(/[^#\w(),.% ]/g, ''))}"><b>${esc(T)}</b><small>${ch.length}단원</small></div>${ch.length ? `<ol class="clb-pch">${ch.slice(0, 8).map(c => `<li>${esc(c.title || '')}</li>`).join('')}${ch.length > 8 ? `<li class="mini">외 ${ch.length - 8}단원</li>` : ''}</ol>` : ''}`; }
+    if (e.origin === 'book') { const ch = r.chs || []; return `<div class="clb-pbk" style="--bk:${esc(String(r.color || '#00862D').replace(/[^#\w(),.% ]/g, ''))}"><b>${esc(T)}</b><small>${ch.length}단원</small></div>${ch.length ? `<ol class="clb-pch">${ch.slice(0, 8).map(c => `<li>${esc(c.title || '')}</li>`).join('')}${ch.length > 8 ? `<li class="mini">외 ${ch.length - 8}단원</li>` : ''}</ol>` : ''}`; }
     if (id) return `<a class="clb-yt" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener"><span class="clb-pth">${thumb(e)}</span><span>YouTube에서 보기 ›</span></a>`;
     if (e.origin === 'lib' && r.kind !== '평가') { const cv = r.kind === '동영상' && typeof a2ConvOf === 'function' ? a2ConvOf(r) : ''; return `<span class="clb-pth">${thumb(e)}</span>${cv ? `<p class="clb-conv">재생 준비 상태: <b>${esc(cv)}</b>${cv === '최적화 실패' ? ' — Handbrake로 다시 인코딩한 뒤 올려 주세요.' : ''}</p>` : ''}<p class="mini">데모에서는 파일 이름 · 크기만 기록합니다. 실제 운영에서는 여기서 바로 재생 · 열기가 됩니다.</p>`; }
     const it = e.origin === 'lib' ? (r.item || {}) : r;
@@ -425,16 +425,16 @@
   const demoTuts = () => { try { return typeof LSEED_UNIV_TUTS !== 'undefined' ? LSEED_UNIV_TUTS : []; } catch (e) { return []; } };
   /* v36 1-5: 키가 없을 때 쓰는 분야별 데모 목록 — 실제 공개 YouTube 영상만(2026-11-10 oEmbed로 제목 · 채널 확인). [영상 id, 제목, 채널] */
   const TUT_DEMO = [
-    { re: /엑셀|excel|피벗|스프레드시트|컴활|vlookup|함수/i, v: [["R7q0r_YD0a4", "엑셀 초보도 한 방에 이해하는 피벗테이블 기초!", "방과후도우미"], ["k2FsYHMtXMY", "[엑셀이뭐니]12강 피벗테이블(상) / 기초부터 디자인까지/ PIVOT TABLE/ 엑셀강좌", "엑셀런투데이"], ["GnTsrcNIyxg", "엑셀 13강] 피벗 테이블을 잘 만드는 방법 👍 | 02-7", "짤막한 강좌"], ["0L36b0GJ24g", "엑셀 피벗테이블 만들기 방법 |초보자", "쉬운엑셀"], ["zJyd2o2g7wQ", "직장인 엑셀 피벗테이블 너무 쉽다! 복잡한 데이터 10분만에 정리하기!", "배우공"], ["Wk5dFhLsp6U", "엑셀 피벗테이블: 실무자가 꼭 알아야 할 핵심 기능 총정리 | 이 영상으로 마스터하세요!", "오빠두엑셀 l 엑셀 강의 대표채널"]] },
+    { re: /엑셀|excel|피벗|스프레드시트|컴활|vlookup|함수/i, v: [["R7q0r_YD0a4", "엑셀 초보도 한 방에 이해하는 피벗테이블 기초!", "방과후도우미"], ["k2FsYHMtXMY", "[엑셀이뭐니]12강 피벗테이블(상) / 기초부터 디자인까지/ PIVOT TABLE/ 엑셀강좌", "엑셀런투데이"], ["GnTsrcNIyxg", "엑셀 13강] 피벗 테이블을 잘 만드는 방법  | 02-7", "짤막한 강좌"], ["0L36b0GJ24g", "엑셀 피벗테이블 만들기 방법 |초보자", "쉬운엑셀"], ["zJyd2o2g7wQ", "직장인 엑셀 피벗테이블 너무 쉽다! 복잡한 데이터 10분만에 정리하기!", "배우공"], ["Wk5dFhLsp6U", "엑셀 피벗테이블: 실무자가 꼭 알아야 할 핵심 기능 총정리 | 이 영상으로 마스터하세요!", "오빠두엑셀 l 엑셀 강의 대표채널"]] },
     { re: /파이썬|python|코딩|프로그래밍/i, v: [["yytWGELNeOI", "파이썬 무료 기초 강의 - 1강 파이썬이란 무엇인가?", "조코딩 JoCoding"], ["KL1MIuBfWe0", "파이썬 코딩 무료 강의 - 5시간만 투자하면 개발자가 됩니다", "조코딩 JoCoding"], ["3R6vFdb7YI4", "파이썬 왕초보 기초 강의 - 파이썬 프로그래밍의 기초, 자료형(1)", "조코딩 JoCoding"], ["ns61Ol2OIuo", "파이썬 기초 무료 강의 - [한양대 ERICA 소프트웨어학부 도경구 교수] - 우리학교 명강의", "메타코드M"]] },
     { re: /파워포인트|ppt|powerpoint|발표\s*자료|슬라이드/i, v: [["WW7eHCbyyYo", "[파워포인트 기초강좌1] PPT 왕초보를 위한 열기 글자변경 슬라이드 삽입 저장까지", "스마일정쌤"], ["gF_SvivXzWQ", "파워포인트 처음부터 시작하기 1. 메뉴 및 화면구성/ #powerpoint", "지식나눔터"], ["aWTtIaCJ3cg", "파워포인트 기초 강좌 1 - 화면 구성과 저장 방법", "방컴TV (방과후 컴퓨터)"]] },
     { re: /노션|notion/i, v: [["XzU81FfDXLs", "[템플릿 제공] 2026 노션 사용법, 기초부터 데이터베이스·자동화·AI까지 이 영상 하나로 끝! (노션 기초 강의 풀버전)", "시간기획자 최민정"], ["7TCdvnlbdSk", "노션 사용법 입문 총정리: 왕초보도 이 영상 하나면 기초부터 데이터베이스까지 끝!", "1000쌤 | 교사·선생님을 위한 노션, AI 가이드"], ["mebSi7p85_4", "노션(notion) 초보자를 위한 설치부터 기본 사용법까지!｜경기도 지식(GSEEK)", "경기도 지식 GSEEK"], ["dTSMrPsiSCg", "[노션 기초 강의] 노션 데이터베이스 사용법 1편 I 표, 칸반 보드, 갤러리", "러닝스푼즈 | 커리어 성공의 비밀"]] },
     { re: /데이터|통계|분석|시각화/i, v: [["HNlRYQnLkek", "[데이터 분석 기초 강의] 7강. 통계로 요약하기", "한빛미디어"], ["R3E4m8fqUSg", "[데이터 분석 기초 강의] 13강. 통계적으로 추론하기", "한빛미디어"], ["r7jTwciTdXo", "통계 기초의 모든것을 5시간만에 끝내드립니다ㅣ고려대 통계학과 출신 데이터분석가ㅣ표본, 기대값, 정규분포, 모평균, t분포, 포아송분포, 조건부 확률 등", "메타코드M"], ["Zqq-HvKhlW8", "[Full 버전] 데이터 분석 8시간 무료강의 - 미국 빅테크 Data Scientist 현직자가 알려드려요", "메타코드M"]] },
-    { re: /취업|면접|자기소개|자소서|이력서|진로/i, v: [["QUvvGKKrbNU", "자기소개서, 면접 준비 방법", "면이괜(면접이대로괜찮은가)"], ["5-sbXv0KK2o", "취업 준비를 위한 자기소개서 작성, 완벽한 구조와 예시!🔍", "내일부터 출근"], ["EKYxExHE0B0", "면접관이 알려주는 1분 자기소개의 모든 것", "면접왕 이형"], ["XZ6N70UW2n4", "서류 40번 떨어지고 깨달은 합격 자기소개서 쓰는 법", "취업갤러리"]] },
+    { re: /취업|면접|자기소개|자소서|이력서|진로/i, v: [["QUvvGKKrbNU", "자기소개서, 면접 준비 방법", "면이괜(면접이대로괜찮은가)"], ["5-sbXv0KK2o", "취업 준비를 위한 자기소개서 작성, 완벽한 구조와 예시!", "내일부터 출근"], ["EKYxExHE0B0", "면접관이 알려주는 1분 자기소개의 모든 것", "면접왕 이형"], ["XZ6N70UW2n4", "서류 40번 떨어지고 깨달은 합격 자기소개서 쓰는 법", "취업갤러리"]] },
     { re: /분수|수학|덧셈|뺄셈|초등/i, v: [["FGIfZ3YDz3k", "분수의 덧셈과 뺄셈 1 : 기초 (초등수학)", "청개구리유여사"], ["avX_LvT3bpE", "분수의 덧셈 : 개념 (초등수학)", "청개구리유여사"], ["quOnh5g5qT4", "분모가 같은 분수의 덧셈과 뺄셈(4학년 1학기 1단원)", "재미있는수학이야기"], ["giF_f0AEgb8", "초등 수학 개념잡기 - 27강 분수의 덧셈과 뺄셈   _#001", "EBS Learning"]] },
     { re: /챗\s*gpt|chatgpt|프롬프트|생성형|gpt/i, v: [["pPJ7Pr7SYtI", "챗GPT의 프롬프트 작성의 기초! | 챗GPT 사용법, Chat GPT", "감자나라ai"], ["qd6w-IbfLlA", "챗GPT 초보를 위한 프롬프트 작성법 5가지 / 프롬프트, 잘 쓴 것 같은데 왜 답이 이상할까?", "TASoL"], ["rZE9f9CPPxw", "[챗GPT] 프롬프트 전문적 작성방법 - 7가지 방법과 사례 심층 정리", "promptStrategies"], ["ELZ7rYyKA4w", "입문자, 초보자가 알아야 할 ChatGPT 사용 방법 Top 3 - 프롬프트 잘 쓰는 법, PDF 파일 대화, 유튜브 추출", "버프TV (한국GPT협회)"]] },
     { re: /성희롱|폭력\s*예방|법정|의무\s*교육|직장\s*내/i, v: [["xaqQ7j7gHcM", "(고용노동부 제작, 성희롱 예방교육)  뭉쳤다! 국내 최고의 소통전문가와 공인노무사 with 레이디제인", "고용노동부"], ["qT3C4G9HCDE", "(사업장교육용) 매년 실시하는 직장내 성희롱 예방교육 이 영상을 확인하세요!", "고용노동부"], ["dM7qPxoRMYU", "[동영상 강의]노동법률_직장 내 성희롱 예방", "제주특별자치도노동권익센터"]] },
-    { re: /영어|회화|english/i, v: [["OGHo7apPWIY", "왕초보를 위한 영어회화 강의 - Lesson 001 [기본적인 문장 구성하기]", "라이브 아카데미 토들러"], ["iMDR9wAj0k8", "왕초보 기초 영어회화 100문장 | 생활영어 첫걸음 이것부터 외우세요(흘려듣기)", "말트영어(기초&여행&생활영어)"], ["-Iqytaj8oxI", "영어회화 왕초보라면 제발 꼭 보세요🔥매일 쓰는 기초 생활영어 200개 완벽 정리", "해커스톡 기초영어회화 공식 유튜브"]] }
+    { re: /영어|회화|english/i, v: [["OGHo7apPWIY", "왕초보를 위한 영어회화 강의 - Lesson 001 [기본적인 문장 구성하기]", "라이브 아카데미 토들러"], ["iMDR9wAj0k8", "왕초보 기초 영어회화 100문장 | 생활영어 첫걸음 이것부터 외우세요(흘려듣기)", "말트영어(기초&여행&생활영어)"], ["-Iqytaj8oxI", "영어회화 왕초보라면 제발 꼭 보세요매일 쓰는 기초 생활영어 200개 완벽 정리", "해커스톡 기초영어회화 공식 유튜브"]] }
   ];
   /* 주제와 상관없는 넓은 말(기초 · 강의 · 사용법 …)로는 맞췄다고 치지 않는다 — '엑셀 피벗 기초'에 n8n '기초부터' 영상이 1번으로 오던 문제 */
   const TUT_GEN = /^(기초|기본|입문|강의|강좌|사용법|방법|초보|초보자|왕초보|활용|실무|따라하기|따라|하기|완벽|정리|총정리|가이드|배우기|만들기|쉽게|무료|최신|핵심|실습|예제|신입|사원|신입사원|직장인|학생|교사|교수|대학생|위한|위해|용|쉬운|처음|시작|시작하기|과정|교육|수업)$/;
@@ -505,7 +505,7 @@
 .clb-card{display:grid;grid-template-columns:48px 1fr;gap:12px 14px;align-items:start;background:#fff;border:1px solid var(--g300);border-radius:8px;padding:16px;box-shadow:var(--e1)}
 .clb-card[hidden]{display:none}
 .clb-ic{width:48px;height:48px;border-radius:10px;display:inline-grid;place-items:center;background:var(--s50);color:var(--s600)}
-.clb-ic.k-d{background:#E3F3FC;color:#0B6FAE}.clb-ic.k-q{background:#FFF3E0;color:#A84A00}.clb-ic.k-b{background:var(--b50);color:var(--b900)}.clb-ic.k-f{background:var(--g200);color:var(--g800)}
+.clb-ic.k-d{background:var(--gr50,#ECFDF3);color:var(--gr800,#066B2A)}.clb-ic.k-q{background:var(--co50,#FFF3EC);color:var(--co700,#B53C0A)}.clb-ic.k-b{background:var(--b50);color:var(--b900)}.clb-ic.k-f{background:var(--g200);color:var(--g800)}
 .clb-tx{min-width:0;display:flex;flex-direction:column;gap:4px}
 .clb-tx b{font-size:17px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
 .clb-tx small{color:var(--t-sub);font-size:14px}
@@ -571,12 +571,12 @@
 .clb-card{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;overflow:hidden;cursor:pointer;background:#fff;border:1px solid var(--g300);border-radius:10px;box-shadow:var(--e1);transition:border-color .15s,box-shadow .15s}
 .clb-card:hover,.clb-lrow:hover{border-color:var(--s400)}
 .clb-card:focus-visible,.clb-lrow:focus-visible{outline:none;box-shadow:0 0 0 3px var(--s100);border-color:var(--s400)}
-.clb-card.on,.clb-lrow.on{border-color:var(--s500,#5C74F6);box-shadow:0 0 0 2px var(--s100)}
+.clb-card.on,.clb-lrow.on{border-color:var(--s500,#00862D);box-shadow:0 0 0 2px var(--s100)}
 .clb-card .clb-tx{padding:12px 14px 14px;gap:4px}
 .clb-card .clb-tx b{font-size:16px}
 .clb-th{position:relative;display:block;aspect-ratio:16/9;background:var(--s50);color:var(--s600);overflow:hidden}
-.clb-th.k-d{background:#E3F3FC;color:#0B6FAE}.clb-th.k-q{background:#FFF3E0;color:#A84A00}.clb-th.k-f{background:var(--g200);color:var(--g800)}
-.clb-th.k-b{background:var(--bk,#5C74F6);color:#fff}
+.clb-th.k-d{background:var(--gr50,#ECFDF3);color:var(--gr800,#066B2A)}.clb-th.k-q{background:var(--co50,#FFF3EC);color:var(--co700,#B53C0A)}.clb-th.k-f{background:var(--g200);color:var(--g800)}
+.clb-th.k-b{background:radial-gradient(120% 90% at 85% 10%,var(--gr600,#00A832) 0,transparent 55%),linear-gradient(135deg,var(--gr700,#00862D),var(--gr900,#053D1E)) var(--gr800,#066B2A);color:#fff}
 .clb-thi{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;text-align:center}
 .clb-thb{font-size:15px;line-height:1.3;max-width:90%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;text-shadow:0 1px 2px rgba(0,0,0,.25)}
 .clb-thx{font-size:13px;letter-spacing:.04em}
@@ -600,7 +600,7 @@
 .clb-pb{padding:16px 18px;overflow:auto;flex:1 1 auto;display:flex;flex-direction:column;gap:14px}
 .clb-pth{display:block;border-radius:8px;overflow:hidden}.clb-pth .clb-th{border-radius:8px}
 .clb-pb .clb-yt span:last-child{display:inline-block;margin-top:8px;font-weight:700;color:var(--link)}
-.clb-pbk{background:var(--bk);color:#fff;border-radius:8px;padding:22px 18px;display:flex;flex-direction:column;gap:4px}.clb-pbk b{font-size:18px}
+.clb-pbk{background:linear-gradient(135deg,var(--gr700,#00862D),var(--gr900,#053D1E)) var(--gr800,#066B2A);color:#fff;border-radius:8px;padding:22px 18px;display:flex;flex-direction:column;gap:4px}.clb-pbk b{font-size:18px}
 .clb-pch{margin:0;padding-left:20px;line-height:1.7}
 .clb-conv{margin:0}.clb-play{min-height:48px}
 .clb-pb .clb-dl{margin:0;font-size:15px}.clb-ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}.clb-ul .link{font-size:15px;text-align:left;min-height:32px}
@@ -617,4 +617,9 @@
 @media (max-width:640px){.clb-bar{flex-direction:column;align-items:stretch}.clb-tools{flex:1 1 auto;width:100%}.clb-grid{grid-template-columns:1fr 1fr;gap:10px}
   .clb-card .clb-tx{padding:10px}.clb-card .clb-thb{display:none}.clb-card .clb-tx b{font-size:15px}.clb-card .clb-use{font-size:13px}.clb-card .clb-tx small{display:none}
   .clb-topb .btn.clb-make,.clb-topb .btn.clb-tutb{flex:1 1 100%}}`; document.head.appendChild(st); }
+  /* v43 E2 — 첫 줄 브리핑(L43). l43.js가 뒤에 로드되므로 DOMContentLoaded에서 등록 */
+  { const reg43 = () => { if (!window.L43) return; L43.reg('clib', { art: 'list', brief: () => { if (UI.clibSub) return null; let A = []; try { A = entries(); } catch (e) { return null; } if (!A.length) return null;
+      const n = k => A.filter(e => inTab(e, k)).length; const idle = A.filter(e => !(e.uses || []).length).length;
+      return { eye: '콘텐츠 라이브러리', title: idle ? `콘텐츠 <em>${A.length}개</em> 가운데 ${idle}개는 아직 어느 ${esc(cname())}에도 없습니다` : `콘텐츠 <em>${A.length}개</em>가 모두 ${esc(cname())}에 들어가 있습니다`, sub: '쓰지 않는 콘텐츠는 미리보기에서 바로 ' + esc(cname()) + '에 넣을 수 있습니다.', stats: [[n('video') + '개', '영상'], [n('doc') + '개', '문서'], [n('quiz') + '개', '퀴즈 · 시험'], [n('book') + '권', '디지털북']] }; } }); try { L43.run(); } catch (e) { } };
+    if (window.L43) reg43(); else document.addEventListener('DOMContentLoaded', reg43); }
 })();

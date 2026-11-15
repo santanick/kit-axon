@@ -49,3 +49,41 @@
   .lmsa-acts .btn.sm,#main [data-act^="lmsa-"].btn.sm{min-height:40px;padding-top:8px;padding-bottom:8px;position:relative}
   .lmsa-acts .btn.sm::after,#main [data-act^="lmsa-"].btn.sm::after{content:"";position:absolute;inset:-2px 0}
 }
+/* v43 E2 — 학사 LMS 화면 공통(L43 등록 화면 #main.l43[data-l43^=lms]). 토큰만 사용 — 다크 자동 */
+#main.l43[data-l43^=lms] .card{border-radius:var(--r-card,20px);border:1px solid var(--hair);box-shadow:var(--sh1);background:var(--surface)}
+#main.l43[data-l43^=lms] .card .card{box-shadow:none}
+#main.l43[data-l43^=lms] .ch b{font-size:16px;font-weight:800;color:var(--g900)}
+#main.l43[data-l43^=lms] .btn,#main.l43[data-l43^=lms] summary.btn,#main.l43[data-l43^=lms] select,#main.l43[data-l43^=lms] .bar2 input{min-height:44px}
+#main.l43[data-l43^=lms] .btn.sm{padding-top:0;padding-bottom:0;display:inline-flex;align-items:center}
+#main.l43[data-l43^=lms] .link{min-height:44px;display:inline-flex;align-items:center}
+#main.l43[data-l43^=lms] .kpi .lab{color:var(--t-sub);font-weight:700}
+#main.l43[data-l43^=lms] .kpi.r .val,#main.l43[data-l43^=lms] .kpi.y .val{color:var(--t-warn,#B53C0A)}
+/* 화면 안 탭(LMP.ux.tabs · tabs4) → 알약형 칩(L43 필터 칩과 같은 모양) */
+#main.l43[data-l43^=lms] .seg2.lmp-tabs,#main.l43[data-l43^=lms] .bview .seg2:not(.wtabs):not(.btabs){display:inline-flex;flex-wrap:wrap;gap:6px;border:0;padding:4px;background:var(--surface2);border-radius:24px;box-shadow:inset 0 0 0 1px var(--hair);margin:0 0 12px}
+#main.l43[data-l43^=lms] .seg2.lmp-tabs button,#main.l43[data-l43^=lms] .bview .seg2:not(.wtabs):not(.btabs) button,#main.l43[data-l43^=lms] .lmp-tmore>summary{min-height:44px;padding:0 16px;border:0;border-radius:99px;margin:0;font:inherit;font-size:14px;font-weight:700;color:var(--g700);background:transparent;display:inline-flex;align-items:center}
+#main.l43[data-l43^=lms] .seg2.lmp-tabs button.on,#main.l43[data-l43^=lms] .bview .seg2:not(.wtabs):not(.btabs) button.on{background:var(--surface);color:var(--g900);box-shadow:var(--sh1)}
+/* 메뉴 안 화면 줄(lms/nav.js) */
+.lmsnav-sub{gap:8px}
+.lmsnav-sub button.on{box-shadow:var(--sh1)}
+/* 「지금 할 일」 줄(LMP.ux.todo) — 브리핑 아래 실행 줄 */
+#main .lmp-todo{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 18px;margin:0 0 14px;border-radius:var(--r-card,20px);background:var(--surface);border:1px solid var(--hair);box-shadow:var(--sh1)}
+#main .lmp-todo .lmp-todoh{font-size:13px;font-weight:800;color:var(--gr800,#066B2A);letter-spacing:.02em}
+#main .lmp-todo .lmp-todoi{display:flex;flex-wrap:wrap;gap:8px}
+#main .lmp-todo .lmp-todoi>span{display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border-radius:99px;background:var(--surface2);font-size:13px;color:var(--g800)}
+#main .lmp-todo .lmp-todoi em{font-style:normal;font-size:16px;font-weight:800;color:var(--g900);font-variant-numeric:tabular-nums}
+#main .lmp-todo .lmp-todoi>span.r,#main .lmp-todo .lmp-todoi>span.y{background:var(--co50);color:var(--co700,#B53C0A)}
+#main .lmp-todo .lmp-todoi>span.r em,#main .lmp-todo .lmp-todoi>span.y em{color:var(--co700,#B53C0A)}
+#main .lmp-todo .lmp-demo,#main .lmp-demo{font-size:12px;color:var(--t-sub)}
+/* 더보기 · 행 메뉴(uxmore/uxpop) · 접는 차시 머리 — 학사 LMS 화면 안에서 44px · 12px 이상 */
+#main.l43[data-l43^=lms] button,#main.l43[data-l43^=lms] .uxmore>summary,#main.l43[data-l43^=lms] summary.ch{min-height:44px}
+#main.l43[data-l43^=lms] .uxmore>summary,#main.l43[data-l43^=lms] summary.ch{display:flex;align-items:center}
+#main.l43[data-l43^=lms] .uxmore>summary{display:inline-flex}
+#main.l43[data-l43^=lms] .uxmore em,#main.l43[data-l43^=lms] summary em{font-size:12px}
+#main.l43[data-l43^=lms] .uxpop button{display:flex;align-items:center;width:100%}
+#main.l43[data-l43^=lms] input[type=checkbox],#main.l43[data-l43^=lms] input[type=radio]{min-height:0}
+/* 상태 칩(lw-st: 설문 · MOOC · 비교과) — 대비 4.5:1 */
+#main .lw-st.on{background:var(--gr50);color:var(--gr800,#066B2A)}
+#main .lw-st.wait{background:var(--co50);color:var(--t-warn,#B53C0A)}
+#main .lw-st.bad{background:var(--badl,#FDE7EA);color:var(--t-bad,#B3001F)}
+#main.l43[data-l43^=lms] select{border-radius:12px;border:1px solid var(--hair);background-color:var(--surface);padding:0 34px 0 12px;font-weight:600;color:var(--g900)}
+#main.l43[data-l43^=lms] small{font-size:max(12px,.85em)}

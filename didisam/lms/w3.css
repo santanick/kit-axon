@@ -31,11 +31,11 @@
 .w3-tr button.on{background:var(--magl);color:var(--magd);font-weight:600}
 .w3-tr button small{color:var(--muted);margin-right:6px;font-family:var(--num)}
 .w3-quiz{position:absolute;inset:0;background:rgba(20,20,20,.86);color:#fff;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:18px}
-.w3-quiz button{background:#fff;color:var(--ink);border:0;border-radius:6px;padding:8px 10px;text-align:left;font:inherit;cursor:pointer}
+.w3-quiz button{background:var(--surface,#fff);color:var(--ink);border:0;border-radius:6px;padding:8px 10px;text-align:left;font:inherit;cursor:pointer}
 .w3-sub textarea{width:100%;min-height:120px;font:12px/1.5 ui-monospace,monospace}
 /* 분석(J) */
 .w3-chart{width:100%;height:auto;max-height:240px}
-.w3-chart text{font-size:11px;fill:var(--muted)}
+.w3-chart text{font-size:12px;fill:var(--muted)}
 .w3-lvl-danger{color:var(--bad);font-weight:700}.w3-lvl-warn{color:var(--warn);font-weight:700}.w3-lvl-ok{color:var(--ok)}
 .w3-stu{border:2px dashed var(--mag);border-radius:var(--r);padding:12px;background:var(--magl)}
 .w3-fb{white-space:pre-wrap;font-size:13.5px;line-height:1.6}

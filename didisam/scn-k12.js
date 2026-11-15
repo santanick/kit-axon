@@ -376,4 +376,18 @@
     crmatt: { a: ['오늘 미등원 보여줘', '보호자에게 출결 알림 보내줘', '이번 주 결석 많은 원생 보여줘'] },
     class: { d: '수업(반 · 시간표)을 만들고 원생을 배정해요', a: ['중등 수학 수업 만들어줘', '시간표 겹치는 수업 찾아줘', '정원이 남은 수업 보여줘'] },
     dash: { a: ['오늘 학원 현황 요약해줘', '이번 달 미납 현황 알려줘', '퇴원 위험 원생 찾아줘'] } });
+  /* v43 E2 — 첫 줄 브리핑(L43 패턴). l43.js가 뒤에 로드되므로 DOMContentLoaded에서 등록한다. 숫자만 읽고 렌더 · 데이터는 바꾸지 않는다 */
+  { const reg43 = () => { if (!window.L43) return; const E = s => esc(String(s == null ? '' : s));
+    const csDue = () => { const cf = CFG(); const lim = addDays(today(), -(+cf.csDays || 30)); const last = {}; (S.consults || []).forEach(c => { const a = String(c.at).slice(0, 10); if (!last[c.who] || last[c.who] < a) last[c.who] = a; }); return ACTIVE().filter(m => !last[m.id] || last[m.id] < lim).length; };
+    L43.reg('crmex', { art: 'doc', brief: () => { if (!K12()) return null; const L = myCls(); const c = C(UI.crmEC) || L[0]; if (!c) return null; const X = EXS(c); if (!X.length) return { eye: '성적', title: `${E(c.name)}에 첫 시험을 등록하세요`, sub: '점수를 넣으면 석차 · 평균을 계산하고, 보호자에게 성적 알림을 보낼 수 있습니다.' };
+      const cur = X.find(e => e.id === UI.crmE) || X.slice().sort((a, b) => a.date < b.date ? 1 : -1)[0]; const R = rankOf(cur); const miss = (c.learners || []).length - R.n;
+      return { eye: '성적', title: miss > 0 ? `${E(cur.name)} 점수 미입력 <em>${miss}명</em>이 남았습니다` : `${E(cur.name)} 평균 <em>${R.avg ?? '—'}점</em>, ${R.n}명이 응시했습니다`, sub: cur.sent ? `성적 알림을 ${E(cur.sent)}에 보냈습니다.` : '점수를 모두 넣은 뒤 성적 알림으로 보호자에게 보내세요.' }; } });
+    L43.reg('crmcs', { art: 'people', brief: () => { if (!K12()) return null; const open = LEADS().filter(l => !['등록', '보류'].includes(l.st)).length; const due = csDue();
+      return { eye: '상담', title: open ? `답을 기다리는 신규 문의 <em>${open}건</em>이 있습니다` : due ? `상담한 지 오래된 재원생 <em>${due}명</em>이 있습니다` : '모든 재원생과 최근에 상담했습니다', sub: open ? '문의 순서대로 연락하고, 등록하면 원생으로 바로 옮길 수 있습니다.' : '미상담자 탭에서 기준 일수를 넘긴 원생을 확인하세요.', stats: [[open + '건', '신규 문의', open ? 'warn' : ''], [due + '명', '미상담자', due ? 'warn' : ''], [(S.consults || []).length + '건', '상담 기록']] }; } });
+    L43.reg('crmbill', { art: 'doc', brief: () => { if (!K12()) return null; const un = (S.bills || []).filter(billOpen); const sum = un.reduce((a, b) => a + billBal(b), 0); const late = un.filter(b => b.due && b.due < today()).length;
+      return { eye: '수납', title: un.length ? `미납 <em>${un.length}건</em> · ${E(won(sum))}을 확인하세요` : '이번 달 미납이 <em>없습니다</em>', sub: un.length ? (late ? `납부일이 지난 ${late}건부터 안내하세요. 독촉은 자동 운영 설정에 따라 보냅니다.` : '납부일 전에 안내 문자를 한 번 보내면 미납이 줄어듭니다.') : '새 달 수강료는 수업별 발생 탭에서 만들 수 있습니다.' }; } });
+    L43.reg('crmstat', { art: 'doc', brief: () => { if (!K12()) return null; const d = curD(); let F = null; try { F = dailyFacts(d); } catch (e) { return null; } const left = Math.max(0, F.need - F.marked);
+      return { eye: '학원 현황', title: left ? `오늘 출결 입력이 <em>${left}명</em> 남았습니다` : F.absent ? `오늘 결석 <em>${F.absent}명</em>, 보호자 연락을 확인하세요` : '오늘 출결 입력을 모두 마쳤습니다', sub: '아래 숫자는 기준일 하루치입니다. 월별 · 강사별 탭에서 추이를 봅니다.' }; } });
+    try { L43.run(); } catch (e) { } };
+    if (window.L43) reg43(); else document.addEventListener('DOMContentLoaded', reg43); }
 })();

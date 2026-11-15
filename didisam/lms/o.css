@@ -3,18 +3,18 @@
 .lo-grid>*{min-width:0}
 @media (max-width:860px){.lo-grid{grid-template-columns:1fr}}
 .lo-list{display:flex;flex-direction:column;gap:6px}
-.lo-it{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:var(--r);background:#fff;padding:8px 10px;cursor:pointer;color:var(--ink)}
+.lo-it{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:var(--r);background:var(--surface,#fff);padding:8px 10px;cursor:pointer;color:var(--ink)}
 .lo-it.on{border-color:var(--mag);background:var(--magl)}
 .lo-it small{display:block;color:var(--muted);margin-top:2px}
 .lo-msgs{display:flex;flex-direction:column;gap:8px;max-height:520px;overflow:auto;padding:4px}
 .lo-msg{border-radius:var(--r);padding:10px 12px;background:var(--soft);white-space:pre-wrap;word-break:break-word}
 .lo-msg.user{background:var(--magl);align-self:flex-end;max-width:85%}
-.lo-msg.assistant{background:#fff;border:1px solid var(--line);max-width:95%}
+.lo-msg.assistant{background:var(--surface,#fff);border:1px solid var(--line);max-width:95%}
 .lo-msg .lo-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--muted)}
 .lo-cite{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:12px;padding:1px 8px;background:var(--g50);color:var(--g800)}
 .lo-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end}
 .lo-form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--g800);min-width:0}
-.lo-form input,.lo-form select,.lo-form textarea,.lo-ta{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r);padding:7px 9px;font:inherit;background:#fff;color:var(--ink)}
+.lo-form input,.lo-form select,.lo-form textarea,.lo-ta{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r);padding:7px 9px;font:inherit;background:var(--surface,#fff);color:var(--ink)}
 .lo-ta{min-height:96px;resize:vertical}
 .lo-langs{display:flex;flex-wrap:wrap;gap:6px}
 .lo-langs label{flex-direction:row;align-items:center;gap:4px;border:1px solid var(--line);border-radius:14px;padding:2px 8px}
@@ -26,7 +26,7 @@
 .lo-tv .row{font-family:ui-monospace,monospace;font-size:12.5px}
 .lo-out{white-space:pre-wrap;background:var(--g50);border:1px solid var(--line);border-radius:var(--r);padding:10px;max-height:360px;overflow:auto;word-break:break-word}
 .lo-qr{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
-.lo-qr svg{width:168px;height:168px;background:#fff;border:1px solid var(--line);border-radius:var(--r);flex:none}
+.lo-qr svg{width:168px;height:168px;background:var(--surface,#fff);border:1px solid var(--line);border-radius:var(--r);flex:none}
 .lo-qr code{word-break:break-all;font-size:12px}
 .lo-line{display:grid;grid-template-columns:40px 1fr auto;gap:8px;align-items:center;border-top:1px solid var(--line);padding:6px 0}
 .lo-line input{min-width:0}
@@ -35,30 +35,30 @@
 .lo-cap header b{flex:1;min-width:120px}
 .lo-cap select,.lo-cap button{font:inherit;border-radius:6px;border:1px solid #555;background:#222;color:#fff;padding:4px 8px}
 .lo-cap p{margin:0 0 10px;line-height:1.5}
-.lo-cap p small{display:block;color:#9fb0ff}
+.lo-cap p small{display:block;color:#A6F0BE}
 .lo-bar{height:8px;border-radius:4px;background:var(--soft);overflow:hidden}
 .lo-bar i{display:block;height:100%;background:var(--mag)}
 .lo-bar.warn i{background:var(--warn)}.lo-bar.over i{background:var(--bad)}
 /* 화면 단순화 공용(묶음 M · O · P): 탭 4개 + 더보기 · 「지금 할 일」 · 접기 */
 .lmp-tabs{flex-wrap:wrap;align-items:center}
 .lmp-tabs .lmp-tmore>summary{height:auto;min-height:32px;padding:0 12px;font-weight:600}
-.lmp-tabs .lmp-tmore.on>summary{background:var(--magl,#fdeef6);color:var(--mag,#c2185b)}
+.lmp-tabs .lmp-tmore.on>summary{background:var(--magl,#fdeef6);color:var(--mag,#B53C0A)}
 .lmp-tabs .lmp-tmore .uxpop button{display:block;width:100%;text-align:left;border:0;background:none;padding:9px 14px;font:inherit;cursor:pointer;color:var(--ink)}
 .lmp-tabs .lmp-tmore .uxpop button.on,.lmp-tabs .lmp-tmore .uxpop button:hover{background:var(--soft)}
-.lmp-todo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;border:1px solid var(--line);border-left:4px solid var(--mag,#c2185b);border-radius:var(--r,8px);background:#fff;padding:10px 14px;margin:10px 0 12px}
+.lmp-todo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;border:1px solid var(--line);border-left:4px solid var(--mag,#B53C0A);border-radius:var(--r,8px);background:var(--surface,#fff);padding:10px 14px;margin:10px 0 12px}
 .lmp-todoh{font-size:13px;color:var(--muted);white-space:nowrap}
 .lmp-todoi{display:flex;flex-wrap:wrap;gap:4px 14px;flex:1;min-width:0}
 .lmp-todoi span{white-space:nowrap;font-size:14px}
 .lmp-todoi em{font-style:normal;font-weight:800;font-size:16px;margin-right:2px}
 .lmp-todoi span.r em{color:var(--bad,#c62828)}.lmp-todoi span.y em{color:var(--warn,#b26a00)}
-.lmp-todo .lmp-demo{flex-basis:100%;font-size:11.5px;color:var(--muted)}
-.lmp-fold{border:1px solid var(--line);border-radius:var(--r,8px);background:#fff;margin:10px 0;padding:0 12px}
+.lmp-todo .lmp-demo{flex-basis:100%;font-size:12px;color:var(--muted)}
+.lmp-fold{border:1px solid var(--line);border-radius:var(--r,8px);background:var(--surface,#fff);margin:10px 0;padding:0 12px}
 .lmp-fold>summary{cursor:pointer;padding:10px 0;list-style:revert}
 .lmp-fold>summary small{color:var(--muted);font-weight:400}
 .lmp-foldb{padding:0 0 12px}
-.lmp-link{font-weight:700;color:var(--mag,#c2185b);text-decoration:underline;text-underline-offset:2px}
+.lmp-link{font-weight:700;color:var(--mag,#B53C0A);text-decoration:underline;text-underline-offset:2px}
 .lmp-sub{display:block;margin-top:2px}
 .lmp-langbtn{display:flex;flex-wrap:wrap;gap:6px}
-.lmp-langbtn .on{border-color:var(--mag,#c2185b);background:var(--magl,#fdeef6);font-weight:700}
+.lmp-langbtn .on{border-color:var(--mag,#B53C0A);background:var(--magl,#fdeef6);font-weight:700}
 @media (max-width:600px){.lmp-todo{padding:9px 11px}.lmp-todo .btn{flex:1 1 100%}}
 .lo-h3{font-size:15px;margin:18px 0 6px}

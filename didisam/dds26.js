@@ -90,3 +90,47 @@ AFTER.push(() => { try { if (!CUR || CUR.tab !== 'book' || !Array.isArray(S.book
 /* v26.4 커뮤니티 관리 머리(피그마 Studio › 커뮤니티 관리): [커뮤니티로 이동] — 학습자 사이트 커뮤니티 새 창 */
 AFTER.push(() => { try { if (!CUR || CUR.tab !== 'community') return; const phr = document.querySelector('#main .ph .phr'); if (!phr || phr.querySelector('.cm26go')) return;
   const u = (typeof mbLURL === 'function' ? mbLURL() : 'learner.html') + '#comm'; phr.insertAdjacentHTML('beforeend', `<a class="btn pri cm26go" href="${esc(u)}" target="_blank" rel="noopener">${ic('arrow', 15)} 커뮤니티로 이동</a>`); } catch (e) { console.error(e); } });
+/* v43 E2 — 설정 하위 화면 첫 줄 브리핑(L43). 설정 루트 · 메뉴 구성(D2 등록)은 그대로 두고 UI.settings 하위만 덧붙인다.
+   l43.js가 뒤에 로드되므로 DOMContentLoaded에서 감싼다. 숫자만 읽고 저장 값 · 렌더는 바꾸지 않는다. */
+(function () {
+  'use strict';
+  const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const PLAN = { standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' };
+  const SUB = {
+    rules: ['학습 규칙 · AI 튜터', () => { const p = (S.settings || {}).progress || {}, tu = (S.settings || {}).tutor || {}; const q = (S.tutorUsage || []).reduce((a, u) => a + (+u.n || 0), 0);
+      return { title: `완료 기준 시청률 <em>${+p.watchThr || 0}%</em>, AI 튜터는 ${tu.enabled ? '사용 중입니다' : '꺼져 있습니다'}`, sub: '대화 내용은 저장하지 않고 질문 횟수만 집계합니다. 과제를 대신 써 주지 않도록 도움 범위를 정하세요.', stats: [[q + '회', '최근 7일 질문'], [(+tu.daily || 0) + '회', '1인 하루 한도'], [(+p.resubmit || 0) + '회', '과제 재제출']] }; }],
+    plan: ['요금제 · 결제', () => ({ title: `지금 요금제는 <em>${E(PLAN[S.org.plan] || S.org.plan || '체험')}</em>입니다`, sub: '요금제 변경은 정운영자만 할 수 있습니다. 결제 내역 탭에서 영수증을 받습니다.' })],
+    integr: ['연동', () => ({ title: 'Slack · Google · AI(MCP) 같은 <em>외부 서비스</em>를 연결합니다', sub: 'API 키는 서버에만 저장되고 화면에는 앞 몇 자리만 보입니다. 쓰지 않는 키는 바로 폐기하세요.' })],
+    service: ['서비스 설정', () => { const st = S.settings || {}; return { title: `회원 가입은 <em>${E(st.join || '자동 수락')}</em> 방식입니다`, sub: '홈페이지 공개 범위 · 가입 질문 · 재생 속도를 여기서 정합니다. 바꾼 값은 바로 저장됩니다.' }; }],
+    terms: ['약관', () => { const H = (S.settings || {}).termsHist || []; return { title: H.length ? `약관 개정 이력 <em>${H.length}건</em>을 보관하고 있습니다` : '디디쌤 기본 약관을 <em>우리 기관</em>에 맞게 고쳐 쓰세요', sub: '약관을 바꾸면 시행일 7일 전(회원에게 불리한 변경은 30일 전)까지 공지해야 합니다.' }; }],
+    popup: ['팝업', () => { const P = (S.settings || {}).popups || []; const td = today(); const live = P.filter(p => p.on !== false && (!p.s || p.s <= td) && (!p.e || p.e >= td)).length;
+      return P.length ? { title: `첫 화면 팝업 <em>${live}개</em>가 지금 보이고 있습니다`, sub: `등록 ${P.length}개 · 최대 4개까지 띄울 수 있습니다. 기간이 끝난 팝업은 자동으로 숨겨집니다.` } : { title: '첫 화면에 띄울 <em>팝업</em>이 없습니다', sub: '이벤트 · 약관 변경처럼 꼭 알릴 내용을 팝업으로 올리세요(최대 4개).' }; }],
+    lang: ['언어 · 용어', () => ({ title: '화면 언어와 용어를 <em>우리 기관 말</em>로 바꿉니다', sub: '예를 들어 「과정」을 「강좌」로 바꾸면 운영자 · 학습자 화면 모두에 같이 반영됩니다.' })],
+    data: ['데이터', () => ({ title: '기관 데이터를 <em>내보내거나 초기화</em>합니다', sub: '초기화는 되돌릴 수 없습니다. 먼저 내보내기로 백업하세요.' })],
+    room: ['데이터룸 · 배포', () => ({ title: '이 기관의 데이터는 <em>전용 데이터룸</em>에 분리해 저장합니다', sub: '배포 모델(공유 SaaS · 전용 클라우드 · 고객 클라우드 · 설치형)에 따라 저장 위치가 달라집니다.' })]
+  };
+  const reg = () => {
+    if (!window.L43) return; const base = L43.REG.settings || {};
+    L43.reg('settings', Object.assign({}, base, { brief: m => { const k = UI.settings; if (!k || !SUB[k]) return base.brief ? base.brief(m) : null; return Object.assign({ eye: '설정 · ' + SUB[k][0] }, SUB[k][1]()); } }));
+    if (!document.querySelector('style[data-set43]')) { const st = document.createElement('style'); st.dataset.set43 = '1'; st.textContent = `
+#main.l43[data-l43=settings] .btn,#main.l43[data-l43=settings] select,#main.l43[data-l43=settings] input:not([type=checkbox]):not([type=radio]):not([type=range]){min-height:44px}
+#main.l43[data-l43=settings] .btn.sm{display:inline-flex;align-items:center;padding-top:0;padding-bottom:0}
+#main.l43[data-l43=settings] .link{min-height:44px;min-width:44px}
+#main.l43[data-l43=settings] .card.plan.on{box-shadow:0 0 0 2px var(--gr600),var(--sh1)}
+#main.l43[data-l43=settings] .card.plan strong{font-size:24px;font-weight:800;color:var(--g900)}
+#main.l43[data-l43=settings] .swrow small,#main.l43[data-l43=settings] .rng2 small{font-size:12px;color:var(--t-sub)}
+#main.l43[data-l43=settings] .rng2 em{font-style:normal;font-weight:800;color:var(--gr800);font-variant-numeric:tabular-nums}
+#main.l43[data-l43=settings] .tr26n{border-radius:16px;background:var(--co50);color:var(--g900);border:0}
+#main.l43[data-l43=settings] .tr26n b{color:var(--co700)}
+#main.l43[data-l43=settings] .spark small{font-size:12px;color:var(--t-sub)}
+#main.l43[data-l43=settings] .spark i{background:var(--c-data)}
+#main.l43[data-l43=settings] .sl-sw{box-sizing:border-box;height:44px;padding:7px 0;background-clip:content-box}
+#main.l43[data-l43=settings] .sl-sw i{top:10px}
+#main.l43[data-l43=settings] .sx-lg{background:var(--surface);border-color:var(--hair)}
+#main.l43[data-l43=settings] .sx-lg.on{border-color:var(--gr600);background:var(--gr50)}
+#main.l43[data-l43=settings] .sx-lg.on em{color:var(--gr800,#066B2A)}
+#main.l43[data-l43=settings] .seg2 button,#main.l43[data-l43=settings] .subtabs button{min-height:44px}`; document.head.appendChild(st); }
+    try { L43.run(); } catch (e) { }
+  };
+  if (window.L43) reg(); else document.addEventListener('DOMContentLoaded', reg);
+})();
