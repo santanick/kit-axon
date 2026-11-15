@@ -9,10 +9,10 @@
 @media (max-width: 600px) { .lg-legal li { grid-template-columns: 64px minmax(0, 1fr); } .lg-legal li .lbtn { grid-column: 1 / -1; justify-content: center; } }
 /* 히어로: 과정 카드 월 */
 .hmos .mcard { display: flex; flex-direction: column; gap: 6px; padding: 16px; min-height: 120px; border-radius:12px; background: linear-gradient(150deg, var(--c), #2A2B2B); color: #fff; text-decoration: none; box-shadow: 0 18px 40px -20px rgba(0, 0, 0, .6); }
-.hmos .mcard i { font-style: normal; font-size: 11px; font-weight: 700; opacity: .8; letter-spacing: .04em; }
+.hmos .mcard i { font-style: normal; font-size: 12px; font-weight: 700; opacity: .8; letter-spacing: .04em; }
 .hmos .mcard b { font-size: 16px; line-height: 1.35; } .hmos .mcard small { font-size: 12px; opacity: .75; margin-top: auto; }
 /* 학원 보호자 보기(읽기 전용) */
-.lg-bar { position: sticky; top: 0; z-index: 30; padding: 10px 16px; background: #EAF2FF; color: #1E3A8A; font-size: 13.5px; text-align: center; border-bottom: 1px solid #C9DAF8; }
+.lg-bar { position: sticky; top: 0; z-index: 30; padding: 10px 16px; background: #ECFDF3; color: #053D1E; font-size: 13.5px; text-align: center; border-bottom: 1px solid #D1FADF; }
 body.lg-guard .lt-fab, body.lg-guard .lt-panel, body.lg-guard .lt-nudge, body.lg-guard #qz button[type=submit] { display: none !important; }
 body.lg-guard.lt-dock { padding-right: 0 !important; }
 .lg-ck { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin: 4px 0 10px; line-height: 1.5; }

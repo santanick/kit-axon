@@ -1,23 +1,23 @@
 /* 디디쌤 학습자 v26.1 — 로그인 · 간편가입 · 계정 찾기(피그마 My Page › 회원가입 & 로그인 벤치마크) */
-body.la26 #lm{background:#fff}
+body.la26 #lm{background:var(--surface,#fff)}
 body.la26 section.login .lgw{display:block;max-width:440px;margin:0 auto;box-shadow:none;border:0;background:transparent}
 body.la26 section.login .lgl{display:none}
 body.la26 section.login .lgr{padding:8px 0 40px;background:transparent}
 body.la26 section.la .in.narrow{max-width:440px}
-body.la26 section.login,body.la26 section.la{padding:56px 0 72px;background:#fff}
-.l26logo{display:inline-grid;place-items:center;min-width:44px;height:44px;padding:0 8px;border-radius:10px;background:var(--pri);color:#fff;font-weight:800;font-size:17px;letter-spacing:-.02em;margin-bottom:22px}
+body.la26 section.login,body.la26 section.la{padding:56px 0 72px;background:var(--surface,#fff)}
+.l26logo{display:inline-grid;place-items:center;min-width:44px;height:44px;padding:0 8px;border-radius:10px;background:var(--pri);color:var(--pri-ink,#fff);font-weight:800;font-size:17px;letter-spacing:-.02em;margin-bottom:22px}
 body.la26 .lgr>h2,body.la26 section.la .in.narrow>h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px;color:var(--g900)}
 .l26sub{margin:0 0 26px;color:var(--g700);font-size:15px;font-weight:600}
 /* SNS: 흰 바탕 둥근 버튼 + 브랜드 아이콘 */
 body.la26 .la-soc{gap:10px;margin:8px 0 6px}
-body.la26 .la-sb,body.la26 .la-sb.kakao,body.la26 .la-sb.naver,body.la26 .la-sb.google,body.la26 .la-sb.apple{display:flex;align-items:center;justify-content:center;gap:10px;height:52px;padding:0 18px;border-radius:999px;background:#fff!important;color:var(--g900)!important;box-shadow:inset 0 0 0 1px var(--g300)!important;border:0;font-weight:600;font-size:15px;position:relative}
+body.la26 .la-sb,body.la26 .la-sb.kakao,body.la26 .la-sb.naver,body.la26 .la-sb.google,body.la26 .la-sb.apple{display:flex;align-items:center;justify-content:center;gap:10px;height:52px;padding:0 18px;border-radius:999px;background:var(--surface,#fff)!important;color:var(--g900)!important;box-shadow:inset 0 0 0 1px var(--g300)!important;border:0;font-weight:600;font-size:15px;position:relative}
 body.la26 .la-sb:hover{box-shadow:inset 0 0 0 1px var(--g500)!important;background:var(--g50)!important}
 .l26i{display:inline-grid;place-items:center;width:22px;height:22px;flex:none}
 body.la26 .la-or{margin:18px 0 14px;color:var(--t-sub,var(--g500));font-size:13px}
 body.la26 .la-or::before,body.la26 .la-or::after{background:var(--g300)}
 /* 입력 · 버튼 */
 body.la26 section.login .fl,body.la26 section.la .fl{font-size:14px;font-weight:600;color:var(--g800)}
-body.la26 section.login input:not([type=checkbox]):not([type=radio]),body.la26 section.la input:not([type=checkbox]):not([type=radio]),body.la26 section.la select{height:48px;border-radius:4px;border:1px solid var(--g400);box-shadow:none;background:#fff;padding:0 14px;font-size:15px}
+body.la26 section.login input:not([type=checkbox]):not([type=radio]),body.la26 section.la input:not([type=checkbox]):not([type=radio]),body.la26 section.la select{height:48px;border-radius:4px;border:1px solid var(--g400);box-shadow:none;background:var(--surface,#fff);padding:0 14px;font-size:15px}
 body.la26 section.login input:focus,body.la26 section.la input:focus{border-color:var(--g900);outline:0}
 body.la26 section.login input:disabled,body.la26 section.la input:disabled,body.la26 section.la input[readonly]{background:var(--g100);color:var(--t-sub,var(--g600))}
 body.la26 section.login .lbtn.pri.blk,body.la26 section.la .lbtn.pri.blk{height:52px;border-radius:4px;background:var(--g900);font-size:16px}
@@ -43,7 +43,7 @@ body.la26 section.la .la-cons,body.la26 section.la .la-age{border-radius:8px;bor
 @media (max-width:860px){.shp-tabs{top:56px;gap:18px;overflow-x:auto}}
 /* 결제하기(v26.2, 피그마 User Page › 결제하기): 가운데 한 장의 카드 */
 .shp-pay.p26{display:block;max-width:640px;margin:0 auto}
-.p26c{background:#fff;border:1px solid var(--g300);border-radius:8px;padding:28px 32px 32px}
+.p26c{background:var(--surface,#fff);border:1px solid var(--g300);border-radius:8px;padding:28px 32px 32px}
 .p26h{font-size:17px;font-weight:800;color:var(--g900);margin:28px 0 12px;letter-spacing:-.01em}
 .p26h:first-child{margin-top:0}
 .p26 .shp-item{border:0;background:var(--g100);border-radius:8px;margin:0}
@@ -52,7 +52,7 @@ body.la26 section.la .la-cons,body.la26 section.la .la-age{border-radius:8px;bor
 .p26amt .tot{padding-top:10px;border-top:1px dashed var(--g300);color:var(--g900);font-weight:800}
 .p26amt dd.tot b{font-size:20px;color:var(--g900)}
 .p26m{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border:0;padding:0;background:transparent;margin:0}
-.p26t{position:relative;display:flex!important;flex-direction:column;align-items:flex-start!important;gap:2px!important;min-height:64px;padding:12px 14px;border:1px solid var(--g300);border-radius:8px;background:#fff;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.p26t{position:relative;display:flex!important;flex-direction:column;align-items:flex-start!important;gap:2px!important;min-height:64px;padding:12px 14px;border:1px solid var(--g300);border-radius:8px;background:var(--surface,#fff);cursor:pointer;transition:border-color .15s,box-shadow .15s}
 .p26t input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
 .p26t b{font-size:15px;color:var(--g900)}.p26t small{font-size:12.5px;color:var(--t-sub,var(--g600))}
 .p26t:hover{border-color:var(--g500)}
@@ -63,10 +63,10 @@ body.la26 section.la .la-cons,body.la26 section.la .la-age{border-radius:8px;bor
 .p26err{margin:6px 0 0 24px;color:#E5484D;font-size:13px;font-weight:600}
 .p26btn{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:24px}
 .p26btn .lbtn{height:52px;border-radius:4px;font-size:16px;justify-content:center;display:flex;align-items:center}
-.p26btn .lbtn.ghost{background:#fff;color:var(--pri-tx,var(--pri));box-shadow:inset 0 0 0 1px var(--pri);border:0}
+.p26btn .lbtn.ghost{background:var(--surface,#fff);color:var(--pri-tx,var(--pri));box-shadow:inset 0 0 0 1px var(--pri);border:0}
 @media (max-width:520px){.p26c{padding:20px 16px 24px;border-radius:0;border-left:0;border-right:0}.p26m{grid-template-columns:1fr}}
 /* 교재/교구 상세(v26.4, 피그마 User Page › 교재/교구 상세) */
-.tb26n{background:#fff;border:1px solid var(--g300);border-radius:8px;padding:16px 20px;margin:18px 0 8px}.tb26n b{font-size:15px;color:var(--g900)}.tb26n ul{margin:8px 0 0;padding-left:18px;color:var(--g700);font-size:14px;line-height:1.7}
+.tb26n{background:var(--surface,#fff);border:1px solid var(--g300);border-radius:8px;padding:16px 20px;margin:18px 0 8px}.tb26n b{font-size:15px;color:var(--g900)}.tb26n ul{margin:8px 0 0;padding-left:18px;color:var(--g700);font-size:14px;line-height:1.7}
 .tb26h{font-size:20px;font-weight:800;margin:32px 0 12px;padding-bottom:12px;border-bottom:1px solid var(--g300)}
 .tb26a{display:flex;flex-direction:column;gap:14px}.tb26p{display:flex;gap:14px;align-items:flex-start}.tb26p b{font-size:15px}.tb26p p{margin:6px 0 0;color:var(--g700);font-size:14px;line-height:1.7}
 .tb26av{flex:none;width:56px;height:56px;border-radius:50%;background:var(--g200,#E9EBEC);display:grid;place-items:center;font-weight:800;color:var(--g700);font-size:18px}

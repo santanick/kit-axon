@@ -138,7 +138,7 @@
 #lm .lhb~.myh .mytab a:hover,#lm .lhb~.myh .mytab a.on{color:var(--ink);border-bottom-color:var(--pri)}
 /* 반응형 */
 @media (max-width:1100px){.lhb-hg{grid-template-columns:minmax(0,1fr) 400px;gap:28px}.lhb-hero h1{font-size:38px}.lhb-r1{grid-template-columns:1fr 1fr}.lhb-rc{grid-column:1/-1;min-height:180px}.lhb-band{grid-template-columns:1fr 1fr}.lhb-band .lb2{grid-column:1/-1}.lhb-band .all{grid-column:1/-1;justify-self:start}.lhb-rw{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:760px){.lhb-hero{padding:28px 0 24px;border-radius:0 0 22px 22px;background-position:center 30%}.lhb-hg{grid-template-columns:1fr;gap:20px}.lhb-hero h1{font-size:30px}.lhb-hero .lead{font-size:15px}.lhb .ac .lhb-btn{flex:1 1 100%}.lhb .tut{justify-content:space-between}
+@media (max-width:760px){.lhb-hero{padding:28px 0 24px;border-radius:0 0 22px 22px;background-position:center 30%}.lhb-hg{grid-template-columns:minmax(0,1fr);gap:20px}.lhb-hero h1{font-size:30px}.lhb-hero .lead{font-size:15px}.lhb .ac .lhb-btn{flex:1 1 100%}.lhb .tut{justify-content:space-between}
   .lhb-rw{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:16px;gap:12px;margin:0 -16px;padding:4px 16px 8px;scrollbar-width:none}.lhb-rw::-webkit-scrollbar{display:none}.lhb-v{flex:0 0 78%;scroll-snap-align:start}
   .lhb-r1{grid-template-columns:1fr}.lhb-band{grid-template-columns:1fr;padding:16px}.lhb-pc{padding:16px}.lhb-pc .nd{width:30px;height:30px}.lhb-sh h2{font-size:18px}}
 /* v43 학습자 공통 머리(로그인 후 클래식 웹 셸) — 로고 판 · 메뉴 알약 · 다크 모드. 홈페이지 빌더 테마(body.lhs-hps)는 건드리지 않음 */
@@ -150,3 +150,19 @@ body:not(.lhs-hps) header.lh .ln a.on{background:var(--ink);color:var(--surface,
 html[data-theme="dark"] body:not(.lhs-hps) header.lh .ln a:hover{background:var(--surface2)}
 html[data-theme="dark"] #lm>section.sub{background:var(--surface)!important;color:var(--ink)}
 html[data-theme="dark"] #lm>section.sub h1{color:var(--ink)}
+/* v43 3단계(E3) 학습자 웹 공통 정리 — 머리 · 체험 띠 · 누르는 크기 44px. 앱 프레임(body.lapp)과 홈페이지 빌더 테마(body.lhs-hps)는 제외 */
+body:not(.lapp):not(.lhs-hps) header.lh .ln a,body:not(.lapp):not(.lhs-hps) header.lh .lux-mb{min-height:44px}
+body:not(.lapp):not(.lhs-hps) header.lh .bn small{font-size:12px}
+body:not(.lapp) .lux-mb i{font-size:12px;display:inline-grid;place-items:center;width:14px}
+.pvbar .lhs-dx{height:44px}
+/* 유형 · 트랙 색(--c)을 글자로 쓸 때는 잉크와 섞어 라이트 · 다크 모두 4.5:1 이상 */
+body:not(.lapp) :is(.tg,.tkb li span,.first,.ty span,.cwb span,.tyh+* span){color:color-mix(in srgb,var(--c,var(--pri)) 58%,var(--ink))}
+body:not(.lapp) .tg{background:color-mix(in srgb,var(--c,var(--pri)) 10%,var(--surface,#fff))}
+body:not(.lapp) .lk{color:var(--pri-tx,var(--pri))}
+/* 트랙 · 코스 카드 안 실행 버튼은 주 버튼(그린) */
+body:not(.lapp) .tkb .lbtn{background:var(--pri);color:var(--pri-ink,#fff)}
+/* 비활성 버튼: 회색 면 위 흰 글자(1.7:1) → 연한 면 + 보조 글자 */
+body:not(.lapp) .lbtn:disabled,body:not(.lapp) .lbtn.pri:disabled{background:var(--line2);color:var(--mute);box-shadow:inset 0 0 0 1px var(--line)}
+/* 누르는 크기 44px: 필터 · 정렬 · 칩 · 보기 전환 · 입력 상자 */
+body:not(.lapp) #lm :is(.tfilt button,.lc26so button,.shp-chip,.lq-seg button,.lux-tabs button,.chips button,.seg button){min-height:44px}
+body:not(.lapp) #lm :is(select,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file])){min-height:44px}

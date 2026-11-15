@@ -21,7 +21,7 @@ body.lapp{
   /* v33 글자 전용 토큰(QA #71, WCAG 4.5:1) — 채움 · 테두리는 위 브랜드 값 그대로, 글자만 아래 값을 쓴다.
      tx2 #666767: 흰 5.67 · Grey100 5.29 · Grey200 5.06 · Primary50 5.13 / tp #007A29: 흰 5.50 · Primary50 4.98 · Grey200 4.91
      tw #A84A00: 흰 5.76 · Warning50 5.25 / ts #006ABF: 흰 5.51 · Secondary50 4.85 (DADS Grey 600 #808181 = 3.91 · Grey 500 = 2.30 · Primary #00C53B = 2.32 · Warning Dark #EF6D00 = 3.06이라 글자에 쓰지 않음) */
-  --d-tx2:#5C554B;--d-tp:#00862D;--d-tw:#B53C0A;--d-ts:#066B2A;--pri-tx:var(--d-tp);--t-sub:var(--d-tx2);--t-ok:var(--d-tp);--t-warn:var(--d-tw);
+  --d-tx2:#5C554B;--d-tp:#007A29;--d-tw:#B53C0A;--d-ts:#066B2A;--pri-tx:var(--d-tp);--t-sub:var(--d-tx2);--t-ok:var(--d-tp);--t-warn:var(--d-tw);
   --ap-bg:var(--surface,#FFFFFF);--ap-ink:var(--d-g900);--ap-mute:var(--d-tx2);--ap-line:var(--d-g300);--ap-r:12px;--sg:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;
   background:var(--surface,#fff);color:var(--d-g900);font-family:var(--sg);letter-spacing:0;font-feature-settings:'tnum' 1;-webkit-font-smoothing:antialiased}
 body.lapp #lm{background:var(--surface,#fff)}
@@ -33,9 +33,9 @@ body.lapp .ap-tt{font:700 18px/26px var(--sg);color:var(--d-g900)}
 body.lapp .ap-ib{border-radius:8px;color:var(--d-g900)}body.lapp .ap-ib:active,body.lapp .ap-ib:hover{background:var(--d-g200)}
 body.lapp .ap-call{border:1px solid var(--d-ol);background:var(--surface,#fff);font:600 14px/20px var(--sg);color:var(--d-g900);min-height:40px}
 body.lapp .ap-nav{background:var(--surface,#fff);backdrop-filter:none;-webkit-backdrop-filter:none;border-top:1px solid var(--d-g300);padding-top:4px}
-body.lapp .ap-nav a{color:var(--d-tx2);font:600 11px/16px var(--sg);border-radius:8px}
+body.lapp .ap-nav a{color:var(--d-tx2);font:600 12px/16px var(--sg);border-radius:8px}
 body.lapp .ap-nav a.on{color:var(--d-g900)}body.lapp .ap-nav a.on svg{stroke-width:2.4}
-body.lapp .ap-bd{background:#D1001F;font:600 10px/17px var(--sg)}
+body.lapp .ap-bd{background:#D1001F;font:600 12px/17px var(--sg)}
 @media (min-width:900px){body.lapp .ap-nav{border-radius:16px;box-shadow:0 8px 24px -12px rgba(42,43,43,.25)}}
 
 /* 첫 화면 */
@@ -49,7 +49,7 @@ body.lapp .ap-ey{font:600 12px/16px var(--sg);color:var(--d-tx2)}
 body.lapp .ap-lead,body.lapp .ap-hero .ap-sub,body.lapp .ap-lead2{font:500 14px/20px var(--sg);color:var(--d-g700)}
 body.lapp .ap-st span{background:var(--d-g100);border:0;border-radius:4px;padding:6px 8px;font:500 12px/16px var(--sg);color:var(--d-g700)}body.lapp .ap-st b{color:var(--d-g900);font-weight:700}
 body.lapp .ap-org{background:var(--surface,#fff);border:1px solid var(--d-ol);border-radius:999px;font:600 12px/16px var(--sg)}
-body.lapp .ap-org i{border-radius:4px;background:var(--d-p50);color:var(--d-tp);font:600 11px/16px var(--sg)}
+body.lapp .ap-org i{border-radius:4px;background:var(--d-p50);color:var(--d-tp);font:600 12px/16px var(--sg)}
 body.lapp .ap-me b{font:700 16px/24px var(--sg)}body.lapp .ap-me small{font:500 12px/16px var(--sg);color:var(--d-tx2)}
 body.lapp .ap-on{background:var(--d-p);box-shadow:0 0 0 3px var(--d-p100)}
 
@@ -64,7 +64,7 @@ body.lapp .ap-cc.warn{background:var(--d-warn50);border:0}
 /* 오늘의 미션: 흰 카드 + Outline Gray, 태그 = 상태 칩(Primary 50 · Warning 50) */
 body.lapp .ap-cd{border-radius:var(--ap-r);border:1px solid var(--d-ol);box-shadow:none;background:var(--surface,#fff);color:var(--d-g900);padding:14px 40px 14px 14px;gap:6px}
 body.lapp .ap-cd.first{background:var(--surface,#fff);color:var(--d-g900);border:1.5px solid var(--d-g900)}
-body.lapp .ap-cd small,body.lapp .ap-cd.first small{display:inline-flex;align-self:flex-start;padding:4px 6px;border-radius:4px;background:var(--d-p50);color:var(--d-tp);font:600 11px/16px var(--sg);letter-spacing:0}
+body.lapp .ap-cd small,body.lapp .ap-cd.first small{display:inline-flex;align-self:flex-start;padding:4px 6px;border-radius:4px;background:var(--d-p50);color:var(--d-tp);font:600 12px/16px var(--sg);letter-spacing:0}
 body.lapp .ap-cd.warn small{background:var(--d-warn50);color:var(--d-tw)}
 body.lapp .ap-cd b{font:600 16px/24px var(--sg)}
 body.lapp .ap-cd span,body.lapp .ap-cd.first span{font:500 13px/16px var(--sg);color:var(--d-tx2)}
@@ -73,7 +73,7 @@ body.lapp .ap-cd i,body.lapp .ap-cd.first i{background:var(--d-g100);color:var(-
 /* 대화 말풍선(Body1) */
 body.lapp .ap-th .lt-b{background:var(--d-g100);border:0;box-shadow:none;border-radius:4px 16px 16px 16px;color:var(--d-g900);font:500 16px/24px var(--sg)}
 body.lapp .ap-th .lt-m.u .lt-b{background:var(--d-g900);color:#fff;border-radius:16px 4px 16px 16px}
-body.lapp .ap-th .lt-src,body.lapp .ap-note{font:500 11px/16px var(--sg);color:var(--d-tx2)}
+body.lapp .ap-th .lt-src,body.lapp .ap-note{font:500 12px/16px var(--sg);color:var(--d-tx2)}
 
 /* 입력 · 추천 칩: Chip Round 36(흰 바탕 + Outline Gray) */
 body.lapp .ap-comp{background:var(--surface,#fff);border-top:1px solid var(--d-g300);padding-top:10px}
@@ -118,12 +118,12 @@ body.lapp .ap-sh nav button:last-child{background:none;color:var(--d-tx2)}
 body.lapp .ap-dlg{border-radius:12px}
 body.lapp .ap-orow{border:1px solid var(--d-ol);border-radius:var(--ap-r);background:var(--surface,#fff)}
 body.lapp .ap-orow.on{border:1.5px solid var(--d-g900);background:var(--d-g50)}
-body.lapp .ap-oty{color:var(--d-tp);font:600 11px/16px var(--sg)}body.lapp .ap-orow b{font:600 15px/20px var(--sg)}
+body.lapp .ap-oty{color:var(--d-tp);font:600 12px/16px var(--sg)}body.lapp .ap-orow b{font:600 15px/20px var(--sg)}
 body.lapp .ap-orow em,body.lapp .ap-orow svg{color:var(--d-ts)}
 body.lapp .ap-ms label:has(input:checked){border-color:var(--d-g900);background:var(--d-g50)}
 
 /* 상태 표시: Claude 연결 = Primary 50 상태 칩 */
-body.lapp .ap-ai{border-radius:4px;background:var(--d-g100);color:var(--d-g700);font:600 11px/16px var(--sg)}
+body.lapp .ap-ai{border-radius:4px;background:var(--d-g100);color:var(--d-g700);font:600 12px/16px var(--sg)}
 body.lapp .ap-ai.on{background:var(--d-p50);color:var(--d-tp)}body.lapp .ap-ai.on i{background:var(--d-p);box-shadow:0 0 0 3px var(--d-p100)}
 
 /* 내 강의: 진도 = Primary, 구역 띠 8px Grey 100 */
@@ -131,7 +131,7 @@ body.lapp .ap-myh{background:var(--d-g100);border:0;border-radius:4px 16px 16px 
 body.lapp .ap-h2{font:700 18px/26px var(--sg);color:var(--d-g900);margin:22px 0 10px}
 body.lapp .ap-rg{background:conic-gradient(var(--d-p) calc(var(--p)*1%),var(--d-g300) 0)}
 body.lapp .ap-rg b{background:var(--d-g100);font:700 12px/16px var(--sg)}
-body.lapp .ap-cm b{font:600 16px/24px var(--sg)}body.lapp .ap-cm small{font:500 13px/16px var(--sg);color:var(--d-tx2)}body.lapp .ap-cm em{font:600 11px/16px var(--sg);color:var(--d-tw)}
+body.lapp .ap-cm b{font:600 16px/24px var(--sg)}body.lapp .ap-cm small{font:500 13px/16px var(--sg);color:var(--d-tx2)}body.lapp .ap-cm em{font:600 12px/16px var(--sg);color:var(--d-tw)}
 body.lapp .ap-cc i{background:var(--d-g900)}body.lapp .ap-cc.done i{background:var(--d-g300);color:var(--d-g900)}
 body.lapp .ap-pg,body.lapp .ap-my{padding-top:12px}
 body.lapp .ap-my{border-bottom:8px solid var(--d-g100)}
@@ -181,7 +181,7 @@ body.lapp .ap-join h2{margin:0;font:700 18px/26px var(--sg);color:var(--d-g900)}
 body.lapp .ap-join p{margin:0;font:500 14px/18px var(--sg);color:var(--d-g700)}
 body.lapp .ap-join ol{margin:0;padding:0 0 0 18px;display:grid;gap:4px;font:500 13px/18px var(--sg);color:var(--d-g800)}
 body.lapp .ap-tags{display:flex;flex-wrap:wrap;gap:6px}
-body.lapp .ap-tag{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:4px;background:var(--d-p50);color:var(--d-tp);font:600 11px/16px var(--sg)}
+body.lapp .ap-tag{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:4px;background:var(--d-p50);color:var(--d-tp);font:600 12px/16px var(--sg)}
 body.lapp .ap-tag.w{background:#FFF3E0;color:var(--d-tw)}
 body.lapp .ap-join .ap-lk,body.lapp .ap-lk{background:none;border:0;padding:0;color:var(--d-tx2);font:500 13px/16px var(--sg);text-decoration:underline;cursor:pointer;justify-self:center}
 body.lapp .ap-osr{display:flex;align-items:center;gap:8px;height:44px;margin:8px 0 12px;padding:0 12px;border:1px solid var(--d-ol);border-radius:4px;background:var(--d-g100,#F6F7F7);color:var(--d-tx2)}
@@ -247,7 +247,7 @@ body.lpar .lt-fab,body.lpar .lt-panel{display:none!important}
    · Gray 단계 --g50~--g900은 학습자 :root에서 10단계 모두 정의한다(빠지면 입력칸 테두리가 사라진다). */
 :root{
   --g50:#FAF8F5;--g100:#F6F3EE;--g200:#F3F0EA;--g300:#E7E2D9;--g400:#D6CFC2;--g500:#A39B8E;--g600:#736B5F;--g700:#5C554B;--g800:#3F3A33;--g900:#1A1814;
-  --gr50:#ECFDF3;--gr100:#D1FADF;--gr200:#A6F0BE;--gr300:#5FE08A;--gr400:#2FD266;--gr500:#00C53B;--gr600:#00A832;--gr700:#00862D;--gr800:#066B2A;--gr900:#053D1E;--gr950:#03271A;
+  --gr50:#ECFDF3;--gr100:#D1FADF;--gr200:#A6F0BE;--gr300:#5FE08A;--gr400:#2FD266;--gr500:#00C53B;--gr600:#00A832;--gr700:#007A29;--gr800:#066B2A;--gr900:#053D1E;--gr950:#03271A;
   --co50:#FFF3EC;--co100:#FFE2D1;--co500:#FF6B2C;--co700:#B53C0A;
   --sh1:0 1px 2px rgba(26,24,20,.05),0 0 0 1px rgba(26,24,20,.04);--sh2:0 1px 2px rgba(26,24,20,.05),0 8px 24px rgba(26,24,20,.07);--sh3:0 2px 4px rgba(26,24,20,.06),0 24px 48px rgba(26,24,20,.14);
   --r-card:20px;--r-block:24px;--r-btn:14px;--r-in:12px;
@@ -306,7 +306,7 @@ html[data-theme="dark"] :is(input,select,textarea){background:var(--surface2);co
 html[data-theme="dark"] .lbtn.ghost{background:var(--surface2)}
 html[data-theme="dark"] body.lapp .ap-nav,html[data-theme="dark"] body.tube .ap-nav.tb-nav{box-shadow:0 0 0 1px rgba(255,255,255,.1),0 16px 40px rgba(0,0,0,.6)}
 html[data-theme="dark"] :is(.ap-av,.ls-av,img.logo,.lg img){box-shadow:0 0 0 1px rgba(255,255,255,.16)}
-html[data-theme="dark"] :is(.certp,.a2lcert,.certpv,.a2cert,[data-light]){color-scheme:light;--ink:#1A1814;--ink2:#3F3A33;--mute:#5C554B;--line:#E7E2D9;--line2:#F3F0EA;--paper:#F3F0EA;--surface:#fff;--t-sub:#5C554B;--pri-tx:#00862D;
+html[data-theme="dark"] :is(.certp,.a2lcert,.certpv,.a2cert,[data-light]){color-scheme:light;--ink:#1A1814;--ink2:#3F3A33;--mute:#5C554B;--line:#E7E2D9;--line2:#F3F0EA;--paper:#F3F0EA;--surface:#fff;--t-sub:#5C554B;--pri-tx:#007A29;
   --g200:#F3F0EA;--g300:#E7E2D9;--g700:#5C554B;--g900:#1A1814;background-color:#fff;color:#1A1814}
 @media print{html[data-theme]{color-scheme:light}html[data-theme] body{background:#fff!important;color:#1A1814!important}.thm-box,.ap-nav{display:none!important}}
 html[data-theme="dark"] :is(.lq-hc,.sec.la,.ls-list,.lfs-row,.ls-me .ls-prof){background:var(--surface);color:var(--ink)}
