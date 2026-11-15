@@ -149,3 +149,5 @@ body .hps-ri{font-size:12px}body .hps-steps li,body .hps-cnt,body .hps-og small,
 /* v38 F5 R3 UL15: 학사 LMS 하위 탭 · 단계 숫자(em) · 자동화 흐름 글자 12px 이상(390), PC 레일 · 계정 메뉴 보조 글 12px */
 @media (max-width:860px){body #main em,body header em,body .bsub em{font-size:max(12px,1em)!important}body .cn-tflow span{font-size:12px!important}}
 @media (min-width:861px){body .brail .ri{font-size:12px}}body .acn small,body .uxacs small,body .acp small,body .uxacs label{font-size:12px}
+/* v43 F1: 출석 · 진도 필터 칩(ops-pf) 44px */
+button[data-act=ops-pf]{min-height:44px}

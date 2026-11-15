@@ -81,7 +81,10 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
           /* 과정 일정 상세 → 바로 가기 */
           const ym = await p.evaluate(() => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`; });
           const cand = E.filter(e => e.src === 'auto' && e.date.startsWith(ym)); const a = cand.find(e => e.iid) || cand[0];
-          await p.locator(`#lm .lq-month [data-lcal="ev"][data-v="${a.id}"]`).first().click();
+          /* v43 대표님 결정: 휴대폰 월간 칸은 칩 대신 점 — 날짜를 누르면 그날 일정 목록이 크게 펼쳐지고, 거기서 일정을 고른다 */
+          const chipV = await p.locator(`#lm .lq-month [data-lcal="ev"][data-v="${a.id}"]`).first().isVisible();
+          if (chipV) await p.locator(`#lm .lq-month [data-lcal="ev"][data-v="${a.id}"]`).first().click();
+          else { await p.locator(`#lm .lq-month .lq-dn[data-v="${a.date}"]`).click(); await p.waitForTimeout(200); const big = await p.evaluate(id => { const r = document.querySelector(`#lcalDlg .lq-dl [data-lcal="ev"][data-v="${id}"]`); return r ? Math.round(r.getBoundingClientRect().height) : 0; }, a.id); ok(big >= 44, `${tag} 날짜 누르기 → 그날 목록(행 높이 ${big}px)`); await p.locator(`#lcalDlg .lq-dl [data-lcal="ev"][data-v="${a.id}"]`).click(); }
           await p.waitForTimeout(200); const det = await p.evaluate(() => { const d = document.getElementById('lcalDlg'); return d ? { t: d.querySelector('h2').textContent, html: d.innerHTML.slice(0, 500), go: [...d.querySelectorAll('a[href^="#c/"]')].map(x => x.getAttribute('href')) } : null; });
           ok(det && det.go.length >= 1 && det.go.some(h => h.includes(a.cls)), `${tag} 일정 상세 · 바로 가기 ${det ? det.go.join(' ') : '없음'}${det && !det.go.length ? det.t + ' ' + JSON.stringify(a) + det.html : ''}`); await shot(p, `${type}_${mode}_detail_${w}`);
           if (!det || !det.go.length) await p.evaluate(() => { const d = document.getElementById('lcalDlg'); if (d) d.remove(); });
@@ -130,7 +133,7 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
         const { ctx, p } = await learner(o, mode, w, { sid: 'pT0001', id: 'pT0001', kind: 'parent', acct: 'code', nick: '수학맘', grade: '정회원' });
         await go(p, '#home'); ok(await p.locator('#lm a.lq-hc[href="#cal"]').count() === 1, `${tag} 보호자 홈: 자녀 일정 카드`); if (mode === 'app' && w === 390) { /* v43 대표님 결정: 보호자 아래 탭은 5칸(홈 · 자녀 · 메시지 · 결제 · 나) 그대로 — 6칸이면 칸이 좁아져 이름이 잘리므로 '자녀 일정'은 탭이 아니라 「자녀」 화면 안 세그먼트(자녀 현황 | 자녀 일정)로 옮겼다 */
           const T = await p.$$eval('#lapp .ap-nav > a', A => A.map(a => ({ h: a.getAttribute('href'), w: Math.round(a.getBoundingClientRect().width), hh: Math.round(a.getBoundingClientRect().height) })));
-          ok(T.length === 5 && T.map(x => x.h).join() === '#home,#family,#msg,#mypay/bill,#acct' && T.every(x => x.w >= 48 && x.hh >= 48), `${tag} 보호자 아래 탭 5칸(자녀 일정 탭 없음): ${T.map(x => x.h + ':' + x.w).join(' ')}`);
+          ok(T.length === 5 && T[0].h === '#home' && T[1].h === '#family' && T[2].h === '#msg' && T[4].h === '#acct' && !T.some(x => x.h === '#cal') && T.every(x => x.w >= 48 && x.hh >= 48), `${tag} 보호자 아래 탭 5칸(자녀 일정 탭 없음): ${T.map(x => x.h + ':' + x.w).join(' ')}`);
           await go(p, '#family'); const sg = await p.evaluate(() => { const s = document.querySelector('#lm .lq-kseg'); return s ? [...s.querySelectorAll('a')].map(a => a.getAttribute('href') + (a.classList.contains('on') ? '*' : '') + ':' + Math.round(a.getBoundingClientRect().height)).join() : ''; });
           ok(/^#family\*:4\d,#cal:4\d/.test(sg), `${tag} 「자녀」 화면 세그먼트 자녀 현황 | 자녀 일정(44px 이상): ${sg}`);
           await go(p, '#cal'); ok(await p.evaluate(() => (document.querySelector('#lapp .ap-nav > a.on') || {}).getAttribute?.('href') === '#family' && !!document.querySelector('#lm .lq-kseg a.on[href="#cal"]')), `${tag} #cal에서 '자녀' 탭 켜짐 · 세그먼트 '자녀 일정' 켜짐`); await go(p, '#home'); } if (w === 390) await shot(p, `k12_parent_${mode}_home_${w}`);

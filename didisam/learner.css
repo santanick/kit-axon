@@ -375,7 +375,7 @@ body:not(.lapp) .lbtn:disabled,body:not(.lapp) .lbtn.pri:disabled{background:#C8
 body:not(.lapp) :is(.hero,.sec.dark,.myh,.cp.big,.lgl,.lux-cc:not(.empty),.tk) .lbtn:where(:not(.ghost,.wht,.out,.line,.red,.warn,.sec,.pri)){background:var(--surface,#fff);color:#2A2B2B}
 body:not(.lapp) .lux-cc:not(.empty) .lux-ey{color:#9EE3A3}
 /* 칩 한 종류: 흰 바탕 + Outline #E0E0E0 · 높이 36 · 알약 / 선택 = Grey 900 채움 */
-body:not(.lapp) .lt-chip,body:not(.lapp) .shp-chip,body:not(.lapp) .lctabs:not(.l26side .lctabs)>a,body:not(.lapp) .lctabs:not(.l26side .lctabs)>button{display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;min-height:36px;padding:0 14px;border:1px solid var(--d-ol);border-radius:999px;background:var(--surface,#fff);box-shadow:none;color:#2A2B2B;font-size:14px;font-weight:600;line-height:20px;text-decoration:none;white-space:nowrap}
+body:not(.lapp) .lt-chip,body:not(.lapp) .shp-chip,body:not(.lapp) .lctabs:not(.l26side .lctabs)>a,body:not(.lapp) .lctabs:not(.l26side .lctabs)>button{display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;min-height:44px;padding:0 14px;border:1px solid var(--d-ol);border-radius:999px;background:var(--surface,#fff);box-shadow:none;color:var(--ink,#1A1814);font-size:14px;font-weight:600;line-height:20px;text-decoration:none;white-space:nowrap}
 body:not(.lapp) .lt-chip:hover,body:not(.lapp) .shp-chip:hover,body:not(.lapp) .lctabs:not(.l26side .lctabs)>:is(a,button):hover{background:#F6F7F7;box-shadow:none}
 body:not(.lapp) .lt-chip.pri,body:not(.lapp) .shp-chip.on,body:not(.lapp) .lctabs:not(.l26side .lctabs)>:is(a,button).on{background:#2A2B2B;border-color:#2A2B2B;color:#fff}
 body:not(.lapp) .lt-chip.esc{color:var(--t-sub)}
@@ -407,7 +407,7 @@ body:not(.lapp) .th{background:#4C4D4D}
 body:not(.lapp) .shp-th0{background:var(--g100,#F6F7F7);color:#2A2B2B}
 body:not(.lapp) :is(.lt-orb,.lai-orb){background:#E7F8E8;color:#007A29;box-shadow:none}
 body:not(.lapp) .lai{background:var(--surface,#fff)}
-body:not(.lapp) .lai h1 em{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:#2A2B2B;-webkit-text-fill-color:currentColor}
+body:not(.lapp) .lai h1 em{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:var(--ink,#1A1814);-webkit-text-fill-color:currentColor}
 body:not(.lapp) :is(.lt-in button,.lai-f button){background:#2A2B2B;color:#fff}
 body:not(.lapp) :is(.lt-src i,.lt-dots i,.lux-bar i){background:#00C53B}
 body:not(.lapp) :is(.lt-hd,#ltut .lt-hd){background:var(--surface,#fff);color:#2A2B2B;border-bottom:1px solid #EAEBEB}

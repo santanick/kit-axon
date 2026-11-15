@@ -310,3 +310,4 @@ html[data-theme="dark"] :is(.certp,.a2lcert,.certpv,.a2cert,[data-light]){color-
   --g200:#F3F0EA;--g300:#E7E2D9;--g700:#5C554B;--g900:#1A1814;background-color:#fff;color:#1A1814}
 @media print{html[data-theme]{color-scheme:light}html[data-theme] body{background:#fff!important;color:#1A1814!important}.thm-box,.ap-nav{display:none!important}}
 html[data-theme="dark"] :is(.lq-hc,.sec.la,.ls-list,.lfs-row,.ls-me .ls-prof){background:var(--surface);color:var(--ink)}
+html[data-theme="dark"] body.lapp .ap-ib2{color:var(--canvas,#07110C)} /* v43 F1: 다크에서 밝은 칩 위 흰 글자(1.4:1) → 어두운 글자 */
