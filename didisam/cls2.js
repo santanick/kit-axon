@@ -115,7 +115,7 @@ function c2PayLink(c) { let u = ''; try { u = new URL('learner.html', location.h
 async function c2Copy(txt, msg) { try { await navigator.clipboard.writeText(txt); toast(msg || '복사했습니다.', 'ok'); } catch (e) { c2ov('링크 복사', `<p class="mini">아래 주소를 직접 복사하세요.</p><input class="c2link" readonly value="${esc(txt)}" onfocus="this.select()">`, [{ id: 'ok', label: '닫기' }]); } }
 
 /* 기본 썸네일(SVG) · AI 추천 */
-const C2THUMB = [['#E63295', '#7D5CB5', '온라인 클래스'], ['#4C77C5', '#2A2B2B', '업무 · 데이터'], ['#3BA875', '#1F6F4F', '자격 · 시험'], ['#E8A317', '#E8622A', '창작 · 디자인'], ['#2A2B2B', '#4C77C5', 'AI · 코딩'], ['#7D5CB5', '#E63295', '어학 · 회화'], ['#E8622A', '#4257D7', '특강 · 이벤트'], ['#2E4F8F', '#3BA875', '법정 · 직무']];
+const C2THUMB = [['#00A832', '#066B2A', '온라인 클래스'], ['#00862D', '#2A2B2B', '업무 · 데이터'], ['#3BA875', '#1F6F4F', '자격 · 시험'], ['#FF6B2C', '#B53C0A', '창작 · 디자인'], ['#2A2B2B', '#00862D', 'AI · 코딩'], ['#066B2A', '#00A832', '어학 · 회화'], ['#FF6B2C', '#066B2A', '특강 · 이벤트'], ['#053D1E', '#3BA875', '법정 · 직무']];
 const C2KW = [[/(AI|인공지능|코딩|프로그래밍|개발|파이썬|웹|데이터 분석가)/i, 4], [/(엑셀|노션|업무|데이터|컴활|오피스|실무)/, 1], [/(자격|시험|기능사|필기|실기|수능|내신|수학|과학)/, 2], [/(디자인|영상|창작|드로잉|사진|바리스타|공예)/, 3], [/(영어|일본어|중국어|회화|어학|국어)/, 5], [/(특강|원데이|방학|이벤트|세미나)/, 6], [/(법정|성희롱|안전|개인정보|장애인|직무|리더십|온보딩)/, 7]];
 function c2ThumbSvg(i, label) { const [a, b, l] = C2THUMB[i % C2THUMB.length]; const txt = String(label || l).slice(0, 18).replace(/[<>&"']/g, ''); const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="640" height="360" fill="url(#g)"/><circle cx="560" cy="60" r="120" fill="#fff" opacity=".12"/><circle cx="80" cy="330" r="90" fill="#fff" opacity=".1"/><text x="40" y="300" font-family="Pretendard, sans-serif" font-size="40" font-weight="800" fill="#fff">${txt}</text></svg>`; return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }
 function c2ThumbRec(name) { const hit = C2KW.filter(([re]) => re.test(name || '')).map(x => x[1]); return [...new Set([...hit, 0, 1, 4])].slice(0, 4); }
@@ -493,7 +493,7 @@ function c2Dash() {
     <div class="card"><div class="ch"><b>많이 방문한 요일과 시간</b>${demo}</div><div class="c2heat" role="img" aria-label="요일별 시간대 방문 히트맵">${['일', '월', '화', '수', '목', '금', '토'].map((d, i) => `<span class="c2hl">${d}</span>${heat[i].map((v, hr) => `<i style="opacity:${v ? (.15 + v / hm * .85).toFixed(2) : .05}" title="${d} ${hr}시 ${v}회"></i>`).join('')}`).join('')}</div><small class="mini">0시 → 23시</small></div>
   </section>
   <section class="g2c c2dash">
-    <div class="card"><div class="ch"><b>방문자 · 페이지뷰</b>${segb('dVis', [['w', '주간'], ['m', '월간']], UI.dVis || 'w')}</div>${typeof lineChart === 'function' ? lineChart(vl.map(x => x[0]), [{ n: '방문자', c: '#4C77C5', v: vl.map(x => x[1]) }, { n: '페이지뷰', c: '#5C74F6', v: vl.map(x => x[2]) }]) : ''}${demo}</div>
+    <div class="card"><div class="ch"><b>방문자 · 페이지뷰</b>${segb('dVis', [['w', '주간'], ['m', '월간']], UI.dVis || 'w')}</div>${typeof lineChart === 'function' ? lineChart(vl.map(x => x[0]), [{ n: '방문자', c: '#00862D', v: vl.map(x => x[1]) }, { n: '페이지뷰', c: '#00862D', v: vl.map(x => x[2]) }]) : ''}${demo}</div>
     <div class="card"><div class="ch"><b>평균 ${esc(t('done'))}율 추이</b>${segb('dTr', [['3', '3개월'], ['6', '6개월']], UI.dTr || '3')}</div>${c2Bars(tr, '%', 'g')}</div>
   </section>
   <section class="grid g3 c2dash">
