@@ -65,7 +65,7 @@
   const TH = { clean: ['solid', 'cols', 'drawer'], premium: ['overlay', 'mega', 'full'], warm: ['contact', 'cta', 'drawer'], official: ['contact', 'biz', 'full'], tech: ['overlay', 'mega', 'full'], kids: ['float', 'cta', 'drawer'], campus: ['solid', 'biz', 'full'], senior: ['contact', 'biz', 'full'] };
   function chrome(s) { s = s || {}; const c = (s.hps && typeof s.hps === 'object') ? s.hps : {};
     const F = s.layout && window.HPL && HPL.fam && HPL.fam[s.layout]; const fd = (F && F.hps) || {};
-    const fm = FAM[s.layout] || []; const tm = TH[s.theme] || TH.clean;
+    const fm = FAM[s.layout] || []; const tm = TH[s.theme] || TH[window.HPT && HPT.base ? HPT.base(s.theme) : ''] || TH.clean; /* v43 T1: 프리미엄 테마는 base 테마의 머리글 */
     const pick = (k, i) => [c[k], fd[k], fm[i], tm[i]].find(v => KN[k].includes(v));
     const r = { head: pick('head', 0), foot: pick('foot', 1), mm: pick('mm', 2) };
     const Y = TYK[typeKey()]; const seed = hsh(s.tpl || s.layout || s.theme || '');

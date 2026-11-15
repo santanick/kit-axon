@@ -136,5 +136,5 @@ ${s.theme === 'official' ? `.hpt .hp-sh{border-left:4px solid var(--a);padding-l
   /* 스튜디오 문서: 글꼴 고르기 견본(가나다 Aa)이 실제 글꼴로 보이도록 @font-face만 선언(쓰일 때만 내려받음) */
   try { if (typeof document !== 'undefined' && document.head && !document.getElementById('hpdir-ff')) { const st = document.createElement('style'); st.id = 'hpdir-ff'; st.textContent = faces(Object.keys(FONTS)); document.head.appendChild(st); } } catch (e) { }
 
-  window.HPD = { tok: tokOf, css, faces, need, FONTS, FB, scale, list: () => Object.keys(D) };
+  window.HPD = { tok: tokOf, css, faces, need, FONTS, FB, scale, list: () => Object.keys(D), reg: (id, k) => { if (/^[a-z]{2,16}$/.test(id) && k && !D[id]) D[id] = k; } }; /* v43 T1: 프리미엄 테마 글자 · 여백 토큰 등록(hpprem.js) */
 })();

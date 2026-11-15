@@ -157,7 +157,7 @@
   function cardKind(d, s, L) { d = d || {}; if (KINDS.some(([k]) => k === d.card)) return d.card;
     const ty = S.org && S.org.type; const dated = (L || []).filter(c => recOf(c) || startOf(c)).length;
     if (dated && dated * 2 >= (L || []).length && /^(voc|lifelong|public)$/.test(ty || '')) return ty === 'public' ? 'table' : 'schedule';
-    return BY_TH[s && s.theme] || 'photo'; }
+    return BY_TH[s && s.theme] || (window.HPT && HPT.meta && (HPT.meta(s && s.theme) || {}).ck) || 'photo'; } /* v43 T1: 프리미엄 테마는 테마 값(ck) */
   const idsOf = d => { const lim = Math.max(1, Math.min(24, +d.n || (d.card === 'table' ? 10 : 6))); return d.auto ? pub().map(c => c.id).slice(0, lim) : (d.ids || []); };
 
   /* ── CSS(테마 토큰) ── */

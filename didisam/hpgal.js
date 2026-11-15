@@ -72,7 +72,7 @@
     const g = $1('.tpg-g'); if (!g) return; MODE = narrow(); g.classList.toggle('tpg-gm', MODE);
     g.querySelectorAll('.tpd-c').forEach(c => { const th = c.querySelector('.tpg-th'); if (!th || th.dataset.w8) return; th.dataset.w8 = 1; const tp = TPL.find(t => t.id === th.dataset.tp); if (!tp) return;
       /* 카드 아래 한 줄: 분위기(테마) · 레이아웃 계열(없으면 첫 화면 배치) */
-      const tg = c.querySelector('.tpd-tg'); if (tg) { const mood = thName(tp.theme) || '기본 디자인'; const lay = famName(tp.layout) || HERO_L[tp.hero] || ''; tg.innerHTML = `<i style="background:${E(tp.color || '#5C74F6')}"></i>${E(mood)}${lay ? ` · ${E(lay)}` : ''}`; }
+      const tg = c.querySelector('.tpd-tg'); if (tg) { const mood = thName(tp.theme) || '기본 디자인'; const lay = famName(tp.layout) || HERO_L[tp.hero] || ''; tg.innerHTML = `<i style="background:${E(tp.color || '#00862D')}"></i>${E(mood)}${lay ? ` · ${E(lay)}` : ''}`; }
       watch(th, () => { const m = narrow(); TPG.mini(th, () => htmlOfTp(tp), m ? 390 : 1280, m ? 620 : 800); }); });
   }
   if (typeof AFTER !== 'undefined') AFTER.push(() => { if ($1('.tpg-g')) { galLazy(); document.querySelector('.sl-page')?.classList.add('tpg-page'); } });
