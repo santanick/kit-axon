@@ -73,8 +73,8 @@
   const LGN = { ko: '한국어', en: 'English', ja: '日本語', zh: '中文', vi: 'Tiếng Việt', th: 'ไทย', id: 'Bahasa Indonesia', es: 'Español', fr: 'Français' };
   const tplOf = it => TPLN[it.ai.tpl] ? it.ai.tpl : 'slide'; const avOf = it => AVN[it.ai.avatar] ? it.ai.avatar : '';
   const capScenes = it => (Array.isArray(it.ai.cap) && it.ai.cap.length === it.ai.scenes.length ? it.ai.cap : null);
-  const avSVG = k => { const body = { f: '#5C74F6', m: '#2A2B2B', robot: '#8A94A6', bear: '#EF6D00' }[k]; const skin = k === 'robot' ? '#D7DCE4' : k === 'bear' ? '#B7743A' : '#F6D2B5';
-    const hair = k === 'f' ? '<ellipse cx="50" cy="40" rx="27" ry="29" fill="#4A2E1F"/>' : ''; const ears = k === 'bear' ? '<circle cx="31" cy="24" r="9" fill="#8A5226"/><circle cx="69" cy="24" r="9" fill="#8A5226"/>' : k === 'robot' ? '<path d="M50 14v-8" stroke="#8A94A6" stroke-width="3"/><circle cx="50" cy="5" r="3.5" fill="#5C74F6"/>' : '';
+  const avSVG = k => { const body = { f: '#00A832', m: '#2A2B2B', robot: '#8A94A6', bear: '#EF6D00' }[k]; const skin = k === 'robot' ? '#D7DCE4' : k === 'bear' ? '#B7743A' : '#F6D2B5';
+    const hair = k === 'f' ? '<ellipse cx="50" cy="40" rx="27" ry="29" fill="#4A2E1F"/>' : ''; const ears = k === 'bear' ? '<circle cx="31" cy="24" r="9" fill="#8A5226"/><circle cx="69" cy="24" r="9" fill="#8A5226"/>' : k === 'robot' ? '<path d="M50 14v-8" stroke="#8A94A6" stroke-width="3"/><circle cx="50" cy="5" r="3.5" fill="#2FD266"/>' : '';
     const head = k === 'robot' ? `<rect x="27" y="16" width="46" height="44" rx="9" fill="${skin}"/>` : `<circle cx="50" cy="40" r="23" fill="${skin}"/>`;
     const top = k === 'f' ? '<path d="M28 34c4-14 18-18 30-15 8 2 13 8 14 14-10-6-27-7-44 1z" fill="#4A2E1F"/>' : k === 'm' ? '<path d="M27 36c0-14 10-21 23-21s23 7 23 21c-6-7-14-9-23-9s-17 2-23 9z" fill="#1F2020"/>' : '';
     const eyes = k === 'robot' ? '<rect x="37" y="32" width="8" height="7" rx="1" fill="#00C2FF"/><rect x="55" y="32" width="8" height="7" rx="1" fill="#00C2FF"/>' : '<circle cx="41" cy="38" r="2.6" fill="#2A2B2B"/><circle cx="59" cy="38" r="2.6" fill="#2A2B2B"/>';
@@ -173,7 +173,7 @@
   /* ── 디지털북 ── */
   function bookHTML(c, it, st) { let bk = null; try { bk = (SITE().dbooks || []).find(b => b.id === it.book && (b.on !== false || LR.mode === 'preview')); } catch (e) { }
     const has = bk && (bk.chs || []).some(ch => (ch.blocks || []).length);
-    const card = bk ? `<a class="lc-book" href="${has ? '#bk/' + E(bk.id) : bk.url ? E(bk.url) : '#books'}" ${!has && bk.url ? 'target="_blank" rel="noopener"' : ''} style="--c:${E(bk.color || '#5C74F6')}"><span class="lc-bkc">${IC('book', 28)}</span><span class="lc-bkt"><small>디지털북</small><b>${E(bk.title || it.title)}</b><em>${(bk.units || (bk.chs || []).map(x => x.title) || []).length ? `${(bk.units || bk.chs).length}개 단원 · ` : ''}책장을 넘기며 읽어요</em></span><span class="lbtn pri sm">책 펼치기 ${IC('arrow', 14)}</span></a>`
+    const card = bk ? `<a class="lc-book" href="${has ? '#bk/' + E(bk.id) : bk.url ? E(bk.url) : '#books'}" ${!has && bk.url ? 'target="_blank" rel="noopener"' : ''} style="--c:${E(bk.color || 'var(--pri)')}"><span class="lc-bkc">${IC('book', 28)}</span><span class="lc-bkt"><small>디지털북</small><b>${E(bk.title || it.title)}</b><em>${(bk.units || (bk.chs || []).map(x => x.title) || []).length ? `${(bk.units || bk.chs).length}개 단원 · ` : ''}책장을 넘기며 읽어요</em></span><span class="lbtn pri sm">책 펼치기 ${IC('arrow', 14)}</span></a>`
       : `<div class="lc-demo">${IC('book', 26)}<div><b>디지털북 준비 중</b><p>운영자가 디지털북을 게시하면 여기서 바로 펼쳐 볼 수 있어요. 아래 내용을 먼저 읽어 보세요.</p></div></div>`;
     return card + (it.doc && (it.doc.secs || []).length ? `<div class="lc-hd2"><b>함께 읽을 내용</b>${fsTools()}</div>${docHTML(it.doc)}` : '') + doneBtn(c, it, st, '다 읽었어요'); }
 

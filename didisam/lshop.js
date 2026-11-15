@@ -74,7 +74,7 @@
   const payOff = () => { try { return SITE().pay === false; } catch (e) { return false; } };
   const critOf = c => { try { const b = (SITE().classes || []).find(x => x.id === c.id) || c; return typeof a2lCritTxt === 'function' ? a2lCritTxt({ ...b, thr: b.thr || c.thr }) : { s: `진도 ${c.thr || 80}%`, l: `진도 ${c.thr || 80}% 이상` }; } catch (e) { return { s: `진도 ${c.thr || 80}%`, l: `진도 ${c.thr || 80}% 이상` }; } };
   const priceHTML = x => { const f = priceOf(x); if (payOff() && ['period', 'episode', 'sub', 'pack'].includes(x.kind || 'period')) return ''; if (!+x.price) return '<b class="shp-free">무료</b>'; return f < x.price ? `<s>${won(x.price)}</s> <b>${won(f)}</b>${x.kind === 'sub' ? '<small>/월</small>' : ''}` : `<b>${won(f)}</b>${x.kind === 'sub' ? '<small>/월</small>' : ''}`; };
-  const thumb = (x, cls = '') => x.thumb ? `<img class="shp-th ${cls}" src="${esc(x.thumb)}" alt="">` : `<span class="shp-th shp-th0 ${cls}" aria-hidden="true">${esc(String(x.name || '').slice(0, 6))}</span>`;
+  const thumb = (x, cls = '') => x.thumb ? `<img class="shp-th ${cls}" src="${esc(x.thumb)}" alt="">` : window.LHB ? `<span class="shp-th shp-th0 shp-thp ${cls}" aria-hidden="true" style="background-image:url('${esc(window.LHB.photo(x.name))}')"></span>` : `<span class="shp-th shp-th0 ${cls}" aria-hidden="true">${esc(String(x.name || '').slice(0, 6))}</span>`; /* v43 썸네일이 없으면 글자 상자 대신 학습 사진(lhub.js LHB.photo) */
   const sec = (h, inner, crumb) => `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › ${crumb || esc(h)}</p><h1>${esc(h)}</h1></div></section><section class="sec shp"><div class="in">${inner}</div></section>`;
   const shopT = () => (typeof LAPP_FIND === 'function' && LAPP_FIND()) || '클래스';
   const noShop = () => sec(shopT(), '<p class="empty">아직 판매 정보가 게시되지 않았습니다. 운영자가 학습자 사이트를 게시하면 보입니다.</p>');
@@ -161,22 +161,23 @@
     const MD = { 신용카드: '신용카드 · 체크카드', 계좌이체: '실시간 계좌이체', 간편결제: '간편결제', 가상계좌: '가상계좌', 해외카드: '해외카드' };
     const MS = { 신용카드: sub ? '정기결제 카드 등록' : '모든 국내 카드', 계좌이체: '내 계좌에서 바로', 간편결제: '토스페이 · 카카오페이 · 네이버페이', 가상계좌: '기한 안에 입금', 해외카드: 'VISA · Master' };
     const pol = (sh.policy && sh.policy.text ? String(sh.policy.text).split(/\n+/).map(s => s.replace(/^[-·*•]\s*/, '').trim()).filter(Boolean) : ['환불은 홈페이지 운영 정책에 따라 승인 여부와 금액이 정해집니다.']).concat([kind === 'book' ? (x.kind === '전자책' ? '전자책은 결제일로부터 7일 이내 신청할 수 있고, 한 번이라도 내려받으면 환불할 수 없습니다.' : '실물 교재/교구는 결제일로부터 7일 이내 신청할 수 있고, 이미 전달받았다면 환불할 수 없습니다.') : '환불을 신청하면 즉시 수강할 수 없고, 운영자 승인 후 환불이 완료됩니다.', `결제는 ${sh.pg.name || 'PG사'} 결제창에서 안전하게 진행됩니다.`]);
-    return sec('결제하기', `<form id="shpPay" class="shp-pay p26" novalidate data-kind="${esc(kind)}" data-id="${esc(id)}"><div class="p26c">
+    return sec('결제하기', `<form id="shpPay" class="shp-pay p26" novalidate data-kind="${esc(kind)}" data-id="${esc(id)}"><div class="p26c"><div class="p26l">
       <h2 class="p26h">주문 상품</h2>
       <div class="shp-item">${thumb(x)}<div><small>${kind === 'book' ? esc(x.kind) : esc(KIND[x.kind] || '클래스')}</small><b>${esc(x.name)}</b>${kind !== 'book' && periodTxt(x) ? `<small>수강 기간: ${esc(periodTxt(x))}</small>` : ''}${kind === 'book' && x.kind === '전자책' ? `<small>결제 후 ${(x.dl && x.dl.days) || 30}일 동안 내려받을 수 있습니다.</small>` : ''}</div></div>
       ${req ? `<label class="fl">${esc(x.req.q || '배송지 · 요청사항')}${x.req.must ? ' (필수)' : ''}<textarea name="ship" rows="3" maxlength="300" ${x.req.must ? 'required' : ''} placeholder="예: 부산광역시 해운대구 ○○로 12, 101동 1001호 / 문 앞에 놓아 주세요"></textarea></label>` : ''}
       ${sub ? `<label class="fl">구독 시작일(비우면 결제 즉시 시작)<input type="date" name="start" min="${today()}"></label><p class="mini">결제 수단을 등록하면 매월 같은 날 ${won(f)}이 자동 결제됩니다. 구독을 취소하면 남은 기간은 수강할 수 있고 다음 달부터 결제되지 않습니다. 결제가 실패하면 재시도 기간 동안 수강 권한이 유지되고, 끝내 실패하면 자동 만료됩니다.</p>` : ''}
-      <h2 class="p26h">결제 금액</h2>
-      <dl class="shp-sum p26amt"><dt>상품 금액</dt><dd>${won(x.price)}</dd><dt>할인 금액</dt><dd>${disc ? '-' + won(disc) : '0원'}</dd><dt class="tot">최종 결제 금액</dt><dd class="tot"><b>${won(f)}</b>${sub ? '/월' : ''}</dd></dl>
-      ${kind === 'class' && f > 0 && typeof cpnCalc === 'function' ? `<div class="p26cp"><label class="fl" for="p26cpn">쿠폰 · 할인 코드(있으면)</label><div class="cpn-row"><input id="p26cpn" name="cpn" maxlength="20" autocomplete="off" placeholder="예: WELCOME10" style="text-transform:uppercase"><button type="button" class="lbtn ghost" data-lcpn="1">적용</button></div><p class="mini" id="p26cpm" role="status" aria-live="polite"></p></div>` : ''}
       <h2 class="p26h" id="p26mh">결제 방식</h2>
       <div class="shp-mth p26m" role="radiogroup" aria-labelledby="p26mh">${methods.map(([v], i) => `<label class="p26t"><input type="radio" name="m" value="${v}" ${i === 0 ? 'checked' : ''}><b>${esc(MD[v] || v)}</b><small>${esc(MS[v] || '')}</small></label>`).join('')}</div>
       <h2 class="p26h">유의사항</h2>
       <ul class="p26n">${pol.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+      </div><aside class="p26r">
+      <h2 class="p26h">결제 금액</h2>
+      <dl class="shp-sum p26amt"><dt>상품 금액</dt><dd>${won(x.price)}</dd><dt>할인 금액</dt><dd>${disc ? '-' + won(disc) : '0원'}</dd>${(() => { try { if (!(window.mileOn && window.mileOn() && window.LMIL && LMIL.model)) return ''; const M = LMIL.model(LR.me.sid); return `<dt>마일리지 차감</dt><dd>0원</dd><dd class="p26mi">보유 ${Number(M.balance || 0).toLocaleString('ko-KR')}${esc(M.unit || '점')} · <a href="#mile/rewards">보상에서 학원비 차감으로 바꿔 쓸 수 있어요</a></dd>`; } catch (e) { return ''; } })()}<dt class="tot">최종 결제 금액</dt><dd class="tot"><b>${won(f)}</b>${sub ? '/월' : ''}</dd></dl>
+      ${kind === 'class' && f > 0 && typeof cpnCalc === 'function' ? `<div class="p26cp"><label class="fl" for="p26cpn">쿠폰 · 할인 코드(있으면)</label><div class="cpn-row"><input id="p26cpn" name="cpn" maxlength="20" autocomplete="off" placeholder="예: WELCOME10" style="text-transform:uppercase"><button type="button" class="lbtn ghost" data-lcpn="1">적용</button></div><p class="mini" id="p26cpm" role="status" aria-live="polite"></p></div>` : ''}
       <label class="shp-agree p26a"><input type="checkbox" name="agree"> 주문 내용을 확인하였으며, 약관에 동의합니다.</label>
       <p class="p26err" role="alert" hidden>결제를 진행하려면 주문 내용 확인 및 약관 동의에 체크해 주세요.</p>
       <div class="p26btn"><a class="lbtn ghost" href="${back}">취소</a><button class="lbtn pri" type="submit">${won(f)} 결제하기</button></div>
-    </div></form>`, `<a href="${back}">${esc(x.name)}</a> › 결제`); }
+    </aside></div></form>`, `<a href="${back}">${esc(x.name)}</a> › 결제`); }
   function pgWindow(title, amount, done, onFail) { const sh = SHOP() || { pg: {} };
     shModal(`토스페이먼츠 결제창(데모)`, `<p><b>${esc(title)}</b></p><p class="shp-amt">${won(amount)}</p><p class="mini">실제 운영에서는 PG사 결제창(팝업)이 열립니다. <!-- 운영: TossPayments.requestPayment / 나이스 결제창 --> 데모에서는 승인 결과를 고릅니다.</p>`,
       [{ label: '결제 실패 테스트', run: () => { setTimeout(() => (onFail || payFail)(), 0); } }, { label: '결제 승인', kind: 'pri', run: () => { setTimeout(done, 0); } }]); }

@@ -62,3 +62,35 @@
 
 /* v38 A-17 쿠폰 입력 */
 .p26cp{margin:12px 0}.cpn-row{display:flex;gap:8px;align-items:center}.cpn-row input{flex:1;min-width:0;min-height:48px}.cpn-row .lbtn{min-height:48px;flex:none;width:auto;margin:0}#p26cpm.ok{color:#15803d;font-weight:600}#p26cpm.bad{color:#b91c1c}
+/* v43 결제(#pay) — 최종 시안: 왼쪽 주문 · 결제 방식, 오른쪽 결제 요약 카드(고정) · 최종 금액 강조 · 주 버튼 var(--pri). 결제 완료(#payok)는 체크 원 · 한 문장 헤드라인 카드. */
+form.shp-pay.p26{max-width:1040px}
+.p26 .p26c{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:28px;align-items:start;background:none;border:0;padding:0}
+.p26 .p26l,.p26 .p26r{background:var(--surface,#fff);border:1px solid var(--line);border-radius:20px;padding:26px 28px 28px;box-shadow:var(--sh1)}
+.p26 .p26r{position:sticky;top:88px}
+.p26 .p26r .p26h:first-child,.p26 .p26l .p26h:first-child{margin-top:0}
+.p26 .p26amt{border-top:0;padding-top:4px}
+.p26 .p26amt dt,.p26 .p26amt dd{font-size:15px}
+.p26 .p26amt dt.tot{font-size:16px;color:var(--ink)}
+.p26 .p26amt dd.tot b{font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--pri-tx,var(--pri));font-variant-numeric:tabular-nums}
+.p26 .p26amt dd{font-variant-numeric:tabular-nums}
+.p26 .p26amt .p26mi{grid-column:1/-1;margin:-4px 0 4px;font-size:13px;font-weight:500;color:var(--mute);text-align:left}
+.p26 .p26amt .p26mi a{color:var(--pri-tx);font-weight:700}
+.p26 .p26btn{grid-template-columns:1fr;gap:8px}
+.p26 .p26btn .lbtn{border-radius:999px;min-height:52px}
+.p26 .p26btn .lbtn.pri{order:-1;background:var(--pri)!important;color:var(--pri-ink,#fff)!important;border:0;font-weight:800;box-shadow:0 10px 24px -10px color-mix(in srgb,var(--pri) 70%,transparent)}
+.p26 .p26btn .lbtn.ghost{box-shadow:none;color:var(--mute);background:transparent}
+.p26 .shp-item{background:var(--surface2,var(--line2));border:0;border-radius:16px}
+.p26 .shp-item>div{min-width:0}
+.p26 .shp-item .shp-th{width:136px;aspect-ratio:16/9;border-radius:12px;object-fit:cover}
+.shp-thp{background:var(--line2) center/cover;color:transparent;font-size:0;min-height:60px;padding:0}
+.p26 .p26t{border-radius:14px;background:var(--surface,#fff)}
+.p26 .p26t:has(input:checked){background:color-mix(in srgb,var(--pri) 9%,var(--surface,#fff))}
+.p26 .p26a{font-size:14px}
+@media (max-width:900px){.p26 .p26c{grid-template-columns:1fr}.p26 .p26r{position:static}}
+@media (max-width:520px){.p26 .p26l,.p26 .p26r{padding:20px 16px;border-radius:16px}.p26 .shp-item .shp-th{width:100%}}
+.shp-done{position:relative;text-align:center;margin:0 auto;padding:40px 28px 32px;border-radius:24px;background:var(--surface,#fff);box-shadow:var(--sh2)}
+.shp-done::before{content:'';display:block;width:72px;height:72px;margin:0 auto 18px;border-radius:50%;background:var(--pri) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/38px no-repeat;box-shadow:0 0 0 10px color-mix(in srgb,var(--pri) 14%,transparent)}
+.shp-done>p:first-child{font-size:17px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.shp-done .shp-row{justify-content:center;flex-wrap:wrap;gap:10px}
+.shp-done .lbtn{min-height:48px;border-radius:999px}
+.shp-done .lbtn.pri{background:var(--pri)!important;color:var(--pri-ink,#fff)!important}

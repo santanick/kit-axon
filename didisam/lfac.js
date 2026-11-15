@@ -139,7 +139,7 @@
   function homeView() { const c = cfg(); const C = catsAll(); if (!C.includes(FX.cat) && FX.cat !== 'all') FX.cat = 'all';
     const L = FACS().filter(f => FX.cat === 'all' || catOf(f) === FX.cat || (FX.cat === '이용권' && prods(f).some(p => /^pass-/.test(p.type))));
     const chips = `<div class="fx-chips" role="tablist" aria-label="시설 종류">${[['all', '전체'], ...C.map(x => [x, x])].map(([k, l]) => `<button type="button" role="tab" class="fx-chip${FX.cat === k ? ' on' : ''}" aria-selected="${FX.cat === k}" data-fx="cat" data-v="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
-    return page('fx-home', `${head('시설 예약', esc((SITE().org || {}).name || ''), LR.me ? `<a class="fx-btn sm" href="#fac/my">${sv('cal', 18)}내 예약</a>` : '')}${chips}${gate('fac')}${LR.me ? passCard() + nextCard() : ''}
+    return page('fx-home', `${head('시설 예약', esc((SITE().org || {}).name || ''), LR.me ? `<a class="fx-btn sm" href="#fac/my">${sv('cal', 18)}내 예약</a>` : '')}${FX.cat === 'all' && FACS().length ? `<p class="fx-hl">오늘 예약할 수 있는 곳이<br><em>${FACS().length}곳</em> 있어요.</p>` : ''}${chips}${gate('fac')}${LR.me ? passCard() + nextCard() : ''}
       <div class="fx-sh"><h2>${FX.cat === 'all' ? '오늘 이용 가능' : esc(FX.cat)}</h2><small>${esc(fmtD(today()))} ${esc(kst().slice(11, 16))} 기준</small></div>
       <div class="fx-list">${L.map(facRow).join('') || '<p class="fx-empty">이 종류의 시설이 아직 없어요.</p>'}</div>${c.notice ? `<p class="fx-foot">${esc(c.notice)}</p>` : ''}`); }
 
