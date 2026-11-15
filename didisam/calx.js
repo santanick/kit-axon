@@ -50,7 +50,7 @@
   function monthHTML(E) { const cur = UI.cxD || today(); const ym = cur.slice(0, 7); const first = dd(ym + '-01'); const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(); const B = byDate(E);
     let h = WD.split('').map(w => `<div class="cx-wd">${w}</div>`).join('') + Array(first.getDay()).fill('<div class="cx-day x"></div>').join('');
     for (let i = 1; i <= days; i++) { const d = `${ym}-${pad(i)}`; const L = B[d] || [];
-      h += `<div class="cx-day ${d === today() ? 'td' : ''} ${d === UI.cxSel ? 'sel' : ''}" data-cxday="${d}"><button type="button" class="cx-dn" data-act="cx-day" data-v="${d}" aria-label="${fmt(d)} 일정 ${L.length}개 — 보기 · 추가">${i}</button>${L.slice(0, 3).map(chip).join('')}${L.length > 3 ? `<button type="button" class="cx-more" data-act="cx-day" data-v="${d}">+${L.length - 3}개</button>` : ''}</div>`; }
+      h += `<div class="cx-day ${d === today() ? 'td' : ''} ${d === UI.cxSel ? 'sel' : ''}" data-cxday="${d}"><button type="button" class="cx-dn" data-act="cx-day" data-v="${d}" aria-label="${fmt(d)} 일정 ${L.length}개 — 보기 · 추가">${i}</button>${L.slice(0, 3).map(chip).join('')}${L.length > 3 ? `<button type="button" class="cx-more" data-act="cx-day" data-v="${d}">+${L.length - 3}개</button>` : ''}${L.length ? `<span class="cx-dots" aria-hidden="true">${L.slice(0, 4).map(e => `<i style="background:${kcol(e.kind)}"></i>`).join('')}</span>` : ''}</div>`; }
     const tail = (7 - (first.getDay() + days) % 7) % 7; h += Array(tail).fill('<div class="cx-day x"></div>').join('');
     return `<div class="cx-month" role="grid" aria-label="${+ym.slice(0, 4)}년 ${+ym.slice(5)}월">${h}</div>`; }
   function weekHTML(E) { const cur = UI.cxD || today(); const s0 = addD(cur, -dd(cur).getDay()); const B = byDate(E);
@@ -123,6 +123,8 @@
     toast(`${t('cls')}에서 들어온 일정은 ${t('cls')} 설정에서 날짜를 바꿉니다.`, 'warn'); return false; }
   window.cxMove = cxMove;
   document.addEventListener('dragstart', e => { const x = e.target.closest && e.target.closest('[data-cxdrag]'); if (!x) return; e.dataTransfer.setData('text/plain', 'cx:' + x.dataset.cxdrag); e.dataTransfer.effectAllowed = 'move'; x.classList.add('drag'); });
+  // v43 F1: 월간 칸 빈 곳을 눌러도 그날 일정 목록(dayOpen)이 크게 펼쳐집니다(휴대폰에서는 칩 대신 점이라 칸 누르기가 주 동작)
+  document.addEventListener('click', e => { const c = e.target.closest && e.target.closest('.cx-day[data-cxday]'); if (!c || e.target.closest('[data-act],a,button,input')) return; dayOpen(c.dataset.cxday); });
   document.addEventListener('dragend', e => { document.querySelectorAll('.cx-ev.drag, [data-cxday].over').forEach(x => x.classList.remove('drag', 'over')); });
   document.addEventListener('dragover', e => { const c = e.target.closest && e.target.closest('[data-cxday]'); if (!c) return; e.preventDefault(); document.querySelectorAll('[data-cxday].over').forEach(x => x !== c && x.classList.remove('over')); c.classList.add('over'); });
   document.addEventListener('drop', e => { const c = e.target.closest && e.target.closest('[data-cxday]'); if (!c) return; const v = e.dataTransfer.getData('text/plain'); if (!v.startsWith('cx:')) return; e.preventDefault(); c.classList.remove('over'); cxMove(v.slice(3), c.dataset.cxday); });
@@ -151,7 +153,9 @@
 .cx-dn{align-self:flex-start;min-width:32px;height:32px;border:0;border-radius:50%;background:none;font:inherit;font-size:14px;font-weight:700;cursor:pointer;color:inherit}
 .cx-ev{display:block;width:100%;text-align:left;border:0;border-left:3px solid var(--k);background:color-mix(in srgb,var(--k) 12%,var(--surface,#fff));color:var(--g900);border-radius:6px;padding:3px 6px;font:inherit;font-size:12.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;min-height:24px}
 .cx-ev.dr{cursor:grab}.cx-ev.drag{opacity:.45}.cx-ev i{font-style:normal;font-weight:700;margin-right:4px}
-.cx-more{border:0;background:none;font:inherit;font-size:12px;color:var(--t-mag);text-align:left;cursor:pointer;padding:2px 4px}
+.cx-more{border:0;background:none;font:inherit;font-size:12px;color:var(--t-mag);text-align:left;cursor:pointer;padding:2px 4px;min-height:24px}
+/* v43 F1 월간 칸: 날짜 · 일정 칩은 44px 예외(대표님 결정), WCAG 2.5.8 최소 24px — 날짜를 누르면 그날 목록이 크게 펼쳐짐 */
+.cx-dots{display:none}
 .cx-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
 .cx-wcol{background:var(--surface,var(--surface,#fff));border:1px solid var(--line);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;min-height:260px;min-width:0}.cx-wcol.td{border-color:var(--gr700)}
 .cx-wh{display:flex;justify-content:space-between;border:0;background:var(--surface2);border-radius:8px;padding:8px;font:inherit;cursor:pointer;min-height:44px;align-items:center}
@@ -164,6 +168,6 @@
 .cx-pub{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:600}.cx-pub input{width:20px;height:20px}.cx-pub small{color:var(--t-sub);font-weight:400}
 .cx-form .form2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .d26-evl .cx-lr{margin-top:6px;grid-template-columns:10px minmax(0,1fr)}.d26-evl .cx-lk{display:none}.d26-evl .cx-lr b{white-space:normal;font-size:13.5px}
-@media (max-width:640px){.cx-day{min-height:64px;padding:2px}.cx-ev{font-size:0;height:8px;min-height:8px;padding:0;border-left-width:0;background:var(--k);border-radius:4px}.cx-ev i{display:none}.cx-week{grid-template-columns:1fr}.cx-wcol{min-height:0}.cx-form .form2{grid-template-columns:1fr 1fr}.cx-bar .sp{display:none}}`;
+@media (max-width:640px){.cx-day{min-height:64px;padding:2px;align-items:center}.cx-dn{align-self:stretch;min-height:32px;border-radius:10px}.cx-ev,.cx-more{display:none}.cx-dots{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;pointer-events:none}.cx-dots i{width:6px;height:6px;border-radius:50%}.cx-week{grid-template-columns:1fr}.cx-wcol{min-height:0}.cx-form .form2{grid-template-columns:1fr 1fr}.cx-bar .sp{display:none}}`;
   (document.head || document.documentElement).appendChild(st);
 })();

@@ -106,7 +106,7 @@
   function monthHTML(E) { const cur = LC.d || td(); const ym = cur.slice(0, 7); const first = dd(ym + '-01'); const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(); const B = byDate(E);
     let h = WD.split('').map((w, i) => `<div class="lq-wd${i === 0 ? ' su' : i === 6 ? ' sa' : ''}">${w}</div>`).join('') + Array(first.getDay()).fill('<div class="lq-day x"></div>').join('');
     for (let i = 1; i <= days; i++) { const d = `${ym}-${pad(i)}`; const L = B[d] || [];
-      h += `<div class="lq-day${d === td() ? ' td' : ''}" data-lcday="${d}"><button type="button" class="lq-dn" data-lcal="day" data-v="${d}" aria-label="${fmt(d)} 일정 ${L.length}개">${i}</button>${L.slice(0, 3).map(chip).join('')}${L.length > 3 ? `<button type="button" class="lq-more" data-lcal="day" data-v="${d}">+${L.length - 3}</button>` : ''}</div>`; }
+      h += `<div class="lq-day${d === td() ? ' td' : ''}" data-lcday="${d}"><button type="button" class="lq-dn" data-lcal="day" data-v="${d}" aria-label="${fmt(d)} 일정 ${L.length}개">${i}</button>${L.slice(0, 3).map(chip).join('')}${L.length > 3 ? `<button type="button" class="lq-more" data-lcal="day" data-v="${d}">+${L.length - 3}</button>` : ''}${L.length ? `<span class="lq-dots" aria-hidden="true">${L.slice(0, 4).map(e => `<i style="background:${col(e)}"></i>`).join('')}</span>` : ''}</div>`; }
     h += Array((7 - (first.getDay() + days) % 7) % 7).fill('<div class="lq-day x"></div>').join('');
     return `<div class="lq-month" role="grid" aria-label="${+ym.slice(0, 4)}년 ${+ym.slice(5)}월">${h}</div>`; }
   function weekHTML(E) { const cur = LC.d || td(); const s0 = addD(cur, -dd(cur).getDay()); const B = byDate(E);
@@ -225,7 +225,11 @@
   function decorate() { if (!SITE() || !LR.me) return; const lm = document.getElementById('lm'); if (!lm) return; const a = route().a;
     if (appOn()) {
       /* v37.4 결정 2: 앱 아래 탭에 '캘린더'(보호자 '자녀 일정') — 홈 다음. lapp.js navHTML은 그대로 두고 그린 뒤 끼운다(L2 앱 셸 작업과 충돌 없게). */
-      const nav = document.querySelector('#lapp .ap-nav'); if (nav && !nav.querySelector('a[href="#cal"]')) { const on = a === 'cal'; const L = [...nav.querySelectorAll(':scope > a')];
+      /* v43 대표님 결정: 보호자 아래 탭은 홈 · 자녀 · 메시지 · 결제 · 나 5칸 그대로 — 6칸이면 칸이 좁아 이름이 잘리므로 '자녀 일정'은 탭 대신 「자녀」 화면 안 세그먼트(자녀 현황 | 자녀 일정)로. #cal에서는 '자녀' 탭이 켜짐 */
+      if (isPar()) { const nav = document.querySelector('#lapp .ap-nav'); if (nav && a === 'cal') { nav.querySelectorAll(':scope > a').forEach(x => { const k = x.getAttribute('href') === '#family'; x.classList.toggle('on', k); if (k) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); }); }
+        if (['family', 'cal'].includes(a) && !lm.querySelector('.lq-kseg')) { const seg = `<nav class="lq-kseg" aria-label="자녀 화면"><a href="#family"${a === 'family' ? ' class="on" aria-current="page"' : ''}>${ico('user', 18)}<span>자녀 현황</span></a><a href="#cal"${a === 'cal' ? ' class="on" aria-current="page"' : ''}>${ico('cal', 18)}<span>자녀 일정</span></a></nav>`;
+          const host = lm.querySelector('.mypage .in') || lm.querySelector('.lc') || lm.firstElementChild || lm; host.insertAdjacentHTML('afterbegin', seg); } }
+      const nav = document.querySelector('#lapp .ap-nav'); if (!isPar() && nav && !nav.querySelector('a[href="#cal"]')) { const on = a === 'cal'; const L = [...nav.querySelectorAll(':scope > a')];
         if (on) L.forEach(x => { x.classList.remove('on'); x.removeAttribute('aria-current'); });
         const t = document.createElement('a'); t.href = '#cal'; t.className = 'lq-tab' + (on ? ' on' : ''); if (on) t.setAttribute('aria-current', 'page'); t.innerHTML = `${ico('cal', 22)}<span>${isPar() ? '자녀 일정' : '캘린더'}</span>`;
         if (L[0]) L[0].after(t); else nav.prepend(t); nav.classList.add('lq-n' + nav.querySelectorAll(':scope > a').length); }

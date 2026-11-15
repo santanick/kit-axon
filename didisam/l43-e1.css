@@ -1,8 +1,8 @@
 /* v43 E1 — 관리자 화면 33장 보정(l43-e1.js 로 등록한 탭). 색은 토큰만 · 글자 12px 이상 · 누르는 곳 44px 이상(밀집 표 안은 보이는 크기 + ::after 누를 자리 44px) */
 :root{--e1-hit:44px}
 /* 밀집 표 · 달력 · 출석 칸: 보이는 크기는 유지하고 누를 자리만 44px */
-#main.l43 :is(.att,.cx-dn,.cmfav,.w2-satt,[data-act=jn-rm],[data-act=crm-att],[data-act=cs-open],[data-act=cm-msg-view],.cm26go2,.cx-ev,.tw td select){position:relative}
-#main.l43 :is(.att,.cmfav,.w2-satt,[data-act=jn-rm],[data-act=crm-att],[data-act=cs-open],[data-act=cm-msg-view],.cm26go2,.cx-ev)::after{content:'';position:absolute;top:min(0px,calc((100% - var(--e1-hit)) / 2));bottom:min(0px,calc((100% - var(--e1-hit)) / 2));left:min(0px,calc((100% - var(--e1-hit)) / 2));right:min(0px,calc((100% - var(--e1-hit)) / 2))}
+#main.l43 :is(.att,.cmfav,.w2-satt,[data-act=jn-rm],[data-act=crm-att],[data-act=cs-open],[data-act=cm-msg-view],.cm26go2,.tw td select){position:relative}
+#main.l43 :is(.att,.cmfav,.w2-satt,[data-act=jn-rm],[data-act=crm-att],[data-act=cs-open],[data-act=cm-msg-view],.cm26go2)::after{content:'';position:absolute;top:min(0px,calc((100% - var(--e1-hit)) / 2));bottom:min(0px,calc((100% - var(--e1-hit)) / 2));left:min(0px,calc((100% - var(--e1-hit)) / 2));right:min(0px,calc((100% - var(--e1-hit)) / 2))}
 #main.l43 .tw td select{min-height:44px}
 /* 보이는 버튼 · 칩 · 하위 탭 44px */
 #main.l43 :is(.chip,.cm26k,.mb-chip,.cn-chip,.cmn-pb,.ops-xbtn,.cm26adv,[data-act=cm-mc-mode],[data-act=sx-sub],[data-act=sl-chip],[data-act=cert-preview],[data-act=lmsh-xls],[data-act=doc-f],[data-act=cm26-qf]),
@@ -25,10 +25,7 @@ html[data-theme=dark] #main.l43 .cm26k{color:var(--g800);border-color:var(--line
 .ll-ck{display:inline-flex;align-items:center;gap:8px}
 .ll-ck>i{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;box-shadow:inset 0 0 0 1.5px var(--g400,var(--line));color:var(--on-pr,#fff)}
 .ll-ck.ok>i{background:var(--pr,#00A832);box-shadow:none}
-/* 달력 날짜 숫자: 오늘 원은 32px 그대로, 누를 자리 44px */
-#main.l43 .cx-dn{min-width:44px;height:44px;margin:-6px 0 -6px -6px;background:none!important;z-index:0}
-#main.l43 .cx-dn::before{content:'';position:absolute;inset:6px;border-radius:50%;z-index:-1}
-#main.l43 .cx-day.td .cx-dn::before{background:var(--gr700)}
+/* 달력 날짜 · 일정 칩: 44px 예외(24px 이상) — v43 F1에서 calx.js 원본으로 이동 */
 /* 다크: l43-e1.js darkFix()가 표시한 흰 바탕 · 잉크 바탕 → 토큰 */
 html[data-theme=dark] #main.l43 .e1-wb{background-color:var(--surface)!important}
 html[data-theme=dark] #main.l43 .e1-ink{background-color:var(--pr)!important;color:var(--on-pr)!important}

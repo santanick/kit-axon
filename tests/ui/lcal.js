@@ -128,7 +128,12 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
       /* 학원 보호자 */
       if (type === 'k12') for (const mode of ['app', 'web']) for (const w of [1280, 390]) { const tag = `[k12 보호자 ${mode} ${w}]`;
         const { ctx, p } = await learner(o, mode, w, { sid: 'pT0001', id: 'pT0001', kind: 'parent', acct: 'code', nick: '수학맘', grade: '정회원' });
-        await go(p, '#home'); ok(await p.locator('#lm a.lq-hc[href="#cal"]').count() === 1, `${tag} 보호자 홈: 자녀 일정 카드`); if (mode === 'app' && w === 390) await tabs(p, tag, '자녀 일정'); if (w === 390) await shot(p, `k12_parent_${mode}_home_${w}`);
+        await go(p, '#home'); ok(await p.locator('#lm a.lq-hc[href="#cal"]').count() === 1, `${tag} 보호자 홈: 자녀 일정 카드`); if (mode === 'app' && w === 390) { /* v43 대표님 결정: 보호자 아래 탭은 5칸(홈 · 자녀 · 메시지 · 결제 · 나) 그대로 — 6칸이면 칸이 좁아져 이름이 잘리므로 '자녀 일정'은 탭이 아니라 「자녀」 화면 안 세그먼트(자녀 현황 | 자녀 일정)로 옮겼다 */
+          const T = await p.$$eval('#lapp .ap-nav > a', A => A.map(a => ({ h: a.getAttribute('href'), w: Math.round(a.getBoundingClientRect().width), hh: Math.round(a.getBoundingClientRect().height) })));
+          ok(T.length === 5 && T.map(x => x.h).join() === '#home,#family,#msg,#mypay/bill,#acct' && T.every(x => x.w >= 48 && x.hh >= 48), `${tag} 보호자 아래 탭 5칸(자녀 일정 탭 없음): ${T.map(x => x.h + ':' + x.w).join(' ')}`);
+          await go(p, '#family'); const sg = await p.evaluate(() => { const s = document.querySelector('#lm .lq-kseg'); return s ? [...s.querySelectorAll('a')].map(a => a.getAttribute('href') + (a.classList.contains('on') ? '*' : '') + ':' + Math.round(a.getBoundingClientRect().height)).join() : ''; });
+          ok(/^#family\*:4\d,#cal:4\d/.test(sg), `${tag} 「자녀」 화면 세그먼트 자녀 현황 | 자녀 일정(44px 이상): ${sg}`);
+          await go(p, '#cal'); ok(await p.evaluate(() => (document.querySelector('#lapp .ap-nav > a.on') || {}).getAttribute?.('href') === '#family' && !!document.querySelector('#lm .lq-kseg a.on[href="#cal"]')), `${tag} #cal에서 '자녀' 탭 켜짐 · 세그먼트 '자녀 일정' 켜짐`); await go(p, '#home'); } if (w === 390) await shot(p, `k12_parent_${mode}_home_${w}`);
         await go(p, '#cal'); const r = await p.evaluate(() => ({ E: lcalEvents(), h: document.title, add: !!document.querySelector('#lm [data-lcal="add"]') }));
         ok(r.E.some(e => e.who && e.src === 'auto') && /자녀 일정/.test(r.h), `${tag} 자녀 일정(자녀 이름 표시 ${r.E.filter(e => e.who).length}개)`);
         ok(!r.add, `${tag} 보호자: 내 일정 추가 버튼 없음`); const ov = await over(p); ok(!ov.sx && !ov.A.length, `${tag} 가로 넘침 없음`); await shot(p, `k12_parent_${mode}_cal_${w}`); await ctx.close(); }

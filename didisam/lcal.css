@@ -18,11 +18,13 @@
 .lq-month{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface,#fff)}
 .lq-wd{padding:8px 4px;font-size:13px;font-weight:700;color:var(--mute);background:var(--paper);text-align:center}.lq-wd.su{color:var(--t-bad,#C4001D)}.lq-wd.sa{color:var(--t-mag,#066B2A)}
 .lq-day{min-height:108px;border-top:1px solid var(--line);border-left:1px solid var(--line2);padding:4px;display:flex;flex-direction:column;gap:3px;min-width:0;cursor:pointer}
-.lq-day.x{background:#FBFCFC;cursor:default}.lq-day:hover:not(.x){background:#F4FBF6}
+.lq-day.x{background:var(--paper);cursor:default}.lq-day:hover:not(.x){background:color-mix(in srgb,var(--pri) 6%,var(--surface,#fff))}
 .lq-dn{align-self:flex-start;min-width:32px;height:32px;border:0;border-radius:50%;background:none;font:inherit;font-size:14px;font-weight:700;cursor:pointer;color:inherit}.lq-day.td .lq-dn{background:var(--pri);color:var(--pri-ink,#fff)}
 .lq-ev{display:block;width:100%;text-align:left;border:0;border-left:3px solid var(--k);background:color-mix(in srgb,var(--k) 12%,var(--surface,#fff));color:var(--ink);border-radius:6px;padding:3px 6px;font:inherit;font-size:12.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;min-height:24px}
 .lq-ev i{font-style:normal;font-weight:700;margin-right:4px}.lq-ev.dn{opacity:.55;text-decoration:line-through}
-.lq-more{border:0;background:none;font:inherit;font-size:12px;color:var(--t-mag,#066B2A);text-align:left;cursor:pointer;padding:2px 4px;font-weight:700}
+.lq-more{border:0;background:none;font:inherit;font-size:12px;color:var(--t-mag,#066B2A);text-align:left;cursor:pointer;padding:2px 4px;font-weight:700;min-height:24px}
+/* v43 F1 달력 월간 칸: 날짜 · 일정 칩은 44px 예외(대표님 결정) — 대신 WCAG 2.5.8 최소 24px. 날짜를 누르면 그날 일정이 크게 펼쳐진 목록(dayOpen)으로 */
+.lq-dots{display:none}
 .lq-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
 .lq-wc{background:var(--surface,#fff);border:1px solid var(--line);border-radius:14px;padding:6px;display:flex;flex-direction:column;gap:5px;min-height:240px;min-width:0}.lq-wc.td{border-color:var(--pri)}
 .lq-wh{display:flex;justify-content:space-between;align-items:center;border:0;background:var(--paper);border-radius:10px;padding:8px;font:inherit;cursor:pointer;min-height:44px;gap:4px}
@@ -65,7 +67,9 @@
 body.lapp .lq-sub{display:none}body.lapp .lc{padding-top:12px}
 @media (max-width:760px){.lq-sum{grid-template-columns:1fr}}
 @media (max-width:640px){.lq-day{min-height:58px;padding:2px;align-items:center}.lq-dn{align-self:center}
-  .lq-ev{font-size:0;height:6px;min-height:6px;padding:0;border-left-width:0;background:var(--k);border-radius:4px;width:80%}.lq-ev i{display:none}.lq-more{font-size:12px;padding:0}
+  .lq-dn{width:100%;min-height:32px;border-radius:10px}.lq-day.td .lq-dn{border-radius:10px}
+  .lq-ev,.lq-more{display:none}.lq-dots{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;pointer-events:none}.lq-dots i{width:6px;height:6px;border-radius:50%}
+  /* 휴대폰: 칩 대신 점(장식) — 칸 전체(날짜 버튼 32px 이상 + 칸 누르기)가 그날 목록을 엽니다 */
   .lq-week{grid-template-columns:1fr}.lq-wc{min-height:0}.lq-f3{grid-template-columns:1fr 1fr}.lq-f3 label:first-child{grid-column:1/-1}
   .lq-bar{gap:6px}.lq-nav{order:3;flex-basis:100%}.lq-seg{flex:1}.lq-seg button{flex:1}
   .lq-top .lbtn{flex:1 1 140px}
@@ -112,3 +116,8 @@ body[data-luxr=my]:not(.f5-scr) #ltut .lt-fab{opacity:0!important;visibility:hid
 /* v38 F5 R3 U14: 학습자 주 버튼 48px(PC · 휴대폰 · 앱 같은 기준) — 이번 주 계획 맡기기 · 추천 질문 칩 · 이어서 학습 · 설치 */
 body.lapp .ap-chip,body .ap-chip,body.lapp .ap-go,body.lapp .ap-ib2,#lm .nx .lbtn,#lm .lux-ml .lbtn,#lm .lux-cc .lbtn,#lm .lbtn.pri{min-height:48px!important}
 body.lapp .ap-org{min-height:44px!important}body.lapp .ap-ix{min-width:44px;min-height:44px}
+/* v43 보호자 「자녀」 화면 세그먼트(자녀 현황 | 자녀 일정) — 아래 탭 5칸 유지 */
+.lq-kseg{display:flex;gap:4px;padding:4px;margin:0 0 12px;border-radius:14px;background:var(--paper);border:1px solid var(--line)}
+.lq-kseg a{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border-radius:10px;font-weight:700;font-size:14px;color:var(--mute);text-decoration:none}
+.lq-kseg a.on{background:var(--surface,#fff);color:var(--t-mag,#066B2A);box-shadow:0 1px 3px rgba(26,24,20,.12)}
+body.lapp .lq-kseg{margin:12px 16px 4px}

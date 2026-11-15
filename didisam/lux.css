@@ -2,7 +2,7 @@
 /* ── 머리: 핵심 메뉴 + 더 보기 ── */
 .lh .ln{flex-wrap:nowrap}
 .lux-more{position:relative;display:inline-flex}
-.lux-mb{display:inline-flex;align-items:center;gap:4px;border:0;background:none;font:inherit;font-weight:600;font-size:14px;color:var(--ink2);padding:8px 14px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.lux-mb{display:inline-flex;align-items:center;gap:4px;border:0;background:none;font:inherit;font-weight:600;font-size:14px;color:var(--ink2);padding:8px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;min-height:44px} /* v43: 학습자 머리 「더 보기」 44px */
 .lux-mb i{font-style:normal;font-size:12px;transition:transform .15s}.lux-mb:hover{background:var(--surface,#fff);color:var(--ink)}.lux-mb.on{background:var(--ink);color:var(--surface,#fff)}
 .lux-more.open .lux-mb i{transform:rotate(180deg)}
 .lux-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:200px;flex-direction:column;gap:2px;background:var(--surface,#fff);border-radius:8px;padding:8px;box-shadow:0 0 0 1px var(--line),0 22px 44px -22px rgba(42,43,43,.45);z-index:45}

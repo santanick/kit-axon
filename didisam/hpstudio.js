@@ -1053,5 +1053,8 @@
   /* 섹션 패널 동작(위 · 아래 · 숨기기)을 학습 페이지 · 세부 설정 패널에서도 — 바뀐 뒤 패널을 다시 그린다 */
   { const base = ACT['hps-secdo']; ACT['hps-secdo'] = el => { const r = base(el); if (PANM.includes(HS.pan) && el.dataset.a !== 'more') setTimeout(() => panPaint('hard'), 140); return r; }; }
 
+  /* v43 F1: 섹션 패널에서 고른 섹션을 그린 선택 상태로 표시(배치 · 동작은 그대로) */
+  { const base = ACT['hps-secgo']; ACT['hps-secgo'] = el => { document.querySelectorAll('.hps-sl li.on').forEach(x => { x.classList.remove('on'); x.querySelector('.hps-sn')?.removeAttribute('aria-current'); }); const li = el.closest && el.closest('.hps-sl li'); if (li) { li.classList.add('on'); el.setAttribute('aria-current', 'true'); } return base(el); }; }
+
   if (typeof COVER !== 'undefined') COVER.push(['[v36] 한 화면 홈페이지 편집기 — 메뉴 탭 · 페이지 프롬프트(코드 블록) · 두 번 눌러 고치기 · 섹션 갤러리 · 처음 흐름(템플릿 → AI → 기본 정보 → 게시) · 미리보기 링크 차단 수정', 'site', '']);
 })();

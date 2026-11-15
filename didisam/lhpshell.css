@@ -132,3 +132,4 @@ body.lhs-home .lgj.lhs-jm{display:none!important}
   body.lhs-home.lhs-bar-tab footer.lf{padding-bottom:calc(var(--lhs-tb,62px) + 12px)!important}
 }
 body.lhs-hps .lhs-head>header.lh,body.lhs-hps .lhs-head>header.lh>.in,body.lhs-hps .lhs-head>header.lh nav.ln,body.lhs-hps .lhs-head>header.lh nav.ln>.smmi{font-size:inherit;font-weight:inherit;letter-spacing:inherit}
+body.lhs-hps .lhs-head>header.lh .lux-mb{min-height:44px} /* v43 F1: 홈페이지 셸 머리 「더 보기」도 44px */

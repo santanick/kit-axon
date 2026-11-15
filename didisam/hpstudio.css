@@ -208,3 +208,54 @@ body.hps-dock #fabBtn{right:88px}
 @media (min-width:761px){body.hps-dock.hps-pan-on #fabBtn{right:12px;bottom:12px;width:48px;min-width:48px;height:48px;padding:0;justify-content:center}body.hps-dock.hps-pan-on #fabBtn>*:not(svg):not(.fabdot){display:none}}
 .hps-dom{display:flex!important;flex-direction:row!important}.hps-dom small{display:inline!important}
 @media (max-width:760px){.hps-pan.hps-panm{max-height:54%}}
+/* ───────── v43 F1 — 캔버스 도구 줄 · 섹션 패널을 v43 디자인으로(카드 · 반경 · 간격 · 아이콘 버튼 44px · 선택 상태 그린). 배치 구조는 그대로 ───────── */
+body.hps-dock #hpe.hps{background:var(--paper,#F3F0EA)}
+#hpe.hps .hpe-bar{background:var(--surface,#fff);padding:8px 14px;gap:8px;border-bottom:1px solid var(--hair,var(--line))}
+#hpe.hps .hpe-bar .btn,#hpe.hps .hpe-bar select,#hpe.hps .hpe-dev button,.hps-zoom select{min-height:44px;border-radius:12px}
+#hpe.hps #hpeRedo{min-width:44px;justify-content:center}
+.hps-tab{min-height:44px;border-radius:12px;color:var(--t-sub,#5C554B)}
+.hps-tab:hover{background:var(--surface2,#FAF8F5);color:var(--g900,#1A1814)}
+.hps-tab.on{color:var(--t-mag,#066B2A);background:var(--gr50,#ECFDF3);box-shadow:inset 0 0 0 1.5px var(--pr,#00A832)}
+.hps-tab i{font-size:12px;color:var(--t-mag,#066B2A)}
+.hps-tadd{min-height:44px;border-radius:12px;border-color:var(--g400,#D6CFC2);color:var(--t-sub,#5C554B)}
+.hps-tadd:hover{border-color:var(--pr,#00A832);color:var(--t-mag,#066B2A)}
+.hps-subs>span{color:var(--t-sub,#5C554B)}.hps-subs .hps-tab{min-height:44px}.hps-subs .hps-tab.on{box-shadow:inset 0 -2px 0 var(--pr,#00A832);background:transparent;color:var(--t-mag,#066B2A)}
+.hps-zoom select{background:var(--surface,#fff)}
+.hps-flow{background:var(--surface,#fff);border-bottom-color:var(--hair,var(--line))}
+.hps-flow li button{min-height:44px;background:var(--surface2,#FAF8F5);color:var(--t-sub,#5C554B)}
+.hps-flow li button i{background:var(--surface,#fff);box-shadow:inset 0 0 0 1.5px var(--g400,#D6CFC2);color:var(--t-sub,#5C554B)}
+.hps-flow li.done button{color:var(--t-mag,#066B2A);background:var(--gr50,#ECFDF3)}.hps-flow li.done button i{background:var(--pr,#00A832);color:var(--on-pr,#fff)}
+.hps-flow li.cur button{background:var(--g900,#1A1814);color:var(--surface,#fff)}
+.hps-flow .hps-fok{color:var(--t-mag,#066B2A)}.hps-flow li.done button i{background:var(--pr,#00A832)}
+.hps-flow p{color:var(--t-sub,#5C554B)}
+.hps-fx{width:44px;height:44px;border-radius:12px;color:var(--t-sub,#5C554B)}.hps-fx:hover{background:var(--surface2,#FAF8F5)}
+#hpe.hps .hpw-talk,.hps-code{background:var(--surface2,#FAF8F5)!important}
+.hps-cb[aria-expanded=true]{background:var(--g900,#1A1814);color:var(--surface,#fff)}
+#hpe.hps .hpe-stage iframe#hpeF,.hps-lv{border-radius:16px;box-shadow:var(--sh2,0 12px 40px rgba(26,24,20,.14))}
+/* 오른쪽 아이콘 줄 */
+.hps-rail{background:var(--surface,#fff);border-left-color:var(--hair,var(--line));gap:4px;padding:10px 6px}
+.hps-ri{border-radius:14px;min-height:56px;font-size:12px;color:var(--t-sub,#5C554B)}
+.hps-ri:hover{background:var(--surface2,#FAF8F5);color:var(--g900,#1A1814)}
+.hps-ri.on{background:var(--gr50,#ECFDF3);color:var(--t-mag,#066B2A);box-shadow:inset 0 0 0 1.5px var(--pr,#00A832)}
+/* 섹션 패널: 카드 · 반경 · 간격 */
+.hps-pan{background:var(--surface2,#FAF8F5);border-left-color:var(--hair,var(--line));box-shadow:var(--sh2,-8px 0 24px rgba(26,24,20,.06))}
+.hps-ph{background:var(--surface,#fff);padding:12px 12px 12px 20px;min-height:68px;border-bottom-color:var(--hair,var(--line))}.hps-ph b{font-size:17px;font-weight:800;letter-spacing:-.02em}
+.hps-ph .btn{min-width:44px;min-height:44px;justify-content:center;border-radius:12px}
+.hps-pb{padding:16px 16px 24px}
+.hps-pd{color:var(--t-sub,#5C554B)}
+.hps-sl{gap:10px}
+.hps-sl li{background:var(--surface,#fff);border:1px solid var(--hair,var(--line));border-radius:16px;padding:8px;gap:6px;box-shadow:var(--sh1,0 1px 2px rgba(26,24,20,.06));transition:border-color .15s,box-shadow .15s}
+.hps-sl li:hover{border-color:var(--g400,#D6CFC2)}
+.hps-sl li.on{border-color:var(--pr,#00A832);box-shadow:0 0 0 1.5px var(--pr,#00A832);background:color-mix(in srgb,var(--gr50,#ECFDF3) 60%,var(--surface,#fff))}
+.hps-sl li.on .hps-sn b{color:var(--t-mag,#066B2A)}
+.hps-sl li.hid{background:var(--surface2,#FAF8F5)}
+.hps-sn{min-height:44px;padding:6px 8px;border-radius:10px}.hps-sn:hover{background:var(--surface2,#FAF8F5)}.hps-sn small{color:var(--t-sub,#5C554B)}
+.hps-sa{gap:6px}.hps-sa button{min-height:44px;min-width:44px;border-radius:12px;background:var(--surface2,#FAF8F5);box-shadow:inset 0 0 0 1px var(--hair,var(--line));font-size:13px;color:var(--g800,#3F3A33)}
+.hps-sa button:hover:not(:disabled){background:var(--gr50,#ECFDF3);color:var(--t-mag,#066B2A);box-shadow:inset 0 0 0 1.5px var(--pr,#00A832)}
+.hps-back{border-radius:14px}.hps-back span{color:var(--t-mag,#066B2A)}
+.hps-serp,.hps-logo img{border-color:var(--hair,var(--line));background:var(--surface,#fff)}
+.hps-sw input:checked+i{box-shadow:0 0 0 2px var(--surface,#fff),0 0 0 4px var(--pr,#00A832)}
+#modal .hps-gc{border-radius:16px;background:var(--surface,#fff)}#modal .hps-gc:hover,#modal .hps-gc:focus-visible{background:var(--gr50,#ECFDF3);box-shadow:inset 0 0 0 2px var(--pr,#00A832)}#modal .hps-gc svg{background:var(--surface2,#FAF8F5)}
+.hps-gal{background:var(--paper,#F3F0EA)}.hps-galh{background:var(--surface,#fff)}
+@media (max-width:760px){#hpe.hps .hpe-bar{padding:4px 6px;gap:4px}.hps-ri{min-height:52px}}
+
