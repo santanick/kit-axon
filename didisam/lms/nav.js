@@ -54,8 +54,8 @@
 
   if (!document.querySelector('style[data-lmsnav]')) { const st = document.createElement('style'); st.dataset.lmsnav = '1'; st.textContent = `
 .lmsnav-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 16px}
-.lmsnav-sub .lnd{flex:1 1 100%;margin:0 0 2px;color:var(--mut,#64748b);font-size:13px}
-.lmsnav-sub button{border:1px solid var(--line,#e2e8f0);background:var(--card,#fff);color:inherit;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+.lmsnav-sub .lnd{flex:1 1 100%;margin:0 0 2px;color:var(--t-sub,#5C554B);font-size:13px}
+.lmsnav-sub button{border:1px solid var(--hair,var(--line,#e2e8f0));background:var(--surface,var(--card,#fff));color:var(--g800,inherit);border-radius:999px;min-height:44px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer}
 @media (max-width:600px){.lmsnav-sub button{min-height:44px;padding:10px 14px}} /* v38 390 하위 탭 44px */
 .lmsnav-sub button.on{background:var(--gr700,#00862D);border-color:var(--gr700,#00862D);color:var(--on-pr,#fff)}
 .lmsnav-sub button.more{border-style:dashed}
@@ -94,4 +94,48 @@
     const sub = m.length > 1 ? `<div class="lmsnav-sub" role="tablist" aria-label="${esc(at.h.label)}">${desc}${vis.map(id => `<button role="tab" aria-selected="${id === cur.tab}" class="${id === cur.tab ? 'on' : ''}" data-act="go" data-v="${id}">${esc(nm(id))}</button>`).join('')}${m.length > N ? `<button class="more" data-act="nav-more" data-v="${at.h.id}">${open ? '접기' : `더보기 ${m.length - N}`}</button>` : ''}</div>` : (desc ? `<div class="lmsnav-sub">${desc}</div>` : '');
     if (sub) bar.insertAdjacentHTML('afterend', sub);
   });
+})();
+/* v43 E2 — 학사 LMS 화면 첫 줄 브리핑(L43 패턴). 렌더 코드는 그대로 두고, 그려진 화면의 숫자(표 · KPI · 「지금 할 일」)를 읽어 한 문장으로 요약한다.
+   l43.js가 이 파일보다 뒤(boot.js 앞)에 로드되므로 DOMContentLoaded에서 등록한다. 학사 LMS(ULMS) 기관에서만 의미가 있다. */
+(function () {
+  'use strict';
+  const T = x => (x ? x.textContent : '').replace(/\s+/g, ' ').trim();
+  const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const jo = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1); return w + ((c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28) ? a : b); };
+  const tbl = (m, i) => m.querySelectorAll('.tw table')[i || 0];
+  const rows = (m, i) => { const t = tbl(m, i); return t && t.tBodies[0] ? [...t.tBodies[0].rows].filter(r => r.cells.length > 1).length : 0; };
+  const col = (m, h, i) => { const t = tbl(m, i); if (!t || !t.tHead) return []; const k = [...t.tHead.rows[0].cells].findIndex(c => T(c) === h); return k < 0 ? [] : [...t.tBodies[0].rows].map(r => T(r.cells[k])); };
+  const sumCol = (m, h, i) => col(m, h, i).reduce((a, v) => a + (parseInt(v.replace(/,/g, ''), 10) || 0), 0);
+  const kv = (m, l) => { const k = [...m.querySelectorAll('.kpi')].find(x => T(x.querySelector('.lab')) === l); return k ? T(k.querySelector('.val')) : null; };
+  const num = v => parseInt(String(v || '').replace(/[^\d-]/g, ''), 10) || 0;
+  const tabOn = m => T(m.querySelector('.bview .seg2:not(.wtabs):not(.lmsnav-sub) button.on, .lmp-tabs button.on'));
+  const noSec = m => /분반이 없습니다|강의실\(분반\)이 없습니다|분반을 먼저 개설/.test(T(m.querySelector('.empty, .slg-empty')));
+  const n = (v, u) => `<em>${E(v)}${u}</em>`;
+  /* 화면별: [eye, (main) => {title, sub} | null] */
+  const B = {
+    lmsb: ['강의실 구성', m => { const w = m.querySelectorAll('.lmsb-week').length || [...m.querySelectorAll('h3, .ch b')].filter(h => /^\d+(주차|차시)/.test(T(h))).length; const s = m.querySelector('select[aria-label*="강의실"], .lmsb-bar select, select'); const nm = s && s.selectedOptions[0] ? T(s.selectedOptions[0]).replace(/^\d{4}-\d+ · /, '') : '';
+      return { title: w ? `${nm ? E(nm) + ' 강의실에 ' : ''}주차 ${n(w, '개')}를 구성했습니다` : '첫 차시를 만들어 강의실을 여세요', sub: '차시마다 자료 · 영상 · 학습활동을 올리면 학생 강의실에 바로 보입니다.' }; }],
+    lmsc: ['학습활동', m => { const t = tabOn(m) || '학습활동'; const k = rows(m) || m.querySelectorAll('.lmsb-item, .lw-card, .card .row').length; return k ? { title: `${E(t)} ${n(k, '건')}이 열려 있습니다`, sub: '참여가 적은 활동은 강의 게시판 공지로 한 번 더 알리세요.' } : { title: `아직 연 ${E(jo(t, '이', '가'))} 없습니다`, sub: '토론 · 사전 과제 · 팀 프로젝트 · 간편 설문 가운데 하나로 수업 참여를 시작하세요.' }; }],
+    lmsd: ['강의 게시판', m => { const t = tabOn(m) || '게시판'; const k = rows(m); return k ? { title: `${E(t)} 글 ${n(k, '건')}이 올라와 있습니다`, sub: '답이 없는 Q&A부터 확인하세요. 공지는 학생 앱 알림으로도 갑니다.' } : { title: `${E(t)}에 아직 글이 없습니다`, sub: '첫 수업 안내 공지를 올리면 학생 앱 알림으로 함께 전달됩니다.' }; }],
+    lmse: ['과제', m => { const k = rows(m); if (!k) return null; const w = sumCol(m, '채점 대기'); return { title: w ? `채점을 기다리는 과제 제출물 ${n(w, '건')}이 있습니다` : `과제 ${n(k, '개')}가 진행 중이며 채점할 제출물은 없습니다`, sub: '마감이 지난 과제부터 채점하세요. 루브릭을 쓰면 같은 기준으로 빠르게 채점할 수 있습니다.' }; }],
+    lmsf: ['시험 · 문제은행', m => { const k = rows(m); if (!k) return null; const w = sumCol(m, '채점 대기'); return { title: w ? `서술형 채점 대기 ${n(w, '건')}이 있습니다` : `시험 ${n(k, '개')}의 채점이 끝났습니다`, sub: '객관식은 자동 채점됩니다. 결과 · 통계 탭에서 문항별 정답률을 확인하세요.' }; }],
+    lmsg: ['출결 관리', m => { const r = kv(m, '결석 1/4 이상'), a = kv(m, '평균 출석률'); if (r == null) return null; return num(r) ? { title: `결석이 1/4을 넘은 학생 ${n(num(r), '명')}에게 먼저 연락하세요`, sub: `평균 출석률은 ${E(a || '—')}입니다. 학칙상 F 처리 대상이 되기 전에 안내를 보내는 것이 좋습니다.` } : { title: `평균 출석률 ${n(a || '—', '')}, 결석 1/4을 넘은 학생은 없습니다`, sub: '차시를 고르면 출석부를 열고 바로 고칠 수 있습니다.' }; }],
+    lmsi: ['동영상 · 진도', m => noSec(m) ? null : ({ title: '영상 진도는 <em>실제로 본 구간</em>만 인정합니다', sub: '진도 현황 탭에서 기준에 못 미친 학생을 찾고, 영상 퀴즈 · 자막을 함께 관리하세요.' })],
+    lmsj: ['학습 분석', m => { const r = kv(m, '위험'), c = kv(m, '주의'); if (r == null) return null; return { title: num(r) ? `위험 학생 ${n(num(r), '명')}, 주의 ${num(c)}명에게 먼저 연락하세요` : `위험 학생은 없고, 주의 학생이 ${n(num(c), '명')} 있습니다`, sub: '위험지수는 출석 · 과제 · 접속 기록을 합쳐 계산합니다. 조기 경고 탭에서 안내를 보낼 수 있습니다.' }; }],
+    lmsk: ['설문 · 강의평가', m => { const k = rows(m); return k ? { title: `설문 ${n(k, '개')}를 운영하고 있습니다`, sub: '응답률이 낮은 설문은 마감 전에 알림을 한 번 더 보내세요.' } : { title: '템플릿으로 첫 설문을 만드세요', sub: '강의평가 · 만족도 조사 템플릿을 고르면 문항이 바로 채워집니다.' }; }],
+    'lmsl-cal': ['통합 달력', m => { const k = m.querySelectorAll('.lmp-ev').length; return { title: k ? `이번 달 일정 ${n(k, '건')}, 다가오는 마감부터 확인하세요` : '이번 달 일정이 아직 없습니다', sub: '학사 · 강좌 일정은 학생 달력에도 함께 보입니다. 개인 일정은 운영자에게만 보입니다.' }; }],
+    'lmsl-dm': ['채팅', m => { const R = [...m.querySelectorAll('.lmp-room')]; const u = R.reduce((a, r) => a + num(T(r.querySelector('em'))), 0); return R.length ? { title: u ? `안 읽은 메시지 ${n(u, '건')}이 있습니다` : `대화방 ${n(R.length, '개')}, 새 메시지는 없습니다`, sub: '학생 · 교수자와 1:1 또는 분반 단위로 대화합니다.' } : { title: '첫 대화를 시작하세요', sub: '학생 · 교수자와 1:1 또는 분반 단위로 대화합니다.' }; }],
+    'lmsl-noti': ['알림 규칙', m => { const k = m.querySelectorAll('[data-act="lmsl-rdel"]').length; return { title: k ? `알림 규칙 ${n(k, '개')}가 마감 · 공지를 자동으로 알립니다` : '알림 규칙을 만들어 마감 안내를 자동으로 보내세요', sub: '방해금지 시간에는 알림을 모았다가 보냅니다.' }; }],
+    lmsm: ['시스템 관리', m => { const k = rows(m); return k ? { title: `구성원 ${n(k, '명')}의 계정 · 권한을 관리합니다`, sub: '구분 · 학과 · 상태로 찾고, 바꾼 내용은 로그 검색에서 확인할 수 있습니다.' } : null; }],
+    lmsn: ['MOOC · 비학위', m => { const k = rows(m); return k ? { title: `MOOC · 비학위 과정 ${n(k, '개')}를 운영합니다`, sub: '기수를 열면 학생 화면(과정 찾기)에 신청 버튼이 생깁니다.' } : null; }],
+    lmso: ['AI 학습 지원', m => { const k = rows(m); return { title: k ? `AI 튜터가 참고하는 강의자료 ${n(k, '건')}이 올라와 있습니다` : '강의자료를 올리면 AI 튜터가 그 범위 안에서 답합니다', sub: '학생 질문과 AI 답변은 AI 질문 답변 탭에서 확인하고 고칠 수 있습니다.' }; }],
+    lmsp: ['공통 설정', () => ({ title: '화면 언어 · 보안 · 파일 규칙을 <em>학교 전체</em>에 한 번에 적용합니다', sub: '바꾼 설정은 모든 강의실에 바로 반영됩니다.' })],
+    'lmsp-portal': ['포털 대시보드', m => ({ title: `교수자 · 학생 포털 첫 화면에 위젯 ${n(m.querySelectorAll('.card').length, '개')}가 보입니다`, sub: '자주 쓰는 위젯을 앞에 두면 학생이 오늘 할 일을 바로 찾습니다.' })],
+    'lmsp-app': ['앱 출석', () => ({ title: '교수자가 QR을 열면 <em>학생 앱</em>으로 출석합니다', sub: 'QR은 15초마다 바뀌어 캡처 공유를 막습니다. 출석 기록은 출결 관리 화면과 같습니다.' })],
+    lmsq: ['비교과', m => { const k = rows(m); if (!k) return null; const o = col(m, '상태').filter(v => /접수중/.test(v)).length; return { title: `비교과 프로그램 ${n(k, '개')} 가운데 ${o}개가 접수 중입니다`, sub: '대기자는 정원이 비면 자동으로 승격됩니다. 마감 전 신청 현황을 확인하세요.' }; }],
+    lmslive: ['실시간 수업', m => { const k = rows(m); return k ? { title: `실시간 수업 ${n(k, '개')}가 등록되어 있습니다`, sub: '차시와 연결하면 입장 기록이 출결에 반영됩니다. 연결 없는 수업은 출결이 기록되지 않습니다.' } : null; }],
+    lmsv: ['강의 영상 관리', m => { const a = kv(m, '자막 미게시'), b = kv(m, '차시 미배치'), ok = kv(m, '재생 가능'); if (ok == null) return null; const w = num(a) + num(b); return { title: w ? `자막 미게시 ${n(num(a), '개')} · 차시 미배치 ${num(b)}개 영상을 정리하세요` : `올린 영상 ${n(num(ok), '개')}가 모두 재생 · 배치되었습니다`, sub: '자막을 게시하고 차시에 배치해야 학생 강의실에 영상이 보입니다.' }; }]
+  };
+  const reg = () => { if (!window.L43) return; Object.entries(B).forEach(([tab, [eye, f]]) => { L43.reg(tab, { art: /lmsm|lmsj|lmsg/.test(tab) ? 'people' : /lmse|lmsf/.test(tab) ? 'check' : /lmsp$|noti/.test(tab) ? 'gear' : 'list', brief: m => { if (noSec(m)) return null; const o = f(m); return o ? Object.assign({ eye: '학사 LMS · ' + eye }, o) : null; } }); }); try { L43.run(); } catch (e) { } };
+  if (window.L43) reg(); else document.addEventListener('DOMContentLoaded', reg);
 })();

@@ -19,7 +19,7 @@
 .k-st button.on.g{background:#067647;border-color:#067647}
 .k-calh{display:flex;align-items:center;gap:6px;margin-bottom:8px}.k-calh b{flex:1;text-align:center;font-size:14px}
 .k-calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center}
-.k-calg em{font-style:normal;font-size:11px;color:var(--muted)}
+.k-calg em{font-style:normal;font-size:12px;color:var(--muted)}
 .k-calg button{position:relative;border:0;background:transparent;color:inherit;padding:7px 0;border-radius:6px;cursor:pointer;font-size:13px}
 .k-calg button i{position:absolute;left:50%;bottom:2px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor}
 .k-calg button.td{font-weight:800}
@@ -27,20 +27,35 @@
 .k-tt{display:grid;gap:8px;grid-template-columns:repeat(7,minmax(0,1fr))}.k-tt .card{margin:0;padding:10px}
 .k-bars{display:flex;align-items:flex-end;gap:6px;height:110px;margin-bottom:14px}
 .k-bar{flex:1;max-width:40px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
-.k-bar i{display:block;width:100%;min-height:2px;background:var(--ink,#222);border-radius:4px 4px 0 0}.k-bar small{font-size:11px;color:var(--muted)}
+.k-bar i{display:block;width:100%;min-height:2px;background:var(--c-data,#00C53B);border-radius:4px 4px 0 0}.k-bar small{font-size:12px;color:var(--muted)}
 @media (max-width:900px){.k-split.has,.k-att{grid-template-columns:minmax(0,1fr)}.k-tt{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.k-grid{grid-template-columns:minmax(0,1fr)}}
 .linkb{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer;text-align:left}
 .k-todo{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.k-todo p{margin:0}
 .k-dl{display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px 12px;margin:0 0 14px}.k-dl dt{color:var(--muted);font-size:13px}.k-dl dd{margin:0}
-.k-r{color:#d92d20}.k-sel{align-items:center}.k-date input[type=date]{width:auto}.k-sum{margin-bottom:14px}
+.k-r{color:var(--t-bad,#B3001F)}.k-sel{align-items:center}.k-date input[type=date]{width:auto}.k-sum{margin-bottom:14px}
 @media (max-width:900px){.k-split.has .k-card{order:-1}}
 @media (max-width:860px){.k-attc table.mcard>tbody>tr>td[data-l]{flex:1 1 100%}.k-st{display:flex;width:100%;gap:6px}.k-st button{flex:1 1 0;padding:9px 0;font-size:13.5px}}
 .k-tg{border:0;padding:0;margin:8px 0;display:flex;flex-wrap:wrap;gap:4px 12px}.k-tg legend{margin-bottom:4px}
 /* v38 F5 K14: 출석부 날짜는 브라우저 언어와 상관없이 한국식(2026. 11. 11.)으로 보인다 — 실제 입력 칸은 위에 겹쳐 누르면 달력이 열린다 */
-.k-dd{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border:1px solid var(--g300,#d8dbe0);border-radius:8px;background:#fff;font-weight:600}
+.k-dd{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border:1px solid var(--g300,#d8dbe0);border-radius:8px;background:var(--surface,#fff);font-weight:600}
 .k-dd input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0}
 .k-dd input[type=date]::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
 .k-auto{list-style:none;margin:0;padding:0;display:grid;gap:2px}.k-auto li{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line,#eee)}.k-auto li:last-child{border-bottom:0}.k-auto li>div{flex:1;min-width:0}.k-auto b{display:block;font-size:14px}.k-auto small{color:var(--muted);font-size:12.5px}
 .k-sw{flex:none;position:relative;width:42px;height:24px;border-radius:12px;border:0;background:#d0d5dd;cursor:pointer;padding:0;transition:background .15s}.k-sw i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s}.k-sw[aria-checked=true]{background:var(--ink,#222)}.k-sw[aria-checked=true] i{left:21px}.k-sw:focus-visible{outline:2px solid var(--ink,#222);outline-offset:2px}
 .k-auto.brief li{padding:6px 0}.k-auto.brief b{font-size:13.5px;font-weight:600}
+/* v43 E2 — 성적 · 상담 · 수납 · 학원 현황(L43 등록 화면). 토큰만 사용 */
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) .card{border-radius:var(--r-card,20px);border:1px solid var(--hair);box-shadow:var(--sh1);background:var(--surface)}
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) .btn,#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) select,#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) input:not([type=checkbox]):not([type=radio]){min-height:44px}
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) .btn.sm{display:inline-flex;align-items:center;padding-top:0;padding-bottom:0}
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) .k-todo{border-left:0;padding:16px 20px;background:var(--gr50);border-color:color-mix(in srgb,var(--gr600) 25%,transparent)}
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) .k-warn{border-radius:16px}
+#main.l43[data-l43=crmstat] .k-sum{background:var(--surface2);box-shadow:none}
+#main.l43[data-l43=crmstat] .k-sum .k-p{font-size:15px;color:var(--g800)}
+#main.l43[data-l43=crmstat] .k-bar i{border-radius:6px 6px 0 0}
+#main.l43[data-l43=crmstat] .k-sw{background:var(--g400)}#main.l43[data-l43=crmstat] .k-sw[aria-checked=true]{background:var(--gr700,#00862D)}
+#main.l43[data-l43=crmstat] .k-auto li{border-color:var(--hair)}
+/* 자동 운영 스위치: 보이는 막대 24px, 누르는 영역 44px */
+#main.l43[data-l43=crmstat] .k-sw{box-sizing:border-box;height:44px;padding:10px 0;background-clip:content-box}
+#main.l43[data-l43=crmstat] .k-sw i{top:13px}
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) select{border-radius:12px;border:1px solid var(--hair);background-color:var(--surface);font-weight:600}

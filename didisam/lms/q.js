@@ -325,8 +325,8 @@
     const pt = (i, k) => { const a = -Math.PI / 2 + i * 2 * Math.PI / L.length; return [cx + Math.cos(a) * r * k, cy + Math.sin(a) * r * k]; };
     const ring = k => L.map((_, i) => pt(i, k).join(',')).join(' ');
     return `<svg class="lw-radar" viewBox="0 0 300 260" role="img" aria-label="나의 역량 지수 그래프">${[0.25, 0.5, 0.75, 1].map(k => `<polygon points="${ring(k)}" fill="none" stroke="var(--line)"/>`).join('')}
-      <polygon points="${L.map((x, i) => pt(i, x.v / mx).join(',')).join(' ')}" fill="var(--b500,#4a6cf7)" fill-opacity=".3" stroke="var(--b500,#4a6cf7)" stroke-width="2"/>
-      ${L.map((x, i) => { const [px, py] = pt(i, 1.17); return `<text x="${px}" y="${py}" font-size="11" text-anchor="middle" fill="currentColor">${esc(x.name)} ${x.v}</text>`; }).join('')}</svg>`;
+      <polygon points="${L.map((x, i) => pt(i, x.v / mx).join(',')).join(' ')}" fill="var(--b500,#00862D)" fill-opacity=".3" stroke="var(--b500,#00862D)" stroke-width="2"/>
+      ${L.map((x, i) => { const [px, py] = pt(i, 1.17); return `<text x="${px}" y="${py}" font-size="12" text-anchor="middle" fill="currentColor">${esc(x.name)} ${x.v}</text>`; }).join('')}</svg>`;
   }
   function stuView(U) {
     const my = U.my || { applications: [], competency: [], mileage: 0, mileage_expected: 0 }; const v = U.view;
