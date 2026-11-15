@@ -17,7 +17,7 @@ section.crsh.l26hide{display:none}
 .cw2.l26 .items li li a>i{grid-area:i;width:22px;height:22px;border-radius:6px}
 .cw2.l26 .items li li a>span{grid-area:s;white-space:normal;line-height:1.45;font-weight:600;align-self:center}
 .cw2.l26 .items li li a>em{grid-area:em;justify-self:start;padding:2px 7px;border-radius:4px;background:var(--g100,#F2F3F4);color:var(--g700);font-size:11px;font-weight:700}
-.l26st{grid-area:st;justify-self:end;align-self:center;font-size:11.5px;font-weight:700;color:var(--t-sub,var(--g500))}.l26st.ok{color:#2F6FED}.l26st.now{color:var(--pri-tx,var(--pri))}
+.l26st{grid-area:st;justify-self:end;align-self:center;font-size:11.5px;font-weight:700;color:var(--t-sub,var(--g500))}.l26st.ok{color:var(--pri-tx,var(--pri))}.l26st.now{color:var(--pri-tx,var(--pri))}
 .cw2.l26 .items li.on a{background:var(--g100,#F2F3F4);color:var(--g900);box-shadow:inset 3px 0 0 var(--pri)}
 .cw2.l26 .items li.on i{background:#fff;color:var(--pri-tx,var(--pri))}.cw2.l26 .items li.on em{color:var(--g700);background:#fff}
 .cw2.l26 .items li.done span{color:var(--g700)}
@@ -105,3 +105,19 @@ section.crsh.l26hide{display:none}
 /* v26.8 오른쪽 패널 탭이 두 줄로 꺾이지 않게 — 한 줄 유지, 넘치면 가로로 밀기 */
 .l26side #lcPanel .lctabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:14px}.l26side #lcPanel .lctabs::-webkit-scrollbar{display:none}
 .l26side #lcPanel .lctabs button{white-space:nowrap;flex:none;padding-left:8px;padding-right:8px}
+
+/* v43 강의 수강(#c) — 최종 시안 기준: 영상 영역은 사진 포스터 · 큰 재생 원, 주 버튼은 var(--pri), 「다음 차시」는 본문 아래 고정 줄. 글자 12px 이상. */
+.l26 .imain{min-width:0}
+.l26 .imain h2{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.25;margin:2px 0 14px}
+.l26 .imain .novid{position:relative;overflow:hidden;border-radius:20px;background:#04100A var(--ph,none) center/cover;color:#fff;font-size:15px;font-weight:700;gap:12px;box-shadow:var(--sh2)}
+.l26 .imain .novid::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,16,10,.25),rgba(4,16,10,.72))}
+.l26 .imain .novid>*{position:relative}
+.l26 .imain .novid .ic{width:64px;height:64px;padding:18px;border-radius:50%;background:rgba(255,255,255,.94);color:#04140A;box-shadow:0 12px 28px rgba(0,0,0,.35)}
+.l26 .imain .lbtn.pri{background:var(--pri)!important;color:var(--pri-ink,#fff)!important;border-color:var(--pri);min-height:48px;padding:0 22px;border-radius:999px}
+.l26 .inav{position:sticky;bottom:0;z-index:4;margin-top:24px;padding:12px 0;background:color-mix(in srgb,var(--surface,#fff) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+.l26 .inav .lbtn{min-height:48px;border-radius:999px}
+.l26 .inav .lbtn:last-child:not(:first-child),.l26 .inav .lbtn:only-child{background:var(--pri)!important;color:var(--pri-ink,#fff)!important;border-color:var(--pri);font-weight:800}
+.l26 .ih .tg,.l26 .cur ol.items :is(small,em,.tg),.l26 .cur :is(.l26chh,li.wk>p) small{font-size:12px}
+.l26 .l26st{font-size:12px}
+.l26 .l26bar{height:8px;border-radius:99px}
+body.lapp .l26 .inav{bottom:calc(64px + env(safe-area-inset-bottom,0px))}
