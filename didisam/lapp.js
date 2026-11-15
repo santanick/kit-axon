@@ -34,7 +34,10 @@
 
   /* ── 공통 조각 ── */
   const jw = n => (typeof lJ === 'function' ? n + lJ(n, '과', '와') : n + '과');
-  const av = (P, big) => `<span class="ap-av ${big ? 'big' : ''}" style="--pc:${P ? P.c : 'var(--pri)'}" aria-hidden="true"><i>${P ? P.e : ico('sparkle', big ? 30 : 18)}</i></span>`;
+  /* v43: 선생님 스타일 아바타는 이모지 대신 그린 선 아이콘(1.75) — 다정(해) · 꼼꼼(자) · 차분(잎) */
+  const PSV = { warm: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>', strict: '<path d="M4 17L17 4l3 3L7 20z"/><path d="M8 13l1.5 1.5M11 10l1.5 1.5M14 7l1.5 1.5"/>', calm: '<path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14"/><path d="M5 19l7-7"/>' };
+  const pIco = (k, sz) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PSV[k] || PSV.warm}</svg>`;
+  const av = (P, big) => `<span class="ap-av ${big ? 'big' : ''}" style="--pc:${P ? P.c : 'var(--pri)'}" aria-hidden="true"><i>${P ? pIco(P.k, big ? 36 : 20) : ico('sparkle', big ? 30 : 18)}</i></span>`;
   const tName = () => (persona() || {}).n || TCFG().name;
   const hiTime = () => { const h = new Date().getHours(); return h < 5 ? '늦은 밤까지 수고 많아요.' : h < 11 ? '좋은 아침이에요.' : h < 14 ? '점심은 드셨어요?' : h < 18 ? '좋은 오후예요.' : '오늘 하루 수고 많았어요.'; };
   const who = () => { const c = typeof lCall === 'function' ? lCall() : ((LR.me && (LR.me.nick || LR.me.sid)) || ''); return c && !/님$/.test(c) ? c + '님' : c; }; /* v37 L2: 첫 화면 호칭은 늘 '~님'(대학 학번만 있을 때 '20261008,'로 뜨던 것 — ltutor 인사와 같은 규칙) */
@@ -51,7 +54,7 @@
     k12: { learn: '내 수업', find: '수업 찾기', tabs: [['my', '#my', '내 수업'], ['cal', '#cal', '일정']], sub: () => '숙제 · 출석 · 복습을 함께 챙겨요', chips: [['오늘 숙제', '오늘 해야 할 숙제 알려줘', 'due'], ['출석 확인', '내 출석 현황 알려줘', 'att'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '수업 · 숙제 · 출결 · 보호자' },
     adult: { learn: '내 강의', find: '둘러보기', tabs: [['my', '#my', '내 강의'], ['find', '#shop', '둘러보기']], sub: () => '수강 · 복습 · 자격증 준비를 함께 챙겨요', chips: [['이번 주 계획', '이번 주 학습 계획 짜줘', 'plan'], ['자격증 준비', '자격증 준비 순서 알려줘', 'certprep'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '강좌 수강 · 결제 · 자격증' },
     lifelong: { learn: '내 강좌', find: '강좌 신청', tabs: [['my', '#my', '내 강좌'], ['find', '#courses', '강좌 신청']], sub: () => '강좌 신청 · 출석 · 수료를 함께 챙겨요', chips: [['신청할 강좌', '지금 신청할 수 있는 강좌 알려줘', 'list'], ['수료 조건', '수료 조건 알려줘', 'rule'], ['이번 주 일정', '이번 주 수업 일정 알려줘', 'week']], d: '강좌 신청 · 출석 · 수료 기록' },
-    voc: { learn: '내 훈련', find: '훈련과정', tabs: [['my', '#my', '내 훈련'], ['cal', '#cal', '일정']], sub: () => '출석 · 학습 시간 · 수료 기준을 함께 챙겨요', chips: [['출석 확인', '오늘 출석 현황 알려줘', 'att'], ['수료 기준', '훈련 수료 기준 알려줘', 'rule'], ['오늘 학습 한도', '오늘 학습할 수 있는 시간 알려줘', 'limit']], d: '훈련과정 · 출결 · 수료' }
+    voc: { learn: '내 훈련', find: '훈련과정', tabs: [['my', '#my', '내 훈련'], ['att', '#attend', '출석']] /* v43 APP-TABS: 출결 · 학습시간 한도는 수료 요건이라 한 번에 닿게(일정은 「내 훈련」 세그먼트) */, sub: () => '출석 · 학습 시간 · 수료 기준을 함께 챙겨요', chips: [['출석 확인', '오늘 출석 현황 알려줘', 'att'], ['수료 기준', '훈련 수료 기준 알려줘', 'rule'], ['오늘 학습 한도', '오늘 학습할 수 있는 시간 알려줘', 'limit']], d: '훈련과정 · 출결 · 수료' }
   };
   /* v29 대학 학사 LMS(전교생 메인)는 수업 · 출석 · 과제 · 시험 · 성적 중심 시나리오 */
   SCN.univ_lms = { learn: '이번 학기 강의', find: '비교과', tabs: [['my', '#my', '이번 학기 강의'], ['cal', '#cal', '일정']], sub: me => `학번 ${me.sid || ''} · 출석 · 과제 · 시험 · 성적을 함께 챙겨요`, chips: [['오늘 출석', '오늘 출석해야 할 수업 알려줘', 'att'], ['과제 · 시험 마감', '이번 주 과제 · 시험 마감 정리해줘', 'due'], ['학습 분량 점검', '이번 주 온라인 강의 중 덜 들은 차시 알려줘', 'gap']], d: '교과 수업 · 스마트 출석 · 성적 · 학사 연동' };
