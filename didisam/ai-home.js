@@ -123,7 +123,8 @@ function aihMenuHTML() {
 }
 
 /* ── 홈 = AI 비서 ── */
-function aihHomeHTML() {
+function aihHomeHTML() { if (!aihTeacher() && window.V4) return aih43HTML(); return aihHomeT(); }
+function aihHomeT() {
   const T = aihTeacher(); const nm = T ? 'AI 조교' : 'AI SAM'; const chips = aihChips();
   const guide = !T && S.bld && !(bAllDone() && S.bld.obHide) ? `<div class="aih-guide">${obHTML().replace('아래 대화창에', '위 입력창에')}</div>` : '';
   return `<div class="aih ${T ? 'aih-t' : ''}">
@@ -141,6 +142,78 @@ function aihHomeHTML() {
   ${aihMenuHTML()}
 </div>`;
 }
+/* ── v43 운영자 홈(최종 시안 2판 admin.html): 한 문장 브리핑 히어로 · 처리 카드 · 시설 타임라인 · 매출 차트 · 수납 도넛 · 대기 목록 + 오른쪽 AI SAM 패널(요약 → 계획 → 승인 · 고치기)
+   데이터가 없는 새 기관은 시작 가이드 중심 화면. 입력창(#aihQ) · 추천 칩(.aih-chips) · 최근 대화(.aih-res)는 오른쪽 패널에 둔다. */
+const AIH_PREP = { grade: ['task', '채점 초안 준비'], qna: ['chat', '답변 초안 준비'], refund: ['receipt', '환불액 계산 완료'], away: ['send', '독려 메시지 초안 준비'], diag: ['send', '안내문 초안 준비'], legal: ['send', '마감 안내 초안 준비'], att: ['send', '경고 안내 초안 준비'], docs: ['file', '채울 값 준비'], coach: ['cal', '코칭 메시지 준비'] };
+const aihHasData = () => !!((S.members || []).length || (S.classes || []).length || (S.pays || []).length);
+function aih43Tasks() { let B = []; try { B = BRIEF().filter(b => b.n > 0); } catch (e) { }
+  const L = B.map(b => { const p = AIH_PREP[b.k]; return { k: b.k, ic: p ? p[0] : 'check', t: b.label, s: p ? p[1] : '직접 확인 필요', n: b.n, u: b.unit || '건', q: b.q, prep: !!p }; });
+  try { if (window.ledgerView && typeof menuOn === 'function' && menuOn('ledger')) { const T = ledgerView.todo(); const n = (T.s1 || 0) + (T.s2 || 0) + (T.s3 || 0); if (n && !L.some(x => x.k === 'unpaid')) L.push({ k: 'unpaid', ic: 'wallet', t: '미납 결제 안내', s: '직접 확인 필요', n, u: '명', act: 'go', v: 'ledger', tag: `미납 ${n}명`, prep: false }); } } catch (e) { }
+  return L.slice(0, 4); }
+function aih43Card(id, title, side, body, cls = '') { return `<section class="v4-card aih43-c ${cls}" aria-labelledby="${id}"><div class="v4-ch"><h3 id="${id}">${title}</h3>${side || ''}</div>${body}</section>`; }
+function aih43Fac() { if (typeof window.facToday !== 'function' || (typeof menuOn === 'function' && !menuOn('fac'))) return ''; let T; try { if (typeof facEnsure === 'function') facEnsure(); T = facToday(); } catch (e) { return ''; } if (!T || !T.rows.length) return '';
+  const R = T.rows.slice(0, 3); return aih43Card('aihFac', `오늘 시설 ${T.n}곳 · <span class="num">${T.util}%</span> 가동`, `${T.free.length ? V4.chip('비어 있음 · ' + T.free[0], 'ok') : ''}<button type="button" class="btn sm ghost" data-act="go" data-v="fac">시설 관리 ›</button>`,
+    V4.timeline({ lo: T.lo, hi: T.hi, now: T.now, rows: R.map(r => ({ n: r.n, sub: r.open ? `가동 ${r.util}%` : r.closed || '운영 안 함', img: r.img, blocks: r.blocks })) }) + `<div class="aih43-ft"><span>오늘 예약 <b class="num">${T.total}</b>건</span><span>승인 대기 <b class="num">${T.appr}</b>건</span><span class="sp"></span>${T.appr ? `<button type="button" class="btn sm" data-act="go" data-v="fac">승인하러 가기</button>` : ''}</div>`, 'fac'); }
+function aih43Rev() { let sm = null; try { if (window.ledgerView) sm = ledgerView.summary(); } catch (e) { }
+  const mo = today().slice(0, 7); const dIn = today().slice(8, 10) | 0; const per = Array(dIn).fill(0);
+  if (sm && sm.daily && sm.daily.length) sm.daily.forEach(d => { const k = String(d.day || ''); if (k.startsWith(mo)) { const i = (k.slice(8, 10) | 0) - 1; if (i >= 0 && i < dIn) per[i] += +d.net || 0; } });
+  else (S.pays || []).filter(p => /완료/.test(p.status || '') && String(p.at || '').startsWith(mo)).forEach(p => { const i = (String(p.at).slice(8, 10) | 0) - 1; if (i >= 0 && i < dIn) per[i] += +p.amount || 0; });
+  let c = 0; const cum = per.map(v => (c += v)); const net = sm ? sm.net : c; if (!net && !c) return '';
+  const lab = cum.map((_, i) => (i % 3 === 0 || i === dIn - 1) ? `${i + 1}일` : '');
+  const wk = (S.weeks || []).slice(-6).map(w => +w.join || 0); const prevW = wk.length > 1 ? wk[wk.length - 2] : 0; const dl = prevW ? Math.round((wk[wk.length - 1] - prevW) / prevW * 100) : null;
+  return `<section class="v4-card aih43-c rev" aria-labelledby="aihRev"><div class="v4-ch"><div style="margin-right:auto"><p class="v4-eb" style="margin:0" id="aihRev">${today().slice(5, 7) | 0}월 순매출 · ${dIn}일 기준</p><p class="v4-big">${V4.n(net)}<small>원</small></p></div>${sm ? V4.chip(`수납률 ${sm.collectRate}%`, sm.collectRate < 80 ? 'warn' : 'ok') : ''}</div>
+    ${V4.area(cum, { labels: lab, h: 150, fmt: v => V4.n(v) + '원', yfmt: v => v >= 10000 ? Math.round(v / 10000) + '만' : V4.n(v), tipL: i => `${today().slice(5, 7) | 0}월 ${i + 1}일 누적`, aria: '이번 달 누적 순매출 추이' })}
+    ${wk.length > 1 ? `<div class="aih43-mini"><span>주간 신규 가입</span><b class="num">${V4.n(wk[wk.length - 1])}명</b>${dl != null ? `<em class="v4-dl ${dl < 0 ? 'dn' : ''}">${dl >= 0 ? '▲' : '▼'} ${Math.abs(dl)}%</em>` : ''}${V4.spark(wk, { w: 96, h: 28 })}</div>` : ''}</section>`; }
+function aih43Pay() { if (!window.ledgerView || (typeof menuOn === 'function' && !menuOn('ledger'))) return ''; let sm, T; try { sm = ledgerView.summary(); T = ledgerView.todo(); } catch (e) { return ''; } if (!sm || !(sm.paid || sm.unpaid)) return '';
+  const nU = (T.s1 || 0) + (T.s2 || 0) + (T.s3 || 0); const rate = sm.collectRate || 0;
+  const parts = [{ l: '수납', v: sm.paid, c: 'var(--c-data)' }, { l: '환불', v: sm.refund, c: 'var(--c-data2)' }, { l: nU ? `미납 ${nU}명` : '미수', v: sm.unpaid, c: 'var(--c-warn)', tone: 'co' }];
+  return aih43Card('aihPay', `${today().slice(5, 7) | 0}월 수납`, T.s2 + T.s3 ? V4.chip('납기 지남', 'warn') : '', `<div class="v4-dw">${V4.donut(parts, { size: 112, w: 13, center: `<div><b>${rate}%</b><small>수납</small></div>` })}${V4.legend(parts)}</div>
+    ${nU && S.me.role !== 'teacher' ? `<button type="button" class="btn pri aih43-wide" data-act="led-dun" data-v="">${ic('send', 16)} 미납 ${nU}명에게 결제 안내 보내기</button>` : `<button type="button" class="btn aih43-wide" data-act="go" data-v="ledger">수납 원장 보기</button>`}`, 'pay'); }
+function aih43Wait() { let L = []; try { if (window.MIL && MIL.isOn && MIL.isOn() && window.milrw && milrw.pending) L = milrw.pending(); } catch (e) { }
+  if (L.length) return aih43Card('aihMil', '마일리지 사용 대기', V4.chip(`보상 ${L.length}건`, 'warn'), `<ul class="aih43-ml">${L.slice(0, 3).map((r, i) => `<li class="${i ? '' : 'hv'}"><span class="v4-ph" style="background-image:url(${V4.photo(r.t)})"></span><div><b>${esc(r.t)}</b><small class="num">${esc(r.who)} · ${V4.n(r.p)}P</small></div><button type="button" class="btn sm ${i ? '' : 'pri'}" data-act="mrw-ok" data-v="${esc(r.id)}">승인</button></li>`).join('')}</ul>`, 'mil');
+  const Q = (S.posts || []).filter(p => p.kind === '질문' && !p.replies); if (!Q.length) return '';
+  const q = Q[0]; const m = (S.members || []).find(x => x.id === q.who) || {};
+  return aih43Card('aihQa', `${esc(t('learner'))}의 질문`, V4.chip(`대기 ${Q.length}`, ''), `<div class="aih43-qa"><span class="av">${esc((m.name || '학')[0])}</span><p><b>${esc(m.name || t('learner'))}${q.board ? ' · ' + esc(q.board) : ''}</b>${esc(q.title || '')}</p></div>
+    <div class="aih43-draft"><b>${V4.ai()} SAM 답변 초안</b>질문 내용과 강의 자료를 바탕으로 답변 초안을 만들어 둡니다. 확인 후 보내십시오.</div>
+    <div class="aih43-two"><button type="button" class="btn pri" data-act="chat-q" data-v="미답변 질문에 답변 초안 만들어줘">초안 보기</button><button type="button" class="btn" data-act="go" data-v="board">질문 열기</button></div>`, 'qa'); }
+/* 오른쪽 AI SAM 패널 */
+function aih43Panel(tasks) { const nm = 'AI SAM'; const chips = aihChips(); const prep = tasks.filter(x => x.prep);
+  let sm = null; try { if (window.ledgerView && menuOn('ledger')) sm = ledgerView.summary(); } catch (e) { }
+  const sum = aihHasData() ? `${sm && sm.net ? `이번 달 순매출은 <b>${V4.n(sm.net)}원</b>, 수납률은 <b>${sm.collectRate}%</b>입니다. ` : ''}${tasks.length ? `오늘 처리할 일은 <b>${tasks.length}가지</b>이고, 그중 <b>${prep.length}가지</b>는 초안을 만들어 두었습니다.` : '오늘 급하게 처리할 일은 없습니다.'}` : '아직 데이터가 없습니다. 시작 가이드를 따라 하나씩 채우면 매일 아침 여기서 운영 요약을 드립니다.';
+  const wk = (S.weeks || []).slice(-5); const mx = Math.max(1, ...wk.map(w => +w.join || 0));
+  const plan = tasks.slice(0, 3);
+  return `<aside class="aih-sam" aria-label="${nm} 패널"><div class="aih-samh"><span class="v4-orb aih-orb" aria-hidden="true">${ic('spark', 18)}</span><div><b>${nm} ${V4.ai()}</b><small><i class="aih-live" aria-hidden="true"></i>홈 화면을 보고 있습니다</small></div></div>
+  <div class="aih-feed">
+    <div class="aih-bot"><p class="aih-step"><span>1</span>요약</p><p>${sum}</p>${aihHasData() && wk.length > 2 ? `<div class="aih-mb" aria-hidden="true">${wk.map((w, i) => `<i class="${i === wk.length - 1 ? 'on' : ''}" style="height:${Math.max(8, Math.round((+w.join || 0) / mx * 100))}%"></i>`).join('')}</div><div class="aih-mbl">${wk.map(w => `<span>${esc(String(w.w || w.label || '').slice(-5))}</span>`).join('')}</div><p class="aih-cap">주간 신규 가입</p>` : ''}
+      ${plan.length ? `<div class="aih-plan"><p class="aih-step"><span>2</span>계획 · 승인하면 바로 실행합니다</p><ol>${plan.map((x, i) => `<li><i>${i + 1}</i><span>${esc(x.t)} ${x.n}${esc(x.u)}</span><em>${esc(x.prep ? '초안 준비' : '확인 필요')}</em></li>`).join('')}</ol>
+      <div class="aih43-two"><button type="button" class="btn pri" data-act="chat-q" data-v="${esc(plan[0].q || '오늘 할 일 브리핑해줘')}">${ic('check', 16)} 계획 승인</button><button type="button" class="btn" data-act="aih-fix">${ic('edit', 16)} 고치기</button></div></div>` : ''}</div>
+    ${aihResHTML()}
+    <div class="aih-chips" role="list" aria-label="추천 일">${chips.map(([l, q]) => `<button type="button" role="listitem" class="chip" data-act="chat-q" data-v="${esc(q)}">${esc(l)}</button>`).join('')}</div>
+  </div>
+  <form class="composer aih-comp" data-where="home"><div class="cbox"><label for="aihQ" class="sr">${nm}에게 지시</label><textarea id="aihQ" rows="2" maxlength="300" placeholder="예: ${esc(aihPh())}"></textarea><button class="send" type="submit" aria-label="보내기">${ic('send', 18)}</button></div><p class="aih-note">계획을 먼저 보여 드리고, 승인하신 뒤에 처리합니다.</p></form>
+</aside>`; }
+ACT['aih-fix'] = () => { const ta = $('#aihQ'); if (!ta) return; ta.value = '계획을 이렇게 바꿔줘: '; ta.focus(); try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) { } };
+function aih43Start() { const L = S.bld && typeof bList === 'function' ? bList() : []; const dn = L.filter(s => bDone(s.id)).length; const cur = L.find(s => !bDone(s.id));
+  return `<section class="v4-card aih43-start" aria-labelledby="aihSt"><div class="v4-ch"><h3 id="aihSt">시작 가이드</h3><span class="v4-cap num">${dn}/${L.length} 완료</span><span class="aih43-bar" aria-hidden="true"><i style="width:${L.length ? Math.round(dn / L.length * 100) : 0}%"></i></span></div>
+    <ol class="aih43-steps">${L.map((s, i) => { const d = bDone(s.id), on = cur && cur.id === s.id; const q = typeof obQ === 'function' ? obQ(s.id) : ''; return `<li class="${d ? 'ok' : ''} ${on ? 'on' : ''}"><span class="n">${d ? ic('check', 16) : i + 1}</span><div><b>${esc(bName(s))}</b><small>${esc(s.d || '')}</small></div>${d ? V4.chip('완료', 'ok') : on && q ? `<button type="button" class="btn sm pri" data-act="chat-q" data-v="${esc(q)}">${ic('spark', 14)} SAM에게 맡기기</button>` : `<button type="button" class="btn sm" data-act="go" data-v="${esc(s.view)}">열기</button>`}</li>`; }).join('')}</ol></section>`; }
+function aih43HTML() { const data = aihHasData(); const who = aihWho(); const tasks = data ? aih43Tasks() : []; const prep = tasks.filter(x => x.prep);
+  let main;
+  if (data) { const N = tasks.length;
+    const h = `<h1 id="aihH"><span class="v4-hi">안녕하세요, ${esc(who)}.</span>${N ? `할 일 <em>${N}건</em> 중 ${prep.length ? `${prep.length}건은 준비해 두었습니다.` : '먼저 볼 일부터 정리했습니다.'}` : '오늘은 급한 일이 <em>없습니다</em>.'}</h1>`;
+    const acts = N ? `${prep.length ? `<button type="button" class="btn pri" data-act="chat-q" data-v="${esc(prep[0].q)}">${ic('check', 18)} 준비된 ${prep.length}건 검토 시작</button>` : ''}<button type="button" class="btn dk" data-act="go" data-v="dash">현황 보기</button><span class="cap">계획을 보여 드린 뒤 승인하면 실행합니다</span>` : `<button type="button" class="btn pri" data-act="go" data-v="dash">${ic('chart', 18)} 현황 보기</button>`;
+    const side = tasks.length ? V4.stack(tasks.map((x, i) => ({ ic: x.ic, t: x.t, s: x.s, n: x.n, tag: x.tag, act: x.act || 'chat-q', v: x.act ? x.v : x.q, on: i === 0 }))) : '';
+    const fac = aih43Fac(), rev = aih43Rev(), pay = aih43Pay(), wait = aih43Wait();
+    main = V4.hero({ cls: 'aih-hero', label: 'aihH', eb: `AI SAM 오늘의 브리핑 · ${esc(aihDate())}`, h, acts, side })
+      + (fac || rev ? `<div class="aih43-r2 ${fac && rev ? '' : 'one'}">${fac}${rev}</div>` : '')
+      + (pay || wait ? `<div class="aih43-r3 ${pay && wait ? '' : 'one'}">${pay}${wait}</div>` : '');
+  } else {
+    const L = S.bld && typeof bList === 'function' ? bList() : []; const cur = L.find(s => !bDone(s.id)); const q = cur && typeof obQ === 'function' ? obQ(cur.id) : '';
+    main = V4.hero({ cls: 'aih-hero start', label: 'aihH', eb: `${esc(aihDate())} · ${esc(S.org.name)} · 새 스튜디오`, h: `<h1 id="aihH"><span class="v4-hi">안녕하세요, ${esc(who)}.</span>첫 ${esc(t('cls'))}부터 <em>함께</em> 채워 볼까요?</h1><p class="aih43-lead">말로 지시하면 AI SAM이 계획을 보여 드리고, 승인하시면 만들어 둡니다.</p>`,
+      acts: `${cur ? `<button type="button" class="btn pri" data-act="${q ? 'chat-q' : 'go'}" data-v="${esc(q || cur.view)}">${ic('spark', 18)} ${esc(bName(cur))} 시작</button>` : ''}<button type="button" class="btn dk" data-act="go" data-v="class">${esc(t('cls'))} 직접 만들기</button>`,
+      side: `<div class="aih43-art">${V4.art('start')}</div>` })
+      + aih43Start();
+  }
+  return `<div class="aih aih43 ${data ? 'has' : 'new'}"><div class="aih43-main">${main}${aihConnHTML() || aihAutoHTML() ? `<div class="aih-two">${aihConnHTML()}${aihAutoHTML()}</div>` : ''}${aihMenuHTML()}</div>${aih43Panel(tasks)}</div>`; }
 { const base = bHome; bHome = () => { if (!aihActive()) return (aihTeacher() && typeof tHome === 'function' && (UI.tst === 'operate' || UI.tst === 'report')) ? tHome() : base(); try { return aihHomeHTML(); } catch (e) { console.error(e); return base(); } }; }
 
 /* 시작 가이드: 홈 안 카드도 함께 다시 그림 · 홈에서는 위젯을 자동으로 열지 않음 */
@@ -148,7 +221,7 @@ function aihHomeHTML() {
   const g = $('.aih-guide'); if (g) { const h = obHTML().replace('아래 대화창에', '위 입력창에'); g.innerHTML = h; g.hidden = !h; } return r; }; }
 /* 홈에서 AI SAM을 부르면(버튼 · Ctrl+K · '시작 가이드' 막대) 위젯 대신 홈 입력창으로 */
 { const base = fabOpen; fabOpen = (focus = true) => { if (aihActive() && fabOn()) { const ta = $('#aihQ'); if (ta) { ta.scrollIntoView({ block: 'center', behavior: 'smooth' }); if (focus) ta.focus({ preventScroll: true }); } return true; } return base(focus); }; }
-{ const base = ACT['ob-show']; ACT['ob-show'] = el => { if (aihActive()) { UI.obc = false; if (S.bld) S.bld.obHide = false; obMount(); const g = $('.aih-guide'); g && g.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; } return base(el); }; }
+{ const base = ACT['ob-show']; ACT['ob-show'] = el => { if (aihActive()) { UI.obc = false; if (S.bld) S.bld.obHide = false; obMount(); const g = $('.aih-guide') || $('.aih43-start'); g && g.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; } return base(el); }; }
 /* 교수자: 운영 · 성과 화면을 보다가 레일 '홈'을 누르면 비서 홈으로(운영 · 성과는 내 강의 카드 · 대화에서 다시 열림) */
 { const base = ACT.go; ACT.go = el => { if (el && el.dataset && el.dataset.v === 'home' && aihTeacher() && (UI.tst === 'operate' || UI.tst === 'report')) UI.tst = ''; return base(el); }; }
 /* 그린 뒤: 홈 표시 · 위젯 닫기 · 머리 탭 이름 */

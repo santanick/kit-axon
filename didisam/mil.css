@@ -154,3 +154,14 @@
 @media (max-width:900px){.mil-g21,.mil-g2,.mil-g3{grid-template-columns:minmax(0,1fr)}.mil-steps{grid-template-columns:repeat(5,minmax(0,1fr))}.mil-steps li div{display:none}.mil-steps li{justify-content:center}.mil-steps li.on div{display:block}.mil-steps li.on{grid-column:span 1}}
 @media (max-width:600px){.mil-g4,.mil-sim,.mil-lv{grid-template-columns:minmax(0,1fr)}.mil-hero{padding:18px;gap:14px}.mil-hb{grid-template-columns:minmax(0,1fr);gap:4px}.mil-hb .v{text-align:left}.mil-set{grid-template-columns:minmax(0,1fr)}
   .mil-steps li.on div{display:none}.mil-tabs{width:100%}.mil-tabs button{flex:1 1 auto;justify-content:center}.mil-acts .btn{flex:1 1 auto}.mil-phone{border-width:4px}.mil h2{font-size:19px}}
+/* ───────── v43 마일리지 정책(최종 시안 2판) — 토큰으로 다시 지정(다크 모드), 파랑 정보 · 보라 AI는 그린 ───────── */
+.mil{--g:var(--gr500);--g-act:var(--pr);--gd:var(--t-mag);--gl:var(--gr50);--gm:var(--gr200);--wait:var(--co700);--waitbg:var(--co50);--waitln:var(--co500);--bad:var(--t-bad);--badbg:var(--badl);--info:var(--t-mag);--infobg:var(--gr50);--infoln:var(--gr200);--lock:var(--n700);--lockbg:var(--n100);--lockln:var(--n300);--vio:var(--t-mag);--viobg:var(--gr50);--track:var(--c-track);--l2:var(--g300);color:var(--g900)}
+.mil .btn.pri,#modal .mf .btn.pri{background:var(--pr);color:var(--on-pr)}
+.mil .mut,.mil small{color:var(--t-sub)}
+.mil .card,.mil-kpi{border:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh2)}
+.mil-kpi{padding:16px 18px;gap:4px}.mil-kpi .k{color:var(--t-sub);font-weight:700}.mil-kpi .k svg{color:var(--t-mag)}.mil-kpi .s{color:var(--t-sub)}
+.mil-kpi .v{font-size:28px;letter-spacing:-.035em}
+.mil-kpi .v4-ksp{height:34px;margin:2px -2px 0}
+.mil43-h{margin:0}
+.mil43-dn .v4-dw{margin:6px 0 2px}
+.mil-tabs button.on{border-bottom-color:var(--pr)}

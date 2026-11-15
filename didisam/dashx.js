@@ -185,22 +185,22 @@
   if (!document.querySelector('style[data-dashx]')) { const st = document.createElement('style'); st.dataset.dashx = '1'; st.textContent = `
 .dx{margin:0 0 20px}
 .dx-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 10px}
-.dx-h h2{font-size:16px;margin:0}.dx-h small{color:var(--muted,#64748b);font-size:12px}.dx-h .sp,.dx-edf .sp,.dx-li .sp{flex:1}
+.dx-h h2{font-size:17px;margin:0;letter-spacing:-.02em}.dx-h small{color:var(--t-sub);font-size:12px}.dx-h .sp,.dx-edf .sp,.dx-li .sp{flex:1}
 .dx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
-.dx-card{display:flex;flex-direction:column;gap:4px;min-width:0;background:#fff;border:1px solid var(--line,#e2e8f0);border-radius:10px;padding:14px 14px 12px}
-.dx-card.w{border-color:#F5C2D8;background:linear-gradient(180deg,#FFF6FA,#fff 55%)}
-.dx-card h3{margin:0;font-size:13px;font-weight:600;color:var(--ink,#1f2937)}
-.dx-n{margin:2px 0 0;display:flex;align-items:baseline;gap:3px;min-width:0}.dx-n b{font:700 28px/1.1 var(--num,inherit);color:var(--ink,#111);overflow-wrap:anywhere}.dx-card.w .dx-n b{color:var(--mag,#C2185B)}.dx-n small{font-size:13px;color:var(--muted,#64748b)}
-.dx-s{margin:0;font-size:12px;color:var(--muted,#64748b);line-height:1.45;min-height:2.9em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dx-card{display:flex;flex-direction:column;gap:4px;min-width:0;background:var(--surface);border:0;border-radius:var(--r-card,20px);box-shadow:var(--sh2);padding:16px 16px 14px}
+.dx-card.w{background:linear-gradient(180deg,var(--co50),var(--surface) 60%);box-shadow:var(--sh2),inset 0 0 0 1px var(--co100)}
+.dx-card h3{margin:0;font-size:13px;font-weight:700;color:var(--t-sub)}
+.dx-n{margin:2px 0 0;display:flex;align-items:baseline;gap:3px;min-width:0}.dx-n b{font:700 28px/1.1 var(--num,inherit);color:var(--g900);overflow-wrap:anywhere;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.dx-card.w .dx-n b{color:var(--co700)}.dx-n small{font-size:13px;color:var(--t-sub)}
+.dx-s{margin:0;font-size:12px;color:var(--t-sub);line-height:1.45;min-height:2.9em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .dx-card .btn{margin-top:auto;align-self:flex-start;max-width:100%;white-space:normal;text-align:left}
-.dx-ed{background:#fff;border:1px solid var(--line,#e2e8f0);border-radius:10px;padding:12px}
+.dx-ed{background:var(--surface);border:0;box-shadow:var(--sh2);border-radius:var(--r-card,20px);padding:14px}
 .dx-list{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}
-.dx-li{display:flex;align-items:center;gap:8px;border:1px solid var(--line,#e2e8f0);border-radius:8px;padding:6px 8px;background:#fff;min-width:0}
-.dx-li:focus{outline:2px solid var(--mag,#C2185B);outline-offset:1px}.dx-li.off{opacity:.6}.dx-li.drag{opacity:.4}.dx-li.over{border-color:var(--mag,#C2185B);box-shadow:0 -2px 0 var(--mag,#C2185B)}
-.dx-grip{cursor:grab;color:var(--muted,#94a3b8);letter-spacing:-2px;user-select:none}
+.dx-li{display:flex;align-items:center;gap:8px;border:1px solid var(--g300);border-radius:8px;padding:6px 8px;background:var(--surface);min-width:0}
+.dx-li:focus{outline:2px solid var(--pr);outline-offset:1px}.dx-li.off{opacity:.6}.dx-li.drag{opacity:.4}.dx-li.over{border-color:var(--pr);box-shadow:0 -2px 0 var(--pr)}
+.dx-grip{cursor:grab;color:var(--g600);letter-spacing:-2px;user-select:none}
 .dx-ck{display:flex;align-items:center;gap:6px;min-width:0;cursor:pointer}.dx-ck span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dx-edf{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-@media (max-width:520px){.dx-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dx-card{padding:12px 10px 10px}.dx-n b{font-size:22px}.dx-card .btn{font-size:12px;padding:5px 8px}}`; document.head.appendChild(st); }
+@media (max-width:520px){.dx-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dx-card{padding:12px 10px 10px}.dx-n b{font-size:22px}.dx-card .btn{font-size:12px;padding:5px 10px}}`; document.head.appendChild(st); }
 
   if (typeof COVER !== 'undefined' && COVER.push) COVER.push(['[개선] 현황: 기관 유형별 숫자 위젯 · 사람마다 항목 편집(보이기 · 순서 · 기본 구성)', 'dash', '']);
 })();

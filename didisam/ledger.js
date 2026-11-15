@@ -200,7 +200,8 @@
     const kp = `<div class="lg-kpis">${card('순매출', won(sm.net), `수납 ${won(sm.paid)} − 환불 ${won(sm.refund)}`)}${card('수납률', sm.collectRate + '%', `청구 ${won(sm.charged || (sm.paid + sm.unpaid))} 기준`, sm.collectRate < 80 ? 'warn' : '')}${card('미수', won(sm.unpaid), `${esc(P.label)} 청구 중 미수납`, sm.unpaid ? 'bad' : '')}${card('환불', won(sm.refund), `환불 완료 기준`)}</div>`;
     const warn = LIVEON() && LV.err ? `<div class="lg-err" role="alert">${esc(LV.err)}</div>` : ''; const ro = teacher() ? '<p class="lg-ro">교강사 권한은 조회만 할 수 있습니다.</p>' : '';
     let body = ''; try { body = ({ today: vToday, book: vBook, charge: vCharge, unpaid: vUnpaid, desk: vDesk, refund: vRefund, close: vClose, import: vImport, share: vShare, set: vSet })[tab](sm, t); } catch (e) { console.error('ledger view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(e.message)}</div>`; }
-    return `<div class="lg">${bar}${warn}${ai}${kp}${ro}${tabs('ledger', tabList(), tab)}<div class="lg-body" data-tab="${tab}">${body}</div><p class="lg-foot">숫자 기준: ${esc(P.from)} ~ ${esc(P.to)} · ${esc(uname(curUnit()))}${rollup() ? ' 및 하위 단위' : ''} · 원장 요약 함수 하나로 계산${LIVEON() ? ' · 운영 서버' : ' · 시연판'}</p></div>`; };
+    let v43 = ''; try { v43 = lg43(sm, t, P); } catch (e) { console.error('ledger v43', e); }
+    return `<div class="lg">${bar}${warn}${ai}${kp}${v43}${ro}${tabs('ledger', tabList(), tab)}<div class="lg-body" data-tab="${tab}">${body}</div><p class="lg-foot">숫자 기준: ${esc(P.from)} ~ ${esc(P.to)} · ${esc(uname(curUnit()))}${rollup() ? ' 및 하위 단위' : ''} · 원장 요약 함수 하나로 계산${LIVEON() ? ' · 운영 서버' : ' · 시연판'}</p></div>`; };
   ACT['led-unit'] = el => { UI.ledU = el.value; LV.key = ''; render(); };
   ACT['led-roll'] = el => { UI.ledRoll = el.dataset.v === '1'; LV.key = ''; render(); };
   ACT['led-per'] = el => { UI.ledP = el.dataset.v; LV.key = ''; render(); };
@@ -224,6 +225,18 @@
     return headD('오늘 할 일', 'AI가 미납 단계 · 대사 · 환불 · 마감을 모아 보여 줍니다. 안내 발송과 환불은 확인 카드를 거쳐 실행합니다.', '')
       + (rollup() ? unitCompare(sm) : '') + `<div class="lg-dos">${STG.map(([k, l, a, b]) => row(t[k], `미납 ${l}`, `납기 후 ${a}${b < 9999 ? '~' + b : '일 이상'}${b < 9999 ? '일' : ''}`, 'unpaid', k === 's1' ? 'warn' : 'bad', t[k] && !ro() ? `<button class="btn sm pri" data-act="led-dun" data-v="${k}">안내 보내기</button>` : '')).join('')}
       ${row(t.unmatched, '대사 미일치', '가져온 입금 · 매입 내역 중 수납과 맞지 않은 줄', 'import', 'warn')}${row(t.refunds, '환불 확정 대기', '규정 계산이 끝나 직원 확인을 기다리는 환불', 'refund', 'warn')}${row(days.length, '미마감', days.length ? days.slice(0, 3).join(', ') + (days.length > 3 ? ' 외' : '') : `최근 6일 모두 마감(${td} 오늘 마감은 영업 종료 후)`, 'close', 'warn')}</div>`; }
+  /* v43 수납 도넛 · 미납 안내 실행 · 일별 순매출(최종 시안 2판, v43ui.js 패턴) */
+  function lg43(sm, t, P) { if (!window.V4) return ''; const nU = t.s1 + t.s2 + t.s3;
+    if (!(sm.paid || sm.unpaid || sm.refund)) return `<div class="lg43 one">${V4.empty({ art: 'wallet', t: `${P.label} 수납 기록이 아직 없습니다`, d: '청구를 만들면 학습자에게 결제 링크가 가고, 수납 · 미납이 여기 그려집니다.', act: teacher() ? '' : 'tab', key: 'ledger', v: 'charge', l: '첫 청구 만들기' })}</div>`;
+    const parts = [{ l: '수납', v: sm.paid, c: 'var(--c-data)' }, { l: '환불', v: sm.refund, c: 'var(--c-data2)' }, { l: nU ? `미납 ${nU}명` : '미수', v: sm.unpaid, c: 'var(--c-warn)', tone: sm.unpaid ? 'co' : '' }];
+    const st2 = t.s2 + t.s3;
+    const pay = `<section class="v4-card lg43-pay" aria-labelledby="lg43p"><div class="v4-ch"><h3 id="lg43p">${esc(P.label)} 수납</h3>${st2 ? V4.chip(`2단계 이상 ${st2}명`, 'warn') : nU ? V4.chip(`1단계 ${t.s1}명`, 'warn') : V4.chip('미납 없음', 'ok')}</div>
+      <div class="v4-dw">${V4.donut(parts, { size: 124, w: 14, center: `<div><b>${sm.collectRate}%</b><small>수납률</small></div>`, aria: `수납률 ${sm.collectRate}%` })}${V4.legend(parts, v => won(v))}</div>
+      ${nU && !teacher() ? `<button class="btn pri lg43-go" data-act="led-dun" data-v="">${ic('send', 16)} 미납 ${nU}명에게 결제 안내 보내기</button><small class="lg43-n">보내기 전에 대상 · 문구 확인 카드를 보여 드립니다.</small>` : `<button class="btn lg43-go" data-act="tab" data-key="ledger" data-v="book">원장 보기</button>`}</section>`;
+    const D = (sm.daily || []).filter(d => String(d.day || '') >= P.from && String(d.day || '') <= P.to); let c = 0; const cum = D.map(d => (c += +d.net || 0));
+    const area = cum.length > 1 ? `<section class="v4-card lg43-area" aria-labelledby="lg43a"><div class="v4-ch"><div style="margin-right:auto"><p class="v4-eb" style="margin:0" id="lg43a">${esc(P.label)} 누적 순매출</p><p class="v4-big">${won(sm.net).replace(/원$/, '')}<small>원</small></p></div>${V4.chip(`수납 ${won(sm.paid)}`, 'ok')}</div>
+      ${V4.area(cum, { h: 200, labels: D.map((d, i) => i % Math.max(1, Math.ceil(D.length / 6)) === 0 || i === D.length - 1 ? String(d.day).slice(5).replace('-', '.') : ''), fmt: v => won(v), yfmt: v => v >= 10000 ? Math.round(v / 10000) + '만' : String(v), tipL: i => `${String(D[i].day).slice(5).replace('-', '.')}까지 누적`, aria: '누적 순매출 추이' })}</section>` : '';
+    return `<div class="lg43 ${area ? '' : 'one'}">${pay}${area}</div>`; }
   /* 미납 안내(연락) — 확인 카드 */
   ACT['led-dun'] = el => { const k = el.dataset.v; const T = unpaidList().filter(x => !k || x.stage === k || (k === 'sel' && (UI.ledSel || []).includes(x.unitId + '|' + x.sid))); if (!T.length) return toast('안내할 대상이 없습니다.', 'warn'); const g = STG.find(x => x[0] === k);
     const msg = `[${S.org.name}] 납부 기한이 지난 청구가 있어 안내드려요. 아래 링크에서 청구서를 확인하고 결제할 수 있어요.`;

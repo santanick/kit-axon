@@ -195,3 +195,7 @@
 @media (max-width:640px){.fc-g3{grid-template-columns:repeat(2,minmax(0,1fr))}.fc-kpis,.fc-kpis.st{grid-template-columns:repeat(2,minmax(0,1fr))}.fc-q{margin-left:0;flex:1 1 100%}.fc-sum{margin-left:0}.fc-dl{grid-template-columns:80px minmax(0,1fr)}.fc-scan h3{font-size:18px}.fc-tr{grid-template-columns:110px minmax(0,1fr)}}
 .fc-body>.fc-card,.fc-body>.fc-split,.fc-body>.fc-kpis{margin-bottom:14px}
 .fc-lgd .hm{vertical-align:middle}
+/* v43 오늘 타임라인(v43ui.css 패턴) */
+.fc43{margin:0 0 16px}
+.fc43-ft{display:flex;align-items:center;gap:16px;margin-top:14px;padding-top:12px;border-top:1px solid var(--g300);font-size:13px;color:var(--t-sub)}
+.fc43-ft b{color:var(--g900)}.fc43-ft .sp{flex:1}
