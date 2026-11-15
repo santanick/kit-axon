@@ -114,9 +114,15 @@
     if (empty(main)) return null; const all = main.querySelectorAll('.ll-ck').length; const ok = main.querySelectorAll('.ll-ck.ok').length; if (!all) return null;
     return { eye: '평생교육 운영', title: ok < all ? `운영 요건 <em>${all - ok}개</em>를 아직 갖추지 않았습니다` : '운영 요건을 <em>모두</em> 갖췄습니다', sub: '평생교육법 기준 요약입니다. 실제 신고 전에는 관할 교육청에 확인하세요. 학습비 반환은 신청일로부터 5일 안에 처리합니다.', stats: [[ok + '/' + all, '갖춘 요건', ok < all ? 'warn' : '']] };
   } });
-  R('sales', { art: 'doc', brief: main => {
+  R('sales', { art: 'doc', enhance: main => { /* v43 Q1 보조 열: 결제 연결(PG) 카드 · 수수료 안내를 오른쪽 340px로, 월 매출 · KPI · 표를 주 열로 */
+    const bv = main.querySelector(':scope > .bview'); if (!bv || bv.querySelector(':scope > .q1-2col')) return; const pg = bv.querySelector(':scope > .grid:has(.pgc)'); const fee = bv.querySelector(':scope > .sl2-fee'); if (!pg) return;
+    const rest = [...bv.children].filter(x => !x.matches('.l43-brief, .ph') && x !== pg && x !== fee); if (!rest.length) return; const col = document.createElement('div'); col.className = 'q1-main'; rest[0].before(col); rest.forEach(x => col.appendChild(x));
+    L43.side(main, col, `<section class="q1-ac q1-pg"><h3>결제 연결</h3></section>${L43.acard({ ai: true, t: 'AI SAM 제안', p: '환불 요청은 3일 안에 처리하면 분쟁이 줄어듭니다. 환불 내역 탭에서 승인 · 거절을 한 번에 처리하세요.' })}`);
+    const box = main.querySelector('.q1-pg'); if (box) { pg.classList.add('q1-pgg'); box.appendChild(pg); if (fee) box.appendChild(fee); } }, brief: main => {
     if (empty(main)) return null; const P = A('pays'); if (!P.length) return null; const m = P.filter(p => String(p.at || '').startsWith(ym())); const ok = m.filter(p => /완료/.test(p.status || '')).reduce((a, p) => a + (+p.amount || 0), 0); const rf = m.filter(p => /환불/.test(p.status || '')).length;
-    return { eye: '매출', title: `이번 달 결제 <em>${won0(ok)}</em>`, sub: rf ? `환불 ${rf}건이 있습니다. 결제 목록에서 사유를 확인하세요.` : '이번 달 환불은 없습니다. 결제 수수료는 PG사 수수료만 부과됩니다.' };
+    return { eye: '매출', title: `이번 달 결제 <em>${won0(ok)}</em>`, sub: rf ? `환불 ${rf}건이 있습니다. 결제 목록에서 사유를 확인하세요.` : '이번 달 환불은 없습니다. 결제 수수료는 PG사 수수료만 부과됩니다.',
+      /* v43 Q1: 숫자형(N) — 결제 완료율 링 + 건수 · 객단가 · 환불 */
+      stats: (() => { const dn = m.filter(p => /완료/.test(p.status || '')).length; return [[(m.length ? Math.round(dn / m.length * 100) : 0) + '%', '결제 완료율'], [m.length + '건', '이번 달 결제'], [won0(dn ? Math.round(ok / dn) : 0), '평균 결제액'], [rf + '건', '환불', rf ? 'warn' : '']]; })() };
   } });
   R('billing', { art: 'doc', brief: main => {
     if (empty(main)) return null; const B = A('bills'); if (!B.length) return null; const un = B.filter(b => b.status === '미납'); const late = un.filter(b => b.due && b.due < today()).length;

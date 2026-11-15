@@ -29,13 +29,40 @@
   const chip = (t, tone) => `<span class="l43-chip ${tone || ''}">${E(t)}</span>`;
   const DOW = ['일', '월', '화', '수', '목', '금', '토'];
   const todayLabel = () => { const d = new Date(); return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일(${DOW[d.getDay()]})`; };
+  /* v43 Q1 — 요약 카드 4종(화면 성격에 따라 모양을 바꿈)
+   *   hero  짙은 그린 메시 + 큰 문장 + 유리 숫자 칸(돈 · 위험 · 마감처럼 결정이 급한 화면)
+   *   kpi   한 문장 + KPI 4칸(스파크라인 · 증감)(목록 · 현황 화면)
+   *   photo 실사진 + 한 문장 + 숫자(공간 · 콘텐츠 · 홈페이지 · 상세 화면) — o.photo: 사진 낱말, o.img: 주소 직접
+   *   list  한 문장 + 할 일 3줄(처리 대기가 있는 화면) — o.todo: [[제목, 보조, tone]]
+   * 고르는 순서: o.kind → L43.reg(tab, {kind}) → KIND 배정표(DIRECTION.md) → 자동(todo 있으면 list, 숫자 3개 이상이면 kpi, 아니면 hero) */
+  /* 배정표: DIRECTION.md §9 「카드」 열(H 짙은 히어로 · N 숫자형 · P 사진형 · L 목록형) + 견본 6장 */
+  const KIND = (() => { const o = {}; const T = { H: 'hero', N: 'kpi', P: 'photo', L: 'list' };
+    'assess:L attend:N cert:P badge:P book:P library:N academic:L lifelong:L hrd:N groups:P parents:N admins:L message:L community:L consult:N billing:N org:P diag:H board:L enroll:L tutorial:P dbook:P conn:N sis:N aigov:N rfpmap:N cpl:H crmstu:L crmatt:N crmex:N crmcs:L crmbill:H crmstat:N lmsa:N lmsb:L lmsc:H lmsd:L lmse:L lmsf:N lmsi:P lmsk:N lmsl-dm:L lmsl-noti:L lmsm:N lmsn:P lmso:L lmsp:L lmsp-app:N lmsq:P lmslive:H lmsv:P clib:P settings:L ledger:N fac:P home:H class:P members:L sales:N lmsj:N dash:N mileage:N compliance:H crmcal:L'
+      .split(' ').forEach(x => { const [k, v] = x.split(':'); o[k] = T[v]; }); return o; })();
+  const PHOTOKW = { fac: '강의실 스터디룸', clib: '노트북 온라인', lib: '도서 책', book: '도서 책', books: '도서 책', dbook: '도서 책', site: '캠퍼스', cert: '책상 공부', badge: '세미나 모임', live: '세미나 강의', cls: '강의실' };
+  /* 스파크라인 — 실제 시계열(o.stats[i][3])이 있으면 그것을, 없으면 값에서 만든 시연용 추세(빈 기관은 그리지 않음) */
+  const sparkPts = (v, seed) => { const n = parseFloat(String(v).replace(/[^\d.-]/g, '')) || 0; if (!n) return null; const r = (k => () => { k = (k * 1103515245 + 12345) >>> 0; return (k >>> 8) / 16777216; })(hash(seed) || 7); const out = []; let x = n * (.62 + r() * .18); for (let i = 0; i < 11; i++) { out.push(x); x += (n - x) / (11 - i) + (r() - .45) * n * .06; } out.push(n); return out; };
+  const spark = (d, tone) => { if (!d || d.length < 2) return ''; const mn = Math.min(...d), mx = Math.max(...d), W2 = 96, H2 = 32, rg = mx - mn || 1; const P = d.map((v, i) => [i / (d.length - 1) * W2, H2 - 3 - (v - mn) / rg * (H2 - 8)]); const ln = P.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' '); const id = 'l43s' + (hash(d.join()) % 1e6);
+    return `<svg class="l43-spk ${tone || ''}" viewBox="0 0 ${W2} ${H2}" width="${W2}" height="${H2}" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-opacity=".28" style="stop-color:currentColor"/><stop offset="1" stop-opacity="0" style="stop-color:currentColor"/></linearGradient></defs><path d="${ln} L${W2} ${H2} L0 ${H2}Z" fill="url(#${id})"/><path d="${ln}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${P[P.length - 1][0].toFixed(1)}" cy="${P[P.length - 1][1].toFixed(1)}" r="3" fill="currentColor"/></svg>`; };
+  const eyeHTML = o => `<p class="l43-eye"><span class="l43-ai" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor"/></svg>AI</span>${E(o.eye || '오늘 브리핑')} · ${E(todayLabel())}</p>`;
+  const demo = () => { try { return !(W.S && S.org && S.org.empty); } catch (e) { return true; } };
   function brief(o) {
     if (!o) return '';
-    const st = (o.stats || []).filter(Boolean);
-    return `<section class="l43-brief" aria-label="화면 브리핑"><div class="l43-bl"><p class="l43-eye"><span class="l43-ai" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor"/></svg>AI</span>${E(o.eye || '오늘 브리핑')} · ${E(todayLabel())}</p>
-      <h2 class="l43-hl">${o.title}</h2>${o.sub ? `<p class="l43-sub">${o.sub}</p>` : ''}</div>
-      ${st.length ? `<dl class="l43-stats">${st.map(([v, l, t]) => `<div class="l43-st ${t || ''}"><dt>${E(l)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl>` : ''}</section>`;
+    const st = (o.stats || []).filter(Boolean); const tab = (typeof CUR !== "undefined" && (CUR.ws === 'settings' ? 'settings' : CUR.tab)) || '';
+    let k = o.kind || (REG[tab] && REG[tab].kind) || KIND[tab] || (o.todo ? 'list' : st.length >= 3 ? 'kpi' : 'hero');
+    if (k === 'list' && !(o.todo && o.todo.length) && !st.length) k = 'hero';
+    const head = `<div class="l43-bl">${eyeHTML(o)}<h2 class="l43-hl">${o.title}</h2>${o.sub ? `<p class="l43-sub">${o.sub}</p>` : ''}${o.foot || ''}</div>`;
+    if (k === 'hero') return `<section class="l43-brief l43-k-hero" aria-label="화면 브리핑">${head}${st.length ? `<dl class="l43-gl">${st.slice(0, 4).map(([v, l, t, sp]) => `<div class="l43-g ${t || ''}"><dt>${E(l)}</dt><dd>${E(v)}</dd>${spark(sp || (demo() ? sparkPts(v, l + v) : null), 'on')}</div>`).join('')}</dl>` : ''}</section>`;
+    if (k === 'photo') { const kw = o.photo || PHOTOKW[tab] || (W.S && S.org ? S.org.name : '교실'); const U = [].concat(o.imgs || o.img || []).filter(Boolean); while (U.length < 3) { const u = V4photo(kw, 'brief-' + tab + U.length, { slot: U.length ? 'card' : 'hero', size: U.length ? '' : 'lg' }); if (!u) break; U.push(u); }
+      return `<section class="l43-brief l43-k-photo" aria-label="화면 브리핑"><div class="l43-pbody">${head}${st.length ? `<dl class="l43-stats">${st.slice(0, 3).map(([v, l, t]) => `<div class="l43-st ${t || ''}"><dt>${E(l)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl>` : ''}</div>${U.length ? `<div class="l43-pst n${U.length}" role="img" aria-label="${E(o.alt || '분위기 사진')}">${U.slice(0, 3).map((u, i) => `<span class="l43-pimg p${i}" style="background-image:url('${E(u)}')"></span>`).join('')}</div>` : ''}</section>`; }
+    if (k === 'list') { const T = (o.todo && o.todo.length ? o.todo : st.map(([v, l, t]) => [`${l} ${v}`, t === 'warn' ? '먼저 처리할 항목' : '현재 상태', t])).slice(0, 3);
+      return `<section class="l43-brief l43-k-list" aria-label="화면 브리핑">${head}<ol class="l43-todo" aria-label="할 일">${T.map(([a, b, t], i) => `<li class="${t || ''}"><span class="l43-tn">${t === 'warn' ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 8v5M12 16.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>' : t === 'ok' ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 12.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : i + 1}</span><span class="l43-tt"><b>${E(a)}</b>${b ? `<small>${E(b)}</small>` : ''}</span>${t === 'warn' ? '<span class="l43-chip warn">처리 필요</span>' : t === 'ok' ? '<span class="l43-chip ok">정상</span>' : '<span class="l43-chip">확인</span>'}</li>`).join('')}</ol></section>`; }
+    /* kpi(N): 왼쪽 헤드라인 · 오른쪽 링 1개 + KPI 3칸(스파크라인) */
+    let ri = o.ring ? -1 : st.findIndex(x => /%$/.test(String(x[0]).trim())); const rg = o.ring || (ri >= 0 ? [parseFloat(st[ri][0]), st[ri][1], st[ri][2]] : null); const K = st.filter((x, i) => i !== ri).slice(0, rg ? 3 : 4);
+    const ring = rg ? (() => { const v = Math.max(0, Math.min(100, +rg[0] || 0)), R = 42, C = 2 * Math.PI * R; return `<div class="l43-ring ${rg[2] || ''}" role="img" aria-label="${E(rg[1])} ${num(v)}%"><svg viewBox="0 0 100 100" width="112" height="112" aria-hidden="true"><circle cx="50" cy="50" r="${R}" class="tr"/><circle cx="50" cy="50" r="${R}" class="fg" stroke-dasharray="${(C * v / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/></svg><b>${num(v)}<small>%</small></b><span>${E(rg[1])}</span></div>`; })() : '';
+    return `<section class="l43-brief l43-k-kpi${rg ? ' hasring' : ''}" aria-label="화면 브리핑">${head}${st.length ? `<div class="l43-kr">${ring}<dl class="l43-kp n${K.length}">${K.map(([v, l, t, sp], i) => `<div class="l43-kc ${t || ''}"><dt>${E(l)}</dt><dd>${E(v)}</dd>${spark(sp || (demo() ? sparkPts(v, l + v + i) : null), t === 'warn' ? 'co' : '')}</div>`).join('')}</dl></div>` : ''}</section>`;
   }
+  const V4photo = (k, s, o) => { try { return W.V4 && V4.photo ? V4.photo(k, s, o) : (W.HPSTOCK && HPSTOCK.photo ? HPSTOCK.photo(k, s, o) : ''); } catch (e) { return ''; } };
   /* 빈 상태 일러스트(160×120, 그린 톤 · 토큰 색이라 다크 자동) */
   const ART = {
     list: '<rect x="30" y="22" width="100" height="78" rx="12" class="a3"/><rect x="42" y="36" width="22" height="16" rx="4" class="a1"/><rect x="70" y="38" width="46" height="5" rx="2.5" class="a4"/><rect x="70" y="47" width="30" height="4" rx="2" class="a5"/><rect x="42" y="62" width="22" height="16" rx="4" class="a1"/><rect x="70" y="64" width="46" height="5" rx="2.5" class="a4"/><rect x="70" y="73" width="24" height="4" rx="2" class="a5"/><circle cx="124" cy="94" r="16" class="a2"/><path d="M116 94h16M124 86v16" class="a6"/>',
@@ -56,9 +83,8 @@
     const q = o.q ? `<label class="l43-q"><span class="sr">검색</span><input type="search" placeholder="${E(o.q.ph || '검색')}" value="${E(o.q.val || '')}" data-chg="${E(o.q.act)}"></label>` : '';
     return `<div class="l43-fbar">${ch ? `<div class="l43-fcs" role="tablist">${ch}</div>` : ''}${q}<span class="sp"></span>${o.right || ''}</div>`;
   }
-  function photo(words, seed) {
-    try { if (!W.HPSTOCK) return ''; const L4 = HPSTOCK.pick([].concat(words || []).filter(Boolean), 4, String(seed || words)); const it = L4[hash(seed || words) % Math.max(1, L4.length)]; return it ? HPSTOCK.url(it, 'sm') : ''; } catch (e) { return ''; }
-  }
+  /* v43 Q1: V4.photo(HPSTOCK.photo)로 통일 — 같은 화면 중복 없음 */
+  function photo(words, seed) { try { if (W.V4 && V4.photo) return V4.photo([].concat(words || []).join(' '), String(seed || words)); } catch (e) { } return ''; }
   /* 과정 이름 → 사진 고르기용 단어(hpstock 분류 키워드와 맞춤) */
   const KW = [[/스마트폰|디지털|컴퓨터|엑셀|데이터|AI|코딩|IT|파이썬|프로그래밍/i, 'IT'], [/바리스타|커피|제과|요리|조리/, '요리'], [/인문|독서|문학|역사|철학|국어/, '독서'], [/복지|요양|돌봄|간호|보건/, '돌봄'], [/창업|경영|마케팅|회계|재무/, '경영'], [/영어|일본어|중국어|어학|회화/, '외국어'], [/수학|과학/, '수학'], [/미술|디자인|드로잉/, '미술'], [/음악|피아노|노래/, '음악'], [/안전|성희롱|개인정보|장애인|법정/, '사무'], [/운동|요가|체육|수영/, '운동']];
   const wordsOf = name => { const w = KW.filter(([re]) => re.test(name || '')).map(x => x[1]); return w.length ? w : ['교실']; };
@@ -103,7 +129,29 @@
       if (e.querySelector('button,a,input,select')) e.insertAdjacentHTML('afterbegin', art); else e.innerHTML = `${art}<p>${E(t)}</p>`; });
     main.classList.toggle('l43-none', !!main.querySelector('.slg-empty'));
   }
+  /* v43 Q1 — 모든 관리자 화면 공통(등록 여부와 무관, 글자 · data-act를 바꾸지 않음)
+   * 1) 페이지 머리: 제목 + 한 줄 설명(slgGuide.d) + 오른쪽 주 버튼(.bview 첫 .ph 도구줄을 머리 오른쪽으로 옮김)
+   * 2) 표: 숫자 열 오른쪽 정렬 · tabular(l43-r), 짧은 칸 줄바꿈 금지(l43-nw) */
+  function pageHead(main, tab) {
+    const bhd = main.querySelector(':scope > .bhd'); if (!bhd) return; bhd.classList.add('q1-ph');
+    const bl = bhd.querySelector('.bhdl') || bhd;
+    if (!bhd.dataset.q1 && !main.querySelector(':scope > p, :scope > .bview > p.mini:first-child, .q1-desc, .uxdesc, .lmsnav-d')) { bhd.dataset.q1 = 1; let d = ''; try { const g = W.slgGuide && slgGuide(tab); d = g && g.d ? String(g.d) : ''; } catch (e) { }
+      if (d && !/^(?:\s*)$/.test(d)) bl.insertAdjacentHTML('beforeend', `<p class="q1-desc">${E(d)}</p>`); }
+    const bv = main.querySelector(':scope > .bview'); if (!bv) return;
+    const ph = [...bv.children].slice(0, 4).find(x => x.classList.contains('ph') && !x.querySelector('h1, h2, h3, input, select') && x.querySelector('.phr .btn, .phr button'));
+    if (ph) { ph.classList.add('q1-phmv'); bhd.appendChild(ph); }
+  }
+  const NUMRE = /^[-+▲▼]?\s?[\d,.]+\s*(원|명|건|개|회|점|P|p|분|시간|일|%|장|권)?$/;
+  function tableNums(main) {
+    main.querySelectorAll('.tw table:not([data-q1])').forEach(tbl => { tbl.dataset.q1 = 1; const hr = tbl.tHead && tbl.tHead.rows[0]; const B = tbl.tBodies[0]; if (!hr || !B || !B.rows.length) return;
+      const n = hr.cells.length; const R = [...B.rows].filter(r => r.cells.length === n).slice(0, 60); if (!R.length) return;
+      for (let i = 0; i < n; i++) { let num = 0, tot = 0; R.forEach(r => { const c = r.cells[i]; if (c.querySelector('.l43-pg,button,input,select')) return; const t = c.textContent.trim(); if (!t || t === '—' || t === '-') return; tot++; if (NUMRE.test(t)) num++; });
+        if (tot && num / tot >= .7) { hr.cells[i].classList.add('l43-r'); R.forEach(r => r.cells[i].classList.add('l43-r')); } }
+      [...B.rows].forEach(r => [...r.cells].forEach(c => { const t = c.textContent.trim(); if (t && t.length <= 24 && !c.querySelector('button.btn, textarea')) c.classList.add('l43-nw'); }));
+    });
+  }
   function run() {
+    { const m0 = document.getElementById('main'); if (m0 && W.S && S.org && typeof CUR !== "undefined") { const tb = CUR.ws === 'settings' ? 'settings' : CUR.tab; try { pageHead(m0, tb); } catch (e) { console.error(e); } try { tableNums(m0); } catch (e) { console.error(e); } } }
     const main = document.getElementById('main'); if (!main || !W.S || !S.org) return;
     const tab = CUR.ws === 'settings' ? 'settings' : CUR.tab; const R = REG[tab];
     main.classList.toggle('l43', !!R); if (!R) return; main.dataset.l43 = tab;
@@ -112,9 +160,15 @@
     try { if (R.enhance) R.enhance(main); } catch (e) { console.error(e); }
     try { enhanceEmpty(main, tab); } catch (e) { console.error(e); }
   }
+  /* v43 Q1 보조 열(DIRECTION §1-1): side(main, target, cardsHTML) — target(주 콘텐츠)을 .q1-2col로 감싸고 오른쪽 340px 보조 열을 붙인다.
+     aside 카드: L43.acard({ t, items:[[글, tone, 이동할 요소 id]], p, ai:true }) — 이동은 data-q1to(스크롤), data-act는 쓰지 않음 */
+  const acard = o => `<section class="q1-ac${o.ai ? ' ai' : ''}">${o.t ? `<h3>${o.ai ? '<span class="l43-ai" aria-hidden="true">AI</span>' : ''}${E(o.t)}</h3>` : ''}${o.items ? `<ul>${o.items.map(([x, t, to]) => `<li>${to ? `<a href="#${E(to)}" data-q1to="${E(to)}"><i class="${t || ''}"></i>${E(x)}</a>` : `<span><i class="${t || ''}"></i>${E(x)}</span>`}</li>`).join('')}</ul>` : ''}${o.p ? `<p>${o.p}</p>` : ''}</section>`;
+  function side(main, target, cards) { if (!target || target.closest('.q1-2col')) return; const w = document.createElement('div'); w.className = 'q1-2col'; target.parentNode.insertBefore(w, target); w.appendChild(target); w.insertAdjacentHTML('beforeend', `<aside class="q1-aside" aria-label="보조 정보">${cards}</aside>`); }
+  document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('[data-q1to]'); if (!a) return; e.preventDefault(); const t = document.getElementById(a.dataset.q1to); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   const reg = (tab, o) => { REG[tab] = o || {}; if (o && o.art) ARTOF[tab] = o.art; };
+  const kindOf = tab => (REG[tab] && REG[tab].kind) || KIND[tab] || '';
   if (typeof AFTER !== 'undefined') AFTER.push(() => { run(); setTimeout(run, 0); });
-  W.L43 = { brief, av, prog, chip, empty, bulk, fbar, photo, wordsOf, reg, run, artSvg, REG };
+  W.L43 = { brief, side, acard, spark, sparkPts, KIND, kindOf, av, prog, chip, empty, bulk, fbar, photo, wordsOf, reg, run, artSvg, REG };
 
   /* ═════════ 대표 화면 등록(D2) ═════════ */
   const L = k => { try { return t(k); } catch (e) { return k; } };
@@ -127,9 +181,11 @@
   /* 1. 과정 목록 · 상세 */
   reg('class', {
     brief: () => {
+      if (UI.cls && S.classes.some(x => x.id === UI.cls)) { const c = S.classes.find(x => x.id === UI.cls), n = (c.learners || []).length; let dn = 0; try { dn = doneN(c); } catch (e) { dn = (c.learners || []).filter(id => +((c.prog || {})[id] || {}).p >= 100).length; } const a = cp(c);
+        return { kind: 'photo', eye: c.status || L('cls'), img: c.thumb && !/^data:image\/svg/.test(c.thumb) ? c.thumb : photo(wordsOf(c.name), c.id + c.name), title: `${E(c.name)} — ${E(L('learner'))} ${n}명 가운데 <em>${dn}명 수료</em>`, sub: a < 50 ? `평균 진도 ${pct(a)}입니다. 진도 30% 미만 수강생에게 독려 메시지를 먼저 보내세요.` : `평균 진도 ${pct(a)}로 순조롭게 진행 중입니다.`, stats: [[n + '명', '수강 인원'], [pct(a), '평균 진도'], [dn + '명', '수료']] }; }
       if (UI.cls || UI.clsView === 'cats' || !S.classes.length) return null;
       const C = S.classes, run = C.filter(c => c.status === '운영중').length, N = C.reduce((a, c) => a + (c.learners || []).length, 0), A = avgOf(C.map(cp)), low = C.filter(c => (c.learners || []).length && cp(c) < 30).length;
-      return { title: `운영 중인 ${E(L('cls'))} <em>${run}개</em>, ${E(L('learner'))} ${N}명이 평균 ${pct(A)}까지 왔습니다`, sub: low ? `평균 진도 30% 미만 ${E(L('cls'))} ${low}개는 독려 메시지를 먼저 보내는 것이 좋습니다.` : `모든 ${E(L('cls'))}의 평균 진도가 30% 이상입니다.`, stats: [[C.length + '개', '전체 ' + L('cls')], [N + '명', L('learner')], [pct(A), '평균 진도'], [low + '개', '30% 미만', low ? 'warn' : '']] };
+      return { imgs: C.slice(0, 3).map(c => c.thumb && !/^data:image\/svg/.test(c.thumb) ? c.thumb : photo(wordsOf(c.name), c.id + c.name)), title: `운영 중인 ${E(L('cls'))} <em>${run}개</em>, ${E(L('learner'))} ${N}명이 평균 ${pct(A)}까지 왔습니다`, sub: low ? `평균 진도 30% 미만 ${E(L('cls'))} ${low}개는 독려 메시지를 먼저 보내는 것이 좋습니다.` : `모든 ${E(L('cls'))}의 평균 진도가 30% 이상입니다.`, stats: [[C.length + '개', '전체 ' + L('cls')], [N + '명', L('learner')], [pct(A), '평균 진도'], [low + '개', '30% 미만', low ? 'warn' : '']] };
     },
     enhance: main => {
       main.querySelectorAll('.d26-cc:not([data-l43])').forEach(card => {
@@ -142,7 +198,7 @@
       main.querySelectorAll('.c2nm .c2th0').forEach(s => { const a = s.closest('.c2nm'); const c = a && C(a.dataset.v); const u = c && photo(wordsOf(c.name), c.id + c.name); if (u) s.outerHTML = `<img class="c2th sm" src="${E(u)}" alt="">`; });
       /* 상세: 머리에 대표 사진 */
       if (UI.cls) { const c = C(UI.cls); const h2 = c && [...main.querySelectorAll('h1,h2')].find(h => h.firstChild && String(h.firstChild.textContent || '').trim() === c.name);
-        if (h2 && !main.querySelector('.l43-dthumb')) { const u = c.thumb || photo(wordsOf(c.name), c.id + c.name); h2.classList.add('l43-dh2'); if (u) h2.insertAdjacentHTML('afterbegin', `<img class="l43-dthumb" src="${E(u)}" alt="">`); } }
+        if (h2 && !main.querySelector('.l43-dthumb') && !main.querySelector('.l43-k-photo')) { const u = c.thumb || photo(wordsOf(c.name), c.id + c.name); h2.classList.add('l43-dh2'); if (u) h2.insertAdjacentHTML('afterbegin', `<img class="l43-dthumb" src="${E(u)}" alt="">`); } }
     }
   });
 
@@ -152,7 +208,8 @@
       if (UI.mem || !S.members.length) return null; const M0 = S.members, wait = M0.filter(m => m.grade === '승인 대기').length;
       const lim = (() => { try { return addDays(today(), -30); } catch (e) { return ''; } })(); const away = M0.filter(m => m.last && lim && m.last <= lim).length;
       const A = avgOf(M0.map(m => memAvg(m.id))); const low = M0.filter(m => S.classes.some(c => (c.learners || []).includes(m.id)) && memAvg(m.id) < 30).length;
-      return { title: `${E(L('learner'))} <em>${M0.length}명</em> 가운데 ${low}명이 진도 30%에 못 미칩니다`, sub: `${wait ? `가입 승인 대기 ${wait}명을 먼저 처리하세요. ` : ''}${away ? `30일 넘게 접속하지 않은 ${away}명에게는 독려 메시지를 권합니다.` : '모두 최근 30일 안에 접속했습니다.'}`, stats: [[M0.length + '명', '전체'], [wait + '명', '승인 대기', wait ? 'warn' : ''], [pct(A), '평균 진도'], [low + '명', '30% 미만', low ? 'warn' : '']] };
+      return { title: `${E(L('learner'))} <em>${M0.length}명</em> 가운데 ${low}명이 진도 30%에 못 미칩니다`, sub: `${wait ? `가입 승인 대기 ${wait}명을 먼저 처리하세요. ` : ''}${away ? `30일 넘게 접속하지 않은 ${away}명에게는 독려 메시지를 권합니다.` : '모두 최근 30일 안에 접속했습니다.'}`, stats: [[M0.length + '명', '전체'], [wait + '명', '승인 대기', wait ? 'warn' : ''], [pct(A), '평균 진도'], [low + '명', '30% 미만', low ? 'warn' : '']],
+        todo: [[`가입 승인 대기 ${wait}명`, wait ? '승인 전에는 홈페이지를 이용할 수 없습니다' : '대기 중인 가입 신청이 없습니다', wait ? 'warn' : 'ok'], [`진도 30% 미만 ${low}명`, '독려 메시지 초안을 AI SAM이 준비해 두었습니다', low ? 'warn' : 'ok'], [`30일 넘게 미접속 ${away}명`, away ? '알림톡 · 문자로 다시 안내하세요' : '모두 최근 30일 안에 접속했습니다', away ? 'warn' : 'ok']] };
     },
     enhance: main => {
       if (UI.mem) return; const tbl = main.querySelector('.tw table'); if (!tbl || tbl.dataset.l43m) return; tbl.dataset.l43m = 1;
@@ -178,8 +235,13 @@
     brief: () => {
       if (UI.settings) return null; let onM = 0; try { onM = Object.values(S.nav.tabs).flat().filter(x => x.on && MENU[x.id]).length; } catch (e) { }
       const adm = (S.admins || []).length, au = (S.autos || []).filter(a => a.on).length;
-      return { eye: '운영 설정', title: `켜진 메뉴 <em>${onM}개</em>로 스튜디오를 운영하고 있습니다`, sub: '메뉴 · 사용자 · 알림 · 외부 연결을 여기서 바꿉니다. 바꾼 내용은 바로 저장됩니다.', stats: [[onM + '개', '켜진 메뉴'], [adm + '명', '운영자'], [au + '개', '자동 운영']] };
-    }
+      return { eye: '운영 설정', title: `켜진 메뉴 <em>${onM}개</em>로 스튜디오를 운영하고 있습니다`, sub: '메뉴 · 사용자 · 알림 · 외부 연결을 여기서 바꿉니다. 바꾼 내용은 바로 저장됩니다.', stats: [[onM + '개', '켜진 메뉴'], [adm + '명', '운영자'], [au + '개', '자동 운영']],
+        todo: (() => { const st = S.settings || {}; const pg = st.pg && st.pg !== 'none'; const tos = st.terms && st.terms.tos; return [[`결제 연결 ${pg ? '사용 중' : '미연결'}`, pg ? '수강료 결제를 받을 수 있습니다' : '외부 연결에서 PG를 고르면 결제를 받을 수 있습니다', pg ? 'ok' : 'warn'], [`이용약관 · 개인정보 처리방침 ${tos ? '등록됨' : '미등록'}`, tos ? '홈페이지 아래에 노출됩니다' : '기본 문안으로 바로 등록할 수 있습니다', tos ? 'ok' : 'warn'], [`자동 운영 ${au}개 켜짐`, `운영자 ${adm}명 · 켜진 메뉴 ${onM}개`, 'ok']]; })() };
+    },
+    enhance: main => { if (UI.settings) return; const pg = main.querySelector('.sx-page'); if (!pg) return; pg.classList.add('q1-wide');
+      const toc = [...pg.querySelectorAll('.sx-card[id]')].map(c => [((c.querySelector('h2,h3,b') || {}).textContent || c.id).trim().slice(0, 18), '', c.id]);
+      const st = S.settings || {}; const tips = []; if (!(st.terms && st.terms.tos)) tips.push('이용약관 · 개인정보 처리방침을 기본 문안으로 등록하세요'); if (!st.pg || st.pg === 'none') tips.push('결제 연결(PG)을 고르면 수강료 결제를 받을 수 있습니다'); if (/^org-/.test(S.org.domain || '')) tips.push('홈페이지 주소를 영문 도메인으로 바꾸세요');
+      side(main, pg, acard({ t: '설정 목차', items: toc }) + acard({ ai: true, t: 'AI SAM 제안', p: tips.length ? tips.map(E).join('<br>') : '필수 설정을 모두 마쳤습니다. 자동 운영 규칙을 하나 더 켜 보세요.' })); }
   });
 
   /* 5. 기관 유형 전용 */
