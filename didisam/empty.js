@@ -13,6 +13,14 @@ function emptyOut() {
   S.admins = (S.admins || []).filter(a => a.role === 'owner').map(a => ({ ...a, classes: [] }));
   S.org.empty = today(); S.chat = []; S.guides = { done: {}, fin: {} };
   if (S.lsite && Array.isArray(S.lsite.dbooks)) S.lsite.dbooks = []; /* v38 A-8: 샘플 과정으로 만든 디지털북 3권도 비운다 */
+  /* v43 E1: 통합 수납 원장(ledger.js) · 시설(fac.js) · 마일리지(mil.js · milrw.js) 시연 데이터도 비운다.
+     원장은 units를 빈 배열로 두면 ensure()가 기관 이름으로 본부 1개만 다시 만든다(시연 seedDemo는 units가 배열이 아닐 때만 실행).
+     시설은 facilities가 배열이면 다시 채우지 않으므로 템플릿 시설 · 이용권 · 예약 기록을 모두 비우고 설정(키오스크 · 보관 기간)만 남긴다.
+     마일리지 보상(milrw)은 지우면 ensure()가 다시 만들되, 회원이 없으므로 권장 보상 목록만 두고 신청 예시는 만들지 않는다. */
+  if (S.ledger && Array.isArray(S.ledger.units)) ['units', 'charges', 'receipts', 'allocs', 'refunds', 'closes', 'links', 'imports', 'devices', 'notes'].forEach(k => { S.ledger[k] = []; });
+  if (S.fac && Array.isArray(S.fac.facilities)) { S.fac.facilities = []; S.fac.products = []; S.fac.roster = []; S.fac.demo = { bookings: [], passes: [], rentals: [], checkins: [], pays: [], refunds: [], log: [], bans: {}, notes: [], hist: {}, noshowCnt: {} }; }
+  if (S.mileage) { S.mileage.entries = []; S.mileage.log = []; S.mileage.funded = {}; }
+  delete S.milrw; if (typeof UI !== 'undefined') delete UI.milEv;
   delete S.bld; bInit();
   S.chat = [{ role: 'ai', text: `안녕하세요, AI SAM입니다.\n${S.org.name} 스튜디오가 비어 있는 상태로 준비되었습니다. 위의 '시작 가이드'를 따라 하나씩 채우겠습니다.\n말로 지시하셔도 됩니다. 예: "임직원 대상 AI 교육과정 3개 만들어줘", "연습용 학습자 30명 등록해줘".` }];
   S.audit = (S.audit || []).filter(a => !/^표준 문서 생성/.test(String(a && a.what || ''))); /* v38 비운 샘플 문서의 생성 기록도 남기지 않는다 */

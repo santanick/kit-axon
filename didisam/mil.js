@@ -171,7 +171,7 @@
 
   /* ── 시연 데이터: 지난 30일 학습 사건(모의 계산 재료, 개인정보 없음) ── */
   function rng(seed) { let s = seed; return () => (s = (s * 9301 + 49297) % 233280) / 233280; }
-  function demoEvents(days = 30) { const r = rng(42 + (S.org.type || '').length); const td = today(); const M = (S.members || []).length ? S.members.slice(0, 48) : Array.from({ length: 40 }, (_, i) => ({ sid: String(7100000 + i * 17 + 10) })); /* 빈 스튜디오: 학습자 번호만 있는 시연 학습자 40명 */ const C = (S.classes || []).map(c => c.id); const ev = []; let k = 0;
+  function demoEvents(days = 30) { if (S.org && S.org.empty && !(S.members || []).length) return []; /* v43 E1: 빈 스튜디오(emptyOut)는 시연 학습 사건도 만들지 않는다 */ const r = rng(42 + (S.org.type || '').length); const td = today(); const M = (S.members || []).length ? S.members.slice(0, 48) : Array.from({ length: 40 }, (_, i) => ({ sid: String(7100000 + i * 17 + 10) })); /* 빈 스튜디오: 학습자 번호만 있는 시연 학습자 40명 */ const C = (S.classes || []).map(c => c.id); const ev = []; let k = 0;
     const push = (sid, trigger, o = {}) => ev.push({ id: 'ev' + (++k), sid, trigger, srcType: o.st || 'x', srcId: o.src || ('s' + k), value: o.v, prev: o.prev, target: o.target, diag: o.diag, required: o.req, clsId: o.cls || C[Math.floor(r() * C.length)] || null, trust: o.tr || 'A', at: addD(td, -Math.floor(r() * days)) });
     M.forEach((m, i) => { if (r() < 0.25) return; const sid = String(m.sid || m.id || ('m' + i)); const act = 0.4 + r();
       for (let j = 0, L = Math.floor(18 * act); j < L; j++) push(sid, 'lesson_done', { src: 'l' + i + '_' + j, tr: r() < 0.7 ? 'A' : 'C', v: 30 + Math.floor(r() * 50) });

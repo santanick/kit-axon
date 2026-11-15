@@ -53,7 +53,6 @@ th.l43-sort:hover,th.l43-sort:focus-visible{color:var(--g900)}
 .l43-nc{white-space:nowrap}.l43-nc>.l43-av{margin-right:10px}
 .l43-nw{white-space:nowrap}
 .l43-nc :is(small,span:not(.l43-av),em){color:var(--g600);font-weight:500}
-#main.l43 .uxdots>summary{background:var(--surface2);color:var(--g800);border-color:var(--g300)}
 .l43-mute{color:var(--g600);font-size:13px}
 
 /* 아바타(L43.av) — 이름으로 6색 고정 */
