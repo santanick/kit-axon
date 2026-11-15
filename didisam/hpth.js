@@ -342,7 +342,7 @@ ${th.lux ? `.hp-hero h1{font-weight:700;letter-spacing:-.025em}.hp-ey{letter-spa
   }
   /* 미리보기 · 게시본에 CSS 넣기 */
   { const base = siteHTML; siteHTML = (s, full, lang) => { const h = base(s, full, lang); const th = thOf(s); if (!th) return h;
-    try { return h.replace('</style>', css(s) + `header.gh .hr .l,header.gh .logo i{background:${tok(s, th).a};color:${tok(s, th).on}}</style>`).replace(/<body class="([^"]*)"/, `<body class="$1 hpt-on hpt-${s.theme}"`); } catch (e) { console.error('hpth css', e); return h; } }; window.siteHTML = siteHTML; }
+    try { return h.replace('</style>', css1(s) + `header.gh .hr .l,header.gh .logo i{background:${tok(s, th).a};color:${tok(s, th).on}}</style>`).replace(/<body class="([^"]*)"/, `<body class="$1 hpt-on hpt-${s.theme}"`); } catch (e) { console.error('hpth css', e); return h; } }; window.siteHTML = siteHTML; }
 
   /* ── 섹션 보강(규칙 설계 · AI 설계 공통, 여러 번 불러도 같은 결과) ── */
   const S2x = (type, data) => (typeof S2 === 'function' ? S2(type, data) : { id: uid('s'), type, data });
@@ -380,9 +380,16 @@ ${th.lux ? `.hp-hero h1{font-weight:700;letter-spacing:-.025em}.hp-ey{letter-spa
     const secs = (base.sections || []).filter(x => !x.hide); const hero0 = secs.find(x => x.type === 'banner') || { type: 'banner', data: { eyebrow: 'WELCOME', title: S.org.name, sub: '', cta: `${t('cls')} 둘러보기` } };
     const rest = secs.filter(x => x !== hero0 && x.type === 'text' && x.data && ['features', 'steps'].includes(x.data.variant)).slice(0, 1);
     band = 0; const body = [hero(hero0.data || {}, base, th, T), ...rest.map(x => textSec(x.data, base, th, T, true, x) || '')].join('');
-    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=1280"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' ${(typeof location!=='undefined'&&/^https?:/.test(location.origin))?location.origin:''} data: blob:; style-src 'unsafe-inline'"><style>body{margin:0;background:${th.bg}}${css(base)}</style></head><body>${body}</body></html>`; }
-  const list = IDS.map(id => ({ id, name: TH[id].name, desc: TH[id].desc, swatch: [TH[id].acc, TH[id].hero === 'dark' ? TH[id].hb : TH[id].bg === '#FFFFFF' ? TH[id].alt : TH[id].bg, TH[id].sw2] }));
-  window.HPT = { list, apply, thumb, pick, rec: k => TYPE_TH[k] || 'clean', enrich, facts, css, audit, reviews: () => realReviews(), tokens: s => thOf(s) ? tok(s, thOf(s)) : null, has: id => !!TH[id] };
+    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=1280"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' ${(typeof location!=='undefined'&&/^https?:/.test(location.origin))?location.origin:''} data: blob:; style-src 'unsafe-inline'"><style>body{margin:0;background:${th.bg}}${css1(base)}</style></head><body>${body}</body></html>`; }
+  const entry = id => ({ id, name: TH[id].name, desc: TH[id].desc, swatch: [TH[id].acc, TH[id].hero === 'dark' ? TH[id].hb : TH[id].bg === '#FFFFFF' ? TH[id].alt : TH[id].bg, TH[id].sw2], ...(TH[id].prem ? { prem: 1, tags: (TH[id].tags || []).slice(), tone: TH[id].tone || 'light' } : {}) });
+  const list = IDS.map(entry);
+  /* v43 T1: 프리미엄 테마 등록(hpprem.js). def = 기존 테마 형식 + { prem: 1, tags[기관 유형], tone: 'light'|'dark', base(기존 테마 id: 머리글 · 카드 등 테마별 표를 이어받음), hk(첫 화면 방식), cssX(site, th, T, U) }
+     기존 8종의 값 · 순서 · 렌더는 바꾸지 않는다(이미 게시된 사이트 모양 유지). */
+  const U = { mix, fit, CR, Lm, al, rgb, ok6 };
+  const css1 = s => { const th = thOf(s); let x = css(s); if (th && typeof th.cssX === 'function') { try { x += th.cssX(s, th, tok(s, th), U); } catch (e) { console.error('hpth cssX', e); } } return x; };
+  function reg(id, def) { if (!/^[a-z]{2,16}$/.test(id) || !def || TH[id]) return false; TH[id] = def; IDS.push(id); list.push(entry(id)); return true; }
+  window.HPT = { list, apply, thumb, pick, rec: k => TYPE_TH[k] || 'clean', enrich, facts, css: css1, audit, reviews: () => realReviews(), tokens: s => thOf(s) ? tok(s, thOf(s)) : null, has: id => !!TH[id],
+    reg, meta: id => TH[id] || null, base: id => (TH[id] && TH[id].base) || id, U };
 
   /* ── AI로 만든 초안에 테마 · 보강 자동 적용(hpRun → HPE.draft) ── */
   if (typeof HPE !== 'undefined' && HPE && !Object.getOwnPropertyDescriptor(HPE, 'draft')?.set) { let cur = HPE.draft;

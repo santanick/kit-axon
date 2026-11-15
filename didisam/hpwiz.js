@@ -34,7 +34,7 @@
   const REC_LOOK = { corp: 'corpPortal', univ: 'campus', univ_lms: 'campus', k12: 'brandBold', adult: 'mintSoft', lifelong: 'senior', voc: 'publicTiles', public: 'publicTiles' };
   const REC_HPT = { corp: /clean|modern|모던|깔끔|corp/i, univ: /official|공식|clean|campus/i, univ_lms: /official|공식|clean|campus/i, k12: /warm|따뜻|학원|kids|키즈/i, adult: /modern|clean|모던|깔끔/i, lifelong: /warm|따뜻|senior|큰/i, voc: /tech|테크|official|공식/i, public: /official|공식|public|기관/i };
   function themes() {
-    if (hasT()) return HPT.list.map(x => ({ id: String(x.id), name: String(x.name || x.id), desc: String(x.desc || ''), sw: A(x.swatch).slice(0, 3), hpt: true }));
+    if (hasT()) return HPT.list.map(x => ({ id: String(x.id), name: String(x.name || x.id), desc: String(x.desc || ''), sw: A(x.swatch).slice(0, 3), hpt: true, prem: !!x.prem, tags: A(x.tags) }));
     return Object.keys(typeof LOOKS !== 'undefined' ? LOOKS : {}).map(k => { const c = LK_COL[k] || '#5C74F6'; return { id: k, name: LOOKS[k].n, desc: LK_DESC[k] || '', sw: [c, mixc(c, '#ffffff', .82), '#ffffff'] }; });
   }
   function recTheme() {
@@ -280,8 +280,14 @@
     if (st.step === 1) {
       const T = themes();
       b.innerHTML = `${stepper(1)}<p class="hpw-lead">마음에 드는 분위기를 고르세요. 고르면 바로 다음 단계로 넘어갑니다. 테마는 나중에 '테마 바꿔줘'로 언제든 바꿀 수 있습니다.</p>
-        <div class="hpw-tg" role="radiogroup" aria-label="테마">${T.map(x => `<div class="hpw-th ${x.id === st.theme ? 'on' : ''}" role="radio" tabindex="0" aria-checked="${x.id === st.theme}" data-hw="theme" data-v="${esc(x.id)}">
-          <div class="hpw-tv">${themeThumb(x.id)}</div><div class="hpw-tn"><b>${esc(x.name)}${x.id === st.rec ? '<span class="hpw-rec">추천</span>' : ''}</b><small>${esc(x.desc)}</small>${x.sw.length ? `<span class="hpw-sw" aria-hidden="true">${x.sw.map(c => `<i style="background:${esc(c)}"></i>`).join('')}</span>` : ''}</div></div>`).join('')}</div>`;
+        ${(() => { /* v43 T1: 프리미엄 6종을 묶음으로 먼저(기관 유형에 맞는 테마부터), 기본 테마는 그 아래 */
+          const card = x => `<div class="hpw-th ${x.id === st.theme ? 'on' : ''}${x.prem ? ' prem' : ''}" role="radio" tabindex="0" aria-checked="${x.id === st.theme}" data-hw="theme" data-v="${esc(x.id)}">
+          <div class="hpw-tv">${themeThumb(x.id)}</div><div class="hpw-tn"><b>${esc(x.name)}${x.id === st.rec ? '<span class="hpw-rec">추천</span>' : ''}</b><small>${esc(x.desc)}</small>${x.prem && x.tags.length ? `<span class="hpw-tags">${x.tags.filter(k => k !== 'univ_lms').map(k => `<em${HPT.premFits && HPT.premFits(x.id) && (k === tyKey() || (k === 'univ' && tyKey() === 'univ_lms')) ? ' class="on"' : ''}>${esc(HPT.tagName ? HPT.tagName(k) : k)}</em>`).join('')}</span>` : x.sw.length ? `<span class="hpw-sw" aria-hidden="true">${x.sw.map(c => `<i style="background:${esc(c)}"></i>`).join('')}</span>` : ''}</div></div>`;
+          const P = T.filter(x => x.prem); const B = T.filter(x => !x.prem);
+          if (!P.length) return `<div class="hpw-tg" role="radiogroup" aria-label="테마">${B.map(card).join('')}</div>`;
+          const O = typeof HPT.premFor === 'function' ? HPT.premFor(tyKey()) : P.map(x => x.id); P.sort((a, b) => O.indexOf(a.id) - O.indexOf(b.id));
+          return `<h3 class="hpw-gh">프리미엄 <small>기관 색 하나로 6가지 첫 화면 · 카드 · 밀도를 고릅니다</small></h3><div class="hpw-tg" role="radiogroup" aria-label="프리미엄 테마">${P.map(card).join('')}</div>
+          <h3 class="hpw-gh">기본 테마</h3><div class="hpw-tg" role="radiogroup" aria-label="기본 테마">${B.map(card).join('')}</div>`; })()}`;
       foot([{ id: 'close', l: '취소' }, { id: 'next', l: '다음', k: 'pri' }]);
       const on = b.querySelector('.hpw-th.on'); if (on) on.focus(); return;
     }

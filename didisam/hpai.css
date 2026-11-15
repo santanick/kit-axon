@@ -1,6 +1,6 @@
 /* v24 hpai — AI로 홈페이지 만들기 · 화면에서 바로 고치기 · 메뉴 편성 */
 .hpai-bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 14px;padding:16px 18px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--line)}
-.hpai-bar.fresh{background:linear-gradient(120deg,var(--magl),#EEF0FF);box-shadow:inset 0 0 0 1.5px #f4c4d8}
+.hpai-bar.fresh{background:linear-gradient(120deg,var(--magl),var(--gr50));box-shadow:inset 0 0 0 1.5px #f4c4d8}
 .hpai-bt{flex:1 1 320px;min-width:0}.hpai-bt b{font-size:16px;display:block}.hpai-bt p{margin:4px 0 0;font-size:13.5px;color:var(--muted)}
 .hpai-bb{display:flex;gap:8px;flex-wrap:wrap}
 .hpai-bar .btn.ai.pri2{background:var(--mag);color:#fff;box-shadow:none}.hpai-bar .btn.ai.pri2:hover{background:var(--magd)}

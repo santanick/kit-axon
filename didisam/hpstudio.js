@@ -237,12 +237,12 @@
 .hpe-tb .hps-sep{width:1px;height:20px;background:rgba(255,255,255,.22);margin:0 3px}
 .hps-ddw{position:relative;display:inline-flex}.hps-dd{display:none;position:absolute;right:0;top:calc(100% + 6px);background:#2A2B2B;border-radius:10px;padding:4px;min-width:150px;flex-direction:column;box-shadow:0 10px 28px rgba(0,0,0,.3);z-index:50}
 .hps-ddw.open .hps-dd{display:flex}.hps-dd>button{width:100%;text-align:left;justify-content:flex-start;border:0;background:transparent;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit}.hps-dd>button:hover,.hps-dd>button:focus-visible{background:rgba(255,255,255,.16);outline:none}
-.hpe-add{padding:0!important;height:0;overflow:visible}.hpe-add button{transform:translateY(-50%);opacity:0!important;transition:opacity .12s;background:#5C74F6!important;color:#fff!important;border:0!important;box-shadow:0 4px 14px rgba(92,116,246,.4);padding:0 16px!important;min-height:34px;line-height:34px}
+.hpe-add{padding:0!important;height:0;overflow:visible}.hpe-add button{transform:translateY(-50%);opacity:0!important;transition:opacity .12s;background:#00862D!important;color:#fff!important;border:0!important;box-shadow:0 4px 14px rgba(0,134,45,.4);padding:0 16px!important;min-height:34px;line-height:34px}
 .hpe-add:hover button,.hpe-add button:focus-visible,[data-hpe]:hover+.hpe-add button,.hpe-add:first-child button,.hpe-add:last-child button{opacity:1!important}
-.hpe-add::before{content:'';position:absolute;left:0;right:0;top:0;border-top:2px dashed transparent}.hpe-add:first-child button{transform:translateY(8px)} /* v38 F5 A20: 맨 위 '+ 섹션 추가'가 미리보기 머리 바에 반쯤 가려지지 않게 */.hpe-add:hover::before{border-top-color:#5C74F6}
+.hpe-add::before{content:'';position:absolute;left:0;right:0;top:0;border-top:2px dashed transparent}.hpe-add:first-child button{transform:translateY(8px)} /* v38 F5 A20: 맨 위 '+ 섹션 추가'가 미리보기 머리 바에 반쯤 가려지지 않게 */.hpe-add:hover::before{border-top-color:#00862D}
 /* v36 R4 맨 위 '+ 섹션 추가'(늘 보임)가 첫 섹션 사진의 '샘플' 표시와 겹치던 것(휴대폰) — 첫 섹션의 샘플 표시를 버튼 아래로 */
 .hpe-add:first-child+[data-hpi-stock]::before,.hpe-add:first-child+* [data-hpi-stock]::before,.hpe-add:first-child+*>[data-hpi-stock]::before{top:52px!important}
-[data-hpe-f].hps-pick,[data-hpi-img].hps-pick{outline:2px solid #5C74F6!important;outline-offset:3px;background-color:rgba(92,116,246,.06)}`;
+[data-hpe-f].hps-pick,[data-hpi-img].hps-pick{outline:2px solid #00862D!important;outline-offset:3px;background-color:rgba(0,134,45,.06)}`;
   const bound = new WeakSet();
   function bindCanvas(f) {
     let doc; try { doc = f.contentDocument; } catch (e) { return; } if (!doc || bound.has(doc)) return; bound.add(doc); const win = doc.defaultView; if (!win) return;
@@ -309,18 +309,18 @@
   const PIN = { lshead: 1, lslist: 1 };
 
   /* [+ 섹션] 갤러리: hpai의 고르기 창을 미리보기 그림 카드로 */
-  const GAL = { banner: ['첫 화면 큰 배너', '제목 · 한 줄 소개 · 버튼', '<rect x="2" y="3" width="44" height="26" rx="2" fill="#C9D2FF"/><rect x="7" y="10" width="20" height="3" rx="1" fill="#5C74F6"/><rect x="7" y="16" width="14" height="2" rx="1" fill="#8E9BF0"/><rect x="7" y="21" width="9" height="4" rx="2" fill="#5C74F6"/>'],
-    features: ['소개 카드', '장점 3~4개를 카드로', '<rect x="2" y="8" width="13" height="16" rx="2" fill="#E3E7FF"/><rect x="17.5" y="8" width="13" height="16" rx="2" fill="#E3E7FF"/><rect x="33" y="8" width="13" height="16" rx="2" fill="#E3E7FF"/><rect x="5" y="12" width="7" height="2" rx="1" fill="#5C74F6"/><rect x="20.5" y="12" width="7" height="2" rx="1" fill="#5C74F6"/><rect x="36" y="12" width="7" height="2" rx="1" fill="#5C74F6"/>'],
-    stats: ['숫자 강조', '실제 운영 숫자 3개', '<text x="5" y="20" font-size="10" font-weight="800" fill="#5C74F6">12</text><text x="19" y="20" font-size="10" font-weight="800" fill="#5C74F6">95</text><text x="33" y="20" font-size="10" font-weight="800" fill="#5C74F6">3</text><rect x="5" y="23" width="9" height="2" rx="1" fill="#B9C1E8"/><rect x="19" y="23" width="9" height="2" rx="1" fill="#B9C1E8"/><rect x="33" y="23" width="9" height="2" rx="1" fill="#B9C1E8"/>'],
-    steps: ['단계 안내', '신청 → 수강 → 수료 순서', '<circle cx="8" cy="16" r="4" fill="#5C74F6"/><circle cx="24" cy="16" r="4" fill="#8E9BF0"/><circle cx="40" cy="16" r="4" fill="#C9D2FF"/><path d="M12 16h8M28 16h8" stroke="#B9C1E8" stroke-width="1.5"/>'],
-    classes: [() => `${lbl()} 목록`, () => `공개 ${lbl()}이 자동으로`, '<rect x="2" y="6" width="13" height="20" rx="2" fill="#fff" stroke="#C9D2FF"/><rect x="2" y="6" width="13" height="8" rx="2" fill="#C9D2FF"/><rect x="17.5" y="6" width="13" height="20" rx="2" fill="#fff" stroke="#C9D2FF"/><rect x="17.5" y="6" width="13" height="8" rx="2" fill="#C9D2FF"/><rect x="33" y="6" width="13" height="20" rx="2" fill="#fff" stroke="#C9D2FF"/><rect x="33" y="6" width="13" height="8" rx="2" fill="#C9D2FF"/>'],
-    image: ['사진', '사진 한 장 · 여러 장', '<rect x="4" y="5" width="40" height="22" rx="2" fill="#E3E7FF"/><path d="M8 24l9-9 7 7 5-5 11 7" stroke="#5C74F6" stroke-width="1.6" fill="none"/><circle cx="34" cy="11" r="2.5" fill="#8E9BF0"/>'],
+  const GAL = { banner: ['첫 화면 큰 배너', '제목 · 한 줄 소개 · 버튼', '<rect x="2" y="3" width="44" height="26" rx="2" style="fill:var(--gr200,#A6F0BE)"/><rect x="7" y="10" width="20" height="3" rx="1" style="fill:var(--gr600,#00A832)"/><rect x="7" y="16" width="14" height="2" rx="1" style="fill:var(--gr400,#2FD266)"/><rect x="7" y="21" width="9" height="4" rx="2" style="fill:var(--gr600,#00A832)"/>'],
+    features: ['소개 카드', '장점 3~4개를 카드로', '<rect x="2" y="8" width="13" height="16" rx="2" style="fill:var(--gr50,#ECFDF3)"/><rect x="17.5" y="8" width="13" height="16" rx="2" style="fill:var(--gr50,#ECFDF3)"/><rect x="33" y="8" width="13" height="16" rx="2" style="fill:var(--gr50,#ECFDF3)"/><rect x="5" y="12" width="7" height="2" rx="1" style="fill:var(--gr600,#00A832)"/><rect x="20.5" y="12" width="7" height="2" rx="1" style="fill:var(--gr600,#00A832)"/><rect x="36" y="12" width="7" height="2" rx="1" style="fill:var(--gr600,#00A832)"/>'],
+    stats: ['숫자 강조', '실제 운영 숫자 3개', '<text x="5" y="20" font-size="10" font-weight="800" style="fill:var(--gr600,#00A832)">12</text><text x="19" y="20" font-size="10" font-weight="800" style="fill:var(--gr600,#00A832)">95</text><text x="33" y="20" font-size="10" font-weight="800" style="fill:var(--gr600,#00A832)">3</text><rect x="5" y="23" width="9" height="2" rx="1" style="fill:var(--gr100,#D1FADF)"/><rect x="19" y="23" width="9" height="2" rx="1" style="fill:var(--gr100,#D1FADF)"/><rect x="33" y="23" width="9" height="2" rx="1" style="fill:var(--gr100,#D1FADF)"/>'],
+    steps: ['단계 안내', '신청 → 수강 → 수료 순서', '<circle cx="8" cy="16" r="4" style="fill:var(--gr600,#00A832)"/><circle cx="24" cy="16" r="4" style="fill:var(--gr400,#2FD266)"/><circle cx="40" cy="16" r="4" style="fill:var(--gr200,#A6F0BE)"/><path d="M12 16h8M28 16h8" style="stroke:var(--gr100,#D1FADF)" stroke-width="1.5"/>'],
+    classes: [() => `${lbl()} 목록`, () => `공개 ${lbl()}이 자동으로`, '<rect x="2" y="6" width="13" height="20" rx="2" fill="#fff" style="stroke:var(--gr200,#A6F0BE)"/><rect x="2" y="6" width="13" height="8" rx="2" style="fill:var(--gr200,#A6F0BE)"/><rect x="17.5" y="6" width="13" height="20" rx="2" fill="#fff" style="stroke:var(--gr200,#A6F0BE)"/><rect x="17.5" y="6" width="13" height="8" rx="2" style="fill:var(--gr200,#A6F0BE)"/><rect x="33" y="6" width="13" height="20" rx="2" fill="#fff" style="stroke:var(--gr200,#A6F0BE)"/><rect x="33" y="6" width="13" height="8" rx="2" style="fill:var(--gr200,#A6F0BE)"/>'],
+    image: ['사진', '사진 한 장 · 여러 장', '<rect x="4" y="5" width="40" height="22" rx="2" style="fill:var(--gr50,#ECFDF3)"/><path d="M8 24l9-9 7 7 5-5 11 7" style="stroke:var(--gr600,#00A832)" stroke-width="1.6" fill="none"/><circle cx="34" cy="11" r="2.5" style="fill:var(--gr400,#2FD266)"/>'],
     video: ['동영상', '유튜브 · 소개 영상', '<rect x="4" y="5" width="40" height="22" rx="2" fill="#2A2B2B"/><path d="M21 11l8 5-8 5z" fill="#fff"/>'],
-    notices: ['공지사항', '최근 공지가 자동으로', '<rect x="5" y="7" width="38" height="3" rx="1" fill="#C9D2FF"/><rect x="5" y="14" width="38" height="3" rx="1" fill="#E3E7FF"/><rect x="5" y="21" width="38" height="3" rx="1" fill="#E3E7FF"/>'],
-    reviews: ['수강후기', '실제 후기만 보여 줍니다', '<rect x="3" y="7" width="20" height="18" rx="3" fill="#E3E7FF"/><rect x="25" y="7" width="20" height="18" rx="3" fill="#E3E7FF"/><path d="M7 13h12M7 17h9M29 13h12M29 17h9" stroke="#8E9BF0" stroke-width="1.5"/>'],
+    notices: ['공지사항', '최근 공지가 자동으로', '<rect x="5" y="7" width="38" height="3" rx="1" style="fill:var(--gr200,#A6F0BE)"/><rect x="5" y="14" width="38" height="3" rx="1" style="fill:var(--gr50,#ECFDF3)"/><rect x="5" y="21" width="38" height="3" rx="1" style="fill:var(--gr50,#ECFDF3)"/>'],
+    reviews: ['수강후기', '실제 후기만 보여 줍니다', '<rect x="3" y="7" width="20" height="18" rx="3" style="fill:var(--gr50,#ECFDF3)"/><rect x="25" y="7" width="20" height="18" rx="3" style="fill:var(--gr50,#ECFDF3)"/><path d="M7 13h12M7 17h9M29 13h12M29 17h9" style="stroke:var(--gr400,#2FD266)" stroke-width="1.5"/>'],
     map: ['오시는 길', '지도 · 주소 · 운영 시간', '<rect x="4" y="5" width="40" height="22" rx="2" fill="#E6F4EA"/><path d="M4 18c10-6 18 4 40-6" stroke="#9CCFA9" stroke-width="2" fill="none"/><path d="M24 9a4 4 0 014 4c0 3-4 7-4 7s-4-4-4-7a4 4 0 014-4z" fill="#E5484D"/>'],
-    cta: ['문의 · 신청 띠', '버튼 하나로 신청 받기', '<rect x="2" y="9" width="44" height="14" rx="3" fill="#5C74F6"/><rect x="7" y="14" width="18" height="3" rx="1" fill="#fff"/><rect x="33" y="13" width="9" height="6" rx="3" fill="#fff"/>'],
-    plain: ['글 상자', '제목과 문단', '<rect x="5" y="6" width="22" height="4" rx="1" fill="#5C74F6"/><rect x="5" y="14" width="38" height="2.5" rx="1" fill="#C9D2FF"/><rect x="5" y="19" width="34" height="2.5" rx="1" fill="#C9D2FF"/><rect x="5" y="24" width="26" height="2.5" rx="1" fill="#C9D2FF"/>'] };
+    cta: ['문의 · 신청 띠', '버튼 하나로 신청 받기', '<rect x="2" y="9" width="44" height="14" rx="3" style="fill:var(--gr600,#00A832)"/><rect x="7" y="14" width="18" height="3" rx="1" fill="#fff"/><rect x="33" y="13" width="9" height="6" rx="3" fill="#fff"/>'],
+    plain: ['글 상자', '제목과 문단', '<rect x="5" y="6" width="22" height="4" rx="1" style="fill:var(--gr600,#00A832)"/><rect x="5" y="14" width="38" height="2.5" rx="1" style="fill:var(--gr200,#A6F0BE)"/><rect x="5" y="19" width="34" height="2.5" rx="1" style="fill:var(--gr200,#A6F0BE)"/><rect x="5" y="24" width="26" height="2.5" rx="1" style="fill:var(--gr200,#A6F0BE)"/>'] };
   new MutationObserver(() => { const g = $1('#modal .hpe-addg'); if (!g || g.dataset.hps) return; g.dataset.hps = 1; const m = $1('#modal'); if (m) m.classList.add('hps-galm');
     const ttl = m && m.querySelector('.mh h3, .mh b, h3'); if (ttl && /섹션 추가/.test(ttl.textContent)) ttl.textContent = '섹션 추가 — 넣을 모양을 고르세요';
     g.querySelectorAll('[data-mact]').forEach(b => { const k = b.dataset.mact; const G = GAL[k]; if (!G) return; const v = x => (typeof x === 'function' ? x() : x);
@@ -363,8 +363,8 @@
     if (k === 'sec') { const pg = pageOf(HPE.key) || { label: '홈', sections: s.sections };
       body = `<p class="hps-pd">「${E(pg.label)}」 페이지의 섹션입니다. 이름을 누르면 그 섹션으로 갑니다. 글 · 사진은 화면에서 두 번 눌러 고칩니다.</p>${secOl(pg)}
         <button type="button" class="btn pri hps-wide" data-act="hps-secadd">${SV(P.plus, 16, 2)} 섹션 추가</button>`; }
-    else if (k === 'basic') { const ft = (S.settings && S.settings.footer) || {}; const g = s.gnb || {}; const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#5C74F6';
-      const SW = ['#5C74F6', '#1F4E9E', '#0F766E', '#15803D', '#C2410C', '#B91C1C', '#7C3AED', '#1F2937'];
+    else if (k === 'basic') { const ft = (S.settings && S.settings.footer) || {}; const g = s.gnb || {}; const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#00862D';
+      const SW = ['#00862D', '#1F4E9E', '#0F766E', '#15803D', '#C2410C', '#B91C1C', '#00862D', '#1F2937'];
       body = `<form class="hps-bf" data-hps-form="basic"><p class="hps-pd">여기 넣은 값이 머리글 · 바닥글 · 오시는 길 · 문의 버튼에 함께 들어갑니다.</p>
         <label class="fl">기관명<input name="name" maxlength="30" value="${E(S.org.name)}" required></label>
         <label class="fl">대표 전화<input name="tel" maxlength="30" inputmode="tel" value="${E(ft.tel || '')}" placeholder="예: 051-000-0000"></label>
@@ -478,15 +478,15 @@
 
   /* ═════════ 7. 학습 페이지 머리글(v36 R3 · 4-2): 두 번 눌러 고치기 · 머리글 도구 · 말로 고치기 · 게시본 hp.lhead ═════════ */
   const LH_CSS = `.sub.llh h1,.sub.llh .llh-d{cursor:text;border-radius:4px}
-.sub.llh h1:hover,.sub.llh .llh-d:hover,.sub.llh .hps-pick{outline:2px dashed #5C74F6;outline-offset:4px}
-.sub.llh [contenteditable]{outline:2px solid #5C74F6!important;outline-offset:4px;background:#fff!important;color:#14161F!important;-webkit-text-fill-color:#14161F}
+.sub.llh h1:hover,.sub.llh .llh-d:hover,.sub.llh .hps-pick{outline:2px dashed #00862D;outline-offset:4px}
+.sub.llh [contenteditable]{outline:2px solid #00862D!important;outline-offset:4px;background:#fff!important;color:#14161F!important;-webkit-text-fill-color:#14161F}
 .sub.llh .llh-ph{opacity:.6;border:1.5px dashed currentColor;padding:4px 12px;display:inline-block;border-radius:8px;font-size:15px}
-.sub.llh:hover{box-shadow:inset 0 0 0 2px rgba(92,116,246,.55)}
+.sub.llh:hover{box-shadow:inset 0 0 0 2px rgba(0,134,45,.55)}
 .llh-tb{position:absolute;bottom:10px;right:12px;z-index:5;display:none;gap:2px;background:#2A2B2B;padding:4px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);font:600 12.5px/1 Pretendard,system-ui,sans-serif;flex-wrap:wrap;max-width:calc(100% - 24px);color:#fff}
 .sub.llh:hover .llh-tb,.sub.llh.llh-sel .llh-tb,.llh-tb:focus-within{display:flex}
-.llh-tb button{border:0;background:transparent;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit;white-space:nowrap;min-height:34px}.llh-tb button:hover,.llh-tb button:focus-visible{background:rgba(255,255,255,.18);outline:none}.llh-tb button[aria-pressed=true]{background:#5C74F6}
+.llh-tb button{border:0;background:transparent;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit;white-space:nowrap;min-height:34px}.llh-tb button:hover,.llh-tb button:focus-visible{background:rgba(255,255,255,.18);outline:none}.llh-tb button[aria-pressed=true]{background:#00862D}
 .llh-tb i{width:1px;background:rgba(255,255,255,.22);margin:4px 3px}
-.llh-tag{position:absolute;left:12px;top:10px;z-index:5;background:#5C74F6;color:#fff;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:6px 10px;border-radius:99px;display:none}.sub.llh:hover .llh-tag,.sub.llh.llh-sel .llh-tag{display:block}`;
+.llh-tag{position:absolute;left:12px;top:10px;z-index:5;background:#00862D;color:#fff;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:6px 10px;border-radius:99px;display:none}.sub.llh:hover .llh-tag,.sub.llh.llh-sel .llh-tag{display:block}`;
   const lhFrame = () => $1('#hpsLvF');
   const lhKeyNow = () => { const lp = curLearn(); if (lp) return { k: lp, top: true }; /* v37: 학습 페이지는 같은 캔버스(#hpeF)에서 고친다 */
     const f = lhFrame(); try { const w = f && f.contentWindow; if (w && typeof w.lhKey === 'function') return w.lhKey(); } catch (e) { } return HS.lv && HS.lv.hash ? { k: decodeURIComponent(HS.lv.hash.slice(1)), top: true } : null; };
@@ -646,7 +646,7 @@
   /* ── 렌더러: 머리글 · 자동 목록 · 게시판 ── */
   const lumL = c => { try { return lum(c); } catch (e) { return .5; } };
   const tokS = s => { try { return window.HPT && HPT.tokens ? HPT.tokens(s) : null; } catch (e) { return null; } };
-  function lsHead(x, s) { const d = x.data || {}; const c = (site().lhead || {})[d.route] || {}; const T = tokS(s) || {}; const a = /^#[0-9a-f]{6}$/i.test(T.a || '') ? T.a : (s.color || '#5C74F6');
+  function lsHead(x, s) { const d = x.data || {}; const c = (site().lhead || {})[d.route] || {}; const T = tokS(s) || {}; const a = /^#[0-9a-f]{6}$/i.test(T.a || '') ? T.a : (s.color || '#00862D');
     const okImg = /^(data:image\/(png|jpe?g|webp|gif);base64,|https:\/\/|img\/stock\/)/.test(String(c.img || '')); const tone = okImg ? 'img' : ['plain', 'soft', 'brand'].includes(c.tone) ? c.tone : 'soft';
     const on = T.on || (lumL(a) > .35 ? '#14161F' : '#fff'); const st = `--lsh-a:${a};--lsh-on:${on}${T.as ? `;--lsh-as:${T.as}` : ''}${okImg ? `;--lsh-img:url('${String(c.img).replace(/['"()\\\s]/g, '')}')` : ''}`;
     return `<section class="hpx-lsh lt-${tone}${c.al === 'c' ? ' al-c' : ''}${c.h === 's' || c.h === 'l' ? ' h-' + c.h : ''}" style="${E(st)}"><div class="hpx-lsw"><nav class="hpx-lshc" aria-label="이동 경로">홈 › ${E(d.def || d.title || '')}</nav><h1>${E(d.title || '')}</h1>${d.sub ? `<p>${E(d.sub)}</p>` : ''}</div></section>`; }
@@ -688,7 +688,7 @@
 .hpx-lsh.lt-plain{background:#fff;border-bottom:1px solid rgba(20,22,31,.08)}.hpx-lsh.lt-brand{background:var(--lsh-a);color:var(--lsh-on)}
 .hpx-lsh.lt-img{color:#fff;background:#1B1C22 var(--lsh-img) center/cover no-repeat}.hpx-lsh.lt-img::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(10,12,20,.72),rgba(10,12,20,.3))}
 .hpx-lsh.al-c .hpx-lsw{text-align:center}.hpx-lsh.al-c p{margin-left:auto;margin-right:auto}.hpx-lsh.h-s{padding:26px 0 20px}.hpx-lsh.h-l{padding:96px 0 80px}.hpx-lsh.h-l h1{font-size:clamp(34px,5vw,56px)}
-.hpx-lsl{position:relative;display:block;padding:8px 0}.hpx-lsb{position:absolute;left:12px;top:10px;z-index:5;display:inline-flex;align-items:center;gap:6px;background:#EEF0FF;color:#2B3796;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:7px 11px;border-radius:99px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.hpx-lsl{position:relative;display:block;padding:8px 0}.hpx-lsb{position:absolute;left:12px;top:10px;z-index:5;display:inline-flex;align-items:center;gap:6px;background:#ECFDF3;color:#00862D;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:7px 11px;border-radius:99px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
 .hpx-lse{display:none}
 .hpx-lsf{display:flex;align-items:center;gap:8px;margin:44px 0 0;max-width:420px;border:1px solid rgba(20,22,31,.18);border-radius:10px;padding:12px 14px;color:rgba(20,22,31,.55);font-size:15px;background:#fff}
 .hpx-lsmy{padding:48px 0}.hpx-lsmy .hpx-lsw>div{border:1.5px dashed rgba(20,22,31,.2);border-radius:14px;padding:36px;text-align:center}.hpx-lsmy b{font-size:18px}.hpx-lsmy p{margin:6px 0 0;opacity:.7}
@@ -786,7 +786,7 @@
     say(`${par ? `「${mName(par.l)}」 아래에 하위 메뉴` : '메뉴'} 「${nm}」을(를) 만들었습니다. 지금 그 페이지를 고치고 있습니다.`, 'ok'); }, true);
 
   /* ── 게시판 섹션: [+ 섹션] 갤러리 카드 · 고르기/만들기 창 · 설정 · 메뉴로도 추가 ── */
-  const BD_SVG = '<rect x="4" y="5" width="40" height="4" rx="1" fill="#5C74F6"/><rect x="4" y="12" width="28" height="2.5" rx="1" fill="#C9D2FF"/><rect x="36" y="12" width="8" height="2.5" rx="1" fill="#E3E7FF"/><rect x="4" y="18" width="24" height="2.5" rx="1" fill="#C9D2FF"/><rect x="36" y="18" width="8" height="2.5" rx="1" fill="#E3E7FF"/><rect x="4" y="24" width="30" height="2.5" rx="1" fill="#C9D2FF"/><rect x="36" y="24" width="8" height="2.5" rx="1" fill="#E3E7FF"/>';
+  const BD_SVG = '<rect x="4" y="5" width="40" height="4" rx="1" style="fill:var(--gr600,#00A832)"/><rect x="4" y="12" width="28" height="2.5" rx="1" style="fill:var(--gr200,#A6F0BE)"/><rect x="36" y="12" width="8" height="2.5" rx="1" style="fill:var(--gr50,#ECFDF3)"/><rect x="4" y="18" width="24" height="2.5" rx="1" style="fill:var(--gr200,#A6F0BE)"/><rect x="36" y="18" width="8" height="2.5" rx="1" style="fill:var(--gr50,#ECFDF3)"/><rect x="4" y="24" width="30" height="2.5" rx="1" style="fill:var(--gr200,#A6F0BE)"/><rect x="36" y="24" width="8" height="2.5" rx="1" style="fill:var(--gr50,#ECFDF3)"/>';
   new MutationObserver(() => { const g = $1('#modal .hpe-addg'); if (!g || g.querySelector('[data-hps-bdadd]')) return; g.insertAdjacentHTML('beforeend', `<button type="button" class="btn hps-gc" data-hps-bdadd="1"><svg viewBox="0 0 48 32" width="96" height="64" aria-hidden="true">${BD_SVG}</svg><b>게시판</b><small>최근 글 · 글쓰기 · 새 게시판도 만들기</small></button>`); }).observe(document.body, { childList: true, subtree: true });
   document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-hps-bdadd]'); if (!b) return; e.preventDefault(); const at = HS.addAt; closeModal(); bdPick(at, -1); });
   const menuOfBoard = bid => { for (const m of A(site().menus)) { if (m.link === 'learn:comm/' + bid) return m; for (const b of A(m.subs)) if (b.link === 'learn:comm/' + bid) return b; } return null; };
