@@ -411,3 +411,7 @@ body.lapp.tb-watch .lctabs{background:#0E1A14}
 body.tube .ap-nav.tb-nav:has(>a:nth-child(5)){left:8px;right:8px;padding:5px;gap:2px}
 body.tube .ap-nav.tb-nav:has(>a:nth-child(5)) a{padding:4px 2px;min-height:52px}
 body.tube .ap-nav.tb-nav:has(>a:nth-child(5)) a span{white-space:normal;word-break:keep-all;text-align:center;line-height:1.15;overflow:visible}
+body.lapp.tb-watch .imain .lbtn.pri{background:#13231B!important;color:#CFDBD2!important;box-shadow:inset 0 0 0 1px #21332A!important;opacity:1}
+/* 재생 화면 아이콘은 「이 장면 질문」 글자가 들어가는 알약 */
+body.lapp.tb-watch .tb-fab{width:auto;height:52px;padding:0 16px 0 14px;flex-direction:row;gap:6px;border-radius:999px}
+body.lapp.tb-watch .tb-fab span{font-size:14px}
