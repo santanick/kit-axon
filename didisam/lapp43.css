@@ -1,0 +1,57 @@
+/* v43 학습자 앱 대표 화면 층(D4) — 「나」 · 일정 · 내 강의 · 마일리지(앱 모드). body.lapp 범위에서만 덮는다(웹 화면은 그대로).
+   기준: final2/app-home · app-mile · png/f-app.png. 토큰만 쓴다(ldads.css v43 층). 다크는 html[data-theme=dark] 토큰이 자동으로 바꾼다.
+   패턴: .ls-ic(그린 톤 아이콘 상자 하나) · .thm-box(테마 3칸) · .lm-top(마일리지 진그린 잔액 판 — 메시 아님, 평면) */
+
+/* ── 「나」: 프로필 · 메뉴 목록 ── */
+body.lapp .ls-prof{padding:8px 4px 16px}
+body.lapp .ls-av{background:var(--gr50);color:var(--gr800);font-weight:800}
+body.lapp .ls-prof b{font-size:22px;line-height:30px;font-weight:800;letter-spacing:-.02em;color:var(--g900)}
+body.lapp .ls-list{background:var(--surface);border-radius:var(--r-card);box-shadow:var(--sh1)}
+body.lapp .ls-row+.ls-row{border-top-color:var(--hair)}
+body.lapp .ls-row:hover,body.lapp .ls-row:active{background:var(--surface2)}
+/* 보라 · 파랑 · 주황 · 회색 단색 상자(lslim.js --c) → 그린 50 바탕 + 그린 700 선 아이콘 하나로 */
+body.lapp .ls-ic{width:40px;height:40px;border-radius:13px;background:var(--gr50);color:var(--gr700)}
+body.lapp .ls-ic svg{stroke:currentColor}
+body.lapp .ls-tx b{color:var(--g900)}
+body.lapp .ls-tx small{color:var(--g700)}
+body.lapp .ls-go{color:var(--g500)}
+body.lapp .ls-bd{background:var(--co500)}
+body.lapp .ls-gh{color:var(--g700);font-size:14px;font-weight:800;margin:24px 4px 8px}
+body.lapp .in.narrow:has(.ls-me)>.l26logo{display:none} /* 「나」 목록 아래 떠 있던 기관 글자 로고 */
+/* 테마 3칸 세그먼트: 제목 · 설명 한 줄 + 꽉 찬 3칸 */
+body.lapp .thm-box{display:grid;grid-template-columns:1fr;gap:10px;margin:14px 0 0;padding:16px;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1)}
+body.lapp .thm-lb{font-size:16px;font-weight:800;color:var(--g900)}
+body.lapp .thm-hint{margin:-6px 0 0;font-size:13px;line-height:1.45;color:var(--g700)}
+body.lapp .thm-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:16px;background:var(--g200);box-shadow:inset 0 0 0 1px var(--hair)}
+body.lapp .thm-seg button{justify-content:center;min-height:48px;border-radius:12px;font-size:14px;color:var(--g700)}
+body.lapp .thm-seg button.on{background:var(--surface);color:var(--g900);box-shadow:var(--sh2)}
+body.lapp .thm-seg button.on .ic{color:var(--gr700)}
+
+/* ── 일정(lcal) · 내 강의: 카드 면만 토큰으로(구성 · 탭은 그대로) ── */
+body.lapp .lq-r,body.lapp .lq-hc{border:0;background:var(--surface);border-radius:16px;box-shadow:var(--sh1)}
+body.lapp .lq-hc>svg:first-child{color:var(--gr700)}
+body.lapp .lq-sn a{border-radius:16px}
+body.lapp .lq-ib,body.lapp .lq-tb{background:var(--surface);border-color:var(--g300)}
+
+/* ── 마일리지(lmil.js 앱 모드): 회색 하드코딩 토큰을 DDS 토큰으로, 잔액 판은 진그린 평면 ── */
+body.lapp :is(.lm,.lm-me,.lm-myb,.lm-sheet,.lm-cap){--lm-g:var(--gr500);--lm-act:var(--gr700);--lm-gd:var(--gr800);--lm-gl:var(--gr50);--lm-ink:var(--g900);--lm-mute:var(--g700);--lm-line:var(--g300);--lm-bg:var(--canvas)}
+body.lapp .lm .lm-card{background:var(--surface);border:0;border-radius:var(--r-card);box-shadow:var(--sh1)}
+body.lapp .lm .lm-top{background:var(--gr900);color:#fff;box-shadow:var(--sh3);border-radius:var(--r-block);padding:20px 18px 18px}
+body.lapp .lm .lm-top .lm-lab{color:#A6F0BE}
+body.lapp .lm .lm-top .lm-lab svg,body.lapp .lm .lm-top .lm-lab .lm-i{color:#A6F0BE}
+body.lapp .lm .lm-top .lm-big{font-size:48px;font-weight:800;letter-spacing:-.04em;color:#fff;font-variant-numeric:tabular-nums}
+body.lapp .lm .lm-top .lm-big span{font-size:22px;color:#A6F0BE}
+body.lapp .lm .lm-top .lm-mu{color:#D1FADF}
+body.lapp .lm .lm-top .lm-split{gap:8px;border:0;background:none;overflow:visible}
+body.lapp .lm .lm-top .lm-split>div{border:0;border-radius:14px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+body.lapp .lm .lm-top .lm-split dt{color:#C6F6D5;font-size:12px}
+body.lapp .lm .lm-top .lm-split dd{color:#fff;font-variant-numeric:tabular-nums}
+body.lapp .lm .lm-top .lm-fu.ok{background:rgba(255,255,255,.1);border:0;color:#D1FADF}
+body.lapp .lm .lm-top .lm-fu.ok b{color:#fff}
+body.lapp .lm .lm-top .lm-fu.lk{background:rgba(0,0,0,.18);border:0;color:#C6F6D5}
+body.lapp .lm .lm-top .lm-lockn{color:#D1FADF}
+body.lapp .lm .lm-top .lm-lockn b{color:#fff}
+body.lapp .lm .lm-top .lm-lockn p{color:#C6F6D5}
+body.lapp .lm .lm-gi{background:var(--gr50);color:var(--gr700);border-radius:14px}
+body.lapp .lm .lm-bar{background:var(--g200)}
+body.lapp .lm .lm-bar i{background:var(--gr500)}

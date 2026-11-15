@@ -43,7 +43,7 @@ const FAC = { on: true, payOnline: false, facilities: [court('f_ta', '테니스 
   /* 공통 흐름 */
   async function flow(tag, o) { const { ctx, p, errs } = await open(o); const app = !o.web;
     if (app) { const r = await p.evaluate(() => ({ chip: !!document.querySelector('.tb-chips a.fx-chip-go[href="#fac"]'), tabs: [...document.querySelectorAll('#lapp .ap-nav > a')].map(a => a.textContent.trim()), card: !!document.querySelector('.fx-today') }));
-      ok(r.chip, `${tag} 홈 칩 「예약」`); ok(r.tabs.length === 4 && r.tabs[1] === '일정', `${tag} 하단 탭 4칸 유지(${r.tabs.join('·')})`); ok(!r.card, `${tag} 예약 없으면 오늘 예약 카드 없음`);
+      ok(r.chip, `${tag} 홈 칩 「예약」`); ok(r.tabs.length === 5 && r.tabs[3] === '시설', `${tag} 하단 탭(v43 대표님 지시: 학습자 입장 유형별 탭 — 시설 켠 기관은 시설을 나 앞에 더해 5칸, ${r.tabs.join('·')})`); ok(!r.card, `${tag} 예약 없으면 오늘 예약 카드 없음`);
       await p.click('a.fx-chip-go'); await p.waitForTimeout(400); }
     else { ok(await p.evaluate(() => !!document.querySelector('header.lh nav.ln a[href="#fac"]')), `${tag} 웹 머리 메뉴 「시설 예약」`); await go(p, '#fac'); }
     const h = await p.evaluate(() => ({ rows: [...document.querySelectorAll('.fx-home .fx-row b')].map(x => x.textContent), chips: [...document.querySelectorAll('.fx-home .fx-chip')].map(x => x.textContent), tag: (document.querySelector('.fx-row[href="#fac/f_room"] .fx-b') || {}).textContent }));
@@ -74,7 +74,7 @@ const FAC = { on: true, payOnline: false, facilities: [court('f_ta', '테니스 
     const id = decodeURIComponent(dn.h.split('/')[2]); if (app) await shot(p, '04-done.png', 1);
     const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 3000 }).catch(() => null), p.click('[data-fx="ics"]')]); let icsOK = false; if (dl) { const f = await dl.path(); icsOK = /DTSTART:\d{8}T040000Z/.test(fs.readFileSync(f, 'utf8')); } ok(icsOK, `${tag} 캘린더에 추가(.ics, 13:00 KST)`);
     await go(p, '#fac/my', 400); const my = await p.evaluate(() => ({ row: (document.querySelector('.fx-my .fx-row') || {}).textContent || '', tab: (document.querySelector('#lapp .ap-nav a.on') || {}).textContent || '' }));
-    ok(/테니스 코트 A/.test(my.row) && /현장 결제/.test(my.row), `${tag} 내 예약 목록`); if (app) ok(my.tab.trim() === '일정', `${tag} 내 예약은 일정 탭(${my.tab.trim()})`);
+    ok(/테니스 코트 A/.test(my.row) && /현장 결제/.test(my.row), `${tag} 내 예약 목록`); if (app) ok(my.tab.trim() === '시설', `${tag} 내 예약은 시설 탭(v43 유형별 탭 — ${my.tab.trim()})`);
     if (app) { await shot(p, '06-mine.png', 1); await go(p, '#home', 500); ok(!!(await p.$('.tb-main > .fx-today a[href^="#fac/qr/"]')), `${tag} 홈 맨 위 오늘 예약 QR 카드`); }
     await go(p, '#cal', 500); const cal = await p.evaluate(() => ({ card: (document.querySelector('.fx-calc') || {}).textContent || '', ev: (window.lcalEvents ? lcalEvents() : []).filter(e => e.src === 'fac').length }));
     ok(/예정 1건/.test(cal.card) && cal.ev === 1, `${tag} 일정 탭: 내 예약 카드 · 캘린더 일정`);
