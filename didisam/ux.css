@@ -23,7 +23,7 @@ details.uxmore>summary::after{content:'';width:7px;height:7px;border:solid curre
 details.uxmore[open]>summary,details.uxmore>summary:hover{background:var(--surface,#fff);color:var(--ink)}
 details.uxmore>summary em{font:700 12px var(--num);font-style:normal;background:var(--soft);color:var(--ink);border-radius:99px;padding:0 7px}
 .uxpop{position:absolute;z-index:40;top:calc(100% + 6px);left:0;min-width:200px;background:var(--surface,#fff);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 32px rgba(42,43,43,.14);padding:6px;display:flex;flex-direction:column;gap:2px}
-.uxpop>button,.uxpop>a{display:flex!important;align-items:center;gap:8px;width:100%;justify-content:flex-start;text-align:left;border:0!important;background:none!important;box-shadow:none!important;color:var(--ink)!important;height:auto!important;min-height:40px;padding:8px 12px!important;border-radius:6px!important;font-weight:600!important;font-size:14px!important;cursor:pointer}
+.uxpop>button,.uxpop>a{display:flex!important;align-items:center;gap:8px;width:100%;justify-content:flex-start;text-align:left;border:0!important;background:none!important;box-shadow:none!important;color:var(--ink)!important;height:auto!important;min-height:44px;padding:8px 12px!important;border-radius:6px!important;font-weight:600!important;font-size:14px!important;cursor:pointer}
 .uxpop>button:hover,.uxpop>a:hover{background:var(--soft)!important}
 .uxpop>button.on{background:var(--magl)!important;color:var(--magd)!important}
 .uxdots>summary{width:40px;padding:0!important;justify-content:center;border:1px solid var(--line);background:var(--surface,#fff)}

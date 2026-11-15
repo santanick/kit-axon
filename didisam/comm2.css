@@ -28,16 +28,16 @@
 .cmsub{padding-left:22px}
 .cmcat{border-bottom:1px solid var(--soft);padding:2px 0}
 .cmcat .row{border-bottom:0}
-.cmheat{display:grid;grid-template-columns:22px repeat(24,minmax(0,1fr));gap:2px;font-size:10px;align-items:center}
+.cmheat{display:grid;grid-template-columns:22px repeat(24,minmax(0,1fr));gap:2px;font-size:12px;align-items:center}
 .cmheat small{color:var(--muted);text-align:center}
-.cmheat b{font-size:11px;color:var(--muted)}
+.cmheat b{font-size:12px;color:var(--muted)}
 .cmheat i{display:block;aspect-ratio:1;border-radius:3px;background:var(--soft);position:relative}
 .cmheat i::after{content:"";position:absolute;inset:0;border-radius:3px;background:var(--mag);opacity:var(--a,0)}
 .cmbars{display:flex;align-items:flex-end;gap:3px;height:140px;padding-top:8px;overflow-x:auto}
 .cmbars.sm{height:90px}
 .cmbars span{flex:1;min-width:12px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px}
 .cmbars i{display:block;width:100%;background:var(--ink);border-radius:4px 4px 0 0;min-height:2px}
-.cmbars small{font-size:10px;color:var(--muted)}
+.cmbars small{font-size:12px;color:var(--muted)}
 .cmins ol{margin:6px 0;padding-left:18px}
 .cmtl{display:grid;gap:6px;max-height:460px;overflow:auto}
 .cmt{display:grid;grid-template-columns:52px 90px 1fr;gap:8px;align-items:start;padding:6px 0;border-bottom:1px solid var(--soft)}
@@ -45,7 +45,7 @@
 .cmchat{display:flex;flex-direction:column;gap:8px;max-height:460px;overflow:auto}
 .cmb{max-width:78%;background:var(--paper);border-radius:8px 14px 14px 4px;padding:8px 12px}
 .cmb.me{align-self:flex-end;background:var(--magl);border-radius:8px 14px 4px 14px}
-.cmb small{color:var(--muted);font-size:11px}.cmb p{margin:2px 0 0}
+.cmb small{color:var(--muted);font-size:12px}.cmb p{margin:2px 0 0}
 mark{background:#ffe58a;border-radius:3px;padding:0 2px}
 .cmpick{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;cursor:pointer;border:0;font:inherit}
 .cmpick:hover{box-shadow:0 0 0 2px var(--mag)}
@@ -64,8 +64,8 @@ mark{background:#ffe58a;border-radius:3px;padding:0 2px}
 .cmn-m{flex:1;min-width:0;display:grid;gap:3px;text-align:left;background:none;border:0;padding:10px 6px;cursor:text;font:inherit;color:inherit;border-radius:8px;min-height:48px}
 .cmn-m:hover{background:var(--paper)}.cmn-m:focus-visible{outline:2px solid var(--mag);outline-offset:1px}
 .cmn-t{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}.cmn-t b{font-size:15px;overflow-wrap:anywhere}
-.cmn-pin{font-size:11px;font-weight:700;color:#fff;background:var(--mag);border-radius:4px;padding:1px 6px}
-.cmn-to{font-size:11px;color:var(--muted);background:var(--soft);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.cmn-pin{font-size:12px;font-weight:700;color:#fff;background:var(--mag);border-radius:4px;padding:1px 6px}
+.cmn-to{font-size:12px;color:var(--muted);background:var(--soft);border-radius:4px;padding:1px 6px;white-space:nowrap}
 .cmn-x{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cmn-meta{color:var(--muted);font-size:12px}
 .cmn-o{display:flex;align-items:center;gap:4px;flex:none}
 .cmn-mv{display:none;width:40px;height:40px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:16px;cursor:pointer}
@@ -90,7 +90,7 @@ mark{background:#ffe58a;border-radius:3px;padding:0 2px}
 /* v36 다중 게시판 */
 .cmb-chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
 .cmb-chips button{min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:#fff;font:inherit;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.cmb-chips button small{color:var(--muted);font-size:12px}.cmb-chips button em{font-style:normal;font-size:11px;font-weight:700;background:var(--warn);color:#fff;border-radius:999px;padding:0 6px}
+.cmb-chips button small{color:var(--muted);font-size:12px}.cmb-chips button em{font-style:normal;font-size:12px;font-weight:700;background:var(--warn);color:#fff;border-radius:999px;padding:0 6px}
 .cmb-chips button.on{background:var(--ink);border-color:var(--ink);color:#fff}.cmb-chips button.on small{color:#ddd}
 .cmb-chips .cmb-add{border-style:dashed;color:var(--muted)}
 .cmb-h{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--paper);margin-bottom:10px}
