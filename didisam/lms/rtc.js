@@ -8,7 +8,7 @@
   const api = (m, p, b) => { LV.setMode(LIVEM() ? 'live' : 'demo'); if (!LIVEM()) LV.demoMe = { kind: 'staff' }; return LV.api(m, p, b); };
   const LN = LV.LN;
   const C = { c: {}, room: null, cap: null };
-  (function css() { if (document.querySelector('link[data-lvs]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/rtc.css?v=32.2'; l.dataset.lvs = '1'; document.head.appendChild(l); })();
+  (function css() { if (document.querySelector('link[data-lvs]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/rtc.css?v=43.0'; l.dataset.lvs = '1'; document.head.appendChild(l); })();
 
   /* ── 메뉴: 학사 LMS 프리셋 · 「수업 › 강의실」 메뉴 안(동영상 · 진도 다음) ── */
   MENU.lmslive = { label: '실시간 수업', ws: 'learn', only: 'univ' };
