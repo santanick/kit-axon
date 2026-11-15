@@ -76,7 +76,7 @@ body.lapp .fx-hd:not(:has(a,button)){display:none}
 a.tb-chip.fx-chip-go{display:inline-flex;align-items:center;text-decoration:none;min-height:44px}
 /* 상세 · 날짜 · 시간 */
 .fx-hero{position:relative;overflow:hidden;border-radius:16px;padding:22px 16px 18px;color:#fff;background:var(--pri-tx)}
-.fx-hero.t-g{background:#007200}.fx-hero.t-y{background:#8a5a00}.fx-hero.t-p{background:#5f45ad}.fx-hero.t-r{background:#a8001a}.fx-hero.t-n{background:#3a3a3a}
+.fx-hero.t-g{background:#007200}.fx-hero.t-y{background:#8a5a00}.fx-hero.t-p{background:#0F766E}.fx-hero.t-r{background:#a8001a}.fx-hero.t-n{background:#3a3a3a}
 .fx-hero small{font-size:13px;opacity:.92}
 .fx-hero h2{margin:4px 0;font-size:24px}
 .fx-hero p{margin:0;font-size:14px;opacity:.95}

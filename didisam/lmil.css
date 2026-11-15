@@ -108,7 +108,7 @@ body.lapp .lm-hd{position:absolute;width:1px;height:1px;overflow:hidden;clip:rec
 .lm-note{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);background:var(--lm-bluel);border-radius:12px;padding:14px}
 .lm-note .lm-i{color:var(--lm-blue);margin-top:1px}
 .lm-note b{display:block;font-size:15px}
-.lm-note p{margin:4px 0 0;font-size:14px;line-height:1.55;color:#1e3a8a}
+.lm-note p{margin:4px 0 0;font-size:14px;line-height:1.55;color:#053D1E}
 .lm-note.ok{border-color:#a8dfb0;background:var(--lm-gl)}
 .lm-note.ok .lm-i,.lm-note.ok p{color:var(--lm-gd)}
 .lm-note.err{border-color:#f3b3ad;background:var(--lm-redl)}

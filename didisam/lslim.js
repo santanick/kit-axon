@@ -13,18 +13,21 @@
   const cnt = () => { let m = 0, n = 0; try { m = typeof lcInbox === 'function' ? lcInbox().filter(x => !x.read).length : 0; } catch (e) { } try { n = typeof laItems === 'function' ? laItems().L.filter(x => !x.read).length : 0; } catch (e) { } return { m, n }; };
   const row = (o) => `<${o.la ? `a href="#" data-lact="${o.la}"` : o.href ? `a href="${o.href}"` : `button type="button" data-ap="${o.ap}"`} class="ls-row"><span class="ls-ic" style="--c:${o.c}">${ic(o.i, 20)}</span><span class="ls-tx"><b>${esc(o.n)}</b><small>${esc(o.s)}</small></span>${o.k ? `<i class="ls-bd">${o.k > 99 ? '99+' : o.k}</i>` : ''}<span class="ls-go" aria-hidden="true">›</span></${o.href || o.la ? 'a' : 'button'}>`;
 
+  /* v43: 프로필 동그라미 — 이름(닉네임) 첫 글자 → 없으면 학과 첫 글자 → 없으면 사람 아이콘. 학번 숫자는 쓰지 않는다(대학은 학번 · 학과만 받음). */
+  const avOf = (me) => { const n = String((me && (me.nick || me.name)) || '').trim(); if (n) return esc([...n][0]); const d = String((me && me.dept) || '').trim(); if (d) return esc([...d][0]); return ic('user', 20) || '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>'; };
+  window.lAvOf = avOf;
   /* 1) 「나」 첫머리: 휴대폰 설정형 목록 */
   function meList() { const c = cnt(); const P = isPar(); const org = (SITE().org || {}).name || '';
     const R = [
       { href: '#inbox', i: 'bell', c: '#FF9800', n: '알림', s: c.n ? `새 알림 ${c.n}개` : '공지 · 가입 · 수업 알림', k: c.n },
-      { href: '#msg', i: 'chat', c: '#109BF1', n: '메시지', s: c.m ? `안 읽은 메시지 ${c.m}개` : `${org} 소식`, k: c.m },
+      { href: '#msg', i: 'chat', c: '#0F766E', n: '메시지', s: c.m ? `안 읽은 메시지 ${c.m}개` : `${org} 소식`, k: c.m },
       ...(P ? [{ href: '#mypay/bill', i: 'layers', c: '#00C53B', n: '청구서 · 결제', s: '결제 대기 · 내역' }] : typeof lPayOff === 'function' && lPayOff() ? [] /* v38 F5 결제 꺼진 기관은 결제 줄을 감춘다 */ : [{ href: '#mypay/pay', i: 'layers', c: '#00C53B', n: '결제 · 환불 내역', s: '결제 · 환불 · 구독 · 청구서' }]),
-      ...(P ? [{ href: '#family', i: 'user', c: '#E5487A', n: '자녀', s: '출결 · 수강 현황' }] : [{ href: '#connect', i: 'clock', c: '#7C5CF2', n: '연결 · 알림', s: '앱 알림 · 캘린더 · 리마인더' }, { ap: 'tsheet', i: 'sparkle', c: '#5C74F6', n: 'AI 튜터 · 앱 설정', s: '튜터 이름 바꾸기 · AI 연결 · 화면' }]),
+      ...(P ? [{ href: '#family', i: 'user', c: '#C2410C', n: '자녀', s: '출결 · 수강 현황' }] : [{ href: '#connect', i: 'clock', c: '#A16207', n: '연결 · 알림', s: '앱 알림 · 캘린더 · 리마인더' }, { ap: 'tsheet', i: 'sparkle', c: '#00862D', n: 'AI 튜터 · 앱 설정', s: '튜터 이름 바꾸기 · AI 연결 · 화면' }]),
       { ap: 'orgs', i: 'grid', c: '#6C6C6C', n: '내 기관', s: org },
       ...(LR.me ? [{ href: '#who', i: 'user', c: '#6C6C6C', n: '계정 바꾸기', s: '이 기기의 다른 계정으로 열기' }] : []) /* v38 K12 */,
       ...(LR.me ? [{ la: 'logout', i: 'out', c: '#6C6C6C', n: '로그아웃', s: '공용 기기라면 꼭 로그아웃하세요' }] : []) /* v38 F5 U13 로그아웃을 '나'에서 바로 */
     ];
-    return `<div class="ls-me" aria-label="나">${(LR.me ? `<div class="ls-prof"><span class="ls-av">${esc([...String(LR.me.nick || LR.me.sid || '나')][0])}</span><span><b>${esc(LR.me.nick || LR.me.sid || '')}</b><small>${esc(LR.me.grade || (P ? '보호자 계정' : '회원'))}</small></span></div>` : '')}<nav class="ls-list">${R.map(row).join('')}</nav><h2 class="ls-gh">회원정보</h2></div>`; }
+    return `<div class="ls-me" aria-label="나">${(LR.me ? `<div class="ls-prof"><span class="ls-av">${avOf(LR.me)}</span><span><b>${esc(LR.me.nick || LR.me.sid || '')}</b><small>${esc(LR.me.grade || (P ? '보호자 계정' : '회원'))}</small></span></div>` : '')}<nav class="ls-list">${R.map(row).join('')}</nav><h2 class="ls-gh">회원정보</h2></div>`; }
 
   /* 2) 카드 묶음 → 눌러서 펼치는 줄(제목 + 한 줄) */
   const SUB = { 계정: '이메일 · 등급 · 회원 번호', 프로필: '닉네임 · 사진', '내 개인정보': '보관 중인 정보 보기 · 삭제', '마케팅 정보 수신': '', '비밀번호 설정(선택)': '선택 사항이에요', 'SNS 연동': '카카오 · 네이버 · 구글 · 애플', '회원 탈퇴': '탈퇴하고 개인정보 삭제' };
