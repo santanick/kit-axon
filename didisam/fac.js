@@ -112,6 +112,22 @@
   /* 학습자 게시본: 공개 설정만(데모 예약 · 명단 · 키오스크 PIN 제외) */
   function facPublic() { const D = F(); return { on: D.on !== false, facilities: D.facilities.filter(f => f.on !== false).map(f => ({ id: f.id, name: f.name, kind: f.kind, place: f.place, photo: f.photo, note: f.note, link: f.link, hours: f.hours, closed: f.closed.map(c => ({ from: c.from, to: c.to, repeat: c.repeat || '', reason: c.reason })), slotMin: f.slotMin, minSlots: f.minSlots, maxSlots: f.maxSlots, capacity: f.capacity, open: f.open, windows: f.windows, approval: f.approval, pay: f.pay === 'online' && !tossReady() ? 'onsite' : f.pay, audience: f.audience, verify: f.verify, prices: f.prices, rules: { dupSame: f.rules.dupSame, exclGroup: f.rules.exclGroup || '', noShowMin: f.rules.noShowMin, noShowStrikes: f.rules.noShowStrikes, suspendDays: f.rules.suspendDays, oneEntryPerDay: f.rules.oneEntryPerDay, transferable: f.rules.transferable, maxActive: f.rules.maxActive }, refund: f.refund, extra: (f.extra || []).filter(x => x.on).map(x => ({ key: x.key, label: x.label, purpose: x.purpose, keepDays: x.keepDays, required: !!x.required })), resources: f.resources.filter(r => r.on !== false).map(r => ({ id: r.id, name: r.name })), deposit: f.deposit, lateFeePerDay: f.lateFeePerDay, maxDays: f.maxDays })), products: D.products.filter(p => fac(p.fac) && fac(p.fac).on !== false), retention: D.settings.retention }; }
   window.facPublic = facPublic;
+  /* v43 오늘 타임라인 데이터(홈 · 시설 화면 공용): 시간 예약 시설별 오늘 예약 블록 · 가동률 */
+  function facToday(day) { day = day || today(); const D = F(); const TF = D.facilities.filter(f => f.kind === 'time' && f.on !== false); const B = bookings().filter(b => b.day === day && !['cancelled', 'rejected', 'expired'].includes(b.status));
+    let lo = 24 * 60, hi = 0; const rows = TF.map(f => { const H = FC().dayHours(f, day); const open = H && !H.closed; if (open) { lo = Math.min(lo, H.from); hi = Math.max(hi, H.to); }
+      const res = (f.resources || []).filter(r => r.on !== false).length || 1; const L = B.filter(b => b.fac === f.id); const used = L.reduce((a, b) => a + Math.max(0, b.em - b.sm), 0); const cap = open ? (H.to - H.from) * res : 0;
+      const tone = b => b.status === 'requested' ? 'warn' : b.status === 'no_show' ? 'off' : b.status === 'done' ? 'b' : checkedIn(b) ? 'c' : 'a';
+      return { id: f.id, n: f.name, img: f.photo || (window.V4 ? V4.photo(f.name + ' ' + f.place) : ''), open, closed: H && H.closed ? H.reason || '휴관' : '', util: cap ? Math.min(100, Math.round(used / cap * 100)) : 0, n_bk: L.length,
+        blocks: L.sort((a, b) => a.sm - b.sm).map(b => ({ l: b.label || (b.status === 'requested' ? '승인 대기' : b.who ? '예약 · ' + String(b.who).slice(0, 4) : '예약'), s: b.sm, e: b.em, tone: tone(b), act: 'fac-bk', v: b.id })) }; });
+    if (lo >= hi) { lo = 9 * 60; hi = 21 * 60; } lo = Math.floor(lo / 60) * 60; hi = Math.ceil(hi / 60) * 60;
+    const on = rows.filter(r => r.open); const util = on.length ? Math.round(on.reduce((a, r) => a + r.util, 0) / on.length) : 0; const m = nowM(); const free = on.filter(r => !r.blocks.some(b => b.s <= m && b.e > m)).map(r => r.n);
+    return { day, lo, hi, now: day === today() ? m : null, rows, util, n: on.length, free, appr: B.filter(b => b.status === 'requested').length, total: B.length }; }
+  window.facToday = facToday;
+  function todayCard() { if (!window.V4) return ''; const T = facToday(); if (!T.rows.length) return V4.empty({ art: 'room', t: '시간 예약 시설이 아직 없습니다', d: '강의실 · 스터디룸처럼 시간 단위로 빌려주는 공간을 등록하면 오늘 예약이 여기 시간 순서로 보입니다.', act: 'fac-tpl', l: '기본 템플릿으로 시작' });
+    const td = todo(); const chips = [td.appr ? V4.chip(`승인 대기 ${td.appr}`, 'warn') : '', td.over ? V4.chip(`연체 ${td.over}`, 'bad') : '', T.free.length ? V4.chip(`비어 있음 · ${T.free[0]}${T.free.length > 1 ? ` 외 ${T.free.length - 1}` : ''}`, 'ok') : ''].join('');
+    return `<section class="v4-card fc43" aria-labelledby="fc43h"><div class="v4-ch"><h3 id="fc43h">오늘 시설 ${T.n}곳 · <span class="num">${T.util}%</span> 가동</h3>${chips}<button class="btn sm ghost" data-act="tab" data-key="fac" data-v="tl">예약 현황 전체</button></div>
+      ${V4.timeline({ lo: T.lo, hi: T.hi, now: T.now, aria: `${T.day} 시설 예약 타임라인`, rows: T.rows.map(r => ({ n: r.n, sub: r.open ? `가동 ${r.util}% · ${r.n_bk}건` : r.closed || '운영 안 함', img: r.img, blocks: r.blocks })) })}
+      <div class="fc43-ft"><span>오늘 예약 <b class="num">${T.total}</b>건</span><span>승인 대기 <b class="num">${T.appr}</b>건</span><span class="sp"></span><button class="btn sm" data-act="fac-walk">+ 현장 예약 등록</button></div></section>`; }
   if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const pub = base(...a); try { if (pub && S && S.fac) pub.fac = facPublic(); } catch (e) { console.error('fac pub', e); } return pub; }; } /* eslint-disable-line no-global-assign */
 
   /* ── 운영 서버(/api/fac/*) ── */
@@ -157,7 +173,8 @@
     const top = `<div class="fc-todos" aria-label="오늘 처리할 일"><span class="fc-tl">오늘 처리할 일</span>${n(td.appr, '승인 대기', 'appr', 'warn')}${n(td.due, '반납 예정', 'ns', '')}${n(td.over, '연체', 'ns', 'bad')}${n(td.ns, '노쇼', 'ns', 'bad')}</div>`;
     const warn = LIVEON() && LV.err ? `<div class="fc-err" role="alert">${esc(LV.err)}</div>` : '';
     let body = ''; try { body = ({ list: vList, tl: vTl, appr: vAppr, chk: vChk, pay: vPay, ref: vRef, ns: vNs, stat: vStat })[tab](); } catch (e) { console.error('fac view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(e.message)}</div>`; }
-    return `<div class="fc">${top}${warn}${tabs('fac', T, tab)}<div class="fc-body" data-tab="${tab}">${body}</div></div>`; };
+    let today43 = ''; try { if (tab === 'list' && !teacher()) today43 = todayCard(); } catch (e) { console.error('fac today', e); }
+    return `<div class="fc">${today43}${top}${warn}${tabs('fac', T, tab)}<div class="fc-body" data-tab="${tab}">${body}</div></div>`; };
 
   /* 1. 목록 · 등록 */
   const priceTxt = f => { if (f.kind === 'pass') { const L = F().products.filter(p => p.fac === f.id); return L.length ? won(Math.min(...L.map(p => FC().quote({ fac: f, product: p, aud: f.audience[f.audience.length - 1] }).final || 0))) + '~' : '-'; } if (f.kind === 'rent') { const p = F().products.find(x => x.fac === f.id); const v = p ? Math.max(0, ...Object.values(p.prices || {}).map(Number)) : 0; return (v ? won(v) + (p.per === 'month' ? '/월' : '/일') : '무료') + (f.deposit ? ` · 보증금 ${won(f.deposit)}` : ''); }

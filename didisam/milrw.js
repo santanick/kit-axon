@@ -215,7 +215,7 @@
     } else body = kv('수여 조건', w.auto ? '기준 도달 시 자동 수여' : P(w.cost.fixedP)) + kv('단계', w.kind === 'cert' ? '인증(육각 · 검증 번호)' : '성취(방패)') + `<p class="mrw-mut">금전 가치가 없어 국비 지원 과정 적립분으로도 받을 수 있습니다.</p>`;
     const aud = w.audience && !w.audience.all && (w.audience.cls || []).length ? (w.audience.cls || []).map(id => ((S.classes || []).find(c => c.id === id) || { name: id }).name).join(', ') : '전체 학습자';
     const soft = w.softLock && !w.active;
-    return `<article class="mrw-rw ${w.active ? '' : 'off'}" data-rw="${esc(w.id)}"><div class="hd"><span class="mrw-ic">${ic(k[1], 24)}</span><div class="f1"><small>${esc(k[0])}</small><b>${esc(w.title)}</b></div>
+    return `<article class="mrw-rw ${w.active ? '' : 'off'}" data-rw="${esc(w.id)}">${window.V4 ? `<div class="mrw-cov" style="background-image:url(${V4.photo(w.title + ' ' + (KIND[w.kind] || [''])[0], w.kind === 'tuition' ? 'sem-01' : w.kind === 'coupon' ? 'sem-01' : w.kind === 'badge' || w.kind === 'cert' ? 'lec-01' : 'lib-03')})" aria-hidden="true"></div>` : ''}<div class="hd"><span class="mrw-ic">${ic(k[1], 24)}</span><div class="f1"><small>${esc(k[0])}</small><b>${esc(w.title)}</b></div>
       ${w.cash ? pill('금전성', 'info', 'mrwReceipt') : pill('비금전', 'off', 'mrwMedal')}
       <button class="mrw-tg ${w.active ? 'on' : ''}" role="switch" aria-checked="${!!w.active}" aria-label="${esc(w.title)} ${w.active ? '켜짐' : '꺼짐'}" data-act="mrw-rw-on" data-v="${esc(w.id)}" ${own ? '' : 'disabled'}><i></i><span>${w.active ? '켬' : '끔'}</span></button></div>
       <div class="bd">${body}${kv('대상', esc(aud))}${kv('승인', esc(APPR[w.approval] || w.approval || '자동'))}</div>
@@ -488,5 +488,5 @@
   push({ id: 'approvals', label: '신청 · 승인', order: 40, badge: nAp, render: () => { pull('approvals'); return viewApprovals(); } });
   push({ id: 'fraud', label: '부정 의심', order: 60, badge: nFl, render: () => { pull('fraud'); return viewFraud(); } });
 
-  window.milrw = { ensure, checks: id => { const r = findRd(id); return r ? checks(r) : []; }, billOf: id => { const r = findRd(id); return r ? billOf(r) : null; }, payRows, approveDemo: id => approveDemo(findRd(id)), live: LV };
+  window.milrw = { pending: () => { try { ensure(); return apList().map(r => { const w = rwOf(r.rewardId); return { id: r.id, t: w.title || '보상', kind: w.kind, who: who(r), p: +r.points || 0, at: r.at || '', hold: checks(r).length }; }); } catch (e) { return []; } }, ensure, checks: id => { const r = findRd(id); return r ? checks(r) : []; }, billOf: id => { const r = findRd(id); return r ? billOf(r) : null; }, payRows, approveDemo: id => approveDemo(findRd(id)), live: LV };
 })();

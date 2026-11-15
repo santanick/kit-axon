@@ -16,12 +16,12 @@ function d26Kpi() {
   return { cls: C.length, open: C.filter(c => /운영|모집|판매/.test((c.status || '') + (c.sale || ''))).length, rate: all ? Math.round(dn / all * 1000) / 10 : 0, lib: lib.length, kinds, mem: M.length, lrn: L.size };
 }
 function d26Line(pts, keys, h = 170) { const W = 560, P = 26; const max = Math.max(1, ...pts.flatMap(p => keys.map(k => +p[k] || 0))); const x = i => P + i * ((W - P * 2) / Math.max(1, pts.length - 1)); const y = v => h - 24 - (v / max) * (h - 44);
-  const col = ['#5C74F6', '#FF5A4C'];
-  return `<svg class="d26-svg" viewBox="0 0 ${W} ${h}" role="img" aria-label="주간 추이">${[0, .5, 1].map(f => `<line x1="${P}" x2="${W - P}" y1="${y(max * f)}" y2="${y(max * f)}" stroke="#EAEBEB"/><text x="2" y="${y(max * f) + 4}" font-size="10" fill="#808181">${Math.round(max * f)}</text>`).join('')}
-    ${keys.map((k, j) => `<polyline fill="none" stroke="${col[j]}" stroke-width="2" points="${pts.map((p, i) => `${x(i)},${y(+p[k] || 0)}`).join(' ')}"/>${pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(+p[k] || 0)}" r="3" fill="#fff" stroke="${col[j]}" stroke-width="2"/>`).join('')}`).join('')}
-    ${pts.map((p, i) => `<text x="${x(i)}" y="${h - 6}" font-size="10" fill="#808181" text-anchor="middle">${esc(String(p.w || p.label || '').slice(-5))}</text>`).join('')}</svg>`; }
-function d26Bars(vals, labels, color = '#FF9800', h = 130) { const W = 300, max = Math.max(1, ...vals), bw = (W - 20) / vals.length * .5;
-  return `<svg class="d26-svg" viewBox="0 0 ${W} ${h}" role="img" aria-label="수익 추이">${vals.map((v, i) => { const x = 10 + i * ((W - 20) / vals.length) + bw / 2, bh = (v / max) * (h - 34); return `<rect x="${x}" y="${h - 20 - bh}" width="${bw}" height="${bh}" rx="3" fill="${color}"/><text x="${x + bw / 2}" y="${h - 6}" font-size="10" fill="#808181" text-anchor="middle">${esc(labels[i])}</text>`; }).join('')}</svg>`; }
+  const col = ['var(--c-data)', 'var(--c-warn)'];
+  return `<svg class="d26-svg" viewBox="0 0 ${W} ${h}" role="img" aria-label="주간 추이">${[0, .5, 1].map(f => `<line x1="${P}" x2="${W - P}" y1="${y(max * f)}" y2="${y(max * f)}" style="stroke:var(--c-grid)"/><text x="2" y="${y(max * f) + 4}" font-size="12" style="fill:var(--c-axis)">${Math.round(max * f)}</text>`).join('')}
+    ${keys.map((k, j) => `<polyline fill="none" style="stroke:${col[j]}" stroke-width="2" points="${pts.map((p, i) => `${x(i)},${y(+p[k] || 0)}`).join(' ')}"/>${pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(+p[k] || 0)}" r="3" style="fill:var(--surface);stroke:${col[j]}" stroke-width="2"/>`).join('')}`).join('')}
+    ${pts.map((p, i) => `<text x="${x(i)}" y="${h - 6}" font-size="12" style="fill:var(--c-axis)" text-anchor="middle">${esc(String(p.w || p.label || '').slice(-5))}</text>`).join('')}</svg>`; }
+function d26Bars(vals, labels, color = 'var(--c-data)', h = 130) { const W = 300, max = Math.max(1, ...vals), bw = (W - 20) / vals.length * .5;
+  return `<svg class="d26-svg" viewBox="0 0 ${W} ${h}" role="img" aria-label="수익 추이">${vals.map((v, i) => { const x = 10 + i * ((W - 20) / vals.length) + bw / 2, bh = (v / max) * (h - 34); return `<rect x="${x}" y="${h - 20 - bh}" width="${bw}" height="${bh}" rx="3" style="fill:${color}"/><text x="${x + bw / 2}" y="${h - 6}" font-size="12" style="fill:var(--c-axis)" text-anchor="middle">${esc(labels[i])}</text>`; }).join('')}</svg>`; }
 function d26Cal() { const now = new Date(UI.d26m || today()); const y = now.getFullYear(), m = now.getMonth(); const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate();
   const ev = []; (S.classes || []).forEach(c => { if (c.start) ev.push({ d: c.start, t: '시작', c }); if (c.end) ev.push({ d: c.end, t: '종료', c }); (c.sessions || []).forEach && (c.sessions || []).forEach(s => s && s.date && ev.push({ d: s.date, t: s.mode === 'live' ? 'LIVE' : '수업', c })); });
   const ym = `${y}-${String(m + 1).padStart(2, '0')}`; const on = new Set(ev.filter(e => String(e.d).startsWith(ym)).map(e => +String(e.d).slice(8, 10)));
@@ -46,16 +46,16 @@ function d26Left() { const b = (() => { try { return BRIEF().filter(x => x.n > 0
     ${typeof mbPayOn === 'function' && !mbPayOn() ? '' : `<div class="card d26-rev"><div class="ch"><b>나의 수익 현황</b><span class="sp"></span><button class="btn sm" data-act="go" data-v="sales">자세히 보기</button></div><small>이번 달 결제 금액</small><strong>${d26n(sum)}원</strong>${d26Bars(wk.map(x => x.v), wk.map(x => x.l))}</div>`}
   </aside>`; }
 function d26Main(base) { const k = d26Kpi(); const tab = UI.d26t || 'cls';
-  const kc = { 영상: '#5C74F6', 자료: '#63B8F4', 과제: '#71D87C', 평가: '#FFA826', 설문: '#FF7A73' }; const kt = Object.entries(k.kinds);
+  const kc = { 영상: 'var(--c-data)', 자료: 'var(--gr300)', 과제: 'var(--gr800)', 평가: 'var(--c-warn)', 설문: 'var(--c-prev)' }; const kt = Object.entries(k.kinds);
   const bdOn = typeof menuOn === 'function' ? menuOn('badge') : true; const wk = (S.weeks || []).slice(-8); const last = wk[wk.length - 1] || {}, prev = wk[wk.length - 2] || {}; const ch = prev.join ? Math.round(((last.join || 0) - prev.join) / prev.join * 100) : 0;
   const C = [...(S.classes || [])].sort((a, b) => UI.d26s === 'rate' ? d26Avg(b) - d26Avg(a) : (b.learners || []).length - (a.learners || []).length).slice(0, 10);
-  const medal = i => ['🥇', '🥈', '🥉'][i] || `${i + 1}위`;
+  const medal = i => `<span class="d26-rk ${i < 3 ? 't' : ''}">${i + 1}</span>`;
   return `<div class="d26-main">
     <section class="card d26-kpi"><h3>전체 운영 현황</h3><div class="d26-kg">
       <div><small>${ic('book', 15)} ${esc(t('cls'))}</small><b>${d26n(k.cls)}<em>개</em></b></div><div><small>${ic('chart', 15)} 전체 평균 수료율</small><b>${k.rate}<em>%</em></b></div>
-      <div class="wide"><small>${ic('grid', 15)} 콘텐츠</small><b>${d26n(k.lib)}<em>개</em></b>${k.lib ? `<span class="d26-stack">${kt.map(([n, v]) => `<i style="flex:${v};background:${kc[n] || '#C8C9C9'}" title="${esc(n)} ${v}"></i>`).join('')}</span><span class="d26-leg">${kt.map(([n, v]) => `<span><i style="background:${kc[n] || '#C8C9C9'}"></i>${esc(n)} <b>${v}</b></span>`).join('')}</span>` : ''}</div>
+      <div class="wide"><small>${ic('grid', 15)} 콘텐츠</small><b>${d26n(k.lib)}<em>개</em></b>${k.lib ? `<span class="d26-stack">${kt.map(([n, v]) => `<i style="flex:${v};background:${kc[n] || 'var(--c-prev)'}" title="${esc(n)} ${v}"></i>`).join('')}</span><span class="d26-leg">${kt.map(([n, v]) => `<span><i style="background:${kc[n] || 'var(--c-prev)'}"></i>${esc(n)} <b>${v}</b></span>`).join('')}</span>` : ''}</div>
       <div><small>${ic('users', 15)} 회원</small><b>${d26n(k.mem)}<em>명</em></b></div><div><small>${ic('users', 15)} ${esc(t('learner'))}</small><b>${d26n(k.lrn)}<em>명</em></b></div></div></section>
-    ${wk.length ? `<section class="d26-row"><div class="card d26-trend"><div class="ch"><b>주간 신규 가입${bdOn ? ' · 배지 발급' : ''}</b><small>최근 ${wk.length}주</small><span class="sp"></span><span class="d26-lg"><i style="background:#5C74F6"></i>신규 가입${bdOn ? ' <i style="background:#FF5A4C"></i>배지 발급' : ''}</span></div>${d26Line(wk, bdOn ? ['join', 'badge'] : ['join'])}</div>
+    ${wk.length ? `<section class="d26-row"><div class="card d26-trend"><div class="ch"><b>주간 신규 가입${bdOn ? ' · 배지 발급' : ''}</b><small>최근 ${wk.length}주</small><span class="sp"></span><span class="d26-lg"><i style="background:var(--c-data)"></i>신규 가입${bdOn ? ' <i style="background:var(--c-warn)"></i>배지 발급' : ''}</span></div>${d26Line(wk, bdOn ? ['join', 'badge'] : ['join'])}</div>
       <div class="d26-hl"><small>이번 주 신규 가입</small><strong>${d26n(last.join || 0)}<em>명</em></strong><span>${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch)}%</span><p>지난주보다 ${ch >= 0 ? '늘었어요' : '줄었어요'}. ${esc(t('learner'))} 초대 링크를 공유하면 더 늘릴 수 있어요.</p></div></section>` : ''}
     <section class="card d26-tabs"><div class="seg2 wtabs"><button class="${tab === 'cls' ? 'on' : ''}" data-act="d26-tab" data-v="cls">${esc(t('cls'))} 운영 현황</button><button class="${tab === 'lrn' ? 'on' : ''}" data-act="d26-tab" data-v="lrn">${esc(t('learner'))} 활동 현황</button></div>
       ${tab === 'cls' ? `<div class="d26-strip"><span>전체 ${esc(t('cls'))} <b>${k.cls}개</b></span><span>수강 가능 ${esc(t('cls'))} <b>${k.open}개</b></span><span>평균 수료율 <b>${k.rate}%</b></span><button class="btn sm ghost" data-act="go" data-v="class">${esc(t('cls'))} 관리 바로가기 ›</button></div>
@@ -64,10 +64,37 @@ function d26Main(base) { const k = d26Kpi(); const tab = UI.d26t || 'cls';
           <div class="tw"><table><thead><tr><th>순위</th><th>${esc(t('cls'))}명</th><th>평균 진도</th><th>수료</th><th>수강 인원</th></tr></thead><tbody>${C.map((c, i) => `<tr><td>${medal(i)}</td><td><a href="#" data-act="cls-open" data-v="${esc(c.id)}"><b>${esc(c.name)}</b></a></td><td>${d26Avg(c)}%</td><td>${d26Done(c)}명</td><td>${(c.learners || []).length}명</td></tr>`).join('') || `<tr><td colspan="5"><div class="empty">${esc(tj('cls', '을'))} 만들면 여기에 순위가 보입니다.</div></td></tr>`}</tbody></table></div></div>` : `<div class="d26-old">${base}</div>`}
     </section></div>`;
   function bar(p) { return `<span class="d26-meter"><i style="width:${Math.min(100, p)}%"></i></span>`; } }
+/* v43 현황 상단(최종 시안 2판): 한 문장 브리핑 · KPI 4칸(스파크라인) · 그라데이션 면적 차트(툴팁) · 도넛 · 퍼널 — v43ui.js(V4) 패턴 */
+function d43Data() { const k = d26Kpi(); const C = S.classes || []; const wk = (S.weeks || []).slice(-8); const last = wk[wk.length - 1] || {}, prev = wk[wk.length - 2] || {};
+  const ch = prev.join ? Math.round(((last.join || 0) - prev.join) / prev.join * 100) : null;
+  const pays = (S.pays || []).filter(p => /완료/.test(p.status || '')); const mo = today().slice(0, 7); const sum = pays.filter(p => String(p.at || '').startsWith(mo)).reduce((a, p) => a + (+p.amount || 0), 0);
+  const pw = [5, 4, 3, 2, 1, 0].map(n => { const e = new Date(Date.now() - n * 7 * 864e5), st = new Date(e.getTime() - 7 * 864e5); return pays.filter(p => { const t = new Date(p.at || 0); return t > st && t <= e; }).reduce((a, p) => a + (+p.amount || 0), 0); });
+  const H = new Set(), Dn = new Set(); C.forEach(c => (c.learners || []).forEach(id => { if ((((c.prog || {})[id] || {}).p || 0) >= 50) H.add(id); try { if (typeof clsDone === 'function' && clsDone(c, id)) Dn.add(id); } catch (e) { } })); const half = H.size;
+  const enr = C.reduce((a, c) => a + (c.learners || []).length, 0), dn = C.reduce((a, c) => a + d26Done(c), 0);
+  return { k, wk, ch, sum, pw, half, enr, dn, dnU: Dn.size, last }; }
+function d43Head(d) { if (!window.V4) return ''; const { k, ch, last } = d;
+  if (!k.cls && !k.mem) return V4.head({ eb: `${V4.ai()} 오늘의 현황`, h: `아직 볼 숫자가 없습니다.<br><em>첫 ${esc(t('cls'))}</em>을 열면 여기부터 채워집니다.`, acts: `<button class="btn pri" data-act="go" data-v="class">${esc(t('cls'))} 만들기</button>` });
+  return V4.head({ eb: `${V4.ai()} 오늘의 현황 · ${esc(today())}`, h: `이번 주 신규 가입 <em>${d26n(last.join || 0)}명</em>, 평균 수료율은 <em class="${k.rate < 50 ? 'co' : ''}">${k.rate}%</em>입니다.`, sub: `${ch != null ? `신규 가입은 지난주보다 ${Math.abs(ch)}% ${ch >= 0 ? '늘었습니다' : '줄었습니다'}. ` : ''}${esc(t('cls'))} ${d26n(k.cls)}개 · ${esc(t('learner'))} ${d26n(k.lrn)}명을 운영 중입니다.` }); }
+function d43Top(d) { if (!window.V4) return ''; const { k, wk, ch, sum, pw, half, enr, dn, dnU } = d; const bdOn = typeof menuOn === 'function' ? menuOn('badge') : true;
+  const cum = []; let c0 = Math.max(0, k.mem - wk.reduce((a, w) => a + (+w.join || 0), 0)); wk.forEach(w => { c0 += +w.join || 0; cum.push(c0); });
+  const kpis = `<div class="v4-kpis d43-kpis">${V4.kpi({ l: '회원', icon: 'users', v: d26n(k.mem), u: '명', delta: ch, spark: cum.length > 1 ? cum : null, sub: `이번 주 신규 ${d26n((wk[wk.length - 1] || {}).join || 0)}명` })}
+    ${V4.kpi({ l: t('learner'), icon: 'users', v: d26n(k.lrn), u: '명', spark: wk.length > 1 ? wk.map(w => +w.join || 0) : null, sub: `수강 등록 ${d26n(enr)}건` })}
+    ${V4.kpi({ l: '평균 수료율', icon: 'chart', v: String(k.rate), u: '%', tone: k.rate && k.rate < 30 ? 'warn' : '', spark: wk.length > 1 ? wk.map(w => +w.badge || 0) : null, sub: `수료 ${d26n(dn)}건 · ${esc(t('cls'))} ${d26n(k.cls)}개` })}
+    ${typeof mbPayOn === 'function' && !mbPayOn() ? V4.kpi({ l: '콘텐츠', icon: 'grid', v: d26n(k.lib), u: '개', sub: '영상 · 자료 · 과제 · 평가' }) : V4.kpi({ l: '이번 달 결제', icon: 'wallet', v: d26n(sum), u: '원', spark: pw, sub: '최근 6주 주간 결제 추이' })}</div>`;
+  const area = wk.length > 1 ? `<section class="v4-card d43-area" aria-labelledby="d43a"><div class="v4-ch"><h3 id="d43a">주간 신규 가입</h3><span class="v4-alg"><span><i></i>신규 가입</span>${bdOn ? '<span><i class="p"></i>배지 발급</span>' : ''}</span></div>
+    ${V4.area(wk.map(w => +w.join || 0), { prev: bdOn ? wk.map(w => +w.badge || 0) : null, prevL: '배지', labels: wk.map(w => String(w.w || w.label || '').slice(-5)), h: 200, fmt: v => d26n(v) + '명', yfmt: v => d26n(v), tipL: i => `${String(wk[i].w || wk[i].label || '').slice(-5)} 주`, aria: '주간 신규 가입 추이' })}</section>`
+    : `<section class="v4-card d43-area">${V4.empty({ art: 'chart', t: '가입 추이는 첫 주가 지나면 그려집니다', d: '초대 링크를 공유해 첫 학습자를 모아 보세요.', act: 'go', v: 'enroll', l: '초대 링크 만들기' })}</section>`;
+  const kt = Object.entries(k.kinds); const PAL = ['var(--c-data)', 'var(--gr300)', 'var(--gr800)', 'var(--c-warn)', 'var(--c-prev)']; const kc = { 영상: PAL[0], 자료: PAL[1], 과제: PAL[2], 평가: PAL[3], 설문: PAL[4] };
+  const parts = kt.map(([n, v]) => ({ l: n, v, c: kc[n] || PAL[4] }));
+  const donut = `<section class="v4-card d43-dn" aria-labelledby="d43d"><div class="v4-ch"><h3 id="d43d">콘텐츠 구성</h3><button class="btn sm ghost" data-act="go" data-v="lib">자료실 ›</button></div>${k.lib ? `<div class="v4-dw">${V4.donut(parts, { size: 132, w: 16, center: `<div><b>${d26n(k.lib)}</b><small>개</small></div>` })}${V4.legend(parts, v => d26n(v) + '개')}</div>` : V4.empty({ art: 'start', t: '아직 콘텐츠가 없습니다', act: 'go', v: 'lib', l: '자료 올리기' })}</section>`;
+  const fun = `<section class="v4-card d43-fun" aria-labelledby="d43f"><div class="v4-ch"><h3 id="d43f">학습 전환</h3><span class="v4-cap">회원에서 수료까지 · 오른쪽은 앞 단계 대비</span></div>${V4.funnel([{ l: '회원', s: '가입 완료', v: k.mem }, { l: t('learner'), s: '1개 이상 수강', v: k.lrn }, { l: '진도 50% 이상', s: '1개 이상 강좌', v: half }, { l: '수료', s: '1개 이상 수료', v: dnU }], { u: '' })}</section>`;
+  return `<div class="d43">${kpis}<div class="d43-r">${area}${donut}</div>${fun}</div>`; }
 { const base = VIEWS.dash; VIEWS.dash = () => { let old = ''; try { old = base(); } catch (e) { console.error(e); }
   try { const now = new Date(); const ts = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const body = old.replace(/^[\s\S]*?<\/div><\/div>/, m => /class="ph"/.test(m) ? '' : m); /* 기존 머리 제거, 본문만 '활동 현황' 탭에 */
-    return head('홈페이지 대시보드', `수집 기준 시각 ${ts} · 운영 현황을 한눈에 봅니다.`, `<button class="btn pri" data-act="d26-xls">${ic('download', 15)} 운영 현황 엑셀로 내려받기</button>`) + `<div class="d26">${d26Left()}${d26Main(body)}</div>`;
+    let d = null, top = '', hl = ''; try { d = d43Data(); hl = d43Head(d); top = d43Top(d); } catch (e) { console.error('d43', e); }
+    let main = d26Main(body); if (top) main = main.replace(/<section class="card d26-kpi">[\s\S]*?(?=<section class="card d26-tabs">)/, top);
+    return head('홈페이지 대시보드', `수집 기준 시각 ${ts} · 운영 현황을 한눈에 봅니다.`, `<button class="btn pri" data-act="d26-xls">${ic('download', 15)} 운영 현황 엑셀로 내려받기</button>`) + hl + `<div class="d26">${d26Left()}${main}</div>`;
   } catch (e) { console.error(e); return old; } }; }
 ACT['d26-tab'] = el => { UI.d26t = el.dataset.v; render(); };
 ACT['d26-sort'] = el => { UI.d26s = el.value; render(); };
