@@ -171,7 +171,7 @@
 
   /* ── 시연 데이터: 지난 30일 학습 사건(모의 계산 재료, 개인정보 없음) ── */
   function rng(seed) { let s = seed; return () => (s = (s * 9301 + 49297) % 233280) / 233280; }
-  function demoEvents(days = 30) { if (S.org && S.org.empty && !(S.members || []).length) return []; /* v43 E1: 빈 스튜디오(emptyOut)는 시연 학습 사건도 만들지 않는다 */ const r = rng(42 + (S.org.type || '').length); const td = today(); const M = (S.members || []).length ? S.members.slice(0, 48) : Array.from({ length: 40 }, (_, i) => ({ sid: String(7100000 + i * 17 + 10) })); /* 빈 스튜디오: 학습자 번호만 있는 시연 학습자 40명 */ const C = (S.classes || []).map(c => c.id); const ev = []; let k = 0;
+  function demoEvents(days = 30) { if (S.org && S.org.empty && !(S.members || []).length && LIVEON()) return []; /* v43 E1 · G1: 운영 서버의 빈 스튜디오는 시연 학습 사건을 만들지 않는다. 시연판에서는 모의 계산 · [시연 사건 넣기]용 재료로만 쓰고, 화면에 실제 학습자처럼 세지 않는다(마법사 「최근 30일 학습」) */ const r = rng(42 + (S.org.type || '').length); const td = today(); const M = (S.members || []).length ? S.members.slice(0, 48) : Array.from({ length: 40 }, (_, i) => ({ sid: String(7100000 + i * 17 + 10) })); /* 빈 스튜디오: 학습자 번호만 있는 시연 학습자 40명 */ const C = (S.classes || []).map(c => c.id); const ev = []; let k = 0;
     const push = (sid, trigger, o = {}) => ev.push({ id: 'ev' + (++k), sid, trigger, srcType: o.st || 'x', srcId: o.src || ('s' + k), value: o.v, prev: o.prev, target: o.target, diag: o.diag, required: o.req, clsId: o.cls || C[Math.floor(r() * C.length)] || null, trust: o.tr || 'A', at: addD(td, -Math.floor(r() * days)) });
     M.forEach((m, i) => { if (r() < 0.25) return; const sid = String(m.sid || m.id || ('m' + i)); const act = 0.4 + r();
       for (let j = 0, L = Math.floor(18 * act); j < L; j++) push(sid, 'lesson_done', { src: 'l' + i + '_' + j, tr: r() < 0.7 ? 'A' : 'C', v: 30 + Math.floor(r() * 50) });
@@ -294,7 +294,7 @@
     if (teacher()) return note('info', '마일리지 제도가 꺼져 있습니다', '정운영자가 켜면 이 화면에서 적립 현황을 볼 수 있습니다.');
     if (D0.declined && !UI.milRestart) return `<div class="card mil-hero">${ic('pause', 40)}<div class="f1"><h2>마일리지 제도를 사용하지 않습니다</h2><p>${esc(D0.declined.at)} · ${esc(D0.declined.by)} 결정. 학습자 화면에도 마일리지가 보이지 않습니다.</p></div>${owner() ? `<button class="btn pri" data-act="mil-restart">${ic('play', 18)}다시 시작하기</button>` : ''}</div>`;
     const ro = !owner() ? note('info', '정운영자만 켤 수 있습니다', '부운영자는 권장 정책안을 미리 볼 수 있습니다. 켜기 · 끄기 · 순위 설정은 정운영자 권한입니다.') : '';
-    const learners = (S.members || []).length; const ev = UI.milEv || (UI.milEv = demoEvents(30)); const act = new Set(ev.map(e => e.sid)).size;
+    const learners = (S.members || []).length; const ev = UI.milEv || (UI.milEv = demoEvents(30)); const act = learners ? new Set(ev.map(e => e.sid)).size : 0; /* v43 G1: 학습자가 없으면 시연 사건의 학습자를 세지 않는다 */
     const head0 = `<div class="card mil-hero"><span class="mil-mk">${ic('mile', 40)}</span><div class="f1"><div class="eyebrow">처음 한 번만 설정합니다 · 5단계</div><h2>마일리지 제도 시작하기</h2><p>디디쌤이 기관 유형과 최근 학습 기록으로 권장 정책안을 만들어 드립니다. 모든 값은 기관이 정하고, 언제든 바꾸거나 끌 수 있습니다.</p></div>
       <ul class="mil-facts"><li>${ic('check', 16)}기관 유형 · 템플릿 <b>${esc(T.name)}</b></li><li>${ic('check', 16)}등록 학습자 <b>${n(learners)}명</b> · 최근 30일 학습 <b>${n(act)}명</b></li><li>${ic('check', 16)}${T.won ? '수납 원장과 연결 가능 · 1' + esc(T.ab) + ' = 1원' : '비현금 보상 중심(배지 · 인증서 · 등급)'}</li></ul></div>`;
     if (w.step === 1) { const opt = (on, act2, v, icn, t, d, tg) => `<button type="button" class="mil-opt ${on ? 'on' : ''}" data-act="${act2}" data-v="${v}" aria-pressed="${on}"><span class="rd">${on ? ic('check', 14) : ''}</span><span class="f1"><span class="t">${ic(icn, 20)}${esc(t)}${on ? '<span class="pill p-ok">선택됨</span>' : tg || ''}</span><span class="d">${esc(d)}</span></span></button>`;
@@ -695,4 +695,7 @@
     const at = String(x.at || nowStr()); const ym0 = at.slice(0, 7); const per = +(((P().streak || {}).repair || {}).perMonth) || 1; D0.repairs = Array.isArray(D0.repairs) ? D0.repairs : [];
     if (D0.repairs.filter(r => r.sid === sid && r.ym === ym0).length >= per) return; if (D0.repairs.some(r => r.sid === sid && r.days.join() === days.join())) return;
     D0.repairs.push({ sid, days, ym: ym0, at }); D0.repairs = D0.repairs.slice(-500); if (typeof logAudit === 'function') logAudit(`마일리지 연속 학습 복구 — 학습자 ${sid} · ${days.join(', ')}`); };
+  /* v43 G1: 화면 추천 칩 「마일리지 알려줘」 — 규칙 엔진이 이해하지 못하던 조회에 이번 달 요약으로 답한다 */
+  if (typeof answer === 'function') { const base = answer; answer = (q, ...r) => { let a = null; try { const s = String(q || '').trim(); if (S && S.mileage && /^(학습\s*)?마일리지\s*(알려|현황|보여|요약)/.test(s)) { const st = monthStats();
+      a = { text: `${ym(today())} 마일리지는 적립 ${fmtP(st.earn)} · 사용 ${fmtP(st.use)} · 소멸 ${fmtP(st.expire)}입니다. 적립 받은 학습자 ${n(st.sids)}명${st.pend ? ` · 확인할 적립 ${n(st.pend)}건` : ''}.`, go: 'mileage' }; } } catch (e) { console.error('mil sam', e); } return a || base(q, ...r); }; } /* eslint-disable-line no-global-assign */
 })();

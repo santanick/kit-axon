@@ -11,7 +11,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
 (async () => {
   const srv = http.createServer((q, r) => { const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); }).listen(0, '127.0.0.1'); await new Promise(k => srv.once('listening', k));
   const B = `http://127.0.0.1:${srv.address().port}`; const browser = await chromium.launch(); const errs = [];
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await p.goto(B + '/index.html', { waitUntil: 'load' });
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await p.addInitScript(() => { try { localStorage.setItem('didisam.emptyStart', '0'); } catch (e) { } }); /* v43: 시연 경로(샘플 데이터 기관)로 만든다 — 빈 스튜디오는 원장 · 시설 · 마일리지 시연 데이터를 비운다(empty.js) */ await p.goto(B + '/index.html', { waitUntil: 'load' });
   const mok = async () => { await p.click('#modal [data-mact="ok"]'); };
 
   /* ① 유형별 메뉴 · 기본 탭 순서 */
