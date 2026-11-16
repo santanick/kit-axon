@@ -84,7 +84,7 @@
     try { const d = typeof today === 'function' ? today() : (typeof ymdL === 'function' ? ymdL(new Date()) : new Date().toISOString().slice(0, 10));
       const p = ((S.settings && S.settings.popups) || []).find(p => p && p.on !== false && (!p.s || p.s <= d) && (!p.e || p.e >= d) && val(p.t));
       return p ? { t: val(p.t).slice(0, 80), link: p.link || '' } : null; } catch (e) { return null; } }
-  const linkHref = v => { v = String(v || ''); if (!v) return ''; if (v.startsWith('learn:')) return '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice' }[v.slice(6)] || 'home');
+  const linkHref = v => { v = String(v || ''); if (!v) return ''; if (v.startsWith('learn:')) return '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice', fac: 'l-fac' }[v.slice(6)] || 'home');
     if (v.startsWith('page:')) return '#p-' + v.slice(5); if (v.startsWith('cls:')) return '#p-c-' + v.slice(4); if (v.startsWith('url:')) return typeof safeURL === 'function' ? safeURL(v.slice(4)) || '' : (/^https:\/\//.test(v.slice(4)) ? v.slice(4) : ''); return ''; };
   const aAttr = h => `href="${E(h)}"${/^https?:/.test(h) ? ' target="_blank" rel="noopener"' : ''}`;
 

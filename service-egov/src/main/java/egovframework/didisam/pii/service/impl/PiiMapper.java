@@ -55,6 +55,8 @@ public interface PiiMapper {
     Map<String, Object> selectUniv(@Param("tid") String tid, @Param("sub") String sub);
     Map<String, Object> selectMine(@Param("tid") String tid, @Param("sid") String sid);
     String updateField(@Param("tid") String tid, @Param("sid") String sid, @Param("f") String f, @Param("v") String v);
+    int setPhoneConsent(@Param("tid") String tid, @Param("sid") String sid, @Param("at") String at);
+    int dropPhoneConsent(@Param("tid") String tid, @Param("sid") String sid);
     Map<String, Object> selectEmailBidx(@Param("tid") String tid, @Param("lid") String lid);
     List<Map<String, Object>> selectMasks(@Param("tid") String tid);
     Map<String, Object> selectField(@Param("tid") String tid, @Param("lid") String lid, @Param("f") String f);

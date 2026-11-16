@@ -1,6 +1,15 @@
 /* v43 D-C(P2 C4): 학사 LMS 「명단에 없는 학번」 안내 — 한 화면에 한 번만(학습자 화면이 그릴 때마다 처음 1회), 접근코드 재발급 요청(#find/code) · 학교 문의(#find/inq) */
-window.lmsNoRoster = window.lmsNoRoster || (() => { const k = location.hash + '|' + (window.__lmsNR = (window.__lmsNR || 0)); if (window.__lmsNRk === k) return ''; window.__lmsNRk = k; setTimeout(() => { window.__lmsNR++; }, 0);
-  return `<div class="lms43nr" role="note"><p><b>이 학번은 아직 이번 학기 수강 명단에 없어요.</b><br>수강 신청 · 정정 뒤에 명단이 들어오면 강의실이 자동으로 열려요. 학번이 맞는데 계속 보이면 학과 사무실이나 학사 담당 부서에 확인해 주세요.</p><div class="lms43nb"><a class="lbtn pri" href="#find/code">접근코드 재발급 요청</a><a class="lbtn ghost" href="#find/inq">학교에 문의하기</a></div></div>`; });
+/* v43 K2(P2-C4): 명단에 없는 학번 안내를 학사 연동 상태로 나눈다 — sync = /api/lms/a/my 의 sync(동기화 전 before · 반영 끝 done · 운영 학기 없음 none).
+   동기화 전: 학교가 명단을 보내는 중 + 예상 시점 + 문의 경로 / 반영 끝: 이 학번이 명단에 없음 + 재발급 · 문의 / 학기 없음: 강의실이 아직 열리지 않음 */
+window.lmsNoRoster = (sync) => { const k = location.hash + '|' + (window.__lmsNR = (window.__lmsNR || 0)); if (window.__lmsNRk === k) return ''; window.__lmsNRk = k; setTimeout(() => { window.__lmsNR++; }, 0);
+  const E = s => typeof esc === 'function' ? esc(s) : String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const d = v => { const x = v ? new Date(v) : null; return x && !isNaN(x) ? `${x.getMonth() + 1}월 ${x.getDate()}일${v.length > 10 ? ` ${String(x.getHours()).padStart(2, '0')}:${String(x.getMinutes()).padStart(2, '0')}` : ''}` : ''; };
+  const S0 = sync && typeof sync === 'object' ? sync : {}; const st = S0.state || '';
+  const inq = '<a class="lbtn ghost" href="#find/inq">학과 사무실에 문의하기</a>';
+  if (st === 'before') return `<div class="lms43nr is-sync" role="note" data-sync="before"><p><b>학교에서 수강 명단을 보내는 중이에요.</b><br>${S0.next_at ? `${E(d(S0.next_at))}쯤 다시 열어 보세요. ` : ''}보통 수강 신청 · 정정이 끝나고 하루 안에 강의실이 자동으로 열려요. 학번은 맞게 입력하셨어요.</p>${S0.term ? `<p class="mini">${E(S0.term)}${S0.last_at ? ` · 마지막 명단 반영 ${E(d(S0.last_at))}` : ' · 아직 명단이 한 번도 들어오지 않았어요'}</p>` : ''}<div class="lms43nb"><button type="button" class="lbtn pri" data-lms-reload="1">다시 확인하기</button>${inq}</div></div>`;
+  if (st === 'none') return `<div class="lms43nr" role="note" data-sync="none"><p><b>이번 학기 강의실이 아직 열리지 않았어요.</b><br>학교가 학기를 열면 수강 분반이 자동으로 보여요.</p><div class="lms43nb">${inq}</div></div>`;
+  return `<div class="lms43nr" role="note" data-sync="done"><p><b>이 학번은 아직 이번 학기 수강 명단에 없어요.</b><br>수강 신청 · 정정 뒤에 명단이 들어오면 강의실이 자동으로 열려요. 학번이 맞는데 계속 보이면 학과 사무실이나 학사 담당 부서에 확인해 주세요.</p>${S0.last_at ? `<p class="mini">마지막 명단 반영 ${E(d(S0.last_at))}</p>` : ''}<div class="lms43nb"><a class="lbtn pri" href="#find/code">접근코드 재발급 요청</a>${inq}</div></div>`; };
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-lms-reload]'); if (!b) return; e.preventDefault(); try { if (window.LMSA_ST) { window.LMSA_ST.live = null; window.LMSA_ST.err = ''; } if (window.LMSEFH_DROP) window.LMSEFH_DROP(); } catch (x) { } if (typeof lrender === 'function') lrender(); if (typeof toast === 'function') toast('학사 명단을 다시 확인했어요.', 'ok'); });
 /* v30 학사 LMS 묶음 A — 학습자 앱: 「이번 학기 수강 분반」 카드(내 강의 화면)
    - 운영: GET /api/lms/a/my (학습자 세션) — 합반 공유분반은 대표분반으로 보이고 숨김 분반은 보이지 않는다. 청강 · 조교 신청 · 취소(POST)
    - 데모: 이 브라우저의 기관 데이터룸(S.lms.a)에서 같은 규칙으로 읽기만 한다(신청은 운영 서버에서) */
@@ -8,12 +17,13 @@ window.lmsNoRoster = window.lmsNoRoster || (() => { const k = location.hash + '|
   'use strict';
   if (typeof viewMy !== 'function' || typeof LR !== 'object') return;
   const on = () => { try { const o = SITE() && SITE().org; return !!(o && o.type === 'univ' && o.ed === 'lms' && LR.me); } catch (e) { return false; } };
-  const ST = { live: null, busy: false, err: '' };
+  const ST = { live: null, busy: false, err: '' }; window.LMSA_ST = ST;
   const MODE = { online: '온라인', blended: '블렌디드', offline: '오프라인', hyflex: '하이플렉스' };
   function demo() {
     let A = null; try { const r = typeof demoRoom === 'function' ? demoRoom() : null; A = r && r.lms && r.lms.a; } catch (e) { }
-    if (!A) return { me: null, sections: [], requests: [], open: [] };
-    const m = String(LR.me.sid || ''); if (!A.persons.some(p => p.member_no === m)) return { me: null, sections: [], requests: [], open: [] };
+    if (!A || !(A.enr || []).length) return { me: null, sections: [], requests: [], open: [], sync: { state: 'before', term: ((A && A.terms) || []).map(x => x.name)[0] || '' } }; /* v43 K2: 체험판 — 명단이 아직 없으면 동기화 전 */
+    const lastAt = () => (A.enr || []).map(e => e.at || '').sort().pop() || '';
+    const m = String(LR.me.sid || ''); if (!A.persons.some(p => p.member_no === m)) return { me: null, sections: [], requests: [], open: [], sync: { state: 'done', last_at: lastAt() } };
     const co = c => (A.courses.find(x => x.course_code === c) || {}).name || ''; const out = new Map();
     const add = (sid, kind) => { const s0 = A.sections.find(s => s.section_id === sid); if (!s0) return; const v = A.sections.find(s => s.section_id === (s0.rep_section_id || s0.section_id)); if (!v || !['open', 'closed'].includes(v.status)) return; if (out.has(v.section_id)) { const o = out.get(v.section_id); if (kind === 'ta') o.ta = true; else if (o.kind === 'ta') { o.kind = kind; o.ta = true; } return; } /* v38 #17 수강하면서 조교인 학생은 둘 다 표시 */
       out.set(v.section_id, { section_id: v.section_id, course_code: v.course_code, course_name: co(v.course_code), section_no: v.section_no, title: v.title, mode: v.mode, schedule: v.schedule || [], kind, ta: kind === 'ta', via: s0.section_id !== v.section_id ? s0.section_no : null }); };
@@ -29,7 +39,7 @@ window.lmsNoRoster = window.lmsNoRoster || (() => { const k = location.hash + '|
   function card() {
     const D = data(); const head = '<div class="myhead"><h2>이번 학기 수강 분반</h2></div>';
     if (!D) return `<div class="mycard" id="lmsaMy">${head}<p class="mini">${ST.err ? esc(ST.err) : '불러오는 중입니다.'}</p></div>`;
-    if (!D.me) return `<div class="mycard" id="lmsaMy">${head}${(window.lmsNoRoster || (() => ''))()}</div>`; /* v43 D-C(P2 C4): 막다른 길 대신 접근코드 재발급 요청 · 학교 문의 */
+    if (!D.me) return `<div class="mycard" id="lmsaMy">${head}${(window.lmsNoRoster || (() => ''))(D.sync)}</div>`; /* v43 D-C(P2 C4): 막다른 길 대신 접근코드 재발급 요청 · 학교 문의 */
     const sn = id => { const s = [...D.sections, ...(D.open || [])].find(x => x.section_id === id); return s ? `${s.course_name} ${s.section_no}분반` : '분반'; };
     const L = D.sections.map(s => `<li><b>${esc(s.course_name)}</b> <small>${esc(s.course_code)} · ${esc(s.section_no)}분반 · ${esc(MODE[s.mode] || s.mode)}${s.kind === 'audit' ? ' · 청강(성적 미산정)' : ''}${s.kind === 'ta' || s.ta ? ' · <b class="lmsa-ta">조교</b>' : ''}${s.via ? ` · ${esc(s.via)}분반 합반` : ''}</small>${(s.schedule || []).length ? `<small class="lmsa-sch">${esc(s.schedule.map(x => `${x.day} ${x.period}${x.room ? ' ' + x.room : ''}`).join(', '))}</small>` : ''}</li>`).join('');
     const R = (D.requests || []).map(r => `<li>${esc(sn(r.section_id))} · ${r.kind === 'ta' ? '조교' : '청강'} 신청 승인 대기${LR.mode === 'live' ? ` <button class="lbtn sm ghost" data-lact="lmsa-cancel" data-s="${esc(r.section_id)}" data-k="${esc(r.kind)}">신청 취소</button>` : ''}</li>`).join('');

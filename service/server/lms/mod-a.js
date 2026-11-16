@@ -563,6 +563,9 @@ function createLms({ pool, inTenant, need, HttpErr, readBody, limit, audit }) {
     const r = (await pool.query('select tenant_id, sid from learner_sessions where id = $1 and expires_at > now()', [crypto.createHash('sha256').update(t).digest('hex')])).rows[0];
     if (!r) throw new HttpErr(401, '로그인이 필요합니다.', 'auth'); return r;
   }
+  const SQL_SYNC = `select json_build_object('state', case when t.term_id is null then 'none' when r.last_at is null or not exists (select 1 from lms_enrollment e join lms_section s on s.tenant_id = e.tenant_id and s.section_id = e.section_id where s.term_id = t.term_id) then 'before' else 'done' end, 'term', t.name, 'term_start', t.starts_on, 'last_at', lms_ts(r.last_at), 'next_at', lms_ts(case when r.last_at is null then null else r.last_at + interval '1 day' end))::text j
+  from (select 1) d left join lateral (select term_id, name, starts_on from lms_term where is_operating order by starts_on desc limit 1) t on true
+  left join lateral (select max(coalesce(x.finished_at, x.started_at)) last_at from lms_sis_sync_run x where x.scope in ('all','enrollment') and (x.term_id is null or x.term_id = t.term_id)) r on true`;
   async function pubLms(req) {
     const s = await lsess(req); const tid = s.tenant_id;
     const t = (await pool.query('select type from tenants where id = $1', [tid])).rows[0]; if (!t || t.type !== 'univ') throw err('lms_edition');
@@ -571,7 +574,9 @@ function createLms({ pool, inTenant, need, HttpErr, readBody, limit, audit }) {
     return inTenant(pool, tid, async c => {
       let p = await one(c, 'select person_id::text, member_no from lms_person where member_no = $1', [s.sid]);
       if (!p && RE.uuid.test(s.sid)) { const a = await one(c, 'select student_no from learner_accounts where learner_id = $1::uuid', [s.sid]); if (a && a.student_no) p = await one(c, 'select person_id::text, member_no from lms_person where member_no = $1', [a.student_no]); }
-      if (!b) { if (!p) return { me: null, sections: [], requests: [], open: [] }; return { me: { member_no: p.member_no }, ...JSON.parse((await one(c, SQL_PUB, [p.person_id])).j) }; }
+      if (!b) { /* v43 K2(P2-C4): 명단에 없거나 분반이 없으면 학사 연동 상태(동기화 전 · 완료 · 학기 없음)와 다음 예상 시점을 함께 — LmsAServiceImpl.pubLms와 같은 규칙 */
+        const sync = async () => { try { return JSON.parse((await one(c, SQL_SYNC, [])).j); } catch (e) { return null; } };
+        if (!p) return { me: null, sections: [], requests: [], open: [], sync: await sync() }; const o = { me: { member_no: p.member_no }, ...JSON.parse((await one(c, SQL_PUB, [p.person_id])).j) }; if (!(o.sections || []).length) o.sync = await sync(); return o; }
       if (!p) throw err('person');
       const act = T(b.act); const kind = T(b.kind); if (kind !== 'ta' && kind !== 'audit') throw err('req_kind');
       const sid = T(b.section_id); if (!RE.uuid.test(sid)) throw err('section');

@@ -125,6 +125,10 @@
   <!-- ── 학습자(내 분반) — 세션 · 기관 유형은 plain ── -->
   <select id="selectLearnerSession" resultType="java.util.LinkedHashMap">select tenant_id, sid from learner_sessions where id = #{hash} and expires_at &gt; now()</select>
   <select id="selectTenantType" resultType="string">select type from tenants where id = #{tid}</select>
+  <!-- v43 K2(P2-C4): 학사 연동 상태 — mod-a.js SQL_SYNC와 같은 규칙 -->
+  <select id="selectSyncState" resultType="string"><![CDATA[select json_build_object('state', case when t.term_id is null then 'none' when r.last_at is null or not exists (select 1 from lms_enrollment e join lms_section s on s.tenant_id = e.tenant_id and s.section_id = e.section_id where s.term_id = t.term_id) then 'before' else 'done' end, 'term', t.name, 'term_start', t.starts_on, 'last_at', lms_ts(r.last_at), 'next_at', lms_ts(case when r.last_at is null then null else r.last_at + interval '1 day' end))::text j
+  from (select 1) d left join lateral (select term_id, name, starts_on from lms_term where is_operating order by starts_on desc limit 1) t on true
+  left join lateral (select max(coalesce(x.finished_at, x.started_at)) last_at from lms_sis_sync_run x where x.scope in ('all','enrollment') and (x.term_id is null or x.term_id = t.term_id)) r on true]]></select>
   <select id="selectAccountStudentNo" resultType="string">select student_no from learner_accounts where learner_id = cast(#{lid} as uuid)</select>
   <select id="selectPub" resultType="string"><![CDATA[select json_build_object(
   'sections', coalesce((select json_agg(z.o order by z.term_id desc, z.course_code, z.section_no) from (

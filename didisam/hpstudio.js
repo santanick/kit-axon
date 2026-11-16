@@ -121,7 +121,7 @@
 
   /* ═════════ 3. 편집기 꾸미기(위 탭 · 처음 흐름 · 오른쪽 아이콘 줄) ═════════ */
   const SKIND = { class: '#shop', book: '#textbooks', community: '#comm' };
-  const LEARN_OK = ['home', 'shop', 'comm', 'notice', 'textbooks', 'my', 'courses'];
+  const LEARN_OK = ['home', 'shop', 'comm', 'notice', 'textbooks', 'my', 'courses', 'fac'];
   /* 게시본에서 메뉴가 어디로 가는지(sitemerge menuHref와 같은 규칙) — 학습 페이지면 { hash }, 외부 주소면 { url } */
   function target(it, parent) {
     const lk = String(it.link || '');

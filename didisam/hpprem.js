@@ -69,6 +69,9 @@
 .hpt :is(table,th,td){border-color:var(--ln)!important}.hpt :is(th){background:${mix(th.bg, '#ffffff', .1)}!important;color:var(--ink)!important}
 .hpt :is(small,.hp-sd,.hp-lead,.hps-mu,.hps-meta,dd,dt,figcaption){color:var(--mu)}
 .hpt .hp-btn.gh,.hpt .hps-btn.g{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4)}
+/* v43 K2(D-E 인계): 레이아웃 렌더러(hplay · pt-*) 흰 면 · 흰 버튼도 무대 면으로 — 흰 바탕 위 밝은 글자(대비 1:1)가 되던 것 */
+.hpt :is(.pt-qk,.pt-fg,.pt-fg>li,.pt-fg>div,.pt-srch){background:var(--surf)!important;border-color:var(--ln)!important;box-shadow:0 0 0 1px var(--ln)!important}.hpt :is(.pt-qk,.pt-fg) :is(h3,b,strong){color:${th.ink}!important}.hpt :is(.pt-qk,.pt-fg) p{color:${mu}!important}.hpt .pt-srch .pt-sp{color:${mu}!important}
+.hpt :is(.hpl-btn.wh,.hps-cta),.hpt-stage .hps-cta{background:#ffffff!important;color:#14191A!important}.hpt :is(.hpl-btn.wh,.hps-cta) *,.hpt-stage .hps-cta *{color:#14191A!important}
 .hpt .hps-bd{color:#14191A!important}.hpt .hps-bd.is-on{color:var(--on-a)!important}.hpt .hp-ey,.hpt .hps-ey{color:var(--at)}.hpt a:not(.hp-btn):not(.hps-btn){color:inherit}`; }
     return x; }
 
@@ -121,7 +124,7 @@
     const unit = f => (+f.slotMin || 60) >= 60 ? `${Math.round((+f.slotMin || 60) / 60)}시간` : `${f.slotMin}분`;
     const price = f => { const p = f.prices || {}; const g = k => +((p[k] || {}).slot) || 0; return g('public') || g('staff') || g('student') ? [`일반 ${W(g('public'))}`, p.staff ? `지역주민 ${W(g('staff'))}` : '', p.student ? `감면 ${W(g('student'))}` : ''].filter(Boolean).join(' · ') + ` (${unit(f)})` : '무료'; };
     const pr = TF.filter(f => !f.approval).slice(0, 4).map(f => [f.name, price(f)]); const ps = (S.fac.products || []).filter(x => x.type === 'pass-period').slice(0, 1).map(x => [x.name, `일반 ${W((x.prices || {}).public)}`]);
-    return [ban({ eyebrow: '시설 예약 · 강습', title: `오늘 바로\n예약할 수 있어요`, sub: `${TF.slice(0, 3).map(f => f.name.replace(/\s*(타석|코트|룸)$/, '')).join(' · ')} 빈 시간을 보고 1분 안에 예약해요.`, cta: '시설 예약', cta2: '강습 신청' }),
+    return [ban({ eyebrow: '시설 예약 · 강습', title: `오늘 바로\n예약할 수 있어요`, sub: `${TF.slice(0, 3).map(f => f.name.replace(/\s*(타석|코트|룸)$/, '')).join(' · ')} 빈 시간을 보고 1분 안에 예약해요.`, cta: '시설 예약', link: 'learn:fac', cta2: '강습 신청', link2: 'learn:shop' }), /* v43 K2(P2-C3): 시설 예약 버튼 → #fac */
       TX('info', { hpt: 'sp-hours', eyebrow: 'OPEN HOURS', title: '운영 시간', cols: [['평일', `${hr(f0, 1)}`], ['토요일', hr(f0, 6)], ['일요일 · 공휴일', hr(f0, 0)], ['휴관', cl ? `${cl.from.slice(5).replace('-', '.')} ${cl.reason || '휴관'} · 공지로 안내` : '휴관일은 공지로 안내해요']] }),
       TX('features', { eyebrow: 'FACILITIES', title: '예약할 수 있는 시설', cols: FS.slice(0, 4).map(f => [f.name, `${f.place ? f.place + ' · ' : ''}${f.kind === 'time' ? (f.approval ? '승인 후 확정' : '바로 예약') : f.kind === 'pass' ? '이용권' : '대여'}`]) }),
       TX('info', { eyebrow: 'PRICE', title: '요금표', cols: [...pr, ...ps].slice(0, 4) }),
