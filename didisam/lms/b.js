@@ -116,7 +116,8 @@
     if (X.as && !asOpts.some(o => o[0] === X.as)) asOpts.push([X.as, X.as]);
     /* 2단계(UX): 신분 전환(교수 · 조교 · 학생 화면 미리보기)은 「다른 신분으로 보기」 펼침 안으로, 안내는 한 줄 작은 글로 */
     const asNow = X.as ? (asOpts.find(o => o[0] === X.as) || [X.as, X.as])[1] : '';
-    return `<div class="lmsx-head card"><div class="lmsx-hrow"><div><b>${esc(title)}</b><p class="mini">${desc}</p></div>
+    /* v43 R7: 제목 · 설명은 화면 첫 줄 브리핑이 말하므로 카드 머리를 없애고 강의실 고르기 한 줄만 둔다(브리핑이 있으면 nav.js가 그 머리 안으로 옮김) */
+    return `<div class="lmsx-head lmsx-slim"><div class="lmsx-hrow"><h2 class="sr">${esc(title)}</h2><p class="sr">${desc}</p>
       <div class="lmsx-pick"><label>강의실<select data-chg="lmsx-sec">${ss.map(s => `<option value="${esc(s.id)}" ${s.id === X.sec ? 'selected' : ''}>${esc(s.term)} · ${esc(s.title)}</option>`).join('') || '<option value="">강의실 없음</option>'}</select></label>
       <details class="uxmore lmsx-asmore ${X.as ? 'on' : ''}"><summary>${X.as ? `${ic('users', 14)} ${esc(asNow)} 화면` : '다른 신분으로 보기'}</summary><div class="uxpop lmsx-aspop" role="menu">
         <label>보기 신분<select data-chg="lmsx-as">${asOpts.map(([v, l]) => `<option value="${esc(v)}" ${v === (X.as || '') ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>

@@ -419,8 +419,8 @@
         : noCls ? `<span>${ic('check', 16)} 이번 학기 준비 완료 · 강의실이 연결되지 않은 분반 <b>${noCls}</b>개</span><button class="btn sm pri" data-act="tab" data-key="lmsaT" data-v="section">분반 확인하기</button>`
         : `<span>${ic('check', 16)} 이번 학기 준비가 끝났습니다.</span>`;
       const more = TABS.slice(4); const curMore = more.find(([k]) => k === tb);
-      bar = `<div class="lmsa-steps" role="tablist" aria-label="이번 학기 준비 순서">${ST.map(([k, l, n, done], i) => `<button role="tab" aria-selected="${k === tb}" class="lmsa-step ${k === tb ? 'on' : ''} ${done ? 'done' : ''} ${nx && nx[0] === k ? 'next' : ''}" data-act="tab" data-key="lmsaT" data-v="${k}"><i>${done ? ic('check', 14) : i + 1}</i><span><b>${l}</b><small>${n}</small></span></button>`).join('')}</div>
-        <div class="lmsa-todo">${todo}<span class="lmsa-tsel">${termSel(ov, 'lmsaTerm', term)}</span><details class="uxmore lmsa-more"><summary>${curMore ? esc(curMore[1]) : '더보기'}${curMore ? '' : ` <em>${more.length}</em>`}</summary><div class="uxpop" role="menu">${more.map(([k, l]) => `<button role="menuitem" class="${k === tb ? 'on' : ''}" data-act="tab" data-key="lmsaT" data-v="${k}">${esc(l)}</button>`).join('')}</div></details></div>`;
+      bar = `<div class="lmsa-steps" role="tablist" aria-label="이번 학기 준비 순서">${ST.map(([k, l, n, done], i) => `<button role="tab" aria-selected="${k === tb}" class="lmsa-step ${k === tb ? 'on' : ''} ${done ? 'done' : ''} ${nx && nx[0] === k ? 'next' : ''}" data-act="tab" data-key="lmsaT" data-v="${k}"><i>${done ? ic('check', 14) : i + 1}</i><span><b>${l}</b><small>${n}</small></span></button>`).join('')}<details class="uxmore lmsa-more"><summary>${curMore ? esc(curMore[1]) : '더보기'}${curMore ? '' : ` <em>${more.length}</em>`}</summary><div class="uxpop" role="menu">${more.map(([k, l]) => `<button role="menuitem" class="${k === tb ? 'on' : ''}" data-act="tab" data-key="lmsaT" data-v="${k}">${esc(l)}</button>`).join('')}</div></details></div>
+        <div class="lmsa-todo">${todo}<span class="lmsa-tsel">${termSel(ov, 'lmsaTerm', term)}</span></div>`;
     }
     const top2 = top + bar;
     let b = '';

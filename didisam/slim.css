@@ -187,3 +187,57 @@ body:has(#slSheet) .mwrap{z-index:96}
 #main .sx3 select.sx3-hs{display:none!important}
 #main .sx3 [data-sx3g][hidden]{display:none!important}
 #main .sx3 .rng2{display:grid;grid-template-columns:minmax(160px,1fr) minmax(120px,1.2fr) 52px;align-items:center;gap:12px}#main .sx3 .rng2>span{min-width:0}#main .sx3 .sl-setx .swrow{gap:12px}
+/* v43 R7 2차: 요금제 카드(금액 위계 · 추천 배지 · 기능 3줄) · 부가 옵션 2열 */
+#main .r7-plans .card.plan{position:relative;display:flex;flex-direction:column;gap:6px;padding:22px 20px}
+#main .r7-plans .card.plan.rec{border:2px solid var(--gr600,#16A34A)}
+#main .r7-plans .r7-rec{position:absolute;top:-12px;left:20px;font-style:normal;font-size:12px;font-weight:800;color:#fff;background:var(--gr700,#00862D);border-radius:999px;padding:4px 12px}
+#main .r7-plans .card.plan>b{font-size:16px;font-weight:800}#main .r7-plans .r7-who{font-size:13px;color:var(--t-sub,#5C554B)}
+#main .r7-plans .card.plan strong.r7-pr{font-size:28px;font-weight:800;letter-spacing:-.02em;color:var(--g900,#1F1B16);margin:6px 0 2px}#main .r7-pr span{font-size:14px;font-weight:600;color:var(--t-sub,#5C554B);margin-left:4px}
+#main .r7-pf{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:6px}#main .r7-pf li{font-size:14px;padding-left:22px;position:relative}#main .r7-pf li:before{content:"";position:absolute;left:2px;top:5px;width:10px;height:6px;border-left:2px solid var(--gr600,#16A34A);border-bottom:2px solid var(--gr600,#16A34A);transform:rotate(-45deg)}
+#main .r7-plans .card.plan .btn{margin-top:auto}
+#main .r7-addon .r7-ao{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}#main .r7-addon .row{display:grid;gap:2px;padding:10px 12px;border:1px solid var(--hair,#E5DFD3);border-radius:12px}#main .r7-addon .row span{font-size:14px;font-weight:700}#main .r7-addon .row small{font-size:13px;color:var(--t-sub,#5C554B)}
+/* v43 R7 2차: 학습 규칙 — 라벨 14px · 줄 간격 · 값 칩 / 지금 값 핵심 3개 */
+#main .r7-rules .rng2,#main .r7-rules .swrow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--hair,#EDE7DC)}
+#main .r7-rules .rng2 b,#main .r7-rules .swrow b{font-size:15px;font-weight:700}#main .r7-rules .rng2 small,#main .r7-rules .swrow small{display:block;font-size:13px;color:var(--t-sub,#5C554B);margin-top:2px}
+#main .r7-rules .r7-rr{display:flex;align-items:center;gap:10px;flex:0 0 46%}#main .r7-rules .r7-rr input{flex:1}
+#main .r7-rules .r7-rr em{font-style:normal;font-size:14px;font-weight:800;min-width:56px;text-align:center;border-radius:999px;padding:6px 10px;background:var(--gr50,#E8F5EC);color:var(--gr800,#0B6B2C)}
+#main .r7-rules .fl{display:grid;gap:6px;font-size:15px;font-weight:700;padding:14px 0;border-top:1px solid var(--hair,#EDE7DC)}
+#main .r7-nv{display:grid;gap:8px;margin:4px 0 12px}#main .r7-nv div{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:12px;background:var(--g50,#F7F4EE)}#main .r7-nv b{font-size:18px;font-weight:800;order:2}#main .r7-nv small{font-size:14px;color:var(--t-sub,#5C554B)}
+/* v43 R7 2차: 저장 공간 링 · 데이터룸 배포 정보(아이콘 + 한 줄 요약) */
+#main .r7-st{display:flex;align-items:center;gap:20px;margin:8px 0 12px}#main .r7-st .tr{fill:none;stroke:var(--g100,#EDE7DC);stroke-width:12}#main .r7-st .fg{fill:none;stroke:var(--gr600,#16A34A);stroke-width:12;stroke-linecap:round}#main .r7-st .fg.hi{stroke:var(--co500,#E8613F)}
+#main .r7-st text{font-size:20px;font-weight:800;fill:var(--g900,#1F1B16)}#main .r7-st b{display:block;font-size:18px;font-weight:800}#main .r7-st small{font-size:14px;color:var(--t-sub,#5C554B)}
+#main .r7-drid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#main .r7-drid>div{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid var(--hair,#E5DFD3);border-radius:14px;background:var(--surface,#fff)}
+#main .r7-di{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--gr50,#E8F5EC);color:var(--gr700,#00862D);flex:0 0 auto}
+#main .r7-drid small{display:block;font-size:13px;color:var(--t-sub,#5C554B)}#main .r7-drid b{display:block;font-size:15px;font-weight:800}#main .r7-drid em{display:block;font-style:normal;font-size:13px;color:var(--t-sub,#5C554B)}
+/* v43 R7 2차: 관리자 화면 언어 선택 카드 */
+#main .r7-lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+#main .r7-lgrid .r7-lo{display:flex!important;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--hair,#E5DFD3);border-radius:14px;background:var(--surface,#fff);min-height:64px;cursor:pointer}
+#main .r7-lo i{font-style:normal;font-size:12px;font-weight:800;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--g50,#F4F1EA);color:var(--g800,#3A352E);flex:0 0 auto}
+#main .r7-lo b{display:block;font-size:15px;font-weight:800}#main .r7-lo small{display:block;font-size:13px;color:var(--t-sub,#5C554B)}
+#main .r7-lo.on{border:2px solid var(--gr600,#16A34A);background:var(--gr50,#F1F8F3)}#main .r7-lo.on i{background:var(--gr700,#00862D);color:#fff}
+#main .r7-lo input[type=radio]{position:absolute;opacity:0;width:1px;height:1px}
+/* v43 R7 2차: 팝업 — 사용량 칸 막대 · 미리보기 썸네일 카드 */
+#main .r7-pph{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+#main .r7-pu{display:grid;grid-template-columns:auto auto;align-items:center;gap:4px 12px}#main .r7-pu b{font-size:16px;font-weight:800}#main .r7-pu small{grid-column:1/-1;font-size:13px;color:var(--t-sub,#5C554B)}
+#main .r7-pub{display:inline-flex;gap:4px}#main .r7-pub i{width:28px;height:10px;border-radius:5px;background:var(--g100,#EDE7DC)}#main .r7-pub i.on{background:var(--gr600,#16A34A)}
+#main .r7-ppl{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+#main .r7-ppl>li{display:flex!important;gap:14px;padding:14px!important;border:1px solid var(--hair,#E5DFD3);border-radius:16px;background:var(--surface,#fff);align-items:stretch}
+#main .r7-ppl>li.off{opacity:.72}
+#main .r7-ppt{flex:0 0 108px;border:0;padding:10px;border-radius:12px;background:linear-gradient(160deg,var(--gr100,#D8EEDF),var(--g100,#EDE7DC));cursor:pointer}
+#main .r7-ppw{display:grid;gap:5px;height:100%;padding:8px;border-radius:8px;background:var(--surface,#fff);box-shadow:0 4px 12px rgba(0,0,0,.08);text-align:left}
+#main .r7-ppw i{height:22px;border-radius:5px;background:var(--gr600,#16A34A)}#main .r7-ppw b{font-size:11px;line-height:1.3;font-weight:800;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#main .r7-ppw em{height:4px;border-radius:2px;background:var(--g100,#EDE7DC)}#main .r7-ppw em.s{width:60%}#main .r7-ppw span{font-size:10px;font-weight:700;color:#fff;background:var(--g900,#1F1B16);border-radius:4px;padding:2px 4px;justify-self:start}
+#main .r7-ppb{flex:1;display:grid;gap:4px;min-width:0}#main .r7-ppr{display:flex;justify-content:space-between;align-items:center}#main .r7-ppr small{font-size:13px;color:var(--t-sub,#5C554B)}
+#main .r7-ppb>b{font-size:15px;font-weight:800;line-height:1.35}#main .r7-ppd{font-size:13px;color:var(--t-sub,#5C554B)}
+#main .r7-pps{font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px;background:var(--g100,#EDE7DC);color:var(--g800,#3A352E)}#main .r7-pps.ok{background:var(--gr50,#E8F5EC);color:var(--gr700,#00862D)}#main .r7-pps.wait{background:#FFF4DB;color:#8A5A00}
+#main .r7-ppa{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:4px}#main .r7-ppa .grow{flex:1}
+#main .r7-cgh{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;margin:12px 0 8px;color:var(--g800,#3A352E)}#main .r7-cgh em{font-style:normal;font-size:12px;color:var(--gr700,#00862D);background:var(--gr50,#E8F5EC);border-radius:999px;padding:2px 8px}
+/* v43 R7 2차: 가입 방식 — 선택 카드 2열 */
+#main .r7-opt2{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#main .r7-opt2 .st26o{display:flex;gap:12px;align-items:flex-start;padding:16px;border:1px solid var(--hair,#E5DFD3);border-radius:16px;background:var(--surface,#fff);cursor:pointer;min-height:88px}
+#main .r7-opt2 .st26o:has(input:checked){border:2px solid var(--gr600,#16A34A);background:var(--gr50,#F1F8F3)}
+#main .r7-opt2 .st26o b{display:block;font-size:15px;font-weight:800}#main .r7-opt2 .st26o small{display:block;font-size:13px;color:var(--t-sub,#5C554B);margin-top:4px;line-height:1.5}
+@media (max-width:700px){#main .r7-opt2{grid-template-columns:1fr}}
+#main .r7-ppl{grid-template-columns:1fr}
+#main .r7-rules .rng2{flex-wrap:wrap}#main .r7-rules .rng2 .r7-rr{flex:1 1 100%}
+#main .r7-lgrid .r7-lo:before,#main .r7-lgrid .r7-lo:after{display:none!important}

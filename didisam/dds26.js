@@ -116,14 +116,15 @@ AFTER.push(() => { try { if (!CUR || CUR.tab !== 'community') return; const phr 
   const st0 = () => S.settings || {};
   const MORE = {
     rules: () => { const p = st0().progress || {}; return { kind: 'kpi', ring: [+p.watchThr || 0, '완료 기준'], todo: [[`순차 학습 ${p.seq ? '켜짐' : '꺼짐'}`, '앞 레슨을 끝내야 다음 레슨이 열립니다', p.seq ? 'ok' : ''], [`실제 재생 구간만 인정 ${p.realOnly ? '켜짐' : '꺼짐'}`, '건너뛰기 · 2배속 초과 구간은 제외합니다', p.realOnly ? 'ok' : 'warn']] }; },
-    plan: () => { const N = (S.members || []).length, A = (S.admins || []).length; return { kind: 'kpi', stats: [[N + '명', '등록 ' + (typeof t === 'function' ? t('learner') : '학습자')], [A + '명', '운영자'], [((S.classes || []).length) + '개', '운영 과정']] }; },
+    plan: () => { const N = (S.members || []).length; const cap = { standard: 50, premium: 500 }[S.org.plan]; const d = new Date(); const nx = new Date(d.getFullYear(), d.getMonth() + 1, 1); const ren = `${nx.getMonth() + 1}월 ${nx.getDate()}일`; /* v43 R7: 요금제와 관계있는 숫자(사용량 · 갱신일 · 요금)만(J2 076) */
+      return { kind: 'kpi', ring: cap ? [Math.round(N / cap * 100), `학습자 ${N} / ${cap}명`, N / cap > .8 ? 'warn' : ''] : null, stats: [[ren, '다음 갱신일'], [({ standard: '무료', premium: '월 30만원', enterprise: '협의' })[S.org.plan] || '체험', '이번 달 요금'], [cap ? (cap - N) + '명' : '제한 없음', '추가 가능 학습자']] }; },
     integr: () => { const K = (S.apikeys || []); const live = K.filter(k => !k.revoked_at).length; const calls = K.reduce((a, k) => a + (+k.calls || 0), 0); return { kind: 'list', todo: [[`MCP 키 ${live}개 사용 중`, `최근 30일 호출 ${calls.toLocaleString()}회`, live ? 'ok' : ''], [`결제 연결 ${st0().pg && st0().pg !== 'none' ? '사용 중' : '미연결'}`, '수강료 · 교재 결제를 받습니다', st0().pg && st0().pg !== 'none' ? 'ok' : 'warn'], [`카카오 채널 ${st0().kakao ? '연결됨' : '미연결'}`, '알림톡 · 상담 채널', st0().kakao ? 'ok' : '']] }; },
     service: () => { const q = (st0().extraQ || []); return { kind: 'list', todo: [[`홈페이지 ${st0().siteOpen === 'private' ? '로그인 사용자만' : '누구나'} 볼 수 있음`, '공개 범위', 'ok'], [`가입 질문 ${q.length}개`, q.length ? q.join(' · ') : '이름 · 연락처만 받습니다', ''], [`재생 속도 ${st0().speedMin || 0.5}배 ~ ${st0().speedMax || 2}배`, '학습자 플레이어에 적용', 'ok']] }; },
-    terms: () => { const T = st0().terms || {}; return { kind: 'list', todo: [[`이용약관 ${T.tos ? '등록됨' : '미등록'}`, T.tos ? '홈페이지 아래에 노출됩니다' : '기본 문안으로 바로 등록할 수 있습니다', T.tos ? 'ok' : 'warn'], [`개인정보 처리방침 ${T.privacy ? '등록됨' : '미등록'}`, '수집 항목 · 보관 기간을 적습니다', T.privacy ? 'ok' : 'warn']] }; },
+    terms: () => { const T = st0().terms || {}; const H = st0().termsHist || []; const nx = H.map(h => h.at || h.eff || '').filter(Boolean).sort().pop(); return { kind: 'list', todo: [[`이용약관 ${T.tos ? '등록됨' : '미등록'}`, T.tos ? '홈페이지 아래에 노출됩니다' : '기본 문안으로 바로 등록할 수 있습니다', T.tos ? 'ok' : 'warn'], [`개인정보 처리방침 ${T.privacy ? '등록됨' : '미등록'}`, '수집 항목 · 보관 기간을 적습니다', T.privacy ? 'ok' : 'warn'], [H.length ? `개정 이력 ${H.length}건 보관` : '개정 이력 없음', nx ? `가장 최근 시행 ${String(nx).slice(0, 10)} · 시행 7일 전 공지` : '새 버전으로 저장하면 이력이 남습니다', H.length ? 'ok' : '']] }; }, /* v43 R7: 처리 묶음 3건(J2 079) */
     popup: () => { const P = st0().popups || []; const td = today(); const live = P.filter(p => p.on !== false && (!p.s || p.s <= td) && (!p.e || p.e >= td)).length; const soon = P.filter(p => p.on !== false && p.s && p.s > td).length; return { ...(P.length && !live && soon ? { title: `노출 예약된 팝업 <em>${soon}개</em>가 시작일을 기다리고 있습니다`, sub: `등록 ${P.length}개 · 최대 4개까지 띄울 수 있습니다. 시작일이 되면 학습자 사이트 첫 화면에 순서대로 뜹니다.` } : {}), kind: 'list', todo: P.length ? P.slice(0, 3).map(p => [p.t || '(제목 없음)', `${p.s || ''} ~ ${p.e || ''}`, p.on === false ? '' : (p.s && p.s > td ? '' : 'ok')]) : null }; },
     lang: () => ({ kind: 'list', todo: [['화면 언어 한국어', '운영자 · 학습자 화면 공통', 'ok'], ['학습자 사이트 번역 4개 언어', '영어 · 일본어 · 중국어 · 베트남어', 'ok'], ['기관 용어 바꾸기', '과정 → 강좌처럼 우리 기관 말로', '']] }),
     data: () => ({ kind: 'list', todo: [['마지막 내보내기 11월 14일', 'JSON · 학습자 · 결제 · 진도 전체', 'ok'], ['자동 백업 매일 03:00', '최근 7일 보관', 'ok'], ['초기화는 정운영자만', '되돌릴 수 없으니 먼저 내보내세요', 'warn']] }),
-    room: () => ({ kind: 'list', todo: [['배포 모델 공유 SaaS', '기관별 데이터룸으로 논리 분리', 'ok'], ['저장 위치 서울 리전', '개인정보는 암호화해 따로 보관', 'ok'], ['접근 기록 90일 보관', '운영자 열람 · 내보내기 기록', '']] })
+    room: () => ({ kind: 'kpi', ring: [100, '분리 점검 통과'], stats: [['공유 SaaS', '배포 모델'], ['서울 리전', '저장 위치'], ['90일', '접근 기록 보관']] }) /* v43 R7: 「정상」 칩 3줄 반복 → 요약 링 + 숫자(J2 084) */
   };
   const TIPS = {
     menus: ['처음 한 달은 기본 메뉴만 켜 두고, 자주 찾는 기능부터 하나씩 켜세요', '「순서 바꾸기」로 자주 쓰는 메뉴를 위로 올리면 클릭이 줄어듭니다', '교수자에게는 과정 · 평가 메뉴만 보이도록 권한에서 나눌 수 있습니다'],
@@ -146,7 +147,20 @@ AFTER.push(() => { try { if (!CUR || CUR.tab !== 'community') return; const phr 
     const a = main.querySelector('.q1-aside a[data-q1to="' + (open ? open.id : '') + '"]'); if (a) a.setAttribute('aria-current', 'true'); };
   const reg = () => {
     if (!window.L43) return; const base = L43.REG.settings || {};
-    L43.reg('settings', Object.assign({}, base, { brief: m => { const k = subKey(); if (!k || !SUB[k]) return base.brief ? base.brief(m) : null; const o = Object.assign({ eye: '설정 · ' + SUB[k][0] }, SUB[k][1]()); const x = MORE[k] ? MORE[k]() : {}; Object.keys(x).forEach(j => { if (x[j] != null) o[j] = x[j]; }); return o; },
+    /* v43 R7 2차: 설정 머리 주 · 보조 버튼(J2 공통 결함 「머리 버튼 없음」) — 화면에 이미 있는 버튼을 대신 누르거나(go) 관련 화면으로 간다(tab) */
+    const G = (a, v) => `[data-act="${a}"]` + (v != null ? `[data-v="${v}"]` : '');
+    const SACT = { menus: [{ label: '메뉴 순서 바꾸기', go: G('sx-sub', 'menu|menu') }, { label: '켜진 메뉴만 보기', kind: 'sec', go: G('sl-chip', 'on') }],
+      rules: [{ label: `${(typeof t === 'function' ? t('learner') : '학습자')} 진도 보기`, tab: 'members' }, { label: '학습자 화면에서 확인', kind: 'sec', tab: 'site' }],
+      plan: [{ label: '결제 내역 · 영수증', go: G('tab', 'bill') }, { label: '매출 · 결제 열기', kind: 'sec', tab: 'sales' }],
+      integr: [{ label: 'Slack 연결하기', go: G('sl-cn', 'slack') }, { label: 'AI 연결(MCP) 키 관리', kind: 'sec', go: G('sx-sec', 'integr|0') }],
+      service: [{ label: '가입 질문 추가', go: G('mem-q') }, { label: '운영자 · 권한 관리', kind: 'sec', tab: 'admins' }],
+      terms: [{ label: '새 버전으로 저장', go: G('tr26-save') }, { label: 'AI 유형별 초안', kind: 'sec', go: G('ai-terms') }],
+      popup: [{ label: '+ 팝업 추가', go: G('popup-new') }, { label: '팝업 미리보기', kind: 'sec', go: G('pp26-pv', 'all') }],
+      lang: [{ label: '언어 설정 열기', go: G('sx-sub', 'lang|lang') }, { label: '학습자 사이트에서 확인', kind: 'sec', tab: 'site' }],
+      data: [{ label: '전체 데이터 내보내기', go: G('data-export') }, { label: '오래된 기록 정리', kind: 'sec', go: G('st-compact') }],
+      room: [{ label: '설치 구성 파일 받기', go: G('dr-yaml') }, { label: '데이터룸 내보내기', kind: 'sec', go: G('data-export') }] };
+    const rootActs = () => { const st = S.settings || {}; const A = []; if (!(st.terms && st.terms.tos)) A.push({ label: '약관 기본 문안 등록', tab: 'terms' }); if (!st.pg || st.pg === 'none') A.push({ label: '결제 연결하기', go: G('sl-cn', 'toss') }); A.push({ label: '메뉴 켜고 끄기', tab: 'more' }); return A.slice(0, 2).map((a, i) => Object.assign(a, { kind: i ? 'sec' : 'pri' })); };
+    L43.reg('settings', Object.assign({}, base, { brief: m => { const k = subKey(); if (!k || !SUB[k]) { const o0 = base.brief ? base.brief(m) : null; if (o0 && !o0.acts) o0.acts = rootActs(); return o0; } const o = Object.assign({ eye: '설정 · ' + SUB[k][0] }, SUB[k][1]()); const x = MORE[k] ? MORE[k]() : {}; Object.keys(x).forEach(j => { if (x[j] != null) o[j] = x[j]; }); if (!o.acts && SACT[k]) o.acts = SACT[k]; return o; },
       enhance: m => { const k = subKey(); if (!k || !SUB[k]) return base.enhance && base.enhance(m); try { subEnhance(m); } catch (e) { console.error(e); } } }));
     if (!document.querySelector('style[data-set43]')) { const st = document.createElement('style'); st.dataset.set43 = '1'; st.textContent = `
 #main.l43[data-l43=settings] .btn,#main.l43[data-l43=settings] select,#main.l43[data-l43=settings] input:not([type=checkbox]):not([type=radio]):not([type=range]){min-height:44px}

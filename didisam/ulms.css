@@ -182,3 +182,29 @@
 #main .db-cb i{display:block;height:100%;border-radius:99px;background:var(--gr200)}
 #main .db-cb.on i{background:linear-gradient(90deg,var(--gr500),var(--gr700))}
 :root[data-theme="dark"] #main .db-area .ar{fill:rgba(0,197,59,.18)}
+/* v43 R7: 앱 출석 — 나머지 분반은 칩형 드롭다운 한 칸 */
+.lp3-row select.lp3-more{min-height:40px;border-radius:999px;padding:0 34px 0 14px;font-size:14px;font-weight:700;border:1px dashed var(--hair,#D9D2C5);background-color:var(--surface,#fff);max-width:220px}
+/* v43 R7: 언어 선택 카드 */
+.r7-lgc{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin:8px 0}
+.r7-lg{position:relative;display:grid;justify-items:start;gap:4px;text-align:left;padding:16px;border:1px solid var(--hair,#E5DFD3);border-radius:16px;background:var(--surface,#fff);cursor:pointer;min-height:96px;font:inherit;color:inherit}
+.r7-lg i{font-style:normal;font-size:12px;font-weight:800;letter-spacing:.04em;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--g50,#F4F1EA);color:var(--g800,#3A352E)}
+.r7-lg b{font-size:16px;font-weight:800}.r7-lg small{font-size:13px;color:var(--t-sub,#5C554B)}
+.r7-lg em{position:absolute;top:14px;right:14px;font-style:normal;font-size:12px;font-weight:800;color:var(--gr700,#00862D);background:var(--gr50,#E8F5EC);border-radius:999px;padding:3px 8px}
+.r7-lg.on{border:2px solid var(--gr600,#16A34A);box-shadow:0 0 0 4px var(--gr50,#E8F5EC)}.r7-lg.on i{background:var(--gr700,#00862D);color:#fff}
+/* v43 R7: 구성원 찾기 — 아이콘 · 둥근 칸 · 주 버튼이 한 덩어리 */
+.r7-q .r7-qb{display:flex;align-items:center;gap:8px;flex:1 1 420px;max-width:560px;min-height:48px;padding:0 6px 0 16px;border:1px solid var(--hair,#E5DFD3);border-radius:999px;background:var(--surface,#fff);color:var(--t-sub,#5C554B)}
+.r7-q .r7-qb:focus-within{border-color:var(--gr600,#16A34A);box-shadow:0 0 0 4px var(--gr50,#E8F5EC)}
+.r7-q .r7-qb input{flex:1;border:0!important;background:none!important;box-shadow:none!important;min-height:44px;font-size:15px;padding:0;outline:0}
+.r7-q .r7-qb .btn{border-radius:999px}
+.fx-v.fx-0 small{font-size:13px;color:var(--t-sub,#5C554B);white-space:nowrap}
+/* v43 R7: 과정 · 프로그램 사진 카드 격자(MOOC · 비교과) */
+.r7-cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin:4px 0 16px}
+.r7-cc{display:flex;flex-direction:column;border:1px solid var(--hair,#E5DFD3);border-radius:18px;background:var(--surface,#fff);overflow:hidden}
+.r7-cph{position:relative;height:132px;background:var(--g100,#EDE7DC) center/cover no-repeat;display:flex;align-items:flex-start;gap:6px;padding:12px}
+.r7-cph>*{background:var(--surface,#fff)!important;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.r7-cb{display:grid;gap:6px;padding:14px 16px 16px}.r7-cb>b{font-size:16px;font-weight:800;line-height:1.35}.r7-cb>small{font-size:13px;color:var(--t-sub,#5C554B)}
+.r7-cm{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--t-sub,#5C554B)}.r7-cm b{font-size:18px;color:var(--g900,#1F1B16);margin-right:2px}
+.r7-cb .lw-acts{display:flex;align-items:center;gap:8px;margin-top:4px}
+.r7-fch{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.r7-pn{display:flex;align-items:center;gap:12px}.r7-th{width:64px;height:44px;border-radius:10px;object-fit:cover;flex:0 0 auto}
+.r7-cnt{font-size:14px;white-space:nowrap}.r7-cnt b{font-weight:800}.r7-cnt em{font-style:normal;font-weight:700;color:var(--co700,#B4432A)}

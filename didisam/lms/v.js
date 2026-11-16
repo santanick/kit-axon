@@ -158,7 +158,7 @@
     const body = { list: vList, rec: vRec, cap: vCap, set: vSet }[t] || vList;
     return `<div data-lmsv-root>${head('강의 영상 관리', '강의 영상을 올리거나 바로 녹화하면 학교 서버가 스트리밍용으로 변환하고, 고른 차시에 놓습니다. 진도와 자동출석은 「동영상 · 진도」와 같이 계산됩니다.', `<button class="btn pri" data-act="lmsv-up">영상 올리기</button> ${W3.mode()}`)}
       ${window.LMSX && LMSX.todo ? LMSX.todo(esc(todo), tbtn) : `<p class="mini">${esc(todo)}</p>`}
-      <div class="kpis">${kpi('재생 가능', c.ready + '개')}${kpi('변환 중', c.working + '개', '', c.working ? 'warn' : '')}${kpi('자막 미게시', c.no_caption + '개', '', c.no_caption ? 'warn' : '')}${kpi('차시 미배치', c.unplaced + '개')}</div>
+      <div class="kpis">${kpi('재생 가능', c.ready ? c.ready + '개' : '아직 없음', c.ready ? '학생 강의실에서 재생' : '변환이 끝나면 여기에 셉니다')}${kpi('변환 중', c.working ? c.working + '개' : '대기 없음', c.working ? '끝나면 자동으로 재생 가능' : '모든 영상 변환 완료', c.working ? 'warn' : '')}${kpi('자막 미게시', c.no_caption ? c.no_caption + '개' : '모두 게시', c.no_caption ? '자막 탭에서 만들기' : '청각장애 학생도 같은 진도', c.no_caption ? 'warn' : '')}${kpi('차시 미배치', c.unplaced ? c.unplaced + '개' : '모두 배치', c.unplaced ? '차시에 놓아야 학생에게 보임' : '모든 영상이 차시에 있음', c.unplaced ? 'warn' : '')}</div>
       ${tb}${body(sec, it, Lst)}</div>`;
   };
   ACT['lmsv-todo'] = el => { UI.lmsvT = el.dataset.v === 'cap' ? 'cap' : 'list'; const L2 = W3.cache['lmsv:list']; if (L2) { const m = el.dataset.v === 'cap' ? L2.items.find(x => x.status === 'ready' && !x.captions.some(c => c.status === 'published')) : L2.items.find(x => x.status === 'ready' && !x.placements); if (m) V.sel = m.media_id; } render(); };

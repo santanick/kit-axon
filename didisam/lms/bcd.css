@@ -61,3 +61,21 @@ details.lmsb-week:not([open]){padding-top:10px;padding-bottom:10px}details.lmsb-
 .lb-wb{display:block;width:100%;height:6px;border-radius:9px;background:var(--line);overflow:hidden;margin-top:4px}.lb-wb i{display:block;height:100%;background:var(--g,#16a34a)}
 .lb-wr{font-size:11.5px;color:var(--muted)}.lb-w.next .lb-wb{opacity:.5}
 details.lmsb-week:not([open]){box-shadow:none;background:transparent;border-color:transparent;border-bottom:1px solid var(--line);border-radius:0;margin:0}
+/* v43 R7: 강의실 · 분반 고르기 — 카드 없는 한 줄, 브리핑 머리 안(.r7-ctx)에서는 칩형 드롭다운 */
+.lmsx-head.lmsx-slim{padding:0;margin:0 0 12px;background:none;border:0;box-shadow:none}.lmsx-slim .lmsx-hrow{justify-content:flex-start;align-items:center}
+.l43-bl .r7-ctx{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 0}
+.r7-ctx .lmsx-pick,.r7-ctx .efh-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;padding:0;background:none;border:0}
+.l43-bl .r7-ctx label,.l43-bl .r7-ctx .lmsx-pick label,.l43-bl .r7-ctx .r7-ctxl{flex-direction:row!important;display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--t-sub,#5C554B);margin:0}
+.r7-ctx select{min-height:40px;border-radius:999px;padding:0 36px 0 16px;font-size:14px;font-weight:700;max-width:340px;border:1px solid var(--hair,#E5DFD3);background-color:var(--surface,#fff)}
+.r7-ctx small{font-size:13px}.r7-ctx details summary{min-height:40px;display:inline-flex;align-items:center;border-radius:999px;padding:0 14px;font-size:13px}
+/* v43 R7: 학사 LMS 보조 열 카드(목록 · 링 · 드롭존 · 대화 상대) */
+.r7-lc ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}.r7-lc li{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--hair,#EDE7DC)}.r7-lc li:first-child{border-top:0}
+.r7-lt{flex:0 0 auto;min-width:52px;text-align:center;font-size:13px;font-weight:700;border-radius:999px;padding:4px 10px;background:var(--g50,#F4F1EA);color:var(--t-sub,#5C554B)}
+.r7-lc li.warn .r7-lt{background:var(--co50,#FDECE7);color:var(--co700,#B4432A)}.r7-lc li.ok .r7-lt{background:var(--gr50,#E8F5EC);color:var(--gr700,#00862D)}.r7-lc li.now .r7-lt{background:var(--gr700,#00862D);color:#fff}
+.r7-lx{display:grid;gap:2px;min-width:0}.r7-lx b{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.r7-lx small{font-size:13px;color:var(--t-sub,#5C554B)}
+.r7-rw{display:flex;align-items:center;gap:16px;margin:8px 0}.r7-rw svg{flex:0 0 auto}.r7-rt{fill:none;stroke:var(--g100,#EDE7DC);stroke-width:12}.r7-rs{fill:none;stroke-width:12}
+.r7-rs.g,.r7-rl i.g{stroke:var(--gr700,#00862D);background:var(--gr700,#00862D)}.r7-rs.w,.r7-rl i.w{stroke:#F2B84B;background:#F2B84B}.r7-rs.n,.r7-rl i.n{stroke:var(--co400,#F08A6E);background:var(--co400,#F08A6E)}.r7-rs.m,.r7-rl i.m{stroke:#9DB7A5;background:#9DB7A5}
+.r7-rv b{display:block;font-size:28px;font-weight:800;letter-spacing:-.02em}.r7-rv small{font-size:13px;color:var(--t-sub,#5C554B)}
+.r7-rl{display:grid;gap:6px;margin:4px 0 0}.r7-rl div{display:flex;justify-content:space-between;font-size:14px}.r7-rl dt{display:flex;align-items:center;gap:8px}.r7-rl i{width:10px;height:10px;border-radius:3px;display:inline-block}.r7-rl dd{margin:0;font-weight:700}
+.r7-dz{display:grid;justify-items:center;gap:6px;text-align:center;padding:22px 16px;border:2px dashed var(--gr300,#9BD3AE);border-radius:16px;background:var(--gr50,#F1F8F3);cursor:pointer;margin:8px 0}.r7-dz b{font-size:15px}.r7-dz small{font-size:13px;color:var(--t-sub,#5C554B)}
+.r7-pf{display:flex;align-items:center;gap:12px;margin:8px 0 4px}.r7-pf b{display:block;font-size:16px}.r7-pf small{font-size:13px;color:var(--t-sub,#5C554B)}
