@@ -281,7 +281,8 @@
   const ICO = { home: null, my: 'course', cal: 'cal', find: 'compass', fac: 'fac', att: 'att', me: 'me' };
   function navHTML() { const T = tabsOf(); const cur = curTab(T);
     return T.map(([k, h, l]) => { const i = k === 'home' ? (cur === 'home' ? I.home(24) : I.homeO(24)) : I[ICO[k] || 'course'](24);
-      return `<a href="${esc(h)}" class="tb-n-${esc(k)}${cur === k ? ' on' : ''}"${cur === k ? ' aria-current="page"' : ''}>${i}<span>${esc(l)}</span></a>`; }).join(''); }
+      const sl = k === 'my' && l.length > 6 && !l.startsWith('내 ') ? '내 ' + l.split(' ').pop() : l; /* v43.4 P2(109): 아래 탭 라벨은 짧게(예: 이번 학기 강의 → 내 강의) — 두 줄로 꺾여 다른 칸과 높이가 어긋나지 않게. 전체 이름은 title로 */
+      return `<a href="${esc(h)}" class="tb-n-${esc(k)}${cur === k ? ' on' : ''}"${cur === k ? ' aria-current="page"' : ''}${sl !== l ? ` title="${esc(l)}"` : ''}>${i}<span>${esc(sl)}</span></a>`; }).join(''); }
   /* 「내 ○○」 위 세그먼트: 목록(#my) | 일정(#cal) — 두 화면 맨 위(하위 경로 없을 때) */
   function segHTML(a) { const k = a === 'cal' ? 'cal' : 'my';
     return `<nav class="tb-seg" aria-label="${esc(info().learn || '내 과정')}">${[['my', '#my', '목록'], ['cal', '#cal', '일정']].map(([x, h, l]) => `<a href="${h}" class="tb-sg-${x}${x === k ? ' on' : ''}"${x === k ? ' aria-current="page"' : ''}>${l}</a>`).join('')}</nav>`; }
