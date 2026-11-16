@@ -173,7 +173,7 @@
   def('billing', { kpis: () => { const B = A('bills'); const un = B.filter(b => b.status === '미납'); const paid = B.filter(b => b.status !== '미납'); const late = un.filter(b => b.due && b.due < td()); const sum = a => a.reduce((x, b) => x + (+b.amount || +b.total || 0), 0);
       return [[pct(B.length ? paid.length / B.length * 100 : 0), '수납률'], [won0(sum(paid)), '수납 금액'], [un.length + '건', '미납', un.length ? 'warn' : ''], [late.length + '건', '납기 지남', late.length ? 'warn' : '']]; },
     side: () => { const un = A('bills').filter(b => b.status === '미납'); return people('오늘 안내할 미납', un.slice(0, 6).map(b => [mname(b.who || b.mid || b.member), b.title || b.item || '', b.due ? (b.due < td() ? '납기 지남' : 'D-' + Math.max(0, Math.round((new Date(b.due) - new Date(td())) / 864e5))) : '', b.due && b.due < td() ? 'warn' : '']), un.length) + ai('[미납 안내]를 보내면 보호자에게 결제 링크가 함께 갑니다. 3일 전 · 당일 자동 안내를 켜 두면 미납이 줄어듭니다.'); } });
-  def('org', { skip: () => !!UI.orgId, kpis: () => { const O = A('orgs'); const n = O.reduce((a, o) => a + (+o.n || 0), 0), d = O.reduce((a, o) => a + (+o.done || 0), 0); return [[O.length + '곳', '협력 기관'], [n + '명', '기관 회원'], [pct(n ? d / n * 100 : 0), '수료율'], [O.reduce((a, o) => a + (+o.job || 0), 0) + '명', '취업 연계']]; },
+  def('org', { skip: () => !!UI.orgId, kpis: () => { const O = A('orgs'); const n = O.reduce((a, o) => a + (+o.n || 0), 0), d = O.reduce((a, o) => a + (+o.done || 0), 0); return [[O.length + '곳', '협력 기관'], [n + '명', '기관 회원'], [pct(n ? d / n * 100 : 0), '수료율'], (['voc', 'univ'].includes((S.org || {}).type) ? [O.reduce((a, o) => a + (+o.job || 0), 0) + '명', '취업 연계'] : [O.reduce((a, o) => a + ((o.entries || []).length || 1), 0) + '개', '운영 클래스'])]; }, /* v43 R1: 기업 · 평생은 취업 대신 운영 클래스(0명 칸 제거) */
     side: () => { const O = A('orgs'); return photos('협력 기관', O.map(o => [photoL('공공건물 ' + o.name, o.id), o.name, `${o.mgr} · 회원 ${o.n}명`, `수료 ${o.done}`, ''])) + ai('기관 담당자를 「기관 담당자」 역할로 지정하면 자기 기관 현황만 봅니다. 월말에 기관별 리포트를 자동으로 보낼 수 있습니다.'); } });
 
   /* ═════════ 24. 자동화 ═════════ */
@@ -194,4 +194,44 @@
     side: main => { const ev = [...main.querySelectorAll(`[data-cxday="${td()}"] .cx-ev`)].map(e => e.textContent.trim()).slice(0, 4); const up = [...main.querySelectorAll('.cx-ev')].map(e => [e.closest('[data-cxday]'), e.textContent.trim()]).filter(([d]) => d && d.dataset.cxday > td()).slice(0, 4);
       return todo('오늘 일정', ev.length ? ev.map((x, i) => [x, ['09:00', '13:00', '16:00', '19:00'][i], i ? '' : 'warn', '']) : [['오늘은 일정이 없습니다', '날짜 칸을 눌러 일정을 추가하세요', 'ok', '']]) + todo('다가오는 일정', up.map(([d, x]) => [x, d.dataset.cxday.slice(5), '', ''])) + ai('수업 · 상담 · 코칭 일정이 학습자 달력에 함께 보입니다. 끌어 옮기면 바로 반영됩니다.'); } });
   def('docs', { skip: () => !!UI.docId, side: () => { const D = A('docs'); return todo('최근 만든 문서', D.map(d => [d.name, d.cat || '', 'ok', ''])) + `<section class="q1-ac da-steps"><h3>단계별 서식</h3><ol>${['계획', '준비', '운영', '평가', '결과 보고'].map((s, i) => `<li><span>${i + 1}</span>${s}</li>`).join('')}</ol></section>` + ai('기관 정보 · 강좌 · 수강생 숫자를 읽어 빈 칸을 채웁니다. 확인만 하고 내려받으세요.'); } });
+})();
+
+/* v43 R1 — 관리자 1~28 본문 재설계 공통 부품(렌더 함수 안에서 직접 호출)
+ *  R1.page(key, arr)        표 12행 페이지 — UI.r1pg[key](기본 12)만큼 자름
+ *  R1.more(key, total, unit) 표 아래 「더 보기」 바(12행 단위 · 접기)
+ *  R1.dist(o)               분포 막대 카드  o={t, sub, rows:[[라벨, 값, tone?, 보조]], unit, max}
+ *  R1.area(o)               추세 면적 차트  o={t, sub, pts:[숫자], labels:[], unit, big}
+ *  R1.heat(o)               히트맵          o={t, sub, rows:[라벨], cols:[라벨], m:[[0~100]], unit}
+ *  R1.tl(items)             타임라인        [[시각, 제목, 보조, tone]]
+ *  R1.chips(key, list, cur) 칩 필터 줄      list=[[값, 라벨, 개수]] (data-act="tab" data-key)
+ *  R1.demo()                시연 경로 여부(빈 기관 · 운영 데이터면 false — 시드 금지) */
+(function () {
+  'use strict';
+  const W = window;
+  const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const N = n => (Math.round(+n || 0)).toLocaleString('ko-KR');
+  const STEP = 12;
+  const lim = key => { const u = W.UI || {}; return (u.r1pg && u.r1pg[key]) || STEP; };
+  const page = (key, arr) => (arr || []).slice(0, lim(key));
+  const more = (key, total, unit) => { const n = Math.min(lim(key), total); if (total <= STEP) return ''; const left = total - n;
+    return `<div class="r1-more" role="navigation" aria-label="표 더 보기"><span class="r1-mc"><b>${N(n)}</b> / ${N(total)}${E(unit || '건')} 표시</span><span class="r1-mbar"><i style="width:${Math.round(n / total * 100)}%"></i></span>${left > 0 ? `<button type="button" class="btn sm r1-mb" data-act="r1-more" data-k="${E(key)}">${N(Math.min(STEP, left))}${E(unit || '건')} 더 보기</button>` : ''}${n > STEP ? `<button type="button" class="btn sm ghost r1-mb" data-act="r1-less" data-k="${E(key)}">접기</button>` : ''}</div>`; };
+  const tone = t => t ? ' ' + t : '';
+  function dist(o) { const rows = o.rows || []; const mx = o.max || Math.max(1, ...rows.map(r => +r[1] || 0));
+    return `<section class="r1-card r1-dist${o.cls ? ' ' + o.cls : ''}">${o.t ? `<header class="r1-ch"><h3>${E(o.t)}</h3>${o.sub ? `<small>${E(o.sub)}</small>` : ''}</header>` : ''}<ul class="r1-dl">${rows.map(r => `<li class="${tone(r[2]).trim()}"><span class="r1-dk">${E(r[0])}</span><span class="r1-dt"><i style="width:${Math.max(2, Math.round((+r[1] || 0) / mx * 100))}%"></i></span><b class="r1-dv">${N(r[1])}${E(o.unit || '')}</b>${r[3] ? `<small class="r1-dx">${E(r[3])}</small>` : ''}</li>`).join('')}</ul></section>`; }
+  function area(o) { const p = (o.pts || []).map(v => +v || 0); if (p.length < 2) return ''; const w = 560, h = o.h || 150, pad = 6; const mn = Math.min(0, ...p), mx = Math.max(1, ...p);
+    const X = i => pad + i * (w - pad * 2) / (p.length - 1), Y = v => h - pad - (v - mn) / (mx - mn) * (h - pad * 2 - 14);
+    const line = p.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(' '); const id = 'r1g' + Math.random().toString(36).slice(2, 7); const L = o.labels || [];
+    const lab = L.length ? `<div class="r1-ax">${[0, Math.floor((L.length - 1) / 2), L.length - 1].map(i => `<span>${E(L[i] || '')}</span>`).join('')}</div>` : '';
+    return `<section class="r1-card r1-area${o.cls ? ' ' + o.cls : ''}"><header class="r1-ch"><h3>${E(o.t || '')}</h3>${o.sub ? `<small>${E(o.sub)}</small>` : ''}${o.big ? `<b class="r1-big">${o.big}</b>` : ''}</header><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="${E(o.t || '추세')}"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".28"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs><path d="${line} L${X(p.length - 1).toFixed(1)} ${h} L${X(0).toFixed(1)} ${h} Z" fill="url(#${id})"/><path d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="${X(p.length - 1).toFixed(1)}" cy="${Y(p[p.length - 1]).toFixed(1)}" r="4.5" fill="currentColor"/></svg>${lab}</section>`; }
+  function heat(o) { const C = o.cols || [], R = o.rows || [], M = o.m || [];
+    const lv = v => v == null ? 'n' : v >= 90 ? 5 : v >= 75 ? 4 : v >= 55 ? 3 : v >= 30 ? 2 : v > 0 ? 1 : 0;
+    return `<section class="r1-card r1-heat${o.cls ? ' ' + o.cls : ''}">${o.t ? `<header class="r1-ch"><h3>${E(o.t)}</h3>${o.sub ? `<small>${E(o.sub)}</small>` : ''}</header>` : ''}<div class="r1-hg" style="grid-template-columns:minmax(96px,auto) repeat(${C.length},minmax(0,1fr))"><span></span>${C.map(c => `<span class="r1-hc">${E(c)}</span>`).join('')}${R.map((r, i) => `<span class="r1-hr">${E(r)}</span>${C.map((c, j) => { const c0 = (M[i] || [])[j]; const v = Array.isArray(c0) ? c0[0] : c0; const tx = Array.isArray(c0) ? c0[1] : (v == null ? '' : N(v)); return `<span class="r1-hx l${lv(v)}" title="${E(r)} · ${E(c)} ${E(tx || '—')}${Array.isArray(c0) ? '' : E(o.unit || '%')}">${E(tx)}</span>`; }).join('')}`).join('')}</div><p class="r1-hl"><span>낮음</span>${[0, 1, 2, 3, 4, 5].map(i => `<i class="r1-hx l${i}"></i>`).join('')}<span>높음</span></p></section>`; }
+  const tl = items => `<ol class="r1-tl">${(items || []).map(x => `<li class="${E(x[3] || '')}"><time>${E(x[0])}</time><b>${x[1]}</b>${x[2] ? `<small>${x[2]}</small>` : ''}</li>`).join('')}</ol>`;
+  const chips = (key, list, cur, right) => `<div class="r1-chips" role="tablist">${list.map(([v, l, c]) => `<button type="button" role="tab" aria-selected="${v === cur}" class="r1-chip${v === cur ? ' on' : ''}" data-act="tab" data-key="${E(key)}" data-v="${E(v)}">${E(l)}${c != null ? `<em>${E(c)}</em>` : ''}</button>`).join('')}${right ? `<span class="sp"></span>${right}` : ''}</div>`;
+  const demo = () => { try { return !!(W.S && S.org && !S.org.empty); } catch (e) { return false; } };
+  W.R1 = { page, more, lim, dist, area, heat, tl, chips, demo, STEP };
+  if (W.ACT) {
+    ACT['r1-more'] = el => { const k = el.dataset.k; UI.r1pg = UI.r1pg || {}; UI.r1pg[k] = lim(k) + STEP; render(); };
+    ACT['r1-less'] = el => { const k = el.dataset.k; UI.r1pg = UI.r1pg || {}; UI.r1pg[k] = STEP; render(); };
+  }
 })();
