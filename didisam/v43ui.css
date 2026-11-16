@@ -464,3 +464,10 @@ html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background
   #main .l43-bl .r7-ctx details.lmsd-as,#main .l43-bl .r7-ctx details.lmsx-asmore{width:100%;margin:0}
   #main .l43-bl .r7-ctx details>summary{min-height:44px;width:auto;padding:0 2px;border:0;border-radius:0;background:none;box-shadow:none;font-size:13.5px;font-weight:700;text-decoration:underline;text-underline-offset:3px;white-space:normal;color:inherit}
 }
+
+/* v43.4 모바일: 하위 탭(.seg2)은 휴대폰에서 한 줄 가로 넘김 — 마지막 탭(예: 수납 「통계」)이 둘째 줄로 떨어지던 문제 */
+@media (max-width:760px){
+  #main .seg2{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;max-width:100%}
+  #main .seg2::-webkit-scrollbar{display:none}
+  #main .seg2>button{flex:0 0 auto;white-space:nowrap}
+}
