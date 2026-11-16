@@ -459,3 +459,10 @@ html[data-theme=dark] .hps-pubc.hps-pubc9{background:#1F2221}
   #hpe.hps .hps-zseg button{padding:0 6px;font-size:12px}
   #hpe.hps .hps-rt{gap:6px}
 }
+/* v43 S3B 122: 끌기 손잡이 점이 stroke 0 · fill none으로 보이지 않던 문제 → 채운 점 */
+.hps-sl9 .hps-sg svg{fill:currentColor}
+.hps-sl9 li:not(.pin) .hps-sg{color:var(--g500,#8F877A)}
+/* v43 S3B 125: 게시 카드 주소 줄 — 임시 주소 옆 「영문 주소로 바꾸기」 */
+.hps-pubc .hps-pcu{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hps-pubc .hps-pcu b{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
+.hps-pubc .hps-pcu .hps-pcu-go{flex:none}

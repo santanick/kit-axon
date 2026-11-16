@@ -163,7 +163,7 @@
     const G = 12, n = used.size, p = Math.min(100, Math.round(n / G * 100)); const wk = weekDays().map(x => ({ ...x, ok: used.has(x.di) }));
     const t = n >= G ? '이번 달 목표 횟수를 채웠어요' : n ? `${G - n}회 더 오면 이번 달 목표예요` : '첫 이용부터 횟수를 세어 드려요';
     return `<section class="tb-goal tb-hero tb-fgoal${n >= G ? ' done' : ''}" aria-label="이번 달 이용"><a class="tb-gb" href="#fac" aria-label="이번 달 이용 ${n}회 · 목표 ${G}회 · 시설 예약 보기"><span class="tb-rg">${ringSVG(p)}<b class="tb-rn">${n}<small>/${G}회</small></b></span>
-      <span class="tb-gl"><small>이번 달 이용 · 목표 ${G}회</small><strong>${esc(t)}</strong><span class="tb-wd" aria-hidden="true">${wk.map(x => `<i class="${x.ok ? 'ok' : ''}${x.today ? ' td' : ''}">${x.l}</i>`).join('')}</span></span></a></section>`; }
+      <span class="tb-gl"><small>이번 달 이용 · 목표 ${G}회</small><strong>${esc(t)}</strong><span class="tb-m12" aria-hidden="true">${Array.from({ length: G }, (_, i) => `<i class="${i < n ? 'ok' : ''}"></i>`).join('')}</span></span></a></section>`; } /* v43 S3B 208: 월간 목표인데 요일 점(월~일)이던 것 → 12칸 막대 */
   function goalHTML() { const g = goal(), m = Math.min(minToday(), 999), p = Math.min(100, Math.round(m / g * 100)); const done = m >= g; const st = streakN();
     if (tyKey() === 'public_facility') return facGoalHTML();
     /* v43 R9(J4 204 · 206): 「참고용」 안내를 굵은 문장으로 쓰면 두 줄로 꺾여 헤드라인을 밀어냄 → 굵은 문장은 남은 분, 「참고용」은 작은 칩 */
@@ -234,7 +234,7 @@
         const rows = D.map(e => [String(e.title).replace(/ · [^·]+$/, '').replace(/^.*? — /, ''), `${e.k} · ${ddL(e.date)}${e.time ? ' ' + e.time : ''}`, ddL(e.date) === '오늘' || ddL(e.date) === 'D-1' ? 'wn' : '']);
         const itn = C0.reduce((a, x) => a + (x.c.items || []).filter(it => it.type !== 'chapter' && lpItem(x.c.id, it.id).done).length, 0);
         if (k === 'univ') /* v43 R9(J4 203): 비교과 센터 고유 — 비교과 포인트 · 완료 차시 · 이수 과정(포인트 = 완료 차시 × 10점, 비교과 이수 기준) */
-          return tyCard({ ic: 'award', eb: `학번 ${me.sid || me.id || ''} · 비교과 이수 현황`.trim(), t: itn ? `비교과 포인트 ${itn * 10}점을 모았어요` : '첫 차시를 마치면 비교과 포인트가 쌓여요', kv: [['비교과 포인트', `${itn * 10}점`, Math.min(100, itn * 10 / 2)], ['완료 차시', `${itn}개`], ['이수 과정', `${dn} / ${C0.length}`, C0.length ? dn / C0.length * 100 : 0]], rows: rows.slice(0, 2), none: '이번 주 마감 과제는 없어요. 다음 주 일정은 캘린더에서 미리 볼 수 있어요', go: ['#cal', '이번 주 과제 · 시험 보기'] });
+          return tyCard({ ic: 'award', eb: `학번 ${me.sid || me.id || ''}${me.dept ? ' · ' + me.dept : ''} · 비교과 이수 현황`.trim(), t: itn ? `비교과 포인트 ${itn * 10}점을 모았어요` : '첫 차시를 마치면 비교과 포인트가 쌓여요', kv: [['비교과 포인트', `${itn * 10}점`, Math.min(100, itn * 10 / 2)], ['완료 차시', `${itn}개`], dn ? ['이수 과정', `${dn} / ${C0.length}`, C0.length ? dn / C0.length * 100 : 0] : (() => { const L = C0.map(x => (x.c.items || []).filter(it => it.type !== 'chapter' && !lpItem(x.c.id, it.id).done).length).filter(v => v > 0); return L.length ? ['첫 이수까지', `${Math.min(...L)}차시`] : ['이수 과정', '아직 없어요']; })()] /* v43 S3B 203: 「0 / 5」 숫자 0 → 문장 */, rows: rows.slice(0, 2), none: '이번 주 마감 과제는 없어요. 다음 주 일정은 캘린더에서 미리 볼 수 있어요', go: ['#cal', '이번 주 과제 · 시험 보기'] });
         /* v43 R9(J4 204): 학사 고유 — 이번 주 출석 · 과제 마감 */
         const A = attData(); const N = (A.M && A.M.n) || {}; const ok = (+N.출석 || 0) + (+N.지각 || 0); const tot = A.M && A.M.tot ? A.M.tot : 0; const avg = C0.length ? Math.round(C0.reduce((a, x) => a + (x.p || 0), 0) / C0.length) : 0;
         return tyCard({ ic: 'edit', eb: `학번 ${me.sid || me.id || ''} · 출석 · 과제`.trim(), t: D.length ? `이번 주 마감 ${D.length}건이 남았어요` : '이번 주 마감 과제는 없어요', kv: [['수강 과목', `${C0.length}과목`], tot && ok ? ['이번 달 출석', `${ok} / ${tot}회`, ok / tot * 100] : ['평균 진도', `${avg}%`, avg], ['마감 남음', `${D.length}건`]], rows: rows.slice(0, 2), none: '다음 주 일정은 캘린더에서 미리 볼 수 있어요', go: ['#cal', '이번 주 일정 보기'] }); }
@@ -251,7 +251,11 @@
         return tyCard({ ic: 'compass', eb: '신청한 강좌 · 수강 신청', t: nx.length ? `신청한 강좌 ${C0.length}개 · 다음 수업 ${ddL(nx[0].d)}` : `신청한 강좌 ${C0.length}개`, rows: R, none: '새 강좌가 열리면 알림으로 알려 드려요', go: [f.browse && f.browse !== '#home' ? f.browse : '#courses', O.length ? '강좌 더 신청하기' : '강좌 둘러보기'] }); }
       if (k === 'public_facility') { const B = ((window.FAC_UI && FAC_UI.st && FAC_UI.st.v && FAC_UI.st.v.bk) || []).filter(b => ['confirmed', 'requested', 'paid', 'approved'].includes(b.status)); const F = E.filter(e => /예약|시설/.test(e.k + e.title) && e.date >= t0).slice(0, 2);
         const R = B.length ? B.slice(0, 2).map(b => [b.name || b.facName || '시설 예약', `${b.day || b.date || ''} ${b.from || ''}`.trim() + (b.status === 'requested' ? ' · 승인 대기' : ' · 예약 확정'), b.status === 'requested' ? 'wn' : '']) : F.map(e => [String(e.title).replace(/ · [^·]+$/, ''), `${ddL(e.date)}${e.time ? ' ' + e.time : ''}`]);
-        return tyCard({ ic: 'fac', eb: '시설 예약', t: R.length ? `예약 ${R.length}건이 확정됐어요` : '오늘 예약한 시설이 없어요', big: R.length ? (F[0] ? ddL(F[0].date) : '예약') : null, rows: R, none: '빈 시간을 고르면 바로 예약할 수 있어요', go: ['#fac', R.length ? '내 예약 보기' : '시설 예약하기'] }); }
+        const h0 = tyCard({ ic: 'fac', eb: '시설 예약', t: R.length ? `예약 ${R.length}건이 확정됐어요` : '오늘 예약한 시설이 없어요', big: R.length ? (F[0] ? ddL(F[0].date) : '예약') : null, rows: R, none: '빈 시간을 고르면 바로 예약할 수 있어요', go: ['#fac', R.length ? '내 예약 보기' : '시설 예약하기'], cls: 'tb-tyfac' });
+        /* v43 S3B 208: 시설 예약 카드에 시설 사진 + 위치(코트 · 레인) */
+        if (!R.length) return h0; const nm = String(R[0][0] || ''); const b0 = B[0] || {}; const loc = b0.place || b0.court || (nm.match(/(\d+\s*(?:코트|레인|번 코트|룸|실|면))/) || [])[1] || ''; const fnm = nm.replace(/\s*\d+\s*(?:코트|레인|룸|실|면).*$/, '').replace(/\s*예약.*$/, '') || '시설';
+        let ph = ''; try { ph = typeof lPhoto === 'function' ? lPhoto(fnm + ' 체육 시설', 'fac:' + fnm) : ''; } catch (e) { ph = ''; }
+        return h0.replace('<ul class="tb-tyl">', `<div class="tb-fph"${ph ? ` style="background-image:url('${esc(ph)}')"` : ''}><span class="tb-fpl">${I.fac ? I.fac(14) : ''}${esc(fnm)}${loc ? ' · ' + esc(loc) : ''}</span></div><ul class="tb-tyl">`); }
     } catch (e) { console.error('typeHTML', e); }
     return ''; }
   function homeHTML() { const f = CH().some(x => x[0] === TB.f) ? TB.f : (TB.f = 'all');

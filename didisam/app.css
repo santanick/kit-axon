@@ -432,6 +432,8 @@ span.sw:not(:has(input)){display:inline-block;width:14px;height:14px;border-radi
 .kpis.bkkpis{grid-template-columns:repeat(5,minmax(0,1fr))}@media (max-width:900px){.kpis.bkkpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.topr .lvacct{margin-top:0;flex:none}.topr .lvacct small{display:none}.topr .lvacct .btn{padding:4px 6px;font-size:11px;white-space:nowrap;min-height:0}}
 /* v43 R8 128: 모달 — 배경 흐림을 줄이고 딤으로 맥락 유지, 바닥 버튼은 DDS 높이(44) */
-body .mwrap{backdrop-filter:blur(1px)}
-.mwrap .modal>.mf .btn{min-height:44px;padding:0 20px;font-size:15px;border-radius:10px}
+html body .mwrap{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(10,20,14,.5)!important} /* v43 S3B 128: 흐림 없이 딤만 — 뒤 화면 맥락이 읽히게 */
+.mwrap .modal{width:min(600px,100%)}.mwrap .modal.wide{width:min(780px,100%)}
+.mwrap .modal>.mf .btn{min-height:40px;height:40px;padding:0 18px;font-size:14px;border-radius:10px} /* v43 S3B 128: DDS 버튼 높이 40 */
+.mwrap .modal>.mb label.fl:only-child input:not([type=checkbox]):not([type=radio]){min-height:48px;font-size:16px}
 .mwrap .modal>.mh b{font-size:18px}
