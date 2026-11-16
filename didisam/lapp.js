@@ -16,7 +16,11 @@
   /* 설치한 앱은 시작 주소에 기관 번호가 없으므로 마지막 기관을 기억해 둔다 */
   if (!LR.tid && (Q.get('app') === '1' || standalone())) { const t = ls.get('tid'); if (t) LR.tid = t; }
   if (Q.get('app') === '1') { try { ls.set('classic', null); } catch (e) { } } /* v38 F5 V · L: 주소에 ?app=1이 있으면 전에 저장한 '기존 화면' 선택을 지우고 앱 화면으로 연다(앱 안의 '기존 화면으로 보기'는 그대로 동작) */
-  const appOn = () => { try { return !!SITE() && LR.mode !== 'preview' && ls.get('classic') !== '1' && (!!LR.me || standalone() || Q.get('app') === '1'); } catch (e) { return false; } };
+  /* v43 G2 2차(대표님 결정 11-16): PC 폭(900px 이상)에서 로그인한 학습자의 기본 화면은 「넓은 허브」(학습자 웹).
+     앱 화면은 설치한 앱(standalone) · 주소 ?app=1 · 사용자가 앱 화면을 고른 경우(classic='0') · 900px 미만일 때 보여 준다. */
+  const wide = () => { try { return matchMedia('(min-width: 900px)').matches; } catch (e) { return false; } };
+  const appOn = () => { try { return !!SITE() && LR.mode !== 'preview' && ls.get('classic') !== '1' && (standalone() || Q.get('app') === '1' || (!!LR.me && (!wide() || ls.get('classic') === '0'))); } catch (e) { return false; } };
+  try { const mq = matchMedia('(min-width: 900px)'); const re = () => { try { if (typeof lrender === 'function' && ls.get('classic') !== '0' && !standalone() && Q.get('app') !== '1') lrender(); } catch (e) { } }; mq.addEventListener ? mq.addEventListener('change', re) : mq.addListener(re); } catch (e) { }
   window.lappOn = appOn;
 
   Object.assign(ICP, { search: ICP.search || 'M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-4-4', sortk: 'M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4', mic: 'M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM5 11a7 7 0 0014 0M12 18v3', back: 'M15 5l-7 7 7 7', dots: 'M5 12h.01M12 12h.01M19 12h.01', install: 'M12 3v12M7 10l5 5 5-5M5 21h14', sparkle: ICP.sparkle || 'M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z', book2: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19V5', compass: 'M12 21a9 9 0 100-18 9 9 0 000 18zM15.5 8.5l-2 5-5 2 2-5z' });
@@ -409,7 +413,7 @@
     if (!on && isPar()) { const a0 = route().a; if (['home', 'my', 'shop', 'courses', 'tutorials'].includes(a0)) { lm.innerHTML = parClassicHTML(); document.body.classList.add('lpar'); if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } } /* 보호자 홈에서는 학생용 AI 튜터 버튼을 숨긴다(가족 연결 · 자녀 화면의 보호자 비서는 그대로) */
       document.querySelectorAll('header.lh a[href="#my"], header.lh a[href="#shop"], header.lh a[href="#courses"], header.lh a[href="#tutorials"], header.lh a[href="#login/my"]').forEach(x => { x.hidden = true; }); return; }
     if (!on && !LR.me && route().a === 'home' && !lm.querySelector('.lgj')) lm.insertAdjacentHTML('afterbegin', joinStrip());
-    if (!on) { if (LR.me && route().a === 'home' && ls.get('classic') === '1' && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
+    if (!on) { if (LR.me && !isPar() && route().a === 'home' && (ls.get('classic') === '1' || wide()) && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
     const a = route().a; document.body.classList.toggle('ap-play', a === 'c' && decodeURIComponent(location.hash.slice(1)).split('/').length > 2); /* PC 강의 화면: 떠 있는 아래 메뉴가 본문을 가리지 않게(lapp.css) */ if (LR.me && (a === 'login' || a === 'join')) { location.replace('#home'); return; } /* v32.8 로그인한 뒤 로그인 · 가입 화면은 홈으로 */
     if (!LR.me && ['connect', 'books'].includes(a) && typeof needLogin === 'function' && !lm.textContent.trim()) lm.innerHTML = needLogin(a);
     const hm = a === 'home' || (a === 'ai' && !isPar()); /* v39 디디쌤 튜브: 홈은 피드(ltube.js), 선생님과의 대화는 #ai(AI 튜터 탭) */
@@ -451,7 +455,7 @@
     if (k === 'inst-x') { ls.set('instx', '1'); const b = el.closest('.ap-inst'); b && b.remove(); return; }
     if (k === 'dlg-x') { const d = el.closest('dialog'); d && d.close(); return; }
     if (k === 'classic') { closeSheet(); ls.set('classic', '1'); toast('기존 화면으로 바꿨습니다. 홈 위쪽에서 언제든 앱 화면으로 돌아올 수 있어요.', 'ok'); lrender(); return; }
-    if (k === 'modern') { ls.set('classic', null); lrender(); return; }
+    if (k === 'modern') { ls.set('classic', wide() ? '0' : null); lrender(); return; } /* v43 G2: PC에서 앱 화면을 고르면 기억(classic='0') */
     if (k === 'mic') return mic(el);
     if (k === 'push-on') return pushEnable();
     if (k === 'push-off') { if (conn().push) conn().push.on = false; LR.api.save(); toast('앱 알림을 껐습니다.', 'ok'); lrender(); return; }

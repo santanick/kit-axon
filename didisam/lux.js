@@ -20,7 +20,7 @@
   /* ── 쉬운 말 ── */
   try { ITN.chapter = '단원'; ITI.chapter = 'layers'; } catch (e) { }
   try { const K = { diag: '레벨 진단', tutorials: '실습 영상', courses: '단계별 코스', badges: '수료 · 배지', books: '디지털북', notice: '공지사항' }; Object.keys(K).forEach(k => { if (PG_DESC[k]) PG_DESC[k][0] = K[k]; }); } catch (e) { }
-  const WORDS = () => { const tn = (pageOf('tutorials') || {}).name || '실습 영상'; return [['코스웨어에서 고르기', '단계별 코스 보기'], ['코스웨어', '단계별 코스'], ['COURSEWARE', '단계별 코스'], ['TUTORIALS', tn], ['튜토리얼', tn], ['WELCOME', '반갑습니다'], ['MY RESULT', '내 결과'], ['DIAGNOSIS', '레벨 진단'], ['DIGITAL BADGES', '디지털 배지'], ['DIGITAL BOOK', '디지털북'], ['커리큘럼', '배우는 내용']]; };
+  const WORDS = () => { const tn = (pageOf('tutorials') || {}).name || '실습 영상'; return [['코스웨어에서 고르기', '단계별 코스 보기'], ['단계별 코스웨어', '단계별 코스'] /* v43 G2: 「단계별 단계별 코스」 중복 방지 */, ['코스웨어', '단계별 코스'], ['COURSEWARE', '단계별 코스'], ['TUTORIALS', tn], ['튜토리얼', tn], ['WELCOME', '반갑습니다'], ['MY RESULT', '내 결과'], ['DIAGNOSIS', '레벨 진단'], ['DIGITAL BADGES', '디지털 배지'], ['DIGITAL BOOK', '디지털북'], ['커리큘럼', '배우는 내용']]; };
   function plain(root) { if (!root) return; const W = WORDS(); const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement && n.parentElement.closest('script,style,textarea,input,code,svg,.lt') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
     const L = []; while (tw.nextNode()) L.push(tw.currentNode); L.forEach(n => { let v = n.nodeValue; if (!/[가-힣A-Z]/.test(v)) return; const o = v; W.forEach(([a, b]) => { if (v.includes(a)) v = v.split(a).join(b); }); if (v !== o) n.nodeValue = v; }); }
 

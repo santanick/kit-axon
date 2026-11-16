@@ -436,3 +436,32 @@ body.tube:not(.tb-watch) #lm{padding-bottom:calc(var(--ap-nav) + var(--ap-sb,0px
 .tb-cm>span.tb-pl{display:grid;flex-direction:row}
 .tb-ct{height:168px}
 html[data-theme="dark"] .tb-tt.img>i{background:rgba(21,23,22,.86);color:var(--gr300)}
+/* ═════════ v43 G2 2차 — AX 튜터 단추를 탭 바 위로 띄움(탭 바 옆에 붙어 5칸처럼 보이던 문제)
+   작은 알약(높이 44px, 아이콘 + 이름) → 아래로 스크롤하는 동안은 44px 원으로 접힘(tb-fsm). 탭 바는 원래 폭(4칸)으로 되돌린다. ═════════ */
+body.tube:not(.tb-watch):not(.lt-on):not(.tb-sheet):not(.ap-pickon):has(> #tbFab) .ap-nav.tb-nav{right:12px}
+body.tube:not(.tb-watch) #tbFab.tb-fab{right:14px;bottom:calc(var(--ap-nav,76px) + 12px + var(--ap-sb,0px));width:auto;height:44px;padding:0 14px 0 11px;flex-direction:row;gap:6px;border-radius:999px;font-weight:700;box-shadow:0 1px 2px rgba(26,24,20,.08),0 10px 24px -6px rgba(0,134,45,.45)}
+body.tube:not(.tb-watch) #tbFab.tb-fab svg{width:18px;height:18px}
+body.tube:not(.tb-watch) #tbFab.tb-fab span{display:inline;font-size:13px}
+body.tube.tb-fsm:not(.tb-watch) #tbFab.tb-fab{width:44px;height:44px;padding:0;gap:0;justify-content:center}
+body.tube.tb-fsm:not(.tb-watch) #tbFab.tb-fab span{display:none}
+body.tube:not(.tb-watch) #lm{padding-bottom:calc(var(--ap-nav,64px) + var(--ap-sb,0px) + 80px)}
+@media (min-width:900px){body.tube:not(.tb-watch):has(> #tbFab) .ap-nav.tb-nav{right:auto;transform:translateX(-50%)}body.tube:not(.tb-watch) #tbFab.tb-fab{left:auto;right:calc(50% - 240px);bottom:calc(var(--ap-nav,76px) + 20px)}}
+/* v43 G2 2차: 유형별 홈 고유 카드(ltube.js typeHTML) */
+.tb-tyc{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:20px;background:var(--surface,#fff);box-shadow:0 1px 2px rgba(26,24,20,.05),0 8px 24px -14px rgba(26,24,20,.18)}
+.tb-tyc.hot{background:linear-gradient(180deg,var(--co50,#FFF3EC),var(--surface,#fff) 70%);box-shadow:inset 0 0 0 1px var(--co100,#FFE0CF),0 8px 24px -14px rgba(26,24,20,.18)}
+.tb-tyh{display:flex;align-items:center;gap:12px}
+.tb-tyh>span:nth-child(2){display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.tb-tyh small{font-size:13px;font-weight:600;color:var(--g700,#5C554B)}
+.tb-tyh b{font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--g900,#1A1814);word-break:keep-all}
+.tb-tyi{flex:none;width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:var(--gr50,#ECFDF3);color:var(--gr700,#00862D)}
+.tb-tyc.hot .tb-tyi{background:var(--co100,#FFE0CF);color:var(--co700,#C2410C)}
+.tb-tyn{flex:none;font-style:normal;padding:4px 10px;border-radius:999px;background:var(--gr50,#ECFDF3);color:var(--gr800,#00602A);font-size:13px;font-weight:800;white-space:nowrap}
+.tb-tyl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tb-tyl li{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:var(--surface2,#F7F5F1);border-left:3px solid var(--gr500,#16A34A)}
+.tb-tyl li.wn{border-left-color:var(--co500,#F97316)}
+.tb-tyl li b{font-size:14px;font-weight:700;color:var(--g900,#1A1814);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-tyl li small{font-size:13px;color:var(--g700,#5C554B)}
+.tb-tye,.tb-tyx{margin:0;font-size:13px;line-height:1.5;color:var(--g700,#5C554B)}
+.tb-tyx{display:flex;align-items:center;gap:6px}.tb-tyx::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--gr500,#16A34A)}
+.tb-tya{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 4px;color:var(--gr700,#00862D);font-size:14px;font-weight:800;text-decoration:none}
+html[data-theme="dark"] .tb-tyc.hot{background:var(--surface)}

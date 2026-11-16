@@ -145,7 +145,7 @@
   function card(w) {
     let r; try { r = w.v() || {}; } catch (e) { console.warn('dashx', w.id, e); r = { v: '—', sub: '값을 계산하지 못했습니다' }; }
     const tg = target(w); const u = r.u != null ? r.u : /^[\d,]+$/.test(String(r.v)) || typeof r.v === 'number' ? w.u : (String(r.v).includes('/') ? w.u : '');
-    return `<article class="dx-card ${r.tone === 'w' ? 'w' : ''}" data-w="${w.id}"><h3>${esc(nm(w))}</h3><p class="dx-n"><b>${esc(typeof r.v === 'number' ? N(r.v) : String(r.v))}</b>${u ? `<small>${esc(u)}</small>` : ''}</p><p class="dx-s">${esc(r.sub || '')}</p><button type="button" class="btn sm" data-act="dx-go" data-v="${esc(tg.id)}" data-ui="${esc(tg.ui ? JSON.stringify(tg.ui) : '')}" data-w="${w.id}">${esc(bl(w))} ›</button></article>`;
+    return `<article class="dx-card ${r.tone === 'w' ? 'w' : ''}" data-w="${w.id}"><h3>${esc(nm(w))}</h3>${(() => { const z = window.L43 && L43.zero ? L43.zero(r.v, nm(w)) : null; /* v43 G2: 0 · 「—」 → 문장 */ return z ? `<p class="dx-n dx-z"><b>${esc(z)}</b></p>` : `<p class="dx-n"><b>${esc(typeof r.v === 'number' ? N(r.v) : String(r.v))}</b>${u ? `<small>${esc(u)}</small>` : ''}</p>`; })()}<p class="dx-s">${esc(r.sub || '')}</p><button type="button" class="btn sm" data-act="dx-go" data-v="${esc(tg.id)}" data-ui="${esc(tg.ui ? JSON.stringify(tg.ui) : '')}" data-w="${w.id}">${esc(bl(w))} ›</button></article>`;
   }
   function editHTML(Lx) {
     return `<div class="dx-ed" role="region" aria-label="현황 항목 편집"><p class="mini">보일 항목을 고르고 순서를 바꿉니다. 끌어서 옮기거나, 항목에서 Alt + ↑ ↓ 키 또는 화살표 버튼을 씁니다.</p>
@@ -191,6 +191,7 @@
 .dx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
 .dx-card{display:flex;flex-direction:column;gap:4px;min-width:0;background:var(--surface);border:0;border-radius:var(--r-card,20px);box-shadow:var(--sh2);padding:16px 16px 14px}
 .dx-card.w{background:linear-gradient(180deg,var(--co50),var(--surface) 60%);box-shadow:var(--sh2),inset 0 0 0 1px var(--co100)}
+.dx-n.dx-z b{font-size:20px;color:var(--t-sub)}
 .dx-card h3{margin:0;font-size:13px;font-weight:700;color:var(--t-sub)}
 .dx-n{margin:2px 0 0;display:flex;align-items:baseline;gap:3px;min-width:0}.dx-n b{font:700 28px/1.1 var(--num,inherit);color:var(--g900);overflow-wrap:anywhere;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.dx-card.w .dx-n b{color:var(--co700)}.dx-n small{font-size:13px;color:var(--t-sub)}
 .dx-s{margin:0;font-size:12px;color:var(--t-sub);line-height:1.45;min-height:2.9em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}

@@ -209,3 +209,28 @@ html[data-theme="dark"] .l43-brief.l43-k-hero{background:radial-gradient(90% 120
 .l43-brief.l43-k-kpi{grid-template-columns:minmax(340px,1fr) auto}
 .l43-k-kpi .l43-kp{grid-template-columns:repeat(3,minmax(132px,1fr))}
 .l43-k-photo .l43-pst{min-height:250px;max-height:300px}
+
+/* ── v43 G2: 머리 버튼(L43.brief acts) · 0 문장 ── */
+.l43-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.l43-acts .l43-act{min-height:44px;padding:0 18px;border-radius:999px;font-weight:700}
+.l43-k-hero .l43-acts .l43-act.pri{background:#fff;color:var(--gr800,#00602A);border-color:#fff}
+.l43-k-hero .l43-acts .l43-act.ghost{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.4)}
+.l43-k-hero .l43-acts .l43-act.ghost:hover{background:rgba(255,255,255,.18)}
+.v4-head .l43-acts{margin-top:14px}
+dd .l43-z,.l43-z{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--g700);white-space:nowrap}
+.l43-k-hero .l43-z{color:rgba(255,255,255,.86)}
+.l43-st.warn .l43-z,.l43-kc.warn .l43-z{color:var(--g700)}
+.v4-acts .l43-acts{margin-top:0}
+/* v43 G2 2차: 시연 문구 칩 · 설정 화면 머리 낮추기 */
+.g2-demo{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;background:var(--surface2,#F4F2EE);border:1px solid var(--hair,#E7E5E0);color:var(--g700);font-size:13px;font-weight:700;letter-spacing:0;white-space:nowrap;vertical-align:middle;cursor:help}
+.g2-demo::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--y500,#E8A317)}
+p.mini:has(> .g2-demo:only-child),p:has(> .g2-demo:only-child){margin:6px 0 0}
+#main.g2-set .l43-brief{padding:18px 24px;margin:0 0 12px;gap:14px 24px;align-items:center}
+#main.g2-set .l43-eye{margin-bottom:6px}
+#main.g2-set .l43-hl,#main.g2-set .l43-k-hero .l43-hl{font-size:24px;line-height:1.25}
+#main.g2-set .l43-sub{margin-top:4px;font-size:14px}
+#main.g2-set .l43-brief.l43-k-hero{padding:20px 26px}
+#main.g2-set .l43-todo li{padding-top:8px;padding-bottom:8px}
+#main.g2-set .l43-pst{max-height:120px}
+#main.g2-set .l43-kc .l43-spk,#main.g2-set .l43-g .l43-spk{display:none}
+#main.g2-set .l43-ring svg{width:84px;height:84px}
