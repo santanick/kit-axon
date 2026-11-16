@@ -82,3 +82,5 @@ details.lmsb-week:not([open]){box-shadow:none;background:transparent;border-colo
 
 /* v43.4 MB 모바일: 049 「다른 신분으로 보기」 팝업이 오른쪽 화면 밖으로 나가지 않게 펼침 단추의 오른쪽에 맞춘다 */
 @media (max-width:760px){.uxpop.lmsx-aspop{left:auto;right:0;min-width:0;width:min(300px,calc(100vw - 40px))}}
+/* v43.4 P1 · 049 휴대폰: 다크 브리핑 안 「강의실」 라벨 대비(흰색 82%) */
+@media (max-width:760px){.l43-k-hero .r7-ctx .lmsx-pick label,.l43-k-hero .r7-ctx label{color:rgba(255,255,255,.86)!important}}

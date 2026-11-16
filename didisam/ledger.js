@@ -117,7 +117,8 @@
      기본 켬: 돈을 받는 기관(학원 · 평생 · 직업훈련 · 공공 시민 교육형 · 시설형). 기업 · 공공 직원 교육형 · 대학은 끔(메뉴 찾기에서 켬, P1-F07 · P2-H11) */
   MENU.ledger = { label: '수납', ws: 'ops' };
   if (MENU.sales) MENU.sales.label = '매출';
-  if (MENU.billing) MENU.billing.label = '청구서(수납으로 이동)';
+  /* v43.4 P1 · 022 · 045 · 046: 휴대폰(≤760px) 탭 줄에서는 「청구서」로 줄여 끝 잘림을 막는다(그리는 때마다 폭을 다시 읽음) */
+  if (MENU.billing) Object.defineProperty(MENU.billing, 'label', { configurable: true, enumerable: true, get: () => (window.matchMedia && matchMedia('(max-width:760px)').matches) ? '청구서' : '청구서(수납으로 이동)', set: () => { } });
   if (MENU.crmbill) MENU.crmbill.label = '수납';
   const pubEd0 = () => (S && S.org && S.org.type === 'public' && ['citizen', 'facility', 'staff'].includes(S.org.ed)) ? S.org.ed : 'staff';
   const MONEY = () => { if (!S || !S.org) return []; const ty = S.org.type; if (ty === 'k12') return ['crmbill', 'sales']; if (['adult', 'lifelong', 'voc'].includes(ty)) return ['ledger', 'sales']; if (ty === 'public' && pubEd0() !== 'staff') return ['ledger', 'sales']; return []; };

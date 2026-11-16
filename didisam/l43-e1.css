@@ -126,3 +126,12 @@ html[data-theme=dark] .bks-pb,html[data-theme=dark] .bks-cb,html[data-theme=dark
 #main .h1-subrow>.lmsnav-sub.h1-sub button.on{background:var(--gr700,#00862D);color:var(--on-pr,#fff)}
 #main .h1-subrow>.lmsnav-sub.h1-sub::after{content:none}
 #main .h1-dupact{display:none!important}
+/* v43.4 P1 · 034 · 069 휴대폰: 표지에는 배지 · 단원 수만(제목은 표지 아래에서 2줄), 통계 3칸 고르게 */
+@media (max-width:760px){
+  .bks-grid{gap:12px}
+  .bks-cov .bks-ct b,.bks-cov .bks-ct small{display:none}
+  .bks-cov .bks-lv{top:10px;left:12px}
+  .bks-cov .bks-ct{left:12px;right:10px;bottom:10px}
+  .bks-tx>b{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.35;word-break:keep-all}
+  .bks-nums{justify-content:space-between;gap:6px}
+}

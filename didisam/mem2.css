@@ -180,3 +180,17 @@
   #main[data-l43="members"] table.mcard td.l43-pc{flex:1 1 100%;min-width:0}
   #main[data-l43="members"] table.mcard td.l43-pc .l43-pgt{min-width:0;flex:1}
 }
+/* v43.4 P1 · 029 휴대폰: 양식 미리보기 머리는 세로로, 표는 카드형 행(이름 · 부서 / 이메일 · 연락처) */
+@media (max-width:760px){
+  .en-smh{flex-wrap:wrap;row-gap:2px}
+  .en-smh small{flex:1 1 100%;order:3;font-size:13px}
+  .en-smp table,.en-smp tbody{display:block;width:100%}
+  .en-smp thead{display:none}
+  .en-smp tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .en-smp tbody tr:last-child{border-bottom:0}
+  .en-smp tbody td{padding:0;border:0;font-size:13px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .en-smp tbody td:nth-child(1){grid-row:2;grid-column:1;color:var(--muted)}
+  .en-smp tbody td:nth-child(2){grid-row:1;grid-column:1;font-weight:700}
+  .en-smp tbody td:nth-child(3){grid-row:1;grid-column:2;text-align:right}
+  .en-smp tbody td:nth-child(4){grid-row:2;grid-column:2;text-align:right;font-variant-numeric:tabular-nums}
+}
