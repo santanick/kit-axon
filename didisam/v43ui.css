@@ -419,3 +419,24 @@ html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background
 .modal.m1 .m1pv s{color:var(--t-sub,var(--g600))}.modal.m1 .m1pv p>span{color:var(--t-sub,var(--g600))}
 .modal.m1 .m1v{font-weight:800;color:var(--g900)}.modal.m1 .m1v.bad{color:var(--co700,#B53C0A);font-weight:700}
 .modal.m1 .mf .btn{min-height:44px;min-width:96px;font-size:15px}
+
+/* ── v43.4 GM 휴대폰 공통(≤760px). PC는 그대로 ──
+   ① 머리 버튼 줄(.phr)은 한 줄 가로 넘김 칩 — 잘리거나 두 줄로 꺾이지 않게. 「···」 메뉴는 넘김 상자에 잘리지 않게 화면 기준으로 띄운다
+   ② 화면 안 탭(.wtabs · .btabs)도 한 줄 가로 넘김
+   ③ 상단 공간 탭(.brail)은 글자를 줄이지 않고 한 줄 가로 넘김 */
+@media (max-width:760px){
+  #main>.bhd.q1-ph{align-items:stretch}
+  #main>.bhd.q1-ph>.ph.q1-phmv{flex:1 1 100%;min-width:0;max-width:100%}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px 16px 4px 2px;margin:0 -16px 0 -2px;scroll-padding:0 16px}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr::-webkit-scrollbar{display:none}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr>*{flex:none}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr .btn{min-height:44px;white-space:nowrap}
+  #main>.bhd.q1-ph .phr details.uxmore .uxpop{position:fixed;left:16px;right:16px;width:auto;max-width:none;margin-top:6px;z-index:60}
+  #main .seg2.wtabs,#main .seg2.btabs{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-width:100%;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #main .seg2.wtabs::-webkit-scrollbar,#main .seg2.btabs::-webkit-scrollbar{display:none}
+  #main .seg2.wtabs>*,#main .seg2.btabs>*{flex:none;white-space:nowrap}
+  details.uxmore:not([open])>.uxpop,details.uxtabmore:not([open])>.uxpop{display:none}
+  #main .seg2.wtabs .uxtabmore .uxpop,#main .seg2.btabs .uxtabmore .uxpop{position:fixed;left:16px;right:16px;width:auto}
+  nav.brail{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  nav.brail::-webkit-scrollbar{display:none}
+}

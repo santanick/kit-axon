@@ -500,3 +500,8 @@ html[data-theme=dark] .hps-pubc.hps-pubc9{background:#1F2221}
 }
 .hps-lpr .hps-lpi span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hps-lpr .hps-lpi small.hps-lpc{flex:none}
+/* v43.4 GM 휴대폰(≤760px): 미리보기(캔버스)는 전체 폭 · 흰 바탕으로, 편집 패널은 아래 시트(기존 .hps-pan 규칙) */
+@media (max-width:760px){
+  #hpe.hps .hpe-stage{padding:0;background:var(--surface,#fff);justify-content:flex-start}
+  #hpe.hps .hpe-stage iframe#hpeF,#hpe.hps .hps-lv{border-radius:0;box-shadow:none;background:#fff}
+}

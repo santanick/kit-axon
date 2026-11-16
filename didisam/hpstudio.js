@@ -84,7 +84,8 @@
     const bn = [...document.querySelectorAll('.bnav, nav.mnav, .tabbar, nav.brail')].find(n => { const r = n.getBoundingClientRect(); return r.width > innerWidth * .6 && r.top > innerHeight * .6 && getComputedStyle(n).position === 'fixed'; });
     const bot = bn ? Math.max(0, Math.round(innerHeight - bn.getBoundingClientRect().top)) : 0;
     w.style.setProperty('--hps-t', top + 'px'); w.style.setProperty('--hps-l', left + 'px'); w.style.setProperty('--hps-b', bot + 'px'); layout(); }
-  addEventListener('resize', () => { place(); fit(); });
+  /* v43.4 GM: 휴대폰 폭(<760px)으로 들어오거나 줄어들면 미리보기를 휴대폰 화면(390 · 전체 폭)으로 — PC 미리보기를 작게 줄여 띄우거나 빈 캔버스로 남지 않게 */
+  addEventListener('resize', () => { place(); if (HS.dock && innerWidth < 760 && HPE.dev !== 'mo' && ACT['hpe-dev']) ACT['hpe-dev']({ dataset: { v: 'mo' } }); fit(); });
   function dockOn() { if (!HS.dock && !HS.devSet && innerWidth < 760) { HS.devSet = 1; if (HPE.dev !== 'mo') { HPE.dev = 'mo'; if (ACT['hpe-dev']) setTimeout(() => ACT['hpe-dev']({ dataset: { v: 'mo' } }), 0); } } HS.dock = true; document.body.classList.add('hps-dock'); const w = $1('#hpe'); if (w) { w.classList.add('hps'); w.setAttribute('role', 'region'); w.removeAttribute('aria-modal'); w.setAttribute('aria-label', '홈페이지 편집기'); } place(); }
   function dockOff() { HS.dock = false; HS.pan = ''; HS.lv = null; HS.gal = 0; document.body.classList.remove('hps-dock', 'hps-talk-on', 'hps-gal-on'); const g = $1('#hpsGal'); if (g) g.remove(); }
   AFTER.push(() => {
@@ -218,7 +219,7 @@
     const top = st.offsetTop; w.style.setProperty('--hps-st', top + 'px'); fit(); }
   function fit() { const w = $1('#hpe'); if (!w || !HS.dock) return; const st = w.querySelector('.hpe-stage'); const f = $1('#hpeF'); if (!st || !f) return;
     const cs = getComputedStyle(st); const pw = st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); const ph = st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-    if (pw < 50 || ph < 50) return; const mo = HPE.dev === 'mo'; const W = mo ? 390 : 1280;
+    if (pw < 50 || ph < 50) { /* v43.4 GM: 휴대폰에서 캔버스 높이가 아직 0이면(첫 그리기 · 시트 전환 직후) 몇 번 다시 맞춘다 — 크기를 못 받아 검게 빈 캔버스로 남지 않게 */ if ((fit.n = (fit.n || 0) + 1) <= 12) requestAnimationFrame(() => fit()); return; } fit.n = 0; const mo = HPE.dev === 'mo'; const W = mo ? 390 : 1280;
     let z = HS.zoom === 'fit' ? Math.min(1, pw / W) : (+HS.zoom || 100) / 100; z = Math.max(.2, Math.min(1, z)); if (HS.zoom === 'fit' && !mo && pw >= W) z = 1;
     const Wd = mo ? W : (HS.zoom === 'fit' && pw >= W ? Math.min(pw, 1440) : W); const H = Math.round(ph / z);
     Object.assign(f.style, { width: Wd + 'px', maxWidth: 'none', minWidth: '0', height: H + 'px', minHeight: '0', transform: z < 1 ? `scale(${z})` : '', transformOrigin: 'top left', marginRight: z < 1 ? `${-Math.round(Wd * (1 - z))}px` : '', marginBottom: z < 1 ? `${-Math.round(H * (1 - z))}px` : '', flex: '0 0 auto' });
