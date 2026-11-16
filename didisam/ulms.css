@@ -215,3 +215,13 @@
 .r7-q .r7-qb input{flex:1;border:0!important;background:none!important;box-shadow:none!important;min-height:44px;font-size:15px;padding:0;outline:0}
 .r7-q .r7-qb .btn{border-radius:999px}
 .fx-v.fx-0 small{font-size:13px;color:var(--t-sub,#5C554B);white-space:nowrap}
+/* v43 R6: 성적 분반 칩 */
+.efh-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.efh-chip{min-height:36px;padding:6px 14px;border-radius:999px;border:0;background:var(--surface2,#f2f4f3);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.efh-chip.on{background:var(--ink);color:var(--surface,#fff)}
+/* v43 R6: AI 관리 탭 더 보기 */
+.ai-more{position:relative}.ai-more>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:12px;font-weight:700;font-size:14px;color:var(--g700,#3f4a45)}
+.ai-more>summary::-webkit-details-marker{display:none}.ai-more>summary em{font-style:normal;font-size:12px;min-width:20px;height:20px;display:inline-grid;place-items:center;border-radius:99px;background:var(--surface2,#eef0ef)}
+.ai-more.on>summary{background:var(--gr50,#EAF8EF);color:var(--gr800,#066B2A)}
+.ai-morep{position:absolute;z-index:20;top:calc(100% + 6px);left:0;min-width:200px;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:14px;background:var(--surface,#fff);box-shadow:0 10px 30px rgba(16,24,40,.14),inset 0 0 0 1px var(--hair)}
+.ai-morep button{justify-content:flex-start;text-align:left}

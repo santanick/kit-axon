@@ -117,3 +117,10 @@ mark{background:#ffe58a;border-radius:3px;padding:0 2px}
 }
 .cmb-l{display:block;font-weight:700;margin-bottom:6px}
 .cmb-n{font-size:15px;font-weight:700;margin:6px 0}
+.cm43-rd{display:inline-block;vertical-align:middle;width:56px;height:6px;border-radius:99px;background:var(--surface2,#eef0ef);overflow:hidden;margin-right:6px}.cm43-rd i{display:block;height:100%;background:var(--pr,#00c53b);border-radius:inherit}
+/* v43 R6: 상담 — 채널톡 연결 안내 카드 · 그린 단계 히트맵 */
+.cs43-conn{display:flex;align-items:center;gap:14px;padding:14px 16px;margin:0 0 14px;border-radius:16px;background:var(--gr50,#EAF8EF);box-shadow:inset 0 0 0 1px var(--gr200,#B7E8C6)}
+.cs43-ci{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--surface,#fff);color:var(--gr800,#066B2A);flex:0 0 auto}
+.cs43-ct{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.cs43-ct b{font-size:15px}.cs43-ct small{font-size:13px;color:var(--g700,#4a5450)}
+.cs43-heat .r1-hx.l0{background:var(--surface2,#f2f4f3);color:var(--muted)}.cs43-heat .r1-hx.l1{background:var(--gr50,#EAF8EF);color:var(--gr800,#066B2A)}
+.cs43-heat .r1-hx.l2{background:var(--gr100,#d3f2dc)}.cs43-heat .r1-hx.l3{background:var(--gr300,#8fdca6)}

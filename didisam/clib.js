@@ -262,7 +262,7 @@
   function thumb(e) { const k = (KIND[e.kind] || KIND.file)[2]; const id = ytOfE(e); const r = e.ref || {}; const L = lenOf(e);
     const st = e.origin === 'book' && r.color ? ` style="--bk:${esc(String(r.color).replace(/[^#\w(),.% ]/g, ''))}"` : '';
     const cvu = !window.V4 || !V4.photo ? '' : e.origin === 'book' && !id ? V4.photo(`${e.title} 도서 책`, e.id) /* v43 D-E: 디지털북은 단색 상자 대신 사진 표지 */
-      : ['video', 'doc'].includes(e.kind) ? V4.photo(`${e.title} ${e.kind === 'video' ? '강의 영상 촬영' : '문서 노트'}`, 'clb' + e.id) : ''; /* v43 R1: 영상 · 문서도 빗금 아이콘 대신 사진 표지(유튜브 썸네일은 그 위에 덮임) */
+      : ['video', 'doc'].includes(e.kind) ? (() => { /* v43 R6: 이름으로 장면을 못 고르면 교실 사진만 반복 — 카드마다 다른 장면 */ const P = ['IT', '경영', '독서', '외국어', '돌봄', '요리']; const w = window.L43 && L43.wordsOf ? L43.wordsOf(e.title) : []; const hs = String(e.id || e.title).split('').reduce((a, ch) => a + ch.charCodeAt(0), 0); return V4.photo(w[0] && w[0] !== '교실' ? `${w[0]} ${e.title}` : P[hs % P.length], 'clb' + e.id); })() : ''; /* v43 R1: 영상 · 문서도 빗금 아이콘 대신 사진 표지(유튜브 썸네일은 그 위에 덮임) */
     const inner = (cvu ? `<span class="clb-cov" style="background-image:url('${esc(cvu)}')"></span>` : '') + (id ? `<img class="clb-thimg" src="https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : '') + (e.kind === 'video' ? `<span class="r1-play" aria-hidden="true"></span>` : '');
     const cap = e.origin === 'book' ? `<b class="clb-thb">${esc(e.title)}</b>` : e.kind === 'file' && extOf(e) ? `<b class="clb-thx">${esc(extOf(e))}</b>` : '';
     return `<span class="clb-th k-${k}${id ? ' yt' : ''}"${st} aria-hidden="true"><span class="clb-thi">${ic((KIND[e.kind] || KIND.file)[1], 30)}${cap}</span>${inner}<em class="clb-thk">${esc(isLink(e) && e.kind === 'video' ? 'YouTube' : kName(e.kind))}</em>${L ? `<em class="clb-thl">${esc(L)}</em>` : ''}</span>`; }
@@ -356,12 +356,13 @@
       <div class="clb-vw" role="group" aria-label="보기 방식"><button type="button" data-act="clb-view" data-v="card" aria-pressed="${vm === 'card'}" class="${vm === 'card' ? 'on' : ''}">카드</button><button type="button" data-act="clb-view" data-v="list" aria-pressed="${vm === 'list'}" class="${vm === 'list' ? 'on' : ''}">목록</button></div></div></div>`;
     const shown = L.filter(e => !q || qOf(e).includes(q));
     const make1 = MAKE.find(m => (tb === 'video' && m[0] === 'aivideo') || (tb === 'doc' && m[0] === 'doc') || (tb === 'quiz' && m[0] === 'quiz') || (tb === 'book' && m[0] === 'book') || (tb === 'link' && m[0] === 'youtube'));
-    const body = L.length ? `<div class="${vm === 'list' ? 'clb-list' : 'clb-grid'}" id="clbGrid">${L.slice(0, lim).map(vm === 'list' ? row : card).join('')}</div><div class="clb-none" id="clbNone" ${shown.length ? 'hidden' : ''}>찾는 콘텐츠가 없습니다. 다른 말로 찾아보거나 [만들기]를 눌러 새로 만드세요.</div>${L.length > lim ? `<div class="clb-more"><button type="button" class="btn" data-act="clb-more">더 보기 (${L.length - lim}개 더)</button></div>` : ''}`
+    const body = L.length ? `<div class="${vm === 'list' ? 'clb-list' : 'clb-grid'}${tb === 'book' ? ' clb-g4' : ''}" id="clbGrid">${L.slice(0, lim).map(vm === 'list' ? row : card).join('')}</div><div class="clb-none" id="clbNone" ${shown.length ? 'hidden' : ''}>찾는 콘텐츠가 없습니다. 다른 말로 찾아보거나 [만들기]를 눌러 새로 만드세요.</div>${L.length > lim ? `<div class="clb-more"><button type="button" class="btn" data-act="clb-more">더 보기 (${L.length - lim}개 더)</button></div>` : ''}`
       : `<div class="clb-empty1"><p>아직 ${esc(TABS.find(x => x[0] === tb)[1])} 콘텐츠가 없습니다.</p>${make1 ? `<button type="button" class="btn pri" data-act="clb-mk" data-v="${make1[0]}">${esc(make1[1])} ${['upload', 'youtube'].includes(make1[0]) ? '넣기' : '만들기'}</button>` : ''}</div>`;
     const body2 = tb === 'book' && L.length && vm !== 'list' ? shelfHTML(L.slice(0, lim)) : body; /* v43 R5 */
     const fresh = !A.some(x => x.origin !== 'book'); /* 기본으로 들어 있는 디지털북만 있을 때도 처음 안내를 먼저 보여 준다 */
     const ph = panelHTML(); setTimeout(() => document.body.classList.toggle('clb-sheet', !!ph && innerWidth <= 860), 0);
-    return `<div class="clb">${top}${lmsNote}${fresh ? emptyHTML() : ''}${bar}<div class="clb-wrap${ph ? ' has-p' : ''}"><div class="clb-main">${body2}${storageLine()}</div><aside class="clb-panel" id="clbPanel" aria-label="미리보기" ${ph ? '' : 'hidden'}>${ph}</aside></div></div>`;
+    /* v43 R6: 설명 문단 · [만들기] · [튜토리얼 영상 추천]은 머리 카드(L43 브리핑) 안으로 — 콘텐츠가 있을 때 */
+    return `<div class="clb">${window.L43 && !UI.clibSub ? '' : top}${lmsNote}${fresh ? emptyHTML() : ''}${bar}<div class="clb-wrap${ph ? ' has-p' : ''}"><div class="clb-main">${body2}${storageLine()}</div><aside class="clb-panel" id="clbPanel" aria-label="미리보기" ${ph ? '' : 'hidden'}>${ph}</aside></div></div>`;
   };
 
   /* 검색은 다시 그리지 않고 카드만 거른다(입력 중 초점 유지) */
@@ -600,6 +601,7 @@
 .clb-wrap{display:block}.clb-wrap.has-p{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
 .clb-main{min-width:0}
 .clb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+@media (min-width:1100px){.clb-grid.clb-g4{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}} /* v43 R6: 디지털북 표지 4열 */
 .clb-card{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;overflow:hidden;cursor:pointer;background:#fff;border:1px solid var(--g300);border-radius:10px;box-shadow:var(--e1);transition:border-color .15s,box-shadow .15s}
 .clb-card:hover,.clb-lrow:hover{border-color:var(--s400)}
 .clb-card:focus-visible,.clb-lrow:focus-visible{outline:none;box-shadow:0 0 0 3px var(--s100);border-color:var(--s400)}
@@ -648,10 +650,14 @@
   .clb-lrow{grid-template-columns:80px minmax(0,1fr) 20px;gap:10px}.clb-lrow .clb-th{width:80px}.clb-lk,.clb-ll{display:none}}
 @media (max-width:640px){.clb-bar{flex-direction:column;align-items:stretch}.clb-tools{flex:1 1 auto;width:100%}.clb-grid{grid-template-columns:1fr 1fr;gap:10px}
   .clb-card .clb-tx{padding:10px}.clb-card .clb-thb{display:none}.clb-card .clb-tx b{font-size:15px}.clb-card .clb-use{font-size:13px}.clb-card .clb-tx small{display:none}
-  .clb-topb .btn.clb-make,.clb-topb .btn.clb-tutb{flex:1 1 100%}}`; document.head.appendChild(st); }
+  .clb-topb .btn.clb-make,.clb-topb .btn.clb-tutb{flex:1 1 100%}
+  .l43-acts:has(.clb-make){flex-wrap:wrap}.l43-acts .btn.clb-make,.l43-acts .btn.clb-tutb{flex:1 1 100%;justify-content:center;min-width:0} /* v43 R6: 머리 카드 안 버튼 — 휴대폰 한 줄씩 */}`; document.head.appendChild(st); }
   /* v43 E2 — 첫 줄 브리핑(L43). l43.js가 뒤에 로드되므로 DOMContentLoaded에서 등록 */
   { const reg43 = () => { if (!window.L43) return; L43.reg('clib', { art: 'list', brief: () => { if (UI.clibSub) return null; let A = []; try { A = entries(); } catch (e) { return null; } if (!A.length) return null;
       const n = k => A.filter(e => inTab(e, k)).length; const idle = A.filter(e => !(e.uses || []).length).length;
-      return { eye: '콘텐츠 라이브러리', title: idle ? `콘텐츠 <em>${A.length}개</em> 가운데 ${idle}개는 아직 어느 ${esc(cname())}에도 없습니다` : `콘텐츠 <em>${A.length}개</em>가 모두 ${esc(cname())}에 들어가 있습니다`, sub: '쓰지 않는 콘텐츠는 미리보기에서 바로 ' + esc(cname()) + '에 넣을 수 있습니다.', stats: [[n('video') + '개', '영상'], [n('doc') + '개', '문서'], [n('quiz') + '개', '퀴즈 · 시험'], [n('book') + '권', '디지털북']] }; } }); try { L43.run(); } catch (e) { } };
+      const foot = `<div class="l43-acts"><button type="button" class="btn pri clb-make" data-act="clb-make">${ic('clplus', 18)} 만들기</button><button type="button" class="btn ghost clb-tutb" data-act="clb-tut">${ic('clyt', 18)} 튜토리얼 영상 추천</button></div>`;
+      if (UI.clibT === 'book') { /* v43 R6: 디지털북 보기는 전용 헤드라인(009와 같은 문장 · 사진 반복 금지) */ const B = A.filter(e => inTab(e, 'book')); const v = B.reduce((a, e) => a + (+((e.ref || e.book || {}).views) || 0), 0); const un = B.filter(e => !(e.uses || []).length).length;
+        return { eye: '디지털북', imgs: ['독서', 'IT', '외국어'].map((w, i) => L43.photo([w], 'dbook' + i)), title: un ? `디지털북 <em>${B.length}권</em> 가운데 ${un}권을 아직 ${esc(cname())}에 넣지 않았습니다` : `디지털북 <em>${B.length}권</em>이 모두 ${esc(cname())}에 들어가 있습니다`, sub: '표지를 누르면 미리보기에서 바로 고치고, [넣기]로 원하는 차시에 붙입니다. 학습자는 앱에서 이어 읽습니다.', foot: `<div class="l43-acts"><button type="button" class="btn pri clb-make" data-act="clb-make">${ic('clplus', 18)} 디지털북 만들기</button></div>`, stats: [[B.length + '권', '디지털북'], [un + '권', '미배치', un ? 'warn' : ''], [n('doc') + '개', '함께 쓰는 문서']] }; }
+      return { eye: '콘텐츠 라이브러리', foot, title: idle ? `콘텐츠 <em>${A.length}개</em> 가운데 ${idle}개는 아직 어느 ${esc(cname())}에도 없습니다` : `콘텐츠 <em>${A.length}개</em>가 모두 ${esc(cname())}에 들어가 있습니다`, sub: '쓰지 않는 콘텐츠는 미리보기에서 바로 ' + esc(cname()) + '에 넣을 수 있습니다.', stats: [[n('video') + '개', '영상'], [n('doc') + '개', '문서'], [n('quiz') + '개', '퀴즈 · 시험'], [n('book') + '권', '디지털북']] }; } }); try { L43.run(); } catch (e) { } };
     if (window.L43) reg43(); else document.addEventListener('DOMContentLoaded', reg43); }
 })();

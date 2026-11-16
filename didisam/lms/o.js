@@ -282,7 +282,8 @@
   if (baseAigov) VIEWS.aigov = () => {
     let h = baseAigov(); const mine = [['lo-prov', 'LLM 플러그인'], ['lo-mon', '응답시간 · 토큰'], ['lo-quota', '토큰 할당량'], ['lo-rag', 'RAG 소스(동적)']];
     const cur = UI.aiT || 'model'; const at = h.indexOf('<div class="seg2" role="tablist">');
-    if (at >= 0) { const end = h.indexOf('</div>', at); h = h.slice(0, end) + mine.map(([id, l]) => `<button role="tab" aria-selected="${id === cur}" class="${id === cur ? 'on' : ''}" data-act="tab" data-key="aiT" data-v="${id}">${esc(l)}</button>`).join('') + h.slice(end); }
+    /* v43 R6: 탭 9개 2줄 → 기본 5개 + 「더 보기」(운영 서버 탭 4개) */
+    if (at >= 0) { const end = h.indexOf('</div>', at); const sel = mine.find(([id]) => id === cur); h = h.slice(0, end) + `<details class="ai-more${sel ? ' on' : ''}"><summary role="tab" aria-selected="${!!sel}">${sel ? esc(sel[1]) : '더 보기'} <em>${mine.length}</em></summary><div class="ai-morep">${mine.map(([id, l]) => `<button role="tab" aria-selected="${id === cur}" class="${id === cur ? 'on' : ''}" data-act="tab" data-key="aiT" data-v="${id}">${esc(l)}</button>`).join('')}</div></details>` + h.slice(end); }
     if (cur.startsWith('lo-')) { try { h += ({ 'lo-prov': vProv, 'lo-mon': vMon, 'lo-quota': vQuota, 'lo-rag': vSrc })[cur](); } catch (e) { h += `<div class="empty">${esc(e.message)}</div>`; } }
     return h;
   };

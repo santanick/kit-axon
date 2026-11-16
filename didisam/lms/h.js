@@ -71,9 +71,14 @@
   VIEWS.grade = () => { if (!ON()) return base ? base() : ''; css(); return gradeView() + (base ? `<details class="card efh-old"><summary>간편 성적 보기(이전 데모 화면)</summary>${base()}</details>` : ''); };
   function gradeView() {
     const P = secPick('lmshSec', 'lmsh-sec'); const tab = UI.lmshT || 'board';
-    let h = head('성적', '평가 항목 점수를 수업계획서 비율로 환산해 등급을 내고, 확정해 학사로 보냅니다(학사 전송은 연동 후 동작). 청강생은 산출에서 제외합니다.') + P.html;
+    /* v43 R6: 분반 드롭다운 → 칩(6개 이하) */
+    const OP = [...P.html.matchAll(/<option value="([^"]*)"\s*(selected)?\s*>([^<]*)<\/option>/g)];
+    const chipB = m => `<button type="button" class="efh-chip${m[2] ? ' on' : ''}" data-act="lmsh-secc" data-v="${m[1]}" aria-pressed="${!!m[2]}">${m[3]}</button>`;
+    const vis = OP.length <= 6 ? OP : OP.filter((m, i) => i < 4 || m[2]); const rest = OP.filter(m => !vis.includes(m)); /* 많으면 칩 4~5개 + 「다른 분반」 펼침 */
+    const pickH = OP.length ? P.html.replace(/<label class="efh-lab">[\s\S]*?<\/label>/, `<div class="efh-chips" role="group" aria-label="분반 선택"><span class="efh-lab">분반</span>${vis.map(chipB).join('')}${rest.length ? `<details class="ai-more"><summary>다른 분반 <em>${rest.length}</em></summary><div class="ai-morep">${rest.map(chipB).join('')}</div></details>` : ''}</div>`) : P.html;
+    let h = head('성적', '평가 항목 점수를 수업계획서 비율로 환산해 등급을 내고, 확정해 학사로 보냅니다(학사 전송은 연동 후 동작). 청강생은 산출에서 제외합니다.') + pickH;
     if (!P.sec) return h; const sec = P.sec.section_id;
-    const r = load('lmsh:b:' + sec, () => call('GET', '/api/lms/h/board', { section: sec })); if (r && r.ok) h += todoH(r.ok);
+    const r = load('lmsh:b:' + sec, () => call('GET', '/api/lms/h/board', { section: sec })); UI.lmshTodo = ''; if (r && r.ok) { const tdh = todoH(r.ok); if (window.L43) { /* v43 R6: 「지금 할 일」 띠는 머리 카드 문장 · 버튼과 겹쳐 머리로 흡수 */ const m = tdh.match(/u2-todo-t">([\s\S]*?)<\/span>/); UI.lmshTodo = m ? m[1] : ''; } else h += tdh; }
     h += tabs4('lmshT', [['board', '종합 평가 보드'], ['items', '평가 항목 · 점수 입력'], ['confirm', '확정 · 학사 전송']], tab, [['policy', '등급 방식 · 조정 · 공개'], ['msg', '조건으로 학생 골라 안내']]);
     if (!r) return h + wait(); if (r.err) return h + errBox(r.err); const B = r.ok;
     if (tab === 'items') return h + itemsView(B); if (tab === 'policy') return h + policyView(B); if (tab === 'confirm') return h + confirmView(B); if (tab === 'msg') return h + msgView(B);
@@ -99,6 +104,7 @@
     return todo(`성적 확정 완료(${fmt(B.policy.confirmed_at)}) · 정정은 「확정 · 학사 전송」에서 사유와 함께 남깁니다`);
   }
   ACT['lmsh-sec'] = el => { UI.lmshSec = el.value; render(); };
+  ACT['lmsh-secc'] = el => { UI.lmshSec = el.dataset.v; render(); };
   const B0 = () => peek('lmsh:b:' + UI.lmshSec);
   ACT['lmsh-xls'] = () => { const B = B0(); if (!B) return; downloadCSV(`성적_${today()}.csv`, ['학번', '학과', ...B.items.map(i => i.name), '환산', '조정 총점', '등급', '순위'], B.rows.map(x => [x.member_no, x.unit_code || '', ...B.items.map(i => x.scores[i.item_id] ?? ''), x.raw, x.total, x.letter || '', x.rank])); };
   function itemsView(B) {
