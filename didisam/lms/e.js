@@ -266,7 +266,10 @@
     if (tab === 'learner') return h + learnerView(P.sec);
     if (!r) return h + wait(); if (r.err) return h + errBox(r.err);
     const L = r.ok.assignments;
-    return h + `<div class="card">${table(['과제', '마감', '제출', '채점 대기', ''], L.map(g => [`<b>${esc(g.title)}</b> ${g.status === 'published' ? '' : tag({ draft: '비공개', closed: '마감' }[g.status] || g.status)}${g.kind === 'team' ? ' ' + tag('팀') : ''}`, fmt(g.due_at), `${g.submitted} / ${g.targets}`, g.submitted - g.graded > 0 ? tag(String(g.submitted - g.graded) + '건', 'y') : '0',
+    /* v43 R2: 3행 뒤 빈 화면 → 제출 현황 요약 막대(채점 완료 · 채점 대기 · 미제출) + 행마다 제출 막대 */
+    const pc = (a, b) => b ? Math.round(a / b * 100) : 0; const T = L.reduce((a, g) => ({ t: a.t + (+g.targets || 0), s: a.s + (+g.submitted || 0), g: a.g + (+g.graded || 0) }), { t: 0, s: 0, g: 0 });
+    const sumC = L.length ? `<div class="card ex-sum"><div class="ch"><b>제출 · 채점 현황</b><small>과제 ${L.length}개 · 제출률 ${pc(T.s, T.t)}%</small></div><div class="ex-rows">${L.slice(0, 8).map(g => { const t = +g.targets || 0; return `<div class="ex-r"><span>${esc(g.title)}</span><span class="ex-b">${t ? `<i class="g" style="flex:${+g.graded || 0}"></i><i class="w" style="flex:${Math.max(0, (+g.submitted || 0) - (+g.graded || 0))}"></i><i class="n" style="flex:${Math.max(0, t - (+g.submitted || 0))}"></i>` : '<i class="n" style="flex:1"></i>'}</span><b>${pc(+g.submitted || 0, t)}%</b></div>`; }).join('')}</div><div class="fx-lg"><span><i></i>채점 완료</span><span><i class="pd"></i>채점 대기</span><span><i class="nn"></i>미제출</span></div></div>` : '';
+    return h + sumC + `<div class="card">${table(['과제', '마감', '제출', '채점 대기', ''], L.map(g => [`<b>${esc(g.title)}</b> ${g.status === 'published' ? '' : tag({ draft: '비공개', closed: '마감' }[g.status] || g.status)}${g.kind === 'team' ? ' ' + tag('팀') : ''}`, fmt(g.due_at), `<span class="ex-sc"><span class="ex-sb"><i style="width:${pc(+g.submitted || 0, +g.targets || 0)}%"></i></span><b>${g.submitted} / ${g.targets}</b></span>`, g.submitted - g.graded > 0 ? tag(String(g.submitted - g.graded) + '건', 'y') : '0',
       `<button class="btn sm" data-act="lmse-open" data-v="${esc(g.asg_id)}">열기</button>`]), '아직 과제가 없습니다. 「새 과제」로 만드세요.')}</div>`;
   };
   /* 지금 할 일: 채점 대기 · 다가오는 마감 */

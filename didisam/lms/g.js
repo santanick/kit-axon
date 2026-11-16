@@ -40,6 +40,12 @@
         let q = pm.get(p.member_no); if (!q) { q = { person_id: W3.uid(), member_no: p.member_no, lmsa: 1 }; d.persons.push(q); pm.set(p.member_no, q); }
         if (!q.lmsa) { q.secs = [...new Set([...(q.secs || []).filter(id => !A.sections.some(x => x.section_id === id)), ...reg])]; return; }
         Object.assign(q, { unit_code: p.unit_code || '', grade_year: p.grade_year || null, ekind: reg.length || !aud.length ? 'regular' : 'audit', secs: reg.length ? reg : aud }); });
+      /* v43 R2: 시연 기관은 학사 분반에도 지난 차시 출결을 결정적으로 채운다(분반 출석 표가 「0%」로 비던 것). 빈 기관 · 운영 서버는 그대로 */
+      if (!(S.org && S.org.empty) && !W3.live()) { const M = ['code', 'qr', 'nfc', 'ble', 'photo']; const t0 = Date.now();
+        d.sections.filter(x => x.lmsa && !x.attSeed).forEach((w, si) => { w.attSeed = 1; const reg = d.persons.filter(p => p.ekind === 'regular' && (p.secs || []).includes(w.section_id));
+          d.sessions.filter(x => x.section_id === w.section_id && x.kind !== 'holiday' && Date.parse(x.starts_at) < t0).forEach(x => reg.forEach((p, j) => { const k = x.session_id + '|' + p.person_id; if (d.att[k]) return; const r = (x.week_no * 7 + j * 13 + si * 5) % 29; const weak = (j + si) % 11 === 4;
+            const st = weak ? (r < 9 ? 'absent' : r < 13 ? 'late' : 'present') : r === 0 ? 'absent' : r < 3 ? 'late' : r === 3 ? 'excused' : 'present';
+            d.att[k] = { status: st, method: st === 'excused' ? 'manual' : x.kind === 'online' ? 'online' : M[(x.week_no + j) % 5], evidence: { at: x.starts_at }, reason: st === 'excused' ? '병결(진단서 제출)' : null }; })); }); }
     },
     async call(m, p, b) {
       if (W3.live()) {
