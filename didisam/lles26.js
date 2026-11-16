@@ -27,6 +27,29 @@
     const h2 = main.querySelector(':scope > h2'); if (h2 && name) h2.insertAdjacentHTML('beforebegin', `<small class="l26cls">${E(name)}</small>`); void ih;
     const panel = main.querySelector('#lcPanel'); if (panel) { const side = document.createElement('aside'); side.className = 'l26side'; side.setAttribute('aria-label', '학습노트 · 공지 · 커뮤니티 · 수강후기'); cw.appendChild(side); side.appendChild(panel); }
   }
+  /* v43 H2(087): 몰입형 무대 마감 — 웹(PC)에서만. ① 영상 미준비 화면도 재생 버튼 · 남은 시간 표기 ② 영상 아래 진행 막대 · 시간 · 적립 칩 한 줄(「확인했어요」 포함)
+     ③ 오른쪽 패널 맨 위에 AI 튜터 질문 카드(담당 강사 질문 포함) — 노트 입력은 CSS로 접힘(lles26.css pl43fold). data-lact · #lcPanel · #lcN은 그대로 둔다 */
+  function stage43() {
+    if (document.body.classList.contains('lapp')) return; const cw = document.querySelector('section.crsb .cw2.l26.pl43'); if (!cw) return; const main = cw.querySelector('.imain'); if (!main) return;
+    const ic = (n, s) => (typeof ico === 'function' ? ico(n, s) : '');
+    const on = cw.querySelector('aside.cur li.on a[href^="#c/"]'); const P = on ? on.getAttribute('href').split('/') : []; const cid = decodeURIComponent(P[1] || ''), iid = decodeURIComponent(P[2] || '');
+    let c = null, it = null, st = {}; try { c = SITE().classes.find(x => x.id === cid); it = c && c.items.find(x => x.id === iid); st = (((LR.lp.cls || {})[cid] || {}).items || {})[iid] || {}; } catch (e) { }
+    const mins = it ? Math.max(1, Math.round((it.dur || it.cplSec || 600) / 60)) : 10; const w = Math.round((st.w || (st.done ? 1 : 0)) * 100); const left = Math.max(0, Math.round(mins * (100 - w) / 100));
+    const nv = main.querySelector(':scope > .novid'); if (nv && !nv.dataset.pl) { nv.dataset.pl = 1; nv.classList.add('pl43v');
+      nv.innerHTML = `<em class="pl43vs">${ic('video', 13)} 체험용 영상</em><span class="pl43vp" aria-hidden="true">${ic('play', 30)}</span><span class="pl43vt">${E(it ? it.title : '')}</span><span class="pl43vd">${st.done ? '다 봤어요' : `남은 ${left}분`} · 전체 ${mins}:00</span>`; }
+    if (!main.querySelector('.pl43ctl') && it && it.type === 'video') { const done = main.querySelector(':scope > [data-lact="done"]'); const bar = main.querySelector(':scope > .wbar'); const wt = main.querySelector(':scope > #wtxt');
+      const row = document.createElement('div'); row.className = 'pl43ctl'; row.setAttribute('aria-label', '재생 상태');
+      row.innerHTML = `<span class="pl43pl" aria-hidden="true">${ic('play', 15)}</span><span class="pl43tm num">${Math.round(mins * w / 100)}:00 / ${mins}:00</span><div class="pl43bar" role="progressbar" aria-valuenow="${w}" aria-valuemin="0" aria-valuemax="100" aria-label="시청 진도"><i style="width:${w}%"></i></div><span class="pl43chip">${ic('star', 12)} ${st.done ? '진도 반영됨' : '다 보면 진도 반영'}</span>`;
+      if (bar) { bar.replaceWith(row); if (wt) row.appendChild(wt); } else (nv || main.querySelector(':scope > h2')).after(row);
+      if (done) row.appendChild(done); }
+    const side = cw.querySelector(':scope > .l26side'); const ask = main.querySelector('.lcaskb');
+    if (side && !side.querySelector('.pl43ai')) { const T = (typeof lcTerm === 'function' && lcTerm('teacher')) || '강사'; const ttl = it ? it.title : '';
+      const Q = [`「${ttl}」 핵심만 3줄로 정리해 주세요`, '이 차시에서 헷갈리기 쉬운 부분은요?'];
+      const card = document.createElement('div'); card.className = 'pl43ai';
+      card.innerHTML = `<div class="pl43aih"><span class="pl43aib">AI</span><div><b>AI 튜터</b><small>지금 보는 차시를 알고 있어요</small></div></div><div class="pl43aiq">${Q.map(q => `<button type="button" class="pl43q" data-pl43q="${E(q)}">${E(q)}</button>`).join('')}</div><div class="pl43aif"><button type="button" class="pl43go" data-pl43q="">${ic('spark', 15)} AI 튜터에게 묻기</button></div>`;
+      side.insertBefore(card, side.firstChild); if (ask) { ask.classList.add('pl43ask'); card.querySelector('.pl43aif').appendChild(ask); const a = ask.querySelector('a'); if (a) a.textContent = `담당 ${T}에게 질문`; } }
+  }
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-pl43q]'); if (!b) return; const q = b.dataset.pl43q; try { if (typeof ltOpen === 'function') ltOpen(); if (q && typeof ltAsk === 'function') setTimeout(() => ltAsk(q), 300); } catch (er) { } });
   /* 영상 재생 완료 → 다음 강의 이동 확인 */
   function closeDlg() { const d = document.getElementById('l26dlg'); if (d) d.remove(); }
   window.l26Ended = () => { const L = [...document.querySelectorAll('.crsb .inav a[href^="#c/"]')]; const nx = L.length > 1 || (L[0] && !/이전/.test(L[0].textContent)) ? L[L.length - 1] : null; if (!nx || document.getElementById('l26dlg')) return;
@@ -35,8 +58,8 @@
   document.addEventListener('click', e => { const b = e.target.closest('[data-l26dlg]'); if (!b && e.target.id !== 'l26dlg') return; const d = document.getElementById('l26dlg'); const go = b && b.dataset.l26dlg === '1' ? d && d.dataset.href : ''; closeDlg(); if (go) location.hash = go; });
   addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('l26dlg')) closeDlg(); });
   addEventListener('hashchange', closeDlg);
-  const mo = new MutationObserver(() => { try { enhance(); } catch (e) { console.error('lles26', e); } });
-  const start = () => { mo.observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); enhance(); };
+  const mo = new MutationObserver(() => { try { enhance(); stage43(); } catch (e) { console.error('lles26', e); } });
+  const start = () => { mo.observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); enhance(); stage43(); };
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', start) : start();
 })();
 /* v26.4 공지사항(피그마 User Page › 공지사항): 총 N건 · 제목 검색 · 표 머리(번호 · 제목 · 작성일) · 번호 */
