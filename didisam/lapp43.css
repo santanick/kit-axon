@@ -151,3 +151,173 @@ body.lapp .ap-av i{display:grid;place-items:center}
 body.lapp .ap-pc{border:0;background:var(--surface);box-shadow:var(--sh1);border-radius:var(--r-card)}
 body.lapp .ap-pc.on{box-shadow:inset 0 0 0 2px var(--gr700),var(--sh2)}
 body.lapp #lm .cwl span{font-size:12px;color:var(--gr800);background:var(--gr50)}
+
+/* ═════════ v43 Q3 — 앱 머리 화면 전역 재디자인(수석 3). 모두 body.lapp 범위 ═════════
+   문법(시안 f-app 마일리지 판과 같은 말): 진그린 「작은 히어로」(눈썹 · 한 문장 · 숫자 3칸) → 흰 카드 목록(반경 20 · sh1 · 테두리 없음) → 사진 카드는 4:3 · 칩은 그린 50/800 · 진도 막대 6px.
+   마크업은 ltube.js subHero() · emptyUp() · photoUp()이 앱 모드에서만 더한다(웹 화면 영향 없음). */
+/* 앱 머리 막대: 히어로가 있는 화면은 바탕과 한 면으로 */
+body.lapp.tube:has(#lm .tb-ph) .ap-bar{background:var(--canvas);border-bottom-color:transparent;box-shadow:none}
+/* 작은 히어로 */
+body.lapp #lm section.sub.tb-ph{position:relative;overflow:hidden;isolation:isolate;margin:6px 16px 0;padding:20px 18px 18px;border-radius:var(--r-block);background:var(--gr900);color:#fff;box-shadow:var(--sh3)}
+body.lapp #lm section.sub.tb-ph::before{content:"";position:absolute;z-index:-1;right:-70px;top:-90px;width:240px;height:240px;border-radius:50%;box-shadow:inset 0 0 0 28px rgba(255,255,255,.035),inset 0 0 0 56px rgba(255,255,255,.025);pointer-events:none}
+body.lapp #lm section.sub.tb-ph::after{content:"";position:absolute;z-index:-1;left:-40px;bottom:-60px;width:160px;height:160px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,197,59,.22),transparent);pointer-events:none}
+body.lapp #lm section.sub.tb-ph .in{padding:0;max-width:none;display:flex;flex-direction:column;gap:0}
+body.lapp #lm section.sub.tb-ph .tb-pheb,body.lapp #lm section.sub.tb-ph h1.tb-pheb{order:0;margin:0;font-size:13px;line-height:18px;font-weight:800;letter-spacing:0;color:#A6F0BE}
+body.lapp #lm section.sub.tb-ph h1:not(.tb-pheb){margin:2px 0 0;font-size:26px;line-height:1.25;font-weight:800;letter-spacing:-.03em;color:#fff;word-break:keep-all}
+body.lapp #lm section.sub.tb-ph .tb-phh{margin:6px 0 0;font-size:26px;line-height:1.28;font-weight:800;letter-spacing:-.03em;color:#fff;word-break:keep-all}
+body.lapp #lm section.sub.tb-ph :is(.tb-phh,h1) em{font-style:normal;color:var(--gr300)}
+body.lapp #lm section.sub.tb-ph .in>p:not(.tb-phh):not(.tb-pheb):not(.crumb){margin:6px 0 0;font-size:14px;line-height:1.5;color:#C6F6D5}
+body.lapp #lm .tb-phk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0 0}
+body.lapp #lm .tb-phk span{display:flex;flex-direction:column;gap:4px;min-width:0;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+body.lapp #lm .tb-phk small{font-size:12px;font-weight:700;color:#C6F6D5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.lapp #lm .tb-phk b{font-size:19px;line-height:1.15;font-weight:800;letter-spacing:-.02em;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 히어로 안 탭(공지 「전체 · 내 강좌」 등): 진그린 위 반투명 칩, 선택은 흰 칩 */
+body.lapp #lm section.sub.tb-ph .lctabs{display:flex;gap:6px;margin:14px 0 0;padding:0;border:0;background:none;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+body.lapp #lm section.sub.tb-ph .lctabs :is(a,button){flex:none;min-height:44px;padding:0 16px;border:0;border-radius:999px;background:rgba(255,255,255,.1);color:#EAF7EE;font-size:14px;font-weight:700;box-shadow:none}
+body.lapp #lm section.sub.tb-ph .lctabs :is(a,button).on{background:#fff;color:var(--gr900)}
+html[data-theme="dark"] body.lapp #lm section.sub.tb-ph .lctabs :is(a,button).on{color:#053D1E}
+body.lapp #lm section.sub.tb-ph+.sec,body.lapp #lm section.sub.tb-ph~.sec{padding-top:16px}
+body.lapp #lm .sec>.in>.sh:empty{display:none}
+/* 사진형 히어로(강좌 상세): 강좌 사진 위 아래쪽 진그린 그라데이션 + 제목 · 숫자 3칸 */
+body.lapp #lm section.sub.tb-ph-photo{min-height:300px;display:flex;align-items:flex-end;padding-top:120px;background:var(--gr950)}
+body.lapp #lm .tb-phi{position:absolute;inset:0;z-index:-2;width:100%;height:100%;object-fit:cover}
+body.lapp #lm section.sub.tb-ph-photo::before{inset:0;right:auto;top:auto;width:100%;height:100%;border-radius:0;box-shadow:none;background:linear-gradient(180deg,rgba(3,39,26,.05) 0%,rgba(3,39,26,.55) 45%,rgba(3,39,26,.94) 100%)}
+body.lapp #lm section.sub.tb-ph-photo::after{display:none}
+body.lapp #lm section.sub.tb-ph-photo .in{width:100%}
+body.lapp #lm section.sub.tb-ph-photo h1{font-size:28px}
+body.lapp #lm:has(.tb-ph-photo) .shp-main>.shp-th.big{display:none}
+/* 「나」 프로필 히어로: 이니셜 원 + 이름 + 숫자 3칸(원래 프로필 줄은 숨김) */
+body.lapp .ls-me>section.tb-ph-me{margin:0 0 16px}
+body.lapp #lm .ls-me>section.sub.tb-ph{margin:0 0 16px}
+body.lapp .ls-me:has(.tb-ph-me)>.ls-prof{display:none}
+body.lapp #lm .tb-phm{display:flex;align-items:center;gap:14px}
+body.lapp #lm .tb-phm>span:last-child{display:flex;flex-direction:column;min-width:0}
+body.lapp #lm .tb-pav{flex:none;display:grid;place-items:center;width:60px;height:60px;border-radius:50%;background:var(--gr500);color:#03271A;font-size:20px;font-weight:800;letter-spacing:-.02em;box-shadow:0 0 0 4px rgba(255,255,255,.12)}
+body.lapp #lm .tb-ph-me .tb-phh{margin:2px 0 0;font-size:24px}
+/* 알림함: 앱이 만든 히어로가 제목을 맡으므로 원래 제목 줄은 숨김 */
+body.lapp #lm:has(.tb-ph) .la-ih h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+body.lapp #lm .la-inb{padding-top:12px}
+
+/* ── 카드 목록 문법 통일: 흰 면 · 반경 20 · sh1 · 테두리 없음 · 줄 사이는 머리카락 선 ── */
+body.lapp #lm :is(.shp-list,.lclist,.shp-card2,.mycard,.lcert-l){border:0;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--sh1);overflow:hidden}
+body.lapp #lm .shp-list li{border-bottom:1px solid var(--hair)}
+body.lapp #lm .shp-list li:last-child{border-bottom:0}
+body.lapp #lm :is(.shp-list a,.shp-li,.lcrow){min-height:64px;padding:14px 16px}
+body.lapp #lm .lcrow{display:flex;align-items:center;gap:12px;border:0;border-bottom:1px solid var(--hair);background:none;text-decoration:none;color:var(--g900)}
+body.lapp #lm .lcrow:last-child{border-bottom:0}
+body.lapp #lm .lcrow.unread b{font-weight:800}
+body.lapp #lm .lck{flex:none;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;background:var(--g200);color:var(--g800)}
+body.lapp #lm .lck.q{background:var(--gr50);color:var(--gr800)}
+body.lapp #lm .lcert-li{display:flex;align-items:center;gap:12px;padding:14px 16px;border:0}
+body.lapp #lm .lcert-li .lbtn{min-height:44px;border-radius:12px;white-space:nowrap}
+body.lapp #lm .mini{color:var(--g700)}
+/* 결제 내역(웹 표 py26t): 앱에서는 줄마다 카드 한 칸(항목 · 금액 · 상태) */
+body.lapp #lm .py26t{display:flex;flex-direction:column;border:0;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--sh1);overflow:hidden}
+body.lapp #lm .py26r.py26hd{display:none}
+body.lapp #lm .py26r:not(.py26hd){display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"it am" "dt st";gap:4px 12px;padding:14px 16px;min-height:64px;border:0;border-bottom:1px solid var(--hair);color:var(--g900);text-decoration:none}
+body.lapp #lm .py26r:not(.py26hd):last-child{border-bottom:0}
+body.lapp #lm .py26r>span:nth-child(1),body.lapp #lm .py26r>span:nth-child(5),body.lapp #lm .py26r>.py26d{display:none}
+body.lapp #lm .py26r>span:nth-child(2){grid-area:dt;font-size:13px;color:var(--g700);font-variant-numeric:tabular-nums}
+body.lapp #lm .py26r>span:nth-child(3){grid-area:it;min-width:0}
+body.lapp #lm .py26r>span:nth-child(3) small{display:none}
+body.lapp #lm .py26r>span:nth-child(3) b{display:block;font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.lapp #lm .py26r>span:nth-child(4){grid-area:am;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+body.lapp #lm .py26r>span:nth-child(6){grid-area:st;justify-self:end}
+/* 결제 탭(결제 · 환불 · 구독 · 청구서): 밑줄 탭 48px, 가로 스크롤 */
+body.lapp #lm .shp-tabs{display:flex;gap:0;margin:0 0 12px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--hair)}
+body.lapp #lm .shp-tabs a{flex:none;display:inline-flex;align-items:center;min-height:48px;padding:0 12px;border-bottom:2px solid transparent;color:var(--g700);font-size:15px;font-weight:700;text-decoration:none}
+body.lapp #lm .shp-tabs a.on{color:var(--g900);border-bottom-color:var(--gr600)}
+
+/* ── 둘러보기(#shop · #courses): 2칸 사진 카드(4:3 · 반경 20) · 칩 · 상태 ── */
+body.lapp #lm .shp-filt{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
+body.lapp #lm #shpQ{min-height:48px;border:0;border-radius:14px;background:var(--surface);box-shadow:var(--sh1);padding:0 16px;font-size:15px;color:var(--g900)}
+body.lapp #lm .shp-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
+body.lapp #lm .shp-chips :is(a,button){flex:none;min-height:44px;padding:0 16px;border:0;border-radius:999px;background:var(--surface);box-shadow:var(--sh1);color:var(--g800);font-size:14px;font-weight:700}
+body.lapp #lm .shp-chips :is(a,button).on{background:var(--g900);color:var(--canvas);box-shadow:none}
+body.lapp #lm .shp-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+body.lapp #lm .shp-card{display:flex;flex-direction:column;border:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1);overflow:hidden;color:var(--g900);text-decoration:none}
+body.lapp #lm .shp-card .shp-th{width:100%;aspect-ratio:4/3;max-height:none;border-radius:0;background-size:cover;background-position:center}
+body.lapp #lm .shp-card .shp-th0:not(.shp-thp){background:var(--gr900);color:#D1FADF;font-size:16px}
+body.lapp #lm .shp-cb{padding:12px 12px 14px;gap:4px;flex:1}
+body.lapp #lm .shp-cb h3{margin:2px 0 0;font-size:15px;line-height:1.35;font-weight:800;letter-spacing:-.01em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+body.lapp #lm .shp-cb .mini{display:none}
+body.lapp #lm .shp-tags .tg{font-size:12px;font-weight:800;padding:3px 8px;border-radius:999px;background:var(--gr50);color:var(--gr800);border:0}
+body.lapp #lm .shp-tags .tg.r{background:var(--co50);color:var(--co700)}
+body.lapp #lm .shp-cb .shp-pr{margin-top:auto;padding-top:6px}
+body.lapp #lm .shp-cb .shp-pr b{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+body.lapp #lm .shp-rs{font-size:12px;font-weight:800;color:var(--gr700)}
+body.lapp #lm .shp-rs.off{color:var(--g700)}
+/* 강좌 상세: 정보 카드 · 신청 카드 */
+body.lapp #lm .shp-det{gap:12px}
+body.lapp #lm .shp-side{position:static;border:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh2);padding:18px}
+body.lapp #lm .shp-side .shp-sname{font-size:18px;font-weight:800}
+body.lapp #lm .shp-side .lbtn.pri{min-height:52px;border-radius:var(--r-btn);background:var(--gr600);border-color:transparent;color:#fff;font-weight:800}
+html[data-theme="dark"] body.lapp #lm .shp-side .lbtn.pri{color:#03271A}
+body.lapp #lm .shp-main h2{font-size:18px;font-weight:800;margin:18px 0 8px}
+
+/* ── 빈 목록(emptyUp): 그린 톤 일러스트 + 한 문장 + 주 버튼 1개 ── */
+body.lapp #lm .tb-emp{display:flex;flex-direction:column;align-items:center;gap:10px;margin:0;padding:28px 20px 24px;border:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1);text-align:center;font-size:15px;font-weight:700;color:var(--g900)}
+body.lapp #lm .tb-emp p{margin:0;font-size:15px;font-weight:700;color:var(--g900)}
+body.lapp #lm .tb-emp .tb-ea{margin-bottom:4px}
+body.lapp #lm .tb-emp .tb-pri{margin-top:6px}
+body.lapp #lm .shp-list:has(>li.tb-emp){background:none;box-shadow:none;overflow:visible}
+
+/* ── 아래에서 올라오는 시트(검색 · 기관 바꾸기 · 하루 목표): 손잡이 · 왼쪽 정렬 제목 · 카드 목록 ── */
+body.lapp .ap-sheet{background:rgba(3,20,12,.48);backdrop-filter:blur(2px)}
+body.lapp .ap-sh{position:relative;text-align:left;padding:30px 18px calc(18px + var(--ap-sb,0px));border-radius:28px 28px 0 0;background:var(--canvas);box-shadow:var(--sh3)}
+body.lapp .ap-sh::before{content:"";position:absolute;left:50%;top:10px;width:40px;height:5px;margin-left:-20px;border-radius:99px;background:var(--g300)}
+body.lapp .ap-sh>h2{margin:0;font-size:24px;line-height:1.3;font-weight:800;letter-spacing:-.03em;color:var(--g900)}
+body.lapp .ap-sh>p{margin:4px 0 14px;font-size:14px;line-height:1.5;color:var(--g700)}
+body.lapp .ap-sh .ap-osr{display:flex;align-items:center;gap:10px;min-height:52px;margin:14px 0 6px;padding:0 16px;border:0;border-radius:16px;background:var(--surface);box-shadow:var(--sh1),inset 0 0 0 1.5px var(--gr600);color:var(--g700)}
+body.lapp .ap-sh .ap-osr input{flex:1;min-width:0;border:0;background:none;outline:0;font-size:16px;color:var(--g900)}
+body.lapp .ap-sh .ap-oh{margin:16px 2px 8px;font-size:14px;font-weight:800;color:var(--g700)}
+body.lapp .ap-sh .ap-ol{list-style:none;margin:0;padding:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1);overflow:hidden}
+body.lapp .ap-sh .ap-ol li{display:flex;align-items:center;border-bottom:1px solid var(--hair)}
+body.lapp .ap-sh .ap-ol li:last-child{border-bottom:0}
+body.lapp .ap-sh :is(.ap-orow,.ap-srr){flex:1;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"ty go" "nm go" "sm go";align-items:center;gap:2px 10px;min-height:64px;padding:12px 16px;border:0;border-radius:0;background:none;text-align:left;color:var(--g900);text-decoration:none}
+body.lapp .ap-sh .ap-orow.on{background:var(--gr50);box-shadow:inset 3px 0 0 var(--gr600)}
+body.lapp .ap-sh .ap-oty{grid-area:ty;justify-self:start;font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--gr50);color:var(--gr800)}
+body.lapp .ap-sh .ap-orow.on .ap-oty{background:var(--surface)}
+body.lapp .ap-sh :is(.ap-orow,.ap-srr) b{grid-area:nm;font-size:16px;font-weight:800}
+body.lapp .ap-sh .ap-orow small{grid-area:sm;font-size:13px;color:var(--g700)}
+body.lapp .ap-sh .ap-orow em{grid-area:go;font-style:normal;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;background:var(--gr600);color:#fff}
+html[data-theme="dark"] body.lapp .ap-sh .ap-orow em{color:#03271A}
+body.lapp .ap-sh .ap-orow>svg{grid-area:go;color:var(--g500)}
+body.lapp .ap-sh .ap-oadd{margin:16px 0 0;padding:16px;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1)}
+body.lapp .ap-sh .ap-oadd label{display:block;margin:0 0 8px;font-size:15px;font-weight:800;color:var(--g900)}
+body.lapp .ap-sh .ap-oadd>div{display:flex;gap:8px}
+body.lapp .ap-sh .ap-oadd input{flex:1;min-width:0;min-height:48px;padding:0 14px;border:0;border-radius:12px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--g300);font-size:15px;color:var(--g900)}
+body.lapp .ap-sh .ap-oadd .ap-go{min-height:48px;min-width:64px;border-radius:12px}
+body.lapp .ap-sh .ap-oadd small{display:block;margin:8px 0 0;font-size:12px;color:var(--g700)}
+body.lapp .ap-sh>nav{margin:16px 0 0}
+body.lapp .ap-sh>nav button{width:100%;min-height:52px;border:0;border-radius:var(--r-btn);background:var(--surface);box-shadow:var(--sh1);font-size:15px;font-weight:800;color:var(--g900)}
+body.lapp .ap-sh .ap-empty{margin:4px 0 0;font-size:14px;color:var(--g700)}
+body.lapp .ap-sh .ap-fc{display:flex;flex-wrap:wrap;gap:6px}
+body.lapp .ap-sh .tb-srs{display:flex;flex-wrap:wrap;gap:6px}
+body.lapp .ap-sh .tb-srs button{min-height:44px;padding:0 14px;border:0;border-radius:999px;background:var(--surface);box-shadow:var(--sh1);font-size:14px;font-weight:700;color:var(--g800)}
+body.lapp .ap-sh .tb-srs button svg{color:var(--gr700);margin-right:4px;vertical-align:-2px}
+/* Q3 보정: 챕터 칩 44px · 선택은 그린 바탕(▶ 글자 대신) · 결제/상세 탭 바탕 없음 · 히어로 숫자 칸 좁은 폭 · 시트 제목 왼쪽 · 빈 상태 속 원래 아이콘 숨김 · 질문 버튼 */
+body.lapp .tbw-c{min-height:44px;border-radius:999px;padding:0 14px}
+body.lapp .tbw-c.on{background:var(--gr500);color:#03271A;font-weight:800}
+body.lapp #lm .shp-tabs{background:none;box-shadow:none;border-radius:0;padding:0;gap:0;width:auto}
+body.lapp #lm .tb-phk b{font-size:clamp(15px,4.6vw,19px)}
+body.lapp #lm .tb-phk span{padding:10px 10px}
+body.lapp .ap-sh>h2,body.lapp .ap-sh>p{text-align:left}
+body.lapp #lm .tb-emp>svg:not(.tb-ea),body.lapp #lm .tb-emp p>svg{display:none}
+body.lapp #lm section.sub.tb-ph .lctabs>:not(a):not(button){display:none}
+body.lapp #lm .lcaskb{margin:0 0 12px}
+body.lapp #lm .lcaskb .lbtn{display:flex;justify-content:center;align-items:center;width:100%;min-height:52px;border:0;border-radius:var(--r-btn);background:var(--surface);box-shadow:var(--sh1);color:var(--gr800);font-size:15px;font-weight:800}
+body.lapp #lm .n26bar input{min-height:48px;border:0;border-radius:14px;background:var(--surface);box-shadow:var(--sh1);padding:0 16px;font-size:15px}
+body.lapp #lm .la-ib{padding:0 4px;color:var(--g700)}
+/* Q3 재생 화면: 영상 없음 · 준비 중 상자 = 강좌 사진 포스터 + 짙은 그린 막 + 가운데 재생 원 */
+body.lapp #lm .novid{position:relative;background:linear-gradient(180deg,rgba(3,39,26,.35),rgba(3,39,26,.82)),var(--tb-poster,none) center/cover no-repeat,#0B3A1E;color:#fff}
+body.lapp #lm .novid svg{color:#fff}
+body.lapp .ap-bar .ls-i{position:relative}
+body.lapp .ap-bar .ls-i::after{content:"";position:absolute;inset:-8px}
+body.lapp #lm .lcaskb .lbtn.pri,body.lapp #lm .lcaskb a.lbtn{background:var(--surface);color:var(--gr800);border:0;box-shadow:var(--sh1)}
+body.lapp #lm .tb-emp .tb-pri{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 22px;border-radius:var(--r-btn);background:var(--gr700);color:#fff;font-size:15px;font-weight:800;text-decoration:none}
+html[data-theme="dark"] body.lapp #lm .tb-emp .tb-pri{background:var(--gr500);color:#04140A}
+html body.lapp #lm .lcaskb :is(.lbtn.pri,a.lbtn){background:var(--surface)!important;color:var(--gr800)!important;border-color:transparent!important;box-shadow:var(--sh1)!important}
+/* Q3 앱 홈: 이어 보기 재생 원 = 시안처럼 짙은 그린 + 연한 테두리(형광 그린 단색 → 그린 700) */
+body.lapp .tb-cont .tb-pl{width:52px;height:52px;background:var(--gr700);color:#fff;box-shadow:0 0 0 5px var(--gr50),0 8px 18px rgba(0,122,41,.25)}
+html[data-theme="dark"] body.lapp .tb-cont .tb-pl{color:#04140A;box-shadow:0 0 0 5px rgba(46,224,106,.14)}

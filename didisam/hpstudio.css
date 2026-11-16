@@ -259,3 +259,66 @@ body.hps-dock #hpe.hps{background:var(--paper,#F3F0EA)}
 .hps-gal{background:var(--paper,#F3F0EA)}.hps-galh{background:var(--surface,#fff)}
 @media (max-width:760px){#hpe.hps .hpe-bar{padding:4px 6px;gap:4px}.hps-ri{min-height:52px}}
 
+
+/* ═════════ v43 Q3 편집기 재디자인(수석 3) — Framer · Webflow 문법: 회색 캔버스 + 흰 패널 · 도구 줄 2단(페이지 · 기기 · 되돌리기 · 게시 / 순서 · AI 한 줄) · 선택은 그린 · 아이콘 버튼 44px.
+   배치 · data-act · id는 그대로 두고 CSS만 덮는다. 1100px 이상에서만 「순서 + AI」를 한 줄로 합친다(좁은 폭은 위 규칙 그대로). */
+body.hps-dock #hpe.hps{--hps-cv:#ECEEEA;background:var(--hps-cv)}
+html[data-theme="dark"] body.hps-dock #hpe.hps{--hps-cv:#07110C}
+#hpe.hps .hpe-bar{background:var(--surface,#fff);border-bottom:1px solid var(--hair,rgba(26,24,20,.06));align-items:center}
+@media (min-width:761px){#hpe.hps .hpe-bar{padding:8px 16px;gap:8px}}
+#hpe.hps .hps-tab{border-radius:12px;font-weight:700;color:var(--t-sub,#5C554B)}
+#hpe.hps .hps-tabs>.hps-tab.on,#hpe.hps .hps-tabs .hps-tg>.hps-tab.on{background:var(--gr50,#ECFDF3);color:var(--gr800,#066B2A);box-shadow:inset 0 0 0 1.5px var(--gr600,#00A832)}
+#hpe.hps .hps-tab em{font-style:normal}
+#hpe.hps .hpe-dev{border-radius:14px;background:var(--surface2,#FAF8F5);box-shadow:inset 0 0 0 1px var(--hair,rgba(26,24,20,.06))}
+#hpe.hps .hpe-dev button{border-radius:11px;font-weight:700}
+@media (min-width:761px){#hpe.hps .hpe-dev{padding:3px}#hpe.hps .hpe-dev button{min-height:44px}}
+#hpe.hps .hpe-dev button.on{background:var(--surface,#fff);color:var(--gr800,#066B2A);box-shadow:var(--sh2,0 1px 2px rgba(26,24,20,.05),0 8px 24px rgba(26,24,20,.07))}
+#hpe.hps :is(#hpeUndo,#hpeRedo){min-width:44px;min-height:44px;border-radius:12px}
+#hpe.hps .hpe-bar [data-act="hpe-pub"]{min-height:44px;border-radius:12px;background:var(--gr700,#007A29);border-color:transparent;color:#fff;font-weight:800;box-shadow:0 1px 2px rgba(0,60,20,.2),0 6px 16px rgba(0,122,41,.22)}
+html[data-theme="dark"] #hpe.hps .hpe-bar [data-act="hpe-pub"]{background:var(--gr500,#00C53B);color:#04140A}
+@media (min-width:1100px){
+  #hpe.hps{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto minmax(0,1fr);align-content:stretch}
+  #hpe.hps>*{grid-column:1/-1;grid-row:3}
+  #hpe.hps>.hpe-bar{grid-row:1}
+  #hpe.hps>.hps-flow{grid-row:2;grid-column:1;border-bottom:1px solid var(--hair,rgba(26,24,20,.06));padding:8px 6px 8px 16px;gap:8px;flex-wrap:nowrap}
+  #hpe.hps>.hpw-talk{grid-row:2;grid-column:2;border-bottom:1px solid var(--hair,rgba(26,24,20,.06));background:var(--surface,#fff)!important;padding:8px 16px 8px 8px!important;min-width:0}
+  #hpe.hps>.hpe-stage{grid-row:4;min-height:0}
+  #hpe.hps>:is(.hps-rail,.hps-pan){grid-row:auto}
+  #hpe.hps .hps-flow p,#hpe.hps .hps-flow .hps-fx{display:none}
+  #hpe.hps .hps-flow ol{flex-wrap:nowrap}
+  #hpe.hps .hps-flow li button{font-size:13px;padding:0 12px 0 6px}
+  #hpe.hps .hps-flow li:not(.cur) button{font-size:0;gap:0;padding:0 6px;min-width:44px;justify-content:center} /* 지금 단계만 이름, 나머지는 번호 원(이름은 title · aria) */
+  #hpe.hps .hps-flow li:not(.cur) button i{font-size:13px}
+  #hpe.hps .hps-flow ol{gap:6px;position:relative}
+  #hpe.hps .hps-flow ol::after{content:"";position:absolute;left:22px;right:22px;top:50%;height:2px;margin-top:-1px;background:var(--g300,#E4DED3);z-index:-1}
+  #hpe.hps .hps-flow{isolation:isolate}
+}
+#hpe.hps .hps-flow{background:var(--surface,#fff)}
+#hpe.hps .hps-flow li.cur button{background:var(--gr900,#053D1E);color:#fff}
+#hpe.hps .hps-flow li.done button i{background:var(--gr500,#00C53B);color:#04140A}
+#hpe.hps .hpw-talk input[name=q]{min-height:44px;border-radius:12px;border:0;background:var(--surface2,#FAF8F5);box-shadow:inset 0 0 0 1px var(--g300,#E4DED3);padding:0 14px;font-size:14px}
+#hpe.hps .hpw-talk input[name=q]:focus{box-shadow:inset 0 0 0 1.5px var(--gr600,#00A832),0 0 0 3px rgba(0,197,59,.18);outline:0}
+#hpe.hps .hpw-talk .btn{min-height:44px;border-radius:12px}
+/* 캔버스: 회색 바탕 위 흰 판(그림자 2층) · 미리보기 둘레 여백 24 */
+#hpe.hps .hpe-stage{background:var(--hps-cv)}
+@media (min-width:761px){#hpe.hps .hpe-stage{padding:24px 28px}}
+#hpe.hps .hpe-stage iframe#hpeF{border:0;border-radius:14px;background:#fff;box-shadow:0 0 0 1px rgba(16,24,20,.06),0 2px 4px rgba(16,24,20,.05),0 16px 40px rgba(16,24,20,.10)}
+#hpe.hps .hpe-stage.mo iframe#hpeF,#hpe.hps .hpe-stage:not(.pc) iframe#hpeF{border-radius:28px}
+/* 오른쪽 레일 · 속성 패널: 흰 면, 선택은 그린 50 + 그린 선 */
+.hps-rail{background:var(--surface,#fff);border-left:1px solid var(--hair,rgba(26,24,20,.06));padding:10px 6px;gap:4px}
+.hps-ri{min-height:56px;border-radius:14px;font-size:12px;font-weight:700}
+.hps-ri svg{stroke-width:1.75}
+.hps-ri.on{background:var(--gr50,#ECFDF3);color:var(--gr800,#066B2A);box-shadow:inset 0 0 0 1.5px var(--gr600,#00A832)}
+.hps-pan{background:var(--surface,#fff);border-left:1px solid var(--hair,rgba(26,24,20,.06));box-shadow:-12px 0 32px rgba(16,24,20,.08)}
+html[data-theme="dark"] .hps-pan{box-shadow:-12px 0 32px rgba(0,0,0,.4)}
+.hps-pan :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea){min-height:44px;border-radius:10px;border:1px solid var(--g300,#E4DED3);background:var(--surface,#fff)}
+.hps-pan :is(input,select,textarea):focus{outline:0;border-color:var(--gr600,#00A832);box-shadow:0 0 0 3px rgba(0,197,59,.18)}
+.hps-tadd{border-style:dashed;border-color:var(--g400,#D6CFC2);border-radius:12px}
+.hps-tadd:hover{border-color:var(--gr600,#00A832);color:var(--gr800,#066B2A);background:var(--gr50,#ECFDF3)}
+/* 미리보기를 가리던 안내 · AI SAM 버튼: 토스트는 캔버스 왼쪽 아래 좁게, AI SAM은 오른쪽 레일 아래 48px 원으로(1100px 이상) */
+@media (min-width:1100px){
+  body.hps-dock #toasts{left:calc(var(--hps-l,76px) + 20px);right:auto;bottom:18px;transform:none;align-items:flex-start;max-width:420px}
+  body.hps-dock #toasts .toast{max-width:420px;font-size:13px}
+  body.hps-dock :is(#fabBtn,.aifab){right:12px!important;bottom:14px!important;width:48px!important;min-width:48px!important;height:48px!important;padding:0!important;border-radius:50%!important;justify-content:center}
+  body.hps-dock :is(#fabBtn,.aifab)>*:not(svg):not(.fabdot){display:none!important}
+}

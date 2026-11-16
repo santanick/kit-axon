@@ -29,13 +29,13 @@
   const HERO_L = () => hasT() ? { center: '가운데 첫 화면', split: '좌우 분할 첫 화면', bg: '배경형 첫 화면' } : { center: '테마 기본 첫 화면', split: '진한 배경 · 왼쪽 정렬', bg: '진한 배경 · 가운데' };
 
   /* ═════════ 테마 목록: HPT 우선, 없으면 기존 룩 ═════════ */
-  const LK_COL = { navyGlow: '#3B5BDB', mintSoft: '#5C74F6', senior: '#2F6FE4', brandBold: '#2563EB', corpPortal: '#1E3A8A', storyNumbered: '#0F766E', publicTiles: '#1E40AF', campus: '#2A2B2B' };
+  const LK_COL = { navyGlow: '#3B5BDB', mintSoft: '#00862D', senior: '#15803D', brandBold: '#007A29', corpPortal: '#1E3A8A', storyNumbered: '#0F766E', publicTiles: '#1E40AF', campus: '#2A2B2B' };
   const LK_DESC = { navyGlow: '어두운 첫 화면 · 빛나는 강조', mintSoft: '부드러운 그라데이션 · 친근함', senior: '큰 글씨 · 넓은 버튼', brandBold: '브랜드 색 배너 · 리포트 카드', corpPortal: '단정한 기업 포털', storyNumbered: '번호로 풀어 가는 이야기', publicTiles: '공공기관 바로가기 타일', campus: '캠퍼스 · 일정표형' };
   const REC_LOOK = { corp: 'corpPortal', univ: 'campus', univ_lms: 'campus', k12: 'brandBold', adult: 'mintSoft', lifelong: 'senior', voc: 'publicTiles', public: 'publicTiles' };
   const REC_HPT = { corp: /clean|modern|모던|깔끔|corp/i, univ: /official|공식|clean|campus/i, univ_lms: /official|공식|clean|campus/i, k12: /warm|따뜻|학원|kids|키즈/i, adult: /modern|clean|모던|깔끔/i, lifelong: /warm|따뜻|senior|큰/i, voc: /tech|테크|official|공식/i, public: /official|공식|public|기관/i };
   function themes() {
     if (hasT()) return HPT.list.map(x => ({ id: String(x.id), name: String(x.name || x.id), desc: String(x.desc || ''), sw: A(x.swatch).slice(0, 3), hpt: true, prem: !!x.prem, tags: A(x.tags) }));
-    return Object.keys(typeof LOOKS !== 'undefined' ? LOOKS : {}).map(k => { const c = LK_COL[k] || '#5C74F6'; return { id: k, name: LOOKS[k].n, desc: LK_DESC[k] || '', sw: [c, mixc(c, '#ffffff', .82), '#ffffff'] }; });
+    return Object.keys(typeof LOOKS !== 'undefined' ? LOOKS : {}).map(k => { const c = LK_COL[k] || '#00862D'; return { id: k, name: LOOKS[k].n, desc: LK_DESC[k] || '', sw: [c, mixc(c, '#ffffff', .82), '#ffffff'] }; });
   }
   function recTheme() {
     const T = themes(); if (!T.length) return '';
@@ -54,7 +54,7 @@
     const T = themes().find(x => x.id === id) || {};
     if (T.hpt && typeof HPT.thumb === 'function') { let h = ''; try { h = String(HPT.thumb(site(), id) || ''); } catch (e) { h = ''; }
       if (h) return /<html|<!doctype|<body/i.test(h) ? `<iframe class="hpw-tf" title="${esc(T.name)} 미리보기" sandbox="allow-same-origin" srcdoc="${esc(h)}" tabindex="-1"></iframe>` : `<div class="hpw-tt" aria-hidden="true">${h}</div>`; }
-    const c = T.sw && T.sw[0] || '#5C74F6';
+    const c = T.sw && T.sw[0] || '#00862D';
     return `<div class="hpw-mini lk-${esc(id)}" style="--c:${esc(c)};--c2:${esc(mixc(c, '#ffffff', .85))}" aria-hidden="true"><i class="hm-b"></i><div class="hm-h"><i class="t1"></i><i class="t2"></i><i class="bt"></i><i class="vis"></i></div><div class="hm-c"><i></i><i></i><i></i></div></div>`;
   }
 
@@ -167,7 +167,7 @@
   function hpwQuality(s) {
     s = s || site(); try { if (W.qpre) W.qpre(s); } catch (e) { } /* v34.5 X4: 숨긴 빈 섹션 다시 판정(hpwiz2) */ const secs = live(s); const bn = secs.find(x => x.type === 'banner'); const it = [];
     const add = (k, label, pts, ok, note, auto) => it.push({ k, label, pts, ok: !!ok, note: note || '', auto: auto !== false });
-    const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#5C74F6'; const cr = cRatio(col, '#ffffff');
+    const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#00862D'; const cr = cRatio(col, '#ffffff');
     add('contrast', '글자 대비', 15, cr >= 4.5, cr >= 4.5 ? `대표 색 대비 ${cr.toFixed(1)}:1` : `대표 색 위 흰 글자 대비 ${cr.toFixed(1)}:1 — 4.5:1 미만`);
     const em = secs.filter(emptyOf); add('empty', '빈 섹션', 15, !em.length, em.length ? `내용이 없는 섹션 ${em.length}개(${[...new Set(em.map(x => (SEC[x.type] || {}).n || x.type))].join(' · ')})` : '모든 섹션에 내용이 있습니다');
     const ph = secs.filter(x => strs(x.data).some(v => PH.test(v))); add('ph', '자리 문구', 15, !ph.length, ph.length ? `'입력하세요' 같은 자리 문구 ${ph.length}곳` : '자리 문구 없음');
@@ -190,7 +190,7 @@
   const brk = s => String(s || '').split(/(\s+)/).map(w => { const lim = /[가-힣]/.test(w) ? 10 : 18; if (w.length <= lim + 2 || w.includes('​')) return w; return w.match(new RegExp(`.{1,${lim}}`, 'g')).join('​'); }).join('');
   function hpwFix(s0) {
     const s = clone(s0); const log = []; const secs = live(s);
-    const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#5C74F6'; if (cRatio(col, '#ffffff') < 4.5) { let c = col; for (let k = 1; k <= 20 && cRatio(c, '#ffffff') < 4.5; k++) c = mixc(col, '#000000', k * .05); s.color = c; log.push(`대표 색을 조금 진하게(${col} → ${c}) 바꿔 글자 대비를 4.5:1 이상으로 맞췄습니다`); }
+    const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#00862D'; if (cRatio(col, '#ffffff') < 4.5) { let c = col; for (let k = 1; k <= 20 && cRatio(c, '#ffffff') < 4.5; k++) c = mixc(col, '#000000', k * .05); s.color = c; log.push(`대표 색을 조금 진하게(${col} → ${c}) 바꿔 글자 대비를 4.5:1 이상으로 맞췄습니다`); }
     /* 자리 문구: 지도 섹션은 실제 연락처로, 나머지 글은 비움 */
     let phn = 0; secs.forEach(x => { const d = x.data || {};
       if (x.type === 'map') { const f = ft(); if (PH.test(d.addr || '') || !d.addr) { d.addr = f.addr || ''; phn++; } if (PH.test(d.tel || '') || !d.tel) { d.tel = f.tel || f.mail || ''; phn++; } return; }
@@ -262,7 +262,7 @@
   function hpwOpen(pre) {
     pre = pre || {}; const last = (S.site && S.site.ai) || {};
     W.st = { step: 1, theme: curTheme(S.site) && themes().some(x => x.id === curTheme(S.site)) && S.site.ai ? curTheme(S.site) : recTheme(), rec: recTheme(), brief: pre.brief || last.brief || defaultBrief(), url: pre.url || '', tone: pre.tone || '', pasted: pre.pasted || '',
-      color: (S.site && S.site.color) || '#5C74F6', colorOn: false, logo: '', drafts: [], pick: 0, busy: false, notes: [], via: '' };
+      color: (S.site && S.site.color) || '#00862D', colorOn: false, logo: '', drafts: [], pick: 0, busy: false, notes: [], via: '' };
     if (pre.brief || pre.url) W.st.step = 1;
     const w = modal('AI로 홈페이지 만들기', `<div id="hpwBox" class="hpw"></div>`, [], true); w.classList.add('hpai-m', 'hpai-wide', 'hpw-m');
     w.addEventListener('click', onClick); w.addEventListener('keydown', e => { const c = e.target.closest && e.target.closest('[data-hw="pick"],[data-hw="theme"]'); if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); c.click(); } });

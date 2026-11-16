@@ -355,7 +355,7 @@
       <div id="apSR" aria-live="polite"></div>
       <div id="apS0">${R.length ? `<div class="ap-srh"><h3 class="ap-oh">최근 검색어</h3><button type="button" class="ap-lk" data-ap="srch-clr" data-v="srq">전체 삭제</button></div><div class="ap-fc wrap">${R.map(x => `<span class="ap-fch q"><button type="button" data-ap="srch-q" data-v="${esc(x)}">${esc(x)}</button><button type="button" class="x" data-ap="srch-del" data-v="${esc(x)}" aria-label="${esc(x)} 지우기">×</button></span>`).join('')}</div>` : ''}
       ${V.length ? `<div class="ap-srh"><h3 class="ap-oh">최근 본 학습</h3><button type="button" class="ap-lk" data-ap="srch-clr" data-v="srv">전체 삭제</button></div><ul class="ap-ol">${V.map(x => `<li><a class="ap-srr" href="${esc(x.h)}" data-ap="sheet-x"><span class="ap-oty">${esc(x.k)}</span><b>${esc(x.n)}</b></a></li>`).join('')}</ul>` : ''}
-      ${!R.length && !V.length ? `<p class="ap-empty">찾고 싶은 클래스나 교재 이름을 입력하세요.</p>` : ''}</div>
+      ${!R.length && !V.length ? `<p class="ap-empty">찾고 싶은 클래스나 교재 이름을 입력하세요.</p>${P.length ? `<h3 class="ap-oh">이 기관에서 많이 찾아요</h3><div class="tb-srs">${P.slice(0, 6).map(x => `<button type="button" data-ap="srch-q" data-v="${esc(x.n)}">${ico('search', 14)}${esc(x.n)}</button>`).join('')}</div>` : ''}` : ''}</div>
       <nav><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
     document.body.appendChild(w); const i = w.querySelector('#apSQ'); i && i.focus(); }
   function closeSheet() { const w = document.getElementById('apSheet'); if (w) w.remove(); }
