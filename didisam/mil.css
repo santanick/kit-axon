@@ -165,3 +165,39 @@
 .mil43-h{margin:0}
 .mil43-dn .v4-dw{margin:6px 0 2px}
 .mil-tabs button.on{border-bottom-color:var(--pr)}
+/* v43 D-E — 마일리지 켜기 마법사: 사진형 머리 · 16/14 위계 · 단계 띠 · 요약 카드 */
+#main .mil-wiz .l43-brief.mil-b43{margin:4px 0 16px}
+#main .mil-wiz .mil-steps{gap:10px;margin-bottom:16px}
+#main .mil-wiz .mil-steps li{padding:12px 14px;border-radius:14px;font-size:14px;min-height:56px;box-shadow:0 1px 2px rgba(16,24,20,.04)}
+#main .mil-wiz .mil-steps li .n{width:28px;height:28px;border-radius:14px;font-size:13px}
+#main .mil-wiz .mil-steps li small{display:block;font-size:12px;font-weight:600;color:var(--t-sub,#5B6660)}
+#main .mil-wiz .mil-steps li.on{background:var(--gr50,#EFFBF2)}
+#main .mil-wiz .mil-g21{grid-template-columns:minmax(0,1fr) 340px;gap:20px}
+#main .mil-wiz .card{border-radius:20px;padding:24px}
+#main .mil-wiz .card h3{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:4px 0 0}
+#main .mil-wiz .card h4{font-size:17px;font-weight:700;margin:0}
+#main .mil-wiz .eyebrow{font-size:13px;font-weight:700;color:var(--gr700,#0B7A33)}
+#main .mil-wiz .mil-opt{padding:18px 20px;border-radius:16px;gap:14px;min-height:96px}
+#main .mil-wiz .mil-opt .t{font-size:16px;gap:10px}
+#main .mil-wiz .mil-opt .d{font-size:14px;line-height:1.55;margin-top:6px;color:var(--t-sub,#4C5550)}
+#main .mil-wiz .mil-opt.on{background:var(--gr50,#F2FCF5);border-color:var(--gr600,#00A332);box-shadow:inset 0 0 0 1px var(--gr600,#00A332),0 8px 20px -14px rgba(0,120,40,.45)}
+#main .mil-wiz .mil-opt .rd{width:24px;height:24px;border-radius:12px}
+#main .mil-wiz .mil-opt.on .rd{background:var(--gr600,#00A332);border-color:var(--gr600,#00A332)}
+#main .mil-wiz .mil-g21>.mil-col>.card{padding:20px 22px;gap:10px}
+#main .mil-wiz .mil-g21>.mil-col>.card p{font-size:14px;line-height:1.6;margin:0}
+#main .mil-wiz .mil-g21>.mil-col>.card:first-child{background:radial-gradient(120% 120% at 100% 0%,var(--gr50,#EFFBF2) 0%,transparent 60%),var(--surface,#fff)}
+#main .mil-wiz .mil-acts{padding-top:6px}
+@media (max-width:1180px){#main .mil-wiz .mil-g21{grid-template-columns:minmax(0,1fr)}#main .mil-wiz .mil-steps{grid-template-columns:repeat(5,minmax(120px,1fr));overflow-x:auto}}
+@media (max-width:640px){#main .mil-wiz .mil-steps{grid-template-columns:repeat(5,minmax(132px,1fr))}}
+#main .mil-wiz .mil-sum{list-style:none;margin:4px 0 2px;padding:0;display:flex;flex-direction:column}
+#main .mil-wiz .mil-sum li{display:flex;justify-content:space-between;gap:12px;align-items:center;min-height:44px;border-bottom:1px solid var(--hair,#E8ECE9);font-size:14px}
+#main .mil-wiz .mil-sum li:last-child{border-bottom:0}
+#main .mil-wiz .mil-sum span{color:var(--t-sub,#5B6660);font-weight:600}
+#main .mil-wiz .mil-sum b{font-weight:700;color:var(--g900,#121614);text-align:right}
+html[data-theme=dark] #main .mil-wiz .mil-steps li{background:var(--surface,#0E1A14);color:#EAF2EC;border-color:#2A3B31}
+html[data-theme=dark] #main .mil-wiz .mil-steps li .n{background:#1C2C23;color:#EAF2EC}
+html[data-theme=dark] #main .mil-wiz .mil-steps li.on{background:#13231B}html[data-theme=dark] #main .mil-wiz .mil-steps li.on .n{background:#00C53B;color:#04140A}
+html[data-theme=dark] #main .mil-wiz .mil-steps li small{color:#A7B8AD}
+html[data-theme=dark] #main .mil-wiz .mil-opt{background:var(--surface,#0E1A14);border-color:#2A3B31;color:#EAF2EC}
+html[data-theme=dark] #main .mil-wiz .mil-opt.on{background:#13231B;border-color:#00C53B;box-shadow:inset 0 0 0 1px #00C53B}
+html[data-theme=dark] #main .mil-wiz .mil-opt .d{color:#A7B8AD}

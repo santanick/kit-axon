@@ -41,7 +41,8 @@
   const univ = () => ty() === 'univ';
   const payOnline = () => { if (FX.onsiteOnly) return false; const c = cfg() || {}; return c.payOnline === true || !!(c.settings && c.settings.payOnline === true); }; /* 서버 /api/config · fac-list의 payOnline:false면 온라인 결제 숨김 */
   const AUD = { student: '학생', staff: '교직원', public: '일반', member: '수강생', resident: '지역주민', reduced: '감면 대상', employee: '임직원', external: '외부' };
-  const audL = a => AUD[a] || a || '일반';
+  const AUD_SP = { student: '감면', staff: '지역주민' }; /* v43 D-E(P2 H13): 공단 · 체육시설은 대학 용어(학생 · 교직원) 대신 일반 · 지역주민 · 감면 */
+  const audL = a => (ty() === 'public' && AUD_SP[a]) || AUD[a] || a || '일반';
   const audsOf = f => { const A = (Array.isArray(f.audience) && f.audience.length ? f.audience : Object.keys(f.prices || {})).filter(a => AUD[a] || a); return A.length ? A : ['public']; };
   const CATRX = [[/골프|타석/, '골프'], [/테니스|코트/, '테니스'], [/배드민턴/, '배드민턴'], [/체육관|대관|강당/, '체육관'], [/수영/, '수영장'], [/강의실|세미나|실습실|강의/, '강의실'], [/회의실|교육장/, '회의실'], [/사물함|락커/, '사물함'], [/노트북|카메라|장비|태블릿|대여/, '장비']];
   const catOf = f => f.cat || (CATRX.find(([r]) => r.test(f.name || '')) || [0, f.kind === 'rent' ? '장비' : f.kind === 'pass' ? '이용권' : '시설'])[1];
@@ -133,8 +134,8 @@
       else tag = ['n', A.st === 'not_open' ? '오픈 전' : '신청 기간 아님']; }
     else if (f.kind === 'rent') { const P0 = prods(f); tag = f.approval ? ['b', '승인제'] : ['g', `대여 가능 ${resOf(f).length - mine().rt.filter(r => r.fac === f.id && ['requested', 'approved', 'lent'].includes(r.status)).length}`]; if (!P0.length) tag = ['n', '준비 중']; }
     else tag = ['g', '이용권'];
-    const a0 = audsOf(f)[0]; const q = f.kind === 'time' ? { final: f.pay === 'free' ? 0 : Math.max(0, +(((f.prices || {})[a0] || {}).slot) || 0) } : null; const pp = prods(f).map(p => QT({ fac: f, product: p, aud: (p.prices && p.prices[a0] != null) || (p.unitPrice && p.unitPrice[a0] != null) ? a0 : Object.keys(p.prices || p.unitPrice || {})[0] || a0 }).final).filter(x => x > 0);
-    const price = f.kind === 'time' ? (q.final ? `${audL(audsOf(f)[0])} ${won(q.final)}~` : f.approval ? '구성원 무료' : '무료') : pp.length ? `${won(Math.min(...pp))}~` : '';
+    const a0 = ty() === 'public' && audsOf(f).includes('public') ? 'public' : audsOf(f)[0]; const q = f.kind === 'time' ? { final: f.pay === 'free' ? 0 : Math.max(0, +(((f.prices || {})[a0] || {}).slot) || 0) } : null; const pp = prods(f).map(p => QT({ fac: f, product: p, aud: (p.prices && p.prices[a0] != null) || (p.unitPrice && p.unitPrice[a0] != null) ? a0 : Object.keys(p.prices || p.unitPrice || {})[0] || a0 }).final).filter(x => x > 0);
+    const price = f.kind === 'time' ? (q.final ? `${audL(a0)} ${won(q.final)}${a0 === 'public' ? '' : '~'}` : f.approval ? (ty() === 'public' ? '회원 무료' : '구성원 무료') : '무료') : pp.length ? `${won(Math.min(...pp))}~` : '';
     return `<a class="fx-row" href="#fac/${esc(f.id)}">${icBox(f)}<span class="fx-ct"><b>${esc(f.name)}</b><small>${esc([f.place, f.kind === 'time' ? `${resOf(f).length > 1 ? resOf(f).length + unitOf(f) : '정원 ' + perOf(f) + '명'}` : f.kind === 'rent' ? '대여' : '이용권'].filter(Boolean).join(' · '))}</small></span><span class="fx-rt">${tag[1] ? badge(tag) : ''}<small>${esc(sub2 || price)}</small></span></a>`; }
   function homeView() { const c = cfg(); const C = catsAll(); if (!C.includes(FX.cat) && FX.cat !== 'all') FX.cat = 'all';
     const L = FACS().filter(f => FX.cat === 'all' || catOf(f) === FX.cat || (FX.cat === '이용권' && prods(f).some(p => /^pass-/.test(p.type))));
