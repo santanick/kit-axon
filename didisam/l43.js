@@ -195,10 +195,15 @@
     main.classList.toggle('g2-set', typeof CUR !== 'undefined' && CUR.ws === 'settings');
     const hasBrief = !!main.querySelector('.l43-brief, .v4-head'); main.classList.toggle('g2-hasbrief', hasBrief);
     if (hasBrief) main.querySelectorAll('.lmsnav-sub > .lnd').forEach(p => { p.hidden = true; });
-    main.querySelectorAll('small, span, p, em').forEach(el => { if (el.dataset.g2d || el.closest('.g2-demo, .modal, textarea')) return; const t = el.textContent; if (t.length > 120 || !DEMO_RE.test(t)) return; if ([...el.children].some(c => DEMO_RE.test(c.textContent))) return; el.dataset.g2d = 1;
-      const full = t.trim(); if (full.replace(DEMO_RE, '').replace(/[\s·|,()]/g, '') === '') { el.outerHTML = demoChip(full); return; }
-      const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n; while ((n = tw.nextNode())) { if (DEMO_RE.test(n.nodeValue)) { n.nodeValue = n.nodeValue.replace(DEMO_RE, '').replace(/\s*[·|]\s*$/, ' ').replace(/^\s*[·|]\s*/, ''); break; } }
-      el.insertAdjacentHTML('beforeend', ' ' + demoChip(full)); });
+    /* v43 G3(K2 공통 ①): 탭 줄 + 알약 탭이 겹치면 알약 탭(.lmsnav-sub)을 브리핑 아래 본문 필터 칩으로 내린다(버튼 · data-act 그대로) */
+    if (hasBrief) { const br = main.querySelector('.l43-brief, .v4-head'); main.querySelectorAll('.lmsnav-sub').forEach(sb => { if (!sb.querySelector('button') || br.contains(sb)) return; sb.classList.add('g3-fchips'); if (sb.compareDocumentPosition(br) & Node.DOCUMENT_POSITION_FOLLOWING) br.insertAdjacentElement('afterend', sb); }); }
+    let seen = 0; main.querySelectorAll('small, span, p, em').forEach(el => { if (el.dataset.g2d || el.closest('.g2-demo, .modal, textarea')) return; const t = el.textContent; if (t.length > 120 || !DEMO_RE.test(t)) return; if ([...el.children].some(c => DEMO_RE.test(c.textContent))) return; el.dataset.g2d = 1;
+      seen = 1; const full = t.trim(); if (full.replace(DEMO_RE, '').replace(/[\s·|,()]/g, '') === '') { el.hidden = true; return; }
+      const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n; while ((n = tw.nextNode())) { if (DEMO_RE.test(n.nodeValue)) { n.nodeValue = n.nodeValue.replace(DEMO_RE, '').replace(/\s*[·|]\s*$/, ' ').replace(/^\s*[·|]\s*/, ''); break; } } });
+    /* v43 G3: 머리마다 반복되던 「시연 모드」 칩 → 머리줄(상단 바) 칩 1개. 본문 안 칩은 그리지 않는다 */
+    main.querySelectorAll('.g2-demo').forEach(c => c.remove());
+    if (seen) W.__g2demo = 1;
+    const top = document.querySelector('.top'); if (W.__g2demo && top && !top.querySelector('.g2-demotop')) { const at = top.querySelector('.g2-dom') || top.querySelector('.brand'); if (at) at.insertAdjacentHTML('afterend', demoChip().replace('class="g2-demo"', 'class="g2-demo g2-demotop" role="status"')); }
   }
   if (typeof AFTER !== 'undefined') AFTER.push(() => { run(); try { compact(); } catch (e) { console.error(e); } setTimeout(() => { run(); try { compact(); } catch (e) { console.error(e); } }, 0); });
   W.L43 = { brief, acts, zero, compact, side, acard, spark, sparkPts, KIND, kindOf, av, prog, chip, empty, bulk, fbar, photo, wordsOf, reg, run, artSvg, REG };

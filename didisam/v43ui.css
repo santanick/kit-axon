@@ -372,3 +372,35 @@ input[type=file][hidden]{display:none!important} /* 라벨 단추(.btn) 안 숨�
 #toasts .toast.warn::before,.toast.warn::before{background:#FFB547 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C3200' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M12 7v6M12 17v.5'/%3E%3C/svg%3E") center/14px no-repeat}
 html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background:#0B0D0C!important;box-shadow:0 0 0 1px rgba(255,255,255,.18),0 18px 40px -12px rgba(0,0,0,.7)!important}
 .top:has(> .g2-dom) .topr{margin-left:auto} /* v43 G2 2차: 시작 가이드(.bprog)를 칩 안으로 옮겨도 오른쪽 도구는 오른쪽 끝에 */
+
+/* ═════════ v43 G3 전역(3차) ═════════ */
+/* ② 「시연 모드」: 본문 머리마다 반복되던 칩 → 머리줄 칩 1개(l43.js compact) */
+.top .g2-demotop{flex:none;height:28px;margin-left:8px;font-size:12.5px;cursor:default}
+@media (max-width:720px){.top .g2-demotop{display:none}}
+/* ③ 히어로(브리핑) 높이 — 1440×900 첫 화면에서 주 콘텐츠가 보이도록 300px 아래(시안 200~260) */
+@media (min-width:901px){
+  #main .l43-brief{padding:20px 26px;margin:0 0 14px;gap:16px 28px}
+  #main .l43-brief .l43-eye{margin-bottom:6px}
+  #main .l43-brief .l43-hl{font-size:28px;line-height:1.22}
+  #main .l43-brief.l43-k-hero .l43-hl,#main .lg .lg-hero .l43-hl{font-size:30px;line-height:1.2}
+  #main .l43-brief .l43-sub{margin-top:6px;font-size:14.5px;line-height:1.5}
+  #main .l43-brief .l43-acts{margin-top:12px}
+  #main .l43-brief.l43-k-hero{padding:22px 28px}
+  #main .l43-brief.l43-k-kpi{padding:20px 24px}
+  #main .l43-brief.l43-k-photo{padding:0}
+  #main .l43-brief.l43-k-photo .l43-pbody{padding:20px 8px 20px 26px;gap:12px}
+  #main .l43-brief .l43-pst{min-height:0;height:200px;max-height:220px;margin:12px 12px 12px 0}
+  #main .l43-brief .l43-kc{padding:12px 14px 10px}#main .l43-brief .l43-kc dd{font-size:26px}#main .l43-brief .l43-kc .l43-spk{height:26px}
+  #main .l43-brief .l43-gl{gap:8px}#main .l43-brief .l43-g{padding:10px 14px 8px}#main .l43-brief .l43-g dd{font-size:24px}#main .l43-brief .l43-g .l43-spk{height:20px;margin-top:4px}
+  #main .l43-brief .l43-todo li{min-height:48px;padding:6px 12px}
+  #main .l43-brief .l43-ring{transform:scale(.86);margin:-9px -8px}
+  #main .lg .lg-hero{gap:22px}
+  /* 페이지 부제(.wh p)는 브리핑 문장과 겹치므로 브리핑이 있으면 숨긴다(K2 공통 ①) */
+  #main.g2-hasbrief .wh p,#main.g2-hasbrief>.bhd.q1-ph :is(.q1-desc,.uxdesc),#main.g2-hasbrief>.bhd.q1-ph .uxdesc[hidden]{display:none}
+}
+/* ④ 탐색 겹: 탭 줄 아래 알약 탭 → 브리핑 아래 본문 필터 칩(l43.js compact) */
+#main .lmsnav-sub.g3-fchips{margin:0 0 14px;gap:6px}
+#main .lmsnav-sub.g3-fchips button{min-height:38px;padding:0 14px;font-size:13.5px;font-weight:600;border-radius:999px;background:transparent;border:1px solid var(--hair,var(--line,#E7E5E0));color:var(--t-sub,var(--g700));box-shadow:none}
+#main .lmsnav-sub.g3-fchips button:hover{background:var(--surface,#fff);color:var(--g900)}
+#main .lmsnav-sub.g3-fchips button.on{background:var(--gr50,#ECFDF3);border-color:color-mix(in srgb,var(--gr600,#00862D) 40%,transparent);color:var(--gr800,#066B2A);font-weight:700}
+@media (max-width:600px){#main .lmsnav-sub.g3-fchips button{min-height:44px}}
