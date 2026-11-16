@@ -95,6 +95,15 @@
       : J.mode === 'invite' ? `<a class="lbtn pri" href="#login">초대받은 계정으로 시작</a><span class="lgj-s">초대 링크(메일 · 메신저)를 열면 가입돼요</span>`
       : `<a class="lbtn pri" href="#login">${oTy() === 'univ' ? '학번' : '접근코드'}으로 시작</a><a class="lgj-lk" href="#find/code">접근코드를 모르겠어요</a>`;
     return `<section class="lgj" aria-label="가입 · 시작"><div><b>${esc(J.t)}</b><small>${esc(J.s[0] || '')}</small></div><div class="lgj-a">${cta}</div></section>`; }
+  /* v43 D-D(111) 방문자 첫 화면: 흰 바탕 + 아이콘 1개 → 사진 무대 히어로(사진 + 짙은 그린 그라데이션) · 혜택 칩 3개 */
+  function guestHero() { let u = ''; try { u = typeof window.lPhoto === 'function' ? window.lPhoto(SITE().org.name + ' 온라인 강의 학습', 'ap-guest', true) : ''; } catch (e) { }
+    return `<section class="ap-hero ap-ghero"${u ? ` style="--ph:url('${esc(u)}')"` : ''}>${orgChip()}<p class="ap-gey">${esc(TYL[oTy()] || '기관')} · 나만의 AI 선생님</p><h1>나만의 AI 선생님과<br>공부를 시작해 보세요</h1><p class="ap-gsub">강좌 · 수강 방법은 로그인 없이 바로 물어보세요. 가입하면 내 진도와 마감을 매일 먼저 챙겨 드려요.</p>
+      <ul class="ap-gben" aria-label="가입 혜택"><li>${ico('chat', 16)}로그인 없이 질문</li><li>${ico('book2', 16)}내 진도 기억</li><li>${ico('bell', 16)}마감 먼저 알림</li></ul></section>`; }
+  /* v43 D-D — 체험판(샘플 사이트)에서만 쓰는 보호자 자녀 2명 · 알림 6건. 기관 데이터(laRoom)가 있으면 쓰지 않는다. 학생은 이름 대신 닉네임 · 반만 */
+  const demoS = () => LR.mode === 'demo' && LR.tid === 'sample' && !!LR.me;
+  const DKIDS = [{ n: '지우', g: '중2 · 수학 심화반', at: 96, p: 72, due: '오늘 숙제 1개' }, { n: '하준', g: '초6 · 영어 리딩반', at: 100, p: 58, due: '내일 단어 시험' }];
+  window.lappDemoKids = () => demoS() && isPar() && !laRoomOk() ? DKIDS : null;
+  const laRoomOk = () => { try { return !!(typeof laRoom === 'function' && laRoom()); } catch (e) { return false; } };
   function joinCard() { if (LR.me || isPar()) return ''; const J = joinInfo(); const pend = pendSid();
     if (pend) return `<section class="ap-join pend" aria-label="가입 상태"><span class="ap-tag w">가입 승인 대기 중</span><h2>운영자가 승인하면 바로 알려 드려요</h2><p>승인 전에도 강좌 · 공지를 둘러볼 수 있어요. 수강 · 결제는 승인 뒤에 열려요.</p><a class="ap-go ghost sm" href="${esc(browse())}">둘러보기</a></section>`;
     const cta = J.mode === 'open' ? `<a class="ap-go" href="#join">${esc(SITE().org.name)} 가입하기</a><a class="ap-lk" href="#login">이미 가입했어요 · 로그인</a>`
@@ -125,15 +134,16 @@
   const cnt = () => { let m = 0, n = 0; try { m = typeof lcInbox === 'function' ? lcInbox().filter(x => !x.read).length : 0; } catch (e) { } try { n = typeof laItems === 'function' ? laItems().L.filter(x => !x.read).length : 0; } catch (e) { } return { m, n }; };
   const bdg = k => k ? `<i class="ap-bd">${k > 99 ? '99+' : k}</i>` : '';
   const topIcons = () => { const c = cnt(); return `<a class="ap-ib" href="#msg" aria-label="메시지${c.m ? ` · 안 읽은 메시지 ${c.m}개` : ''}">${ico('chat', 21)}${bdg(c.m)}</a><a class="ap-ib" href="#inbox" aria-label="알림${c.n ? ` · 새 알림 ${c.n}개` : ''}">${ico('bell', 21)}${bdg(c.n)}</a>`; };
-  function kidsHTML() { let r = {}, pa = null; try { r = laRoom() || {}; pa = laPacct(); } catch (e) { }
+  function kidsHTML() { const DK = window.lappDemoKids && window.lappDemoKids(); if (DK) return `<section class="ap-kids"><h2>연결된 자녀 <small>${DK.length}명</small></h2>${DK.map((k, i) => `<a class="ap-kid dd-kid" href="#family"><span class="dd-kav" style="--kc:${i ? '#0E7C66' : '#00862D'}" aria-hidden="true">${esc(k.n.slice(0, 1))}</span><span><b>${esc(k.n)}</b><small>${esc(k.g)} · ${esc(k.due)}</small><span class="dd-kst"><em>출석 ${k.at}%</em><em>진도 ${k.p}%</em></span></span>${ico('arrow', 16)}</a>`).join('')}</section>`;
+    let r = {}, pa = null; try { r = laRoom() || {}; pa = laPacct(); } catch (e) { }
     const PR = (r.parents || []).filter(p => pa && p.acct === pa.id); const K = PR.filter(p => p.status === '연결 완료'); const W = PR.filter(p => p.status === '연결 요청').length;
     const nm = id => { const m = (r.members || []).find(x => x.id === id); return m ? (m.nick || m.name || '자녀') : '자녀'; };
     return `<section class="ap-kids"><h2>연결된 자녀 <small>${K.length}명</small></h2>${K.length ? K.map(k => `<a class="ap-kid" href="#family">${av(null)}<span><b>${esc(nm(k.child))}</b><small>${esc(k.rel || '자녀')} · 출결 · 수강 현황 보기</small></span>${ico('arrow', 16)}</a>`).join('') : `<a class="ap-kid none" href="#family">${ico('link', 20)}<span><b>자녀와 연결하기</b><small>${W ? `확인할 연결 요청 ${W}건` : '자녀의 가족 연결 코드로 요청하세요'}</small></span>${ico('arrow', 16)}</a>`}</section>`; }
   function parHomeHTML() { const c = cnt(); const org = SITE().org.name; const tile = (h, i, t, d, k) => `<a class="ap-pt" href="${h}">${ico(i, 22)}<b>${esc(t)}</b><small>${esc(d)}</small>${bdg(k)}</a>`;
     return `<div class="ap-home ap-par"><header class="ap-top"><button type="button" class="ap-me" data-ap="tsheet" aria-label="앱 설정">${av(null)}<span><b>${esc(org)}</b><small>보호자 계정 · ${esc(LR.me.nick || '')}</small></span></button>${topIcons()}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
-      <div class="ap-scroll ap-pscroll"><section class="ap-hero">${orgChip()}${av(null, true)}<h1>${esc(who())},<br>자녀의 학습을 함께 챙겨요</h1><p class="ap-sub">출결 · 수업 소식 · 청구서를 한곳에서 확인하세요.</p></section>
-      <nav class="ap-pg4" aria-label="보호자 바로가기">${tile('#family', 'user', '자녀 관리', '출결 · 수강 현황', 0)}${tile('#msg', 'chat', '메시지', c.m ? `안 읽은 메시지 ${c.m}개` : '기관 · 강사 소식', c.m)}${tile('#mypay/bill', 'layers', '청구서 · 결제', '결제 대기 · 내역', 0)}${tile('#notice', 'bell', '공지사항', '전체 · 클래스 공지', 0)}</nav>
-      ${kidsHTML()}</div></div>`; }
+      <div class="ap-scroll ap-pscroll">${(() => { const DK = window.lappDemoKids && window.lappDemoKids(); return `<section class="ap-hero dd-phero">${orgChip()}<h1>${esc(who())},<br>자녀의 학습을 함께 챙겨요</h1>${DK ? `<div class="dd-psum" role="group" aria-label="이번 주 자녀 요약"><p>이번 주 · 자녀 ${DK.length}명</p><div><span><b>${Math.round(DK.reduce((a, k) => a + k.at, 0) / DK.length)}<small>%</small></b>평균 출석</span><span><b>${DK.length}<small>건</small></b>할 일</span><span><b>1<small>건</small></b>결제 대기</span></div></div>` : '<p class="ap-sub">출결 · 수업 소식 · 청구서를 한곳에서 확인하세요.</p>'}</section>`; })()}
+      ${window.lappDemoKids && window.lappDemoKids() ? kidsHTML() : ''}<nav class="ap-pg4" aria-label="보호자 바로가기">${tile('#family', 'user', '자녀 관리', '출결 · 수강 현황', 0)}${tile('#msg', 'chat', '메시지', c.m ? `안 읽은 메시지 ${c.m}개` : '기관 · 강사 소식', c.m)}${tile('#mypay/bill', 'layers', '청구서 · 결제', window.lappDemoKids && window.lappDemoKids() ? '결제 대기 1건 · 11월 수강료' : '결제 대기 · 내역', 0)}${tile('#notice', 'bell', '공지사항', '전체 · 클래스 공지', 0)}</nav>
+      ${window.lappDemoKids && window.lappDemoKids() ? '' : kidsHTML()}</div></div>`; }
   /* v33 보호자 PC 웹(기존 화면) 홈 — 학생 기능(AI 튜터 · 내 학습 · 강좌) 대신 자녀 현황 · 청구서 · 알림 중심(QA #56) */
   function parClassicHTML() { const c = cnt(); const tile = (h, i, t, d, k) => `<a class="lpar-t" href="${h}">${ico(i, 22)}<span><b>${esc(t)}</b><small>${esc(d)}</small></span>${bdg(k)}</a>`;
     return `<section class="sec lpar-home"><div class="in"><p class="lpar-ey">${esc(SITE().org.name)} · 보호자 계정</p><h1>${esc(who())}, 자녀의 학습을 함께 챙겨요</h1><p class="lead">자녀 현황 · 청구서 · 알림을 한곳에서 확인하세요. 수강 · 과제 제출 · AI 튜터는 자녀 계정에서 이용해요.</p>
@@ -158,10 +168,13 @@
   const afterGet = () => { try { return sessionStorage.getItem(AFK) || ''; } catch (e) { return AP.after || ''; } };
   const afterSet = h => { AP.after = h || ''; try { h ? sessionStorage.setItem(AFK, h) : sessionStorage.removeItem(AFK); } catch (e) { } };
   const afterGo = () => { const h = afterGet(); afterSet(''); if (h && /^#c\//.test(h)) { setTimeout(() => { location.hash = h; }, 0); return true; } return false; };
+  /* v43 D-D(112) 선생님 캐릭터 일러스트(SVG, 이모지 없음): 얼굴 원 + 스타일별 소품(해 · 자 · 잎) */
+  const pChar = P => `<svg width="132" height="132" viewBox="0 0 132 132" fill="none" aria-hidden="true"><defs><radialGradient id="pcg${P.k}" cx="50%" cy="35%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="${P.c}" stop-opacity=".18"/></radialGradient></defs><circle cx="66" cy="66" r="62" fill="url(#pcg${P.k})"/><circle cx="66" cy="66" r="61" stroke="${P.c}" stroke-opacity=".35" stroke-width="2"/><path d="M30 118c4-22 18-34 36-34s32 12 36 34" fill="${P.c}" fill-opacity=".9"/><circle cx="66" cy="56" r="24" fill="#FBE3CF"/><path d="M42 54c0-16 11-26 24-26s24 10 24 26c-6-8-14-12-24-12s-18 4-24 12z" fill="#2B2B2B"/><circle cx="57" cy="58" r="2.6" fill="#2B2B2B"/><circle cx="75" cy="58" r="2.6" fill="#2B2B2B"/><path d="M59 67c4 4 10 4 14 0" stroke="#2B2B2B" stroke-width="2.4" stroke-linecap="round"/><g transform="translate(88 18)" stroke="${P.c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="14" r="14" fill="#fff" stroke-width="1.5"/><g transform="translate(2 2)" stroke-width="1.75">${PSV[P.k] || PSV.warm}</g></g></svg>`;
   function pickHTML() { const cur = persona(); const sel = AP.sel || (cur && cur.k) || 'warm'; const B = PERS.find(x => x.k === sel); const nm = AP.nm || (cur && cur.k === sel ? cur.n : B.n);
     return `<section class="ap-pick" aria-labelledby="apPickT"><div class="ap-pw">
-      <div class="ap-ph">${av(B, true)}<p class="ap-ey">${esc(SITE().org.name)} · 나만의 AI 선생님</p><h1 id="apPickT">${cur ? '선생님을 바꿔 볼까요?' : `${esc(who())}, 함께 공부할<br>AI 선생님을 골라 주세요`}</h1><p class="ap-lead">내 진도 · 과제 · 마감을 기억하고 매일 먼저 챙겨 주는 선생님이에요. 나중에 언제든 바꿀 수 있어요.${afterGet() ? ' 고르면 첫 강의로 바로 이어져요.' : ''}</p></div>
+      <div class="ap-ph"><span class="dd-pchar" aria-hidden="true">${pChar(B)}</span><p class="ap-ey">${esc(SITE().org.name)} · 나만의 AI 선생님</p><h1 id="apPickT">${cur ? '선생님을 바꿔 볼까요?' : `${esc(who())}, 함께 공부할<br>AI 선생님을 골라 주세요`}</h1><p class="ap-lead">내 진도 · 과제 · 마감을 기억하고 매일 먼저 챙겨 주는 선생님이에요. 나중에 언제든 바꿀 수 있어요.${afterGet() ? ' 고르면 첫 강의로 바로 이어져요.' : ''}</p></div>
       <form id="apPickF"><fieldset class="ap-pl"><legend class="sr">선생님 스타일</legend>${PERS.map(p => `<label class="ap-pc ${p.k === sel ? 'on' : ''}" style="--pc:${p.c}"><input type="radio" name="pk" value="${p.k}" ${p.k === sel ? 'checked' : ''}>${av(p)}<span><b>${esc(p.t)}</b><small>${esc(p.d)}</small><em>“${esc(p.hi)}”</em></span></label>`).join('')}</fieldset>
+      <div class="dd-pprev" aria-live="polite">${av(B)}<p><b>${esc(nm || B.n)}</b>${esc(B.hi)}</p></div>
       <label class="ap-nm">선생님 이름<input name="nm" maxlength="12" value="${esc(nm)}" autocomplete="off" required></label>
       <button type="submit" class="ap-go" style="--pc:${B.c}">${esc(jw(nm || B.n))} 시작하기</button>
       ${cur ? '<button type="button" class="ap-lk" data-ap="pick-x">그대로 둘게요</button>' : '<button type="button" class="ap-lk" data-ap="pick-skip">기본 선생님으로 시작</button>'}</form></div></section>`; }
@@ -249,7 +262,7 @@
       <header class="ap-top"><button type="button" class="ap-me" data-ap="tsheet" aria-label="${esc(tName())} — 선생님 설정">${av(P)}<span><b>${esc(tName())}</b><small>${aiPill()}${me ? `${esc(P ? P.t : '내 AI 학습 비서')}` : '로그인 없이 물어볼 수 있어요'}</small></span></button>
         <button type="button" class="ap-ib" data-ap="srch" aria-label="학습 찾기">${ico('search', 21)}</button>${me ? topIcons() : ''}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
       <div class="ap-scroll" id="apScroll">
-        <section class="ap-hero">${orgChip()}${av(P, true)}<h1>${me ? `${esc(who())},<br>오늘은 무엇을 함께 할까요?` : `나만의 AI 선생님과<br>공부를 시작해 보세요`}</h1>${me ? `<p class="ap-sub">${esc(scn().sub(me))}</p>` : ''}${statHTML()}</section>
+        ${me ? `<section class="ap-hero">${orgChip()}${av(P, true)}<h1>${esc(who())},<br>오늘은 무엇을 함께 할까요?</h1><p class="ap-sub">${esc(scn().sub(me))}</p>${statHTML()}</section>` : guestHero()}
         ${me ? legalCard() : joinCard()}${instBox}${cardsHTML()}${me ? connRow() : ''}
         <div class="ap-th lai-th" aria-live="polite" aria-label="${esc(tName())}와의 대화">
           ${me ? `<div class="lt-m ap-hi">${av(P)}<div class="lt-b"><p>${nl(first)}</p>${brief ? `<p>${nl(brief.t)}</p>${brief.h || ''}` : ''}</div></div>` : `<div class="lt-m ap-hi">${av(null)}<div class="lt-b"><p>안녕하세요, ${esc(SITE().org.name)}의 ${esc(C.name)}입니다.\n강좌 · 수강 방법${typeof lPayOff === 'function' && lPayOff() ? '' : ' · 가격'}을 바로 물어보세요. 로그인하면 내 진도와 과제에 맞춰 나만의 선생님이 매일 챙겨 드려요.</p><div class="ap-gb"><a class="ap-go sm" href="#login">로그인</a>${SITE().org.type === 'univ' ? '' : '<a class="ap-go sm ghost" href="#join">30초 간편가입</a>'}</div></div></div>`}
@@ -465,3 +478,12 @@
   /* ── 오프라인 · 설치용 서비스 워커(https · localhost에서만) ── */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) && !Q.get('nosw')) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
 })();
+/* v43 D-D — 체험판(샘플 사이트, LR.tid 'sample')의 알림함이 비어 앱 · 웹 「알림」이 빈 화면으로 보이던 문제: 시연 알림 6건.
+   기관 데이터(laRoom)가 있으면 원래 함수 결과를 그대로 쓴다. 읽음 · 삭제는 원래 저장소(laIS 'demo-<학번>')를 그대로 쓴다.
+   결제 내역은 D-C(lshop.js demoPays) · 메시지는 Q2 시드를 같이 쓰므로 여기서 다시 넣지 않는다. */
+{ const base = laItems; laItems = function () { const r = base.apply(this, arguments); try { if (r.L.length || r.k || LR.mode !== 'demo' || LR.tid !== 'sample' || !LR.me) return r;
+    const k = 'demo-' + (LR.me.sid || LR.me.id || 'me'); const st = laIS(k); const par = LR.me.kind === 'parent'; const d = n => { const t = new Date(Date.now() - n * 36e5); return t.toISOString().slice(0, 10) + ' ' + t.toTimeString().slice(0, 5); };
+    const A = par ? [['dn1', 2, '지우 · 오늘 숙제가 올라왔어요', '수학 심화반 「일차함수 활용」 숙제 1개 · 내일 수업 전까지'], ['dn2', 6, '11월 수강료 청구서가 도착했어요', '결제 대기 1건 · 11월 25일까지 결제하면 돼요'], ['dn3', 20, '하준 · 출석했어요', '영어 리딩반 16:00 출석 확인'], ['dn4', 30, '겨울 특강 신청이 열렸어요', '12월 20일까지 신청하면 10% 할인'], ['dn5', 54, '지우 · 월말 평가 결과', '수학 심화반 88점 · 지난달보다 6점 올랐어요'], ['dn6', 80, '12월 휴원 안내', '12월 25일은 쉬어요']]
+      : [['dn1', 1, '5-3 실습 과제 마감이 3일 남았어요', '엑셀 실무 마스터 · 11월 19일 23:59까지'], ['dn2', 5, '새 차시가 열렸어요', '피벗 테이블 2차시 · 값 요약 방식'], ['dn3', 22, '퀴즈 결과가 나왔어요', '개념 확인 퀴즈 40점 · 틀린 문제 다시 풀기'], ['dn4', 30, '마일리지 150P가 쌓였어요', '7일 연속 학습 보너스'], ['dn5', 50, '수료까지 진도 32% 남았어요', '이번 주 2차시만 더 들으면 돼요'], ['dn6', 75, '겨울 특강 얼리버드 안내', '12월 20일까지 신청하면 10% 할인']];
+    const L = A.filter(([id]) => !st.del.includes(id)).map(([id, h, title, body], i) => ({ id, at: d(h), title, body, read: i > 1 || st.read.includes(id), demo: true }));
+    return { k, L }; } catch (e) { return r; } }; }
