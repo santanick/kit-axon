@@ -112,3 +112,59 @@
 .ai-rc{display:flex;flex-wrap:wrap;gap:6px}
 .ai-rc button{height:34px;padding:0 12px;border-radius:999px;border:0;box-shadow:inset 0 0 0 1px var(--line);background:var(--card,#fff);font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
 .ai-rc button.on{background:var(--ink,#111);color:var(--card,#fff);box-shadow:none;font-weight:700}
+/* v43 R3(065 앱 출석): 분반 · 차시 칩 + 교수자 패널 + 최근 차시 기록 + 휴대폰 미리보기 */
+#main .lp3-pick{display:grid;gap:10px;margin:4px 0 18px}
+#main .lp3-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#main .lp3-row>small{width:44px;font-size:12px;font-weight:800;color:var(--t-sub,#6B7076)}
+#main .lp3-chip{display:inline-flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:0;border:0;font:inherit;min-height:44px;padding:6px 14px;border-radius:14px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--hair,#E4E2DB);cursor:pointer;color:var(--g900,#17191C);font-size:14px;font-weight:700}
+#main .lp3-chip span{font-size:11px;font-weight:600;color:var(--t-sub,#6B7076)}
+#main .lp3-chip.past{background:var(--g50,#F6F5F1)}
+#main .lp3-chip.on{background:var(--gr600,#0A8A3A);color:#fff;box-shadow:0 8px 16px -10px rgba(5,61,30,.7)}
+#main .lp3-chip.on span{color:rgba(255,255,255,.8)}
+#main .lp3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) 340px;gap:18px;align-items:start}
+#main .lp3>.card{margin:0;border-radius:22px;padding:20px}
+#main .lp3-qr0{display:grid;justify-items:center;text-align:center;gap:8px;padding:22px 10px;border-radius:18px;background:linear-gradient(160deg,var(--gr50,#EEFBF1),var(--surface,#fff));box-shadow:inset 0 0 0 1px var(--gr100,#DDF5E3)}
+#main .lp3-qri{display:grid;place-items:center;width:64px;height:64px;border-radius:20px;background:var(--gr600,#0A8A3A);color:#fff}
+#main .lp3-qr0 b{font-size:16px}#main .lp3-qr0 p{margin:0;font-size:13px;color:var(--t-sub,#6B7076)}
+#main .lp3-k{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0 6px}
+#main .lp3-k>div{border-radius:14px;padding:10px;background:var(--g50,#F6F5F1);display:grid}
+#main .lp3-k b{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}#main .lp3-k b small{font-size:12px;margin-left:2px}
+#main .lp3-k span{font-size:12px;color:var(--t-sub,#6B7076)}
+#main .lp3-k .g b{color:var(--gr800,#066B2A)}#main .lp3-k .y b{color:#B26B00}#main .lp3-k .r b{color:var(--co700,#C2410C)}
+#main .lp3-ses,#main .lp3-stu{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+#main .lp3-ses li{display:grid;grid-template-columns:150px 1fr 48px;gap:12px;align-items:center;min-height:52px;padding:6px 0;border-bottom:1px solid var(--hair,#ECEAE4)}
+#main .lp3-ses li>div{display:grid}#main .lp3-ses small,#main .lp3-stu small{font-size:12px;color:var(--t-sub,#6B7076)}
+#main .lp3-ses em,#main .lp3-stu em{font-style:normal;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+#main .lp3-bar{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--g100,#F0EFEA)}
+#main .lp3-bar i{display:block;height:100%}#main .lp3-bar .g{background:var(--gr600,#0A8A3A)}#main .lp3-bar .y{background:#F2B33D}#main .lp3-bar .b{background:#5B8DEF}#main .lp3-bar .r{background:#E5533D}
+#main .lp3-stu li{display:grid;grid-template-columns:32px 92px 1fr 48px;gap:10px;align-items:center;min-height:42px}
+#main .lp3-av{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:12px;font-weight:800;color:#fff;background:hsl(var(--h) 45% 42%)}
+#main .lp3-pr{height:8px;border-radius:99px;background:var(--g100,#F0EFEA);overflow:hidden}#main .lp3-pr i{display:block;height:100%;background:var(--gr600,#0A8A3A)}#main .lp3-pr i.r{background:#E5533D}#main .lp3-stu em.r{color:var(--co700,#C2410C)}
+#main .lp3-ph{display:grid;gap:12px}
+#main .lp3-dev{position:relative;border-radius:44px;padding:12px;background:#15171A;box-shadow:0 30px 60px -30px rgba(0,0,0,.55),inset 0 0 0 2px #2A2D31}
+#main .lp3-notch{position:absolute;left:50%;top:18px;transform:translateX(-50%);width:96px;height:24px;border-radius:14px;background:#000;z-index:1}
+#main .lp3-scr{border-radius:34px;background:var(--surface,#fff);padding:54px 18px 20px;display:grid;gap:10px;min-height:560px;align-content:start}
+#main .lp3-ah{display:grid;gap:2px;padding:14px 16px;border-radius:20px;background:linear-gradient(140deg,var(--gr600,#0A8A3A),#053D1E);color:#fff}
+#main .lp3-ah small{font-size:11px;opacity:.8}#main .lp3-ah b{font-size:20px}#main .lp3-ah span{font-size:12px;opacity:.85}
+#main .lp3-scan,#main .lp3-go{min-height:50px;border-radius:16px;font-size:15px}
+#main .lp3-nqr{font-size:12px;color:var(--t-sub,#6B7076);padding:10px 12px;border-radius:12px;background:var(--g50,#F6F5F1)}
+#main .lp3-code{font-size:22px!important;letter-spacing:.4em;text-align:center;font-weight:800}
+#main .lp3-off{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding-top:8px;border-top:1px solid var(--hair,#ECEAE4)}
+@media (max-width:1240px){#main .lp3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#main .lp3-ph{grid-column:1/-1;max-width:380px}}
+@media (max-width:760px){#main .lp3{grid-template-columns:1fr}#main .lp3-ses li{grid-template-columns:110px 1fr 44px}}
+/* v43 R3(060 시스템 관리): 학과 분포 막대 + 칩 필터 + 아바타 행 */
+#main .lm3{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;align-items:start}
+#main .lm3>.card{margin:0;border-radius:22px}
+#main .lm3-dist ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+#main .lm3-dist li{display:grid;grid-template-columns:70px 1fr 34px;gap:10px;align-items:center;font-size:13px}
+#main .lm3-dist li i{height:12px;border-radius:99px;background:linear-gradient(90deg,var(--gr600,#0A8A3A),#38B26A)}
+#main .lm3-dist li b{text-align:right;font-variant-numeric:tabular-nums}
+#main .lm3-chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+#main .lm3-chip{border:0;font:inherit;font-size:13px;font-weight:700;min-height:38px;padding:0 14px;border-radius:99px;background:var(--g50,#F6F5F1);color:var(--g800,#2C3035);cursor:pointer;box-shadow:inset 0 0 0 1px var(--hair,#E4E2DB)}
+#main .lm3-chip em{font-style:normal;color:var(--t-sub,#6B7076);margin-left:4px}
+#main .lm3-chip.on{background:var(--g900,#17191C);color:#fff;box-shadow:none}#main .lm3-chip.on em{color:rgba(255,255,255,.75)}
+#main .lm3-who{display:inline-flex;align-items:center;gap:10px}
+#main .lm3-av{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:12px;font-weight:800;color:#fff;background:hsl(var(--h) 42% 44%)}
+#main .lm3-k{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--g100,#F0EFEA)}
+#main .lm3-k.professor{background:#E8EEFD;color:#2848A8}#main .lm3-k.student{background:var(--gr50,#EEFBF1);color:var(--gr800,#066B2A)}
+@media (max-width:1100px){#main .lm3{grid-template-columns:1fr}}

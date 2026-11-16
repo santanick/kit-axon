@@ -233,12 +233,12 @@
   /* 4. 설정 루트 · 메뉴 구성 */
   reg('settings', {
     brief: () => {
-      if (UI.settings) return null; let onM = 0; try { onM = Object.values(S.nav.tabs).flat().filter(x => x.on && MENU[x.id]).length; } catch (e) { }
+      if (UI.sxOpen) return null; let onM = 0; /* v43 R3: 하위 설정을 열지 않은 루트만 */ try { onM = Object.values(S.nav.tabs).flat().filter(x => x.on && MENU[x.id]).length; } catch (e) { }
       const adm = (S.admins || []).length, au = (S.autos || []).filter(a => a.on).length;
       return { eye: '운영 설정', title: `켜진 메뉴 <em>${onM}개</em>로 스튜디오를 운영하고 있습니다`, sub: '메뉴 · 사용자 · 알림 · 외부 연결을 여기서 바꿉니다. 바꾼 내용은 바로 저장됩니다.', stats: [[onM + '개', '켜진 메뉴'], [adm + '명', '운영자'], [au + '개', '자동 운영']],
         todo: (() => { const st = S.settings || {}; const pg = st.pg && st.pg !== 'none'; const tos = st.terms && st.terms.tos; return [[`결제 연결 ${pg ? '사용 중' : '미연결'}`, pg ? '수강료 결제를 받을 수 있습니다' : '외부 연결에서 PG를 고르면 결제를 받을 수 있습니다', pg ? 'ok' : 'warn'], [`이용약관 · 개인정보 처리방침 ${tos ? '등록됨' : '미등록'}`, tos ? '홈페이지 아래에 노출됩니다' : '기본 문안으로 바로 등록할 수 있습니다', tos ? 'ok' : 'warn'], [`자동 운영 ${au}개 켜짐`, `운영자 ${adm}명 · 켜진 메뉴 ${onM}개`, 'ok']]; })() };
     },
-    enhance: main => { if (UI.settings) return; const pg = main.querySelector('.sx-page'); if (!pg) return; pg.classList.add('q1-wide');
+    enhance: main => { if (UI.sxOpen) return; const pg = main.querySelector('.sx-page'); if (!pg || pg.classList.contains('sx3')) return; pg.classList.add('q1-wide');
       const toc = [...pg.querySelectorAll('.sx-card[id]')].map(c => [((c.querySelector('h2,h3,b') || {}).textContent || c.id).trim().slice(0, 18), '', c.id]);
       const st = S.settings || {}; const tips = []; if (!(st.terms && st.terms.tos)) tips.push('이용약관 · 개인정보 처리방침을 기본 문안으로 등록하세요'); if (!st.pg || st.pg === 'none') tips.push('결제 연결(PG)을 고르면 수강료 결제를 받을 수 있습니다'); if (/^org-/.test(S.org.domain || '')) tips.push('홈페이지 주소를 영문 도메인으로 바꾸세요');
       side(main, pg, acard({ t: '설정 목차', items: toc }) + acard({ ai: true, t: 'AI SAM 제안', p: tips.length ? tips.map(E).join('<br>') : '필수 설정을 모두 마쳤습니다. 자동 운영 규칙을 하나 더 켜 보세요.' })); }

@@ -14,7 +14,7 @@ async function mcpLoad(force) {
 }
 const mcpPol = () => { const r = S.org.room || (S.org.room = {}); r.egress = r.egress || {}; return r.egress.mcp !== false; };
 function mcpCard() {
-  if (!MCPX.keys) setTimeout(() => mcpLoad(), 0);
+  if (!MCPX.keys) { if (!mcpLive()) MCPX.keys = (S.apikeys || []).slice(); else setTimeout(() => mcpLoad(), 0); } /* v43 R3: 데모는 시드 키를 첫 렌더부터 보인다(예전에는 빈 표가 찍혔다) */
   const K = MCPX.keys || []; const on = mcpPol(); const owner = S.me.role === 'owner';
   const row = k => `<tr class="${k.revoked_at ? 'off' : ''}"><td><b>${esc(k.name)}</b></td><td><code>${esc(k.prefix)}…</code></td><td>${k.scope === 'write' ? tag('읽기 + 쓰기', 'mg') : tag('읽기 전용', '')}</td><td>${esc(String(k.created_at || '').slice(0, 10))}</td><td>${k.last_used ? esc(String(k.last_used).slice(0, 16).replace('T', ' ')) : '—'}</td><td>${+k.calls || 0}</td><td>${k.revoked_at ? tag('폐기됨', 'r') : tag('사용 중', 'g')}</td><td>${!k.revoked_at && owner ? `<button class="btn sm ghost" data-act="mcp-revoke" data-v="${esc(k.id)}">폐기</button>` : ''}</td></tr>`;
   return `<div class="card mcpc" id="mcpCard"><div class="ch mch2"><span class="orb sm" aria-hidden="true"></span><div><b>AI 연결(MCP) · API 키</b><small>Claude · ChatGPT · 사내 AI 에이전트가 우리 기관 데이터로 바로 일하게 합니다</small></div>${mcpLive() ? tag('운영 서버 · 사용 가능', 'g') : tag('데모 · 발급 체험', 'y')}</div>

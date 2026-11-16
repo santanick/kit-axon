@@ -106,6 +106,7 @@ AFTER.push(() => { try { if (!CUR || CUR.tab !== 'community') return; const phr 
     popup: ['팝업', () => { const P = (S.settings || {}).popups || []; const td = today(); const live = P.filter(p => p.on !== false && (!p.s || p.s <= td) && (!p.e || p.e >= td)).length;
       return P.length ? { title: `첫 화면 팝업 <em>${live}개</em>가 지금 보이고 있습니다`, sub: `등록 ${P.length}개 · 최대 4개까지 띄울 수 있습니다. 기간이 끝난 팝업은 자동으로 숨겨집니다.` } : { title: '첫 화면에 띄울 <em>팝업</em>이 없습니다', sub: '이벤트 · 약관 변경처럼 꼭 알릴 내용을 팝업으로 올리세요(최대 4개).' }; }],
     lang: ['언어 · 용어', () => ({ title: '화면 언어와 용어를 <em>우리 기관 말</em>로 바꿉니다', sub: '예를 들어 「과정」을 「강좌」로 바꾸면 운영자 · 학습자 화면 모두에 같이 반영됩니다.' })],
+    type: ['기관 정보', () => ({ kind: 'list', title: `<em>${E(S.org.name)}</em>의 기본 정보와 기관 유형입니다`, sub: '유형을 바꾸면 추천 메뉴 · 순서 · 용어가 그 유형에 맞게 바뀝니다. 데이터는 그대로 유지됩니다.', todo: [[`기관 유형 ${E((TYPES[S.org.type] || {}).name || '')}`, '메뉴 · 용어 프리셋 기준', 'ok'], [`홈페이지 주소 ${E(S.org.domain || '')}`, /^org-/.test(S.org.domain || '') ? '영문 도메인으로 바꾸면 검색 노출이 좋아집니다' : '학습자 사이트 주소', /^org-/.test(S.org.domain || '') ? 'warn' : 'ok'], [`개설일 ${E(S.org.created || '')}`, '데모 데이터는 이 브라우저에만 저장됩니다', '']] })],
     data: ['데이터', () => ({ title: '기관 데이터를 <em>내보내거나 초기화</em>합니다', sub: '초기화는 되돌릴 수 없습니다. 먼저 내보내기로 백업하세요.' })],
     menus: ['메뉴 구성', () => { let on = 0, all = 0; try { const A = Object.values(S.nav.tabs).flat().filter(x => MENU[x.id]); all = A.length; on = A.filter(x => x.on).length; } catch (e) { } return { kind: 'kpi', title: `메뉴 <em>${on}개</em>를 켜서 쓰고 있습니다`, sub: '쓰지 않는 메뉴를 끄면 운영자 · 학습자 화면이 그만큼 단순해집니다. 끈 메뉴의 데이터는 지워지지 않습니다.', stats: [[on + '개', '켜진 메뉴'], [Math.max(0, all - on) + '개', '꺼진 메뉴'], [((S.admins || []).length) + '명', '함께 쓰는 운영자']] }; }],
     room: ['데이터룸 · 배포', () => ({ title: '이 기관의 데이터는 <em>전용 데이터룸</em>에 분리해 저장합니다', sub: '배포 모델(공유 SaaS · 전용 클라우드 · 고객 클라우드 · 설치형)에 따라 저장 위치가 달라집니다.' })]
@@ -136,8 +137,9 @@ AFTER.push(() => { try { if (!CUR || CUR.tab !== 'community') return; const phr 
     data: ['초기화 전에 내보내기로 백업을 먼저 받으세요', '내보낸 파일에는 개인정보가 들어 있으니 암호를 걸어 보관하세요', '저장 공간이 80%를 넘으면 오래된 영상부터 정리하세요'],
     room: ['공공 · 대학은 전용 클라우드 또는 설치형을 많이 고릅니다', '배포 모델을 바꾸면 이전 작업은 디디쌤 지원팀이 함께 합니다', '접근 기록은 개인정보 점검 때 그대로 제출할 수 있습니다']
   };
-  const subKey = () => (UI.sxOpen && UI.sxSub === 'onoff') ? 'menus' : UI.settings;
-  const subEnhance = main => { const k = subKey(); const pg = main.querySelector('.sx-page'); if (!pg || pg.closest('.q1-2col')) return; pg.classList.add('q1-wide', 'dd-sub');
+  const subKey = () => !UI.sxOpen ? '' : UI.sxSub === 'onoff' || UI.settings === 'menu' ? 'menus' : UI.settings; /* v43 R3: 루트(아무것도 열지 않음)는 루트 머리 */
+  window.SX_TIPS = TIPS;
+  const subEnhance = main => { const k = subKey(); const pg = main.querySelector('.sx-page'); if (!pg || pg.closest('.q1-2col') || pg.classList.contains('sx3')) return; /* v43 R3: 목차 · 보조 열을 화면이 직접 그린다 */ pg.classList.add('q1-wide', 'dd-sub');
     const open = pg.querySelector('.sx-card.open'); const toc = [...pg.querySelectorAll('.sx-card[id]')].map(c => [((c.querySelector('h3,h2,b') || {}).textContent || c.id).trim().slice(0, 18), c === open ? 'cur' : '', c.id]);
     const tips = TIPS[k] || ['바꾼 값은 바로 저장됩니다. 학습자 화면에서 미리보기로 확인하세요.'];
     L43.side(main, pg, L43.acard({ t: '설정 목차', items: toc }) + L43.acard({ ai: true, t: 'AI SAM 제안', p: tips.map(E).join('<br>') }));
@@ -187,9 +189,15 @@ AFTER.push(() => { try { if (!CUR || CUR.tab !== 'community') return; const phr 
 { const base = seed; seed = function (type) { const d = base.apply(this, arguments); try { const st = d.settings || {}; const td = today(), ad = n => addDays(td, n);
     if (Array.isArray(st.popups) && !st.popups.length) st.popups = [{ t: '겨울 특강 얼리버드 신청 안내', s: ad(4), e: ad(24), on: true, body: '12월 20일까지 신청하면 수강료 10%를 할인해 드립니다.' }, { t: '이용약관 개정 안내(12월 1일 시행)', s: ad(8), e: ad(15), on: true, body: '환불 기준 조항이 바뀝니다. 자세한 내용은 약관에서 확인하세요.' }];
     if (!Array.isArray(st.termsHist) || !st.termsHist.length) st.termsHist = [{ k: 'tos', at: ad(15), text: '' }, { k: 'tos', at: '2026-03-02', text: '' }, { k: 'privacy', at: '2026-03-02', text: '' }];
+    /* v43 R3: 설정 보조 열 「변경 이력」 — 시연 경로에만 설정 변경 기록 10건(빈 스튜디오는 emptyOut이 audit을 비운다) */
+    if (!Array.isArray(d.audit)) d.audit = (S && Array.isArray(S.audit)) ? S.audit.slice() : [];
+    if (Array.isArray(d.audit) && !d.audit.some(x => x.seed43)) { const at = (n, h) => `${ad(-n)} ${h}`; const who = '관리자';
+      [[1, '10:12', '완료 기준 시청률 80% → 85%'], [2, '16:40', '팝업 추가 — 겨울 특강 얼리버드 신청 안내'], [3, '09:05', '이용약관 새 버전 — 12월 1일 시행'], [4, '14:22', 'MCP 키 발급 — 수납 자동화(Zapier)'], [6, '11:30', '메뉴 켜기 — 마일리지 · 시설'],
+        [8, '15:02', '가입 방식 변경 — 자동 수락'], [9, '10:48', '독려 알림 켜기 — 미접속 7일'], [12, '13:15', '학습자 사이트 언어 켜기 — 영어 · 베트남어'], [14, '17:20', '데이터 내보내기(JSON) — 전체'], [16, '09:40', '요금제 확인 — 프리미엄 연간'], [20, '10:00', '기관 유형 · 이름 설정 — 개설'], [21, '11:05', 'AI 튜터 도움 범위 — 힌트만']]
+        .forEach(([n, h, w]) => d.audit.push({ at: at(n, h), who, role: 'owner', what: w, seed43: 1 })); }
     if (!Array.isArray(d.apikeys) || !d.apikeys.length) d.apikeys = [{ id: 'k1', name: 'Claude 데스크톱 · 운영팀', prefix: 'dd_live_7Hq2', scope: 'read', created_by: '관리자', created_at: ad(-40), last_used: ad(-1), calls: 1284, revoked_at: null }, { id: 'k2', name: '수납 자동화(Zapier)', prefix: 'dd_live_K9vA', scope: 'write', created_by: '관리자', created_at: ad(-21), last_used: td, calls: 412, revoked_at: null }, { id: 'k3', name: '예전 테스트 키', prefix: 'dd_test_3mPx', scope: 'read', created_by: '관리자', created_at: ad(-120), last_used: ad(-96), calls: 37, revoked_at: ad(-30) }];
   } catch (e) { console.error(e); } return d; }; }
-{ const base = emptyOut; emptyOut = function () { const r = base.apply(this, arguments); try { if (S.settings) { S.settings.popups = []; S.settings.termsHist = []; } S.apikeys = []; } catch (e) { } return r; }; }
+{ const base = emptyOut; emptyOut = function () { const r = base.apply(this, arguments); try { if (S.settings) { S.settings.popups = []; S.settings.termsHist = []; } S.apikeys = []; S.audit = (S.audit || []).filter(x => !x.seed43); } catch (e) { } return r; }; }
 /* v43 D-D — 공용 팝업(128~133) 새 디자인: 가입(짙은 사진 패널 · 사진 유형 카드 · 명확한 비활성) · 모달 폭 480 · AI SAM 패널 글자 12px 이상 · 가이드 칩 44px · 계정 메뉴 행 44px.
    공통 CSS(app.css · dds.css · v43ui.css)는 고치지 않고 화면 범위 선택자로 덮어쓴다(마지막에 붙는 style). */
 (function () {

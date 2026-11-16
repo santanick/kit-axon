@@ -477,6 +477,7 @@ VIEWS.settings = () => { const tb = UI.settings || 'menu'; const st = S.settings
   if (tb === 'cover') b = coverage();
   if (tb === 'data') b = `<p class="mini">데모 데이터는 이 브라우저의 저장소에만 있습니다. 기관마다 데이터룸이 분리되어 있고, 운영 모드에서는 설정 › 계정 · 데이터 › 데이터룸 · 배포에서 고른 배포 모델(공유 SaaS · 전용 클라우드 · 고객 클라우드 · 설치형)의 데이터룸에 저장됩니다. 대학 유형은 학번 · 학과만 저장하고 학교 SSO로 연계합니다.</p><button class="btn" data-act="data-export">전체 데이터 JSON 내보내기</button>`;
   const SG = [['운영 설정', ['menu', 'rules', 'type']], ['연동 · 언어', ['integr', 'lang']], ['서비스 · 홈페이지', ['service', 'home', 'popup', 'consult', 'terms']], ['계정 · 데이터', ['plan', 'cover', 'room', 'data']]].map(([n, ids]) => [n, ids.filter(id => T.some(x => x[0] === id))]).filter(g => g[1].length);
+  if (UI.sxIn) return b; /* v43 R3: 설정 한 화면의 목차가 4묶음 탭을 대신한다 */
   const g = SG.find(x => x[1].includes(tb)) || SG[0];
   return tabs('settings', SG.map(([n, ids]) => [ids[0], n]), g[1][0]) + (g[1].length > 1 ? `<div class="subtabs">${tabs('settings', T.filter(x => g[1].includes(x[0])), tb)}</div>` : '') + b; };
 ACT['pp26-tog'] = el => { const p = S.settings.popups[+el.dataset.v]; if (!p) return; p.on = !!el.checked; save(); render(); toast(!p.on ? '팝업을 숨겼습니다.' : '팝업을 노출합니다.', 'ok'); };
