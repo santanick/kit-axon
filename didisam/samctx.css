@@ -24,3 +24,11 @@ body:not(.fab-open) #fabBtn:has(.scxbt){padding-right:20px}
 @media (max-width:860px){.bch>div{flex:1 1 auto;min-width:120px}}
 /* 떠 있는 버튼이 표 맨 아래 줄 버튼(채점 · 상세 등)을 가리지 않게 화면 끝에 여백 */
 body.fab-on:not(.aih-on) .bview{padding-bottom:96px}
+/* v43.4 P2(131) 휴대폰 폭: AI SAM 패널의 「지금 화면」을 머리 단추 + 칩 한 줄로 합쳐 대화 높이를 확보(접기 단추 유지) */
+@media (max-width:760px){
+body.fab-open .bchat .scx:not(.off){display:flex;align-items:center;min-width:0}
+body.fab-open .bchat .scx:not(.off) .scxh{flex:none;width:auto;min-height:44px;padding:0 6px 0 8px;background:transparent}
+body.fab-open .bchat .scx:not(.off) .scxt small{display:none}
+body.fab-open .bchat .scx:not(.off) .scxt b{white-space:nowrap}
+body.fab-open .bchat .scx:not(.off) .scxc{flex:1;min-width:0;max-height:none;padding:6px 8px 6px 0}
+}

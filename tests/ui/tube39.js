@@ -125,7 +125,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
   /* v43 대표님 지시: 학습자 입장 유형별 탭(plan/APP-TABS.md) — 홈 · [내 ○○] · [유형별 핵심] · 나, 시설 켠 기관은 시설을 더해 5칸.
      유형마다 탭을 실제 클릭해 해시 이동 · 선택 표시를 보고, #cal 딥링크가 모든 유형에서 열리는지(일정은 탭이 아니어도 「목록 | 일정」 세그먼트로) 본다. */
   { const FAC = { on: true, facilities: [{ id: 'f_r', name: '스터디룸 A', kind: 'time', place: '2층', hours: Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(d => [d, ['09:00', '22:00']])), slotMin: 60, maxSlots: 2, capacity: { res: 1, perSlot: 4 }, open: { daysAhead: 7, at: '09:00' }, pay: 'free', audience: ['student', 'public'], prices: { student: { slot: 0 }, public: { slot: 0 } } }] };
-    const CASES = [['adult', '', '홈,내 강의,둘러보기,나'], ['k12', '', '홈,내 수업,일정,나'], ['univ', 'lms', '홈,이번 학기 강의,일정,나'], ['voc', '', '홈,내 훈련,출석,나'] /* v43 3단계: 직업훈련 탭 3은 「출석」(#attend) — 출결 · 학습시간 한도가 수료 요건이라 한 번에 닿게(APP-TABS.md). 일정은 「내 훈련」의 「목록 | 일정」 세그먼트 */, ['corp', '', '홈,내 교육,교육과정,나'], ['lifelong', '', '홈,내 강좌,강좌 신청,시설,나', true]];
+    const CASES = [['adult', '', '홈,내 강의,둘러보기,나'], ['k12', '', '홈,내 수업,일정,나'], ['univ', 'lms', '홈,내 강의,일정,나'] /* v43.4 P2(109): 학사 LMS 아래 탭 라벨은 4자 이하(두 줄 꺾임 방지) */, ['voc', '', '홈,내 훈련,출석,나'] /* v43 3단계: 직업훈련 탭 3은 「출석」(#attend) — 출결 · 학습시간 한도가 수료 요건이라 한 번에 닿게(APP-TABS.md). 일정은 「내 훈련」의 「목록 | 일정」 세그먼트 */, ['corp', '', '홈,내 교육,교육과정,나'], ['lifelong', '', '홈,내 강좌,강좌 신청,시설,나', true]];
     for (const [type, ed, want, fac] of CASES) { const tag = `v43 유형별 탭 ${type}${ed ? '/' + ed : ''}${fac ? '+시설' : ''}`;
       const { ctx, p, errs } = await open('#home', { type, ed, patch: fac ? (j => { j.fac = FAC; }) : null });
       const T = await p.$$eval('.ap-nav.tb-nav a', A => A.map(a => ({ t: a.textContent.trim(), h: a.getAttribute('href'), c: a.className.split(' ')[0], hh: Math.round(a.getBoundingClientRect().height) })));
@@ -151,7 +151,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
   for (const [type, ed] of [['voc', ''], ['univ', 'lms']]) { const label = type + (ed ? '/' + ed : '');
     const { ctx, p, errs } = await open('#home', { type, ed });
     const tabs = await p.$$eval('.ap-nav.tb-nav a', A => A.map(x => x.textContent.trim()));
-    ok(tabs.join() === (type === 'voc' ? '홈,내 훈련,출석,나' /* v43 3단계: 직업훈련은 「출석」 탭(APP-TABS.md) */ : '홈,이번 학기 강의,일정,나') && await p.$('#tbFab') !== null, `${label}: 탭 4칸(v43 대표님 지시: 학습자 입장 유형별 탭) · AI 튜터 아이콘 — ${tabs.join(' · ')}`);
+    ok(tabs.join() === (type === 'voc' ? '홈,내 훈련,출석,나' /* v43 3단계: 직업훈련은 「출석」 탭(APP-TABS.md) */ : '홈,내 강의,일정,나') && await p.$('#tbFab') !== null, `${label}: 탭 4칸(v43 대표님 지시: 학습자 입장 유형별 탭) · AI 튜터 아이콘 — ${tabs.join(' · ')}`);
     await p.evaluate(() => { location.hash = '#review'; }); await p.waitForTimeout(250);
     const off = await p.evaluate(() => (document.querySelector('.tb-off h1') || {}).textContent || '');
     ok(/짧게 복습은 이 기관에서 쓰지 않아요/.test(off), `${label}: #review 안내 — ${off}`);
