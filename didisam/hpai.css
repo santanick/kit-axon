@@ -68,3 +68,17 @@ body.hpe-open{overflow:hidden}
 .hpm-dz{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 6px;border-radius:6px;border:1.5px dashed var(--line)}.hpm-dz .mini{font-size:12px}
 .hpm-dz.top{border-style:dashed;padding:8px}
 @media (max-width:640px){.hpm-s{margin-left:8px}.hpm-bt{margin-left:0;width:100%}.hpm-r select{max-width:100%}}
+/* v43 R9(J4 124): 메뉴 행 — 이름 + 연결 칩 + 보임 · 세부 설정만. 연결 방식 · 순서 · 하위로 · 삭제 · 「+ 하위 메뉴」는 칩을 눌러 펼친 행에서 */
+.hpm-chip{flex:0 1 auto;min-width:0;max-width:190px;display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:0 8px 0 10px;border:0;border-radius:999px;background:var(--gr50,#ECFDF3);color:var(--gr800,#00602A);font:600 12.5px/1 inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.hpm-chip:hover{background:var(--gr100,#D1FADF)}
+.hpm-i.ed>.hpm-r .hpm-chip svg{transform:rotate(180deg)}
+.hpm-i:not(.ed)>.hpm-r .hpm-x,.hpm-i:not(.ed)>.hpm-r .hpm-bt .btn:not(.hpm-eye):not([data-hpm="more"]){display:none}
+.hpm-x{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hpm-i.ed>.hpm-r{flex-wrap:wrap!important;background:var(--surface2,#FAF8F5);border-radius:12px;padding:6px}
+.hpm-i.ed>.hpm-r .hpm-x{order:9;flex:1 1 100%;padding-left:22px}
+.hpm-i.ed>.hpm-r .hpm-bt{order:10;flex:1 1 100%;justify-content:flex-end}
+/* 빌더 패널: 「+ 하위 메뉴」 줄은 행을 펼쳤을 때만(마우스를 올릴 때 높이가 바뀌면 끌어 놓기 위치가 어긋나므로 hover로 열지 않음). 하위로 넣기는 행 오른쪽으로 끌어 놓기 */
+.hps-panw #hpmBox .hpm-i:not(.ed)>.hpm-s>.hpm-dz{display:none}
+.hpm-dz{transition:opacity .12s}
+html[data-theme="dark"] .hpm-chip{background:rgba(61,220,132,.12);color:#9EF0B8}
+#hpmBox .hpm-i:not(.ed)>.hpm-r .hpm-bt .btn:not(.hpm-eye):not([data-hpm="more"]){display:none!important}

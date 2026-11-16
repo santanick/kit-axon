@@ -59,7 +59,7 @@
   window.tubeOn = on;
   const day = (d = new Date()) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 10);
   const mmss = s => { s = Math.max(0, Math.floor(+s || 0)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
-  const unit = () => (ty() === 'k12' ? '회차' : '차시');
+  const unit = () => (ty() === 'k12' || (ty() === 'public' && ed() === 'facility') ? '회차' : '차시'); /* v43 R9: 체육 시설 강습은 회차 */
   /* 관리자 설정 · 유형 용어: 튜터 켜기(tutor.enabled) · 튜터 이름(학습자가 고른 선생님 → 기관 튜터 이름) · 유형별 탭 이름 · 둘러보기 · 커뮤니티/공지 */
   const info = () => { try { return window.lappInfo ? window.lappInfo() : {}; } catch (e) { return {}; } };
   const tOn = () => { try { return TCFG().enabled !== false; } catch (e) { return true; } };
@@ -157,10 +157,19 @@
   /* 링(SVG): 오늘 목표 진행률. 색은 토큰(--gr300 위 트랙 흰 14%) */
   const ringSVG = (p, sz = 92, w = 9) => { const r = (sz - w) / 2, C = 2 * Math.PI * r; return `<svg class="tb-ring2" width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}" aria-hidden="true"><circle cx="${sz / 2}" cy="${sz / 2}" r="${r}" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="${w}"/><circle cx="${sz / 2}" cy="${sz / 2}" r="${r}" fill="none" stroke="var(--gr300)" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${(C * p / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 ${sz / 2} ${sz / 2})"/></svg>`; };
   /* 오늘 목표 히어로(메시 1곳 허용): 링 + 한 줄 + 이번 주 7칸. 버튼 전체가 「목표 바꾸기」 */
+  /* v43 R9(J4 208): 공공 체육 시설은 「하루 20분 학습」이 어색함 → 이번 달 이용 횟수(학습 · 출석한 날) / 목표 12회 */
+  function facGoalHTML() { const d0 = day(); const ym = d0.slice(0, 7); const R = rec(); const used = new Set(Object.keys(R.sec || {}).filter(k => k.slice(0, 7) === ym && +R.sec[k] > 0));
+    try { evs().concat((window.lcalEvents ? window.lcalEvents() : []).filter(e => e.done)).forEach(e => { if (e.date && e.date.slice(0, 7) === ym && e.date < d0 && /회차|예약/.test(e.k)) used.add(e.date); }); } catch (e) { }
+    const G = 12, n = used.size, p = Math.min(100, Math.round(n / G * 100)); const wk = weekDays().map(x => ({ ...x, ok: used.has(x.di) }));
+    const t = n >= G ? '이번 달 목표 횟수를 채웠어요' : n ? `${G - n}회 더 오면 이번 달 목표예요` : '첫 이용부터 횟수를 세어 드려요';
+    return `<section class="tb-goal tb-hero tb-fgoal${n >= G ? ' done' : ''}" aria-label="이번 달 이용"><a class="tb-gb" href="#fac" aria-label="이번 달 이용 ${n}회 · 목표 ${G}회 · 시설 예약 보기"><span class="tb-rg">${ringSVG(p)}<b class="tb-rn">${n}<small>/${G}회</small></b></span>
+      <span class="tb-gl"><small>이번 달 이용 · 목표 ${G}회</small><strong>${esc(t)}</strong><span class="tb-wd" aria-hidden="true">${wk.map(x => `<i class="${x.ok ? 'ok' : ''}${x.today ? ' td' : ''}">${x.l}</i>`).join('')}</span></span></a></section>`; }
   function goalHTML() { const g = goal(), m = Math.min(minToday(), 999), p = Math.min(100, Math.round(m / g * 100)); const done = m >= g; const st = streakN();
-    const S = strict(); const t = S ? '스스로 정한 목표예요. 진도와는 따로 세요' : done ? '오늘은 여기서 쉬어도 좋아요' : m ? `${g - m}분 더 보면 오늘 목표 달성이에요` : '영상을 보면 자동으로 채워져요';
+    if (tyKey() === 'public_facility') return facGoalHTML();
+    /* v43 R9(J4 204 · 206): 「참고용」 안내를 굵은 문장으로 쓰면 두 줄로 꺾여 헤드라인을 밀어냄 → 굵은 문장은 남은 분, 「참고용」은 작은 칩 */
+    const S = strict(); const t = done ? '오늘은 여기서 쉬어도 좋아요' : m ? `${g - m}분 더 보면 오늘 목표 달성이에요` : '영상을 보면 자동으로 채워져요';
     return `<section class="tb-goal tb-hero${done ? ' done' : ''}" aria-label="오늘 목표"><button type="button" class="tb-gb" data-tb="goal" aria-label="오늘 목표 ${g}분 중 ${m}분${S ? ' · 참고용, 진도 · 출석에는 반영되지 않음' : ''} · 목표 바꾸기"><span class="tb-rg">${ringSVG(p)}<b class="tb-rn">${m}<small>/${g}분</small></b></span>
-      <span class="tb-gl"><small>오늘 목표 ${g}분${S ? ' · 참고용' : ''}${st ? ` · ${st}일 연속` : ''}</small><strong>${esc(t)}</strong><span class="tb-wd" aria-hidden="true">${weekDays().map(x => `<i class="${x.ok ? 'ok' : ''}${x.today ? ' td' : ''}">${x.l}</i>`).join('')}</span></span></button>${done ? `<a class="tb-gd" href="#done">완료 보기</a>` : ''}</section>`; }
+      <span class="tb-gl"><small>오늘 목표 ${g}분${st ? ` · ${st}일 연속` : ''}${S ? '<em class="tb-gchip" title="진도 · 출석과 별개">참고용</em>' : ''}</small><strong>${esc(t)}</strong><span class="tb-wd" aria-hidden="true">${weekDays().map(x => `<i class="${x.ok ? 'ok' : ''}${x.today ? ' td' : ''}">${x.l}</i>`).join('')}</span></span></button>${done ? `<a class="tb-gd" href="#done">완료 보기</a>` : ''}</section>`; }
   /* 빈 상태 공통: 그린 톤 SVG 일러스트 + 한 문장 + 주 버튼 1개 */
   const emptyArt = () => `<svg class="tb-ea" width="120" height="88" viewBox="0 0 120 88" aria-hidden="true"><rect x="14" y="14" width="92" height="60" rx="12" fill="var(--gr50)" stroke="var(--gr200)" stroke-width="2"/><rect x="24" y="24" width="72" height="40" rx="8" fill="var(--surface)" stroke="var(--gr200)" stroke-width="2"/><path d="M54 36l14 8-14 8z" fill="var(--gr700)"/><circle cx="98" cy="18" r="9" fill="var(--gr500)"/><path d="M94 18l3 3 5-6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 80h60" stroke="var(--gr200)" stroke-width="4" stroke-linecap="round"/></svg>`;
   function contHTML() { const k = cont(); if (!k) { const lms = ty() === 'univ' && ed() === 'lms'; const f = info(); const h = lms ? '#lms' : (f.browse && f.browse !== '#home' ? f.browse : '#my'); const lb = lms ? '수강 분반 보기' : (f.find && f.browse !== '#home' ? f.find : `${f.learn || '내 과정'} 보기`);
@@ -178,8 +187,11 @@
       if ((it.type === 'quiz' || it.type === 'exam') && r.score != null && +r.score < 70 && (!q || String(r.at || '') > String(q.r.at || ''))) q = { x, it, r };
       if (it.type === 'video' && !r.done && +r.pos > 30 && (!v || String(r.at || '') > String(v.r.at || ''))) v = { x, it, r }; }));
     const k = cont(); if (v && k && k.it === v.it) v = null; /* 이어 보기 카드와 같은 것이면 제안하지 않는다 */
-    if (q) { const sh = freeC(q.x.c) ? shortsFor(q.x.c)[0] : null; return { t: `<b>${esc(q.it.title)}</b>에서 ${q.r.score}점을 받았어요. ${sh && !strict() ? '틀린 부분만 짧게 다시 볼까요?' : '틀린 부분을 같이 짚어 볼까요?'}`, h: sh && !strict() ? '#review' : '', ask: `「${q.it.title}」에서 헷갈린 개념을 쉽게 다시 설명해줘` }; }
+    if (q && tyKey() === 'public_facility') q = null; /* 체육 강습에는 퀴즈 제안을 하지 않음 */ if (q) { const sh = freeC(q.x.c) ? shortsFor(q.x.c)[0] : null; return { t: `<b>${esc(q.it.title)}</b>에서 ${q.r.score}점을 받았어요. ${sh && !strict() ? '틀린 부분만 짧게 다시 볼까요?' : '틀린 부분을 같이 짚어 볼까요?'}`, h: sh && !strict() ? '#review' : '', ask: `「${q.it.title}」에서 헷갈린 개념을 쉽게 다시 설명해줘` }; }
     if (v) return { t: `<b>${esc(v.it.title)}</b> ${mmss(v.r.pos)}에서 멈췄어요. 그 장면부터 이어 볼까요?`, h: hrefOf(v.x.c, v.it) };
+    /* v43 R9(J4 205 · 207): 틀린 퀴즈 · 멈춘 영상이 없는 유형도 같은 자리에 진도 근거 제안 1장(유형마다 홈 구성이 달라 보이던 문제) */
+    const y = C.filter(x => !x.done && x.next && (x.p || 0) > 0 && !(k && k.it === x.next)).sort((a, b) => (a.p || 0) - (b.p || 0))[0];
+    if (y) return { t: `<b>${esc(y.c.name)}</b> 진도가 ${y.p || 0}%예요. 다음 ${unit()} 「${esc(y.next.title)}」를 오늘 보면 이번 주 진도를 따라잡아요.`, h: hrefOf(y.c, y.next) };
     return null; }
   /* 유형별 AI 튜터 바로 묻기(기존 앱 첫 화면 칩: 출석 확인 · 필수교육 마감 · 오늘 학습 한도 등) */
   function askHTML() { if (!tOn()) return ''; const C = (info().chips || []).slice(0, 3); if (!C.length) return '';
@@ -194,7 +206,7 @@
     return `<section class="tb-sug" aria-label="AI 튜터 제안"><span class="tb-sp" aria-hidden="true">${I.spark(16)}</span><p><em class="tb-ai">AI 제안</em>${s.t}</p>${s.h ? `<a class="tb-go" href="${esc(s.h)}">보기</a>` : `<button type="button" class="tb-go" data-tb="ask" data-v="${esc(s.ask || '')}">보기</button>`}</section>`; }
   const locked = (c, it) => { try { return typeof CPLL === 'object' && CPLL && typeof CPLL.lockBy === 'function' && !!CPLL.lockBy(c, it); } catch (e) { return false; } }; /* 규정 순차 학습으로 잠긴 차시 — 요원 3 */
   function nextTiles() { const out = []; const k = cont();
-    stats().courses.filter(x => !x.done).forEach(x => { const S0 = seq(x.c); const i0 = k && k.x.c.id === x.c.id ? S0.indexOf(k.it) + 1 : S0.indexOf(x.next); S0.slice(Math.max(0, i0)).filter(it => !lpItem(x.c.id, it.id).done && !['survey'].includes(it.type) && !locked(x.c, it)).slice(0, 2).forEach(it => out.push({ c: x.c, it })); });
+    stats().courses.filter(x => !x.done).forEach(x => { const S0 = seq(x.c); const i0 = k && k.x.c.id === x.c.id ? S0.indexOf(k.it) + 1 : S0.indexOf(x.next); S0.slice(Math.max(0, i0)).filter(it => !lpItem(x.c.id, it.id).done && !['survey'].concat(tyKey() === 'public_facility' ? ['quiz', 'exam', 'assign', 'doc'] : []).includes(it.type) && !locked(x.c, it)) /* v43 R9(J4 208): 체육 강습에는 퀴즈 · 시험 차시를 보이지 않음 */.slice(0, 2).forEach(it => out.push({ c: x.c, it })); });
     const L = liveSoon().slice(0, 2).map(({ c, u }) => ({ c, u })); return { L, V: out.slice(0, 4 - Math.min(2, L.length)) }; }
   function weekHTML() { const { L, V } = nextTiles(); if (!L.length && !V.length) return '';
     const TY = { video: '영상', doc: '자료', quiz: '퀴즈', assign: '과제', exam: '시험', live: '라이브', offline: '오프라인' };
@@ -213,26 +225,37 @@
   const tyKey = () => { const t = ty(), e = ed(); return t === 'univ' && e === 'lms' ? 'univ_lms' : t === 'public' && ['citizen', 'facility'].includes(e) ? 'public_' + e : t; };
   const evs = () => { try { return typeof window.lcalEvents === 'function' ? window.lcalEvents().filter(e => !e.done && e.k !== '시작') : []; } catch (e) { return []; } };
   const ddL = d => { const n = Math.round((Date.parse(d) - Date.parse(day())) / 864e5); return isNaN(n) ? '' : n < 0 ? '지남' : n === 0 ? '오늘' : 'D-' + n; };
-  const tyCard = (o) => `<section class="tb-tyc${o.cls ? ' ' + o.cls : ''}" aria-label="${esc(o.t)}"><div class="tb-tyh"><span class="tb-tyi" aria-hidden="true">${I[o.ic || 'cal'](20)}</span><span><small>${esc(o.eb || '')}</small><b>${esc(o.t)}</b></span>${o.big != null ? `<em class="tb-tyn">${esc(o.big)}</em>` : ''}</div>${o.rows && o.rows.length ? `<ul class="tb-tyl">${o.rows.slice(0, 3).map(([a, b, tone]) => `<li class="${tone || ''}"><b>${esc(a)}</b>${b ? `<small>${esc(b)}</small>` : ''}</li>`).join('')}</ul>` : `<p class="tb-tye">${esc(o.none || '')}</p>`}${o.note ? `<p class="tb-tyx">${esc(o.note)}</p>` : ''}${o.go ? `<a class="tb-tya" href="${esc(o.go[0])}">${esc(o.go[1])}${I.next(14)}</a>` : ''}</section>`;
+  const tyCard = (o) => `<section class="tb-tyc${o.cls ? ' ' + o.cls : ''}" aria-label="${esc(o.t)}"><div class="tb-tyh"><span class="tb-tyi" aria-hidden="true">${I[o.ic || 'cal'](20)}</span><span><small>${esc(o.eb || '')}</small><b>${esc(o.t)}</b></span>${o.big != null ? `<em class="tb-tyn">${esc(o.big)}</em>` : ''}</div>${o.kv && o.kv.length ? `<dl class="tb-tykv">${o.kv.map(([a, b, w]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd>${w != null ? `<span class="tb-tyb" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, +w || 0))}%"></i></span>` : ''}</div>`).join('')}</dl>` : ''}${o.rows && o.rows.length ? `<ul class="tb-tyl">${o.rows.slice(0, 3).map(([a, b, tone]) => `<li class="${tone || ''}"><b>${esc(a)}</b>${b ? `<small>${esc(b)}</small>` : ''}</li>`).join('')}</ul>` : `<p class="tb-tye">${esc(o.none || '')}</p>`}${o.note ? `<p class="tb-tyx">${esc(o.note)}</p>` : ''}${o.go ? `<a class="tb-tya" href="${esc(o.go[0])}">${esc(o.go[1])}${I.next(14)}</a>` : ''}</section>`;
   function typeHTML(pos) { const k = tyKey(); const top = ['corp', 'public'].includes(k); if ((pos === 'top') !== top) return ''; const t0 = day(); const E = evs(); const wk = (() => { const d = new Date(Date.parse(t0) + 6 * 864e5); return d.toISOString().slice(0, 10); })(); const me = LR.me || {};
     try {
       if (k === 'k12') { const T = E.filter(e => e.date === t0 && ['회차', '라이브', '오프라인', '주차', '차시', '기관'].includes(e.k)); const H = E.filter(e => e.k === '과제' && e.date >= t0 && e.date <= wk);
         return tyCard({ ic: 'cal', eb: '오늘 수업', t: T.length ? `오늘 수업 ${T.length}개가 있어요` : '오늘은 수업이 없어요', rows: T.map(e => [String(e.title).replace(/ · [^·]+$/, ''), e.time ? `${e.time}${e.place ? ' · ' + e.place : ''}` : (e.place || '')]).concat(H.slice(0, 1).map(e => [String(e.title).replace(/ · [^·]+$/, ''), `숙제 ${ddL(e.date)}`, 'wn'])), none: H.length ? '' : '이번 주 숙제도 모두 끝냈어요', note: '출석과 숙제 제출은 보호자 앱에도 바로 알림이 가요', go: ['#cal', '시간표 · 숙제 보기'] }); }
-      if (k === 'univ' || k === 'univ_lms') { const D = E.filter(e => ['과제', '시험'].includes(e.k) && e.date >= t0 && e.date <= wk); const st = stats(); const dn = st.courses.filter(x => x.p >= 100).length;
-        return tyCard({ ic: 'edit', eb: `학번 ${me.sid || me.id || ''}`.trim(), t: D.length ? `이번 주 과제 · 시험 ${D.length}건` : '이번 주 마감 과제가 없어요', big: k === 'univ' ? `이수 ${dn}/${st.courses.length}` : null, rows: D.map(e => [String(e.title).replace(/ · [^·]+$/, '').replace(/^.*? — /, ''), `${e.k} · ${ddL(e.date)}${e.time ? ' ' + e.time : ''}`, ddL(e.date) === '오늘' || ddL(e.date) === 'D-1' ? 'wn' : '']), none: '다음 주 일정은 캘린더에서 미리 볼 수 있어요', go: ['#cal', '이번 주 일정 보기'] }); }
+      if (k === 'univ' || k === 'univ_lms') { const D = E.filter(e => ['과제', '시험'].includes(e.k) && e.date >= t0 && e.date <= wk); const st = stats(); const C0 = st.courses; const dn = C0.filter(x => x.p >= 100).length;
+        const rows = D.map(e => [String(e.title).replace(/ · [^·]+$/, '').replace(/^.*? — /, ''), `${e.k} · ${ddL(e.date)}${e.time ? ' ' + e.time : ''}`, ddL(e.date) === '오늘' || ddL(e.date) === 'D-1' ? 'wn' : '']);
+        const itn = C0.reduce((a, x) => a + (x.c.items || []).filter(it => it.type !== 'chapter' && lpItem(x.c.id, it.id).done).length, 0);
+        if (k === 'univ') /* v43 R9(J4 203): 비교과 센터 고유 — 비교과 포인트 · 완료 차시 · 이수 과정(포인트 = 완료 차시 × 10점, 비교과 이수 기준) */
+          return tyCard({ ic: 'award', eb: `학번 ${me.sid || me.id || ''} · 비교과 이수 현황`.trim(), t: itn ? `비교과 포인트 ${itn * 10}점을 모았어요` : '첫 차시를 마치면 비교과 포인트가 쌓여요', kv: [['비교과 포인트', `${itn * 10}점`, Math.min(100, itn * 10 / 2)], ['완료 차시', `${itn}개`], ['이수 과정', `${dn} / ${C0.length}`, C0.length ? dn / C0.length * 100 : 0]], rows: rows.slice(0, 2), none: '이번 주 마감 과제는 없어요. 다음 주 일정은 캘린더에서 미리 볼 수 있어요', go: ['#cal', '이번 주 과제 · 시험 보기'] });
+        /* v43 R9(J4 204): 학사 고유 — 이번 주 출석 · 과제 마감 */
+        const A = attData(); const N = (A.M && A.M.n) || {}; const ok = (+N.출석 || 0) + (+N.지각 || 0); const tot = A.M && A.M.tot ? A.M.tot : 0; const avg = C0.length ? Math.round(C0.reduce((a, x) => a + (x.p || 0), 0) / C0.length) : 0;
+        return tyCard({ ic: 'edit', eb: `학번 ${me.sid || me.id || ''} · 출석 · 과제`.trim(), t: D.length ? `이번 주 마감 ${D.length}건이 남았어요` : '이번 주 마감 과제는 없어요', kv: [['수강 과목', `${C0.length}과목`], tot && ok ? ['이번 달 출석', `${ok} / ${tot}회`, ok / tot * 100] : ['평균 진도', `${avg}%`, avg], ['마감 남음', `${D.length}건`]], rows: rows.slice(0, 2), none: '다음 주 일정은 캘린더에서 미리 볼 수 있어요', go: ['#cal', '이번 주 일정 보기'] }); }
       if (k === 'corp' || k === 'public') { let L = typeof lLegal === 'function' ? lLegal() : []; if (!L.length) L = stats().courses.filter(x => /법정|필수|의무|예방|안전교육/.test(x.c.name || '') && (x.p || 0) < 100).map(x => ({ x, d: x.c.end ? Math.ceil((Date.parse(x.c.end) - Date.now()) / 864e5) : null })); /* 과정에 legal 표시가 없어도 이름으로 필수교육을 찾는다 */
-        return tyCard({ cls: L.length ? 'hot' : '', ic: 'clock', eb: '필수교육(법정의무교육)', t: L.length ? `필수교육 ${L.length}건이 마감 전이에요` : '필수교육을 모두 이수했어요', rows: L.map(({ x, d }) => [x.c.name, `${d == null ? '기한 확인' : d < 0 ? '기한 지남' : 'D-' + d}${x.c.end ? ' · ' + String(x.c.end).slice(0, 10) + '까지' : ''} · 진도 ${x.p || 0}%`, d != null && d <= 7 ? 'wn' : '']), none: '새 필수교육이 배정되면 여기서 먼저 알려 드려요', go: L.length ? [`#c/${L[0].x.c.id}`, '마감 가까운 교육 이어 듣기'] : ['#my', '내 교육 보기'] }); }
-      if (k === 'voc') { const D = attData(); const r = D.M.rate; const lim = D.C && D.C.dayMax ? +D.C.dayMax : 0;
-        return tyCard({ ic: 'att', eb: '출결 · 훈련일지', t: r == null ? '이번 달 출결 기록이 아직 없어요' : `이번 달 출석률 ${r}%`, big: r == null ? null : (r >= (typeof DDAtt === 'object' ? DDAtt.MIN : 80) ? '기준 충족' : '기준 미달'), rows: [[`오늘 학습 ${hm(D.sec)}${lim ? ` / 한도 ${lim}시간` : ''}`, '학습 시간 한도를 넘으면 그날 학습은 인정되지 않아요'], [`훈련일지 · 오늘 학습한 차시 ${D.n}개`, D.n ? '학습 일시가 자동으로 기록됐어요' : '차시를 들으면 학습 일시가 자동으로 기록돼요']], go: ['#attend', '출석 · 학습 시간 보기'] }); }
-      if (k === 'lifelong' || k === 'public_citizen') { const mine = new Set(stats().courses.map(x => x.c.id)); const O = (SITE().classes || []).filter(c => !mine.has(c.id) && c.status !== '종료' && c.status !== '마감' && (c.items || []).length).slice(0, 2); const f = info();
-        return tyCard({ ic: 'compass', eb: '수강 신청', t: O.length ? `지금 신청할 수 있는 강좌 ${O.length}개` : '지금 열린 신청이 없어요', rows: O.map(c => [c.name, `${c.start ? '개강 ' + ddL(c.start) + ' · ' : ''}${c.seats ? '정원 ' + c.seats + '명 · ' : ''}신청 가능`]), none: '새 강좌가 열리면 알림으로 알려 드려요', go: [f.browse && f.browse !== '#home' ? f.browse : '#courses', '강좌 신청하러 가기'] }); }
+        const d0 = L.length && L[0].d != null ? L[0].d : null; /* v43 R9(J4 205): 마감 D-n을 카드 머리에 크게 */
+        return tyCard({ cls: L.length ? 'hot' : '', ic: 'clock', eb: '필수교육(법정의무교육)', t: L.length ? `필수교육 ${L.length}건이 마감 전이에요` : '필수교육을 모두 이수했어요', big: d0 == null ? null : d0 < 0 ? '기한 지남' : `마감 D-${d0}`, rows: L.map(({ x, d }) => [x.c.name, `${d == null ? '기한 확인' : d < 0 ? '기한 지남' : 'D-' + d}${x.c.end ? ' · ' + String(x.c.end).slice(0, 10) + '까지' : ''} · 진도 ${x.p || 0}%`, d != null && d <= 7 ? 'wn' : '']), none: '새 필수교육이 배정되면 여기서 먼저 알려 드려요', go: L.length ? [`#c/${L[0].x.c.id}`, '마감 가까운 교육 이어 듣기'] : ['#my', '내 교육 보기'] }); }
+      if (k === 'voc') { const D = attData(); const r = D.M.rate; const lim = D.C && D.C.dayMax ? +D.C.dayMax : 8; const sec = Math.max(D.sec || 0, secToday()); const MIN = typeof DDAtt === 'object' ? DDAtt.MIN : 80;
+        /* v43 R9(J4 206): 직훈 고유 — 오늘 출석 인정 학습 시간 / 하루 한도(규정 미설정이면 직업훈련 원격 기준 8시간) + 출석률은 기록이 있을 때만 */
+        return tyCard({ ic: 'att', eb: '오늘 출석 인정 · 훈련일지', t: sec ? `오늘 ${hm(sec)} 인정됐어요` : '오늘 첫 차시를 들으면 인정 시간이 쌓여요', kv: [[`오늘 인정 · 한도 ${lim}시간`, hm(sec), sec / (lim * 3600) * 100], r ? ['이번 달 출석률', `${r}%`, r] : ['수료 출결 기준', `${MIN}% 이상`]], rows: [[`훈련일지 · ${D.n ? `오늘 ${D.n}개 차시 학습 일시가 기록됐어요` : '차시를 들으면 학습 일시가 자동으로 기록돼요'}`, '한도를 넘긴 학습은 그날 출석 시간으로 인정되지 않아요']], go: ['#attend', '출석 · 학습 시간 보기'] }); }
+      if (k === 'lifelong' || k === 'public_citizen') { const C0 = stats().courses; const mine = new Set(C0.map(x => x.c.id)); const O = (SITE().classes || []).filter(c => !mine.has(c.id) && c.status !== '종료' && c.status !== '마감' && (c.items || []).length).slice(0, 1); const f = info();
+        /* v43 R9(J4 207): 평생학습 고유 — 신청한 강좌의 다음 수업(개강 · 회차 D-n) + 지금 신청 가능한 강좌 1개 */
+        const nx = C0.map(x => { const e = E.find(y => y.cls === x.c.id && y.date >= t0 && ['회차', '라이브', '주차', '차시'].includes(y.k)); const st = x.c.start && x.c.start > t0 ? x.c.start : ''; return { x, d: st || (e && e.date) || '', st: !!st, e }; }).filter(y => y.d).sort((a, b) => a.d.localeCompare(b.d));
+        const R = nx.slice(0, 2).map(({ x, d, st, e }) => [x.c.name, `${st ? '개강' : '다음 수업'} ${ddL(d)}${e && e.time ? ' ' + e.time : ''}${e && e.place ? ' · ' + e.place : ''}`]).concat(O.map(c => [c.name, `${c.start ? '개강 ' + ddL(c.start) + ' · ' : ''}지금 신청 가능`, 'wn']));
+        return tyCard({ ic: 'compass', eb: '신청한 강좌 · 수강 신청', t: nx.length ? `신청한 강좌 ${C0.length}개 · 다음 수업 ${ddL(nx[0].d)}` : `신청한 강좌 ${C0.length}개`, rows: R, none: '새 강좌가 열리면 알림으로 알려 드려요', go: [f.browse && f.browse !== '#home' ? f.browse : '#courses', O.length ? '강좌 더 신청하기' : '강좌 둘러보기'] }); }
       if (k === 'public_facility') { const B = ((window.FAC_UI && FAC_UI.st && FAC_UI.st.v && FAC_UI.st.v.bk) || []).filter(b => ['confirmed', 'requested', 'paid', 'approved'].includes(b.status)); const F = E.filter(e => /예약|시설/.test(e.k + e.title) && e.date >= t0).slice(0, 2);
         const R = B.length ? B.slice(0, 2).map(b => [b.name || b.facName || '시설 예약', `${b.day || b.date || ''} ${b.from || ''}`.trim() + (b.status === 'requested' ? ' · 승인 대기' : ' · 예약 확정'), b.status === 'requested' ? 'wn' : '']) : F.map(e => [String(e.title).replace(/ · [^·]+$/, ''), `${ddL(e.date)}${e.time ? ' ' + e.time : ''}`]);
-        return tyCard({ ic: 'fac', eb: '시설 예약', t: R.length ? `예약 ${R.length}건이 있어요` : '오늘 예약한 시설이 없어요', rows: R, none: '빈 시간을 고르면 바로 예약할 수 있어요', go: ['#fac', R.length ? '내 예약 보기' : '시설 예약하기'] }); }
+        return tyCard({ ic: 'fac', eb: '시설 예약', t: R.length ? `예약 ${R.length}건이 확정됐어요` : '오늘 예약한 시설이 없어요', big: R.length ? (F[0] ? ddL(F[0].date) : '예약') : null, rows: R, none: '빈 시간을 고르면 바로 예약할 수 있어요', go: ['#fac', R.length ? '내 예약 보기' : '시설 예약하기'] }); }
     } catch (e) { console.error('typeHTML', e); }
     return ''; }
   function homeHTML() { const f = CH().some(x => x[0] === TB.f) ? TB.f : (TB.f = 'all');
-    const body = f === 'all' ? hlHTML() + typeHTML('top') + instHTML() + pinHTML() + goalHTML() + contHTML() + typeHTML() + tutHTML() + sugHTML() + askHTML() + weekHTML() + linksHTML() : f === 'cont' ? hlHTML() + goalHTML() + contHTML() + sugHTML() : listHTML(f);
+    const body = f === 'all' ? hlHTML() + typeHTML('top') + instHTML() + pinHTML() + goalHTML() + sugHTML() + contHTML() + typeHTML() + tutHTML() + askHTML() + weekHTML() + linksHTML() : f === 'cont' ? hlHTML() + goalHTML() + contHTML() + sugHTML() : listHTML(f);
     return `<div class="tb-home">${headHTML()}<div class="tb-main">${body}</div></div>`; }
 
   /* ── 하단 탭 ── */
@@ -418,7 +441,9 @@
       return { h: R.length ? `지금까지 <em>${R.length}건</em> 결제했어요` : `아직 결제한 내역이 <em>없어요</em>`, k: [['결제', `${R.length}건`], ['결제 금액', `${nf(sum)}원`], ['정기 결제', `${sub}건`]] }; }
     if (a === 'badges' || a === 'cert' || a === 'bkcert') return { h: fin ? `수료 <em>${fin}개</em>를 마쳤어요` : run ? `<em>${run}개</em> 강좌가 수료를 향해 가고 있어요` : `수강을 시작하면 <em>수료증</em>이 여기 모여요`, k: [['수강 중', `${run}개`], ['수료', `${fin}개`], ['평균 진도', `${avg}%`]] };
     if (a === 'shop' || a === 'courses' || a === 'tb') { const n = cnt('.shp-grid .shp-card') || cnt('.cw,.tk'); const ok = [...document.querySelectorAll('#lm .shp-card')].filter(x => /신청 가능|무료/.test(x.textContent)).length;
-      return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : `<em>${n}개</em> 강좌를 둘러볼 수 있어요`, k: [['전체', `${n}개`], ['신청 가능', `${ok}개`], ['수강 중', `${run}개`]] }; }
+      /* v43 R9(J4 117): 페이지 머리에 이미 수치 칸(코스 · 트랙 · 난이도)이 있으면 칸을 더하지 않는다(6칸 · 숫자 어긋남 · 「신청 가능 0개」) — 문장도 같은 코스 수로 */
+      const st = document.querySelector('#lm .lph-st'); if (st) { const c0 = +((st.querySelector('dd b') || {}).textContent || 0); const dt = ((st.querySelector('dt') || {}).textContent || '코스').trim(); return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : run ? `수강 중인 ${run}개를 이어 가고, <em>${c0 || n}개</em> ${dt}를 더 둘러봐요` : `<em>${c0 || n}개</em> ${dt}를 둘러볼 수 있어요`, k: [] }; }
+      return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : `<em>${n}개</em> 강좌를 둘러볼 수 있어요`, k: [['전체', `${n}개`], ok ? ['신청 가능', `${ok}개`] : null, ['수강 중', `${run}개`]].filter(Boolean) }; }
     if (a === 'class') { const id = decodeURIComponent(route().b || ''); const c = ((SITE().shop || {}).classes || []).find(x => x.id === id) || (SITE().classes || []).find(x => x.id === id) || {}; const full = (SITE().classes || []).find(x => x.id === id) || c; const n = seq(full).length; const pr = +(c.final != null ? c.final : c.price) || 0;
       const ph = photoOf({ thumb: c.thumb, name: c.name || full.name || '' }); return { photo: ph, k: [[unit() === '회차' ? '회차' : '강의', `${n}개`], ['수료 기준', `진도 ${(full.cpl && full.cpl.prog) || 80}%`], ['수강료', pr ? (pr >= 10000 ? `${+(pr / 10000).toFixed(1)}만원` : `${nf(pr)}원`) : '무료']] }; }
     if (a === 'acct') { const me = LR.me || {}; const nm = String(me.nick || me.name || me.sid || '').trim(); const wk = weekDays().filter(x => x.ok).length;
@@ -443,6 +468,26 @@
 
   /* ── 그리기(가장 바깥 감싸기) ── */
   /* v43 G3 — 체험판 첫 진입: 지난 7일 학습 시간 · 앞 두 강좌 진도를 유형별로 다르게 넣어 「0/20분 · 진도 0%」로 시작하지 않게(기록이 이미 있으면 건드리지 않음) */
+  /* v43 R9(J4 202~208 「캘린더 문구가 8유형 공통」): 체험판(시연 기관 sample)에서만 유형별 일정 몇 건을 학습 캘린더에 더한다(lcal.js LCAL_SRC).
+     저장하지 않고 그릴 때마다 오늘 기준 날짜로 만든다. 실제 기관 · 로그인 학습자에게는 아무것도 더하지 않는다. */
+  (window.LCAL_SRC = window.LCAL_SRC || []).push(() => { if (!on() || LR.mode !== 'demo' || LR.tid !== 'sample') return [];
+    const t0 = day(); const D = n => new Date(Date.parse(t0) + n * 864e5).toISOString().slice(0, 10); const C = stats().courses.map(x => x.c); const nm = i => (C[i] || C[0] || {}).name || ''; const id = i => (C[i] || C[0] || {}).id || '';
+    const ev = (n, k, title, time, place, i) => ({ id: 'demo:' + tyKey() + ':' + n + ':' + title, date: D(n), time: time || '', k, title: title + (i != null ? ' · ' + nm(i) : ''), place: place || '', cls: i != null ? id(i) : '', cn: i != null ? nm(i) : '', src: 'org' });
+    const S = {
+      k12: [ev(0, '회차', '7회차 일차함수 그래프', '16:00', '3층 2강의실', 0), ev(1, '과제', '숙제 — 일차함수 문제 20개', '22:00', '', 0), ev(3, '회차', '8회차 문제 풀이', '16:00', '3층 2강의실', 0)],
+      univ: [ev(2, '과제', '과제 마감 — 프롬프트 설계 보고서', '23:59', '', 0), ev(4, '시험', '시험 — 중간 점검 퀴즈', '10:00', '', 1), ev(5, '기관', 'AX 챌린지 비교과 설명회', '15:00', '학생회관 2층')],
+      univ_lms: [ev(0, '회차', '10주차 수업', '13:00', '공학관 304호', 0), ev(1, '과제', '과제 마감 — 연결 리스트 구현', '23:59', '', 0), ev(3, '시험', '시험 — 퀴즈 2', '09:00', '', 4)],
+      corp: [ev(3, '기관', '정보보안 서약 제출 마감', '18:00'), ev(6, '라이브', '신임 팀장 리더십 라이브 특강', '14:00', '', 3)],
+      public: [ev(3, '기관', '청렴 교육 제출 마감', '18:00')],
+      voc: [ev(0, '회차', '9회차 래더 회로 실습', '09:30', '실습동 2층', 0), ev(2, '시험', '시험 — 실기 모의 평가', '10:00', '', 0)],
+      lifelong: [ev(2, '회차', '5회차 인물 사진 찍기', '10:00', '평생학습관 3층', 0), ev(5, '기관', '가을 학기 수강 신청 마감', '18:00')],
+      public_citizen: [ev(2, '회차', '5회차 수업', '10:00', '본관 2층', 0)],
+      public_facility: [ev(0, '예약', '배드민턴장 2코트 예약 확정', '19:00', '체육관 1층'), ev(2, '회차', '7회차 강습', '10:00', '실내 수영장', 0)]
+    }[tyKey()] || [];
+    return S; });
+  /* v43 R9(J4 113 · 205): 홈 첫 화면에서 떠 있는 AX 튜터 단추가 튜터 카드 · 사진을 가림 → 홈에서는 본문 튜터 바를 지나 내려간 뒤에만 단추를 보인다 */
+  const fhome = () => { const B = document.body; if (!B) return; const t = route().a === 'home' && B.classList.contains('tube') ? document.querySelector('#lm .tb-tut') : null; B.classList.toggle('tb-fhome', !!t && t.getBoundingClientRect().bottom > 0); };
+  addEventListener('scroll', fhome, { passive: true }); addEventListener('resize', fhome);
   function demoSeed() { try { if (!on() || LR.mode !== 'demo' || LR.tid !== 'sample') return; const t = rec(); if (t.demoSeeded || Object.keys(t.sec).length) return; t.demoSeeded = 1;
     const o = SITE().org || {}; const key = (o.type || '') + (o.ed || '') + (LR.me.sid || ''); let h = 7; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     const g = goal(); for (let k = 0; k < 7; k++) { const d = day(new Date(Date.now() - k * 864e5)); t.sec[d] = k === 0 ? (5 + h % 11) * 60 : ((h >> k) % 4 ? (g + (h >> (k + 3)) % 12) * 60 : (3 + k) * 60); }
@@ -464,7 +509,7 @@
     if ((a === 'my' || a === 'cal') && !route().b && !lm.querySelector('.tb-seg')) lm.insertAdjacentHTML('afterbegin', segHTML(a));
     if (a === 'c') { mountWatch(); try { const k = cur(); const ph = k ? photoOf(k.c) : ''; lm.style.setProperty('--tb-poster', ph ? `url("${ph}")` : 'none'); } catch (e) { } } /* Q3: 영상이 없거나 준비 중인 검은 상자 → 강좌 사진 포스터 */ if (!cur() && TB.open) { TB.open = false; B.classList.remove('tb-sheet'); }
     const nav = app.querySelector('.ap-nav'); if (nav) { nav.classList.add('tb-nav'); nav.classList.remove('lq-n6'); nav.setAttribute('aria-label', '아래 탭'); const h = navHTML(); if (nav.dataset.tbh !== h) { nav.innerHTML = h; nav.dataset.tbh = h; } } }
-  { const base = lrender; lrender = (...x) => { demoSeed(); /* v43 R5: 시드를 먼저 — 「내 강의」(#my)가 0%로 그려진 뒤에 시드가 들어가던 문제 */ const r = base(...x); try { apply(); fab(); } catch (e) { console.error('ltube', e); } return r; }; }
+  { const base = lrender; lrender = (...x) => { demoSeed(); /* v43 R5: 시드를 먼저 — 「내 강의」(#my)가 0%로 그려진 뒤에 시드가 들어가던 문제 */ const r = base(...x); try { apply(); fab(); fhome(); } catch (e) { console.error('ltube', e); } return r; }; }
   /* 말로 묻기(기존 앱 첫 화면 마이크) — 대화 창 · 장면 튜터 입력칸 옆. 브라우저 음성 인식이 있을 때만 */
   const SRc = () => window.SpeechRecognition || window.webkitSpeechRecognition;
   const micBtn = id => SRc() ? `<button type="button" class="tb-mic" data-tb="mic" data-v="${id}" aria-label="말로 묻기">${SV('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>', 20)}</button>` : '';

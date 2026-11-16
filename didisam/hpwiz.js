@@ -247,8 +247,12 @@
     const rOk = !dup.length && defN < 4; add('rep', '블록 반복', QW.rep || 4, rOk, rOk ? '섹션 모양이 겹치지 않음' : dup.length ? `같은 모양 섹션이 두 번 이상(${dup.map(k => k.replace(/:$/, '')).join(' · ')})` : `공통 블록 ${defN}개가 기본 모양 그대로입니다 — 다른 모양을 섞으면 다른 기관과 덜 비슷해집니다`, false); };
   const qHTML = (q, q0, log, withContact) => {
     const f = ft(); const need = q.items.find(x => x.k === 'contact' && !x.ok);
-    return `<div class="hpw-q" aria-live="polite"><div class="hpw-qs"><b class="hpw-score ${q.score >= 90 ? 'hi' : q.score >= 75 ? 'mid' : 'lo'}">${q.score}<small>점</small></b><div><b>품질 점수</b><small>${q0 && q0.score !== q.score ? `자동 보정 전 ${q0.score}점 → 보정 후 ${q.score}점` : '100점 만점'}</small></div></div>
-      <ul class="hpw-ql">${q.items.map(x => { const was = q0 && q0.items.find(y => y.k === x.k); const fixed = x.ok && was && !was.ok; return `<li class="${x.ok ? (fixed ? 'fx' : 'ok') : 'no'}"><span class="hpw-qi" aria-hidden="true">${x.ok ? (fixed ? '↻' : '✓') : '!'}</span><b>${esc(x.label)}</b><small>${fixed ? '자동 보정 · ' : ''}${esc(x.note)}</small><em>${x.info ? '안내' : `${x.ok ? x.pts : 0}/${x.pts}`}</em></li>`; }).join('')}</ul>
+    /* v43 R9(J4 127): 작은 숫자 「93점」 + 22항목 2열 회색 목록 → 점수 링 + 큰 숫자, 고칠 항목만 위에 펼치고 통과한 항목은 접기. 점수가 없는 안내 항목은 「안내」 */
+    const li = x => { const was = q0 && q0.items.find(y => y.k === x.k); const fixed = x.ok && was && !was.ok; return `<li class="${x.ok ? (fixed ? 'fx' : 'ok') : 'no'}"><span class="hpw-qi" aria-hidden="true">${x.ok ? (fixed ? '↻' : '✓') : '!'}</span><b>${esc(x.label)}</b><small>${fixed ? '자동 보정 · ' : ''}${esc(x.note)}</small><em>${x.info ? '안내' : x.ok ? `+${x.pts}` : `0/${x.pts}`}</em></li>`; };
+    const bad = q.items.filter(x => !x.ok && !x.info), info = q.items.filter(x => !x.ok && x.info), good = q.items.filter(x => x.ok); const R = 34, C = 2 * Math.PI * R, tone = q.score >= 90 ? 'hi' : q.score >= 75 ? 'mid' : 'lo';
+    return `<div class="hpw-q hpw-q9" aria-live="polite"><div class="hpw-qs"><span class="hpw-ring ${tone}" aria-hidden="true"><svg viewBox="0 0 80 80" width="88" height="88"><circle cx="40" cy="40" r="${R}" fill="none" stroke-width="8" class="tr"/><circle cx="40" cy="40" r="${R}" fill="none" stroke-width="8" stroke-linecap="round" class="br" stroke-dasharray="${(C * q.score / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 40 40)"/></svg></span><b class="hpw-score ${tone}">${q.score}<small>점</small></b><div><b>품질 점수</b><small>${q0 && q0.score !== q.score ? `자동 보정 전 ${q0.score}점 → 보정 후 ${q.score}점` : bad.length ? `고칠 항목 ${bad.length}개 · 통과 ${good.length}개` : `${good.length}개 항목 모두 통과`}</small></div></div>
+      ${bad.length ? `<h4 class="hpw-qh">고칠 항목 ${bad.length}개</h4><ul class="hpw-ql hpw-qbad">${bad.map(li).join('')}</ul>` : '<p class="hpw-qok">고칠 항목이 없습니다. 그대로 게시해도 됩니다.</p>'}${info.length ? `<ul class="hpw-ql hpw-qinfo">${info.map(li).join('')}</ul>` : ''}
+      <details class="hpw-qgood"><summary>통과한 항목 ${good.length}개</summary><ul class="hpw-ql">${good.map(li).join('')}</ul></details>
       ${A(log).length ? `<details class="hpw-log"><summary>자동으로 고친 것 ${log.length}가지</summary><ul>${log.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
       ${need && withContact ? `<div class="hpw-ct"><b>연락처 넣기(선택)</b><div class="hpw-ctr"><label>전화<input name="hwTel" inputmode="tel" maxlength="30" placeholder="051-000-0000" value="${esc(f.tel || '')}"></label><label>이메일<input name="hwMail" inputmode="email" maxlength="80" placeholder="info@example.com" value="${esc(f.mail || '')}"></label></div><small>입력하면 문의 블록 · 푸터에 들어갑니다. 비워 두면 문의 게시판으로 안내합니다.</small></div>` : ''}</div>`;
   };
@@ -264,7 +268,7 @@
     W.st = { step: 1, theme: curTheme(S.site) && themes().some(x => x.id === curTheme(S.site)) && S.site.ai ? curTheme(S.site) : recTheme(), rec: recTheme(), brief: pre.brief || last.brief || defaultBrief(), url: pre.url || '', tone: pre.tone || '', pasted: pre.pasted || '',
       color: (S.site && S.site.color) || '#00862D', colorOn: false, logo: '', drafts: [], pick: 0, busy: false, notes: [], via: '' };
     if (pre.brief || pre.url) W.st.step = 1;
-    const w = modal('AI로 홈페이지 만들기', `<div id="hpwBox" class="hpw"></div>`, [], true); w.classList.add('hpai-m', 'hpai-wide', 'hpw-m');
+    const w = modal('AI로 홈페이지 만들기', `<div id="hpwBox" class="hpw"></div>`, [], true); w.classList.add('hpai-m', 'hpai-wide', 'hpw-m'); if ($('#hpe')) w.classList.add('hpw-dock'); /* v43 R9(J4 119): 빌더 안에서는 오른쪽 패널(캔버스 미리보기 유지) */
     w.addEventListener('click', onClick); w.addEventListener('keydown', e => { const c = e.target.closest && e.target.closest('[data-hw="pick"],[data-hw="theme"]'); if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); c.click(); } });
     paint();
   }
@@ -273,7 +277,8 @@
   function grab() { const w = $('#modal'); const st = W.st; if (!w || !st) return; const v = n => { const e = w.querySelector(`[name="${n}"]`); return e ? (e.type === 'checkbox' ? e.checked : e.value.trim()) : undefined; };
     if (st.step === 2) { ['brief', 'url', 'tone', 'pasted', 'color'].forEach(k => { const x = v('hw_' + k); if (x !== undefined) st[k] = x; }); const c = v('hw_colorOn'); if (c !== undefined) st.colorOn = c; }
     if (st.step === 3) { const tel = v('hwTel'), mail = v('hwMail'); if (tel !== undefined) st.tel = tel; if (mail !== undefined) st.mail = mail; } }
-  function stepper(n) { const S3 = [['1', '테마'], ['2', '설명'], ['3', '시안 고르기']]; return `<ol class="hpw-sp" aria-label="3단계 중 ${n}단계">${S3.map(([k, l], i) => `<li class="${i + 1 === n ? 'on' : i + 1 < n ? 'done' : ''}" ${i + 1 === n ? 'aria-current="step"' : ''}><span>${i + 1 < n ? '✓' : k}</span>${l}</li>`).join('')}</ol>`; }
+  function stepper(n) { const S3 = [['1', '테마'], ['2', '설명'], ['3', '시안 고르기']]; /* v43 R9(J4 119): 작은 숫자 칩 3개 → 단계 이름이 붙은 진행 바 */
+    return `<ol class="hpw-sp hpw-sp9" aria-label="3단계 중 ${n}단계" style="--p:${Math.round(n / S3.length * 100)}%">${S3.map(([k, l], i) => `<li class="${i + 1 === n ? 'on' : i + 1 < n ? 'done' : ''}" ${i + 1 === n ? 'aria-current="step"' : ''}><span>${i + 1 < n ? '✓' : k}</span>${l}</li>`).join('')}</ol>`; }
   function foot(btns) { const f = $('#modal .mf'); if (f) f.innerHTML = btns.map(b => `<button type="button" class="btn ${b.k || ''}" data-hw="${b.id}" ${b.dis ? 'disabled' : ''}>${b.html || esc(b.l)}</button>`).join(''); }
   function paint() {
     const st = W.st; const b = box(); if (!st || !b) return;
@@ -505,7 +510,7 @@
   ACT['hpw-q'] = () => { if (!S.site) return; const q0 = hpwQuality(site()); const fx = hpwFix(site()); const q1 = hpwQuality(fx.site);
     modal('홈페이지 품질 점수', `<div class="hpw">${qHTML(q0, null, [], false)}${fx.log.length ? `<p class="hpw-lead">[자동 보정]을 누르면 ${q1.score}점이 됩니다(되돌리기 가능).</p><ul class="hpw-fl">${fx.log.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : '<p class="hpw-lead">자동으로 고칠 것이 없습니다.</p>'}${q1.items.some(x => !x.ok && !x.auto) ? '<p class="mini">연락처는 설정 › 홈페이지 푸터에서 입력합니다(지어낸 연락처는 넣지 않습니다).</p>' : ''}</div>`,
       fx.log.length ? [{ id: 'c', label: '닫기' }, { id: 'ok', label: '자동 보정', kind: 'pri', run: () => { try { hpPush(); } catch (e) { } const n = fx.site; S.site = n; save(); /* v34.5 FZ(FIXLIST 19): 검색 제목 · 설명은 저장 때 HPSEO.sync가 n.aiSeo로 맞춘다(운영자가 쓴 값은 그대로) */ repaint(); toast(`자동 보정했습니다 — 품질 ${q1.score}점.`, 'ok'); } }] : [{ id: 'c', label: '닫기' }]);
-    $('#modal').classList.add('hpai-m'); };
+    $('#modal').classList.add('hpai-m'); if ($('#hpe')) $('#modal').classList.add('hpw-dock'); }; /* v43 R9(J4 127): 빌더 안에서는 화면 전체를 흐리는 창 대신 오른쪽 패널(캔버스가 보이게) */
 
   /* ═════════ 사이트 첫 화면(v34 slim): 「AI로 홈페이지 만들기」 카드 · 품질 점수 ═════════ */
   if (typeof AFTER !== 'undefined') AFTER.push(() => {

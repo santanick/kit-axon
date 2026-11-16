@@ -238,7 +238,9 @@
         ${tp.prem ? `<span class="tpd-pm"><span class="tpd-pmk">프리미엄</span>${A(tp.types).filter(k => k !== 'prem').map(k => `<em${window.HPT && HPT.premFits && HPT.premFits(tp.theme) && (k === tyKey() || (k === 'univ' && tyKey() === 'univ')) ? ' class="on"' : ''}>${esc(window.HPT && HPT.tagName ? HPT.tagName(k) : k)}</em>`).join('')}</span>` : ''}<span class="tpd-tg"><i style="background:${esc(tp.color || '#5C74F6')}"></i>${esc(moodName(moodOf(tp)))}${tp.hero ? ` · ${esc(HERO_L[tp.hero] || '')}` : ''} · 섹션 ${m.n}${A(tp.langs).length > 1 ? ' · 다국어' : ''}</span></div></article>`; };
     return SL.page('홈페이지 템플릿', right,
       /* v34.3 대표님 '유형별 메뉴 부분은 너무 복잡 — 더 심플하게': 칩은 한 줄(추천 · 전체 · 분위기)만, 다른 유형 · 목적 칩은 없애고 검색으로 찾는다 */
-      SL.chips('tpdK', [['mine', '추천'], ...(hasPrem ? [['prem', '프리미엄']] : []), ['all', '전체'], ...moods.map(k => [k, moodName(k)])], UI.tpdK || 'mine') +
+      /* v43 R9(J4 120): 분류 칩 9개가 한 줄을 넘침 → 앞 6개(추천 · 프리미엄 · 전체 · 분위기 3개 — 지금 고른 분위기는 늘 앞에)만 칩, 나머지 분위기는 「더 보기」 펼침 안에 */
+      (() => { const cur = UI.tpdK || 'mine'; const all = [['mine', '추천'], ...(hasPrem ? [['prem', '프리미엄']] : []), ['all', '전체'], ...moods.map(k => [k, moodName(k)])]; const head = all.slice(0, 6); const ci = all.findIndex(x => x[0] === cur); if (ci >= 6) head[5] = all[ci]; const rest = all.filter(x => !head.includes(x));
+        return `<div class="tpd-chw">${SL.chips('tpdK', head, cur)}${rest.length ? `<details class="tpd-more"><summary>분위기 더 보기 <small>${rest.length}</small></summary>${SL.chips('tpdK', rest, cur)}</details>` : ''}</div>`; })() +
       `<div class="sl-search tpd-q">${ic('search' in IC ? 'search' : 'spark', 16)}<input id="tpdQ" type="search" value="${esc(UI.tpdQ || '')}" placeholder="템플릿 이름 · 업종 · 분위기 검색" aria-label="템플릿 검색"></div>` +
       `<p class="tpd-cnt mini" aria-live="polite">${(UI.tpdK || 'mine') === 'mine' ? `${esc((TYPES[tyKey()] || {}).name || '')} 추천 ` : UI.tpdK === 'prem' ? `프리미엄 · ${esc((TYPES[tyKey()] || {}).name || '')}에 맞는 순서 ` : ''}${L.length}종</p><div class="tpd-g">${L.map(card).join('') || '<div class="sl-empty">조건에 맞는 템플릿이 없습니다.</div>'}</div>`);
   }
