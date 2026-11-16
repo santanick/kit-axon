@@ -102,7 +102,12 @@ const lsTutPlaceholder = t => !!t && !t.yt && !t.ch && !t.tool && Array.isArray(
 function lsSeedTuts(ty) {
   if (ty === 'univ' && typeof LSEED_UNIV_TUTS !== 'undefined') return LSEED_UNIV_TUTS.map(t => ({ id: 'tu' + t.id, title: t.title, ch: t.ch, tool: t.tool, level: t.lv - 1, type: t.type, yt: t.vid, steps: t.steps.slice(0, 3), mission: t.mission, badge: '', on: true, at: today(), seed: 1 }));
   const T = (LS_TYPES[ty] || LS_TYPES.corp);
-  return T.slice(0, 3).map(([k, name], i) => ({ id: uid('tu'), title: `${name} 첫 실습`, ch: '', tool: '', level: 0, type: k, yt: '', steps: ['영상을 보며 준비물을 확인합니다', '영상 속 예시를 그대로 따라 합니다', '내 주제로 바꿔 결과물을 저장합니다'], mission: `${name} 결과물 1건 완성`, badge: '', on: true, at: today(), seed: 1 }));
+  const ST = ['영상을 보며 준비물을 확인합니다', '영상 속 예시를 그대로 따라 합니다', '내 주제로 바꿔 결과물을 저장합니다'];
+  const one = ([k, name], lv, t, m) => ({ id: uid('tu'), title: t, ch: '', tool: '', level: lv, type: k, yt: '', steps: ST.slice(), mission: m, badge: '', on: true, at: today(), seed: 1 });
+  const L = T.slice(0, 3).map(x => one(x, 0, `${x[1]} 첫 실습`, `${x[1]} 결과물 1건 완성`));
+  /* v43 R5: 샘플로 시작한 기관은 수준별 실습을 더 넣어 8개로(따라 하기 영상 화면이 3장뿐이던 문제 — 033). 빈 스튜디오는 3개 그대로 */
+  if (!(S && S.org && S.org.empty)) T.slice(0, 5).forEach((x, i) => { if (L.length >= 8) return; L.push(one(x, 1 + (i % 2), i % 2 ? `${x[1]} 결과물 완성하기` : `${x[1]} 실무 따라 하기`, `${x[1]} 실무 과제 1건 제출`)); });
+  return L;
 }
 /* 코스웨어 표 기본: 과정의 level(0~2) × 유형을 순서대로 채움 */
 function lsGridAuto() { const L = S.lsite; const g = {}; S.classes.forEach((c, i) => { const lv = Math.min(L.levels.length - 1, c.level || 0); const ty = c.ctype || L.types[i % L.types.length].k; const key = lv + ':' + ty; if (!g[key]) g[key] = c.id; }); return g; }

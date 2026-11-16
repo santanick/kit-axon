@@ -413,8 +413,8 @@ select:focus-visible{outline:none;border-color:var(--f43-acc);box-shadow:var(--f
 /* 체크 · 라디오: 디자인된 네모 · 동그라미(스위치 안 숨은 입력은 그대로) */
 input:is([type=checkbox],[type=radio]):not(.sw input):not(.lvs input){appearance:none!important;-webkit-appearance:none!important;width:20px;height:20px;min-width:20px;min-height:0;flex:none;margin:0 8px 0 0;padding:0;border:1.5px solid color-mix(in srgb,var(--f43-fg) 30%,transparent);background:var(--f43-bg) center/14px no-repeat;border-radius:6px;display:inline-grid;place-items:center;vertical-align:-4px;cursor:pointer;transition:background-color .12s,border-color .12s;box-shadow:none}
 input[type=radio]:not(.lvs input){border-radius:50%}
-input[type=checkbox]:not(.sw input):checked{background-color:var(--f43-acc);border-color:var(--f43-acc);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")}
-input[type=radio]:not(.lvs input):checked{border:6px solid var(--f43-acc);background:var(--f43-bg)}
+input[type=checkbox]:not(.sw input):not(.lvs input):checked{background-color:var(--f43-acc);border-color:var(--f43-acc);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")}
+input[type=radio]:not(.sw input):not(.lvs input):checked{border:6px solid var(--f43-acc);background:var(--f43-bg)}
 input:is([type=checkbox],[type=radio]):focus-visible{outline:none;box-shadow:var(--f43-ring)}
 input:is([type=checkbox],[type=radio]):disabled{opacity:.45;cursor:not-allowed}
 /* 날짜 · 시간: 왼쪽 아이콘 + 칸 전체를 누르면 달력(기본 달력 단추는 투명하게 칸 전체로) */

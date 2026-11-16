@@ -359,3 +359,23 @@ body.lapp .la-nx{min-width:44px;min-height:44px;display:inline-grid;place-items:
 /* D-D: 앱 하위 화면 짙은 머리의 주 버튼(갈색 · 검정 → 밝은 그린, 117 결함) */
 html body.lapp #lm .lph-cta,html[data-theme] body.lapp #lm .lph-cta,html[data-theme] body.lapp #lm a.lbtn.pri.lph-cta{background:#00C53B!important;color:#04140A!important;border-color:transparent!important;font-weight:800}
 html body.lapp #lapp [class*="ap-o"] em,html body.lapp [class*="ap-o"] em{color:#fff!important;background:var(--gr700,#00752A)!important}
+/* v43 R5 — 116 검색 시트: 추천 검색어 + 사진 결과 */
+.ap-srp{list-style:none;margin:4px 0 8px;padding:0;display:flex;flex-direction:column;gap:8px}
+.ap-srp a{display:flex;align-items:center;gap:12px;padding:8px;border-radius:16px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--line,rgba(0,0,0,.06));color:inherit;text-decoration:none;min-height:64px}
+.ap-srpi{position:relative;flex:none;width:72px;height:52px;border-radius:12px;background:var(--gr100,#D3F2DC) center/cover no-repeat}
+.ap-srpi em{position:absolute;left:6px;top:6px;width:20px;height:20px;border-radius:7px;display:grid;place-items:center;background:rgba(4,16,10,.72);color:#fff;font-style:normal;font-size:11px;font-weight:800}
+.ap-srpt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.ap-srpt b{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ap-srpt small{font-size:12.5px;color:var(--mute,#6B6F6C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-srp a>svg{color:var(--mute,#6B6F6C);flex:none}
+html[data-theme=dark] .ap-srp a{background:#1C1F1E;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+/* v43 R5 — 112 선생님 이름: 기본 입력칸 → 캐릭터 · 편집 아이콘이 있는 DDS 입력 */
+body.lapp .ap-nm43{gap:8px;font:700 14px/20px var(--sg)}
+body.lapp .ap-nm43 .ap-nml small{font-weight:500;font-size:12px;color:var(--mute,#6B6F6C);margin-left:6px}
+body.lapp .ap-nmw{position:relative;display:flex;align-items:center;gap:10px;height:56px;padding:0 14px 0 8px;border-radius:16px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--pc,#00862D) 40%,var(--line,#E4E4EA));transition:box-shadow .15s}
+body.lapp .ap-nmw:focus-within{box-shadow:inset 0 0 0 2px var(--pc,#00862D),0 0 0 4px color-mix(in srgb,var(--pc,#00862D) 14%,transparent)}
+body.lapp .ap-nmi{flex:none;width:40px;height:40px;border-radius:12px;overflow:hidden;display:grid;place-items:center;background:color-mix(in srgb,var(--pc,#00862D) 12%,#fff)}
+body.lapp .ap-nmi>*{transform:scale(.8)}
+body.lapp .ap-nm43 input{flex:1;min-width:0;height:100%!important;border:0!important;border-radius:0!important;padding:0!important;background:transparent!important;font:700 17px/1 var(--sg)!important;box-shadow:none!important}
+body.lapp .ap-nme{flex:none;color:var(--mute,#6B6F6C)}
+html[data-theme=dark] body.lapp .ap-nmw{background:#1C1F1E}
+/* v43 R5 — 117 앱 강좌 탭: 트랙 카드 단추를 그린 주 단추로 */
+body.lapp .track .lbtn{background:var(--gr600,#00862D)!important;border-color:var(--gr600,#00862D)!important;color:#fff!important}

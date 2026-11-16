@@ -271,6 +271,35 @@
     return `<article class="clb-card${on ? ' on' : ''}" data-act="clb-sel" data-v="${esc(e.key)}" data-q="${esc(qOf(e))}" role="button" tabindex="0" aria-pressed="${on}" aria-label="${esc(e.title)} 미리보기">${thumb(e)}<div class="clb-tx"><b title="${esc(e.title)}">${esc(e.title)}</b><small>${esc(subOf(e))}</small>${useLine(e)}</div></article>`; }
   function row(e) { const on = UI.clibSel === e.key; const L = lenOf(e);
     return `<article class="clb-lrow${on ? ' on' : ''}" data-act="clb-sel" data-v="${esc(e.key)}" data-q="${esc(qOf(e))}" role="button" tabindex="0" aria-pressed="${on}" aria-label="${esc(e.title)} 미리보기">${thumb(e)}<div class="clb-tx"><b title="${esc(e.title)}">${esc(e.title)}</b>${useLine(e)}</div><span class="clb-lk">${esc(kName(e.kind))}</span><span class="clb-ll">${esc(L || '—')}</span><span class="clb-chev" aria-hidden="true">›</span></article>`; }
+  /* v43 R5 — 디지털북 탭(034): 단색 작은 표지 3장 → 사진 표지 서가 + 오른쪽 열람 통계(이번 주 열람 막대 · 단원별 열람).
+     실제 열람 기록(bkRows)이 있으면 그 값, 시연 기관(샘플 데이터로 시작)에서 기록이 없으면 책마다 정해진 가상 수치. 빈 스튜디오는 0 그대로 */
+  const bkH = s => [...String(s || '')].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  function bkStat(b) { const chs = b.chs || []; let R = []; try { R = typeof bkRows === 'function' ? bkRows(b) : []; } catch (x) { R = []; }
+    const demo = !(S.org && S.org.empty);
+    if (R.length || !demo) { const n = R.length; const p = n ? Math.round(R.reduce((a, r) => a + (+r.c.p || 0), 0) / n) : 0; const done = R.filter(r => r.c.complete).length;
+      const ch = chs.map(c => R.filter(r => r.st && r.st.r && r.st.r[c.id]).length); const wk = [...Array(7)].map((_, i) => { const d = new Date(Date.now() - (6 - i) * 864e5 + 9 * 3600e3).toISOString().slice(0, 10); return R.filter(r => String(r.at || '').slice(0, 10) === d).length; });
+      return { n, p, done, ch, wk, demo: false }; }
+    const h = bkH(b.id + b.title); const n = 18 + h % 42; const p = 38 + (h >>> 3) % 48; const done = Math.max(1, Math.round(n * p / 100 * .45));
+    const ch = chs.map((c, i) => Math.max(1, Math.round(n * (1 - i * (.18 + ((h >>> (i + 2)) % 10) / 100))))); const wk = [...Array(7)].map((_, i) => Math.round(n * (.18 + ((h >>> (i * 3)) % 9) / 30)) + (i > 3 ? 4 : 0));
+    return { n, p, done, ch, wk, demo: true }; }
+  function bkCover(e, big) { const b = e.ref || {}; const LV = ((typeof LSV === 'function' && LSV().levels) || [])[b.level] || {}; const u = window.V4 && V4.photo ? V4.photo(`${e.title} 도서 책`, e.ref.id) : '';
+    const acts = (b.chs || []).reduce((a, c) => a + (c.blocks || []).filter(x => typeof BK_TRACK === 'object' && BK_TRACK.has(x.type)).length, 0);
+    return `<span class="bks-cov${big ? ' big' : ''}" style="--bk:${esc(String(b.color || '#00862D').replace(/[^#\w(),.% ]/g, ''))}" aria-hidden="true">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : ''}<i class="bks-spine"></i>${LV.name ? `<em class="bks-lv">${esc(LV.name)}</em>` : ''}<span class="bks-ct"><small>DIGITAL BOOK</small><b>${esc(String(e.title).replace(/\s*디지털북$/, ''))}</b><span>${(b.chs || []).length}단원 · 활동 ${acts}개</span></span></span>`; }
+  function shelfHTML(L) { const ST = L.map(e => ({ e, s: bkStat(e.ref || {}) })); const tot = ST.reduce((a, x) => a + x.s.n, 0); const dn = ST.reduce((a, x) => a + x.s.done, 0);
+    const avg = ST.length ? Math.round(ST.reduce((a, x) => a + x.s.p, 0) / ST.length) : 0; const wk = [...Array(7)].map((_, i) => ST.reduce((a, x) => a + (x.s.wk[i] || 0), 0)); const wmax = Math.max(1, ...wk);
+    const top = ST.slice().sort((a, b) => b.s.n - a.s.n)[0]; const WDN = ['일', '월', '화', '수', '목', '금', '토']; const d0 = new Date(Date.now() + 9 * 3600e3).getUTCDay();
+    const cards = ST.map(({ e, s }) => { const on = UI.clibSel === e.key; const c = e.ref && e.ref.cls && (S.classes || []).find(x => x.id === e.ref.cls);
+      return `<article class="bks-card${on ? ' on' : ''}" data-act="clb-sel" data-v="${esc(e.key)}" data-q="${esc(qOf(e))}" role="button" tabindex="0" aria-pressed="${on}" aria-label="${esc(e.title)} 미리보기">${bkCover(e)}
+        <div class="bks-tx"><b title="${esc(e.title)}">${esc(e.title)}</b><small>${c ? `연결 ${esc(cname())} · ${esc(c.name)}` : `연결된 ${esc(cname())} 없음`}${e.ref && e.ref.on === false ? ' · 숨김' : ''}</small>
+        <span class="bks-pb" aria-hidden="true"><i style="width:${s.p}%"></i></span><span class="bks-nums"><span><b>${s.n}</b>명 열람</span><span><b>${s.p}</b>% 평균</span><span><b>${s.done}</b>명 완독</span></span></div></article>`; }).join('');
+    const chRows = top ? (top.e.ref.chs || []).map((c, i) => { const v = top.s.ch[i] || 0; const mx = Math.max(1, ...top.s.ch); return `<li><span class="bks-cn">${i + 1}</span><span class="bks-cl"><b>${esc(c.title)}</b><span class="bks-cb" aria-hidden="true"><i style="width:${Math.round(v / mx * 100)}%"></i></span></span><em>${v}명</em></li>`; }).join('') : '';
+    return `<div class="bks">
+      <div class="bks-main"><div class="bks-grid" id="clbGrid">${cards}</div><div class="clb-none" id="clbNone" hidden>찾는 디지털북이 없습니다.</div></div>
+      <aside class="bks-side" aria-label="디지털북 열람 통계">
+        <section class="bks-box"><h3>이번 주 열람</h3><p class="bks-big"><b>${wk.reduce((a, x) => a + x, 0)}</b>회 <small>${ST.length}권 · 열람 ${tot}명 · 완독 ${dn}명 · 평균 진도 ${avg}%</small></p>
+          <div class="bks-wk" role="img" aria-label="최근 7일 열람 수 ${wk.join(', ')}">${wk.map((v, i) => `<span class="${i === 6 ? 'td' : ''}"><i style="height:${Math.max(6, Math.round(v / wmax * 100))}%"></i><em>${v}</em><small>${WDN[(d0 + 1 + i) % 7]}</small></span>`).join('')}</div></section>
+        ${top ? `<section class="bks-box"><h3>단원별 열람 <small>${esc(top.e.title)}</small></h3><ol class="bks-ch">${chRows}</ol><p class="bks-note">${ic('spark', 14)} ${top.s.ch.length > 1 && top.s.ch[1] < top.s.ch[0] * .7 ? `2단원에서 ${top.s.ch[0] - top.s.ch[1]}명이 멈췄습니다. 확인 문제를 앞으로 옮기면 이어 읽기가 늘어납니다.` : '단원마다 고르게 읽히고 있습니다.'}</p></section>` : ''}
+      </aside></div>`; }
   const START = () => [
     ['upload', '1', '가진 파일 올리기', '쓰던 영상 · PPT · PDF가 있다면 그대로 올립니다.', '파일 올리기'],
     ['aivideo', '2', '주제만 쓰고 AI 강의 영상 만들기', '한 줄만 쓰면 슬라이드와 목소리로 된 강의가 나옵니다.', 'AI 영상 만들기'],
@@ -328,9 +357,10 @@
     const make1 = MAKE.find(m => (tb === 'video' && m[0] === 'aivideo') || (tb === 'doc' && m[0] === 'doc') || (tb === 'quiz' && m[0] === 'quiz') || (tb === 'book' && m[0] === 'book') || (tb === 'link' && m[0] === 'youtube'));
     const body = L.length ? `<div class="${vm === 'list' ? 'clb-list' : 'clb-grid'}" id="clbGrid">${L.slice(0, lim).map(vm === 'list' ? row : card).join('')}</div><div class="clb-none" id="clbNone" ${shown.length ? 'hidden' : ''}>찾는 콘텐츠가 없습니다. 다른 말로 찾아보거나 [만들기]를 눌러 새로 만드세요.</div>${L.length > lim ? `<div class="clb-more"><button type="button" class="btn" data-act="clb-more">더 보기 (${L.length - lim}개 더)</button></div>` : ''}`
       : `<div class="clb-empty1"><p>아직 ${esc(TABS.find(x => x[0] === tb)[1])} 콘텐츠가 없습니다.</p>${make1 ? `<button type="button" class="btn pri" data-act="clb-mk" data-v="${make1[0]}">${esc(make1[1])} ${['upload', 'youtube'].includes(make1[0]) ? '넣기' : '만들기'}</button>` : ''}</div>`;
+    const body2 = tb === 'book' && L.length && vm !== 'list' ? shelfHTML(L.slice(0, lim)) : body; /* v43 R5 */
     const fresh = !A.some(x => x.origin !== 'book'); /* 기본으로 들어 있는 디지털북만 있을 때도 처음 안내를 먼저 보여 준다 */
     const ph = panelHTML(); setTimeout(() => document.body.classList.toggle('clb-sheet', !!ph && innerWidth <= 860), 0);
-    return `<div class="clb">${top}${lmsNote}${fresh ? emptyHTML() : ''}${bar}<div class="clb-wrap${ph ? ' has-p' : ''}"><div class="clb-main">${body}${storageLine()}</div><aside class="clb-panel" id="clbPanel" aria-label="미리보기" ${ph ? '' : 'hidden'}>${ph}</aside></div></div>`;
+    return `<div class="clb">${top}${lmsNote}${fresh ? emptyHTML() : ''}${bar}<div class="clb-wrap${ph ? ' has-p' : ''}"><div class="clb-main">${body2}${storageLine()}</div><aside class="clb-panel" id="clbPanel" aria-label="미리보기" ${ph ? '' : 'hidden'}>${ph}</aside></div></div>`;
   };
 
   /* 검색은 다시 그리지 않고 카드만 거른다(입력 중 초점 유지) */

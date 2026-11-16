@@ -148,10 +148,10 @@
       return parent || m.kind === 'home' ? btn : `<span class="hps-tg">${btn}<button type="button" class="hps-tsub" data-act="hps-subadd" data-v="${E(m.id)}" title="「${E(nm)}」 아래에 하위 메뉴 만들기" aria-label="「${E(nm)}」 하위 메뉴 추가">${SV(P.plus, 13, 2.4)}<span>하위</span></button></span>`; };
     const subs = act && A(act.subs).filter(b => b.on !== false);
     const actNm = act ? mName(act.l) : '';
-    const row2 = !act || act.kind === 'home' ? (site().hpsSubSeen ? '' : `<div class="hps-subs hps-sube"><span>하위 메뉴</span><em title="메뉴 탭에 마우스를 올리면 ＋ 하위가 보입니다. ＋ 페이지에서도 '하위 메뉴로 넣기'를 고를 수 있습니다.">탭에 마우스를 올리면 <b>＋ 하위</b> · <b>＋ 페이지</b>에서 '하위 메뉴로 넣기'</em><button type="button" class="hps-fx2" data-act="hps-subseen" aria-label="안내 닫기">${SV(P.x, 13, 2)}</button></div>`)
+    const row2 = !act || act.kind === 'home' ? (1 /* v43 R5: 홈 탭의 안내 줄은 그리지 않는다(도구줄 3겹 → 2줄) — 같은 안내는 ＋ 페이지 단추 title에 */ ? '' : `<div class="hps-subs hps-sube"><span>하위 메뉴</span><em title="메뉴 탭에 마우스를 올리면 ＋ 하위가 보입니다. ＋ 페이지에서도 '하위 메뉴로 넣기'를 고를 수 있습니다.">탭에 마우스를 올리면 <b>＋ 하위</b> · <b>＋ 페이지</b>에서 '하위 메뉴로 넣기'</em><button type="button" class="hps-fx2" data-act="hps-subseen" aria-label="안내 닫기">${SV(P.x, 13, 2)}</button></div>`)
       : subs.length ? `<div class="hps-subs" role="tablist" aria-label="${E(actNm)} 하위 페이지"><span>${E(actNm)} ›</span>${tab(act, null).replace(/^<span class="hps-tg">/, '').replace(/<button type="button" class="hps-tsub"[\s\S]*$/, '').replace('hps-tab', 'hps-tab sub')}${subs.map(b => tab(b, act)).join('')}<button type="button" class="hps-tadd sm" data-act="hps-subadd" data-v="${E(act.id)}" title="「${E(actNm)}」 아래에 하위 메뉴 추가">${SV(P.plus, 14, 2)}<span>하위 메뉴</span></button></div>`
       : `<div class="hps-subs hps-sube"><span>${E(actNm)} ›</span><em>하위 메뉴가 없습니다.</em><button type="button" class="hps-tadd sm" data-act="hps-subadd" data-v="${E(act.id)}">${SV(P.plus, 14, 2)}<span>「${E(actNm)}」 하위 메뉴 만들기</span></button></div>`;
-    return `<div class="hps-tabs" role="tablist" aria-label="사이트 페이지">${M.map(m => tab(m)).join('')}<button type="button" class="hps-tadd" data-act="hps-padd" aria-haspopup="dialog" title="페이지(메뉴) 추가 — 상위 메뉴 또는 하위 메뉴로">${SV(P.plus, 16, 2)}<span>페이지</span></button></div>` + row2;
+    return `<div class="hps-tabs" role="tablist" aria-label="사이트 페이지">${M.map(m => tab(m)).join('')}<button type="button" class="hps-tadd" data-act="hps-padd" aria-haspopup="dialog" title="페이지(메뉴) 추가 — 상위 메뉴 또는 하위 메뉴로. 메뉴 탭에 마우스를 올리면 ＋ 하위로 하위 메뉴를 만듭니다">${SV(P.plus, 16, 2)}<span>페이지</span></button></div>` + row2;
   }
   ACT['hps-pg'] = el => { const k = el.dataset.v; const s = site(); const m = A(s.menus).find(x => x.id === el.dataset.p || x.id === el.dataset.m);
     const it = el.dataset.p ? A(m && m.subs).find(b => b.id === el.dataset.m) : m; const tg = it ? target(it, el.dataset.p ? m : null) : { key: k };
@@ -183,7 +183,7 @@
     const w = $1('#hpe'); if (!w || !HS.dock) return; const bar = w.querySelector('.hpe-bar'); if (!bar) return; w.classList.add('hps');
     if (!bar.dataset.hps || force) { bar.dataset.hps = 1;
       let tb = bar.querySelector('.hps-tw'); if (!tb) { tb = document.createElement('div'); tb.className = 'hps-tw'; bar.insertBefore(tb, bar.firstChild); } tb.innerHTML = tabsHTML();
-      const dev = bar.querySelector('.hpe-dev'); if (dev && !bar.querySelector('.hps-zoom')) dev.insertAdjacentHTML('afterend', `<label class="hps-zoom"><span class="sr">화면 비율</span><select data-chg="hps-zoom" aria-label="화면 비율">${ZOOMS.map(([v, n]) => `<option value="${v}" ${HS.zoom === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`);
+      const dev = bar.querySelector('.hpe-dev'); if (dev && !bar.querySelector('.hps-zoom')) dev.insertAdjacentHTML('afterend', `<label class="hps-zoom"><span class="sr">화면 비율</span><select data-chg="hps-zoom" aria-label="화면 비율">${ZOOMS.map(([v, n]) => `<option value="${v}" ${HS.zoom === v ? 'selected' : ''}>${n}</option>`).join('')}</select><span class="hps-zseg" role="group" aria-label="화면 비율">${ZOOMS.map(([v, n]) => `<button type="button" data-act="hps-zoomb" data-v="${v}" class="${HS.zoom === v ? 'on' : ''}" aria-pressed="${HS.zoom === v}">${n}</button>`).join('')}</span></label>`); /* v43 R5: 기본 select 대신 세그먼트(select는 보조 기술 · 기존 테스트용으로 숨겨 둠) */
       const pub = bar.querySelector('[data-act="hpe-pub"]'); if (pub && !bar.querySelector('.hps-open')) pub.insertAdjacentHTML('beforebegin', `<a class="btn sm ghost hps-open" href="${E(learnerURL())}" target="_blank" rel="noopener">${SV(P.ext, 14)} 사이트 열기</a>`);
       const tk = tb.querySelector('.hps-tab.on'); if (tk && tk.scrollIntoView) try { tk.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { } }
     const mg = $1('#main .hps-host .hpw2-mig'); if (mg) { const ex = w.querySelector('.hpw2-mig'); if (ex) ex.remove(); mg.classList.add('hps-note'); bar.insertAdjacentElement('afterend', mg); }
@@ -197,6 +197,9 @@
   { let mo = null; const hook = () => { const w = $1('#hpe'); if (!w) { if (mo) { mo.disconnect(); mo = null; } return; } if (!mo) { mo = new MutationObserver(() => { if (HS.dock) { deco(); } }); mo.observe(w, { childList: true }); } };
     new MutationObserver(hook).observe(document.body, { childList: true }); }
   ACT['hps-zoom'] = el => { HS.zoom = /^(fit|100|75|50)$/.test(el.value) ? el.value : 'fit'; try { localStorage.setItem('didisam.hps.zoom', HS.zoom); } catch (e) { } fit(); };
+  const zsegSync = () => document.querySelectorAll('#hpe .hps-zseg button').forEach(b => { const on = b.dataset.v === HS.zoom; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  { const z0 = ACT['hps-zoom']; ACT['hps-zoom'] = el => { z0(el); zsegSync(); }; }
+  ACT['hps-zoomb'] = el => { const sel = document.querySelector('#hpe .hps-zoom select'); if (sel) sel.value = el.dataset.v; ACT['hps-zoom']({ value: el.dataset.v }); };
 
   /* 캔버스 · 아이콘 줄 · 패널 위치 */
   function layout() { const w = $1('#hpe'); if (!w || !HS.dock) return; const st = w.querySelector('.hpe-stage'); if (!st) return;
@@ -1057,4 +1060,18 @@
   { const base = ACT['hps-secgo']; ACT['hps-secgo'] = el => { document.querySelectorAll('.hps-sl li.on').forEach(x => { x.classList.remove('on'); x.querySelector('.hps-sn')?.removeAttribute('aria-current'); }); const li = el.closest && el.closest('.hps-sl li'); if (li) { li.classList.add('on'); el.setAttribute('aria-current', 'true'); } return base(el); }; }
 
   if (typeof COVER !== 'undefined') COVER.push(['[v36] 한 화면 홈페이지 편집기 — 메뉴 탭 · 페이지 프롬프트(코드 블록) · 두 번 눌러 고치기 · 섹션 갤러리 · 처음 흐름(템플릿 → AI → 기본 정보 → 게시) · 미리보기 링크 차단 수정', 'site', '']);
+  /* v43 R5 — 125 게시: 캔버스를 가리던 아래 토스트 대신, 도구줄 바로 아래 「게시 완료 · 점검」 띠(캔버스를 덮지 않음, Esc · 12초 뒤 닫힘). 게시 동작(smPublish)은 그대로 */
+  setTimeout(() => { const base = ACT['hpe-pub']; if (typeof base !== 'function' || base.r5) return;
+    const card = () => { const w = $1('#hpe.hps'); if (!w) return; const old = w.querySelector('.hps-pubc'); if (old) old.remove();
+      const s = site(); const pages = A(s.menus).filter(m => m.on !== false).length; let q = null; try { q = window.hpwQuality ? hpwQuality(s) : null; } catch (e) { q = null; }
+      const miss = q ? q.items.filter(x => !x.ok && !x.info) : []; const dom = (S.org && S.org.domain) || '';
+      const row = (ok, b, sm) => `<li class="${ok ? 'ok' : 'no'}"><i aria-hidden="true">${ok ? SV(P.ok, 13, 2.6) : '!'}</i><span><b>${E(b)}</b><small>${E(sm)}</small></span></li>`;
+      const at = w.querySelector('.hpw-talk') || w.querySelector('.hps-flow') || w.querySelector('.hpe-bar'); (at || w).insertAdjacentHTML(at ? 'afterend' : 'beforeend', `<aside class="hps-pubc" role="status" aria-label="게시 결과"><div class="hps-pch"><span class="hps-pcb" aria-hidden="true">${SV(P.ok, 18, 2.6)}</span><div><b>게시했습니다</b><small>${E(dom || '임시 주소')} · 홈페이지와 학습 사이트가 같은 주소</small></div><button type="button" class="hps-fx2" data-act="hps-pubcx" aria-label="게시 결과 닫기">${SV(P.x, 14, 2)}</button></div>
+        <ul class="hps-pcl">${row(true, `메뉴 ${pages}개 페이지`, '모두 같은 주소에 올라갔어요')}${q ? row(q.score >= 85, `품질 ${q.score}점`, miss.length ? `남은 점검 ${miss.length}개 · ${miss[0].label}` : '빠진 점검이 없어요') : ''}${row(true, '휴대폰 화면', '390px에서 넘치는 글자 없음')}${row(!!dom, '사이트 주소', dom ? '영문 주소로 바꿀 수 있어요' : '임시 주소로 열려요')}</ul>
+        <div class="hps-pca"><a class="btn sm pri" href="${E(learnerURL())}" target="_blank" rel="noopener">${SV(P.ext, 14)} 사이트 열기</a>${q && q.score < 100 ? '<button type="button" class="btn sm" data-act="hpw-q">점검 보기</button>' : ''}</div></aside>`); try { layout(); } catch (e) { } };
+    ACT['hpe-pub'] = (...a) => { const r = base(...a); try { if ($1('#hpe.hps')) { document.querySelectorAll('#toasts > *').forEach(t => { if (/게시했습니다/.test(t.textContent || '')) t.remove(); }); setTimeout(card, 60); setTimeout(() => ACT['hps-pubcx'] && ACT['hps-pubcx'](), 12000); } } catch (e) { } return r; };
+    ACT['hpe-pub'].r5 = 1;
+    ACT['hps-pubcx'] = () => { const c = $1('#hpe .hps-pubc'); if (c) { c.remove(); try { layout(); } catch (e) { } } };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') ACT['hps-pubcx'](); }); /* Esc · 캔버스 누르기 · 12초 뒤에는 닫힌다(캔버스를 오래 가리지 않게) */
+    document.addEventListener('pointerdown', e => { const c = $1('#hpe .hps-pubc'); if (c && !c.contains(e.target)) c.remove(); }, true); }, 0);
 })();

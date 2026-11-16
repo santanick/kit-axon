@@ -424,3 +424,15 @@ body.tube.tb-fsm:not(.tb-watch) #tbFab.tb-fab{width:64px;height:64px}
 body.tube.tb-fsm:not(.tb-watch) #tbFab.tb-fab span{display:inline}
 body.tube:not(.tb-watch) #lm{padding-bottom:calc(var(--ap-nav) + var(--ap-sb,0px) + 24px)}
 @media (min-width:900px){body.tube:not(.tb-watch):has(> #tbFab) .ap-nav.tb-nav{right:auto;transform:translateX(calc(-50% - 36px))}body.tube:not(.tb-watch) #tbFab.tb-fab{right:auto;left:calc(50% + 240px - 36px + 8px)}}
+/* v43 R5 — 앱 홈 선반 타일 실사진(빗금 자리표시 대신) · 이어 보기 재생 단추 가운데 · 사진 높이(f-app 기준) */
+.tb-tt.img{background:var(--gr900);overflow:hidden;justify-content:space-between;box-shadow:none}
+.tb-tt.img>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tb-tt.img::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,16,10,.28),rgba(4,16,10,0) 40%,rgba(4,16,10,.46))}
+.tb-tt.img>i,.tb-tt.img>em{position:relative;z-index:1}
+.tb-tt.img>i{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.92);color:var(--gr800);box-shadow:none}
+.tb-tt.img>em{background:rgba(4,16,10,.72);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.tb-tt.img>em.lv{background:var(--co600,#E8590C);color:#fff}
+.tb-tt{height:112px}
+.tb-cm>span.tb-pl{display:grid;flex-direction:row}
+.tb-ct{height:168px}
+html[data-theme="dark"] .tb-tt.img>i{background:rgba(21,23,22,.86);color:var(--gr300)}
