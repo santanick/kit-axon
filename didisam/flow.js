@@ -164,7 +164,7 @@ function bComposer() {
   document.body.className = document.body.className.replace(/\bmode-\w+/g, '').trim() + ' mode-app mode-bld';
   const w = CUR.ws; const key = bKey(); const T = w !== 'home' && w !== 'dash' && w !== 'settings' ? wsTabs(w) : [];
   const hl = UI.bhl && UI.bhl.key === key && Date.now() - UI.bhl.t < 12000;
-  const L = bList(); const dn = L.filter(s => bDone(s.id)).length; const fq = typeof FILLQ === 'function' ? FILLQ()[CUR.tab] || FILLQ()[w] : '';
+  const L = bList(); const dn = L.filter(s => bDone(s.id)).length; const fq = ['message', 'auto'].includes(CUR.tab) ? '' /* v43 F1 018 · 024: 머리 카드에 AI 버튼이 있어 상단 오른쪽 「AI SAM에게 맡기기」는 중복 */ : typeof FILLQ === 'function' ? FILLQ()[CUR.tab] || FILLQ()[w] : '';
   const c = bCur(); const onStep = c && !bDone(c.id) && (c.view === key);
   $('#app').innerHTML = `
   <header class="top">

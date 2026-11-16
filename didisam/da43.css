@@ -399,3 +399,111 @@
 .r1-dgart .ic{flex:none;opacity:.95}
 .r1-dgart i{display:block;width:14px;border-radius:7px 7px 0 0;background:rgba(255,255,255,.28);align-self:flex-end}
 .r1-dgart i:nth-of-type(1){height:38%;margin-left:auto}.r1-dgart i:nth-of-type(2){height:62%}.r1-dgart i:nth-of-type(3){height:84%;background:rgba(255,255,255,.45)}
+
+/* ═════════ v43 F1 — 017 운영자 · 018 메시지 · 024 자동화 · 026 러닝 저니 · 032 학습자 사이트 ═════════ */
+/* 017 역할 카드(사람 행 + 권한 칩) */
+.f1-rg.n3{grid-template-columns:repeat(3,minmax(0,1fr))}.f1-rg.n4{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:1100px){.f1-rg.n3,.f1-rg.n4{grid-template-columns:1fr}}
+.f1-roles .r1-role{gap:12px}
+.f1-pl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.f1-ap{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--n50);min-height:56px}
+.f1-ap .l43-av{width:36px;height:36px;flex:none}
+.f1-apt{display:flex;flex-direction:column;align-items:flex-start;text-align:left;min-width:0;flex:1;gap:2px}
+.f1-apt b{font-size:14.5px;font-weight:800;color:var(--g900)}.f1-apt small{font-size:12.5px;color:var(--g600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f1-scs{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.f1-sc{font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--surface);color:var(--g700);box-shadow:inset 0 0 0 1px var(--hair)}
+.f1-sc.all{background:var(--gr50);color:var(--gr800);box-shadow:none}.f1-sc.no{color:#93370D;background:#FEF0C7;box-shadow:none}
+.f1-ed{flex:none;min-height:36px}.f1-me{flex:none;font-size:12px;font-weight:800;color:var(--gr800);background:var(--gr50);padding:3px 10px;border-radius:99px}
+.f1-none{color:var(--g600);font-size:13px;justify-content:center}
+.f1-pt{font-size:12px;font-weight:700;color:var(--g600);margin-top:2px}
+.f1-ed-h{display:flex;align-items:center;gap:12px;margin-bottom:6px}.f1-ed-h div{display:flex;flex-direction:column}.f1-ed-h small{color:var(--g600);font-size:13px}
+.f1-ed-l{margin:14px 0 8px;font-size:13px;font-weight:800;color:var(--g700)}
+.f1-rcs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.f1-rc{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px 14px;min-height:72px;border-radius:14px;border:1px solid var(--hair);background:var(--surface);font:inherit;cursor:pointer;color:var(--g900)}
+.f1-rc b{font-size:14.5px;font-weight:800}.f1-rc small{font-size:12.5px;color:var(--g600)}
+.f1-rc.on{border-color:var(--gr600);box-shadow:inset 0 0 0 1px var(--gr600);background:var(--gr50)}
+.f1-eda{display:flex;flex-wrap:wrap;gap:8px}
+/* 017 오른쪽 아이콘 타임라인 */
+.f1-itl h3{display:flex;align-items:center;gap:8px}.f1-itl h3 em{font-style:normal;margin-left:auto;font-size:12.5px;font-weight:700;color:var(--g600)}
+.f1-itl ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.f1-itl li{display:flex;gap:12px;padding:8px 0;position:relative}
+.f1-itl li:not(:last-child)::before{content:"";position:absolute;left:15px;top:40px;bottom:-4px;width:2px;background:var(--gr100)}
+.f1-ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--n100);color:var(--g700)}
+.f1-itl li.ok .f1-ic{background:var(--gr50);color:var(--gr700)}.f1-itl li.warn .f1-ic{background:#FEE4E2;color:#B42318}.f1-itl li.doc .f1-ic{background:#E0F2FE;color:#026AA2}
+.f1-itl li div{display:flex;flex-direction:column;min-width:0;gap:1px}
+.f1-itl li b{font-size:13.5px;font-weight:800;color:var(--g900)}.f1-itl li p{margin:0;font-size:13px;color:var(--g700);line-height:1.45}.f1-itl li small{font-size:12px;color:var(--g600)}
+/* 018 작성 바 · 발송 내역 행 */
+.f1-cbar{display:flex;align-items:center;gap:14px;padding:16px 18px!important;margin:0 0 16px}
+.f1-cbi{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--gr50);color:var(--gr700);flex:none}
+.f1-cbq{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--hair);border-radius:14px;background:var(--n50);padding:10px 16px;min-height:52px;font:inherit;cursor:text;color:var(--g900)}
+.f1-cbq b{font-size:14.5px;font-weight:800}.f1-cbq span{font-size:13px;color:var(--g600)}
+.f1-cbn{display:flex;gap:4px;flex:none}.f1-cbn i{font-style:normal;font-size:12.5px;font-weight:700;color:var(--g600);padding:5px 10px;border-radius:99px;background:var(--n50)}.f1-cbn i.on{background:var(--g900);color:var(--surface)}
+@media (max-width:1100px){.f1-cbn{display:none}}
+.f1-cmp[hidden]{display:none!important}
+.f1-cmp .ch .f1-cx{margin-left:6px}
+.f1-seg{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.f1-mh{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.f1-mh li{display:grid;grid-template-columns:44px minmax(0,1.6fr) minmax(0,1fr) 110px 150px 36px;align-items:center;gap:14px;padding:12px 14px;border-radius:16px;box-shadow:inset 0 0 0 1px var(--hair);background:var(--surface);min-height:64px}
+.f1-mh li:hover{box-shadow:inset 0 0 0 1px var(--gr600)}
+.f1-mhi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--gr50);color:var(--gr700)}.f1-mhi.ml{background:#E0F2FE;color:#026AA2}
+.f1-mht{display:flex;flex-direction:column;min-width:0;gap:2px}.f1-mht b{font-size:14.5px;font-weight:800;color:var(--g900)}.f1-mht small{font-size:12.5px;color:var(--g600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f1-mhto{display:flex;flex-direction:column;align-items:flex-start;gap:4px;font-size:13px;color:var(--g700);min-width:0}
+.f1-mhn{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.f1-mhn b{font-size:16px;font-weight:800;color:var(--g900);font-variant-numeric:tabular-nums}.f1-mhn small{font-size:12px;color:var(--g600)}
+.f1-mhr{display:flex;flex-direction:column;gap:4px}.f1-mhr small{font-size:12px;color:var(--g600)}.f1-mhr .cm43-rd{width:100%}
+@media (max-width:1100px){.f1-mh li{grid-template-columns:40px minmax(0,1fr) auto 32px}.f1-mhto,.f1-mhr{display:none}}
+/* 024 새 자동화 칩 흐름 노드 · 승인 처리 행 */
+.f1-aunew{padding:18px 20px!important}
+.f1-auh{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}.f1-auh b{font-size:16px;font-weight:800;color:var(--g900)}.f1-auh small{font-size:13px;color:var(--g600)}
+.f1-auf{display:flex;align-items:center;gap:0;flex-wrap:wrap;row-gap:10px}
+.f1-aun{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:left;padding:10px 16px 10px 10px;min-height:52px;border-radius:99px;border:1px solid var(--hair);background:var(--surface);font:inherit;cursor:pointer;color:var(--g900)}
+.f1-aun:hover{border-color:var(--gr600);background:var(--gr50)}
+.f1-aun i{grid-row:1/3;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--gr50);color:var(--gr700)}
+.f1-aun small{font-size:11.5px;font-weight:700;color:var(--g600);line-height:1.2}.f1-aun b{font-size:14px;font-weight:800;line-height:1.3}
+.f1-aul{width:28px;height:2px;background:var(--gr500);position:relative;flex:none}.f1-aul::after{content:"";position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left-color:var(--gr500);border-right:0}
+.f1-auf .sp{flex:1}
+.f1-apr{display:flex;align-items:center;gap:12px;margin:14px 0 4px;padding:10px 12px;border-radius:14px;background:#FFFAEB;box-shadow:inset 0 0 0 1px #FEDF89;max-width:560px}
+.f1-apn{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#F79009;color:#fff;font-weight:800;flex:none}
+.f1-apr>span:nth-child(2){display:flex;flex-direction:column;flex:1;min-width:0}.f1-apr b{font-size:14px;font-weight:800;color:var(--g900)}.f1-apr small{font-size:12.5px;color:var(--g700)}
+.f1-apl{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.f1-apl li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;box-shadow:inset 0 0 0 1px var(--hair)}.f1-apl li div{display:flex;flex-direction:column;flex:1;min-width:0}.f1-apl small{color:var(--g600);font-size:12.5px}
+/* 026 단계 타임라인 */
+.f1-jt{list-style:none;margin:0 0 16px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.f1-js{display:flex;flex-direction:column;gap:10px;min-width:0}
+.f1-jsn{display:flex;align-items:center;gap:0;height:32px}
+.f1-jno{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--gr600);color:#fff;font-weight:800;font-size:14px;flex:none;box-shadow:0 0 0 5px var(--gr50)}
+.f1-jline{flex:1;height:2px;margin:0 -16px 0 10px;background:repeating-linear-gradient(90deg,var(--gr500) 0 8px,transparent 8px 14px)}
+.f1-jc{display:flex;flex-direction:column;gap:12px;padding:18px!important;flex:1;margin:0!important}
+.f1-jc header{display:flex;align-items:center;gap:8px}.f1-jc header .f1-jed{margin-left:auto}
+.f1-jdrag{width:32px;height:32px;border-radius:8px;border:0;background:var(--n50);color:var(--g600);display:grid;place-items:center;cursor:grab;flex:none}
+.f1-jdrag:hover,.f1-jdrag:focus-visible{background:var(--gr50);color:var(--gr700)}
+.f1-js.drag{opacity:.5}.f1-js.over .f1-jc{box-shadow:inset 0 0 0 2px var(--gr600)}
+.f1-jc h3{margin:0;font-size:20px;font-weight:800;color:var(--g900);letter-spacing:-.01em}
+.f1-jun{display:inline-flex;align-items:center;gap:6px;margin:0;align-self:flex-start;font-size:13px;font-weight:700;color:var(--gr800);background:var(--gr50);padding:5px 12px;border-radius:99px}
+.f1-jcl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;flex:1}
+.f1-jcl li{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--g900);padding:8px 10px;border-radius:12px;background:var(--n50)}
+.f1-jcl li.no{font-weight:500;color:var(--g600);font-size:13px}
+.f1-jci{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--surface);color:var(--gr700);box-shadow:inset 0 0 0 1px var(--hair);flex:none}
+.f1-jc footer{display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--hair)}
+.f1-jb{display:flex;align-items:center;gap:8px;flex:1;min-width:0}.f1-jb>span{display:flex;flex-direction:column}.f1-jb b{font-size:13.5px;font-weight:800;color:var(--g900)}.f1-jb small{font-size:12px;color:var(--g600)}
+.f1-jcnt{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:84px}.f1-jcnt b{font-size:18px;font-weight:800;color:var(--g900);font-variant-numeric:tabular-nums}.f1-jcnt small{font-size:12px;color:var(--g600)}
+.f1-jbar{display:block;width:84px;height:6px;border-radius:99px;background:var(--n100);overflow:hidden}.f1-jbar i{display:block;height:100%;background:var(--gr500);border-radius:99px}
+.f1-chs{display:flex;flex-wrap:wrap;gap:6px}
+.f1-ch{min-height:40px;padding:6px 14px;border-radius:99px;border:1px solid var(--hair);background:var(--surface);font:inherit;font-size:13.5px;font-weight:700;color:var(--g800,var(--g900));cursor:pointer}
+.f1-ch.on{background:var(--gr50);border-color:var(--gr600);color:var(--gr800)}
+/* 032 학습 페이지 패널: 스위치 행 · 좁은 패널(미리보기 확대) */
+.hps-lpr:has(.f1-sw){gap:0;border:1px solid var(--line,#E4E4EA);border-radius:12px;background:var(--surface,#fff);min-height:52px;padding-right:8px}
+.hps-lpr:has(.f1-sw) .hps-lpi{border:0;background:transparent;box-shadow:none}
+.hps-lpr:has(.f1-sw) .hps-lpi.on{background:var(--gr50);border-radius:12px 0 0 12px}
+.f1-sw{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 6px;cursor:pointer;flex:none;position:relative}
+.f1-sw input{position:absolute;opacity:0;width:1px;height:1px;margin:0;appearance:none;-webkit-appearance:none}
+.f1-sw i{width:40px;height:24px;border-radius:99px;background:var(--n300,#C5C8CA);position:relative;transition:background .15s;flex:none}
+.f1-sw i::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(16,24,40,.25);transition:transform .15s}
+.f1-sw input:checked+i{background:var(--gr600)}.f1-sw input:checked+i::after{transform:translateX(16px)}
+.f1-sw input:focus-visible+i{outline:2px solid var(--gr700);outline-offset:2px}
+.f1-sw span{font-size:12.5px;font-weight:700;color:var(--g700);min-width:26px}
+@media (min-width:761px){body.f1-lpan .hps-pan{width:340px}body.f1-lpan.hps-pan-on #hpe.hps .hpe-stage{margin-right:412px}}
+.f1-pjz{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:14px;padding:14px 16px;border-radius:16px;background:var(--n50)}
+.f1-pjz b{font-size:14px;font-weight:800;color:var(--g900)}.f1-pjz span{display:flex;flex-wrap:wrap;gap:6px}
+.f1-pjz i{font-style:normal;font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair);color:var(--g700)}
+.f1-pjz small{flex-basis:100%;font-size:12.5px;color:var(--g600)}
+.hps-lpr:has(.f1-sw) .hps-lpi{min-width:0}.hps-lpr:has(.f1-sw) .hps-lpi small{overflow:hidden;text-overflow:ellipsis;min-width:0}
