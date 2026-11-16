@@ -77,3 +77,17 @@
 .efl43a.dn>details[open]>summary header::after{transform:translateY(-30%) rotate(-135deg)}
 .efl43a.dn>details>:not(summary){margin-left:20px;margin-right:20px}.efl43a.dn>details[open]{padding-bottom:16px}
 @media (max-width:980px){.efl43g{grid-template-columns:1fr}.efl43s{position:static}.efl43hi{padding:28px 16px 24px}.efl43 .efl-in{padding:0 16px}.efl.efl43 .efl43h h1{font-size:28px}}
+/* v43.4 MC(109): 접힌(제출 완료) 과제를 펼치면 본문 칸이 좌우 여백(20px×2)만큼 카드 밖으로 밀리던 것 — 여백을 뺀 폭으로 */
+.efl43a.dn>details>.efl-ta{width:calc(100% - 40px)}
+@media (max-width:760px){.efl43 .efl-tabs button,.efl43 .efl-chips button{min-height:44px}.efl43lk{min-height:44px;padding:0 10px}.efl43 .efl43t{min-height:44px}}
+/* v43.4 P2(109) 휴대폰 폭: 통계 3칸 한 줄 · 분반 칩 한 줄 가로 넘김 */
+@media (max-width:760px){
+.efl43g{grid-template-columns:minmax(0,1fr)}.efl43g>.efl43m{min-width:0;max-width:100%}
+.efl43k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.efl43k span{min-width:0;padding:10px 12px}
+.efl43k small{font-size:12.5px;line-height:1.3;white-space:normal;word-break:keep-all}
+.efl43k b{font-size:20px;white-space:nowrap}
+.efl43 .efl-chips{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-right:16px}
+.efl43 .efl-chips::-webkit-scrollbar{display:none}
+.efl43 .efl-chips button{flex:none;white-space:nowrap}
+}

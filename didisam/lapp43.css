@@ -432,3 +432,125 @@ body.lapp.ap-myon #lm .ap-mymore i{font-style:normal;margin-left:4px;padding:1px
 body.lapp.ap-myon #lm .ap-mymore small{font:500 12.5px/1.3 var(--sg);color:var(--ap-mute,#5C554B);text-align:right}
 body.lapp.ap-myon #lm .ap-mymore:focus-visible{outline:2px solid var(--gr700,#00862D);outline-offset:2px}
 html[data-theme=dark] body.lapp.ap-myon #lm .ap-mytile .ap-mti{background:#123222;color:#7EE2A0}
+/* v43.4 MC: 휴대폰(앱 모드)에서도 필터 · 정렬 단추를 44px로(웹은 lhub.css 167행과 같은 규칙), 정렬 글자 13px */
+@media (max-width:760px){body.lapp #lm :is(.tfilt button,.lc26so button,.shp-chip,.lq-seg button,.lux-tabs button,.chips button,.seg button){min-height:44px}body.lapp #lm .lc26so button{font-size:13px}}
+/* v43.4 MC: 휴대폰 AI 튜터 단추(#tbFab)가 카드 · 단추를 가리던 것 — 48px 원형(이름은 화면 읽기 프로그램용으로 남김), 스크롤하는 동안 숨기고 멈추면 다시 보임, 본문 끝에 단추 높이만큼 여백 */
+@media (max-width:760px){
+body.lapp:not(.ap-myon) #tbFab.tb-fab{width:48px;height:48px;padding:0;gap:0;right:12px;border-radius:50%}
+body.lapp #tbFab.tb-fab span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+body.lapp #tbFab.tb-fab{transition:opacity .18s ease}
+body.lapp.tb-fscr #tbFab.tb-fab{opacity:0;pointer-events:none}
+body.lapp #lm{padding-bottom:calc(var(--ap-nav) + var(--ap-sb) + 72px)}
+}
+@media (prefers-reduced-motion:reduce){body.lapp #tbFab.tb-fab{transition:none}}
+
+/* v43.4 P2 휴대폰 폭(390px) 2차: 학습자 웹 화면별 교정(089 · 090 · 092 · 095 · 097 · 100 · 103 · 106 · 108 · 110 · 111) — PC(>760px)는 그대로 */
+@media (max-width:760px){
+/* 089 튜토리얼: 썸네일 실패 시 사진 배경(lrun.js가 깨진 img를 걷어 냄) · 제목 3줄 · 유형 칩 한 줄 가로 넘김 */
+html body.lapp #lm .tcard .th.th-noimg:not(.ph){background:color-mix(in srgb,var(--pri) 16%,var(--surface,#fff))}
+html body.lapp #lm .tcard .tci b{-webkit-line-clamp:3;line-clamp:3}
+html body.lapp #lm .tfilt .chips{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:8px;padding-right:16px}
+html body.lapp #lm .tfilt .chips::-webkit-scrollbar{display:none}
+html body.lapp #lm .tfilt .chips>button{flex:none;white-space:nowrap}
+/* 090 튜토리얼 상세: 영상 자리 = 16:9 포스터 + 가운데 재생 단추(검은 빈 상자 대신) · 「다 봤어요」 전체 폭 44px */
+html body.lapp #lm .tw2 .vbox[style*="--poster"]{position:relative;aspect-ratio:16/9;height:auto;min-height:0;background:#04100A var(--poster) center/cover;border-radius:16px;overflow:hidden}
+html body.lapp #lm .tw2 .vbox .vfac{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:100%;height:100%;padding:0;border:0;border-radius:0;background:linear-gradient(180deg,rgba(4,16,10,.05),rgba(4,16,10,.5));color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+html body.lapp #lm .tw2 .vbox .vfac span{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--pri);color:var(--pri-ink,#fff);box-shadow:0 12px 30px -8px rgba(0,0,0,.5)}
+html body.lapp #lm .tw2 .vbox .ytf{position:absolute;inset:0;width:100%;height:100%;border:0}
+html body.lapp #lm .tw2 .vid>[data-lact="wdone"]{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin:10px 0 0;font-size:15px}
+/* 092 배지: 어두운 섹션 → 밝은 바탕 · 배지 카드는 메달 왼쪽 + 글 오른쪽 가로형 */
+html body.lapp #lm .sec.dark:has(.badges){background:none!important;color:var(--ink);padding-top:28px}
+html body.lapp #lm .sec.dark:has(.badges) :is(h2,.sh h2){color:var(--ink)}
+html body.lapp #lm .sec.dark:has(.badges) .lead{color:var(--mute)}
+html body.lapp #lm .sec.dark .badges{grid-template-columns:1fr;gap:10px}
+html body.lapp #lm .sec.dark .badges .badge{display:grid;grid-template-columns:56px minmax(0,1fr);column-gap:14px;row-gap:4px;align-items:start;padding:16px;border-radius:16px;background:var(--surface,#fff);border:1px solid var(--line);box-shadow:none;color:var(--ink)}
+html body.lapp #lm .sec.dark .badges .badge>svg:first-child{grid-row:1/span 4;width:56px;height:auto;margin:0}
+html body.lapp #lm .sec.dark .badges .badge>:not(svg:first-child){grid-column:2;min-width:0}
+html body.lapp #lm .sec.dark .badges .badge small{color:var(--pri-tx,var(--pri));font-size:13px}
+html body.lapp #lm .sec.dark .badges .badge b{color:var(--ink);font-size:18px}
+html body.lapp #lm .sec.dark .badges .badge p{color:var(--ink2,var(--ink));font-size:14px;margin:0}
+html body.lapp #lm .sec.dark .badges .crit span{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink2,var(--ink));font-size:13px}
+html body.lapp #lm .sec.dark:has(.badges) .bfeat>div{color:var(--ink);background:var(--surface,#fff);border-color:var(--line)}
+html body.lapp #lm .sec.dark:has(.badges) .bfeat p{color:var(--mute)}
+/* 095 수료증: 혼자 남은 「수료한 과정」 타일 → 전체 폭 안내 줄 · 목록 제목과 보조 문구 두 줄 · 미리보기 아래 여백 */
+html body.lapp #lm .lph .lph-st:has(>.lph-z:only-child){display:block}
+html body.lapp #lm .lph .lph-st>.lph-z:only-child{max-width:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px}
+html body.lapp #lm .lph .lph-st>.lph-z:only-child dd{margin:0}
+html body.lapp #lm .lph .lph-st>.lph-z:only-child dd b{font-size:15px;line-height:1.4;text-align:right}
+html body.lapp #lm .ce43h small{display:block;margin:4px 0 0;font-size:14px}
+html body.lapp #lm .ce43g{padding-bottom:16px}
+/* 097 커뮤니티: 게시판 탭은 알약 한 벌(한 줄 가로 넘김) · 정렬 한 줄 · 글 카드 칩은 제목 위 줄 */
+html body.lapp #lm .lc26w .lc26bd{display:none}
+html body.lapp #lm .in>.lctabs{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding-right:16px}
+html body.lapp #lm .in>.lctabs::-webkit-scrollbar{display:none}
+html body.lapp #lm .in>.lctabs>*{flex:none;white-space:nowrap}
+html body.lapp #lm .lc26so>span{display:flex;flex-wrap:nowrap;align-items:center;gap:2px;max-width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+html body.lapp #lm .lc26so>span::-webkit-scrollbar{display:none}
+html body.lapp #lm .lc26so>span>*{flex:none;white-space:nowrap}
+html body.lapp #lm .lc26t{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+html body.lapp #lm .lc26t>b{flex:1 1 100%;min-width:0}
+/* 103 결제: 섹션 탭은 밑줄 탭 · 결제 행은 제목 · 날짜 왼쪽, 금액 · 상태 오른쪽 */
+html body.lapp #lm nav.shp-tabs{display:flex;gap:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--hair,var(--line))}
+html body.lapp #lm nav.shp-tabs a{flex:none;display:inline-flex;align-items:center;min-height:48px!important;padding:0 14px!important;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;box-shadow:none;color:var(--g700,var(--mute));font-size:15px;font-weight:700}
+html body.lapp #lm nav.shp-tabs a.on{color:var(--ink);border-bottom-color:var(--pri)}
+html body.lapp #lm .py26r.r4row:not(.py26hd){display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-areas:none;align-items:center;gap:12px;padding:14px 16px}
+html body.lapp #lm .py26r.r4row>span{grid-area:auto;display:flex}
+html body.lapp #lm .py26r.r4row>.r4av{display:grid;place-items:center;width:40px;height:40px}
+html body.lapp #lm .py26r.r4row>.r4t{flex-direction:column;gap:2px;min-width:0;font-size:13px}
+html body.lapp #lm .py26r.r4row>.r4t b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body.lapp #lm .py26r.r4row>.r4m{grid-column:auto;flex-direction:column;align-items:flex-end;gap:4px;text-align:right}
+html body.lapp #lm .py26r.r4row>.r4m b{font-size:15px;white-space:nowrap}
+/* 106 시설: 가격은 설명 아래 한 줄, 남은 수 배지는 오른쪽 위 */
+html body.lapp #lm .fx-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"ic ct bd" "ic pr pr";column-gap:12px;row-gap:2px;align-items:start}
+html body.lapp #lm .fx-row>.fx-ic{grid-area:ic;align-self:center}
+html body.lapp #lm .fx-row>.fx-ct{grid-area:ct}
+html body.lapp #lm .fx-row>.fx-rt{display:contents}
+html body.lapp #lm .fx-row>.fx-rt>.fx-b{grid-area:bd;justify-self:end;white-space:nowrap}
+html body.lapp #lm .fx-row>.fx-rt>small{grid-area:pr;justify-self:start;text-align:left;font-size:13px;white-space:nowrap}
+/* 108 연결 · 알림: 켜기 44px · 스위치 누르는 칸 44px · 연결 카드 1열(설명 2줄) · 보조 안내는 핵심 1문장만 */
+html body.lapp #lm .ap-pr [data-ap="push-on"]{min-height:44px;padding:0 18px}
+html body.lapp #lm .ap-pr [data-ap="push-on"]:disabled{background:var(--surface,#fff)!important;color:var(--mute)!important;border:1px solid var(--line)!important;box-shadow:none!important;opacity:1}
+html body.lapp #lm button.lai-sw.lai-swb{width:52px;height:44px}
+html body.lapp #lm button.lai-sw.lai-swb span{inset:10px 5px}
+html body.lapp #lm .ap-pw2 .lai-cn{display:grid;grid-template-columns:minmax(0,1fr);width:100%}
+html body.lapp #lm .ap-pw2 :is(.lai-sec,section):has(.lai-cn){width:auto;max-width:none;align-self:stretch;justify-self:stretch}
+html body.lapp #lm .ap-pw2 .lai-cc small{white-space:normal;overflow:visible;text-overflow:clip;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+html body.lapp #lm .ap-pw2 .lai-sub{display:none}
+html body.lapp #lm .ap-pw2 .ap-lead2{font-size:14px}
+/* 110 AI 튜터: 빈 연녹색 아바타 → AX 튜터 반짝이 아이콘 */
+body.lapp .lt-panel .lt-orb{background:var(--d-p50,#E7F8E8) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23007A29'%3E%3Cpath d='M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z'/%3E%3C/svg%3E") center/56% no-repeat}
+/* 111 앱 첫 화면(손님): 부제는 둘째 줄로 · 강좌 가로 카드 화면의 78% · 인사 대화 묶음 폭 복구(썸네일 .ap-th와 이름이 겹쳐 80px로 눌림) */
+body.lapp .ap-top .ap-me small{flex-wrap:wrap;white-space:normal;row-gap:2px;line-height:1.35}
+body.lapp .ap-grl .ap-grc{width:78%;max-width:300px}
+body.lapp .ap-grl .ap-grc small{text-overflow:ellipsis}
+body.lapp .ap-scroll>.ap-th.lai-th{display:flex;flex-direction:column;gap:12px;width:auto;height:auto;border-radius:0;background:none;object-fit:initial}
+body.lapp .ap-scroll{padding-bottom:24px}
+}
+/* 100 로그인(웹, lapp 아님): 체험 안내 띠 두 줄 허용 · 로그인 카드 아래 빈 높이 제거 */
+@media (max-width:760px){
+body.la26 .pvbar.lhs-demo .lhs-dt{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4;padding:4px 0;text-align:center}
+body.la26 footer.lf{margin-top:0!important}
+}
+/* v43.4 Q1 휴대폰(≤760px): 089 · 097 · 108 · 110 남은 결함 */
+@media (max-width:760px){
+/* 089 어두운 대체 사진 위에 브랜드 색 막을 얹어 「검은 빈 상자」가 아니라 영상 포스터로 보이게 */
+html body.lapp #lm .tcard .th.ph::before{content:'';position:absolute;inset:0;background:linear-gradient(150deg,color-mix(in srgb,var(--pri) 62%,transparent),color-mix(in srgb,var(--pri) 18%,transparent) 70%);pointer-events:none}
+html body.lapp #lm .tcard .th .play{z-index:1}
+/* 097 강좌별 카드는 화면의 74%(다음 카드가 보이게) · 정렬은 한 줄(「내가 쓴 글 보기」는 위 줄) · 글 종류 탭은 작은 칩 필터로 낮춤 */
+html body.lapp #lm .lc26side>.lc26c{flex:0 0 74%;max-width:74%;min-width:0}
+html body.lapp #lm .lc26side>.lc26c b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+html body.lapp #lm .lc26so>span{flex-wrap:wrap;overflow:visible;row-gap:6px;-webkit-mask-image:none;mask-image:none}
+html body.lapp #lm .lc26so>span::after{display:none}
+html body.lapp #lm .lc26so>span>.lc26my{flex:1 1 100%}
+html body.lapp #lm .lc26kt{display:flex;gap:8px;border:0;padding:0;margin:4px 0;background:none;box-shadow:none;overflow:visible}
+html body.lapp #lm .lc26kt>button{flex:none;min-height:36px!important;padding:0 14px!important;border:1px solid var(--line)!important;border-radius:99px!important;background:var(--surface,#fff)!important;color:var(--g700,var(--mute));font-size:14px;font-weight:600;margin:0}
+html body.lapp #lm .lc26kt>button:is(.on,[aria-selected=true]){border-color:color-mix(in srgb,var(--pri) 55%,transparent)!important;background:color-mix(in srgb,var(--pri) 12%,var(--surface,#fff))!important;color:var(--ink)}
+/* 108 경고문 줄 간격 · 「켜기」는 초록 테두리 44px(차단 상태라 누를 수 없음을 유지) · 연결 카드는 오른쪽 「연결 ›」 */
+html body.lapp #lm .ap-pr small{line-height:1.55;display:block;margin-top:2px}
+html body.lapp #lm .ap-pr [data-ap="push-on"]:disabled{border:1.5px solid var(--pri)!important;color:var(--pri)!important;font-weight:700}
+html body.lapp #lm .ap-pw2 .lai-cc:not(.on){padding-right:76px}
+html body.lapp #lm .ap-pw2 .lai-cc:not(.on) .lai-dot{display:none}
+html body.lapp #lm .ap-pw2 .lai-cc:not(.on)::after{content:'연결 ›';position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:var(--pri);background:color-mix(in srgb,var(--pri) 10%,var(--surface,#fff));border-radius:99px;padding:6px 10px;white-space:nowrap}
+/* 110 입력창 아래 안내는 두 줄까지 */
+body.lapp #ltut .lt-note,body.lapp .lt-panel .lt-note{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.45}
+}

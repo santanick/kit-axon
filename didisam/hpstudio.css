@@ -500,3 +500,25 @@ html[data-theme=dark] .hps-pubc.hps-pubc9{background:#1F2221}
 }
 .hps-lpr .hps-lpi span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hps-lpr .hps-lpi small.hps-lpc{flex:none}
+/* v43.4 GM 휴대폰(≤760px): 미리보기(캔버스)는 전체 폭 · 흰 바탕으로, 편집 패널은 아래 시트(기존 .hps-pan 규칙) */
+@media (max-width:760px){
+  #hpe.hps .hpe-stage{padding:0;background:var(--surface,#fff);justify-content:flex-start}
+  #hpe.hps .hpe-stage iframe#hpeF,#hpe.hps .hps-lv{border-radius:0;box-shadow:none;background:#fff}
+}
+/* v43.4 P0 휴대폰(≤760px): ② 아래 편집 도구줄은 한 화면에 5개 반만 보이게(6번째가 반쯤 보여 넘길 수 있음을 알림, 끝 흐림은 focus.js .hx-fade) ④ 메뉴 AI 입력칸 안내 문구는 한 줄 말줄임(124) */
+@media (max-width:760px){
+  #hpe.hps .hps-rail .hps-ri{flex:0 0 auto;min-width:calc((100vw - 12px) / 5.5);max-width:none;padding:4px 6px}
+  #hpe.hps .hps-rail .hps-ri>span{white-space:nowrap}
+  #hpmQ,#hpe.hps .hps-pan input[placeholder]{text-overflow:ellipsis}
+  #hpe.hps .hps-pan{padding-bottom:12px}
+}
+/* v43.4 P0 휴대폰(≤760px): 편집 패널 바텀시트는 반 높이로 — 위쪽에 미리보기가 보이게(032 · 126). 시트 안은 따로 스크롤 */
+@media (max-width:760px){#hpe.hps .hps-pan{max-height:52%;max-height:52dvh;overflow-y:auto;overscroll-behavior:contain}}
+/* v43.4 Q1 휴대폰(≤760px): 편집 시트가 열리면 시트 바로 위 미리보기를 흐리게 덮어 반쯤 잘린 큰 글자가 깨진 글자처럼 보이지 않게(122 · 124) · 아래 도구줄 좌우 여백 · 섹션 행 버튼 간격 8px · 시트 끝 여백 */
+@media (max-width:760px){
+  body.hps-pan-on #hpe.hps .hpe-stage::after{content:'';position:fixed;left:0;right:0;bottom:calc(62px + min(52%, 52dvh) - 2px);height:40px;z-index:2;pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 32%)}
+  #hpe.hps .hps-rail{padding-left:8px;padding-right:8px;scroll-padding-inline:8px}
+  #hpe.hps .hps-rail::after{content:'';flex:0 0 4px}
+  #hpe.hps .hps-sl9 .hps-sa{gap:8px}
+  #hpe.hps .hps-pan>:last-child{margin-bottom:24px}
+}

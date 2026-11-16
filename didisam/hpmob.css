@@ -1,1 +1,33 @@
 /* v34.5 hpmob */
+/* v43.4 MC 빌더 편집 패널(119~127) 휴대폰 폭: 행 단추 44px, 메뉴 행은 이름을 한 줄 전체로 두고 연결 칩 · 단추를 아래 줄로 */
+@media (max-width:760px){
+body .tpd-wz .btn{min-height:44px!important;height:44px}
+.hps-sl9 .hps-sib{width:44px;height:44px}
+body .hps-panw #hpmBox .hpm-r{flex-wrap:wrap;row-gap:6px}
+body .hps-panw #hpmBox .hpm-n{flex:1 1 calc(100% - 34px);min-width:0;min-height:44px!important}
+body .hps-panw #hpmBox .hpm-chip{min-height:44px;max-width:none;flex:1 1 0;min-width:0;margin-left:24px}
+body .hps-panw #hpmBox .hpm-i:not(.ed) .hpm-bt{width:auto;margin-left:auto;flex-wrap:nowrap}
+body .hps-panw #hpmBox .hpm-bt .btn,body #hpmBox .hpm-bt .btn{width:44px;height:44px;min-width:44px}
+body .hps-panw #hpmBox .hpm-dz .btn,body #hpmBox .hpm-dz .btn{min-height:44px;font-size:13px}
+}
+/* v43.4 P2 휴대폰 폭(390px) 2차: 빌더 화면별 교정(118 · 119 · 121 · 122 · 124 · 126) — 하단 도구줄 · 떠 있는 버튼은 P0 공통 */
+@media (max-width:760px){
+/* 118 · 126: 편집기가 열려 있으면 관리 탭 줄을 아이콘 한 줄(44px)로 접어 미리보기 높이를 확보(이름은 화면 읽기 프로그램용으로 남김) */
+body.b-pv.hpe-open nav.brail{padding:4px 8px;gap:2px;justify-content:space-between}
+body.b-pv.hpe-open nav.brail .ri{flex:none;width:46px;min-height:44px;padding:0;gap:0}
+body.b-pv.hpe-open nav.brail .ri span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+body.b-pv.hpe-open nav.brail .ri em{top:2px;right:0}
+/* 119 AI 시안 시트: 휴대폰에서는 전체 폭 · 단계 이름 한 줄 · 테마 시안 카드는 같은 높이(행마다 늘려 맞춤) */
+#modal.hpw-dock>.modal{width:100%!important;border-radius:0!important}
+#modal.hpw-dock .hpw-sp9 li{white-space:nowrap;font-size:12.5px;padding-right:10px}
+#modal.hpw-dock .hpw-tg{grid-auto-rows:1fr;align-items:stretch}
+#modal.hpw-dock .hpw-th{height:100%}
+/* 121 디자인 패널: 아래 도구줄 바로 위까지 채움(회색 빈 띠 제거) */
+body.hps-dock .tpg-dz{height:auto!important;bottom:62px}
+body.hps-dock .tpg-dzb{padding-bottom:20px}
+/* 122 · 124: 패널 목록 끝이 도구줄에 잘린 것처럼 보이지 않게 아래 여백 + 끝 흐림 · 눈 · 더보기 단추 사이 8px */
+body.hps-dock .hps-pan .hps-pb{padding-bottom:48px;-webkit-mask-image:linear-gradient(#000 calc(100% - 28px),transparent);mask-image:linear-gradient(#000 calc(100% - 28px),transparent)}
+.hps-sl9 .hps-sa{gap:8px}
+/* 126 학습 페이지: 홀수 마지막 카드는 한 줄 전체 */
+.hps-lpg>.hps-lpi:last-child:nth-child(odd){grid-column:1/-1}
+}

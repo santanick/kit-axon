@@ -60,3 +60,21 @@ html.a11y-rm *,html.a11y-rm *::before,html.a11y-rm *::after{animation-duration:.
 .lmp-dm{grid-template-columns:340px minmax(0,1fr)}
 #main .lmp-cmp input#lmslMsg{border:0 !important;box-shadow:none !important;background:transparent !important}
 .lmp-msgs{max-height:640px}
+
+/* v43.4 MB 모바일: 058 DM 목록 340px 고정 열이 860px 이하에서도 남아 대화 칸이 0px로 눌리던 것 → 1열 */
+@media (max-width:860px){.lmp-dm{grid-template-columns:minmax(0,1fr)}.lmp-cmp>*{min-width:0}.lmp-cmp input#lmslMsg{flex:1 1 auto;width:auto}.lmp-cmp>.btn{flex:0 0 auto}}
+
+/* v43.4 MB 모바일: 057 · 059 달 이동(‹ ›) · 삭제(✕) 단추를 44px 터치 대상으로 */
+@media (max-width:760px){.lmp-calbar .btn.sm,#main [data-act=lmsl-del],#main [data-act=lmsl-rdel]{min-width:44px;min-height:44px;justify-content:center}}
+/* v43.4 P1 · 057 휴대폰: 달력 칸 일정은 1~2글자 대신 점(칸당 최대 3개) — 일정 내용은 아래 「이번 달 일정」 목록, To-do 날짜는 제목 아래 줄 */
+@media (max-width:760px){
+  .lmp-cal{padding:8px}
+  .lmp-day{min-height:50px;flex-direction:row;flex-wrap:wrap;align-content:flex-start;justify-content:center;gap:4px;padding:6px 2px}
+  .lmp-day i{flex:0 0 100%;text-align:center;font-size:13px}
+  .lmp-day.today i{flex:0 0 auto;align-self:auto;margin:0 calc(50% - 14px)}
+  .lmp-ev{flex:none;width:7px;height:7px;padding:0;border-radius:50%;font-size:0!important;line-height:0;background:var(--gr600,#00862D)}
+  .lmp-ev.s-academic{background:var(--co500,#F04E23)}.lmp-ev.s-personal{background:#C98A00}
+  .lmp-day small{font-size:11px;line-height:8px;color:var(--muted)}
+  #main .lmp-cal+.grid .row{flex-wrap:wrap;row-gap:4px}
+  #main .lmp-cal+.grid .row>.mini{flex:1 1 100%;padding-left:28px}
+}

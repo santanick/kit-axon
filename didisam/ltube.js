@@ -281,7 +281,8 @@
   const ICO = { home: null, my: 'course', cal: 'cal', find: 'compass', fac: 'fac', att: 'att', me: 'me' };
   function navHTML() { const T = tabsOf(); const cur = curTab(T);
     return T.map(([k, h, l]) => { const i = k === 'home' ? (cur === 'home' ? I.home(24) : I.homeO(24)) : I[ICO[k] || 'course'](24);
-      return `<a href="${esc(h)}" class="tb-n-${esc(k)}${cur === k ? ' on' : ''}"${cur === k ? ' aria-current="page"' : ''}>${i}<span>${esc(l)}</span></a>`; }).join(''); }
+      const sl = k === 'my' && l.length > 6 && !l.startsWith('내 ') ? '내 ' + l.split(' ').pop() : l; /* v43.4 P2(109): 아래 탭 라벨은 짧게(예: 이번 학기 강의 → 내 강의) — 두 줄로 꺾여 다른 칸과 높이가 어긋나지 않게. 전체 이름은 title로 */
+      return `<a href="${esc(h)}" class="tb-n-${esc(k)}${cur === k ? ' on' : ''}"${cur === k ? ' aria-current="page"' : ''}${sl !== l ? ` title="${esc(l)}"` : ''}>${i}<span>${esc(sl)}</span></a>`; }).join(''); }
   /* 「내 ○○」 위 세그먼트: 목록(#my) | 일정(#cal) — 두 화면 맨 위(하위 경로 없을 때) */
   function segHTML(a) { const k = a === 'cal' ? 'cal' : 'my';
     return `<nav class="tb-seg" aria-label="${esc(info().learn || '내 과정')}">${[['my', '#my', '목록'], ['cal', '#cal', '일정']].map(([x, h, l]) => `<a href="${h}" class="tb-sg-${x}${x === k ? ' on' : ''}"${x === k ? ' aria-current="page"' : ''}>${l}</a>`).join('')}</nav>`; }
@@ -409,7 +410,9 @@
     const h = `${I.spark(24)}<span>${v ? '이 장면 질문' : esc(short)}</span>`; if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; } b.setAttribute('aria-label', lab); b.setAttribute('aria-expanded', v ? String(!!TB.open) : String(!!(typeof LT === 'object' && LT.open))); }
   /* v43: 스크롤하는 동안 떠 있는 튜터 버튼이 카드 오른쪽 끝을 가리지 않게 — 내려가면 작은 원(48px, 아이콘만), 위로 올리거나 맨 위에 오면 원래 크기 */
   { let y0 = 0; const B = () => document.body; addEventListener('scroll', () => { const y = window.scrollY || 0; if (y > y0 + 4 && y > 40) B().classList.add('tb-fsm'); else if (y < y0 - 4 || y <= 40) B().classList.remove('tb-fsm'); y0 = y; }, { passive: true });
-    addEventListener('hashchange', () => B().classList.remove('tb-fsm')); }
+    addEventListener('hashchange', () => B().classList.remove('tb-fsm', 'tb-fscr'));
+    /* v43.4 MC: 휴대폰에서는 스크롤하는 동안 튜터 단추를 숨기고, 멈추고 0.5초 뒤 다시 보인다(lapp43.css tb-fscr) */
+    let tq = 0; addEventListener('scroll', () => { if (innerWidth > 760) return; B().classList.add('tb-fscr'); clearTimeout(tq); tq = setTimeout(() => B().classList.remove('tb-fscr'), 500); }, { passive: true }); }
   function sheet(o) { TB.open = o; const t = document.getElementById('tbwTu'); if (t) { t.hidden = !o; t.classList.toggle('open', o); } document.body.classList.toggle('tb-sheet', o); fab(); if (o) { const ms = t && t.querySelector('.tbw-ms'); if (ms) ms.scrollTop = ms.scrollHeight; setTimeout(() => { const i = document.getElementById('tbwQ'); i && i.focus(); }, 30); } else { const b = document.getElementById('tbFab'); b && b.focus(); } }
   const WQ = { '이 장면 다시 설명': t => `지금 ${t != null ? mmss(t) + ' ' : ''}장면에서 설명한 내용을 쉬운 말로 다시 설명해줘`, '3줄 요약': () => '이 레슨 내용을 3줄로 요약해줘', '퀴즈 1문제': () => '이 장면 내용으로 확인 퀴즈 1문제 내줘(정답은 내가 답한 뒤에 알려줘)' };
   async function ask(q, label) { const k = cur(); if (!k || TB.busy) return; q = String(q || '').trim(); if (!q) return; const C = TCFG(); const t = nowT(); const M = thread(k.it.id);

@@ -419,3 +419,55 @@ html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background
 .modal.m1 .m1pv s{color:var(--t-sub,var(--g600))}.modal.m1 .m1pv p>span{color:var(--t-sub,var(--g600))}
 .modal.m1 .m1v{font-weight:800;color:var(--g900)}.modal.m1 .m1v.bad{color:var(--co700,#B53C0A);font-weight:700}
 .modal.m1 .mf .btn{min-height:44px;min-width:96px;font-size:15px}
+
+/* ── v43.4 GM 휴대폰 공통(≤760px). PC는 그대로 ──
+   ① 머리 버튼 줄(.phr)은 한 줄 가로 넘김 칩 — 잘리거나 두 줄로 꺾이지 않게. 「···」 메뉴는 넘김 상자에 잘리지 않게 화면 기준으로 띄운다
+   ② 화면 안 탭(.wtabs · .btabs)도 한 줄 가로 넘김
+   ③ 상단 공간 탭(.brail)은 글자를 줄이지 않고 한 줄 가로 넘김 */
+@media (max-width:760px){
+  #main>.bhd.q1-ph{align-items:stretch}
+  #main>.bhd.q1-ph>.ph.q1-phmv{flex:1 1 100%;min-width:0;max-width:100%}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px 16px 4px 2px;margin:0 -16px 0 -2px;scroll-padding:0 16px}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr::-webkit-scrollbar{display:none}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr>*{flex:none}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr .btn{min-height:44px;white-space:nowrap}
+  #main>.bhd.q1-ph .phr details.uxmore .uxpop{position:fixed;left:16px;right:16px;width:auto;max-width:none;margin-top:6px;z-index:60}
+  #main .seg2.wtabs,#main .seg2.btabs{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-width:100%;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #main .seg2.wtabs::-webkit-scrollbar,#main .seg2.btabs::-webkit-scrollbar{display:none}
+  #main .seg2.wtabs>*,#main .seg2.btabs>*{flex:none;white-space:nowrap}
+  #main .seg2.wtabs>button,#main .seg2.btabs>button{min-width:44px;justify-content:center;text-align:center}
+  .q1-2col{grid-template-columns:minmax(0,1fr)}
+  /* 차트 x축: 휴대폰에서는 처음 · 끝 + 홀수 번째 라벨만(끝에서 두 번째는 숨김) — 마지막 두 날짜가 겹치지 않게 */
+  .v4-xl span:nth-child(even):not(:last-child),.v4-xl span:nth-last-child(2):not(:first-child){display:none}
+  details.uxmore:not([open])>.uxpop,details.uxtabmore:not([open])>.uxpop{display:none}
+  #main .seg2.wtabs .uxtabmore .uxpop,#main .seg2.btabs .uxtabmore .uxpop{position:fixed;left:16px;right:16px;width:auto}
+  nav.brail{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  nav.brail::-webkit-scrollbar{display:none}
+}
+/* ── v43.4 P0 휴대폰(≤760px) 공통 2차. PC는 그대로 ──
+   ⑦ 머리 버튼 줄(.phr): 넘김 대신 줄바꿈 — 오른쪽 버튼이 화면 밖으로 잘리지 않게(008 · 019 · 020). 보기 전환 탭은 첫 줄, 버튼은 남는 폭을 나눠 채운다
+   ⑥ 숫자 카드(.l43-kc · .da-k)의 작은 추세선은 숫자 아래 줄 전체 폭으로 — 카드 밖으로 나오지 않게(019 · 036 · 046)
+   ⑧ 학사 LMS 맥락 줄(.r7-ctx): 라벨 위 · 고르기 전체 폭, 「다른 신분으로 보기」는 고르기 밖 링크 줄로(048 · 049) */
+@media (max-width:760px){
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr{flex-wrap:wrap;overflow:visible;margin:0;padding:2px 0 4px;row-gap:8px;-webkit-mask-image:none;mask-image:none}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr::after{display:none}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr>.btn,#main>.bhd.q1-ph>.ph.q1-phmv .phr>a.btn{flex:1 1 auto;justify-content:center;max-width:100%}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr>:is(.seg2,.vtabs,[role=tablist]){flex:1 1 100%}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr details.uxmore{flex:none}
+  .l43-kc,.da-k{min-width:0;overflow:hidden;grid-template-columns:minmax(0,1fr) auto}
+  .l43-kc dd,.da-k .da-kv{min-width:0;font-size:clamp(20px,6.2vw,24px)}
+  .l43-kc .l43-spk,.da-k .l43-spk{grid-column:1/-1;width:100%;max-width:100%;height:22px;margin-top:8px}
+  #main .l43-bl .r7-ctx{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;width:100%}
+  #main .l43-bl .r7-ctx .lmsx-pick{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;width:100%}
+  #main .l43-bl .r7-ctx label,#main .l43-bl .r7-ctx .lmsx-pick label,#main .l43-bl .r7-ctx .r7-ctxl{flex-direction:column!important;align-items:stretch;gap:4px;width:100%;min-width:0;font-size:13px}
+  #main .l43-bl .r7-ctx select{width:100%;max-width:none;min-width:0;min-height:44px}
+  #main .l43-bl .r7-ctx details.lmsd-as,#main .l43-bl .r7-ctx details.lmsx-asmore{width:100%;margin:0}
+  #main .l43-bl .r7-ctx details>summary{min-height:44px;width:auto;padding:0 2px;border:0;border-radius:0;background:none;box-shadow:none;font-size:13.5px;font-weight:700;text-decoration:underline;text-underline-offset:3px;white-space:normal;color:inherit}
+}
+
+/* v43.4 모바일: 하위 탭(.seg2)은 휴대폰에서 한 줄 가로 넘김 — 마지막 탭(예: 수납 「통계」)이 둘째 줄로 떨어지던 문제 */
+@media (max-width:760px){
+  #main .seg2{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;max-width:100%}
+  #main .seg2::-webkit-scrollbar{display:none}
+  #main .seg2>button{flex:0 0 auto;white-space:nowrap}
+}

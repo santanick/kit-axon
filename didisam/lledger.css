@@ -139,7 +139,7 @@ html body:not(.lapp) section.lg.lg43 .lg-sum{padding:20px 24px;border-radius:20p
 html body:not(.lapp) section.lg.lg43.lg-r>.lg-in,html body:not(.lapp) section.lg.lg43.lg-d>.lg-in,html body:not(.lapp) section.lg.lg43.lg-off>.lg-in{max-width:640px;display:flex}
 @media (max-width:760px){html body:not(.lapp) section.lg.lg43>.lg-in{grid-template-columns:1fr}}
 /* v43 R8 104: D-day 칩 · 낸 비율 막대 · 납부 완료 접힘 카드 */
-body:not(.lapp) .lg-sum.lg43s{flex-wrap:wrap}
+body:not(.lapp) .lg-sum.lg43s,body.lapp .lg-sum.lg43s{flex-wrap:wrap}
 .lg43cs{display:flex;gap:8px;flex-wrap:wrap;width:100%;margin-top:8px}
 .lg43c{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;font-style:normal;font-size:13px;font-weight:700;background:var(--surface,#fff);color:var(--pri-tx,#007200);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pri) 30%,transparent)}
 .lg43c.bad{color:#B42318;box-shadow:inset 0 0 0 1px rgba(180,35,24,.3)}

@@ -45,3 +45,13 @@
 /* v43 S3A 040: 기한 있는 할 일 — 기본 체크박스 모양(각진 상자) 대신 DDS 체크 원 */
 .cpl-todo.cpl-ckl .cpl-ckb{width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--g300);flex:none;background:var(--surface)}
 .cpl-todo.cpl-ckl li:has(.cpl-dd.r) .cpl-ckb{box-shadow:inset 0 0 0 2px var(--co500)}
+/* v43.4 P1 · 040 휴대폰: 기한 있는 할 일 — 상태 배지를 제목 위, 마감일은 제목 아래(본문 전폭), 카드 안쪽 여백 16px */
+@media (max-width:760px){
+  #main .cpl-todo{padding-left:16px;padding-right:16px}
+  #main .cpl-todo li{display:grid!important;grid-template-columns:22px minmax(0,1fr);column-gap:12px;row-gap:4px;align-items:start}
+  #main .cpl-todo li>.cpl-ckb{grid-row:1/span 3;grid-column:1;margin-top:1px}
+  #main .cpl-todo li>.cpl-dd{grid-column:2;justify-self:start;min-width:0;width:auto;padding:2px 8px;border-radius:999px;background:var(--g100,#F1F3F2);font-size:12px;line-height:18px}
+  #main .cpl-todo li>span:not(.cpl-ckb){grid-column:2;min-width:0}
+  #main .cpl-todo li>small{grid-column:2;text-align:left;font-size:13px;color:var(--t-sub,var(--g700))}
+  #main .cpl-todo li>small:empty{display:none}
+}

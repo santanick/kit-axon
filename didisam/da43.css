@@ -174,14 +174,14 @@
 .da-no{color:var(--g500)}
 /* 자동 점검(44px): 탭 · 보기 전환 · 칩 버튼 높이 */
 #main.l43 button[data-act="tab"],#main.da43 button[data-act="tab"],#main [data-act="cm-mc-mode"],#main [data-act="cs-u"],#main [data-act="cx-view"],#main[data-l43="dash"] button[data-act="chat-q"],#main[data-l43="dash"] button[data-act="go"],#main [data-act="cls-back"]{min-height:44px}
-#main .v4-tl .v4-blk{position:relative}
+#main .v4-tl .v4-blk{position:absolute}
 #main .v4-tl .v4-blk::after{content:"";position:absolute;left:0;right:0;top:-7px;bottom:-7px}
 .da-no{color:var(--g700)}
 #main button[data-act="tab"],#main [data-act="cm-mc-mode"],#main [data-act="cs-u"],#main [data-act="cx-view"]{height:auto!important;min-height:44px!important}
 #main .cx-ev,#main .cx-dn,#main [data-act="sl-tip"]{position:relative}
 #main .cx-ev::after{content:"";position:absolute;left:0;right:0;top:-10px;bottom:-10px}
 #main .cx-dn::after,#main [data-act="sl-tip"]::after{content:"";position:absolute;left:-6px;right:-6px;top:-12px;bottom:-12px}
-#main .v4-blk{position:relative}
+#main .v4-tl .v4-trk{height:44px}#main .v4-tl .v4-blk{position:absolute;top:0;bottom:0} /* 간트 막대는 트랙 기준 절대 위치(relative면 막대가 흐름으로 밀려 카드 밖으로 흩어짐) */
 #main .v4-blk::after{content:""!important;position:absolute!important;left:0;right:0;top:-10px!important;bottom:-10px!important}
 #main button[data-act="chat-q"],#main button[data-act="go"],#main button[data-act="ux-find"]{min-height:44px}
 #main .clb-thk,#main .clb-thl{background:rgba(4,20,10,.92)!important;color:#fff!important}
@@ -507,3 +507,41 @@
 .f1-pjz i{font-style:normal;font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair);color:var(--g700)}
 .f1-pjz small{flex-basis:100%;font-size:12.5px;color:var(--g600)}
 .hps-lpr:has(.f1-sw) .hps-lpi{min-width:0}.hps-lpr:has(.f1-sw) .hps-lpi small{overflow:hidden;text-overflow:ellipsis;min-width:0}
+/* v43.4 MA(관리자 001~042) 휴대폰 폭 교정 */
+@media (max-width:760px){
+  /* 주 콘텐츠 열이 안쪽 내용 폭만큼 늘어나 오른쪽 끝이 잘리던 것(018 · 023 · 031) */
+  #main .q1-2col{grid-template-columns:minmax(0,1fr)}
+  #main .da-kpis,#main .da-kpis.n3,#main .da-kpis.n4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #main .da-k{min-width:0}
+  /* 001 홈: 3칸 카드 줄이 세로로 한 글자씩 꺾이던 것 → 한 칸씩 쌓는다 */
+  .aih43-r3.n3,.aih43-r3.n2{grid-template-columns:minmax(0,1fr)}
+  /* 003 강좌: 검색칸이 눌려 한 글자만 보이던 것 → 검색칸은 한 줄 전체, 칩은 아래 줄에서 가로로 넘긴다 */
+  #main[data-da="class"].da43 .c2lbar{flex-wrap:wrap}
+  #main[data-da="class"].da43 .c2lbar input[type=search],#main[data-da="class"].da43 .c2lbar .sl-search{flex:1 1 100%;max-width:none}
+  #main[data-da="class"].da43 .c2lbar .c2cchips{flex:1 1 100%}
+  /* 011 학과별 표: 4칸 최소 폭이 카드보다 넓어 「배지」 칸이 잘리던 것 */
+  .r1-acg{grid-template-columns:minmax(0,1.2fr) minmax(0,1.3fr) auto auto;gap:10px 10px}
+  .r1-acg>*{min-width:0}
+  /* 011 학습 위험군: 학번 · 과목 줄이 카드 밖으로 밀리던 것 → 상태 칩은 아래 줄로 */
+  .r1-grid2,.r1-grid3{grid-template-columns:minmax(0,1fr)}
+  .r1-grid2>*,.r1-grid3>*{min-width:0}
+  .r1-ppl{grid-template-columns:minmax(0,1fr)}.r1-ppl li{min-width:0}
+  .r1-risk li{flex-wrap:wrap}
+  .r1-risk li>span:nth-child(2){flex:1 1 0;min-width:0}
+  .r1-risk li>.r1-rc{flex:1 1 100%;justify-content:flex-start;padding-left:42px}
+  /* 020 · 026 열 머리글이 좁은 칸에서 겹치던 것 → 두 줄까지 줄바꿈 */
+  .r1-hc{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.25;font-size:12px}
+  /* 026 단계 순서 손잡이 터치 크기 */
+  .f1-jdrag{min-width:44px}
+  /* 018 메시지: 새 메시지 입력 상자가 좁은 칸에 눌려 4~5글자씩 꺾이던 것 → 쓰기 버튼은 아래 줄 */
+  .f1-cbar{flex-wrap:wrap}.f1-cbq{flex:1 1 calc(100% - 58px)}.f1-cbar>.btn{flex:1 1 100%;justify-content:center;min-height:44px}
+}
+/* v43.4 P1 · 027 휴대폰: 진단 카드 1열(그래픽 위 배지 · 라벨 분리), 버튼은 가로 한 줄 */
+@media (max-width:760px){
+  #main .r1-dgl{grid-template-columns:minmax(0,1fr);gap:12px}
+  .r1-dgi{aspect-ratio:auto;height:112px}
+  .r1-dgi .tag{top:10px;right:10px}
+  .r1-dgm{left:12px;bottom:10px;font-size:13px}
+  #main .r1-dgc .bar2{display:flex;flex-wrap:wrap;gap:8px}
+  #main .r1-dgc .bar2>.btn{flex:1 1 0;min-height:44px;white-space:nowrap}
+}

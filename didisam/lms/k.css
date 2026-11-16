@@ -54,3 +54,6 @@
 .lk-chip.on{background:var(--ink,#111);color:var(--card,#fff);box-shadow:none;font-weight:700}.lk-sep{width:1px;height:20px;background:var(--line);margin:0 4px}
 .lk-rb{display:flex;align-items:center;gap:8px;margin:6px 0 2px}.lk-rb span{flex:1;height:8px;border-radius:9px;background:var(--soft,#eef0f2);overflow:hidden}.lk-rb i{display:block;height:100%;background:var(--g,#16a34a);border-radius:9px}.lk-rb b{font-size:13px;font-variant-numeric:tabular-nums}
 .lw-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+
+/* v43.4 MB 모바일: 056 설문 화면 — 주 열(q1-main)이 내용 최소 폭(386px)만큼 늘어 오른쪽이 잘리던 것 → 열 폭을 화면에 맞춘다 */
+@media (max-width:760px){.q1-main:has(.lw-grid),.q1-main:has(.lw-tabrow){min-width:0}.lw-card .lw-more .uxpop{left:auto;right:0}.lw-grid{grid-template-columns:minmax(0,1fr)}}

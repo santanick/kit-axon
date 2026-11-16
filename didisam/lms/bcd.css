@@ -79,3 +79,8 @@ details.lmsb-week:not([open]){box-shadow:none;background:transparent;border-colo
 .r7-rl{display:grid;gap:6px;margin:4px 0 0}.r7-rl div{display:flex;justify-content:space-between;font-size:14px}.r7-rl dt{display:flex;align-items:center;gap:8px}.r7-rl i{width:10px;height:10px;border-radius:3px;display:inline-block}.r7-rl dd{margin:0;font-weight:700}
 .r7-dz{display:grid;justify-items:center;gap:6px;text-align:center;padding:22px 16px;border:2px dashed var(--gr300,#9BD3AE);border-radius:16px;background:var(--gr50,#F1F8F3);cursor:pointer;margin:8px 0}.r7-dz b{font-size:15px}.r7-dz small{font-size:13px;color:var(--t-sub,#5C554B)}
 .r7-pf{display:flex;align-items:center;gap:12px;margin:8px 0 4px}.r7-pf b{display:block;font-size:16px}.r7-pf small{font-size:13px;color:var(--t-sub,#5C554B)}
+
+/* v43.4 MB 모바일: 049 「다른 신분으로 보기」 팝업이 오른쪽 화면 밖으로 나가지 않게 펼침 단추의 오른쪽에 맞춘다 */
+@media (max-width:760px){.uxpop.lmsx-aspop{left:auto;right:0;min-width:0;width:min(300px,calc(100vw - 40px))}}
+/* v43.4 P1 · 049 휴대폰: 다크 브리핑 안 「강의실」 라벨 대비(흰색 82%) */
+@media (max-width:760px){.l43-k-hero .r7-ctx .lmsx-pick label,.l43-k-hero .r7-ctx label{color:rgba(255,255,255,.86)!important}}

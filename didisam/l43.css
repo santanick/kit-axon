@@ -234,3 +234,54 @@ p.mini:has(> .g2-demo:only-child),p:has(> .g2-demo:only-child){margin:6px 0 0}
 #main.g2-set .l43-pst{max-height:120px}
 #main.g2-set .l43-kc .l43-spk,#main.g2-set .l43-g .l43-spk{display:none}
 #main.g2-set .l43-ring svg{width:84px;height:84px}
+
+/* ── v43.4 GM 휴대폰(대표님 11-17 「모바일뷰에서 깨지는 게 너무 많아」): 사진형 브리핑은 사진 위 · 글 아래 전체 폭으로 쌓는다(글 칸이 좁아져 한 글자씩 세로로 꺾이던 것). 목록형 · KPI형도 한 칸 너비를 넘지 않게 ── */
+@media (max-width:900px){
+  .l43-brief.l43-k-photo,#main .l43-brief.l43-k-photo{grid-template-columns:minmax(0,1fr);gap:0}
+  .l43-k-photo .l43-pst,#main.g2-set .l43-k-photo .l43-pst{order:-1;margin:12px 12px 0;min-height:168px;max-height:none}
+  .l43-k-photo .l43-pbody{padding:18px 20px 22px;gap:14px}
+  .l43-brief.l43-k-list,.l43-brief.l43-k-kpi{grid-template-columns:minmax(0,1fr)}
+  .l43-brief>*{min-width:0}
+}
+@media (max-width:760px){
+  .l43-k-photo .l43-pst{min-height:150px}
+  .l43-k-photo .l43-pst .p0{inset:0 30% 0 0}
+  .l43-k-photo .l43-hl,#main.g2-set .l43-k-photo .l43-hl{font-size:22px;line-height:1.3;word-break:keep-all;overflow-wrap:anywhere}
+  .l43-k-photo .l43-sub{font-size:14px}
+  .l43-brief .l43-acts{width:100%}
+  .l43-brief .l43-acts .l43-act{flex:1 1 auto;justify-content:center}
+  .l43-k-kpi .l43-kp,.l43-k-kpi .l43-kp.n4,.l43-k-kpi .l43-kp.n2{grid-template-columns:repeat(2,minmax(0,1fr))}.l43-k-kpi .l43-kp.n1{grid-template-columns:minmax(0,1fr)}
+  .l43-kc{padding:12px 12px 10px}.l43-kc dt{white-space:normal}
+  .l43-todo li{flex-wrap:wrap;row-gap:6px}
+  .l43-todo{min-width:0;width:100%}
+  .l43-kr{flex-direction:column;align-items:stretch;min-width:0;width:100%}.l43-kr>*{min-width:0}.l43-kr .l43-ring{align-self:center}
+  .l43-brief .btn,.l43-brief button{min-height:44px;min-width:44px}
+  .l43-todo li .l43-tt{flex:1 1 calc(100% - 44px)}
+  .l43-todo li .l43-tt small{white-space:normal}
+  .l43-todo li>.btn,.l43-todo li>button{margin-left:40px!important;min-height:40px}
+}
+/* v43.4 P0 휴대폰(≤760px): 브리핑 머리 줄은 줄바꿈 허용(날짜는 focus.js가 「11.17(화)」로 줄임) — 048 */
+@media (max-width:760px){.l43-eye{flex-wrap:wrap;row-gap:4px;line-height:1.35;min-width:0}}
+
+/* v43.4 모바일: 브리핑 숫자 타일 — 최소 150px 고정 열 때문에 2열이 카드 밖으로 넘치던 문제(022·045). 휴대폰에서는 0 최소 폭 2열 · 금액 크기 자동 */
+@media (max-width:760px){
+  .l43-kp,.l43-kp.n1,.l43-kp.n2,.l43-kp.n3,.l43-kp.n4{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px}
+  .l43-kp.n1{grid-template-columns:minmax(0,1fr)!important}
+  .l43-kc{min-width:0}
+  .l43-kc dd{font-size:clamp(18px,5.4vw,26px)!important;white-space:nowrap;overflow:hidden;text-overflow:clip;letter-spacing:-.03em}
+  .l43-kc dt{white-space:normal}
+}
+/* v43.4 모바일: 짙은 히어로 브리핑 숫자(.l43-gl · .l43-g) — 금액이 칸보다 길면 글자 크기를 칸 폭에 맞춘다 */
+@media (max-width:760px){
+  .l43-gl{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .l43-g{min-width:0}
+  .l43-g dd{font-size:clamp(17px,5.2vw,28px)!important;white-space:nowrap;letter-spacing:-.035em;overflow:hidden}
+}
+/* v43.4 Q1 휴대폰: 브리핑 숫자 타일(.l43-stats)은 개수만큼 카드 전폭을 나눈다(3칸이 4열 격자의 3/4만 쓰던 문제, 034 · 069 · 070). 라벨은 단어 단위 줄바꿈, 「아직 없음」 같은 글 값은 칸 안 크기로 */
+@media (max-width:760px){
+  .l43-brief .l43-stats{display:grid;width:100%;grid-template-columns:none!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px}
+  .l43-brief .l43-st{min-width:0;padding:9px 8px}
+  .l43-brief .l43-st dt{font-size:12px;line-height:1.35;white-space:normal;word-break:keep-all;letter-spacing:-.02em}
+  .l43-brief .l43-st dd{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em}
+  .l43-brief .l43-st dd .l43-z{font-size:14px;font-weight:700}
+}

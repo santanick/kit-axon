@@ -129,7 +129,7 @@
   function todayCard() { if (!window.V4) return ''; const T = facToday(); if (!T.rows.length) return V4.empty({ art: 'room', t: '시간 예약 시설이 아직 없습니다', d: '강의실 · 스터디룸처럼 시간 단위로 빌려주는 공간을 등록하면 오늘 예약이 여기 시간 순서로 보입니다.', act: 'fac-tpl', l: '기본 템플릿으로 시작' });
     const td = todo(); const chips = [td.appr ? V4.chip(`승인 대기 ${td.appr}`, 'warn') : '', td.over ? V4.chip(`연체 ${td.over}`, 'bad') : '', T.free.length ? V4.chip(`비어 있음 · ${T.free[0]}${T.free.length > 1 ? ` 외 ${T.free.length - 1}` : ''}`, 'ok') : ''].join('');
     return `<section class="v4-card fc43" aria-labelledby="fc43h"><div class="v4-ch"><h3 id="fc43h">오늘 시설 ${T.n}곳 · <span class="num">${T.util}%</span> 가동</h3>${chips}<button class="btn sm ghost" data-act="tab" data-key="fac" data-v="tl">예약 현황 전체</button></div>
-      ${V4.timeline({ lo: T.lo, hi: T.hi, now: T.now, aria: `${T.day} 시설 예약 타임라인`, rows: T.rows.map(r => ({ n: r.n, sub: r.open ? `가동 ${r.util}% · ${r.n_bk}건` : r.closed || '운영 안 함', img: r.img, blocks: r.blocks })) })}
+      ${V4.timeline({ lo: T.lo, hi: T.hi, now: T.now, aria: `${T.day} 시설 예약 타임라인`, rowAct: { act: 'tab', key: 'fac', v: 'tl' }, rows: T.rows.map(r => ({ n: r.n, sub: r.open ? `가동 ${r.util}% · ${r.n_bk}건` : r.closed || '운영 안 함', img: r.img, blocks: r.blocks })) })}
       <div class="fc43-ft"><span>오늘 예약 <b class="num">${T.total}</b>건</span><span>승인 대기 <b class="num">${T.appr}</b>건</span><span class="sp"></span><button class="btn sm" data-act="fac-walk">+ 현장 예약 등록</button></div></section>`; }
   if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const pub = base(...a); try { if (pub && S && S.fac) pub.fac = facPublic(); } catch (e) { console.error('fac pub', e); } return pub; }; } /* eslint-disable-line no-global-assign */
 

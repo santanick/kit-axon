@@ -117,7 +117,8 @@
      기본 켬: 돈을 받는 기관(학원 · 평생 · 직업훈련 · 공공 시민 교육형 · 시설형). 기업 · 공공 직원 교육형 · 대학은 끔(메뉴 찾기에서 켬, P1-F07 · P2-H11) */
   MENU.ledger = { label: '수납', ws: 'ops' };
   if (MENU.sales) MENU.sales.label = '매출';
-  if (MENU.billing) MENU.billing.label = '청구서(수납으로 이동)';
+  /* v43.4 P1 · 022 · 045 · 046: 휴대폰(≤760px) 탭 줄에서는 「청구서」로 줄여 끝 잘림을 막는다(그리는 때마다 폭을 다시 읽음) */
+  if (MENU.billing) Object.defineProperty(MENU.billing, 'label', { configurable: true, enumerable: true, get: () => (window.matchMedia && matchMedia('(max-width:760px)').matches) ? '청구서' : '청구서(수납으로 이동)', set: () => { } });
   if (MENU.crmbill) MENU.crmbill.label = '수납';
   const pubEd0 = () => (S && S.org && S.org.type === 'public' && ['citizen', 'facility', 'staff'].includes(S.org.ed)) ? S.org.ed : 'staff';
   const MONEY = () => { if (!S || !S.org) return []; const ty = S.org.type; if (ty === 'k12') return ['crmbill', 'sales']; if (['adult', 'lifelong', 'voc'].includes(ty)) return ['ledger', 'sales']; if (ty === 'public' && pubEd0() !== 'staff') return ['ledger', 'sales']; return []; };
@@ -269,7 +270,7 @@
       ${nU && !teacher() ? `<button class="btn pri lg43-go" data-act="led-dun" data-v="">${ic('send', 16)} 미납 ${nU}명에게 결제 안내 보내기</button><small class="lg43-n">보내기 전에 대상 · 문구 확인 카드를 보여 드립니다.</small>` : `<button class="btn lg43-go" data-act="tab" data-key="ledger" data-v="book">원장 보기</button>`}</section>`;
     const D = (sm.daily || []).filter(d => String(d.day || '') >= P.from && String(d.day || '') <= P.to); let c = 0; const cum = D.map(d => (c += +d.net || 0));
     const area = cum.length > 1 ? `<section class="v4-card lg43-area" aria-labelledby="lg43a"><div class="v4-ch"><div style="margin-right:auto"><p class="v4-eb" style="margin:0" id="lg43a">${esc(P.label)} 누적 순매출</p><p class="v4-big">${won(sm.net).replace(/원$/, '')}<small>원</small></p></div>${V4.chip(`수납 ${won(sm.paid)}`, 'ok')}</div>
-      ${V4.area(cum, { h: 200, labels: D.map((d, i) => i % Math.max(1, Math.ceil(D.length / 6)) === 0 || i === D.length - 1 ? String(d.day).slice(5).replace('-', '.') : ''), fmt: v => won(v), yfmt: v => v >= 10000 ? Math.round(v / 10000) + '만' : String(v), tipL: i => `${String(D[i].day).slice(5).replace('-', '.')}까지 누적`, aria: '누적 순매출 추이' })}</section>` : '';
+      ${V4.area(cum, { h: 200, labels: D.map((d, i, A, st = Math.max(1, Math.ceil(D.length / 6))) => (i % st === 0 && (D.length - 1 - i >= st || st === 1)) || i === D.length - 1 ? String(d.day).slice(5).replace('-', '.') : ''), fmt: v => won(v), yfmt: v => v >= 10000 ? Math.round(v / 10000) + '만' : String(v), tipL: i => `${String(D[i].day).slice(5).replace('-', '.')}까지 누적`, aria: '누적 순매출 추이' })}</section>` : '';
     return `<div class="lg43 ${area ? '' : 'one'}">${pay}${area}</div>`; }
   /* 미납 안내(연락) — 확인 카드 */
   ACT['led-dun'] = el => { const k = el.dataset.v; const T = unpaidList().filter(x => !k || x.stage === k || (k === 'sel' && (UI.ledSel || []).includes(x.unitId + '|' + x.sid))); if (!T.length) return toast('안내할 대상이 없습니다.', 'warn'); const g = STG.find(x => x[0] === k);

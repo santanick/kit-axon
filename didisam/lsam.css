@@ -107,3 +107,5 @@ body:not(.lapp) #ltut .lt-in .lt-escb{flex-basis:100%;margin:0 6px}
 body:not(.lapp) #ltut .lt-note{padding:0 18px 10px}
 /* v43 H2(110): 웹 튜터 아바타 = 그린 원 + 반짝이(빈 연두 사각형처럼 보이던 것) */
 body:not(.lapp) #ltut .lt-orb{border-radius:50%;background:var(--pri,#00A63E) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z'/%3E%3C/svg%3E") center/58% no-repeat}
+/* v43.4 MC(110): 휴대폰 AI 튜터 머리 단추 44px */
+@media (max-width:760px){#ltut .lt-hb{width:44px;height:44px}}
