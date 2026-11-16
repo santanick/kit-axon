@@ -371,3 +371,4 @@ input[type=file][hidden]{display:none!important} /* 라벨 단추(.btn) 안 숨�
 #toasts .toast.warn,.toast.warn{background:#5C3200!important}
 #toasts .toast.warn::before,.toast.warn::before{background:#FFB547 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C3200' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M12 7v6M12 17v.5'/%3E%3C/svg%3E") center/14px no-repeat}
 html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background:#0B0D0C!important;box-shadow:0 0 0 1px rgba(255,255,255,.18),0 18px 40px -12px rgba(0,0,0,.7)!important}
+.top:has(> .g2-dom) .topr{margin-left:auto} /* v43 G2 2차: 시작 가이드(.bprog)를 칩 안으로 옮겨도 오른쪽 도구는 오른쪽 끝에 */

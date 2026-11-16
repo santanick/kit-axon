@@ -364,7 +364,7 @@ html[data-theme=dark] .hps-pubc{background:linear-gradient(90deg,rgba(0,134,45,.
 #hpe.hps .hpe-bar{padding:4px 12px;min-height:52px}
 #hpe.hps .hps-tabs{padding-top:0}
 #hpe.hps .hps-tab{padding:0 12px}
-#hpe.hps .hps-tab i{font-size:0;width:6px;height:6px;padding:0;border-radius:50%;background:var(--gr500,#16A34A);flex:none}
+#hpe.hps .hps-tab i{font-size:0!important;line-height:0;color:transparent;overflow:hidden;width:6px;height:6px;min-width:0;padding:0!important;border-radius:50%;background:var(--gr500,#16A34A);flex:none;align-self:center}
 #hpe.hps .hpe-bar .hps-open{display:none}
 #hpe.hps .hps-zseg button{padding:0 8px}
 #hpe.hps .hps-flow{padding:6px 12px;gap:10px}

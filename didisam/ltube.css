@@ -442,8 +442,10 @@ body.tube:not(.tb-watch):not(.lt-on):not(.tb-sheet):not(.ap-pickon):has(> #tbFab
 body.tube:not(.tb-watch) #tbFab.tb-fab{right:14px;bottom:calc(var(--ap-nav,76px) + 12px + var(--ap-sb,0px));width:auto;height:44px;padding:0 14px 0 11px;flex-direction:row;gap:6px;border-radius:999px;font-weight:700;box-shadow:0 1px 2px rgba(26,24,20,.08),0 10px 24px -6px rgba(0,134,45,.45)}
 body.tube:not(.tb-watch) #tbFab.tb-fab svg{width:18px;height:18px}
 body.tube:not(.tb-watch) #tbFab.tb-fab span{display:inline;font-size:13px}
-body.tube.tb-fsm:not(.tb-watch) #tbFab.tb-fab{width:44px;height:44px;padding:0;gap:0;justify-content:center}
-body.tube.tb-fsm:not(.tb-watch) #tbFab.tb-fab span{display:none}
+/* 아래로 스크롤하는 동안은 접어 둔다(본문 카드 위에 떠 있지 않게) — 위로 올리거나 맨 위에 오면 다시 보임 */
+body.tube:not(.tb-watch) #tbFab.tb-fab{transition:opacity .18s ease,transform .18s ease}
+body.tube.tb-fsm:not(.tb-watch) #tbFab.tb-fab{opacity:0;transform:translateY(16px) scale(.9);pointer-events:none}
+@media (prefers-reduced-motion:reduce){body.tube:not(.tb-watch) #tbFab.tb-fab{transition:none}}
 body.tube:not(.tb-watch) #lm{padding-bottom:calc(var(--ap-nav,64px) + var(--ap-sb,0px) + 80px)}
 @media (min-width:900px){body.tube:not(.tb-watch):has(> #tbFab) .ap-nav.tb-nav{right:auto;transform:translateX(-50%)}body.tube:not(.tb-watch) #tbFab.tb-fab{left:auto;right:calc(50% - 240px);bottom:calc(var(--ap-nav,76px) + 20px)}}
 /* v43 G2 2차: 유형별 홈 고유 카드(ltube.js typeHTML) */
