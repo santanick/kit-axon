@@ -67,22 +67,26 @@
       `<div class="kpis">${kpi('이번 학기', sem())}${kpi('연동 강의실', S.classes.length + '개')}${kpi('분반', secN + '개')}${kpi('수강 등록', enr + '건')}${kpi('마지막 동기화', L.sis.last ? '완료' : '없음', L.sis.last ? esc(L.sis.last) : '지금 동기화로 시작')}</div>` +
       tabs('sisT', [['stat', '연동 구성'], ['sec', '분반 · 합반'], ['auth', '통합 인증'], ['mig', '데이터 이관'], ['log', '동기화 기록']], tb);
     let b = '';
-    if (tb === 'stat') b = `<div class="card"><div class="ch"><b>연동 방식</b><small>학교 협력부서(정보화본부 · 학사과)와 규격 확정 후 연결</small></div>
-      ${(() => { /* v43 R2: 기본 select 2개 · 시간 입력 → 세그먼트 칩(연동 방식 · 주기 · 실행 시각) + 상태 흐름 */ const dis = SIS_EDIT() ? '' : 'disabled'; const seg = (k, O, cur) => `<div class="ul-seg" role="radiogroup">${O.map(([v, l, d]) => `<button type="button" role="radio" aria-checked="${cur === v}" class="${cur === v ? 'on' : ''}" data-act="sis-set" data-k="${k}" value="${esc(v)}" ${dis}><b>${esc(l)}</b>${d ? `<small>${esc(d)}</small>` : ''}</button>`).join('')}</div>`;
-        const MD = { db: '학사 DB의 읽기 전용 뷰를 직접 조회', api: '학사 시스템이 제공하는 API 호출', file: '정해진 시각에 파일을 주고받기' };
-        return `<div class="ul-row"><span class="ul-lb">학사 연계 방식</span>${seg('mode', Object.entries(MODE).map(([k, v]) => [k, v, MD[k]]), L.sis.mode)}</div>
-      <div class="ul-row"><span class="ul-lb">자동 동기화 주기</span>${seg('cycle', Object.entries(CYC).map(([k, v]) => [k, v]), L.sis.cycle)}</div>
-      <div class="ul-row"><span class="ul-lb">실행 시각</span>${seg('time', ['02:00', '04:00', '06:00', '22:00'].concat(L.sis.time && !['02:00', '04:00', '06:00', '22:00'].includes(L.sis.time) ? [L.sis.time] : []).map(x => [x, x]), L.sis.time)}</div>
-      <label class="ul-ck ul-sw"><input type="checkbox" role="switch" ${L.sis.enrollAuto ? 'checked' : ''} data-chg="sis-set" data-k="enrollAuto" ${dis}><span>수강신청 기간에는 실시간으로 자동 동기화</span></label>
-      <div class="ul-flow">${[['학사 시스템', MODE[L.sis.mode] || ''], ['디디쌤 동기화', CYC[L.sis.cycle] || ''], ['강의실 · 수강 반영', `${S.classes.length}개 강의실`], ['출석 · 성적 전송', '교수 확정 후']].map(([a, b], i) => `<div><i>${i + 1}</i><b>${esc(a)}</b><small>${esc(b)}</small></div>`).join('<span class="ul-ar">›</span>')}</div></div>`; })()}` +
-      `<div class="card"><div class="ch"><b>받는 데이터 · 보내는 데이터</b></div>${table(['방향', '항목', '디디쌤 필드', '비고'], [
-        ['받기', '구성원(교수 · 조교 · 직원 · 학생)', '학번/사번 · 소속 · 역할 · 학적 상태', '이름 · 연락처는 저장하지 않음'],
-        ['받기', '조직 · 학사 일정', '학과 · 학기 · 차시', '달력 · 알림에 반영'],
-        ['받기', '강의 정보 · 수업계획서', '교과목 · 학수번호 · 분반 · 담당교수 · 평가 비율', '평가 비율은 성적 기준으로 자동 등록'],
-        ['받기', '수강 정보', '수강생 · 청강생 · 수강 취소', '청강생은 성적 처리에서 제외'],
-        ['보내기', '출석', '차시별 출석 · 지각 · 결석 · 공결', '휴 · 보강 포함'],
-        ['보내기', '성적', '항목별 점수 · 총점 · 등급', '교수 확정 후 전송']].map(r => r.map((x, i) => i === 0 ? tag(x, x === '받기' ? '' : 'y') : esc(x))))}</div>` +
-      `<div class="card"><div class="ch"><b>기간계 연계</b></div><p class="mini">메일 · SMS · 카카오 알림톡(독려 · 휴보강 알림), 강의 녹화 시스템(녹화본 자동 탑재), 화상강의(출석 연동), 성장마루(비교과) · KOCW · MOOC는 모듈별로 켜고 끕니다.</p></div>`;
+    if (tb === 'stat') b = (() => { /* v43 F2 036: 폼이 주인공 → 「동기화 기록 · 다음 실행」 타임라인이 주인공, 연동 방식 · 주기 · 시각은 접는 설정 패널로 */
+      const dis = SIS_EDIT() ? '' : 'disabled'; const seg = (k, O, cur) => `<div class="ul-seg" role="radiogroup">${O.map(([v, l, d]) => `<button type="button" role="radio" aria-checked="${cur === v}" class="${cur === v ? 'on' : ''}" data-act="sis-set" data-k="${k}" value="${esc(v)}" ${dis}><b>${esc(l)}</b>${d ? `<small>${esc(d)}</small>` : ''}</button>`).join('')}</div>`;
+      const MD = { db: '학사 DB의 읽기 전용 뷰를 직접 조회', api: '학사 시스템이 제공하는 API 호출', file: '정해진 시각에 파일을 주고받기' };
+      const tm = L.sis.time || '02:00'; const cyc = CYC[L.sis.cycle] || ''; const sumTxt = `${MODE[L.sis.mode] || '방식 미정'} · ${cyc}${L.sis.cycle === 'daily' ? ' ' + tm : ''}${L.sis.enrollAuto ? ' · 수강신청 기간 실시간' : ''}`;
+      const cfg = `<details class="card ul-cfg"${UI.sisCfg ? ' open' : ''}><summary><span class="ul-cfgi" aria-hidden="true">${ic('gear', 18)}</span><span class="ul-cfgt"><b>연동 설정</b><small>${esc(sumTxt)}</small></span><span class="ul-cfgb">${SIS_EDIT() ? '바꾸기' : '보기'}</span></summary>
+        <div class="ul-row"><span class="ul-lb">학사 연계 방식</span>${seg('mode', Object.entries(MODE).map(([k, v]) => [k, v, MD[k]]), L.sis.mode)}</div>
+        <div class="ul-row"><span class="ul-lb">자동 동기화 주기</span>${seg('cycle', Object.entries(CYC).map(([k, v]) => [k, v]), L.sis.cycle)}</div>
+        <div class="ul-row"><span class="ul-lb">실행 시각</span>${seg('time', ['02:00', '04:00', '06:00', '22:00'].concat(L.sis.time && !['02:00', '04:00', '06:00', '22:00'].includes(L.sis.time) ? [L.sis.time] : []).map(x => [x, x]), L.sis.time)}</div>
+        <label class="ul-ck ul-sw"><input type="checkbox" role="switch" ${L.sis.enrollAuto ? 'checked' : ''} data-chg="sis-set" data-k="enrollAuto" ${dis}><span>수강신청 기간에는 실시간으로 자동 동기화</span></label><p class="mini">연동 방식은 학교 협력부서(정보화본부 · 학사과)와 규격을 확정한 뒤 정합니다.</p></details>`;
+      const flow = `<div class="ul-flow">${[['학사 시스템', MODE[L.sis.mode] || ''], ['디디쌤 동기화', cyc], ['강의실 · 수강 반영', `${S.classes.length}개 강의실`], ['출석 · 성적 전송', '교수 확정 후']].map(([a, b], i) => `<div><i>${i + 1}</i><b>${esc(a)}</b><small>${esc(b)}</small></div>`).join('<span class="ul-ar">›</span>')}</div>`;
+      const LG = (L.sis.log || []).slice(0, 5); const d1 = new Date(); d1.setDate(d1.getDate() + 1); const tmr = `${d1.getMonth() + 1}월 ${d1.getDate()}일`;
+      const nx = [[L.sis.cycle === 'daily' ? `${tmr} ${tm}` : L.sis.cycle === 'hourly' ? '다음 정시' : '5분마다', '자동 동기화', '구성원 · 학기 · 교과목 · 수강 정보를 받습니다'], ['수강 정정 기간', L.sis.enrollAuto ? '실시간' : '꺼짐', L.sis.enrollAuto ? '수강 변경을 5분 안에 강의실에 반영합니다' : '설정에서 켜면 수강 변경을 바로 반영합니다'], ['교수 확정 후', '학사로 보내기', '차시별 출석 · 항목별 성적을 학사 시스템에 보냅니다']];
+      const it = (cls, when, k, t, d, btn) => `<li class="${cls}"><span class="ul-td" aria-hidden="true"></span><div class="ul-tw"><small>${esc(when)}</small><b>${tag(k, cls === 'err' ? 'r' : cls === 'now' ? 'y' : cls === 'next' ? '' : 'g')} ${esc(t)}</b>${d ? `<span>${esc(d)}</span>` : ''}</div>${btn || ''}</li>`;
+      const tl = `<div class="card ul-tl"><div class="ch"><b>동기화 기록 · 다음 실행</b><small>${L.sis.last ? `마지막 ${esc(L.sis.last)}` : '아직 동기화하지 않았습니다'}</small>${LG.length ? `<button class="btn sm ghost" data-act="tab" data-key="sisT" data-v="log">전체 기록</button>` : ''}</div>${flow}<ol>
+        ${LG.length ? LG.map(r => it(r.ok ? 'ok' : 'err', r.at, r.ok ? '성공' : '확인 필요', r.k + ' 동기화', r.what)).join('') : it('now', '지금', '대기', '첫 동기화를 기다립니다', `강의실 ${S.classes.length}개 · 수강 등록 ${enr}건을 받을 준비가 됐습니다`, SIS_EDIT() ? '<button class="btn sm pri" data-act="sis-sync">첫 동기화 실행</button>' : '')}
+        ${nx.map(([w, k, d]) => it('next', w, '예정', k, d)).join('')}</ol></div>`;
+      const ROWS = [['받기', '구성원(교수 · 조교 · 직원 · 학생)', '학번/사번 · 소속 · 역할 · 학적 상태', '이름 · 연락처는 저장하지 않음'], ['받기', '조직 · 학사 일정', '학과 · 학기 · 차시', '달력 · 알림에 반영'], ['받기', '강의 정보 · 수업계획서', '교과목 · 학수번호 · 분반 · 담당교수 · 평가 비율', '평가 비율은 성적 기준으로 자동 등록'], ['받기', '수강 정보', '수강생 · 청강생 · 수강 취소', '청강생은 성적 처리에서 제외'], ['보내기', '출석', '차시별 출석 · 지각 · 결석 · 공결', '휴 · 보강 포함'], ['보내기', '성적', '항목별 점수 · 총점 · 등급', '교수 확정 후 전송']];
+      const io = `<div class="card ul-io"><div class="ch"><b>받는 데이터 · 보내는 데이터</b><small>받기 4종 · 보내기 2종</small></div>${table(['방향', '항목', '디디쌤 필드', '비고'], ROWS.map(r => r.map((x, i) => i === 0 ? tag(x, x === '받기' ? '' : 'y') : esc(x))))}
+        <div class="ul-mods"><b>기간계 연계</b>${['메일', 'SMS', '카카오 알림톡', '강의 녹화 시스템', '화상강의', '성장마루(비교과)', 'KOCW', 'MOOC'].map(x => `<span class="ul-mod">${esc(x)}</span>`).join('')}<small class="mini">모듈별로 켜고 끕니다</small></div></div>`;
+      return tl + cfg + io; })();
     if (tb === 'sec') b = `<div class="card"><div class="ch"><b>교과목 · 분반</b><small>학사 기준 자동 개설 · 같은 과목 분반에 원클릭 동기화</small></div>${table(['학수번호', t('cls'), '분반', '수강', '합반', ''], S.classes.map((c, i) => { const x = sx[c.id] || {}; return [esc(x.code || code(c, i)), esc(c.name), (x.secs || []).map(s => tag(s)).join(' ') || '—', c.learners.length + '명', x.merged ? tag('대표 ' + esc(x.merged)) : '—', (x.secs || []).length > 1 && SIS_EDIT() ? `<button class="btn sm" data-act="sec-sync" data-c="${c.id}">분반 동기화</button>` : '']; }), '동기화된 교과목이 없습니다. 연동 구성에서 지금 동기화를 누르세요.')}</div>
       <div class="card"><div class="ch"><b>분반 동기화 기록</b></div>${(L.secLog || []).slice(0, 8).map(r => `<div class="row"><span>${esc(r.at)} · ${esc(r.c)}</span><span class="mini">${esc(r.what)}</span></div>`).join('') || '<div class="empty">아직 없습니다. 개별 분반에서 고친 항목은 다시 동기화해도 덮어쓰지 않습니다.</div>'}</div>`;
     if (tb === 'auth') { const A = L.auth; const ck = (k, l) => `<label class="ul-ck"><input type="checkbox" ${A[k] ? 'checked' : ''} data-chg="auth-set" data-k="${k}" ${SIS_EDIT() ? '' : 'disabled'}> ${esc(l)}</label>`;
@@ -94,7 +98,7 @@
     if (tb === 'log') b = `<div class="card"><div class="ch"><b>동기화 기록</b><small>개인별 결과 조회 · 실패 건 재처리</small></div>${table(['시각', '구분', '결과', '내용'], L.sis.log.slice(0, 20).map(r => [esc(r.at), esc(r.k), r.ok ? tag('성공') : tag('확인 필요', 'r'), esc(r.what)]), '아직 기록이 없습니다.')}</div>`;
     return top + b;
   };
-  ACT['sis-set'] = el => { if (!SIS_EDIT()) return; const L = ens(); const k = el.dataset.k; L.sis[k] = el.type === 'checkbox' ? el.checked : (el.value || el.getAttribute('value') || ''); logAudit('학사 연동 설정 변경 — ' + k); save(); render(); };
+  ACT['sis-set'] = el => { if (!SIS_EDIT()) return; const L = ens(); UI.sisCfg = 1; /* 설정 패널을 연 채로 다시 그립니다 */ const k = el.dataset.k; L.sis[k] = el.type === 'checkbox' ? el.checked : (el.value || el.getAttribute('value') || ''); logAudit('학사 연동 설정 변경 — ' + k); save(); render(); };
   ACT['auth-set'] = el => { if (!SIS_EDIT()) return; const A = ens().auth; const k = el.dataset.k; A[k] = el.type === 'checkbox' ? el.checked : (isNaN(+el.value) ? el.value : +el.value); logAudit('통합 인증 정책 변경 — ' + k); save(); render(); };
   ACT['sis-sync'] = () => {
     if (!SIS_EDIT()) return toast('관리자만 실행할 수 있습니다.', 'warn'); const L = ens(); const at = nowStr(); let secN = 0;
