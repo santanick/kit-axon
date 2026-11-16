@@ -310,6 +310,14 @@
     if (A.length) notify(tName(), `오늘의 미션 ${A.length}개 · 먼저 「${A[0].h}」부터 해 볼까요?`, 'today'); else if (qa) notify(tName(), '선생님 답변이 도착했어요.', 'qa'); }
 
   /* ── v27.1 내 강의(#my) 앱 화면: 이어서 학습 카드 + 아래에 기존 학습 기록(배지 · 수료증 · 결제 · 활동) 그대로 ── */
+  /* v43 F4(K4 114): 내 강의 머리 = 그린 요약 카드(이어 갈 차시 한 문장 + 숫자 3칸). 같은 숫자를 문장 · 칩에서 반복하지 않고, 0은 숫자로 쓰지 않는다 */
+  function myHeroHTML(P, ing, cntOf, today, CW) { const nx = ing.find(x => x.next) || ing[0]; const avg = ing.length ? Math.round(ing.reduce((a, x) => a + (x.p || 0), 0) / ing.length) : 0;
+    const dl = ing.map(x => String(x.c.end || '').slice(0, 10)).filter(d => d && d >= today).sort()[0]; const dd = dl ? Math.round((new Date(dl + 'T00:00:00') - new Date(today + 'T00:00:00')) / 864e5) : null;
+    const T = [cntOf('ing') ? [cntOf('ing') + '개', '수강 중'] : ing.length ? [ing.length + '개', '남은 강좌'] : null, avg ? [avg + '%', '평균 진도'] : null, dd != null ? [dd ? 'D-' + dd : '오늘', '가까운 마감'] : cntOf('done') ? [cntOf('done') + '개', '수료'] : null].filter(Boolean);
+    const h = nx && nx.next ? `「${esc(nx.next.title)}」부터 이어 가요` : nx ? `「${esc(nx.c.name)}」${lJ(nx.c.name, '을', '를')} 시작해 볼까요?` : `수강 중인 ${esc(CW)}${lJ(CW, '을', '를')} 모두 마쳤어요`;
+    const href = nx ? (nx.next ? `#c/${nx.c.id}/${nx.next.id}` : `#c/${nx.c.id}`) : '';
+    return `<div class="ap-myh ap-myhero"><div class="ap-myhh">${av(P)}<span><small>${esc(who())}의 ${esc(CW)}</small><b>${h}</b>${nx ? `<em>${esc(nx.c.name)}${nx.p ? ` · ${nx.p}%` : ''}</em>` : ''}</span></div>
+      ${T.length ? `<div class="ap-myst">${T.map(([v, l]) => `<span><b>${v}</b>${l}</span>`).join('')}</div>` : ''}${href ? `<a class="ap-mygo" href="${esc(href)}">${ico('play', 14)} 이어서 학습</a>` : ''}</div>`; }
   function myTopHTML() { if (typeof myStats !== 'function') return ''; const st = myStats(); const C = st.courses; const P = persona();
     const anyTh = C.some(x => x.c && x.c.thumb); /* v37 L1: 썸네일이 있는 과정이 하나라도 있으면 없는 과정은 이름 타일로 줄을 맞춘다 */
     const ring = p => `<span class="ap-rg" style="--p:${Math.max(0, Math.min(100, p))}"><b>${p}%</b></span>`;
@@ -324,8 +332,8 @@
     const ing = C.filter(x => !x.done), dn = C.filter(x => x.done);
     const CW = (w => w && w !== '클래스' ? w : '강좌')((SITE().terms || {}).cls); /* v38 F5 U16: 기관 유형 용어(교과목 · 교육과정 …) */
     return `<section class="ap-my" style="--pc:${P ? P.c : 'var(--pri)'}"><div class="ap-pw2">
-      <div class="ap-myh">${av(P)}<p>${C.length ? `${esc(who())}, 수강 전 ${cntOf('pre')}개 · 수강 중 ${cntOf('ing')}개 · 수료 ${cntOf('done')}개예요.${ing[0] && ing[0].next ? ` 「${esc(ing[0].next.title)}」부터 이어 가요.` : ''}` : `${esc(who())}, 아직 수강 중인 ${esc(CW)}${lJ(CW, '이', '가')} 없어요. 둘러보고 시작해 볼까요?`}</p></div>
-      ${C.length ? `<div class="ap-mf"><div class="ap-fc" role="tablist" aria-label="수강 상태">${[['all', '전체'], ['pre', '수강 전'], ['ing', '수강 중'], ['done', '수강 완료']].map(([k, l]) => `<button type="button" role="tab" class="ap-fch${F === k ? ' on' : ''}" aria-selected="${F === k}" data-ap="myf" data-v="${k}">${l} <i>${cntOf(k)}</i></button>`).join('')}</div>
+      ${C.length ? myHeroHTML(P, live.filter(x => !x.done), cntOf, today, CW) : `<div class="ap-myh">${av(P)}<p>${esc(who())}, 아직 수강 중인 ${esc(CW)}${lJ(CW, '이', '가')} 없어요. 둘러보고 시작해 볼까요?</p></div>`}
+      ${C.length ? `<div class="ap-mf"><div class="ap-fc" role="tablist" aria-label="수강 상태">${[['all', '전체'], ['pre', '수강 전'], ['ing', '수강 중'], ['done', '수강 완료']].map(([k, l]) => `<button type="button" role="tab" class="ap-fch${F === k ? ' on' : ''}" aria-selected="${F === k}" data-ap="myf" data-v="${k}">${l}${cntOf(k) ? ` <i>${cntOf(k)}</i>` : ''}</button>`).join('')}</div>
         <button type="button" class="ap-srt" data-ap="mys" aria-label="정렬 바꾸기 — 지금 ${SO === 'name' ? '제목순' : '최근 수강순'}">${ico('sortk', 14)}${SO === 'name' ? '제목순' : '최근 수강순'}</button></div>
         <div class="ap-cl">${V.length ? V.map(x => card(x)).join('') : `<p class="ap-empty">${F === 'pre' ? `아직 시작하지 않은 ${CW}${lJ(CW, '이', '가')} 없어요.` : F === 'done' ? `아직 완료한 ${CW}${lJ(CW, '이', '가')} 없어요. 조금만 더 힘내요!` : `해당하는 ${CW}${lJ(CW, '이', '가')} 없어요.`}</p>`}</div>
         ${EX.length ? `<h2 class="ap-h2">기간 만료 <small>${EX.length}</small></h2><div class="ap-cl">${EX.map(x => card(x, 1)).join('')}</div>` : ''}`
@@ -416,7 +424,7 @@
   /* ── 그리기 ── */
   function sync() { const th = document.querySelector('.ap-home .ap-th'); if (!th) return; th.querySelectorAll(':scope > .lt-m:not(.ap-hi)').forEach(x => x.remove()); th.insertAdjacentHTML('beforeend', threadHTML()); const sc = document.getElementById('apScroll'); if (sc && (LT.busy || (LT.msgs || []).some(m => m.me))) sc.scrollTop = sc.scrollHeight; }
   function apply() {
-    const on = appOn(); document.body.classList.toggle('lapp', on); document.body.classList.remove('ap-homeon', 'ap-pickon');
+    const on = appOn(); document.body.classList.toggle('lapp', on); document.body.classList.remove('ap-homeon', 'ap-pickon', 'ap-myon');
     try { if (LR.tid && (on || LR.me)) { ls.set('tid', LR.tid); if (on) orgSave(); } } catch (e) { }
     const lm = document.getElementById('lm'); const app = document.getElementById('lapp'); if (!lm || !app) return;
     document.body.classList.remove('lpar');
@@ -434,6 +442,7 @@
     else if (a === 'home' && isPar()) { lm.innerHTML = parHomeHTML(); }
     else if (hm) { if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } lm.innerHTML = homeHTML(); document.body.classList.add('ap-homeon'); const sc = document.getElementById('apScroll'); if (sc && (LT.msgs || []).some(m => !m.sys)) sc.scrollTop = sc.scrollHeight; }
     if (a === 'my' && LR.me && !isPar() && !lm.querySelector('.ap-my')) { const h = lm.querySelector('section.myh'); if (h) h.hidden = true; lm.insertAdjacentHTML('afterbegin', myTopHTML()); }
+    if (a === 'my' && LR.me && !isPar()) { document.body.classList.add('ap-myon'); const tidy = () => lm.querySelectorAll('.mypage .ls-fh .ls-tx b').forEach(b => { const t = b.textContent, u = t.replace(/\s+0\s*\/\s*\d+.*$/, ''); if (u !== t && u.trim()) b.textContent = u; }); tidy(); setTimeout(tidy, 0); } /* v43 F4(K4 114): 접힌 기록 머리의 「0/3」 「0/5 수료…」 숫자 0 표기 정리 */
     if (!hm && !needPick) { const ob = app.querySelector('.ap-bar'); if (!ob) app.insertAdjacentHTML('afterbegin', barHTML()); else if (ob.dataset.a !== a) ob.outerHTML = barHTML(); }
     if (LR.me && !needPick && !isPar()) dailyNudge();
     if (!app.querySelector('.ap-nav') && !needPick) app.insertAdjacentHTML('beforeend', navHTML());
