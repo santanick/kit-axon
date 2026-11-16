@@ -268,3 +268,24 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
 .tu43-on{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:13px;font-weight:600}
 html[data-theme=dark] .tu43-st{background:rgba(14,20,17,.92);color:#EAF2EC}
 html[data-theme=dark] #main .clb-th .clb-thk,html[data-theme=dark] #main .clb-th .clb-thl{color:#fff!important;background:rgba(6,12,9,.92)}
+/* v43 R5 — 033 따라 하기 진행 현황(단계 깔때기 + 완료 상위) */
+.tu43-sum{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;margin-top:20px}
+.tu43-box{padding:22px;border-radius:20px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--line,rgba(0,0,0,.06))}
+.tu43-bh{display:flex;align-items:baseline;gap:10px;margin-bottom:16px}.tu43-bh h3{margin:0;font-size:16px;font-weight:800}.tu43-bh small{font-size:12px;color:var(--mute,#6B6F6C)}
+.tu43-fn{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.tu43-fn li{display:grid;grid-template-columns:120px minmax(0,1fr) 56px 40px;gap:12px;align-items:center;font-size:13px}
+.tu43-fl{color:var(--ink2,#3A3F3C);font-weight:600}
+.tu43-fb{display:block;height:14px;border-radius:99px;background:var(--gr50,#E8F7EC);overflow:hidden}.tu43-fb i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--gr600,#00862D),var(--gr400,#3BC765))}
+.tu43-fn li:last-child .tu43-fb i{background:var(--gr800,#03271A)}
+.tu43-fn b{text-align:right;font-variant-numeric:tabular-nums}.tu43-fn em{font-style:normal;font-size:12px;color:var(--mute,#6B6F6C);text-align:right}
+.tu43-tip{margin:18px 0 0;padding:10px 12px;border-radius:12px;background:var(--gr50,#E8F7EC);color:var(--gr800,#03271A);font-size:12.5px;line-height:1.5;display:flex;gap:6px}
+.tu43-rk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.tu43-rk li{display:grid;grid-template-columns:22px 56px minmax(0,1fr) auto;gap:12px;align-items:center}
+.tu43-rn{font-weight:800;color:var(--gr700,#066B2A);text-align:center}
+.tu43-rp{width:56px;height:40px;border-radius:10px;background:var(--gr100,#D3F2DC) center/cover no-repeat}
+.tu43-rt{display:flex;flex-direction:column;min-width:0}.tu43-rt b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tu43-rt small{font-size:12px;color:var(--mute,#6B6F6C)}
+.tu43-rv{font-size:12px;color:var(--mute,#6B6F6C)}.tu43-rv b{font-size:16px;color:var(--ink,#14171A);font-variant-numeric:tabular-nums}
+html[data-theme=dark] .tu43-box{background:#1C1F1E;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+html[data-theme=dark] .tu43-fb,html[data-theme=dark] .tu43-tip{background:rgba(255,255,255,.08);color:var(--gr300,#7DDB95)}
+@media (max-width:1100px){.tu43-sum{grid-template-columns:1fr}}
+.tu43-on{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--mute,#6B6F6C);cursor:pointer}

@@ -65,6 +65,8 @@ function bkEnsureAll() { const L = S.lsite; if (!L) return; L.dbooks = (L.dbooks
   const B = L.my && L.my.blocks; if (B && !B.some(([k]) => k === 'books')) { const i = B.findIndex(([k]) => k === 'courses'); B.splice(i < 0 ? B.length : i + 1, 0, ['books', true]); } }
 { const base = lsDefault; lsDefault = (...a) => { const D = base(...a); try { const CL = (S.classes || []).filter(c => c.status !== '종료' && (c.curriculum || []).length);
     D.dbooks = D.levels.map((l, i) => { const c = CL[i]; if (!c && S.org && S.org.empty) return null; /* v38 A-8: 빈 스튜디오에는 샘플 디지털북을 넣지 않는다(만든 과정이 있으면 그 과정으로) */ const b = c ? bkFromCourse(c) : bkAIDraft(`${l.name} ${(D.types[i] || D.types[0] || {}).name || ''}`.trim(), 3); return Object.assign(b, { level: i, color: l.color }); }).filter(Boolean);
+    /* v43 R5: 샘플로 시작한 기관은 남은 과정(최대 3개)도 디지털북으로 — 디지털북 탭이 3권만 있어 비어 보이던 문제(034). 빈 스튜디오는 그대로 */
+    if (!(S.org && S.org.empty)) CL.slice(D.levels.length, D.levels.length + 3).forEach((c, k) => { const l = D.levels[k % Math.max(1, D.levels.length)] || {}; D.dbooks.push(Object.assign(bkFromCourse(c), { level: k % Math.max(1, D.levels.length), color: l.color || '#00862D' })); });
     const TU = (Array.isArray(S.tuts) ? S.tuts : lsSeedTuts(lsT())).filter(t => /^[\w-]{11}$/.test(t.yt || '')); /* 과정 영상이 YouTube가 아니면 같은 수준 튜토리얼 영상을 1단원에 넣어 바로 재생되게 */
     D.dbooks.forEach((b, i) => { const tu = TU.find(t => t.level === i) || TU[i]; const ch = b.chs[0]; if (!tu || !ch || bkAll(b).some(x => x.type === 'video')) return; ch.blocks.splice(1, 0, bkB('video', { yt: tu.yt, title: tu.title })); }); } catch (e) { console.error(e); } return D; }; }
 const bkAll = b => b.chs.flatMap(c => c.blocks);

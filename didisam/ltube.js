@@ -110,13 +110,23 @@
     [/오프라인|원데이|워크숍|실습 ?클래스|세미나|특강/, ['grp-06', 'grp-02', 'cor-02']], [/구독|템플릿|양식/, ['lap-01', 'dsk-09', 'lap-04']], [/요리|조리|한식|양식 ?조리|제과|제빵|베이킹/, ['coo-01', 'coo-02', 'bak-02', 'bak-05']],
     [/피아노|기타|음악|보컬|악기/, ['mus-08', 'mus-02', 'mus-05']], [/미술|수채화|드로잉|그림|캘리/, ['art-01', 'art-02', 'art-06']], [/정비|자동차|용접|전기|기계|공구/, ['aut-03', 'wrk-07', 'wrk-04']],
     [/리더십|직무|신입|온보딩|연수|역량|HRD|매니저/, ['cor-01', 'cor-07', 'cor-03']], [/수학|과학|국어|내신|수능|숙제/, ['dsk-03', 'dsk-07', 'dsk-06']]);
+  STK.push([/수영|아쿠아|배드민턴|헬스|PT|체육|스포츠|축구|농구/, ['spo-01', 'spo-03', 'spo-05', 'spo-07']], [/요가|필라테스|명상|스트레칭/, ['yog-01', 'yog-02', 'yog-03']], [/시니어|스마트폰|디지털 배움/, ['sen-01', 'sen-03', 'sen-06']],
+    [/역사|탐방|문화|여행/, ['arc-01', 'arc-03', 'nat-02']], [/간호|보건|의료|해부/, ['sci-01', 'sci-02']], [/공학|자료구조|프로그래밍 기초|알고리즘/, ['cod-02', 'lap-05']], [/글쓰기|리딩|문학|독서/, ['lib-02', 'lib-05', 'lan-01']],
+    [/창업|캠프|아이디어|포트폴리오/, ['grp-01', 'grp-03', 'off-04']], [/CNC|선반|PLC|제어|안전/, ['wrk-02', 'wrk-05', 'wrk-08']], [/협상|영업|팀장/, ['cor-04', 'cor-09', 'off-06']], [/코딩 놀이|초6|초등/, ['kid-03', 'kid-05', 'kid-07']]);
+  /* v43 R5: 강좌명으로 장면을 못 찾으면 기관 유형 사진 묶음에서(빗금 자리표시 대신 실사진). 같은 화면 안에서는 겹치지 않게 */
+  const POOL = { adult: ['lap-02', 'lap-07', 'dsk-05', 'lap-09', 'dsk-08', 'off-02'], k12: ['kid-01', 'kid-02', 'stu-01', 'dsk-06', 'kid-06', 'kid-08'], univ: ['lec-01', 'lib-01', 'stu-02', 'lec-02', 'lib-03', 'cls-02'],
+    corp: ['cor-05', 'off-01', 'cor-08', 'off-03', 'cor-11', 'sem-01'], voc: ['wrk-01', 'wrk-03', 'aut-01', 'wrk-06', 'voc-01', 'aut-02'], lifelong: ['sen-02', 'art-03', 'mus-01', 'sen-04', 'lib-04', 'art-04'],
+    public: ['spo-02', 'spo-04', 'spo-06', 'yog-01', 'spo-08', 'fam-02'] };
+  const LIVEP = { adult: ['grp-06', 'cls-01'], k12: ['cls-03', 'kid-04'], univ: ['lec-03', 'cls-04'], corp: ['sem-01', 'cor-02'], voc: ['wrk-07', 'wrk-04'], lifelong: ['grp-02', 'sen-07'], public: ['spo-05', 'yog-02'] };
+  const poolOf = (seed, live) => { const L = (live ? LIVEP : POOL)[ty()] || POOL.adult; const u = TB.used || (TB.used = new Set()); const k0 = hsh(seed) % L.length;
+    for (let i = 0; i < L.length; i++) { const id = L[(k0 + i) % L.length]; if (!u.has(id)) { u.add(id); return `img/stock/${id}-800.webp`; } } return `img/stock/${L[k0]}-800.webp`; };
   const stockOf = s => { const t = String(s || ''); const r = STK.find(([re]) => re.test(t)); if (!r) return ''; const L = r[1], u = TB.used || (TB.used = new Set()); const k0 = hsh(t) % L.length;
     for (let i = 0; i < L.length; i++) { const id = L[(k0 + i) % L.length]; if (!u.has(id)) { u.add(id); return id; } } return ''; };
   window.tubeStock = stockOf;
   const TYI = { video: 'play', doc: 'doc', quiz: 'quiz', exam: 'quiz', assign: 'edit', live: 'live', offline: 'pin' };
   const patHTML = (seed, ty, cls) => `<span class="${cls} tb-pat p${hsh(seed) % 4}" aria-hidden="true"><i>${I[TYI[ty] || 'film'](28)}</i></span>`;
   /* 사진 있는 썸네일: <img> 한 장(가로 꽉 채움). 없으면 패턴 */
-  const photoOf = c => { if (c.thumb) return c.thumb; const id = stockOf(c.name); return id ? `img/stock/${id}-800.webp` : ''; };
+  const photoOf = c => { if (c.thumb) return c.thumb; const id = stockOf(c.name); return id ? `img/stock/${id}-800.webp` : poolOf(c.name); };
   function thumbBlock(c, it, cls) { const ph = photoOf(c); return ph ? `<span class="${cls} img"><img src="${esc(ph)}" alt="" loading="lazy"></span>` : patHTML(c.name, it ? it.type : 'video', cls); }
 
   /* ── 홈 피드 ── */
@@ -136,7 +146,7 @@
   function pinHTML() { try { const mine = new Set(stats().courses.map(x => x.c.id)); const N = (SITE().notices || []).filter(n => n && n.pin && (!n.clsId || mine.has(n.clsId))).sort((a, b) => (a.ord || 0) - (b.ord || 0)); if (!N.length) return '';
     const n = N[0]; return `<a class="tb-pin" href="#notice"><em>공지</em><b>${esc(n.title)}</b>${N.length > 1 ? `<small>외 ${N.length - 1}건</small>` : ''}</a>`; } catch (e) { return ''; } }
   /* v43 질문형 헤드라인: 「서아님, 오늘 8분만 더 해 볼까요?」 — 화면 첫 줄 한 문장(디스플레이 28~32px/800). 이름이 없으면 인사 없이 질문만 */
-  function hlHTML() { const g = goal(), m = Math.min(minToday(), 999), left = Math.max(0, g - m); const me = LR.me || {}; const nm = String(me.nick || me.name || '').trim();
+  function hlHTML() { const g = goal(), m = Math.min(minToday(), 999), left = Math.max(0, g - m); const me = LR.me || {}; const nm = String(me.nick || me.name || (LR.tid === 'sample' && LR.sample && LR.sample.nick) || '').trim();
     const q = m >= g ? `오늘 목표를 <em>다 채웠어요</em>` : m === 0 ? `오늘 <em>${g}분</em>, 시작해 볼까요?` : `오늘 <em>${left}분</em>만 더 해 볼까요?`;
     const dt = new Date(Date.now() + 9 * 3600e3); const eb = `${dt.getUTCMonth() + 1}월 ${dt.getUTCDate()}일 ${WD[dt.getUTCDay()]}요일`;
     return `<section class="tb-hl" aria-label="오늘 한 줄"><small class="tb-eb">${eb}</small><h1>${nm ? `${esc(nm)}님,<br>` : ''}${q}</h1></section>`; }
@@ -158,7 +168,7 @@
     const { x, it } = k; const c = x.c; const r = lpItem(c.id, it.id); const d = durOf(c, it); const pos = Math.min(+r.pos || 0, d || +r.pos || 0); const w = d ? Math.round(pos / d * 100) : Math.round((+r.w || 0) * 100);
     const left = d && pos ? Math.max(1, Math.round((d - pos) / 60)) : 0; const n = nOf(c, it); const ph = photoOf(c);
     return `<a class="tb-cont" href="${esc(hrefOf(c, it))}"><span class="tb-ct${ph ? ' img' : ` tb-pat p${hsh(c.name) % 4}`}">${ph ? `<img src="${esc(ph)}" alt="" loading="lazy">` : `<i class="tb-pi" aria-hidden="true">${I.play(30)}</i>`}<em class="tb-tag">${I.play(12)}이어 보기 · ${n}${unit()}</em>${left ? `<em class="tb-time">남은 시간 ${left}분</em>` : ''}<span class="tb-pb" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, w))}%"></i></span></span>
-      <span class="tb-cm"><span class="tb-cx"><b>${esc(it.title || '')}</b><small>${[c.name, d ? `${mmss(pos)} / ${mmss(d)}` : '', `진도 ${x.p}%`].filter(Boolean).map(esc).join(' · ')}</small></span><span class="tb-pl" aria-hidden="true">${I.play(18)}</span></span></a>`; }
+      <span class="tb-cm"><span class="tb-cx"><b>${esc(it.title || '')}</b><small>${[c.name, d && pos ? `${mmss(pos)} / ${mmss(d)}` : '', `진도 ${x.p}%`].filter(Boolean).map(esc).join(' · ')}</small></span><span class="tb-pl" aria-hidden="true">${I.play(18)}</span></span></a>`; }
   /* AI 튜터 미니 바: 늘 떠 있는 아이콘과 같은 대화 창을 연다(튜터를 끄면 숨김) */
   function tutHTML() { if (!tOn()) return ''; const k = cont(); const ex = k ? `「${k.it.title}」 핵심이 뭐예요?` : '「이번 주에 뭘 들으면 돼요?」';
     return `<button type="button" class="tb-tut" data-tb="tutor" aria-label="${esc(tNm())}에게 묻기"><span class="tb-orb" aria-hidden="true">${I.spark(18)}</span><span class="tb-tx"><b>${esc(tNm())} <em class="tb-ai">AI</em></b><small>${esc(ex)}처럼 물어보세요</small></span><span class="tb-snd" aria-hidden="true">${I.send(18)}</span></button>`; }
@@ -189,8 +199,8 @@
   function weekHTML() { const { L, V } = nextTiles(); if (!L.length && !V.length) return '';
     const TY = { video: '영상', doc: '자료', quiz: '퀴즈', assign: '과제', exam: '시험', live: '라이브', offline: '오프라인' };
     /* v43 선반 타일: 그린 톤 패턴 썸네일(유형 아이콘 + 유형 칩) · 제목 2줄 · 한 줄 정보 */
-    const tV = ({ c, it }) => { const d = durOf(c, it); return `<a class="tb-tile" href="${esc(hrefOf(c, it))}"><span class="tb-tt tb-pat p${hsh(c.name + it.id) % 4}"><i aria-hidden="true">${I[TYI[it.type] || 'film'](26)}</i><em>${esc(TY[it.type] || '')}${d ? ` · ${Math.max(1, Math.round(d / 60))}분` : ''}</em></span><b class="tb-tn">${esc(it.title)}</b><span class="tb-tl">${nOf(c, it)}${unit()} · ${esc(c.name)}</span></a>`; };
-    const tL = ({ c, u }) => `<a class="tb-tile" href="#c/${esc(encodeURIComponent(c.id))}"><span class="tb-tt tb-pat p${hsh(c.name + u.date) % 4} lv"><i aria-hidden="true">${I[u.type === 'offline' ? 'pin' : 'live'](26)}</i><em class="lv">${u.type === 'offline' ? '오프라인' : '라이브'} ${esc(wdOf(u.date))} ${esc(u.from || '')}</em></span><b class="tb-tn">${esc(u.title || '라이브')}</b><span class="tb-tl">${esc(c.name)} · 입장 · 출결</span></a>`;
+    const tV = ({ c, it }) => { const d = durOf(c, it); return `<a class="tb-tile" href="${esc(hrefOf(c, it))}"><span class="tb-tt img"><img src="${esc((id => id ? `img/stock/${id}-800.webp` : poolOf(c.name + it.id))(stockOf(it.title + ' ' + c.name)))}" alt="" loading="lazy"><i aria-hidden="true">${I[TYI[it.type] || 'film'](18)}</i><em>${esc(TY[it.type] || '')}${d ? ` · ${Math.max(1, Math.round(d / 60))}분` : ''}</em></span><b class="tb-tn">${esc(it.title)}</b><span class="tb-tl">${nOf(c, it)}${unit()} · ${esc(c.name)}</span></a>`; };
+    const tL = ({ c, u }) => `<a class="tb-tile" href="#c/${esc(encodeURIComponent(c.id))}"><span class="tb-tt img lv"><img src="${esc(poolOf(c.name + u.date, 1))}" alt="" loading="lazy"><i aria-hidden="true">${I[u.type === 'offline' ? 'pin' : 'live'](18)}</i><em class="lv">${u.type === 'offline' ? '오프라인' : '라이브'} ${esc(wdOf(u.date))} ${esc(u.from || '')}</em></span><b class="tb-tn">${esc(u.title || '라이브')}</b><span class="tb-tl">${esc(c.name)} · 입장 · 출결</span></a>`;
     return `<section class="tb-week" aria-labelledby="tbWk"><div class="tb-sh"><h2 id="tbWk">이번 주 볼 ${unit()}</h2><a href="#my">전체 보기</a></div><div class="tb-grid">${[...V.map(tV), ...L.map(tL)].join('')}</div></section>`; }
   function listHTML(f) { const L = stats().courses;
     if (f === 'mine') return `<section class="tb-list" aria-label="내 과정">${L.map(x => `<a class="tb-row" href="${esc(x.next ? hrefOf(x.c, x.next) : '#c/' + encodeURIComponent(x.c.id))}">${thumbBlock(x.c, null, 'tb-rt')}<span><b>${esc(x.c.name)}</b><small>${x.done ? '이수' : `진도 ${x.p}%${x.next ? ` · 다음 「${esc(x.next.title)}」` : ''}`}</small></span></a>`).join('')}</section>`;
@@ -412,9 +422,10 @@
   function demoSeed() { try { if (!on() || LR.mode !== 'demo' || LR.tid !== 'sample') return; const t = rec(); if (t.demoSeeded || Object.keys(t.sec).length) return; t.demoSeeded = 1;
     const o = SITE().org || {}; const key = (o.type || '') + (o.ed || '') + (LR.me.sid || ''); let h = 7; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     const g = goal(); for (let k = 0; k < 7; k++) { const d = day(new Date(Date.now() - k * 864e5)); t.sec[d] = k === 0 ? (5 + h % 11) * 60 : ((h >> k) % 4 ? (g + (h >> (k + 3)) % 12) * 60 : (3 + k) * 60); }
-    const L = LR.lp; L.cls = L.cls || {}; const now = new Date().toISOString(); (SITE().classes || []).slice(0, 3).forEach((c, ci) => { if (L.cls[c.id] && Object.keys(L.cls[c.id].items || {}).length) return; const n = [2 + h % 5, 1 + (h >> 4) % 4, 1 + (h >> 7) % 3][ci];
-      L.cls[c.id] = { items: {} }; (c.items || []).slice(0, n).forEach(it => { L.cls[c.id].items[it.id] = { done: true, w: 100, at: now, score: 70 + (h >> ci) % 30 }; }); });
-    try { LR.api.save(); } catch (e) { } } catch (e) { } }
+    const L = LR.lp; L.cls = L.cls || {}; const now = new Date().toISOString(); (SITE().classes || []).slice(0, 4).forEach((c, ci) => { if (L.cls[c.id] && Object.keys(L.cls[c.id].items || {}).length) return; const n = [2 + h % 5, 1 + (h >> 4) % 4, 1 + (h >> 7) % 3, 1][ci];
+      L.cls[c.id] = { items: {} }; const S0 = (c.items || []).filter(it => it.type !== 'chapter'); S0.slice(0, n).forEach(it => { L.cls[c.id].items[it.id] = { done: true, w: 100, at: now, score: 70 + (h >> ci) % 30 }; });
+      /* v43 R5: 첫 강좌는 이어 볼 영상에 재생 위치를 둔다(이어 보기 카드의 「남은 ○분」 · 진행 막대) */ if (ci === 0) { const v = S0.slice(n).find(it => it.type === 'video'); if (v) { const d = (12 + h % 14) * 60; L.cls[c.id].items[v.id] = { pos: Math.round(d * .62), dur: d, max: d, w: .62, at: now }; } } });
+    try { LR.api.save(); } catch (e) { } if (route().a !== 'home') setTimeout(() => { try { lrender(); } catch (e) { } }, 0); /* v43 R5: 첫 화면이 홈이 아니면(「내 강의」 등) 시드를 넣은 뒤 한 번 더 그린다 */ } catch (e) { } }
   function apply() { const B = document.body; B.classList.remove('tube', 'tb-full', 'tb-watch'); const a0 = route().a; demoSeed();
     if (document.body.classList.contains('lapp') && ['review', 'done'].includes(a0) && !on()) { location.replace('#home'); return; } /* 보호자 · 방문자: 튜브 전용 주소는 홈으로(요원 3) */
     if (!on()) return; if (a0 === 'ai' && !tOn()) { location.replace('#home'); return; } /* 튜터를 끄면 대화 화면 주소도 닫음(요원 2) */ const a = route().a; const lm = $('#lm'), app = $('#lapp'); if (!lm || !app) return;
@@ -429,7 +440,7 @@
     if ((a === 'my' || a === 'cal') && !route().b && !lm.querySelector('.tb-seg')) lm.insertAdjacentHTML('afterbegin', segHTML(a));
     if (a === 'c') { mountWatch(); try { const k = cur(); const ph = k ? photoOf(k.c) : ''; lm.style.setProperty('--tb-poster', ph ? `url("${ph}")` : 'none'); } catch (e) { } } /* Q3: 영상이 없거나 준비 중인 검은 상자 → 강좌 사진 포스터 */ if (!cur() && TB.open) { TB.open = false; B.classList.remove('tb-sheet'); }
     const nav = app.querySelector('.ap-nav'); if (nav) { nav.classList.add('tb-nav'); nav.classList.remove('lq-n6'); nav.setAttribute('aria-label', '아래 탭'); const h = navHTML(); if (nav.dataset.tbh !== h) { nav.innerHTML = h; nav.dataset.tbh = h; } } }
-  { const base = lrender; lrender = (...x) => { const r = base(...x); try { apply(); fab(); } catch (e) { console.error('ltube', e); } return r; }; }
+  { const base = lrender; lrender = (...x) => { demoSeed(); /* v43 R5: 시드를 먼저 — 「내 강의」(#my)가 0%로 그려진 뒤에 시드가 들어가던 문제 */ const r = base(...x); try { apply(); fab(); } catch (e) { console.error('ltube', e); } return r; }; }
   /* 말로 묻기(기존 앱 첫 화면 마이크) — 대화 창 · 장면 튜터 입력칸 옆. 브라우저 음성 인식이 있을 때만 */
   const SRc = () => window.SpeechRecognition || window.webkitSpeechRecognition;
   const micBtn = id => SRc() ? `<button type="button" class="tb-mic" data-tb="mic" data-v="${id}" aria-label="말로 묻기">${SV('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>', 20)}</button>` : '';

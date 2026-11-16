@@ -322,3 +322,41 @@ html[data-theme="dark"] .hps-pan{box-shadow:-12px 0 32px rgba(0,0,0,.4)}
   body.hps-dock :is(#fabBtn,.aifab){right:12px!important;bottom:14px!important;width:48px!important;min-width:48px!important;height:48px!important;padding:0!important;border-radius:50%!important;justify-content:center}
   body.hps-dock :is(#fabBtn,.aifab)>*:not(svg):not(.fabdot){display:none!important}
 }
+/* v43 R5 — 화면 비율: 기본 select → 세그먼트(select는 숨김 보조) */
+.hps-zoom{position:relative;display:inline-flex}
+.hps-zoom select{position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;opacity:0;pointer-events:none;padding:0!important;overflow:hidden}
+.hps-zseg{display:inline-flex;gap:2px;padding:3px;border-radius:10px;background:var(--soft,#F3F3F7);box-shadow:inset 0 0 0 1px var(--line,#E4E4EA)}
+.hps-zseg button{border:0;background:transparent;min-height:30px;padding:0 9px;border-radius:7px;font:inherit;font-size:12.5px;font-weight:700;color:var(--muted,#5B6170);cursor:pointer;font-variant-numeric:tabular-nums}
+.hps-zseg button.on{background:#fff;color:var(--g900,#14171A);box-shadow:0 1px 2px rgba(16,24,40,.12)}
+html[data-theme=dark] .hps-zseg{background:rgba(255,255,255,.06)}html[data-theme=dark] .hps-zseg button.on{background:#2A2E2C;color:#fff}
+/* v43 R5 — 124 메뉴 패널: 행을 DDS 카드로(아이콘 단추 · 숨김 상태 · 하위 끌어 놓기 칸은 끌 때만 크게) */
+.hps-panw #hpmBox .hpm-i{border-radius:14px;padding:8px 8px 8px 6px;box-shadow:inset 0 0 0 1px var(--line,#E4E4EA);background:var(--surface,#fff)}
+.hps-panw #hpmBox .hpm-i:hover{box-shadow:inset 0 0 0 1px var(--gr300,#7DDB95),0 2px 8px rgba(5,40,20,.06)}
+.hps-panw #hpmBox .hpm-r{flex-wrap:nowrap;gap:6px}
+.hps-panw #hpmBox .hpm-h{color:var(--muted,#9AA0A6);cursor:grab;width:16px;text-align:center}
+.hps-panw #hpmBox .hpm-n{flex:1 1 90px;min-width:70px;min-height:36px!important;border-radius:10px!important;font-weight:700}
+.hps-panw #hpmBox .hpm-r select{flex:0 1 140px;min-height:36px!important;border-radius:10px!important;font-size:12.5px!important}
+.hps-panw #hpmBox .hpm-bt{flex-wrap:nowrap;gap:0;margin-left:0}
+.hps-panw #hpmBox .hpm-bt .btn{width:30px;height:32px;min-height:0;padding:0;display:inline-grid;place-items:center;border-radius:8px;color:var(--muted,#5B6170)}
+.hps-panw #hpmBox .hpm-bt .btn:hover:not(:disabled){background:var(--gr50,#E8F7EC);color:var(--gr800,#03271A)}
+.hps-panw #hpmBox .hpm-bt .btn:disabled{opacity:.28}
+.hps-panw #hpmBox .hpm-eye{color:var(--gr700,#066B2A)!important}.hps-panw #hpmBox .hpm-eye.off{color:var(--muted,#9AA0A6)!important}
+.hps-panw #hpmBox .hpm-del:hover{background:#FDECEC!important;color:#C0392B!important}
+.hps-panw #hpmBox .hpm-s{margin:6px 0 0 22px}
+.hps-panw #hpmBox .hpm-dz{border:0;padding:0 4px;min-height:0}
+.hps-panw #hpmBox .hpm-dz .mini{display:none}
+.hps-panw #hpmBox .hpm-dz .btn{min-height:26px;padding:0 8px;font-size:12px;color:var(--gr700,#066B2A);background:transparent}
+.hps-panw #hpmBox .hpm-dz.over{border:1.5px dashed var(--gr500,#21B04B);padding:8px}.hps-panw #hpmBox .hpm-dz.over .mini{display:inline}
+html[data-theme=dark] .hps-panw #hpmBox .hpm-i{background:#1C1F1E;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+/* v43 R5 — 125 게시 결과 띠(도구줄 아래 · 캔버스를 덮지 않음) */
+.hps-pubc{display:flex;align-items:center;gap:18px;padding:10px 14px;background:linear-gradient(90deg,var(--gr50,#E8F7EC),#fff 70%);border-bottom:1px solid var(--line,#E4E4EA);animation:hpsPc .22s ease-out}
+@keyframes hpsPc{from{opacity:0}to{opacity:1}}
+.hps-pch{display:flex;gap:10px;align-items:center;flex:none;max-width:340px}.hps-pch>div{display:flex;flex-direction:column;gap:1px;min-width:0}.hps-pch b{font-size:14px;font-weight:800}.hps-pch small{font-size:12px;color:var(--muted,#5B6170);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hps-pch .hps-fx2{order:9;margin-left:4px}
+.hps-pcb{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--gr600,#00862D);color:#fff;flex:none}
+.hps-pcl{list-style:none;margin:0;padding:0;display:flex;gap:16px;flex:1;min-width:0;overflow:hidden}
+.hps-pcl li{display:flex;gap:8px;align-items:center;flex:none}.hps-pcl li i{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:11px;background:#fff;color:var(--gr700,#066B2A);box-shadow:inset 0 0 0 1px var(--gr200,#BDEBC9)}
+.hps-pcl li.no i{background:#FFF1E6;color:#C2410C;box-shadow:none}
+.hps-pcl li span{display:flex;flex-direction:column}.hps-pcl b{font-size:12.5px}.hps-pcl small{font-size:11.5px;color:var(--muted,#5B6170)}
+.hps-pca{display:flex;gap:6px;flex:none}
+html[data-theme=dark] .hps-pubc{background:linear-gradient(90deg,rgba(0,134,45,.18),#151716 70%)}
