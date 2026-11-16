@@ -199,7 +199,7 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
             tid, S(r.get("id")), ver, S(r.get("trigger")), S(r.get("nature")), S(r.get("label")), r.get("cond"), r.get("score"), r.get("caps"), S(r.get("once")), nullish(r.get("groupKey")) ? null : S(r.get("groupKey")), S(r.get("trustMin")), S(r.get("approval")),
             numOrNull(r.get("approveOver")), r.get("expiry"), r.get("record"), nullish(r.get("startsOn")) ? null : S(r.get("startsOn")), nullish(r.get("endsOn")) ? null : S(r.get("endsOn")), r.get("active").asBoolean(), email(a));
         log(tid, "rule", null, ruleOut(row), null, email(a), null); return row; }
-    void fundedBlock(String tid, JsonNode cls, boolean cash) { if (!cash || cls == null || !cls.isArray()) return; for (JsonNode c : cls) if (!one("select mil_cash_ok($1,$2) r", tid, str(c, 60)).asBoolean()) throw E("funded_blocked"); }
+    void fundedBlock(String tid, JsonNode cls, boolean cash) { if (!cash) return; JsonNode voc = one("select coalesce((select doc->'org'->>'type' from tenant_state where tenant_id = $1), '') = 'voc' r", tid); if (voc != null && voc.asBoolean()) throw E("funded_blocked"); /* v43 P1-F09: 직업훈련원 금전성 보상 잠금(Node mileage/mod-admin.js와 같음) */ if (cls == null || !cls.isArray()) return; for (JsonNode c : cls) if (!one("select mil_cash_ok($1,$2) r", tid, str(c, 60)).asBoolean()) throw E("funded_blocked"); }
     static final List<String> KINDS = List.of("tuition", "coupon", "goods", "badge", "cert", "shop");
     ObjectNode saveReward(Map<String, Object> a, JsonNode b) { String tid = tid(a);
         String kind = str(get(b, "kind"), 10); if (!KINDS.contains(kind)) throw E("bad_rule", map("field", "kind"), 400); /* scholar 정산은 v42.2 */

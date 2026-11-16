@@ -195,7 +195,7 @@
   front('lifelong', {
     title: () => lb('lifelong'),
     build: () => { const st = S.settings || {}; const chk = [A(S.classes).every(c => c.hours >= 30 || c.price === 0), !!(st.terms || {}).tos, true, true, !!S.llIns, !!(st.terms || {}).privacy, !!(st.footer || {}).biz];
-      const ok = chk.filter(Boolean).length; const rf = A(S.pays).filter(p => p.status === '환불 신청'); const short = A(S.classes).filter(c => c.hours < 30 && c.price).length;
+      const ok = chk.filter(Boolean).length; const rf = window.DDStat ? DDStat.refunds() : A(S.pays).filter(p => p.status === '환불 신청'); /* v43 DDStat */ const short = A(S.classes).filter(c => c.hours < 30 && c.price).length;
       return pg('lifelong', `${more('lifelong')}<button type="button" class="btn pri" data-act="ll-check">점검 완료로 표시</button>`,
         status(ok === chk.length ? 'check' : 'book', `운영 요건 ${ok}/${chk.length} 충족`, ok === chk.length ? '모두 충족했습니다' : '자세히에서 빠진 항목을 확인하세요', ok === chk.length ? '' : 'w') +
         SL.list([SL.row({ act: 'sb-old', v: 'lifelong', name: '운영 요건 체크리스트', sub: '평생교육법 요건 7가지', icon: I('check', 20), col: '#00A224', right: cnt(`${ok}/${chk.length}`, ok < chk.length) }),
@@ -208,7 +208,7 @@
   /* HRD-Net 보고(직업훈련원) */
   front('hrd', {
     title: () => lb('hrd'),
-    build: () => { const R = A((S.hrd || {}).reports); const low = typeof lowAtt === 'function' ? lowAtt().length : 0; const wait = R.filter(r => r.st === '전송 대기').length;
+    build: () => { const R = A((S.hrd || {}).reports); const low = typeof lowAttN === 'function' ? lowAttN() : 0; /* v43 DDStat 사람 수 */ const wait = R.filter(r => r.st === '전송 대기').length;
       return pg('hrd', `${more('hrd')}<button type="button" class="btn pri" data-act="auto-run-id" data-v="hrd-weekly">${I('spark', 14)} 이번 주 보고 만들기</button>`,
         SL.sum(`<span>${t('learner')}</span><span class="sl-n">${A(S.members).length}명</span>`) +
         SL.list([SL.row({ act: 'sb-old', v: 'hrd', name: '보고 내역', sub: R.length ? `최근 ${R[0].at} · ${R[0].kind}` : '아직 만든 보고가 없습니다', icon: I('book', 20), col: '#5C74F6', right: cnt(wait ? `대기 ${wait}` : R.length + '건', wait) }),

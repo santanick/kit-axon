@@ -16,11 +16,11 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
 
   /* ① 유형별 메뉴 · 기본 탭 순서 */
   const P = await p.evaluate(() => { const out = {}; for (const [ty, ed] of [['k12'], ['univ', 'lite'], ['public'], ['lifelong'], ['corp']]) { createOrg(ty, '점검', ed); S.me.role = 'owner'; go('ledger'); render(); out[ty] = { on: menuOn('ledger'), fl: S.ledger.flavor, tabs: [...document.querySelectorAll('#main [data-key="ledger"][role="tab"]')].map(b => b.dataset.v).slice(0, 2), units: S.ledger.units.length }; } return out; });
-  ok(P.k12.on && P.k12.fl === 'franchise' && P.k12.tabs.join() === 'charge,unpaid' && P.k12.units === 4, '프랜차이즈: 청구 · 미납 우선 · 본사+가맹 3 ' + JSON.stringify(P.k12));
-  ok(P.univ.on && P.univ.tabs.join() === 'book,import', '대학: 부서 정산(원장) · 가져오기 ' + JSON.stringify(P.univ));
+  ok(!P.k12.on && P.k12.fl === 'franchise' && P.k12.tabs.join() === 'charge,unpaid' && P.k12.units === 4, 'v43 돈 메뉴 2개: 학원(초중고) 수납은 원생 수강료 화면(crmbill) — 원장은 기본 메뉴에서 빠지고 링크로 연다 · 청구 · 미납 우선 · 본사+가맹 3 ' + JSON.stringify(P.k12));
+  ok(!P.univ.on && P.univ.tabs.join() === 'import,today', 'v43: 대학은 돈 메뉴 기본 끔(P2-H11) · 원장 탭은 매출로 옮김 → 수납 첫 탭 가져오기 ' + JSON.stringify(P.univ));
   ok(P.public.tabs.join() === 'today,close', '체육: 오늘 · 마감 ' + JSON.stringify(P.public));
   ok(P.lifelong.tabs.join() === 'desk,close', '복지관: 현장 수납 · 마감 ' + JSON.stringify(P.lifelong));
-  ok(P.corp.on && P.corp.tabs.join() === 'today,book', '일반 순서 ' + JSON.stringify(P.corp));
+  ok(!P.corp.on && P.corp.tabs.join() === 'today,charge', 'v43: 기업은 돈 메뉴 기본 끔(P1-F07) · 수납 탭 순서(원장은 매출) ' + JSON.stringify(P.corp));
   const U = await p.evaluate(() => { createOrg('adult', '예전 기관'); delete S.ledger; Object.values(S.nav.tabs).forEach(L => { const i = L.findIndex(x => x.id === 'ledger'); if (i >= 0) L.splice(i, 1); }); upgradeState(); return { led: !!S.ledger && S.ledger.charges.length > 0, nav: Object.values(S.nav.tabs).some(L => L.some(x => x.id === 'ledger')) }; });
   ok(U.led && U.nav, 'upgradeState: 기본값 · 메뉴 ' + JSON.stringify(U));
 

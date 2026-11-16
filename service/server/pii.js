@@ -63,7 +63,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
   const plog = (P, tid, actor, action, lid, purpose, fields) => P('insert into pii.access_log (tid, actor, action, learner_id, purpose, fields) values ($1, $2, $3, $4, $5, $6)', [tid, String(actor).slice(0, 80), action, lid || null, purpose || null, fields || []]);
   async function orgOf(L, tid) {
     const d = (await L("select doc->'org'->>'type' type, doc->'settings'->'acct' acct, doc->'org'->'cpl' cpl from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
-    const a = d.acct || {}; return { parent: d.type === 'k12' && !!a.parent, approve: a.approve === 'manual' ? 'manual' : 'auto', strictPw: !!(d.cpl && d.cpl.on && /^moel-/.test(String(d.cpl.profile || ''))), type: d.type || '', mode: a.mode || 'open', under14: !!a.under14, social: Array.isArray(a.social) ? a.social : PROVIDERS, idv: a.idv && a.idv.on ? { on: true, reason: String(a.idv.reason || '') } : { on: false } };
+    const a = d.acct || {}; return { parent: d.type === 'k12' && !!a.parent, approve: a.approve === 'manual' || d.type === 'voc' ? 'manual' : 'auto', /* v43 P1-F01: 직업훈련원은 자동 수락 불가(Java PiiServiceImpl과 같음) */ strictPw: !!(d.cpl && d.cpl.on && /^moel-/.test(String(d.cpl.profile || ''))), type: d.type || '', mode: a.mode || 'open', under14: !!a.under14, social: Array.isArray(a.social) ? a.social : PROVIDERS, idv: a.idv && a.idv.on ? { on: true, reason: String(a.idv.reason || '') } : { on: false } };
   }
 
   /* SNS 식별자 → 해시. 운영: 공급자 토큰을 서버에서 검증해 sub(회원 번호)를 받는다.

@@ -256,7 +256,7 @@
   reg('hrd', {
     brief: () => {
       const R = (S.hrd && S.hrd.reports) || []; const w = R.filter(r => r.st === '전송 대기').length; let low = 0; try { low = lowAttN(); } catch (e) { }
-      return { eye: 'HRD-Net 보고', title: w ? `HRD-Net 보고 대기 <em>${w}건</em>, 출석률 80% 미만 훈련생 ${low}명` : `출석률 80% 미만 훈련생 <em>${low}명</em>을 먼저 확인하세요`, sub: `${w ? '' : '전송을 기다리는 보고는 없습니다. '}수료 요건은 진도율 · 평가 성적 · 출석률을 함께 봅니다.`, stats: [[S.members.length + '명', '훈련생'], [low + '명', '출석 80% 미만', low ? 'warn' : ''], [w + '건', '보고 대기', w ? 'warn' : '']] };
+      return { eye: 'HRD-Net 보고', title: w ? `HRD-Net 보고 대기 <em>${w}건</em>, 출석률 80% 미만 훈련생 ${low}명` : `출석률 80% 미만 훈련생 <em>${low}명</em>을 먼저 확인하세요`, sub: `${w ? '' : '전송을 기다리는 보고는 없습니다. '}수료 요건은 진도율 · 평가 성적 · 출석률을 함께 봅니다.`, stats: [[(window.DDStat ? DDStat.learnerN() : S.members.length) + '명', '훈련생'], [low + '명', '출석 80% 미만', /* v43 P1-F03 DDStat */ low ? 'warn' : ''], [w + '건', '보고 대기', w ? 'warn' : '']] };
     }
   });
   reg('crmstu', {

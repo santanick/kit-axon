@@ -125,7 +125,7 @@
     const low = typeof lowAtt === 'function' ? lowAtt() : [];
     return page('출결', tblBtn('attend') + padB + more('att', [typeof ACT['w2-kiolink'] === 'function' && ['태블릿용 주소 복사', 'w2-kiolink', '', '태블릿 전용 출결 화면', 'grid']]),
       SL.chips('slAttF', [['today', `오늘 수업 ${E.filter(c => tdOf(c).length).length}`], ['all', '전체']], f) +
-      (low.length ? SL.sum(`<span>출석률 80% 미만</span><span class="sl-n sl-w">${low.length}명</span>`, 'sla-t', 'attend:1') : '') +
+      (low.length ? SL.sum(`<span>출석률 80% 미만</span><span class="sl-n sl-w">${lowAttN()}명</span>`, 'sla-t', 'attend:1') : '') +
       (L.length ? list(L.map(c => { const td = tdOf(c); const u = td[0];
         return row({ act: 'sla-att', v: c.id, name: c.name, icon: clsIc(c), col: td.length ? 'var(--s400)' : 'var(--g500)',
           sub: [kindL(c), td.length ? `오늘 ${c.kind === 'episode' ? u.n + '회차' : u.title || '수업'}${u.from ? ' ' + u.from : ''}` : '오늘 수업 없음', `${(c.learners || []).length}명`].join(' · '),

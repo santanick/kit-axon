@@ -89,7 +89,7 @@
     if (['k12', 'adult', 'lifelong'].includes(t)) add({ kind: 'tuition', title: '학원비 차감', cost: { wonPerP: 1 }, minUse: 1000, step: 100, maxUse: { billPct: 30 }, approval: t === 'k12' ? 'guardian' : 'manual', trust: 'AB' });
     if (['adult', 'lifelong'].includes(t)) add({ kind: 'coupon', title: '수강권 1만 원 할인 쿠폰', cost: { fixedP: 10000 }, approval: 'auto', perSid: { month: 1 }, link: { couponType: 'amount', couponVal: 10000, validDays: 30 }, trust: 'AB' });
     if (t === 'k12') { add({ kind: 'goods', title: '문제집 교환(지정 3종)', cost: { fixedP: 3000 }, stock: 18, perSid: { month: 1 }, approval: 'manual', link: { priceWon: 15000 } }); add({ kind: 'goods', title: '필통 · 노트 세트', cost: { fixedP: 1500 }, stock: 6, perSid: { month: 1 }, approval: 'manual', link: { priceWon: 8000 } }); }
-    if (['adult', 'lifelong', 'univ', 'voc'].includes(t)) add({ kind: 'goods', title: t === 'univ' ? '학생식당 식권 1매' : '교재 교환권', cost: { fixedP: t === 'univ' ? 50 : 2000 }, stock: t === 'univ' ? 140 : 30, perSid: { month: t === 'univ' ? 2 : 1 }, approval: t === 'univ' ? 'auto' : 'manual', link: { priceWon: t === 'univ' ? 5000 : 12000 } });
+    if (['adult', 'lifelong', 'univ'].includes(t)) add({ kind: 'goods', title: t === 'univ' ? '학생식당 식권 1매' : '교재 교환권', /* v43 P1-F09: 직업훈련원(국비)에는 교재 교환권 등 금전성 보상을 넣지 않는다 */ cost: { fixedP: t === 'univ' ? 50 : 2000 }, stock: t === 'univ' ? 140 : 30, perSid: { month: t === 'univ' ? 2 : 1 }, approval: t === 'univ' ? 'auto' : 'manual', link: { priceWon: t === 'univ' ? 5000 : 12000 } });
     if (t === 'public') add({ kind: 'goods', title: '지역 서점 교환권', cost: { fixedP: 300 }, approval: 'manual', active: false, softLock: 'C', link: { priceWon: 10000 } });
     if (t === 'corp') { add({ kind: 'shop', title: '도서 교환권', cost: { fixedP: 300 }, perSid: { month: 2 }, approval: 'auto', link: { priceWon: 15000 } }); add({ kind: 'shop', title: '사내 카페 이용권', cost: { fixedP: 100 }, approval: 'auto', link: { priceWon: 4500 } }); }
     add({ kind: 'badge', title: t === 'k12' ? '4주 연속 출석 배지' : '학습 습관 배지', cost: { fixedP: 0 }, approval: 'auto', tier: 2, auto: true });
@@ -262,6 +262,7 @@
     if (k === 'shop') body += note('info', '안내 G · 근로소득 과세 가능성', NOTICE.G);
     ask(isNew ? `${KIND[k][0]} 추가` : `${w.title} 고치기`, body, isNew ? '확인하고 추가' : '변경 내용 확인하고 저장', m => {
       const num = n => { const v = fv(m, n); return v === '' ? null : Math.max(0, Math.round(+String(v).replace(/[^\d]/g, '') || 0)); };
+      if (CASH[k] && S.org && S.org.type === 'voc') { toast('직업훈련원(국비 과정)에서는 금전 가치가 있는 보상을 쓸 수 없습니다. 배지 · 인증서를 쓰십시오.', 'warn'); return false; } /* v43 P1-F09: 서버 fundedBlock(voc)과 같음 */
       const out = { ...w, title: fv(m, 'title') || KIND[k][0], kind: k, cash: CASH[k] };
       if (k === 'tuition') { out.cost = { wonPerP: num('rate') || 1 }; out.maxUse = { ...out.maxUse, billPct: Math.min(100, num('pct') || REC.billPct) }; out.minUse = num('min') || 0; out.step = num('step') || 1; out.trust = fv(m, 'trust') || 'AB'; }
       if (k === 'coupon') { out.cost = { fixedP: num('fixedP') || 0 }; out.link = { couponType: 'amount', couponVal: num('cval') || 0, validDays: num('days') || 30 }; out.perSid = { month: num('pm') || 0 }; }

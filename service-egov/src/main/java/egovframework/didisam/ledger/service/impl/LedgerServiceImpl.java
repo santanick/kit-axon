@@ -241,32 +241,32 @@ public class LedgerServiceImpl extends EgovAbstractServiceImpl implements Ledger
     @Override public Object admin(HttpServletRequest req, HttpServletResponse res, String op, String id, byte[] body) throws Exception {
         if (id != null && !Pattern.matches("^(lp|lr)_[a-z0-9]{12}$", id)) throw E(404, "not_found", "없는 주소입니다.");
         switch (op) {
-            case "GET units": { Map<String, Object> a = auth.need(req); String tid = tid(a); return T(tid, () -> { List<Map<String, Object>> U = unitsOf(tid); List<Map<String, Object>> flat = new ArrayList<>(); for (Map<String, Object> u : U) flat.add(unitOut(u)); return map("ok", true, "units", tree(U), "flat", flat); }); }
+            case "GET units": { Map<String, Object> a = auth.needStaff(req); String tid = tid(a); return T(tid, () -> { List<Map<String, Object>> U = unitsOf(tid); List<Map<String, Object>> flat = new ArrayList<>(); for (Map<String, Object> u : U) flat.add(unitOut(u)); return map("ok", true, "units", tree(U), "flat", flat); }); }
             case "POST units": return unitSave(auth.needOwner(req), DdWeb.readBody(body, 4096));
-            case "GET summary": { Map<String, Object> a = auth.need(req); String tid = tid(a); String[] R = range(req);
+            case "GET summary": { Map<String, Object> a = auth.needStaff(req); String tid = tid(a); String[] R = range(req);
                 return T(tid, () -> { ArrayNode UC = unitCalc(unitsOf(tid)); ArrayNode rows = rowsOf(tid, R[0], R[1]); String unit = qp(req, "unit").isEmpty() ? null : qp(req, "unit");
                     ObjectNode opt = F.objectNode().put("from", R[0]).put("to", R[1]).put("unit", unit).put("rollup", "1".equals(req.getParameter("rollup"))); opt.set("units", UC);
                     ObjectNode o = F.objectNode().put("ok", true).put("from", R[0]).put("to", R[1]).put("unit", unit); o.setAll(DdLedgerCalc.summary(rows, opt)); return o; }); }
-            case "GET entries": { Map<String, Object> a = auth.need(req); double pg = I(req.getParameter("page")); int page = (int) Math.max(1, Double.isNaN(pg) || pg == 0 ? 1 : pg); List<Map<String, Object>> all = entries(tid(a), req);
+            case "GET entries": { Map<String, Object> a = auth.needStaff(req); double pg = I(req.getParameter("page")); int page = (int) Math.max(1, Double.isNaN(pg) || pg == 0 ? 1 : pg); List<Map<String, Object>> all = entries(tid(a), req);
                 int from = Math.min(all.size(), Math.max(0, (page - 1) * 50)), to = Math.min(all.size(), page * 50); return map("ok", true, "total", all.size(), "page", page, "entries", from >= to ? List.of() : all.subList(from, to)); }
             case "POST charges": return charge(auth.needStaff(req), DdWeb.readBody(body, 16 * 1024));
             case "POST charges/generate": return generate(auth.needStaff(req), DdWeb.readBody(body, 2048));
             case "POST receipts": return receipt(auth.needStaff(req), DdWeb.readBody(body, 4096));
             case "POST receipts/correct": if (!id.startsWith("lp_")) throw E(404, "not_found", "없는 주소입니다."); return correct(auth.needStaff(req), id, DdWeb.readBody(body, 1024));
             case "POST refunds": return refundCreate(auth.needStaff(req), DdWeb.readBody(body, 4096));
-            case "GET refunds": { Map<String, Object> a = auth.need(req); String tid = tid(a); String st = cut(req.getParameter("status") == null || req.getParameter("status").isEmpty() ? "pending" : req.getParameter("status"), 12);
+            case "GET refunds": { Map<String, Object> a = auth.needStaff(req); String tid = tid(a); String st = cut(req.getParameter("status") == null || req.getParameter("status").isEmpty() ? "pending" : req.getParameter("status"), 12);
                 return T(tid, () -> { List<Map<String, Object>> out = new ArrayList<>(); for (Map<String, Object> r : m.selectRefunds(tid, st)) { Map<String, Object> o = rfOut(r); o.put("paid", r.get("paid")); o.put("method", r.get("method")); o.put("channel", r.get("channel")); o.put("sid", r.get("sid")); o.put("calc", parse(s(r.get("calc_json")))); out.add(o); } return map("ok", true, "refunds", out); }); }
             case "POST refunds/confirm": if (!id.startsWith("lr_")) throw E(404, "not_found", "없는 주소입니다."); return refundConfirm(auth.needStaff(req), id, DdWeb.readBody(body, 1024));
             case "POST links": return link(auth.needStaff(req), DdWeb.readBody(body, 4096));
-            case "GET close": { Map<String, Object> a = auth.need(req); String tid = tid(a); String d = qp(req, "day"); String day = DAY.matcher(d).matches() ? d : today(); String unit = !qp(req, "unitId").isEmpty() ? qp(req, "unitId") : !qp(req, "unit").isEmpty() ? qp(req, "unit") : "lu_root";
+            case "GET close": { Map<String, Object> a = auth.needStaff(req); String tid = tid(a); String d = qp(req, "day"); String day = DAY.matcher(d).matches() ? d : today(); String unit = !qp(req, "unitId").isEmpty() ? qp(req, "unitId") : !qp(req, "unit").isEmpty() ? qp(req, "unit") : "lu_root";
                 return T(tid, () -> { Map<String, Object> o = map("ok", true, "day", day, "unit", unit); o.putAll(sys(tid, unit, day)); Map<String, Object> c = m.selectClose(tid, unit, day); o.put("close", c == null ? null : closeOut(c)); return o; }); }
             case "POST close": return close(auth.needStaff(req), DdWeb.readBody(body, 2048));
-            case "GET today": return today(auth.need(req));
-            case "GET export": return export(auth.need(req), req, res);
+            case "GET today": return today(auth.needStaff(req));
+            case "GET export": return export(auth.needStaff(req), req, res);
             case "POST devices": return device(auth.needOwner(req), DdWeb.readBody(body, 1024));
             case "GET devices": { Map<String, Object> a = auth.needStaff(req); String tid = tid(a); return T(tid, () -> map("ok", true, "devices", m.selectDevices(tid))); }
             case "POST device-push": return devicePush(req, body);
-            case "GET share": return share(auth.need(req), req);
+            case "GET share": return share(auth.needStaff(req), req);
             case "POST import": return importRun(auth.needStaff(req), DdWeb.readBody(body, 2 * 1024 * 1024));
             default: throw E(404, "not_found", "없는 주소입니다.");
         }

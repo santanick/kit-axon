@@ -363,7 +363,7 @@
      설정 › 기관 유형 변경(type-chg)은 유형 · 프리셋 메뉴만 바꿨다. 이제 유형이 바뀌면 같은 자리에서: 대학 에디션 정리(대학이면 기본 lite, 아니면 삭제) ·
      유형별 기본 메뉴(slimApply) 다시 적용 — 레일 라벨(t()) · 첫 화면 호칭(aihKey) · 사이트 메뉴 이름(HPS.menuName)이 모두 같은 S.org.type · S.org.ed를 본다. */
   AFTER.push(() => { if (!S || !S.org) return; const k = S.org.type + '/' + (S.org.ed || ''); if (S.org.tySeen === k) return; const first = !S.org.tySeen; S.org.tySeen = k; if (first) return;
-    if (S.org.type === 'univ') { if (S.org.ed !== 'lms') S.org.ed = 'lite'; } else delete S.org.ed;
+    if (S.org.type === 'univ') { if (S.org.ed !== 'lms') S.org.ed = 'lite'; } else if (S.org.type === 'public') { if (!['citizen', 'facility', 'staff'].includes(S.org.ed)) S.org.ed = 'staff'; } else delete S.org.ed; /* v43 공공 세부 유형 유지 */
     S.org.tySeen = S.org.type + '/' + (S.org.ed || ''); try { slimApply(); } catch (e) { console.error(e); } save(); setTimeout(render, 0); });
   /* 기존 사용자 한 번 안내 */
   AFTER.push(() => { if (!UI.slimNote) return; UI.slimNote = 0; toast('메뉴를 꼭 필요한 것만 남겼습니다. 다른 메뉴는 설정 › 메뉴에서 켜세요.', 'ok'); });

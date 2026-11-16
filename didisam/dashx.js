@@ -80,7 +80,7 @@
     p_done: { n: '수료', u: '%', v: () => { let all = 0, dn = 0; myCls().forEach(c => { all += (c.learners || []).length; dn += doneN(c); }); /* v36 R1 이수 판정 한 곳(clsDone) */ return { v: all ? Math.round(dn / all * 100) : 0, sub: `${t('done')} ${N(dn)}명 / 수강 ${N(all)}명` }; }, act: ['cert', 'class'], b: () => `${t('done')} 처리` },
     p_sat: { n: '만족도', u: '점', v: () => { const R = arr(S.reviews).filter(r => !r.hidden && +r.stars > 0); const V = R.map(r => +r.stars); myCls().forEach(c => Object.values(c.svres || {}).forEach(x => { const s = +((x && (x.score || x.stars)) || 0); if (s > 0 && s <= 5) V.push(s); })); return { v: V.length ? (Math.round(V.reduce((a, b) => a + b, 0) / V.length * 10) / 10).toFixed(1) : '—', sub: V.length ? `5점 만점 · 응답 ${N(V.length)}건` : '아직 응답이 없습니다' }; }, act: ['community', 'assess', 'class'], b: '후기 · 설문 보기' },
     p_legal: { n: '법정의무교육 미이수', u: '명', v: () => { const n = typeof legalUndone === 'function' ? new Set(legalUndone().map(x => x.id)).size : 0; const has = (S.classes || []).some(c => c && c.legal); return { v: n, sub: !has ? '법정의무 과정이 아직 없습니다' : n ? '마감 전 안내가 필요합니다' : '모두 이수했습니다', tone: n ? 'w' : '' }; } /* v38 P-16: 법정 과정이 없거나 미이수 0명이면 '안내 필요'라고 하지 않는다 */, act: ['compliance', 'members'], b: '미이수자 보기' },
-    l_refund: { n: '학습비 반환 신청', u: '건', v: () => { const n = arr(S.pays).filter(p => p.status === '환불 신청').length; return { v: n, sub: n ? '반환 기한 안에 처리합니다' : '처리할 신청이 없습니다', tone: n ? 'w' : '' }; }, act: ['lifelong', 'sales'], b: '반환 처리' },
+    l_refund: { n: '학습비 반환 신청', u: '건', v: () => { const n = DDStat.refundN(), late = DDStat.refundLate(); return { v: n, sub: n ? (late ? `법정 기한 지남 ${late}건` : '반환 기한 안에 처리합니다') : '처리할 신청이 없습니다', tone: n ? 'w' : '' }; }, act: [['ledger', { ledger: 'refund' }]], b: '반환 처리' } /* v43 P2-H1: 수납 › 환불 한 곳 · DDStat */,
     u_diag: { n: 'AI 진단 미완료', u: '명', v: () => { const n = arr(S.members).filter(m => !m.withdrawn && !m.diag).length; return { v: n, sub: `전체 ${t('learner')} ${N(arr(S.members).length)}명 중` }; }, act: ['diag', 'members'], b: '진단 안내' },
 
     /* 직업훈련원(인가 · 규정 준수) */
@@ -98,8 +98,8 @@
     k_unpaid: { n: '미납', u: '건', v: () => { const tot = b => arr(b.items).reduce((a, x) => a + (+(Array.isArray(x) ? x[1] : x && x.amt) || 0), 0); const paid = b => arr(b.paid).reduce((a, x) => a + (+x.amt || 0), 0); const O = arr(S.bills).filter(b => /미납|부분/.test(b.status || '')); const bal = O.reduce((a, b) => a + Math.max(0, tot(b) - paid(b)), 0); return { v: O.length, sub: O.length ? `잔액 ${won(bal)}` : '미납이 없습니다', tone: O.length ? 'w' : '' }; }, act: [['crmbill', { crmBT: 'now' }], 'billing'], b: '미납 관리' },
     k_cs: { n: '상담', u: '건', v: () => { const lead = arr(S.crmLeads).filter(l => !['등록', '보류'].includes(l.st)).length; const cs = arr(S.consults).filter(c => !/완료/.test(c.status || '')).length; return { v: lead + cs, sub: `신규 문의 ${N(lead)} · 진행 중 상담 ${N(cs)}`, tone: lead + cs ? 'w' : '' }; }, act: [['crmcs', { crmCT: 'lead' }], 'consult'], b: '상담 기록' },
     k_exam: { n: '성적 알림', u: '건', v: () => { const lim = plus(td(), -14); let n = 0, miss = 0; myCls().forEach(c => arr(c.k12Exams).forEach(e => { if (String(e.date || '') < lim) return; n++; (c.learners || []).forEach(id => { const s = (e.scores || {})[id]; if (!s || (s.v == null && !s.absent)) miss++; }); })); return { v: n, sub: n ? `최근 2주 시험 · 점수 미입력 ${N(miss)}명` : '최근 2주 등록된 시험이 없습니다', tone: miss ? 'w' : '' }; }, act: ['crmex', 'assess'], b: '성적 입력' },
-    a_rev: { n: '이번 달 결제', u: '원', v: () => { const mo = td().slice(0, 7); const P = arr(S.pays).filter(p => /완료/.test(p.status || '') && String(p.at || '').startsWith(mo)); return { v: N(P.reduce((a, p) => a + (+p.amount || 0), 0)), sub: `결제 ${N(P.length)}건` }; }, act: ['sales'], b: '매출 보기' },
-    a_refund: { n: '환불 신청', u: '건', v: () => { const n = arr(S.pays).filter(p => p.status === '환불 신청').length; return { v: n, sub: n ? '기한 안에 처리합니다' : '처리할 신청이 없습니다', tone: n ? 'w' : '' }; }, act: ['sales'], b: '환불 처리' },
+    a_rev: { n: '이번 달 순매출', u: '원', v: () => { const R = DDStat.revenue(); return { v: N(R.net), sub: `수납 ${N(R.paid)}원 − 환불 ${N(R.refund)}원` }; }, act: ['sales'], b: '매출 보기' } /* v43 DDStat: 매출 화면과 같은 숫자 */,
+    a_refund: { n: '환불 신청', u: '건', v: () => { const n = DDStat.refundN(); return { v: n, sub: n ? '기한 안에 처리합니다' : '처리할 신청이 없습니다', tone: n ? 'w' : '' }; }, act: [['ledger', { ledger: 'refund' }]], b: '환불 처리' } /* v43 DDStat · 수납 › 환불 */,
     a_cs: { n: '상담', u: '건', v: () => { const n = arr(S.consults).filter(c => !/완료/.test(c.status || '')).length; return { v: n, sub: `전체 ${N(arr(S.consults).length)}건 중 진행 중`, tone: n ? 'w' : '' }; }, act: ['consult'], b: '상담 기록' },
 
     /* 기업 */
@@ -119,12 +119,14 @@
     corp: [['c_legal', 'c_dept', 'c_due'], ['away', 'cls_run', 'grade_wait']],
     public: [['p_prog', 'p_apply', 'p_done', 'p_sat', 'p_legal'], ['away', 'c_dept', 'c_due']],
     lifelong: [['p_prog', 'p_apply', 'p_done', 'p_sat', 'l_refund'], ['today_cls', 'away']],
+    pub_c: [['p_apply', 'today_cls', 'p_prog', 'p_done', 'a_refund'], ['away', 'p_sat']], /* v43 공공 시민 교육형: 강좌 신청 · 출석 · 수료 */
+    pub_f: [['today_cls', 'p_apply', 'a_rev', 'a_refund'], ['away', 'p_done']], /* v43 공공 시설형: 강습 신청 · 회원 · 수납(시설 카드는 AI 홈 aih43Fac) */
     t_ulms: [['u_today', 'u_grade', 'u_absent', 'u_risk', 'u_deadline'], ['qna', 'u_eval']],
     t_k12: [['k_today', 'k_att', 'k_exam', 'grade_wait', 'risk_low'], ['qna']],
     t_gen: [['today_cls', 'grade_wait', 'qna', 'risk_low', 'avg_prog'], ['away']]
   };
-  const LAYN = { ulms: '대학 · 학사 LMS', ulite: '대학 · 사업단 · 센터', voc: '직업훈련원', k12: '학원(초중고)', adult: '학원(성인)', corp: '기업', public: '공공기관', lifelong: '평생교육원', t_ulms: '교수 · 학사 LMS', t_k12: '강사 · 학원', t_gen: () => `${t('teacher')}` };
-  const layKey = () => { const k = ty() === 'univ' ? (S.org.ed === 'lms' ? 'ulms' : 'ulite') : ty(); if (isT()) return k === 'ulms' ? 't_ulms' : k === 'k12' ? 't_k12' : 't_gen'; return LAY[k] ? k : 'adult'; };
+  const LAYN = { ulms: '대학 · 학사 LMS', ulite: '대학 · 사업단 · 센터', voc: '직업훈련원', k12: '학원(초중고)', adult: '학원(성인)', corp: '기업', public: '공공기관 · 직원 교육형', pub_c: '공공기관 · 시민 교육형', pub_f: '공공기관 · 시설형', lifelong: '평생교육원', t_ulms: '교수 · 학사 LMS', t_k12: '강사 · 학원', t_gen: () => `${t('teacher')}` };
+  const layKey = () => { const k = ty() === 'univ' ? (S.org.ed === 'lms' ? 'ulms' : 'ulite') : ty() === 'public' ? ({ citizen: 'pub_c', facility: 'pub_f' }[S.org.ed] || 'public') : ty(); /* v43 공공 세부 유형별 홈 위젯 */ if (isT()) return k === 'ulms' ? 't_ulms' : k === 'k12' ? 't_k12' : 't_gen'; return LAY[k] ? k : 'adult'; };
   const userKey = () => { if (isT()) { const me = typeof tMe === 'function' ? tMe() : null; return 't:' + ((me && me.id) || 'teacher'); } return (S.me.role || 'owner') + ':' + (S.me.id || S.me.email || 'me'); };
   const store = () => { S.dashx = S.dashx && typeof S.dashx === 'object' ? S.dashx : { v: 1, u: {} }; S.dashx.u = S.dashx.u || {}; const u = S.dashx.u[userKey()] = S.dashx.u[userKey()] || {}; return u; };
   const nm = w => typeof w.n === 'function' ? w.n() : w.n;

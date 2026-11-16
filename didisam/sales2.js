@@ -254,6 +254,14 @@
       tabs('slTab', [['pay', '결제 내역'], ['refund', `환불 내역${reqs.length ? ` (${reqs.length})` : ''}`], ['bill', '청구서 납부 내역'], ['stat', '월별 · 연도별 통계']], tb) + body +
       `<div class="card sl2-tj"><div><b>토스페이먼츠 PG 가입</b><small>${ST().toss.status === '승인' ? `가입 완료 · 상점 ID ${esc(ST().toss.mid)}` : `온보딩 최대 ${ST().toss.weeks || 4}주 · 청구서 · 구독 · 부분 환불을 쓰려면 필요합니다.`}</small></div>${ST().toss.status === '승인' ? tag('승인', 'g') : `<button class="btn" data-act="sl2-toss">토스페이먼츠 PG 가입</button>`}</div>`;
   };
+  /* v43 매출 화면(ledger.js viewL · rev)에 넣는 조각 — 강좌 결제 목록 · 통계 · 결제 설정. 환불 승인은 수납 › 환불(ledger.js payRefCard)로 옮김 */
+  window.SL2 = {
+    pay() { sl2Ensure(); const q = (UI.slQ || '').trim(); const ty = UI.slTy || ''; const L = S.pays.filter(p => p.itemType !== 'bill').filter(p => (!ty || p.itemType === ty) && (!q || [p.item, M(p.who)?.name, p.method, p.status].join(' ').includes(q)));
+      return `<div class="sl2-bar"><input type="search" placeholder="결제자 · 항목 · 상태 검색" value="${esc(q)}" data-chg="sl2-q" aria-label="결제 내역 검색"><select data-chg="sl2-ty" aria-label="유형"><option value="">전체 유형</option>${[['class', t('cls')], ['book', '교재/교구'], ['sub', '구독']].map(([k, l]) => `<option value="${k}" ${ty === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><button class="btn sm" data-act="sales-xls">내려받기</button></div>` +
+        table(['결제일', '결제자', '유형', '항목', '금액', '수단', '상태', ''], L.slice(0, 80).map(p => [esc(p.at), mn(p.who), itTag(p), esc(p.item), won(p.amount), esc(p.method || ''), tag(p.refund ? rfState(p) : p.status, p.refund && p.refund.state === '신청' ? 'y' : stTone(p.status)), (p.refund && p.refund.state === '신청' || p.status === '환불 신청' ? `<button class="btn sm" data-act="go-refund">수납 › 환불에서 처리</button>` : '') + `<button class="btn sm ghost" data-act="sl2-payd" data-v="${p.id}">상세</button>`]), '결제 내역이 없습니다.'); },
+    stat() { sl2Ensure(); return statsView(); },
+    pg() { sl2Ensure(); return pgPanel() + `<div class="card sl2-tj"><div><b>토스페이먼츠 PG 가입</b><small>${ST().toss.status === '승인' ? `가입 완료 · 상점 ID ${esc(ST().toss.mid)}` : `온보딩 최대 ${ST().toss.weeks || 4}주 · 청구서 · 구독 · 부분 환불을 쓰려면 필요합니다.`}</small></div></div>`; }
+  };
   ACT['sl2-q'] = el => { UI.slQ = el.value; render(); };
   ACT['sl2-ty'] = el => { UI.slTy = el.value; render(); };
   ACT['sales-xls'] = () => { sl2Ensure(); downloadCSV(`매출_${today()}.csv`, ['결제일', '결제자', '유형', '항목', '금액', '수단', '상태', '환불 신청일', '환불액', '환불 사유'], S.pays.map(p => [p.at, M(p.who)?.name, ITN[p.itemType] || '', p.item, p.amount, p.method, p.refund ? rfState(p) : p.status, p.refund?.at || '', p.refund?.state === '승인' ? p.refund.amount : '', p.refund?.reason || ''])); };

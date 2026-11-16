@@ -174,7 +174,7 @@ ACT['ai-grade-all'] = () => { pend().forEach(({ c, id }) => { c.prog[id].draft =
 
 /* ═════════ 출결 ═════════ */
 /* v38 출석률은 clsAtt(DDAtt) 한 곳 — 출결 탭 격자 · 경고 카드 · HRD-Net · 규정 준수 '한눈에'가 같은 숫자(QA V4). 지금 수강 명단 기준 */
-const lowAtt = () => S.classes.filter(c => c.kind === 'episode' || S.org.type === 'voc').flatMap(c => (c.learners || []).map(id => ({ c, id, att: clsAtt(c, id) })).filter(x => x.att != null && x.att < 80));
+const lowAtt = () => window.DDStat ? DDStat.lowAtt() : S.classes.filter(c => c.kind === 'episode' || S.org.type === 'voc').flatMap(c => (c.learners || []).map(id => ({ c, id, att: clsAtt(c, id) })).filter(x => x.att != null && x.att < 80));
 const lowAttN = () => new Set(lowAtt().map(x => x.id)).size;
 VIEWS.attend = () => {
   const eps = S.classes.filter(c => c.kind === 'episode' || S.org.type === 'voc'); const c = C(UI.attC) || eps[0];
@@ -240,7 +240,20 @@ ACT['lib-del'] = el => { const l = S.lib.find(x => x.id === el.dataset.v); if (l
 /* ═════════ 유형 전용: 기업 법정의무교육 ═════════ */
 /* v38 C-R1: 학습자에게 열린 과정인가 — 준비 중 · 비공개 과정은 배정 알림 · 독려 · 자동화 대상에서 뺀다(공개할 때 보류 알림을 보낸다) */
 function clsLive(c) { return !!c && c.status !== '준비중' && c.status !== '종료' && (c.open || '전체') !== '비공개'; }
-const legalUndone = () => S.classes.filter(c => c.legal && clsLive(c)).flatMap(c => c.learners.filter(id => !clsDone(c, id)).map(id => ({ c, id })));
+/* v43 F02 · 통합 담당 결정(근거 조사): 사업주 법정의무교육 5종 — 기업 · 공공 직원 교육형 공통. 퇴직연금교육은 기관 설정 「퇴직연금 도입」을 켠 때만 필수.
+   직장 내 괴롭힘 예방교육은 법정 의무가 아닌 권장 교육. 근거는 법령 이름까지, 조항은 원문 확인 전 「확인 필요」(docs/compliance/README.md 법정의무교육 목록) */
+const LEGAL43 = [
+  { id: 'harass', n: '직장 내 성희롱 예방교육', law: '남녀고용평등과 일 · 가정 양립 지원에 관한 법률', re: /성희롱|4대\s*폭력/, kind: 'req' },
+  { id: 'privacy', n: '개인정보 보호 교육', law: '개인정보 보호법', re: /개인정보/, kind: 'req' },
+  { id: 'disab', n: '직장 내 장애인 인식개선 교육', law: '장애인고용촉진 및 직업재활법(공공기관 포함 모든 사업주)', re: /장애인\s*인식/, kind: 'req' },
+  { id: 'safety', n: '산업안전보건교육', law: '산업안전보건법', re: /산업\s*안전|안전\s*보건/, kind: 'req' },
+  { id: 'pension', n: '퇴직연금교육', law: '근로자퇴직급여 보장법(퇴직연금 도입 사업장)', re: /퇴직\s*연금/, kind: 'pension' },
+  { id: 'bully', n: '직장 내 괴롭힘 예방교육', law: '근로기준법(교육 실시 의무 규정 없음 · 권장)', re: /괴롭힘/, kind: 'rec' }
+];
+const legalKind = x => x.kind === 'pension' ? (S.settings && S.settings.pension ? 'req' : 'na') : x.kind;
+const legalOf = c => LEGAL43.find(x => x.re.test(c && c.name || ''));
+const legalReq = c => { if (!c || !c.legal) return false; const x = legalOf(c); return !x || legalKind(x) === 'req'; }; /* 목록 밖 법정 과정(기관이 직접 표시)은 필수로 둔다 */
+const legalUndone = () => S.classes.filter(c => legalReq(c) && clsLive(c)).flatMap(c => c.learners.filter(id => !clsDone(c, id)).map(id => ({ c, id })));
 /* v38 C#3 부서별 이수율: 부서가 있으면 부서별(+ 미지정 줄), 부서를 하나도 만들지 않았으면 가입 때 답한 부서(소속) 값으로 묶어 보이고 [부서 만들기]를 안내한다 */
 const compAns = id => { const x = (M(id) || {}).extra || {}; return String(x['부서'] || x['소속'] || '').trim().slice(0, 30); };
 function compDeptCard(L) {
@@ -252,11 +265,16 @@ function compDeptCard(L) {
   const hint = noG ? `<div class="cmp-dh" data-cmp-dept-hint style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px"><p class="mini">${esc(tj('group', '을'))} 만들면 ${esc(G)}별 이수율을 볼 수 있습니다.${rows.length && rows.some(r => !/미입력$/.test(r.name)) ? ` 지금은 가입할 때 답한 ${esc(G)} 값으로 묶어 보여 줍니다.` : ''}</p><button type="button" class="btn sm" data-act="grp-new">${esc(G)} 만들기</button></div>` : '';
   return `<div class="card"><div class="ch"><b>${esc(G)}별 이수율</b><small>법정교육 ${L.length}종 평균${noG && rows.length ? ` · 가입 답 기준` : ''}</small></div>${hint}${table([G, ...L.map(c => c.name.replace(/\s*교육.*$/, '').slice(0, 12)), '평균'], body, noG ? `${G}별로 볼 ${t('learner')}이 아직 없습니다.` : '데이터가 없습니다.')}</div>`;
 }
+function legalListCard() { const pen = !!(S.settings && S.settings.pension);
+  const rows = LEGAL43.map(x => { const k = legalKind(x); const cs = S.classes.filter(c => x.re.test(c.name || '') && c.status !== '종료'); const n = cs.reduce((a, c) => a + c.learners.length, 0), d = cs.reduce((a, c) => a + doneN(c), 0);
+    return [`<b>${esc(x.n)}</b>`, k === 'req' ? tag('필수', 'g') : k === 'rec' ? tag('권장', 'b') : tag('해당 없음'), esc(x.law), '<small class="mini">확인 필요</small>', cs.length ? `${cs.length}개 · 이수 ${d}/${n}명(${pct(d / Math.max(1, n) * 100)})` : '<span class="mini">운영 과정 없음</span>', cs.length ? '' : (k === 'na' ? '' : `<button class="btn sm" data-act="chat-q" data-v="${esc(x.n)} 과정 만들어줘">과정 만들기</button>`)]; });
+  return `<div class="card" id="legalList"><div class="ch"><b>법정의무교육 목록</b><small>사업주 법정의무교육 5종 · ${S.org.type === 'public' ? '공공 직원 교육형' : '기업'} 공통</small><span class="sp"></span><label class="ckl" title="기관 설정 · 퇴직연금을 도입한 사업장만 퇴직연금교육이 필수입니다"><input type="checkbox" data-chg="legal-pension" ${pen ? 'checked' : ''}> 퇴직연금 도입</label></div>${table(['교육', '구분', '근거 법령', '조항', '운영 · 이수', ''], rows)}<p class="mini">근거는 법령 이름까지 적었습니다. 조항 · 시간 · 주기는 법령 원문을 확인한 뒤 확정합니다. 권장 교육은 미이수 집계와 독려에서 뺍니다.</p></div>`; }
+ACT['legal-pension'] = el => { S.settings.pension = !!el.checked; logAudit(`기관 설정 — 퇴직연금 도입 ${el.checked ? '켬' : '끔'}`); save(); render(); };
 VIEWS.compliance = () => {
-  const L = S.classes.filter(c => c.legal);
+  const L = S.classes.filter(c => legalReq(c));
   return head('법정의무교육', `${L.length ? L.map(c => c.name.replace(/\s*교육.*$/, '')).join(' · ') : '법정 의무교육'} — 연 1회 이상 이수 관리`, `<button class="btn" data-act="comp-report">이수 증빙 보고서</button><button class="btn ai" data-act="legal-nudge">✦ 미이수자 독려 실행</button>`) +
     `<section class="grid g4">${L.map(c => kpi(c.name.replace(/교육.*$/, ''), pct(doneN(c) / Math.max(1, c.learners.length) * 100), `미이수 ${c.learners.length - doneN(c)}명 · 마감 ${c.end}`, doneN(c) / c.learners.length > .9 ? 'g' : 'y')).join('')}</section>` +
-    compDeptCard(L) +
+    legalListCard() + compDeptCard(L) +
     `<p class="mini">※ 이수 기준·주기는 관계 법령과 ${S.org.type === 'public' ? '기관 규정을 따르며, 실제 운영 전 교육 담당 부서' : '사내 규정을 따르며, 실제 운영 전 HR 담당'} 확인이 필요합니다.</p>`;
 };
 ACT['comp-report'] = () => downloadCSV(`법정의무교육_이수현황_${today()}.csv`, ['교육', '이름', t('group'), '진도', '이수'], S.classes.filter(c => c.legal).flatMap(c => c.learners.map(id => [c.name, M(id)?.name, S.groups.find(g => g.id === M(id)?.group)?.name || compAns(id), c.prog[id].p, clsDone(c, id) ? 'Y' : 'N'])));
@@ -273,11 +291,11 @@ ACT['acad-xls'] = () => downloadCSV(`성적_${today()}.csv`, ['학번', '학과'
 
 /* ═════════ 유형 전용: 평생교육원 ═════════ */
 VIEWS.lifelong = () => {
-  const refunds = S.pays.filter(p => p.status === '환불 신청');
   const chk = [['불특정 다수 대상, 학습비를 받는 과정은 최소 10명 이상 · 30시간 이상', S.classes.every(c => c.hours >= 30 || c.price === 0)], ['운영 규칙에 학습비 반환 기준 명시', !!S.settings.terms.tos], ['반환 사유 발생 시 5일 이내 반환', true], ['신고한 과정만 운영 · 수료증에 허위 명칭 금지', true], ['배상책임보험 가입', !!S.llIns], ['개인정보 처리방침 게시', !!S.settings.terms.privacy], ['사이트 초기 화면에 통신판매업 신고번호 등 6종 표시', !!S.settings.footer.biz]];
   return head('학습비 · 과정 신고', `원격 평생교육시설 운영 요건 체크 · 학습비 반환 5일 기한 관리 ${guideRef('faq-1/register/lifelong-education.md')}`, `<button class="btn" data-act="ll-check">점검 완료로 표시</button>`) +
     `<div class="card"><div class="ch"><b>운영 요건 체크리스트</b><small>평생교육법 기준 요약 · 실제 신고 전 관할 교육청 확인</small></div>${chk.map(([l, ok], i) => `<div class="row"><span class="ll-ck ${ok ? 'ok' : ''}"><i aria-hidden="true">${ok ? ic('check', 14) : ''}</i><span class="sr">${ok ? '완료' : '미완료'}</span>${esc(l)}</span>${i === 4 ? `<button class="btn sm ghost" data-act="ll-ins">${S.llIns ? '가입됨' : '가입 표시'}</button>` : !ok ? '<button class="btn sm ghost" data-act="go" data-v="settings">설정</button>' : ''}</div>`).join('')}</div>` +
-    `<div class="card"><div class="ch"><b>학습비 반환 요청</b><small>신청일로부터 5일 이내 처리</small></div>${table(['신청일', '이름', '강좌', '금액', '기한', ''], refunds.map(p => { const dd = 5 - Math.floor((Date.now() - new Date(p.at)) / 864e5); return [p.at, mn(p.who), esc(p.item), won(p.amount), dd < 0 ? tag('기한 경과', 'r') : tag(`D-${dd}`, dd <= 1 ? 'y' : ''), `<button class="btn sm" data-act="go" data-v="sales">처리</button>`]; }), '반환 요청이 없습니다.')}</div>` +
+    /* v43 P2-H1: 반환 처리는 「수납 › 환불」 한 곳. 여기는 기한 감시판(D-day · 기한 경과)만 — 건수는 DDStat.refunds() */
+    `<div class="card" id="llRfWatch"><div class="ch"><b>학습비 반환 기한</b><small>평생교육법 시행령 · 반환 사유 발생일부터 5일 이내</small><button class="btn sm pri" data-act="go-refund">처리하러 가기</button></div>${table(['신청일', '이름', '강좌', '금액', '법정 기한'], DDStat.refunds().map(x => [esc(x.at || ''), x.src === 'pay' ? mn(x.who) : esc('학습자 ···' + String(x.who || '').slice(-4)), esc(x.item || ''), won(x.amount), x.left == null ? '—' : x.left < 0 ? tag('기한 경과', 'r') : tag(`D-${x.left}`, x.left <= 1 ? 'y' : '')]), '반환 요청이 없습니다.')}<p class="mini">승인 · 금액 확정은 [처리하러 가기]의 수납 › 환불에서 합니다. 같은 건수가 홈 · 수납에도 나옵니다.</p></div>` +
     `<div class="card"><div class="ch"><b>강좌별 운영 시간</b></div>${S.classes.map(c => `<div class="row"><span>${esc(c.name)} · ${c.learners.length}명</span><span>${c.hours}시간 ${c.hours < 30 && c.price ? tag('30시간 미만', 'y') : ''}</span></div>`).join('')}</div>`;
 };
 ACT['ll-check'] = () => { S.llChecked = true; save(); render(); toast('점검 완료로 표시했습니다.', 'ok'); };
@@ -289,7 +307,7 @@ VIEWS.hrd = () => {
   const R = S.hrd.reports; const sus = typeof cplSuspects === 'function' ? cplSuspects() : [];
   return head('HRD-Net 보고', `훈련생 등록 · 진도 · 평가 · 수료 보고 준비 · 부정훈련 의심 모니터링 ${guideRef('faq-1/register/undefined.md')}`, `<button class="btn ai" data-act="auto-run-id" data-v="hrd-weekly">✦ 이번 주 보고 자료 생성</button>`) +
     `<div class="warn">HRD-Net 실제 전송은 고용노동부 · 한국산업인력공단 연계 승인 후 사용합니다. 데모에서는 보고 파일 생성까지 진행합니다.</div>` +
-    `<section class="grid g4">${kpi('훈련생', S.members.length + '명')}${kpi('출석률 80% 미만', lowAttN() + '명', '', lowAttN() ? 'r' : 'g')}${kpi('수료 요건 충족', S.classes.reduce((a, c) => a + doneN(c), 0) + '명', '진도율 + 평가 성적 + 출석률')}${kpi('보고 대기', R.filter(r => r.st === '전송 대기').length + '건')}</section>` +
+    `<section class="grid g4">${kpi('훈련생', DDStat.learnerN() + '명', '운영 중 과정 · 중복 제외')}${kpi('출석률 80% 미만', lowAttN() + '명', '출결 과정 · 중복 제외', lowAttN() ? 'r' : 'g')}${kpi('수료 요건 충족', DDStat.doneN() + '명', '진도율 + 평가 성적 + 출석률 · 중복 제외')}${kpi('보고 대기', R.filter(r => r.st === '전송 대기').length + '건')}</section>` +
     `<div class="card"><div class="ch"><b>보고 내역</b></div>${table(['생성 시각', '종류', '대상', '상태', ''], R.map((r, i) => [esc(r.at), esc(r.kind), r.n + '명', tag(r.st, r.st === '전송 대기' ? 'y' : 'g'), `<button class="btn sm ghost" data-act="hrd-dl" data-v="${i}">파일</button>`]), '아직 생성한 보고가 없습니다.')}</div>` +
     /* v36 R1 인가 · 규정 준수의 'HRD-Net 보고'(수료 보고 파일 · 학습 통계)를 이 화면으로 합침 — 같은 이름의 화면이 두 곳에 있던 것 */
     (typeof cplRepHTML === 'function' ? (() => { const h = cplRepHTML(); return h ? `<section class="hrd-cpl">${h.replace(/<div class="warn">HRD-Net 실제 전송은[\s\S]*?<\/div>/, '').replace(/<button class="btn sm" data-act="go" data-v="hrd">HRD-Net 보고 화면<\/button>/, '')}</section>` : ''; })() : '') +

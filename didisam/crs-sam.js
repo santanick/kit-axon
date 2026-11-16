@@ -178,7 +178,22 @@
   const MKF = new RegExp(`${CW}[^.!?\\n]{0,40}?(만들어|만들|개설해|개설|열어)\\s*(줘|주세요|주십시오|줄래|주실|달라)`);
   const GRADE = /(초등학생|초등\s*[1-6]\s*학년|초[1-6]|중학생|중학교\s*[1-3]\s*학년|중[1-3]|고등학생|고등학교\s*[1-3]\s*학년|고[1-3]|대학생|신입생|재학생)/;
   const AUDW = /(신입\s*사원|신규\s*입사자|임직원|직장인|재직자|구직자|시니어|어르신|성인|훈련생|지역\s*주민|주민|공무원|학부모|교원|교사|강사|관리자|팀장)/;
-  function parse(q) { const s = String(q || '').replace(/\s+/g, ' ').trim(); const p = { q: s };
+  /* v43 P3-F05: 「월수금 오후 4시」 같은 요일 · 시간을 버리지 않는다 → 회차형 요일반으로 연다.
+     요일: 두 글자 이상 이어진 요일(월수금 · 화목 · 월·수·금) 또는 「○요일」. 「11월」 「월 수강료」 「수학」은 요일로 읽지 않는다.
+     시간: 오전 · 오후 · 저녁 + ○시(반 · ○분) 또는 16:00, 범위(~ · 부터 · 까지). 접두 없이 1~8시면 오후로 본다(학원 · 강좌 운영 시간). 끝 시각이 없으면 90분 */
+  const WDN = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 }; const WDL = ['일', '월', '화', '수', '목', '금', '토'];
+  function schedParse(s) { const out = {}; const B = '(?=$|[\\s,.·/]|요일|오전|오후|저녁|아침|밤|\\d|반|에)';
+    let dm = s.match(new RegExp('(?<![\\d가-힣])([월화수목금토일](?:\\s*[,·/]?\\s*[월화수목금토일]){1,6})' + B)) || s.match(/(?<![\d가-힣])([월화수목금토일])\s*요일/);
+    if (dm) { const D = [...new Set([...dm[1].replace(/[^월화수목금토일]/g, '')].map(c => WDN[c]))]; if (D.length) out.wdays = D.sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)); }
+    const T1 = '(오전|오후|저녁|아침|밤)?\\s*(\\d{1,2})\\s*(?::\\s*(\\d{2})|시(?!간)\\s*(?:(\\d{1,2})\\s*분|(반))?)';
+    const tm = s.match(new RegExp(T1 + '(?:\\s*(?:~|-|–|부터|에서)\\s*' + T1 + '\\s*(?:까지)?)?'));
+    const hh = (ap, h, mm, mi, half, ref) => { h = +h; if (h > 24) return null; if ((/오후|저녁|밤/.test(ap || '') && h < 12) || (!ap && h >= 1 && h <= 8 && (ref == null || ref >= 12))) h += 12; if (ap === '오전' && h === 12) h = 0; const m = mm != null ? +mm : mi != null ? +mi : half ? 30 : 0; return h * 60 + m; };
+    const fmt = v => `${String(Math.floor(v / 60) % 24).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`;
+    if (tm && (out.wdays || /(오전|오후|저녁|아침|밤)|\d:\d{2}/.test(tm[0]))) { const a = hh(tm[1], tm[2], tm[3], tm[4], tm[5]); if (a != null) { out.from = fmt(a); const b = tm[7] != null ? hh(tm[6] || tm[1], tm[7], tm[8], tm[9], tm[10], Math.floor(a / 60)) : null; out.to = fmt(b != null && b > a ? b : a + 90); } }
+    return out; }
+  SAM.schedParse = schedParse;
+  const schedTxt = p => p.wdays ? `${p.wdays.map(d => WDL[d]).join(' · ')}${p.from ? ` ${p.from}~${p.to}` : ''}` : '';
+  function parse(q) { const s = String(q || '').replace(/\s+/g, ' ').trim(); const p = { q: s }; Object.assign(p, schedParse(s));
     const ses = +(s.match(typeof SESS_RE !== 'undefined' ? SESS_RE : /(\d+)\s*(?:차시|회차|주)/) || [])[1]; if (ses) p.sessions = Math.max(1, Math.min(30, ses));
     let fee = null; try { fee = typeof aiFee === 'function' ? aiFee(s) : null; } catch (e) { } if (fee && fee.price != null && !fee.amb) p.price = fee.price;
     const am = s.match(/((?:(?:신규|신입|예비|일반|전체|초보|현직|소속)\s)?[가-힣A-Za-z0-9]+)\s*대상(?:으로|의|인)?/); const gm = s.match(GRADE); const wm = s.match(AUDW);
@@ -200,6 +215,7 @@
     { const cm = s.match(/정원\s*(?:은|는|이)?\s*(\d{1,4})\s*명|(\d{1,4})\s*명\s*(?:정원|모집|까지\s*받|선착순)/); if (cm) p.cap = Math.min(9999, +(cm[1] || cm[2])); }
     if (p.name && /^(비교과|교양|전공|특강|온라인|오프라인|무료|유료|새|신규|정규|단기|직무|법정|필수)(\s*(프로그램|과정|교육|강좌|교과목|훈련))?$/.test(p.name)) { p.kindWord = p.name; delete p.name; delete p.topic; }
     if (U() && /(비교과|특강|연수|클리닉|워크숍|워크샵|캠프|세미나)/.test(s)) { p.credit = 0; p.per = 1; if (!p.sessions) p.sessions = 4; }
+    if (p.name && p.wdays) p.name = p.name.replace(/(?<![\d가-힣])(매주\s*)?[월화수목금토일](\s*[,·/]?\s*[월화수목금토일])+\s*(요일)?(?![가-힣])/g, ' ').replace(/\s*(오전|오후|저녁|아침|밤)?\s*\d{1,2}\s*(시|:\d{2}).*$/, '').replace(/\s+/g, ' ').trim() || p.name; /* v43 P3-F05: 이름에 섞인 요일 · 시간 떼기 */
     if (p.name) { try { p.goal = AI.goal(p.name, p.target); } catch (e) { } }
     return p; }
   const md = v => String(v || '').replace(/^\d{4}-(\d{2})-(\d{2})$/, (m, a, b) => `${+a}월 ${+b}일`);
@@ -216,7 +232,12 @@
     try { if (typeof flowParse === 'function') { const F = flowParse(s); if (F && F.steps.some(f => f.id !== 'course')) return false; } } catch (e) { }
     return true; }
   SAM.isOne = isOne;
-  function openFlow(q, from, chip) { const F = cf(); if (!F) return false; const p = typeof q === 'string' ? parse(q) : (q || {}); const pre = {}; Object.keys(p).forEach(k => { if (k !== 'q' && p[k] !== '' && p[k] != null) pre[k] = p[k]; });
+  /* 요일 · 시간을 말했으면 회차형 요일반 마법사로 연다(P3-F05) */
+  function openWeekly(p) { if (typeof ACT['cls-new-adv'] !== 'function' || typeof W2 === 'undefined' || typeof wizard !== 'function') return false;
+    try { ACT['cls-new-adv'](); if (typeof WZ === 'undefined' || !WZ) return false; Object.assign(WZ, { kind: 'episode', sub: '요일반', name: p.name || WZ.name || '', target: p.target || WZ.target || '' }); if (p.price) WZ.price = p.price; if (p.cap) WZ.cap = p.cap;
+      const z = W2.wz(); z.days = p.wdays.slice(); if (p.from) { z.from = p.from; z.to = p.to; z.notime = false; } z.sig = ''; wizard(); audit(`AI SAM 요일반 만들기 열기 — ${p.name || '이름 미정'} · ${schedTxt(p)}`); return true; } catch (e) { console.error(e); return false; } }
+  SAM.openWeekly = openWeekly;
+  function openFlow(q, from, chip) { const F = cf(); if (!F) return false; const p = typeof q === 'string' ? parse(q) : (q || {}); if (p.wdays && !chip && openWeekly(p)) return true; const pre = {}; Object.keys(p).forEach(k => { if (k !== 'q' && p[k] !== '' && p[k] != null) pre[k] = p[k]; });
     /* 추천 칩(사용자가 직접 쓰지 않은 문장)이면 이름 · 대상 · 목표는 채우지 않는다 */
     if (chip && !pre.name) pre._chip = 1; /* v38 V-11: 칩 문장에 과정 이름이 있으면(용접기능사 실기 20차시 등) 그대로 채운다 — 분류 낱말(비교과 등)은 parse가 이름에서 뺀다 */
     /* 흐름(C1)의 자동 넣기 설정 d.auto로 옮긴다 */
@@ -229,6 +250,7 @@
   { const b = ACT['chat-q']; if (b) ACT['chat-q'] = (el, ...r) => { SAM.viaChip = true; try { return b(el, ...r); } finally { SAM.viaChip = false; } }; }
   ACT['csam-open'] = el => openFlow(el.dataset.v || '', 'sam');
   const card = (q, chip) => { const p = parse(q); const n = p.sessions || (U() ? 15 : 6); const unit = U() ? '주' : '차시';
+    if (p.wdays && !chip) { const fee = ['k12', 'adult'].includes(ty()) ? '월 수강료' : T('fee'); return { title: `${T('cls')} 만들기`, text: `${p.name ? jo(`「${p.name}」`, '을') + ' ' : ''}${schedTxt(p)} 요일반으로 채웠습니다. ${p.cap ? '' : '정원과 '}${p.price ? '나머지 설정' : fee}만 확인해 주세요.`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' }; }
     if (chip && !p.name) return { title: `${T('cls')} 만들기`, text: `${T('cls')} 만들기 화면을 열었습니다. 이름은 비워 두었습니다. 화면의 예시 카드를 누르거나 직접 적고 [다음]을 누르세요. 막히면 [AI SAM에게 맡기기]를 누르면 됩니다.`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' };
     const got = [p.name ? `이름 「${p.name}」` : '', p.target ? `대상 ${p.target}` : '', `${n}${unit}`, p.price ? `수강료 ${won(p.price)}` : '', ...extraGot(p)].filter(Boolean).join(' · ');
     return { title: `${T('cls')} 만들기`, text: `${T('cls')} 만들기 화면을 열고 말씀하신 내용(${got})을 미리 채워 두었습니다. 화면에서 확인만 하고 [다음]을 누르세요. 막히면 [AI SAM에게 맡기기]를 누르면 됩니다.${p.name ? '' : `\n이름은 비어 있습니다. 예: 「${sugg()[0]}」`}`, btn: { act: 'csam-open', v: q, label: `${T('cls')} 만들기 화면 열기` }, via: 'AI SAM' }; };
