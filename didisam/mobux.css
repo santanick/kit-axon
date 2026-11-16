@@ -16,3 +16,12 @@
   table.mcard>tbody>tr>td.mcfull{flex:1 1 100%}
   table.mcard>tbody>tr:hover{background:#fff}
 }
+/* v43.4 MA(관리자 001~042) 휴대폰 폭 교정 */
+@media (max-width:860px){
+  /* 카드형 행: PC 표의 행 높이(56px 고정)가 카드에서는 글이 넘쳐 다음 칸과 겹친다(014 연락처 · 039 핵심 요건) */
+  #main table.mcard>tbody>tr>td{height:auto}
+  /* 줄바꿈 금지(l43-nw · l43-nc) 칸의 긴 이름이 옆 칸 글자와 겹치던 것(002 · 004) */
+  #main table.mcard>tbody>tr>td:is(.l43-nw,.l43-nc){white-space:normal;overflow-wrap:anywhere}
+  /* 칩 · 태그가 카드 폭을 넘지 않게 줄바꿈한다(041 수업 칩) */
+  #main table.mcard .db-tag{height:auto;min-height:26px;max-width:100%;white-space:normal;padding:3px 10px;line-height:1.4}
+}

@@ -56,3 +56,8 @@
 /* v43 S3A 002: 머리 보조 버튼을 테두리 보조 버튼 규격으로 */
 .d43h .l43-acts .l43-act.ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
 .d43h .l43-acts .l43-act.ghost:hover{border-color:var(--pr);color:var(--pr)}
+/* v43.4 MA(관리자 001~042) 휴대폰 폭 교정 */
+@media (max-width:860px){
+  /* 002 현황: 본문 카드가 화면 오른쪽 끝까지 밀려 잘리던 것 */
+  .d26>*{min-width:0;max-width:100%}
+}
