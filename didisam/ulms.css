@@ -266,3 +266,23 @@
 .ul-mods{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .ul-mods>b{font-size:14px;margin-right:4px}.ul-mod{font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;background:var(--soft,#f1f3f5)}
 .ul-mods .mini{margin-left:auto}
+/* v43 H1(M1 036): 받는 데이터 · 보내는 데이터 — 두 카드 + 필드 칩 */
+.ul-io2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start;margin:4px 0 14px}
+@media (max-width:900px){.ul-io2{grid-template-columns:1fr}}
+.ul-ioc{border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--card,#fff)}
+.ul-ioc.in{background:linear-gradient(180deg,color-mix(in srgb,var(--gr50,#EAF7EE) 70%,transparent),transparent 90px)}
+.ul-ioc.out{background:linear-gradient(180deg,rgba(224,163,37,.09),transparent 90px)}
+.ul-ioc header{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.ul-ioc header b{font-size:15px}
+.ul-ioc header small{margin-left:auto;color:var(--mute);font-size:12.5px}
+.ul-ioi{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--gr50,#EAF7EE);color:var(--gr700,#00862D)}
+.ul-ioc.out .ul-ioi{background:rgba(224,163,37,.16);color:#9a6a06}
+.ul-ioc ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.ul-ioc li{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-top:1px solid var(--line)}
+.ul-ioc li>b{font-size:14px}
+.ul-ioc li>small{color:var(--mute);font-size:12.5px}
+.ul-fc{display:flex;flex-wrap:wrap;gap:6px}
+.ul-fc i{font-style:normal;font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--bg2,#F3F4F3);color:var(--ink,#1A1814)}
+.ul-ioc.in .ul-fc i{background:var(--gr50,#EAF7EE);color:var(--gr800,#0B5A2A)}
+html[data-theme=dark] .ul-fc i{background:#26292a;color:#e8e8e8}
+html[data-theme=dark] .ul-ioc.in .ul-fc i{background:#123222;color:#9be8b5}

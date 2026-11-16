@@ -309,6 +309,21 @@
     const A = typeof ltTodo === 'function' ? ltTodo() : []; const qa = (LR.mine && Array.isArray(LR.mine.qa) ? LR.mine.qa.length : 0);
     if (A.length) notify(tName(), `오늘의 미션 ${A.length}개 · 먼저 「${A[0].h}」부터 해 볼까요?`, 'today'); else if (qa) notify(tName(), '선생님 답변이 도착했어요.', 'qa'); }
 
+  /* v43 H1(M1 114): 내 강의 아래 기록 묶음 — 회색 글자 타일 대신 아이콘 · 숫자 있는 2열 카드 4개만 보이고, 나머지는 「기록 더 보기」 한 줄 안으로. 「지금 할 일」은 머리 요약 카드와 같은 내용이라 감춘다 */
+  const MYT = [['배지 지갑', 'award'], ['진단 결과', 'target'], ['학습 달력', 'clock'], ['수준 로드맵', 'compass'], ['내 학습 숫자', 'layers'], ['AI 학습 비서', 'spark'], ['내 과정 공지', 'bell'], ['내 디지털북', 'book'], ['튜토리얼 기록', 'video'], ['내 기록', 'brief'], ['내 활동', 'user'], ['내 과정', 'layers'], ['내 강좌', 'layers']];
+  function myTiles(lm) { const g = lm.querySelector('.mypage .mygrid'); if (!g) return; const hero = lm.querySelector('.ap-myhero');
+    const nx = g.querySelector(':scope > .nextc'); if (nx) nx.classList.toggle('ap-mydup', !!hero);
+    const T = [...g.querySelectorAll(':scope > .ls-fold'), ...lm.querySelectorAll('#lcMyAct.ls-fold')].filter(c => !c.classList.contains('ls-open') || c.dataset.apt);
+    if (!T.length) return; const nm = c => { const b = c.querySelector(':scope > .ls-fh .ls-tx b'); return c.dataset.apn || (b ? b.textContent.trim() : ''); };
+    const rk = c => { const n = nm(c); const i = MYT.findIndex(([k]) => n.startsWith(k)); return i < 0 ? 99 : i; };
+    const S = [...T].sort((a, b) => rk(a) - rk(b)); const keep = S.slice(0, 4), rest = S.slice(4);
+    keep.forEach(c => { c.classList.add('ap-mytile'); c.classList.remove('ap-myx'); if (c.dataset.apt) return; const fh = c.querySelector(':scope > .ls-fh'); if (!fh) return; const n = nm(c); c.dataset.apn = n; c.dataset.apt = 1;
+      const h3 = c.querySelector(':scope > .mh h3'); const sm = h3 && h3.querySelector('small'); const k = MYT.find(([t]) => n.startsWith(t)); const ttl = k ? k[0] : n; let st = (sm ? sm.textContent : n.slice(ttl.length)).replace(/\s+/g, ' ').trim();
+      fh.innerHTML = `<span class="ap-mti" aria-hidden="true">${ico(k ? k[1] : 'layers', 18)}</span><span class="ls-tx"><b>${esc(ttl)}</b><small>${esc(st || '열어 보기')}</small></span><span class="ls-go" aria-hidden="true">›</span>`; });
+    rest.forEach(c => c.classList.toggle('ap-myx', !AP.myall));
+    let mb = lm.querySelector('.ap-mymore'); if (!rest.length) { if (mb) mb.remove(); return; }
+    if (!mb) { mb = document.createElement('button'); mb.type = 'button'; mb.className = 'ap-mymore'; mb.dataset.ap = 'myall'; g.after(mb); }
+    mb.setAttribute('aria-expanded', AP.myall ? 'true' : 'false'); mb.innerHTML = `<span>${AP.myall ? '기록 접기' : '기록 더 보기'}</span><small>${esc(rest.map(nm).map(n => (MYT.find(([t]) => n.startsWith(t)) || [n])[0]).slice(0, 2).join(' · '))}${rest.length > 2 ? ` 외 ${rest.length - 2}` : ''}</small>`; }
   /* ── v27.1 내 강의(#my) 앱 화면: 이어서 학습 카드 + 아래에 기존 학습 기록(배지 · 수료증 · 결제 · 활동) 그대로 ── */
   /* v43 F4(K4 114): 내 강의 머리 = 그린 요약 카드(이어 갈 차시 한 문장 + 숫자 3칸). 같은 숫자를 문장 · 칩에서 반복하지 않고, 0은 숫자로 쓰지 않는다 */
   function myHeroHTML(P, ing, cntOf, today, CW) { const nx = ing.find(x => x.next) || ing[0]; const avg = ing.length ? Math.round(ing.reduce((a, x) => a + (x.p || 0), 0) / ing.length) : 0;
@@ -442,7 +457,7 @@
     else if (a === 'home' && isPar()) { lm.innerHTML = parHomeHTML(); }
     else if (hm) { if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } lm.innerHTML = homeHTML(); document.body.classList.add('ap-homeon'); const sc = document.getElementById('apScroll'); if (sc && (LT.msgs || []).some(m => !m.sys)) sc.scrollTop = sc.scrollHeight; }
     if (a === 'my' && LR.me && !isPar() && !lm.querySelector('.ap-my')) { const h = lm.querySelector('section.myh'); if (h) h.hidden = true; lm.insertAdjacentHTML('afterbegin', myTopHTML()); }
-    if (a === 'my' && LR.me && !isPar()) { document.body.classList.add('ap-myon'); const tidy = () => lm.querySelectorAll('.mypage .ls-fh .ls-tx b').forEach(b => { const t = b.textContent, u = t.replace(/\s+0\s*\/\s*\d+.*$/, ''); if (u !== t && u.trim()) b.textContent = u; }); tidy(); setTimeout(tidy, 0); } /* v43 F4(K4 114): 접힌 기록 머리의 「0/3」 「0/5 수료…」 숫자 0 표기 정리 */
+    if (a === 'my' && LR.me && !isPar()) { document.body.classList.add('ap-myon'); const tidy = () => lm.querySelectorAll('.mypage .ls-fh .ls-tx b').forEach(b => { const t = b.textContent, u = t.replace(/\s+0\s*\/\s*\d+.*$/, ''); if (u !== t && u.trim()) b.textContent = u; }); tidy(); setTimeout(tidy, 0); myTiles(lm); setTimeout(() => myTiles(lm), 0); } /* v43 F4(K4 114): 접힌 기록 머리의 「0/3」 「0/5 수료…」 숫자 0 표기 정리 */
     if (!hm && !needPick) { const ob = app.querySelector('.ap-bar'); if (!ob) app.insertAdjacentHTML('afterbegin', barHTML()); else if (ob.dataset.a !== a) ob.outerHTML = barHTML(); }
     if (LR.me && !needPick && !isPar()) dailyNudge();
     if (!app.querySelector('.ap-nav') && !needPick) app.insertAdjacentHTML('beforeend', navHTML());
@@ -455,6 +470,7 @@
     if (k === 'back') { if (history.length > 1) history.back(); else location.hash = '#home'; return; }
     if (k === 'tsheet') return tsheet();
     if (k === 'myf') { AP.myf = el.dataset.v; lrender(); return; }
+    if (k === 'myall') { AP.myall = !AP.myall; myTiles(document.getElementById('lm')); return; }
     if (k === 'mys') { AP.mys = AP.mys === 'name' ? 'recent' : 'name'; lrender(); return; }
     if (k === 'srch') return searchSheet();
     if (k === 'srch-q') { const i = document.getElementById('apSQ'); if (i) { i.value = el.dataset.v; i.dispatchEvent(new Event('input', { bubbles: true })); } return; }

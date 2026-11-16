@@ -413,3 +413,22 @@ body.lapp.ap-myon #lm .mypage .mygrid>.ls-fold:not(.ls-open)>.ls-fh{min-height:7
 body.lapp.ap-myon #lm .mypage .nextc .nx.big{background:var(--gr50);color:var(--d-g900,#1A1814);box-shadow:inset 0 0 0 1px var(--gr100)}
 body.lapp.ap-myon #lm .mypage .nextc .nx.big :is(small,.nxt small){color:var(--gr700,#00862D)}
 body.lapp.ap-myon #lm .mypage .nextc .nx.big .lbtn{background:var(--gr700,#00862D);color:#fff;border-color:transparent}
+/* v43 H1(M1 114) 앱 「내 강의」 — ① AX 튜터 단추는 상시 노출(대표님) · 탭 바를 왼쪽으로 줄여 단추를 탭 바 오른쪽 옆에 둔다 → 목록 재생 단추 위에 떠 있지 않음 ② 기록 묶음은 아이콘 · 숫자 카드 4개 + 「기록 더 보기」 ③ 「지금 할 일」은 머리 요약과 중복이라 감춤 */
+@media (max-width:899px){
+  body.lapp.ap-myon:not(.tb-watch):not(.lt-on):not(.tb-sheet) .ap-nav{right:76px!important}
+  body.lapp.ap-myon:not(.tb-watch) #tbFab.tb-fab{right:12px;bottom:calc(16px + var(--ap-sb,0px));width:56px;height:56px;border-radius:20px}
+}
+body.lapp.ap-myon #lm .mypage .mygrid>.ap-mydup,body.lapp.ap-myon #lm .ap-myx{display:none!important}
+body.lapp.ap-myon #lm .mypage .mygrid>.ap-mytile:not(.ls-open)>.ls-fh{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 1fr;align-items:start;gap:10px 6px;min-height:112px;padding:14px}
+body.lapp.ap-myon #lm .ap-mytile:not(.ls-open)>.ls-fh .ap-mti{grid-column:1;grid-row:1;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--gr50,#EAF7EE);color:var(--gr700,#00862D)}
+body.lapp.ap-myon #lm .ap-mytile:not(.ls-open)>.ls-fh .ls-go{grid-column:2;grid-row:1;color:var(--ap-mute,#5C554B)}
+body.lapp.ap-myon #lm .ap-mytile:not(.ls-open)>.ls-fh .ls-tx{grid-column:1/-1;grid-row:2;align-self:end;display:flex;flex-direction:column;gap:3px;min-width:0}
+body.lapp.ap-myon #lm .ap-mytile:not(.ls-open)>.ls-fh .ls-tx b{font:800 15px/1.3 var(--sg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.lapp.ap-myon #lm .ap-mytile:not(.ls-open)>.ls-fh .ls-tx small{display:block;font:700 13px/1.35 var(--sg);color:var(--gr700,#00862D);white-space:normal;word-break:keep-all}
+body.lapp.ap-myon #lm .ap-mytile.ls-open>.ls-fh .ap-mti{display:none}
+body.lapp.ap-myon #lm .ap-mymore{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:56px;margin:10px 0 0;padding:12px 16px;border:1px dashed var(--ap-line,#E7E2D9);border-radius:16px;background:transparent;font:inherit;text-align:left;color:var(--ap-ink,#1A1814);cursor:pointer}
+body.lapp.ap-myon #lm .ap-mymore span{font:700 14.5px/1.3 var(--sg)}
+body.lapp.ap-myon #lm .ap-mymore i{font-style:normal;margin-left:4px;padding:1px 7px;border-radius:99px;background:var(--gr50,#EAF7EE);color:var(--gr700,#00862D);font-size:12px}
+body.lapp.ap-myon #lm .ap-mymore small{font:500 12.5px/1.3 var(--sg);color:var(--ap-mute,#5C554B);text-align:right}
+body.lapp.ap-myon #lm .ap-mymore:focus-visible{outline:2px solid var(--gr700,#00862D);outline-offset:2px}
+html[data-theme=dark] body.lapp.ap-myon #lm .ap-mytile .ap-mti{background:#123222;color:#7EE2A0}

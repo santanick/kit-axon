@@ -117,3 +117,12 @@ html[data-theme=dark] .bks-pb,html[data-theme=dark] .bks-cb,html[data-theme=dark
 #main .l43-brief .lmsnav-sub.l43-insub .lnd{display:none}
 #main .l43-brief .lmsnav-sub.l43-insub button{min-height:44px;padding:0 14px;font-size:13px;background:rgba(255,255,255,.7)}
 #main .l43-brief .lmsnav-sub.l43-insub button.on{background:var(--gr700,#00862D);color:var(--on-pr,#fff)}
+/* v43 H1(M1 036) 학사 연동: 화면 칩 묶음 + 하위 탭을 한 줄로, 페이지 머리 동기화 단추 중복 감춤 */
+#main .h1-subrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 4px}
+#main .h1-subrow>.seg2{margin:0;flex:1 1 auto;min-width:0}
+#main .h1-subrow>.lmsnav-sub.h1-sub{display:inline-flex;align-items:center;gap:2px;margin:0;padding:4px;border-radius:999px;background:var(--gr50,#EAF7EE);flex:none}
+#main .h1-subrow>.lmsnav-sub.h1-sub .lnd{display:none}
+#main .h1-subrow>.lmsnav-sub.h1-sub button{min-height:40px;padding:0 14px;border:0;border-radius:999px;background:transparent;font-size:13.5px;font-weight:700;color:var(--gr800,#0B5A2A);white-space:nowrap}
+#main .h1-subrow>.lmsnav-sub.h1-sub button.on{background:var(--gr700,#00862D);color:var(--on-pr,#fff)}
+#main .h1-subrow>.lmsnav-sub.h1-sub::after{content:none}
+#main .h1-dupact{display:none!important}
