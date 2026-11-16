@@ -26,3 +26,10 @@
 .efl-items li p{flex-basis:100%;margin:0}
 .efl-note{margin-top:18px}
 @media (max-width:600px){.efl .lbtn.sm,.efl .efl-acts .lbtn,.efl .efl-files .lbtn{min-height:44px;display:inline-flex;align-items:center}} /* v38 390 과제 제출 · 파일 첨부 44px */
+
+/* v43 D-C(P2 C4): 학사 LMS 명단에 없는 학번 안내 — 접근코드 재발급 요청 · 학교 문의 */
+.lms43nr{padding:18px 20px;border-radius:18px;background:color-mix(in srgb,var(--pri) 7%,var(--surface,#fff));border:1px solid color-mix(in srgb,var(--pri) 22%,transparent);text-align:left}
+.lms43nr p{margin:0;font-size:14px;line-height:1.6;color:var(--mute)}
+.lms43nr p b{font-size:16px;color:var(--ink)}
+.lms43nb{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:inherit}
+.lms43nb .lbtn{min-height:44px;border-radius:999px;padding:0 18px}

@@ -86,8 +86,10 @@
   const payOnline = () => LG.po !== false && !(live() && LG.my && LG.my.payOnline === false);
 
   /* ── 화면 조각 ── */
-  const page = (cls, inner) => `<section class="lg ${cls || ''}"><div class="lg-in">${inner}</div></section>`;
-  const head = (t, sub) => `<div class="lg-hd"><h1>${esc(t)}</h1>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`;
+  /* v43 D-C: 웹(body:not(.lapp))은 공통 사진 머리(lPageHead)로 — 앱 프레임은 예전 머리 그대로. 결제 메인은 숫자(미납 · 결제할 금액 · 결제 완료) */
+  let HT = null; const webH = () => typeof lPageHead === 'function' && !document.body.classList.contains('lapp');
+  const page = (cls, inner) => { const h = HT ? lPageHead({ key: 'ledger', title: HT[0], desc: HT[1] || '', crumb: '<a href="#home">홈</a> › ' + (HT[0] === '결제' ? '결제' : '<a href="#ledger">결제</a> › ' + esc(HT[0])), compact: !HT[2], stats: HT[2] || null, cta: HT[2] ? HT[3] : null, eyebrow: HT[2] ? '청구서 · 결제 내역 · 환불' : '' }) : ''; HT = null; return `${h}<section class="lg ${cls || ''}${h ? ' lg43' : ''}"><div class="lg-in">${inner}</div></section>`; };
+  const head = (t, sub, st, cta) => { if (webH()) { HT = [t, sub, st, cta]; return ''; } return `<div class="lg-hd"><h1>${esc(t)}</h1>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`; };
   const stTag = b => b.st === 'paid' ? `<span class="lg-tag ok">${sv('check', 14)}납부 완료</span>` : b.late ? `<span class="lg-tag bad">${sv('warn', 14)}마감 지남</span>` : b.st === 'partial' ? `<span class="lg-tag mid">${sv('clock', 14)}일부 납부</span>` : `<span class="lg-tag">${sv('clock', 14)}결제 대기</span>`;
   const whoL = (M, sid) => { const k = (M.people || []).find(p => p.sid === sid); return k ? k.label : ''; };
   const noOnline = () => `<p class="lg-note" role="note">${sv('info', 18)}<span>이 기관은 지금 온라인 결제를 받지 않아요. 기관 데스크에서 결제해 주세요.</span></p>`;
@@ -134,7 +136,8 @@
     const M = model(); const isPar = LR.me.kind === 'parent';
     if (b === 'r') return page('lg-r', rcptView(M, c)); if (b === 'done') return page('lg-d', head('결제 완료') + doneView(M, c));
     const cur = b === 'hist' || b === 'rf' ? b : '';
-    return page('lg-main', `${head('결제', isPar ? '연결된 자녀의 청구서도 함께 보여요' : '청구서 · 결제 내역 · 환불을 한곳에서 봐요')}${peopleBar(M)}${tabs(cur, M)}${cur === 'hist' ? histView(M) : cur === 'rf' ? rfView(M) : billsView(M)}`); }
+    const bal = M.open.reduce((a, x) => a + (+x.bal || 0), 0);
+    return page('lg-main', `${head('결제', isPar ? '연결된 자녀의 청구서도 함께 보여요' : '청구서 · 결제 내역 · 환불을 한곳에서 봐요', [[M.open.length, '건', '결제할 청구서'], [Number(bal).toLocaleString('ko-KR'), '원', '결제할 금액'], [M.receipts.length, '건', '결제 내역']], M.open.length && payOnline() ? null : ['결제 내역 보기', '#ledger/hist'])}${peopleBar(M)}${tabs(cur, M)}${cur === 'hist' ? histView(M) : cur === 'rf' ? rfView(M) : billsView(M)}`); }
 
   /* ── 결제(앱 · 웹) ── */
   const rer = () => { const y = scrollY; lrender(); requestAnimationFrame(() => scrollTo(0, y)); };

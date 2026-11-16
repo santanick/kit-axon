@@ -94,3 +94,63 @@ form.shp-pay.p26{max-width:1040px}
 .shp-done .shp-row{justify-content:center;flex-wrap:wrap;gap:10px}
 .shp-done .lbtn{min-height:48px;border-radius:999px}
 .shp-done .lbtn.pri{background:var(--pri);color:var(--pri-ink,#fff)}
+
+/* ═════════ v43 D-C — 강좌 상세(#class) 정보 띠 · 강사 프로필 · 차시 카드 / 대학 비교과 신청 안내 빈 상태 ═════════
+   lhub.css(Q2)보다 먼저 읽히므로 html body:not(.lapp)로 범위를 좁혀 덮는다. 강조 var(--pri), 그림자 --q2-sh */
+html body:not(.lapp) .shp-det .cd43-band{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:18px 0 6px;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;border-radius:0!important}
+html body:not(.lapp) .shp-det .cd43-band>div{position:relative;padding:16px 16px 16px 62px;min-height:76px;border-radius:18px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh);display:flex;flex-direction:column;justify-content:center}
+html body:not(.lapp) .shp-det .cd43-band i{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--q2-t1);color:var(--pri-tx,var(--pri));font-style:normal}
+html body:not(.lapp) .shp-det .cd43-band small{font-size:13px;font-weight:600;color:var(--mute)}
+html body:not(.lapp) .shp-det .cd43-band b{margin-top:2px;font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--ink);word-break:keep-all;line-height:1.3}
+html body:not(.lapp) .shp-det .shp-main h2{margin:34px 0 14px;font-size:22px;font-weight:800;letter-spacing:-.025em;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+html body:not(.lapp) .shp-det .shp-main h2 small{font-size:14px;font-weight:600;color:var(--mute)}
+html body:not(.lapp) .shp-det .cd43-ins{display:block}
+html body:not(.lapp) .shp-det .cd43-pf{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:20px;align-items:center;padding:22px 24px;border-radius:22px;background:linear-gradient(135deg,var(--q2-t1),var(--surface,#fff) 60%);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
+html body:not(.lapp) .shp-det .cd43-pf+.cd43-pf{margin-top:12px}
+html body:not(.lapp) .shp-det .cd43-pf img,html body:not(.lapp) .shp-det .cd43-av{width:76px;height:76px;border-radius:50%;object-fit:cover}
+html body:not(.lapp) .shp-det .cd43-av{display:grid;place-items:center;font-size:30px;font-weight:800;color:#fff;background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--pri) 70%,#fff),var(--pri) 55%,color-mix(in srgb,var(--pri) 55%,#04100A));box-shadow:0 0 0 4px var(--surface,#fff),0 0 0 6px var(--q2-t2)}
+html body:not(.lapp) .shp-det .cd43-pi small{font-size:13px;font-weight:700;color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .shp-det .cd43-pi>b{display:block;font-size:19px;font-weight:800;margin-top:2px}
+html body:not(.lapp) .shp-det .cd43-pi p.mini{margin:6px 0 0;font-size:14px;line-height:1.55;color:var(--mute)}
+html body:not(.lapp) .shp-det .cd43-ps{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:12px 0 0;padding:0}
+html body:not(.lapp) .shp-det .cd43-ps li{display:inline-flex;align-items:baseline;gap:4px;min-height:30px;padding:5px 12px;border-radius:999px;background:var(--surface,#fff);border:1px solid var(--q2-bd);font-size:13px;color:var(--mute)}
+html body:not(.lapp) .shp-det .cd43-ps b{font-size:14px;font-weight:800;color:var(--ink)}
+html body:not(.lapp) .shp-det .cd43-q{min-height:44px;border-radius:999px;padding:0 18px}
+html body:not(.lapp) .shp-det .shp-main ol.cd43-cur{counter-reset:none;border:0;background:none;border-radius:0;overflow:visible;display:flex;flex-direction:column;gap:8px;padding:0;margin:0}
+html body:not(.lapp) .shp-det .shp-main ol.cd43-cur>li{border:0;padding:0;min-height:0}
+html body:not(.lapp) .shp-det .cd43-cur>li.cd43-ch{margin:14px 0 2px;font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--pri-tx,var(--pri));display:flex;align-items:center;gap:10px}
+html body:not(.lapp) .shp-det .cd43-cur>li.cd43-ch:first-child{margin-top:0}
+html body:not(.lapp) .shp-det .cd43-cur>li.cd43-ch::after{content:'';flex:1;height:1px;background:var(--q2-bd)}
+html body:not(.lapp) .shp-det .cd43-cur>li.cd43-it{display:grid;grid-template-columns:44px minmax(0,1fr) 36px;gap:14px;align-items:center;min-height:68px;padding:12px 16px;border-radius:16px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:0 1px 2px rgba(16,24,40,.04)}
+html body:not(.lapp) .shp-det .cd43-n{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--q2-t1);color:var(--pri-tx,var(--pri));font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+html body:not(.lapp) .shp-det .cd43-tt b{display:block;font-size:16px;font-weight:700;color:var(--ink)}
+html body:not(.lapp) .shp-det .cd43-tt small{display:inline-flex;align-items:center;gap:5px;margin-top:3px;font-size:13px;color:var(--mute)}
+html body:not(.lapp) .shp-det .cd43-tt small i{display:inline-grid;font-style:normal;color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .shp-det .cd43-lk{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--mute);background:color-mix(in srgb,var(--ink) 5%,transparent)}
+html body:not(.lapp) .shp-det .cd43-lk.on{background:var(--pri);color:var(--pri-ink,#fff)}
+html body:not(.lapp) .cd43-wait{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;align-items:stretch}
+html body:not(.lapp) .cd43-wait .cd43-we{margin:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:320px}
+html body:not(.lapp) .cd43-wait .cd43-we p{font-size:16px;line-height:1.6}
+html body:not(.lapp) .cd43-wait .cd43-we p b{font-size:20px;font-weight:800}
+html body:not(.lapp) .cd43-wb{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:8px}
+html body:not(.lapp) .cd43-wb .lbtn{min-height:48px;border-radius:999px;padding:0 22px}
+html body:not(.lapp) .cd43-guide{padding:24px;border-radius:22px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh2)}
+html body:not(.lapp) .cd43-guide h3{margin:0 0 14px;font-size:18px;font-weight:800}
+html body:not(.lapp) .cd43-guide ol{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:14px}
+html body:not(.lapp) .cd43-guide li{display:grid;grid-template-columns:32px 1fr;gap:12px;font-size:14px;line-height:1.55;color:var(--mute)}
+html body:not(.lapp) .cd43-guide li>b{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--pri);color:var(--pri-ink,#fff);font-size:14px}
+html body:not(.lapp) .cd43-guide strong{display:block;font-size:15px;color:var(--ink)}
+html body:not(.lapp) .cd43-guide .lbtn{min-height:44px;border-radius:14px}
+@media (max-width:860px){html body:not(.lapp) .shp-det .cd43-band{grid-template-columns:repeat(2,minmax(0,1fr))}html body:not(.lapp) .shp-det .cd43-band>div:last-child:nth-child(odd){grid-column:1/-1}html body:not(.lapp) .shp-det .cd43-pf{grid-template-columns:60px minmax(0,1fr);padding:18px}html body:not(.lapp) .shp-det .cd43-pf img,html body:not(.lapp) .shp-det .cd43-av{width:60px;height:60px;font-size:24px}html body:not(.lapp) .shp-det .cd43-q{grid-column:1/-1}html body:not(.lapp) .cd43-wait{grid-template-columns:1fr}}
+/* v43 D-C: .shp-tabs(결제 관리 · 강좌 상세) — lauth26.css 밑줄 탭 !important와 Q2 알약(선택 짙은 바탕)이 겹쳐 선택 탭 글자가 사라지던 문제 → Q2 알약 규격으로 통일 */
+html body:not(.lapp) #lm .shp-tabs{position:static;gap:8px;border:0;margin:0 0 18px;padding:0;overflow-x:auto;scrollbar-width:none}
+html body:not(.lapp) #lm .shp-tabs a{min-height:44px;padding:0 18px!important;border-radius:999px!important;border:0!important;margin:0;background:var(--surface,#fff)!important;box-shadow:inset 0 0 0 1px var(--q2-bd)!important;color:var(--mute);font-size:14px;font-weight:700}
+html body:not(.lapp) #lm .shp-tabs a.on{background:var(--ink)!important;color:var(--surface,#fff)!important;box-shadow:none!important}
+html body:not(.lapp) .py43lk{display:flex;align-items:center;gap:8px;margin:0 0 14px;padding:12px 16px;border-radius:14px;background:var(--q2-t1);font-size:14px;color:var(--ink)}
+html body:not(.lapp) .py43lk a{font-weight:700;color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .shp-det .shp-main h2 small.mini{display:block;flex-basis:100%;font-size:14px!important;font-weight:600;line-height:1.5;color:var(--mute)}
+@media (max-width:860px){html body:not(.lapp) .shp-det .cd43-band b{font-size:15px}}
+/* v43 D-C: 결제 내역 표(.py26t, lles26.css 흰 바탕 고정) — 카드 규격 · 다크 모드 면 */
+html body:not(.lapp) #lm .py26t{background:var(--surface,#fff);border:1px solid var(--q2-bd);border-radius:20px;box-shadow:var(--q2-sh)}
+html body:not(.lapp) #lm .py26r{min-height:60px;border-top-color:var(--q2-bd)}
+html body:not(.lapp) #lm .py26r.py26hd{background:color-mix(in srgb,var(--ink) 4%,var(--surface,#fff));font-size:13px;font-weight:700;color:var(--mute);min-height:44px}

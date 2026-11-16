@@ -206,3 +206,16 @@ html[data-theme="dark"] :is(.fx,.fx-today,.fx-calc){--y:#2A2210;--yd:#F5C46B;--r
 .fx .fx-row{min-height:72px}
 .fx .fx-ic{border-radius:12px;width:44px;height:44px}
 @media (max-width:600px){.fx .fx-hl{font-size:24px}}
+
+/* ═════════ v43 D-C — 웹 시설 예약(#fac) 사진 머리 아래 넓은 본문 · 시설 사진 카드 2열(앱 프레임 제외) ═════════ */
+html body:not(.lapp) section.fx.fx43{background:transparent;padding:28px 0 72px}
+html body:not(.lapp) section.fx.fx43 .fx-in{max-width:1120px}
+html body:not(.lapp) section.fx.fx43.fx-pay .fx-in,html body:not(.lapp) section.fx.fx43.fx-done .fx-in{max-width:760px}
+html body:not(.lapp) .fx43r{justify-content:flex-end}
+html body:not(.lapp) section.fx.fx43 .fx-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;background:none;border:0;box-shadow:none}
+html body:not(.lapp) section.fx.fx43 a.fx-row[style*="--fx-ph"]{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:150px 18px 16px;min-height:0;border-radius:22px;border:1px solid var(--q2-bd);background:var(--surface,#fff);box-shadow:var(--q2-sh);overflow:hidden}
+html body:not(.lapp) section.fx.fx43 a.fx-row[style*="--fx-ph"]::before{content:'';position:absolute;left:0;right:0;top:0;height:134px;background:#0b1a12 var(--fx-ph) center/cover}
+html body:not(.lapp) section.fx.fx43 a.fx-row[style*="--fx-ph"]:hover{box-shadow:var(--q2-sh2)}
+@media (max-width:760px){html body:not(.lapp) section.fx.fx43 .fx-list{grid-template-columns:1fr}html body:not(.lapp) section.fx.fx43 a.fx-row[style*="--fx-ph"]{padding-top:128px}html body:not(.lapp) section.fx.fx43 a.fx-row[style*="--fx-ph"]::before{height:112px}}
+html body:not(.lapp) section.fx.fx43 a.fx-row[style*="--fx-ph"]>:last-child{white-space:nowrap;text-align:right}
+html body:not(.lapp) section.fx.fx43 a.fx-row[style*="--fx-ph"]>:last-child br{display:none}

@@ -54,8 +54,8 @@
     const my = get('my', () => call('GET', '/api/lms/a/my'));
     const head = `<section class="efl"><div class="efl-in"><p class="eb">MY LMS</p><h1>과제 · 시험 · 성적</h1>`;
     if (my === undefined) return head + wait + '</div></section>';
-    if (!my || !my.me) return head + `<div class="empty2"><p>${esc(L.err.my || '학사 정보에 등록된 학번이 아닙니다. 학교 학사 담당 부서에 문의하세요.')}</p><a class="lbtn pri" href="#my">내 학습으로 가기</a></div></div></section>`; /* v43 Q2: 빈 상태 규격(그린 일러스트 · 한 문장 · 주 버튼) */
-    const secs = (my.sections || []).filter(s => s.kind !== 'ta'); if (!secs.length) return head + '<p class="mini">이번 학기 수강 분반이 없습니다.</p></div></section>';
+    if (!my || !my.me) return head + (L.err.my || !window.lmsNoRoster ? `<div class="empty2"><p>${esc(L.err.my || '이 학번은 아직 이번 학기 수강 명단에 없어요.')}</p><div class="lms43nb"><a class="lbtn pri" href="#find/code">접근코드 재발급 요청</a><a class="lbtn ghost" href="#find/inq">학교에 문의하기</a></div></div>` : `<div class="empty2">${window.lmsNoRoster()}</div>`) + `</div></section>`; /* v43 D-C(P2 C4) */ /* v43 Q2: 빈 상태 규격(그린 일러스트 · 한 문장 · 주 버튼) */
+    const secs = (my.sections || []).filter(s => s.kind !== 'ta'); if (!secs.length) return head + `<div class="empty2">${window.lmsNoRoster ? window.lmsNoRoster() : '<p>이 학번은 아직 이번 학기 수강 명단에 없어요.</p>'}</div></div></section>`; /* v43 D-C(P2 C4): 막다른 길 대신 재발급 요청 · 학교 문의 */
     const sec = secs.find(s => s.section_id === L.sec) || secs[0]; L.sec = sec.section_id;
     const chips = `<div class="efl-chips" role="tablist">${secs.map(s => `<button class="${s === sec ? 'on' : ''}" data-lact="efl-sec" data-v="${esc(s.section_id)}">${esc(s.course_name || s.title)} ${esc(s.section_no)}분반${s.kind === 'audit' ? ' · 청강' : ''}</button>`).join('')}</div>`;
     const tabs = `<div class="efl-tabs" role="tablist">${[['asg', '과제'], ['exam', '시험'], ['grade', '성적']].map(([k, l]) => `<button class="${L.tab === k ? 'on' : ''}" data-lact="efl-tab" data-v="${k}" role="tab" aria-selected="${L.tab === k}">${l}</button>`).join('')}</div>`;

@@ -126,3 +126,15 @@ body .lg .lg-btn.pri[disabled]{background:#d7dada!important;border-color:#d7dada
 .lg-tbl{background:var(--surface,#fff);border:1px solid var(--ln);border-radius:8px;padding:14px 16px;gap:10px}
 .lg-tbl .lg-b{font-size:19px;font-weight:800}
 body .lg-bar .lg-btn.pri{background:var(--g)!important;border-color:var(--g)!important;color:#fff!important}
+
+/* ═════════ v43 D-C — 웹 결제(#ledger) 사진 머리 아래 넓은 2열(청구서 카드 2장씩) ═════════ */
+html body:not(.lapp) section.lg.lg43{padding:28px 0 72px}
+html body:not(.lapp) section.lg.lg43>.lg-in{max-width:1120px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+html body:not(.lapp) section.lg.lg43>.lg-in>*:not(.lg-bill){grid-column:1/-1}
+html body:not(.lapp) section.lg.lg43 .lg-bill{border-radius:22px;box-shadow:var(--q2-sh);border:1px solid var(--q2-bd)}
+html body:not(.lapp) section.lg.lg43 .lg-tabs{justify-content:flex-start;gap:8px;border:0}
+html body:not(.lapp) section.lg.lg43 .lg-tabs a{flex:none;min-height:44px;padding:0 18px;border-radius:999px;border:0;box-shadow:inset 0 0 0 1px var(--q2-bd);font-weight:700}
+html body:not(.lapp) section.lg.lg43 .lg-tabs a.on{background:var(--ink);color:var(--surface,#fff);box-shadow:none}
+html body:not(.lapp) section.lg.lg43 .lg-sum{padding:20px 24px;border-radius:20px}
+html body:not(.lapp) section.lg.lg43.lg-r>.lg-in,html body:not(.lapp) section.lg.lg43.lg-d>.lg-in,html body:not(.lapp) section.lg.lg43.lg-off>.lg-in{max-width:640px;display:flex}
+@media (max-width:760px){html body:not(.lapp) section.lg.lg43>.lg-in{grid-template-columns:1fr}}

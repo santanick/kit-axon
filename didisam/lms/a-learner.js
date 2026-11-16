@@ -1,3 +1,6 @@
+/* v43 D-C(P2 C4): 학사 LMS 「명단에 없는 학번」 안내 — 한 화면에 한 번만(학습자 화면이 그릴 때마다 처음 1회), 접근코드 재발급 요청(#find/code) · 학교 문의(#find/inq) */
+window.lmsNoRoster = window.lmsNoRoster || (() => { const k = location.hash + '|' + (window.__lmsNR = (window.__lmsNR || 0)); if (window.__lmsNRk === k) return ''; window.__lmsNRk = k; setTimeout(() => { window.__lmsNR++; }, 0);
+  return `<div class="lms43nr" role="note"><p><b>이 학번은 아직 이번 학기 수강 명단에 없어요.</b><br>수강 신청 · 정정 뒤에 명단이 들어오면 강의실이 자동으로 열려요. 학번이 맞는데 계속 보이면 학과 사무실이나 학사 담당 부서에 확인해 주세요.</p><div class="lms43nb"><a class="lbtn pri" href="#find/code">접근코드 재발급 요청</a><a class="lbtn ghost" href="#find/inq">학교에 문의하기</a></div></div>`; });
 /* v30 학사 LMS 묶음 A — 학습자 앱: 「이번 학기 수강 분반」 카드(내 강의 화면)
    - 운영: GET /api/lms/a/my (학습자 세션) — 합반 공유분반은 대표분반으로 보이고 숨김 분반은 보이지 않는다. 청강 · 조교 신청 · 취소(POST)
    - 데모: 이 브라우저의 기관 데이터룸(S.lms.a)에서 같은 규칙으로 읽기만 한다(신청은 운영 서버에서) */
@@ -26,12 +29,12 @@
   function card() {
     const D = data(); const head = '<div class="myhead"><h2>이번 학기 수강 분반</h2></div>';
     if (!D) return `<div class="mycard" id="lmsaMy">${head}<p class="mini">${ST.err ? esc(ST.err) : '불러오는 중입니다.'}</p></div>`;
-    if (!D.me) return `<div class="mycard" id="lmsaMy">${head}<p class="mini">학사 정보에 등록된 학번이 아닙니다. 학교 학사 담당 부서에 문의하세요.</p></div>`;
+    if (!D.me) return `<div class="mycard" id="lmsaMy">${head}${(window.lmsNoRoster || (() => ''))()}</div>`; /* v43 D-C(P2 C4): 막다른 길 대신 접근코드 재발급 요청 · 학교 문의 */
     const sn = id => { const s = [...D.sections, ...(D.open || [])].find(x => x.section_id === id); return s ? `${s.course_name} ${s.section_no}분반` : '분반'; };
     const L = D.sections.map(s => `<li><b>${esc(s.course_name)}</b> <small>${esc(s.course_code)} · ${esc(s.section_no)}분반 · ${esc(MODE[s.mode] || s.mode)}${s.kind === 'audit' ? ' · 청강(성적 미산정)' : ''}${s.kind === 'ta' || s.ta ? ' · <b class="lmsa-ta">조교</b>' : ''}${s.via ? ` · ${esc(s.via)}분반 합반` : ''}</small>${(s.schedule || []).length ? `<small class="lmsa-sch">${esc(s.schedule.map(x => `${x.day} ${x.period}${x.room ? ' ' + x.room : ''}`).join(', '))}</small>` : ''}</li>`).join('');
     const R = (D.requests || []).map(r => `<li>${esc(sn(r.section_id))} · ${r.kind === 'ta' ? '조교' : '청강'} 신청 승인 대기${LR.mode === 'live' ? ` <button class="lbtn sm ghost" data-lact="lmsa-cancel" data-s="${esc(r.section_id)}" data-k="${esc(r.kind)}">신청 취소</button>` : ''}</li>`).join('');
     const O = LR.mode === 'live' && (D.open || []).length ? `<details class="nt"><summary><b>청강 신청하기</b></summary><ul class="lmsa-ul">${D.open.slice(0, 30).map(s => `<li>${esc(s.course_name)} <small>${esc(s.course_code)} · ${esc(s.section_no)}분반</small> <button class="lbtn sm ghost" data-lact="lmsa-req" data-s="${esc(s.section_id)}">청강 신청</button></li>`).join('')}</ul></details>` : '';
-    return `<div class="mycard" id="lmsaMy">${head}<p class="mini">학번 ${esc(D.me.member_no)} · 학사 수강 정보 기준</p><ul class="lmsa-ul">${L || '<li class="mini">이번 학기 수강 분반이 없습니다.</li>'}</ul>${R ? `<p class="mini"><b>신청 현황</b></p><ul class="lmsa-ul">${R}</ul>` : ''}${O}</div>`;
+    return `<div class="mycard" id="lmsaMy">${head}<p class="mini">학번 ${esc(D.me.member_no)} · 학사 수강 정보 기준</p><ul class="lmsa-ul">${L || '<li class="mini">이번 학기 수강 분반이 없습니다.</li>'}</ul>${!L && !R && window.lmsNoRoster ? window.lmsNoRoster() : ''}${R ? `<p class="mini"><b>신청 현황</b></p><ul class="lmsa-ul">${R}</ul>` : ''}${O}</div>`;
   }
   { const base = viewMy; viewMy = function (...a) { const h = base.apply(this, a); if (!on()) return h; try { const c = card(); return h.includes('<div class="mygrid">') ? h.replace('<div class="mygrid">', '<div class="mygrid">' + c) : c + h; } catch (e) { console.error('lmsa my', e); return h; } }; } // eslint-disable-line no-global-assign
   document.addEventListener('click', async e => {

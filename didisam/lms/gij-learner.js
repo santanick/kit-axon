@@ -94,7 +94,7 @@
   function card() {
     const g = G(), i = I(); const head = '<div class="myhead"><h2>출석 · 강의 · 성찰</h2></div>';
     if (!g || !i) return `<div class="mycard wide" id="gijMy">${head}<p class="mini">${ST.err ? E(ST.err) : '불러오는 중입니다.'}</p></div>`;
-    if (!g.found) return `<div class="mycard wide" id="gijMy">${head}<p class="mini">${g.err ? E(g.err) : '학사 정보에 등록된 학번이 아닙니다. 학교 학사 담당 부서에 문의하세요.'}</p></div>`;
+    if (!g.found) return g.err ? `<div class="mycard wide" id="gijMy">${head}<p class="mini">${E(g.err)}</p></div>` : ''; /* v43 D-C(P2 C4): 명단에 없는 학번 안내는 위 카드(lmsNoRoster)에서 한 번만 */
     const tabs = [['att', '출석하기'], ['mine', '내 출결 · 진도'], ['vid', '강의 영상'], ['refl', '성찰일지']];
     const body = { att: () => cAtt(g), mine: () => cMine(g, i), vid: () => cVid(i), refl: () => cRefl(g) }[ST.tab]();
     return `<div class="mycard wide" id="gijMy">${head}<p class="mini">학번 ${E(g.member_no)}${live() ? '' : ' · 데모 화면(기록은 운영 서버에서 저장됩니다)'}</p><div class="gij-seg" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${k === ST.tab}" class="${k === ST.tab ? 'on' : ''}" data-lact="gij-tab" data-v="${k}">${l}</button>`).join('')}</div>${body}</div>`;

@@ -182,8 +182,12 @@
   }
 
   /* ═════ 화면 조각 ═════ */
-  const page = (cls, inner) => `<section class="lm ${cls || ''}"><div class="lm-in">${inner}</div></section>`;
-  const head = (t, sub) => `<div class="lm-hd"><h1>${esc(t)}</h1>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`;
+  /* v43 D-C: 웹은 공통 사진 머리(lPageHead) — 내 마일리지는 숫자(쓸 수 있는 · 적립 대기 · 소멸 예정), 아래 화면은 짧은 띠. 앱은 예전 머리 */
+  let HT = null; const webH = () => typeof lPageHead === 'function' && !document.body.classList.contains('lapp');
+  const page = (cls, inner) => { let h = ''; if (HT) { const main = /lm-main/.test(cls || ''); let st = null; if (main) { try { const M = model(); st = [[Number(M.balance || 0).toLocaleString('ko-KR'), M.unit || '점', '지금 쓸 수 있어요'], [M.pending ? Number(M.pending).toLocaleString('ko-KR') : '', M.unit || '점', '적립 대기'], [M.expiring && M.expiring.points ? Number(M.expiring.points).toLocaleString('ko-KR') : '', M.unit || '점', '곧 소멸']]; } catch (e) { st = null; } }
+    h = lPageHead({ key: 'mile', title: HT[0], desc: HT[1] || (main ? '학습하면 쌓이고, 보상으로 바꿔 쓸 수 있어요.' : ''), crumb: main || HT[0] === '내 마일리지' ? '<a href="#home">홈</a> › 내 마일리지' : '<a href="#home">홈</a> › <a href="#mile">내 마일리지</a> › ' + esc(HT[0]), compact: !main, stats: st, cta: main ? ['적립 내역 보기', '#mile/list'] : null, eyebrow: main ? '학습 마일리지' : '' }); HT = null; }
+    return `${h}<section class="lm ${cls || ''}${h ? ' lm43' : ''}"><div class="lm-in">${inner}</div></section>`; };
+  const head = (t, sub) => { if (webH()) { HT = [t, sub]; return ''; } return `<div class="lm-hd"><h1>${esc(t)}</h1>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`; };
   const bar = (p, cls) => `<span class="lm-bar${cls ? ' ' + cls : ''}" role="presentation"><i style="width:${Math.max(0, Math.min(100, p))}%"></i></span>`;
   const ring = (p, top, sub) => `<span class="lm-ring" style="--p:${Math.max(0, Math.min(100, p))}" role="img" aria-label="${esc(top)} 등급 ${p}%"><b>${esc(top)}</b><small>${esc(sub)}</small></span>`;
   const note = (k, t, b) => `<div class="lm-note ${k}" role="${k === 'err' ? 'alert' : 'note'}">${sv(k === 'ok' ? 'check' : k === 'err' ? 'x' : k === 'lock' ? 'lock' : 'info', 20)}<div><b>${esc(t)}</b>${b ? `<p>${esc(b)}</p>` : ''}</div></div>`;

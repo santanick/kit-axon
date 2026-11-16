@@ -292,3 +292,12 @@ html[data-theme="dark"] :is(.lm,.lm-me,.lm-myb,.lm-toast,.lm-sheet,.lm-cap,.lm-f
 .lm-lad b{font-size:13px;font-weight:700;color:var(--lm-mute)}
 .lm-lad .h b{color:var(--lm-gd)}
 @media (max-width:600px){.lm-hl{font-size:22px}}
+
+/* ═════════ v43 D-C — 웹 마일리지(#mile) 사진 머리 아래 2열(앱 프레임 제외) ═════════ */
+html body:not(.lapp) section.lm.lm43{padding:28px 0 72px}
+html body:not(.lapp) section.lm.lm43 .lm-in{max-width:1120px;padding:0 16px}
+html body:not(.lapp) section.lm.lm43.lm-main .lm-in{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+html body:not(.lapp) section.lm.lm43.lm-main .lm-in>:first-child{grid-column:1/-1}
+html body:not(.lapp) section.lm.lm43 .lm-card{border-radius:22px;box-shadow:var(--q2-sh);border:1px solid var(--q2-bd)}
+@media (max-width:760px){html body:not(.lapp) section.lm.lm43.lm-main .lm-in{grid-template-columns:1fr}}
+html body:not(.lapp) section.lm.lm43 .lm-fund *{font-size:max(12px,1em)}
