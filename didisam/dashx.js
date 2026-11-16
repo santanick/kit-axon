@@ -188,7 +188,7 @@
 .dx{margin:0 0 20px}
 .dx-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 10px}
 .dx-h h2{font-size:17px;margin:0;letter-spacing:-.02em}.dx-h small{color:var(--t-sub);font-size:12px}.dx-h .sp,.dx-edf .sp,.dx-li .sp{flex:1}
-.dx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.dx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
 .dx-card{display:flex;flex-direction:column;gap:4px;min-width:0;background:var(--surface);border:0;border-radius:var(--r-card,20px);box-shadow:var(--sh2);padding:16px 16px 14px}
 .dx-card.w{background:linear-gradient(180deg,var(--co50),var(--surface) 60%);box-shadow:var(--sh2),inset 0 0 0 1px var(--co100)}
 .dx-n.dx-z b{font-size:20px;color:var(--t-sub)}

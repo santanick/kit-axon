@@ -225,3 +225,21 @@
 .ai-more.on>summary{background:var(--gr50,#EAF8EF);color:var(--gr800,#066B2A)}
 .ai-morep{position:absolute;z-index:20;top:calc(100% + 6px);left:0;min-width:200px;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:14px;background:var(--surface,#fff);box-shadow:0 10px 30px rgba(16,24,40,.14),inset 0 0 0 1px var(--hair)}
 .ai-morep button{justify-content:flex-start;text-align:left}
+/* v43 S3A 060: 구성원 표가 주인공(왼쪽 넓게), 학과 분포는 오른쪽 보조 · 검색은 표 머리 안 */
+#main .lm3{grid-template-columns:minmax(0,1fr) 300px}
+#main .lm3 .lm3-dist{order:2}
+#main .lm3 .lm3-t .r7-q{margin:0 0 10px;padding:0;background:none;box-shadow:none;border:0}
+/* v43 S3A 064: 다가오는 마감 — 짧은 날짜 + D-day 칩 */
+#main .p43-due{align-items:center}
+#main .p43-dd{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex:none}
+#main .p43-dd em{font-style:normal;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--gr50);color:var(--gr800)}
+#main .p43-dd em.warn{background:var(--co50);color:var(--co700)}
+#main .p43-dd small{font-size:13px;color:var(--mute);font-variant-numeric:tabular-nums}
+/* v43 S3A 068: 영상 관리 KPI — 단위를 숫자에 붙이고 크기를 키움, 문장 값은 숫자 칸과 크기 맞춤 */
+#main [data-lmsv-root] .kpis .kpi .val small{font-size:18px;font-weight:700;margin-left:1px;color:var(--ink)}
+#main [data-lmsv-root] .kpis .kpi .val{font-size:30px}
+#main [data-lmsv-root] .kpis{margin-bottom:12px}
+/* v43 S3A 049: 짙은 머리 안 선택 칸 — 흰 기본 드롭다운 대신 반투명 칩 */
+#main.l43[data-l43=lmsc] .l43-k-hero select{appearance:none;-webkit-appearance:none;min-height:40px;padding:0 36px 0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;color:#fff;font-weight:700;font-size:14px}
+#main.l43[data-l43=lmsc] .l43-k-hero select option{color:#1a1a1a}
+#main.l43[data-l43=lmsc] .l43-k-hero select:focus-visible{outline:2px solid #fff;outline-offset:2px}

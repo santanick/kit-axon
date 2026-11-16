@@ -241,3 +241,23 @@ body:has(#slSheet) .mwrap{z-index:96}
 #main .r7-ppl{grid-template-columns:1fr}
 #main .r7-rules .rng2{flex-wrap:wrap}#main .r7-rules .rng2 .r7-rr{flex:1 1 100%}
 #main .r7-lgrid .r7-lo:before,#main .r7-lgrid .r7-lo:after{display:none!important}
+/* v43 S3A 073·075·077·078·082~084: 「지금 값」 텍스트 표 → 값 칩(큰 값 + 작은 이름, 2열) */
+#main .sx3 .sx3-now{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-content:start}
+#main .sx3 .sx3-now>*:not(.sx-kv){grid-column:1/-1}
+#main .sx3 .sx3-now .sx-kv{flex-direction:column-reverse;align-items:flex-start;justify-content:flex-end;gap:2px;min-height:0;padding:10px 12px;border:0;border-radius:12px;background:var(--g50,#F7F4EE);font-size:12px}
+#main .sx3 .sx3-now .sx-kv b{font-size:16px;line-height:1.3;text-align:left;color:var(--ink)}
+#main .sx3 .sx3-now .sx-kv span{font-size:12px;color:var(--mute)}
+/* v43 S3A 075: 메뉴 켜고 끄기 — 스위치 행 2열 카드(첫 화면에 더 많이) */
+#main .sx43-mn .sl-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;border:0;background:none;box-shadow:none}
+#main .sx43-mn .sl-row{border:1px solid var(--line);border-radius:14px;background:var(--surface);min-width:0}
+@media (max-width:900px){#main .sx43-mn .sl-list{grid-template-columns:1fr}}
+/* v43 S3A 083: 본문 「전체 데이터 JSON 내보내기」는 머리 주 버튼과 같은 동작 — 머리 버튼이 이 버튼을 누르므로 본문 쪽은 숨김 */
+#main:has(.l43-brief [data-l43go*="data-export"]) .dt43-exp{display:none}
+/* v43 S3A 077: 연결 타일 설명 · 상태 줄 */
+#main .sx-lg .r7-use{display:block;font-size:13px;line-height:1.35;color:var(--mute);text-align:center;max-width:100%;padding:0 4px}
+#main .sx-lg em{margin-top:auto;font-weight:700;color:var(--pr)}
+#main .sx-lg.on em{color:var(--gr700)}
+/* v43 S3A 073 · 082: 설정 안 학습 규칙 — 라벨 15/13px, 줄 간격 넓힘 */
+#main .sx3 .r7-rules .rng2 b,#main .sx3 .r7-rules .swrow b{font-size:15px;line-height:1.4}
+#main .sx3 .r7-rules .rng2 small,#main .sx3 .r7-rules .swrow small{display:block;font-size:13px;line-height:1.45;margin-top:2px}
+#main .sx3 .r7-rules .rng2,#main .sx3 .r7-rules .swrow{padding:16px 0}

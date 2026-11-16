@@ -51,13 +51,13 @@
   R('diag', { art: 'check', brief: main => {
     if (empty(main) || UI.dgEdit || UI.dgRes) return null; const m = (main.innerText || '').match(/(\d+)명 응시\((\d+)%\)/);
     /* v43 R6: 응시 0명이어도 요약 머리(H) + 「미응시 학생 안내」 · 「새 진단 만들기」 버튼 */ const acts = [{ label: '미응시 학생 안내', go: '[data-act="dg-run"]' }, { label: '새 진단 만들기', kind: 'sec', go: '[data-act="dg-new"]' }];
-    if (!m) { const D = A('diags').filter(d => d.status !== '초안'); if (!D.length) return null; return { eye: 'AI 진단', kind: 'hero', title: `진단 <em>${D.length}개</em>를 열었고, 아직 응시한 학생이 없습니다`, sub: '진단 링크를 보내면 학생이 5분 안에 응시하고, 결과 유형별로 다음 단계 교과목이 추천됩니다.', acts }; }
+    if (!m) { const D = A('diags').filter(d => d.status !== '초안'); if (!D.length) return null; const dr = A('diags').length - D.length; /* v43 S3A 027: 탭 숫자(전체)와 맞게 초안 수를 함께 */ return { eye: 'AI 진단', kind: 'hero', title: `진단 <em>${D.length}개</em>를 열었고${dr ? `(초안 ${dr}개 별도)` : ''}, 아직 응시한 학생이 없습니다`, sub: '진단 링크를 보내면 학생이 5분 안에 응시하고, 결과 유형별로 다음 단계 교과목이 추천됩니다.', acts }; }
     return { eye: 'AI 진단', title: `진단 응시율 <em>${m[2]}%</em>, ${m[1]}명이 응시했습니다`, sub: '응시하지 않은 학생에게 안내를 보내고, 결과 보기에서 유형별로 다음 단계 교과목을 배정하세요.', acts };
   } });
   R('calendar', { art: 'doc', brief: main => {
     if (empty(main)) return null; const n = main.querySelectorAll('.cx-ev').length; if (!n) return null; const td = (() => { try { return today(); } catch (e) { return ''; } })();
     const tn = main.querySelectorAll(`[data-cxday="${td}"] .cx-ev`).length;
-    return { eye: '일정', title: tn ? `오늘 일정 <em>${tn}건</em>이 있습니다` : `이번 달 일정 <em>${n}건</em>이 잡혀 있습니다`, sub: '날짜 칸을 누르면 일정을 추가하고, 일정을 끌어 옮기면 학습자 달력에도 바로 반영됩니다.', acts: [{ label: '+ 일정 추가', go: '[data-act="cx-add"]' }, { label: 'AI 코칭 일정', kind: 'sec', go: '[data-act="tab"][data-v="coach"]' }] };
+    return { eye: '일정', title: tn ? `오늘 일정 <em>${tn}건</em>이 있습니다` : `이번 달 일정 <em>${n}건</em>이 잡혀 있습니다`, sub: '날짜 칸을 누르면 일정을 추가하고, 일정을 끌어 옮기면 학습자 달력에도 바로 반영됩니다.', acts: [{ label: 'AI 코칭 일정', go: '[data-act="tab"][data-v="coach"]' }, { label: '연동 설정', kind: 'sec', go: '[data-act="tab"][data-key="calT"][data-v="conn"]' }] }; /* v43 S3A 030: 「+ 일정 추가」는 달력 위 버튼 하나만 */
   } });
   R('tutorial', { art: 'list', brief: main => {
     if (empty(main) || UI.tuId) return null; const T = A('tuts'); if (!T.length) return null; const pub = T.filter(x => x.pub !== false).length;
@@ -105,7 +105,7 @@
   } });
   R('community', { art: 'list', brief: main => {
     if (empty(main) || UI.cmPost) return null; const P = A('posts').filter(p => !p.hidden); if (!P.length) return null; const q = P.filter(p => p.kind === '질문' && !+p.replies).length;
-    return { eye: '게시판', title: q ? `답변을 기다리는 질문 <em>${q}건</em>이 있습니다` : `게시글 <em>${P.length}건</em>, 모든 질문에 답했습니다`, sub: q ? '오래된 질문부터 답하세요. [답변 초안]을 누르면 AI SAM이 강의 자료를 근거로 초안을 씁니다.' : '새 질문이 올라오면 이 화면 맨 위에 모입니다.', acts: q ? [{ label: `답변 초안 ${q}건 검토`, go: '[data-act="ai-reply-all"]' }] : [] };
+    return { eye: '게시판', title: q ? `답변을 기다리는 질문 <em>${q}건</em>이 있습니다` : `게시글 <em>${P.length}건</em>, 모든 질문에 답했습니다`, sub: q ? '오래된 질문부터 답하세요. [답변 초안]을 누르면 AI SAM이 강의 자료를 근거로 초안을 씁니다.' : '새 질문이 올라오면 이 화면 맨 위에 모입니다.', acts: [q ? { label: `답변 초안 ${q}건 검토`, go: '[data-act="ai-reply-all"]' } : null, { label: '게시판 설정', kind: 'sec', go: '#main [data-act="cm-board-edit"]' }].filter(Boolean) }; /* v43 S3A 019: 보조 버튼 — 카드 안 「게시판 설정」은 머리로 옮김 */
   } });
   R('consult', { art: 'list', brief: main => {
     if (empty(main) || UI.csId) return null; const C = A('consults'); if (!C.length) return null; const op = C.filter(c => /진행|대기/.test(c.status || '')).length;
@@ -113,7 +113,7 @@
   } });
   R('board', { art: 'doc', brief: main => {
     if (empty(main) || UI.nEdit) return null; const n = num(main, /공지\s*\/?\s*([\d,]+)건/) || main.querySelectorAll('.tw tbody tr').length; if (!n) return null; const pin = main.querySelectorAll('.cmn-pb.on').length;
-    return { eye: '공지', title: `공지 <em>${n}건</em>을 게시하고 있습니다`, sub: `${pin ? `상단 고정 ${pin}건은 학습자 사이트 맨 위에 보입니다. ` : ''}중요한 공지는 [알림 보내기]로 앱 푸시까지 보내세요.`, acts: [{ label: '+ 공지 쓰기', go: '[data-act="notice-new"]' }, { label: '알림 보내기', kind: 'sec', go: '[data-act="al-new"]' }] };
+    return { eye: '공지', title: `공지 <em>${n}건</em>을 게시하고 있습니다`, sub: `${pin ? `상단 고정 ${pin}건은 학습자 사이트 맨 위에 보입니다. ` : ''}중요한 공지는 [알림 보내기]로 앱 푸시까지 보내세요.`, acts: [{ label: '알림 보내기', go: '[data-act="al-new"]' }, { label: '메시지 보내기', kind: 'sec', tab: 'message' }] }; /* v43 S3A 028: 「+ 공지 쓰기」는 목록 위 버튼 하나만 */
   } });
 
   /* ── 운영 공간 ── */
@@ -124,7 +124,8 @@
   R('lifelong', { art: 'check', brief: main => {
     if (empty(main)) return null; const all = main.querySelectorAll('.ll-ck, .r1-ckl li').length; const ok = main.querySelectorAll('.ll-ck.ok, .r1-ckl li.ok').length; if (!all) return null; /* v43 R6: 체크리스트 마크업(r1-ckl)을 읽음 — 0% · 0개 수정 */
     const W = [...main.querySelectorAll('.r1-ckl li.warn .r1-ckt')].slice(0, 3).map(x => [x.textContent.trim().slice(0, 34), '확인 필요 · 설정에서 바로 고칩니다', 'warn']);
-    return { eye: '평생교육 운영', kind: W.length ? 'list' : undefined, todo: W.length ? W : undefined, title: ok < all ? `운영 요건 <em>${all - ok}개</em>를 아직 갖추지 않았습니다` : '운영 요건을 <em>모두</em> 갖췄습니다', sub: '평생교육법 기준 요약입니다. 실제 신고 전에는 관할 교육청에 확인하세요. 학습비 반환은 신청일로부터 5일 안에 처리합니다.', stats: [[ok + '/' + all, '갖춘 요건', ok < all ? 'warn' : '']], acts: [{ label: '점검 완료로 표시', go: '[data-act="ll-check"]' }] };
+    const rf = A('pays').filter(p => p.refund && p.refund.state !== '승인').length; /* 보조 열 「반환 신청」과 같은 기준 */ /* v43 S3A 012: 머리는 링(갖춘 비율) + KPI — 할 일 행은 본문 체크리스트와 겹치므로 머리에서 뺌 */ void W;
+    return { eye: '평생교육 운영', kind: 'kpi', ring: [Math.round(ok / all * 100), `갖춘 요건 ${ok}/${all}`, ok < all ? 'warn' : ''], stats: [[(all - ok) + '개', '확인 필요', all - ok ? 'warn' : ''], [rf + '건', '반환 신청', rf ? 'warn' : ''], [S.classes.length + '개', '운영 강좌']], title: ok < all ? `운영 요건 <em>${all - ok}개</em>를 아직 갖추지 않았습니다` : '운영 요건을 <em>모두</em> 갖췄습니다', sub: '평생교육법 기준 요약입니다. 실제 신고 전에는 관할 교육청에 확인하세요. 학습비 반환은 신청일로부터 5일 안에 처리합니다.', acts: [{ label: '점검 완료로 표시', go: '[data-act="ll-check"]' }] };
   } });
   R('sales', { art: 'doc', enhance: main => { /* v43 Q1 보조 열: 결제 연결(PG) 카드 · 수수료 안내를 오른쪽 340px로, 월 매출 · KPI · 표를 주 열로 */
     const bv = main.querySelector(':scope > .bview'); if (!bv || bv.querySelector(':scope > .q1-2col')) return; const pg = bv.querySelector(':scope > .grid:has(.pgc)'); const fee = bv.querySelector(':scope > .sl2-fee'); if (!pg) return;
@@ -165,7 +166,7 @@
   R('aigov', { art: 'gear', brief: main => {
     if (empty(main)) return null; const t = (main.innerText || '').replace(/\n/g, ' / '); const m = t.match(/AI기본법 항목\s*\/?\s*(\d+)\/(\d+)/); const g = re => { const x = t.match(re); return x ? +x[1] : 0; };
     const on = g(/켜진 모델\s*\/?\s*(\d+)/), rag = g(/학습 자료\s*\/?\s*(\d+)/);
-    return { eye: 'AI 관리', title: m ? `AI기본법 항목 <em>${m[1]}/${m[2]}</em>을 갖췄습니다` : 'AI 사용을 <em>한곳</em>에서 관리합니다', sub: '연결 모델 · 학습 자료 · 개인정보 가림 · 인젝션 감지 기록을 확인하고, 남은 항목은 거버넌스 탭에서 채우세요.', stats: [[m ? Math.round(m[1] / m[2] * 100) + '%' : '0%', 'AI기본법 항목'], [on + '개', '켜진 모델'], [rag + '종', '학습 자료'], ['1,284건', '이번 달 AI 질문']] };
+    return { eye: 'AI 관리', title: m ? `AI기본법 항목 <em>${m[1]}/${m[2]}</em>을 갖췄습니다` : 'AI 사용을 <em>한곳</em>에서 관리합니다', sub: '연결 모델 · 학습 자료 · 개인정보 가림 · 인젝션 감지 기록을 확인하고, 남은 항목은 거버넌스 탭에서 채우세요.', stats: [[m ? Math.round(m[1] / m[2] * 100) + '%' : '0%', 'AI기본법 항목'], [on + '개', '켜진 모델'], [rag + '종', '학습 자료'], ['1,284건', '이번 달 AI 질문']], acts: m && +m[1] < +m[2] ? [{ label: `남은 항목 ${m[2] - m[1]}개 채우기`, go: '[data-act="tab"][data-key="aiT"][data-v="law"]' }, { label: 'LLM 연결 보기', kind: 'sec', go: '[data-act="tab"][data-key="aiT"][data-v="model"]' }] : [{ label: 'LLM 연결 보기', go: '[data-act="tab"][data-key="aiT"][data-v="model"]' }] }; /* v43 S3A 038: 머리 주 · 보조 버튼 */
   }, enhance: main => { if (!window.DBX || (S.org && S.org.empty)) return; DBX.side(main, { todo: [['AI기본법 남은 항목 2개', '이용자 고지 · 영향평가 기록을 채웁니다', 'warn', '보완'], ['학내 LLM 연결 검토', 'GPU 제공 주체를 정보화 부서와 확인합니다', '', '검토'], ['개인정보 가림 규칙 점검', '학번 · 연락처 패턴을 AI 전송 전에 가립니다', 'ok', '켜짐']], chart: { t: '최근 7일 AI 질문', v: '212건', s: '학생 · 교수자 합계', d: [148, 162, 171, 158, 189, 201, 212], lb: DBX.days7() }, ai: '응답 시간이 3초를 넘는 날이 늘면 토큰 할당량을 분반별로 나누세요. 시험 기간에는 AI 튜터를 시험 범위 밖으로 제한할 수 있습니다.' }); } });
   R('rfpmap', { art: 'check', brief: main => {
     const N = (typeof RFP_JNU !== 'undefined' && RFP_JNU.length) || 0; if (!N) return null; const c = k => RFP_JNU.filter(r => r[5] === k).length; const have = c('have') + c('v30') + c('v29');

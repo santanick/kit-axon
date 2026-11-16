@@ -94,7 +94,7 @@ function d43Top(d) { if (!window.V4) return ''; const { k, wk, ch, sum, pw, half
     const body = old.replace(/^[\s\S]*?<\/div><\/div>/, m => /class="ph"/.test(m) ? '' : m); /* 기존 머리 제거, 본문만 '활동 현황' 탭에 */
     let d = null, top = '', hl = ''; try { d = d43Data(); hl = d43Head(d); top = d43Top(d); } catch (e) { console.error('d43', e); }
     let main = d26Main(body); if (top) main = main.replace(/<section class="card d26-kpi">[\s\S]*?(?=<section class="card d26-tabs">)/, window.DASHX ? '' : top); /* v43 R6: 「지금 볼 숫자」 4칸(dashx)과 겹치는 KPI 4칸 줄은 뺌 — KPI 8칸 2줄 → 4칸 1줄 */
-    return head('홈페이지 대시보드', `수집 기준 시각 ${ts} · 운영 현황을 한눈에 봅니다.`, `<button class="btn pri" data-act="d26-xls">${ic('download', 15)} 운영 현황 엑셀로 내려받기</button>`) + hl + `<div class="d26">${d26Left()}${main}</div>`;
+    return head('홈페이지 대시보드', `수집 기준 시각 ${ts} · 운영 현황을 한눈에 봅니다.`, `<button class="btn pri" data-act="d26-xls">${ic('download', 15)} 운영 현황 엑셀로 내려받기</button>`) + (hl ? `<div class="d43h">${hl}</div>` : '') + `<div class="d26">${d26Left()}${main}</div>`;
   } catch (e) { console.error(e); return old; } }; }
 ACT['d26-tab'] = el => { UI.d26t = el.dataset.v; render(); };
 ACT['d26-sort'] = el => { UI.d26s = el.value; render(); };
