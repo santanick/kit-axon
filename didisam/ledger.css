@@ -159,3 +159,8 @@
 @media (max-width:640px){#main .lg .lg-hero .lg-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#main .lg .lg-hero .lg-kpi b{font-size:20px}#main .lg .lg-hero .l43-hl{font-size:24px}}
 @media (min-width:861px){#main:has(.lg) .sl-i{position:relative}#main:has(.lg) .sl-i::after{content:'';position:absolute;inset:-12px}}
 html[data-theme=dark] #main .lg .lg-hero .lg-ai .btn{background:#fff!important;color:#053D1E!important}
+/* v43 R6: 단위 세그먼트(기본 드롭다운 대체) · 히어로 주 · 보조 버튼 */
+.lg-useg{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.lg-useg>span{font-weight:700;font-size:13px;color:var(--muted);margin-right:2px}
+.lg-hero .l43-acts{margin-top:14px}
+.lg-xchips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 12px}.lg-xchips>span{font-size:13px;font-weight:700;color:var(--muted);margin-right:4px}.lg-xchips .lg-chip{min-height:36px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair)}
+.lg-useg .lg-uk{font-size:12px;font-weight:600;opacity:.65;margin-left:2px}

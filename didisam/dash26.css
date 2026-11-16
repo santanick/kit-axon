@@ -50,3 +50,6 @@
 .d26-rk.t{background:var(--gr50);color:var(--t-mag);box-shadow:inset 0 0 0 1px var(--gr100)}
 .d26-meter i{background:linear-gradient(90deg,var(--gr600),var(--gr300))}
 @media (max-width:1320px){.d43-r{grid-template-columns:minmax(0,1fr)}}
+/* v43 R6: 로고 없는 기관 — 사진 카드 + 이니셜 배지 */
+.d26-org .d26-ophoto{position:relative;display:block;width:100%;aspect-ratio:16/9;border-radius:14px;background:var(--surface2) center/cover no-repeat;margin-bottom:12px;overflow:hidden}
+.d26-org .d26-oini{position:absolute;left:12px;bottom:12px;display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--surface,#fff);color:var(--ink);font-weight:800;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.18)}

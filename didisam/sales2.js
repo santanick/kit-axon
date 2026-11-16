@@ -24,6 +24,9 @@
     if (!S || !S.org || !S.settings) return;
     ['pays', 'bills', 'books', 'subs', 'msgs', 'parents'].forEach(k => { if (!Array.isArray(S[k])) S[k] = []; });
     const st = ST(); const demo = !S.org.empty;
+    /* v43 R6: 시연 기관 교재가 2권뿐이면 그리드가 비어 보임 — 시드 교재 2권(실물 1 · 전자책 1)을 한 번만 더함 */
+    if (demo && !S._bkSeed43 && S.books.length === 2 && S.books.every(b => /^bk[01]$/.test(b.id))) { S._bkSeed43 = 1; const k12 = S.org.type === 'k12';
+      S.books.push({ id: 'bk2', name: k12 ? '영어 내신 단어장' : '현장 실습 노트(실물)', kind: '실물', price: k12 ? 9000 : 15000, sold: 12, delivered: 9, open: '전체' }, { id: 'bk3', name: k12 ? '서술형 대비 워크북' : '핵심 요약 가이드북', kind: '전자책', price: k12 ? 11000 : 9900, sold: 27, delivered: 0, open: '전체' }); }
     if (!st.pg) st.pg = 'none';
     if (!st.pgInfo) { st.pgInfo = { kind: 'biz', name: '', bizNo: '', ceo: '', addr: '', rrn: '', bank: '', account: '', holder: '', docs: [], status: '미등록', reason: '', tossMid: '' };
       if (demo && st.pg === 'nice') Object.assign(st.pgInfo, { name: S.org.name, bizNo: '123-45-67890', ceo: '홍길동', addr: '부산광역시 해운대구', bank: '신한', account: '110000000000', holder: S.org.name, docs: [{ name: '사업자등록증.pdf', size: 120000, k: 'biz' }, { name: '통장사본.jpg', size: 80000, k: 'bank' }], status: '승인', at: addDays(today(), -60) }); }

@@ -38,3 +38,7 @@
 @media (max-width:900px){.c2set{grid-template-columns:1fr}.c2th.lg{width:100%;height:auto;aspect-ratio:16/9}.c2gal{max-width:none}}
 @media (max-width:560px){.c2inl input[type=date]{width:100%!important}.c2bars{gap:3px}.c2b small{font-size:9.5px}}
 .c2sup{display:inline-block;font-size:13px;font-weight:700;color:var(--blue,#066B2A);line-height:1.35} /* v36 R4 직업훈련 훈련비 지원 구분 */
+/* v43 R6: 카테고리 칩 필터 */
+.c2lbar .c2cchips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;min-width:0;flex:1 1 auto;scrollbar-width:none}
+.c2cchip{flex:0 0 auto;min-height:36px;padding:6px 14px;border-radius:999px;border:0;background:var(--surface2,#f2f4f3);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.c2cchip.on{background:var(--ink);color:var(--surface,#fff)}.c2cchip.set{background:transparent;color:var(--pr-ink,#0a7a32);box-shadow:inset 0 0 0 1px var(--hair)}

@@ -108,3 +108,8 @@
 .k-autog .k-auto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;list-style:none;padding:0;margin:0}
 .k-autog .k-auto li{padding:12px 14px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--line);border:0!important}
 @media (max-width:900px){.k-autog .k-auto{grid-template-columns:1fr}}
+/* v43 R6: 출석부 날짜 칩 */
+.k-days{display:flex;gap:6px;flex-wrap:wrap}
+.k-day{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:52px;min-height:48px;padding:4px 8px;border:0;border-radius:12px;background:var(--surface2,#f2f4f3);color:var(--ink);font:inherit;cursor:pointer}
+.k-day small{font-size:12px;color:var(--muted);font-weight:600}.k-day b{font-size:14px}
+.k-day.td{box-shadow:inset 0 0 0 1.5px var(--pr,#00c53b)}.k-day.on{background:var(--ink);color:var(--surface,#fff)}.k-day.on small{color:inherit;opacity:.75}

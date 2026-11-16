@@ -93,3 +93,17 @@ html[data-theme=dark] .bks-card,html[data-theme=dark] .bks-box{background:#1C1F1
 html[data-theme=dark] .bks-pb,html[data-theme=dark] .bks-cb,html[data-theme=dark] .bks-cn,html[data-theme=dark] .bks-note{background:rgba(255,255,255,.08);color:var(--gr300,#7DDB95)}
 @media (max-width:1200px){.bks{grid-template-columns:1fr}.bks-side{position:static;display:grid;grid-template-columns:1fr 1fr}}
 @media (max-width:860px){.bks-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bks-side{grid-template-columns:1fr}}
+/* v43 R6: 디지털북 표지 4열(J1 034) */
+@media (min-width:1100px){.bks-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.bks-grid .bks-nums{flex-wrap:wrap;row-gap:2px}}
+/* v43 R6: 배지 카드 4열 정렬 · 0개 문장 */
+#main .medals.md4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+#main .medals.md4 .mcard{min-width:0;margin:0}
+#main .medals.md4 .mz small{font-size:13px;font-weight:600;color:var(--muted)}
+@media (max-width:1100px){#main .medals.md4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#legalList .lg43-pr{display:flex;align-items:center;gap:8px;min-width:140px}#legalList .lg43-pr .bar{flex:1}#legalList .lg43-pr b{font-variant-numeric:tabular-nums;font-size:13px}
+/* v43 R6: 평생교육 체크리스트 — 처리 행 3개 + 모두 보기 */
+#main .r1-ck3{display:flex;flex-direction:column;gap:8px}
+#main .r1-ck3 li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--surface2,#f6f7f6)}
+#main .r1-ck3 .r1-ckt{flex:1;min-width:0}
+#main .r1-ckm{margin-top:8px}#main .r1-ckm>summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--pr-ink,#0a7a32);padding:8px 0;list-style:none}
+#main .r1-ckm>summary::-webkit-details-marker{display:none}
