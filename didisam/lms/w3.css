@@ -110,3 +110,6 @@
 @media (max-width:600px){.r2-dr{flex-direction:column;align-items:stretch}.r2-sm{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .r2-top{grid-template-columns:minmax(400px,1fr) minmax(0,1.3fr)}
 .r2-dls li span small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* v43.4 MB 모바일: 055 위 줄(분포 · 선택) 고정 400px 열이 1100px 이하에서도 남아 있던 것을 1열로 쌓는다 */
+@media (max-width:1100px){.r2-top{grid-template-columns:minmax(0,1fr)}}

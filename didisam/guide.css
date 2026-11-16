@@ -48,3 +48,6 @@ body:has(.mwrap) .gdbar{display:none}
 .gd43lk{display:inline-flex;align-items:center;gap:4px;padding:6px 0;border:0;background:none;font:inherit;font-size:14px;font-weight:700;color:var(--pri-tx,#007200);cursor:pointer}
 .gd43lk:hover{text-decoration:underline}
 .gdc.gd43 .gdcb{margin-top:auto}
+
+/* v43.4 MB 모바일: 077 MCP 키 표 — 좁은 폭에서 칸이 눌려 글자가 세로로 꺾이던 것 → 표 상자만 가로로 넘긴다 */
+@media (max-width:760px){.mcpc .tbl table{min-width:600px}.mcpc .tbl td,.mcpc .tbl th{white-space:nowrap}}

@@ -286,3 +286,6 @@
 .ul-ioc.in .ul-fc i{background:var(--gr50,#EAF7EE);color:var(--gr800,#0B5A2A)}
 html[data-theme=dark] .ul-fc i{background:#26292a;color:#e8e8e8}
 html[data-theme=dark] .ul-ioc.in .ul-fc i{background:#123222;color:#9be8b5}
+
+/* v43.4 MB 모바일: 060 구성원 표 + 학과별 분포 2열이 1100px 이하에서도 남아 표가 36px로 눌리던 것 → 1열 */
+@media (max-width:1100px){#main .lm3{grid-template-columns:minmax(0,1fr)}}

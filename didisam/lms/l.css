@@ -60,3 +60,9 @@ html.a11y-rm *,html.a11y-rm *::before,html.a11y-rm *::after{animation-duration:.
 .lmp-dm{grid-template-columns:340px minmax(0,1fr)}
 #main .lmp-cmp input#lmslMsg{border:0 !important;box-shadow:none !important;background:transparent !important}
 .lmp-msgs{max-height:640px}
+
+/* v43.4 MB 모바일: 058 DM 목록 340px 고정 열이 860px 이하에서도 남아 대화 칸이 0px로 눌리던 것 → 1열 */
+@media (max-width:860px){.lmp-dm{grid-template-columns:minmax(0,1fr)}.lmp-cmp>*{min-width:0}.lmp-cmp input#lmslMsg{flex:1 1 auto;width:auto}.lmp-cmp>.btn{flex:0 0 auto}}
+
+/* v43.4 MB 모바일: 057 · 059 달 이동(‹ ›) · 삭제(✕) 단추를 44px 터치 대상으로 */
+@media (max-width:760px){.lmp-calbar .btn.sm,#main [data-act=lmsl-del],#main [data-act=lmsl-rdel]{min-width:44px;min-height:44px;justify-content:center}}
