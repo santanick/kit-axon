@@ -148,14 +148,21 @@
     (d.polls || []).forEach(q => c.polls.push({ id: nid(), sec, closed: false, closes_at: null, ...q })); (d.pretasks || []).forEach(k => c.pre.push({ id: nid(), sec, due_at: null, session_id: null, ...k })); (d.reviews || []).forEach(r => c.reviews.push({ id: nid(), sec, title: r.title, body: r.body, anonymous: r.anonymous, per: r.per_reviewer, mode: r.mode, self: r.self, criteria: r.criteria, due_at: null })); };
 
   /* 2단계(UX) 데모 샘플: 이번 학기 강의실에 토론 · 설문 · 사전 과제를 미리 넣어 처음 연 화면이 비어 있지 않게 한다(운영 모드 영향 없음) */
+  /* v43 D-B 시연 시드: 학번은 그 분반 실제 수강생에서 고른다(학사 연동 분반은 학번이 달라 글이 0건으로 찍히던 문제). 토론 3 · 글 12 · 사전 과제 제출 5 · 설문 응답 6 */
   X.seedHooks.push(L => { L.sections.filter(s => s.term === '2026-2').forEach(s => { try {
-    const sec = s.id; const fo = D['forum-save']({ section: sec, kind: 'free', layout: 'thread', title: '1차시 — 이번 학기에 기대하는 점', prompt: '이 과목에서 가장 배우고 싶은 것을 한두 문장으로 남겨 주세요.' });
-    [['20261001', '실무 사례를 많이 다뤘으면 좋겠습니다.'], ['20261002', '프로젝트로 직접 만들어 보고 싶습니다.'], ['20261004', '시험 준비 방법이 궁금합니다.']].forEach(([no, body]) => D.post({ as: no, forum: fo.id, body }));
+    const sec = s.id; const R0 = (s.enroll || []).filter(e => e.status === 'enrolled').map(e => (L.persons.find(p => p.id === e.pid) || {}).no).filter(Boolean);
+    const R = R0.length ? R0 : ['20261001', '20261002', '20261003', '20261004']; const st = i => R[i % R.length]; const say = (fo, i, body) => { try { D.post({ as: st(i), forum: fo.id, body }); } catch (e) { } };
+    const fo = D['forum-save']({ section: sec, kind: 'free', layout: 'thread', title: '1차시 — 이번 학기에 기대하는 점', prompt: '이 과목에서 가장 배우고 싶은 것을 한두 문장으로 남겨 주세요.' });
+    ['실무 사례를 많이 다뤘으면 좋겠습니다.', '프로젝트로 직접 만들어 보고 싶습니다.', '시험 준비 방법이 궁금합니다.', '지난 학기 선배 과제를 예시로 보고 싶습니다.', '조별 활동 비중이 궁금합니다.'].forEach((b, i) => say(fo, i, b));
+    const f2 = D['forum-save']({ section: sec, kind: 'free', layout: 'thread', title: '7차시 — 사례 토론: 우리 동네 가게의 원가 구조', prompt: '주변 가게 한 곳을 골라 고정비 · 변동비를 추정해 보세요.' });
+    ['편의점은 인건비가 가장 큰 고정비로 보입니다.', '카페는 원두 값이 변동비의 절반 정도일 것 같습니다.', '임대료를 고정비로 볼지 계약 기간으로 나눌지 헷갈립니다.', '배달 수수료는 변동비로 분류했습니다.'].forEach((b, i) => say(f2, i + 1, b));
+    const f3 = D['forum-save']({ section: sec, kind: 'free', layout: 'board', title: '11주차 — 중간 과제 질문 모음', prompt: '과제 관련 질문을 남기면 조교가 답합니다.' });
+    ['표 양식은 자유인가요?', '참고문헌 형식은 APA로 맞추면 될까요?', '제출 파일 용량 제한이 있나요?'].forEach((b, i) => say(f3, i + 2, b));
     const pl = D['poll-save']({ section: sec, question: '지난 수업 난이도는 어땠나요?', options: ['쉬웠다', '적당했다', '어려웠다'] });
-    [['20261001', 1], ['20261002', 1], ['20261003', 2], ['20261004', 0]].forEach(([no, c]) => D['poll-vote']({ as: no, poll: pl.id, choices: [c] }));
+    [1, 1, 2, 0, 1, 2].forEach((c, i) => { try { D['poll-vote']({ as: st(i), poll: pl.id, choices: [c] }); } catch (e) { } });
     const due = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10) + 'T23:59';
     const pt = D['pretask-save']({ section: sec, kind: 'pretask', title: '다음 주 사전 학습 — 핵심 개념 요약', body: '사전 영상을 보고 핵심 개념 3가지를 정리해 제출하세요.', due_at: due });
-    [['20261001', '1) 정의 2) 예시 3) 한계'], ['20261002', '개념 요약을 표로 정리했습니다.'], ['20261003', '영상 10분 지점 내용이 어려웠습니다.']].forEach(([no, body]) => D['pretask-submit']({ as: no, task: pt.id, body }));
+    ['1) 정의 2) 예시 3) 한계', '개념 요약을 표로 정리했습니다.', '영상 10분 지점 내용이 어려웠습니다.', '핵심 개념을 마인드맵으로 정리했습니다.', '예시 문제를 하나 더 풀어 보았습니다.'].forEach((body, i) => { try { D['pretask-submit']({ as: st(i), task: pt.id, body }); } catch (e) { } });
   } catch (e) { console.warn(e); } }); });
 
   /* ══════════ 화면 ══════════ */

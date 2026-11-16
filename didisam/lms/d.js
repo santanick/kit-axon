@@ -26,6 +26,12 @@
       Dd().answers.push({ id: nid(), post: q3.id, pid: null, label: '교수자', body: '영상을 다시 올렸습니다. 새로 고침 후 확인해 주세요.', anonymous: false, accepted: true, at: at(10, 21, 9) });
       P('archive', '강의자료', '10차시 강의 슬라이드 — 트리와 탐색', '10차시 수업 자료입니다.', null, at(11, 2, 9)); P('archive', '참고자료', '중간고사 해설', '자주 틀린 문항 해설입니다.', null, at(11, 3, 11));
       P('counsel', '학업', '중간고사 점수 확인 요청', '3번 문항 채점 기준을 확인하고 싶습니다.', '20261004', at(11, 4, 17), { private: true });
+      /* v43 D-B 시연 시드 보강(게시판 5~12건 · 답변 대기 2건 이상) */
+      P('notice', '학사', '기말 프로젝트 조 편성 결과 안내', '조 편성 결과를 자료실에 올렸습니다. 조장은 11월 20일까지 주제를 제출하세요.', null, at(11, 10, 9));
+      P('qna', '강의', '9차시 예제 코드가 실행되지 않습니다', '라이브러리 버전 문제인지 확인 부탁드립니다.', '20261005', at(11, 12, 22));
+      const q5 = P('qna', '과제', '과제 2 피드백은 어디서 보나요?', '채점이 끝났다고 들었는데 피드백 위치를 모르겠습니다.', '20261006', at(11, 1, 13), { status: 'answered' });
+      Dd().answers.push({ id: nid(), post: q5.id, pid: null, label: '교수자', body: '과제 화면의 「내 제출」 아래에서 볼 수 있습니다.', anonymous: false, accepted: true, at: at(11, 2, 9) });
+      P('archive', '강의자료', '11차시 강의 슬라이드 — 그래프', '11차시 수업 자료입니다.', null, at(11, 9, 9));
       void q1; });
   });
   const ctx = (args, sec) => { const a = X.actor(sec, args); X.need(a, 'course.view'); return a; };

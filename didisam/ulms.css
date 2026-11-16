@@ -8,3 +8,59 @@
 .rfp-bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--paper,#f1f3f7);margin:6px 0 2px}
 .rfp-bar i{display:block;height:100%}
 @media (max-width:720px){.ul-cols{grid-template-columns:1fr}}
+
+/* v43 D-B — 관리자 35~64 보조 열 카드(DBX: lms/nav.js). 할 일 · 요약 막대 · AI 제안 */
+#main .db-todo h3, #main .db-sum h3{justify-content:space-between}
+#main .db-cnt{margin-left:auto;font-size:12px;font-weight:700;color:var(--gr800);background:var(--gr50);border-radius:999px;padding:3px 9px}
+#main .db-todo ol{gap:0}
+#main .db-todo li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 2px;border-top:1px solid var(--hair)}
+#main .db-todo li:first-child{border-top:0;padding-top:4px}
+#main .db-todo .n{width:28px;height:28px;border-radius:50%;background:var(--gr50);color:var(--gr800);font-size:13px;font-weight:800;display:grid;place-items:center}
+#main .db-todo li.warn .n{background:var(--co50);color:var(--co700)}
+#main .db-todo li.ok .n{background:var(--gr600);color:#fff}
+#main .db-todo .tx b{display:block;font-size:14px;font-weight:700;color:var(--g900);line-height:1.35}
+#main .db-todo .tx small{display:block;font-size:13px;line-height:1.45;color:var(--t-sub,var(--g600));margin-top:2px}
+#main .db-chip{font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--gr50);color:var(--gr800);white-space:nowrap}
+#main .db-todo li.warn .db-chip{background:var(--co50);color:var(--co700)}
+#main .db-v{display:flex;align-items:baseline;gap:8px;font-size:30px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--g900)}
+#main .db-dt{font-size:13px;font-weight:700;color:var(--gr700)}#main .db-dt.dn{color:var(--co700)}
+#main .db-s{margin:2px 0 0!important;font-size:13px!important}
+#main .db-bars{display:flex;align-items:flex-end;gap:8px;height:104px;margin-top:14px}
+#main .db-bars span{flex:1;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:6px;height:100%}
+#main .db-bars i{display:block;width:100%;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,var(--gr200),var(--gr100))}
+#main .db-bars span:last-child i{background:linear-gradient(180deg,var(--gr500),var(--gr700));box-shadow:0 6px 14px -8px var(--gr700)}
+#main .db-bars em{font-style:normal;font-size:12px;font-weight:600;text-align:center;color:var(--t-sub,var(--g600));white-space:nowrap}
+#main .db-main{min-width:0;display:flex;flex-direction:column;gap:16px}
+#main .db-main > *{margin-top:0;margin-bottom:0}
+:root[data-theme="dark"] #main .db-todo li.ok .n{color:#04140A;background:var(--gr500)}
+:root[data-theme="dark"] #main .db-bars i{background:linear-gradient(180deg,rgba(0,197,59,.38),rgba(0,197,59,.14))}
+:root[data-theme="dark"] #main .db-bars span:last-child i{background:linear-gradient(180deg,#00C53B,#00862D)}
+#main .db-tag{display:inline-flex;align-items:center;height:26px;padding:0 10px;margin:2px 6px 2px 0;border-radius:999px;background:var(--gr50);color:var(--gr800);font-size:13px;font-weight:600;white-space:nowrap}
+#main .db-more{font-size:13px;font-weight:600;color:var(--t-sub,var(--g600));white-space:nowrap}
+#main tr.db-hide{display:none}
+#main .db-page{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;font-size:13px;color:var(--t-sub,var(--g600))}
+#main td.db-rsn input{border-color:transparent!important;background:transparent!important;box-shadow:none!important}
+#main td.db-rsn input:hover, #main td.db-rsn input:focus{border-color:var(--hair)!important;background:var(--surface)!important}
+#main .db-rsnb{min-height:44px;font-size:13px;color:var(--t-sub,var(--g600))}
+#main .efh-hist{height:168px;gap:10px;padding:12px 4px 0;border-bottom:1px solid var(--hair)}
+#main .efh-hist div{background:var(--gr50);border-radius:10px 10px 4px 4px}
+#main .efh-hist div i{background:linear-gradient(180deg,var(--gr400),var(--gr700));border-radius:10px 10px 4px 4px}
+#main .efh-hist small{font-size:12px;font-weight:700;color:var(--t-sub,var(--g600))}
+/* 외부 연결(slim 목록): 가운데 좁은 열 → 주 영역 전체 + 서비스 3열 카드 */
+#main[data-l43="conn"] .sl-page{max-width:none;margin:0}
+#main[data-l43="conn"] .sl-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#main[data-l43="conn"] .sl-list > *{border-radius:18px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair),0 1px 2px rgba(16,24,40,.04);min-height:96px}
+@media (max-width:1280px){#main[data-l43="conn"] .sl-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){#main[data-l43="conn"] .sl-list{grid-template-columns:1fr}}
+#main .db-clamp{max-width:420px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;line-height:1.5}
+#main .db-clamp.open{display:block;-webkit-line-clamp:unset}
+/* 보조 열 할 일 행: v43ui .q1-ac li>span(flex · 패딩) 규칙을 이 카드에서만 끈다 */
+#main .db-todo li > span{display:block;min-height:0;padding:0;border-radius:0}
+#main .db-todo li > .n{display:grid;place-items:center;padding:0}
+#main .db-todo li.ok .n{background:var(--gr700)}
+#main .bview .db-main .seg2:not(.wtabs) > button, #main .db-main .seg2:not(.wtabs) > button{min-height:44px}
+#main[data-l43="crmstu"] .linkb{min-height:44px;display:inline-flex;align-items:center}
+#main details.efh-set > summary{min-height:44px;display:flex;align-items:center}
+#main[data-l43="conn"] .brl-t{color:var(--g900)!important}
+/* 브리핑 숫자 칸과 같은 숫자를 반복하던 화면 KPI 줄은 숨긴다(브리핑이 같은 값을 보여 줌) */
+#main[data-l43="sis"] .db-main > .kpis, #main[data-l43="grade"] .db-main > .kpis, #main[data-l43="aigov"] .db-main > .kpis, #main[data-l43="lmsg"] .db-main .kpis, #main[data-l43="lmsj"] .db-main .kpis{display:none}

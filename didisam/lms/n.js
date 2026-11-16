@@ -98,6 +98,8 @@
     N.courses.push(...C);
     C.slice(0, 5).forEach(c => N.cohorts.push({ cohort_id: LW4.uuid(), course_id: c.course_id, no: 1, starts_on: '2026-11-02', ends_on: '2026-12-18', capacity: 30, status: 'open' }));
     const h = N.cohorts[0].cohort_id; [['20261001', 92, 4, 85], ['20261002', 60, 2, 70], ['20261003', 88, 3, 55]].forEach(([no, p, ac, sc]) => N.enrolls.push({ cohort_id: h, member_no: no, status: 'approved', pay_status: 'free', progress: p, activity: ac, score: sc, items: { 중간: sc, 기말: sc }, reason: '', cert_no: null, applied_at: LW4.now(), completed_at: null }));
+    /* v43 D-B 시연 시드: 나머지 기수에도 수강생(학번만)을 채워 「수강 0명」 행이 없게 */
+    N.cohorts.slice(1).forEach((hh, k) => { const cnt = [14, 9, 18, 7][k] || 6; for (let i = 0; i < cnt; i++) { const no = '2026' + String(1010 + k * 9 + i); if (N.enrolls.some(e => e.cohort_id === hh.cohort_id && e.member_no === no)) continue; const p = (i * 23 + k * 11) % 101; N.enrolls.push({ cohort_id: hh.cohort_id, member_no: no, status: p >= 90 ? 'completed' : 'approved', pay_status: 'free', progress: p, activity: 1 + i % 5, score: 50 + (i * 7) % 50, items: {}, reason: '', cert_no: null, applied_at: LW4.now(), completed_at: null }); } });
     N.diags.push({ test_id: LW4.uuid(), title: '신입생 기초학력 진단', kind: 'basic', items: [{ q: '2x + 3 = 7 일 때 x는?', options: ['1', '2', '3'], answer: 1, area: '수리' }, { q: '다음 중 맞춤법이 옳은 것은?', options: ['되요', '돼요'], answer: 1, area: '국어' }, { q: 'print("a")의 결과는?', options: ['a 출력', '오류'], answer: 0, area: '프로그래밍' }, { q: '평균을 구하는 방법은?', options: ['합 ÷ 개수', '최댓값 - 최솟값'], answer: 0, area: '통계' }] });
   }
 
