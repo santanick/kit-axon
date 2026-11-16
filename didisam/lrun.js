@@ -198,12 +198,13 @@ function lDemoType(j, nat) {
 }
 
 /* v43 G4 — 학습자 다크: 기관 홈페이지 본문(Shadow DOM)도 다크 토큰을 따른다. 기관이 고른 브랜드 색(--c · --a)은 그대로 두고
-   바탕 · 카드 · 글자 · 선 변수만 어둡게 바꾼다(게시본 CSS의 변수와 흰 바탕 고정값을 덮음). 라이트에서는 아무것도 바꾸지 않는다. */
+   바탕 · 카드 · 글자 · 선 변수만 어둡게 바꾼다(게시본 CSS의 변수와 흰 바탕 고정값을 덮음). 라이트에서는 아무것도 바꾸지 않는다.
+   v43 R4: 팔레트(hpcolor)가 .hpt마다 --ink · --bg를 다시 적어 .smr 변수를 덮었다 → .smr .hpt에 다크 값을 다시 주고, 표식 글자는 고정 밝은 색. */
 (function () {
   if (typeof CSSStyleSheet !== 'function' || !('adoptedStyleSheets' in Document.prototype)) return;
   const V = '--bg:#151716;--bg2:#1C1F1E;--alt:#1C1F1E;--ink:#ECEDEA;--mu:#A9AEAA;--ln:rgba(255,255,255,.12);--hps-card:#1F2221;--hps-b:#151716;--hps-c:#ECEDEA;--hps-ln:rgba(255,255,255,.12);--hps-mu:#A9AEAA;--lt:color-mix(in srgb,var(--c,#00862D) 24%,#151716);--lt2:color-mix(in srgb,var(--c,#00862D) 34%,#151716);color:var(--ink)';
   const CARD = '.smr:not(.hps-on),.smr .cc,.smr .s2im figure,.smr .hp-card,.smr .hps-mb,.smr .hps-mf,.smr .hps .hps-bd,.smr .hps-card,.smr .hpx-lsf,.smr .hpt .hp-qa details,.smr .hpt .hp-dl div,.smr .hpt .hp-tll li:not(.on),.smr .hps-k-table .hps-tw,.smr footer.gf.hps-f';
-  const R = s => `${s} .smr,${s} .hps-root{${V}}${s} :is(${CARD}){background-color:#1F2221!important;border-color:rgba(255,255,255,.12)!important}${s} .smr:not(.hps-on){background-color:#151716!important}${s} .smr :is(.hp-alt,.is-alt){background-color:#1C1F1E}${s} .smr :is(h1,h2,h3,h4,p,li,td,th,dt,dd,label,small,b,strong):not([style*="color"]){color:inherit}${s} .smr [data-dkw="1"]{background-color:#1F2221!important;color:var(--ink)}${s} .smr [data-dkw="2"]{background-color:#1C1F1E!important;color:var(--ink)}${s} .smr [data-dkt]{color:var(--ink)!important}${s} .smr img{filter:brightness(.92)}`;
+  const R = s => `${s} .smr,${s} .hps-root{${V}}${s} :is(${CARD}){background-color:#1F2221!important;border-color:rgba(255,255,255,.12)!important}${s} .smr:not(.hps-on){background-color:#151716!important}${s} .smr :is(.hp-alt,.is-alt){background-color:#1C1F1E}${s} .smr :is(h1,h2,h3,h4,p,li,td,th,dt,dd,label,small,b,strong):not([style*="color"]){color:inherit}${s} .smr [data-dkw="1"]{background-color:#1F2221!important;color:var(--ink)}${s} .smr [data-dkw="2"]{background-color:#1C1F1E!important;color:var(--ink)}${s} .smr .hpt{--bg:#151716;--alt:#1C1F1E;--ink:#ECEDEA;--mu:#A9AEAA;--hps-c:#ECEDEA;--hps-mu:#A9AEAA}${s} .smr [data-dkt]{color:#ECEDEA!important}${s} .smr img{filter:brightness(.92)}`;
   const css = `:host-context(html[data-theme="dark"]) .smr{${V}}${R(':host-context(html[data-theme="dark"])')}@media (prefers-color-scheme:dark){${R(':host-context(html:not([data-theme="light"]):not([data-theme="dark"]))')}}`;
   let sh; try { sh = new CSSStyleSheet(); sh.replaceSync(css); } catch (e) { return; }
   /* 게시본이 흰색을 직접 적은 구역(변수를 쓰지 않는 섹션 · 카드)은 표식(data-dkw)을 달아 다크에서만 어둡게 */

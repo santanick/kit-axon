@@ -141,6 +141,8 @@
     const SEC = [g1, g2, g3, d1, cp, m1, m2, b1, b2, a1];
     for (let i = 0; i < 60; i++) { const m = String(20261000 + i); if (i === 50 || i === 51) continue; en(SEC[i % 3], m); en(SEC[3 + (i % 7)], m); }
     en(g1, '20261002', 'audit'); en(b1, '20261051', 'audit', 'pending', 'request');
+    /* v43 R4: 학습자 체험 계정(스튜디오 lxDemo가 발급하는 첫 체험 학번 20269000)도 정규 수강 — 109 학사 LMS 학습자 화면이 「수강 명단에 없어요」로 비지 않게 */
+    A.persons.push({ member_no: '20269000', kind: 'student', unit_code: 'CSE', status: 'active', grade_year: 2, source: 'sis' }); en(g1, '20269000'); en(d1, '20269000'); en(b1, '20269000');
     A.runs.push({ run_id: 1, term_id: t, scope: 'enrollment', trigger: 'manual', at: iso(), counts: { inserted: A.enr.length, skipped: 0, error: 0 }, errors_n: 0, errors: [] });
     return A;
   }

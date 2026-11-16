@@ -207,11 +207,14 @@
   /* 칸의 빈 곳을 눌러도 그날 일정 */
   document.addEventListener('click', e => { const c = e.target.closest && e.target.closest('.lq-day[data-lcday]'); if (!c || e.target.closest('[data-lcal]')) return; dayOpen(c.dataset.lcday); });
 
+  /* v43 R4(108): 연결 · 알림 화면의 「이번 주 일정」 막대(오늘부터 7일 · 날짜별 일정 수) */
+  window.lcalWeek = () => { try { const E = events().filter(e => !e.done && e.k !== '시작'); const t0 = td(); const D = [...Array(7)].map((_, i) => addD(t0, i)); const v = D.map(d => E.filter(e => e.date === d).length);
+    return { n: v.reduce((a, b) => a + b, 0), v, l: D.map((d, i) => i ? ['일', '월', '화', '수', '목', '금', '토'][new Date(d + 'T00:00:00').getDay()] : '오늘') }; } catch (e) { return null; } };
   /* ── 라우팅: #cal(학습 캘린더) · 웹 #connect(연결 · 알림 — 앱과 같은 카드) ── */
   { const base = viewPage; viewPage = (id, ...a) => {
     if (id === 'cal') { if (!LR.me) return needLogin('cal'); try { return calHTML(); } catch (e) { console.error('lcal', e); return '<section class="sec"><div class="in"><p class="empty">캘린더를 그리지 못했어요. 새로 고침해 주세요.</p></div></section>'; } }
     if (id === 'connect' && !(pageOf && pageOf('connect'))) { if (!LR.me) return needLogin('connect'); const more = typeof window.laiMore === 'function' ? window.laiMore() : '';
-      return `${lPageHead({ key: 'connect', title: '연결 · 알림', desc: `${(SITE().org || {}).type === 'univ' ? '캘린더' : '캘린더 · 카카오톡'} 연결과 학습 리마인더를 설정해요.`, compact: true })}<section class="sec lq-conn"><div class="in"><p><a class="lbtn ghost sm" href="#cal">${ico('cal', 16)}학습 캘린더 보기</a></p><div class="ap-conn-a" hidden></div>${more}</div></section>`; }
+      return `${lPageHead({ key: 'connect', title: '연결 · 알림', desc: `${(SITE().org || {}).type === 'univ' ? '캘린더' : '캘린더 · 카카오톡'} 연결과 학습 리마인더를 설정해요.`, compact: true })}<section class="sec lq-conn r4sec"><div class="ap-conn-a" hidden></div>${more}</section>`; }
     return base(id, ...a); }; }
 
   /* ── 진입: 웹 머리 메뉴(로그인한 학습자 · 보호자) ── */

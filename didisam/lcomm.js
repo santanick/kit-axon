@@ -164,7 +164,21 @@ function lcInbox() { const st = lcStore(); if (!LR.me) return []; /* 운영: GET
 window.lcInbox = lcInbox;
 const lcUnread = () => lcInbox().filter(x => !x.read).length;
 function lcMsgImgs(e) { const r = lcRoom(); const m = r && (r.msgs || []).find(x => x.id === e.msg); return (m && m.imgs) || []; }
-window.lcMsgList = () => { const L = lcInbox(); return L.length ? `<div class="lclist">${L.map(x => `<a class="lcrow ${x.read ? '' : 'unread'}" href="#msg/${encodeURIComponent(x.id)}"><span class="lck ${x.read ? '' : 'q'}">${x.read ? '읽음' : '새 메시지'}</span><span class="lct"><b>${esc(x.title || '(제목 없음)')}</b><small>${esc(x.from || SITE().org.name)} · ${esc(lLocal(x.at).slice(0, 16))}${x.child ? ' · 자녀 ' + esc(x.child) : ''}${x.imgs ? ` · 이미지 ${x.imgs}장` : ''}</small></span></a>`).join('')}</div>` : '<div class="empty2"><p>받은 메시지가 없습니다.</p></div>'; };
+/* v43 R4(098): 메시지함 본문 — 8+4 두 열. 왼쪽 = 칩 필터(전체 · 안 읽음 · 강사 · 운영 · 알림) + 날짜 묶음 아바타 행(보낸 곳 · 제목 · 본문 첫 줄 · 시각),
+   오른쪽 = 안 읽음 · 이번 주 숫자, 보낸 곳 분포 막대, 질문하기 카드, 보낸 질문. 체험 사이트는 comm.demoInbox 8건. */
+const lcMsgKind = x => /강사|교수|선생|튜터/.test(x.from || '') ? 't' : /운영|센터|기관|아카데미|학교/.test(x.from || '') || !x.from ? 'o' : 'n';
+window.lcMsgList = () => { const A = lcInbox(); if (!A.length) return R4.empty('받은 메시지가 없습니다', '강사 · 운영팀이 보낸 안내와 과제 결과가 여기에 모입니다.', null);
+  const f = LCM.mf || ''; const L = A.filter(x => !f || (f === 'u' ? !x.read : lcMsgKind(x) === f)); const now = Date.now();
+  const grp = x => { const d = (now - Date.parse(x.at)) / 864e5; return d < 1 ? '오늘' : d < 7 ? '이번 주' : '지난 메시지'; }; let last = '';
+  const N = k => A.filter(x => lcMsgKind(x) === k).length;
+  const rows = L.map(x => { const g = grp(x); const h = g !== last ? `<div class="r4day">${g}</div>` : ''; last = g; const k = lcMsgKind(x);
+    return `${h}<a class="r4row lcrow ${x.read ? '' : 'unread'}" href="#msg/${encodeURIComponent(x.id)}">${R4.av(x.from || SITE().org.name, k === 'o' ? 'brief' : k === 'n' ? 'bell' : '')}<span class="r4t"><small>${esc(x.from || SITE().org.name)}${x.child ? ' · 자녀 ' + esc(x.child) : ''}</small><b>${esc(x.title || '(제목 없음)')}</b><span>${esc(String(x.body || '').split('\n')[0])}</span></span><span class="r4m">${esc(lLocal(x.at).slice(5, 16).replace('-', '.'))}${x.read ? '<span class="r4chip mute">읽음</span>' : '<span class="r4chip">새 메시지</span>'}${x.imgs ? `<small>이미지 ${x.imgs}장</small>` : ''}</span></a>`; }).join('');
+  return `<div class="lclist">${R4.chips([['', '전체', A.length], ['u', '안 읽음', A.filter(x => !x.read).length], ['t', esc(lcTerm('teacher')), N('t')], ['o', '운영', N('o')], ['n', '알림', N('n')]].filter(c => c[0] === '' || c[2]), f, 'data-lc="mf" data-v')}${R4.card(R4.head(f ? '골라 본 메시지' : '받은 메시지', `${L.length}건`), rows || '<div class="r4day">조건에 맞는 메시지가 없어요</div>', { cls: 'flush' })}</div>`; };
+window.lcMsgSide = () => { const A = lcInbox(); const now = Date.now(); const wk = A.filter(x => now - Date.parse(x.at) < 7 * 864e5).length; const un = A.filter(x => !x.read).length;
+  const N = k => A.filter(x => lcMsgKind(x) === k).length; const st = lcStore(); const asks = (st.asks || []).length;
+  return R4.card(R4.head('한눈에'), `<div class="r4ks" style="--n:3">${R4.kpi(un, '건', '안 읽음', '')}${R4.kpi(wk, '건', '이번 주')}${R4.kpi(asks, '건', '보낸 질문')}</div>`)
+    + R4.card(R4.head('보낸 곳'), R4.bars([[lcTerm('teacher'), N('t'), N('t') + '건'], ['운영팀', N('o'), N('o') + '건'], ['알림', N('n'), N('n') + '건']]))
+    + R4.card(R4.head(`담당 ${lcTerm('teacher')}에게 질문`, '답변은 이 메시지함과 알림으로 와요'), `<ul class="r4list"><li><span>${ico('clock', 16)}</span><span>평일 기준 하루 안에 답변해요<small>강의 · 과제 화면에서 보내면 보던 차시가 함께 전달돼요</small></span></li><li><span>${ico('lock', 16)}</span><span>이름 · 전화번호는 적지 않아도 돼요<small>개인정보는 자동으로 가려서 보냅니다</small></span></li></ul><div class="r4cta" style="margin-top:16px"><a class="lbtn pri" href="#msg/new">질문 보내기</a><a class="lbtn ghost" href="#comm">수강생 라운지에 묻기</a></div>`, { cls: 'tint' }); };
 window.lcMsgDetail = id => { const e = lcInbox().find(x => x.id === id); if (!e) return '<div class="empty2"><p>메시지를 찾지 못했습니다.</p></div>'; const st = lcStore();
   if (!st.read[e.id]) { st.read[e.id] = 1; lcSave(); lcPush('msg-read', { id: e.id, msg: e.msg, par: e.par || '' }); }
   const I = lcMsgImgs(e); return `<article class="lcpost"><div class="lcch"><b>${esc(e.from || SITE().org.name)}</b>${e.child ? `<span class="lck q">자녀 ${esc(e.child)}</span>` : ''}<small>${esc(lLocal(e.at).slice(0, 16))}</small></div><h2>${esc(e.title || '')}</h2><div class="body">${nl(e.body || '')}</div>${e.href && /^#[\w/%:.-]+$/.test(e.href) ? `<p><a class="lbtn ghost sm" href="${esc(e.href)}">${e.kind === 'resub' ? '과제 화면 열기' : '관련 화면 열기'}</a>${e.ask || e.kind === 'resub' ? ` <a class="lbtn ghost sm" href="#msg/new${e.href.startsWith('#c/') ? ':' + e.href.slice(3).split('/').map(encodeURIComponent).join(':') : ''}">강사에게 다시 질문</a>` : ''}</p>` : ''}${I.length ? `<div class="lcfiles">${I.map(f => lcImg(f.data) ? `<a href="${esc(f.data)}" download="${esc(f.name)}" title="내려받기"><img src="${esc(f.data)}" alt="${esc(f.name)}"></a>` : `<span class="lcf">${esc(f.name)} · ${lcSize(f.size)}</span>`).join('')}</div><p class="mini">이미지를 누르면 내려받을 수 있어요.</p>` : ''}</article>`; };
@@ -177,7 +191,10 @@ function lcAskForm(id) { const [, cid0, iid0] = String(id || '').split(':').map(
 function lcAskList() { const st = lcStore(); const A = st.asks || []; if (!A.length) return ''; const I = lcInbox();
   return `<h2 class="lch2">보낸 질문 ${A.length}</h2><div class="lclist">${A.slice(0, 20).map(q => { const ans = I.find(x => x.ask === q.id); const c = lcCls(q.cls); return `<a class="lcrow" href="${ans ? '#msg/' + encodeURIComponent(ans.id) : '#msg'}"><span class="lck ${ans ? '' : 'q'}">${ans ? '답변 완료' : '답변 대기'}</span><span class="lct"><b>${esc(q.body.slice(0, 60))}</b><small>${esc(c ? c.name : '운영자 문의')} · ${esc(lcDay(q.at))}</small></span></a>`; }).join('')}</div>`; }
 function lcViewMsg(id) { if (!LR.me) return needLogin('msg'); if (/^new(:|$)/.test(id || '')) return lcSub('<a href="#msg">메시지</a>', '담당 강사에게 질문', `질문은 담당 ${esc(lcTerm('teacher'))}에게 전달되고, 답변은 메시지함과 알림으로 와요.`) + `<section class="sec lcsec"><div class="in narrow">${lcAskForm(id)}<p><a class="lbtn ghost sm" href="#msg">← 메시지함</a></p></div></section>`;
-  return lcSub(id ? '<a href="#msg">메시지</a>' : '메시지', id ? '메시지' : '메시지함', id ? '' : `${SITE().org.name}에서 나에게 보낸 메시지입니다.${typeof laCfg === 'function' && laCfg().mode === 'code' ? '' : ' 같은 내용이 가입 이메일로도 발송됩니다.'}`) + `<section class="sec lcsec"><div class="in narrow">${id ? window.lcMsgDetail(id) + '<p><a class="lbtn ghost sm" href="#msg">← 메시지함</a></p>' : `<p class="lcaskb"><a class="lbtn pri sm" href="#msg/new">담당 ${esc(lcTerm('teacher'))}에게 질문하기</a></p>` + window.lcMsgList() + lcAskList()}${LR.mode !== 'demo' || LR.tid === 'sample' ? '<p class="mini">미리보기 · 체험 사이트에서는 메시지함이 비어 있어요.</p>' : ''}</div></section>`; }
+  const head = lcSub(id ? '<a href="#msg">메시지</a>' : '메시지', id ? '메시지' : '메시지함', id ? '' : `${SITE().org.name}에서 나에게 보낸 메시지입니다.${typeof laCfg === 'function' && laCfg().mode === 'code' ? '' : ' 같은 내용이 가입 이메일로도 발송됩니다.'}`);
+  if (id) return head + `<section class="sec lcsec"><div class="in narrow">${window.lcMsgDetail(id)}<p><a class="lbtn ghost sm" href="#msg">← 메시지함</a></p></div></section>`;
+  /* v43 R4(098): 목록은 8+4 두 열(lcMsgList · lcMsgSide) */
+  return head + `<section class="sec lcsec r4sec"><div class="r4wrap"><div class="r4g"><div>${window.lcMsgList()}${lcAskList()}</div><div>${window.lcMsgSide()}</div></div>${(LR.mode !== 'demo' || LR.tid === 'sample') && !lcInbox().length ? '<p class="mini">미리보기 · 체험 사이트에서는 메시지함이 비어 있어요.</p>' : ''}</div></section>`; }
 
 /* ── 라우팅 · 헤더 ── */
 { const base = lrender; lrender = (...a) => { const r = route(); if (!SITE() || !['comm', 'post', 'write', 'msg'].includes(r.a)) { base(...a); lcAfter(r); return; }
@@ -203,6 +220,7 @@ document.addEventListener('toggle', e => { const d = e.target; if (!(d instanceo
 /* ── 클릭 ── */
 document.addEventListener('click', e => { const el = e.target.closest('[data-lc]'); if (!el) return; e.preventDefault(); const k = el.dataset.lc, v = el.dataset.v; const st = lcStore();
   if (k === 'ctab') { LCM.ctab = v; lcPanelRefresh(); return; }
+  if (k === 'mf') { LCM.mf = v || ''; LCM.keepScroll = 1; lrender(); return; } /* v43 R4(098) 메시지함 칩 필터 */
   if (k === 'nf') { LCM.nf = v; lrender(); return; }
   if (k === 'ff') { LCM.f = { ...LCM.f, [el.dataset.k]: v || '' }; if (el.dataset.k === 'cls') LCM.f.item = ''; LCM.keepScroll = 1; lrender(); return; }
   if (!LR.me) { location.hash = '#login'; return; }

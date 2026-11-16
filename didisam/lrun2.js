@@ -220,3 +220,27 @@ document.addEventListener('change', e => { const f = e.target.closest('#dg'); if
   const nx = Fs[k + 1]; e.target.closest('fieldset').classList.add('answered'); if (nx && nx.classList.contains('later')) { nx.classList.remove('later'); setTimeout(() => nx.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120); }
   if (ans >= Fs.length) { const b = document.getElementById('dgsub'); if (b) { b.classList.remove('later'); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); } } });
 /* 시작은 lboot.js(모든 스크립트 로드 뒤) */
+
+/* ── v43 R4 학습자 본문 문법(8+4 · 카드 · 칩 · 행 · 차트) — 메시지함 · 결제 · 연결 · 계정 · 학사 LMS 등 학습 기능 화면이 함께 쓴다.
+   마크업만 만든다(동작은 각 화면의 data-* 그대로). CSS: lhub.css 「v43 R4」 블록. */
+window.R4 = window.R4 || (() => {
+  const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  Object.assign(ICP, { mail: ICP.mail || 'M4 6h16v12H4zM4 7l8 6 8-6', card: ICP.card || 'M3 6h18v12H3zM3 10h18M7 15h4', receipt: ICP.receipt || 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', shield: ICP.shield || 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z', phone: ICP.phone || 'M7 3h10v18H7zM11 18h2', chat2: ICP.chat2 || 'M4 5h16v11H9l-5 4z', cal2: ICP.cal2 || 'M5 5h14v15H5zM5 10h14M9 3v4M15 3v4', users: ICP.users || 'M9 11a4 4 0 100-8 4 4 0 000 8zM2 21v-1a6 6 0 0112 0v1M17 11a3 3 0 100-6M22 21v-1a5 5 0 00-4-5' });
+  const AV = ['#00862D', '#0E7C66', '#B7791F', '#2B6CB0', '#6B46C1'];
+  const hue = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return AV[h % AV.length]; };
+  const av = (name, ic) => `<span class="r4av" style="--av:${hue(name)}" aria-hidden="true">${ic ? ico(ic, 18) : E(String(name || '·').replace(/[^가-힣A-Za-z0-9]/g, '').slice(0, 1) || '·')}</span>`;
+  const card = (head, body, o = {}) => `<section class="r4c${o.cls ? ' ' + o.cls : ''}"${o.id ? ` id="${o.id}"` : ''}${o.label ? ` aria-label="${E(o.label)}"` : ''}>${head ? `<div class="r4h">${head}</div>` : ''}${body}</section>`;
+  const head = (t, sub, act) => `<b>${E(t)}</b>${sub ? `<small>${sub}</small>` : ''}${act ? `<span class="r4h-a">${act}</span>` : ''}`;
+  const chips = (L, cur, attr) => `<div class="r4chips" role="tablist">${L.map(([v, l, n]) => `<button type="button" role="tab" aria-selected="${v === cur}" class="${v === cur ? 'on' : ''}" ${attr}="${E(v)}">${E(l)}${n != null ? `<em>${n}</em>` : ''}</button>`).join('')}</div>`;
+  const kpi = (v, unit, label, tone) => `<div class="r4k${tone ? ' ' + tone : ''}"><b>${E(v)}<small>${E(unit || '')}</small></b><span>${E(label)}</span></div>`;
+  const bars = L => { const mx = Math.max(1, ...L.map(x => +x[1] || 0)); return `<ul class="r4bars">${L.map(([l, v, sub]) => `<li><span>${E(l)}</span><i><s style="width:${Math.round((+v || 0) / mx * 100)}%"></s></i><b>${E(sub != null ? sub : v)}</b></li>`).join('')}</ul>`; };
+  /* 월별 막대(값 배열 · 라벨 배열) — 마지막 칸 강조 */
+  const cols = (vals, labs, fmt) => { const mx = Math.max(1, ...vals); return `<div class="r4cols" role="img" aria-label="${E(labs.map((l, i) => l + ' ' + (fmt ? fmt(vals[i]) : vals[i])).join(', '))}">${vals.map((v, i) => `<div class="${i === vals.length - 1 ? 'on' : ''}"><em>${v ? E(fmt ? fmt(v) : v) : ''}</em><i style="height:${Math.max(4, Math.round(v / mx * 100))}%"></i><span>${E(labs[i])}</span></div>`).join('')}</div>`; };
+  /* 추세 면적(7~30점) */
+  const area = (vals, h = 64) => { const n = vals.length; if (n < 2) return ''; const mx = Math.max(1, ...vals), W = 300; const pt = vals.map((v, i) => [Math.round(i / (n - 1) * W), Math.round(h - 4 - v / mx * (h - 12))]);
+    const d = pt.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' '); return `<svg class="r4area" viewBox="0 0 ${W} ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${d} L${W} ${h} L0 ${h}Z" class="f"/><path d="${d}" class="l"/><circle cx="${pt[n - 1][0]}" cy="${pt[n - 1][1]}" r="4"/></svg>`; };
+  const ring = (pct, label) => { const p = Math.max(0, Math.min(100, Math.round(pct))); return `<div class="r4ring" style="--p:${p}"><b>${p}<small>%</small></b>${label ? `<span>${E(label)}</span>` : ''}</div>`; };
+  const empty = (t, d, cta) => `<div class="r4empty"><span class="r4empty-i" aria-hidden="true">${ico('spark', 28)}</span><b>${E(t)}</b>${d ? `<p>${d}</p>` : ''}${cta ? `<a class="lbtn pri" href="${E(cta[1])}">${E(cta[0])}</a>` : ''}</div>`;
+  const won = n => (Math.round(+n || 0)).toLocaleString('ko-KR');
+  return { E, av, hue, card, head, chips, kpi, bars, cols, area, ring, empty, won };
+})();
