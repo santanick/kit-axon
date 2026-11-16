@@ -105,7 +105,13 @@
   function billsView(M) { const due = M.open.reduce((s, b) => s + b.bal, 0);
     return `${M.open.length ? `<div class="lg-sum" role="status"><span>결제할 금액</span><b>${won(due)}</b><small>청구서 ${M.open.length}건${M.open.some(b => b.late) ? ' · 마감 지난 청구서가 있어요' : ''}</small></div>` : `<div class="lg-empty">${sv('check', 28)}<p>지금 결제할 청구서가 없어요.</p></div>`}
       ${M.open.map(b => billCard(b, M)).join('')}
-      ${M.done.length ? `<details class="lg-old"><summary>납부 완료 청구서 ${M.done.length}건</summary>${M.done.map(b => billCard(b, M)).join('')}</details>` : ''}`; }
+      ${M.done.length ? `<details class="lg-old"><summary>납부 완료 청구서 ${M.done.length}건</summary>${M.done.map(b => billCard(b, M)).join('')}</details>` : ''}${recentR4(M)}`; }
+  /* v43 R4(104): 청구서 아래 빈 하단 → 최근 결제 · 영수증(아바타 행 4건) + 월별 납부 막대 · 납부 안내(8+4). 결제 내역 화면(.lg-row)은 그대로 */
+  function recentR4(M) { if (typeof R4 !== 'object') return ''; const L = rows(M); if (!L.length) return '';
+    const d0 = new Date(); const Ms = [...Array(6)].map((_, i) => { const d = new Date(d0.getFullYear(), d0.getMonth() - 5 + i, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; });
+    const mv = Ms.map(m => L.filter(x => kst(x.at).slice(0, 7) === m || String(x.at).slice(0, 7) === m).reduce((a, x) => a + (+x.amount || 0), 0));
+    const list = L.slice(0, 4).map(x => `<a class="r4row" href="${esc(x.href || '#ledger/hist')}">${R4.av(x.what, /교재/.test(x.what) ? 'book' : /강좌|구독/.test(x.what) ? 'video' : 'receipt')}<span class="r4t"><small>${esc(x.sub)}</small><b>${esc(x.what)}</b></span><span class="r4m"><b>${won(x.amount)}</b><span class="r4chip${/환불|거절|실패/.test(x.tag) ? ' warn' : ''}">${esc(x.tag)}</span></span></a>`).join('');
+    return `<div class="r4g lg-r4" style="margin-top:28px"><div>${R4.card(R4.head('최근 결제 · 영수증', `전체 ${L.length}건`, '<a href="#ledger/hist">결제 내역 전체</a>'), list, { cls: 'flush' })}</div><div>${R4.card(R4.head('월별 납부'), R4.cols(mv, Ms.map(m => +m.slice(5) + '월'), v => v >= 10000 ? Math.round(v / 1000) + 'k' : R4.won(v)))}${R4.card(R4.head('납부 안내'), `<ul class="r4list"><li><span>${ico('card', 16)}</span><span>카드 · 계좌이체 · 간편결제<small>결제하면 영수증이 바로 이 화면에 생겨요</small></span></li><li><span>${ico('clock', 16)}</span><span>마감 3일 전에 알림을 보내요<small>연결 · 알림에서 카카오톡으로도 받을 수 있어요</small></span></li></ul>`, { cls: 'tint' })}</div></div>`; }
   const refOf = (M, rid) => M.refunds.filter(f => f.receiptId === rid && f.status !== 'cancelled' && f.status !== 'requested').reduce((s, f) => s + f.amount, 0);
   /* v43 K2(P3-F02): 결제 내역 하나로 — 청구서 수납(원장 receipts)과 강좌 · 교재 구매(lshop 결제, shMine().pays)를 같은 목록에 시간순으로.
      #mypay(나 › 결제 · 환불 내역)도 이 목록으로 온다. 강좌 구매 줄의 영수증 = 결제 상세(#payd) */

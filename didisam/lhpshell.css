@@ -133,3 +133,7 @@ body.lhs-home .lgj.lhs-jm{display:none!important}
 }
 body.lhs-hps .lhs-head>header.lh,body.lhs-hps .lhs-head>header.lh>.in,body.lhs-hps .lhs-head>header.lh nav.ln,body.lhs-hps .lhs-head>header.lh nav.ln>.smmi{font-size:inherit;font-weight:inherit;letter-spacing:inherit}
 body.lhs-hps .lhs-head>header.lh .lux-mb{min-height:44px} /* v43 F1: 홈페이지 셸 머리 「더 보기」도 44px */
+/* v43 R4 — 085 다크: 첫 화면 위 「내 학습」 띠가 다크에서도 밝은 기관 면(--hpt-as)으로 남아 머리글과 히어로 사이가 끊겼다 */
+html[data-theme="dark"] body.lhs-in .lhs-mt{background:#1C1F1E;border-bottom-color:rgba(255,255,255,.08);color:#ECEDEA}
+html[data-theme="dark"] body.lhs-in .lhs-mtw :is(em,a){color:#7FD6A0}
+@media (prefers-color-scheme:dark){html:not([data-theme="light"]) body.lhs-in .lhs-mt{background:#1C1F1E;border-bottom-color:rgba(255,255,255,.08);color:#ECEDEA}html:not([data-theme="light"]) body.lhs-in .lhs-mtw :is(em,a){color:#7FD6A0}}

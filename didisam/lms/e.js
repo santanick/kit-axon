@@ -101,7 +101,7 @@
   }
   function css() { if (document.getElementById('efhCss')) return; const l = document.createElement('link'); l.id = 'efhCss'; l.rel = 'stylesheet'; l.href = 'lms/e.css?v=43.1'; document.head.appendChild(l); }
   const peek = k => C[k] && C[k].ok;
-  window.EFH = { peek, ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, sections, secPick, demoStudents, demoSections, rid, r2, fmt, ERR, nowIso, toB64, dl, b64bytes, zip, css, s0, demoTag, todo, dots, tabs4, mi };
+  window.EFH = { seedSec: sec => seedSec(sec), peek, ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, sections, secPick, demoStudents, demoSections, rid, r2, fmt, ERR, nowIso, toB64, dl, b64bytes, zip, css, s0, demoTag, todo, dots, tabs4, mi };
 
   /* ═════════ 데모 처리기(E) — 서버 lms_e_* 와 같은 응답 형태 ═════════ */
   const asgOf = id => { const a = st().asg.find(x => x.asg_id === id); if (!a) ERR(404, 'assignment', '없는 과제입니다.'); return a; };
