@@ -143,8 +143,8 @@ body:not(.lapp) .lg-sum.lg43s{flex-wrap:wrap}
 .lg43cs{display:flex;gap:8px;flex-wrap:wrap;width:100%;margin-top:8px}
 .lg43c{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;font-style:normal;font-size:13px;font-weight:700;background:var(--surface,#fff);color:var(--pri-tx,#007200);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pri) 30%,transparent)}
 .lg43c.bad{color:#B42318;box-shadow:inset 0 0 0 1px rgba(180,35,24,.3)}
-.lg-amt .lg43p{grid-column:1/-1;display:flex!important;flex-direction:column;gap:6px;margin-top:6px}
-.lg-amt .lg43p i{display:block;height:8px;border-radius:99px;background:color-mix(in srgb,var(--ink) 8%,transparent);overflow:hidden}
+.lg-amt .lg43p{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:6px;margin-top:6px}
+.lg-amt .lg43p i{display:block;width:100%;height:8px;border-radius:99px;background:color-mix(in srgb,var(--ink) 8%,transparent);overflow:hidden}
 .lg-amt .lg43p u{display:block;height:100%;background:var(--pri);border-radius:99px}
 .lg-amt .lg43p small{font-size:13px;color:var(--mute);font-weight:600}
 body:not(.lapp) .lg-old.lg43o{border-radius:20px;background:var(--surface,#fff);border:1px solid var(--q2-bd,#e7e2d6);box-shadow:var(--q2-sh,none);padding:0 18px;margin-top:6px}
