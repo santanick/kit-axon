@@ -105,10 +105,13 @@
   /* v43 D-D(111) 방문자 첫 화면: 흰 바탕 + 아이콘 1개 → 사진 무대 히어로(사진 + 짙은 그린 그라데이션) · 혜택 칩 3개 */
   function guestHero() { let u = ''; try { u = typeof window.lPhoto === 'function' ? window.lPhoto(SITE().org.name + ' 온라인 강의 학습', 'ap-guest', true) : ''; } catch (e) { }
     return `<section class="ap-hero ap-ghero"${u ? ` style="--ph:url('${esc(u)}')"` : ''}>${orgChip()}<p class="ap-gey">${esc(TYL[oTy()] || '기관')} · 나만의 AI 선생님</p><h1>나만의 AI 선생님과<br>공부를 시작해 보세요</h1><p class="ap-gsub">강좌 · 수강 방법은 로그인 없이 바로 물어보세요. 가입하면 내 진도와 마감을 매일 먼저 챙겨 드려요.</p>
-      <ul class="ap-gben" aria-label="가입 혜택"><li>${ico('chat', 16)}로그인 없이 질문</li><li>${ico('book2', 16)}내 진도 기억</li><li>${ico('bell', 16)}마감 먼저 알림</li></ul></section>`; }
+</section>`; } /* v43 R9(J4 111): 혜택 칩 3개는 가입 카드 문장과 겹쳐 뺌(히어로를 낮춰 추천 강좌 · 가입 카드가 첫 화면에 온전히 보이게) */
   /* v43 D-D — 체험판(샘플 사이트)에서만 쓰는 보호자 자녀 2명 · 알림 6건. 기관 데이터(laRoom)가 있으면 쓰지 않는다. 학생은 이름 대신 닉네임 · 반만 */
   const demoS = () => LR.mode === 'demo' && LR.tid === 'sample' && !!LR.me;
   const DKIDS = [{ n: '지우', g: '중2 · 수학 심화반', at: 96, p: 72, due: '오늘 숙제 1개' }, { n: '하준', g: '초6 · 영어 리딩반', at: 100, p: 58, due: '내일 단어 시험' }];
+  /* v43 R9(J4 115): 체험판 보호자 홈의 「자녀 일정 · 예정된 일정이 없어요」 → 체험 자녀 일정 3건(저장 없음, 그릴 때마다 오늘 기준) */
+  (window.LCAL_SRC = window.LCAL_SRC || []).push(() => { const DK = window.lappDemoKids && window.lappDemoKids(); if (!DK) return []; const t0 = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); const D = n => new Date(Date.parse(t0) + n * 864e5).toISOString().slice(0, 10);
+    return [{ id: 'demo:p1', date: D(0), time: '22:00', k: '과제', title: `[${DK[0].n}] 숙제 마감 — 일차함수 문제 20개`, src: 'org', who: DK[0].n }, { id: 'demo:p2', date: D(1), time: '17:00', k: '시험', title: `[${DK[1].n}] 단어 시험 — Unit 6`, src: 'org', who: DK[1].n }, { id: 'demo:p3', date: D(2), time: '16:00', k: '회차', title: `[${DK[0].n}] 수학 심화반 8회차`, src: 'org', who: DK[0].n, place: '3층 2강의실' }]; });
   window.lappDemoKids = () => demoS() && isPar() && !laRoomOk() ? DKIDS : null;
   const laRoomOk = () => { try { return !!(typeof laRoom === 'function' && laRoom()); } catch (e) { return false; } };
   function joinCard() { if (LR.me || isPar()) return ''; const J = joinInfo(); const pend = pendSid();
@@ -117,7 +120,11 @@
       : J.mode === 'invite' ? `<button type="button" class="ap-go" data-ap="orgs" data-v="add">초대 링크 붙여 넣기</button><a class="ap-lk" href="#login">이미 가입했어요 · 로그인</a>`
       : `<a class="ap-go" href="#login">${oTy() === 'univ' ? '학번' : '접근코드'}으로 시작하기</a><a class="ap-lk" href="#find/code">접근코드를 모르겠어요</a>`;
     return `<section class="ap-join" aria-labelledby="apJT"><p class="ap-jey">${esc(TYL[oTy()] || '기관')} · ${esc(SITE().org.name)}</p><h2 id="apJT">${esc(J.t)}</h2>${J.tags.length ? `<p class="ap-tags">${J.tags.map(t => `<span class="ap-tag">${esc(t)}</span>`).join('')}</p>` : ''}
-      <ol>${J.s.map(x => `<li>${esc(x)}</li>`).join('')}</ol>${cta}</section>`; }
+      <p class="ap-jl">${esc(J.s[0] || '')}</p>${cta}</section>`; } /* v43 R9(J4 111): 두 줄 목록 → 한 줄(카드가 대화 영역 경계에서 잘리지 않게) */
+  /* v43 R9(J4 111): 방문자 첫 화면에 강좌가 하나도 보이지 않던 문제 → 추천 강좌 사진 카드(가로로 넘김) */
+  function guestRec() { const C = (SITE().classes || []).filter(c => c && c.status !== '종료' && c.status !== 'stop' && c.sale !== false).slice(0, 4); if (!C.length) return '';
+    return `<section class="ap-grec" aria-labelledby="apGR"><div class="ap-grh"><h2 id="apGR">이런 ${esc(/교과목/.test(scn().find) ? '교과목' : /교육/.test(scn().find) ? '교육' : '강좌')}이 있어요</h2><a href="${esc(browse())}">전체 보기</a></div><div class="ap-grl">${C.map(c => { let ph = c.thumb || ''; try { if (!ph && typeof lPhoto === 'function') ph = lPhoto(c.name, c.id); } catch (e) { } const n = (c.items || []).filter(i => i && i.type !== 'chapter').length; const pr = +(c.salePrice || c.price || 0);
+      return `<a class="ap-grc" href="#class/${esc(encodeURIComponent(c.id))}"><span class="ap-grp">${ph ? `<img src="${esc(ph)}" alt="" loading="lazy">` : ''}</span><b>${esc(c.name)}</b><small>${[n ? n + '개 차시' : '', c.teacher || '', pr ? pr.toLocaleString() + '원' : '무료'].filter(Boolean).map(esc).join(' · ')}</small></a>`; }).join('')}</div></section>`; }
   const legalN = () => { try { return typeof lLegal === 'function' ? lLegal().length : 0; } catch (e) { return 0; } };
   const orgs = () => { try { return JSON.parse(ls.get('orgs') || '[]').filter(o => o && o.tid); } catch (e) { return []; } };
   function orgSave() { if (!SITE() || !LR.tid || LR.mode === 'preview') return; const L = orgs(); const o = { tid: LR.tid, name: String(SITE().org.name || '').slice(0, 40), type: oTy(), me: !!LR.me, at: Date.now() };
@@ -141,7 +148,7 @@
   const cnt = () => { let m = 0, n = 0; try { m = typeof lcInbox === 'function' ? lcInbox().filter(x => !x.read).length : 0; } catch (e) { } try { n = typeof laItems === 'function' ? laItems().L.filter(x => !x.read).length : 0; } catch (e) { } return { m, n }; };
   const bdg = k => k ? `<i class="ap-bd">${k > 99 ? '99+' : k}</i>` : '';
   const topIcons = () => { const c = cnt(); return `<a class="ap-ib" href="#msg" aria-label="메시지${c.m ? ` · 안 읽은 메시지 ${c.m}개` : ''}">${ico('chat', 21)}${bdg(c.m)}</a><a class="ap-ib" href="#inbox" aria-label="알림${c.n ? ` · 새 알림 ${c.n}개` : ''}">${ico('bell', 21)}${bdg(c.n)}</a>`; };
-  function kidsHTML() { const DK = window.lappDemoKids && window.lappDemoKids(); if (DK) return `<section class="ap-kids"><h2>연결된 자녀 <small>${DK.length}명</small></h2>${DK.map((k, i) => `<a class="ap-kid dd-kid" href="#family"><span class="dd-kav" style="--kc:${i ? '#0E7C66' : '#00862D'}" aria-hidden="true">${esc(k.n.slice(0, 1))}</span><span><b>${esc(k.n)}</b><small>${esc(k.g)} · ${esc(k.due)}</small><span class="dd-kst"><em>출석 ${k.at}%</em><em>진도 ${k.p}%</em></span></span>${ico('arrow', 16)}</a>`).join('')}</section>`;
+  function kidsHTML() { const DK = window.lappDemoKids && window.lappDemoKids(); if (DK) return `<section class="ap-kids"><h2>연결된 자녀 <small>${DK.length}명</small></h2>${DK.map((k, i) => `<a class="ap-kid dd-kid dd-kid9" href="#family"><span class="dd-kav" style="--kc:${i ? '#0E7C66' : '#00862D'}" aria-hidden="true">${esc(k.n.slice(0, 1))}</span><span class="dd-kb"><b>${esc(k.n)}</b><small>${esc(k.g)}</small><span class="dd-kdue">${esc(k.due)}</span><span class="dd-kbar">${[['출석', k.at], ['진도', k.p]].map(([l, v]) => `<span><em>${l}</em><i aria-hidden="true"><i style="width:${v}%"></i></i><b>${v}%</b></span>`).join('')}</span></span>${ico('arrow', 16)}</a>`).join('')}</section>`;
     let r = {}, pa = null; try { r = laRoom() || {}; pa = laPacct(); } catch (e) { }
     const PR = (r.parents || []).filter(p => pa && p.acct === pa.id); const K = PR.filter(p => p.status === '연결 완료'); const W = PR.filter(p => p.status === '연결 요청').length;
     const nm = id => { const m = (r.members || []).find(x => x.id === id); return m ? (m.nick || m.name || '자녀') : '자녀'; };
@@ -159,6 +166,9 @@
   function navHTML() { const s = (isPar() ? SECP : SEC)[route().a] || '';
     if (isPar()) { const c = cnt(); const it = [['home', '#home', 'home', '홈'], ['kids', '#family', 'user', '자녀'], ['msg', '#msg', 'chat', '메시지'], ['pay', '#mypay/bill', 'layers', '결제'], ['me', '#acct', 'grid', '나']];
       return `<nav class="ap-nav" aria-label="앱 메뉴">${it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span>${k === 'msg' ? bdg(c.m) : ''}</a>`).join('')}</nav>`; }
+    /* v43 R9(J4 111): 방문자는 4칸(홈 · 둘러보기 · 공지/커뮤니티 · 로그인) — AX 튜터가 「홈」 자리를 그린 알약으로 차지하고 「내 강의」가 로그인으로 튀던 문제 */
+    if (!LR.me) { const g = [['home', '#home', 'home', '홈'], ['find', browse(), 'compass', scn().find], ...(hasComm() ? [['comm', '#comm', 'msg', '커뮤니티']] : [['comm', '#notice', 'bell', '공지']]), ['me', '#login', 'user', '로그인']];
+      return `<nav class="ap-nav ap-gnav" aria-label="앱 메뉴">${g.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span></a>`).join('')}</nav>`; }
     const it = [['home', '#home', 'sparkle', tName()], ['learn', LR.me ? '#my' : '#login/my', 'book2', scn().learn], ['find', browse(), 'compass', scn().find], ...(hasComm() ? [['comm', '#comm', 'msg', '커뮤니티']] : [['comm', '#notice', 'bell', '공지']]), ['me', LR.me ? '#acct' : '#login', 'user', LR.me ? '나' : '로그인']];
     return `<nav class="ap-nav" aria-label="앱 메뉴">${it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span></a>`).join('')}</nav>`; }
   const TITLE = { my: '내 강의', c: '강의', t: '튜토리얼', bk: '디지털북', dg: '진단', cert: '수료증', badge: '배지', mybooks: '내 교재/교구', shop: '둘러보기', class: '클래스', courses: '코스', tutorials: '튜토리얼', textbooks: '교재/교구', tb: '교재/교구', books: '디지털북', pay: '결제하기', payok: '결제 완료', applied: '신청 완료', comm: '커뮤니티', post: '게시글', write: '글쓰기', notice: '공지사항', acct: '나', connect: '연결 · 알림', inbox: '알림', mypay: '결제 · 환불 내역', payd: '결제 상세', msg: '메시지', family: '가족', login: '로그인', join: '간편가입', find: '계정 찾기', privacy: '개인정보 처리방침' };
@@ -180,11 +190,11 @@
   function pickHTML() { const cur = persona(); const sel = AP.sel || (cur && cur.k) || 'warm'; const B = PERS.find(x => x.k === sel); const nm = AP.nm || (cur && cur.k === sel ? cur.n : B.n);
     return `<section class="ap-pick" aria-labelledby="apPickT"><div class="ap-pw">
       <div class="ap-ph"><span class="dd-pchar" aria-hidden="true">${pChar(B)}</span><p class="ap-ey">${esc(SITE().org.name)} · 나만의 AI 선생님</p><h1 id="apPickT">${cur ? '선생님을 바꿔 볼까요?' : `${esc(who())}, 함께 공부할<br>AI 선생님을 골라 주세요`}</h1><p class="ap-lead">내 진도 · 과제 · 마감을 기억하고 매일 먼저 챙겨 주는 선생님이에요. 나중에 언제든 바꿀 수 있어요.${afterGet() ? ' 고르면 첫 강의로 바로 이어져요.' : ''}</p></div>
-      <form id="apPickF"><fieldset class="ap-pl"><legend class="sr">선생님 스타일</legend>${PERS.map(p => `<label class="ap-pc ${p.k === sel ? 'on' : ''}" style="--pc:${p.c}"><input type="radio" name="pk" value="${p.k}" ${p.k === sel ? 'checked' : ''}>${av(p)}<span><b>${esc(p.t)}</b><small>${esc(p.d)}</small><em>“${esc(p.hi)}”</em></span></label>`).join('')}</fieldset>
+      <form id="apPickF"><fieldset class="ap-pl"><legend class="sr">선생님 스타일</legend>${PERS.map(p => `<label class="ap-pc ${p.k === sel ? 'on' : ''}" style="--pc:${p.c}"><input type="radio" name="pk" value="${p.k}" ${p.k === sel ? 'checked' : ''}><span class="ap-pcf" aria-hidden="true">${pChar(p).replace(/pcg/g, 'pcf')}</span><span><b>${esc(p.t)}</b><small>${esc(p.d)}</small><em>“${esc(p.hi)}”</em></span></label>`).join('')}</fieldset>
       <div class="dd-pprev" aria-live="polite">${av(B)}<p><b>${esc(nm || B.n)}</b>${esc(B.hi)}</p></div>
       <label class="ap-nm ap-nm43"><span class="ap-nml">선생님 이름 <small>부를 때 쓰는 이름 · 12자까지</small></span><span class="ap-nmw" style="--pc:${B.c}"><span class="ap-nmi" aria-hidden="true">${av(B)}</span><input name="nm" maxlength="12" value="${esc(nm)}" autocomplete="off" required><svg class="ap-nme" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></span></label>
       <button type="submit" class="ap-go" style="--pc:${B.c}">${esc(jw(nm || B.n))} 시작하기</button>
-      ${cur ? '<button type="button" class="ap-lk" data-ap="pick-x">그대로 둘게요</button>' : '<button type="button" class="ap-lk" data-ap="pick-skip">기본 선생님으로 시작</button>'}</form></div></section>`; }
+      ${cur ? '<button type="button" class="ap-go ghost ap-keep" data-ap="pick-x">그대로 둘게요</button>' /* v43 R9(J4 112): 밑줄 글자 → 보조(고스트) 버튼 */ : '<button type="button" class="ap-lk" data-ap="pick-skip">기본 선생님으로 시작</button>'}</form></div></section>`; }
 
   /* ── 첫 화면: 선생님과의 대화 ── */
   function cardsHTML() { if (!LR.me) return ''; const A = typeof ltTodo === 'function' ? ltTodo() : []; if (!A.length) return '';
@@ -265,12 +275,12 @@
   function homeHTML() { const P = persona(); const me = LR.me; const C = TCFG();
     const brief = me && typeof ltBrief === 'function' ? ltBrief() : null; const first = me ? `${esc(who())}, ${hiTime()}\n${esc(P ? P.hi : '')}` : '';
     const instBox = !standalone() && ls.get('instx') !== '1' ? `<div class="ap-inst" role="note">${ico('install', 18)}<span><b>홈 화면에 앱으로 설치</b><small>${IOS ? '공유 버튼 → 「홈 화면에 추가」' : '한 번 누르면 앱처럼 바로 열려요'}</small></span><button type="button" class="ap-ib2" data-ap="install">설치</button><button type="button" class="ap-ix" data-ap="inst-x" aria-label="설치 안내 닫기">${ico('x', 16)}</button></div>` : '';
-    return `<div class="ap-home ${me ? '' : 'guest'}" style="--pc:${P ? P.c : 'var(--pri)'}">
+    return `<div class="ap-home ${me ? '' : 'guest ap-g9'}" style="--pc:${P ? P.c : 'var(--pri)'}">
       <header class="ap-top"><button type="button" class="ap-me" data-ap="tsheet" aria-label="${esc(tName())} — 선생님 설정">${av(P)}<span><b>${esc(tName())}</b><small>${aiPill()}${me ? `${esc(P ? P.t : '내 AI 학습 비서')}` : '로그인 없이 물어볼 수 있어요'}</small></span></button>
         <button type="button" class="ap-ib" data-ap="srch" aria-label="학습 찾기">${ico('search', 21)}</button>${me ? topIcons() : ''}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
       <div class="ap-scroll" id="apScroll">
         ${me ? `<section class="ap-hero">${orgChip()}${av(P, true)}<h1>${esc(who())},<br>오늘은 무엇을 함께 할까요?</h1><p class="ap-sub">${esc(scn().sub(me))}</p>${statHTML()}</section>` : guestHero()}
-        ${me ? legalCard() : joinCard()}${instBox}${cardsHTML()}${me ? connRow() : ''}
+        ${me ? legalCard() : guestRec() + joinCard()}${instBox}${cardsHTML()}${me ? connRow() : ''}
         <div class="ap-th lai-th" aria-live="polite" aria-label="${esc(tName())}와의 대화">
           ${me ? `<div class="lt-m ap-hi">${av(P)}<div class="lt-b"><p>${nl(first)}</p>${brief ? `<p>${nl(brief.t)}</p>${brief.h || ''}` : ''}</div></div>` : `<div class="lt-m ap-hi">${av(null)}<div class="lt-b"><p>안녕하세요, ${esc(SITE().org.name)}의 ${esc(C.name)}입니다.\n강좌 · 수강 방법${typeof lPayOff === 'function' && lPayOff() ? '' : ' · 가격'}을 바로 물어보세요. 로그인하면 내 진도와 과제에 맞춰 나만의 선생님이 매일 챙겨 드려요.</p><div class="ap-gb"><a class="ap-go sm" href="#login">로그인</a>${SITE().org.type === 'univ' ? '' : '<a class="ap-go sm ghost" href="#join">30초 간편가입</a>'}</div></div></div>`}
           ${threadHTML()}</div></div>
@@ -370,15 +380,15 @@
     return ['클래스', '교재'].filter(g => by(g).length).map(g => `<h3 class="ap-oh">${g} <small>${by(g).length}</small></h3><ul class="ap-ol">${by(g).map(li).join('')}</ul>`).join(''); }
   function searchSheet() { closeSheet(); const R = srRecent(); const P = srPool(); const V = srSeen().map(id => P.find(x => x.id === id)).filter(Boolean);
     const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
-    w.innerHTML = `<div class="ap-sh ap-ssh" role="dialog" aria-modal="true" aria-labelledby="apST"><h2 id="apST">학습 찾기</h2>
+    /* v43 R9(J4 116): 전폭 「닫기」 버튼 → 손잡이 + 바깥 탭(apSheet 클릭) + 머리 오른쪽 작은 닫기 아이콘. 최근 · 추천 검색어는 한 줄 가로 넘김, 결과 행은 순위 숫자를 사진 왼쪽에 */
+    const RW = [...new Set(P.map(x => String(x.n).split(/[\s(·]/)[0]).filter(w => w.length >= 2))].filter(w => !R.includes(w)).slice(0, 6);
+    w.innerHTML = `<div class="ap-sh ap-ssh ap-ssh9" role="dialog" aria-modal="true" aria-labelledby="apST"><span class="ap-shh" aria-hidden="true"></span><div class="ap-ssht"><h2 id="apST">학습 찾기</h2><button type="button" class="ap-ib" data-ap="sheet-x" aria-label="닫기">${ico('x', 20)}</button></div>
       <label class="ap-osr big"><span class="sr">클래스 · 교재 이름으로 찾기</span>${ico('search', 18)}<input type="search" id="apSQ" placeholder="클래스 · 교재 이름으로 찾기" autocomplete="off" enterkeyhint="search"></label>
       <div id="apSR" aria-live="polite"></div>
-      <div id="apS0">${R.length ? `<div class="ap-srh"><h3 class="ap-oh">최근 검색어</h3><button type="button" class="ap-lk" data-ap="srch-clr" data-v="srq">전체 삭제</button></div><div class="ap-fc wrap">${R.map(x => `<span class="ap-fch q"><button type="button" data-ap="srch-q" data-v="${esc(x)}">${esc(x)}</button><button type="button" class="x" data-ap="srch-del" data-v="${esc(x)}" aria-label="${esc(x)} 지우기">×</button></span>`).join('')}</div>` : ''}
+      <div id="apS0">${R.length || RW.length ? `<div class="ap-srh"><h3 class="ap-oh">${R.length ? '최근 · 추천 검색어' : '추천 검색어'}</h3>${R.length ? '<button type="button" class="ap-lk" data-ap="srch-clr" data-v="srq">최근 삭제</button>' : ''}</div><div class="ap-src1">${R.map(x => `<span class="ap-fch q"><button type="button" data-ap="srch-q" data-v="${esc(x)}">${ico('clock', 14)}${esc(x)}</button><button type="button" class="x" data-ap="srch-del" data-v="${esc(x)}" aria-label="${esc(x)} 지우기">×</button></span>`).join('')}${RW.map(w => `<button type="button" class="ap-srw" data-ap="srch-q" data-v="${esc(w)}">${ico('search', 14)}${esc(w)}</button>`).join('')}</div>` : ''}
       ${V.length ? `<div class="ap-srh"><h3 class="ap-oh">최근 본 학습</h3><button type="button" class="ap-lk" data-ap="srch-clr" data-v="srv">전체 삭제</button></div><ul class="ap-ol">${V.map(x => `<li><a class="ap-srr" href="${esc(x.h)}" data-ap="sheet-x"><span class="ap-oty">${esc(x.k)}</span><b>${esc(x.n)}</b></a></li>`).join('')}</ul>` : ''}
-      ${P.length ? `<h3 class="ap-oh">추천 검색어</h3><div class="tb-srs">${[...new Set(P.map(x => String(x.n).split(/[\s(·]/)[0]).filter(w => w.length >= 2))].slice(0, 6).map(w => `<button type="button" data-ap="srch-q" data-v="${esc(w)}">${ico('search', 14)}${esc(w)}</button>`).join('')}</div>
-        <div class="ap-srh"><h3 class="ap-oh">이 기관에서 많이 찾는 학습</h3></div><ul class="ap-srp">${P.filter(x => x.k === '클래스').slice(0, 4).map((x, i) => { const c = (SITE().classes || []).find(y => y.id === x.id) || {}; const ph = c.thumb || (typeof lPhoto === 'function' ? lPhoto(x.n, x.id) : '');
-          return `<li><a href="${esc(x.h)}" data-ap="sheet-x"><span class="ap-srpi"${ph ? ` style="background-image:url('${esc(ph)}')"` : ''}><em>${i + 1}</em></span><span class="ap-srpt"><b>${esc(x.n)}</b><small>${esc(x.d || x.k)}</small></span>${ico('arrow', 16)}</a></li>`; }).join('')}</ul>` : `<p class="ap-empty">찾고 싶은 클래스나 교재 이름을 입력하세요.</p>`}</div>
-      <nav><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
+      ${P.length ? `<div class="ap-srh"><h3 class="ap-oh">이 기관에서 많이 찾는 학습</h3></div><ul class="ap-srp">${P.filter(x => x.k === '클래스').slice(0, 4).map((x, i) => { const c = (SITE().classes || []).find(y => y.id === x.id) || {}; const ph = c.thumb || (typeof lPhoto === 'function' ? lPhoto(x.n, x.id) : '');
+          return `<li><a href="${esc(x.h)}" data-ap="sheet-x"><em class="ap-srn">${i + 1}</em><span class="ap-srpi"${ph ? ` style="background-image:url('${esc(ph)}')"` : ''}></span><span class="ap-srpt"><b>${esc(x.n)}</b><small>${esc(x.d || x.k)}</small></span>${ico('arrow', 16)}</a></li>`; }).join('')}</ul>` : `<p class="ap-empty">찾고 싶은 클래스나 교재 이름을 입력하세요.</p>`}</div></div>`;
     document.body.appendChild(w); const i = w.querySelector('#apSQ'); i && i.focus(); }
   function closeSheet() { const w = document.getElementById('apSheet'); if (w) w.remove(); }
 

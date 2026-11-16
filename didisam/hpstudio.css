@@ -371,3 +371,45 @@ html[data-theme=dark] .hps-pubc{background:linear-gradient(90deg,rgba(0,134,45,.
 #hpe.hps .hps-flow li:not(.cur) button{padding:0 6px}
 #hpe.hps .hpw-talk{padding:6px 12px!important}
 #hpe.hps .hpw-talk input[name=q]{min-height:40px}
+/* ═════════ v43 R9 — 빌더 패널 시각화(J4 121 · 122 · 124 · 125 · 127) ═════════ */
+#hpe{--hps-th:#00862D;--hps-th2:#D1FADF;--hps-th3:#ECFDF3}
+html[data-theme="dark"] #hpe{--hps-th:#3DDC84;--hps-th2:#1F3A2A;--hps-th3:#16261D}
+.hps-pd1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hps-sl9 li{flex-direction:row!important;align-items:center;gap:8px!important;padding:8px 8px 8px 4px!important}
+.hps-sl9 .hps-sg{flex:none;width:16px;color:var(--g400,#B8B0A2);cursor:grab;display:grid;place-items:center}
+.hps-sl9 .hps-sth{flex:none;border-radius:6px;background:var(--surface2,#FAF8F5);box-shadow:inset 0 0 0 1px var(--hair,rgba(26,24,20,.08))}
+.hps-sl9 .hps-sn{flex:1;min-width:0;text-align:left}
+.hps-sl9 .hps-sn b,.hps-sl9 .hps-sn small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hps-sl9 .hps-sa{flex:none;display:flex;gap:2px}
+.hps-sl9 .hps-sib{width:30px;height:30px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--g700,#5C554B);cursor:pointer;padding:0}
+.hps-sl9 .hps-sib:hover:not(:disabled){background:var(--gr50,#ECFDF3);color:var(--gr700,#00862D)}
+.hps-sl9 .hps-sib:disabled{opacity:.3;cursor:default}
+.hps-sl9 li.hid .hps-sth{opacity:.5}
+.hps-sl9 li:not(:hover):not(:focus-within):not(.on) .hps-sib:is([data-a="up"],[data-a="down"]){display:none}
+.hps-sl9 .hps-sa button{min-width:0!important;min-height:0!important}
+/* v43 R9(J4 120): 템플릿 고르기 — 열린 동안 캔버스를 감춰 머리가 비치지 않게 · 카드 3열 큰 썸네일 · 칩 6개 + 더 보기 */
+body.hps-gal-on #hpeF{visibility:hidden}
+@media (min-width:761px){.hps-gal .tpd-g{grid-template-columns:repeat(auto-fill,minmax(360px,1fr))!important;gap:24px!important}}
+.tpd-chw{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tpd-chw>.sl-chips{flex-wrap:nowrap}
+.tpd-more{position:relative}
+.tpd-more>summary{list-style:none;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:999px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--hair,rgba(26,24,20,.12));font-size:14px;font-weight:600;cursor:pointer}
+.tpd-more>summary::-webkit-details-marker{display:none}
+.tpd-more>summary small{font-size:12px;color:var(--gr700,#00862D);font-weight:800}
+.tpd-more[open]>.sl-chips{position:absolute;z-index:20;top:calc(100% + 6px);left:0;display:flex;flex-wrap:wrap;gap:6px;width:max-content;max-width:420px;padding:10px;border-radius:14px;background:var(--surface,#fff);box-shadow:0 12px 32px -8px rgba(26,24,20,.25)}
+/* v43 R9(J4 125): 게시 결과 = 캔버스 오른쪽 위 카드 */
+.hps-pubc.hps-pubc9{position:absolute;right:76px;z-index:7;width:360px;flex-direction:column;align-items:stretch;gap:12px;padding:16px;border:0;border-radius:20px;background:var(--surface,#fff);box-shadow:0 1px 2px rgba(26,24,20,.06),0 18px 40px -12px rgba(26,24,20,.28)}
+.hps-pubc9 .hps-pch{display:flex;align-items:center;gap:12px}
+.hps-pubc9 .hps-pch>div{flex:1;min-width:0}
+.hps-pubc9 .hps-pch b{font-size:17px;font-weight:800}
+.hps-pubc9 .hps-pch small{display:block;font-size:13px;color:var(--g700,#5C554B)}
+.hps-pubc9 .hps-pcb{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--gr600,#00A33A);color:#fff}
+.hps-pubc9 .hps-pcl{display:flex!important;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.hps-pubc9 .hps-pcl li{display:flex;align-items:flex-start;gap:10px;font-size:14px}
+.hps-pubc9 .hps-pcl li i{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;background:var(--gr50,#ECFDF3);color:var(--gr700,#00862D)}
+.hps-pubc9 .hps-pcl li.no i{background:#FEF3C7;color:#B45309}
+.hps-pubc9 .hps-pcl li b{display:block;font-size:14px}.hps-pubc9 .hps-pcl li small{display:block;font-size:13px;color:var(--g700,#5C554B)}
+.hps-pubc9 .hps-pcu{margin:0;display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--surface2,#FAF8F5);font-size:13px}
+.hps-pubc9 .hps-pcu span{flex:none;color:var(--g600,#6B6459)}.hps-pubc9 .hps-pcu b{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:ui-monospace,monospace;font-size:12.5px}
+.hps-pubc9 .hps-pca{display:flex;gap:8px}.hps-pubc9 .hps-pca .btn{flex:1;justify-content:center;min-height:40px;font-size:14px}
+html[data-theme=dark] .hps-pubc.hps-pubc9{background:#1F2221}

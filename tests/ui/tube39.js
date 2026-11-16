@@ -47,6 +47,9 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     ok(/VLOOKUP 퀴즈/.test(r.sug) && /40점/.test(r.sug), `홈: AI 튜터 제안(틀린 퀴즈 근거) — ${r.sug.replace(/\s+/g, ' ')}`);
     ok(r.week >= 2, `홈: 이번 주 차시 ${r.week}개`);
     ok(r.tabs.join() === '홈,내 강의,둘러보기,나' && r.on === '홈', `홈: 하단 탭 4칸(v43 대표님 지시: 학습자 입장 유형별 탭 — 성인 학원) — ${r.tabs.join(' · ')} (선택 ${r.on})`);
+    /* v43 R9(J4 113 · 205): 홈 첫 화면에서는 본문 튜터 바가 보이는 동안 떠 있는 단추를 접는다(카드 · 사진을 가리지 않게) → 튜터 바가 보이면 접힘, 지나 내려간 뒤(위로 조금 올림) 다시 보임 */
+    ok(await p.evaluate(() => { const t = document.querySelector('#lm .tb-tut'); return !t || t.getBoundingClientRect().bottom <= 0 || document.body.classList.contains('tb-fhome'); }), '홈: 튜터 바가 보이는 동안 떠 있는 단추를 접음(v43 R9)');
+    await p.evaluate(() => { const t = document.querySelector('#lm .tb-tut'); if (t) scrollTo({ top: scrollY + t.getBoundingClientRect().bottom + 60, behavior: 'instant' }); }); await p.waitForTimeout(150); await p.evaluate(() => scrollTo({ top: Math.max(0, scrollY - 20), behavior: 'instant' })); await p.waitForTimeout(350);
     const fb = await p.evaluate(() => { const b = document.getElementById('tbFab'); if (!b) return null; const R = b.getBoundingClientRect(); const n = document.querySelector('.ap-nav.tb-nav').getBoundingClientRect(); return { t: b.textContent.trim(), l: b.getAttribute('aria-label'), w: R.width, above: R.bottom <= n.top, dock: Math.abs(R.bottom - n.bottom) <= 4 && R.left >= n.right, fixed: getComputedStyle(b).position }; });
     /* v43 G2 2차(J4 공통 결함 4): 탭 바 옆에 붙으면 5칸처럼 보여 탭 바 위로 띄운 작은 알약(높이 44px)으로 바꿨다 — 탭 바와 겹치지 않고(above) 탭 바 줄에 붙지 않음(!dock) */
     ok(fb && fb.t === 'AX 튜터' && /AX 튜터\(AI 튜터\) 열기/.test(fb.l) && fb.w >= 44 && fb.above && !fb.dock && fb.fixed === 'fixed', `홈: AI 튜터 단추가 아래 탭 바 위에 떠 있음(v43 G2 2차: 5칸처럼 보이지 않게) — ${JSON.stringify(fb)}`);

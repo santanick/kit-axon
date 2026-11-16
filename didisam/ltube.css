@@ -467,3 +467,22 @@ body.tube:not(.tb-watch) #lm{padding-bottom:calc(var(--ap-nav,64px) + var(--ap-s
 .tb-tyx{display:flex;align-items:center;gap:6px}.tb-tyx::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--gr500,#16A34A)}
 .tb-tya{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 4px;color:var(--gr700,#00862D);font-size:14px;font-weight:800;text-decoration:none}
 html[data-theme="dark"] .tb-tyc.hot{background:var(--surface)}
+/* ═════════ v43 R9 — 앱 홈(J4 113 · 202~208) ═════════ */
+/* 홈: 본문 튜터 바가 보이는 동안(아직 지나지 않음) 떠 있는 단추를 접어 첫 화면 카드 · 사진을 가리지 않게 */
+body.tube.tb-fhome:not(.tb-watch) #tbFab.tb-fab{opacity:0;transform:translateY(16px) scale(.9);pointer-events:none}
+/* 목표 카드 「참고용」 = 작은 칩(두 줄 꺾임 방지) */
+.tb-gchip{display:inline-flex;align-items:center;margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;font-size:11px;font-weight:700;font-style:normal;vertical-align:1px}
+.tb-fgoal .tb-gb{text-decoration:none;color:inherit}
+/* 유형 카드 수치 칸(3칸) + 막대 */
+.tb-tykv{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;margin:0}
+.tb-tykv>div{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:14px;background:var(--surface2,#F7F5F1);min-width:0}
+.tb-tykv dt{font-size:12px;font-weight:600;color:var(--g700,#5C554B);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-tykv dd{margin:0;font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--g900,#1A1814);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-tyb{display:block;height:6px;border-radius:99px;background:var(--gr100,#D1FADF);overflow:hidden}.tb-tyb i{display:block;height:100%;border-radius:inherit;background:var(--gr500,#16A34A)}
+.tb-tyc.hot .tb-tyn{background:var(--co100,#FFE0CF);color:var(--co700,#C2410C)}
+/* v43 R9(J4 117): 앱 트랙 카드 사진 띠 머리 */
+body.lapp #lm .track.tk9 .tkh{position:relative;overflow:hidden;min-height:132px;display:flex;flex-direction:column;justify-content:flex-end;background:#06351C!important}
+body.lapp #lm .track.tk9 .tkp{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+body.lapp #lm .track.tk9 .tkh::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,30,14,.08) 0%,rgba(4,30,14,.78) 100%)}
+body.lapp #lm .track.tk9 .tkh>:not(img){position:relative;z-index:1}
+body.lapp #lm .track .lbtn.pri{background:var(--gr600,#00A33A)!important;border-color:var(--gr600,#00A33A)!important;color:#fff!important}

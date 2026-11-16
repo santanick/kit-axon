@@ -144,7 +144,9 @@ const SECR = {
     return `<section class="sec"><div class="in">${secHead(d, `<p class="shr">아래 ${I.length}단계를 차례로 따라가면 됩니다. 모든 단계는 이 사이트 안에서 이어집니다.</p>`)}<div class="steps">${I.map((s, i) => { const now = i === M.step, done = LR.me && i < M.step;
       const href = i === 0 ? (M.dg ? '#dg/' + M.dg.id : '#diag') : i === 1 ? '#courses' : i === 2 ? '#tutorials' : '#badges';
       return `<a class="step ${now ? 'now' : ''} ${done ? 'done' : ''}" href="${href}"><div class="sth"><span class="no">${String(i + 1).padStart(2, '0')}</span><em>${done ? '완료 ✓' : now ? '지금 할 차례' : '다음'}</em></div><b>${esc(s.h)}</b><p>${esc(s.d)}</p>${s.tag ? `<div class="stf"><span>${ico('clock', 13)} ${esc(s.tag)}</span></div>` : ''}</a>`; }).join('')}</div></div></section>`; },
-  tracks(d) { return `<section class="sec"><div class="in">${secHead(d)}<div class="tracks">${SITE().tracks.map(t => `<div class="track" style="--c:${esc(t.color)}"><div class="tkh"><p>${esc(t.eyebrow || 'TRACK')}</p><h3>${esc(t.name)}</h3></div><div class="tkb"><p>${esc(t.desc)}</p><ol>${(t.steps || []).map((s, i) => `<li><span>BADGE ${i + 1}</span>${esc(String(s).replace(/^\d+\.\s*/, ''))}</li>`).join('')}</ol>${btn(t.cta || '시작하기', diagFirst() ? '#dg/' + diagFirst().id : '#courses', document.body.classList.contains('lapp') ? 'pri' : 'blk' /* v43 R5(117): 앱에서는 검정 단추 대신 그린 주 단추 */)}</div></div>`).join('')}</div></div></section>`; },
+  tracks(d) { const AP = document.body.classList.contains('lapp') || (typeof window.lappOn === 'function' && window.lappOn()); /* v43 R9(J4 117): 앱 트랙 카드 = 사진 띠 머리(단색 머리 → 사진 + 어둡게 깐 글자) · 그린 주 단추 */
+    const ph = t => { try { return AP && typeof window.lPhoto === 'function' ? window.lPhoto(t.name + ' ' + (t.desc || ''), t.id || t.name, true) : ''; } catch (e) { return ''; } };
+    return `<section class="sec"><div class="in">${secHead(d)}<div class="tracks">${SITE().tracks.map(t => { const u = ph(t); return `<div class="track${u ? ' tk9' : ''}" style="--c:${esc(t.color)}"><div class="tkh">${u ? `<img class="tkp" src="${esc(u)}" alt="" loading="lazy">` : ''}<p>${esc(t.eyebrow || 'TRACK')}</p><h3>${esc(t.name)}</h3></div><div class="tkb"><p>${esc(t.desc)}</p><ol>${(t.steps || []).map((s, i) => `<li><span>BADGE ${i + 1}</span>${esc(String(s).replace(/^\d+\.\s*/, ''))}</li>`).join('')}</ol>${btn(t.cta || '시작하기', diagFirst() ? '#dg/' + diagFirst().id : '#courses', AP ? 'pri' : 'blk' /* v43 R5(117): 앱에서는 검정 단추 대신 그린 주 단추 */)}</div></div>`; }).join('')}</div></div></section>`; },
   tutorials(d) {
     const f = LR.tf || {}; const S2 = SITE(); let T = S2.tuts.filter(t => (f.lv == null || f.lv === '' || String(t.level) === String(f.lv)) && (!f.ty || t.type === f.ty)); const n = +d.n || 5; const all = T.length; T = T.slice(0, n); const main = T[0];
     const filt = `<div class="tfilt"><div class="seg">${['', ...S2.levels.map((_, i) => String(i))].map(v => `<button data-lact="tf" data-k="lv" data-v="${v}" class="${String(f.lv ?? '') === v ? 'on' : ''}">${v === '' ? '전체' : esc(lvOf(+v).name.split(' ').pop())}</button>`).join('')}</div><div class="chips">${S2.types.map(x => `<button data-lact="tf" data-k="ty" data-v="${(f.ty || '') === x.k ? '' : esc(x.k)}" class="${f.ty === x.k ? 'on' : ''}" style="--c:${esc(x.color)}"><i></i>${esc(x.k)} · ${esc(x.name)}</button>`).join('')}</div></div>`;
@@ -186,7 +188,8 @@ function lDemoType(j, nat) {
   if (j.org.type === nat && !(nat === 'univ' && j.org.ed === 'lms')) return;
   const P = {
     k12: ['중2 수학 심화반', '중3 영어 리딩반', '고1 국어 문학 특강', '초6 과학 탐구반', '겨울방학 수학 선행', '주말 코딩 놀이반'],
-    'univ:lite': ['AI 리터러시 기초', '데이터 분석 입문(파이썬)', '취업 역량 포트폴리오', '창업 아이디어 캠프', '글로벌 커뮤니케이션', 'SW 코딩 부트캠프'],
+    /* v43 R9(J4 203): AI교육센터 과정이 창업 · 글로벌과 섞여 보이던 문제 → 센터 과정을 AI 트랙으로 일관 */
+    'univ:lite': ['AI 리터러시 기초', 'AI 데이터 분석 입문(파이썬)', 'AI 활용 취업 포트폴리오', '생성형 AI 창업 아이디어 캠프', 'AI 프롬프트 글쓰기', 'AI · SW 코딩 부트캠프'],
     'univ:lms': ['자료구조 01분반', '경영 데이터 분석 02분반', '프로그래밍 기초 01분반', '간호학 개론 02분반', '공학 수학 03분반', '교양 글쓰기 01분반'],
     corp: ['신입사원 온보딩', '생성형 AI 업무 활용', '개인정보보호 교육(법정)', '신임 팀장 리더십', '직장 내 괴롭힘 예방(법정)', '영업 협상 스킬'],
     voc: ['전기기능사 실기', '용접 기초 실습', 'CNC 선반 가공', '산업안전보건 교육', 'PLC 제어 입문', '현장 실무 프로젝트'],

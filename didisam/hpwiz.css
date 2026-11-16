@@ -110,3 +110,38 @@
 .hpw-th.on{box-shadow:0 0 0 2px var(--gr600,#00A832),0 12px 28px rgba(0,122,41,.14)}
 .hpw-th.on .hpw-tn{background:var(--gr50,#ECFDF3)}
 .hpw-rec{background:var(--gr700,#007A29);color:#fff}
+/* ═════════ v43 R9(J4 119 · 127) — 빌더 안에서는 오른쪽 패널 · 단계 진행 바 · 큰 썸네일 · 품질 점수 링 ═════════ */
+#modal.hpw-dock{background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;justify-content:flex-end!important;align-items:stretch!important;padding:0!important;pointer-events:none}
+#modal.hpw-dock>.modal{pointer-events:auto;width:min(600px,46vw)!important;max-width:none!important;height:100vh!important;max-height:none!important;margin:0!important;border-radius:20px 0 0 20px!important;box-shadow:-24px 0 48px -24px rgba(26,24,20,.35)!important;display:flex;flex-direction:column;animation:none}
+#modal.hpw-dock>.modal>.mb{flex:1;overflow:auto}
+#modal.hpw-dock .hpw-tg{grid-template-columns:repeat(2,1fr);gap:16px}
+#modal.hpw-dock .hpw-tv{height:150px}
+.hpw-sp9{position:relative;display:grid!important;grid-template-columns:repeat(3,1fr);gap:0!important;padding:0 0 14px!important;margin:0 0 14px!important}
+.hpw-sp9::before,.hpw-sp9::after{content:"";position:absolute;left:0;bottom:0;height:6px;border-radius:99px}
+.hpw-sp9::before{right:0;background:var(--gr100,#D1FADF)}
+.hpw-sp9::after{width:var(--p);background:var(--gr600,#00A33A);transition:width .2s}
+.hpw-sp9 li{display:flex!important;align-items:center;gap:8px;font-size:14px!important;font-weight:600;color:var(--g600,#6B6459);background:none!important;padding:0!important}
+.hpw-sp9 li.on{color:var(--g900,#1A1814);font-weight:800}
+.hpw-sp9 li.done{color:var(--gr700,#00862D)}
+.hpw-sp9 li span{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:var(--surface2,#F3F0EA);color:inherit}
+.hpw-sp9 li.on span{background:var(--gr600,#00A33A);color:#fff}
+.hpw-sp9 li.done span{background:var(--gr100,#D1FADF)}
+.hpw-q9 .hpw-qs{display:flex;align-items:center;gap:16px;position:relative}
+.hpw-q9 .hpw-ring{position:relative;flex:none;width:88px;height:88px}
+.hpw-q9 .hpw-ring .tr{stroke:var(--gr100,#D1FADF)}.hpw-q9 .hpw-ring .br{stroke:var(--gr600,#00A33A)}
+.hpw-q9 .hpw-ring.mid .br{stroke:#F59E0B}.hpw-q9 .hpw-ring.lo .br{stroke:#DC2626}
+.hpw-q9 .hpw-score{position:absolute;left:0;top:0;width:88px;height:88px;display:grid;place-items:center;font-size:28px!important;font-weight:800;letter-spacing:-.03em;line-height:1}
+.hpw-q9 .hpw-score small{display:none}
+.hpw-q9 .hpw-qs>div b{font-size:17px}.hpw-q9 .hpw-qs>div small{display:block;font-size:14px;color:var(--g700,#5C554B)}
+.hpw-q9 .hpw-qh{margin:16px 0 8px;font-size:14px;font-weight:800;color:#B91C1C}
+.hpw-q9 .hpw-qbad,.hpw-q9 .hpw-qinfo{grid-template-columns:1fr!important}
+.hpw-q9 .hpw-qbad li{padding:10px 12px;border-radius:12px;background:#FEF2F2;font-size:14px}
+.hpw-q9 .hpw-ql li{font-size:14px}
+.hpw-q9 .hpw-qok{margin:14px 0;padding:12px 14px;border-radius:12px;background:var(--gr50,#ECFDF3);color:var(--gr800,#00602A);font-size:14px;font-weight:600}
+.hpw-q9 .hpw-qgood{margin-top:12px}
+.hpw-q9 .hpw-qgood>summary{cursor:pointer;font-size:14px;font-weight:700;color:var(--gr700,#00862D);min-height:36px;display:flex;align-items:center}
+html[data-theme="dark"] .hpw-q9 .hpw-qbad li{background:rgba(220,38,38,.12)}
+#modal.hpw-dock{display:flex!important}
+.hpw-q9 .hpw-score{background:transparent!important;min-width:0!important;border-radius:50%}
+.hpw-q9 .hpw-score small{display:none!important}
+#modal.hpw-dock .hpw-q9{padding-top:4px}

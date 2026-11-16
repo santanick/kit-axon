@@ -161,12 +161,13 @@
   const hooked = new WeakSet();
   const watch = () => { if (!HPE.on) return; const f = document.getElementById('hpeF'); if (f && !hooked.has(f)) { hooked.add(f); f.addEventListener('load', () => setTimeout(() => { try { bindF(f); } catch (e) { console.error('hpimg bind', e); } }, 0)); } };
   new MutationObserver(watch).observe(document.body, { childList: true, subtree: true });
+  /* v43 R9(J4 118 · 121 · 025): 사진 위 「샘플 — 우리 기관 사진으로 바꾸세요」 긴 띠가 사진마다 겹쳐 보임 → 왼쪽 아래 모서리 작은 칩 「샘플 사진」 */
   const EDIT_CSS = `[data-hpi-img]{cursor:pointer;position:relative}[data-hpi-img]:hover,[data-hpi-img].hpi-on,[data-hpi-img]:focus-visible{outline:3px solid #00862D!important;outline-offset:2px}
 [data-hpi-img].hpi-drop{outline:3px dashed #00862D!important;outline-offset:4px;background-color:rgba(0,134,45,.10)}
 [data-hpi-img]:not(a)::after{content:attr(data-hpi-lb);position:absolute;right:12px;bottom:12px;z-index:31;background:#2A2B2B;color:#fff;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:8px 12px;border-radius:99px;opacity:0;transition:opacity .12s;pointer-events:none;box-shadow:0 6px 16px rgba(0,0,0,.25)}
 [data-hpi-img]:hover::after,[data-hpi-img].hpi-on::after,[data-hpi-img].hpi-drop::after{opacity:1}
 [data-hpe-f].hpi-cur{outline:2px solid #00862D;outline-offset:3px}
-[data-hpi-stock]::before{content:'샘플 — 우리 기관 사진으로 바꾸세요';position:absolute;left:12px;top:12px;z-index:32;background:rgba(20,22,31,.86);color:#fff;font:700 12px/1.2 Pretendard,system-ui,sans-serif;padding:7px 11px;border-radius:99px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.25);white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}`;
+[data-hpi-stock]::before{content:'샘플 사진';position:absolute;left:10px;top:auto!important;bottom:10px;z-index:32;background:rgba(20,22,31,.72);color:#fff;font:700 11px/1.2 Pretendard,system-ui,sans-serif;padding:4px 9px;border-radius:99px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.25);white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}`;
   function targets(doc) {
     const mark = (el, r, lb) => { if (!el || el.hasAttribute('data-hpi-img')) return; el.setAttribute('data-hpi-img', JSON.stringify(r)); el.removeAttribute('aria-hidden'); el.setAttribute('data-hpi-lb', lb); el.setAttribute('tabindex', '0'); el.setAttribute('role', 'button'); el.setAttribute('aria-label', `${lb} — 누르거나 사진을 끌어다 놓으세요`); };
     doc.querySelectorAll('[data-hpe]').forEach(sec => { const [key, si] = sec.dataset.hpe.split('|'); if (key !== HPE.key) return; const x = secList(HPE.key)[+si]; if (!x) return;

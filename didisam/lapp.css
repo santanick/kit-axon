@@ -176,3 +176,55 @@ body.lapp .ap-my+section.myh+section.sec,body.lapp .ap-my~section.sec.mypage:fir
 .ap-legal{display:flex;align-items:center;gap:12px;min-height:56px;background:var(--surface,#fff);border:1px solid var(--ap-line);border-left:4px solid #B45309;border-radius:16px;padding:10px 12px;margin:6px 0 12px;color:var(--ap-ink);text-decoration:none}
 .ap-legal.hot{border-left-color:#B3121B}.ap-legal .ap-ld{flex:none;font:800 15px/1 var(--sg);color:#B45309;min-width:46px;text-align:center}.ap-legal.hot .ap-ld{color:#B3121B}
 .ap-legal .ap-lt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.ap-legal b{font:700 14px/1.35 var(--sg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ap-legal small{font:500 12.5px/1.35 var(--sg);color:var(--ap-mute)}
+/* ═════════ v43 R9 — 방문자 앱 홈(J4 111): 히어로 낮춤 · 추천 강좌 사진 카드 · 가입 카드 한 덩어리 · 빠른 질문 한 줄 ═════════ */
+body.lapp .ap-g9 .ap-ghero{min-height:0;padding:18px 18px 18px;margin-bottom:12px}
+body.lapp .ap-g9 .ap-ghero .ap-gey{margin-top:64px}
+body.lapp .ap-g9 .ap-ghero h1{font-size:24px}
+body.lapp .ap-g9 .ap-ghero .ap-gsub{margin-bottom:12px;font-size:13px}
+body.lapp .ap-home.guest.ap-g9 .ap-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+body.lapp .ap-g9 .ap-chips::-webkit-scrollbar{display:none}
+body.lapp .ap-g9 .ap-chips>*{flex:none}
+.ap-grec{margin:0 0 12px}
+.ap-grh{display:flex;align-items:baseline;justify-content:space-between;margin:0 12px 8px}
+.ap-grh h2{margin:0;font:800 17px/1.3 var(--sg,inherit);letter-spacing:-.02em;color:var(--g900,#1A1814)}
+.ap-grh a{font-size:13px;font-weight:700;color:var(--gr700,#00862D);text-decoration:none;min-height:32px;display:inline-flex;align-items:center}
+.ap-grl{display:flex;gap:10px;overflow-x:auto;padding:0 12px 4px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.ap-grl::-webkit-scrollbar{display:none}
+.ap-grc{flex:none;width:200px;scroll-snap-align:start;display:flex;flex-direction:column;gap:4px;text-decoration:none;color:inherit}
+.ap-grp{display:block;height:112px;border-radius:16px;overflow:hidden;background:var(--gr50,#ECFDF3)}
+.ap-grp img{width:100%;height:100%;object-fit:cover;display:block}
+.ap-grc b{font-size:14px;font-weight:800;color:var(--g900,#1A1814);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.ap-grc small{font-size:12px;color:var(--g700,#5C554B);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.lapp .ap-g9 .ap-join{padding-top:16px;padding-bottom:16px}
+body.lapp .ap-g9 .ap-join .ap-jl{margin:6px 0 12px;font-size:13px;line-height:1.5;color:var(--g700,#5C554B)}
+/* v43 R9(J4 112): 선생님 카드마다 얼굴 일러스트 · 어절 단위 줄바꿈 · 보조 버튼 */
+.ap-pc .ap-pcf{flex:none;width:64px;height:64px;display:block}
+.ap-pc .ap-pcf svg{width:64px;height:64px;display:block}
+.ap-pc b,.ap-pc small,.ap-pc em{word-break:keep-all;overflow-wrap:break-word}
+.ap-go.ghost.ap-keep{display:flex;width:100%;justify-content:center;margin-top:10px;text-decoration:none}
+/* v43 R9(J4 115): 자녀 카드 — 큰 아바타 · 굵은 출석 · 진도 막대 + 숫자, 바로가기 둘째 줄이 탭 바에 가리지 않게 아래 여백 */
+body.lapp .dd-kid9{align-items:center;gap:14px;padding:16px}
+body.lapp .dd-kid9 .dd-kav{width:56px;height:56px;font-size:22px}
+body.lapp .dd-kid9 .dd-kb{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+body.lapp .dd-kid9 .dd-kb>b{font-size:17px}
+body.lapp .dd-kid9 .dd-kdue{align-self:flex-start;margin-top:2px;padding:3px 9px;border-radius:99px;background:var(--co50,#FFF3EC);color:var(--co700,#C2410C);font:700 12px/1.3 var(--sg)}
+body.lapp .dd-kbar{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+body.lapp .dd-kbar>span{display:grid;grid-template-columns:30px 1fr 42px;align-items:center;gap:8px}
+body.lapp .dd-kbar em{font:600 12px/1 var(--sg);font-style:normal;color:var(--ap-mute,#5C554B)}
+body.lapp .dd-kbar>span>i{display:block;height:8px;border-radius:99px;background:var(--gr100,#D1FADF);overflow:hidden}
+body.lapp .dd-kbar>span>i>i{display:block;height:100%;border-radius:inherit;background:var(--gr600,#00A33A)}
+body.lapp .dd-kbar b{font:800 14px/1 var(--sg);text-align:right;font-variant-numeric:tabular-nums}
+.ap-par .ap-pscroll{padding-bottom:calc(var(--ap-nav,76px) + 40px + env(safe-area-inset-bottom))}
+html[data-theme="dark"] body.lapp .dd-kid9 .dd-kdue{background:rgba(249,115,22,.14);color:#FDBA8C}
+/* v43 R9(J4 116): 검색 시트 — 손잡이 · 머리 닫기 아이콘 · 검색어 한 줄 가로 넘김 · 순위 숫자는 사진 왼쪽, 사진 72px */
+.ap-ssh9 .ap-shh{display:block;width:40px;height:5px;margin:-4px auto 10px;border-radius:99px;background:var(--line2,rgba(26,24,20,.18))}
+.ap-ssh9 .ap-ssht{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ap-ssh9 .ap-ssht h2{margin:0}
+.ap-ssh9 .ap-src1{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin:0 -2px;scrollbar-width:none}
+.ap-ssh9 .ap-src1::-webkit-scrollbar{display:none}
+.ap-ssh9 .ap-src1>*{flex:none}
+.ap-ssh9 .ap-srw{display:inline-flex;align-items:center;gap:4px;min-height:40px;padding:0 14px;border:0;border-radius:999px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--line,rgba(0,0,0,.08));font-size:14px;font-weight:700;color:var(--g800,#2E2A24);white-space:nowrap}
+.ap-ssh9 .ap-srw svg,.ap-ssh9 .ap-src1 .ap-fch svg{color:var(--gr700,#00862D);vertical-align:-2px;margin-right:2px}
+.ap-ssh9 .ap-srp a{padding:8px 10px 8px 6px}
+.ap-ssh9 .ap-srn{flex:none;width:22px;text-align:center;font:800 17px/1 var(--sg,inherit);font-style:normal;color:var(--gr700,#00862D);font-variant-numeric:tabular-nums}
+.ap-ssh9 .ap-srpi{width:72px;height:72px;border-radius:14px}
