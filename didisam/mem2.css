@@ -169,3 +169,14 @@
 .mb-rel{display:inline-flex;align-items:center;min-height:26px;padding:2px 10px;border-radius:999px;background:var(--surface2,#f2f4f3);font-size:13px;font-weight:600}
 /* v43 S3A 014: 이름 아래 가린 연락처 줄을 작게 — 행 높이를 줄임 */
 #main .mb-ct{display:inline-block;font-size:12px;line-height:16px;margin-top:2px;color:var(--mute);letter-spacing:-.1px}
+/* v43.4 MA(관리자 001~042) 휴대폰 폭 교정 */
+@media (max-width:760px){
+  /* 029 초대: 연결 링크와 3칸 안내 카드가 카드 밖으로 넘치던 것 → 링크는 두 줄, 안내 카드는 한 줄에 하나 */
+  .en-ch{grid-template-columns:minmax(0,1fr)}
+  .en-link{flex-wrap:wrap}.en-link code{flex:1 1 100%}.en-link .btn{flex:1 1 100%;justify-content:center;min-height:44px}
+  /* 014 명단: 가린 연락처가 「평균 진도」와 겹치던 것 → 연락처는 이름 아래 한 줄을 따로 쓴다 */
+  #main .mb-ct{display:block;white-space:normal;overflow-wrap:anywhere;margin-top:4px}
+  #main[data-l43="members"] table.mcard td.mc1{white-space:normal}
+  #main[data-l43="members"] table.mcard td.l43-pc{flex:1 1 100%;min-width:0}
+  #main[data-l43="members"] table.mcard td.l43-pc .l43-pgt{min-width:0;flex:1}
+}
