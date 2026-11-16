@@ -13,6 +13,10 @@ const FABI = { big: 'M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7', small: 'M4 14h6v6
 const fabSvg = (k, s = 16) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${FABI[k]}"/></svg>`;
 const fabWide = () => innerWidth > 860;
 const fabBld = () => document.body.classList.contains('mode-bld');
+/* v43 H2(131): 대화를 맨 아래로 내린 뒤, 마지막 답 말풍선이 대화 칸보다 짧으면 그 머리(아바타)부터 보이게 — 「지금 화면」 블록 밑에 윗부분이 잘려 시작하지 않게 */
+const fabThreadStart = () => { const th = $('.bchat .thread'); if (!th) return; th.scrollTop = th.scrollHeight; const L = [...th.querySelectorAll(':scope > .msg')]; const m = L.pop(); if (!m) return;
+  const top = m.getBoundingClientRect().top - th.getBoundingClientRect().top + th.scrollTop - 10; const prev = L.pop(); const pt = prev && prev.classList.contains('u') ? prev.getBoundingClientRect().top - th.getBoundingClientRect().top + th.scrollTop - 10 : null;
+  th.scrollTop = Math.max(0, pt != null && th.scrollHeight - pt <= th.clientHeight + 10 ? pt : Math.min(th.scrollTop, top)); };
 /* v25.2 대표님(2026-11-03) '모바일에서는 AI SAM 챗봇이 없자나?' → 휴대폰(빌드 화면)도 같은 떠 있는 버튼, 대화창은 전체 화면 시트(고정 모드 없음) */
 const fabOn = () => (fabWide() ? FAB.get().mode === 'float' : fabBld()) && !!(typeof S !== 'undefined' && S && S.org) && !document.body.classList.contains('mode-learner');
 const fabIsOpen = () => fabBld() ? FAB.get().open : !!$('#drawer');
@@ -37,11 +41,11 @@ function fabOpen(focus = true) { if (!fabOn()) return false;
   if (fabBld()) { if (!FAB.get().open) FAB.set({ open: true }); else fabSync(); }
   else if (CUR.ws === 'home') { const ta = $('.chatwrap textarea'); if (ta) { ta.scrollIntoView({ block: 'center', behavior: 'smooth' }); if (focus) ta.focus(); } return true; } /* 클래식 홈은 대화가 화면 본문 */
   else if (!$('#drawer')) { ACT['chat-open'] && ACT['chat-open'](); }
-  if (focus) setTimeout(() => { const ta = $(fabBld() ? '.bchat textarea' : '#drawer textarea'); ta && ta.focus(); const th = $('.bchat .thread'); if (th) th.scrollTop = th.scrollHeight; }, 60); return true; }
+  if (focus) setTimeout(() => { const ta = $(fabBld() ? '.bchat textarea' : '#drawer textarea'); ta && ta.focus(); fabThreadStart(); }, 60); return true; }
 function fabClose() { if (fabBld()) FAB.set({ open: false }); else ACT['chat-close'] && ACT['chat-close']({}); fabSync(); $('#fabBtn')?.focus(); }
 ACT['fab-toggle'] = () => fabIsOpen() ? fabClose() : fabOpen();
 ACT['fab-close'] = () => fabClose();
-ACT['fab-size'] = () => { FAB.set({ size: FAB.get().size === 'l' ? 's' : 'l' }); const th = $('.bchat .thread'); if (th) th.scrollTop = th.scrollHeight; };
+ACT['fab-size'] = () => { FAB.set({ size: FAB.get().size === 'l' ? 's' : 'l' }); fabThreadStart(); };
 ACT['fab-mode'] = el => { const v = el.dataset.v === 'dock' ? 'dock' : 'float'; FAB.set({ mode: v, open: true }); toast(v === 'dock' ? 'AI SAM을 왼쪽에 고정했습니다. 머리의 띄우기 버튼으로 되돌릴 수 있습니다.' : 'AI SAM을 화면 위에 띄웠습니다. 오른쪽 아래 버튼으로 열고 닫습니다.', 'ok'); };
 /* 대화창을 여는 기존 경로를 위젯으로 */
 /* v21 대표님 '어떤 걸 클릭할 때마다 AI SAM이 열려 불편' → 대화창은 사람이 연 경우(버튼 · Ctrl+K · 대화창 열기 버튼 클릭)에만 연다.
