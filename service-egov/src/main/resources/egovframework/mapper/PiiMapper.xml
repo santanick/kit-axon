@@ -92,6 +92,9 @@
   <select id="updateField" resultType="string" flushCache="true" useCache="false">
     update pii.identity set ${f}_enc = #{v} where tid = #{tid} and learner_id::text = #{sid} returning learner_id::text
   </select>
+  <!-- v43 K2: 휴대폰(예약 · 노쇼 알림 문자) 동의 기록 — pii.js myPii와 같은 모양 -->
+  <update id="setPhoneConsent">update pii.identity set consent = coalesce(consent, '{}'::jsonb) || jsonb_build_object('phone', jsonb_build_object('purpose', 'sms_noti', 'keep', 'withdraw', 'at', cast(#{at} as text))) where tid = #{tid} and learner_id::text = #{sid}</update>
+  <update id="dropPhoneConsent">update pii.identity set consent = coalesce(consent, '{}'::jsonb) - 'phone' where tid = #{tid} and learner_id::text = #{sid}</update>
   <select id="selectEmailBidx" resultType="java.util.LinkedHashMap">select email_bidx from pii.identity where tid = #{tid} and learner_id = cast(#{lid} as uuid)</select>
   <select id="selectMasks" resultType="java.util.LinkedHashMap">select learner_id::text learner_id, email_mask from pii.identity where tid = #{tid}</select>
   <!-- f는 서비스에서 name · email · phone 중 하나로만 허용한 값 -->

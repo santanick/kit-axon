@@ -33,7 +33,7 @@
     if (LR.mode === 'live') { let u = path; if (method === 'GET' && body) u += '?' + new URLSearchParams(Object.entries(body).filter(([, v]) => v != null && v !== '')).toString(); return api(method, u, method === 'GET' ? undefined : (body || {})); }
     await demoBoot(); window.S = typeof demoRoom === 'function' ? demoRoom() : null; if (!window.S) throw new Error('데모 기관 데이터가 없습니다.');
     const pid = demoMe(); window.UI.lmseAs = window.UI.lmsfAs = window.UI.lmshAs = pid;
-    if (path === '/api/lms/a/my') { if (!pid) return { me: null, sections: [] }; return { me: { member_no: LR.me.sid }, sections: EFH.demoSections().map(s => ({ ...s, kind: (EFH.demoStudents(s.section_id).find(p => p.person_id === pid) || {}).kind })).filter(s => s.kind) }; }
+    if (path === '/api/lms/a/my') { if (!pid) { const A = window.S && window.S.lms && window.S.lms.a; return { me: null, sections: [], sync: { state: A && (A.enr || []).length ? 'done' : 'before' } }; } /* v43 K2(P2-C4) */ return { me: { member_no: LR.me.sid }, sections: EFH.demoSections().map(s => ({ ...s, kind: (EFH.demoStudents(s.section_id).find(p => p.person_id === pid) || {}).kind })).filter(s => s.kind) }; }
     if (!pid) { const e = new Error('학사 구성원으로 등록되지 않은 학습자입니다.'); e.status = 403; throw e; }
     const f = EFH.D[method + ' ' + path]; if (!f) throw new Error('데모에서 지원하지 않는 기능입니다.');
     const out = f(JSON.parse(JSON.stringify(body || {}))); window.save(); return JSON.parse(JSON.stringify(out));
@@ -43,7 +43,7 @@
     if (!L.busy[key]) { L.busy[key] = true; Promise.resolve().then(fn).then(v => { L.cache[key] = v; delete L.err[key]; }).catch(e => { L.err[key] = e.message; L.cache[key] = null; }).finally(() => { delete L.busy[key]; rer(); }); }
     return undefined;
   }
-  const drop = p => Object.keys(L.cache).forEach(k => { if (!p || k.startsWith(p)) delete L.cache[k]; });
+  const drop = p => Object.keys(L.cache).forEach(k => { if (!p || k.startsWith(p)) delete L.cache[k]; }); window.LMSEFH_DROP = () => { drop(); L.err = {}; };
   const box = (k, html) => L.err[k] ? `<p class="mini">${esc(L.err[k])}</p>` : html;
   const wait = '<p class="mini">불러오는 중입니다.</p>';
   async function act(fn, ok, dropKey) { try { const r = await fn(); if (ok) toast(ok, 'ok'); if (dropKey !== undefined) { drop(dropKey); rer(); } return r; } catch (e) { toast(e.message, 'bad'); return null; } }
@@ -54,8 +54,8 @@
     const my = get('my', () => call('GET', '/api/lms/a/my'));
     const head = `<section class="efl"><div class="efl-in"><p class="eb">MY LMS</p><h1>과제 · 시험 · 성적</h1>`;
     if (my === undefined) return head + wait + '</div></section>';
-    if (!my || !my.me) return head + (L.err.my || !window.lmsNoRoster ? `<div class="empty2"><p>${esc(L.err.my || '이 학번은 아직 이번 학기 수강 명단에 없어요.')}</p><div class="lms43nb"><a class="lbtn pri" href="#find/code">접근코드 재발급 요청</a><a class="lbtn ghost" href="#find/inq">학교에 문의하기</a></div></div>` : `<div class="empty2">${window.lmsNoRoster()}</div>`) + `</div></section>`; /* v43 D-C(P2 C4) */ /* v43 Q2: 빈 상태 규격(그린 일러스트 · 한 문장 · 주 버튼) */
-    const secs = (my.sections || []).filter(s => s.kind !== 'ta'); if (!secs.length) return head + `<div class="empty2">${window.lmsNoRoster ? window.lmsNoRoster() : '<p>이 학번은 아직 이번 학기 수강 명단에 없어요.</p>'}</div></div></section>`; /* v43 D-C(P2 C4): 막다른 길 대신 재발급 요청 · 학교 문의 */
+    if (!my || !my.me) return head + (L.err.my || !window.lmsNoRoster ? `<div class="empty2"><p>${esc(L.err.my || '이 학번은 아직 이번 학기 수강 명단에 없어요.')}</p><div class="lms43nb"><a class="lbtn pri" href="#find/code">접근코드 재발급 요청</a><a class="lbtn ghost" href="#find/inq">학교에 문의하기</a></div></div>` : `<div class="empty2">${window.lmsNoRoster(my && my.sync)}</div>`) + `</div></section>`; /* v43 D-C(P2 C4) */ /* v43 Q2: 빈 상태 규격(그린 일러스트 · 한 문장 · 주 버튼) */
+    const secs = (my.sections || []).filter(s => s.kind !== 'ta'); if (!secs.length) return head + `<div class="empty2">${window.lmsNoRoster ? window.lmsNoRoster(my.sync) : '<p>이 학번은 아직 이번 학기 수강 명단에 없어요.</p>'}</div></div></section>`; /* v43 D-C(P2 C4): 막다른 길 대신 재발급 요청 · 학교 문의 */
     const sec = secs.find(s => s.section_id === L.sec) || secs[0]; L.sec = sec.section_id;
     const chips = `<div class="efl-chips" role="tablist">${secs.map(s => `<button class="${s === sec ? 'on' : ''}" data-lact="efl-sec" data-v="${esc(s.section_id)}">${esc(s.course_name || s.title)} ${esc(s.section_no)}분반${s.kind === 'audit' ? ' · 청강' : ''}</button>`).join('')}</div>`;
     const tabs = `<div class="efl-tabs" role="tablist">${[['asg', '과제'], ['exam', '시험'], ['grade', '성적']].map(([k, l]) => `<button class="${L.tab === k ? 'on' : ''}" data-lact="efl-tab" data-v="${k}" role="tab" aria-selected="${L.tab === k}">${l}</button>`).join('')}</div>`;

@@ -154,3 +154,19 @@ html body:not(.lapp) .shp-det .shp-main h2 small.mini{display:block;flex-basis:1
 html body:not(.lapp) #lm .py26t{background:var(--surface,#fff);border:1px solid var(--q2-bd);border-radius:20px;box-shadow:var(--q2-sh)}
 html body:not(.lapp) #lm .py26r{min-height:60px;border-top-color:var(--q2-bd)}
 html body:not(.lapp) #lm .py26r.py26hd{background:color-mix(in srgb,var(--ink) 4%,var(--surface,#fff));font-size:13px;font-weight:700;color:var(--mute);min-height:44px}
+/* v43 K2(P2-C1 · H4 · H5): 신청 완료(#applied) · 신청 진행 단계 · 정원 줄 · 내 학습 「신청한 프로그램」 — 앱 · 웹 공통, 누르는 곳 44px */
+.ap43{max-width:640px;margin:8px auto 0;padding:32px 24px;border-radius:22px;background:var(--surface,#fff);border:1px solid var(--q2-bd,var(--line));box-shadow:var(--q2-sh2,var(--sh));text-align:center}
+.ap43-ic{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--pri) 14%,transparent);color:var(--pri-tx,var(--pri))}
+.ap43 h2{margin:0 0 8px;font-size:24px;font-weight:800;color:var(--ink)}
+.ap43 .lead{margin:0 0 6px;font-size:16px;line-height:1.6;color:var(--ink2,var(--ink))}
+.ap43 .mini{font-size:14px;color:var(--t-sub,var(--mute))}
+.ap43-st{list-style:none;margin:22px 0;padding:0;display:flex;flex-direction:column;gap:12px;text-align:left}
+.ap43-s{display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:start;font-size:14px;line-height:1.5;color:var(--t-sub,var(--mute))}
+.ap43-s>b{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:14px;background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink)}
+.ap43-s.done>b{background:var(--pri);color:var(--pri-ink,#fff)}.ap43-s.now>b{background:color-mix(in srgb,var(--pri) 18%,transparent);color:var(--pri-tx,var(--pri));box-shadow:inset 0 0 0 2px var(--pri)}
+.ap43-s.bad>b{background:color-mix(in srgb,var(--t-bad,#C4001D) 14%,transparent);color:var(--t-bad,#C4001D)}
+.ap43-s strong{display:block;font-size:15px;color:var(--ink)}
+.ap43-b{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}.ap43-b .lbtn{min-height:48px;padding:0 24px}
+.shp-meta .shp-seat{font-weight:700;color:var(--ink)}
+.ap43-my .shp-list a{min-height:44px;align-items:center}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .ap43-s>b{background:color-mix(in srgb,#fff 12%,transparent)}}

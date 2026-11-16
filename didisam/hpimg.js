@@ -242,7 +242,7 @@
       ${s.btn ? `<button type="button" data-hpi="ln" aria-expanded="${HI.pop === 'ln'}" title="버튼 연결">링크 ▾</button>` : ''}
       <button type="button" data-hpi="ai" class="ai" aria-expanded="${HI.pop === 'ai'}">✦ AI로 다시 쓰기</button>
       <button type="button" data-hpi="rs" title="이 글자 스타일 지우기" aria-label="이 글자 스타일 지우기" ${Object.keys(st).length ? '' : 'disabled'}>↺</button><button type="button" data-hpi="x" aria-label="글자 도구 닫기">✕</button></div>${pop}`; }
-  const LINKS = () => [['learn:shop', `${typeof t === 'function' ? t('cls') : '강좌'} 목록`], ['learn:home', '홈'], ['learn:comm', '커뮤니티'], ['learn:notice', '공지사항'], ['learn:my', '내 학습']];
+  const LINKS = () => [['learn:shop', `${typeof t === 'function' ? t('cls') : '강좌'} 목록`], ['learn:home', '홈'], ['learn:comm', '커뮤니티'], ['learn:notice', '공지사항'], ['learn:my', '내 학습'], ...(typeof S !== 'undefined' && S && S.fac && (S.fac.facilities || []).length ? [['learn:fac', '시설 예약']] : [])];
   const linkKey = s => s.leaf === 'cta2' ? 'link2' : 'link';
   function linkPop() { const s = HI.sel; const d = s.x.data || {}; const cur = String(d[linkKey(s)] || ''); const url = cur.startsWith('url:') ? cur.slice(4) : '';
     return `<div class="hpi-pop hpi-lnp" role="dialog" aria-label="버튼 연결"><div class="hpi-lnl">${LINKS().map(([v, l]) => `<button type="button" data-hpi="lnv" data-v="${v}" class="${cur === v ? 'on' : ''}">${E(l)}</button>`).join('')}</div><label class="hpi-lnu">외부 주소<input data-hpi="lnu" inputmode="url" maxlength="300" placeholder="https://" value="${E(url)}"></label><button type="button" class="hpi-ok" data-hpi="lnok">연결</button></div>`; }

@@ -86,6 +86,7 @@ public interface LmsAMapper {
     String selectTenantType(@Param("tid") String tid);
     String selectAccountStudentNo(@Param("lid") String lid);
     String selectPub(@Param("pid") String pid);
+    String selectSyncState();
     String selectOpenSection(@Param("sid") String sid);
     int cancelAudit(@Param("sid") String sid, @Param("pid") String pid);
 }

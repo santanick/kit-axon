@@ -261,7 +261,13 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             v.set("score", coalesce(get(g, "score"), F.nullNode())); v.put("done", pv >= num(thr));
             cls.add(Map.entry(key(get(c, "id")), v));
         }
-        o.set("bk", bk); o.set("qa", qa); o.set("badges", badges); o.set("cls", fromEntries(cls)); return o;
+        /* v43 K2: 추첨 · 승인 신청 상태(c.applies) — Node mineOf ap와 같은 규칙. 내 것만, 상태 req · ok · rej만 */
+        ObjectNode ap = F.objectNode();
+        for (JsonNode c : arr(or(get(doc, "classes"), F.arrayNode()))) for (JsonNode a : arr(or(get(c, "applies"), F.arrayNode()))) {
+            if (!strictEq(get(a, "id"), mid)) continue; String st = sOr(get(a, "st")); if (st.isEmpty()) st = "req";
+            if (st.equals("req") || st.equals("ok") || st.equals("rej")) ap.put(key(get(c, "id")), st);
+        }
+        o.set("bk", bk); o.set("qa", qa); o.set("badges", badges); o.set("cls", fromEntries(cls)); if (ap.size() > 0) o.set("ap", ap); return o;
     }
     static void setIf(ObjectNode o, String k, JsonNode v) { if (!undef(v)) o.set(k, v); }
 
