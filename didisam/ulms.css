@@ -208,3 +208,10 @@
 .r7-fch{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .r7-pn{display:flex;align-items:center;gap:12px}.r7-th{width:64px;height:44px;border-radius:10px;object-fit:cover;flex:0 0 auto}
 .r7-cnt{font-size:14px;white-space:nowrap}.r7-cnt b{font-weight:800}.r7-cnt em{font-style:normal;font-weight:700;color:var(--co700,#B4432A)}
+
+/* v43 R7: 구성원 찾기 — 아이콘 · 둥근 칸 · 주 버튼이 한 덩어리 */
+.r7-q .r7-qb{display:flex;align-items:center;gap:8px;flex:1 1 420px;max-width:560px;min-height:48px;padding:0 6px 0 16px;border:1px solid var(--hair,#E5DFD3);border-radius:999px;background:var(--surface,#fff);color:var(--t-sub,#5C554B)}
+.r7-q .r7-qb:focus-within{border-color:var(--gr600,#16A34A);box-shadow:0 0 0 4px var(--gr50,#E8F5EC)}
+.r7-q .r7-qb input{flex:1;border:0!important;background:none!important;box-shadow:none!important;min-height:44px;font-size:15px;padding:0;outline:0}
+.r7-q .r7-qb .btn{border-radius:999px}
+.fx-v.fx-0 small{font-size:13px;color:var(--t-sub,#5C554B);white-space:nowrap}
