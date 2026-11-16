@@ -141,19 +141,19 @@ html body:not(.lapp) .ac43d,html body:not(.lapp) .ac43b{grid-column:1/-1}
 html body:not(.lapp) .ac43d{font-size:14px!important;line-height:1.6;padding:12px 14px;border-radius:14px;background:var(--q2-t1);margin-top:10px!important}
 html body:not(.lapp) .ac43b{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
 html body:not(.lapp) .ac43b .lbtn{min-height:48px;border-radius:999px;padding:0 20px}
-html body:not(.lapp) .ac43pv h3{display:flex;align-items:center;gap:8px;margin:0 0 14px;font-size:18px;font-weight:800}
-html body:not(.lapp) .ac43pv ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
-html body:not(.lapp) .ac43pv li{display:grid;grid-template-columns:28px 1fr;gap:12px;font-size:14px;line-height:1.5;color:var(--mute)}
-html body:not(.lapp) .ac43pv li b{display:block;color:var(--ink);font-size:15px}
-html body:not(.lapp) .ac43pv li i{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-style:normal;background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--mute)}
-html body:not(.lapp) .ac43pv li.ok i{background:var(--pri);color:var(--pri-ink,#fff)}
-html body:not(.lapp) .ac43q{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-html body:not(.lapp) .ac43q a{display:flex;flex-direction:column;gap:4px;min-height:112px;padding:18px;border-radius:20px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh);color:var(--ink);text-decoration:none;transition:transform .15s}
-html body:not(.lapp) .ac43q a:hover{transform:translateY(-2px)}
-html body:not(.lapp) .ac43q i{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--q2-t1);color:var(--pri-tx,var(--pri));font-style:normal;margin-bottom:6px}
-html body:not(.lapp) .ac43q b{font-size:16px}
-html body:not(.lapp) .ac43q small{font-size:13px;color:var(--mute)}
-@media (max-width:760px){html body:not(.lapp) .ac43g{grid-template-columns:1fr}html body:not(.lapp) .ac43q{grid-template-columns:repeat(2,minmax(0,1fr))}html body:not(.lapp) .ac43id{grid-template-columns:56px minmax(0,1fr)}html body:not(.lapp) .ac43av{width:56px;height:56px;font-size:20px}}
+html body:not(.lapp) .ac43pv h3,html body.lapp .ac43pv h3{display:flex;align-items:center;gap:8px;margin:0 0 14px;font-size:18px;font-weight:800}
+html body:not(.lapp) .ac43pv ul,html body.lapp .ac43pv ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+html body:not(.lapp) .ac43pv li,html body.lapp .ac43pv li{display:grid;grid-template-columns:28px 1fr;gap:12px;font-size:14px;line-height:1.5;color:var(--mute)}
+html body:not(.lapp) .ac43pv li b,html body.lapp .ac43pv li b{display:block;color:var(--ink);font-size:15px}
+html body:not(.lapp) .ac43pv li i,html body.lapp .ac43pv li i{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-style:normal;background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--mute)}
+html body:not(.lapp) .ac43pv li.ok i,html body.lapp .ac43pv li.ok i{background:var(--pri);color:var(--pri-ink,#fff)}
+html body:not(.lapp) .ac43q,html body.lapp .ac43q{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+html body:not(.lapp) .ac43q a,html body.lapp .ac43q a{display:flex;flex-direction:column;gap:4px;min-height:112px;padding:18px;border-radius:20px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh);color:var(--ink);text-decoration:none;transition:transform .15s}
+html body:not(.lapp) .ac43q a:hover,html body.lapp .ac43q a:hover{transform:translateY(-2px)}
+html body:not(.lapp) .ac43q i,html body.lapp .ac43q i{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--q2-t1);color:var(--pri-tx,var(--pri));font-style:normal;margin-bottom:6px}
+html body:not(.lapp) .ac43q b,html body.lapp .ac43q b{font-size:16px}
+html body:not(.lapp) .ac43q small,html body.lapp .ac43q small{font-size:13px;color:var(--mute)}
+@media (max-width:760px){html body:not(.lapp) .ac43g{grid-template-columns:1fr}html body:not(.lapp) .ac43q,html body.lapp .ac43q{grid-template-columns:repeat(2,minmax(0,1fr))}html body:not(.lapp) .ac43id{grid-template-columns:56px minmax(0,1fr)}html body:not(.lapp) .ac43av{width:56px;height:56px;font-size:20px}}
 /* v43 K2: 「연결 · 알림」 문자 알림 카드(공단 · 평생교육원만) — 누르는 곳 44px, 번호는 가려서 */
 .sm43{margin:24px 0 0;padding:22px;border-radius:20px;background:var(--surface,#fff);border:1px solid var(--q2-bd,var(--line));box-shadow:var(--q2-sh2,none)}
 .sm43 h2{margin:0 0 6px;font-size:18px;font-weight:800;color:var(--ink)}.sm43>.mini{margin:0 0 14px;font-size:14px;color:var(--t-sub,var(--mute))}

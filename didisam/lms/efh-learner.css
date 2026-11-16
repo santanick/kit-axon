@@ -77,3 +77,6 @@
 .efl43a.dn>details[open]>summary header::after{transform:translateY(-30%) rotate(-135deg)}
 .efl43a.dn>details>:not(summary){margin-left:20px;margin-right:20px}.efl43a.dn>details[open]{padding-bottom:16px}
 @media (max-width:980px){.efl43g{grid-template-columns:1fr}.efl43s{position:static}.efl43hi{padding:28px 16px 24px}.efl43 .efl-in{padding:0 16px}.efl.efl43 .efl43h h1{font-size:28px}}
+/* v43.4 MC(109): 접힌(제출 완료) 과제를 펼치면 본문 칸이 좌우 여백(20px×2)만큼 카드 밖으로 밀리던 것 — 여백을 뺀 폭으로 */
+.efl43a.dn>details>.efl-ta{width:calc(100% - 40px)}
+@media (max-width:760px){.efl43 .efl-tabs button,.efl43 .efl-chips button{min-height:44px}.efl43lk{min-height:44px;padding:0 10px}.efl43 .efl43t{min-height:44px}}

@@ -409,7 +409,9 @@
     const h = `${I.spark(24)}<span>${v ? '이 장면 질문' : esc(short)}</span>`; if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; } b.setAttribute('aria-label', lab); b.setAttribute('aria-expanded', v ? String(!!TB.open) : String(!!(typeof LT === 'object' && LT.open))); }
   /* v43: 스크롤하는 동안 떠 있는 튜터 버튼이 카드 오른쪽 끝을 가리지 않게 — 내려가면 작은 원(48px, 아이콘만), 위로 올리거나 맨 위에 오면 원래 크기 */
   { let y0 = 0; const B = () => document.body; addEventListener('scroll', () => { const y = window.scrollY || 0; if (y > y0 + 4 && y > 40) B().classList.add('tb-fsm'); else if (y < y0 - 4 || y <= 40) B().classList.remove('tb-fsm'); y0 = y; }, { passive: true });
-    addEventListener('hashchange', () => B().classList.remove('tb-fsm')); }
+    addEventListener('hashchange', () => B().classList.remove('tb-fsm', 'tb-fscr'));
+    /* v43.4 MC: 휴대폰에서는 스크롤하는 동안 튜터 단추를 숨기고, 멈추고 0.5초 뒤 다시 보인다(lapp43.css tb-fscr) */
+    let tq = 0; addEventListener('scroll', () => { if (innerWidth > 760) return; B().classList.add('tb-fscr'); clearTimeout(tq); tq = setTimeout(() => B().classList.remove('tb-fscr'), 500); }, { passive: true }); }
   function sheet(o) { TB.open = o; const t = document.getElementById('tbwTu'); if (t) { t.hidden = !o; t.classList.toggle('open', o); } document.body.classList.toggle('tb-sheet', o); fab(); if (o) { const ms = t && t.querySelector('.tbw-ms'); if (ms) ms.scrollTop = ms.scrollHeight; setTimeout(() => { const i = document.getElementById('tbwQ'); i && i.focus(); }, 30); } else { const b = document.getElementById('tbFab'); b && b.focus(); } }
   const WQ = { '이 장면 다시 설명': t => `지금 ${t != null ? mmss(t) + ' ' : ''}장면에서 설명한 내용을 쉬운 말로 다시 설명해줘`, '3줄 요약': () => '이 레슨 내용을 3줄로 요약해줘', '퀴즈 1문제': () => '이 장면 내용으로 확인 퀴즈 1문제 내줘(정답은 내가 답한 뒤에 알려줘)' };
   async function ask(q, label) { const k = cur(); if (!k || TB.busy) return; q = String(q || '').trim(); if (!q) return; const C = TCFG(); const t = nowT(); const M = thread(k.it.id);
