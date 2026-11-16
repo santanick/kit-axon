@@ -119,3 +119,6 @@
 .k-day{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:52px;min-height:48px;padding:4px 8px;border:0;border-radius:12px;background:var(--surface2,#f2f4f3);color:var(--ink);font:inherit;cursor:pointer}
 .k-day small{font-size:12px;color:var(--muted);font-weight:600}.k-day b{font-size:14px}
 .k-day.td{box-shadow:inset 0 0 0 1.5px var(--pr,#00c53b)}.k-day.on{background:var(--ink);color:var(--surface,#fff)}.k-day.on small{color:inherit;opacity:.75}
+/* v43 S3A 043: 점수 분포 0 구간은 숫자 0 대신 「없음」(흐리게) */
+.k-exb b.z{font-size:12px;font-weight:600;color:var(--mute)}
+.card .ch .k-lnew{margin-left:auto}

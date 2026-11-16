@@ -124,3 +124,11 @@ mark{background:#ffe58a;border-radius:3px;padding:0 2px}
 .cs43-ct{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.cs43-ct b{font-size:15px}.cs43-ct small{font-size:13px;color:var(--g700,#4a5450)}
 .cs43-heat .r1-hx.l0{background:var(--surface2,#f2f4f3);color:var(--muted)}.cs43-heat .r1-hx.l1{background:var(--gr50,#EAF8EF);color:var(--gr800,#066B2A)}
 .cs43-heat .r1-hx.l2{background:var(--gr100,#d3f2dc)}.cs43-heat .r1-hx.l3{background:var(--gr300,#8fdca6)}
+/* v43 S3A 019: 「게시판 설정」은 머리 보조 버튼으로 옮겼으므로 카드 안 버튼은 숨김(머리 버튼이 이 버튼을 누름) */
+#main:has(.l43-brief [data-l43go*="cm-board-edit"]) .cmb-hr .cmb-edh{display:none}
+/* v43 S3A 020: 숫자 대신 문장인 KPI 칸은 다른 칸 숫자와 높이 · 크기를 맞춤 */
+#main .kpi.cs43z .val{font-size:22px;line-height:1.35;letter-spacing:-.2px;white-space:normal;margin:10px 0 8px}
+/* v43 S3A 028: 공지 대상 칩 한 줄 */
+#main .cmn-bar .cmn-ch{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1}
+#main .cmn-bar .cmn-ch .r1-chip{flex:none;white-space:nowrap}
+#main .bar2.cmn-bar{flex-wrap:nowrap}

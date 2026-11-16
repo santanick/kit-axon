@@ -143,8 +143,8 @@
     return SL.page('메뉴 추가', `<button class="btn ghost" data-act="sl-menuorder">순서 바꾸기</button><button class="btn" data-act="sl-reset-menu">기본 메뉴로</button>`,
       
       SL.chips('slMenuF', [['all', '전체'], ['on', `켜짐 ${on.length}`], ...wsL.map(w => [w, lab(WS[w])])], f) +
-      SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
-        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) +
+      '<div class="sx43-mn">' /* v43 S3A 075: 메뉴 목록 2열 카드 */ + SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
+        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) + '</div>' +
       SL.search('slMenuQ', '메뉴 검색'));
   };
   window.slMenuSet = (id, on) => { const t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (!t) return false; t.on = on; save(); return true; };
@@ -272,8 +272,8 @@
       { k: 'conn', n: '외부 연결', i: 'send', subs: ['integr'], kw: '연결 slack google 구글 토스 채널톡 카카오 네이버 zoom 줌 youtube 유튜브 notion 노션 microsoft 마이크로소프트 mcp api claude 클로드 hrd',
         sum: `연결됨 ${cnOnL.length}개`,
         q: () => { /* v43 R7 2차: 연결 타일 12개 한 격자 → 「연결됨」 · 「연결할 수 있음」 두 묶음(J2 077) — 타일 data-act 그대로 */
-          const tile = id => { let on = false; try { on = cnStatus(id).st === CN_ST.on; } catch (e) { }
-            return [on, `<button type="button" class="sx-lg ${on ? 'on' : ''}" data-act="${O ? 'sl-cn' : 'sx-owner'}" data-v="${id}" aria-label="${esc(CN[id].name)} ${on ? '연결됨' : '연결하기'}">${typeof brandLogo === 'function' ? brandLogo(id, 36, CN[id].name) : esc(CN[id].logo)}<small>${esc(CN[id].name.replace(/\(.*\)| API 키/g, '').trim())}</small><em>${on ? '연결됨' : '연결'}</em></button>`]; };
+          const tile = id => { let on = false, nt = ''; try { const cs = cnStatus(id); on = cs.st === CN_ST.on; nt = cs.note || ''; } catch (e) { }
+            return [on, `<button type="button" class="sx-lg ${on ? 'on' : ''}" data-act="${O ? 'sl-cn' : 'sx-owner'}" data-v="${id}" aria-label="${esc(CN[id].name)} ${on ? '연결됨' : '연결하기'}">${typeof brandLogo === 'function' ? brandLogo(id, 36, CN[id].name) : esc(CN[id].logo)}<small>${esc(CN[id].name.replace(/\(.*\)| API 키/g, '').trim())}</small><span class="r7-use">${esc(on ? (nt || '연결됨') : (CN[id].use || ''))}</span><em>${on ? '연결됨' : '연결하기'}</em></button>`]; }; /* v43 S3A 077: 타일에 설명 1줄(연결 전) · 상태 줄(연결됨) */
           const T2 = (typeof cnIds === 'function' ? cnIds() : typeof CN_IDS !== 'undefined' ? CN_IDS : []).map(tile); const ext = SX_EXT().map(([id, n, d, act, v]) => `<button type="button" class="sx-lg ext" data-act="${act}" data-v="${esc(v)}" aria-label="${esc(n)} — ${esc(d)}">${typeof brandLogo === 'function' ? brandLogo(id, 36, n) : esc(n[0])}<small>${esc(n)}</small><em>${act === 'sx-soon' ? '준비 중' : esc(d)}</em></button>`).join('');
           const onT = T2.filter(x => x[0]).map(x => x[1]).join(''), offT = T2.filter(x => !x[0]).map(x => x[1]).join('');
           return `${onT ? `<h4 class="r7-cgh">연결됨 <em>${T2.filter(x => x[0]).length}</em></h4><div class="sx-logos r7-on">${onT}</div>` : ''}<h4 class="r7-cgh">연결할 수 있음</h4><div class="sx-logos">${offT}${ext}</div>`; } },
@@ -289,7 +289,7 @@
       { k: 'lang', n: '언어', i: 'globe', subs: ['lang'], kw: '언어 영어 일본어 중국어 베트남어 번역', sum: '화면 · 사이트 언어',
         q: () => { const ls = (st.siteLangs || st.langs || []); return sxRow('관리자 화면', esc(({ ko: '한국어', en: 'English', ja: '日本語' })[st.adminLang || 'ko'] || '한국어')) + sxRow('학습자 사이트', Array.isArray(ls) && ls.length ? `${ls.length}개 언어` : '한국어 + 4개 언어') + sxRow('용어', esc(`${t('learner')} · ${t('cls')} · ${t('teacher')}`)) + `<div class="sx-acts">${sxBtn('언어 설정', 'sx-sub', 'lang|lang')}</div>`; } },
       { k: 'data', n: '데이터', i: 'gear', subs: ['data', ...(O ? ['room'] : []), 'cover'], kw: '데이터 내보내기 백업 초기화 데이터룸 배포 기능 맵', sum: '내보내기 · 데이터룸',
-        q: () => sxRow(`${t('learner')} · ${t('cls')}`, `${(S.members || []).length}명 · ${(S.classes || []).length}개`) + sxRow('배포 모델', esc(({ saas: '공유 SaaS', dedicated: '전용 클라우드', customer: '고객 클라우드', onprem: '설치형' })[(S.org.room || {}).model] || '공유 SaaS')) + sxRow('자동 백업', '매일 03:00 · 7일 보관') + `<div class="sx-acts">${UI.sxOpen === 'data' ? sxBtn('지금 내보내기(JSON)', 'data-export', '', 'pri') : sxBtn('내보내기(JSON)', 'data-export', '') + sxBtn('데이터 · 초기화', 'sx-sub', 'data|data') + (O ? sxBtn('데이터룸 · 배포', 'sx-sub', 'data|room') : '')}</div>` }, /* v43 R7: 데이터 설정을 연 화면의 지금 값 칸은 주 버튼 1개(하위 이동은 위 칩 줄)(J2 083) */
+        q: () => sxRow(`${t('learner')} · ${t('cls')}`, `${(S.members || []).length}명 · ${(S.classes || []).length}개`) + sxRow('배포 모델', esc(({ saas: '공유 SaaS', dedicated: '전용 클라우드', customer: '고객 클라우드', onprem: '설치형' })[(S.org.room || {}).model] || '공유 SaaS')) + sxRow('자동 백업', '매일 03:00 · 7일 보관') + `<div class="sx-acts">${UI.sxOpen === 'data' ? '' /* v43 S3A 083 · 084: 머리 「전체 데이터 내보내기」와 겹치는 버튼 제거 */ : sxBtn('내보내기(JSON)', 'data-export', '') + sxBtn('데이터 · 초기화', 'sx-sub', 'data|data') + (O ? sxBtn('데이터룸 · 배포', 'sx-sub', 'data|room') : '')}</div>` }, /* v43 R7: 데이터 설정을 연 화면의 지금 값 칸은 주 버튼 1개(하위 이동은 위 칩 줄)(J2 083) */
       ...(sxLive() ? [{ k: 'acct', n: '계정', i: 'users', subs: [], kw: '계정 로그인 아이디 이메일 비밀번호 변경 로그아웃', sum: esc(LIVE.user.email || ''),
         q: () => sxRow('로그인 아이디', esc(LIVE.user.email || '')) + `<div class="sx-acts">${sxBtn('비밀번호 변경', 'live-pw', '')}${sxBtn('로그아웃', 'live-logout', '', 'ghost')}</div>` }] : [])
     ]; };
@@ -299,8 +299,8 @@
     const wsL = [...new Set(A.map(x => x.w))].filter(w => WS[w]); const L = A.filter(x => (f === 'all' || (f === 'on' ? x.on : x.w === f)) && (!q || (mlabel(x.id) + mdOf(x.id)[0]).includes(q)));
     const on = A.filter(x => x.on);
     return SL.chips('slMenuF', [['all', '전체'], ['on', `켜짐 ${on.length}`], ...wsL.map(w => [w, lab(WS[w])])], f) +
-      SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
-        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) +
+      '<div class="sx43-mn">' /* v43 S3A 075: 메뉴 목록 2열 카드 */ + SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
+        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) + '</div>' +
       `<div class="sx-acts">${sxBtn('기본 메뉴로', 'sl-reset-menu', '')}</div>` + SL.search('slMenuQ', '메뉴 검색'); };
   window.slMenusBody = menusBody;
   /* mem2.js가 DOMContentLoaded에 감싸는 층(결제 · 수납 카드)까지 안쪽에 두려고 같은 시점에 가장 바깥에서 감싼다 */

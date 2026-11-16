@@ -107,3 +107,8 @@ html[data-theme=dark] .bks-pb,html[data-theme=dark] .bks-cb,html[data-theme=dark
 #main .r1-ck3 .r1-ckt{flex:1;min-width:0}
 #main .r1-ckm{margin-top:8px}#main .r1-ckm>summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--pr-ink,#0a7a32);padding:8px 0;list-style:none}
 #main .r1-ckm>summary::-webkit-details-marker{display:none}
+/* v43 S3A 010: 퇴직연금 도입 스위치 · 표 마지막(과정) 열이 잘리지 않게 */
+#legalList .lg43sw{display:inline-flex;align-items:center;gap:10px;min-height:44px;font-size:14px;font-weight:600;cursor:pointer}
+#legalList table{table-layout:auto;width:100%}
+#legalList td:last-child,#legalList th:last-child{white-space:nowrap;width:1%}
+#legalList td:nth-child(3){min-width:180px}

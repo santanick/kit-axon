@@ -380,3 +380,22 @@
 .r1-chips-s .r1-chip::after{top:-6px;bottom:-6px}
 .r1-chip em{color:var(--g700)}
 .r1-grpb dt,.r1-ach,.r1-hc,.r1-tl time,.r1-dl li .r1-dx{color:var(--g600)}
+/* v43 S3A 012: 체크리스트 처리 행 — 연한 박스 반복 대신 구분선 목록 + 행 끝 화살표 */
+#main .r1-ck .r1-ckl.r1-ck3{grid-template-columns:1fr;gap:0}
+#main .r1-ck .r1-ckl.r1-ck3 li{background:none;box-shadow:none;border-radius:0;padding:12px 4px;border-bottom:1px solid var(--line)}
+#main .r1-ck .r1-ckl.r1-ck3 li:last-child{border-bottom:0}
+.r1-ck .r1-ckl.r1-ck3 li .r1-ckt{flex:1}
+.r1-ckgo{display:inline-flex;align-items:center;gap:2px;min-height:44px;padding:0 6px 0 10px;border:0;background:none;color:var(--pr);font-weight:700;font-size:14px;cursor:pointer;border-radius:10px}
+.r1-ckgo:hover{background:var(--gr50)}
+/* v43 S3A 027: 「새 진단 만들기」는 머리 보조 버튼 하나만 — 본문 버튼은 숨김(머리 버튼이 이 버튼을 누름) */
+#main:has(.l43-brief [data-l43go*="dg-new"]) .dg-newb{display:none}
+/* v43 S3A 030: 0 대신 문장인 KPI 칸 */
+#main .da-k.da-kz .da-kv{font-size:20px;line-height:1.4;color:var(--g700,#4C4C4C);white-space:normal}
+/* v43 S3A 027: 진단 카드 머리 — 유형별 그래픽(색 · 아이콘 · 막대 장식) */
+.r1-dgart{position:absolute;inset:0;display:flex;align-items:center;padding:0 24px;gap:16px;color:#fff;overflow:hidden;background:linear-gradient(135deg,var(--gr700),var(--gr900))}
+.r1-dgart.a1{background:linear-gradient(135deg,var(--s400),var(--s700))}
+.r1-dgart.a2{background:linear-gradient(135deg,var(--co500),var(--co700))}
+.r1-dgart.a3{background:linear-gradient(135deg,var(--g600),var(--g900))}
+.r1-dgart .ic{flex:none;opacity:.95}
+.r1-dgart i{display:block;width:14px;border-radius:7px 7px 0 0;background:rgba(255,255,255,.28);align-self:flex-end}
+.r1-dgart i:nth-of-type(1){height:38%;margin-left:auto}.r1-dgart i:nth-of-type(2){height:62%}.r1-dgart i:nth-of-type(3){height:84%;background:rgba(255,255,255,.45)}
