@@ -87,7 +87,7 @@
   } });
   R('admins', { art: 'people', brief: main => {
     if (empty(main)) return null; const Ad = A('admins'); if (!Ad.length) return null; const by = r => Ad.filter(a => a.role === r).length;
-    return { eye: '운영자 · 기록', title: `운영자 <em>${Ad.length}명</em>이 스튜디오를 함께 운영합니다`, sub: '권한은 메뉴별로 다릅니다. 담당 범위를 정해 두면 그 범위의 학습자만 보입니다. 모든 변경은 감사 로그에 남습니다.', stats: [[by('owner') + '명', '정운영자'], [by('staff') + '명', '부운영자'], [by('teacher') + '명', L('teacher')]], acts: [{ label: '+ 운영자 추가', go: '[data-act="adm-new"]' }] };
+    return { eye: '운영자 · 기록', title: `운영자 <em>${Ad.length}명</em>이 스튜디오를 함께 운영합니다`, sub: '권한은 메뉴별로 다릅니다. 담당 범위를 정해 두면 그 범위의 학습자만 보입니다. 모든 변경은 감사 로그에 남습니다.', kind: 'kpi', stats: [[by('owner') + '명', '정운영자'], [by('sub') + '명', '부운영자'], [by('teacher') + '명', L('teacher')], [A('audit').length + '건', '감사 기록']], acts: [{ label: '+ 운영자 추가', go: '[data-act="adm-new"]' }] }; /* v43 F1 017: 「확인」 칩만 있던 처리 묶음 → 숫자 4칸(부운영자 키 staff → sub 바로잡음), 버튼은 주 버튼 1개 */
   } });
   R('enroll', { art: 'people', brief: main => {
     if (empty(main)) return null; const M = A('members'); const w = M.filter(m => m.grade === '승인 대기').length; const inv = A('invites').filter(i => i.active).length;
@@ -147,7 +147,10 @@
   } });
   R('auto', { art: 'gear', brief: main => {
     if (empty(main)) return null; const Au = A('autos'); if (!Au.length) return null; const on = Au.filter(a => a.on).length; const ap = Au.filter(a => a.on && a.approve).length;
-    return { eye: '자동화', title: `자동화 <em>${on}개</em>가 켜져 있습니다`, acts: [{ label: '+ 연결 자동화 만들기', go: '[data-act="cn-build"]' }, { label: 'AI SAM에게 맡기기', kind: 'sec', go: '[data-act="chat-q"]' }], sub: ap ? `그중 ${ap}개는 실행 전에 승인을 받습니다. 한 줄로 적으면 언제 · 조건 · 할 일 세 칸을 채워 드립니다.` : '한 줄로 적으면 언제 · 조건 · 할 일 세 칸을 채워 드립니다.', stats: [[Au.length + '개', '전체'], [on + '개', '켜짐'], [ap + '개', '승인 후 실행']] };
+    return { eye: '자동화', title: `자동화 <em>${on}개</em>가 켜져 있습니다`, acts: [{ label: '+ 연결 자동화 만들기', go: '[data-act="cn-build"]' }, { label: 'AI SAM에게 맡기기', kind: 'sec', go: '[data-act="chat-q"]' }], sub: '한 줄로 적으면 언제 · 조건 · 할 일 세 칸을 채워 드립니다. 메시지 대량 발송처럼 민감한 일은 실행 전에 승인을 받습니다.', kind: 'kpi',
+      /* v43 F1 024: 「전체 7 · 켜짐 7」 같은 숫자 반복 → 켜짐 · 14일 처리 · 아낀 시간, 승인 후 실행은 처리 행(foot)으로 */
+      stats: (() => { const R = A('runs'); const d0 = (() => { try { return addDays(today(), -13); } catch (e) { return ''; } })(); const n14 = R.filter(r => String(r.at || '').slice(0, 10) >= d0).reduce((a, r) => a + (+r.n || 0), 0); const all = R.reduce((a, r) => a + (+r.n || 0), 0); return [[on + '개', '켜진 자동화'], [n14 + '건', '최근 14일 처리'], [(Math.round(all * 3 / 60 * 10) / 10) + '시간', '아낀 시간']]; })(),
+      foot: ap ? `<div class="f1-apr" role="group" aria-label="승인 대기"><span class="f1-apn">${ap}</span><span><b>승인 후 실행 자동화 ${ap}개</b><small>실행 전에 처리 계획을 확인하고 승인합니다</small></span><button type="button" class="btn sm" data-act="f1-au-ap">승인 목록 보기</button></div>` : '' };
   } });
   R('docs', { art: 'doc', brief: main => {
     if (empty(main) || UI.docId) return null; const D = A('docs');

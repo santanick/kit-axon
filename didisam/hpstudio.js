@@ -383,7 +383,7 @@
   function panPaint(force) { const w = $1('#hpe'); if (!w || !HS.dock || !HS.pan) return; let p = $1('#hpsPan');
     if (!p) { p = document.createElement('aside'); p.id = 'hpsPan'; p.className = 'hps-pan'; p.setAttribute('aria-label', '편집 패널'); w.appendChild(p); force = true; }
     document.body.classList.add('hps-pan-on'); if (!force && p.dataset.k === HS.pan + HPE.key && HS.pan === 'basic') return; /* 입력 중인 칸은 다시 그리지 않음 */
-    document.body.classList.toggle('hps-panw-on', HS.pan === 'menu'); const mid = PANM.includes(HS.pan); document.body.classList.toggle('hps-panm-on', mid); p.classList.toggle('hps-panm', mid);
+    document.body.classList.toggle('hps-panw-on', HS.pan === 'menu'); document.body.classList.toggle('f1-lpan', HS.pan === 'learn'); /* v43 F1 032: 학습 페이지 패널은 좁게 → 미리보기 폭 확대 */ const mid = PANM.includes(HS.pan); document.body.classList.toggle('hps-panm-on', mid); p.classList.toggle('hps-panm', mid);
     if (HS.pan === 'menu') { p.classList.add('hps-panw'); if (!force && p.querySelector('#hpmBox')) return; menuPanel(p); setTimeout(fit, 0); return; } p.classList.remove('hps-panw');
     if (mid) { const ae = document.activeElement; if (force !== 'hard' && p.contains(ae) && ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && p.dataset.pk === HS.pan) return; /* v37 P4: 입력 중에는 다시 그리지 않는다 */
       const sg = HS.pan + '|' + HPE.key + '|' + (HS.lv ? HS.lv.tab : '') + '|' + panSig(); if (!force && p.dataset.sig === sg) return; p.dataset.sig = sg; p.dataset.pk = HS.pan; p.dataset.k = HS.pan + HPE.key;
