@@ -305,7 +305,7 @@
       const order = [by('up'), by('down'), by('dup'), by('del'), sep, dd, ai].filter(Boolean); order.forEach(n => tb.appendChild(n));
       /* v37 학습 페이지의 머리글 · 자동 목록: 지우기 · 복제 · 숨기기 · AI 다시 쓰기 대신 전용 도구 */
       const sec = tb.parentElement; const x = curSecs()[+String(sec.dataset.hpe || '').split('|')[1]]; if (!x) return;
-      if (x.type === 'lshead') { [by('up'), by('down'), by('dup'), by('del'), ai, dd, sep].forEach(n => n && n.remove()); const c = lhCur(x.data.route || ''); const tone = c.img ? 'img' : c.tone || 'soft';
+      if (x.type === 'lshead') { [by('up'), by('down'), by('dup'), by('del'), ai, dd, sep].forEach(n => n && n.remove()); const c = lhCur(x.data.route || ''); const tone = c.img || lhAuto(x.data.route, c) ? 'img' : c.tone || 'soft';
         const b2 = (a, v, n, on) => `<button type="button" data-hps-lh="${a}" data-v="${v}" aria-pressed="${!!on}">${n}</button>`;
         tb.insertAdjacentHTML('beforeend', `<span class="hps-tbl">머리글</span>${b2('up', '', '사진 올리기')}${b2('stock', '', '샘플 사진')}${c.img ? b2('noimg', '', '사진 빼기') : ''}<i class="hps-sep"></i>${b2('al', 'l', '왼쪽', c.al !== 'c')}${b2('al', 'c', '가운데', c.al === 'c')}<i class="hps-sep"></i>${b2('h', 's', '작게', c.h === 's')}${b2('h', 'm', '보통', !c.h)}${b2('h', 'l', '크게', c.h === 'l')}<i class="hps-sep"></i>${b2('tone', 'plain', '흰 바탕', tone === 'plain')}${b2('tone', 'soft', '연한 색', tone === 'soft')}${b2('tone', 'brand', '대표 색', tone === 'brand')}`); }
       if (x.type === 'lslist') { [by('dup'), by('del'), ai, dd, sep].forEach(n => n && n.remove()); tb.insertAdjacentHTML('beforeend', `<span class="hps-tbl">자동 목록 — 위아래로 옮길 수 있습니다</span>`); }
@@ -664,6 +664,9 @@
   const enc = v => encodeURIComponent(String(v == null ? '' : v));
   const boardsL = () => A(typeof S !== 'undefined' && S ? S.boards : []);
   /* 학습 주소 → 목록 종류 */
+  /* v43 F4(K4 126): 머리글을 따로 정하지 않은 학습 페이지는 캔버스에서도 학습자 화면(lhead.js AUTO)과 같은 사진 띠로 — 연두 빈 띠 대신 */
+  const LHAUTO = { shop: 'lec-01', courses: 'lec-01', notice: 'off-05', comm: 'grp-03', textbooks: 'lib-02', books: 'lib-02', my: 'lap-03', tutorials: 'lap-06', badges: 'cor-07', diag: 'dsk-05', cal: 'off-07', fac: 'cls-02' };
+  const lhAuto = (r, c) => { c = c || {}; if (c.img || c.tone) return ''; const k = LHAUTO[String(r || '').split('/')[0]]; return k ? `img/stock/${k}.webp` : ''; };
   const listKind = (r, kind) => { const a = String(r || '').split('/')[0]; return { shop: 'cls', courses: 'cls', notice: 'notice', comm: 'comm', textbooks: 'book', my: 'my', class: 'one' }[a] || { class: 'cls', book: 'book', community: 'comm', notice: 'notice', board: 'comm' }[kind] || 'cls'; };
   const subDef = (lk, r) => { if (lk === 'comm' && /^comm\/./.test(r)) { const b = boardsL().find(x => x.id === r.slice(5)); return (b && b.desc) || '궁금한 점을 묻고 이야기를 나눠요.'; }
     return { cls: `지금 신청할 수 있는 ${cls()}입니다.`, notice: '새로운 소식과 안내를 확인하세요.', comm: '궁금한 점을 묻고 이야기를 나눠요.', book: '수업에 쓰는 교재 · 교구입니다.', my: `내 ${cls()} · 진도 · 수료증을 한곳에서 봐요.`, one: '' }[lk] || ''; };
@@ -679,7 +682,7 @@
   /* ── 렌더러: 머리글 · 자동 목록 · 게시판 ── */
   const lumL = c => { try { return lum(c); } catch (e) { return .5; } };
   const tokS = s => { try { return window.HPT && HPT.tokens ? HPT.tokens(s) : null; } catch (e) { return null; } };
-  function lsHead(x, s) { const d = x.data || {}; const c = (site().lhead || {})[d.route] || {}; const T = tokS(s) || {}; const a = /^#[0-9a-f]{6}$/i.test(T.a || '') ? T.a : (s.color || '#00862D');
+  function lsHead(x, s) { const d = x.data || {}; const c0 = (site().lhead || {})[d.route] || {}; const au = lhAuto(d.route, c0); const c = au ? Object.assign({}, c0, { img: au }) : c0; const T = tokS(s) || {}; const a = /^#[0-9a-f]{6}$/i.test(T.a || '') ? T.a : (s.color || '#00862D');
     const okImg = /^(data:image\/(png|jpe?g|webp|gif);base64,|https:\/\/|img\/stock\/)/.test(String(c.img || '')); const tone = okImg ? 'img' : ['plain', 'soft', 'brand'].includes(c.tone) ? c.tone : 'soft';
     const on = T.on || (lumL(a) > .35 ? '#14161F' : '#fff'); const st = `--lsh-a:${a};--lsh-on:${on}${T.as ? `;--lsh-as:${T.as}` : ''}${okImg ? `;--lsh-img:url('${String(c.img).replace(/['"()\\\s]/g, '')}')` : ''}`;
     return `<section class="hpx-lsh lt-${tone}${c.al === 'c' ? ' al-c' : ''}${c.h === 's' || c.h === 'l' ? ' h-' + c.h : ''}" style="${E(st)}"><div class="hpx-lsw"><nav class="hpx-lshc" aria-label="이동 경로">홈 › ${E(d.def || d.title || '')}</nav><h1>${E(d.title || '')}</h1>${d.sub ? `<p>${E(d.sub)}</p>` : ''}</div></section>`; }
@@ -687,10 +690,10 @@
   function lsList(x, i, s, lk2) { const d = x.data || {}; const k = d.lk || 'cls'; const r = String(d.route || ''); const ed = !!HPE.map; let inner = ''; const P2 = (o) => { try { return proSec(Object.assign({ id: '_lsl', data: {} }, o), i, s, lk2) || ''; } catch (e) { console.error('hps lsl', e); return ''; } };
     const nn = +d.n > 0 ? +d.n : 0; const cut = L => nn ? L.slice(0, nn) : L; const ck = ['photo', 'list', 'big'].includes(d.card) ? d.card : undefined; /* v37 P4: 학습 페이지 패널의 목록 수 · 카드 모양 · 검색 칸 */
     const filt = k === 'cls' && d.filt !== false ? `<div class="hpx-lsw"><div class="hpx-lsf" aria-hidden="true">${SV(P.seo, 16)} ${E(cls())} 검색</div></div>` : '';
-    if (k === 'cls') inner = filt + P2({ type: 'classes', data: { title: '', ids: cut(pubIds()), card: ck } });
+    if (k === 'cls') inner = filt + P2({ type: 'classes', data: { title: '', ids: cut(pubIds()), card: ck || 'photo' } }); /* v43 F4(K4 126): 기본은 학습자 화면과 같은 사진 카드(회색 긴 표 대신) */
     else if (k === 'one') inner = P2({ type: 'classes', data: { title: '', ids: [r.split('/')[1]].filter(Boolean) } });
     else if (k === 'notice') inner = P2({ type: 'notices', data: { title: '', n: noticeN() } });
-    else if (k === 'book') inner = P2({ type: 'books', data: { title: '', ids: cut((S.books || []).filter(b => (b.open || '전체') === '전체').map(b => b.id)), card: ck } });
+    else if (k === 'book') inner = P2({ type: 'books', data: { title: '', ids: cut((S.books || []).filter(b => (b.open || '전체') === '전체').map(b => b.id)), card: ck || 'photo' } });
     else if (k === 'comm') { const bid = /^comm\/./.test(r) ? r.slice(5) : (d.kind === 'board' ? ((boardsL().find(b => b.id !== '커뮤니티') || {}).id || '') : ''); inner = bdHTML({ bid, n: 8, title: '', all: !bid }, s); }
     else inner = `<section class="hpx-lsmy"><div class="hpx-lsw"><div><b>로그인하면 이곳에 내 학습이 보입니다</b><p>수강 중인 ${E(cls())} · 진도 · 수료증 · 내 활동</p></div></div></section>`;
     const note = { cls: `공개 ${cls()} 목록 — ${cls()} 메뉴에서 만들고 공개합니다`, one: `${cls()} 하나 — ${cls()} 메뉴에서 고칩니다`, notice: '공지 목록 — 소통 › 공지에서 씁니다', comm: '게시글 목록 — 소통 › 게시판에서 관리합니다', book: '교재 · 교구 목록', my: '로그인한 학습자에게 보이는 내 학습 화면' }[k] || '자동 목록';
@@ -721,9 +724,9 @@
 .hpx-lsh.lt-plain{background:#fff;border-bottom:1px solid rgba(20,22,31,.08)}.hpx-lsh.lt-brand{background:var(--lsh-a);color:var(--lsh-on)}
 .hpx-lsh.lt-img{color:#fff;background:#1B1C22 var(--lsh-img) center/cover no-repeat}.hpx-lsh.lt-img::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(10,12,20,.72),rgba(10,12,20,.3))}
 .hpx-lsh.al-c .hpx-lsw{text-align:center}.hpx-lsh.al-c p{margin-left:auto;margin-right:auto}.hpx-lsh.h-s{padding:26px 0 20px}.hpx-lsh.h-l{padding:96px 0 80px}.hpx-lsh.h-l h1{font-size:clamp(34px,5vw,56px)}
-.hpx-lsl{position:relative;display:block;padding:8px 0}.hpx-lsb{position:absolute;left:12px;top:10px;z-index:5;display:inline-flex;align-items:center;gap:6px;background:#ECFDF3;color:#00862D;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:7px 11px;border-radius:99px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.hpx-lsl{position:relative;display:block;padding:8px 0}.hpx-lsl>section:not(.hpx-lsmy):not(.hpx-bd){padding-top:20px!important;padding-bottom:48px!important}.hpx-lsb{position:absolute;left:12px;top:10px;z-index:5;display:inline-flex;align-items:center;gap:6px;background:#ECFDF3;color:#00862D;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:7px 11px;border-radius:99px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
 .hpx-lse{display:none}
-.hpx-lsf{display:flex;align-items:center;gap:8px;margin:44px 0 0;max-width:420px;border:1px solid rgba(20,22,31,.18);border-radius:10px;padding:12px 14px;color:rgba(20,22,31,.55);font-size:15px;background:#fff}
+.hpx-lsf{display:flex;align-items:center;gap:8px;margin:36px 0 0;max-width:420px;border:1px solid rgba(20,22,31,.18);border-radius:10px;padding:12px 14px;color:rgba(20,22,31,.55);font-size:15px;background:#fff}
 .hpx-lsmy{padding:48px 0}.hpx-lsmy .hpx-lsw>div{border:1.5px dashed rgba(20,22,31,.2);border-radius:14px;padding:36px;text-align:center}.hpx-lsmy b{font-size:18px}.hpx-lsmy p{margin:6px 0 0;opacity:.7}
 .hpx-bd{padding:clamp(40px,6vw,72px) 0}.hpx-bdh h2{margin:0;font-size:clamp(22px,2.6vw,30px);letter-spacing:-.025em;font-family:var(--hd-ff,inherit)}.hpx-bdh p{margin:6px 0 0;opacity:.7}
 .hpx-bdl{list-style:none;margin:18px 0 0;padding:0;border-top:2px solid currentColor}.hpx-bdl li{border-bottom:1px solid rgba(20,22,31,.1)}
@@ -895,14 +898,18 @@
   function learnHTML() {
     const L = lsL(); const LP = lpPages(); const ls = curLs(); const sel = ls ? null : LP.find(p => p.key === HPE.key) || null; const taken = new Set(LP.map(p => String(p.learn).split('/')[0]));
     const rest = A(L.pages).filter(p => p.id !== 'home' && !taken.has(p.id)); const offN = rest.filter(p => !p.on).length; const rows = rest.filter(p => p.on || HS.lsAll || (ls && ls.id === p.id));
-    let h = `<p class="hps-pd">학습 페이지를 고르면 캔버스도 그 페이지로 바뀝니다. 여기서 고친 내용은 캔버스에 바로 보이고, [게시하기]를 누르면 학습자 사이트에 반영됩니다.</p>
-      <div class="hps-lpk"><b class="hps-lpt">메뉴로 연결된 학습 페이지</b>${LP.length ? LP.map(p => { const on = !!(sel && sel.key === p.key); return `<button type="button" class="hps-lpi${on ? ' on' : ''}" data-act="hps-lpgo" data-v="${E(p.key)}" aria-pressed="${on}"><span>${E(p.label)}</span><small>${E(LKN()[listKind(p.learn)] || '목록')}</small></button>`; }).join('') : '<p class="mini">메뉴로 연결된 학습 페이지가 없습니다. 위 [＋ 페이지]에서 「학습 페이지」를 고르면 생깁니다.</p>'}
-      <b class="hps-lpt">학습 사이트 페이지</b>${rows.map(p => { const on = !!(ls && ls.id === p.id); return `<div class="hps-lpr"><button type="button" class="hps-lpi${on ? ' on' : ''}" data-act="hps-lsgo" data-v="${E(p.id)}" aria-pressed="${on}"><span>${E(p.name)}</span><small>${p.on ? `섹션 ${A(p.sections).length}개` : '꺼짐'}${p.access === '로그인' ? ' · 로그인한 사람만' : ''}</small></button><label class="hps-chk"><input type="checkbox" data-hx="ls-on" data-v="${E(p.id)}" ${p.on ? 'checked' : ''}><span>보이기</span></label></div>`; }).join('') || '<p class="mini">켜진 학습 사이트 페이지가 없습니다.</p>'}
+    /* v43 F4(K4 126): 페이지 고르기 = 종류 아이콘 타일(2열) + 학습 사이트 페이지는 아이콘 · 섹션 수 칩 · 스위치 행(체크박스 목록 대신) */
+    const LKI = { cls: P.learn, one: P.learn, book: '<path d="M4 5h7v14H4zM13 5h7v14h-7z"/>', notice: '<path d="M4 10v4h3l6 4V6L7 10zM17 9a4 4 0 0 1 0 6"/>', comm: '<path d="M5 5h14v10H9l-4 4z"/>', my: '<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0"/>' };
+    const ki = k => `<i class="hps-lpic" aria-hidden="true">${SV(LKI[k] || P.learn, 16)}</i>`;
+    let h = `<p class="hps-pd">고르면 캔버스가 그 페이지로 바뀝니다. 고친 내용은 [게시하기] 후 학습자 사이트에 반영됩니다.</p>
+      <div class="hps-lpk"><b class="hps-lpt">메뉴로 연결된 학습 페이지 <em class="hps-lpn">${LP.length}</em></b>${LP.length ? `<div class="hps-lpg">${LP.map(p => { const on = !!(sel && sel.key === p.key); const lk = listKind(p.learn); return `<button type="button" class="hps-lpi${on ? ' on' : ''}" data-act="hps-lpgo" data-v="${E(p.key)}" aria-pressed="${on}">${ki(lk)}<span>${E(p.label)}</span><small>${E(LKN()[lk] || '목록')}</small></button>`; }).join('')}</div>` : '<p class="mini">메뉴로 연결된 학습 페이지가 없습니다. 위 [＋ 페이지]에서 「학습 페이지」를 고르면 생깁니다.</p>'}
+      <b class="hps-lpt">학습 사이트 페이지 <em class="hps-lpn">${rows.filter(p => p.on).length}</em></b>${rows.map(p => { const on = !!(ls && ls.id === p.id); const n = A(p.sections).length; return `<div class="hps-lpr${p.on ? '' : ' off'}"><button type="button" class="hps-lpi${on ? ' on' : ''}" data-act="hps-lsgo" data-v="${E(p.id)}" aria-pressed="${on}">${ki(p.id === 'my' || p.access === '로그인' ? 'my' : 'cls')}<span>${E(p.name)}</span><small class="hps-lpc">${p.on ? (n ? `섹션 ${n}개` : '섹션 없음') : '꺼짐'}${p.access === '로그인' ? ' · 로그인' : ''}</small></button><label class="hps-chk hps-sw" title="학습자 사이트에 보이기"><input type="checkbox" role="switch" data-hx="ls-on" data-v="${E(p.id)}" ${p.on ? 'checked' : ''}><span>보이기</span></label></div>`; }).join('') || '<p class="mini">켜진 학습 사이트 페이지가 없습니다.</p>'}
       ${offN && !HS.lsAll ? `<button type="button" class="hps-ln" data-act="hps-lsall">꺼진 페이지 ${offN}개도 보기</button>` : ''}</div>`;
     if (ls) h += lsDetail(ls); else if (sel) h += lpDetail(sel); else h += `<p class="hps-pe">위에서 고칠 학습 페이지를 고르세요. 지금 캔버스는 「${E(HS.lv ? HS.lv.name : (pageOf(HPE.key) || {}).label || '홈')}」 페이지입니다.</p>`;
     return h; }
   function lpDetail(p) { const X = A(p.sections); const head = X.find(x => x.type === 'lshead'); const ll = X.find(x => x.type === 'lslist'); const d = (ll && ll.data) || {}; const lk = d.lk || listKind(p.learn); const c = lhCur(p.learn); const it = p.sb || p.m;
-    const tone = c.img ? 'img' : c.tone || 'soft'; const B = 'hps-lh';
+    const au = lhAuto(p.learn, c); const tone = c.img || au ? 'img' : c.tone || 'soft'; const B = 'hps-lh';
+    const pv = `<div class="hps-lhpv lt-${tone}${c.al === 'c' ? ' al-c' : ''}"${tone === 'img' ? ` style="--pv:url('${E(String(c.img || au).replace(/['"()\\\s]/g, ''))}')"` : ''}><b>${E((head && head.data && head.data.title) || p.label)}</b>${head && head.data && head.data.sub ? `<small>${E(head.data.sub)}</small>` : ''}<em>${au ? '기본 사진 띠' : tone === 'img' ? '배경 사진' : { plain: '흰 바탕', soft: '연한 색', brand: '대표 색' }[tone]}</em></div>`;
     let list = '';
     if (lk === 'cls' || lk === 'book') { const KN = [['photo', '사진형'], ['list', '목록형'], ['big', '큰 사진']]; const cur = ['photo', 'list', 'big'].includes(d.card) ? d.card : 'photo';
       list = `<label class="fl">한 번에 보일 개수<select data-hx="ll-n">${[[0, '전체'], [4, '4개'], [8, '8개'], [12, '12개'], [20, '20개']].map(([v, n]) => `<option value="${v}" ${(+d.n || 0) === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
@@ -915,7 +922,7 @@
     else list = `<p class="mini">${E(cls())} 하나의 소개 화면입니다. 내용은 ${E(cls())} 메뉴에서 고칩니다.</p>`;
     return `<div class="hps-lpd"><h4>「${E(p.label)}」 페이지</h4>
       <label class="ckl"><input type="checkbox" data-hx="pg-on" data-v="${E(p.key)}" ${it && it.on !== false ? 'checked' : ''} ${it && it.kind === 'home' ? 'disabled' : ''}> 사이트 메뉴에 보이기</label>
-      <fieldset class="hps-fs"><legend>머리글</legend>
+      <fieldset class="hps-fs"><legend>머리글</legend>${pv}
         <label class="fl">제목<input data-hx="lh-t" maxlength="60" value="${E((head && head.data && head.data.title) || '')}"></label>
         <label class="fl">소개 문구<textarea data-hx="lh-d" rows="2" maxlength="200">${E((head && head.data && head.data.sub) || '')}</textarea></label>
         ${segR('정렬', seg(B, 'al', 'l', (c.al || 'l') === 'l', '왼쪽') + seg(B, 'al', 'c', c.al === 'c', '가운데'))}
