@@ -33,8 +33,8 @@ const wait = ms => new Promise(k => setTimeout(k, ms));
 
   /* ① 설정: 하위 단위 생성(POST units) */
   await tab('set'); await p.click('[data-act="led-u-add"][data-v="lu_root"]'); await p.fill('#modal [name="n"]', '라이브 1호점'); await p.click('#modal [data-mact="ok"]');
-  await p.waitForFunction(() => [...document.querySelectorAll('.lg-unit option')].some(o => /라이브 1호점/.test(o.textContent)), null, { timeout: 10000 }).catch(() => { });
-  const U1 = await p.evaluate(() => { const o = [...document.querySelectorAll('.lg-unit option')].find(x => /라이브 1호점/.test(x.textContent)); return o && o.value; });
+  /* v43 R6: 단위 6개 이하는 기본 드롭다운 대신 칩(세그먼트) — 둘 다 읽음 */ await p.waitForFunction(() => [...document.querySelectorAll('.lg-unit option, .lg-useg .lg-chip')].some(o => /라이브 1호점/.test(o.textContent)), null, { timeout: 10000 }).catch(() => { });
+  const U1 = await p.evaluate(() => { const o = [...document.querySelectorAll('.lg-unit option, .lg-useg .lg-chip')].find(x => /라이브 1호점/.test(x.textContent)); return o && (o.value || o.dataset.v); });
   ok(!!U1, '단위 생성 ' + U1);
 
   /* ② 청구(POST charges, 할인 줄 포함) */
