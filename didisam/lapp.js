@@ -56,12 +56,15 @@
     lifelong: { learn: '내 강좌', find: '강좌 신청', tabs: [['my', '#my', '내 강좌'], ['find', '#courses', '강좌 신청']], sub: () => '강좌 신청 · 출석 · 수료를 함께 챙겨요', chips: [['신청할 강좌', '지금 신청할 수 있는 강좌 알려줘', 'list'], ['수료 조건', '수료 조건 알려줘', 'rule'], ['이번 주 일정', '이번 주 수업 일정 알려줘', 'week']], d: '강좌 신청 · 출석 · 수료 기록' },
     voc: { learn: '내 훈련', find: '훈련과정', tabs: [['my', '#my', '내 훈련'], ['att', '#attend', '출석']] /* v43 APP-TABS: 출결 · 학습시간 한도는 수료 요건이라 한 번에 닿게(일정은 「내 훈련」 세그먼트) */, sub: () => '출석 · 학습 시간 · 수료 기준을 함께 챙겨요', chips: [['출석 확인', '오늘 출석 현황 알려줘', 'att'], ['수료 기준', '훈련 수료 기준 알려줘', 'rule'], ['오늘 학습 한도', '오늘 학습할 수 있는 시간 알려줘', 'limit']], d: '훈련과정 · 출결 · 수료' }
   };
+  /* v43 공공 세부 유형(대표님 결정 11-16): 직원 교육형은 위 public(필수교육 · 이수). 시민 교육형 = 강좌 신청 · 출석 · 수료, 시설형 = 시설 예약 · 강습 신청 · 이용권(「시설」 탭 포함, APP-TABS) */
+  SCN.public_citizen = { learn: '내 강좌', find: '강좌 신청', tabs: [['my', '#my', '내 강좌'], ['find', '#courses', '강좌 신청']], sub: () => '강좌 신청 · 출석 · 수료를 함께 챙겨요', chips: [['신청할 강좌', '지금 신청할 수 있는 강좌 알려줘', 'list'], ['이번 주 일정', '이번 주 수업 일정 알려줘', 'week'], ['수료 조건', '수료 조건 알려줘', 'rule']], d: '시민 강좌 신청 · 출석 · 수료' };
+  SCN.public_facility = { learn: '내 강습', find: '강습 신청', tabs: [['my', '#my', '내 강습'], ['find', '#courses', '강습 신청'], ['fac', '#fac', '시설']], sub: () => '시설 예약 · 강습 · 이용권을 함께 챙겨요', chips: [['오늘 예약', '오늘 내 시설 예약 알려줘', 'fac'], ['신청할 강습', '지금 신청할 수 있는 강습 알려줘', 'list'], ['이용권 잔여', '내 이용권 남은 횟수 알려줘', 'pass']], d: '시설 예약 · 강습 신청 · 이용권' };
   /* v29 대학 학사 LMS(전교생 메인)는 수업 · 출석 · 과제 · 시험 · 성적 중심 시나리오 */
   SCN.univ_lms = { learn: '이번 학기 강의', find: '비교과', tabs: [['my', '#my', '이번 학기 강의'], ['cal', '#cal', '일정']], sub: me => `학번 ${me.sid || ''} · 출석 · 과제 · 시험 · 성적을 함께 챙겨요`, chips: [['오늘 출석', '오늘 출석해야 할 수업 알려줘', 'att'], ['과제 · 시험 마감', '이번 주 과제 · 시험 마감 정리해줘', 'due'], ['학습 분량 점검', '이번 주 온라인 강의 중 덜 들은 차시 알려줘', 'gap']], d: '교과 수업 · 스마트 출석 · 성적 · 학사 연동' };
   const oTy = () => (SITE() && SITE().org && SITE().org.type) || 'adult';
   const oEd = () => (SITE() && SITE().org && SITE().org.ed) || '';
   const scnExt = () => { for (const f of window.LSCN_PICK || []) { try { const x = f(oTy(), oEd()); if (x) return x; } catch (e) { console.error(e); } } return null; };
-  const scn = () => scnExt() || (oTy() === 'univ' && oEd() === 'lms' ? SCN.univ_lms : SCN[oTy()]) || SCN.adult;
+  const scn = () => scnExt() || (oTy() === 'univ' && oEd() === 'lms' ? SCN.univ_lms : oTy() === 'public' && SCN['public_' + oEd()] ? SCN['public_' + oEd()] : SCN[oTy()]) || SCN.adult; /* v43 공공 세부 유형(oEd: citizen · facility · staff, 없으면 직원 교육형) */
   window.lappScn = () => scn(); /* v33: 기존 웹(lterm.js)이 같은 용어를 쓰도록 내보냄 */
   /* v39 디디쌤 튜브(ltube.js)가 기존 앱과 같은 유형 용어 · 튜터 이름 · 둘러보기 · 커뮤니티 경로 · 설치 안내를 쓰도록 내보냄 */
   window.lappInfo = () => ({ tName: tName(), learn: scn().learn, find: scn().find, chips: scn().chips || [], browse: browse(), comm: hasComm() ? ['#comm', '커뮤니티'] : ['#notice', '공지'], inst: !standalone() && ls.get('instx') !== '1', ios: IOS });

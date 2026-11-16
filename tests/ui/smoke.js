@@ -5,7 +5,7 @@ const http = require('node:http'); const fs = require('node:fs'); const path = r
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../../didisam');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/json', '.json': 'application/json' };
-const CASES = [['univ', 'lms'], ['univ', 'lite'], ['corp'], ['public'], ['k12'], ['adult'], ['lifelong'], ['voc']];
+const CASES = [['univ', 'lms'], ['univ', 'lite'], ['corp'], ['public'], ['public', 'citizen'], ['public', 'facility'], ['public', 'staff'], /* v43 공공 세부 유형 */ ['k12'], ['adult'], ['lifelong'], ['voc']];
 
 (async () => {
   const srv = http.createServer((q, r) => {

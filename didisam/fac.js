@@ -65,7 +65,7 @@
       mk({ id: 'f_proj', name: '빔프로젝터', kind: 'rent', place: '안내데스크', res: 3, resPrefix: 'P-', audience: ['staff'], hours: H7(['09:00', '18:00'], null), refund: { type: 'rent' }, maxDays: 2 })],
       products: [{ id: 'p_proj', fac: 'f_proj', type: 'rent', name: '프로젝터 대여', per: 'day', days: 2, prices: { staff: 0 }, deposit: 0, lateFeePerDay: 0 }] }) }
   };
-  const tplFor = type => type === 'univ' ? 'univ' : type === 'corp' ? 'corp' : ['public'].includes(type) ? 'sports' : 'room';
+  const tplFor = type => type === 'univ' ? 'univ' : type === 'corp' ? 'corp' : type === 'public' ? (S && S.org && S.org.ed === 'citizen' ? 'room' : 'sports') : 'room'; /* v43 공공 시민 교육형은 강의실 대관형 */
 
   /* ── 데모 데이터: 오늘 기준 예약 · 이용권 · 대여 · 지난 13일 결제 ── */
   const WHO = ['김*연', '박*준', '이*아', '정*호', '최*린', '한*결', '윤*아', '서*훈', '강*민', '조*우', '임*희', '신*수'];
@@ -106,7 +106,9 @@
   MENU.fac = { label: '시설 · 장비', ws: 'ops' };
   Object.keys(PRESET).forEach(k => { const P = PRESET[k]; if (!P.on.includes('fac') && !P.off.includes('fac')) P.on.push('fac'); });
   /* v36 기본 메뉴(slim.js ESS)에도 넣는다 — 02 명세 1절: 모든 유형 프리셋에 켬(학사 LMS는 그쪽 규칙 그대로) */
-  if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { const E = base(...a) || []; try { if (S && S.org && !(S.org.type === 'univ' && S.org.ed === 'lms') && MENU.fac && !E.includes('fac')) return [...E, 'fac']; } catch (e) { } return E; }; }
+  if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { const E = base(...a) || []; try { if (S && S.org && !(S.org.type === 'univ' && S.org.ed === 'lms') && MENU.fac && !E.includes('fac') && !facOffDefault()) return [...E, 'fac']; } catch (e) { } return E; }; }
+  /* v43 결정(DECISIONS A · B1): 학원 시설 메뉴는 기본 끔(설정 › 메뉴 찾기에서 켬), 공공 직원 교육형은 시설을 쓰지 않으므로 끔. 공공 시설형은 시설이 중심 */
+  function facOffDefault() { const o = S.org; return o.type === 'k12' || o.type === 'adult' || (o.type === 'public' && (o.ed || 'staff') === 'staff'); }
   if (typeof DICT !== 'undefined') Object.assign(DICT, { '시설 · 장비': 'Facilities|施設・設備|设施 · 设备|Instalaciones|Installations|Einrichtungen|Cơ sở vật chất|สิ่งอำนวยความสะดวก|Объекты' });
   if (typeof postSeed === 'function') { const base = postSeed; postSeed = (...a) => { const r = base(...a); try { ensure(); } catch (e) { console.error('fac', e); } return r; }; } /* eslint-disable-line no-global-assign */
   if (typeof upgradeState === 'function') { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org) { ensure(); if (typeof navAdd === 'function' && !Object.values(S.nav.tabs).some(L => (L || []).some(x => x.id === 'fac'))) navAdd('fac', true); } } catch (e) { console.error('fac', e); } return r; }; } /* eslint-disable-line no-global-assign */

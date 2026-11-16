@@ -304,7 +304,7 @@
         <div><div class="eyebrow">1단계 · ${STEPS[0]}</div><h3>마일리지 제도를 사용하시겠습니까?</h3></div>
         <div class="mil-g2">${opt(w.use, 'mil-w-use', '1', 'play', '사용합니다', '권장 정책안을 확인한 뒤 마지막 단계에서 켭니다.')}${opt(!w.use, 'mil-w-use', '0', 'pause', '사용하지 않음', '마일리지는 꺼진 상태로 둡니다. 나중에 여기서 다시 시작할 수 있습니다.')}</div>
         ${w.use ? `<hr><div><h4>무엇을 위해 쓰십니까?</h4><p class="mut">목적에 따라 2단계 권장 정책안과 3단계 보상 목록이 달라집니다.</p></div>
-        <div class="mil-g2">${opt(w.purpose === 'motive', 'mil-w-pur', 'motive', 'chart', '동기부여만', '적립 · 등급 · 배지로 학습의 흔적을 보여 줍니다. 돈과 바꾸는 보상은 쓰지 않습니다.', `<span class="pill p-off">${['corp', 'univ', 'voc'].includes(S.org.type) ? '권장 · ' : ''}비현금형</span>`)}${opt(w.purpose === 'cash', 'mil-w-pur', 'cash', 'receipt', '할인 · 장학과 연계', T.won ? `${p.unitName}를 학원비 차감 · 쿠폰 · 굿즈로 바꿀 수 있게 합니다. 수납 원장과 연결됩니다.` : '교환권 · 굿즈 등 금전 가치가 있는 보상을 씁니다. 예산을 함께 정합니다.', ({ adult: '학원에서 많이 씀', k12: '학원에서 많이 씀', public: '공공에서 많이 씀', lifelong: '평생교육에서 많이 씀' })[S.org.type] ? `<span class="pill p-info">${({ adult: '학원에서 많이 씀', k12: '학원에서 많이 씀', public: '공공에서 많이 씀', lifelong: '평생교육에서 많이 씀' })[S.org.type]}</span>` : '')}</div>
+        <div class="mil-g2">${opt(w.purpose === 'motive', 'mil-w-pur', 'motive', 'chart', '동기부여만', '적립 · 등급 · 배지로 학습의 흔적을 보여 줍니다. 돈과 바꾸는 보상은 쓰지 않습니다.', `<span class="pill p-off">${['corp', 'univ', 'voc'].includes(S.org.type) ? '권장 · ' : ''}비현금형</span>`)}${S.org.type === 'voc' ? `<div class="mil-opt mil-lock" aria-disabled="true" id="milCashLock"><span class="rd">${ic('lock', 14)}</span><span class="f1"><span class="t">${ic('receipt', 20)}할인 · 장학과 연계<span class="pill p-off">잠김</span></span><span class="d">국비 훈련생에게는 돈과 바꾸는 보상(교환권 · 할인 · 장학)을 줄 수 없습니다. 직업훈련원은 동기부여(적립 · 등급 · 배지)만 씁니다.</span></span></div>` : ''}${S.org.type === 'voc' ? '' : opt(w.purpose === 'cash', 'mil-w-pur', 'cash', 'receipt', '할인 · 장학과 연계', T.won ? `${p.unitName}를 학원비 차감 · 쿠폰 · 굿즈로 바꿀 수 있게 합니다. 수납 원장과 연결됩니다.` : '교환권 · 굿즈 등 금전 가치가 있는 보상을 씁니다. 예산을 함께 정합니다.', ({ adult: '학원에서 많이 씀', k12: '학원에서 많이 씀', public: '공공에서 많이 씀', lifelong: '평생교육에서 많이 씀' })[S.org.type] ? `<span class="pill p-info">${({ adult: '학원에서 많이 씀', k12: '학원에서 많이 씀', public: '공공에서 많이 씀', lifelong: '평생교육에서 많이 씀' })[S.org.type]}</span>` : '')}</div>
         <hr><div><h4>한 달 보상 예산이 있습니까?</h4><p class="mut">디디쌤이 묻는 질문은 이것 하나입니다. 예산이 없으면 비현금형으로 안내합니다.</p></div>
         <div class="mil-row"><label class="mil-fld f1"><span>월 보상 예산(원)</span><input name="milBud" inputmode="numeric" value="${esc(w.budget)}" placeholder="예: 300000" data-chg="mil-w-bud" ${w.noBudget ? 'disabled' : ''}></label>
         <label class="mil-ck"><input type="checkbox" data-chg="mil-w-nob" ${w.noBudget ? 'checked' : ''}> 예산 없음 — 배지 · 등급만 사용</label></div>` : ''}
@@ -357,7 +357,7 @@
 
   ACT['mil-restart'] = () => { UI.milRestart = 1; UI.milW = null; render(); };
   ACT['mil-w-use'] = el => { wiz().use = el.dataset.v === '1'; render(); };
-  ACT['mil-w-pur'] = el => { const w = wiz(); w.purpose = el.dataset.v; w.draft = null; render(); };
+  ACT['mil-w-pur'] = el => { const w = wiz(); if (S.org.type === 'voc' && el.dataset.v === 'cash') { toast('국비 훈련생에게는 돈과 바꾸는 보상을 줄 수 없습니다.', 'warn'); return; } w.purpose = el.dataset.v; w.draft = null; render(); };
   ACT['mil-w-bud'] = el => { const w = wiz(); w.budget = el.value.replace(/[^\d]/g, ''); w.draft = null; };
   ACT['mil-w-nob'] = el => { const w = wiz(); w.noBudget = el.checked; if (el.checked) w.purpose = 'motive'; w.draft = null; render(); };
   ACT['mil-w-later'] = () => { toast('나중에 마일리지 › 시작하기에서 이어서 설정할 수 있습니다.'); go('home'); };

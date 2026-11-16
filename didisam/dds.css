@@ -167,8 +167,8 @@ input[type=search]::placeholder,input::placeholder,textarea::placeholder{color:v
 .cm26drop{display:flex;align-items:center;justify-content:center;gap:6px;height:96px;margin-top:6px;border:1px dashed var(--g400,#C5C8CA);border-radius:8px;color:var(--s400);font-weight:700;cursor:pointer;position:relative;background:var(--surface,#fff)}
 .cm26drop:hover{background:var(--s50)}.cm26drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
 .cm26drop:focus-within{outline:2px solid var(--s400);outline-offset:2px}
-.cm26send{width:100%;height:48px;justify-content:center;margin-top:6px;background:#2A2B2B!important;border-color:#2A2B2B!important;color:#fff!important}
-.cm26send:hover{background:#111!important}
+.cm26send{width:100%;height:48px;justify-content:center;margin-top:6px;background:var(--pr,#00A832)!important;border-color:var(--pr,#00A832)!important;color:var(--on-pr,#fff)!important} /* v43 D-A: 검정 → 그린 주 버튼 */
+.cm26send:hover{background:var(--pr-h,#05612A)!important}
 .cm26t{background:var(--g50,#F7F8F8)!important;min-height:100%;display:flex;flex-direction:column;gap:10px}
 .cm26r button{min-width:72px}
 .cm26cnt{margin:6px 0 0;padding-bottom:10px;border-bottom:1px solid var(--g300,#DDE0E2);font-weight:700}.cm26cnt b{color:var(--s400)}

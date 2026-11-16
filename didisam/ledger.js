@@ -34,7 +34,7 @@
   const st = (M, s) => { const x = M[s] || [s, '']; return `<span class="lg-st ${x[1]}">${esc(x[0])}</span>`; };
 
   /* 기관 성격 → 기본 탭 순서(09 문서 5절) */
-  const TABN = { today: '오늘 할 일', book: '원장', charge: '청구', unpaid: '미납', desk: '현장 수납', refund: '환불', close: '마감', import: '가져오기', share: '쉐어', set: '설정' };
+  const TABN = { today: '오늘 할 일', book: '원장', charge: '청구', unpaid: '미납', desk: '현장 수납', refund: '환불', close: '마감', import: '가져오기', share: '정산 · 쉐어', set: '설정', pay: '강좌 결제', stat: '월별 · 연도별', pgset: '결제 설정' };
   const FLAV = {
     franchise: { n: '프랜차이즈 본사', order: ['charge', 'unpaid', 'today', 'book', 'desk', 'refund', 'close', 'import', 'share', 'set'] },
     univ: { n: '대학(부서 정산)', order: ['book', 'import', 'today', 'charge', 'unpaid', 'desk', 'refund', 'close', 'share', 'set'] },
@@ -42,7 +42,7 @@
     welfare: { n: '평생교육원 · 복지관', order: ['desk', 'close', 'today', 'book', 'refund', 'charge', 'unpaid', 'import', 'share', 'set'] },
     std: { n: '일반', order: ['today', 'book', 'charge', 'unpaid', 'desk', 'refund', 'close', 'import', 'share', 'set'] }
   };
-  const flavorFor = type => type === 'univ' ? 'univ' : type === 'public' ? 'sports' : (type === 'k12' || type === 'adult') ? 'franchise' : type === 'lifelong' ? 'welfare' : 'std';
+  const flavorFor = type => type === 'univ' ? 'univ' : type === 'public' ? (S && S.org && S.org.ed === 'citizen' ? 'welfare' : 'sports') : (type === 'k12' || type === 'adult') ? 'franchise' : type === 'lifelong' ? 'welfare' : 'std';
   const UNIT_TPL = {
     franchise: ['hq', '본사', [['branch', '해운대점'], ['branch', '서면점'], ['branch', '동래점']]],
     univ: ['hq', '대학 본부', [['dept', '평생교육원'], ['dept', '국제교류처'], ['facility', '체육시설']]],
@@ -112,12 +112,28 @@
   function sysCash(D, unitId, day) { const R = D.receipts.filter(r => r.unitId === unitId && r.status === 'paid' && String(r.paidAt).slice(0, 10) === day); return { cash: R.filter(r => r.method === 'cash').reduce((s, r) => s + r.amount, 0), card: R.filter(r => r.method === 'desk_card').reduce((s, r) => s + r.amount, 0) }; }
 
   /* ── 메뉴 · 프리셋 · 기존 저장 사용자 ── */
-  MENU.ledger = { label: '매출 · 수납', ws: 'ops' };
-  Object.keys(PRESET).forEach(k => { const P = PRESET[k]; if (!P.on.includes('ledger') && !P.off.includes('ledger')) P.on.push('ledger'); });
-  if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { const E = base(...a) || []; try { if (S && S.org && !(S.org.type === 'univ' && S.org.ed === 'lms') && MENU.ledger && !E.includes('ledger')) return [...E, 'ledger']; } catch (e) { } return E; }; }
-  if (typeof DICT !== 'undefined') Object.assign(DICT, { '매출 · 수납': 'Revenue · Collections|売上・収納|营收 · 收款|Ingresos · Cobros|Revenus · Encaissements|Umsatz · Inkasso|Doanh thu · Thu tiền|รายได้ · การรับชำระ|Выручка · Оплаты' });
+  /* v43 대표님 결정: 돈 메뉴는 2개 — 「수납」(ledger: 청구 · 미납 · 현장 수납 · 환불 · 마감) · 「매출」(sales: 원장 · 결제 · 통계 · 정산).
+     청구서(billing)는 수납 › 청구로 합치고 옛 주소(#billing)는 MENU_ALIAS로 넘긴다. 학원(초중고)은 원생 수강료 화면(crmbill)이 「수납」이다.
+     기본 켬: 돈을 받는 기관(학원 · 평생 · 직업훈련 · 공공 시민 교육형 · 시설형). 기업 · 공공 직원 교육형 · 대학은 끔(메뉴 찾기에서 켬, P1-F07 · P2-H11) */
+  MENU.ledger = { label: '수납', ws: 'ops' };
+  if (MENU.sales) MENU.sales.label = '매출';
+  if (MENU.billing) MENU.billing.label = '청구서(수납으로 이동)';
+  if (MENU.crmbill) MENU.crmbill.label = '수납';
+  const pubEd0 = () => (S && S.org && S.org.type === 'public' && ['citizen', 'facility', 'staff'].includes(S.org.ed)) ? S.org.ed : 'staff';
+  const MONEY = () => { if (!S || !S.org) return []; const ty = S.org.type; if (ty === 'k12') return ['crmbill', 'sales']; if (['adult', 'lifelong', 'voc'].includes(ty)) return ['ledger', 'sales']; if (ty === 'public' && pubEd0() !== 'staff') return ['ledger', 'sales']; return []; };
+  window.moneyMenus = MONEY;
+  Object.keys(PRESET).forEach(k => { const P = PRESET[k]; P.on = P.on.filter(x => x !== 'billing'); P.off = P.off.filter(x => x !== 'billing'); if (!P.on.includes('ledger') && !P.off.includes('ledger')) P.off.push('ledger'); if (!P.on.includes('sales') && !P.off.includes('sales')) P.off.push('sales'); });
+  MENU_ALIAS.billing = () => { if (S && S.org && S.org.type === 'k12' && MENU.crmbill) return 'crmbill'; UI.ledger = 'charge'; return 'ledger'; };
+  if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { let E = base(...a) || []; try { if (S && S.org && !(S.org.type === 'univ' && S.org.ed === 'lms')) { const want = MONEY().filter(id => MENU[id]); const isM = id => ['ledger', 'sales', 'billing', 'crmbill'].includes(id); const at = E.findIndex(isM); E = E.filter(id => !isM(id)); E.splice(at < 0 ? E.length : at, 0, ...want); /* 수납 → 매출 순서로, 원래 돈 메뉴 자리에 */ } } catch (e) { } return E; }; }
+  /* 저장된 기관 1회 이전(m43): 청구서 메뉴 끄기, 기본 돈 메뉴 2개 켜기, 기업 · 대학 등 돈을 받지 않는 기관에서 수납 · 매출 끄기 */
+  function money43() { if (!S || !S.org || !S.nav || !S.nav.tabs || S.nav.m43) return; const want = MONEY(); const all = Object.values(S.nav.tabs).flat();
+    all.forEach(x => { if (x.id === 'billing') x.on = false; if (['ledger', 'sales', 'crmbill'].includes(x.id) && !(S.org.type === 'univ' && S.org.ed === 'lms')) x.on = want.includes(x.id); });
+    want.forEach(id => { if (MENU[id] && typeof navAdd === 'function' && !all.some(x => x.id === id)) navAdd(id, true); }); S.nav.m43 = 1; }
+  window.money43 = money43;
+  if (typeof window.slimMD === 'function') { const base = window.slimMD; window.slimMD = id => id === 'ledger' ? ['청구 · 미납 · 환불을 처리합니다', '이번 달 수납 현황 요약해줘'] : id === 'sales' ? ['매출 리포트 · 정산을 봅니다', '이번 달 매출 요약해줘'] : base(id); }
+  if (typeof DICT !== 'undefined') Object.assign(DICT, { '수납': 'Collections|収納|收款|Cobros|Encaissements|Inkasso|Thu tiền|การรับชำระ|Оплаты', '매출': 'Revenue|売上|营收|Ingresos|Revenus|Umsatz|Doanh thu|รายได้|Выручка' });
   if (typeof postSeed === 'function') { const base = postSeed; postSeed = (...a) => { const r = base(...a); try { ensure(); } catch (e) { console.error('ledger', e); } return r; }; } /* eslint-disable-line no-global-assign */
-  if (typeof upgradeState === 'function') { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org) { ensure(); if (typeof navAdd === 'function' && !Object.values(S.nav.tabs).some(T => (T || []).some(x => x.id === 'ledger'))) navAdd('ledger', true); } } catch (e) { console.error('ledger', e); } return r; }; } /* eslint-disable-line no-global-assign */
+  if (typeof upgradeState === 'function') { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org) { ensure(); if (typeof navAdd === 'function' && !Object.values(S.nav.tabs).some(T => (T || []).some(x => x.id === 'ledger'))) navAdd('ledger', false); money43(); } } catch (e) { console.error('ledger', e); } return r; }; } /* eslint-disable-line no-global-assign */
   /* 학습자 게시본에는 원장을 싣지 않는다(개인 청구는 /api/pub/<tid>/ledger-my 또는 시연판 학습자 화면이 S.ledger에서 직접 읽음) */
   if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const pub = base(...a); try { if (pub && S && S.ledger) pub.ledger = { on: S.ledger.on !== false, payOnline: L().units.some(u => u.hasKey) }; } catch (e) { console.error('ledger pub', e); } return pub; }; } /* eslint-disable-line no-global-assign */
 
@@ -159,8 +175,13 @@
   const scope = () => rollup() ? descend(units(), curUnit()) : new Set([curUnit()]);
   const inScope = id => scope().has(id);
   const flavor = () => LIVEON() && LIVE.cfg && LIVE.cfg.ledgerFlavor ? LIVE.cfg.ledgerFlavor : L().flavor;
-  const tabList = () => { const O = (FLAV[flavor()] || FLAV.std).order; return O.filter(t => !(teacher() && t === 'set') && !(t === 'share' && !owner())).map(t => [t, TABN[t]]); };
-  const curTab = () => { const T = tabList(); return T.some(x => x[0] === UI.ledger) ? UI.ledger : T[0][0]; };
+  /* v43 대표님 결정(돈 메뉴 2개): 「수납」(ledger · 청구 · 미납 · 현장 수납 · 환불 · 마감) / 「매출」(sales · 원장 · 강좌 결제 · 통계 · 정산 · 결제 설정). 같은 원장 · 같은 요약 함수 */
+  const REV = ['book', 'pay', 'stat', 'share', 'pgset'];
+  const mode = () => (typeof CUR !== 'undefined' && CUR && CUR.tab === 'sales') ? 'rev' : 'col';
+  const uiKey = () => mode() === 'rev' ? 'ledRev' : 'ledger';
+  const tabList = () => { if (mode() === 'rev') return REV.filter(t => !(t === 'share' && !owner()) && !(['pay', 'stat', 'pgset'].includes(t) && !window.SL2)).map(t => [t, TABN[t]]);
+    const O = (FLAV[flavor()] || FLAV.std).order; return O.filter(t => !REV.includes(t) && !(teacher() && t === 'set')).map(t => [t, TABN[t]]); };
+  const curTab = () => { const T = tabList(); const v = UI[uiKey()]; if (T.some(x => x[0] === v)) return v; if (mode() === 'col' && ['book', 'share'].includes(v) && !(v === 'share' && !owner())) return v; /* v43 옛 경로(원장 · 쉐어를 수납에서 열던 상태 · 딥링크)는 그대로 열어 준다. 메뉴 탭은 매출에 있음 */ return T[0][0]; };
   function per() { const td = today(), ym = ymOf(td), p = UI.ledP || 'this';
     if (p === 'prev') { const m = ymPlus(ym, -1); return { p, ym: m, from: m + '-01', to: lastDay(m), label: '지난달' }; }
     if (p === 'q') { const m = ymPlus(ym, -2); return { p, ym, from: m + '-01', to: td, label: '최근 3개월' }; }
@@ -187,7 +208,7 @@
     return { s1: cnt('s1'), s2: cnt('s2'), s3: cnt('s3'), unpaidAmt: U.reduce((s, x) => s + x.bal, 0), unmatched: unm, refunds: rf, unclosed: unc }; }
 
   /* ── 화면 ── */
-  VIEWS.ledger = () => { ensure(); if (LIVEON()) livePull(); const tab = curTab(); const P = per(); const sm = summary(); const t = todo(); const U = units();
+  const viewL = () => { ensure(); if (LIVEON()) livePull(); const REVM = mode() === 'rev'; const tab = curTab(); const P = per(); const sm = summary(); const t = todo(); const U = units();
     const opt = (u, dep) => `<option value="${esc(u.id)}" ${u.id === curUnit() ? 'selected' : ''}>${'　'.repeat(dep)}${esc(u.name)} (${esc(u.kind === 'hq' && flavor() !== 'franchise' ? '본부' : UKIND[u.kind] || u.kind)})</option>`;
     const tree = []; const walk = (p, dep) => U.filter(u => (u.parentId || null) === p).sort((a, b) => (a.sort || 0) - (b.sort || 0)).forEach(u => { tree.push(opt(u, dep)); walk(u.id, dep + 1); }); walk(null, 0);
     const hasKids = U.some(u => u.parentId === curUnit());
@@ -195,17 +216,21 @@
       <div class="lg-seg" role="group" aria-label="합산 범위"><button class="${rollup() ? 'on' : ''}" data-act="led-roll" data-v="1" aria-pressed="${rollup()}" ${hasKids ? '' : 'disabled'}>하위 합산</button><button class="${rollup() ? '' : 'on'}" data-act="led-roll" data-v="0" aria-pressed="${!rollup()}" ${hasKids ? '' : 'disabled'}>이 단위만</button></div>
       <div class="lg-per" role="group" aria-label="기간">${[['this', '이번 달'], ['prev', '지난달'], ['q', '최근 3개월']].map(([k, l]) => `<button class="lg-chip ${P.p === k ? 'on' : ''}" data-act="led-per" data-v="${k}" aria-pressed="${P.p === k}">${l}</button>`).join('')}</div></div>`;
     const totU = t.s1 + t.s2 + t.s3; const urgent = t.refunds ? 'refund' : t.s3 || t.s2 ? 'unpaid' : t.unclosed.length ? 'close' : t.unmatched ? 'import' : 'today';
-    const ai = `<div class="lg-ai" role="status"><span class="lg-ai-b">AI 요약</span><p>${esc(P.label)} 순매출 ${won(sm.net)}, 수납률 ${sm.collectRate}%입니다. ${totU ? `미납 ${totU}명 ${won(t.unpaidAmt)} 중 2단계 이상 ${t.s2 + t.s3}명입니다.` : '납기 지난 미납은 없습니다.'}${t.refunds ? ` 확정 대기 환불 ${t.refunds}건이 있습니다.` : ''}${t.unclosed.length ? ` 마감하지 않은 날이 ${new Set(t.unclosed.map(x => x.day || x)).size}일 있습니다.` : ''}</p>${urgent !== 'today' ? `<button class="btn sm" data-act="tab" data-key="ledger" data-v="${urgent}">${esc(TABN[urgent])} 보기</button>` : ''}</div>`;
+    const ai = `<div class="lg-ai" role="status"><span class="lg-ai-b">AI 요약</span><p>${esc(P.label)} 순매출 ${won(sm.net)}, 수납률 ${sm.collectRate}%입니다. ${totU ? `미납 ${totU}명 ${won(t.unpaidAmt)} 중 2단계 이상 ${t.s2 + t.s3}명입니다.` : '납기 지난 미납은 없습니다.'}${t.refunds ? ` 확정 대기 환불 ${t.refunds}건이 있습니다.` : ''}${t.unclosed.length ? ` 마감하지 않은 날이 ${new Set(t.unclosed.map(x => x.day || x)).size}일 있습니다.` : ''}</p>${urgent !== 'today' ? `<button class="btn sm" data-act="go-led" data-v="${urgent}">${esc(TABN[urgent])} 보기</button>` : ''}</div>`;
     const SPK = (v, k, tone) => { try { return window.L43 && !(S.org && S.org.empty) ? L43.spark(L43.sparkPts(v, 'lg' + k + v), tone) : ''; } catch (e) { return ''; } };
     const card = (l, v, sub, tone) => `<div class="lg-kpi ${tone || ''}"><span>${esc(l)}</span><b>${v}</b><small>${sub}</small>${SPK(v, l, 'on')}</div>`;
     const kp = `<div class="lg-kpis">${card('순매출', won(sm.net), `수납 ${won(sm.paid)} − 환불 ${won(sm.refund)}`)}${card('수납률', sm.collectRate + '%', `청구 ${won(sm.charged || (sm.paid + sm.unpaid))} 기준`, sm.collectRate < 80 ? 'warn' : '')}${card('미수', won(sm.unpaid), `${esc(P.label)} 청구 중 미수납`, sm.unpaid ? 'bad' : '')}${card('환불', won(sm.refund), `환불 완료 기준`)}</div>`;
     const warn = LIVEON() && LV.err ? `<div class="lg-err" role="alert">${esc(LV.err)}</div>` : ''; const ro = teacher() ? '<p class="lg-ro">교강사 권한은 조회만 할 수 있습니다.</p>' : '';
-    let body = ''; try { body = ({ today: vToday, book: vBook, charge: vCharge, unpaid: vUnpaid, desk: vDesk, refund: vRefund, close: vClose, import: vImport, share: vShare, set: vSet })[tab](sm, t); } catch (e) { console.error('ledger view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(e.message)}</div>`; }
+    let body = ''; try { body = ({ today: vToday, book: vBook, charge: vCharge, unpaid: vUnpaid, desk: vDesk, refund: vRefund, close: vClose, import: vImport, share: vShare, set: vSet, pay: () => SL2.pay(), stat: () => SL2.stat(), pgset: () => SL2.pg() })[tab](sm, t); } catch (e) { console.error('ledger view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(e.message)}</div>`; }
     let v43 = ''; try { v43 = lg43(sm, t, P); } catch (e) { console.error('ledger v43', e); }
     /* v43 D-E: AI 요약 띠 + KPI 4장 → 짙은 그린 히어로 한 장(시안 f-admin B2). .lg-ai p · .lg-kpi b는 그대로(테스트 · 화면 낭독) */
     const DOW = ['일', '월', '화', '수', '목', '금', '토']; const d0 = new Date();
-    const hero = `<section class="lg-hero l43-brief l43-k-hero" aria-label="수납 브리핑"><div class="l43-bl"><p class="l43-eye"><span class="l43-ai" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor"/></svg>AI</span>수납 브리핑 · ${d0.getMonth() + 1}월 ${d0.getDate()}일(${DOW[d0.getDay()]})</p><h2 class="l43-hl">${esc(P.label)} 순매출 <em class="num">${won(sm.net)}</em>${totU ? `,<br>미납 <em class="co num">${totU}명</em>이 남았습니다.` : ',<br>납기 지난 미납은 없습니다.'}</h2>${ai}</div>${kp}</section>`;
-    return `<div class="lg">${bar}${warn}${hero}${v43}${ro}${tabs('ledger', tabList(), tab)}<div class="lg-body" data-tab="${tab}">${body}</div><p class="lg-foot">숫자 기준: ${esc(P.from)} ~ ${esc(P.to)} · ${esc(uname(curUnit()))}${rollup() ? ' 및 하위 단위' : ''} · 원장 요약 함수 하나로 계산${LIVEON() ? ' · 운영 서버' : ' · 시연판'}</p></div>`; };
+    const hero = `<section class="lg-hero l43-brief l43-k-hero" aria-label="${REVM ? '매출' : '수납'} 브리핑"><div class="l43-bl"><p class="l43-eye"><span class="l43-ai" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor"/></svg>AI</span>${REVM ? '매출' : '수납'} 브리핑 · ${d0.getMonth() + 1}월 ${d0.getDate()}일(${DOW[d0.getDay()]})</p><h2 class="l43-hl">${esc(P.label)} 순매출 <em class="num">${won(sm.net)}</em>${REVM ? `,<br>수납률 <em class="co num">${sm.collectRate}%</em>입니다.` : totU ? `,<br>미납 <em class="co num">${totU}명</em>이 남았습니다.` : ',<br>납기 지난 미납은 없습니다.'}</h2>${ai}</div>${kp}</section>`;
+    return `<div class="lg">${bar}${warn}${hero}${v43}${ro}${REVM ? `<p class="lg-x">청구 · 미납 · 환불 처리는 <button type="button" class="lnk" data-act="go" data-v="ledger">수납</button>에서 합니다. 이 화면은 매출 리포트 · 정산입니다.</p>` : ''}${tabs(uiKey(), tabList(), tab)}<div class="lg-body" data-tab="${tab}">${body}</div><p class="lg-foot">숫자 기준: ${esc(P.from)} ~ ${esc(P.to)} · ${esc(uname(curUnit()))}${rollup() ? ' 및 하위 단위' : ''} · 원장 요약 함수 하나로 계산${LIVEON() ? ' · 운영 서버' : ' · 시연판'}</p></div>`; };
+  VIEWS.ledger = viewL; VIEWS.sales = viewL; /* v43: 매출(sales)도 같은 원장 화면 — 탭 묶음만 다름 */
+  ACT['go-led'] = el => { const v = el.dataset.v; if (REV.includes(v)) { UI.ledRev = v; go('sales'); } else { UI.ledger = v; go('ledger'); } };
+  /* 학원(초중고): 수납 = 원생 수강료(crmbill). 환불 · 현장 수납 · 마감은 원장 화면으로 잇는다 */
+  AFTER.push(cur => { try { if (!cur || cur.tab !== 'crmbill' || teacher() || document.getElementById('lgK12x')) return; const h = document.querySelector('#main .bview') || document.querySelector('#main'); if (!h) return; h.insertAdjacentHTML('afterbegin', `<p class="lg-x" id="lgK12x">환불 · 현장 수납 · 마감은 <button type="button" class="lnk" data-act="go-led" data-v="refund">원장(환불)</button>, 매출 리포트는 <button type="button" class="lnk" data-act="go" data-v="sales">매출</button>에서 봅니다.</p>`); } catch (e) { } });
   ACT['led-unit'] = el => { UI.ledU = el.value; LV.key = ''; render(); };
   ACT['led-roll'] = el => { UI.ledRoll = el.dataset.v === '1'; LV.key = ''; render(); };
   ACT['led-per'] = el => { UI.ledP = el.dataset.v; LV.key = ''; render(); };
@@ -368,10 +393,16 @@
     const rOf = id => LIVEON() ? rec.find(r => r.id === id) || (refs.find(f => f.receiptId === id && f.paid != null) ? (f => ({ sid: f.sid, method: f.method, amount: f.paid }))(refs.find(f => f.receiptId === id && f.paid != null)) : {}) : L().receipts.find(r => r.id === id) || {};
     const pend = refs.filter(f => f.status === 'pending'), done = refs.filter(f => f.status !== 'pending');
     return headD('환불', '규정으로 환불액을 자동 계산해 「확정 대기」로 둡니다. 직원이 확인하고 확정하면 토스 결제는 부분 취소가 요청되고, 단말 · 현금은 기록만 남습니다.', '')
-      + `<div class="lg-card"><div class="lg-ch"><b>확정 대기</b><small>${pend.length}건</small></div>${(() => { const LL = flavor() === 'welfare'; /* v43 D-E(P2 H1): 평생교육원 — 반환 신청일 + 5일 법정 기한 */ const dl = f => { const d0 = String(f.at || '').slice(0, 10); if (!d0) return '—'; const due = dPlus(d0, 5); const n = Math.round((new Date(due) - new Date(today())) / 864e5); return `${esc(due.slice(5).replace('-', '.'))} <span class="lg-st ${n <= 1 ? 'warn' : 'ok'}">${n < 0 ? `D+${-n}` : n === 0 ? 'D-day' : `D-${n}`}</span>`; };
+      + `<div class="lg-card"><div class="lg-ch"><b>확정 대기</b><small>${pend.length}건</small></div>${(() => { const KD = window.DDStat && DDStat.refundDays(); const LL = flavor() === 'welfare' || !!KD; /* v43 D-E(P2 H1) → v43 K1: 법정 반환 기한(평생교육법 · 학원법 5일) 열 */ const dl = f => { const d0 = String(f.at || '').slice(0, 10); if (!d0) return '—'; const due = dPlus(d0, KD || 5); const n = Math.round((new Date(due) - new Date(today())) / 864e5); return `${esc(due.slice(5).replace('-', '.'))} <span class="lg-st ${n <= 1 ? 'warn' : 'ok'}">${n < 0 ? `D+${-n}` : n === 0 ? 'D-day' : `D-${n}`}</span>`; };
         return table(['신청', '학습자', '원 수납', '규정', ...(LL ? ['법정 기한'] : []), '자동 계산', ''], pend.map(f => { const r = rOf(f.receiptId); return [esc(String(f.at).slice(0, 16)), esc(who(r.sid || f.sid)), `${esc(METH[r.method] || r.method || '')} ${won(r.amount)}`, esc(RULE[f.ruleType] || f.ruleType || '') + (f.calc && f.calc.lawCheck ? ' <small class="lg-law">법령 원문 확인 필요</small>' : ''), ...(LL ? [dl(f)] : []), `<b>${won(f.autoAmount != null ? f.autoAmount : f.amount)}</b>`, B('led-ref-ok', '확인 · 확정', f.id, 'pri')]; }), '확정을 기다리는 환불이 없습니다.'); })()}</div>`
+      + payRefCard()
       + `<div class="lg-card"><div class="lg-ch"><b>환불 신청 · 계산</b><small>수납 완료 건에서 시작합니다</small></div><div class="lg-bar"><input class="lg-q" type="search" inputmode="numeric" placeholder="학습자 번호로 찾기" aria-label="학습자 번호로 찾기" value="${esc(UI.ledRq || '')}" data-chg="led-rq"></div>${table(['수납일', '학습자', '수단', '금액', ''], rec.filter(r => !UI.ledRq || String(r.sid || '').includes(UI.ledRq)).slice(0, 20).map(r => [esc(String(r.paidAt || r.at).slice(0, 10)), esc(who(r.sid)), esc(METH[r.method] || r.method || ''), won(r.amount), B('led-ref-new', '환불 계산', r.id)]), '이 기간 수납이 없습니다.')}</div>`
       + `<div class="lg-card"><div class="lg-ch"><b>처리 내역</b></div>${table(['일시', '학습자', '금액', '규정', '상태'], done.slice(0, 15).map(f => [esc(String(f.at).slice(0, 16)), esc(who((rOf(f.receiptId) || {}).sid)), won(f.amount), esc(RULE[f.ruleType] || f.ruleType || ''), st(FST, f.status) + (f.editReason ? ` <small>수정: ${esc(f.editReason)}</small>` : '')]), '처리한 환불이 없습니다.')}</div>`; }
+  /* v43 K1(P2-H1 · P3-F03): 강좌 결제(S.pays)의 환불 · 학습비 반환 신청도 이 탭 한 곳에서 처리 — 승인 · 거절은 sales2.js ACT.rf, 건수는 DDStat.refunds() */
+  function payRefCard() { if (LIVEON() || !window.DDStat) return ''; const R = DDStat.refunds().filter(x => x.src === 'pay'); const KD = DDStat.refundDays(); const life = S.org.type === 'lifelong';
+    const dd = x => x.left == null ? '—' : `${esc(dPlus(String(x.at).slice(0, 10), KD).slice(5).replace('-', '.'))} <span class="lg-st ${x.left <= 1 ? 'warn' : 'ok'}">${x.left < 0 ? `기한 지남 D+${-x.left}` : x.left === 0 ? 'D-day' : `D-${x.left}`}</span>`;
+    return `<div class="lg-card" id="lgPayRef"><div class="lg-ch"><b>${life ? '학습비 반환 신청' : '강좌 결제 환불 신청'}</b><small>${R.length}건 · ${esc(DDStat.refundLaw())}</small></div>${table(['신청일', t('learner'), '항목', '결제액', '법정 기한', ''], R.map(x => [esc(String(x.at || '').slice(0, 10)), typeof mn === 'function' ? mn(x.who) : esc(x.who || ''), esc(x.item || ''), won(x.amount), dd(x), teacher() ? '' : `<button class="btn sm pri" data-act="rf" data-v="${esc(x.id)}" data-ok="1">승인</button><button class="btn sm ghost" data-act="rf" data-v="${esc(x.id)}">거절</button>`]), '처리할 환불 신청이 없습니다.')}</div>`; }
+  ACT['go-refund'] = () => { UI.ledger = 'refund'; go('ledger'); };
   ACT['led-rq'] = el => { UI.ledRq = el.value.trim(); render(); };
   const refundDefault = () => ({ franchise: 'hakwon_law', welfare: 'lifelong_law', univ: 'lifelong_law' })[flavor()] || 'full';
   ACT['led-ref-new'] = el => { const id = el.dataset.v; const D = LIVEON() ? null : L(); const r = D ? D.receipts.find(x => x.id === id) : entL('ent').find(x => x.id === id); if (!r) return;

@@ -19,7 +19,7 @@ WS.home.label = '홈'; WS.home.icon = 'home'; WS.home.desc = '오늘 할 일과 
 WS.dash.desc = '목표 대비 성과 · 단계별 참여 · 추이';
 WS.learn.label = () => t('cls');
 WS.web = { label: '사이트', icon: 'globe', desc: '' };
-WS.ops.label = () => (uxOn('sales') || uxOn('billing')) ? '매출 · 운영' : '운영';
+WS.ops.label = () => '운영'; /* v43: 돈 메뉴(수납 · 매출)는 운영 공간 안 탭 — 레일 이름이 「매출 · …」로 잘리던 것 */
 WS.ops.icon = 'grid';
 MENU.site.ws = 'web';
 /* 쉬운 메뉴 이름(뜻은 그대로) */

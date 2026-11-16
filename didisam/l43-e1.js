@@ -82,11 +82,11 @@
   } });
   R('enroll', { art: 'people', brief: main => {
     if (empty(main)) return null; const M = A('members'); const w = M.filter(m => m.grade === '승인 대기').length; const inv = A('invites').filter(i => i.active).length;
-    return { eye: '등록 · 초대', title: w ? `가입 승인 대기 <em>${w}명</em>을 먼저 처리하세요` : `활성 초대 링크 <em>${inv}개</em>로 ${E(L('learner'))}을 받고 있습니다`, sub: '엑셀(CSV)로 한 번에 등록하거나, 초대 링크 · 알림톡으로 직접 가입하게 할 수 있습니다.', stats: [[M.length + '명', '등록'], [w + '명', '승인 대기', w ? 'warn' : ''], [inv + '개', '초대 링크']] };
+    return { eye: '등록 · 초대', title: w ? `가입 승인 대기 <em>${w}명</em>을 먼저 처리하세요` : !M.length ? `아직 등록한 ${E(L('learner'))}이 없습니다. 첫 ${E(L('learner'))}을 등록하세요` : inv ? `활성 초대 링크 <em>${inv}개</em>로 ${E(L('learner'))}을 받고 있습니다` : `${E(L('learner'))} <em>${M.length}명</em>이 등록되어 있습니다` /* v43 P3-F12: 빈 상태 거짓 요약 금지 */, sub: '엑셀(CSV)로 한 번에 등록하거나, 초대 링크 · 알림톡으로 직접 가입하게 할 수 있습니다.', stats: [[M.length + '명', '등록'], [w + '명', '승인 대기', w ? 'warn' : ''], [inv + '개', '초대 링크']] };
   } });
   R('crmatt', { art: 'check', brief: main => {
     if (empty(main)) return null; const m = (main.innerText || '').match(/수업\s*(\d+)개\s*·\s*미입력\s*(\d+)명/); if (!m) return null;
-    return { eye: '출석부', title: +m[2] ? `오늘 출결 미입력 <em>${m[2]}명</em>이 남았습니다` : '오늘 출결을 <em>모두 입력</em>했습니다', sub: `오늘 수업 ${m[1]}개입니다. 수업이 끝나면 [미입력 전체 출석]으로 한 번에 처리하고, 결석 · 지각만 바꾸세요.` };
+    return { eye: '출석부', title: !+m[1] ? '오늘 예정된 수업이 없습니다' : +m[2] ? `오늘 출결 미입력 <em>${m[2]}명</em>이 남았습니다` : '오늘 출결을 <em>모두 입력</em>했습니다' /* v43 P3-F12 */, sub: `오늘 수업 ${m[1]}개입니다. 수업이 끝나면 [미입력 전체 출석]으로 한 번에 처리하고, 결석 · 지각만 바꾸세요.` };
   } });
 
   /* ── 소통 공간 ── */
@@ -167,7 +167,7 @@
     if (empty(main) || (UI.cpl && UI.cpl !== 'home')) return null; const n = main.querySelectorAll('.cpl-dd').length; const now = main.querySelectorAll('.cpl-dd.r').length; const ty = S.org.type; const P = S.org.cpl || {}; const MIN = (window.DDAtt && DDAtt.MIN) || 80;
     const on = !!P.on; const low = (() => { const m = (main.innerText || '').match(/출석률\s*\d+%\s*미만\s*(\d+)명/); return m ? +m[1] : 0; })();
     const sub = ty === 'lifelong' ? '평생교육법(시행령 제48조 · 시행규칙 제17조) 기준 자체 점검입니다. 실제 신고 전 관할 교육청에 확인하세요.' : on ? '훈련 규정 · 훈련시간 · 평가 기준은 고용노동부 원격훈련 기준을 따릅니다. 실제 심사 전 근거 문서를 확인하세요.' : '규정 기준을 켜지 않은 기관입니다. 법정의무교육 이수 현황만 확인하면 됩니다.';
-    const title = (ty === 'corp' || ty === 'public') && !on ? '환급 과정을 운영하지 않으면 <em>법정의무교육</em>만 확인하면 됩니다' : now ? `지금 처리할 규정 항목 <em>${now}건</em>이 있습니다` : `기한 있는 할 일 <em>${n}건</em>을 가까운 순서로 정리했습니다`;
+    const title = (ty === 'corp' || (ty === 'public' && (S.org.ed || 'staff') === 'staff')) && !on ? '환급 과정을 운영하지 않으면 <em>법정의무교육</em>만 확인하면 됩니다' : now ? `지금 처리할 규정 항목 <em>${now}건</em>이 있습니다` : `기한 있는 할 일 <em>${n}건</em>을 가까운 순서로 정리했습니다`;
     return { eye: '인가 · 규정 준수', title, sub, stats: on ? [[(+P.rate || 0) + '%', '수료 진도율 기준'], [(+P.pass || 0) + '점', '평가 통과 기준'], [MIN + '%', '출석률 기준'], [low + '명', `출석률 ${MIN}% 미만`, low ? 'warn' : '']] : [[n + '건', '기한 있는 할 일'], [now + '건', '지금 처리', now ? 'warn' : '']] };
   }, enhance: main => { if (!window.DBX || (S.org && S.org.empty) || (UI.cpl && UI.cpl !== 'home')) return; const L = [...main.querySelectorAll('.cpl-todo li')].slice(0, 4).map(li => { const d = li.querySelector('.cpl-dd'); const sp = li.querySelector('span'); return [E(sp ? sp.textContent.trim() : li.textContent.trim()).slice(0, 60), '', d && d.classList.contains('r') ? 'warn' : '', d ? d.textContent.trim() : '']; });
     DBX.side(main, { tt: '기한 있는 할 일', todo: L, ai: '규정 수치(진도율 · 평가 · 출석률)는 훈련 규정 탭 한 곳에서 바꿉니다. 바꾸면 수료 판정 · HRD-Net 보고 · 학습자 화면에 같이 반영됩니다.' }); } });

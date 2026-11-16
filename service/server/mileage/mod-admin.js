@@ -48,7 +48,7 @@ module.exports = (ctx, S) => {
     const row = (await c.query('insert into mil_rule (tenant_id, id, ver, trigger, nature, label, cond, score, caps, once, group_key, trust_min, approval, approve_over, expiry, record, starts_on, ends_on, active, created_by) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) returning *',
       [a.tid, r.id, ver, r.trigger, r.nature, r.label, J(r.cond), J(r.score), J(r.caps), r.once, r.groupKey, r.trustMin, r.approval, r.approveOver, J(r.expiry), J(r.record), r.startsOn, r.endsOn, r.active, a.email])).rows[0];
     await log(c, a.tid, 'rule', null, S.ruleOut(row), null, a.email); return row; }
-  async function fundedBlock(c, tid, cls, cash) { if (!cash || !Array.isArray(cls)) return; for (const x of cls) if (!(await one(c, 'select mil_cash_ok($1,$2) r', [tid, str(x, 60)]))) throw E('funded_blocked'); }
+  async function fundedBlock(c, tid, cls, cash) { if (!cash) return; if (await one(c, "select coalesce((select doc->'org'->>'type' from tenant_state where tenant_id = $1), '') = 'voc' r", [tid])) throw E('funded_blocked'); /* v43 P1-F09: 직업훈련원은 기관 전체 금전성 보상 잠금(Java MileServiceImpl과 같음) */ if (!Array.isArray(cls)) return; for (const x of cls) if (!(await one(c, 'select mil_cash_ok($1,$2) r', [tid, str(x, 60)]))) throw E('funded_blocked'); }
   async function saveReward(c, a, b) {
     const kind = str(b.kind, 10); if (!['tuition', 'coupon', 'goods', 'badge', 'cert', 'shop'].includes(kind)) throw E('bad_rule', { field: 'kind' }, 400); /* scholar 정산은 v42.2 */
     const title = str(b.title, 60).trim(); if (!title) throw E('bad_rule', { field: 'title' }, 400);

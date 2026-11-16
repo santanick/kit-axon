@@ -96,7 +96,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         JsonNode a = or(acct, F.objectNode());
         JsonNode soc = get(a, "social"); JsonNode idv = get(a, "idv");
         boolean on = truthy(idv) && truthy(get(idv, "on"));
-        return new Org(type, or(get(a, "mode"), t("open")), truthy(get(a, "under14")), soc != null && soc.isArray() ? soc : arrNode(PROVIDERS.stream().map(Js::t).toList()), on, on ? sOr(get(idv, "reason")) : null, strictEq(get(a, "approve"), "manual"), "k12".equals(type) && truthy(get(a, "parent")));
+        return new Org(type, or(get(a, "mode"), t("open")), truthy(get(a, "under14")), soc != null && soc.isArray() ? soc : arrNode(PROVIDERS.stream().map(Js::t).toList()), on, on ? sOr(get(idv, "reason")) : null, strictEq(get(a, "approve"), "manual") || "voc".equals(type) /* v43 P1-F01: 직업훈련원 자동 수락 불가(Node pii.js와 같음) */, "k12".equals(type) && truthy(get(a, "parent")));
     }
 
     /** SNS 식별자 → 해시. 운영: 공급자 토큰을 서버에서 검증해 sub를 받는다(카카오 · 네이버 · 구글 · 애플). */

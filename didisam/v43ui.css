@@ -196,7 +196,7 @@ html[data-theme="dark"]{--q1-in-bd:rgba(255,255,255,.14)}
 #main .wtabs>button.on::after,#main .wtabs>button[aria-selected=true]::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:3px 3px 0 0;background:var(--gr600)}
 #main .wtabs em,#main .seg2 em{font-style:normal;display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 7px;margin-left:6px;border-radius:99px;font-size:12px;font-weight:800;background:var(--gr50);color:var(--gr800);font-variant-numeric:tabular-nums}
 #main .bview .seg2:not(.wtabs){display:inline-flex;flex-wrap:wrap;gap:4px;border:0;padding:4px;background:var(--surface2);border-radius:99px;box-shadow:inset 0 0 0 1px var(--hair);margin:0 0 14px}
-#main .bview .seg2:not(.wtabs)>button{min-height:40px;padding:0 16px;border:0;border-radius:99px;margin:0;font-size:14px;font-weight:700;color:var(--g700);background:transparent;box-shadow:none}
+#main .bview .seg2:not(.wtabs)>button{min-height:44px;padding:0 16px;border:0;border-radius:99px;margin:0;font-size:14px;font-weight:700;color:var(--g700);background:transparent;box-shadow:none}
 #main .bview .seg2:not(.wtabs)>button.on{background:var(--surface);color:var(--g900);box-shadow:0 1px 2px rgba(16,24,40,.08),0 2px 6px rgba(16,24,40,.06)}
 
 /* 5. 필터 바: 검색 · 칩 · 정렬 · 보기 전환 한 줄 */
@@ -272,7 +272,7 @@ html[data-theme="dark"] :is(#main,.modal) input:is([type=date],[type=time],[type
 .q1-ac{border-radius:20px;background:var(--surface);padding:18px;box-shadow:inset 0 0 0 1px var(--hair),0 1px 2px rgba(16,24,40,.04),0 8px 24px -14px rgba(16,24,40,.10)}
 .q1-ac h3{margin:0 0 10px;font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--g900);display:flex;align-items:center;gap:8px}
 .q1-ac ol,.q1-ac ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
-.q1-ac li a,.q1-ac li>span{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 10px;border-radius:12px;font-size:14px;font-weight:600;color:var(--g800,var(--g900));text-decoration:none}
+.q1-ac li a,.q1-ac li>span:not([class]){display:flex;align-items:center;gap:10px;min-height:44px;padding:0 10px;border-radius:12px;font-size:14px;font-weight:600;color:var(--g800,var(--g900));text-decoration:none}
 .q1-ac li a:hover{background:var(--gr50);color:var(--gr800)}
 .q1-ac li i{width:8px;height:8px;border-radius:50%;background:var(--gr500);flex:none}.q1-ac li i.warn{background:var(--co500)}
 .q1-ac p{margin:0;font-size:14px;line-height:1.6;color:var(--t-sub,var(--g700))}
@@ -293,3 +293,14 @@ html[data-theme="dark"] :is(#main,.modal) input:is([type=date],[type=time],[type
 #main .sx-top::before{display:none}
 #main>.bhd.q1-ph .uxdesc[hidden]{display:block}
 #main>.bhd.q1-ph:has(.uxdesc) .q1-desc{display:none}
+
+/* v43 K1 공통 정리 — 탭 누름 영역 44(D-A · D-B), 다크 모드 흰 면(D-A), 화면 가이드 [i] 44px(f5-38 R2 · D-D), 돈 메뉴 안내 줄, 공공 세부 유형 선택 */
+#main .tabs>button,#main .seg2>button,#main .lg-seg>button{min-height:44px}
+@media (max-width:640px){#main>.bhd.q1-ph .slg-i,.slg-i,.sl-i{width:44px;height:44px;min-width:44px;min-height:44px}} /* f5-38 R2 · D-D: 휴대폰에서 화면 가이드 [i] 누름 영역 44px(PC는 32px 원 그대로) */
+:root[data-theme="dark"] :is(.uxpop,.slg-pop,.slg-ask:hover){background:var(--surface)!important;color:var(--g900)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) :is(.uxpop,.slg-pop){background:var(--surface)!important}}
+.lg-x{margin:0 0 12px;font-size:14px;color:var(--t-sub,var(--g700))}
+.lg-x .lnk,.lnk{border:0;background:none;padding:0 2px;min-height:auto;color:var(--gr700,#05612A);font-weight:700;text-decoration:underline;cursor:pointer}
+.su .su-pub{display:grid!important;grid-template-columns:1fr!important;gap:6px}
+.su .su-pub>button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-height:56px;padding:8px 14px;text-align:left;white-space:normal;width:100%}
+.su-pub>button small{font-weight:500;font-size:12.5px;color:var(--t-sub,var(--g600));line-height:1.35}
