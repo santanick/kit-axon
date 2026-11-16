@@ -119,8 +119,13 @@
   if (!document.querySelector('style[data-lmsv]')) { const st = document.createElement('style'); st.dataset.lmsv = '1'; st.textContent = `
 .lmsv-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
 @media (max-width:900px){.lmsv-grid{grid-template-columns:minmax(0,1fr)}}
-.lmsv-vid{position:relative;background:#0f172a;border-radius:10px;overflow:hidden;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:13px;text-align:center;padding:0}
+.lmsv-vid{position:relative;background:#0E1A14 var(--ph,none) center/cover no-repeat;border-radius:16px;overflow:hidden;aspect-ratio:16/9;display:flex;align-items:flex-end;justify-content:flex-start;color:#fff;font-size:13px;text-align:left;padding:0}
+.lmsv-vid::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,20,10,.05) 30%,rgba(4,20,10,.78))}
+.lmsv-vid::after{content:'';position:absolute;left:50%;top:44%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.92) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 7l9 5-9 5z' fill='%2300862D'/%3E%3C/svg%3E") center/26px no-repeat;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.lmsv-vid:has(video)::before,.lmsv-vid:has(video)::after{display:none}
+.lmsv-vid>span{position:relative;z-index:1;margin:14px 16px;font-size:13px;font-weight:600;line-height:1.5;text-shadow:0 1px 2px rgba(0,0,0,.4)}
 .lmsv-vid video{width:100%;height:100%;object-fit:contain;background:#000}
+.lmsv-cur{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gr600,#00862D);margin-right:8px;vertical-align:middle}
 .lmsv-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
 .lmsv-row>label{display:flex;flex-direction:column;gap:4px;font-size:13px;min-width:0;flex:1 1 160px}
 .lmsv-pb{height:8px;border-radius:99px;background:var(--line,#e2e8f0);overflow:hidden;min-width:80px}.lmsv-pb i{display:block;height:100%;background:var(--pri,#00862D)}
@@ -160,7 +165,7 @@
 
   /* ── 영상 목록 · 상세 ── */
   function vList(sec, it) {
-    const rows = it.map(m => [`<button class="btn sm ghost lmsv-wrap" data-act="lmsv-sel" data-id="${esc(m.media_id)}" style="text-align:left">${m.media_id === V.sel ? '▶ ' : ''}<b>${esc(m.title)}</b></button>`, stTag(m), m.duration_sec ? mmss(m.duration_sec) : '—', m.placements ? m.placements + '곳' : tag('미배치', 'y'), m.captions.filter(x => x.status === 'published').map(x => x.lang.toUpperCase()).join(' · ') || '—']);
+    const rows = it.map(m => [`<button class="btn sm ghost lmsv-wrap" data-act="lmsv-sel" data-id="${esc(m.media_id)}" style="text-align:left">${m.media_id === V.sel ? '<i class="lmsv-cur" aria-label="선택됨"></i>' : ''}<b>${esc(m.title)}</b></button>`, stTag(m), m.duration_sec ? mmss(m.duration_sec) : '—', m.placements ? m.placements + '곳' : tag('미배치', 'y'), m.captions.filter(x => x.status === 'published').map(x => x.lang.toUpperCase()).join(' · ') || '—']);
     return `<div class="lmsv-grid"><div class="card"><div class="ch"><b>올린 영상</b><small>${it.length}개 · 원본은 변환 뒤 지우고 스트리밍 파일(HLS)만 보관합니다</small></div>${table(['제목', '상태', '길이', '배치', '게시 자막'], rows, '아직 올린 영상이 없습니다. 「영상 올리기」나 「녹화하기」로 시작하세요.')}</div>
       <div>${vDetail(sec)}</div></div>`;
   }
@@ -172,7 +177,7 @@
     const ready = m.status === 'ready'; const playable = ready && (W3.live() || DM.blobs[m.media_id]);
     const job = m.job; const jobLine = job ? `${job.kind === 'transcode' ? '변환' : '자막'} 작업: ${esc({ queued: '대기', running: '진행 중', done: '끝', failed: '실패' }[job.status] || job.status)}${job.step ? ' · ' + esc(job.step) : ''}${job.status === 'running' ? ' ' + pbar(job.progress) : ''}${job.error ? ' · ' + esc(job.error) : ''}` : '';
     return `<div class="card"><div class="ch"><b class="lmsv-wrap">${esc(m.title)}</b>${stTag(m)}</div>
-      <div class="lmsv-vid">${playable ? `<video controls playsinline preload="metadata" data-media="media:${esc(m.media_id)}"></video>` : `<span>${ready ? '데모: 이 브라우저에서 올린 영상만 미리 봅니다(운영 서버에서는 학교 서버 스트리밍으로 재생).' : m.status === 'failed' ? esc(m.error || '변환하지 못했습니다.') : `변환 중입니다 ${pbar(m.progress)} ${m.progress}%`}</span>`}</div>
+      <div class="lmsv-vid" style="--ph:url('${esc((window.ddPhoto && ddPhoto(m.title || '강의 영상', m.media_id, { size: 'lg' })) || '')}')">${playable ? `<video controls playsinline preload="metadata" data-media="media:${esc(m.media_id)}"></video>` : `<span>${ready ? '데모: 이 브라우저에서 올린 영상만 미리 봅니다(운영 서버에서는 학교 서버 스트리밍으로 재생).' : m.status === 'failed' ? esc(m.error || '변환하지 못했습니다.') : `변환 중입니다 ${pbar(m.progress)} ${m.progress}%`}</span>`}</div>
       <p class="lmsv-note">${ready ? `화질 ${m.renditions.map(r => r.name).join(' · ')} 자동 전환 · 길이 ${mmss(m.duration_sec)} · 스트리밍 파일 ${m.files.segments}조각 ${mb(m.files.bytes)}` : esc(m.src_name || '')} ${jobLine ? '<br>' + jobLine : ''}</p>
       <div class="lmsv-row"><label>놓을 차시<select id="lmsvSes" aria-label="놓을 차시">${sesOpt}</select></label><button class="btn sm pri" data-act="lmsv-place" ${ready ? '' : 'disabled'}>차시에 놓기</button></div>
       ${m.places.length ? `<p class="lmsv-note">놓인 곳: ${m.places.map(p => `${esc(p.section_title || '')} ${p.week_no}주 ${p.seq}차시`).join(', ')} — 학생은 「동영상 · 진도」 플레이어로 보고, 본 구간만 진도 · 출석으로 인정됩니다.</p>` : ''}
@@ -366,4 +371,42 @@
   }
   ACT['lmsv-deliv'] = el => W3.act(() => W3.call('POST', '/api/lms/v/settings', { cdn_base: $('#lmsvCdn').value.trim(), delivery: el.dataset.v }), r => r.delivery === 'cdn' ? 'CDN으로 전환했습니다. 새 재생 주소부터 CDN으로 나갑니다.' : '학교 서버 직접 전송으로 전환했습니다.').then(r => { if (r) { W3.drop('lmsv:'); render(); } });
   ACT['lmsv-setsave'] = () => W3.act(() => W3.call('POST', '/api/lms/v/settings', { ttl_sec: Math.round(+$('#lmsvTtl').value * 60), retain_days: +$('#lmsvRet').value, domains: $('#lmsvDoms').value.split(',').map(x => x.trim()).filter(Boolean), stt_lang: $('#lmsvStl').value }), '저장했습니다.').then(r => { if (r) { W3.drop('lmsv:'); render(); } });
+})();
+/* v43 D-D — 학사 LMS 앱 출석 · 비교과 · 실시간 수업 · 강의 영상(065~068) 보조 열(DIRECTION §1-1 「주 영역 + 340px 보조 열」).
+   본문 요소는 그대로 두고 .bview 안의 주 콘텐츠를 .dd-lmc로 묶어 L43.side로 오른쪽 보조 열(처리 목록 · 사진 · AI SAM 제안)을 붙인다.
+   시연 경로에서만 예시 출석 로그를 보여 주고(학번 · 학과만), 운영 서버에서는 화면 값만 읽는다. */
+(function () {
+  'use strict';
+  const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const live = () => { try { return !!(window.LMP && LMP.live && LMP.live()); } catch (e) { return false; } };
+  const ph = (k, s) => { try { return window.ddPhoto ? ddPhoto(k, s, { size: 'lg' }) : ''; } catch (e) { return ''; } };
+  const rowsOf = m => [...m.querySelectorAll('.tw tbody tr')].map(tr => [...tr.cells].map(c => { const h = c.querySelector('b, strong, a'); return ((h && h.textContent.trim()) || c.textContent).trim().replace(/\s+/g, ' '); }));
+  const shot = (u, t, s) => u ? `<figure class="dd-ph"><img src="${E(u)}" alt="" loading="lazy"><figcaption><b>${E(t)}</b><small>${E(s)}</small></figcaption></figure>` : '';
+  const SIDE = {
+    'lmsp-app': m => { const L = live() ? [] : [['20269001 · 경영정보학과', '09:02 출석', 'ok'], ['20269014 · 경영정보학과', '09:03 출석', 'ok'], ['20269027 · 컴퓨터공학', '09:11 지각', 'warn'], ['20269033 · 경영정보학과', '09:04 출석', 'ok'], ['20269041 · 산업경영학과', '09:20 전송', '']];
+      return (L.length ? L43.acard({ t: '지난 차시 출석 로그', items: L.map(([a, b, t]) => [a + ' · ' + b, t]) }) : '') + L43.acard({ ai: true, t: 'AI SAM 제안', p: '수업 시작 3분 전에 QR을 열면 지각이 가장 적습니다.<br>와이파이가 약한 강의실은 「오프라인으로 저장」을 안내하세요. 연결되면 자동으로 보냅니다.' }); },
+    lmsq: m => { const R = rowsOf(m).filter(r => r.length > 2); const open = R.filter(r => r.some(c => /접수중/.test(c))).slice(0, 3);
+      return shot(ph('취업 캠프 비교과', 'lmsq-side'), open[0] ? (open[0][1] || '').slice(0, 22) : '비교과 프로그램', '지금 접수 중') + L43.acard({ t: '접수 중 · 마감 순', items: (open.length ? open : R.slice(0, 3)).map(r => [(r[1] || r[0] || '').slice(0, 24), 'ok']) }) + L43.acard({ ai: true, t: 'AI SAM 제안', p: '정원 대비 신청이 50% 미만인 프로그램은 마감 3일 전에 대상 학과에 안내를 한 번 더 보내세요.<br>이수 처리는 출석 80% 이상이 기본입니다.' }); },
+    lmslive: m => { const R = rowsOf(m).filter(r => r.length > 3); const nx = R.find(r => r.some(c => /시작 전/.test(c))) || R[0];
+      return shot(ph('온라인 실시간 강의 화상', 'live-side'), nx ? '다음 수업 · ' + (nx[0] || '').slice(0, 18) : '다음 실시간 수업', nx ? (nx[1] || '') : '') + L43.acard({ t: '최근 녹화', items: live() ? [] : [['3주 2차시 데이터 시각화 — 48분', 'ok'], ['3주 1차시 회귀 분석 실습 — 52분', 'ok'], ['2주 2차시 질의응답 — 31분', '']] }) + L43.acard({ ai: true, t: 'AI SAM 제안', p: '차시와 연결하지 않은 수업은 입장 기록이 출결에 반영되지 않습니다. 「보강(Zoom)」을 차시에 연결하세요.' }); },
+    lmsv: m => L43.acard({ t: '정리할 영상', items: [...m.querySelectorAll('.lmsv-wrap')].slice(0, 4).map(b => [b.textContent.replace(/^[^0-9A-Za-z가-힣]+/, '').trim().slice(0, 24), '']) }) + L43.acard({ ai: true, t: 'AI SAM 제안', p: '자막을 게시하면 청각장애 학생 지원 기준을 충족하고, AI 튜터가 영상 내용으로 답할 수 있습니다.<br>변환이 끝난 영상은 차시에 놓아야 학생 강의실에 보입니다.' })
+  };
+  const run = tab => { const m = document.getElementById('main'); if (!m || !window.L43 || m.querySelector('.q1-2col')) return; const bv = m.querySelector(':scope > .bview'); if (!bv) return;
+    const kids = [...bv.children].filter(x => !x.matches('.l43-brief, .lmp-todo, .lw-todo')); if (!kids.length) return;
+    const w = document.createElement('div'); w.className = 'dd-lmc'; kids[0].parentNode.insertBefore(w, kids[0]); kids.forEach(k => w.appendChild(k));
+    let cards = ''; try { cards = SIDE[tab](m); } catch (e) { console.error(e); } if (!cards) return; L43.side(m, w, cards); m.classList.add('dd-lms');
+    if (tab === 'lmsp-app') { const k = m.querySelector('.kpis'); if (k && [...k.querySelectorAll('.kv, b, strong')].every(x => !/[1-9]/.test(x.textContent)) && !/[1-9]/.test(k.textContent)) k.outerHTML = '<p class="dd-zero">이 차시에는 아직 출석한 학생이 없습니다. QR을 열면 출석 · 지각 · 결석이 실시간으로 집계됩니다.</p>'; const c = [...m.querySelectorAll('.card')].find(x => /학생 앱 화면/.test(x.textContent)); if (c) c.classList.add('dd-phone'); } };
+  if (typeof AFTER !== 'undefined') AFTER.push(cur => { if (cur && SIDE[cur.tab]) setTimeout(() => run(cur.tab), 0); });
+  if (!document.querySelector('style[data-ddlms]')) { const st = document.createElement('style'); st.dataset.ddlms = '1'; st.textContent = `
+#main.dd-lms .dd-lmc{display:flex;flex-direction:column;gap:16px;min-width:0}
+#main.dd-lms .dd-lmc>.grid.g2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+#main.dd-lms .dd-ph{margin:0;position:relative;border-radius:20px;overflow:hidden;aspect-ratio:16/10;background:#0E1A14;box-shadow:0 1px 2px rgba(16,24,40,.06),0 12px 28px -16px rgba(5,61,30,.4)}
+#main.dd-lms .dd-ph img{width:100%;height:100%;object-fit:cover;display:block}
+#main.dd-lms .dd-ph figcaption{position:absolute;inset:auto 0 0 0;padding:40px 16px 14px;background:linear-gradient(180deg,transparent,rgba(4,20,10,.82));color:#fff;display:flex;flex-direction:column;gap:2px}
+#main.dd-lms .dd-ph b{font-size:16px;font-weight:800}#main.dd-lms .dd-ph small{font-size:13px;opacity:.88}
+#main.dd-lms .dd-zero{margin:12px 0 0;padding:14px 16px;border-radius:14px;background:var(--gr50,#EEF9F1);color:var(--gr800,#066B2A);font-size:14px;font-weight:600;line-height:1.55}
+#main.dd-lms .dd-phone{max-width:none!important;border-radius:32px;box-shadow:inset 0 0 0 8px #13231B,0 18px 40px -20px rgba(5,61,30,.45);padding:26px 24px 22px}
+#main.dd-lms .dd-phone::before{content:'';display:block;width:84px;height:6px;border-radius:6px;background:#13231B;margin:-10px auto 14px;opacity:.85}
+#main.dd-lms .q1-ac li i{all:unset;flex:none;width:8px;height:8px;border-radius:50%;background:var(--gr500)}#main.dd-lms .q1-ac li i.warn{background:var(--co500,#F0643C)}
+@media (max-width:1280px){#main.dd-lms .dd-lmc>.grid.g2{grid-template-columns:1fr}}`; document.head.appendChild(st); }
 })();

@@ -107,11 +107,45 @@ AFTER.push(() => { try { if (!CUR || CUR.tab !== 'community') return; const phr 
       return P.length ? { title: `첫 화면 팝업 <em>${live}개</em>가 지금 보이고 있습니다`, sub: `등록 ${P.length}개 · 최대 4개까지 띄울 수 있습니다. 기간이 끝난 팝업은 자동으로 숨겨집니다.` } : { title: '첫 화면에 띄울 <em>팝업</em>이 없습니다', sub: '이벤트 · 약관 변경처럼 꼭 알릴 내용을 팝업으로 올리세요(최대 4개).' }; }],
     lang: ['언어 · 용어', () => ({ title: '화면 언어와 용어를 <em>우리 기관 말</em>로 바꿉니다', sub: '예를 들어 「과정」을 「강좌」로 바꾸면 운영자 · 학습자 화면 모두에 같이 반영됩니다.' })],
     data: ['데이터', () => ({ title: '기관 데이터를 <em>내보내거나 초기화</em>합니다', sub: '초기화는 되돌릴 수 없습니다. 먼저 내보내기로 백업하세요.' })],
+    menus: ['메뉴 구성', () => { let on = 0, all = 0; try { const A = Object.values(S.nav.tabs).flat().filter(x => MENU[x.id]); all = A.length; on = A.filter(x => x.on).length; } catch (e) { } return { kind: 'kpi', title: `메뉴 <em>${on}개</em>를 켜서 쓰고 있습니다`, sub: '쓰지 않는 메뉴를 끄면 운영자 · 학습자 화면이 그만큼 단순해집니다. 끈 메뉴의 데이터는 지워지지 않습니다.', stats: [[on + '개', '켜진 메뉴'], [Math.max(0, all - on) + '개', '꺼진 메뉴'], [((S.admins || []).length) + '명', '함께 쓰는 운영자']] }; }],
     room: ['데이터룸 · 배포', () => ({ title: '이 기관의 데이터는 <em>전용 데이터룸</em>에 분리해 저장합니다', sub: '배포 모델(공유 SaaS · 전용 클라우드 · 고객 클라우드 · 설치형)에 따라 저장 위치가 달라집니다.' })]
   };
+  /* v43 D-D — 설정 하위 화면(073~084): 요약 카드에 숫자 · 처리 행을 더하고, 루트와 같은 「설정 목차 + AI SAM 제안」 보조 열을 모든 하위 화면에 붙인다.
+     펼친 카드는 목록 맨 앞 · 전체 폭으로 올려(CSS order) 요약 카드 바로 아래에서 본다. DOM 순서 · data-act는 그대로 둔다. */
+  const st0 = () => S.settings || {};
+  const MORE = {
+    rules: () => { const p = st0().progress || {}; return { kind: 'kpi', ring: [+p.watchThr || 0, '완료 기준'], todo: [[`순차 학습 ${p.seq ? '켜짐' : '꺼짐'}`, '앞 레슨을 끝내야 다음 레슨이 열립니다', p.seq ? 'ok' : ''], [`실제 재생 구간만 인정 ${p.realOnly ? '켜짐' : '꺼짐'}`, '건너뛰기 · 2배속 초과 구간은 제외합니다', p.realOnly ? 'ok' : 'warn']] }; },
+    plan: () => { const N = (S.members || []).length, A = (S.admins || []).length; return { kind: 'kpi', stats: [[N + '명', '등록 ' + (typeof t === 'function' ? t('learner') : '학습자')], [A + '명', '운영자'], [((S.classes || []).length) + '개', '운영 과정']] }; },
+    integr: () => { const K = (S.apikeys || []); const live = K.filter(k => !k.revoked_at).length; const calls = K.reduce((a, k) => a + (+k.calls || 0), 0); return { kind: 'list', todo: [[`MCP 키 ${live}개 사용 중`, `최근 30일 호출 ${calls.toLocaleString()}회`, live ? 'ok' : ''], [`결제 연결 ${st0().pg && st0().pg !== 'none' ? '사용 중' : '미연결'}`, '수강료 · 교재 결제를 받습니다', st0().pg && st0().pg !== 'none' ? 'ok' : 'warn'], [`카카오 채널 ${st0().kakao ? '연결됨' : '미연결'}`, '알림톡 · 상담 채널', st0().kakao ? 'ok' : '']] }; },
+    service: () => { const q = (st0().extraQ || []); return { kind: 'list', todo: [[`홈페이지 ${st0().siteOpen === 'private' ? '로그인 사용자만' : '누구나'} 볼 수 있음`, '공개 범위', 'ok'], [`가입 질문 ${q.length}개`, q.length ? q.join(' · ') : '이름 · 연락처만 받습니다', ''], [`재생 속도 ${st0().speedMin || 0.5}배 ~ ${st0().speedMax || 2}배`, '학습자 플레이어에 적용', 'ok']] }; },
+    terms: () => { const T = st0().terms || {}; return { kind: 'list', todo: [[`이용약관 ${T.tos ? '등록됨' : '미등록'}`, T.tos ? '홈페이지 아래에 노출됩니다' : '기본 문안으로 바로 등록할 수 있습니다', T.tos ? 'ok' : 'warn'], [`개인정보 처리방침 ${T.privacy ? '등록됨' : '미등록'}`, '수집 항목 · 보관 기간을 적습니다', T.privacy ? 'ok' : 'warn']] }; },
+    popup: () => { const P = st0().popups || []; const td = today(); const live = P.filter(p => p.on !== false && (!p.s || p.s <= td) && (!p.e || p.e >= td)).length; const soon = P.filter(p => p.on !== false && p.s && p.s > td).length; return { ...(P.length && !live && soon ? { title: `노출 예약된 팝업 <em>${soon}개</em>가 시작일을 기다리고 있습니다`, sub: `등록 ${P.length}개 · 최대 4개까지 띄울 수 있습니다. 시작일이 되면 학습자 사이트 첫 화면에 순서대로 뜹니다.` } : {}), kind: 'list', todo: P.length ? P.slice(0, 3).map(p => [p.t || '(제목 없음)', `${p.s || ''} ~ ${p.e || ''}`, p.on === false ? '' : (p.s && p.s > td ? '' : 'ok')]) : null }; },
+    lang: () => ({ kind: 'list', todo: [['화면 언어 한국어', '운영자 · 학습자 화면 공통', 'ok'], ['학습자 사이트 번역 4개 언어', '영어 · 일본어 · 중국어 · 베트남어', 'ok'], ['기관 용어 바꾸기', '과정 → 강좌처럼 우리 기관 말로', '']] }),
+    data: () => ({ kind: 'list', todo: [['마지막 내보내기 11월 14일', 'JSON · 학습자 · 결제 · 진도 전체', 'ok'], ['자동 백업 매일 03:00', '최근 7일 보관', 'ok'], ['초기화는 정운영자만', '되돌릴 수 없으니 먼저 내보내세요', 'warn']] }),
+    room: () => ({ kind: 'list', todo: [['배포 모델 공유 SaaS', '기관별 데이터룸으로 논리 분리', 'ok'], ['저장 위치 서울 리전', '개인정보는 암호화해 따로 보관', 'ok'], ['접근 기록 90일 보관', '운영자 열람 · 내보내기 기록', '']] })
+  };
+  const TIPS = {
+    menus: ['처음 한 달은 기본 메뉴만 켜 두고, 자주 찾는 기능부터 하나씩 켜세요', '「순서 바꾸기」로 자주 쓰는 메뉴를 위로 올리면 클릭이 줄어듭니다', '교수자에게는 과정 · 평가 메뉴만 보이도록 권한에서 나눌 수 있습니다'],
+    rules: ['완료 기준 시청률은 80%가 가장 많이 쓰는 값입니다', '직업훈련 과정은 순차 학습과 실제 재생 구간 인정을 함께 켜야 인정됩니다', 'AI 튜터 도움 범위는 「힌트만」으로 두면 과제 대필을 막을 수 있습니다'],
+    plan: ['학습자가 요금제 한도의 80%를 넘으면 미리 알려 드립니다', '연간 결제로 바꾸면 2개월 요금이 줄어듭니다', '영수증은 결제 내역에서 바로 받을 수 있습니다'],
+    integr: ['쓰지 않는 MCP 키는 폐기하세요 — 90일 넘게 호출이 없는 키가 있습니다', 'Slack을 연결하면 미납 · 질문 알림을 채널로 받습니다', '키 범위는 읽기 전용부터 시작하세요'],
+    service: ['가입 질문은 3개 이하일 때 가입 완료율이 가장 높습니다', '대학은 학번 · 학과만 받습니다(개인정보 최소 수집)', '마케팅 수신 동의는 선택 항목으로 두세요'],
+    terms: ['환불 조항은 학원법 · 평생교육법 기준 초안을 AI가 만들어 드립니다', '회원에게 불리한 변경은 시행 30일 전에 공지하세요', '개정 후에는 첫 화면 팝업으로 알리면 확인율이 높습니다'],
+    popup: ['팝업은 2개 이하일 때 닫기 전 클릭이 가장 많습니다', '약관 개정 팝업은 시행일까지 노출하세요', '모바일에서는 첫 팝업만 보이니 중요한 것을 위로 올리세요'],
+    lang: ['외국인 학습자가 있으면 학습자 사이트에 영어를 켜세요', '용어를 바꾸면 AI SAM 답변에도 같은 말이 쓰입니다', '번역은 게시 전 미리보기로 확인하세요'],
+    data: ['초기화 전에 내보내기로 백업을 먼저 받으세요', '내보낸 파일에는 개인정보가 들어 있으니 암호를 걸어 보관하세요', '저장 공간이 80%를 넘으면 오래된 영상부터 정리하세요'],
+    room: ['공공 · 대학은 전용 클라우드 또는 설치형을 많이 고릅니다', '배포 모델을 바꾸면 이전 작업은 디디쌤 지원팀이 함께 합니다', '접근 기록은 개인정보 점검 때 그대로 제출할 수 있습니다']
+  };
+  const subKey = () => (UI.sxOpen && UI.sxSub === 'onoff') ? 'menus' : UI.settings;
+  const subEnhance = main => { const k = subKey(); const pg = main.querySelector('.sx-page'); if (!pg || pg.closest('.q1-2col')) return; pg.classList.add('q1-wide', 'dd-sub');
+    const open = pg.querySelector('.sx-card.open'); const toc = [...pg.querySelectorAll('.sx-card[id]')].map(c => [((c.querySelector('h3,h2,b') || {}).textContent || c.id).trim().slice(0, 18), c === open ? 'cur' : '', c.id]);
+    const tips = TIPS[k] || ['바꾼 값은 바로 저장됩니다. 학습자 화면에서 미리보기로 확인하세요.'];
+    L43.side(main, pg, L43.acard({ t: '설정 목차', items: toc }) + L43.acard({ ai: true, t: 'AI SAM 제안', p: tips.map(E).join('<br>') }));
+    const a = main.querySelector('.q1-aside a[data-q1to="' + (open ? open.id : '') + '"]'); if (a) a.setAttribute('aria-current', 'true'); };
   const reg = () => {
     if (!window.L43) return; const base = L43.REG.settings || {};
-    L43.reg('settings', Object.assign({}, base, { brief: m => { const k = UI.settings; if (!k || !SUB[k]) return base.brief ? base.brief(m) : null; return Object.assign({ eye: '설정 · ' + SUB[k][0] }, SUB[k][1]()); } }));
+    L43.reg('settings', Object.assign({}, base, { brief: m => { const k = subKey(); if (!k || !SUB[k]) return base.brief ? base.brief(m) : null; const o = Object.assign({ eye: '설정 · ' + SUB[k][0] }, SUB[k][1]()); const x = MORE[k] ? MORE[k]() : {}; Object.keys(x).forEach(j => { if (x[j] != null) o[j] = x[j]; }); return o; },
+      enhance: m => { const k = subKey(); if (!k || !SUB[k]) return base.enhance && base.enhance(m); try { subEnhance(m); } catch (e) { console.error(e); } } }));
     if (!document.querySelector('style[data-set43]')) { const st = document.createElement('style'); st.dataset.set43 = '1'; st.textContent = `
 #main.l43[data-l43=settings] .btn,#main.l43[data-l43=settings] select,#main.l43[data-l43=settings] input:not([type=checkbox]):not([type=radio]):not([type=range]){min-height:44px}
 #main.l43[data-l43=settings] .btn.sm{display:inline-flex;align-items:center;padding-top:0;padding-bottom:0}
@@ -129,8 +163,79 @@ AFTER.push(() => { try { if (!CUR || CUR.tab !== 'community') return; const phr 
 #main.l43[data-l43=settings] .sx-lg{background:var(--surface);border-color:var(--hair)}
 #main.l43[data-l43=settings] .sx-lg.on{border-color:var(--gr600);background:var(--gr50)}
 #main.l43[data-l43=settings] .sx-lg.on em{color:var(--gr800,#066B2A)}
-#main.l43[data-l43=settings] .seg2 button,#main.l43[data-l43=settings] .subtabs button{min-height:44px}`; document.head.appendChild(st); }
+#main.l43[data-l43=settings] .seg2 button,#main.l43[data-l43=settings] .subtabs button{min-height:44px}
+#main.l43[data-l43=settings] .sx-page.dd-sub .sx-card.open{order:-1;grid-column:1/-1;background:var(--surface)!important;box-shadow:0 0 0 1.5px var(--gr600),0 1px 2px rgba(16,24,40,.05),0 16px 36px -18px rgba(5,61,30,.28)}
+#main.l43[data-l43=settings] .sx-page.dd-sub .sx-card.open .sx-h{padding-bottom:14px;margin-bottom:6px;border-bottom:1px solid var(--hair)}
+#main.l43[data-l43=settings] .sx-page.dd-sub .sx-card.open .sx-h h3{font-size:20px;font-weight:800}
+#main.l43[data-l43=settings] .sx-page.dd-sub .sx-card.open .sx-q{display:none}
+#main.l43[data-l43=settings] .sx-page.dd-sub .sx-card:not(.open){padding:14px 18px}
+#main.l43[data-l43=settings] .sx-page.dd-sub .sx-card:not(.open) .sx-q{display:none}
+#main.l43[data-l43=settings] .sx-page.dd-sub .sx-card:not(.open) .sx-h{margin:0}
+#main.l43[data-l43=settings] .q1-ac li i.cur{background:var(--gr600);box-shadow:0 0 0 4px var(--gr100,#DDF5E3)}
+#main.l43[data-l43=settings] .q1-ac li a[aria-current]{background:var(--gr50);color:var(--gr800);font-weight:800}
+#main.l43[data-l43=settings] .sl-setx .card{border-radius:18px}
+#main.l43[data-l43=settings] .sl-setx .swrow{min-height:56px;padding:8px 0;border-bottom:1px solid var(--hair)}
+#main.l43[data-l43=settings] .sl-setx .rng2{min-height:56px}
+#main.l43[data-l43=settings] .sl-setx .pp26l li{min-height:64px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair);padding:10px 14px;margin-bottom:8px}
+#main.l43[data-l43=settings] .sl-setx .pp26l li b{font-size:15px;font-weight:700;color:var(--g900)}`; document.head.appendChild(st); }
     try { L43.run(); } catch (e) { }
   };
   if (window.L43) reg(); else document.addEventListener('DOMContentLoaded', reg);
+})();
+/* v43 D-D — 설정 하위 화면 시연 데이터(DIRECTION §6): 팝업 2건(노출 예약 — 게시한 학습자 사이트 첫 화면을 가리지 않도록 시작일이 미래) · 약관 개정 이력 2건 · MCP 키 3개.
+   시연 경로(seed)에만 넣고, 빈 스튜디오(emptyOut)에서는 다시 비운다. 저장 구조는 mods.js · mcpui.js와 같다. */
+{ const base = seed; seed = function (type) { const d = base.apply(this, arguments); try { const st = d.settings || {}; const td = today(), ad = n => addDays(td, n);
+    if (Array.isArray(st.popups) && !st.popups.length) st.popups = [{ t: '겨울 특강 얼리버드 신청 안내', s: ad(4), e: ad(24), on: true, body: '12월 20일까지 신청하면 수강료 10%를 할인해 드립니다.' }, { t: '이용약관 개정 안내(12월 1일 시행)', s: ad(8), e: ad(15), on: true, body: '환불 기준 조항이 바뀝니다. 자세한 내용은 약관에서 확인하세요.' }];
+    if (!Array.isArray(st.termsHist) || !st.termsHist.length) st.termsHist = [{ k: 'tos', at: ad(15), text: '' }, { k: 'tos', at: '2026-03-02', text: '' }, { k: 'privacy', at: '2026-03-02', text: '' }];
+    if (!Array.isArray(d.apikeys) || !d.apikeys.length) d.apikeys = [{ id: 'k1', name: 'Claude 데스크톱 · 운영팀', prefix: 'dd_live_7Hq2', scope: 'read', created_by: '관리자', created_at: ad(-40), last_used: ad(-1), calls: 1284, revoked_at: null }, { id: 'k2', name: '수납 자동화(Zapier)', prefix: 'dd_live_K9vA', scope: 'write', created_by: '관리자', created_at: ad(-21), last_used: td, calls: 412, revoked_at: null }, { id: 'k3', name: '예전 테스트 키', prefix: 'dd_test_3mPx', scope: 'read', created_by: '관리자', created_at: ad(-120), last_used: ad(-96), calls: 37, revoked_at: ad(-30) }];
+  } catch (e) { console.error(e); } return d; }; }
+{ const base = emptyOut; emptyOut = function () { const r = base.apply(this, arguments); try { if (S.settings) { S.settings.popups = []; S.settings.termsHist = []; } S.apikeys = []; } catch (e) { } return r; }; }
+/* v43 D-D — 공용 팝업(128~133) 새 디자인: 가입(짙은 사진 패널 · 사진 유형 카드 · 명확한 비활성) · 모달 폭 480 · AI SAM 패널 글자 12px 이상 · 가이드 칩 44px · 계정 메뉴 행 44px.
+   공통 CSS(app.css · dds.css · v43ui.css)는 고치지 않고 화면 범위 선택자로 덮어쓴다(마지막에 붙는 style). */
+(function () {
+  const add = () => { if (document.querySelector('style[data-dd43pop]')) return; let ph = ''; try { ph = window.ddPhoto ? ddPhoto('강의실 교육 수업', 'signup-hero', { size: 'lg' }) : ''; } catch (e) { }
+    const st = document.createElement('style'); st.dataset.dd43pop = '1'; st.textContent = `
+body.mode-signup{background:var(--bg,#F6F5F1)}
+.su{grid-template-columns:minmax(0,1fr) minmax(0,560px);gap:40px;max-width:1360px;padding:32px;align-items:stretch}
+.su-l{position:relative;border-radius:32px;overflow:hidden;padding:48px 52px;color:#fff;display:flex;flex-direction:column;justify-content:flex-end;min-height:calc(100vh - 64px);background:#053D1E ${ph ? `url('${ph}') center/cover no-repeat` : ''};box-shadow:0 30px 60px -30px rgba(5,61,30,.55)}
+.su-l::before{content:'';position:absolute;inset:0;background:radial-gradient(120% 80% at 100% 0%,rgba(46,224,106,.28),transparent 55%),linear-gradient(180deg,rgba(4,30,14,.35) 0%,rgba(4,30,14,.78) 45%,rgba(4,26,12,.94) 100%)}
+.su-l>*{position:relative;z-index:1}
+.su-l .brand{position:absolute;top:40px;left:52px;color:#fff}.su-l .brand b{color:#fff;font-size:17px}
+.su-l h1{color:#fff;font-size:clamp(40px,4.4vw,60px);font-weight:800;letter-spacing:-.03em;margin:0 0 16px}.su-l h1 em{color:#5CF08E}
+.su-l .lead{color:rgba(255,255,255,.86);font-size:17px;line-height:1.6}
+.su-l .su-demo .u{background:#00C53B;color:#04140A;font-weight:600}
+.su-l .su-demo .a{background:rgba(255,255,255,.12);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);backdrop-filter:blur(10px)}
+.su-l .mini-btn{background:#fff;color:#053D1E;border-radius:10px;padding:8px 14px;font-size:13px}
+.su-l .note{color:rgba(255,255,255,.78);margin:4px 0 0}.su-l .note a{color:#fff;font-weight:700}
+.su-r{border-radius:28px;padding:36px 36px 28px;align-self:center;box-shadow:0 1px 2px rgba(16,24,40,.05),0 24px 60px -24px rgba(16,24,40,.18)}
+.su-r h2{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-bottom:20px}
+.su-r .tgrid{gap:12px}
+.su-r .tcard{border-radius:18px;padding:16px;min-height:118px;box-shadow:inset 0 0 0 1px var(--hair,#E6E8E6);transition:box-shadow .15s,background .15s}
+.su-r .tcard:hover{box-shadow:inset 0 0 0 1.5px var(--gr400,#4CC774)}
+.su-r .tcard .ti{width:44px;height:44px;border-radius:14px;background:var(--gr50,#EEF9F1);color:var(--gr700,#00752A)}
+.su-r .tcard.on{background:var(--gr50,#EEF9F1);box-shadow:inset 0 0 0 2px var(--gr600,#00862D),0 8px 20px -12px rgba(0,134,45,.45)}.su-r .tcard.on .ti{background:var(--gr600,#00862D);color:#fff}
+.su-r .tcard p{font-size:13px;line-height:1.5;color:var(--t-sub,#5C6660)}
+.su-r .btn.pri.lg{min-height:52px;border-radius:14px;font-size:16px;font-weight:800;width:100%}
+.su-r .btn.pri.lg:disabled{background:var(--g200,#ECEEEC);color:var(--g600,#6B746E);box-shadow:inset 0 0 0 1px var(--g300,#DFE2DF);opacity:1;cursor:not-allowed}
+.su-r .su-who{font-size:13px}
+@media (max-width:960px){.su{grid-template-columns:1fr;padding:16px}.su-l{min-height:0;padding:96px 24px 28px}.su-l .brand{left:24px;top:28px}}
+html[data-theme="dark"] .su-r .btn.pri.lg:disabled{background:#13231B;color:#A7B8AD;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+#modal .modal{min-width:min(480px,calc(100vw - 32px))}
+#modal .modal .mh h2,#modal .modal .mh h3{font-size:19px;font-weight:800;letter-spacing:-.01em}
+#drawer :is(small,kbd,.mg,em),#drawer .ob1 i,.fab-on .bchat :is(small,kbd,.mg,em),.fab-on .bchat .ob1 i{font-size:12px!important}
+#drawer :is(.fbi,.eng,.gdbtn,.ob1),.fab-on .bchat :is(.fbi,.eng,.gdbtn,.ob1){position:relative}
+#drawer :is(.fbi,.eng,.gdbtn,.ob1)::after,.fab-on .bchat :is(.fbi,.eng,.gdbtn,.ob1)::after{content:'';position:absolute;top:-9px;bottom:-9px;left:-4px;right:-4px}
+#drawer .ob1.ok,.fab-on .bchat .ob1.ok{color:var(--gr800,#066B2A)}:is(#drawer,.fab-on .bchat) .ob1.ok i{color:var(--gr800,#066B2A);background:#fff}
+html[data-theme="dark"] :is(#drawer,.fab-on .bchat) .ob1.ok{color:#9EF0B8}html[data-theme="dark"] :is(#drawer,.fab-on .bchat) .ob1.ok i{color:#04140A;background:#9EF0B8}
+html[data-theme="dark"] .fab-on .bchat :is(b,p,h3,h4){color:var(--g900,#EAF2EC)}
+:is(#drawer,.fab-on .bchat) :is(.chip,.scxh){min-height:44px}
+:is(#drawer,.fab-on .bchat) .agl{font-size:12px!important;position:relative}:is(#drawer,.fab-on .bchat) .agl::after{content:'';position:absolute;top:-11px;bottom:-11px;left:0;right:0}
+#modal .chip,.gd26 .chip{min-height:44px;padding-left:16px;padding-right:16px}
+#modal small{font-size:12.5px}
+:is(#drawer,.fab-on .bchat) .composer .cbox{border-radius:18px;box-shadow:inset 0 0 0 1px var(--hair,#E1E5E2),0 6px 18px -12px rgba(16,24,40,.25);background:var(--surface)}
+:is(#drawer,.fab-on .bchat) .composer .cbox:focus-within{box-shadow:inset 0 0 0 1.5px var(--gr600,#00862D),0 0 0 4px rgba(0,134,45,.12)}
+:is(#drawer,.fab-on .bchat) .composer .cbox textarea{border:0!important;box-shadow:none!important;outline:0!important;background:transparent!important;min-width:0;flex:1 1 auto;font-size:15px}
+.acp button{min-height:44px;border-radius:10px;font-size:14px}
+.acp small{font-size:12px}`; document.head.appendChild(st); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', add); else add();
 })();
