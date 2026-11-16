@@ -119,7 +119,7 @@
     const title = v === 'week' ? (() => { const s0 = addD(cur, -dd(cur).getDay()); return `${+s0.slice(5, 7)}/${+s0.slice(8)} ~ ${+addD(s0, 6).slice(5, 7)}/${+addD(s0, 6).slice(8)}`; })() : v === 'list' ? '앞으로 60일' : `${cur.slice(0, 4)}년 ${+cur.slice(5, 7)}월`;
     const ks = ['시작', U() ? '주차' : '차시', '회차', '라이브', '시험', '과제', '설문', '종료', '기관', ...(P ? [] : ['내일정'])].filter(k => k === '내일정' || k === '기관' || E.some(e => e.k === k));
     const nm = P ? '자녀 일정' : '학습 캘린더'; const none = !myCls().length;
-    return `<section class="sub lq-sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › ${nm}</p><h1>${nm}</h1><p>${P ? '연결된 자녀의 수업 · 시험 · 과제 마감을 한눈에 봐요.' : `내 ${esc(T('cls'))}의 차시 · 시험 · 과제 마감과 기관 일정, 내가 넣은 일정을 한눈에 봐요.`}</p></div></section>
+    return `${lPageHead({ key: 'cal', cls: 'lq-sub', title: nm, eyebrow: P ? '자녀 일정' : '차시 · 시험 · 과제 마감', desc: P ? '연결된 자녀의 수업 · 시험 · 과제 마감을 한눈에 봐요.' : `내 ${T('cls')}의 차시 · 시험 · 과제 마감과 기관 일정, 내가 넣은 일정을 한눈에 봐요.`, cta: null })}
     <section class="sec lc"><div class="in">
       <div class="lq-top"><button type="button" class="lbtn ghost lq-send" data-lcal="send">${ico('cal', 18)}내 캘린더로 보내기</button>${P ? '' : `<button type="button" class="lbtn pri lq-addb" data-lcal="add" data-v="${td()}">${ico('plus', 18)}내 일정 추가</button>`}</div>
       ${P && K.length > 1 ? `<div class="lq-kids" role="tablist" aria-label="자녀">${[['', '모두'], ...K.map(k => [k.id, k.name])].map(([id, n]) => `<button type="button" role="tab" aria-selected="${LC.kid === id}" class="${LC.kid === id ? 'on' : ''}" data-lcal="kid" data-v="${esc(id)}">${esc(n)}</button>`).join('')}</div>` : ''}
@@ -211,7 +211,7 @@
   { const base = viewPage; viewPage = (id, ...a) => {
     if (id === 'cal') { if (!LR.me) return needLogin('cal'); try { return calHTML(); } catch (e) { console.error('lcal', e); return '<section class="sec"><div class="in"><p class="empty">캘린더를 그리지 못했어요. 새로 고침해 주세요.</p></div></section>'; } }
     if (id === 'connect' && !(pageOf && pageOf('connect'))) { if (!LR.me) return needLogin('connect'); const more = typeof window.laiMore === 'function' ? window.laiMore() : '';
-      return `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › 연결 · 알림</p><h1>연결 · 알림</h1><p>${(SITE().org || {}).type === 'univ' ? '캘린더' : '캘린더 · 카카오톡'} 연결과 학습 리마인더를 설정해요.</p></div></section><section class="sec lq-conn"><div class="in"><p><a class="lbtn ghost sm" href="#cal">${ico('cal', 16)}학습 캘린더 보기</a></p><div class="ap-conn-a" hidden></div>${more}</div></section>`; }
+      return `${lPageHead({ key: 'connect', title: '연결 · 알림', desc: `${(SITE().org || {}).type === 'univ' ? '캘린더' : '캘린더 · 카카오톡'} 연결과 학습 리마인더를 설정해요.`, compact: true })}<section class="sec lq-conn"><div class="in"><p><a class="lbtn ghost sm" href="#cal">${ico('cal', 16)}학습 캘린더 보기</a></p><div class="ap-conn-a" hidden></div>${more}</div></section>`; }
     return base(id, ...a); }; }
 
   /* ── 진입: 웹 머리 메뉴(로그인한 학습자 · 보호자) ── */

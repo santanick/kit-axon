@@ -52,8 +52,8 @@
     const tt = c.t || mn;
     if (h1 && tt) { if (h1.dataset.llo == null) h1.dataset.llo = h1.textContent; h1.textContent = String(tt).slice(0, 60); const cr = sub.querySelector('.crumb'); const last = cr && cr.lastChild; const lo = String(h1.dataset.llo || '').trim();
       if (last && last.nodeType === 3 && lo) { const tx = last.textContent; const i = tx.lastIndexOf(lo); if (i >= 0 && !tx.slice(i + lo.length).trim()) last.textContent = tx.slice(0, i) + String(tt).slice(0, 60); } }
-    let d = sub.querySelector('.in > p.llh-d') || [...inn.children].find(x => x.tagName === 'P' && !x.classList.contains('crumb'));
-    if (c.d) { if (!d) { d = document.createElement('p'); inn.appendChild(d); } d.classList.add('llh-d'); d.textContent = String(c.d).slice(0, 200); }
+    let d = sub.querySelector('.in > p.llh-d, .lph-t > p.llh-d') || [...inn.children].find(x => x.tagName === 'P' && !x.classList.contains('crumb'));
+    if (c.d) { if (!d) { d = document.createElement('p'); (sub.querySelector('.lph-t h1') ? sub.querySelector('.lph-t h1').parentNode : inn).insertBefore(d, (sub.querySelector('.lph-t h1') || {}).nextSibling || null); } d.classList.add('llh-d'); d.textContent = String(c.d).slice(0, 200); }
     else if (d) d.classList.add('llh-d');
   }
   window.llhApply = apply;

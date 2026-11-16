@@ -15,7 +15,7 @@
   const STOCK = { data: ['dat-01', 'lap-03', 'grp-03', 'lap-01', 'dsk-06', 'cod-03'], video: ['grp-02', 'vid-01', 'lap-03', 'dsk-06'], code: ['cod-03', 'cod-01', 'cod-04', 'lap-03'], ai: ['lap-03', 'grp-03', 'cod-03', 'lap-06'],
     room: ['lec-01', 'cls-03', 'cls-04', 'sem-01', 'lec-02'], sport: ['spo-04', 'spo-03', 'spo-08', 'spo-05'], space: ['off-02', 'off-05', 'sem-01', 'cls-04'], gen: ['stu-01', 'cam-07', 'grp-03', 'dsk-02', 'lap-06', 'lib-04', 'grp-06', 'dsk-06'] };
   const kindOf = n => /테니스|코트|농구|체육|골프|수영|요가|헬스|피트니스|풋살|탁구/.test(n) ? 'sport' : /엑셀|데이터|컴활|분석|파이썬|회계|통계/.test(n) ? 'data' : /영상|촬영|유튜브|사진/.test(n) ? 'video' : /코딩|개발|자동화|노션|프로그래밍/.test(n) ? 'code' : /AI|인공지능|생성형|챗GPT/i.test(n) ? 'ai' : /스터디|세미나|회의|룸|라운지/.test(n) ? 'space' : /오프라인|원데이|특강|워크숍|강의실/.test(n) ? 'room' : 'gen';
-  function photo(name, i = 0, big) { const L = STOCK[kindOf(String(name || ''))]; return `img/stock/${L[(hash(name) + i) % L.length]}${big ? '' : '-800'}.webp`; }
+  function photo(name, i = 0, big) { if (typeof window.lPhoto === 'function') return window.lPhoto(String(name || ''), 'h' + i, big); /* v43 Q2: 화면 안 중복 금지 공통 규칙 */ const L = STOCK[kindOf(String(name || ''))]; return `img/stock/${L[(hash(name) + i) % L.length]}${big ? '' : '-800'}.webp`; }
   const shopCls = id => { try { return ((SITE().shop || {}).classes || []).find(x => x.id === id) || null; } catch (e) { return null; } };
   const thumbOf = (c, it, i) => { const s = shopCls(c.id); if (s && s.thumb) return s.thumb; if (it && it.yt && /^[\w-]{11}$/.test(it.yt)) return `https://i.ytimg.com/vi/${it.yt}/hqdefault.jpg`; return photo(c.name, i || 0); };
   const day0 = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
