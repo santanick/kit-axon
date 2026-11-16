@@ -70,3 +70,13 @@
 .cnb-tl li:not(:last-child)::after{content:'';position:absolute;left:5px;top:30px;bottom:-10px;width:2px;background:var(--line)}
 .cnb-d{width:12px;height:12px;border-radius:50%;background:var(--g,#16a34a)}.cnb-tl li.skip .cnb-d{background:#e0a325}.cnb-tl li.next .cnb-d{background:transparent;box-shadow:inset 0 0 0 2px var(--line2,#cfd5dc)}
 .cnb-tl li div{display:flex;flex-direction:column;min-width:0}.cnb-tl li div b{font-size:14px}.cnb-tl li div span{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cnb-tl li small{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* v43 F2 035: 칩 · 검색 · 안전 안내를 한 줄 도구줄로 */
+#main .cnb-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 6px}
+#main .cnb-bar .sl-chips{padding:0;flex:none}
+#main .cnb-bar .sl-search{position:static;flex:1 1 220px;max-width:320px;margin:0;min-height:40px;padding:0 14px;border-radius:999px;background:var(--card,#fff);box-shadow:0 0 0 1px var(--line);backdrop-filter:none}
+#main .cnb-bar .sl-search input{min-height:38px}
+#main .cnb-safe{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);margin-left:auto}
+#main .cnb-ask{border:1.5px dashed var(--line);background:transparent;box-shadow:none;justify-content:center}
+#main .cnb-ask:hover{box-shadow:0 0 0 1.5px var(--g,#16a34a)}
+#main .cnb-plus{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--g100,#eef6f0);color:var(--g-ink,#15803d);font-size:22px;font-weight:700;margin-bottom:8px}
+@media (max-width:640px){#main .cnb-safe{margin-left:0}#main .cnb-bar .sl-search{max-width:none}}

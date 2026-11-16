@@ -112,3 +112,8 @@ html[data-theme=dark] .bks-pb,html[data-theme=dark] .bks-cb,html[data-theme=dark
 #legalList table{table-layout:auto;width:100%}
 #legalList td:last-child,#legalList th:last-child{white-space:nowrap;width:1%}
 #legalList td:nth-child(3){min-width:180px}
+/* v43 F2 036: 브리핑 머리 안 하위 칩 */
+#main .l43-brief .lmsnav-sub.l43-insub{margin:0 0 10px;gap:6px}
+#main .l43-brief .lmsnav-sub.l43-insub .lnd{display:none}
+#main .l43-brief .lmsnav-sub.l43-insub button{min-height:44px;padding:0 14px;font-size:13px;background:rgba(255,255,255,.7)}
+#main .l43-brief .lmsnav-sub.l43-insub button.on{background:var(--gr700,#00862D);color:var(--on-pr,#fff)}

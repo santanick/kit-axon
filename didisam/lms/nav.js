@@ -135,6 +135,8 @@
   const sumCol = (m, h, i) => col(m, h, i).reduce((a, v) => a + (parseInt(v.replace(/,/g, ''), 10) || 0), 0);
   const kv = (m, l) => { const k = [...m.querySelectorAll('.kpi')].find(x => T(x.querySelector('.lab')) === l); return k ? T(k.querySelector('.val')) : null; };
   const num = v => parseInt(String(v || '').replace(/[^\d-]/g, ''), 10) || 0;
+  /* v43 F2 055: 학습 분석은 KPI 칸 대신 분포 카드(data-*)에 숫자를 둡니다 */
+  const jv = (m, l) => { const x = kv(m, l); if (x != null) return x; const d = m.querySelector('.r2-dist[data-danger]'); if (!d) return null; return d.dataset[{ '위험': 'danger', '주의': 'warn', '양호': 'ok', '평균 위험지수': 'avg' }[l]] ?? null; };
   const tabOn = m => T(m.querySelector('.bview .seg2:not(.wtabs):not(.lmsnav-sub) button.on, .lmp-tabs button.on'));
   const noSec = m => /분반이 없습니다|강의실\(분반\)이 없습니다|분반을 먼저 개설/.test(T(m.querySelector('.empty, .slg-empty')));
   const n = (v, u) => `<em>${E(v)}${u}</em>`;
@@ -149,7 +151,7 @@
     lmsf: ['시험 · 문제은행', m => { const k = rows(m); if (!k) return null; const w = sumCol(m, '채점 대기'); return { title: w ? `서술형 채점 대기 ${n(w, '건')}이 있습니다` : `시험 ${n(k, '개')}의 채점이 끝났습니다`, sub: '객관식은 자동 채점됩니다. 결과 · 통계 탭에서 문항별 정답률을 확인하세요.' }; }],
     lmsg: ['출결 관리', m => { const r = kv(m, '결석 1/4 이상'), a = kv(m, '평균 출석률'); if (r == null) return null; return num(r) ? { title: `결석이 1/4을 넘은 학생 ${n(num(r), '명')}에게 먼저 연락하세요`, sub: `평균 출석률은 ${E(a || '—')}입니다. 학칙상 F 처리 대상이 되기 전에 안내를 보내는 것이 좋습니다.` } : { title: `평균 출석률 ${n(a || '—', '')}, 결석 1/4을 넘은 학생은 없습니다`, sub: '차시를 고르면 출석부를 열고 바로 고칠 수 있습니다.' }; }],
     lmsi: ['동영상 · 진도', m => noSec(m) ? null : ({ title: '영상 진도는 <em>실제로 본 구간</em>만 인정합니다', sub: '진도 현황 탭에서 기준에 못 미친 학생을 찾고, 영상 퀴즈 · 자막을 함께 관리하세요.' })],
-    lmsj: ['학습 분석', m => { const r = kv(m, '위험'), c = kv(m, '주의'); if (r == null) return null; return { title: num(r) ? `위험 학생 ${n(num(r), '명')}, 주의 ${num(c)}명에게 먼저 연락하세요` : `위험 학생은 없고, 주의 학생이 ${n(num(c), '명')} 있습니다`, sub: '위험지수는 출석 · 과제 · 접속 기록을 합쳐 계산합니다. 조기 경고 탭에서 안내를 보낼 수 있습니다.' }; }],
+    lmsj: ['학습 분석', m => { const r = jv(m, '위험'), c = jv(m, '주의'); if (r == null) return null; return { title: num(r) ? `위험 학생 ${n(num(r), '명')}, 주의 ${num(c)}명에게 먼저 연락하세요` : `위험 학생은 없고, 주의 학생이 ${n(num(c), '명')} 있습니다`, sub: '위험지수는 출석 · 과제 · 접속 기록을 합쳐 계산합니다. 조기 경고 탭에서 안내를 보낼 수 있습니다.' }; }],
     lmsk: ['설문 · 강의평가', m => { const k = m.querySelectorAll('.lw-grid > *').length || rows(m); const a = (txt(m).match(/응답\s*(\d+)\s*건/g) || []).reduce((x, y) => x + num(y), 0); return k ? { title: `설문 ${n(k, '개')}에 응답 ${a}건이 모였습니다`, sub: '응답이 적은 설문은 마감 전에 알림을 한 번 더 보내세요.' } : { title: '템플릿으로 첫 설문을 만드세요', sub: '강의평가 · 만족도 조사 템플릿을 고르면 문항이 바로 채워집니다.' }; }],
     'lmsl-cal': ['통합 달력', m => { const k = m.querySelectorAll('.lmp-ev').length; return { title: k ? `이번 달 일정 ${n(k, '건')}, 다가오는 마감부터 확인하세요` : '이번 달 일정이 아직 없습니다', sub: '학사 · 강좌 일정은 학생 달력에도 함께 보입니다. 개인 일정은 운영자에게만 보입니다.' }; }],
     'lmsl-dm': ['채팅', m => { const R = [...m.querySelectorAll('.lmp-room')]; const u = R.reduce((a, r) => a + num(T(r.querySelector('em'))), 0); return R.length ? { title: u ? `안 읽은 메시지 ${n(u, '건')}이 있습니다` : `대화방 ${n(R.length, '개')}, 새 메시지는 없습니다`, sub: '학생 · 교수자와 1:1 또는 분반 단위로 대화합니다.' } : { title: '첫 대화를 시작하세요', sub: '학생 · 교수자와 1:1 또는 분반 단위로 대화합니다.' }; }],
@@ -202,7 +204,7 @@
         chart: { t: '주별 평균 출석률', v: (a || '—').replace(/[^\d%—]/g, '') || '—', s: '출석 · 지각 · 공결 인정', d: [88, 86, 84, 81, 79, 77, num(a) || 75], lb: WK(7) }, ai: '결석이 2주 연속인 학생은 학과 지도교수에게 함께 알리면 중도 탈락을 줄일 수 있습니다.' }; },
     lmsi: m => ({ stats: [['80%', '진도 인정 기준'], ['12개', '강의 영상'], ['9개', '자막 게시']], todo: [['자막 없는 영상 3개', '자막을 올리면 청각장애 학생도 같은 진도를 냅니다', 'warn', '보완'], ['진도 80% 미만 학생 확인', '진도 현황 탭에서 학생별 구간을 봅니다', '', '확인'], ['영상 퀴즈 추가', '중간 퀴즈가 있으면 끝까지 보는 비율이 오릅니다', '', '권장']],
       chart: { t: '최근 7일 시청 시간', v: '38시간', s: '실제로 본 구간만 합산', d: [22, 26, 31, 29, 34, 36, 38], lb: D7() }, ai: '배속 재생과 건너뛴 구간은 진도에서 빠집니다. 기준에 못 미친 학생에게 남은 구간을 알려 주세요.' }),
-    lmsj: m => { const r = kv(m, '위험'), c = kv(m, '주의'), g = kv(m, '양호'), a = kv(m, '평균 위험지수'); if (r == null) return null; const T = num(r) + num(c) + num(g);
+    lmsj: m => { const r = jv(m, '위험'), c = jv(m, '주의'), g = jv(m, '양호'), a = jv(m, '평균 위험지수'); if (r == null) return null; const T = num(r) + num(c) + num(g);
       return { stats: [[num(g) + '명', '양호 학생', ''], [num(r) + '명', '위험', num(r) ? 'warn' : ''], [num(c) + '명', '주의', num(c) ? 'warn' : ''], [num(a) + '점', '평균 위험지수']], ring: [pctOf(num(g), T), '양호 비율', pctOf(num(g), T) < 50 ? 'warn' : ''],
         todo: [[`위험 학생 ${num(r)}명 상담`, '출석 · 과제 · 접속이 함께 떨어진 학생입니다', num(r) ? 'warn' : 'ok', '상담'], [`주의 학생 ${num(c)}명 조기 경고`, '조기 경고 탭에서 안내문을 보냅니다', num(c) ? 'warn' : 'ok', '경고'], ['성찰일지 미제출 확인', '2주 이상 미제출이면 위험지수가 오릅니다', '', '확인']],
         chart: { t: '주별 평균 위험지수', v: num(a) + '점', s: '낮을수록 좋습니다', d: [41, 39, 40, 37, 36, 35, num(a)], lb: WK(7) }, ai: '위험지수 50 이상 학생은 2주 뒤 중도이탈 확률이 높습니다. 지도교수 상담을 이번 주 안에 잡으세요.' }; },

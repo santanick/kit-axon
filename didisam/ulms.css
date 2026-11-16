@@ -243,3 +243,26 @@
 #main.l43[data-l43=lmsc] .l43-k-hero select{appearance:none;-webkit-appearance:none;min-height:40px;padding:0 36px 0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;color:#fff;font-weight:700;font-size:14px}
 #main.l43[data-l43=lmsc] .l43-k-hero select option{color:#1a1a1a}
 #main.l43[data-l43=lmsc] .l43-k-hero select:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* v43 F2 036: 타임라인 주인공 · 접는 설정 패널 · 기간계 칩 */
+.ul-tl .ch{display:flex;align-items:center;gap:10px}.ul-tl .ch .btn{margin-left:auto}
+.ul-tl .ul-flow{margin:4px 0 14px}
+.ul-tl ol{list-style:none;margin:0;padding:0}
+.ul-tl li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 0;position:relative}
+.ul-tl li:not(:last-child)::after{content:'';position:absolute;left:6px;top:34px;bottom:-12px;width:2px;background:var(--line)}
+.ul-td{width:14px;height:14px;border-radius:50%;background:var(--g,#16a34a);box-shadow:0 0 0 4px color-mix(in srgb,var(--g,#16a34a) 16%,transparent)}
+.ul-tl li.err .ul-td{background:var(--bad,#dc2626);box-shadow:0 0 0 4px color-mix(in srgb,var(--bad,#dc2626) 16%,transparent)}
+.ul-tl li.now .ul-td{background:#e0a325;box-shadow:0 0 0 4px rgba(224,163,37,.2)}
+.ul-tl li.next .ul-td{background:var(--card,#fff);box-shadow:inset 0 0 0 2px var(--line)}
+.ul-tw{display:flex;flex-direction:column;gap:3px;min-width:0}.ul-tw small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ul-tw b{font-size:14.5px;display:flex;align-items:center;gap:8px}.ul-tw span{font-size:13px;color:var(--muted)}
+.ul-tl li.now{background:color-mix(in srgb,#e0a325 7%,transparent);border-radius:12px;padding:12px;margin:0 -12px}
+.ul-tl li.now::after{left:18px}
+.ul-cfg{padding:0}.ul-cfg>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer}
+.ul-cfg>summary::-webkit-details-marker{display:none}
+.ul-cfgi{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--soft,#f1f3f5);color:var(--g800,inherit)}
+.ul-cfgt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.ul-cfgt small{font-size:13px;color:var(--muted)}
+.ul-cfgb{font-size:13px;font-weight:700;color:var(--g-ink,#15803d);padding:8px 14px;border-radius:999px;background:color-mix(in srgb,var(--g,#16a34a) 10%,transparent)}
+.ul-cfg[open]>summary{border-bottom:1px solid var(--line)}.ul-cfg[open]>:not(summary){margin-left:20px;margin-right:20px}.ul-cfg[open]>p.mini{margin-bottom:16px}
+.ul-mods{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.ul-mods>b{font-size:14px;margin-right:4px}.ul-mod{font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;background:var(--soft,#f1f3f5)}
+.ul-mods .mini{margin-left:auto}

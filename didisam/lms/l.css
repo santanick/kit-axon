@@ -29,3 +29,34 @@ html.a11y-hc{--ink:#000;--muted:#222;--line:#000;--soft:#e6e6e6;--mag:#0000c8;--
 html.a11y-lg{font-size:118%}html.a11y-lg body{font-size:1.12rem}html.a11y-lg .mini,html.a11y-lg small{font-size:14.5px}
 html.a11y-rm *,html.a11y-rm *::before,html.a11y-rm *::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
 @media (prefers-reduced-motion:reduce){.lmp-prog i{transition:none}}
+/* v43 F2 058: 대화방 목록(아바타 · 미리보기 2줄) · 아바타 말풍선 · DDS 입력창 */
+.lmp-av{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font:700 13px var(--num,inherit);background:color-mix(in srgb,var(--g,#16a34a) 14%,var(--card,#fff));color:var(--g-ink,#15803d)}
+.lmp-av.k-group{background:color-mix(in srgb,#3b82f6 14%,var(--card,#fff));color:#1d4ed8;border-radius:12px}
+.lmp-av.k-broadcast{background:color-mix(in srgb,#e0a325 18%,var(--card,#fff));color:#92400e;border-radius:12px}
+.lmp-av.k-ta{background:color-mix(in srgb,#8b5cf6 14%,var(--card,#fff));color:#6d28d9}
+.lmp-rooms{padding:8px;gap:2px;max-height:none}
+.lmp-room{flex-direction:row;align-items:flex-start;gap:12px;padding:12px 44px 12px 12px;border-radius:12px}
+.lmp-room.on{background:color-mix(in srgb,var(--g,#16a34a) 8%,var(--card,#fff));box-shadow:inset 3px 0 0 var(--g,#16a34a)}
+.lmp-rb{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.lmp-rt{display:flex;align-items:baseline;gap:8px;min-width:0}.lmp-rt b{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.lmp-rt time{font-size:11.5px;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+.lmp-room .lmp-rb small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;font-size:12.5px}
+.lmp-room em{top:auto;bottom:14px;background:var(--g,#16a34a);color:#fff;border-radius:999px;min-width:20px;height:20px;padding:0 6px;display:grid;place-items:center}
+.lmp-chat{display:flex;flex-direction:column}
+.lmp-msgs{gap:14px;max-height:520px;padding:8px 2px 16px;flex:1}
+.lmp-mrow{display:flex;align-items:flex-end;gap:10px;align-self:flex-start;max-width:82%}
+.lmp-mrow .lmp-av{width:32px;height:32px;font-size:11.5px}
+.lmp-mrow .lmp-msg{max-width:none}
+.lmp-msg{border-radius:16px 16px 16px 4px;padding:10px 14px;background:var(--soft,#f3f4f6)}
+.lmp-msg.mine{border-radius:16px 16px 4px 16px;background:color-mix(in srgb,var(--g,#16a34a) 12%,var(--card,#fff))}
+.lmp-msg p{font-size:14.5px;line-height:1.55}
+.lmp-cmp{border-radius:999px;box-shadow:0 0 0 1px var(--line);background:var(--card,#fff);padding:6px 6px 6px 8px;gap:6px}
+.lmp-cmp input#lmslMsg{border:0;box-shadow:none;background:transparent;min-height:40px;padding:0 6px;outline:none}
+.lmp-cmp:focus-within{box-shadow:0 0 0 2px var(--g,#16a34a)}
+.lmp-ic{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:var(--muted);flex:none}
+.lmp-ic:hover{background:var(--soft,#f3f4f6);color:var(--ink)}
+.lmp-go{border-radius:999px;min-height:40px;padding:0 18px;display:inline-flex;align-items:center;gap:6px;flex:none}
+@media (max-width:860px){.lmp-mrow{max-width:94%}}
+.lmp-dm{grid-template-columns:340px minmax(0,1fr)}
+#main .lmp-cmp input#lmslMsg{border:0 !important;box-shadow:none !important;background:transparent !important}
+.lmp-msgs{max-height:640px}

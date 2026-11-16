@@ -79,13 +79,21 @@
       O('email', ME(), '[Q&A] 과제 3 제출 형식 문의', 'sent', 0, 8), O('push', P('20261002'), '중간고사 성적 공개 안내', 'sent', -3, 10), O('push', P('20261003'), '중간고사 성적 공개 안내', 'sent', -3, 10));
     l.seq = id; l.v2 = 1;
   }
+  /* v43 F2 058: 첫 대화방(1조 프로젝트)이 메시지 1개뿐이라 대화창 아래가 비던 것 → 시연 대화 5턴을 앞에 채웁니다(기존 메시지는 마지막 · 안 읽음 유지) */
+  function seed3(l) {
+    if (l.v3) return; l.v3 = 1; const r = (l.rooms || []).find(x => x.id === 'r1'); if (!r || r.msgs.length > 2) return;
+    const d0 = new Date(); const at = (dd, h, mi) => { const d = new Date(d0); d.setDate(d.getDate() + dd); return KST(d.getFullYear(), d.getMonth() + 1, d.getDate(), h, mi || 0); };
+    let id = Math.max(l.seq || 0, ...r.msgs.map(m => m.id), 200); const M = (sender, body, dd, h, mi, read) => ({ id: ++id, sender, body, attachments: [], at: at(dd, h, mi), read: read || 0 });
+    const add = [M('p:20261002', '발표 자료 목차 초안을 올렸습니다. 확인 부탁드립니다.', -1, 19, 10), M(ME(), '목차 좋습니다. 3장 사례는 최근 2년 자료로 바꿔 주세요.', -1, 20, 5, 3), M('p:20261003', '사례를 바꿔서 다시 정리하겠습니다. 마감이 금요일 맞나요?', 0, 9, 20), M(ME(), '네, 금요일 18시까지 강의 게시판 과제함에 올려 주세요.', 0, 9, 40, 2), M('p:20261001', '역할 나눴습니다. 저는 자료 조사, 02는 발표, 03은 보고서를 맡습니다.', 0, 10, 15)];
+    r.read = id; r.msgs = add.concat(r.msgs.map(m => ({ ...m, id: ++id }))); l.seq = id;
+  }
   function ens() {
-    const L = (S.lms = S.lms || {}); if (L.l) { if (!L.l.v2) seed2(L.l); return L.l; }
+    const L = (S.lms = S.lms || {}); if (L.l) { if (!L.l.v2) seed2(L.l); seed3(L.l); return L.l; }
     L.l = { ev: [], rooms: [{ id: 'r1', kind: 'group', title: '1조 프로젝트', members: ['p:20261001', 'p:20261002', 'p:20261003'], msgs: [{ id: 1, sender: 'p:20261001', body: '자료 조사 끝냈습니다.', attachments: [], at: LMP.nowIso(), read: 3 }], read: 0 }],
       rules: [{ id: LMP.uuid(), event: 'due_before', section_id: null, params: { hours: 24 }, channels: ['inapp', 'push'], enabled: true }],
       quiet: { starts: '22:00', ends: '07:00', enabled: true }, outbox: [], inbox: [], seq: 10 };
     if ((S && S.org && S.org.empty)) { L.l.rooms = []; L.l.v2 = 1; return L.l; } /* v38 빈 스튜디오: 학사 · 강좌 일정 · 대화 샘플 없이 */
-    seed2(L.l); return L.l;
+    seed2(L.l); seed3(L.l); return L.l;
   }
   const qNow = () => { const Q = ens().quiet; if (!Q || !Q.enabled || Q.starts === Q.ends) return false; const t = new Date().toTimeString().slice(0, 5); return Q.starts < Q.ends ? t >= Q.starts && t < Q.ends : t >= Q.starts || t < Q.ends; };
   const enq = (p, ch, title, body) => { const L = ens(); const st = ch === 'inapp' ? 'sent' : qNow() ? 'held_quiet' : 'queued'; const o = { id: ++L.seq, principal: p, channel: ch, title, body, status: st, at: LMP.nowIso(), not_before: st === 'held_quiet' ? '방해금지 종료 후' : null }; if (ch === 'inapp') L.inbox.unshift(o); else L.outbox.unshift(o); return st; };
@@ -187,6 +195,8 @@
 
   /* ═════════ DM 채팅(SFR-070) ═════════ */
   const who = p => String(p || '').startsWith('p:') ? String(p).slice(2) : '나(운영자)';
+  /* 학사 LMS는 이름 대신 학번만 씁니다: 아바타는 학번 끝 두 자리 · 그룹은 제목 첫 글자 */
+  const av = (p, kind, ttl) => { const id = String(p || '').startsWith('p:') ? String(p).slice(2) : ''; const t = kind === 'direct' ? (id ? (/^T/.test(id) ? '조' : id.slice(-2)) : '나') : kind === 'broadcast' ? '공' : String(ttl || '?').trim().charAt(0); return `<span class="lmp-av k-${esc(kind || 'direct')}${/^T/.test(id) ? ' k-ta' : ''}" aria-hidden="true">${esc(t)}</span>`; };
   VIEWS['lmsl-dm'] = LMP.guard(() => {
     const rooms = LMP.load('l:rooms', 'l', 'dm.rooms', {}); const L = (rooms && rooms.items) || []; const cur = UI.lmslRoom && L.find(r => r.id === UI.lmslRoom) ? UI.lmslRoom : (L[0] || {}).id;
     const ms = cur ? LMP.load('l:msgs:' + cur, 'l', 'dm.msgs', { room_id: cur }) : null;
@@ -195,12 +205,15 @@
     return head('DM 채팅', `교수 · 조교 · 학생과 1:1 · 그룹으로 대화하고, 여러 학생에게 한 번에 안내합니다. 구성원은 학번으로 찾습니다. ${LW4.demoTag(LMP.live())}`,
       LW4.more(LW4.mi('lmsl-bc', '여러 학생에게 일괄 발송')) + `<button class="btn pri" data-act="lmsl-new">새 대화</button>`) +
       LW4.todo([{ n: unread, t: '개 안 읽은 메시지', btn: ur ? LW4.go('lmsl-room', '읽기', { id: ur.id }) : '' }, { n: L.length, t: '개 대화방' }], '안 읽은 메시지가 없습니다.') +
-      `<div class="lmp-dm"><div class="card lmp-rooms" role="list" aria-label="대화방 목록">${L.length ? L.map(r => `<button role="listitem" class="lmp-room ${r.id === cur ? 'on' : ''}" data-act="lmsl-room" data-id="${esc(r.id)}"><b>${esc(r.title || (r.members || []).map(who).join(', '))}</b><small>${tag(K[r.kind] || r.kind)} ${esc(String(r.last || '').slice(0, 24))}</small>${r.unread ? `<em aria-label="안 읽은 메시지 ${r.unread}개">${r.unread}</em>` : ''}</button>`).join('') : '<p class="mini">대화방이 아직 없습니다. 「새 대화」로 시작하세요.</p>'}</div>
+      /* v43 F2 058: 대화방 목록 = 아바타 · 제목 · 시각 · 미리보기 2줄 / 대화창 = 아바타 말풍선 / 입력창 = 아이콘 첨부 · 초록 보내기 */
+      `<div class="lmp-dm"><div class="card lmp-rooms" role="list" aria-label="대화방 목록">${L.length ? L.map(r => { const ttl = r.title || (r.members || []).map(who).join(', '); return `<button role="listitem" class="lmp-room ${r.id === cur ? 'on' : ''}" data-act="lmsl-room" data-id="${esc(r.id)}">${av(r.kind === 'direct' ? (r.members || [])[0] : '', r.kind, ttl)}<span class="lmp-rb"><span class="lmp-rt"><b>${esc(ttl)}</b><time>${esc(r.last_at ? LMP.ts(r.last_at).replace(/^\d{4}-/, '').slice(0, 11) : '')}</time></span><small>${tag(K[r.kind] || r.kind)} ${esc(String(r.last || ''))}</small></span>${r.unread ? `<em aria-label="안 읽은 메시지 ${r.unread}개">${r.unread}</em>` : ''}</button>`; }).join('') : '<p class="mini">대화방이 아직 없습니다. 「새 대화」로 시작하세요.</p>'}</div>
       <div class="card lmp-chat">${ms ? `<div class="ch"><b>${esc(ms.room.title || '1:1 대화')}</b><small>참여 ${ms.members}명</small><button class="btn sm" data-act="lmsl-tr" data-id="${esc(cur)}">✦ 번역해서 보기</button></div>
-        <div class="lmp-msgs" aria-live="polite">${ms.items.map(m => `<div class="lmp-msg ${m.mine ? 'mine' : ''}"><small>${esc(who(m.sender))} · ${esc(LMP.ts(m.at))}</small><p data-tr="${m.id}">${esc(m.body)}</p>${(m.attachments || []).map(a => `<button class="lmp-att" data-act="lmsl-att" data-room="${esc(cur)}" data-id="${esc(a.file_id || '')}" data-name="${esc(a.name)}" data-mime="${esc(a.mime || '')}" aria-label="${esc(a.name)} 내려받기">${a.kind === 'image' ? '이미지' : a.kind === 'voice' ? '음성' : '파일'} · ${esc(a.name)} <small>${Math.ceil((a.size || 0) / 1024)}KB</small></button>`).join('')}${m.mine ? `<small class="lmp-read">${m.read_by ? `읽음 ${m.read_by}` : '안 읽음'}</small>` : ''}</div>`).join('') || '<div class="empty">첫 메시지를 보내세요.</div>'}</div>
-        <div class="lmp-send"><input id="lmslMsg" maxlength="2000" placeholder="메시지 입력" aria-label="메시지 입력"><label class="btn sm">첨부<input type="file" id="lmslFile" multiple hidden></label><button class="btn lw-go" data-act="lmsl-send" data-id="${esc(cur)}">보내기</button></div>
+        <div class="lmp-msgs" aria-live="polite">${ms.items.map(m => `${m.mine ? '' : `<div class="lmp-mrow">${av(m.sender, 'direct', who(m.sender))}`}<div class="lmp-msg ${m.mine ? 'mine' : ''}"><small>${esc(who(m.sender))} · ${esc(LMP.ts(m.at))}</small><p data-tr="${m.id}">${esc(m.body)}</p>${(m.attachments || []).map(a => `<button class="lmp-att" data-act="lmsl-att" data-room="${esc(cur)}" data-id="${esc(a.file_id || '')}" data-name="${esc(a.name)}" data-mime="${esc(a.mime || '')}" aria-label="${esc(a.name)} 내려받기">${a.kind === 'image' ? '이미지' : a.kind === 'voice' ? '음성' : '파일'} · ${esc(a.name)} <small>${Math.ceil((a.size || 0) / 1024)}KB</small></button>`).join('')}${m.mine ? `<small class="lmp-read">${m.read_by ? `읽음 ${m.read_by}` : '안 읽음'}</small>` : ''}</div>${m.mine ? '' : '</div>'}`).join('') || '<div class="empty">첫 메시지를 보내세요.</div>'}</div>
+        <div class="lmp-send lmp-cmp"><label class="lmp-ic" title="파일 첨부" aria-label="파일 첨부"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5l-8.6 8.6a5 5 0 01-7.1-7.1l8.6-8.6a3.3 3.3 0 014.7 4.7l-8.6 8.6a1.7 1.7 0 01-2.4-2.4l7.9-7.9"/></svg><input type="file" id="lmslFile" multiple hidden></label><input id="lmslMsg" maxlength="2000" placeholder="메시지를 입력하세요" aria-label="메시지 입력"><button class="btn pri lw-go lmp-go" data-act="lmsl-send" data-id="${esc(cur)}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>보내기</button></div>
         <p class="mini">첨부 파일은 기관 파일 저장소에 저장되고, 대화방 참여자만 내려받을 수 있습니다(파일당 2MB · 실행 파일 차단).</p>` : cur ? '<div class="empty">불러오는 중…</div>' : '<div class="empty">왼쪽에서 대화방을 고르세요.</div>'}</div></div>`;
   });
+  /* 대화창은 최근 메시지(아래)부터 보이게 */
+  if (typeof AFTER !== 'undefined') AFTER.push(cur => { if (cur && cur.tab === 'lmsl-dm') { const b = document.querySelector('#main .lmp-msgs'); if (b) b.scrollTop = b.scrollHeight; } });
   ACT['lmsl-room'] = el => { UI.lmslRoom = el.dataset.id; LMP.call('l', 'dm.read', { room_id: el.dataset.id }).catch(() => { }); LMP.drop('l:'); render(); };
   ACT['lmsl-new'] = () => modal('새 대화', `<label class="fl">종류<select name="kind"><option value="direct">1:1</option><option value="group">그룹</option></select></label><label class="fl">그룹 이름(그룹일 때)<input name="title" maxlength="60" placeholder="예: 1조 프로젝트"></label><label class="fl">상대 학번 · 사번(쉼표로 구분)<input name="m" placeholder="20261001, 20261002"></label>`,
     [{ id: 'c', label: '취소' }, { id: 'ok', label: '만들기', kind: 'pri', run: async w => { const r = await LMP.run('l', 'dm.open', { kind: fv(w, 'kind'), title: fv(w, 'title'), members: fv(w, 'm').split(/[,\s]+/).filter(Boolean).map(x => 'p:' + x) }, null, 'l:'); if (r) { UI.lmslRoom = r.id; render(); } return !!r; } }]);
