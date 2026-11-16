@@ -154,18 +154,19 @@ ACT['lib-del'] = el => { const l = S.lib.find(x => x.id === el.dataset.v); if ((
 VIEWS.progress = () => {
   const p = S.settings.progress, tu = S.settings.tutor; const mx = Math.max(...S.tutorUsage.map(u => u.n), 1);
   const sw = (k, l, o, d) => `<label class="swrow"><span><b>${l}</b><small>${d}</small></span><span class="sw"><input type="checkbox" ${o[k] ? 'checked' : ''} data-chg="${o === p ? 'pg' : 'tu'}" data-k="${k}"><span></span></span></label>`;
-  return head('', '진도 인정 규칙과 학습자용 AI 튜터를 설정합니다.') + `<section class="g2c">
+  /* v43 R7 2차: 라벨 14px · 줄 간격 24 · 슬라이더 값은 칩(J2 082) — 값 칩은 입력 바로 뒤라 ACT.pg가 그대로 바꾼다 */
+  return head('', '진도 인정 규칙과 학습자용 AI 튜터를 설정합니다.') + `<section class="g2c r7-rules">
   <div class="card"><div class="ch"><b>진도 규칙</b></div>
-    <label class="rng2"><span><b>완료 기준 시청률</b><small>이 비율 이상 보면 완료</small></span><input type="range" min="50" max="100" step="5" value="${p.watchThr}" data-chg="pg" data-k="watchThr"><em>${p.watchThr}%</em></label>
+    <label class="rng2"><span><b>완료 기준 시청률</b><small>이 비율 이상 보면 완료</small></span><span class="r7-rr"><input type="range" min="50" max="100" step="5" value="${p.watchThr}" data-chg="pg" data-k="watchThr"><em>${p.watchThr}%</em></span></label>
     ${sw('realOnly', '실제 재생 구간만 인정', p, '건너뛰기 · 배속 2배 초과 구간 제외')}${sw('autoDone', '기준 도달 시 자동 완료', p, '시청 기준을 넘으면 바로 완료 처리')}${sw('seq', '순차 학습', p, '앞 레슨을 끝내야 다음 레슨이 열림')}${sw('levelUnlock', '단계 잠금', p, '러닝 저니 열림 조건 적용')}
-    <label class="rng2"><span><b>과제 재제출 허용</b><small>재제출 요청 후 다시 낼 수 있는 횟수</small></span><input type="range" min="0" max="5" value="${p.resubmit}" data-chg="pg" data-k="resubmit"><em>${p.resubmit}회</em></label></div>
+    <label class="rng2"><span><b>과제 재제출 허용</b><small>재제출 요청 후 다시 낼 수 있는 횟수</small></span><span class="r7-rr"><input type="range" min="0" max="5" value="${p.resubmit}" data-chg="pg" data-k="resubmit"><em>${p.resubmit}회</em></span></label></div>
   <div class="card"><div class="ch"><b>AI 학습 튜터</b>${tag(tu.enabled ? '사용 중' : '꺼짐', tu.enabled ? 'g' : '')}</div>
     ${sw('enabled', '튜터 사용', tu, '학습 화면 오른쪽 아래에 표시')}
     <label class="fl">튜터 이름<input maxlength="12" value="${esc(tu.name)}" data-chg="tu" data-k="name"></label>
-    <label class="rng2"><span><b>1인 하루 질문 수</b><small>비용 조절</small></span><input type="range" min="5" max="50" step="5" value="${tu.daily}" data-chg="tu" data-k="daily"><em>${tu.daily}회</em></label>
+    <label class="rng2"><span><b>1인 하루 질문 수</b><small>비용 조절</small></span><span class="r7-rr"><input type="range" min="5" max="50" step="5" value="${tu.daily}" data-chg="tu" data-k="daily"><em>${tu.daily}회</em></span></label>
     <label class="fl">도움 범위<select data-chg="tu" data-k="help"><option value="hint" ${tu.help === 'hint' ? 'selected' : ''}>힌트만</option><option value="feedback" ${tu.help === 'feedback' ? 'selected' : ''}>초안을 평가 기준으로 피드백</option></select></label>
     <label class="fl">모델<select data-chg="tu" data-k="model"><option value="haiku" ${tu.model === 'haiku' ? 'selected' : ''}>빠르고 저렴(Haiku 5.5, 기본)</option><option value="sonnet" ${tu.model === 'sonnet' ? 'selected' : ''}>깊이 있는 답변(Sonnet 5.5)</option></select></label>
-    <label class="rng2"><span><b>방문자(로그인 전) 질문 수</b><small>브라우저당 하루 · 강좌 · 수강 · 가입 안내</small></span><input type="range" min="0" max="30" step="5" value="${tu.guestDaily ?? 10}" data-chg="tu" data-k="guestDaily"><em>${tu.guestDaily ?? 10}회</em></label>
+    <label class="rng2"><span><b>방문자(로그인 전) 질문 수</b><small>브라우저당 하루 · 강좌 · 수강 · 가입 안내</small></span><span class="r7-rr"><input type="range" min="0" max="30" step="5" value="${tu.guestDaily ?? 10}" data-chg="tu" data-k="guestDaily"><em>${tu.guestDaily ?? 10}회</em></span></label>
     ${sw('loginOnly', '로그인한 ' + t('learner') + '만', tu, '켜면 방문자는 질문할 수 없습니다(기본 꺼짐 — 로그인 전부터 강좌 · 가입 안내)')}
     <div class="ch"><b>최근 7일 질문 수</b><small>대화 내용은 저장하지 않고 횟수만 집계</small></div><div class="spark">${S.tutorUsage.map(u => `<div><i style="height:${u.n / mx * 100}%"></i><small>${esc(u.d)}</small><b>${u.n}</b></div>`).join('')}</div>
     <p class="mini">과제 결과물을 대신 써 주지 않습니다. 위기 상황은 상담 기관 안내, 개인정보 질문은 거절합니다.</p></div></section>`;
