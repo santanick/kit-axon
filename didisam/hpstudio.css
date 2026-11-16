@@ -398,7 +398,9 @@ body.hps-gal-on #hpeF{visibility:hidden}
 .tpd-more>summary small{font-size:12px;color:var(--gr700,#00862D);font-weight:800}
 .tpd-more[open]>.sl-chips{position:absolute;z-index:20;top:calc(100% + 6px);left:0;display:flex;flex-wrap:wrap;gap:6px;width:max-content;max-width:420px;padding:10px;border-radius:14px;background:var(--surface,#fff);box-shadow:0 12px 32px -8px rgba(26,24,20,.25)}
 /* v43 R9(J4 125): 게시 결과 = 캔버스 오른쪽 위 카드 */
-.hps-pubc.hps-pubc9{position:absolute;right:76px;z-index:7;width:360px;flex-direction:column;align-items:stretch;gap:12px;padding:16px;border:0;border-radius:20px;background:var(--surface,#fff);box-shadow:0 1px 2px rgba(26,24,20,.06),0 18px 40px -12px rgba(26,24,20,.28)}
+body.hps-pubc-on #hpe.hps .hpe-stage{margin-right:452px}
+@media (max-width:760px){body.hps-pubc-on #hpe.hps .hpe-stage{margin-right:0}.hps-pubc.hps-pubc9{left:12px;right:12px!important;width:auto!important}}
+.hps-pubc.hps-pubc9{position:absolute;right:84px;z-index:7;width:356px;flex-direction:column;align-items:stretch;gap:12px;padding:16px;border:0;border-radius:20px;background:var(--surface,#fff);box-shadow:0 1px 2px rgba(26,24,20,.06),0 18px 40px -12px rgba(26,24,20,.28)}
 .hps-pubc9 .hps-pch{display:flex;align-items:center;gap:12px}
 .hps-pubc9 .hps-pch>div{flex:1;min-width:0}
 .hps-pubc9 .hps-pch b{font-size:17px;font-weight:800}

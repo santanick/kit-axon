@@ -735,7 +735,7 @@
 
   /* ── 메뉴 패널(오른쪽 넓은 패널 · hpai 메뉴 편성 그대로) + 끌어서 들여 놓으면 하위로 ── */
   function menuPanel(p) { p.dataset.k = 'menu'; HS.mSig = msig();
-    p.innerHTML = `<div class="hps-ph"><b>메뉴 · 하위 메뉴</b><button type="button" class="btn sm ghost" data-act="hps-panx" aria-label="패널 닫기">${SV(P.x, 16, 2)}</button></div><div class="hps-pb"><p class="hps-pd hps-mtip"><b>하위 메뉴 만들기</b> — 메뉴를 <b>오른쪽으로 끌어 들여 놓거나</b> 「→ 하위로」를 누르세요. 메뉴 아래 「＋ 하위 메뉴」로 새로 만들 수도 있습니다. 위 탭에 마우스를 올려도 「＋ 하위」가 보입니다.</p><div id="hpmSlot"></div></div>`;
+    p.innerHTML = `<div class="hps-ph"><b>메뉴 · 하위 메뉴</b><button type="button" class="btn sm ghost" data-act="hps-panx" aria-label="패널 닫기">${SV(P.x, 16, 2)}</button></div><div class="hps-pb"><p class="hps-pd hps-mtip"><b>하위 메뉴 만들기</b> — 메뉴를 <b>오른쪽으로 끌어 들여 놓거나</b> 「→ 하위로」를 누르세요. 연결 칩을 눌러 펼치면 순서 · 「＋ 하위 메뉴」가 나옵니다.</p><div id="hpmSlot"></div></div>`;
     try { const keepF = document.activeElement; window.hpMenus(); const box = $1('#modal #hpmBox'); if (box) p.querySelector('#hpmSlot').replaceWith(box); closeModal(); if (keepF && keepF.focus && document.contains(keepF)) try { keepF.focus({ preventScroll: true }); } catch (e) { } } catch (e) { console.error('hps menu', e); }
     const box = p.querySelector('#hpmBox'); if (!box) return; menuDeco(box); new MutationObserver(() => { menuDeco(box); menuSync(); }).observe(box, { childList: true }); }
   const msig = () => { try { return JSON.stringify(A(site().menus).map(m => [m.id, m.l, m.on, m.link, A(m.subs).map(b => [b.id, b.l, b.on, b.link])])); } catch (e) { return ''; } };
@@ -1079,14 +1079,16 @@
       const miss = q ? q.items.filter(x => !x.ok && !x.info) : []; const dom = (S.org && S.org.domain) || '';
       const row = (ok, b, sm) => `<li class="${ok ? 'ok' : 'no'}"><i aria-hidden="true">${ok ? SV(P.ok, 13, 2.6) : '!'}</i><span><b>${E(b)}</b><small>${E(sm)}</small></span></li>`;
       /* v43 R9(J4 125): 도구줄 아래 4번째 띠 → 캔버스 오른쪽 위 게시 패널 카드(체크리스트 · 주소 · 열기, 14px 글자). 캔버스 줄 수를 늘리지 않음 */
-      const at = w.querySelector('.hps-flow') || w.querySelector('.hpe-bar'); const top = at ? at.offsetTop + at.offsetHeight + 12 : 120;
+      /* 패널 자리(오른쪽 열)에 놓고 캔버스를 그만큼 줄인다 — 캔버스 위에 겹쳐 사진 · 글자를 가리지 않게 */
+      if (HS.pan) panClose(); const at = w.querySelector('.hps-flow') || w.querySelector('.hpe-bar'); const top = at ? at.offsetTop + at.offsetHeight + 12 : 120; document.body.classList.add('hps-pubc-on');
       w.insertAdjacentHTML('beforeend', `<aside class="hps-pubc hps-pubc9" role="status" aria-label="게시 결과" style="top:${top}px"><div class="hps-pch"><span class="hps-pcb" aria-hidden="true">${SV(P.ok, 18, 2.6)}</span><div><b>게시했습니다</b><small>홈페이지와 학습 사이트가 같은 주소예요</small></div><button type="button" class="hps-fx2" data-act="hps-pubcx" aria-label="게시 결과 닫기">${SV(P.x, 14, 2)}</button></div>
         <ul class="hps-pcl">${row(true, `메뉴 ${pages}개 페이지`, '모두 같은 주소에 올라갔어요')}${q ? row(q.score >= 85, `품질 ${q.score}점`, miss.length ? `남은 점검 ${miss.length}개 · ${miss[0].label}` : '빠진 점검이 없어요') : ''}${row(true, '휴대폰 화면', '390px에서 넘치는 글자 없음')}${row(!!dom, '사이트 주소', dom ? '영문 주소로 바꿀 수 있어요' : '임시 주소로 열려요 · 기본 정보에서 영문 주소로 바꿔요')}</ul>
         <p class="hps-pcu"><span>주소</span><b>${E(dom || (learnerURL() || '').replace(/^https?:\/\//, '').slice(0, 48))}</b></p>
-        <div class="hps-pca"><a class="btn sm pri" href="${E(learnerURL())}" target="_blank" rel="noopener">${SV(P.ext, 14)} 사이트 열기</a>${q && q.score < 100 ? '<button type="button" class="btn sm" data-act="hpw-q">점검 보기</button>' : ''}</div></aside>`); try { layout(); } catch (e) { } };
+        <div class="hps-pca"><a class="btn sm pri" href="${E(learnerURL())}" target="_blank" rel="noopener">${SV(P.ext, 14)} 사이트 열기</a>${q && q.score < 100 ? '<button type="button" class="btn sm" data-act="hpw-q">점검 보기</button>' : ''}</div></aside>`); try { layout(); fit(); } catch (e) { } };
     ACT['hpe-pub'] = (...a) => { const r = base(...a); try { if ($1('#hpe.hps')) { document.querySelectorAll('#toasts > *').forEach(t => { if (/게시했습니다/.test(t.textContent || '')) t.remove(); }); setTimeout(card, 60); setTimeout(() => ACT['hps-pubcx'] && ACT['hps-pubcx'](), 12000); } } catch (e) { } return r; };
     ACT['hpe-pub'].r5 = 1;
-    ACT['hps-pubcx'] = () => { const c = $1('#hpe .hps-pubc'); if (c) { c.remove(); try { layout(); } catch (e) { } } };
+    const pubOff = () => { document.body.classList.remove('hps-pubc-on'); try { layout(); fit(); } catch (e) { } };
+    ACT['hps-pubcx'] = () => { const c = $1('#hpe .hps-pubc'); if (c) { c.remove(); pubOff(); } };
     document.addEventListener('keydown', e => { if (e.key === 'Escape') ACT['hps-pubcx'](); }); /* Esc · 캔버스 누르기 · 12초 뒤에는 닫힌다(캔버스를 오래 가리지 않게) */
-    document.addEventListener('pointerdown', e => { const c = $1('#hpe .hps-pubc'); if (c && !c.contains(e.target)) c.remove(); }, true); }, 0);
+    document.addEventListener('pointerdown', e => { const c = $1('#hpe .hps-pubc'); if (c && !c.contains(e.target) && !(e.target.closest && e.target.closest('.hps-rail,[data-act="hpe-pub"]'))) { c.remove(); pubOff(); } }, true); }, 0);
 })();
