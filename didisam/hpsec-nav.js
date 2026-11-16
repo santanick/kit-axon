@@ -65,7 +65,7 @@
   const TH = { clean: ['solid', 'cols', 'drawer'], premium: ['overlay', 'mega', 'full'], warm: ['contact', 'cta', 'drawer'], official: ['contact', 'biz', 'full'], tech: ['overlay', 'mega', 'full'], kids: ['float', 'cta', 'drawer'], campus: ['solid', 'biz', 'full'], senior: ['contact', 'biz', 'full'] };
   function chrome(s) { s = s || {}; const c = (s.hps && typeof s.hps === 'object') ? s.hps : {};
     const F = s.layout && window.HPL && HPL.fam && HPL.fam[s.layout]; const fd = (F && F.hps) || {};
-    const fm = FAM[s.layout] || []; const tm = TH[s.theme] || TH.clean;
+    const fm = FAM[s.layout] || []; const tm = TH[s.theme] || TH[window.HPT && HPT.base ? HPT.base(s.theme) : ''] || TH.clean; /* v43 T1: 프리미엄 테마는 base 테마의 머리글 */
     const pick = (k, i) => [c[k], fd[k], fm[i], tm[i]].find(v => KN[k].includes(v));
     const r = { head: pick('head', 0), foot: pick('foot', 1), mm: pick('mm', 2) };
     const Y = TYK[typeKey()]; const seed = hsh(s.tpl || s.layout || s.theme || '');
@@ -84,7 +84,7 @@
     try { const d = typeof today === 'function' ? today() : (typeof ymdL === 'function' ? ymdL(new Date()) : new Date().toISOString().slice(0, 10));
       const p = ((S.settings && S.settings.popups) || []).find(p => p && p.on !== false && (!p.s || p.s <= d) && (!p.e || p.e >= d) && val(p.t));
       return p ? { t: val(p.t).slice(0, 80), link: p.link || '' } : null; } catch (e) { return null; } }
-  const linkHref = v => { v = String(v || ''); if (!v) return ''; if (v.startsWith('learn:')) return '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice' }[v.slice(6)] || 'home');
+  const linkHref = v => { v = String(v || ''); if (!v) return ''; if (v.startsWith('learn:')) return '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice', fac: 'l-fac' }[v.slice(6)] || 'home');
     if (v.startsWith('page:')) return '#p-' + v.slice(5); if (v.startsWith('cls:')) return '#p-c-' + v.slice(4); if (v.startsWith('url:')) return typeof safeURL === 'function' ? safeURL(v.slice(4)) || '' : (/^https:\/\//.test(v.slice(4)) ? v.slice(4) : ''); return ''; };
   const aAttr = h => `href="${E(h)}"${/^https?:/.test(h) ? ' target="_blank" rel="noopener"' : ''}`;
 

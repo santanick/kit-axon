@@ -161,12 +161,13 @@
   const hooked = new WeakSet();
   const watch = () => { if (!HPE.on) return; const f = document.getElementById('hpeF'); if (f && !hooked.has(f)) { hooked.add(f); f.addEventListener('load', () => setTimeout(() => { try { bindF(f); } catch (e) { console.error('hpimg bind', e); } }, 0)); } };
   new MutationObserver(watch).observe(document.body, { childList: true, subtree: true });
-  const EDIT_CSS = `[data-hpi-img]{cursor:pointer;position:relative}[data-hpi-img]:hover,[data-hpi-img].hpi-on,[data-hpi-img]:focus-visible{outline:3px solid #5C74F6!important;outline-offset:2px}
-[data-hpi-img].hpi-drop{outline:3px dashed #5C74F6!important;outline-offset:4px;background-color:rgba(92,116,246,.10)}
+  /* v43 R9(J4 118 · 121 · 025): 사진 위 「샘플 — 우리 기관 사진으로 바꾸세요」 긴 띠가 사진마다 겹쳐 보임 → 왼쪽 아래 모서리 작은 칩 「샘플 사진」 */
+  const EDIT_CSS = `[data-hpi-img]{cursor:pointer;position:relative}[data-hpi-img]:hover,[data-hpi-img].hpi-on,[data-hpi-img]:focus-visible{outline:3px solid #00862D!important;outline-offset:2px}
+[data-hpi-img].hpi-drop{outline:3px dashed #00862D!important;outline-offset:4px;background-color:rgba(0,134,45,.10)}
 [data-hpi-img]:not(a)::after{content:attr(data-hpi-lb);position:absolute;right:12px;bottom:12px;z-index:31;background:#2A2B2B;color:#fff;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:8px 12px;border-radius:99px;opacity:0;transition:opacity .12s;pointer-events:none;box-shadow:0 6px 16px rgba(0,0,0,.25)}
 [data-hpi-img]:hover::after,[data-hpi-img].hpi-on::after,[data-hpi-img].hpi-drop::after{opacity:1}
-[data-hpe-f].hpi-cur{outline:2px solid #5C74F6;outline-offset:3px}
-[data-hpi-stock]::before{content:'샘플 — 우리 기관 사진으로 바꾸세요';position:absolute;left:12px;top:12px;z-index:32;background:rgba(20,22,31,.86);color:#fff;font:700 12px/1.2 Pretendard,system-ui,sans-serif;padding:7px 11px;border-radius:99px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.25);white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}`;
+[data-hpe-f].hpi-cur{outline:2px solid #00862D;outline-offset:3px}
+[data-hpi-stock]::before{content:'샘플 사진';position:absolute;left:10px;top:auto!important;bottom:10px;z-index:32;background:rgba(20,22,31,.72);color:#fff;font:700 11px/1.2 Pretendard,system-ui,sans-serif;padding:4px 9px;border-radius:99px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.25);white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}`;
   function targets(doc) {
     const mark = (el, r, lb) => { if (!el || el.hasAttribute('data-hpi-img')) return; el.setAttribute('data-hpi-img', JSON.stringify(r)); el.removeAttribute('aria-hidden'); el.setAttribute('data-hpi-lb', lb); el.setAttribute('tabindex', '0'); el.setAttribute('role', 'button'); el.setAttribute('aria-label', `${lb} — 누르거나 사진을 끌어다 놓으세요`); };
     doc.querySelectorAll('[data-hpe]').forEach(sec => { const [key, si] = sec.dataset.hpe.split('|'); if (key !== HPE.key) return; const x = secList(HPE.key)[+si]; if (!x) return;
@@ -225,7 +226,7 @@
     if (!keep) HI.pop = '';
     paintTb(); placeTb(); talkSync(); }
   function paintTb() { const tb = HI.tb, s = HI.sel; if (!tb || !s) return; const st = curSty(); const site0 = site(); const sf = site0.font || {};
-    const T = window.HPT && HPT.tokens ? HPT.tokens(site0) : null; const pal = T ? [[T.a, '포인트'], [T.ink, '진한 글자'], [T.mu, '흐린 글자'], [T.at, '강조 글자']] : [['#5C74F6', '포인트'], ['#14161F', '진한 글자'], ['#5B6170', '흐린 글자'], ['#3F55D0', '강조 글자']];
+    const T = window.HPT && HPT.tokens ? HPT.tokens(site0) : null; const pal = T ? [[T.a, '포인트'], [T.ink, '진한 글자'], [T.mu, '흐린 글자'], [T.at, '강조 글자']] : [['#00862D', '포인트'], ['#14161F', '진한 글자'], ['#5B6170', '흐린 글자'], ['#00862D', '강조 글자']];
     const ffNow = st.ff || (/^(H1|H2|H3|H4)$/.test(s.el.tagName) ? sf.h : sf.b) || 'sans'; const sz = szName(st.fs || 1); const al = st.al || '';
     const pop = HI.pop === 'ff' ? `<div class="hpi-pop hpi-ffp" role="dialog" aria-label="글꼴 고르기"><div class="hpi-seg" role="group" aria-label="바꿀 범위">${[['el', '이 글자만'], ['h', '사이트 제목'], ['b', '사이트 본문']].map(([k, l]) => `<button type="button" data-hpi="ffs" data-v="${k}" aria-pressed="${(HI.ffs || 'el') === k}" class="${(HI.ffs || 'el') === k ? 'on' : ''}">${l}</button>`).join('')}</div>
         <div class="hpi-ffl">${FONTS.map(([k, n, ff]) => { const on = (HI.ffs || 'el') === 'el' ? st.ff === k : sf[HI.ffs] === k; return `<button type="button" data-hpi="ffv" data-v="${k}" class="${on ? 'on' : ''}" aria-pressed="${on}"><span style="font-family:${E(ff)}">가나다 Aa</span><small>${n}</small></button>`; }).join('')}</div>
@@ -242,7 +243,7 @@
       ${s.btn ? `<button type="button" data-hpi="ln" aria-expanded="${HI.pop === 'ln'}" title="버튼 연결">링크 ▾</button>` : ''}
       <button type="button" data-hpi="ai" class="ai" aria-expanded="${HI.pop === 'ai'}">✦ AI로 다시 쓰기</button>
       <button type="button" data-hpi="rs" title="이 글자 스타일 지우기" aria-label="이 글자 스타일 지우기" ${Object.keys(st).length ? '' : 'disabled'}>↺</button><button type="button" data-hpi="x" aria-label="글자 도구 닫기">✕</button></div>${pop}`; }
-  const LINKS = () => [['learn:shop', `${typeof t === 'function' ? t('cls') : '강좌'} 목록`], ['learn:home', '홈'], ['learn:comm', '커뮤니티'], ['learn:notice', '공지사항'], ['learn:my', '내 학습']];
+  const LINKS = () => [['learn:shop', `${typeof t === 'function' ? t('cls') : '강좌'} 목록`], ['learn:home', '홈'], ['learn:comm', '커뮤니티'], ['learn:notice', '공지사항'], ['learn:my', '내 학습'], ...(typeof S !== 'undefined' && S && S.fac && (S.fac.facilities || []).length ? [['learn:fac', '시설 예약']] : [])];
   const linkKey = s => s.leaf === 'cta2' ? 'link2' : 'link';
   function linkPop() { const s = HI.sel; const d = s.x.data || {}; const cur = String(d[linkKey(s)] || ''); const url = cur.startsWith('url:') ? cur.slice(4) : '';
     return `<div class="hpi-pop hpi-lnp" role="dialog" aria-label="버튼 연결"><div class="hpi-lnl">${LINKS().map(([v, l]) => `<button type="button" data-hpi="lnv" data-v="${v}" class="${cur === v ? 'on' : ''}">${E(l)}</button>`).join('')}</div><label class="hpi-lnu">외부 주소<input data-hpi="lnu" inputmode="url" maxlength="300" placeholder="https://" value="${E(url)}"></label><button type="button" class="hpi-ok" data-hpi="lnok">연결</button></div>`; }
@@ -526,7 +527,7 @@
     if (/(기울|이탤릭)/.test(s)) pt.it = true;
     if (/가운데/.test(s)) pt.al = 'center'; else if (/왼쪽/.test(s)) pt.al = 'left'; else if (/오른쪽/.test(s)) pt.al = 'right';
     const fh = FONTS.find(([k, n]) => s.includes(n)) || (/(고급|우아|클래식)/.test(s) ? FONTS[1] : /(귀엽|친근|둥글)/.test(s) ? FONTS[2] : null); if (fh) pt.ff = fh[0];
-    const cw = /(색|컬러)/.test(s) ? COLW.find(([re]) => re.test(s)) : null; if (cw) { let c = cw[1] || ((window.HPT && HPT.tokens && HPT.tokens(site())) || {}).a || '#5C74F6'; const bg = bgOf(sel.el); if (CR(c, bg) < 4.5) c = fit(c, bg, 4.6); pt.c = c; }
+    const cw = /(색|컬러)/.test(s) ? COLW.find(([re]) => re.test(s)) : null; if (cw) { let c = cw[1] || ((window.HPT && HPT.tokens && HPT.tokens(site())) || {}).a || '#00862D'; const bg = bgOf(sel.el); if (CR(c, bg) < 4.5) c = fit(c, bg, 4.6); pt.c = c; }
     if (text != null && text !== cur) P.push(`선택한 글을 「${text.replace(/\n/g, ' ').slice(0, 40)}」(으)로`);
     if (pt.fs) P.push(`선택한 글자 크기 ${szName(pt.fs)}`); if (pt.fw) P.push(pt.fw >= 700 ? '굵게' : '보통 굵기'); if (pt.it) P.push('기울임'); if (pt.al) P.push(`${{ left: '왼쪽', center: '가운데', right: '오른쪽' }[pt.al]} 정렬`); if (pt.ff) P.push(`글꼴 ${FN(pt.ff)}`); if (pt.c) P.push(`글자 색 ${pt.c}${cw && cw[1] && pt.c.toLowerCase() !== cw[1].toLowerCase() ? '(대비 4.5:1로 조정)' : ''}`);
     if (!P.length) return null; const { si, path, k } = sel; const key = HPE.key;

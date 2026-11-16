@@ -13,7 +13,9 @@
     return { ...k, bk: books().length }; }
   function statusBar(st) { const k = counts(st); const cls = (typeof lcTerm === 'function' ? lcTerm('cls') : '') || '클래스';
     const it = [['수강 전', k.pre, 'm-courses'], ['수강 중', k.on, 'm-courses'], ['수료', k.done, 'm-courses'], ['기간 만료', k.exp, 'm-courses'], ...(!k.bk && ((typeof lPayOff === 'function' && lPayOff()) || !(((typeof shInfo === 'function' && shInfo()) || {}).books || []).length) ? [] : [['교재/교구', k.bk, 'm-books']])]; /* v38 F5 결제 꺼진 기관은 교재/교구 칸을 감춘다 */
-    return `<div class="mycard wide my26-stat" role="list" aria-label="내 ${E(cls)} 현황">${it.map(([l, n, j]) => `<a role="listitem" href="#" data-lact="myjump" data-v="${j}"><span>${E(l)}${l === '교재/교구' ? '' : ' ' + E(cls)}</span><b>${n}</b></a>`).join('')}</div>`; }
+    /* v43 R8 099: 0 칸 나열 → 한 문장 + 숫자가 있는 칸만 칩 */
+    const nz = it.filter(([, n]) => n > 0); const lead = k.on ? `${E(cls)} <b>${k.on}개</b>를 듣고 있어요.` : k.pre ? `<b>${k.pre}개</b> ${E(cls)}${typeof lJ === 'function' ? lJ(cls, '이', '가') : '이'} 시작을 기다려요. 첫 차시를 들으면 수강 중으로 바뀌어요.` : k.done ? `<b>${k.done}개</b>를 수료했어요.` : `아직 신청한 ${E(cls)}${typeof lJ === 'function' ? lJ(cls, '이', '가') : '이'} 없어요.`;
+    return `<div class="mycard wide my26-stat my26s43"><p class="my26sl">${lead}${k.done ? '' : ' 수료 기준을 채우면 수료증이 바로 발급돼요.'}</p><div class="my26sc" role="list" aria-label="내 ${E(cls)} 현황">${nz.map(([l, n, j]) => `<a role="listitem" href="#" data-lact="myjump" data-v="${j}"><span>${E(l)}${l === '교재/교구' ? '' : ' ' + E(cls)}</span><b>${n}</b></a>`).join('')}</div></div>`; }
   function booksCard() { const L = books().slice(0, 3); if (!L.length) return '';
     return `<div class="mycard wide my26-list" id="m-books"><div class="mh"><h3>최근 구매한 교재/교구</h3><a class="my26-more" href="#mybooks">내 교재/교구 전체보기 ›</a></div><ul>${L.map(x => `<li><a href="#tb/${E(x.id)}">${E(x.b.name)}</a><small>${E(x.b.kind || '')}${x.g.until && x.b.kind === '전자책' ? ` · ${E(x.g.until)}까지` : ''}</small></li>`).join('')}</ul></div>`; }
   function notesCard(st) { if (typeof lcStore !== 'function' || typeof COMM !== 'function') return ''; const me = typeof lcMe === 'function' ? lcMe() : ''; const s = lcStore();

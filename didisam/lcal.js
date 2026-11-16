@@ -30,7 +30,7 @@
   const U = () => ty() === 'univ';
   const isPar = () => !!(LR.me && LR.me.kind === 'parent');
   const appOn = () => document.body.classList.contains('lapp');
-  const COL = { 시작: '#00A224', 종료: '#A84A00', 차시: '#3BA875', 주차: '#3BA875', 회차: '#4C77C5', 라이브: '#7D5CB5', 시험: '#C4001D', 과제: '#5C74F6', 설문: '#E8622A', 기관: '#14A3A3', 내일정: '#E5487A', 예약: '#007200' };
+  const COL = { 시작: '#00A224', 종료: '#A84A00', 차시: '#3BA875', 주차: '#3BA875', 회차: '#0F766E', 라이브: '#A16207', 시험: '#C4001D', 과제: '#00862D', 설문: '#E8622A', 기관: '#14A3A3', 내일정: '#C2410C', 예약: '#007200' };
   const LBL = { 시작: '수강 시작', 종료: '수강 종료', 차시: '차시 열림', 주차: '주차 수업', 회차: '회차', 라이브: '라이브', 시험: '시험', 과제: '과제 마감', 설문: '설문', 기관: '기관 일정', 내일정: '내 일정' };
   const col = e => COL[e.k] || '#6C6C6C';
 
@@ -97,16 +97,17 @@
   const kindTag = e => e.k === '기관' && e.kind2 ? e.kind2 : LBL[e.k] || e.k;
 
   /* ── 화면 조각 ── */
-  const chip = e => `<button type="button" class="lq-ev${e.done ? ' dn' : ''}" style="--k:${col(e)}" data-lcal="ev" data-v="${esc(e.id)}" title="${esc(e.title)}">${e.time && e.time !== '23:59' ? `<i>${esc(e.time)}</i>` : ''}${esc(e.title)}</button>`;
+  const chip = e => `<button type="button" class="lq-ev${e.done ? ' dn' : ''}" style="--k:${col(e)}" data-lcal="ev" data-v="${esc(e.id)}" title="${esc(e.title)}">${e.time && e.time !== '23:59' ? `<i>${esc(e.time)}</i>` : ''}<span>${esc(e.title)}</span></button>`; /* v43 R8 105: 시간 한 줄 + 제목 두 줄(잘림 대신 줄바꿈) */
   const row = (e, d) => `<button type="button" class="lq-r${e.done ? ' dn' : ''}" data-lcal="ev" data-v="${esc(e.id)}"><i style="background:${col(e)}"></i><span class="lq-k">${esc(kindTag(e))}</span><b>${esc(e.title)}</b><small>${esc([d ? fmt(e.date) : '', e.time && e.time !== '23:59' ? e.time + (e.end ? '~' + e.end : '') : e.k === '과제' ? '자정까지' : '', e.place || '', e.done ? '완료' : ''].filter(Boolean).join(' · '))}</small>${d ? `<em class="lq-dd${e.date === td() ? ' t' : ''}">${dday(e.date)}</em>` : ''}</button>`;
   function sumHTML(E) { const t0 = td(), t7 = addD(t0, 6); const open = E.filter(e => !e.done && e.k !== '시작');
     const T0 = open.filter(e => e.date === t0); const W = open.filter(e => e.date > t0 && e.date <= t7); const next = W.slice(0, Math.max(0, 5 - T0.length));
-    return `<div class="lq-sum"><div class="lq-sn"><a href="#" data-lcal="day" data-v="${t0}"><b>${T0.length}</b><span>오늘</span></a><a href="#" data-lcal="view" data-v="list"><b>${W.length + T0.length}</b><span>이번 주</span></a><a href="#" data-lcal="view" data-v="list"><b>${open.filter(e => ['과제', '시험'].includes(e.k) && e.date >= t0 && e.date <= addD(t0, 13)).length}</b><span>2주 안 마감</span></a></div>
+    return `<div class="lq-sum"><div class="lq-sn">${(() => { const n2 = open.filter(e => ['과제', '시험'].includes(e.k) && e.date >= t0 && e.date <= addD(t0, 13)).length; const nb = (n, z) => n ? `<b>${n}</b>` : `<b class="lq-z">${z}</b>`; /* v43 R8 105: 0 → 문장 */
+      return `<a href="#" data-lcal="day" data-v="${t0}">${nb(T0.length, '일정 없음')}<span>오늘</span></a><a href="#" data-lcal="view" data-v="list">${nb(W.length + T0.length, '일정 없음')}<span>이번 주</span></a><a href="#" data-lcal="view" data-v="list">${nb(n2, '마감 없음')}<span>2주 안 마감</span></a>`; })()}</div>
       <div class="lq-sl"><h2>${isPar() ? '자녀의 오늘 · 이번 주' : '오늘 · 이번 주 할 일'}</h2>${T0.length + next.length ? [...T0, ...next].map(e => row(e, 1)).join('') : `<p class="lq-none">${isPar() ? '이번 주 자녀 일정이 없어요.' : '이번 주는 마감이 없어요. 내 일정에 공부 시간을 넣어 볼까요?'}</p>`}</div></div>`; }
   function monthHTML(E) { const cur = LC.d || td(); const ym = cur.slice(0, 7); const first = dd(ym + '-01'); const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(); const B = byDate(E);
     let h = WD.split('').map((w, i) => `<div class="lq-wd${i === 0 ? ' su' : i === 6 ? ' sa' : ''}">${w}</div>`).join('') + Array(first.getDay()).fill('<div class="lq-day x"></div>').join('');
     for (let i = 1; i <= days; i++) { const d = `${ym}-${pad(i)}`; const L = B[d] || [];
-      h += `<div class="lq-day${d === td() ? ' td' : ''}" data-lcday="${d}"><button type="button" class="lq-dn" data-lcal="day" data-v="${d}" aria-label="${fmt(d)} 일정 ${L.length}개">${i}</button>${L.slice(0, 3).map(chip).join('')}${L.length > 3 ? `<button type="button" class="lq-more" data-lcal="day" data-v="${d}">+${L.length - 3}</button>` : ''}</div>`; }
+      h += `<div class="lq-day${d === td() ? ' td' : ''}" data-lcday="${d}"><button type="button" class="lq-dn" data-lcal="day" data-v="${d}" aria-label="${fmt(d)} 일정 ${L.length}개">${i}</button>${L.slice(0, 3).map(chip).join('')}${L.length > 3 ? `<button type="button" class="lq-more" data-lcal="day" data-v="${d}">+${L.length - 3}</button>` : ''}${L.length ? `<span class="lq-dots" aria-hidden="true">${L.slice(0, 4).map(e => `<i style="background:${col(e)}"></i>`).join('')}</span>` : ''}</div>`; }
     h += Array((7 - (first.getDay() + days) % 7) % 7).fill('<div class="lq-day x"></div>').join('');
     return `<div class="lq-month" role="grid" aria-label="${+ym.slice(0, 4)}년 ${+ym.slice(5)}월">${h}</div>`; }
   function weekHTML(E) { const cur = LC.d || td(); const s0 = addD(cur, -dd(cur).getDay()); const B = byDate(E);
@@ -119,7 +120,7 @@
     const title = v === 'week' ? (() => { const s0 = addD(cur, -dd(cur).getDay()); return `${+s0.slice(5, 7)}/${+s0.slice(8)} ~ ${+addD(s0, 6).slice(5, 7)}/${+addD(s0, 6).slice(8)}`; })() : v === 'list' ? '앞으로 60일' : `${cur.slice(0, 4)}년 ${+cur.slice(5, 7)}월`;
     const ks = ['시작', U() ? '주차' : '차시', '회차', '라이브', '시험', '과제', '설문', '종료', '기관', ...(P ? [] : ['내일정'])].filter(k => k === '내일정' || k === '기관' || E.some(e => e.k === k));
     const nm = P ? '자녀 일정' : '학습 캘린더'; const none = !myCls().length;
-    return `<section class="sub lq-sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › ${nm}</p><h1>${nm}</h1><p>${P ? '연결된 자녀의 수업 · 시험 · 과제 마감을 한눈에 봐요.' : `내 ${esc(T('cls'))}의 차시 · 시험 · 과제 마감과 기관 일정, 내가 넣은 일정을 한눈에 봐요.`}</p></div></section>
+    return `${lPageHead({ key: 'cal', cls: 'lq-sub', title: nm, eyebrow: P ? '자녀 일정' : '차시 · 시험 · 과제 마감', desc: P ? '연결된 자녀의 수업 · 시험 · 과제 마감을 한눈에 봐요.' : `내 ${T('cls')}의 차시 · 시험 · 과제 마감과 기관 일정, 내가 넣은 일정을 한눈에 봐요.`, cta: null })}
     <section class="sec lc"><div class="in">
       <div class="lq-top"><button type="button" class="lbtn ghost lq-send" data-lcal="send">${ico('cal', 18)}내 캘린더로 보내기</button>${P ? '' : `<button type="button" class="lbtn pri lq-addb" data-lcal="add" data-v="${td()}">${ico('plus', 18)}내 일정 추가</button>`}</div>
       ${P && K.length > 1 ? `<div class="lq-kids" role="tablist" aria-label="자녀">${[['', '모두'], ...K.map(k => [k.id, k.name])].map(([id, n]) => `<button type="button" role="tab" aria-selected="${LC.kid === id}" class="${LC.kid === id ? 'on' : ''}" data-lcal="kid" data-v="${esc(id)}">${esc(n)}</button>`).join('')}</div>` : ''}
@@ -129,7 +130,7 @@
       <div class="lq-bar"><div class="lq-seg" role="tablist" aria-label="보기">${[['month', '월'], ['week', '주'], ['list', '목록']].map(([k, l]) => `<button type="button" role="tab" aria-selected="${v === k}" class="${v === k ? 'on' : ''}" data-lcal="view" data-v="${k}">${l}</button>`).join('')}</div>
         <span class="lq-nav">${v === 'list' ? '' : `<button type="button" class="lq-ib" data-lcal="mv" data-v="-1" aria-label="이전">‹</button>`}<b class="lq-ttl">${title}</b>${v === 'list' ? '' : `<button type="button" class="lq-ib" data-lcal="mv" data-v="1" aria-label="다음">›</button>`}</span><button type="button" class="lq-tb" data-lcal="mv" data-v="0">오늘</button></div>
       ${v === 'month' ? monthHTML(E) : v === 'week' ? weekHTML(E) : listHTML(E)}
-      <div class="lq-leg" aria-label="일정 종류">${ks.map(k => `<span><i style="background:${COL[k]}"></i>${esc(LBL[k])}</span>`).join('')}</div>
+      <div class="lq-leg" aria-label="일정 종류"><b class="lq-legh">일정 종류</b>${ks.map(k => `<span><i style="background:${COL[k]}"></i>${esc(LBL[k])}<small>${E.filter(e => e.k === k).length || ''}</small></span>`).join('')}</div>
       <p class="lq-help">날짜를 누르면 그날 일정을 보고${P ? '' : ' 내 일정을 넣을 수 있어요'}. 일정을 누르면 ${esc(T('cls'))} · 차시로 바로 갈 수 있어요. ${P ? '' : live() ? '내 일정은 내 계정에 저장돼 다른 기기에서도 보여요.' : '내 일정은 이 기기에만 저장돼요.'}</p>
     </div></section>`; }
   window.lcalHTML = calHTML;
@@ -207,11 +208,16 @@
   /* 칸의 빈 곳을 눌러도 그날 일정 */
   document.addEventListener('click', e => { const c = e.target.closest && e.target.closest('.lq-day[data-lcday]'); if (!c || e.target.closest('[data-lcal]')) return; dayOpen(c.dataset.lcday); });
 
+  /* v43 R4(108): 연결 · 알림 화면의 「이번 주 일정」 막대(오늘부터 7일 · 날짜별 일정 수) */
+  window.lcalWeek = () => { try { const E = events().filter(e => !e.done && e.k !== '시작'); const t0 = td(); const D = [...Array(7)].map((_, i) => addD(t0, i)); const v = D.map(d => E.filter(e => e.date === d).length);
+    return { n: v.reduce((a, b) => a + b, 0), v, l: D.map((d, i) => i ? ['일', '월', '화', '수', '목', '금', '토'][new Date(d + 'T00:00:00').getDay()] : '오늘') }; } catch (e) { return null; } };
+  window.lcalNext = n => { try { const t0 = td(); return events().filter(e => !e.done && e.k !== '시작' && e.date >= t0).slice(0, n || 4).map(e => ({ date: e.date, dd: dday(e.date), title: String(e.title || ''), k: kindTag(e), col: col(e) })); } catch (e) { return []; } }; /* v43 R8 096: 공지 화면 보조 열 「다가오는 일정」 */
   /* ── 라우팅: #cal(학습 캘린더) · 웹 #connect(연결 · 알림 — 앱과 같은 카드) ── */
   { const base = viewPage; viewPage = (id, ...a) => {
     if (id === 'cal') { if (!LR.me) return needLogin('cal'); try { return calHTML(); } catch (e) { console.error('lcal', e); return '<section class="sec"><div class="in"><p class="empty">캘린더를 그리지 못했어요. 새로 고침해 주세요.</p></div></section>'; } }
     if (id === 'connect' && !(pageOf && pageOf('connect'))) { if (!LR.me) return needLogin('connect'); const more = typeof window.laiMore === 'function' ? window.laiMore() : '';
-      return `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › 연결 · 알림</p><h1>연결 · 알림</h1><p>${(SITE().org || {}).type === 'univ' ? '캘린더' : '캘린더 · 카카오톡'} 연결과 학습 리마인더를 설정해요.</p></div></section><section class="sec lq-conn"><div class="in"><p><a class="lbtn ghost sm" href="#cal">${ico('cal', 16)}학습 캘린더 보기</a></p><div class="ap-conn-a" hidden></div>${more}</div></section>`; }
+      return `${lPageHead({ key: 'connect', title: '연결 · 알림', desc: `${(SITE().org || {}).type === 'univ' ? '캘린더' : '캘린더 · 카카오톡'} 연결과 학습 리마인더를 설정해요.`, ...(() => { /* v43 R8 108: 사진 띠 머리 규격 — 연결 수 · 이번 주 일정 · 주 버튼 */ const W = typeof window.lcalWeek === 'function' ? window.lcalWeek() : null; const all = (SITE().org || {}).type === 'univ' ? 1 : 2; let n = 0; try { n = typeof window.laiConnN === 'function' ? window.laiConnN() : 0; } catch (e) { n = 0; }
+        return { eyebrow: '캘린더 · 알림 · 리마인더', stats: [[n, '/' + all, '연결된 서비스', '아직 연결 전이에요'], W ? [W.n, '개', '이번 주 일정', '이번 주는 여유로워요'] : null, [3, '가지', '추천 리마인더']].filter(Boolean), cta: ['캘린더 보기', '#cal'] }; })() })}<section class="sec lq-conn r4sec"><div class="ap-conn-a" hidden></div>${more}</section>`; }
     return base(id, ...a); }; }
 
   /* ── 진입: 웹 머리 메뉴(로그인한 학습자 · 보호자) ── */
@@ -220,12 +226,19 @@
 
   /* ── 진입: 앱 홈 카드 · 「나」 목록 · 웹 마이페이지 · 보호자 홈 ── */
   function brief() { const E = events().filter(e => !e.done && e.k !== '시작'); const t0 = td(), t7 = addD(t0, 6); const T0 = E.filter(e => e.date === t0).length; const W = E.filter(e => e.date >= t0 && e.date <= t7); const nx = E.find(e => e.date >= t0 && ['과제', '시험', '라이브', '회차', '설문'].includes(e.k));
-    return { T0, W: W.length, nx, s: `${T0 ? `오늘 ${T0}개` : '오늘 일정 없음'} · 이번 주 ${W.length}개${nx ? ` · ${dday(nx.date)} ${String(nx.title).replace(/ · [^·]+$/, '')}` : ''}` }; }
+    const nt = x => x ? `${dday(x.date)} ${String(x.title).replace(/ · [^·]+$/, '')}` : ''; const n1 = nx || W[0] || E.find(e => e.date >= t0);
+    /* v43 G2 2차: 「오늘 일정 없음 · 이번 주 3개」처럼 앞뒤가 어긋나 보이던 문장 → 오늘 있으면 오늘부터, 없으면 다음 일정부터 */
+    const s = T0 ? `오늘 ${T0}개${W.length > T0 ? ` · 이번 주 ${W.length}개` : ''}${nx ? ` · ${nt(nx)}` : ''}` : W.length ? `다음 일정 ${nt(n1)} · 이번 주 ${W.length}개 남았어요` : n1 ? `이번 주는 일정이 없어요 · 다음 ${nt(n1)}` : '예정된 일정이 없어요';
+    return { T0, W: W.length, nx, s }; }
   const card = (cls) => { const b = brief(); const P = isPar(); return `<a class="lq-hc ${cls || ''}" href="#cal">${ico('cal', 22)}<span><b>${P ? '자녀 일정' : '학습 캘린더'}</b><small>${esc(b.s)}</small></span>${b.T0 ? `<em>${b.T0}</em>` : ''}${ico('arrow', 16)}</a>`; };
   function decorate() { if (!SITE() || !LR.me) return; const lm = document.getElementById('lm'); if (!lm) return; const a = route().a;
     if (appOn()) {
       /* v37.4 결정 2: 앱 아래 탭에 '캘린더'(보호자 '자녀 일정') — 홈 다음. lapp.js navHTML은 그대로 두고 그린 뒤 끼운다(L2 앱 셸 작업과 충돌 없게). */
-      const nav = document.querySelector('#lapp .ap-nav'); if (nav && !nav.querySelector('a[href="#cal"]')) { const on = a === 'cal'; const L = [...nav.querySelectorAll(':scope > a')];
+      /* v43 대표님 결정: 보호자 아래 탭은 홈 · 자녀 · 메시지 · 결제 · 나 5칸 그대로 — 6칸이면 칸이 좁아 이름이 잘리므로 '자녀 일정'은 탭 대신 「자녀」 화면 안 세그먼트(자녀 현황 | 자녀 일정)로. #cal에서는 '자녀' 탭이 켜짐 */
+      if (isPar()) { const nav = document.querySelector('#lapp .ap-nav'); if (nav && a === 'cal') { nav.querySelectorAll(':scope > a').forEach(x => { const k = x.getAttribute('href') === '#family'; x.classList.toggle('on', k); if (k) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); }); }
+        if (['family', 'cal'].includes(a) && !lm.querySelector('.lq-kseg')) { const seg = `<nav class="lq-kseg" aria-label="자녀 화면"><a href="#family"${a === 'family' ? ' class="on" aria-current="page"' : ''}>${ico('user', 18)}<span>자녀 현황</span></a><a href="#cal"${a === 'cal' ? ' class="on" aria-current="page"' : ''}>${ico('cal', 18)}<span>자녀 일정</span></a></nav>`;
+          const host = lm.querySelector('.mypage .in') || lm.querySelector('.lc') || lm.firstElementChild || lm; host.insertAdjacentHTML('afterbegin', seg); } }
+      const nav = document.querySelector('#lapp .ap-nav'); if (!isPar() && nav && !nav.querySelector('a[href="#cal"]')) { const on = a === 'cal'; const L = [...nav.querySelectorAll(':scope > a')];
         if (on) L.forEach(x => { x.classList.remove('on'); x.removeAttribute('aria-current'); });
         const t = document.createElement('a'); t.href = '#cal'; t.className = 'lq-tab' + (on ? ' on' : ''); if (on) t.setAttribute('aria-current', 'page'); t.innerHTML = `${ico('cal', 22)}<span>${isPar() ? '자녀 일정' : '캘린더'}</span>`;
         if (L[0]) L[0].after(t); else nav.prepend(t); nav.classList.add('lq-n' + nav.querySelectorAll(':scope > a').length); }

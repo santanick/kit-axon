@@ -1,8 +1,8 @@
 /* v34 slim-g — 화면 가이드(제목 옆 ⓘ) · 빈 상태 카드. DDS 토큰만 쓴다. */
-.slg-i{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:8px;border-radius:50%;border:1px solid var(--g400);background:#fff;color:var(--g700);font:700 12px/1 serif;font-style:italic;cursor:pointer;vertical-align:middle;padding:0;flex:none}
+.slg-i{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:8px;border-radius:50%;border:1px solid var(--g400);background:var(--surface,#fff);color:var(--g700);font:700 12px/1 serif;position:relative;font-style:italic;cursor:pointer;vertical-align:middle;padding:0;flex:none}
 .slg-i:hover,.slg-i[aria-expanded=true]{border-color:var(--s400);color:var(--s500);background:var(--s50)}
 .slg-i:focus-visible{outline:2px solid var(--s400);outline-offset:2px}
-.slg-pop{position:absolute;z-index:96;background:#fff;border:1px solid var(--g200);border-radius:16px;box-shadow:var(--e16);padding:16px;display:flex;flex-direction:column;gap:12px;font-size:14px;color:var(--g900)}
+.slg-pop{position:absolute;z-index:96;background:var(--surface,#fff);border:1px solid var(--g200);border-radius:16px;box-shadow:var(--e16);padding:16px;display:flex;flex-direction:column;gap:12px;font-size:14px;color:var(--g900)}
 .slg-pop.sheet{position:fixed;left:0;right:0;bottom:0;top:auto;border-radius:20px 20px 0 0;max-height:80vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
 .slg-ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .slg-ph small{width:100%;color:var(--t-sub);font-size:12px;font-weight:600}
@@ -13,7 +13,7 @@
 .slg-asks{display:flex;flex-direction:column;gap:6px}
 .slg-asks small{color:var(--t-sub);font-size:12px;font-weight:600}
 .slg-ask{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:8px 12px;border:1px solid var(--g200);border-radius:12px;background:var(--g50);font:inherit;font-size:14px;color:var(--g900);text-align:left;cursor:pointer}
-.slg-ask:hover{border-color:var(--s400);background:#fff}
+.slg-ask:hover{border-color:var(--s400);background:var(--surface,#fff)}
 .slg-ask .ic{color:var(--s500);flex:none}
 .slg-desc{border-top:1px solid var(--g200);padding-top:8px}
 .slg-desc summary{cursor:pointer;color:var(--g700);font-weight:600;font-size:13px}
@@ -31,3 +31,7 @@
 .slg-hide,[data-slg-hide]{display:none!important}
 .slg-clamp{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal}
 @media (max-width:600px){.slg-i{width:32px;height:32px;font-size:15px}} /* v38 390 터치: 보이는 크기 32px(터치 영역은 cls-ops.css ::after로 44px 이상) */
+
+/* v43 E1 셸: 화면 설명 i — 보이는 크기는 22px 유지, 누를 자리는 44px */
+.slg-i::after{content:"";position:absolute;inset:-11px;border-radius:50%}
+.slg-ask{min-height:44px}

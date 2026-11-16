@@ -258,11 +258,15 @@
     const own = S.me.role === 'owner';
     const tot = Object.values(U.by).reduce((a, b) => a + b, 0);
     const bulk = (own ? LW4.mi('lmsq-bulk', '선택 일괄 승인', { a: 'approve' }) + LW4.mi('lmsq-bulk', '선택 마감 승인', { a: 'close' }) : '') + (isOp() ? LW4.mi('lmsq-bulkcqi', '선택 CQI 일괄 작성') + LW4.mi('lmsq-bulksv', '선택 설문결과 일괄 내려받기') : '');
-    return `<div class="lw-bar"><select data-chg="lmsq-fs2" aria-label="상태"><option value="">모든 상태 ${tot}</option>${ST.map(s => `<option value="${s}" ${U.fs === s ? 'selected' : ''}>${STN[s]} ${U.by[s] || 0}</option>`).join('')}</select><input type="search" placeholder="프로그램명 · 태그" value="${esc(U.q || '')}" data-chg="lmsq-q" aria-label="프로그램 검색"><select data-chg="lmsq-fg" aria-label="그룹"><option value="">모든 그룹</option>${U.groups.map(g => `<option value="${esc(g.group_id)}" ${U.fg === g.group_id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
-      ${bulk ? LW4.more(bulk, `선택 ${U.sel.length}건 처리`, 'lw-bulk') : ''}</div>` +
+    /* v43 R7: 상태 select → 칩 필터(개수 포함, 0인 상태는 뺌) · 프로그램 칸 사진 썸네일 · 「2 · 2 · 0」 → 신청 · 승인 · 대기 문장(J2 066) */
+    const fch = (v, l, n) => `<button type="button" class="l43-fc ${(U.fs || '') === v ? 'on' : ''}" data-act="lmsq-fs2" value="${v}" aria-pressed="${(U.fs || '') === v}">${l}${n != null ? `<em>${n}</em>` : ''}</button>`;
+    const thumb = p => { let u = ''; try { u = window.L43 ? L43.photo(L43.wordsOf(p.title), p.program_id + p.title) : ''; } catch (e) { } return u ? `<img class="r7-th" src="${esc(u)}" alt="" loading="lazy">` : ''; };
+    const cnt = c => `<span class="r7-cnt">신청 <b>${c.applied + c.approved + c.waiting}</b> · 승인 <b>${c.approved}</b>${c.waiting ? ` · <em>대기 ${c.waiting}</em>` : ''}</span>`;
+    return `<div class="l43-fcs r7-fch" role="group" aria-label="상태">${fch('', '전체', tot)}${ST.filter(s => U.by[s] || U.fs === s).map(s => fch(s, STN[s], U.by[s] || 0)).join('')}</div><div class="lw-bar"><input type="search" placeholder="프로그램명 · 태그" value="${esc(U.q || '')}" data-chg="lmsq-q" aria-label="프로그램 검색">${U.groups.length ? `<span class="r1-chips r1-chips-s q43-g" role="group" aria-label="그룹">${[{ group_id: '', name: '모든 그룹' }, ...U.groups].map(g => `<button type="button" class="r1-chip${(U.fg || '') === g.group_id ? ' on' : ''}" aria-pressed="${(U.fg || '') === g.group_id}" data-act="lmsq-fg" value="${esc(g.group_id)}">${esc(g.name)}</button>`).join('')}</span>` : ''}
+      ${bulk && U.sel.length ? LW4.more(bulk, `선택 ${U.sel.length}건 처리`, 'lw-bulk') : ''}</div>` /* v43 S3A 066: 그룹 select → 칩, 선택이 없으면 「선택 0건 처리」를 숨김 */ +
       table(['', '프로그램', '상태', '신청 · 승인 · 대기', ''], U.list.map(p => [`<input type="checkbox" data-chg="lmsq-sel" data-id="${esc(p.program_id)}" ${U.sel.includes(p.program_id) ? 'checked' : ''} aria-label="선택">`,
-        `<b>${esc(p.title)}</b>${p.certified ? ' <span class="lw-pill">우수 인증</span>' : ''}<small class="lw-sub">${esc(p.group_name || '그룹 없음')} · ${p.kind === 'team' ? '팀' : '개인'} · ${esc(AM[p.approval_mode])} · 운영자 ${esc(p.operator_email || '-')}</small>`, LW4.st(STN[p.status], STT[p.status]),
-        `${p.counts.applied + p.counts.approved + p.counts.waiting} · ${p.counts.approved} · ${p.counts.waiting}`, `<button class="btn sm" data-act="lmsq-open" data-id="${esc(p.program_id)}">열기</button>`]), U.fs ? '이 상태의 프로그램이 없습니다.' : '프로그램이 없습니다. 「새 프로그램」으로 등록하세요.');
+        `<span class="r7-pn">${thumb(p)}<span><b>${esc(p.title)}</b>${p.certified ? ' <span class="lw-pill">우수 인증</span>' : ''}<small class="lw-sub">${esc(p.group_name || '그룹 없음')} · ${p.kind === 'team' ? '팀' : '개인'} · ${esc(AM[p.approval_mode])}</small></span></span>`, LW4.st(STN[p.status], STT[p.status]),
+        cnt(p.counts), `<button class="btn sm" data-act="lmsq-open" data-id="${esc(p.program_id)}">열기</button>`]), U.fs ? '이 상태의 프로그램이 없습니다.' : '프로그램이 없습니다. 「새 프로그램」으로 등록하세요.');
   }
   function detailView(U) {
     const P = U.P; const own = S.me.role === 'owner'; const sub = U.sub;
@@ -325,8 +329,8 @@
     const pt = (i, k) => { const a = -Math.PI / 2 + i * 2 * Math.PI / L.length; return [cx + Math.cos(a) * r * k, cy + Math.sin(a) * r * k]; };
     const ring = k => L.map((_, i) => pt(i, k).join(',')).join(' ');
     return `<svg class="lw-radar" viewBox="0 0 300 260" role="img" aria-label="나의 역량 지수 그래프">${[0.25, 0.5, 0.75, 1].map(k => `<polygon points="${ring(k)}" fill="none" stroke="var(--line)"/>`).join('')}
-      <polygon points="${L.map((x, i) => pt(i, x.v / mx).join(',')).join(' ')}" fill="var(--b500,#4a6cf7)" fill-opacity=".3" stroke="var(--b500,#4a6cf7)" stroke-width="2"/>
-      ${L.map((x, i) => { const [px, py] = pt(i, 1.17); return `<text x="${px}" y="${py}" font-size="11" text-anchor="middle" fill="currentColor">${esc(x.name)} ${x.v}</text>`; }).join('')}</svg>`;
+      <polygon points="${L.map((x, i) => pt(i, x.v / mx).join(',')).join(' ')}" fill="var(--b500,#00862D)" fill-opacity=".3" stroke="var(--b500,#00862D)" stroke-width="2"/>
+      ${L.map((x, i) => { const [px, py] = pt(i, 1.17); return `<text x="${px}" y="${py}" font-size="12" text-anchor="middle" fill="currentColor">${esc(x.name)} ${x.v}</text>`; }).join('')}</svg>`;
   }
   function stuView(U) {
     const my = U.my || { applications: [], competency: [], mileage: 0, mileage_expected: 0 }; const v = U.view;
@@ -410,7 +414,7 @@
   ACT['lmsq-fs'] = el => { QS().fs = el.dataset.v; UI.lmsqT = 'list'; loadList(); };
   ACT['lmsq-fs2'] = el => { QS().fs = el.value; loadList(); };
   ACT['lmsq-q'] = el => { QS().q = el.value; loadList(); };
-  ACT['lmsq-fg'] = el => { QS().fg = el.value; loadList(); };
+  ACT['lmsq-fg'] = el => { QS().fg = el.value != null ? el.value : (el.getAttribute('value') || ''); loadList(); };
   ACT['lmsq-sel'] = el => { const U = QS(); U.sel = el.checked ? [...new Set([...U.sel, el.dataset.id])] : U.sel.filter(x => x !== el.dataset.id); render(); };
   ACT['lmsq-open'] = el => { const U = QS(); U.pid = el.dataset.id; U.sub = 'info'; UI.lmsqT = 'detail'; loadP(); };
   ACT['lmsq-new'] = () => wizard(null);

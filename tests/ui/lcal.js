@@ -40,7 +40,7 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
     await ctx.addInitScript(([s, mode]) => { if (sessionStorage.getItem('lcal.init')) return; sessionStorage.setItem('lcal.init', '1'); const S0 = JSON.parse(s); Object.entries(S0).forEach(([k, v]) => localStorage.setItem(k, v)); if (mode === 'web') localStorage.setItem('didisam.app.classic', '1'); else localStorage.removeItem('didisam.app.classic'); }, [st, mode]);
     const p = await ctx.newPage(); p.on('pageerror', e => errs.push(`[${mode} ${w}] ${e.message}`)); p.on('dialog', d => d.accept());
     if (me) await p.addInitScript(([tid, me]) => { sessionStorage.setItem('didisam.learner.' + tid, JSON.stringify(me)); }, [o.tid, me]);
-    await p.goto(base + `learner.html?t=${o.tid}#home`); await p.waitForFunction(() => typeof LR !== 'undefined' && LR.site, null, { timeout: 10000 });
+    await p.goto(base + `learner.html?t=${o.tid}${mode === 'app' ? '&app=1' : ''}#home`); /* v43 G2 2차: PC 폭 로그인 학습자의 기본 화면이 넓은 허브로 바뀌어, 앱 모드 점검은 ?app=1로 앱 화면을 연다 */ await p.waitForFunction(() => typeof LR !== 'undefined' && LR.site, null, { timeout: 10000 });
     if (!me) { await p.evaluate(async c => { await LR.api.login(c.sid, c.code); lrender(); }, o.code); await p.waitForTimeout(300);
       for (let i = 0; i < 2; i++) { await p.evaluate(() => { location.hash = '#my'; }); await p.waitForTimeout(400); if (await p.evaluate(() => location.hash === '#consent' && !!document.querySelector('#lcConsent'))) { await p.check('#lcConsent [data-cn=all]'); await p.click('#lcConsent button[type=submit]'); await p.waitForTimeout(500); } } }
     await p.evaluate(() => { document.head.insertAdjacentHTML('beforeend', '<style>.ltoast{display:none!important}</style>'); }); return { ctx, p }; };
@@ -49,7 +49,8 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
   const tabs = async (p, tag, label) => { for (const w of [390, 360]) { const vp = p.viewportSize(); await p.setViewportSize({ width: w, height: 800 }); await p.waitForTimeout(150);
       const r = await p.evaluate(() => { const A = [...document.querySelectorAll('#lapp .ap-nav > a')]; return A.map(a => { const b = a.getBoundingClientRect(); const s = a.querySelector('span'); const sr = s.getBoundingClientRect(); return { h: a.getAttribute('href'), t: s.textContent, w: Math.round(b.width), hh: Math.round(b.height), cut: s.scrollWidth > s.clientWidth + 1 || sr.bottom > b.bottom + 1 || sr.right > b.right + 1 || sr.left < b.left - 1 }; }); });
       const tube = await p.evaluate(() => document.body.classList.contains('tube')); /* v39 디디쌤 튜브: 탭 = 홈 · 일정 · 내 과정 · 나(AI 튜터는 떠 있는 아이콘), 캘린더는 홈 피드 카드도 */
-      if (tube) { ok(r.length === 4 && r[0].h === '#home' && r[1].h === '#cal' && r[1].t === '일정' && r.every(x => x.w >= 48 && x.hh >= 48 && !x.cut), `${tag} 튜브 아래 탭 ${w}: ${r.map(x => x.t + ':' + x.w + (x.cut ? '(잘림)' : '')).join(' ')}`); await p.setViewportSize(vp); await p.waitForTimeout(100); continue; }
+      /* v43 대표님 지시: 학습자 입장 유형별 탭 — 홈 · [내 ○○](#my) · [유형별 핵심] · 나. 일정은 탭(학원 초중고 · 학사 LMS · 직업훈련) 또는 「내 ○○」 세그먼트 · #cal 링크 */
+      if (tube) { ok(r.length >= 4 && r[0].h === '#home' && r[1].h === '#my' && r[r.length - 1].h === '#acct' && r.every(x => x.w >= 48 && x.hh >= 48 && !x.cut), `${tag} 튜브 아래 탭 ${w}(v43 유형별 탭): ${r.map(x => x.t + ':' + x.w + (x.cut ? '(잘림)' : '')).join(' ')}`); await p.setViewportSize(vp); await p.waitForTimeout(100); continue; }
       ok(r.length >= 5 && r[1] && r[1].h === '#cal' && r[1].t === label && r.every(x => x.w >= 48 && x.hh >= 48 && !x.cut), `${tag} 아래 탭 ${w}: ${r.length}칸 · 2번째 '${label}' · 모두 48px 이상 · 안 잘림 — ${r.map(x => x.t + ':' + x.w + (x.cut ? '(잘림)' : '')).join(' ')}`);
       if (SH && w === 360) await shot(p, `tabs_${tag.replace(/[\[\] ]+/g, '_')}_360`); await p.setViewportSize(vp); await p.waitForTimeout(100); } };
   const over = p => p.evaluate(() => { const A = []; document.querySelectorAll('#lm *').forEach(el => { const r = el.getBoundingClientRect(); if (r.width && r.right > innerWidth + 1 && !el.closest('.lq-month')) A.push(el.className || el.tagName); }); return { sx: document.documentElement.scrollWidth > innerWidth + 1, A: A.slice(0, 3) }; });
@@ -80,7 +81,10 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
           /* 과정 일정 상세 → 바로 가기 */
           const ym = await p.evaluate(() => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`; });
           const cand = E.filter(e => e.src === 'auto' && e.date.startsWith(ym)); const a = cand.find(e => e.iid) || cand[0];
-          await p.locator(`#lm .lq-month [data-lcal="ev"][data-v="${a.id}"]`).first().click();
+          /* v43 대표님 결정: 휴대폰 월간 칸은 칩 대신 점 — 날짜를 누르면 그날 일정 목록이 크게 펼쳐지고, 거기서 일정을 고른다 */
+          const chipV = await p.locator(`#lm .lq-month [data-lcal="ev"][data-v="${a.id}"]`).first().isVisible();
+          if (chipV) await p.locator(`#lm .lq-month [data-lcal="ev"][data-v="${a.id}"]`).first().click();
+          else { await p.locator(`#lm .lq-month .lq-dn[data-v="${a.date}"]`).click(); await p.waitForTimeout(200); const big = await p.evaluate(id => { const r = document.querySelector(`#lcalDlg .lq-dl [data-lcal="ev"][data-v="${id}"]`); return r ? Math.round(r.getBoundingClientRect().height) : 0; }, a.id); ok(big >= 44, `${tag} 날짜 누르기 → 그날 목록(행 높이 ${big}px)`); await p.locator(`#lcalDlg .lq-dl [data-lcal="ev"][data-v="${a.id}"]`).click(); }
           await p.waitForTimeout(200); const det = await p.evaluate(() => { const d = document.getElementById('lcalDlg'); return d ? { t: d.querySelector('h2').textContent, html: d.innerHTML.slice(0, 500), go: [...d.querySelectorAll('a[href^="#c/"]')].map(x => x.getAttribute('href')) } : null; });
           ok(det && det.go.length >= 1 && det.go.some(h => h.includes(a.cls)), `${tag} 일정 상세 · 바로 가기 ${det ? det.go.join(' ') : '없음'}${det && !det.go.length ? det.t + ' ' + JSON.stringify(a) + det.html : ''}`); await shot(p, `${type}_${mode}_detail_${w}`);
           if (!det || !det.go.length) await p.evaluate(() => { const d = document.getElementById('lcalDlg'); if (d) d.remove(); });
@@ -127,7 +131,12 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
       /* 학원 보호자 */
       if (type === 'k12') for (const mode of ['app', 'web']) for (const w of [1280, 390]) { const tag = `[k12 보호자 ${mode} ${w}]`;
         const { ctx, p } = await learner(o, mode, w, { sid: 'pT0001', id: 'pT0001', kind: 'parent', acct: 'code', nick: '수학맘', grade: '정회원' });
-        await go(p, '#home'); ok(await p.locator('#lm a.lq-hc[href="#cal"]').count() === 1, `${tag} 보호자 홈: 자녀 일정 카드`); if (mode === 'app' && w === 390) await tabs(p, tag, '자녀 일정'); if (w === 390) await shot(p, `k12_parent_${mode}_home_${w}`);
+        await go(p, '#home'); ok(await p.locator('#lm a.lq-hc[href="#cal"]').count() === 1, `${tag} 보호자 홈: 자녀 일정 카드`); if (mode === 'app' && w === 390) { /* v43 대표님 결정: 보호자 아래 탭은 5칸(홈 · 자녀 · 메시지 · 결제 · 나) 그대로 — 6칸이면 칸이 좁아져 이름이 잘리므로 '자녀 일정'은 탭이 아니라 「자녀」 화면 안 세그먼트(자녀 현황 | 자녀 일정)로 옮겼다 */
+          const T = await p.$$eval('#lapp .ap-nav > a', A => A.map(a => ({ h: a.getAttribute('href'), w: Math.round(a.getBoundingClientRect().width), hh: Math.round(a.getBoundingClientRect().height) })));
+          ok(T.length === 5 && T[0].h === '#home' && T[1].h === '#family' && T[2].h === '#msg' && T[4].h === '#acct' && !T.some(x => x.h === '#cal') && T.every(x => x.w >= 48 && x.hh >= 48), `${tag} 보호자 아래 탭 5칸(자녀 일정 탭 없음): ${T.map(x => x.h + ':' + x.w).join(' ')}`);
+          await go(p, '#family'); const sg = await p.evaluate(() => { const s = document.querySelector('#lm .lq-kseg'); return s ? [...s.querySelectorAll('a')].map(a => a.getAttribute('href') + (a.classList.contains('on') ? '*' : '') + ':' + Math.round(a.getBoundingClientRect().height)).join() : ''; });
+          ok(/^#family\*:4\d,#cal:4\d/.test(sg), `${tag} 「자녀」 화면 세그먼트 자녀 현황 | 자녀 일정(44px 이상): ${sg}`);
+          await go(p, '#cal'); ok(await p.evaluate(() => (document.querySelector('#lapp .ap-nav > a.on') || {}).getAttribute?.('href') === '#family' && !!document.querySelector('#lm .lq-kseg a.on[href="#cal"]')), `${tag} #cal에서 '자녀' 탭 켜짐 · 세그먼트 '자녀 일정' 켜짐`); await go(p, '#home'); } if (w === 390) await shot(p, `k12_parent_${mode}_home_${w}`);
         await go(p, '#cal'); const r = await p.evaluate(() => ({ E: lcalEvents(), h: document.title, add: !!document.querySelector('#lm [data-lcal="add"]') }));
         ok(r.E.some(e => e.who && e.src === 'auto') && /자녀 일정/.test(r.h), `${tag} 자녀 일정(자녀 이름 표시 ${r.E.filter(e => e.who).length}개)`);
         ok(!r.add, `${tag} 보호자: 내 일정 추가 버튼 없음`); const ov = await over(p); ok(!ov.sx && !ov.A.length, `${tag} 가로 넘침 없음`); await shot(p, `k12_parent_${mode}_cal_${w}`); await ctx.close(); }

@@ -7,7 +7,7 @@
   'use strict';
   if (typeof MENU !== 'object' || typeof VIEWS !== 'object') return;
   const ON = () => !!(S && S.org && S.org.type === 'univ' && S.org.ed === 'lms');
-  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/a.css?v=38.0'; document.head.appendChild(l); } catch (e) { }
+  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/a.css?v=43.3'; document.head.appendChild(l); } catch (e) { }
 
   /* ── 메뉴 · 프리셋 ── */
   MENU.lmsa = { label: '강좌 · 분반', ws: 'learn', only: 'univ' };
@@ -141,6 +141,8 @@
     const SEC = [g1, g2, g3, d1, cp, m1, m2, b1, b2, a1];
     for (let i = 0; i < 60; i++) { const m = String(20261000 + i); if (i === 50 || i === 51) continue; en(SEC[i % 3], m); en(SEC[3 + (i % 7)], m); }
     en(g1, '20261002', 'audit'); en(b1, '20261051', 'audit', 'pending', 'request');
+    /* v43 R4: 학습자 체험 계정(스튜디오 lxDemo가 발급하는 첫 체험 학번 20269000)도 정규 수강 — 109 학사 LMS 학습자 화면이 「수강 명단에 없어요」로 비지 않게 */
+    A.persons.push({ member_no: '20269000', kind: 'student', unit_code: 'CSE', status: 'active', grade_year: 2, source: 'sis' }); en(g1, '20269000'); en(d1, '20269000'); en(b1, '20269000');
     A.runs.push({ run_id: 1, term_id: t, scope: 'enrollment', trigger: 'manual', at: iso(), counts: { inserted: A.enr.length, skipped: 0, error: 0 }, errors_n: 0, errors: [] });
     return A;
   }
@@ -417,8 +419,8 @@
         : noCls ? `<span>${ic('check', 16)} 이번 학기 준비 완료 · 강의실이 연결되지 않은 분반 <b>${noCls}</b>개</span><button class="btn sm pri" data-act="tab" data-key="lmsaT" data-v="section">분반 확인하기</button>`
         : `<span>${ic('check', 16)} 이번 학기 준비가 끝났습니다.</span>`;
       const more = TABS.slice(4); const curMore = more.find(([k]) => k === tb);
-      bar = `<div class="lmsa-steps" role="tablist" aria-label="이번 학기 준비 순서">${ST.map(([k, l, n, done], i) => `<button role="tab" aria-selected="${k === tb}" class="lmsa-step ${k === tb ? 'on' : ''} ${done ? 'done' : ''} ${nx && nx[0] === k ? 'next' : ''}" data-act="tab" data-key="lmsaT" data-v="${k}"><i>${done ? ic('check', 14) : i + 1}</i><span><b>${l}</b><small>${n}</small></span></button>`).join('')}</div>
-        <div class="lmsa-todo">${todo}<span class="lmsa-tsel">${termSel(ov, 'lmsaTerm', term)}</span><details class="uxmore lmsa-more"><summary>${curMore ? esc(curMore[1]) : '더보기'}${curMore ? '' : ` <em>${more.length}</em>`}</summary><div class="uxpop" role="menu">${more.map(([k, l]) => `<button role="menuitem" class="${k === tb ? 'on' : ''}" data-act="tab" data-key="lmsaT" data-v="${k}">${esc(l)}</button>`).join('')}</div></details></div>`;
+      bar = `<div class="lmsa-steps" role="tablist" aria-label="이번 학기 준비 순서">${ST.map(([k, l, n, done], i) => `<button role="tab" aria-selected="${k === tb}" class="lmsa-step ${k === tb ? 'on' : ''} ${done ? 'done' : ''} ${nx && nx[0] === k ? 'next' : ''}" data-act="tab" data-key="lmsaT" data-v="${k}"><i>${done ? ic('check', 14) : i + 1}</i><span><b>${l}</b><small>${n}</small></span></button>`).join('')}<details class="uxmore lmsa-more"><summary>${curMore ? esc(curMore[1]) : '더보기'}${curMore ? '' : ` <em>${more.length}</em>`}</summary><div class="uxpop" role="menu">${more.map(([k, l]) => `<button role="menuitem" class="${k === tb ? 'on' : ''}" data-act="tab" data-key="lmsaT" data-v="${k}">${esc(l)}</button>`).join('')}</div></details></div>
+        <div class="lmsa-todo">${todo}<span class="lmsa-tsel">${termSel(ov, 'lmsaTerm', term)}</span></div>`;
     }
     const top2 = top + bar;
     let b = '';

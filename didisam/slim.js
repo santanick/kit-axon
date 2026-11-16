@@ -143,8 +143,8 @@
     return SL.page('메뉴 추가', `<button class="btn ghost" data-act="sl-menuorder">순서 바꾸기</button><button class="btn" data-act="sl-reset-menu">기본 메뉴로</button>`,
       
       SL.chips('slMenuF', [['all', '전체'], ['on', `켜짐 ${on.length}`], ...wsL.map(w => [w, lab(WS[w])])], f) +
-      SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
-        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) +
+      '<div class="sx43-mn">' /* v43 S3A 075: 메뉴 목록 2열 카드 */ + SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
+        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) + '</div>' +
       SL.search('slMenuQ', '메뉴 검색'));
   };
   window.slMenuSet = (id, on) => { const t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (!t) return false; t.on = on; save(); return true; };
@@ -169,14 +169,16 @@
       const L = (typeof cnIds === 'function' ? cnIds() : CN_IDS).filter(id => (f === 'all' || CN_CAT[id] === f) && (!q || (CN[id].name + CN_ONE[id]).toLowerCase().includes(q.toLowerCase())));
       const P = S.autos.filter(a => (a.actions || []).some(x => CN_ACT[x]));
       return SL.page('연결', `<button class="btn" data-act="sl-connold" data-v="1">자세히</button>`,
-        SL.note(ic('lock' in IC ? 'lock' : 'gear', 18), '연결 정보는 안전하게 보관됩니다', '키 · 토큰은 화면에 가려서 표시합니다') +
-        SL.chips('slCnF', [['all', '전체'], ['work', '업무툴'], ...(typeof mbPayOn === 'function' && !mbPayOn() ? [] : [['pay', '결제']]), ['msg', '메시지'], ['ai', 'AI']], f) +
-        (on.length ? SL.sum(`<span>연결됨</span><span class="sl-logos">${on.map(id => typeof brandLogo === 'function' ? brandLogo(id, 26, CN[id].name) : `<i style="background:${CN[id].col}">${esc(CN[id].logo)}</i>`).join('')}</span><span class="sl-n">${on.length}</span>`, 'sl-cnf', 'on') : '') +
-        SL.list(L.map(id => { const s = cnStatus(id); const ok = s.st === CN_ST.on, chk = s.st === CN_ST.chk;
-          return SL.row({ act: 'sl-cn', v: id, name: CN[id].name.replace(/\(.*\)/, '').trim(), sub: CN_ONE[id], col: typeof brandLogo === 'function' ? 'transparent' : CN[id].col, icon: typeof brandLogo === 'function' ? brandLogo(id, 44, CN[id].name) : esc(CN[id].logo),
-            right: ok ? '<span class="sl-ok" aria-label="연결됨">✓</span>' : chk ? '<span class="sl-dot" aria-label="점검 필요">!</span>' : '<span class="sl-plus" aria-label="연결">+</span>' }); })) +
-        (P.length ? SL.sum(`<span>연결형 자동화 ${P.length}개</span>`, 'go', 'auto') : '') +
-        SL.search('slCnQ', '서비스 검색'));
+        /* v43 F2 035: 안전 안내 박스 · 아래쪽 검색 줄 · 「연결됨」 요약 줄 → 칩 + 검색 + 안전 한 줄을 한 줄 도구줄로 통합 */
+        `<div class="cnb-bar">${SL.chips('slCnF', [['all', '전체'], ['work', '업무툴'], ...(typeof mbPayOn === 'function' && !mbPayOn() ? [] : [['pay', '결제']]), ['msg', '메시지'], ['ai', 'AI']], f)}${SL.search('slCnQ', '서비스 검색')}<span class="cnb-safe">${ic('lock' in IC ? 'lock' : 'gear', 14)}키 · 토큰은 암호화해 보관하고 화면에는 가려서 표시합니다</span></div>` +
+        `<div class="cnb-grid">${L.map(id => { const s = cnStatus(id); const ok = s.st === CN_ST.on, chk = s.st === CN_ST.chk; const last = (cnEnsure().log || []).find(x => x.svc === id);
+          return `<button class="cnb ${ok ? 'on' : chk ? 'chk' : ''}" data-act="sl-cn" data-v="${esc(id)}"><span class="cnb-h">${typeof brandLogo === 'function' ? brandLogo(id, 40, CN[id].name) : `<i class="cnb-lg" style="background:${CN[id].col}">${esc(CN[id].logo)}</i>`}<span class="cnb-st">${ok ? '연결됨' : chk ? '점검 필요' : '연결 전'}</span></span><b>${esc(CN[id].name.replace(/\(.*\)/, '').trim())}</b><small>${esc(CN_ONE[id])}</small><span class="cnb-f">${last ? `최근 ${esc(String(last.at).split(' ').slice(0, 3).join(' '))}` : ok ? '정상 동작 중' : '3분이면 연결합니다'}<em>${ok ? '관리' : chk ? '점검하기' : '연결하기'} ›</em></span></button>`; }).join('')}${L.length % 3 && !q ? `<button class="cnb cnb-ask" data-act="chat-q" data-v="외부 서비스 연결 도와줘"><span class="cnb-plus" aria-hidden="true">+</span><b>다른 서비스 연결</b><small>필요한 서비스를 말하면 AI SAM이 연결 방법을 안내합니다</small></button>` : ''}</div>` +
+        (() => { let LG = (cnEnsure().log || []).slice(0, 6); const demo = !LG.length && !(S.org && S.org.empty) && on.length;
+          /* 시연 기관: 기록이 없으면 연결된 서비스의 최근 점검을 예시로 보여 줍니다(저장하지 않음) */
+          if (demo) { const d = n => { const x = new Date(); x.setDate(x.getDate() - n); return `${x.getMonth() + 1}월 ${x.getDate()}일`; }; LG = on.flatMap((id, i) => [{ svc: id, ok: true, msg: '정상 응답 · 키 유효', at: d(i) + ' 09:00' }, { svc: id, ok: true, msg: '연결 완료 · 권한 확인', at: d(i + 6) + ' 14:20' }]).slice(0, 3); }
+          const off = CN_IDS.filter(id => cnStatus(id).st !== CN_ST.on).slice(0, Math.max(0, 5 - LG.length));
+          return `<div class="cnb-tl card"><div class="ch"><b>연결 이력 · 다음 연결</b><small>${demo ? '시연 기록' : LG.length ? `최근 ${LG.length}건` : '연결하면 여기에 기록됩니다'}</small></div><ol>${LG.map(x => `<li class="${x.ok ? 'ok' : 'skip'}"><span class="cnb-d"></span><div><b>${esc((CN[x.svc] || {}).name || x.svc)}</b><span>${esc(x.msg)}</span></div><small>${esc(x.at)}</small></li>`).join('')}${off.map(id => `<li class="next"><span class="cnb-d"></span><div><b>${esc(CN[id].name.replace(/\(.*\)/, '').trim())} 연결 추천</b><span>${esc(CN_ONE[id])}</span></div><button class="btn sm" data-act="sl-cn" data-v="${esc(id)}">연결</button></li>`).join('')}</ol></div>`; })() +
+        (P.length ? SL.sum(`<span>연결형 자동화 ${P.length}개</span>`, 'go', 'auto') : ''));
     };
     ACT['sl-connold'] = el => { UI.slConnOld = el.dataset.v === '1'; render(); };
     ACT['sl-cnf'] = () => { UI.slCnF = 'all'; render(); };
@@ -269,22 +271,25 @@
           sxRow('켜진 자동 운영', `${au}개`) + sxRow('홈페이지 팝업', `${pops}개 노출 중`) + `<div class="sx-acts">${sxBtn('자동 운영 열기', 'go', 'auto')}${sxBtn('팝업 공지', 'sx-sub', 'notify|popup')}</div>` },
       { k: 'conn', n: '외부 연결', i: 'send', subs: ['integr'], kw: '연결 slack google 구글 토스 채널톡 카카오 네이버 zoom 줌 youtube 유튜브 notion 노션 microsoft 마이크로소프트 mcp api claude 클로드 hrd',
         sum: `연결됨 ${cnOnL.length}개`,
-        q: () => `<div class="sx-logos">${(typeof cnIds === 'function' ? cnIds() : typeof CN_IDS !== 'undefined' ? CN_IDS : []).map(id => { let on = false; try { on = cnStatus(id).st === CN_ST.on; } catch (e) { }
-            return `<button type="button" class="sx-lg ${on ? 'on' : ''}" data-act="${O ? 'sl-cn' : 'sx-owner'}" data-v="${id}" aria-label="${esc(CN[id].name)} ${on ? '연결됨' : '연결하기'}">${typeof brandLogo === 'function' ? brandLogo(id, 36, CN[id].name) : esc(CN[id].logo)}<small>${esc(CN[id].name.replace(/\(.*\)| API 키/g, '').trim())}</small><em>${on ? '연결됨' : '연결'}</em></button>`; }).join('')}
-          ${SX_EXT().map(([id, n, d, act, v]) => `<button type="button" class="sx-lg ext" data-act="${act}" data-v="${esc(v)}" aria-label="${esc(n)} — ${esc(d)}">${typeof brandLogo === 'function' ? brandLogo(id, 36, n) : esc(n[0])}<small>${esc(n)}</small><em>${act === 'sx-soon' ? '준비 중' : esc(d)}</em></button>`).join('')}</div>` },
+        q: () => { /* v43 R7 2차: 연결 타일 12개 한 격자 → 「연결됨」 · 「연결할 수 있음」 두 묶음(J2 077) — 타일 data-act 그대로 */
+          const tile = id => { let on = false, nt = ''; try { const cs = cnStatus(id); on = cs.st === CN_ST.on; nt = cs.note || ''; } catch (e) { }
+            return [on, `<button type="button" class="sx-lg ${on ? 'on' : ''}" data-act="${O ? 'sl-cn' : 'sx-owner'}" data-v="${id}" aria-label="${esc(CN[id].name)} ${on ? '연결됨' : '연결하기'}">${typeof brandLogo === 'function' ? brandLogo(id, 36, CN[id].name) : esc(CN[id].logo)}<small>${esc(CN[id].name.replace(/\(.*\)| API 키/g, '').trim())}</small><span class="r7-use">${esc(on ? (nt || '연결됨') : (CN[id].use || ''))}</span><em>${on ? '연결됨' : '연결하기'}</em></button>`]; }; /* v43 S3A 077: 타일에 설명 1줄(연결 전) · 상태 줄(연결됨) */
+          const T2 = (typeof cnIds === 'function' ? cnIds() : typeof CN_IDS !== 'undefined' ? CN_IDS : []).map(tile); const ext = SX_EXT().map(([id, n, d, act, v]) => `<button type="button" class="sx-lg ext" data-act="${act}" data-v="${esc(v)}" aria-label="${esc(n)} — ${esc(d)}">${typeof brandLogo === 'function' ? brandLogo(id, 36, n) : esc(n[0])}<small>${esc(n)}</small><em>${act === 'sx-soon' ? '준비 중' : esc(d)}</em></button>`).join('');
+          const onT = T2.filter(x => x[0]).map(x => x[1]).join(''), offT = T2.filter(x => !x[0]).map(x => x[1]).join('');
+          return `${onT ? `<h4 class="r7-cgh">연결됨 <em>${T2.filter(x => x[0]).length}</em></h4><div class="sx-logos r7-on">${onT}</div>` : ''}<h4 class="r7-cgh">연결할 수 있음</h4><div class="sx-logos">${offT}${ext}</div>`; } },
       ...(O || sxPay() ? [{ k: 'pay', n: sxPay() ? '요금제 · 결제' : '요금제', i: 'chart', subs: O ? ['plan'] : [], kw: '요금제 플랜 결제 수강료 pg 토스 환불 매출 청구',
         sum: `${esc(({ standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' })[S.org.plan] || '체험')}${sxPay() ? ` · 결제 ${pgOn ? '연결됨' : '미연결'}` : ''}`,
         q: () => sxRow('요금제', esc(({ standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' })[S.org.plan] || '체험')) + (sxPay() ? sxRow(`${t('fee')} 온라인 결제`, pgOn ? '토스페이먼츠 연결됨' : '연결 전') : '') +
           `<div class="sx-acts">${O ? sxBtn('요금제 보기', 'sx-sub', 'pay|plan') : ''}${sxPay() && MENU.sales ? sxBtn('매출 · 결제 열기', 'go', 'sales') : ''}${sxPay() && O && !pgOn ? sxBtn('결제 연결', 'sl-cn', 'toss') : ''}</div>` }] : []),
       { k: 'learn', n: '학습 규칙 · AI 튜터', i: 'book', subs: ['rules'], kw: '진도 수료 이수 기준 배속 건너뛰기 ai 튜터 학습 규칙', sum: '진도 · 수료 기준 · AI 튜터',
-        q: () => `<div class="sx-acts">${sxBtn('학습 규칙 열기', 'sx-sub', 'learn|rules')}</div>` },
+        q: () => { const p = st.progress || {}, tu = st.tutor || {}; /* v43 R7: 지금 값은 핵심 3개를 큰 값으로(J2 082) */ return `<div class="r7-nv">${[[`${+p.watchThr || 0}%`, '완료 기준 시청률'], [p.seq ? '켜짐' : '꺼짐', '순차 학습'], [tu.enabled ? `하루 ${+tu.daily || 0}회` : '꺼짐', 'AI 튜터']].map(([v, l]) => `<div><b>${esc(v)}</b><small>${esc(l)}</small></div>`).join('')}</div><div class="sx-acts">${sxBtn('학습 규칙 열기', 'sx-sub', 'learn|rules')}</div>`; } },
       { k: 'site', n: '홈페이지 · 약관', i: 'globe', subs: ['home', 'consult', 'terms'], kw: '홈페이지 검색 노출 seo 상담 약관 개인정보 처리방침 카카오 채널톡',
         sum: `약관 ${(st.termsHist || []).length ? '버전 ' + (st.termsHist || []).length + '개' : '기본'} · 상담 ${st.consultKeys || st.kakao ? '연결' : '없음'}`,
         q: () => sxRow('검색 제목', esc((st.seo || {}).title || '—')) + `<div class="sx-acts">${sxBtn('검색 노출', 'sx-sub', 'site|home')}${sxBtn('상담', 'sx-sub', 'site|consult')}${sxBtn('약관', 'sx-sub', 'site|terms')}</div>` },
       { k: 'lang', n: '언어', i: 'globe', subs: ['lang'], kw: '언어 영어 일본어 중국어 베트남어 번역', sum: '화면 · 사이트 언어',
-        q: () => `<div class="sx-acts">${sxBtn('언어 설정', 'sx-sub', 'lang|lang')}</div>` },
+        q: () => { const ls = (st.siteLangs || st.langs || []); return sxRow('관리자 화면', esc(({ ko: '한국어', en: 'English', ja: '日本語' })[st.adminLang || 'ko'] || '한국어')) + sxRow('학습자 사이트', Array.isArray(ls) && ls.length ? `${ls.length}개 언어` : '한국어 + 4개 언어') + sxRow('용어', esc(`${t('learner')} · ${t('cls')} · ${t('teacher')}`)) + `<div class="sx-acts">${sxBtn('언어 설정', 'sx-sub', 'lang|lang')}</div>`; } },
       { k: 'data', n: '데이터', i: 'gear', subs: ['data', ...(O ? ['room'] : []), 'cover'], kw: '데이터 내보내기 백업 초기화 데이터룸 배포 기능 맵', sum: '내보내기 · 데이터룸',
-        q: () => `<div class="sx-acts">${sxBtn('내보내기(JSON)', 'data-export', '')}${sxBtn('데이터 · 초기화', 'sx-sub', 'data|data')}${O ? sxBtn('데이터룸 · 배포', 'sx-sub', 'data|room') : ''}</div>` },
+        q: () => sxRow(`${t('learner')} · ${t('cls')}`, `${(S.members || []).length}명 · ${(S.classes || []).length}개`) + sxRow('배포 모델', esc(({ saas: '공유 SaaS', dedicated: '전용 클라우드', customer: '고객 클라우드', onprem: '설치형' })[(S.org.room || {}).model] || '공유 SaaS')) + sxRow('자동 백업', '매일 03:00 · 7일 보관') + `<div class="sx-acts">${UI.sxOpen === 'data' ? '' /* v43 S3A 083 · 084: 머리 「전체 데이터 내보내기」와 겹치는 버튼 제거 */ : sxBtn('내보내기(JSON)', 'data-export', '') + sxBtn('데이터 · 초기화', 'sx-sub', 'data|data') + (O ? sxBtn('데이터룸 · 배포', 'sx-sub', 'data|room') : '')}</div>` }, /* v43 R7: 데이터 설정을 연 화면의 지금 값 칸은 주 버튼 1개(하위 이동은 위 칩 줄)(J2 083) */
       ...(sxLive() ? [{ k: 'acct', n: '계정', i: 'users', subs: [], kw: '계정 로그인 아이디 이메일 비밀번호 변경 로그아웃', sum: esc(LIVE.user.email || ''),
         q: () => sxRow('로그인 아이디', esc(LIVE.user.email || '')) + `<div class="sx-acts">${sxBtn('비밀번호 변경', 'live-pw', '')}${sxBtn('로그아웃', 'live-logout', '', 'ghost')}</div>` }] : [])
     ]; };
@@ -294,28 +299,68 @@
     const wsL = [...new Set(A.map(x => x.w))].filter(w => WS[w]); const L = A.filter(x => (f === 'all' || (f === 'on' ? x.on : x.w === f)) && (!q || (mlabel(x.id) + mdOf(x.id)[0]).includes(q)));
     const on = A.filter(x => x.on);
     return SL.chips('slMenuF', [['all', '전체'], ['on', `켜짐 ${on.length}`], ...wsL.map(w => [w, lab(WS[w])])], f) +
-      SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
-        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) +
+      '<div class="sx43-mn">' /* v43 S3A 075: 메뉴 목록 2열 카드 */ + SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
+        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) + '</div>' +
       `<div class="sx-acts">${sxBtn('기본 메뉴로', 'sl-reset-menu', '')}</div>` + SL.search('slMenuQ', '메뉴 검색'); };
   window.slMenusBody = menusBody;
   /* mem2.js가 DOMContentLoaded에 감싸는 층(결제 · 수납 카드)까지 안쪽에 두려고 같은 시점에 가장 바깥에서 감싼다 */
+  /* v43 R3 설정 한 화면 재설계(FINAL-AUDIT 073~084 「설정 카드 반복」): 목차(왼쪽) + 지금 연 설정 하나를 크게(가운데) + 보조 열(지금 값 · AI 제안 · 변경 이력).
+     펼친 카드 아래에 나머지 설정 카드 9장을 반복하던 격자를 없앴다. 아무것도 열지 않은 루트(#settings)는 「기관 정보」를 연다.
+     카드 id(sx-<k>) · data-act(sx-open · sx-sub · go · sl-cn …)는 그대로 둔다. 옛 설정 화면 머리의 4묶음 탭은 목차가 대신하므로 그리지 않는다(UI.sxIn). */
+  const SX_LOG = { org: /기관|유형|주소|이름/, menu: /메뉴/, users: /가입|운영자|권한|회원|질문/, notify: /팝업|알림|독려|자동 운영/, conn: /키|연결|MCP|Slack|토스|연동/, pay: /요금|결제/,
+    learn: /시청|진도|수료|튜터|학습 규칙|배속/, site: /약관|개인정보|SEO|상담|검색/, lang: /언어|용어|번역/, data: /내보내기|초기화|데이터|배포|백업/, acct: /비밀번호|로그인/ };
+  const sxTipKey = (k, sub) => sub === 'onoff' || sub === 'menu' ? 'menus' : sub === 'type' ? 'org' : sub;
+  const SX_TIP0 = { org: ['유형을 바꿔도 데이터는 그대로입니다 — 메뉴 · 용어만 그 유형에 맞게 바뀝니다', '홈페이지 주소는 영문 도메인으로 바꾸면 검색 노출이 좋아집니다', '부르는 말(수강생 · 강좌 · 강사)은 언어 · 용어에서 바꿉니다'],
+    notify: ['미접속 7일 독려 알림을 켜면 재방문이 평균 18% 늘어납니다', '자동 운영은 아침 9시 발송이 열람률이 가장 높습니다', '팝업은 2개 이하로 두세요'],
+    home: ['검색 제목은 30자 안에 기관 이름과 대표 강좌를 함께 넣으세요', '설명 문장에 지역 이름을 넣으면 지역 검색에서 잘 보입니다', 'AI SEO 제안으로 초안을 받아 고쳐 쓰세요'],
+    consult: ['카카오 채널을 연결하면 상담 버튼이 학습자 사이트에 바로 붙습니다', '채널톡 키는 서버에만 저장됩니다', '상담 카테고리는 2단까지 만들 수 있습니다'],
+    cover: ['기능 맵은 기존 디디쌤 가이드와 지금 화면을 한 줄씩 맞춰 봅니다', '빠진 기능은 통합 요청으로 올라갑니다', '메뉴에서 끈 기능도 여기서는 보입니다'],
+    acct: ['비밀번호는 90일마다 바꾸세요', '공용 PC에서는 사용 후 로그아웃하세요', '운영자마다 계정을 따로 만드세요'] };
+  const sxLogs = k => { const re = SX_LOG[k]; const A = (S.audit || []).filter(a => re && re.test(a.what || '')).slice(0, 5);
+    return A.length ? A.map(a => `<li><i aria-hidden="true"></i><div><b>${esc(a.what)}</b><small>${esc(String(a.at || '').slice(5, 16))} · ${esc(a.who || '')}</small></div></li>`).join('')
+      : `<li class="sx3-l0"><i aria-hidden="true"></i><div><b>바꾼 기록이 아직 없습니다</b><small>${esc(S.org.created || today())} 개설 · 기본값으로 시작</small></div></li>`; };
+  /* 설정 본문 다듬기(렌더 단계): ① 체크 · 라디오 → 디자인된 칩(입력은 화면에서 숨기고 라벨이 칩) ② 선택지 6개 이하 select → 칩 묶음(원래 select는 숨겨 두고 값만 바꿔 change를 보낸다)
+     ③ 카드가 많은 설정(가입 · 연동 · 데이터룸)은 섹션 탭으로 나눠 한 번에 한 묶음만 보인다(나머지는 hidden — 데이터 · 동작은 그대로) */
+  const SX_SEC = { service: [['가입 · 회원', /홈페이지 유형|가입 설정|회원가입/], ['학습 · 후기', /학습 · 후기/], ['홈페이지', /홈페이지 정보|이름 · 주소/], ['개인정보 · 결제', /./]],
+    integr: [['AI 연결(MCP)', /MCP/], ['Claude AI', /Claude/], ['YouTube · 기타', /./]], room: [['배포 모델', /데이터룸|배포 모델/], ['세부 구성', /세부 구성/], ['분리 · 준비', /./]] };
+  const sx3Form = (h, sub) => { const T = document.createElement('template'); T.innerHTML = h; const R = T.content; let n = 0;
+    R.querySelectorAll('input[type=checkbox],input[type=radio]').forEach(inp => { if (inp.closest('.sl-sw,.sw,.swrow,.sx3-ck,.sx3-rd') || inp.hidden) return; /* 이미 스위치로 그린 줄은 그대로 */ const lb = inp.closest('label'); if (!lb) return;
+      inp.classList.add('sx3-in'); lb.classList.add(inp.type === 'radio' ? 'sx3-rd' : 'sx3-ck'); inp.insertAdjacentHTML('afterend', '<span class="sx3-mk" aria-hidden="true"></span>'); });
+    R.querySelectorAll('select').forEach(sel => { const O = [...sel.options]; if (sel.hidden || sel.multiple || O.length < 2 || O.length > 6 || O.some(o => o.text.trim().length > 22)) return;
+      const k = sub + '-' + (n++); sel.dataset.sx3 = k; sel.hidden = true; sel.classList.add('sx3-hs'); const cur = Math.max(0, sel.selectedIndex);
+      sel.insertAdjacentHTML('afterend', `<span class="sx3-pk" role="radiogroup">${O.map((o, i) => `<button type="button" role="radio" aria-checked="${i === cur}" class="${i === cur ? 'on' : ''}" data-act="sx3-pick" data-v="${k}|${i}">${esc(o.text.trim())}</button>`).join('')}</span>`); });
+    const G = SX_SEC[sub]; if (G) { [...R.children].filter(w => w.classList.contains('st26')).forEach(w => w.replaceWith(...w.childNodes));
+      const kids = [...R.children]; const cardT = e => ((e.querySelector('.ch b, h3, .ch strong') || {}).textContent || '').trim(); let g = 0; const cnt = G.map(() => 0);
+      kids.forEach(e => { const tt = cardT(e); if (tt) { const j = G.findIndex(x => x[1].test(tt)); g = j < 0 ? G.length - 1 : j; } e.dataset.sx3g = g; cnt[g]++; });
+      const on = Math.min((UI.sxSec || {})[sub] || 0, G.length - 1); kids.forEach(e => { if (+e.dataset.sx3g !== on) e.hidden = true; });
+      R.prepend(document.createRange().createContextualFragment(`<div class="sx3-sec" role="tablist" aria-label="섹션">${G.map(([nm], i) => cnt[i] ? `<button type="button" role="tab" aria-selected="${i === on}" class="${i === on ? 'on' : ''}" data-act="sx-sec" data-v="${sub}|${i}">${esc(nm)}</button>` : '').join('')}</div>`)); }
+    const d = document.createElement('div'); d.appendChild(R); return d.innerHTML; };
+  ACT['sx-sec'] = el => { const [sub, i] = String(el.dataset.v).split('|'); UI.sxSec = Object.assign({}, UI.sxSec, { [sub]: +i }); render(); };
+  ACT['sx3-pick'] = el => { const [k, i] = String(el.dataset.v).split('|'); const sel = document.querySelector(`select[data-sx3="${CSS.escape(k)}"]`); if (!sel) return;
+    sel.selectedIndex = +i; el.parentNode.querySelectorAll('button').forEach(b => { b.classList.toggle('on', b === el); b.setAttribute('aria-checked', String(b === el)); }); sel.dispatchEvent(new Event('change', { bubbles: true })); };
   document.addEventListener('DOMContentLoaded', () => { const base = VIEWS.settings; window.slSetBase = base;
-    VIEWS.settings = () => { UI.slSetIn = false; const C = SXC(); const q = (UI.slSetQ || '').trim().toLowerCase(); const open = UI.sxOpen || '';
+    VIEWS.settings = () => { UI.slSetIn = false; const C = SXC(); const q = (UI.slSetQ || '').trim().toLowerCase(); const keepSet = UI.settings;
       const hit = c => !q || (c.n + ' ' + c.kw + ' ' + c.sum + ' ' + c.subs.map(x => SXN[x] || '').join(' ')).toLowerCase().includes(q);
-      const L = C.filter(hit); const keepSet = UI.settings;
-      const body = c => { if (open !== c.k || !c.subs.length) return ''; const sub = c.subs.includes(UI.sxSub) ? UI.sxSub : c.subs[0];
-        let h = ''; if (sub === 'onoff') h = menusBody(); else { UI.settings = sub; try { h = base(); } catch (e) { console.error(e); h = '<div class="warn">이 설정을 표시하지 못했습니다.</div>'; } }
-        return `<div class="sx-x">${c.subs.length > 1 ? `<div class="sl-chips sx-subs" role="tablist">${c.subs.map(x => `<button type="button" role="tab" aria-selected="${x === sub}" class="${x === sub ? 'on' : ''}" data-act="sx-sub" data-v="${c.k}|${x}">${esc(SXN[x] || x)}</button>`).join('')}</div>` : ''}<div class="sl-setx" data-sub="${esc(sub)}">${h}</div></div>`; };
-      const cards = L.map(c => { const isOpen = open === c.k;
-        return `<section class="sx-card ${isOpen ? 'open' : ''}" id="sx-${c.k}" data-k="${c.k}" aria-labelledby="sxh-${c.k}"><div class="sx-h"><span class="sx-ic">${ic(c.i in IC ? c.i : 'gear', 20)}</span><div class="sx-t"><h3 id="sxh-${c.k}">${esc(c.n)}</h3><small>${c.sum}</small></div>${c.subs.length ? `<button type="button" class="btn sm ghost sx-tog" data-act="sx-open" data-v="${c.k}" aria-expanded="${isOpen}">${isOpen ? '접기' : '펼치기'}</button>` : ''}</div>
-          <div class="sx-q">${c.q()}</div>${body(c)}</section>`; }).join('');
-      const out = `<div class="sx-page"><div class="sx-top">${SL.search('slSetQ', '설정 검색 — 예: 메뉴, 가입, 결제, 약관')}</div>${L.length ? `<div class="sx-grid">${cards}</div>` : `<div class="sl-empty">「${esc(UI.slSetQ)}」에 맞는 설정이 없습니다.</div>`}</div>`;
-      if (open && C.find(c => c.k === open)) { const c = C.find(x => x.k === open); UI.settings = c.subs.includes(UI.sxSub) ? UI.sxSub : (c.subs[0] || keepSet); } else UI.settings = keepSet;
-      return out; }; });
+      const L = C.filter(hit); const c = C.find(x => x.k === UI.sxOpen) || C[0]; const k = c.k; const idx = C.indexOf(c);
+      const sub = c.subs.length ? (c.subs.includes(UI.sxSub) ? UI.sxSub : c.subs[0]) : '';
+      let h = ''; if (sub === 'onoff') h = menusBody(); else if (sub) { UI.settings = sub; UI.sxIn = true; try { h = sx3Form(base(), sub); } catch (e) { console.error(e); h = '<div class="warn">이 설정을 표시하지 못했습니다.</div>'; } UI.sxIn = false; }
+      const qMain = !c.subs.length || k === 'conn'; /* 외부 연결의 로고 격자 · 하위 화면이 없는 카드(계정)는 가운데에 */
+      const toc = `<nav class="sx3-toc" aria-label="설정 목차"><div class="sx-top">${SL.search('slSetQ', '설정 검색')}</div><ol>${L.map(x => { const on = x.k === k;
+          return `<li><button type="button" class="sx3-ti${on ? ' cur' : ''}" data-act="sx-open" data-v="${x.k}" ${on ? 'aria-current="true"' : ''}><span class="sx3-tic">${ic(x.i in IC ? x.i : 'gear', 18)}</span><span class="sx3-tt"><b>${esc(x.n)}</b><small>${x.sum}</small></span></button>${on && x.subs.length > 1 ? `<div class="sx3-subs">${x.subs.map(s2 => `<button type="button" class="${s2 === sub ? 'on' : ''}" data-act="sx-sub" data-v="${x.k}|${s2}" ${s2 === sub ? 'aria-current="true"' : ''}>${esc(SXN[s2] || s2)}</button>`).join('')}</div>` : ''}</li>`; }).join('') || `<li class="sl-empty">「${esc(UI.slSetQ)}」에 맞는 설정이 없습니다.</li>`}</ol></nav>`;
+      const main = `<section class="sx-card open sx3-main" id="sx-${k}" data-k="${k}" aria-labelledby="sxh-${k}"><header class="sx3-mh"><span class="sx3-mic">${ic(c.i in IC ? c.i : 'gear', 26)}</span><div class="sx3-mt"><small>설정 ${idx + 1} / ${C.length}${sub ? ' · ' + esc(SXN[sub] || '') : ''}</small><h2 id="sxh-${k}">${esc(c.n)}</h2><p>${c.sum}</p></div></header>
+        ${c.subs.length > 1 ? `<div class="sl-chips sx-subs" role="tablist">${c.subs.map(x => `<button type="button" role="tab" aria-selected="${x === sub}" class="${x === sub ? 'on' : ''}" data-act="sx-sub" data-v="${k}|${x}">${esc(SXN[x] || x)}</button>`).join('')}</div>` : ''}
+        ${qMain ? `<div class="sx3-q">${c.q()}</div>` : ''}${sub ? `<div class="sl-setx" data-sub="${esc(sub)}">${h}</div>` : ''}</section>`;
+      const TIPS = window.SX_TIPS || {}; const tips = TIPS[sxTipKey(k, sub)] || SX_TIP0[sub] || SX_TIP0[k] || ['바꾼 값은 바로 저장됩니다. 학습자 화면에서 미리보기로 확인하세요.'];
+      const acc = sxLive() && k !== 'acct' ? C.find(x => x.k === 'acct') : null;
+      const side = `<aside class="sx3-side" aria-label="보조 정보">${qMain ? '' : `<section class="sx3-box sx3-now"><h3>지금 값</h3>${c.q()}</section>`}
+        <section class="sx3-box sx3-ai"><h3><span class="l43-ai" aria-hidden="true">AI</span> AI SAM 제안</h3><ol>${tips.map(x => `<li>${esc(x)}</li>`).join('')}</ol></section>
+        <section class="sx3-box sx3-log"><h3>변경 이력</h3><ul>${sxLogs(k)}</ul></section>${acc ? `<section class="sx3-box sx3-acc"><h3>계정</h3>${acc.q()}</section>` : ''}</aside>`;
+      UI.settings = sub && sub !== 'onoff' ? sub : keepSet;
+      return `<div class="sx-page sx3" data-open="${k}">${toc}${main}${side}</div>`; }; });
   /* 하위 키(plan · integr · …)가 들어 있는 카드 */
   const sxCardOf = sub => { const c = SXC().find(x => x.subs.includes(sub)); return c ? c.k : ''; };
   window.slSetOpen = (sub, scroll) => { const k = sxCardOf(sub); if (!k) return false; UI.sxOpen = k; UI.sxSub = sub; UI.settings = sub === 'onoff' ? UI.settings : sub; if (scroll) UI.sxScroll = k; return true; };
-  ACT['sx-open'] = el => { const k = el.dataset.v; if (UI.sxOpen === k) { UI.sxOpen = ''; } else { UI.sxOpen = k; const c = SXC().find(x => x.k === k); UI.sxSub = c && c.subs[0]; } render(); };
+  ACT['sx-open'] = el => { const k = el.dataset.v; if (UI.sxOpen !== k) { UI.sxOpen = k; const c = SXC().find(x => x.k === k); UI.sxSub = c && c.subs[0]; } render(); }; /* v43 R3: 목차에서 고르면 그 설정을 연다(접기 없음) */
   ACT['sx-sub'] = el => { const [k, sub] = String(el.dataset.v).split('|'); if (CUR.ws !== 'settings') { go('settings'); } UI.sxOpen = k; UI.sxSub = sub; UI.sxScroll = k; render(); };
   ACT['sx-soon'] = el => toast(`${el.dataset.v} 연결은 준비 중입니다. 지금은 설정 › 외부 연결 › API · MCP(MCP 키)로 외부 AI 앱과 연결해 쓸 수 있습니다.`);
   ACT['sx-owner'] = () => toast('외부 연결은 정운영자만 관리할 수 있습니다.', 'warn');
@@ -327,7 +372,8 @@
       else if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id)) { slSetOpen(id, true); const r = base('settings', keep); return r; }
       return base(id, keep); }; }
   /* 깊은 링크로 연 카드는 화면에 보이게 */
-  AFTER.push(() => { if (CUR.ws !== 'settings' || !UI.sxScroll) return; const k = UI.sxScroll; UI.sxScroll = ''; setTimeout(() => { const e = document.getElementById('sx-' + k); if (e && e.scrollIntoView) e.scrollIntoView({ block: 'start' }); }, 90); });
+  /* v43 R3: 연 설정이 늘 맨 위 가운데에 있으므로 카드로 스크롤하지 않는다(예전에는 머리가 잘린 채 열렸다) */
+  AFTER.push(() => { if (CUR.ws === 'settings' && UI.sxScroll) UI.sxScroll = ''; });
   ACT['sl-menuorder'] = () => { slSetOpen('menu', true); go('settings'); };
 
   /* 기관 초기화: 기관 이름을 입력해야 실행(되돌릴 수 없음) */
@@ -363,7 +409,7 @@
      설정 › 기관 유형 변경(type-chg)은 유형 · 프리셋 메뉴만 바꿨다. 이제 유형이 바뀌면 같은 자리에서: 대학 에디션 정리(대학이면 기본 lite, 아니면 삭제) ·
      유형별 기본 메뉴(slimApply) 다시 적용 — 레일 라벨(t()) · 첫 화면 호칭(aihKey) · 사이트 메뉴 이름(HPS.menuName)이 모두 같은 S.org.type · S.org.ed를 본다. */
   AFTER.push(() => { if (!S || !S.org) return; const k = S.org.type + '/' + (S.org.ed || ''); if (S.org.tySeen === k) return; const first = !S.org.tySeen; S.org.tySeen = k; if (first) return;
-    if (S.org.type === 'univ') { if (S.org.ed !== 'lms') S.org.ed = 'lite'; } else delete S.org.ed;
+    if (S.org.type === 'univ') { if (S.org.ed !== 'lms') S.org.ed = 'lite'; } else if (S.org.type === 'public') { if (!['citizen', 'facility', 'staff'].includes(S.org.ed)) S.org.ed = 'staff'; } else delete S.org.ed; /* v43 공공 세부 유형 유지 */
     S.org.tySeen = S.org.type + '/' + (S.org.ed || ''); try { slimApply(); } catch (e) { console.error(e); } save(); setTimeout(render, 0); });
   /* 기존 사용자 한 번 안내 */
   AFTER.push(() => { if (!UI.slimNote) return; UI.slimNote = 0; toast('메뉴를 꼭 필요한 것만 남겼습니다. 다른 메뉴는 설정 › 메뉴에서 켜세요.', 'ok'); });

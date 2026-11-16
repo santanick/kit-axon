@@ -10,7 +10,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
 (async () => {
   const srv = http.createServer((q, r) => { const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); }).listen(0, '127.0.0.1'); await new Promise(k => srv.once('listening', k));
   const B = `http://127.0.0.1:${srv.address().port}`; const browser = await chromium.launch(); const errs = [];
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await p.goto(B + '/index.html', { waitUntil: 'load' });
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await p.addInitScript(() => { try { localStorage.setItem('didisam.emptyStart', '0'); } catch (e) { } }); /* v43: 시연 경로(샘플 데이터 기관)로 만든다 — 빈 스튜디오는 원장 · 시설 · 마일리지 시연 데이터를 비운다(empty.js) */ await p.goto(B + '/index.html', { waitUntil: 'load' });
 
   /* ① 계산 벡터(화면 계산 = 서버 · Java와 같은 값) */
   const V = await p.evaluate(V => { const F = window.facCalc; const fac = x => typeof x === 'string' ? V.facilities[x] : x, pr = x => typeof x === 'string' ? V.products[x] : x;
@@ -20,10 +20,10 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
   ok(V.n >= 30 && !V.bad.length, `계산 벡터 ${V.n}개 일치 ` + V.bad.join(' | '));
 
   /* ② 유형별 메뉴 · 기본 템플릿 */
-  const P = await p.evaluate(() => { const out = {}; for (const [ty, ed] of [['univ', 'lite'], ['corp'], ['k12'], ['public']]) { createOrg(ty, '점검', ed); out[ty] = { on: menuOn('fac'), tpl: S.fac.tpl, n: S.fac.facilities.length, verify: S.fac.facilities[0].verify, pay: S.fac.facilities[0].pay, appr: S.fac.facilities[0].approval }; } return out; });
+  const P = await p.evaluate(() => { const out = {}; for (const [ty, ed] of [['univ', 'lite'], ['corp'], ['k12'], ['public', 'facility']]) { createOrg(ty, '점검', ed); out[ty] = { on: menuOn('fac'), tpl: S.fac.tpl, n: S.fac.facilities.length, verify: S.fac.facilities[0].verify, pay: S.fac.facilities[0].pay, appr: S.fac.facilities[0].approval }; } return out; });
   ok(P.univ.on && P.univ.tpl === 'univ' && P.univ.verify === 'sid' && P.univ.appr && P.univ.pay === 'free', '대학: 학번 확인 · 무료 · 승인제 ' + JSON.stringify(P.univ));
   ok(P.corp.on && P.corp.tpl === 'corp' && P.corp.verify === 'none', '기업: 회의실 ' + JSON.stringify(P.corp));
-  ok(P.k12.on && P.k12.tpl === 'room' && P.public.on && P.public.tpl === 'sports', '학원 · 공공(스포츠센터) 템플릿 ' + P.k12.tpl + '/' + P.public.tpl);
+  ok(!P.k12.on && P.k12.tpl === 'room' && P.public.on && P.public.tpl === 'sports', '학원은 시설 메뉴 기본 끔(v43 결정 A · 템플릿은 room) · 공공 시설형(스포츠센터) 켬 ' + P.k12.tpl + '/' + P.public.tpl);
   /* 기존 저장 사용자(upgradeState): S.fac 없음 → 기본값 · 메뉴 자리 */
   const U = await p.evaluate(() => { createOrg('adult', '예전 기관'); delete S.fac; Object.values(S.nav.tabs).forEach(L => { const i = L.findIndex(x => x.id === 'fac'); if (i >= 0) L.splice(i, 1); }); upgradeState(); return { fac: !!S.fac && S.fac.facilities.length > 0, nav: Object.values(S.nav.tabs).flat().some(x => x.id === 'fac') }; });
   ok(U.fac && U.nav, 'upgradeState: 기본값 · 메뉴 ' + JSON.stringify(U));
@@ -122,8 +122,8 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
   ok(AI2.plan && AI2.draft && AI2.sent, 'SAM 연체 안내(문구 초안 → 확인 후 발송) ' + JSON.stringify(AI2));
 
   /* ⑫ 교강사: 예약 현황 · 체크인 · 반납만 */
-  const TC = await p.evaluate(() => { S.me.role = 'teacher'; UI.fac = 'list'; go('fac'); render(); const t = [...document.querySelectorAll('#main [data-key="fac"][role="tab"]')].map(b => b.dataset.v); const a = answer('다음 주 화요일 체육관 휴관 처리') || {}; S.me.role = 'owner'; return { t, deny: !a.plan }; });
-  ok(TC.t.join() === 'tl,chk,ns' && TC.deny, '교강사 탭 제한 · 휴관 거절 ' + TC.t);
+  const TC = await p.evaluate(() => { S.me.role = 'teacher'; UI.fac = 'list'; go('fac'); render(); const open = CUR.tab === 'fac'; const a = answer('다음 주 화요일 체육관 휴관 처리') || {}; S.me.role = 'owner'; go('fac'); render(); return { open, deny: !a.plan }; });
+  ok(!TC.open && TC.deny, 'v43 P3-F01: 교강사는 시설 메뉴를 열 수 없음(DECISIONS A 강사 권한) · 휴관 거절 ' + JSON.stringify(TC));
 
   /* ⑬ 운영 모드: /api/fac/* 실패 시 안내 */
   const LV = await p.evaluate(async () => { const calls = []; window.LIVE = { tenant: 't1', cfg: {} }; window.api = async (m, u) => { calls.push(m + ' ' + u); const e = new Error('없는 경로'); e.status = 404; e.code = 'not_found'; throw e; }; UI.fac = 'tl'; UI.facDay = today(); render(); await new Promise(k => setTimeout(k, 80)); const err = (document.querySelector('.fc-err') || {}).textContent || ''; delete window.LIVE; delete window.api; render(); return { calls, err }; });

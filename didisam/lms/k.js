@@ -4,7 +4,7 @@
    운영(서버) 모드: /api/lms/k/* 호출. 데모 모드: S.lms.k 상태 + 같은 규칙의 브라우저 엔진. 공용 도우미 LW4는 묶음 N · Q도 쓴다. */
 (function () {
   'use strict';
-  if (!document.querySelector('link[data-lw4]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/k.css?v=31.8'; l.dataset.lw4 = '1'; document.head.appendChild(l); }
+  if (!document.querySelector('link[data-lw4]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/k.css?v=43.3'; l.dataset.lw4 = '1'; document.head.appendChild(l); }
 
   /* ── 공용 도우미(K · N · Q) ── */
   const LW4 = window.LW4 = window.LW4 || { demo: {} };
@@ -181,6 +181,10 @@
     const d1 = mk({ title: '2026-2 비교과 프로그램 만족도', langs: ['ko'], scope: 'program', target: { kinds: ['student'] } }, actor); putQs(d1, t.questions.map(q => ({ type: q.type, text: { ...q.text }, required: q.required })));
     const e1 = mk({ title: '2026-2 중간 강의평가 · 프로그래밍 기초 01', kind: 'course_eval', scope: 'section', langs: ['ko', 'en'], gate_steps: ['grade'], target: { kinds: ['student'] } }, actor); putQs(e1, EVALQ); e1.status = 'open';
     K.surveys.push(d1, e1);
+    /* v43 G3 시연 밀도: 설문 카드 6장 이상(진행 · 마감 섞음, 응답 있음) */
+    [['2026-2 수업 운영 중간 점검', 'section', 'open'], ['2026 진로 상담 수요 조사', 'univ', 'open'], ['도서관 이용 만족도', 'univ', 'closed'], ['AI 학습 도구 사용 경험 조사', 'univ', 'open']].forEach(([title, scope, st], k) => {
+      const x = mk({ title, langs: ['ko'], scope, target: { kinds: ['student'] } }, actor); putQs(x, t.questions.map(q => ({ type: q.type, text: { ...q.text }, required: q.required }))); x.status = st; K.surveys.push(x);
+      ['20261001', '20261002', '20261003', '20261004', '20261005', '20261006', '20261007', '20261008'].slice(0, 4 + k).forEach((no, i) => { try { store(x, no, { 1: 3 + (i + k) % 3, 2: 2 + (i * 3 + k) % 4, 3: '' }, 'web'); } catch (e) { } }); });
     [['20261001', 5, 4, 5, 4, 5], ['20261002', 4, 4, 3, 4, 4], ['20261005', 5, 5, 4, 5, 5]].forEach(([no, ...v]) => store(e1, no, { 1: v[0], 2: v[1], 3: v[2], 4: v[3], 5: v[4], 6: no === '20261002' ? '실습 시간이 조금 더 있으면 좋겠습니다.' : '' }, 'web'));
   }
 
@@ -207,9 +211,9 @@
     let b = '';
     if (tb === 'list' || tb === 'tpl') {
       const L = tb === 'list' ? U.list : U.tpl;
-      b = (tb === 'list' ? `<div class="lw-bar"><input type="search" placeholder="설문 제목 검색" value="${esc(U.q || '')}" data-chg="lmsk-f" data-k="q" aria-label="설문 검색"><select data-chg="lmsk-f" data-k="fk" aria-label="종류"><option value="">모든 종류</option>${Object.entries(KIND).map(([k, v]) => `<option value="${k}" ${U.fk === k ? 'selected' : ''}>${v}</option>`).join('')}</select><select data-chg="lmsk-f" data-k="fs" aria-label="상태"><option value="">모든 상태</option>${Object.entries(STS).map(([k, v]) => `<option value="${k}" ${U.fs === k ? 'selected' : ''}>${v[0]}</option>`).join('')}</select></div>` : `<p class="lw-note">템플릿은 배포하지 않고, 「이 템플릿으로 만들기」로 새 설문을 만듭니다. 비교과 만족도 · 강의평가 템플릿을 기관 표준으로 관리하세요.</p>`) +
+      b = (tb === 'list' ? `<div class="lw-bar"><input type="search" placeholder="설문 제목 검색" value="${esc(U.q || '')}" data-chg="lmsk-f" data-k="q" aria-label="설문 검색"></div><div class="lk-chips">${[['', '모든 종류'], ...Object.entries(KIND)].map(([k, v]) => `<button class="lk-chip${(U.fk || '') === k ? ' on' : ''}" data-act="lmsk-f" data-k="fk" data-v="${k}">${esc(v)}</button>`).join('')}<span class="lk-sep"></span>${[['', '모든 상태'], ...Object.entries(STS).map(([k, v]) => [k, v[0]])].map(([k, v]) => `<button class="lk-chip${(U.fs || '') === k ? ' on' : ''}" data-act="lmsk-f" data-k="fs" data-v="${k}">${esc(v)}</button>`).join('')}</div>` : `<p class="lw-note">템플릿은 배포하지 않고, 「이 템플릿으로 만들기」로 새 설문을 만듭니다. 비교과 만족도 · 강의평가 템플릿을 기관 표준으로 관리하세요.</p>`) +
         `<div class="lw-grid">${L.map(s => `<div class="lw-card" data-survey="${esc(s.survey_id)}"><div>${LW4.st(STS[s.status][0], STS[s.status][1])} <span class="lw-pill">${esc(KIND[s.kind])}</span><span class="lw-pill">${esc(SCOPE[s.scope])}${s.scope_ref ? ' · ' + esc(s.scope_ref.slice(0, 12)) : ''}</span></div>
-          <h4>${esc(s.title)}</h4><small>문항 ${s.n_q}개 · 응답 ${s.n_resp}건 · 언어 ${esc((s.langs || []).join('/'))}${s.gate_steps.length ? ' · 제한: ' + s.gate_steps.map(g => GN[g]).join(', ') : ''}${s.kind === 'course_eval' ? ' · 교수 ' + (s.prof_public ? '공개' : '미공개') : ''}</small>
+          <h4>${esc(s.title)}</h4>${s.is_template ? '' : `<div class="lk-rb"><span><i style="width:${Math.round((s.n_resp || 0) / Math.max(1, ...L.map(x => x.n_resp || 0)) * 100)}%"></i></span><b>${s.n_resp || 0}건</b></div>`}<small>문항 ${s.n_q}개 · 응답 ${s.n_resp}건 · 언어 ${esc((s.langs || []).join('/'))}${s.gate_steps.length ? ' · 제한: ' + s.gate_steps.map(g => GN[g]).join(', ') : ''}${s.kind === 'course_eval' ? ' · 교수 ' + (s.prof_public ? '공개' : '미공개') : ''}</small>
           <div class="lw-acts">${s.is_template ? `<button class="btn sm lw-go" data-act="lmsk-fromtpl" data-id="${esc(s.survey_id)}">이 템플릿으로 만들기</button>${LW4.more(LW4.mi('lmsk-edit', '템플릿 편집', { id: s.survey_id }))}` :
             `${s.status !== 'open' ? `<button class="btn sm lw-go" data-act="lmsk-st" data-op="open" data-id="${esc(s.survey_id)}">배포</button>` : `<button class="btn sm" data-act="lmsk-stat" data-id="${esc(s.survey_id)}">결과 보기</button>`}${canOp && s.status === 'open' ? `<button class="btn sm" data-act="lmsk-remind" data-id="${esc(s.survey_id)}">미응답 독려</button>` : ''}
             ${LW4.more(LW4.mi('lmsk-edit', '편집', { id: s.survey_id }) + (s.status === 'open' ? LW4.mi('lmsk-st', '마감', { op: 'close', id: s.survey_id }) : LW4.mi('lmsk-stat', '결과 통계', { id: s.survey_id })) + LW4.mi('lmsk-csv', '응답 내려받기(CSV)', { id: s.survey_id }) + (canOp ? LW4.mi('lmsk-up', '오프라인 응답 올리기(엑셀)', { id: s.survey_id }) : '') + LW4.mi('lmsk-copy', '복사', { id: s.survey_id }) + (canOp && !s.n_resp ? LW4.mi('lmsk-del', '삭제', { id: s.survey_id }) : ''))}`}</div></div>`).join('') || '<div class="empty">조건에 맞는 설문이 아직 없습니다. 「템플릿으로 새 설문」으로 시작하세요.</div>'}</div>`;

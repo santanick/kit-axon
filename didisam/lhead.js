@@ -35,7 +35,11 @@
     const b = document.body; if (!b || b.classList.contains('lapp')) return; const lm = document.getElementById('lm'); if (!lm) return;
     const sub = lm.querySelector(':scope > section.sub'); if (!sub) return;
     let H = null; try { H = SITE().hp || null; } catch (e) { } if (!H) return; css();
-    const T = H.theme || {}; const L = H.lhead || {}; const { k, top } = keyOf(); const c = (L[k] && typeof L[k] === 'object') ? L[k] : {};
+    const T = H.theme || {}; const L = H.lhead || {}; const { k, top } = keyOf(); let c = (L[k] && typeof L[k] === 'object') ? L[k] : {};
+    /* v43 R5(126): 머리글을 따로 정하지 않은 학습 페이지는 연두 빈 띠 대신 페이지 성격에 맞는 사진 띠(기관이 색 · 사진을 고르면 그 값) */
+    const AUTO = { shop: 'lec-01', courses: 'lec-01', notice: 'off-05', comm: 'grp-03', textbooks: 'lib-02', books: 'lib-02', my: 'lap-03', tutorials: 'lap-06', badges: 'cor-07', diag: 'dsk-05', cal: 'off-07', fac: 'cls-02' };
+    const auto = !c.img && !c.tone && AUTO[String(k).split('/')[0]] ? `img/stock/${AUTO[String(k).split("/")[0]]}.webp` : '';
+    if (auto) c = Object.assign({}, c, { img: auto });
     const tone = c.img && okImg(c.img) ? 'img' : ['plain', 'soft', 'brand'].includes(c.tone) ? c.tone : 'soft';
     sub.classList.add('llh'); ['plain', 'soft', 'brand', 'img'].forEach(x => sub.classList.toggle('llh-' + x, x === tone));
     sub.classList.toggle('llh-c', c.al === 'c'); sub.classList.toggle('llh-s', c.h === 's'); sub.classList.toggle('llh-l', c.h === 'l'); sub.dataset.llk = k;
@@ -52,8 +56,8 @@
     const tt = c.t || mn;
     if (h1 && tt) { if (h1.dataset.llo == null) h1.dataset.llo = h1.textContent; h1.textContent = String(tt).slice(0, 60); const cr = sub.querySelector('.crumb'); const last = cr && cr.lastChild; const lo = String(h1.dataset.llo || '').trim();
       if (last && last.nodeType === 3 && lo) { const tx = last.textContent; const i = tx.lastIndexOf(lo); if (i >= 0 && !tx.slice(i + lo.length).trim()) last.textContent = tx.slice(0, i) + String(tt).slice(0, 60); } }
-    let d = sub.querySelector('.in > p.llh-d') || [...inn.children].find(x => x.tagName === 'P' && !x.classList.contains('crumb'));
-    if (c.d) { if (!d) { d = document.createElement('p'); inn.appendChild(d); } d.classList.add('llh-d'); d.textContent = String(c.d).slice(0, 200); }
+    let d = sub.querySelector('.in > p.llh-d, .lph-t > p.llh-d') || [...inn.children].find(x => x.tagName === 'P' && !x.classList.contains('crumb'));
+    if (c.d) { if (!d) { d = document.createElement('p'); (sub.querySelector('.lph-t h1') ? sub.querySelector('.lph-t h1').parentNode : inn).insertBefore(d, (sub.querySelector('.lph-t h1') || {}).nextSibling || null); } d.classList.add('llh-d'); d.textContent = String(c.d).slice(0, 200); }
     else if (d) d.classList.add('llh-d');
   }
   window.llhApply = apply;

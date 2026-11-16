@@ -40,6 +40,12 @@
         let q = pm.get(p.member_no); if (!q) { q = { person_id: W3.uid(), member_no: p.member_no, lmsa: 1 }; d.persons.push(q); pm.set(p.member_no, q); }
         if (!q.lmsa) { q.secs = [...new Set([...(q.secs || []).filter(id => !A.sections.some(x => x.section_id === id)), ...reg])]; return; }
         Object.assign(q, { unit_code: p.unit_code || '', grade_year: p.grade_year || null, ekind: reg.length || !aud.length ? 'regular' : 'audit', secs: reg.length ? reg : aud }); });
+      /* v43 R2: 시연 기관은 학사 분반에도 지난 차시 출결을 결정적으로 채운다(분반 출석 표가 「0%」로 비던 것). 빈 기관 · 운영 서버는 그대로 */
+      if (!(S.org && S.org.empty) && !W3.live()) { const M = ['code', 'qr', 'nfc', 'ble', 'photo']; const t0 = Date.now();
+        d.sections.filter(x => x.lmsa && !x.attSeed).forEach((w, si) => { w.attSeed = 1; const reg = d.persons.filter(p => p.ekind === 'regular' && (p.secs || []).includes(w.section_id));
+          d.sessions.filter(x => x.section_id === w.section_id && x.kind !== 'holiday' && Date.parse(x.starts_at) < t0).forEach(x => reg.forEach((p, j) => { const k = x.session_id + '|' + p.person_id; if (d.att[k]) return; const r = (x.week_no * 7 + j * 13 + si * 5) % 29; const weak = (j + si) % 11 === 4;
+            const st = weak ? (r < 9 ? 'absent' : r < 13 ? 'late' : 'present') : r === 0 ? 'absent' : r < 3 ? 'late' : r === 3 ? 'excused' : 'present';
+            d.att[k] = { status: st, method: st === 'excused' ? 'manual' : x.kind === 'online' ? 'online' : M[(x.week_no + j) % 5], evidence: { at: x.starts_at }, reason: st === 'excused' ? '병결(진단서 제출)' : null }; })); }); }
     },
     async call(m, p, b) {
       if (W3.live()) {
@@ -70,7 +76,7 @@
     secPick() { const L = W3.cache.sections || []; return L.length > 1 ? `<select data-chg="w3-sec" aria-label="분반 선택">${L.map(s => `<option value="${esc(s.section_id)}" ${s.section_id === UI.w3sec ? 'selected' : ''}>${esc(s.title)}</option>`).join('')}</select>` : ''; },
     mode() { return W3.live() ? tag('운영 서버', 'g') : '<small class="efh-demo" title="서버 없이 이 브라우저에만 저장됩니다">데모: 브라우저에만 저장</small>'; },
     fmt(t) { if (!t) return '—'; const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; },
-    css(name) { if (!document.querySelector(`link[data-w3css="${name}"]`)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = `lms/${name}.css?v=30.0`; l.dataset.w3css = name; document.head.appendChild(l); } }
+    css(name) { if (!document.querySelector(`link[data-w3css="${name}"]`)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = `lms/${name}.css?v=43.3`; l.dataset.w3css = name; document.head.appendChild(l); } }
   };
   ACT['w3-sec'] = el => { UI.w3sec = el.value; W3.drop(); render(); };
   /* 학생 · 행 데이터 접근(데모) */
@@ -98,6 +104,7 @@
     const base = Date.parse('2026-09-07T00:00:00Z'); /* 09:00 KST */
     for (let w = 1; w <= 15; w++) for (const seq of (w === 10 ? [1, 2] : [1])) { const t = base + (w - 1) * 7 * 864e5 + (seq - 1) * 90 * 6e4; d.sessions.push({ session_id: W3.uid(), section_id: sec.section_id, week_no: w, seq, kind: [3, 7, 12].includes(w) ? 'online' : 'class', starts_at: W3.ts(t), ends_at: W3.ts(t + 75 * 6e4), open_at: W3.ts(t), close_at: W3.ts(t + 7 * 864e5), room: '공학관 301', required_sec: 0, extra_study_sec: 0 }); }
     for (let i = 1; i <= 9; i++) d.persons.push({ person_id: W3.uid(), member_no: String(20269000 + i), unit_code: ['CSE', 'BIZ', 'EDU'][i % 3], grade_year: 1 + i % 4, ekind: i === 9 ? 'audit' : 'regular', secs: [sec.section_id] });
+    d.persons.push({ person_id: W3.uid(), member_no: '20269000', unit_code: 'CSE', grade_year: 2, ekind: 'regular', secs: [sec.section_id] }); /* v43 G3: 학습자 체험 계정(상단 띠의 20269000)도 명단에 — 109 학사 LMS 학습자 화면이 비지 않게 */
     d.beacons.push({ beacon_id: 'NFC-ENG301', kind: 'nfc', room: '공학관 301', active: true }, { beacon_id: 'BLE-ENG301', kind: 'ble', room: '공학관 301', active: true });
     /* 지난 차시 출결 · 학습 데모(결정적) */
     const reg = regular(sec.section_id); const M = ['code', 'qr', 'nfc', 'ble', 'photo'];
@@ -250,13 +257,13 @@
     UI.w3gSus = { session_id: last ? last.s.session_id : null, label: last ? `${last.s.week_no}주 ${last.s.seq}차` : '', list: sus.map(x => x.member_no) };
     const todoH = (tod.length ? `오늘 수업 <b>${tod.length}개</b>` : last ? `최근 수업 <b>${last.s.week_no}주 ${last.s.seq}차</b>(${esc(W3.fmt(last.s.starts_at))})` : '아직 지난 수업이 없습니다') + (last ? ` · 결석 의심 <b>${sus.length}명</b>` : '') + (tot.risk ? ` · 결석 1/4 이상 ${tot.risk}명` : '');
     const todoC = window.EFH ? EFH.todo(todoH, sus.length ? `<button class="btn sm pri" data-act="w3g-notify">결석 알림 보내기</button>` : '') : '';
-    const head2 = `<div class="kpis">${kpi('수강생', R.students.length + '명', `청강생 ${R.audit_excluded}명 출석 대상 제외`)}${kpi('평균 출석률', (tot.past ? Math.round(100 * tot.p / tot.past) : 100) + '%', '출석 · 지각 · 공결 인정')}${kpi('결석 1/4 이상', tot.risk + '명', '학칙상 F 처리 주의', tot.risk ? 'warn' : '')}${kpi('차시', ss.length + '개', `휴강 ${ss.filter(s => s.kind === 'holiday').length} · 보강 ${ss.filter(s => s.makeup_of).length}`)}</div>`;
+    const head2 = `<div class="kpis">${kpi('수강생', R.students.length + '명', `청강생 ${R.audit_excluded}명 출석 대상 제외`)}${kpi('평균 출석률', tot.past ? Math.round(100 * tot.p / tot.past) + '%' : '—', tot.past ? '출석 · 지각 · 공결 인정' : '아직 출석을 받지 않았습니다')}${kpi('결석 1/4 이상', tot.risk + '명', '학칙상 F 처리 주의', tot.risk ? 'warn' : '')}${kpi('차시', ss.length + '개', `휴강 ${ss.filter(s => s.kind === 'holiday').length} · 보강 ${ss.filter(s => s.makeup_of).length}`)}</div>`;
     const dots = window.EFH ? EFH.dots : () => ''; const mi = window.EFH ? EFH.mi : () => '';
     /* 분반 목록(학기 기준) */
     const SL = (W3.cache.sections || [sec]).slice(0, 12); /* 분반이 많으면 앞 12개만(나머지는 위 분반 선택으로) */
     const secRows = SL.map(s => { const Q = s.section_id === sec.section_id ? R : W3.get('roster:' + s.section_id, 'GET', '/api/lms/g/roster', { section_id: s.section_id }); const ok = Q && !Q.__err;
       const t2 = ok ? Q.students.reduce((a, x) => { const u = x.sum; a.p += u.present + u.late + u.excused; a.past += u.past; a.risk += u.past && (u.absent + u.unrecorded + Math.floor(u.late / 3)) >= Math.ceil(u.past / 4) ? 1 : 0; return a; }, { p: 0, past: 0, risk: 0 }) : null;
-      return [`<b>${esc(s.title)}</b>`, ok ? Q.students.length + '명' : '…', t2 ? (t2.past ? Math.round(100 * t2.p / t2.past) : 100) + '%' : '…', t2 ? (t2.risk ? tag(t2.risk + '명', 'r') : '0') : '…', s.section_id === sec.section_id ? tag('보는 중', 'g') : `<button class="btn sm" data-act="w3g-secgo" data-v="${esc(s.section_id)}">열기</button>`]; });
+      return [`<b>${esc(s.title)}</b>`, ok ? Q.students.length + '명' : '…', t2 ? (t2.past ? Math.round(100 * t2.p / t2.past) + '%' : '<span class="mini">— 아직 출석을 받지 않았습니다</span>') : '…', t2 ? (t2.risk ? tag(t2.risk + '명', 'r') : '0') : '…', s.section_id === sec.section_id ? tag('보는 중', 'g') : `<button class="btn sm" data-act="w3g-secgo" data-v="${esc(s.section_id)}">열기</button>`]; });
     const secCard = `<div class="card"><div class="ch"><b>분반별 출석</b><small>${esc(sec.term_id)} 학기</small><span class="efh-acts">${dots([mi('w3g-online', '온라인 출석 반영(진도율 · 차시 기간)'), mi('w3g-csv', '학교 양식 엑셀(CSV) 내려받기'), mi('w3g-print', '출석부 인쇄'), mi('w3g-full', UI.w3gFull ? '학기 전체 출석부 닫기' : '학기 전체 출석부 보기')], '분반 출석 다른 작업')}</span></div>${table(['분반', '수강생', '평균 출석률', '결석 1/4 이상', ''], secRows)}</div>`;
     /* 차시 고르기 */
     const recent = past.slice(-4).reverse();

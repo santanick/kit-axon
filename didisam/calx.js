@@ -12,8 +12,8 @@
     corp: ['집합 교육', '워크숍', '법정교육 마감', '회의'], public: ['집합 교육', '모집 마감', '평가', '회의'], lifelong: ['특강', '모집 마감', '학습비 반환 기한', '회의'],
     voc: ['훈련', 'HRD-Net 보고 기한', '평가', '상담']
   };
-  const COL = { 개강: '#00A224', 종강: '#B3121B', 회차: '#4C77C5', 시험: '#B3121B', 과제: '#5C74F6', 라이브: '#7D5CB5', 진단: '#E8622A', 수업: '#4C77C5' };
-  const UCOL = ['#E5487A', '#14A3A3', '#FF9800', '#6447F5', '#109BF1'];
+  const COL = { 개강: 'var(--gr700,#00862D)', 종강: 'var(--bad,#B3121B)', 회차: 'var(--c-data,#00A832)', 시험: 'var(--bad,#B3121B)', 과제: 'var(--co500,#E8622A)', 라이브: 'var(--gr800,#05612A)', 진단: 'var(--co700,#B5470F)', 수업: 'var(--c-data,#00A832)' }; /* v43 E1: 파랑 · 보라 → 그린 · 코랄 토큰 */
+  const UCOL = ['var(--co500,#E8622A)', '#14A3A3', '#FF9800', 'var(--gr800,#05612A)', 'var(--n500,#736B5F)'];
   const kinds = () => KINDS[(S && S.org && S.org.type) || 'adult'] || KINDS.adult;
   /* v37.4 학습자 캘린더(lcal.js): 직접 넣은 일정 중 '학습자에게 보이기'가 켜진 것만 게시본(lsSnapshot.calx)에 싣는다. 내부 일정 종류는 기본 꺼짐. */
   const INNER = ['회의', '상담', 'HRD-Net 보고 기한', '학습비 반환 기한'];
@@ -50,7 +50,7 @@
   function monthHTML(E) { const cur = UI.cxD || today(); const ym = cur.slice(0, 7); const first = dd(ym + '-01'); const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(); const B = byDate(E);
     let h = WD.split('').map(w => `<div class="cx-wd">${w}</div>`).join('') + Array(first.getDay()).fill('<div class="cx-day x"></div>').join('');
     for (let i = 1; i <= days; i++) { const d = `${ym}-${pad(i)}`; const L = B[d] || [];
-      h += `<div class="cx-day ${d === today() ? 'td' : ''} ${d === UI.cxSel ? 'sel' : ''}" data-cxday="${d}"><button type="button" class="cx-dn" data-act="cx-day" data-v="${d}" aria-label="${fmt(d)} 일정 ${L.length}개 — 보기 · 추가">${i}</button>${L.slice(0, 3).map(chip).join('')}${L.length > 3 ? `<button type="button" class="cx-more" data-act="cx-day" data-v="${d}">+${L.length - 3}개</button>` : ''}</div>`; }
+      h += `<div class="cx-day ${d === today() ? 'td' : ''} ${d === UI.cxSel ? 'sel' : ''}" data-cxday="${d}"><button type="button" class="cx-dn" data-act="cx-day" data-v="${d}" aria-label="${fmt(d)} 일정 ${L.length}개 — 보기 · 추가">${i}</button>${L.slice(0, 3).map(chip).join('')}${L.length > 3 ? `<button type="button" class="cx-more" data-act="cx-day" data-v="${d}">+${L.length - 3}개</button>` : ''}${L.length ? `<span class="cx-dots" aria-hidden="true">${L.slice(0, 4).map(e => `<i style="background:${kcol(e.kind)}"></i>`).join('')}</span>` : ''}</div>`; }
     const tail = (7 - (first.getDay() + days) % 7) % 7; h += Array(tail).fill('<div class="cx-day x"></div>').join('');
     return `<div class="cx-month" role="grid" aria-label="${+ym.slice(0, 4)}년 ${+ym.slice(5)}월">${h}</div>`; }
   function weekHTML(E) { const cur = UI.cxD || today(); const s0 = addD(cur, -dd(cur).getDay()); const B = byDate(E);
@@ -123,6 +123,8 @@
     toast(`${t('cls')}에서 들어온 일정은 ${t('cls')} 설정에서 날짜를 바꿉니다.`, 'warn'); return false; }
   window.cxMove = cxMove;
   document.addEventListener('dragstart', e => { const x = e.target.closest && e.target.closest('[data-cxdrag]'); if (!x) return; e.dataTransfer.setData('text/plain', 'cx:' + x.dataset.cxdrag); e.dataTransfer.effectAllowed = 'move'; x.classList.add('drag'); });
+  // v43 F1: 월간 칸 빈 곳을 눌러도 그날 일정 목록(dayOpen)이 크게 펼쳐집니다(휴대폰에서는 칩 대신 점이라 칸 누르기가 주 동작)
+  document.addEventListener('click', e => { const c = e.target.closest && e.target.closest('.cx-day[data-cxday]'); if (!c || e.target.closest('[data-act],a,button,input')) return; dayOpen(c.dataset.cxday); });
   document.addEventListener('dragend', e => { document.querySelectorAll('.cx-ev.drag, [data-cxday].over').forEach(x => x.classList.remove('drag', 'over')); });
   document.addEventListener('dragover', e => { const c = e.target.closest && e.target.closest('[data-cxday]'); if (!c) return; e.preventDefault(); document.querySelectorAll('[data-cxday].over').forEach(x => x !== c && x.classList.remove('over')); c.classList.add('over'); });
   document.addEventListener('drop', e => { const c = e.target.closest && e.target.closest('[data-cxday]'); if (!c) return; const v = e.dataTransfer.getData('text/plain'); if (!v.startsWith('cx:')) return; e.preventDefault(); c.classList.remove('over'); cxMove(v.slice(3), c.dataset.cxday); });
@@ -144,26 +146,28 @@
   st.textContent = `.cx{display:flex;flex-direction:column;gap:12px;min-width:0}
 .cx-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cx-bar .btn{min-height:44px}.cx-ttl{font-size:17px;min-width:90px;text-align:center}.cx-bar .sp{flex:1}
 .cx-v button{min-height:44px;min-width:52px}
-.cx-month{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid #EAEBEB;border-radius:14px;overflow:hidden;background:#fff}
-.cx-wd{padding:8px;font-size:13px;font-weight:700;color:#6C6C6C;background:#F6F7F7;text-align:center}
-.cx-day{min-height:112px;border-top:1px solid #EAEBEB;border-left:1px solid #F1F2F2;padding:4px;display:flex;flex-direction:column;gap:3px;min-width:0;cursor:pointer}
-.cx-day.x{background:#FBFCFC;cursor:default}.cx-day:hover:not(.x){background:#F7F8FF}.cx-day.td .cx-dn{background:#5C74F6;color:#fff}.cx-day.sel{outline:2px solid #A5B0FA;outline-offset:-2px}.cx-day.over,.cx-wcol.over,.cx-lg.over{background:#EAEDFF;outline:2px dashed #5C74F6;outline-offset:-3px}
+.cx-month{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface,var(--surface,#fff))}
+.cx-wd{padding:8px;font-size:13px;font-weight:700;color:var(--t-sub);background:var(--surface2);text-align:center}
+.cx-day{min-height:112px;border-top:1px solid var(--line);border-left:1px solid var(--line);padding:4px;display:flex;flex-direction:column;gap:3px;min-width:0;cursor:pointer}
+.cx-day.x{background:var(--surface2);cursor:default}.cx-day:hover:not(.x){background:var(--gr50)}.cx-day.td .cx-dn{background:var(--gr700);color:#fff}html[data-theme=dark] .cx-day.td .cx-dn{color:var(--on-pr,#04140A)}.cx-day.sel{outline:2px solid var(--gr600);outline-offset:-2px}.cx-day.over,.cx-wcol.over,.cx-lg.over{background:var(--gr50);outline:2px dashed var(--gr700);outline-offset:-3px}
 .cx-dn{align-self:flex-start;min-width:32px;height:32px;border:0;border-radius:50%;background:none;font:inherit;font-size:14px;font-weight:700;cursor:pointer;color:inherit}
-.cx-ev{display:block;width:100%;text-align:left;border:0;border-left:3px solid var(--k);background:color-mix(in srgb,var(--k) 12%,#fff);color:#2A2B2B;border-radius:6px;padding:3px 6px;font:inherit;font-size:12.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;min-height:24px}
+.cx-ev{display:block;width:100%;text-align:left;border:0;border-left:3px solid var(--k);background:color-mix(in srgb,var(--k) 12%,var(--surface,#fff));color:var(--g900);border-radius:6px;padding:3px 6px;font:inherit;font-size:12.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;min-height:24px}
 .cx-ev.dr{cursor:grab}.cx-ev.drag{opacity:.45}.cx-ev i{font-style:normal;font-weight:700;margin-right:4px}
-.cx-more{border:0;background:none;font:inherit;font-size:12px;color:#4257D7;text-align:left;cursor:pointer;padding:2px 4px}
+.cx-more{border:0;background:none;font:inherit;font-size:12px;color:var(--t-mag);text-align:left;cursor:pointer;padding:2px 4px;min-height:24px}
+/* v43 F1 월간 칸: 날짜 · 일정 칩은 44px 예외(대표님 결정), WCAG 2.5.8 최소 24px — 날짜를 누르면 그날 목록이 크게 펼쳐짐 */
+.cx-dots{display:none}
 .cx-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
-.cx-wcol{background:#fff;border:1px solid #EAEBEB;border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;min-height:260px;min-width:0}.cx-wcol.td{border-color:#5C74F6}
-.cx-wh{display:flex;justify-content:space-between;border:0;background:#F6F7F7;border-radius:8px;padding:8px;font:inherit;cursor:pointer;min-height:44px;align-items:center}
-.cx-none{color:#AAABAB;font-size:12px;padding:4px}.cx-add1{margin-top:auto;border:1px dashed #C8C9C9;background:none;border-radius:8px;min-height:40px;font-size:18px;color:#6C6C6C;cursor:pointer}
+.cx-wcol{background:var(--surface,var(--surface,#fff));border:1px solid var(--line);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;min-height:260px;min-width:0}.cx-wcol.td{border-color:var(--gr700)}
+.cx-wh{display:flex;justify-content:space-between;border:0;background:var(--surface2);border-radius:8px;padding:8px;font:inherit;cursor:pointer;min-height:44px;align-items:center}
+.cx-none{color:var(--n400);font-size:12px;padding:4px}.cx-add1{margin-top:auto;border:1px dashed var(--n300);background:none;border-radius:8px;min-height:40px;font-size:18px;color:var(--t-sub);cursor:pointer}
 .cx-list{display:flex;flex-direction:column;gap:10px}.cx-lg{display:flex;flex-direction:column;gap:4px}
-.cx-lh{align-self:flex-start;border:0;background:none;font:inherit;font-weight:800;font-size:15px;padding:6px 0;cursor:pointer;min-height:40px}.cx-lh.td{color:#4257D7}
-.cx-lr{display:grid;grid-template-columns:10px auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:left;width:100%;border:1px solid #EAEBEB;background:#fff;border-radius:12px;padding:10px 12px;font:inherit;cursor:pointer;min-height:52px}
-.cx-lr:hover{border-color:#A5B0FA}.cx-lr>i{width:10px;height:10px;border-radius:50%;grid-row:1/3}.cx-lk{font-size:12px;font-weight:700;color:#6C6C6C;background:#F6F7F7;border-radius:6px;padding:2px 6px}.cx-lr b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.cx-lr small{grid-column:2/4;color:#808181;font-size:13px}
-.cx-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:#4C4D4D}.cx-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-.cx-pub{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:600}.cx-pub input{width:20px;height:20px}.cx-pub small{color:#808181;font-weight:400}
+.cx-lh{align-self:flex-start;border:0;background:none;font:inherit;font-weight:800;font-size:15px;padding:6px 0;cursor:pointer;min-height:40px}.cx-lh.td{color:var(--t-mag)}
+.cx-lr{display:grid;grid-template-columns:10px auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:left;width:100%;border:1px solid var(--line);background:var(--surface,var(--surface,#fff));border-radius:12px;padding:10px 12px;font:inherit;cursor:pointer;min-height:52px}
+.cx-lr:hover{border-color:var(--gr600)}.cx-lr>i{width:10px;height:10px;border-radius:50%;grid-row:1/3}.cx-lk{font-size:12px;font-weight:700;color:var(--t-sub);background:var(--surface2);border-radius:6px;padding:2px 6px}.cx-lr b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.cx-lr small{grid-column:2/4;color:var(--t-sub);font-size:13px}
+.cx-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--g900)}.cx-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.cx-pub{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:600}.cx-pub input{width:20px;height:20px}.cx-pub small{color:var(--t-sub);font-weight:400}
 .cx-form .form2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .d26-evl .cx-lr{margin-top:6px;grid-template-columns:10px minmax(0,1fr)}.d26-evl .cx-lk{display:none}.d26-evl .cx-lr b{white-space:normal;font-size:13.5px}
-@media (max-width:640px){.cx-day{min-height:64px;padding:2px}.cx-ev{font-size:0;height:8px;min-height:8px;padding:0;border-left-width:0;background:var(--k);border-radius:4px}.cx-ev i{display:none}.cx-week{grid-template-columns:1fr}.cx-wcol{min-height:0}.cx-form .form2{grid-template-columns:1fr 1fr}.cx-bar .sp{display:none}}`;
+@media (max-width:640px){.cx-day{min-height:64px;padding:2px;align-items:center}.cx-dn{align-self:stretch;min-height:32px;border-radius:10px}.cx-ev,.cx-more{display:none}.cx-dots{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;pointer-events:none}.cx-dots i{width:6px;height:6px;border-radius:50%}.cx-week{grid-template-columns:1fr}.cx-wcol{min-height:0}.cx-form .form2{grid-template-columns:1fr 1fr}.cx-bar .sp{display:none}}`;
   (document.head || document.documentElement).appendChild(st);
 })();

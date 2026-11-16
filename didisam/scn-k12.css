@@ -19,7 +19,7 @@
 .k-st button.on.g{background:#067647;border-color:#067647}
 .k-calh{display:flex;align-items:center;gap:6px;margin-bottom:8px}.k-calh b{flex:1;text-align:center;font-size:14px}
 .k-calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center}
-.k-calg em{font-style:normal;font-size:11px;color:var(--muted)}
+.k-calg em{font-style:normal;font-size:12px;color:var(--muted)}
 .k-calg button{position:relative;border:0;background:transparent;color:inherit;padding:7px 0;border-radius:6px;cursor:pointer;font-size:13px}
 .k-calg button i{position:absolute;left:50%;bottom:2px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor}
 .k-calg button.td{font-weight:800}
@@ -27,20 +27,98 @@
 .k-tt{display:grid;gap:8px;grid-template-columns:repeat(7,minmax(0,1fr))}.k-tt .card{margin:0;padding:10px}
 .k-bars{display:flex;align-items:flex-end;gap:6px;height:110px;margin-bottom:14px}
 .k-bar{flex:1;max-width:40px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
-.k-bar i{display:block;width:100%;min-height:2px;background:var(--ink,#222);border-radius:4px 4px 0 0}.k-bar small{font-size:11px;color:var(--muted)}
+.k-bar i{display:block;width:100%;min-height:2px;background:var(--c-data,#00C53B);border-radius:4px 4px 0 0}.k-bar small{font-size:12px;color:var(--muted)}
 @media (max-width:900px){.k-split.has,.k-att{grid-template-columns:minmax(0,1fr)}.k-tt{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.k-grid{grid-template-columns:minmax(0,1fr)}}
 .linkb{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer;text-align:left}
 .k-todo{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.k-todo p{margin:0}
 .k-dl{display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px 12px;margin:0 0 14px}.k-dl dt{color:var(--muted);font-size:13px}.k-dl dd{margin:0}
-.k-r{color:#d92d20}.k-sel{align-items:center}.k-date input[type=date]{width:auto}.k-sum{margin-bottom:14px}
+.k-r{color:var(--t-bad,#B3001F)}.k-sel{align-items:center}.k-date input[type=date]{width:auto}.k-sum{margin-bottom:14px}
 @media (max-width:900px){.k-split.has .k-card{order:-1}}
 @media (max-width:860px){.k-attc table.mcard>tbody>tr>td[data-l]{flex:1 1 100%}.k-st{display:flex;width:100%;gap:6px}.k-st button{flex:1 1 0;padding:9px 0;font-size:13.5px}}
 .k-tg{border:0;padding:0;margin:8px 0;display:flex;flex-wrap:wrap;gap:4px 12px}.k-tg legend{margin-bottom:4px}
 /* v38 F5 K14: 출석부 날짜는 브라우저 언어와 상관없이 한국식(2026. 11. 11.)으로 보인다 — 실제 입력 칸은 위에 겹쳐 누르면 달력이 열린다 */
-.k-dd{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border:1px solid var(--g300,#d8dbe0);border-radius:8px;background:#fff;font-weight:600}
+.k-dd{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border:1px solid var(--g300,#d8dbe0);border-radius:8px;background:var(--surface,#fff);font-weight:600}
 .k-dd input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0}
 .k-dd input[type=date]::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
 .k-auto{list-style:none;margin:0;padding:0;display:grid;gap:2px}.k-auto li{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line,#eee)}.k-auto li:last-child{border-bottom:0}.k-auto li>div{flex:1;min-width:0}.k-auto b{display:block;font-size:14px}.k-auto small{color:var(--muted);font-size:12.5px}
 .k-sw{flex:none;position:relative;width:42px;height:24px;border-radius:12px;border:0;background:#d0d5dd;cursor:pointer;padding:0;transition:background .15s}.k-sw i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s}.k-sw[aria-checked=true]{background:var(--ink,#222)}.k-sw[aria-checked=true] i{left:21px}.k-sw:focus-visible{outline:2px solid var(--ink,#222);outline-offset:2px}
 .k-auto.brief li{padding:6px 0}.k-auto.brief b{font-size:13.5px;font-weight:600}
+/* v43 E2 — 성적 · 상담 · 수납 · 학원 현황(L43 등록 화면). 토큰만 사용 */
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) .card{border-radius:var(--r-card,20px);border:1px solid var(--hair);box-shadow:var(--sh1);background:var(--surface)}
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) .btn,#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) select,#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) input:not([type=checkbox]):not([type=radio]){min-height:44px}
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) .btn.sm{display:inline-flex;align-items:center;padding-top:0;padding-bottom:0}
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) .k-todo{border-left:0;padding:16px 20px;background:var(--gr50);border-color:color-mix(in srgb,var(--gr600) 25%,transparent)}
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) .k-warn{border-radius:16px}
+#main.l43[data-l43=crmstat] .k-sum{background:var(--surface2);box-shadow:none}
+#main.l43[data-l43=crmstat] .k-sum .k-p{font-size:15px;color:var(--g800)}
+#main.l43[data-l43=crmstat] .k-bar i{border-radius:6px 6px 0 0}
+#main.l43[data-l43=crmstat] .k-sw{background:var(--g400)}#main.l43[data-l43=crmstat] .k-sw[aria-checked=true]{background:var(--gr700,#00862D)}
+#main.l43[data-l43=crmstat] .k-auto li{border-color:var(--hair)}
+/* 자동 운영 스위치: 보이는 막대 24px, 누르는 영역 44px */
+#main.l43[data-l43=crmstat] .k-sw{box-sizing:border-box;height:44px;padding:10px 0;background-clip:content-box}
+#main.l43[data-l43=crmstat] .k-sw i{top:13px}
+#main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) select{border-radius:12px;border:1px solid var(--hair);background-color:var(--surface);font-weight:600}
+/* v43 R2 — 원생: 학년 분포 · 칩 필터 · 행 정돈 */
+.k-gdist{padding:4px 0 14px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.k-gh{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}.k-gh b{font-size:15px}.k-gh small{color:var(--muted);font-size:12.5px}
+.k-gb{display:flex;align-items:flex-end;gap:8px;height:96px}
+.k-gc{flex:1;min-width:34px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;border:0;background:transparent;cursor:pointer;font:inherit;padding:0;color:var(--ink)}
+.k-gc i{display:block;width:100%;max-width:44px;border-radius:7px 7px 3px 3px;background:color-mix(in srgb,var(--g,#16a34a) 30%,transparent);min-height:4px}
+.k-gc.on i,.k-gc:hover i{background:var(--g,#16a34a)}.k-gc b{font-size:12px;font-variant-numeric:tabular-nums}.k-gc span{font-size:12px;color:var(--muted)}
+.k-fbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.k-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.k-chips2{margin-bottom:12px}
+.k-chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:0;box-shadow:inset 0 0 0 1px var(--line);background:var(--card,#fff);font:inherit;font-size:13.5px;cursor:pointer;color:var(--ink);white-space:nowrap}
+.k-chip b{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}.k-chip.on{background:var(--ink,#111);color:var(--card,#fff);box-shadow:none}.k-chip.on b{color:inherit;opacity:.75}
+.k-chips2 .k-chip{height:30px;font-size:13px}.k-sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+.k-q:not(.clb-th){margin-left:auto}.k-q:not(.clb-th) input{min-width:220px;height:36px;border-radius:999px!important}
+.k-who{display:inline-flex!important;align-items:center;gap:10px;text-align:left;text-decoration:none!important}
+.k-who span:last-child{display:flex;flex-direction:column}.k-who b{font-size:14px;color:var(--ink)}.k-who small{font-size:12px;color:var(--muted);font-weight:400}
+.k-av.l43-av{width:32px;height:32px;flex:none;margin:0}
+.k-gy{display:inline-block;padding:3px 9px;border-radius:7px;background:var(--soft,#f1f3f5);font-size:12.5px;font-weight:600}
+.k-cc{display:inline-block;margin:2px 4px 2px 0;padding:3px 9px;border-radius:999px;font-size:12.5px;background:color-mix(in srgb,var(--g,#16a34a) 10%,transparent);color:var(--g-ink,#15803d);white-space:nowrap}
+.k-more{display:flex;align-items:center;justify-content:space-between;padding:12px 2px 0}
+.k-ccs{display:flex;gap:4px;flex-wrap:wrap;align-items:center}.k-ccs .k-cc{margin:0}
+.k-gb{justify-content:flex-start;gap:18px}.k-gc{flex:0 0 56px}
+/* v43 R2 — 출석부: 요약 막대 + 원생 칩 격자 */
+.k-asum{display:flex;height:10px;border-radius:9px;overflow:hidden;gap:2px;background:var(--soft,#eef0f2);margin:2px 0 8px}
+.k-asum i,.k-alg i{display:block}.t-ok{background:var(--g,#16a34a)}.t-warn{background:#e0a325}.t-bad{background:var(--bad,#c0262d)}.t-none{background:var(--line2,#d5dae0)}.t-etc{background:#7c8a99}
+.k-alg{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:12px}.k-alg span{display:inline-flex;align-items:center;gap:5px}.k-alg i{width:9px;height:9px;border-radius:3px}.k-alg b{color:var(--ink)}
+.k-roll{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.k-rc{border-radius:12px;padding:10px;box-shadow:inset 0 0 0 1px var(--line);background:var(--card,#fff);display:flex;flex-direction:column;gap:8px}
+.k-rc.t-ok,.k-rc.t-warn,.k-rc.t-bad,.k-rc.t-etc{background:var(--card,#fff)}
+.k-rc.t-bad{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--bad,#c0262d) 45%,transparent)}.k-rc.t-warn{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,#e0a325 50%,transparent)}
+.k-rch{display:flex;align-items:center;gap:8px}.k-rcn{display:flex;flex-direction:column;min-width:0;flex:1}.k-rcn b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.k-rcn small{font-size:12px;color:var(--muted)}
+.k-rcm{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;padding:4px 6px;border-radius:6px}.k-rcm:hover{background:var(--soft,#f1f3f5)}
+.k-rc .k-st{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}.k-rc .k-st button{min-height:30px;padding:0 2px;font-size:12.5px}
+.k-rsn{height:32px!important;font-size:13px!important}
+/* v43 R2 — 성적: 수업 · 시험 칩 · 점수 분포 · 점수 막대 */
+.k-exc{margin:0 0 6px}
+.k-exd{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:14px;align-items:end;padding:6px 0 14px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.k-exb{display:flex;gap:10px;height:110px;align-items:flex-end}
+.k-exb>div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.k-exb i{display:block;width:100%;max-width:60px;min-height:4px;border-radius:7px 7px 3px 3px;background:color-mix(in srgb,var(--g,#16a34a) 45%,transparent)}.k-exb i.lo{background:color-mix(in srgb,var(--bad,#c0262d) 55%,transparent)}.k-exb i.hi{background:var(--g,#16a34a)}
+.k-exb b{font-size:12.5px;font-variant-numeric:tabular-nums}.k-exb span{font-size:11.5px;color:var(--muted)}
+.k-exs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.k-exs div{padding:10px;border-radius:10px;background:var(--soft,#f4f5f7);display:flex;flex-direction:column}.k-exs small{font-size:12px;color:var(--muted)}.k-exs b{font-size:20px;font-variant-numeric:tabular-nums}
+.k-sb{display:block;width:140px;height:8px;border-radius:9px;background:var(--soft,#eef0f2);overflow:hidden}.k-sb i{display:block;height:100%;background:var(--g,#16a34a);opacity:.7}.k-sb i.lo{background:var(--bad,#c0262d)}.k-sb i.hi{opacity:1}
+.k-rk{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--soft,#f1f3f5);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}.k-rk.top{background:color-mix(in srgb,var(--g,#16a34a) 14%,transparent);color:var(--g-ink,#15803d)}
+@media (max-width:900px){.k-exd{grid-template-columns:1fr}}
+/* v43 R2 — 학원 현황: 날짜 칩 · 자동 운영 2열 */
+.k-days{margin:0 0 12px}.k-day{flex-direction:row;gap:6px}.k-day small{font-size:11.5px;opacity:.7}
+.k-autog .k-auto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;list-style:none;padding:0;margin:0}
+.k-autog .k-auto li{padding:12px 14px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--line);border:0!important}
+@media (max-width:900px){.k-autog .k-auto{grid-template-columns:1fr}}
+/* v43 R7 2차: 점수 칸은 읽기 모양(테두리 없음 · 굵은 숫자), 누르거나 고칠 때만 입력 칸 / 지난 시험 드롭다운 */
+#main .k-num.r7-ro{border:1px solid transparent!important;background:transparent!important;box-shadow:none!important;font-size:16px;font-weight:800;width:72px;border-radius:10px;-moz-appearance:textfield}
+#main .k-num.r7-ro::-webkit-inner-spin-button,#main .k-num.r7-ro::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+#main tr:hover .k-num.r7-ro,#main .k-num.r7-ro:focus{border-color:var(--hair,#D9D2C5)!important;background:var(--surface,#fff)!important}
+#main .k-num.r7-ro:focus{border-color:var(--gr600,#16A34A)!important;box-shadow:0 0 0 3px var(--gr50,#E8F5EC)!important}
+#main select.r7-exs{min-height:40px;border-radius:999px;padding:0 34px 0 14px;font-size:14px;font-weight:700;border:1px dashed var(--hair,#D9D2C5)}
+/* v43 R6: 출석부 날짜 칩 */
+.k-days{display:flex;gap:6px;flex-wrap:wrap}
+.k-day{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:52px;min-height:48px;padding:4px 8px;border:0;border-radius:12px;background:var(--surface2,#f2f4f3);color:var(--ink);font:inherit;cursor:pointer}
+.k-day small{font-size:12px;color:var(--muted);font-weight:600}.k-day b{font-size:14px}
+.k-day.td{box-shadow:inset 0 0 0 1.5px var(--pr,#00c53b)}.k-day.on{background:var(--ink);color:var(--surface,#fff)}.k-day.on small{color:inherit;opacity:.75}
+/* v43 S3A 043: 점수 분포 0 구간은 숫자 0 대신 「없음」(흐리게) */
+.k-exb b.z{font-size:12px;font-weight:600;color:var(--mute)}
+.card .ch .k-lnew{margin-left:auto}

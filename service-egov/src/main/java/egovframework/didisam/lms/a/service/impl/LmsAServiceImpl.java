@@ -414,8 +414,10 @@ public class LmsAServiceImpl extends EgovAbstractServiceImpl implements LmsAServ
             if (p == null && mt(RE_UUID, lsid)) { String no = m.selectAccountStudentNo(lsid); if (no != null) p = m.selectPerson(no); }
             if (b == null) {
                 ObjectNode o = Js.F.objectNode();
-                if (p == null) { o.putNull("me"); o.putArray("sections"); o.putArray("requests"); o.putArray("open"); return o; }
-                o.putObject("me").put("member_no", (String) p.get("member_no")); o.setAll((ObjectNode) Js.parse(m.selectPub((String) p.get("person_id")))); return o;
+                /* v43 K2(P2-C4): 명단에 없거나 분반이 없으면 학사 연동 상태 — mod-a.js pubLms와 같은 규칙 */
+                if (p == null) { o.putNull("me"); o.putArray("sections"); o.putArray("requests"); o.putArray("open"); syncState(o); return o; }
+                o.putObject("me").put("member_no", (String) p.get("member_no")); o.setAll((ObjectNode) Js.parse(m.selectPub((String) p.get("person_id"))));
+                JsonNode secs = o.get("sections"); if (secs == null || !secs.isArray() || secs.size() == 0) syncState(o); return o;
             }
             if (p == null) throw err("person");
             String act = T(b, "act"), kind = T(b, "kind"); if (!kind.equals("ta") && !kind.equals("audit")) throw err("req_kind");
@@ -431,4 +433,5 @@ public class LmsAServiceImpl extends EgovAbstractServiceImpl implements LmsAServ
         });
     }
     static ObjectNode okOnly() { return ok(); }
+    private void syncState(ObjectNode o) { try { String j = m.selectSyncState(); if (j != null) o.set("sync", Js.parse(j)); } catch (Exception e) { /* 연동 상태를 못 읽어도 화면은 기본 안내 */ } }
 }

@@ -28,9 +28,9 @@ const BAN = /서두르세요|곧 사라져요|놓치지 마세요|끊겨요|꼴�
   const openDemo = async (o = {}) => { const ctx = await browser.newContext({ viewport: { width: o.w || 390, height: 844 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
     await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
     await p.addInitScript(([sid, k, v, cl]) => { try { sessionStorage.setItem(k || 'didisam.learner.sample', JSON.stringify({ sid, dept: '', id: sid })); localStorage.setItem('didisam.app.instx', '1'); if (cl) localStorage.setItem('didisam.app.classic', '1'); if (v) Object.entries(v).forEach(([a, b]) => localStorage.getItem(a) || localStorage.setItem(a, b)); } catch (e) { } }, [SID, o.sess || '', o.ls || null, !!o.web]);
-    await p.goto(`${base}/learner.html?${o.t ? 't=' + o.t : 'demo=adult'}${o.web ? '' : '&app=1'}${o.q ?? '&mile=1'}${o.h || '#acct'}`, { waitUntil: 'load' }); await p.waitForTimeout(900); return { ctx, p, errs }; };
+    await p.goto(`${base}/learner.html?${o.t ? 't=' + o.t : 'demo=1'}${o.web ? '' : '&app=1'}${o.q ?? '&mile=1'}${o.h || '#acct'}`, { waitUntil: 'load' }); await p.waitForTimeout(900); return { ctx, p, errs }; };
 
-  /* ── 1. 시연판 앱 ── */
+  /* ── 1. 시연판 앱 ── (v43 F2: D-E(ab0ae93)가 학원(adult · k12) 체험판 마일리지를 학원 문구 샘플로 바꿨으므로(의도된 변경), 대학 샘플(국비 · 정정 · 학생식당)을 점검하는 이 테스트는 대학 체험판 ?demo=1로 연다) */
   { const { ctx, p, errs } = await openDemo();
     const me = await p.evaluate(() => { const c = document.querySelector('.lm-me'); return c ? { t: c.textContent, after: !!(c.previousElementSibling && c.previousElementSibling.classList.contains('ls-prof')), ring: !!c.querySelector('.lm-ring') } : null; });
     ok(!!me, '「나」 탭: 내 마일리지 카드'); ok(me && me.after, '카드 위치: 프로필 바로 아래'); ok(me && /잔액/.test(me.t) && /다음 목표/.test(me.t) && /연속 학습 중/.test(me.t) && /소멸 예정/.test(me.t) && /보상 보기/.test(me.t), '카드 구성: 잔액 · 다음 목표 · 연속 · 소멸 예정 · 보상 보기');
@@ -109,11 +109,11 @@ const BAN = /서두르세요|곧 사라져요|놓치지 마세요|끊겨요|꼴�
     const d = JSON.parse(doc); d.milrw = { v: 42, rewards: [{ id: 'mrw_t', kind: 'tuition', title: '학원비 차감', cost: { wonPerP: 1 }, minUse: 100, step: 100, maxUse: { billPct: 30 }, approval: 'guardian', active: true }], redeems: [{ id: 'mrd_x', sid: SID, rewardId: 'mrw_t', points: 100, won: 100, status: 'requested', guardian: 'wait', at: '2026-11-13 10:00', idem: 'k1' }], entries: [{ id: 'me_h', sid: SID, kind: 'hold', points: -100, status: 'posted', redeemId: 'mrd_x', at: '2026-11-13 10:00' }] };
     const { ctx, p, errs } = await openDemo({ t: T, q: '', sess: 'didisam.learner.' + T, ls: { ['didisam.room.' + T]: JSON.stringify(d) }, h: '#mile' });
     const m = await p.evaluate(() => ({ dd: [...document.querySelectorAll('.lm-split dd')].map(x => x.textContent), w: (document.querySelector('#lmWays + .lm-ul') || {}).textContent || '' }));
-    ok(m.dd.join() === '200P,0P,100P', `스튜디오 문서: 잔액 · hold 줄 사용 대기(${m.dd.join()})`); ok(/차시를 끝까지 들으면 2P/.test(m.w) && /하루 20P까지/.test(m.w), `규칙 문장 {P} · 한도(${m.w.trim().slice(0, 40)})`);
+    /* v43 R8 107: 0인 칸은 숫자 대신 문장(예정 없음 · 대기 중인 신청 없음) — J3 결함 「사용 대기 0점」 */ ok(m.dd.join() === '200P,예정 없음,100P', `스튜디오 문서: 잔액 · hold 줄 사용 대기(${m.dd.join()})`); ok(/차시를 끝까지 들으면 2P/.test(m.w) && /하루 20P까지/.test(m.w), `규칙 문장 {P} · 한도(${m.w.trim().slice(0, 40)})`);
     await go(p, '#mile/req'); ok(/보호자 확인 대기/.test(await txt(p, '.lm-q')) && /학원비 차감/.test(await txt(p, '.lm-q')), '신청 guardian:wait → 보호자 확인 대기 · 보상 이름');
     p.once('dialog', x => x.accept()); await p.click('[data-lm="rcancel"]'); await p.waitForTimeout(400);
     const c = await p.evaluate(t => ({ dd: [...document.querySelectorAll('.lm-split dd')].map(x => x.textContent), q: JSON.parse(localStorage.getItem('didisam.room.' + t + '.lpx') || '[]') }), T);
-    const cx = c.q.find(x => x.type === 'mile-redeem-cancel'); ok(c.dd.join() === '300P,0P,0P' && cx && cx.data.id === 'mrd_x' && cx.data.redeemId === 'mrd_x', `스튜디오 신청 취소 → 복원 · lpx {id, redeemId}(${c.dd.join()})`);
+    const cx = c.q.find(x => x.type === 'mile-redeem-cancel'); ok(c.dd.join() === '300P,예정 없음,대기 중인 신청 없음' /* v43 R8: 0 → 문장 */ && cx && cx.data.id === 'mrd_x' && cx.data.redeemId === 'mrd_x', `스튜디오 신청 취소 → 복원 · lpx {id, redeemId}(${c.dd.join()})`);
     await go(p, '#mile/rewards'); await p.click('[data-lm="redeem"][data-v="mrw_t"]'); await p.waitForTimeout(300); ok(!!(await p.$('#lmRdP')), '학원비 차감: 쓸 양 입력(단위 · 최소)'); await p.fill('#lmRdP', '200'); await p.click('#lmRdF button[type=submit]'); await p.waitForTimeout(400);
     const r = await p.evaluate(t => JSON.parse(localStorage.getItem('didisam.room.' + t + '.lpx') || '[]').filter(x => x.type === 'mile-redeem').map(x => x.data), T);
     ok(r.length === 1 && r[0].rewardId === 'mrw_t' && r[0].points === 200 && r[0].sid === SID && r[0].id === r[0].redeemId && !!r[0].idem, `lpx mile-redeem {id, redeemId, rewardId, points, sid, idem}(${JSON.stringify(r[0] || {})})`);
@@ -135,7 +135,7 @@ const BAN = /서두르세요|곧 사라져요|놓치지 마세요|끊겨요|꼴�
   { const L = LIVE(); const { ctx, p, errs } = await openLive(L, '/learner.html?t=T1&app=1#acct');
     const c = await txt(p, '.lm-me'); ok(/650LP/.test(c) && /성장/.test(c) && /남은 50LP/.test(c) && /5일/.test(c), `운영: mile-my → 「나」 카드(${c.replace(/\s+/g, ' ').slice(0, 70)})`);
     await go(p, '#mile', 900); const m = await p.evaluate(() => ({ dd: [...document.querySelectorAll('.lm-split dd')].map(x => x.textContent), fund: !!document.querySelector('.lm-fund'), rows: document.querySelectorAll('.lm-row').length, ways: document.querySelectorAll('#lmWays + .lm-ul li').length }));
-    ok(m.dd.join() === '650LP,0LP,100LP' && m.fund && m.rows === 2 && m.ways === 2, `운영: 내 마일리지 · 국비 분리 · 최근 내역 · 모으는 방법 ${JSON.stringify(m)}`);
+    ok(m.dd.join() === '650LP,예정 없음,100LP' /* v43 R8: 0 → 문장 */ && m.fund && m.rows === 2 && m.ways === 2, `운영: 내 마일리지 · 국비 분리 · 최근 내역 · 모으는 방법 ${JSON.stringify(m)}`);
     await go(p, '#mile/rewards', 900); await p.click('[data-lm="redeem"][data-v="mrw_c"]'); await p.waitForTimeout(300); await p.click('#lmRdF button[type=submit]'); await p.waitForTimeout(900);
     const rb = L.st.redeems[0] || {}; ok(rb.rewardId === 'mrw_c' && rb.points === 100 && /^lm_/.test(rb.idem || '') && Object.keys(rb).sort().join() === 'idem,points,rewardId', `운영: 신청 본문은 rewardId · points · idem만(${JSON.stringify(rb)})`);
     ok(await p.evaluate(() => location.hash) === '#mile/req' && (await p.$$('.lm-q')).length === 2, '운영: 신청 후 내 신청');

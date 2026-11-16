@@ -210,6 +210,8 @@ function ltRender() {
   const st = ltStatus(); const fresh = !LT.msgs.some(m => m.me); const nm = esc(C.name);
   if (LT.sk !== sc.k + '|' + sc.name) { LT.hint = LT.sk && !LT.open && sc.chips.length ? sc.name : ''; LT.sk = sc.k + '|' + sc.name; }
   const chip = (c, i) => c.kind === 'go' ? `<a class="lt-chip go" href="${esc(c.href)}" data-tact="go">${esc(c.l)}</a>` : `<button type="button" class="lt-chip${c.kind === 'escq' ? ' esc' : ''}" data-tact="${c.kind === 'escq' ? 'escq' : 'q'}" data-v="${esc(c.q)}" data-i="${i}">${esc(c.l)}</button>`;
+  /* v43 G2: 작은 안내 말풍선은 세션에서 처음 한 번만(첫 진입) — 화면을 옮길 때마다 카드 · 사진을 가리지 않게 */
+  if (LT.hint || LT.nudge) { let seen = null; try { seen = sessionStorage.getItem('didisam.lt.hint1'); } catch (e) { } if (seen && seen !== String(LT.h1 || '')) { LT.hint = ''; LT.nudge = ''; } else if (!seen) { LT.h1 = Date.now(); try { sessionStorage.setItem('didisam.lt.hint1', String(LT.h1)); } catch (e) { } } }
   R.innerHTML = `<button type="button" class="lt-fab ${LT.open ? 'hide' : ''} ${LR.me ? '' : 'guest'}" data-tact="open" aria-label="${nm} 열기 — 지금 화면: ${esc(sc.name)}, 도와드릴 일 ${sc.chips.length}가지" title="${nm} · 지금 화면에서 도와드릴 일 ${sc.chips.length}가지"><span class="lt-fi" aria-hidden="true">${ico('spark', 20)}</span><span class="lt-ft"><b>${nm}</b><span class="sr">${LR.me ? '무엇이든 물어보세요' : '로그인 없이 물어보세요'}</span></span>${badge ? `<em>${badge}</em>` : ''}</button>
   ${!LT.open && LT.hint ? `<div class="lt-hint" aria-hidden="true">${ico('spark', 12)} ${esc(LT.hint)} · 도와드릴 일 ${sc.chips.length}가지</div>` : ''}
   ${!LT.open && LT.nudge && !LT.hint ? `<div class="lt-hint lt-hn" role="status">${ico('spark', 12)} ${esc(LT.nudge)}</div>` : ''}
@@ -218,16 +220,22 @@ function ltRender() {
       <button type="button" class="lt-hb lt-bigb" data-tact="big" aria-label="${LT.big ? '작게 보기' : '크게 보기'}" title="${LT.big ? '작게 보기' : '크게 보기'}">${LT.big ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 14h6v6M3 21l7-7M20 10h-6V4M21 3l-7 7"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg>'}</button>
       <button type="button" class="lt-hb lt-x" data-tact="close" aria-label="닫기" title="닫기 (Esc)">${ico('x', 18)}</button></header>
     <div class="lt-sc ${fresh ? '' : 'cmp'}" role="group" aria-label="지금 화면에서 도와드릴 수 있는 일"><p><span>지금 화면</span><b>${esc(sc.name)}</b><small>도와드릴 수 있는 일</small></p>${sc.chips.length ? `<div class="lt-scc">${sc.chips.map(chip).join('')}</div>` : ''}</div>
-    <div class="lt-th" aria-live="polite">${LT.msgs.map((m, i) => i >= (LT.seenN || 0) ? ltMsgHTML(m).replace('class="lt-m', 'class="lt-m new') : ltMsgHTML(m)).join('')}${LT.busy ? '<div class="lt-m"><span class="lt-orb sm"></span><div class="lt-b"><span class="lt-dots"><i></i><i></i><i></i></span></div></div>' : ''}</div>
-    <form class="lt-in ${LT.escNext ? 'escm' : ''}" id="ltf">${LT.escNext ? `<p class="lt-escb">선생님께 넘길 질문을 적어 주세요 <button type="button" data-tact="escx">취소</button></p>` : ''}<label for="ltq" class="sr">${nm}에게 질문</label><textarea id="ltq" rows="1" maxlength="800" placeholder="${LT.escNext ? '예: 2번 요구사항을 어떻게 이해하면 될까요?' : LR.me ? '궁금한 것 · 맡길 일을 적어 주세요' : '무엇이든 물어보세요'}"></textarea><button type="submit" aria-label="보내기" ${LT.busy ? 'disabled' : ''}>${ico('send', 18)}</button></form>
+    <div class="lt-th" aria-live="polite">${(() => { /* v43 H2(110): 첫 안내(sys)의 이어서 학습 · 맡기기 묶음은 뒤 답변에 같은 묶음(링크 · 단추)이 오면 1회만 — 같은 버튼이 두 번 보이지 않게 */ const later = i => LT.msgs.slice(i + 1).some(x => !x.me && x.h && /lt-acts/.test(x.h)); return LT.msgs.map((m, i) => { if (m.sys && LT.msgs.slice(i + 1).some(x => !x.me && x.t === m.t)) return ''; /* 같은 안내 문장이 답으로 다시 오면 첫 안내는 생략 */ const m2 = m.sys && m.h && later(i) ? { ...m, h: '' } : m; const hx = ltMsgHTML(m2); return i >= (LT.seenN || 0) ? hx.replace('class="lt-m', 'class="lt-m new') : hx; }).join(''); })()}${LT.busy ? '<div class="lt-m"><span class="lt-orb sm"></span><div class="lt-b"><span class="lt-dots"><i></i><i></i><i></i></span></div></div>' : ''}</div>
+    <form class="lt-in ${LT.escNext ? 'escm' : ''}" id="ltf">${LT.escNext ? `<p class="lt-escb">선생님께 넘길 질문을 적어 주세요 <button type="button" data-tact="escx">취소</button></p>` : ''}<label for="ltq" class="sr">${nm}에게 질문</label>${LR.me && !LT.escNext ? `<button type="button" class="lt-att" data-tact="escq" aria-label="선생님께 질문 넘기기" title="선생님께 질문 넘기기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.1l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8"/></svg></button>` : ''}<textarea id="ltq" rows="1" maxlength="800" placeholder="${LT.escNext ? '예: 2번 요구사항을 어떻게 이해하면 될까요?' : LR.me ? '궁금한 것 · 맡길 일을 적어 주세요' : '무엇이든 물어보세요'}"></textarea><button type="submit" aria-label="보내기" ${LT.busy ? 'disabled' : ''}>${ico('send', 18)}</button></form>
     <small class="lt-note">${LR.me ? '과제를 대신 써 주지 않고 함께 풀어요' : '로그인 없이 쓸 수 있어요 · 개인정보는 적지 마세요'} · 대화는 저장하지 않아요 · 오늘 ${left}회 남음</small>
   </section>`;
   LT.anim = false; LT.seenN = LT.open ? LT.msgs.length : (LT.seenN || 0); /* 다시 그릴 때 창 · 지난 말풍선이 깜빡이지 않게: 새로 연 창 · 새 말풍선만 움직임 */
   const q = R.querySelector('#ltq'); if (q && keep) q.value = keep; if (q && had) q.focus();
-  const th = R.querySelector('.lt-th'); if (th) th.scrollTop = th.scrollHeight;
-  document.body.classList.remove('lt-dock'); document.body.classList.toggle('lt-on', !!LT.open);
+  const th = R.querySelector('.lt-th'); if (th) { th.scrollTop = th.scrollHeight; /* v43 H2(110): 답이 끝나면 마지막 질문(내 말풍선)이 대화 맨 위에 오게 — 첫 항목이 칩 줄 밑에 잘려 시작하지 않게 */
+    const me = [...th.querySelectorAll(':scope > .lt-m.u')].pop(); if (me && !LT.busy) { const y = me.getBoundingClientRect().top - th.getBoundingClientRect().top + th.scrollTop - 12; if (y < th.scrollTop) th.scrollTop = Math.max(0, y); } }
+  /* v43 F3(110): 로그인한 PC 웹(앱 화면 아님)에서 연 튜터는 오른쪽에 고정(본문 8 + 튜터 4) — 홈 위에 뜬 작은 창이 사진 · 카드를 가리던 문제. 휴대폰 · 앱 · 로그인 전은 떠 있는 창 그대로 */
+  document.body.classList.toggle('lt-dock', !!(LT.open && LR.me && !document.body.classList.contains('lapp') && innerWidth >= 1100)); document.body.classList.toggle('lt-on', !!LT.open);
   /* 작은 안내는 잠깐만(버튼 위, 누를 수 없음 · 창은 열지 않음) — v25: 로그인 후 '오늘 할 일' 말풍선도 같은 방식 */
-  if (LT.hint || LT.nudge) { clearTimeout(LT.ht); LT.ht = setTimeout(() => { LT.hint = ''; LT.nudge = ''; const h = $('#ltut .lt-hint'); if (h) h.remove(); }, 4500); }
+  /* v43 G2: PC 웹은 말풍선을 머리 줄 안(계정 앞)에 작게 — 본문 위에 뜨지 않음 */
+  /* v43 G2: PC 웹은 AX 튜터 단추도 머리 줄 안(계정 앞)으로 — 떠 있는 단추가 카드 · 사진 · 버튼을 가리지 않게(휴대폰 · 앱은 그대로) */
+  try { document.querySelectorAll('header.lh .lt-hint, header.lh .lt-fab').forEach(x => x.remove()); const hd = document.querySelector('header.lh > .in'); if (hd && !document.body.classList.contains('lapp') && matchMedia('(min-width:901px)').matches) { const at = hd.querySelector(':scope > .acct') || null;
+      const f = R.querySelector('.lt-fab'); if (f) { f.classList.add('lt-hfab'); hd.insertBefore(f, at); } const h = R.querySelector('.lt-hint'); if (h) { h.classList.add('lt-hh'); hd.insertBefore(h, f && f.parentNode === hd ? f : at); } } } catch (e) { }
+  if (LT.hint || LT.nudge) { clearTimeout(LT.ht); LT.ht = setTimeout(() => { LT.hint = ''; LT.nudge = ''; document.querySelectorAll('.lt-hint').forEach(h => h.remove()); }, 4500); }
   ltPlace();
 }
 /* 버튼 자리: 휴대폰 아래 탭 · 화면 아래 고정 버튼(강좌 상세 신청 막대 등) 위로 */
@@ -330,3 +338,5 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) lsyn
 window.addEventListener('storage', e => { if (LR.mode === 'demo' && e.key && e.key === 'didisam.room.' + LR.tid) lsyncMine(true); });
 /* v32.9: 휴대폰 폭에서는 튜터 창이 화면 전체를 덮으므로, 화면(주소)이 바뀌면 닫는다 — 뒤로 가기로 빠져나올 수 있게 */
 window.addEventListener('hashchange', () => { if (innerWidth <= 600 && typeof LT !== 'undefined' && LT.open) { LT.open = false; document.body.classList.remove('lt-on'); try { sessionStorage.setItem(LTK(), '0'); } catch (e) { } setTimeout(ltRender, 0); } });
+/* v43 G2: 스크롤하면 안내 말풍선은 바로 숨김 */
+addEventListener('scroll', () => { if (typeof LT === 'object' && (LT.hint || LT.nudge)) { LT.hint = ''; LT.nudge = ''; document.querySelectorAll('.lt-hint').forEach(h => h.remove()); } }, { passive: true });

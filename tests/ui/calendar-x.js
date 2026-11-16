@@ -31,6 +31,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     ok(await p.evaluate(() => (S.calx.ev || []).some(e => e.title === '학사 일정 점검 회의(변경)')), '일정 클릭 → 수정 저장');
     /* 끌어서 날짜 바꾸기 */
     const d1 = d0.slice(0, 8) + '19';
+    await p.evaluate(d => { const c = document.querySelector(`#main .cx-day[data-cxday="${d}"]`); if (c) c.scrollIntoView({ block: 'center' }); }, d1); /* v43: 브리핑 · 머리 영역이 커져 놓을 칸이 화면 아래 끝에 걸리면 끌기 중 스크롤로 끌기가 시작되지 않는다 — 놓을 칸을 먼저 화면 가운데로 */
     await p.dragAndDrop(`#main .cx-day[data-cxday="${d0}"] .cx-ev:has-text("점검 회의")`, `#main .cx-day[data-cxday="${d1}"]`); await p.waitForTimeout(250);
     ok(await p.evaluate(d => (S.calx.ev || []).some(e => e.title.includes('점검 회의') && e.date === d), d1), `끌어서 날짜 바꾸기(직접 넣은 일정) → ${d1}`);
     const ses = await p.evaluate(() => { const e = cxEvents().find(x => x.sid && x.date.slice(0, 7) === (UI.cxD || today()).slice(0, 7)); if (!e) return null; const c = S.classes.find(c => c.id === e.cls); let d = e.date; for (let i = 1; i < 10; i++) { const n = new Date(d); n.setDate(n.getDate() + 1); d = n.toISOString().slice(0, 10); if (d.slice(0, 7) !== e.date.slice(0, 7)) return null; if (!c.sessions.some(s => s.date === d)) return { id: e.id, from: e.date, to: d }; } return null; });

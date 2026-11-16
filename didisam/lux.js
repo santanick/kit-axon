@@ -20,7 +20,7 @@
   /* ── 쉬운 말 ── */
   try { ITN.chapter = '단원'; ITI.chapter = 'layers'; } catch (e) { }
   try { const K = { diag: '레벨 진단', tutorials: '실습 영상', courses: '단계별 코스', badges: '수료 · 배지', books: '디지털북', notice: '공지사항' }; Object.keys(K).forEach(k => { if (PG_DESC[k]) PG_DESC[k][0] = K[k]; }); } catch (e) { }
-  const WORDS = () => { const tn = (pageOf('tutorials') || {}).name || '실습 영상'; return [['코스웨어에서 고르기', '단계별 코스 보기'], ['코스웨어', '단계별 코스'], ['COURSEWARE', '단계별 코스'], ['TUTORIALS', tn], ['튜토리얼', tn], ['WELCOME', '반갑습니다'], ['MY RESULT', '내 결과'], ['DIAGNOSIS', '레벨 진단'], ['DIGITAL BADGES', '디지털 배지'], ['DIGITAL BOOK', '디지털북'], ['커리큘럼', '배우는 내용']]; };
+  const WORDS = () => { const tn = (pageOf('tutorials') || {}).name || '실습 영상'; return [['코스웨어에서 고르기', '단계별 코스 보기'], ['단계별 코스웨어', '단계별 코스'] /* v43 G2: 「단계별 단계별 코스」 중복 방지 */, ['코스웨어', '단계별 코스'], ['COURSEWARE', '단계별 코스'], ['TUTORIALS', tn], ['튜토리얼', tn], ['WELCOME', '반갑습니다'], ['MY RESULT', '내 결과'], ['DIAGNOSIS', '레벨 진단'], ['DIGITAL BADGES', '디지털 배지'], ['DIGITAL BOOK', '디지털북'], ['커리큘럼', '배우는 내용']]; };
   function plain(root) { if (!root) return; const W = WORDS(); const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement && n.parentElement.closest('script,style,textarea,input,code,svg,.lt') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
     const L = []; while (tw.nextNode()) L.push(tw.currentNode); L.forEach(n => { let v = n.nodeValue; if (!/[가-힣A-Z]/.test(v)) return; const o = v; W.forEach(([a, b]) => { if (v.includes(a)) v = v.split(a).join(b); }); if (v !== o) n.nodeValue = v; }); }
 
@@ -94,7 +94,7 @@
 
   /* ── 홈페이지 섹션(Shadow DOM): 빈 링크 · 강좌 카드 연결 ── */
   function hpFix() { const sh = (typeof shInfo === 'function' && shInfo()) || { classes: [] }; const go = browseHref();
-    document.querySelectorAll('.smhost').forEach(host => { const r = host.shadowRoot; if (!r || r.querySelector('style[data-lux]')) return; const st = document.createElement('style'); st.dataset.lux = '1'; st.textContent = '.cc{position:relative}.luxcc{position:absolute;inset:0;border-radius:inherit;z-index:2}.luxcc:focus-visible{outline:3px solid #5C74F6;outline-offset:2px}.cc:hover{transform:translateY(-2px);transition:transform .15s}'; r.appendChild(st);
+    document.querySelectorAll('.smhost').forEach(host => { const r = host.shadowRoot; if (!r || r.querySelector('style[data-lux]')) return; const st = document.createElement('style'); st.dataset.lux = '1'; st.textContent = '.cc{position:relative}.luxcc{position:absolute;inset:0;border-radius:inherit;z-index:2}.luxcc:focus-visible{outline:3px solid #00862D;outline-offset:2px}.cc:hover{transform:translateY(-2px);transition:transform .15s}'; r.appendChild(st);
       r.querySelectorAll('a[href="#"], a[href=""]').forEach(a => a.setAttribute('href', go));
       /* v25: 운영자가 아직 채우지 않은 견본 칸('주소를 입력하세요' 등)은 공개 화면에서 숨김(스튜디오 미리보기에서는 그대로 보여 고치게) */
       if (LR.mode !== 'preview') r.querySelectorAll('*').forEach(el => { if (el.childElementCount || el.dataset.luxPh) return; const t = (el.textContent || '').trim(); if (!/^.{1,14}(을|를) 입력하세요\.?$/.test(t)) return; el.dataset.luxPh = '1'; el.style.display = 'none'; const pv = el.previousElementSibling; if (pv && !pv.childElementCount && pv.textContent.trim().length <= 10) pv.style.display = 'none'; });
@@ -122,7 +122,7 @@
       lm.querySelectorAll('#lcN button[type=submit], .lcform button[type=submit]').forEach(b => { b.classList.remove('pri'); b.classList.add('ghost'); });
       const nx = lm.querySelector('.inav a.dark'); const main = lm.querySelector('.imain'); if (main && nx && main.querySelector('.lbtn.pri:not(.ghost)')) nx.classList.replace('dark', 'ghost'); }
     /* 로그인 후 홈: 이어서 학습하기 */
-    if (r.a === 'home' && LR.me && !lm.querySelector('.lux-cont')) { lm.insertAdjacentHTML('afterbegin', contHTML()); onePrimary(lm, lm.querySelector('.lux-go')); }
+    if (r.a === 'home' && LR.me && !lm.querySelector('.lux-cont') && !lm.querySelector('.lhb-home')) { /* v43 F3: 학습 허브 홈은 히어로가 이어 보기를 맡음 */ lm.insertAdjacentHTML('afterbegin', contHTML()); onePrimary(lm, lm.querySelector('.lux-go')); }
     /* 결제 완료: 주 버튼 하나 */
     if (r.a === 'payok') { const go = lm.querySelector('a.lbtn.pri[href^="#c/"]'); if (go) { go.innerHTML = `지금 학습 시작하기 ${ico('arrow', 16)}`; } }
     /* 내 학습: 학습 · 결제 · 계정 */
@@ -147,7 +147,8 @@
     const keep = lm.querySelector('.lux-wide .lbtn.pri'); if (keep) [...lm.querySelectorAll('.mypage .lbtn.pri, .mypage .lbtn:not(.ghost):not(.sm):not(.wht)')].filter(b => b !== keep && !b.closest('.lux-wide, form, .lux-tabs')).forEach(b => { b.classList.remove('pri', 'dark'); b.classList.add('ghost'); }); }
   function myListHTML() { const L = myCourses(); const x = L.find(y => y.p < 100) || L[0];
     const W = cw(); if (!L.length) return `<div class="mh"><h3>내 ${esc(W)}</h3></div><p class="mini">아직 신청한 ${esc(W)}${lj(W, '이', '가')} 없습니다.</p><a class="lbtn pri sm" href="${browseHref()}">${esc(W)} 둘러보기</a>`;
-    return `<div class="mh"><h3>내 ${esc(W)} <small>${L.length}개</small></h3></div><ul class="lux-ml">${L.map(y => `<li>${y.c.thumb ? `<img class="lux-mth" src="${esc(y.c.thumb)}" alt="" loading="lazy">` : L.some(z => z.c.thumb) ? `<span class="lux-mth lux-mth0" aria-hidden="true">${esc(String(y.c.name || '').slice(0, 4))}</span>` : ''}<div><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>진도 ${y.p}%${Math.round(y.done / Math.max(1, y.n) * 100) === y.p ? ` · ${y.done}/${y.n}` : ''}${y.nx && y.p < 100 ? ` · 다음 ${esc(y.nx.title)}` : ''}</small></div><span class="lux-mla">${y.fin ? `<a class="lbtn ghost sm" href="#cert/${esc(y.c.id)}">수료증</a>` : ''}<a class="lbtn ${y === x ? 'pri' : 'ghost'} sm" href="${nextHref(y)}">${y.p >= 100 ? '다시 보기' : y.started ? '이어서' : '시작'}</a></span></li>`).join('')}</ul>`; }
+    const web = !document.body.classList.contains('lapp'); /* v43 R8 099: 웹은 16:9 사진 카드(진도 막대 · 다음 차시), 앱은 예전 목록 */
+    return `<div class="mh"><h3>내 ${esc(W)} <small>${L.length}개</small></h3></div><ul class="lux-ml${web ? ' lux-ml43' : ''}">${L.map(y => `<li>${y.c.thumb ? `<img class="lux-mth" src="${esc(y.c.thumb)}" alt="" loading="lazy">` : web && typeof lPhoto === 'function' ? `<img class="lux-mth" src="${esc(lPhoto(y.c.name, 'my:' + y.c.id))}" alt="" loading="lazy">` : L.some(z => z.c.thumb) ? `<span class="lux-mth lux-mth0" aria-hidden="true">${esc(String(y.c.name || '').slice(0, 4))}</span>` : ''}<div><b>${esc(y.c.name)}</b><span class="lux-mbar"><i style="width:${y.p}%"></i></span><small>${y.p ? `진도 ${y.p}%${Math.round(y.done / Math.max(1, y.n) * 100) === y.p ? ` · ${y.done}/${y.n}` : ''}` : `${y.n}차시 · 첫 차시부터 시작해요`}${y.nx && y.p < 100 ? ` · 다음 ${esc(y.nx.title)}` : ''}</small></div><span class="lux-mla">${y.fin ? `<a class="lbtn ghost sm" href="#cert/${esc(y.c.id)}">수료증</a>` : ''}<a class="lbtn ${y === x ? 'pri' : 'ghost'} sm" href="${nextHref(y)}">${y.p >= 100 ? '다시 보기' : y.started ? '이어서' : '시작'}</a></span></li>`).join('')}</ul>`; }
   function setTab(k) { const lm = document.getElementById('lm'); if (!lm) return; lm.dataset.luxtab = k; ss.set(TABK(), k); lm.querySelectorAll('[data-lux-tab]').forEach(b => { const on = b.dataset.luxTab === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); }
 
   /* ── 튜터: 사람이 열 때만 ── */

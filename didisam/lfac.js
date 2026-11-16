@@ -41,7 +41,8 @@
   const univ = () => ty() === 'univ';
   const payOnline = () => { if (FX.onsiteOnly) return false; const c = cfg() || {}; return c.payOnline === true || !!(c.settings && c.settings.payOnline === true); }; /* 서버 /api/config · fac-list의 payOnline:false면 온라인 결제 숨김 */
   const AUD = { student: '학생', staff: '교직원', public: '일반', member: '수강생', resident: '지역주민', reduced: '감면 대상', employee: '임직원', external: '외부' };
-  const audL = a => AUD[a] || a || '일반';
+  const AUD_SP = { student: '감면', staff: '지역주민' }; /* v43 D-E(P2 H13): 공단 · 체육시설은 대학 용어(학생 · 교직원) 대신 일반 · 지역주민 · 감면 */
+  const audL = a => (ty() === 'public' && AUD_SP[a]) || AUD[a] || a || '일반';
   const audsOf = f => { const A = (Array.isArray(f.audience) && f.audience.length ? f.audience : Object.keys(f.prices || {})).filter(a => AUD[a] || a); return A.length ? A : ['public']; };
   const CATRX = [[/골프|타석/, '골프'], [/테니스|코트/, '테니스'], [/배드민턴/, '배드민턴'], [/체육관|대관|강당/, '체육관'], [/수영/, '수영장'], [/강의실|세미나|실습실|강의/, '강의실'], [/회의실|교육장/, '회의실'], [/사물함|락커/, '사물함'], [/노트북|카메라|장비|태블릿|대여/, '장비']];
   const catOf = f => f.cat || (CATRX.find(([r]) => r.test(f.name || '')) || [0, f.kind === 'rent' ? '장비' : f.kind === 'pass' ? '이용권' : '시설'])[1];
@@ -107,10 +108,14 @@
   const usedDay = (f, d) => activeB().filter(b => b.fac === f.id && b.day === d).reduce((a, b) => a + b.slots, 0);
 
   /* ── 공통 조각 ── */
-  const head = (t, sub, right) => `<div class="fx-hd"><div><h1>${esc(t)}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${right || ''}</div>`;
+  /* v43 D-C: 웹(body:not(.lapp))은 공통 사진 머리(lPageHead) — 시설 홈은 숫자(시설 · 오늘 예약 가능 · 내 예약)와 [내 예약], 아래 화면은 짧은 띠. 앱은 예전 머리 */
+  let HT = null; const webH = () => typeof lPageHead === 'function' && !document.body.classList.contains('lapp');
+  const head = (t, sub, right) => { if (webH()) { HT = [t, sub, right]; return right && !/fx-btn sm" href="#fac\/my"/.test(right) ? `<div class="fx-hd fx43r">${right}</div>` : ''; } return `<div class="fx-hd"><div><h1>${esc(t)}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${right || ''}</div>`; };
   const stB = b => b.status === 'requested' ? ['y', '승인 대기'] : b.status === 'approved' ? ['y', '결제 대기'] : b.status === 'checked_in' ? ['g', '이용 중'] : b.status === 'done' ? ['n', '이용 완료'] : b.status === 'cancelled' ? ['n', '취소됨'] : b.status === 'no_show' ? ['r', '자동 취소'] : b.status === 'rejected' ? ['r', '반려됨'] : b.payStatus === 'pending' && b.pay === 'online' ? ['y', '결제 대기'] : b.payStatus === 'pending' ? ['g', '확정 · 현장 결제'] : ['g', '확정'];
   const badge = ([t, l]) => `<em class="fx-b t-${t}">${t === 'g' && /^확정/.test(l) ? sv('check', 14) : ''}${esc(l)}</em>`;
-  const page = (cls, inner) => `<section class="fx ${cls || ''}"><div class="in fx-in">${inner}</div></section>`;
+  const page = (cls, inner, side) => { let h = ''; if (HT) { const home = /fx-home/.test(cls || ''); let st = null; if (home) { try { const F = FACS(); st = [[F.length, '곳', '예약할 수 있는 시설'], [(FX.my || []).length || '', '건', '내 예약']]; } catch (e) { st = null; } }
+    h = lPageHead({ key: 'fac', title: HT[0], desc: home ? '날짜와 시간을 고르면 바로 예약돼요. 취소 · 환불 기준도 미리 보여 드려요.' : '', crumb: home ? '<a href="#home">홈</a> › 시설 예약' : '<a href="#home">홈</a> › <a href="#fac">시설 예약</a> › ' + esc(HT[0]), compact: !home, stats: st, cta: home && LR.me ? ['내 예약 보기', '#fac/my'] : home ? ['로그인하고 예약하기', '#login/fac'] : null, eyebrow: home ? '체육관 · 강의실 · 대여' : '' }); HT = null; }
+    return `${h}<section class="fx ${cls || ''}${h ? ' fx43' : ''}"><div class="in fx-in">${side ? `<div class="fx43g"><div class="fx43mn">${inner}</div>${side}</div>` : inner}</div></section>`; };
   const gate = back => { if (LR.me) return ''; return `<div class="fx-note t-b">${sv('info', 18)}<span>예약하려면 간편 로그인이 필요해요. 둘러보기는 로그인 없이 할 수 있어요.</span><a class="fx-btn sm" href="#login/${esc(back)}">로그인</a></div>`; };
   const timeOf = b => `${fmtD(b.day)} ${b.from}–${b.to}`;
   const flowBar = h => `<div class="fx-bar">${h}</div>`;
@@ -133,15 +138,21 @@
       else tag = ['n', A.st === 'not_open' ? '오픈 전' : '신청 기간 아님']; }
     else if (f.kind === 'rent') { const P0 = prods(f); tag = f.approval ? ['b', '승인제'] : ['g', `대여 가능 ${resOf(f).length - mine().rt.filter(r => r.fac === f.id && ['requested', 'approved', 'lent'].includes(r.status)).length}`]; if (!P0.length) tag = ['n', '준비 중']; }
     else tag = ['g', '이용권'];
-    const a0 = audsOf(f)[0]; const q = f.kind === 'time' ? { final: f.pay === 'free' ? 0 : Math.max(0, +(((f.prices || {})[a0] || {}).slot) || 0) } : null; const pp = prods(f).map(p => QT({ fac: f, product: p, aud: (p.prices && p.prices[a0] != null) || (p.unitPrice && p.unitPrice[a0] != null) ? a0 : Object.keys(p.prices || p.unitPrice || {})[0] || a0 }).final).filter(x => x > 0);
-    const price = f.kind === 'time' ? (q.final ? `${audL(audsOf(f)[0])} ${won(q.final)}~` : f.approval ? '구성원 무료' : '무료') : pp.length ? `${won(Math.min(...pp))}~` : '';
-    return `<a class="fx-row" href="#fac/${esc(f.id)}">${icBox(f)}<span class="fx-ct"><b>${esc(f.name)}</b><small>${esc([f.place, f.kind === 'time' ? `${resOf(f).length > 1 ? resOf(f).length + unitOf(f) : '정원 ' + perOf(f) + '명'}` : f.kind === 'rent' ? '대여' : '이용권'].filter(Boolean).join(' · '))}</small></span><span class="fx-rt">${tag[1] ? badge(tag) : ''}<small>${esc(sub2 || price)}</small></span></a>`; }
+    const a0 = ty() === 'public' && audsOf(f).includes('public') ? 'public' : audsOf(f)[0]; const q = f.kind === 'time' ? { final: f.pay === 'free' ? 0 : Math.max(0, +(((f.prices || {})[a0] || {}).slot) || 0) } : null; const pp = prods(f).map(p => QT({ fac: f, product: p, aud: (p.prices && p.prices[a0] != null) || (p.unitPrice && p.unitPrice[a0] != null) ? a0 : Object.keys(p.prices || p.unitPrice || {})[0] || a0 }).final).filter(x => x > 0);
+    const price = f.kind === 'time' ? (q.final ? `${audL(a0)} ${won(q.final)}${a0 === 'public' ? '' : '~'}` : f.approval ? (ty() === 'public' ? '회원 무료' : '구성원 무료') : '무료') : pp.length ? `${won(Math.min(...pp))}~` : '';
+    return `<a class="fx-row" href="#fac/${esc(f.id)}"${typeof lPhoto === 'function' ? ` style="--fx-ph:url('${esc(lPhoto(f.name + ' ' + (f.place || '') + ' 공간', 'fx:' + f.id))}')"` : ''}>${icBox(f)}<span class="fx-ct"><b>${esc(f.name)}</b><small>${esc([f.place, f.kind === 'time' ? `${resOf(f).length > 1 ? resOf(f).length + unitOf(f) : '정원 ' + perOf(f) + '명'}` : f.kind === 'rent' ? '대여' : '이용권'].filter(Boolean).join(' · '))}</small></span><span class="fx-rt">${tag[1] ? badge(tag) : ''}<small>${esc(sub2 || price)}</small></span></a>`; }
   function homeView() { const c = cfg(); const C = catsAll(); if (!C.includes(FX.cat) && FX.cat !== 'all') FX.cat = 'all';
     const L = FACS().filter(f => FX.cat === 'all' || catOf(f) === FX.cat || (FX.cat === '이용권' && prods(f).some(p => /^pass-/.test(p.type))));
     const chips = `<div class="fx-chips" role="tablist" aria-label="시설 종류">${[['all', '전체'], ...C.map(x => [x, x])].map(([k, l]) => `<button type="button" role="tab" class="fx-chip${FX.cat === k ? ' on' : ''}" aria-selected="${FX.cat === k}" data-fx="cat" data-v="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
-    return page('fx-home', `${head('시설 예약', esc((SITE().org || {}).name || ''), LR.me ? `<a class="fx-btn sm" href="#fac/my">${sv('cal', 18)}내 예약</a>` : '')}${chips}${gate('fac')}${LR.me ? passCard() + nextCard() : ''}
+    return page('fx-home', `${head('시설 예약', esc((SITE().org || {}).name || ''), LR.me ? `<a class="fx-btn sm" href="#fac/my">${sv('cal', 18)}내 예약</a>` : '')}${FX.cat === 'all' && FACS().length ? `<p class="fx-hl">오늘 예약할 수 있는 곳이<br><em>${FACS().length}곳</em> 있어요.</p>` : ''}${chips}${gate('fac')}${LR.me ? passCard() + nextCard() : ''}
       <div class="fx-sh"><h2>${FX.cat === 'all' ? '오늘 이용 가능' : esc(FX.cat)}</h2><small>${esc(fmtD(today()))} ${esc(kst().slice(11, 16))} 기준</small></div>
-      <div class="fx-list">${L.map(facRow).join('') || '<p class="fx-empty">이 종류의 시설이 아직 없어요.</p>'}</div>${c.notice ? `<p class="fx-foot">${esc(c.notice)}</p>` : ''}`); }
+      <div class="fx-list">${L.map(facRow).join('') || '<p class="fx-empty">이 종류의 시설이 아직 없어요.</p>'}</div>${c.notice ? `<p class="fx-foot">${esc(c.notice)}</p>` : ''}`, webH() ? homeSide() : ''); }
+  /* v43 R8 106: 웹 시설 홈 8+4 — 오른쪽 보조 열(내 예약 · 이용 규칙 · 다른 메뉴) */
+  function homeSide() { const U0 = LR.me ? upcoming() : []; const b = U0[0]; const f = b ? facOf(b.fac) || { name: b.fac } : null;
+    const mineC = `<div class="fx43c fx43dk"><p class="fx43k">${sv('cal', 16)}내 예약</p>${LR.me ? (b ? `<h3>${b.day === today() ? '오늘' : esc(fmtD(b.day))} ${esc(b.from)}<br>${esc(f.name)}</h3><p>다가오는 예약 ${U0.length}건 · 시작 15분 전부터 QR로 체크인해요.</p><a class="fx-btn pri" href="#fac/bk/${esc(b.id)}">예약 보기</a>` : `<h3>아직 잡힌 예약이 없어요</h3><p>시설을 고르고 시간을 누르면 바로 예약돼요.</p><a class="fx-btn pri" href="#fac/my">내 예약 · 이용 기록</a>`) : `<h3>로그인하면 예약할 수 있어요</h3><p>둘러보기는 로그인 없이 할 수 있어요.</p><a class="fx-btn pri" href="#login/fac">간편 로그인</a>`}</div>`;
+    const rule = `<div class="fx43c"><p class="fx43k">${sv('info', 16)}이용 규칙</p><ul class="fx43r2"><li><b>체크인</b><span>이용 시작 15분 전부터 입장 QR이 열려요</span></li><li><b>취소 · 환불</b><span>시설마다 기준을 예약 화면에서 먼저 보여 드려요</span></li><li><b>승인제 시설</b><span>담당자가 확인하면 알림으로 알려 드려요</span></li></ul></div>`;
+    const more = `<nav class="fx43c fx43m" aria-label="함께 쓰는 메뉴"><p class="fx43k">${sv('pin', 16)}함께 쓰는 메뉴</p>${[['#cal', '학습 캘린더', '예약과 수업 일정을 한곳에'], ['#mypay', '결제 내역', '이용료 영수증 보기'], ['#msg/new', '담당자에게 문의', '대관 · 단체 이용 상담']].map(([h, t, d]) => `<a href="${h}"><span><b>${t}</b><small>${d}</small></span>${sv('chev', 16)}</a>`).join('')}</nav>`;
+    return `<aside class="fx43s" aria-label="예약 도움">${mineC}${rule}${more}</aside>`; }
 
   /* ── 시설 상세 · 날짜 · 시간(#fac/<시설>) ── */
   function rulesLine(f) { const R = f.rules || {}; const out = []; const H = f.hours || {}; const wk = [1, 2, 3, 4, 5].map(i => H[i]).find(Boolean), sa = H[6], su = H[0];
@@ -396,7 +407,7 @@
   (window.LCAL_SRC = window.LCAL_SRC || []).push(() => { if (!cfg() || !LR.me) return []; return activeB().map(b => { const f = facOf(b.fac) || { name: '' }; return { id: 'f:' + b.id, date: b.day, time: b.from, end: b.to, k: '예약', title: `예약 · ${f.name}`, place: f.place || '', note: b.status === 'requested' ? '승인 대기' : `예약 번호 ${b.no || b.id}`, src: 'fac', href: '#fac/bk/' + encodeURIComponent(b.id), hrefL: '예약 상세 보기' }; }); });
 
   /* ── 라우팅 ── */
-  { const base = viewPage; viewPage = (id, ...a) => { if (id !== 'fac') return base(id, ...a); if (!cfg()) return page('fx-off', `${head('시설 예약')}<p class="fx-empty">이 기관은 아직 시설 예약을 쓰지 않아요.</p>`);
+  { const base = viewPage; viewPage = (id, ...a) => { if (id !== 'fac') return base(id, ...a); if (!cfg()) return page('fx-off', `${head('시설 예약')}${webH() ? `<div class="fx43off"><span class="fx43op" style="background-image:url('${esc(typeof lPhoto === 'function' ? lPhoto('강의실 세미나실 공간', 'fx-off') : '')}')"></span><div><p class="fx43k">${sv('info', 16)}시설 예약</p><h2>이 기관은 아직 시설 예약을 쓰지 않아요</h2><p>강의실 · 실습실 대관이 필요하면 담당자에게 문의해 주세요. 시설 예약이 열리면 이 화면에서 날짜와 시간을 골라 바로 예약할 수 있어요.</p><div class="fx43oa"><a class="fx-btn pri" href="#msg/new">담당자에게 문의</a><a class="fx-btn" href="#cal">학습 캘린더 보기</a></div></div></div>` : '<p class="fx-empty">이 기관은 아직 시설 예약을 쓰지 않아요.</p>'}`); /* v43 R8 106: 빈 상태 카드(사진 · 설명 · 문의) */
       if (!CC()) return page('fx-off', '<p class="fx-empty">예약 화면을 불러오지 못했어요. 새로 고침해 주세요.</p>');
       const seg = decodeURIComponent(location.hash.slice(1)).split(/[?#]/)[0].split('/').slice(1); const [b, c, d] = seg;
       try { if (!b) return homeView(); if (b === 'my') return myView(); if (b === 'qr') return qrView(c); if (b === 'paid') { setTimeout(() => paidBack(c), 0); return page('fx-done', `${head('결제 확인')}<p class="fx-empty" role="status">결제를 확인하고 있어요…</p>`); } if (b === 'done') return doneView(c); if (['bk', 'ps', 'rt'].includes(b)) return itemView(b, c);
@@ -414,7 +425,7 @@
     if (!on) return; const lm = document.getElementById('lm'); if (!lm) return;
     if (a === 'home' && B.classList.contains('tube')) { const ch = lm.querySelector('.tb-chips'); if (ch && !ch.querySelector('.fx-chip-go')) ch.insertAdjacentHTML('beforeend', `<a class="tb-chip fx-chip-go" href="#fac">예약</a>`);
       const mn = lm.querySelector('.tb-main'); const tc = todayCard(); if (mn && tc && !mn.querySelector('.fx-today') && (!window.TUBE || window.TUBE.f === 'all')) mn.insertAdjacentHTML('afterbegin', tc); }
-    if (a === 'fac' && B.classList.contains('lapp')) { const b = route().b; const tab = ['my', 'bk', 'ps', 'rt'].includes(b) ? 'cal' : 'home'; const nav = document.querySelector('#lapp .ap-nav'); if (nav) nav.querySelectorAll(':scope > a').forEach(x => { const o = x.classList.contains('tb-n-' + tab); x.classList.toggle('on', o); if (o) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); }); }
+    if (a === 'fac' && B.classList.contains('lapp')) { const tab = 'fac'; /* v43: 하단 탭에 「시설」(tb-n-fac)이 생겨 #fac 하위 화면은 모두 시설 탭을 선택한다(예전 tb-n-home · tb-n-cal 이름 대신) */ const nav = document.querySelector('#lapp .ap-nav'); if (nav) nav.querySelectorAll(':scope > a').forEach(x => { const o = x.classList.contains('tb-n-' + tab); x.classList.toggle('on', o); if (o) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); }); }
     if (a === 'cal' && LR.me && !lm.querySelector('.fx-calc')) { const U = upcoming(); const M = mine(); const n = M.ps.filter(passOK).length, r = M.rt.filter(x => ['approved', 'lent', 'overdue'].includes(x.status)).length; const nx = U[0];
       const h = `<a class="fx-card fx-calc" href="#fac/my">${sv('cal', 22)}<span class="fx-ct"><b>내 예약</b><small>${esc([`예정 ${U.length}건`, n ? `이용권 ${n}` : '', r ? `대여 ${r}` : '', nx ? `다음 ${fmtD(nx.day)} ${nx.from} ${(facOf(nx.fac) || {}).name || ''}` : ''].filter(Boolean).join(' · '))}</small></span>${sv('chev', 18)}</a>`;
       const anc = lm.querySelector('.lq-top'); if (anc) anc.insertAdjacentHTML('beforebegin', h); else lm.insertAdjacentHTML('afterbegin', h); }

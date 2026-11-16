@@ -128,7 +128,7 @@ function scxDefs(k) { const L = t('learner'), K = t('cls'), G = t('group'), c = 
       ['cs-ct', '채널톡 연결 도와줘', scxAsk('채널톡 연결 도와줘')]],
     site: [['s-ai', 'AI로 홈페이지 만들어줘', scxAsk('AI로 홈페이지 만들어줘')], ['s-pub', '사이트 게시해줘', scxAsk('사이트 게시해줘')], ['s-menu', '홈페이지 메뉴 AI로 짜줘', scxAsk('홈페이지 메뉴 AI로 짜줘')]],
     sales: [['sl-sum', '이번 달 매출 요약', () => { const mo = today().slice(0, 7); const P = (S.pays || []).filter(p => String(p.at || '').slice(0, 7) === mo); const ok = P.filter(p => /결제 완료|부분 환불/.test(p.status)); const sum = ok.reduce((a, p) => a + (+p.amount || 0), 0); const rf = P.filter(p => /환불/.test(p.status)).length; return scxInfo(`${mo} 결제 ${ok.length}건 · 매출 ${sum.toLocaleString()}원 · 환불 관련 ${rf}건입니다.`, scxTbl(['항목', '값'], [['결제 완료', ok.length + '건'], ['매출', sum.toLocaleString() + '원'], ['환불 신청 · 완료', rf + '건'], ['결제 대기(가상계좌)', P.filter(p => p.status === '결제 대기').length + '건']])); }],
-      ['sl-ref', '환불 신청 확인해줘', () => { const X = (S.pays || []).filter(p => p.status === '환불 신청'); return scxInfo(X.length ? `처리할 환불 신청 ${X.length}건입니다. 매출 화면에서 승인 · 거절하세요.` : '처리할 환불 신청이 없습니다.', scxTbl(['신청일', '항목', '금액', '사유'], X.slice(0, 10).map(p => [(p.refund && p.refund.at) || p.at, p.item, (+p.amount || 0).toLocaleString() + '원', (p.refund && p.refund.reason) || '']))); }],
+      ['sl-ref', '환불 신청 확인해줘', () => { const X = (S.pays || []).filter(p => p.status === '환불 신청'); return scxInfo(X.length ? `처리할 환불 신청 ${X.length}건입니다. 수납 › 환불에서 승인 · 거절하세요.` : '처리할 환불 신청이 없습니다.', scxTbl(['신청일', '항목', '금액', '사유'], X.slice(0, 10).map(p => [(p.refund && p.refund.at) || p.at, p.item, (+p.amount || 0).toLocaleString() + '원', (p.refund && p.refund.reason) || '']))); }],
       ['sl-toss', '토스페이먼츠 연결 도와줘', scxAsk('토스페이먼츠 연결 도와줘')]],
     billing: [['bi-due', '미납 청구서 안내 보내줘', scxAsk('미납 청구서 안내 보내줘')], ['bi-sum', '청구서 현황 요약', () => { const B = S.bills || []; const by = {}; B.forEach(b => { by[b.status || '미납'] = (by[b.status || '미납'] || 0) + 1; }); return scxInfo(B.length ? `청구서 ${B.length}건입니다.` : '보낸 청구서가 없습니다.', scxTbl(['상태', '건수'], Object.entries(by))); }]],
     compliance: [['co-due', '법정교육 미이수자에게 마감 안내 보내줘', scxAsk('법정교육 미이수자에게 마감 안내 보내줘')], ['co-sum', '법정교육 이수 현황', () => { const R = (S.classes || []).filter(x => x.legal).map(x => { const thr = (x.criteria && x.criteria.threshold) || 80; const ids = x.learners || []; const d = ids.filter(id => clsDone(x, id)).length; return [x.name, ids.length, d, ids.length ? Math.round(d / ids.length * 100) + '%' : '—', x.end || '']; }); return scxInfo(R.length ? `법정의무교육 ${R.length}개 과정입니다.` : '법정의무교육으로 표시된 과정이 없습니다.', scxTbl(['과정', '대상', '이수', '이수율', '마감'], R)); }], ['co-rep', '실적 보고서 내려받아줘', scxAsk('실적 보고서 내려받아줘')]],
@@ -170,10 +170,10 @@ function scxRun(id) { const ch = scxChips().find(x => x.id === id); if (!ch) ret
 ACT['scx-run'] = el => { scxRun(el.dataset.v); };
 /* 낮은 화면(세로 760 이하)에서는 시작 가이드 카드와 이 화면 카드 중 하나만 펼친다(입력창 · 대화가 보이게) */
 const scxLow = () => innerHeight <= 760;
-const scxObOpen = () => { try { return !!(typeof obHTML === 'function' && obHTML() && !UI.obc); } catch (e) { return false; } };
+const scxObOpen = () => { try { return !!(typeof obHTML === 'function' && obHTML() && UI.obc === false); } catch (e) { return false; } };
 const scxOffNow = () => !!scxPref().off || (scxLow() && scxObOpen() && !UI.scxOpen);
 ACT['scx-tog'] = () => { if (!scxPref().off && scxOffNow()) { UI.scxOpen = true; UI.obc = true; try { obMount(); } catch (e) { } scxMount(); return; } scxSetPref({ off: !scxOffNow() }); if (!scxOffNow() && scxLow()) { UI.scxOpen = true; UI.obc = true; try { obMount(); } catch (e) { } } scxMount(); };
-{ const b = ACT['ob-tog']; if (b) ACT['ob-tog'] = el => { b(el); if (!UI.obc) UI.scxOpen = false; scxMount(); }; }
+{ const b = ACT['ob-tog']; if (b) ACT['ob-tog'] = el => { b(el); if (UI.obc === false) UI.scxOpen = false; scxMount(); }; }
 addEventListener('resize', () => { try { scxMount(); } catch (e) { } });
 
 /* ── 대화창 카드 ── */

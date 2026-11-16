@@ -1,5 +1,5 @@
 'use strict';
-/* v41 운영자 /api/ledger/*(09 3절). 조회는 owner · sub · teacher, 쓰기는 owner · sub(needStaff), 단위 · 단말 등록은 owner.
+/* v41 운영자 /api/ledger/*(09 3절). v43 P3-F01: 조회도 owner · sub만(교강사 차단 — 청구 금액 · 미수 비공개, Java LedgerServiceImpl과 같음), 쓰기는 owner · sub(needStaff), 단위 · 단말 등록은 owner.
    돈이 나가거나 연락이 가는 일(환불 확정 · 청구서 링크 · 대사 반영)은 직원이 부른 요청에서만 실행한다. 모든 숫자는 calc 함수 값. */
 module.exports = (ctx, S) => {
   const { pool, inTenant, readBody, limit, audit, need, needStaff, needOwner, env = process.env } = ctx; const { E, calc, str, int, DAY_RE, YM_RE } = S;
@@ -53,7 +53,7 @@ module.exports = (ctx, S) => {
   }
 
   const R = {
-    'GET /api/ledger/units': async req => { const a = await need(req); return T(a, async c => { const U = await S.unitsOf(c, a.tid); return { ok: true, units: tree(U), flat: U.map(unitOut) }; }); },
+    'GET /api/ledger/units': async req => { const a = await needStaff(req); return T(a, async c => { const U = await S.unitsOf(c, a.tid); return { ok: true, units: tree(U), flat: U.map(unitOut) }; }); },
     'POST /api/ledger/units': async req => { const a = await needOwner(req); const b = await readBody(req, 4096);
       return T(a, async c => { await S.ensureRoot(c, a.tid); const id = b.id ? str(b.id, 30) : S.rid('lu_'); if (!/^lu_[a-z0-9]{4,24}$/.test(id)) throw E(400, 'id', '단위 번호를 확인해 주십시오.');
         const cur = (await c.query('select * from led_unit where tenant_id = $1 and id = $2', [a.tid, id])).rows[0];
@@ -69,11 +69,11 @@ module.exports = (ctx, S) => {
           on conflict (tenant_id, id) do update set parent_id = $3, kind = $4, name = $5, toss_mid = $6, toss_client_key = $7, toss_secret_enc = $8, share_rate_bp = $9, active = $10, sort = $11 returning *`, [a.tid, id, parent, kind, name, mid, ck, sec, bp, act, sort])).rows[0];
         await audit(c, a.tid, a.email, 'ledger.unit', { unit: id, name, keyChanged: b.tossSecret !== undefined }); return { ok: true, unit: unitOut(row) }; }); },
 
-    'GET /api/ledger/summary': async req => { const a = await need(req); const Q = q(req); const { from, to } = S.range(Q);
+    'GET /api/ledger/summary': async req => { const a = await needStaff(req); const Q = q(req); const { from, to } = S.range(Q);
       return T(a, async c => { const U = await S.unitsOf(c, a.tid); const rows = await S.rowsOf(c, a.tid, from, to); const unit = Q.get('unit') || null;
         return { ok: true, from, to, unit, ...calc.summary(rows, { from, to, unit, rollup: Q.get('rollup') === '1', units: S.unitCalc(U) }) }; }); },
 
-    'GET /api/ledger/entries': async req => { const a = await need(req); const Q = q(req); const page = Math.max(1, int(Q.get('page')) || 1); const all = await entries(a, Q);
+    'GET /api/ledger/entries': async req => { const a = await needStaff(req); const Q = q(req); const page = Math.max(1, int(Q.get('page')) || 1); const all = await entries(a, Q);
       return { ok: true, total: all.length, page, entries: all.slice((page - 1) * 50, page * 50) }; },
 
     'POST /api/ledger/charges': async req => { const a = await needStaff(req); const b = await readBody(req, 16 * 1024); const sid = str(b.sid, 40).trim(); if (!sid) throw E(400, 'sid', '학습자를 골라 주십시오.');
@@ -110,7 +110,7 @@ module.exports = (ctx, S) => {
         await audit(c, a.tid, a.email, 'ledger.receipt', { receipt: row.id, amount, method }); return { ok: true, receipt: rcOut(row), allocs }; }); },
 
     'POST /api/ledger/refunds': async req => { const a = await needStaff(req); return refundCreate(a, await readBody(req, 4096)); },
-    'GET /api/ledger/refunds': async req => { const a = await need(req); const st = q(req).get('status') || 'pending';
+    'GET /api/ledger/refunds': async req => { const a = await needStaff(req); const st = q(req).get('status') || 'pending';
       return T(a, async c => ({ ok: true, refunds: (await c.query('select f.*, r.amount paid, r.method, r.channel, r.sid from led_refund f join led_receipt r on r.tenant_id = f.tenant_id and r.id = f.receipt_id where f.tenant_id = $1 and f.status = $2 order by f.at desc limit 200', [a.tid, str(st, 12)])).rows.map(r => ({ ...rfOut(r), paid: r.paid, method: r.method, channel: r.channel, sid: r.sid, calc: r.calc })) })); },
 
     'POST /api/ledger/links': async req => { const a = await needStaff(req); const b = await readBody(req, 4096); const chargeIds = ids(b.chargeIds); const sid = str(b.sid, 40).trim();
@@ -121,7 +121,7 @@ module.exports = (ctx, S) => {
         await c.query('insert into led_link (tenant_id, token_hash, charge_ids, sid, expires_at, created_by) values ($1,$2,$3,$4,$5,$6)', [a.tid, S.sha(tok), chargeIds, sid, exp, a.email]);
         await audit(c, a.tid, a.email, 'ledger.link', { charges: chargeIds, ttlHours: ttl }); return { ok: true, url: `/learner.html?t=${encodeURIComponent(a.tid)}&bill=${tok}`, token: tok, expiresAt: exp }; }); },
 
-    'GET /api/ledger/close': async req => { const a = await need(req); const Q = q(req); const day = DAY_RE.test(Q.get('day') || '') ? Q.get('day') : S.kstDay(); const unit = Q.get('unitId') || Q.get('unit') || 'lu_root';
+    'GET /api/ledger/close': async req => { const a = await needStaff(req); const Q = q(req); const day = DAY_RE.test(Q.get('day') || '') ? Q.get('day') : S.kstDay(); const unit = Q.get('unitId') || Q.get('unit') || 'lu_root';
       return T(a, async c => ({ ok: true, day, unit, ...(await sys(c, a.tid, unit, day)), close: (await c.query('select * from led_close where tenant_id = $1 and unit_id = $2 and day = $3', [a.tid, unit, day])).rows.map(closeOut)[0] || null })); },
     'POST /api/ledger/close': async req => { const a = await needStaff(req); const b = await readBody(req, 2048); const day = DAY_RE.test(b.day || '') ? b.day : S.kstDay();
       const cc = int(b.cashCounted), kc = int(b.cardCounted); if (!Number.isInteger(cc) || !Number.isInteger(kc) || cc < 0 || kc < 0) throw E(400, 'counted', '실제 금액을 입력해 주십시오.');
@@ -132,7 +132,7 @@ module.exports = (ctx, S) => {
         await c.query("update led_receipt set close_id = $4 where tenant_id = $1 and unit_id = $2 and status = 'paid' and close_id is null and (paid_at at time zone 'Asia/Seoul')::date = $3", [a.tid, u.id, day, id]);
         await audit(c, a.tid, a.email, 'ledger.close', { unit: u.id, day, cashDiff: cc - s.cashSystem, cardDiff: kc - s.cardSystem }); return { ok: true, close: closeOut(row) }; }); },
 
-    'GET /api/ledger/today': async req => { const a = await need(req);
+    'GET /api/ledger/today': async req => { const a = await needStaff(req);
       return T(a, async c => { const today = S.kstDay(); const sids = (await c.query("select distinct bill_id from led_charge where tenant_id = $1 and status in ('open','partial')", [a.tid])).rows.map(r => r.bill_id);
         const L = sids.length ? await S.linesOf(c, a.tid, { bills: sids }) : { bal: { lines: [] }, by: new Map() }; const stages = { soon: 0, d1: 0, d8: 0, d31: 0, nodue: 0, later: 0 }; const amounts = { soon: 0, d1: 0, d8: 0, d31: 0, nodue: 0, later: 0 }; const who = {};
         for (const l of L.bal.lines) { if (l.balance <= 0) continue; const x = L.by.get(l.id); const s = stageOf(x.due, today); amounts[s] += l.balance; (who[s] = who[s] || new Set()).add(x.sid); }
@@ -144,7 +144,7 @@ module.exports = (ctx, S) => {
         const over = (await c.query("select count(*)::int n from led_receipt where tenant_id = $1 and diff_reason = 'over_paid' and status = 'paid'", [a.tid])).rows[0].n;
         return { ok: true, today, unpaid: { people: stages, amount: amounts }, unmatched: um, refundsPending: pr.n, refundsPendingAmount: pr.amt, unclosed: uc, overPaid: over }; }); },
 
-    'GET /api/ledger/export': async (req, res) => { const a = await need(req); const Q = q(req); const { from, to } = S.range(Q);
+    'GET /api/ledger/export': async (req, res) => { const a = await needStaff(req); const Q = q(req); const { from, to } = S.range(Q);
       const out = { entries: await entries(a, Q) };
       const esc = v => { const s = v == null ? '' : v instanceof Date ? v.toISOString() : String(v); return /[",\n\r]/.test(s) || /^[=+\-@]/.test(s) ? `"${(/^[=+\-@]/.test(s) && !/^-?\d+$/.test(s) ? "'" : '') + s.replace(/"/g, '""')}"` : s; };
       const H = ['type', 'id', 'at', 'unit', 'sid', 'itemType', 'title', 'method', 'channel', 'amount', 'status', 'approvalNo', 'receipt', 'ruleType', 'diffReason'];
@@ -166,7 +166,7 @@ module.exports = (ctx, S) => {
         const { row } = await S.record(c, tid, { unit: d.unit_id, sid: b.sid ? str(b.sid, 40) : null, chargeIds: ids(b.chargeIds), method: 'desk_card', channel: 'desk', amount, paidAt: new Date(), approvalNo: appr, cardIssuer: str(b.cardIssuer, 30) || null, installment: int(b.installment) || null, terminalId: str(b.terminalId, 30) || null, shareEligible: false, by: 'device:' + d.id, idem });
         await audit(c, tid, 'device:' + d.id, 'ledger.device.push', { receipt: row.id, amount, mode: d.mode }); return { ok: true, receipt: rcOut(row) }; }); },
 
-    'GET /api/ledger/share': async req => { const a = await need(req); return require('./share')(ctx, S).report(a, q(req)); },
+    'GET /api/ledger/share': async req => { const a = await needStaff(req); return require('./share')(ctx, S).report(a, q(req)); },
     'POST /api/ledger/import': async req => { const a = await needStaff(req); return require('./import')(ctx, S).run(a, await readBody(req, 2 * 1024 * 1024)); }
   };
   async function entries(a, Q) { const { from, to } = S.range(Q);

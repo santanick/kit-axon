@@ -167,7 +167,7 @@ const lookOf = s => s.look || TPL.find(t => t.id === s.tpl)?.look || 'campus';
 const SEH = (d, def) => `<div class="sh">${d.eyebrow || def ? `<p class="ey">${esc(d.eyebrow || def)}</p>` : ''}${d.title ? `<h2>${esc(d.title).replace(/\n/g, '<br>')}</h2>` : ''}${d.sub || (typeof d.body === 'string' && d.body && !['cta'].includes(d.variant)) ? `<p class="sd">${esc(d.sub || d.body)}</p>` : ''}</div>`;
 const ICO = ['M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z', 'M4 5h16v11H4zM8 20h8M12 16v4', 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 4v5l3 2', 'M5 4h10l4 4v12H5zM14 4v5h5M8 13h8M8 17h6', 'M3 12l9-8 9 8M5 10v10h14V10', 'M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z', 'M4 19V9l8-5 8 5v10M9 19v-6h6v6', 'M20 12a8 8 0 11-16 0 8 8 0 0116 0zM8 12l3 3 5-6'];
 const svgI = (i, s = 22) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICO[i % ICO.length]}"/></svg>`;
-const SPZ = ['#E63295', '#7D5CB5', '#E8622A', '#4C77C5', '#3BA875'];
+const SPZ = ['#00862D', '#05612A', '#0F766E', '#3F3A33', '#5C554B']; // v43 F1: PRISM 유형 색(kit.js PRISM과 같은 값)
 function thumbArt(title, i, col, look, date) {
   const pal = look === 'senior' ? ['#2F4FD8', '#4A90F0', '#F06A7A', '#8B5CF6'] : look === 'navyGlow' ? ['#0A1628', '#13254A', '#1B2E5C', '#0F1F3D'] : [col, mixc(col, '#000', .35), mixc(col, '#5C74F6', .45), mixc(col, '#0EA5E9', .45)];
   const bg = pal[i % pal.length]; const t = String(title || '').slice(0, 28);

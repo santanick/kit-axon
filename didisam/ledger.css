@@ -91,3 +91,76 @@
 .lg-rate i{display:block;height:100%;background:var(--lg-gt)}
 .lg-rate.low i{background:var(--warn)}
 .lg-amt.warnc{color:var(--warn)}
+/* ───────── v43 매출 · 수납(최종 시안 2판) — 토큰 · 카드 · 표 머리 · 상태 칩 · 결제/환불 모달 ───────── */
+.lg{--lg-g:var(--gr500);--lg-gt:var(--t-mag);--lg-gl:var(--gr50)}
+.lg .btn.pri,#modal .btn.pri{background:var(--pr);color:var(--on-pr)}
+.lg-unit select,.lg-q,.lg-fl input,.lg-fl select,.lg-fl textarea,.lg-url{border:0;border-radius:var(--r-in);box-shadow:inset 0 0 0 1px var(--g300);background:var(--surface);color:var(--g900)}
+.lg-fl input:focus,.lg-fl select:focus,.lg-fl textarea:focus,.lg-q:focus,.lg-unit select:focus{outline:0;box-shadow:inset 0 0 0 1.5px var(--pr),0 0 0 4px rgba(0,197,59,.14)}
+.lg-seg{border:0;background:var(--surface);box-shadow:var(--sh1);border-radius:14px}
+.lg-seg button.on,.lg-chip.on{background:var(--g900);color:var(--surface)}
+.lg-chip{border-radius:12px;background:var(--surface);box-shadow:var(--sh1)}
+.lg-ai{border:0;border-radius:var(--r-card);background:var(--gr50);box-shadow:inset 0 0 0 1px var(--gr100);padding:14px 18px}
+.lg-ai p{font-size:16px;font-weight:600;color:var(--g900)}
+.lg-ai-b{background:var(--pr);color:var(--on-pr);border-radius:7px}
+.lg-kpi,.lg-card,.lg-do{border:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh2)}
+.lg-kpi{padding:16px 18px}.lg-kpi b{font-size:28px;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.lg-kpi.warn{box-shadow:var(--sh2),inset 0 0 0 1px var(--co100)}.lg-kpi.warn b{color:var(--co700)}
+.lg-kpi.bad{box-shadow:var(--sh2),inset 0 0 0 1px var(--badl)}.lg-kpi.bad b{color:var(--t-bad)}
+.lg-do.warn{background:var(--surface);box-shadow:var(--sh2),inset 3px 0 0 var(--co500)}.lg-do.warn>b{color:var(--co700)}
+.lg-do.bad{background:var(--surface);box-shadow:var(--sh2),inset 3px 0 0 var(--bad)}.lg-do.bad>b{color:var(--t-bad)}
+.lg-close.done{background:var(--surface2)}
+/* 수납 도넛 · 누적 순매출 */
+.lg43{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:14px}
+.lg43.one{grid-template-columns:minmax(0,1fr)}
+.lg43-pay .v4-dw{margin:6px 0 14px}
+.lg43-go{width:100%;justify-content:center;margin-top:auto}
+.lg43-n{display:block;margin-top:6px;text-align:center}
+/* 표 머리 · 행 · 상태 칩 */
+.lg .tw{border-radius:var(--r-card);box-shadow:var(--sh2);background:var(--surface)}
+.lg .tw thead th{background:var(--surface2);color:var(--t-sub);font-size:12px;font-weight:800;letter-spacing:.02em;text-transform:none;padding-top:12px;padding-bottom:12px;border-bottom:1px solid var(--g300);white-space:nowrap}
+.lg .tw tbody td{border-bottom:1px solid var(--g200);font-variant-numeric:tabular-nums}
+.lg .tw tbody tr:last-child td{border-bottom:0}
+.lg-st{min-height:26px;padding:0 10px;border-radius:99px;background:var(--g200);color:var(--g700)}
+.lg-st::before{opacity:1}
+.lg-st.ok{background:var(--gr50);color:var(--t-mag)}
+.lg-st.warn,.lg-st.wait{background:var(--co50);color:var(--co700)}
+.lg-st.bad{background:var(--badl);color:var(--t-bad)}
+.lg-st.off{background:var(--g200);color:var(--g700)}
+.lg-k{border:0;border-radius:99px;background:var(--g200);color:var(--g700)}
+.lg-k.receipt{background:var(--gr50);color:var(--t-mag)}.lg-k.refund{background:var(--badl);color:var(--t-bad)}
+.lg-amt.neg,.lg-li.neg{color:var(--t-bad)}
+/* 결제 · 환불 모달 */
+#modal .lg-calc{background:var(--gr50);border-radius:16px;padding:14px 16px;box-shadow:inset 0 0 0 1px var(--gr100);gap:6px}
+#modal .lg-calc strong{font-size:22px;letter-spacing:-.03em;color:var(--t-mag);font-variant-numeric:tabular-nums}
+#modal .lg-msg{border:0;border-radius:16px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--g300);padding:14px 16px;line-height:1.6}
+#modal .lg-note{border-radius:14px;background:var(--surface2);color:var(--t-sub)}
+#modal .lg-bal{padding:12px 16px;border-radius:16px;background:var(--gr50)}#modal .lg-bal b{color:var(--t-mag);font-variant-numeric:tabular-nums}
+#modal .lg-term{border-radius:20px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--g300)}#modal .lg-term b{color:var(--t-mag);font-variant-numeric:tabular-nums}
+#modal .lg-acts{padding-top:12px;border-top:1px solid var(--g300);margin-top:6px}
+#modal .lg-law{color:var(--co700)}
+@media (max-width:1100px){.lg43{grid-template-columns:minmax(0,1fr)}}
+/* v43 D-E — 매출 · 수납 머리: 짙은 그린 히어로(AI 요약 + 유리 KPI 2×2) */
+#main .lg .lg-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,460px);gap:28px;margin:4px 0 16px}
+#main .lg .lg-hero .l43-hl{font-size:38px}
+#main .lg .lg-hero .lg-ai{background:transparent;box-shadow:none;border:0;padding:0;margin-top:14px;gap:14px;align-items:center}
+#main .lg .lg-hero .lg-ai-b{display:none}
+#main .lg .lg-hero .lg-ai p{color:rgba(255,255,255,.86);font-size:15.5px;font-weight:500;line-height:1.6;flex:1 1 100%}
+#main .lg .lg-hero .lg-ai .btn{background:#fff;color:#053D1E;border:0;min-height:44px;padding:0 18px;font-weight:700}
+#main .lg .lg-hero .lg-kpis{position:relative;z-index:1;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:center}
+#main .lg .lg-hero .lg-kpi{padding:14px 16px 10px;border-radius:16px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);border:0;min-height:0;color:#fff}
+#main .lg .lg-hero .lg-kpi span{font-size:13px;font-weight:600;color:rgba(255,255,255,.8)}
+#main .lg .lg-hero .lg-kpi b{display:block;font-size:26px;font-weight:800;letter-spacing:-.02em;color:#fff;font-variant-numeric:tabular-nums;margin:2px 0 2px;white-space:nowrap}
+#main .lg .lg-hero .lg-kpi.warn b,#main .lg .lg-hero .lg-kpi.bad b{color:#FFB08F}
+#main .lg .lg-hero .lg-kpi small{font-size:12px;color:rgba(255,255,255,.74);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+#main .lg .lg-hero .lg-kpi .l43-spk{display:block;width:100%;height:26px;margin-top:6px;color:#7CF2A2}
+#main .lg .lg-hero .lg-kpi.warn .l43-spk,#main .lg .lg-hero .lg-kpi.bad .l43-spk{color:#FFB08F}
+#main .bview .lg>.seg2:not(.wtabs)>button,#main .lg>.seg2 button,#main .lg .lg-per .lg-chip,#main .lg .lg-seg button{min-height:44px}
+@media (max-width:1180px){#main .lg .lg-hero{grid-template-columns:minmax(0,1fr)}#main .lg .lg-hero .l43-hl{font-size:30px}}
+@media (max-width:640px){#main .lg .lg-hero .lg-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#main .lg .lg-hero .lg-kpi b{font-size:20px}#main .lg .lg-hero .l43-hl{font-size:24px}}
+@media (min-width:861px){#main:has(.lg) .sl-i{position:relative}#main:has(.lg) .sl-i::after{content:'';position:absolute;inset:-12px}}
+html[data-theme=dark] #main .lg .lg-hero .lg-ai .btn{background:#fff!important;color:#053D1E!important}
+/* v43 R6: 단위 세그먼트(기본 드롭다운 대체) · 히어로 주 · 보조 버튼 */
+.lg-useg{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.lg-useg>span{font-weight:700;font-size:13px;color:var(--muted);margin-right:2px}
+.lg-hero .l43-acts{margin-top:14px}
+.lg-xchips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 12px}.lg-xchips>span{font-size:13px;font-weight:700;color:var(--muted);margin-right:4px}.lg-xchips .lg-chip{min-height:36px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair)}
+.lg-useg .lg-uk{font-size:12px;font-weight:600;opacity:.65;margin-left:2px}

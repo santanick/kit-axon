@@ -16,7 +16,11 @@
   /* 설치한 앱은 시작 주소에 기관 번호가 없으므로 마지막 기관을 기억해 둔다 */
   if (!LR.tid && (Q.get('app') === '1' || standalone())) { const t = ls.get('tid'); if (t) LR.tid = t; }
   if (Q.get('app') === '1') { try { ls.set('classic', null); } catch (e) { } } /* v38 F5 V · L: 주소에 ?app=1이 있으면 전에 저장한 '기존 화면' 선택을 지우고 앱 화면으로 연다(앱 안의 '기존 화면으로 보기'는 그대로 동작) */
-  const appOn = () => { try { return !!SITE() && LR.mode !== 'preview' && ls.get('classic') !== '1' && (!!LR.me || standalone() || Q.get('app') === '1'); } catch (e) { return false; } };
+  /* v43 G2 2차(대표님 결정 11-16): PC 폭(900px 이상)에서 로그인한 학습자의 기본 화면은 「넓은 허브」(학습자 웹).
+     앱 화면은 설치한 앱(standalone) · 주소 ?app=1 · 사용자가 앱 화면을 고른 경우(classic='0') · 900px 미만일 때 보여 준다. */
+  const wide = () => { try { return matchMedia('(min-width: 900px)').matches; } catch (e) { return false; } };
+  const appOn = () => { try { return !!SITE() && LR.mode !== 'preview' && ls.get('classic') !== '1' && (standalone() || Q.get('app') === '1' || (!!LR.me && (!wide() || ls.get('classic') === '0'))); } catch (e) { return false; } };
+  try { const mq = matchMedia('(min-width: 900px)'); const re = () => { try { if (typeof lrender === 'function' && ls.get('classic') !== '0' && !standalone() && Q.get('app') !== '1') lrender(); } catch (e) { } }; mq.addEventListener ? mq.addEventListener('change', re) : mq.addListener(re); } catch (e) { }
   window.lappOn = appOn;
 
   Object.assign(ICP, { search: ICP.search || 'M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-4-4', sortk: 'M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4', mic: 'M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM5 11a7 7 0 0014 0M12 18v3', back: 'M15 5l-7 7 7 7', dots: 'M5 12h.01M12 12h.01M19 12h.01', install: 'M12 3v12M7 10l5 5 5-5M5 21h14', sparkle: ICP.sparkle || 'M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z', book2: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19V5', compass: 'M12 21a9 9 0 100-18 9 9 0 000 18zM15.5 8.5l-2 5-5 2 2-5z' });
@@ -34,31 +38,37 @@
 
   /* ── 공통 조각 ── */
   const jw = n => (typeof lJ === 'function' ? n + lJ(n, '과', '와') : n + '과');
-  const av = (P, big) => `<span class="ap-av ${big ? 'big' : ''}" style="--pc:${P ? P.c : 'var(--pri)'}" aria-hidden="true"><i>${P ? P.e : ico('sparkle', big ? 30 : 18)}</i></span>`;
+  /* v43: 선생님 스타일 아바타는 이모지 대신 그린 선 아이콘(1.75) — 다정(해) · 꼼꼼(자) · 차분(잎) */
+  const PSV = { warm: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>', strict: '<path d="M4 17L17 4l3 3L7 20z"/><path d="M8 13l1.5 1.5M11 10l1.5 1.5M14 7l1.5 1.5"/>', calm: '<path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14"/><path d="M5 19l7-7"/>' };
+  const pIco = (k, sz) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PSV[k] || PSV.warm}</svg>`;
+  const av = (P, big) => `<span class="ap-av ${big ? 'big' : ''}" style="--pc:${P ? P.c : 'var(--pri)'}" aria-hidden="true"><i>${P ? pIco(P.k, big ? 36 : 20) : ico('sparkle', big ? 30 : 18)}</i></span>`;
   const tName = () => (persona() || {}).n || TCFG().name;
   const hiTime = () => { const h = new Date().getHours(); return h < 5 ? '늦은 밤까지 수고 많아요.' : h < 11 ? '좋은 아침이에요.' : h < 14 ? '점심은 드셨어요?' : h < 18 ? '좋은 오후예요.' : '오늘 하루 수고 많았어요.'; };
   const who = () => { const c = typeof lCall === 'function' ? lCall() : ((LR.me && (LR.me.nick || LR.me.sid)) || ''); return c && !/님$/.test(c) ? c + '님' : c; }; /* v37 L2: 첫 화면 호칭은 늘 '~님'(대학 학번만 있을 때 '20261008,'로 뜨던 것 — ltutor 인사와 같은 규칙) */
   const hasComm = () => (SITE().pages || []).some(p => p.id === 'comm') || typeof lcCommHTML === 'function';
   const browse = () => document.querySelector('header.lh a[href="#shop"]') ? '#shop' : ((SITE().pages || []).some(p => p.id === 'shop') || typeof viewShop === 'function') ? '#shop' : (SITE().pages || []).some(p => p.id === 'courses') ? '#courses' : '#home';
-  const SEC = { home: 'home', my: 'learn', c: 'learn', t: 'learn', bk: 'learn', dg: 'learn', cert: 'learn', badge: 'learn', mybooks: 'learn', shop: 'find', class: 'find', courses: 'find', tutorials: 'find', textbooks: 'find', tb: 'find', books: 'find', pay: 'find', payok: 'find', comm: 'comm', post: 'comm', write: 'comm', notice: 'comm', acct: 'me', connect: 'me', inbox: 'me', mypay: 'me', payd: 'me', msg: 'me', family: 'me', login: 'me', join: 'me' };
+  const SEC = { home: 'home', my: 'learn', c: 'learn', t: 'learn', bk: 'learn', dg: 'learn', cert: 'learn', badge: 'learn', mybooks: 'learn', shop: 'find', class: 'find', courses: 'find', tutorials: 'find', textbooks: 'find', tb: 'find', books: 'find', pay: 'find', payok: 'find', applied: 'learn', comm: 'comm', post: 'comm', write: 'comm', notice: 'comm', acct: 'me', connect: 'me', inbox: 'me', mypay: 'me', payd: 'me', msg: 'me', family: 'me', login: 'me', join: 'me' };
   /* v27.4 하나의 앱 · 여러 기관 — 가입한 기관 유형(시나리오)에 따라 탭 · 첫 화면 · 추천 질문 · 용어가 달라진다.
      이 기기에는 기관 번호 · 이름 · 유형만 기억한다(개인정보 없음). 운영: 디디쌤 통합 계정의 '내 기관' 목록(GET /api/me/orgs)으로 대체 */
   const TYL = { univ: '대학', corp: '기업', public: '공공기관', k12: '학원(초중고)', adult: '학원(성인)', lifelong: '평생교육원', voc: '직업훈련원' };
   const SCN = {
-    univ: { learn: '내 교과목', find: '교과목 찾기', sub: me => `학번 ${me.sid || ''} · 교과 · 비교과 · 배지를 함께 챙겨요`, chips: [['이번 학기 이수 현황', '이번 학기 교과 · 비교과 이수 현황 알려줘', 'status'], ['비교과 추천', '나한테 맞는 비교과 프로그램 추천해줘', 'rec'], ['과제 마감', '이번 주 과제 마감 정리해줘', 'due']], d: '교과 · 비교과 · 학번 로그인' },
-    corp: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '직무 교육 · 필수교육 이수를 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['직무 과정 추천', '내 직무에 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '직무 · 법정의무교육 · 이수 관리' },
-    public: { learn: '내 교육', find: '교육과정', sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '교육 신청 · 이수 현황을 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['교육과정 추천', '나에게 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '교육 신청 · 필수교육 · 이수 관리' },
-    k12: { learn: '내 수업', find: '수업 찾기', sub: () => '숙제 · 출석 · 복습을 함께 챙겨요', chips: [['오늘 숙제', '오늘 해야 할 숙제 알려줘', 'due'], ['출석 확인', '내 출석 현황 알려줘', 'att'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '수업 · 숙제 · 출결 · 보호자' },
-    adult: { learn: '내 강의', find: '둘러보기', sub: () => '수강 · 복습 · 자격증 준비를 함께 챙겨요', chips: [['이번 주 계획', '이번 주 학습 계획 짜줘', 'plan'], ['자격증 준비', '자격증 준비 순서 알려줘', 'certprep'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '강좌 수강 · 결제 · 자격증' },
-    lifelong: { learn: '내 강좌', find: '강좌 신청', sub: () => '강좌 신청 · 출석 · 수료를 함께 챙겨요', chips: [['신청할 강좌', '지금 신청할 수 있는 강좌 알려줘', 'list'], ['수료 조건', '수료 조건 알려줘', 'rule'], ['이번 주 일정', '이번 주 수업 일정 알려줘', 'week']], d: '강좌 신청 · 출석 · 수료 기록' },
-    voc: { learn: '내 훈련', find: '훈련과정', sub: () => '출석 · 학습 시간 · 수료 기준을 함께 챙겨요', chips: [['출석 확인', '오늘 출석 현황 알려줘', 'att'], ['수료 기준', '훈련 수료 기준 알려줘', 'rule'], ['오늘 학습 한도', '오늘 학습할 수 있는 시간 알려줘', 'limit']], d: '훈련과정 · 출결 · 수료' }
+    univ: { learn: '내 교과목', find: '교과목 찾기', tabs: [['my', '#my', '내 교과목'], ['find', '#courses', '교과목 찾기']], sub: me => `학번 ${me.sid || ''} · 교과 · 비교과 · 배지를 함께 챙겨요`, chips: [['이번 학기 이수 현황', '이번 학기 교과 · 비교과 이수 현황 알려줘', 'status'], ['비교과 추천', '나한테 맞는 비교과 프로그램 추천해줘', 'rec'], ['과제 마감', '이번 주 과제 마감 정리해줘', 'due']], d: '교과 · 비교과 · 학번 로그인' },
+    corp: { learn: '내 교육', find: '교육과정', tabs: [['my', '#my', '내 교육'], ['find', '#courses', '교육과정']], sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '직무 교육 · 필수교육 이수를 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['직무 과정 추천', '내 직무에 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '직무 · 법정의무교육 · 이수 관리' },
+    public: { learn: '내 교육', find: '교육과정', tabs: [['my', '#my', '내 교육'], ['find', '#courses', '교육과정']], sub: () => { const n = legalN(); return n ? `필수교육 미이수 ${n}건 · 마감 전에 먼저 알려 드려요` : '교육 신청 · 이수 현황을 함께 챙겨요'; }, chips: [['필수교육 마감', '필수(법정)교육 마감 알려줘', 'legal'], ['교육과정 추천', '나에게 맞는 교육과정 추천해줘', 'rec'], ['이수 현황', '내 교육 이수 현황 정리해줘', 'status']], d: '교육 신청 · 필수교육 · 이수 관리' },
+    k12: { learn: '내 수업', find: '수업 찾기', tabs: [['my', '#my', '내 수업'], ['cal', '#cal', '일정']], sub: () => '숙제 · 출석 · 복습을 함께 챙겨요', chips: [['오늘 숙제', '오늘 해야 할 숙제 알려줘', 'due'], ['출석 확인', '내 출석 현황 알려줘', 'att'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '수업 · 숙제 · 출결 · 보호자' },
+    adult: { learn: '내 강의', find: '둘러보기', tabs: [['my', '#my', '내 강의'], ['find', '#shop', '둘러보기']], sub: () => '수강 · 복습 · 자격증 준비를 함께 챙겨요', chips: [['이번 주 계획', '이번 주 학습 계획 짜줘', 'plan'], ['자격증 준비', '자격증 준비 순서 알려줘', 'certprep'], ['복습 퀴즈', '복습 퀴즈 내줘', 'quiz']], d: '강좌 수강 · 결제 · 자격증' },
+    lifelong: { learn: '내 강좌', find: '강좌 신청', tabs: [['my', '#my', '내 강좌'], ['find', '#courses', '강좌 신청']], sub: () => '강좌 신청 · 출석 · 수료를 함께 챙겨요', chips: [['신청할 강좌', '지금 신청할 수 있는 강좌 알려줘', 'list'], ['수료 조건', '수료 조건 알려줘', 'rule'], ['이번 주 일정', '이번 주 수업 일정 알려줘', 'week']], d: '강좌 신청 · 출석 · 수료 기록' },
+    voc: { learn: '내 훈련', find: '훈련과정', tabs: [['my', '#my', '내 훈련'], ['att', '#attend', '출석']] /* v43 APP-TABS: 출결 · 학습시간 한도는 수료 요건이라 한 번에 닿게(일정은 「내 훈련」 세그먼트) */, sub: () => '출석 · 학습 시간 · 수료 기준을 함께 챙겨요', chips: [['출석 확인', '오늘 출석 현황 알려줘', 'att'], ['수료 기준', '훈련 수료 기준 알려줘', 'rule'], ['오늘 학습 한도', '오늘 학습할 수 있는 시간 알려줘', 'limit']], d: '훈련과정 · 출결 · 수료' }
   };
+  /* v43 공공 세부 유형(대표님 결정 11-16): 직원 교육형은 위 public(필수교육 · 이수). 시민 교육형 = 강좌 신청 · 출석 · 수료, 시설형 = 시설 예약 · 강습 신청 · 이용권(「시설」 탭 포함, APP-TABS) */
+  SCN.public_citizen = { learn: '내 강좌', find: '강좌 신청', tabs: [['my', '#my', '내 강좌'], ['find', '#courses', '강좌 신청']], sub: () => '강좌 신청 · 출석 · 수료를 함께 챙겨요', chips: [['신청할 강좌', '지금 신청할 수 있는 강좌 알려줘', 'list'], ['이번 주 일정', '이번 주 수업 일정 알려줘', 'week'], ['수료 조건', '수료 조건 알려줘', 'rule']], d: '시민 강좌 신청 · 출석 · 수료' };
+  SCN.public_facility = { learn: '내 강습', find: '강습 신청', tabs: [['my', '#my', '내 강습'], ['find', '#courses', '강습 신청'], ['fac', '#fac', '시설']], sub: () => '시설 예약 · 강습 · 이용권을 함께 챙겨요', chips: [['오늘 예약', '오늘 내 시설 예약 알려줘', 'fac'], ['신청할 강습', '지금 신청할 수 있는 강습 알려줘', 'list'], ['이용권 잔여', '내 이용권 남은 횟수 알려줘', 'pass']], d: '시설 예약 · 강습 신청 · 이용권' };
   /* v29 대학 학사 LMS(전교생 메인)는 수업 · 출석 · 과제 · 시험 · 성적 중심 시나리오 */
-  SCN.univ_lms = { learn: '이번 학기 강의', find: '비교과', sub: me => `학번 ${me.sid || ''} · 출석 · 과제 · 시험 · 성적을 함께 챙겨요`, chips: [['오늘 출석', '오늘 출석해야 할 수업 알려줘', 'att'], ['과제 · 시험 마감', '이번 주 과제 · 시험 마감 정리해줘', 'due'], ['학습 분량 점검', '이번 주 온라인 강의 중 덜 들은 차시 알려줘', 'gap']], d: '교과 수업 · 스마트 출석 · 성적 · 학사 연동' };
+  SCN.univ_lms = { learn: '이번 학기 강의', find: '비교과', tabs: [['my', '#my', '이번 학기 강의'], ['cal', '#cal', '일정']], sub: me => `학번 ${me.sid || ''} · 출석 · 과제 · 시험 · 성적을 함께 챙겨요`, chips: [['오늘 출석', '오늘 출석해야 할 수업 알려줘', 'att'], ['과제 · 시험 마감', '이번 주 과제 · 시험 마감 정리해줘', 'due'], ['학습 분량 점검', '이번 주 온라인 강의 중 덜 들은 차시 알려줘', 'gap']], d: '교과 수업 · 스마트 출석 · 성적 · 학사 연동' };
   const oTy = () => (SITE() && SITE().org && SITE().org.type) || 'adult';
   const oEd = () => (SITE() && SITE().org && SITE().org.ed) || '';
   const scnExt = () => { for (const f of window.LSCN_PICK || []) { try { const x = f(oTy(), oEd()); if (x) return x; } catch (e) { console.error(e); } } return null; };
-  const scn = () => scnExt() || (oTy() === 'univ' && oEd() === 'lms' ? SCN.univ_lms : SCN[oTy()]) || SCN.adult;
+  const scn = () => scnExt() || (oTy() === 'univ' && oEd() === 'lms' ? SCN.univ_lms : oTy() === 'public' && SCN['public_' + oEd()] ? SCN['public_' + oEd()] : SCN[oTy()]) || SCN.adult; /* v43 공공 세부 유형(oEd: citizen · facility · staff, 없으면 직원 교육형) */
   window.lappScn = () => scn(); /* v33: 기존 웹(lterm.js)이 같은 용어를 쓰도록 내보냄 */
   /* v39 디디쌤 튜브(ltube.js)가 기존 앱과 같은 유형 용어 · 튜터 이름 · 둘러보기 · 커뮤니티 경로 · 설치 안내를 쓰도록 내보냄 */
   window.lappInfo = () => ({ tName: tName(), learn: scn().learn, find: scn().find, chips: scn().chips || [], browse: browse(), comm: hasComm() ? ['#comm', '커뮤니티'] : ['#notice', '공지'], inst: !standalone() && ls.get('instx') !== '1', ios: IOS });
@@ -92,13 +102,29 @@
       : J.mode === 'invite' ? `<a class="lbtn pri" href="#login">초대받은 계정으로 시작</a><span class="lgj-s">초대 링크(메일 · 메신저)를 열면 가입돼요</span>`
       : `<a class="lbtn pri" href="#login">${oTy() === 'univ' ? '학번' : '접근코드'}으로 시작</a><a class="lgj-lk" href="#find/code">접근코드를 모르겠어요</a>`;
     return `<section class="lgj" aria-label="가입 · 시작"><div><b>${esc(J.t)}</b><small>${esc(J.s[0] || '')}</small></div><div class="lgj-a">${cta}</div></section>`; }
+  /* v43 D-D(111) 방문자 첫 화면: 흰 바탕 + 아이콘 1개 → 사진 무대 히어로(사진 + 짙은 그린 그라데이션) · 혜택 칩 3개 */
+  function guestHero() { let u = ''; try { u = typeof window.lPhoto === 'function' ? window.lPhoto(SITE().org.name + ' 온라인 강의 학습', 'ap-guest', true) : ''; } catch (e) { }
+    return `<section class="ap-hero ap-ghero"${u ? ` style="--ph:url('${esc(u)}')"` : ''}>${orgChip()}<p class="ap-gey">${esc(TYL[oTy()] || '기관')} · 나만의 AI 선생님</p><h1>나만의 AI 선생님과<br>공부를 시작해 보세요</h1><p class="ap-gsub">강좌 · 수강 방법은 로그인 없이 바로 물어보세요. 가입하면 내 진도와 마감을 매일 먼저 챙겨 드려요.</p>
+</section>`; } /* v43 R9(J4 111): 혜택 칩 3개는 가입 카드 문장과 겹쳐 뺌(히어로를 낮춰 추천 강좌 · 가입 카드가 첫 화면에 온전히 보이게) */
+  /* v43 D-D — 체험판(샘플 사이트)에서만 쓰는 보호자 자녀 2명 · 알림 6건. 기관 데이터(laRoom)가 있으면 쓰지 않는다. 학생은 이름 대신 닉네임 · 반만 */
+  const demoS = () => LR.mode === 'demo' && LR.tid === 'sample' && !!LR.me;
+  const DKIDS = [{ n: '지우', g: '중2 · 수학 심화반', at: 96, p: 72, due: '오늘 숙제 1개' }, { n: '하준', g: '초6 · 영어 리딩반', at: 100, p: 58, due: '내일 단어 시험' }];
+  /* v43 R9(J4 115): 체험판 보호자 홈의 「자녀 일정 · 예정된 일정이 없어요」 → 체험 자녀 일정 3건(저장 없음, 그릴 때마다 오늘 기준) */
+  (window.LCAL_SRC = window.LCAL_SRC || []).push(() => { const DK = window.lappDemoKids && window.lappDemoKids(); if (!DK) return []; const t0 = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); const D = n => new Date(Date.parse(t0) + n * 864e5).toISOString().slice(0, 10);
+    return [{ id: 'demo:p1', date: D(0), time: '22:00', k: '과제', title: `[${DK[0].n}] 숙제 마감 — 일차함수 문제 20개`, src: 'org', who: DK[0].n }, { id: 'demo:p2', date: D(1), time: '17:00', k: '시험', title: `[${DK[1].n}] 단어 시험 — Unit 6`, src: 'org', who: DK[1].n }, { id: 'demo:p3', date: D(2), time: '16:00', k: '회차', title: `[${DK[0].n}] 수학 심화반 8회차`, src: 'org', who: DK[0].n, place: '3층 2강의실' }]; });
+  window.lappDemoKids = () => demoS() && isPar() && !laRoomOk() ? DKIDS : null;
+  const laRoomOk = () => { try { return !!(typeof laRoom === 'function' && laRoom()); } catch (e) { return false; } };
   function joinCard() { if (LR.me || isPar()) return ''; const J = joinInfo(); const pend = pendSid();
     if (pend) return `<section class="ap-join pend" aria-label="가입 상태"><span class="ap-tag w">가입 승인 대기 중</span><h2>운영자가 승인하면 바로 알려 드려요</h2><p>승인 전에도 강좌 · 공지를 둘러볼 수 있어요. 수강 · 결제는 승인 뒤에 열려요.</p><a class="ap-go ghost sm" href="${esc(browse())}">둘러보기</a></section>`;
     const cta = J.mode === 'open' ? `<a class="ap-go" href="#join">${esc(SITE().org.name)} 가입하기</a><a class="ap-lk" href="#login">이미 가입했어요 · 로그인</a>`
       : J.mode === 'invite' ? `<button type="button" class="ap-go" data-ap="orgs" data-v="add">초대 링크 붙여 넣기</button><a class="ap-lk" href="#login">이미 가입했어요 · 로그인</a>`
       : `<a class="ap-go" href="#login">${oTy() === 'univ' ? '학번' : '접근코드'}으로 시작하기</a><a class="ap-lk" href="#find/code">접근코드를 모르겠어요</a>`;
-    return `<section class="ap-join" aria-labelledby="apJT"><p class="ap-jey">${esc(TYL[oTy()] || '기관')} · ${esc(SITE().org.name)}</p><h2 id="apJT">${esc(J.t)}</h2>${J.tags.length ? `<p class="ap-tags">${J.tags.map(t => `<span class="ap-tag">${esc(t)}</span>`).join('')}</p>` : ''}
-      <ol>${J.s.map(x => `<li>${esc(x)}</li>`).join('')}</ol>${cta}</section>`; }
+    return `<section class="ap-join ap-join43" aria-labelledby="apJT"><h2 id="apJT">${esc(J.t)}</h2>${J.tags.length ? `<p class="ap-tags">${J.tags.map(t => `<span class="ap-tag">${esc(t)}</span>`).join('')}</p>` : ''}
+      <p class="ap-jl">${esc(J.s[0] || '')}</p>${cta}</section>`; } /* v43 R9(J4 111): 두 줄 목록 → 한 줄(카드가 대화 영역 경계에서 잘리지 않게) */
+  /* v43 R9(J4 111): 방문자 첫 화면에 강좌가 하나도 보이지 않던 문제 → 추천 강좌 사진 카드(가로로 넘김) */
+  function guestRec() { const C = (SITE().classes || []).filter(c => c && c.status !== '종료' && c.status !== 'stop' && c.sale !== false).slice(0, 4); if (!C.length) return '';
+    return `<section class="ap-grec" aria-labelledby="apGR"><div class="ap-grh"><h2 id="apGR">이런 ${esc(/교과목/.test(scn().find) ? '교과목이' : /교육/.test(scn().find) ? '교육이' : '강좌가')} 있어요</h2><a href="${esc(browse())}">전체 보기</a></div><div class="ap-grl">${C.map(c => { let ph = c.thumb || ''; try { if (!ph && typeof lPhoto === 'function') ph = lPhoto(c.name, c.id); } catch (e) { } const n = (c.items || []).filter(i => i && i.type !== 'chapter').length; const pr = +(c.salePrice || c.price || 0);
+      return `<a class="ap-grc" href="#class/${esc(encodeURIComponent(c.id))}"><span class="ap-grp">${ph ? `<img src="${esc(ph)}" alt="" loading="lazy">` : ''}</span><b>${esc(c.name)}</b><small>${n ? n + '개 차시' : '차시 준비 중'}</small><small class="ap-grt">${[c.teacher ? '강사 ' + String(c.teacher).replace(/^강사\s*/, '') : '', pr ? pr.toLocaleString() + '원' : '무료'].filter(Boolean).map(esc).join(' · ')}</small></a>`; /* v43 S3B 111: 부가 정보 한 줄 잘림 → 차시 수 / 강사 · 가격 두 줄 */ }).join('')}</div></section>`; }
   const legalN = () => { try { return typeof lLegal === 'function' ? lLegal().length : 0; } catch (e) { return 0; } };
   const orgs = () => { try { return JSON.parse(ls.get('orgs') || '[]').filter(o => o && o.tid); } catch (e) { return []; } };
   function orgSave() { if (!SITE() || !LR.tid || LR.mode === 'preview') return; const L = orgs(); const o = { tid: LR.tid, name: String(SITE().org.name || '').slice(0, 40), type: oTy(), me: !!LR.me, at: Date.now() };
@@ -122,15 +148,16 @@
   const cnt = () => { let m = 0, n = 0; try { m = typeof lcInbox === 'function' ? lcInbox().filter(x => !x.read).length : 0; } catch (e) { } try { n = typeof laItems === 'function' ? laItems().L.filter(x => !x.read).length : 0; } catch (e) { } return { m, n }; };
   const bdg = k => k ? `<i class="ap-bd">${k > 99 ? '99+' : k}</i>` : '';
   const topIcons = () => { const c = cnt(); return `<a class="ap-ib" href="#msg" aria-label="메시지${c.m ? ` · 안 읽은 메시지 ${c.m}개` : ''}">${ico('chat', 21)}${bdg(c.m)}</a><a class="ap-ib" href="#inbox" aria-label="알림${c.n ? ` · 새 알림 ${c.n}개` : ''}">${ico('bell', 21)}${bdg(c.n)}</a>`; };
-  function kidsHTML() { let r = {}, pa = null; try { r = laRoom() || {}; pa = laPacct(); } catch (e) { }
+  function kidsHTML() { const DK = window.lappDemoKids && window.lappDemoKids(); if (DK) return `<section class="ap-kids"><h2>연결된 자녀 <small>${DK.length}명</small></h2>${DK.map((k, i) => `<a class="ap-kid dd-kid dd-kid9" href="#family"><span class="dd-kav" style="--kc:${i ? '#0E7C66' : '#00862D'}" aria-hidden="true">${esc(k.n.slice(0, 1))}</span><span class="dd-kb"><b>${esc(k.n)}</b><small>${esc(k.g)}</small><span class="dd-kdue">${esc(k.due)}</span><span class="dd-kbar">${[['출석', k.at], ['진도', k.p]].map(([l, v]) => `<span><em>${l}</em><i aria-hidden="true"><i style="width:${v}%"></i></i><b>${v}%</b></span>`).join('')}</span></span>${ico('arrow', 16)}</a>`).join('')}</section>`;
+    let r = {}, pa = null; try { r = laRoom() || {}; pa = laPacct(); } catch (e) { }
     const PR = (r.parents || []).filter(p => pa && p.acct === pa.id); const K = PR.filter(p => p.status === '연결 완료'); const W = PR.filter(p => p.status === '연결 요청').length;
     const nm = id => { const m = (r.members || []).find(x => x.id === id); return m ? (m.nick || m.name || '자녀') : '자녀'; };
     return `<section class="ap-kids"><h2>연결된 자녀 <small>${K.length}명</small></h2>${K.length ? K.map(k => `<a class="ap-kid" href="#family">${av(null)}<span><b>${esc(nm(k.child))}</b><small>${esc(k.rel || '자녀')} · 출결 · 수강 현황 보기</small></span>${ico('arrow', 16)}</a>`).join('') : `<a class="ap-kid none" href="#family">${ico('link', 20)}<span><b>자녀와 연결하기</b><small>${W ? `확인할 연결 요청 ${W}건` : '자녀의 가족 연결 코드로 요청하세요'}</small></span>${ico('arrow', 16)}</a>`}</section>`; }
   function parHomeHTML() { const c = cnt(); const org = SITE().org.name; const tile = (h, i, t, d, k) => `<a class="ap-pt" href="${h}">${ico(i, 22)}<b>${esc(t)}</b><small>${esc(d)}</small>${bdg(k)}</a>`;
     return `<div class="ap-home ap-par"><header class="ap-top"><button type="button" class="ap-me" data-ap="tsheet" aria-label="앱 설정">${av(null)}<span><b>${esc(org)}</b><small>보호자 계정 · ${esc(LR.me.nick || '')}</small></span></button>${topIcons()}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
-      <div class="ap-scroll ap-pscroll"><section class="ap-hero">${orgChip()}${av(null, true)}<h1>${esc(who())},<br>자녀의 학습을 함께 챙겨요</h1><p class="ap-sub">출결 · 수업 소식 · 청구서를 한곳에서 확인하세요.</p></section>
-      <nav class="ap-pg4" aria-label="보호자 바로가기">${tile('#family', 'user', '자녀 관리', '출결 · 수강 현황', 0)}${tile('#msg', 'chat', '메시지', c.m ? `안 읽은 메시지 ${c.m}개` : '기관 · 강사 소식', c.m)}${tile('#mypay/bill', 'layers', '청구서 · 결제', '결제 대기 · 내역', 0)}${tile('#notice', 'bell', '공지사항', '전체 · 클래스 공지', 0)}</nav>
-      ${kidsHTML()}</div></div>`; }
+      <div class="ap-scroll ap-pscroll">${(() => { const DK = window.lappDemoKids && window.lappDemoKids(); return `<section class="ap-hero dd-phero">${orgChip()}<h1>${esc(who())},<br>자녀의 학습을 함께 챙겨요</h1>${DK ? `<div class="dd-psum" role="group" aria-label="이번 주 자녀 요약"><p>이번 주 · 자녀 ${DK.length}명</p><div><span><b>${Math.round(DK.reduce((a, k) => a + k.at, 0) / DK.length)}<small>%</small></b>평균 출석</span><span><b>${DK.length}<small>건</small></b>할 일</span><span><b>1<small>건</small></b>결제 대기</span></div></div>` : '<p class="ap-sub">출결 · 수업 소식 · 청구서를 한곳에서 확인하세요.</p>'}</section>`; })()}
+      ${window.lappDemoKids && window.lappDemoKids() ? kidsHTML() : ''}<nav class="ap-pg4" aria-label="보호자 바로가기">${tile('#family', 'user', '자녀 관리', '출결 · 수강 현황', 0)}${tile('#msg', 'chat', '메시지', c.m ? `안 읽은 메시지 ${c.m}개` : '기관 · 강사 소식', c.m)}${tile('#mypay/bill', 'layers', '청구서 · 결제', window.lappDemoKids && window.lappDemoKids() ? '결제 대기 1건 · 11월 수강료' : '결제 대기 · 내역', 0)}${tile('#notice', 'bell', '공지사항', '전체 · 클래스 공지', 0)}</nav>
+      ${window.lappDemoKids && window.lappDemoKids() ? '' : kidsHTML()}</div></div>`; }
   /* v33 보호자 PC 웹(기존 화면) 홈 — 학생 기능(AI 튜터 · 내 학습 · 강좌) 대신 자녀 현황 · 청구서 · 알림 중심(QA #56) */
   function parClassicHTML() { const c = cnt(); const tile = (h, i, t, d, k) => `<a class="lpar-t" href="${h}">${ico(i, 22)}<span><b>${esc(t)}</b><small>${esc(d)}</small></span>${bdg(k)}</a>`;
     return `<section class="sec lpar-home"><div class="in"><p class="lpar-ey">${esc(SITE().org.name)} · 보호자 계정</p><h1>${esc(who())}, 자녀의 학습을 함께 챙겨요</h1><p class="lead">자녀 현황 · 청구서 · 알림을 한곳에서 확인하세요. 수강 · 과제 제출 · AI 튜터는 자녀 계정에서 이용해요.</p>
@@ -139,9 +166,12 @@
   function navHTML() { const s = (isPar() ? SECP : SEC)[route().a] || '';
     if (isPar()) { const c = cnt(); const it = [['home', '#home', 'home', '홈'], ['kids', '#family', 'user', '자녀'], ['msg', '#msg', 'chat', '메시지'], ['pay', '#mypay/bill', 'layers', '결제'], ['me', '#acct', 'grid', '나']];
       return `<nav class="ap-nav" aria-label="앱 메뉴">${it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span>${k === 'msg' ? bdg(c.m) : ''}</a>`).join('')}</nav>`; }
+    /* v43 R9(J4 111): 방문자는 4칸(홈 · 둘러보기 · 공지/커뮤니티 · 로그인) — AX 튜터가 「홈」 자리를 그린 알약으로 차지하고 「내 강의」가 로그인으로 튀던 문제 */
+    if (!LR.me) { const g = [['home', '#home', 'home', '홈'], ['find', browse(), 'compass', scn().find], ...(hasComm() ? [['comm', '#comm', 'msg', '커뮤니티']] : [['comm', '#notice', 'bell', '공지']]), ['me', '#login', 'user', '로그인']];
+      return `<nav class="ap-nav ap-gnav" aria-label="앱 메뉴">${g.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span></a>`).join('')}</nav>`; }
     const it = [['home', '#home', 'sparkle', tName()], ['learn', LR.me ? '#my' : '#login/my', 'book2', scn().learn], ['find', browse(), 'compass', scn().find], ...(hasComm() ? [['comm', '#comm', 'msg', '커뮤니티']] : [['comm', '#notice', 'bell', '공지']]), ['me', LR.me ? '#acct' : '#login', 'user', LR.me ? '나' : '로그인']];
     return `<nav class="ap-nav" aria-label="앱 메뉴">${it.map(([k, h, i, l]) => `<a href="${h}" class="${s === k ? 'on' : ''}"${s === k ? ' aria-current="page"' : ''}>${ico(i, 22)}<span>${esc(l)}</span></a>`).join('')}</nav>`; }
-  const TITLE = { my: '내 강의', c: '강의', t: '튜토리얼', bk: '디지털북', dg: '진단', cert: '수료증', badge: '배지', mybooks: '내 교재/교구', shop: '둘러보기', class: '클래스', courses: '코스', tutorials: '튜토리얼', textbooks: '교재/교구', tb: '교재/교구', books: '디지털북', pay: '결제하기', payok: '결제 완료', comm: '커뮤니티', post: '게시글', write: '글쓰기', notice: '공지사항', acct: '나', connect: '연결 · 알림', inbox: '알림', mypay: '결제 · 환불 내역', payd: '결제 상세', msg: '메시지', family: '가족', login: '로그인', join: '간편가입', find: '계정 찾기', privacy: '개인정보 처리방침' };
+  const TITLE = { my: '내 강의', c: '강의', t: '튜토리얼', bk: '디지털북', dg: '진단', cert: '수료증', badge: '배지', mybooks: '내 교재/교구', shop: '둘러보기', class: '클래스', courses: '코스', tutorials: '튜토리얼', textbooks: '교재/교구', tb: '교재/교구', books: '디지털북', pay: '결제하기', payok: '결제 완료', applied: '신청 완료', comm: '커뮤니티', post: '게시글', write: '글쓰기', notice: '공지사항', acct: '나', connect: '연결 · 알림', inbox: '알림', mypay: '결제 · 환불 내역', payd: '결제 상세', msg: '메시지', family: '가족', login: '로그인', join: '간편가입', find: '계정 찾기', privacy: '개인정보 처리방침' };
   window.LAPP_FIND = () => { try { if (!document.body.classList.contains('lapp')) return ''; const pg = (SITE().pages || []).find(p => p.id === 'shop'); return (pg && pg.name) || scn().find || ''; } catch (e) { return ''; } }; /* v32.9: 둘러보기 본문 제목을 기관 용어와 맞춤 */
   function barHTML() { const a = route().a; const P = persona(); const pg = (SITE().pages || []).find(p => p.id === a);
     const h1t = ['join', 'acct', 'find', 'login'].includes(a) ? ((document.querySelector('#lm h1') || {}).textContent || '').trim().slice(0, 18) : ''; /* v32.9: 계정 화면은 본문 제목과 같게 */
@@ -155,13 +185,16 @@
   const afterGet = () => { try { return sessionStorage.getItem(AFK) || ''; } catch (e) { return AP.after || ''; } };
   const afterSet = h => { AP.after = h || ''; try { h ? sessionStorage.setItem(AFK, h) : sessionStorage.removeItem(AFK); } catch (e) { } };
   const afterGo = () => { const h = afterGet(); afterSet(''); if (h && /^#c\//.test(h)) { setTimeout(() => { location.hash = h; }, 0); return true; } return false; };
+  /* v43 D-D(112) 선생님 캐릭터 일러스트(SVG, 이모지 없음): 얼굴 원 + 스타일별 소품(해 · 자 · 잎) */
+  const pChar = P => `<svg width="132" height="132" viewBox="0 0 132 132" fill="none" aria-hidden="true"><defs><radialGradient id="pcg${P.k}" cx="50%" cy="35%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="${P.c}" stop-opacity=".18"/></radialGradient></defs><circle cx="66" cy="66" r="62" fill="url(#pcg${P.k})"/><circle cx="66" cy="66" r="61" stroke="${P.c}" stroke-opacity=".35" stroke-width="2"/><path d="M30 118c4-22 18-34 36-34s32 12 36 34" fill="${P.c}" fill-opacity=".9"/><circle cx="66" cy="56" r="24" fill="#FBE3CF"/><path d="M42 54c0-16 11-26 24-26s24 10 24 26c-6-8-14-12-24-12s-18 4-24 12z" fill="#2B2B2B"/><circle cx="57" cy="58" r="2.6" fill="#2B2B2B"/><circle cx="75" cy="58" r="2.6" fill="#2B2B2B"/><path d="M59 67c4 4 10 4 14 0" stroke="#2B2B2B" stroke-width="2.4" stroke-linecap="round"/><g transform="translate(88 18)" stroke="${P.c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="14" r="14" fill="#fff" stroke-width="1.5"/><g transform="translate(2 2)" stroke-width="1.75">${PSV[P.k] || PSV.warm}</g></g></svg>`;
   function pickHTML() { const cur = persona(); const sel = AP.sel || (cur && cur.k) || 'warm'; const B = PERS.find(x => x.k === sel); const nm = AP.nm || (cur && cur.k === sel ? cur.n : B.n);
     return `<section class="ap-pick" aria-labelledby="apPickT"><div class="ap-pw">
-      <div class="ap-ph">${av(B, true)}<p class="ap-ey">${esc(SITE().org.name)} · 나만의 AI 선생님</p><h1 id="apPickT">${cur ? '선생님을 바꿔 볼까요?' : `${esc(who())}, 함께 공부할<br>AI 선생님을 골라 주세요`}</h1><p class="ap-lead">내 진도 · 과제 · 마감을 기억하고 매일 먼저 챙겨 주는 선생님이에요. 나중에 언제든 바꿀 수 있어요.${afterGet() ? ' 고르면 첫 강의로 바로 이어져요.' : ''}</p></div>
-      <form id="apPickF"><fieldset class="ap-pl"><legend class="sr">선생님 스타일</legend>${PERS.map(p => `<label class="ap-pc ${p.k === sel ? 'on' : ''}" style="--pc:${p.c}"><input type="radio" name="pk" value="${p.k}" ${p.k === sel ? 'checked' : ''}>${av(p)}<span><b>${esc(p.t)}</b><small>${esc(p.d)}</small><em>“${esc(p.hi)}”</em></span></label>`).join('')}</fieldset>
-      <label class="ap-nm">선생님 이름<input name="nm" maxlength="12" value="${esc(nm)}" autocomplete="off" required></label>
+      <div class="ap-ph"><span class="dd-pchar" aria-hidden="true">${pChar(B)}</span><p class="ap-ey">${esc(SITE().org.name)} · 나만의 AI 선생님</p><h1 id="apPickT">${cur ? '선생님을 바꿔 볼까요?' : `${esc(who())}, 함께 공부할<br>AI 선생님을 골라 주세요`}</h1><p class="ap-lead">내 진도 · 과제 · 마감을 기억하고 매일 먼저 챙겨 주는 선생님이에요. 나중에 언제든 바꿀 수 있어요.${afterGet() ? ' 고르면 첫 강의로 바로 이어져요.' : ''}</p></div>
+      <form id="apPickF"><fieldset class="ap-pl"><legend class="sr">선생님 스타일</legend>${PERS.map(p => `<label class="ap-pc ${p.k === sel ? 'on' : ''}" style="--pc:${p.c}"><input type="radio" name="pk" value="${p.k}" ${p.k === sel ? 'checked' : ''}><span class="ap-pcf" aria-hidden="true">${pChar(p).replace(/pcg/g, 'pcf')}</span><span><b>${esc(p.t)}</b><small>${esc(p.d).replace(/ (\S+)$/, '\u00a0$1')}</small><em>“${esc(p.hi)}”</em></span></label>`).join('')}</fieldset>
+      <!-- v43 S3B 112: 선택 카드 인용문을 되풀이하던 미리보기 카드는 빼고 이름 칸 하나로 -->
+      <label class="ap-nm ap-nm43"><span class="ap-nml">선생님 이름 <small>부를 때 쓰는 이름 · 12자까지</small></span><span class="ap-nmw" style="--pc:${B.c}"><span class="ap-nmi" aria-hidden="true">${av(B)}</span><input name="nm" maxlength="12" value="${esc(nm)}" autocomplete="off" required><svg class="ap-nme" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></span></label>
       <button type="submit" class="ap-go" style="--pc:${B.c}">${esc(jw(nm || B.n))} 시작하기</button>
-      ${cur ? '<button type="button" class="ap-lk" data-ap="pick-x">그대로 둘게요</button>' : '<button type="button" class="ap-lk" data-ap="pick-skip">기본 선생님으로 시작</button>'}</form></div></section>`; }
+      ${cur ? '<button type="button" class="ap-go ghost ap-keep" data-ap="pick-x">그대로 둘게요</button>' /* v43 R9(J4 112): 밑줄 글자 → 보조(고스트) 버튼 */ : '<button type="button" class="ap-lk" data-ap="pick-skip">기본 선생님으로 시작</button>'}</form></div></section>`; }
 
   /* ── 첫 화면: 선생님과의 대화 ── */
   function cardsHTML() { if (!LR.me) return ''; const A = typeof ltTodo === 'function' ? ltTodo() : []; if (!A.length) return '';
@@ -242,18 +275,18 @@
   function homeHTML() { const P = persona(); const me = LR.me; const C = TCFG();
     const brief = me && typeof ltBrief === 'function' ? ltBrief() : null; const first = me ? `${esc(who())}, ${hiTime()}\n${esc(P ? P.hi : '')}` : '';
     const instBox = !standalone() && ls.get('instx') !== '1' ? `<div class="ap-inst" role="note">${ico('install', 18)}<span><b>홈 화면에 앱으로 설치</b><small>${IOS ? '공유 버튼 → 「홈 화면에 추가」' : '한 번 누르면 앱처럼 바로 열려요'}</small></span><button type="button" class="ap-ib2" data-ap="install">설치</button><button type="button" class="ap-ix" data-ap="inst-x" aria-label="설치 안내 닫기">${ico('x', 16)}</button></div>` : '';
-    return `<div class="ap-home ${me ? '' : 'guest'}" style="--pc:${P ? P.c : 'var(--pri)'}">
+    return `<div class="ap-home ${me ? '' : 'guest ap-g9'}" style="--pc:${P ? P.c : 'var(--pri)'}">
       <header class="ap-top"><button type="button" class="ap-me" data-ap="tsheet" aria-label="${esc(tName())} — 선생님 설정">${av(P)}<span><b>${esc(tName())}</b><small>${aiPill()}${me ? `${esc(P ? P.t : '내 AI 학습 비서')}` : '로그인 없이 물어볼 수 있어요'}</small></span></button>
         <button type="button" class="ap-ib" data-ap="srch" aria-label="학습 찾기">${ico('search', 21)}</button>${me ? topIcons() : ''}<button type="button" class="ap-ib" data-lux="menu" aria-label="전체 메뉴">${ico('menu', 21)}</button></header>
       <div class="ap-scroll" id="apScroll">
-        <section class="ap-hero">${orgChip()}${av(P, true)}<h1>${me ? `${esc(who())},<br>오늘은 무엇을 함께 할까요?` : `나만의 AI 선생님과<br>공부를 시작해 보세요`}</h1>${me ? `<p class="ap-sub">${esc(scn().sub(me))}</p>` : ''}${statHTML()}</section>
-        ${me ? legalCard() : joinCard()}${instBox}${cardsHTML()}${me ? connRow() : ''}
+        ${me ? `<section class="ap-hero">${orgChip()}${av(P, true)}<h1>${esc(who())},<br>오늘은 무엇을 함께 할까요?</h1><p class="ap-sub">${esc(scn().sub(me))}</p>${statHTML()}</section>` : guestHero()}
+        ${me ? legalCard() : guestRec() + joinCard()}${instBox}${cardsHTML()}${me ? connRow() : ''}
         <div class="ap-th lai-th" aria-live="polite" aria-label="${esc(tName())}와의 대화">
           ${me ? `<div class="lt-m ap-hi">${av(P)}<div class="lt-b"><p>${nl(first)}</p>${brief ? `<p>${nl(brief.t)}</p>${brief.h || ''}` : ''}</div></div>` : `<div class="lt-m ap-hi">${av(null)}<div class="lt-b"><p>안녕하세요, ${esc(SITE().org.name)}의 ${esc(C.name)}입니다.\n강좌 · 수강 방법${typeof lPayOff === 'function' && lPayOff() ? '' : ' · 가격'}을 바로 물어보세요. 로그인하면 내 진도와 과제에 맞춰 나만의 선생님이 매일 챙겨 드려요.</p><div class="ap-gb"><a class="ap-go sm" href="#login">로그인</a>${SITE().org.type === 'univ' ? '' : '<a class="ap-go sm ghost" href="#join">30초 간편가입</a>'}</div></div></div>`}
           ${threadHTML()}</div></div>
-      <form class="ap-comp" id="apF">${chipsHTML()}<div class="ap-box"><label for="apQ" class="sr">${esc(tName())}에게 말하기</label><textarea id="apQ" rows="1" maxlength="800" placeholder="${me ? '무엇이든 말해 보세요' : '무엇이든 물어보세요'}"></textarea>
+      <form class="ap-comp" id="apF">${chipsHTML()}<div class="ap-box"><label for="apQ" class="sr">${esc(tName())}에게 말하기</label><textarea id="apQ" rows="1" maxlength="800" placeholder="${me ? '무엇이든 말해 보세요' : '개인정보 없이 물어보세요'}"></textarea>
         ${(window.SpeechRecognition || window.webkitSpeechRecognition) ? `<button type="button" class="ap-mic" data-ap="mic" aria-label="말로 묻기">${ico('mic', 20)}</button>` : ''}<button type="submit" class="ap-send" aria-label="보내기">${ico('up', 20)}</button></div>
-        <small class="ap-note">${me ? '과제를 대신 써 주지 않고 함께 풀어요 · 대화 내용은 저장하지 않아요' : '개인정보는 적지 마세요'}</small></form></div>`; }
+        ${me ? '<small class="ap-note">과제를 대신 써 주지 않고 함께 풀어요 · 대화 내용은 저장하지 않아요</small>' : '' /* v43 S3B 111: 방문자 안내 문장은 입력칸 안내 글자로(탭 바와 입력칸 사이 끼임 해소) */}</form></div>`; }
 
   /* ── v27.1 연결 · 알림(#connect): 캘린더 · 카카오톡 · 리마인더(lai-home 카드 재사용) + 앱 알림 ── */
   const conn = () => { const L = LR.lp; L.conn = L.conn && typeof L.conn === 'object' ? L.conn : {}; return L.conn; };
@@ -276,7 +309,30 @@
     const A = typeof ltTodo === 'function' ? ltTodo() : []; const qa = (LR.mine && Array.isArray(LR.mine.qa) ? LR.mine.qa.length : 0);
     if (A.length) notify(tName(), `오늘의 미션 ${A.length}개 · 먼저 「${A[0].h}」부터 해 볼까요?`, 'today'); else if (qa) notify(tName(), '선생님 답변이 도착했어요.', 'qa'); }
 
+  /* v43 H1(M1 114): 내 강의 아래 기록 묶음 — 회색 글자 타일 대신 아이콘 · 숫자 있는 2열 카드 4개만 보이고, 나머지는 「기록 더 보기」 한 줄 안으로. 「지금 할 일」은 머리 요약 카드와 같은 내용이라 감춘다 */
+  const MYT = [['배지 지갑', 'award'], ['진단 결과', 'target'], ['학습 달력', 'clock'], ['수준 로드맵', 'compass'], ['내 학습 숫자', 'layers'], ['AI 학습 비서', 'spark'], ['내 과정 공지', 'bell'], ['내 디지털북', 'book'], ['튜토리얼 기록', 'video'], ['내 기록', 'brief'], ['내 활동', 'user'], ['내 과정', 'layers'], ['내 강좌', 'layers']];
+  function myTiles(lm) { const g = lm.querySelector('.mypage .mygrid'); if (!g) return; const hero = lm.querySelector('.ap-myhero');
+    const nx = g.querySelector(':scope > .nextc'); if (nx) nx.classList.toggle('ap-mydup', !!hero);
+    const T = [...g.querySelectorAll(':scope > .ls-fold'), ...lm.querySelectorAll('#lcMyAct.ls-fold')].filter(c => !c.classList.contains('ls-open') || c.dataset.apt);
+    if (!T.length) return; const nm = c => { const b = c.querySelector(':scope > .ls-fh .ls-tx b'); return c.dataset.apn || (b ? b.textContent.trim() : ''); };
+    const rk = c => { const n = nm(c); const i = MYT.findIndex(([k]) => n.startsWith(k)); return i < 0 ? 99 : i; };
+    const S = [...T].sort((a, b) => rk(a) - rk(b)); const keep = S.slice(0, 4), rest = S.slice(4);
+    keep.forEach(c => { c.classList.add('ap-mytile'); c.classList.remove('ap-myx'); if (c.dataset.apt) return; const fh = c.querySelector(':scope > .ls-fh'); if (!fh) return; const n = nm(c); c.dataset.apn = n; c.dataset.apt = 1;
+      const h3 = c.querySelector(':scope > .mh h3'); const sm = h3 && h3.querySelector('small'); const k = MYT.find(([t]) => n.startsWith(t)); const ttl = k ? k[0] : n; let st = (sm ? sm.textContent : n.slice(ttl.length)).replace(/\s+/g, ' ').trim();
+      fh.innerHTML = `<span class="ap-mti" aria-hidden="true">${ico(k ? k[1] : 'layers', 18)}</span><span class="ls-tx"><b>${esc(ttl)}</b><small>${esc(st || '열어 보기')}</small></span><span class="ls-go" aria-hidden="true">›</span>`; });
+    rest.forEach(c => c.classList.toggle('ap-myx', !AP.myall));
+    let mb = lm.querySelector('.ap-mymore'); if (!rest.length) { if (mb) mb.remove(); return; }
+    if (!mb) { mb = document.createElement('button'); mb.type = 'button'; mb.className = 'ap-mymore'; mb.dataset.ap = 'myall'; g.after(mb); }
+    mb.setAttribute('aria-expanded', AP.myall ? 'true' : 'false'); mb.innerHTML = `<span>${AP.myall ? '기록 접기' : '기록 더 보기'}</span><small>${esc(rest.map(nm).map(n => (MYT.find(([t]) => n.startsWith(t)) || [n])[0]).slice(0, 2).join(' · '))}${rest.length > 2 ? ` 외 ${rest.length - 2}` : ''}</small>`; }
   /* ── v27.1 내 강의(#my) 앱 화면: 이어서 학습 카드 + 아래에 기존 학습 기록(배지 · 수료증 · 결제 · 활동) 그대로 ── */
+  /* v43 F4(K4 114): 내 강의 머리 = 그린 요약 카드(이어 갈 차시 한 문장 + 숫자 3칸). 같은 숫자를 문장 · 칩에서 반복하지 않고, 0은 숫자로 쓰지 않는다 */
+  function myHeroHTML(P, ing, cntOf, today, CW) { const nx = ing.find(x => x.next) || ing[0]; const avg = ing.length ? Math.round(ing.reduce((a, x) => a + (x.p || 0), 0) / ing.length) : 0;
+    const dl = ing.map(x => String(x.c.end || '').slice(0, 10)).filter(d => d && d >= today).sort()[0]; const dd = dl ? Math.round((new Date(dl + 'T00:00:00') - new Date(today + 'T00:00:00')) / 864e5) : null;
+    const T = [cntOf('ing') ? [cntOf('ing') + '개', '수강 중'] : ing.length ? [ing.length + '개', '남은 강좌'] : null, avg ? [avg + '%', '평균 진도'] : null, dd != null ? [dd ? 'D-' + dd : '오늘', '가까운 마감'] : cntOf('done') ? [cntOf('done') + '개', '수료'] : null].filter(Boolean);
+    const h = nx && nx.next ? `「${esc(nx.next.title)}」부터 이어 가요` : nx ? `「${esc(nx.c.name)}」${lJ(nx.c.name, '을', '를')} 시작해 볼까요?` : `수강 중인 ${esc(CW)}${lJ(CW, '을', '를')} 모두 마쳤어요`;
+    const href = nx ? (nx.next ? `#c/${nx.c.id}/${nx.next.id}` : `#c/${nx.c.id}`) : '';
+    return `<div class="ap-myh ap-myhero"><div class="ap-myhh">${av(P)}<span><small>${esc(who())}의 ${esc(CW)}</small><b>${h}</b>${nx ? `<em>${esc(nx.c.name)}${nx.p ? ` · ${nx.p}%` : ''}</em>` : ''}</span></div>
+      ${T.length ? `<div class="ap-myst">${T.map(([v, l]) => `<span><b>${v}</b>${l}</span>`).join('')}</div>` : ''}${href ? `<a class="ap-mygo" href="${esc(href)}">${ico('play', 14)} 이어서 학습</a>` : ''}</div>`; }
   function myTopHTML() { if (typeof myStats !== 'function') return ''; const st = myStats(); const C = st.courses; const P = persona();
     const anyTh = C.some(x => x.c && x.c.thumb); /* v37 L1: 썸네일이 있는 과정이 하나라도 있으면 없는 과정은 이름 타일로 줄을 맞춘다 */
     const ring = p => `<span class="ap-rg" style="--p:${Math.max(0, Math.min(100, p))}"><b>${p}%</b></span>`;
@@ -291,8 +347,8 @@
     const ing = C.filter(x => !x.done), dn = C.filter(x => x.done);
     const CW = (w => w && w !== '클래스' ? w : '강좌')((SITE().terms || {}).cls); /* v38 F5 U16: 기관 유형 용어(교과목 · 교육과정 …) */
     return `<section class="ap-my" style="--pc:${P ? P.c : 'var(--pri)'}"><div class="ap-pw2">
-      <div class="ap-myh">${av(P)}<p>${C.length ? `${esc(who())}, 수강 전 ${cntOf('pre')}개 · 수강 중 ${cntOf('ing')}개 · 수료 ${cntOf('done')}개예요.${ing[0] && ing[0].next ? ` 「${esc(ing[0].next.title)}」부터 이어 가요.` : ''}` : `${esc(who())}, 아직 수강 중인 ${esc(CW)}${lJ(CW, '이', '가')} 없어요. 둘러보고 시작해 볼까요?`}</p></div>
-      ${C.length ? `<div class="ap-mf"><div class="ap-fc" role="tablist" aria-label="수강 상태">${[['all', '전체'], ['pre', '수강 전'], ['ing', '수강 중'], ['done', '수강 완료']].map(([k, l]) => `<button type="button" role="tab" class="ap-fch${F === k ? ' on' : ''}" aria-selected="${F === k}" data-ap="myf" data-v="${k}">${l} <i>${cntOf(k)}</i></button>`).join('')}</div>
+      ${C.length ? myHeroHTML(P, live.filter(x => !x.done), cntOf, today, CW) : `<div class="ap-myh">${av(P)}<p>${esc(who())}, 아직 수강 중인 ${esc(CW)}${lJ(CW, '이', '가')} 없어요. 둘러보고 시작해 볼까요?</p></div>`}
+      ${C.length ? `<div class="ap-mf"><div class="ap-fc" role="tablist" aria-label="수강 상태">${[['all', '전체'], ['pre', '수강 전'], ['ing', '수강 중'], ['done', '수강 완료']].map(([k, l]) => `<button type="button" role="tab" class="ap-fch${F === k ? ' on' : ''}" aria-selected="${F === k}" data-ap="myf" data-v="${k}">${l}${cntOf(k) ? ` <i>${cntOf(k)}</i>` : ''}</button>`).join('')}</div>
         <button type="button" class="ap-srt" data-ap="mys" aria-label="정렬 바꾸기 — 지금 ${SO === 'name' ? '제목순' : '최근 수강순'}">${ico('sortk', 14)}${SO === 'name' ? '제목순' : '최근 수강순'}</button></div>
         <div class="ap-cl">${V.length ? V.map(x => card(x)).join('') : `<p class="ap-empty">${F === 'pre' ? `아직 시작하지 않은 ${CW}${lJ(CW, '이', '가')} 없어요.` : F === 'done' ? `아직 완료한 ${CW}${lJ(CW, '이', '가')} 없어요. 조금만 더 힘내요!` : `해당하는 ${CW}${lJ(CW, '이', '가')} 없어요.`}</p>`}</div>
         ${EX.length ? `<h2 class="ap-h2">기간 만료 <small>${EX.length}</small></h2><div class="ap-cl">${EX.map(x => card(x, 1)).join('')}</div>` : ''}`
@@ -347,13 +403,15 @@
     return ['클래스', '교재'].filter(g => by(g).length).map(g => `<h3 class="ap-oh">${g} <small>${by(g).length}</small></h3><ul class="ap-ol">${by(g).map(li).join('')}</ul>`).join(''); }
   function searchSheet() { closeSheet(); const R = srRecent(); const P = srPool(); const V = srSeen().map(id => P.find(x => x.id === id)).filter(Boolean);
     const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
-    w.innerHTML = `<div class="ap-sh ap-ssh" role="dialog" aria-modal="true" aria-labelledby="apST"><h2 id="apST">학습 찾기</h2>
+    /* v43 R9(J4 116): 전폭 「닫기」 버튼 → 손잡이 + 바깥 탭(apSheet 클릭) + 머리 오른쪽 작은 닫기 아이콘. 최근 · 추천 검색어는 한 줄 가로 넘김, 결과 행은 순위 숫자를 사진 왼쪽에 */
+    const RW = [...new Set(P.map(x => String(x.n).split(/[\s(·]/)[0]).filter(w => w.length >= 2))].filter(w => !R.includes(w)).slice(0, 6);
+    w.innerHTML = `<div class="ap-sh ap-ssh ap-ssh9" role="dialog" aria-modal="true" aria-labelledby="apST"><span class="ap-shh" aria-hidden="true"></span><div class="ap-ssht"><h2 id="apST">학습 찾기</h2><button type="button" class="ap-ib" data-ap="sheet-x" aria-label="닫기">${ico('x', 20)}</button></div>
       <label class="ap-osr big"><span class="sr">클래스 · 교재 이름으로 찾기</span>${ico('search', 18)}<input type="search" id="apSQ" placeholder="클래스 · 교재 이름으로 찾기" autocomplete="off" enterkeyhint="search"></label>
       <div id="apSR" aria-live="polite"></div>
-      <div id="apS0">${R.length ? `<div class="ap-srh"><h3 class="ap-oh">최근 검색어</h3><button type="button" class="ap-lk" data-ap="srch-clr" data-v="srq">전체 삭제</button></div><div class="ap-fc wrap">${R.map(x => `<span class="ap-fch q"><button type="button" data-ap="srch-q" data-v="${esc(x)}">${esc(x)}</button><button type="button" class="x" data-ap="srch-del" data-v="${esc(x)}" aria-label="${esc(x)} 지우기">×</button></span>`).join('')}</div>` : ''}
+      <div id="apS0">${R.length || RW.length ? `<div class="ap-srh"><h3 class="ap-oh">${R.length ? '최근 · 추천 검색어' : '추천 검색어'}</h3>${R.length ? '<button type="button" class="ap-lk" data-ap="srch-clr" data-v="srq">최근 삭제</button>' : ''}</div><div class="ap-src1">${R.map(x => `<span class="ap-fch q"><button type="button" data-ap="srch-q" data-v="${esc(x)}">${ico('clock', 14)}${esc(x)}</button><button type="button" class="x" data-ap="srch-del" data-v="${esc(x)}" aria-label="${esc(x)} 지우기">×</button></span>`).join('')}${RW.map(w => `<button type="button" class="ap-srw" data-ap="srch-q" data-v="${esc(w)}">${ico('search', 14)}${esc(w)}</button>`).join('')}</div>` : ''}
       ${V.length ? `<div class="ap-srh"><h3 class="ap-oh">최근 본 학습</h3><button type="button" class="ap-lk" data-ap="srch-clr" data-v="srv">전체 삭제</button></div><ul class="ap-ol">${V.map(x => `<li><a class="ap-srr" href="${esc(x.h)}" data-ap="sheet-x"><span class="ap-oty">${esc(x.k)}</span><b>${esc(x.n)}</b></a></li>`).join('')}</ul>` : ''}
-      ${!R.length && !V.length ? `<p class="ap-empty">찾고 싶은 클래스나 교재 이름을 입력하세요.</p>` : ''}</div>
-      <nav><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
+      ${P.length ? `<div class="ap-srh"><h3 class="ap-oh">이 기관에서 많이 찾는 학습</h3></div><ul class="ap-srp">${P.filter(x => x.k === '클래스').slice(0, 4).map((x, i) => { const c = (SITE().classes || []).find(y => y.id === x.id) || {}; const ph = c.thumb || (typeof lPhoto === 'function' ? lPhoto(x.n, x.id) : '');
+          return `<li><a href="${esc(x.h)}" data-ap="sheet-x"><em class="ap-srn">${i + 1}</em><span class="ap-srpi"${ph ? ` style="background-image:url('${esc(ph)}')"` : ''}></span><span class="ap-srpt"><b>${esc(x.n)}</b><small>${esc(x.d || x.k)}</small>${(() => { const m = LR.me && LR.mine && LR.mine.cls && LR.mine.cls[x.id]; return m ? `<em class="ap-src43 on">수강 중 · 진도 ${Math.round(+m.p || 0)}%</em>` : `<em class="ap-src43">신청 가능</em>`; })()}</span>${ico('arrow', 16)}</a></li>`; }).join('')}</ul><a class="ap-srall" href="${esc(browse())}" data-ap="sheet-x">${/교과목/.test(scn().find) ? '교과목' : /교육/.test(scn().find) ? '교육과정' : '강좌'} 전체 보기 ${ico('arrow', 15)}</a>` /* v43 S3B 116: 결과 행에 수강 상태 칩 · 시트 끝 「전체 보기」 */ : `<p class="ap-empty">찾고 싶은 클래스나 교재 이름을 입력하세요.</p>`}</div></div>`;
     document.body.appendChild(w); const i = w.querySelector('#apSQ'); i && i.focus(); }
   function closeSheet() { const w = document.getElementById('apSheet'); if (w) w.remove(); }
 
@@ -381,14 +439,14 @@
   /* ── 그리기 ── */
   function sync() { const th = document.querySelector('.ap-home .ap-th'); if (!th) return; th.querySelectorAll(':scope > .lt-m:not(.ap-hi)').forEach(x => x.remove()); th.insertAdjacentHTML('beforeend', threadHTML()); const sc = document.getElementById('apScroll'); if (sc && (LT.busy || (LT.msgs || []).some(m => m.me))) sc.scrollTop = sc.scrollHeight; }
   function apply() {
-    const on = appOn(); document.body.classList.toggle('lapp', on); document.body.classList.remove('ap-homeon', 'ap-pickon');
+    const on = appOn(); document.body.classList.toggle('lapp', on); document.body.classList.remove('ap-homeon', 'ap-pickon', 'ap-myon');
     try { if (LR.tid && (on || LR.me)) { ls.set('tid', LR.tid); if (on) orgSave(); } } catch (e) { }
     const lm = document.getElementById('lm'); const app = document.getElementById('lapp'); if (!lm || !app) return;
     document.body.classList.remove('lpar');
     if (!on && isPar()) { const a0 = route().a; if (['home', 'my', 'shop', 'courses', 'tutorials'].includes(a0)) { lm.innerHTML = parClassicHTML(); document.body.classList.add('lpar'); if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } } /* 보호자 홈에서는 학생용 AI 튜터 버튼을 숨긴다(가족 연결 · 자녀 화면의 보호자 비서는 그대로) */
       document.querySelectorAll('header.lh a[href="#my"], header.lh a[href="#shop"], header.lh a[href="#courses"], header.lh a[href="#tutorials"], header.lh a[href="#login/my"]').forEach(x => { x.hidden = true; }); return; }
     if (!on && !LR.me && route().a === 'home' && !lm.querySelector('.lgj')) lm.insertAdjacentHTML('afterbegin', joinStrip());
-    if (!on) { if (LR.me && route().a === 'home' && ls.get('classic') === '1' && !lm.querySelector('.ap-back')) lm.insertAdjacentHTML('afterbegin', `<div class="ap-back"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); return; }
+    if (!on) { if (LR.me && !isPar() && route().a === 'home' && (ls.get('classic') === '1' || wide()) && !lm.querySelector('.ap-back')) { const tut = lm.querySelector('.lhb-home .lhb-hero .tut'); /* v43 F3(085): 학습 허브 홈은 히어로 안 작은 버튼(본문 위 띠 없음) */ (tut || lm).insertAdjacentHTML(tut ? 'beforeend' : 'afterbegin', `<div class="ap-back${tut ? ' lhb-apb' : ''}"><button type="button" data-ap="modern">${ico('sparkle', 16)} AI 선생님 앱 화면으로 보기</button></div>`); } return; }
     const a = route().a; document.body.classList.toggle('ap-play', a === 'c' && decodeURIComponent(location.hash.slice(1)).split('/').length > 2); /* PC 강의 화면: 떠 있는 아래 메뉴가 본문을 가리지 않게(lapp.css) */ if (LR.me && (a === 'login' || a === 'join')) { location.replace('#home'); return; } /* v32.8 로그인한 뒤 로그인 · 가입 화면은 홈으로 */
     if (!LR.me && ['connect', 'books'].includes(a) && typeof needLogin === 'function' && !lm.textContent.trim()) lm.innerHTML = needLogin(a);
     const hm = a === 'home' || (a === 'ai' && !isPar()); /* v39 디디쌤 튜브: 홈은 피드(ltube.js), 선생님과의 대화는 #ai(AI 튜터 탭) */
@@ -399,6 +457,7 @@
     else if (a === 'home' && isPar()) { lm.innerHTML = parHomeHTML(); }
     else if (hm) { if (LT.open) { LT.open = false; document.body.classList.remove('lt-on'); } lm.innerHTML = homeHTML(); document.body.classList.add('ap-homeon'); const sc = document.getElementById('apScroll'); if (sc && (LT.msgs || []).some(m => !m.sys)) sc.scrollTop = sc.scrollHeight; }
     if (a === 'my' && LR.me && !isPar() && !lm.querySelector('.ap-my')) { const h = lm.querySelector('section.myh'); if (h) h.hidden = true; lm.insertAdjacentHTML('afterbegin', myTopHTML()); }
+    if (a === 'my' && LR.me && !isPar()) { document.body.classList.add('ap-myon'); const tidy = () => lm.querySelectorAll('.mypage .ls-fh .ls-tx b').forEach(b => { const t = b.textContent, u = t.replace(/\s+0\s*\/\s*\d+.*$/, ''); if (u !== t && u.trim()) b.textContent = u; }); tidy(); setTimeout(tidy, 0); myTiles(lm); setTimeout(() => myTiles(lm), 0); } /* v43 F4(K4 114): 접힌 기록 머리의 「0/3」 「0/5 수료…」 숫자 0 표기 정리 */
     if (!hm && !needPick) { const ob = app.querySelector('.ap-bar'); if (!ob) app.insertAdjacentHTML('afterbegin', barHTML()); else if (ob.dataset.a !== a) ob.outerHTML = barHTML(); }
     if (LR.me && !needPick && !isPar()) dailyNudge();
     if (!app.querySelector('.ap-nav') && !needPick) app.insertAdjacentHTML('beforeend', navHTML());
@@ -411,6 +470,7 @@
     if (k === 'back') { if (history.length > 1) history.back(); else location.hash = '#home'; return; }
     if (k === 'tsheet') return tsheet();
     if (k === 'myf') { AP.myf = el.dataset.v; lrender(); return; }
+    if (k === 'myall') { AP.myall = !AP.myall; myTiles(document.getElementById('lm')); return; }
     if (k === 'mys') { AP.mys = AP.mys === 'name' ? 'recent' : 'name'; lrender(); return; }
     if (k === 'srch') return searchSheet();
     if (k === 'srch-q') { const i = document.getElementById('apSQ'); if (i) { i.value = el.dataset.v; i.dispatchEvent(new Event('input', { bubbles: true })); } return; }
@@ -430,7 +490,7 @@
     if (k === 'inst-x') { ls.set('instx', '1'); const b = el.closest('.ap-inst'); b && b.remove(); return; }
     if (k === 'dlg-x') { const d = el.closest('dialog'); d && d.close(); return; }
     if (k === 'classic') { closeSheet(); ls.set('classic', '1'); toast('기존 화면으로 바꿨습니다. 홈 위쪽에서 언제든 앱 화면으로 돌아올 수 있어요.', 'ok'); lrender(); return; }
-    if (k === 'modern') { ls.set('classic', null); lrender(); return; }
+    if (k === 'modern') { ls.set('classic', wide() ? '0' : null); lrender(); return; } /* v43 G2: PC에서 앱 화면을 고르면 기억(classic='0') */
     if (k === 'mic') return mic(el);
     if (k === 'push-on') return pushEnable();
     if (k === 'push-off') { if (conn().push) conn().push.on = false; LR.api.save(); toast('앱 알림을 껐습니다.', 'ok'); lrender(); return; }
@@ -462,3 +522,12 @@
   /* ── 오프라인 · 설치용 서비스 워커(https · localhost에서만) ── */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) && !Q.get('nosw')) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
 })();
+/* v43 D-D — 체험판(샘플 사이트, LR.tid 'sample')의 알림함이 비어 앱 · 웹 「알림」이 빈 화면으로 보이던 문제: 시연 알림 6건.
+   기관 데이터(laRoom)가 있으면 원래 함수 결과를 그대로 쓴다. 읽음 · 삭제는 원래 저장소(laIS 'demo-<학번>')를 그대로 쓴다.
+   결제 내역은 체험 데이터(learner-demo-*.json의 demo.pays, v43 K2) · 메시지는 Q2 시드를 같이 쓰므로 여기서 다시 넣지 않는다. */
+{ const base = laItems; laItems = function () { const r = base.apply(this, arguments); try { if (r.L.length || r.k || LR.mode !== 'demo' || LR.tid !== 'sample' || !LR.me) return r;
+    const k = 'demo-' + (LR.me.sid || LR.me.id || 'me'); const st = laIS(k); const par = LR.me.kind === 'parent'; const d = n => { const t = new Date(Date.now() - n * 36e5); return t.toISOString().slice(0, 10) + ' ' + t.toTimeString().slice(0, 5); };
+    const A = par ? [['dn1', 2, '지우 · 오늘 숙제가 올라왔어요', '수학 심화반 「일차함수 활용」 숙제 1개 · 내일 수업 전까지'], ['dn2', 6, '11월 수강료 청구서가 도착했어요', '결제 대기 1건 · 11월 25일까지 결제하면 돼요'], ['dn3', 20, '하준 · 출석했어요', '영어 리딩반 16:00 출석 확인'], ['dn4', 30, '겨울 특강 신청이 열렸어요', '12월 20일까지 신청하면 10% 할인'], ['dn5', 54, '지우 · 월말 평가 결과', '수학 심화반 88점 · 지난달보다 6점 올랐어요'], ['dn6', 80, '12월 휴원 안내', '12월 25일은 쉬어요']]
+      : [['dn1', 1, '5-3 실습 과제 마감이 3일 남았어요', '엑셀 실무 마스터 · 11월 19일 23:59까지'], ['dn2', 5, '새 차시가 열렸어요', '피벗 테이블 2차시 · 값 요약 방식'], ['dn3', 22, '퀴즈 결과가 나왔어요', '개념 확인 퀴즈 40점 · 틀린 문제 다시 풀기'], ['dn4', 30, '마일리지 150P가 쌓였어요', '7일 연속 학습 보너스'], ['dn5', 50, '수료까지 진도 32% 남았어요', '이번 주 2차시만 더 들으면 돼요'], ['dn6', 75, '겨울 특강 얼리버드 안내', '12월 20일까지 신청하면 10% 할인']];
+    const L = A.filter(([id]) => !st.del.includes(id)).map(([id, h, title, body], i) => ({ id, at: d(h), title, body, read: i > 1 || st.read.includes(id), demo: true }));
+    return { k, L }; } catch (e) { return r; } }; }

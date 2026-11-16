@@ -1,15 +1,15 @@
 /* v22 lcomm — 커뮤니티 · 학습노트 · 후기 · 메시지함 */
 .lcsec{padding:32px 0 72px}
 .lctabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 12px}
-.lctabs a,.lctabs button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 14px;font-weight:700;font-size:14px;text-decoration:none;color:var(--ink);cursor:pointer}
-.lctabs a.on,.lctabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.lctabs a,.lctabs button{border:1px solid var(--line);background:var(--surface,#fff);border-radius:99px;padding:7px 14px;font-weight:700;font-size:14px;text-decoration:none;color:var(--ink);cursor:pointer}
+.lctabs a.on,.lctabs button.on{background:var(--ink);color:var(--surface,#fff);border-color:var(--ink)}
 .lctabs.sm a,.lctabs.sm button{padding:5px 11px;font-size:13px}
 .lctabs .mini{align-self:center}
 .lcbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-.lcbar select,.lcform select,.lcform textarea,.lcform input[type=text],.lcform input:not([type]),.lcform input[name]{border:1px solid var(--line);border-radius:6px;padding:9px 12px;font:inherit;font-size:15px;background:#fff;color:var(--ink);position:static;opacity:1;width:auto;height:auto}
+.lcbar select,.lcform select,.lcform textarea,.lcform input[type=text],.lcform input:not([type]),.lcform input[name]{border:1px solid var(--line);border-radius:6px;padding:9px 12px;font:inherit;font-size:15px;background:var(--surface,#fff);color:var(--ink);position:static;opacity:1;width:auto;height:auto}
 .lcform textarea{width:100%;resize:vertical}
 .lcgrow{flex:1}
-.lclist{display:flex;flex-direction:column;background:#fff;border-radius:var(--r,20px);box-shadow:var(--sh);overflow:hidden;margin-bottom:14px}
+.lclist{display:flex;flex-direction:column;background:var(--surface,#fff);border-radius:var(--r,20px);box-shadow:var(--sh);overflow:hidden;margin-bottom:14px}
 .lcrow{display:flex;gap:12px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line2,#F1F2F2);text-decoration:none;color:inherit}
 .lcrow:last-child{border-bottom:0}.lcrow:hover{background:var(--paper)}
 .lcrow.unread .lct b::after{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pri);margin-left:6px;vertical-align:middle}
@@ -17,15 +17,15 @@
 .lct b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lct small,.lcm{color:var(--mute);font-size:12.5px}
 .lcm{white-space:nowrap;display:inline-flex;gap:4px;align-items:center}
-.lck{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--line2,#F1F2F2);color:var(--mute);white-space:nowrap}
+.lck{display:inline-block;font-size:12px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--line2,#F1F2F2);color:var(--mute);white-space:nowrap}
 .lck.q{background:color-mix(in srgb,var(--pri) 12%,#fff);color:var(--pri-tx,var(--pri))}
 .lcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:14px}
-.lccard{background:#fff;border-radius:var(--r,20px);box-shadow:var(--sh);padding:16px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:6px}
+.lccard{background:var(--surface,#fff);border-radius:var(--r,20px);box-shadow:var(--sh);padding:16px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:6px}
 .lccard p{margin:0;color:var(--mute);font-size:14px}
 .lccard img{border-radius:6px;max-height:180px;object-fit:cover;width:100%}
 .lcch{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .lcch small{color:var(--mute);font-size:12.5px}
-.lcpost{background:#fff;border-radius:var(--r,20px);box-shadow:var(--sh);padding:22px;margin-bottom:16px}
+.lcpost{background:var(--surface,#fff);border-radius:var(--r,20px);box-shadow:var(--sh);padding:22px;margin-bottom:16px}
 .lcpost h2{margin:10px 0}
 .lcact{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
 .lcfiles{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
@@ -40,7 +40,7 @@
 .lcl{border:0;background:none;color:var(--mute);font-size:12.5px;font-weight:700;cursor:pointer;padding:0 2px}
 .lcl:hover{color:var(--pri-tx,var(--pri))}
 .lcform{display:flex;flex-direction:column;gap:10px;margin:12px 0}
-.lcw{background:#fff;border-radius:var(--r,20px);box-shadow:var(--sh);padding:22px}
+.lcw{background:var(--surface,#fff);border-radius:var(--r,20px);box-shadow:var(--sh);padding:22px}
 .lcw label{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px}
 .lcw input[type=file]{position:static;opacity:1;width:auto;height:auto;margin-top:4px}
 .lc2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -48,7 +48,7 @@
 .lcrad legend{font-weight:700;font-size:14px;margin-bottom:4px}
 .lcrad label,.lcck{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:8px;font-weight:600!important;min-height:36px;cursor:pointer}
 .lcrad input,.lcck input{position:static!important;opacity:1!important;width:22px!important;height:22px!important;margin:0!important;flex:none}
-.lcpanel{background:#fff;border-radius:8px;box-shadow:var(--sh);padding:14px 16px;margin:18px 0}
+.lcpanel{background:var(--surface,#fff);border-radius:8px;box-shadow:var(--sh);padding:14px 16px;margin:18px 0}
 .lcpanel h3{margin:0 0 8px;font-size:16px}
 .lcpb{margin-top:6px}
 .lcnt{display:flex;gap:8px;align-items:flex-end}
@@ -58,9 +58,9 @@
 .lcnote{display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--line2,#F1F2F2);padding-top:10px}
 .lcnote>div{flex:1;min-width:0}.lcnote p{margin:4px 0}
 .lcnote.own .lcch b{color:var(--pri-tx,var(--pri))}
-.lctime{border:0;background:var(--ink);color:#fff;border-radius:8px;padding:4px 8px;font:700 12px var(--sg);cursor:pointer;white-space:nowrap}
+.lctime{border:0;background:var(--ink);color:var(--surface,#fff);border-radius:8px;padding:4px 8px;font:700 12px var(--sg);cursor:pointer;white-space:nowrap}
 .lcnc{flex-direction:row;margin:6px 0 0}.lcnc input{flex:1}
-.lcun{font-style:normal;font-size:11px;font-weight:800;color:var(--pri-tx,var(--pri));background:var(--d-p50,#E7F8E8);border-radius:99px;padding:2px 7px;margin:0 6px}
+.lcun{font-style:normal;font-size:12px;font-weight:800;color:var(--pri-tx,var(--pri));background:var(--d-p50,#E7F8E8);border-radius:99px;padding:2px 7px;margin:0 6px}
 .lcnt2{margin:6px 0}
 .lcstar{color:#E8A317;letter-spacing:1px}
 .lcrvh{display:flex;align-items:center;gap:10px;margin-bottom:6px}
@@ -68,20 +68,74 @@
 .lcrv p{margin:4px 0 0}
 .lcbell{position:relative;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;color:inherit;margin-right:6px}
 .lcbell:hover{background:var(--paper)}
-.lcbell em{position:absolute;top:2px;right:0;min-width:17px;height:17px;border-radius:99px;background:var(--pri);color:#fff;font:700 10.5px/17px var(--sg);text-align:center;font-style:normal;padding:0 4px}
+.lcbell em{position:absolute;top:2px;right:0;min-width:17px;height:17px;border-radius:99px;background:var(--pri);color:var(--pri-ink,#fff);font:700 12px/17px var(--sg);text-align:center;font-style:normal;padding:0 4px}
 .lcmy{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0}
-.lcmy a{background:#fff;border-radius:8px;box-shadow:var(--sh);padding:14px;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center}
+.lcmy a{background:var(--surface,#fff);border-radius:8px;box-shadow:var(--sh);padding:14px;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center}
 .lcmy b{font:800 24px var(--sg)}.lcmy span{font-size:13px;color:var(--mute)}
 @media (max-width:640px){.lc2{grid-template-columns:1fr}.lcmy{grid-template-columns:repeat(3,minmax(0,1fr))}.lcrow{flex-wrap:wrap}.lcm{width:100%}.lcbar select{flex:1;min-width:0}}
 .lh .acct:has(.lcbell){display:flex;align-items:center;gap:4px;flex-direction:row}
 .lcbar select{min-width:110px;appearance:auto;-webkit-appearance:menulist}
 @media (max-width:640px){.lcbar select{flex:1 1 calc(50% - 8px);min-width:120px}.lcbar .lcgrow{display:none}.lcbar .lbtn{flex:1;justify-content:center}}
 /* v36 다중 게시판 · 공지 서식 */
-.lck.pin{background:var(--pri);color:#fff;margin-right:4px}
+.lck.pin{background:var(--pri);color:var(--pri-ink,#fff);margin-right:4px}
 .lcbdesc{margin:6px 0 10px;color:var(--mute);font-size:14px}
 .lcro{color:var(--mute)}
-.lc26bd nav a small{font-size:11px;color:var(--mute);margin-left:4px}
+.lc26bd nav a small{font-size:12px;color:var(--mute);margin-left:4px}
 .lcmd p{margin:0 0 8px}.lcmd ul{margin:0 0 8px;padding-left:22px}.lcmd li{margin:2px 0}
 .lcmd a{color:var(--pri-tx,var(--pri));text-decoration:underline;overflow-wrap:anywhere}
 .lcmd img{max-width:100%;height:auto;border-radius:8px;display:block;margin:8px 0}
 .nt>.lcmd{padding:4px 18px 16px;font-size:14px;line-height:1.7}.mycard .nt>.lcmd{padding:0 0 12px}.ncard>.lcmd{padding-top:10px}
+
+/* ═════════ v43 D-C — 공지(#notice) 고정 공지 사진 카드 ═════════ */
+html body:not(.lapp) .nt43pin{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 22px}
+html body:not(.lapp) a.nt43c{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:150px;border-radius:22px;overflow:hidden;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh);color:var(--ink);text-decoration:none;transition:transform .15s,box-shadow .15s}
+html body:not(.lapp) a.nt43c:hover{transform:translateY(-2px);box-shadow:var(--q2-sh2)}
+html body:not(.lapp) .nt43ph{position:relative;background:#0b1a12 center/cover no-repeat}
+html body:not(.lapp) .nt43ph::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,16,10,0) 40%,rgba(4,16,10,.55))}
+html body:not(.lapp) .nt43ph em{position:absolute;left:12px;top:12px;z-index:1;display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px;border-radius:999px;background:var(--pri);color:var(--pri-ink,#fff);font-style:normal;font-size:12px;font-weight:800}
+html body:not(.lapp) .nt43b{display:flex;flex-direction:column;gap:6px;padding:18px 20px}
+html body:not(.lapp) .nt43b small{align-self:flex-start;display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--q2-t1);color:var(--pri-tx,var(--pri));font-size:12px;font-weight:700}
+html body:not(.lapp) .nt43b b{font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.35}
+html body:not(.lapp) .nt43b p{margin:0;font-size:14px;line-height:1.55;color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+html body:not(.lapp) .nt43b time{margin-top:auto;font-size:13px;color:var(--mute)}
+@media (max-width:760px){html body:not(.lapp) .nt43pin{grid-template-columns:1fr}html body:not(.lapp) a.nt43c{grid-template-columns:116px minmax(0,1fr);min-height:132px}html body:not(.lapp) .nt43b{padding:14px 16px}html body:not(.lapp) .nt43b b{font-size:16px}}
+/* v43 R8 096: 공지 = 8+4 · 분류 칩 · 카드 목록 */
+html body:not(.lapp) .nt43g{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+html body:not(.lapp) .nt43pin.nt43p2{grid-template-columns:1fr 1fr}
+html body:not(.lapp) .nt43p2 a.nt43c{grid-template-columns:1fr;grid-template-rows:140px auto}
+html body:not(.lapp) .nt43f{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+html body:not(.lapp) .nt43f button{height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--q2-bd);background:var(--surface,#fff);font:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
+html body:not(.lapp) .nt43f button small{margin-left:4px;font-size:13px;color:var(--mute)}
+html body:not(.lapp) .nt43f button.on{background:var(--ink);border-color:var(--ink);color:#fff}html body:not(.lapp) .nt43f button.on small{color:#cfd8d2}
+html body:not(.lapp) .nlist.n26.nt43l{background:none;border:0;box-shadow:none;overflow:visible;display:flex;flex-direction:column;gap:10px}
+html body:not(.lapp) .nlist.n26.nt43l details.nt{border-radius:18px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary{grid-template-columns:auto minmax(0,1fr) auto auto auto!important;min-height:72px;padding:16px 20px}
+html body:not(.lapp) .nlist.n26.nt43l .n26no{display:none}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>.tcat{grid-column:1!important}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>b{grid-column:2!important;font-size:16px}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>em.lcun{grid-column:3!important}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>em.new{grid-column:4!important}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>time{grid-column:5!important;color:var(--mute);font-size:14px}
+html body:not(.lapp) .nt43s{display:flex;flex-direction:column;gap:14px;position:sticky;top:96px}
+html body:not(.lapp) .nt43sc{padding:20px;border-radius:20px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
+html body:not(.lapp) .nt43sc h3{margin:0 0 6px;font-size:18px;font-weight:800}
+html body:not(.lapp) .nt43sc .mini{margin:0 0 12px;font-size:14px;line-height:1.55}
+html body:not(.lapp) .nt43sc .lbtn{width:100%;justify-content:center}
+html body:not(.lapp) .nt43k{display:flex;align-items:center;gap:6px;margin:0 0 10px;font-size:13px;font-weight:700;color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .nt43dk{background:radial-gradient(120% 140% at 100% 0,#1f7a3a 0,transparent 55%),linear-gradient(135deg,#0d3b20,#06170d);border-color:transparent;color:#fff}
+html body:not(.lapp) .nt43dk .nt43k{color:#9CF5B8}html body:not(.lapp) .nt43dk .mini{color:#CFE3D6}
+html body:not(.lapp) .nt43ev{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:10px}
+html body:not(.lapp) .nt43ev li{display:flex;gap:12px;align-items:center}
+html body:not(.lapp) .nt43ev .nt43d{flex:none;width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.1);display:flex;flex-direction:column;align-items:center;justify-content:center}
+html body:not(.lapp) .nt43ev .nt43d b{font-size:15px}html body:not(.lapp) .nt43ev .nt43d small{font-size:12px;color:#9CF5B8;font-weight:700}
+html body:not(.lapp) .nt43ev li>span:last-child b{display:block;font-size:14px;line-height:1.35}html body:not(.lapp) .nt43ev li>span:last-child small{font-size:13px;color:#CFE3D6}
+html body:not(.lapp) .nt43lk{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;padding:12px 0;border-top:1px solid var(--q2-bd);color:var(--ink);text-decoration:none}
+html body:not(.lapp) .nt43lk b{font-size:15px}html body:not(.lapp) .nt43lk small{grid-row:2;font-size:13px;color:var(--mute)}html body:not(.lapp) .nt43lk svg{grid-row:1/3;grid-column:2;color:var(--mute)}
+@media (max-width:900px){html body:not(.lapp) .nt43g{grid-template-columns:1fr}html body:not(.lapp) .nt43s{position:static}}
+/* v43 R8 098: 메시지 행 높이 · 발신자 아바타 확대 */
+html body:not(.lapp) #lm .lcrow43{min-height:88px;padding:16px 22px;gap:16px}
+html body:not(.lapp) #lm .lcrow43 .r4av{width:48px;height:48px;font-size:17px}
+@media (min-width:561px){html body:not(.lapp) #lm .r4row.lcrow43{grid-template-columns:48px minmax(0,1fr) auto}}
+html body:not(.lapp) #lm .lcrow43 .r4t b{font-size:16px}
+html body:not(.lapp) #lm .lcrow43 .r4t span{font-size:14px}
+html body:not(.lapp) #lm .lcrow43 .r4t small{font-size:13px;font-weight:700}

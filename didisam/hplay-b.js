@@ -271,7 +271,7 @@
   const lesOf = c => (c.curriculum || []).length;
   const priceOf = c => +c.price ? won_(c.price) : ((typeof mbPayOn === 'function' && window.S && S.org ? !mbPayOn() : (typeof SITE === 'function' && SITE() ? SITE().pay === false : false)) ? '' : '무료'); /* v38 F5 결제 꺼진 기관은 '무료' 표시도 감춘다 */
   const KIND = c => ({ live: '실시간', offline: '현장', blend: '혼합', sub: '구독', pack: '패키지' })[c.kind] || '온라인';
-  const linkHref = v => !v ? '' : v.startsWith('learn:') ? '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice' }[v.slice(6)] || 'home') : v.startsWith('page:') ? '#p-' + v.slice(5) : v.startsWith('cls:') ? '#p-c-' + v.slice(4) : v.startsWith('url:') ? (typeof safeURL === 'function' ? safeURL(v.slice(4)) : '') : '';
+  const linkHref = v => !v ? '' : v.startsWith('learn:') ? '#p-' + ({ home: 'home', shop: 'm-class', textbooks: 'm-book', comm: 'm-community', notice: 'm-notice', fac: 'l-fac' }[v.slice(6)] || 'home') : v.startsWith('page:') ? '#p-' + v.slice(5) : v.startsWith('cls:') ? '#p-c-' + v.slice(4) : v.startsWith('url:') ? (typeof safeURL === 'function' ? safeURL(v.slice(4)) : '') : '';
   const aAttr = h => `href="${E(h)}"${/^https?:/.test(h) ? ' target="_blank" rel="noopener"' : ''}`;
   const menuOf = (s, kind) => (s.menus || []).find(m => m.kind === kind && m.on !== false);
   const menusOn = s => (s.menus || []).filter(m => m.on !== false && m.kind !== 'home' && m.access !== '비공개' && m.access !== '지정 회원');

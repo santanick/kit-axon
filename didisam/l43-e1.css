@@ -1,0 +1,128 @@
+/* v43 E1 — 관리자 화면 33장 보정(l43-e1.js 로 등록한 탭). 색은 토큰만 · 글자 12px 이상 · 누르는 곳 44px 이상(밀집 표 안은 보이는 크기 + ::after 누를 자리 44px) */
+:root{--e1-hit:44px}
+/* 밀집 표 · 달력 · 출석 칸: 보이는 크기는 유지하고 누를 자리만 44px */
+#main.l43 :is(.att,.cmfav,.w2-satt,[data-act=jn-rm],[data-act=crm-att],[data-act=cs-open],[data-act=cm-msg-view],.cm26go2,.tw td select){position:relative}
+#main.l43 :is(.att,.cmfav,.w2-satt,[data-act=jn-rm],[data-act=crm-att],[data-act=cs-open],[data-act=cm-msg-view],.cm26go2)::after{content:'';position:absolute;top:min(0px,calc((100% - var(--e1-hit)) / 2));bottom:min(0px,calc((100% - var(--e1-hit)) / 2));left:min(0px,calc((100% - var(--e1-hit)) / 2));right:min(0px,calc((100% - var(--e1-hit)) / 2))}
+#main.l43 .tw td select{min-height:44px}
+/* 보이는 버튼 · 칩 · 하위 탭 44px */
+#main.l43 :is(.chip,.cm26k,.mb-chip,.cn-chip,.cmn-pb,.ops-xbtn,.cm26adv,[data-act=cm-mc-mode],[data-act=sx-sub],[data-act=sl-chip],[data-act=cert-preview],[data-act=lmsh-xls],[data-act=doc-f],[data-act=cm26-qf]),
+#main.l43 .seg2:not(.wtabs) button,#main.l43 .tw ~ * .btn,#main.l43 .ch .btn,#main.l43 select,#main.l43 .bar2 button{min-height:44px}
+#main.l43 :is([data-act=cm-mc-mode],[data-act=sl-chip],[data-act=sx-sub]){display:inline-flex;align-items:center}
+#main.l43 summary[data-act=cn-gal],#main.l43 .cn-gal>summary{min-height:44px;display:flex;align-items:center}
+/* 글자 12px 이상 */
+#main.l43 :is(.cmn-pin,.cmn-to,.efh-demo,.cm26k em){font-size:12px} /* .jn · .flow · .seg2 em 은 v43 F1에서 app.css 원본을 12px로 */
+#main.l43[data-l43=attend] .tw small,#main.l43[data-l43=grade] small,#main.l43[data-l43=consult] small{font-size:12px}
+/* 출석 칸 · 보호자 칩 대비(라이트 4.5:1) */
+#main.l43 .att.g,#main.l43 .mb-chip.g{color:var(--t-mag)}
+#main.l43 .att.y,#main.l43 .mb-chip.y{color:var(--t-warn)}
+/* 다크: 흰 바탕 하드코딩 → 표면 토큰 */
+html[data-theme=dark] #main.l43 :is(.cmn-pb,.cm26k,.cx-month,.cx-wcol,.clb-c,.clb-card,.cn-chip,.sx-sub,.brl,.cm26tab,.cmtab){background:var(--surface)}
+html[data-theme=dark] #main.l43 .cm26k{color:var(--g800);border-color:var(--line)}
+/* 성적 분포 막대 · 디지털북 썸네일 파랑 → 그린 */
+#main.l43[data-l43=grade] .efh-hist div i{background:var(--c-data)}
+#main.l43 .clb-th.k-b{background:var(--gr700)!important;color:#fff}
+/* 평생교육 운영 요건 체크(이모지 대신 체크 표시) */
+.ll-ck{display:inline-flex;align-items:center;gap:8px}
+.ll-ck>i{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;box-shadow:inset 0 0 0 1.5px var(--g400,var(--line));color:var(--on-pr,#fff)}
+.ll-ck.ok>i{background:var(--pr,#00A832);box-shadow:none}
+/* 달력 날짜 · 일정 칩: 44px 예외(24px 이상) — v43 F1에서 calx.js 원본으로 이동 */
+/* 다크: l43-e1.js darkFix()가 표시한 흰 바탕 · 잉크 바탕 → 토큰 */
+html[data-theme=dark] #main.l43 .e1-wb{background-color:var(--surface)!important}
+html[data-theme=dark] #main.l43 .e1-ink{background-color:var(--pr)!important;color:var(--on-pr)!important}
+html[data-theme=dark] #main.l43 .e1-ink *{color:inherit!important}
+/* 종이 미리보기(수료증)는 다크에서도 라이트 글자색 */
+html[data-theme=dark] #main.l43 .e1-paper{--g900:#1A1814;--g800:#3F3A33;--g700:#5C554B;--g600:#736B5F;--g500:#A39B8E;--ink:#1A1814;--muted:#5C554B;--t-sub:#5C554B;--t-bad:#C4001D;--bad:#B3121B;--line:#E7E2D9;--surface:#fff;--surface2:#FAF8F5;color:#1A1814}
+html[data-theme=dark] #main.l43 .ck-card:not(.e1-x){background:var(--surface);color:var(--g900)}
+/* 개별 색 보정 */
+#main.l43 .lnd{color:var(--t-sub)}
+#main.l43 .bd26p .row span{color:var(--t-sub)}
+#main.l43 .cpl-dd.r{color:var(--t-bad)}
+html[data-theme=dark] #main.l43 .cmn-pin{color:var(--on-pr)}
+#main.l43[data-l43=community] button em{background:var(--co700);color:#fff;font-size:12px}
+html[data-theme=dark] #main.l43[data-l43=community] button em{color:#1A0D06}
+#main.l43 .cpl-go,#main.l43[data-l43=cpl] .btn.sm{min-height:44px}
+#main.l43 [data-act=w2-satt]{min-height:44px;display:inline-flex;align-items:center}
+#main.l43 [data-act=w2-hist]{position:relative}#main.l43 [data-act=w2-hist]::after{content:"";position:absolute;top:-11px;bottom:-11px;left:0;right:0}
+#main.l43 .att.r{color:color-mix(in srgb,var(--bad) 78%,var(--g900))}
+#main.l43 .clb-th.e1-ph{color:#fff}#main.l43 .clb-th.e1-ph svg{color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
+html[data-theme=dark] #main.l43 .lmsa-note{background:var(--warnl);color:var(--t-warn)}
+html[data-theme=dark] #main.l43 .clb-th.k-b,html[data-theme=dark] #main.l43 .clb-th.k-b *{color:var(--on-pr)}
+#main.l43 .bd26h small{color:var(--t-sub)}
+/* v43 R5 — 034 디지털북 서가(clib 디지털북 탭): 사진 표지 3열 + 오른쪽 열람 통계 */
+.bks{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+.bks-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.bks-card{display:flex;flex-direction:column;gap:12px;padding:12px;border-radius:20px;background:var(--surface,#fff);box-shadow:var(--sh1,0 1px 2px rgba(0,0,0,.06)),inset 0 0 0 1px var(--line,rgba(0,0,0,.06));cursor:pointer;transition:box-shadow .15s,transform .15s}
+.bks-card:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(5,40,20,.12)}
+.bks-card.on{box-shadow:0 0 0 2px var(--gr600,#00862D)}
+.bks-cov{position:relative;display:block;aspect-ratio:4/3;border-radius:12px 14px 14px 12px;overflow:hidden;background:var(--bk,#00862D);color:#fff}
+.bks-cov img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.bks-cov::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,16,10,.1) 0,rgba(4,16,10,.2) 40%,color-mix(in srgb,var(--bk,#053D1E) 70%,#04100A) 100%)}
+.bks-spine{position:absolute;left:0;top:0;bottom:0;width:10px;z-index:1;background:linear-gradient(90deg,rgba(0,0,0,.35),rgba(255,255,255,.12) 60%,rgba(0,0,0,.1))}
+.bks-lv{position:absolute;z-index:2;top:12px;left:20px;height:24px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;font-style:normal;font-size:12px;font-weight:800;background:rgba(255,255,255,.92);color:var(--gr800,#03271A)}
+.bks-ct{position:absolute;z-index:2;left:20px;right:16px;bottom:14px;display:flex;flex-direction:column;gap:4px}
+.bks-ct small{font-size:10px;letter-spacing:.14em;font-weight:800;opacity:.8}
+.bks-ct b{font-size:19px;line-height:1.25;font-weight:800;letter-spacing:-.02em;word-break:keep-all}
+.bks-ct span{font-size:12px;opacity:.88}
+.bks-tx{display:flex;flex-direction:column;gap:6px;padding:0 4px 4px}
+.bks-tx>b{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bks-tx>small{font-size:12px;color:var(--mute,#6B6F6C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bks-pb{display:block;height:6px;border-radius:99px;background:var(--gr50,#E8F7EC);overflow:hidden;margin-top:4px}
+.bks-pb i{display:block;height:100%;border-radius:99px;background:var(--gr600,#00862D)}
+.bks-nums{display:flex;gap:12px;font-size:12px;color:var(--mute,#6B6F6C)}
+.bks-nums b{font-size:14px;color:var(--ink,#14171A);font-variant-numeric:tabular-nums;margin-right:1px}
+.bks-side{display:flex;flex-direction:column;gap:16px;position:sticky;top:12px}
+.bks-box{padding:20px;border-radius:20px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--line,rgba(0,0,0,.06))}
+.bks-box h3{margin:0 0 10px;font-size:15px;font-weight:800;display:flex;align-items:baseline;gap:8px}
+.bks-box h3 small{font-size:12px;font-weight:600;color:var(--mute,#6B6F6C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bks-big{margin:0 0 14px;font-size:13px;color:var(--mute,#6B6F6C)}.bks-big b{font-size:32px;font-weight:800;color:var(--ink,#14171A);letter-spacing:-.03em;margin-right:2px}
+.bks-big small{display:block;margin-top:4px;font-size:12px}
+.bks-wk{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;height:140px;align-items:end}
+.bks-wk span{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.bks-wk i{display:block;width:100%;max-width:28px;border-radius:8px 8px 4px 4px;background:var(--gr200,#BDEBC9)}
+.bks-wk span.td i{background:var(--gr600,#00862D)}
+.bks-wk em{font-style:normal;font-size:11px;font-weight:700;color:var(--ink,#14171A);font-variant-numeric:tabular-nums;order:-1}
+.bks-wk small{font-size:11px;color:var(--mute,#6B6F6C)}
+.bks-ch{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.bks-ch li{display:grid;grid-template-columns:26px minmax(0,1fr) 44px;gap:10px;align-items:center}
+.bks-cn{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--gr50,#E8F7EC);color:var(--gr800,#03271A);font-size:12px;font-weight:800}
+.bks-cl{display:flex;flex-direction:column;gap:6px;min-width:0}.bks-cl b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bks-cb{display:block;height:8px;border-radius:99px;background:var(--gr50,#E8F7EC);overflow:hidden}.bks-cb i{display:block;height:100%;background:var(--gr500,#21B04B);border-radius:99px}
+.bks-ch em{font-style:normal;font-size:13px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.bks-note{margin:14px 0 0;padding:10px 12px;border-radius:12px;background:var(--gr50,#E8F7EC);color:var(--gr800,#03271A);font-size:12px;line-height:1.5;display:flex;gap:6px;align-items:flex-start}
+html[data-theme=dark] .bks-card,html[data-theme=dark] .bks-box{background:#1C1F1E;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+html[data-theme=dark] .bks-pb,html[data-theme=dark] .bks-cb,html[data-theme=dark] .bks-cn,html[data-theme=dark] .bks-note{background:rgba(255,255,255,.08);color:var(--gr300,#7DDB95)}
+@media (max-width:1200px){.bks{grid-template-columns:1fr}.bks-side{position:static;display:grid;grid-template-columns:1fr 1fr}}
+@media (max-width:860px){.bks-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bks-side{grid-template-columns:1fr}}
+/* v43 R6: 디지털북 표지 4열(J1 034) */
+@media (min-width:1100px){.bks-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.bks-grid .bks-nums{flex-wrap:wrap;row-gap:2px}}
+/* v43 R6: 배지 카드 4열 정렬 · 0개 문장 */
+#main .medals.md4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+#main .medals.md4 .mcard{min-width:0;margin:0}
+#main .medals.md4 .mz small{font-size:13px;font-weight:600;color:var(--muted)}
+@media (max-width:1100px){#main .medals.md4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#legalList .lg43-pr{display:flex;align-items:center;gap:8px;min-width:140px}#legalList .lg43-pr .bar{flex:1}#legalList .lg43-pr b{font-variant-numeric:tabular-nums;font-size:13px}
+/* v43 R6: 평생교육 체크리스트 — 처리 행 3개 + 모두 보기 */
+#main .r1-ck3{display:flex;flex-direction:column;gap:8px}
+#main .r1-ck3 li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--surface2,#f6f7f6)}
+#main .r1-ck3 .r1-ckt{flex:1;min-width:0}
+#main .r1-ckm{margin-top:8px}#main .r1-ckm>summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--pr-ink,#0a7a32);padding:8px 0;list-style:none}
+#main .r1-ckm>summary::-webkit-details-marker{display:none}
+/* v43 S3A 010: 퇴직연금 도입 스위치 · 표 마지막(과정) 열이 잘리지 않게 */
+#legalList .lg43sw{display:inline-flex;align-items:center;gap:10px;min-height:44px;font-size:14px;font-weight:600;cursor:pointer}
+#legalList table{table-layout:auto;width:100%}
+#legalList td:last-child,#legalList th:last-child{white-space:nowrap;width:1%}
+#legalList td:nth-child(3){min-width:180px}
+/* v43 F2 036: 브리핑 머리 안 하위 칩 */
+#main .l43-brief .lmsnav-sub.l43-insub{margin:0 0 10px;gap:6px}
+#main .l43-brief .lmsnav-sub.l43-insub .lnd{display:none}
+#main .l43-brief .lmsnav-sub.l43-insub button{min-height:44px;padding:0 14px;font-size:13px;background:rgba(255,255,255,.7)}
+#main .l43-brief .lmsnav-sub.l43-insub button.on{background:var(--gr700,#00862D);color:var(--on-pr,#fff)}
+/* v43 H1(M1 036) 학사 연동: 화면 칩 묶음 + 하위 탭을 한 줄로, 페이지 머리 동기화 단추 중복 감춤 */
+#main .h1-subrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 4px}
+#main .h1-subrow>.seg2{margin:0;flex:1 1 auto;min-width:0}
+#main .h1-subrow>.lmsnav-sub.h1-sub{display:inline-flex;align-items:center;gap:2px;margin:0;padding:4px;border-radius:999px;background:var(--gr50,#EAF7EE);flex:none}
+#main .h1-subrow>.lmsnav-sub.h1-sub .lnd{display:none}
+#main .h1-subrow>.lmsnav-sub.h1-sub button{min-height:40px;padding:0 14px;border:0;border-radius:999px;background:transparent;font-size:13.5px;font-weight:700;color:var(--gr800,#0B5A2A);white-space:nowrap}
+#main .h1-subrow>.lmsnav-sub.h1-sub button.on{background:var(--gr700,#00862D);color:var(--on-pr,#fff)}
+#main .h1-subrow>.lmsnav-sub.h1-sub::after{content:none}
+#main .h1-dupact{display:none!important}

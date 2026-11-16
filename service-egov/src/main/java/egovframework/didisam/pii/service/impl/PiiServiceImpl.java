@@ -28,7 +28,9 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
     static final Pattern NICK_RE = Pattern.compile("[가-힣A-Za-z0-9_-]{2,20}"), STU_RE = Pattern.compile("[0-9]{6,10}"),
         MAIL_RE = Pattern.compile("[^" + Js.WS + "@<>]+@[^" + Js.WS + "@<>]+\\.[^" + Js.WS + "@<>]{2,}"), PHONE_RE = Pattern.compile("01\\d-?\\d{3,4}-?\\d{4}"),
         UUIDISH = Pattern.compile("[0-9a-f-]{36}"), DEVSUB = Pattern.compile("[\\w.-]{3,80}");
-    static final Map<String, String> PURPOSES = new LinkedHashMap<>(Map.of("cert", "수료증 발급", "refund", "결제 · 환불 처리", "alimtalk", "알림톡 수신", "legal", "법령상 요청"));
+    static final Map<String, String> PURPOSES = new LinkedHashMap<>(Map.of("cert", "수료증 발급", "refund", "결제 · 환불 처리", "alimtalk", "알림톡 수신", "legal", "법령상 요청", "sms_noti", "예약 · 노쇼 알림 문자"));
+    /* v43 K2: sms_noti = 공단 · 평생교육원 회원이 알림을 켤 때만 받는 휴대폰(대학 불가, 탈퇴 시 파기) — pii.js와 같은 규칙 */
+    static final List<String> SMS_TYPES = List.of("public", "lifelong");
     static final Map<String, String> IDV_REASONS = Map.of("refund", "고용보험 환급 과정", "adult", "성인 인증 콘텐츠", "credit", "학점 인정");
     /** JS 객체 리터럴에서 Object.prototype으로 닿는 이름(IDV_REASONS[x]가 함수가 되어 JSON에서 빠지는 경우) */
     static final Set<String> PROTO_FN = Set.of("constructor", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__");
@@ -96,7 +98,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         JsonNode a = or(acct, F.objectNode());
         JsonNode soc = get(a, "social"); JsonNode idv = get(a, "idv");
         boolean on = truthy(idv) && truthy(get(idv, "on"));
-        return new Org(type, or(get(a, "mode"), t("open")), truthy(get(a, "under14")), soc != null && soc.isArray() ? soc : arrNode(PROVIDERS.stream().map(Js::t).toList()), on, on ? sOr(get(idv, "reason")) : null, strictEq(get(a, "approve"), "manual"), "k12".equals(type) && truthy(get(a, "parent")));
+        return new Org(type, or(get(a, "mode"), t("open")), truthy(get(a, "under14")), soc != null && soc.isArray() ? soc : arrNode(PROVIDERS.stream().map(Js::t).toList()), on, on ? sOr(get(idv, "reason")) : null, strictEq(get(a, "approve"), "manual") || "voc".equals(type) /* v43 P1-F01: 직업훈련원 자동 수락 불가(Node pii.js와 같음) */, "k12".equals(type) && truthy(get(a, "parent")));
     }
 
     /** SNS 식별자 → 해시. 운영: 공급자 토큰을 서버에서 검증해 sub를 받는다(카카오 · 네이버 · 구글 · 애플). */
@@ -307,16 +309,21 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         }));
         JsonNode b = DdWeb.readBody(body, props.getInt("body.piiMax")); String f = sOr(get(b, "field")); String purpose = sOr(get(b, "purpose"));
         if (!List.of("name", "phone").contains(f)) throw processException("dd.400.field");
-        if (!PURPOSES.containsKey(purpose) || ("phone".equals(f) && !List.of("alimtalk", "refund").contains(purpose)) || ("name".equals(f) && !List.of("cert", "refund").contains(purpose))) throw processException("dd.400.purpose");
+        if (!PURPOSES.containsKey(purpose) || ("phone".equals(f) && !List.of("alimtalk", "refund", "sms_noti").contains(purpose)) || ("name".equals(f) && !List.of("cert", "refund").contains(purpose))) throw processException("dd.400.purpose");
         String v = trim(sOr(get(b, "value")));
         if ("phone".equals(f) && !v.isEmpty()) { v = normPhone(v); if (v.isEmpty()) throw processException("dd.400.phone"); }
         if ("name".equals(f) && v.length() > 30) throw processException("dd.400.name.pii");
-        String fv = v;
+        String fv = v; boolean sms = "sms_noti".equals(purpose);
+        if (sms) { Org org = ptx.run(tid, r -> r.L(() -> orgOf(tid))); if (!SMS_TYPES.contains(org.type())) throw processException("dd.403.sms_type"); }
         return ptx.run(tid, r -> r.P(() -> {
             String lid = mapper.updateField(tid, sid, f, fv.isEmpty() ? null : enc(fv, DdPiiCrypto.aad(tid, sid, f)));
             if (lid == null) throw processException("dd.404.none");
+            String at = java.time.Instant.now().toString();
+            if (sms) { if (fv.isEmpty()) mapper.dropPhoneConsent(tid, sid); else mapper.setPhoneConsent(tid, sid, at); } /* 동의 기록(목적 · 보관 기간 · 동의 시각) — 알림을 끄면 번호와 함께 지움 */
             plog(tid, "self", fv.isEmpty() ? "erase" : "update", lid, purpose, List.of(f));
-            Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); o.put("field", f); o.put("purpose", PURPOSES.get(purpose)); return o;
+            Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); o.put("field", f); o.put("purpose", PURPOSES.get(purpose));
+            if (sms) { String d = fv.replaceAll("\\D", ""); o.put("mask", d.length() >= 10 ? d.substring(0, 3) + "-****-" + d.substring(d.length() - 4) : ""); o.put("keep", "탈퇴하면 바로 파기"); o.put("at", fv.isEmpty() ? null : at); }
+            return o;
         }));
     }
 

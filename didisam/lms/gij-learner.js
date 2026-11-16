@@ -18,7 +18,7 @@
   const E = s => (typeof esc === 'function' ? esc(s) : String(s ?? ''));
   const T = (m, k) => { try { toast(m, k); } catch (e) { } };
   const re = () => { if (typeof lrender === 'function') lrender(); };
-  try { if (!document.querySelector('link[data-gij]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/gij-learner.css?v=30.0'; l.dataset.gij = '1'; document.head.appendChild(l); } } catch (e) { }
+  try { if (!document.querySelector('link[data-gij]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/gij-learner.css?v=43.3'; l.dataset.gij = '1'; document.head.appendChild(l); } } catch (e) { }
   const ST = { g: null, i: null, refl: {}, busy: {}, err: '', ses: '', m: 'code', res: null, geo: null, play: null, tab: 'att' };
   const ERRT = { not_open: '아직 출석 시간이 아닙니다.', closed: '출석 인정 시간이 지났습니다.', dup: '이미 출석했습니다.' };
   const ST_N = { present: '출석', late: '지각', absent: '결석', excused: '공결' };
@@ -94,7 +94,7 @@
   function card() {
     const g = G(), i = I(); const head = '<div class="myhead"><h2>출석 · 강의 · 성찰</h2></div>';
     if (!g || !i) return `<div class="mycard wide" id="gijMy">${head}<p class="mini">${ST.err ? E(ST.err) : '불러오는 중입니다.'}</p></div>`;
-    if (!g.found) return `<div class="mycard wide" id="gijMy">${head}<p class="mini">${g.err ? E(g.err) : '학사 정보에 등록된 학번이 아닙니다. 학교 학사 담당 부서에 문의하세요.'}</p></div>`;
+    if (!g.found) return g.err ? `<div class="mycard wide" id="gijMy">${head}<p class="mini">${E(g.err)}</p></div>` : ''; /* v43 D-C(P2 C4): 명단에 없는 학번 안내는 위 카드(lmsNoRoster)에서 한 번만 */
     const tabs = [['att', '출석하기'], ['mine', '내 출결 · 진도'], ['vid', '강의 영상'], ['refl', '성찰일지']];
     const body = { att: () => cAtt(g), mine: () => cMine(g, i), vid: () => cVid(i), refl: () => cRefl(g) }[ST.tab]();
     return `<div class="mycard wide" id="gijMy">${head}<p class="mini">학번 ${E(g.member_no)}${live() ? '' : ' · 데모 화면(기록은 운영 서버에서 저장됩니다)'}</p><div class="gij-seg" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${k === ST.tab}" class="${k === ST.tab ? 'on' : ''}" data-lact="gij-tab" data-v="${k}">${l}</button>`).join('')}</div>${body}</div>`;

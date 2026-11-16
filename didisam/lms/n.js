@@ -98,6 +98,8 @@
     N.courses.push(...C);
     C.slice(0, 5).forEach(c => N.cohorts.push({ cohort_id: LW4.uuid(), course_id: c.course_id, no: 1, starts_on: '2026-11-02', ends_on: '2026-12-18', capacity: 30, status: 'open' }));
     const h = N.cohorts[0].cohort_id; [['20261001', 92, 4, 85], ['20261002', 60, 2, 70], ['20261003', 88, 3, 55]].forEach(([no, p, ac, sc]) => N.enrolls.push({ cohort_id: h, member_no: no, status: 'approved', pay_status: 'free', progress: p, activity: ac, score: sc, items: { 중간: sc, 기말: sc }, reason: '', cert_no: null, applied_at: LW4.now(), completed_at: null }));
+    /* v43 D-B 시연 시드: 나머지 기수에도 수강생(학번만)을 채워 「수강 0명」 행이 없게 */
+    N.cohorts.slice(1).forEach((hh, k) => { const cnt = [14, 9, 18, 7][k] || 6; for (let i = 0; i < cnt; i++) { const no = '2026' + String(1010 + k * 9 + i); if (N.enrolls.some(e => e.cohort_id === hh.cohort_id && e.member_no === no)) continue; const p = (i * 23 + k * 11) % 101; N.enrolls.push({ cohort_id: hh.cohort_id, member_no: no, status: p >= 90 ? 'completed' : 'approved', pay_status: 'free', progress: p, activity: 1 + i % 5, score: 50 + (i * 7) % 50, items: {}, reason: '', cert_no: null, applied_at: LW4.now(), completed_at: null }); } });
     N.diags.push({ test_id: LW4.uuid(), title: '신입생 기초학력 진단', kind: 'basic', items: [{ q: '2x + 3 = 7 일 때 x는?', options: ['1', '2', '3'], answer: 1, area: '수리' }, { q: '다음 중 맞춤법이 옳은 것은?', options: ['되요', '돼요'], answer: 1, area: '국어' }, { q: 'print("a")의 결과는?', options: ['a 출력', '오류'], answer: 0, area: '프로그래밍' }, { q: '평균을 구하는 방법은?', options: ['합 ÷ 개수', '최댓값 - 최솟값'], answer: 0, area: '통계' }] });
   }
 
@@ -129,11 +131,13 @@
         <div>${(U.res.tags || []).map(t => `<button class="lw-pill" data-act="lmsn-tag" data-v="${esc(t)}">#${esc(t)}</button>`).join('')}</div>
         <div class="lw-grid" style="margin-top:10px">${U.res.items.map(c => card(c, U)).join('') || '<div class="empty">조건에 맞는 과정이 없습니다.</div>'}</div>` + (U.cur ? detail(U) : '');
     } else if (tb === 'admin') {
-      b = `<p class="lw-note">${isOp() ? '운영자: 공개 승인 · 반려 · 종료, 수료증 양식 · 수강 승인 방식을 정합니다.' : '교수자: 내 과정을 작성해 승인을 요청하고, 기수 · 진도를 관리합니다.'} 과정 이름을 누르면 기수 · 수강생 · 수료 처리로 갑니다.</p>` +
-        table(['과정', '상태', '수강', '담당', ''], A.map(c => {
-          const main = isOp() && c.status === 'pending' ? `<button class="btn sm lw-go" data-act="lmsn-dec" data-id="${esc(c.course_id)}" data-y="1">승인</button>` : `<button class="btn sm" data-act="lmsn-coh" data-id="${esc(c.course_id)}">기수 · 수료</button>`;
+      /* v43 R7: 회색 안내 문장 · 회색 표 → 사진 카드 격자(J2 061). 카드마다 상태 칩 · 수강 인원 · 주 버튼 1개 + ⋯ — data-act는 표와 같다 */
+      const ph = c => { try { return window.L43 ? L43.photo(L43.wordsOf(c.title), c.course_id + c.title) : ''; } catch (e) { return ''; } };
+      b = A.length ? `<div class="r7-cg">${A.map(c => {
+          const main = isOp() && c.status === 'pending' ? `<button class="btn sm pri lw-go" data-act="lmsn-dec" data-id="${esc(c.course_id)}" data-y="1">승인</button>` : `<button class="btn sm" data-act="lmsn-coh" data-id="${esc(c.course_id)}">기수 · 수료</button>`;
           const more = LW4.mi('lmsn-edit', '과정 편집', { id: c.course_id }) + (['draft', 'rejected'].includes(c.status) ? LW4.mi('lmsn-cst', '승인 요청', { op: 'submit', id: c.course_id }) : '') + (isOp() && c.status === 'pending' ? LW4.mi('lmsn-dec', '반려', { id: c.course_id }) + LW4.mi('lmsn-coh', '기수 · 수료', { id: c.course_id }) : '') + (isOp() && c.status === 'approved' ? LW4.mi('lmsn-cst', '과정 종료', { op: 'close', id: c.course_id }) : '');
-          return [`<b>${esc(c.title)}</b>${c.source === 'converted' ? ' <span class="lw-pill">정규 전환</span>' : ''}<small class="lw-sub">${esc(LV[c.level])} · ${c.price ? c.price.toLocaleString() + '원' : '무료'}${c.reject_reason ? ' · 반려: ' + esc(c.reject_reason) : ''}</small>`, LW4.st(CST[c.status][0], CST[c.status][1]), c.n_enroll + '명', esc(c.owner_email || '-'), `<span class="lw-acts" style="margin:0">${main}${LW4.more(more)}</span>`]; }), '과정이 없습니다. 「새 과정」으로 만드세요.');
+          const u = ph(c);
+          return `<article class="r7-cc" data-st="${esc(CST[c.status][0])}" data-n="${+c.n_enroll || 0}"><div class="r7-cph"${u ? ` style="background-image:url('${esc(u)}')"` : ''}>${LW4.st(CST[c.status][0], CST[c.status][1])}${c.source === 'converted' ? '<span class="lw-pill">정규 전환</span>' : ''}</div><div class="r7-cb"><b>${esc(c.title)}</b><small>${esc(LV[c.level])} · ${c.price ? c.price.toLocaleString() + '원' : '무료'}${c.reject_reason ? ' · 반려: ' + esc(c.reject_reason) : ''}</small><div class="r7-cm"><span><b>${+c.n_enroll || 0}</b>명 수강</span><span>${esc(c.owner_email || '-')}</span></div><span class="lw-acts">${main}${LW4.more(more)}</span></div></article>`; }).join('')}</div>` : '<div class="empty">과정이 없습니다. 「새 과정」으로 만드세요.</div>';
     } else if (tb === 'cohort') b = cohortView(U);
     else if (tb === 'diag') b = diagView(U, who);
     else if (tb === 'my') b = myView(U, who);

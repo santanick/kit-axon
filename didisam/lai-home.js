@@ -9,7 +9,7 @@
 'use strict';
 (() => {
   Object.assign(ICP, { bolt: 'M13 3L5 14h6l-1 7 8-11h-6z', sparkle: 'M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z', bell: ICP.bell || 'M6 16V11a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0' });
-  const on = () => { try { return !!SITE() && TCFG().enabled !== false && route().a === 'home'; } catch (e) { return false; } };
+  const on = () => { try { return !!SITE() && TCFG().enabled !== false && route().a === 'home' && !(typeof window.lhbHome === 'function' && window.lhbHome()); } catch (e) { return false; } }; /* v43 F3: 로그인 PC 웹 홈은 학습 허브(lhub.js)가 그린다 */
   const U = () => SITE().org.type === 'univ';
   const lp = () => LR.lp || {};
   const conn = () => { const L = LR.lp; L.conn = L.conn && typeof L.conn === 'object' ? L.conn : {}; return L.conn; };
@@ -43,13 +43,23 @@
   function connHTML() {
     const g = gcalOn(); const p = phoneOn(); const cards = [`<button type="button" class="lai-cc ${g ? 'on' : ''}" data-lai="gcal" aria-label="Google Calendar — ${g ? '연결됨' : '미연결'}. 연결 안내 열기">${typeof window.brandLogo === 'function' ? window.brandLogo('gcal', 32) : '<span class="lai-lg" style="--c:#1A73E8">G</span>'}<span class="lai-cm"><b>Google Calendar</b><small>${g ? '학습 일정 연동 중' : '학습 일정 연동'}</small></span><i class="lai-dot" aria-hidden="true"></i></button>`];
     if (!U()) cards.push(`<a class="lai-cc ${p ? 'on' : ''}" href="#acct/phone" aria-label="카카오톡 알림 — ${p ? '받는 중' : '미신청'}. 신청 화면으로">${typeof window.brandLogo === 'function' ? window.brandLogo('kakao', 32) : '<span class="lai-lg" style="--c:#F2C200;color:#3A1D1D">K</span>'}<span class="lai-cm"><b>카카오톡 알림</b><small>${p ? '알림톡 받는 중' : '알림톡 신청하기'}</small></span><i class="lai-dot" aria-hidden="true"></i></a>`);
-    return `<div class="lai-sec"><div class="lai-sh"><h2>연결 <small>${[g, !U() && p].filter(Boolean).length}/${cards.length}</small></h2></div><div class="lai-cn">${cards.join('')}</div><p class="lai-sub">연결하면 리마인더를 ${U() ? '캘린더로도' : '캘린더 · 카카오톡으로도'} 받아요.</p></div>`; }
+    return `<div class="lai-sec"><div class="lai-sh"><h2>연결 <small>${[g, !U() && p].filter(Boolean).length ? `${[g, !U() && p].filter(Boolean).length}/${cards.length}` : '아직 연결 전이에요'}</small></h2></div><div class="lai-cn">${cards.join('')}</div><p class="lai-sub">연결하면 리마인더를 ${U() ? '캘린더로도' : '캘린더 · 카카오톡으로도'} 받아요.</p></div>`; }
   function autoHTML() { const L = autos(); const rows = L.map(a => { const T = TPL.find(x => x.k === a.k) || { n: a.k, d: () => '' };
       return `<li class="lai-ar ${a.on ? '' : 'off'}"><span class="lai-ai">${ico('bolt', 15)}</span><span class="lai-am"><b>${esc(T.n)}</b><small>${esc(T.d(a.t))}${a.on ? ` · ${esc(chans())}` : ' · 꺼짐'}</small>${a.k === 'review' ? `<label class="lai-tm">알림 시각 <input type="time" value="${esc(a.t || '21:00')}" data-lai-t="${esc(a.id)}"></label>` : ''}</span><label class="lai-sw"><input type="checkbox" ${a.on ? 'checked' : ''} data-lai-on="${esc(a.id)}" aria-label="${esc(T.n)} ${a.on ? '끄기' : '켜기'}"><span></span></label></li>`; });
-    const tp = TPL.filter(x => !L.some(a => a.k === x.k)).map(x => `<li class="lai-ar tp"><span class="lai-am"><b>${esc(x.n)}</b><small>${esc(x.d(x.t))}</small></span><button type="button" class="lbtn sm ghost" data-lai="mk" data-v="${x.k}">켜기</button></li>`);
+    const tp = TPL.filter(x => !L.some(a => a.k === x.k)).map(x => `<li class="lai-ar tp"><span class="lai-am"><b>${esc(x.n)}</b><small>${esc(x.d(x.t))}</small></span><button type="button" class="lai-sw lai-swb" role="switch" aria-checked="false" data-lai="mk" data-v="${x.k}" aria-label="${esc(x.n)} 켜기"><span></span></button></li>`); /* v43 R8 108: 텍스트 「켜기」 버튼 → 같은 줄의 스위치와 같은 꺼진 토글 */
     return `<div class="lai-sec"><div class="lai-sh"><h2>내 자동화 <small>${L.filter(a => a.on).length ? `${L.filter(a => a.on).length}개 켜짐` : '학습 리마인더'}</small></h2></div><ul class="lai-l">${rows.join('')}${tp.join('')}</ul><p class="lai-sub">데모에서는 설정만 저장합니다. 실제 알림은 운영 서버가 보냅니다.</p></div>`; }
-  const moreHTML = () => `<section class="lai-more" aria-label="내 학습 비서 도구"><div class="in lai-w">${todoHTML()}<div class="lai-two">${connHTML()}${autoHTML()}</div></div></section>`;
+  /* v43 R4(108): 웹 「연결 · 알림」(#connect)은 8+4 두 열 — 왼쪽 큰 연결 상태 카드 · 내 자동화, 오른쪽 이번 주 일정 막대 · 오늘 할 일 · 캘린더 바로가기.
+     같은 lai-more 구역을 바꿔 그리므로 스위치를 바꿀 때 다시 그리기(remount)도 같은 모양. 앱(body.lapp) · 홈 아래 비서 도구는 그대로. */
+  const r4Conn = () => { const g = gcalOn(); const p = phoneOn(); const L = autos(); const W = typeof window.lcalWeek === 'function' ? window.lcalWeek() : null; const T = typeof ltTodo === 'function' ? ltTodo() : [];
+    const n = [g, !U() && p].filter(Boolean).length, all = U() ? 1 : 2;
+    const st = R4.card(R4.head('연결 상태', n ? `${n}/${all} 연결` : '연결하면 알림을 더 빨리 받아요'), `<div class="r4ks" style="--n:3">${R4.kpi(n, '/' + all, '연결된 서비스', '', '아직 연결된 서비스가 없어요')}${R4.kpi(L.filter(a => a.on).length, '개', '켜진 자동화', '', '켜 둔 알림이 없어요')}${R4.kpi(W ? W.n : T.length, '개', W ? '이번 주 일정' : '오늘 할 일', '', '이번 주는 여유로워요')}</div>`, { cls: 'dark' }); /* v43 R8 108: 0 → 문장 */
+    const side = (W ? R4.card(R4.head('이번 주 일정', `${W.n}개`, '<a href="#cal">캘린더</a>'), R4.cols(W.v, W.l)) : '')
+      + (T.length ? R4.card(R4.head('오늘 할 일', `${T.length}가지`), `<ul class="r4list">${T.slice(0, 5).map(a => `<li><span>${ico(a.k === 'warn' ? 'clock' : 'play', 16)}</span><a href="${esc(a.href)}" style="color:inherit;text-decoration:none">${esc(a.h)}<small>${esc(a.d || '')}</small></a></li>`).join('')}</ul>`) : '')
+      + R4.card(R4.head('알림은 이렇게 와요'), `<ul class="r4list"><li><span>${ico('bell', 16)}</span><span>앱 알림 · 이메일이 기본<small>연결하면 ${U() ? '캘린더 일정으로도' : '캘린더 · 카카오톡으로도'} 받아요</small></span></li><li><span>${ico('lock', 16)}</span><span>밤 10시 ~ 아침 8시는 보내지 않아요<small>마감 3시간 전 알림만 예외예요</small></span></li></ul>`, { cls: 'tint' });
+    return `<section class="lai-more r4conn" aria-label="연결 · 알림"><div class="r4wrap"><div class="r4g"><div>${st}${R4.card('', connHTML())}${R4.card('', autoHTML())}</div><div>${side}</div></div></div></section>`; };
+  const moreHTML = () => (typeof R4 === 'object' && !document.body.classList.contains('lapp') && route().a === 'connect' ? r4Conn() : `<section class="lai-more" aria-label="내 학습 비서 도구"><div class="in lai-w">${todoHTML()}<div class="lai-two">${connHTML()}${autoHTML()}</div></div></section>`);
 
+  window.laiConnN = () => [gcalOn(), !U() && phoneOn()].filter(Boolean).length; /* v43 R8: 연결 · 알림 머리 숫자 */
   window.laiMore = () => moreHTML(); /* v27.1 학습자 앱 '연결 · 알림' 화면(#connect)이 같은 카드를 쓴다 */
   function mount() { const lm = document.getElementById('lm'); if (!lm || lm.querySelector('.lai')) return;
     /* v25.1 잔여 QA: 방문자에게는 기관 홈페이지 첫 화면(히어로)을 먼저 보여 주고 AI 학습 비서는 그 바로 아래에 둔다(로그인하면 비서가 맨 위). */

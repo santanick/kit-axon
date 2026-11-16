@@ -116,7 +116,8 @@
     if (X.as && !asOpts.some(o => o[0] === X.as)) asOpts.push([X.as, X.as]);
     /* 2단계(UX): 신분 전환(교수 · 조교 · 학생 화면 미리보기)은 「다른 신분으로 보기」 펼침 안으로, 안내는 한 줄 작은 글로 */
     const asNow = X.as ? (asOpts.find(o => o[0] === X.as) || [X.as, X.as])[1] : '';
-    return `<div class="lmsx-head card"><div class="lmsx-hrow"><div><b>${esc(title)}</b><p class="mini">${desc}</p></div>
+    /* v43 R7: 제목 · 설명은 화면 첫 줄 브리핑이 말하므로 카드 머리를 없애고 강의실 고르기 한 줄만 둔다(브리핑이 있으면 nav.js가 그 머리 안으로 옮김) */
+    return `<div class="lmsx-head lmsx-slim"><div class="lmsx-hrow"><h2 class="sr">${esc(title)}</h2><p class="sr">${desc}</p>
       <div class="lmsx-pick"><label>강의실<select data-chg="lmsx-sec">${ss.map(s => `<option value="${esc(s.id)}" ${s.id === X.sec ? 'selected' : ''}>${esc(s.term)} · ${esc(s.title)}</option>`).join('') || '<option value="">강의실 없음</option>'}</select></label>
       <details class="uxmore lmsx-asmore ${X.as ? 'on' : ''}"><summary>${X.as ? `${ic('users', 14)} ${esc(asNow)} 화면` : '다른 신분으로 보기'}</summary><div class="uxpop lmsx-aspop" role="menu">
         <label>보기 신분<select data-chg="lmsx-as">${asOpts.map(([v, l]) => `<option value="${esc(v)}" ${v === (X.as || '') ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
@@ -127,12 +128,16 @@
   ACT['lmsx-sec'] = el => { X.sec = el.value; X.refresh(); };
   ACT['lmsx-as'] = el => { X.as = el.value || ''; X.refresh(); };
   ACT['lmsx-asgo'] = () => { const v = ($('[data-lmsx-asin]') || {}).value || ''; X.as = v.trim(); X.refresh(); };
+  /* v43 Q1 시연 밀도: 처음 여는 강의실은 시드 기록(토론 · 게시판 · 과제 · 차시)이 가장 많은 분반으로 고른다(운영 서버 · 빈 기관은 예전처럼 첫 분반) */
+  X.pickSec = ss => { if (!ss || !ss.length) return ''; if (LIVE_ON() || (S.org && S.org.empty)) return ss[0].id; try { const d = X.db(); const c = d.c || {}, dd = d.d || {};
+    const sc = id => (c.forums || []).filter(f => f.sec === id).length * 3 + (c.posts || []).filter(p => p.sec === id).length + (dd.posts || []).filter(p => p.sec === id).length * 2 + (d.sessions || []).filter(x => x.sec === id).length;
+    let best = ss[0], bs = sc(best.id); ss.forEach(s => { const v = sc(s.id); if (v > bs) { best = s; bs = v; } }); return best.id; } catch (e) { return ss[0].id; } };
   /* 비동기 화면: VIEWS는 틀만 돌려주고 render 뒤에 채운다 */
   X.views = {};
   X.mount = (id, fn) => { X.views[id] = fn; VIEWS[id] = () => { setTimeout(() => X.fill(id), 0); return `<div id="lmsxRoot" data-v="${id}"><div class="empty">불러오는 중입니다…</div></div>`; }; };
   X.fill = async id => {
     const root = $('#lmsxRoot'); if (!root || root.dataset.v !== id) return;
-    try { if (!X.sections) await X.loadSections(); if (!X.sec || !X.sections.some(s => s.id === X.sec)) X.sec = X.sections[0] ? X.sections[0].id : ''; await X.loadMenu(); const h = await X.views[id](); const r2 = $('#lmsxRoot'); if (r2 && r2.dataset.v === id) r2.innerHTML = h; X.applyMenu(); }
+    try { if (!X.sections) await X.loadSections(); if (!X.sec || !X.sections.some(s => s.id === X.sec)) X.sec = X.pickSec(X.sections); await X.loadMenu(); const h = await X.views[id](); const r2 = $('#lmsxRoot'); if (r2 && r2.dataset.v === id) r2.innerHTML = h; X.applyMenu(); }
     catch (e) { const r2 = $('#lmsxRoot'); if (r2) r2.innerHTML = `<div class="warn">${esc(e.message || '불러오지 못했습니다.')}</div>`; console.warn(e); }
   };
   X.refresh = () => { const r = $('#lmsxRoot'); if (r) X.fill(r.dataset.v); };
@@ -160,7 +165,7 @@
   /* 「지금 할 일」 한 줄(화면 맨 위) */
   X.todo = (text, btn) => `<div class="lmsx-todo"><span>${ic('spark', 16)} ${text}</span>${btn || ''}</div>`;
   /* CSS */
-  if (!document.querySelector('link[data-lmsx]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/bcd.css?v=31.8'; l.dataset.lmsx = '1'; document.head.appendChild(l); }
+  if (!document.querySelector('link[data-lmsx]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/bcd.css?v=43.3'; l.dataset.lmsx = '1'; document.head.appendChild(l); }
 
   /* 메뉴: 학사 LMS 프리셋 + 기존 기관 상태에도 탭을 넣는다 */
   X.menu = (id, label, ws) => {
@@ -563,7 +568,9 @@
       b = `${me.can['structure.edit'] && OV.weeks.length ? `<div class="bar2 lmsb-acts"><button class="btn sm pri" data-act="lmsb-res-new">+ 학습자원</button><details class="uxmore lmsb-addmore"><summary>다른 추가 <em>3</em></summary><div class="uxpop" role="menu"><button data-act="lmsb-week">+ 주차</button><button data-act="lmsb-ses">+ 차시</button><button data-act="lmsb-pkg">표준 학습 패키지(SCORM · HTML5) 올리기</button></div></details><button class="btn sm ghost" data-act="lmsb-wkall">${UI.lmsbOpenAll ? '이번 주만 펼치기' : `모든 주차 펼치기(${OV.weeks.length})`}</button></div>` : OV.weeks.length > 3 ? `<div class="bar2 lmsb-acts"><button class="btn sm ghost" data-act="lmsb-wkall">${UI.lmsbOpenAll ? '이번 주만 펼치기' : `모든 주차 펼치기(${OV.weeks.length})`}</button></div>` : ''}
         ${me.role === 'student' ? `<div class="card" data-lmsb-next><div class="empty">다음 학습을 찾는 중…</div></div>` : ''}
         ${OV.common.length ? `<div class="card"><div class="ch"><b>강의실 공통 자료</b></div>${OV.common.map(r => resRow(r, me)).join('')}</div>` : ''}
-        ${OV.weeks.map(w => `<details class="card lmsb-week ${w.week_no === curWeekNo ? 'cur' : ''}" ${UI.lmsbOpenAll || OV.weeks.length <= 3 || w.week_no === (curWeekNo || 1) ? 'open' : ''}><summary class="ch"><b>${w.week_no}주차${w.title && w.title !== w.week_no + '주차' ? ' · ' + esc(w.title) : ''}</b>${w.week_no === curWeekNo ? ' ' + tag('이번 주', 'g') : ''}<small>${fmtD(w.starts_on)} ~ ${fmtD(w.ends_on)} · 차시 ${w.sessions.length} · 자료 ${w.sessions.reduce((n, x) => n + x.resources.length, 0)}${w.plan && w.plan.plan ? ' · 계획: ' + esc(w.plan.plan) : ''}</small></summary>${me.can['structure.edit'] ? `<div class="lmsb-wkact"><button class="btn sm ghost" data-act="lmsb-week" data-w="${w.week_no}">주차 편집</button></div>` : ''}
+        ${OV.weeks.length > 3 ? (() => { /* v43 R2: 회색 아코디언 15줄 위에 주차 카드 타임라인(지난 주 · 이번 주 · 남은 주, 차시 · 자료 · 출석률) */ const wk = UI.lmsbWk || curWeekNo || 1; return `<div class="card lb-tl"><div class="ch"><b>학기 주차</b><small>${OV.weeks.length}주 · 이번 주 ${curWeekNo || '—'}주차 · 누르면 그 주차를 펼칩니다</small></div><div class="lb-ws">${OV.weeks.map(w => { const at = w.sessions.reduce((a, x) => ({ t: a.t + (x.att.total || 0), p: a.p + (x.att.present || 0) + (x.att.late || 0) + (x.att.excused || 0) }), { t: 0, p: 0 }); const rn = w.sessions.reduce((n, x) => n + x.resources.length, 0); const st = curWeekNo && w.week_no < curWeekNo ? 'past' : w.week_no === curWeekNo ? 'cur' : 'next'; const r = at.t ? Math.round(at.p / at.t * 100) : null;
+          return `<button class="lb-w ${st}${w.week_no === wk ? ' on' : ''}" data-act="lmsb-wkgo" data-w="${w.week_no}"><span class="lb-wn">${w.week_no}<small>주</small></span><small class="lb-wd">${esc(fmtD(w.starts_on))}</small><span class="lb-wm">차시 ${w.sessions.length} · 자료 ${rn}</span><span class="lb-wb"><i style="width:${r == null ? 0 : r}%"></i></span><small class="lb-wr">${r == null ? (st === 'next' ? '예정' : '기록 없음') : '출석 ' + r + '%'}</small></button>`; }).join('')}</div></div>`; })() : ''}
+        ${OV.weeks.map(w => `<details class="card lmsb-week ${w.week_no === curWeekNo ? 'cur' : ''}" ${UI.lmsbOpenAll || OV.weeks.length <= 3 || w.week_no === (UI.lmsbWk || curWeekNo || 1) ? 'open' : ''}><summary class="ch"><b>${w.week_no}주차${w.title && w.title !== w.week_no + '주차' ? ' · ' + esc(w.title) : ''}</b>${w.week_no === curWeekNo ? ' ' + tag('이번 주', 'g') : ''}<small>${fmtD(w.starts_on)} ~ ${fmtD(w.ends_on)} · 차시 ${w.sessions.length} · 자료 ${w.sessions.reduce((n, x) => n + x.resources.length, 0)}${w.plan && w.plan.plan ? ' · 계획: ' + esc(w.plan.plan) : ''}</small></summary>${me.can['structure.edit'] ? `<div class="lmsb-wkact"><button class="btn sm ghost" data-act="lmsb-week" data-w="${w.week_no}">주차 편집</button></div>` : ''}
           ${w.summary ? `<p class="mini">${esc(w.summary)}</p>` : ''}
           ${w.sessions.map(s => `<div class="lmsb-ses"><div class="lmsb-sh"><b>${s.seq}차시 ${esc(s.title || '')}</b> ${tag(SKN[s.kind] || s.kind)} <span class="mini">${s.open_at ? '인정 ' + fmt(s.open_at) + ' ~ ' + fmt(s.close_at) : ''}${s.required_sec ? ' · 학습분량 ' + Math.round(s.required_sec / 60) + '분' : ''}${s.prereq.length ? ' · 선수: ' + esc(s.prereq.map(p => { const q = sAll.find(x => x.id === p); return q ? `${q.week_no}-${q.seq}` : '?'; }).join(', ')) : ''}</span>
             <span class="mini lmsb-att">출결 ${s.att.total ? `출석 ${s.att.present} · 지각 ${s.att.late} · 결석 ${s.att.absent} · 공결 ${s.att.excused}` : '기록 없음'}</span>${me.can['structure.edit'] ? `<button class="btn sm ghost" data-act="lmsb-ses" data-id="${esc(s.id)}">차시 편집</button><button class="btn sm ghost" data-act="lmsb-res-new" data-s="${esc(s.id)}">+ 자원</button>` : ''}</div>
@@ -759,6 +766,7 @@
   /* 빈 강의실 첫 행동(확인 없이 — 덮어쓸 주차가 없음) · 지금 할 일의 「자료 넣기」 */
   ACT['lmsb-quick'] = el => { X.run('b', 'template-apply', { section: X.sec, template: el.dataset.v || 'blended' }).then(r => r && done2(`주차 ${r.weeks} · 차시 ${r.sessions} · 자원 ${r.resources}개를 만들었습니다.`)); };
   ACT['lmsb-todo-res'] = el => resModal(null, el.dataset.s);
+  ACT['lmsb-wkgo'] = el => { UI.lmsbWk = +el.dataset.w; UI.lmsbOpenAll = false; render(); };
   ACT['lmsb-wkall'] = () => { UI.lmsbOpenAll = UI.lmsbOpenAll ? 0 : 1; X.refresh(); };
   ACT['lmsb-tpl-apply'] = el => { if (!confirm('템플릿을 적용할까요? 같은 주차 · 차시 번호는 덮어쓰고 자원은 추가됩니다.')) return; X.run('b', 'template-apply', { section: X.sec, template: el.dataset.v }).then(r => r && done2(`주차 ${r.weeks} · 차시 ${r.sessions} · 자원 ${r.resources}개를 만들었습니다.`)); };
   ACT['lmsb-tpl-save'] = () => modal('템플릿으로 저장', '<label>이름<input name="n" maxlength="60"></label>', [{ id: 'ok', label: '저장', kind: 'pri', run: m => { X.run('b', 'template-save', { section: X.sec, name: fv(m, 'n') }, '템플릿을 저장했습니다.').then(r => r && X.refresh()); } }]);

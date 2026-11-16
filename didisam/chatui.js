@@ -10,4 +10,4 @@ ACT['chat-clear'] = () => { S.chat = []; save(); render(); renderThreads(); };
 /* 서랍 머리 */
 { const base = ACT['chat-open']; ACT['chat-open'] = el => { const had = $('#drawer'); base(el); const d = $('#drawer'); if (!d || had) return; const av = d.querySelector('.dh .av'); if (av) av.outerHTML = `<span class="orb">${ic('spark', 16)}</span>`; d.querySelector('.dh div')?.insertAdjacentHTML('afterend', `<span class="dheng">${clBadge()}</span>`); }; }
 /* 입력창 아래 안내: 엔진 상태 */
-{ const base = composer; composer = where => base(where).replace(/<small class="cnote">[\s\S]*?<\/small>/, `<small class="cnote"><span><kbd>Enter</kbd> 보내기</span><span><kbd>Shift+Enter</kbd> 줄바꿈</span><span>${CL.on('chat') ? `${esc(CL.label())} 연결됨` : '규칙 엔진(데모)'}</span><span>실행은 승인 후</span></small>`).replace(/placeholder="[^"]*"/, 'placeholder="AI SAM에게 무엇이든 지시하세요"'); }
+{ const base = composer; composer = where => base(where).replace(/<small class="cnote">[\s\S]*?<\/small>/, `<small class="cnote"><span><kbd>Enter</kbd> 보내기</span><span>${CL.on('chat') ? `${esc(CL.label())} 연결됨` : '규칙 엔진(데모)'}</span><span>실행은 승인 후</span></small>`).replace(/placeholder="[^"]*"/, 'placeholder="무엇이든 지시하세요"'); }

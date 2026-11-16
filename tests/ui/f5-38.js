@@ -142,7 +142,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     await p.goto(base + `learner.html?t=${tid}#home`); await p.waitForFunction(() => typeof LR !== 'undefined' && LR.site); await login(p, code); await go(p, '#mypay/pay', 700);
     const t = await p.evaluate(() => document.body.innerText); ok(/학습비 반환/.test(t) && !/(^|[^(])환불/.test(t.replace(/학습비 반환\(환불\)/g, '')), '평생교육원 학습자: 환불 → 학습비 반환(운영자와 같은 말)'); await ctx.close(); }
   { const { ctx, op } = await org('k12'); await op.evaluate(() => { go('crmatt'); render(); }); await op.waitForTimeout(400);
-    const d = await op.evaluate(() => ((document.querySelector('.k-dd span') || {}).textContent || '').trim()); ok(/^\d{4}\. \d{1,2}\. \d{1,2}\.$/.test(d), `출석부 날짜 한국식 표시 (${d})`); await ctx.close(); }
+    const d = await op.evaluate(() => ((/* v43 R6: 날짜 입력이 7일 칩으로 바뀌어, 고른 날짜의 전체 표기는 .k-dfull에서 읽는다 */ document.querySelector('.k-dfull') || {}).textContent || '').trim()); ok(/^\d{4}\. \d{1,2}\. \d{1,2}\.$/.test(d), `출석부 날짜 한국식 표시 (${d})`); await ctx.close(); }
   ok(!errs.length, '오류 없음 ' + errs.slice(0, 3).join(' | '));
   await br.close(); srv.close();
   console.log(fails.length ? `✗ 실패 ${fails.length}건` : '✓ v38 F5 유형별 노출 · 용어 · 크기 점검 통과'); process.exit(fails.length ? 1 : 0);

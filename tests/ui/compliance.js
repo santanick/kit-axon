@@ -94,5 +94,21 @@ LR.api.save(); return r; }, R.cid);
   const v38 = await a.evaluate(() => { createOrg('voc', '출결 기준'); const c = { id: 'z1', name: '집체', kind: 'period', status: '운영중', curriculum: [{ id: 'o1', type: 'offline', date: '2020-01-01' }, { id: 'o2', type: 'offline', date: '2020-01-02' }, { id: 'o3', type: 'offline', date: '2020-01-03' }, { id: 'o4', type: 'offline', date: '2020-01-04' }, { id: 'o5', type: 'offline', date: '2020-01-05' }, { id: 'e1', type: 'exam', qs: [] }], learners: ['a', 'b'], prog: { a: { p: 100, exam: 90 }, b: { p: 100, exam: 90 } }, att: { o1: { a: '출석', b: '출석' }, o2: { a: '출석', b: '결석' }, o3: { a: '출석', b: '출석' }, o4: { a: '출석', b: '결석' }, o5: { a: '출석', b: '출석' } }, criteria: { threshold: 80 }, enr: {} }; S.members = [{ id: 'a', name: '가' }, { id: 'b', name: '나' }]; S.classes = [c];
     const on = [clsDone(c, 'a'), clsDone(c, 'b'), clsAtt(c, 'b')]; S.org.cpl.on = false; const off = clsDone(c, 'b'); S.org.cpl.on = true; return { on, off }; });
   ok(JSON.stringify(v38.on) === '[true,false,60]' && v38.off === true, 'v38 출석률 80% 미만 수료 아님(규정 켜짐) · 규정 꺼짐은 기존 판정 ' + JSON.stringify(v38));
+  /* v43 법정의무교육 목록(통합 담당 근거 조사 결정 · docs/compliance/README.md): 5종 필수(퇴직연금은 「퇴직연금 도입」 켠 때만) + 괴롭힘 예방 권장. 기업 · 공공 직원 교육형 공통, 시민 · 시설형은 법정 화면 없음 */
+  const v43 = await a.evaluate(() => { localStorage.setItem('didisam.emptyStart', '0'); const out = {};
+    for (const [ty, ed] of [['corp'], ['public', 'staff'], ['public', 'citizen'], ['public', 'facility']]) { createOrg(ty, '법정', ed); render(); const k = ty + (ed ? '_' + ed : '');
+      const on = menuOn('compliance'); let txt = ''; if (on) { go('compliance'); render(); txt = document.querySelector('#legalList') ? document.querySelector('#legalList').innerText : ''; }
+      out[k] = { on, list: !!txt, req: (txt.match(/필수/g) || []).length, rec: /괴롭힘[\s\S]*권장/.test(txt), na: /퇴직연금교육[\s\S]*해당 없음/.test(txt), law: /장애인고용촉진/.test(txt) && /근로자퇴직급여/.test(txt), art: /확인 필요/.test(txt), brief: typeof BRIEF === 'function' && BRIEF().some(b => b.k === 'legal') };
+      if (ty === 'corp') { const c = { id: 'pz', name: '퇴직연금교육', kind: 'period', status: '운영중', legal: true, learners: ['m1'], prog: { m1: { p: 0 } }, curriculum: [], criteria: { threshold: 100 }, open: '전체' }; S.classes.push(c); const n0 = legalUndone().filter(x => x.c.id === 'pz').length; S.settings.pension = true; const n1 = legalUndone().filter(x => x.c.id === 'pz').length; out.pension = [n0, n1]; } }
+    return out; });
+  ok(v43.corp.on && v43.corp.list && v43.corp.rec && v43.corp.na && v43.corp.law && v43.corp.art, 'v43 기업 법정교육 목록: 권장 괴롭힘 · 퇴직연금 해당 없음(미도입) · 법령 이름 · 조항 확인 필요 ' + JSON.stringify(v43.corp));
+  ok(v43.public_staff.on && v43.public_staff.list && v43.public_staff.law, 'v43 F02 공공 직원 교육형: 법정의무교육 메뉴 · 같은 목록 ' + JSON.stringify(v43.public_staff));
+  ok(!v43.public_citizen.on && !v43.public_facility.on && !v43.public_citizen.brief && !v43.public_facility.brief, 'v43 공공 시민 · 시설형: 법정의무교육 메뉴 · 홈 브리핑 없음 ' + JSON.stringify([v43.public_citizen, v43.public_facility]));
+  ok(JSON.stringify(v43.pension) === '[0,1]', 'v43 퇴직연금교육은 「퇴직연금 도입」을 켰을 때만 미이수 집계 ' + JSON.stringify(v43.pension));
+  /* v43 F12: HRD-Net 실시신고 상태 열 · 완료 표시 · 기한 지남 */
+  const f12 = await a.evaluate(() => { localStorage.setItem('didisam.emptyStart', '0'); createOrg('voc', '실시신고'); const c = S.classes.find(x => x.status !== '종료'); c.start = addDays(today(), -5); go('hrd'); render(); /* 보고 기한 표는 HRD-Net 보고 화면(cplRepHTML) */ const t0 = document.querySelector('#main').innerText;
+    const late = /기한 지남 — HRD-Net 확인/.test(t0) && window.cplNotifyLate().some(r => r.c.id === c.id); const b = document.querySelector(`[data-act="cpl-notified"][data-v="${c.id}"]`); b && b.click(); render(); const t1 = document.querySelector('#main').innerText;
+    return { late, col: /실시신고 상태/.test(t0), done: !!S.cpl.notified[c.id] && /완료 · /.test(t1), cleared: !window.cplNotifyLate().some(r => r.c.id === c.id) }; });
+  ok(f12.late && f12.col && f12.done && f12.cleared, 'v43 F12 실시신고 상태: 기한 지남 표시 → [완료 표시] → 완료일 ' + JSON.stringify(f12));
   await browser.close(); srv.close(); console.log(`pass ${pass} fail ${fail}`); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

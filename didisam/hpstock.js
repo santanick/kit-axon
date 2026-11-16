@@ -471,5 +471,29 @@
     var k = opts.seed == null ? 0 : hash(opts.seed) % Math.min(ids.length, 2); /* 앞쪽(가장 맞는) 2장 안에서만 섞는다 */
     return BY[ids[k]] || null;
   };
+  /* v43 Q1 — 사진 분산 공통 함수(관리자 V4.photo · 학습자 window.ddPhoto 공용)
+     photo(key, salt, opts) → 사진 주소(800px). key: 강좌 · 시설 · 보상 이름(낱말로 장면 분류를 고름), salt: id 등 고유값(같은 이름이라도 다른 사진).
+     같은 화면(한 번의 렌더 · 동기 실행 구간) 안에서는 이미 쓴 사진을 빼고 고른다 — 다음 작업 틱에 사용 목록을 비운다.
+     opts: { size:'lg'(1600px), slot:'card'|'hero'|'space', tone:'dark', id:true(사진 객체 반환), scope:'이름'(직접 구간 지정) } */
+  var USED = {}, USEDQ = 0, USEDS = '';
+  var KWX = [[/스마트폰|컴퓨터|엑셀|파이썬|챗gpt|chatgpt|생성형|인공지능/i, ' 코딩 디지털'], [/회화|영어|일본어|중국어|토익|어학/, ' 어학 노트'], [/요양|돌봄|복지|간호|보건/, ' 상담 시니어'], [/창업|경영|마케팅|회계|재무|세무/, ' 기업 회의'], [/스터디룸|스터디|회의실/, ' 세미나'], [/촬영|영상|유튜브/, ' 디지털 노트북'], [/체력|헬스|수영|골프|탁구/, ' 운동 스포츠'], [/장학|쿠폰|할인|학원비|보상|기프트/, ' 책상 공부']];
+  function hashS(s) { var h = 2166136261; s = String(s || ''); for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  H.photo = function (key, salt, opts) {
+    opts = opts || {}; key = String(key || '');
+    var sc = opts.scope || '';
+    if (sc !== USEDS) { USED = {}; USEDS = sc; }
+    if (!sc && !USEDQ) { USEDQ = 1; setTimeout(function () { USED = {}; USEDQ = 0; }, 0); }
+    var w = key; KWX.forEach(function (p) { if (p[0].test(key)) w += p[1]; });
+    var cats = catsOf(w); if (!cats.length) cats = ['classroom', 'seminar', 'desk', 'laptop'];
+    var ex = Object.keys(USED);
+    var out = rank({ cats: cats, words: w.split(/\s+/), exclude: ex, slot: opts.slot || 'card', tone: opts.tone }, 5, key + '|' + (salt == null ? '' : salt));
+    /* 점수가 같은 장면 안에서 salt 해시로 고른다(같은 이름이 여러 개여도 흩어짐) */
+    var top = out.filter(function (x, i) { return i < 3; }); var x = top[hashS(salt == null ? key : salt) % Math.max(1, top.length)] || out[0];
+    if (!x) return opts.id ? null : '';
+    USED[x.id] = 1;
+    return opts.id ? x : H.url(x, opts.size === 'lg' ? '' : 'sm');
+  };
+  H.photoReset = function () { USED = {}; };
   window.HPSTOCK = H;
+  window.ddPhoto = H.photo;
 })();

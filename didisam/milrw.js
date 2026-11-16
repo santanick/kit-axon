@@ -89,7 +89,7 @@
     if (['k12', 'adult', 'lifelong'].includes(t)) add({ kind: 'tuition', title: '학원비 차감', cost: { wonPerP: 1 }, minUse: 1000, step: 100, maxUse: { billPct: 30 }, approval: t === 'k12' ? 'guardian' : 'manual', trust: 'AB' });
     if (['adult', 'lifelong'].includes(t)) add({ kind: 'coupon', title: '수강권 1만 원 할인 쿠폰', cost: { fixedP: 10000 }, approval: 'auto', perSid: { month: 1 }, link: { couponType: 'amount', couponVal: 10000, validDays: 30 }, trust: 'AB' });
     if (t === 'k12') { add({ kind: 'goods', title: '문제집 교환(지정 3종)', cost: { fixedP: 3000 }, stock: 18, perSid: { month: 1 }, approval: 'manual', link: { priceWon: 15000 } }); add({ kind: 'goods', title: '필통 · 노트 세트', cost: { fixedP: 1500 }, stock: 6, perSid: { month: 1 }, approval: 'manual', link: { priceWon: 8000 } }); }
-    if (['adult', 'lifelong', 'univ', 'voc'].includes(t)) add({ kind: 'goods', title: t === 'univ' ? '학생식당 식권 1매' : '교재 교환권', cost: { fixedP: t === 'univ' ? 50 : 2000 }, stock: t === 'univ' ? 140 : 30, perSid: { month: t === 'univ' ? 2 : 1 }, approval: t === 'univ' ? 'auto' : 'manual', link: { priceWon: t === 'univ' ? 5000 : 12000 } });
+    if (['adult', 'lifelong', 'univ'].includes(t)) add({ kind: 'goods', title: t === 'univ' ? '학생식당 식권 1매' : '교재 교환권', /* v43 P1-F09: 직업훈련원(국비)에는 교재 교환권 등 금전성 보상을 넣지 않는다 */ cost: { fixedP: t === 'univ' ? 50 : 2000 }, stock: t === 'univ' ? 140 : 30, perSid: { month: t === 'univ' ? 2 : 1 }, approval: t === 'univ' ? 'auto' : 'manual', link: { priceWon: t === 'univ' ? 5000 : 12000 } });
     if (t === 'public') add({ kind: 'goods', title: '지역 서점 교환권', cost: { fixedP: 300 }, approval: 'manual', active: false, softLock: 'C', link: { priceWon: 10000 } });
     if (t === 'corp') { add({ kind: 'shop', title: '도서 교환권', cost: { fixedP: 300 }, perSid: { month: 2 }, approval: 'auto', link: { priceWon: 15000 } }); add({ kind: 'shop', title: '사내 카페 이용권', cost: { fixedP: 100 }, approval: 'auto', link: { priceWon: 4500 } }); }
     add({ kind: 'badge', title: t === 'k12' ? '4주 연속 출석 배지' : '학습 습관 배지', cost: { fixedP: 0 }, approval: 'auto', tier: 2, auto: true });
@@ -215,7 +215,7 @@
     } else body = kv('수여 조건', w.auto ? '기준 도달 시 자동 수여' : P(w.cost.fixedP)) + kv('단계', w.kind === 'cert' ? '인증(육각 · 검증 번호)' : '성취(방패)') + `<p class="mrw-mut">금전 가치가 없어 국비 지원 과정 적립분으로도 받을 수 있습니다.</p>`;
     const aud = w.audience && !w.audience.all && (w.audience.cls || []).length ? (w.audience.cls || []).map(id => ((S.classes || []).find(c => c.id === id) || { name: id }).name).join(', ') : '전체 학습자';
     const soft = w.softLock && !w.active;
-    return `<article class="mrw-rw ${w.active ? '' : 'off'}" data-rw="${esc(w.id)}"><div class="hd"><span class="mrw-ic">${ic(k[1], 24)}</span><div class="f1"><small>${esc(k[0])}</small><b>${esc(w.title)}</b></div>
+    return `<article class="mrw-rw ${w.active ? '' : 'off'}" data-rw="${esc(w.id)}">${window.V4 ? `<div class="mrw-cov" style="background-image:url(${V4.photo(w.title + ' ' + (KIND[w.kind] || [''])[0], w.kind === 'tuition' ? 'sem-01' : w.kind === 'coupon' ? 'sem-01' : w.kind === 'badge' || w.kind === 'cert' ? 'lec-01' : 'lib-03')})" aria-hidden="true"></div>` : ''}<div class="hd"><span class="mrw-ic">${ic(k[1], 24)}</span><div class="f1"><small>${esc(k[0])}</small><b>${esc(w.title)}</b></div>
       ${w.cash ? pill('금전성', 'info', 'mrwReceipt') : pill('비금전', 'off', 'mrwMedal')}
       <button class="mrw-tg ${w.active ? 'on' : ''}" role="switch" aria-checked="${!!w.active}" aria-label="${esc(w.title)} ${w.active ? '켜짐' : '꺼짐'}" data-act="mrw-rw-on" data-v="${esc(w.id)}" ${own ? '' : 'disabled'}><i></i><span>${w.active ? '켬' : '끔'}</span></button></div>
       <div class="bd">${body}${kv('대상', esc(aud))}${kv('승인', esc(APPR[w.approval] || w.approval || '자동'))}</div>
@@ -232,7 +232,7 @@
     if (sub === 'pay') return wrap(subTabs + viewPay(list));
     const fc = fundedCls();
     const fundNote = t === 'voc' || fc.length ? lock('국비 지원 과정 적립분은 금전성 보상에 쓸 수 없습니다', NOTICE.FUND_OP + (fc.length ? ` 해당 과정: ${fc.map(c => c.name).join(', ')}.` : ' 국비 지원 과정으로 표시된 과정의 적립은 배지 · 인정 기록만 받습니다.'))
-      : note('info', '국비 지원 과정 적립분은 금전성 보상에서 자동으로 빠집니다', '학원비 차감 · 쿠폰 · 굿즈처럼 금전 가치가 있는 보상은 국비 지원 과정에서 쌓인 적립으로 쓸 수 없습니다. 배지 · 인정 기록은 그대로 받습니다. 지금 이 기관에는 해당 과정이 없습니다.');
+      : ['adult', 'k12', 'univ', 'public'].includes(t) ? '' /* v43 D-E(P3 F06): 국비 과정이 없는 학원 · 대학 · 공공에는 국비 안내를 보이지 않는다 */ : note('info', '국비 지원 과정 적립분은 금전성 보상에서 자동으로 빠집니다', '학원비 차감 · 쿠폰 · 굿즈처럼 금전 가치가 있는 보상은 국비 지원 과정에서 쌓인 적립으로 쓸 수 없습니다. 배지 · 인정 기록은 그대로 받습니다. 지금 이 기관에는 해당 과정이 없습니다.');
     const top = `<div class="mrw-head"><div><h2>보상</h2><p>디디쌤 값은 권장값입니다. 모든 값은 기관이 정하고, 권장값을 벗어나도 저장은 막지 않습니다.</p></div><div class="mrw-acts">${own ? `<button class="btn pri" data-act="mrw-rw-new">${ic('mrwPlus', 18)}보상 추가</button>` : ''}</div></div>`;
     const list2 = list.filter(w => kindsFor(t).includes(w.kind) || w.kind === 'tuition');
     const foot = `<div class="mrw-card mrw-row">${ic('info', 20)}<span class="f1">학습자가 신청하면 마일리지를 「사용 대기」로 잡아 두고, 반려하면 바로 돌려줍니다.${list2.some(w => w.kind === 'tuition') ? (minorOrg() ? ' 학원비 차감은 보호자 확인 → 운영자 확인 순서입니다.' : ' 학원비 차감은 운영자 확인 후 다음 청구서에 붙습니다.') : ''}</span><button class="btn sm" data-act="mrw-go" data-v="approvals">신청 · 승인으로 이동</button></div>`;
@@ -262,6 +262,7 @@
     if (k === 'shop') body += note('info', '안내 G · 근로소득 과세 가능성', NOTICE.G);
     ask(isNew ? `${KIND[k][0]} 추가` : `${w.title} 고치기`, body, isNew ? '확인하고 추가' : '변경 내용 확인하고 저장', m => {
       const num = n => { const v = fv(m, n); return v === '' ? null : Math.max(0, Math.round(+String(v).replace(/[^\d]/g, '') || 0)); };
+      if (CASH[k] && S.org && S.org.type === 'voc') { toast('직업훈련원(국비 과정)에서는 금전 가치가 있는 보상을 쓸 수 없습니다. 배지 · 인증서를 쓰십시오.', 'warn'); return false; } /* v43 P1-F09: 서버 fundedBlock(voc)과 같음 */
       const out = { ...w, title: fv(m, 'title') || KIND[k][0], kind: k, cash: CASH[k] };
       if (k === 'tuition') { out.cost = { wonPerP: num('rate') || 1 }; out.maxUse = { ...out.maxUse, billPct: Math.min(100, num('pct') || REC.billPct) }; out.minUse = num('min') || 0; out.step = num('step') || 1; out.trust = fv(m, 'trust') || 'AB'; }
       if (k === 'coupon') { out.cost = { fixedP: num('fixedP') || 0 }; out.link = { couponType: 'amount', couponVal: num('cval') || 0, validDays: num('days') || 30 }; out.perSid = { month: num('pm') || 0 }; }
@@ -488,5 +489,5 @@
   push({ id: 'approvals', label: '신청 · 승인', order: 40, badge: nAp, render: () => { pull('approvals'); return viewApprovals(); } });
   push({ id: 'fraud', label: '부정 의심', order: 60, badge: nFl, render: () => { pull('fraud'); return viewFraud(); } });
 
-  window.milrw = { ensure, checks: id => { const r = findRd(id); return r ? checks(r) : []; }, billOf: id => { const r = findRd(id); return r ? billOf(r) : null; }, payRows, approveDemo: id => approveDemo(findRd(id)), live: LV };
+  window.milrw = { pending: () => { try { ensure(); return apList().map(r => { const w = rwOf(r.rewardId); return { id: r.id, t: w.title || '보상', kind: w.kind, who: who(r), p: +r.points || 0, at: r.at || '', hold: checks(r).length }; }); } catch (e) { return []; } }, ensure, checks: id => { const r = findRd(id); return r ? checks(r) : []; }, billOf: id => { const r = findRd(id); return r ? billOf(r) : null; }, payRows, approveDemo: id => approveDemo(findRd(id)), live: LV };
 })();

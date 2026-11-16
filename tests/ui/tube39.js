@@ -40,15 +40,19 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
       cont: (document.querySelector('.tb-cont') || {}).getAttribute && document.querySelector('.tb-cont').getAttribute('href'), contTx: (document.querySelector('.tb-cont') || {}).textContent || '', sug: (document.querySelector('.tb-sug') || {}).textContent || '',
       week: document.querySelectorAll('.tb-tile').length, tabs: [...document.querySelectorAll('.ap-nav.tb-nav a')].map(x => x.textContent.trim()), on: (document.querySelector('.ap-nav a.on') || {}).textContent || '', bar: !!document.querySelector('.ap-bar') }));
     ok(r.tube && !r.bar, `홈: 튜브 보기 · 앱 머리 막대 없음`);
-    { const h0 = await p.evaluate(() => location.hash); await p.click('.ap-nav.tb-nav a.tb-n-cal'); await p.waitForTimeout(400); const h1 = await p.evaluate(() => location.hash); await p.evaluate(h => { location.hash = h; }, h0 || '#home'); await p.waitForTimeout(400); ok(h1 === '#cal', `아래 탭 누르면 이동(일정 → #cal, v42.2 회귀 방지) — ${h0} → ${h1}`); }
+    { const h0 = await p.evaluate(() => location.hash); await p.click('.ap-nav.tb-nav a.tb-n-find'); await p.waitForTimeout(400); const h1 = await p.evaluate(() => location.hash); await p.evaluate(h => { location.hash = h; }, h0 || '#home'); await p.waitForTimeout(400); ok(h1 === '#shop', `아래 탭 누르면 이동(v43 대표님 지시: 학습자 입장 유형별 탭 — 성인 학원 둘러보기 → #shop, v42.2 회귀 방지) — ${h0} → ${h1}`); }
     ok(r.chips[0] === '전체' && r.chips.includes('이어 보기') && r.chips.includes('내 강의'), `홈: 칩 — ${r.chips.join(' · ')}`);
     ok(/오늘 목표 20분/.test(r.goal) && /12\/20분/.test(r.goal), `홈: 오늘 목표 12/20분 — ${r.goal.replace(/\s+/g, ' ')}`);
     ok(/itcd8rdl0/.test(r.cont) && /이어 보기 · 2차시/.test(r.contTx) && /12:34 \/ 18:00/.test(r.contTx) && /남은 시간 5분/.test(r.contTx), `홈: 이어 보기 카드(재생 위치 · 남은 시간) — ${r.contTx.replace(/\s+/g, ' ').slice(0, 90)}`);
     ok(/VLOOKUP 퀴즈/.test(r.sug) && /40점/.test(r.sug), `홈: AI 튜터 제안(틀린 퀴즈 근거) — ${r.sug.replace(/\s+/g, ' ')}`);
     ok(r.week >= 2, `홈: 이번 주 차시 ${r.week}개`);
-    ok(r.tabs.join() === '홈,일정,내 강의,나' && r.on === '홈', `홈: 하단 탭 4칸 — ${r.tabs.join(' · ')} (선택 ${r.on})`);
-    const fb = await p.evaluate(() => { const b = document.getElementById('tbFab'); if (!b) return null; const R = b.getBoundingClientRect(); const n = document.querySelector('.ap-nav.tb-nav').getBoundingClientRect(); return { t: b.textContent.trim(), l: b.getAttribute('aria-label'), w: R.width, above: R.bottom <= n.top, fixed: getComputedStyle(b).position }; });
-    ok(fb && fb.t === 'AX 튜터' && /AX 튜터\(AI 튜터\) 열기/.test(fb.l) && fb.w >= 56 && fb.above && fb.fixed === 'fixed', `홈: AI 튜터 아이콘이 아래 탭 위에 떠 있음 — ${JSON.stringify(fb)}`);
+    ok(r.tabs.join() === '홈,내 강의,둘러보기,나' && r.on === '홈', `홈: 하단 탭 4칸(v43 대표님 지시: 학습자 입장 유형별 탭 — 성인 학원) — ${r.tabs.join(' · ')} (선택 ${r.on})`);
+    /* v43 R9(J4 113 · 205): 홈 첫 화면에서는 본문 튜터 바가 보이는 동안 떠 있는 단추를 접는다(카드 · 사진을 가리지 않게) → 튜터 바가 보이면 접힘, 지나 내려간 뒤(위로 조금 올림) 다시 보임 */
+    ok(await p.evaluate(() => { const t = document.querySelector('#lm .tb-tut'); return !t || t.getBoundingClientRect().bottom <= 0 || document.body.classList.contains('tb-fhome'); }), '홈: 튜터 바가 보이는 동안 떠 있는 단추를 접음(v43 R9)');
+    await p.evaluate(() => { const t = document.querySelector('#lm .tb-tut'); if (t) scrollTo({ top: scrollY + t.getBoundingClientRect().bottom + 60, behavior: 'instant' }); }); await p.waitForTimeout(150); await p.evaluate(() => scrollTo({ top: Math.max(0, scrollY - 20), behavior: 'instant' })); await p.waitForTimeout(350);
+    const fb = await p.evaluate(() => { const b = document.getElementById('tbFab'); if (!b) return null; const R = b.getBoundingClientRect(); const n = document.querySelector('.ap-nav.tb-nav').getBoundingClientRect(); return { t: b.textContent.trim(), l: b.getAttribute('aria-label'), w: R.width, above: R.bottom <= n.top, dock: Math.abs(R.bottom - n.bottom) <= 4 && R.left >= n.right, fixed: getComputedStyle(b).position }; });
+    /* v43 G2 2차(J4 공통 결함 4): 탭 바 옆에 붙으면 5칸처럼 보여 탭 바 위로 띄운 작은 알약(높이 44px)으로 바꿨다 — 탭 바와 겹치지 않고(above) 탭 바 줄에 붙지 않음(!dock) */
+    ok(fb && fb.t === 'AX 튜터' && /AX 튜터\(AI 튜터\) 열기/.test(fb.l) && fb.w >= 44 && fb.above && !fb.dock && fb.fixed === 'fixed', `홈: AI 튜터 단추가 아래 탭 바 위에 떠 있음(v43 G2 2차: 5칸처럼 보이지 않게) — ${JSON.stringify(fb)}`);
     await p.click('#tbFab'); await p.waitForTimeout(250);
     const op = await p.evaluate(() => ({ on: document.body.classList.contains('lt-on'), fabHidden: getComputedStyle(document.getElementById('tbFab')).display === 'none' }));
     ok(op.on && op.fabHidden, `홈: 아이콘을 누르면 AI 튜터 창이 열림(아이콘은 숨김) ${JSON.stringify(op)}`);
@@ -118,11 +122,36 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     await p.click('[data-tb="sheet-x"]'); await p.waitForTimeout(150); ok(await p.evaluate(() => document.getElementById('tbwTu').hidden && document.activeElement && document.activeElement.id === 'tbFab'), '영상: 닫기 → 시트 닫힘 · 초점은 아이콘으로');
     ok(!errs.length, `영상: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
 
+  /* v43 대표님 지시: 학습자 입장 유형별 탭(plan/APP-TABS.md) — 홈 · [내 ○○] · [유형별 핵심] · 나, 시설 켠 기관은 시설을 더해 5칸.
+     유형마다 탭을 실제 클릭해 해시 이동 · 선택 표시를 보고, #cal 딥링크가 모든 유형에서 열리는지(일정은 탭이 아니어도 「목록 | 일정」 세그먼트로) 본다. */
+  { const FAC = { on: true, facilities: [{ id: 'f_r', name: '스터디룸 A', kind: 'time', place: '2층', hours: Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(d => [d, ['09:00', '22:00']])), slotMin: 60, maxSlots: 2, capacity: { res: 1, perSlot: 4 }, open: { daysAhead: 7, at: '09:00' }, pay: 'free', audience: ['student', 'public'], prices: { student: { slot: 0 }, public: { slot: 0 } } }] };
+    const CASES = [['adult', '', '홈,내 강의,둘러보기,나'], ['k12', '', '홈,내 수업,일정,나'], ['univ', 'lms', '홈,이번 학기 강의,일정,나'], ['voc', '', '홈,내 훈련,출석,나'] /* v43 3단계: 직업훈련 탭 3은 「출석」(#attend) — 출결 · 학습시간 한도가 수료 요건이라 한 번에 닿게(APP-TABS.md). 일정은 「내 훈련」의 「목록 | 일정」 세그먼트 */, ['corp', '', '홈,내 교육,교육과정,나'], ['lifelong', '', '홈,내 강좌,강좌 신청,시설,나', true]];
+    for (const [type, ed, want, fac] of CASES) { const tag = `v43 유형별 탭 ${type}${ed ? '/' + ed : ''}${fac ? '+시설' : ''}`;
+      const { ctx, p, errs } = await open('#home', { type, ed, patch: fac ? (j => { j.fac = FAC; }) : null });
+      const T = await p.$$eval('.ap-nav.tb-nav a', A => A.map(a => ({ t: a.textContent.trim(), h: a.getAttribute('href'), c: a.className.split(' ')[0], hh: Math.round(a.getBoundingClientRect().height) })));
+      ok(T.map(x => x.t).join() === want && T.every(x => x.hh >= 44), `${tag}: 탭 ${T.map(x => x.t + ':' + x.hh).join(' ')}`);
+      const went = []; for (const x of [...T.slice(1), T[0]]) { await p.click(`.ap-nav.tb-nav a.${x.c}`); await p.waitForTimeout(400); const r = await p.evaluate(() => ({ h: location.hash, on: ((document.querySelector('.ap-nav.tb-nav a.on') || {}).textContent || '').trim() })); went.push(`${x.t}>${r.h}${r.on === x.t ? '' : '(선택 ' + r.on + ')'}`); if (r.h !== x.h || r.on !== x.t) went.push('✗'); }
+      ok(!went.includes('✗'), `${tag}: 탭마다 실제 클릭 → 이동 · 선택 표시 — ${went.join(' ')}`);
+      await p.evaluate(() => { location.hash = '#cal'; }); await p.waitForTimeout(400);
+      const c = await p.evaluate(() => ({ seg: [...document.querySelectorAll('.tb-seg a')].map(a => a.getAttribute('href') + (a.classList.contains('on') ? '*' : '')).join(), cal: !!document.querySelector('#lm .lq-sn, #lm .lq-top, #lm .lq-seg'), on: ((document.querySelector('.ap-nav.tb-nav a.on') || {}).textContent || '').trim() }));
+      ok(c.cal && c.seg === '#my,#cal*' && !!c.on, `${tag}: #cal 딥링크 열림 · 「목록 | 일정」 세그먼트 · 선택 탭 ${c.on}`);
+      ok(!errs.length, `${tag}: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); } }
+
+  /* v43 3단계: 직업훈련 「출석」 탭(#attend) — 읽기 전용(새 /api · 저장 없음). 오늘 출석 상태 · 이번 달 출석률 · 오늘 학습 시간과 한도(게시 규정 dayMax · dayChasi) · 훈련일지 바로가기 */
+  { const { ctx, p, errs } = await open('#home', { type: 'voc' }); const lp0 = await p.evaluate(() => JSON.stringify(LR.lp));
+    await p.click('.ap-nav.tb-nav a.tb-n-att'); await p.waitForTimeout(400);
+    const r = await p.evaluate(() => ({ h: location.hash, on: ((document.querySelector('.ap-nav.tb-nav a.on') || {}).textContent || '').trim(), tt: ((document.querySelector('.ap-bar .ap-tt') || {}).textContent || '').trim(), h1: ((document.querySelector('.tba .tb-hl h1') || {}).textContent || ''), hero: !!document.querySelector('.tba-hero .tb-ring2'), kpi: [...document.querySelectorAll('.tba-k em')].map(x => x.textContent), links: [...document.querySelectorAll('.tba-links a')].map(a => a.textContent.trim() + '>' + a.getAttribute('href')), qr: !!document.querySelector('.tba-qr'), lp: JSON.stringify(LR.lp) }));
+    ok(r.h === '#attend' && r.on === '출석' && r.tt === '출석' && r.hero && r.qr && r.h1.length > 0, `출석 탭: 이동 · 선택 · 머리 제목 · 출석률 히어로 · QR 안내 — ${r.h} ${r.on} 「${r.h1}」`);
+    ok(r.kpi.some(t => /하루 최대 8시간/.test(t)) && r.kpi.some(t => /하루 최대 8차시/.test(t)), `출석 탭: 학습 한도는 게시 규정(dayMax 8시간 · dayChasi 8차시) — ${r.kpi.join(' / ')}`);
+    ok(r.links.some(x => /^훈련일지>#c\//.test(x)) && r.links.some(x => /^일정>#cal$/.test(x)), `출석 탭: 훈련일지 · 일정 바로가기 — ${r.links.join(' · ')}`);
+    ok(r.lp === lp0, '출석 탭: 화면을 열어도 학습 기록을 바꾸지 않음(읽기 전용)');
+    ok(!errs.length, `출석 탭: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
+
   /* 5) 규정 대상: 직업훈련 · 학사 LMS */
   for (const [type, ed] of [['voc', ''], ['univ', 'lms']]) { const label = type + (ed ? '/' + ed : '');
     const { ctx, p, errs } = await open('#home', { type, ed });
     const tabs = await p.$$eval('.ap-nav.tb-nav a', A => A.map(x => x.textContent.trim()));
-    ok(tabs.join() === (type === 'voc' ? '홈,일정,내 훈련,나' : '홈,일정,이번 학기 강의,나') && await p.$('#tbFab') !== null, `${label}: 탭 4칸 · AI 튜터 아이콘 — ${tabs.join(' · ')}`);
+    ok(tabs.join() === (type === 'voc' ? '홈,내 훈련,출석,나' /* v43 3단계: 직업훈련은 「출석」 탭(APP-TABS.md) */ : '홈,이번 학기 강의,일정,나') && await p.$('#tbFab') !== null, `${label}: 탭 4칸(v43 대표님 지시: 학습자 입장 유형별 탭) · AI 튜터 아이콘 — ${tabs.join(' · ')}`);
     await p.evaluate(() => { location.hash = '#review'; }); await p.waitForTimeout(250);
     const off = await p.evaluate(() => (document.querySelector('.tb-off h1') || {}).textContent || '');
     ok(/짧게 복습은 이 기관에서 쓰지 않아요/.test(off), `${label}: #review 안내 — ${off}`);

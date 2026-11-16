@@ -46,6 +46,8 @@ const TEACH = { ulms: 't_ulms', k12: 't_k12' };
         const cardOver = [...sec.querySelectorAll('.dx-card')].filter(c => c.scrollWidth > c.clientWidth + 1).map(c => c.dataset.w);
         return { lay: sec.dataset.lay, k: L.k, def: DASHX.LAY[L.k][0], exp, got, nums, bad, over, cardOver };
       }, role);
+      /* v32.8(QA U4)부터 교수자는 기관 현황(#dash) 직접 이동이 막혀 홈으로 돌아간다(core.js TEACH_NO). 교수자는 이동 차단과 교수자용 구성 키만 확인한다. */
+      if (role === 'teacher') { const t = await page.evaluate(() => ({ ws: CUR.ws, k: DASHX.layKey() })); ok(r.none && t.ws === 'home' && t.k === want, `${label} teacher: 현황 차단 ${t.ws} · 구성 ${t.k} (기대 home · ${want})`); continue; }
       if (r.none) { ok(false, `${label} ${role}: 현황 위젯 없음`); continue; }
       ok(r.lay === want && r.k === want, `${label} ${role}: 구성 ${r.lay} (기대 ${want})`);
       ok(JSON.stringify(r.got) === JSON.stringify(r.exp), `${label} ${role}: 보이는 위젯 ${r.got.join(',')} ≠ ${r.exp.join(',')}`);

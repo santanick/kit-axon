@@ -137,6 +137,11 @@ function modal(title, body, actions = [], wide = false) {
   w.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mh"><b>${esc(title)}</b><button class="x" data-act="modal-close" aria-label="닫기">${ic('x', 18)}</button></div><div class="mb">${body}</div><div class="mf">${actions.map(a => `<button class="btn ${a.kind || ''}" data-mact="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</div></div>`;
   document.body.appendChild(w);
   w.addEventListener('click', e => { if (e.target === w) closeModal(); const b = e.target.closest('[data-mact]'); if (!b) return; const a = actions.find(x => x.id === b.dataset.mact); if (a && a.run) { if (a.run(w) !== false) closeModal(); } else closeModal(); });
+  /* v43 F3(128): 입력칸 하나뿐인 모달 = 넓은 창 + 도움말 + 「바뀌기 전 → 바뀐 후」 미리보기(입력하는 대로 바뀜) */
+  try { const ins = [...w.querySelectorAll('.mb input:not([type=hidden]),.mb select,.mb textarea')]; const one = ins.length === 1 && ins[0].tagName === 'INPUT' && /^(text|search|)$/.test(ins[0].getAttribute('type') || '') ? ins[0] : null;
+    if (one && !w.querySelector('.mb .help,.mb small')) { const md = w.querySelector('.modal'); md.classList.add('m1'); const v0 = one.value; const mx = +one.getAttribute('maxlength') || 0;
+      (one.closest('label') || one).insertAdjacentHTML('afterend', `<p class="m1help">${mx ? `최대 ${mx}자 · ` : ''}저장을 누르면 바로 반영됩니다. 취소하면 바뀌지 않습니다.</p><div class="m1pv" aria-live="polite"><span class="m1ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></span><div><small>미리보기</small><p>${v0 ? `<s>${esc(v0)}</s><span aria-hidden="true">→</span>` : ''}<b class="m1v">${esc(v0 || '입력하면 여기에 보입니다')}</b></p></div></div>`);
+      const out = w.querySelector('.m1v'); one.addEventListener('input', () => { out.textContent = one.value.trim() || '비어 있으면 저장할 수 없습니다'; out.classList.toggle('bad', !one.value.trim()); }); } } catch (e) { }
   const f = w.querySelector('input,select,textarea,button.btn'); f && f.focus({ preventScroll: true }); return w;
 }
 const closeModal = () => { const m = $('#modal'); m && m.remove(); };
@@ -163,14 +168,16 @@ function logAudit(what) { S.audit.unshift({ at: nowStr(), who: S.me.name, role: 
 /* ───────── 라우터 · 셸 ───────── */
 const VIEWS = {};
 let CUR = { ws: 'home', tab: '' };
+const MENU_ALIAS = {}; /* v43 옛 메뉴 id → 새 위치(#billing → 수납 등). 값은 새 id를 돌려주는 함수 */
 function resolve(id) {
+  if (MENU_ALIAS[id]) id = MENU_ALIAS[id]();
   if (id === 'settings') return { ws: 'settings', tab: '' };
   if (WS[id]) { const tb = wsTabs(id); return { ws: id, tab: (UI['tab_' + id] && tb.includes(UI['tab_' + id])) ? UI['tab_' + id] : tb[0] || '' }; }
   if (MENU[id]) return { ws: MENU[id].ws, tab: id };
   if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id)) { UI.settings = id; return { ws: 'settings', tab: '' }; } /* v32.8 설정 하위 화면 바로가기(현황 › 요금제 [업그레이드] 등) */
   return { ws: 'home', tab: '' };
 }
-const TEACH_NO = ['site', 'sales', 'billing', 'admins', 'org', 'auto', 'settings', 'dash']; /* v32.8 설정 · 기관 현황은 교수자 직접 이동도 막음(QA U4) */
+const TEACH_NO = ['site', 'sales', 'billing', 'ledger', 'fac', 'crmbill', 'admins', 'org', 'auto', 'settings', 'dash']; /* v43 P3-F01: 강사에게 수납 · 매출 · 시설 · 청구 금액 숨김(서버 requireRole과 같게) */ /* v32.8 설정 · 기관 현황은 교수자 직접 이동도 막음(QA U4) */
 function go(id, keep) {
   let r = resolve(id);
   if (r.tab && MENU[r.tab]?.owner && S.me.role !== 'owner') { toast('정운영자만 볼 수 있는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; }
@@ -235,9 +242,9 @@ function renderSignup() {
     return `<button type="button" class="tcard ${sel ? 'on' : ''}" data-act="su-type" data-v="${k}" aria-pressed="${sel}"><span class="ti">${ticon(ty.icon)}</span><b>${esc(ty.name)}</b><p>${esc(ty.desc)}</p></button>`;
   }).join('');
   const isAcad = SU.type === 'academy' || TYPES[SU.type]?.group === 'academy';
-  const isUni = SU.type === 'univ';
-  const ready = SU.type && SU.type !== 'academy' && (!isUni || !!SU.ed);
-  const pk = isUni && SU.ed === 'lms' && PRESET.univ_lms ? 'univ_lms' : SU.type;
+  const isUni = SU.type === 'univ'; const isPub = SU.type === 'public'; const PE = window.PUB_ED || null;
+  const ready = SU.type && SU.type !== 'academy' && (!isUni || !!SU.ed) && (!isPub || !PE || !!SU.ed);
+  const pk = isUni && SU.ed === 'lms' && PRESET.univ_lms ? 'univ_lms' : isPub && SU.ed && PRESET['public_' + SU.ed] ? 'public_' + SU.ed : SU.type;
   $('#app').innerHTML = `
   <div class="su">
     <div class="su-l">
@@ -252,22 +259,23 @@ function renderSignup() {
       <div class="tgrid">${cards}</div>
       ${isAcad ? `<p class="su-q">어떤 학원인가요? <small>고르면 메뉴와 용어가 맞춰집니다</small></p><div class="seg2 full"><button type="button" class="${SU.type === 'k12' ? 'on' : ''}" data-act="su-type" data-v="k12">초중고 · 반 · 보호자 · 청구서</button><button type="button" class="${SU.type === 'adult' ? 'on' : ''}" data-act="su-type" data-v="adult">성인 · 강좌 판매 · 매출</button></div>` : ''}
       ${isUni ? `<p class="su-q">어떻게 도입하나요? <small>도입 형태에 따라 메뉴 · 연동 범위가 달라집니다</small></p><div class="seg2 full"><button type="button" class="${SU.ed === 'lite' ? 'on' : ''}" data-act="su-ed" data-v="lite">사업단 · 센터 · 비교과(빠른 도입)</button><button type="button" class="${SU.ed === 'lms' ? 'on' : ''}" data-act="su-ed" data-v="lms">학사 LMS · 전교생 교과(학사 연동)</button></div>` : ''}
+      ${isPub && PE ? `<p class="su-q">어떤 공공기관인가요? <small>고르면 메뉴 · 홈 · 용어가 맞춰집니다</small></p><div class="seg2 full su-pub">${['citizen', 'facility', 'staff'].map(k => `<button type="button" class="${SU.ed === k ? 'on' : ''}" data-act="su-ed" data-v="${k}" aria-pressed="${SU.ed === k}"><b>${esc(PE[k].n)}</b><small>${esc(PE[k].s)}</small></button>`).join('')}</div>` : ''}
       <label class="fl">기관명<input name="name" maxlength="30" required placeholder="예: 산타 아카데미" value="${esc(SU.name)}"></label>
-      ${ready ? `<div class="pv"><b>${esc(isUni ? '대학 · ' + (SU.ed === 'lms' ? '학사 LMS' : '사업단 · 센터') : TYPES[SU.type].name)} 맞춤 구성</b><p>${['learn', 'people', 'talk', 'ops'].map(w => `<span>${esc(w === 'people' ? TERMS[SU.type].learner : lab(WS[w]))} <small>${PRESET[pk].on.filter(i => MENU[i].ws === w).length}</small></span>`).join('')}</p><small>${esc(TERMS[SU.type].learner)} · ${esc(TERMS[SU.type].cls)} · ${esc(TERMS[SU.type].group)} 용어로 표시됩니다.</small></div>` : ''}
-      <button class="btn pri lg" type="submit" ${ready ? '' : 'disabled'}>시작하기</button>${ready ? '' : `<p class="su-hint">${isAcad ? '학원 종류(초중고 · 성인)를 고르면' : isUni ? '도입 형태(사업단 · 센터 / 학사 LMS)를 고르면' : '기관 유형을 고르면'} 시작할 수 있습니다.</p>`}<p class="su-who">강사 · 직원이신가요? 운영자에게 받은 초대 링크로 들어오세요. 수강생이신가요? 다니는 기관의 홈페이지에서 로그인하세요.</p>
+      ${ready ? `<div class="pv"><b>${esc(isUni ? '대학 · ' + (SU.ed === 'lms' ? '학사 LMS' : '사업단 · 센터') : isPub && PE && PE[SU.ed] ? '공공기관 · ' + PE[SU.ed].n : TYPES[SU.type].name)} 맞춤 구성</b><p>${['learn', 'people', 'talk', 'ops'].map(w => `<span>${esc(w === 'people' ? TERMS[SU.type].learner : lab(WS[w]))} <small>${PRESET[pk].on.filter(i => MENU[i].ws === w).length}</small></span>`).join('')}</p><small>${esc(TERMS[SU.type].learner)} · ${esc(TERMS[SU.type].cls)} · ${esc(TERMS[SU.type].group)} 용어로 표시됩니다.</small></div>` : ''}
+      <button class="btn pri lg" type="submit" ${ready ? '' : 'disabled'}>시작하기</button>${ready ? '' : `<p class="su-hint">${isAcad ? '학원 종류(초중고 · 성인)를 고르면' : isUni ? '도입 형태(사업단 · 센터 / 학사 LMS)를 고르면' : isPub ? '공공기관 세부 유형(시민 교육형 · 시설형 · 직원 교육형)을 고르면' : '기관 유형을 고르면'} 시작할 수 있습니다.</p>`}<p class="su-who">강사 · 직원이신가요? 운영자에게 받은 초대 링크로 들어오세요. 수강생이신가요? 다니는 기관의 홈페이지에서 로그인하세요.</p>
     </form>
   </div>`;
   const f = $('#suForm');
   f.addEventListener('input', () => { SU.name = f.name.value; });
-  f.addEventListener('submit', e => { e.preventDefault(); SU.name = f.name.value.trim(); if (!SU.name) { f.name.focus(); return; } createOrg(SU.type, SU.name, SU.type === 'univ' ? SU.ed : undefined); });
+  f.addEventListener('submit', e => { e.preventDefault(); SU.name = f.name.value.trim(); if (!SU.name) { f.name.focus(); return; } createOrg(SU.type, SU.name, SU.type === 'univ' || SU.type === 'public' ? SU.ed : undefined); });
 }
 function createOrg(type, name, ed) {
   RNG = 7 + Object.keys(TYPES).indexOf(type) * 13;
-  S = { v: 2, org: { name, type, created: today(), domain: ((a => a.length >= 3 ? a : 'org-' + Math.random().toString(36).slice(2, 8))(name.replace(/[^a-z0-9]/gi, '').toLowerCase())) + '.didisam.com', /* v38 한글 이름(영문 3자 미만)은 'e.didisam.com' 대신 기관별 기본 주소 — 홈페이지 › 도메인에서 바꿈 */ plan: 'premium', ...(type === 'univ' ? { ed: ed === 'lms' ? 'lms' : 'lite' } : {}) }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type, type === 'univ' ? (ed === 'lms' ? 'lms' : 'lite') : undefined), audit: [], runs: [], ai: { usage: 0 }, chat: [] };
+  S = { v: 2, org: { name, type, created: today(), domain: ((a => a.length >= 3 ? a : 'org-' + Math.random().toString(36).slice(2, 8))(name.replace(/[^a-z0-9]/gi, '').toLowerCase())) + '.didisam.com', /* v38 한글 이름(영문 3자 미만)은 'e.didisam.com' 대신 기관별 기본 주소 — 홈페이지 › 도메인에서 바꿈 */ plan: 'premium', ...(type === 'univ' ? { ed: ed === 'lms' ? 'lms' : 'lite' } : type === 'public' ? { ed: ['citizen', 'facility', 'staff'].includes(ed) ? ed : 'staff' } : {}) }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type, type === 'univ' ? (ed === 'lms' ? 'lms' : 'lite') : type === 'public' ? (['citizen', 'facility', 'staff'].includes(ed) ? ed : 'staff') : undefined), /* v43 공공 세부 유형(시민 교육형 · 시설형 · 직원 교육형) — 없으면 직원 교육형(하위 호환) */ audit: [], runs: [], ai: { usage: 0 }, chat: [] };
   Object.assign(S, seed(type));
   if (typeof postSeed === 'function') postSeed(type);
   logAudit(`기관 생성 — 유형 ${TYPES[type].name}`); save(); CUR = { ws: 'home', tab: '' };
-  if (/^org-/.test(S.org.domain)) setTimeout(() => { try { toast(`홈페이지 주소를 임시로 ${S.org.domain}로 정했습니다. 나중에 홈페이지 › 도메인에서 영문 주소로 바꿀 수 있습니다.`); } catch (e) { } }, 1500); /* v38 */
+  if (/^org-/.test(S.org.domain)) UI.tmpDom = S.org.domain; /* v38 → v43 G2: 임시 주소 안내는 떠 있는 토스트(본문 가림) 대신 머리 줄 안내(ux.js uxTop) */
   $('#app').innerHTML = `<div class="gen"><div class="spin"></div><b>${esc(TYPES[type].name)} 맞춤 어드민을 준비하고 있습니다</b><p>메뉴 구성 · 용어 · 자동화 레시피 · 샘플 데이터</p></div>`;
   setTimeout(() => { render(); }, 800);
 }
@@ -306,27 +314,34 @@ function seed(type) {
   const bills = type === 'k12' ? members.slice(0, 30).map((m, i) => ({ id: uid('b'), who: m.id, title: '11월 수강료', items: [['수업료', 280000], ...(i % 3 === 0 ? [['차량비', 40000]] : []), ...(i % 4 === 0 ? [['교재비', 18000]] : [])], due: addDays(today(), i % 5 === 0 ? -3 : 7), status: i % 5 === 0 ? '미납' : i % 3 === 0 ? '현장 납부' : '납부 완료' })) : [];
   const consults = Array.from({ length: type === 'corp' ? 3 : 9 }, (_, i) => ({ id: uid('cs'), at: addDays(today(), -i * 2), who: members[i * 3].id, ch: pick(['채널톡 전화', '채널톡 채팅', '대면 상담']), cat: pick(type === 'k12' ? ['입학 문의', '성적 상담', '수강료'] : type === 'voc' ? ['훈련 신청', '출결 문의', '취업 상담'] : ['수강 문의', '결제 · 환불', '학습 상담']), title: pick(['수강 일정 문의', '진도 상담', '환불 규정 문의', '레벨 테스트 결과 상담', '수료 기준 문의']), summary: '', status: i < 2 ? '진행 중' : '완료' }));
   const posts = Array.from({ length: 12 }, (_, i) => ({ id: uid('po'), kind: i % 3 === 0 ? '질문' : pick(['질문', '이야기']), board: pick(['커뮤니티', '커뮤니티', '게시판', '학습노트', '수강후기']), who: members[i * 2].id, title: pick(['과제 제출 형식 질문', '오늘 수업 정리', '퀴즈 3번 해설 부탁드립니다', '수강 후기 남깁니다', '영상이 끊겨요']), at: addDays(today(), -i), replies: i % 3 ? 1 : 0, views: 10 + i * 7, hidden: false }));
+  /* v43 R1: 커뮤니티 게시판 시연 글 8건 추가(난수를 쓰지 않아 다른 시드 값은 그대로) */
+  ['이번 주 실습 결과물 공유합니다', '과제 마감 연장 가능할까요?', '스터디 같이 하실 분', '2주차 자료 링크가 안 열려요', '강의 덕분에 업무가 빨라졌어요', '질문 게시판 사용법 문의', '오프라인 특강 후기', '복습용 요약 노트 올립니다'].forEach((title, k) => posts.push({ id: uid('po'), kind: k % 3 === 1 ? '질문' : '이야기', board: '커뮤니티', who: members[(k * 5 + 3) % members.length].id, title, at: addDays(today(), -(k + 1)), replies: k % 3 === 1 ? 0 : 1 + k % 4, views: 24 + k * 11, hidden: false }));
   const books = ['k12', 'adult', 'lifelong'].includes(type) ? [{ id: 'bk0', name: type === 'k12' ? '중2 수학 개념서' : '실무 워크북(PDF)', kind: type === 'k12' ? '실물' : '전자책', price: 18000, sold: 23, delivered: 18, open: '전체' }, { id: 'bk1', name: '기출 문제집', kind: '전자책', price: 12000, sold: 41, delivered: 0, open: '전체' }] : [];
   const lib = [['오리엔테이션.mp4', '동영상', '12:30', ['c0']], ['1강 핵심 개념.mp4', '동영상', '48:10', ['c0', 'c1']], ['실습 따라하기.mp4', '동영상', '22:05', ['c1']], ['https://youtu.be/dQw4w9WgXcQ', 'YouTube', '03:33', []], ['강의자료_1차시.pdf', '문서', '2.1MB', ['c0']], ['실습 템플릿.xlsx', '문서', '310KB', []]].map(([n, k, s, u], i) => ({ id: 'l' + i, name: n, kind: k, size: s, used: u.length, cls: u, at: addDays(today(), -i * 5), views: Math.round(40 + rnd() * 400), drop: Math.round(10 + rnd() * 35) }));
   const admins = [{ id: 'a0', name: '정운영자', email: 'owner@demo', role: 'owner', classes: [] }, { id: 'a1', name: '운영 담당', email: 'staff@demo', role: 'sub', classes: [] }, { id: 'a2', name: t2(type, 'teacher') + ' 김○○', email: 'teacher@demo', role: 'teacher', classes: ['c0', 'c1'] }];
-  const COL = [['#E63295', '#4257D7', '#F5B5D2'], ['#4C77C5', '#2E4F8F', '#B9CCEB'], ['#E8A317', '#A86F00', '#F6D58A']];
+  const COL = [['#00A832', '#05612A', '#A6F0BE'], ['#14A3A3', '#0B6E6E', '#A7E3E3'], ['#E8A317', '#A86F00', '#F6D58A']]; /* v43 E1: 배지 기본 색 분홍 · 보라 · 파랑 → 그린 · 청록 · 금색 */
   const badges = sm.lv.map((lv, i) => ({ id: 'bd' + i, name: `${lv}`, key: String(i + 1), cls: classes[i]?.id || 'c0', method: i === 2 ? 'manual' : 'pass', special: false, fill: COL[i][0], ring: COL[i][1], rib: COL[i][2], issued: (classes[i]?.learners || []).filter(id => classes[i].prog[id].p >= 80).slice(0, 14 - i * 5).map((id, j) => ({ who: id, at: addDays(today(), -j), no: `${String(i + 1)}-${String(j + 1).padStart(4, '0')}`, how: i === 2 ? '수동' : '자동', st: '유효', reason: '' })) }));
   badges.push({ id: 'bdx', name: '우수 프로젝트', key: '★', cls: '', method: 'manual', special: true, fill: '#2A2B2B', ring: '#1F2020', rib: '#5C74F6', issued: [] });
   const certs = classes[0].learners.filter(id => (classes[0].prog[id] || {}).p >= classes[0].criteria.threshold).slice(0, 8).map((id, i) => /* v36 R1 샘플 수료증도 이수 기준을 채운 사람에게만 */ ({ id: uid('ct'), cls: 'c0', who: id, at: addDays(today(), -i), no: `${today().slice(0, 4)}-${String(i + 1).padStart(4, '0')}`, dl: i % 2 === 0, manual: false }));
-  const msgs = [{ id: uid('ms'), at: addDays(today(), -2), to: '전체', title: '이번 주 운영 안내', ch: '앱 푸시 + 이메일', n: members.length }];
-  const orgs = ['corp', 'univ', 'lifelong', 'voc'].includes(type) ? [{ id: 'o0', name: type === 'voc' ? '협약기업 A사' : type === 'univ' ? '취업지원센터' : type === 'corp' ? '계열사 B' : '구청 평생학습관', mgr: '기관 담당자', n: 14, done: 9, job: type === 'voc' ? 6 : 0 }] : [];
+  /* v43 Q1 시연 밀도(DIRECTION §6): 발송 내역 10건 · 채널 3종 섞기(빈 기관은 empty.js가 비움) */
+  const msgs = [['이번 주 운영 안내', '전체', '앱 푸시 + 이메일', 2], ['과제 3 마감 하루 전 안내', '진도 50% 미만', '알림톡', 3], ['11월 특강 신청 안내', '전체', '이메일', 4], ['14일 이상 미접속 독려', '미접속 14일+', '알림톡', 5], ['수료증 발급 완료 안내', '수료자', '앱 푸시', 6], ['출석 확인 요청', '결석 2회 이상', '문자', 8], ['설문 참여 부탁드립니다', '전체', '앱 푸시 + 이메일', 9], ['결제 링크 재안내', '미납자', '알림톡', 11], ['시험 일정 변경 안내', '전체', '앱 푸시', 13], ['새 강좌 개설 소식', '전체', '이메일', 16]]
+    .map(([title, to, ch, d], i) => ({ id: uid('ms'), at: addDays(today(), -d), to, title, ch, n: to === '전체' ? members.length : Math.max(3, Math.round(members.length * (0.08 + i * 0.03))) }));
+  const orgs = ['corp', 'univ', 'lifelong', 'voc'].includes(type) ? [{ id: 'o0', name: type === 'voc' ? '협약기업 A사' : type === 'univ' ? '취업지원센터' : type === 'corp' ? '계열사 B' : '구청 평생학습관', mgr: '기관 담당자', n: 14, done: 9, job: type === 'voc' ? 6 : 0 },
+    /* v43 G3 시연 밀도: 협력 기관 6곳(가상) */
+    ...(type === 'voc' ? [['협약기업 B사', 22, 17, 11], ['해운대 일자리센터', 18, 12, 8], ['센텀 제조 협동조합', 11, 9, 5], ['부산 물류 C사', 16, 10, 7], ['동구 청년센터', 9, 6, 3]] : type === 'univ' ? [['교수학습개발센터', 31, 24, 0], ['산학협력단', 19, 15, 0], ['평생교육원', 26, 18, 0], ['공학교육혁신센터', 12, 9, 0], ['국제교류처', 8, 5, 0]] : type === 'corp' ? [['계열사 C', 38, 29, 0], ['협력사 D', 21, 14, 0], ['해외법인 E', 17, 11, 0], ['물류센터 F', 26, 22, 0], ['연구소 G', 12, 10, 0]] : [['수영구 평생학습관', 24, 17, 0], ['해운대 도서관', 19, 13, 0], ['동래 주민센터', 15, 9, 0], ['금정 청소년센터', 12, 8, 0], ['남구 복지관', 21, 16, 0]]).map(([name, n, done, job], i) => ({ id: 'o' + (i + 1), name, mgr: ['김지현', '박도윤', '이서연', '최민준', '정하은'][i] + ' 담당', n, done, job }))] : [];
   const journey = sm.lv.map((lv, i) => ({ id: 'j' + i, name: lv, cls: classes.filter(c => c.level === i).map(c => c.id), unlock: i === 0 ? '바로 열림' : `${sm.lv[i - 1]} 배지 획득`, badge: 'bd' + i }));
-  const alerts = [{ id: uid('al'), at: addDays(today(), -1), to: '전체', title: '이번 주 학습 일정 안내', read: 62 }];
+  /* v43 R1: 알림함 발송 내역 시연 8건(대상 · 읽음률이 다르게) */
+  const alerts = [[1, '전체', '이번 주 학습 일정 안내', 62], [3, '진도 30% 미만', '마감 전 진도 확인 부탁드립니다', 48], [5, '신규 가입자', '첫 수업 시작 안내', 81], [8, '전체', '11월 특강 신청 안내', 57], [11, '과제 미제출', '과제 3 마감 하루 전 안내', 44], [14, '수료 예정자', '수료증 발급 안내', 88], [18, '전체', '설문 참여 부탁드립니다', 39], [24, '14일 미접속', '다시 학습을 이어 가세요', 27]].map(([d, to, title, read]) => ({ id: uid('al'), at: addDays(today(), -d), to, title, read }));
   const weeks = Array.from({ length: 8 }, (_, i) => ({ w: addDays(today(), -7 * (7 - i)).slice(5), join: Math.round(6 + rnd() * 10 - i * .4), badge: Math.round(1 + rnd() * 4 + i * .3) }));
   return {
     groups, members, parents, classes, pays, bills, consults, posts, books, lib, admins, badges, certs, msgs, orgs, journey, alerts, weeks, notices: [],
     autos: defaultAutos(type), site: null,
-    settings: { join: type === 'corp' ? '운영자 초대만' : '자동 수락', siteOpen: type === 'corp' ? 'private' : 'public', marketing: true, extraQ: type === 'corp' ? ['부서', '직급'] : type === 'univ' ? ['학번', '학과'] : [], speedMin: 0.5, speedMax: 2, reviewCond: '수료 시', nudge: true, popups: [], seo: { title: '', desc: '', kw: '' }, pixel: '', terms: { tos: '', privacy: '' }, consultKeys: false, kakao: false, pg: type === 'k12' ? 'toss' : ['adult', 'lifelong'].includes(type) ? 'nice' : 'none', certInfo: { rep: '', org: '' }, footer: { company: '', ceo: '', biz: '', mail: '', addr: '', tel: '', reg: '' },
+    settings: { join: type === 'corp' ? '운영자 초대만' : type === 'voc' ? '운영자 수락' : '자동 수락', /* v43 P1-F01 */ siteOpen: type === 'corp' ? 'private' : 'public', marketing: true, extraQ: type === 'corp' ? ['부서', '직급'] : type === 'univ' ? ['학번', '학과'] : [], speedMin: 0.5, speedMax: 2, reviewCond: '수료 시', nudge: true, popups: [], seo: { title: '', desc: '', kw: '' }, pixel: '', terms: { tos: '', privacy: '' }, consultKeys: false, kakao: false, pg: type === 'k12' ? 'toss' : ['adult', 'lifelong'].includes(type) ? 'nice' : 'none', certInfo: { rep: '', org: '' }, footer: { company: '', ceo: '', biz: '', mail: '', addr: '', tel: '', reg: '' },
       progress: { watchThr: 80, realOnly: true, seq: true, autoDone: true, levelUnlock: true, resubmit: 2 },
       tutor: { enabled: true, name: 'AX 튜터', daily: 20, guestDaily: 10, help: 'feedback', loginOnly: false, guide: '', model: 'haiku' },
       goals: { join: 60, active: 50, progress: 40, badge: 30 } },
     tutorUsage: Array.from({ length: 7 }, (_, i) => ({ d: addDays(today(), i - 6).slice(5), n: Math.round(30 + rnd() * 90) })),
-    codes: [], hrd: { reports: [] }
+    codes: [], hrd: { reports: type === 'voc' ? [[2, '주간(등록 · 진도 · 출석 · 평가)', 24, '전송 대기'], [9, '주간(등록 · 진도 · 출석 · 평가)', 24, '파일 생성'], [16, '수료 보고(용접기능사 실기)', 18, '파일 생성'], [23, '주간(등록 · 진도 · 출석 · 평가)', 22, '파일 생성']].map(([d, kind, n, st]) => ({ at: addDays(today(), -d) + ' 18:00', kind, n, st })) : [] } /* v43 R1: 직업훈련 시연 보고 4건 */
   };
 }
 function curriculumFor(name, kind) {

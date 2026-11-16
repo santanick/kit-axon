@@ -15,7 +15,8 @@ const NICK_RE = /^[가-힣A-Za-z0-9_-]{2,20}$/;
 const STU_RE = /^[0-9]{6,10}$/;
 const MAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]{2,}$/;
 const PHONE_RE = /^01\d-?\d{3,4}-?\d{4}$/;
-const PURPOSES = { cert: '수료증 발급', refund: '결제 · 환불 처리', alimtalk: '알림톡 수신', legal: '법령상 요청' };
+const PURPOSES = { cert: '수료증 발급', refund: '결제 · 환불 처리', alimtalk: '알림톡 수신', legal: '법령상 요청', sms_noti: '예약 · 노쇼 알림 문자' }; /* v43 K2: sms_noti = 공단 · 평생교육원 회원이 알림을 켤 때만 받는 휴대폰(대학 불가, 탈퇴 시 파기) */
+const SMS_TYPES = ['public', 'lifelong'];
 const IDV_REASONS = { refund: '고용보험 환급 과정', adult: '성인 인증 콘텐츠', credit: '학점 인정' };
 
 const { pwRule } = require('./pwrule');
@@ -63,7 +64,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
   const plog = (P, tid, actor, action, lid, purpose, fields) => P('insert into pii.access_log (tid, actor, action, learner_id, purpose, fields) values ($1, $2, $3, $4, $5, $6)', [tid, String(actor).slice(0, 80), action, lid || null, purpose || null, fields || []]);
   async function orgOf(L, tid) {
     const d = (await L("select doc->'org'->>'type' type, doc->'settings'->'acct' acct, doc->'org'->'cpl' cpl from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
-    const a = d.acct || {}; return { parent: d.type === 'k12' && !!a.parent, approve: a.approve === 'manual' ? 'manual' : 'auto', strictPw: !!(d.cpl && d.cpl.on && /^moel-/.test(String(d.cpl.profile || ''))), type: d.type || '', mode: a.mode || 'open', under14: !!a.under14, social: Array.isArray(a.social) ? a.social : PROVIDERS, idv: a.idv && a.idv.on ? { on: true, reason: String(a.idv.reason || '') } : { on: false } };
+    const a = d.acct || {}; return { parent: d.type === 'k12' && !!a.parent, approve: a.approve === 'manual' || d.type === 'voc' ? 'manual' : 'auto', /* v43 P1-F01: 직업훈련원은 자동 수락 불가(Java PiiServiceImpl과 같음) */ strictPw: !!(d.cpl && d.cpl.on && /^moel-/.test(String(d.cpl.profile || ''))), type: d.type || '', mode: a.mode || 'open', under14: !!a.under14, social: Array.isArray(a.social) ? a.social : PROVIDERS, idv: a.idv && a.idv.on ? { on: true, reason: String(a.idv.reason || '') } : { on: false } };
   }
 
   /* SNS 식별자 → 해시. 운영: 공급자 토큰을 서버에서 검증해 sub(회원 번호)를 받는다.
@@ -218,16 +219,21 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
 
   const isAccount = sid => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(sid));
   const changePw = (tid, lid, cur, pw) => tx(tid, async ({ P }) => { const r = (await P('select pw_hash from pii.identity where tid = $1 and learner_id = $2', [tid, lid])).rows[0]; if (!r || (r.pw_hash && !(await checkPw(cur, r.pw_hash)))) throw new HttpErr(401, '비밀번호가 올바르지 않습니다.', 'login'); await P('update pii.identity set pw_hash = $3 where tid = $1 and learner_id = $2', [tid, lid, await hashPw(pw)]); await plog(P, tid, 'self', 'pw_change', lid, 'self', []); });
+  const maskPhone = v => { const d = String(v || '').replace(/\D/g, ''); return d.length >= 10 ? `${d.slice(0, 3)}-****-${d.slice(-4)}` : ''; };
   async function myPii(req, res, tid, s) {
     if (req.method === 'GET') return tx(tid, async ({ P }) => { const r = (await P('select learner_id, provider, email_enc, phone_enc, name_enc, consent, created_at from pii.identity where tid = $1 and learner_id::text = $2', [tid, s.sid])).rows[0]; if (!r) throw new HttpErr(404, '계정 정보가 없습니다.', 'none');
       await plog(P, tid, 'self', 'view', r.learner_id, 'self_access', ['email', 'phone', 'name']);
       return { provider: r.provider, email: dec(r.email_enc, aad(tid, r.learner_id, 'email')), phone: dec(r.phone_enc, aad(tid, r.learner_id, 'phone')), name: dec(r.name_enc, aad(tid, r.learner_id, 'name')), consent: r.consent, created_at: r.created_at }; });
     const b = await readBody(req, 2048); const f = String(b.field || ''); const purpose = String(b.purpose || '');
     if (!['name', 'phone'].includes(f)) throw new HttpErr(400, '수정할 수 있는 항목이 아닙니다.', 'field');
-    if (!PURPOSES[purpose] || (f === 'phone' && !['alimtalk', 'refund'].includes(purpose)) || (f === 'name' && !['cert', 'refund'].includes(purpose))) throw new HttpErr(400, '수집 목적을 확인하세요.', 'purpose');
+    if (!PURPOSES[purpose] || (f === 'phone' && !['alimtalk', 'refund', 'sms_noti'].includes(purpose)) || (f === 'name' && !['cert', 'refund'].includes(purpose))) throw new HttpErr(400, '수집 목적을 확인하세요.', 'purpose');
+    const sms = purpose === 'sms_noti';
     let v = String(b.value || '').trim(); if (f === 'phone' && v) { v = normPhone(v); if (!v) throw new HttpErr(400, '휴대폰 번호 형식을 확인하세요.', 'phone'); } if (f === 'name' && v.length > 30) throw new HttpErr(400, '이름은 30자 이내입니다.', 'name');
-    return tx(tid, async ({ P }) => { const r = (await P(`update pii.identity set ${f}_enc = $3 where tid = $1 and learner_id::text = $2 returning learner_id`, [tid, s.sid, v ? enc(v, aad(tid, s.sid, f)) : null])).rows[0]; if (!r) throw new HttpErr(404, '계정 정보가 없습니다.', 'none');
-      await plog(P, tid, 'self', v ? 'update' : 'erase', r.learner_id, purpose, [f]); return { ok: true, field: f, purpose: PURPOSES[purpose] }; });
+    return tx(tid, async ({ L, P }) => { if (sms && !SMS_TYPES.includes((await orgOf(L, tid)).type)) throw new HttpErr(403, '이 기관은 휴대폰 번호를 받지 않습니다.', 'sms_type'); /* 대학 · 기업 · 학원 등은 받지 않음 */
+      /* 동의 기록(목적 · 보관 기간 · 동의 시각)은 consent.phone에 — 지우면(알림 끔) 번호와 함께 지운다. 탈퇴(withdraw)는 identity 행째 파기 */
+      const cons = sms ? (v ? `, consent = coalesce(consent, '{}'::jsonb) || jsonb_build_object('phone', jsonb_build_object('purpose', 'sms_noti', 'keep', 'withdraw', 'at', $4::text))` : `, consent = coalesce(consent, '{}'::jsonb) - 'phone'`) : '';
+      const r = (await P(`update pii.identity set ${f}_enc = $3${cons} where tid = $1 and learner_id::text = $2 returning learner_id`, [tid, s.sid, v ? enc(v, aad(tid, s.sid, f)) : null, ...(sms && v ? [new Date().toISOString()] : [])])).rows[0]; if (!r) throw new HttpErr(404, '계정 정보가 없습니다.', 'none');
+      await plog(P, tid, 'self', v ? 'update' : 'erase', r.learner_id, purpose, [f]); return { ok: true, field: f, purpose: PURPOSES[purpose], ...(sms ? { mask: v ? maskPhone(v) : '', keep: '탈퇴하면 바로 파기', at: v ? new Date().toISOString() : null } : {}) }; });
   }
 
   async function withdraw(req, res, tid, s) {

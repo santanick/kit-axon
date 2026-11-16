@@ -33,7 +33,7 @@ const R = []; const ok = (c, m) => { R.push([!!c, m]); console.log(c ? '✓' : '
     await p.screenshot({ path: path.join(OUT, 'e36-bulk-1280.png') });
     const t0 = Date.now(); await p.click('[data-act="mb-bulkrun"]'); await p.waitForFunction(() => !document.querySelector('#modal'), null, { timeout: 30000 }); const dt = Date.now() - t0;
     const a = await p.evaluate(() => { UI.slaT = { members: true, enroll: true }; UI.slMemTable = true; go('members'); UI.mem = null; const t0 = performance.now(); render(); const ms = performance.now() - t0; return { n: S.members.length, rows: document.querySelectorAll('#main tbody tr').length, more: !!document.querySelector('[data-act="mb-lim"]'), ms: Math.round(ms), g: S.groups.filter(g => g.name === '새부서A').length, stor: (localStorage.getItem(Object.keys(localStorage).find(k => /room\..*state|didisam\.room\.[^.]+$/.test(k)) || '') || '').length }; });
-    ok(a.n - n0 === 4997, `일괄: 등록 후 명단 +${a.n - n0} (${dt}ms)`); ok(a.rows <= 101 && a.more, `명단 100명씩 표시(${a.rows}행, 더 보기 ${a.more}) 렌더 ${a.ms}ms`); ok(a.g === 1, '새 부서 자동 생성');
+    ok(a.n - n0 === 4997, `일괄: 등록 후 명단 +${a.n - n0} (${dt}ms)`); ok(a.rows <= 13 && a.more, `명단 처음 12행 표시 — v43 R1 표 12행 규격(${a.rows}행, 더 보기 ${a.more}) 렌더 ${a.ms}ms`); ok(a.g === 1, '새 부서 자동 생성');
     await p.screenshot({ path: path.join(OUT, 'e36-members5000-1280.png') });
     await ctx.close(); }
   if (only.includes('q')) for (const [ty, W, H] of [['adult', 1280, 900], ['univ', 1280, 900], ['adult', 390, 844]]) { const { ctx, p } = await org(ty, ty === 'univ' ? 'lite' : '', W, H); const tag = `${ty}-${W}`;

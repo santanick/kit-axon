@@ -99,9 +99,9 @@
     const cs = cen.reduce((a, b) => a + b.length, 0); const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cs), ...u32(off), ...u16(0)]);
     const all = [...parts, ...cen, end]; const out = new Uint8Array(all.reduce((a, b) => a + b.length, 0)); let p = 0; for (const x of all) { out.set(x, p); p += x.length; } return out;
   }
-  function css() { if (document.getElementById('efhCss')) return; const l = document.createElement('link'); l.id = 'efhCss'; l.rel = 'stylesheet'; l.href = 'lms/e.css?v=31.8'; document.head.appendChild(l); }
+  function css() { if (document.getElementById('efhCss')) return; const l = document.createElement('link'); l.id = 'efhCss'; l.rel = 'stylesheet'; l.href = 'lms/e.css?v=43.3'; document.head.appendChild(l); }
   const peek = k => C[k] && C[k].ok;
-  window.EFH = { peek, ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, sections, secPick, demoStudents, demoSections, rid, r2, fmt, ERR, nowIso, toB64, dl, b64bytes, zip, css, s0, demoTag, todo, dots, tabs4, mi };
+  window.EFH = { seedSec: sec => seedSec(sec), peek, ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, sections, secPick, demoStudents, demoSections, rid, r2, fmt, ERR, nowIso, toB64, dl, b64bytes, zip, css, s0, demoTag, todo, dots, tabs4, mi };
 
   /* ═════════ 데모 처리기(E) — 서버 lms_e_* 와 같은 응답 형태 ═════════ */
   const asgOf = id => { const a = st().asg.find(x => x.asg_id === id); if (!a) ERR(404, 'assignment', '없는 과제입니다.'); return a; };
@@ -203,12 +203,19 @@
     const a1 = mkA({ title: '1차시 보고서 — 수업 개념 사례 조사', body: '수업에서 다룬 개념을 실제 사례 하나에 적용해 2쪽 이내로 정리합니다.', due_at: iso(now - 3 * DAY), late_until: iso(now - DAY), late_penalty_pct: 10, rubric_id: 'rub_tpl1', plag_on: true });
     const a2 = mkA({ title: '중간 프로젝트 계획서', body: '팀 프로젝트 주제 · 역할 · 일정을 1쪽으로 제출합니다.', due_at: iso(now + 4 * DAY) });
     mkA({ title: '기말 보고서', body: '학기 프로젝트 결과 보고서(5쪽 이내).', due_at: iso(now + 40 * DAY), status: 'draft' });
+    /* v43 G3 시연 밀도: 과제 목록 6건(마감 지남 · 진행 · 예정 섞음) */
+    const aX = [mkA({ title: '2차시 실습 — 데이터 정리와 시각화', body: '제공 데이터를 정리해 차트 2개와 해석을 제출합니다.', due_at: iso(now - 17 * DAY), open_at: iso(now - 28 * DAY) }),
+      mkA({ title: '4차시 퀴즈 오답 노트', body: '틀린 문항의 개념을 정리해 제출합니다.', due_at: iso(now - 9 * DAY), open_at: iso(now - 20 * DAY) }),
+      mkA({ title: '현장 사례 인터뷰 요약', body: '실무자 1명을 인터뷰하고 1쪽으로 요약합니다.', due_at: iso(now + 11 * DAY) })];
     const sub = (g, p, v) => { const s = { sub_id: rid(), asg_id: g.asg_id, owner_key: 'p:' + p.person_id, person_id: p.person_id, team_id: null, files: [], ...v }; X.subs.push(s); X.vers.push({ sub_id: s.sub_id, ver: s.version, by: p.member_no, at: s.saved_at, body: s.body, files: [] }); return s; };
     P.forEach(p => { const h = hp(p, 'a1'); if (h % 100 < 86) { const late = h % 7 === 0; const t = late ? now - 2 * DAY : now - (4 + h % 4) * DAY; const graded = h % 100 < 66;
         const s = sub(a1, p, { status: graded ? 'graded' : 'submitted', body: BODY[h % BODY.length], version: 1 + h % 3, saved_at: iso(t), submitted_at: iso(t), late });
         if (graded) { const l1 = [10, 6, 10, 6, 10][h % 5], l2 = [5, 3, 5, 1][h % 4]; s.rubric_scores = { logic: l1, form: l2 }; s.score = r2((l1 + l2) / 15 * 100 * (late ? 0.9 : 1)); s.feedback = FB[h % FB.length]; s.graded_at = iso(now - DAY); applyGrade(a1, s); } }
       const h2 = hp(p, 'a2'); if (h2 % 100 < 30) sub(a2, p, { status: 'submitted', body: '주제: ' + S0.course_name + ' 관련 문제 해결 · 역할 분담과 4주 일정을 정리했습니다.', version: 1, saved_at: iso(now - DAY), submitted_at: iso(now - DAY), late: false });
       else if (h2 % 100 < 55) sub(a2, p, { status: 'draft', body: '주제 후보를 정리하는 중입니다.', version: 1, saved_at: iso(now - 2 * 36e5), submitted_at: null, late: false }); });
+    aX.slice(0, 2).forEach((g, gi) => P.forEach(p => { const h = hp(p, 'ax' + gi); if (h % 100 >= 93) return; const t = now - (gi ? 10 : 18) * DAY - (h % 3) * 36e5; const sc = 62 + h % 37;
+      const s = sub(g, p, { status: 'graded', body: BODY[h % BODY.length], version: 1, saved_at: iso(t), submitted_at: iso(t), late: false }); s.score = sc; s.feedback = FB[h % FB.length]; s.graded_at = iso(t + DAY); applyGrade(g, s); }));
+    P.forEach(p => { const h = hp(p, 'ax2'); if (h % 100 < 20) sub(aX[2], p, { status: 'draft', body: '인터뷰 대상을 섭외하는 중입니다.', version: 1, saved_at: iso(now - 36e5), submitted_at: null, late: false }); });
     /* 표절 검사 결과(유사도 높은 제출 1건) */
     const sa = X.subs.filter(s => s.asg_id === a1.asg_id); sa.forEach((s, i) => { X.plag[s.sub_id] = { engine: 'stub-local', status: 'done', similarity: i === 1 ? 62 : 8 + (hsh(s.sub_id) % 25), matches: [], finished_at: iso(now - DAY) }; });
     /* 문제은행 · 시험 */
@@ -220,6 +227,9 @@
     const ex1 = { exam_id: rid(), ...exBase, title: '1차 퀴즈', open_at: iso(now - 10 * DAY), close_at: iso(now - 3 * DAY), time_limit_min: 20, max_attempts: 1, rules: [], fixed: qs.map(q => q.q_id), need_precheck: false };
     const ex2 = { exam_id: rid(), ...exBase, title: '2차 퀴즈', open_at: iso(now - 36e5), close_at: iso(now + 7 * DAY), time_limit_min: 60, max_attempts: 1, rules: [{ bank_id: bank.bank_id, difficulty: null, n: 5 }], fixed: [], need_precheck: true, show_result: 'after_close' };
     X.exams.push(ex1, ex2); const it1 = gradeLink(sec, 'exam:' + ex1.exam_id, 'quiz', ex1.title, 100); gradeLink(sec, 'exam:' + ex2.exam_id, 'quiz', ex2.title, 100);
+    /* v43 G3 시연 밀도: 시험 6건(마감 · 진행 · 예정 · 초안) */
+    const exX = [['진단 평가', -30, -27, 15], ['3차 퀴즈', -2, 5, 30], ['중간고사', 6, 7, 75, 1], ['4차 퀴즈', 14, 21, 30], ['기말고사(초안)', 48, 49, 90, 1, 'draft']].map(([title, o, c, tl, pre, stt]) => ({ exam_id: rid(), ...exBase, title, open_at: iso(now + o * DAY), close_at: iso(now + c * DAY), time_limit_min: tl, max_attempts: 1, rules: [{ bank_id: bank.bank_id, difficulty: null, n: Math.min(qs.length, 5) }], fixed: [], need_precheck: !!pre, status: stt || 'published' }));
+    X.exams.push(...exX); exX.forEach(x => gradeLink(sec, 'exam:' + x.exam_id, 'quiz', x.title, 100));
     const pr = { easy: 85, mid: 65, hard: 45 };
     P.forEach((p, j) => { const h = hp(p, 'x1'); if (h % 100 >= 92) return; const t0 = now - (9 - h % 5) * DAY; let s = 0, mx = 0, pend = false; const answers = {}, marks = {};
       const items = qs.map(q => ({ q: q.q_id, p: q.points, c: q.choices.map(c => c.id) }));
@@ -256,7 +266,10 @@
     if (tab === 'learner') return h + learnerView(P.sec);
     if (!r) return h + wait(); if (r.err) return h + errBox(r.err);
     const L = r.ok.assignments;
-    return h + `<div class="card">${table(['과제', '마감', '제출', '채점 대기', ''], L.map(g => [`<b>${esc(g.title)}</b> ${g.status === 'published' ? '' : tag({ draft: '비공개', closed: '마감' }[g.status] || g.status)}${g.kind === 'team' ? ' ' + tag('팀') : ''}`, fmt(g.due_at), `${g.submitted} / ${g.targets}`, g.submitted - g.graded > 0 ? tag(String(g.submitted - g.graded) + '건', 'y') : '0',
+    /* v43 R2: 3행 뒤 빈 화면 → 제출 현황 요약 막대(채점 완료 · 채점 대기 · 미제출) + 행마다 제출 막대 */
+    const pc = (a, b) => b ? Math.round(a / b * 100) : 0; const T = L.reduce((a, g) => ({ t: a.t + (+g.targets || 0), s: a.s + (+g.submitted || 0), g: a.g + (+g.graded || 0) }), { t: 0, s: 0, g: 0 });
+    const sumC = L.length ? `<div class="card ex-sum"><div class="ch"><b>제출 · 채점 현황</b><small>과제 ${L.length}개 · 제출률 ${pc(T.s, T.t)}%</small></div><div class="ex-rows">${L.slice(0, 8).map(g => { const t = +g.targets || 0; return `<div class="ex-r"><span>${esc(g.title)}</span><span class="ex-b">${t ? `<i class="g" style="flex:${+g.graded || 0}"></i><i class="w" style="flex:${Math.max(0, (+g.submitted || 0) - (+g.graded || 0))}"></i><i class="n" style="flex:${Math.max(0, t - (+g.submitted || 0))}"></i>` : '<i class="n" style="flex:1"></i>'}</span><b>${pc(+g.submitted || 0, t)}%</b></div>`; }).join('')}</div><div class="fx-lg"><span><i></i>채점 완료</span><span><i class="pd"></i>채점 대기</span><span><i class="nn"></i>미제출</span></div></div>` : '';
+    return h + sumC + `<div class="card">${table(['과제', '마감', '제출', '채점 대기', ''], L.map(g => [`<b>${esc(g.title)}</b> ${g.status === 'published' ? '' : tag({ draft: '비공개', closed: '마감' }[g.status] || g.status)}${g.kind === 'team' ? ' ' + tag('팀') : ''}`, fmt(g.due_at), `<span class="ex-sc"><span class="ex-sb"><i style="width:${pc(+g.submitted || 0, +g.targets || 0)}%"></i></span><b>${g.submitted} / ${g.targets}</b></span>`, g.submitted - g.graded > 0 ? tag(String(g.submitted - g.graded) + '건', 'y') : '0',
       `<button class="btn sm" data-act="lmse-open" data-v="${esc(g.asg_id)}">열기</button>`]), '아직 과제가 없습니다. 「새 과제」로 만드세요.')}</div>`;
   };
   /* 지금 할 일: 채점 대기 · 다가오는 마감 */

@@ -1,0 +1,434 @@
+/* v43 학습자 앱 대표 화면 층(D4) — 「나」 · 일정 · 내 강의 · 마일리지(앱 모드). body.lapp 범위에서만 덮는다(웹 화면은 그대로).
+   기준: final2/app-home · app-mile · png/f-app.png. 토큰만 쓴다(ldads.css v43 층). 다크는 html[data-theme=dark] 토큰이 자동으로 바꾼다.
+   패턴: .ls-ic(그린 톤 아이콘 상자 하나) · .thm-box(테마 3칸) · .lm-top(마일리지 진그린 잔액 판 — 메시 아님, 평면) */
+
+/* ── 「나」: 프로필 · 메뉴 목록 ── */
+body.lapp .ls-prof{padding:8px 4px 16px}
+body.lapp .ls-av{background:var(--gr50);color:var(--gr800);font-weight:800}
+body.lapp .ls-prof b{font-size:22px;line-height:30px;font-weight:800;letter-spacing:-.02em;color:var(--g900)}
+body.lapp .ls-list{background:var(--surface);border-radius:var(--r-card);box-shadow:var(--sh1)}
+body.lapp .ls-row+.ls-row{border-top-color:var(--hair)}
+body.lapp .ls-row:hover,body.lapp .ls-row:active{background:var(--surface2)}
+/* 보라 · 파랑 · 주황 · 회색 단색 상자(lslim.js --c) → 그린 50 바탕 + 그린 700 선 아이콘 하나로 */
+body.lapp .ls-ic{width:40px;height:40px;border-radius:13px;background:var(--gr50);color:var(--gr700)}
+body.lapp .ls-ic svg{stroke:currentColor}
+body.lapp .ls-tx b{color:var(--g900)}
+body.lapp .ls-tx small{color:var(--g700)}
+body.lapp .ls-go{color:var(--g500)}
+body.lapp .ls-bd{background:var(--co500)}
+body.lapp .ls-gh{color:var(--g700);font-size:14px;font-weight:800;margin:24px 4px 8px}
+body.lapp .in.narrow:has(.ls-me)>.l26logo{display:none} /* 「나」 목록 아래 떠 있던 기관 글자 로고 */
+/* 테마 3칸 세그먼트: 제목 · 설명 한 줄 + 꽉 찬 3칸 */
+body.lapp .thm-box{display:grid;grid-template-columns:1fr;gap:10px;margin:14px 0 0;padding:16px;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1)}
+body.lapp .thm-lb{font-size:16px;font-weight:800;color:var(--g900)}
+body.lapp .thm-hint{margin:-6px 0 0;font-size:13px;line-height:1.45;color:var(--g700)}
+body.lapp .thm-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:16px;background:var(--g200);box-shadow:inset 0 0 0 1px var(--hair)}
+body.lapp .thm-seg button{justify-content:center;min-height:48px;border-radius:12px;font-size:14px;color:var(--g700)}
+body.lapp .thm-seg button.on{background:var(--surface);color:var(--g900);box-shadow:var(--sh2)}
+body.lapp .thm-seg button.on .ic{color:var(--gr700)}
+
+/* ── 일정(lcal) · 내 강의: 카드 면만 토큰으로(구성 · 탭은 그대로) ── */
+body.lapp .lq-r,body.lapp .lq-hc{border:0;background:var(--surface);border-radius:16px;box-shadow:var(--sh1)}
+body.lapp .lq-hc>svg:first-child{color:var(--gr700)}
+body.lapp .lq-sn a{border-radius:16px}
+body.lapp .lq-ib,body.lapp .lq-tb{background:var(--surface);border-color:var(--g300)}
+
+/* ── 마일리지(lmil.js 앱 모드): 회색 하드코딩 토큰을 DDS 토큰으로, 잔액 판은 진그린 평면 ── */
+body.lapp :is(.lm,.lm-me,.lm-myb,.lm-sheet,.lm-cap){--lm-g:var(--gr500);--lm-act:var(--gr700);--lm-gd:var(--gr800);--lm-gl:var(--gr50);--lm-ink:var(--g900);--lm-mute:var(--g700);--lm-line:var(--g300);--lm-bg:var(--canvas)}
+body.lapp .lm .lm-card{background:var(--surface);border:0;border-radius:var(--r-card);box-shadow:var(--sh1)}
+body.lapp .lm .lm-top{background:var(--gr900);color:#fff;box-shadow:var(--sh3);border-radius:var(--r-block);padding:20px 18px 18px}
+body.lapp .lm .lm-top .lm-lab{color:#A6F0BE}
+body.lapp .lm .lm-top .lm-lab svg,body.lapp .lm .lm-top .lm-lab .lm-i{color:#A6F0BE}
+body.lapp .lm .lm-top .lm-big{font-size:48px;font-weight:800;letter-spacing:-.04em;color:#fff;font-variant-numeric:tabular-nums}
+body.lapp .lm .lm-top .lm-big span{font-size:22px;color:#A6F0BE}
+body.lapp .lm .lm-top .lm-mu{color:#D1FADF}
+body.lapp .lm .lm-top .lm-split{gap:8px;border:0;background:none;overflow:visible}
+body.lapp .lm .lm-top .lm-split>div{border:0;border-radius:14px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+body.lapp .lm .lm-top .lm-split dt{color:#C6F6D5;font-size:12px}
+body.lapp .lm .lm-top .lm-split dd{color:#fff;font-variant-numeric:tabular-nums}
+body.lapp .lm .lm-top .lm-fu.ok{background:rgba(255,255,255,.1);border:0;color:#D1FADF}
+body.lapp .lm .lm-top .lm-fu.ok b{color:#fff}
+body.lapp .lm .lm-top .lm-fu.lk{background:rgba(0,0,0,.18);border:0;color:#C6F6D5}
+body.lapp .lm .lm-top .lm-lockn{color:#D1FADF}
+body.lapp .lm .lm-top .lm-lockn b{color:#fff}
+body.lapp .lm .lm-top .lm-lockn p{color:#C6F6D5}
+body.lapp .lm .lm-gi{background:var(--gr50);color:var(--gr700);border-radius:14px}
+body.lapp .lm .lm-bar{background:var(--g200)}
+body.lapp .lm .lm-bar i{background:var(--gr500)}
+
+/* ═════════ v43 3단계(E4) — 남은 앱 화면 · 직업훈련 「출석」 · 튜터 버튼 · 재생 화면 다크 마무리. 모두 body.lapp 범위 ═════════ */
+/* ── 직업훈련 「출석」(#attend, ltube.js attHTML): 헤드라인 · 출석률 히어로(메시 1곳) · 오늘 수업 · 학습 시간 한도 · QR 안내 · 바로가기 ── */
+body.lapp .tba .tba-hero .tb-gb{cursor:default;flex-wrap:wrap;row-gap:14px}
+body.lapp .tba-ct{flex:1 0 100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+body.lapp .tba-ct span{display:flex;flex-direction:column-reverse;align-items:flex-start;gap:2px;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);font-size:12px;font-weight:700;color:#D1FADF}
+body.lapp .tba-ct b{font-size:20px;line-height:1.1;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+body.lapp .tba-sec{display:flex;flex-direction:column;gap:8px}
+body.lapp .tba-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+body.lapp .tba-row{display:flex;align-items:center;gap:12px;min-height:64px;padding:12px 14px;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1);color:var(--g900);text-decoration:none}
+body.lapp .tba-tm{flex:none;width:52px;font-size:15px;font-weight:800;color:var(--gr700);font-variant-numeric:tabular-nums}
+body.lapp .tba-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+body.lapp .tba-tx b{font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.lapp .tba-tx small{font-size:13px;color:var(--g700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.lapp .tba-st{flex:none;font-style:normal;font-size:13px;font-weight:800;padding:5px 10px;border-radius:999px;background:var(--g200);color:var(--g800)}
+body.lapp .tba-st.ok{background:var(--gr50);color:var(--gr800)}
+body.lapp .tba-st.wn{background:var(--co50,#FFF1EB);color:var(--co700,#B42318)}
+body.lapp .tba-st.bd{background:var(--co50,#FFF1EB);color:var(--co700,#B42318)}
+body.lapp .tba-none{margin:0;padding:16px;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1);font-size:14px;line-height:1.5;color:var(--g700)}
+body.lapp .tba-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px}
+body.lapp .tba-k{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1);min-width:0}
+body.lapp .tba-k small{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--g700)}
+body.lapp .tba-k small svg{color:var(--gr700);stroke-width:1.75}
+body.lapp .tba-k b{font-size:24px;font-weight:800;letter-spacing:-.03em;color:var(--g900);font-variant-numeric:tabular-nums}
+body.lapp .tba-k em{font-style:normal;font-size:12px;line-height:1.4;color:var(--g700)}
+body.lapp .tba-bar{display:block;height:6px;border-radius:99px;background:var(--g200);overflow:hidden}
+body.lapp .tba-bar i{display:block;height:100%;border-radius:inherit;background:var(--gr500)}
+body.lapp .tba-qr{display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1)}
+body.lapp .tba-qr>span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+body.lapp .tba-qr b{font-size:15px;font-weight:800;color:var(--g900)}
+body.lapp .tba-qr small{font-size:13px;line-height:1.45;color:var(--g700)}
+body.lapp .tba-qr .tb-li{flex:none}
+body.lapp .tba-note{margin:0;padding:0 4px;font-size:13px;line-height:1.5;color:var(--g700)}
+
+/* ── 떠 있는 AI 튜터 버튼: 아래로 스크롤하면 작은 원(48px, 아이콘만) — 카드 오른쪽 끝을 가리지 않게(ltube.js tb-fsm) ── */
+body.lapp .tb-fab{transition:width .18s ease,height .18s ease,padding .18s ease,right .18s ease}
+body.lapp.tb-fsm .tb-fab,body.lapp.tb-watch.tb-fsm .tb-fab{width:48px;height:48px;padding:0;gap:0;right:10px;border-radius:50%}
+body.lapp.tb-fsm .tb-fab span{display:none}
+@media (prefers-reduced-motion:reduce){body.lapp .tb-fab{transition:none}}
+
+/* ── 재생 화면(tb-watch) 다크 마무리: 「확인했어요」(영상 없는 항목 완료) · 목차 · 학습노트 패널(lcomm lcPanel) ── */
+body.lapp.tb-watch #lm .imain>.lbtn.pri,body.lapp.tb-watch #lm .imain>.lbtn.ghost[data-lact=done]{align-self:stretch;min-height:52px;border-radius:var(--r-btn,14px)!important;background:rgba(46,224,106,.12)!important;border-color:transparent!important;color:#5FE08A!important;box-shadow:inset 0 0 0 1px rgba(95,224,138,.45)!important;font-size:15px;font-weight:800}
+body.lapp.tb-watch #lm .imain>.lbtn.ghost[data-lact=done]{background:#13231B!important;color:#A7B8AD!important;box-shadow:inset 0 0 0 1px #21332A!important}
+body.lapp.tb-watch #lm .imain .lcaskb .lbtn{min-height:44px;border-radius:12px;background:#13231B;color:#EAF2EC;box-shadow:inset 0 0 0 1px #21332A}
+body.lapp.tb-watch aside.cur{margin:0 16px}
+body.lapp.tb-watch aside.cur .curt{border-radius:16px;background:#0E1A14;color:#EAF2EC}
+body.lapp.tb-watch aside.l26side{margin:4px 16px 0;padding:0 16px 12px;width:auto;border:0;border-radius:var(--r-block,20px);background:#0E1A14;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+body.lapp.tb-watch aside.l26side .lcpanel{margin:0;padding:0;background:none;box-shadow:none}
+body.lapp.tb-watch aside.l26side .lctabs{margin:0 0 14px;padding:0;flex-wrap:nowrap;gap:0;overflow-x:auto;scrollbar-width:none;background:none;border-bottom:1px solid #21332A}
+body.lapp.tb-watch aside.l26side .lctabs :is(a,button){flex:none;min-height:48px;padding:0 10px;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:#A7B8AD;font-size:14px;font-weight:700}
+body.lapp.tb-watch aside.l26side .lctabs :is(a,button).on{color:#fff;border-bottom-color:var(--gr500);background:none}
+body.lapp.tb-watch aside.l26side .lcpb{margin:0;background:none;border:0}
+body.lapp.tb-watch aside.l26side :is(input:not([type=checkbox]):not([type=radio]),textarea,select){background:#13231B!important;color:#EAF2EC!important;border:1px solid #21332A!important;border-radius:12px!important;min-height:44px}
+body.lapp.tb-watch aside.l26side :is(input,textarea)::placeholder{color:#8FA396}
+body.lapp.tb-watch aside.l26side input:is([type=checkbox],[type=radio]){accent-color:var(--gr500);width:20px;height:20px}
+body.lapp.tb-watch aside.l26side .lbtn{min-height:44px;border:0;border-radius:12px!important;background:#13231B!important;color:#EAF2EC!important;box-shadow:inset 0 0 0 1px #21332A!important}
+body.lapp.tb-watch aside.l26side .lbtn.pri,body.lapp.tb-watch aside.l26side #lcN .lcact .lbtn{background:var(--gr500)!important;color:#03271A!important;box-shadow:none!important}
+body.lapp.tb-watch aside.l26side :is(.mini,small){color:#A7B8AD}
+
+/* ── 앱 머리를 쓰는 학습자 화면(공지 · 메시지 · 결제 내역 · 배지 · 수료증 · 둘러보기 등) 공통: 12px 미만 글자 · 44px 미만 칩 정리 ── */
+body.lapp #lm :is(.tcat,.lcun,.new,.tg,.ap-tag){font-size:12px}
+body.lapp #lm :is(.tb-chip,.shp-chip,.ap-fch){min-height:44px}
+body.lapp #lm .lctabs :is(a,button){min-height:44px;display:inline-flex;align-items:center}
+body.lapp :is(.ap-mic,.ap-send){width:44px;height:44px}
+body.lapp .ap-ai{font-size:12px}
+/* 보호자 홈 타일: 베이지 면 → 카드 면(surface · sh1), 아이콘은 그린 50 상자 */
+body.lapp .ap-pt{border:0;background:var(--surface);box-shadow:var(--sh1);border-radius:var(--r-card)}
+/* 내 강의(#my) 아래 학습 허브 히어로(lhub .lhb-hg): 760px 이하 1fr 칸이 긴 제목에 늘어나 오른쪽이 잘리던 것 — 앱에서는 칸을 화면 폭에 묶는다(웹 lhub.css는 E3 공통 변경 요청) */
+body.lapp .lhb-hg{grid-template-columns:minmax(0,1fr)}
+body.lapp .lhb-hg>*{min-width:0}
+body.lapp .lhb-hero h1{word-break:keep-all;overflow-wrap:anywhere}
+/* 공지(#notice · lcomm n26 목록): 좁은 폭에서 강좌 칩 · 제목 · 안 읽음 · NEW가 한 줄에 눌리던 것 → 칩 / 제목(두 줄까지) / 날짜 · 상태 3단 */
+body.lapp .nlist.n26{border:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1);overflow:hidden}
+body.lapp .n26 .nt summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"cat cat cat" "tt tt tt" "tm un nw";align-items:center;gap:6px 6px;padding:14px 16px;min-height:64px}
+body.lapp .n26 .nt summary .n26no{display:none}
+body.lapp .n26 .nt summary .tcat{grid-area:cat;justify-self:start;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+body.lapp .n26 .nt summary>b{grid-area:tt;font-size:16px;line-height:1.4;font-weight:700;color:var(--g900);white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+body.lapp .n26 .nt summary time{grid-area:tm;font-size:13px;color:var(--g700);font-variant-numeric:tabular-nums}
+body.lapp .n26 .nt summary .lcun{grid-area:un;margin:0}
+body.lapp .n26 .nt summary .new{grid-area:nw;margin:0}
+body.lapp .n26 .nt+.nt{border-top:1px solid var(--hair)}
+/* 앱 머리 화면 공통 대비 · 색: 웹 빵부스러기(홈 › 강좌)는 앱의 뒤로 버튼과 겹치므로 숨김, 강좌 칩 · 안 읽음 · NEW는 그린 50 + 그린 800(4.5:1 이상) */
+body.lapp #lm .crumb{display:none}
+body.lapp #lm :is(.tcat,.lcun,.new){background:var(--gr50);color:var(--gr800)}
+body.lapp .tb-sh a,body.lapp #lm .eb{color:var(--g800)}
+/* 강좌(#courses) 트랙 · 코스 머리: 기관 데이터 색(주황 · 파랑 --c) → 짙은 그린 평면, 10~11px 머리 글자 → 12px */
+body.lapp #lm .tkh,body.lapp #lm .cwh{--c:var(--gr800);background:var(--gr900)!important;background-image:none!important}
+body.lapp #lm .tkh p,body.lapp #lm .tkb li span,body.lapp #lm .cwh span,body.lapp #lm .cwh b,body.lapp #lm .tk{font-size:12px}
+body.lapp #lm .tkb li span{color:var(--gr800);background:var(--gr50)}
+/* 선생님 고르기(#home 첫 진입 · 바꾸기): 주황 · 파랑 스타일 색(--pc) → 그린 한 톤, 아바타는 그린 50 원 + 그린 700 선 아이콘 */
+body.lapp :is(.ap-av,.ap-pc,.ap-go){--pc:var(--gr700)!important}
+body.lapp .ap-av{background:var(--gr50);color:var(--gr700)}
+body.lapp .ap-av i{display:grid;place-items:center}
+body.lapp .ap-pc{border:0;background:var(--surface);box-shadow:var(--sh1);border-radius:var(--r-card)}
+body.lapp .ap-pc.on{box-shadow:inset 0 0 0 2px var(--gr700),var(--sh2)}
+body.lapp #lm .cwl span{font-size:12px;color:var(--gr800);background:var(--gr50)}
+
+/* ═════════ v43 Q3 — 앱 머리 화면 전역 재디자인(수석 3). 모두 body.lapp 범위 ═════════
+   문법(시안 f-app 마일리지 판과 같은 말): 진그린 「작은 히어로」(눈썹 · 한 문장 · 숫자 3칸) → 흰 카드 목록(반경 20 · sh1 · 테두리 없음) → 사진 카드는 4:3 · 칩은 그린 50/800 · 진도 막대 6px.
+   마크업은 ltube.js subHero() · emptyUp() · photoUp()이 앱 모드에서만 더한다(웹 화면 영향 없음). */
+/* 앱 머리 막대: 히어로가 있는 화면은 바탕과 한 면으로 */
+body.lapp.tube:has(#lm .tb-ph) .ap-bar{background:var(--canvas);border-bottom-color:transparent;box-shadow:none}
+/* 작은 히어로 */
+body.lapp #lm section.sub.tb-ph{position:relative;overflow:hidden;isolation:isolate;margin:6px 16px 0;padding:20px 18px 18px;border-radius:var(--r-block);background:var(--gr900);color:#fff;box-shadow:var(--sh3)}
+body.lapp #lm section.sub.tb-ph::before{content:"";position:absolute;z-index:-1;right:-70px;top:-90px;width:240px;height:240px;border-radius:50%;box-shadow:inset 0 0 0 28px rgba(255,255,255,.035),inset 0 0 0 56px rgba(255,255,255,.025);pointer-events:none}
+body.lapp #lm section.sub.tb-ph::after{content:"";position:absolute;z-index:-1;left:-40px;bottom:-60px;width:160px;height:160px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,197,59,.22),transparent);pointer-events:none}
+body.lapp #lm section.sub.tb-ph .in{padding:0;max-width:none;display:flex;flex-direction:column;gap:0}
+body.lapp #lm section.sub.tb-ph .tb-pheb,body.lapp #lm section.sub.tb-ph h1.tb-pheb{order:0;margin:0;font-size:13px;line-height:18px;font-weight:800;letter-spacing:0;color:#A6F0BE}
+body.lapp #lm section.sub.tb-ph h1:not(.tb-pheb){margin:2px 0 0;font-size:26px;line-height:1.25;font-weight:800;letter-spacing:-.03em;color:#fff;word-break:keep-all}
+body.lapp #lm section.sub.tb-ph .tb-phh{margin:6px 0 0;font-size:26px;line-height:1.28;font-weight:800;letter-spacing:-.03em;color:#fff;word-break:keep-all}
+body.lapp #lm section.sub.tb-ph :is(.tb-phh,h1) em{font-style:normal;color:var(--gr300)}
+body.lapp #lm section.sub.tb-ph .in>p:not(.tb-phh):not(.tb-pheb):not(.crumb){margin:6px 0 0;font-size:14px;line-height:1.5;color:#C6F6D5}
+body.lapp #lm .tb-phk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0 0}
+body.lapp #lm .tb-phk span{display:flex;flex-direction:column;gap:4px;min-width:0;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+body.lapp #lm .tb-phk small{font-size:12px;font-weight:700;color:#C6F6D5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.lapp #lm .tb-phk b{font-size:19px;line-height:1.15;font-weight:800;letter-spacing:-.02em;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 히어로 안 탭(공지 「전체 · 내 강좌」 등): 진그린 위 반투명 칩, 선택은 흰 칩 */
+body.lapp #lm section.sub.tb-ph .lctabs{display:flex;gap:6px;margin:14px 0 0;padding:0;border:0;background:none;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+body.lapp #lm section.sub.tb-ph .lctabs :is(a,button){flex:none;min-height:44px;padding:0 16px;border:0;border-radius:999px;background:rgba(255,255,255,.1);color:#EAF7EE;font-size:14px;font-weight:700;box-shadow:none}
+body.lapp #lm section.sub.tb-ph .lctabs :is(a,button).on{background:#fff;color:var(--gr900)}
+html[data-theme="dark"] body.lapp #lm section.sub.tb-ph .lctabs :is(a,button).on{color:#053D1E}
+body.lapp #lm section.sub.tb-ph+.sec,body.lapp #lm section.sub.tb-ph~.sec{padding-top:16px}
+body.lapp #lm .sec>.in>.sh:empty{display:none}
+/* 사진형 히어로(강좌 상세): 강좌 사진 위 아래쪽 진그린 그라데이션 + 제목 · 숫자 3칸 */
+body.lapp #lm section.sub.tb-ph-photo{min-height:300px;display:flex;align-items:flex-end;padding-top:120px;background:var(--gr950)}
+body.lapp #lm .tb-phi{position:absolute;inset:0;z-index:-2;width:100%;height:100%;object-fit:cover}
+body.lapp #lm section.sub.tb-ph-photo::before{inset:0;right:auto;top:auto;width:100%;height:100%;border-radius:0;box-shadow:none;background:linear-gradient(180deg,rgba(3,39,26,.05) 0%,rgba(3,39,26,.55) 45%,rgba(3,39,26,.94) 100%)}
+body.lapp #lm section.sub.tb-ph-photo::after{display:none}
+body.lapp #lm section.sub.tb-ph-photo .in{width:100%}
+body.lapp #lm section.sub.tb-ph-photo h1{font-size:28px}
+body.lapp #lm:has(.tb-ph-photo) .shp-main>.shp-th.big{display:none}
+/* 「나」 프로필 히어로: 이니셜 원 + 이름 + 숫자 3칸(원래 프로필 줄은 숨김) */
+body.lapp .ls-me>section.tb-ph-me{margin:0 0 16px}
+body.lapp #lm .ls-me>section.sub.tb-ph{margin:0 0 16px}
+body.lapp .ls-me:has(.tb-ph-me)>.ls-prof{display:none}
+body.lapp #lm .tb-phm{display:flex;align-items:center;gap:14px}
+body.lapp #lm .tb-phm>span:last-child{display:flex;flex-direction:column;min-width:0}
+body.lapp #lm .tb-pav{flex:none;display:grid;place-items:center;width:60px;height:60px;border-radius:50%;background:var(--gr500);color:#03271A;font-size:20px;font-weight:800;letter-spacing:-.02em;box-shadow:0 0 0 4px rgba(255,255,255,.12)}
+body.lapp #lm .tb-ph-me .tb-phh{margin:2px 0 0;font-size:24px}
+/* 알림함: 앱이 만든 히어로가 제목을 맡으므로 원래 제목 줄은 숨김 */
+body.lapp #lm:has(.tb-ph) .la-ih h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+body.lapp #lm .la-inb{padding-top:12px}
+
+/* ── 카드 목록 문법 통일: 흰 면 · 반경 20 · sh1 · 테두리 없음 · 줄 사이는 머리카락 선 ── */
+body.lapp #lm :is(.shp-list,.lclist,.shp-card2,.mycard,.lcert-l){border:0;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--sh1);overflow:hidden}
+body.lapp #lm .shp-list li{border-bottom:1px solid var(--hair)}
+body.lapp #lm .shp-list li:last-child{border-bottom:0}
+body.lapp #lm :is(.shp-list a,.shp-li,.lcrow){min-height:64px;padding:14px 16px}
+body.lapp #lm .lcrow{display:flex;align-items:center;gap:12px;border:0;border-bottom:1px solid var(--hair);background:none;text-decoration:none;color:var(--g900)}
+body.lapp #lm .lcrow:last-child{border-bottom:0}
+body.lapp #lm .lcrow.unread b{font-weight:800}
+body.lapp #lm .lck{flex:none;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;background:var(--g200);color:var(--g800)}
+body.lapp #lm .lck.q{background:var(--gr50);color:var(--gr800)}
+body.lapp #lm .lcert-li{display:flex;align-items:center;gap:12px;padding:14px 16px;border:0}
+body.lapp #lm .lcert-li .lbtn{min-height:44px;border-radius:12px;white-space:nowrap}
+body.lapp #lm .mini{color:var(--g700)}
+/* 결제 내역(웹 표 py26t): 앱에서는 줄마다 카드 한 칸(항목 · 금액 · 상태) */
+body.lapp #lm .py26t{display:flex;flex-direction:column;border:0;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--sh1);overflow:hidden}
+body.lapp #lm .py26r.py26hd{display:none}
+body.lapp #lm .py26r:not(.py26hd){display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"it am" "dt st";gap:4px 12px;padding:14px 16px;min-height:64px;border:0;border-bottom:1px solid var(--hair);color:var(--g900);text-decoration:none}
+body.lapp #lm .py26r:not(.py26hd):last-child{border-bottom:0}
+body.lapp #lm .py26r>span:nth-child(1),body.lapp #lm .py26r>span:nth-child(5),body.lapp #lm .py26r>.py26d{display:none}
+body.lapp #lm .py26r>span:nth-child(2){grid-area:dt;font-size:13px;color:var(--g700);font-variant-numeric:tabular-nums}
+body.lapp #lm .py26r>span:nth-child(3){grid-area:it;min-width:0}
+body.lapp #lm .py26r>span:nth-child(3) small{display:none}
+body.lapp #lm .py26r>span:nth-child(3) b{display:block;font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.lapp #lm .py26r>span:nth-child(4){grid-area:am;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+body.lapp #lm .py26r>span:nth-child(6){grid-area:st;justify-self:end}
+/* 결제 탭(결제 · 환불 · 구독 · 청구서): 밑줄 탭 48px, 가로 스크롤 */
+body.lapp #lm .shp-tabs{display:flex;gap:0;margin:0 0 12px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--hair)}
+body.lapp #lm .shp-tabs a{flex:none;display:inline-flex;align-items:center;min-height:48px;padding:0 12px;border-bottom:2px solid transparent;color:var(--g700);font-size:15px;font-weight:700;text-decoration:none}
+body.lapp #lm .shp-tabs a.on{color:var(--g900);border-bottom-color:var(--gr600)}
+
+/* ── 둘러보기(#shop · #courses): 2칸 사진 카드(4:3 · 반경 20) · 칩 · 상태 ── */
+body.lapp #lm .shp-filt{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
+body.lapp #lm #shpQ{min-height:48px;border:0;border-radius:14px;background:var(--surface);box-shadow:var(--sh1);padding:0 16px;font-size:15px;color:var(--g900)}
+body.lapp #lm .shp-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
+body.lapp #lm .shp-chips :is(a,button){flex:none;min-height:44px;padding:0 16px;border:0;border-radius:999px;background:var(--surface);box-shadow:var(--sh1);color:var(--g800);font-size:14px;font-weight:700}
+body.lapp #lm .shp-chips :is(a,button).on{background:var(--g900);color:var(--canvas);box-shadow:none}
+body.lapp #lm .shp-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+body.lapp #lm .shp-card{display:flex;flex-direction:column;border:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1);overflow:hidden;color:var(--g900);text-decoration:none}
+body.lapp #lm .shp-card .shp-th{width:100%;aspect-ratio:4/3;max-height:none;border-radius:0;background-size:cover;background-position:center}
+body.lapp #lm .shp-card .shp-th0:not(.shp-thp){background:var(--gr900);color:#D1FADF;font-size:16px}
+body.lapp #lm .shp-cb{padding:12px 12px 14px;gap:4px;flex:1}
+body.lapp #lm .shp-cb h3{margin:2px 0 0;font-size:15px;line-height:1.35;font-weight:800;letter-spacing:-.01em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+body.lapp #lm .shp-cb .mini{display:none}
+body.lapp #lm .shp-tags .tg{font-size:12px;font-weight:800;padding:3px 8px;border-radius:999px;background:var(--gr50);color:var(--gr800);border:0}
+body.lapp #lm .shp-tags .tg.r{background:var(--co50);color:var(--co700)}
+body.lapp #lm .shp-cb .shp-pr{margin-top:auto;padding-top:6px}
+body.lapp #lm .shp-cb .shp-pr b{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+body.lapp #lm .shp-rs{font-size:12px;font-weight:800;color:var(--gr700)}
+body.lapp #lm .shp-rs.off{color:var(--g700)}
+/* 강좌 상세: 정보 카드 · 신청 카드 */
+body.lapp #lm .shp-det{gap:12px}
+body.lapp #lm .shp-side{position:static;border:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh2);padding:18px}
+body.lapp #lm .shp-side .shp-sname{font-size:18px;font-weight:800}
+body.lapp #lm .shp-side .lbtn.pri{min-height:52px;border-radius:var(--r-btn);background:var(--gr600);border-color:transparent;color:#fff;font-weight:800}
+html[data-theme="dark"] body.lapp #lm .shp-side .lbtn.pri{color:#03271A}
+body.lapp #lm .shp-main h2{font-size:18px;font-weight:800;margin:18px 0 8px}
+
+/* ── 빈 목록(emptyUp): 그린 톤 일러스트 + 한 문장 + 주 버튼 1개 ── */
+body.lapp #lm .tb-emp{display:flex;flex-direction:column;align-items:center;gap:10px;margin:0;padding:28px 20px 24px;border:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1);text-align:center;font-size:15px;font-weight:700;color:var(--g900)}
+body.lapp #lm .tb-emp p{margin:0;font-size:15px;font-weight:700;color:var(--g900)}
+body.lapp #lm .tb-emp .tb-ea{margin-bottom:4px}
+body.lapp #lm .tb-emp .tb-pri{margin-top:6px}
+body.lapp #lm .shp-list:has(>li.tb-emp){background:none;box-shadow:none;overflow:visible}
+
+/* ── 아래에서 올라오는 시트(검색 · 기관 바꾸기 · 하루 목표): 손잡이 · 왼쪽 정렬 제목 · 카드 목록 ── */
+body.lapp .ap-sheet{background:rgba(3,20,12,.48);backdrop-filter:blur(2px)}
+body.lapp .ap-sh{position:relative;text-align:left;padding:30px 18px calc(18px + var(--ap-sb,0px));border-radius:28px 28px 0 0;background:var(--canvas);box-shadow:var(--sh3)}
+body.lapp .ap-sh::before{content:"";position:absolute;left:50%;top:10px;width:40px;height:5px;margin-left:-20px;border-radius:99px;background:var(--g300)}
+body.lapp .ap-sh>h2{margin:0;font-size:24px;line-height:1.3;font-weight:800;letter-spacing:-.03em;color:var(--g900)}
+body.lapp .ap-sh>p{margin:4px 0 14px;font-size:14px;line-height:1.5;color:var(--g700)}
+body.lapp .ap-sh .ap-osr{display:flex;align-items:center;gap:10px;min-height:52px;margin:14px 0 6px;padding:0 16px;border:0;border-radius:16px;background:var(--surface);box-shadow:var(--sh1),inset 0 0 0 1.5px var(--gr600);color:var(--g700)}
+body.lapp .ap-sh .ap-osr input{flex:1;min-width:0;border:0;background:none;outline:0;font-size:16px;color:var(--g900)}
+body.lapp .ap-sh .ap-oh{margin:16px 2px 8px;font-size:14px;font-weight:800;color:var(--g700)}
+body.lapp .ap-sh .ap-ol{list-style:none;margin:0;padding:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1);overflow:hidden}
+body.lapp .ap-sh .ap-ol li{display:flex;align-items:center;border-bottom:1px solid var(--hair)}
+body.lapp .ap-sh .ap-ol li:last-child{border-bottom:0}
+body.lapp .ap-sh :is(.ap-orow,.ap-srr){flex:1;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"ty go" "nm go" "sm go";align-items:center;gap:2px 10px;min-height:64px;padding:12px 16px;border:0;border-radius:0;background:none;text-align:left;color:var(--g900);text-decoration:none}
+body.lapp .ap-sh .ap-orow.on{background:var(--gr50);box-shadow:inset 3px 0 0 var(--gr600)}
+body.lapp .ap-sh .ap-oty{grid-area:ty;justify-self:start;font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--gr50);color:var(--gr800)}
+body.lapp .ap-sh .ap-orow.on .ap-oty{background:var(--surface)}
+body.lapp .ap-sh :is(.ap-orow,.ap-srr) b{grid-area:nm;font-size:16px;font-weight:800}
+body.lapp .ap-sh .ap-orow small{grid-area:sm;font-size:13px;color:var(--g700)}
+body.lapp .ap-sh .ap-orow em{grid-area:go;font-style:normal;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;background:var(--gr600);color:#fff}
+html[data-theme="dark"] body.lapp .ap-sh .ap-orow em{color:#03271A}
+body.lapp .ap-sh .ap-orow>svg{grid-area:go;color:var(--g500)}
+body.lapp .ap-sh .ap-oadd{margin:16px 0 0;padding:16px;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh1)}
+body.lapp .ap-sh .ap-oadd label{display:block;margin:0 0 8px;font-size:15px;font-weight:800;color:var(--g900)}
+body.lapp .ap-sh .ap-oadd>div{display:flex;gap:8px}
+body.lapp .ap-sh .ap-oadd input{flex:1;min-width:0;min-height:48px;padding:0 14px;border:0;border-radius:12px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--g300);font-size:15px;color:var(--g900)}
+body.lapp .ap-sh .ap-oadd .ap-go{min-height:48px;min-width:64px;border-radius:12px}
+body.lapp .ap-sh .ap-oadd small{display:block;margin:8px 0 0;font-size:12px;color:var(--g700)}
+body.lapp .ap-sh>nav{margin:16px 0 0}
+body.lapp .ap-sh>nav button{width:100%;min-height:52px;border:0;border-radius:var(--r-btn);background:var(--surface);box-shadow:var(--sh1);font-size:15px;font-weight:800;color:var(--g900)}
+body.lapp .ap-sh .ap-empty{margin:4px 0 0;font-size:14px;color:var(--g700)}
+body.lapp .ap-sh .ap-fc{display:flex;flex-wrap:wrap;gap:6px}
+body.lapp .ap-sh .tb-srs{display:flex;flex-wrap:wrap;gap:6px}
+body.lapp .ap-sh .tb-srs button{min-height:44px;padding:0 14px;border:0;border-radius:999px;background:var(--surface);box-shadow:var(--sh1);font-size:14px;font-weight:700;color:var(--g800)}
+body.lapp .ap-sh .tb-srs button svg{color:var(--gr700);margin-right:4px;vertical-align:-2px}
+/* Q3 보정: 챕터 칩 44px · 선택은 그린 바탕(▶ 글자 대신) · 결제/상세 탭 바탕 없음 · 히어로 숫자 칸 좁은 폭 · 시트 제목 왼쪽 · 빈 상태 속 원래 아이콘 숨김 · 질문 버튼 */
+body.lapp .tbw-c{min-height:44px;border-radius:999px;padding:0 14px}
+body.lapp .tbw-c.on{background:var(--gr500);color:#03271A;font-weight:800}
+body.lapp #lm .shp-tabs{background:none;box-shadow:none;border-radius:0;padding:0;gap:0;width:auto}
+body.lapp #lm .tb-phk b{font-size:clamp(15px,4.6vw,19px)}
+body.lapp #lm .tb-phk span{padding:10px 10px}
+body.lapp .ap-sh>h2,body.lapp .ap-sh>p{text-align:left}
+body.lapp #lm .tb-emp>svg:not(.tb-ea),body.lapp #lm .tb-emp p>svg{display:none}
+body.lapp #lm section.sub.tb-ph .lctabs>:not(a):not(button){display:none}
+body.lapp #lm .lcaskb{margin:0 0 12px}
+body.lapp #lm .lcaskb .lbtn{display:flex;justify-content:center;align-items:center;width:100%;min-height:52px;border:0;border-radius:var(--r-btn);background:var(--surface);box-shadow:var(--sh1);color:var(--gr800);font-size:15px;font-weight:800}
+body.lapp #lm .n26bar input{min-height:48px;border:0;border-radius:14px;background:var(--surface);box-shadow:var(--sh1);padding:0 16px;font-size:15px}
+body.lapp #lm .la-ib{padding:0 4px;color:var(--g700)}
+/* Q3 재생 화면: 영상 없음 · 준비 중 상자 = 강좌 사진 포스터 + 짙은 그린 막 + 가운데 재생 원 */
+body.lapp #lm .novid{position:relative;background:linear-gradient(180deg,rgba(3,39,26,.35),rgba(3,39,26,.82)),var(--tb-poster,none) center/cover no-repeat,#0B3A1E;color:#fff}
+body.lapp #lm .novid svg{color:#fff}
+body.lapp .ap-bar .ls-i{position:relative}
+body.lapp .ap-bar .ls-i::after{content:"";position:absolute;inset:-8px}
+body.lapp #lm .lcaskb .lbtn.pri,body.lapp #lm .lcaskb a.lbtn{background:var(--surface);color:var(--gr800);border:0;box-shadow:var(--sh1)}
+body.lapp #lm .tb-emp .tb-pri{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 22px;border-radius:var(--r-btn);background:var(--gr700);color:#fff;font-size:15px;font-weight:800;text-decoration:none}
+html[data-theme="dark"] body.lapp #lm .tb-emp .tb-pri{background:var(--gr500);color:#04140A}
+html body.lapp #lm .lcaskb :is(.lbtn.pri,a.lbtn){background:var(--surface)!important;color:var(--gr800)!important;border-color:transparent!important;box-shadow:var(--sh1)!important}
+/* Q3 앱 홈: 이어 보기 재생 원 = 시안처럼 짙은 그린 + 연한 테두리(형광 그린 단색 → 그린 700) */
+body.lapp .tb-cont .tb-pl{width:52px;height:52px;background:var(--gr700);color:#fff;box-shadow:0 0 0 5px var(--gr50),0 8px 18px rgba(0,122,41,.25)}
+html[data-theme="dark"] body.lapp .tb-cont .tb-pl{color:#04140A;box-shadow:0 0 0 5px rgba(46,224,106,.14)}
+/* ───── v43 D-D 앱 화면(111 방문자 · 112 선생님 고르기 · 115 보호자 홈) — 화면 범위 클래스(ap-ghero · dd-*)만 ───── */
+body.lapp .ap-ghero{position:relative;margin:4px 12px 14px;padding:22px 20px 22px;border-radius:28px;overflow:hidden;text-align:left;color:#fff;min-height:330px;display:flex;flex-direction:column;justify-content:flex-end;background:#053D1E var(--ph,none) center/cover no-repeat;box-shadow:0 18px 40px -22px rgba(5,61,30,.6)}
+body.lapp .ap-ghero::before{content:'';position:absolute;inset:0;background:radial-gradient(100% 70% at 100% 0%,rgba(46,224,106,.25),transparent 60%),linear-gradient(180deg,rgba(4,30,14,.12) 0%,rgba(4,30,14,.62) 42%,rgba(4,26,12,.94) 100%)}
+body.lapp .ap-ghero>*{position:relative;z-index:1}
+body.lapp .ap-ghero .ap-org,body.lapp .ap-ghero>button:first-child,body.lapp .ap-ghero>a:first-child{position:absolute;top:16px;left:16px;background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.22);backdrop-filter:blur(8px)}
+body.lapp .ap-ghero .ap-gey{margin:0 0 8px;font:700 13px/1.4 var(--sg);color:#B9F5CB;display:flex;align-items:center;gap:6px}
+body.lapp .ap-ghero h1{margin:0 0 10px;color:#fff;font:800 27px/1.28 var(--sg);letter-spacing:-.025em;text-align:left}
+body.lapp .ap-ghero .ap-gsub{margin:0 0 16px;color:rgba(255,255,255,.86);font:500 14px/1.55 var(--sg)}
+body.lapp .ap-gben{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+body.lapp .ap-gben li{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border-radius:99px;background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);font:600 13px/1 var(--sg);color:#fff}
+body.lapp .ap-home.guest .ap-chips{flex-wrap:wrap;overflow:visible}
+body.lapp .ap-home.guest .ap-join{margin-left:12px;margin-right:12px;border-radius:24px}
+body.lapp .dd-pchar{display:inline-grid;place-items:center;width:132px;height:132px;margin:0 auto 6px;filter:drop-shadow(0 10px 20px rgba(5,61,30,.18))}
+body.lapp .dd-pprev{display:flex;gap:10px;align-items:flex-start;margin:4px 0 14px;padding:12px 14px;border-radius:18px;background:var(--gr50,#EEF9F1)}
+body.lapp .dd-pprev p{margin:0;font:500 14px/1.5 var(--sg);color:var(--ap-ink)}.dd-pprev b{display:block;font-weight:800;color:var(--gr800,#066B2A);margin-bottom:2px}
+body.lapp .ap-pc.on{box-shadow:0 0 0 2px var(--gr600,#00862D),var(--sh1);background:var(--gr50,#EEF9F1)}
+body.lapp .dd-phero{text-align:left;margin:4px 12px 12px;padding:20px;border-radius:28px;background:radial-gradient(120% 90% at 100% 0%,rgba(46,224,106,.24),transparent 55%),linear-gradient(160deg,#0B5A2A,#053D1E);color:#fff;box-shadow:0 18px 40px -24px rgba(5,61,30,.6)}
+body.lapp .dd-phero h1{color:#fff;text-align:left;margin:12px 0 14px;font-size:25px}
+body.lapp .dd-phero .ap-org{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.2)}
+body.lapp .dd-phero .ap-sub{color:rgba(255,255,255,.86);margin:0}
+body.lapp .dd-psum p{margin:0 0 8px;font:700 13px/1.3 var(--sg);color:#B9F5CB}
+body.lapp .dd-psum>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+body.lapp .dd-psum span{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);font:600 12px/1.3 var(--sg);color:rgba(255,255,255,.86)}
+body.lapp .dd-psum b{font:800 22px/1.1 var(--sg);color:#fff;font-variant-numeric:tabular-nums}.dd-psum b small{font-size:13px;margin-left:1px}
+body.lapp .dd-kid{border:0;background:var(--surface);box-shadow:var(--sh1);border-radius:20px}
+body.lapp .dd-kav{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--kc);color:#fff;font:800 17px/1 var(--sg)}
+body.lapp .dd-kst{display:flex;gap:6px;margin-top:6px}.dd-kst em{font:700 12px/1 var(--sg);font-style:normal;padding:6px 8px;border-radius:99px;background:var(--gr50,#EEF9F1);color:var(--gr800,#066B2A)}
+html[data-theme="dark"] body.lapp .dd-pprev{background:#13231B}html[data-theme="dark"] body.lapp .dd-kst em{background:rgba(46,224,106,.12);color:#9EF0B8}
+html[data-theme="dark"] body.lapp .ap-pc.on{background:#13231B}
+body.lapp .ap-ghero{justify-content:flex-start}
+body.lapp .ap-ghero .ap-org{position:static;align-self:flex-start;margin:0 0 auto;padding-bottom:0}
+body.lapp .ap-ghero .ap-gey{margin-top:96px}
+body.lapp #lm .llh-d{color:rgba(255,255,255,.84)}
+body.lapp :is(.tb-ib i,.ap-bd){background:#C4251B;color:#fff}
+body.lapp .la-nx{min-width:44px;min-height:44px;display:inline-grid;place-items:center;border-radius:12px}
+/* D-D: 앱 하위 화면 짙은 머리의 주 버튼(갈색 · 검정 → 밝은 그린, 117 결함) */
+html body.lapp #lm .lph-cta,html[data-theme] body.lapp #lm .lph-cta,html[data-theme] body.lapp #lm a.lbtn.pri.lph-cta{background:#00C53B!important;color:#04140A!important;border-color:transparent!important;font-weight:800}
+html body.lapp #lapp [class*="ap-o"] em,html body.lapp [class*="ap-o"] em{color:#fff!important;background:var(--gr700,#00752A)!important}
+/* v43 R5 — 116 검색 시트: 추천 검색어 + 사진 결과 */
+.ap-srp{list-style:none;margin:4px 0 8px;padding:0;display:flex;flex-direction:column;gap:8px}
+.ap-srp a{display:flex;align-items:center;gap:12px;padding:8px;border-radius:16px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--line,rgba(0,0,0,.06));color:inherit;text-decoration:none;min-height:64px}
+.ap-srpi{position:relative;flex:none;width:72px;height:52px;border-radius:12px;background:var(--gr100,#D3F2DC) center/cover no-repeat}
+.ap-srpi em{position:absolute;left:6px;top:6px;width:20px;height:20px;border-radius:7px;display:grid;place-items:center;background:rgba(4,16,10,.72);color:#fff;font-style:normal;font-size:11px;font-weight:800}
+.ap-srpt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.ap-srpt b{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ap-srpt small{font-size:12.5px;color:var(--mute,#6B6F6C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-srp a>svg{color:var(--mute,#6B6F6C);flex:none}
+html[data-theme=dark] .ap-srp a{background:#1C1F1E;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+/* v43 R5 — 112 선생님 이름: 기본 입력칸 → 캐릭터 · 편집 아이콘이 있는 DDS 입력 */
+body.lapp .ap-nm43{gap:8px;font:700 14px/20px var(--sg)}
+body.lapp .ap-nm43 .ap-nml small{font-weight:500;font-size:12px;color:var(--mute,#6B6F6C);margin-left:6px}
+body.lapp .ap-nmw{position:relative;display:flex;align-items:center;gap:10px;height:56px;padding:0 14px 0 8px;border-radius:16px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--pc,#00862D) 40%,var(--line,#E4E4EA));transition:box-shadow .15s}
+body.lapp .ap-nmw:focus-within{box-shadow:inset 0 0 0 2px var(--pc,#00862D),0 0 0 4px color-mix(in srgb,var(--pc,#00862D) 14%,transparent)}
+body.lapp .ap-nmi{flex:none;width:40px;height:40px;border-radius:12px;overflow:hidden;display:grid;place-items:center;background:color-mix(in srgb,var(--pc,#00862D) 12%,#fff)}
+body.lapp .ap-nmi>*{transform:scale(.8)}
+body.lapp .ap-nm43 input{flex:1;min-width:0;height:100%!important;border:0!important;border-radius:0!important;padding:0!important;background:transparent!important;font:700 17px/1 var(--sg)!important;box-shadow:none!important}
+body.lapp .ap-nme{flex:none;color:var(--mute,#6B6F6C)}
+html[data-theme=dark] body.lapp .ap-nmw{background:#1C1F1E}
+/* v43 R5 — 117 앱 강좌 탭: 트랙 카드 단추를 그린 주 단추로 */
+body.lapp .track .lbtn{background:var(--gr600,#00862D)!important;border-color:var(--gr600,#00862D)!important;color:#fff!important}
+
+/* ═════════ v43 G3 전역(3차) ═════════ */
+/* ⑤ 고정 탭 바 + 떠 있는 「AX 튜터」 단추가 본문 끝(이어 보기 · 바로 가기 둘째 줄 · 목록 마지막 행)을 가리지 않게 — 아래 여백 = 탭 바 + 튜터 단추(약 60px) + 여유 */
+body.lapp:not(.ap-homeon):not(.ap-pickon):not(.tb-watch) #lm{padding-bottom:calc(var(--ap-nav,64px) + var(--ap-sb,0px) + 96px)}
+body.lapp .ap-par .ap-pscroll{padding-bottom:calc(var(--ap-nav,64px) + 96px + env(safe-area-inset-bottom))}
+/* ⑥ 「…」 잘림 없애기: 캘린더 한 줄 요약 · 강좌 카드 부가 정보는 두 줄까지 줄바꿈, 빠른 칩 줄은 줄바꿈해 모두 보이게 */
+body.lapp #lm :is(.lq-hc small,.tb-row small,.tb-cx small,.tb-tx small,.tba-tx small,.ap-cm small,.ap-grc small,.ap-srpt small){white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:keep-all}
+body.lapp #lm .tb-chips{flex-wrap:wrap;overflow:visible;margin-right:0;padding-right:0}
+/* v43 F4(K4 114) 앱 「내 강의」: 그린 요약 카드 머리 · 그린 선택 칩 · 계정 탭은 「나」로 · 기록은 2열 타일 · 떠 있는 튜터 단추가 목록을 가리지 않게 */
+body.lapp.ap-myon .ap-myhero{display:block;margin:0 0 16px;padding:18px;border:0;border-radius:24px;background:radial-gradient(120% 90% at 100% 0%,rgba(46,224,106,.24),transparent 55%),linear-gradient(160deg,#0B5A2A,#053D1E);color:#fff;box-shadow:0 18px 40px -24px rgba(5,61,30,.6)}
+body.lapp.ap-myon .ap-myhh{display:flex;gap:12px;align-items:flex-start}
+body.lapp.ap-myon .ap-myhh>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+body.lapp.ap-myon .ap-myhh small{font:700 12.5px/1.3 var(--sg);color:#B9F5CB}
+body.lapp.ap-myon .ap-myhh b{font:800 19px/1.35 var(--sg);color:#fff;word-break:keep-all}
+body.lapp.ap-myon .ap-myhh em{font:600 13px/1.4 var(--sg);font-style:normal;color:rgba(255,255,255,.82)}
+body.lapp.ap-myon .ap-myhero .ap-av{background:rgba(255,255,255,.16);color:#fff}
+body.lapp.ap-myon .ap-myst{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;margin:14px 0 0}
+body.lapp.ap-myon .ap-myst span{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);font:600 12px/1.3 var(--sg);color:rgba(255,255,255,.86)}
+body.lapp.ap-myon .ap-myst b{font:800 20px/1.2 var(--sg);color:#fff}
+body.lapp.ap-myon .ap-mygo{display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;margin-top:14px;border-radius:14px;background:#fff;color:#053D1E;font:800 15px/1 var(--sg);text-decoration:none}
+body.lapp.ap-myon .ap-fch.on{background:var(--gr700,#00862D);color:#fff;border-color:transparent}
+body.lapp.ap-myon .ap-cc i{background:var(--gr50);color:var(--gr700,#00862D)}
+body.lapp.ap-myon .tb-fab{width:52px;height:52px;right:10px}body.lapp.ap-myon .tb-fab span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)} /* AI 튜터는 상시 유지(대표님 11-13) — 내 강의에서는 작은 원으로 줄여 목록을 덜 가린다 */
+body.lapp.ap-myon #lm .mypage .mygrid>.ls-fold:not(.ls-open) .ls-tx b{white-space:normal;overflow:visible;text-overflow:clip;word-break:keep-all}
+body.lapp.ap-myon #lm .mypage .lux-tabs{display:none}
+body.lapp.ap-myon #lm .mypage{padding-top:8px}
+body.lapp.ap-myon #lm .mypage .mygrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+body.lapp.ap-myon #lm .mypage .mygrid>:is(.ls-open,:not(.ls-fold)){grid-column:1/-1}
+body.lapp.ap-myon #lm .mypage .mygrid>.ls-fold:not(.ls-open){grid-column:auto}
+body.lapp.ap-myon #lm .mypage .mygrid>.ls-fold:not(.ls-open){border-radius:16px;background:var(--surface,#fff);border:1px solid var(--ap-line,#EAEBEB);box-shadow:none}
+body.lapp.ap-myon #lm .mypage .mygrid>.ls-fold:not(.ls-open)>.ls-fh{min-height:72px;align-items:flex-end;padding:12px 14px;font-weight:700;word-break:keep-all}
+body.lapp.ap-myon #lm .mypage .nextc .nx.big{background:var(--gr50);color:var(--d-g900,#1A1814);box-shadow:inset 0 0 0 1px var(--gr100)}
+body.lapp.ap-myon #lm .mypage .nextc .nx.big :is(small,.nxt small){color:var(--gr700,#00862D)}
+body.lapp.ap-myon #lm .mypage .nextc .nx.big .lbtn{background:var(--gr700,#00862D);color:#fff;border-color:transparent}
+/* v43 H1(M1 114) 앱 「내 강의」 — ① AX 튜터 단추는 상시 노출(대표님) · 탭 바를 왼쪽으로 줄여 단추를 탭 바 오른쪽 옆에 둔다 → 목록 재생 단추 위에 떠 있지 않음 ② 기록 묶음은 아이콘 · 숫자 카드 4개 + 「기록 더 보기」 ③ 「지금 할 일」은 머리 요약과 중복이라 감춤 */
+@media (max-width:899px){
+  body.lapp.ap-myon:not(.tb-watch):not(.lt-on):not(.tb-sheet) .ap-nav{right:76px!important}
+  body.lapp.ap-myon:not(.tb-watch) #tbFab.tb-fab{right:12px;bottom:calc(16px + var(--ap-sb,0px));width:56px;height:56px;border-radius:20px}
+}
+body.lapp.ap-myon #lm .mypage .mygrid>.ap-mydup,body.lapp.ap-myon #lm .ap-myx{display:none!important}
+body.lapp.ap-myon #lm .mypage .mygrid>.ap-mytile:not(.ls-open)>.ls-fh{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 1fr;align-items:start;gap:10px 6px;min-height:112px;padding:14px}
+body.lapp.ap-myon #lm .ap-mytile:not(.ls-open)>.ls-fh .ap-mti{grid-column:1;grid-row:1;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--gr50,#EAF7EE);color:var(--gr700,#00862D)}
+body.lapp.ap-myon #lm .ap-mytile:not(.ls-open)>.ls-fh .ls-go{grid-column:2;grid-row:1;color:var(--ap-mute,#5C554B)}
+body.lapp.ap-myon #lm .ap-mytile:not(.ls-open)>.ls-fh .ls-tx{grid-column:1/-1;grid-row:2;align-self:end;display:flex;flex-direction:column;gap:3px;min-width:0}
+body.lapp.ap-myon #lm .ap-mytile:not(.ls-open)>.ls-fh .ls-tx b{font:800 15px/1.3 var(--sg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.lapp.ap-myon #lm .ap-mytile:not(.ls-open)>.ls-fh .ls-tx small{display:block;font:700 13px/1.35 var(--sg);color:var(--gr700,#00862D);white-space:normal;word-break:keep-all}
+body.lapp.ap-myon #lm .ap-mytile.ls-open>.ls-fh .ap-mti{display:none}
+body.lapp.ap-myon #lm .ap-mymore{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:56px;margin:10px 0 0;padding:12px 16px;border:1px dashed var(--ap-line,#E7E2D9);border-radius:16px;background:transparent;font:inherit;text-align:left;color:var(--ap-ink,#1A1814);cursor:pointer}
+body.lapp.ap-myon #lm .ap-mymore span{font:700 14.5px/1.3 var(--sg)}
+body.lapp.ap-myon #lm .ap-mymore i{font-style:normal;margin-left:4px;padding:1px 7px;border-radius:99px;background:var(--gr50,#EAF7EE);color:var(--gr700,#00862D);font-size:12px}
+body.lapp.ap-myon #lm .ap-mymore small{font:500 12.5px/1.3 var(--sg);color:var(--ap-mute,#5C554B);text-align:right}
+body.lapp.ap-myon #lm .ap-mymore:focus-visible{outline:2px solid var(--gr700,#00862D);outline-offset:2px}
+html[data-theme=dark] body.lapp.ap-myon #lm .ap-mytile .ap-mti{background:#123222;color:#7EE2A0}

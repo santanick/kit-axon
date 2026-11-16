@@ -6,7 +6,7 @@ body.lapp .ls-prof{display:flex;align-items:center;gap:14px;padding:6px 4px 14px
 body.lapp .ls-av{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:var(--d-p50);color:var(--d-p800);font:700 20px/1 var(--sg)}
 body.lapp .ls-prof b{display:block;font:700 18px/26px var(--sg);color:var(--d-g900)}
 body.lapp .ls-prof small{color:var(--d-g600);font-size:14px}
-body.lapp .ls-list{display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 0 0 1px var(--ap-line);overflow:hidden}
+body.lapp .ls-list{display:flex;flex-direction:column;background:var(--surface,#fff);border-radius:16px;box-shadow:0 0 0 1px var(--ap-line);overflow:hidden}
 body.lapp .ls-row{display:flex;align-items:center;gap:14px;min-height:64px;padding:10px 14px;border:0;background:none;font:inherit;text-align:left;color:var(--d-g900);text-decoration:none;width:100%;cursor:pointer}
 body.lapp .ls-row+.ls-row{border-top:1px solid var(--ap-line)}
 body.lapp .ls-row:active,body.lapp .ls-row:hover{background:var(--d-g50)}
@@ -31,7 +31,7 @@ body.lapp .ls-fh:focus-visible,body.lapp .ls-row:focus-visible{outline:2px solid
 body.lapp .mygrid:has(.ls-fold){gap:8px}
 /* 머리 ⓘ */
 body.lapp .ap-bar.ls-hasi .ap-tt{flex:0 1 auto}
-body.lapp .ls-i{flex:none;width:28px;height:28px;margin:0 auto 0 2px;border-radius:50%;border:1px solid var(--d-g300);background:#fff;color:var(--d-g700);font:700 13px/1 serif;font-style:italic;display:grid;place-items:center;cursor:pointer;position:relative}
+body.lapp .ls-i{flex:none;width:28px;height:28px;margin:0 auto 0 2px;border-radius:50%;border:1px solid var(--d-g300);background:var(--surface,#fff);color:var(--d-g700);font:700 13px/1 serif;font-style:italic;display:grid;place-items:center;cursor:pointer;position:relative}
 body.lapp .ls-i::after{content:'';position:absolute;inset:-8px}
 body.lapp .ls-pop{position:fixed;left:12px;right:12px;z-index:60;background:var(--d-g900);color:#fff;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.55;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 body.lapp .ls-pop p{margin:0}
@@ -40,7 +40,7 @@ body.lapp .ls-pop p+p{margin-top:6px}
 body.lapp .ls-more{position:relative;margin-left:auto}
 body.lapp .ls-more>summary{list-style:none;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;cursor:pointer;color:var(--d-g700)}
 body.lapp .ls-more>summary::-webkit-details-marker{display:none}
-body.lapp .ls-mp{position:absolute;right:0;top:calc(100% + 4px);background:#fff;border-radius:12px;box-shadow:0 0 0 1px var(--ap-line),0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:20;min-width:170px}
+body.lapp .ls-mp{position:absolute;right:0;top:calc(100% + 4px);background:var(--surface,#fff);border-radius:12px;box-shadow:0 0 0 1px var(--ap-line),0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:20;min-width:170px}
 body.lapp .ls-mp .lbtn{justify-content:flex-start;border:0;min-height:44px}
 body.lapp section.sub:has(.crumb[data-ls-hide]){padding-top:8px!important;padding-bottom:0!important}
 body.lapp section.sub:has(.crumb[data-ls-hide]) .in{padding-top:0!important;padding-bottom:0!important;min-height:0!important}

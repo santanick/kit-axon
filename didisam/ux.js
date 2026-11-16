@@ -19,7 +19,7 @@ WS.home.label = '홈'; WS.home.icon = 'home'; WS.home.desc = '오늘 할 일과 
 WS.dash.desc = '목표 대비 성과 · 단계별 참여 · 추이';
 WS.learn.label = () => t('cls');
 WS.web = { label: '사이트', icon: 'globe', desc: '' };
-WS.ops.label = () => (uxOn('sales') || uxOn('billing')) ? '매출 · 운영' : '운영';
+WS.ops.label = () => '운영'; /* v43: 돈 메뉴(수납 · 매출)는 운영 공간 안 탭 — 레일 이름이 「매출 · …」로 잘리던 것 */
 WS.ops.icon = 'grid';
 MENU.site.ws = 'web';
 /* 쉬운 메뉴 이름(뜻은 그대로) */
@@ -157,6 +157,13 @@ function uxTop() {
     ['#langSel', '#roleSel'].forEach(sel => { const el = top.querySelector('.topr > ' + sel); if (el) { const l = document.createElement('label'); l.textContent = sel === '#langSel' ? '화면 언어' : '권한별 화면'; l.appendChild(el); box.appendChild(l); } });
   }
   const r = top.querySelector('.topr'); if (r && !r.querySelector('[data-act=ux-find]')) r.insertAdjacentHTML('afterbegin', `<button type="button" class="uxfind" data-act="ux-find" title="메뉴 찾기 (Ctrl+/)" aria-label="메뉴 찾기">${ic('search', 18)}<span>메뉴 찾기</span></button>`);
+  /* v43 G2: 새 기관의 임시 홈페이지 주소 — 머리 줄 안 작은 안내(본문을 가리지 않음, 닫거나 주소를 바꾸면 사라짐) */
+  { const old = top.querySelector('.g2-dom'); const on = UI.tmpDom && S && S.org && S.org.domain === UI.tmpDom && !(typeof scn === 'function' && scn() === 'teacher');
+    if (!on && old) old.remove();
+    if (on && !old) { const br = top.querySelector('.brand'); if (br) { /* v43 G2 2차: 임시 주소 · 시작 가이드 띠 → 머리 줄 작은 칩 1개(누르면 펼침) */
+      const bp = top.querySelector('.bprog'); const bpOn = bp && !bp.hidden; const pr = bpOn ? ((bp.querySelector('b') || {}).textContent || '') : ''; const op = !!UI.g2pop;
+      br.insertAdjacentHTML('afterend', `<div class="g2-dom${op ? ' open' : ''}"><button type="button" class="g2-domchip" aria-expanded="${op}" aria-controls="g2DomPop" title="임시 홈페이지 주소${pr ? ' · 시작 가이드 ' + esc(pr) : ''}">${ic('globe', 15)}<span>임시 주소${pr ? ` · 시작 <b>${esc(pr)}</b>` : ''}</span></button><div class="g2-dompop" id="g2DomPop" role="group" aria-label="홈페이지 주소 안내"${op ? '' : ' hidden'}><p>홈페이지 주소를 임시로 <b>${esc(UI.tmpDom)}</b>로 정했습니다. 영문 주소로 바꾸면 학습자에게 안내하기 쉽습니다.</p><div class="g2-dpa"><button type="button" class="g2-domgo" data-act="go" data-v="site">영문 주소로 바꾸기</button><button type="button" class="g2-domx" data-act="g2-domx">안내 닫기</button></div></div></div>`);
+      if (bpOn) { const pop = top.querySelector('.g2-dompop'); if (pop) { bp.classList.add('g2-inpop'); pop.insertBefore(bp, pop.querySelector('.g2-dpa')); } } } } }
   const gp = document.querySelector('.hmeta [data-act=guides]'); if (gp && !gp.dataset.ux) { gp.dataset.ux = 1; gp.innerHTML = `${ic('book', 14)} 도움말`; }
   const seg = document.querySelector('.bmseg'); if (seg) { const pv = seg.querySelector('[data-v=pv]'); if (pv && pv.firstChild && pv.firstChild.nodeType === 3) pv.firstChild.nodeValue = '화면'; }
 }
@@ -238,3 +245,7 @@ document.addEventListener('toggle', e => { const d = e.target; if (!(d instanceo
   const w = Math.max(200, pop.offsetWidth); let left = Math.min(r.left, innerWidth - w - 8); left = Math.max(8, left); pop.style.left = left + 'px';
   const h = pop.offsetHeight; const below = r.bottom + 6; pop.style.top = (below + h > innerHeight - 8 && r.top - h - 6 > 8 ? r.top - h - 6 : below) + 'px'; pop.style.maxHeight = (innerHeight - 24) + 'px'; pop.style.overflow = 'auto'; }, true);
 ['scroll', 'resize'].forEach(ev => addEventListener(ev, e => { if (e.type === 'scroll' && e.target && e.target.closest && e.target.closest('.uxpop')) return; document.querySelectorAll('details.uxmore[open]').forEach(d => d.removeAttribute('open')); }, true));
+ACT['g2-domx'] = () => { UI.tmpDom = ''; UI.g2pop = false; try { render(); } catch (e) { document.querySelectorAll('.g2-dom').forEach(x => x.remove()); } };
+/* v43 G2 2차: 임시 주소 칩 펼치기 · 바깥 누르면 접기(data-act 없이) */
+document.addEventListener('click', e => { const c = e.target.closest && e.target.closest('.g2-domchip'); const w = document.querySelector('.g2-dom'); if (!w) return; if (c) { UI.g2pop = !UI.g2pop; } else if (!e.target.closest('.g2-dom') && UI.g2pop) { UI.g2pop = false; } else return; w.classList.toggle('open', !!UI.g2pop); c ? c.setAttribute('aria-expanded', !!UI.g2pop) : w.querySelector('.g2-domchip').setAttribute('aria-expanded', 'false'); const p = w.querySelector('.g2-dompop'); if (p) p.hidden = !UI.g2pop; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && UI.g2pop) { UI.g2pop = false; const w = document.querySelector('.g2-dom'); if (w) { w.classList.remove('open'); const p = w.querySelector('.g2-dompop'); if (p) p.hidden = true; } } });

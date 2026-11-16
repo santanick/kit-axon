@@ -164,8 +164,11 @@ ACT['tq-send'] = el => { const x = tqEnsure().find(y => y.id === (el.dataset.v |
 
 /* ── 로그인으로 역할 전환(데모): 계정 메뉴 · 역할별 로그인 화면 ── */
 function lxDemo() {
-  const L = tCls(); const c = L[0] || S.classes[0]; if (!c) return null; S.codes = S.codes || [];
+  const L = tCls(); const c = L[0] || S.classes[0]; S.codes = S.codes || [];
   let code = S.codes.find(x => x.demo); if (code) return code;
+  /* v43 R4(109): 학사 LMS 샘플은 강의(S.classes) 대신 학사 명단(lms/a.js)에 체험 학번 20269000이 정규 수강으로 있다 → 그 학번으로 체험 코드 발급 */
+  if (!c) { try { const A = typeof lmsaEns === 'function' && S.org && S.org.ed === 'lms' && !S.org.empty ? lmsaEns() : null; const p = A && (A.persons || []).find(x => x.member_no === '20269000');
+    if (!p) return null; code = { sid: p.member_no, dept: ((A.units || []).find(u => u.unit_code === p.unit_code) || {}).name || '', code: 'DEMO' + String(Math.floor(1000 + Math.random() * 8999)), at: today(), demo: true }; S.codes.push(code); logAudit('체험 학습자 접근코드 발급(데모)'); save(); return code; } catch (e) { return null; } }
   const id = c.learners.find(i => c.prog[i] && c.prog[i].p >= 25 && c.prog[i].p <= 70) || c.learners[0]; const m = M(id); if (!m) return null;
   const sid = m.sid || (m.extra || {}).학번 || ('2026' + String(9000 + S.codes.length)); m.sid = sid; m.extra = { ...(m.extra || {}), 학번: (m.extra || {}).학번 || sid };
   const g = c.prog[id]; g.assign = 'returned'; g.score = 62; g.fb = `요구사항 2번(활용 사례 비교)이 빠졌습니다. 사례 2개를 표로 비교하고, 내 ${S.org.type === 'univ' ? '전공' : ['corp', 'public'].includes(S.org.type) ? '직무' : '실무'}에 적용할 점을 한 줄 덧붙여 다시 제출하세요.`;

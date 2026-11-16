@@ -154,3 +154,59 @@
 @media (max-width:900px){.mil-g21,.mil-g2,.mil-g3{grid-template-columns:minmax(0,1fr)}.mil-steps{grid-template-columns:repeat(5,minmax(0,1fr))}.mil-steps li div{display:none}.mil-steps li{justify-content:center}.mil-steps li.on div{display:block}.mil-steps li.on{grid-column:span 1}}
 @media (max-width:600px){.mil-g4,.mil-sim,.mil-lv{grid-template-columns:minmax(0,1fr)}.mil-hero{padding:18px;gap:14px}.mil-hb{grid-template-columns:minmax(0,1fr);gap:4px}.mil-hb .v{text-align:left}.mil-set{grid-template-columns:minmax(0,1fr)}
   .mil-steps li.on div{display:none}.mil-tabs{width:100%}.mil-tabs button{flex:1 1 auto;justify-content:center}.mil-acts .btn{flex:1 1 auto}.mil-phone{border-width:4px}.mil h2{font-size:19px}}
+/* ───────── v43 마일리지 정책(최종 시안 2판) — 토큰으로 다시 지정(다크 모드), 파랑 정보 · 보라 AI는 그린 ───────── */
+.mil{--g:var(--gr500);--g-act:var(--pr);--gd:var(--t-mag);--gl:var(--gr50);--gm:var(--gr200);--wait:var(--co700);--waitbg:var(--co50);--waitln:var(--co500);--bad:var(--t-bad);--badbg:var(--badl);--info:var(--t-mag);--infobg:var(--gr50);--infoln:var(--gr200);--lock:var(--n700);--lockbg:var(--n100);--lockln:var(--n300);--vio:var(--t-mag);--viobg:var(--gr50);--track:var(--c-track);--l2:var(--g300);color:var(--g900)}
+.mil .btn.pri,#modal .mf .btn.pri{background:var(--pr);color:var(--on-pr)}
+.mil .mut,.mil small{color:var(--t-sub)}
+.mil .card,.mil-kpi{border:0;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh2)}
+.mil-kpi{padding:16px 18px;gap:4px}.mil-kpi .k{color:var(--t-sub);font-weight:700}.mil-kpi .k svg{color:var(--t-mag)}.mil-kpi .s{color:var(--t-sub)}
+.mil-kpi .v{font-size:28px;letter-spacing:-.035em}
+.mil-kpi .v4-ksp{height:34px;margin:2px -2px 0}
+.mil43-h{margin:0}
+.mil43-dn .v4-dw{margin:6px 0 2px}
+.mil-tabs button.on{border-bottom-color:var(--pr)}
+/* v43 D-E — 마일리지 켜기 마법사: 사진형 머리 · 16/14 위계 · 단계 띠 · 요약 카드 */
+#main .mil-wiz .l43-brief.mil-b43{margin:4px 0 16px}
+#main .mil-wiz .mil-steps{gap:10px;margin-bottom:16px}
+#main .mil-wiz .mil-steps li{padding:12px 14px;border-radius:14px;font-size:14px;min-height:56px;box-shadow:0 1px 2px rgba(16,24,20,.04)}
+#main .mil-wiz .mil-steps li .n{width:28px;height:28px;border-radius:14px;font-size:13px}
+#main .mil-wiz .mil-steps li small{display:block;font-size:12px;font-weight:600;color:var(--t-sub,#5B6660)}
+#main .mil-wiz .mil-steps li.on{background:var(--gr50,#EFFBF2)}
+#main .mil-wiz .mil-g21{grid-template-columns:minmax(0,1fr) 340px;gap:20px}
+#main .mil-wiz .card{border-radius:20px;padding:24px}
+#main .mil-wiz .card h3{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:4px 0 0}
+#main .mil-wiz .card h4{font-size:17px;font-weight:700;margin:0}
+#main .mil-wiz .eyebrow{font-size:13px;font-weight:700;color:var(--gr700,#0B7A33)}
+#main .mil-wiz .mil-opt{padding:18px 20px;border-radius:16px;gap:14px;min-height:96px}
+#main .mil-wiz .mil-opt .t{font-size:16px;gap:10px}
+#main .mil-wiz .mil-opt .d{font-size:14px;line-height:1.55;margin-top:6px;color:var(--t-sub,#4C5550)}
+#main .mil-wiz .mil-opt.on{background:var(--gr50,#F2FCF5);border-color:var(--gr600,#00A332);box-shadow:inset 0 0 0 1px var(--gr600,#00A332),0 8px 20px -14px rgba(0,120,40,.45)}
+#main .mil-wiz .mil-opt .rd{width:24px;height:24px;border-radius:12px}
+#main .mil-wiz .mil-opt.on .rd{background:var(--gr600,#00A332);border-color:var(--gr600,#00A332)}
+#main .mil-wiz .mil-g21>.mil-col>.card{padding:20px 22px;gap:10px}
+#main .mil-wiz .mil-g21>.mil-col>.card p{font-size:14px;line-height:1.6;margin:0}
+#main .mil-wiz .mil-g21>.mil-col>.card:first-child{background:radial-gradient(120% 120% at 100% 0%,var(--gr50,#EFFBF2) 0%,transparent 60%),var(--surface,#fff)}
+#main .mil-wiz .mil-acts{padding-top:6px}
+@media (max-width:1180px){#main .mil-wiz .mil-g21{grid-template-columns:minmax(0,1fr)}#main .mil-wiz .mil-steps{grid-template-columns:repeat(5,minmax(120px,1fr));overflow-x:auto}}
+@media (max-width:640px){#main .mil-wiz .mil-steps{grid-template-columns:repeat(5,minmax(132px,1fr))}}
+#main .mil-wiz .mil-sum{list-style:none;margin:4px 0 2px;padding:0;display:flex;flex-direction:column}
+#main .mil-wiz .mil-sum li{display:flex;justify-content:space-between;gap:12px;align-items:center;min-height:44px;border-bottom:1px solid var(--hair,#E8ECE9);font-size:14px}
+#main .mil-wiz .mil-sum li:last-child{border-bottom:0}
+#main .mil-wiz .mil-sum span{color:var(--t-sub,#5B6660);font-weight:600}
+#main .mil-wiz .mil-sum b{font-weight:700;color:var(--g900,#121614);text-align:right}
+html[data-theme=dark] #main .mil-wiz .mil-steps li{background:var(--surface,#0E1A14);color:#EAF2EC;border-color:#2A3B31}
+html[data-theme=dark] #main .mil-wiz .mil-steps li .n{background:#1C2C23;color:#EAF2EC}
+html[data-theme=dark] #main .mil-wiz .mil-steps li.on{background:#13231B}html[data-theme=dark] #main .mil-wiz .mil-steps li.on .n{background:#00C53B;color:#04140A}
+html[data-theme=dark] #main .mil-wiz .mil-steps li small{color:#A7B8AD}
+html[data-theme=dark] #main .mil-wiz .mil-opt{background:var(--surface,#0E1A14);border-color:#2A3B31;color:#EAF2EC}
+html[data-theme=dark] #main .mil-wiz .mil-opt.on{background:#13231B;border-color:#00C53B;box-shadow:inset 0 0 0 1px #00C53B}
+html[data-theme=dark] #main .mil-wiz .mil-opt .d{color:#A7B8AD}
+/* v43 S3A 072: 선택 카드 설명 14px · 「기관이 정하는 것」 아이콘 행 */
+#main .mil-wiz .mil-opt .d{font-size:14px;line-height:1.5;color:var(--ink);opacity:.78}
+#main .mil-wiz .mil-sum .mil-sk{display:inline-flex;align-items:center;gap:8px;color:var(--mute)}
+#main .mil-wiz .mil-sum .mil-sk .ic{color:var(--gr700);flex:none}
+/* v43 S3A 072: 마법사 단계 5칸 상자 → 머리 아래 얇은 진행 표시(상자 · 테두리 없음) */
+#main .mil-steps:not(.sm){gap:4px}
+#main .mil-steps:not(.sm) li{background:none;border:0;border-top:3px solid var(--line);border-radius:0;padding:8px 2px 0;font-size:13px}
+#main .mil-steps:not(.sm) li.done,#main .mil-steps:not(.sm) li.on{border-top-color:var(--pr)}
+#main .mil-steps:not(.sm) li .n{width:22px;height:22px}

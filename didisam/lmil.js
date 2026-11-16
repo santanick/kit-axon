@@ -57,7 +57,7 @@
   /* 체험 샘플(?mile=1): 한빛대 김서연 시안과 같은 흐름 — 잔액 · 적립 예정 · 정정 줄 · 소멸 예정 45 · 국비 과정 기록만 · 식권 사용 */
   function seed(sid) { const T = today(); const D = n => addD(T, n) + 'T03:00:00Z'; const E = (id, kind, p, d, o = {}) => ({ id, sid, kind, points: p, status: 'posted', at: D(d), trust: 'B', nature: 'achievement', convertible: true, ...o });
     const exp1 = addD(T, 47), exp2 = addD(T, 230);
-    return { on: true, policy: { unitName: '점', dailyCapTotal: 50, tierWindow: 'term', tiers: [{ name: '시작', min: 0 }, { name: '성장', min: 80 }, { name: '도약', min: 150 }, { name: '으뜸', min: 250 }], expiry: { mode: 'term_end', label: '학기 말 + 1학기(항목별)' }, notice: { monthsBefore: 6, daysBefore: [30, 3] }, streak: { minMin: 10, freezePerWeek: 1, repair: { withinH: 48, factor: 2, perMonth: 1 } }, ruleVerLabel: '2026-2학기 규칙' },
+    return { on: true, policy: { unitName: '점', dailyCapTotal: 50, tierWindow: 'term', tiers: [{ name: '새싹', min: 0 }, { name: '보통', min: 80 }, { name: '으뜸', min: 150 }, { name: '마스터', min: 250 }], expiry: { mode: 'term_end', label: '학기 말 + 1학기(항목별)' }, notice: { monthsBefore: 6, daysBefore: [30, 3] }, streak: { minMin: 10, freezePerWeek: 1, repair: { withinH: 48, factor: 2, perMonth: 1 } }, ruleVerLabel: '2026-2학기 규칙' },
       rules: [{ id: 'mru_q', trigger: 'lms_q', label: '비교과 프로그램 이수', say: '비교과 프로그램을 이수하면 프로그램 점수만큼', cap: '항목군 학기 60점까지', score: { mode: 'source' }, active: true },
         { id: 'mru_att', trigger: 'attend', label: '특강 출석', say: '특강에 출석하면 30점', cap: '학기 120점까지', cond: '특강마다 1회 · 학기 120점까지', score: { mode: 'fixed', v: 30 }, active: true, act: '특강 1번 출석' },
         { id: 'mru_diag', trigger: 'diag', label: 'AI 역량진단', say: 'AI 역량진단을 마치면 50점', cap: '학기 1회까지', score: { mode: 'fixed', v: 50 }, active: true, act: 'AI 역량진단', href: '#home' },
@@ -75,8 +75,24 @@
         { id: 'mrw_badge', kind: 'badge', title: '디지털 배지 · AI 역량 인증', how: '조건 · 진단 + 특강 2회', owned: true }],
       redeems: [{ id: 'mrd_s1', sid, rewardId: 'mrw_meal', title: '학생식당 식권 1매', points: 50, status: 'fulfilled', at: D(-2), no: 'RQ-031' }, { id: 'mrd_s2', sid, rewardId: 'mrw_meal', title: '학생식당 식권 1매', points: 50, status: 'rejected', at: D(-40), reason: '신청한 날 식권 재고가 없어 반려했어요. 잡아 둔 50점은 바로 돌려드렸어요.', no: 'RQ-017' }],
       badges: [{ sid, id: 'b_first', name: '첫 특강 출석', tier: 1, at: D(-23) }, { sid, id: 'b_q3', name: '비교과 3개 이수', tier: 2, at: D(-60) }, { sid, id: 'b_ai', name: 'AI 역량 인증', tier: 3, at: D(-14) }, { id: 'b_write', name: '글쓰기 역량 인증', tier: 3, lock: '클리닉 2회 남음' }] }; }
+
+  /* v43 D-E(P3 F06): 학원(성인 · 초중고) 체험판은 학원 문구로 — 국비 · 비교과 · 학생식당 · TOEIC · 학기 문구를 쓰지 않는다 */
+  function acad(v) { let ty = ''; try { ty = ((SITE() && SITE().org) || {}).type || ''; } catch (e) { } if (!['adult', 'k12'].includes(ty) || !v) return v;
+    const kid = ty === 'k12'; const T = today(); const D = n => addD(T, n) + 'T03:00:00Z'; const sid = (v.entries[0] || {}).sid; const ex = addD(T, 300) + 'T14:59:59Z';
+    const E = (id, kind, p, d, o = {}) => ({ id, sid, kind, points: p, status: 'posted', at: D(d), trust: 'B', nature: 'achievement', convertible: true, expiresAt: ex, ...o });
+    const R = kid ? [['mru_att', 'attend', '출석', '수업에 출석하면 10점', '한 달 200점까지', 10], ['mru_hw', 'hw', '숙제 제출', '숙제를 내면 10점', '한 달 150점까지', 10], ['mru_voc', 'quiz', '단어 시험 통과', '단어 시험을 통과하면 20점', '주 1회', 20]]
+      : [['mru_les', 'lesson', '강좌 1차시 완료', '강좌 1차시를 마치면 10점', '하루 30점까지', 10], ['mru_mock', 'quiz', '모의고사 응시', '모의고사에 응시하면 30점', '한 달 4회까지', 30], ['mru_rv', 'review', '수강 후기', '수강 후기를 남기면 20점', '강좌마다 1회', 20]];
+    const out = Object.assign({}, v, { policy: Object.assign({}, v.policy, { tierWindow: 'year', expiry: { mode: 'months', label: '적립일부터 12개월' }, ruleVerLabel: '2026년 규칙' }),
+      rules: R.map(([id, trigger, label, say, cap, p]) => ({ id, trigger, label, say, cap, score: { mode: 'fixed', v: p }, active: true })),
+      entries: kid ? [E('ma1', 'earn', 120, -40, { title: '10월 출석 12회', ruleId: 'mru_att' }), E('ma2', 'earn', 60, -20, { title: '숙제 제출 6회', ruleId: 'mru_hw' }), E('ma3', 'use', -100, -12, { title: '문구 굿즈 교환', redeemId: 'mrd_a1' }), E('ma4', 'earn', 20, -3, { title: '단어 시험 통과', ruleId: 'mru_voc' }), E('ma5', 'earn', 10, -1, { title: '수업 출석', status: 'pending', ruleId: 'mru_att' })]
+        : [E('ma1', 'earn', 150, -45, { title: '「엑셀 실무」 1~15차시 완료', ruleId: 'mru_les' }), E('ma2', 'earn', 30, -21, { title: '모의고사 1회 응시', ruleId: 'mru_mock' }), E('ma3', 'earn', 20, -18, { title: '「엑셀 실무」 수강 후기', ruleId: 'mru_rv' }), E('ma4', 'use', -100, -10, { title: '교재 10% 할인 교환', redeemId: 'mrd_a1' }), E('ma5', 'earn', 30, -4, { title: '모의고사 2회 응시', ruleId: 'mru_mock' }), E('ma6', 'earn', 10, -1, { title: '강좌 1차시 완료', status: 'pending', ruleId: 'mru_les' })],
+      rewards: kid ? [{ id: 'mrw_fee', kind: 'coupon', title: '학원비 5,000원 차감', cost: { fixedP: 500 }, approval: 'manual', cash: true, how: '보호자 확인 후 다음 청구서에서' }, { id: 'mrw_gd', kind: 'goods', title: '문구 굿즈', cost: { fixedP: 100 }, approval: 'auto', cash: true, how: '자동(데스크 수령)' }, { id: 'mrw_badge', kind: 'badge', title: '개근 배지', how: '한 달 출석 100%' }]
+        : [{ id: 'mrw_cp', kind: 'coupon', title: '다음 강좌 1만 원 할인 쿠폰', cost: { fixedP: 1000 }, approval: 'auto', cash: true, how: '자동(결제할 때 적용)' }, { id: 'mrw_bk', kind: 'coupon', title: '교재 10% 할인', cost: { fixedP: 500 }, approval: 'auto', cash: true, how: '자동(결제할 때 적용)' }, { id: 'mrw_gd', kind: 'goods', title: '학원 굿즈(텀블러)', cost: { fixedP: 800 }, approval: 'manual', cash: true, how: '데스크 확인 후' }],
+      redeems: [{ id: 'mrd_a1', sid, rewardId: kid ? 'mrw_gd' : 'mrw_bk', title: kid ? '문구 굿즈' : '교재 10% 할인', points: 100, status: 'fulfilled', at: D(kid ? -12 : -10), no: 'RQ-021' }],
+      badges: kid ? [{ sid, id: 'b_att', name: '첫 개근', tier: 1, at: D(-40) }, { id: 'b_voc', name: '단어왕', tier: 2, lock: '단어 시험 3회 남음' }] : [{ sid, id: 'b_first', name: '첫 강좌 완주', tier: 1, at: D(-30) }, { id: 'b_mock', name: '모의고사 5회', tier: 2, lock: '3회 남음' }] });
+    return out; }
   /* 스튜디오 문서: 정책 · 규칙 · 적립 = S.mileage(mil.js), 보상 · 신청 · hold/use 줄 = S.milrw(milrw.js) — 합쳐서 읽는다 */
-  function demoSrc() { const d = roomDoc(); const m = d && (d.mileage || d.mile); if (m && typeof m === 'object') { const w = d.milrw && typeof d.milrw === 'object' ? d.milrw : null; if (!w) return m; if (MI.mg && MI.mg.m === m && MI.mg.w === w) return MI.mg.v; const v = { ...m, rewards: (w.rewards || []).length ? w.rewards : m.rewards || [], redeems: [...(m.redeems || []), ...(w.redeems || [])], entries: [...(m.entries || []), ...(w.entries || [])] }; MI.mg = { m, w, v }; return v; } if (BQ.get('mile') === '1' && LR.me) return MI.seed && MI.seed.sid === LR.me.sid ? MI.seed.v : (MI.seed = { sid: LR.me.sid, v: seed(LR.me.sid) }).v; return null; }
+  function demoSrc() { const d = roomDoc(); const m = d && (d.mileage || d.mile); if (m && typeof m === 'object') { const w = d.milrw && typeof d.milrw === 'object' ? d.milrw : null; if (!w) return m; if (MI.mg && MI.mg.m === m && MI.mg.w === w) return MI.mg.v; const v = { ...m, rewards: (w.rewards || []).length ? w.rewards : m.rewards || [], redeems: [...(m.redeems || []), ...(w.redeems || [])], entries: [...(m.entries || []), ...(w.entries || [])] }; MI.mg = { m, w, v }; return v; } if (BQ.get('mile') === '1' && LR.me) return MI.seed && MI.seed.sid === LR.me.sid ? MI.seed.v : (MI.seed = { sid: LR.me.sid, v: acad(seed(LR.me.sid)) }).v; return null; }
   const polOf = m => (m && (m.policy || m)) || {};
   const demoOn = () => { const m = demoSrc(); if (!m) return false; const p = polOf(m); return (m.on ?? p.on) !== false; };
   const isPar = () => !!(LR.me && LR.me.kind === 'parent');
@@ -150,7 +166,7 @@
     try { const r = await lapi('GET', P('rewards')); MI.rw = r; MI.rat = Date.now(); } catch (e) { MI.rw = MI.rw || { rewards: [] }; if (e.status === 403 || e.code === 'mile_off') MI.off = true; }
     MI.rbusy = false; rer(); }
   const on = () => { try { if (!LR.me) return false; if (live()) { if (MI.off) return false; if (MI.my) return isPar() ? Array.isArray(MI.my.kids) && MI.my.kids.length > 0 : true; const s = SITE(); return !!(s && s.mileage && s.mileage.on); } if (isPar()) return demoOn() && kidsDemo().length > 0; return demoOn(); } catch (e) { return false; } };
-  window.mileOn = on; MI.calc = calc; /* 기준값 대조(tests/ui/mil42-learner.js): 시연판 계산 = milecalc.js */
+  window.mileOn = on; MI.calc = calc; MI.model = sid => model(sid); /* v43 학습 허브(lhub.js) 마일리지 링 */ /* 기준값 대조(tests/ui/mil42-learner.js): 시연판 계산 = milecalc.js */
 
   /* ── 모델: 운영 · 시연판을 같은 모양으로 ── */
   function model(sid) { if (live()) { const r = MI.my || {}; UNIT = r.unitName || r.unit || UNIT; const RW = MI.rw || {}; const tier = typeof r.tier === 'object' && r.tier ? r.tier : r.tier ? { name: String(r.tier) } : null;
@@ -165,7 +181,7 @@
     }
     const C = calc(sid || (LR.me || {}).sid); const p = C.p; UNIT = p.ab || p.unitAb || p.unit_ab || p.unitName || p.unit_name || p.unit || 'P';
     const tiers = (p.tiers || []).map(x => Array.isArray(x) ? { name: x[0], min: +x[1] } : { name: x.name, min: +x.min || 0 }).sort((a, b) => a.min - b.min);
-    let tier = null; if (tiers.length) { let i = 0; tiers.forEach((x, k) => { if (C.ew >= x.min) i = k; }); const top = tiers[tiers.length - 1].min || 1; tier = { name: tiers[i].name, pct: Math.min(100, Math.round(C.ew / top * 100)), next: tiers[i + 1] ? tiers[i + 1].name : '', left: tiers[i + 1] ? tiers[i + 1].min - C.ew : 0 }; }
+    let tier = null; if (tiers.length) { let i = 0; tiers.forEach((x, k) => { if (C.ew >= x.min) i = k; }); const top = tiers[tiers.length - 1].min || 1; tier = { all: tiers.map(x => x.name), idx: i, now: C.ew, min: tiers[i].min, nmin: tiers[i + 1] ? tiers[i + 1].min : 0, name: tiers[i].name, pct: Math.min(100, Math.round(C.ew / top * 100)), next: tiers[i + 1] ? tiers[i + 1].name : '', left: tiers[i + 1] ? tiers[i + 1].min - C.ew : 0 }; }
     const rules = (C.m.rules || []).filter(r => r.active !== false && r.on !== false);
     const CAPN = { day: '하루', week: '한 주', month: '한 달', term: '학기', year: '한 해', total: '전체' }; const capT = r => typeof r.cap === 'string' ? r.cap : r.capText || Object.entries(r.caps || {}).filter(([, v]) => +v > 0).slice(0, 1).map(([k, v]) => `${CAPN[k] || k} ${nf(v)}${UNIT}까지`)[0] || '';
     const sv0 = r => { const v = r.score ? +r.score.v : +r.v || +r.points || 0; return v > 0 ? `${nf(v)}${UNIT}` : '점수만큼'; };
@@ -182,12 +198,16 @@
   }
 
   /* ═════ 화면 조각 ═════ */
-  const page = (cls, inner) => `<section class="lm ${cls || ''}"><div class="lm-in">${inner}</div></section>`;
-  const head = (t, sub) => `<div class="lm-hd"><h1>${esc(t)}</h1>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`;
+  /* v43 D-C: 웹은 공통 사진 머리(lPageHead) — 내 마일리지는 숫자(쓸 수 있는 · 적립 대기 · 소멸 예정), 아래 화면은 짧은 띠. 앱은 예전 머리 */
+  let HT = null; const webH = () => typeof lPageHead === 'function' && !document.body.classList.contains('lapp');
+  const page = (cls, inner) => { let h = ''; if (HT) { const main = /lm-main/.test(cls || ''); let st = null; if (main) { try { const M = model(); st = [[Number(M.balance || 0).toLocaleString('ko-KR'), M.unit || '점', '지금 쓸 수 있어요'], [M.pending ? Number(M.pending).toLocaleString('ko-KR') : '', M.unit || '점', '적립 대기'], [M.expiring && M.expiring.points ? Number(M.expiring.points).toLocaleString('ko-KR') : '', M.unit || '점', '곧 소멸']]; } catch (e) { st = null; } }
+    h = lPageHead({ key: 'mile', title: HT[0], desc: HT[1] || (main ? '학습하면 쌓이고, 보상으로 바꿔 쓸 수 있어요.' : ''), crumb: main || HT[0] === '내 마일리지' ? '<a href="#home">홈</a> › 내 마일리지' : '<a href="#home">홈</a> › <a href="#mile">내 마일리지</a> › ' + esc(HT[0]), compact: !main, stats: st, cta: main ? ['적립 내역 보기', '#mile/list'] : null, eyebrow: main ? '학습 마일리지' : '' }); HT = null; }
+    return `${h}<section class="lm ${cls || ''}${h ? ' lm43' : ''}"><div class="lm-in">${inner}</div></section>`; };
+  const head = (t, sub) => { if (webH()) { HT = [t, sub]; return ''; } return `<div class="lm-hd"><h1>${esc(t)}</h1>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`; };
   const bar = (p, cls) => `<span class="lm-bar${cls ? ' ' + cls : ''}" role="presentation"><i style="width:${Math.max(0, Math.min(100, p))}%"></i></span>`;
   const ring = (p, top, sub) => `<span class="lm-ring" style="--p:${Math.max(0, Math.min(100, p))}" role="img" aria-label="${esc(top)} 등급 ${p}%"><b>${esc(top)}</b><small>${esc(sub)}</small></span>`;
   const note = (k, t, b) => `<div class="lm-note ${k}" role="${k === 'err' ? 'alert' : 'note'}">${sv(k === 'ok' ? 'check' : k === 'err' ? 'x' : k === 'lock' ? 'lock' : 'info', 20)}<div><b>${esc(t)}</b>${b ? `<p>${esc(b)}</p>` : ''}</div></div>`;
-  const split = M => `<dl class="lm-split"><div><dt>${sv('check', 16)}쓸 수 있어요</dt><dd>${pt(Math.max(0, M.balance))}</dd></div><div><dt>${sv('hour', 16)}적립 예정</dt><dd>${pt(M.pending)}</dd></div><div><dt>${sv('clock', 16)}사용 대기</dt><dd>${pt(M.held)}</dd></div></dl>`;
+  const split = M => `<dl class="lm-split"><div><dt>${sv('check', 16)}쓸 수 있어요</dt><dd>${pt(Math.max(0, M.balance))}</dd></div><div><dt>${sv('hour', 16)}적립 예정</dt><dd>${M.pending ? pt(M.pending) : '<span class="lm-z">예정 없음</span>'}</dd></div><div><dt>${sv('clock', 16)}사용 대기</dt><dd>${M.held ? pt(M.held) : '<span class="lm-z">대기 중인 신청 없음</span>'}</dd></div></dl>`; /* v43 R8 107: 0 → 문장 */
   function goalCard(M, delta) { const G = M.goal; if (!G) return '';
     return `<section class="lm-card lm-goal" aria-label="다음 목표"><div class="lm-gh"><span class="lm-gi">${sv(G.kind === 'tier' ? 'flag' : 'cap', 24)}</span><span class="lm-gt"><small>다음 목표</small><b>${esc(G.label)}</b></span>${delta ? `<span class="lm-delta">${sv('up', 14)}${sgn(delta)}</span>` : `<span class="lm-gn"><small>남은 마일리지</small><b>${pt(G.need)}</b></span>`}</div>
       ${bar(G.pct)}${G.now != null && G.target != null ? `<div class="lm-gm"><span>지금 <b>${pt(G.now)}</b></span><span>목표 ${pt(G.target)}</span></div>` : ''}
@@ -225,11 +245,15 @@
     if (blank) return `${head('내 마일리지')}${empty(M)}${ways(M)}${links()}`;
     const fundedBox = M.funded > 0 ? `<div class="lm-fund"><div class="lm-fu ok">${sv('gift', 18)}<small>보상에 쓸 수 있는 양</small><b>${pt(M.convertible)}</b></div><div class="lm-fu lk">${sv('lock', 18)}<b>국비 과정 적립 ${pt(M.funded)}</b><small>배지 · 기록만</small></div></div><div class="lm-lockn">${sv('lock', 20)}<div><b>국비 지원 과정에는 쓸 수 없어요</b><p>국비 지원 과정에서 쌓은 마일리지는 배지와 학습 기록으로 남아요. 할인 · 장학에는 쓸 수 없어요.</p></div></div>` : '';
     return `${head('내 마일리지')}${M.sunset ? note('info', '마일리지 제도가 바뀌어요', [M.sunset.endAt && `${md(M.sunset.endAt)}에 제도가 끝나요.`, M.sunset.stopEarnAt && `${md(M.sunset.stopEarnAt)}부터 새로 쌓이지 않아요.`, '남은 마일리지는 그 전까지 보상으로 바꿀 수 있어요.'].filter(Boolean).join(' ')) : ''}
-      <section class="lm-card lm-top" aria-label="마일리지 잔액"><p class="lm-lab">${sv('mile', 18)}마일리지 잔액</p><b class="lm-big">${nf(M.balance)}<span>${esc(UNIT)}</span></b>${M.balance < 0 ? `<p class="lm-mu">정정된 적립이 있어 잔액이 0보다 작아요. 다음 적립에서 먼저 채워져요.</p>` : ''}${split(M)}${fundedBox}</section>
+      <section class="lm-card lm-top lm-hero43" aria-label="마일리지 잔액">${ladder(M)}<p class="lm-lab">${sv('mile', 18)}마일리지 잔액</p><b class="lm-big">${nf(M.balance)}<span>${esc(UNIT)}</span></b>${M.balance < 0 ? `<p class="lm-mu">정정된 적립이 있어 잔액이 0보다 작아요. 다음 적립에서 먼저 채워져요.</p>` : ''}${split(M)}${fundedBox}</section>
       ${capNote(M)}${goalCard(M)}${ways(M)}
       ${M.E.length ? `<section class="lm-card" aria-labelledby="lmRec"><div class="lm-ch"><h2 id="lmRec" class="lm-h2">${sv('hist', 20)}최근 내역</h2><a class="lm-more" href="#mile/list">전체 내역${sv('chev', 18)}</a></div><ul class="lm-rows">${M.E.slice(0, 3).map(e => rowHTML(e, M)).join('')}</ul></section>` : ''}
       ${expStrip(M)}${links()}`; }
-  const links = () => `<nav class="lm-links" aria-label="마일리지 메뉴">${[['#mile/rewards', 'gift', '보상'], ['#mile/req', 'ticket', '내 신청'], ['#mile/badges', 'medal', '배지 지갑'], ['#mile/streak', 'cal', '연속 학습'], ['#mile/list', 'hist', '적립 내역']].map(([h, i, l]) => `<a href="${h}">${sv(i, 20)}<span>${l}</span>${sv('chev', 16)}</a>`).join('')}</nav>`;
+  /* v43 등급 사다리(새싹 · 보통 · 으뜸 · 마스터 등 기관 설정 이름) — 한 문장 헤드라인 + 4단 막대 */
+  function ladder(M) { const T = M.tier; if (!T || !T.name) return ''; const all = Array.isArray(T.all) && T.all.length ? T.all : [T.name]; const i = all.indexOf(T.name) < 0 ? 0 : all.indexOf(T.name);
+    const p = T.nmin ? Math.max(6, Math.min(100, Math.round((T.now - T.min) / Math.max(1, T.nmin - T.min) * 100))) : 100;
+    return `<p class="lm-hl">지금은 <em>${esc(T.name)}</em> 등급이에요.${T.next ? `<br>${esc(T.next)}까지 ${nf(T.left)}${esc(UNIT)} 남았어요.` : '<br>가장 높은 등급이에요.'}</p><div class="lm-lad" role="img" aria-label="등급 ${all.length}단계 중 ${i + 1}단계">${all.map((n, k) => `<span class="${k < i ? 'd' : k === i ? 'h' : ''}"${k === i ? ` style="--p:${p}%"` : ''}><i></i><b>${esc(n)}</b></span>`).join('')}</div>`; }
+  const links = () => `<nav class="lm-links" aria-label="마일리지 메뉴">${[['#mile/rewards', 'gift', '보상', '쿠폰 · 교재 할인으로 바꿔요'], ['#mile/req', 'ticket', '내 신청', '신청한 보상의 처리 상태'], ['#mile/badges', 'medal', '배지 지갑', '모은 배지와 다음 배지'], ['#mile/streak', 'cal', '연속 학습', '이번 주 학습한 날'], ['#mile/list', 'hist', '적립 내역', '적립 · 사용 · 소멸 기록']].map(([h, i, l, d]) => `<a href="${h}"><i class="lm-lki">${sv(i, 20)}</i><span><b>${l}</b><small>${d}</small></span>${sv('chev', 16)}</a>`).join('')}</nav>`;
 
   /* ── #mile/list 적립 내역(시안 a2-04) · 근거 시트(a2-05) ── */
   function listView(M) { if (live() && !MI.list) { loadList(); return `${head('적립 내역')}<p class="lm-load" role="status">내역을 불러오고 있어요…</p>`; }
@@ -333,7 +357,7 @@
       ${M.E.length ? `<ul class="lm-rows">${M.E.slice(0, 3).map(e => rowHTML(e, M)).join('')}</ul>` : empty(M)}${expStrip(M)}
       <div class="lm-acts"><a class="lm-btn" href="#mile/list">${sv('hist', 18)}전체 내역</a><a class="lm-btn pri" href="#mile/rewards">${sv('gift', 18)}보상 보기</a></div></div>`; }
   /* 앱(로그인한 학습자 기본 · lapp.js appOn과 같은 조건)은 「나」 카드, 웹(클래식 보기)은 마이페이지 블록 */
-  const appMode = () => { try { return document.body.classList.contains('lapp') || (LR.mode !== 'preview' && localStorage.getItem('didisam.app.classic') !== '1' && !!LR.me); } catch (e) { return document.body.classList.contains('lapp'); } };
+  const appMode = () => { try { return document.body.classList.contains('lapp') || (typeof window.lappOn === 'function' ? window.lappOn() : (LR.mode !== 'preview' && localStorage.getItem('didisam.app.classic') !== '1' && !!LR.me)); } catch (e) { return document.body.classList.contains('lapp'); } };
   if (typeof viewMy === 'function') { const base = viewMy; viewMy = (...a) => { const h = base(...a); try { if (!LR.me || isPar() || !on() || appMode()) return h; const B = (SITE().my && SITE().my.blocks) || null; const set = B && B.find(x => x[0] === 'mile'); if (set && !set[1]) return h; if (live() && !MI.my) { loadMy(); return h; } const blk = webBlock(); return blk ? h.replace('<div class="mygrid">', '<div class="mygrid">' + blk) : h; } catch (e) { console.error('lmil my', e); return h; } }; }
 
   /* ═════ 동작 ═════ */

@@ -29,13 +29,13 @@
   const HERO_L = () => hasT() ? { center: '가운데 첫 화면', split: '좌우 분할 첫 화면', bg: '배경형 첫 화면' } : { center: '테마 기본 첫 화면', split: '진한 배경 · 왼쪽 정렬', bg: '진한 배경 · 가운데' };
 
   /* ═════════ 테마 목록: HPT 우선, 없으면 기존 룩 ═════════ */
-  const LK_COL = { navyGlow: '#3B5BDB', mintSoft: '#5C74F6', senior: '#2F6FE4', brandBold: '#2563EB', corpPortal: '#1E3A8A', storyNumbered: '#0F766E', publicTiles: '#1E40AF', campus: '#2A2B2B' };
+  const LK_COL = { navyGlow: '#3B5BDB', mintSoft: '#00862D', senior: '#15803D', brandBold: '#007A29', corpPortal: '#1E3A8A', storyNumbered: '#0F766E', publicTiles: '#1E40AF', campus: '#2A2B2B' };
   const LK_DESC = { navyGlow: '어두운 첫 화면 · 빛나는 강조', mintSoft: '부드러운 그라데이션 · 친근함', senior: '큰 글씨 · 넓은 버튼', brandBold: '브랜드 색 배너 · 리포트 카드', corpPortal: '단정한 기업 포털', storyNumbered: '번호로 풀어 가는 이야기', publicTiles: '공공기관 바로가기 타일', campus: '캠퍼스 · 일정표형' };
   const REC_LOOK = { corp: 'corpPortal', univ: 'campus', univ_lms: 'campus', k12: 'brandBold', adult: 'mintSoft', lifelong: 'senior', voc: 'publicTiles', public: 'publicTiles' };
   const REC_HPT = { corp: /clean|modern|모던|깔끔|corp/i, univ: /official|공식|clean|campus/i, univ_lms: /official|공식|clean|campus/i, k12: /warm|따뜻|학원|kids|키즈/i, adult: /modern|clean|모던|깔끔/i, lifelong: /warm|따뜻|senior|큰/i, voc: /tech|테크|official|공식/i, public: /official|공식|public|기관/i };
   function themes() {
-    if (hasT()) return HPT.list.map(x => ({ id: String(x.id), name: String(x.name || x.id), desc: String(x.desc || ''), sw: A(x.swatch).slice(0, 3), hpt: true }));
-    return Object.keys(typeof LOOKS !== 'undefined' ? LOOKS : {}).map(k => { const c = LK_COL[k] || '#5C74F6'; return { id: k, name: LOOKS[k].n, desc: LK_DESC[k] || '', sw: [c, mixc(c, '#ffffff', .82), '#ffffff'] }; });
+    if (hasT()) return HPT.list.map(x => ({ id: String(x.id), name: String(x.name || x.id), desc: String(x.desc || ''), sw: A(x.swatch).slice(0, 3), hpt: true, prem: !!x.prem, tags: A(x.tags) }));
+    return Object.keys(typeof LOOKS !== 'undefined' ? LOOKS : {}).map(k => { const c = LK_COL[k] || '#00862D'; return { id: k, name: LOOKS[k].n, desc: LK_DESC[k] || '', sw: [c, mixc(c, '#ffffff', .82), '#ffffff'] }; });
   }
   function recTheme() {
     const T = themes(); if (!T.length) return '';
@@ -54,7 +54,7 @@
     const T = themes().find(x => x.id === id) || {};
     if (T.hpt && typeof HPT.thumb === 'function') { let h = ''; try { h = String(HPT.thumb(site(), id) || ''); } catch (e) { h = ''; }
       if (h) return /<html|<!doctype|<body/i.test(h) ? `<iframe class="hpw-tf" title="${esc(T.name)} 미리보기" sandbox="allow-same-origin" srcdoc="${esc(h)}" tabindex="-1"></iframe>` : `<div class="hpw-tt" aria-hidden="true">${h}</div>`; }
-    const c = T.sw && T.sw[0] || '#5C74F6';
+    const c = T.sw && T.sw[0] || '#00862D';
     return `<div class="hpw-mini lk-${esc(id)}" style="--c:${esc(c)};--c2:${esc(mixc(c, '#ffffff', .85))}" aria-hidden="true"><i class="hm-b"></i><div class="hm-h"><i class="t1"></i><i class="t2"></i><i class="bt"></i><i class="vis"></i></div><div class="hm-c"><i></i><i></i><i></i></div></div>`;
   }
 
@@ -167,7 +167,7 @@
   function hpwQuality(s) {
     s = s || site(); try { if (W.qpre) W.qpre(s); } catch (e) { } /* v34.5 X4: 숨긴 빈 섹션 다시 판정(hpwiz2) */ const secs = live(s); const bn = secs.find(x => x.type === 'banner'); const it = [];
     const add = (k, label, pts, ok, note, auto) => it.push({ k, label, pts, ok: !!ok, note: note || '', auto: auto !== false });
-    const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#5C74F6'; const cr = cRatio(col, '#ffffff');
+    const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#00862D'; const cr = cRatio(col, '#ffffff');
     add('contrast', '글자 대비', 15, cr >= 4.5, cr >= 4.5 ? `대표 색 대비 ${cr.toFixed(1)}:1` : `대표 색 위 흰 글자 대비 ${cr.toFixed(1)}:1 — 4.5:1 미만`);
     const em = secs.filter(emptyOf); add('empty', '빈 섹션', 15, !em.length, em.length ? `내용이 없는 섹션 ${em.length}개(${[...new Set(em.map(x => (SEC[x.type] || {}).n || x.type))].join(' · ')})` : '모든 섹션에 내용이 있습니다');
     const ph = secs.filter(x => strs(x.data).some(v => PH.test(v))); add('ph', '자리 문구', 15, !ph.length, ph.length ? `'입력하세요' 같은 자리 문구 ${ph.length}곳` : '자리 문구 없음');
@@ -190,7 +190,7 @@
   const brk = s => String(s || '').split(/(\s+)/).map(w => { const lim = /[가-힣]/.test(w) ? 10 : 18; if (w.length <= lim + 2 || w.includes('​')) return w; return w.match(new RegExp(`.{1,${lim}}`, 'g')).join('​'); }).join('');
   function hpwFix(s0) {
     const s = clone(s0); const log = []; const secs = live(s);
-    const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#5C74F6'; if (cRatio(col, '#ffffff') < 4.5) { let c = col; for (let k = 1; k <= 20 && cRatio(c, '#ffffff') < 4.5; k++) c = mixc(col, '#000000', k * .05); s.color = c; log.push(`대표 색을 조금 진하게(${col} → ${c}) 바꿔 글자 대비를 4.5:1 이상으로 맞췄습니다`); }
+    const col = /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : '#00862D'; if (cRatio(col, '#ffffff') < 4.5) { let c = col; for (let k = 1; k <= 20 && cRatio(c, '#ffffff') < 4.5; k++) c = mixc(col, '#000000', k * .05); s.color = c; log.push(`대표 색을 조금 진하게(${col} → ${c}) 바꿔 글자 대비를 4.5:1 이상으로 맞췄습니다`); }
     /* 자리 문구: 지도 섹션은 실제 연락처로, 나머지 글은 비움 */
     let phn = 0; secs.forEach(x => { const d = x.data || {};
       if (x.type === 'map') { const f = ft(); if (PH.test(d.addr || '') || !d.addr) { d.addr = f.addr || ''; phn++; } if (PH.test(d.tel || '') || !d.tel) { d.tel = f.tel || f.mail || ''; phn++; } return; }
@@ -247,8 +247,12 @@
     const rOk = !dup.length && defN < 4; add('rep', '블록 반복', QW.rep || 4, rOk, rOk ? '섹션 모양이 겹치지 않음' : dup.length ? `같은 모양 섹션이 두 번 이상(${dup.map(k => k.replace(/:$/, '')).join(' · ')})` : `공통 블록 ${defN}개가 기본 모양 그대로입니다 — 다른 모양을 섞으면 다른 기관과 덜 비슷해집니다`, false); };
   const qHTML = (q, q0, log, withContact) => {
     const f = ft(); const need = q.items.find(x => x.k === 'contact' && !x.ok);
-    return `<div class="hpw-q" aria-live="polite"><div class="hpw-qs"><b class="hpw-score ${q.score >= 90 ? 'hi' : q.score >= 75 ? 'mid' : 'lo'}">${q.score}<small>점</small></b><div><b>품질 점수</b><small>${q0 && q0.score !== q.score ? `자동 보정 전 ${q0.score}점 → 보정 후 ${q.score}점` : '100점 만점'}</small></div></div>
-      <ul class="hpw-ql">${q.items.map(x => { const was = q0 && q0.items.find(y => y.k === x.k); const fixed = x.ok && was && !was.ok; return `<li class="${x.ok ? (fixed ? 'fx' : 'ok') : 'no'}"><span class="hpw-qi" aria-hidden="true">${x.ok ? (fixed ? '↻' : '✓') : '!'}</span><b>${esc(x.label)}</b><small>${fixed ? '자동 보정 · ' : ''}${esc(x.note)}</small><em>${x.info ? '안내' : `${x.ok ? x.pts : 0}/${x.pts}`}</em></li>`; }).join('')}</ul>
+    /* v43 R9(J4 127): 작은 숫자 「93점」 + 22항목 2열 회색 목록 → 점수 링 + 큰 숫자, 고칠 항목만 위에 펼치고 통과한 항목은 접기. 점수가 없는 안내 항목은 「안내」 */
+    const li = x => { const was = q0 && q0.items.find(y => y.k === x.k); const fixed = x.ok && was && !was.ok; return `<li class="${x.ok ? (fixed ? 'fx' : 'ok') : 'no'}"><span class="hpw-qi" aria-hidden="true">${x.ok ? (fixed ? '↻' : '✓') : '!'}</span><b>${esc(x.label)}</b><small>${fixed ? '자동 보정 · ' : ''}${esc(x.note)}</small><em>${x.info ? '안내' : x.ok ? `+${x.pts}` : `0/${x.pts}`}</em></li>`; };
+    const bad = q.items.filter(x => !x.ok && !x.info), info = q.items.filter(x => !x.ok && x.info), good = q.items.filter(x => x.ok); const R = 34, C = 2 * Math.PI * R, tone = q.score >= 90 ? 'hi' : q.score >= 75 ? 'mid' : 'lo';
+    return `<div class="hpw-q hpw-q9" aria-live="polite"><div class="hpw-qs"><span class="hpw-ring ${tone}" aria-hidden="true"><svg viewBox="0 0 80 80" width="88" height="88"><circle cx="40" cy="40" r="${R}" fill="none" stroke-width="8" class="tr"/><circle cx="40" cy="40" r="${R}" fill="none" stroke-width="8" stroke-linecap="round" class="br" stroke-dasharray="${(C * q.score / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 40 40)"/></svg></span><b class="hpw-score ${tone}">${q.score}<small>점</small></b><div><b>품질 점수</b><small>${q0 && q0.score !== q.score ? `자동 보정 전 ${q0.score}점 → 보정 후 ${q.score}점` : bad.length ? `고칠 항목 ${bad.length}개 · 통과 ${good.length}개` : `${good.length}개 항목 모두 통과`}</small></div></div>
+      ${bad.length ? `<h4 class="hpw-qh">고칠 항목 ${bad.length}개</h4><ul class="hpw-ql hpw-qbad">${bad.map(li).join('')}</ul>` : '<p class="hpw-qok">고칠 항목이 없습니다. 그대로 게시해도 됩니다.</p>'}${info.length ? `<ul class="hpw-ql hpw-qinfo">${info.map(li).join('')}</ul>` : ''}
+      <details class="hpw-qgood"><summary>통과한 항목 ${good.length}개</summary><ul class="hpw-ql">${good.map(li).join('')}</ul></details>
       ${A(log).length ? `<details class="hpw-log"><summary>자동으로 고친 것 ${log.length}가지</summary><ul>${log.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
       ${need && withContact ? `<div class="hpw-ct"><b>연락처 넣기(선택)</b><div class="hpw-ctr"><label>전화<input name="hwTel" inputmode="tel" maxlength="30" placeholder="051-000-0000" value="${esc(f.tel || '')}"></label><label>이메일<input name="hwMail" inputmode="email" maxlength="80" placeholder="info@example.com" value="${esc(f.mail || '')}"></label></div><small>입력하면 문의 블록 · 푸터에 들어갑니다. 비워 두면 문의 게시판으로 안내합니다.</small></div>` : ''}</div>`;
   };
@@ -262,9 +266,9 @@
   function hpwOpen(pre) {
     pre = pre || {}; const last = (S.site && S.site.ai) || {};
     W.st = { step: 1, theme: curTheme(S.site) && themes().some(x => x.id === curTheme(S.site)) && S.site.ai ? curTheme(S.site) : recTheme(), rec: recTheme(), brief: pre.brief || last.brief || defaultBrief(), url: pre.url || '', tone: pre.tone || '', pasted: pre.pasted || '',
-      color: (S.site && S.site.color) || '#5C74F6', colorOn: false, logo: '', drafts: [], pick: 0, busy: false, notes: [], via: '' };
+      color: (S.site && S.site.color) || '#00862D', colorOn: false, logo: '', drafts: [], pick: 0, busy: false, notes: [], via: '' };
     if (pre.brief || pre.url) W.st.step = 1;
-    const w = modal('AI로 홈페이지 만들기', `<div id="hpwBox" class="hpw"></div>`, [], true); w.classList.add('hpai-m', 'hpai-wide', 'hpw-m');
+    const w = modal('AI로 홈페이지 만들기', `<div id="hpwBox" class="hpw"></div>`, [], true); w.classList.add('hpai-m', 'hpai-wide', 'hpw-m'); if ($('#hpe')) w.classList.add('hpw-dock'); /* v43 R9(J4 119): 빌더 안에서는 오른쪽 패널(캔버스 미리보기 유지) */
     w.addEventListener('click', onClick); w.addEventListener('keydown', e => { const c = e.target.closest && e.target.closest('[data-hw="pick"],[data-hw="theme"]'); if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); c.click(); } });
     paint();
   }
@@ -273,17 +277,24 @@
   function grab() { const w = $('#modal'); const st = W.st; if (!w || !st) return; const v = n => { const e = w.querySelector(`[name="${n}"]`); return e ? (e.type === 'checkbox' ? e.checked : e.value.trim()) : undefined; };
     if (st.step === 2) { ['brief', 'url', 'tone', 'pasted', 'color'].forEach(k => { const x = v('hw_' + k); if (x !== undefined) st[k] = x; }); const c = v('hw_colorOn'); if (c !== undefined) st.colorOn = c; }
     if (st.step === 3) { const tel = v('hwTel'), mail = v('hwMail'); if (tel !== undefined) st.tel = tel; if (mail !== undefined) st.mail = mail; } }
-  function stepper(n) { const S3 = [['1', '테마'], ['2', '설명'], ['3', '시안 고르기']]; return `<ol class="hpw-sp" aria-label="3단계 중 ${n}단계">${S3.map(([k, l], i) => `<li class="${i + 1 === n ? 'on' : i + 1 < n ? 'done' : ''}" ${i + 1 === n ? 'aria-current="step"' : ''}><span>${i + 1 < n ? '✓' : k}</span>${l}</li>`).join('')}</ol>`; }
+  function stepper(n) { const S3 = [['1', '테마'], ['2', '설명'], ['3', '시안 고르기']]; /* v43 R9(J4 119): 작은 숫자 칩 3개 → 단계 이름이 붙은 진행 바 */
+    return `<ol class="hpw-sp hpw-sp9" aria-label="3단계 중 ${n}단계" style="--p:${Math.round(n / S3.length * 100)}%">${S3.map(([k, l], i) => `<li class="${i + 1 === n ? 'on' : i + 1 < n ? 'done' : ''}" ${i + 1 === n ? 'aria-current="step"' : ''}><span>${i + 1 < n ? '✓' : k}</span>${l}</li>`).join('')}</ol>`; }
   function foot(btns) { const f = $('#modal .mf'); if (f) f.innerHTML = btns.map(b => `<button type="button" class="btn ${b.k || ''}" data-hw="${b.id}" ${b.dis ? 'disabled' : ''}>${b.html || esc(b.l)}</button>`).join(''); }
   function paint() {
     const st = W.st; const b = box(); if (!st || !b) return;
     if (st.step === 1) {
       const T = themes();
       b.innerHTML = `${stepper(1)}<p class="hpw-lead">마음에 드는 분위기를 고르세요. 고르면 바로 다음 단계로 넘어갑니다. 테마는 나중에 '테마 바꿔줘'로 언제든 바꿀 수 있습니다.</p>
-        <div class="hpw-tg" role="radiogroup" aria-label="테마">${T.map(x => `<div class="hpw-th ${x.id === st.theme ? 'on' : ''}" role="radio" tabindex="0" aria-checked="${x.id === st.theme}" data-hw="theme" data-v="${esc(x.id)}">
-          <div class="hpw-tv">${themeThumb(x.id)}</div><div class="hpw-tn"><b>${esc(x.name)}${x.id === st.rec ? '<span class="hpw-rec">추천</span>' : ''}</b><small>${esc(x.desc)}</small>${x.sw.length ? `<span class="hpw-sw" aria-hidden="true">${x.sw.map(c => `<i style="background:${esc(c)}"></i>`).join('')}</span>` : ''}</div></div>`).join('')}</div>`;
+        ${(() => { /* v43 T1: 프리미엄 6종을 묶음으로 먼저(기관 유형에 맞는 테마부터), 기본 테마는 그 아래 */
+          const card = x => `<div class="hpw-th ${x.id === st.theme ? 'on' : ''}${x.prem ? ' prem' : ''}" role="radio" tabindex="0" aria-checked="${x.id === st.theme}" data-hw="theme" data-v="${esc(x.id)}">
+          <div class="hpw-tv">${themeThumb(x.id)}</div><div class="hpw-tn"><b>${esc(x.name)}${x.id === st.rec ? '<span class="hpw-rec">추천</span>' : ''}</b><small>${esc(x.desc)}</small>${x.prem && x.tags.length ? `<span class="hpw-tags">${x.tags.filter(k => k !== 'univ_lms').map(k => `<em${HPT.premFits && HPT.premFits(x.id) && (k === tyKey() || (k === 'univ' && tyKey() === 'univ_lms')) ? ' class="on"' : ''}>${esc(HPT.tagName ? HPT.tagName(k) : k)}</em>`).join('')}</span>` : x.sw.length ? `<span class="hpw-sw" aria-hidden="true">${x.sw.map(c => `<i style="background:${esc(c)}"></i>`).join('')}</span>` : ''}</div></div>`;
+          const P = T.filter(x => x.prem); const B = T.filter(x => !x.prem);
+          if (!P.length) return `<div class="hpw-tg" role="radiogroup" aria-label="테마">${B.map(card).join('')}</div>`;
+          const O = typeof HPT.premFor === 'function' ? HPT.premFor(tyKey()) : P.map(x => x.id); P.sort((a, b) => O.indexOf(a.id) - O.indexOf(b.id));
+          return `<h3 class="hpw-gh">프리미엄 <small>기관 색 하나로 6가지 첫 화면 · 카드 · 밀도를 고릅니다</small></h3><div class="hpw-tg" role="radiogroup" aria-label="프리미엄 테마">${P.map(card).join('')}</div>
+          <h3 class="hpw-gh">기본 테마</h3><div class="hpw-tg" role="radiogroup" aria-label="기본 테마">${B.map(card).join('')}</div>`; })()}`;
       foot([{ id: 'close', l: '취소' }, { id: 'next', l: '다음', k: 'pri' }]);
-      const on = b.querySelector('.hpw-th.on'); if (on) on.focus(); return;
+      const on = b.querySelector('.hpw-th.on'); if (on) on.focus({ preventScroll: true }); /* v43 D-E: 고른 테마로 스크롤하지 않고 1단계 맨 위(단계 · 안내)부터 보이게 */ for (let x = b; x && x !== document.body; x = x.parentElement) if (x.scrollTop) x.scrollTop = 0; requestAnimationFrame(() => { for (let x = b; x && x !== document.body; x = x.parentElement) if (x.scrollTop) x.scrollTop = 0; }); return;
     }
     if (st.step === 2) {
       const T = themes().find(x => x.id === st.theme) || {};
@@ -499,7 +510,7 @@
   ACT['hpw-q'] = () => { if (!S.site) return; const q0 = hpwQuality(site()); const fx = hpwFix(site()); const q1 = hpwQuality(fx.site);
     modal('홈페이지 품질 점수', `<div class="hpw">${qHTML(q0, null, [], false)}${fx.log.length ? `<p class="hpw-lead">[자동 보정]을 누르면 ${q1.score}점이 됩니다(되돌리기 가능).</p><ul class="hpw-fl">${fx.log.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : '<p class="hpw-lead">자동으로 고칠 것이 없습니다.</p>'}${q1.items.some(x => !x.ok && !x.auto) ? '<p class="mini">연락처는 설정 › 홈페이지 푸터에서 입력합니다(지어낸 연락처는 넣지 않습니다).</p>' : ''}</div>`,
       fx.log.length ? [{ id: 'c', label: '닫기' }, { id: 'ok', label: '자동 보정', kind: 'pri', run: () => { try { hpPush(); } catch (e) { } const n = fx.site; S.site = n; save(); /* v34.5 FZ(FIXLIST 19): 검색 제목 · 설명은 저장 때 HPSEO.sync가 n.aiSeo로 맞춘다(운영자가 쓴 값은 그대로) */ repaint(); toast(`자동 보정했습니다 — 품질 ${q1.score}점.`, 'ok'); } }] : [{ id: 'c', label: '닫기' }]);
-    $('#modal').classList.add('hpai-m'); };
+    $('#modal').classList.add('hpai-m'); if ($('#hpe')) $('#modal').classList.add('hpw-dock'); }; /* v43 R9(J4 127): 빌더 안에서는 화면 전체를 흐리는 창 대신 오른쪽 패널(캔버스가 보이게) */
 
   /* ═════════ 사이트 첫 화면(v34 slim): 「AI로 홈페이지 만들기」 카드 · 품질 점수 ═════════ */
   if (typeof AFTER !== 'undefined') AFTER.push(() => {

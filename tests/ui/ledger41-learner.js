@@ -47,7 +47,7 @@ const SID = '20269000';
     await p.click('.lg-acts a[href^="#ledger/r/"]'); await p.waitForTimeout(350);
     const rc = await txt(p, '.lg-rcpt'); ok(/277,000원/.test(rc) && /카드\(온라인\)/.test(rc) && /수강료/.test(rc), '영수증: 금액 · 수단 · 결제 항목'); await check(p, '영수증'); await shot(p, '04-receipt.png');
     await go(p, '#ledger'); ok((await p.$$('.lg-main > .lg-in > .lg-bill')).length === 1 && (await txt(p, '.lg-sum b')) === '70,000원', '결제 후 미납 1건 · 70,000원');
-    await go(p, '#ledger/hist'); const hs = await p.evaluate(() => [...document.querySelectorAll('.lg-row')].map(x => x.textContent)); ok(hs.length === 4 && /277,000원/.test(hs[0]) && hs.some(x => /환불 30,000원/.test(x)), `결제 내역 4건 · 환불 표시(${hs.length})`);
+    await go(p, '#ledger/hist'); const hs = await p.evaluate(() => [...document.querySelectorAll('.lg-row')].map(x => x.textContent)); ok(hs.length === 9 && /277,000원/.test(hs[0]) && hs.some(x => /환불 30,000원/.test(x)) && hs.some(x => /강좌 · 엑셀 실무 마스터/.test(x)), `결제 내역 9건(v43 K2 P3-F02: 청구서 수납 4 + 강좌 · 교재 구매 5를 한 목록으로) · 환불 표시(${hs.length})`);
     await check(p, '결제 내역'); await shot(p, '05-hist.png');
     const q0 = await p.evaluate(() => JSON.parse(localStorage.getItem('didisam.room.sample.lpx') || '[]').map(x => x.type));
     await go(p, '#ledger/rf'); await p.fill('#lgRfW', '이사로 그만둬요'); await p.click('#lgRf button[type=submit]'); await p.waitForTimeout(350);
@@ -57,9 +57,9 @@ const SID = '20269000';
 
   { const { ctx, p, errs } = await openDemo({ web: true, w: 1280 }); ok(await p.evaluate(() => !!document.querySelector('header.lh nav.ln a[href="#ledger"]')), '웹 머리 메뉴 「결제」');
     await go(p, '#ledger'); ok((await p.$$('.lg-bill')).length >= 2, '웹 결제 화면'); await check(p, '웹 1280');
-    await go(p, '#mypay'); ok(!!(await p.$('.lg-due')), '결제 관리(#mypay) → 통합 결제 바로가기'); ok(!errs.length, `웹 pageerror 0 ${errs.join('|')}`); await ctx.close(); }
+    await go(p, '#mypay', 700); ok(await p.evaluate(() => location.hash) === '#ledger/hist' && (await p.$$('.lg-row')).length === 8, '결제 관리(#mypay) → 결제 내역(#ledger/hist) 한 화면으로(v43 K2 P3-F02 — 새 창이라 원장 3 + 구매 5)'); ok(!errs.length, `웹 pageerror 0 ${errs.join('|')}`); await ctx.close(); }
 
-  { const { ctx, p, errs } = await openDemo({ q: '' }); ok(!(await p.$('.lg-due')), '원장 없는 기관: 홈 결제 카드 없음'); await go(p, '#ledger'); ok(/아직 온라인 청구서를 쓰지 않아요/.test(await txt(p, '.lg-off')), '원장 없는 기관 안내'); ok(!errs.length, 'pageerror 0'); await ctx.close(); }
+  { const { ctx, p, errs } = await openDemo({ q: '' }); ok(!(await p.$('.lg-due')), '원장 없는 기관: 홈 결제 카드 없음'); await go(p, '#ledger'); ok((await p.$$('.lg-off .lg-row')).length === 5 && !/결제 내역이 없/.test(await txt(p, '.lg-off')), '원장 없는 기관: 청구서 대신 강좌 · 교재 결제 내역 5건(v43 K2 P3-F02 — 영수증을 찾을 수 있게)'); ok(!errs.length, 'pageerror 0'); await ctx.close(); }
 
   /* 링크 청구서(시연판) */
   { const { ctx, p, errs } = await openDemo({ login: false, q: '&bill=demo', h: '' });

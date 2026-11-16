@@ -177,7 +177,7 @@
   ACT['d26-cat'] = () => { const c = C(UI.cls); if (!c) return; try { c2EnsureAll(); } catch (e) { }
     const T = typeof c2CatTree === 'function' ? c2CatTree() : [];
     const w = SL.sheet('카테고리', `<p class="ops-one">고른 카테고리는 학습자 사이트 ${esc(t('cls'))} 목록의 카테고리 탭이 됩니다.</p>` + SL.list([SL.row({ act: 'ops-catset', v: '', name: '카테고리 없음', icon: I('grid', 18), col: '#AAABAB', right: !c.cat ? '<span class="sl-ok">✓</span>' : '' }),
-      ...T.map(([k, d]) => SL.row({ act: 'ops-catset', v: k.id, name: (d ? '└ ' : '') + k.name, sub: `${S.classes.filter(x => x.cat === k.id).length}개`, icon: I('grid', 18), col: d ? '#7C5CF2' : '#5C74F6', right: c.cat === k.id ? '<span class="sl-ok">✓</span>' : '' }))]) +
+      ...T.map(([k, d]) => SL.row({ act: 'ops-catset', v: k.id, name: (d ? '└ ' : '') + k.name, sub: `${S.classes.filter(x => x.cat === k.id).length}개`, icon: I('grid', 18), col: d ? '#00A832' : '#00862D', right: c.cat === k.id ? '<span class="sl-ok">✓</span>' : '' }))]) +
       `<div class="ops-catadd"><input id="opsCatN" maxlength="30" placeholder="새 카테고리 이름" aria-label="새 카테고리 이름"><button type="button" class="btn pri" data-act="ops-catadd">만들고 넣기</button></div>` +
       (!T.length ? `<div class="ops-sug"><small>추천</small>${A(SUGGEST[S.org.type] || SUGGEST.adult).map(n => `<button type="button" class="chip" data-act="ops-catadd" data-v="${esc(n)}">+ ${esc(n)}</button>`).join('')}</div>` : ''),
       `<button type="button" class="btn ghost" data-act="ops-catmgr">카테고리 관리</button>`); w.dataset.ops = 'cat'; };
@@ -243,6 +243,13 @@
     else { let hd = ''; try { const b0 = base(...a); const d = document.createElement('div'); d.innerHTML = b0; const ph = d.querySelector('.ph') || d.firstElementChild; hd = ph ? ph.outerHTML : ''; } catch (e) { }
       h = hd + `<div class="bar2"><select data-chg="attSel" aria-label="${esc(t('cls'))} 선택">${opts}</select><span class="mini">온라인으로 듣는 ${esc(t('cls'))}은(는) 출석 대신 진도율로 관리합니다.</span></div>`; }
     return h + progHTML(pick); }; }
+  /* v43 R6: 반 선택 드롭다운 → 칩 세그먼트(8개 이하일 때). 출결 받는 반 먼저, 진도율만 보는 반은 뒤에 */
+  { const b2 = VIEWS.attend; if (typeof b2 === 'function') VIEWS.attend = (...a) => { const h = b2(...a); try { if (!S || !S.org || UI.attSel || UI.attS) return h; const all = visCls(); if (all.length > 8 || !/<select data-chg="attSel"/.test(h)) return h;
+      const m = h.match(/<select data-chg="attSel"[^>]*>[\s\S]*?<\/select>/); const cur = (m[0].match(/<option value="([^"]+)"[^>]*selected/) || [])[1];
+      const un = c => { try { return W2.hasUnits(c) || S.org.type === 'voc'; } catch (e) { return c.kind === 'episode'; } };
+      const chips = `<div class="att-seg" role="group" aria-label="${esc(t('cls'))} 선택">${[...all.filter(un), ...all.filter(c => !un(c))].map(x => `<button type="button" class="att-sc${x.id === cur ? ' on' : ''}${un(x) ? '' : ' pg'}" data-act="attSelc" data-v="${x.id}" aria-pressed="${x.id === cur}">${esc(x.name)}${un(x) ? '' : '<small>진도</small>'}</button>`).join('')}</div>`;
+      return h.replace(m[0], chips); } catch (e) { console.error(e); return h; } }; }
+  ACT.attSelc = el => { UI.attC = el.dataset.v; render(); };
   function progHTML(c) { const L = A(c.learners); const f = UI.opsPF || 'all'; const s = sumOf(c);
     const keep = id => f === 'all' || (f === 'low' && pOf(c, id) < 30) || (f === 'away' && away(id)) || (f === 'done' && done(c, id)) || (f === 'undone' && !done(c, id));
     const R = L.filter(keep).sort((a, b) => pOf(c, a) - pOf(c, b));
@@ -273,7 +280,11 @@
   /* 수료증 화면: 디자인 고르기 카드 · 이수 현황 엑셀 */
   { const base = VIEWS.cert; if (typeof base === 'function') VIEWS.cert = (...a) => { let h = base(...a); try { if (!S || !S.org) return h;
     h = h.replace(/<label>디자인<select data-chg="certInfo" data-k="design">[\s\S]*?<\/select><\/label>/, `<div class="fl ck-curl"><span>디자인</span><b>${esc(CERTK.label(CK().design || 'a'))}</b></div>`);
-    const gal = `<section class="card ck-gwrap"><div class="ch"><b>수료증 디자인</b><small>5종 + 내 이미지 · 누르면 바로 바뀝니다</small><span class="sp"></span><button type="button" class="btn sm" data-act="cert-preview">미리보기</button></div>${galleryHTML('')}</section>`;
+    /* v43 R6: 작은 썸네일 6장 → 지금 디자인 큰 실물 미리보기 1장 + 디자인 선택 칩 */
+    const ci0 = CK(); const cur0 = ci0.design || 'a'; let big = ''; try { big = a2CertHTML({ ...ci0, fields: { ...(ci0.fields || {}) } }, sample()); } catch (e) { }
+    const gal = `<section class="card ck-gwrap ck-bigw"><div class="ch"><b>수료증 디자인</b><small>칩을 누르면 바로 바뀝니다 · 다음 발급분부터 적용</small><span class="sp"></span><button type="button" class="btn sm" data-act="cert-preview">크게 보기</button></div>
+      <div class="ck-bigb"><div class="ck-bigpv" aria-label="${esc(CERTK.label(cur0))} 미리보기"><span class="ck-big-in">${big}</span></div>
+      <div class="ck-pick2"><p class="ck-pl">디자인</p><div class="ck-chips" role="radiogroup" aria-label="수료증 디자인">${CERTK.LIST.map(([k, n, d]) => `<button type="button" role="radio" aria-checked="${cur0 === k}" class="ck-chip ${cur0 === k ? 'on' : ''}" data-act="ck-pick" data-v="" data-k="${k}"><b>${esc(n)}</b><small>${esc(d)}</small></button>`).join('')}<button type="button" role="radio" aria-checked="${cur0 === 'img'}" class="ck-chip ${cur0 === 'img' ? 'on' : ''}" data-act="ck-edit" data-v=""><b>내 이미지</b><small>올린 수료증 위에 글자 넣기</small></button></div></div></div></section>`;
     const i = h.indexOf('<div class="grid g2">'); if (i >= 0) h = h.slice(0, i) + gal + h.slice(i); else h += gal;
     h = h.replace(/(data-act="cert-manual"[^>]*>[^<]*<\/button>)/, `$1${xlsBtn('', `${xlsW()} 현황 엑셀`)}`);
   } catch (e) { console.error(e); } return h; }; }
