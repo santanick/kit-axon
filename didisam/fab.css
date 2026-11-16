@@ -72,3 +72,15 @@ body.fab-on .top{z-index:58} /* 계정 메뉴 등 머리 드롭다운이 위젯 
   body.mode-bld.fab-open:not(.fab-l) #main[data-da="class"].da43 .c2lbar input[type=search]{flex:1 1 220px;max-width:none}
   body.mode-bld.fab-open:not(.fab-l) #main[data-da="class"].da43 .c2lbar .c2cchips{flex:1 1 100%;order:3}
 }
+/* ── v43.4 GM 휴대폰(≤760px): AI SAM 버튼은 48px 원으로 줄여 오른쪽 아래에 두고, 본문 끝에 버튼 높이만큼 여백을 둔다.
+   스크롤하는 동안에는 숨기고 멈추면 다시 보인다(fab.js body.fab-scr). 기능 · data-act(fab-toggle)는 그대로. 홈페이지 빌더(hps-dock)는 hpstudio.css 규칙을 따른다 ── */
+@media (max-width:760px){
+  body.fab-on:not(.hps-dock) #fabBtn{right:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:48px;min-width:48px;height:48px;padding:0!important;border-radius:50%;gap:0;transition:opacity .18s ease,transform .18s ease}
+  body.fab-on:not(.hps-dock) #fabBtn>span{display:none}
+  body.fab-on #fabBtn>svg{flex:none}
+  body.fab-on #fabBtn .fabn{top:-4px;right:-4px}
+  body.fab-on.fab-scr:not(.fab-open) #fabBtn{opacity:0;transform:translateY(18px) scale(.86);pointer-events:none}
+  body.fab-on:not(.hps-dock) #main{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+  body.fab-on #toasts{bottom:72px}
+}
+@media (max-width:760px) and (prefers-reduced-motion:reduce){body.fab-on #fabBtn{transition:none}}
