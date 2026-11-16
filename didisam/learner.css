@@ -595,3 +595,42 @@ html body:not(.lapp) section.login.lg43 .lg43b:hover{background:#086629}
 html body:not(.lapp) section.login.lg43 #li .fl{display:flex;flex-direction:column;gap:8px;font-size:15px;font-weight:700;color:var(--ink)}
 html body:not(.lapp) section.login.lg43 #li .fl input{height:52px;border-radius:12px;border:1.5px solid var(--line);padding:0 16px;font-size:16px}
 html body:not(.lapp) section.login.lg43 #li .fl input:focus{border-color:#0B7A33;box-shadow:0 0 0 4px rgba(11,122,51,.14);outline:0}
+/* v43 S3B 086: 트랙 카드 단추 = 딥그린 보조형(전폭 형광 → 내용 폭 테두리), 트랙과 코스 격자 사이 공백 축소, 아래 3칸 모두 사진 카드 */
+html body:not(.lapp) .track.tk43 .tkb a.lbtn{width:auto!important;align-self:flex-start;min-height:44px;padding:0 20px!important;background:transparent!important;color:var(--gr800,#0B5F2A)!important;border:1.5px solid color-mix(in srgb,var(--gr800,#0B5F2A) 55%,transparent)!important;box-shadow:none!important;font-weight:700;border-radius:12px}
+html body:not(.lapp) .track.tk43 .tkb a.lbtn:hover{background:color-mix(in srgb,var(--gr800,#0B5F2A) 8%,transparent)!important}
+html body:not(.lapp) .track.tk43 .tkb{display:flex;flex-direction:column}
+html body:not(.lapp) section.sec:has(.tracks .tk43){padding-bottom:24px}
+html body:not(.lapp) section.sec.cw43s{padding-top:40px;padding-bottom:40px}
+html body:not(.lapp) .cw43k{position:relative;overflow:hidden;padding:0 0 20px}
+html body:not(.lapp) .cw43k>:not(.cw43kp){margin-left:20px;margin-right:20px}
+html body:not(.lapp) .cw43kp{display:block;height:96px;margin-bottom:8px;background:#0b1a12 center/cover}
+html body:not(.lapp) .cw43k.cw43dk .cw43kp{opacity:.55;mix-blend-mode:luminosity}
+/* v43 S3B 089: 튜토리얼 카드 진도 막대 · 마지막 줄 빈칸 채움 카드 */
+html body:not(.lapp) .tcard .tc43bar{display:block;height:5px;margin:8px 0 2px;border-radius:99px;background:color-mix(in srgb,var(--ink) 8%,transparent);overflow:hidden}
+html body:not(.lapp) .tcard .tc43bar u{display:block;height:100%;background:var(--pri);border-radius:inherit}
+html body:not(.lapp) .tc43fill{grid-column:span var(--sp,1);display:flex;flex-direction:column;justify-content:center;gap:12px;padding:24px;border-radius:16px;background:radial-gradient(110% 140% at 100% 0,color-mix(in srgb,var(--pri) 28%,transparent),transparent 60%),#0A1D12;color:#fff;text-decoration:none;min-height:200px}
+html body:not(.lapp) .tc43fill .tc43fi{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.1);color:#9CF5B8}
+html body:not(.lapp) .tc43fill b{display:block;font-size:18px;font-weight:800}
+html body:not(.lapp) .tc43fill small{display:block;margin-top:6px;font-size:14px;line-height:1.55;color:#CFE3D6}
+html body:not(.lapp) .tc43fill em{font-style:normal;font-weight:700;color:#9CF5B8;display:inline-flex;align-items:center;gap:4px}
+@media (max-width:1100px){html body:not(.lapp) .tc43fill{grid-column:auto}}
+/* v43 S3B 092: 배지 아래 8+4 — 받은 사람 · 공유(왼쪽 8) + FAQ 펼침 카드 4개(오른쪽 4) */
+html body:not(.lapp) section.bs43.bs43w{padding-top:48px}
+html body:not(.lapp) .bs43w .bs43o{display:grid;grid-template-columns:minmax(0,8fr) minmax(0,4fr);gap:18px;align-items:start}
+html body:not(.lapp) .bs43w .bs43g{grid-template-columns:1fr}
+html body:not(.lapp) .bs43f{display:flex;flex-direction:column;gap:10px}
+html body:not(.lapp) .bs43f h2{margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+html body:not(.lapp) .bs43q{border-radius:16px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
+html body:not(.lapp) .bs43q summary{display:flex;align-items:center;gap:10px;padding:16px 18px;cursor:pointer;list-style:none;font-size:15px}
+html body:not(.lapp) .bs43q summary::-webkit-details-marker{display:none}
+html body:not(.lapp) .bs43q summary b{flex:1;font-weight:700}
+html body:not(.lapp) .bs43q summary svg{flex:none;color:var(--mute);transform:rotate(90deg);transition:transform .15s}
+html body:not(.lapp) .bs43q[open] summary svg{transform:rotate(-90deg)}
+html body:not(.lapp) .bs43qq{flex:none;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:800;background:color-mix(in srgb,var(--pri) 12%,transparent);color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .bs43q p{margin:0;padding:0 18px 16px 54px;font-size:14px;line-height:1.6;color:var(--mute)}
+@media (max-width:900px){html body:not(.lapp) .bs43w .bs43o{grid-template-columns:1fr}}
+/* v43 S3B 089 · 092: 밝은 바닥글에서 기관 이름이 흰 글자로 사라져 「AI」 한 글자만 보이던 문제 → 로고 칩 + 기관 이름 블록 */
+html body:not(.lapp) footer.lf:not(.smf){border-top:1px solid var(--q2-bd,rgba(0,0,0,.08));color:var(--ink)}
+html body:not(.lapp) footer.lf:not(.smf) .lg{background:var(--gr800,#0B5F2A);color:#fff;border-radius:10px;min-width:36px;height:36px;display:inline-grid;place-items:center;padding:0 8px;font-weight:800;vertical-align:middle}
+html body:not(.lapp) footer.lf:not(.smf) b{color:var(--ink);font-size:16px;font-weight:800;vertical-align:middle}
+html body:not(.lapp) footer.lf:not(.smf) small{color:var(--mute)}

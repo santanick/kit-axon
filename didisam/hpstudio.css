@@ -415,3 +415,10 @@ body.hps-pubc-on #hpe.hps .hpe-stage{margin-right:452px}
 .hps-pubc9 .hps-pcu span{flex:none;color:var(--g600,#6B6459)}.hps-pubc9 .hps-pcu b{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:ui-monospace,monospace;font-size:12.5px}
 .hps-pubc9 .hps-pca{display:flex;gap:8px}.hps-pubc9 .hps-pca .btn{flex:1;justify-content:center;min-height:40px;font-size:14px}
 html[data-theme=dark] .hps-pubc.hps-pubc9{background:#1F2221}
+/* v43 S3B 122: 끌기 손잡이 점이 stroke 0 · fill none으로 보이지 않던 문제 → 채운 점 */
+.hps-sl9 .hps-sg svg{fill:currentColor}
+.hps-sl9 li:not(.pin) .hps-sg{color:var(--g500,#8F877A)}
+/* v43 S3B 125: 게시 카드 주소 줄 — 임시 주소 옆 「영문 주소로 바꾸기」 */
+.hps-pubc .hps-pcu{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hps-pubc .hps-pcu b{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
+.hps-pubc .hps-pcu .hps-pcu-go{flex:none}

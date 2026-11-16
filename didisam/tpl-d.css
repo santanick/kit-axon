@@ -36,3 +36,7 @@
 
 /* v34.4 카드는 이름 + 한 줄만(분위기 · 배치 · 섹션 수 줄은 숨김) */
 .tpd-tg{display:none}
+/* v43 S3B 119: 「업종 템플릿에서 고르기」 회색 띠 안 작은 버튼 → 띠 없이 링크형 칩 */
+.tpd-wz{background:transparent!important;padding:0!important;margin:0 0 12px!important;justify-content:flex-start!important}
+.tpd-wz>span{font-size:13px;color:var(--g700,#5C554B)}
+.tpd-wz .btn{min-height:32px!important;height:32px;padding:0 12px!important;border-radius:999px!important;border:0!important;background:var(--gr50,#ECFDF3)!important;color:var(--gr700,#00862D)!important;font-weight:700;box-shadow:none!important}

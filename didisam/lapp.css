@@ -228,3 +228,27 @@ html[data-theme="dark"] body.lapp .dd-kid9 .dd-kdue{background:rgba(249,115,22,.
 .ap-ssh9 .ap-srp a{padding:8px 10px 8px 6px}
 .ap-ssh9 .ap-srn{flex:none;width:22px;text-align:center;font:800 17px/1 var(--sg,inherit);font-style:normal;color:var(--gr700,#00862D);font-variant-numeric:tabular-nums}
 .ap-ssh9 .ap-srpi{width:72px;height:72px;border-radius:14px}
+/* v43 S3B 111: 추천 강좌 부가 정보 두 줄 · 가입 카드 한 덩어리(주 버튼 + 로그인 글자 링크를 한 줄로) */
+body.lapp .ap-grc small{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip}
+body.lapp .ap-grc small.ap-grt{margin-top:2px;font-size:13px;color:var(--ap-mute,#7A7368)}
+body.lapp .ap-join.ap-join43{padding:18px 18px 16px}
+body.lapp .ap-join.ap-join43 h2{margin-top:0}
+body.lapp .ap-join.ap-join43 .ap-lk{margin:6px auto 0;padding:8px}
+/* v43 S3B 112: 위 큰 얼굴은 작게(선택한 성격 얼굴과 같음) · 카드 설명 폭 넓힘 */
+body.lapp .ap-pick .ap-ph .dd-pchar svg{width:84px;height:84px}
+body.lapp .ap-pick .ap-ph .dd-pchar{display:inline-block;margin-bottom:2px}
+body.lapp .ap-pick .ap-pc{gap:10px;padding:14px 12px}
+body.lapp .ap-pick .ap-pc .ap-pcf,body.lapp .ap-pick .ap-pc .ap-pcf svg{width:56px;height:56px}
+body.lapp .ap-pick .ap-pc>span:last-child{flex:1}
+body.lapp .ap-pick .ap-pc small{word-break:keep-all;overflow-wrap:normal}
+/* v43 S3B 116: 검색칸 = 회색 채움, 테두리는 포커스 때만 · 결과 행 상태 칩 · 시트 끝 전체 보기 */
+body .ap-ssh9 .ap-osr.big{background:var(--g100,#F2EFEA)!important;border-color:transparent!important;box-shadow:none!important}
+body .ap-ssh9 .ap-osr.big:focus-within{background:var(--surface,#fff)!important;border-color:transparent!important;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--gr600,#00A63E) 45%,transparent)!important}
+body .ap-ssh9 .ap-srpt .ap-src43{display:inline-flex;align-self:flex-start;margin-top:4px;height:22px;align-items:center;padding:0 8px;border-radius:999px;font:700 12px/1 var(--sg,inherit);font-style:normal;background:var(--g100,#F2EFEA);color:var(--g700,#5C554B)}
+body .ap-ssh9 .ap-srpt .ap-src43.on{background:var(--gr50,#ECFDF3);color:var(--gr700,#00862D)}
+body .ap-ssh9 .ap-srpt{display:flex;flex-direction:column;min-width:0}
+body .ap-ssh9 .ap-srall{display:flex;align-items:center;justify-content:center;gap:4px;min-height:48px;margin:10px 0 4px;border-radius:14px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--ap-line,rgba(0,0,0,.08));font:700 15px/1 var(--sg,inherit);color:var(--gr700,#00862D);text-decoration:none}
+/* v43 S3B 117: 단계별 코스 카드 머리 = 사진 띠(트랙 카드와 같은 문법) · 영문 워터마크 제거 */
+html body.lapp #lm .cwc.ph .cwh{background-color:#0b1a12!important;background-image:linear-gradient(180deg,rgba(6,23,13,.05) 0,rgba(6,23,13,.78) 100%),var(--ph)!important;background-size:cover!important;background-position:center!important}
+body.lapp .cwc .cwh u,body.lapp .cwc.ph .cwh>i{display:none!important}
+body.lapp .cwc.ph .cwh span{background:rgba(255,255,255,.92);color:#0B3B1E}

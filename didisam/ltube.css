@@ -486,3 +486,10 @@ body.lapp #lm .track.tk9 .tkp{position:absolute;inset:0;width:100%;height:100%;o
 body.lapp #lm .track.tk9 .tkh::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,30,14,.08) 0%,rgba(4,30,14,.78) 100%)}
 body.lapp #lm .track.tk9 .tkh>:not(img){position:relative;z-index:1}
 body.lapp #lm .track .lbtn.pri{background:var(--gr600,#00A33A)!important;border-color:var(--gr600,#00A33A)!important;color:#fff!important}
+/* v43 S3B 208: 월간 목표 12칸 막대 · 시설 예약 사진 + 위치 */
+.tb-m12{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;margin-top:8px;max-width:230px}
+.tb-m12 i{height:10px;border-radius:3px;background:rgba(255,255,255,.16)}
+.tb-m12 i.ok{background:var(--gr400,#4ADE80)}
+.tb-tyfac .tb-fph{position:relative;height:112px;margin:12px 0 10px;border-radius:14px;background:#0b1a12 center/cover;overflow:hidden}
+.tb-tyfac .tb-fph::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(6,23,13,.6))}
+.tb-tyfac .tb-fpl{position:absolute;left:10px;bottom:10px;z-index:1;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.94);color:#0B3B1E;font-size:13px;font-weight:700}

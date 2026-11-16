@@ -87,11 +87,14 @@ function lPageHead(o) {
 window.lPageHead = lPageHead;
 /* v43 D-C: 배지 페이지 아래 — 받은 사람 수 · 공유 카드(FAQ 아래 빈 곳). 받은 사람 수(b.holders)는 기관 데이터에 있을 때만 숫자로 보인다 */
 function lBadgeShare() { const B = SITE().badges || []; if (!B.length) return ''; const has = new Set(((LR.mine || {}).badges || []).map(b => b.id)); const tot = B.reduce((a, b) => a + (+b.holders || 0), 0); const mx = Math.max(1, ...B.map(b => +b.holders || 0)); const mine = B.find(b => has.has(b.id));
-  return `<section class="sec bs43"><div class="in"><div class="bs43g">
+  const fq = window.__bs43faq; window.__bs43faq = null; /* v43 S3B 092: 배지 FAQ = 오른쪽 4칸 펼침 카드(질문 4개, 기관 질문이 모자라면 배지 공통 질문으로 채움) */
+  const FQ = fq ? [...(fq.items || []), { q: '배지는 언제까지 유효한가요?', a: '발급일과 기준이 함께 기록되어 기한 없이 증명 링크로 확인할 수 있어요.' }, { q: '배지를 받지 못했어요', a: '과제가 검수 중일 수 있어요. 결과물 제출 상태를 마이페이지에서 확인하고, 그래도 없으면 담당자에게 질문해 주세요.' }, { q: '여러 배지를 함께 받을 수 있나요?', a: '단계마다 하나씩 받아요. 앞 단계를 받으면 다음 단계 코스가 열려요.' }].filter((x, i, A) => x && x.q && A.findIndex(y => y.q === x.q) === i).slice(0, 4) : [];
+  const faqC = FQ.length ? `<aside class="bs43f" aria-labelledby="bs43fT"><h2 id="bs43fT">${esc(fq.title || '배지 FAQ')}</h2>${FQ.map((x, i) => `<details class="bs43q"${i ? '' : ' open'}><summary><span class="bs43qq" aria-hidden="true">Q</span><b>${esc(x.q)}</b>${ico('arrow', 14)}</summary><p>${esc(x.a || '')}</p></details>`).join('')}</aside>` : '';
+  return `<section class="sec bs43${faqC ? ' bs43w' : ''}"><div class="in"><div class="bs43o"><div class="bs43g">
     <div class="bs43c bs43n"><p class="bs43k">${ico('user', 16)}받은 사람</p>${tot ? `<h3><b>${lphN(tot)}</b>명이 배지를 받았어요</h3><ul>${B.map(b => `<li><span>${esc(b.name)}</span><i><u style="width:${Math.round((+b.holders || 0) / mx * 100)}%;background:${esc(b.fill || 'var(--pri)')}"></u></i><b>${lphN(+b.holders || 0)}명</b></li>`).join('')}</ul>` : `<h3>첫 배지의 주인공이 되어 보세요</h3><p class="mini">배지를 받은 사람 수는 운영자가 집계하면 여기에 보여요.</p>`}</div>
     <div class="bs43c bs43s"><p class="bs43k">${ico('link', 16)}공유하기</p><h3>받은 배지는 링크 하나로 증명돼요</h3><p class="mini">이력서 · 포트폴리오 · SNS에 붙이면 누구나 발급 기관과 기준을 확인할 수 있어요. 인쇄하거나 PDF로 저장할 수도 있어요.</p>
       <div class="bs43a">${mine ? `<a class="lbtn pri" href="#badge/${esc(mine.id)}">내 배지 증명 열기${ico('arrow', 16)}</a>` : `<a class="lbtn pri" href="#courses">배지 받는 코스 보기${ico('arrow', 16)}</a>`}<a class="lbtn ghost" href="#my">내 배지 지갑</a></div></div>
-  </div></div></section>`; }
+  </div>${faqC}</div></div></section>`; }
 window.lBadgeShare = lBadgeShare;
 
 function needLogin(back) { return `<section class="sec"><div class="in narrow"><div class="gate">${ico('lock', 28)}<h2>로그인이 필요합니다</h2><p class="lead">이 화면은 로그인한 ${esc(SITE().terms.learner || '학습자')}만 볼 수 있습니다. 기록 · 진도 · 배지가 저장됩니다.</p>${btn('로그인하기', '#login/' + encodeURIComponent(back || ''), 'pri', 'arrow')}</div></div></section>`; }
