@@ -23,6 +23,64 @@ function shell(inner, cur) {
     ${LR.mode === 'preview' ? '<div class="pvbar">미리보기 · 초안</div>' : ''}${LR.sample ? `<div class="pvbar">${LR.sample.own ? '데모' : '체험용 샘플 사이트'} · 체험 계정 ${esc(LR.sample.sid)} / ${esc(LR.sample.code)} · 기록은 이 기기에만 저장됩니다</div>` : ''}<main id="lm">${inner}</main>
     <footer class="lf"><div class="in"><div><span class="lg">${esc(short)}</span><b>${esc(S2.org.name)}</b><small>학습자 정보는 ${S2.org.type === 'univ' ? '학번 · 학과만' : '번호 · 소속만'} 저장합니다. 이름 · 연락처 · 이메일은 받지 않습니다.</small></div><small>Powered by 디디쌤</small></div></footer>${tabbar}`;
 }
+/* v43 Q2 — 학습자 웹 공통 「사진」 · 「하위 페이지 머리」(수석 디자이너 2 · plan/lead-web.md)
+   lPhoto(key, salt): 강좌 · 시설 · 페이지 이름 키워드로 CC0 스톡(img/stock) 묶음을 고르고 salt(id) 해시로 시작점을 정한다.
+     같은 화면(lrender 한 번) 안에서는 이미 쓴 사진을 건너뛴다(LPHOTO_USED). 묶음이 다 쓰이면 일반 학습 사진 → 전체 순으로 넘어간다.
+   lPageHead({ key, crumb, title, desc, eyebrow, stats, cta, photo }): 하위 페이지 머리(사진 무대 + 한 문장 + 숫자 2~3개 + 주 버튼).
+     stats · cta를 주지 않으면 LPH[key](주소 첫 칸)에서 기관 데이터로 채운다. 마크업은 예전 section.sub(.in · .crumb · h1 · p)을 그대로 품어
+     lhead.js(운영자 머리글 설정) · 테스트 선택자가 그대로 동작한다. 강조색은 var(--pri). */
+const LPHOTO = { data: ['dat-01', 'lap-03', 'dsk-06', 'lap-01', 'cod-03', 'dsk-04', 'lap-07'], cert: ['stu-01', 'stu-02', 'lib-04', 'dsk-02', 'lib-02', 'doc-01'], video: ['vid-01', 'pho-01', 'pho-02', 'grp-02', 'lap-05'],
+  code: ['cod-01', 'cod-02', 'cod-03', 'cod-04', 'lap-03'], ai: ['lap-03', 'rob-01', 'cod-03', 'lap-06', 'lap-08'], auto: ['dsk-07', 'lap-02', 'dsk-03', 'lap-09', 'stu-01'], design: ['dsn-01', 'art-01', 'art-03', 'dsk-04', 'pho-01'],
+  offline: ['cls-03', 'sem-01', 'grp-03', 'lec-02', 'cls-01', 'grp-05'], sub: ['dsk-08', 'off-05', 'dsk-05', 'doc-01', 'lap-09'], sport: ['spo-04', 'spo-03', 'spo-08', 'spo-05', 'spo-01', 'spo-06', 'yog-01'],
+  lang: ['lan-02', 'lib-03', 'stu-02', 'lib-04'], cook: ['coo-01', 'coo-02', 'bak-01', 'bak-03'], music: ['mus-01', 'mus-03', 'mus-05'], admin: ['off-02', 'off-07', 'brd-01', 'dsk-09', 'off-11'], law: ['lib-05', 'doc-01', 'lib-07', 'off-12'], lead: ['sem-01', 'brd-01', 'grp-06', 'off-04'],
+  room: ['lec-01', 'cls-04', 'cls-02', 'sem-01', 'lec-03'], space: ['off-06', 'off-08', 'cam-05', 'lib-06'], comm: ['grp-03', 'grp-01', 'grp-06', 'cam-07', 'grp-05'], notice: ['off-13', 'dsk-01', 'brd-02', 'dsk-09'], badge: ['cam-03', 'cam-06', 'stu-01', 'cam-08'],
+  book: ['lib-01', 'lib-08', 'lib-04', 'lib-03', 'stu-02'], pay: ['dsk-02', 'off-01', 'dsk-05'], msg: ['lap-10', 'dsk-03', 'lap-02'], cal: ['dsk-01', 'dsk-06', 'off-05'], gen: ['stu-01', 'cam-07', 'grp-03', 'dsk-02', 'lap-06', 'lib-04', 'grp-06', 'dsk-06', 'cam-09', 'lib-02'] };
+const LPHOTO_KW = [[/테니스|코트|농구|체육|골프|수영|요가|헬스|피트니스|풋살|탁구|필라테스|스포츠/, 'sport'], [/컴활|자격|필기|시험|기출|토익|공무원|모의/, 'cert'], [/엑셀|데이터|분석|파이썬|회계|통계|SQL|대시보드/i, 'data'],
+  [/영상|촬영|유튜브|사진|편집|숏폼/, 'video'], [/코딩|개발|프로그래밍|웹|앱 만들|자바|DEV/i, 'code'], [/생성형|AI|GPT|챗봇|프롬프트|인공지능/i, 'ai'], [/노션|자동화|업무|오피스|OA|생산성/i, 'auto'], [/디자인|포토샵|일러스트|피그마|드로잉/, 'design'],
+  [/오프라인|원데이|워크숍|현장|특강|세미나/, 'offline'], [/구독|템플릿|멤버십/, 'sub'], [/영어|일본어|중국어|외국어|회화/, 'lang'], [/요리|베이킹|제과|바리스타|커피/, 'cook'], [/음악|피아노|기타|보컬/, 'music'],
+  [/행정|민원|공무|ADM/i, 'admin'], [/법|규정|LAW/i, 'law'], [/리더|관리자|코칭|LEAD/i, 'lead'], [/강의실|세미나실|교실|실습실/, 'room'], [/스튜디오|라운지|회의실|공간/, 'space']];
+let LPHOTO_USED = new Set();
+const lPhHash = s => { let h = 2166136261; for (const ch of String(s || '')) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+function lPhotoKind(key) { const k = String(key || ''); if (k.startsWith('page:')) { const p = k.slice(5).split('/')[0]; return LPHOTO[p] ? p : ({ shop: 'offline', courses: 'gen', tutorials: 'ai', books: 'book', bk: 'book', mypay: 'pay', ledger: 'pay', cert: 'badge', fac: 'space', mile: 'badge', diag: 'cert', write: 'comm', post: 'comm', tb: 'book' })[p] || 'gen'; } const f = LPHOTO_KW.find(([re]) => re.test(k)); return f ? f[1] : 'gen'; }
+let LPHOTO_MEMO = new Map();
+function lPhoto(key, salt, big) {
+  const mk = key + '|' + (salt == null ? '' : salt); if (LPHOTO_MEMO.has(mk)) return `img/stock/${LPHOTO_MEMO.get(mk)}${big ? '' : '-800'}.webp`;
+  const kind = lPhotoKind(key); const own = LPHOTO[kind] || LPHOTO.gen; const h = lPhHash((salt == null ? '' : salt) + '|' + key);
+  const pools = [own, LPHOTO.gen, [].concat(...Object.values(LPHOTO))]; let pick = null;
+  for (const L of pools) { for (let i = 0; i < L.length && !pick; i++) { const c = L[(h + i) % L.length]; if (!LPHOTO_USED.has(c)) pick = c; } if (pick) break; }
+  pick = pick || own[h % own.length]; LPHOTO_USED.add(pick); LPHOTO_MEMO.set(mk, pick); return `img/stock/${pick}${big ? '' : '-800'}.webp`;
+}
+window.lPhoto = lPhoto; window.lPhotoReset = () => { LPHOTO_USED = new Set(); LPHOTO_MEMO = new Map(); };
+const lphN = v => Number(v || 0).toLocaleString('ko-KR');
+const lphWeek = d => { const t = Date.parse(String(d || '').slice(0, 10)); return !isNaN(t) && Date.now() - t < 7 * 864e5 + 864e5; };
+/* 페이지별 숫자 · 주 버튼(데이터가 없으면 그 칸을 빼고, 숫자가 하나도 없으면 숫자 묶음 없이 그린다) */
+const LPH = {
+  shop: () => { const L = ((SITE().shop || {}).classes || []).filter(c => c.status !== '숨김'); const open = L.filter(c => !c.status || c.status === '운영중').length; const lo = L.map(c => +c.final || +c.price || 0).filter(v => v > 0); const n = L.reduce((a, c) => a + (+c.n || 0), 0);
+    return { eyebrow: '지금 신청할 수 있는 강좌', stats: [[L.length, '개 강좌', '전체'], [n ? lphN(n) : open, n ? '명' : '개', n ? '함께 듣는 수강생' : '신청 가능'], lo.length ? [lphN(Math.min(...lo)), '원~', '수강료'] : null], cta: LR.me ? ['내 강좌 이어 보기', '#my'] : ['로그인하고 신청하기', '#login/shop'] }; },
+  courses: () => { const S2 = SITE(); const C = (S2.classes || []).length; return { eyebrow: '단계별 코스웨어', stats: [[C, '개', '코스'], [(S2.tracks || []).length, '개', '트랙'], (S2.tuts || []).length ? [(S2.tuts || []).length, '편', '튜토리얼'] : [(S2.levels || []).length, '단계', '난이도']], cta: (S2.diags || []).length ? ['진단으로 내 코스 찾기', '#diag'] : [LR.me ? '내 학습 이어 가기' : '로그인하고 시작하기', LR.me ? '#my' : '#login/courses'] }; },
+  comm: () => { let P = []; try { P = typeof lcPosts === 'function' ? lcPosts() : []; } catch (e) { P = []; } const cm = p => (p.cmts || []).reduce((s, r) => s + 1 + (r.replies || []).length, 0);
+    return { eyebrow: '함께 배우는 사람들', stats: [[P.length, '개', '전체 글'], [P.filter(p => lphWeek(p.at)).length, '개', '이번 주 새 글'], [P.reduce((a, p) => a + cm(p), 0), '개', '답변 · 댓글']], cta: (() => { if (!LR.me) return ['로그인하고 참여하기', '#login/comm']; const BS = typeof COMM === 'function' ? COMM().boards : []; let cur = ''; try { cur = decodeURIComponent(String(location.hash).split('/')[1] || ''); } catch (e) { cur = ''; } const bd = BS.find(b => b.id === cur) || BS[0]; /* 쓰기 권한이 있는 게시판에서만 글쓰기 버튼(운영자 전용 게시판은 공지로) */ return bd && (typeof lcBoardOK !== 'function' || lcBoardOK(bd, true)) && bd.write !== 'admin' ? ['질문 남기기', '#write/b:' + encodeURIComponent(bd.id)] : ['공지 보기', '#notice']; })() }; },
+  notice: () => { const N = SITE().notices || []; return { eyebrow: '기관 소식', stats: [[N.length, '건', '전체 공지'], [N.filter(n => lphWeek(n.at)).length, '건', '이번 주 새 공지'], [N.filter(n => n.pin).length, '건', '고정 공지']], cta: ['수강생 라운지 가기', '#comm'] }; },
+  badges: () => { const B = SITE().badges || []; let got = 0; try { got = (myStats().badges || []).filter(x => x.got || x.ok).length; } catch (e) { got = 0; } return { eyebrow: '디지털 배지 · Open Badge', stats: [[B.length, '단계', '배지'], got ? [got, '개', '내가 받은 배지'] : [(SITE().tuts || []).length || (SITE().classes || []).length, (SITE().tuts || []).length ? '편' : '개', (SITE().tuts || []).length ? '배지로 이어지는 튜토리얼' : '배지 과정'], (SITE().classes || []).length ? [(SITE().classes || []).length, '개', '배지로 이어지는 코스'] : null], cta: ['배지 받는 코스 보기', '#courses'] }; },
+  books: () => { const B = (SITE().dbooks || []).filter(b => b.on !== false); const ch = B.reduce((a, b) => a + ((b.chs || b.units || []).length), 0); return { eyebrow: '읽고 · 보고 · 풀고 · 쓰는 교재', stats: [[B.length, '권', '디지털북'], [ch, '장', '전체 단원'], [B.length ? (B[0].thr || 80) : 0, '%', '수료 기준 진도']], cta: B.length ? ['첫 권 읽기', '#bk/' + encodeURIComponent(B[0].id)] : null }; },
+  mypay: () => { let L = []; try { L = JSON.parse(localStorage.getItem('didisam.room.' + LR.tid + '.lpx') || '[]').filter(x => x.kind === 'pay' || x.payId); } catch (e) { L = []; } const sum = L.reduce((a, x) => a + (+x.amount || 0), 0);
+    return { eyebrow: '결제 · 환불 · 구독', stats: [[L.length, '건', '결제'], [lphN(sum), '원', '누적 결제액'], [L.filter(x => /환불/.test(x.status || '')).length, '건', '환불']], cta: ['강좌 둘러보기', '#shop'] }; },
+  class: () => { const c = (((SITE().shop || {}).classes) || []).find(x => x.id === route().b); if (!c) return {}; const pr = +c.final || +c.price || 0;
+    return { eyebrow: [c.kind === 'session' ? '회차' : c.kind === 'sub' ? '구독' : '기간', c.legal ? '법정' : '', c.status || ''].filter(Boolean).join(' · '), stats: [[c.items || (c.curr || []).length || '', '개', '차시'], c.n ? [lphN(c.n), '명', '수강생'] : null, [pr ? lphN(pr) : '무료', pr ? '원' : '', '수강료']], cta: null, photo: lPhoto(c.name, 'hero:' + c.id, true) }; },
+  msg: () => ({ eyebrow: '기관 · 강사가 보낸 메시지', stats: null, cta: ['수강생 라운지 가기', '#comm'] }),
+  cert: () => { let n = 0; try { n = myStats().courses.filter(x => x.done).length; } catch (e) { n = 0; } return { eyebrow: '수료 기록', stats: [[n, '개', '수료한 과정']], cta: ['내 학습으로', '#my'] }; }
+};
+const LPH_ICO = { shop: 'grid', courses: 'layers', comm: 'user', notice: 'bell', badges: 'award', books: 'book', mypay: 'brief', msg: 'bell', cert: 'award', cal: 'clock' };
+function lPageHead(o) {
+  o = o || {}; const key = o.key || (route().a || 'page'); let auto = {}; try { auto = !o.compact && LPH[key] ? LPH[key]() || {} : {}; } catch (e) { auto = {}; }
+  const st = (o.stats !== undefined ? o.stats : auto.stats) || []; const S = st.filter(x => x && x[0] !== '' && x[0] != null).slice(0, 3); const cta = o.cta !== undefined ? o.cta : auto.cta; const eb = o.eyebrow || auto.eyebrow || '';
+  const ph = o.photo || auto.photo || lPhoto('page:' + key, key, true);
+  return `<section class="sub lph${o.compact ? ' lph-c' : ''}${o.cls ? ' ' + esc(o.cls) : ''}" data-lph="${esc(key)}" style="--lph-img:url('${esc(ph)}')"><div class="in"><p class="crumb">${o.crumb || `<a href="#home">홈</a> › ${esc(o.title || '')}`}</p>
+    <div class="lph-g"><div class="lph-t">${eb ? `<p class="lph-eb"><i aria-hidden="true">${ico(LPH_ICO[key] || 'spark', 14)}</i>${esc(eb)}</p>` : ''}<h1>${esc(o.title || '')}</h1>${o.desc ? `<p class="llh-d">${o.descHtml ? o.desc : esc(o.desc)}</p>` : ''}
+      ${cta ? `<div class="lph-ac"><a class="lbtn pri lph-cta" href="${esc(cta[1])}">${esc(cta[0])}${ico('arrow', 16)}</a></div>` : ''}</div>
+    ${S.length ? `<dl class="lph-st">${S.map(([v, u, l]) => `<div><dt>${esc(l)}</dt><dd><b>${esc(v)}</b>${u ? `<small>${esc(u)}</small>` : ''}</dd></div>`).join('')}</dl>` : ''}</div></div></section>`;
+}
+window.lPageHead = lPageHead;
 function needLogin(back) { return `<section class="sec"><div class="in narrow"><div class="gate">${ico('lock', 28)}<h2>로그인이 필요합니다</h2><p class="lead">이 화면은 로그인한 ${esc(SITE().terms.learner || '학습자')}만 볼 수 있습니다. 기록 · 진도 · 배지가 저장됩니다.</p>${btn('로그인하기', '#login/' + encodeURIComponent(back || ''), 'pri', 'arrow')}</div></div></section>`; }
 
 function viewPage(id) {
@@ -30,7 +88,7 @@ function viewPage(id) {
   if (p.access === '로그인' && !LR.me) return needLogin(p.id);
   const inner = p.sections.map(s => { try { return (SECR[s.type] || (() => ''))(s.data || {}); } catch (e) { console.error(e); return ''; } }).join('');
   const D = PG_DESC[p.id] || ['', ''];
-  return (p.id !== 'home' && p.id !== 'my' && !p.sections.some(s => s.type === 'hero') ? `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › ${esc(p.name)}</p><h1>${esc(p.name)}</h1>${D[1] ? `<p>${esc(D[1])}</p>` : ''}</div></section>` : '') + inner + (p.id === 'my' ? viewMy() : '');
+  return (p.id !== 'home' && p.id !== 'my' && !p.sections.some(s => s.type === 'hero') ? lPageHead({ key: p.id, title: p.name, desc: D[1] || '' }) : '') + inner + (p.id === 'my' ? viewMy() : '');
 }
 function viewTut(id) {
   const S2 = SITE(); const t = S2.tuts.find(x => x.id === id); if (!t) return '<section class="sec"><div class="in"><p class="empty">튜토리얼을 찾지 못했습니다.</p></div></section>';
@@ -40,10 +98,10 @@ function viewTut(id) {
   return `<section class="tutv"><div class="in"><p class="crumb"><a href="#tutorials">튜토리얼</a> › ${esc(ty.name)} · ${esc(lvOf(t.level).name)}</p>
     <div class="tvh"><div><span class="tg" style="--c:${esc(ty.color)}">${esc(ty.k)} · ${esc(ty.name)}</span><h1>${esc(t.title)}</h1><p class="mini">${esc([t.ch, t.tool].filter(Boolean).join(' · '))}</p></div>
       <ol class="flow">${['영상 보기', '3단계 따라 하기', '미션 제출'].map((s, i) => `<li class="${i < stage ? 'done' : i === stage || (!LR.me && i === 0) ? 'now' : ''}"><span>${i < stage ? ico('check', 13) : i + 1}</span>${s}</li>`).join('')}</ol></div>
-    <div class="tw2"><div class="vid"><div class="vbox">${ytOK(t.yt) ? `<div id="yt" data-yt="${esc(t.yt)}" data-kind="tut" data-id="${esc(t.id)}"></div>` : '<div class="novid">영상 준비 중</div>'}</div><div class="wbar"><i style="width:${Math.round((r.w || 0) * 100)}%"></i></div><small class="mini" id="wtxt">시청 ${Math.round((r.w || 0) * 100)}%</small></div>
+    <div class="tw2"><div class="vid"><div class="vbox" style="--poster:url('${esc(lPhoto(t.title, t.id, true))}')">${ytOK(t.yt) ? `<div id="yt" data-yt="${esc(t.yt)}" data-kind="tut" data-id="${esc(t.id)}"></div>` : '<div class="novid">영상 준비 중</div>'}</div><div class="wbar"><i style="width:${Math.round((r.w || 0) * 100)}%"></i></div><small class="mini" id="wtxt">시청 ${Math.round((r.w || 0) * 100)}%</small></div>
     <aside class="follow"><p class="fh">STEP 2 · 따라 할 3단계 <b>${n3}/3</b></p>${t.steps.map((s, i) => `<label class="fs"><input type="checkbox" data-lchg="step" data-v="${i}" ${r.steps && r.steps[i] ? 'checked' : ''} ${LR.me ? '' : 'disabled'}><span><em>${i + 1}</em>${esc(s)}</span></label>`).join('')}
       <div class="mission"><p class="fh">STEP 3 · 미션 제출</p><b>${esc(t.mission)}</b>${LR.me ? `<textarea id="msn" rows="4" maxlength="2000" placeholder="결과물 링크 · 만든 과정 한 줄 설명">${esc(r.mission || '')}</textarea><button class="lbtn pri blk" data-lact="msn" data-v="${esc(t.id)}">${r.mission ? '다시 제출' : '미션 제출하기'}</button>${r.mission ? '<small class="mini">제출 완료 · 운영자 검수 후 배지로 이어집니다.</small>' : ''}` : `<p class="mini">로그인하면 체크 · 미션 제출이 기록되어 배지로 이어집니다.</p>${btn('로그인하고 기록하기', '#login/' + encodeURIComponent('t/' + t.id), 'pri blk')}`}</div></aside></div>
-    ${rel.length ? `<div class="rel"><h3>이어서 해 볼 튜토리얼</h3><div class="tgrid">${rel.map(x => `<a class="tcard" href="#t/${esc(x.id)}">${thumb(x.yt)}<div class="tci"><span class="tg" style="--c:${esc(tyOf(x.type).color)}">${esc(tyOf(x.type).name)}</span><b>${esc(x.title)}</b><small>${esc(x.tool || '')}</small><span class="go">${tutDone(x) ? ico('check', 14) + ' 완료' : '3단계 따라 하기 ' + ico('arrow', 13)}</span></div></a>`).join('')}</div></div>` : ''}</div></section>`;
+    ${rel.length ? `<div class="rel"><h3>이어서 해 볼 튜토리얼</h3><div class="tgrid">${rel.map(x => `<a class="tcard" href="#t/${esc(x.id)}">${thumb(x.yt, '', x.title)}<div class="tci"><span class="tg" style="--c:${esc(tyOf(x.type).color)}">${esc(tyOf(x.type).name)}</span><b>${esc(x.title)}</b><small>${esc(x.tool || '')}</small><span class="go">${tutDone(x) ? ico('check', 14) + ' 완료' : '3단계 따라 하기 ' + ico('arrow', 13)}</span></div></a>`).join('')}</div></div>` : ''}</div></section>`;
 }
 const ITN = { video: '영상', doc: '강의자료', quiz: '퀴즈', exam: '시험', assign: '과제', survey: '설문', live: '라이브', offline: '오프라인' };
 const ITI = { video: 'video', doc: 'book', quiz: 'edit', exam: 'edit', assign: 'brief', survey: 'star', live: 'video', offline: 'pin' };
@@ -57,7 +115,7 @@ function viewCourse(id, itemId) {
   const ty = S2.types.find(x => x.k === c.ctype); const G = []; c.items.forEach(x => { const w = x.week || 0; let g = G.find(y => y.w === w); if (!g) G.push(g = { w, items: [] }); g.items.push(x); });
   let main = '<p class="empty">항목이 없습니다.</p>';
   if (it) { const st = r.items[it.id] || {};
-    if (it.type === 'video') main = ytOK(it.yt) ? `<div class="vbox"><div id="yt" data-yt="${esc(it.yt)}" data-kind="cls" data-id="${esc(c.id)}" data-item="${esc(it.id)}"></div></div><div class="wbar"><i style="width:${Math.round((st.w || 0) * 100)}%"></i></div><small class="mini" id="wtxt">시청 ${Math.round((st.w || 0) * 100)}% · 80% 이상 보면 완료</small>` : `<div class="novid">${ico('video', 28)}<span>영상 준비 중</span></div><button class="lbtn ${st.done ? 'ghost' : 'pri'}" data-lact="done" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${st.done ? '완료됨' : '확인했어요'}</button>`;
+    if (it.type === 'video') main = ytOK(it.yt) ? `<div class="vbox" style="--poster:url('${esc(lPhoto(c.name, c.id, true))}')"><div id="yt" data-yt="${esc(it.yt)}" data-kind="cls" data-id="${esc(c.id)}" data-item="${esc(it.id)}"></div></div><div class="wbar"><i style="width:${Math.round((st.w || 0) * 100)}%"></i></div><small class="mini" id="wtxt">시청 ${Math.round((st.w || 0) * 100)}% · 80% 이상 보면 완료</small>` : `<div class="novid">${ico('video', 28)}<span>영상 준비 중</span></div><button class="lbtn ${st.done ? 'ghost' : 'pri'}" data-lact="done" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${st.done ? '완료됨' : '확인했어요'}</button>`;
     else if (it.type === 'quiz' || it.type === 'exam') main = `${st.score != null ? `<div class="qres"><b>${st.score}</b><small>점 · 최근 응시</small></div>` : `<p class="mini">${it.qs.length}문항${it.time ? ` · ${it.time}분` : ''} · 제출하면 바로 채점됩니다.</p>`}<form id="qz" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${it.qs.map((q, k2) => `<fieldset class="q"><legend><span>${k2 + 1}</span>${esc(String(q.q).replace(/^\d+\.\s*/, ''))}</legend>${q.t === 'mc' || q.t === 'ox' ? `<div class="opts">${(q.t === 'ox' ? ['O', 'X'] : q.opts).map((o, j) => `<label><input type="radio" name="q${k2}" value="${q.t === 'ox' ? esc(o) : j}"><span>${esc(o)}</span></label>`).join('')}</div>` : `<textarea name="q${k2}" rows="3" maxlength="1000" placeholder="답을 입력하세요"></textarea>`}</fieldset>`).join('') || '<p>문항이 없습니다.</p>'}<button class="lbtn pri" type="submit">${st.score != null ? '다시 제출' : '제출하고 채점'}</button></form>`;
     else if (it.type === 'assign') main = `<div class="body">${nl(it.desc || '과제 안내를 확인하고 제출하세요.')}</div>${m.st && m.st !== 'none' ? `<p class="fbk ${esc(m.st)}"><b>${esc({ submitted: '검수 대기', graded: '검수 완료', returned: '재제출 요청', failed: '미통과' }[m.st] || '')}</b>${m.fb ? ' ' + esc(m.fb) : ''}</p>` : ''}<textarea id="asg" rows="6" maxlength="4000" placeholder="제출 내용 · 결과물 링크">${esc((r.sub && r.sub.text) || '')}</textarea><button class="lbtn pri" data-lact="asg" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${r.sub ? '다시 제출' : '과제 제출'}</button>`;
     else main = `<div class="body">${nl(it.desc || `${ITN[it.type] || '항목'} 안내를 확인하세요.`)}</div><button class="lbtn ${st.done ? 'ghost' : 'pri'}" data-lact="done" data-c="${esc(c.id)}" data-i="${esc(it.id)}">${st.done ? '완료됨' : '완료로 표시'}</button>`; }
@@ -93,12 +151,14 @@ function viewMy() { return needLogin('my'); }
 function lrender() {
   if (PLAYER && PLAYER.stop) PLAYER.stop(); PLAYER = null; if (typeof bkStop === 'function') bkStop();
   const app = $('#lapp'); if (!SITE()) { app.innerHTML = `<div class="lerr"><b>학습자 사이트</b><p>${esc(LR.err || '불러오는 중…')}</p></div>`; return; }
+  LPHOTO_USED = new Set(); LPHOTO_MEMO = new Map(); /* v43 Q2: 화면마다 사진 중복 금지 */
   const { a, b } = route(); let inner, cur = a;
   if (a === 't') { inner = viewTut(b); cur = 'tutorials'; } else if (a === 'c') { inner = viewCourse(b, route().b && decodeURIComponent(location.hash.slice(1)).split('/')[2]); cur = 'courses'; }
   else if (a === 'dg') { inner = viewDiag(b); cur = 'diag'; } else if (a === 'cert') { inner = viewCert(b); cur = 'my'; } else if (a === 'badge') { inner = viewBadgeCert(b); cur = 'my'; } else if (a === 'bk' && typeof viewBook === 'function') { const n = decodeURIComponent(location.hash.slice(1)).split('/')[2]; inner = viewBook(b, n ? Math.max(0, (parseInt(n, 10) || 1) - 1) : null); cur = 'books'; } else if (a === 'bkcert' && typeof viewBookCert === 'function') { inner = viewBookCert(b); cur = 'my'; }
   else if (a === 'login') { inner = LR.me ? viewMy() : viewLogin(route().rest); } else inner = viewPage(a);
   document.body.className = 'look-' + (SITE().look || 'clean') + (LR.mode === 'preview' ? ' pv' : '');
   app.innerHTML = shell(inner, cur); document.title = `${SITE().org.name} · 학습`;
+  try { const h1 = $('#lm>section.sub.lph h1'); const nx = h1 && $('#lm>section.sub.lph~section.sec .sh h2'); if (nx && nx.textContent.trim() === h1.textContent.trim()) nx.closest('.sh').classList.add('lph-dup'); } catch (e) { } /* v43 Q2: 머리 제목과 같은 첫 섹션 제목은 숨김(중복 금지) */
   const y = $('#yt'); if (y) PLAYER = ytMount(y);
   if (!location.hash.includes('/')) window.scrollTo(0, 0); if (typeof bkMount === 'function') bkMount();
 }
@@ -109,9 +169,12 @@ function ytMount(el) {
   const id = el.dataset.yt; let seen = new Set(), dur = 0, iv = 0, p = null, stopped = false;
   const rec = () => { const w = dur ? Math.min(1, seen.size / Math.max(1, Math.floor(dur))) : 0; const tgt = el.dataset.kind === 'tut' ? (LR.lp.tut[el.dataset.id] = LR.lp.tut[el.dataset.id] || { w: 0, steps: [], mission: '' }) : (() => { const c = LR.lp.cls[el.dataset.id] = LR.lp.cls[el.dataset.id] || { items: {} }; return (c.items[el.dataset.item] = c.items[el.dataset.item] || {}); })();
     if (w > (tgt.w || 0)) { tgt.w = Math.round(w * 100) / 100; if (el.dataset.kind === 'cls' && w >= 0.8 && !tgt.done) { tgt.done = true; toast('시청 완료로 기록했습니다.', 'ok'); } const t = $('#wtxt'); if (t) t.textContent = `시청 ${Math.round(w * 100)}%`; const b = $('.wbar i'); if (b && el.dataset.kind === 'tut') b.style.width = Math.round(w * 100) + '%'; if (LR.me) LR.api.save(); } };
-  loadYT().then(() => { if (stopped) return; p = new YT.Player(el, { videoId: id, host: 'https://www.youtube-nocookie.com', playerVars: { rel: 0, modestbranding: 1, playsinline: 1 }, events: { onReady: () => { dur = p.getDuration() || 0; }, onStateChange: ev => { if (ev.data === 0 && el.dataset.kind === 'cls') { try { rec(); } catch (e) { } if (typeof window.l26Ended === 'function') window.l26Ended(); } } } });
+  loadYT().then(() => { if (stopped) return; p = new YT.Player(el, { videoId: id, host: 'https://www.youtube-nocookie.com', playerVars: { rel: 0, modestbranding: 1, playsinline: 1 }, events: { onReady: () => { dur = p.getDuration() || 0; const vb = document.querySelector('.vbox'); if (vb) vb.classList.add('ready'); }, onStateChange: ev => { if (ev.data === 0 && el.dataset.kind === 'cls') { try { rec(); } catch (e) { } if (typeof window.l26Ended === 'function') window.l26Ended(); } } } });
     iv = setInterval(() => { try { if (p.getPlayerState && p.getPlayerState() === 1) { const r = p.getPlaybackRate ? p.getPlaybackRate() : 1; if (r <= 2) seen.add(Math.floor(p.getCurrentTime())); if (!dur) dur = p.getDuration(); if (seen.size % 5 === 0) rec(); } } catch (e) { } }, 1000);
-  }).catch(() => { el.outerHTML = `<iframe class="ytf" src="https://www.youtube-nocookie.com/embed/${esc(id)}?rel=0" title="영상" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe><button class="lbtn sm ghost" data-lact="wdone">다 봤어요(시청 기록)</button>`; });
+  }).catch(() => { if (stopped || !el.isConnected) return; const vb = el.closest('.vbox'); /* v43 Q2: 플레이어 스크립트를 못 불러오면 강의 사진 포스터 + [영상 재생] — 누르면 그때 영상 창을 붙인다(검은 빈 상자 대신) */
+    const mk = () => `<iframe class="ytf" src="https://www.youtube-nocookie.com/embed/${esc(id)}?rel=0&autoplay=1" title="영상" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    if (vb && vb.style.getPropertyValue('--poster')) { el.outerHTML = `<button type="button" class="vfac" aria-label="영상 재생"><span>${ico('play', 22)}</span><b>영상 재생</b></button>`; const f = vb.querySelector('.vfac'); if (f) f.addEventListener('click', () => { f.outerHTML = mk(); vb.classList.add('ready'); }); vb.insertAdjacentHTML('afterend', '<button class="lbtn sm ghost" data-lact="wdone">다 봤어요(시청 기록)</button>'); }
+    else el.outerHTML = mk().replace('&autoplay=1', '') + `<button class="lbtn sm ghost" data-lact="wdone">다 봤어요(시청 기록)</button>`; });
   return { stop() { stopped = true; clearInterval(iv); try { rec(); p && p.destroy && p.destroy(); } catch (e) { } }, mark() { const w = 1; seen = new Set(Array.from({ length: Math.max(1, Math.floor(dur || 60)) }, (_, i) => i)); dur = dur || 60; rec(); void w; } };
 }
 

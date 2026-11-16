@@ -51,7 +51,7 @@ function lcPosts() { const C2 = COMM(); const st = lcStore(); const me = lcMe();
 const lcCnt = L => (L || []).reduce((s, r) => s + 1 + lcCnt(r.replies), 0);
 const lcSortF = k => k === 'likes' ? (a, b) => b.nlike - a.nlike : k === 'cmts' ? (a, b) => lcCnt(b.cmts) - lcCnt(a.cmts) : k === 'views' ? (a, b) => (b.views || 0) - (a.views || 0) : (a, b) => String(b.at).localeCompare(String(a.at));
 const lcTitle = p => p.lock && !p.own ? (p.tonly ? `${lcTerm('teacher')}에게만 공개된 글입니다` : '비공개 글입니다') : (p.title || String(p.body || '').slice(0, 30) || '(내용 없음)');
-const lcSub = (h, t2, d) => `<section class="sub"><div class="in"><p class="crumb"><a href="#home">홈</a> › ${h}</p><h1>${esc(t2)}</h1>${d ? `<p>${esc(d)}</p>` : ''}</div></section>`;
+const lcSub = (h, t2, d) => { const r = route(); /* v43 Q2: 공통 머리(lPageHead) — 목록(커뮤니티 · 메시지함)은 숫자 · 주 버튼까지, 글 보기 · 글쓰기는 짧은 머리 */ return lPageHead({ key: r.a === 'comm' ? 'comm' : r.a, crumb: `<a href="#home">홈</a> › ${h}`, title: t2, desc: d || '', compact: !(r.a === 'comm' || (r.a === 'msg' && !r.b)) }); };
 
 /* ── 커뮤니티 목록 ── */
 function lcViewComm(bid) { const C2 = COMM(); const f = LCM.f; const mine = bid === 'mine'; const boards = C2.boards.filter(b => lcBoardOK(b)); if (!mine && !boards.some(b => b.id === bid)) bid = (boards[0] || {}).id || '커뮤니티'; const cur = mine ? null : boards.find(b => b.id === bid); const canW = !!LR.me && (mine ? boards.some(b => lcBoardOK(b, true)) : lcBoardOK(cur, true)); const talk = mine || !cur || !cur.type || cur.type === 'talk' || cur.type === 'qa'; const nN = (SITE().notices || []).length;
@@ -156,7 +156,7 @@ const lcPanelRefresh = () => { const p = $('#lcPanel'); if (p) p.outerHTML = lcP
     const panel = lcPanel(id, iid, vid) + `<p class="lcaskb"><a class="lbtn ghost sm" href="#msg/new:${encodeURIComponent(id)}:${encodeURIComponent(iid)}">담당 ${esc(lcTerm('teacher'))}에게 질문</a></p>`; const k = h.lastIndexOf('<div class="inav">'); return k > 0 ? h.slice(0, k) + panel + h.slice(k) : h + `<section class="sec"><div class="in">${panel}</div></section>`; } catch (e) { console.error('lcomm course', e); return h; } }; }
 
 /* ── 메시지함 ── */
-function lcInbox() { const st = lcStore(); if (!LR.me) return []; /* 운영: GET /api/pub/<tid>/inbox */ const r = lcRoom(); if (!r) return []; const m = lcMember(); const I = r.inbox || {};
+function lcInbox() { const st = lcStore(); if (!LR.me) return []; /* 운영: GET /api/pub/<tid>/inbox */ const r = lcRoom(); if (!r) { /* v43 Q2: 체험 사이트(방 없음)는 시연 메시지(comm.demoInbox)로 메시지함을 채운다 — 운영 · 방 있는 시연은 그대로 */ const DI = LR.mode === 'demo' && SITE() && SITE().comm && Array.isArray(SITE().comm.demoInbox) ? SITE().comm.demoInbox : []; return DI.map(x => ({ ...x, read: !!(x.read || st.read[x.id]) })).sort((a, b) => String(b.at).localeCompare(String(a.at))); } const m = lcMember(); const I = r.inbox || {};
   const pa = LR.me.kind === 'parent' ? (r.pacct || []).find(x => x.sid === LR.me.sid) : null; /* v38 보호자 계정 id(운영자 '보호자 포함' 발송 키) + 계정 연결 전 행 id(QA K3) */
   const pks = [...new Set([LR.me.pid, LR.me.parent && LR.me.parent.id, pa && pa.id, ...(pa ? (r.parents || []).filter(p => p.acct === pa.id).map(p => p.id) : [])].filter(Boolean))];
   const L = [...(m ? I[m.id] || [] : []), ...pks.flatMap(pk => (I['par:' + pk] || []).map(x => ({ ...x, par: pk })))].filter((x, i, A) => A.findIndex(y => y.id === x.id) === i);
