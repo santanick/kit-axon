@@ -132,20 +132,35 @@
     const real = s && (P.blob || /^(https?:|blob:)/.test(s.src || '') || med);
     setTimeout(paint, 0);
     return `<div class="card"><div class="ch"><b>HTML5 플레이어</b>${csel}</div>
-      <div class="form2"><label>학번(학생 화면으로 재생)<input id="w3imno" maxlength="20" value="${esc(UI.w3iMno || '20269001')}"></label><label>내 컴퓨터 영상으로 미리보기<input type="file" id="w3ifile" accept="video/*" data-chg="w3i-file"></label></div>
+      <div class="r2-iform"><label class="r2-mno"><span>학번(학생 화면으로 재생)</span><input id="w3imno" maxlength="20" value="${esc(UI.w3iMno || '20269001')}"></label><label class="r2-drop">${ic('upload', 18)}<span><b>내 컴퓨터 영상으로 미리보기</b><small>영상 파일을 끌어 놓거나 눌러서 고릅니다 · 서버에 올리지 않습니다</small></span><input type="file" id="w3ifile" accept="video/*" data-chg="w3i-file" class="r2-file"></label></div>
       ${P.msg ? `<div class="w3-res bad" role="alert">${esc(P.msg)}</div>` : ''}
       <div class="w3-player"><div>
-        <div class="w3-vid">${real ? (med ? `<video id="w3v" data-media="${esc(s.src)}" playsinline preload="metadata"></video>` : `<video id="w3v" src="${esc(P.blob || s.src)}" playsinline preload="metadata"></video>`) : `<div class="w3-sim" id="w3sim">${s ? '가상 영상(시간만 흐름) — 실제 영상은 CDN 연동 후 재생됩니다' : '「재생 시작」을 누르면 서버에 재생 세션을 엽니다(이어보기 · 동시 재생 확인)'}</div>`}
+        <div class="w3-vid">${real ? (med ? `<video id="w3v" data-media="${esc(s.src)}" playsinline preload="metadata"></video>` : `<video id="w3v" src="${esc(P.blob || s.src)}" playsinline preload="metadata"></video>`) : (s ? `<div class="w3-sim" id="w3sim">가상 영상(시간만 흐름) — 실제 영상은 CDN 연동 후 재생됩니다</div>` : `<div class="w3-sim r2-thumb" id="w3sim" data-wk="${esc(String(c.week_no || 1))}"><div class="r2-sl"><small>${esc(String(c.week_no || ''))}주 ${esc(String(c.seq || 1))}차 · ${esc(sec.title.replace(/\s*\(.*$/, ''))}</small><b>${esc(c.title || '강의 영상')}</b><span class="r2-sb"><i></i><i></i><i></i></span></div><button class="r2-play" data-act="w3i-start" aria-label="재생 시작">${ic('play', 26)}</button><span class="r2-dur">${mmss(c.duration_sec || 0)}</span><span class="r2-hint">「재생 시작」을 누르면 재생 세션을 엽니다(이어보기 · 동시 재생 확인)</span></div>`)}
           <div class="w3-cap" id="w3cap" aria-live="polite"></div>${P.quiz ? quizBox(P.quiz) : ''}</div>
         <div class="w3-seg" id="w3seg" aria-hidden="true"></div>
         <input type="range" id="w3pos" min="0" max="${c.duration_sec || 1}" value="${Math.floor(P.pos)}" data-chg="w3i-seek" aria-label="재생 위치" style="width:100%" ${s ? '' : 'disabled'}>
         <div class="w3-ctl">${s ? `<button class="btn sm pri" data-act="w3i-toggle">${P.playing ? '일시정지' : '재생'}</button><button class="btn sm" data-act="w3i-end">재생 종료</button>` : `<button class="btn sm pri" data-act="w3i-start">재생 시작</button>`}
-          <label>배속 <select data-chg="w3i-rate" aria-label="배속">${[1, 1.25, 1.5, 1.75, 2].map(r => `<option value="${r}" ${r === P.rate ? 'selected' : ''}>${r.toFixed(2).replace(/0$/, '')}x</option>`).join('')}</select></label>
-          <label>화질 <select aria-label="화질">${(c.qualities || ['auto']).map(q => `<option>${esc(q)}</option>`).join('')}</select></label>
-          <label>자막 <select data-chg="w3i-lang" aria-label="자막 언어"><option value="">끄기</option>${(c.subtitles || []).map(l => `<option value="${l}" ${l === P.lang ? 'selected' : ''}>${esc(LANGS[l] || l)}</option>`).join('')}</select></label>
+          <span class="r2-seg" role="group" aria-label="배속"><em>배속</em>${[1, 1.25, 1.5, 2].map(r => `<button type="button" class="${r === P.rate ? 'on' : ''}" data-act="w3i-rate" value="${r}">${r}x</button>`).join('')}</span>
+          <span class="r2-seg" role="group" aria-label="화질"><em>화질</em>${(c.qualities || ['auto']).map(q => `<button type="button" class="${q === (UI.w3iQ || 'auto') ? 'on' : ''}" data-act="w3i-q" value="${esc(q)}">${esc(q === 'auto' ? '자동' : q)}</button>`).join('')}</span>
+          <span class="r2-seg" role="group" aria-label="자막 언어"><em>자막</em><button type="button" class="${!P.lang ? 'on' : ''}" data-act="w3i-lang" value="">끄기</button>${(c.subtitles || []).map(l => `<button type="button" class="${l === P.lang ? 'on' : ''}" data-act="w3i-lang" value="${l}">${esc(LANGS[l] || l)}</button>`).join('')}</span>
           <span class="mini" id="w3time">${mmss(P.pos)} / ${mmss(c.duration_sec || 0)}</span></div>
         <p class="mini" id="w3stat">${s ? `학습 인정 ${mmss(s.watched_sec || 0)} · 진도 ${s.pct || 0}% · 이어보기 ${mmss(s.resume_pos)}부터 · ${s.block_concurrent ? '동시 재생 차단 중' : '동시 재생 허용'}` : '본 구간만 학습시간으로 인정합니다(건너뛴 구간 불인정, 배속은 1.0~2.0배).'}</p>
-      </div><div><p class="mini"><b>대본</b> — 누르면 그 위치로 이동합니다</p><div class="w3-tr" id="w3tr">${P.cues.length ? P.cues.map((q, i) => `<button data-act="w3i-cue" data-i="${i}"><small>${mmss(q.s)}</small>${esc(q.t)}</button>`).join('') : '<div class="empty">자막이 없습니다.</div>'}</div></div></div></div>`;
+      </div><div>${P.cues.length ? `<p class="mini"><b>대본</b> — 누르면 그 위치로 이동합니다</p><div class="w3-tr" id="w3tr">${P.cues.map((q, i) => `<button data-act="w3i-cue" data-i="${i}"><small>${mmss(q.s)}</small>${esc(q.t)}</button>`).join('')}</div>` : iSide(sec, c)}</div></div></div>`;
+  }
+  if (typeof IC === 'object') { if (!IC.play) IC.play = '<path d="M8 5v14l11-7z" fill="currentColor"/>'; if (!IC.upload) IC.upload = '<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>'; }
+  /* v43 R2: 자막이 없을 때 오른쪽이 빈 일러스트였던 것 → 이 영상의 진도 구간 막대 · 학생별 진도(진도 현황과 같은 /api/lms/i/progress) */
+  function iSide(sec, c) {
+    const R = W3.get('prog:' + sec.section_id, 'GET', '/api/lms/i/progress', { section_id: sec.section_id });
+    const ci = R && !R.__err ? R.contents.findIndex(x => x.content_id === c.content_id) : -1;
+    if (ci < 0) return `<p class="mini"><b>대본</b></p><div class="w3-tr" id="w3tr"><div class="empty">자막이 없습니다. 「자막」 탭에서 VTT · SRT를 올리면 대본이 여기에 나옵니다.</div></div>`;
+    const ps = R.students.map(s => ({ m: s.member_no, u: s.unit_code || '', p: +s.pcts[ci] || 0 }));
+    const B = [['90% 이상', p => p >= 90, 'ok'], ['50~89%', p => p >= 50 && p < 90, 'mid'], ['50% 미만', p => p < 50, 'low']].map(([l, f, k]) => [l, ps.filter(x => f(x.p)).length, k]); const mx = Math.max(1, ...B.map(b => b[1]));
+    const avg = ps.length ? Math.round(ps.reduce((a, x) => a + x.p, 0) / ps.length) : 0;
+    const top = ps.slice().sort((a, b) => a.p - b.p).slice(0, 7);
+    return `<div class="r2-iside" id="w3tr"><div class="r2-ish"><b>이 영상 진도</b><small>${ps.length}명 · 평균 ${avg}%</small></div>
+      <div class="r2-ibk">${B.map(([l, n, k]) => `<div class="${k}"><span>${l}</span><i style="width:${Math.round(n / mx * 100)}%"></i><b>${n}명</b></div>`).join('')}</div>
+      <div class="r2-ish"><b>진도 낮은 순</b><button class="btn sm ghost" data-act="tab" data-key="w3iT" data-v="prog">진도 현황</button></div>
+      <ul class="r2-il">${top.map(x => `<li><span class="r2-av">${esc(x.m.slice(-2))}</span><span class="r2-im"><b>${esc(x.m)}</b><small>${esc(x.u)}</small></span><span class="r2-ib"><i class="${x.p >= 90 ? 'ok' : x.p < 50 ? 'low' : 'mid'}" style="width:${x.p}%"></i></span><b class="r2-ip">${x.p}%</b></li>`).join('')}</ul></div>`;
   }
   const quizBox = q => `<div class="w3-quiz" role="dialog" aria-label="영상 중간 퀴즈"><b>${esc(q.question)}</b>${q.options.map((o, i) => `<button data-act="w3i-ans" data-i="${i}">${i + 1}. ${esc(o)}</button>`).join('')}</div>`;
   function paint() {
@@ -190,7 +205,8 @@
     const b = document.querySelector('[data-act="w3i-toggle"]'); if (b) b.textContent = P.playing ? '일시정지' : '재생'; };
   ACT['w3i-seek'] = el => { if (!P.st) return; const to = +el.value; beat(() => { P.pos = to; P.from = to; if (P.video) P.video.currentTime = to; paint(); }); };
   ACT['w3i-cue'] = el => { const q = P.cues[+el.dataset.i]; if (!q || !P.st) return; beat(() => { P.pos = q.s; P.from = Math.floor(q.s); if (P.video) P.video.currentTime = q.s; paint(); }); };
-  ACT['w3i-rate'] = el => { const r = +el.value; beat(() => { P.rate = r; if (P.video) P.video.playbackRate = r; }); };
+  ACT['w3i-rate'] = el => { const r = +el.value; beat(() => { P.rate = r; if (P.video) P.video.playbackRate = r; }); if (el.tagName === 'BUTTON') { el.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === el)); } };
+  ACT['w3i-q'] = el => { UI.w3iQ = el.value; el.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === el)); };
   ACT['w3i-lang'] = async el => { P.lang = el.value; if (!P.lang) { P.cues = []; render(); return; } const subs = await W3.call('GET', '/api/lms/i/subtitles', { content_id: UI.w3iC }).catch(() => []); P.cues = (subs.find(x => x.lang === P.lang) || {}).cues || []; render(); };
   ACT['w3i-ans'] = async el => { const q = P.quiz; if (!q) return; try { const r = await W3.call('POST', '/api/lms/i/quiz/answer', { quiz_id: q.quiz_id, member_no: UI.w3iMno, choice: +el.dataset.i }); q.mine = { choice: r.choice, correct: r.correct }; toast(r.correct ? `정답입니다. 영상 퀴즈 점수 ${r.score}점` : `오답입니다(정답 ${r.answer + 1}번). 영상 퀴즈 점수 ${r.score}점`, r.correct ? 'ok' : 'warn'); }
     catch (e) { q.skip = 1; toast(e.message, 'warn'); } P.quiz = null; render(); ACT['w3i-toggle'](); };

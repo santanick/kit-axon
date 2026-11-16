@@ -59,3 +59,36 @@
 #main.l43[data-l43=crmstat] .k-sw{box-sizing:border-box;height:44px;padding:10px 0;background-clip:content-box}
 #main.l43[data-l43=crmstat] .k-sw i{top:13px}
 #main.l43:is([data-l43=crmex],[data-l43=crmcs],[data-l43=crmbill],[data-l43=crmstat]) select{border-radius:12px;border:1px solid var(--hair);background-color:var(--surface);font-weight:600}
+/* v43 R2 — 원생: 학년 분포 · 칩 필터 · 행 정돈 */
+.k-gdist{padding:4px 0 14px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.k-gh{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}.k-gh b{font-size:15px}.k-gh small{color:var(--muted);font-size:12.5px}
+.k-gb{display:flex;align-items:flex-end;gap:8px;height:96px}
+.k-gc{flex:1;min-width:34px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;border:0;background:transparent;cursor:pointer;font:inherit;padding:0;color:var(--ink)}
+.k-gc i{display:block;width:100%;max-width:44px;border-radius:7px 7px 3px 3px;background:color-mix(in srgb,var(--g,#16a34a) 30%,transparent);min-height:4px}
+.k-gc.on i,.k-gc:hover i{background:var(--g,#16a34a)}.k-gc b{font-size:12px;font-variant-numeric:tabular-nums}.k-gc span{font-size:12px;color:var(--muted)}
+.k-fbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.k-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.k-chips2{margin-bottom:12px}
+.k-chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:0;box-shadow:inset 0 0 0 1px var(--line);background:var(--card,#fff);font:inherit;font-size:13.5px;cursor:pointer;color:var(--ink);white-space:nowrap}
+.k-chip b{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}.k-chip.on{background:var(--ink,#111);color:var(--card,#fff);box-shadow:none}.k-chip.on b{color:inherit;opacity:.75}
+.k-chips2 .k-chip{height:30px;font-size:13px}.k-sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+.k-q{margin-left:auto}.k-q input{min-width:220px;height:36px;border-radius:999px!important}
+.k-who{display:inline-flex!important;align-items:center;gap:10px;text-align:left;text-decoration:none!important}
+.k-who span:last-child{display:flex;flex-direction:column}.k-who b{font-size:14px;color:var(--ink)}.k-who small{font-size:12px;color:var(--muted);font-weight:400}
+.k-av.l43-av{width:32px;height:32px;flex:none;margin:0}
+.k-gy{display:inline-block;padding:3px 9px;border-radius:7px;background:var(--soft,#f1f3f5);font-size:12.5px;font-weight:600}
+.k-cc{display:inline-block;margin:2px 4px 2px 0;padding:3px 9px;border-radius:999px;font-size:12.5px;background:color-mix(in srgb,var(--g,#16a34a) 10%,transparent);color:var(--g-ink,#15803d);white-space:nowrap}
+.k-more{display:flex;align-items:center;justify-content:space-between;padding:12px 2px 0}
+.k-ccs{display:flex;gap:4px;flex-wrap:wrap;align-items:center}.k-ccs .k-cc{margin:0}
+.k-gb{justify-content:flex-start;gap:18px}.k-gc{flex:0 0 56px}
+/* v43 R2 — 출석부: 요약 막대 + 원생 칩 격자 */
+.k-asum{display:flex;height:10px;border-radius:9px;overflow:hidden;gap:2px;background:var(--soft,#eef0f2);margin:2px 0 8px}
+.k-asum i,.k-alg i{display:block}.t-ok{background:var(--g,#16a34a)}.t-warn{background:#e0a325}.t-bad{background:var(--bad,#c0262d)}.t-none{background:var(--line2,#d5dae0)}.t-etc{background:#7c8a99}
+.k-alg{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:12px}.k-alg span{display:inline-flex;align-items:center;gap:5px}.k-alg i{width:9px;height:9px;border-radius:3px}.k-alg b{color:var(--ink)}
+.k-roll{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.k-rc{border-radius:12px;padding:10px;box-shadow:inset 0 0 0 1px var(--line);background:var(--card,#fff);display:flex;flex-direction:column;gap:8px}
+.k-rc.t-ok,.k-rc.t-warn,.k-rc.t-bad,.k-rc.t-etc{background:var(--card,#fff)}
+.k-rc.t-bad{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--bad,#c0262d) 45%,transparent)}.k-rc.t-warn{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,#e0a325 50%,transparent)}
+.k-rch{display:flex;align-items:center;gap:8px}.k-rcn{display:flex;flex-direction:column;min-width:0;flex:1}.k-rcn b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.k-rcn small{font-size:12px;color:var(--muted)}
+.k-rcm{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;padding:4px 6px;border-radius:6px}.k-rcm:hover{background:var(--soft,#f1f3f5)}
+.k-rc .k-st{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}.k-rc .k-st button{min-height:30px;padding:0 2px;font-size:12.5px}
+.k-rsn{height:32px!important;font-size:13px!important}
