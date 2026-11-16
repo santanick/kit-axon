@@ -561,3 +561,37 @@ html body:not(.lapp) .myp43s dt{font-size:12px;font-weight:700;color:var(--mute)
 html body:not(.lapp) .myp43s dd{margin:2px 0 0;font-size:13px;font-weight:700}
 html body:not(.lapp) .myp43s dd b{font-size:20px;margin-right:2px}
 html body:not(.lapp) .myp43s dd span{font-size:14px;color:var(--pri-tx,var(--pri))}
+/* v43 R8 086: 열린 코스 사진 카드 · 트랙 사진 · 진도 링 · 추천 3칸 */
+html body:not(.lapp) .cw43{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+html body:not(.lapp) .cw43c{display:flex;flex-direction:column;border-radius:20px;overflow:hidden;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh);color:var(--ink);text-decoration:none;transition:transform .18s}
+html body:not(.lapp) .cw43c:hover{transform:translateY(-2px)}
+html body:not(.lapp) .cw43ph{position:relative;display:block;aspect-ratio:16/9;background:#0b1a12 center/cover}
+html body:not(.lapp) .cw43ph em{position:absolute;font-style:normal;font-size:12px;font-weight:700;height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px}
+html body:not(.lapp) .cw43lv{left:12px;top:12px;background:rgba(6,23,13,.78);color:#fff}
+html body:not(.lapp) .cw43ty{left:12px;bottom:12px;background:var(--c);color:#fff}
+html body:not(.lapp) .cw43b{display:flex;flex-direction:column;gap:4px;padding:16px 18px 18px}
+html body:not(.lapp) .cw43b b{font-size:17px;font-weight:800}
+html body:not(.lapp) .cw43b small{font-size:13px;color:var(--mute)}
+html body:not(.lapp) .cw43bar{display:block;height:6px;margin-top:8px;border-radius:99px;background:color-mix(in srgb,var(--ink) 7%,transparent);overflow:hidden}
+html body:not(.lapp) .cw43bar u{display:block;height:100%;background:var(--pri)}
+html body:not(.lapp) .cw43p{font-weight:600}
+html body:not(.lapp) .cw43x{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px}
+html body:not(.lapp) .cw43k{display:flex;flex-direction:column;gap:6px;padding:20px;border-radius:20px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh);color:var(--ink);text-decoration:none}
+html body:not(.lapp) .cw43k small{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .cw43k b{font-size:18px;font-weight:800}
+html body:not(.lapp) .cw43k span{font-size:14px;color:var(--mute);line-height:1.5}
+html body:not(.lapp) .cw43k.cw43dk{background:radial-gradient(120% 140% at 100% 0,#1f7a3a 0,transparent 55%),linear-gradient(135deg,#0d3b20,#06170d);border-color:transparent;color:#fff}
+html body:not(.lapp) .cw43dk small{color:#9CF5B8}html body:not(.lapp) .cw43dk b{color:#fff}html body:not(.lapp) .cw43dk span{color:#CFE3D6}
+html body:not(.lapp) .track.tk43 .tkh{position:relative;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 92%,#000) 30%,color-mix(in srgb,var(--c) 40%,transparent)),var(--ph) center/cover;padding-right:100px}
+html body:not(.lapp) .tk43r{position:absolute;right:20px;top:50%;transform:translateY(-50%);width:56px;height:56px;display:grid;place-items:center}
+html body:not(.lapp) .tk43r svg{position:absolute;inset:0}
+html body:not(.lapp) .tk43r b{position:relative;font-size:12px;font-weight:800;color:#fff;text-align:center;line-height:1.1}
+html body:not(.lapp) section.sec.cw43s{padding-bottom:48px}
+@media (max-width:900px){html body:not(.lapp) .cw43,html body:not(.lapp) .cw43x{grid-template-columns:1fr 1fr}}
+/* v43 R8 100: 로그인 — 딥그린 주 버튼 · 입력 48 · 라벨 위계 · 아래 여백 */
+html body:not(.lapp) section.login.lg43{padding-bottom:40px}
+html body:not(.lapp) section.login.lg43 .lg43b{background:#0B7A33;border-color:#0B7A33;color:#fff;min-height:52px;border-radius:14px}
+html body:not(.lapp) section.login.lg43 .lg43b:hover{background:#086629}
+html body:not(.lapp) section.login.lg43 #li .fl{display:flex;flex-direction:column;gap:8px;font-size:15px;font-weight:700;color:var(--ink)}
+html body:not(.lapp) section.login.lg43 #li .fl input{height:52px;border-radius:12px;border:1.5px solid var(--line);padding:0 16px;font-size:16px}
+html body:not(.lapp) section.login.lg43 #li .fl input:focus{border-color:#0B7A33;box-shadow:0 0 0 4px rgba(11,122,51,.14);outline:0}

@@ -170,3 +170,16 @@ html body:not(.lapp) #lm .py26r.py26hd{background:color-mix(in srgb,var(--ink) 4
 .shp-meta .shp-seat{font-weight:700;color:var(--ink)}
 .ap43-my .shp-list a{min-height:44px;align-items:center}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .ap43-s>b{background:color-mix(in srgb,#fff 12%,transparent)}}
+/* v43 R8 103: 표 카드 안 도구줄 · 월별 막대 글자 · 영수증 묶음 */
+body:not(.lapp) #lm .py43bar{margin:0;padding:12px 20px;border-bottom:1px solid var(--q2-bd,#e7e2d6);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+body:not(.lapp) #lm .py43bar .r4q{flex:1 1 200px}
+body:not(.lapp) #lm .py43ch .r4cols em{font-size:13px;font-weight:800;color:var(--ink)}
+body:not(.lapp) #lm .py43ch .r4cols span{font-size:14px;font-weight:600}
+body:not(.lapp) #lm .py43cn{margin:12px 0 0;font-size:14px;color:var(--mute)}
+body:not(.lapp) #lm .py43rc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+body:not(.lapp) #lm .py43rc a{display:flex;align-items:center;gap:12px;padding:16px;border-radius:18px;background:var(--surface,#fff);border:1px solid var(--q2-bd,#e7e2d6);box-shadow:var(--q2-sh,none);color:var(--ink);text-decoration:none}
+body:not(.lapp) #lm .py43rc i{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--q2-t1,#eef7f0);color:var(--pri-tx,var(--pri));flex:none}
+body:not(.lapp) #lm .py43rc span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+body:not(.lapp) #lm .py43rc b{font-size:15px}body:not(.lapp) #lm .py43rc small{font-size:13px;color:var(--mute)}
+body:not(.lapp) #lm .py43rc em{font-style:normal;font-size:13px;font-weight:800;color:var(--pri-tx,var(--pri));white-space:nowrap}
+@media (max-width:760px){body:not(.lapp) #lm .py43rc{grid-template-columns:1fr}}

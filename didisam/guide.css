@@ -40,3 +40,11 @@ body:has(.mwrap) .gdbar{display:none}
 /* 빌드 · 강사 스튜디오(3열)에서는 대화 열을 가리지 않게 캔버스 가운데에 */
 @media (min-width:1180px){body.mode-bld .gdbar{left:calc(50% + 258px);width:min(600px,calc(100vw - 560px))}}
 @media (min-width:861px) and (max-width:1179px){body.mode-bld .gdbar{left:calc(50% + 210px);width:min(560px,calc(100vw - 460px))}}
+/* v43 R8 132: 추천 카드 강조 · 단계 점 · 텍스트 링크 */
+.gdc.gd43{display:flex;flex-direction:column;gap:6px}
+.gdc.gd43.rec{border-color:var(--pri,#00862D);box-shadow:0 0 0 3px color-mix(in srgb,var(--pri,#00862D) 18%,transparent)}
+.gdc.gd43.fin{opacity:.78}
+.gd43d{display:flex;gap:4px;margin-top:4px}.gd43d i{flex:1;height:5px;border-radius:99px;background:color-mix(in srgb,var(--ink,#1f2020) 10%,transparent)}.gd43d i.on{background:var(--pri,#00862D)}
+.gd43lk{display:inline-flex;align-items:center;gap:4px;padding:6px 0;border:0;background:none;font:inherit;font-size:14px;font-weight:700;color:var(--pri-tx,#007200);cursor:pointer}
+.gd43lk:hover{text-decoration:underline}
+.gdc.gd43 .gdcb{margin-top:auto}

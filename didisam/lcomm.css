@@ -132,3 +132,10 @@ html body:not(.lapp) .nt43ev li>span:last-child b{display:block;font-size:14px;l
 html body:not(.lapp) .nt43lk{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;padding:12px 0;border-top:1px solid var(--q2-bd);color:var(--ink);text-decoration:none}
 html body:not(.lapp) .nt43lk b{font-size:15px}html body:not(.lapp) .nt43lk small{grid-row:2;font-size:13px;color:var(--mute)}html body:not(.lapp) .nt43lk svg{grid-row:1/3;grid-column:2;color:var(--mute)}
 @media (max-width:900px){html body:not(.lapp) .nt43g{grid-template-columns:1fr}html body:not(.lapp) .nt43s{position:static}}
+/* v43 R8 098: 메시지 행 높이 · 발신자 아바타 확대 */
+html body:not(.lapp) #lm .lcrow43{min-height:88px;padding:16px 22px;gap:16px}
+html body:not(.lapp) #lm .lcrow43 .r4av{width:48px;height:48px;font-size:17px}
+@media (min-width:561px){html body:not(.lapp) #lm .r4row.lcrow43{grid-template-columns:48px minmax(0,1fr) auto}}
+html body:not(.lapp) #lm .lcrow43 .r4t b{font-size:16px}
+html body:not(.lapp) #lm .lcrow43 .r4t span{font-size:14px}
+html body:not(.lapp) #lm .lcrow43 .r4t small{font-size:13px;font-weight:700}
