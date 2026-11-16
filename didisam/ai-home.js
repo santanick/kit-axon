@@ -176,6 +176,11 @@ function aih43Wait() { let L = []; try { if (window.MIL && MIL.isOn && MIL.isOn(
   return aih43Card('aihQa', `${esc(t('learner'))}의 질문`, V4.chip(`대기 ${Q.length}`, ''), `<div class="aih43-qa"><span class="av">${esc((m.name || '학')[0])}</span><p><b>${esc(m.name || t('learner'))}${q.board ? ' · ' + esc(q.board) : ''}</b>${esc(q.title || '')}</p></div>
     <div class="aih43-draft"><b>${V4.ai()} SAM 답변 초안</b>질문 내용과 강의 자료를 바탕으로 답변 초안을 만들어 둡니다. 확인 후 보내십시오.</div>
     <div class="aih43-two"><button type="button" class="btn pri" data-act="chat-q" data-v="미답변 질문에 답변 초안 만들어줘">초안 보기</button><button type="button" class="btn" data-act="go" data-v="board">질문 열기</button></div>`, 'qa'); }
+/* v43 D-A: 오늘 자동 실행(처리 카드) — 켜진 자동화 3건 + 연결 요약. 강사 화면은 그리지 않음 */
+function aih43Auto() { if (S.me.role === 'teacher') return ''; const L = (S.autos || []).filter(a => a.on); const on = typeof CN_IDS !== 'undefined' ? CN_IDS.filter(id => { try { return cnStatus(id).st === CN_ST.on; } catch (e) { return false; } }) : [];
+  if (!L.length && !on.length) return ''; const tm = ['09:00', '10:30', '11:00'];
+  return aih43Card('aihAuto', '오늘 자동 실행', V4.chip(`${L.length}개 켜짐`, 'ok'), `<ul class="aih43-au">${L.slice(0, 3).map((a, i) => `<li><span class="ck">${ic('check', 14)}</span><b>${esc(a.name)}</b><small class="num">${tm[i]}</small></li>`).join('')}</ul>
+    <div class="aih43-two">${S.me.role === 'owner' && typeof CN_IDS !== 'undefined' ? `<button type="button" class="btn" data-act="sl-goconn">연결 ${on.length}/${CN_IDS.length}</button>` : ''}<button type="button" class="btn" data-act="sl-goauto">자동화 관리</button></div>`, 'auto'); }
 /* 오른쪽 AI SAM 패널 */
 function aih43Panel(tasks) { const nm = 'AI SAM'; const chips = aihChips(); const prep = tasks.filter(x => x.prep);
   let sm = null; try { if (window.ledgerView && menuOn('ledger')) sm = ledgerView.summary(); } catch (e) { }
@@ -205,7 +210,7 @@ function aih43HTML() { const data = aihHasData(); const who = aihWho(); const ta
     const fac = aih43Fac(), rev = aih43Rev(), pay = aih43Pay(), wait = aih43Wait();
     main = V4.hero({ cls: 'aih-hero', label: 'aihH', eb: `AI SAM 오늘의 브리핑 · ${esc(aihDate())}`, h, acts, side })
       + (fac || rev ? `<div class="aih43-r2 ${fac && rev ? '' : 'one'}">${fac}${rev}</div>` : '')
-      + (pay || wait ? `<div class="aih43-r3 ${pay && wait ? '' : 'one'}">${pay}${wait}</div>` : '');
+      + (() => { const au = aih43Auto(); const n = [pay, wait, au].filter(Boolean).length; return n ? `<div class="aih43-r3 n${n} ${n === 1 ? 'one' : ''}">${pay}${wait}${au}</div>` : ''; })(); /* v43 D-A: 아래 연결 · 자동 운영 요약 줄 → 처리 카드 3칸(수납 · 질문 · 오늘 자동 실행) */
   } else {
     const L = S.bld && typeof bList === 'function' ? bList() : []; const cur = L.find(s => !bDone(s.id)); const q = cur && typeof obQ === 'function' ? obQ(cur.id) : '';
     main = V4.hero({ cls: 'aih-hero start', label: 'aihH', eb: `${esc(aihDate())} · ${esc(S.org.name)} · 새 스튜디오`, h: `<h1 id="aihH"><span class="v4-hi">안녕하세요, ${esc(who)}.</span>첫 ${esc(t('cls'))}부터 <em>함께</em> 채워 볼까요?</h1><p class="aih43-lead">말로 지시하면 AI SAM이 계획을 보여 드리고, 승인하시면 만들어 둡니다.</p>`,
@@ -213,7 +218,7 @@ function aih43HTML() { const data = aihHasData(); const who = aihWho(); const ta
       side: `<div class="aih43-art">${V4.art('start')}</div>` })
       + aih43Start();
   }
-  return `<div class="aih aih43 ${data ? 'has' : 'new'}"><div class="aih43-main">${main}${aihConnHTML() || aihAutoHTML() ? `<div class="aih-two">${aihConnHTML()}${aihAutoHTML()}</div>` : ''}${aihMenuHTML()}</div>${aih43Panel(tasks)}</div>`; }
+  return `<div class="aih aih43 ${data ? 'has' : 'new'}"><div class="aih43-main">${main}${!data && (aihConnHTML() || aihAutoHTML()) ? `<div class="aih-two">${aihConnHTML()}${aihAutoHTML()}</div>` : ''}${aihMenuHTML()}</div>${aih43Panel(tasks)}</div>`; }
 { const base = bHome; bHome = () => { if (!aihActive()) return (aihTeacher() && typeof tHome === 'function' && (UI.tst === 'operate' || UI.tst === 'report')) ? tHome() : base(); try { return aihHomeHTML(); } catch (e) { console.error(e); return base(); } }; }
 
 /* 시작 가이드: 홈 안 카드도 함께 다시 그림 · 홈에서는 위젯을 자동으로 열지 않음 */

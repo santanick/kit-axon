@@ -27,7 +27,7 @@
   window.BRAND = BR;
   /* brandLogo(id, px) — 타일 하나(정사각, 모서리 둥글게). 접근성: 서비스 이름을 aria-label로 */
   window.brandLogo = (id, px, label) => { const k = ALIAS[id] || id; const b = BR[k]; px = px || 36; const pad = Math.round(px * 0.2), s = px - pad * 2;
-    if (!b) { const t = TXT[k] || [String(label || id || '?').slice(0, 2), '#6C6C6C', label || id]; return `<span class="brl brl-t" role="img" aria-label="${t[2]}" style="width:${px}px;height:${px}px;color:${t[1]};font-size:${Math.round(px * (t[0].length > 2 ? 0.28 : 0.38))}px">${t[0]}</span>`; }
+    if (!b) { const t = TXT[k] || [String(label || id || '?').slice(0, 2), '#6C6C6C', label || id]; return `<span class="brl brl-t" role="img" aria-label="${t[2]}" style="width:${px}px;height:${px}px;color:${t[1]};font-size:${Math.max(12, Math.round(px * (t[0].length > 2 ? 0.28 : 0.38)))}px">${t[0]}</span>`; }
     return `<span class="brl${b.bg ? ' brl-f' : ''}" role="img" aria-label="${b.n}" style="width:${px}px;height:${px}px;${b.bg ? `background:${b.bg};border-color:${b.bg};` : ''}"><svg viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true" focusable="false">${b.p ? b.p.map(q => `<path fill="${q[0]}" d="${q[1]}"/>`).join('') : `<path fill="${b.c}" d="${b.d}"/>`}</svg></span>`; };
   window.brandHas = id => !!BR[ALIAS[id] || id];
   /* 공통 모양(dds.css · app.css를 건드리지 않고 이 파일에서 한 번 넣는다) */
