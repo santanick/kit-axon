@@ -472,3 +472,92 @@ html body:not(.lapp) .ce43bar u{display:block;height:100%;background:var(--pri);
 html body:not(.lapp) .ce43l em{font-style:normal;display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:700;background:var(--q2-t1);color:var(--pri-tx,var(--pri))}
 html body:not(.lapp) .ce43l em.ok{background:var(--pri);color:var(--pri-ink,#fff)}
 @media (max-width:860px){html body:not(.lapp) .ce43g,html body:not(.lapp) .ce43l{grid-template-columns:1fr}html body:not(.lapp) .ce43pv{padding:16px}html body:not(.lapp) .ce43paper{padding:30px 22px}html body:not(.lapp) .ce43paper h2{font-size:26px;letter-spacing:.2em}}
+/* v43 R8 095 · 094: 잠금 칩은 증서 아래, 0% 대신 문장, 내 과정은 사진 카드 2열 */
+html body:not(.lapp) .ce43lk.ce43lk2{position:static;transform:none;display:flex;width:max-content;margin:18px auto 0}
+html body:not(.lapp) .ce43rc b.ce43z{font-size:22px;line-height:1.3;letter-spacing:-.02em}
+html body:not(.lapp) .ce43h small{margin-left:10px;font-size:14px;font-weight:600;color:var(--mute)}
+html body:not(.lapp) .ce43l.ce43k a{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;padding:0 0 16px;overflow:hidden;gap:12px 14px;align-items:end}
+html body:not(.lapp) .ce43l.ce43k .ce43th{grid-column:1/-1;width:100%;height:auto;aspect-ratio:16/7;border-radius:0}
+html body:not(.lapp) .ce43l.ce43k .ce43lt{padding-left:18px}
+html body:not(.lapp) .ce43l.ce43k .ce43lt b{font-size:17px}
+html body:not(.lapp) .ce43l.ce43k em{margin-right:16px}
+html body:not(.lapp) .ce43l em.nx{background:var(--pri-tx,var(--pri));color:#fff}
+html body:not(.lapp) .ce43l em.wt{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--mute)}
+html body:not(.lapp) .ce43l li.bk43-nx a{box-shadow:0 0 0 2px var(--pri),var(--q2-sh)}
+html body:not(.lapp) .ce43l li.bk43-wt .ce43no{background:color-mix(in srgb,var(--ink) 5%,transparent);color:var(--mute)}
+html body:not(.lapp) .ce43l li.bk43-ok .ce43no{background:var(--pri);color:var(--pri-ink,#fff)}
+/* v43 R8 093: 디지털북 내 진도 · 완독 증명 */
+html body:not(.lapp) section.bk43{padding:8px 0 56px}
+html body:not(.lapp) .bk43g{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+html body:not(.lapp) .bk43c{padding:22px;border-radius:22px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
+html body:not(.lapp) .bk43a{display:flex;flex-direction:column;gap:14px}
+html body:not(.lapp) .bk43h{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+html body:not(.lapp) .bk43h h2{margin:0;font-size:22px;font-weight:800}
+html body:not(.lapp) .bk43h small{font-size:14px;color:var(--mute)}
+html body:not(.lapp) .bk43r{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 0;border-top:1px solid var(--q2-bd);color:var(--ink);text-decoration:none}
+html body:not(.lapp) .bk43h+.bk43r{border-top:0}
+html body:not(.lapp) .bk43cv{width:72px;height:96px;border-radius:6px 12px 12px 6px;background:linear-gradient(160deg,color-mix(in srgb,var(--c) 80%,#fff),var(--c));color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:8px;box-shadow:inset 4px 0 0 rgba(0,0,0,.18),0 10px 18px -10px rgba(0,0,0,.45);overflow:hidden}
+html body:not(.lapp) .bk43cv small{font-size:16px;font-weight:800;opacity:.85}
+html body:not(.lapp) .bk43cv b{font-size:11px;line-height:1.3;font-weight:700}
+html body:not(.lapp) .bk43t b{display:block;font-size:17px;font-weight:800}
+html body:not(.lapp) .bk43t small{display:block;font-size:14px;color:var(--mute);margin-top:3px}
+html body:not(.lapp) .bk43bar{position:relative;display:block;height:8px;margin-top:10px;border-radius:99px;background:color-mix(in srgb,var(--ink) 7%,transparent)}
+html body:not(.lapp) .bk43bar u{display:block;height:100%;border-radius:99px;background:var(--pri)}
+html body:not(.lapp) .bk43bar em{position:absolute;top:-3px;width:2px;height:14px;background:var(--ink);opacity:.45}
+html body:not(.lapp) .bk43s{text-align:right;min-width:72px}
+html body:not(.lapp) .bk43s b{display:block;font-size:22px;font-weight:800}
+html body:not(.lapp) .bk43s small{font-size:13px;color:var(--mute)}
+html body:not(.lapp) .bk43s em{font-style:normal;display:inline-flex;height:30px;align-items:center;padding:0 12px;border-radius:999px;font-size:13px;font-weight:700;background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--mute)}
+html body:not(.lapp) .bk43s em.ok{background:var(--pri);color:var(--pri-ink,#fff)}
+html body:not(.lapp) .bk43k{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px;font-weight:700;color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .bk43a h3{margin:0 0 6px;font-size:20px;font-weight:800;line-height:1.3}
+html body:not(.lapp) .bk43a p{margin:0 0 14px;font-size:14px;line-height:1.55;color:var(--mute)}
+html body:not(.lapp) .bk43dk{background:radial-gradient(120% 140% at 100% 0,#1f7a3a 0,transparent 55%),linear-gradient(135deg,#0d3b20,#06170d);border-color:transparent;color:#fff}
+html body:not(.lapp) .bk43dk h3{color:#fff}html body:not(.lapp) .bk43dk p{color:#CFE3D6}html body:not(.lapp) .bk43dk .bk43k{color:#9CF5B8}
+html body:not(.lapp) .bk43dk .lbtn{width:100%;justify-content:center;gap:6px}
+html body:not(.lapp) .bk43o{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;counter-reset:b}
+html body:not(.lapp) .bk43o li{display:flex;flex-direction:column;gap:2px;padding-left:34px;position:relative;counter-increment:b}
+html body:not(.lapp) .bk43o li::before{content:counter(b);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:var(--q2-t1);color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .bk43o b{font-size:14px}html body:not(.lapp) .bk43o span{font-size:13px;color:var(--mute)}
+@media (max-width:900px){html body:not(.lapp) .bk43g{grid-template-columns:1fr}}
+/* v43 R8 090: 영상 재생 막대 · 단계 위계 · 하단 여백 */
+html body:not(.lapp) .tutv.tv43{padding-bottom:40px}
+html body:not(.lapp) .tv43 .rel{margin-top:36px}
+html body:not(.lapp) .tv43ctl{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;margin-top:10px;padding:10px 14px;border-radius:14px;background:#0b1a12;color:#fff}
+html body:not(.lapp) .tv43ctl .tv43pl{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--pri);color:#fff}
+html body:not(.lapp) .tv43ctl .wbar{margin:0;height:6px;background:rgba(255,255,255,.18)}
+html body:not(.lapp) .tv43ctl #wtxt{color:#fff;font-weight:700;font-variant-numeric:tabular-nums}
+html body:not(.lapp) .tv43ctl .tv43tm{font-size:13px;color:#CFE3D6}
+html body:not(.lapp) .fs.tv43s>span{background:var(--surface,#fff);border:1px solid var(--line);align-items:center}
+html body:not(.lapp) .fs.tv43s em{width:30px;height:30px;font-size:14px}
+html body:not(.lapp) .fs.tv43s .tv43st{display:flex;flex-direction:column;gap:2px}
+html body:not(.lapp) .fs.tv43s .tv43st small{font-size:12px;font-weight:700;color:var(--mute)}
+html body:not(.lapp) .fs.tv43s.now>span{border-color:var(--pri);box-shadow:0 0 0 3px color-mix(in srgb,var(--pri) 18%,transparent)}
+html body:not(.lapp) .fs.tv43s.now em{background:var(--pri);color:#fff;box-shadow:none}
+html body:not(.lapp) .fs.tv43s.now .tv43st small{color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .fs.tv43s.wt>span{opacity:.8}
+/* v43 R8 091: 진단 유형 아이콘 · 예시 결과 칸 · 간격 */
+html body:not(.lapp) .tyh .ty43i{position:absolute;right:14px;bottom:12px;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.16);color:#fff}
+html body:not(.lapp) .tyh em~.ty43i{display:none}
+html body:not(.lapp) .tyh span{font-size:13px}
+html body:not(.lapp) .tools .ty43m{background:transparent;color:var(--mute);font-weight:700}
+html body:not(.lapp) section.sec.dg43{padding-top:36px;padding-bottom:36px}
+html body:not(.lapp) section.sec.dg43 + section.sec.dg43{padding-top:12px}
+html body:not(.lapp) .step.st43ex{background:radial-gradient(120% 140% at 100% 0,#1f7a3a 0,transparent 55%),linear-gradient(135deg,#0d3b20,#06170d);color:#fff;border-color:transparent}
+html body:not(.lapp) .step.st43ex .st43k{display:inline-flex;height:26px;align-items:center;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.12);font-size:12px;font-weight:700;color:#9CF5B8}
+html body:not(.lapp) .step.st43ex .st43r{display:flex;align-items:center;gap:12px;margin:14px 0 10px}
+html body:not(.lapp) .step.st43ex .st43r i{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--c);color:#fff;flex:none}
+html body:not(.lapp) .step.st43ex .st43r b{display:block;font-size:18px;color:#fff}
+html body:not(.lapp) .step.st43ex .st43r small{font-size:13px;color:#CFE3D6}
+html body:not(.lapp) .step.st43ex p{color:#CFE3D6}
+html body:not(.lapp) .step.st43ex .stf span{background:rgba(255,255,255,.1);color:#fff}
+/* v43 R8 099: 계정 줄 → 프로필 카드(숫자 3칸, 0은 문장) */
+html body:not(.lapp) .myp.myp43{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:20px 24px;border-radius:22px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
+html body:not(.lapp) .myp43 .mpi{flex:1 1 220px}
+html body:not(.lapp) .myp43 .mpi b{font-size:20px}
+html body:not(.lapp) .myp43s{display:flex;gap:8px;margin:0}
+html body:not(.lapp) .myp43s>div{min-width:96px;padding:10px 14px;border-radius:14px;background:var(--q2-t1,#eef7f0)}
+html body:not(.lapp) .myp43s dt{font-size:12px;font-weight:700;color:var(--mute)}
+html body:not(.lapp) .myp43s dd{margin:2px 0 0;font-size:13px;font-weight:700}
+html body:not(.lapp) .myp43s dd b{font-size:20px;margin-right:2px}
+html body:not(.lapp) .myp43s dd span{font-size:14px;color:var(--pri-tx,var(--pri))}

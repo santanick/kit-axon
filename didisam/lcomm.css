@@ -99,3 +99,36 @@ html body:not(.lapp) .nt43b b{font-size:18px;font-weight:800;letter-spacing:-.02
 html body:not(.lapp) .nt43b p{margin:0;font-size:14px;line-height:1.55;color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 html body:not(.lapp) .nt43b time{margin-top:auto;font-size:13px;color:var(--mute)}
 @media (max-width:760px){html body:not(.lapp) .nt43pin{grid-template-columns:1fr}html body:not(.lapp) a.nt43c{grid-template-columns:116px minmax(0,1fr);min-height:132px}html body:not(.lapp) .nt43b{padding:14px 16px}html body:not(.lapp) .nt43b b{font-size:16px}}
+/* v43 R8 096: 공지 = 8+4 · 분류 칩 · 카드 목록 */
+html body:not(.lapp) .nt43g{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+html body:not(.lapp) .nt43pin.nt43p2{grid-template-columns:1fr 1fr}
+html body:not(.lapp) .nt43p2 a.nt43c{grid-template-columns:1fr;grid-template-rows:140px auto}
+html body:not(.lapp) .nt43f{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+html body:not(.lapp) .nt43f button{height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--q2-bd);background:var(--surface,#fff);font:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
+html body:not(.lapp) .nt43f button small{margin-left:4px;font-size:13px;color:var(--mute)}
+html body:not(.lapp) .nt43f button.on{background:var(--ink);border-color:var(--ink);color:#fff}html body:not(.lapp) .nt43f button.on small{color:#cfd8d2}
+html body:not(.lapp) .nlist.n26.nt43l{background:none;border:0;box-shadow:none;overflow:visible;display:flex;flex-direction:column;gap:10px}
+html body:not(.lapp) .nlist.n26.nt43l details.nt{border-radius:18px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary{grid-template-columns:auto minmax(0,1fr) auto auto auto!important;min-height:72px;padding:16px 20px}
+html body:not(.lapp) .nlist.n26.nt43l .n26no{display:none}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>.tcat{grid-column:1!important}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>b{grid-column:2!important;font-size:16px}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>em.lcun{grid-column:3!important}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>em.new{grid-column:4!important}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>time{grid-column:5!important;color:var(--mute);font-size:14px}
+html body:not(.lapp) .nt43s{display:flex;flex-direction:column;gap:14px;position:sticky;top:96px}
+html body:not(.lapp) .nt43sc{padding:20px;border-radius:20px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
+html body:not(.lapp) .nt43sc h3{margin:0 0 6px;font-size:18px;font-weight:800}
+html body:not(.lapp) .nt43sc .mini{margin:0 0 12px;font-size:14px;line-height:1.55}
+html body:not(.lapp) .nt43sc .lbtn{width:100%;justify-content:center}
+html body:not(.lapp) .nt43k{display:flex;align-items:center;gap:6px;margin:0 0 10px;font-size:13px;font-weight:700;color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .nt43dk{background:radial-gradient(120% 140% at 100% 0,#1f7a3a 0,transparent 55%),linear-gradient(135deg,#0d3b20,#06170d);border-color:transparent;color:#fff}
+html body:not(.lapp) .nt43dk .nt43k{color:#9CF5B8}html body:not(.lapp) .nt43dk .mini{color:#CFE3D6}
+html body:not(.lapp) .nt43ev{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:10px}
+html body:not(.lapp) .nt43ev li{display:flex;gap:12px;align-items:center}
+html body:not(.lapp) .nt43ev .nt43d{flex:none;width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.1);display:flex;flex-direction:column;align-items:center;justify-content:center}
+html body:not(.lapp) .nt43ev .nt43d b{font-size:15px}html body:not(.lapp) .nt43ev .nt43d small{font-size:12px;color:#9CF5B8;font-weight:700}
+html body:not(.lapp) .nt43ev li>span:last-child b{display:block;font-size:14px;line-height:1.35}html body:not(.lapp) .nt43ev li>span:last-child small{font-size:13px;color:#CFE3D6}
+html body:not(.lapp) .nt43lk{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;padding:12px 0;border-top:1px solid var(--q2-bd);color:var(--ink);text-decoration:none}
+html body:not(.lapp) .nt43lk b{font-size:15px}html body:not(.lapp) .nt43lk small{grid-row:2;font-size:13px;color:var(--mute)}html body:not(.lapp) .nt43lk svg{grid-row:1/3;grid-column:2;color:var(--mute)}
+@media (max-width:900px){html body:not(.lapp) .nt43g{grid-template-columns:1fr}html body:not(.lapp) .nt43s{position:static}}
