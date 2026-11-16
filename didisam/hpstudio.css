@@ -505,3 +505,12 @@ html[data-theme=dark] .hps-pubc.hps-pubc9{background:#1F2221}
   #hpe.hps .hpe-stage{padding:0;background:var(--surface,#fff);justify-content:flex-start}
   #hpe.hps .hpe-stage iframe#hpeF,#hpe.hps .hps-lv{border-radius:0;box-shadow:none;background:#fff}
 }
+/* v43.4 P0 휴대폰(≤760px): ② 아래 편집 도구줄은 한 화면에 5개 반만 보이게(6번째가 반쯤 보여 넘길 수 있음을 알림, 끝 흐림은 focus.js .hx-fade) ④ 메뉴 AI 입력칸 안내 문구는 한 줄 말줄임(124) */
+@media (max-width:760px){
+  #hpe.hps .hps-rail .hps-ri{flex:0 0 auto;min-width:calc((100vw - 12px) / 5.5);max-width:none;padding:4px 6px}
+  #hpe.hps .hps-rail .hps-ri>span{white-space:nowrap}
+  #hpmQ,#hpe.hps .hps-pan input[placeholder]{text-overflow:ellipsis}
+  #hpe.hps .hps-pan{padding-bottom:12px}
+}
+/* v43.4 P0 휴대폰(≤760px): 편집 패널 바텀시트는 반 높이로 — 위쪽에 미리보기가 보이게(032 · 126). 시트 안은 따로 스크롤 */
+@media (max-width:760px){#hpe.hps .hps-pan{max-height:52%;max-height:52dvh;overflow-y:auto;overscroll-behavior:contain}}
