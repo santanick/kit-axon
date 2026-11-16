@@ -42,7 +42,8 @@
     const V = [['rooms', '수업'], ['att', '출석'], ['rec', '녹화'], ['cap', '실시간 자막']], M = [['stats', '자막 이용 현황'], ['set', '연결 설정']];
     const R = load('rooms', '/api/lms/live/rooms'); const rooms = R && R.rooms || [];
     const liveR = rooms.filter(r => r.status === 'live'), next = rooms.filter(r => r.status === 'ready').sort((x, y) => (x.mode === 'link') - (y.mode === 'link'));
-    const todo = `<div class="card"><div class="ch"><b>지금 할 일</b></div><div class="lvs-now">${liveR.length ? `<span>진행 중 <b>${liveR.length}</b>개 수업 · 접속 ${liveR.reduce((a, r) => a + r.online, 0)}명</span><button class="btn pri" data-act="lvs-open" data-id="${esc(liveR[0].room_id)}">수업 화면 열기</button>`
+    /* v43 R7: 「지금 할 일」은 브리핑 머리 버튼 · 할 일로 올라가므로 띠(lmsx-todo)로 표시 — 브리핑이 있으면 nav.js가 숨김(J2 067) */
+    const todo = `<div class="card lmsx-todo"><div class="ch"><b>지금 할 일</b></div><div class="lvs-now">${liveR.length ? `<span>진행 중 <b>${liveR.length}</b>개 수업 · 접속 ${liveR.reduce((a, r) => a + r.online, 0)}명</span><button class="btn pri" data-act="lvs-open" data-id="${esc(liveR[0].room_id)}">수업 화면 열기</button>`
       : next.length ? `<span>시작 전 수업 <b>${next.length}</b>개 — 「${esc(next[0].title)}」</span><button class="btn pri" data-act="lvs-open" data-id="${esc(next[0].room_id)}">수업 화면 열기</button>` : `<span>예정된 실시간 수업이 없습니다.</span><button class="btn pri" data-act="lvs-new">새 실시간 수업</button>`}</div>
       <p class="lvs-limit">${esc(LV.LIMIT)}</p></div>`;
     const body = R && R._err ? errBox(R) : { rooms: vRooms, att: vAtt, rec: vRec, cap: vCap, stats: vStats, set: vSet }[t](rooms);
@@ -53,11 +54,10 @@
   /* ── 수업 ── */
   function vRooms(rooms) {
     if (!rooms && !C.c.rooms) return busy;
-    return `<div class="card"><div class="ch"><b>실시간 수업</b><button class="btn sm" data-act="lvs-new">새 실시간 수업</button></div>${table(['수업', '분반', '방식', '상태', ''], rooms.map(r => [
-      `<b>${esc(r.title)}</b>${r.session ? `<br><small class="mini">${r.session.week_no}주 ${r.session.seq}차시 출결 연결</small>` : '<br><small class="mini">차시 연결 없음(출결 미기록)</small>'}`, esc(r.section_title || secName(r.section_id)), esc(MODE[r.mode]) + (r.rec_allowed ? ' ' + tag('녹화 허용') : ''),
-      tag(...ST[r.status]) + (r.status === 'live' ? ` <small class="mini">접속 ${r.online}</small>` : '') + (r.recording ? ' ' + tag('녹화 중', 'bad') : ''),
-      r.status === 'ended' ? `<button class="btn sm" data-act="lvs-att" data-id="${esc(r.room_id)}">출석 보기</button>` : `<button class="btn sm pri" data-act="lvs-open" data-id="${esc(r.room_id)}">열기</button> <button class="btn sm" data-act="lvs-share" data-id="${esc(r.room_id)}">학생 링크 · QR</button> <button class="btn sm ghost" data-act="lvs-edit" data-id="${esc(r.room_id)}">수정</button>`]), '아직 실시간 수업이 없습니다. 「새 실시간 수업」으로 만드세요.')}
-      <p class="mini">학생은 학습자 사이트 「내 학습」의 실시간 수업 카드, 링크, QR로 입장합니다(휴대폰 가능). 같은 학번으로 두 번째 창 · 기기에서 들어오면 먼저 연결은 끊깁니다(중복 접속 차단).</p></div>`;
+    /* v43 R7: 회색 표 → 시간대 카드(차시 · 상태 · 접속 · 주 버튼). 버튼 data-act는 표와 같다(J2 067) */
+    const slot = r => r.session ? `${r.session.week_no}주 ${r.session.seq}차시` : '차시 연결 없음';
+    return `<div class="card"><div class="ch"><b>실시간 수업</b><small>${rooms.length}개 · 진행 ${rooms.filter(r => r.status === 'live').length} · 시작 전 ${rooms.filter(r => r.status === 'ready').length}</small><button class="btn sm" data-act="lvs-new">새 실시간 수업</button></div>${rooms.length ? `<div class="r7-lv">${rooms.map(r => `<article class="r7-lvc ${r.status}" data-room="${esc(r.room_id)}"><div class="r7-lvt"><span class="r7-lvs">${esc(slot(r))}</span>${tag(...ST[r.status])}${r.recording ? ' ' + tag('녹화 중', 'bad') : ''}</div><b>${esc(r.title)}</b><small>${esc(r.section_title || secName(r.section_id))} · ${esc(MODE[r.mode])}${r.rec_allowed ? ' · 녹화 허용' : ''}${r.status === 'live' ? ` · 접속 ${r.online}명` : ''}</small><small class="r7-lvn">${r.session ? '입장 기록이 출결에 반영됩니다' : '차시에 연결하면 출결이 기록됩니다'}</small><div class="r7-lva">${r.status === 'ended' ? `<button class="btn sm" data-act="lvs-att" data-id="${esc(r.room_id)}">출석 보기</button>` : `<button class="btn sm pri" data-act="lvs-open" data-id="${esc(r.room_id)}">열기</button> <button class="btn sm" data-act="lvs-share" data-id="${esc(r.room_id)}">학생 링크 · QR</button> <button class="btn sm ghost" data-act="lvs-edit" data-id="${esc(r.room_id)}">수정</button>`}</div></article>`).join('')}</div>` : '<div class="empty">아직 실시간 수업이 없습니다. 「새 실시간 수업」으로 만드세요.</div>'}
+      <p class="r7-lvp">학생은 학습자 사이트 「내 학습」의 실시간 수업 카드, 링크, QR로 입장합니다(휴대폰 가능). 같은 학번으로 두 번째 기기에서 들어오면 먼저 연결은 끊깁니다. ${esc(LV.LIMIT)}</p></div>`;
   }
   const roomOf = id => (C.c.rooms && C.c.rooms.rooms || []).find(r => r.room_id === id);
   ACT['lvs-open'] = el => { const r = roomOf(el.dataset.id); if (r && r.mode === 'link') { window.open(r.ext_url, '_blank', 'noopener'); return; } open('room=' + encodeURIComponent(el.dataset.id)); };
