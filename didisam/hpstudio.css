@@ -485,3 +485,18 @@ html[data-theme=dark] .hps-pubc.hps-pubc9{background:#1F2221}
 .hps-lhpv em{position:absolute;top:10px;right:10px;font-style:normal;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.9);color:#14161F}
 .hps-lhpv.lt-img{color:#fff;background:#1B1C22 var(--pv) center/cover no-repeat}.hps-lhpv.lt-img::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(10,12,20,.72),rgba(10,12,20,.3))}
 .hps-lhpv.lt-plain{background:#fff;box-shadow:inset 0 0 0 1px var(--line,#E4E4EA)}.hps-lhpv.lt-brand{background:var(--gr700,#00862D);color:#fff}.hps-lhpv.al-c{align-items:center;text-align:center}
+/* v43 H1(M1 032 · 126) 도구줄 과밀 정리 — ① 1440 이상에서도 AI 입력 줄은 둘째 줄 전체 폭(입력 잘림 없음) ② 배율 4칸 세그먼트 → 작은 선택 칩 하나 ③ 페이지 이름 한 줄 */
+@media (min-width:1440px){
+  #hpe.hps>.hpe-bar>.hps-rt{grid-column:3/5}
+  #hpe.hps>.hpw-talk{grid-row:2;grid-column:1/-1;min-height:0;padding:6px 16px!important;gap:8px}
+  #hpe.hps .hpw-talk .hps-cb span{display:inline}
+  #hpe.hps .hpw-talk input[name=q]{min-width:280px}
+  #hpe.hps .hps-ul{display:inline}
+}
+@media (min-width:1100px){
+  #hpe.hps .hps-zoom .hps-zseg{display:none}
+  #hpe.hps .hps-zoom select{position:static!important;width:auto!important;height:40px!important;min-height:40px;margin:0;padding:0 30px 0 12px!important;opacity:1!important;clip:auto!important;clip-path:none!important;pointer-events:auto!important;-webkit-appearance:none;appearance:none;border:1px solid var(--line,#E4E4EA);border-radius:10px;background:var(--surface,#fff) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235C554B' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;font:700 13px/1 var(--sg,inherit);color:var(--t-ink,#1A1814);cursor:pointer}
+  #hpe.hps .hps-zoom select:focus-visible{outline:2px solid var(--gr700,#00862D);outline-offset:2px}
+}
+.hps-lpr .hps-lpi span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hps-lpr .hps-lpi small.hps-lpc{flex:none}
