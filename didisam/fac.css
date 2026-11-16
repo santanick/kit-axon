@@ -234,3 +234,12 @@ html[data-theme=dark] #main .fc-opt{background:var(--surface,#0E1A14);color:#EAF
 #main .q1-aside:has(.fc-ac) .q1-ac.ai li>span:not([class]),#main .q1-aside:has(.fc-ac) .q1-ac.ai li a{color:#fff}
 #main .q1-aside:has(.fc-ac) .q1-ac.ai li i{width:8px;height:8px;min-height:0;padding:0;margin:0;border:0;border-radius:50%;box-shadow:none;background:#7CF2A2}
 #main .q1-aside:has(.fc-ac) .q1-ac.ai li i.warn{background:#FF9A6E}
+/* v43.4 Q1 · 070 휴대폰: 하위 탭은 한 줄 가로 넘김(회색 판 안에서 3줄로 흩어지던 문제) · 간트는 행 전체가 누르는 칸(v43ui.js rowAct, 가는 막대 대신) */
+@media (max-width:760px){
+  #main .fc .seg2[role=tablist]{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;max-width:100%;width:auto;align-self:stretch}
+  #main .fc .seg2[role=tablist]::-webkit-scrollbar{display:none}
+  #main .fc .seg2[role=tablist]>button{flex:none;white-space:nowrap;min-height:44px}
+  #main .fc43 button.v4-trk{display:block;width:100%;height:44px;padding:0;border:0;font:inherit;cursor:pointer;text-align:left;color:inherit}
+  #main .fc43 button.v4-trk:focus-visible{outline:2px solid var(--pr,#00862D);outline-offset:2px}
+  #main .fc43 .v4-ch .btn{min-height:44px}
+}

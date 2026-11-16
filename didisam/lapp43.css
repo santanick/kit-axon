@@ -531,3 +531,26 @@ body.lapp .ap-scroll{padding-bottom:24px}
 body.la26 .pvbar.lhs-demo .lhs-dt{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4;padding:4px 0;text-align:center}
 body.la26 footer.lf{margin-top:0!important}
 }
+/* v43.4 Q1 휴대폰(≤760px): 089 · 097 · 108 · 110 남은 결함 */
+@media (max-width:760px){
+/* 089 어두운 대체 사진 위에 브랜드 색 막을 얹어 「검은 빈 상자」가 아니라 영상 포스터로 보이게 */
+html body.lapp #lm .tcard .th.ph::before{content:'';position:absolute;inset:0;background:linear-gradient(150deg,color-mix(in srgb,var(--pri) 62%,transparent),color-mix(in srgb,var(--pri) 18%,transparent) 70%);pointer-events:none}
+html body.lapp #lm .tcard .th .play{z-index:1}
+/* 097 강좌별 카드는 화면의 74%(다음 카드가 보이게) · 정렬은 한 줄(「내가 쓴 글 보기」는 위 줄) · 글 종류 탭은 작은 칩 필터로 낮춤 */
+html body.lapp #lm .lc26side>.lc26c{flex:0 0 74%;max-width:74%;min-width:0}
+html body.lapp #lm .lc26side>.lc26c b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+html body.lapp #lm .lc26so>span{flex-wrap:wrap;overflow:visible;row-gap:6px;-webkit-mask-image:none;mask-image:none}
+html body.lapp #lm .lc26so>span::after{display:none}
+html body.lapp #lm .lc26so>span>.lc26my{flex:1 1 100%}
+html body.lapp #lm .lc26kt{display:flex;gap:8px;border:0;padding:0;margin:4px 0;background:none;box-shadow:none;overflow:visible}
+html body.lapp #lm .lc26kt>button{flex:none;min-height:36px!important;padding:0 14px!important;border:1px solid var(--line)!important;border-radius:99px!important;background:var(--surface,#fff)!important;color:var(--g700,var(--mute));font-size:14px;font-weight:600;margin:0}
+html body.lapp #lm .lc26kt>button:is(.on,[aria-selected=true]){border-color:color-mix(in srgb,var(--pri) 55%,transparent)!important;background:color-mix(in srgb,var(--pri) 12%,var(--surface,#fff))!important;color:var(--ink)}
+/* 108 경고문 줄 간격 · 「켜기」는 초록 테두리 44px(차단 상태라 누를 수 없음을 유지) · 연결 카드는 오른쪽 「연결 ›」 */
+html body.lapp #lm .ap-pr small{line-height:1.55;display:block;margin-top:2px}
+html body.lapp #lm .ap-pr [data-ap="push-on"]:disabled{border:1.5px solid var(--pri)!important;color:var(--pri)!important;font-weight:700}
+html body.lapp #lm .ap-pw2 .lai-cc:not(.on){padding-right:76px}
+html body.lapp #lm .ap-pw2 .lai-cc:not(.on) .lai-dot{display:none}
+html body.lapp #lm .ap-pw2 .lai-cc:not(.on)::after{content:'연결 ›';position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:var(--pri);background:color-mix(in srgb,var(--pri) 10%,var(--surface,#fff));border-radius:99px;padding:6px 10px;white-space:nowrap}
+/* 110 입력창 아래 안내는 두 줄까지 */
+body.lapp #ltut .lt-note,body.lapp .lt-panel .lt-note{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.45}
+}

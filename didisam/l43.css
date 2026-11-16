@@ -277,3 +277,11 @@ p.mini:has(> .g2-demo:only-child),p:has(> .g2-demo:only-child){margin:6px 0 0}
   .l43-g{min-width:0}
   .l43-g dd{font-size:clamp(17px,5.2vw,28px)!important;white-space:nowrap;letter-spacing:-.035em;overflow:hidden}
 }
+/* v43.4 Q1 휴대폰: 브리핑 숫자 타일(.l43-stats)은 개수만큼 카드 전폭을 나눈다(3칸이 4열 격자의 3/4만 쓰던 문제, 034 · 069 · 070). 라벨은 단어 단위 줄바꿈, 「아직 없음」 같은 글 값은 칸 안 크기로 */
+@media (max-width:760px){
+  .l43-brief .l43-stats{display:grid;width:100%;grid-template-columns:none!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px}
+  .l43-brief .l43-st{min-width:0;padding:9px 8px}
+  .l43-brief .l43-st dt{font-size:12px;line-height:1.35;white-space:normal;word-break:keep-all;letter-spacing:-.02em}
+  .l43-brief .l43-st dd{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em}
+  .l43-brief .l43-st dd .l43-z{font-size:14px;font-weight:700}
+}

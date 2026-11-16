@@ -61,12 +61,12 @@
   if (window.__hxOn) return; window.__hxOn = 1;
   const MQ = matchMedia('(max-width:760px)');
   const css = `@media (max-width:760px){
-.hx-fade{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}
-.hx-fade.hx-st{-webkit-mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 36px),transparent)}
+.hx-fade{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 52px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 52px),transparent)}
+.hx-fade.hx-st{-webkit-mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 52px),transparent);mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 52px),transparent)}
 .hx-fade.hx-end{-webkit-mask-image:none;mask-image:none}
 .hx-fade.hx-end.hx-st{-webkit-mask-image:linear-gradient(90deg,transparent,#000 24px);mask-image:linear-gradient(90deg,transparent,#000 24px)}
 .hx-fade:is(:has(details[open]),:has([aria-expanded="true"])){-webkit-mask-image:none!important;mask-image:none!important}
-.hx-fade.hx-fx::after{content:'';flex:0 0 8px;align-self:stretch;width:8px;min-width:8px}
+.hx-fade.hx-fx::after{content:'';flex:0 0 16px;align-self:stretch;width:16px;min-width:16px}
 .hx-fade.hx-pr{padding-right:16px}
 #fabBtn.fab-edge,#tbFab.tb-fab.fab-edge{right:0!important;width:30px!important;min-width:30px!important;height:52px!important;padding:0!important;gap:0!important;border-radius:14px 0 0 14px!important}
 #fabBtn.fab-edge>:not(svg),#tbFab.tb-fab.fab-edge>:not(svg){position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important}
