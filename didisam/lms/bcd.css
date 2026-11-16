@@ -52,3 +52,12 @@ details.lmsb-week>summary::before{content:'';flex:none;width:7px;height:7px;bord
 details.lmsb-week[open]>summary::before{transform:rotate(45deg)}
 details.lmsb-week:not([open]){padding-top:10px;padding-bottom:10px}details.lmsb-week:not([open])>summary{margin:0}
 .lmsb-wkact{display:flex;justify-content:flex-end;margin:-4px 0 6px}
+/* v43 R2 — 강의실 구성: 주차 카드 타임라인 */
+.lb-ws{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.lb-w{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px;border:0;border-radius:12px;box-shadow:inset 0 0 0 1px var(--line);background:var(--card,#fff);font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.lb-w.past{background:var(--soft,#f6f7f9)}.lb-w.cur{box-shadow:inset 0 0 0 2px var(--g,#16a34a)}.lb-w.on{box-shadow:inset 0 0 0 2px var(--ink,#111)}
+.lb-wn{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}.lb-wn small{font-size:12px;font-weight:600;margin-left:1px;color:var(--muted)}
+.lb-wd{font-size:11.5px;color:var(--muted)}.lb-wm{font-size:12px}
+.lb-wb{display:block;width:100%;height:6px;border-radius:9px;background:var(--line);overflow:hidden;margin-top:4px}.lb-wb i{display:block;height:100%;background:var(--g,#16a34a)}
+.lb-wr{font-size:11.5px;color:var(--muted)}.lb-w.next .lb-wb{opacity:.5}
+details.lmsb-week:not([open]){box-shadow:none;background:transparent;border-color:transparent;border-bottom:1px solid var(--line);border-radius:0;margin:0}
