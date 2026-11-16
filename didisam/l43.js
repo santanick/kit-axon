@@ -3,6 +3,11 @@
  *
  * 1) 렌더 함수(새 화면 · 새 코드에서 직접 호출)
  *    L43.brief({ eye, title, sub, stats:[[값, 라벨, tone]] })  → 화면 첫 줄 「한 문장 브리핑」 + 핵심 숫자
+ *      acts:[{ label, kind:'pri'|'sec', go:'<CSS 선택자>' | tab:'<탭 id>' }] → 머리 주 버튼 · 보조 버튼(v43 G2)
+ *        go  : 화면에 이미 있는 버튼(예: '[data-act="cls-new"]')을 대신 클릭합니다. 대상이 없으면 버튼을 그리지 않습니다.
+ *        tab : go(탭 id)로 이동합니다. 새 버튼에는 data-act를 달지 않습니다(테스트 strict 모드) — data-l43go · data-l43tab만 씁니다.
+ *        다른 머리(V4.head 등)에도 L43.acts(배열)로 같은 버튼 HTML을 얻어 넣을 수 있습니다.
+ *      stats 값이 0 · 빈 값 · 「—」 · NaN이면 숫자 대신 짧은 문장(L43.zero: 「대기 없음」 · 「해당 없음」 등)을 보여 줍니다.
  *    L43.av(name)            → 이니셜 원형 아바타(이름으로 색이 고정)
  *    L43.prog(v, tone?)      → 진도 막대 + 숫자(30% 미만 코랄, 80% 이상 짙은 그린)
  *    L43.chip(text, tone)    → 상태 칩(ok · warn · bad · mute · ai)
@@ -46,21 +51,32 @@
     return `<svg class="l43-spk ${tone || ''}" viewBox="0 0 ${W2} ${H2}" width="${W2}" height="${H2}" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-opacity=".28" style="stop-color:currentColor"/><stop offset="1" stop-opacity="0" style="stop-color:currentColor"/></linearGradient></defs><path d="${ln} L${W2} ${H2} L0 ${H2}Z" fill="url(#${id})"/><path d="${ln}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${P[P.length - 1][0].toFixed(1)}" cy="${P[P.length - 1][1].toFixed(1)}" r="3" fill="currentColor"/></svg>`; };
   const eyeHTML = o => `<p class="l43-eye"><span class="l43-ai" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor"/></svg>AI</span>${E(o.eye || '오늘 브리핑')} · ${E(todayLabel())}</p>`;
   const demo = () => { try { return !(W.S && S.org && S.org.empty); } catch (e) { return true; } };
+  /* v43 G2 — 0 · 빈 값 · 「—」 · NaN → 짧은 문장. 숫자가 있으면 null */
+  const ZW = [[/승인|대기|보고/, '대기 없음'], [/미납|연체|환불/, '미납 없음'], [/미만|위험|미이수|결석|노쇼|지각|낮은|이탈|미접속|미배정|미입력|오류|실패/, '해당 없음'], [/오늘/, '오늘은 없음'], [/이번 달|이번 주|신규|발급|제출|예정/, '아직 없음']];
+  const zero = (v, l) => { const t = String(v == null ? '' : v).trim(); if (/NaN|undefined/.test(t) || !t || /^[—\-–]+$/.test(t)) return '집계 전'; const n = parseFloat(t.replace(/[^\d.\-]/g, '')); if (/\d/.test(t) && n === 0 && !/[1-9]/.test(t)) { const h = ZW.find(([re]) => re.test(l || '')); return h ? h[1] : '아직 없음'; } return null; };
+  const zv = (v, l) => { const z = zero(v, l); return z ? `<span class="l43-z">${E(z)}</span>` : E(v); };
+  /* v43 G2 — 머리 버튼(주 · 보조). go 대상이 화면에 없으면 그리지 않음 */
+  const acts = A => { A = (A || []).filter(a => a && a.label && (a.tab || a.go)); if (!A.length) return ''; return `<div class="l43-acts">${A.slice(0, 3).map((a, i) => `<button type="button" class="btn ${(a.kind || (i ? 'sec' : 'pri')) === 'pri' ? 'pri' : 'ghost'} l43-act"${a.go ? ` data-l43go="${E(a.go)}"` : ` data-l43tab="${E(a.tab)}"`}>${E(a.label)}</button>`).join('')}</div>`; };
+  const actTarget = sel => { try { return [...document.querySelectorAll(sel)].find(x => !x.closest('.l43-acts') && (x.offsetParent || x.getClientRects().length)) || document.querySelector(sel); } catch (e) { return null; } };
+  const pruneActs = root => { (root || document).querySelectorAll('.l43-act[data-l43go]').forEach(b => { if (!actTarget(b.dataset.l43go)) b.remove(); }); (root || document).querySelectorAll('.l43-acts').forEach(w => { if (!w.children.length) w.remove(); }); };
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.l43-act'); if (!b) return; e.preventDefault();
+    if (b.dataset.l43tab) { try { go(b.dataset.l43tab); } catch (x) { console.error(x); } return; }
+    const t = actTarget(b.dataset.l43go); if (t) { t.scrollIntoView && t.scrollIntoView({ block: 'center' }); t.click(); } });
   function brief(o) {
     if (!o) return '';
     const st = (o.stats || []).filter(Boolean); const tab = (typeof CUR !== "undefined" && (CUR.ws === 'settings' ? 'settings' : CUR.tab)) || '';
     let k = o.kind || (REG[tab] && REG[tab].kind) || KIND[tab] || (o.todo ? 'list' : st.length >= 3 ? 'kpi' : 'hero');
     if (k === 'list' && !(o.todo && o.todo.length) && !st.length) k = 'hero';
-    const head = `<div class="l43-bl">${eyeHTML(o)}<h2 class="l43-hl">${o.title}</h2>${o.sub ? `<p class="l43-sub">${o.sub}</p>` : ''}${o.foot || ''}</div>`;
-    if (k === 'hero') return `<section class="l43-brief l43-k-hero" aria-label="화면 브리핑">${head}${st.length ? `<dl class="l43-gl">${st.slice(0, 4).map(([v, l, t, sp]) => `<div class="l43-g ${t || ''}"><dt>${E(l)}</dt><dd>${E(v)}</dd>${spark(sp || (demo() ? sparkPts(v, l + v) : null), 'on')}</div>`).join('')}</dl>` : ''}</section>`;
+    const head = `<div class="l43-bl">${eyeHTML(o)}<h2 class="l43-hl">${o.title}</h2>${o.sub ? `<p class="l43-sub">${o.sub}</p>` : ''}${o.foot || ''}${acts(o.acts)}</div>`;
+    if (k === 'hero') return `<section class="l43-brief l43-k-hero" aria-label="화면 브리핑">${head}${st.length ? `<dl class="l43-gl">${st.slice(0, 4).map(([v, l, t, sp]) => `<div class="l43-g ${t || ''}"><dt>${E(l)}</dt><dd>${zv(v, l)}</dd>${zero(v, l) ? '' : spark(sp || (demo() ? sparkPts(v, l + v) : null), 'on')}</div>`).join('')}</dl>` : ''}</section>`;
     if (k === 'photo') { const kw = o.photo || PHOTOKW[tab] || (W.S && S.org ? S.org.name : '교실'); const U = [].concat(o.imgs || o.img || []).filter(Boolean); while (U.length < 3) { const u = V4photo(kw, 'brief-' + tab + U.length, { slot: U.length ? 'card' : 'hero', size: U.length ? '' : 'lg', tone: 'light' }); if (!u) break; U.push(u); }
-      return `<section class="l43-brief l43-k-photo" aria-label="화면 브리핑"><div class="l43-pbody">${head}${st.length ? `<dl class="l43-stats">${st.slice(0, 3).map(([v, l, t]) => `<div class="l43-st ${t || ''}"><dt>${E(l)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl>` : ''}</div>${U.length ? `<div class="l43-pst n${U.length}" role="img" aria-label="${E(o.alt || '분위기 사진')}">${U.slice(0, 3).map((u, i) => `<span class="l43-pimg p${i}" style="background-image:url('${E(u)}')"></span>`).join('')}</div>` : ''}</section>`; }
-    if (k === 'list') { const T = (o.todo && o.todo.length ? o.todo : st.map(([v, l, t]) => [`${l} ${v}`, t === 'warn' ? '먼저 처리할 항목' : '현재 상태', t])).slice(0, 3);
+      return `<section class="l43-brief l43-k-photo" aria-label="화면 브리핑"><div class="l43-pbody">${head}${st.length ? `<dl class="l43-stats">${st.slice(0, 3).map(([v, l, t]) => `<div class="l43-st ${t || ''}"><dt>${E(l)}</dt><dd>${zv(v, l)}</dd></div>`).join('')}</dl>` : ''}</div>${U.length ? `<div class="l43-pst n${U.length}" role="img" aria-label="${E(o.alt || '분위기 사진')}">${U.slice(0, 3).map((u, i) => `<span class="l43-pimg p${i}" style="background-image:url('${E(u)}')"></span>`).join('')}</div>` : ''}</section>`; }
+    if (k === 'list') { const T = (o.todo && o.todo.length ? o.todo : st.map(([v, l, t]) => [zero(v, l) ? `${l} · ${zero(v, l)}` : `${l} ${v}`, t === 'warn' ? '먼저 처리할 항목' : '현재 상태', zero(v, l) ? 'ok' : t])).slice(0, 3);
       return `<section class="l43-brief l43-k-list" aria-label="화면 브리핑">${head}<ol class="l43-todo" aria-label="할 일">${T.map(([a, b, t], i) => `<li class="${t || ''}"><span class="l43-tn">${t === 'warn' ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 8v5M12 16.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>' : t === 'ok' ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 12.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : i + 1}</span><span class="l43-tt"><b>${E(a)}</b>${b ? `<small>${E(b)}</small>` : ''}</span>${t === 'warn' ? '<span class="l43-chip warn">처리 필요</span>' : t === 'ok' ? '<span class="l43-chip ok">정상</span>' : '<span class="l43-chip">확인</span>'}</li>`).join('')}</ol></section>`; }
     /* kpi(N): 왼쪽 헤드라인 · 오른쪽 링 1개 + KPI 3칸(스파크라인) */
-    let ri = o.ring ? -1 : st.findIndex(x => /%$/.test(String(x[0]).trim())); const rg = o.ring || (ri >= 0 ? [parseFloat(st[ri][0]), st[ri][1], st[ri][2]] : null); const K = st.filter((x, i) => i !== ri).slice(0, rg ? 3 : 4);
+    let ri = o.ring ? -1 : st.findIndex(x => /%$/.test(String(x[0]).trim())); const rg = o.ring || (ri >= 0 && !zero(st[ri][0], st[ri][1]) ? [parseFloat(st[ri][0]), st[ri][1], st[ri][2]] : null); if (ri >= 0 && !rg) ri = -1; const K = st.filter((x, i) => i !== ri).slice(0, rg ? 3 : 4);
     const ring = rg ? (() => { const v = Math.max(0, Math.min(100, +rg[0] || 0)), R = 42, C = 2 * Math.PI * R; return `<div class="l43-ring ${rg[2] || ''}" role="img" aria-label="${E(rg[1])} ${num(v)}%"><svg viewBox="0 0 100 100" width="112" height="112" aria-hidden="true"><circle cx="50" cy="50" r="${R}" class="tr"/><circle cx="50" cy="50" r="${R}" class="fg" stroke-dasharray="${(C * v / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/></svg><b>${num(v)}<small>%</small></b><span>${E(rg[1])}</span></div>`; })() : '';
-    return `<section class="l43-brief l43-k-kpi${rg ? ' hasring' : ''}" aria-label="화면 브리핑">${head}${st.length ? `<div class="l43-kr">${ring}<dl class="l43-kp n${K.length}">${K.map(([v, l, t, sp], i) => `<div class="l43-kc ${t || ''}"><dt>${E(l)}</dt><dd>${E(v)}</dd>${spark(sp || (demo() ? sparkPts(v, l + v + i) : null), t === 'warn' ? 'co' : '')}</div>`).join('')}</dl></div>` : ''}</section>`;
+    return `<section class="l43-brief l43-k-kpi${rg ? ' hasring' : ''}" aria-label="화면 브리핑">${head}${st.length ? `<div class="l43-kr">${ring}<dl class="l43-kp n${K.length}">${K.map(([v, l, t, sp], i) => `<div class="l43-kc ${t || ''}"><dt>${E(l)}</dt><dd>${zv(v, l)}</dd>${zero(v, l) ? '' : spark(sp || (demo() ? sparkPts(v, l + v + i) : null), t === 'warn' ? 'co' : '')}</div>`).join('')}</dl></div>` : ''}</section>`;
   }
   const V4photo = (k, s, o) => { try { return W.V4 && V4.photo ? V4.photo(k, s, o) : (W.HPSTOCK && HPSTOCK.photo ? HPSTOCK.photo(k, s, o) : ''); } catch (e) { return ''; } };
   /* 빈 상태 일러스트(160×120, 그린 톤 · 토큰 색이라 다크 자동) */
@@ -156,6 +172,7 @@
     const tab = CUR.ws === 'settings' ? 'settings' : CUR.tab; const R = REG[tab];
     main.classList.toggle('l43', !!R); if (!R) return; main.dataset.l43 = tab;
     if (!main.querySelector('.l43-brief') && R.brief) { let o = null; try { o = R.brief(main); } catch (e) { console.error(e); } if (o) { const h = brief(o); const bv = main.querySelector(':scope > .bview'); const wh = main.querySelector('.wh, .bhd'); if (bv) bv.insertAdjacentHTML('afterbegin', h); else if (wh) wh.insertAdjacentHTML('afterend', h); else main.insertAdjacentHTML('afterbegin', h); } }
+    try { pruneActs(main); } catch (e) { }
     try { enhanceTables(main); } catch (e) { console.error(e); }
     try { if (R.enhance) R.enhance(main); } catch (e) { console.error(e); }
     try { enhanceEmpty(main, tab); } catch (e) { console.error(e); }
@@ -167,8 +184,24 @@
   document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('[data-q1to]'); if (!a) return; e.preventDefault(); const t = document.getElementById(a.dataset.q1to); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   const reg = (tab, o) => { REG[tab] = o || {}; if (o && o.art) ARTOF[tab] = o.art; };
   const kindOf = tab => (REG[tab] && REG[tab].kind) || KIND[tab] || '';
-  if (typeof AFTER !== 'undefined') AFTER.push(() => { run(); setTimeout(run, 0); });
-  W.L43 = { brief, side, acard, spark, sparkPts, KIND, kindOf, av, prog, chip, empty, bulk, fbar, photo, wordsOf, reg, run, artSvg, REG };
+  /* v43 G2 2차 — 탐색 층 압축(모든 관리자 화면)
+   * ① 브리핑(.l43-brief · .v4-head)이 있으면 탭 아래 설명 줄(.lmsnav-sub .lnd)을 숨긴다 — 브리핑 문장이 같은 역할을 한다
+   * ② 「데모: 브라우저에만 저장」 문구는 작은 칩 「시연 모드」로 바꾼다(원문은 title)
+   * ③ 설정 화면(CUR.ws === 'settings')은 머리 카드를 낮춘다(#main.g2-set, l43.css) */
+  const DEMO_RE = /데모\s*:\s*(?:이\s*)?브라우저에만\s*저장(?:됩니다)?\.?/;
+  const demoChip = full => `<span class="g2-demo" title="${E(full || '서버 연결 전 시연 모드입니다. 저장한 내용은 이 브라우저에만 남습니다.')}">시연 모드</span>`;
+  function compact() {
+    const main = document.getElementById('main'); if (!main || !W.S || !S.org) return;
+    main.classList.toggle('g2-set', typeof CUR !== 'undefined' && CUR.ws === 'settings');
+    const hasBrief = !!main.querySelector('.l43-brief, .v4-head'); main.classList.toggle('g2-hasbrief', hasBrief);
+    if (hasBrief) main.querySelectorAll('.lmsnav-sub > .lnd').forEach(p => { p.hidden = true; });
+    main.querySelectorAll('small, span, p, em').forEach(el => { if (el.dataset.g2d || el.closest('.g2-demo, .modal, textarea')) return; const t = el.textContent; if (t.length > 120 || !DEMO_RE.test(t)) return; if ([...el.children].some(c => DEMO_RE.test(c.textContent))) return; el.dataset.g2d = 1;
+      const full = t.trim(); if (full.replace(DEMO_RE, '').replace(/[\s·|,()]/g, '') === '') { el.outerHTML = demoChip(full); return; }
+      const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n; while ((n = tw.nextNode())) { if (DEMO_RE.test(n.nodeValue)) { n.nodeValue = n.nodeValue.replace(DEMO_RE, '').replace(/\s*[·|]\s*$/, ' ').replace(/^\s*[·|]\s*/, ''); break; } }
+      el.insertAdjacentHTML('beforeend', ' ' + demoChip(full)); });
+  }
+  if (typeof AFTER !== 'undefined') AFTER.push(() => { run(); try { compact(); } catch (e) { console.error(e); } setTimeout(() => { run(); try { compact(); } catch (e) { console.error(e); } }, 0); });
+  W.L43 = { brief, acts, zero, compact, side, acard, spark, sparkPts, KIND, kindOf, av, prog, chip, empty, bulk, fbar, photo, wordsOf, reg, run, artSvg, REG };
 
   /* ═════════ 대표 화면 등록(D2) ═════════ */
   const L = k => { try { return t(k); } catch (e) { return k; } };
@@ -185,7 +218,7 @@
         return { kind: 'photo', eye: c.status || L('cls'), img: c.thumb && !/^data:image\/svg/.test(c.thumb) ? c.thumb : photo(wordsOf(c.name), c.id + c.name), title: `${E(L('learner'))} ${n}명 가운데 <em>${dn}명</em>이 수료했습니다`, sub: a < 50 ? `평균 진도 ${pct(a)}입니다. 진도 30% 미만 수강생에게 독려 메시지를 먼저 보내세요.` : `평균 진도 ${pct(a)}로 순조롭게 진행 중입니다. 아래 수강생 표에서 진도가 낮은 순으로 확인하세요.` }; } /* 숫자는 아래 상세 KPI 4칸이 보여 주므로 반복하지 않음(DIRECTION §3 페이지 머리) */
       if (UI.cls || UI.clsView === 'cats' || !S.classes.length) return null;
       const C = S.classes, run = C.filter(c => c.status === '운영중').length, N = C.reduce((a, c) => a + (c.learners || []).length, 0), A = avgOf(C.map(cp)), low = C.filter(c => (c.learners || []).length && cp(c) < 30).length;
-      return { imgs: C.slice(0, 3).map(c => c.thumb && !/^data:image\/svg/.test(c.thumb) ? c.thumb : photo(wordsOf(c.name), c.id + c.name)), title: `운영 중인 ${E(L('cls'))} <em>${run}개</em>, ${E(L('learner'))} ${N}명이 평균 ${pct(A)}까지 왔습니다`, sub: low ? `평균 진도 30% 미만 ${E(L('cls'))} ${low}개는 독려 메시지를 먼저 보내는 것이 좋습니다.` : `모든 ${E(L('cls'))}의 평균 진도가 30% 이상입니다.`, stats: [[C.length + '개', '전체 ' + L('cls')], [N + '명', L('learner')], [pct(A), '평균 진도'], [low + '개', '30% 미만', low ? 'warn' : '']] };
+      return { imgs: C.slice(0, 3).map(c => c.thumb && !/^data:image\/svg/.test(c.thumb) ? c.thumb : photo(wordsOf(c.name), c.id + c.name)), title: `운영 중인 ${E(L('cls'))} <em>${run}개</em>, ${E(L('learner'))} ${N}명이 평균 ${pct(A)}까지 왔습니다`, sub: low ? `평균 진도 30% 미만 ${E(L('cls'))} ${low}개는 독려 메시지를 먼저 보내는 것이 좋습니다.` : `모든 ${E(L('cls'))}의 평균 진도가 30% 이상입니다.`, acts: [{ label: `AI로 새 ${L('cls')} 설계`, go: '[data-act="ai-design"]' }, { label: '직접 만들기', kind: 'sec', go: '[data-act="cls-new"]' }], stats: [[C.length + '개', '전체 ' + L('cls')], [N + '명', L('learner')], [pct(A), '평균 진도'], [low + '개', '30% 미만', low ? 'warn' : '']] };
     },
     enhance: main => {
       main.querySelectorAll('.d26-cc:not([data-l43])').forEach(card => {
@@ -208,7 +241,7 @@
       if (UI.mem || !S.members.length) return null; const M0 = S.members, wait = M0.filter(m => m.grade === '승인 대기').length;
       const lim = (() => { try { return addDays(today(), -30); } catch (e) { return ''; } })(); const away = M0.filter(m => m.last && lim && m.last <= lim).length;
       const A = avgOf(M0.map(m => memAvg(m.id))); const low = M0.filter(m => S.classes.some(c => (c.learners || []).includes(m.id)) && memAvg(m.id) < 30).length;
-      return { title: `${E(L('learner'))} <em>${M0.length}명</em> 가운데 ${low}명이 진도 30%에 못 미칩니다`, sub: `${wait ? `가입 승인 대기 ${wait}명을 먼저 처리하세요. ` : ''}${away ? `30일 넘게 접속하지 않은 ${away}명에게는 독려 메시지를 권합니다.` : '모두 최근 30일 안에 접속했습니다.'}`, stats: [[M0.length + '명', '전체'], [wait + '명', '승인 대기', wait ? 'warn' : ''], [pct(A), '평균 진도'], [low + '명', '30% 미만', low ? 'warn' : '']],
+      return { title: `${E(L('learner'))} <em>${M0.length}명</em> 가운데 ${low}명이 진도 30%에 못 미칩니다`, sub: `${wait ? `가입 승인 대기 ${wait}명을 먼저 처리하세요. ` : ''}${away ? `30일 넘게 접속하지 않은 ${away}명에게는 독려 메시지를 권합니다.` : '모두 최근 30일 안에 접속했습니다.'}`, acts: [wait ? { label: `승인 대기 ${wait}명 처리`, go: '[data-act="tab"][data-v="승인 대기"]' } : null, { label: `+ ${L('learner')} 추가`, kind: wait ? 'sec' : 'pri', go: '[data-act="mem-invite"]' }, { label: '선택 회원 메시지', kind: 'sec', go: '[data-act="cm-mem-msg"]' }].filter(Boolean).slice(0, 2), stats: [[M0.length + '명', '전체'], [wait + '명', '승인 대기', wait ? 'warn' : ''], [pct(A), '평균 진도'], [low + '명', '30% 미만', low ? 'warn' : '']],
         todo: [[`가입 승인 대기 ${wait}명`, wait ? '승인 전에는 홈페이지를 이용할 수 없습니다' : '대기 중인 가입 신청이 없습니다', wait ? 'warn' : 'ok'], [`진도 30% 미만 ${low}명`, '독려 메시지 초안을 AI SAM이 준비해 두었습니다', low ? 'warn' : 'ok'], [`30일 넘게 미접속 ${away}명`, away ? '알림톡 · 문자로 다시 안내하세요' : '모두 최근 30일 안에 접속했습니다', away ? 'warn' : 'ok']] };
     },
     enhance: main => {
@@ -225,7 +258,7 @@
     brief: () => {
       if (UI.asDetail || UI.aItem) return null; let P = []; try { P = pend(); } catch (e) { }
       const cls = new Set(P.map(x => x.c.id)).size;
-      return P.length ? { title: `채점을 기다리는 답안 <em>${P.length}건</em>이 있습니다`, sub: `${cls}개 ${E(L('cls'))}에서 제출했습니다. 오래 기다린 답안부터 채점하고, 나머지는 AI 평가로 초안을 받아 확정하세요.` } : { title: '채점할 답안이 <em>없습니다</em>', sub: '새 답안이 제출되면 이 화면 맨 위에 모입니다.' };
+      return P.length ? { title: `채점을 기다리는 답안 <em>${P.length}건</em>이 있습니다`, sub: `${cls}개 ${E(L('cls'))}에서 제출했습니다. 오래 기다린 답안부터 채점하고, 나머지는 AI 평가로 초안을 받아 확정하세요.`, acts: [{ label: `대기 ${P.length}건 AI 평가`, go: '[data-act="ai-eval-all"]' }, { label: '오래된 답안부터 직접 채점', kind: 'sec', go: '[data-act="grade"]' }] } : { title: '채점할 답안이 <em>없습니다</em>', sub: '새 답안이 제출되면 이 화면 맨 위에 모입니다.' };
     },
     enhance: main => { main.querySelectorAll('.tw td .tag').forEach(t => { if (/^\d+일$/.test(t.textContent.trim())) { const d = parseInt(t.textContent, 10); t.classList.add('l43-age'); if (d >= 7) t.classList.add('old'); } }); }
   });

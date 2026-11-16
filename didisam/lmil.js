@@ -357,7 +357,7 @@
       ${M.E.length ? `<ul class="lm-rows">${M.E.slice(0, 3).map(e => rowHTML(e, M)).join('')}</ul>` : empty(M)}${expStrip(M)}
       <div class="lm-acts"><a class="lm-btn" href="#mile/list">${sv('hist', 18)}전체 내역</a><a class="lm-btn pri" href="#mile/rewards">${sv('gift', 18)}보상 보기</a></div></div>`; }
   /* 앱(로그인한 학습자 기본 · lapp.js appOn과 같은 조건)은 「나」 카드, 웹(클래식 보기)은 마이페이지 블록 */
-  const appMode = () => { try { return document.body.classList.contains('lapp') || (LR.mode !== 'preview' && localStorage.getItem('didisam.app.classic') !== '1' && !!LR.me); } catch (e) { return document.body.classList.contains('lapp'); } };
+  const appMode = () => { try { return document.body.classList.contains('lapp') || (typeof window.lappOn === 'function' ? window.lappOn() : (LR.mode !== 'preview' && localStorage.getItem('didisam.app.classic') !== '1' && !!LR.me)); } catch (e) { return document.body.classList.contains('lapp'); } };
   if (typeof viewMy === 'function') { const base = viewMy; viewMy = (...a) => { const h = base(...a); try { if (!LR.me || isPar() || !on() || appMode()) return h; const B = (SITE().my && SITE().my.blocks) || null; const set = B && B.find(x => x[0] === 'mile'); if (set && !set[1]) return h; if (live() && !MI.my) { loadMy(); return h; } const blk = webBlock(); return blk ? h.replace('<div class="mygrid">', '<div class="mygrid">' + blk) : h; } catch (e) { console.error('lmil my', e); return h; } }; }
 
   /* ═════ 동작 ═════ */

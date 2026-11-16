@@ -168,3 +168,17 @@
 #main .lm3-k{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--g100,#F0EFEA)}
 #main .lm3-k.professor{background:#E8EEFD;color:#2848A8}#main .lm3-k.student{background:var(--gr50,#EEFBF1);color:var(--gr800,#066B2A)}
 @media (max-width:1100px){#main .lm3{grid-template-columns:1fr}}
+/* v43 G2 2차: 보조 열 차트 모양 — 면적 추세선(db-line) · 평균 대비 비교(db-delta) */
+#main .db-area{display:block;width:100%;height:92px;margin-top:12px;overflow:visible}
+#main .db-area .ar{fill:var(--gr100);opacity:.9}
+#main .db-area .ln{fill:none;stroke:var(--gr600);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+#main .db-area .pt{fill:var(--surface);stroke:var(--gr700);stroke-width:2.5}
+#main .db-ax{display:flex;justify-content:space-between;margin-top:6px;font-size:13px;color:var(--t-sub,var(--g600))}
+#main .db-cmp{margin:14px 0 0;display:grid;gap:10px}
+#main .db-cmp dt{margin:0 0 4px;font-size:13px;font-weight:600;color:var(--t-sub,var(--g600))}
+#main .db-cmp dd{margin:0;display:flex;align-items:center;gap:10px}
+#main .db-cmp b{min-width:64px;text-align:right;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--g900)}
+#main .db-cb{flex:1;height:10px;border-radius:99px;background:var(--surface2,var(--g100));overflow:hidden}
+#main .db-cb i{display:block;height:100%;border-radius:99px;background:var(--gr200)}
+#main .db-cb.on i{background:linear-gradient(90deg,var(--gr500),var(--gr700))}
+:root[data-theme="dark"] #main .db-area .ar{fill:rgba(0,197,59,.18)}

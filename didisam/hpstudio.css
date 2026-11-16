@@ -360,3 +360,14 @@ html[data-theme=dark] .hps-panw #hpmBox .hpm-i{background:#1C1F1E;box-shadow:ins
 .hps-pcl li span{display:flex;flex-direction:column}.hps-pcl b{font-size:12.5px}.hps-pcl small{font-size:11.5px;color:var(--muted,#5B6170)}
 .hps-pca{display:flex;gap:6px;flex:none}
 html[data-theme=dark] .hps-pubc{background:linear-gradient(90deg,rgba(0,134,45,.18),#151716 70%)}
+/* v43 G2 2차: 빌더 도구줄 — 두 줄 안에서 페이지 탭이 잘리지 않게(학습 표시는 점, 머리 줄과 겹치는 「사이트 열기」 숨김, 줄 높이 축소) */
+#hpe.hps .hpe-bar{padding:4px 12px;min-height:52px}
+#hpe.hps .hps-tabs{padding-top:0}
+#hpe.hps .hps-tab{padding:0 12px}
+#hpe.hps .hps-tab i{font-size:0!important;line-height:0;color:transparent;overflow:hidden;width:6px;height:6px;min-width:0;padding:0!important;border-radius:50%;background:var(--gr500,#16A34A);flex:none;align-self:center}
+#hpe.hps .hpe-bar .hps-open{display:none}
+#hpe.hps .hps-zseg button{padding:0 8px}
+#hpe.hps .hps-flow{padding:6px 12px;gap:10px}
+#hpe.hps .hps-flow li:not(.cur) button{padding:0 6px}
+#hpe.hps .hpw-talk{padding:6px 12px!important}
+#hpe.hps .hpw-talk input[name=q]{min-height:40px}

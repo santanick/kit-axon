@@ -343,16 +343,32 @@ input[type=file][hidden]{display:none!important} /* 라벨 단추(.btn) 안 숨�
   body:has(.brail):not(.fab-open) #fabBtn .scxbt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 }
 @media (min-width:901px) and (max-width:1180px){body:has(.brail){--g2-rail:68px}}
-/* v43 G2: 임시 주소 안내 — 머리 줄 안(떠 있지 않음) */
-.top .g2-dom{display:flex;align-items:center;gap:8px;min-width:0;margin:0;padding:4px 4px 4px 12px;border-radius:999px;background:color-mix(in srgb,var(--gr600,#00862D) 8%,var(--surface,#fff));border:1px solid color-mix(in srgb,var(--gr600,#00862D) 22%,transparent);color:var(--g800,#2A2B2B);font-size:13px;font-weight:600;white-space:nowrap}
-.top .g2-dom>svg{flex:none;color:var(--gr700,#00862D)}
-.top .g2-dom>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
-.top .g2-dom b{font-weight:800;font-variant-numeric:tabular-nums}
-.top .g2-dom .g2-domgo{flex:none;min-height:32px;padding:0 12px;border:0;border-radius:999px;background:var(--gr600,#00862D);color:#fff;font:inherit;font-weight:700;cursor:pointer}
-.top .g2-dom .g2-domx{flex:none;width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer}
-.top .g2-dom .g2-domx:hover{background:color-mix(in srgb,var(--g900,#1A1814) 8%,transparent)}
-@media (max-width:1180px){.top .g2-dom>span{display:none}}
+/* v43 G2 2차: 임시 주소 · 시작 가이드 → 머리 줄 작은 칩 1개(누르면 아래로 펼침, 본문을 가리지 않는 짧은 팝오버) */
+.top .g2-dom{position:relative;flex:none;min-width:0}
+.top .g2-domchip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px 0 10px;border-radius:999px;border:1px solid color-mix(in srgb,var(--gr600,#00862D) 24%,transparent);background:color-mix(in srgb,var(--gr600,#00862D) 7%,var(--surface,#fff));color:var(--g800,#2A2B2B);font:600 13px/1 inherit;white-space:nowrap;cursor:pointer}
+.top .g2-domchip svg{flex:none;color:var(--gr700,#00862D)}
+.top .g2-domchip b{font-weight:800;font-variant-numeric:tabular-nums;color:var(--gr700,#00862D)}
+.top .g2-domchip::after{content:"";width:6px;height:6px;margin-left:2px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:translateY(-2px) rotate(45deg);opacity:.6}
+.top .g2-dom.open .g2-domchip::after{transform:translateY(1px) rotate(-135deg)}
+.top .g2-dompop{position:absolute;top:calc(100% + 8px);left:0;z-index:60;width:340px;padding:14px;border-radius:16px;background:var(--surface,#fff);border:1px solid var(--line,#E7E5E0);box-shadow:var(--sh3,0 12px 32px rgba(0,0,0,.14));color:var(--g800,#2A2B2B);font-size:13px;line-height:1.5;white-space:normal}
+.top .g2-dompop[hidden]{display:none}
+.top .g2-dompop p{margin:0 0 10px}.top .g2-dompop p b{font-weight:800;word-break:break-all}
+.top .g2-dompop .bprog.g2-inpop{display:flex;margin:0 0 12px;padding:8px 10px;border-radius:12px;background:var(--surface2,#F7F6F3);min-height:40px}
+.top .g2-dompop .bprog.g2-inpop .bpbar{flex:1;width:auto}
+.top .g2-dpa{display:flex;gap:8px;flex-wrap:wrap}
+.top .g2-dpa button{min-height:40px;padding:0 14px;border-radius:999px;font:700 13px inherit;cursor:pointer}
+.top .g2-dpa .g2-domgo{border:0;background:var(--gr600,#00862D);color:#fff}
+.top .g2-dpa .g2-domx{border:1px solid var(--line,#E7E5E0);background:none;color:inherit}
+.top .uxfind{flex:none;white-space:nowrap}.top .uxfind span{white-space:nowrap}
+@media (max-width:1180px){.top .g2-domchip>span{display:none}.top .g2-domchip{padding:0 10px}}
 @media (max-width:720px){.top .g2-dom{display:none}}
 
 /* v43 F3 본문 보조 글자 하한: 관리자 본문의 보조 글자(12~12.75px)를 13px로 올린다. 왼쪽 메뉴·AI SAM 버튼은 제외 */
 #main :is(small,time,.tag,.l43-tt small,.sx3-tt small,.da-tt small,.bprog span,.tx small):not(.acp *):not(.scxbt *){font-size:13px}
+.v4-kv.v4-kz b{font-size:20px;color:var(--t-sub,var(--g700));letter-spacing:-.01em}
+/* v43 G2 2차: 공용 토스트(129) 대비 — 다크 테마에서 --ink가 밝은 색으로 바뀌어 흰 글자와 대비가 낮던 문제. 두 테마 모두 짙은 바탕 + 흰 글자(대비 15:1 이상) */
+#toasts .toast,.toast{background:#1A1814!important;color:#fff!important}
+#toasts .toast.warn,.toast.warn{background:#5C3200!important}
+#toasts .toast.warn::before,.toast.warn::before{background:#FFB547 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C3200' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M12 7v6M12 17v.5'/%3E%3C/svg%3E") center/14px no-repeat}
+html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background:#0B0D0C!important;box-shadow:0 0 0 1px rgba(255,255,255,.18),0 18px 40px -12px rgba(0,0,0,.7)!important}
+.top:has(> .g2-dom) .topr{margin-left:auto} /* v43 G2 2차: 시작 가이드(.bprog)를 칩 안으로 옮겨도 오른쪽 도구는 오른쪽 끝에 */

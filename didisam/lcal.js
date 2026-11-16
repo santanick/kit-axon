@@ -223,7 +223,10 @@
 
   /* ── 진입: 앱 홈 카드 · 「나」 목록 · 웹 마이페이지 · 보호자 홈 ── */
   function brief() { const E = events().filter(e => !e.done && e.k !== '시작'); const t0 = td(), t7 = addD(t0, 6); const T0 = E.filter(e => e.date === t0).length; const W = E.filter(e => e.date >= t0 && e.date <= t7); const nx = E.find(e => e.date >= t0 && ['과제', '시험', '라이브', '회차', '설문'].includes(e.k));
-    return { T0, W: W.length, nx, s: `${T0 ? `오늘 ${T0}개` : '오늘 일정 없음'} · 이번 주 ${W.length}개${nx ? ` · ${dday(nx.date)} ${String(nx.title).replace(/ · [^·]+$/, '')}` : ''}` }; }
+    const nt = x => x ? `${dday(x.date)} ${String(x.title).replace(/ · [^·]+$/, '')}` : ''; const n1 = nx || W[0] || E.find(e => e.date >= t0);
+    /* v43 G2 2차: 「오늘 일정 없음 · 이번 주 3개」처럼 앞뒤가 어긋나 보이던 문장 → 오늘 있으면 오늘부터, 없으면 다음 일정부터 */
+    const s = T0 ? `오늘 ${T0}개${W.length > T0 ? ` · 이번 주 ${W.length}개` : ''}${nx ? ` · ${nt(nx)}` : ''}` : W.length ? `다음 일정 ${nt(n1)} · 이번 주 ${W.length}개 남았어요` : n1 ? `이번 주는 일정이 없어요 · 다음 ${nt(n1)}` : '예정된 일정이 없어요';
+    return { T0, W: W.length, nx, s }; }
   const card = (cls) => { const b = brief(); const P = isPar(); return `<a class="lq-hc ${cls || ''}" href="#cal">${ico('cal', 22)}<span><b>${P ? '자녀 일정' : '학습 캘린더'}</b><small>${esc(b.s)}</small></span>${b.T0 ? `<em>${b.T0}</em>` : ''}${ico('arrow', 16)}</a>`; };
   function decorate() { if (!SITE() || !LR.me) return; const lm = document.getElementById('lm'); if (!lm) return; const a = route().a;
     if (appOn()) {

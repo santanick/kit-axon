@@ -40,7 +40,7 @@ const shot = async (pg, n) => { if (!SH) return; fs.mkdirSync(SH, { recursive: t
     await ctx.addInitScript(([s, mode]) => { if (sessionStorage.getItem('lcal.init')) return; sessionStorage.setItem('lcal.init', '1'); const S0 = JSON.parse(s); Object.entries(S0).forEach(([k, v]) => localStorage.setItem(k, v)); if (mode === 'web') localStorage.setItem('didisam.app.classic', '1'); else localStorage.removeItem('didisam.app.classic'); }, [st, mode]);
     const p = await ctx.newPage(); p.on('pageerror', e => errs.push(`[${mode} ${w}] ${e.message}`)); p.on('dialog', d => d.accept());
     if (me) await p.addInitScript(([tid, me]) => { sessionStorage.setItem('didisam.learner.' + tid, JSON.stringify(me)); }, [o.tid, me]);
-    await p.goto(base + `learner.html?t=${o.tid}#home`); await p.waitForFunction(() => typeof LR !== 'undefined' && LR.site, null, { timeout: 10000 });
+    await p.goto(base + `learner.html?t=${o.tid}${mode === 'app' ? '&app=1' : ''}#home`); /* v43 G2 2차: PC 폭 로그인 학습자의 기본 화면이 넓은 허브로 바뀌어, 앱 모드 점검은 ?app=1로 앱 화면을 연다 */ await p.waitForFunction(() => typeof LR !== 'undefined' && LR.site, null, { timeout: 10000 });
     if (!me) { await p.evaluate(async c => { await LR.api.login(c.sid, c.code); lrender(); }, o.code); await p.waitForTimeout(300);
       for (let i = 0; i < 2; i++) { await p.evaluate(() => { location.hash = '#my'; }); await p.waitForTimeout(400); if (await p.evaluate(() => location.hash === '#consent' && !!document.querySelector('#lcConsent'))) { await p.check('#lcConsent [data-cn=all]'); await p.click('#lcConsent button[type=submit]'); await p.waitForTimeout(500); } } }
     await p.evaluate(() => { document.head.insertAdjacentHTML('beforeend', '<style>.ltoast{display:none!important}</style>'); }); return { ctx, p }; };

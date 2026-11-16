@@ -48,7 +48,8 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     ok(r.week >= 2, `홈: 이번 주 차시 ${r.week}개`);
     ok(r.tabs.join() === '홈,내 강의,둘러보기,나' && r.on === '홈', `홈: 하단 탭 4칸(v43 대표님 지시: 학습자 입장 유형별 탭 — 성인 학원) — ${r.tabs.join(' · ')} (선택 ${r.on})`);
     const fb = await p.evaluate(() => { const b = document.getElementById('tbFab'); if (!b) return null; const R = b.getBoundingClientRect(); const n = document.querySelector('.ap-nav.tb-nav').getBoundingClientRect(); return { t: b.textContent.trim(), l: b.getAttribute('aria-label'), w: R.width, above: R.bottom <= n.top, dock: Math.abs(R.bottom - n.bottom) <= 4 && R.left >= n.right, fixed: getComputedStyle(b).position }; });
-    ok(fb && fb.t === 'AX 튜터' && /AX 튜터\(AI 튜터\) 열기/.test(fb.l) && fb.w >= 56 && fb.dock && fb.fixed === 'fixed', `홈: AI 튜터 아이콘이 아래 탭 바 오른쪽 끝에 붙어 있음(v43 G2: 따로 떠서 카드 · 칩을 가리지 않게 탭 바와 같은 줄로 옮김) — ${JSON.stringify(fb)}`);
+    /* v43 G2 2차(J4 공통 결함 4): 탭 바 옆에 붙으면 5칸처럼 보여 탭 바 위로 띄운 작은 알약(높이 44px)으로 바꿨다 — 탭 바와 겹치지 않고(above) 탭 바 줄에 붙지 않음(!dock) */
+    ok(fb && fb.t === 'AX 튜터' && /AX 튜터\(AI 튜터\) 열기/.test(fb.l) && fb.w >= 44 && fb.above && !fb.dock && fb.fixed === 'fixed', `홈: AI 튜터 단추가 아래 탭 바 위에 떠 있음(v43 G2 2차: 5칸처럼 보이지 않게) — ${JSON.stringify(fb)}`);
     await p.click('#tbFab'); await p.waitForTimeout(250);
     const op = await p.evaluate(() => ({ on: document.body.classList.contains('lt-on'), fabHidden: getComputedStyle(document.getElementById('tbFab')).display === 'none' }));
     ok(op.on && op.fabHidden, `홈: 아이콘을 누르면 AI 튜터 창이 열림(아이콘은 숨김) ${JSON.stringify(op)}`);

@@ -72,7 +72,7 @@
 .fc-pt small{display:flex;align-items:center;gap:4px;margin-top:4px}
 .fc-pt .fc-n,.fc .fc-n{width:64px!important}
 .fc-row{display:flex;flex-wrap:wrap;gap:6px}
-.fc-tg{display:flex;align-items:center;gap:10px;font-size:13px;min-height:36px;cursor:pointer}
+.fc-tg{position:relative;display:flex;align-items:center;gap:10px;font-size:13px;min-height:36px;cursor:pointer} /* v43 G2: 숨긴 체크박스가 body 기준으로 놓여 문서가 2,900px로 늘어나던 문제(070 아래 빈 화면) */
 .fc-tg input{position:absolute;opacity:0;width:1px;height:1px}
 .fc-tg i{flex:0 0 40px;height:24px;border-radius:12px;background:var(--g400,#C8C9C9);position:relative;transition:.15s}
 .fc-tg i::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}
