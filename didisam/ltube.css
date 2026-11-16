@@ -415,3 +415,12 @@ body.lapp.tb-watch .imain .lbtn.pri{background:#13231B!important;color:#CFDBD2!i
 /* 재생 화면 아이콘은 「이 장면 질문」 글자가 들어가는 알약 */
 body.lapp.tb-watch .tb-fab{width:auto;height:52px;padding:0 16px 0 14px;flex-direction:row;gap:6px;border-radius:999px}
 body.lapp.tb-watch .tb-fab span{font-size:14px}
+
+/* ═════════ v43 G2 — AI 튜터 단추를 아래 탭 바에 붙임(따로 떠서 카드 · 칩을 가리지 않게) ═════════
+   탭 바 오른쪽 끝을 단추 폭만큼 비우고, 단추는 탭 바와 같은 줄 · 같은 높이에 둔다. 재생 화면(tb-watch)은 그대로. */
+body.tube:not(.tb-watch):not(.lt-on):not(.tb-sheet):not(.ap-pickon):has(> #tbFab) .ap-nav.tb-nav{right:84px}
+body.tube:not(.tb-watch) #tbFab.tb-fab{right:12px;bottom:calc(10px + var(--ap-sb,0px));width:64px;height:64px;border-radius:24px;box-shadow:0 1px 2px rgba(26,24,20,.06),0 16px 36px rgba(26,24,20,.16),0 0 0 1px rgba(26,24,20,.05)}
+body.tube.tb-fsm:not(.tb-watch) #tbFab.tb-fab{width:64px;height:64px}
+body.tube.tb-fsm:not(.tb-watch) #tbFab.tb-fab span{display:inline}
+body.tube:not(.tb-watch) #lm{padding-bottom:calc(var(--ap-nav) + var(--ap-sb,0px) + 24px)}
+@media (min-width:900px){body.tube:not(.tb-watch):has(> #tbFab) .ap-nav.tb-nav{right:auto;transform:translateX(calc(-50% - 36px))}body.tube:not(.tb-watch) #tbFab.tb-fab{right:auto;left:calc(50% + 240px - 36px + 8px)}}

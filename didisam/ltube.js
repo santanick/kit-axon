@@ -408,7 +408,14 @@
     const dup = seen.has(src); seen.add(src); if (!dup && el.tagName === 'IMG') return; const id = stockOf(nm); if (!id) return; const u = `img/stock/${id}-800.webp`; if (el.tagName === 'IMG') el.src = u; else el.style.backgroundImage = `url('${u}')`; }); }
 
   /* ── 그리기(가장 바깥 감싸기) ── */
-  function apply() { const B = document.body; B.classList.remove('tube', 'tb-full', 'tb-watch'); const a0 = route().a;
+  /* v43 G3 — 체험판 첫 진입: 지난 7일 학습 시간 · 앞 두 강좌 진도를 유형별로 다르게 넣어 「0/20분 · 진도 0%」로 시작하지 않게(기록이 이미 있으면 건드리지 않음) */
+  function demoSeed() { try { if (!on() || LR.mode !== 'demo' || LR.tid !== 'sample') return; const t = rec(); if (t.demoSeeded || Object.keys(t.sec).length) return; t.demoSeeded = 1;
+    const o = SITE().org || {}; const key = (o.type || '') + (o.ed || '') + (LR.me.sid || ''); let h = 7; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const g = goal(); for (let k = 0; k < 7; k++) { const d = day(new Date(Date.now() - k * 864e5)); t.sec[d] = k === 0 ? (5 + h % 11) * 60 : ((h >> k) % 4 ? (g + (h >> (k + 3)) % 12) * 60 : (3 + k) * 60); }
+    const L = LR.lp; L.cls = L.cls || {}; const now = new Date().toISOString(); (SITE().classes || []).slice(0, 3).forEach((c, ci) => { if (L.cls[c.id] && Object.keys(L.cls[c.id].items || {}).length) return; const n = [2 + h % 5, 1 + (h >> 4) % 4, 1 + (h >> 7) % 3][ci];
+      L.cls[c.id] = { items: {} }; (c.items || []).slice(0, n).forEach(it => { L.cls[c.id].items[it.id] = { done: true, w: 100, at: now, score: 70 + (h >> ci) % 30 }; }); });
+    try { LR.api.save(); } catch (e) { } } catch (e) { } }
+  function apply() { const B = document.body; B.classList.remove('tube', 'tb-full', 'tb-watch'); const a0 = route().a; demoSeed();
     if (document.body.classList.contains('lapp') && ['review', 'done'].includes(a0) && !on()) { location.replace('#home'); return; } /* 보호자 · 방문자: 튜브 전용 주소는 홈으로(요원 3) */
     if (!on()) return; if (a0 === 'ai' && !tOn()) { location.replace('#home'); return; } /* 튜터를 끄면 대화 화면 주소도 닫음(요원 2) */ const a = route().a; const lm = $('#lm'), app = $('#lapp'); if (!lm || !app) return;
     if (B.classList.contains('ap-pickon')) return; /* 선생님 고르기 화면은 그대로 */

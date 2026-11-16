@@ -210,6 +210,8 @@ function ltRender() {
   const st = ltStatus(); const fresh = !LT.msgs.some(m => m.me); const nm = esc(C.name);
   if (LT.sk !== sc.k + '|' + sc.name) { LT.hint = LT.sk && !LT.open && sc.chips.length ? sc.name : ''; LT.sk = sc.k + '|' + sc.name; }
   const chip = (c, i) => c.kind === 'go' ? `<a class="lt-chip go" href="${esc(c.href)}" data-tact="go">${esc(c.l)}</a>` : `<button type="button" class="lt-chip${c.kind === 'escq' ? ' esc' : ''}" data-tact="${c.kind === 'escq' ? 'escq' : 'q'}" data-v="${esc(c.q)}" data-i="${i}">${esc(c.l)}</button>`;
+  /* v43 G2: 작은 안내 말풍선은 세션에서 처음 한 번만(첫 진입) — 화면을 옮길 때마다 카드 · 사진을 가리지 않게 */
+  if (LT.hint || LT.nudge) { let seen = null; try { seen = sessionStorage.getItem('didisam.lt.hint1'); } catch (e) { } if (seen && seen !== String(LT.h1 || '')) { LT.hint = ''; LT.nudge = ''; } else if (!seen) { LT.h1 = Date.now(); try { sessionStorage.setItem('didisam.lt.hint1', String(LT.h1)); } catch (e) { } } }
   R.innerHTML = `<button type="button" class="lt-fab ${LT.open ? 'hide' : ''} ${LR.me ? '' : 'guest'}" data-tact="open" aria-label="${nm} 열기 — 지금 화면: ${esc(sc.name)}, 도와드릴 일 ${sc.chips.length}가지" title="${nm} · 지금 화면에서 도와드릴 일 ${sc.chips.length}가지"><span class="lt-fi" aria-hidden="true">${ico('spark', 20)}</span><span class="lt-ft"><b>${nm}</b><span class="sr">${LR.me ? '무엇이든 물어보세요' : '로그인 없이 물어보세요'}</span></span>${badge ? `<em>${badge}</em>` : ''}</button>
   ${!LT.open && LT.hint ? `<div class="lt-hint" aria-hidden="true">${ico('spark', 12)} ${esc(LT.hint)} · 도와드릴 일 ${sc.chips.length}가지</div>` : ''}
   ${!LT.open && LT.nudge && !LT.hint ? `<div class="lt-hint lt-hn" role="status">${ico('spark', 12)} ${esc(LT.nudge)}</div>` : ''}
@@ -227,7 +229,11 @@ function ltRender() {
   const th = R.querySelector('.lt-th'); if (th) th.scrollTop = th.scrollHeight;
   document.body.classList.remove('lt-dock'); document.body.classList.toggle('lt-on', !!LT.open);
   /* 작은 안내는 잠깐만(버튼 위, 누를 수 없음 · 창은 열지 않음) — v25: 로그인 후 '오늘 할 일' 말풍선도 같은 방식 */
-  if (LT.hint || LT.nudge) { clearTimeout(LT.ht); LT.ht = setTimeout(() => { LT.hint = ''; LT.nudge = ''; const h = $('#ltut .lt-hint'); if (h) h.remove(); }, 4500); }
+  /* v43 G2: PC 웹은 말풍선을 머리 줄 안(계정 앞)에 작게 — 본문 위에 뜨지 않음 */
+  /* v43 G2: PC 웹은 AX 튜터 단추도 머리 줄 안(계정 앞)으로 — 떠 있는 단추가 카드 · 사진 · 버튼을 가리지 않게(휴대폰 · 앱은 그대로) */
+  try { document.querySelectorAll('header.lh .lt-hint, header.lh .lt-fab').forEach(x => x.remove()); const hd = document.querySelector('header.lh > .in'); if (hd && !document.body.classList.contains('lapp') && matchMedia('(min-width:901px)').matches) { const at = hd.querySelector(':scope > .acct') || null;
+      const f = R.querySelector('.lt-fab'); if (f) { f.classList.add('lt-hfab'); hd.insertBefore(f, at); } const h = R.querySelector('.lt-hint'); if (h) { h.classList.add('lt-hh'); hd.insertBefore(h, f && f.parentNode === hd ? f : at); } } } catch (e) { }
+  if (LT.hint || LT.nudge) { clearTimeout(LT.ht); LT.ht = setTimeout(() => { LT.hint = ''; LT.nudge = ''; document.querySelectorAll('.lt-hint').forEach(h => h.remove()); }, 4500); }
   ltPlace();
 }
 /* 버튼 자리: 휴대폰 아래 탭 · 화면 아래 고정 버튼(강좌 상세 신청 막대 등) 위로 */
@@ -330,3 +336,5 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) lsyn
 window.addEventListener('storage', e => { if (LR.mode === 'demo' && e.key && e.key === 'didisam.room.' + LR.tid) lsyncMine(true); });
 /* v32.9: 휴대폰 폭에서는 튜터 창이 화면 전체를 덮으므로, 화면(주소)이 바뀌면 닫는다 — 뒤로 가기로 빠져나올 수 있게 */
 window.addEventListener('hashchange', () => { if (innerWidth <= 600 && typeof LT !== 'undefined' && LT.open) { LT.open = false; document.body.classList.remove('lt-on'); try { sessionStorage.setItem(LTK(), '0'); } catch (e) { } setTimeout(ltRender, 0); } });
+/* v43 G2: 스크롤하면 안내 말풍선은 바로 숨김 */
+addEventListener('scroll', () => { if (typeof LT === 'object' && (LT.hint || LT.nudge)) { LT.hint = ''; LT.nudge = ''; document.querySelectorAll('.lt-hint').forEach(h => h.remove()); } }, { passive: true });

@@ -500,5 +500,9 @@ function postSeed(type) {
   });
   const dims = type === 'univ' ? Object.keys(PRISM) : null;
   S.diags = type === 'univ' ? [{ id: 'dg0', name: 'AI 활용 역량 진단(PRISM)', mode: 'type', src: 'ai', topic: 'AI 활용', n: 10, items: AI.likert('AI 활용', dims), outs: dgDefaultOuts('type'), to: 'all', days: 30, status: '진행 중', start: addDays(today(), -20), end: addDays(today(), 10), res: Object.fromEntries(S.members.filter(m => m.diag).map(m => [m.id, { out: m.diag, at: addDays(today(), -Math.floor(rnd() * 18)) }])) }] : [];
+  /* v43 G3 시연 밀도: 진단 목록 6건(진행 · 종료 · 초안) — 응답은 회원 일부 */
+  if (type === 'univ') [['디지털 리터러시 기초 진단', '진행 중', -12, 18, .55], ['전공 기초 수학 수준 진단', '진행 중', -6, 24, .35], ['신입생 학습 성향 진단', '종료', -70, -40, .9], ['진로 준비도 진단', '종료', -45, -15, .7], ['데이터 분석 역량 사전 진단', '초안', 3, 33, 0]].forEach(([name, status, a, b, r], i) => {
+    const res = Object.fromEntries(S.members.filter((m, j) => m.diag && ((j * 7 + i * 3) % 100) / 100 < r).map(m => [m.id, { out: m.diag, at: addDays(today(), Math.min(-1, a + ((m.id.length + i) % 9))) }]));
+    S.diags.push({ id: 'dg' + (i + 1), name, mode: 'type', src: i % 2 ? 'file' : 'ai', topic: name.replace(/ 진단.*/, ''), n: 8, items: AI.likert(name.replace(/ 진단.*/, ''), dims), outs: dgDefaultOuts('type'), to: 'all', days: b - a, status, start: addDays(today(), a), end: addDays(today(), b), res }); });
 }
 function upgradeState() { if (S.rubrics) return; postSeed(S.org.type); save(); }

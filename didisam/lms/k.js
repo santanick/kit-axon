@@ -181,6 +181,10 @@
     const d1 = mk({ title: '2026-2 비교과 프로그램 만족도', langs: ['ko'], scope: 'program', target: { kinds: ['student'] } }, actor); putQs(d1, t.questions.map(q => ({ type: q.type, text: { ...q.text }, required: q.required })));
     const e1 = mk({ title: '2026-2 중간 강의평가 · 프로그래밍 기초 01', kind: 'course_eval', scope: 'section', langs: ['ko', 'en'], gate_steps: ['grade'], target: { kinds: ['student'] } }, actor); putQs(e1, EVALQ); e1.status = 'open';
     K.surveys.push(d1, e1);
+    /* v43 G3 시연 밀도: 설문 카드 6장 이상(진행 · 마감 섞음, 응답 있음) */
+    [['2026-2 수업 운영 중간 점검', 'section', 'open'], ['2026 진로 상담 수요 조사', 'univ', 'open'], ['도서관 이용 만족도', 'univ', 'closed'], ['AI 학습 도구 사용 경험 조사', 'univ', 'open']].forEach(([title, scope, st], k) => {
+      const x = mk({ title, langs: ['ko'], scope, target: { kinds: ['student'] } }, actor); putQs(x, t.questions.map(q => ({ type: q.type, text: { ...q.text }, required: q.required }))); x.status = st; K.surveys.push(x);
+      ['20261001', '20261002', '20261003', '20261004', '20261005', '20261006', '20261007', '20261008'].slice(0, 4 + k).forEach((no, i) => { try { store(x, no, { 1: 3 + (i + k) % 3, 2: 2 + (i * 3 + k) % 4, 3: '' }, 'web'); } catch (e) { } }); });
     [['20261001', 5, 4, 5, 4, 5], ['20261002', 4, 4, 3, 4, 4], ['20261005', 5, 5, 4, 5, 5]].forEach(([no, ...v]) => store(e1, no, { 1: v[0], 2: v[1], 3: v[2], 4: v[3], 5: v[4], 6: no === '20261002' ? '실습 시간이 조금 더 있으면 좋겠습니다.' : '' }, 'web'));
   }
 

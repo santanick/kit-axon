@@ -304,3 +304,52 @@ html[data-theme="dark"] :is(#main,.modal) input:is([type=date],[type=time],[type
 .su .su-pub{display:grid!important;grid-template-columns:1fr!important;gap:6px}
 .su .su-pub>button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-height:56px;padding:8px 14px;text-align:left;white-space:normal;width:100%}
 .su-pub>button small{font-weight:500;font-size:12.5px;color:var(--t-sub,var(--g600));line-height:1.35}
+
+/* ═════════ v43 G1 — 기본 폼 요소 0(관리자 · 학습자 · 앱 · 빌더 공통, 범위 제한 없음) ═════════
+   원인: Q1 규칙이 :is(#main,.modal,.sheet,.uxpop) 안에만 걸려 빌더 패널(#hpe) · 머리 계정 메뉴 · 학습자 화면(v43ui.css 미로드)에 닿지 않았고,
+   date · time 은 테두리만 바뀌고 기본 달력 단추가 남았으며, 라벨 안 파일 입력은 :not(label *) 로 빠져 「Choose File」이 그대로였다. */
+:root{--f43-acc:var(--gr600,var(--pri,#00862D));--f43-fg:var(--g900,var(--ink,#1A1814));--f43-bg:var(--surface,#fff);--f43-bd:color-mix(in srgb,var(--f43-fg) 22%,transparent);--f43-ring:0 0 0 3px color-mix(in srgb,var(--f43-acc) 28%,transparent);
+  --f43-chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238A8F98' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  --f43-cal:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238A8F98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15' rx='3'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4'/%3E%3C/svg%3E");
+  --f43-clk:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238A8F98' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E")}
+/* 드롭다운: 둥근 칸 + 꺾쇠(기본 화살표 없음) */
+select:not([multiple]):not([size]):not(.sr):not(.sr-only){appearance:none!important;-webkit-appearance:none!important;background-image:var(--f43-chev)!important;background-repeat:no-repeat!important;background-position:right 10px center!important;background-size:18px!important;padding-right:36px!important;border-radius:10px;border:1px solid var(--f43-bd);background-color:var(--f43-bg);color:var(--f43-fg);font-family:inherit;min-height:36px;padding-left:12px;cursor:pointer}
+select[multiple]{appearance:none;-webkit-appearance:none;border-radius:12px;border:1px solid var(--f43-bd);background:var(--f43-bg);color:var(--f43-fg);padding:6px}
+select:focus-visible{outline:none;border-color:var(--f43-acc);box-shadow:var(--f43-ring)}
+/* 체크 · 라디오: 디자인된 네모 · 동그라미(스위치 안 숨은 입력은 그대로) */
+input:is([type=checkbox],[type=radio]):not(.sw input):not(.lvs input){appearance:none!important;-webkit-appearance:none!important;width:20px;height:20px;min-width:20px;min-height:0;flex:none;margin:0 8px 0 0;padding:0;border:1.5px solid color-mix(in srgb,var(--f43-fg) 30%,transparent);background:var(--f43-bg) center/14px no-repeat;border-radius:6px;display:inline-grid;place-items:center;vertical-align:-4px;cursor:pointer;transition:background-color .12s,border-color .12s;box-shadow:none}
+input[type=radio]:not(.lvs input){border-radius:50%}
+input[type=checkbox]:not(.sw input):checked{background-color:var(--f43-acc);border-color:var(--f43-acc);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")}
+input[type=radio]:not(.lvs input):checked{border:6px solid var(--f43-acc);background:var(--f43-bg)}
+input:is([type=checkbox],[type=radio]):focus-visible{outline:none;box-shadow:var(--f43-ring)}
+input:is([type=checkbox],[type=radio]):disabled{opacity:.45;cursor:not-allowed}
+/* 날짜 · 시간: 왼쪽 아이콘 + 칸 전체를 누르면 달력(기본 달력 단추는 투명하게 칸 전체로) */
+input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week]){position:relative;border-radius:10px;border:1px solid var(--f43-bd);background-color:var(--f43-bg);color:var(--f43-fg);font-family:inherit;font-variant-numeric:tabular-nums;min-height:36px;padding:0 12px 0 38px!important;background-image:var(--f43-cal)!important;background-repeat:no-repeat!important;background-position:12px center!important;background-size:17px!important;cursor:pointer}
+input[type=time]{background-image:var(--f43-clk)!important}
+input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])::-webkit-calendar-picker-indicator{position:absolute!important;inset:0!important;width:auto!important;height:auto!important;margin:0!important;padding:0!important;opacity:0!important;cursor:pointer;background:none!important;filter:none!important}
+input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])::-webkit-datetime-edit{padding:0}
+input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])::-webkit-datetime-edit-fields-wrapper{padding:0}
+input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week]):focus-visible{outline:none;border-color:var(--f43-acc);box-shadow:var(--f43-ring)}
+/* 파일: 점선 드롭존 + 둥근 단추(라벨 안에 있어도) */
+input[type=file]:not([hidden]){display:block;box-sizing:border-box;width:100%;max-width:100%;min-height:64px;padding:12px!important;border:1.5px dashed color-mix(in srgb,var(--f43-acc) 45%,transparent)!important;border-radius:14px!important;background:color-mix(in srgb,var(--f43-acc) 6%,var(--f43-bg))!important;color:color-mix(in srgb,var(--f43-fg) 72%,transparent);font:inherit;font-size:14px;cursor:pointer}
+input[type=file]:not([hidden])::file-selector-button{min-height:40px;margin-right:14px;padding:0 16px;border:0;border-radius:10px;background:var(--f43-acc);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+input[type=file]:not([hidden]):hover{border-color:var(--f43-acc)!important}
+input[type=file][hidden]{display:none!important} /* 라벨 단추(.btn) 안 숨은 파일 입력이 다른 display 규칙 때문에 「Choose File」로 드러나던 문제 */
+
+/* ═════════ v43 G2 — 떠 있는 「AI SAM · 이 화면 도움」 단추: 본문 오른쪽 아래(카드 · 표 단추)를 가리지 않게 왼쪽 아이콘 줄 아래칸에 붙임 ═════════ */
+@media (min-width:901px){
+  body:has(.brail):not(.fab-open) #fabBtn{left:calc((var(--g2-rail,76px) - 52px)/2);right:auto;bottom:96px;width:52px;min-width:52px;height:52px;padding:0!important;border-radius:16px;justify-content:center}
+  body:has(.brail):not(.fab-open) #fabBtn > span:not(.fabn){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  body:has(.brail):not(.fab-open) #fabBtn .scxbt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+}
+@media (min-width:901px) and (max-width:1180px){body:has(.brail){--g2-rail:68px}}
+/* v43 G2: 임시 주소 안내 — 머리 줄 안(떠 있지 않음) */
+.top .g2-dom{display:flex;align-items:center;gap:8px;min-width:0;margin:0;padding:4px 4px 4px 12px;border-radius:999px;background:color-mix(in srgb,var(--gr600,#00862D) 8%,var(--surface,#fff));border:1px solid color-mix(in srgb,var(--gr600,#00862D) 22%,transparent);color:var(--g800,#2A2B2B);font-size:13px;font-weight:600;white-space:nowrap}
+.top .g2-dom>svg{flex:none;color:var(--gr700,#00862D)}
+.top .g2-dom>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.top .g2-dom b{font-weight:800;font-variant-numeric:tabular-nums}
+.top .g2-dom .g2-domgo{flex:none;min-height:32px;padding:0 12px;border:0;border-radius:999px;background:var(--gr600,#00862D);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.top .g2-dom .g2-domx{flex:none;width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer}
+.top .g2-dom .g2-domx:hover{background:color-mix(in srgb,var(--g900,#1A1814) 8%,transparent)}
+@media (max-width:1180px){.top .g2-dom>span{display:none}}
+@media (max-width:720px){.top .g2-dom{display:none}}

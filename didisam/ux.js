@@ -157,6 +157,10 @@ function uxTop() {
     ['#langSel', '#roleSel'].forEach(sel => { const el = top.querySelector('.topr > ' + sel); if (el) { const l = document.createElement('label'); l.textContent = sel === '#langSel' ? '화면 언어' : '권한별 화면'; l.appendChild(el); box.appendChild(l); } });
   }
   const r = top.querySelector('.topr'); if (r && !r.querySelector('[data-act=ux-find]')) r.insertAdjacentHTML('afterbegin', `<button type="button" class="uxfind" data-act="ux-find" title="메뉴 찾기 (Ctrl+/)" aria-label="메뉴 찾기">${ic('search', 18)}<span>메뉴 찾기</span></button>`);
+  /* v43 G2: 새 기관의 임시 홈페이지 주소 — 머리 줄 안 작은 안내(본문을 가리지 않음, 닫거나 주소를 바꾸면 사라짐) */
+  { const old = top.querySelector('.g2-dom'); const on = UI.tmpDom && S && S.org && S.org.domain === UI.tmpDom && !(typeof scn === 'function' && scn() === 'teacher');
+    if (!on && old) old.remove();
+    if (on && !old) { const br = top.querySelector('.brand'); if (br) br.insertAdjacentHTML('afterend', `<p class="g2-dom" role="status">${ic('globe', 15)}<span>홈페이지 주소를 임시로 <b>${esc(UI.tmpDom)}</b>로 정했습니다</span><button type="button" class="g2-domgo" data-act="go" data-v="site">영문 주소로 바꾸기</button><button type="button" class="g2-domx" data-act="g2-domx" aria-label="임시 주소 안내 닫기" title="닫기">${ic('x', 14)}</button></p>`); } }
   const gp = document.querySelector('.hmeta [data-act=guides]'); if (gp && !gp.dataset.ux) { gp.dataset.ux = 1; gp.innerHTML = `${ic('book', 14)} 도움말`; }
   const seg = document.querySelector('.bmseg'); if (seg) { const pv = seg.querySelector('[data-v=pv]'); if (pv && pv.firstChild && pv.firstChild.nodeType === 3) pv.firstChild.nodeValue = '화면'; }
 }
@@ -238,3 +242,4 @@ document.addEventListener('toggle', e => { const d = e.target; if (!(d instanceo
   const w = Math.max(200, pop.offsetWidth); let left = Math.min(r.left, innerWidth - w - 8); left = Math.max(8, left); pop.style.left = left + 'px';
   const h = pop.offsetHeight; const below = r.bottom + 6; pop.style.top = (below + h > innerHeight - 8 && r.top - h - 6 > 8 ? r.top - h - 6 : below) + 'px'; pop.style.maxHeight = (innerHeight - 24) + 'px'; pop.style.overflow = 'auto'; }, true);
 ['scroll', 'resize'].forEach(ev => addEventListener(ev, e => { if (e.type === 'scroll' && e.target && e.target.closest && e.target.closest('.uxpop')) return; document.querySelectorAll('details.uxmore[open]').forEach(d => d.removeAttribute('open')); }, true));
+ACT['g2-domx'] = () => { UI.tmpDom = ''; document.querySelectorAll('.g2-dom').forEach(x => x.remove()); };

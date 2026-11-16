@@ -98,6 +98,7 @@
     const base = Date.parse('2026-09-07T00:00:00Z'); /* 09:00 KST */
     for (let w = 1; w <= 15; w++) for (const seq of (w === 10 ? [1, 2] : [1])) { const t = base + (w - 1) * 7 * 864e5 + (seq - 1) * 90 * 6e4; d.sessions.push({ session_id: W3.uid(), section_id: sec.section_id, week_no: w, seq, kind: [3, 7, 12].includes(w) ? 'online' : 'class', starts_at: W3.ts(t), ends_at: W3.ts(t + 75 * 6e4), open_at: W3.ts(t), close_at: W3.ts(t + 7 * 864e5), room: '공학관 301', required_sec: 0, extra_study_sec: 0 }); }
     for (let i = 1; i <= 9; i++) d.persons.push({ person_id: W3.uid(), member_no: String(20269000 + i), unit_code: ['CSE', 'BIZ', 'EDU'][i % 3], grade_year: 1 + i % 4, ekind: i === 9 ? 'audit' : 'regular', secs: [sec.section_id] });
+    d.persons.push({ person_id: W3.uid(), member_no: '20269000', unit_code: 'CSE', grade_year: 2, ekind: 'regular', secs: [sec.section_id] }); /* v43 G3: 학습자 체험 계정(상단 띠의 20269000)도 명단에 — 109 학사 LMS 학습자 화면이 비지 않게 */
     d.beacons.push({ beacon_id: 'NFC-ENG301', kind: 'nfc', room: '공학관 301', active: true }, { beacon_id: 'BLE-ENG301', kind: 'ble', room: '공학관 301', active: true });
     /* 지난 차시 출결 · 학습 데모(결정적) */
     const reg = regular(sec.section_id); const M = ['code', 'qr', 'nfc', 'ble', 'photo'];

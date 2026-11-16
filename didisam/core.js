@@ -270,7 +270,7 @@ function createOrg(type, name, ed) {
   Object.assign(S, seed(type));
   if (typeof postSeed === 'function') postSeed(type);
   logAudit(`기관 생성 — 유형 ${TYPES[type].name}`); save(); CUR = { ws: 'home', tab: '' };
-  if (/^org-/.test(S.org.domain)) setTimeout(() => { try { toast(`홈페이지 주소를 임시로 ${S.org.domain}로 정했습니다. 나중에 홈페이지 › 도메인에서 영문 주소로 바꿀 수 있습니다.`); } catch (e) { } }, 1500); /* v38 */
+  if (/^org-/.test(S.org.domain)) UI.tmpDom = S.org.domain; /* v38 → v43 G2: 임시 주소 안내는 떠 있는 토스트(본문 가림) 대신 머리 줄 안내(ux.js uxTop) */
   $('#app').innerHTML = `<div class="gen"><div class="spin"></div><b>${esc(TYPES[type].name)} 맞춤 어드민을 준비하고 있습니다</b><p>메뉴 구성 · 용어 · 자동화 레시피 · 샘플 데이터</p></div>`;
   setTimeout(() => { render(); }, 800);
 }
@@ -319,7 +319,9 @@ function seed(type) {
   /* v43 Q1 시연 밀도(DIRECTION §6): 발송 내역 10건 · 채널 3종 섞기(빈 기관은 empty.js가 비움) */
   const msgs = [['이번 주 운영 안내', '전체', '앱 푸시 + 이메일', 2], ['과제 3 마감 하루 전 안내', '진도 50% 미만', '알림톡', 3], ['11월 특강 신청 안내', '전체', '이메일', 4], ['14일 이상 미접속 독려', '미접속 14일+', '알림톡', 5], ['수료증 발급 완료 안내', '수료자', '앱 푸시', 6], ['출석 확인 요청', '결석 2회 이상', '문자', 8], ['설문 참여 부탁드립니다', '전체', '앱 푸시 + 이메일', 9], ['결제 링크 재안내', '미납자', '알림톡', 11], ['시험 일정 변경 안내', '전체', '앱 푸시', 13], ['새 강좌 개설 소식', '전체', '이메일', 16]]
     .map(([title, to, ch, d], i) => ({ id: uid('ms'), at: addDays(today(), -d), to, title, ch, n: to === '전체' ? members.length : Math.max(3, Math.round(members.length * (0.08 + i * 0.03))) }));
-  const orgs = ['corp', 'univ', 'lifelong', 'voc'].includes(type) ? [{ id: 'o0', name: type === 'voc' ? '협약기업 A사' : type === 'univ' ? '취업지원센터' : type === 'corp' ? '계열사 B' : '구청 평생학습관', mgr: '기관 담당자', n: 14, done: 9, job: type === 'voc' ? 6 : 0 }] : [];
+  const orgs = ['corp', 'univ', 'lifelong', 'voc'].includes(type) ? [{ id: 'o0', name: type === 'voc' ? '협약기업 A사' : type === 'univ' ? '취업지원센터' : type === 'corp' ? '계열사 B' : '구청 평생학습관', mgr: '기관 담당자', n: 14, done: 9, job: type === 'voc' ? 6 : 0 },
+    /* v43 G3 시연 밀도: 협력 기관 6곳(가상) */
+    ...(type === 'voc' ? [['협약기업 B사', 22, 17, 11], ['해운대 일자리센터', 18, 12, 8], ['센텀 제조 협동조합', 11, 9, 5], ['부산 물류 C사', 16, 10, 7], ['동구 청년센터', 9, 6, 3]] : type === 'univ' ? [['교수학습개발센터', 31, 24, 0], ['산학협력단', 19, 15, 0], ['평생교육원', 26, 18, 0], ['공학교육혁신센터', 12, 9, 0], ['국제교류처', 8, 5, 0]] : type === 'corp' ? [['계열사 C', 38, 29, 0], ['협력사 D', 21, 14, 0], ['해외법인 E', 17, 11, 0], ['물류센터 F', 26, 22, 0], ['연구소 G', 12, 10, 0]] : [['수영구 평생학습관', 24, 17, 0], ['해운대 도서관', 19, 13, 0], ['동래 주민센터', 15, 9, 0], ['금정 청소년센터', 12, 8, 0], ['남구 복지관', 21, 16, 0]]).map(([name, n, done, job], i) => ({ id: 'o' + (i + 1), name, mgr: ['김지현', '박도윤', '이서연', '최민준', '정하은'][i] + ' 담당', n, done, job }))] : [];
   const journey = sm.lv.map((lv, i) => ({ id: 'j' + i, name: lv, cls: classes.filter(c => c.level === i).map(c => c.id), unlock: i === 0 ? '바로 열림' : `${sm.lv[i - 1]} 배지 획득`, badge: 'bd' + i }));
   const alerts = [{ id: uid('al'), at: addDays(today(), -1), to: '전체', title: '이번 주 학습 일정 안내', read: 62 }];
   const weeks = Array.from({ length: 8 }, (_, i) => ({ w: addDays(today(), -7 * (7 - i)).slice(5), join: Math.round(6 + rnd() * 10 - i * .4), badge: Math.round(1 + rnd() * 4 + i * .3) }));

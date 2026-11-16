@@ -51,7 +51,7 @@ LR.api = {
       const st = demoRoom(); LR.site = st && st.lsite && st.lsite.pub; LR._codes = (st && st.codes) || [];
       if (!LR.site && st) { LR.err = '아직 게시되지 않은 사이트입니다. 스튜디오 › 사이트 › 홈페이지 · 학습 사이트에서 [게시하기]를 누르면 학습자에게 열립니다.'; return; } /* v32.8 이 기관의 데이터가 있는데 게시 전이면 다른 기관 샘플을 보여 주지 않는다(QA U1) */
       if (!LR.site) { /* 이 브라우저에 게시본이 없으면(다른 기기 · 처음 방문) 체험용 샘플 사이트로 */
-        try { const dm = String(Q.get('demo') || '').replace(/[^a-z0-9]/g, ''); const r = await fetch(dm && dm !== '1' ? `learner-demo-${dm}.json` : 'learner-demo.json', { cache: 'no-cache' }); /* v38.3 ?demo=1 · ?demo=adult: 운영 서버에서도 서버를 쓰지 않는 체험판(기록은 이 기기에만) */ const j = r.ok ? await r.json() : null; if (j && j.pages) { LR.site = j; LR.sample = j.demo || null; LR.tid = 'sample'; LR._codes = j.demo ? [{ sid: j.demo.sid, code: j.demo.code, dept: j.demo.dept }] : []; } } catch (e) { }
+        try { const dm = String(Q.get('demo') || '').replace(/[^a-z0-9]/g, ''); const r = await fetch(dm && dm !== '1' ? `learner-demo-${dm}.json` : 'learner-demo.json', { cache: 'no-cache' }); /* v38.3 ?demo=1 · ?demo=adult: 운영 서버에서도 서버를 쓰지 않는 체험판(기록은 이 기기에만) */ const j = r.ok ? await r.json() : null; try { lDemoType(j, dm === 'adult' ? 'adult' : dm === 'sports' ? 'public' : 'univ'); } catch (e) { } if (j && j.pages) { LR.site = j; LR.sample = j.demo || null; LR.tid = 'sample'; LR._codes = j.demo ? [{ sid: j.demo.sid, code: j.demo.code, dept: j.demo.dept }] : []; } } catch (e) { }
         if (!LR.site) { LR.err = '아직 게시되지 않았습니다. 스튜디오 › 사이트 › 홈페이지 · 학습 사이트에서 [게시하기]를 누르세요.'; return; }
       }
     }
@@ -175,3 +175,43 @@ const SECR = {
 };
 /* v43 D-C: 공지 고정 카드 → 아래 목록의 같은 공지를 펼친다 */
 document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a.nt43c'); if (!a) return; e.preventDefault(); const d = a.dataset.nt43 && document.querySelector(`#lm details.nt[data-nid="${CSS.escape(a.dataset.nt43)}"]`); if (d) { d.open = true; d.scrollIntoView({ block: 'center', behavior: 'smooth' }); } });
+
+/* v43 G3 — 체험판 시드를 기관 유형별로 나눔: 같은 체험 데이터(learner-demo-*.json)를 다른 유형으로 열면
+   강좌 이름 · 강사 · 가격이 그 유형답게 바뀐다(앱 유형별 홈이 서로 똑같이 보이던 문제). 파일 본래 유형이면 그대로. */
+function lDemoType(j, nat) {
+  if (!j || !j.org || !Array.isArray(j.classes)) return; const T = j.org.type + (j.org.type === 'univ' ? ':' + (j.org.ed || 'lite') : '');
+  if (j.org.type === nat && !(nat === 'univ' && j.org.ed === 'lms')) return;
+  const P = {
+    k12: ['중2 수학 심화반', '중3 영어 리딩반', '고1 국어 문학 특강', '초6 과학 탐구반', '겨울방학 수학 선행', '주말 코딩 놀이반'],
+    'univ:lite': ['AI 리터러시 기초', '데이터 분석 입문(파이썬)', '취업 역량 포트폴리오', '창업 아이디어 캠프', '글로벌 커뮤니케이션', 'SW 코딩 부트캠프'],
+    'univ:lms': ['자료구조 01분반', '경영 데이터 분석 02분반', '프로그래밍 기초 01분반', '간호학 개론 02분반', '공학 수학 03분반', '교양 글쓰기 01분반'],
+    corp: ['신입사원 온보딩', '생성형 AI 업무 활용', '개인정보보호 교육(법정)', '신임 팀장 리더십', '직장 내 괴롭힘 예방(법정)', '영업 협상 스킬'],
+    voc: ['전기기능사 실기', '용접 기초 실습', 'CNC 선반 가공', '산업안전보건 교육', 'PLC 제어 입문', '현장 실무 프로젝트'],
+    lifelong: ['스마트폰 사진 교실', '생활 영어 회화', '시니어 디지털 배움터', '수채화 기초', '우리 동네 역사 탐방', '건강 요가'],
+    public: ['아쿠아로빅 오전반', '성인 수영 초급', '필라테스 저녁반', '배드민턴 강습', '키즈 수영', '헬스 PT 입문']
+  }[T] || null; if (!P) return;
+  const TR = { k12: '선생님', 'univ:lite': '교수', 'univ:lms': '교수', corp: '사내강사', voc: '훈련교사', lifelong: '강사', public: '코치' }[T];
+  const NM = ['김서윤', '박지호', '이하린', '최도윤', '정민서', '한유진'];
+  const PR = { k12: 1, 'univ:lite': 0, 'univ:lms': 0, corp: 0, voc: 0, lifelong: .4, public: .6 }[T];
+  j.classes.forEach((c, i) => { if (!P[i]) return; c.name = P[i]; c.teacher = NM[i] + ' ' + TR; if (PR === 0) { c.price = c.salePrice = c.earlyPrice = 0; } else c.price = c.salePrice = c.earlyPrice = Math.round(c.price * PR / 1000) * 1000;
+    (c.items || []).forEach((it, k) => { if (it && typeof it.title === 'string' && k === 0) it.title = '오리엔테이션 — ' + P[i]; }); });
+}
+
+/* v43 G4 — 학습자 다크: 기관 홈페이지 본문(Shadow DOM)도 다크 토큰을 따른다. 기관이 고른 브랜드 색(--c · --a)은 그대로 두고
+   바탕 · 카드 · 글자 · 선 변수만 어둡게 바꾼다(게시본 CSS의 변수와 흰 바탕 고정값을 덮음). 라이트에서는 아무것도 바꾸지 않는다. */
+(function () {
+  if (typeof CSSStyleSheet !== 'function' || !('adoptedStyleSheets' in Document.prototype)) return;
+  const V = '--bg:#151716;--bg2:#1C1F1E;--alt:#1C1F1E;--ink:#ECEDEA;--mu:#A9AEAA;--ln:rgba(255,255,255,.12);--hps-card:#1F2221;--hps-b:#151716;--hps-c:#ECEDEA;--hps-ln:rgba(255,255,255,.12);--hps-mu:#A9AEAA;--lt:color-mix(in srgb,var(--c,#00862D) 24%,#151716);--lt2:color-mix(in srgb,var(--c,#00862D) 34%,#151716);color:var(--ink)';
+  const CARD = '.smr:not(.hps-on),.smr .cc,.smr .s2im figure,.smr .hp-card,.smr .hps-mb,.smr .hps-mf,.smr .hps .hps-bd,.smr .hps-card,.smr .hpx-lsf,.smr .hpt .hp-qa details,.smr .hpt .hp-dl div,.smr .hpt .hp-tll li:not(.on),.smr .hps-k-table .hps-tw,.smr footer.gf.hps-f';
+  const R = s => `${s} .smr,${s} .hps-root{${V}}${s} :is(${CARD}){background-color:#1F2221!important;border-color:rgba(255,255,255,.12)!important}${s} .smr:not(.hps-on){background-color:#151716!important}${s} .smr :is(.hp-alt,.is-alt){background-color:#1C1F1E}${s} .smr :is(h1,h2,h3,h4,p,li,td,th,dt,dd,label,small,b,strong):not([style*="color"]){color:inherit}${s} .smr [data-dkw="1"]{background-color:#1F2221!important;color:var(--ink)}${s} .smr [data-dkw="2"]{background-color:#1C1F1E!important;color:var(--ink)}${s} .smr [data-dkt]{color:var(--ink)!important}${s} .smr img{filter:brightness(.92)}`;
+  const css = `:host-context(html[data-theme="dark"]) .smr{${V}}${R(':host-context(html[data-theme="dark"])')}@media (prefers-color-scheme:dark){${R(':host-context(html:not([data-theme="light"]):not([data-theme="dark"]))')}}`;
+  let sh; try { sh = new CSSStyleSheet(); sh.replaceSync(css); } catch (e) { return; }
+  /* 게시본이 흰색을 직접 적은 구역(변수를 쓰지 않는 섹션 · 카드)은 표식(data-dkw)을 달아 다크에서만 어둡게 */
+  const mark = r => { r.querySelectorAll('.smr:not(.hps-on) *').forEach(e => { if (e.hasAttribute('data-dkw')) return; const b = getComputedStyle(e).backgroundColor; if (b === 'rgb(255, 255, 255)' || b === 'rgb(246, 247, 250)' || b === 'rgb(243, 245, 249)') e.setAttribute('data-dkw', b === 'rgb(255, 255, 255)' ? '1' : '2');
+    /* 글자색을 짙은 무채색으로 직접 적은 제목 · 본문(브랜드 색 글자는 제외)도 다크에서 밝게 */ if (!e.hasAttribute('data-dkt') && [...e.childNodes].some(x => x.nodeType === 3 && x.textContent.trim())) { const m = getComputedStyle(e).color.match(/\d+/g); if (m) { const [r, g, bb] = m.map(Number); if (Math.max(r, g, bb) < 110 && Math.max(r, g, bb) - Math.min(r, g, bb) < 40) e.setAttribute('data-dkt', '1'); } } }); };
+  const adopt = () => { document.querySelectorAll('.smhost, .lhs-head, #lm *').forEach(el => { const r = el.shadowRoot; if (!r) return; if (!r.adoptedStyleSheets.includes(sh)) r.adoptedStyleSheets = [...r.adoptedStyleSheets, sh]; try { mark(r); } catch (e) { } }); };
+  new MutationObserver(() => kick()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  let t = 0; const kick = () => { clearTimeout(t); t = setTimeout(adopt, 30); };
+  const go = () => { adopt(); new MutationObserver(kick).observe(document.body, { childList: true, subtree: true }); };
+  if (document.body) go(); else addEventListener('DOMContentLoaded', go);
+})();
