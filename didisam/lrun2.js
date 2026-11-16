@@ -69,9 +69,12 @@ const LPH = {
   class: () => { const c = (((SITE().shop || {}).classes) || []).find(x => x.id === route().b); if (!c) return {}; const pr = +c.final || +c.price || 0;
     return { eyebrow: [c.kind === 'session' ? '회차' : c.kind === 'sub' ? '구독' : '기간', c.legal ? '법정' : '', c.status || ''].filter(Boolean).join(' · '), stats: [[c.items || (c.curr || []).length || '', '개', '차시'], c.n ? [lphN(c.n), '명', '수강생'] : null, [pr ? lphN(pr) : '무료', pr ? '원' : '', '수강료']], cta: null, photo: lPhoto(c.name, 'hero:' + c.id, true) }; },
   msg: () => ({ eyebrow: '기관 · 강사가 보낸 메시지', stats: null, cta: ['수강생 라운지 가기', '#comm'] }),
-  cert: () => { let n = 0; try { n = myStats().courses.filter(x => x.done).length; } catch (e) { n = 0; } return { eyebrow: '수료 기록', stats: [[n, '개', '수료한 과정']], cta: ['내 학습으로', '#my'] }; }
+  cert: () => { let n = 0; try { n = myStats().courses.filter(x => x.done).length; } catch (e) { n = 0; } return { eyebrow: '수료 기록', stats: [[n, '개', '수료한 과정', '곧 첫 수료증을 받아요']], cta: ['내 학습으로', '#my'] }; }
 };
 const LPH_ICO = { shop: 'grid', courses: 'layers', comm: 'user', notice: 'bell', badges: 'award', books: 'book', mypay: 'brief', msg: 'bell', cert: 'award', cal: 'clock' };
+/* v43 R8: 숫자 칸이 0 · 빈 값이면 숫자 대신 짧은 문장(4번째 값, 없으면 「아직 없어요」) */
+const lphZero = v => { const t = String(v == null ? '' : v).trim(); return !t || /NaN|undefined/.test(t) || (/\d/.test(t) && !/[1-9]/.test(t)); };
+window.lphZero = lphZero;
 function lPageHead(o) {
   o = o || {}; const key = o.key || (route().a || 'page'); let auto = {}; try { auto = !o.compact && LPH[key] ? LPH[key]() || {} : {}; } catch (e) { auto = {}; }
   const st = (o.stats !== undefined ? o.stats : auto.stats) || []; const S = st.filter(x => x && x[0] !== '' && x[0] != null).slice(0, 3); const cta = o.cta !== undefined ? o.cta : auto.cta; const eb = o.eyebrow || auto.eyebrow || '';
@@ -79,7 +82,7 @@ function lPageHead(o) {
   return `<section class="sub lph${o.compact ? ' lph-c' : ''}${o.cls ? ' ' + esc(o.cls) : ''}" data-lph="${esc(key)}" style="--lph-img:url('${esc(ph)}')"><div class="in"><p class="crumb">${o.crumb || `<a href="#home">홈</a> › ${esc(o.title || '')}`}</p>
     <div class="lph-g"><div class="lph-t">${eb ? `<p class="lph-eb"><i aria-hidden="true">${ico(LPH_ICO[key] || 'spark', 14)}</i>${esc(eb)}</p>` : ''}<h1>${esc(o.title || '')}</h1>${o.desc ? `<p class="llh-d">${o.descHtml ? o.desc : esc(o.desc)}</p>` : ''}
       ${cta ? `<div class="lph-ac"><a class="lbtn pri lph-cta" href="${esc(cta[1])}">${esc(cta[0])}${ico('arrow', 16)}</a></div>` : ''}</div>
-    ${S.length ? `<dl class="lph-st">${S.map(([v, u, l]) => `<div><dt>${esc(l)}</dt><dd><b>${esc(v)}</b>${u ? `<small>${esc(u)}</small>` : ''}</dd></div>`).join('')}</dl>` : ''}</div></div></section>`;
+    ${S.length ? `<dl class="lph-st">${S.map(([v, u, l, z]) => lphZero(v) ? `<div class="lph-z"><dt>${esc(l)}</dt><dd><b>${esc(z || '아직 없어요')}</b></dd></div>` : `<div><dt>${esc(l)}</dt><dd><b>${esc(v)}</b>${u ? `<small>${esc(u)}</small>` : ''}</dd></div>`).join('')}</dl>` : ''}</div></div></section>`;
 }
 window.lPageHead = lPageHead;
 /* v43 D-C: 배지 페이지 아래 — 받은 사람 수 · 공유 카드(FAQ 아래 빈 곳). 받은 사람 수(b.holders)는 기관 데이터에 있을 때만 숫자로 보인다 */
@@ -105,11 +108,12 @@ function viewTut(id) {
   const r = LR.lp.tut[t.id] || { w: 0, steps: [], mission: '' }; const n3 = (r.steps || []).filter(Boolean).length; const ty = tyOf(t.type);
   const rel = S2.tuts.filter(x => x.id !== t.id && (x.type === t.type || x.level === t.level)).slice(0, 4);
   const stage = !LR.me ? 0 : r.mission ? 3 : n3 >= 3 ? 2 : 1;
-  return `<section class="tutv"><div class="in"><p class="crumb"><a href="#tutorials">튜토리얼</a> › ${esc(ty.name)} · ${esc(lvOf(t.level).name)}</p>
+  return `<section class="tutv tv43"><div class="in"><p class="crumb"><a href="#tutorials">튜토리얼</a> › ${esc(ty.name)} · ${esc(lvOf(t.level).name)}</p>
     <div class="tvh"><div><span class="tg" style="--c:${esc(ty.color)}">${esc(ty.k)} · ${esc(ty.name)}</span><h1>${esc(t.title)}</h1><p class="mini">${esc([t.ch, t.tool].filter(Boolean).join(' · '))}</p></div>
       <ol class="flow">${['영상 보기', '3단계 따라 하기', '미션 제출'].map((s, i) => `<li class="${i < stage ? 'done' : i === stage || (!LR.me && i === 0) ? 'now' : ''}"><span>${i < stage ? ico('check', 13) : i + 1}</span>${s}</li>`).join('')}</ol></div>
-    <div class="tw2"><div class="vid"><div class="vbox" style="--poster:url('${esc(lPhoto(t.title, t.id, true))}')">${ytOK(t.yt) ? `<div id="yt" data-yt="${esc(t.yt)}" data-kind="tut" data-id="${esc(t.id)}"></div>` : '<div class="novid">영상 준비 중</div>'}</div><div class="wbar"><i style="width:${Math.round((r.w || 0) * 100)}%"></i></div><small class="mini" id="wtxt">시청 ${Math.round((r.w || 0) * 100)}%</small></div>
-    <aside class="follow"><p class="fh">STEP 2 · 따라 할 3단계 <b>${n3}/3</b></p>${t.steps.map((s, i) => `<label class="fs"><input type="checkbox" data-lchg="step" data-v="${i}" ${r.steps && r.steps[i] ? 'checked' : ''} ${LR.me ? '' : 'disabled'}><span><em>${i + 1}</em>${esc(s)}</span></label>`).join('')}
+    <div class="tw2"><div class="vid"><div class="vbox" style="--poster:url('${esc(lPhoto(t.title, t.id, true))}')">${ytOK(t.yt) ? `<div id="yt" data-yt="${esc(t.yt)}" data-kind="tut" data-id="${esc(t.id)}"></div>` : '<div class="novid">영상 준비 중</div>'}</div><div class="tv43ctl" aria-label="재생 상태"><span class="tv43pl" aria-hidden="true">${ico('play', 16)}</span><div class="wbar"><i style="width:${Math.round((r.w || 0) * 100)}%"></i></div><small class="mini" id="wtxt">시청 ${Math.round((r.w || 0) * 100)}%</small><span class="tv43tm">약 15분 · 끝까지 보면 자동 기록</span></div></div>
+    <aside class="follow"><p class="fh">STEP 2 · 따라 할 3단계 <b>${n3}/3</b></p>${(() => { const nx = t.steps.findIndex((s, i) => !(r.steps && r.steps[i])); /* v43 R8 090: 단계 위계 — 완료(체크) · 지금 할 단계(강조) · 다음 */
+      return t.steps.map((s, i) => { const dn = !!(r.steps && r.steps[i]); return `<label class="fs tv43s ${dn ? 'ok' : i === nx ? 'now' : 'wt'}"><input type="checkbox" data-lchg="step" data-v="${i}" ${dn ? 'checked' : ''} ${LR.me ? '' : 'disabled'}><span><em>${i + 1}</em><span class="tv43st"><small>${dn ? '완료' : i === nx ? '지금 할 단계' : `${i + 1}단계`}</small>${esc(s)}</span></span></label>`; }).join(''); })()}
       <div class="mission"><p class="fh">STEP 3 · 미션 제출</p><b>${esc(t.mission)}</b>${LR.me ? `<textarea id="msn" rows="4" maxlength="2000" placeholder="결과물 링크 · 만든 과정 한 줄 설명">${esc(r.mission || '')}</textarea><button class="lbtn pri blk" data-lact="msn" data-v="${esc(t.id)}">${r.mission ? '다시 제출' : '미션 제출하기'}</button>${r.mission ? '<small class="mini">제출 완료 · 운영자 검수 후 배지로 이어집니다.</small>' : ''}` : `<p class="mini">로그인하면 체크 · 미션 제출이 기록되어 배지로 이어집니다.</p>${btn('로그인하고 기록하기', '#login/' + encodeURIComponent('t/' + t.id), 'pri blk')}`}</div></aside></div>
     ${rel.length ? `<div class="rel"><h3>이어서 해 볼 튜토리얼</h3><div class="tgrid">${rel.map(x => `<a class="tcard" href="#t/${esc(x.id)}">${thumb(x.yt, '', x.title)}<div class="tci"><span class="tg" style="--c:${esc(tyOf(x.type).color)}">${esc(tyOf(x.type).name)}</span><b>${esc(x.title)}</b><small>${esc(x.tool || '')}</small><span class="go">${tutDone(x) ? ico('check', 14) + ' 완료' : '3단계 따라 하기 ' + ico('arrow', 13)}</span></div></a>`).join('')}</div></div>` : ''}</div></section>`;
 }
@@ -150,9 +154,9 @@ function viewDiag(id) {
 }
 function viewLogin(back) {
   const u = SITE().org.type === 'univ';
-  return `<section class="login"><div class="in"><div class="lgw"><div class="lgl"><p class="eb">WELCOME</p><h1>${esc(SITE().org.name)}<br>온라인 학습 센터</h1><ul>${[['target', '진단 결과와 추천 코스가 저장됩니다'], ['video', '영상 · 튜토리얼 진도가 이어집니다'], ['award', '과제 검수 후 디지털 배지가 발급됩니다']].map(([i, t]) => `<li>${ico(i, 18)}${t}</li>`).join('')}</ul><small>${u ? '학번 · 학과' : '번호 · 소속'}과 학습 기록만 저장합니다. 이름 · 연락처 · 이메일은 받지 않습니다.</small></div>
+  return `<section class="login lg43"><div class="in"><div class="lgw"><div class="lgl"><p class="eb">WELCOME</p><h1>${esc(SITE().org.name)}<br>온라인 학습 센터</h1><ul>${[['target', '진단 결과와 추천 코스가 저장됩니다'], ['video', '영상 · 튜토리얼 진도가 이어집니다'], ['award', '과제 검수 후 디지털 배지가 발급됩니다']].map(([i, t]) => `<li>${ico(i, 18)}${t}</li>`).join('')}</ul><small>${u ? '학번 · 학과' : '번호 · 소속'}과 학습 기록만 저장합니다. 이름 · 연락처 · 이메일은 받지 않습니다.</small></div>
     <div class="lgr"><h2>로그인</h2><p class="mini">${lIdLabel()}${lJ(lIdLabel(), '과', '와')} 기관에서 받은 접근코드를 입력하세요.</p>
-    <form id="li" data-back="${esc(back || 'my')}"><label class="fl">${lIdLabel()}<input name="sid" inputmode="numeric" autocomplete="username" required maxlength="20" placeholder="${u ? '예: 20260001' : ''}"></label><label class="fl">접근코드<input name="code" autocomplete="current-password" required maxlength="12" placeholder="기관에서 받은 코드"></label><p class="err" id="liErr" role="alert"></p><button class="lbtn pri blk" type="submit">로그인 ${ico('arrow', 16)}</button></form>
+    <form id="li" data-back="${esc(back || 'my')}"><label class="fl">${lIdLabel()}<input name="sid" inputmode="numeric" autocomplete="username" required maxlength="20" placeholder="${u ? '예: 20260001' : ''}"></label><label class="fl">접근코드<input name="code" autocomplete="current-password" required maxlength="12" placeholder="기관에서 받은 코드"></label><p class="err" id="liErr" role="alert"></p><button class="lbtn pri blk lg43b" type="submit">로그인 ${ico('arrow', 16)}</button></form>
     ${LR.sample ? `<div class="demo"><span>체험 계정 <b>${esc(LR.sample.sid)}</b> / <b>${esc(LR.sample.code)}</b></span><button type="button" class="lbtn sm ghost" data-lact="demofill">자동 입력</button></div>` : ''}${LR.mode === 'preview' ? '<p class="mini">미리보기에서는 어드민의 접근코드로 로그인해 볼 수 있으며 기록은 저장되지 않습니다.</p>' : ''}<p class="mini">접근코드를 모르면 ${u ? '학과 사무실 · 담당 선생님' : '담당자'}에게 발급을 요청하세요.</p></div></div></div></section>`;
 }
 function viewMy() { return needLogin('my'); }
@@ -232,7 +236,7 @@ window.R4 = window.R4 || (() => {
   const card = (head, body, o = {}) => `<section class="r4c${o.cls ? ' ' + o.cls : ''}"${o.id ? ` id="${o.id}"` : ''}${o.label ? ` aria-label="${E(o.label)}"` : ''}>${head ? `<div class="r4h">${head}</div>` : ''}${body}</section>`;
   const head = (t, sub, act) => `<b>${E(t)}</b>${sub ? `<small>${sub}</small>` : ''}${act ? `<span class="r4h-a">${act}</span>` : ''}`;
   const chips = (L, cur, attr) => `<div class="r4chips" role="tablist">${L.map(([v, l, n]) => `<button type="button" role="tab" aria-selected="${v === cur}" class="${v === cur ? 'on' : ''}" ${attr}="${E(v)}">${E(l)}${n != null ? `<em>${n}</em>` : ''}</button>`).join('')}</div>`;
-  const kpi = (v, unit, label, tone) => `<div class="r4k${tone ? ' ' + tone : ''}"><b>${E(v)}<small>${E(unit || '')}</small></b><span>${E(label)}</span></div>`;
+  const kpi = (v, unit, label, tone, z) => lphZero(v) ? `<div class="r4k r4kz${tone ? ' ' + tone : ''}"><b>${E(z || '아직 없어요')}</b><span>${E(label)}</span></div>` : `<div class="r4k${tone ? ' ' + tone : ''}"><b>${E(v)}<small>${E(unit || '')}</small></b><span>${E(label)}</span></div>`; /* v43 R8: 0이면 숫자 대신 문장 */
   const bars = L => { const mx = Math.max(1, ...L.map(x => +x[1] || 0)); return `<ul class="r4bars">${L.map(([l, v, sub]) => `<li><span>${E(l)}</span><i><s style="width:${Math.round((+v || 0) / mx * 100)}%"></s></i><b>${E(sub != null ? sub : v)}</b></li>`).join('')}</ul>`; };
   /* 월별 막대(값 배열 · 라벨 배열) — 마지막 칸 강조 */
   const cols = (vals, labs, fmt) => { const mx = Math.max(1, ...vals); return `<div class="r4cols" role="img" aria-label="${E(labs.map((l, i) => l + ' ' + (fmt ? fmt(vals[i]) : vals[i])).join(', '))}">${vals.map((v, i) => `<div class="${i === vals.length - 1 ? 'on' : ''}"><em>${v ? E(fmt ? fmt(v) : v) : ''}</em><i style="height:${Math.max(4, Math.round(v / mx * 100))}%"></i><span>${E(labs[i])}</span></div>`).join('')}</div>`; };

@@ -431,3 +431,7 @@ span.sw:not(:has(input)){display:inline-block;width:14px;height:14px;border-radi
 @media (max-width:1180px){.bkb{grid-template-columns:230px minmax(0,1fr)}}@media (max-width:640px){.bkb{grid-template-columns:1fr}}
 .kpis.bkkpis{grid-template-columns:repeat(5,minmax(0,1fr))}@media (max-width:900px){.kpis.bkkpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.topr .lvacct{margin-top:0;flex:none}.topr .lvacct small{display:none}.topr .lvacct .btn{padding:4px 6px;font-size:11px;white-space:nowrap;min-height:0}}
+/* v43 R8 128: 모달 — 배경 흐림을 줄이고 딤으로 맥락 유지, 바닥 버튼은 DDS 높이(44) */
+body .mwrap{backdrop-filter:blur(1px)}
+.mwrap .modal>.mf .btn{min-height:44px;padding:0 20px;font-size:15px;border-radius:10px}
+.mwrap .modal>.mh b{font-size:18px}

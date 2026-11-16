@@ -57,3 +57,6 @@
   .lai-two{grid-template-columns:minmax(0,1fr)}
   .lai-chips{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:2px}.lai-chips::-webkit-scrollbar{display:none}.lai-chips .lt-chip{flex:none}
 }
+/* v43 R8 108: 템플릿 줄 「켜기」 = 꺼진 스위치(button) */
+button.lai-sw.lai-swb{border:0;padding:0;background:none;cursor:pointer}
+button.lai-sw.lai-swb:focus-visible span{outline:3px solid var(--pri);outline-offset:2px}
