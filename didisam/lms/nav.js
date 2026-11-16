@@ -114,7 +114,7 @@
     const lbL = (c.lb || [])[d.length - 1] || '최근', lbA = /주/.test(lbL) ? `앞선 ${prev.length}주 평균` : `앞선 ${prev.length}일 평균`;
     return `<section class="q1-ac db-sum db-delta"><h3>${E(c.t)}</h3><div class="db-v">${E(c.v)}<span class="db-dt ${ch < 0 ? 'dn' : ''}">${ch >= 0 ? '+' : '−'}${Math.abs(ch)}%</span></div>${c.s ? `<p class="db-s">${E(c.s)}</p>` : ''}<dl class="db-cmp"><div><dt>${E(lbL)}</dt><dd><span class="db-cb on"><i style="width:${Math.round(last / mx * 100)}%"></i></span><b>${E(f(last))}</b></dd></div><div><dt>${E(lbA)}</dt><dd><span class="db-cb"><i style="width:${Math.round(av / mx * 100)}%"></i></span><b>${E(f(av))}</b></dd></div></dl></section>`; };
   const chartCard = (c, main) => { if (!c || noData(c)) return ''; if (!isTime(c)) return barCard(c); const tab = (main && main.dataset.l43) || (typeof CUR !== 'undefined' ? CUR.tab : ''); const k = (window.L43 && L43.kindOf ? L43.kindOf(tab) : '') || ''; return k === 'kpi' ? lineCard(c) : (k === 'list' || k === 'photo') ? deltaCard(c) : barCard(c); };
-  function side(main, o) { if (!window.L43 || !main || main.querySelector('.q1-aside')) return; const col = wrap(main); if (!col) return; let h = ''; if (o.todo && o.todo.length) h += todoCard(o.todo, o.tt); if (o.chart) h += chartCard(o.chart, main); if (o.ai) h += L43.acard({ ai: true, t: 'AI SAM 제안', p: o.ai }); L43.side(main, col, h); }
+  function side(main, o) { if (!window.L43 || !main || main.querySelector('.q1-aside')) return; const col = wrap(main); if (!col) return; let h = ''; if (o.todo && o.todo.length) h += todoCard(o.todo, o.tt); if (o.card) h += o.card; else if (o.chart) h += chartCard(o.chart, main); if (o.ai) h += L43.acard({ ai: true, t: 'AI SAM 제안', p: o.ai }); L43.side(main, col, h); }
   const DOW = ['일', '월', '화', '수', '목', '금', '토'];
   const days7 = () => Array.from({ length: 7 }, (_, i) => { const d = new Date(Date.now() - (6 - i) * 864e5); return i === 6 ? '오늘' : DOW[d.getDay()]; });
   const weeks = n => Array.from({ length: n }, (_, i) => i === n - 1 ? '이번 주' : `${n - 1 - i}주 전`).map((x, i, a) => i === a.length - 1 ? x : (a.length - 1 - i) + '주');
@@ -165,7 +165,7 @@
     lmsv: ['강의 영상 관리', m => { const a = kv(m, '자막 미게시'), b = kv(m, '차시 미배치'), ok = kv(m, '재생 가능'); if (ok == null) return null; const w = num(a) + num(b); return { title: w ? `자막 미게시 ${n(num(a), '개')} · 차시 미배치 ${num(b)}개 영상을 정리하세요` : `올린 영상 ${n(num(ok), '개')}가 모두 재생 · 배치되었습니다`, sub: '자막을 게시하고 차시에 배치해야 학생 강의실에 영상이 보입니다.' }; }]
   };
   /* v43 D-B — 화면마다 KPI 숫자(stats) · 할 일(todo) · 보조 열(side)을 넘긴다. 숫자는 그려진 화면에서만 읽는다(같은 화면 안 숫자와 일치). */
-  const txt = m => (m.innerText || '').replace(/\s+/g, ' ');
+  const txt = m => ((m.innerText || '') + ' ' + [...m.querySelectorAll('[data-r7src]')].map(x => x.textContent).join(' ')).replace(/\s+/g, ' '); /* R7: 숨긴 「지금 할 일」 띠의 숫자도 읽는다 */
   const rx = (m, re) => { const x = txt(m).match(re); return x ? num(x[1]) : 0; };
   const pctOf = (a, b) => b ? Math.round(a / b * 100) : 0;
   const fr = (m, h, i) => col(m, h, i).map(v => { const x = v.match(/(\d+)\s*\/\s*(\d+)/); return x ? [+x[1], +x[2]] : null; }).filter(Boolean);
@@ -221,10 +221,60 @@
     lmsp: m => { const k = rows(m); return { stats: [[k + '개', '강의실'], ['4개', '화면 언어'], ['30분', '자동 로그아웃']], todo: [['보안 설정 점검', '관리자 2단계 인증이 켜져 있는지 확인합니다', 'ok', '켜짐'], ['파일 업로드 상한', '강의자료 500MB · 과제 50MB', '', '확인'], ['영문 매뉴얼 배포', '유학생 안내용 PDF를 올립니다', '', '권장']], chart: { t: '언어별 접속 비율', v: '한국어 88%', s: 'English 7% · 中文 3% · 日本語 2%', d: [88, 7, 3, 2], lb: ['한국어', 'EN', '中文', '日本'] }, ai: '유학생이 많은 분반은 강의실 언어를 English로 두면 메뉴와 알림이 영어로 바뀝니다.' }; },
     'lmsp-portal': m => { const w = m.querySelectorAll('.lmp-wgrid > *').length || m.querySelectorAll('.card').length; return { stats: [[w + '개', '위젯'], ['78%', '평균 출석률'], ['4명', '결석 3회 이상', 'warn']], todo: [['결석 3회 이상 4명', '포털 첫 화면에 지도교수 연락 버튼이 보입니다', 'warn', '연락'], ['위젯 순서 정리', '자주 쓰는 위젯을 앞에 둡니다', '', '권장']], chart: { t: '최근 7일 포털 방문', v: '1,240회', s: '교수자 · 학생 합계', d: [860, 920, 1010, 980, 1100, 1180, 1240], lb: D7() }, ai: '학생 포털 첫 화면에 「오늘 할 일」 위젯을 맨 앞에 두면 과제 마감을 놓치는 학생이 줄어듭니다.' }; }
   };
+  /* v43 R7 2차 — 머리 버튼 · 맥락 줄 흡수 · 화면별 보조 카드(J2 043~084)
+     ① 머리 주 버튼 = 「지금 할 일」 띠의 주 동작(채점 시작 등), 보조 버튼 = 화면 머리의 새로 만들기(uxkeep) — 없으면 같은 업무의 이웃 화면(SEC2)
+     ② 강의실 · 분반 고르기(.lmsx-pick · .efh-bar · w3-sec)는 브리핑 머리 안 한 줄로 옮긴다(따로 떠 있는 가로 띠 제거)
+     ③ 「지금 할 일」 띠는 브리핑(목록형 할 일 3줄) · 보조 열 「오늘 할 일」과 같은 내용이라 브리핑이 있으면 숨긴다(숫자는 브리핑 · 보조 열이 그대로 보여 줌)
+     ④ X2가 card(HTML)를 주면 보조 열의 반복 막대 대신 그 카드를 쓴다 */
+  const STRIP = '.lmsx-todo, .u2-todo, .lw-todo, .lmp-todo, .lmsa-todo';
+  const selOf = b => { const a = b && b.dataset.act; if (!a || /^(go|nav-more|slg-open|g26-open)$/.test(a) || (a === 'tab' && !b.dataset.key)) return ''; let q = `[data-act="${a}"]`; if (b.dataset.key) q += `[data-key="${b.dataset.key}"]`; if (b.dataset.v != null && b.dataset.v !== '') q += `[data-v="${String(b.dataset.v).replace(/"/g, '\\"')}"]`; return q; };
+  const lbl = b => T(b).replace(/\s*[→›]\s*$/, '').slice(0, 18);
+  const SEC2 = { lmsa: ['lmsb', '강의실 구성 열기'], lmsb: ['lmsi', '동영상 · 진도 보기'], lmsc: ['lmsd', '강의 게시판 열기'], lmsd: ['lmsl-dm', '채팅 열기'], lmse: ['lmsf', '시험 · 문제은행'], lmsf: ['grade', '성적으로 가기'], lmsg: ['lmsp-app', '앱 출석 열기'], lmsi: ['lmsb', '강의실 구성 열기'], lmsk: ['lmsq', '비교과 보기'], 'lmsl-cal': ['lmsl-noti', '알림 규칙 보기'], 'lmsl-dm': ['lmsd', '강의 게시판 열기'], 'lmsl-noti': ['lmsl-cal', '통합 달력 보기'], lmsm: ['admins', '운영자 · 기록 보기'], lmsn: ['lmsq', '비교과 보기'], lmso: ['aigov', 'AI 관리 열기'], lmsp: ['lmsm', '사용자 · 권한 보기'], 'lmsp-portal': ['lmsj', '학습 분석 보기'], 'lmsp-app': ['lmsg', '출결 관리 열기'], lmsq: ['lmsk', '설문 · 강의평가'], lmslive: ['lmsg', '출결 관리 열기'], lmsv: ['lmsi', '동영상 · 진도 보기'] };
+  const autoActs = (m, tab) => { const A = [];
+    const sb = [...m.querySelectorAll(STRIP)].flatMap(x => [...x.querySelectorAll('button[data-act]')]).find(b => !b.closest('details') && selOf(b)); if (sb) A.push({ label: lbl(sb), go: selOf(sb) });
+    const hb = [...m.querySelectorAll('button.uxkeep[data-act]')].filter(b => !b.closest('details, .l43-brief')); const h = hb.find(b => b.classList.contains('pri')) || hb[hb.length - 1];
+    if (h && selOf(h) && !A.some(a => a.go === selOf(h))) A.push({ label: lbl(h), go: selOf(h), kind: A.length ? 'sec' : 'pri' });
+    const s2 = SEC2[tab]; if (A.length < 2 && s2) { try { if (typeof MENU === 'undefined' || MENU[s2[0]]) A.push({ label: s2[1], tab: s2[0], kind: A.length ? 'sec' : 'pri' }); } catch (e) { } }
+    return A.slice(0, 2); };
+  /* ④ 화면별 보조 카드(반복 막대 대신) — 시연 데이터(LMSX · LMP 데모 저장소)와 그려진 화면 숫자만 쓴다 */
+  const lcard = (t, L, foot, cls) => L.length ? `<section class="q1-ac r7-lc ${cls || ''}"><h3>${E(t)}</h3><ul>${L.map(([a, b, c, tone]) => `<li class="${tone || ''}"><span class="r7-lt">${E(c || '')}</span><span class="r7-lx"><b>${E(a)}</b>${b ? `<small>${E(b)}</small>` : ''}</span></li>`).join('')}</ul>${foot || ''}</section>` : '';
+  const rcard = (t, center, sub, P) => { const tot = P.reduce((a, p) => a + p[1], 0) || 1, R = 40, C = 2 * Math.PI * R; let off = 0;
+    const seg = P.map(([, v, c]) => { const d = C * v / tot; const h = `<circle cx="50" cy="50" r="${R}" class="r7-rs ${c}" stroke-dasharray="${d.toFixed(1)} ${(C - d).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}"/>`; off += d; return h; }).join('');
+    return `<section class="q1-ac r7-rc"><h3>${E(t)}</h3><div class="r7-rw"><svg viewBox="0 0 100 100" width="120" height="120" role="img" aria-label="${E(t)}"><circle cx="50" cy="50" r="${R}" class="r7-rt"/><g transform="rotate(-90 50 50)">${seg}</g></svg><div class="r7-rv"><b>${E(center)}</b><small>${E(sub)}</small></div></div><dl class="r7-rl">${P.map(([l, v, c]) => `<div><dt><i class="${c}"></i>${E(l)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl></section>`; };
+  const ago = t => { const d = Math.floor((Date.now() - Date.parse(t)) / 864e5); return isNaN(d) ? '' : d <= 0 ? '오늘' : d + '일 전'; };
+  const dday = t => { const d = Math.ceil((Date.parse(t) - Date.now()) / 864e5); return isNaN(d) ? '' : d <= 0 ? '오늘' : 'D-' + d; };
+  const CARD = {
+    lmsb: m => { const cw = rx(m, /이번 주\s*(\d+)\s*주차/) || 11; const W = [cw - 2, cw - 1, cw, cw + 1, cw + 2].filter(w => w > 0 && w <= 16);
+      return lcard('주차 진행', W.map(w => [`${w}주차`, w < cw ? '차시 공개 · 자료 완료' : w === cw ? '이번 주 · 차시 2개 공개' : '공개 예약 · 자료 준비', w < cw ? '완료' : w === cw ? '이번 주' : '예정', w < cw ? 'ok' : w === cw ? 'now' : '']), '', 'r7-tl'); },
+    lmsd: () => { let Q = []; try { Q = (LMSX.db().d.posts || []).filter(q => q.kind === 'qna' && q.status === 'open' && !q.deleted_at && (!LMSX.sec || q.sec === LMSX.sec)).sort((a, b) => String(a.at).localeCompare(String(b.at))); } catch (e) { }
+      return lcard(`답을 기다리는 질문 ${Q.length}건`, Q.slice(0, 4).map(q => [q.title, `${q.label || '학생'} · ${q.category || 'Q&A'}`, ago(q.at), 'warn'])); },
+    lmse: m => { const F = fr(m, '제출'); const a = F.reduce((x, y) => x + y[0], 0), b = F.reduce((x, y) => x + y[1], 0); const w = sumCol(m, '채점 대기'); if (!b) return '';
+      return rcard('제출 현황', pctOf(a, b) + '%', '평균 제출률', [['채점 완료', Math.max(0, a - w), 'g'], ['채점 대기', w, 'w'], ['미제출', Math.max(0, b - a), 'n']]); },
+    'lmsl-cal': () => { let I = []; try { I = (LMP.demo.l['cal.list']({}).items || []).filter(e => e.starts_at && Date.parse(e.starts_at) >= Date.now() - 864e5 && !e.done).sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at)); } catch (e) { }
+      return lcard('다가오는 마감 · 일정', I.slice(0, 5).map(e => [e.title, `${String(e.starts_at).slice(5, 10).replace('-', '.')} · ${({ academic: '학사', course: '강좌', personal: '개인' })[e.scope] || '일정'}`, dday(e.starts_at), e.kind === 'deadline' ? 'warn' : ''])); },
+    'lmsl-dm': m => { const on = m.querySelector('.lmp-room.on, .lmp-room[aria-current]') || m.querySelector('.lmp-room'); const nm = on ? T(on.querySelector('b')) : ''; if (!nm) return '';
+      const sub = (T(m.querySelector('.lmp-chat .ch small, .lmp-chat h3 + small')) || '참여 4명');
+      return `<section class="q1-ac r7-lc r7-prof"><h3>대화 상대</h3><div class="r7-pf">${window.L43 ? L43.av(nm, 'lg') : ''}<div><b>${E(nm)}</b><small>${E(sub)}</small></div></div><ul><li><span class="r7-lt">PDF</span><span class="r7-lx"><b>자료 조사 정리.pdf</b><small>공유 파일 · 2MB 이하</small></span></li><li><span class="r7-lt">링크</span><span class="r7-lx"><b>과제 3 안내 공지</b><small>강의 게시판 고정 글</small></span></li></ul></section>`; },
+    'lmsl-noti': m => { const t = txt(m); const ch = [['푸시', (t.match(/푸시/g) || []).length], ['이메일', (t.match(/메일/g) || []).length], ['알림톡', (t.match(/알림톡/g) || []).length], ['SMS', (t.match(/SMS/g) || []).length]].filter(x => x[1]);
+      return ch.length ? rcard('채널별 알림', ch.reduce((a, b) => a + b[1], 0) + '회', '규칙에 쓰인 채널', ch.map(([l, v], i) => [l, v, ['g', 'w', 'n', 'm'][i]])) : ''; },
+    lmso: m => m.querySelector('#loFile') ? `<section class="q1-ac r7-dzc"><h3>강의자료 올리기</h3><label class="r7-dz" for="loFile"><b>파일을 끌어 놓거나 눌러서 고르기</b><small>txt · md · html · 워드 · 엑셀 · 자막(srt · vtt)</small><span class="btn sm pri">파일 고르기</span></label><p class="db-s">올린 자료는 문단으로 나뉘어 AI 튜터 답변의 근거가 됩니다.</p></section>` : '',
+    lmsp: () => rcard('언어별 접속 비율', '88%', '한국어', [['한국어', 88, 'g'], ['English', 7, 'w'], ['中文', 3, 'n'], ['日本語', 2, 'm']]),
+    'lmsp-portal': () => lcard('많이 누르는 위젯', [['오늘 수업', '학생 하루 평균 2.4회', '1', 'ok'], ['다가오는 마감', '마감 하루 전 클릭 급증', '2', ''], ['안 읽은 메시지', '교수자 화면에서 가장 많이 봄', '3', ''], ['내 강좌', '학기 초에 많이 씀', '4', '']])
+  };
+  const PICK = '.lmsx-pick, .efh-bar, select[data-chg="w3-sec"], .lmsa-tsel select';
+  const absorb = m => { const bl = m.querySelector('.l43-brief .l43-bl'); if (!bl || bl.querySelector('.r7-ctx')) return; const P = [...m.querySelectorAll(PICK)].filter(x => !x.closest('.l43-brief, .modal, .uxpop, details'))[0]; if (!P) return;
+    const box = document.createElement('div'); box.className = 'r7-ctx'; const src = P.closest('.lmsx-head') || P.parentElement;
+    if (P.matches('select')) { const l = document.createElement('label'); l.className = 'r7-ctxl'; l.innerHTML = `<span>${P.closest('.lmsa-tsel') ? '학기' : '분반'}</span>`; l.appendChild(P); box.appendChild(l); } else { box.appendChild(P); }
+    const asm = src && (src.querySelector(':scope details.lmsx-asmore, :scope details.lmsd-as') || (src.parentElement && src.parentElement.querySelector(':scope > details.lmsd-as'))); if (asm) box.appendChild(asm); 
+    const acts = bl.querySelector('.l43-acts'); if (acts) bl.insertBefore(box, acts); else bl.appendChild(box);
+    /* 「데모: 브라우저에만 저장」 표시도 맥락 줄로(따로 떠 있던 한 줄 제거) — 비운 부모 줄은 숨김 */
+    const DM = [...m.querySelectorAll('.lmsx-note, .efh-demo, .lw-demo, .lmp-demo, .lmsa-demo, .g2-demo')].filter(x => !x.closest('.l43-brief, [data-r7src], .modal'))[0]; if (DM) { const par = DM.parentElement; box.appendChild(DM); [par, par && par.parentElement].forEach(x => { if (x && x !== m && !x.closest('.l43-brief') && !x.querySelector('select, input, button:not(.slg-i), summary, table, img') && !T(x).replace(/\s/g, '').length) x.style.display = 'none'; }); }
+    [src, src && src.closest('.lmsx-head')].forEach(x => { if (x && x !== m && !x.querySelector('select, input, button:not(.slg-i), summary') && !T(x).replace(/시연 모드|데모: 브라우저에만 저장/g, '').replace(/\s/g, '').length) x.style.display = 'none'; }); const hd = m.querySelector('.lmsx-head.lmsx-slim'); if (hd && !hd.querySelector('select, button, summary')) hd.style.display = 'none'; };
+  const hideStrips = m => { if (!m.querySelector('.l43-brief')) return; m.querySelectorAll(STRIP).forEach(x => { x.style.display = 'none'; x.dataset.r7src = 1; }); };
   const loading = m => /불러오는 중/.test(T(m.querySelector('#lmsxRoot > .empty')));
   const reg = () => { if (!window.L43) return; Object.entries(B).forEach(([tab, [eye, f]]) => { L43.reg(tab, { art: /lmsm|lmsj|lmsg/.test(tab) ? 'people' : /lmse|lmsf/.test(tab) ? 'check' : /lmsp$|noti/.test(tab) ? 'gear' : 'list',
-    brief: m => { if (noSec(m) || loading(m)) return null; const o = f(m); if (!o) return null; let x = null; try { x = X2[tab] && !(S.org && S.org.empty) ? X2[tab](m) : null; } catch (e) { console.warn(e); } if (x) { o.stats = x.stats.map(([v, l, t]) => [/^0(건|명|개)$/.test(String(v)) ? '없음' : v, l, t]); if (x.ring) o.ring = x.ring; if (x.todo) o.todo = x.todo.slice(0, 3).map(([a, b, t]) => [a.replace(/<[^>]+>/g, ''), b, t]); m.__dbx = x; } return Object.assign({ eye: '학사 LMS · ' + eye }, o); },
-    enhance: m => { if (loading(m) || !m.__dbx || !window.DBX) return; const x = m.__dbx; DBX.side(m, { todo: m.querySelector('.l43-k-list') ? null : x.todo, chart: x.chart, ai: x.ai }); } }); });
+    brief: m => { if (noSec(m) || loading(m)) return null; const o = f(m); if (!o) return null; let x = null; try { x = X2[tab] && !(S.org && S.org.empty) ? X2[tab](m) : null; } catch (e) { console.warn(e); } if (x) { o.stats = x.stats.map(([v, l, t]) => [/^0(건|명|개)$/.test(String(v)) ? '없음' : v, l, t]); if (x.ring) o.ring = x.ring; if (x.todo) o.todo = x.todo.slice(0, 3).map(([a, b, t]) => [a.replace(/<[^>]+>/g, ''), b, t]); try { if (CARD[tab]) x.card = CARD[tab](m) || ''; } catch (e) { console.warn(e); } m.__dbx = x; } if (!o.acts) { try { o.acts = autoActs(m, tab); } catch (e) { } } return Object.assign({ eye: '학사 LMS · ' + eye }, o); },
+    enhance: m => { if (loading(m)) return; try { absorb(m); hideStrips(m); } catch (e) { console.warn(e); } if (!m.__dbx || !window.DBX) return; const x = m.__dbx; DBX.side(m, { todo: m.querySelector('.l43-k-list') ? null : x.todo, chart: x.card ? null : x.chart, card: x.card, ai: x.ai }); } }); });
     /* 비동기 화면(X.mount): 「불러오는 중」 뒤에 채워지면 브리핑 · 보조 열을 다시 그린다 */
     try { const LX = window.LMSX; if (LX && LX.fill && !LX.__dbx) { LX.__dbx = 1; const f0 = LX.fill; LX.fill = async (...a) => { const r = await f0(...a); try { const m = document.getElementById('main'); if (m) { m.querySelectorAll('.l43-brief, .q1-aside').forEach(x => x.remove()); m.querySelectorAll('.q1-2col').forEach(w => { const c = w.querySelector(':scope > .q1-main'); if (c) w.replaceWith(...c.childNodes); }); L43.run(); } } catch (e) { console.warn(e); } return r; }; } } catch (e) { }
     try { L43.run(); } catch (e) { } };

@@ -146,7 +146,20 @@ AFTER.push(() => { try { if (!CUR || CUR.tab !== 'community') return; const phr 
     const a = main.querySelector('.q1-aside a[data-q1to="' + (open ? open.id : '') + '"]'); if (a) a.setAttribute('aria-current', 'true'); };
   const reg = () => {
     if (!window.L43) return; const base = L43.REG.settings || {};
-    L43.reg('settings', Object.assign({}, base, { brief: m => { const k = subKey(); if (!k || !SUB[k]) return base.brief ? base.brief(m) : null; const o = Object.assign({ eye: '설정 · ' + SUB[k][0] }, SUB[k][1]()); const x = MORE[k] ? MORE[k]() : {}; Object.keys(x).forEach(j => { if (x[j] != null) o[j] = x[j]; }); return o; },
+    /* v43 R7 2차: 설정 머리 주 · 보조 버튼(J2 공통 결함 「머리 버튼 없음」) — 화면에 이미 있는 버튼을 대신 누르거나(go) 관련 화면으로 간다(tab) */
+    const G = (a, v) => `[data-act="${a}"]` + (v != null ? `[data-v="${v}"]` : '');
+    const SACT = { menus: [{ label: '메뉴 순서 바꾸기', go: G('sx-sub', 'menu|menu') }, { label: '켜진 메뉴만 보기', kind: 'sec', go: G('sl-chip', 'on') }],
+      rules: [{ label: `${(typeof t === 'function' ? t('learner') : '학습자')} 진도 보기`, tab: 'members' }, { label: '학습자 화면에서 확인', kind: 'sec', tab: 'site' }],
+      plan: [{ label: '결제 내역 · 영수증', go: G('tab', 'bill') }, { label: '매출 · 결제 열기', kind: 'sec', tab: 'sales' }],
+      integr: [{ label: 'Slack 연결하기', go: G('sl-cn', 'slack') }, { label: 'AI 연결(MCP) 키 관리', kind: 'sec', go: G('sx-sec', 'integr|0') }],
+      service: [{ label: '가입 질문 추가', go: G('mem-q') }, { label: '운영자 · 권한 관리', kind: 'sec', tab: 'admins' }],
+      terms: [{ label: '새 버전으로 저장', go: G('tr26-save') }, { label: 'AI 유형별 초안', kind: 'sec', go: G('ai-terms') }],
+      popup: [{ label: '+ 팝업 추가', go: G('popup-new') }, { label: '팝업 미리보기', kind: 'sec', go: G('pp26-pv', 'all') }],
+      lang: [{ label: '언어 설정 열기', go: G('sx-sub', 'lang|lang') }, { label: '학습자 사이트에서 확인', kind: 'sec', tab: 'site' }],
+      data: [{ label: '전체 데이터 내보내기', go: G('data-export') }, { label: '오래된 기록 정리', kind: 'sec', go: G('st-compact') }],
+      room: [{ label: '설치 구성 파일 받기', go: G('dr-yaml') }, { label: '데이터룸 내보내기', kind: 'sec', go: G('data-export') }] };
+    const rootActs = () => { const st = S.settings || {}; const A = []; if (!(st.terms && st.terms.tos)) A.push({ label: '약관 기본 문안 등록', tab: 'terms' }); if (!st.pg || st.pg === 'none') A.push({ label: '결제 연결하기', go: G('sl-cn', 'toss') }); A.push({ label: '메뉴 켜고 끄기', tab: 'more' }); return A.slice(0, 2).map((a, i) => Object.assign(a, { kind: i ? 'sec' : 'pri' })); };
+    L43.reg('settings', Object.assign({}, base, { brief: m => { const k = subKey(); if (!k || !SUB[k]) { const o0 = base.brief ? base.brief(m) : null; if (o0 && !o0.acts) o0.acts = rootActs(); return o0; } const o = Object.assign({ eye: '설정 · ' + SUB[k][0] }, SUB[k][1]()); const x = MORE[k] ? MORE[k]() : {}; Object.keys(x).forEach(j => { if (x[j] != null) o[j] = x[j]; }); if (!o.acts && SACT[k]) o.acts = SACT[k]; return o; },
       enhance: m => { const k = subKey(); if (!k || !SUB[k]) return base.enhance && base.enhance(m); try { subEnhance(m); } catch (e) { console.error(e); } } }));
     if (!document.querySelector('style[data-set43]')) { const st = document.createElement('style'); st.dataset.set43 = '1'; st.textContent = `
 #main.l43[data-l43=settings] .btn,#main.l43[data-l43=settings] select,#main.l43[data-l43=settings] input:not([type=checkbox]):not([type=radio]):not([type=range]){min-height:44px}
