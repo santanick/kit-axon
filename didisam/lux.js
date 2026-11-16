@@ -122,7 +122,7 @@
       lm.querySelectorAll('#lcN button[type=submit], .lcform button[type=submit]').forEach(b => { b.classList.remove('pri'); b.classList.add('ghost'); });
       const nx = lm.querySelector('.inav a.dark'); const main = lm.querySelector('.imain'); if (main && nx && main.querySelector('.lbtn.pri:not(.ghost)')) nx.classList.replace('dark', 'ghost'); }
     /* 로그인 후 홈: 이어서 학습하기 */
-    if (r.a === 'home' && LR.me && !lm.querySelector('.lux-cont')) { lm.insertAdjacentHTML('afterbegin', contHTML()); onePrimary(lm, lm.querySelector('.lux-go')); }
+    if (r.a === 'home' && LR.me && !lm.querySelector('.lux-cont') && !lm.querySelector('.lhb-home')) { /* v43 F3: 학습 허브 홈은 히어로가 이어 보기를 맡음 */ lm.insertAdjacentHTML('afterbegin', contHTML()); onePrimary(lm, lm.querySelector('.lux-go')); }
     /* 결제 완료: 주 버튼 하나 */
     if (r.a === 'payok') { const go = lm.querySelector('a.lbtn.pri[href^="#c/"]'); if (go) { go.innerHTML = `지금 학습 시작하기 ${ico('arrow', 16)}`; } }
     /* 내 학습: 학습 · 결제 · 계정 */

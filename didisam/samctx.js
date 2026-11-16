@@ -170,10 +170,10 @@ function scxRun(id) { const ch = scxChips().find(x => x.id === id); if (!ch) ret
 ACT['scx-run'] = el => { scxRun(el.dataset.v); };
 /* 낮은 화면(세로 760 이하)에서는 시작 가이드 카드와 이 화면 카드 중 하나만 펼친다(입력창 · 대화가 보이게) */
 const scxLow = () => innerHeight <= 760;
-const scxObOpen = () => { try { return !!(typeof obHTML === 'function' && obHTML() && !UI.obc); } catch (e) { return false; } };
+const scxObOpen = () => { try { return !!(typeof obHTML === 'function' && obHTML() && UI.obc === false); } catch (e) { return false; } };
 const scxOffNow = () => !!scxPref().off || (scxLow() && scxObOpen() && !UI.scxOpen);
 ACT['scx-tog'] = () => { if (!scxPref().off && scxOffNow()) { UI.scxOpen = true; UI.obc = true; try { obMount(); } catch (e) { } scxMount(); return; } scxSetPref({ off: !scxOffNow() }); if (!scxOffNow() && scxLow()) { UI.scxOpen = true; UI.obc = true; try { obMount(); } catch (e) { } } scxMount(); };
-{ const b = ACT['ob-tog']; if (b) ACT['ob-tog'] = el => { b(el); if (!UI.obc) UI.scxOpen = false; scxMount(); }; }
+{ const b = ACT['ob-tog']; if (b) ACT['ob-tog'] = el => { b(el); if (UI.obc === false) UI.scxOpen = false; scxMount(); }; }
 addEventListener('resize', () => { try { scxMount(); } catch (e) { } });
 
 /* ── 대화창 카드 ── */

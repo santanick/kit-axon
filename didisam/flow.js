@@ -154,7 +154,7 @@ const bCrumb = () => CUR.ws === 'home' ? (bAllDone() ? '오늘의 운영' : '빌
 function bComposer() {
   const c = bCur(); const chips = bAllDone() ? EXQ[S.org.type].slice(0, 3) : [...(c ? bQ(c.id) : []), ...(c && c.id !== 'org' ? ['다음 단계로'] : [])];
   return `<form class="composer bcomp" data-where="bld"><div class="chips">${[...new Set(chips)].map(x => `<button type="button" class="chip" data-act="chat-q" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>
-    <div class="cbox"><textarea rows="1" maxlength="300" placeholder="AI SAM에게 무엇이든 지시하세요" aria-label="AI SAM에게 지시"></textarea><button class="send" type="submit" aria-label="보내기">${ic('send', 18)}</button></div>
+    <div class="cbox"><textarea rows="1" maxlength="300" placeholder="무엇이든 지시하세요" aria-label="AI SAM에게 지시"></textarea><button class="send" type="submit" aria-label="보내기">${ic('send', 18)}</button></div>
     <small class="cnote"><span><kbd>Enter</kbd> 보내기</span><span>${typeof CL !== 'undefined' && CL.on('chat') ? esc(CL.label()) + ' 연결됨' : '규칙 엔진(데모)'}</span><span>실행은 승인 후</span></small></form>`;
 }
 { const base = render; render = () => {

@@ -404,3 +404,18 @@ html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background
 #main .lmsnav-sub.g3-fchips button:hover{background:var(--surface,#fff);color:var(--g900)}
 #main .lmsnav-sub.g3-fchips button.on{background:var(--gr50,#ECFDF3);border-color:color-mix(in srgb,var(--gr600,#00862D) 40%,transparent);color:var(--gr800,#066B2A);font-weight:700}
 @media (max-width:600px){#main .lmsnav-sub.g3-fchips button{min-height:44px}}
+
+/* v43 F3(128): 입력칸 하나 모달 — 넓은 창 · 도움말 · 미리보기 · 버튼 높이 44 */
+.mwrap .modal.m1{width:min(640px,100%)}
+.modal.m1 .mh{padding-top:22px}
+.modal.m1 .mb{padding-top:6px;padding-bottom:22px}
+.modal.m1 .mb .fl{font-size:14px}
+.modal.m1 .mb .fl input{min-height:48px;font-size:16px}
+.modal.m1 .m1help{margin:8px 0 0;font-size:13px;color:var(--t-sub,var(--g600));line-height:1.5}
+.modal.m1 .m1pv{display:flex;align-items:center;gap:14px;margin-top:16px;padding:14px 16px;border-radius:16px;background:color-mix(in srgb,var(--gr600,#0B8A3A) 7%,var(--surface,#fff));border:1px solid color-mix(in srgb,var(--gr600,#0B8A3A) 18%,transparent)}
+.modal.m1 .m1ic{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface,#fff);color:var(--gr700,#08702F);box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.modal.m1 .m1pv small{display:block;font-size:12px;font-weight:700;color:var(--t-sub,var(--g600));margin-bottom:2px}
+.modal.m1 .m1pv p{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:15px}
+.modal.m1 .m1pv s{color:var(--t-sub,var(--g600))}.modal.m1 .m1pv p>span{color:var(--t-sub,var(--g600))}
+.modal.m1 .m1v{font-weight:800;color:var(--g900)}.modal.m1 .m1v.bad{color:var(--co700,#B53C0A);font-weight:700}
+.modal.m1 .mf .btn{min-height:44px;min-width:96px;font-size:15px}

@@ -20,7 +20,7 @@ function obHTML() {
   if (typeof S === 'undefined' || !S || !S.org || !S.bld) return '';
   const L = bList(); const dn = L.filter(s => bDone(s.id)).length; const all = dn === L.length;
   if (all && S.bld.obHide) return '';
-  const c = all ? null : bCur(); const open = !UI.obc; const pct = Math.round(dn / Math.max(1, L.length) * 100);
+  const c = all ? null : bCur(); const open = UI.obc === false; /* v43 F3(131): 시작 가이드는 기본으로 접힘(머리 한 줄 · 진행률) — 펼친 단계 칩이 아래 「지금 화면」 블록에 잘리던 문제. 처음 자동으로 열 때 · 가이드 열기는 펼침 */ const pct = Math.round(dn / Math.max(1, L.length) * 100);
   let h = `<div class="obd ${open ? 'on' : ''} ${all ? 'fin' : ''}"><button type="button" class="obh" data-act="ob-tog" aria-expanded="${open}"><span class="obi">${ic(all ? 'check' : 'spark', 14)}</span><span class="obt"><b>${all ? '시작 가이드 완료' : '시작 가이드'}</b><small>${all ? '운영을 시작할 준비가 끝났습니다' : `STEP ${L.indexOf(c) + 1} · ${esc(bName(c))}`}</small></span><span class="obp">${dn}/${L.length}</span><span class="obbar"><i style="width:${pct}%"></i></span>${ic('down', 14)}</button>`;
   if (open) {
     if (all) h += `<div class="obc"><p>시작 세팅 ${L.length}단계를 모두 마쳤습니다. 이제 첫 화면의 '오늘 확인할 일'부터 운영하시면 됩니다. 무엇이든 아래 대화창에 말로 지시하세요.</p><div class="obbtn"><button type="button" class="btn sm ink" data-act="ob-home">오늘 확인할 일 보기</button><button type="button" class="btn sm ghost" data-act="ob-hide">가이드 닫기</button></div></div>`;
@@ -33,9 +33,9 @@ function obMount() {
   document.querySelectorAll('.bchat, #drawer').forEach(p => { const o = p.querySelector('.obd'); if (!html) { o && o.remove(); return; } if (o) o.outerHTML = html; else p.querySelector('.thread')?.insertAdjacentHTML('beforebegin', html); });
   const pr = $('.bprog'); if (pr && !pr.dataset.act) { pr.dataset.act = 'ob-show'; pr.setAttribute('role', 'button'); pr.tabIndex = 0; pr.title = '시작 가이드 열기'; }
   /* 시작 가이드가 남아 있으면 처음 한 번 대화창을 연다 */
-  if (S && S.bld && !bAllDone() && !S.bld.obAuto && typeof fabOn === 'function' && fabOn()) { S.bld.obAuto = 1; save(); setTimeout(() => fabOpen(false), 400); } /* 기관마다 처음 한 번만 */
+  if (S && S.bld && !bAllDone() && !S.bld.obAuto && typeof fabOn === 'function' && fabOn()) { S.bld.obAuto = 1; save(); UI.obc = false; setTimeout(() => fabOpen(false), 400); } /* 기관마다 처음 한 번만 */
 }
-ACT['ob-tog'] = () => { UI.obc = !UI.obc; obMount(); };
+ACT['ob-tog'] = () => { UI.obc = UI.obc === false; obMount(); };
 ACT['ob-show'] = () => { UI.obc = false; if (S.bld) S.bld.obHide = false; typeof fabOpen === 'function' ? fabOpen(false) : ACT['chat-open'](); obMount(); };
 ACT['ob-hide'] = () => { S.bld.obHide = true; save(); obMount(); };
 ACT['ob-home'] = () => go('home');

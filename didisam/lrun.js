@@ -20,6 +20,13 @@ const api = async (method, url, body) => { const r = await fetch(url, { method, 
 /* ── 데이터 포트 ── */
 const demoRoom = () => { try { const reg = JSON.parse(localStorage.getItem('didisam.rooms') || 'null'); const tid = LR.tid || (reg && reg.cur) || ''; LR.tid = tid; return tid ? JSON.parse(localStorage.getItem('didisam.room.' + tid) || 'null') : null; } catch (e) { return null; } };
 const demoLPKey = () => 'didisam.room.' + LR.tid + '.lp';
+/* v43 F3(085 · 087): 체험판(?demo=) 첫 방문 학습자에게 현실적인 학습 기록을 채운다 — 첫 강좌 앞 차시 완료 · 퀴즈 88점 · 다음 영상 62% · 최근 4일 연속.
+   이 브라우저에 저장된 기록이 있으면 손대지 않고, 저장도 하지 않는다(학습하면 그때 저장). 운영(live) · 미리보기는 해당 없음 */
+function demoSeedLP() { if (LR.mode !== 'demo' || !LR.me || !LR.lp) return; let st = {}; try { st = JSON.parse(localStorage.getItem(demoLPKey()) || '{}') || {}; } catch (e) { st = {}; } if (st[LR.me.sid] || Object.keys(LR.lp.cls || {}).length) return;
+  const c = (SITE() && SITE().classes || []).find(x => (x.items || []).filter(i => i.type !== 'chapter').length >= 4); if (!c) return; const L = c.items.filter(i => i.type !== 'chapter'); const n = Math.max(2, Math.floor(L.length * .45)); const items = {};
+  const day = k => new Date(Date.now() + 9 * 3600e3 - k * 864e5).toISOString().slice(0, 10);
+  L.slice(0, n).forEach((it, k) => { items[it.id] = { done: true, w: 1, at: day(n - k) + 'T11:20:00+09:00', ...(/quiz|exam/.test(it.type) ? { score: 88 } : {}) }; }); const nx = L[n]; if (nx && nx.type === 'video') items[nx.id] = { w: .62, at: day(0) + 'T09:40:00+09:00' };
+  LR.lp.cls = { [c.id]: { items } }; LR.lp.days = { [day(0)]: 1, [day(1)]: 1, [day(2)]: 1, [day(3)]: 1 }; }
 const mineFrom = (doc, sid) => { const own = (o, k) => o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k);
   const bk = Object.fromEntries(Object.entries(doc.bkgrades || {}).filter(([, M]) => own(M, sid)).slice(0, 200).map(([id, M]) => [id, Object.fromEntries(Object.entries(M[sid] || {}).slice(0, 200).map(([k, g]) => [k, { score: g && g.score != null && g.score !== '' ? +g.score : null, fb: String((g && g.fb) || '').slice(0, 500) }]))]));
   const qa = (Array.isArray(doc.tq) ? doc.tq : []).filter(x => x && x.sid === sid && x.st === 'answered' && x.a).slice(0, 30).map(x => ({ id: String(x.id || ''), q: String(x.q || '').slice(0, 400), a: String(x.a || '').slice(0, 2000), cls: String(x.cls || '').slice(0, 60), at: String(x.aAt || x.at || '').slice(0, 25) }));
@@ -56,7 +63,7 @@ LR.api = {
       }
     }
     try { const s = JSON.parse(sessionStorage.getItem(SESS + LR.tid) || 'null') || lKeepLoad(); if (s && LR.mode !== 'live') { LR.me = s; sessionStorage.setItem(SESS + LR.tid, JSON.stringify(s)); } } catch (e) { }
-    if (LR.me && LR.mode !== 'live') { try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[LR.me.sid] || {}) }; } catch (e) { } if (LR.mode === 'demo') LR.mine = demoMine(demoRoom()); }
+    if (LR.me && LR.mode !== 'live') { try { LR.lp = { tut: {}, cls: {}, diag: {}, ...((JSON.parse(localStorage.getItem(demoLPKey()) || '{}'))[LR.me.sid] || {}) }; } catch (e) { } if (LR.mode === 'demo') LR.mine = demoMine(demoRoom()); try { demoSeedLP(); } catch (e) { } }
     try { LR.whoBoot = !sessionStorage.getItem('didisam.tab.' + LR.tid); sessionStorage.setItem('didisam.tab.' + LR.tid, '1'); } catch (e) { } /* v38 K12 이 창에서 처음 열 때만 계정 고르기 카드(lacct.js laWhoV) */
   },
   async login(sid, code) {

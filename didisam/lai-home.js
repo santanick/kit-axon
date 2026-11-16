@@ -9,7 +9,7 @@
 'use strict';
 (() => {
   Object.assign(ICP, { bolt: 'M13 3L5 14h6l-1 7 8-11h-6z', sparkle: 'M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z', bell: ICP.bell || 'M6 16V11a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0' });
-  const on = () => { try { return !!SITE() && TCFG().enabled !== false && route().a === 'home'; } catch (e) { return false; } };
+  const on = () => { try { return !!SITE() && TCFG().enabled !== false && route().a === 'home' && !(typeof window.lhbHome === 'function' && window.lhbHome()); } catch (e) { return false; } }; /* v43 F3: 로그인 PC 웹 홈은 학습 허브(lhub.js)가 그린다 */
   const U = () => SITE().org.type === 'univ';
   const lp = () => LR.lp || {};
   const conn = () => { const L = LR.lp; L.conn = L.conn && typeof L.conn === 'object' ? L.conn : {}; return L.conn; };
