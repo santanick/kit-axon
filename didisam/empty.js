@@ -7,7 +7,7 @@
 const EMPTY_K = 'didisam.emptyStart';
 const emptyPref = () => { try { return localStorage.getItem(EMPTY_K) !== '0'; } catch (e) { return true; } };
 function emptyOut() {
-  Object.assign(S, { groups: [], members: [], parents: [], classes: [], pays: [], bills: [], consults: [], posts: [], books: [], lib: [], badges: [], certs: [], msgs: [], orgs: [], journey: [], alerts: [], notices: [], docs: [], diags: [], tq: [], codes: [], runs: [], bank: [],
+  Object.assign(S, { crmLeads: [], groups: [], members: [], parents: [], classes: [], pays: [], bills: [], consults: [], posts: [], books: [], lib: [], badges: [], certs: [], msgs: [], orgs: [], journey: [], alerts: [], notices: [], docs: [], diags: [], tq: [], codes: [], runs: [], bank: [],
     weeks: (S.weeks || []).map(w => ({ ...w, join: 0, badge: 0 })), tutorUsage: (S.tutorUsage || []).map(x => ({ ...x, n: 0 })), hrd: { reports: [] } });
   (S.autos || []).forEach(a => { a.on = false; a.runs = 0; a.last = ''; });
   S.admins = (S.admins || []).filter(a => a.role === 'owner').map(a => ({ ...a, classes: [] }));

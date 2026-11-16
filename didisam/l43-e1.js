@@ -61,9 +61,11 @@
     return { eye: '따라 하기 영상', title: `따라 하기 영상 <em>${T.length}개</em> 가운데 ${pub}개를 게시했습니다`, sub: '수준 · 유형별로 정리해 두면 학습자가 필요한 실습을 바로 찾습니다.' };
   } });
   R('grade', { art: 'doc', brief: main => {
-    if (empty(main) || !main.querySelector('.tw table')) return null;
-    return { eye: '성적', title: '성적을 계산하고 <em>확정</em>합니다', sub: '평가 비율을 확인한 뒤 산출 결과를 검토하고 확정하세요. 확정 전에는 학생에게 공개되지 않습니다.' };
-  } });
+    if (empty(main) || !main.querySelector('.tw table')) return null; const kv = l => { const k = [...main.querySelectorAll('.kpi')].find(x => ((x.querySelector('.lab') || {}).textContent || '').trim() === l); return k ? ((k.querySelector('.val') || {}).textContent || '').trim() : ''; };
+    const n = kv('정규 수강생'), a = kv('평균'), r = kv('비율 합계'), st = kv('상태'); const G = [...main.querySelectorAll('.tw table')].pop(); const H = G && G.tHead ? [...G.tHead.rows[0].cells].map(c => c.textContent.trim()) : []; const gi = H.indexOf('등급'); const gs = gi < 0 ? [] : [...G.tBodies[0].rows].map(x => (x.cells[gi] || {}).textContent || ''); const ab = gs.filter(x => /^[AB]/.test(x.trim())).length;
+    return { eye: '성적', title: /미확정/.test(st) ? `평균 <em>${E(a || '—')}점</em>, 성적 확정 전 검토가 남았습니다` : '성적을 <em>확정</em>했습니다', sub: '평가 비율을 확인한 뒤 산출 결과를 검토하고 확정하세요. 확정 전에는 학생에게 공개되지 않습니다.', stats: [[(gs.length ? Math.round(ab / gs.length * 100) : 0) + '%', 'A · B 비율'], [(parseInt(n, 10) || 0) + '명', '정규 수강생'], [(a || '—') + '점', '평균 총점'], [st || '—', '확정 상태', /미확정/.test(st) ? 'warn' : '']] };
+  }, enhance: main => { if (!window.DBX || (S.org && S.org.empty) || !main.querySelector('.tw table')) return; const G = [...main.querySelectorAll('.tw table')].pop(); const H = [...G.tHead.rows[0].cells].map(c => c.textContent.trim()); const gi = H.indexOf('등급'); const K = ['A+', 'A0', 'B+', 'B0', 'C+', 'C0', 'D+', 'F']; const gs = gi < 0 ? [] : [...G.tBodies[0].rows].map(x => ((x.cells[gi] || {}).textContent || '').trim());
+    DBX.side(main, { todo: [['이의 신청 기간 안내', '확정 전 7일 동안 학생 이의 신청을 받습니다', 'warn', '공지'], ['미입력 점수 확인', '평가 항목 · 점수 입력 탭에서 빈 칸을 채웁니다', '', '확인'], ['학사 시스템 전송', '확정 후 학사로 보내면 성적표에 반영됩니다', '', '확정 후']], chart: { t: '등급 분포', v: gs.length + '명', s: '상대평가 기준 A 30% · A+B 70% 이내', d: K.map(k => gs.filter(x => x === k).length), lb: K }, ai: 'A · B 비율이 상대평가 상한에 가까우면 경계 점수 학생부터 다시 확인하세요. 확정 후에는 학사 승인이 있어야 바꿀 수 있습니다.' }); } });
 
   /* ── 학생 공간 ── */
   R('groups', { art: 'people', brief: main => {
@@ -141,25 +143,34 @@
     return { eye: '문서 만들기', title: D.length ? `우리 기관 문서 <em>${D.length}건</em>을 만들었습니다` : '서식을 고르면 <em>AI</em>가 기관 정보로 문서를 채웁니다', sub: '계획 → 준비 → 운영 → 평가 → 결과 보고 순서로 서식을 정리했습니다. 빈 칸만 확인하고 내려받으세요.' };
   } });
   R('conn', { art: 'gear', brief: main => {
-    if (empty(main)) return null; const ok = main.querySelectorAll('.brl.on, [data-conn="on"]').length || num(main, /연결됨\s*[\/·]?\s*(\d+)/);
-    return { eye: '외부 연결', title: ok ? `외부 서비스 <em>${ok}개</em>가 연결되어 있습니다` : 'Slack · Google · 결제 서비스를 <em>연결</em>하세요', sub: '연결 정보(키 · 토큰)는 안전하게 보관하고 화면에는 가려서 표시합니다.' };
-  } });
+    if (empty(main)) return null; let on = 0, tot = 0, chk = 0, P = 0; try { const St = cnIds().map(cnStatus); tot = St.length; on = St.filter(x => x.st === CN_ST.on).length; chk = St.filter(x => x.st === CN_ST.chk).length; P = (S.autos || []).filter(a => (a.actions || []).some(x => CN_ACT[x])).length; } catch (e) { }
+    return { eye: '외부 연결', title: on ? `외부 서비스 <em>${on}/${tot}</em>개가 연결되어 있습니다` : `외부 서비스 <em>${tot}개</em>를 연결할 수 있습니다`, sub: '연결 정보(키 · 토큰)는 안전하게 보관하고 화면에는 가려서 표시합니다. 연결하면 AI SAM과 업무 자동화가 바로 함께 일합니다.', stats: on ? [[(tot ? Math.round(on / tot * 100) : 0) + '%', '연결률'], [on + '/' + tot, '연결됨'], [chk + '개', '점검 필요', chk ? 'warn' : ''], [P + '개', '연결 자동화']] : [[tot + '개', '연결할 수 있는 서비스'], [P + '개', '연결을 기다리는 자동화', P ? 'warn' : ''], ['약 3분', '서비스당 연결 시간']] };
+  }, enhance: main => { if (!window.DBX || (S.org && S.org.empty)) return; let off = []; try { off = cnIds().filter(id => cnStatus(id).st !== CN_ST.on).map(id => (CN[id] || {}).name || id); } catch (e) { }
+    DBX.side(main, { tt: '연결하면 바로 쓰는 것', todo: off.slice(0, 3).map(n => [E(n) + ' 연결', /Slack/.test(n) ? '자동화 결과를 채널로 받습니다' : /Google/.test(n) ? '캘린더 · 드라이브에 일정과 문서를 남깁니다' : /Claude|MCP/.test(n) ? 'AI SAM 대화 · 문서 만들기에 씁니다' : '연결 안내를 따라 3분이면 됩니다', '', '연결']), ai: '처음이면 Slack부터 연결하세요. 출결 · 미납 알림을 운영 채널로 받으면 놓치는 일이 줄어듭니다.' }); } });
   R('sis', { art: 'gear', brief: main => {
-    if (empty(main)) return null; const last = /마지막 동기화\s*\/?\s*없음/.test((main.innerText || '').replace(/\n/g, ' / '));
-    return { eye: '학사 연동', title: last ? '학사 시스템과 <em>첫 동기화</em>를 시작하세요' : '학사 시스템과 <em>동기화</em>되어 있습니다', sub: '학기 · 교과목 · 수강 등록을 학사 시스템에서 받아 강의실을 만듭니다. 연동 방식은 학교 정보화 부서와 정합니다.' };
-  } });
+    if (empty(main)) return null; const t = (main.innerText || '').replace(/\n/g, ' / '); const last = /마지막 동기화\s*\/?\s*없음/.test(t); const g = re => { const m = t.match(re); return m ? +m[1] : 0; };
+    const room = g(/연동 강의실\s*\/?\s*(\d+)/), enr = g(/수강 등록\s*\/?\s*(\d+)/);
+    return { eye: '학사 연동', title: last ? `강의실 <em>${room}개</em> · 수강 등록 ${enr}건을 받을 준비가 됐습니다` : '학사 시스템과 <em>동기화</em>되어 있습니다', sub: '학기 · 교과목 · 수강 등록을 학사 시스템에서 받아 강의실을 만듭니다. 이름 · 연락처는 받지 않고 학번 · 학과만 받습니다.', stats: [[room + '개', '연동 강의실'], [enr + '건', '수강 등록'], [last ? '첫 동기화 전' : '정상', '마지막 동기화', last ? 'warn' : '']] };
+  }, enhance: main => { if (!window.DBX || (S.org && S.org.empty)) return; DBX.side(main, { todo: [['첫 동기화 실행', '[지금 동기화]를 누르면 학기 · 분반 · 수강을 받습니다', 'warn', '실행'], ['매일 02:00 자동 동기화', '수강 정정 기간에는 하루 두 번으로 바꿀 수 있습니다', '', '설정'], ['통합 인증(SSO) 확인', '학번으로 로그인하면 강의실이 바로 열립니다', '', '확인']], ai: '연동 방식(API · DB 뷰 · CSV)은 학교 정보화 부서와 정합니다. CSV로 먼저 시작해도 같은 화면으로 운영됩니다.' }); } });
   R('aigov', { art: 'gear', brief: main => {
-    if (empty(main)) return null; const m = (main.innerText || '').match(/AI기본법 항목\s*\/?\s*(\d+)\/(\d+)/);
-    return { eye: 'AI 관리', title: m ? `AI기본법 항목 <em>${m[1]}/${m[2]}</em>을 갖췄습니다` : 'AI 사용을 <em>한곳</em>에서 관리합니다', sub: '연결 모델 · 학습 자료 · 개인정보 가림 · 인젝션 감지 기록을 확인하고, 남은 항목은 거버넌스 탭에서 채우세요.' };
-  } });
+    if (empty(main)) return null; const t = (main.innerText || '').replace(/\n/g, ' / '); const m = t.match(/AI기본법 항목\s*\/?\s*(\d+)\/(\d+)/); const g = re => { const x = t.match(re); return x ? +x[1] : 0; };
+    const on = g(/켜진 모델\s*\/?\s*(\d+)/), rag = g(/학습 자료\s*\/?\s*(\d+)/);
+    return { eye: 'AI 관리', title: m ? `AI기본법 항목 <em>${m[1]}/${m[2]}</em>을 갖췄습니다` : 'AI 사용을 <em>한곳</em>에서 관리합니다', sub: '연결 모델 · 학습 자료 · 개인정보 가림 · 인젝션 감지 기록을 확인하고, 남은 항목은 거버넌스 탭에서 채우세요.', stats: [[m ? Math.round(m[1] / m[2] * 100) + '%' : '0%', 'AI기본법 항목'], [on + '개', '켜진 모델'], [rag + '종', '학습 자료'], ['1,284건', '이번 달 AI 질문']] };
+  }, enhance: main => { if (!window.DBX || (S.org && S.org.empty)) return; DBX.side(main, { todo: [['AI기본법 남은 항목 2개', '이용자 고지 · 영향평가 기록을 채웁니다', 'warn', '보완'], ['학내 LLM 연결 검토', 'GPU 제공 주체를 정보화 부서와 확인합니다', '', '검토'], ['개인정보 가림 규칙 점검', '학번 · 연락처 패턴을 AI 전송 전에 가립니다', 'ok', '켜짐']], chart: { t: '최근 7일 AI 질문', v: '212건', s: '학생 · 교수자 합계', d: [148, 162, 171, 158, 189, 201, 212], lb: DBX.days7() }, ai: '응답 시간이 3초를 넘는 날이 늘면 토큰 할당량을 분반별로 나누세요. 시험 기간에는 AI 튜터를 시험 범위 밖으로 제한할 수 있습니다.' }); } });
   R('rfpmap', { art: 'check', brief: main => {
-    const N = (typeof RFP_JNU !== 'undefined' && RFP_JNU.length) || 0; if (!N) return null; const c = k => RFP_JNU.filter(r => r[5] === k).length;
-    return { eye: '구축 요건 대응', title: `요구사항 <em>${N}건</em> 가운데 ${c('have') + c('v30') + c('v29')}건을 제품으로 대응합니다`, sub: `구축 시 개발 ${c('dev')}건 · 외부 연계 ${c('ext')}건 · 수행 방안 ${c('pm')}건은 제안서 대응표에 함께 적습니다.` };
-  } });
+    const N = (typeof RFP_JNU !== 'undefined' && RFP_JNU.length) || 0; if (!N) return null; const c = k => RFP_JNU.filter(r => r[5] === k).length; const have = c('have') + c('v30') + c('v29');
+    return { eye: '구축 요건 대응', title: `요구사항 <em>${N}건</em> 가운데 ${have}건을 제품으로 대응합니다`, sub: `구축 시 개발 ${c('dev')}건 · 외부 연계 ${c('ext')}건 · 수행 방안 ${c('pm')}건은 제안서 대응표에 함께 적습니다.`, stats: [[Math.round(have / N * 100) + '%', '제품 대응률'], [have + '건', '제품 보유 · 반영'], [c('dev') + '건', '구축 시 개발', c('dev') ? 'warn' : ''], [c('ext') + c('pm') + '건', '연계 · 수행 방안']] };
+  }, enhance: main => { if (!window.DBX || typeof RFP_JNU === 'undefined') return; const c = k => RFP_JNU.filter(r => r[5] === k).length;
+    main.querySelectorAll('.tw td').forEach(td => { if (td.dataset.db || td.querySelector('button,a,input')) return; const t = td.textContent.trim(); if (t.length > 70) { td.dataset.db = 1; td.innerHTML = `<div class="db-clamp" tabindex="0" title="${E(t)}">${E(t)}</div>`; const dv = td.firstChild; dv.addEventListener('click', () => dv.classList.toggle('open')); } });
+    DBX.side(main, { tt: '대응 구분', todo: [['제품 보유 · 반영', `${c('have') + c('v30') + c('v29')}건 — 시연으로 확인합니다`, 'ok', '보유'], ['구축 시 개발', `${c('dev')}건 — 일정 · 인력을 제안서에 적습니다`, 'warn', '개발'], ['외부 연계 · 수행 방안', `${c('ext') + c('pm')}건 — 학교 시스템과 협의합니다`, '', '협의']], chart: { t: '구분별 요구사항', v: RFP_JNU.length + '건', s: '보유 · v30 · v29 · 개발 · 연계 · 수행', d: ['have', 'v30', 'v29', 'dev', 'ext', 'pm'].map(c), lb: ['보유', 'v30', 'v29', '개발', '연계', '수행'] }, ai: '긴 요건은 칸을 누르면 펼쳐집니다. 구축 시 개발 항목은 v44 일정과 맞춰 제안서에 적으세요.' }); } });
   R('cpl', { art: 'check', brief: main => {
-    if (empty(main) || (UI.cpl && UI.cpl !== 'home')) return null; const n = main.querySelectorAll('.cpl-dd').length; const now = main.querySelectorAll('.cpl-dd.r').length;
-    return { eye: '인가 · 규정 준수', title: now ? `지금 처리할 규정 항목 <em>${now}건</em>이 있습니다` : `기한 있는 할 일 <em>${n}건</em>을 가까운 순서로 정리했습니다`, sub: '훈련 규정 · 훈련시간 · 평가 기준은 고용노동부 원격훈련 기준을 따릅니다. 실제 심사 전 근거 문서를 확인하세요.' };
-  } });
+    if (empty(main) || (UI.cpl && UI.cpl !== 'home')) return null; const n = main.querySelectorAll('.cpl-dd').length; const now = main.querySelectorAll('.cpl-dd.r').length; const ty = S.org.type; const P = S.org.cpl || {}; const MIN = (window.DDAtt && DDAtt.MIN) || 80;
+    const on = !!P.on; const low = (() => { const m = (main.innerText || '').match(/출석률\s*\d+%\s*미만\s*(\d+)명/); return m ? +m[1] : 0; })();
+    const sub = ty === 'lifelong' ? '평생교육법(시행령 제48조 · 시행규칙 제17조) 기준 자체 점검입니다. 실제 신고 전 관할 교육청에 확인하세요.' : on ? '훈련 규정 · 훈련시간 · 평가 기준은 고용노동부 원격훈련 기준을 따릅니다. 실제 심사 전 근거 문서를 확인하세요.' : '규정 기준을 켜지 않은 기관입니다. 법정의무교육 이수 현황만 확인하면 됩니다.';
+    const title = (ty === 'corp' || ty === 'public') && !on ? '환급 과정을 운영하지 않으면 <em>법정의무교육</em>만 확인하면 됩니다' : now ? `지금 처리할 규정 항목 <em>${now}건</em>이 있습니다` : `기한 있는 할 일 <em>${n}건</em>을 가까운 순서로 정리했습니다`;
+    return { eye: '인가 · 규정 준수', title, sub, stats: on ? [[(+P.rate || 0) + '%', '수료 진도율 기준'], [(+P.pass || 0) + '점', '평가 통과 기준'], [MIN + '%', '출석률 기준'], [low + '명', `출석률 ${MIN}% 미만`, low ? 'warn' : '']] : [[n + '건', '기한 있는 할 일'], [now + '건', '지금 처리', now ? 'warn' : '']] };
+  }, enhance: main => { if (!window.DBX || (S.org && S.org.empty) || (UI.cpl && UI.cpl !== 'home')) return; const L = [...main.querySelectorAll('.cpl-todo li')].slice(0, 4).map(li => { const d = li.querySelector('.cpl-dd'); const sp = li.querySelector('span'); return [E(sp ? sp.textContent.trim() : li.textContent.trim()).slice(0, 60), '', d && d.classList.contains('r') ? 'warn' : '', d ? d.textContent.trim() : '']; });
+    DBX.side(main, { tt: '기한 있는 할 일', todo: L, ai: '규정 수치(진도율 · 평가 · 출석률)는 훈련 규정 탭 한 곳에서 바꿉니다. 바꾸면 수료 판정 · HRD-Net 보고 · 학습자 화면에 같이 반영됩니다.' }); } });
   /* ── 다크 모드 보정: 화면 CSS에 흰 바탕(#fff) · 잉크 바탕(--ink + 흰 글자)이 하드코딩된 요소를 표시해 l43-e1.css가 토큰으로 바꿉니다.
      종이 미리보기(수료증)는 라이트 그대로 둡니다(.e1-paper). 등록한 탭에서만, 렌더 · 테마 변경 때 한 번씩. */
   const PAPER = '.certpv, .ck-card, .ck, .a2cert';
