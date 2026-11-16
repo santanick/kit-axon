@@ -215,7 +215,7 @@ html[data-theme="dark"]{--q1-in-bd:rgba(255,255,255,.14)}
 #main>.bhd.q1-ph .q1-desc{margin:0;font-size:15px;font-weight:500;color:var(--t-sub,var(--g600));line-height:1.5}
 #main>.bhd.q1-ph>.ph.q1-phmv{margin:0;flex:none}
 #main>.bhd.q1-ph>.ph.q1-phmv .phr{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-#main>.bhd.q1-ph .slg-i{width:26px;height:26px;min-height:26px;border-radius:50%;font-size:13px}
+#main>.bhd.q1-ph .slg-i{width:32px;height:32px;min-height:32px;border-radius:50%;font-size:14px}
 
 /* 7. 카드 · KPI · 설정 카드(2열, 위험 영역 코랄) */
 #main .card,#main .kpi{border-radius:20px;border:0;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair),0 1px 2px rgba(16,24,40,.04),0 8px 24px -14px rgba(16,24,40,.10)}
@@ -259,8 +259,8 @@ html[data-theme="dark"]{--q1-in-bd:rgba(255,255,255,.14)}
 :is(#main,.modal,.sheet,.uxpop) input[type=radio]:not(.lvs input):checked{border:6px solid var(--gr600);background:var(--surface)}
 :is(#main,.modal,.sheet,.uxpop) :is(input[type=checkbox],input[type=radio]):focus-visible{outline:none;box-shadow:var(--q1-ring)}
 :is(#main,.modal,.sheet,.uxpop) :is(input[type=checkbox],input[type=radio]):disabled{opacity:.45;cursor:not-allowed}
-:is(#main,.modal) input[type=file]{display:block;width:100%;min-height:64px;padding:12px!important;border:1.5px dashed color-mix(in srgb,var(--gr600) 45%,transparent)!important;border-radius:16px!important;background:var(--gr50)!important;color:var(--t-sub,var(--g700));font-size:14px;cursor:pointer}
-:is(#main,.modal) input[type=file]::file-selector-button{min-height:40px;margin-right:14px;padding:0 16px;border:0;border-radius:10px;background:var(--pr);color:var(--on-pr,#fff);font:inherit;font-weight:700;cursor:pointer}
+:is(#main,.modal) input[type=file]:not(label *):not([hidden]){display:block;width:100%;min-height:64px;padding:12px!important;border:1.5px dashed color-mix(in srgb,var(--gr600) 45%,transparent)!important;border-radius:16px!important;background:var(--gr50)!important;color:var(--t-sub,var(--g700));font-size:14px;cursor:pointer}
+:is(#main,.modal) input[type=file]:not(label *)::file-selector-button{min-height:40px;margin-right:14px;padding:0 16px;border:0;border-radius:10px;background:var(--pr);color:var(--on-pr,#fff);font:inherit;font-weight:700;cursor:pointer}
 :is(#main,.modal) input[type=time]{font-variant-numeric:tabular-nums}
 :is(#main,.modal) input:is([type=date],[type=time],[type=datetime-local],[type=month])::-webkit-calendar-picker-indicator{opacity:.6;cursor:pointer;filter:none}
 html[data-theme="dark"] :is(#main,.modal) input:is([type=date],[type=time],[type=datetime-local],[type=month])::-webkit-calendar-picker-indicator{filter:invert(1)}
