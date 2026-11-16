@@ -78,3 +78,10 @@ body.lg-guard #ltut .lt-panel.on{display:flex!important}
 @media (prefers-reduced-motion:reduce){#ltut .lt-panel.anim,#ltut .lt-th .lt-m.new{animation:none}}
 /* v25.1 잔여 QA: 휴대폰에서 화면 맨 아래 작은 버튼이 AI 버튼 · 아래 탭 뒤로 숨던 문제 — 본문 끝에 여백을 둔다. */
 @media (max-width:860px){ #lm{padding-bottom:calc(140px + env(safe-area-inset-bottom))!important} }
+/* v43 F3(110): 로그인 PC 웹 — 연 튜터는 오른쪽 전체 높이에 고정(본문은 왼쪽으로 비켜남). 크게 보기(.big)는 떠 있는 창 그대로 */
+@media (min-width:1100px){
+  body.lt-dock #ltut .lt-panel:not(.big){top:0;right:0;bottom:0;left:auto;width:400px;height:auto;max-height:none;border-radius:0;box-shadow:-1px 0 0 var(--line),-24px 0 48px -32px rgba(20,30,24,.35);z-index:90}
+  body.lt-dock:has(#ltut .lt-panel.big){padding-right:0}
+  body.lt-dock .lhb-hg{grid-template-columns:minmax(0,1fr) 360px;gap:24px}
+  body.lt-dock .lhb-hero h1{font-size:34px}
+}

@@ -137,6 +137,11 @@ function modal(title, body, actions = [], wide = false) {
   w.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mh"><b>${esc(title)}</b><button class="x" data-act="modal-close" aria-label="닫기">${ic('x', 18)}</button></div><div class="mb">${body}</div><div class="mf">${actions.map(a => `<button class="btn ${a.kind || ''}" data-mact="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</div></div>`;
   document.body.appendChild(w);
   w.addEventListener('click', e => { if (e.target === w) closeModal(); const b = e.target.closest('[data-mact]'); if (!b) return; const a = actions.find(x => x.id === b.dataset.mact); if (a && a.run) { if (a.run(w) !== false) closeModal(); } else closeModal(); });
+  /* v43 F3(128): 입력칸 하나뿐인 모달 = 넓은 창 + 도움말 + 「바뀌기 전 → 바뀐 후」 미리보기(입력하는 대로 바뀜) */
+  try { const ins = [...w.querySelectorAll('.mb input:not([type=hidden]),.mb select,.mb textarea')]; const one = ins.length === 1 && ins[0].tagName === 'INPUT' && /^(text|search|)$/.test(ins[0].getAttribute('type') || '') ? ins[0] : null;
+    if (one && !w.querySelector('.mb .help,.mb small')) { const md = w.querySelector('.modal'); md.classList.add('m1'); const v0 = one.value; const mx = +one.getAttribute('maxlength') || 0;
+      (one.closest('label') || one).insertAdjacentHTML('afterend', `<p class="m1help">${mx ? `최대 ${mx}자 · ` : ''}저장을 누르면 바로 반영됩니다. 취소하면 바뀌지 않습니다.</p><div class="m1pv" aria-live="polite"><span class="m1ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></span><div><small>미리보기</small><p>${v0 ? `<s>${esc(v0)}</s><span aria-hidden="true">→</span>` : ''}<b class="m1v">${esc(v0 || '입력하면 여기에 보입니다')}</b></p></div></div>`);
+      const out = w.querySelector('.m1v'); one.addEventListener('input', () => { out.textContent = one.value.trim() || '비어 있으면 저장할 수 없습니다'; out.classList.toggle('bad', !one.value.trim()); }); } } catch (e) { }
   const f = w.querySelector('input,select,textarea,button.btn'); f && f.focus({ preventScroll: true }); return w;
 }
 const closeModal = () => { const m = $('#modal'); m && m.remove(); };

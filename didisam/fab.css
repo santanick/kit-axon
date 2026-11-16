@@ -46,3 +46,10 @@ body.fab-on .top{z-index:58} /* 계정 메뉴 등 머리 드롭다운이 위젯 
   body.fab-m #toasts{bottom:80px}
 }
 @keyframes fabUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+/* v43 F3(131): 입력 아래 안내는 한 줄 */
+.bchat .composer .cnote,#drawer .composer .cnote{flex-wrap:nowrap;white-space:nowrap;overflow:hidden;font-size:12.5px}
+.bchat .composer .cnote>span,#drawer .composer .cnote>span{flex:none}
+/* v43 F3(131): 「지금 화면」 칩은 한 줄 가로 넘김 — 세 번째 칩이 둘째 줄로 내려가 대화에 잘리던 문제 */
+.bchat .scxc,#drawer .scxc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:10px}
+.bchat .scxc::-webkit-scrollbar,#drawer .scxc::-webkit-scrollbar{display:none}
+.bchat .scxc>*,#drawer .scxc>*{flex:none}

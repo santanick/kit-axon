@@ -227,7 +227,8 @@ function ltRender() {
   LT.anim = false; LT.seenN = LT.open ? LT.msgs.length : (LT.seenN || 0); /* 다시 그릴 때 창 · 지난 말풍선이 깜빡이지 않게: 새로 연 창 · 새 말풍선만 움직임 */
   const q = R.querySelector('#ltq'); if (q && keep) q.value = keep; if (q && had) q.focus();
   const th = R.querySelector('.lt-th'); if (th) th.scrollTop = th.scrollHeight;
-  document.body.classList.remove('lt-dock'); document.body.classList.toggle('lt-on', !!LT.open);
+  /* v43 F3(110): 로그인한 PC 웹(앱 화면 아님)에서 연 튜터는 오른쪽에 고정(본문 8 + 튜터 4) — 홈 위에 뜬 작은 창이 사진 · 카드를 가리던 문제. 휴대폰 · 앱 · 로그인 전은 떠 있는 창 그대로 */
+  document.body.classList.toggle('lt-dock', !!(LT.open && LR.me && !document.body.classList.contains('lapp') && innerWidth >= 1100)); document.body.classList.toggle('lt-on', !!LT.open);
   /* 작은 안내는 잠깐만(버튼 위, 누를 수 없음 · 창은 열지 않음) — v25: 로그인 후 '오늘 할 일' 말풍선도 같은 방식 */
   /* v43 G2: PC 웹은 말풍선을 머리 줄 안(계정 앞)에 작게 — 본문 위에 뜨지 않음 */
   /* v43 G2: PC 웹은 AX 튜터 단추도 머리 줄 안(계정 앞)으로 — 떠 있는 단추가 카드 · 사진 · 버튼을 가리지 않게(휴대폰 · 앱은 그대로) */

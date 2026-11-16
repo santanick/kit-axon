@@ -40,7 +40,7 @@
     const todo = []; rows.forEach(x => x.L.forEach(it => { if (!/^(assign|quiz|exam|survey)$/.test(it.type) || x.at(it).done) return; todo.push({ x, it, due: it.to || it.due && typeof it.due === 'string' && it.due || x.c.end || '' }); }));
     todo.sort((a, b) => String(a.due || '9').localeCompare(String(b.due || '9')));
     const shelf = []; if (main) { main.L.slice(Math.max(0, main.ni), main.ni + 3).forEach((it, k) => shelf.push({ x: main, it, k: k === 0 ? 'cont' : 'new' })); if (main.ni > 0) shelf.push({ x: main, it: main.L[main.ni - 1], k: 'done' }); }
-    live.slice(1).forEach(x => { if (x.next && shelf.length < 8) shelf.splice(1, 0, { x, it: x.next, k: x.pct(x.next) > 0 ? 'cont' : 'new' }); });
+    live.slice(1).forEach(x => { if (x.next && shelf.length < 8) shelf.splice(Math.min(2, shelf.length), 0, /* v43 F3: 지금 강좌의 다음 차시 2개를 앞에 */ { x, it: x.next, k: x.pct(x.next) > 0 ? 'cont' : 'new' }); });
     const mineIds = new Set(rows.map(x => x.c.id)); const rec = (S2.classes || []).filter(c => !mineIds.has(c.id) && (c.items || []).length);
     let mile = null; try { if (window.mileOn && window.mileOn() && window.LMIL && LMIL.model) { const M = LMIL.model(LR.me.sid); mile = M && M.tier ? M : null; } } catch (e) { mile = null; }
     let fac = []; try { fac = (window.facOn && window.facOn() && S2.fac && S2.fac.facilities) || []; } catch (e) { fac = []; }
@@ -87,7 +87,7 @@
       : empty('todo', G.rows.length ? '남은 과제 · 퀴즈가 없어요. 이번 주도 잘하고 있어요.' : '강좌를 신청하면 과제 · 퀴즈 마감이 여기에 보여요.', `<a class="lhb-btn sc sm" href="#${G.rows.length ? 'cal' : 'courses'}">${G.rows.length ? '캘린더 보기' : '강좌 둘러보기'}</a>`)}</section>`; }
   function mileCard(G) { const M = G.mile; const st = G.st;
     if (!M) return `<section class="lhb-cd"><div class="hd"><h3>내 학습 기록</h3><span class="lhb-tg g">${st.streak}일 연속</span></div><div class="ml"><div class="rng">${ring(st.avg)}<div class="c"><b class="num">${st.avg}%</b><span>평균 진도</span></div></div>
-      <div><span class="lhb-tg num">배지 ${(LR.mine && LR.mine.badges || []).length}개</span><p>학습한 날 <b>${st.active}일</b>${G.qavg != null ? ` · 퀴즈 평균 <b>${G.qavg}점</b>` : ''}. 오늘 한 차시만 들어도 연속 기록이 이어져요.</p></div></div><a class="lhb-btn tx foot" href="#badges">배지 · 수료증 보기${I('chev', 16)}</a></section>`;
+      <div>${(n => `<span class="lhb-tg num">${n ? `배지 ${n}개` : '첫 배지에 도전 중'}</span>`)((LR.mine && LR.mine.badges || []).length)}<p>학습한 날 <b>${st.active}일</b>${G.qavg != null ? ` · 퀴즈 평균 <b>${G.qavg}점</b>` : ''}. 오늘 한 차시만 들어도 연속 기록이 이어져요.</p></div></div><a class="lhb-btn tx foot" href="#badges">배지 · 수료증 보기${I('chev', 16)}</a></section>`;
     const T = M.tier; const U = E(M.unit || 'P'); const all = T.all && T.all.length ? T.all : [T.name]; const pct = T.nmin ? Math.round((T.now - T.min) / Math.max(1, T.nmin - T.min) * 100) : 100;
     return `<section class="lhb-cd"><div class="hd"><h3>내 마일리지</h3><span class="lhb-tg g">${E(T.name)} 등급</span></div>
       <div class="ml"><div class="rng">${ring(T.nmin ? T.now / T.nmin * 100 : 100)}<div class="c"><b class="num">${Number(M.balance || 0).toLocaleString('ko-KR')}${U}</b>${T.nmin ? `<span class="num">/ ${T.nmin.toLocaleString('ko-KR')}</span>` : ''}</div></div>
@@ -101,6 +101,20 @@
 
   function hub() { const G = gather(); return `<div class="lhb" data-lhb="${G.main ? 'on' : 'empty'}">${hero(G)}<div class="lhb-in">${shelf(G)}<div class="lhb-r1">${todo(G)}${mileCard(G)}${recCard(G)}</div>${facBand(G)}</div></div>`; }
   window.LHB.hub = hub;
+
+  /* v43 F3(085): 로그인한 학습자의 PC 웹 홈 = 학습 허브(무대 히어로 · 학습 경로 · 이어 볼 강의 4열 · 할 일 · 마일리지 · 추천) + 다음 강좌 · 기관 소식.
+     방문자 홈(기관 홈페이지 섹션) · 앱 화면(lapp) · 보호자 · 빌더 미리보기는 그대로 둔다. 홈페이지 첫 화면의 흰 콜라주 · 회색 과정 표가 로그인 후 첫 화면을 차지하던 문제(K3 085) */
+  const lhbHome = () => { try { return !!(SITE() && LR.me && LR.me.kind !== 'parent' && LR.mode !== 'preview' && !(typeof window.lappOn === 'function' && window.lappOn())); } catch (e) { return false; } };
+  window.lhbHome = lhbHome;
+  function homeMore(G) { const R = G.rec.slice(G.rec.length > 3 ? 1 : 0, 4); const N = ((G.S2.notices || []).slice().sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || String(b.at || '').localeCompare(String(a.at || '')))).slice(0, 4);
+    if (!R.length && !N.length) return '';
+    const recH = R.length ? `<section class="lhb-hmr"><div class="lhb-sh"><h2>${G.main ? '다음으로 들어 볼 강좌' : '이런 강좌로 시작해요'}</h2><span class="lhb-tg">추천 ${R.length}</span><a class="lhb-btn tx" href="#courses">강좌 전체${I('chev', 16)}</a></div><div class="lhb-rw">${R.map((c, i) => { const s = shopCls(c.id); const n = (c.items || []).filter(x => x.type !== 'chapter').length;
+      return `<a class="lhb-v" href="#${s ? 'class' : 'c'}/${E(c.id)}"><span class="lhb-th" style="background-image:url('${E(thumbOf(c, null, i + 5))}')"><span class="k">${E(c.ctype || '온라인')}</span>${c.hours ? `<span class="du num">${c.hours}시간</span>` : ''}</span><b>${E(c.name)}</b><small class="num">${n}차시${s && s.price ? ` · ${Number(s.price).toLocaleString('ko-KR')}원` : ''}${c.start ? ` · ${E(String(c.start).slice(5).replace('-', '/'))} 개강` : ''}</small></a>`; }).join('')}</div></section>` : '';
+    const ntH = N.length ? `<section class="lhb-cd lhb-hmn"><div class="hd"><h3>기관 소식</h3><span class="lhb-tg num">${(G.S2.notices || []).length}건</span><a class="lhb-btn tx" href="#notice">전체${I('chev', 16)}</a></div><div class="lhb-its">${N.map(n => { const d = String(n.at || '').slice(5, 10).replace('-', '/');
+      return `<a class="it" href="#notice"><span class="dd n num">${E(d || '공지')}${n.pin ? '<small>고정</small>' : ''}</span><span class="tx"><b>${E(n.title)}</b><small>${E(n.cls || '전체 공지')}${n.views ? ` · 조회 ${n.views}` : ''}</small></span>${I('chev', 16)}</a>`; }).join('')}</div></section>` : '';
+    return `<div class="lhb-hm ${recH && ntH ? '' : 'one'}">${recH}${ntH}</div>`; }
+  function homeHub() { const G = gather(); return `<div class="lhb lhb-home" data-lhb="${G.main ? 'on' : 'empty'}">${hero(G)}<div class="lhb-in">${shelf(G)}<div class="lhb-r1">${todo(G)}${mileCard(G)}${recCard(G)}</div>${homeMore(G)}${facBand(G)}</div></div>`; }
+  if (typeof viewPage === 'function') { const bp = viewPage; viewPage = (id, ...a) => { if ((id === 'home' || !id) && lhbHome()) { try { return homeHub(); } catch (e) { console.error('lhub home', e); } } return bp(id, ...a); }; } /* eslint-disable-line no-global-assign */
   /* 강의 수강(#c): 영상이 없을 때 회색 상자 대신 강좌 사진 포스터(LHB.photo) */
   if (typeof viewCourse === 'function') { const bc = viewCourse; viewCourse = (...a) => { const h = bc(...a); try { const c = (SITE().classes || []).find(x => x.id === a[0]); if (!c || typeof h !== 'string') return h; return h.replace(/<div class="novid">/g, `<div class="novid" style="--ph:url('${E(photo(c.name, 0, 1))}')">`); } catch (e) { return h; } }; }
   const base = viewMy; viewMy = (...a) => { const h = base(...a); try { if (!LR.me || LR.me.kind === 'parent' || document.body.classList.contains('lapp')) return h; return hub() + h; } catch (e) { console.error('lhub', e); return h; } };
