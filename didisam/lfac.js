@@ -107,10 +107,14 @@
   const usedDay = (f, d) => activeB().filter(b => b.fac === f.id && b.day === d).reduce((a, b) => a + b.slots, 0);
 
   /* ── 공통 조각 ── */
-  const head = (t, sub, right) => `<div class="fx-hd"><div><h1>${esc(t)}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${right || ''}</div>`;
+  /* v43 D-C: 웹(body:not(.lapp))은 공통 사진 머리(lPageHead) — 시설 홈은 숫자(시설 · 오늘 예약 가능 · 내 예약)와 [내 예약], 아래 화면은 짧은 띠. 앱은 예전 머리 */
+  let HT = null; const webH = () => typeof lPageHead === 'function' && !document.body.classList.contains('lapp');
+  const head = (t, sub, right) => { if (webH()) { HT = [t, sub, right]; return right && !/fx-btn sm" href="#fac\/my"/.test(right) ? `<div class="fx-hd fx43r">${right}</div>` : ''; } return `<div class="fx-hd"><div><h1>${esc(t)}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${right || ''}</div>`; };
   const stB = b => b.status === 'requested' ? ['y', '승인 대기'] : b.status === 'approved' ? ['y', '결제 대기'] : b.status === 'checked_in' ? ['g', '이용 중'] : b.status === 'done' ? ['n', '이용 완료'] : b.status === 'cancelled' ? ['n', '취소됨'] : b.status === 'no_show' ? ['r', '자동 취소'] : b.status === 'rejected' ? ['r', '반려됨'] : b.payStatus === 'pending' && b.pay === 'online' ? ['y', '결제 대기'] : b.payStatus === 'pending' ? ['g', '확정 · 현장 결제'] : ['g', '확정'];
   const badge = ([t, l]) => `<em class="fx-b t-${t}">${t === 'g' && /^확정/.test(l) ? sv('check', 14) : ''}${esc(l)}</em>`;
-  const page = (cls, inner) => `<section class="fx ${cls || ''}"><div class="in fx-in">${inner}</div></section>`;
+  const page = (cls, inner) => { let h = ''; if (HT) { const home = /fx-home/.test(cls || ''); let st = null; if (home) { try { const F = FACS(); st = [[F.length, '곳', '예약할 수 있는 시설'], [(FX.my || []).length || '', '건', '내 예약']]; } catch (e) { st = null; } }
+    h = lPageHead({ key: 'fac', title: HT[0], desc: home ? '날짜와 시간을 고르면 바로 예약돼요. 취소 · 환불 기준도 미리 보여 드려요.' : '', crumb: home ? '<a href="#home">홈</a> › 시설 예약' : '<a href="#home">홈</a> › <a href="#fac">시설 예약</a> › ' + esc(HT[0]), compact: !home, stats: st, cta: home && LR.me ? ['내 예약 보기', '#fac/my'] : home ? ['로그인하고 예약하기', '#login/fac'] : null, eyebrow: home ? '체육관 · 강의실 · 대여' : '' }); HT = null; }
+    return `${h}<section class="fx ${cls || ''}${h ? ' fx43' : ''}"><div class="in fx-in">${inner}</div></section>`; };
   const gate = back => { if (LR.me) return ''; return `<div class="fx-note t-b">${sv('info', 18)}<span>예약하려면 간편 로그인이 필요해요. 둘러보기는 로그인 없이 할 수 있어요.</span><a class="fx-btn sm" href="#login/${esc(back)}">로그인</a></div>`; };
   const timeOf = b => `${fmtD(b.day)} ${b.from}–${b.to}`;
   const flowBar = h => `<div class="fx-bar">${h}</div>`;
@@ -135,7 +139,7 @@
     else tag = ['g', '이용권'];
     const a0 = audsOf(f)[0]; const q = f.kind === 'time' ? { final: f.pay === 'free' ? 0 : Math.max(0, +(((f.prices || {})[a0] || {}).slot) || 0) } : null; const pp = prods(f).map(p => QT({ fac: f, product: p, aud: (p.prices && p.prices[a0] != null) || (p.unitPrice && p.unitPrice[a0] != null) ? a0 : Object.keys(p.prices || p.unitPrice || {})[0] || a0 }).final).filter(x => x > 0);
     const price = f.kind === 'time' ? (q.final ? `${audL(audsOf(f)[0])} ${won(q.final)}~` : f.approval ? '구성원 무료' : '무료') : pp.length ? `${won(Math.min(...pp))}~` : '';
-    return `<a class="fx-row" href="#fac/${esc(f.id)}">${icBox(f)}<span class="fx-ct"><b>${esc(f.name)}</b><small>${esc([f.place, f.kind === 'time' ? `${resOf(f).length > 1 ? resOf(f).length + unitOf(f) : '정원 ' + perOf(f) + '명'}` : f.kind === 'rent' ? '대여' : '이용권'].filter(Boolean).join(' · '))}</small></span><span class="fx-rt">${tag[1] ? badge(tag) : ''}<small>${esc(sub2 || price)}</small></span></a>`; }
+    return `<a class="fx-row" href="#fac/${esc(f.id)}"${typeof lPhoto === 'function' ? ` style="--fx-ph:url('${esc(lPhoto(f.name + ' ' + (f.place || '') + ' 공간', 'fx:' + f.id))}')"` : ''}>${icBox(f)}<span class="fx-ct"><b>${esc(f.name)}</b><small>${esc([f.place, f.kind === 'time' ? `${resOf(f).length > 1 ? resOf(f).length + unitOf(f) : '정원 ' + perOf(f) + '명'}` : f.kind === 'rent' ? '대여' : '이용권'].filter(Boolean).join(' · '))}</small></span><span class="fx-rt">${tag[1] ? badge(tag) : ''}<small>${esc(sub2 || price)}</small></span></a>`; }
   function homeView() { const c = cfg(); const C = catsAll(); if (!C.includes(FX.cat) && FX.cat !== 'all') FX.cat = 'all';
     const L = FACS().filter(f => FX.cat === 'all' || catOf(f) === FX.cat || (FX.cat === '이용권' && prods(f).some(p => /^pass-/.test(p.type))));
     const chips = `<div class="fx-chips" role="tablist" aria-label="시설 종류">${[['all', '전체'], ...C.map(x => [x, x])].map(([k, l]) => `<button type="button" role="tab" class="fx-chip${FX.cat === k ? ' on' : ''}" aria-selected="${FX.cat === k}" data-fx="cat" data-v="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;

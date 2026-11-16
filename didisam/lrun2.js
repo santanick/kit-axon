@@ -63,8 +63,9 @@ const LPH = {
   notice: () => { const N = SITE().notices || []; return { eyebrow: '기관 소식', stats: [[N.length, '건', '전체 공지'], [N.filter(n => lphWeek(n.at)).length, '건', '이번 주 새 공지'], [N.filter(n => n.pin).length, '건', '고정 공지']], cta: ['수강생 라운지 가기', '#comm'] }; },
   badges: () => { const B = SITE().badges || []; let got = 0; try { got = (myStats().badges || []).filter(x => x.got || x.ok).length; } catch (e) { got = 0; } return { eyebrow: '디지털 배지 · Open Badge', stats: [[B.length, '단계', '배지'], got ? [got, '개', '내가 받은 배지'] : [(SITE().tuts || []).length || (SITE().classes || []).length, (SITE().tuts || []).length ? '편' : '개', (SITE().tuts || []).length ? '배지로 이어지는 튜토리얼' : '배지 과정'], (SITE().classes || []).length ? [(SITE().classes || []).length, '개', '배지로 이어지는 코스'] : null], cta: ['배지 받는 코스 보기', '#courses'] }; },
   books: () => { const B = (SITE().dbooks || []).filter(b => b.on !== false); const ch = B.reduce((a, b) => a + ((b.chs || b.units || []).length), 0); return { eyebrow: '읽고 · 보고 · 풀고 · 쓰는 교재', stats: [[B.length, '권', '디지털북'], [ch, '장', '전체 단원'], [B.length ? (B[0].thr || 80) : 0, '%', '수료 기준 진도']], cta: B.length ? ['첫 권 읽기', '#bk/' + encodeURIComponent(B[0].id)] : null }; },
-  mypay: () => { let L = []; try { L = JSON.parse(localStorage.getItem('didisam.room.' + LR.tid + '.lpx') || '[]').filter(x => x.kind === 'pay' || x.payId); } catch (e) { L = []; } const sum = L.reduce((a, x) => a + (+x.amount || 0), 0);
-    return { eyebrow: '결제 · 환불 · 구독', stats: [[L.length, '건', '결제'], [lphN(sum), '원', '누적 결제액'], [L.filter(x => /환불/.test(x.status || '')).length, '건', '환불']], cta: ['강좌 둘러보기', '#shop'] }; },
+  mypay: () => { let L = []; try { const R = typeof window.shMine === 'function' ? window.shMine() : null; L = R ? R.pays || [] : JSON.parse(localStorage.getItem('didisam.room.' + LR.tid + '.lpx') || '[]').filter(x => x.kind === 'pay' || x.payId); } catch (e) { L = []; } /* v43 D-C: 결제 내역 화면과 같은 목록(shMine)으로 센다 */
+    const rf = x => !!x.refund || /환불/.test(x.status || ''); const sum = L.filter(x => !rf(x) && x.status !== '취소' && x.status !== '결제 대기').reduce((a, x) => a + (+x.amount || 0), 0);
+    return { eyebrow: '결제 · 환불 · 구독', stats: [[L.length, '건', '결제'], [lphN(sum), '원', '누적 결제액'], [L.filter(rf).length, '건', '환불']], cta: typeof window.ledgerOn === 'function' && window.ledgerOn() ? ['청구서 · 영수증 보기', '#ledger/hist'] : ['강좌 둘러보기', '#shop'] }; },
   class: () => { const c = (((SITE().shop || {}).classes) || []).find(x => x.id === route().b); if (!c) return {}; const pr = +c.final || +c.price || 0;
     return { eyebrow: [c.kind === 'session' ? '회차' : c.kind === 'sub' ? '구독' : '기간', c.legal ? '법정' : '', c.status || ''].filter(Boolean).join(' · '), stats: [[c.items || (c.curr || []).length || '', '개', '차시'], c.n ? [lphN(c.n), '명', '수강생'] : null, [pr ? lphN(pr) : '무료', pr ? '원' : '', '수강료']], cta: null, photo: lPhoto(c.name, 'hero:' + c.id, true) }; },
   msg: () => ({ eyebrow: '기관 · 강사가 보낸 메시지', stats: null, cta: ['수강생 라운지 가기', '#comm'] }),
@@ -81,6 +82,15 @@ function lPageHead(o) {
     ${S.length ? `<dl class="lph-st">${S.map(([v, u, l]) => `<div><dt>${esc(l)}</dt><dd><b>${esc(v)}</b>${u ? `<small>${esc(u)}</small>` : ''}</dd></div>`).join('')}</dl>` : ''}</div></div></section>`;
 }
 window.lPageHead = lPageHead;
+/* v43 D-C: 배지 페이지 아래 — 받은 사람 수 · 공유 카드(FAQ 아래 빈 곳). 받은 사람 수(b.holders)는 기관 데이터에 있을 때만 숫자로 보인다 */
+function lBadgeShare() { const B = SITE().badges || []; if (!B.length) return ''; const has = new Set(((LR.mine || {}).badges || []).map(b => b.id)); const tot = B.reduce((a, b) => a + (+b.holders || 0), 0); const mx = Math.max(1, ...B.map(b => +b.holders || 0)); const mine = B.find(b => has.has(b.id));
+  return `<section class="sec bs43"><div class="in"><div class="bs43g">
+    <div class="bs43c bs43n"><p class="bs43k">${ico('user', 16)}받은 사람</p>${tot ? `<h3><b>${lphN(tot)}</b>명이 배지를 받았어요</h3><ul>${B.map(b => `<li><span>${esc(b.name)}</span><i><u style="width:${Math.round((+b.holders || 0) / mx * 100)}%;background:${esc(b.fill || 'var(--pri)')}"></u></i><b>${lphN(+b.holders || 0)}명</b></li>`).join('')}</ul>` : `<h3>첫 배지의 주인공이 되어 보세요</h3><p class="mini">배지를 받은 사람 수는 운영자가 집계하면 여기에 보여요.</p>`}</div>
+    <div class="bs43c bs43s"><p class="bs43k">${ico('link', 16)}공유하기</p><h3>받은 배지는 링크 하나로 증명돼요</h3><p class="mini">이력서 · 포트폴리오 · SNS에 붙이면 누구나 발급 기관과 기준을 확인할 수 있어요. 인쇄하거나 PDF로 저장할 수도 있어요.</p>
+      <div class="bs43a">${mine ? `<a class="lbtn pri" href="#badge/${esc(mine.id)}">내 배지 증명 열기${ico('arrow', 16)}</a>` : `<a class="lbtn pri" href="#courses">배지 받는 코스 보기${ico('arrow', 16)}</a>`}<a class="lbtn ghost" href="#my">내 배지 지갑</a></div></div>
+  </div></div></section>`; }
+window.lBadgeShare = lBadgeShare;
+
 function needLogin(back) { return `<section class="sec"><div class="in narrow"><div class="gate">${ico('lock', 28)}<h2>로그인이 필요합니다</h2><p class="lead">이 화면은 로그인한 ${esc(SITE().terms.learner || '학습자')}만 볼 수 있습니다. 기록 · 진도 · 배지가 저장됩니다.</p>${btn('로그인하기', '#login/' + encodeURIComponent(back || ''), 'pri', 'arrow')}</div></div></section>`; }
 
 function viewPage(id) {
@@ -88,7 +98,7 @@ function viewPage(id) {
   if (p.access === '로그인' && !LR.me) return needLogin(p.id);
   const inner = p.sections.map(s => { try { return (SECR[s.type] || (() => ''))(s.data || {}); } catch (e) { console.error(e); return ''; } }).join('');
   const D = PG_DESC[p.id] || ['', ''];
-  return (p.id !== 'home' && p.id !== 'my' && !p.sections.some(s => s.type === 'hero') ? lPageHead({ key: p.id, title: p.name, desc: D[1] || '' }) : '') + inner + (p.id === 'my' ? viewMy() : '');
+  return (p.id !== 'home' && p.id !== 'my' && !p.sections.some(s => s.type === 'hero') ? lPageHead({ key: p.id, title: p.name, desc: D[1] || '' }) : '') + inner + (p.id === 'my' ? viewMy() : '') + (p.id === 'badges' ? lBadgeShare() : '');
 }
 function viewTut(id) {
   const S2 = SITE(); const t = S2.tuts.find(x => x.id === id); if (!t) return '<section class="sec"><div class="in"><p class="empty">튜토리얼을 찾지 못했습니다.</p></div></section>';
