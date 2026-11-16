@@ -15,6 +15,8 @@ const only = (process.env.ONLY || 'corp,k12,k12b,univ,pub,life,date,r2,c3,c17,wh
     const op = await ctx.newPage(); op.on('pageerror', e => errs.push(type + ' op: ' + e.message)); op.on('dialog', d => d.accept());
     await op.goto(base + 'index.html'); await op.waitForFunction(() => typeof createOrg === 'function');
     await op.evaluate(([t, e]) => { localStorage.clear(); localStorage.setItem('didisam.emptyStart', '1'); const x = document.querySelector('#suEmpty'); if (x) x.checked = true; createOrg(t, '연결 점검 기관', e || undefined); }, [type, ed]);
+    /* v43 Q1: createOrg는 800ms 뒤 render()를 한 번 더 부른다. 그 전에 화면을 바꾸면 늦게 온 render가 입력(#enL · #enFOut)을 지워 U10 · U12가 가끔 실패했다 — 준비 화면(.gen)이 사라질 때까지 기다린다 */
+    await op.waitForFunction(() => !document.querySelector('#app .gen'), null, { timeout: 5000 }).catch(() => {});
     await op.waitForFunction(() => window.S && S.org); await op.waitForTimeout(500); await op.evaluate(() => { try { closeModal(); } catch (e) { } }); return { ctx, op }; };
   const pub = async op => { await op.evaluate(() => (typeof smPublish === 'function' ? smPublish : ACT['ls-pub'])()); await op.waitForTimeout(250); const b = await op.$('#modal [data-mact=ok]'); if (b) await b.click(); await op.waitForTimeout(200); return op.evaluate(() => DREG.cur()); };
   const pull = async op => { await op.evaluate(() => { lpxPull(); render(); }); await op.waitForTimeout(150); };

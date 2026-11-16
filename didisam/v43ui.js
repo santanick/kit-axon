@@ -91,6 +91,7 @@
 
   /* 시설 · 보상 대체 사진(CC0 스톡, img/stock): 이름 낱말로 고른다 */
   const PH = [[/촬영|스튜디오|영상/, 'cam-07'], [/강의|교실|세미나|실습/, 'cls-03'], [/스터디|회의|상담|룸/, 'off-02'], [/독서|도서|열람|교재|책/, 'lib-03'], [/체육|헬스|수영|코트|운동|요가/, 'spo-01'], [/빔|프로젝터|장비|노트북|태블릿|대여/, 'dsk-02'], [/특강|강연|우선/, 'lec-01'], [/할인|쿠폰|장학|학원비/, 'sem-01']];
-  V4.photo = (name, def = 'off-01') => `img/stock/${(PH.find(([re]) => re.test(String(name || ''))) || [0, def])[1]}.webp`;
+  /* v43 Q1: 사진 분산 공통 함수 — hpstock.js의 HPSTOCK.photo(이름 낱말 + id 해시, 같은 화면 중복 없음)를 쓴다. 목록이 없을 때만 예전 고정 사진 */
+  V4.photo = (key, salt, o) => { try { if (window.HPSTOCK && HPSTOCK.photo) { const u = HPSTOCK.photo(key, salt == null ? key : (typeof salt === 'string' && !o && /^[a-z]{3}-\d{2}$/.test(salt) ? key : salt), o); if (u) return u; } } catch (e) { } return `img/stock/${(PH.find(([re]) => re.test(String(key || ''))) || [0, 'off-01'])[1]}.webp`; };
   window.V4 = V4;
 })();

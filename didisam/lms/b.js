@@ -127,12 +127,16 @@
   ACT['lmsx-sec'] = el => { X.sec = el.value; X.refresh(); };
   ACT['lmsx-as'] = el => { X.as = el.value || ''; X.refresh(); };
   ACT['lmsx-asgo'] = () => { const v = ($('[data-lmsx-asin]') || {}).value || ''; X.as = v.trim(); X.refresh(); };
+  /* v43 Q1 시연 밀도: 처음 여는 강의실은 시드 기록(토론 · 게시판 · 과제 · 차시)이 가장 많은 분반으로 고른다(운영 서버 · 빈 기관은 예전처럼 첫 분반) */
+  X.pickSec = ss => { if (!ss || !ss.length) return ''; if (LIVE_ON() || (S.org && S.org.empty)) return ss[0].id; try { const d = X.db(); const c = d.c || {}, dd = d.d || {};
+    const sc = id => (c.forums || []).filter(f => f.sec === id).length * 3 + (c.posts || []).filter(p => p.sec === id).length + (dd.posts || []).filter(p => p.sec === id).length * 2 + (d.sessions || []).filter(x => x.sec === id).length;
+    let best = ss[0], bs = sc(best.id); ss.forEach(s => { const v = sc(s.id); if (v > bs) { best = s; bs = v; } }); return best.id; } catch (e) { return ss[0].id; } };
   /* 비동기 화면: VIEWS는 틀만 돌려주고 render 뒤에 채운다 */
   X.views = {};
   X.mount = (id, fn) => { X.views[id] = fn; VIEWS[id] = () => { setTimeout(() => X.fill(id), 0); return `<div id="lmsxRoot" data-v="${id}"><div class="empty">불러오는 중입니다…</div></div>`; }; };
   X.fill = async id => {
     const root = $('#lmsxRoot'); if (!root || root.dataset.v !== id) return;
-    try { if (!X.sections) await X.loadSections(); if (!X.sec || !X.sections.some(s => s.id === X.sec)) X.sec = X.sections[0] ? X.sections[0].id : ''; await X.loadMenu(); const h = await X.views[id](); const r2 = $('#lmsxRoot'); if (r2 && r2.dataset.v === id) r2.innerHTML = h; X.applyMenu(); }
+    try { if (!X.sections) await X.loadSections(); if (!X.sec || !X.sections.some(s => s.id === X.sec)) X.sec = X.pickSec(X.sections); await X.loadMenu(); const h = await X.views[id](); const r2 = $('#lmsxRoot'); if (r2 && r2.dataset.v === id) r2.innerHTML = h; X.applyMenu(); }
     catch (e) { const r2 = $('#lmsxRoot'); if (r2) r2.innerHTML = `<div class="warn">${esc(e.message || '불러오지 못했습니다.')}</div>`; console.warn(e); }
   };
   X.refresh = () => { const r = $('#lmsxRoot'); if (r) X.fill(r.dataset.v); };
