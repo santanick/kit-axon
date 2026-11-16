@@ -261,3 +261,15 @@ body:has(#slSheet) .mwrap{z-index:96}
 #main .sx3 .r7-rules .rng2 b,#main .sx3 .r7-rules .swrow b{font-size:15px;line-height:1.4}
 #main .sx3 .r7-rules .rng2 small,#main .sx3 .r7-rules .swrow small{display:block;font-size:13px;line-height:1.45;margin-top:2px}
 #main .sx3 .r7-rules .rng2,#main .sx3 .r7-rules .swrow{padding:16px 0}
+
+/* v43.4 MB 모바일(390px) — 설정 하위 화면 */
+@media (max-width:760px){
+  /* 079 약관: 종류 칩 · 버전 고르기 · 시행일 줄이 눌려 세로로 꺾이던 것 */
+  #main .tr26h{flex-wrap:wrap}#main .tr26h .tr26p{flex-wrap:nowrap;max-width:100%;overflow-x:auto}#main .tr26h .tr26p button{white-space:nowrap}
+  #main .tr26b .ch{flex-direction:column;align-items:flex-start;gap:8px}#main .tr26v{width:100%;flex-wrap:wrap;white-space:nowrap}#main .tr26v select{flex:1 1 180px;min-width:0}
+  #main .tr26f{flex-wrap:wrap;justify-content:flex-start}#main .tr26f label{white-space:nowrap}
+  /* 080 팝업: 미리보기 + 정보 칸이 한 줄에 있어 오른쪽 글자가 잘리던 것 → 미리보기 위, 정보 아래 */
+  #main .r7-ppl>li{flex-direction:column}#main .r7-ppl .r7-ppt{flex:none;width:100%;max-width:none;height:auto;min-height:120px}
+  /* 084 데이터룸: 4칸 요약이 2열로 눌려 한 글자씩 꺾이던 것 → 1열 */
+  #main .r7-drid{grid-template-columns:minmax(0,1fr)}
+}
