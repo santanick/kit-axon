@@ -594,3 +594,6 @@ header.lh .lt-fab.lt-hfab em{top:-4px;right:-4px}
 #lm .lg select{min-height:44px}
 #lm .r4c .py26r.r4row>*{order:0;grid-column:auto;grid-row:auto}
 @media (max-width:560px){#lm .r4c .py26r.r4row{grid-template-columns:40px minmax(0,1fr);padding:12px 16px}#lm .r4c .py26r.r4row>.r4m{grid-column:2}}
+
+/* v43 F3 본문 보조 글자 하한: 학습자 웹 본문의 보조 글자를 13px로 올린다(앱 하단 탭·머리 메뉴 제외) */
+body:not(.lapp) #lm :is(small,time,.tag,.lhs-dt,.bprog span,.r4t small):not(nav *){font-size:13px}

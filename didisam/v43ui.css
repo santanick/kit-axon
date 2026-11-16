@@ -353,3 +353,6 @@ input[type=file][hidden]{display:none!important} /* 라벨 단추(.btn) 안 숨�
 .top .g2-dom .g2-domx:hover{background:color-mix(in srgb,var(--g900,#1A1814) 8%,transparent)}
 @media (max-width:1180px){.top .g2-dom>span{display:none}}
 @media (max-width:720px){.top .g2-dom{display:none}}
+
+/* v43 F3 본문 보조 글자 하한: 관리자 본문의 보조 글자(12~12.75px)를 13px로 올린다. 왼쪽 메뉴·AI SAM 버튼은 제외 */
+#main :is(small,time,.tag,.l43-tt small,.sx3-tt small,.da-tt small,.bprog span,.tx small):not(.acp *):not(.scxbt *){font-size:13px}
