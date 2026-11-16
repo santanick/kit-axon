@@ -20,7 +20,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; } else { fail++;
     set('m0', ['출석', '출석', '출석', '출석', '출석']); set('m1', ['출석', '출석', '지각', '지각', '지각']); set('m2', ['출석', '결석', '출석', '결석', '지각']);
     r.att = ['m0', 'm1', 'm2'].map(id => clsAtt(c, id)); r.done = ['m0', 'm1', 'm2'].map(id => clsDone(c, id)); r.cpl = ['m0', 'm1', 'm2'].map(id => cplDone(c, id));
     r.low = lowAtt().map(x => x.id); r.lowN = lowAttN();
-    go('hrd'); render(); const hrd = document.querySelector('#main').innerText; r.hrdFake = /동일 IP 동시 접속 2건|무입력 40분|연속 입력 간격 3초/.test(hrd); r.hrdNone = /의심 건이 없습니다/.test(hrd); r.hrdLow = (hrd.match(/출석률 80% 미만\s*(\d+)명/) || [])[1]; r.hrdDone = (hrd.match(/수료 요건 충족\s*(\d+)명/) || [])[1];
+    go('hrd'); render(); const hrd = document.querySelector('#main').innerText; r.hrdFake = /동일 IP 동시 접속 2건|무입력 40분|연속 입력 간격 3초/.test(hrd); r.hrdNone = /의심 건이 없습니다/.test(hrd); r.hrdLow = (hrd.match(/출석률? 80% 미만\s*(\d+)명/) || [])[1]; /* v43 F2: D-A(2e08f18) HRD-Net 머리 숫자 칸 이름이 「출석 80% 미만」으로 줄어든 의도된 문구 변경 — 숫자는 DDStat.lowAttN 그대로 */ r.hrdDone = (hrd.match(/수료 요건 충족\s*(\d+)명/) || [])[1];
     const CSV = []; const dl0 = window.downloadCSV; window.downloadCSV = (n, h, rows) => CSV.push({ n, h, rows }); ACT['cpl-rep-csv'](); window.downloadCSV = dl0; r.csv = CSV[0];
     S.org.cpl.on = true; UI.cpl = 'att'; UI.cplC = 'c1'; go('cpl'); render(); const at = document.querySelector('#main').innerText; r.attName = at.includes('박준호') && at.includes('60%'); r.attRawOnly = /^\s*uabc2defghij\s*$/m.test(at);
     UI.cpl = null; go('cpl'); render(); const home = document.querySelector('#main').innerText; r.homeLow = (home.match(/출석률 80% 미만 (\d+)명/) || [])[1];

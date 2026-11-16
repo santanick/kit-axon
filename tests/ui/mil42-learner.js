@@ -28,9 +28,9 @@ const BAN = /서두르세요|곧 사라져요|놓치지 마세요|끊겨요|꼴�
   const openDemo = async (o = {}) => { const ctx = await browser.newContext({ viewport: { width: o.w || 390, height: 844 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
     await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
     await p.addInitScript(([sid, k, v, cl]) => { try { sessionStorage.setItem(k || 'didisam.learner.sample', JSON.stringify({ sid, dept: '', id: sid })); localStorage.setItem('didisam.app.instx', '1'); if (cl) localStorage.setItem('didisam.app.classic', '1'); if (v) Object.entries(v).forEach(([a, b]) => localStorage.getItem(a) || localStorage.setItem(a, b)); } catch (e) { } }, [SID, o.sess || '', o.ls || null, !!o.web]);
-    await p.goto(`${base}/learner.html?${o.t ? 't=' + o.t : 'demo=adult'}${o.web ? '' : '&app=1'}${o.q ?? '&mile=1'}${o.h || '#acct'}`, { waitUntil: 'load' }); await p.waitForTimeout(900); return { ctx, p, errs }; };
+    await p.goto(`${base}/learner.html?${o.t ? 't=' + o.t : 'demo=1'}${o.web ? '' : '&app=1'}${o.q ?? '&mile=1'}${o.h || '#acct'}`, { waitUntil: 'load' }); await p.waitForTimeout(900); return { ctx, p, errs }; };
 
-  /* ── 1. 시연판 앱 ── */
+  /* ── 1. 시연판 앱 ── (v43 F2: D-E(ab0ae93)가 학원(adult · k12) 체험판 마일리지를 학원 문구 샘플로 바꿨으므로(의도된 변경), 대학 샘플(국비 · 정정 · 학생식당)을 점검하는 이 테스트는 대학 체험판 ?demo=1로 연다) */
   { const { ctx, p, errs } = await openDemo();
     const me = await p.evaluate(() => { const c = document.querySelector('.lm-me'); return c ? { t: c.textContent, after: !!(c.previousElementSibling && c.previousElementSibling.classList.contains('ls-prof')), ring: !!c.querySelector('.lm-ring') } : null; });
     ok(!!me, '「나」 탭: 내 마일리지 카드'); ok(me && me.after, '카드 위치: 프로필 바로 아래'); ok(me && /잔액/.test(me.t) && /다음 목표/.test(me.t) && /연속 학습 중/.test(me.t) && /소멸 예정/.test(me.t) && /보상 보기/.test(me.t), '카드 구성: 잔액 · 다음 목표 · 연속 · 소멸 예정 · 보상 보기');
