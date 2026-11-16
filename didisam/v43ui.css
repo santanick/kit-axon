@@ -435,6 +435,10 @@ html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background
   #main .seg2.wtabs,#main .seg2.btabs{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-width:100%;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   #main .seg2.wtabs::-webkit-scrollbar,#main .seg2.btabs::-webkit-scrollbar{display:none}
   #main .seg2.wtabs>*,#main .seg2.btabs>*{flex:none;white-space:nowrap}
+  #main .seg2.wtabs>button,#main .seg2.btabs>button{min-width:44px;justify-content:center;text-align:center}
+  .q1-2col{grid-template-columns:minmax(0,1fr)}
+  /* 차트 x축: 휴대폰에서는 처음 · 끝 + 홀수 번째 라벨만(끝에서 두 번째는 숨김) — 마지막 두 날짜가 겹치지 않게 */
+  .v4-xl span:nth-child(even):not(:last-child),.v4-xl span:nth-last-child(2):not(:first-child){display:none}
   details.uxmore:not([open])>.uxpop,details.uxtabmore:not([open])>.uxpop{display:none}
   #main .seg2.wtabs .uxtabmore .uxpop,#main .seg2.btabs .uxtabmore .uxpop{position:fixed;left:16px;right:16px;width:auto}
   nav.brail{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
