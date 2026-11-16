@@ -309,6 +309,8 @@ function seed(type) {
   const bills = type === 'k12' ? members.slice(0, 30).map((m, i) => ({ id: uid('b'), who: m.id, title: '11월 수강료', items: [['수업료', 280000], ...(i % 3 === 0 ? [['차량비', 40000]] : []), ...(i % 4 === 0 ? [['교재비', 18000]] : [])], due: addDays(today(), i % 5 === 0 ? -3 : 7), status: i % 5 === 0 ? '미납' : i % 3 === 0 ? '현장 납부' : '납부 완료' })) : [];
   const consults = Array.from({ length: type === 'corp' ? 3 : 9 }, (_, i) => ({ id: uid('cs'), at: addDays(today(), -i * 2), who: members[i * 3].id, ch: pick(['채널톡 전화', '채널톡 채팅', '대면 상담']), cat: pick(type === 'k12' ? ['입학 문의', '성적 상담', '수강료'] : type === 'voc' ? ['훈련 신청', '출결 문의', '취업 상담'] : ['수강 문의', '결제 · 환불', '학습 상담']), title: pick(['수강 일정 문의', '진도 상담', '환불 규정 문의', '레벨 테스트 결과 상담', '수료 기준 문의']), summary: '', status: i < 2 ? '진행 중' : '완료' }));
   const posts = Array.from({ length: 12 }, (_, i) => ({ id: uid('po'), kind: i % 3 === 0 ? '질문' : pick(['질문', '이야기']), board: pick(['커뮤니티', '커뮤니티', '게시판', '학습노트', '수강후기']), who: members[i * 2].id, title: pick(['과제 제출 형식 질문', '오늘 수업 정리', '퀴즈 3번 해설 부탁드립니다', '수강 후기 남깁니다', '영상이 끊겨요']), at: addDays(today(), -i), replies: i % 3 ? 1 : 0, views: 10 + i * 7, hidden: false }));
+  /* v43 R1: 커뮤니티 게시판 시연 글 8건 추가(난수를 쓰지 않아 다른 시드 값은 그대로) */
+  ['이번 주 실습 결과물 공유합니다', '과제 마감 연장 가능할까요?', '스터디 같이 하실 분', '2주차 자료 링크가 안 열려요', '강의 덕분에 업무가 빨라졌어요', '질문 게시판 사용법 문의', '오프라인 특강 후기', '복습용 요약 노트 올립니다'].forEach((title, k) => posts.push({ id: uid('po'), kind: k % 3 === 1 ? '질문' : '이야기', board: '커뮤니티', who: members[(k * 5 + 3) % members.length].id, title, at: addDays(today(), -(k + 1)), replies: k % 3 === 1 ? 0 : 1 + k % 4, views: 24 + k * 11, hidden: false }));
   const books = ['k12', 'adult', 'lifelong'].includes(type) ? [{ id: 'bk0', name: type === 'k12' ? '중2 수학 개념서' : '실무 워크북(PDF)', kind: type === 'k12' ? '실물' : '전자책', price: 18000, sold: 23, delivered: 18, open: '전체' }, { id: 'bk1', name: '기출 문제집', kind: '전자책', price: 12000, sold: 41, delivered: 0, open: '전체' }] : [];
   const lib = [['오리엔테이션.mp4', '동영상', '12:30', ['c0']], ['1강 핵심 개념.mp4', '동영상', '48:10', ['c0', 'c1']], ['실습 따라하기.mp4', '동영상', '22:05', ['c1']], ['https://youtu.be/dQw4w9WgXcQ', 'YouTube', '03:33', []], ['강의자료_1차시.pdf', '문서', '2.1MB', ['c0']], ['실습 템플릿.xlsx', '문서', '310KB', []]].map(([n, k, s, u], i) => ({ id: 'l' + i, name: n, kind: k, size: s, used: u.length, cls: u, at: addDays(today(), -i * 5), views: Math.round(40 + rnd() * 400), drop: Math.round(10 + rnd() * 35) }));
   const admins = [{ id: 'a0', name: '정운영자', email: 'owner@demo', role: 'owner', classes: [] }, { id: 'a1', name: '운영 담당', email: 'staff@demo', role: 'sub', classes: [] }, { id: 'a2', name: t2(type, 'teacher') + ' 김○○', email: 'teacher@demo', role: 'teacher', classes: ['c0', 'c1'] }];
@@ -323,7 +325,8 @@ function seed(type) {
     /* v43 G3 시연 밀도: 협력 기관 6곳(가상) */
     ...(type === 'voc' ? [['협약기업 B사', 22, 17, 11], ['해운대 일자리센터', 18, 12, 8], ['센텀 제조 협동조합', 11, 9, 5], ['부산 물류 C사', 16, 10, 7], ['동구 청년센터', 9, 6, 3]] : type === 'univ' ? [['교수학습개발센터', 31, 24, 0], ['산학협력단', 19, 15, 0], ['평생교육원', 26, 18, 0], ['공학교육혁신센터', 12, 9, 0], ['국제교류처', 8, 5, 0]] : type === 'corp' ? [['계열사 C', 38, 29, 0], ['협력사 D', 21, 14, 0], ['해외법인 E', 17, 11, 0], ['물류센터 F', 26, 22, 0], ['연구소 G', 12, 10, 0]] : [['수영구 평생학습관', 24, 17, 0], ['해운대 도서관', 19, 13, 0], ['동래 주민센터', 15, 9, 0], ['금정 청소년센터', 12, 8, 0], ['남구 복지관', 21, 16, 0]]).map(([name, n, done, job], i) => ({ id: 'o' + (i + 1), name, mgr: ['김지현', '박도윤', '이서연', '최민준', '정하은'][i] + ' 담당', n, done, job }))] : [];
   const journey = sm.lv.map((lv, i) => ({ id: 'j' + i, name: lv, cls: classes.filter(c => c.level === i).map(c => c.id), unlock: i === 0 ? '바로 열림' : `${sm.lv[i - 1]} 배지 획득`, badge: 'bd' + i }));
-  const alerts = [{ id: uid('al'), at: addDays(today(), -1), to: '전체', title: '이번 주 학습 일정 안내', read: 62 }];
+  /* v43 R1: 알림함 발송 내역 시연 8건(대상 · 읽음률이 다르게) */
+  const alerts = [[1, '전체', '이번 주 학습 일정 안내', 62], [3, '진도 30% 미만', '마감 전 진도 확인 부탁드립니다', 48], [5, '신규 가입자', '첫 수업 시작 안내', 81], [8, '전체', '11월 특강 신청 안내', 57], [11, '과제 미제출', '과제 3 마감 하루 전 안내', 44], [14, '수료 예정자', '수료증 발급 안내', 88], [18, '전체', '설문 참여 부탁드립니다', 39], [24, '14일 미접속', '다시 학습을 이어 가세요', 27]].map(([d, to, title, read]) => ({ id: uid('al'), at: addDays(today(), -d), to, title, read }));
   const weeks = Array.from({ length: 8 }, (_, i) => ({ w: addDays(today(), -7 * (7 - i)).slice(5), join: Math.round(6 + rnd() * 10 - i * .4), badge: Math.round(1 + rnd() * 4 + i * .3) }));
   return {
     groups, members, parents, classes, pays, bills, consults, posts, books, lib, admins, badges, certs, msgs, orgs, journey, alerts, weeks, notices: [],
@@ -333,7 +336,7 @@ function seed(type) {
       tutor: { enabled: true, name: 'AX 튜터', daily: 20, guestDaily: 10, help: 'feedback', loginOnly: false, guide: '', model: 'haiku' },
       goals: { join: 60, active: 50, progress: 40, badge: 30 } },
     tutorUsage: Array.from({ length: 7 }, (_, i) => ({ d: addDays(today(), i - 6).slice(5), n: Math.round(30 + rnd() * 90) })),
-    codes: [], hrd: { reports: [] }
+    codes: [], hrd: { reports: type === 'voc' ? [[2, '주간(등록 · 진도 · 출석 · 평가)', 24, '전송 대기'], [9, '주간(등록 · 진도 · 출석 · 평가)', 24, '파일 생성'], [16, '수료 보고(용접기능사 실기)', 18, '파일 생성'], [23, '주간(등록 · 진도 · 출석 · 평가)', 22, '파일 생성']].map(([d, kind, n, st]) => ({ at: addDays(today(), -d) + ' 18:00', kind, n, st })) : [] } /* v43 R1: 직업훈련 시연 보고 4건 */
   };
 }
 function curriculumFor(name, kind) {

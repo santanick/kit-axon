@@ -282,7 +282,12 @@ ACT['dg-assign'] = el => {
 };
 /* 러닝 저니 탭: 진단 결과별 맞춤 저니 현황 추가 */
 { const base = VIEWS.journey; VIEWS.journey = () => { const D = (S.diags || []).filter(d => d.status !== '초안'); D.forEach(dgEnsurePaths);
-  return base() + `<div class="card"><div class="ch"><b>진단 결과별 맞춤 러닝 저니</b><small>진단 결과에 따라 단계 · 과정을 다르게 추천합니다</small><span class="sp"></span><button class="btn sm" data-act="go" data-v="diag">진단에서 편집</button></div>${D.length ? D.map(d => `<p class="mini"><b>${esc(d.name)}</b> · 배정 ${S.members.filter(m => m.path?.dg === d.id).length}명</p>${d.outs.map(o => `<div class="pjrow"><b>${esc(o.k)}</b>${pathFlow(o, true)}<small>${S.members.filter(m => m.path?.dg === d.id && m.path.out === o.k).length}명</small></div>`).join('')}`).join('') : '<div class="empty">실행 중인 진단이 없습니다. AI 진단을 만들면 결과별 러닝 저니가 여기에 모입니다.</div>'}</div>`; }; }
+  /* v43 R1 시연 시드: 응시한 학습자를 진단 결과 경로에 배정(빈 기관 · 이미 배정된 학습자는 건드리지 않음) */
+  if (D.length && !S.org.empty && !S.org.r1path && !S.members.some(m => m.path && m.path.dg)) { S.org.r1path = 1; const ms = S.members.filter(m => !m.withdrawn); ms.forEach((m, i) => { const d = D[i % Math.min(2, D.length)]; if (!d.outs || !d.outs.length || i % 7 === 6) return; const o = d.outs[(i * 3 + (m.id.charCodeAt(1) || 0)) % d.outs.length]; m.path = { ...(m.path || {}), dg: d.id, out: o.k }; }); }
+  /* v43 R1: 진단마다 카드 1장(결과별 배정 막대 + 경로), 0명 줄은 흐리게 */
+  const card = d => { const all = S.members.filter(m => m.path?.dg === d.id).length; const mx = Math.max(1, ...d.outs.map(o => S.members.filter(m => m.path?.dg === d.id && m.path.out === o.k).length));
+    return `<section class="r1-card r1-pj"><header class="r1-ch"><h3>${esc(d.name)}</h3><small>배정 ${all}명</small></header>${d.outs.map(o => { const n = S.members.filter(m => m.path?.dg === d.id && m.path.out === o.k).length; return `<div class="pjrow r1-pjr${n ? '' : ' z'}"><b>${esc(o.k)}</b>${pathFlow(o, true)}<span class="r1-pjn"><span class="r1-dt"><i style="width:${Math.round(n / mx * 100)}%"></i></span><small>${n}명</small></span></div>`; }).join('')}</section>`; };
+  return base() + `<div class="card r1-pjw"><div class="ch"><b>진단 결과별 맞춤 러닝 저니</b><small>진단 결과에 따라 단계 · 과정을 다르게 추천합니다</small><span class="sp"></span><button class="btn sm" data-act="go" data-v="diag">진단에서 편집</button></div>${D.length ? `<div class="r1-grid2">${D.map(card).join('')}</div>` : '<div class="empty">실행 중인 진단이 없습니다. AI 진단을 만들면 결과별 러닝 저니가 여기에 모입니다.</div>'}</div>`; }; }
 
 /* ═════════ ③ AI SAM 상시 패널 + 대화로 메뉴 채우기(흐름) ═════════ */
 const DOCK = { get: () => { try { return localStorage.getItem('didisam.dock') === '1'; } catch (e) { return false; } }, set: v => { try { localStorage.setItem('didisam.dock', v ? '1' : '0'); } catch (e) { } } };

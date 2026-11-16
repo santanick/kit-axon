@@ -241,7 +241,7 @@
      위 [만들기] 하나 + 옆 [튜토리얼 영상 추천] · 종류 칩(전체 · 영상 · 문서 · 퀴즈/시험/설문 · 디지털북 · 링크) · 찾기 · 카드/목록 전환
      · 카드(썸네일 · 종류 · 길이 · 사용처) 클릭 → 오른쪽 미리보기 패널(바로 고치기 · 과정에 넣기 · 복제 · 삭제). 휴대폰은 패널이 아래에서 올라온다.
      예전 '영상 · 자료 보관함'의 기능(이름 바꾸기 · 변환 상태 · 저장 공간 · 사용 중 삭제 막기)은 이 화면의 패널 · 아래 줄로 옮겼다. */
-  const PAGE = 36;
+  const PAGE = 12; /* v43 R1: 처음 12개(3줄) · 더 보기로 12개씩 */
   const kName = k => (KIND[k] || KIND.file)[0];
   const icoBox = k => `<span class="clb-ic k-${(KIND[k] || KIND.file)[2]}" aria-hidden="true">${ic((KIND[k] || KIND.file)[1], 22)}</span>`;
   const ytOfE = e => { const r = e.ref || {}; return (r.yt && r.yt.id) || ytOfU(r.url) || ytOfU(e.origin === 'lib' ? r.name : '') || ''; };
@@ -261,8 +261,9 @@
   const extOf = e => { const r = e.ref || {}; const n = String((r.files && r.files[0] && r.files[0].name) || r.file || r.name || ''); const m = n.match(/\.(\w{2,5})$/); return m ? m[1].toUpperCase() : ''; };
   function thumb(e) { const k = (KIND[e.kind] || KIND.file)[2]; const id = ytOfE(e); const r = e.ref || {}; const L = lenOf(e);
     const st = e.origin === 'book' && r.color ? ` style="--bk:${esc(String(r.color).replace(/[^#\w(),.% ]/g, ''))}"` : '';
-    const cvu = e.origin === 'book' && !id && window.V4 && V4.photo ? V4.photo(`${e.title} 도서 책`, e.id) : ''; /* v43 D-E: 디지털북은 단색 상자 대신 사진 표지 */
-    const inner = id ? `<img class="clb-thimg" src="https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg" alt="" loading="lazy">` : cvu ? `<span class="clb-cov" style="background-image:url('${esc(cvu)}')"></span>` : '';
+    const cvu = !window.V4 || !V4.photo ? '' : e.origin === 'book' && !id ? V4.photo(`${e.title} 도서 책`, e.id) /* v43 D-E: 디지털북은 단색 상자 대신 사진 표지 */
+      : ['video', 'doc'].includes(e.kind) ? V4.photo(`${e.title} ${e.kind === 'video' ? '강의 영상 촬영' : '문서 노트'}`, 'clb' + e.id) : ''; /* v43 R1: 영상 · 문서도 빗금 아이콘 대신 사진 표지(유튜브 썸네일은 그 위에 덮임) */
+    const inner = (cvu ? `<span class="clb-cov" style="background-image:url('${esc(cvu)}')"></span>` : '') + (id ? `<img class="clb-thimg" src="https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : '') + (e.kind === 'video' ? `<span class="r1-play" aria-hidden="true"></span>` : '');
     const cap = e.origin === 'book' ? `<b class="clb-thb">${esc(e.title)}</b>` : e.kind === 'file' && extOf(e) ? `<b class="clb-thx">${esc(extOf(e))}</b>` : '';
     return `<span class="clb-th k-${k}${id ? ' yt' : ''}"${st} aria-hidden="true"><span class="clb-thi">${ic((KIND[e.kind] || KIND.file)[1], 30)}${cap}</span>${inner}<em class="clb-thk">${esc(isLink(e) && e.kind === 'video' ? 'YouTube' : kName(e.kind))}</em>${L ? `<em class="clb-thl">${esc(L)}</em>` : ''}</span>`; }
   const useLine = e => { const U = e.uses; return U.length ? `<span class="clb-use on">${ic('check', 14)} ${esc(useLabel(U[0]))}${U.length > 1 ? ` 외 ${U.length - 1}곳` : ''}</span>` : `<span class="clb-use">아직 사용 안 함</span>`; };

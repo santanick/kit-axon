@@ -218,7 +218,7 @@ function aih43HTML() { const data = aihHasData(); const who = aihWho(); const ta
       side: `<div class="aih43-art">${V4.art('start')}</div>` })
       + aih43Start();
   }
-  return `<div class="aih aih43 ${data ? 'has' : 'new'}"><div class="aih43-main">${main}${!data && (aihConnHTML() || aihAutoHTML()) ? `<div class="aih-two">${aihConnHTML()}${aihAutoHTML()}</div>` : data && aihAutoHTML.keep && aihAutoHTML.keep() ? `<div class="aih-two">${aihAutoHTML()}</div>` /* v43 F2: 시나리오가 홈 스위치 카드를 지키겠다고 하면(aihAutoHTML.keep, 예: 학원 초중고 자동 운영 v32.3) 데이터 있는 홈에도 그린다 */ : ''}${aihMenuHTML()}</div>${aih43Panel(tasks)}</div>`; }
+  return `<div class="aih aih43 ${data ? 'has' : 'new'}"><div class="aih43-main">${main}${!data && (aihConnHTML() || aihAutoHTML()) ? `<div class="aih-two">${aihConnHTML()}${aihAutoHTML()}</div>` : data && aihAutoHTML.keep && aihAutoHTML.keep() ? `<div class="aih-two">${aihAutoHTML()}</div>` /* v43 F2: 시나리오가 홈 스위치 카드를 지키겠다고 하면(aihAutoHTML.keep, 예: 학원 초중고 자동 운영 v32.3) 데이터 있는 홈에도 그린다 */ : ''}${data ? '' : aihMenuHTML() /* v43 R1: 데이터 있는 홈은 회색 메뉴 줄 대신 왼쪽 레일 · 처리 카드로 이동 */}</div>${aih43Panel(tasks)}</div>`; }
 { const base = bHome; bHome = () => { if (!aihActive()) return (aihTeacher() && typeof tHome === 'function' && (UI.tst === 'operate' || UI.tst === 'report')) ? tHome() : base(); try { return aihHomeHTML(); } catch (e) { console.error(e); return base(); } }; }
 
 /* 시작 가이드: 홈 안 카드도 함께 다시 그림 · 홈에서는 위젯을 자동으로 열지 않음 */
