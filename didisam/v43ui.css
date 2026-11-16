@@ -444,3 +444,23 @@ html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background
   nav.brail{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   nav.brail::-webkit-scrollbar{display:none}
 }
+/* ── v43.4 P0 휴대폰(≤760px) 공통 2차. PC는 그대로 ──
+   ⑦ 머리 버튼 줄(.phr): 넘김 대신 줄바꿈 — 오른쪽 버튼이 화면 밖으로 잘리지 않게(008 · 019 · 020). 보기 전환 탭은 첫 줄, 버튼은 남는 폭을 나눠 채운다
+   ⑥ 숫자 카드(.l43-kc · .da-k)의 작은 추세선은 숫자 아래 줄 전체 폭으로 — 카드 밖으로 나오지 않게(019 · 036 · 046)
+   ⑧ 학사 LMS 맥락 줄(.r7-ctx): 라벨 위 · 고르기 전체 폭, 「다른 신분으로 보기」는 고르기 밖 링크 줄로(048 · 049) */
+@media (max-width:760px){
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr{flex-wrap:wrap;overflow:visible;margin:0;padding:2px 0 4px;row-gap:8px;-webkit-mask-image:none;mask-image:none}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr::after{display:none}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr>.btn,#main>.bhd.q1-ph>.ph.q1-phmv .phr>a.btn{flex:1 1 auto;justify-content:center;max-width:100%}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr>:is(.seg2,.vtabs,[role=tablist]){flex:1 1 100%}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr details.uxmore{flex:none}
+  .l43-kc,.da-k{min-width:0;overflow:hidden;grid-template-columns:minmax(0,1fr) auto}
+  .l43-kc dd,.da-k .da-kv{min-width:0;font-size:clamp(20px,6.2vw,24px)}
+  .l43-kc .l43-spk,.da-k .l43-spk{grid-column:1/-1;width:100%;max-width:100%;height:22px;margin-top:8px}
+  #main .l43-bl .r7-ctx{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;width:100%}
+  #main .l43-bl .r7-ctx .lmsx-pick{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;width:100%}
+  #main .l43-bl .r7-ctx label,#main .l43-bl .r7-ctx .lmsx-pick label,#main .l43-bl .r7-ctx .r7-ctxl{flex-direction:column!important;align-items:stretch;gap:4px;width:100%;min-width:0;font-size:13px}
+  #main .l43-bl .r7-ctx select{width:100%;max-width:none;min-width:0;min-height:44px}
+  #main .l43-bl .r7-ctx details.lmsd-as,#main .l43-bl .r7-ctx details.lmsx-asmore{width:100%;margin:0}
+  #main .l43-bl .r7-ctx details>summary{min-height:44px;width:auto;padding:0 2px;border:0;border-radius:0;background:none;box-shadow:none;font-size:13.5px;font-weight:700;text-decoration:underline;text-underline-offset:3px;white-space:normal;color:inherit}
+}

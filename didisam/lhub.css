@@ -630,3 +630,23 @@ body:not(.lapp) #lm :is(small,time,.tag,.lhs-dt,.bprog span,.r4t small):not(nav 
 .lhb .tut .lhb-apb button{white-space:nowrap}
 .lhb .tut .lhb-apb button{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#E6F2EA;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
 .lhb .tut .lhb-apb button:hover{background:rgba(255,255,255,.16)}
+/* ── v43.4 P0 휴대폰(≤760px) 2차. PC는 그대로 ──
+   ⑤ 화면 머리 숫자 타일(.lph-st · .r4ks): 2열로 줄이고, 홀수 개면 마지막 타일은 한 줄 전체 폭 — 라벨은 13px 두 줄까지, 금액은 작게(092 · 094 · 096 · 102 · 103)
+   ④ AX 튜터 입력칸 안내 문구는 한 줄 말줄임(110)
+   ③ 로그인 · 가입 화면에서는 AX 튜터 떠 있는 버튼을 숨긴다 — 입력칸 오른쪽 끝을 덮던 문제(100). 본문 아래 여백은 떠 있는 버튼 + 아래 탭 높이 이상 */
+@media (max-width:760px){
+  .lph .lph-st{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lph .lph-st>div:last-child:nth-child(odd){grid-column:1/-1}
+  .lph .lph-st dt{font-size:13px;line-height:1.3;white-space:normal;overflow:hidden;text-overflow:clip;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .lph .lph-st dd{flex-wrap:wrap;min-width:0}
+  .lph .lph-st dd b{font-size:clamp(18px,5.6vw,22px)}
+  #lm .r4ks{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #lm .r4ks>.r4k:last-child:nth-child(odd){grid-column:1/-1}
+  #lm .r4k{min-width:0}
+  #lm .r4k b{font-size:clamp(18px,5.6vw,24px);overflow-wrap:anywhere}
+  #lm .r4k span{font-size:13px}
+  #ltut #ltq::placeholder,#ltut .lt-in textarea::placeholder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #ltut .lt-in textarea{min-width:0}
+  body:is([data-luxr=login],[data-luxr=join],[data-luxr=find]) #ltut .lt-fab{display:none!important}
+  body.lapp #lapp{padding-bottom:calc(var(--ap-nav,64px) + 72px + env(safe-area-inset-bottom))}
+}

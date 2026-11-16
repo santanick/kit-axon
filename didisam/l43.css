@@ -260,3 +260,5 @@ p.mini:has(> .g2-demo:only-child),p:has(> .g2-demo:only-child){margin:6px 0 0}
   .l43-todo li .l43-tt small{white-space:normal}
   .l43-todo li>.btn,.l43-todo li>button{margin-left:40px!important;min-height:40px}
 }
+/* v43.4 P0 휴대폰(≤760px): 브리핑 머리 줄은 줄바꿈 허용(날짜는 focus.js가 「11.17(화)」로 줄임) — 048 */
+@media (max-width:760px){.l43-eye{flex-wrap:wrap;row-gap:4px;line-height:1.35;min-width:0}}
