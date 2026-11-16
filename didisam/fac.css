@@ -199,3 +199,23 @@
 .fc43{margin:0 0 16px}
 .fc43-ft{display:flex;align-items:center;gap:16px;margin-top:14px;padding-top:12px;border-top:1px solid var(--g300);font-size:13px;color:var(--t-sub)}
 .fc43-ft b{color:var(--g900)}.fc43-ft .sp{flex:1}
+/* v43 D-E — 시설 화면 구성: 보조 열 · 사진 썸네일 · 타임라인 누름 영역 */
+#main .q1-aside .fc-ac .fc-todos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}
+#main .q1-aside .fc-ac .fc-todo{min-height:64px;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;border-radius:14px;padding:10px 14px;font-size:13px;font-weight:600;background:var(--n0,#fff)}
+#main .q1-aside .fc-ac .fc-todo b{font-size:22px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+#main .fc-tbl td.fc-nm{display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:12px;align-items:center}
+#main .fc-tbl td.fc-nm>b{grid-column:2}#main .fc-tbl td.fc-nm>small{grid-column:2}
+#main .fc-tbl .fc-th{grid-row:1 / span 2;width:44px;height:44px;border-radius:12px;background:var(--g100) center/cover no-repeat;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+#main .fc43 .v4-blk::after{content:'';position:absolute;left:0;right:0;top:-14px;bottom:-14px}
+#main .bview .fc>.seg2:not(.wtabs)>button,#main .fc>.seg2>button{min-height:44px}
+#main .l43-brief .num{font-variant-numeric:tabular-nums}
+#main .fc-chip,#main .fc-opt{min-height:44px}
+#main .fc-st.info{background:var(--gr50,#EAF8EF);color:var(--gr800,#066B2A)}
+#main .fc-todo.warn,#main .fc-todo.warn b{color:#A8380A}
+@media (min-width:861px){#main:has(.fc) .sl-i{position:relative}#main:has(.fc) .sl-i::after{content:'';position:absolute;inset:-12px}}
+html[data-theme=dark] #main .fc-st.ok,html[data-theme=dark] #main .fc-st.info{background:rgba(0,197,59,.16);color:#7CF2A2}
+html[data-theme=dark] #main .fc-st.wait,html[data-theme=dark] #main .fc-st.warn{background:rgba(255,154,110,.16);color:#FFB08F}
+html[data-theme=dark] #main .fc-st.bad{background:rgba(255,120,120,.16);color:#FFA3A3}
+html[data-theme=dark] #main .fc-todo.warn,html[data-theme=dark] #main .fc-todo.warn b{color:#FFB08F}
+html[data-theme=dark] #main:has(.fc) .sl-i,html[data-theme=dark] #main:has(.lg) .sl-i,html[data-theme=dark] #main:has(.mil) .sl-i{background:var(--surface,#0E1A14);color:#EAF2EC;border-color:#5C6E63}
+html[data-theme=dark] #main .fc-opt{background:var(--surface,#0E1A14);color:#EAF2EC}html[data-theme=dark] #main .fc-opt.on{background:#13231B;color:#7CF2A2;border-color:#00C53B}

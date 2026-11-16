@@ -289,7 +289,7 @@
           return `<h3 class="hpw-gh">프리미엄 <small>기관 색 하나로 6가지 첫 화면 · 카드 · 밀도를 고릅니다</small></h3><div class="hpw-tg" role="radiogroup" aria-label="프리미엄 테마">${P.map(card).join('')}</div>
           <h3 class="hpw-gh">기본 테마</h3><div class="hpw-tg" role="radiogroup" aria-label="기본 테마">${B.map(card).join('')}</div>`; })()}`;
       foot([{ id: 'close', l: '취소' }, { id: 'next', l: '다음', k: 'pri' }]);
-      const on = b.querySelector('.hpw-th.on'); if (on) on.focus(); return;
+      const on = b.querySelector('.hpw-th.on'); if (on) on.focus({ preventScroll: true }); /* v43 D-E: 고른 테마로 스크롤하지 않고 1단계 맨 위(단계 · 안내)부터 보이게 */ for (let x = b; x && x !== document.body; x = x.parentElement) if (x.scrollTop) x.scrollTop = 0; requestAnimationFrame(() => { for (let x = b; x && x !== document.body; x = x.parentElement) if (x.scrollTop) x.scrollTop = 0; }); return;
     }
     if (st.step === 2) {
       const T = themes().find(x => x.id === st.theme) || {};

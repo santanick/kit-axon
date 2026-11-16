@@ -39,7 +39,7 @@
     franchise: { n: '프랜차이즈 본사', order: ['charge', 'unpaid', 'today', 'book', 'desk', 'refund', 'close', 'import', 'share', 'set'] },
     univ: { n: '대학(부서 정산)', order: ['book', 'import', 'today', 'charge', 'unpaid', 'desk', 'refund', 'close', 'share', 'set'] },
     sports: { n: '체육시설', order: ['today', 'close', 'desk', 'book', 'refund', 'charge', 'unpaid', 'import', 'share', 'set'] },
-    welfare: { n: '복지관', order: ['desk', 'close', 'today', 'book', 'refund', 'charge', 'unpaid', 'import', 'share', 'set'] },
+    welfare: { n: '평생교육원 · 복지관', order: ['desk', 'close', 'today', 'book', 'refund', 'charge', 'unpaid', 'import', 'share', 'set'] },
     std: { n: '일반', order: ['today', 'book', 'charge', 'unpaid', 'desk', 'refund', 'close', 'import', 'share', 'set'] }
   };
   const flavorFor = type => type === 'univ' ? 'univ' : type === 'public' ? 'sports' : (type === 'k12' || type === 'adult') ? 'franchise' : type === 'lifelong' ? 'welfare' : 'std';
@@ -47,7 +47,7 @@
     franchise: ['hq', '본사', [['branch', '해운대점'], ['branch', '서면점'], ['branch', '동래점']]],
     univ: ['hq', '대학 본부', [['dept', '평생교육원'], ['dept', '국제교류처'], ['facility', '체육시설']]],
     sports: ['hq', '공단 본부', [['facility', '수영장'], ['facility', '헬스장']]],
-    welfare: ['hq', '복지관', [['dept', '본관 데스크'], ['dept', '별관 데스크']]],
+    welfare: ['hq', '평생교육원', [['dept', '본관'], ['dept', '분관']]], /* v43 D-E(P2 M4): 평생교육원(본부) · 본관 · 분관 */
     std: ['hq', '본원', [['branch', '분원']]]
   };
   const ITEMS_BY = { franchise: [['tuition', '월 수강료', 280000], ['book', '교재비', 25000]], univ: [['program', '비교과 프로그램', 120000], ['facility', '시설 이용료', 30000]], sports: [['pass', '월이용권', 70000], ['program', '수영 강습', 90000]], welfare: [['program', '프로그램 이용료', 30000], ['etc', '재료비', 10000]], std: [['tuition', '수강료', 200000], ['book', '교재비', 20000]] };
@@ -188,7 +188,7 @@
 
   /* ── 화면 ── */
   VIEWS.ledger = () => { ensure(); if (LIVEON()) livePull(); const tab = curTab(); const P = per(); const sm = summary(); const t = todo(); const U = units();
-    const opt = (u, dep) => `<option value="${esc(u.id)}" ${u.id === curUnit() ? 'selected' : ''}>${'　'.repeat(dep)}${esc(u.name)} (${esc(UKIND[u.kind] || u.kind)})</option>`;
+    const opt = (u, dep) => `<option value="${esc(u.id)}" ${u.id === curUnit() ? 'selected' : ''}>${'　'.repeat(dep)}${esc(u.name)} (${esc(u.kind === 'hq' && flavor() !== 'franchise' ? '본부' : UKIND[u.kind] || u.kind)})</option>`;
     const tree = []; const walk = (p, dep) => U.filter(u => (u.parentId || null) === p).sort((a, b) => (a.sort || 0) - (b.sort || 0)).forEach(u => { tree.push(opt(u, dep)); walk(u.id, dep + 1); }); walk(null, 0);
     const hasKids = U.some(u => u.parentId === curUnit());
     const bar = `<div class="lg-top"><label class="lg-unit"><span>단위</span><select data-chg="led-unit" aria-label="단위 선택">${tree.join('')}</select></label>
@@ -196,12 +196,16 @@
       <div class="lg-per" role="group" aria-label="기간">${[['this', '이번 달'], ['prev', '지난달'], ['q', '최근 3개월']].map(([k, l]) => `<button class="lg-chip ${P.p === k ? 'on' : ''}" data-act="led-per" data-v="${k}" aria-pressed="${P.p === k}">${l}</button>`).join('')}</div></div>`;
     const totU = t.s1 + t.s2 + t.s3; const urgent = t.refunds ? 'refund' : t.s3 || t.s2 ? 'unpaid' : t.unclosed.length ? 'close' : t.unmatched ? 'import' : 'today';
     const ai = `<div class="lg-ai" role="status"><span class="lg-ai-b">AI 요약</span><p>${esc(P.label)} 순매출 ${won(sm.net)}, 수납률 ${sm.collectRate}%입니다. ${totU ? `미납 ${totU}명 ${won(t.unpaidAmt)} 중 2단계 이상 ${t.s2 + t.s3}명입니다.` : '납기 지난 미납은 없습니다.'}${t.refunds ? ` 확정 대기 환불 ${t.refunds}건이 있습니다.` : ''}${t.unclosed.length ? ` 마감하지 않은 날이 ${new Set(t.unclosed.map(x => x.day || x)).size}일 있습니다.` : ''}</p>${urgent !== 'today' ? `<button class="btn sm" data-act="tab" data-key="ledger" data-v="${urgent}">${esc(TABN[urgent])} 보기</button>` : ''}</div>`;
-    const card = (l, v, sub, tone) => `<div class="lg-kpi ${tone || ''}"><span>${esc(l)}</span><b>${v}</b><small>${sub}</small></div>`;
+    const SPK = (v, k, tone) => { try { return window.L43 && !(S.org && S.org.empty) ? L43.spark(L43.sparkPts(v, 'lg' + k + v), tone) : ''; } catch (e) { return ''; } };
+    const card = (l, v, sub, tone) => `<div class="lg-kpi ${tone || ''}"><span>${esc(l)}</span><b>${v}</b><small>${sub}</small>${SPK(v, l, 'on')}</div>`;
     const kp = `<div class="lg-kpis">${card('순매출', won(sm.net), `수납 ${won(sm.paid)} − 환불 ${won(sm.refund)}`)}${card('수납률', sm.collectRate + '%', `청구 ${won(sm.charged || (sm.paid + sm.unpaid))} 기준`, sm.collectRate < 80 ? 'warn' : '')}${card('미수', won(sm.unpaid), `${esc(P.label)} 청구 중 미수납`, sm.unpaid ? 'bad' : '')}${card('환불', won(sm.refund), `환불 완료 기준`)}</div>`;
     const warn = LIVEON() && LV.err ? `<div class="lg-err" role="alert">${esc(LV.err)}</div>` : ''; const ro = teacher() ? '<p class="lg-ro">교강사 권한은 조회만 할 수 있습니다.</p>' : '';
     let body = ''; try { body = ({ today: vToday, book: vBook, charge: vCharge, unpaid: vUnpaid, desk: vDesk, refund: vRefund, close: vClose, import: vImport, share: vShare, set: vSet })[tab](sm, t); } catch (e) { console.error('ledger view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(e.message)}</div>`; }
     let v43 = ''; try { v43 = lg43(sm, t, P); } catch (e) { console.error('ledger v43', e); }
-    return `<div class="lg">${bar}${warn}${ai}${kp}${v43}${ro}${tabs('ledger', tabList(), tab)}<div class="lg-body" data-tab="${tab}">${body}</div><p class="lg-foot">숫자 기준: ${esc(P.from)} ~ ${esc(P.to)} · ${esc(uname(curUnit()))}${rollup() ? ' 및 하위 단위' : ''} · 원장 요약 함수 하나로 계산${LIVEON() ? ' · 운영 서버' : ' · 시연판'}</p></div>`; };
+    /* v43 D-E: AI 요약 띠 + KPI 4장 → 짙은 그린 히어로 한 장(시안 f-admin B2). .lg-ai p · .lg-kpi b는 그대로(테스트 · 화면 낭독) */
+    const DOW = ['일', '월', '화', '수', '목', '금', '토']; const d0 = new Date();
+    const hero = `<section class="lg-hero l43-brief l43-k-hero" aria-label="수납 브리핑"><div class="l43-bl"><p class="l43-eye"><span class="l43-ai" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor"/></svg>AI</span>수납 브리핑 · ${d0.getMonth() + 1}월 ${d0.getDate()}일(${DOW[d0.getDay()]})</p><h2 class="l43-hl">${esc(P.label)} 순매출 <em class="num">${won(sm.net)}</em>${totU ? `,<br>미납 <em class="co num">${totU}명</em>이 남았습니다.` : ',<br>납기 지난 미납은 없습니다.'}</h2>${ai}</div>${kp}</section>`;
+    return `<div class="lg">${bar}${warn}${hero}${v43}${ro}${tabs('ledger', tabList(), tab)}<div class="lg-body" data-tab="${tab}">${body}</div><p class="lg-foot">숫자 기준: ${esc(P.from)} ~ ${esc(P.to)} · ${esc(uname(curUnit()))}${rollup() ? ' 및 하위 단위' : ''} · 원장 요약 함수 하나로 계산${LIVEON() ? ' · 운영 서버' : ' · 시연판'}</p></div>`; };
   ACT['led-unit'] = el => { UI.ledU = el.value; LV.key = ''; render(); };
   ACT['led-roll'] = el => { UI.ledRoll = el.dataset.v === '1'; LV.key = ''; render(); };
   ACT['led-per'] = el => { UI.ledP = el.dataset.v; LV.key = ''; render(); };
@@ -364,7 +368,8 @@
     const rOf = id => LIVEON() ? rec.find(r => r.id === id) || (refs.find(f => f.receiptId === id && f.paid != null) ? (f => ({ sid: f.sid, method: f.method, amount: f.paid }))(refs.find(f => f.receiptId === id && f.paid != null)) : {}) : L().receipts.find(r => r.id === id) || {};
     const pend = refs.filter(f => f.status === 'pending'), done = refs.filter(f => f.status !== 'pending');
     return headD('환불', '규정으로 환불액을 자동 계산해 「확정 대기」로 둡니다. 직원이 확인하고 확정하면 토스 결제는 부분 취소가 요청되고, 단말 · 현금은 기록만 남습니다.', '')
-      + `<div class="lg-card"><div class="lg-ch"><b>확정 대기</b><small>${pend.length}건</small></div>${table(['신청', '학습자', '원 수납', '규정', '자동 계산', ''], pend.map(f => { const r = rOf(f.receiptId); return [esc(String(f.at).slice(0, 16)), esc(who(r.sid || f.sid)), `${esc(METH[r.method] || r.method || '')} ${won(r.amount)}`, esc(RULE[f.ruleType] || f.ruleType || '') + (f.calc && f.calc.lawCheck ? ' <small class="lg-law">법령 원문 확인 필요</small>' : ''), `<b>${won(f.autoAmount != null ? f.autoAmount : f.amount)}</b>`, B('led-ref-ok', '확인 · 확정', f.id, 'pri')]; }), '확정을 기다리는 환불이 없습니다.')}</div>`
+      + `<div class="lg-card"><div class="lg-ch"><b>확정 대기</b><small>${pend.length}건</small></div>${(() => { const LL = flavor() === 'welfare'; /* v43 D-E(P2 H1): 평생교육원 — 반환 신청일 + 5일 법정 기한 */ const dl = f => { const d0 = String(f.at || '').slice(0, 10); if (!d0) return '—'; const due = dPlus(d0, 5); const n = Math.round((new Date(due) - new Date(today())) / 864e5); return `${esc(due.slice(5).replace('-', '.'))} <span class="lg-st ${n <= 1 ? 'warn' : 'ok'}">${n < 0 ? `D+${-n}` : n === 0 ? 'D-day' : `D-${n}`}</span>`; };
+        return table(['신청', '학습자', '원 수납', '규정', ...(LL ? ['법정 기한'] : []), '자동 계산', ''], pend.map(f => { const r = rOf(f.receiptId); return [esc(String(f.at).slice(0, 16)), esc(who(r.sid || f.sid)), `${esc(METH[r.method] || r.method || '')} ${won(r.amount)}`, esc(RULE[f.ruleType] || f.ruleType || '') + (f.calc && f.calc.lawCheck ? ' <small class="lg-law">법령 원문 확인 필요</small>' : ''), ...(LL ? [dl(f)] : []), `<b>${won(f.autoAmount != null ? f.autoAmount : f.amount)}</b>`, B('led-ref-ok', '확인 · 확정', f.id, 'pri')]; }), '확정을 기다리는 환불이 없습니다.'); })()}</div>`
       + `<div class="lg-card"><div class="lg-ch"><b>환불 신청 · 계산</b><small>수납 완료 건에서 시작합니다</small></div><div class="lg-bar"><input class="lg-q" type="search" inputmode="numeric" placeholder="학습자 번호로 찾기" aria-label="학습자 번호로 찾기" value="${esc(UI.ledRq || '')}" data-chg="led-rq"></div>${table(['수납일', '학습자', '수단', '금액', ''], rec.filter(r => !UI.ledRq || String(r.sid || '').includes(UI.ledRq)).slice(0, 20).map(r => [esc(String(r.paidAt || r.at).slice(0, 10)), esc(who(r.sid)), esc(METH[r.method] || r.method || ''), won(r.amount), B('led-ref-new', '환불 계산', r.id)]), '이 기간 수납이 없습니다.')}</div>`
       + `<div class="lg-card"><div class="lg-ch"><b>처리 내역</b></div>${table(['일시', '학습자', '금액', '규정', '상태'], done.slice(0, 15).map(f => [esc(String(f.at).slice(0, 16)), esc(who((rOf(f.receiptId) || {}).sid)), won(f.amount), esc(RULE[f.ruleType] || f.ruleType || ''), st(FST, f.status) + (f.editReason ? ` <small>수정: ${esc(f.editReason)}</small>` : '')]), '처리한 환불이 없습니다.')}</div>`; }
   ACT['led-rq'] = el => { UI.ledRq = el.value.trim(); render(); };

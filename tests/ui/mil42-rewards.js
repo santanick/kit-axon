@@ -29,7 +29,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
   const T0 = await p.evaluate(() => { milOpen('k12'); milTab('rewards'); const ids = window.MIL_TABS.map(t => t.id); const cards = [...document.querySelectorAll('.mrw-rw')]; const tu = cards.find(c => /학원비 차감/.test(c.querySelector('.hd').textContent));
     return { ids, n: cards.length, recSame: tu ? tu.querySelectorAll('.mrw-rec.same').length : 0, rate: tu ? /1P = 1원/.test(tu.textContent) : false, note: !!document.querySelector('.mrw > .mrw-note.n-info'), lock: document.querySelectorAll('.mrw-locktag').length, pri: getComputedStyle(document.querySelector('.mrw .btn.pri')).backgroundColor }; });
   ok(['rewards', 'approvals', 'fraud'].every(i => T0.ids.includes(i)), 'MIL_TABS 3개 등록 ' + T0.ids);
-  ok(T0.n === 5 && T0.recSame >= 3 && T0.rate && T0.note && T0.lock === 0, '학원 카탈로그 5종 · 권장값 같음 배지 · 1P=1원 · 국비 안내(해당 과정 없음) ' + JSON.stringify(T0));
+  ok(T0.n === 5 && T0.recSame >= 3 && T0.rate && !T0.note && T0.lock === 0, '학원 카탈로그 5종 · 권장값 같음 배지 · 1P=1원 · 국비 안내 없음(v43 P3 F06: 국비 과정이 없는 학원에는 국비 문구를 보이지 않음) ' + JSON.stringify(T0));
   ok(T0.pri === 'rgb(0, 134, 45)', '주 버튼 #00862D(마일리지 화면 한정) ' + T0.pri);
   await shot('r1-rewards');
   const F1 = await p.evaluate(() => { S.classes[0].funded = true; render(); return { lock: !!document.querySelector('.mrw > .mrw-lock'), tags: document.querySelectorAll('.mrw-rw .mrw-locktag').length, cash: document.querySelectorAll('.mrw-rw .mrw-pill.info').length }; });

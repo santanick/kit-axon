@@ -261,7 +261,8 @@
   const extOf = e => { const r = e.ref || {}; const n = String((r.files && r.files[0] && r.files[0].name) || r.file || r.name || ''); const m = n.match(/\.(\w{2,5})$/); return m ? m[1].toUpperCase() : ''; };
   function thumb(e) { const k = (KIND[e.kind] || KIND.file)[2]; const id = ytOfE(e); const r = e.ref || {}; const L = lenOf(e);
     const st = e.origin === 'book' && r.color ? ` style="--bk:${esc(String(r.color).replace(/[^#\w(),.% ]/g, ''))}"` : '';
-    const inner = id ? `<img class="clb-thimg" src="https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg" alt="" loading="lazy">` : '';
+    const cvu = e.origin === 'book' && !id && window.V4 && V4.photo ? V4.photo(`${e.title} 도서 책`, e.id) : ''; /* v43 D-E: 디지털북은 단색 상자 대신 사진 표지 */
+    const inner = id ? `<img class="clb-thimg" src="https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg" alt="" loading="lazy">` : cvu ? `<span class="clb-cov" style="background-image:url('${esc(cvu)}')"></span>` : '';
     const cap = e.origin === 'book' ? `<b class="clb-thb">${esc(e.title)}</b>` : e.kind === 'file' && extOf(e) ? `<b class="clb-thx">${esc(extOf(e))}</b>` : '';
     return `<span class="clb-th k-${k}${id ? ' yt' : ''}"${st} aria-hidden="true"><span class="clb-thi">${ic((KIND[e.kind] || KIND.file)[1], 30)}${cap}</span>${inner}<em class="clb-thk">${esc(isLink(e) && e.kind === 'video' ? 'YouTube' : kName(e.kind))}</em>${L ? `<em class="clb-thl">${esc(L)}</em>` : ''}</span>`; }
   const useLine = e => { const U = e.uses; return U.length ? `<span class="clb-use on">${ic('check', 14)} ${esc(useLabel(U[0]))}${U.length > 1 ? ` 외 ${U.length - 1}곳` : ''}</span>` : `<span class="clb-use">아직 사용 안 함</span>`; };

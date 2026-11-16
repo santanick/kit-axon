@@ -232,7 +232,7 @@
     if (sub === 'pay') return wrap(subTabs + viewPay(list));
     const fc = fundedCls();
     const fundNote = t === 'voc' || fc.length ? lock('국비 지원 과정 적립분은 금전성 보상에 쓸 수 없습니다', NOTICE.FUND_OP + (fc.length ? ` 해당 과정: ${fc.map(c => c.name).join(', ')}.` : ' 국비 지원 과정으로 표시된 과정의 적립은 배지 · 인정 기록만 받습니다.'))
-      : note('info', '국비 지원 과정 적립분은 금전성 보상에서 자동으로 빠집니다', '학원비 차감 · 쿠폰 · 굿즈처럼 금전 가치가 있는 보상은 국비 지원 과정에서 쌓인 적립으로 쓸 수 없습니다. 배지 · 인정 기록은 그대로 받습니다. 지금 이 기관에는 해당 과정이 없습니다.');
+      : ['adult', 'k12', 'univ', 'public'].includes(t) ? '' /* v43 D-E(P3 F06): 국비 과정이 없는 학원 · 대학 · 공공에는 국비 안내를 보이지 않는다 */ : note('info', '국비 지원 과정 적립분은 금전성 보상에서 자동으로 빠집니다', '학원비 차감 · 쿠폰 · 굿즈처럼 금전 가치가 있는 보상은 국비 지원 과정에서 쌓인 적립으로 쓸 수 없습니다. 배지 · 인정 기록은 그대로 받습니다. 지금 이 기관에는 해당 과정이 없습니다.');
     const top = `<div class="mrw-head"><div><h2>보상</h2><p>디디쌤 값은 권장값입니다. 모든 값은 기관이 정하고, 권장값을 벗어나도 저장은 막지 않습니다.</p></div><div class="mrw-acts">${own ? `<button class="btn pri" data-act="mrw-rw-new">${ic('mrwPlus', 18)}보상 추가</button>` : ''}</div></div>`;
     const list2 = list.filter(w => kindsFor(t).includes(w.kind) || w.kind === 'tuition');
     const foot = `<div class="mrw-card mrw-row">${ic('info', 20)}<span class="f1">학습자가 신청하면 마일리지를 「사용 대기」로 잡아 두고, 반려하면 바로 돌려줍니다.${list2.some(w => w.kind === 'tuition') ? (minorOrg() ? ' 학원비 차감은 보호자 확인 → 운영자 확인 순서입니다.' : ' 학원비 차감은 운영자 확인 후 다음 청구서에 붙습니다.') : ''}</span><button class="btn sm" data-act="mrw-go" data-v="approvals">신청 · 승인으로 이동</button></div>`;

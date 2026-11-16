@@ -33,7 +33,7 @@
       acc: G, bg: '#FFFFFF', alt: '#F6F5F2', ink: '#121614', mu: '#4C534F', r: 22, br: 999, hero: 'split', vis: 'mock', illu: 'book', card: 'shadow', look: 'mintSoft', sw2: '#F6F5F2', base: 'clean', hk: 'cover', hp: 'brief', ck: 'photo' },
     todayfeed: { name: '오늘 피드', desc: '둥근 사진 카드와 모집 강좌 피드 · 학원 · 초중고에 친근하게', tags: ['k12', 'adult'], tone: 'light', dens: '보통',
       acc: G, bg: '#FBFCFB', alt: '#F1F5F2', ink: '#14191A', mu: '#4B5452', r: 22, br: 14, hero: 'split', vis: 'mock', illu: 'kids', card: 'shadow', look: 'brandBold', sw2: '#E6F4EA', base: 'warm', hk: 'desk', hp: 'feed', ck: 'photo', sh: '0 1px 2px rgba(16,24,20,.05),0 16px 36px -20px rgba(16,24,20,.26)' },
-    stage: { name: '무대', desc: '어두운 무대 바탕 · 사진이 주인공인 공연장 분위기(예체능 · 스포츠)', tags: ['adult', 'lifelong'], tone: 'dark', dens: '여유',
+    stage: { name: '무대', desc: '어두운 무대 바탕 · 사진이 주인공인 공연장 분위기(예체능 · 스포츠 · 체육시설)', tags: ['adult', 'lifelong', 'public'], tone: 'dark', dens: '여유',
       acc: G, bg: '#0D1110', alt: '#141A18', ink: '#F1F5F3', mu: '#AAB4AF', r: 16, br: 999, hero: 'dark', hb: '#0A0D0C', vis: 'mock', illu: 'book', card: 'line', look: 'navyGlow', sw2: '#0D1110', base: 'premium', hk: 'cover', hp: 'stage', ck: 'big' }
   };
   /* 글자 · 여백 · 모서리 · 그림자(hpdir 토큰 형식) — 밀도: 조밀(섹션 80~96) · 보통(112) · 여유(136) */
@@ -65,6 +65,7 @@
       x += `.hpt{--surf:${surf};--ln:${ln};--mu:${mu};--at:${at};--at2:${at};color-scheme:dark}
 .hpt,.hpt.hp-s,.hpt .hp-s{color:var(--ink)}.hpt .hp-s.hp-alt,.hpt.hp-s.hp-alt{background:var(--alt)}
 .hpt :is(.hp-card,.hp-cc,.hp-c1,.hps-c,.hps-card,.hps-pr,.hps-tb,.hp-faq details,.hp-nt li,.hp-rv,.hp-ci.lt li,.hp-mapv,.hps-it,.hps-rw){background:var(--surf)!important;color:var(--ink);border-color:var(--ln)!important;box-shadow:0 0 0 1px var(--ln)!important}
+.hpt :is(.hp-card,.hp-cc,.hp-c1,.hps-c,.hps-card,.hps-pr,.hps-tb,.hps-it,.hps-rw) :is(h3,h4,b,strong){color:${th.ink}!important}.hpt :is(.hp-card,.hp-cc,.hp-c1,.hps-c,.hps-card,.hps-pr,.hps-tb,.hps-it,.hps-rw) :is(p,small){color:${mu}!important}
 .hpt :is(table,th,td){border-color:var(--ln)!important}.hpt :is(th){background:${mix(th.bg, '#ffffff', .1)}!important;color:var(--ink)!important}
 .hpt :is(small,.hp-sd,.hp-lead,.hps-mu,.hps-meta,dd,dt,figcaption){color:var(--mu)}
 .hpt .hp-btn.gh,.hpt .hps-btn.g{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4)}
@@ -82,7 +83,7 @@
 
   /* ── 미리보기: 프리미엄은 실제 게시본(siteHTML)을 그대로 축소 — 첫 화면 사진 · 옆판까지 실제와 같다 ── */
   { const tb = HPT.thumb; HPT.thumb = (s, id) => { if (!DEF[id] || typeof siteHTML !== 'function') return tb(s, id);
-    try { const b = JSON.parse(JSON.stringify(s || (typeof site === 'function' ? site() : S.site))); HPT.apply(b, id, { keepColor: true }); delete b.layout;
+    try { const b = JSON.parse(JSON.stringify(s || (typeof site === 'function' ? site() : S.site))); HPT.apply(b, id, { keepColor: true }); delete b.layout; try { const tp = typeof TPL !== 'undefined' && TPL.find(t => t.id === 'prem-' + id); if (tp && typeof tp.build === 'function') b.sections = tp.build(); } catch (e) { } /* v43 D-E: 미리보기는 그 테마의 기본 섹션(첫 화면 문구 · 순서)으로 — 6종이 서로 달라 보이게 */
       const bn = (b.sections || []).find(x => x && x.type === 'banner'); if (bn && bn.data) { delete bn.data.hero; delete bn.data.hk; }
       return siteHTML(b, false, 'ko'); } catch (e) { console.error('hpprem thumb', e); return tb(s, id); } }; }
 
@@ -111,6 +112,22 @@
   const cta = (title, body, btn) => TX('cta', { eyebrow: '', title, body, cta: btn, cols: [] });
   const map = () => S2('map', { title: '오시는 길', addr: ft().addr || '', tel: ft().tel || '' });
   const org = () => { try { return S.org.name; } catch (e) { return ''; } };
+  /* v43 D-E(P2 C3): 체육시설 · 공단(공공 + 시설 템플릿 sports)은 무대 기본 섹션을 「시설 예약 · 운영 시간 · 시설 카드 · 요금표 · 오시는 길 · 공지」 순서로 */
+  const sportsFac = () => { try { return S.org.type === 'public' && S.fac && S.fac.tpl === 'sports' && (S.fac.facilities || []).some(f => f.on !== false); } catch (e) { return false; } };
+  const W = v => (+v || 0).toLocaleString('ko-KR') + '원';
+  function sportsBuild() { const FS = S.fac.facilities.filter(f => f.on !== false); const TF = FS.filter(f => f.kind === 'time');
+    const hr = (f, d) => { const h = f && f.hours && f.hours[d]; return h ? `${h[0]}–${h[1]}` : '휴관'; }; const f0 = TF[0] || FS[0];
+    const cl = (FS.find(f => (f.closed || []).length) || { closed: [] }).closed[0];
+    const unit = f => (+f.slotMin || 60) >= 60 ? `${Math.round((+f.slotMin || 60) / 60)}시간` : `${f.slotMin}분`;
+    const price = f => { const p = f.prices || {}; const g = k => +((p[k] || {}).slot) || 0; return g('public') || g('staff') || g('student') ? [`일반 ${W(g('public'))}`, p.staff ? `지역주민 ${W(g('staff'))}` : '', p.student ? `감면 ${W(g('student'))}` : ''].filter(Boolean).join(' · ') + ` (${unit(f)})` : '무료'; };
+    const pr = TF.filter(f => !f.approval).slice(0, 4).map(f => [f.name, price(f)]); const ps = (S.fac.products || []).filter(x => x.type === 'pass-period').slice(0, 1).map(x => [x.name, `일반 ${W((x.prices || {}).public)}`]);
+    return [ban({ eyebrow: '시설 예약 · 강습', title: `오늘 바로\n예약할 수 있어요`, sub: `${TF.slice(0, 3).map(f => f.name.replace(/\s*(타석|코트|룸)$/, '')).join(' · ')} 빈 시간을 보고 1분 안에 예약해요.`, cta: '시설 예약', cta2: '강습 신청' }),
+      TX('info', { hpt: 'sp-hours', eyebrow: 'OPEN HOURS', title: '운영 시간', cols: [['평일', `${hr(f0, 1)}`], ['토요일', hr(f0, 6)], ['일요일 · 공휴일', hr(f0, 0)], ['휴관', cl ? `${cl.from.slice(5).replace('-', '.')} ${cl.reason || '휴관'} · 공지로 안내` : '휴관일은 공지로 안내해요']] }),
+      TX('features', { eyebrow: 'FACILITIES', title: '예약할 수 있는 시설', cols: FS.slice(0, 4).map(f => [f.name, `${f.place ? f.place + ' · ' : ''}${f.kind === 'time' ? (f.approval ? '승인 후 확정' : '바로 예약') : f.kind === 'pass' ? '이용권' : '대여'}`]) }),
+      TX('info', { eyebrow: 'PRICE', title: '요금표', cols: [...pr, ...ps].slice(0, 4) }),
+      cls('강습 프로그램', '', 4),
+      TX('info', { eyebrow: 'DIRECTIONS', title: '오시는 길 · 주차', cols: [['주소', ft().addr || '기본 정보에서 주소를 입력하면 여기에 보여요'], ['주차', '방문 차량은 프런트에서 등록하면 2시간 무료예요'], ['감면', '감면 대상은 첫 방문 때 프런트에서 확인해요'], ['문의', ft().tel || '프런트로 문의해 주세요']] }),
+      S2('map', { title: '오시는 길', place: org(), pin: { x: 52, y: 46 }, addr: ft().addr || '주소는 기본 정보에서 입력해 주세요', tel: ft().tel || '', hours: f0 ? `평일 ${hr(f0, 1)} · 토 ${hr(f0, 6)}` : '' }), notices('공지사항')]; }
   const T = {
     coursedesk: { scene: '과정이 많은 대학 · 평생교육원 — 모집 강좌를 첫 화면 옆판에서 바로', purpose: ['learn', 'apply'],
       build: () => [ban({ eyebrow: '이번 학기 모집', title: `${org()}\n배우고 싶은 과정을 한곳에서`, sub: '모집 중인 과정과 수강 방법을 확인하고, 마음에 드는 과정을 바로 신청하세요.', cta: '과정 둘러보기', cta2: '수강 상담' }),
@@ -136,9 +153,14 @@
         cls('모집 중인 수업', '반별 일정과 대상을 확인하세요.', 4), facts(), notices('학원 소식'), reviews('학부모 · 학생 이야기'),
         cta('상담은 언제든 편하게', '수업과 반 배정을 상담해 드려요.', '상담 신청'), map()] },
     stage: { scene: '예체능 · 스포츠센터 · 평생교육 — 어두운 무대와 사진이 주인공', purpose: ['brand', 'apply'],
-      build: () => [ban({ eyebrow: 'CLASS ON STAGE', title: `${org()}\n오늘의 무대에 올라 보세요`, sub: '실력에 맞는 반을 고르고, 사진과 영상으로 수업 분위기를 먼저 확인하세요.', cta: '클래스 보기', cta2: '체험 신청' }),
+      build: () => sportsFac() ? sportsBuild() : [ban({ eyebrow: 'CLASS ON STAGE', title: `${org()}\n오늘의 무대에 올라 보세요`, sub: '실력에 맞는 반을 고르고, 사진과 영상으로 수업 분위기를 먼저 확인하세요.', cta: '클래스 보기', cta2: '체험 신청' }),
         cls('지금 열린 클래스', '', 4), facts(), reviews('수강생 이야기'), notices('소식'), cta('체험 수업 신청', '처음이라면 체험 수업부터 시작해 보세요.', '체험 신청'), map()] }
   };
+  /* 체육시설 무대: 공공 기본 배치(공지를 첫 화면 바로 아래로)를 따르지 않고 공지는 맨 끝(P2 C3 ⑥) */
+  if (typeof HPT.enrich === 'function') { const e0 = HPT.enrich; HPT.enrich = s => { const r = e0(s); try { const L = s && s.sections; if (Array.isArray(L) && L.some(x => x && x.data && x.data.hpt === 'sp-hours')) { const k = L.findIndex(x => x && x.type === 'notices'); if (k >= 0 && k !== L.length - 1) { const [n] = L.splice(k, 1); L.push(n); } } } catch (e) { console.error('hpprem enrich', e); } return r; }; }
+  /* 체육시설 무대: 실내 · 운동장 체육 사진으로(카페 · 교실 사진 대신) */
+  if (typeof siteFromTpl === 'function' && !siteFromTpl.hpsp) { const base = siteFromTpl; const f = tp => { const s = base(tp); try { if (tp && tp.id === 'prem-stage' && sportsFac() && window.HPSTOCK && typeof HPSTOCK.slotImg === 'function') { s.photos = { hero: 'spo-03', about: 'spo-05', space: 'spo-07', cta: 'spo-01' }; s.img = s.img || {}; Object.keys(s.photos).forEach(sl => { const v = HPSTOCK.slotImg(s.photos[sl], sl); if (v) s.img[sl] = v; }); } } catch (e) { console.error('hpprem sports', e); } return s; };
+    Object.keys(base).forEach(k => { try { f[k] = base[k]; } catch (e) { } }); f.hpsp = 1; siteFromTpl = f; window.siteFromTpl = f; }
   PREM.forEach(id => { if (TPL.some(t => t.id === 'prem-' + id)) return; const c = T[id];
     TPL.push({ id: 'prem-' + id, name: DEF[id].name, types: ['prem', ...DEF[id].tags.filter(k => k !== 'univ_lms')], scene: c.scene, color: G, tone: DEF[id].r >= 20 ? '친근' : DEF[id].r <= 8 ? '신뢰' : '모던', look: DEF[id].look, theme: id, hero: '', purpose: c.purpose, prem: 1, build: c.build }); });
 })();
