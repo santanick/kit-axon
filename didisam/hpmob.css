@@ -1,1 +1,12 @@
 /* v34.5 hpmob */
+/* v43.4 MC 빌더 편집 패널(119~127) 휴대폰 폭: 행 단추 44px, 메뉴 행은 이름을 한 줄 전체로 두고 연결 칩 · 단추를 아래 줄로 */
+@media (max-width:760px){
+body .tpd-wz .btn{min-height:44px!important;height:44px}
+.hps-sl9 .hps-sib{width:44px;height:44px}
+body .hps-panw #hpmBox .hpm-r{flex-wrap:wrap;row-gap:6px}
+body .hps-panw #hpmBox .hpm-n{flex:1 1 calc(100% - 34px);min-width:0;min-height:44px!important}
+body .hps-panw #hpmBox .hpm-chip{min-height:44px;max-width:none;flex:1 1 0;min-width:0;margin-left:24px}
+body .hps-panw #hpmBox .hpm-i:not(.ed) .hpm-bt{width:auto;margin-left:auto;flex-wrap:nowrap}
+body .hps-panw #hpmBox .hpm-bt .btn,body #hpmBox .hpm-bt .btn{width:44px;height:44px;min-width:44px}
+body .hps-panw #hpmBox .hpm-dz .btn,body #hpmBox .hpm-dz .btn{min-height:44px;font-size:13px}
+}

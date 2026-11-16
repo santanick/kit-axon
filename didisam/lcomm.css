@@ -87,55 +87,64 @@
 .nt>.lcmd{padding:4px 18px 16px;font-size:14px;line-height:1.7}.mycard .nt>.lcmd{padding:0 0 12px}.ncard>.lcmd{padding-top:10px}
 
 /* ═════════ v43 D-C — 공지(#notice) 고정 공지 사진 카드 ═════════ */
-html body:not(.lapp) .nt43pin{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 22px}
-html body:not(.lapp) a.nt43c{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:150px;border-radius:22px;overflow:hidden;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh);color:var(--ink);text-decoration:none;transition:transform .15s,box-shadow .15s}
-html body:not(.lapp) a.nt43c:hover{transform:translateY(-2px);box-shadow:var(--q2-sh2)}
-html body:not(.lapp) .nt43ph{position:relative;background:#0b1a12 center/cover no-repeat}
-html body:not(.lapp) .nt43ph::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,16,10,0) 40%,rgba(4,16,10,.55))}
-html body:not(.lapp) .nt43ph em{position:absolute;left:12px;top:12px;z-index:1;display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px;border-radius:999px;background:var(--pri);color:var(--pri-ink,#fff);font-style:normal;font-size:12px;font-weight:800}
-html body:not(.lapp) .nt43b{display:flex;flex-direction:column;gap:6px;padding:18px 20px}
-html body:not(.lapp) .nt43b small{align-self:flex-start;display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--q2-t1);color:var(--pri-tx,var(--pri));font-size:12px;font-weight:700}
-html body:not(.lapp) .nt43b b{font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.35}
-html body:not(.lapp) .nt43b p{margin:0;font-size:14px;line-height:1.55;color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-html body:not(.lapp) .nt43b time{margin-top:auto;font-size:13px;color:var(--mute)}
-@media (max-width:760px){html body:not(.lapp) .nt43pin{grid-template-columns:1fr}html body:not(.lapp) a.nt43c{grid-template-columns:116px minmax(0,1fr);min-height:132px}html body:not(.lapp) .nt43b{padding:14px 16px}html body:not(.lapp) .nt43b b{font-size:16px}}
+html body:not(.lapp) .nt43pin,html body.lapp .nt43pin{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 22px}
+html body:not(.lapp) a.nt43c,html body.lapp a.nt43c{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:150px;border-radius:22px;overflow:hidden;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh);color:var(--ink);text-decoration:none;transition:transform .15s,box-shadow .15s}
+html body:not(.lapp) a.nt43c:hover,html body.lapp a.nt43c:hover{transform:translateY(-2px);box-shadow:var(--q2-sh2)}
+html body:not(.lapp) .nt43ph,html body.lapp .nt43ph{position:relative;background:#0b1a12 center/cover no-repeat}
+html body:not(.lapp) .nt43ph::after,html body.lapp .nt43ph::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,16,10,0) 40%,rgba(4,16,10,.55))}
+html body:not(.lapp) .nt43ph em,html body.lapp .nt43ph em{position:absolute;left:12px;top:12px;z-index:1;display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px;border-radius:999px;background:var(--pri);color:var(--pri-ink,#fff);font-style:normal;font-size:12px;font-weight:800}
+html body:not(.lapp) .nt43b,html body.lapp .nt43b{display:flex;flex-direction:column;gap:6px;padding:18px 20px}
+html body:not(.lapp) .nt43b small,html body.lapp .nt43b small{align-self:flex-start;display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--q2-t1);color:var(--pri-tx,var(--pri));font-size:12px;font-weight:700}
+html body:not(.lapp) .nt43b b,html body.lapp .nt43b b{font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.35}
+html body:not(.lapp) .nt43b p,html body.lapp .nt43b p{margin:0;font-size:14px;line-height:1.55;color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+html body:not(.lapp) .nt43b time,html body.lapp .nt43b time{margin-top:auto;font-size:13px;color:var(--mute)}
+@media (max-width:760px){html body:not(.lapp) .nt43pin,html body.lapp .nt43pin{grid-template-columns:1fr}html body:not(.lapp) a.nt43c,html body.lapp a.nt43c{grid-template-columns:116px minmax(0,1fr);min-height:132px}html body:not(.lapp) .nt43b,html body.lapp .nt43b{padding:14px 16px}html body:not(.lapp) .nt43b b,html body.lapp .nt43b b{font-size:16px}}
 /* v43 R8 096: 공지 = 8+4 · 분류 칩 · 카드 목록 */
-html body:not(.lapp) .nt43g{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
-html body:not(.lapp) .nt43pin.nt43p2{grid-template-columns:1fr 1fr}
-html body:not(.lapp) .nt43p2 a.nt43c{grid-template-columns:1fr;grid-template-rows:140px auto}
-html body:not(.lapp) .nt43f{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
-html body:not(.lapp) .nt43f button{height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--q2-bd);background:var(--surface,#fff);font:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
-html body:not(.lapp) .nt43f button small{margin-left:4px;font-size:13px;color:var(--mute)}
-html body:not(.lapp) .nt43f button.on{background:var(--ink);border-color:var(--ink);color:#fff}html body:not(.lapp) .nt43f button.on small{color:#cfd8d2}
-html body:not(.lapp) .nlist.n26.nt43l{background:none;border:0;box-shadow:none;overflow:visible;display:flex;flex-direction:column;gap:10px}
-html body:not(.lapp) .nlist.n26.nt43l details.nt{border-radius:18px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
-html body:not(.lapp) .nlist.n26.nt43l details.nt>summary{grid-template-columns:auto minmax(0,1fr) auto auto auto!important;min-height:72px;padding:16px 20px}
-html body:not(.lapp) .nlist.n26.nt43l .n26no{display:none}
-html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>.tcat{grid-column:1!important}
-html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>b{grid-column:2!important;font-size:16px}
-html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>em.lcun{grid-column:3!important}
-html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>em.new{grid-column:4!important}
-html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>time{grid-column:5!important;color:var(--mute);font-size:14px}
-html body:not(.lapp) .nt43s{display:flex;flex-direction:column;gap:14px;position:sticky;top:96px}
-html body:not(.lapp) .nt43sc{padding:20px;border-radius:20px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
-html body:not(.lapp) .nt43sc h3{margin:0 0 6px;font-size:18px;font-weight:800}
-html body:not(.lapp) .nt43sc .mini{margin:0 0 12px;font-size:14px;line-height:1.55}
-html body:not(.lapp) .nt43sc .lbtn{width:100%;justify-content:center}
-html body:not(.lapp) .nt43k{display:flex;align-items:center;gap:6px;margin:0 0 10px;font-size:13px;font-weight:700;color:var(--pri-tx,var(--pri))}
-html body:not(.lapp) .nt43dk{background:radial-gradient(120% 140% at 100% 0,#1f7a3a 0,transparent 55%),linear-gradient(135deg,#0d3b20,#06170d);border-color:transparent;color:#fff}
-html body:not(.lapp) .nt43dk .nt43k{color:#9CF5B8}html body:not(.lapp) .nt43dk .mini{color:#CFE3D6}
-html body:not(.lapp) .nt43ev{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:10px}
-html body:not(.lapp) .nt43ev li{display:flex;gap:12px;align-items:center}
-html body:not(.lapp) .nt43ev .nt43d{flex:none;width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.1);display:flex;flex-direction:column;align-items:center;justify-content:center}
-html body:not(.lapp) .nt43ev .nt43d b{font-size:15px}html body:not(.lapp) .nt43ev .nt43d small{font-size:12px;color:#9CF5B8;font-weight:700}
-html body:not(.lapp) .nt43ev li>span:last-child b{display:block;font-size:14px;line-height:1.35}html body:not(.lapp) .nt43ev li>span:last-child small{font-size:13px;color:#CFE3D6}
-html body:not(.lapp) .nt43lk{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;padding:12px 0;border-top:1px solid var(--q2-bd);color:var(--ink);text-decoration:none}
-html body:not(.lapp) .nt43lk b{font-size:15px}html body:not(.lapp) .nt43lk small{grid-row:2;font-size:13px;color:var(--mute)}html body:not(.lapp) .nt43lk svg{grid-row:1/3;grid-column:2;color:var(--mute)}
-@media (max-width:900px){html body:not(.lapp) .nt43g{grid-template-columns:1fr}html body:not(.lapp) .nt43s{position:static}}
+html body:not(.lapp) .nt43g,html body.lapp .nt43g{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+html body:not(.lapp) .nt43pin.nt43p2,html body.lapp .nt43pin.nt43p2{grid-template-columns:1fr 1fr}
+html body:not(.lapp) .nt43p2 a.nt43c,html body.lapp .nt43p2 a.nt43c{grid-template-columns:1fr;grid-template-rows:140px auto}
+html body:not(.lapp) .nt43f,html body.lapp .nt43f{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+html body:not(.lapp) .nt43f button,html body.lapp .nt43f button{height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--q2-bd);background:var(--surface,#fff);font:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
+html body:not(.lapp) .nt43f button small,html body.lapp .nt43f button small{margin-left:4px;font-size:13px;color:var(--mute)}
+html body:not(.lapp) .nt43f button.on,html body.lapp .nt43f button.on{background:var(--ink);border-color:var(--ink);color:#fff}html body:not(.lapp) .nt43f button.on small,html body.lapp .nt43f button.on small{color:#cfd8d2}
+html body:not(.lapp) .nlist.n26.nt43l,html body.lapp .nlist.n26.nt43l{background:none;border:0;box-shadow:none;overflow:visible;display:flex;flex-direction:column;gap:10px}
+html body:not(.lapp) .nlist.n26.nt43l details.nt,html body.lapp .nlist.n26.nt43l details.nt{border-radius:18px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary,html body.lapp .nlist.n26.nt43l details.nt>summary{grid-template-columns:auto minmax(0,1fr) auto auto auto!important;min-height:72px;padding:16px 20px}
+html body:not(.lapp) .nlist.n26.nt43l .n26no,html body.lapp .nlist.n26.nt43l .n26no{display:none}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>.tcat,html body.lapp .nlist.n26.nt43l details.nt>summary>.tcat{grid-column:1!important}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>b,html body.lapp .nlist.n26.nt43l details.nt>summary>b{grid-column:2!important;font-size:16px}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>em.lcun,html body.lapp .nlist.n26.nt43l details.nt>summary>em.lcun{grid-column:3!important}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>em.new,html body.lapp .nlist.n26.nt43l details.nt>summary>em.new{grid-column:4!important}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>time,html body.lapp .nlist.n26.nt43l details.nt>summary>time{grid-column:5!important;color:var(--mute);font-size:14px}
+html body:not(.lapp) .nt43s,html body.lapp .nt43s{display:flex;flex-direction:column;gap:14px;position:sticky;top:96px}
+html body:not(.lapp) .nt43sc,html body.lapp .nt43sc{padding:20px;border-radius:20px;background:var(--surface,#fff);border:1px solid var(--q2-bd);box-shadow:var(--q2-sh)}
+html body:not(.lapp) .nt43sc h3,html body.lapp .nt43sc h3{margin:0 0 6px;font-size:18px;font-weight:800}
+html body:not(.lapp) .nt43sc .mini,html body.lapp .nt43sc .mini{margin:0 0 12px;font-size:14px;line-height:1.55}
+html body:not(.lapp) .nt43sc .lbtn,html body.lapp .nt43sc .lbtn{width:100%;justify-content:center}
+html body:not(.lapp) .nt43k,html body.lapp .nt43k{display:flex;align-items:center;gap:6px;margin:0 0 10px;font-size:13px;font-weight:700;color:var(--pri-tx,var(--pri))}
+html body:not(.lapp) .nt43dk,html body.lapp .nt43dk{background:radial-gradient(120% 140% at 100% 0,#1f7a3a 0,transparent 55%),linear-gradient(135deg,#0d3b20,#06170d);border-color:transparent;color:#fff}
+html body:not(.lapp) .nt43dk .nt43k,html body.lapp .nt43dk .nt43k{color:#9CF5B8}html body:not(.lapp) .nt43dk .mini,html body.lapp .nt43dk .mini{color:#CFE3D6}
+html body:not(.lapp) .nt43ev,html body.lapp .nt43ev{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:10px}
+html body:not(.lapp) .nt43ev li,html body.lapp .nt43ev li{display:flex;gap:12px;align-items:center}
+html body:not(.lapp) .nt43ev .nt43d,html body.lapp .nt43ev .nt43d{flex:none;width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.1);display:flex;flex-direction:column;align-items:center;justify-content:center}
+html body:not(.lapp) .nt43ev .nt43d b,html body.lapp .nt43ev .nt43d b{font-size:15px}html body:not(.lapp) .nt43ev .nt43d small,html body.lapp .nt43ev .nt43d small{font-size:12px;color:#9CF5B8;font-weight:700}
+html body:not(.lapp) .nt43ev li>span:last-child b,html body.lapp .nt43ev li>span:last-child b{display:block;font-size:14px;line-height:1.35}html body:not(.lapp) .nt43ev li>span:last-child small,html body.lapp .nt43ev li>span:last-child small{font-size:13px;color:#CFE3D6}
+html body:not(.lapp) .nt43lk,html body.lapp .nt43lk{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;padding:12px 0;border-top:1px solid var(--q2-bd);color:var(--ink);text-decoration:none}
+html body:not(.lapp) .nt43lk b,html body.lapp .nt43lk b{font-size:15px}html body:not(.lapp) .nt43lk small,html body.lapp .nt43lk small{grid-row:2;font-size:13px;color:var(--mute)}html body:not(.lapp) .nt43lk svg,html body.lapp .nt43lk svg{grid-row:1/3;grid-column:2;color:var(--mute)}
+@media (max-width:900px){html body:not(.lapp) .nt43g,html body.lapp .nt43g{grid-template-columns:1fr}html body:not(.lapp) .nt43s,html body.lapp .nt43s{position:static}}
+/* v43.4 MC(096): 휴대폰 공지 — 고정 공지 2장은 한 줄씩(사진 왼쪽), 목록 행은 분류 · 제목 · 날짜 3줄, 분류 칩은 44px */
+@media (max-width:760px){html body:not(.lapp) .nt43pin.nt43p2,html body.lapp .nt43pin.nt43p2{grid-template-columns:1fr;gap:10px}html body:not(.lapp) .nt43p2 a.nt43c,html body.lapp .nt43p2 a.nt43c{grid-template-columns:112px minmax(0,1fr);grid-template-rows:auto;min-height:124px}html body:not(.lapp) .nt43p2 a.nt43c,html body.lapp .nt43p2 a.nt43c{grid-template-columns:124px minmax(0,1fr)}html body:not(.lapp) .nt43ph em,html body.lapp .nt43ph em{left:6px;right:6px;top:6px;justify-content:center;gap:3px;height:26px;padding:0 6px;white-space:nowrap}html body:not(.lapp) .nt43b small,html body.lapp .nt43b small{display:block;max-width:100%;height:auto;line-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}html body:not(.lapp) .nt43b,html body.lapp .nt43b{padding:12px 14px;gap:4px}html body:not(.lapp) .nt43b b,html body.lapp .nt43b b{font-size:15px}
+html body:not(.lapp) .nt43f button,html body.lapp .nt43f button{min-height:44px;height:auto}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary,html body.lapp .nlist.n26.nt43l details.nt>summary{grid-template-columns:minmax(0,1fr) auto!important;row-gap:6px;padding:14px 16px;min-height:0}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>.tcat,html body.lapp .nlist.n26.nt43l details.nt>summary>.tcat{grid-column:1!important;grid-row:1;justify-self:start}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>em.lcun,html body.lapp .nlist.n26.nt43l details.nt>summary>em.lcun{grid-column:2!important;grid-row:1}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>b,html body.lapp .nlist.n26.nt43l details.nt>summary>b{grid-column:1/-1!important;grid-row:2;font-size:15px;white-space:normal}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>time,html body.lapp .nlist.n26.nt43l details.nt>summary>time{grid-column:1!important;grid-row:3;font-size:13px}
+html body:not(.lapp) .nlist.n26.nt43l details.nt>summary>em.new,html body.lapp .nlist.n26.nt43l details.nt>summary>em.new{grid-column:2!important;grid-row:3}}
 /* v43 R8 098: 메시지 행 높이 · 발신자 아바타 확대 */
-html body:not(.lapp) #lm .lcrow43{min-height:88px;padding:16px 22px;gap:16px}
-html body:not(.lapp) #lm .lcrow43 .r4av{width:48px;height:48px;font-size:17px}
-@media (min-width:561px){html body:not(.lapp) #lm .r4row.lcrow43{grid-template-columns:48px minmax(0,1fr) auto}}
-html body:not(.lapp) #lm .lcrow43 .r4t b{font-size:16px}
-html body:not(.lapp) #lm .lcrow43 .r4t span{font-size:14px}
-html body:not(.lapp) #lm .lcrow43 .r4t small{font-size:13px;font-weight:700}
+html body:not(.lapp) #lm .lcrow43,html body.lapp #lm .lcrow43{min-height:88px;padding:16px 22px;gap:16px}
+html body:not(.lapp) #lm .lcrow43 .r4av,html body.lapp #lm .lcrow43 .r4av{width:48px;height:48px;font-size:17px}
+@media (min-width:561px){html body:not(.lapp) #lm .r4row.lcrow43,html body.lapp #lm .r4row.lcrow43{grid-template-columns:48px minmax(0,1fr) auto}}
+html body:not(.lapp) #lm .lcrow43 .r4t b,html body.lapp #lm .lcrow43 .r4t b{font-size:16px}
+html body:not(.lapp) #lm .lcrow43 .r4t span,html body.lapp #lm .lcrow43 .r4t span{font-size:14px}
+html body:not(.lapp) #lm .lcrow43 .r4t small,html body.lapp #lm .lcrow43 .r4t small{font-size:13px;font-weight:700}
