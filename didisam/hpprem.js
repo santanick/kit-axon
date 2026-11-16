@@ -69,10 +69,11 @@
 .hpt :is(table,th,td){border-color:var(--ln)!important}.hpt :is(th){background:${mix(th.bg, '#ffffff', .1)}!important;color:var(--ink)!important}
 .hpt :is(small,.hp-sd,.hp-lead,.hps-mu,.hps-meta,dd,dt,figcaption){color:var(--mu)}
 .hpt .hp-btn.gh,.hpt .hps-btn.g{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4)}
+/* v43 F2: 마지막 줄 a{color:inherit}에서 .hpl-btn을 뺀다 — 레이아웃 렌더러 주 버튼(.hpl-btn.pri) 글자가 var(--on) 대신 무대 글자색(--ink)을 물려받아 초록 위 대비 4.29였던 것 → 흰 글자 4.7 */
 /* v43 K2(D-E 인계): 레이아웃 렌더러(hplay · pt-*) 흰 면 · 흰 버튼도 무대 면으로 — 흰 바탕 위 밝은 글자(대비 1:1)가 되던 것 */
 .hpt :is(.pt-qk,.pt-fg,.pt-fg>li,.pt-fg>div,.pt-srch){background:var(--surf)!important;border-color:var(--ln)!important;box-shadow:0 0 0 1px var(--ln)!important}.hpt :is(.pt-qk,.pt-fg) :is(h3,b,strong){color:${th.ink}!important}.hpt :is(.pt-qk,.pt-fg) p{color:${mu}!important}.hpt .pt-srch .pt-sp{color:${mu}!important}
 .hpt :is(.hpl-btn.wh,.hps-cta),.hpt-stage .hps-cta{background:#ffffff!important;color:#14191A!important}.hpt :is(.hpl-btn.wh,.hps-cta) *,.hpt-stage .hps-cta *{color:#14191A!important}
-.hpt .hps-bd{color:#14191A!important}.hpt .hps-bd.is-on{color:var(--on-a)!important}.hpt .hp-ey,.hpt .hps-ey{color:var(--at)}.hpt a:not(.hp-btn):not(.hps-btn){color:inherit}`; }
+.hpt .hps-bd{color:#14191A!important}.hpt .hps-bd.is-on{color:var(--on-a)!important}.hpt .hp-ey,.hpt .hps-ey{color:var(--at)}.hpt a:not(.hp-btn):not(.hps-btn):not(.hpl-btn){color:inherit}`; }
     return x; }
 
   Object.keys(DEF).forEach(id => { const d = Object.assign({ prem: 1, cssX }, DEF[id]); HPT.reg(id, d); try { if (window.HPD && typeof HPD.reg === 'function') HPD.reg(id, HD[id]); } catch (e) { console.error('hpprem HPD', e); } });
