@@ -174,14 +174,14 @@
 .da-no{color:var(--g500)}
 /* 자동 점검(44px): 탭 · 보기 전환 · 칩 버튼 높이 */
 #main.l43 button[data-act="tab"],#main.da43 button[data-act="tab"],#main [data-act="cm-mc-mode"],#main [data-act="cs-u"],#main [data-act="cx-view"],#main[data-l43="dash"] button[data-act="chat-q"],#main[data-l43="dash"] button[data-act="go"],#main [data-act="cls-back"]{min-height:44px}
-#main .v4-tl .v4-blk{position:relative}
+#main .v4-tl .v4-blk{position:absolute}
 #main .v4-tl .v4-blk::after{content:"";position:absolute;left:0;right:0;top:-7px;bottom:-7px}
 .da-no{color:var(--g700)}
 #main button[data-act="tab"],#main [data-act="cm-mc-mode"],#main [data-act="cs-u"],#main [data-act="cx-view"]{height:auto!important;min-height:44px!important}
 #main .cx-ev,#main .cx-dn,#main [data-act="sl-tip"]{position:relative}
 #main .cx-ev::after{content:"";position:absolute;left:0;right:0;top:-10px;bottom:-10px}
 #main .cx-dn::after,#main [data-act="sl-tip"]::after{content:"";position:absolute;left:-6px;right:-6px;top:-12px;bottom:-12px}
-#main .v4-blk{position:relative}
+#main .v4-tl .v4-trk{height:44px}#main .v4-tl .v4-blk{position:absolute;top:0;bottom:0} /* 간트 막대는 트랙 기준 절대 위치(relative면 막대가 흐름으로 밀려 카드 밖으로 흩어짐) */
 #main .v4-blk::after{content:""!important;position:absolute!important;left:0;right:0;top:-10px!important;bottom:-10px!important}
 #main button[data-act="chat-q"],#main button[data-act="go"],#main button[data-act="ux-find"]{min-height:44px}
 #main .clb-thk,#main .clb-thl{background:rgba(4,20,10,.92)!important;color:#fff!important}
@@ -535,4 +535,13 @@
   .f1-jdrag{min-width:44px}
   /* 018 메시지: 새 메시지 입력 상자가 좁은 칸에 눌려 4~5글자씩 꺾이던 것 → 쓰기 버튼은 아래 줄 */
   .f1-cbar{flex-wrap:wrap}.f1-cbq{flex:1 1 calc(100% - 58px)}.f1-cbar>.btn{flex:1 1 100%;justify-content:center;min-height:44px}
+}
+/* v43.4 P1 · 027 휴대폰: 진단 카드 1열(그래픽 위 배지 · 라벨 분리), 버튼은 가로 한 줄 */
+@media (max-width:760px){
+  #main .r1-dgl{grid-template-columns:minmax(0,1fr);gap:12px}
+  .r1-dgi{aspect-ratio:auto;height:112px}
+  .r1-dgi .tag{top:10px;right:10px}
+  .r1-dgm{left:12px;bottom:10px;font-size:13px}
+  #main .r1-dgc .bar2{display:flex;flex-wrap:wrap;gap:8px}
+  #main .r1-dgc .bar2>.btn{flex:1 1 0;min-height:44px;white-space:nowrap}
 }

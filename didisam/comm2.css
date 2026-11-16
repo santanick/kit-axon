@@ -132,3 +132,16 @@ mark{background:#ffe58a;border-radius:3px;padding:0 2px}
 #main .cmn-bar .cmn-ch{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1}
 #main .cmn-bar .cmn-ch .r1-chip{flex:none;white-space:nowrap}
 #main .bar2.cmn-bar{flex-wrap:nowrap}
+/* v43.4 P1 · 020 휴대폰: 채널톡 안내 카드는 버튼을 아래 줄 전폭으로(글 폭 확보), 「요약 대기」는 숫자 크기 대신 상태 배지 */
+@media (max-width:760px){
+  #main .cs43-conn{flex-wrap:wrap;align-items:flex-start}
+  #main .cs43-conn .cs43-ct{flex:1 1 calc(100% - 54px)}
+  #main .cs43-conn>.btn,#main .cs43-conn>button{flex:1 1 100%;min-height:44px}
+  #main .kpi.cs43z .val{display:inline-flex;align-items:center;width:auto;font-size:15px!important;line-height:1.2;font-weight:800;margin:8px 0 6px;padding:6px 12px;border-radius:999px;background:var(--gr50,#EAF8EF);color:var(--gr800,#066B2A)}
+}
+/* v43.4 P1 · 019 휴대폰: 게시판 필터 줄 — 셀렉트는 전폭 세로, 체크 2개는 한 줄에 나란히, 검색은 전폭 */
+@media (max-width:760px){
+  #main .bar2:has(>select[data-k="sort"]){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+  #main .bar2:has(>select[data-k="sort"])>*{grid-column:1/-1;width:100%;min-width:0;margin:0}
+  #main .bar2:has(>select[data-k="sort"])>.ckl{grid-column:auto;min-height:44px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+}

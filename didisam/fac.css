@@ -219,3 +219,18 @@ html[data-theme=dark] #main .fc-st.bad{background:rgba(255,120,120,.16);color:#F
 html[data-theme=dark] #main .fc-todo.warn,html[data-theme=dark] #main .fc-todo.warn b{color:#FFB08F}
 html[data-theme=dark] #main:has(.fc) .sl-i,html[data-theme=dark] #main:has(.lg) .sl-i,html[data-theme=dark] #main:has(.mil) .sl-i{background:var(--surface,#0E1A14);color:#EAF2EC;border-color:#5C6E63}
 html[data-theme=dark] #main .fc-opt{background:var(--surface,#0E1A14);color:#EAF2EC}html[data-theme=dark] #main .fc-opt.on{background:#13231B;color:#7CF2A2;border-color:#00C53B}
+/* v43.4 P1 · 070 휴대폰: 간트 트랙은 카드 안에서만, 시설 행 라벨 한 줄, 하단 요약 줄은 버튼 전폭 */
+@media (max-width:760px){
+  #main .fc43 .v4-trk{overflow:hidden}
+  #main .fc43 .v4-tr{grid-template-columns:108px minmax(0,1fr)}
+  #main .fc43 .v4-tn small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
+  #main .fc43-ft .btn{justify-content:center}
+  #main .fc43 .v4-ch{flex-wrap:wrap;row-gap:8px}
+  #main .fc43-ft{flex-wrap:wrap;gap:8px 16px}
+  #main .fc43-ft .sp{display:none}
+  #main .fc43-ft .btn{flex:1 1 100%;min-height:44px}
+}
+/* v43.4 P1 · 070: 시설 화면 AI 제안 카드 — 어두운 바탕에 어두운 글자(판독 불가)와 i.warn에 붙는 경고 상자 모양을 바로잡음 */
+#main .q1-aside:has(.fc-ac) .q1-ac.ai li>span:not([class]),#main .q1-aside:has(.fc-ac) .q1-ac.ai li a{color:#fff}
+#main .q1-aside:has(.fc-ac) .q1-ac.ai li i{width:8px;height:8px;min-height:0;padding:0;margin:0;border:0;border-radius:50%;box-shadow:none;background:#7CF2A2}
+#main .q1-aside:has(.fc-ac) .q1-ac.ai li i.warn{background:#FF9A6E}
