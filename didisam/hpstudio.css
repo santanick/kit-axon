@@ -415,3 +415,47 @@ body.hps-pubc-on #hpe.hps .hpe-stage{margin-right:452px}
 .hps-pubc9 .hps-pcu span{flex:none;color:var(--g600,#6B6459)}.hps-pubc9 .hps-pcu b{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:ui-monospace,monospace;font-size:12.5px}
 .hps-pubc9 .hps-pca{display:flex;gap:8px}.hps-pubc9 .hps-pca .btn{flex:1;justify-content:center;min-height:40px;font-size:14px}
 html[data-theme=dark] .hps-pubc.hps-pubc9{background:#1F2221}
+/* ═════════ v43 G3 — 빌더 도구줄 한 줄화(K4 공통 1) ═════════
+   페이지 탭 → 선택 칩 1개(지금 페이지 + 개수, 누르면 탭 목록) · 기기 · 비율 · 되돌리기 · 게시는 오른쪽 한 칸(.hps-rt)
+   1100px 이상: 도구줄(.hpe-bar)을 display:contents로 풀어 칩 · 단계 · 오른쪽 칸이 한 줄, 1440px 이상은 AI 입력줄까지 같은 줄 */
+#hpe.hps .hps-tw{position:relative;flex:0 0 auto;min-width:0;flex-direction:row;align-items:center}
+#hpe.hps .hps-rt{display:flex;align-items:center;gap:8px;margin-left:auto;flex:none}
+.hps-pgc{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 12px 0 14px;border:0;border-radius:12px;background:var(--surface2,#FAF8F5);box-shadow:inset 0 0 0 1px var(--g300,#E4DED3);font:inherit;font-size:14px;color:var(--g900,#1A1814);cursor:pointer;white-space:nowrap}
+.hps-pgc b{font-weight:800}
+.hps-pgc em{font-style:normal;font-size:12px;font-weight:700;color:var(--t-mag,#066B2A);background:var(--gr50,#ECFDF3);border-radius:99px;padding:2px 8px}
+.hps-pgc>svg:last-child{color:var(--t-sub,#5C554B);transition:transform .15s}
+.hps-pgc:hover{box-shadow:inset 0 0 0 1.5px var(--g400,#D6CFC2)}
+.hps-pgc:focus-visible{outline:2px solid var(--gr700,#007A29);outline-offset:2px}
+.hps-tw.open .hps-pgc{box-shadow:inset 0 0 0 1.5px var(--pr,#00A832);background:var(--surface,#fff)}
+.hps-tw.open .hps-pgc>svg:last-child{transform:rotate(180deg)}
+.hps-pgpop{display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:60;width:max-content;min-width:300px;max-width:min(760px,calc(100vw - 24px));background:var(--surface,#fff);border-radius:14px;box-shadow:0 0 0 1px var(--hair,rgba(26,24,20,.08)),0 16px 40px rgba(26,24,20,.16);padding:8px}
+.hps-tw.open .hps-pgpop{display:flex;flex-direction:column;gap:6px}
+#hpe.hps .hps-pgpop .hps-tabs{flex-wrap:wrap;overflow:visible;padding:0;gap:4px}
+#hpe.hps .hps-pgpop .hps-subs{flex-wrap:wrap;overflow:visible;border-top:1px solid var(--hair,rgba(26,24,20,.08));padding-top:6px;gap:4px}
+#hpe.hps .hps-ub{font-weight:700}
+@media (max-width:760px){.hps-pgc{min-height:40px;padding:0 10px;gap:6px;font-size:13.5px}.hps-pgc>svg:first-child{display:none}.hps-pgpop{left:-6px;max-width:calc(100vw - 12px);min-width:0}#hpe.hps .hps-rt{gap:4px}}
+@media (min-width:1100px){
+  #hpe.hps{grid-template-columns:auto auto minmax(0,1fr) auto}
+  #hpe.hps>.hpe-bar{display:contents}
+  #hpe.hps>.hpe-bar>.hps-tw{grid-row:1;grid-column:1;padding:0 6px 0 16px}
+  #hpe.hps>.hps-flow{grid-row:1;grid-column:2;padding:0 6px!important}
+  #hpe.hps>.hpe-bar>.hps-rt{grid-row:1;grid-column:3/5;justify-content:flex-end;padding:0 12px 0 6px;margin:0}
+  #hpe.hps>.hpw-talk{grid-row:2;grid-column:1/-1;padding:6px 16px!important}
+  #hpe.hps>.hpe-bar>:is(.hps-tw,.hps-rt),#hpe.hps>.hps-flow{min-height:60px;align-self:stretch;display:flex;align-items:center;background:var(--surface,#fff);border-bottom:1px solid var(--hair,rgba(26,24,20,.06))}
+  #hpe.hps .hps-flow li button,#hpe.hps .hps-flow li.cur button{font-size:0;gap:0;padding:0 6px;min-width:44px;justify-content:center} /* 단계는 번호 원 4개(이름은 title · 읽기 도구용 글자) — 지금 단계는 짙은 원 */
+  #hpe.hps .hps-flow li button i{font-size:13px}
+  #hpe.hps .hps-flow .hps-fok{display:none}
+}
+@media (min-width:1440px){
+  #hpe.hps>.hpe-bar>.hps-rt{grid-column:4}
+  #hpe.hps>.hpw-talk{grid-row:1;grid-column:3;min-height:60px;align-self:stretch;align-items:center;padding:0 6px!important;gap:6px}
+  #hpe.hps .hpw-talk .hpw-tl{font-size:0;gap:0}
+  #hpe.hps .hpw-talk .hps-cb span{display:none}
+  #hpe.hps>.hpw-talk{flex-wrap:nowrap}
+  #hpe.hps .hpw-talk input[name=q]{flex:1 1 auto;min-width:150px;width:auto}
+  #hpe.hps .hpw-talk>*:not(input){flex:none;white-space:nowrap}
+  #hpe.hps .hpe-dev button{padding:0 12px}
+  #hpe.hps .hps-ul{display:none}
+  #hpe.hps .hps-zseg button{padding:0 6px;font-size:12px}
+  #hpe.hps .hps-rt{gap:6px}
+}

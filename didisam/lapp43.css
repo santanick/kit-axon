@@ -379,3 +379,11 @@ body.lapp .ap-nme{flex:none;color:var(--mute,#6B6F6C)}
 html[data-theme=dark] body.lapp .ap-nmw{background:#1C1F1E}
 /* v43 R5 — 117 앱 강좌 탭: 트랙 카드 단추를 그린 주 단추로 */
 body.lapp .track .lbtn{background:var(--gr600,#00862D)!important;border-color:var(--gr600,#00862D)!important;color:#fff!important}
+
+/* ═════════ v43 G3 전역(3차) ═════════ */
+/* ⑤ 고정 탭 바 + 떠 있는 「AX 튜터」 단추가 본문 끝(이어 보기 · 바로 가기 둘째 줄 · 목록 마지막 행)을 가리지 않게 — 아래 여백 = 탭 바 + 튜터 단추(약 60px) + 여유 */
+body.lapp:not(.ap-homeon):not(.ap-pickon):not(.tb-watch) #lm{padding-bottom:calc(var(--ap-nav,64px) + var(--ap-sb,0px) + 96px)}
+body.lapp .ap-par .ap-pscroll{padding-bottom:calc(var(--ap-nav,64px) + 96px + env(safe-area-inset-bottom))}
+/* ⑥ 「…」 잘림 없애기: 캘린더 한 줄 요약 · 강좌 카드 부가 정보는 두 줄까지 줄바꿈, 빠른 칩 줄은 줄바꿈해 모두 보이게 */
+body.lapp #lm :is(.lq-hc small,.tb-row small,.tb-cx small,.tb-tx small,.tba-tx small,.ap-cm small,.ap-grc small,.ap-srpt small){white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:keep-all}
+body.lapp #lm .tb-chips{flex-wrap:wrap;overflow:visible;margin-right:0;padding-right:0}

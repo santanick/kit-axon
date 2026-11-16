@@ -153,7 +153,16 @@
       : `<div class="hps-subs hps-sube"><span>${E(actNm)} ›</span><em>하위 메뉴가 없습니다.</em><button type="button" class="hps-tadd sm" data-act="hps-subadd" data-v="${E(act.id)}">${SV(P.plus, 14, 2)}<span>「${E(actNm)}」 하위 메뉴 만들기</span></button></div>`;
     return `<div class="hps-tabs" role="tablist" aria-label="사이트 페이지">${M.map(m => tab(m)).join('')}<button type="button" class="hps-tadd" data-act="hps-padd" aria-haspopup="dialog" title="페이지(메뉴) 추가 — 상위 메뉴 또는 하위 메뉴로. 메뉴 탭에 마우스를 올리면 ＋ 하위로 하위 메뉴를 만듭니다">${SV(P.plus, 16, 2)}<span>페이지</span></button></div>` + row2;
   }
-  ACT['hps-pg'] = el => { const k = el.dataset.v; const s = site(); const m = A(s.menus).find(x => x.id === el.dataset.p || x.id === el.dataset.m);
+  /* v43 G3: 페이지 탭 → 선택 칩 1개(지금 페이지 + 개수). 탭 목록(.hps-tabs · .hps-subs)은 칩을 누르면 펼쳐지는 목록 안에 그대로 둔다(선택자 · data-act 유지) */
+  const pgChipHTML = () => `<button type="button" class="hps-pgc" data-act="hps-pgchip" aria-haspopup="true" aria-expanded="${!!HS.pgOpen}" aria-controls="hpsPgPop">${SV(P.menu, 16, 2)}<b>홈</b><em></em>${SV('<path d="m6 9 6 6 6-6"/>', 14, 2.2)}</button><div class="hps-pgpop" id="hpsPgPop" role="group" aria-label="사이트 페이지 고르기">${tabsHTML()}</div>`;
+  const pgChipSync = tb => { tb.classList.toggle('open', !!HS.pgOpen); const c = tb.querySelector('.hps-pgc'); if (!c) return; c.setAttribute('aria-expanded', !!HS.pgOpen);
+    const on = tb.querySelector('.hps-subs .hps-tab.on:not(.sub)') || tb.querySelector('.hps-tabs .hps-tab.on') || tb.querySelector('.hps-subs .hps-tab.on'); const nm = on ? (on.firstChild && on.firstChild.nodeType === 3 ? on.firstChild.textContent : on.textContent) : '홈';
+    const n = tb.querySelectorAll('.hps-tabs .hps-tab').length; c.querySelector('b').textContent = nm.trim(); c.querySelector('em').textContent = `${n}개 페이지`; c.title = `고칠 페이지: ${nm.trim()} — 눌러서 다른 페이지 고르기 · 페이지 추가`; };
+  const pgSet = v => { HS.pgOpen = !!v; const tb = $1('#hpe .hps-tw'); if (tb) pgChipSync(tb); };
+  ACT['hps-pgchip'] = () => pgSet(!HS.pgOpen);
+  document.addEventListener('pointerdown', e => { if (!HS.pgOpen) return; const t = e.target; if (t.closest && t.closest('#hpe .hps-tw, #hpsPop')) return; pgSet(false); }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && HS.pgOpen) { pgSet(false); const c = $1('#hpe .hps-pgc'); if (c) c.focus(); } });
+  ACT['hps-pg'] = el => { HS.pgOpen = false; const k = el.dataset.v; const s = site(); const m = A(s.menus).find(x => x.id === el.dataset.p || x.id === el.dataset.m);
     const it = el.dataset.p ? A(m && m.subs).find(b => b.id === el.dataset.m) : m; const tg = it ? target(it, el.dataset.p ? m : null) : { key: k };
     /* v37 지시 2: 학습 페이지도 같은 캔버스 · 같은 도구(섹션 + 머리글 + 자동 목록) — 외부 주소만 캔버스 안 안내 카드 */
     if (tg.url || (tg.hash && !pageOf(k))) { HS.lv = { tab: k, hash: tg.hash || '', url: tg.url || '', name: (HS.lab && HS.lab[k]) || mName(it.l) }; if (HS.pan === 'sec') panClose(); deco(true); lvPaint(); panFollow(); return; }
@@ -167,7 +176,7 @@
   function flowHTML() { const s = site(); const D = stepDone(); if (s.hpsFlowOff || STEPS.every(([k]) => D[k])) return '';
     const cur = (STEPS.find(([k]) => !D[k]) || STEPS[3])[0];
     const tip = { tpl: '마음에 드는 템플릿을 먼저 고르세요. 고른 뒤에도 글 · 사진 · 색은 모두 바꿀 수 있습니다.', ai: `아래 입력줄에 원하는 모습을 적거나 코드 블록을 붙여 넣으세요. 지금 보이는 페이지가 바로 바뀝니다.`, basic: '기관명 · 연락처 · 로고 · 대표 색만 넣으면 모든 페이지에 들어갑니다.', pub: '확인했으면 [게시하기]를 누르세요. 학습 사이트와 같은 주소에 함께 올라갑니다.' }[cur];
-    return `<div class="hps-flow" role="group" aria-label="홈페이지 완성 순서"><ol>${STEPS.map(([k, n], i) => `<li class="${D[k] ? 'done' : ''}${k === cur ? ' cur' : ''}"><button type="button" data-act="hps-step" data-v="${k}" aria-current="${k === cur ? 'step' : 'false'}"><i>${i + 1}</i>${n}${D[k] ? ` <span class="hps-fok" aria-label="완료">${SV(P.ok, 13, 2.6)}</span>` : k === cur ? ' <span class="sr">(지금 단계)</span>' : ''}</button></li>` /* v38 F5 A20: 단계마다 같은 형식(번호 + 이름), 끝난 단계는 이름 뒤 ✓, 지금 단계는 강조 */).join('')}</ol>
+    return `<div class="hps-flow" role="group" aria-label="홈페이지 완성 순서"><ol>${STEPS.map(([k, n], i) => `<li class="${D[k] ? 'done' : ''}${k === cur ? ' cur' : ''}"><button type="button" data-act="hps-step" data-v="${k}" title="${i + 1}단계 · ${n}" aria-current="${k === cur ? 'step' : 'false'}"><i>${i + 1}</i>${n}${D[k] ? ` <span class="hps-fok" aria-label="완료">${SV(P.ok, 13, 2.6)}</span>` : k === cur ? ' <span class="sr">(지금 단계)</span>' : ''}</button></li>` /* v38 F5 A20: 단계마다 같은 형식(번호 + 이름), 끝난 단계는 이름 뒤 ✓, 지금 단계는 강조 */).join('')}</ol>
       <p>${E(tip)}${cur === 'ai' ? ` <button type="button" class="hps-ln" data-act="hpai-open">시안 3개로 새로 만들기</button>` : ''}</p><button type="button" class="hps-fx" data-act="hps-flowoff" aria-label="완성 순서 닫기">${SV(P.x, 14, 2)}</button></div>`; }
   ACT['hps-step'] = el => { const k = el.dataset.v;
     if (k === 'tpl') return ACT['tpl-gallery']();
@@ -182,10 +191,13 @@
   function deco(force) {
     const w = $1('#hpe'); if (!w || !HS.dock) return; const bar = w.querySelector('.hpe-bar'); if (!bar) return; w.classList.add('hps');
     if (!bar.dataset.hps || force) { bar.dataset.hps = 1;
-      let tb = bar.querySelector('.hps-tw'); if (!tb) { tb = document.createElement('div'); tb.className = 'hps-tw'; bar.insertBefore(tb, bar.firstChild); } tb.innerHTML = tabsHTML();
+      let tb = bar.querySelector('.hps-tw'); if (!tb) { tb = document.createElement('div'); tb.className = 'hps-tw'; bar.insertBefore(tb, bar.firstChild); } tb.innerHTML = pgChipHTML(); pgChipSync(tb);
+      /* v43 G3: 오른쪽 한 줄 묶음(기기 · 비율 · 되돌리기 · 게시) — 넓은 화면에서 도구줄 한 줄의 오른쪽 칸 */
+      let rt = bar.querySelector('.hps-rt'); if (!rt) { rt = document.createElement('div'); rt.className = 'hps-rt'; bar.appendChild(rt); }
+      const ub = bar.querySelector('#hpeUndo'); if (ub && !ub.querySelector('.hps-ul')) { const em = ub.querySelector('em'); ub.innerHTML = `<b class="hps-ub" aria-hidden="true">↶</b><span class="hps-ul">되돌리기</span><em>${em ? em.textContent : ''}</em>`; ub.setAttribute('aria-label', '되돌리기'); }
       const dev = bar.querySelector('.hpe-dev'); if (dev && !bar.querySelector('.hps-zoom')) dev.insertAdjacentHTML('afterend', `<label class="hps-zoom"><span class="sr">화면 비율</span><select data-chg="hps-zoom" aria-label="화면 비율">${ZOOMS.map(([v, n]) => `<option value="${v}" ${HS.zoom === v ? 'selected' : ''}>${n}</option>`).join('')}</select><span class="hps-zseg" role="group" aria-label="화면 비율">${ZOOMS.map(([v, n]) => `<button type="button" data-act="hps-zoomb" data-v="${v}" class="${HS.zoom === v ? 'on' : ''}" aria-pressed="${HS.zoom === v}">${n}</button>`).join('')}</span></label>`); /* v43 R5: 기본 select 대신 세그먼트(select는 보조 기술 · 기존 테스트용으로 숨겨 둠) */
       const pub = bar.querySelector('[data-act="hpe-pub"]'); if (pub && !bar.querySelector('.hps-open')) pub.insertAdjacentHTML('beforebegin', `<a class="btn sm ghost hps-open" href="${E(learnerURL())}" target="_blank" rel="noopener">${SV(P.ext, 14)} 사이트 열기</a>`);
-      const tk = tb.querySelector('.hps-tab.on'); if (tk && tk.scrollIntoView) try { tk.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { } }
+      ['.hpe-dev', '.hps-zoom', '#hpeUndo', '#hpeRedo', '.hps-open', '[data-act="hpe-pub"]'].forEach(s => { const n = bar.querySelector(s); if (n && n.parentElement !== rt) rt.appendChild(n); }); }
     const mg = $1('#main .hps-host .hpw2-mig'); if (mg) { const ex = w.querySelector('.hpw2-mig'); if (ex) ex.remove(); mg.classList.add('hps-note'); bar.insertAdjacentElement('afterend', mg); }
     let fl = w.querySelector('.hps-flow'); const fh = flowHTML(); if (fh) { if (!fl) { bar.insertAdjacentHTML('afterend', fh); } else if (force || fl.dataset.sig !== fh.length + '') { fl.outerHTML = fh; } fl = w.querySelector('.hps-flow'); if (fl) fl.dataset.sig = fh.length + ''; } else if (fl) fl.remove();
     /* hpwiz의 '말로 고치기' 줄은 body 변화 때 다시 붙는다 — 같은 순간에 닫고 다시 연 뒤 막대를 새로 그리면 빠지므로 한 번 깨운다 */
@@ -620,7 +632,7 @@
     h = h.replace(/<button[^>]*data-act="tpl-back"[^>]*>[\s\S]*?<\/button>/, '');
     const sig = h.length + '|' + (UI.tpdK || ''); if (g.dataset.sig === sig) return; g.dataset.sig = sig;
     g.innerHTML = `<div class="hps-galh"><div><b>템플릿 고르기</b><p>카드를 누르면 크게 미리 봅니다. [이 템플릿으로 시작]을 누르면 지금 사이트가 바뀌고, 마음에 들지 않으면 [되돌리기]로 돌아옵니다.</p></div><button type="button" class="btn" data-act="hps-galx">${SV(P.x, 16, 2)} 닫고 편집기로</button></div><div class="hps-galb">${h}</div>`;
-    document.body.classList.add('hps-gal-on'); talkSet(false); const bar = w.querySelector('.hpe-bar'); if (bar) w.style.setProperty('--hps-gt', (bar.offsetTop + bar.offsetHeight) + 'px'); const sc = g.querySelector('.hps-galb');
+    document.body.classList.add('hps-gal-on'); talkSet(false); const bar0 = w.querySelector('.hpe-bar'); const bar = bar0 && !bar0.offsetHeight ? (w.querySelector('.hps-rt') || bar0) : bar0; if (bar) w.style.setProperty('--hps-gt', (bar.offsetTop + bar.offsetHeight) + 'px'); /* v43 G3: 한 줄 도구줄(display:contents)일 때는 오른쪽 칸 기준 */ const sc = g.querySelector('.hps-galb');
     g.querySelectorAll('.tpd-th:not([data-ok])').forEach(el => { if (galIO) galIO.observe(el); else galThumb(el); });
     if (fresh) { const q = g.querySelector('#tpdQ'); if (q && innerWidth > 760) try { q.focus({ preventScroll: true }); } catch (e) { } if (sc) sc.scrollTop = 0; } }
   addEventListener('resize', () => { document.querySelectorAll('#hpsGal .tpd-th[data-ok]').forEach(el => { const f = el.querySelector('iframe'); if (f && el.clientWidth) f.style.transform = `scale(${el.clientWidth / 1280})`; }); });
@@ -778,6 +790,8 @@
       <div class="hps-popk" role="radiogroup" aria-label="위치"><label><input type="radio" name="pw" value="top" checked><span><b>위 메뉴 줄에</b><small>상위 메뉴로 추가</small></span></label><label><input type="radio" name="pw" value="sub" ${tops.length ? '' : 'disabled'}><span><b>하위 메뉴로 넣기</b><small>어느 메뉴 아래인지 고릅니다</small></span></label></div>
       <label class="fl hps-popx" data-for="sub">어느 메뉴 아래에<select name="pp">${tops.map(m => `<option value="${E(m.id)}" ${HPE.key === 'm-' + m.id ? 'selected' : ''}>${E(mName(m.l))}</option>`).join('')}</select></label>${kindHTML()}
       <div class="hps-popb"><button type="button" class="btn sm ghost" data-hps-popx>취소</button><button type="submit" class="btn sm pri">만들기</button></div></form>`); };
+  ['hps-subadd', 'hps-padd'].forEach(k => { const b0 = ACT[k]; ACT[k] = el => { const r = b0(el); pgSet(false); return r; }; }); /* v43 G3: 추가 창이 뜨면 페이지 목록은 접는다 */
+  { const b0 = ACT['hps-pg']; ACT['hps-pg'] = el => { const r = b0(el); pgSet(false); return r; }; }
   ACT['hps-subseen'] = () => { site().hpsSubSeen = 1; persist(); deco(true); };
   const popSync = f => { const pk = (f.querySelector('input[name=pk]:checked') || {}).value; const pw = (f.querySelector('input[name=pw]:checked') || {}).value; f.querySelectorAll('.hps-popx').forEach(x => { x.hidden = !(x.dataset.for === pk || x.dataset.for === pw); }); };
   document.addEventListener('change', e => { const f = e.target && e.target.closest && e.target.closest('#hpsPop form'); if (f) popSync(f); });
@@ -1080,7 +1094,7 @@
       const row = (ok, b, sm) => `<li class="${ok ? 'ok' : 'no'}"><i aria-hidden="true">${ok ? SV(P.ok, 13, 2.6) : '!'}</i><span><b>${E(b)}</b><small>${E(sm)}</small></span></li>`;
       /* v43 R9(J4 125): 도구줄 아래 4번째 띠 → 캔버스 오른쪽 위 게시 패널 카드(체크리스트 · 주소 · 열기, 14px 글자). 캔버스 줄 수를 늘리지 않음 */
       /* 패널 자리(오른쪽 열)에 놓고 캔버스를 그만큼 줄인다 — 캔버스 위에 겹쳐 사진 · 글자를 가리지 않게 */
-      if (HS.pan) panClose(); const at = w.querySelector('.hps-flow') || w.querySelector('.hpe-bar'); const top = at ? at.offsetTop + at.offsetHeight + 12 : 120; document.body.classList.add('hps-pubc-on');
+      if (HS.pan) panClose(); const at = [w.querySelector('.hps-flow'), w.querySelector('.hps-rt'), w.querySelector('.hpe-bar')].find(x => x && x.offsetHeight); const top = at ? at.offsetTop + at.offsetHeight + 12 : 120; document.body.classList.add('hps-pubc-on');
       w.insertAdjacentHTML('beforeend', `<aside class="hps-pubc hps-pubc9" role="status" aria-label="게시 결과" style="top:${top}px"><div class="hps-pch"><span class="hps-pcb" aria-hidden="true">${SV(P.ok, 18, 2.6)}</span><div><b>게시했습니다</b><small>홈페이지와 학습 사이트가 같은 주소예요</small></div><button type="button" class="hps-fx2" data-act="hps-pubcx" aria-label="게시 결과 닫기">${SV(P.x, 14, 2)}</button></div>
         <ul class="hps-pcl">${row(true, `메뉴 ${pages}개 페이지`, '모두 같은 주소에 올라갔어요')}${q ? row(q.score >= 85, `품질 ${q.score}점`, miss.length ? `남은 점검 ${miss.length}개 · ${miss[0].label}` : '빠진 점검이 없어요') : ''}${row(true, '휴대폰 화면', '390px에서 넘치는 글자 없음')}${row(!!dom, '사이트 주소', dom ? '영문 주소로 바꿀 수 있어요' : '임시 주소로 열려요 · 기본 정보에서 영문 주소로 바꿔요')}</ul>
         <p class="hps-pcu"><span>주소</span><b>${E(dom || (learnerURL() || '').replace(/^https?:\/\//, '').slice(0, 48))}</b></p>

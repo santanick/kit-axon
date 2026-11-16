@@ -26,6 +26,8 @@ const SHOT = process.env.SHOT_DIR || '';
   const ev = (f, a) => page.evaluate(f, a); const wait = ms => page.waitForTimeout(ms);
   const F = () => page.frameLocator('#hpeF');
   const ready = async () => { await page.waitForFunction(() => { const f = document.getElementById('hpeF'); const d = f && f.contentDocument; return d && d.__hpi && d.querySelector('.hpe-add') && (!d.querySelector('[data-hpe] > .hpe-tb') || d.querySelector('.hpe-tb[data-hps]')); }, null, { timeout: 15000 }); };
+  /* v43 G3: 페이지 탭은 선택 칩(.hps-pgc) 안 목록으로 접혔다 — 탭을 누르기 전에 칩을 펼친다 */
+  const pgOpen = () => ev(() => { const t = document.querySelector('#hpe .hps-tw'); if (t && !t.classList.contains('open')) document.querySelector('#hpe .hps-pgc').click(); });
   const frameURL = async sel => { const h = await page.$(sel); const fr = h && await h.contentFrame(); return fr ? fr.url() : ''; };
   try {
     await page.goto(`${base}/index.html`, { waitUntil: 'load' });
@@ -58,7 +60,7 @@ const SHOT = process.env.SHOT_DIR || '';
     await ev(() => document.getElementById('hpeF').contentWindow.scrollTo(0, 0));
 
     /* ── 3) 메뉴 탭 · 캔버스 안 메뉴 링크(연결 거부 재현 방지) ── */
-    await page.click('#hpe .hps-tab[data-v^="m-"]:not(.lp)'); await ready();
+    await pgOpen(); await page.click('#hpe .hps-tab[data-v^="m-"]:not(.lp)'); await ready();
     const k1 = await ev(() => HPE.key); ok('「소개」 탭 → 그 페이지가 캔버스에', /^m-/.test(k1) && (await ev(() => !!document.getElementById('hpeF').contentDocument.querySelector('#p-' + HPE.key))), k1);
     ok('하위 메뉴는 둘째 줄 탭', await ev(() => document.querySelectorAll('#hpe .hps-subs .hps-tab').length >= 2));
     await F().locator('header a[href="#p-home"]:visible', { hasText: /^\s*홈\s*$/ }).first().click(); await ready(); await wait(200);
@@ -84,7 +86,7 @@ const SHOT = process.env.SHOT_DIR || '';
     await page.click('#modal [data-mact="steps"]'); await ready(); ok('갤러리에서 고르면 그 자리에 섹션', (await ev(() => site().sections.length)) === n0 + 1 && (await ev(() => site().sections[1].data.variant)) === 'steps');
 
     /* ── 6) 페이지 프롬프트 · 코드 블록 ── */
-    await page.click('#hpe .hps-tab[data-v^="m-"]:not(.lp)'); await ready();
+    await pgOpen(); await page.click('#hpe .hps-tab[data-v^="m-"]:not(.lp)'); await ready();
     await page.fill('#hpe .hpw-talk input[name=q]', '강사 소개와 오시는 길 넣어줘'); await page.press('#hpe .hpw-talk input[name=q]', 'Enter'); await wait(500); await ready();
     const pb = await ev(() => s2pages(site()).find(p => p.key === HPE.key).sections.map(x => x.type + ':' + ((x.data || {}).variant || '')));
     ok('「소개」 페이지에서 말로 → 그 페이지에 강사 소개 · 오시는 길', pb.includes('map:') && pb.includes('text:profiles') && (await ev(() => site().sections.every(x => x.type !== 'map'))), pb);
@@ -112,7 +114,7 @@ const SHOT = process.env.SHOT_DIR || '';
     await page.click('#hpe [data-act="hpe-pub"]'); await wait(500);
     const frame0 = await ev(() => ({ bar: !!document.querySelector('#hpe .hpe-bar .hps-tabs'), talk: !!document.querySelector('#hpe .hpw-talk'), rail: document.querySelectorAll('#hpe .hps-ri').length }));
     const lpTab = await ev(() => { const b = [...document.querySelectorAll('#hpe .hps-tab.lp')].find(x => /강좌/.test(x.textContent)) || document.querySelector('#hpe .hps-tab.lp'); return b.dataset.v; });
-    await page.click(`#hpe .hps-tab[data-v="${lpTab}"]`); await ready(); await wait(300);
+    await pgOpen(); await page.click(`#hpe .hps-tab[data-v="${lpTab}"]`); await ready(); await wait(300);
     const LP = await ev(() => { const pg = s2pages(site()).find(p => p.key === HPE.key); const d = document.getElementById('hpeF').contentDocument.getElementById('p-' + HPE.key);
       return { key: HPE.key, learn: pg && pg.learn, lv: !!document.querySelector('#hpe .hps-lv'), canvas: getComputedStyle(document.getElementById('hpeF')).visibility, head: !!d.querySelector('.hpx-lsh h1[data-hpe-f]'), list: !!d.querySelector('.hpx-lsl .hpx-lsb'), tools: !!d.querySelector('.hpx-lsh')?.closest('[data-hpe]')?.querySelector('.hpe-tb [data-hps-lh="al"]'),
         bar: !!document.querySelector('#hpe .hpe-bar .hps-tabs'), talk: !!document.querySelector('#hpe .hpw-talk'), rail: document.querySelectorAll('#hpe .hps-ri').length }; });
@@ -137,7 +139,7 @@ const SHOT = process.env.SHOT_DIR || '';
     const LL = await lp0.evaluate(() => { const sub = document.querySelector('#lm > section.sub'); const h = document.querySelector('#lm > .lxhost[data-w="pre"]'); return { h1: sub && sub.querySelector('h1').textContent, pre: !!h && !!h.shadowRoot && /이렇게 시작합니다|단계/.test(h.shadowRoot.textContent), after: !!h && h.previousElementSibling === sub }; });
     ok('학습자 사이트 학습 페이지: 고친 제목 + 머리글 아래 넣은 섹션', LL.h1 === '전체 강좌 보기' && LL.pre && LL.after, LL); ok('학습자 페이지 오류 0(학습 페이지)', !lerr0.length, lerr0); await lp0.close();
     await shot('st-5-learn');
-    await page.click('#hpe .hps-tab[data-v="home"]'); await ready();
+    await pgOpen(); await page.click('#hpe .hps-tab[data-v="home"]'); await ready();
     /* ── 8b) v37 P4(대표님 2026-11-10 16:14 '학습페이지 콘텐츠 / 검색 노출 / 세부설정도 같은 화면에서'):
        세 아이콘 = 섹션 · 메뉴처럼 캔버스를 가리지 않는 오른쪽 패널(큰 덮개 · 창 · 다른 화면 없음) — 고치면 캔버스 · 게시본에 바로 ── */
     const side = k => ev(k => { const p = document.getElementById('hpsPan'); const st = document.querySelector('#hpe .hpe-stage').getBoundingClientRect(); const pr = p && p.getBoundingClientRect();
@@ -195,7 +197,7 @@ const SHOT = process.env.SHOT_DIR || '';
       f.srcdoc = siteHTML(site(), false); document.body.appendChild(f); }); await wait(700);
     const qf = await (await page.$('#qaPv')).contentFrame(); await qf.evaluate(() => { const a = [...document.querySelectorAll('a[href^="#p-m-"]')][0]; a.click(); }); await wait(400);
     const u3 = await frameURL('#qaPv'); ok('미리보기(sandbox) 메뉴를 눌러도 스튜디오 주소로 이동하지 않음(연결 거부 없음)', /^about:srcdoc#p-m-/.test(u3), u3); await ev(() => document.getElementById('qaPv').remove());
-    await page.click('#hpe .hps-tab[data-v="home"]'); await ready();
+    await pgOpen(); await page.click('#hpe .hps-tab[data-v="home"]'); await ready();
     await page.click('#hpe .hps-ri[data-v="menu"]'); await page.waitForSelector('#hpsPan #hpmBox .hpm-i'); ok('메뉴 아이콘 = 편집기 안 오른쪽 패널(창 · 다른 화면 아님)', await ev(() => !document.getElementById('modal') && !!document.querySelector('#hpe #hpsPan.hps-panw #hpmBox') && document.body.classList.contains('hps-dock')));
     await page.click('#hpsPan [data-act="hps-panx"]');
 
@@ -223,17 +225,17 @@ const SHOT = process.env.SHOT_DIR || '';
     ok('Esc · 닫기로 패널만 닫힘(편집기 그대로)', await ev(() => !document.getElementById('hpsGal') && HPE.on && document.body.classList.contains('hps-dock')));
 
     /* ── 11) 하위 메뉴(v37 지시 3): 탭에 마우스 → [＋ 하위] · [＋ 페이지]에서 '하위 메뉴로 넣기' · 빈 상태 안내 · 메뉴 패널에서 끌어 들이면 하위로 ── */
-    await page.click('#hpe .hps-tab[data-v="home"]'); await ready();
+    await pgOpen(); await page.click('#hpe .hps-tab[data-v="home"]'); await ready();
     const topId = await ev(() => { const m = site().menus.find(x => x.kind === 'custom' && x.on !== false && !(x.subs || []).length && !x.link) || site().menus.find(x => x.kind !== 'home' && x.on !== false); return m.id; });
-    await page.hover(`#hpe .hps-tab[data-m="${topId}"]:not(.sub)`); await wait(150);
+    await pgOpen(); await page.hover(`#hpe .hps-tab[data-m="${topId}"]:not(.sub)`); await wait(150);
     ok('탭에 마우스를 올리면 [＋ 하위]가 보임', await ev(id => { const b = document.querySelector(`#hpe .hps-tsub[data-v="${id}"]`); return !!b && getComputedStyle(b).display !== 'none'; }, topId));
-    await page.click(`#hpe .hps-tsub[data-v="${topId}"]`); await page.waitForSelector('#hpsPop form'); await page.fill('#hpsPop [name=pn]', '찾아오시는 길'); await shot('st-7-subpop'); await page.click('#hpsPop button[type=submit]'); await ready(); await wait(200);
+    await pgOpen(); await page.click(`#hpe .hps-tsub[data-v="${topId}"]`); await page.waitForSelector('#hpsPop form'); await page.fill('#hpsPop [name=pn]', '찾아오시는 길'); await shot('st-7-subpop'); await page.click('#hpsPop button[type=submit]'); await ready(); await wait(200);
     const SB = await ev(id => { const m = site().menus.find(x => x.id === id); const sb = (m.subs || []).find(x => x.l === '찾아오시는 길'); return { sb: !!sb, key: HPE.key, want: sb ? `s-${id}-${sb.id}` : '', row: [...document.querySelectorAll('#hpe .hps-subs .hps-tab')].map(b => b.textContent.trim()) }; }, topId);
     ok('[＋ 하위] → 그 메뉴 아래 하위 메뉴 생성 · 그 페이지로 · 둘째 줄 탭에 보임', SB.sb && SB.key === SB.want && SB.row.some(x => /찾아오시는 길/.test(x)), SB);
     const noSub = await ev(() => { const m = site().menus.find(x => x.kind !== 'home' && x.on !== false && !(x.subs || []).filter(b => b.on !== false).length); return m ? m.id : ''; });
-    if (noSub) { await page.click(`#hpe .hps-tab[data-m="${noSub}"]:not(.sub)`); await ready(); await wait(150);
+    if (noSub) { await pgOpen(); await page.click(`#hpe .hps-tab[data-m="${noSub}"]:not(.sub)`); await ready(); await wait(150);
       ok('하위 메뉴가 없는 메뉴: 둘째 줄에 빈 상태 안내 + 「하위 메뉴 만들기」', await ev(() => !!document.querySelector('#hpe .hps-sube [data-act="hps-subadd"]') && /하위 메뉴가 없습니다/.test(document.querySelector('#hpe .hps-sube').textContent))); }
-    await page.click('#hpe .hps-tadd[data-act="hps-padd"]'); await page.waitForSelector('#hpsPop form'); await page.fill('#hpsPop [name=pn]', '학과 소식');
+    await pgOpen(); await page.click('#hpe .hps-tadd[data-act="hps-padd"]'); await page.waitForSelector('#hpsPop form'); await page.fill('#hpsPop [name=pn]', '학과 소식');
     await page.check('#hpsPop input[name=pw][value=sub]'); await page.selectOption('#hpsPop [name=pp]', topId); await page.check('#hpsPop input[name=pk][value=board]'); await page.selectOption('#hpsPop [name=pb]', '__new'); await shot('st-8-pagepop');
     await page.click('#hpsPop button[type=submit]'); await ready(); await wait(200);
     const PG = await ev(id => { const b = S.boards.find(x => x.name === '학과 소식'); const m = site().menus.find(x => x.id === id); const sb = (m.subs || []).find(x => x.l === '학과 소식'); const pg = s2pages(site()).find(p => p.key === HPE.key); return { board: !!b, link: sb && sb.link, bid: b && b.id, learn: pg && pg.learn, list: !!document.getElementById('hpeF').contentDocument.getElementById('p-' + HPE.key).querySelector('.hpx-lsl .hpx-bd') }; }, topId);
@@ -246,7 +248,7 @@ const SHOT = process.env.SHOT_DIR || '';
     await ev(() => window.hpUndo()); await wait(300); await page.click('#hpsPan [data-act="hps-panx"]');
 
     /* ── 12) 게시판 섹션(v37 지시 4): [+ 섹션] 갤러리 → 기존 게시판 고르기 · 새로 만들기 → 최근 글 · 더 보기 · 글쓰기 · 메뉴로도 → 학습자 사이트에서 보기 · 쓰기 ── */
-    await page.click('#hpe .hps-tab[data-v="home"]'); await ready();
+    await pgOpen(); await page.click('#hpe .hps-tab[data-v="home"]'); await ready();
     await ev(() => document.getElementById('hpeF').contentDocument.querySelectorAll('.hpe-add button')[1].click()); await page.waitForSelector('#modal [data-hps-bdadd]'); await page.click('#modal [data-hps-bdadd]'); await page.waitForSelector('#modal .hps-bdp');
     await page.check('#modal input[name=bid][value="__new"]'); await page.fill('#modal [name=bn]', '수강생 이야기'); await page.fill('#modal [name=tt]', '수강생 이야기'); await page.selectOption('#modal [name=n]', '3'); await shot('st-10-boardpick');
     await page.click('#modal [data-mact=ok]'); await ready(); await wait(200);
@@ -274,7 +276,7 @@ const SHOT = process.env.SHOT_DIR || '';
 
     /* ── 10) 휴대폰 390 ── */
     await page.setViewportSize({ width: 390, height: 844 }); await ev(() => { HPS2.devSet = 0; HPS2.dock = false; hpClose(true); render(); }); await ready(); await wait(400);
-    const mo = await ev(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { talk: !!document.querySelector('#hpe .hpw-talk input'), over: document.documentElement.scrollWidth - innerWidth, dev: HPE.dev, rail: Math.round(r('#hpe .hps-rail').bottom), h: innerHeight, tabs: Math.round(r('#hpe .hps-tabs').top), nav: document.querySelector('nav.brail') ? Math.round(document.querySelector('nav.brail').getBoundingClientRect().bottom) : 0 }; });
+    const mo = await ev(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { talk: !!document.querySelector('#hpe .hpw-talk input'), over: document.documentElement.scrollWidth - innerWidth, dev: HPE.dev, rail: Math.round(r('#hpe .hps-rail').bottom), h: innerHeight, tabs: Math.round(r('#hpe .hps-pgc').top) /* v43 G3: 탭 목록은 칩 안으로 접힘 → 칩 위치로 확인 */, nav: document.querySelector('nav.brail') ? Math.round(document.querySelector('nav.brail').getBoundingClientRect().bottom) : 0 }; });
     ok('휴대폰: 가로 넘침 0 · 휴대폰 보기 · 말로 고치기 줄 · 아이콘 줄은 아래 · 스튜디오 메뉴 줄을 가리지 않음', mo.talk && mo.over <= 0 && mo.dev === 'mo' && mo.rail <= mo.h && mo.tabs >= mo.nav, mo); await shot('st-6-mobile');
     /* v36 R3(4-4): 캔버스 우선 — 위 도구는 탭 한 줄, 말로 고치기는 아래 [AI에게 말하기]로 여는 시트 */
     const mc = await ev(() => { const r = s => document.querySelector(s).getBoundingClientRect(); const top = r('#hpe').top, st = r('#hpe .hpe-stage'); return { tools: Math.round(st.top - top), stage: Math.round(st.height), avail: Math.round(innerHeight - top), talkVis: getComputedStyle(document.querySelector('#hpe .hpw-talk')).display }; });
