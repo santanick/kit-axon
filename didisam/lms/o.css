@@ -62,3 +62,9 @@
 .lmp-langbtn .on{border-color:var(--mag,#B53C0A);background:var(--magl,#fdeef6);font-weight:700}
 @media (max-width:600px){.lmp-todo{padding:9px 11px}.lmp-todo .btn{flex:1 1 100%}}
 .lo-h3{font-size:15px;margin:18px 0 6px}
+/* v43 R3(062): 「Choose File」 → 드롭존(입력은 영역 전체를 덮는 투명 층 — 끌어 놓기 · 누르기 모두 동작) */
+.lo-drop{position:relative;display:grid;justify-items:center;gap:6px;text-align:center;margin-top:12px;padding:26px 16px;border-radius:18px;border:1.5px dashed var(--gr300,#8FD9A5);background:var(--gr50,#EEFBF1);cursor:pointer}
+.lo-drop:hover,.lo-drop:focus-within{border-color:var(--gr600,#0A8A3A);background:var(--surface,#fff)}
+.lo-dropin{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.lo-dropic{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--gr600,#0A8A3A);color:#fff}
+.lo-drop b{font-size:15px;color:var(--g900,#17191C)}.lo-drop small{font-size:12px;color:var(--t-sub,#6B7076)}
