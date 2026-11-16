@@ -92,3 +92,19 @@
 .k-rcm{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;padding:4px 6px;border-radius:6px}.k-rcm:hover{background:var(--soft,#f1f3f5)}
 .k-rc .k-st{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}.k-rc .k-st button{min-height:30px;padding:0 2px;font-size:12.5px}
 .k-rsn{height:32px!important;font-size:13px!important}
+/* v43 R2 — 성적: 수업 · 시험 칩 · 점수 분포 · 점수 막대 */
+.k-exc{margin:0 0 6px}
+.k-exd{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:14px;align-items:end;padding:6px 0 14px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.k-exb{display:flex;gap:10px;height:110px;align-items:flex-end}
+.k-exb>div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.k-exb i{display:block;width:100%;max-width:60px;min-height:4px;border-radius:7px 7px 3px 3px;background:color-mix(in srgb,var(--g,#16a34a) 45%,transparent)}.k-exb i.lo{background:color-mix(in srgb,var(--bad,#c0262d) 55%,transparent)}.k-exb i.hi{background:var(--g,#16a34a)}
+.k-exb b{font-size:12.5px;font-variant-numeric:tabular-nums}.k-exb span{font-size:11.5px;color:var(--muted)}
+.k-exs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.k-exs div{padding:10px;border-radius:10px;background:var(--soft,#f4f5f7);display:flex;flex-direction:column}.k-exs small{font-size:12px;color:var(--muted)}.k-exs b{font-size:20px;font-variant-numeric:tabular-nums}
+.k-sb{display:block;width:140px;height:8px;border-radius:9px;background:var(--soft,#eef0f2);overflow:hidden}.k-sb i{display:block;height:100%;background:var(--g,#16a34a);opacity:.7}.k-sb i.lo{background:var(--bad,#c0262d)}.k-sb i.hi{opacity:1}
+.k-rk{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--soft,#f1f3f5);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}.k-rk.top{background:color-mix(in srgb,var(--g,#16a34a) 14%,transparent);color:var(--g-ink,#15803d)}
+@media (max-width:900px){.k-exd{grid-template-columns:1fr}}
+/* v43 R2 — 학원 현황: 날짜 칩 · 자동 운영 2열 */
+.k-days{margin:0 0 12px}.k-day{flex-direction:row;gap:6px}.k-day small{font-size:11.5px;opacity:.7}
+.k-autog .k-auto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;list-style:none;padding:0;margin:0}
+.k-autog .k-auto li{padding:12px 14px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--line);border:0!important}
+@media (max-width:900px){.k-autog .k-auto{grid-template-columns:1fr}}

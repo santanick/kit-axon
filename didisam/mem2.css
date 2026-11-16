@@ -150,3 +150,4 @@
 .en-ch{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .en-c{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px;border:0;border-radius:10px;box-shadow:inset 0 0 0 1px var(--line);background:var(--card,#fff);font:inherit;cursor:pointer;text-align:left;color:var(--ink)}.en-c:hover{box-shadow:inset 0 0 0 1.5px var(--g,#16a34a)}.en-c b{font-size:13px}.en-c small{font-size:11.5px;color:var(--muted)}
 @media (max-width:720px){.en-inv{flex-direction:column}.en-ch{grid-template-columns:1fr}}
+.en-ch{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}

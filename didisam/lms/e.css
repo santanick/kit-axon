@@ -43,3 +43,17 @@ details.efh-set[open]>summary{margin-bottom:8px}
 .w3-one td{vertical-align:middle}
 @media (max-width:600px){.w3-one th:nth-child(3),.w3-one td:nth-child(3){display:none}.w3-c.w3-c2{min-width:52px;padding:2px 6px}}
 .efh-hist div{align-self:stretch}.efh-hist[style] div,.efh-hist small{align-self:auto}
+/* v43 R2 — 시험: 응시 현황 막대 */
+.fx-bars{display:flex;flex-direction:column;gap:8px}
+.fx-r{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr) 80px;gap:12px;align-items:center}
+.fx-n{display:flex;align-items:center;gap:8px;min-width:0}.fx-n b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx-st{font-style:normal;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;flex:none;background:var(--soft,#f1f3f5);color:var(--muted)}.fx-st.o{background:color-mix(in srgb,var(--g,#16a34a) 14%,transparent);color:var(--g-ink,#15803d)}.fx-st.p{background:color-mix(in srgb,#2563eb 12%,transparent);color:#2563eb}
+.fx-b{display:flex;gap:2px;height:14px;border-radius:7px;background:var(--soft,#eef0f2);overflow:hidden}.fx-b i{display:block;height:100%;background:var(--g,#16a34a)}.fx-b i.pd{background:#e0a325}
+.fx-v{display:flex;align-items:baseline;gap:6px;justify-content:flex-end;font-variant-numeric:tabular-nums}.fx-v small{font-size:12px;color:#9a6700}
+.fx-lg{display:flex;gap:14px;margin-top:10px;font-size:12.5px;color:var(--muted)}.fx-lg span{display:inline-flex;align-items:center;gap:5px}.fx-lg i{width:10px;height:10px;border-radius:3px;background:var(--g,#16a34a)}.fx-lg i.pd{background:#e0a325}
+/* v43 R2 — 과제: 제출 · 채점 현황 */
+.ex-rows{display:flex;flex-direction:column;gap:8px}
+.ex-r{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr) 48px;gap:12px;align-items:center;font-size:13.5px}.ex-r>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.ex-r>b{text-align:right;font-variant-numeric:tabular-nums}
+.ex-b{display:flex;gap:2px;height:14px;border-radius:7px;overflow:hidden}.ex-b i{display:block;height:100%}.ex-b i.g{background:var(--g,#16a34a)}.ex-b i.w{background:#e0a325}.ex-b i.n{background:var(--soft,#e6e9ed)}
+.fx-lg i.nn{background:var(--soft,#e6e9ed);box-shadow:inset 0 0 0 1px var(--line)}
+.ex-sc{display:inline-flex;align-items:center;gap:8px}.ex-sb{width:70px;height:7px;border-radius:9px;background:var(--soft,#eef0f2);overflow:hidden}.ex-sb i{display:block;height:100%;background:var(--g,#16a34a)}.ex-sc b{font-variant-numeric:tabular-nums;font-size:13px}
