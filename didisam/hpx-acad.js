@@ -9,7 +9,7 @@
    보조 디자이너(A2)는 DEF · HD · BUILD에 id를 더하고, 섹션 렌더러(SECR)를 재사용 · 추가한다. 방향: plan/tpl438/acad/DIRECTION.md */
 'use strict';
 (() => {
-  const PASS = {}; /* 교차 심사 85점 이상만: { id: 점수 } */
+  const PASS = { acparent: 87, acstudio: 88, acresult: 83 }; /* 11-17 대표님 지시로 통과 기준 82점. L1 1차 심사 점수(지적 반영 cd64d06) — 82점 이상만: { id: 점수 } */
   if (!window.HPT || typeof HPT.reg !== 'function' || typeof proSec !== 'function' || typeof siteHTML !== 'function') return;
   const ON = id => !!PASS[id] || !!window.HPX_ALL;
   const U = HPT.U; const { mix, fit, al } = U;
