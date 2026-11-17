@@ -1,5 +1,5 @@
 /* v43.6 셀프러닝 노트 — 대표님(2026-11-17) 「스스로 셀프러닝처럼 자기 노트 만들어가지고 관리하는 쪽으로 강화」
-   이 파일 = 노트 코어(window.LNOTE API · 데이터 계약) + 학습자 화면(#notes 허브 · #notes/<id> 보기 · 편집 · 레슨 「노트」 미니 패널 · #review 오늘 복습).
+   이 파일 = 노트 코어(window.LNOTE API · 데이터 계약) + 학습자 화면(#notes 허브 · #notes/<id> 보기 · 편집 · 레슨 「노트」 미니 패널 · #notes/review 오늘 복습(#review는 디디쌤 튜브 「짧게 복습」이 이미 써서 겹치지 않게)).
    데이터: LR.lp.notes = { v:1, items[≤120], cards[≤300], goal, sync } — 서버 정리 규칙은 service/server/lpnotes.js · PubServiceImpl.cleanNotes(같은 기준값 tests/lpnotes-vectors.json).
    다른 파일(lnote-ai.js · lnote-sync.js)은 LNOTE API만 쓰고 LR.lp.notes를 직접 고치지 않는다.
    개인정보: 노트 · 내보내기에 이름 · 연락처 · 학번을 넣지 않는다. 스튜디오는 개수만 본다(내용은 보지 않음).
@@ -8,7 +8,7 @@
 (() => {
   if (typeof window === 'undefined') return;
   /* ── 계약 ── */
-  const LIM = { items: 120, cards: 300, t: 80, b: 1500, tags: 5, tag: 20, f: 120, k: 240, exam: 40, page: 60, bytes: 360 * 1024 };
+  const LIM = { items: 120, cards: 300, marks: 300, t: 80, b: 1500, tags: 5, tag: 20, f: 120, k: 240, exam: 40, page: 60, bytes: 360 * 1024 };
   const SRC = ['me', 'tutor', 'quiz', 'yt', 'file', 'exam'], CSRC = ['note', 'quiz'];
   const NID = /^n[0-9a-z]{1,24}$/, KID = /^k[0-9a-z]{1,24}$/, LID = /^[\w-]{1,40}$/, DAY = /^\d{4}-\d{2}-\d{2}$/;
   const isObj = x => !!x && typeof x === 'object' && !Array.isArray(x);
@@ -28,11 +28,13 @@
     const ef = Math.round(Math.min(2.8, Math.max(1.3, Number.isFinite(+x.ef) ? +x.ef : 2.5)) * 100) / 100;
     return { id: String(x.id), nid: NID.test(String(x.nid || '')) ? String(x.nid) : '', f, k: body(x.k, LIM.k), due: DAY.test(String(x.due || '')) ? String(x.due) : today(), iv: int(x.iv, 1, 180, 1), ef, n: int(x.n, 0, 9999, 0), src: CSRC.includes(x.src) ? x.src : 'note' }; }
   /* 저장된 값(이 기기 · 서버)을 계약 모양으로 — 잘못된 항목은 버린다 */
-  function norm(N) { const o = { v: 1, items: [], cards: [], goal: null, sync: {} }; if (!isObj(N)) return o; const seen = new Set();
+  const MKEY = /^(note|q|cmt|post|log):[\w.-]{1,60}$/;
+  function norm(N) { const o = { v: 1, items: [], cards: [], goal: null, sync: {}, marks: {} }; if (!isObj(N)) return o; const seen = new Set();
     for (const x of Array.isArray(N.items) ? N.items : []) { const y = cleanNote(x); if (y && !seen.has(y.id)) { seen.add(y.id); o.items.push(y); } if (o.items.length >= LIM.items) break; }
     const ks = new Set(); for (const x of Array.isArray(N.cards) ? N.cards : []) { const y = cleanCard(x); if (y && !ks.has(y.id)) { ks.add(y.id); if (y.nid && !seen.has(y.nid)) y.nid = ''; o.cards.push(y); } if (o.cards.length >= LIM.cards) break; }
     if (isObj(N.goal)) { const exam = line(N.goal.exam, LIM.exam), date = String(N.goal.date || ''); if (exam && DAY.test(date)) o.goal = { exam, date }; }
     const S = isObj(N.sync) ? N.sync : {}; if (isObj(S.notion)) o.sync.notion = { on: S.notion.on === true, at: line(S.notion.at, 30), page: line(S.notion.page, LIM.page) }; if (isObj(S.gdocs)) o.sync.gdocs = { on: S.gdocs.on === true, at: line(S.gdocs.at, 30) };
+    if (isObj(N.marks)) { let n = 0; for (const [k, v] of Object.entries(N.marks)) { if (n >= LIM.marks) break; if (!MKEY.test(k) || !isObj(v) || !(v.pin === true || v.hide === true)) continue; o.marks[k] = { pin: v.pin === true, hide: v.hide === true }; n++; } }
     return o; }
   const LRo = () => (typeof LR === 'object' && LR) || null;
   /* 원본: LR.lp.notes(로그인 · 학습 기록이 바뀌면 그 값을 다시 읽는다) */
@@ -75,8 +77,14 @@
     goal(g) { const N = store(); if (g === undefined) return N.goal; if (g === null) N.goal = null; else { const exam = line(g && g.exam, LIM.exam), date = String((g && g.date) || ''); if (!exam || !DAY.test(date)) return null; N.goal = { exam, date }; } persist('goal', N.goal); return N.goal; },
     /* sync는 lnote-sync.js가 쓴다(비밀값은 여기 두지 않는다 — 키는 그 파일이 이 기기 저장소에) */
     sync(k, v) { const N = store(); if (k === undefined) return N.sync; if (!['notion', 'gdocs'].includes(k)) return null; if (v === null) delete N.sync[k]; else { const o = { on: !!(v && v.on === true), at: line(v && v.at, 30) }; if (k === 'notion') o.page = line(v && v.page, LIM.page); N.sync[k] = o; } persist('sync', { k }); return N.sync[k] || null; },
+    /* 모아보기 표시: key = '<출처>:<id>'(q · cmt · post · log · note), v = { pin?, hide? } — 둘 다 끄면 지운다. 300개까지 */
+    marks() { return { ...store().marks }; },
+    mark(key, v) { const N = store(); if (!MKEY.test(String(key || ''))) return null; const o = { pin: !!(v && v.pin === true), hide: !!(v && v.hide === true) };
+      if (!o.pin && !o.hide) delete N.marks[key]; else { if (!N.marks[key] && Object.keys(N.marks).length >= LIM.marks) { warn(`표시는 ${LIM.marks}개까지 둘 수 있어요.`); return null; } N.marks[key] = o; } persist('mark', { key }); return N.marks[key] || null; },
     on(fn) { if (typeof fn === 'function') L.add(fn); return () => L.delete(fn); },
     open(id) { location.hash = id ? '#notes/' + encodeURIComponent(id) : '#notes'; },
+    /* 오늘 복습 화면(#notes/review). 노트 id를 주면 그 노트 카드만 */
+    review(nid) { location.hash = '#notes/review' + (nid ? '?n=' + encodeURIComponent(nid) : ''); },
     /* 마크다운 한 편 — 이름 · 연락처 · 학번은 넣지 않는다 */
     md(x) { const n = typeof x === 'string' ? API.get(x) : x; if (!n) return ''; const c = cName(n.cid); const it = n.lid ? iName(n.cid, n.lid) : '';
       return [`# ${n.t || '제목 없음'}`, '', [c && `과정: ${c}${it ? ` › ${it}` : ''}`, n.tags.length ? n.tags.map(t => '#' + t).join(' ') : '', `${SRCN[n.src] || '내 노트'}${n.st === 'draft' ? ' · 초안' : ''} · ${String(n.up || n.at).slice(0, 10)}`].filter(Boolean).map(s => `> ${s}`).join('\n'), '', n.b || ''].join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n'; },
@@ -91,23 +99,24 @@
   window.LNOTE = API;
 })();
 
-/* ── 학습자 화면: #notes 허브 · #notes/<id> 보기 · 편집 · 레슨 「노트」 미니 패널 · #review 오늘 복습 · 진입점 ── */
+/* ── 학습자 화면: #notes 허브 · #notes/<id> 보기 · 편집 · 레슨 「노트」 미니 패널 · #notes/review 오늘 복습(#review는 디디쌤 튜브 「짧게 복습」이 이미 써서 겹치지 않게) · 진입점 ── */
 (() => {
   if (typeof viewPage !== 'function' || typeof lrender !== 'function' || typeof LR !== 'object' || !window.LNOTE) return;
   const N = window.LNOTE;
   { const cs = document.currentScript; const v = cs && cs.src && (cs.src.match(/\?v=[^&#]+/) || [''])[0]; if (!document.getElementById('lnCss')) { const l = document.createElement('link'); l.id = 'lnCss'; l.rel = 'stylesheet'; l.href = 'lnote.css' + (v || ''); (document.head || document.documentElement).appendChild(l); } }
   Object.assign(ICP, { plus: ICP.plus || 'M12 5v14M5 12h14', lnpen: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', lnback: 'M9 14l-4-4 4-4M5 10h9a5 5 0 010 10h-2', lnplay: 'M4 5h16v14H4zM10 9l5 3-5 3z', lndoc: 'M6 3h9l4 4v14H6zM14 3v5h5', lnflag: 'M5 21V4M5 4h11l-2 4 2 4H5',
     lnnote: 'M5 4h11l3 3v13H5zM9 9h6M9 13h6M9 17h3', lncards: 'M8 4h12v13H8zM4 8v12h12', lnpin: 'M12 16v6M8 3h8l-1 6 3 3v2H6v-2l3-3z', lntrash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3', lndl: 'M12 4v11M7 10l5 5 5-5M5 20h14',
-    lntap: 'M9 11V5a2 2 0 014 0v6M13 10a2 2 0 014 0v3M17 12a2 2 0 014 0v3a7 7 0 01-7 7h-1a7 7 0 01-6-3.5L4 14a2 2 0 013-2.5l2 2', search: ICP.search || 'M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-4-4', x: ICP.x || 'M6 6l12 12M18 6L6 18' });
+    chat: ICP.chat || 'M4 5h16v11H9l-5 4zM8 9h8M8 12h5', lntap: 'M9 11V5a2 2 0 014 0v6M13 10a2 2 0 014 0v3M17 12a2 2 0 014 0v3a7 7 0 01-7 7h-1a7 7 0 01-6-3.5L4 14a2 2 0 013-2.5l2 2', search: ICP.search || 'M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-4-4', x: ICP.x || 'M6 6l12 12M18 6L6 18' });
   const SRCI = { me: 'lnpen', tutor: 'spark', quiz: 'lnback', yt: 'lnplay', file: 'lndoc', exam: 'lnflag' };
   const SRCL = { me: '내가', tutor: '튜터', quiz: '오답', yt: '영상', file: '파일', exam: '시험' };
   const appOn = () => document.body.classList.contains('lapp');
   const isPar = () => !!(LR.me && LR.me.kind === 'parent');
   const okMe = () => !!(LR.me && !isPar() && LR.lp);
   const td = N.today;
+  const isRv = () => { try { return route().a === 'notes' && route().b === 'review'; } catch (e) { return false; } };
   const md2 = s => { const [, m, d] = String(s || '').slice(0, 10).split('-'); return m ? `${+m}월 ${+d}일` : ''; };
   const dayOf = s => { const d = new Date(s); return isNaN(d) ? String(s || '').slice(0, 10) : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  const LN = { q: '', tag: '', edit: false, view: false, del: '', pre: null, cardf: false };
+  const LN = { seg: 'note', hid: false, q: '', tag: '', cid: '', edit: false, view: false, del: '', pre: null, cardf: false };
   let RV = null;
   /* 내 과정(노트 연결 · 묶음 이름) */
   function myCourses() { let C = []; try { C = typeof myStats === 'function' ? myStats().courses.map(x => x.c).filter(Boolean) : []; } catch (e) { C = []; } if (!C.length) { try { C = (SITE().classes || []).filter(c => ((LR.lp || {}).cls || {})[c.id]); } catch (e) { C = []; } } return C; }
@@ -115,7 +124,7 @@
   function streak() { const D = (LR.lp && LR.lp.days) || {}; let d = td(); if (!D[d]) d = N.addD(d, -1); let n = 0; while (D[d] && n < 400) { n++; d = N.addD(d, -1); } return n; }
   const week = () => { const D = (LR.lp && LR.lp.days) || {}; return Array.from({ length: 7 }, (_, i) => { const d = N.addD(td(), i - 6); return { d, on: !!D[d], t: d === td() }; }); };
   /* 본문(마크다운 일부: 줄바꿈 · - 목록 · **굵게** · `코드`) → 안전한 HTML */
-  function mdHTML(b) { const inl = t => esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>'); const out = []; let ul = null;
+  function mdHTML(b, n) { const tc = t => t.replace(/\[(\d{1,3}):([0-5]\d)\]/g, (m, a, c) => n && n.cid && n.lid ? `<a class="ln-tc" href="#c/${esc(n.cid)}/${esc(n.lid)}?t=${+a * 60 + +c}" aria-label="레슨 ${a}분 ${c}초로 가기">${ico('play', 13)}${a}:${c}</a>` : `<span class="ln-tc">${a}:${c}</span>`); const inl = t => tc(esc(t)).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>'); const out = []; let ul = null;
     String(b || '').split('\n').forEach(l => { const m = /^\s*[-*]\s+(.*)$/.exec(l); if (m) { (ul = ul || []).push(`<li>${inl(m[1])}</li>`); return; } if (ul) { out.push(`<ul>${ul.join('')}</ul>`); ul = null; } if (l.trim()) out.push(`<p>${inl(l)}</p>`); });
     if (ul) out.push(`<ul>${ul.join('')}</ul>`); return out.join(''); }
   const plain = b => String(b || '').replace(/`|\*\*/g, '').replace(/^\s*[-*]\s+/gm, '· ').replace(/\s*\n\s*/g, ' ').trim();
@@ -139,24 +148,84 @@
       if (wrong.length) N.save({ t: `${c.name} 오답노트`.slice(0, 80), b: `틀린 문제를 모았어요. 정답 이유를 내 말로 적어 보세요.\n${wrong.join('\n')}`, cid: c.id, tags: [tag, '오답'], src: 'quiz', st: 'draft' }); });
     try { localStorage.setItem(seedK(), '1'); } catch (e) { } }
 
+  /* ── 모아보기(추가 지시 1 · 대표님 11-17 11:35): 질문 · 댓글 · 글 · 학습 기록을 그때그때 모아 한 줄 형식으로. 원본은 읽기만 — 고정 · 숨기기 표시만 notes.marks ── */
+  const KN = { all: '전체', note: '노트', q: '질문', cmt: '댓글', post: '글', log: '학습 기록' };
+  const KI = { q: 'chat', cmt: 'lnback', post: 'lndoc', log: 'award' };
+  const SAFE = /[^\w.-]/g; const kid = x => String(x || '').replace(SAFE, '').slice(0, 60);
+  /* 수강 기간이 끝난 과정(읽기 전용 · 「기간 끝남」) */
+  function ended(cid) { if (!cid) return false; const c = (SITE().classes || []).find(x => x.id === cid); if (!c) return false; const sid = LR.me && LR.me.sid; const e = (c.ends && sid && c.ends[sid]) || c.end; return /^\d{4}-\d{2}-\d{2}$/.test(String(e || '')) && e < td(); }
+  const endB = cid => ended(cid) ? '<em class="ln-end">기간 끝남</em>' : '';
+  function gather() { const out = []; const cn = cid => N.cName(cid); const T = (LR.lp && LR.lp.tutor) || {}; const QA = (LR.mine && Array.isArray(LR.mine.qa)) ? LR.mine.qa : [];
+    /* 질문: 튜터에게 넘긴 질문 + 받은 답(id로 연결) */
+    const seenQ = new Set();
+    (Array.isArray(T.ask) ? T.ask : []).forEach(x => { if (!x || !x.id) return; const a = QA.find(y => y && y.id === x.id); seenQ.add(x.id); out.push({ k: 'q', key: 'q:' + kid(x.id), t: String(x.q || '').slice(0, 120), body: String(x.q || ''), ans: a ? String(a.a || a.fb || '') : '', cid: x.cid || '', at: (a && a.at) || x.at || '', st: a ? '새 답변' : '답변 기다림', stc: a ? 'g' : '', href: x.cid ? `#c/${x.cid}` : '#ai', where: x.where || '' }); });
+    QA.forEach(a => { if (!a || !a.id || seenQ.has(a.id)) return; out.push({ k: 'q', key: 'q:' + kid(a.id), t: String(a.q || '').slice(0, 120), body: String(a.q || ''), ans: String(a.a || a.fb || ''), cid: '', at: a.at || '', st: '답변 옴', stc: 'g', href: '#ai' }); });
+    /* 게시판 글 · 댓글 · 학습노트(lcomm) */
+    try { if (typeof lcPosts === 'function') { const P = lcPosts(); const me = typeof lcMe === 'function' ? lcMe() : '';
+      P.filter(x => x.own).forEach(x => { const isQ = /질문/.test(String(x.kind || '') + String(x.board || '')); out.push({ k: isQ ? 'q' : 'post', key: (isQ ? 'q:' : 'post:') + kid(x.id), t: String(x.title || x.body || '').slice(0, 120), body: String(x.body || ''), cid: x.cls || '', at: x.at || '', st: x.pend ? '반영 대기' : (x.cmts || []).length ? `댓글 ${x.cmts.length}` : '', href: '#post/' + encodeURIComponent(x.id) }); });
+      const walk = (L, post) => (L || []).forEach(c => { if (c && c.au === me) out.push({ k: 'cmt', key: 'cmt:' + kid(c.id), t: String(c.body || '').slice(0, 120), body: String(c.body || ''), cid: post.cls || '', at: c.at || '', st: `「${String(post.title || '').slice(0, 24)}」에 남김`, href: '#post/' + encodeURIComponent(post.id) }); walk(c.replies, post); });
+      P.forEach(x => walk(x.cmts, x)); }
+      if (typeof lcStore === 'function' && typeof COMM === 'function') { const st = lcStore(); const me = typeof lcMe === 'function' ? lcMe() : ''; const by = new Map(); [...(COMM().notes || []).filter(n => n.au === me), ...(st.notes || [])].forEach(n => { if (n && n.id) by.set(n.id, n); });
+        by.forEach(n => out.push({ k: 'post', key: 'post:' + kid(n.id), t: `학습노트 · ${String(n.body || '').slice(0, 80)}`, body: String(n.body || ''), cid: n.cls || '', at: n.at || '', st: n.pub ? '공개' : '나만 보기', href: n.cls ? `#c/${n.cls}${n.item ? '/' + n.item : ''}` : '#notes', lnote: 1 })); } } catch (e) { console.error('lnote gather comm', e); }
+    /* 학습 기록: 퀴즈 · 과제 · 수료 · 배지 · 튜토리얼 미션(날짜가 있는 것만) */
+    const C = (LR.lp && LR.lp.cls) || {}; Object.entries(C).forEach(([cid, r]) => { const c = (SITE().classes || []).find(x => x.id === cid); if (!c || !r) return;
+      Object.entries(r.items || {}).forEach(([iid, it]) => { const ti = ((c.items || []).find(y => y.id === iid) || {}).title || '레슨'; const href = `#c/${cid}/${iid}`;
+        (Array.isArray(it.tries) ? it.tries : []).slice(-3).forEach((tr, i) => tr && tr.at && out.push({ k: 'log', key: `log:${kid(cid)}.${kid(iid)}.t${i}`, t: `퀴즈 ${ti}`, cid, at: tr.at, st: `${tr.score}점${tr.pass === false ? ' · 다시 도전' : ''}`, href }));
+        (Array.isArray(it.subs) ? it.subs : []).slice(-2).forEach((sb, i) => sb && sb.at && out.push({ k: 'log', key: `log:${kid(cid)}.${kid(iid)}.s${i}`, t: `과제 제출 ${ti}`, cid, at: sb.at, st: '제출함', href })); });
+      if (r.sub && r.sub.at) out.push({ k: 'log', key: `log:${kid(cid)}.sub`, t: `과제 제출 · ${c.name}`, cid, at: r.sub.at, st: '제출함', href: `#c/${cid}` }); });
+    Object.entries((LR.lp && LR.lp.a2cert) || {}).forEach(([cid, at]) => out.push({ k: 'log', key: `log:${kid(cid)}.cert`, t: `수료증 · ${cn(cid) || '과정'}`, cid, at: String(at || ''), st: '수료', stc: 'g', href: `#cert/${cid}` }));
+    ((LR.mine && LR.mine.badges) || []).forEach(b => { const B = (SITE().badges || []).find(x => x.id === b.id); if (B && (b.at || b.date)) out.push({ k: 'log', key: `log:b.${kid(b.id)}`, t: `배지 · ${B.name}`, cid: '', at: b.at || b.date, st: '받음', stc: 'g', href: `#badge/${b.id}` }); });
+    Object.entries((LR.lp && LR.lp.tut) || {}).forEach(([id, r]) => { const t = (SITE().tuts || []).find(x => x.id === id); if (t && r && r.mission && r.at) out.push({ k: 'log', key: `log:t.${kid(id)}`, t: `미션 제출 · ${t.title}`, cid: '', at: r.at, st: '제출함', href: `#t/${id}` }); });
+    const M = N.marks(); out.forEach(x => { x.cn = cn(x.cid); x.mk = M[x.key] || {}; x.end = ended(x.cid); }); return out.sort((a, b) => String(b.at).localeCompare(String(a.at))); }
+  function itemHTML(x) { const pin = !!x.mk.pin, hid = !!x.mk.hide;
+    return `<div class="ln-item${hid ? ' hid' : ''}" data-k="${x.k}" data-key="${esc(x.key)}"><span class="sp" aria-hidden="true"></span><div class="r1"><span class="ln-src" data-s="${x.k}">${ico(KI[x.k], 14)}${KN[x.k]}</span>${x.st ? `<em class="ln-ist ${x.stc || ''}">${esc(x.st)}</em>` : ''}${endB(x.cid)}${pin ? `<span class="pinic">${ico('lnpin', 16)}<span class="sr">고정</span></span>` : ''}<time>${md2(dayOf(x.at))}</time></div>
+      <b class="t">${esc(x.t || '(내용 없음)')}</b>${x.cn || x.where ? `<small class="ln-icn">${esc([x.cn, x.where].filter(Boolean).join(' · '))}</small>` : ''}
+      ${x.k === 'q' && x.ans ? `<details class="ln-ans"><summary>답 펼쳐 보기</summary><p>${esc(x.ans).replace(/\n/g, '<br>')}</p></details>` : ''}
+      <div class="ln-iact"><a class="ln-lk" href="${esc(x.href)}">원래 자리로 ›</a>${x.k !== 'log' && !x.end ? `<button type="button" class="ln-lk" data-ln="tonote2" data-key="${esc(x.key)}">${ico('lnpen', 16)}노트로 옮기기</button>` : ''}<button type="button" class="ln-ib" data-ln="mkpin" data-key="${esc(x.key)}" aria-pressed="${pin}" aria-label="${pin ? '고정 풀기' : '고정'}">${ico('lnpin', 18)}</button><button type="button" class="ln-ib" data-ln="mkhide" data-key="${esc(x.key)}" aria-label="${hid ? '다시 보이기' : '숨기기'}">${hid ? ico('arrow', 18) : ico('x', 18)}</button></div></div>`; }
+  /* 학습 기록: 주 단위 묶음 + 주간 요약 한 줄(주간 돌아보기 카드는 lnote-ai.js가 #lnWeek에 그린다) */
+  const wkOf = at => { const d = new Date(String(at).slice(0, 10) + 'T00:00:00'); if (isNaN(d)) return ''; d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dayOf(d); };
+  function logHTML(L) { const G = new Map(); L.forEach(x => { const w = wkOf(x.at) || '이전'; if (!G.has(w)) G.set(w, []); G.get(w).push(x); });
+    return `<div id="lnWeek"></div>${[...G.entries()].map(([w, A]) => { const nQ = A.filter(x => /^퀴즈/.test(x.t)).length, nS = A.filter(x => /제출/.test(x.t)).length, nB = A.filter(x => /^(배지|수료)/.test(x.t)).length;
+      return `<div class="ln-sec"><h3 class="ln-h3">${w === '이전' ? '이전 기록' : `${md2(w)} 주`}<small>${[nQ && `퀴즈 ${nQ}`, nS && `제출 ${nS}`, nB && `배지 · 수료 ${nB}`].filter(Boolean).join(' · ') || `${A.length}개`}</small></h3><div class="ln-ilist">${A.map(itemHTML).join('')}</div></div>`; }).join('')}`; }
+  function segHTML(G) { const A = N.all(); const cnt = { all: A.length + G.filter(x => !x.mk.hide).length, note: A.length }; ['q', 'cmt', 'post', 'log'].forEach(k => { cnt[k] = G.filter(x => x.k === k && !x.mk.hide).length; });
+    return `<div class="ln-seg" role="tablist" aria-label="모아보기">${Object.keys(KN).filter(k => k === 'all' || k === 'note' || cnt[k]).map(k => `<button type="button" role="tab" class="${LN.seg === k ? 'on' : ''}" aria-selected="${LN.seg === k}" data-ln="seg" data-v="${k}">${KN[k]}${cnt[k] ? ` <em>${cnt[k]}</em>` : ''}</button>`).join('')}</div>`; }
+  const qOk = (x, q) => [x.t, x.body, x.ans, x.cn, x.where].join(' ').toLowerCase().includes(q);
+  /* 노트가 아닌 구분(전체 · 질문 · 댓글 · 글 · 학습 기록) 목록 */
+  function segList(G) { const q = LN.q.trim().toLowerCase(); const vis = G.filter(x => (LN.hid || !x.mk.hide) && (!q || qOk(x, q))); const hidN = G.filter(x => x.mk.hide).length;
+    const more = hidN ? `<button type="button" class="ln-lk c" data-ln="showhid">${LN.hid ? '숨긴 항목 감추기' : `숨긴 항목 ${hidN}개 보기`}</button>` : '';
+    if (LN.seg === 'all') { const notes = N.all().filter(match); const mix = [...notes.map(n => ({ n, at: n.up || n.at })), ...vis.map(x => ({ x, at: x.at }))].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+      const pins = vis.filter(x => x.mk.pin); if (!mix.length) return `<div class="ln-none" role="status"><b>찾는 항목이 없어요</b><p>다른 낱말로 찾아보세요.</p></div>${more}`;
+      return `${q ? `<p class="ln-cnt" role="status">${mix.length}개 찾았어요 · 노트 · 질문 · 댓글 · 학습 기록 모두에서</p>` : ''}${pins.length && !q ? `<div class="ln-sec"><h3 class="ln-h3">고정한 항목<small>${pins.length}개</small></h3><div class="ln-ilist">${pins.map(itemHTML).join('')}</div></div>` : ''}<div class="ln-sec"><div class="ln-ilist">${mix.map(m => m.n ? cardHTML(m.n) : itemHTML(m.x)).join('')}</div></div>${more}`; }
+    const L = vis.filter(x => x.k === LN.seg); if (!L.length) return `<div class="ln-none" role="status"><b>${q ? '찾는 항목이 없어요' : `아직 ${KN[LN.seg]}이 없어요`}</b><p>${({ q: '레슨에서 튜터에게 「선생님께 질문 넘기기」를 하면 여기에 모여요.', cmt: '게시판에 남긴 댓글이 여기에 모여요.', post: '게시판 글과 레슨 「학습노트」가 여기에 모여요.', log: '퀴즈 · 과제 · 수료 기록이 여기에 쌓여요.' })[LN.seg] || ''}</p></div>${more}`;
+    const pins = L.filter(x => x.mk.pin), rest = L.filter(x => !x.mk.pin);
+    if (LN.seg === 'log') return `${pins.length ? `<div class="ln-sec"><h3 class="ln-h3">고정한 기록</h3><div class="ln-ilist">${pins.map(itemHTML).join('')}</div></div>` : ''}${logHTML(rest)}${more}`;
+    return `${q ? `<p class="ln-cnt" role="status">${L.length}개 찾았어요</p>` : ''}<div class="ln-sec"><div class="ln-ilist">${[...pins, ...rest].map(itemHTML).join('')}</div></div>${more}`; }
+  /* 노트 구분에서 검색하면 다른 활동에서 찾은 것도 아래에(통합 검색) */
+  function alsoHTML(G) { const q = LN.q.trim().toLowerCase(); if (!q) return ''; const L = G.filter(x => !x.mk.hide && qOk(x, q)); if (!L.length) return '';
+    return `<div class="ln-sec"><h3 class="ln-h3">다른 활동에서도 찾았어요<small>${L.length}개</small></h3><div class="ln-ilist">${L.slice(0, 8).map(itemHTML).join('')}</div>${L.length > 8 ? '<button type="button" class="ln-lk c" data-ln="seg" data-v="all">전체에서 모두 보기</button>' : ''}</div>`; }
+  /* 노트로 옮기기: 질문(+답) · 댓글 · 글 → 내 노트 초안(src 'me', 확인 전). lnote-ai.js가 LNOTE.toNote를 감싸 튜터 정리를 붙일 수 있다 */
+  N.toNote = N.toNote || function (x) { const b = x.k === 'q' ? `**질문** ${x.body}${x.ans ? `\n**답** ${x.ans}` : ''}` : x.body; return N.save({ t: (x.k === 'q' ? `질문 · ${x.t}` : x.t).replace(/^학습노트 · /, '').slice(0, 80), b: String(b || '').slice(0, N.LIM.b), cid: x.cid && N.cName(x.cid) ? x.cid : '', tags: [KN[x.k]], src: 'me', st: 'draft' }); };
+
   /* ── 노트 카드(수석 시안 .ln-card: spine · r1 출처 · 제목 · 미리보기 2줄 · r4 태그 · 카드 수) ── */
   function cardHTML(n, cls) { const kc = cardsOf(n.id).length; const pin = cls === 'pin';
     const r4 = pin ? `<span class="meta">${kc ? `${ico('lncards', 15)}카드 ${kc} · ` : ''}${md2(dayOf(n.up || n.at))}</span>` : (n.tags.length || kc ? `<span class="r4">${n.tags.slice(0, 3).map(t => `<i class="ln-tag sm">#${esc(t)}</i>`).join('')}${kc ? `<em>${ico('lncards', 15)}카드 ${kc}</em>` : ''}</span>` : '');
-    return `<a class="ln-card${n.st === 'draft' ? ' draft' : ''}${cls && !pin ? ' ' + cls : ''}" href="#notes/${esc(n.id)}" data-s="${esc(n.src)}"><span class="sp" aria-hidden="true"></span><span class="r1">${srcB(n.src)}${n.st === 'draft' ? '<em class="ln-dr">확인 전</em>' : ''}${n.pin ? `<span class="pinic" title="고정">${ico('lnpin', 16)}<span class="sr">고정</span></span>` : ''}${pin ? '' : `<time>${md2(dayOf(n.up || n.at))}</time>`}</span>
+    return `<a class="ln-card${n.st === 'draft' ? ' draft' : ''}${cls && !pin ? ' ' + cls : ''}" href="#notes/${esc(n.id)}" data-s="${esc(n.src)}"><span class="sp" aria-hidden="true"></span><span class="r1">${srcB(n.src)}${n.st === 'draft' ? '<em class="ln-dr st-draft">확인 전</em>' : ''}${endB(n.cid)}${n.pin ? `<span class="pinic" title="고정">${ico('lnpin', 16)}<span class="sr">고정</span></span>` : ''}${pin ? '' : `<time>${md2(dayOf(n.up || n.at))}</time>`}</span>
       <b class="t">${esc(n.t || '제목 없음')}</b>${!pin && n.b ? `<p>${esc(plain(n.b).slice(0, 200))}</p>` : ''}${r4}</a>`; }
-  function match(n) { if (LN.tag === '__draft') { if (n.st !== 'draft') return false; } else if (LN.tag === '__quiz') { if (n.src !== 'quiz') return false; } else if (LN.tag && !n.tags.includes(LN.tag)) return false; const q = LN.q.trim().toLowerCase(); if (!q) return true; return [n.t, n.b, n.tags.join(' '), N.cName(n.cid)].join(' ').toLowerCase().includes(q); }
-  function listHTML() { const A = N.all(); if (!A.length) return emptyHTML(); const F = A.filter(match); const on = LN.q.trim() || LN.tag;
-    if (!F.length) return `<div class="ln-none" role="status"><b>찾는 노트가 없어요</b><p>${LN.q.trim() ? `「${esc(LN.q.trim())}」에 맞는 노트가 없어요.` : '이 조건에 맞는 노트가 없어요.'} 다른 낱말로 찾거나 조건을 지워 보세요.</p><button type="button" class="ln-b s" data-ln="clear">조건 지우기</button></div>`;
+  function match(n) { if (LN.cid && n.cid !== LN.cid) return false; if (LN.tag === '__pin') { if (!n.pin) return false; } else if (LN.tag === '__draft') { if (n.st !== 'draft') return false; } else if (LN.tag === '__quiz') { if (n.src !== 'quiz') return false; } else if (LN.tag && !n.tags.includes(LN.tag)) return false; const q = LN.q.trim().toLowerCase(); if (!q) return true; return [n.t, n.b, n.tags.join(' '), N.cName(n.cid), ...cardsOf(n.id).map(c => c.f + ' ' + c.k)].join(' ').toLowerCase().includes(q); }
+  function listHTML() { const A = N.all(); if (!A.length) return emptyHTML(); const F = A.filter(match); const on = LN.q.trim() || LN.tag || LN.cid;
+    if (!F.length) return `<div class="ln-none" role="status"><b>찾는 노트가 없어요</b><p>${LN.q.trim() ? `「${esc(LN.q.trim())}」에 맞는 노트가 없어요.` : '이 조건에 맞는 노트가 없어요.'} 다른 낱말로 찾거나 조건을 지워 보세요.</p><div class="ln-row c">${LN.q.trim() ? '<button type="button" class="ln-b p" data-ln="new">이 내용으로 새 노트 쓰기</button>' : ''}<button type="button" class="ln-b s" data-ln="clear">조건 지우기</button></div></div>`;
     const P = on ? [] : F.filter(n => n.pin); const rest = on ? F : F.filter(n => !n.pin);
     const G = new Map(); rest.forEach(n => { const k = N.cName(n.cid) ? n.cid : ''; if (!G.has(k)) G.set(k, []); G.get(k).push(n); });
     const order = [...G.keys()].sort((a, b) => (a ? 0 : 1) - (b ? 0 : 1));
     return `${on ? `<p class="ln-cnt" role="status">${F.length}개 찾았어요</p>` : ''}${P.length ? `<div class="ln-sec"><h3 class="ln-h3">고정한 노트<small>${P.length}개</small></h3><div class="pins">${P.map(n => cardHTML(n, 'pin')).join('')}</div></div>` : ''}
       ${order.map(k => `<div class="ln-sec"><div class="grp"><h3 class="gh">${k ? esc(N.cName(k)) : '과정 밖 노트'}<small>${G.get(k).length}개</small></h3>${G.get(k).map(n => cardHTML(n)).join('')}</div></div>`).join('')}`; }
-  function emptyHTML() { return `<div class="ln-empty"><div class="ph" style="background-image:url('img/stock/dsk-03-800.webp')"><b>아직 노트가 없어요</b></div><div class="bx"><p>오늘 레슨에서 기억할 한 줄부터 남겨 볼까요? 쓴 노트는 복습 카드로 바꿔 내일 다시 꺼내 볼 수 있어요.</p><button type="button" class="ln-b p" data-ln="new">${ico('lnpen', 18)}첫 노트 쓰기</button>${appOn() ? '<a class="ln-lk c" href="#ai">튜터에게 요약 부탁하기</a>' : ''}</div></div>`; }
+  function emptyHTML() { let nx = null; try { const st = typeof myStats === 'function' ? myStats() : null; nx = st && st.courses.find(y => y.c && y.next); } catch (e) { nx = null; }
+    return `<div class="ln-empty"><div class="ph" style="background-image:url('img/stock/doc-01-800.webp')"><p class="eb">${ico('lnnote', 15)}셀프러닝 노트</p><h2>아직 노트가 없어요</h2><p>레슨을 듣고 「노트」 버튼을 눌러 보세요. 기억할 한 줄이면 충분해요.</p></div></div>
+    <div class="ln-ea"><button type="button" class="ln-b p blk" data-ln="new">${ico('lnpen', 18)}첫 노트 쓰기</button>${nx ? `<a class="ln-lk c" href="#c/${esc(nx.c.id)}${nx.next.id ? '/' + esc(nx.next.id) : ''}">${ico('play', 18)}레슨 듣고 노트 남기기</a>` : ''}${appOn() ? `<a class="ln-lk c" href="#ai">${ico('spark', 18)}튜터에게 요약 부탁하기</a>` : ''}</div>`; }
   function chipsHTML() { const A = N.all(); if (!A.length) return ''; const cnt = {}; A.forEach(n => n.tags.forEach(t => { cnt[t] = (cnt[t] || 0) + 1; })); const T = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 10); const dr = A.filter(n => n.st === 'draft').length, qz = A.filter(n => n.src === 'quiz').length;
     if (LN.tag && !LN.tag.startsWith('__') && !T.includes(LN.tag)) T.unshift(LN.tag);
-    const chip = (v, lab, n) => `<button type="button" class="ln-tag${LN.tag === v ? ' on' : ''}" data-ln="tag" data-v="${esc(v)}" aria-pressed="${LN.tag === v}">${lab}${n != null ? ` <em>${n}</em>` : ''}</button>`;
-    return `<div class="ln-chips" role="group" aria-label="노트 거르기">${chip('', '전체', A.length)}${dr ? chip('__draft', '초안', dr) : ''}${qz ? chip('__quiz', '오답', qz) : ''}${T.map(t => chip(t, `#${esc(t)}`, null)).join('')}</div>`; }
+    const chip = (v, lab, n) => `<button type="button" class="ln-tag${LN.tag === v && !(v === '' && LN.cid) ? ' on' : ''}" data-ln="tag" data-v="${esc(v)}" aria-pressed="${LN.tag === v}">${lab}${n != null ? ` <em>${n}</em>` : ''}</button>`;
+    return `<div class="ln-chips" role="group" aria-label="노트 거르기">${LN.cid ? `<button type="button" class="ln-tag on" data-ln="cid" data-v="" aria-label="과정 조건 지우기">${esc(N.cName(LN.cid))} ✕</button>` : ''}${chip('', '전체', A.length)}${dr ? chip('__draft', '초안', dr) : ''}${qz ? chip('__quiz', '오답', qz) : ''}${T.map(t => chip(t, `#${esc(t)}`, null)).join('')}</div>`; }
   function heroHTML() { const A = N.all(), K = N.cards(), D = N.due(), s = streak(); const tm = N.due(N.addD(td(), 1)).length - D.length; const g = N.goal(); const dq = D.filter(c => c.src === 'quiz').length;
     const learned = K.length ? Math.round(K.filter(c => c.iv >= 3).length / K.length * 100) : 0; const R = 30, L = 2 * Math.PI * R;
     const dd = g ? Math.round((new Date(g.date) - new Date(td())) / 864e5) : null;
@@ -165,44 +234,68 @@
     return `<div class="ln-hero"><div class="ln-hr1"><span class="ln-eb"><i aria-hidden="true"></i>${s ? `${s}일째 이어 가는 중` : '오늘 첫 기록을 남겨 보세요'}</span><span class="ln-streak" role="img" aria-label="최근 7일 중 ${week().filter(w => w.on).length}일 학습">${week().map(w => `<i class="${w.t ? 't' : w.on ? 'd' : ''}"></i>`).join('')}</span></div>
       <div class="ln-hr2"><div class="ln-hm">${D.length ? `<p class="ln-hl">오늘 복습할 카드</p><p class="ln-big"><b>${D.length}</b>장</p><p class="ln-hs">약 ${Math.max(1, Math.ceil(D.length / 2))}분이면 끝나요${dq ? ` · 오답 카드 ${dq}장 포함` : ''}</p>` : K.length ? `<p class="ln-hl">오늘의 복습</p><h2 class="ln-h2s">오늘 복습은 끝났어요</h2><p class="ln-hs">${tm > 0 ? `내일 ${tm}장이 기다려요` : '새 노트를 남기면 내일 복습 카드가 생겨요'}</p>` : `<p class="ln-hl">셀프러닝 노트</p><h2 class="ln-h2s">배운 것을 내 말로 남겨 볼까요?</h2><p class="ln-hs">노트에서 복습 카드를 만들면 매일 여기서 꺼내 봐요</p>`}</div>
         ${K.length ? `<div class="ln-ring" role="img" aria-label="익힌 카드 ${learned}%"><svg width="76" height="76" viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="${R}" fill="none" stroke-width="6" class="bg"/><circle cx="38" cy="38" r="${R}" fill="none" stroke-width="6" class="fg" stroke-dasharray="${(L * learned / 100).toFixed(1)} ${L.toFixed(1)}" stroke-linecap="round"/></svg><div><b>${learned}%</b><span>익힌 카드</span></div></div>` : ''}</div>
-      ${D.length ? `<a class="ln-b w" href="#review">${ico('play', 18)}오늘 복습 시작</a>` : `<button type="button" class="ln-b w" data-ln="new">${ico('lnpen', 18)}새 노트 쓰기</button>`}
+      ${D.length ? `<a class="ln-b w" href="#notes/review">${ico('play', 18)}오늘 복습 시작</a>` : `<button type="button" class="ln-b w" data-ln="new">${ico('lnpen', 18)}새 노트 쓰기</button>`}
       <div class="ln-kpis">${kpi(A.length, '내 노트')}${kpi(K.length, '복습 카드')}${kpi(k3[0], k3[1], k3[2])}</div></div>`; }
   function draftsHTML() { const D = N.all().filter(n => n.st === 'draft'); if (!D.length) return ''; const by = {}; D.forEach(n => { by[n.src] = (by[n.src] || 0) + 1; });
     return `<div class="ln-drafts"><span class="ic">${ico('spark', 22)}</span><span class="tx"><b>확인할 초안 ${D.length}개</b><span>${Object.entries(by).map(([k, v]) => `${({ tutor: '튜터 요약', quiz: '오답', yt: '영상', file: '내 자료', exam: '시험 계획', me: '내 노트' })[k]} ${v}`).join(' · ')}</span></span><button type="button" data-ln="tag" data-v="__draft">확인하기</button></div>`; }
-  function hubHTML() { seed(); const A = N.all();
-    const head = appOn() ? `<div class="ln-top"><h1>내 노트</h1>${A.length ? `<button type="button" class="ln-ib s" data-ln="srch" aria-label="노트 찾기">${ico('search', 22)}</button>` : ''}<button type="button" class="ln-ib p" data-ln="new" aria-label="새 노트 쓰기">${ico('plus', 24)}</button></div>` : '';
-    const body = `<section class="sec lnz ln-hub"><div class="in">${head}${heroHTML()}${draftsHTML()}
-      ${A.length ? `<div class="ln-bar"><label class="ln-q">${ico('search', 18)}<span class="sr">노트 찾기</span><input id="lnQ" type="search" placeholder="제목 · 내용 · 태그로 찾기" value="${esc(LN.q)}" maxlength="40" autocomplete="off"></label>${appOn() ? '' : `<button type="button" class="ln-b p" data-ln="new">${ico('lnpen', 18)}새 노트</button>`}</div><div id="lnChips">${chipsHTML()}</div>` : ''}
-      <div id="lnList">${listHTML()}</div>
-      <p class="ln-foot">${ico('lock', 15)}노트는 내 학습 기록에만 저장돼요. 선생님 · 운영자는 노트 내용을 볼 수 없고, 이름 · 연락처 · 학번은 노트와 내보내기에 들어가지 않아요.</p></div></section>`;
-    return appOn() ? body : `${lPageHead({ key: 'notes', title: '내 노트', eyebrow: '셀프러닝 노트', desc: '레슨에서 배운 것을 내 말로 남기고, 복습 카드로 매일 꺼내 봐요.', compact: true })}${body}`; }
-  function paintList() { const L = document.getElementById('lnList'); if (L) L.innerHTML = listHTML(); const C = document.getElementById('lnChips'); if (C) C.innerHTML = chipsHTML(); }
+  /* 웹 왼쪽 레일(시안 A1 §6): 거르기(모든 노트 · 고정 · 확인할 초안 · 오답) · 과정 · 자주 쓴 태그 — 0인 항목은 숨김 */
+  const DOT = ['#00A832', '#E0A800', '#2849A8', '#FF6B2C', '#0F766E', '#736B5F'];
+  function railHTML() { const A = N.all(); const ri = (v, ic, lab, n, cls) => n ? `<button type="button" class="ri${LN.tag === v && !LN.cid ? ' on' : ''}" data-ln="tag" data-v="${v}" aria-pressed="${LN.tag === v && !LN.cid}">${ic}<span>${lab}</span><em class="${cls || ''}">${n}</em></button>` : '';
+    const cnt = {}; A.forEach(n => n.tags.forEach(t => { cnt[t] = (cnt[t] || 0) + 1; })); const T = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 8);
+    const C = []; A.forEach(n => { if (n.cid && N.cName(n.cid) && !C.includes(n.cid)) C.push(n.cid); });
+    return `<aside class="ln-rail" aria-label="노트 거르기"><h1>내 노트</h1><p class="ln-rs">나만 보는 공부 기록이에요</p><button type="button" class="ln-b p blk" data-ln="new">${ico('plus', 20)}새 노트</button>
+      ${A.length ? `<nav class="ln-ris">${ri('', ico('lnnote', 20), '모든 노트', A.length)}${ri('__pin', ico('lnpin', 20), '고정', A.filter(n => n.pin).length)}${ri('__draft', ico('spark', 20), '확인할 초안', A.filter(n => n.st === 'draft').length, 'co')}${ri('__quiz', ico('lnback', 20), '오답', A.filter(n => n.src === 'quiz').length)}</nav>
+      ${C.length ? `<h2>과정</h2><nav class="ln-ris">${C.map((c, i) => `<button type="button" class="ri${LN.cid === c ? ' on' : ''}" data-ln="cid" data-v="${esc(c)}" aria-pressed="${LN.cid === c}"><i class="dot" style="background:${DOT[i % DOT.length]}"></i><span>${esc(N.cName(c))}</span><em>${A.filter(n => n.cid === c).length}</em></button>`).join('')}</nav>` : ''}
+      ${T.length ? `<h2>자주 쓴 태그</h2><div class="ln-rtags">${T.map(t => `<button type="button" class="ln-tag${LN.tag === t ? ' on' : ''}" data-ln="tag" data-v="${esc(t)}" aria-pressed="${LN.tag === t}">#${esc(t)}</button>`).join('')}</div>` : ''}` : ''}
+      <p class="ln-foot">${ico('lock', 15)}노트는 나만 봐요. 기관에는 개수만 보여요.</p></aside>`; }
+  function nextRow() { let x = null; try { const st = typeof myStats === 'function' ? myStats() : null; x = st && st.courses.find(y => y.c && y.next); } catch (e) { x = null; } if (!x) return '';
+    return `<h3 class="ln-h3">방금 본 차시에 남겨 볼까요</h3><div class="ln-box"><div class="ln-nx"><span class="th" style="background-image:url('${esc(typeof lPhoto === 'function' ? lPhoto(x.c.name, x.c.id, true) : '')}')"></span><a class="tx" href="#c/${esc(x.c.id)}${x.next.id ? '/' + esc(x.next.id) : ''}"><b>${esc(x.next.title)}</b><small>${esc(x.c.name)}${x.p ? ` · 진도 ${x.p}%` : ''}</small></a><button type="button" class="ln-tag" data-ln="newat" data-c="${esc(x.c.id)}" data-i="${esc(x.next.id || '')}">${ico('lnpen', 16)}노트</button></div></div>`; }
+  function flowBox() { return `<div class="ln-box"><b class="ln-bt">노트가 쌓이면 이렇게 돼요</b><div class="ln-nodes"><span class="ln-node t">노트 쓰기</span><i aria-hidden="true">→</i><span class="ln-node g">복습 카드</span><i aria-hidden="true">→</i><span class="ln-node">잊을 때쯤 복습</span></div><p class="ln-msg">복습 카드는 첫 노트를 쓰면 생겨요. 퀴즈를 틀리면 오답 노트도 저절로 모여요.</p></div>`; }
+  const listBody = G => LN.seg === 'note' ? listHTML() + alsoHTML(G) : segList(G);
+  function hubHTML() { seed(); const A = N.all(); const W = !appOn(); const G = gather(); const any = A.length || G.length;
+    const head = W ? '' : `<div class="ln-top"><div class="ln-tt"><h1>내 노트</h1>${A.length ? '' : '<p>나만 보는 공부 기록이에요</p>'}</div>${A.length ? `<button type="button" class="ln-ib s" data-ln="srch" aria-label="노트 찾기">${ico('search', 22)}</button>` : ''}<button type="button" class="ln-ib p" data-ln="new" aria-label="새 노트 쓰기">${ico('plus', 24)}</button></div>`;
+    const main = `${head}${A.length ? heroHTML() + draftsHTML() : ''}
+      ${any ? `<div id="lnSeg">${segHTML(G)}</div><div class="ln-bar"><label class="ln-q">${ico('search', 18)}<span class="sr">노트 · 질문 · 댓글 · 학습 기록 찾기</span><input id="lnQ" type="search" placeholder="노트 · 질문 · 댓글 · 기록 찾기" value="${esc(LN.q)}" maxlength="40" autocomplete="off"></label></div><div id="lnChips">${LN.seg === 'note' ? chipsHTML() : ''}</div>` : ''}
+      <div id="lnList">${listBody(G)}</div>${A.length ? '' : `${nextRow()}${flowBox()}`}
+      ${W ? '' : `<p class="ln-foot">${ico('lock', 15)}노트는 나만 봐요. 기관에는 개수만 보여요. 이름 · 연락처 · 학번은 노트와 내보내기에 들어가지 않아요.</p>`}`;
+    return `<section class="sec lnz ln-hub${W ? ' ln-web' : ''}"><div class="in">${W ? `<div class="ln-wrap">${railHTML()}<div class="ln-main">${main}</div></div>` : main}</div></section>`; }
+  function paintList() { const G = gather(); const L = document.getElementById('lnList'); if (L) L.innerHTML = listBody(G); const C = document.getElementById('lnChips'); if (C) C.innerHTML = LN.seg === 'note' ? chipsHTML() : ''; const S = document.getElementById('lnSeg'); if (S) S.innerHTML = segHTML(G); const R = document.querySelector('#lm .ln-rail'); if (R) R.outerHTML = railHTML(); }
 
   /* ── 보기 · 편집(앱 = 하단 시트, 웹 = 오른쪽 패널) ── */
+  /* 저장 상태(추가 지시 1-5): 운영 = PUT /progress 결과, 시연 = 이 기기, 오프라인 = 이 기기에 먼저 */
+  const SV = { st: '', at: 0 };
+  function stText() { if (!SV.at) return ''; if (typeof navigator !== 'undefined' && navigator.onLine === false) return `${ico('lock', 14)}오프라인이라 이 기기에 먼저 두었어요. 연결되면 보내요.`;
+    if (SV.st === 'fail') return `<span class="bad">저장하지 못했어요. 이 기기에 임시로 두었어요.</span><button type="button" class="ln-lk" data-ln="retry">다시 시도</button>`; if (SV.st === 'busy') return '저장하는 중…';
+    return `${ico('check', 14)}저장됨 · ${Date.now() - SV.at < 60000 ? '방금' : md2(dayOf(new Date(SV.at)))}${LR.mode === 'live' ? '' : ' · 이 기기'}`; }
+  const paintSt = () => { const e = document.getElementById('lnSst'); if (e) e.innerHTML = stText(); };
+  N.on(k => { if (['add', 'up', 'del', 'card-add', 'card-del', 'card-up'].includes(k)) { SV.at = Date.now(); SV.st = LR.mode === 'live' ? 'busy' : 'ok'; setTimeout(paintSt, 0); } });
+  if (typeof window.fetch === 'function' && !window.fetch.__ln) { const of = window.fetch; const wf = function (u, o) { const r = of.apply(this, arguments); try { if (o && String(o.method).toUpperCase() === 'PUT' && /\/api\/pub\/[^/]+\/progress$/.test(String(u))) r.then(x => { SV.st = x.ok ? 'ok' : 'fail'; paintSt(); }, () => { SV.st = 'fail'; paintSt(); }); } catch (e) { } return r; }; wf.__ln = 1; window.fetch = wf; }
+  addEventListener('online', paintSt); addEventListener('offline', paintSt);
   function ovHTML(id) { const isNew = id === 'new'; const n = isNew ? null : N.get(id);
     if (!isNew && !n) return shellOv('노트를 찾지 못했어요', '<p class="ln-msg">지워졌거나 다른 기기에서 정리한 노트예요.</p>', '<a class="ln-b p" href="#notes">내 노트로</a>');
-    if (isNew || LN.edit || (n.st === 'draft' && !LN.view)) return editOv(n);
+    const ro = !isNew && ended(n.cid); /* 수강 기간이 끝난 과정의 노트 = 읽기 전용 */
+    if (!ro && (isNew || LN.edit || (n.st === 'draft' && !LN.view))) return editOv(n);
     const C = myCourses(); void C; const cn = N.cName(n.cid), iname = n.lid ? N.iName(n.cid, n.lid) : ''; const K = cardsOf(n.id);
-    const meta = `<div class="ln-meta">${srcB(n.src)}${n.st === 'draft' ? '<em class="ln-dr">확인 전</em>' : ''}${cn ? `<a class="ln-crs" href="#c/${esc(n.cid)}${n.lid ? '/' + esc(n.lid) : ''}">${ico('book', 15)}${esc(cn)}${iname ? ` › ${esc(iname)}` : ''}</a>` : ''}<time>${md2(dayOf(n.up || n.at))} 고침</time></div>`;
+    const meta = `<div class="ln-meta">${srcB(n.src)}${n.st === 'draft' ? '<em class="ln-dr st-draft">확인 전</em>' : ''}${endB(n.cid)}${cn ? `<a class="ln-crs" href="#c/${esc(n.cid)}${n.lid ? '/' + esc(n.lid) : ''}">${ico('book', 15)}${esc(cn)}${iname ? ` › ${esc(iname)}` : ''}</a>` : ''}<time>${md2(dayOf(n.up || n.at))} 고침</time></div>`;
     const dr = n.st === 'draft' ? `<div class="ln-note-dr" role="note">${ico('spark', 18)}<p><b>${n.src === 'quiz' ? '틀린 문제로 만든 초안이에요.' : n.src === 'exam' ? '시험 계획 초안이에요.' : '튜터가 만든 초안이에요.'}</b> 내 말로 고쳐서 저장해 주세요. 확인하기 전에는 「확인 전」으로 보여요.</p></div>` : '';
-    const kHTML = `<div class="ln-ks"><h3>${ico('lncards', 18)}이 노트의 복습 카드${K.length ? ` <small>${K.length}장</small>` : ''}${K.length ? `<a class="ln-lk" href="#review?n=${esc(n.id)}">이 카드만 복습 ›</a>` : ''}</h3>${K.length ? `<ul>${K.map(c => `<li><span><b>${esc(c.f)}</b><small>${esc(c.k)}</small><em>${c.due <= td() ? '오늘 복습' : `${md2(c.due)} 복습`}</em></span><button type="button" class="ln-ib" data-ln="kdel" data-v="${esc(c.id)}" aria-label="카드 지우기: ${esc(c.f)}">${ico('lntrash', 18)}</button></li>`).join('')}</ul>` : '<p class="ln-msg">이 노트로 만든 카드가 아직 없어요. 질문 한 줄과 답 한 줄이면 충분해요.</p>'}
+    const kHTML = `<div class="ln-ks"><h3>${ico('lncards', 18)}이 노트의 복습 카드${K.length ? ` <small>${K.length}장</small>` : ''}${K.length ? `<a class="ln-lk" href="#notes/review?n=${esc(n.id)}">이 카드만 복습 ›</a>` : ''}</h3>${K.length ? `<ul>${K.map(c => `<li><span><b>${esc(c.f)}</b><small>${esc(c.k)}</small><em>${c.due <= td() ? '오늘 복습' : `${md2(c.due)} 복습`}</em></span><button type="button" class="ln-ib" data-ln="kdel" data-v="${esc(c.id)}" aria-label="카드 지우기: ${esc(c.f)}">${ico('lntrash', 18)}</button></li>`).join('')}</ul>` : '<p class="ln-msg">이 노트로 만든 카드가 아직 없어요. 질문 한 줄과 답 한 줄이면 충분해요.</p>'}
       ${LN.cardf ? `<form class="ln-kf" data-ln-f="card" novalidate><label>앞면(질문)<input name="f" maxlength="120" required placeholder="예: 피벗 테이블의 행 영역에는 무엇을 넣나요?"></label><label>뒷면(답)<textarea name="k" rows="2" maxlength="240" placeholder="답을 내 말로 적어요"></textarea></label><p class="ln-err" role="alert"></p><div class="ln-row"><button type="submit" class="ln-b p">카드 만들기</button><button type="button" class="ln-b s" data-ln="cardf">닫기</button></div></form>` : `<button type="button" class="ln-b s blk" data-ln="cardf">${ico('lncards', 18)}복습 카드 만들기</button>`}</div>`;
     const acts = `<div class="ln-acts"><button type="button" class="ln-b s" data-ln="pin" aria-pressed="${n.pin}">${ico('lnpin', 18)}${n.pin ? '고정 풀기' : '맨 위에 고정'}</button><button type="button" class="ln-b s" data-ln="mdone">${ico('lndl', 18)}.md 내려받기</button>${LN.del === n.id ? `<div class="ln-delc" role="alert"><p>이 노트를 지울까요?${K.length ? ` 이 노트로 만든 카드 ${K.length}장은 어떻게 할까요?` : ''} 5초 안에 되돌릴 수 있어요.</p><div class="ln-row">${K.length ? `<button type="button" class="ln-b s danger" data-ln="del">노트만 지우기</button><button type="button" class="ln-b s danger" data-ln="delall">카드도 지우기</button>` : '<button type="button" class="ln-b s danger" data-ln="del">지우기</button>'}<button type="button" class="ln-b s" data-ln="delno">그대로 두기</button></div></div>` : `<button type="button" class="ln-b s danger" data-ln="del">${ico('lntrash', 18)}노트 지우기</button>`}</div>`;
     const tags = n.tags.length ? `<div class="ln-c4 big">${n.tags.map(t => `<i class="ln-tag sm">#${esc(t)}</i>`).join('')}</div>` : '';
-    const foot = n.st === 'draft' ? `<button type="button" class="ln-b p" data-ln="ok">${ico('check', 18)}확인했어요</button><button type="button" class="ln-b s" data-ln="edit">${ico('lnpen', 18)}고치기</button>` : `<button type="button" class="ln-b p" data-ln="edit">${ico('lnpen', 18)}고치기</button><a class="ln-b s" href="#notes">닫기</a>`;
-    return shellOv(n.t || '제목 없음', `${meta}${dr}<div class="ln-md">${mdHTML(n.b) || '<p class="ln-msg">내용이 없어요.</p>'}</div>${tags}${kHTML}${acts}`, foot); }
+    const K1 = K.length; const foot = `${K1 ? `<a class="ln-ib s big" href="#notes/review?n=${esc(n.id)}" aria-label="이 노트 카드 ${K1}장만 복습">${ico('lncards', 22)}</a>` : ''}${ro ? '<p class="ln-msg ro">수강 기간이 끝난 과정이라 읽기만 할 수 있어요. 내보내기 · 복습은 그대로 돼요.</p>' : `<button type="button" class="ln-b p" data-ln="edit">${ico('lnpen', 18)}${n.st === 'draft' ? '확인 · 고치기' : '고치기'}</button>`}`;
+    return shellOv(n.t || '제목 없음', `${meta}<p class="ln-sst" id="lnSst" aria-live="polite">${stText()}</p>${dr}<div class="ln-md">${mdHTML(n.b, n) || '<p class="ln-msg">내용이 없어요.</p>'}</div>${tags}${kHTML}${acts}`, foot); }
   /* 카드 제안(규칙): 「질문? 답」 줄 · 「용어: 설명」 목록 · **굵게** 용어 — 학습자가 고친 뒤 저장할 때만 생긴다. 운영: 튜터 제안은 lnote-ai.js가 LNOTE.suggest를 감싸 붙인다 */
   N.suggest = N.suggest || function (b) { const out = [], seen = new Set(); const add = (f, k) => { f = String(f).trim().slice(0, 120); k = String(k).trim().slice(0, 240); if (!f || !k || seen.has(f) || out.length >= 3) return; seen.add(f); out.push({ f, k }); };
     String(b || '').split('\n').forEach(l => { const x = l.replace(/^\s*[-*]\s+/, '').replace(/\*\*/g, '').replace(/`/g, '').trim(); const m = /^(.{4,118}?\?)\s*(.+)$/.exec(x); if (m) add(m[1], m[2]); });
     String(b || '').split('\n').forEach(l => { const x = l.replace(/^\s*[-*]\s+/, '').trim(); const m = /\*\*([^*]{1,40})\*\*\s*[:：—–-]?\s*(.*)$/.exec(x); if (m && m[2] && !/\?\s*$/.test(m[1])) add(`${m[1].trim()}${/[가-힣]$/.test(m[1].trim()) ? '(이)란?' : '란?'}`, m[2].replace(/\*\*|`/g, '')); });
     String(b || '').split('\n').forEach(l => { const m = /^\s*[-*]\s+([^:：?]{2,40})[:：]\s*(.{2,})$/.exec(l); if (m) add(`${m[1].replace(/\*\*|`/g, '').trim()}란?`, m[2].replace(/\*\*|`/g, '')); });
     return out; };
-  const KM = { key: '', on: false, list: [] };
-  function kmInit(n, key) { if (KM.key === key) return; KM.key = key; const has = n && cardsOf(n.id).length; KM.on = !has && (!n || n.st === 'draft'); KM.list = KM.on ? N.suggest(n ? n.b : (LN.pre || {}).b || '') : []; }
+  const KM = { key: '', on: false, list: [], auto: true };
+  function kmInit(n, key) { if (KM.key === key) return; KM.key = key; KM.auto = true; const has = n && cardsOf(n.id).length; KM.on = !has && (!n || n.st === 'draft'); KM.list = KM.on ? N.suggest(n ? n.b : (LN.pre || {}).b || '') : []; }
   function kmHTML() { const full = N.cards().length >= N.LIM.cards; const left = N.LIM.cards - N.cards().length;
     const fc = (c, i) => `<div class="fc" data-i="${i}"><label><span>앞</span><input name="kf${i}" maxlength="120" value="${esc(c.f)}" aria-label="카드 ${i + 1} 앞면(질문)"></label><button type="button" class="ln-ib" data-ln="kmdel" data-v="${i}" aria-label="카드 ${i + 1} 빼기">${ico('lntrash', 18)}</button><label><span>뒤</span><textarea name="kk${i}" rows="1" maxlength="240" aria-label="카드 ${i + 1} 뒷면(답)">${esc(c.k)}</textarea></label></div>`;
     return `<div class="kmk"><div class="kh"><span class="ki">${ico('lncards', 20)}</span><span class="kt"><b>복습 카드로 만들기</b><small>${full ? '카드가 가득 찼어요' : KM.on ? (KM.list.length ? `질문 ${KM.list.length}개를 뽑았어요. 고칠 수 있어요.` : '본문에서 뽑을 질문이 없어요. 직접 추가해 보세요.') : '켜면 본문에서 질문을 뽑아 드려요'}</small></span><button type="button" class="ln-sw" role="switch" aria-checked="${KM.on}" data-ln="kmsw" aria-label="복습 카드로 만들기"${full ? ' disabled' : ''}><i></i></button></div>
-      ${KM.on ? `${KM.list.map(fc).join('')}<div class="kf"><button type="button" class="ln-lk" data-ln="kmadd"${KM.list.length >= 3 || left <= KM.list.length ? ' disabled' : ''}>${ico('plus', 18)}카드 직접 추가</button><button type="button" class="ln-lk sub" data-ln="kmre">본문에서 다시 뽑기</button><small>첫 복습 내일 · ${md2(N.addD(td(), 1))}</small></div>` : ''}</div>
+      ${KM.on ? `${KM.list.map(fc).join('')}<div class="kf"><button type="button" class="ln-lk" data-ln="kmadd"${KM.list.length >= 3 || left <= KM.list.length ? ' disabled' : ''}>${ico('plus', 18)}카드 직접 추가</button><button type="button" class="ln-lk sub" data-ln="kmre">본문에서 다시 뽑기</button>${window.LNOTE_AI && typeof window.LNOTE_AI.suggestCards === 'function' ? `<button type="button" class="ln-lk sub" data-ln="kmai">${ico('spark', 16)}튜터에게 더 뽑아 달라기</button>` : ''}<small>첫 복습 내일 · ${md2(N.addD(td(), 1))}</small></div>` : ''}</div>
       <p class="ln-msg">${ico('lncards', 14)}${N.cards().length ? `지금 카드 ${N.cards().length}장 · ` : ''}최대 ${N.LIM.cards}장까지 만들 수 있어요</p>`; }
   const kmCount = () => KM.on ? KM.list.filter(c => c.f.trim()).length : 0;
   function kmRead() { const f = document.getElementById('lnF'); if (!f) return; KM.list = KM.list.map((c, i) => ({ f: (f.elements['kf' + i] || {}).value ?? c.f, k: (f.elements['kk' + i] || {}).value ?? c.k })); }
@@ -212,51 +305,74 @@
   function editOv(n) { const C = myCourses(); const pre = LN.pre || {}; const cid = n ? n.cid : pre.cid || ''; const lid = n ? n.lid : pre.lid || ''; kmInit(n, n ? n.id : 'new');
     const opts = [`<option value="">과정 밖 노트</option>`, ...C.map(c => `<option value="${esc(c.id)}"${c.id === cid ? ' selected' : ''}>${esc(c.name)}</option>`)]; if (cid && !C.some(c => c.id === cid) && N.cName(cid)) opts.push(`<option value="${esc(cid)}" selected>${esc(N.cName(cid))}</option>`);
     const t0 = n ? n.t : pre.t || '', b0 = n ? n.b : pre.b || '', g0 = n ? n.tags : pre.tags || [];
-    const f = `<form id="lnF" class="ln-form" data-ln-f="note" novalidate>${n && n.st === 'draft' ? `<div class="ln-note-dr" role="note">${ico('spark', 18)}<p><b>${n.src === 'quiz' ? '틀린 문제로 만든 초안이에요.' : n.src === 'exam' ? '시험 계획 초안이에요.' : n.src === 'tutor' ? '튜터가 만든 초안이에요.' : '확인 전 초안이에요.'}</b><br>내 말로 고쳐서 저장해 주세요.</p></div>` : ''}
+    const dm = !!(n && n.st === 'draft'); const who = n ? ({ quiz: '틀린 문제로 만든 초안이에요.', exam: '시험 계획 초안이에요.', tutor: '튜터가 만든 초안이에요.', yt: '영상 메모로 만든 초안이에요.', file: '내 자료로 만든 초안이에요.' })[n.src] || '확인 전 초안이에요.' : '';
+    const f = `<form id="lnF" class="ln-form${dm ? ' draftmode' : ''}" data-ln-f="note" novalidate>${dm ? `<ol class="ln-steps" aria-label="초안 확인 단계"><li class="done">${ico('check', 14)}읽기</li><li class="cur">내 말로 고치기</li><li>저장</li></ol><div class="ln-draftnote" role="note">${ico('spark', 18)}<p><b>${who}</b><br>내 말로 고쳐서 저장해 주세요.</p></div>` : ''}
       <label class="ln-fl"><span class="lh">제목<small><span id="lnTc">${t0.length}</span> / 80</small></span><input name="t" class="big" maxlength="80" required value="${esc(t0)}" placeholder="예: 피벗 테이블 한 줄 정리"></label>
       <div class="ln-fl"><label class="lh" for="lnB">내용<small><span id="lnCc">${b0.length}</span> / 1,500</small></label><textarea id="lnB" name="b" rows="8" maxlength="1500" placeholder="- 줄 앞에 - 를 쓰면 목록이 돼요&#10;질문? 답 처럼 쓰면 복습 카드로 뽑아 드려요">${esc(b0)}</textarea>
         <div class="ln-tb" role="toolbar" aria-label="글 꾸미기"><button type="button" data-ln="ins" data-v="b" aria-label="굵게"><b>B</b></button><button type="button" data-ln="ins" data-v="li" aria-label="목록">${ico('menu', 18)}</button><button type="button" data-ln="ins" data-v="code" aria-label="코드"><code>&lt;/&gt;</code></button></div></div>
       <div class="ln-two"><label class="ln-fl">과정<select name="cid">${opts.join('')}</select></label><label class="ln-fl">레슨<select name="lid">${lessonOpts(cid, lid)}</select></label></div>
       <label class="ln-fl"><span class="lh">태그<small><span id="lnGc">${g0.length}</span> / 5</small></span><input name="tags" maxlength="120" value="${esc(g0.join(', '))}" placeholder="쉼표로 나눠요 · 최대 5개 · 각 20자"></label>
       <div id="lnKm">${kmHTML()}</div>
+      ${dm && n.src === 'quiz' ? '<label class="ln-fl"><span class="lh">왜 틀렸을까요? 내가 써요<small>1자 이상</small></span><textarea name="why" rows="2" maxlength="300" placeholder="예: 3NF와 BCNF 조건을 헷갈렸어요"></textarea></label>' : ''}
+      ${dm ? '<label class="ln-chk"><input type="checkbox" name="ok"><span>내용을 읽고 확인했어요</span></label>' : ''}
       <p class="ln-err" role="alert"></p><p class="ln-msg">${ico('lock', 14)}노트는 나만 봐요. 기관에는 개수만 보여요. 이름 · 연락처 · 학번은 적지 않아도 돼요.</p></form>`;
     const draft = n && n.st === 'draft';
-    return shellOv(n ? '노트 고치기' : '새 노트', f, `${draft ? '<button type="button" class="ln-b s" data-ln="keepdraft">초안으로 두기</button>' : n ? '<button type="button" class="ln-b s" data-ln="view">취소</button>' : '<a class="ln-b s" href="#notes">취소</a>'}<button type="submit" form="lnF" id="lnSave" class="ln-b p wide">${saveLab()}</button>`); }
+    return shellOv(dm ? '초안 확인하기' : n ? '노트 고치기' : '새 노트', f, `${draft ? '<button type="button" class="ln-b s" data-ln="keepdraft">초안으로 두기</button>' : n ? '<button type="button" class="ln-b s" data-ln="view">취소</button>' : '<a class="ln-b s" href="#notes">취소</a>'}<button type="submit" form="lnF" id="lnSave" class="ln-b p wide">${saveLab()}</button>`); }
   function shellOv(title, body, foot) { const A = appOn();
     return `<div id="lnOv" class="ln-ov ${A ? 'sheet' : 'panel'}"><a class="ln-dim" href="#notes" tabindex="-1" aria-hidden="true"></a><div class="ln-sheet" role="dialog" aria-modal="true" aria-labelledby="lnSt">${A ? '<span class="ln-grab" aria-hidden="true"></span>' : ''}
       <header class="ln-sh"><h2 id="lnSt">${esc(title)}</h2><a class="ln-ib" href="#notes" aria-label="닫기">${ico('x', 20)}</a></header><div class="ln-sb">${body}</div><footer class="ln-sf">${foot}</footer></div></div>`; }
-  function paintOv() { document.querySelectorAll('#lnOv').forEach(x => x.remove()); const { a, b } = route(); document.body.classList.remove('ln-ovon'); if (a !== 'notes' || !b || !okMe()) return;
+  function paintOv() { document.querySelectorAll('#lnOv').forEach(x => x.remove()); const { a, b } = route(); document.body.classList.remove('ln-ovon'); if (a !== 'notes' || !b || b === 'review' || !okMe()) return;
     document.body.insertAdjacentHTML('beforeend', ovHTML(decodeURIComponent(b))); document.body.classList.add('ln-ovon'); const o = document.getElementById('lnOv'); const f = o.querySelector('input[name=t]') || o.querySelector('.ln-sf .ln-b') || o.querySelector('.ln-ib'); if (f) setTimeout(() => { try { f.focus({ preventScroll: true }); } catch (e) { } }, 30); }
 
-  /* ── 오늘 복습(#review) ── */
-  /* #review?n=<노트 id> = 그 노트 카드만(기한과 상관없이) */
+  /* ── 오늘 복습(#notes/review) — #review는 ltube.js 「짧게 복습」이 쓰므로 노트 아래 경로. LNOTE.review(노트 id?)로 연다 ── */
+  /* #notes/review?n=<노트 id> = 그 노트 카드만(기한과 상관없이) */
   const rvNote = () => { const m = /[?&]n=([\w-]{1,40})/.exec(location.hash); return m && N.get(m[1]) ? m[1] : ''; };
-  function rvInit() { const only = rvNote(); const D = only ? N.cards().filter(c => c.nid === only) : N.due(); RV = { day: td(), only, q: D.map(c => c.id), i: 0, flip: false, n: [0, 0, 0], again: new Set(), total: D.length }; }
-  function rvHTML() { if (!RV || RV.day !== td() || RV.only !== rvNote()) rvInit(); const sub = RV.only ? `<small class="ln-rvs">${esc((N.get(RV.only) || {}).t || '')} 카드만</small>` : ''; const K = N.cards(); const back = `<a class="ln-ib s" href="#notes" aria-label="복습 닫고 내 노트로">${ico('x', 22)}</a>`;
-    const tm = () => N.due(N.addD(td(), 1)).length;
-    if (!RV.total) { const nx = K.map(c => c.due).filter(d => d > td()).sort()[0];
-      return `<section class="sec lnz ln-rv"><div class="in narrow"><div class="ln-rvh">${back}<h1>오늘 복습</h1></div><div class="ln-rvz">${ico('lncards', 40)}<b>${K.length ? '오늘 복습할 카드가 없어요' : '아직 복습 카드가 없어요'}</b><p>${K.length ? (tm() ? `내일 ${tm()}장이 기다려요. 오늘은 새 노트를 남겨 볼까요?` : nx ? `다음 복습은 ${md2(nx)}이에요.` : '') : '노트를 열고 「복습 카드 만들기」로 질문 한 줄, 답 한 줄을 남겨 보세요.'}</p><a class="ln-b p" href="#notes">${ico('lnnote', 18)}내 노트로</a></div></div></section>`; }
-    if (RV.i >= RV.q.length) { const done = RV.n[0] + RV.n[1] + RV.n[2]; const pct = RV.total ? Math.round(Math.min(1, (RV.n[1] + RV.n[2]) / Math.max(1, done)) * 100) : 0; const R = 52, L = 2 * Math.PI * R;
-      return `<section class="sec lnz ln-rv"><div class="in narrow"><div class="ln-rvh">${back}<h1>오늘 복습</h1></div><div class="ln-rve" role="status"><div class="ln-ring xl"><svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="${R}" fill="none" stroke-width="10" class="bg"/><circle cx="60" cy="60" r="${R}" fill="none" stroke-width="10" class="fg" stroke-dasharray="${(L * pct / 100).toFixed(1)} ${L.toFixed(1)}" /></svg><div><b>${pct}%</b><span>기억함</span></div></div>
-        <b class="ln-rvt">오늘 복습을 마쳤어요</b><p>${RV.total}장을 모두 봤어요 · 앎 ${RV.n[2]} · 알쏭 ${RV.n[1]} · 다시 ${RV.n[0]}</p><p class="ln-msg">${tm() ? `내일 ${tm()}장이 기다려요.` : '내일은 쉬어 가도 돼요.'} ${streak() ? `${streak()}일째 이어 가는 중이에요.` : ''}</p><div class="ln-row c"><a class="ln-b p" href="#notes">${ico('lnnote', 18)}내 노트로</a></div></div></div></section>`; }
-    const c = N.card(RV.q[RV.i]); if (!c) { RV.i++; return rvHTML(); } const n = c.nid ? N.get(c.nid) : null; const cn = n ? N.cName(n.cid) : ''; const left = RV.q.length - RV.i;
-    const lab = q => { const x = N.next(c, q); return x.iv <= 1 ? '내일' : `${x.iv}일 뒤`; };
-    return `<section class="sec lnz ln-rv"><div class="in narrow"><div class="ln-rvh">${back}<h1>오늘 복습${sub}</h1><span class="ln-rvn" aria-live="polite">${RV.i + 1} / ${RV.q.length}</span></div><div class="ln-prog" role="progressbar" aria-valuemin="0" aria-valuemax="${RV.q.length}" aria-valuenow="${RV.i}" aria-label="복습 진행"><i style="width:${Math.round(RV.i / Math.max(1, RV.q.length) * 100)}%"></i></div>
+  const rvQ = () => { const m = /[?&]q=([^&]{1,40})/.exec(location.hash); try { return m ? decodeURIComponent(m[1]).trim().toLowerCase() : ''; } catch (e) { return ''; } };
+  /* 큐: ?n= 그 노트 카드 전부 · ?q= 검색 일치 카드 · 기본 = 오늘 기한(오답 먼저 켜면 오답 카드부터) */
+  function rvInit() { const only = rvNote(), q = rvQ(); let D = only ? N.cards().filter(c => c.nid === only) : q ? N.cards().filter(c => (c.f + ' ' + c.k).toLowerCase().includes(q)) : N.due();
+    if (RV && RV.wf) D = [...D.filter(c => c.src === 'quiz'), ...D.filter(c => c.src !== 'quiz')];
+    RV = { day: td(), only, q, wf: !!(RV && RV.wf), list: D.map(c => c.id), i: 0, flip: false, n: [0, 0, 0], res: {}, again: [], round: 1, phase: D.length ? 'main' : 'zero', t0: Date.now(), total: D.length }; }
+  const rvKey = () => `${td()}|${rvNote()}|${rvQ()}`;
+  const fwd7 = () => Array.from({ length: 7 }, (_, i) => { const d = N.addD(td(), i + 1); return { d, n: N.cards().filter(c => c.due === d).length }; });
+  function rvHTML() { if (!RV || RV.key !== rvKey()) { rvInit(); RV.key = rvKey(); } const K = N.cards(); const s = streak(); const tm = N.due(N.addD(td(), 1)).length - N.due().length;
+    const sub = RV.only ? `${esc((N.get(RV.only) || {}).t || '')} 카드만` : RV.q ? `「${esc(RV.q)}」 카드만` : '';
+    const close = `<a class="ln-ib s" href="#notes" aria-label="복습 닫고 내 노트로">${ico('x', 22)}</a>`;
+    const head = (rest, mid) => `<div class="ln-rvh">${close}<div class="ln-rvc"><h1>오늘 복습</h1><small class="ln-rvs">${mid || sub || ''}</small></div><span class="ln-ib" aria-hidden="true"></span></div>${rest || ''}`;
+    const wrap = h => `<section class="sec lnz ln-rv"><div class="in narrow">${h}</div></section>`;
+    if (RV.phase === 'zero') { const nx = K.map(c => c.due).filter(d => d > td()).sort()[0];
+      return wrap(`${head()}<div class="ln-empty rv"><div class="ph" style="background-image:url('img/stock/dsk-03-800.webp')"><p class="eb">${ico('lncards', 15)}오늘은 쉬어 가는 날</p><h2>${K.length ? '오늘 복습할 카드가 없어요' : '아직 복습 카드가 없어요'}</h2><p>${K.length ? (tm > 0 ? `내일 ${tm}장이 기다려요.` : nx ? `다음 복습은 ${md2(nx)}이에요.` : '새 노트로 카드를 만들어 보세요.') : '노트를 쓰면서 「복습 카드로 만들기」를 켜 보세요.'}</p></div></div>
+        ${s ? `<div class="ln-box ln-stk"><span class="ln-streak lt">${week().map(w => `<i class="${w.t ? 't' : w.on ? 'd' : ''}"></i>`).join('')}</span><b>${s}일째 이어 가는 중</b></div>` : ''}
+        <div class="ln-ea"><a class="ln-b p blk" href="#notes">${ico('lnnote', 18)}내 노트로</a><button type="button" class="ln-lk c" data-ln="new">${ico('lnpen', 18)}오늘 배운 것 한 줄 남기기</button></div>`); }
+    if (RV.phase === 'ask') { const A = RV.again.map(id => N.card(id)).filter(Boolean);
+      return wrap(`${head()}<div class="ln-again" role="status"><b>${RV.list.length}장 다 봤어요</b><p>「다시」 고른 ${A.length}장만 한 번 더 볼까요?</p><ul>${A.map(c => `<li>${esc(c.f)}</li>`).join('')}</ul></div><div class="ln-ea"><button type="button" class="ln-b p big" data-ln="again">${A.length}장 한 번 더</button><button type="button" class="ln-lk c" data-ln="rvend">오늘은 여기까지 — 내일 다시 나와요</button></div>`); }
+    if (RV.phase === 'done') { const done = RV.n[0] + RV.n[1] + RV.n[2]; const R = 52, L = 2 * Math.PI * R; const min = Math.max(1, Math.round((Date.now() - RV.t0) / 60000)); const F = fwd7(); const mx = Math.max(1, ...F.map(x => x.n));
+      return wrap(`${head()}<div class="ln-hero ln-rvdone" role="status"><div class="ln-hr2"><div class="ln-ring xl"><svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="${R}" fill="none" stroke-width="10" class="bg"/><circle cx="60" cy="60" r="${R}" fill="none" stroke-width="10" class="fg" stroke-dasharray="${L.toFixed(1)} ${L.toFixed(1)}"/></svg><div><b>${RV.total}</b><span>장 끝</span></div></div>
+        <div class="ln-hm"><h2 class="ln-h2s">오늘 복습 끝! ${min}분 만에 마쳤어요</h2><span class="ln-streak" role="img" aria-label="최근 7일 학습">${week().map(w => `<i class="${w.t ? 't' : w.on ? 'd' : ''}"></i>`).join('')}</span><p class="ln-hs">${s ? `${s}일째 이어 가는 중이에요` : '오늘부터 이어 가 봐요'}</p></div></div>
+        <div class="ln-kpis"><div class="ln-kpi"><b>${RV.n[2]}</b><span>앎</span></div><div class="ln-kpi"><b>${RV.n[1]}</b><span>알쏭</span></div><div class="ln-kpi"><b>${RV.n[0]}</b><span>다시 · 내일</span></div></div></div>
+        <div class="ln-box"><b class="ln-bt">앞으로 7일 복습</b><div class="ln-bars" role="img" aria-label="${F.map(x => `${md2(x.d)} ${x.n}장`).join(', ')}">${F.map((x, i) => `<span><i style="height:${Math.max(4, Math.round(x.n / mx * 64))}px" class="${i === 0 ? 'on' : ''}"></i><small>${i === 0 ? '내일' : `${+x.d.slice(8)}일`}</small></span>`).join('')}</div><p class="ln-msg">${tm > 0 ? `내일 ${tm}장이 기다려요.` : '내일은 쉬어 가도 돼요.'}</p></div>
+        <div class="ln-ea"><a class="ln-b p blk" href="#notes">${ico('lnnote', 18)}내 노트로</a><a class="ln-lk c" href="#home">홈으로</a></div>`); }
+    const Q = RV.round === 1 ? RV.list : RV.again; const c = N.card(Q[RV.i]); if (!c) { RV.i++; if (RV.i >= Q.length) { RV.phase = RV.round === 1 && RV.again.length ? 'ask' : 'done'; } return rvHTML(); }
+    const n = c.nid ? N.get(c.nid) : null; const cn = n ? N.cName(n.cid) : ''; const left = Q.length - RV.i; const lab = q => { if (q === 0) return '오늘 한 번 더'; const x = N.next(c, q); return x.iv <= 1 ? '내일' : `${x.iv}일 뒤`; };
+    const seg = Q.map((id, i) => `<i class="${RV.round === 1 && RV.res[id] != null ? 'r' + RV.res[id] : i === RV.i ? 'cur' : ''}"></i>`).join('');
+    const mins = Math.max(1, Math.ceil(left / 2));
+    return wrap(`${head(`<div class="ln-prow"><div class="ln-prog" role="progressbar" aria-valuemin="0" aria-valuemax="${Q.length}" aria-valuenow="${RV.i}" aria-label="복습 진행">${seg}</div><span class="ln-rvn" aria-live="polite">${RV.i + 1} / ${Q.length}</span></div>
+      <div class="ln-pills">${s ? `<span class="ln-pill g">${ico('spark', 16)}${s}일째</span>` : ''}${RV.round === 1 && RV.i === 0 && !RV.only && !RV.q && N.due().some(x => x.src === 'quiz') ? `<button type="button" class="ln-pill${RV.wf ? ' on' : ''}" data-ln="wf" aria-pressed="${RV.wf}">${ico('lnback', 16)}오답 먼저</button>` : ''}${RV.round > 1 ? '<span class="ln-pill co">다시 라운드</span>' : ''}</div>`, sub || `약 ${mins}분 남음`)}
       <div class="ln-stack${left > 1 ? ' s2' : ''}${left > 2 ? ' s3' : ''}"><div class="ln-flip${RV.flip ? ' back' : ''}" data-ln="flip" role="button" tabindex="0" aria-pressed="${RV.flip}" aria-label="${RV.flip ? '답을 보고 있어요. 아래에서 얼마나 기억났는지 골라 주세요' : `질문: ${esc(c.f)}. 눌러서 답 보기`}">
         <span class="top">${srcB(c.src === 'quiz' ? 'quiz' : (n ? n.src : 'me'))}${cn ? `<i class="ln-tag sm">${esc(cn)}</i>` : ''}<span class="n">${c.n ? `${c.n + 1}번째 복습` : '처음 보는 카드'}</span></span>
         ${RV.flip ? `<span class="qs">${esc(c.f)}</span><span class="ans">정답</span><b class="a">${esc(c.k || '(뒷면이 비어 있어요)')}</b>${n ? `<a class="lk" href="#notes/${esc(n.id)}" data-ln="tonote">${ico('lnnote', 18)}<b>노트 보기 · ${esc(n.t.slice(0, 24))}</b><span>›</span></a>` : ''}`
-          : `<span class="q"><small>질문</small><b>${esc(c.f)}</b></span><span class="hint">${ico('lntap', 18)}눌러서 답 보기</span>`}</div></div>
-      <div class="ln-gbar">${RV.flip ? `<p class="ln-gq">얼마나 기억났나요? 솔직하게 골라야 간격이 맞아요</p><div class="ln-grade"><button type="button" class="g0" data-ln="grade" data-v="0"><b>다시</b><span>${lab(0)}</span></button><button type="button" class="g1" data-ln="grade" data-v="1"><b>알쏭</b><span>${lab(1)}</span></button><button type="button" class="g2" data-ln="grade" data-v="2"><b>앎</b><span>${lab(2)}</span></button></div>` : `<button type="button" class="ln-b p big" data-ln="flip">답 보기</button>`}${appOn() ? '' : '<p class="ln-msg c">키보드: 스페이스 = 뒤집기 · 1 다시 · 2 알쏭 · 3 앎</p>'}</div></div></section>`; }
-  function paintRv() { const el = document.querySelector('#lm .ln-rv'); if (!el) return; el.outerHTML = rvHTML(); const f = document.querySelector('#lm .ln-rv .ln-grade .g2') || document.querySelector('#lm .ln-rv .ln-flip'); if (f) try { f.focus({ preventScroll: true }); } catch (e) { } }
+          : `<span class="q"><small>질문</small><b>${esc(c.f)}</b></span><span class="hint">${ico('lntap', 18)}카드를 눌러도 뒤집혀요</span>`}</div></div>
+      <div class="ln-gbar">${RV.flip ? `<p class="ln-gq">얼마나 기억났나요? 솔직하게 골라야 간격이 맞아요</p><div class="ln-grade"><button type="button" class="g0" data-ln="grade" data-v="0"><b>다시</b><span>${lab(0)}</span></button><button type="button" class="g1" data-ln="grade" data-v="1"><b>알쏭</b><span>${lab(1)}</span></button><button type="button" class="g2" data-ln="grade" data-v="2"><b>앎</b><span>${lab(2)}</span></button></div>`
+        : `<p class="ln-gq">답을 먼저 떠올려 본 뒤 눌러 보세요</p><button type="button" class="ln-b p big" data-ln="flip">답 보기</button><div class="ln-row sp"><button type="button" class="ln-lk sub" data-ln="later">${ico('clock', 18)}나중에</button>${n ? `<a class="ln-lk sub" href="#notes/${esc(n.id)}">이 카드 고치기</a>` : ''}</div>`}${appOn() ? '' : '<p class="ln-msg c">키보드: 스페이스 = 뒤집기 · 1 다시 · 2 알쏭 · 3 앎</p>'}</div>`); }
+  function paintRv() { const el = document.querySelector('#lm .ln-rv'); if (!el) return; el.outerHTML = rvHTML(); const f = document.querySelector('#lm .ln-rv .ln-flip') || document.querySelector('#lm .ln-rv .ln-rve a, #lm .ln-rv .ln-rvz a'); /* 채점 버튼에 바로 두면 스페이스 keyup이 그 버튼을 눌러 버린다 */ if (f) try { f.focus({ preventScroll: true }); } catch (e) { } }
 
   /* ── 레슨 화면 「노트」 버튼 · 미니 패널 ── */
-  function lessonCtx() { const parts = decodeURIComponent(location.hash.slice(1)).split('/'); const cid = parts[1]; const c = (SITE().classes || []).find(x => x.id === cid); if (!c) return null;
+  function lessonCtx() { const parts = decodeURIComponent(location.hash.slice(1)).split('?')[0].split('/'); const cid = parts[1]; const c = (SITE().classes || []).find(x => x.id === cid); if (!c) return null;
     const im = document.querySelector('#lm .imain'); if (!im) return null; let lid = parts[2] || ''; const h2 = im.querySelector(':scope > h2');
     if (!lid) { const d = im.querySelector('[data-item], [data-i]'); lid = d ? (d.dataset.item || d.dataset.i || '') : ''; } if (!lid && h2) { const it = (c.items || []).find(x => x.title === h2.textContent.trim()); lid = it ? it.id : ''; }
     const it = (c.items || []).find(x => x.id === lid); return { c, it, lid: it ? lid : '', im, h2 }; }
   function miniHTML(x) { const L = N.all().filter(n => n.cid === x.c.id && (!x.lid || n.lid === x.lid)).slice(0, 4);
     return `<div class="ln-mini" id="lnMini"><div class="ln-mh"><b>${ico('lnnote', 18)}이 레슨 노트</b><a class="ln-lk" href="#notes">내 노트 모두 보기 ›</a></div>${L.length ? `<div class="ln-mlist">${L.map(n => cardHTML(n, 'compact')).join('')}</div>` : '<p class="ln-msg">아직 이 레슨 노트가 없어요. 기억할 한 줄을 바로 적어 보세요.</p>'}
-      <form class="ln-mf" data-ln-f="quick" novalidate><label class="sr" for="lnMq">빠른 노트</label><textarea id="lnMq" name="b" rows="3" maxlength="1500" placeholder="${esc(x.it ? `「${x.it.title}」에서 기억할 것` : '기억할 것')}을 적어요"></textarea><p class="ln-err" role="alert"></p><div class="ln-row"><button type="submit" class="ln-b p">${ico('check', 18)}노트에 저장</button><button type="button" class="ln-b s" data-ln="full">크게 쓰기</button></div></form></div>`; }
+      ${ended(x.c.id) ? '<p class="ln-msg ro">수강 기간이 끝난 과정이라 노트를 읽기만 할 수 있어요.</p>' : `<form class="ln-mf" data-ln-f="quick" novalidate><label class="sr" for="lnMq">빠른 노트</label><textarea id="lnMq" name="b" rows="3" maxlength="1500" placeholder="${esc(x.it ? `「${x.it.title}」에서 기억할 것` : '기억할 것')}을 적어요"></textarea><p class="ln-err" role="alert"></p><div class="ln-row"><button type="submit" class="ln-b p">${ico('check', 18)}노트에 저장</button><button type="button" class="ln-b s" data-ln="full">크게 쓰기</button></div></form>`}</div>`; }
   function lessonDeco() { const x = lessonCtx(); if (!x || x.im.querySelector('.ln-lbtn')) return; const n = N.all().filter(y => y.cid === x.c.id && (!x.lid || y.lid === x.lid)).length;
     const b = `<button type="button" class="ln-lbtn" data-ln="mini" aria-expanded="false" aria-controls="lnMini">${ico('lnnote', 18)}노트${n ? ` <b>${n}</b>` : ''}</button>`;
     if (x.h2) { x.h2.classList.add('ln-h2'); x.h2.insertAdjacentHTML('afterend', `<div class="ln-lrow">${b}</div>`); } else x.im.insertAdjacentHTML('afterbegin', `<div class="ln-lrow">${b}</div>`); }
@@ -268,17 +384,17 @@
       if (a === 'my' && !lm.querySelector('.ln-hc')) { const anc = lm.querySelector('.lq-myw') || lm.querySelector('.ap-my'); if (anc) anc.insertAdjacentHTML('afterend', `<div class="ln-hcw">${hc()}</div>`); } return; }
     if (a === 'my' && !lm.querySelector('.ln-hc')) { const anc = lm.querySelector('.lq-hc') || lm.querySelector('.la-myl') || lm.querySelector('.mypage .in > h1'); const host = lm.querySelector('.mypage .in'); if (anc) anc.insertAdjacentHTML('afterend', hc()); else if (host) host.insertAdjacentHTML('afterbegin', hc()); } }
   const hc = () => { const t = tile(); return `<a class="ln-hc" href="#notes">${ico('lnnote', 22)}<span><b>내 노트 · 오늘 복습</b><small>${esc(t.s)}</small></span>${t.D ? `<em>${t.D}</em>` : ''}${ico('arrow', 16)}</a>`; };
-  { const base = shell; shell = (inner, cur, ...a) => { let h = base(inner, cur, ...a); try { if (okMe() && !/href="#notes"/.test(h.split('</header>')[0])) { const on = ['notes', 'review'].includes(route().a); const lk = `<a href="#notes" class="${on ? 'on' : ''}"${on ? ' aria-current="page"' : ''}>노트</a>`; const i = h.indexOf('<nav class="ln"'); if (i >= 0) { const j = h.indexOf('</nav>', i); if (j > 0) h = h.slice(0, j) + lk + h.slice(j); } } } catch (e) { console.error('lnote shell', e); } return h; }; }
+  { const base = shell; shell = (inner, cur, ...a) => { let h = base(inner, cur, ...a); try { if (okMe() && !/href="#notes"/.test(h.split('</header>')[0])) { const on = route().a === 'notes'; const lk = `<a href="#notes" class="${on ? 'on' : ''}"${on ? ' aria-current="page"' : ''}>내 노트</a>`; const i = h.indexOf('<nav class="ln"'); if (i >= 0) { const j = h.indexOf('</nav>', i); if (j > 0) h = h.slice(0, j) + lk + h.slice(j); } } } catch (e) { console.error('lnote shell', e); } return h; }; }
 
   /* ── 라우팅 ── */
   { const base = viewPage; viewPage = (id, ...a) => {
-    if (id === 'notes' || id === 'review') { if (!LR.me) return needLogin(id); if (isPar()) return '<section class="sec lnz"><div class="in narrow"><p class="ln-msg">노트는 학습자 계정에서 써요. 보호자 계정에서는 자녀의 노트를 볼 수 없어요.</p></div></section>';
-      try { if (id === 'review') { seed(); return rvHTML(); } return hubHTML(); } catch (e) { console.error('lnote', e); return '<section class="sec"><div class="in"><p class="empty">노트를 그리지 못했어요. 새로 고침해 주세요.</p></div></section>'; } }
+    if (id === 'notes') { if (!LR.me) return needLogin(id); if (isPar()) return '<section class="sec lnz"><div class="in narrow"><p class="ln-msg">노트는 학습자 계정에서 써요. 보호자 계정에서는 자녀의 노트를 볼 수 없어요.</p></div></section>';
+      try { if (isRv()) { seed(); return rvHTML(); } return hubHTML(); } catch (e) { console.error('lnote', e); return '<section class="sec"><div class="in"><p class="empty">노트를 그리지 못했어요. 새로 고침해 주세요.</p></div></section>'; } }
     return base(id, ...a); }; }
-  { const base = lrender; lrender = (...x) => { base(...x); try { if (!SITE() || !SITE().org) return; const a = route().a; document.body.classList.toggle('ln-focus', a === 'review' && okMe());
-    if (a === 'notes' || a === 'review') { document.title = `${SITE().org.name} · ${a === 'review' ? '오늘 복습' : '내 노트'}`; if (appOn()) { const nav = document.querySelector('#lapp .ap-nav'); if (nav) nav.querySelectorAll(':scope > a').forEach(y => { const k = y.getAttribute('href') === '#acct' || y.getAttribute('href') === '#my' && !nav.querySelector('a[href="#acct"]'); y.classList.toggle('on', k); if (k) y.setAttribute('aria-current', 'page'); else y.removeAttribute('aria-current'); }); } }
+  { const base = lrender; lrender = (...x) => { base(...x); try { if (!SITE() || !SITE().org) return; const a = route().a; document.body.classList.toggle('ln-focus', isRv() && okMe());
+    if (a === 'notes') { document.title = `${SITE().org.name} · ${isRv() ? '오늘 복습' : '내 노트'}`; if (appOn()) { const nav = document.querySelector('#lapp .ap-nav'); if (nav) nav.querySelectorAll(':scope > a').forEach(y => { const k = y.getAttribute('href') === '#acct' || y.getAttribute('href') === '#my' && !nav.querySelector('a[href="#acct"]'); y.classList.toggle('on', k); if (k) y.setAttribute('aria-current', 'page'); else y.removeAttribute('aria-current'); }); } }
     entries(); if (a === 'c') lessonDeco(); paintOv(); } catch (e) { console.error('lnote deco', e); } }; }
-  addEventListener('hashchange', () => { const { a, b } = route(); if (a !== 'review') RV = null; LN.edit = false; LN.view = false; LN.cardf = false; LN.del = ''; KM.key = ''; });
+  addEventListener('hashchange', () => { if (!isRv()) RV = null; LN.edit = false; LN.view = false; LN.cardf = false; LN.del = ''; KM.key = ''; });
   N.on(k => { if (['grade'].includes(k)) return; try { if (route().a === 'notes' && !route().b) paintList(); } catch (e) { } });
 
   /* ── 이벤트 ── */
@@ -286,22 +402,29 @@
   const go = h => { if (location.hash === h) lrender(); else location.hash = h; };
   document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-ln]'); if (!el) return; const k = el.dataset.ln; const id = decodeURIComponent(route().b || '');
     if (k === 'tonote') return; e.preventDefault();
-    if (k === 'new') { LN.edit = false; LN.pre = null; go('#notes/new'); return; }
-    if (k === 'tag') { LN.tag = el.dataset.v || ''; if (route().a === 'notes' && !route().b) { paintList(); const s = document.getElementById('lnChips'); if (s && LN.tag === '__draft') s.scrollIntoView({ block: 'nearest' }); } return; }
+    if (k === 'new') { LN.edit = false; LN.pre = LN.q.trim() && !N.all().some(match) ? { t: LN.q.trim().slice(0, 80) } : null; go('#notes/new'); return; }
+    if (k === 'retry') { SV.st = 'busy'; paintSt(); try { LR.api.save(); } catch (e) { } return; }
+    if (k === 'seg') { LN.seg = el.dataset.v || 'note'; LN.tag = LN.seg === 'note' ? LN.tag : ''; paintList(); return; }
+    if (k === 'showhid') { LN.hid = !LN.hid; paintList(); return; }
+    if (k === 'mkpin' || k === 'mkhide') { const key = el.dataset.key; const m = N.marks()[key] || {}; const v = k === 'mkpin' ? { pin: !m.pin, hide: false } : { pin: false, hide: !m.hide }; if (N.mark(key, v)) { paintList(); toast(k === 'mkpin' ? (v.pin ? '맨 위에 고정했어요.' : '고정을 풀었어요.') : (v.hide ? '숨겼어요. 원래 기록은 그대로예요.' : '다시 보이게 했어요.'), 'ok'); } return; }
+    if (k === 'tonote2') { const x = gather().find(y => y.key === el.dataset.key); if (!x) return; const n = N.toNote(x); if (n) { toast('노트 초안으로 옮겼어요. 내 말로 고쳐서 저장해 주세요.', 'ok'); LN.seg = 'note'; location.hash = '#notes/' + n.id; } return; }
+    if (k === 'cid') { LN.cid = el.dataset.v || ''; LN.tag = ''; paintList(); return; }
+    if (k === 'newat') { LN.pre = { cid: el.dataset.c || '', lid: el.dataset.i || '' }; go('#notes/new'); return; }
+    if (k === 'tag') { if (el.closest('.ln-rail') && !el.classList.contains('ln-tag')) LN.cid = ''; LN.tag = el.dataset.v || ''; if (route().a === 'notes' && !route().b) { paintList(); const s = document.getElementById('lnChips'); if (s && LN.tag === '__draft') s.scrollIntoView({ block: 'nearest' }); } return; }
     if (k === 'srch') { const q = document.getElementById('lnQ'); if (q) { q.scrollIntoView({ block: 'center' }); q.focus({ preventScroll: true }); } return; }
-    if (k === 'clear') { LN.q = ''; LN.tag = ''; const q = document.getElementById('lnQ'); if (q) q.value = ''; paintList(); return; }
+    if (k === 'clear') { LN.q = ''; LN.tag = ''; LN.cid = ''; const q = document.getElementById('lnQ'); if (q) q.value = ''; paintList(); return; }
     if (k === 'edit') { LN.edit = true; LN.view = false; KM.key = ''; reOv(); return; }
     if (k === 'view') { LN.edit = false; LN.view = true; reOv(); return; }
-    if (k === 'ok') { const n = N.save({ id, st: 'ok' }); if (n) { toast('확인했어요. 이제 내 노트예요.', 'ok'); reOv(); } return; }
     if (k === 'pin') { const n = N.get(id); if (n) { N.save({ id, pin: !n.pin }); toast(n.pin ? '고정을 풀었어요.' : '맨 위에 고정했어요.', 'ok'); reOv(); } return; }
     if (k === 'del' || k === 'delall') { if (LN.del !== id) { LN.del = id; reOv(); return; } const n = N.get(id); if (!n) return; const K = cardsOf(id); LN.del = ''; UNDO = { n: { ...n }, K: k === 'delall' ? K.map(c => ({ ...c })) : [], keep: k === 'delall' ? [] : K.map(c => c.id) };
       if (k === 'delall') K.forEach(c => N.delCard(c.id)); if (N.del(id)) { location.hash = '#notes'; setTimeout(() => undoBar(k === 'delall' ? `노트와 카드 ${K.length}장을 지웠어요.` : '노트를 지웠어요.'), 60); } return; }
     if (k === 'undo') { const u = UNDO; UNDO = null; document.querySelectorAll('.ln-undo').forEach(x => x.remove()); if (!u) return; const Nn = N._store(); if (!Nn.items.some(x => x.id === u.n.id)) { Nn.items.unshift(u.n); } u.K.forEach(c => { if (!Nn.cards.some(x => x.id === c.id)) Nn.cards.push(c); }); u.keep.forEach(cid => { const c = Nn.cards.find(x => x.id === cid); if (c) c.nid = u.n.id; }); N.save({ id: u.n.id }); toast('되돌렸어요.', 'ok'); if (route().a === 'notes') lrender(); return; }
     if (k === 'delno') { LN.del = ''; reOv(); return; }
     if (k === 'kmsw') { kmRead(); KM.on = !KM.on; if (KM.on && !KM.list.length) { const f = document.getElementById('lnF'); KM.list = N.suggest(f ? f.b.value : ''); } kmPaint(); return; }
-    if (k === 'kmre') { const f = document.getElementById('lnF'); KM.list = N.suggest(f ? f.b.value : ''); kmPaint(); if (!KM.list.length) toast('본문에서 뽑을 질문이 없어요. 「질문? 답」처럼 써 보세요.', 'warn'); return; }
-    if (k === 'kmadd') { kmRead(); if (KM.list.length < 3) KM.list.push({ f: '', k: '' }); kmPaint(); const f = document.getElementById('lnF'); const i = f && f.elements['kf' + (KM.list.length - 1)]; if (i) i.focus(); return; }
-    if (k === 'kmdel') { kmRead(); KM.list.splice(+el.dataset.v, 1); kmPaint(); return; }
+    if (k === 'kmre') { const f = document.getElementById('lnF'); KM.auto = true; KM.list = N.suggest(f ? f.b.value : ''); kmPaint(); if (!KM.list.length) toast('본문에서 뽑을 질문이 없어요. 「질문? 답」처럼 써 보세요.', 'warn'); return; }
+    if (k === 'kmai') { const f = document.getElementById('lnF'); if (!f || !window.LNOTE_AI) return; kmRead(); el.disabled = true; Promise.resolve().then(() => LNOTE_AI.suggestCards({ t: f.t.value, b: f.b.value, cid: f.cid.value, lid: f.lid.value })).then(r => { const seen = new Set(KM.list.map(c => c.f)); (Array.isArray(r) ? r : []).forEach(c => { if (c && c.f && !seen.has(c.f) && KM.list.length < 3) { KM.list.push({ f: String(c.f).slice(0, 120), k: String(c.k || '').slice(0, 240) }); seen.add(c.f); } }); KM.auto = false; kmPaint(); }).catch(() => { toast('튜터가 지금 카드를 뽑지 못했어요. 직접 추가해 주세요.', 'warn'); el.disabled = false; }); return; }
+    if (k === 'kmadd') { kmRead(); KM.auto = false; if (KM.list.length < 3) KM.list.push({ f: '', k: '' }); kmPaint(); const f = document.getElementById('lnF'); const i = f && f.elements['kf' + (KM.list.length - 1)]; if (i) i.focus(); return; }
+    if (k === 'kmdel') { kmRead(); KM.auto = false; KM.list.splice(+el.dataset.v, 1); kmPaint(); return; }
     if (k === 'keepdraft') { const f = document.getElementById('lnF'); if (f) saveNote(f, 'draft'); return; }
     if (k === 'ins') { const ta = document.getElementById('lnB'); if (!ta) return; const v = el.dataset.v; const a0 = ta.selectionStart, a1 = ta.selectionEnd, sel = ta.value.slice(a0, a1);
       const r = v === 'b' ? `**${sel || '굵게'}**` : v === 'code' ? `\`${sel || '코드'}\`` : `${a0 && ta.value[a0 - 1] !== '\n' ? '\n' : ''}- ${sel}`; if (ta.value.length - (a1 - a0) + r.length > 1500) return; ta.setRangeText(r, a0, a1, 'end'); ta.focus(); ta.dispatchEvent(new Event('input', { bubbles: true })); return; }
@@ -309,21 +432,36 @@
     if (k === 'cardf') { LN.cardf = !LN.cardf; reOv(); if (LN.cardf) setTimeout(() => { const i = document.querySelector('#lnOv .ln-kf input'); if (i) i.focus(); }, 40); return; }
     if (k === 'kdel') { if (N.delCard(el.dataset.v)) { toast('카드를 지웠어요.', 'ok'); reOv(); } return; }
     if (k === 'flip') { if (!RV) return; RV.flip = !RV.flip; paintRv(); return; }
-    if (k === 'grade') { if (!RV) return; const q = +el.dataset.v; const cid = RV.q[RV.i]; N.grade(cid, q); RV.n[q]++; if (q === 0 && !RV.again.has(cid)) { RV.again.add(cid); RV.q.push(cid); } RV.i++; RV.flip = false; paintRv(); if (RV.i >= RV.q.length) toast('오늘 복습을 마쳤어요.', 'ok'); return; }
+    if (k === 'grade') { if (!RV) return; const q = +el.dataset.v; const Q = RV.round === 1 ? RV.list : RV.again; const cid = Q[RV.i]; if (!cid) return;
+      if (RV.round === 1) { N.grade(cid, q); RV.n[q]++; RV.res[cid] = q; if (q === 0) RV.again.push(cid); } else if (q === 0 && RV.i < 30) RV.again.push(cid); /* 다시 라운드: 일정(due)은 첫 채점 그대로(내일) */
+      RV.i++; RV.flip = false; if (RV.i >= Q.length) RV.phase = RV.round === 1 && RV.again.length ? 'ask' : 'done'; paintRv(); if (RV.phase === 'done') toast('오늘 복습을 마쳤어요.', 'ok'); return; }
+    if (k === 'again') { if (!RV) return; RV.round = 2; RV.again = [...new Set(RV.again)]; RV.i = 0; RV.phase = 'main'; RV.flip = false; paintRv(); return; }
+    if (k === 'rvend') { if (!RV) return; RV.phase = 'done'; paintRv(); return; }
+    if (k === 'later') { if (!RV) return; const Q = RV.round === 1 ? RV.list : RV.again; if (Q.length - RV.i <= 1) { toast('남은 카드가 이것뿐이에요.', 'warn'); return; } Q.push(Q.splice(RV.i, 1)[0]); RV.flip = false; paintRv(); return; }
+    if (k === 'wf') { if (!RV) return; RV.wf = !RV.wf; RV.key = ''; paintRv(); return; }
     if (k === 'mini') { const m = document.getElementById('lnMini'); if (m) { m.remove(); el.setAttribute('aria-expanded', 'false'); return; } const x = lessonCtx(); if (!x) return; el.closest('.ln-lrow').insertAdjacentHTML('afterend', miniHTML(x)); el.setAttribute('aria-expanded', 'true'); const t = document.getElementById('lnMq'); if (t) t.focus({ preventScroll: true }); return; }
     if (k === 'full') { const x = lessonCtx(); const t = document.getElementById('lnMq'); LN.pre = x ? { cid: x.c.id, lid: x.lid, t: x.it ? `${x.it.title} 정리`.slice(0, 80) : '', b: t ? t.value : '' } : null; LN.edit = false; location.hash = '#notes/new'; return; } });
   document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-ln="tonote"]'); if (t) { RV = RV; } });
-  document.addEventListener('input', e => { const t = e.target; if (t && t.id === 'lnQ') { LN.q = t.value; paintList(); } if (t && t.form && t.form.id === 'lnF') { const m = { b: 'lnCc', t: 'lnTc' }[t.name]; if (m) { const c = document.getElementById(m); if (c) c.textContent = t.value.length; } if (t.name === 'tags') { const c = document.getElementById('lnGc'); if (c) c.textContent = t.value.split(/[,\n]+/).filter(x => x.trim()).length; } if (/^k[fk]\d$/.test(t.name)) { kmRead(); const sb = document.getElementById('lnSave'); if (sb) sb.innerHTML = saveLab(); } } });
+  document.addEventListener('input', e => { const t = e.target; if (t && t.id === 'lnQ') { LN.q = t.value; paintList(); } if (t && t.form && t.form.id === 'lnF') { const m = { b: 'lnCc', t: 'lnTc' }[t.name]; if (m) { const c = document.getElementById(m); if (c) c.textContent = t.value.length; } if (t.name === 'tags') { const c = document.getElementById('lnGc'); if (c) c.textContent = t.value.split(/[,\n]+/).filter(x => x.trim()).length; } if (t.name === 'b' && KM.on && KM.auto) { clearTimeout(kmPaint.t); kmPaint.t = setTimeout(() => { if (!KM.on || !KM.auto) return; const nl = N.suggest(t.value); if (JSON.stringify(nl) !== JSON.stringify(KM.list)) { KM.list = nl; kmPaint(); } }, 350); } if (/^k[fk]\d$/.test(t.name)) { KM.auto = false; kmRead(); const sb = document.getElementById('lnSave'); if (sb) sb.innerHTML = saveLab(); } } });
   document.addEventListener('change', e => { const t = e.target; if (t && t.form && t.form.id === 'lnF' && t.name === 'cid') t.form.lid.innerHTML = lessonOpts(t.value, ''); });
   function saveNote(f, st) { const er = f.querySelector('.ln-err'); const id = decodeURIComponent(route().b || ''); const t = f.t.value.trim(), b = f.b.value; er.textContent = ''; f.t.classList.remove('bad');
     if (!t) { er.textContent = '제목을 한 줄 적어 주세요.'; f.t.classList.add('bad'); f.t.focus(); return; }
     const tags = f.tags.value.split(/[,\n]+/).map(x => x.trim().replace(/^#/, '').replace(/\s+/g, '_')).filter(Boolean); if (tags.length > 5) { er.textContent = '태그는 5개까지 붙일 수 있어요.'; f.tags.focus(); return; } if (tags.some(x => x.length > 20)) { er.textContent = '태그 하나는 20자까지예요.'; f.tags.focus(); return; }
+    const old0 = id && id !== 'new' ? N.get(id) : null; let body = b;
+    if (st === 'ok' && old0 && old0.st === 'draft') { /* 대필 방지(FINAL 0-15): 튜터 · 영상 초안 = 고친 줄 1개 이상 + 확인 체크 · 오답 = 「왜 틀렸을까요?」 1자 이상 · 시험 · 파일 = 체크 */
+      const lines = x => String(x || '').split('\n').map(l => l.trim()).filter(Boolean); let ch = 0; try { const r = window.LNOTE_AI && typeof LNOTE_AI.diffLines === 'function' ? LNOTE_AI.diffLines(old0.b, b) : null; ch = typeof r === 'number' ? r : r && typeof r.changed === 'number' ? r.changed : -1; } catch (e) { ch = -1; }
+      if (ch < 0) { const o = new Set(lines(old0.b)); ch = lines(b).filter(l => !o.has(l)).length + (lines(t).join() !== lines(old0.t).join() ? 1 : 0); }
+      if (['tutor', 'yt'].includes(old0.src) && ch < 1) { er.textContent = '내 말로 한 줄 이상 고쳐 주세요.'; f.b.focus(); return; }
+      if (old0.src === 'quiz') { const w = f.why ? f.why.value.trim() : ''; if (!w) { er.textContent = '「왜 틀렸을까요?」를 한 글자 이상 적어 주세요.'; if (f.why) f.why.focus(); return; } body = `${b.replace(/\s+$/, '')}\n\n**왜 틀렸나** ${w}`.slice(0, N.LIM.b); }
+      if (f.ok && !f.ok.checked) { er.textContent = '「내용을 읽고 확인했어요」에 체크해 주세요.'; f.ok.focus(); return; } }
     kmRead(); const K = KM.on ? KM.list.map(c => ({ f: c.f.trim(), k: c.k.trim() })).filter(c => c.f) : []; if (K.some(c => !c.k)) { er.textContent = '카드 뒷면(답)을 적어 주세요. 필요 없는 카드는 휴지통으로 빼요.'; return; }
     if (K.length > N.LIM.cards - N.cards().length) { er.textContent = '카드가 가득 찼어요. 오래된 카드를 정리해 주세요.'; return; }
-    const old = id && id !== 'new' ? N.get(id) : null; const n = N.save({ ...(old ? { id: old.id } : { src: 'me' }), t, b, tags, cid: f.cid.value, lid: f.cid.value ? f.lid.value : '', st });
+    const old = id && id !== 'new' ? N.get(id) : null; const n = N.save({ ...(old ? { id: old.id } : { src: 'me' }), t, b: body, tags, cid: f.cid.value, lid: f.cid.value ? f.lid.value : '', st });
     if (!n) { er.textContent = N.all().length >= N.LIM.items && !old ? `노트가 가득 찼어요(${N.LIM.items}개). 오래된 노트를 정리하면 새로 쓸 수 있어요.` : '저장하지 못했어요. 길이를 확인해 주세요.'; return; }
     K.forEach(c => N.saveCard({ nid: n.id, f: c.f, k: c.k, src: 'note', due: N.addD(td(), 1), iv: 1, ef: 2.5, n: 0 }));
-    LN.edit = false; LN.view = true; LN.pre = null; KM.key = ''; toast(st === 'draft' ? '초안으로 두었어요.' : `노트에 저장했어요${K.length ? ` · 카드 ${K.length}장은 내일 복습에 나와요` : ''}.`, 'ok'); if (route().b === n.id) reOv(); else location.hash = '#notes/' + n.id; }
+    LN.edit = false; LN.view = true; LN.pre = null; KM.key = ''; toast(st === 'draft' ? '초안으로 두었어요.' : `노트에 저장했어요${K.length ? ` · 복습 카드 ${K.length}장도 만들었어요` : ''}.`, 'ok');
+    if (st === 'ok' && old0 && old0.st === 'draft' && LN.tag === '__draft') { const nx = N.all().find(x => x.st === 'draft'); LN.view = false; if (nx) { location.hash = '#notes/' + nx.id; return; } setTimeout(() => toast('초안을 모두 확인했어요.', 'ok'), 2500); }
+    if (route().b === n.id) reOv(); else location.hash = '#notes/' + n.id; }
   let UNDO = null;
   function undoBar(msg) { document.querySelectorAll('.ln-undo').forEach(x => x.remove()); document.body.insertAdjacentHTML('beforeend', `<div class="ln-undo" role="status"><span>${esc(msg)}</span><button type="button" data-ln="undo">되돌리기</button></div>`); clearTimeout(undoBar.t); undoBar.t = setTimeout(() => { document.querySelectorAll('.ln-undo').forEach(x => x.remove()); UNDO = null; }, 5000); }
   document.addEventListener('submit', e => { const f = e.target; const k = f && f.dataset && f.dataset.lnF; if (!k) return; e.preventDefault(); const er = f.querySelector('.ln-err'); const id = decodeURIComponent(route().b || '');
@@ -333,7 +471,7 @@
       const n = N.save({ t: (x.it ? `${x.it.title} · ${first}` : first).slice(0, 80), b, cid: x.c.id, lid: x.lid, tags: [], src: 'me' }); if (!n) { er.textContent = '저장하지 못했어요.'; return; } toast('이 레슨 노트에 저장했어요.', 'ok');
       const m = document.getElementById('lnMini'); if (m) m.outerHTML = miniHTML(x); const bt = document.querySelector('.ln-lbtn'); if (bt) { const c = N.all().filter(y => y.cid === x.c.id && (!x.lid || y.lid === x.lid)).length; bt.innerHTML = `${ico('lnnote', 18)}노트 <b>${c}</b>`; } return; } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('lnOv')) { e.preventDefault(); location.hash = '#notes'; return; }
-    if (route().a !== 'review' || !RV || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '')) return;
+    if (!isRv() || !RV || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '')) return;
     if ((e.key === ' ' || e.key === 'Enter') && !(e.target && e.target.closest && e.target.closest('a, button'))) { e.preventDefault(); RV.flip = !RV.flip; paintRv(); return; }
-    if (RV.flip && ['1', '2', '3'].includes(e.key)) { const b = document.querySelector(`.ln-grade[data-v="${+e.key - 1}"]`); if (b) b.click(); } });
+    if (RV.flip && ['1', '2', '3'].includes(e.key)) { const b = document.querySelector(`.ln-grade button[data-v="${+e.key - 1}"]`); if (b) b.click(); } });
 })();

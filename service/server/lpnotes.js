@@ -1,11 +1,12 @@
 'use strict';
 /* v43.6 셀프러닝 노트(학습자 lnote.js) — 학습 기록 lp.notes · lp.conn 정리 규칙. Java PubServiceImpl.cleanNotes · cleanConn과 같은 규칙(tests/lpnotes-vectors.json).
-   notes: { v:1, items ≤120, cards ≤300, goal, sync } — 계약에 있는 키 · 길이 · 개수만 남기고 나머지(이름 · 연락처 등)는 버린다.
+   notes: { v:1, items ≤120, cards ≤300, goal, sync, marks ≤300 } — 계약에 있는 키 · 길이 · 개수만 남기고 나머지(이름 · 연락처 등)는 버린다.
    - 노트 id 'n'+base36, 카드 id 'k'+base36. 같은 id가 여러 번이면 앞의 것 하나만.
    - 노트 묶음 직렬화가 NOTES_BYTES(UTF-8)를 넘으면 뒤(오래된) 노트부터 뺀다 — 학습자 화면(lnote.js)이 먼저 막으므로 안전장치.
    conn: gcal{on, mode, at} · gh{on, url(https://github.com/아이디/저장소만), at} · push{on, at}(앱 알림). 비밀값(토큰 · 키)은 받지 않는다. */
-const N_MAX = 120, K_MAX = 300, NOTES_BYTES = 360 * 1024;
+const N_MAX = 120, K_MAX = 300, M_MAX = 300, NOTES_BYTES = 360 * 1024;
 const NID = /^n[0-9a-z]{1,24}$/, KID = /^k[0-9a-z]{1,24}$/, LID = /^[\w-]{1,40}$/, DAY = /^\d{4}-\d{2}-\d{2}$/;
+const MKEY = /^(note|q|cmt|post|log):[\w.-]{1,60}$/;
 const GH = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/, MODE = /^[a-z]{1,12}$/;
 const SRC = ['me', 'tutor', 'quiz', 'yt', 'file', 'exam'], CSRC = ['note', 'quiz'];
 const isObj = x => !!x && typeof x === 'object' && !Array.isArray(x);
@@ -33,12 +34,14 @@ function cleanCard(x) {
 function cleanNotes(N) {
   if (!isObj(N)) return null;
   const uniq = (A, fn, max) => { const seen = new Set(), out = []; for (const x of Array.isArray(A) ? A.slice(0, max * 2) : []) { const y = fn(x); if (!y || seen.has(y.id)) continue; seen.add(y.id); out.push(y); if (out.length >= max) break; } return out; };
-  const o = { v: 1, items: uniq(N.items, cleanNote, N_MAX), cards: uniq(N.cards, cleanCard, K_MAX), goal: null, sync: {} };
+  const o = { v: 1, items: uniq(N.items, cleanNote, N_MAX), cards: uniq(N.cards, cleanCard, K_MAX), goal: null, sync: {}, marks: {} };
   const ids = new Set(o.items.map(x => x.id)); o.cards.forEach(c => { if (c.nid && !ids.has(c.nid)) c.nid = ''; });
   if (isObj(N.goal)) { const exam = line(N.goal.exam, 40), date = String(N.goal.date || ''); if (exam && DAY.test(date)) o.goal = { exam, date }; }
   const S = isObj(N.sync) ? N.sync : {};
   if (isObj(S.notion)) o.sync.notion = { on: S.notion.on === true, at: line(S.notion.at, 30), page: line(S.notion.page, 60) };
   if (isObj(S.gdocs)) o.sync.gdocs = { on: S.gdocs.on === true, at: line(S.gdocs.at, 30) };
+  /* 모아보기 표시(추가 지시 1): marks = { '<출처>:<id>': { pin, hide } } ≤300 — 둘 다 꺼진 항목은 버린다 */
+  if (isObj(N.marks)) { let n = 0; for (const [k, v] of Object.entries(N.marks)) { if (n >= M_MAX) break; if (!MKEY.test(k) || !isObj(v)) continue; const pin = v.pin === true, hide = v.hide === true; if (!pin && !hide) continue; o.marks[k] = { pin, hide }; n++; } }
   /* 크기 안전장치: 오래된(뒤쪽) 노트부터 뺀다 */
   const size = () => Buffer.byteLength(JSON.stringify(o));
   while (o.items.length && size() > NOTES_BYTES) { const gone = o.items.pop(); o.cards.forEach(c => { if (c.nid === gone.id) c.nid = ''; }); }
@@ -52,4 +55,4 @@ function cleanConn(C) {
   if (isObj(C.push)) o.push = { on: C.push.on === true, at: line(C.push.at, 30) };
   return o;
 }
-module.exports = { cleanNotes, cleanConn, N_MAX, K_MAX, NOTES_BYTES };
+module.exports = { cleanNotes, cleanConn, N_MAX, K_MAX, M_MAX, NOTES_BYTES };
