@@ -134,7 +134,8 @@
 
   /* 학습자가 쓰는 연결(기관 유형별) — 학습자 앱 「나 › 앱 및 서비스 연결」과 같은 목록 */
   const LRN = () => { const t = TY(), U = /^univ/.test(t), PH = ['public', 'lifelong'].includes(t);
-    return [['알림 · 일정', [['gcal', '내 캘린더(Google)', '수업 · 마감이 내 캘린더에', true], ['apple', '캘린더 파일(Apple · Outlook)', '.ics 파일로 내 캘린더에 넣기', true], ['kakao', '카카오톡 알림', '수업 · 결제 안내를 카카오톡으로', !U], ['sms', '문자 알림', '시설 예약 · 강습 알림(동의 시에만 번호 수집)', PH]]],
+    return [['학습 · AI 튜터', [['notion', '노트 앱으로 내보내기(Notion · Google Docs)', 'AI 튜터 학습 계획 · 진도 · 넘긴 질문을 노트로', true], ['anki', '복습 카드 내보내기(Anki · Quizlet)', '내 과정 퀴즈로 만든 복습 카드', true], ['github', 'GitHub 저장소', '코딩 과제 저장소 — AI 튜터가 코드에 맞춰 힌트(공개 주소만)', ['adult', 'voc', 'corp', 'lifelong'].includes(t)]]],
+      ['알림 · 일정', [['gcal', '내 캘린더(Google)', '수업 · 마감이 내 캘린더에', true], ['apple', '캘린더 파일(Apple · Outlook)', '.ics 파일로 내 캘린더에 넣기', true], ['kakao', '카카오톡 알림', '수업 · 결제 안내를 카카오톡으로', !U], ['sms', '문자 알림', '시설 예약 · 강습 알림(동의 시에만 번호 수집)', PH]]],
       ['로그인 · 결제', [['naver', '간편 로그인(카카오 · 네이버 · Google)', '다음부터 한 번에 들어오기', !U], ['naverpay', '간편결제', '수강료를 간편결제로', !U && payOn()]]],
       ['영상 · 기록', [['youtube', 'YouTube 이어 보기', '기관 채널 강의를 앱에서 이어 보기', true]]]]; };
 

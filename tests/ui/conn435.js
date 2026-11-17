@@ -53,11 +53,17 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
     ok(await p.evaluate(() => [...document.querySelectorAll('.cx-row, .cx-seg button, .cx-cat')].filter(e => e.offsetParent).every(e => e.getBoundingClientRect().height >= 40)), '390px: 누르는 칸 40px 이상');
     ok(!errs.length, '390 오류 없음'); await p.close(); }
 
-  const learner = async (demo, sid, app) => { const ctx = await br.newContext({ viewport: { width: app ? 390 : 1280, height: 900 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
+  const learner = async (demo, sid, app) => { const ctx = await br.newContext({ viewport: { width: app ? 390 : 1280, height: 900 }, acceptDownloads: true }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
     await p.addInitScript(([sid, app]) => { try { sessionStorage.setItem('didisam.learner.sample', JSON.stringify({ sid, dept: '', id: sid })); if (app) localStorage.setItem('didisam.app.instx', '1'); } catch (e) { } }, [sid, app]);
     await p.goto(`${base}/learner.html?demo=${demo}${app ? '&app=1' : ''}#connect`); await p.waitForTimeout(1100); const rows = await p.evaluate(() => [...document.querySelectorAll('.lcx-r b')].map(x => x.textContent)); return { ctx, p, errs, rows }; };
-  { const { ctx, errs, rows } = await learner('adult', '20269000', 1); ok(rows.some(r => /카카오톡 알림/.test(r)) && rows.some(r => /내 캘린더/.test(r)) && !rows.some(r => /문자 알림/.test(r)), '학원 학습자: 캘린더 · 카카오톡(문자 없음)'); ok(!errs.length, '학원 학습자 오류 없음'); await ctx.close(); }
-  { const { ctx, errs, rows } = await learner('1', '20260001', 1); ok(rows.length >= 1 && !rows.some(r => /카카오톡|문자|간편 로그인/.test(r)), '대학 학습자: 휴대폰 · SNS 연결 없음(학번 · 학과만)'); ok(!errs.length, '대학 학습자 오류 없음'); await ctx.close(); }
+  { const { ctx, p, errs, rows } = await learner('adult', '20269000', 1); ok(rows.some(r => /카카오톡 알림/.test(r)) && rows.some(r => /내 캘린더/.test(r)) && !rows.some(r => /문자 알림/.test(r)), '학원 학습자: 캘린더 · 카카오톡(문자 없음)');
+    ok(/노트 앱으로 내보내기/.test(rows[0]) && rows.some(r => /복습 카드/.test(r)) && rows.some(r => /GitHub/.test(r)), '학습 · AI 튜터 묶음이 맨 위(노트 · 복습 카드 · GitHub)');
+    { const [d] = await Promise.all([p.waitForEvent('download'), p.click('[data-lcx="md"]')]); const t = fs.readFileSync(await d.path(), 'utf8'); ok(/\.md$/.test(d.suggestedFilename()) && /AI 튜터와 세운 학습 계획/.test(t) && /개인정보는 넣지 않았어요/.test(t) && !/20269000/.test(t), '노트 내보내기(.md): 계획 · 진도 · 질문, 학번 · 개인정보 없음'); }
+    { const [d] = await Promise.all([p.waitForEvent('download'), p.click('[data-lcx="csv"]')]); const t = fs.readFileSync(await d.path(), 'utf8'); ok(/\.csv$/.test(d.suggestedFilename()) && /앞면\(질문\),뒷면\(정답\)/.test(t) && t.split('\n').length >= 2, '복습 카드 내보내기(.csv): 질문 · 정답'); }
+    await p.click('[data-lcx="gh"]'); await p.fill('.lcx-f input[name=u]', 'github.com/x'); await p.click('.lcx-f [type=submit]'); ok(/형식의 주소/.test(await p.textContent('.lcx-f .err')), 'GitHub: 잘못된 주소 거절');
+    await p.fill('.lcx-f input[name=u]', 'https://github.com/santa/hw1'); await p.click('.lcx-f [type=submit]'); await p.waitForTimeout(300); ok(await p.evaluate(() => !!(LR.lp.conn && LR.lp.conn.gh && LR.lp.conn.gh.on) && /santa\/hw1/.test(document.querySelector('.lcx').textContent)), 'GitHub: 공개 저장소 연결(토큰 없음)');
+    ok(!errs.length, '학원 학습자 오류 없음 ' + errs.join(' | ')); await ctx.close(); }
+  { const { ctx, errs, rows } = await learner('1', '20260001', 1); ok(rows.length >= 1 && !rows.some(r => /카카오톡|문자|간편 로그인|GitHub/.test(r)), '대학 학습자: 휴대폰 · SNS · GitHub 연결 없음(학번 · 학과만)'); ok(!errs.length, '대학 학습자 오류 없음'); await ctx.close(); }
   { const { ctx, p, errs, rows } = await learner('sports', '20269001', 0); ok(rows.some(r => /문자 알림/.test(r)) && !rows.some(r => /카카오톡 알림/.test(r)), '공단 학습자(웹): 문자 알림 줄'); ok(!!(await p.$('.sm43')), '공단: 기존 문자 알림 카드 유지'); ok(!errs.length, '공단 오류 없음'); await ctx.close(); }
 
   await br.close(); srv.close(); console.log(`conn435: ${pass} 통과, ${fail} 실패`); process.exit(fail ? 1 : 0);

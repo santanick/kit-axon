@@ -22,6 +22,9 @@ v37(대표님 2026-11-10 「외부 연결 등은 로고를 실제 해당 서비�
 | youtube | YouTube | youtube.svg | 16.37.0 | #FF0000 | https://www.youtube.com/howyoutubeworks/resources/brand-resources/#logos-icons-and-colors |
 | gsheets | Google Sheets | googlesheets.svg | 16.38.0 | #34A853 | https://about.google/brand-resource-center/logos-list/ |
 | apple | Apple(캘린더 파일 · 로그인 표시) | apple.svg | 16.38.0 | #000000 | https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple |
+| github | GitHub(학습자 코딩 과제 저장소) | github.svg | 16.38.0 | #181717 | https://github.com/logos |
+| anki | Anki(복습 카드 내보내기) | anki.svg | 16.38.0 | #80C2EE | https://apps.ankiweb.net |
+| quizlet | Quizlet(복습 카드 내보내기) | quizlet.svg | 16.38.0 | #4255FF | https://quizlet.com |
 | notion | Notion | notion.svg | 16.37.0 | #000000 | https://www.notion.so |
 | microsoft | Microsoft | microsoft.svg | 10.4.0 + 공식 4색 | #F25022 · #7FBA00 · #00A4EF · #FFB900 | https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks |
 
