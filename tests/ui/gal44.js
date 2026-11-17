@@ -32,8 +32,9 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
   const gal = async page => { await page.evaluate(() => ACT['tpl-gallery']()); await page.waitForSelector('.tpd-c', { timeout: 15000 }); await page.waitForTimeout(300); };
   const state = page => page.evaluate(() => { const root = document.querySelector('#hpsGal') || document;
     return { chips: [...root.querySelectorAll('[data-k="tpdT"]')].map(b => [b.dataset.v, b.textContent.trim(), b.classList.contains('on')]),
-      cards: [...root.querySelectorAll('.tpd-c:not([hidden])')].map(c => ({ v: c.dataset.v, sub: (c.querySelector('.tpd-sub') || {}).textContent || '', now: !!c.querySelector('.tpd-now') })),
-      cnt: (root.querySelector('.tpd-cnt') || {}).textContent || '', sel: !!root.querySelector('#tpdSub') }; });
+      cards: [...root.querySelectorAll('.tpd-c:not([hidden]):not(.tpd-alt)')].map(c => ({ v: c.dataset.v, sub: (c.querySelector('.tpd-sub') || {}).textContent || '', now: !!c.querySelector('.tpd-now') })),
+      cnt: (root.querySelector('.tpd-cnt') || {}).textContent || '', sel: !!root.querySelector('#tpdSub'), alt: [...root.querySelectorAll('.tpd-c.tpd-alt')].map(c => c.dataset.v), lk: !!root.querySelector('[data-act="tpd-alt"]'),
+      fd: [...root.querySelectorAll('[data-act="tpd-f"][role="tab"]')].map(b => [b.dataset.v, b.querySelector('span').textContent, +b.querySelector('em').textContent, b.classList.contains('on')]) }; });
   const chip = async (page, v) => { const root = await page.$('#hpsGal') ? '#hpsGal ' : ''; await page.click(`${root}[data-k="tpdT"][data-v="${v}"]`); await page.waitForTimeout(350); };
   try {
     /* A. g44가 없을 때(지금 저장소 상태): 유형 칩 · 기본 선택 · 예전 목록 대체 */
@@ -59,11 +60,9 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
       await chip(page, 'corp'); s = await state(page);
       ok('B 기업 교육 칩 → 기업 g44만', s.cards.length === D.corp.length && s.cards.every(c => D.corp.some(t => t.id === c.v)), s.cards);
       await chip(page, 'all'); s = await state(page);
-      ok('B 전체 칩 → g44 전부 · 세부 유형 선택 있음', s.cards.length === D.all && s.cards.every(c => /^t44-/.test(c.v)) && s.sel, [s.cards.length, D.all, s.sel]);
-      const sb = D.voc[D.voc.length - 1].sub; await page.selectOption('#tpdSub', sb); await page.waitForTimeout(350); s = await state(page);
-      ok('B 세부 유형 필터', s.cards.length >= 1 && s.cards.every(c => c.sub === sb), [sb, s.cards]);
+      ok('B 전체 칩 → g44 전부 · 세부 유형 선택 상자 없음(v44.2 교육 분야 칩으로 대체)', s.cards.length === D.all && s.cards.every(c => /^t44-/.test(c.v)) && !s.sel, [s.cards.length, D.all, s.sel]);
       /* 예전 템플릿을 쓰는 사이트: 그대로 동작 + 「사용 중」 카드 */
-      await page.evaluate(() => { UI.tpdT = ''; UI.tpdSub = ''; S.site = siteFromTpl(TPL.find(t => t.id === 'adult-cert')); save(); UI.siteGallery = false; try { if (typeof slClose === 'function') slClose(); } catch (e) { } go('site'); render(); });
+      await page.evaluate(() => { UI.tpdT = ''; UI.tpdSub = ''; UI.tpdF = ''; S.site = siteFromTpl(TPL.find(t => t.id === 'adult-cert')); save(); UI.siteGallery = false; try { if (typeof slClose === 'function') slClose(); } catch (e) { } go('site'); render(); });
       await page.waitForTimeout(500);
       ok('B 예전 템플릿 사이트 게시본 동작', await page.evaluate(() => S.site.tpl === 'adult-cert' && siteHTML(S.site, false, 'ko').length > 1000));
       await gal(page); s = await state(page);
@@ -134,6 +133,37 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
       ok('G 390 가로 넘침 0', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       if (SHOT) await page.screenshot({ path: path.join(SHOT, 'settings-type-m.jpg'), type: 'jpeg', quality: 70, fullPage: true });
       ok('G 스크립트 오류 0', !errs.length, errs); await ctx.close(); }
+    /* H. v44.2 교육 분야(2차 칩, 벤치마크 A안): 칩 수 · 0개 칩 없음 · 모든 g44에 분야 · 3종 이하 「다른 유형의 같은 분야」 링크 · hover 미리보기 */
+    { const { ctx, page, errs } = await open('k12', undefined, false, 1440); await gal(page);
+      const map = await page.evaluate(() => { const L = TPL.filter(t => t.g44 && !t.hidden); return { n: L.length, none: L.filter(t => !TPD_fields.of(t).length).map(t => t.id), org: L.filter(t => { const f = TPD_fields.of(t); return f.length === 1 && f[0] === 'org'; }).map(t => t.id), want: (() => { const c = {}; L.filter(t => t.types.includes('k12')).forEach(t => TPD_fields.of(t).forEach(f => { c[f] = (c[f] || 0) + 1; })); return c; })() }; });
+      ok('H 모든 g44에 교육 분야', map.n >= 70 && !map.none.length, map);
+      const guess = await page.evaluate(() => TPL.filter(t => t.g44 && !t.hidden && !TPD_fields.mapped(t)).map(t => `${t.id}(${t.sub}) → ${TPD_fields.of(t).join(' ')}`)); if (guess.length) console.log('  참고: 표에 없어 sub로 추정한 템플릿', guess); /* 새 템플릿(공공 위탁운영 등)은 추정 — 표에 추가 권장 */
+      let s = await state(page); const fz = s.fd.filter(x => x[0]);
+      ok('H 분야 칩 = 그 유형에 있는 분야만(개수 표시 · 0개 칩 없음)', fz.length === Object.keys(map.want).length && fz.every(x => x[2] > 0 && x[2] === map.want[x[0]]) && s.fd[0][0] === '' && s.fd[0][2] === s.cards.length && s.fd[0][3], { fd: s.fd, want: map.want });
+      ok('H 세부 유형 선택 상자 없음', !s.sel);
+      const tf = async v => { const root = await page.$('#hpsGal') ? '#hpsGal ' : ''; await page.click(`${root}[data-act="tpd-f"][role="tab"][data-v="${v}"]`); await page.waitForTimeout(400); return state(page); };
+      s = await tf('arts'); ok('H 예체능 분야 → 그 분야만(3종 이하면 링크)', s.cards.length === map.want.arts && s.cards.length > 0 && s.lk === (s.cards.length <= 3), [s.cards.length, map.want.arts, s.lk]);
+      s = await tf('lang'); const nLang = await page.evaluate(() => TPL.filter(t => t.g44 && !t.hidden && TPD_fields.of(t).includes('lang')).length);
+      ok('H 3종 이하 → 「다른 유형의 같은 분야」 링크 · 추천 카드', s.cards.length <= 3 && s.lk && s.alt.length >= 1 && s.alt.length <= 3 && /다른 유형의 어학/.test(s.cnt), [s.cards.length, s.alt, s.cnt]);
+      if (SHOT) await page.screenshot({ path: path.join(SHOT, 'gal44-field-1440.jpg'), type: 'jpeg', quality: 70 });
+      await page.click('[data-act="tpd-alt"]'); await page.waitForTimeout(500); s = await state(page);
+      ok('H 링크 → 전체 유형 + 같은 분야', (s.chips.find(x => x[2]) || [])[0] === 'all' && s.cards.length === nLang && (s.fd.find(x => x[3]) || [])[0] === 'lang', [s.cards.length, nLang]);
+      await page.click('.tpd-lk'); await page.waitForTimeout(400); s = await state(page); ok('H 분야 해제', (s.fd.find(x => x[3]) || [])[0] === '', s.fd.filter(x => x[3]));
+      /* hover 자동 스크롤 미리보기 */
+      await chip(page, 'k12'); await page.waitForFunction(() => [...document.querySelectorAll('.tpd-c .tpd-th iframe')].some(f => { try { return f.contentDocument && f.contentDocument.body && f.contentDocument.documentElement.scrollHeight > 1500; } catch (e) { return false; } }), null, { timeout: 30000 });
+      const hi = await page.evaluate(() => [...document.querySelectorAll('.tpd-c')].findIndex(c => { const f = [...c.querySelectorAll('.tpd-th iframe')].pop(); try { return f && f.contentDocument && f.contentDocument.documentElement.scrollHeight > 1500; } catch (e) { return false; } }));
+      const TH = `.tpd-c:nth-of-type(${hi + 1}) .tpd-th`; const fy = () => page.evaluate(sel => { const f = [...document.querySelector(sel).querySelectorAll('iframe')].pop(); return f.contentWindow.scrollY; }, TH);
+      await page.hover(TH); await page.waitForTimeout(1300); const y1 = await fy();
+      const mt = await page.evaluate(sel => document.querySelector(sel).parentElement.querySelector('.tpd-mt').textContent, TH);
+      await page.mouse.move(5, 5); await page.waitForTimeout(1200);
+      const y2 = await fy();
+      ok('H hover → 자동 스크롤 미리보기 · 떠나면 처음으로 · 「섹션 n · 약 m화면」', y1 > 300 && y2 < 5 && /섹션 \d+ · 약 \d+화면/.test(mt), { y1, y2, mt });
+      ok('H 스크립트 오류 0', !errs.length, errs); await ctx.close(); }
+    { const { ctx, page, errs } = await open('k12', undefined, false, 390); await gal(page); const s = await state(page);
+      const v = await page.evaluate(() => { const w = [...document.querySelectorAll('.tpd-fd')].find(x => x.offsetParent); const r = w.getBoundingClientRect(); const B = [...w.querySelectorAll('button')]; return { row: B.every(b => Math.abs(b.getBoundingClientRect().top - B[0].getBoundingClientRect().top) < 2), h: Math.round(r.height), over: document.documentElement.scrollWidth > innerWidth + 1 }; });
+      ok('H 390 분야 칩 = 가로 한 줄 · 넘침 0', v.row && v.h <= 60 && !v.over && s.fd.length >= 3, v);
+      if (SHOT) await page.screenshot({ path: path.join(SHOT, 'gal44-field-390.jpg'), type: 'jpeg', quality: 70 });
+      ok('H 390 스크립트 오류 0', !errs.length, errs); await ctx.close(); }
   } catch (e) { console.error(e); fails.push('예외: ' + e.message); }
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건: ${fails.join(' / ')}` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);

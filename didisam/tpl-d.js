@@ -230,7 +230,7 @@
      - 새 템플릿(g44: 1, hp44-*.js)만 보여 준다. 예전 템플릿(130여 종)은 게시된 사이트를 위해 코드에 남고 갤러리에서는 숨긴다.
      - 그 유형의 g44가 아직 없으면(요원 작업 중) 그 유형만 예전 목록으로 대신 보여 준다(모두 합쳐지면 자동으로 사라짐).
      - 지금 사이트가 예전 템플릿이면 우리 유형 · 전체 칩 맨 앞에 「사용 중」 카드로 둔다(계속 그대로 동작).
-     - 카드에는 세부 유형(sub) 이름, 세부 유형이 4개 이상이면 작은 「세부 유형」 선택. 검색은 그대로. */
+     - 카드에는 교육 분야 · 세부 유형(sub) 이름(v44.2부터 「세부 유형」 선택 상자 대신 교육 분야 칩). 검색은 그대로. */
   const GT = [['univ', '대학'], ['k12', '학원(초중고)'], ['adult', '학원(성인)'], /* v44.1 대표님 「1인 강사 부분은 없애줘 → 학원(성인) 통합」: 1인 강사 · 크리에이터 템플릿은 학원(성인) 안에 */ ['corp', '기업 교육'], ['public', '공공 교육원'], ['lifelong', '평생교육'], ['voc', '직업훈련'], ['all', '전체']];
   const G4 = () => window.G44 || null;
   const ourT = () => { const k = G4() ? G4().key(tyKey()) : tyKey(); return GT.some(x => x[0] === k) ? k : 'all'; };
@@ -243,42 +243,92 @@
     if (k === 'all') { const seen = new Set(); return GT.filter(x => x[0] !== 'all').flatMap(x => poolOf(x[0])).filter(t => !seen.has(t.id) && seen.add(t.id)); }
     return has44(k) ? g.ordered(k, ed) : legacy(k); }
   const usedTp = () => { const id = S.site && S.site.tpl; return id ? TPL.find(t => t.id === id) : null; };
+  /* ═════════ v44.2 G(대표님 「기관 유형 + 교육 분야 2중 카테고리」 · 벤치마크 A안): 2차 = 교육 분야 칩 ═════════
+     - 1차 기관 유형 칩은 그대로, 2차 교육 분야는 그 유형에 있는 분야만 개수와 함께(0개 분야는 아예 안 나옴). 「세부 유형」 선택 상자는 없앴다.
+     - 결과가 3종 이하이면 「다른 유형의 같은 분야 n종 더 보기」 링크 + 흐린 추천 카드(최대 3) — 너무 적은 결과 · 빈 화면을 막는다.
+     - 분야: 템플릿에 fields가 있으면 그것, 없으면 아래 FMAP(id → 분야), 그것도 없으면 sub · 이름 · 장면 낱말로 추정(새 템플릿 · 예전 템플릿). */
+  const FIELDS = [['edu', '교과 · 입시', /수학|영어\b|국어|논술|입시|과학|탐구|교과|학사|LMS|강의실|대학원|교수학습/], ['kids', '유아 · 초등', /유아|초등|어린이|키즈|청소년|가족|부모/],
+    ['lang', '어학', /어학|영어|회화|외국어|국제|일본어|중국어/], ['it', 'IT · 코딩 · 디지털', /IT|코딩|STEAM|디지털|DX|SW|개발|부트캠프|데이터|AI/], ['cert', '자격증 · 시험', /자격|시험|기능사|학점은행|합격/],
+    ['arts', '예체능 · 취미', /미술|음악|보컬|체육|태권도|운동|요가|필라테스|공예|취미|요리|베이킹|사진|영상|문화센터|시설|대관/], ['job', '직무 · 리더십', /직무|리더십|승진|온보딩|법정|필수|HRD|영업|서비스|CS|콜센터|대리점|가맹점|협력사|파트너|재직자|직원|연수|협회|코칭/],
+    ['career', '취업 · 창업', /취업|진로|창업|산학|일자리|재테크|커리어|국비|훈련|조리|미용|뷰티|물류|운전|진흥원|은퇴|인생 2막/], ['civic', '인문 · 교양 · 시민', /인문|교양|시민|구민|주민|열린|평생|도서관|박물관|마을|배움터|위탁/],
+    ['senior', '시니어 · 복지', /시니어|어르신|복지|요양|간호|은퇴/], ['org', '기관 종합형', /본부|포털|종합|전통|격식|사내 대학|러닝센터|평생학습관/]];
+  const FN = Object.fromEntries(FIELDS.map(([k, n]) => [k, n]));
+  /* 지금 있는 g44 82종 + 예전 대표 템플릿 — 첫 값이 카드에 붙는 대표 분야 */
+  const FMAP = {
+    t44uncine: 'career civic', t44unsplit: 'edu', t44uncollage: 'civic', t44unclassic: 'org', t44univy: 'edu', t44unposter: 'edu', t44undark: 'career', t44unmag: 'lang', t44unblock: 'career', t44unoverlap: 'job career', t44unportal: 'org edu', t44unfind: 'org edu',
+    t44kfmath: 'edu', t44kfeng: 'lang edu', t44kfessay: 'edu', t44kfprep: 'edu', t44kfsci: 'edu', t44kfkids: 'kids', t44kfcode: 'it kids', t44kfart: 'arts', t44kfmusic: 'arts', t44kfsport: 'arts',
+    t44adtalk: 'lang', t44adexam: 'cert', t44adit: 'it job', t44adcraft: 'arts', t44admove: 'arts', t44adcook: 'arts', t44adcoach: 'job', t44advocal: 'arts', t44adphoto: 'arts', t44adcert: 'cert', t44admoney: 'career',
+    t44cphrd: 'org job', t44cplegal: 'job', t44cponboard: 'job', t44cplead: 'job', t44cpdx: 'it job', t44cpsales: 'job', t44cpheritage: 'org job', t44cpstartup: 'job career', t44cppartner: 'job', t44cpcs: 'job', t44cpstore: 'job', t44cpuniv: 'org job',
+    t44pbcivic: 'job', t44pbjournal: 'civic', t44pbposter: 'arts', t44pbcampus: 'job org', t44pblibrary: 'civic', t44pbyouth: 'kids arts', t44pbsenior: 'senior', t44pbjobs: 'career', t44pbmuseum: 'civic arts', t44pbheritage: 'org', t44pbecon: 'career', t44pbdigital: 'it career', t44pbassoc: 'job',
+    t44vofield: 'career cert', t44vokdt: 'it career', t44voupskill: 'job', t44vocert: 'cert', t44vocook: 'career', t44vobeauty: 'career', t44vodesign: 'it career', t44vologi: 'cert career', t44vocare: 'senior cert', t44voclassic: 'org career',
+    t44lfhall: 'org civic', t44lfuniv: 'civic cert', t44lfsenior: 'senior it', t44lfhuman: 'civic', t44lfvillage: 'civic', t44lfcredit: 'cert edu', t44lfculture: 'arts', t44lflibrary: 'civic', t44lfretire: 'senior career', t44lffamily: 'kids civic' };
+  const FC = new Map();
+  function fieldsOf(tp) { if (!tp) return []; let f = FC.get(tp.id); if (f) return f;
+    const ok = k => FN[k]; const own = A(tp.fields).filter(ok); const m = FMAP[String(tp.id).replace(/-/g, '')];
+    f = own.length ? own : m ? String(m).split(' ').filter(ok) : [];
+    if (!f.length) { const tx = `${tp.sub || ''} ${tp.name || ''} ${tp.scene || ''}`; f = FIELDS.filter(([, , re]) => re.test(tx)).map(x => x[0]).slice(0, 2); }
+    if (!f.length) f = ['org']; FC.set(tp.id, f); return f; }
+  const curF = () => FN[UI.tpdF] ? UI.tpdF : '';
   function listOf() { const k = curT(); let L0 = poolOf(k); const u = usedTp();
     if (u && !L0.includes(u) && (k === 'all' || k === ourT())) L0 = [u, ...L0]; /* 예전 템플릿을 쓰는 사이트: 「사용 중」 카드 */
-    const subs = [...new Set(L0.map(t => t.sub).filter(Boolean))]; const sb = subs.includes(UI.tpdSub) ? UI.tpdSub : '';
-    return { L0, L: sb ? L0.filter(t => t.sub === sb || (t === u && !u.g44)) : L0, subs, sb, k }; }
+    const cnt = {}; L0.forEach(t => fieldsOf(t).forEach(f => { cnt[f] = (cnt[f] || 0) + 1; }));
+    const fs = FIELDS.filter(([f]) => cnt[f]).map(([f, n]) => [f, n, cnt[f]]); const f = cnt[curF()] ? curF() : '';
+    const L = f ? L0.filter(t => fieldsOf(t).includes(f) || (t === u && !u.g44)) : L0;
+    /* 3종 이하: 다른 유형의 같은 분야 */
+    const alt = f && L.length <= 3 && k !== 'all' ? poolOf('all').filter(t => !L0.includes(t) && fieldsOf(t).includes(f)) : [];
+    return { L0, L, fs, f, k, alt }; }
+  const tyOf = tp => { const t0 = A(tp.types).find(x => GT.some(g => g[0] === x)); return (GT.find(g => g[0] === t0) || [])[1] || ''; };
   function gallery() {
-    const { L, subs, sb, k } = listOf();
+    const { L0, L, fs, f, k, alt } = listOf();
     const right = S.site && S.site.tpl ? `<button type="button" class="btn ghost" data-act="tpl-back">편집으로 돌아가기</button>` : '';
     const u = usedTp(); const q = String(UI.tpdQ || '').trim().toLowerCase();
     /* v44.1 대표님 캡처(운영 서버 · 휴대폰 「템플릿 고르기」 사진 깨짐): 썸네일 iframe이 sandbox=""(불투명 출처)라 운영 서버의
        cross-origin-resource-policy: same-origin 헤더에 샘플 사진 · 글꼴 요청이 막혔다 → sandbox="allow-same-origin"(스크립트는 여전히 막힘) */
-    const card = tp => { const m = meta(tp); const now = u === tp; const old = now && !tp.g44 && L.some(t => t.g44); const hide = q && !m.q.includes(q);
-      return `<article class="tpd-c${now ? ' tpd-cur' : ''}" role="button" tabindex="0" data-act="tpd-open" data-v="${esc(tp.id)}" data-q="${esc(m.q)}" ${hide ? ' hidden' : ''} aria-label="${esc(tp.name)} 미리 보기${now ? ' (사용 중)' : ''}">
+    const card = (tp, other) => { const m = meta(tp); const now = u === tp; const old = now && !tp.g44 && L.some(t => t.g44); const hide = q && !m.q.includes(q); const F = fieldsOf(tp); const fz = f && F.includes(f) ? f : F[0];
+      return `<article class="tpd-c${now ? ' tpd-cur' : ''}${other ? ' tpd-alt' : ''}" role="button" tabindex="0" data-act="tpd-open" data-v="${esc(tp.id)}" data-q="${esc(m.q + ' ' + F.map(x => FN[x]).join(' ').toLowerCase())}" data-f="${esc(F.join(' '))}" ${hide ? ' hidden' : ''} aria-label="${esc(tp.name)} 미리 보기${now ? ' (사용 중)' : ''}${other ? ' (다른 유형 · 같은 분야)' : ''}">
         <div class="tpd-th" data-tp="${esc(tp.id)}" style="--c:${esc(tp.color || '#5C74F6')}"><iframe tabindex="-1" aria-hidden="true" title="" sandbox="allow-same-origin"></iframe>${now ? '<span class="tpd-now">사용 중</span>' : ''}</div>
-        <div class="tpd-cb">${tp.sub || old ? `<span class="tpd-sub">${esc(old ? '지금 쓰는 템플릿' : tp.sub)}</span>` : ''}<b>${esc(tp.name)}</b><small>${esc(tp.scene || '')}</small>
+        <div class="tpd-cb"><span class="tpd-tags"><em class="tpd-fd1">${esc(FN[fz] || '')}</em>${other ? `<em>${esc(tyOf(tp))}</em>` : ''}${tp.sub || old ? `<span class="tpd-sub">${esc(old ? '지금 쓰는 템플릿' : tp.sub)}</span>` : ''}</span><b>${esc(tp.name)}</b><small>${esc(other ? '다른 유형 · 같은 분야 추천' : (tp.scene || ''))}</small>
+        <span class="tpd-mt">섹션 ${m.n}</span>
         <span class="tpd-tg"><i style="background:${esc(tp.color || '#5C74F6')}"></i>${esc(moodName(moodOf(tp)))}${tp.hero ? ` · ${esc(HERO_L[tp.hero] || '')}` : ''} · 섹션 ${m.n}${A(tp.langs).length > 1 ? ' · 다국어' : ''}</span></div></article>`; };
     const lab = (GT.find(x => x[0] === k) || [])[1] || '';
+    const fchips = `<nav class="tpd-fdw" aria-label="교육 분야"><p class="tpd-fdh">교육 분야</p><div class="tpd-fd" role="tablist">${[['', '전체', L0.length], ...fs].map(([v, n, c]) => `<button type="button" role="tab" aria-selected="${v === f}" class="${v === f ? 'on' : ''}" data-act="tpd-f" data-v="${esc(v)}"><span>${esc(n)}</span><em>${c}</em></button>`).join('')}</div></nav>`;
+    const more = alt.length ? ` · <button type="button" class="tpd-lk2" data-act="tpd-alt" data-v="${esc(f)}">다른 유형의 ${esc(FN[f])} 템플릿 ${alt.length}종 더 보기 →</button>` : '';
     return SL.page('홈페이지 템플릿', right,
-      `<div class="tpd-chw tpd-ty" aria-label="기관 유형">${SL.chips('tpdT', GT, k)}</div>` +
-      `<div class="tpd-fl"><div class="sl-search tpd-q">${ic('search' in IC ? 'search' : 'spark', 16)}<input id="tpdQ" type="search" value="${esc(UI.tpdQ || '')}" placeholder="템플릿 이름 · 세부 유형 검색" aria-label="템플릿 검색"></div>` +
-      (subs.length >= 4 ? `<label class="tpd-sbf"><span>세부 유형</span><select id="tpdSub" aria-label="세부 유형">${['', ...subs].map(x => `<option value="${esc(x)}"${x === sb ? ' selected' : ''}>${esc(x || '전체')}</option>`).join('')}</select></label>` : '') + `</div>` +
-      `<p class="tpd-cnt mini" aria-live="polite">${esc(lab)}${k === ourT() && k !== 'all' ? ' · 우리 기관 유형' : ''} ${L.length}종</p><div class="tpd-g">${L.map(card).join('') || '<div class="sl-empty">조건에 맞는 템플릿이 없습니다.</div>'}</div>`);
+      `<p class="tpd-fdh">기관 유형</p><div class="tpd-chw tpd-ty" aria-label="기관 유형">${SL.chips('tpdT', GT, k)}</div>` +
+      `<div class="tpd-lay"><div class="tpd-lin">${fchips}<div class="tpd-main">` +
+      `<div class="tpd-fl"><div class="sl-search tpd-q">${ic('search' in IC ? 'search' : 'spark', 16)}<input id="tpdQ" type="search" value="${esc(UI.tpdQ || '')}" placeholder="템플릿 이름 · 분야 · 세부 유형 검색" aria-label="템플릿 검색"></div></div>` +
+      `<p class="tpd-cnt mini" aria-live="polite"><b>${esc(lab)}${f ? ` · ${esc(FN[f])}` : ''}${k === ourT() && k !== 'all' && !f ? ' · 우리 기관 유형' : ''} ${L.length}종</b>${f ? ` <button type="button" class="tpd-lk" data-act="tpd-f" data-v="">분야 해제</button>` : ''}${more}</p>` +
+      `<div class="tpd-g">${L.map(tp => card(tp)).join('') || '<div class="sl-empty">조건에 맞는 템플릿이 없습니다.</div>'}${alt.slice(0, 3).map(tp => card(tp, 1)).join('')}</div></div></div></div>`);
   }
-  /* v44 G 검수(390px): 선택된 유형 칩이 가로 스크롤 밖에 있으면 보이게 — 칩 줄의 scrollLeft만 맞춘다(페이지 세로 스크롤은 그대로) */
-  const chipShow = () => document.querySelectorAll('.tpd-ty').forEach(w0 => { const b = w0.querySelector('[data-k="tpdT"].on'); if (!b) return; const w = [b.parentElement, w0].find(x => x && x.scrollWidth > x.clientWidth + 1); if (!w) return; /* 가로로 밀리는 칸(.sl-chips 또는 바깥 줄) */
-    const wr = w.getBoundingClientRect(), br = b.getBoundingClientRect(); if (br.left >= wr.left && br.right <= wr.right && w.dataset.tpdT === b.dataset.v) return;
-    w.scrollLeft = Math.max(0, w.scrollLeft + (br.left - wr.left) - (w.clientWidth - br.width) / 2); w.dataset.tpdT = b.dataset.v; });
+  ACT['tpd-f'] = el => { UI.tpdF = el.dataset.v || ''; render(); };
+  ACT['tpd-alt'] = el => { UI.tpdT = 'all'; UI.tpdF = el.dataset.v || ''; SITE.clear(); render(); };
+  window.TPD_fields = { FIELDS: FIELDS.map(([k, n]) => [k, n]), of: tp => fieldsOf(tp).slice(), mapped: tp => !!(tp && (A(tp.fields).length || FMAP[String(tp.id).replace(/-/g, '')])) };
+  /* v44 G 검수(390px): 선택된 유형 칩 · 분야 칩이 가로 스크롤 밖에 있으면 보이게 — 칩 줄의 scrollLeft만 맞춘다(페이지 세로 스크롤은 그대로) */
+  const chipShow = () => document.querySelectorAll('.tpd-ty, .tpd-fd').forEach(w0 => { const b = w0.querySelector('.on'); if (!b) return; const w = [b.parentElement, w0].find(x => x && x.scrollWidth > x.clientWidth + 1); if (!w) return; /* 가로로 밀리는 칸(.sl-chips 또는 바깥 줄) */
+    const wr = w.getBoundingClientRect(), br = b.getBoundingClientRect(); const key = b.dataset.v || '-'; if (br.left >= wr.left && br.right <= wr.right && w.dataset.tpdT === key) return;
+    w.scrollLeft = Math.max(0, w.scrollLeft + (br.left - wr.left) - (w.clientWidth - br.width) / 2); w.dataset.tpdT = key; });
   window.TPD_chipShow = chipShow;
   if (typeof AFTER !== 'undefined') AFTER.push(() => { chipShow(); requestAnimationFrame(chipShow); });
-  document.addEventListener('change', e => { const t = e.target; if (!t || t.id !== 'tpdSub') return; UI.tpdSub = t.value; render(); });
+  /* GAP A10: 썸네일에 마우스를 올리면 페이지를 천천히 자동 스크롤해 아래 섹션까지 미리 보여 주고, 떠나면 처음으로. 카드에 「섹션 n · 약 m화면」 */
+  const HV = { el: null, raf: 0 };
+  const thFrame = th => th && [...th.querySelectorAll('iframe')].pop();
+  function hvStop(back) { cancelAnimationFrame(HV.raf); HV.raf = 0; const th = HV.el; HV.el = null; if (!back || !th) return; const f = thFrame(th); try { f && f.contentWindow && f.contentWindow.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { } }
+  function hvStart(th) { if (HV.el === th) return; hvStop(true); if (matchMedia('(prefers-reduced-motion: reduce)').matches || !matchMedia('(hover: hover)').matches) return;
+    const f = thFrame(th); let w = null, d = null; try { w = f && f.contentWindow; d = f && f.contentDocument; } catch (e) { } if (!w || !d || !d.documentElement) return;
+    HV.el = th; const H = d.documentElement.scrollHeight, vh = w.innerHeight || 800; const mt = th.parentElement && th.parentElement.querySelector('.tpd-mt');
+    if (mt && !mt.dataset.len && H > 0) { mt.dataset.len = 1; mt.textContent += ` · 약 ${Math.max(1, Math.round(H / vh))}화면`; }
+    const max = Math.max(0, H - vh); let t0 = 0; const sp = 900; /* 페이지 px/초 */
+    const step = ts => { if (HV.el !== th) return; if (!t0) t0 = ts; const y = Math.min(max, (ts - t0) / 1000 * sp); try { w.scrollTo({ top: y, behavior: 'instant' }); } catch (e) { return; } /* 게시본 html{scroll-behavior:smooth}가 프레임마다 다시 시작되지 않게 */ if (y < max) HV.raf = requestAnimationFrame(step); };
+    HV.raf = requestAnimationFrame(step); }
+  document.addEventListener('mouseover', e => { const th = e.target && e.target.closest && e.target.closest('.tpd-c .tpd-th'); if (th) hvStart(th); else if (HV.el && !(e.target.closest && e.target.closest('.tpd-th') === HV.el)) hvStop(true); });
+  document.addEventListener('mouseleave', () => hvStop(true));
   /* 사이트 화면: 갤러리 모드면 공통 틀 갤러리(학습 페이지 탭은 그대로) */
   { const base = VIEWS.site; VIEWS.site = (...a) => { try { if (S && S.org && UI.smT !== 'learn' && (UI.siteGallery || !(S.site && S.site.tpl))) return gallery(); } catch (e) { console.error('tpl-d gallery', e); } return base(...a); }; }
   ACT['tpl-gallery'] = () => { UI.siteGallery = true; UI.smT = 'home'; SITE.clear(); if (typeof CUR !== 'undefined' && CUR.tab !== 'site') go('site'); else render(); scrollTo(0, 0); };
-  { const base = ACT['sl-chip']; ACT['sl-chip'] = el => { if (el && /^(tplF|tpdM|tpdP)$/.test(el.dataset.k)) { if (el.dataset.k === 'tplF') { delete UI.tpdM; delete UI.tpdP; } } if (el && el.dataset.k === 'tpdT') { delete UI.tpdSub; SITE.clear(); } return base(el); }; }
+  { const base = ACT['sl-chip']; ACT['sl-chip'] = el => { if (el && /^(tplF|tpdM|tpdP)$/.test(el.dataset.k)) { if (el.dataset.k === 'tplF') { delete UI.tpdM; delete UI.tpdP; } } if (el && el.dataset.k === 'tpdT') { delete UI.tpdSub; SITE.clear(); } /* 분야는 유지 — 새 유형에 그 분야가 없으면 listOf가 전체로 */ return base(el); }; }
   /* 검색: 다시 그리지 않고 카드만 거른다(썸네일 유지) */
   document.addEventListener('input', e => { const t = e.target; if (!t || t.id !== 'tpdQ') return; UI.tpdQ = t.value; const q = t.value.trim().toLowerCase(); let n = 0;
-    document.querySelectorAll('.tpd-c').forEach(c => { const on = !q || String(c.dataset.q || '').includes(q); c.hidden = !on; if (on) n++; }); const cn = document.querySelector('.tpd-cnt'); if (cn) cn.textContent = `${n}종`; lazy(); });
+    document.querySelectorAll('.tpd-c').forEach(c => { const on = !q || String(c.dataset.q || '').includes(q); c.hidden = !on; if (on) n++; }); const cn = document.querySelector('.tpd-cnt'); if (cn) { const b = cn.querySelector('b'); if (b) b.textContent = b.textContent.replace(/\d+종$/, `${n}종`); else cn.textContent = `${n}종`; } lazy(); });
   document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.matches && e.target.matches('.tpd-c')) { e.preventDefault(); e.target.click(); } });
   /* 썸네일: 보이는 것만 그린다(지연 로딩) · 카드 폭에 맞춰 축소 */
   let IO = null;

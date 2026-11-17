@@ -637,7 +637,7 @@
     if (!g) { g = document.createElement('section'); g.id = 'hpsGal'; g.className = 'hps-gal'; g.setAttribute('role', 'region'); g.setAttribute('aria-label', '템플릿 고르기'); w.appendChild(g); }
     let h = ''; try { h = TPD.gallery(); } catch (e) { console.error('hps gal', e); }
     h = h.replace(/<button[^>]*data-act="tpl-back"[^>]*>[\s\S]*?<\/button>/, '');
-    const sig = h.length + '|' + (UI.tpdK || '') + '|' + (UI.tpdT || '') + '|' + (UI.tpdSub || ''); /* v44 G: 기관 유형 · 세부 유형 */ if (g.dataset.sig === sig) return; g.dataset.sig = sig;
+    const sig = h.length + '|' + (UI.tpdK || '') + '|' + (UI.tpdT || '') + '|' + (UI.tpdSub || '') + '|' + (UI.tpdF || ''); /* v44 G: 기관 유형 · 세부 유형 · v44.2 교육 분야 */ if (g.dataset.sig === sig) return; g.dataset.sig = sig;
     g.innerHTML = `<div class="hps-galh"><div><b>템플릿 고르기</b><p>카드를 누르면 크게 미리 봅니다. [이 템플릿으로 시작]을 누르면 지금 사이트가 바뀌고, 마음에 들지 않으면 [되돌리기]로 돌아옵니다.</p></div><button type="button" class="btn" data-act="hps-galx">${SV(P.x, 16, 2)} 닫고 편집기로</button></div><div class="hps-galb">${h}</div>`;
     document.body.classList.add('hps-gal-on'); talkSet(false); const bar0 = w.querySelector('.hpe-bar'); const bar = bar0 && !bar0.offsetHeight ? (w.querySelector('.hps-rt') || bar0) : bar0; if (bar) w.style.setProperty('--hps-gt', (bar.offsetTop + bar.offsetHeight) + 'px'); /* v43 G3: 한 줄 도구줄(display:contents)일 때는 오른쪽 칸 기준 */ const sc = g.querySelector('.hps-galb');
     g.querySelectorAll('.tpd-th:not([data-ok])').forEach(el => { if (galIO) galIO.observe(el); else galThumb(el); });
