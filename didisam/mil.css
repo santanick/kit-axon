@@ -210,3 +210,35 @@ html[data-theme=dark] #main .mil-wiz .mil-opt .d{color:#A7B8AD}
 #main .mil-steps:not(.sm) li{background:none;border:0;border-top:3px solid var(--line);border-radius:0;padding:8px 2px 0;font-size:13px}
 #main .mil-steps:not(.sm) li.done,#main .mil-steps:not(.sm) li.on{border-top-color:var(--pr)}
 #main .mil-steps:not(.sm) li .n{width:22px;height:22px}
+/* ───────── v44 단순화(대표님 11-18 「마일리지 부분이 너무 복잡해」) — 탭 4 + 더 보기 · 첫 화면 자주 하는 일 · 자세히 접기 ───────── */
+.mil-tabs .mil-morebtn{color:var(--t-sub)}.mil-tabs .mil-morebtn.on{background:var(--surface,#fff);box-shadow:0 1px 3px #0000001F;color:var(--gd)}
+.mil-tabs .mil-morebtn .ic,.mil-tabs .mil-morebtn svg{opacity:.7}
+.mil-tabs2{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:2px;border-top:1px solid var(--line,#E5E5E5);margin-top:4px;padding-top:4px}
+.mil-tabs2[hidden]{display:none}
+.mil-tabs2 button{font-weight:500}
+.mil-home44{display:flex;flex-direction:column;gap:12px;padding:18px}
+.mil-qrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.mil-qa{display:flex;align-items:center;gap:12px;min-height:64px;padding:12px 16px;border:1px solid var(--line,#E5E5E5);border-radius:14px;background:var(--surface,#fff);color:var(--ink,#212121);font:inherit;text-align:left;cursor:pointer}
+.mil-qa:hover{border-color:var(--pr)}.mil-qa svg,.mil-qa .ic{color:var(--t-mag);flex:none}
+.mil-qa span{display:flex;flex-direction:column;gap:2px;min-width:0}.mil-qa b{font-size:16px;font-weight:700}.mil-qa small{font-size:13px}
+.mil-qa.pri{background:var(--pr);border-color:var(--pr);color:var(--on-pr,#fff)}.mil-qa.pri small,.mil-qa.pri svg,.mil-qa.pri .ic{color:inherit;opacity:.9}
+.mil-todo1{display:flex;align-items:center;gap:6px;margin:0;font-size:14px;color:var(--t-sub)}.mil-todo1 b{color:var(--ink,#212121)}
+.mil-home44 .mil-todo{margin:0}
+.mil-fold{border-radius:var(--r-card,16px);background:var(--surface,#fff);box-shadow:var(--sh2)}
+.mil-fold>summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:52px;padding:8px 18px;cursor:pointer;list-style:none}
+.mil-fold>summary::-webkit-details-marker{display:none}
+.mil-fold>summary::after{content:'';margin-left:auto;width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);opacity:.6}
+.mil-fold[open]>summary::after{transform:rotate(-135deg)}
+.mil-fold>.mil-col{padding:0 18px 18px}
+.mil-fold .card{box-shadow:none;border:1px solid var(--line,#E5E5E5)}
+.mil-wfold{margin-top:12px}
+@media (max-width:600px){.mil-k3{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mil-k3 .mil-kpi{padding:12px 10px}.mil-k3 .mil-kpi .v{font-size:19px}.mil-k3 .mil-kpi .s,.mil-k3 .v4-ksp{display:none}.mil-k3 .mil-kpi .k svg{display:none}
+  .mil-qrow{grid-template-columns:repeat(2,minmax(0,1fr))}.mil-qa{flex-direction:column;align-items:flex-start;gap:6px;min-height:84px}.mil-qa small{display:none}
+  .mil-home44{padding:14px}.mil-tabs .mil-morebtn{flex:1 1 auto;justify-content:center}}
+@media (max-width:900px){.mil-k3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.mil-w1{display:flex;flex-direction:column;gap:16px}
+.mil-tbl.lite .mil-dx{display:none}
+.mil-body[data-tab=home]>*+*{margin-top:14px}
+.mil-todo1 b{white-space:nowrap}
+@media (max-width:600px){.mil-qrow{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mil-qa{padding:10px;min-height:76px}.mil-qa b{font-size:15px}
+  .mil-tabs button{padding:6px 8px}.mil-tabs .mil-morebtn{flex:0 1 auto}.mil-todo1{align-items:flex-start}}
