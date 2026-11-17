@@ -129,8 +129,6 @@ ${th === 'warm' ? `${P} .hu1-r{border-width:2px}${P} .hu1-ag{border-width:2px}` 
  ${P} .hu1-ag{padding:14px 14px 4px}${P} .hu1-ag li a{grid-template-columns:84px minmax(0,1fr);row-gap:4px;column-gap:8px}${P} .hu1-ag li:nth-child(n+4){display:none}${P} .hu1-tg{grid-column:2;justify-self:start}}
 /* 휴대폰: 첫 화면의 장식 사진 · 데스크와 겹치는 숫자 카드 · 바로가기 칸은 접어 데스크가 첫 스크롤 바로 아래에 오게 한다 */
 @media (max-width:560px){.hpl-mo-x,.hpl-mo-s,.pt-hero .pt-qk{display:none!important}}
-/* 첫 화면 제목: 한 단어만 다음 줄로 떨어지지 않게 줄 길이를 고르게 */
-h1,h1 em{text-wrap:balance}
 /* 13px · 44px 관문 보정(기존 부품 · 이 테마에서만) */
 .hps-tag,.hps-chip,.hps-smp,.hp-tag,.hp-chip,.hp-ci small,.hp-s .hp-ey,.hp-ckd,.ey,.nt,.tg,.hey,.lsw,.s2nc .nt,.s2nc time,.s2cnote,.cb dl,.rh span,.mapi dt,.pc small,.fc .f small,.ctas small,.pt-dt small,.ph2 small,.ph3 small{font-size:13px!important}
 .hps-new{font-size:13px!important;width:20px!important;height:20px!important}
@@ -162,15 +160,19 @@ h1,h1 em{text-wrap:balance}
       return Object.assign({}, s, { img, photos: Object.assign({}, s.photos || {}, { hero: pick.id }) }); } catch (e) { return s; } }
 
   /* 제목 줄의 마지막 두 낱말을 붙여 한 낱말만 다음 줄로 떨어지지 않게 한다(태그 없는 글자 조각만) */
-  const orphan = h => h.replace(/(<h1\b[^>]*>)([\s\S]*?)(<\/h1>)/g, (m, a, body, z) => a + body.split(/(<br\s*\/?>)/).map(seg => /<|&nbsp;/.test(seg) || seg.trim().split(/\s+/).length < 3 ? seg : seg.replace(/\s+(\S+)\s*$/, '&nbsp;$1')).join('') + z);
+  /* 휴대폰 첫 화면 제목: 한 줄이 길어(낱말 3개 이상 · 9자 이상) 마지막 낱말만 떨어질 때 글자 크기를 화면 폭에 맞춘다.
+     제목 글자(마크업)는 바꾸지 않는다 — 편집 · 게시본 문구가 그대로 남도록 CSS만 더한다. */
+  const longH1 = h => { const i = h.search(/<main class="s2pg" id="p-home">/); if (i < 0) return false; const j = h.indexOf('<h1', i); const k = j < 0 ? -1 : h.indexOf('</h1>', j); if (k < 0) return false;
+    return h.slice(h.indexOf('>', j) + 1, k).split(/<br\s*\/?>/).map(x => x.replace(/<[^>]*>/g, '').replace(/&[a-z]+;/g, ' ').trim()).some(x => x.split(/\s+/).length >= 3 && x.replace(/\s/g, '').length >= 9); };
+  const H1FIT = '@media (max-width:560px){section[class*=hero] h1,.hps-hero h1,.hp-hero h1{font-size:clamp(28px,8.4vw,36px)!important;line-height:1.28!important}}';
   /* ── 붙이기: 홈 첫 화면 바로 뒤에 데스크, 사이트 CSS 끝에 CSS ── */
-  function inject(h, s) { const mi = h.search(/<main class="s2pg" id="p-home">/); const from = mi >= 0 ? mi : h.search(/<main\b/); if (from < 0) return h;
+  function inject(h, s) { const from = h.search(/<main class="s2pg" id="p-home">/); if (from < 0) return h; /* 홈 페이지에만(메뉴 · 편집 화면의 다른 페이지는 그대로) */
     const end = h.indexOf('</section>', from); if (end < 0) return h; const at = end + '</section>'.length;
     /* 숫자 띠(facts)보다 앞 — 휴대폰 첫 스크롤 안에 갈래가 보이게 한다 */
     return h.slice(0, at) + desk(s) + h.slice(at); }
-  { const base = siteHTML; siteHTML = (s, ...a) => { const mine = s && MINE.includes(s.theme); const h = base(mine ? heroFix(s) : s, ...a);
+  { const base = siteHTML; siteHTML = (s, ...a) => { const mine = s && MINE.includes(s.theme); const ed = typeof HPE !== 'undefined' && !!HPE && !!HPE.map; const h = base(mine && !ed ? heroFix(s) : s, ...a); /* 편집 중에는 사이트 객체를 바꿔 끼우지 않는다(섹션 · 사진 편집 대상 유지) */
     try { if (!s || !MINE.includes(s.theme) || typeof h !== 'string' || !h.includes('</style>') || !HPT.tokens(s)) return h;
-      let o = inject(h, s); o = orphan(o); o = o.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>'); return EXTRA_MIN(s, o); } catch (e) { console.error('hpup-b1', e); return h; } };
+      let o = inject(h, s); const fitH = longH1(o); o = o.replace('</style>', (css(s) + (fitH ? H1FIT : '')).replace(/<\/?style/gi, '') + '</style>'); return EXTRA_MIN(s, o); } catch (e) { console.error('hpup-b1', e); return h; } };
     window.siteHTML = siteHTML; }
   window.HPUP_B1 = { desk, routes, agenda, css };
 })();
