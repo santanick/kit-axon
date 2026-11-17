@@ -28,7 +28,9 @@
   const IDS = Object.keys(TH);
   const TYPE_TH = { adult: 'clean', k12: 'warm', univ: 'campus', univ_lms: 'campus', corp: 'tech', public: 'official', lifelong: 'senior', voc: 'official' };
   const thOf = s => (s && s.theme && TH[s.theme]) ? TH[s.theme] : null;
-  const pick = (type, ed, brief) => { const b = String(brief || '');
+  /* v44 G: 그 유형의 새 템플릿(g44)이 있으면 그중 세부 유형 · 한 줄 설명에 맞는 것의 테마(global.js G44.pick) — 없으면 아래 기존 규칙 */
+  const g44Th = (type, ed, brief) => { try { const g = window.G44 && G44.pick(type === 'univ_lms' ? 'univ' : type, type === 'univ_lms' ? 'lms' : ed, brief); return g && g.theme && TH[g.theme] ? g.theme : ''; } catch (e) { return ''; } };
+  const pick = (type, ed, brief) => { const b = String(brief || ''); const g = g44Th(type, ed, b); if (g) return g;
     if (/고급|프리미엄|럭셔리|품격|명품/.test(b)) return 'premium';
     if (/유아|어린이|초등|키즈|아이들|놀이/.test(b)) return 'kids';
     if (/큰\s*글씨|어르신|시니어|노인|어르신들/.test(b)) return 'senior';
@@ -388,7 +390,7 @@ ${th.lux ? `.hp-hero h1{font-weight:700;letter-spacing:-.025em}.hp-ey{letter-spa
   const U = { mix, fit, CR, Lm, al, rgb, ok6 };
   const css1 = s => { const th = thOf(s); let x = css(s); if (th && typeof th.cssX === 'function') { try { x += th.cssX(s, th, tok(s, th), U); } catch (e) { console.error('hpth cssX', e); } } return x; };
   function reg(id, def) { if (!/^[a-z]{2,16}$/.test(id) || !def || TH[id]) return false; TH[id] = def; IDS.push(id); list.push(entry(id)); return true; }
-  window.HPT = { list, apply, thumb, pick, rec: k => TYPE_TH[k] || 'clean', enrich, facts, css: css1, audit, reviews: () => realReviews(), tokens: s => thOf(s) ? tok(s, thOf(s)) : null, has: id => !!TH[id],
+  window.HPT = { list, apply, thumb, pick, rec: k => g44Th(k, typeof S !== 'undefined' && S && S.org ? S.org.ed : '', '') || TYPE_TH[k] || 'clean', enrich, facts, css: css1, audit, reviews: () => realReviews(), tokens: s => thOf(s) ? tok(s, thOf(s)) : null, has: id => !!TH[id],
     reg, meta: id => TH[id] || null, base: id => (TH[id] && TH[id].base) || id, U };
 
   /* ── AI로 만든 초안에 테마 · 보강 자동 적용(hpRun → HPE.draft) ── */

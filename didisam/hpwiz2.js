@@ -57,7 +57,7 @@
   /* 유형 디자이너 템플릿: 계열 → [템플릿] (그 유형이 types에 들어 있고 계열이 지정된 것) */
   function tplRefs(ty) {
     const R = {}; if (typeof TPL === 'undefined' || !hasL()) return R; const bt = baseTy(ty);
-    A(TPL).forEach(t => { if (!t || t.hidden || !t.layout || !HPL.fam[t.layout]) return; const T2 = A(t.types); if (!(T2.includes(ty) || T2.includes(bt))) return; (R[t.layout] = R[t.layout] || []).push(t); });
+    const g4 = g44L(ty).length > 0; A(TPL).forEach(t => { if (!t || t.hidden || (g4 && !t.g44) || !t.layout || !HPL.fam[t.layout]) return; const T2 = A(t.types); if (!(T2.includes(ty) || T2.includes(bt))) return; (R[t.layout] = R[t.layout] || []).push(t); });
     Object.keys(R).forEach(k => R[k].sort((a, b) => (A(a.types)[0] === bt ? 0 : 1) - (A(b.types)[0] === bt ? 0 : 1))); return R; }
   function tplExtras(t) { const o = {}; try { const L = typeof t.build === 'function' ? A(t.build()) : []; L.forEach(x => { const d = (x && x.data) || {}; if (x.type === 'banner' && d.hk) o.hk = d.hk; if (x.type === 'classes' && d.card) o.card = o.card || d.card; }); } catch (e) { } return o; }
   /* v34.5 FZ: 품질 점수(FB HPS.qItems)의 첫 화면 사진 기준과 같게 — 첫 화면 자리(hero) · 긴 변 1200px 이상 · 기관 유형 맞춤. 시안이 스스로 맞출 수 있는 항목이므로 고를 때 거른다 */
@@ -75,7 +75,9 @@
     const ph = heroId && HPC.forPhoto ? A(HPC.forPhoto(heroId, baseTy(ty))).map(p => p.id) : [];
     const sc = (p, i) => i + (A(p.themes).includes(th) ? 0 : 20) + (p.big && th !== 'senior' ? 60 : 0) + (th === 'senior' && !p.big ? 6 : 0) + (ph.length ? ph.indexOf(p.id) * .6 : 0) + (prefer && p.mood === prefer ? -10 : 0);
     const R = L.map((p, i) => [p, sc(p, i)]).filter(([p]) => !used.includes(p.id)).sort((a, b) => a[1] - b[1]); return R.length ? R[0][0].id : null; }
-  const thPick = (layout, ty, used, want) => { const ok = thList(); const T = (want ? [want] : []).concat(A(L_TH[layout]).filter(t => A(TY_TH[ty]).includes(t)), A(L_TH[layout]), A(TY_TH[ty]), ok).filter(t => ok.includes(t));
+  /* v44 G: 우리 유형의 새 템플릿(g44)이 있으면 시안 3개도 그 템플릿들(테마 · 계열 참고)에서만 고른다 — 예전 템플릿 · 테마는 숨김 */
+  const g44L = ty => { try { return window.G44 ? G44.ordered(ty, S && S.org ? S.org.ed : '').filter(t => t.theme && thList().includes(t.theme)) : []; } catch (e) { return []; } };
+  const thPick = (layout, ty, used, want) => { { const G = g44L(ty).map(t => t.theme); if (G.length) { const T = (want && G.includes(want) ? [want] : []).concat(G); return T.find(t => !used.includes(t)) || T[0]; } } const ok = thList(); const T = (want ? [want] : []).concat(A(L_TH[layout]).filter(t => A(TY_TH[ty]).includes(t)), A(L_TH[layout]), A(TY_TH[ty]), ok).filter(t => ok.includes(t));
     return T.find(t => !used.includes(t)) || T[0] || ''; };
   /* Claude 설계의 design 검증 */
   function fromClaude(o) { if (!o || typeof o !== 'object') return null; const r = {};
@@ -105,6 +107,7 @@
       if (ref) { c.tpl = ref.id; c.by.push('tpl'); }
       const want = i === 0 && o.theme ? o.theme : cd.theme || (ref && ref.theme);
       c.theme = thPick(c.layout, ty, i === 0 && o.theme ? [] : used.theme, want);
+      { const g = g44L(ty).find(t => t.theme === c.theme); if (g) { c.tpl = g.id; if (!c.by.includes('tpl')) c.by.push('tpl'); } } /* v44 G: 시안의 템플릿 = 그 테마의 g44 */
       /* 사진: Claude → 템플릿 → 규칙(사람 장면 우선), 첫 화면 사진은 서로 다르게 */
       const ph = Object.assign({}, ref && ref.photos ? ref.photos : {}, cd.photos || {});
       Object.keys(ph).forEach(k => { if (!hasP() || !HPSTOCK.get(ph[k]) || used.photo.includes(ph[k])) delete ph[k]; }); if (ph.hero && !heroOk(ph.hero, ty)) delete ph.hero;

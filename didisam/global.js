@@ -213,7 +213,39 @@ const TPL = [
 /* v36 R3(대표님 4 · 평가 2-2): 여러 유형에 걸친 템플릿(corp-partner = 기업 · 성인 · 공공 등)이 배열 앞에 있어 성인 학원 → 기업 템플릿, 공공 → 기업,
    직업훈련 → 성인 부트캠프, 평생 → 대학 평생교육으로 시작했다 → 대표 유형(types[0])이 그 유형인 템플릿을 먼저, 숨긴 템플릿은 뒤로(나머지 순서는 그대로).
    기본 템플릿(postSeed · 마법사 바탕 · 갤러리 '추천' 순서)이 모두 tplFor(ty)[0]을 쓰므로 여기 한 곳에서 맞춘다. */
-const tplFor = ty => TPL.map((t, i) => [t, i]).filter(([t]) => t.types.includes(ty)).sort((a, b) => ((a[0].types[0] === ty ? 0 : 1) - (b[0].types[0] === ty ? 0 : 1)) || ((a[0].hidden ? 1 : 0) - (b[0].hidden ? 1 : 0)) || (a[1] - b[1])).map(x => x[0]);
+/* v44 G(대표님 11-18 「기관 유형별 10종만」): 새 템플릿은 hp44-<유형>.js가 TPL.push({ g44: 1, types, sub, theme, … })로 등록한다.
+   G44 = 그 목록 · 우리 기관에 맞는 하나 고르기(세부 유형 · 한 줄 설명 반영). 그 유형의 g44 템플릿이 있으면 tplFor(ty)가 g44를 앞에 두므로
+   새 기관 기본 사이트(postSeed) · AI 기본 설계(hpMake) · 갤러리가 모두 g44에서 시작한다. 없으면(요원 작업 중) 예전 순서 그대로.
+   window.G44_DEMO=1(테스트 전용): g44가 하나도 없을 때 예전 템플릿을 복제한 가짜 g44 몇 개로 갤러리 · 마법사를 확인한다. */
+const G44 = window.G44 = (() => {
+  const A = v => Array.isArray(v) ? v : [];
+  const K = ty => ty === 'univ_lms' ? 'univ' : ty;
+  const KEYS = ['univ', 'k12', 'adult', 'corp', 'public', 'lifelong', 'voc'];
+  const SOLO = /1인|코칭|크리에이터|개인\s*강사|강사\s*브랜드/;
+  const isSolo = tp => !!tp && (tp.solo || A(tp.types).includes('solo') || SOLO.test(`${tp.sub || ''} ${tp.name || ''}`));
+  /* 세부 유형 맞춤: 기관 세부 구분(S.org.ed) · 한 줄 설명의 낱말 */
+  const ED = { lms: /LMS|강의실|학사/, citizen: /시민|구민|주민|강좌/, staff: /직원|공무원|관공서|연수/ };
+  const SYN = [[/고급|프리미엄|럭셔리|품격|격식|전통/, /전통|격식|대학원|본부/], [/유아|어린이|초등|키즈|아이/, /유아|초등|키즈/], [/시니어|어르신|노인|큰\s*글씨/, /시니어|복지|은퇴/],
+    [/코딩|개발|프로그래밍|IT\b|데이터|AI/i, /코딩|IT|DX|KDT|부트캠프|디지털/], [/영어|회화|어학|외국어/, /영어|어학|회화|국제/], [/자격증|시험|합격/, /자격증|시험|기능사/], [/취업|진로|일자리/, /취업|진로|일자리/]];
+  let demo = 0;
+  const DEMO = { univ: ['비교과 센터', '학사 LMS 강의실', '전통 대학 본부'], k12: ['수학', '영어', '유아 · 초등 저학년'], adult: ['어학 회화', '자격증 · 시험', '1인 강사 코칭'], corp: ['대기업 HRD 러닝센터', '법정 · 필수 교육', '신입 온보딩'],
+    public: ['관공서 직원 교육', '시민 강좌 · 구민대학', '전통 관공서(격식)'], lifelong: ['평생학습관', '시니어 디지털', '문화센터'], voc: ['국비 기술훈련원(현장)', 'KDT IT 부트캠프', '조리 · 제과'] };
+  function seedDemo() { if (demo || !window.G44_DEMO || TPL.some(t => t.g44)) return; demo = 1;
+    KEYS.forEach(k => { const L = tplOld(k).filter(t => !t.prem && !t.hidden && typeof t.build === 'function').slice(0, 3);
+      L.forEach((tp, i) => TPL.push(Object.assign({}, tp, { id: `t44-demo${k}${i}`, name: `${DEMO[k][i]} 시안`, types: k === 'univ' ? ['univ', 'univ_lms'] : [k], g44: 1, sub: DEMO[k][i], prem: 0, demo: 1 }))); }); }
+  const list = ty => { seedDemo(); const k = K(ty); return TPL.filter(t => t && t.g44 && !t.hidden && (!k || A(t.types).includes(k))); };
+  /* 우리 기관 세부 구분에 맞는 것 먼저(나머지 순서는 등록 순서 그대로) */
+  function ordered(ty, ed) { const L = list(ty); const re = ED[ty === 'univ_lms' ? 'lms' : ed]; if (!re) return L;
+    const hit = t => (t.ed && t.ed === ed) || A(t.eds).includes(ed) || re.test(`${t.sub || ''} ${t.name || ''}`); return [...L.filter(hit), ...L.filter(t => !hit(t))]; }
+  /* 하나 고르기: 한 줄 설명이 세부 유형을 가리키면 그것, 아니면 우리 기관 세부 구분 · 등록 순서의 첫 번째 */
+  function pick(ty, ed, brief) { const L = ordered(ty, ed); if (!L.length) return null; const b = String(brief || ''); if (!b.trim()) return L[0];
+    const txt = t => `${t.sub || ''} ${t.name || ''} ${t.scene || ''}`; let best = null, bs = 0;
+    L.forEach(t => { let s = 0; const x = txt(t); SYN.forEach(([q, r]) => { if (q.test(b) && r.test(x)) s += 3; }); String(t.sub || '').split(/[\s·,()]+/).filter(w => w.length >= 2).forEach(w => { if (b.includes(w)) s += 2; }); if (s > bs) { bs = s; best = t; } });
+    return best || L[0]; }
+  return { KEYS, list, has: ty => list(ty).length > 0, ordered, pick, isSolo, key: K };
+})();
+const tplOld = ty => TPL.map((t, i) => [t, i]).filter(([t]) => t.types.includes(ty)).sort((a, b) => ((a[0].types[0] === ty ? 0 : 1) - (b[0].types[0] === ty ? 0 : 1)) || ((a[0].hidden ? 1 : 0) - (b[0].hidden ? 1 : 0)) || (a[1] - b[1])).map(x => x[0]);
+const tplFor = ty => { const old = tplOld(ty); let g = []; try { g = G44.ordered(ty, typeof S !== 'undefined' && S && S.org && S.org.type === G44.key(ty) ? S.org.ed : ''); } catch (e) { g = []; } return g.length ? [...g, ...old.filter(t => !t.g44)] : old; };
 function siteFromTpl(tp) { const ty = S.org.type; return { tpl: tp.id, color: tp.color, tone: tp.tone, prompt: '', sections: tp.build(), menus: [['홈', true], ['클래스', true], ['교재/교구', ty !== 'corp' && ty !== 'univ'], ['커뮤니티', true], ['공지사항', true], ['게시판', ty !== 'corp']].map(([l, on]) => ({ l, on, access: S.settings.siteOpen === 'private' ? '지정 회원' : '공개' })), langs: tp.langs || ['ko'], tr: {}, log: [], published: S.site?.published || false, at: nowStr() }; }
 function tplThumb(tp) { const secs = tp.build(); return `<div class="tth" style="--c:${tp.color}"><i class="th-hero"></i>${secs.slice(1, 5).map(s => `<i class="th-${['classes', 'books', 'reviews'].includes(s.type) ? 'grid' : s.type === 'text' ? 'cols' : 'line'}"></i>`).join('')}</div>`; }
 { const base = VIEWS.site; VIEWS.site = () => {
