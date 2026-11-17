@@ -4,7 +4,8 @@
 const H = require('./hp-visual/lib.js');
 const IDS = ['acparent', 'acresult', 'acstudio'];
 /* 템플릿별로 반드시 보여야 하는 섹션(실적 띠 ac-proof는 운영자 입력 전이라 숨김이 맞다 — 아래 6)에서 따로 확인) */
-const SECS = { acparent: ['.hxa-ah', '.hxa-wk', '.hxa-fee', '.hxa-al', '.hxa-dir'], acresult: ['.hxa-rs', '.hxa-wk', '.hxa-cy', '.hxa-fee', '.hxa-dir'], acstudio: ['.hxa-st', '.hxa-cl', '.hxa-wk', '.hxa-fee', '.hxa-al', '.hxa-dir'] };
+const SECS = { acparent: ['.hxa-ah', '.hxa-wk', '.hxa-fee', '.hxa-al', '.hxa-dir'], acresult: ['.hxa-sb', '.hxa-board', '.hxa-rp', '.hxa-cy', '.hxa-fee', '.hxa-dir'], acstudio: ['.hxa-st', '.hxa-cl', '.hxa-wk', '.hxa-al', '.hxa-dir'] };
+const NOT = { acparent: [], acresult: ['.hxa-wk', '.hxa-pf'], acstudio: ['.hxa-fee', '.hps-cta'] }; /* L1 재심사: 성과형은 시간표 대신 성과 판 · 리포트, 스튜디오는 같은 반 3번 반복 · 상담 띠 중복 제거 */
 (async () => {
   const { chromium } = H.need('playwright'); const PORT = 9700 + Math.floor(Math.random() * 200);
   const srv = await H.serve(PORT); const base = `http://127.0.0.1:${PORT}/`; const br = await chromium.launch();
@@ -35,7 +36,7 @@ const SECS = { acparent: ['.hxa-ah', '.hxa-wk', '.hxa-fee', '.hxa-al', '.hxa-dir
         for (const [w, h] of [[1440, 900], [390, 844]]) {
           await pg.setViewportSize({ width: w, height: h }); await pg.goto('about:blank'); await pg.goto(base + 'learner.html?t=' + o.tid + '&r=' + Date.now() + '#home');
           await pg.waitForFunction(() => document.querySelector('.smhost') && document.querySelector('.smhost').shadowRoot, null, { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(600); await H.settle(pg);
-          const m = await pg.evaluate(SEL => { const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); const q = s => R.flatMap(r => [...r.querySelectorAll(s)]);
+          const m = await pg.evaluate(([SEL, NOTSEL]) => { const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); const q = s => R.flatMap(r => [...r.querySelectorAll(s)]);
             const vis = el => { const b = el.getBoundingClientRect(); const cs = getComputedStyle(el); return b.width > 0 && b.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden'; };
             const mineEls = q('.hxa-ah *, .hxa-s *').filter(vis);
             const small = [], tap = [], wide = [], brk = [];
@@ -44,14 +45,22 @@ const SECS = { acparent: ['.hxa-ah', '.hxa-wk', '.hxa-fee', '.hxa-al', '.hxa-dir
               if (el.matches('a[href]') && (b.height < 44 || b.width < 44)) tap.push(`${(el.textContent || '').trim().slice(0, 12)} ${Math.round(b.width)}x${Math.round(b.height)}`);
               if (b.right > innerWidth + 1 || b.left < -1) { let a = el.parentElement, clip = false; while (a) { if (/(hidden|clip|auto|scroll)/.test(getComputedStyle(a).overflowX)) { clip = true; break; } a = a.parentElement; } if (!clip) wide.push(`${el.tagName}.${el.className}`); }
               if (own.replace(/\s/g, '').length >= 2 && el.children.length === 0 && b.width < fs * 1.6 && b.height > fs * 2.2) brk.push(own.slice(0, 10)); });
-            const doors = q('.hxa-dr a').map(a => a.getAttribute('href')); const tt = q('.hxa-tt a, .hxa-stp a, .hxa-trial a, .hxa-clc, .hxa-wd a').map(a => a.getAttribute('href'));
-            const secs = SEL.filter(s => q(s).some(vis)); const proof = q('.hxa-pf').filter(vis).length;
+            const doors = q('.hxa-dr a').map(a => a.getAttribute('href')); const tt = q('.hxa-tt a, .hxa-board a, .hxa-trial a, .hxa-clc, .hxa-wd a').map(a => a.getAttribute('href'));
+            const secs = SEL.filter(s => q(s).some(vis)); const not = NOTSEL.filter(s => q(s).some(vis));
+            const h1 = q('h1').filter(vis)[0]; const h1n = h1 ? Math.round(h1.getBoundingClientRect().height / parseFloat(getComputedStyle(h1).lineHeight)) : 0;
+            const topImg = q('.hxa-ah img').filter(vis).some(im => { const b = im.getBoundingClientRect(); return b.top < innerHeight && b.bottom > 0 && b.height >= 100 && im.complete && im.naturalWidth > 0; });
+            const stImgs = q('.hxa-stm img, .hxa-mstrip img').map(im => im.getAttribute('src') || ''); const board = q('.hxa-board').map(x => x.textContent).join(' '); const proof = q('.hxa-pf').filter(vis).length;
             const inputs = q('input, form, textarea').length; const txt = R.map(r => r.textContent).join(' ');
-            return { over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), doors, tt, secs, proof, inputs, phone: /휴대폰 번호|주민|생년월일/.test(txt), q: q('.hxa-dq').map(x => x.textContent).join('') }; }, SECS[id]);
+            return { over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), doors, tt, secs, not, h1n, topImg, stImgs, board, proof, inputs, phone: /휴대폰 번호|주민|생년월일/.test(txt), q: q('.hxa-dq').map(x => x.textContent).join('') }; }, [SECS[id], NOT[id]]);
           const tag = `[${type} ${w}] ${id}`;
           ok(m.secs.length === SECS[id].length, `${tag} 섹션 ${SECS[id].length}종 표시(${m.secs.join(' ')})`);
           ok(!m.proof, `${tag} 실적 띠: 입력 전에는 숨김`);
           ok(m.over <= 0 && !m.wide.length, `${tag} 가로 넘침 0(${m.over} ${m.wide.join(',')})`);
+          ok(!m.not.length, `${tag} 빼기로 한 섹션 없음(${m.not.join(' ')})`);
+          ok(m.h1n >= 1 && m.h1n <= (w === 390 ? 3 : 2), `${tag} 첫 화면 제목 ${m.h1n}줄`);
+          ok(m.topImg, `${tag} 첫 화면 안에 실사진`);
+          if (id === 'acstudio') ok(m.stImgs.every(x => !/(hum-2[2-9]|hum-30|art-|mus-|spo-)/.test(x)), `${tag} 사진이 강좌(수학 · 영어 등)와 맞음 — 예체능 고정 사진 없음`);
+          if (id === 'acresult') ok(/성과 보드/.test(m.board) && !/남은 자리 \d/.test(m.board) && /(마감|개강|평점)/.test(m.board), `${tag} 성과 보드 = 의미 있는 숫자(마감 임박 · 개강 · 후기 평점)`);
           ok(!m.small.length, `${tag} 13px 미만 글자 0(${m.small.join(',')})`);
           ok(!m.tap.length, `${tag} 누르는 칸 44px 이상(${m.tap.join(',')})`);
           ok(!m.brk.length, `${tag} 한 글자 꺾임 0(${m.brk.join(',')})`);
@@ -66,8 +75,8 @@ const SECS = { acparent: ['.hxa-ah', '.hxa-wk', '.hxa-fee', '.hxa-al', '.hxa-dir
         if (id === 'acresult') { /* 6) 실적 띠: 운영자가 입력하면 게시본에 그대로 · 자리 문구는 거른다 */
           await o.op.evaluate(() => { const x = S.site.sections.find(v => v && v.data && v.data.hpt === 'ac-proof'); x.hide = false; delete x.hideAuto; x.data.cols = [['수학 1등급 12명', '2026 수능 · 재원생 기준'], ['내신 평균 +14점', '2026 1학기 · 3개월 이상 재원생'], ['입력하세요', '']]; save(); smPublish(); }); await H.dismiss(o.op);
           await pg.setViewportSize({ width: 390, height: 844 }); await pg.goto('about:blank'); await pg.goto(base + 'learner.html?t=' + o.tid + '&r=' + Date.now() + '#home'); await pg.waitForFunction(() => document.querySelector('.smhost') && document.querySelector('.smhost').shadowRoot, null, { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(600);
-          const pf = await pg.evaluate(() => { const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); const L = R.flatMap(r => [...r.querySelectorAll('.hxa-pfl li')]); return { n: L.length, t: L.map(l => l.textContent).join('|'), over: document.documentElement.scrollWidth - innerWidth }; });
-          ok(pf.n === 2 && /1등급 12명/.test(pf.t) && !/입력하세요/.test(pf.t) && pf.over <= 0, `[${type} 390] acresult 실적 띠 = 입력한 값만(${pf.n}개 · ${pf.t.slice(0, 40)})`); }
+          const pf = await pg.evaluate(() => { const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); const L = R.flatMap(r => [...r.querySelectorAll('.hxa-board .hxa-sbc')]); return { n: L.length, t: L.map(l => l.textContent).join('|'), band: R.some(r => r.querySelector('.hxa-pfl')), ex: R.some(r => r.querySelector('.hxa-sbtr')), over: document.documentElement.scrollWidth - innerWidth }; });
+          ok(pf.n === 2 && /1등급 12명/.test(pf.t) && !/입력하세요/.test(pf.t) && !pf.band && !pf.ex && pf.over <= 0, `[${type} 390] acresult 실적 입력 → 성과 보드에 입력한 값만 · 예시 추이 숨김 · 띠 중복 없음(${pf.n}개 · ${pf.t.slice(0, 40)})`); }
         ok(!perr.length, `[${type}] ${id} 학습자 pageerror 0 ${perr.join('|')}`); await pg.close();
       }
       ok(!errs.length, `[${type}] 운영 pageerror 0 ${errs.slice(0, 3).join('|')}`); await o.ctx.close();
