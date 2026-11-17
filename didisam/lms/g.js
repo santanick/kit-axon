@@ -76,7 +76,7 @@
     secPick() { const L = W3.cache.sections || []; return L.length > 1 ? `<select data-chg="w3-sec" aria-label="분반 선택">${L.map(s => `<option value="${esc(s.section_id)}" ${s.section_id === UI.w3sec ? 'selected' : ''}>${esc(s.title)}</option>`).join('')}</select>` : ''; },
     mode() { return W3.live() ? tag('운영 서버', 'g') : '<small class="efh-demo" title="서버 없이 이 브라우저에만 저장됩니다">데모: 브라우저에만 저장</small>'; },
     fmt(t) { if (!t) return '—'; const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; },
-    css(name) { if (!document.querySelector(`link[data-w3css="${name}"]`)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = `lms/${name}.css?v=43.7`; l.dataset.w3css = name; document.head.appendChild(l); } }
+    css(name) { if (!document.querySelector(`link[data-w3css="${name}"]`)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = `lms/${name}.css?v=43.8`; l.dataset.w3css = name; document.head.appendChild(l); } }
   };
   ACT['w3-sec'] = el => { UI.w3sec = el.value; W3.drop(); render(); };
   /* 학생 · 행 데이터 접근(데모) */

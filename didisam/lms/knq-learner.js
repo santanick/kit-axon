@@ -8,7 +8,7 @@
 (function () {
   'use strict';
   if (typeof viewMy !== 'function' || typeof viewPage !== 'function' || typeof LR !== 'object') return;
-  try { if (!document.querySelector('link[data-knq]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/knq-learner.css?v=43.7'; l.dataset.knq = '1'; document.head.appendChild(l); } } catch (e) { }
+  try { if (!document.querySelector('link[data-knq]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/knq-learner.css?v=43.8'; l.dataset.knq = '1'; document.head.appendChild(l); } } catch (e) { }
   const on = () => { try { const o = SITE() && SITE().org; return !!(o && o.type === 'univ' && o.ed === 'lms'); } catch (e) { return false; } };
   const live = () => LR.mode === 'live';
   const me = () => String((LR.me && LR.me.sid) || '');
