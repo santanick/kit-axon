@@ -53,10 +53,11 @@ const inject = h => /hpv-univ\.js/.test(h) ? h : h.replace(/(<script src="hpprem
   /* ── 2) 갤러리 ── */
   { await p.evaluate(() => { UI.tpdK = 'all'; ACT['tpl-gallery'](); }); await p.waitForTimeout(900);
     const all = await p.evaluate(() => [...document.querySelectorAll('.tpd-c .tpg-th[data-tp]')].map(x => x.dataset.tp));
-    ok(IDS.every(id => all.includes('prem-' + id)), `갤러리(전체)에 4종 노출 (${all.length}종)`);
+    /* v44: 대표님 11-18 「기관 유형별 10종」 — v43.9 hpv 템플릿은 hp44로 흡수되어 갤러리에서 숨김(기존 사이트용 등록만 유지) */
+    ok(IDS.every(id => !all.includes('prem-' + id)) && all.some(t => /^t44-/.test(t)), `갤러리(전체): hpv 4종 숨김 · t44만 노출 (${all.length}종)`);
     await p.evaluate(() => { UI.tpdK = 'mine'; render(); }); await p.waitForTimeout(700);
     const mine = await p.evaluate(() => [...document.querySelectorAll('.tpd-c .tpg-th[data-tp]')].map(x => x.dataset.tp));
-    ok(IDS.some(id => mine.slice(0, 4).includes('prem-' + id)), `갤러리(추천) 앞쪽에 노출 (${mine.slice(0, 4)})`);
+    ok(mine.slice(0, 4).every(t => /^t44-/.test(t)), `갤러리(우리 유형) 앞쪽은 t44 템플릿 (${mine.slice(0, 4)})`);
     ok(await p.evaluate(() => /uv9-ivy-h/.test(HPT.thumb(site(), 'uvivy')) && /uv9-cls-h/.test(HPT.thumb(site(), 'uvclassic'))), '테마 미리보기(HPT.thumb): 게시본과 같은 첫 화면'); }
 
   /* ── 3) 게시본 390 · 1440 관문 + 구성 ── */
