@@ -979,7 +979,7 @@ footer.gf.hx-f .hps-cp{display:flex;gap:12px;margin:0;font-size:12px;opacity:.72
 .hx-rev figure{padding:24px 22px;gap:16px}.hx-rev blockquote{font-size:16px;line-height:1.65}.hx-rev .hx-hd{flex-direction:column;align-items:flex-start;gap:14px}.hx-rev .hx-avg b{font-size:36px}
 .hx-num .hx-nb,.hx-num .hx-nb.n3,.hx-num .hx-nb.n4{grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 0}.hx-num .hx-nb>div{padding:0 0 0 18px}.hx-num .hx-nb>div:nth-child(odd){border-left:0;padding-left:0}.hx-num .hx-nb.n3>div:last-child{grid-column:1/-1;border-left:0;padding-left:0}
 .hx-num dd b{font-size:44px}.hx-num dd span{font-size:17px}.hx-num dt{font-size:15px}
-.hx-faq summary{min-height:64px;font-size:16px;gap:12px}.hx-faq summary i{width:32px;height:32px}.hx-faq .hx-a{padding:0 8px 20px 28px;font-size:15.5px;line-height:1.7}.hx-faq .hx-fqh .hx-btn{display:none}
+.hx-faq summary{min-height:64px;font-size:16px;gap:12px}.hx-faq summary i{width:32px;height:32px}.hx-faq .hx-a{padding:0 8px 20px 28px;font-size:15.5px;line-height:1.7}.hx-faq .hx-fqh .hx-btn{width:100%}.hx-faq .hx-fqh .hx-hd{margin-bottom:20px}
 .hx-loc .hx-mv{order:-1;aspect-ratio:16/10}.hx-loc .hx-lg{gap:28px}.hx-loc .hx-ci b,.hx-loc .hx-ci a{font-size:16px}.hx-loc .hx-lb .hx-btn{flex:1 1 100%}.hx-loc .hx-pin{width:52px;height:52px}.hx-loc .hx-mad{display:none}
 .hx-price li{padding:28px 22px}.hx-price .hx-pp b{font-size:34px}
 .hx-cls .hx-cx b{font-size:17px}.hx-cls .hx-cx small{font-size:14px}
