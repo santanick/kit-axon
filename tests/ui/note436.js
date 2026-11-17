@@ -129,40 +129,51 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
     ok(r.g && r.g.exam === '정보처리기사' && r.gb === null && r.sy.page.length === 60 && !/secret_abc/.test(r.raw) && !/홍길동/.test(r.raw), '목표 · 동기화 정리(비밀값 · 이름 없음)');
     ok(!errs.length, '제한 오류 없음 ' + errs.join(' | ')); await ctx.close(); }
 
-  /* 3b. 모아보기(추가 지시 1): 구분 · 질문(답 · 노트로 옮기기) · 댓글 · 글 · 학습 기록 · 고정/숨기기(marks) · 통합 검색 · 기간 끝남 · 저장 상태 */
+  /* 3b. 모아보기(추가 1 · S22~S26): 구분 · LNOTE.feed · 질문 상세(답 · 노트로 옮기기) · 댓글 · 글 · 학습 기록 타임라인 · ⋯ 관리(고정 · 숨기기 = marks) · 통합 검색 · 기간 끝남 · 저장 상태 */
   { const { ctx, p, errs } = await open({ hash: 'home' });
     await p.evaluate(() => { const c = SITE().classes[0]; window.__cid = c.id; const it = (c.items || []).find(x => x.type !== 'chapter');
       LR.lp.tutor = { plan: [], ask: [{ id: 'eq1', q: '정규화에서 3NF는 왜 필요한가요?', cls: c.name, cid: c.id, where: it ? it.title : '', at: '2026-11-16T01:00:00.000Z' }], planAt: '' };
       LR.mine.qa = [{ id: 'eq1', q: '정규화에서 3NF는 왜 필요한가요?', a: '이행 종속을 없애 갱신 이상을 막기 위해서예요.', at: '2026-11-16T03:00:00.000Z' }];
       const r = LR.lp.cls[c.id] = LR.lp.cls[c.id] || { items: {} }; r.items = r.items || {}; if (it) r.items[it.id] = { ...(r.items[it.id] || {}), done: true, tries: [{ at: '2026-11-15T02:00:00.000Z', score: 80, pass: true }] };
-      const st = lcStore(); st.posts.push({ id: 'poT1', board: '자유', title: '피벗 질문 아닌 글', body: '오늘 배운 피벗 정리 공유해요', cls: c.id, at: '2026-11-14T02:00:00.000Z', au: lcMe() }); st.cmts.push({ id: 'cmT1', post: 'poT1', parent: '', body: '정규화 표 예시도 좋아요', at: '2026-11-14T03:00:00.000Z' });
+      const st = lcStore(); st.posts.push({ id: 'poT1', board: '자유', title: '피벗 정리 공유', body: '오늘 배운 피벗 정리 공유해요', cls: c.id, at: '2026-11-14T02:00:00.000Z', au: lcMe() }); st.cmts.push({ id: 'cmT1', post: 'poT1', parent: '', body: '정규화 표 예시도 좋아요', at: '2026-11-14T03:00:00.000Z' });
       LNOTE.save({ t: '정규화 요약', b: '- 3NF', cid: c.id }); });
+    ok(await p.evaluate(() => { const F = LNOTE.feed(); return ['note', 'ask', 'cmt', 'post', 'log'].every(s => F.some(x => x.src === s)) && F.every(x => x.src && x.id && 'href' in x && Array.isArray(x.act)) && LNOTE.feed({ src: 'ask' }).length === 1 && LNOTE.feed({ q: '이행 종속' }).length === 1; }), 'LNOTE.feed: 노트 · 질문 · 댓글 · 글 · 기록 · 거르기 · 검색');
+    ok(await p.evaluate(() => !JSON.stringify(LR.lp.notes).includes('정규화에서 3NF는')), 'feed는 저장 데이터를 늘리지 않음');
     await go(p, '#notes'); await p.waitForTimeout(150);
     const seg = await p.$$eval('#lnSeg [data-v]', x => x.map(b => b.dataset.v + ':' + b.textContent.trim()));
-    ok(['all', 'note', 'q', 'cmt', 'post', 'log'].every(k => seg.some(v => v.startsWith(k + ':'))) && seg.some(v => /^q:질문 1/.test(v)), '모아보기 구분: 전체 · 노트 · 질문 · 댓글 · 글 · 학습 기록(개수) ' + seg.join(' | '));
-    { const g = await gate(p, '.ln-hub'); ok(!g.over && !g.small.length && !g.tiny.length, '390 모아보기 관문 ' + JSON.stringify(g)); }
-    await p.click('#lnSeg [data-v=q]'); await p.waitForTimeout(100);
-    ok(/새 답변/.test(await p.textContent('#lnList')) && !!(await p.$('#lnList .ln-item[data-k=q] details.ln-ans')) && !!(await p.$('#lnList .ln-item a[href^="#c/"]')), '질문: 새 답변 배지 · 답 펼치기 · 원래 자리로');
-    await shot(p, 'app-agg-q'); { const g = await gate(p, '.ln-hub'); ok(!g.over && !g.small.length && !g.tiny.length, '390 질문 구분 관문 ' + JSON.stringify(g)); }
-    await p.click('#lnList .ln-item[data-k=q] [data-ln=tonote2]'); await p.waitForTimeout(300);
-    ok(await p.evaluate(() => { const n = LNOTE.get(decodeURIComponent(location.hash.split('/')[1])); return n && n.st === 'draft' && n.src === 'me' && /\*\*질문\*\*/.test(n.b) && /이행 종속/.test(n.b); }) && !!(await p.$('#lnOv #lnF')), '질문 → 노트로 옮기기(질문 + 답 · 초안 · 편집으로)');
-    ok(await p.evaluate(() => !LR.lp.tutor.ask.length === false && LR.mine.qa.length === 1), '원본(튜터 질문 · 답)은 그대로');
-    await go(p, '#notes'); await p.click('#lnSeg [data-v=log]'); await p.waitForTimeout(100); ok(/퀴즈/.test(await p.textContent('#lnList')) && /80점/.test(await p.textContent('#lnList')) && !!(await p.$('#lnList .ln-h3')), '학습 기록: 주 단위 묶음 · 퀴즈 점수');
-    await p.click('#lnList .ln-item[data-k=log] [data-ln=mkpin]'); await p.waitForTimeout(100); ok(await p.evaluate(() => Object.entries(LNOTE.marks()).some(([k, v]) => /^log:/.test(k) && v.pin)), 'marks: 학습 기록 고정');
-    await p.click('#lnSeg [data-v=cmt]'); await p.waitForTimeout(100); ok(/정규화 표 예시/.test(await p.textContent('#lnList')), '댓글: 내가 남긴 댓글');
-    await p.click('#lnList .ln-item[data-k=cmt] [data-ln=mkhide]'); await p.waitForTimeout(100); ok(await p.evaluate(() => LNOTE.marks()['cmt:cmT1'] && LNOTE.marks()['cmt:cmT1'].hide && !document.querySelector('#lnList .ln-item[data-k=cmt]') && /숨긴 항목 1개/.test(document.getElementById('lnList').textContent)), 'marks: 댓글 숨기기 · 숨긴 항목 보기');
-    await p.click('#lnSeg [data-v=post]'); await p.waitForTimeout(100); ok(/피벗 질문 아닌 글/.test(await p.textContent('#lnList')), '글: 내가 쓴 게시글');
-    /* 통합 검색: 노트 구분에서 찾으면 다른 활동도 */
+    ok(['all', 'note', 'ask', 'cmt', 'post', 'log'].every(k => seg.some(v => v.startsWith(k + ':'))) && seg.some(v => /^ask:질문1/.test(v)), '모아보기 구분: 전체 · 노트 · 질문 · 댓글 · 글 · 기록(개수) ' + seg.join(' | '));
+    ok(await p.evaluate(() => { const r = [...document.querySelectorAll('#lnSeg button')].map(b => b.getBoundingClientRect()); return r.every(x => Math.abs(x.top - r[0].top) < 2 && x.right <= innerWidth); }), '390: 구분 6칸이 한 줄(가로 스크롤 없음)');
+    { const g = await gate(p, '.ln-hub'); ok(!g.over && !g.small.length && !g.tiny.length, '390 허브(구분) 관문 ' + JSON.stringify(g)); }
+    await p.click('#lnSeg [data-v=all]'); await p.waitForTimeout(100); ok(/오늘|어제|\d+월 \d+일/.test(await p.textContent('#lnList .ln-h3')) && (await p.$$('#lnList .ln-row')).length >= 5, '전체: 날짜 머리 · .ln-row 목록');
+    await shot(p, 'app-agg-all'); { const g = await gate(p, '.ln-hub'); ok(!g.over && !g.small.length && !g.tiny.length, '390 전체 관문 ' + JSON.stringify(g)); }
+    await p.click('#lnSeg [data-v=ask]'); await p.waitForTimeout(100); ok(/새 답변 1개/.test(await p.textContent('#lnList')) && !!(await p.$('#lnList .ln-row[data-s=ask] .ln-new')), '질문 탭: 새 답변 머리 · 배지');
+    await p.click('#lnList .ln-row[data-s=ask] .ln-rm'); await p.waitForTimeout(250); ok(/#notes\/q\/eq1$/.test(p.url()) && /이행 종속/.test(await p.textContent('.ln-ansc')) && /에서 물었어요/.test(await p.textContent('.ln-bubm')), '질문 상세: 말풍선 · 답 카드');
+    await shot(p, 'app-q'); { const g = await gate(p, '.ln-q'); ok(!g.over && !g.small.length && !g.tiny.length, '390 질문 상세 관문 ' + JSON.stringify(g)); }
+    await p.click('.ln-qf [data-ln=tonote2]'); await p.waitForTimeout(350);
+    ok(await p.evaluate(() => { const n = LNOTE.get(decodeURIComponent(location.hash.split('/')[1])); return n && n.st === 'draft' && n.src === 'me' && /질문/.test(n.b) && /이행 종속/.test(n.b) && !/20269000/.test(n.b); }) && !!(await p.$('#lnOv #lnF')), '질문 → 노트로 옮기기(초안 모드로 · 학번 없음)');
+    ok(await p.evaluate(() => LR.lp.tutor.ask.length === 1 && LR.mine.qa.length === 1), '원본(튜터 질문 · 답)은 그대로');
+    await go(p, '#notes/q/eq1'); ok(!!(await p.$('.ln-qf a[href^="#notes/n"]')), '이미 옮긴 질문 → 「옮긴 노트 보기」');
+    await go(p, '#notes?t=log'); await p.waitForTimeout(150); ok(/80점/.test(await p.textContent('#lnList')) && !!(await p.$('#lnList .ln-tll li')) && /퀴즈 평균 80점/.test(await p.evaluate(() => [...document.querySelectorAll('#lnList .ln-tl .ln-h3')].map(x => x.textContent).join())), '기록 탭(#notes?t=log): 타임라인 · 주 요약');
+    await shot(p, 'app-log');
+    await p.click('#lnList .ln-tll .ln-more'); await p.waitForTimeout(100); ok(!!(await p.$('#lnAct .ln-ai')), '⋯ 관리 시트'); await p.click('#lnAct [data-ln=mkpin]'); await p.waitForTimeout(100);
+    ok(await p.evaluate(() => Object.entries(LNOTE.marks()).some(([k, v]) => /^log:/.test(k) && v.pin)), 'marks: 학습 기록 고정');
+    await p.click('#lnSeg [data-v=cmt]'); await p.waitForTimeout(100); ok(/정규화 표 예시/.test(await p.textContent('#lnList')), '댓글 탭: 내가 남긴 댓글');
+    await p.click('#lnList .ln-row[data-s=cmt] .ln-more'); await p.click('#lnAct [data-ln=mkhide]'); await p.waitForTimeout(100);
+    ok(await p.evaluate(() => LNOTE.marks()['cmt:cmT1'] && LNOTE.marks()['cmt:cmT1'].hide && !document.querySelector('#lnList .ln-row[data-s=cmt]') && /숨긴 항목 1개/.test(document.getElementById('lnList').textContent)), 'marks: 댓글 숨기기 · 숨긴 항목 보기');
+    await p.click('#lnSeg [data-v=post]'); await p.waitForTimeout(100); ok(/피벗 정리 공유/.test(await p.textContent('#lnList')), '글 탭: 내가 쓴 글');
+    /* 노트 탭 검색 → 다른 활동도 · 통합 검색 화면 */
     await p.click('#lnSeg [data-v=note]'); await p.fill('#lnQ', '정규화'); await p.waitForTimeout(150);
-    ok(/다른 활동에서도 찾았어요/.test(await p.textContent('#lnList')) && !!(await p.$('#lnList .ln-item[data-k=q]')) && !!(await p.$('#lnList .ln-card')), '통합 검색: 노트 + 질문(숨긴 댓글 제외)');
-    await p.click('#lnSeg [data-v=all]'); await p.waitForTimeout(100); ok(/모두에서/.test(await p.textContent('#lnList .ln-cnt')), '전체 구분 + 검색');
-    await shot(p, 'app-agg-search');
-    await p.fill('#lnQ', ''); await p.waitForTimeout(100);
+    ok(/다른 활동에서도 찾았어요/.test(await p.textContent('#lnList')) && !!(await p.$('#lnList .ln-row[data-s=ask]')) && !(await p.$('#lnList .ln-row[data-s=cmt]')), '노트 탭 검색: 다른 활동(숨긴 댓글 제외)');
+    await go(p, '#notes/search'); await p.fill('#lnSq', '피벗'); await p.waitForTimeout(450);
+    ok(/#notes\/search\?q=/.test(p.url()) && !!(await p.$('#lnSr mark')) && !!(await p.$('#lnSr .ln-chips [data-v=post]')), '통합 검색: 출처 칩 · 일치 표시');
+    await shot(p, 'app-search'); { const g = await gate(p, '.ln-srch'); ok(!g.over && !g.small.length && !g.tiny.length, '390 통합 검색 관문 ' + JSON.stringify(g)); }
+    await p.fill('#lnSq', '없는말없는말'); await p.waitForTimeout(450); ok(/로 찾은 게 없어요/.test(await p.textContent('#lnSr')), '통합 검색: 결과 없음');
+    await p.fill('#lnSq', ''); await p.waitForTimeout(450); ok(/최근 검색어/.test(await p.textContent('#lnSr')), '통합 검색: 최근 검색어');
     /* 저장 상태 · 기간 끝남 */
-    const id = await p.evaluate(() => LNOTE.all().find(n => n.t === '정규화 요약').id); await go(p, '#notes/' + id); await p.click('#lnOv [data-ln=edit]'); await p.fill('#lnF [name=b]', '- 3NF 이행 종속'); await p.click('#lnSave'); await p.waitForTimeout(250);
+    const id = await p.evaluate(() => LNOTE.all().find(n => n.t === '정규화 요약').id); await go(p, '#notes'); await go(p, '#notes/' + id); await p.click('#lnOv [data-ln=edit]'); await p.fill('#lnF [name=b]', '- 3NF 이행 종속'); await p.click('#lnSave'); await p.waitForTimeout(250);
     ok(/저장됨 · 방금/.test(await p.textContent('#lnSst')), '저장 상태: 저장됨 · 방금');
     await p.evaluate(() => { const c = SITE().classes[0]; c.end = '2020-01-01'; c.ends = {}; }); await go(p, '#notes'); await go(p, '#notes/' + id);
-    ok(/기간 끝남/.test(await p.textContent('#lnOv')) && !(await p.$('#lnOv [data-ln=edit]')) && /읽기만/.test(await p.textContent('#lnOv')), '기간 끝난 과정: 배지 · 읽기 전용');
+    ok(/기간 끝남/.test(await p.textContent('#lnOv')) && !(await p.$('#lnOv [data-ln=edit]')) && /읽기만/.test(await p.textContent('#lnOv')) && !!(await p.$('#lnOv [data-ln=mdone]')), '기간 끝난 과정: 배지 · 읽기 전용 · 내보내기는 남김');
     ok(!errs.length, '모아보기 오류 없음 ' + errs.join(' | ')); await ctx.close(); }
 
   /* 4. 대학 학습자(웹 1280) — 레일 · 머리 메뉴 「내 노트」 · 마이페이지 카드 · 시연 노트 · .md에 학번 없음 · 레슨 미니 패널 */
