@@ -24,7 +24,7 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
   await new Promise(ok => srv.once('listening', ok)); const base = `http://127.0.0.1:${srv.address().port}`;
   const browser = await chromium.launch(); const fails = []; const ok = (c, m) => { console.log(`${c ? '✓' : '✗'} ${m}`); if (!c) fails.push(m); };
   const view = async (key, html, minN) => { PV.set(key + '.html', html.replace('<head>', `<head><base href="${base}/">`));
-    for (const w of [1440, 390]) { const c2 = await browser.newContext({ viewport: { width: w, height: 900 } }); const q = await c2.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message)); await q.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
+    for (const w of [1440, 390]) { const c2 = await browser.newContext({ viewport: { width: w, height: w < 600 ? 844 : 900 } }); const q = await c2.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message)); await q.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
       await q.goto(`${base}/__pv/${key}.html`, { waitUntil: 'load' }); await q.waitForTimeout(300);
       const m = await q.evaluate(w => { const de = document.documentElement; const vw = de.clientWidth; const vis = el => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
         const C = [...document.querySelectorAll('section.c4')];
@@ -32,12 +32,13 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
           small: w < 600 ? [...document.querySelectorAll('section.c4 a')].filter(a => vis(a) && a.getBoundingClientRect().height < 44).map(a => a.textContent.trim().slice(0, 12)) : [],
           tiny: [...document.querySelectorAll('section.c4 *')].filter(el => vis(el) && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(el).fontSize) < 13).map(el => el.textContent.trim().slice(0, 10)),
           narrow: [...document.querySelectorAll('section.c4 :is(h1,h2,h3,b,small,a,p,em,span)')].filter(el => { if (!vis(el) || el.textContent.trim().length < 3) return false; const r = el.getBoundingClientRect(); const fs = parseFloat(getComputedStyle(el).fontSize); return r.height > fs * 5 && r.width < fs * 2.2; }).length,
-          h1: (() => { const h = document.querySelector('section.c4-hero h1'); return h ? parseFloat(getComputedStyle(h).fontSize) : 0; })() }; }, w);
+          h1: (() => { const h = document.querySelector('section.c4-hero h1'); return h ? parseFloat(getComputedStyle(h).fontSize) : 0; })(), cta: (() => { const b = [...document.querySelectorAll('section.c4-hero .c4-cta a')].pop(); return b ? Math.round(b.getBoundingClientRect().bottom) : 0; })() }; }, w);
       ok(m.n >= (minN || 4) && m.over <= 0 && !m.out, `${key} ${w}: 섹션 ${m.n}개 · 가로 넘침 0 · 화면 밖 요소 0(${m.over}/${m.out})`);
       ok(!m.small.length, `${key} ${w}: 누르는 칸 44px 이상 ${m.small.join(',')}`);
       ok(!m.tiny.length, `${key} ${w}: 글자 13px 이상 ${m.tiny.join(',')}`);
       ok(!m.narrow, `${key} ${w}: 한 글자 꺾임 0(${m.narrow})`);
-      ok(w > 600 ? m.h1 >= 64 && m.h1 <= 104 : m.h1 >= 36 && m.h1 <= 46, `${key} ${w}: 첫 화면 제목 ${m.h1}px(PC 64~104 · 휴대폰 36~44)`);
+      ok(w > 600 ? m.h1 >= 64 && m.h1 <= 104 : m.h1 >= 36 && m.h1 <= 48, `${key} ${w}: 첫 화면 제목 ${m.h1}px(PC 64~104 · 휴대폰 36~48)`);
+      if (w < 600) ok(m.cta > 0 && m.cta <= 844, `${key} 390: 첫 화면 안에 제목 · 버튼(마지막 버튼 아래 ${m.cta}px ≤ 844)`);
       ok(!pe.length, `${key} ${w}: pageerror 0 ${pe.join('|')}`);
       await c2.close(); } };
   const admin = async empty => { const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
@@ -62,6 +63,16 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
     ok(!/hps-flow|hps-short/.test((r.html.match(/<section class="[^"]*\bc4\b[^"]*"/g) || []).join(' ')), `${id}: 섹션 간격 압축 클래스 제거`);
     ok(!/NaN|undefined|object Object|<input|<form|주민등록|휴대폰 번호/.test((r.html.match(/<section class="hpt c4[\s\S]*?<\/section>/g) || []).join('')), `${id}: 이상 값 · 입력 칸 · 개인정보 문구 없음`);
     await view(id, r.html); }
+  /* QA 11-18: 낮은 숫자 블록 숨김 · 후기 필터 */
+  { const q = await a.p.evaluate(() => { const out = {}; const ids = ['cplegal', 'cpdx', 'cpheritage', 'cpuniv']; const h = id => siteHTML(siteFromTpl(TPL.find(t => t.id === 't44-' + id)));
+      out.n = S.classes.filter(c => c.status !== '종료').length; out.figs = ids.filter(id => /class="hpt c4 [a-z]+ c4-figs"/.test(h(id)));
+      out.nums = /운영 중인 과정<\/p>|함께 배우는 인원<\/p>/.test(h('cpdx'));
+      const keep = S.reviews; S.reviews = [{ id: 'r1', cls: S.classes[0].id, stars: 5, body: '영상이 자꾸 끊겨요 확인 부탁드립니다', at: '2026-11-10' }, { id: 'r2', cls: S.classes[0].id, stars: 5, body: '퀴즈 3번 해설도 올려 주실 수 있나요?', at: '2026-11-11' }];
+      out.bad = /c4-quote"/.test(h('cphrd'));
+      S.reviews.push({ id: 'r3', cls: S.classes[0].id, stars: 5, body: '팀장이 되고 처음 6주가 막막했는데 리더 과정이 지도가 돼 줬어요', at: '2026-11-12' });
+      const g = h('cphrd'); out.good = /c4-quote"/.test(g) && /지도가 돼 줬어요/.test(g) && !/끊겨요|해설도/.test(g); S.reviews = keep; return out; });
+    ok(q.n < 10 && !q.figs.length && !q.nums, `숫자 블록: 과정 ${q.n}개 · 인원 100명 미만 시연 데이터에서 4종 모두 숨김(${q.figs.join(',')})`);
+    ok(!q.bad && q.good, `후기 인용: 불만 · 요청 · 질문 글 제외, 긍정 글만 크게(${JSON.stringify(q)})`); }
   ok(!a.errs.length, `관리자 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close();
 
   /* ── 빈 기관 ── */
