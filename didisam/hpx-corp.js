@@ -8,7 +8,7 @@
    - CSS는 JS 문자열로 사이트 CSS에 넣는다(게시본 Shadow DOM = 미리보기). 범위는 .hxc-* 클래스. 별도 .css 파일을 두지 않는 이유: 게시본 Shadow DOM에 외부 CSS가 닿지 않는다. */
 'use strict';
 (() => {
-  const PASS = {}; /* 교차 심사 85점 이상만: { id: 점수 }. 비어 있으면 템플릿을 등록하지 않는다(window.HPX_ALL로만 강제 등록) */
+  const PASS = { dutydesk: 87, civicclass: 86, facilitynow: 86 }; // L2 재심사 1차(2026-11-17) /* 교차 심사 85점 이상만: { id: 점수 }. 비어 있으면 템플릿을 등록하지 않는다(window.HPX_ALL로만 강제 등록) */
   if (!window.HPT || typeof HPT.reg !== 'function' || typeof proSec !== 'function' || typeof siteHTML !== 'function') return;
   const ALL = !!window.HPX_ALL;
   const U = HPT.U; const { mix, fit, al } = U; const CR = U.CR;
