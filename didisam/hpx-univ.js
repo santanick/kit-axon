@@ -11,7 +11,7 @@
 'use strict';
 (() => {
   /* 교차 심사 통과표 — 통합 담당이 채운다(85점 이상만). 비어 있으면 HPX_ALL일 때만 등록 */
-  const PASS = {};
+  const PASS = { uvhub: 88, uvlms: 86, uvopen: 84 }; // 11-17 대표님 지시로 통과 기준 82점. L4 1차 심사 점수(지적 반영 6d76251)
   if (!window.HPT || typeof HPT.reg !== 'function' || typeof proSec !== 'function' || typeof siteHTML !== 'function') return;
   const U = HPT.U; const { mix, fit, al, CR } = U;
   const ramp = HPT.ramp || (c => ({ 50: mix(c, '#ffffff', .94), 100: mix(c, '#ffffff', .86), 200: mix(c, '#ffffff', .7), 500: c, 700: mix(c, '#000000', .3), 800: mix(c, '#000000', .46), 900: mix(c, '#000000', .62) }));
