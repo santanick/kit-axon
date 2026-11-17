@@ -7,7 +7,8 @@ const http = require('node:http'); const fs = require('node:fs'); const path = r
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../../didisam'); const SHOT = process.env.SHOT || '';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/json' };
-const IDS = ['uvhub']; /* 보조(A1) 템플릿 id를 여기 더한다 */
+const IDS = ['uvhub', 'uvlms', 'uvopen']; /* uvhub(L1) · uvlms · uvopen(보조 A1) */
+const HERO = '.hp-hero.hxu-u'; /* 세 템플릿 공통 첫 화면 */
 
 (async () => {
   const pages = {};
@@ -67,13 +68,23 @@ const IDS = ['uvhub']; /* 보조(A1) 템플릿 id를 여기 더한다 */
     for (const w of [1440, 390]) { const c = await browser.newContext({ viewport: { width: w, height: w < 600 ? 844 : 900 } }); await c.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); const q = await c.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message));
       await q.goto(base + '/__t.html', { waitUntil: 'load' }); await q.evaluate(async () => { for (let y = 0; y < document.documentElement.scrollHeight; y += 700) { scrollTo(0, y); await new Promise(r => setTimeout(r, 40)); } scrollTo(0, 0); }); await q.waitForTimeout(400);
       const g = await gate(q); ok(!g.ovf && !g.out.length && !g.small.length && !g.tiny.length && !g.wrap1.length && !pe.length, `${id} @${w}: 넘침 ${g.ovf} · 잘림 ${g.out.length} · 44px 미만 ${g.small.length} · 13px 미만 ${g.tiny.length} · 한 글자 꺾임 ${g.wrap1.length} ${[...g.out, ...g.small, ...g.tiny, ...g.wrap1].slice(0, 4).join(' / ')}`);
-      if (w === 1440) { const s = await q.evaluate(() => { const T = s => (document.querySelector(s) || {}).innerText || ''; const hero = T('.hxu-uh'); const ph = document.querySelector('.hxu-uh img');
+      if (w === 1440 && id === 'uvhub') { const s = await q.evaluate(() => { const T = s => (document.querySelector(s) || {}).innerText || ''; const hero = T('.hxu-uh'); const ph = document.querySelector('.hxu-uh img');
           return { hero, photo: !!(ph && ph.naturalWidth > 0), who: [...document.querySelectorAll('.hxu-pc h3')].map(x => x.innerText), due: document.querySelectorAll('.hxu-pn-l li').length, cal: T('.hxu-cal'), nt: T('.hxu-nt'), bd: document.querySelectorAll('.hxu-lad li').length,
             order: [...document.querySelectorAll('main section, body > section, section.hpt')].slice(0, 3).map(x => x.className.match(/hxu-\w+|hp-\w+/g) || []).flat().join(' '), facts1: !!document.querySelector('.hxu-uh + section [class*=hps-fact], .hxu-uh + .hp-stats') }; });
         ok(/학번으로 로그인/.test(s.hero) && /비교과 신청하기/.test(s.hero) && /마감 임박/.test(s.hero) && s.due >= 2 && /D-2/.test(s.hero) && s.photo, `${id}: 첫 화면 — 학번 로그인 · 비교과 신청 · 마감 임박(D-day ${s.due}건) · 실사진`);
         ok(s.who.join('/') === '재학생/신입생/교수자/산학 · 지역', `${id}: 방문자별 바로 가기 4종 ${s.who}`);
         ok(/기말고사/.test(s.cal) && !/교직원 회의/.test(s.cal) && /접수 마감/.test(s.cal), `${id}: 학사 일정 — 학습자에게 보이는 일정 · 모집 마감만(내부 회의 제외)`);
         ok(/비교과 프로그램 추가 모집/.test(s.nt) && /중요/.test(s.nt), `${id}: 공지(중요 먼저)`); ok(s.bd >= 2, `${id}: 이수 · 배지 사다리 ${s.bd}단계(실제 배지)`); }
+      if (w === 1440 && id !== 'uvhub') { const s = await q.evaluate(() => { const T = s => (document.querySelector(s) || {}).innerText || ''; const ph = document.querySelector('.hp-hero.hxu-u img');
+          return { hero: T('.hp-hero.hxu-u'), photo: !!(ph && ph.naturalWidth > 0), who: [...document.querySelectorAll('.hxu-pc h3')].map(x => x.innerText), wk: document.querySelectorAll('.hxu-wk a').length, cur: (document.querySelector('.hxu-wk a[aria-current]') || {}).innerText || '', td: document.querySelectorAll('.hxu-td li').length,
+            chips: [...document.querySelectorAll('.hxu-op-ch li a')].map(a => a.innerText.replace(/\s+/g, ' ')), tel: !!document.querySelector('.hxu-op-if a[href^="tel:"]'), seats: [...document.querySelectorAll('.hxu-se-l li')].map(x => x.innerText.replace(/\s+/g, ' ')), cal: T('.hxu-cal'), nt: T('.hxu-nt'), list: !!document.querySelector('.hp-cls') }; });
+        if (id === 'uvlms') { ok(/학번으로 로그인/.test(s.hero) && /이번 주 할 일/.test(s.hero) && s.wk === 7 && /오늘/.test(s.cur) && s.td >= 2 && /D-2/.test(s.hero) && /학번 · 학과로만/.test(s.hero) && s.photo, `uvlms: 첫 화면 — 7일 띠(${s.wk}칸 · 오늘 표시) · 이번 주 할 일 ${s.td}건(D-2) · 학번 로그인 카드 · 실사진`);
+          ok(s.who.join('/') === '재학생/신입생/교수자/산학 · 지역' && /기말고사/.test(s.cal) && !/교직원 회의/.test(s.cal) && /중요/.test(s.nt) && s.list, `uvlms: 교과목 목록 · 학사 일정(내부 회의 제외) · 공지 · 방문자 바로 가기`);
+          ok(!/교직원 회의/.test(s.hero), 'uvlms: 이번 주 할 일에 내부 일정(교직원 회의) 없음'); }
+        if (id === 'uvopen') { ok(/공개 강좌 둘러보기/.test(s.hero) && /수강 문의하기/.test(s.hero) && /^전체/.test(s.chips[0] || '') && s.chips.length >= 5 && /D-2 접수 중/.test(s.chips[1] || '') && s.tel && s.photo, `uvopen: 첫 화면 — 강좌 칩 ${s.chips.length}개(접수 중 먼저: ${s.chips[1]}) · 문의 전화 · 실사진`);
+          ok(s.seats.length >= 2 && s.seats.every(x => /자리 남음|정원이 찼어요|정원 \d+명/.test(x)) && /34 \/ 40명|\d+ \/ 40명/.test(s.seats.join(' ')), `uvopen: 남은 자리 막대 ${s.seats.length}건 (${s.seats[0]})`);
+          ok(s.who[0] === '시민 · 지역 주민' && s.who.length === 4, `uvopen: 방문자 바로 가기 — 시민 · 지역 주민 먼저 ${s.who}`);
+          ok(/기말고사/.test(s.cal) && !/교직원 회의/.test(s.cal) && /중요/.test(s.nt), 'uvopen: 행사 · 학사 일정 · 공지'); } }
       if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await q.screenshot({ path: path.join(SHOT, `t-${id}-${w}.png`), fullPage: true }); }
       await c.close(); } }
 
@@ -82,28 +93,31 @@ const IDS = ['uvhub']; /* 보조(A1) 템플릿 id를 여기 더한다 */
       const A = [...d.querySelectorAll('.hxu-u a[href]')].map(a => a.getAttribute('href')); const menus = (s.menus || []).map(m => m.id); const cls = (S.classes || []).map(c => c.id);
       const bad = A.filter(h => !(/^#(login|cal|badges|my)$/.test(h) || /^tel:\+?\d+$/.test(h) || /^mailto:/.test(h) || (/^#p-m-/.test(h) && menus.includes(h.slice(5))) || (/^#p-c-/.test(h) && cls.includes(h.slice(5)))));
       const txt = [...d.querySelectorAll('.hxu-u')].map(x => x.textContent).join(' ');
-      return { id, n: A.length, bad, inputs: d.querySelectorAll('.hxu-u input, .hxu-u select, .hxu-u textarea, form').length, phone: /휴대폰|핸드폰|전화번호를?\s*입력|주민/.test(txt), sid: /학번/.test(txt) }; }), IDS);
+      return { id, n: A.length, bad, inputs: d.querySelectorAll('.hxu-u input, .hxu-u select, .hxu-u textarea, form').length, phone: /휴대폰|핸드폰|전화번호를?\s*입력|주민(등록)?번호/.test(txt) /* 「지역 주민」은 방문자 이름이라 허용 */, sid: /학번/.test(txt) }; }), IDS);
     r.forEach(x => { ok(x.n >= 15 && !x.bad.length, `${x.id}: 시나리오 링크 ${x.n}개 모두 실제 경로(죽은 링크 0) ${x.bad.join(' ')}`); ok(!x.inputs && !x.phone && x.sid, `${x.id}: 대학 개인정보 — 학번 · 학과만 안내, 입력칸 · 휴대폰 문구 없음`); }); }
 
   /* ── 5) 템플릿 사용 → 학습자 미리보기(Shadow DOM) · 링크 클릭 ── */
-  { await p.evaluate(id => { ACT['tpl-use']({ dataset: { v: 'prem-' + id } }); save(); }, IDS[0]); await p.waitForTimeout(700);
-    ok(await p.evaluate(id => S.site.theme === id && S.site.tpl === 'prem-' + id, IDS[0]), '템플릿 사용: 사이트 테마 · 템플릿 반영');
+  const CLK = { uvhub: [['.hxu-pn-f', /^#cal/], ['.hxu-pn-l a', /^#class\//], ['.hxu-uh .hxu-btn.g', /^#shop|^#class\//]],
+    uvlms: [['.hxu-wk a', /^#cal/], ['.hxu-td a', /^#class\//], ['.hxu-lm-bt .hxu-btn.p', /^#login/]],
+    uvopen: [['.hxu-op-ch a.all', /^#shop|^#class\//], ['.hxu-op-ch li:nth-child(2) a', /^#class\//], ['.hxu-se-l a', /^#class\//]] };
+  for (const id of IDS) { await p.evaluate(id => { const f = document.getElementById('pvF'); if (f) f.remove(); ACT['tpl-use']({ dataset: { v: 'prem-' + id } }); save(); }, id); await p.waitForTimeout(700);
+    ok(await p.evaluate(id => S.site.theme === id && S.site.tpl === 'prem-' + id, id), `${id} 템플릿 사용: 사이트 테마 · 템플릿 반영`);
     await p.evaluate(() => { const f = document.createElement('iframe'); f.id = 'pvF'; f.src = 'learner.html?preview=1#home'; f.style.cssText = 'position:fixed;left:0;top:0;width:1280px;height:900px;z-index:99999;background:#fff'; document.body.appendChild(f); }); await p.waitForTimeout(3200);
-    const L = await p.evaluate(() => { const d = document.getElementById('pvF').contentDocument; const h = [...d.querySelectorAll('.smhost')].find(x => x.shadowRoot && x.shadowRoot.querySelector('.hxu-uh')); return h ? [...h.shadowRoot.querySelectorAll('.hxu-u a[href]')].map(a => a.getAttribute('href')) : null; });
-    ok(!!L && L.length >= 15, `학습자 미리보기: 게시본(Shadow DOM)에 첫 화면 · 부품 (${L ? L.length : 0} 링크)`);
-    ok(!!L && L.every(h => /^#(login|cal|badges|my|shop|notice|home|comm|class\/[\w-]+)$/.test(h) || /^(tel|mailto):/.test(h)), `학습자 미리보기: 링크가 학습자 경로로 바뀜 ${L ? [...new Set(L)].join(' ') : ''}`);
-    for (const [sel, want] of [['.hxu-pn-f', /^#cal/], ['.hxu-pn-l a', /^#class\//], ['.hxu-uh .hxu-btn.g', /^#shop|^#class\//]]) {
-      const hh = await p.evaluate(sel => { const d = document.getElementById('pvF').contentDocument; const h = [...d.querySelectorAll('.smhost')].find(x => x.shadowRoot && x.shadowRoot.querySelector('.hxu-uh')); const a = h.shadowRoot.querySelector(sel); a.click(); return new Promise(r => setTimeout(() => r([d.defaultView.location.hash, (d.querySelector('#lm') || d.body).innerText.length]), 900)); }, sel);
-      ok(want.test(hh[0]) && hh[1] > 40, `학습자 미리보기: ${sel} 누르면 ${hh[0]} 화면(내용 ${hh[1]}자)`);
+    const L = await p.evaluate(H => { const d = document.getElementById('pvF').contentDocument; const h = [...d.querySelectorAll('.smhost')].find(x => x.shadowRoot && x.shadowRoot.querySelector(H)); return h ? [...h.shadowRoot.querySelectorAll('.hxu-u a[href]')].map(a => a.getAttribute('href')) : null; }, HERO);
+    ok(!!L && L.length >= 15, `${id} 학습자 미리보기: 게시본(Shadow DOM)에 첫 화면 · 부품 (${L ? L.length : 0} 링크)`);
+    ok(!!L && L.every(h => /^#(login|cal|badges|my|shop|notice|home|comm|class\/[\w-]+)$/.test(h) || /^(tel|mailto):/.test(h)), `${id} 학습자 미리보기: 링크가 학습자 경로로 바뀜 ${L ? [...new Set(L)].join(' ') : ''}`);
+    for (const [sel, want] of CLK[id]) {
+      const hh = await p.evaluate(([sel, H]) => { const d = document.getElementById('pvF').contentDocument; const h = [...d.querySelectorAll('.smhost')].find(x => x.shadowRoot && x.shadowRoot.querySelector(H)); const a = h && h.shadowRoot.querySelector(sel); if (!a) return ['(없음)', 0]; a.click(); return new Promise(r => setTimeout(() => r([d.defaultView.location.hash, (d.querySelector('#lm') || d.body).innerText.length]), 900)); }, [sel, HERO]);
+      ok(want.test(hh[0]) && hh[1] > 40, `${id} 학습자 미리보기: ${sel} 누르면 ${hh[0]} 화면(내용 ${hh[1]}자)`);
       await p.evaluate(() => { const w = document.getElementById('pvF').contentWindow; w.location.hash = '#home'; }); await p.waitForTimeout(900); } }
 
   /* ── 6) 대비: 기관 색이 무엇이든 4.5:1 ── */
   { const r = await p.evaluate(ids => { const out = []; ids.forEach(id => ['#1F4E9E', '#F5C400', '#E11D48', '#10B981', '#7C3AED'].forEach(c => { const s = JSON.parse(JSON.stringify(site())); HPT.apply(s, id, { color: c }); HPT.audit(s).filter(x => x[3] < 4.5).forEach(x => out.push(id + c + ' ' + x[0] + ' ' + x[3])); })); return out; }, IDS);
     ok(!r.length, `대비 4.5:1(기관 색 5종) ${r.slice(0, 4).join(' / ')}`);
-    const css = await p.evaluate(id => { const s = JSON.parse(JSON.stringify(site())); HPT.apply(s, id, { color: '#F5C400' }); const h = siteHTML(s, true, 'ko'); const m = h.match(/\.hxu-u\{--x-a:[^}]*\}/); return m ? m[0] : ''; }, IDS[0]);
+    for (const id of IDS) { const css = await p.evaluate(id => { const s = JSON.parse(JSON.stringify(site())); HPT.apply(s, id, { color: '#F5C400' }); const h = siteHTML(s, true, 'ko'); const m = h.match(/\.hxu-u\{--x-a:[^}]*\}/); return m ? m[0] : ''; }, id);
     const v = k => (css.match(new RegExp(`--x-${k}:(#[0-9a-fA-F]{6})`)) || [])[1]; const lum = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(x => x <= .03928 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
     const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
-    ok(v('at') && cr(v('at'), '#ffffff') >= 4.5 && cr(v('at50'), v('50')) >= 4.5 && cr(v('wt'), v('wbg')) >= 4.5 && cr(v('on'), v('a')) >= 4.5, `부품 글자 대비(노랑 기관 색): 라벨 ${v('at') && cr(v('at'), '#ffffff').toFixed(2)} · 옅은 칸 ${v('at50') && cr(v('at50'), v('50')).toFixed(2)} · 마감 ${v('wt') && cr(v('wt'), v('wbg')).toFixed(2)} · 버튼 ${v('on') && cr(v('on'), v('a')).toFixed(2)}`); }
+    ok(v('at') && cr(v('at'), '#ffffff') >= 4.5 && cr(v('at50'), v('50')) >= 4.5 && cr(v('wt'), v('wbg')) >= 4.5 && cr(v('on'), v('a')) >= 4.5, `${id} 부품 글자 대비(노랑 기관 색): 라벨 ${v('at') && cr(v('at'), '#ffffff').toFixed(2)} · 옅은 칸 ${v('at50') && cr(v('at50'), v('50')).toFixed(2)} · 마감 ${v('wt') && cr(v('wt'), v('wbg')).toFixed(2)} · 버튼 ${v('on') && cr(v('on'), v('a')).toFixed(2)}`); } }
   ok(!errs.length, `관리자 pageerror 0 ${errs.join('|')}`); await ctx.close();
 
   /* ── 7) 빈 기관: 사실 없는 판은 숨김 ── */
@@ -111,6 +125,9 @@ const IDS = ['uvhub']; /* 보조(A1) 템플릿 id를 여기 더한다 */
     const r = await p.evaluate(id => { const s = siteFromTpl(TPL.find(t => t.id === 'prem-' + id)); const h = siteHTML(s, true, 'ko'); const d = new DOMParser().parseFromString(h, 'text/html');
       return { hero: !!d.querySelector('.hxu-uh'), pn: !!d.querySelector('.hxu-uh-pn'), bd: !!d.querySelector('.hxu-bd'), who: !!d.querySelector('.hxu-who'), dday: /D-\d/.test(h), nb: (S.badges || []).filter(b => b && b.name).length, zero: /첫 발급 전/.test(h) || !(S.badges || []).length }; }, IDS[0]);
     ok(r.hero && r.who && !r.pn && r.bd === r.nb > 0 && r.zero && !r.dday, `빈 기관: 마감 판 · D-day 숨김, 배지 판은 배지가 정해진 경우에만(발급 0건은 「첫 발급 전」) ${JSON.stringify(r)}`);
+    const r2 = await p.evaluate(() => ['uvlms', 'uvopen'].map(id => { const s = siteFromTpl(TPL.find(t => t.id === 'prem-' + id)); const h = siteHTML(s, true, 'ko'); const d = new DOMParser().parseFromString(h, 'text/html');
+      return { id, hero: !!d.querySelector('.hp-hero.hxu-u'), dday: /D-\d/.test(h), seats: !!d.querySelector('.hxu-se'), wkItems: d.querySelectorAll('.hxu-td li').length, chips: d.querySelectorAll('.hxu-op-ch li').length, cls: (S.classes || []).length, login: /학번 · 학과로만/.test(h) }; }));
+    r2.forEach(x => ok(x.hero && x.login && !x.dday && !x.seats && (x.cls ? true : !x.wkItems && !x.chips), `빈 기관 ${x.id}: 첫 화면은 남고 D-day · 남은 자리 · 칩은 사실이 없으면 숨김 ${JSON.stringify(x)}`));
     ok(!errs.length, `빈 기관 pageerror 0 ${errs.join('|')}`); await ctx.close(); }
 
   await browser.close(); srv.close(); void T0;
