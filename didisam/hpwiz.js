@@ -33,7 +33,12 @@
   const LK_DESC = { navyGlow: '어두운 첫 화면 · 빛나는 강조', mintSoft: '부드러운 그라데이션 · 친근함', senior: '큰 글씨 · 넓은 버튼', brandBold: '브랜드 색 배너 · 리포트 카드', corpPortal: '단정한 기업 포털', storyNumbered: '번호로 풀어 가는 이야기', publicTiles: '공공기관 바로가기 타일', campus: '캠퍼스 · 일정표형' };
   const REC_LOOK = { corp: 'corpPortal', univ: 'campus', univ_lms: 'campus', k12: 'brandBold', adult: 'mintSoft', lifelong: 'senior', voc: 'publicTiles', public: 'publicTiles' };
   const REC_HPT = { corp: /clean|modern|모던|깔끔|corp/i, univ: /official|공식|clean|campus/i, univ_lms: /official|공식|clean|campus/i, k12: /warm|따뜻|학원|kids|키즈/i, adult: /modern|clean|모던|깔끔/i, lifelong: /warm|따뜻|senior|큰/i, voc: /tech|테크|official|공식/i, public: /official|공식|public|기관/i };
+  /* v44 G: 우리 유형의 새 템플릿(g44)이 있으면 1단계는 그 템플릿의 테마만(세부 유형 이름으로) — 예전 테마 · 프리미엄 묶음은 숨긴다. 없으면 기존 목록 */
+  function themes44() { if (!hasT() || !window.G44) return []; let L = []; try { L = G44.ordered(tyKey(), S.org.ed); } catch (e) { L = []; } const seen = new Set();
+    return L.filter(tp => tp.theme && HPT.list.some(x => String(x.id) === tp.theme) && !seen.has(tp.theme) && seen.add(tp.theme))
+      .map(tp => ({ id: String(tp.theme), name: String(tp.sub || tp.name), desc: String(tp.scene || tp.name || ''), sw: [tp.color].filter(Boolean), hpt: true, prem: false, tags: [], g44: tp.id })); }
   function themes() {
+    { const G = themes44(); if (G.length) return G; }
     if (hasT()) return HPT.list.map(x => ({ id: String(x.id), name: String(x.name || x.id), desc: String(x.desc || ''), sw: A(x.swatch).slice(0, 3), hpt: true, prem: !!x.prem, tags: A(x.tags) }));
     return Object.keys(typeof LOOKS !== 'undefined' ? LOOKS : {}).map(k => { const c = LK_COL[k] || '#00862D'; return { id: k, name: LOOKS[k].n, desc: LK_DESC[k] || '', sw: [c, mixc(c, '#ffffff', .82), '#ffffff'] }; });
   }
@@ -132,7 +137,7 @@
       if (v.hero === 'split') { const P = pubList().slice(0, 3); if (P.length) bn.data.chips = P.map((c, k) => [String(k + 1).padStart(2, '0'), String(c.name).slice(0, 18), +c.price ? won(c.price) : '무료']); } }
     A(d.sections).forEach(x => { if (x.type === 'text' && x.data && x.data.variant === 'cta' && !x.data.link) x.data.link = 'learn:comm'; });
     const keepC = !!(st.colorOn && st.color) || (!local && /^#[0-9a-f]{6}$/i.test(d.color || '')); /* 고른 색 · Claude가 설계한 색은 테마가 덮어쓰지 않음 */
-    if (st.theme) d = applyTheme(d, st.theme, keepC);
+    if (st.theme) { d = applyTheme(d, st.theme, keepC); const g = themes().find(x => x.id === st.theme && x.g44); if (g) d.tpl = g.g44; } /* v44 G: g44 테마로 만든 시안은 그 템플릿을 「사용 중」으로 */
     if (hasT() && typeof HPT.enrich === 'function') { try { HPT.enrich(d); } catch (e) { console.error('HPT.enrich', e); } } /* 실제 데이터 숫자 띠 · FAQ · 등록 강사 */
     if (st.colorOn && /^#[0-9a-f]{6}$/i.test(st.color || '')) d.color = st.color;
     if (st.logo) d.gnb = Object.assign({}, typeof d.gnb === 'object' ? d.gnb : {}, { logo: st.logo });
@@ -374,7 +379,7 @@
     [/(문의|연락|상담)/, x => (x.type === 'text' && x.data && x.data.variant === 'cta') || x.type === 'map', 'cta', '문의'], [/(일정)/, x => x.type === 'text' && x.data && x.data.variant === 'timeline', 'timeline', '일정'],
     [/(수강\s*안내|안내표|안내)/, x => x.type === 'text' && x.data && x.data.variant === 'info', 'info', '수강 안내'], [/(소개|특징|장점)/, x => x.type === 'text' && x.data && x.data.variant === 'features', 'features', '소개'],
     [/(강좌|과정|수업|교과목|클래스|프로그램)/, x => x.type === 'classes', 'classes', `강좌 목록`], [/(이미지|사진)/, x => x.type === 'image', 'image', '이미지'], [/(동영상|영상|비디오)/, x => x.type === 'video', 'video', '동영상']];
-  const themeByRe = re => themes().find(x => re.test(`${x.id} ${x.name} ${x.desc}`));
+  const themeByRe = re => themes().find(x => re.test(`${x.id} ${x.name} ${x.desc}`)) || (themes44().length && hasT() ? HPT.list.map(x => ({ id: String(x.id), name: String(x.name || x.id), desc: String(x.desc || '') })).find(x => re.test(`${x.id} ${x.name} ${x.desc}`)) : undefined); /* v44 G: g44 목록에 없으면 전체 테마에서 */
   const quoteOf = s => { const m = s.match(/["“”'‘’「『]([^"“”'‘’」』]{2,60})["“”'‘’」』]/); return m ? m[1].trim() : ''; };
   function heroAlts() { const n = N(); const cp = COPY[tyKey()] || COPY.adult; const L0 = []; try { const j = hpLocal(''); const b = A(j.sections).find(x => x.type === 'banner'); if (b) L0.push([b.title, b.sub]); } catch (e) { } return [...L0, ...cp.map(([a, b]) => [fill(a, n), b])]; }
   /* 문장 → 계획 { title, steps[], next(s) } (없으면 null) */

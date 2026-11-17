@@ -122,7 +122,8 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
     UI.mil = 'home'; render(); const todo = /점검 할 일 2건/.test(document.body.innerText); const order = [...document.querySelectorAll('.mil-tabs [role=tab]')].map(b => b.dataset.v); milGo('zz'); const shown = !!document.querySelector('#zzv');
     const a = milLedgerAdd({ sid: '7100010', kind: 'hold', points: -100, idemKey: 'r:7100010:t1' }); const b = milLedgerAdd({ sid: '7100010', kind: 'hold', points: -100, idemKey: 'r:7100010:t1' }); let bad = false; try { milLedgerAdd({ sid: 'x', kind: 'delete', points: 1 }); } catch (e) { bad = true; }
     MIL_TABS.splice(MIL_TABS.findIndex(t => t.id === 'zz'), 1); return { todo, order, shown, same: a === b, bad, badge: /점검 탭2/.test(order.join()) || true }; });
-  ok(X.todo && X.order.indexOf('zz') > X.order.indexOf('rules') && X.order.indexOf('zz') < X.order.indexOf('ledger') && X.shown && X.same && X.bad, 'MIL_TABS(render · order · todo) · milGo · milLedgerAdd(멱등 · 종류 검사) ' + JSON.stringify(X));
+  /* v44 단순화: 탭은 첫 줄 4개(한눈에 · 적립 규칙 · 신청 · 승인 · 내역) + 「더 보기」 줄로 나뉜다. 끼운 탭(order 35)은 더 보기 줄에서 order대로(보상 30 뒤 · 부정 의심 60 앞) 놓인다 */
+  ok(X.todo && X.order.indexOf('zz') > X.order.indexOf('rewards') && X.order.indexOf('zz') < X.order.indexOf('fraud') && X.order.indexOf('zz') > X.order.indexOf('ledger') && X.shown && X.same && X.bad, 'MIL_TABS(render · order · todo) · milGo · milLedgerAdd(멱등 · 종류 검사) ' + JSON.stringify(X));
 
   /* ⑪ 교강사: 설정 · 이력 탭 없음, 줄 취소 없음 */
   const TC = await p.evaluate(() => { S.me.role = 'teacher'; UI.mil = 'ledger'; render(); const r = { tabs: [...document.querySelectorAll('.mil-tabs [role=tab]')].map(b => b.dataset.v), cancel: document.querySelectorAll('[data-act="mil-cancel"]').length }; S.me.role = 'owner'; return r; });

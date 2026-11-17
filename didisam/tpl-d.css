@@ -40,3 +40,16 @@
 .tpd-wz{background:transparent!important;padding:0!important;margin:0 0 12px!important;justify-content:flex-start!important}
 .tpd-wz>span{font-size:13px;color:var(--g700,#5C554B)}
 .tpd-wz .btn{min-height:32px!important;height:32px;padding:0 12px!important;border-radius:999px!important;border:0!important;background:var(--gr50,#ECFDF3)!important;color:var(--gr700,#00862D)!important;font-weight:700;box-shadow:none!important}
+
+/* v44 G: 기관 유형 칩(한 줄, 넘치면 옆으로 밀기) · 세부 유형 이름 · 작은 세부 유형 선택 */
+.tpd-ty{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -2px 10px;padding:2px}
+.tpd-ty::-webkit-scrollbar{display:none}
+.tpd-ty>.sl-chips{flex-wrap:nowrap}
+.tpd-ty>.sl-chips button{white-space:nowrap;flex:none}
+.tpd-fl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tpd-fl .tpd-q{flex:1 1 260px;margin:0}
+.tpd-sbf{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--g600,#4B5563);font-weight:600}
+.tpd-sbf select{min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--g200,#E5E7EB);background:#fff;font:inherit;font-size:14px;color:var(--g900,#111827);max-width:220px}
+.tpd-sub{display:block;font-size:13px;font-weight:700;color:var(--gr700,#00862D);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tpd-cur{box-shadow:0 0 0 2px var(--g900,#111827)}
+@media(max-width:560px){.tpd-sbf{width:100%}.tpd-sbf select{flex:1;max-width:none}}
