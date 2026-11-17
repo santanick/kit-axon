@@ -36,6 +36,10 @@ const BAD = { univ: /필수 교육|LEARNING CENTER|업무에 필요한/, k12: /�
           ok(H.length >= 6 && !bad.length, `[${ID}/${ty}] 첫 화면 경로 ${H.length}개 · 잘못된 경로 ${bad.join(' ')}`);
           ok(!(BAD[ty] && BAD[ty].test(m.txt)), `[${ID}/${ty}] 유형에 맞지 않는 문구 없음`);
           ok(/어떤 일로 오셨나요/.test(m.txt), `[${ID}/${ty}] 방문자별 바로가기`);
+          if (ID === 'cmdledger') { const big0 = await q.evaluate(() => [...document.querySelectorAll('.hu3-fx dd')].filter(e => e.textContent.trim() === '0').length); const html2 = await q.content();
+            ok(!big0 && !/로그인 후 볼 수 있습니다/.test(html2), `[cmdledger/${ty}] 숫자 0 노출 없음 · 「로그인 후 볼 수 있습니다」 중복 카드 없음`);
+            ok(!/한 표로/.test(m.txt) || /hu3-lh/.test(html2), `[cmdledger/${ty}] 「한 표로」 제목이면 표가 있음`);
+            if (ty === 'corp') ok(!(await q.evaluate(() => [...document.querySelectorAll('.hu3 .hu3-lr b')].some(b => /성희롱|온보딩|개인정보보호|리더십/.test(b.textContent)))), `[cmdledger/corp] 지정 회원 과정명을 공개 첫 화면에 내지 않음`); }
           if (ty === 'univ') ok(/학번 · 학과로만/.test(m.txt) && m.inputs === 0 && !/휴대폰|전화번호|주민|생년월일/.test(m.txt), `[${ID}/univ] 개인정보 — 학번 · 학과만, 입력칸 0`); }
         if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await q.screenshot({ path: path.join(SHOT, `${ty}-${ID}-${w}.png`) }); }
         await c2.close(); }
