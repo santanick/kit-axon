@@ -18,7 +18,7 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
   const learner = async (pg, tid, w, h) => { await pg.setViewportSize({ width: w, height: h }); await pg.goto('about:blank'); await pg.goto(base + 'learner.html?t=' + tid + '&r=' + Date.now() + '#home');
     await pg.waitForFunction(() => document.querySelector('.smhost') && document.querySelector('.smhost').shadowRoot, null, { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(700); await H.settle(pg);
     await pg.evaluate(async () => { const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); R.forEach(r => r.querySelectorAll('img[loading=lazy]').forEach(i => { i.loading = 'eager'; }));
-      await Promise.all(R.flatMap(r => [...r.querySelectorAll('img')]).map(i => i.complete ? 0 : new Promise(ok2 => { i.onload = i.onerror = ok2; setTimeout(ok2, 3000); }))); try { await document.fonts.ready; } catch (e) { } }); };
+      await Promise.all(R.flatMap(r => [...r.querySelectorAll('img')]).map(i => i.complete ? 0 : new Promise(ok2 => { i.onload = i.onerror = ok2; setTimeout(ok2, 3000); }))); try { await document.fonts.ready; } catch (e) { } }); await pg.evaluate(async () => { scrollTo(0, 0); await new Promise(r => setTimeout(r, 600)); }); };
   const measure = (pg, sel) => pg.evaluate(SEL => { const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); const q = s => R.flatMap(r => [...r.querySelectorAll(s)]);
     const vis = el => { const b = el.getBoundingClientRect(); const cs = getComputedStyle(el); return b.width > 0 && b.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden'; };
     const small = [], tap = [], wide = [], brk = [];
@@ -30,9 +30,15 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
     const links = q('.k4-h a[href], .k4-s a[href]').map(a => a.getAttribute('href'));
     const h1 = q('.k4-h h1').filter(vis)[0]; const h1n = h1 ? Math.round(h1.getBoundingClientRect().height / parseFloat(getComputedStyle(h1).lineHeight)) : 0;
     const h1fs = h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0;
+    /* 첫 화면 제목 위쪽이 머리글에 가려지지 않음: 제목 첫 줄 위쪽 몇 점에서 맨 위 요소가 제목인지 */
+    const cover = (() => { if (!h1) return 'no h1'; const b = h1.getBoundingClientRect(); if (b.top < 0) return 'top ' + Math.round(b.top); const sr = h1.getRootNode(); const host = sr.host;
+      const xs = [b.left + 12, b.left + Math.min(b.width, 300) / 2]; const bad = [];
+      xs.forEach(x => { const y = b.top + Math.min(24, b.height / 4); const top = document.elementFromPoint(x, y); if (top !== host && !(host && host.contains(top))) bad.push(`${Math.round(x)},${Math.round(y)} ${top && top.tagName}.${top && top.className}`); else { const inn = sr.elementFromPoint ? sr.elementFromPoint(x, y) : null; if (inn && !inn.closest('h1') && !inn.closest('.k4-h')) bad.push(`inner ${inn.tagName}.${inn.className}`); } });
+      return bad.join(' | '); })();
+    const sy0 = scrollY;
     const topImg = q('.k4-h img').filter(vis).some(im => { const b = im.getBoundingClientRect(); return b.top < innerHeight && b.bottom > 0 && b.height >= 100 && im.complete && im.naturalWidth > 0; });
     const secs = SEL.filter(s => q(s).some(vis)); const txt = R.map(r => r.textContent).join(' ');
-    return { over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, inputs: q('.k4-h input, .k4-s input, .k4-s form').length, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.k4-h h1, .k4-fin h2').map(x => x.textContent).join('')) }; }, sel);
+    return { cover, sy0, over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, inputs: q('.k4-h input, .k4-s input, .k4-s form').length, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.k4-h h1, .k4-fin h2').map(x => x.textContent).join('')) }; }, sel);
   const allowed = h => /^(#login\/(family|my|mypay)|#join|#p-c-[\w-]+|#p-m-[\w-]+|#class\/[\w-]+|#courses|#shop|#notice|tel:[\d+]+|mailto:.+)$/.test(h);
   try {
     for (const type of ['k12']) {
@@ -48,19 +54,20 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
       for (const id of IDS) {
         const r = await H.applyTpl(o.op, 't44-' + id); ok(!r.err && r.theme === id, `[${type}] ${id} 템플릿 적용 · 게시(${r.err || r.theme})`);
         const pg = await o.ctx.newPage(); const perr = []; pg.on('pageerror', e => perr.push(e.message.slice(0, 160)));
-        for (const [w, h] of [[1440, 900], [390, 844]]) {
+        for (const [w, h] of [[1440, 900], [1280, 800], [390, 844]]) {
           await learner(pg, o.tid, w, h); const m = await measure(pg, SECS[id]); const tag = `[${type} ${w}] ${id}`;
           ok(m.secs.length === SECS[id].length, `${tag} 섹션 ${SECS[id].length}종 표시(${m.secs.join(' ')})`);
           ok(m.over <= 0 && !m.wide.length, `${tag} 가로 넘침 0(${m.over} ${m.wide.join(',')})`);
           ok(m.h1n >= 1 && m.h1n <= H1MAX[id][w === 390 ? 1 : 0] && m.h1fs >= (w === 390 ? 36 : 64), `${tag} 첫 화면 제목 ${m.h1fs}px · ${m.h1n}줄`);
           ok(m.topImg, `${tag} 첫 화면 안에 실사진`);
+          ok(!m.cover && m.sy0 === 0, `${tag} 첫 화면 제목 위쪽이 머리글에 가려지지 않음(${m.cover || 'ok'} · scrollY ${m.sy0})`);
           ok(!m.small.length, `${tag} 13px 미만 글자 0(${m.small.join(',')})`);
           ok(!m.tap.length, `${tag} 누르는 칸 44px 이상(${m.tap.join(',')})`);
           ok(!m.brk.length, `${tag} 한 글자 꺾임 0(${m.brk.join(',')})`);
           ok(m.links.length >= 8 && m.links.every(allowed), `${tag} 버튼 · 링크가 실제 학습자 경로(${[...new Set(m.links)].join(' ')})`);
           ok(type !== 'k12' || ['#login/family', '#login/my', '#login/mypay'].every(x => m.links.includes(x)), `${tag} 학부모 · 학생 · 결제 바로 가기`);
           ok(!m.inputs && !m.phone && !m.star, `${tag} 개인정보 입력칸 · 수집 문구 · 강조 기호 노출 없음`);
-          if (A.shots) { const fs = require('fs'); fs.mkdirSync(A.shots, { recursive: true }); const f = `${A.shots}/${id}_${type}_${w === 390 ? 'm' : 'pc'}`;
+          if (A.shots) { const fs = require('fs'); fs.mkdirSync(A.shots, { recursive: true }); const f = `${A.shots}/${id}_${type}_${w === 390 ? 'm' : w === 1280 ? 'pc1280' : 'pc'}`;
             await pg.screenshot({ path: f + '_top.jpg', type: 'jpeg', quality: 80 }); await pg.evaluate(async () => { for (let y = 0; y < document.documentElement.scrollHeight; y += 700) { scrollTo(0, y); await new Promise(r2 => setTimeout(r2, 60)); } scrollTo(0, 0); const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); await Promise.all(R.flatMap(r => [...r.querySelectorAll('img')]).map(i => i.complete ? (i.decode ? i.decode().catch(() => 0) : 0) : new Promise(ok2 => { i.onload = i.onerror = ok2; setTimeout(ok2, 4000); }))); }); await pg.waitForTimeout(800); await pg.screenshot({ path: f + '_full.jpg', type: 'jpeg', quality: 70, fullPage: true }); }
           if (w === 1440) { const c = m.links.find(x => /^#(class\/|p-c-)/.test(x)); if (c) { await pg.evaluate(hh => { const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); const a = R.flatMap(r2 => [...r2.querySelectorAll(`.k4-s a[href="${hh}"]`)])[0]; if (a) a.click(); }, c); await pg.waitForTimeout(800);
             ok(await pg.evaluate(() => /^#(class|p-c)/.test(location.hash) && (document.body.innerText || '').length > 50), `${tag} 반 카드 → 반 상세 이동(${c} → ${await pg.evaluate(() => location.hash)})`); } else ok(false, `${tag} 반 링크 없음`); }
