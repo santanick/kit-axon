@@ -28,7 +28,7 @@ import static egovframework.didisam.cmm.Js.*;
  */
 @Service("pubService")
 public class PubServiceImpl extends EgovAbstractServiceImpl implements PubService {
-    public static final int LP_MAX = 256 * 1024;
+    public static final int LP_MAX = 512 * 1024; /* v43.6 셀프러닝 노트(lp.notes)로 256KB → 512KB — Node app.js와 같음 */
     static final Pattern TID_RE = Pattern.compile("tn_[a-z0-9]{8,16}"), SID_RE = Pattern.compile("[A-Za-z0-9_-]{4,20}"), UUIDISH = Pattern.compile("[0-9a-f-]{36}"),
         LPKEY = Pattern.compile("[\\w-]{1,40}"), DAY = Pattern.compile("\\d{4}-\\d{2}-\\d{2}"), HREF = Pattern.compile("#[\\w/%-]{0,120}"), ASKID = Pattern.compile("[\\w-]{1,24}"),
         MODEL_STRIP = Pattern.compile("^claude-|-\\d[^\\n\\r\\u2028\\u2029]*\\z");
@@ -324,6 +324,8 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         }
         { ObjectNode tb = cleanTube(get(lp, "tube")); if (tb != null) o.set("tube", tb); } /* v39 디디쌤 튜브 — Node cleanTube와 같은 규칙 */
         { ArrayNode cal = cleanCal(get(lp, "cal")); if (cal != null) o.set("cal", cal); } /* v37.4 학습 캘린더 '내 일정' — Node lpcal.js와 같은 규칙 */
+        { ObjectNode nt = cleanNotes(get(lp, "notes")); if (nt != null) o.set("notes", nt); } /* v43.6 셀프러닝 노트 — Node lpnotes.js와 같은 규칙 */
+        { ObjectNode cn = cleanConn(get(lp, "conn")); if (cn != null) o.set("conn", cn); } /* v43.6 학습자 연결(gcal · gh · push) */
         return o;
     }
 
@@ -346,6 +348,72 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         ArrayNode out = F.arrayNode(); int bytes = 2;
         for (ObjectNode y : by.values()) { if (out.size() >= CAL_MAX) break; int n = stringify(y).getBytes(java.nio.charset.StandardCharsets.UTF_8).length + 1; if (bytes + n > CAL_BYTES) break; bytes += n; out.add(y); }
         return out;
+    }
+
+    /* v43.6 셀프러닝 노트 lp.notes · 학습자 연결 lp.conn — Node service/server/lpnotes.js와 같은 규칙(tests/lpnotes-vectors.json으로 대조) */
+    static final int N_MAX = 120, K_MAX = 300, M_MAX = 300, NOTES_BYTES = 360 * 1024;
+    static final Pattern MKEY = Pattern.compile("(note|ask|cmt|post|log|eval|fb):[\\w.-]{1,60}");
+    static final Pattern NID = Pattern.compile("n[0-9a-z]{1,24}"), KID = Pattern.compile("k[0-9a-z]{1,24}"),
+        GH_URL = Pattern.compile("https://github\\.com/[\\w.-]+/[\\w.-]+"), CONN_MODE = Pattern.compile("[a-z]{1,12}");
+    static final List<String> NOTE_SRC = List.of("me", "tutor", "quiz", "yt", "file", "exam"), CARD_SRC = List.of("note", "quiz");
+    static boolean plainObj(JsonNode v) { return v != null && v.isObject(); }
+    static boolean isTrue(JsonNode v) { return v != null && v.isBoolean() && v.booleanValue(); }
+    static String nLine(JsonNode v, int n) { return cut(S(v).replaceAll("[<>]", "").replaceAll("[\\u0000-\\u001f\\u007f]", " ").strip(), n); }
+    static String nBody(JsonNode v, int n) { return cut(S(v).replaceAll("\\r\\n?", "\n").replaceAll("[\\u0000-\\u0008\\u000b-\\u001f\\u007f]", " "), n); }
+    static long nInt(JsonNode v, long lo, long hi, long d) { double x = round(num(v)); return Double.isNaN(x) || Double.isInfinite(x) ? d : (long) Math.min(hi, Math.max(lo, x)); }
+    static String strOf(JsonNode v) { return v != null && v.isTextual() ? v.asText() : ""; }
+    static ObjectNode cleanNote(JsonNode x) {
+        if (!plainObj(x) || !NID.matcher(sOr(get(x, "id"))).matches()) return null;
+        String t = nLine(get(x, "t"), 80), b = nBody(get(x, "b"), 1500); if (t.isEmpty() && b.strip().isEmpty()) return null;
+        ObjectNode y = F.objectNode(); y.put("id", sOr(get(x, "id"))); y.put("t", t); y.put("b", b);
+        String cid = sOr(get(x, "cid")), lid = sOr(get(x, "lid")); y.put("cid", LPKEY.matcher(cid).matches() ? cid : ""); y.put("lid", LPKEY.matcher(lid).matches() ? lid : "");
+        ArrayNode tags = y.putArray("tags"); List<String> seen = new ArrayList<>(); JsonNode tg = get(x, "tags");
+        for (JsonNode g : head(tg != null && tg.isArray() ? arr(tg) : List.of(), 20)) { String s = nLine(g, 20).replaceFirst("^#", ""); if (!s.isEmpty() && !seen.contains(s)) { seen.add(s); tags.add(s); } if (seen.size() >= 5) break; }
+        String src = strOf(get(x, "src")); y.put("src", NOTE_SRC.contains(src) ? src : "me");
+        y.put("st", "ok".equals(strOf(get(x, "st"))) ? "ok" : "draft"); y.put("pin", isTrue(get(x, "pin")));
+        y.put("at", nLine(get(x, "at"), 30)); y.put("up", nLine(get(x, "up"), 30));
+        return y;
+    }
+    static ObjectNode cleanCard(JsonNode x) {
+        if (!plainObj(x) || !KID.matcher(sOr(get(x, "id"))).matches()) return null;
+        String f = nLine(get(x, "f"), 120); if (f.isEmpty()) return null;
+        double e = num(get(x, "ef")); if (Double.isNaN(e) || Double.isInfinite(e)) e = 2.5; e = round(Math.min(2.8, Math.max(1.3, e)) * 100) / 100;
+        String nid = sOr(get(x, "nid")), due = sOr(get(x, "due")), src = strOf(get(x, "src"));
+        ObjectNode y = F.objectNode(); y.put("id", sOr(get(x, "id"))); y.put("nid", NID.matcher(nid).matches() ? nid : ""); y.put("f", f); y.put("k", nBody(get(x, "k"), 240));
+        y.put("due", DAY.matcher(due).matches() ? due : java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).toString());
+        y.set("iv", numNode(nInt(get(x, "iv"), 1, 180, 1))); y.set("ef", numNode(e)); y.set("n", numNode(nInt(get(x, "n"), 0, 9999, 0))); y.put("src", CARD_SRC.contains(src) ? src : "note");
+        return y;
+    }
+    public static ObjectNode cleanNotes(JsonNode N) {
+        if (!plainObj(N)) return null;
+        ObjectNode o = F.objectNode(); o.put("v", 1); ArrayNode items = o.putArray("items"), cards = o.putArray("cards");
+        java.util.Set<String> seen = new java.util.HashSet<>(); JsonNode A = get(N, "items");
+        for (JsonNode x : head(A != null && A.isArray() ? arr(A) : List.of(), N_MAX * 2)) { ObjectNode y = cleanNote(x); if (y == null || !seen.add(y.get("id").asText())) continue; items.add(y); if (items.size() >= N_MAX) break; }
+        java.util.Set<String> ks = new java.util.HashSet<>(); JsonNode K = get(N, "cards");
+        for (JsonNode x : head(K != null && K.isArray() ? arr(K) : List.of(), K_MAX * 2)) { ObjectNode y = cleanCard(x); if (y == null || !ks.add(y.get("id").asText())) continue; cards.add(y); if (cards.size() >= K_MAX) break; }
+        for (JsonNode c : cards) { String nid = c.get("nid").asText(); if (!nid.isEmpty() && !seen.contains(nid)) ((ObjectNode) c).put("nid", ""); }
+        JsonNode g = get(N, "goal"); o.putNull("goal");
+        if (plainObj(g)) { String exam = nLine(get(g, "exam"), 40), date = sOr(get(g, "date")); if (!exam.isEmpty() && DAY.matcher(date).matches()) { ObjectNode y = o.putObject("goal"); y.put("exam", exam); y.put("date", date); } }
+        ObjectNode sy = o.putObject("sync"); JsonNode S0 = get(N, "sync");
+        if (plainObj(S0)) {
+            JsonNode no = get(S0, "notion"), gd = get(S0, "gdocs");
+            if (plainObj(no)) { ObjectNode y = sy.putObject("notion"); y.put("on", isTrue(get(no, "on"))); y.put("at", nLine(get(no, "at"), 30)); y.put("page", nLine(get(no, "page"), 60)); }
+            if (plainObj(gd)) { ObjectNode y = sy.putObject("gdocs"); y.put("on", isTrue(get(gd, "on"))); y.put("at", nLine(get(gd, "at"), 30)); }
+        }
+        ObjectNode mk = o.putObject("marks"); JsonNode M0 = get(N, "marks"); /* 모아보기 표시 { '<출처>:<id>': { pin, hide } } ≤300 */
+        if (plainObj(M0)) { int c = 0; for (var e : entries(M0)) { if (c >= M_MAX) break; JsonNode v = e.getValue(); if (!MKEY.matcher(e.getKey()).matches() || !plainObj(v)) continue; boolean pin = isTrue(get(v, "pin")), hide = isTrue(get(v, "hide")), sn = isTrue(get(v, "seen")); if (!pin && !hide && !sn) continue; ObjectNode y = mk.putObject(e.getKey()); y.put("pin", pin); y.put("hide", hide); y.put("seen", sn); c++; } }
+        /* 크기 안전장치: 오래된(뒤쪽) 노트부터 뺀다 */
+        while (items.size() > 0 && stringify(o).getBytes(java.nio.charset.StandardCharsets.UTF_8).length > NOTES_BYTES) { String gone = items.remove(items.size() - 1).get("id").asText(); for (JsonNode c : cards) if (gone.equals(c.get("nid").asText())) ((ObjectNode) c).put("nid", ""); }
+        while (cards.size() > 0 && stringify(o).getBytes(java.nio.charset.StandardCharsets.UTF_8).length > NOTES_BYTES) cards.remove(cards.size() - 1);
+        return o;
+    }
+    public static ObjectNode cleanConn(JsonNode C) {
+        if (!plainObj(C)) return null; ObjectNode o = F.objectNode();
+        JsonNode gc = get(C, "gcal"), gh = get(C, "gh"), pu = get(C, "push");
+        if (plainObj(gc)) { String m = sOr(get(gc, "mode")); ObjectNode y = o.putObject("gcal"); y.put("on", isTrue(get(gc, "on"))); y.put("mode", CONN_MODE.matcher(m).matches() ? m : ""); y.put("at", nLine(get(gc, "at"), 30)); }
+        if (plainObj(gh)) { String u = sOr(get(gh, "url")).strip().replaceAll("/+$", ""); if (u.length() <= 200 && GH_URL.matcher(u).matches()) { ObjectNode y = o.putObject("gh"); y.put("on", isTrue(get(gh, "on"))); y.put("url", u); y.put("at", nLine(get(gh, "at"), 30)); } }
+        if (plainObj(pu)) { ObjectNode y = o.putObject("push"); y.put("on", isTrue(get(pu, "on"))); y.put("at", nLine(get(pu, "at"), 30)); }
+        return o;
     }
 
     /** n.toLocaleString('ko-KR') */

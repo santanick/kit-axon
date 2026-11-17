@@ -56,8 +56,8 @@ const AIH_USE = { claude: 'AI SAM 답변 품질', mcp: '외부 AI 앱 연결', s
 function aihConnHTML() {
   if (aihTeacher()) return aihTConnHTML();
   if (typeof CN === 'undefined') return '';
-  const ids = CN_IDS.filter(id => CN[id]); const on = ids.filter(id => cnStatus(id).st === CN_ST.on).length;
-  return `<section class="aih-sec" aria-labelledby="aihCn"><div class="aih-sh"><h2 id="aihCn">Connect <small>업무 툴 연결 ${on}/${ids.length}</small></h2><span class="sp"></span>${S.me.role === 'owner' ? `<button type="button" class="aih-lk" data-act="go" data-v="conn">전체 보기</button>` : ''}</div>
+  const all = (typeof cnIds === 'function' ? cnIds() : CN_IDS).filter(id => CN[id]); const on = all.filter(id => cnStatus(id).st === CN_ST.on).length; /* v43.5 연결이 13종으로 늘어 홈에는 켜진 · 진행 중 연결을 먼저, 6개까지만 */ const ids = [...all.filter(id => cnStatus(id).st !== CN_ST.off), ...all.filter(id => cnStatus(id).st === CN_ST.off)].slice(0, 6);
+  return `<section class="aih-sec" aria-labelledby="aihCn"><div class="aih-sh"><h2 id="aihCn">Connect <small>업무 툴 연결 ${on}/${all.length}</small></h2><span class="sp"></span>${S.me.role === 'owner' ? `<button type="button" class="aih-lk" data-act="go" data-v="conn">전체 보기</button>` : ''}</div>
     <div class="aih-cn">${ids.map(id => { const s = cnStatus(id); const d = CN[id]; const tone = s.st === CN_ST.on ? 'on' : s.st === CN_ST.chk ? 'chk' : '';
       return `<button type="button" class="aih-cc ${tone}" data-act="cn-open" data-v="${id}" aria-label="${esc(d.name)} — ${esc(s.st)}. 연결 안내 열기">${typeof brandLogo === 'function' ? brandLogo(id, 40, d.name) : `<span class="aih-lg" style="--c:${esc(d.col)}">${esc(d.logo)}</span>`}<span class="aih-cm"><b>${esc(d.name.replace(' API 키', '').replace('(외부 AI 연결)', ''))}</b><small>${esc(s.st === CN_ST.on ? s.st : s.st === CN_ST.chk ? s.st : AIH_USE[id] || d.use.split(' · ')[0])}</small></span><i class="aih-dot" aria-hidden="true"></i></button>`; }).join('')}</div></section>`;
 }

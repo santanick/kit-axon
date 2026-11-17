@@ -173,7 +173,7 @@ function lrender() {
   const app = $('#lapp'); if (!SITE()) { app.innerHTML = `<div class="lerr"><b>학습자 사이트</b><p>${esc(LR.err || '불러오는 중…')}</p></div>`; return; }
   LPHOTO_USED = new Set(); LPHOTO_MEMO = new Map(); /* v43 Q2: 화면마다 사진 중복 금지 */
   const { a, b } = route(); let inner, cur = a;
-  if (a === 't') { inner = viewTut(b); cur = 'tutorials'; } else if (a === 'c') { inner = viewCourse(b, route().b && decodeURIComponent(location.hash.slice(1)).split('/')[2]); cur = 'courses'; }
+  if (a === 't') { inner = viewTut(b); cur = 'tutorials'; } else if (a === 'c') { inner = viewCourse(b, route().b && (decodeURIComponent(location.hash.slice(1)).split('/')[2] || '').split('?')[0]); /* v43.6 노트 시각 칩 #c/<cid>/<lid>?t=초 — 레슨 id 뒤 ?는 떼고 연다 */ cur = 'courses'; }
   else if (a === 'dg') { inner = viewDiag(b); cur = 'diag'; } else if (a === 'cert') { inner = viewCert(b); cur = 'my'; } else if (a === 'badge') { inner = viewBadgeCert(b); cur = 'my'; } else if (a === 'bk' && typeof viewBook === 'function') { const n = decodeURIComponent(location.hash.slice(1)).split('/')[2]; inner = viewBook(b, n ? Math.max(0, (parseInt(n, 10) || 1) - 1) : null); cur = 'books'; } else if (a === 'bkcert' && typeof viewBookCert === 'function') { inner = viewBookCert(b); cur = 'my'; }
   else if (a === 'login') { inner = LR.me ? viewMy() : viewLogin(route().rest); } else inner = viewPage(a);
   document.body.className = 'look-' + (SITE().look || 'clean') + (LR.mode === 'preview' ? ' pv' : '');

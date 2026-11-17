@@ -1,0 +1,340 @@
+[
+ {
+  "name": "정상 노트 · 카드 · 목표 · 동기화",
+  "kind": "notes",
+  "in": {
+   "v": 1,
+   "items": [
+    {
+     "id": "nabc1",
+     "t": "  변수와 자료형  ",
+     "b": "- 정수 `int`\n- **실수** float\r\n코드 a < b",
+     "cid": "c1",
+     "lid": "i-2",
+     "tags": [
+      "#파이썬",
+      "기초",
+      "기초",
+      "",
+      "a",
+      "b",
+      "c",
+      "d"
+     ],
+     "src": "tutor",
+     "st": "draft",
+     "pin": true,
+     "at": "2026-11-17T01:00:00.000Z",
+     "up": "2026-11-17T01:00:00.000Z",
+     "name": "홍길동",
+     "phone": "010-1234-5678"
+    }
+   ],
+   "cards": [
+    {
+     "id": "k1",
+     "nid": "nabc1",
+     "f": "int는?",
+     "k": "정수",
+     "due": "2026-11-18",
+     "iv": 3,
+     "ef": 2.5,
+     "n": 1,
+     "src": "note",
+     "x": 1
+    }
+   ],
+   "goal": {
+    "exam": "정보처리기사",
+    "date": "2027-03-01",
+    "sid": "20260001"
+   },
+   "sync": {
+    "notion": {
+     "on": true,
+     "at": "2026-11-17T01:00:00.000Z",
+     "page": "학습 노트",
+     "key": "secret_abcdef"
+    },
+    "gdocs": {
+     "on": false,
+     "at": ""
+    },
+    "evil": {
+     "on": true
+    }
+   },
+   "extra": "버림",
+   "marks": {
+    "ask:eq1": {
+     "pin": true,
+     "hide": false,
+     "x": 1
+    },
+    "post:po_2": {
+     "pin": false,
+     "hide": true
+    },
+    "cmt:c3": {
+     "pin": false,
+     "hide": false
+    },
+    "bad key": {
+     "pin": true
+    },
+    "note:n1": "yes",
+    "fb:po_1.cls": {
+     "seen": true
+    }
+   }
+  },
+  "out": {
+   "v": 1,
+   "items": [
+    {
+     "id": "nabc1",
+     "t": "변수와 자료형",
+     "b": "- 정수 `int`\n- **실수** float\n코드 a < b",
+     "cid": "c1",
+     "lid": "i-2",
+     "tags": [
+      "파이썬",
+      "기초",
+      "a",
+      "b",
+      "c"
+     ],
+     "src": "tutor",
+     "st": "draft",
+     "pin": true,
+     "at": "2026-11-17T01:00:00.000Z",
+     "up": "2026-11-17T01:00:00.000Z"
+    }
+   ],
+   "cards": [
+    {
+     "id": "k1",
+     "nid": "nabc1",
+     "f": "int는?",
+     "k": "정수",
+     "due": "2026-11-18",
+     "iv": 3,
+     "ef": 2.5,
+     "n": 1,
+     "src": "note"
+    }
+   ],
+   "goal": {
+    "exam": "정보처리기사",
+    "date": "2027-03-01"
+   },
+   "sync": {
+    "notion": {
+     "on": true,
+     "at": "2026-11-17T01:00:00.000Z",
+     "page": "학습 노트"
+    },
+    "gdocs": {
+     "on": false,
+     "at": ""
+    }
+   },
+   "marks": {
+    "ask:eq1": {
+     "pin": true,
+     "hide": false,
+     "seen": false
+    },
+    "post:po_2": {
+     "pin": false,
+     "hide": true,
+     "seen": false
+    },
+    "fb:po_1.cls": {
+     "pin": false,
+     "hide": false,
+     "seen": true
+    }
+   }
+  }
+ },
+ {
+  "name": "잘못된 값 정리(id · src · st · pin · 범위 · 중복 · 고아 카드)",
+  "kind": "notes",
+  "in": {
+   "items": [
+    {
+     "id": "N1",
+     "t": "대문자 id"
+    },
+    {
+     "id": "n2",
+     "t": "",
+     "b": "   "
+    },
+    {
+     "id": "n3",
+     "t": "<b>제목</b>\u0007",
+     "b": "본문",
+     "cid": "과정 한글",
+     "src": "hack",
+     "st": "ok",
+     "pin": "true"
+    },
+    {
+     "id": "n3",
+     "t": "중복"
+    },
+    "문자열"
+   ],
+   "cards": [
+    {
+     "id": "k2",
+     "nid": "n9",
+     "f": "앞",
+     "k": "뒤",
+     "due": "2026-11-20",
+     "iv": 999,
+     "ef": 9,
+     "n": -3,
+     "src": "x"
+    },
+    {
+     "id": "k3",
+     "f": "",
+     "k": "뒤"
+    },
+    {
+     "id": "k4",
+     "f": "앞2",
+     "due": "2026-11-20",
+     "iv": "2",
+     "ef": 1.0,
+     "n": 2.6,
+     "src": "quiz"
+    }
+   ],
+   "goal": {
+    "exam": "",
+    "date": "2027-01-01"
+   },
+   "sync": []
+  },
+  "out": {
+   "v": 1,
+   "items": [
+    {
+     "id": "n3",
+     "t": "b제목/b",
+     "b": "본문",
+     "cid": "",
+     "lid": "",
+     "tags": [],
+     "src": "me",
+     "st": "ok",
+     "pin": false,
+     "at": "",
+     "up": ""
+    }
+   ],
+   "cards": [
+    {
+     "id": "k2",
+     "nid": "",
+     "f": "앞",
+     "k": "뒤",
+     "due": "2026-11-20",
+     "iv": 180,
+     "ef": 2.8,
+     "n": 0,
+     "src": "note"
+    },
+    {
+     "id": "k4",
+     "nid": "",
+     "f": "앞2",
+     "k": "",
+     "due": "2026-11-20",
+     "iv": 2,
+     "ef": 1.3,
+     "n": 3,
+     "src": "quiz"
+    }
+   ],
+   "goal": null,
+   "sync": {},
+   "marks": {}
+  }
+ },
+ {
+  "name": "notes가 객체가 아니면 없음",
+  "kind": "notes",
+  "in": [
+   1,
+   2
+  ],
+  "out": null
+ },
+ {
+  "name": "연결: gcal · gh · push, 그 밖의 키와 토큰 버림",
+  "kind": "conn",
+  "in": {
+   "gcal": {
+    "on": true,
+    "mode": "demo",
+    "at": "2026-11-17T01:00:00.000Z",
+    "token": "ya29.x"
+   },
+   "gh": {
+    "on": true,
+    "url": "https://github.com/santa/hw1/",
+    "at": "2026-11-17",
+    "token": "ghp_x"
+   },
+   "push": {
+    "on": false,
+    "at": ""
+   },
+   "kakao": {
+    "on": true
+   }
+  },
+  "out": {
+   "gcal": {
+    "on": true,
+    "mode": "demo",
+    "at": "2026-11-17T01:00:00.000Z"
+   },
+   "gh": {
+    "on": true,
+    "url": "https://github.com/santa/hw1",
+    "at": "2026-11-17"
+   },
+   "push": {
+    "on": false,
+    "at": ""
+   }
+  }
+ },
+ {
+  "name": "연결: github.com 외 주소 · 잘못된 mode 버림",
+  "kind": "conn",
+  "in": {
+   "gcal": {
+    "on": "yes",
+    "mode": "Demo!"
+   },
+   "gh": {
+    "on": true,
+    "url": "http://evil.com/a/b"
+   }
+  },
+  "out": {
+   "gcal": {
+    "on": false,
+    "mode": "",
+    "at": ""
+   }
+  }
+ }
+]
