@@ -7,7 +7,7 @@ const http = require('node:http'); const fs = require('node:fs'); const path = r
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../../didisam'); const SHOT = process.argv[2] || '';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.svg': 'image/svg+xml' };
-const T = { coursedesk: ['univ', 'lifelong', 'k12'], learnpath: ['univ', 'voc'], cmdledger: ['corp', 'public', 'univ'] };
+const T = { coursedesk: ['univ', 'lifelong', 'k12', 'corp', 'public'], learnpath: ['univ', 'voc', 'corp', 'public'], cmdledger: ['corp', 'public', 'univ'] };
 const BAD = { univ: /필수 교육|LEARNING CENTER|업무에 필요한/, k12: /필수 교육|LEARNING CENTER|이번 학기/, lifelong: /LEARNING CENTER|업무에 필요한/, voc: /LEARNING CENTER/, corp: /이번 학기/, public: /LEARNING CENTER|업무에 필요한/ };
 (async () => {
   const srv = http.createServer((q, r) => { const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); }).listen(0, '127.0.0.1');
@@ -40,7 +40,10 @@ const BAD = { univ: /필수 교육|LEARNING CENTER|업무에 필요한/, k12: /�
             ok(!big0 && !/로그인 후 볼 수 있습니다/.test(html2), `[cmdledger/${ty}] 숫자 0 노출 없음 · 「로그인 후 볼 수 있습니다」 중복 카드 없음`);
             ok(!/한 표로/.test(m.txt) || /hu3-lh/.test(html2), `[cmdledger/${ty}] 「한 표로」 제목이면 표가 있음`);
             if (ty === 'corp') ok(!(await q.evaluate(() => [...document.querySelectorAll('.hu3 .hu3-lr b')].some(b => /성희롱|온보딩|개인정보보호|리더십/.test(b.textContent)))), `[cmdledger/corp] 지정 회원 과정명을 공개 첫 화면에 내지 않음`); }
+          if (ty === 'corp' || ty === 'public') { const html3 = await q.content(); const npub = await p.evaluate(() => S.classes.filter(c => c.open === '전체' && c.status !== '종료').length);
+            ok(!/로그인 후 볼 수 있습니다/.test(html3) && (npub || !/접수 중인 강좌|모집 중 0|접수 중 0/.test(m.txt)) && (npub || ty !== 'public' || !/>시민</.test(html3)), `[${ID}/${ty}] 공개 강좌 ${npub}개 — 빈 상태 안내 · 빈 카드 없음 · 직원형 공공 「시민」 갈래 없음`); }
           if (ty === 'univ') ok(/학번 · 학과로만/.test(m.txt) && m.inputs === 0 && !/휴대폰|전화번호|주민|생년월일/.test(m.txt), `[${ID}/univ] 개인정보 — 학번 · 학과만, 입력칸 0`); }
+        if (w === 390 && ID === 'cmdledger') { const hh = await q.evaluate(() => { const e = document.querySelector('.hu3'); return e ? Math.round(e.getBoundingClientRect().height) : 0; }); ok(hh < 1600, `[cmdledger/${ty} 390] 첫 화면 높이 ${hh}px`); }
         if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await q.screenshot({ path: path.join(SHOT, `${ty}-${ID}-${w}.png`) }); }
         await c2.close(); }
       ok(!errs.length, `[${ID}/${ty}] pageerror 0 ${errs.slice(0, 2).join(' | ')}`); await c.close(); }
