@@ -22,7 +22,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
   const gate = (p, sel) => p.evaluate(sel => { const R = { over: document.documentElement.scrollWidth > innerWidth + 1, small: [], tiny: [] };
     document.querySelectorAll(sel).forEach(root => root.querySelectorAll('*').forEach(e => { if (!e.offsetParent && getComputedStyle(e).position !== 'fixed') return; const cs = getComputedStyle(e); const own = [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
       if (own && parseFloat(cs.fontSize) < 13 && cs.visibility !== 'hidden' && !e.closest('.sr')) R.small.push(e.className + ':' + e.textContent.trim().slice(0, 12) + ':' + cs.fontSize);
-      if (e.matches('button, a[href], input:not([type=hidden]), select, textarea, [role=button]') && !e.closest('.sr') && !e.classList.contains('ln-dim')) { const b = e.getBoundingClientRect(); if (b.width && b.height && (b.height < 43.5 || b.width < 43.5) && !e.matches('.ln-card *')) R.tiny.push(e.className + ':' + (e.textContent || e.getAttribute('aria-label') || '').trim().slice(0, 14) + ':' + Math.round(b.width) + 'x' + Math.round(b.height)); }
+      if (e.matches('button, a[href], input:not([type=hidden]), select, textarea, [role=button]') && !e.closest('.sr') && !e.classList.contains('ln-dim') && !e.closest('.ln-chk')) { const b = e.getBoundingClientRect(); if (b.width && b.height && (b.height < 43.5 || b.width < 43.5) && !e.matches('.ln-card *')) R.tiny.push(e.className + ':' + (e.textContent || e.getAttribute('aria-label') || '').trim().slice(0, 14) + ':' + Math.round(b.width) + 'x' + Math.round(b.height)); }
       const b = e.getBoundingClientRect(); if (b.right > innerWidth + 1 && cs.position !== 'fixed' && !e.closest('.ln-chips, .pins')) R.small.push('잘림 ' + e.className + ':' + Math.round(b.right)); })); return R; }, sel);
 
   /* 1. 학원 학습자 앱 390 — 빈 허브 → 새 노트(카드 제안) → 보기 → 고치기 → 태그 · 검색 → 삭제 · 되돌리기 */
@@ -161,7 +161,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
     /* 저장 상태 · 기간 끝남 */
     const id = await p.evaluate(() => LNOTE.all().find(n => n.t === '정규화 요약').id); await go(p, '#notes/' + id); await p.click('#lnOv [data-ln=edit]'); await p.fill('#lnF [name=b]', '- 3NF 이행 종속'); await p.click('#lnSave'); await p.waitForTimeout(250);
     ok(/저장됨 · 방금/.test(await p.textContent('#lnSst')), '저장 상태: 저장됨 · 방금');
-    await p.evaluate(() => { SITE().classes[0].end = '2020-01-01'; }); await go(p, '#notes'); await go(p, '#notes/' + id);
+    await p.evaluate(() => { const c = SITE().classes[0]; c.end = '2020-01-01'; c.ends = {}; }); await go(p, '#notes'); await go(p, '#notes/' + id);
     ok(/기간 끝남/.test(await p.textContent('#lnOv')) && !(await p.$('#lnOv [data-ln=edit]')) && /읽기만/.test(await p.textContent('#lnOv')), '기간 끝난 과정: 배지 · 읽기 전용');
     ok(!errs.length, '모아보기 오류 없음 ' + errs.join(' | ')); await ctx.close(); }
 

@@ -6,7 +6,7 @@
    conn: gcal{on, mode, at} · gh{on, url(https://github.com/아이디/저장소만), at} · push{on, at}(앱 알림). 비밀값(토큰 · 키)은 받지 않는다. */
 const N_MAX = 120, K_MAX = 300, M_MAX = 300, NOTES_BYTES = 360 * 1024;
 const NID = /^n[0-9a-z]{1,24}$/, KID = /^k[0-9a-z]{1,24}$/, LID = /^[\w-]{1,40}$/, DAY = /^\d{4}-\d{2}-\d{2}$/;
-const MKEY = /^(note|q|cmt|post|log):[\w.-]{1,60}$/;
+const MKEY = /^(note|ask|cmt|post|log):[\w.-]{1,60}$/;
 const GH = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/, MODE = /^[a-z]{1,12}$/;
 const SRC = ['me', 'tutor', 'quiz', 'yt', 'file', 'exam'], CSRC = ['note', 'quiz'];
 const isObj = x => !!x && typeof x === 'object' && !Array.isArray(x);

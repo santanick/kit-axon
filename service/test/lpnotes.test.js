@@ -23,4 +23,4 @@ test('app.js cleanLP가 notes · conn을 남기고 LP_MAX는 512KB', () => {
   const src = require('node:fs').readFileSync(require.resolve('../server/app.js'), 'utf8');
   assert.match(src, /const LP_MAX = 512 \* 1024/); assert.match(src, /cleanNotes\(lp\.notes\)/); assert.match(src, /cleanConn\(lp\.conn\)/);
 });
-test('marks: 300개 제한 · 키 형식', () => { const m = {}; for (let i = 0; i < 350; i++) m['q:e' + i] = { pin: true }; const r = cleanNotes({ marks: m }); assert.strictEqual(Object.keys(r.marks).length, 300); assert.deepStrictEqual(cleanNotes({ marks: { 'x:1': { pin: true } } }).marks, {}); });
+test('marks: 300개 제한 · 키 형식', () => { const m = {}; for (let i = 0; i < 350; i++) m['ask:e' + i] = { pin: true }; const r = cleanNotes({ marks: m }); assert.strictEqual(Object.keys(r.marks).length, 300); assert.deepStrictEqual(cleanNotes({ marks: { 'x:1': { pin: true } } }).marks, {}); });

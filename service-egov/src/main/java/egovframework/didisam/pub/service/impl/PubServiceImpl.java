@@ -352,7 +352,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
 
     /* v43.6 셀프러닝 노트 lp.notes · 학습자 연결 lp.conn — Node service/server/lpnotes.js와 같은 규칙(tests/lpnotes-vectors.json으로 대조) */
     static final int N_MAX = 120, K_MAX = 300, M_MAX = 300, NOTES_BYTES = 360 * 1024;
-    static final Pattern MKEY = Pattern.compile("(note|q|cmt|post|log):[\\w.-]{1,60}");
+    static final Pattern MKEY = Pattern.compile("(note|ask|cmt|post|log):[\\w.-]{1,60}");
     static final Pattern NID = Pattern.compile("n[0-9a-z]{1,24}"), KID = Pattern.compile("k[0-9a-z]{1,24}"),
         GH_URL = Pattern.compile("https://github\\.com/[\\w.-]+/[\\w.-]+"), CONN_MODE = Pattern.compile("[a-z]{1,12}");
     static final List<String> NOTE_SRC = List.of("me", "tutor", "quiz", "yt", "file", "exam"), CARD_SRC = List.of("note", "quiz");
