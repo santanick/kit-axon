@@ -45,12 +45,19 @@ const IDS = Object.keys(T);
           document.querySelectorAll('body *').forEach(e => { if (!vis(e)) return; const t = [...e.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim()).map(n => n.textContent.trim()).join(''); if (!t) return; const fs = parseFloat(getComputedStyle(e).fontSize); const r = e.getBoundingClientRect();
             if (fs < 13) R.small.push(`${e.className}:${fs}:${t.slice(0, 10)}`); if ((r.right > vw + 1 || r.left < -1) && !scrollerOf(e)) R.out.push(t.slice(0, 10)); const lh = parseFloat(getComputedStyle(e).lineHeight) || fs * 1.4; if (t.length >= 2 && r.width < fs * 1.6 && r.height > lh * 1.8) R.wrap1.push(t.slice(0, 10)); });
           /* 44px: 새 섹션의 누르는 칸(링크 · 라벨) */
-          document.querySelectorAll('.hxl-hero a,.hxl-hero label,.hxl-find a,.hxl-find label,.hxl-elig a,.hxl-track a,.hxl-tbh a,.hxl-tbh label,.hxl-tbl a,.hxl-lhh a,.hxl-lhh label,.hxl-cat a').forEach(e => { if (!vis(e)) return; const r = e.getBoundingClientRect(); if (r.height < 44 || r.width < 44) R.t44.push(`${(e.textContent || '').trim().slice(0, 10)}:${Math.round(r.width)}x${Math.round(r.height)}`); });
+          document.querySelectorAll('.hpb-qc a,.hxl-dr a,.hxl-hero a,.hxl-hero label,.hxl-find a,.hxl-find label,.hxl-elig a,.hxl-track a,.hxl-tbh a,.hxl-tbh label,.hxl-tbl a,.hxl-lhh a,.hxl-lhh label,.hxl-cat a').forEach(e => { if (!vis(e)) return; const r = e.getBoundingClientRect(); if (r.height < 44 || r.width < 44) R.t44.push(`${(e.textContent || '').trim().slice(0, 10)}:${Math.round(r.width)}x${Math.round(r.height)}`); });
           return R; });
         ok(m.ow <= 0 && !m.out.length, `${P} ${tag} 가로 넘침 0 · 화면 밖 0 ${m.out.slice(0, 3).join(' | ')}`);
         ok(!m.small.length, `${P} ${tag} 13px 미만 0 ${m.small.slice(0, 3).join(' | ')}`);
         ok(!m.t44.length, `${P} ${tag} 누르는 칸 44px 이상 ${m.t44.slice(0, 3).join(' | ')}`);
         ok(!m.wrap1.length, `${P} ${tag} 한 글자 꺾임 0 ${m.wrap1.slice(0, 3).join(' | ')}`);
+        /* 심사 공통 ①: 숫자 띠 「공개 과정 N개」와 화면의 과정 수(칩 · 카드 · 표 · 링크된 과정)가 같아야 한다 */
+        const nm = await q.evaluate(() => { const f = [...document.querySelectorAll('.hps-facts dt,.hps-facts span,.hps-facts p')].find(e => /^공개 /.test(e.textContent.trim())); let n = null;
+          if (f) { const box = f.closest('div') || f.parentElement; const m0 = (box.textContent || '').match(/(\d+)\s*개/); n = m0 ? +m0[1] : null; }
+          const ids = new Set([...document.querySelectorAll('section[class*="hxl-"] a[href^="#p-c-"]')].map(a => a.getAttribute('href')));
+          const chip = document.querySelector('label[for="hxlf-all"] small'); const cards = document.querySelectorAll('.hxl-cc').length; const rows = document.querySelectorAll('.hxl-tb a.hxl-tr').length;
+          return { n, ids: ids.size, chip: chip ? +chip.textContent : null, cards: cards || null, rows: rows || null }; });
+        ok(nm.n != null && nm.ids === nm.n && [nm.chip, nm.cards, nm.rows].every(v => v == null || v === nm.n), `${P} ${tag} 과정 수 일치 — 숫자 띠 ${nm.n} · 링크 ${nm.ids} · 칩 ${nm.chip} · 카드 ${nm.cards} · 표 ${nm.rows}`);
         /* 첫 화면 방문자 고르기: 라벨을 누르면 그 사람의 할 일이 열린다 */
         if (ID === 'careernav') { const sw = await q.evaluate(async () => { const vis = s => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none'; }; const a0 = vis('.hxl-ans.a0') && !vis('.hxl-ans.a3'); document.querySelector('label[for="hxlp3"]').click(); await new Promise(r => setTimeout(r, 50)); return { a0, a3: vis('.hxl-ans.a3') && !vis('.hxl-ans.a0'), first: [...document.querySelectorAll('.hxl-ans.a3 a')].map(a => a.getAttribute('href')) }; });
         ok(sw.a0 && sw.a3 && sw.first.includes('#login/my'), `${P} ${tag} 「어떤 분이세요?」 전환 → ${ty === 'voc' ? '훈련생' : '수강생'} 할 일 ${sw.first.join(' ')}`); }

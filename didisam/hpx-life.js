@@ -38,7 +38,8 @@
   const ic = (k, n) => `<svg viewBox="0 0 24 24" width="${n || 20}" height="${n || 20}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${IC[k] || IC.arrow}"/></svg>`;
 
   /* ── 실제 데이터: 공개 과정 · 링크 ── */
-  const pubAll = () => { try { return (S.classes || []).filter(c => (c.open === '전체' || c.open == null) && c.status !== '종료' && c.name); } catch (e) { return []; } };
+  /* 숫자 띠(HPT.facts)와 같은 목록: 운영 중 과정이 있으면 그것만, 없으면 공개 과정 전체 — 같은 화면의 「공개 과정 N개」 · 칩 · 카드 수가 어긋나지 않게 */
+  const pubAll = () => { try { const L = (S.classes || []).filter(c => (c.open === '전체' || c.open == null) && c.status !== '종료' && c.name); const R = L.filter(c => c.status === '운영중'); return R.length ? R : L; } catch (e) { return []; } };
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
   const dot = d => String(d || '').slice(5, 10).replace('-', '.');
   const won = v => (+v || 0).toLocaleString('ko-KR') + '원';
@@ -149,7 +150,7 @@
   /* ── 국비 자격 미리 확인(3문항 · radio + :has) ── */
   function check(s) { const ask = askOf(s); const G = pubAll().filter(c => { const x = facts(c); return x.gov || x.free; });
     if (!isVoc()) return `<div class="hxl-ck"><p class="hxl-ckh">${ic('book', 20)}<span>수강 신청, 세 단계면 끝나요</span></p><ol class="hxl-cs"><li><b>과정 고르기</b><small>요일 · 시간 · 수강료를 비교해요</small></li><li><b>신청 · 결제</b><small>온라인으로 신청해요</small></li><li><b>강의실 입장</b><small>로그인하면 바로 시작해요</small></li></ol><div class="hxl-ab">${btn(clsList(s), '과정 고르기', 'p')}${btn(ask.h, ask.l, 'g', ask.ic)}</div></div>`;
-    const Q = ['구직 중이거나, 회사에 다니거나, 자영업을 하고 있어요', '공무원 · 사립학교 교직원이 아니에요', '대학 재학생이 아니에요(졸업 예정자는 괜찮아요)'];
+    const Q = ['구직 · 재직 · 자영업 중이에요', '공무원 · 사립학교 교직원이 아니에요', '재학생이 아니에요(졸업 예정자는 괜찮아요)'];
     return `<div class="hxl-ck" role="group" aria-label="국민내일배움카드 자격 미리 확인"><p class="hxl-ckh">${ic('card', 20)}<span>국비 자격, 3가지로 미리 확인해요</span></p>
 <ol class="hxl-cq">${Q.map((q, k) => `<li><p><i aria-hidden="true">${k + 1}</i><span>${E(q)}</span></p><div class="hxl-yn"><input class="hxl-r" type="radio" name="hxlq${k}" id="hxlq${k}y"><label for="hxlq${k}y">예</label><input class="hxl-r" type="radio" name="hxlq${k}" id="hxlq${k}n"><label for="hxlq${k}n">아니요</label></div></li>`).join('')}</ol>
 <div class="hxl-cr r0"><p>세 문항에 답하면 결과가 바로 보여요</p></div>
@@ -164,16 +165,17 @@
       : [[clsList(s), '전체 과정', 'book'], ['#login/my', '내 강의실', 'qr'], ['#login/cal', '수업 일정', 'cal'], [noticeH(s), '공지 · 소식', 'bell']];
     const bd = board();
     return `<section class="hpt hp-hero hps-hero hxl-tbh"><div class="hxl-w"><div class="hxl-tbg"><div class="hxl-tbl0">${d.eyebrow ? `<p class="hxl-ey3">${ic('cal', 16)}${E(d.eyebrow)}</p>` : ''}<h1>${lines(d).map(E).join('<br>')}</h1>${d.sub ? `<p class="hxl-sub">${E(d.sub)}</p>` : ''}
-<div class="hxl-ab">${btn(clsOr(s, G.length ? G : pubAll()), d.cta || (v ? '국비 과정 보기' : '과정 보기'), 'w')}${btn(ask.h, d.cta2 || ask.l, 'ow', ask.ic)}</div>
-<nav class="hxl-qk" aria-label="바로 가기"><p>${v ? '이미 훈련생이라면' : '이미 수강 중이라면'}</p><ul>${Q.map(([h, l, k]) => `<li><a ${aAttr(h)}>${ic(k, 18)}<span>${E(l)}</span></a></li>`).join('')}</ul></nav></div>
-${check(s)}</div>${bd ? `<div class="hxl-tbb">${bd}${figOf('hero', p, 'hxl-tph', true)}</div>` : ''}</div></section>`; }
+<div class="hxl-ab">${btn(clsOr(s, G.length ? G : pubAll()), d.cta || (v ? '국비 과정 보기' : '과정 보기'), 'w')}${btn(ask.h, d.cta2 || ask.l, 'ow', ask.ic)}</div></div>
+${check(s)}<nav class="hxl-qk" aria-label="바로 가기"><p>${v ? '이미 훈련생이라면' : '이미 수강 중이라면'}</p><ul>${Q.map(([h, l, k]) => `<li><a ${aAttr(h)}>${ic(k, 18)}<span>${E(l)}</span></a></li>`).join('')}</ul></nav></div></div></section>`; }
+  /* 개강 일정표 섹션(text hpt 'lf-board'): 첫 화면 판 아래에 반쯤 걸친 흰 카드 + 사진(PC). 휴대폰은 흰 바탕 다음 섹션, 사진 숨김 */
+  function boardSec(s, d) { const bd = board(); if (!bd) return ''; const p = typeof HS.photo === 'function' ? HS.photo(s, 'hero', null) : null; return `<div class="hxl-w"><div class="hxl-tbb">${bd}${figOf('hero', p, 'hxl-tph', true)}</div></div>`; }
 
   /* ── 과정 비교표(text hpt 'lf-table') — PC 표 · 휴대폰 카드 ── */
   function table(s, d) { const L = pubAll().map(c => [c, facts(c)]).slice(0, 8); if (!L.length) return ''; const all = pubAll().length; const v = isVoc();
     const H = ['과정', '기간', '요일 · 시간', v ? '수강료 · 지원' : '수강료', '수료'];
     const row = ([c, x]) => `<a class="hxl-tr" role="row" href="#p-c-${E(c.id)}"><span role="cell" class="c0"><b>${E(c.name)}</b><span class="hxl-tg">${x.gov ? '<span class="g">국비</span>' : ''}${x.emp ? '<span>사업주 · 재직자</span>' : ''}${x.lv ? `<span>${E(x.lv)}</span>` : ''}${stChip(x)}</span></span>
 <span role="cell" data-l="기간">${c.start ? E(`${dot(c.start)} – ${dot(c.end)}`) + (x.w ? `<small>${x.w}주</small>` : '') : '<small>상세에서 확인</small>'}</span>
-<span role="cell" data-l="요일 · 시간">${x.days ? E(whenOf(x)) : '<small class="q">상세에서 확인</small>'}${+c.hours ? `<small>총 ${+c.hours}시간</small>` : ''}</span>
+<span role="cell" data-l="요일 · 시간">${x.days ? E(whenOf(x)) : c.kind === 'period' ? '기간 내 자유 수강' : '<small class="q">일정 협의</small>'}${+c.hours ? `<small>총 ${+c.hours}시간</small>` : ''}</span>
 <span role="cell" data-l="${E(H[3])}"><b class="pr">${E(x.price)}</b></span><span role="cell" data-l="수료">${x.certOn ? `<span class="hxl-ce">${ic('cert', 16)}수료증</span>` : '<small>없음</small>'}</span><span class="hxl-ta" aria-hidden="true">${ic('arrow', 20)}</span></a>`;
     return `<div class="hxl-w"><div class="hxl-sh">${d.eyebrow ? `<p class="hxl-ey2">${E(d.eyebrow)}</p>` : ''}<h2>${E(d.title || '과정 비교표')}</h2>${d.sub ? `<p>${E(d.sub)}</p>` : ''}</div>
 <div class="hxl-tb" role="table" aria-label="과정 비교표"><div class="hxl-tr hxl-thd" role="row">${H.map(h => `<span role="columnheader">${E(h)}</span>`).join('')}<span></span></div>${L.map(row).join('')}</div>
@@ -183,14 +185,14 @@ ${check(s)}</div>${bd ? `<div class="hxl-tbb">${bd}${figOf('hero', p, 'hxl-tph',
   const DORD = [1, 2, 3, 4, 5, 6, 0];
   function dayFinder(s) { const L = pubAll().map(c => [c, facts(c), (Array.isArray(c.days) ? c.days : []).map(Number).filter(n => n >= 0 && n <= 6)]); const ask = askOf(s);
     const D = L.filter(r => r[2].length); const nD = L.length - D.length; const t = x => (x.tm || '').split('–')[0];
-    const item = ([c, x]) => `<li><a href="#p-c-${E(c.id)}"><span class="hxl-dt"><b>${E(t(x) || x.days)}</b>${t(x) ? `<small>${E(x.days)}</small>` : ''}</span><span class="hxl-dn"><b>${E(c.name)}</b><small>${E([c.start ? `${dot(c.start)} – ${dot(c.end)}` : '', x.price].filter(Boolean).join(' · '))}</small></span>${ic('arrow', 20)}</a></li>`;
+    const item = ([c, x]) => `<li><a href="#p-c-${E(c.id)}"><span class="hxl-dt"><b>${E(t(x) || x.days || (c.kind === 'period' ? '자유' : '협의'))}</b>${t(x) ? `<small>${E(x.days)}</small>` : !x.days ? `<small>${c.kind === 'period' ? '수강' : '상담'}</small>` : ''}</span><span class="hxl-dn"><b>${E(c.name)}</b><small>${E([c.start ? `${dot(c.start)} – ${dot(c.end)}` : '', x.price].filter(Boolean).join(' · '))}</small></span>${ic('arrow', 20)}</a></li>`;
     const rest = nD ? `<p class="hxl-dr">요일이 따로 적히지 않은 수업 ${nD}개는 <a href="${E(clsList(s))}">전체 수업</a>에서 볼 수 있어요.</p>` : '';
     if (!D.length) return `<div class="hxl-day"><div class="hxl-dh"><h2>지금 들을 수 있는 수업</h2></div><ul class="hxl-dl">${L.slice(0, 4).map(item).join('')}</ul></div>`;
     const by = k => D.filter(r => r[2].includes(k)); const sortT = A => A.slice().sort((a, b) => (t(a[1]) || '99').localeCompare(t(b[1]) || '99'));
-    const chips = `<input class="hxl-r" type="radio" name="hxld" id="hxld-a" checked><label for="hxld-a">전체</label>` + DORD.map(k => `<input class="hxl-r" type="radio" name="hxld" id="hxld${k}"><label for="hxld${k}"${by(k).length ? '' : ' class="z"'}>${WD[k]}</label>`).join('');
-    const pane = (id, A, nm) => `<div class="hxl-dp p${id}">${A.length ? `<p class="hxl-dc">${E(nm)} 수업 <b>${A.length}개</b></p><ul class="hxl-dl">${sortT(A).slice(0, 5).map(item).join('')}</ul>` : `<div class="hxl-de"><p>${E(nm)}에는 아직 수업이 없어요. 다른 요일을 골라 보거나 상담으로 물어보세요.</p>${btn(ask.h, ask.l, 'g', ask.ic)}</div>`}</div>`;
+    const chips = `<input class="hxl-r" type="radio" name="hxld" id="hxld-a" checked><label for="hxld-a">전체 <small>${L.length}</small></label>` + DORD.filter(k => by(k).length).map(k => `<input class="hxl-r" type="radio" name="hxld" id="hxld${k}"><label for="hxld${k}">${WD[k]} <small>${by(k).length}</small></label>`).join('');
+    const pane = (id, A, nm) => `<div class="hxl-dp p${id}">${A.length ? `<p class="hxl-dc">${E(nm)} 수업 <b>${A.length}개</b></p><ul class="hxl-dl">${(id === 'a' ? A : sortT(A)).slice(0, 6).map(item).join('')}</ul>` : `<div class="hxl-de"><p>${E(nm)}에는 아직 수업이 없어요. 다른 요일을 골라 보거나 상담으로 물어보세요.</p>${btn(ask.h, ask.l, 'g', ask.ic)}</div>`}</div>`;
     return `<div class="hxl-day" role="group" aria-label="요일로 찾기"><div class="hxl-dh"><h2>${ic('cal', 24)}<span>요일로 찾기</span></h2><p>다니기 편한 요일을 누르면 그날 수업만 보여요.</p></div><div class="hxl-dch">${chips}</div>
-${pane('a', D, '요일이 정해진')}${DORD.map(k => pane(k, by(k), WD[k] + '요일')).join('')}${rest}</div>`; }
+${pane('a', [...D, ...L.filter(r => !r[2].length)], '전체')}${DORD.filter(k => by(k).length).map(k => pane(k, by(k), WD[k] + '요일')).join('')}</div>`; }
   function heroLH(s, d) { const ph = k => typeof HS.photo === 'function' ? HS.photo(s, k, k === 'hero' ? d : undefined) : null; const ask = askOf(s); const v = isVoc();
     return `<section class="hpt hp-hero hps-hero hxl-lhh"><div class="hxl-w"><div class="hxl-lg"><div class="hxl-ll">${d.eyebrow ? `<p class="hxl-ey"><i aria-hidden="true"></i>${E(d.eyebrow)}</p>` : ''}<h1>${lines(d).map(E).join('<br>')}</h1>${d.sub ? `<p class="hxl-sub">${E(d.sub)}</p>` : ''}
 <div class="hxl-ab">${btn(clsList(s), d.cta || '전체 수업 보기', 'p')}${btn(ask.h, d.cta2 || ask.l, 'g', ask.ic)}</div><p class="hxl-me"><a href="#login/my">${ic('user', 20)}<span>${v ? '이미 훈련생이세요? 내 훈련 현황' : '이미 수강생이세요? 내 강의실'}</span>${ic('arrow', 18)}</a></p></div>
@@ -205,7 +207,7 @@ ${pane('a', D, '요일이 정해진')}${DORD.map(k => pane(k, by(k), WD[k] + '�
     return `<div class="hxl-w"><div class="hxl-sh">${d.eyebrow ? `<p class="hxl-ey2">${E(d.eyebrow)}</p>` : ''}<h2>${E(d.title || '분야로 둘러보기')}</h2>${d.sub ? `<p>${E(d.sub)}</p>` : ''}</div>
 <ul class="hxl-cl">${T.map(tile).join('')}<li class="all"><a href="${E(clsList(s))}"><span class="hxl-ci" aria-hidden="true">${ic('book', 26)}</span><span class="hxl-cx"><b>전체 ${v ? '과정' : '수업'}</b><small>모든 ${v ? '과정' : '수업'}을 한 번에 봐요</small></span><em>${L.length}개</em></a></li></ul></div>`; }
 
-  const SEC = { 'lf-find': [find, 'hxl-find'], 'lf-elig': [elig, 'hxl-elig'], 'lf-track': [track, 'hxl-track'], 'lf-table': [table, 'hxl-tbl'], 'lf-cat': [cats, 'hxl-cat'] };
+  const SEC = { 'lf-board': [boardSec, 'hxl-bds'], 'lf-find': [find, 'hxl-find'], 'lf-elig': [elig, 'hxl-elig'], 'lf-track': [track, 'hxl-track'], 'lf-table': [table, 'hxl-tbl'], 'lf-cat': [cats, 'hxl-cat'] };
 
   /* ── CSS(기관 색 하나에서 계산) ── */
   function css(s) { const T = HPT.tokens(s) || { a: '#0F6E66' }; const th = HPT.meta(s.theme) || DEF.careernav; const R = ramp(T.a); const ink = '#111A18', mu = '#4B5753';
@@ -285,7 +287,8 @@ ${['gov', 'emp', 'short', 'cert', 'it', 'beg', 'sen'].map(k => `.hxl-fd:has(#hxl
 .hxl-tq a{display:flex;align-items:center;gap:14px;min-height:72px;padding:12px 4px;text-decoration:none;color:inherit}.hxl-tq a>i{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--lf-50);color:var(--lf-att)}
 .hxl-tq a>span{flex:1;min-width:0;display:grid;gap:2px}.hxl-tq b{font-size:17px;font-weight:750}.hxl-tq small{font-size:14px;color:var(--lf-mu)}.hxl-tq a>svg{color:var(--lf-mu);flex:none}.hxl-tq a:hover>svg{color:var(--lf-at)}
 /* 공통 부품 글자 하한(13px) — 이 템플릿을 쓰는 사이트에서만 */
-.hps-tag,.hp-fl small,.hps-facts small,.hpt dd small,.hps-wmk small{font-size:13px!important}.hps-new{font-size:13px!important;width:22px!important;height:22px!important}
+.hps-tag,.hp-fl small,.hps-facts small,.hpt dd small,.hps-wmk small{font-size:13px!important}
+.hxl-dch label small{margin-left:4px;font-weight:650}/* 글 속 링크(FAQ 아래 「문의 게시판」)도 누르는 칸 44px */.hpb-qc a,.hxl-dr a{display:inline-block;line-height:20px;padding:12px 4px;margin:-12px 0;vertical-align:baseline}.hps-new{font-size:13px!important;width:22px!important;height:22px!important}
 /* 휴대폰 · 태블릿 */
 @media (max-width:1000px){.hxl-hg,.hxl-eg,.hxl-tg2{grid-template-columns:minmax(0,1fr);gap:32px}.hxl-cg{grid-template-columns:repeat(2,minmax(0,1fr))}.hxl-up{margin:-72px 16px 0 auto}}
 @media (max-width:640px){.hxl-w{padding:0 20px}.hpt.hxl-hero{padding:28px 0 48px}.hxl-sub{font-size:16.5px}.hxl-pz{margin-top:22px;padding:16px}
@@ -302,8 +305,8 @@ ${['gov', 'emp', 'short', 'cert', 'it', 'beg', 'sen'].map(k => `.hxl-fd:has(#hxl
     const senior = s && s.theme === 'learnhub';
     return `
 /* v43.8 hpx-life A4 — 훈련 일정표 */
-.hpt.hxl-tbh{background:${hb};background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:56px 56px;color:#fff;padding:56px 0 64px;position:relative;overflow:hidden}
-.hxl-tbg{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:48px;align-items:start}
+.hpt.hxl-tbh{padding-bottom:150px!important;background:${hb};background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:56px 56px;color:#fff;padding:56px 0 64px;position:relative;overflow:hidden}
+.hxl-tbg{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);grid-template-areas:"a c" "q c";gap:0 48px;align-items:start}.hxl-tbl0{grid-area:a}.hxl-tbg>.hxl-ck{grid-area:c}.hxl-tbg>.hxl-qk{grid-area:q}
 .hpt.hxl-tbh h1{margin:0;max-width:none;text-shadow:none;font-size:clamp(34px,4vw,52px);line-height:1.18;font-weight:800;letter-spacing:-.035em;color:#fff;word-break:keep-all}.hxl-tbh .hxl-sub{color:${hMu}}
 .hxl-ey3{display:inline-flex;align-items:center;gap:8px;margin:0 0 18px;padding:8px 14px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.24);font-size:14px;font-weight:750;color:${hA}}
 .hxl-tbh .hxl-tbl0>.hxl-ab{margin-top:26px}
@@ -323,7 +326,7 @@ ${['gov', 'emp', 'short', 'cert', 'it', 'beg', 'sen'].map(k => `.hxl-fd:has(#hxl
 .hxl-ck:has(.hxl-yn input[id$=n]:checked) .no,.hxl-ck:has(#hxlq0y:checked):has(#hxlq1y:checked):has(#hxlq2y:checked) .ok{display:block}
 .hxl-cn{margin:14px 0 0;font-size:13.5px;line-height:1.55;color:var(--lf-mu)}
 .hxl-cs{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px;counter-reset:c}.hxl-cs li{display:grid;gap:2px;padding:12px 0;border-top:1px solid ${ln}}.hxl-cs b{font-size:16px}.hxl-cs small{font-size:14px;color:var(--lf-mu)}
-.hxl-tbb{margin-top:44px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:stretch}
+.hpt.hp-s.hxl-bds{background:transparent;padding:0 0 72px;margin-top:-110px;position:relative;z-index:2}.hxl-tbb{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:stretch}
 .hxl-tph{position:relative;margin:0;border-radius:24px;overflow:hidden;min-height:220px}.hxl-tph img{position:absolute;inset:0;width:100%;height:100%;display:block}
 .hxl-gx{background:#fff;color:${ink};border-radius:24px;padding:20px 24px 10px;box-shadow:0 30px 60px -30px rgba(0,0,0,.5)}
 .hxl-gxh{display:flex;justify-content:space-between;align-items:center;gap:8px 16px;flex-wrap:wrap;margin-bottom:8px}.hxl-gxh .hxl-uph{margin:0}
@@ -380,10 +383,10 @@ ${senior ? `/* 시니어 친화(learnhub): 본문 17px · 버튼 56px · 대비 
 .hxl-cat,.hxl-elig,.hxl-track{--lf-mu:#3A433F;--lf-at:${fit(T.a, '#ffffff', 7, '#000000')};--lf-att:${fit(T.a, R[50], 7, '#000000')};--lf-p:${pb7};--lf-on:${on(pb7)}}
 .hxl-cat,.hxl-elig,.hxl-track{font-size:17px}.hxl-elig .hxl-b,.hxl-track .hxl-b,.hxl-cat .hxl-b{min-height:56px;font-size:17px}.hxl-ec li,.hxl-steps small,.hxl-tm small,.hxl-tq small,.hxl-en{font-size:17px}.hxl-tq b,.hxl-steps b,.hxl-tm b{font-size:19px}
 .hxl-ed,.hxl-steps small{color:${fit('#C9D4D0', deep, 7, '#ffffff')}}` : ''}
-@media (max-width:1000px){.hxl-tbg,.hxl-lg{grid-template-columns:minmax(0,1fr);gap:32px}.hxl-tbb{grid-template-columns:minmax(0,1fr)}.hxl-tph{min-height:0;aspect-ratio:16/7}.hxl-mo{height:380px}.hxl-cl{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:1000px){.hxl-tbg,.hxl-lg{grid-template-columns:minmax(0,1fr);gap:32px}.hxl-tbg{grid-template-areas:"a" "c" "q";gap:24px}.hxl-tbg>.hxl-qk{margin-top:0}.hpt.hxl-tbh{padding-bottom:48px!important}.hpt.hp-s.hxl-bds{margin-top:0;padding:40px 0 8px}.hxl-tbb{grid-template-columns:minmax(0,1fr)}.hxl-tph{min-height:0;aspect-ratio:16/7}.hxl-mo{height:380px}.hxl-cl{grid-template-columns:repeat(2,minmax(0,1fr))}
 .hxl-tr{grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) 24px}.hxl-tr>:nth-child(5){display:none}}
 @media (max-width:640px){.hpt.hxl-tbh{padding:28px 0 44px}.hxl-qk ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.hxl-qk a{width:100%;white-space:normal;line-height:1.3;padding:8px 12px}
-.hxl-ck{padding:18px;border-radius:20px}.hxl-cq li{grid-template-columns:minmax(0,1fr);gap:10px}.hxl-yn label{flex:1}.hxl-tbb{margin-top:32px}.hxl-tph{aspect-ratio:16/9;border-radius:20px}
+.hxl-ck{padding:18px;border-radius:20px}.hxl-cq li{grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px 0}.hxl-cq p{font-size:15px}.hxl-cq p i{display:none}.hxl-yn label{min-width:48px;padding:0 8px}.hxl-cn{margin-top:10px}.hxl-tbh .hxl-ey3{display:none}.hxl-tph{display:none}.hpt.hxl-tbh .hxl-sub{display:none}
 .hxl-gx{padding:16px 16px 6px;border-radius:20px}.hxl-gh{grid-template-columns:minmax(0,1fr)}.hxl-gh>span:not(.hxl-gm){display:none}.hxl-gm small{display:none}
 .hxl-gl a{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n c" "t t";gap:10px 12px;padding:14px 0}.hxl-gn{grid-area:n}.hxl-gt{grid-area:t}.hxl-gl em{grid-area:c;align-self:start}.hxl-gn small{white-space:normal}
 .hpt.hxl-tbl,.hpt.hxl-cat{padding:64px 0}.hxl-thd{display:none!important}.hxl-tb{display:grid;gap:12px;background:none;box-shadow:none;border-radius:0;overflow:visible}
@@ -434,6 +437,7 @@ ${senior ? `/* 시니어 친화(learnhub): 본문 17px · 버튼 56px · 대비 
     trainboard: { scene: '직업훈련 — 개강 일정표와 국비 자격 3문항으로 「언제 · 내가 들을 수 있나」를 첫 화면에서 푼다', purpose: ['apply', 'learn'],
       build: () => { const v = isVoc(); return [
         S2('banner', { eyebrow: v ? '훈련생 모집 · 개강 일정' : '수강생 모집 · 개강 일정', title: v ? '개강 일정부터 보고\n내게 맞는 훈련을 골라요' : '개강 일정부터 보고\n내게 맞는 과정을 골라요', sub: v ? `${org()}의 훈련 과정을 기간 · 시간 · 비용으로 비교하고, 국비 자격도 바로 확인하세요.` : `${org()}의 과정을 기간 · 시간 · 수강료로 비교해 보세요.`, cta: v ? '국비 과정 보기' : '과정 보기', cta2: '수강 상담', hk: 'trainboard' }),
+        TX('timeline', { hpt: 'lf-board', eyebrow: '', title: v ? '개강 · 훈련 일정표' : '개강 · 수업 일정표', cols: [['개강', '과정별 시작일'], ['진행', '지난 기간 · 남은 기간'], ['오늘', '오늘 날짜 표시']] }),
         TX('features', { hpt: 'lf-table', eyebrow: '과정 비교표', title: '기간 · 시간 · 비용을 한 줄로 비교해요', sub: '수료증 발급 여부까지 표 한 장에서 확인하고, 줄을 누르면 과정 상세로 이동해요.', cols: [['과정', '과정 이름과 수준'], ['기간 · 시간', '개강일 · 요일 · 총 시간'], ['비용 · 수료', v ? '국비 지원 · 수강료와 수료증' : '수강료와 수료증']] }),
         TX('timeline', { hpt: 'lf-track', eyebrow: v ? '훈련 과정' : '수강 과정', title: v ? '신청부터 수료 · 취업 연계까지' : '신청부터 수료증까지', cols: v ? [['신청 · 선발', '과정 신청 후 상담과 선발을 거쳐요'], ['훈련', '출결과 진도가 자동으로 기록돼요'], ['수료', '수료 기준을 채우면 수료증을 받아요'], ['취업 연계', '이력서 · 면접 상담과 채용 소식을 안내해요']] : [['신청', '과정을 고르고 온라인으로 신청해요'], ['수강', 'PC · 휴대폰으로 이어서 들어요'], ['수료', '수료 기준을 채우면 수료증을 받아요'], ['다음 배움', '이어서 들을 과정을 추천해 드려요']] }),
         TX('stats', { hpt: 'facts', title: '', cols: [] }),
@@ -449,8 +453,8 @@ ${senior ? `/* 시니어 친화(learnhub): 본문 17px · 버튼 56px · 대비 
         TX('cta', { eyebrow: '', title: '어떤 수업이 맞을지 고민되시나요?', body: '배우고 싶은 것과 편한 요일을 알려 주시면 맞는 수업을 안내해 드려요. 휴대폰 번호는 동의한 경우에만 받아요.', cta: '상담 신청', cols: [], ck: 'contact' })]; } } };
 
   /* 첫 화면 사진: 사람 · 실습 장면(어두운 실루엣 · 무관한 장면 대신). 템플릿마다 다른 사진(첫 화면 중복 금지) */
-  const PH = { careernav: [{ hero: 'cod-03' }, { hero: 'stu-02' }], trainboard: [{ hero: 'hum-41' }, { hero: 'hum-08' }], learnhub: [{ hero: 'wrk-08', about: 'hum-18', space: 'cor-09' }, { hero: 'sen-07', about: 'hum-24', space: 'cls-02' }] };
-  if (typeof siteFromTpl === 'function' && !siteFromTpl.hpxl) { const base = siteFromTpl; const f = tp => { const s = base(tp); try { if (tp && tp.hpx === 'life') s.photos = Object.assign({}, s.photos, (PH[tp.theme] || PH.careernav)[isVoc() ? 0 : 1]); } catch (e) { console.error('hpx-life photo', e); } return s; };
+  const PH = { careernav: [{ hero: 'cls-03' }, { hero: 'stu-02' }], trainboard: [{ hero: 'hum-41' }, { hero: 'hum-08' }], learnhub: [{ hero: 'wrk-08', about: 'hum-18', space: 'cor-09' }, { hero: 'sen-07', about: 'hum-24', space: 'cls-02' }] };
+  if (typeof siteFromTpl === 'function' && !siteFromTpl.hpxl) { const base = siteFromTpl; const f = tp => { const s = base(tp); try { if (tp && tp.hpx === 'life') { s.photos = Object.assign({}, s.photos, (PH[tp.theme] || PH.careernav)[isVoc() ? 0 : 1]); s.blocks = Object.assign({}, s.blocks, { facts: 'row', notices: 'rows' }); } /* 심사: 숫자 판은 가로 띠 하나로(큰 숫자 판 · 끊긴 세로선 대신), 공지는 같은 글 반복 없는 목록형 */ } catch (e) { console.error('hpx-life photo', e); } return s; };
     Object.keys(base).forEach(k => { try { f[k] = base[k]; } catch (e) { } }); f.hpxl = 1; siteFromTpl = f; window.siteFromTpl = f; }
   function regAll() { if (regAll.done) return; regAll.done = 1;
     Object.keys(DEF).forEach(id => { if (!(window.HPX_ALL || (PASS[id] || 0) >= 85)) return; if (!HPT.has(id)) HPT.reg(id, Object.assign({ prem: 1, cssX }, DEF[id])); try { if (window.HPD && typeof HPD.reg === 'function') HPD.reg(id, HD[id]); } catch (e) { console.error('hpx-life HPD', e); }
