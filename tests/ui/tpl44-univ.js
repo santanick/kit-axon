@@ -109,6 +109,25 @@ const inject = h => /hp44-univ\.js/.test(h) ? h : /hpv-univ\.js/.test(h) ? h.rep
     r.forEach(x => ok(x.hero && x.login && (x.n ? true : !x.cls && !x.big) && (x.nb ? true : !x.medal), `빈 기관 ${x.id}: 첫 화면 유지 · 강좌 · 큰 숫자 · 배지는 데이터가 있을 때만 ${JSON.stringify(x)}`));
     ok(!errs.length, `빈 기관 pageerror 0 ${errs.join('|')}`); await ctx.close(); }
 
+
+  /* ── 8) 학습자 게시본(learner.html?t=… · Shadow DOM)에서 테마가 그대로인지 — v44 QA: body 선택자만 쓰면 게시본에서 변수 · 배경이 통째로 빠짐 ── */
+  { const { ctx, p, errs } = await admin(); await seed(p);
+    for (const id of IDS) { const tid = await p.evaluate(tp => { try { closeModal(); } catch (e) { } const s = siteFromTpl(TPL.find(x => x.id === tp)); S.site = s; s.published = true; save(); smPublish(); try { closeModal(); } catch (e) { } return DREG.cur(); }, 't44-' + id);
+      for (const w of [1440, 390]) { const q = await ctx.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message)); await q.setViewportSize({ width: w, height: w > 600 ? 900 : 844 });
+        await q.goto(`${base}/learner.html?t=${tid}#home`, { waitUntil: 'load' });
+        await q.waitForFunction(H => [...document.querySelectorAll('.smhost')].some(x => x.shadowRoot && x.shadowRoot.querySelector(H)), '.hp-hero.u4', { timeout: 15000 }).catch(() => 0); await q.waitForTimeout(500);
+        const r = await q.evaluate(([H, id]) => { const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).find(x => x && x.querySelector(H)); if (!R) return null; const h = R.querySelector(H); const cs = getComputedStyle(h);
+          const rgb = c => (String(c).match(/\d+(\.\d+)?/g) || []).map(Number); const lum = c => { const [r0, g0, b0] = rgb(c).map(v => v / 255).map(x => x <= .03928 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4); return .2126 * r0 + .7152 * g0 + .0722 * b0; };
+          const bgOf = el => { for (let e = el; e; e = e.parentElement) { const b = getComputedStyle(e).backgroundColor; if (b && !/rgba\(0, 0, 0, 0\)|transparent/.test(b)) return b; } return 'rgb(255, 255, 255)'; };
+          const h1 = h.querySelector('h1'); const t1 = h1 ? h1.getBoundingClientRect() : null; const b1 = h.querySelector('[class*="-btn"]'); const bb = b1 ? b1.getBoundingClientRect() : null;
+          const photo = h.querySelector('figure img'); const onPhoto = !!(photo && photo.closest('figure') && getComputedStyle(photo.closest('figure')).position === 'absolute');
+          const fg = h1 ? getComputedStyle(h1).color : ''; const bg = onPhoto ? 'rgb(20, 20, 30)' : bgOf(h1 || h); const L1 = lum(fg), L2 = lum(bg); const cr = (Math.max(L1, L2) + .05) / (Math.min(L1, L2) + .05);
+          return { a: cs.getPropertyValue('--u-a').trim(), heroBg: cs.backgroundColor, cr: Math.round(cr * 10) / 10, h1fs: h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0, h1b: t1 ? Math.round(t1.bottom) : 9999, btnb: bb ? Math.round(bb.bottom) : 9999, big: !!R.querySelector('.' + id + '-big'), scrim: (() => { const s = h.querySelector('[class*="-scrim"]'); return s ? getComputedStyle(s).backgroundImage !== 'none' : null; })() }; }, ['.hp-hero.u4', 'u4']);
+        const need = ({ undark: 1, unposter: 1, unclassic: 1, uncine: 1 })[id]; ok(!!r && !!r.a && (!need || !/rgba\(0, 0, 0, 0\)|transparent/.test(r.heroBg)) && r.cr >= 4.5 && r.scrim !== false && !pe.length, `${id} 게시본 @${w}: 테마 변수 ${r && r.a} · 첫 화면 바탕 ${r && r.heroBg} · 제목 대비 ${r && r.cr} · 스크림 ${r && r.scrim} · 오류 ${pe.length}`);
+        if (w === 390 && r) { const lim = id === 'unposter' ? 64 : 48; ok(r.h1fs >= 36 && r.h1fs <= lim && r.h1b <= 844 && r.btnb <= 844 + 40, `${id} 게시본 @390: 제목 ${r.h1fs}px(36~${lim}) · 제목 · 버튼이 첫 화면 안(제목 ${r.h1b} · 버튼 ${r.btnb})`); }
+        if (w === 1440 && r) ok(!r.big, `${id} 게시본: 시연 데이터(강좌 10개 미만 · 배지 100개 미만)에서는 큰 숫자 블록 숨김`);
+        await q.close(); } }
+    ok(!errs.length, `게시본 점검 관리자 pageerror 0 ${errs.join('|')}`); await ctx.close(); }
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
