@@ -213,7 +213,7 @@
       ${bar(G.pct)}${G.now != null && G.target != null ? `<div class="lm-gm"><span>지금 <b>${pt(G.now)}</b></span><span>목표 ${pt(G.target)}</span></div>` : ''}
       ${G.need <= 0 ? `<p class="lm-hint">${sv('check', 18)}<span>목표에 도달했어요.</span></p>` : G.hint ? `<p class="lm-hint">${sv('sprout', 18)}<span>${esc(G.hint)}</span></p>` : ''}</section>`; }
   const wayRow = w => `<li class="lm-li"><span class="lm-ic${w.nature === 'participation' ? ' off' : ''}">${sv(w.nature === 'participation' ? 'users' : 'plus', 18)}</span><span class="lm-lt"><b>${esc(w.say)}</b>${w.cap || w.nature === 'participation' ? `<small>${esc(w.cap || '')}${w.nature === 'participation' ? `${w.cap ? ' · ' : ''}참여 적립 · 현금성 보상 제외` : ''}</small>` : ''}</span></li>`;
-  const ways = M => M.ways.length ? `<section class="lm-card" aria-labelledby="lmWays"><h2 id="lmWays" class="lm-h2">${sv('sprout', 20)}이렇게 모을 수 있어요</h2><ul class="lm-ul">${M.ways.map(wayRow).join('')}</ul></section>` : '';
+  const ways = M => M.ways.length ? `<section class="lm-card" aria-labelledby="lmWays"><h2 id="lmWays" class="lm-h2">${sv('sprout', 20)}받는 방법</h2><ul class="lm-ul">${M.ways.map(wayRow).join('')}</ul></section>` : '';
   function rowHTML(e, M) { const cancel = e.kind === 'cancel' || e.kind === 'penalty'; const pend = e.status === 'pending'; const ic = pend ? 'hour' : cancel ? 'fix' : e.kind === 'expire' ? 'clock' : e.points > 0 ? 'plus' : e.kind === 'use' || e.kind === 'hold' ? 'gift' : 'link';
     const meta = [md(e.at), pend ? '적립 예정' : KIND[e.kind] || e.kind, e.trust && e.points > 0 ? `<span class="lm-trust" title="${esc(TRUST[e.trust] || '')}">${esc(e.trust)}</span> ${esc(TRUST[e.trust] || '')}` : '', e.expiresAt && e.points > 0 && !pend ? `${esc(md(e.expiresAt))}까지` : ''].filter(Boolean);
     const t = cancel ? `정정 · ${e.title || '기록 정정'}` : e.title || KIND[e.kind] || '마일리지';
@@ -241,14 +241,24 @@
       ${isPar() ? '' : `<a class="lm-btn wide" href="#mile/rewards">${sv('gift', 20)}보상 보기</a>`}</section>`; }
 
   /* ── #mile 내 마일리지(시안 a2-02 · a3-07 국비 · a2-12 빈 상태) ── */
+  /* v44 단순화(대표님 11-18 「마일리지 부분이 너무 복잡해」): 내 마일리지 · 받는 방법 · 쓰는 곳 세 덩어리.
+     예전 5줄 바로 가기 · 국비 긴 안내 · 등급과 겹치는 목표 카드는 합치거나 줄였다(경로 #mile/* 는 그대로). */
+  function useBlock(M) { const R = (M.R || []).filter(r => r.cost != null || r.kind === 'tuition' || r.perUnitP).slice(0, 3);
+    const sub = [['#mile/req', 'ticket', '내 신청'], ['#mile/badges', 'medal', '배지'], ['#mile/streak', 'cal', '연속 학습']];
+    return `<section class="lm-card lm-use" aria-labelledby="lmUse"><div class="lm-ch"><h2 id="lmUse" class="lm-h2">${sv('gift', 20)}쓰는 곳</h2><span class="lm-uv">지금 <b>${pt(Math.max(0, M.convertible != null && M.funded > 0 ? M.convertible : M.usable != null ? M.usable : M.balance))}</b> 쓸 수 있어요</span></div>
+      ${R.length ? `<ul class="lm-ul lm-rwl">${R.map(r => `<li><span class="lm-lt"><b>${esc(r.title)}</b></span><span class="lm-rc">${r.cost != null ? pt(r.cost) : '원하는 만큼'}</span></li>`).join('')}</ul>` : ''}
+      ${isPar() ? '' : `<a class="lm-btn pri wide" href="#mile/rewards">${sv('gift', 20)}보상 보기</a>`}
+      <nav class="lm-subl" aria-label="마일리지 더 보기">${sub.map(([h, i, l]) => `<a href="${h}">${sv(i, 18)}${l}</a>`).join('')}</nav></section>`; }
   function mainView(M) { const blank = !M.E.length && !M.balance && !M.pending;
-    if (blank) return `${head('내 마일리지')}${empty(M)}${ways(M)}${links()}`;
-    const fundedBox = M.funded > 0 ? `<div class="lm-fund"><div class="lm-fu ok">${sv('gift', 18)}<small>보상에 쓸 수 있는 양</small><b>${pt(M.convertible)}</b></div><div class="lm-fu lk">${sv('lock', 18)}<b>국비 과정 적립 ${pt(M.funded)}</b><small>배지 · 기록만</small></div></div><div class="lm-lockn">${sv('lock', 20)}<div><b>국비 지원 과정에는 쓸 수 없어요</b><p>국비 지원 과정에서 쌓은 마일리지는 배지와 학습 기록으로 남아요. 할인 · 장학에는 쓸 수 없어요.</p></div></div>` : '';
+    if (blank) return `${head('내 마일리지')}${empty(M)}${ways(M)}${useBlock(M)}`;
+    const fundedBox = M.funded > 0 ? `<div class="lm-fund"><div class="lm-fu ok">${sv('gift', 18)}<small>보상에 쓸 수 있는 양</small><b>${pt(M.convertible)}</b></div><div class="lm-fu lk">${sv('lock', 18)}<b>국비 과정 적립 ${pt(M.funded)}</b><small>배지 · 기록만</small></div></div><p class="lm-gl1">${sv('lock', 18)}<span>국비 지원 과정에는 쓸 수 없어요. 배지와 학습 기록으로 남아요.</span></p>` : ''; /* 국비 안내(규정)는 한 줄로 남긴다 */
+    const dupGoal = M.goal && M.goal.kind === 'tier' && M.tier && M.tier.name; /* 등급 사다리와 같은 목표면 카드 대신 한 줄 */
+    const goalLine = dupGoal ? `<p class="lm-goal lm-gl1">${sv('sprout', 18)}<span>${esc(M.goal.hint || `${M.goal.label}까지 ${pt(M.goal.need)} 남았어요`)}</span></p>` : '';
+    const x = M.expiring[0];
+    const recent = M.E.length || x ? `<section class="lm-card lm-rec" aria-labelledby="lmRec"><div class="lm-ch"><h2 id="lmRec" class="lm-h2">${sv('hist', 20)}최근 내역</h2><a class="lm-more" href="#mile/list">전체 내역${sv('chev', 18)}</a></div>${M.E.length ? `<ul class="lm-rows">${M.E.slice(0, 2).map(e => rowHTML(e, M)).join('')}</ul>` : ''}${expStrip(M)}</section>` : '';
     return `${head('내 마일리지')}${M.sunset ? note('info', '마일리지 제도가 바뀌어요', [M.sunset.endAt && `${md(M.sunset.endAt)}에 제도가 끝나요.`, M.sunset.stopEarnAt && `${md(M.sunset.stopEarnAt)}부터 새로 쌓이지 않아요.`, '남은 마일리지는 그 전까지 보상으로 바꿀 수 있어요.'].filter(Boolean).join(' ')) : ''}
-      <section class="lm-card lm-top lm-hero43" aria-label="마일리지 잔액">${ladder(M)}<p class="lm-lab">${sv('mile', 18)}마일리지 잔액</p><b class="lm-big">${nf(M.balance)}<span>${esc(UNIT)}</span></b>${M.balance < 0 ? `<p class="lm-mu">정정된 적립이 있어 잔액이 0보다 작아요. 다음 적립에서 먼저 채워져요.</p>` : ''}${split(M)}${fundedBox}</section>
-      ${capNote(M)}${goalCard(M)}${ways(M)}
-      ${M.E.length ? `<section class="lm-card" aria-labelledby="lmRec"><div class="lm-ch"><h2 id="lmRec" class="lm-h2">${sv('hist', 20)}최근 내역</h2><a class="lm-more" href="#mile/list">전체 내역${sv('chev', 18)}</a></div><ul class="lm-rows">${M.E.slice(0, 3).map(e => rowHTML(e, M)).join('')}</ul></section>` : ''}
-      ${expStrip(M)}${links()}`; }
+      <section class="lm-card lm-top lm-hero43" aria-label="마일리지 잔액">${ladder(M)}<p class="lm-lab">${sv('mile', 18)}마일리지 잔액</p><b class="lm-big">${nf(M.balance)}<span>${esc(UNIT)}</span></b>${M.balance < 0 ? `<p class="lm-mu">정정된 적립이 있어 잔액이 0보다 작아요. 다음 적립에서 먼저 채워져요.</p>` : ''}${split(M)}${fundedBox}${goalLine}</section>
+      ${capNote(M)}${dupGoal ? '' : goalCard(M)}${recent}${ways(M)}${useBlock(M)}`; }
   /* v43 등급 사다리(새싹 · 보통 · 으뜸 · 마스터 등 기관 설정 이름) — 한 문장 헤드라인 + 4단 막대 */
   function ladder(M) { const T = M.tier; if (!T || !T.name) return ''; const all = Array.isArray(T.all) && T.all.length ? T.all : [T.name]; const i = all.indexOf(T.name) < 0 ? 0 : all.indexOf(T.name);
     const p = T.nmin ? Math.max(6, Math.min(100, Math.round((T.now - T.min) / Math.max(1, T.nmin - T.min) * 100))) : 100;

@@ -321,3 +321,18 @@ body:not(.lapp) .lm-hero43 .lm-split dt,body.lapp .lm-hero43 .lm-split dt{color:
 body:not(.lapp) .lm-hero43 .lm-split dd,body.lapp .lm-hero43 .lm-split dd{color:#fff}
 body:not(.lapp) .lm-hero43 .lm-z,body.lapp .lm-hero43 .lm-z{color:#CFE3D6}
 body:not(.lapp) .lm-hero43 .lm-mu,body.lapp .lm-hero43 .lm-mu{color:#CFE3D6}
+/* ───────── v44 단순화 — 내 마일리지 · 받는 방법 · 쓰는 곳 세 덩어리 ───────── */
+.lm-use{display:flex;flex-direction:column;gap:12px}
+.lm-use .lm-ch{flex-wrap:wrap;gap:6px 12px}
+.lm-uv{font-size:14px;color:var(--lm-mute)}.lm-uv b{color:var(--lm-ink);font-size:16px;font-variant-numeric:tabular-nums}
+.lm-rwl li{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;border-bottom:1px solid var(--lm-line);font-size:15px}
+.lm-rwl li:last-child{border-bottom:0}
+.lm-rwl .lm-lt b{font-weight:600}
+.lm-rc{flex:none;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lm-gd)}
+.lm-subl{display:flex;flex-wrap:wrap;gap:8px}
+.lm-subl a{flex:1 1 0;min-width:96px;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 12px;border-radius:12px;background:var(--lm-gl);color:var(--lm-gd);text-decoration:none;font-size:14px;font-weight:600}
+.lm-subl a:focus-visible{outline:3px solid #9ee3a3;outline-offset:2px}
+.lm-gl1{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:14px;line-height:1.5}
+body:not(.lapp) .lm-hero43 .lm-gl1,body.lapp .lm-hero43 .lm-gl1{color:#CFE3D6}
+.lm-rec .lm-exp{margin-top:8px}
+.lm-subl a{white-space:nowrap;min-width:0;padding:0 8px}
