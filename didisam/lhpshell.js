@@ -177,3 +177,29 @@
   document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-lhs="demo-x"]'); if (!t) return; e.preventDefault(); ss.set('demo.' + tid(), '0'); const bar = t.closest('.pvbar'); if (bar) bar.hidden = true; });
   addEventListener('resize', () => { if (document.body.classList.contains('lhs-home')) size(); });
 })();
+
+/* v44.1 CM — 새 템플릿(g44) 게시본에서만: 머리글 스크롤 축소(PC 72 → 56 · 흰 바탕 · 그림자) · AX 튜터는 머리글 메뉴에서 빼 오른쪽 아래 떠 있는 버튼으로 ·
+   아래 섹션이 처음 보일 때 한 번 나타나기(불투명 0→1 · 12px · 300ms, prefers-reduced-motion이면 없음).
+   g44 여부는 게시본 hp.g44(스튜디오 hpsec-trust HPX가 g44 템플릿 사이트에서만 싣는다) — 예전 템플릿 게시본은 아무것도 바뀌지 않는다. */
+(() => {
+  if (typeof lrender !== 'function') return;
+  const g44 = () => { try { const s = SITE(); return !!(s && s.hp && s.hp.g44); } catch (e) { return false; } };
+  const guest = () => !(typeof LR !== 'undefined' && LR.me);
+  window.lhsG44 = () => g44() && guest() && !(document.body && document.body.classList.contains('lapp'));
+  const HEAD = '@media(min-width:901px){header.gh.hps-h .hps-hw{height:72px!important;transition:height .2s ease}:host(.hx-sc) header.gh.hps-h{background:#ffffff!important;box-shadow:0 6px 24px rgba(15,23,42,.08)!important}:host(.hx-sc) header.gh.hps-h .hps-hw{height:56px!important}:host(.hx-sc) header.gh.hps-h :is(.hps-hr a,.logo,.hps-wmk){color:#111827}}.hps-hr .hx-login{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;font-size:15px;font-weight:600;color:inherit;text-decoration:none;white-space:nowrap}.hps-hr .hx-login:hover{text-decoration:underline;text-underline-offset:4px}@media(max-width:900px){.hps-hr .hx-login{display:none}}@media(prefers-reduced-motion:reduce){header.gh .hps-hw{transition:none!important}}';
+  const RM = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+  let io = null;
+  function reveal() { const host = document.querySelector('#lm .smhost[data-smk=home]'); const sr = host && host.shadowRoot; const r = sr && sr.querySelector('.smr'); if (!r || r.dataset.hx || RM() || typeof IntersectionObserver !== 'function') return;
+    r.dataset.hx = '1'; const L = [...r.querySelectorAll(':scope > section')].slice(1); const H = innerHeight;
+    L.forEach(x => { if (x.getBoundingClientRect().top < H * .92) x.classList.add('hx-in'); });
+    if (io) io.disconnect(); io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('hx-in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    L.filter(x => !x.classList.contains('hx-in')).forEach(x => io.observe(x)); r.classList.add('hx-js'); }
+  function sc() { const hh = document.querySelector('#lapp > .lhs-head'); if (hh) hh.classList.toggle('hx-sc', (scrollY || document.documentElement.scrollTop || 0) > 8); }
+  function apply() { const b = document.body; if (!b) return; const on = window.lhsG44(); b.classList.toggle('lhs-g44', on); if (!on) return;
+    const hh = document.querySelector('#lapp > .lhs-head'); if (hh && hh.shadowRoot && !hh.shadowRoot.getElementById('hxHd')) { const st = document.createElement('style'); st.id = 'hxHd'; st.textContent = HEAD; hh.shadowRoot.appendChild(st); }
+    /* 머리글 오른쪽은 로그인(글자) + 신청(버튼) — 대표번호 머리글(contact)에 로그인이 없으면 넣는다 */
+    const hr = hh && hh.shadowRoot && hh.shadowRoot.querySelector('header.gh .hps-hr'); if (hr && !hr.querySelector('a[href="#login"]')) { const a = document.createElement('a'); a.className = 'hx-login'; a.href = '#login'; a.textContent = '로그인'; const c = hr.querySelector('.hps-cta'); hr.insertBefore(a, c || null); }
+    sc(); try { reveal(); } catch (e) { console.error('lhpshell g44 reveal', e); } }
+  addEventListener('scroll', () => { if (document.body && document.body.classList.contains('lhs-g44')) sc(); }, { passive: true });
+  { const base = lrender; lrender = (...x) => { const r = base(...x); try { apply(); } catch (e) { console.error('lhpshell g44', e); } return r; }; }
+})();
