@@ -45,12 +45,15 @@ body.hpm-pv .s2chat{bottom:calc(84px + env(safe-area-inset-bottom))!important}}`
   /* ── 휴대폰 배치 CSS(계열 공통 + 계열별) ── */
   function css(s) { return MOB.common(s) + MOB.base(s) + (s && s.layout && MOB.fam[s.layout] ? MOB.fam[s.layout](s) : ''); }
   const MOB = { fam: {} };
-  /* 공통: 터치 44px · 가로 넘침 0 · 긴 낱말 줄바꿈 · 바닥글 링크 칸 */
+  /* 공통: 터치 44px · 가로 넘침 0 · 긴 낱말 줄바꿈 · 바닥글 링크 칸
+     v43.8 390 관문: 글 속 전화 · 메일 링크(FAQ 카드 · 연락처 · 바닥글)와 바닥글 큰 대표번호는 위아래 padding + 같은 크기 음수 margin으로
+     누르는 칸만 48px로 키운다(글자 크기 · 줄 간격 · 배치는 그대로). 템플릿 CSS의 같은 보정과 겹쳐도 무해하다 */
   MOB.common = s => `@media(max-width:640px){
 .hpt h1,.hpt h2,.hpt h3{overflow-wrap:break-word;word-break:keep-all}
 header.gh .logo{min-height:44px;display:inline-flex;align-items:center}
 .hp-all,.ed-link,.sp-link,.ty-link,.bt-link,.fb-link,.pt-link,a[class$="-all"],a[class$="-more"],a.hpl-bu-tm{min-height:44px;display:inline-flex!important;align-items:center}
 footer.gf .fl2{display:flex;flex-wrap:wrap;gap:0 18px}footer.gf .fl2 a,footer.gf .fl2>span,footer.gf a.s2esc,footer.gf .hps-lg a,footer.gf li>a{min-height:44px;min-width:44px;display:inline-flex;align-items:center}footer.gf .hps-lg{display:flex;flex-wrap:wrap;gap:0 18px}footer.gf li:has(>a){margin:0!important}footer.gf .hps-fc ul{row-gap:0!important}
+.hpt a[href^="tel:"]:not([class]),.hpt a[href^="mailto:"]:not([class]),footer.gf a[href^="tel:"]:not([class]),footer.gf a[href^="mailto:"]:not([class]),footer.gf a.hps-sbig{padding-block:calc((48px - 1.1em) / 2);margin-block:calc((1.1em - 48px) / 2)}
 .hpt .hp-btn,.hpt .hpl-btn{min-height:48px}
 ${editing() ? '' : '.hpl-img:not(:has(img,svg,picture,video)),.hpl-k-cta .hpl-art{display:none!important}'}
 }`;
