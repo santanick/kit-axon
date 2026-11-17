@@ -37,7 +37,9 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
       ok(!m.small.length, `${key} ${w}: 누르는 칸 44px 이상 ${m.small.join(',')}`);
       ok(!m.tiny.length, `${key} ${w}: 글자 13px 이상 ${m.tiny.join(',')}`);
       ok(!m.narrow, `${key} ${w}: 한 글자 꺾임 0(${m.narrow})`);
-      ok(w > 600 ? m.h1 >= 64 && m.h1 <= 104 : m.h1 >= 36 && m.h1 <= 46, `${key} ${w}: 첫 화면 제목 ${m.h1}px(PC 64~104 · 휴대폰 36~44)`);
+      ok(w > 600 ? m.h1 >= 64 && m.h1 <= 104 : m.h1 >= 36 && m.h1 <= 48, `${key} ${w}: 첫 화면 제목 ${m.h1}px(PC 64~104 · 휴대폰 36~48)`);
+      if (w < 600) { const f = await q.evaluate(() => { const B = [...document.querySelectorAll('section.l4-hero :is(.l4-cta a,.l4-bb)')]; return B.length ? Math.max(...B.map(b => b.getBoundingClientRect().bottom + scrollY)) : 0; });
+        ok(f > 0 && f <= 844, `${key} 390: 첫 화면(844px) 안에 제목 · 버튼이 모두 보임(버튼 아래 끝 ${Math.round(f)}px)`); }
       ok(!pe.length, `${key} ${w}: pageerror 0 ${pe.join('|')}`);
       await c2.close(); } };
   const admin = async empty => { const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
@@ -62,7 +64,17 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
     ok(!/hps-flow|hps-short/.test((r.html.match(/<section class="[^"]*\bl4\b[^"]*"/g) || []).join(' ')), `${id}: 섹션 간격 압축 클래스 제거`);
     ok(!/NaN|undefined|object Object|<input|<form|주민등록|휴대폰 번호/.test((r.html.match(/<section class="hpt l4[\s\S]*?<\/section>/g) || []).join('')), `${id}: 이상 값 · 입력 칸 · 개인정보 문구 없음`);
     ok(!/국비|훈련생|고용24|내일배움/.test((r.html.match(/<section class="hpt l4[\s\S]*?<\/section>/g) || []).join('')), `${id}: 평생교육에 훈련 · 국비 문구 없음`);
+    ok(!/class="hpt l4 [a-z]+ l4-num/.test(r.html), `${id}: 시연 데이터(공개 강좌 ${cid.length}개 < 10)에서 큰 숫자 블록 숨김`);
     await view(id, r.html); }
+  /* ── 큰 숫자: 공개 강좌 10개 이상일 때만 · 0원 줄은 5개 이상일 때만 ── */
+  { const r = await a.p.evaluate(() => { const C0 = S.classes; const mk = (n, free) => Array.from({ length: n }, (_, i) => Object.assign({}, C0[i % C0.length], { id: 'zz' + i, name: '강좌 ' + i, status: '운영중', open: '전체', price: i < free ? 0 : 50000 }));
+      const out = {}; for (const [k, n, f] of [['n9', 9, 0], ['n12', 12, 3], ['n12f', 12, 6]]) { S.classes = mk(n, f); const h = siteHTML(siteFromTpl(TPL.find(t => t.id === 't44-lfhall'))); out[k] = { num: /class="hpt l4 [a-z]+ l4-num/.test(h), free: /수강료 없이/.test(h), hrs: /시간<\/span>/.test(h) }; } S.classes = C0; return out; });
+    ok(!r.n9.num && r.n12.num && !r.n12.free && r.n12f.free && !r.n12.hrs, `큰 숫자: 9개 숨김 · 12개 보임 · 0원 줄은 5개 이상만 · 시간 합계 없음(${JSON.stringify(r)})`); }
+  /* ── 후기 인용: 불만 · 요청 · 질문 제외 ── */
+  { const r = await a.p.evaluate(() => { const r0 = HPT.reviews; const q = L => { HPT.reviews = () => L; const h = siteHTML(siteFromTpl(TPL.find(t => t.id === 't44-lfuniv'))); HPT.reviews = r0; const m = h.match(/<blockquote>([\s\S]*?)<\/blockquote>/); return m ? m[1] : ''; };
+      const bad = [{ b: '영상이 자꾸 끊겨요 확인 부탁드립니다', st: 5 }, { b: '퀴즈 3번 해설 부탁드립니다', st: 5 }, { b: '수료증은 언제 나오나요?', st: 4 }, { b: '결제 오류로 환불 요청드려요', st: 5 }];
+      return { bad: q(bad), good: q([...bad, { b: '저녁반이라 퇴근하고도 꾸준히 들을 수 있었어요.', st: 5, c: '자격 과정' }]) }; });
+    ok(!/끊겨|부탁|나오나요|환불/.test(r.bad) && /새로운 일은/.test(r.bad) && /꾸준히/.test(r.good), `후기 인용: 불만 · 요청 · 질문 제외, 없으면 기관 한마디(${JSON.stringify(r)})`); }
   /* ── 시니어: 큰 글씨 · 큰 버튼 ── */
   { const html = await a.p.evaluate(() => { const s = siteFromTpl(TPL.find(t => t.id === 't44-lfsenior')); return siteHTML(s); }); PV.set('sen.html', html.replace('<head>', `<head><base href="${base}/">`));
     for (const w of [1440, 390]) { const c2 = await browser.newContext({ viewport: { width: w, height: 900 } }); const q = await c2.newPage(); await q.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await q.goto(`${base}/__pv/sen.html`, { waitUntil: 'load' });

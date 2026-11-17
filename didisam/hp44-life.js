@@ -45,7 +45,9 @@
   const dayL = c => { const d = Array.isArray(c.days) && c.days.length ? c.days.map(x => DOW[+x] || '').filter(Boolean).join(' · ') : ''; const t = c.time && c.time.from ? `${c.time.from}–${c.time.to || ''}` : ''; return [d, t].filter(Boolean).join(' '); };
   const meta = c => [dayL(c), +c.hours ? `${+c.hours}시간` : '', c.teacher || ''].filter(Boolean).join(' · ');
   const cH = c => '#p-c-' + c.id;
-  const review = () => { try { const R = (HPT.reviews && HPT.reviews()) || []; const G = R.filter(x => x && (!x.st || x.st >= 4) && String(x.b || '').length >= 12); const r = G.find(x => x.b.length <= 96) || G[0]; return r ? { b: r.b.length > 96 ? r.b.slice(0, 94) + '…' : r.b, w: [r.c, r.w].filter(Boolean).join(' · ') } : null; } catch (e) { return null; } };
+  const review = () => { try { const R = (HPT.reviews && HPT.reviews()) || []; const G = R.filter(x => x && (!x.st || x.st >= 4) && String(x.b || '').length >= 12 && !BADR.test(String(x.b).trim())); const r = G.find(x => x.b.length <= 96) || G[0]; return r ? { b: r.b.length > 96 ? r.b.slice(0, 94) + '…' : r.b, w: [r.c, r.w].filter(Boolean).join(' · ') } : null; } catch (e) { return null; } };
+  /* 큰 인용에서 뺄 글: 불만 · 요청 · 질문(별점이 높아도) */
+  const BADR = /끊겨|끊김|안 ?돼|안 ?되|안 ?열려|부탁|해 ?주세요|주실 수|오류|에러|환불|불편|불만|아쉬|느려|문의|버그|[?？]\s*$/;
   const notes = n => { try { return [...(S.notices || []), ...(S.classes || []).flatMap(c => c.notices || [])].filter(x => x && x.title && !x.hidden && !x.draft).sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, n || 4); } catch (e) { return []; } };
 
   /* ── 사진 ── */
@@ -70,13 +72,13 @@
   /* k: 첫 화면 · bg/alt/ink/mu: 바탕 · 면 · 글자 · dk: 짙은 면 · pt: 포인트 · r/br: 모서리 · hf/hw: 제목 서체 · 굵기 · card: 강좌 카드 모양 · ph: 사진 슬롯 · pool: 예비 사진 */
   const DEF = {
     lfhall: { name: '계절 매거진', sub: '평생학습관', k: 'almanac', desc: '크림 바탕 · 명조 제목 · 사진 콜라주로 이번 학기 강좌를 잡지처럼 펼치는 시 · 구 평생학습관', acc: '#2E5641', bg: '#F5EFE4', alt: '#EDE4D3', ink: '#1E2621', mu: '#4F574F', dk: '#23402F', pt: '#C2552E', r: 4, br: 999, hf: SERIF, hw: 700, nw: 700, card: 'mag', ph: { hero: 'hum-23', about: 'kni-03', space: 'hum-26', cta: 'sen-04' }, pool: ['kni-01', 'hum-24', 'art-02'] },
-    lfuniv: { name: '대학 평생교육원', sub: '대학 평생교육원', k: 'shift', desc: '흰 바탕 가운데 큰 제목과 넓은 둥근 사진 · 방문 목적별 세 갈래 — 대학 부설 평생교육원의 자격 · 교양 과정', acc: '#1D4ED8', bg: '#FFFFFF', alt: '#F5F6F8', ink: '#0C0E13', mu: '#4A4F5A', dk: '#0C0E13', pt: '#D7F25C', r: 20, br: 999, hf: SANS, hw: 800, nw: 800, card: 'box', ph: { hero: 'cam-07', about: 'hum-13' }, pool: ['lec-01', 'stu-02', 'hum-14'] },
+    lfuniv: { name: '대학 평생교육원', sub: '대학 평생교육원', k: 'shift', desc: '흰 바탕 가운데 큰 제목과 넓은 둥근 사진 · 방문 목적별 세 갈래 — 대학 부설 평생교육원의 자격 · 교양 과정', acc: '#1D4ED8', bg: '#FFFFFF', alt: '#F5F6F8', ink: '#0C0E13', mu: '#4A4F5A', dk: '#0C0E13', pt: '#D7F25C', r: 20, br: 999, hf: SANS, hw: 800, nw: 800, card: 'box', ph: { hero: 'cam-07', about: 'hum-13', space: 'cam-08' }, pool: ['lec-01', 'stu-02', 'hum-14'] },
     lfsenior: { name: '시니어 디지털 배움터', sub: '시니어 디지털', k: 'senior', desc: '큰 글씨 · 큰 버튼 · 전화 한 번으로 — 어르신 스마트폰 · 키오스크 · 디지털 생활 교육', acc: '#0B4F8A', bg: '#FFFCF5', alt: '#F3EEE2', ink: '#14171C', mu: '#33373F', dk: '#0B2E52', pt: '#F2B705', r: 28, br: 18, hf: SANS, hw: 800, nw: 800, card: 'box', big: 1, ph: { hero: 'hum-34', about: 'sen-07' }, pool: ['sen-03', 'sen-02', 'hum-09'] },
     lfhuman: { name: '인문 아카데미', sub: '인문 · 교양 아카데미', k: 'lecture', desc: '짙은 먹색 · 함렛 세리프 · 강의 목록을 공연 안내처럼 — 인문학 · 고전 · 역사 교양 강좌', acc: '#C8A96A', bg: '#15120F', alt: '#1E1A16', ink: '#F2ECE1', mu: '#BDB4A5', dk: '#0B0907', pt: '#C8A96A', r: 2, br: 2, hf: HAHM, hw: 600, nw: 600, card: 'line', dark: 1, ph: { hero: 'lib-06', about: 'lib-07', space: 'hum-12' }, pool: ['hum-38', 'lib-05', 'hum-37'] },
     lfvillage: { name: '동네 배움터', sub: '동네 배움터 · 마을 학교', k: 'line', desc: '버터 노랑 바탕과 둥근 손글씨풍 제목, 빨랫줄에 걸린 사진 — 이웃이 이웃을 가르치는 마을 배움터', acc: '#D9480F', bg: '#FFF4CF', alt: '#FFFFFF', ink: '#2B2114', mu: '#5A4B36', dk: '#3A2A12', pt: '#2F9E6A', r: 6, br: 999, hf: ROUND, hw: 400, nw: 400, card: 'poly', ph: { hero: 'kni-02', about: 'bak-02', space: 'nat-03', cta: 'hum-24' }, pool: ['bak-05', 'kni-01', 'gar-01'] },
     lfcredit: { name: '학점은행 학습과정', sub: '학점은행제(전통 · 격식)', k: 'formal', desc: '아이보리 바탕 · 이중 테두리 증서 · 문장 휘장 · 로마 숫자 단계 — 학위 · 자격을 준비하는 학점은행제 기관의 격식', acc: '#1B2A4A', bg: '#F8F6F1', alt: '#FFFFFF', ink: '#161A22', mu: '#474D59', dk: '#1B2A4A', pt: '#A8844F', r: 0, br: 0, hf: SERIF, hw: 600, nw: 400, card: 'line', ph: { about: 'cam-02', space: 'lib-03' }, pool: ['hum-02', 'lib-03', 'hum-14'] },
     lfculture: { name: '컬처 모자이크', sub: '문화센터', k: 'mosaic', desc: '큰 제목 아래 그림 · 음악 · 요가 · 베이킹 사진 모자이크 — 요일별 시간표로 고르는 문화센터 강좌', acc: '#C2255C', bg: '#FFFFFF', alt: '#FBF3F5', ink: '#1A1216', mu: '#544850', dk: '#2A0F1C', pt: '#FFC93C', r: 18, br: 999, hf: SANS, hw: 800, nw: 800, card: 'over', ph: { hero: 'hum-27', about: 'hum-30', space: 'yog-03', cta: 'bak-03' }, pool: ['art-02', 'mus-01', 'bak-01'] },
-    lflibrary: { name: '도서관 배움', sub: '도서관 평생교육', k: 'cover', desc: '밝은 열람실 사진 위에 책 표지처럼 겹친 제목 카드 — 도서관 강좌 · 독서 모임 · 작가 강연', acc: '#1F6F78', bg: '#F3F6F5', alt: '#FFFFFF', ink: '#13201F', mu: '#45524F', dk: '#123D42', pt: '#E09F3E', r: 14, br: 10, hf: SANS, hw: 800, nw: 800, card: 'box', ph: { hero: 'lib-01', about: 'hum-37', space: 'lib-05' }, pool: ['lib-07', 'hum-38', 'lib-02'] },
+    lflibrary: { name: '도서관 배움', sub: '도서관 평생교육', k: 'cover', desc: '밝은 열람실 사진 위에 책 표지처럼 겹친 제목 카드 — 도서관 강좌 · 독서 모임 · 작가 강연', acc: '#1F6F78', bg: '#F3F6F5', alt: '#FFFFFF', ink: '#13201F', mu: '#45524F', dk: '#123D42', pt: '#E09F3E', r: 14, br: 10, hf: SANS, hw: 800, nw: 800, card: 'box', ph: { hero: 'lib-01', about: 'hum-37', space: 'lib-02' }, pool: ['lib-07', 'hum-38', 'lib-04'] },
     lfretire: { name: '두 번째 출발', sub: '은퇴 설계 · 인생 2막', k: 'horizon', desc: '바다 수평선을 가득 채운 첫 화면과 명조 제목 — 은퇴를 앞둔 분의 일 · 돈 · 건강 · 관계 설계 과정', acc: '#E8915B', bg: '#FBF8F4', alt: '#FFFFFF', ink: '#1B1F26', mu: '#4D525B', dk: '#1C2633', pt: '#E8915B', r: 16, br: 999, hf: SERIF, hw: 600, nw: 400, card: 'over', ph: { hero: 'sen-06', about: 'sen-02', space: 'sen-01' }, pool: ['sen-03', 'hum-10', 'nat-02'] },
     lffamily: { name: '함께 자라는 부모', sub: '가족 · 부모 교육', k: 'circle', desc: '복숭아빛 바탕에 큰 원형 사진 두 장 · 자녀 나이별 갈래 — 부모 · 가족 교육 강좌', acc: '#8A3B74', bg: '#FFF2EC', alt: '#FFFFFF', ink: '#25161F', mu: '#57474F', dk: '#3E1B33', pt: '#F08A5D', r: 28, br: 999, hf: SANS, hw: 800, nw: 800, card: 'box', ph: { hero: 'fam-01', about: 'fam-03', space: 'fam-02' }, pool: ['fam-04', 'kid-06', 'fam-05'] }
   };
@@ -151,10 +153,11 @@ ${C.length ? `<dl class="l4-deg n${C.length}">${C.map(c => `<div><dt>${E(c[0])}<
     return sec(x, s, 'rows', `<div class="l4w"><div class="l4-head"><div>${head(d)}</div><a class="l4-more" href="#courses">전체 강좌 보기 ${ic('arrow', 18, 2)}</a></div><ol class="l4-ls">${L.map((c, i) => { const sd = okD(c.start) && days(t, c.start) > 0 ? c.start : c.end; const lab = d.num === 'lecture' ? `제${i + 1}강` : okD(sd) ? dot(sd) : '수시';
       return `<li><a class="l4-rw" href="${cH(c)}"><span class="l4-dt"><b>${E(lab)}</b><small>${E(d.num === 'lecture' ? whenL(c) : okD(sd) ? (sd === c.start ? '개강' : '종강') + ' · ' + DOW[new Date(sd + 'T00:00:00').getDay()] + '요일' : '상시')}</small></span><span class="l4-rn"><b>${E(c.name)}</b><small>${E(meta(c) || whenL(c))}</small></span><span class="l4-pr">${E(price(c))}</span>${ic(DEF[th].big ? 'arrow' : 'chev', DEF[th].big ? 28 : 22, 2)}</a></li>`; }).join('')}</ol></div>`); };
   /* 큰 숫자 하나(공개 강좌 수 또는 수업 시간 합) */
-  SEC['l4-num'] = (x, s) => { const d = x.data || {}; const L = live(); if (L.length < 2) return empty(x, '공개 강좌가 2개 이상이면 큰 숫자로 보여요.'); const hrs = L.reduce((a, c) => a + (+c.hours || 0), 0); const free = L.filter(c => !+c.price).length;
-    const useH = d.mode === 'hours' && hrs >= 40; const n = useH ? hrs.toLocaleString('ko-KR') : String(L.length); const u = useH ? '시간' : '개';
-    const t = d.title || (useH ? `지금 열린 ${L.length}개 강좌의 수업 시간을 모두 더했어요.` : `지금 ${org()}에서 신청할 수 있는 강좌예요.`);
-    return sec(x, s, 'num', `<div class="l4w l4-ng"><p class="l4-n">${E(n)}<span>${u}</span></p><div><p class="l4-nt2">${E(t)}</p><p class="l4-ns">${E(free && !useH ? `그중 ${free}개는 수강료 없이 들을 수 있어요.` : d.sub || `${org()} 공개 강좌 기준`)}</p><a class="l4-ln" href="#courses">강좌 고르기 ${ic('arrow', 18, 2)}</a></div></div>`); };
+  /* 자랑할 만한 값일 때만(공개 강좌 10개 이상). 작으면 블록 전체를 숨긴다. 수강료 0원 강좌는 5개 이상일 때만 한 줄로 */
+  const NUM_MIN = 10, FREE_MIN = 5;
+  SEC['l4-num'] = (x, s) => { const d = x.data || {}; const L = live(); if (L.length < NUM_MIN) return empty(x, `공개 강좌가 ${NUM_MIN}개 이상이면 큰 숫자로 보여요.`); const free = L.filter(c => !+c.price).length;
+    const t = d.title || `지금 ${org()}에서 신청할 수 있는 ${d.unit || '강좌'}예요.`;
+    return sec(x, s, 'num', `<div class="l4w l4-ng"><p class="l4-n">${E(String(L.length))}<span>개</span></p><div><p class="l4-nt2">${E(t)}</p><p class="l4-ns">${E(free >= FREE_MIN ? `그중 ${free}개는 수강료 없이 들을 수 있어요.` : d.sub || `${org()} 공개 ${d.unit || '강좌'} 기준`)}</p><a class="l4-ln" href="#courses">${E(d.unit || '강좌')} 고르기 ${ic('arrow', 18, 2)}</a></div></div>`); };
   /* 사진 + 이야기(정의 목록 또는 번호 단계) */
   SEC['l4-story'] = (x, s) => { const d = x.data || {}; const cols = (d.cols || []).filter(c => c && c[0]).slice(0, 4); if (!cols.length) return empty(x); const p = slotP(s, d.slot || 'about', null, DEF[thOf(s)].ph[d.slot || 'about']);
     const body = d.dl ? `<dl class="l4-dl">${cols.map(c => `<div><dt>${E(c[0])}</dt><dd>${E(c[1] || '')}</dd></div>`).join('')}</dl>` : `<ol class="l4-steps">${cols.map((c, i) => `<li><span class="l4-sn">${String(i + 1).padStart(2, '0')}</span><div><h3>${E(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}</div></li>`).join('')}</ol>`;
@@ -373,7 +376,7 @@ font-family:${SANS};color:var(--ink);background:var(--bg);font-size:${B ? 19 : 1
 .l4-k-circle h1{font-size:84px;line-height:1.14;letter-spacing:-.055em}.l4-k-circle h1 em{color:var(--at)}
 .l4-k-circle .l4-orb{position:relative;height:640px}.l4-k-circle .l4-o1{position:absolute;right:-120px;top:0;width:640px;height:640px;border-radius:50%}.l4-k-circle .l4-o2{position:absolute;left:-10px;bottom:-10px;width:240px;height:240px;border-radius:50%;border:10px solid var(--bg)}
 .l4-k-circle .l4-dot{position:absolute;left:60px;top:70px;width:72px;height:72px;border-radius:50%;background:var(--pt)}
-@media (max-width:720px){.l4-k-circle{padding:48px 0 72px}.l4-k-circle .l4-g{grid-template-columns:1fr;gap:28px}.l4-k-circle h1{font-size:44px;line-height:1.2}.l4-k-circle .l4-orb{height:340px;order:-1}.l4-k-circle .l4-o1{right:-70px;width:330px;height:330px}.l4-k-circle .l4-o2{width:150px;height:150px;left:0;bottom:0;border-width:7px}.l4-k-circle .l4-dot{left:30px;top:30px;width:44px;height:44px}}`
+@media (max-width:720px){.l4-k-circle{padding:32px 0 72px}.l4-k-circle .l4-g{grid-template-columns:1fr;gap:28px}.l4-k-circle h1{font-size:44px;line-height:1.2}.l4-k-circle .l4-orb{height:236px;order:-1}.l4-k-circle .l4-o1{right:-60px;width:236px;height:236px}.l4-k-circle .l4-o2{width:120px;height:120px;left:0;bottom:0;border-width:6px}.l4-k-circle .l4-dot{left:30px;top:30px;width:44px;height:44px}}`
   };
 
   /* ── 렌더러 연결 ── */
@@ -383,7 +386,7 @@ font-family:${SANS};color:var(--ink);background:var(--bg);font-size:${B ? 19 : 1
       if (x.type === 'banner' && mine(s) && HPT.has(s.theme) && !+d.dstyle && !s.layout) { if (x.hide && !editing()) return ''; return mark(heroSec(s, d), x); } }
     } catch (e) { console.error('hp44-life', e); }
     return base(x, i, s, lk); }; window.proSec = proSec; }
-  try { if (window.HPW && typeof HPW.emptyOf === 'function') { const e0 = HPW.emptyOf; HPW.emptyOf = x => { const d = (x && x.data) || {}; if (x && x.type === 'text' && SEC[d.hpt]) { try { return /^l4-(cards|rows)$/.test(d.hpt) ? !live().length : d.hpt === 'l4-num' ? live().length < 2 : false; } catch (e) { return false; } } return e0(x); }; } } catch (e) { }
+  try { if (window.HPW && typeof HPW.emptyOf === 'function') { const e0 = HPW.emptyOf; HPW.emptyOf = x => { const d = (x && x.data) || {}; if (x && x.type === 'text' && SEC[d.hpt]) { try { return /^l4-(cards|rows)$/.test(d.hpt) ? !live().length : d.hpt === 'l4-num' ? live().length < NUM_MIN : false; } catch (e) { return false; } } return e0(x); }; } } catch (e) { }
   const needCSS = s => !!(s && (mine(s) || (s.sections || []).some(x => x && x.data && SEC[x.data.hpt])));
   { const base = siteHTML; siteHTML = (s, ...a) => { let h = base(s, ...a); try { if (needCSS(s) && HPT.tokens(s)) { h = h.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>');
       h = h.replace(/<section class="([^"]*\bl4\b[^"]*)"/g, (m, c) => `<section class="${c.replace(/\bhps-(flowb?|short)\b\s*/g, '').trim()}"`); /* 같은 바탕 섹션 간격 압축은 시안 리듬을 깨므로 뺀다 */
@@ -412,7 +415,7 @@ font-family:${SANS};color:var(--ink);background:var(--bg);font-size:${B ? 19 : 1
     lfuniv: { scene: '대학 평생교육원 — 성인 학습자가 자격 · 교양 · 직무 과정을 고르고, 수강생은 내 강의실과 수료증으로 바로 이동', purpose: ['apply', 'learn'],
       build: () => [ban({ eyebrow: `${org()} · 이번 학기 과정`, title: '다시 배우는 시간,\n대학에서 시작해요', sub: '대학 강의실에서 자격 · 교양 · 직무 과정을 들어요. 일하면서도 들을 수 있는 저녁 · 주말 과정이 있어요.', cta: '과정 둘러보기', link: 'learn:courses', cta2: '내 강의실', link2: 'learn:my' }),
         TX('features', { hpt: 'l4-cards', eyebrow: '모집 중인 과정', title: '나에게 맞는\n다음 걸음', sub: '전공이나 경력이 없어도 괜찮아요. 과정마다 기간 · 시간 · 수강료를 먼저 보여 드려요.', cols: AUTO }),
-        TX('features', { hpt: 'l4-num', mode: 'hours', title: '', cols: AUTO }),
+        TX('features', { hpt: 'l4-band', slot: 'space', title: '퇴근 뒤 캠퍼스,\n두 번째 강의실이 열려요.', sub: '저녁 · 주말 과정은 일을 하면서도 들을 수 있게 짜여 있어요.', cols: AUTO }),
         TX('features', { hpt: 'l4-story', eyebrow: '수업 방식', title: '강의만 듣고\n끝나지 않아요', cols: [['직접 해 보며 배워요', '수업마다 실습과 과제가 있어 배운 것을 바로 써 봐요.'], ['기록이 남아요', '출석과 진도가 자동으로 기록되고, 수료하면 수료증을 받아요.'], ['끝난 뒤에도 물어보세요', '다음에 들을 과정을 상담으로 함께 골라요.']] }),
         TX('features', { hpt: 'l4-quote', title: '새로운 일은, 배우기로 마음먹은 날 시작돼요.', sub: '', cols: AUTO }),
         TX('features', { hpt: 'l4-cta', title: '어떤 과정이 맞을지\n함께 찾아요', sub: '배우고 싶은 것을 알려 주시면 맞는 과정을 안내해 드려요.', cta: '과정 둘러보기', cols: [] }), ...quiet()] },
@@ -441,7 +444,7 @@ font-family:${SANS};color:var(--ink);background:var(--bg);font-size:${B ? 19 : 1
       build: () => [ban({ eyebrow: '학점은행제 학습과정', title: '일하면서도,\n학위를 완성해요', sub: `${org()}에서 학점을 쌓아 전문학사 · 학사 학위를 준비해요. 인정 학점과 과목은 상담으로 확인해 드려요.`, cta: '개설 과목 보기', link: 'learn:courses', cta2: '학습 상담', link2: 'learn:comm', cols: [['전문학사', '2년제 · 3년제 학위 과정'], ['학사', '4년제 학위 과정'], ['자격 취득', '학점 연계 자격 과정']] }),
         TX('features', { hpt: 'l4-flow', num: 'roman', eyebrow: '학위 취득 절차', title: '네 단계로\n학위를 준비해요', sub: '정확한 학점 기준과 제출 서류는 학습 상담에서 안내해 드려요.', cols: [['학습 설계', '전공과 목표 학위에 맞춰 이수 계획을 세워요.'], ['과목 이수', '학기마다 개설 과목을 듣고 학점을 쌓아요.'], ['학습자 등록', '정해진 기간에 학습자 등록을 해요.'], ['학위 신청', '기준 학점을 채우면 학위를 신청해요.']] }),
         TX('features', { hpt: 'l4-rows', eyebrow: '이번 학기', title: '개설 과목', cols: AUTO }),
-        TX('features', { hpt: 'l4-num', title: '', cols: AUTO }),
+        TX('features', { hpt: 'l4-num', unit: '과목', title: '', cols: AUTO }),
         TX('features', { hpt: 'l4-help', title: '학사 공지', sub: '학점 인정 · 학위 신청 상담', cols: [] }),
         TX('features', { hpt: 'l4-cta', eyebrow: '수강 신청', title: '이번 학기,\n학점을 쌓아 보세요', sub: '수강 신청 기간과 과목은 공지로 먼저 알려 드려요.', cta: '개설 과목 보기', cols: [] }), ...quiet()] },
     lfculture: { scene: '문화센터 — 그림 · 음악 · 요가 · 베이킹 강좌를 사진 모자이크로 보고 요일별 시간표로 골라 신청', purpose: ['apply', 'learn'],
@@ -455,7 +458,7 @@ font-family:${SANS};color:var(--ink);background:var(--bg);font-size:${B ? 19 : 1
       build: () => [ban({ eyebrow: '도서관 평생학습', title: '책 한 권으로\n시작하는 배움', sub: '독서 모임 · 글쓰기 · 작가와의 만남까지, 도서관에서 열리는 강좌를 모았어요.', cta: '강좌 둘러보기', link: 'learn:courses', cta2: '내 강의실', link2: 'learn:my', note: '도서관 회원이면 누구나 신청할 수 있어요.' }),
         TX('features', { hpt: 'l4-cards', eyebrow: '이번 달 강좌', title: '도서관에서\n열리는 강좌', cols: AUTO }),
         TX('features', { hpt: 'l4-story', dl: 1, flip: 1, eyebrow: '이용 안내', title: '신청부터 수업까지\n도서관에서', cols: [['신청', '강좌 페이지에서 바로 신청해요.'], ['장소', '강좌 상세에 강의실을 적어 둬요.'], ['자료', '수업 자료와 함께 읽을 책을 안내해요.'], ['수료', '출석 기준을 채우면 수료증을 받아요.']] }),
-        TX('features', { hpt: 'l4-num', title: '', cols: AUTO }),
+        TX('features', { hpt: 'l4-band', slot: 'space', title: '조용한 서가 사이에서,\n한 권을 끝까지 읽는 시간.', sub: '강좌가 끝나도 함께 읽은 책은 도서관에서 계속 빌릴 수 있어요.', cols: AUTO }),
         TX('features', { hpt: 'l4-help', title: '도서관 알림', sub: '강좌 문의', cols: [] }),
         TX('features', { hpt: 'l4-cta', title: '이번 달엔\n어떤 책을 함께 읽을까요?', sub: '관심 있는 주제를 고르면 맞는 강좌를 보여 드려요.', cta: '강좌 둘러보기', cols: [] }), ...quiet()] },
     lfretire: { scene: '은퇴 설계 · 인생 2막 — 은퇴를 앞둔 분이 일 · 돈 · 건강 · 관계 설계 과정을 보고 상담 · 신청', purpose: ['apply', 'brand'],
