@@ -4,9 +4,9 @@
 const H = require('./hp-visual/lib.js');
 const A = H.args(process.argv.slice(2));
 const IDS = ['kfmath', 'kfeng', 'kfessay', 'kfprep', 'kfsci', 'kfkids', 'kfcode', 'kfart', 'kfmusic', 'kfsport'];
-const SECS = { kfmath: ['.k4-split', '.k4-story', '.k4-tt', '.k4-cls', '.k4-quote', '.k4-fin'], kfeng: ['.k4-frame', '.k4-stm', '.k4-cls', '.k4-week', '.k4-quote', '.k4-fin'], kfessay: ['.k4-center', '.k4-story', '.k4-num', '.k4-cls', '.k4-quote', '.k4-fin'],
-  kfprep: ['.k4-formal', '.k4-steps', '.k4-rows', '.k4-num', '.k4-notice', '.k4-fin'], kfsci: ['.k4-cine', '.k4-stm', '.k4-cls', '.k4-week', '.k4-num', '.k4-quote', '.k4-fin'], kfkids: ['.k4-bubble', '.k4-steps', '.k4-gal', '.k4-cls', '.k4-quote', '.k4-fin'],
-  kfcode: ['.k4-grid', '.k4-band', '.k4-steps', '.k4-num', '.k4-fin'], kfart: ['.k4-collage', '.k4-band', '.k4-num', '.k4-gal', '.k4-quote', '.k4-fin'], kfmusic: ['.k4-half', '.k4-story', '.k4-tt', '.k4-quote', '.k4-fin'], kfsport: ['.k4-slab', '.k4-num', '.k4-band', '.k4-week', '.k4-gal', '.k4-fin'] };
+const SECS = { kfmath: ['.k4-split', '.k4-story', '.k4-tt', '.k4-cls', '.k4-quote', '.k4-fin'], kfeng: ['.k4-frame', '.k4-stm', '.k4-cls', '.k4-week', '.k4-quote', '.k4-fin'], kfessay: ['.k4-center', '.k4-story', '.k4-cls', '.k4-quote', '.k4-fin'],
+  kfprep: ['.k4-formal', '.k4-steps', '.k4-rows', '.k4-notice', '.k4-fin'], kfsci: ['.k4-cine', '.k4-stm', '.k4-cls', '.k4-week', '.k4-quote', '.k4-fin'], kfkids: ['.k4-bubble', '.k4-steps', '.k4-gal', '.k4-cls', '.k4-quote', '.k4-fin'],
+  kfcode: ['.k4-grid', '.k4-band', '.k4-steps', '.k4-fin'], kfart: ['.k4-collage', '.k4-band', '.k4-gal', '.k4-quote', '.k4-fin'], kfmusic: ['.k4-half', '.k4-story', '.k4-tt', '.k4-quote', '.k4-fin'], kfsport: ['.k4-slab', '.k4-band', '.k4-week', '.k4-gal', '.k4-fin'] };
 const H1MAX = Object.fromEntries(IDS.map(id => [id, id === 'kfart' ? [3, 4] : [2, 4]]));
 const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { const res = await r.fetch(); let b = await res.text();
   if (!/hp44-k12\.js/.test(b)) b = b.replace(/(<script src="hpprem\.js[^"]*"><\/script>)/, '$1\n<script src="hp44-k12.js"></script>');
@@ -36,13 +36,19 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
       xs.forEach(x => { const y = b.top + Math.min(24, b.height / 4); const top = document.elementFromPoint(x, y); if (top !== host && !(host && host.contains(top))) bad.push(`${Math.round(x)},${Math.round(y)} ${top && top.tagName}.${top && top.className}`); else { const inn = sr.elementFromPoint ? sr.elementFromPoint(x, y) : null; if (inn && !inn.closest('h1') && !inn.closest('.k4-h')) bad.push(`inner ${inn.tagName}.${inn.className}`); } });
       return bad.join(' | '); })();
     const sy0 = scrollY;
+    const cta = q('.k4-h .k4-b.p').filter(vis)[0]; const ctaB = cta ? Math.round(cta.getBoundingClientRect().bottom) : 9999;
+    const h1B = h1 ? Math.round(h1.getBoundingClientRect().bottom) : 9999;
+    const rv = (() => { try { return (HPT.reviews ? HPT.reviews() : []).length; } catch (e) { return -1; } })();
+    const quoteTx = q('.k4-quote blockquote').map(x => x.textContent).join('|'); const bigTx = q('.k4-num .k4-big').map(x => x.textContent).join('|');
     const topImg = q('.k4-h img').filter(vis).some(im => { const b = im.getBoundingClientRect(); return b.top < innerHeight && b.bottom > 0 && b.height >= 100 && im.complete && im.naturalWidth > 0; });
     const secs = SEL.filter(s => q(s).some(vis)); const txt = R.map(r => r.textContent).join(' ');
-    return { cover, sy0, over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, inputs: q('.k4-h input, .k4-s input, .k4-s form').length, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.k4-h h1, .k4-fin h2').map(x => x.textContent).join('')) }; }, sel);
+    return { ctaB, h1B, quoteTx, bigTx, cover, sy0, over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, inputs: q('.k4-h input, .k4-s input, .k4-s form').length, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.k4-h h1, .k4-fin h2').map(x => x.textContent).join('')) }; }, sel);
   const allowed = h => /^(#login\/(family|my|mypay)|#join|#p-c-[\w-]+|#p-m-[\w-]+|#class\/[\w-]+|#courses|#shop|#notice|tel:[\d+]+|mailto:.+)$/.test(h);
   try {
     for (const type of ['k12']) {
       const errs = []; const o = await H.mkOrg(br, base, type, errs, 'filled'); await inject(o.ctx); await o.op.reload(); await o.op.waitForFunction(() => window.S && S.org && typeof TPL !== 'undefined'); await o.op.waitForTimeout(500); await H.dismiss(o.op);
+      /* 후기 필터 점검: 별점 5인 불만 · 요청 후기(가장 긴 글)를 섞어 둔다 — 인용으로 뽑히면 안 된다 */
+      await o.op.evaluate(() => { const who = (S.members || [])[0] ? S.members[0].id : 'm0'; S.posts = [...(S.posts || []), { id: 'qbad', kind: '이야기', board: '수강후기', who, title: '영상이 자꾸 끊겨요', body: '수업은 좋은데 집에서 복습 영상을 볼 때 영상이 자꾸 끊겨요. 확인 부탁드려요', stars: 5, at: new Date().toISOString().slice(0, 10), replies: 0, views: 3, hidden: false }]; save(); smPublish(); }); await H.dismiss(o.op);
       const reg = await o.op.evaluate(ids => ids.map(id => { const tp = TPL.find(t => t.id === 't44-' + id) || {}; let th = ''; try { th = HPT.thumb(S.site, id); } catch (e) { th = 'ERR ' + e.message; }
         const au = (() => { try { const b = JSON.parse(JSON.stringify(S.site)); HPT.apply(b, id, { keepColor: true }); return HPT.audit(b).filter(x => x[3] < 4.5).map(x => x[0] + ' ' + x[3]); } catch (e) { return ['ERR ' + e.message]; } })();
         return { id, has: HPT.has(id), list: HPT.list.some(x => x.id === id && x.prem), types: tp.types || [], fits: HPT.premFits(id), first: HPT.premFor().slice(0, 6), thumb: /k4-h/.test(th) && /k4-fin/.test(th), g44: tp.g44 === 1 && !!tp.sub, au }; }), IDS);
@@ -58,7 +64,10 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
           await learner(pg, o.tid, w, h); const m = await measure(pg, SECS[id]); const tag = `[${type} ${w}] ${id}`;
           ok(m.secs.length === SECS[id].length, `${tag} 섹션 ${SECS[id].length}종 표시(${m.secs.join(' ')})`);
           ok(m.over <= 0 && !m.wide.length, `${tag} 가로 넘침 0(${m.over} ${m.wide.join(',')})`);
-          ok(m.h1n >= 1 && m.h1n <= H1MAX[id][w === 390 ? 1 : 0] && m.h1fs >= (w === 390 ? 36 : 64), `${tag} 첫 화면 제목 ${m.h1fs}px · ${m.h1n}줄`);
+          ok(m.h1n >= 1 && m.h1n <= H1MAX[id][w === 390 ? 1 : 0] && (w === 390 ? m.h1fs >= 36 && m.h1fs <= (id === 'kfart' ? 64 : 48) : m.h1fs >= 64), `${tag} 첫 화면 제목 ${m.h1fs}px · ${m.h1n}줄`);
+          ok(m.h1B <= h - (w === 390 ? 80 : 0) && m.ctaB <= h - (w === 390 ? 76 : 0), `${tag} 첫 화면 안에 제목 · 주 버튼이 모두 보임(제목 ${m.h1B} · 버튼 ${m.ctaB} / ${h})`);
+          ok(!/끊겨|부탁|해 ?주세요|환불|오류|[?？]$/.test(m.quoteTx), `${tag} 후기 인용에 불만 · 요청 · 질문 없음(${m.quoteTx.slice(0, 30)})`);
+          ok(!m.bigTx || !/^\d개 반$|^\d\.\d\/5$/.test(m.bigTx), `${tag} 큰 숫자는 자랑할 만한 값만(${m.bigTx || '숨김'})`);
           ok(m.topImg, `${tag} 첫 화면 안에 실사진`);
           ok(!m.cover && m.sy0 === 0, `${tag} 첫 화면 제목 위쪽이 머리글에 가려지지 않음(${m.cover || 'ok'} · scrollY ${m.sy0})`);
           ok(!m.small.length, `${tag} 13px 미만 글자 0(${m.small.join(',')})`);
@@ -76,11 +85,20 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
       }
       ok(!errs.length, `[${type}] 운영 pageerror 0 ${errs.slice(0, 3).join('|')}`); await o.ctx.close();
     }
+    /* 큰 숫자: 시연 데이터(후기 3건 · 반 6개 · 정원 12~32명)에서는 숨김(위 점검), 자랑할 만한 값이면 템플릿마다 정한 지표로 보임 */
+    { const errs = []; const o = await H.mkOrg(br, base, 'k12', errs, 'filled'); await inject(o.ctx); await o.op.reload(); await o.op.waitForFunction(() => window.S && S.org && typeof TPL !== 'undefined'); await o.op.waitForTimeout(500); await H.dismiss(o.op);
+      await o.op.evaluate(() => { const who = (S.members || [])[0] ? S.members[0].id : 'm0'; const d0 = new Date().toISOString().slice(0, 10);
+        S.posts = [...(S.posts || []).filter(p => p.board !== '수강후기'), ...Array.from({ length: 12 }, (_, i) => ({ id: 'qg' + i, kind: '이야기', board: '수강후기', who, title: '선생님 설명이 좋아요 ' + i, body: '선생님이 차근차근 설명해 주셔서 아이가 수업을 기다려요. 숙제 알림도 편해요 ' + i, stars: 5, at: d0, replies: 0, views: 1, hidden: false }))];
+        S.classes.forEach(c => { c.recruit = Object.assign({}, c.recruit, { cap: 8 }); }); S.classes[0].learners = Array.from({ length: 120 }, (_, i) => 'L' + i); save(); smPublish(); }); await H.dismiss(o.op);
+      const EXP = { kfessay: /\d\.\d\/5/, kfart: /\d\.\d\/5/, kfcode: /^1:8$/, kfsci: /^120명$/, kfsport: /^120명$/ };
+      for (const id of Object.keys(EXP)) { const r = await H.applyTpl(o.op, 't44-' + id); const pg = await o.ctx.newPage(); await learner(pg, o.tid, 390, 844); const m = await measure(pg, ['.k4-num']);
+        ok(!r.err && EXP[id].test(m.bigTx), `[자랑할 값 390] ${id} 큰 숫자 표시(${m.bigTx || '없음'}) · 템플릿마다 다른 지표`); await pg.close(); }
+      await o.ctx.close(); }
     /* 데이터 없음: 공개 강좌 · 후기 0 → 반 · 숫자 · 인용 덩어리 숨김(게시본), 넘침 0 */
     { const errs = []; const o = await H.mkOrg(br, base, 'k12', errs, 'empty'); await inject(o.ctx); await o.op.reload(); await o.op.waitForFunction(() => window.S && S.org && typeof TPL !== 'undefined'); await o.op.waitForTimeout(500); await H.dismiss(o.op);
       for (const id of IDS) { await o.op.evaluate(() => { S.classes = []; S.posts = (S.posts || []).filter(p => p.board !== '수강후기'); S.reviews = []; S.notices = []; save(); });
         const r = await H.applyTpl(o.op, 't44-' + id); const pg = await o.ctx.newPage(); const perr = []; pg.on('pageerror', e => perr.push(e.message));
-        await learner(pg, o.tid, 390, 844); const m = await measure(pg, ['.k4-cls', '.k4-band', '.k4-gal', '.k4-num', '.k4-quote', '.k4-stm', '.k4-tt', '.k4-notice', '.k4-hint']);
+        await learner(pg, o.tid, 390, 844); const m = await measure(pg, ['.k4-cls', '.k4-band', '.k4-gal', '.k4-quote', '.k4-stm', '.k4-tt', '.k4-notice', '.k4-hint']);
         ok(!r.err && !m.secs.length && m.over <= 0 && !perr.length && m.secs.length === 0, `[빈 기관 390] ${id} 데이터 없는 덩어리 숨김 · 안내 문구 비노출 · 넘침 0(${m.secs.join(' ')} ${m.over} ${perr.join('|')})`);
         const ed = await o.op.evaluate(id2 => { try { HPE = HPE || null; } catch (e) { } let h = ''; try { const b = JSON.parse(JSON.stringify(S.site)); h = siteHTML(b, false, 'ko'); } catch (e) { h = 'ERR ' + e.message; } return { ok: /k4-h/.test(h), err: /^ERR/.test(h) ? h : '' }; }, id);
         ok(ed.ok, `[빈 기관] ${id} 스튜디오 미리보기 렌더(${ed.err})`); await pg.close(); }

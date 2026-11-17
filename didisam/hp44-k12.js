@@ -68,14 +68,17 @@
   const head = d => `${d.eyebrow ? `<p class="k4-kick">${E(d.eyebrow)}</p>` : ''}<h1>${emph(d.title || org())}</h1>${d.sub ? `<p class="k4-sub">${E(d.sub)}</p>` : ''}`;
 
   /* ── 큰 숫자: 계산 가능하고 내세울 만한 값만 ── */
-  function bigNum(pref) { let R = []; try { R = (HPT.reviews() || []).filter(r => +r.st > 0); } catch (e) { }
-    const C = pub(); const caps = C.map(capOf).filter(Boolean); const avg = R.length ? R.reduce((a, r) => a + Math.min(5, +r.st), 0) / R.length : 0;
-    const rv = R.length >= 2 && avg >= 4 ? { v: avg.toFixed(1), u: '/5', t: '학부모 · 학생이 남긴\n실제 후기 평점이에요', n: `수강후기 ${R.length}건 평균` } : null;
-    const cap = caps.length ? Math.max(...caps) : 0;
-    const cp = cap && cap <= 20 ? (pref === 'ratio' ? { v: `1:${cap}`, u: '', t: `선생님 한 명이 보는 인원은\n최대 ${cap}명이에요`, n: '공개 반 정원 기준' } : { v: String(cap), u: '명', t: `한 반은\n최대 ${cap}명까지만 받아요`, n: `공개 반 ${C.length}개의 정원 기준` }) : null;
-    const nc = C.length >= 3 ? { v: String(C.length), u: '개 반', t: '지금 신청할 수 있는\n반이 열려 있어요', n: '공개 강좌 기준' } : null;
-    const order = pref === 'ratio' ? [cp, rv, nc] : pref === 'count' ? [nc, rv, cp] : [rv, cp, nc];
-    return order.find(Boolean) || null; }
+  /* 후기: 별점 4 이상 · 불만 · 요청 · 질문으로 보이는 글 제외(검수 FIX 3) */
+  const BAD = /끊겨|끊김|안 ?돼|안 ?되|부탁|해 ?주세요|해주세요|오류|에러|환불|불편|느려|별로|아쉬|문의|언제|어떻게|왜 /;
+  const goodRev = () => { let R = []; try { R = HPT.reviews() || []; } catch (e) { } return R.filter(r => +r.st >= 4 && !BAD.test(String(r.b)) && !/[?？]\s*$/.test(String(r.b).trim()) && String(r.b).trim().length >= 12); };
+  /* 큰 숫자: 자랑할 만한 값일 때만, 템플릿마다 한 가지 지표(검수 FIX 2) — 후기 10건 이상 · 공개 반 10개 이상 · 수강생 100명 이상 · 정원 12명 이하 */
+  function bigNum(pref) { const C = pub();
+    if (pref === 'review') { let R = []; try { R = (HPT.reviews() || []).filter(r => +r.st > 0); } catch (e) { } const avg = R.length ? R.reduce((a, r) => a + Math.min(5, +r.st), 0) / R.length : 0;
+      return R.length >= 10 && avg >= 4.3 ? { v: avg.toFixed(1), u: '/5', t: '학부모 · 학생이 남긴\n실제 후기 평점이에요', n: `수강후기 ${R.length}건 평균` } : null; }
+    if (pref === 'count') return C.length >= 10 ? { v: String(C.length), u: '개 반', t: '학년 · 과목별로\n반을 나눠 열어요', n: '공개 강좌 기준' } : null;
+    if (pref === 'learners') { const n = C.reduce((a, c) => a + ((c.learners || []).length), 0); return n >= 100 ? { v: n.toLocaleString('ko-KR'), u: '명', t: '지금 이 반들에서\n함께 배우고 있어요', n: '공개 강좌 수강생 합계' } : null; }
+    if (pref === 'ratio') { const caps = C.map(capOf).filter(Boolean); const cap = caps.length ? Math.max(...caps) : 0; return cap && cap <= 12 ? { v: `1:${cap}`, u: '', t: `선생님 한 명이 보는 인원은\n최대 ${cap}명이에요`, n: '공개 반 정원 기준' } : null; }
+    return null; }
 
   /* ══ 첫 화면 10종 ══ */
   const H0 = (s, cls, inner, dark) => `<section class="hpt hp-hero hps-hero k4-h ${cls}"${dark ? ' data-hps-dark="1"' : ''}>${inner}</section>`;
@@ -126,7 +129,7 @@
       return sec('k4-band', `${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2>${C.map(band).join('')}`); },
     'k4-gal': (d, s) => { fresh(); const C = pub().slice(0, 4); const P = C.map((c, i) => [c, clsPh(c, s, i + 7)]).filter(x => x[1]); if (P.length < 3) return hint('k4-gal', '공개 강좌가 3개 이상이면 반별 장면 갤러리가 표시됩니다.');
       return sec('k4-gal', `${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2><div class="k4-gl n${P.length}">${P.map(([c, p]) => `<a ${aT(L.c(c))}>${img(p, '', 0)}<em>${E(c.name)}</em></a>`).join('')}</div>`); },
-    'k4-quote': (d, s) => { let R = []; try { R = HPT.reviews() || []; } catch (e) { } const r = R.slice().sort((a, b) => (b.st || 0) - (a.st || 0) || String(b.b).length - String(a.b).length)[0];
+    'k4-quote': (d, s) => { const R = goodRev(); const r = R.slice().sort((a, b) => (b.st || 0) - (a.st || 0) || String(b.b).length - String(a.b).length)[0];
       if (!r) return hint('k4-quote', '실제 수강후기가 등록되면 이곳에 크게 보여 드려요(없으면 게시된 사이트에서 숨겨집니다).');
       const t2 = String(r.b).replace(/\s+/g, ' ').trim(); const q = t2.length > 120 ? t2.slice(0, 118).replace(/\s\S*$/, '') + '…' : t2;
       return sec('k4-quote', `${fig(s, 'quote', 'k4-qp', 0)}<div class="k4-qt"><blockquote>${E(q)}</blockquote><p class="k4-cite">${E([r.w, r.c].filter(Boolean).join(' · '))}</p></div>`); },
@@ -286,7 +289,7 @@
 @media(max-width:1000px){.k4-sg{grid-template-columns:minmax(0,1fr);gap:36px;padding-bottom:40px}.k4-split .k4-hi{height:420px}}
 @media(max-width:760px){.k4-split .k4-hi{height:300px;border-radius:20px}.k4-split .k4-sub{font-size:17px;margin:18px 0 26px!important}}`,
     kfeng: v => `${HB('k4-frame', '24px 0 0', '12px 0 0')}${H1('k4-frame', 92, 40, 1.08, 'color:#fff!important;')}
-.k4-fr{position:relative;height:760px;border-radius:32px;overflow:hidden}.k4-fr .k4-hi{position:absolute;inset:0;height:100%}
+.k4-fr{position:relative;height:clamp(560px,calc(100vh - 130px),760px);border-radius:32px;overflow:hidden}.k4-fr .k4-hi{position:absolute;inset:0;height:100%}
 .k4-fr::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(6,20,26,.86) 0%,rgba(6,20,26,.35) 48%,rgba(6,20,26,0) 72%);pointer-events:none}
 .k4-fc{position:absolute;z-index:2;left:64px;right:64px;bottom:60px;color:#fff}.k4-frame .k4-kick{color:#fff;opacity:.9;margin-bottom:18px!important}.k4-frame h1 em{color:var(--pt)!important}
 .k4-frame .k4-sub{font-size:20px;line-height:1.65;color:rgba(255,255,255,.86);margin:22px 0 34px!important;max-width:600px}
@@ -312,10 +315,10 @@
 .k4-notice{background:var(--alt)!important}
 .k4-fin{border-top:1px solid var(--ln)}.k4-fin .k4-fg{grid-template-columns:minmax(0,1fr);text-align:center;justify-items:center}.k4-fin .k4-cta{justify-content:center}.k4-fin .k4-lead{max-width:640px;margin:0 auto}.k4-info{text-align:left}
 @media(max-width:760px){.k4-cr svg{width:48px;height:58px}.k4-formal .k4-sub{font-size:16px}.k4-formal .k4-hi{height:320px;border-radius:200px 200px 0 0;outline-offset:6px;margin-top:40px}.k4-formal .k4-q{margin-top:40px}.k4-rule{margin:20px auto!important}}`,
-    kfsci: v => `.hpt.hp-hero.k4-h.k4-cine{position:relative;height:880px;padding:0;overflow:hidden;background:var(--bg);color:#fff;margin:0}${H1('k4-cine', 104, 42, 1.06, 'color:#fff!important;letter-spacing:-.055em!important;max-width:1060px;')}
+    kfsci: v => `.hpt.hp-hero.k4-h.k4-cine{position:relative;height:clamp(640px,calc(100vh - 64px),880px);padding:0;overflow:hidden;background:var(--bg);color:#fff;margin:0}${H1('k4-cine', 104, 42, 1.06, 'color:#fff!important;letter-spacing:-.055em!important;max-width:1060px;')}
 .k4-cine>.k4-hi{position:absolute;inset:0;height:100%;background:#000}
 .k4-cine::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,9,10,.9) 0%,rgba(6,9,10,.55) 46%,rgba(6,9,10,.12) 80%),linear-gradient(0deg,rgba(6,9,10,.92) 0%,rgba(6,9,10,0) 36%),linear-gradient(180deg,rgba(6,9,10,.55) 0%,rgba(6,9,10,0) 22%);pointer-events:none}
-.k4-hc{position:absolute;z-index:2;left:0;right:0;bottom:150px}.k4-cine .k4-kick{margin-bottom:24px!important}
+.k4-hc{position:absolute;z-index:2;left:0;right:0;bottom:130px}.k4-cine .k4-kick{margin-bottom:24px!important}
 .k4-cine .k4-sub{font-size:21px;line-height:1.65;color:rgba(255,255,255,.8);margin:28px 0 40px!important;max-width:580px}.k4-cine .k4-b.o{color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
 .k4-qb{position:absolute;z-index:2;left:0;right:0;bottom:0;border-top:1px solid rgba(255,255,255,.16)}.k4-cine .k4-q{border:0}.k4-cine .k4-q a{color:#fff;min-height:88px}.k4-cine .k4-q span{color:rgba(255,255,255,.62)}
 .k4-stm{padding-bottom:0!important}
@@ -341,7 +344,7 @@
 .k4-cp,.k4-gl a,.k4-sp,.k4-qp{border-radius:28px!important}.k4-quote{background:var(--bg)!important}.k4-quote .k4-qp{border-radius:50%!important;height:440px;width:440px;justify-self:end}
 @media(max-width:1000px){.k4-bg2{grid-template-columns:minmax(0,1fr)}.k4-bub{order:-1;max-width:640px}}
 @media(max-width:760px){.k4-bg2{gap:20px;padding-bottom:40px}.k4-bub{height:380px}.k4-b1{width:230px;height:230px;top:50px}.k4-b2{width:150px;height:150px}.k4-b3{width:170px;height:170px;right:10px}.k4-d1{left:190px;width:44px;height:44px}.k4-d3{right:170px;bottom:70px}
-.k4-bubble .k4-sub{font-size:17px;margin:18px 0 26px!important}.k4-quote .k4-qp{width:260px;height:260px;justify-self:start}}`,
+.k4-bubble .k4-sub{font-size:17px;margin:18px 0 26px!important}.k4-bub{order:2}.k4-quote .k4-qp{width:260px;height:260px;justify-self:start}}`,
     kfcode: v => `${HB('k4-grid', '56px 0 0', '24px 0 0')}${H1('k4-grid', 90, 42, 1.08, 'letter-spacing:-.05em!important;')}
 .hpt.hp-hero.k4-h.k4-grid{background-color:var(--bg);background-image:linear-gradient(${mix(v.ink, v.bg, .9)} 1px,transparent 1px),linear-gradient(90deg,${mix(v.ink, v.bg, .9)} 1px,transparent 1px);background-size:32px 32px}
 .k4-gg{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:64px;align-items:center;padding-bottom:84px}
@@ -357,9 +360,9 @@
 .k4-num{background:var(--pt)!important;color:#111!important}.k4-num .k4-big{font-family:${F.sans}}
 .k4-fin{background-color:var(--bg)!important;background-image:linear-gradient(${mix(v.ink, v.bg, .9)} 1px,transparent 1px),linear-gradient(90deg,${mix(v.ink, v.bg, .9)} 1px,transparent 1px)!important;background-size:32px 32px!important}
 @media(max-width:1000px){.k4-gg{grid-template-columns:minmax(0,1fr)}.k4-gc{order:-1;height:440px;max-width:620px}.k4-gc .k4-hi{height:340px}}
-@media(max-width:760px){.k4-gg{gap:24px;padding-bottom:40px}.k4-gc{height:330px}.k4-gc .k4-hi{height:250px;width:92%;box-shadow:8px 8px 0 var(--a)}.k4-g2{width:170px;height:120px}.k4-grid .k4-sub{font-size:17px;margin:18px 0 26px!important}.k4-grid .k4-q{padding:0 16px}.k4-b.p,.k4-b.o{box-shadow:3px 3px 0 var(--ink),inset 0 0 0 2px var(--ink)!important}}`,
-    kfart: v => `${HB('k4-collage', '64px 0 0', '20px 0 0')}${H1('k4-collage', 120, 60, 1.02, 'letter-spacing:-.065em!important;')}
-.k4-pg{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;padding-bottom:90px}@media(max-width:1340px){.hpt.hp-hero.k4-h.k4-collage h1{font-size:108px!important}}
+@media(max-width:760px){.k4-gg{gap:24px;padding-bottom:40px}.k4-gc{height:330px}.k4-gc .k4-hi{height:250px;width:92%;box-shadow:8px 8px 0 var(--a)}.k4-g2{width:170px;height:120px}.k4-grid .k4-sub{font-size:17px;margin:18px 0 26px!important}.k4-gc{order:2}.k4-grid .k4-q{padding:0 16px}.k4-b.p,.k4-b.o{box-shadow:3px 3px 0 var(--ink),inset 0 0 0 2px var(--ink)!important}}`,
+    kfart: v => `${HB('k4-collage', '64px 0 0', '20px 0 0')}${H1('k4-collage', 120, 56, 1.04, 'letter-spacing:-.065em!important;')}
+.k4-pg{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;padding-bottom:90px}@media(max-width:1340px) and (min-width:761px){.hpt.hp-hero.k4-h.k4-collage h1{font-size:108px!important}}
 .k4-collage .k4-sub{font-size:20px;line-height:1.65;color:var(--mu);margin:34px 0 38px!important;max-width:500px}
 .k4-col{position:relative;height:690px}.k4-col .k4-ph{position:absolute}
 .k4-s1{left:0;top:40px;width:330px;height:470px;border-radius:165px 165px 18px 18px}.k4-s2{right:0;top:0;width:290px;height:290px;border-radius:50%}.k4-s3{right:10px;bottom:0;width:340px;height:360px;border-radius:18px}
@@ -370,7 +373,7 @@
 .k4-fin{background:var(--ink)!important;color:var(--bg)!important;--mu:#B5B0A8;--ln:#2E2E2E}.k4-fin h2 em{color:var(--pt)!important}.k4-fin .k4-b.o{color:#fff}
 @media(max-width:1000px){.k4-pg{grid-template-columns:minmax(0,1fr)}.k4-col{order:-1;max-width:640px}}
 @media(max-width:760px){.k4-pg{gap:24px;padding-bottom:44px}.k4-col{height:410px}.k4-s1{width:190px;height:290px;top:30px;border-radius:95px 95px 14px 14px}.k4-s2{width:170px;height:170px}.k4-s3{width:180px;height:200px;right:0}.k4-dot{left:160px;top:0;width:56px;height:56px}
-.k4-collage .k4-sub{font-size:17px;margin:20px 0 26px!important}.k4-num .k4-big{font-size:150px}.k4-nt h2{font-size:28px}.k4-quote .k4-w{grid-template-columns:minmax(0,1fr)}.k4-quote .k4-qp{width:240px;height:240px}.k4-quote blockquote{font-size:28px}}`,
+.k4-collage .k4-sub{font-size:17px;margin:18px 0 24px!important}.k4-col{order:2}.k4-num .k4-big{font-size:150px}.k4-nt h2{font-size:28px}.k4-quote .k4-w{grid-template-columns:minmax(0,1fr)}.k4-quote .k4-qp{width:240px;height:240px}.k4-quote blockquote{font-size:28px}}`,
     kfmusic: v => `.hpt.hp-hero.k4-h.k4-half{display:grid;grid-template-columns:1fr 1fr;min-height:860px;padding:0;background:var(--bg);color:var(--ink);margin:0}${H1('k4-half', 64, 38, 1.2, 'letter-spacing:-.035em!important;')}
 @media(max-width:1340px) and (min-width:1001px){.hpt.hp-hero.k4-h.k4-half{grid-template-columns:.85fr 1.15fr}.k4-hr{padding:72px 48px 56px}}.k4-hl{position:relative;min-height:100%}.k4-hl .k4-hi{position:absolute;inset:0;height:100%}
 .k4-hr{display:flex;align-items:center;padding:80px 72px 60px}.k4-hri{max-width:580px}
@@ -381,11 +384,11 @@
 .k4-tt .k4-td{font-family:${F.serif};font-style:italic}
 .k4-quote{background:var(--a)!important;color:#fff!important;--mu:rgba(255,255,255,.75);--pt:${v.pt}}.k4-quote .k4-qp{border-radius:4px}
 @media(max-width:1000px){.hpt.hp-hero.k4-h.k4-half{grid-template-columns:minmax(0,1fr);min-height:0}.k4-hl{height:460px}.k4-hr{padding:48px 40px 40px}}
-@media(max-width:760px){.k4-hl{height:330px}.k4-hr{padding:32px 20px 20px}.k4-half .k4-sub{font-size:17px;margin:18px 0 26px!important}.k4-half .k4-q{margin-top:32px}}`,
-    kfsport: v => `.hpt.hp-hero.k4-h.k4-slab{padding:0;background:var(--bg);color:var(--ink);margin:0}${H1('k4-slab', 132, 60, .95, 'letter-spacing:-.02em!important;')}
-.k4-slab>.k4-hi{height:470px}
+@media(max-width:760px){.k4-hl{height:260px}.k4-hr{padding:32px 20px 20px}.k4-half .k4-sub{font-size:17px;margin:18px 0 26px!important}.k4-half .k4-q{margin-top:32px}}`,
+    kfsport: v => `.hpt.hp-hero.k4-h.k4-slab{padding:0;background:var(--bg);color:var(--ink);margin:0}${H1('k4-slab', 128, 48, 1.02, 'letter-spacing:-.02em!important;')}
+.k4-slab>.k4-hi{height:clamp(300px,calc(100vh - 440px),470px)}@media(max-width:1340px) and (min-width:761px){.hpt.hp-hero.k4-h.k4-slab h1{font-size:108px!important}}
 .k4-sl{background:var(--pt);color:#111;padding:60px 0 64px;margin-top:-120px;position:relative;z-index:2;max-width:1280px;margin-left:auto;margin-right:auto}
-.k4-slab .k4-kick{color:#111;font-weight:700;font-size:16px;margin-bottom:18px!important}.k4-slab h1 em{color:transparent!important;-webkit-text-stroke:3px #111}@media(max-width:760px){.k4-slab h1 em{-webkit-text-stroke:2px #111}}
+.k4-slab .k4-kick{color:#111;font-weight:700;font-size:16px;margin-bottom:18px!important}.k4-slab h1 em{color:var(--pt)!important;background:#111;padding:0 .08em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 .k4-slr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:40px;align-items:end;margin-top:32px}.k4-slab .k4-sub{font-size:20px;line-height:1.65;color:#2A2A2A;max-width:560px}
 .k4-b{border-radius:0!important}.k4-slab .k4-b.p{background:#111;color:#fff}.k4-slab .k4-b.o{color:#111;box-shadow:inset 0 0 0 2px #111}
 .k4-slab .k4-q{margin-top:0;border-top:0}
@@ -449,13 +452,13 @@
     kfprep: () => [BAN('종합 입시 · 내신 · 수능', '한 해의 공부를\n*끝까지* 책임집니다', '진단에서 반 배정, 주간 테스트와 입시 상담까지. 한 학생의 한 해를 담임이 함께 걷습니다.'),
       TX('features', { hpt: 'k4-steps', nst: 'roman', eyebrow: '교육 원칙', title: '세 가지 원칙을 지킵니다', cols: [['진단으로 시작합니다', '입학 전 과목별 진단으로 출발점을 정합니다.'], ['매주 확인합니다', '주간 테스트와 클리닉으로 약한 단원을 바로 메웁니다.'], ['끝까지 상담합니다', '학기마다 학부모 상담으로 다음 계획을 함께 정합니다.']] }),
       TX('features', { hpt: 'k4-cls', lay: 'rows', eyebrow: '개설 강좌', title: '이번 학기 개설 강좌', cols: AUTO }),
-      TX('features', { hpt: 'k4-num', pref: 'review', body: '', cols: AUTO }),
+      TX('features', { hpt: 'k4-num', pref: 'count', body: '', cols: AUTO }),
       TX('features', { hpt: 'k4-notice', eyebrow: '학원 소식', title: '알려 드립니다', cols: AUTO }), ...FIN('입학 상담으로\n*시작하십시오*', '진단 결과와 목표를 듣고 맞는 반과 한 해의 계획을 안내해 드립니다.')],
     kfsci: () => [BAN('중 · 고등 과학 · 탐구 실험반', '교과서 속 원리를\n*직접* 확인해요', '매주 실험 한 가지, 보고서 한 장. 왜 그런지 끝까지 묻는 과학 수업이에요.'),
       TX('features', { hpt: 'k4-stm', body: '매주 *실험 한 가지*와 보고서 한 장으로 이어 가요.', cols: AUTO }),
       TX('features', { hpt: 'k4-cls', eyebrow: '모집 중인 반', title: '지금 신청할 수 있는 반', cols: AUTO }),
       TX('features', { hpt: 'k4-week', eyebrow: '한 주의 흐름', title: '가설에서 보고서까지,\n한 주에 한 바퀴', body: '실험이 끝나면 결과와 보고서를 학부모님께도 보내 드려요.', cols: [['수업 1', '개념 · 가설 세우기', '오늘 확인할 질문을 정해요'], ['수업 2', '실험', '조를 나눠 직접 측정해요'], ['주말', '보고서 쓰기', '결과와 이유를 한 장으로'], ['월말', '탐구 발표', '한 달의 실험을 발표해요']] }),
-      TX('features', { hpt: 'k4-num', pref: 'ratio', body: '', cols: AUTO }),
+      TX('features', { hpt: 'k4-num', pref: 'learners', body: '', cols: AUTO }),
       TX('features', { hpt: 'k4-quote', cols: AUTO }), ...FIN('이번 주 실험 수업에\n*함께해요*', '체험 수업이 끝나면 담당 선생님이 맞는 반과 시작 시점을 알려 드려요.')],
     kfkids: () => [BAN('5~9살 · 놀이로 배우는 첫 공부', '처음 배우는 날이\n*즐거운 날*이 돼요', '한글 · 수 · 그림책 수업을 놀이로. 수업이 끝나면 오늘 한 것을 사진으로 보내 드려요.'),
       TX('features', { hpt: 'k4-steps', eyebrow: '첫 등원까지', title: '이렇게 시작해요', cols: [['상담 예약', '아이의 나이와 좋아하는 것을 알려 주세요.'], ['체험 수업', '선생님과 친구들을 먼저 만나 봐요.'], ['반 정하기', '아이에게 맞는 반과 시간을 함께 정해요.']] }),
@@ -468,7 +471,7 @@
       TX('features', { hpt: 'k4-num', pref: 'ratio', body: '', cols: AUTO }), ...FIN('첫 작품은\n*체험 수업*에서', '체험 수업이 끝나면 아이의 수준에 맞는 반과 교구를 안내해 드려요.')],
     kfart: () => [BAN('', '그리고,\n만들고,\n*빚어요.*', '수채화 · 드로잉 · 소조까지. 소수 정원 반에서 한 학기 열두 가지 재료를 만져 봐요.'),
       TX('features', { hpt: 'k4-band', eyebrow: '수업', title: '좋아하는 걸 찾을 때까지,\n골고루 해 봐요', cols: AUTO }),
-      TX('features', { hpt: 'k4-num', pref: 'ratio', body: '그래서 붓 잡는 손 하나까지 한 명씩 봐 줄 수 있어요.', cols: AUTO }),
+      TX('features', { hpt: 'k4-num', pref: 'review', body: '그래서 붓 잡는 손 하나까지 한 명씩 봐 줄 수 있어요.', cols: AUTO }),
       TX('features', { hpt: 'k4-gal', eyebrow: '갤러리', title: '이번 학기, 아이들의 작업', cols: AUTO }),
       TX('features', { hpt: 'k4-quote', cols: AUTO }), ...FIN('한 번,\n*와 보세요.*', '체험 수업이 끝나면 아이가 어떤 재료에서 가장 즐거워했는지 말씀드려요.')],
     kfmusic: () => [BAN('피아노 · 바이올린 · 첼로', '매일 십 분이\n한 곡의 *무대*가 돼요', '1:1 레슨에 소리 듣기 수업을 더했어요. 학기 말에는 작은 무대에서 직접 연주해요.'),
@@ -476,7 +479,7 @@
       TX('features', { hpt: 'k4-tt', eyebrow: '레슨 시간', title: '이번 학기 레슨 시간', cols: AUTO }),
       TX('features', { hpt: 'k4-quote', cols: AUTO }), ...FIN('첫 레슨은\n*체험*으로 시작해요', '체험 레슨이 끝나면 아이에게 맞는 악기와 교재를 안내해 드려요.')],
     kfsport: () => [BAN('태권도 · 줄넘기 · 체육', '끝까지,\n*한 번 더.*', '기본기부터 단계별 승급까지. 땀 흘린 만큼 자라는 체육 수업이에요.'),
-      TX('features', { hpt: 'k4-num', pref: 'ratio', body: '', cols: AUTO }),
+      TX('features', { hpt: 'k4-num', pref: 'learners', body: '', cols: AUTO }),
       TX('features', { hpt: 'k4-band', eyebrow: '수업', title: '나이와 단계에 맞게', cols: AUTO }),
       TX('features', { hpt: 'k4-week', eyebrow: '한 달의 흐름', title: '기본기에서\n승급 심사까지', body: '한 달에 한 번, 배운 것을 심사로 확인해요.', cols: [['1주', '기본기', '자세 · 발차기 · 줄넘기 기본'], ['2~3주', '단계 연습', '품새 · 기술을 단계별로'], ['4주', '승급 심사', '배운 것을 심사로 확인해요'], ['방학', '캠프 · 대회', '야외 활동과 대회 참가']] }),
       TX('features', { hpt: 'k4-gal', eyebrow: '수업 장면', title: '땀 흘린 시간들', cols: AUTO }), ...FIN('오늘 바로\n*체험* 와요', '체험 수업이 끝나면 아이에게 맞는 반과 시간을 안내해 드려요.')]
