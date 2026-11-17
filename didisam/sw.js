@@ -2,7 +2,7 @@
    네트워크 우선(배포 즉시 새 버전), 실패할 때만 저장본. API · 외부 도메인 · POST는 건드리지 않는다. */
 const C = 'didisam-app-v43.8';
 const SHELL = ['learner.html', 'learner.css', 'lapp.css', 'ldads.css', 'lapp.js', 'ltube.css', 'ltube.js', 'manifest.webmanifest', 'app-icon-192.png',
-  /* v43.1 새 파일(학습자 · 공통) */ 'theme.js', 'ddstat.js', 'pubed.js', 'lsms.js', 'lhub.js', 'lhub.css', 'lapp43.css', 'l43.js', 'l43.css', 'l43-e1.js', 'l43-e1.css', 'da43.js', 'da43.css', 'v43ui.js', 'v43ui.css', 'hpprem.js', /* v43.5 외부 연결 카탈로그 */ 'connx.js', 'connx.css', 'lconn.js', /* v43.6 셀프러닝 노트 */ 'lnote.js', 'lnote.css', 'lnote-ai.js', 'lnote-ai.css', 'lnote-sync.js', /* v43.8 기관별 템플릿 · 기존 14종 업그레이드 */ 'hpx-univ.js', 'hpx-acad.js', 'hpx-corp.js', 'hpx-life.js', 'hpup-b1.js', 'hpup-b2.js', 'hpup-p1.js', 'hpup-p2.js'];
+  /* v43.1 새 파일(학습자 · 공통) */ 'theme.js', 'ddstat.js', 'pubed.js', 'lsms.js', 'lhub.js', 'lhub.css', 'lapp43.css', 'l43.js', 'l43.css', 'l43-e1.js', 'l43-e1.css', 'da43.js', 'da43.css', 'v43ui.js', 'v43ui.css', 'hpprem.js', /* v43.5 외부 연결 카탈로그 */ 'connx.js', 'connx.css', 'lconn.js', /* v43.6 셀프러닝 노트 */ 'lnote.js', 'lnote.css', 'lnote-ai.js', 'lnote-ai.css', 'lnote-sync.js', /* v43.9 기관별 고품질 템플릿(시안 기반) */ 'hpv-univ.js', 'hpv-acad.js', 'hpv-corp.js', 'hpv-life.js'];
 /* v34.5 X2 런타임 캐시: 이름이 바뀌지 않는 파일(img/stock · fonts · /api/media/<내용 해시>)만. 최대 160개 · 약 40MB, 오래 안 쓴 것부터 지움(LRU) */
 const RTC = 'didisam-rt-media', RT = /\/(img\/stock\/[\w-]+\.webp|fonts\/(?:[\w-]+\/)?[\w.-]+\.(?:woff2|css)|api\/media\/[\w.-]+)$/, RT_N = 300, RT_B = 40 << 20;
 const rt = async r => { const c = await caches.open(RTC); const hit = await c.match(r); if (hit) { c.delete(r).then(() => c.put(r, hit.clone())).catch(() => { }); return hit; }
