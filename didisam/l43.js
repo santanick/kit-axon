@@ -30,7 +30,7 @@
   /* ───────── 렌더 함수 ───────── */
   const initial = n => { n = String(n || '').trim(); if (!n) return '?'; if (/^[A-Za-z]/.test(n)) { const p = n.split(/\s+/); return (p[0][0] + (p[1] ? p[1][0] : '')).toUpperCase(); } return n[0]; };
   const av = (name, size) => `<span class="l43-av t${hash(name) % 6}${size ? ' ' + size : ''}" aria-hidden="true">${E(initial(name))}</span>`;
-  const prog = (v, tone) => { v = Math.max(0, Math.min(100, num(v))); const t = tone || (v < 30 ? 'lo' : v >= 80 ? 'hi' : ''); return `<span class="l43-pg ${t}"><span class="l43-pgt"><i style="width:${v}%"></i></span><b>${v}%</b></span>`; };
+  const prog = (v, tone) => { v = Math.max(0, Math.min(100, num(v))); const t = tone || (v < 30 ? 'lo' : v >= 80 ? 'hi' : ''); return `<span class="l43-pg ${t}${v ? '' : ' z0'}"><span class="l43-pgt"><i style="width:${v}%"></i></span><b>${v ? v + '%' : '시작 전'}</b></span>`; }; /* v43.7 Q1(Q2 몫 17): 0%는 「시작 전」 */
   const chip = (t, tone) => `<span class="l43-chip ${tone || ''}">${E(t)}</span>`;
   const DOW = ['일', '월', '화', '수', '목', '금', '토'];
   const todayLabel = () => { const d = new Date(); return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일(${DOW[d.getDay()]})`; };
