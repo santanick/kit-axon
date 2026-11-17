@@ -237,7 +237,7 @@
   const curT = () => GT.some(x => x[0] === UI.tpdT) ? UI.tpdT : ourT();
   const has44 = k => !!(G4() && G4().has(k));
   const legacy = k => { const fit = t => A(t.types).includes(k) || (k === 'univ' && A(t.types).includes('univ_lms'));
-    return [...premL().filter(fit), ...tplOld(k).filter(t => !t.prem && !t.g44)]; };
+    return [...premL().filter(t => fit(t) && !t.g44 && !t.hidden), ...tplOld(k).filter(t => !t.prem && !t.g44)]; }; /* hp44 템플릿은 prem: 1이라 프리미엄 묶음에서도 뺀다 */
   function poolOf(k) {
     const g = G4(); const ed = k === ourT() ? S.org.ed : '';
     if (k === 'solo') { const L = has44('adult') ? g.list('adult').filter(g.isSolo) : []; return L.length ? L : TPL.filter(t => !t.g44 && !t.hidden && g && g.isSolo(t)); }
@@ -264,6 +264,12 @@
       (subs.length >= 4 ? `<label class="tpd-sbf"><span>세부 유형</span><select id="tpdSub" aria-label="세부 유형">${['', ...subs].map(x => `<option value="${esc(x)}"${x === sb ? ' selected' : ''}>${esc(x || '전체')}</option>`).join('')}</select></label>` : '') + `</div>` +
       `<p class="tpd-cnt mini" aria-live="polite">${esc(lab)}${k === ourT() && k !== 'all' ? ' · 우리 기관 유형' : ''} ${L.length}종</p><div class="tpd-g">${L.map(card).join('') || '<div class="sl-empty">조건에 맞는 템플릿이 없습니다.</div>'}</div>`);
   }
+  /* v44 G 검수(390px): 선택된 유형 칩이 가로 스크롤 밖에 있으면 보이게 — 칩 줄의 scrollLeft만 맞춘다(페이지 세로 스크롤은 그대로) */
+  const chipShow = () => document.querySelectorAll('.tpd-ty').forEach(w0 => { const b = w0.querySelector('[data-k="tpdT"].on'); if (!b) return; const w = [b.parentElement, w0].find(x => x && x.scrollWidth > x.clientWidth + 1); if (!w) return; /* 가로로 밀리는 칸(.sl-chips 또는 바깥 줄) */
+    const wr = w.getBoundingClientRect(), br = b.getBoundingClientRect(); if (br.left >= wr.left && br.right <= wr.right && w.dataset.tpdT === b.dataset.v) return;
+    w.scrollLeft = Math.max(0, w.scrollLeft + (br.left - wr.left) - (w.clientWidth - br.width) / 2); w.dataset.tpdT = b.dataset.v; });
+  window.TPD_chipShow = chipShow;
+  if (typeof AFTER !== 'undefined') AFTER.push(() => { chipShow(); requestAnimationFrame(chipShow); });
   document.addEventListener('change', e => { const t = e.target; if (!t || t.id !== 'tpdSub') return; UI.tpdSub = t.value; render(); });
   /* 사이트 화면: 갤러리 모드면 공통 틀 갤러리(학습 페이지 탭은 그대로) */
   { const base = VIEWS.site; VIEWS.site = (...a) => { try { if (S && S.org && UI.smT !== 'learn' && (UI.siteGallery || !(S.site && S.site.tpl))) return gallery(); } catch (e) { console.error('tpl-d gallery', e); } return base(...a); }; }
