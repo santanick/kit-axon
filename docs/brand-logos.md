@@ -20,6 +20,8 @@ v37(대표님 2026-11-10 「외부 연결 등은 로고를 실제 해당 서비�
 | naver | NAVER | naver.svg | 16.37.0 | #03C75A | https://developers.naver.com/docs/login/bi/bi.md |
 | zoom | Zoom | zoom.svg | 16.37.0 | #0B5CFF | https://brand.zoom.us/usage-legal/ |
 | youtube | YouTube | youtube.svg | 16.37.0 | #FF0000 | https://www.youtube.com/howyoutubeworks/resources/brand-resources/#logos-icons-and-colors |
+| gsheets | Google Sheets | googlesheets.svg | 16.38.0 | #34A853 | https://about.google/brand-resource-center/logos-list/ |
+| apple | Apple(캘린더 파일 · 로그인 표시) | apple.svg | 16.38.0 | #000000 | https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple |
 | notion | Notion | notion.svg | 16.37.0 | #000000 | https://www.notion.so |
 | microsoft | Microsoft | microsoft.svg | 10.4.0 + 공식 4색 | #F25022 · #7FBA00 · #00A4EF · #FFB900 | https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks |
 
@@ -27,7 +29,8 @@ v37(대표님 2026-11-10 「외부 연결 등은 로고를 실제 해당 서비�
 - 모양 · 비율 · 색을 바꾸지 않습니다(늘이기 · 기울이기 · 그림자 · 다른 색 금지). 한 가지 공식 색으로만 그립니다.
 - 흰 바탕 정사각 타일 안에 그리고, 둘레 여백은 타일 한 변의 20%입니다(가이드의 최소 여백 이상). 최소 크기 20px.
 - 카카오: 카카오 로그인 디자인 가이드의 조합(바탕 #FEE500 + 심볼 검정 #000000). 네이버: 네이버 로그인 BI 조합(바탕 #03C75A + 흰색 N).
-- 공식 로고 파일을 확보하지 못한 서비스(토스페이먼츠 · 채널톡 · HRD-Net)는 로고를 흉내 낸 그림을 만들지 않고 글자 타일(서비스 색 글자)로 둡니다.
+- v43.5(대표님 2026-11-17 「서비스 로고는 웹에서 찾아 다 넣고」): 알림톡은 카카오톡 심볼(kakao), 네이버 예약은 네이버 심볼(naver), Google Sheets · Apple을 추가했습니다. 문자(SMS)는 특정 회사 서비스가 아니라 글자 타일입니다.
+- 공식 로고 파일을 확보하지 못한 서비스(토스페이먼츠 · 채널톡 · HRD-Net · 네이버페이 · 나이스페이먼츠 — Simple Icons에 없고, 공개 브랜드 리소스는 가맹·제휴 계약 후 제공)는 로고를 흉내 낸 그림을 만들지 않고 글자 타일(서비스 색 글자)로 둡니다.
   각 사 공식 자료(토스페이먼츠 브랜드 리소스, 채널톡 브랜드 키트, 고용24 · HRD-Net 이용 안내)를 받으면 img/brand/에 넣고 brand.js의 BR에 추가합니다.
 
 ## 쓰는 곳

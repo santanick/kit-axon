@@ -18,7 +18,7 @@
   const E = s => (typeof esc === 'function' ? esc(s) : String(s ?? ''));
   const T = (m, k) => { try { toast(m, k); } catch (e) { } };
   const re = () => { if (typeof lrender === 'function') lrender(); };
-  try { if (!document.querySelector('link[data-gij]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/gij-learner.css?v=43.4'; l.dataset.gij = '1'; document.head.appendChild(l); } } catch (e) { }
+  try { if (!document.querySelector('link[data-gij]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/gij-learner.css?v=43.5'; l.dataset.gij = '1'; document.head.appendChild(l); } } catch (e) { }
   const ST = { g: null, i: null, refl: {}, busy: {}, err: '', ses: '', m: 'code', res: null, geo: null, play: null, tab: 'att' };
   const ERRT = { not_open: '아직 출석 시간이 아닙니다.', closed: '출석 인정 시간이 지났습니다.', dup: '이미 출석했습니다.' };
   const ST_N = { present: '출석', late: '지각', absent: '결석', excused: '공결' };

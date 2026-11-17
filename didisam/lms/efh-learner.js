@@ -21,7 +21,7 @@
     W.render = W.render || rer;
     /* v38 학사 LMS 수강 분반은 학기 · 강좌(S.lms.a)를 읽는다 — 학습자 앱에는 lms/a.js가 없으므로 읽기 전용 접근자를 둔다(시드하지 않음) */
     if (typeof W.lmsaEns !== 'function') W.lmsaEns = () => { const A = W.S && W.S.lms && W.S.lms.a; return A || { terms: [], units: [], courses: [], persons: [], sections: [], staff: [], enr: [] }; };
-    const load = f => new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'lms/' + f + '?v=43.4'; s.onload = ok; s.onerror = () => no(new Error(f + ' 불러오기 실패')); document.head.appendChild(s); });
+    const load = f => new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'lms/' + f + '?v=43.5'; s.onload = ok; s.onerror = () => no(new Error(f + ' 불러오기 실패')); document.head.appendChild(s); });
     demoReady = load('e.js').then(() => load('f.js')).then(() => load('h.js'));
     return demoReady;
   }
@@ -331,6 +331,6 @@
   { const base = viewPage; viewPage = function (id, ...r) { if (id === 'lms' && on()) { try { return page(); } catch (e) { console.error('efh learner', e); return '<p>화면을 그리지 못했습니다.</p>'; } } return base.call(this, id, ...r); }; } // eslint-disable-line no-global-assign
   if (typeof viewMy === 'function') { const base = viewMy; viewMy = function (...a) { const h = base.apply(this, a); if (!on() || !LR.me) return h; const c = `<div class="mycard" id="eflMy"><div class="myhead"><h2>과제 · 시험 · 성적</h2></div><p class="mini">수강 분반의 과제 제출, 시험 응시, 성적과 피드백을 확인합니다.</p><a class="lbtn sm" href="#lms">바로 가기</a></div>`; return h.includes('<div class="mygrid">') ? h.replace('<div class="mygrid">', '<div class="mygrid">' + c) : c + h; }; } // eslint-disable-line no-global-assign
   window.addEventListener('hashchange', () => { if (!location.hash.startsWith('#lms')) { clearInterval(tick); if (PM.on) { pmEv('hidden', { why: '다른 화면으로 이동' }); pmStop(); L.paper = null; } if (L.pc) pcClose(); } });
-  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/efh-learner.css?v=43.4'; document.head.appendChild(l); } catch (e) { }
+  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/efh-learner.css?v=43.5'; document.head.appendChild(l); } catch (e) { }
   window.EFHL = { L, call, drop };
 })();

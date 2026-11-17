@@ -61,7 +61,8 @@ const CN = {
 };
 const CN_IDS = ['claude', 'mcp', 'slack', 'google', 'toss', 'channeltalk'];
 const cnIds = () => CN_IDS.filter(id => id !== 'toss' || typeof mbPayOn !== 'function' || mbPayOn()); /* v38 F5 결제를 끈 기관(대학 · 기업 · 공공 기본)은 토스페이먼츠 카드를 감춘다 — 결제를 켜면 다시 보인다 */
-const cnAlias = s => { s = String(s || '').toLowerCase().trim(); if (/claude|클로드|anthropic|api\s*키/.test(s)) return 'claude'; if (/mcp|외부\s*ai/.test(s)) return 'mcp'; if (/slack|슬랙/.test(s)) return 'slack'; if (/google|구글|gmail|지메일|sheet|시트|calendar|캘린더|drive|드라이브|workspace/.test(s)) return 'google'; if (/toss|토스|pg|결제/.test(s)) return 'toss'; if (/channel|채널톡/.test(s)) return 'channeltalk'; return CN[s] ? s : ''; };
+const cnAlias = s => { s = String(s || '').toLowerCase().trim(); if (/claude|클로드|anthropic|api\s*키/.test(s)) return 'claude'; if (/mcp|외부\s*ai/.test(s)) return 'mcp'; if (/slack|슬랙/.test(s)) return 'slack'; if (/google|구글|gmail|지메일|sheet|시트|calendar|캘린더|drive|드라이브|workspace/.test(s)) return 'google'; if (/알림톡|alimtalk/.test(s)) return 'alimtalk'; if (/문자|sms|lms/.test(s)) return 'sms'; if (/네이버\s*페이|naver\s*pay|npay/.test(s)) return 'naverpay'; if (/나이스|nice/.test(s)) return 'nicepay'; if (/네이버\s*예약|스마트플레이스|naver\s*book/.test(s)) return 'nbook'; if (/youtube|유튜브/.test(s)) return 'youtube'; if (/zoom|줌/.test(s)) return 'zoom'; /* v43.5 connx.js */
+  if (/toss|토스|pg|결제/.test(s)) return 'toss'; if (/channel|채널톡/.test(s)) return 'channeltalk'; return CN[s] ? s : ''; };
 
 /* ═════════ 상태 판정 ═════════ */
 function cnMcpActive() { const L = (typeof MCPX !== 'undefined' && MCPX.keys) || S.apikeys || []; return L.filter(k => !k.revoked_at).length; }
