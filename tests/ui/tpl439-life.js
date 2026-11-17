@@ -7,6 +7,7 @@ const http = require('node:http'); const fs = require('node:fs'); const path = r
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../../didisam'); const SHOT = process.argv[2] || '';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.svg': 'image/svg+xml' };
+const HEAD = { lvworkshop: 'hps-ovw', lvalmanac: 'hps-h-center', lvshift: 'hps-h-solid' };
 const T = { lvworkshop: { ty: ['voc'], hero: 'lvA-hero', secs: ['lv-a-zero', 'lv-a-cards', 'lv-a-steps', 'lv-a-quote', 'lv-a-cta'] },
   lvalmanac: { ty: ['lifelong'], hero: 'lvB-hero', secs: ['lv-b-season', 'lv-b-num', 'lv-b-story', 'lv-b-quote', 'lv-b-cta'] },
   lvshift: { ty: ['voc', 'lifelong'], hero: 'lvC-hero', secs: ['lv-c-tracks', 'lv-c-big', 'lv-c-how', 'lv-c-voice', 'lv-c-cta'] } };
@@ -18,7 +19,8 @@ const IDS = Object.keys(T);
     if (/\/index\.html$/.test(f) && !tagged) { r.writeHead(200, { 'content-type': 'text/html' }); return r.end(idx.replace(/<script src="hpstudio\.js/, '<script src="hpv-life.js"></script>\n<script src="hpstudio.js')); }
     r.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); }).listen(0, '127.0.0.1');
   await new Promise(ok => srv.once('listening', ok)); const base = `http://127.0.0.1:${srv.address().port}`;
-  const browser = await chromium.launch(); const fails = []; const ok = (c, m) => { console.log(`${c ? '✓' : '✗'} ${m}`); if (!c) fails.push(m); };
+  const browser = await chromium.launch(SHOT && process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: '127.0.0.1,localhost' } } : {}); /* 캡처 때는 실제 서비스처럼 웹글꼴(CDN)을 받는다 */
+  const NET = SHOT ? /^https?:\/\/(?!127\.0\.0\.1|cdn\.jsdelivr\.net)/ : /^https?:\/\/(?!127\.0\.0\.1)/; const fails = []; const ok = (c, m) => { console.log(`${c ? '✓' : '✗'} ${m}`); if (!c) fails.push(m); };
   const make = (p, ty, empty) => p.evaluate(([ty, empty]) => { localStorage.setItem('didisam.emptyStart', empty ? '1' : '0'); const b = document.querySelector('#suEmpty'); if (b) b.checked = !!empty; createOrg(ty, ty === 'voc' ? '한빛직업전문학교' : '해운대평생학습관'); if (empty) { S.classes = []; S.reviews = []; S.notices = []; } }, [ty, !!empty]);
   try {
     for (const ID of IDS) for (const ty of T[ID].ty) for (const empty of [false, true]) {
@@ -31,10 +33,12 @@ const IDS = Object.keys(T);
       const P = `[${ID} ${ty}${empty ? ' 빈 기관' : ''}]`;
       if (!empty) { ok(g.reg && g.inGal && g.fits && g.top.includes(ID), `${P} 등록 · 갤러리 · 유형 추천 앞자리(${g.top.join(' · ')})`);
         ok(g.th.includes(T[ID].hero), `${P} 갤러리 미리보기에 새 첫 화면`);
-        ok(T[ID].secs.every(k => g.secs.includes(k)) && g.html.includes(T[ID].hero), `${P} 섹션 구성 ${g.secs.join(' · ')}`); }
+        ok(T[ID].secs.every(k => g.secs.includes(k)) && g.html.includes(T[ID].hero), `${P} 섹션 구성 ${g.secs.join(' · ')}`);
+        ok(g.html.includes(HEAD[ID]), `${P} 머리글 ${HEAD[ID]}(시안과 같은 머리글)`);
+        ok(/(lvA-qk|lvB-paths|lvC-paths)/.test(g.html) && /처음이에요/.test(g.html), `${P} 첫 화면 아래 한 줄 바로 가기`); }
       ok(!errs.length, `${P} 스크립트 오류 없음 ${errs.slice(0, 2).join(' | ')}`);
       for (const [w, h, tag] of [[1440, 900, 'pc'], [390, 844, 'm']]) {
-        const c2 = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: SHOT && !empty ? 2 : 1 }); const q = await c2.newPage(); const e2 = []; q.on('pageerror', e => e2.push(e.message)); await q.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
+        const c2 = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: SHOT && !empty ? 2 : 1, ignoreHTTPSErrors: true }); const q = await c2.newPage(); const e2 = []; q.on('pageerror', e => e2.push(e.message)); await q.route(NET, x => x.abort());
         await q.goto(`${base}/index.html#blank`, { waitUntil: 'domcontentloaded' }).catch(() => { }); await q.setContent(g.html, { waitUntil: 'load' }).catch(() => { }); await q.waitForTimeout(400);
         const m = await q.evaluate(() => { const vw = innerWidth; const R = { ow: document.documentElement.scrollWidth - vw, small: [], t44: [], wrap1: [], out: [], secs: document.querySelectorAll('section.lv').length };
           const vis = e => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && cs.opacity !== '0'; };
@@ -49,7 +53,7 @@ const IDS = Object.keys(T);
         ok(!e2.length, `${P} ${tag} 게시본 오류 없음`);
         ok(tag === 'pc' ? m.h1 >= 80 : m.h1 >= 36 && m.h1 <= 44, `${P} ${tag} 첫 화면 제목 ${m.h1}px`);
         if (empty) ok(m.secs >= 3, `${P} ${tag} 데이터 없음: 과정 · 숫자 덩어리는 숨기고 첫 화면 · 이야기 · 마지막 행동은 남음(섹션 ${m.secs})`);
-        if (SHOT && !empty) { await q.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 600) { scrollTo(0, y); await new Promise(r => setTimeout(r, 60)); } scrollTo(0, 0); }); await q.waitForTimeout(500); await q.screenshot({ path: path.join(SHOT, `${ID}-${ty}-${tag}-hero.jpg`), type: 'jpeg', quality: 82 }); await q.screenshot({ path: path.join(SHOT, `${ID}-${ty}-${tag}-full.jpg`), type: 'jpeg', quality: 70, fullPage: true }); }
+        if (SHOT && !empty) { const fo = await q.evaluate(async () => { await document.fonts.ready; return document.fonts.check('800 40px "Pretendard Variable"') && [...document.fonts].some(f => /Pretendard/.test(f.family) && f.status === 'loaded'); }); ok(fo, `${P} ${tag} Pretendard 웹글꼴 로드(CDN)`); await q.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 600) { scrollTo(0, y); await new Promise(r => setTimeout(r, 60)); } scrollTo(0, 0); }); await q.waitForTimeout(500); await q.screenshot({ path: path.join(SHOT, `${ID}-${ty}-${tag}-hero.jpg`), type: 'jpeg', quality: 82 }); await q.screenshot({ path: path.join(SHOT, `${ID}-${ty}-${tag}-full.jpg`), type: 'jpeg', quality: 70, fullPage: true }); }
         await c2.close(); }
       const H = [...g.html.matchAll(/<section class="[^"]*\blv\b[\s\S]*?<\/section>/g)].map(x => x[0]).join(''); const hrefs = [...H.matchAll(/href="([^"]*)"/g)].map(x => x[1]);
       const good = h => { const a = h.match(/^#p-c-(.+)$/); if (a) return g.classIds.includes(a[1]); const n = h.match(/^#p-m-(.+)$/); if (n) return g.menuIds.includes(n[1]); return /^(#p-home|#login\/(my|cal)|tel:[\d+]+|mailto:\S+@\S+|https:\/\/www\.work24\.go\.kr)$/.test(h); };

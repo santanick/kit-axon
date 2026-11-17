@@ -56,12 +56,12 @@
   const latestNotice = () => { try { const N = (S.notices || []).filter(x => x && x.title && !x.hidden); return N.slice().sort((a, b) => String(b.at || b.date || '').localeCompare(String(a.at || a.date || '')))[0] || null; } catch (e) { return null; } };
   /* 방문자 갈래: 첫 화면 아래 한 줄 바로 가기(실제 경로만) */
   const paths = s => { const ask = askOf(s); return isVoc()
-    ? [['처음이에요', '국비 지원 자격 확인', W24], ['훈련생', '출결 · 진도 · 수료', '#login/my'], ['문의', ask.s, ask.h]]
+    ? [['처음이에요', '국비 지원 자격 확인', W24], ['훈련생', '출결 · 진도 · 수료', '#login/my'], ['기업', '채용 연계 문의', ask.h]]
     : [['처음이에요', '과정 둘러보기', clsList(s)], ['수강생', '내 강의실 · 수료증', '#login/my'], ['문의', ask.s, ask.h]]; };
 
   /* ════ A 「현장」 ════ */
   function heroA(s, d) { const p = ph(s, 'hero', d);
-    return `<section class="hpt hp-hero hps-hero lv lvA lvA-hero">${fig('hero', p, 'lvA-bg', true)}<div class="lv-w lvA-hw">${d.eyebrow ? `<p class="lvA-ey">${E(d.eyebrow)}</p>` : ''}<h1>${lines(d)}</h1>${d.sub ? `<p class="lvA-sub">${E(d.sub)}</p>` : ''}
+    return `<section class="hpt hp-hero hps-hero lv lvA lvA-hero" data-hps-dark="1">${fig('hero', p, 'lvA-bg', true)}<div class="lv-w lvA-hw">${d.eyebrow ? `<p class="lvA-ey">${E(d.eyebrow)}</p>` : ''}<h1>${lines(d)}</h1>${d.sub ? `<p class="lvA-sub">${E(d.sub)}</p>` : ''}
 <div class="lv-bs">${btn(clsList(s), d.cta || '모집 중인 과정 보기', 'p')}${btn(askOf(s).h, d.cta2 || '상담 문의', 'gl')}</div></div>
 <nav class="lvA-qk" aria-label="바로 가기"><div class="lv-w">${paths(s).map(([k, l, h]) => `<a ${aA(h)}><b>${E(k)}</b><span>${E(l)}</span></a>`).join('')}</div></nav></section>`; }
   function zeroA(s, d) { const L = pubAll(); if (!L.length) return ''; const F = L.filter(c => !+c.price);
@@ -83,7 +83,7 @@
     const n = latestNotice(); const nx = L.find(c => { const x = dday(c); return x != null && x >= 0; });
     const line = n ? `<span><b>${E(n.title)}</b></span>${lnk(noticeH(s), '공지 보기')}` : nx ? `<span><b>${E(md(nx.start))}</b> ${E(nx.name)} 개강을 앞두고 있어요.</span>${lnk('#p-c-' + nx.id, '자세히 보기')}` : '';
     return `<section class="hpt hp-hero hps-hero lv lvB lvB-hero"><div class="lv-w lvB-hg"><div>${d.eyebrow ? `<p class="lvB-is">${E(d.eyebrow)}</p>` : ''}<h1>${linesEm(d, 'line')}</h1>${d.sub ? `<p class="lvB-sub">${E(d.sub)}</p>` : ''}
-<div class="lv-bs">${btn(clsList(s), d.cta || '강좌 둘러보기', 'p')}${btn(askOf(s).h, d.cta2 || '수강 문의', 'ol')}</div></div>
+<div class="lv-bs">${btn(clsList(s), d.cta || '강좌 둘러보기', 'p')}${btn(askOf(s).h, d.cta2 || '수강 문의', 'ol')}</div><nav class="lvB-paths" aria-label="방문 목적별 바로 가기">${paths(s).map(([k, l, h]) => `<a ${aA(h)}><b>${E(k)}</b><span>${E(l)}</span></a>`).join('')}</nav></div>
 <div class="lvB-col">${P.map(([k, p, c]) => fig(k, p, 'lvB-' + c, k === 'hero', '(max-width: 760px) 60vw, 30vw')).join('')}</div></div>${line ? `<div class="lvB-nt"><div class="lv-w"><i aria-hidden="true"></i>${line}</div></div>` : ''}</section>`; }
   function seasonB(s, d) { const L = sorted(); if (!L.length) return ''; const N = L.slice(0, 3);
     const card = c => { const x = info(c); return `<li><a class="lvB-card" href="#p-c-${E(c.id)}">${fig('cls-' + c.id, cphoto(c), 'lvB-cph')}<small class="lvB-cat">${E(x.when)}</small><b>${E(c.name)}</b><small class="lvB-meta">${E([x.meta, x.price].filter(Boolean).join(' · '))}</small></a></li>`; };
@@ -133,8 +133,9 @@ ${fig('hero', p, 'lvC-stage', true, '(max-width: 760px) 100vw, 1120px')}<nav cla
     const cream = '#F5EFE4', cream2 = '#EDE4D3'; const bA = fit(a, cream, 4.8, '#000000'); const terra = fit('#C2552E', cream, 4.6, '#000000'); const bDeep = fit(a, '#ffffff', 7, '#000000');
     /* C: 흰 바탕 · 기관 색 + 라임 포인트(검은 바탕 위에서만) */
     const cA = fit(a, '#ffffff', 4.6, '#000000');
+    const head = s.theme === 'lvalmanac' ? `div.hps-top header.gh.hps-h{background:${cream};border-bottom-color:#D9CFBD}` : '';
     return `
-/* v43.9 hpv-life */
+/* v43.9 hpv-life */${head}
 .lv{--lv-a:${a};--lv-p:${pb};--lv-on:${on};font-variant-numeric:tabular-nums;word-break:keep-all}
 .lv *{box-sizing:border-box}:where(.lv) :where(h1,h2,h3,p,ol,ul,dl,dd,blockquote,figure){margin:0;padding:0}:where(.lv) :where(ol,ul){list-style:none}
 .lv-w{max-width:1240px;margin:0 auto;padding:0 40px;position:relative}
@@ -200,6 +201,7 @@ section.lv.lvB-hero{padding:96px 0 0;background:${cream}}.lvB-hero h1 em{font-st
 .lvB-is{font-size:14px;font-weight:600;letter-spacing:.14em;color:${terra};margin-bottom:36px}
 .lvB-hero h1{font-size:84px;line-height:1.16;letter-spacing:-.05em;font-weight:700}
 .lvB-sub{font-size:20px;color:#46504A;margin-top:32px;max-width:480px;line-height:1.65}
+.lvB-paths{display:flex;flex-wrap:wrap;margin-top:28px;font-size:15.5px;color:#46504A}.lvB-paths a{display:flex;align-items:center;gap:8px;min-height:44px;padding-right:20px;margin-right:20px;border-right:1px solid #D9CFBD}.lvB-paths a:last-child{border:0;margin:0;padding:0}.lvB-paths b{color:#1E2621}
 .lvB-col{position:relative;height:660px}.lvB-col figure,.lvB-col .lv-ph0{position:absolute;border-radius:4px}
 .lvB-c1{left:0;top:40px;width:56%;height:520px}.lvB-c2{right:0;top:0;width:40%;height:290px}.lvB-c3{right:0;bottom:0;width:40%;height:350px}
 .lvB-nt{margin-top:96px;border-top:1px solid #D9CFBD;border-bottom:1px solid #D9CFBD}
@@ -253,7 +255,7 @@ section.lvC-voice{background:#F5F6F8;text-align:center}.lvC-voice blockquote{fon
   section.lvA:not(.lvA-hero),section.lvB:not(.lvB-hero),section.lvC:not(.lvC-hero){padding:84px 0}
   .lv-bs{flex-direction:column;margin-top:32px}.lv-b{width:100%;min-height:56px;font-size:16px}
   .lv-top{display:block;margin-bottom:36px}.lv-top .lv-ln,.lv-top .lv-lead{margin-top:18px}
-  .lvA-hero{height:780px;min-height:0}.lvA-bg::after{background:linear-gradient(0deg,rgba(10,15,20,.93) 0%,rgba(10,15,20,.62) 50%,rgba(10,15,20,.18) 82%)}
+  .lvA-hero{height:calc(100svh - 64px);min-height:660px;max-height:800px}.lvA-bg::after{background:linear-gradient(0deg,rgba(10,15,20,.93) 0%,rgba(10,15,20,.62) 50%,rgba(10,15,20,.18) 82%)}
   .lvA-hw{padding-bottom:116px}.lvA-ey{font-size:13.5px;margin-bottom:20px}.lv.lvA-hero h1{color:#fff;font-size:42px;line-height:1.16}.lvA-sub{font-size:17px;margin-top:20px}
   .lvA-qk .lv-w{padding:0;display:grid;grid-template-columns:repeat(3,1fr)}.lvA-qk a{margin:0;padding:12px 4px;min-height:84px;flex-direction:column;justify-content:center;gap:2px;text-align:center;font-size:13.5px}
   .lvA-zg{grid-template-columns:1fr;gap:36px}.lvA-big{font-size:150px}.lvA-zero h2{font-size:30px}
@@ -262,6 +264,7 @@ section.lvC-voice{background:#F5F6F8;text-align:center}.lvC-voice blockquote{fon
   section.lvA-q{min-height:600px}.lvA-qw{padding-top:88px;padding-bottom:140px}.lv.lvA-q blockquote{color:#fff;font-size:30px}.lvA-q blockquote::before{font-size:80px}.lvA-stat{left:22px;right:auto;text-align:left;bottom:40px}.lvA-stat b{font-size:38px}
   .lvA-cg{grid-template-columns:1fr;gap:36px}.lvA-cta h2{font-size:34px}.lvA-cg p{font-size:17px}.lvA-act .lv-b{min-height:62px;font-size:17px}
   section.lv.lvB-hero{padding-top:48px}.lvB-hg{grid-template-columns:1fr;gap:44px}.lvB-is{font-size:13px;margin-bottom:22px}.lvB-hero h1{font-size:42px;line-height:1.24}.lvB-sub{font-size:17px;margin-top:20px}
+  .lvB-paths{flex-direction:column;margin-top:20px}.lvB-paths a{border:0;border-bottom:1px solid #D9CFBD;margin:0;padding:0 2px;min-height:52px}.lvB-paths a:last-child{border-bottom:0;padding:0 2px}
   .lvB-col{height:420px}.lvB-c1{top:24px;height:330px;width:58%}.lvB-c2{height:190px;width:38%}.lvB-c3{height:212px;width:38%}
   .lvB-nt{margin-top:56px}.lvB-nt .lv-w{flex-wrap:wrap;gap:6px 12px;padding:18px 22px;font-size:15px}.lvB-nt .lv-ln{margin-left:21px}
   .lvB-top{grid-template-columns:1fr;gap:18px;margin-bottom:40px}.lvB-top .lv-lead{justify-self:start;font-size:16.5px}
@@ -329,8 +332,9 @@ section.lvC-voice{background:#F5F6F8;text-align:center}.lvC-voice blockquote{fon
         TX('features', { hpt: 'lv-c-voice', title: '새로운 일은, 배우기로 마음먹은 날 시작돼요.', sub: '', cols: AUTO }),
         TX('cta', { hpt: 'lv-c-cta', title: v ? '지원 자격,\n먼저 확인해 보세요' : '어떤 과정이 맞을지\n함께 찾아요', sub: v ? '정확한 지원 범위는 고용24에서 확인돼요.' : '배우고 싶은 것을 알려 주시면 맞는 과정을 안내해 드려요.', cols: [] })]; } } };
   /* 시안과 같은 사진(첫 화면 · 이야기 · 인용). 기관이 올린 사진(site.img)이 있으면 그것이 먼저다 */
+  const HEAD = { lvworkshop: 'overlay', lvalmanac: 'center', lvshift: 'solid' };
   const PH = { lvworkshop: { hero: 'wrk-08', about: 'hum-18', cta: 'coo-03' }, lvalmanac: { hero: 'hum-23', about: 'kni-03', space: 'hum-26', cta: 'sen-01' }, lvshift: { hero: 'cam-07', about: 'hum-13' } };
-  if (typeof siteFromTpl === 'function' && !siteFromTpl.hpvl) { const base = siteFromTpl; const f = tp => { const s = base(tp); try { if (tp && tp.hpv === 'life') s.photos = Object.assign({}, s.photos, PH[tp.theme]); } catch (e) { console.error('hpv-life photo', e); } return s; };
+  if (typeof siteFromTpl === 'function' && !siteFromTpl.hpvl) { const base = siteFromTpl; const f = tp => { const s = base(tp); try { if (tp && tp.hpv === 'life') { s.photos = Object.assign({}, s.photos, PH[tp.theme]); s.hps = Object.assign({}, s.hps, { head: HEAD[tp.theme], ownH: 1 }); } } catch (e) { console.error('hpv-life photo', e); } return s; };
     Object.keys(base).forEach(k => { try { f[k] = base[k]; } catch (e) { } }); f.hpvl = 1; siteFromTpl = f; window.siteFromTpl = f; }
   function regAll() { Object.keys(DEF).forEach(id => { if (!HPT.has(id)) HPT.reg(id, Object.assign({ prem: 1, cssX }, DEF[id])); try { if (window.HPD && typeof HPD.reg === 'function') HPD.reg(id, HD[id]); } catch (e) { console.error('hpv-life HPD', e); }
     if (typeof TPL === 'undefined' || typeof S2 !== 'function' || TPL.some(t => t.id === 'prem-' + id)) return; const c = TPLS[id];
@@ -341,7 +345,7 @@ section.lvC-voice{background:#F5F6F8;text-align:center}.lvC-voice blockquote{fon
   if (typeof HPT.premFits === 'function' && !HPT.premFits.hpvl) { const f0 = HPT.premFits; HPT.premFits = (id, t) => MY(id) ? DEF[id].tags.includes(t || tyK()) : f0(id, t); HPT.premFits.hpvl = 1; }
   if (typeof HPT.premFor === 'function' && !HPT.premFor.hpvl) { const f0 = HPT.premFor; HPT.premFor = t => { t = t || tyK(); const L = f0(t).filter(id => !DEF[id]); const M = Object.keys(DEF).filter(MY); return [...M.filter(id => DEF[id].tags.includes(t)), ...L, ...M.filter(id => !DEF[id].tags.includes(t))]; }; HPT.premFor.hpvl = 1; }
   if (typeof HPT.thumb === 'function' && !HPT.thumb.hpvl) { const tb = HPT.thumb; HPT.thumb = (s, id) => { if (!MY(id) || typeof siteHTML !== 'function') return tb(s, id);
-    try { const b = JSON.parse(JSON.stringify(s || (typeof site === 'function' ? site() : S.site))); HPT.apply(b, id, { keepColor: true }); delete b.layout; const tp = typeof TPL !== 'undefined' && TPL.find(t => t.id === 'prem-' + id); if (tp) { b.sections = tp.build(); b.photos = Object.assign({}, b.photos, PH[id]); } return siteHTML(b, false, 'ko'); } catch (e) { console.error('hpv-life thumb', e); return tb(s, id); } }; HPT.thumb.hpvl = 1; }
+    try { const b = JSON.parse(JSON.stringify(s || (typeof site === 'function' ? site() : S.site))); HPT.apply(b, id, { keepColor: true }); delete b.layout; const tp = typeof TPL !== 'undefined' && TPL.find(t => t.id === 'prem-' + id); if (tp) { b.sections = tp.build(); b.photos = Object.assign({}, b.photos, PH[id]); b.hps = Object.assign({}, b.hps, { head: HEAD[id], ownH: 1 }); } return siteHTML(b, false, 'ko'); } catch (e) { console.error('hpv-life thumb', e); return tb(s, id); } }; HPT.thumb.hpvl = 1; }
   /* 공지: 유형 기본 배치(첫 화면 바로 아래) 대신 마지막 행동 앞으로 — 첫 화면 다음은 과정 */
   if (typeof HPT.enrich === 'function' && !HPT.enrich.hpvl) { const e0 = HPT.enrich; HPT.enrich = s => { const r = e0(s); try { const L = s && s.sections; if (Array.isArray(L) && L.some(x => x && x.type === 'text' && x.data && SEC[x.data.hpt])) { const k = L.findIndex(x => x && x.type === 'notices'); if (k >= 0) { const [n] = L.splice(k, 1); const c = L.findIndex(x => x && x.type === 'text' && x.data && (x.data.hpt === 'faq' || /^lv-.-cta$/.test(x.data.hpt || ''))); L.splice(c >= 0 ? c : L.length, 0, n); } } } catch (e) { console.error('hpv-life enrich', e); } return r; }; Object.keys(e0).forEach(k => { try { HPT.enrich[k] = e0[k]; } catch (e) { } }); HPT.enrich.hpvl = 1; }
   window.HPV_LIFE = { ids: Object.keys(DEF), css, reg: regAll };
