@@ -534,6 +534,8 @@
 .clb-search{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;border:1px solid var(--g400);border-radius:8px;background:#fff;flex:0 1 320px;color:var(--g700)}
 .clb-search input{border:0;outline:0;font:inherit;font-size:16px;flex:1;min-width:0;background:transparent;min-height:46px;padding:0;box-shadow:none}
 .clb-search:focus-within{box-shadow:0 0 0 2px var(--s400)}
+/* v43.7 Q2: 공통 입력 규칙(v43ui.css, #main 범위)이 이 칸에도 테두리 · 돋보기 배경을 다시 입혀 검색창이 이중 상자로 보이던 것 — id로 이 칸만 되돌린다 */
+#main .clb-search #clbQ{border:0;background:transparent none;padding:0 !important;min-height:46px;border-radius:0;box-shadow:none}/* 공통 규칙의 padding-left:42px!important(돋보기 배경 자리)를 이 칸에서만 되돌림 — 돋보기는 label 안 아이콘 */
 .clb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
 .clb-card{display:grid;grid-template-columns:48px 1fr;gap:12px 14px;align-items:start;background:#fff;border:1px solid var(--g300);border-radius:8px;padding:16px;box-shadow:var(--e1)}
 .clb-card[hidden]{display:none}
@@ -649,7 +651,7 @@
   body.clb-sheet .fab,body.clb-sheet #fab{visibility:hidden}
   .clb-lrow{grid-template-columns:80px minmax(0,1fr) 20px;gap:10px}.clb-lrow .clb-th{width:80px}.clb-lk,.clb-ll{display:none}}
 @media (max-width:640px){.clb-bar{flex-direction:column;align-items:stretch}.clb-tools{flex:1 1 auto;width:100%}.clb-grid{grid-template-columns:1fr 1fr;gap:10px}
-  .clb-card .clb-tx{padding:10px}.clb-card .clb-thb{display:none}.clb-card .clb-tx b{font-size:15px}.clb-card .clb-use{font-size:13px}.clb-card .clb-tx small{display:none}
+  .clb-card .clb-tx{padding:10px}.clb-card .clb-thb{display:none}.clb-card .clb-thi{padding:28px 10px}/* v43.7 Q2: 작은 썸네일에서 가운데 아이콘 · 확장자가 왼쪽 위 종류 칩 · 오른쪽 아래 크기 칩과 겹치던 것 */.clb-card .clb-tx b{font-size:15px}.clb-card .clb-use{font-size:13px}.clb-card .clb-tx small{display:none}
   .clb-topb .btn.clb-make,.clb-topb .btn.clb-tutb{flex:1 1 100%}
   .l43-acts:has(.clb-make){flex-wrap:wrap}.l43-acts .btn.clb-make,.l43-acts .btn.clb-tutb{flex:1 1 100%;justify-content:center;min-width:0} /* v43 R6: 머리 카드 안 버튼 — 휴대폰 한 줄씩 */}`; document.head.appendChild(st); }
   /* v43 E2 — 첫 줄 브리핑(L43). l43.js가 뒤에 로드되므로 DOMContentLoaded에서 등록 */

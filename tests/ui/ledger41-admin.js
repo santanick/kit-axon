@@ -36,7 +36,8 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
   ok(/순매출/.test(T1.ai) && /수납률/.test(T1.ai) && /원장 요약 함수/.test(T1.foot), 'AI 요약 한 줄 · 기준 푸터 ' + T1.ai);
   const T2 = await p.evaluate(() => { const v = () => document.querySelectorAll('.lg-kpi b')[0].textContent; const pick = id => { const sel = document.querySelector('.lg-unit select'); if (!sel) { document.querySelector(`[data-act="led-unitc"][data-v="${id}"]`).click(); return; } sel.value = id; sel.dispatchEvent(new Event('change', { bubbles: true })); }; /* v43 R6: 칩이면 클릭 */ const all = v(); pick('lu_1'); const one = v();
     pick('lu_root'); document.querySelector('[data-act="led-roll"][data-v="0"]').click(); const rootOnly = v(); UI.ledRoll = true; render(); return { all, one, rootOnly }; });
-  ok(T2.all !== T2.one && T2.rootOnly === '0원', '롤업: 가맹점 선택 · 본사 단독 0원 ' + JSON.stringify(T2));
+  /* v43.7 Q3: 청구 · 수납 · 환불이 하나도 없는 단위는 KPI를 「0원」 대신 「아직 없음」으로 보여 준다(0 표시는 문장으로 — 디자인 규칙) */
+  ok(T2.all !== T2.one && T2.rootOnly === '아직 없음', '롤업: 가맹점 선택 · 본사 단독 기록 없음 ' + JSON.stringify(T2));
 
   const CMP = await p.evaluate(() => { UI.ledger = 'today'; UI.ledU = 'lu_root'; UI.ledRoll = true; render(); const c = [...document.querySelectorAll('.lg-card')].find(e => /가맹점별 수납/.test(e.textContent)); return { n: c ? c.querySelectorAll('tbody tr').length : 0, rate: c ? !!c.querySelector('.lg-rate') : false }; });
   ok(CMP.n === 3 && CMP.rate, '가맹점별 수납 비교(시안 1) ' + JSON.stringify(CMP));

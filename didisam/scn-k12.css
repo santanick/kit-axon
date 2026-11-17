@@ -125,3 +125,15 @@
 
 /* v43.4 MB 모바일: 046 기준일 칩 7개가 2줄로 꺾이던 것 → 한 줄 가로 넘김 */
 @media (max-width:760px){.k-days{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.k-days::-webkit-scrollbar{display:none}.k-days .k-day{flex:0 0 auto}#main .bview:has(.k-days) .grid .kpi .val{font-size:22px}}
+/* v43.7 Q2: 홈 「자동 운영」 켜기 스위치(42×24)의 누르는 칸이 44px보다 작던 것 — 모양은 그대로, 위아래로 누르는 칸만 넓힌다 */
+.k-sw::after{content:'';position:absolute;left:-1px;right:-1px;top:-10px;bottom:-10px}
+/* v43.7 Q3: 출석부 날짜 줄 — 휴대폰에서 [‹] · 7일 칩 · [›]가 세 줄로 갈라져 [‹]는 위, [›]는 아래에 혼자 서던 것.
+   760px 이하: 7일 칩을 첫 줄 전체로, 둘째 줄에 [‹] 요약 [›]를 한 줄로 둔다(화살표는 44px 정사각) */
+@media (max-width:760px){
+  #main .bar2.k-date,#main.l43 .bar2.k-date{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;grid-template-areas:"days days days" "prev sum next";align-items:center;gap:8px}
+  .k-date>.k-days{grid-area:days;margin:0}
+  .k-date>button:first-child{grid-area:prev}
+  .k-date>.k-days+button{grid-area:next}
+  .k-date>button:first-child,.k-date>.k-days+button{width:44px;min-width:44px;height:44px;padding:0;justify-content:center}
+  .k-date>.mini{grid-area:sum;text-align:center;min-width:0}
+}

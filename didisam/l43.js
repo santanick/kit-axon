@@ -30,7 +30,7 @@
   /* ───────── 렌더 함수 ───────── */
   const initial = n => { n = String(n || '').trim(); if (!n) return '?'; if (/^[A-Za-z]/.test(n)) { const p = n.split(/\s+/); return (p[0][0] + (p[1] ? p[1][0] : '')).toUpperCase(); } return n[0]; };
   const av = (name, size) => `<span class="l43-av t${hash(name) % 6}${size ? ' ' + size : ''}" aria-hidden="true">${E(initial(name))}</span>`;
-  const prog = (v, tone) => { v = Math.max(0, Math.min(100, num(v))); const t = tone || (v < 30 ? 'lo' : v >= 80 ? 'hi' : ''); return `<span class="l43-pg ${t}"><span class="l43-pgt"><i style="width:${v}%"></i></span><b>${v}%</b></span>`; };
+  const prog = (v, tone) => { v = Math.max(0, Math.min(100, num(v))); const t = tone || (v < 30 ? 'lo' : v >= 80 ? 'hi' : ''); return `<span class="l43-pg ${t}${v ? '' : ' z0'}"><span class="l43-pgt"><i style="width:${v}%"></i></span><b>${v ? v + '%' : '시작 전'}</b></span>`; }; /* v43.7 Q1(Q2 몫 17): 0%는 「시작 전」 */
   const chip = (t, tone) => `<span class="l43-chip ${tone || ''}">${E(t)}</span>`;
   const DOW = ['일', '월', '화', '수', '목', '금', '토'];
   const todayLabel = () => { const d = new Date(); return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일(${DOW[d.getDay()]})`; };
@@ -288,13 +288,13 @@
       const Lg = S.classes.filter(c => c.legal); if (!Lg.length) return null;
       const tot = Lg.reduce((a, c) => a + (c.learners || []).length, 0), dn = Lg.reduce((a, c) => { try { return a + doneN(c); } catch (e) { return a; } }, 0); const r = tot ? dn / tot * 100 : 0;
       const ends = Lg.map(c => c.end).filter(Boolean).sort(); const first = ends[0];
-      return { eye: '법정의무교육', title: `평균 이수율 <em>${pct(r)}</em>, 미이수 ${tot - dn}건에 독려가 필요합니다`, sub: first ? `가장 빠른 마감은 ${E(first)}입니다. 부서별 이수율이 낮은 팀부터 독려하세요.` : '', stats: [[Lg.length + '종', '법정 교육'], [pct(r), '평균 이수율', r < 50 ? 'warn' : ''], [(tot - dn) + '건', '미이수', tot - dn ? 'warn' : '']] };
+      return { eye: '법정의무교육', title: tot - dn ? `평균 이수율 <em>${pct(r)}</em>, 미이수 ${tot - dn}건에 독려가 필요합니다` : tot ? '법정의무교육을 <em>모두 이수</em>했습니다' : '법정의무교육 수강자가 <em>아직 없습니다</em>', sub: first ? `가장 빠른 마감은 ${E(first)}입니다. 부서별 이수율이 낮은 팀부터 독려하세요.` : '', stats: [[Lg.length + '종', '법정 교육'], [pct(r), '평균 이수율', r < 50 ? 'warn' : ''], [(tot - dn) + '건', '미이수', tot - dn ? 'warn' : '']] };
     }
   });
   reg('hrd', {
     brief: () => {
       const R = (S.hrd && S.hrd.reports) || []; const w = R.filter(r => r.st === '전송 대기').length; let low = 0; try { low = lowAttN(); } catch (e) { }
-      return { eye: 'HRD-Net 보고', title: w ? `HRD-Net 보고 대기 <em>${w}건</em>, 출석률 80% 미만 훈련생 ${low}명` : `출석률 80% 미만 훈련생 <em>${low}명</em>을 먼저 확인하세요`, sub: `${w ? '' : '전송을 기다리는 보고는 없습니다. '}수료 요건은 진도율 · 평가 성적 · 출석률을 함께 봅니다.`, stats: [[(window.DDStat ? DDStat.learnerN() : S.members.length) + '명', '훈련생'], [low + '명', '출석 80% 미만', /* v43 P1-F03 DDStat */ low ? 'warn' : ''], [w + '건', '보고 대기', w ? 'warn' : '']] };
+      return { eye: 'HRD-Net 보고', title: w ? `HRD-Net 보고 대기 <em>${w}건</em>${low ? `, 출석률 80% 미만 훈련생 ${low}명` : ''}` : low ? `출석률 80% 미만 훈련생 <em>${low}명</em>을 먼저 확인하세요` : '보고 대기도, 출석 경고 대상도 <em>없습니다</em>' /* v43.7 Q3: 「0명을 먼저 확인하세요」 → 문장 */, sub: `${w ? '' : '전송을 기다리는 보고는 없습니다. '}수료 요건은 진도율 · 평가 성적 · 출석률을 함께 봅니다.`, stats: [[(window.DDStat ? DDStat.learnerN() : S.members.length) + '명', '훈련생'], [low + '명', '출석 80% 미만', /* v43 P1-F03 DDStat */ low ? 'warn' : ''], [w + '건', '보고 대기', w ? 'warn' : '']] };
     }
   });
   reg('crmstu', {

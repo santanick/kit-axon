@@ -68,3 +68,5 @@
 .a2sec input[type=radio],.a2sec input[type=checkbox],.a2svq input[type=checkbox],.a2cr input[type=checkbox],.a2pick input,.a2pol input[type=checkbox]{width:auto;flex:none;margin:0}
 .a2rad label,.a2req,.a2ck{white-space:nowrap}
 .a2subtabs{margin:10px 0 12px}
+/* v43.7 Q2: 수료증 › 「과정별 발급 방식 · 양식」 — 과정 이름이 길면 「기준 …점을 채우면 자동 발급」 칩이 줄 밖으로 밀리던 것(휴대폰) */
+.a2crow{flex-wrap:wrap;gap:6px 10px}.a2crow .tag{white-space:normal;max-width:100%}

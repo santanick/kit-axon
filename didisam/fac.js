@@ -172,8 +172,8 @@
   const teacher = () => S.me && S.me.role === 'teacher';
   VIEWS.fac = () => { ensure(); sweep(); let tab = UI.fac || (teacher() ? 'tl' : 'list'); const T = teacher() ? TABS.filter(x => TEACH_TABS.includes(x[0])) : TABS; if (!T.some(x => x[0] === tab)) tab = T[0][0];
     if (LIVEON()) livePull(UI.facDay || today());
-    const td = todo(); const n = (v, l, t, tone) => `<button class="fc-todo ${v ? tone : ''}" data-act="tab" data-key="fac" data-v="${t}"><b>${v}</b>${esc(l)}</button>`;
-    const top = `<div class="fc-todos" aria-label="오늘 처리할 일"><span class="fc-tl">오늘 처리할 일</span>${n(td.appr, '승인 대기', 'appr', 'warn')}${n(td.due, '반납 예정', 'ns', '')}${n(td.over, '연체', 'ns', 'bad')}${n(td.ns, '노쇼', 'ns', 'bad')}</div>`;
+    const td = todo(); const n = (v, l, t, tone) => `<button class="fc-todo ${v ? tone : ''}" data-act="tab" data-key="fac" data-v="${t}">${v ? `<b>${v}</b>${esc(l)}` : `${esc(l)} 없음` /* v43.7 Q3: 「0 노쇼」 → 「노쇼 없음」 */}</button>`;
+    const top = `<div class="fc-todos" aria-label="오늘 처리할 일"><span class="fc-tdl">오늘 처리할 일</span>${n(td.appr, '승인 대기', 'appr', 'warn')}${n(td.due, '반납 예정', 'ns', '')}${n(td.over, '연체', 'ns', 'bad')}${n(td.ns, '노쇼', 'ns', 'bad')}</div>`;
     const warn = LIVEON() && LV.err ? `<div class="fc-err" role="alert">${esc(LV.err)}</div>` : '';
     let body = ''; try { body = ({ list: vList, tl: vTl, appr: vAppr, chk: vChk, pay: vPay, ref: vRef, ns: vNs, stat: vStat })[tab](); } catch (e) { console.error('fac view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(e.message)}</div>`; }
     let today43 = ''; try { if (tab === 'list' && !teacher()) today43 = todayCard(); } catch (e) { console.error('fac today', e); }
@@ -521,6 +521,6 @@
       enhance: main => { if (teacher() || (UI.fac && UI.fac !== 'list')) return; const tc = main.querySelector('.fc43'); const td0 = main.querySelector('.fc-todos'); if (!tc || !td0 || tc.closest('.q1-2col')) return; const T = facToday();
         const ai = [T.free.length ? [`${T.free[0]} 빈 시간 현장 예약 받기`, 'ok'] : null, todo().appr ? [`승인 대기 ${todo().appr}건 · 신청 순서대로 검토`, 'warn'] : null, ['노쇼는 시작 후 자동 취소 · 누적 시 예약 정지', ''], ['요금 구분 · 휴관일을 바꾸면 [게시하기]로 반영', '']].filter(Boolean).slice(0, 3);
         L43.side(main, tc, `<section class="q1-ac fc-ac"><h3>오늘 처리할 일</h3></section>` + L43.acard({ ai: true, t: 'AI 제안', items: ai, p: '제안은 승인 전에는 실행하지 않습니다.' }));
-        const ac = main.querySelector('.fc-ac'); if (ac) { ac.appendChild(td0); const lb = td0.querySelector('.fc-tl'); if (lb) lb.remove(); } } }); };
+        const ac = main.querySelector('.fc-ac'); if (ac) { ac.appendChild(td0); const lb = td0.querySelector('.fc-tdl'); if (lb) lb.remove(); } } }); };
     if (window.L43) reg43(); else window.addEventListener('DOMContentLoaded', reg43); }
 })();

@@ -200,7 +200,7 @@
   function cardsHTML() { if (!LR.me) return ''; const A = typeof ltTodo === 'function' ? ltTodo() : []; if (!A.length) return '';
     return `<div class="ap-cards" role="list" aria-label="오늘의 미션">${A.map((a, i) => `<a role="listitem" class="ap-cd ${a.k === 'warn' ? 'warn' : ''} ${i === 0 ? 'first' : ''}" href="${esc(a.href)}"><small>${i === 0 ? '지금 할 일' : a.k === 'warn' ? '먼저 챙기기' : '오늘의 미션'}</small><b>${esc(a.h)}</b><span>${esc(a.d || '')}</span><i>${ico('arrow', 16)}</i></a>`).join('')}</div>`; }
   function statHTML() { if (!LR.me || typeof myStats !== 'function') return ''; const st = myStats();
-    return `<p class="ap-st"><span><b>${st.streak}</b>일 연속</span><span>평균 진도 <b>${st.avg}%</b></span>${(SITE().badges || []).length && !(oTy() === 'univ' && oEd() === 'lms') ? `<span>배지 <b>${((LR.mine && LR.mine.badges) || []).length}</b>개</span>` : ''}</p>`; } /* v38 F5 UL11: 배지를 쓰지 않는 기관 · 학사 LMS는 배지 수를 보이지 않는다 */
+    return `<p class="ap-st"><span><b>${st.streak}</b>일 연속</span><span>${st.avg ? `평균 진도 <b>${st.avg}%</b>` : '진도 <b>시작 전</b>'}</span>${(SITE().badges || []).length && !(oTy() === 'univ' && oEd() === 'lms') ? `<span>배지 <b>${((LR.mine && LR.mine.badges) || []).length}</b>개</span>` : ''}</p>`; } /* v38 F5 UL11: 배지를 쓰지 않는 기관 · 학사 LMS는 배지 수를 보이지 않는다 */
   function threadHTML() { const M = (LT.msgs || []).filter(m => !m.sys);
     return M.map(ltMsgHTML).join('').replace(/<span class="lt-orb sm" aria-hidden="true"><\/span>/g, av(persona())) + (LT.busy ? `<div class="lt-m">${av(persona())}<div class="lt-b"><span class="lt-dots"><i></i><i></i><i></i></span></div></div>` : ''); }
   /* ── v33 홈 추천 칩의 의도(intent) — 칩마다 의도에 맞는 답 · 이동을 정해 둔다(QA #34). 값이 정해진 안내라 Claude가 지어내지 않게 기본 안내로 답한다 ── */
@@ -293,8 +293,10 @@
   const pushOK = () => 'Notification' in window && 'serviceWorker' in navigator;
   const pushOn = () => !!(conn().push && conn().push.on && pushOK() && Notification.permission === 'granted');
   function connCount() { const c = conn(); let n = 0; if (c.gcal && c.gcal.on) n++; if (pushOn()) n++; try { if (typeof laV === 'function' && (laV().ids[LR.me.sid] || {}).phone) n++; } catch (e) { } return n; }
+  /* v43.7 Q4: 안내 문구를 기관 유형의 실제 연결 줄(lconn.js)과 맞춘다 — 대학은 카카오톡 · 문자 없음, 공단 · 평생교육원은 문자 알림 */
+  function connSub() { const t = String((SITE() && SITE().org && SITE().org.type) || ''); return /^univ/.test(t) ? '캘린더 · 앱 알림' : ['public', 'lifelong'].includes(t) ? '캘린더 · 문자 · 앱 알림' : '캘린더 · 카카오톡 · 앱 알림'; }
   function connRow() { const n = connCount(); const ar = Array.isArray(LR.lp.auto) ? LR.lp.auto.filter(a => a.on).length : 0;
-    return `<a class="ap-conn" href="#connect">${ico('cal', 20)}<span><b>캘린더 · 알림 연결</b><small>${n ? `${n}개 연결됨` : '캘린더 · 카카오톡 · 앱 알림'}${ar ? ` · 리마인더 ${ar}개 켜짐` : ''}</small></span>${ico('arrow', 16)}</a>`; }
+    return `<a class="ap-conn" href="#connect">${ico('cal', 20)}<span><b>캘린더 · 알림 연결</b><small>${n ? `${n}개 연결됨` : connSub()}${ar ? ` · 리마인더 ${ar}개 켜짐` : ''}</small></span>${ico('arrow', 16)}</a>`; }
   function pushCard() { const on = pushOn(); const den = pushOK() && Notification.permission === 'denied';
     const note = !pushOK() ? '이 브라우저는 앱 알림을 지원하지 않습니다.' + (IOS ? ' iPhone은 홈 화면에 앱을 설치(iOS 16.4 이상)한 뒤 켤 수 있어요.' : '') : IOS && !standalone() ? 'iPhone은 홈 화면에 앱을 설치한 뒤 그 앱에서 켤 수 있어요.' : den ? '알림이 차단되어 있어요. 휴대폰 설정 › 알림에서 이 앱을 허용해 주세요.' : on ? '오늘의 미션 · 선생님 답변 · 마감 임박을 알려 드려요.' : '오늘의 미션 · 선생님 답변 · 마감 임박을 앱 알림으로 받아요.';
     return `<div class="lai-sec ap-push"><div class="lai-sh"><h2>앱 알림 <small>${on ? '켜짐' : '꺼짐'}</small></h2></div><div class="ap-pr">${ico('bell', 20)}<span><b>${esc(tName())}의 알림</b><small>${esc(note)}</small></span>${on ? `<button type="button" class="lbtn sm ghost" data-ap="push-test">테스트</button><button type="button" class="lbtn sm ghost" data-ap="push-off">끄기</button>` : `<button type="button" class="lbtn sm pri" data-ap="push-on" ${pushOK() && !den && !(IOS && !standalone()) ? '' : 'disabled'}>켜기</button>`}</div><p class="lai-sub">지금은 앱을 열 때 하루 한 번 알려 드려요. 앱을 닫아 두어도 오는 알림(서버 푸시)은 운영 서버 연결 후 켜집니다.</p></div>`; }

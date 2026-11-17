@@ -36,7 +36,7 @@
     (S.classes || []).filter(c => c.status !== '삭제').forEach(c => {
       if (okD(c.start)) add({ id: `a:개강:${c.id}`, date: c.start, title: `개강 — ${c.name}`, kind: '개강', cls: c.id, auto: 1 });
       if (okD(c.end)) add({ id: `a:종강:${c.id}`, date: c.end, title: `종강 — ${c.name}`, kind: '종강', cls: c.id, auto: 1 });
-      (Array.isArray(c.sessions) ? c.sessions : []).forEach(s => { if (s && okD(s.date)) add({ id: `s:${c.id}:${s.id}`, date: s.date, time: s.from || '', end: s.to || '', title: `${(s.n || '') + '회차'}${s.title && !/^\s*\d+\s*회차\s*$/.test(s.title) && s.title !== c.name ? ' ' + s.title : ''} · ${c.name}`, kind: '회차', cls: c.id, sid: s.id, place: s.place || '', drag: 1 }); });
+      (Array.isArray(c.sessions) ? c.sessions : []).forEach(s => { if (s && okD(s.date)) add({ id: `s:${c.id}:${s.id}`, date: s.date, time: s.from || '', end: s.to || '', title: (st => `${(s.n || '') + '회차'}${st && st !== c.name ? ' ' + st : ''} · ${c.name}`)(String(s.title || '').replace(/^\s*\d+\s*회차\s*/, '').replace(/\s*[·\-—]\s*$/, '').trim()) /* v43.7 Q2: 회차 제목이 「7회차 …」로 시작하면 「7회차 7회차 …」로 겹치던 것 */, kind: '회차', cls: c.id, sid: s.id, place: s.place || '', drag: 1 }); });
     });
     try { if (typeof calEvents === 'function') calEvents('teacher', null).filter(e => ['과제', '시험', '라이브', '진단'].includes(e.kind)).forEach((e, i) => add({ id: `a:${e.kind}:${e.cls || ''}:${e.date}:${i}`, date: e.date, time: e.time && e.time !== '23:59' ? e.time : '', title: e.title, kind: e.kind, cls: e.cls, auto: 1 })); } catch (x) { }
     store().ev.forEach(u => add({ ...u, id: 'u:' + u.id, uid: u.id, drag: 1, user: 1 }));

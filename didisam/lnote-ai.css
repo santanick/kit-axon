@@ -160,3 +160,4 @@ body.lna-on{overflow:hidden}
 .ln-today .tx b,.ln-wrongbox b,.lna-ql .tx b,.lna-kp b,.qbox .q{color:var(--lna-ink)}
 .ln-wrongbox p,.ln-today .tx span{color:var(--lna-sub)}
 @media (min-width:761px){.ln-today .ft{display:flex}.ln-today .ft .lna-b{width:auto;min-width:260px}.lna-hubw .ln-today{margin-top:0}}
+.lhb-in>.lna-hubw:first-child{margin-top:24px} /* v43.7 Q4: 웹 학습 허브 — 노트 카드가 머리 띠 아래에 틈 없이 붙던 것 */

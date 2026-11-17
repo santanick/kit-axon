@@ -276,7 +276,7 @@ const only = (process.env.ONLY || 'corp,k12,k12b,univ,pub,life,date,r2,c3,c17,wh
     ok(two.who && /민준님으로 계속하기/.test(two.txt) && /엄마/.test(two.txt) && /다른 계정으로/.test(two.txt), 'K12: 계정 둘 → 앱을 열면 「민준님으로 계속하기 / 다른 계정」 카드');
     ok(!/PPP234|CCC234|name|phone|email/.test(two.keys), 'K12: 기억 항목은 닉네임 · 세션뿐(코드 · 이름 · 연락처 없음)'); await shot(p, 'who_390');
     const ov = await p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1); ok(!ov, 'K12: 카드 390 가로 넘침 없음');
-    await p.click('[data-ac=who-sw][data-v=KP0001]'); await p.waitForTimeout(900); const sw = await p.evaluate(() => ({ me: LR.me && LR.me.sid, who: !!document.querySelector('[data-la-who]') }));
+    await p.click('[data-ac=who-sw][data-v=KP0001]'); /* v43.8: who-sw는 location.reload — 고정 900ms 대신 새로 뜬 화면에서 로그인 복원까지 기다린다(부하에 따라 0.6~1.2s, 고정 대기로 간헐 실패) */ await p.waitForTimeout(300); await p.waitForFunction(() => typeof LR !== 'undefined' && !!LR.me, null, { timeout: 8000 }).catch(() => {}); await p.waitForTimeout(200); const sw = await p.evaluate(() => ({ me: LR.me && LR.me.sid, who: !!document.querySelector('[data-la-who]') }));
     ok(sw.me === 'KP0001' && !sw.who, `K12: 한 번 눌러 엄마 계정으로 바로 진행 (${sw.me})`);
     await p.evaluate(() => { location.hash = '#acct'; }); await p.waitForTimeout(600); const my = await p.evaluate(() => [...document.querySelectorAll('.ls-me a[href="#who"]')].length);
     ok(my > 0, `K12: '나'에 [계정 바꾸기] (${my})`); await p.click('.ls-me a[href="#who"]'); await p.waitForTimeout(400); ok(await p.$('[data-la-who]'), 'K12: [계정 바꾸기] → 계정 고르기 카드');

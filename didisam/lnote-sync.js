@@ -85,7 +85,7 @@
     const last = ['notion', 'gdocs'].map(k => S[k]).filter(x => x && x.on && x.at).sort((a, b) => a.at < b.at ? 1 : -1)[0]; const lastK = last === S.notion ? 'Notion' : 'Google Docs';
     const ey = err ? `<p class="lns-ey bad"><i></i>Notion이 키를 거절했어요 — 키를 다시 넣어 주세요</p>` : `<p class="lns-ey"><i></i>${on ? (last ? `${lastK}에 ${ago(last.at)} 보냈어요` : '연결을 켰어요. 지금 보내 보세요') : '아직 켜 둔 연결이 없어요'}</p>`;
     const cta = !F('sync') ? (F('file') ? `<button type="button" class="lns-b w" data-lns="md">${I('down', 18)} 노트 전체 내려받기(.md)</button>` : '') : err ? `<button type="button" class="lns-b w" data-lns="notion">${I('lock', 18)} 키 다시 넣기</button>` : on ? `<button type="button" class="lns-b w" data-lns="send">${I('redo', 18)} 지금 다시 보내기</button>` : `<button type="button" class="lns-b w" data-lns="notion">${LG('notion', 24)} Notion 연결하기</button>`;
-    const hero = `<section class="lns-hero">${ey}<h2>노트 ${N.length}개와 복습 카드 ${C.length}장,<br>내가 쓰는 앱에서도 이어 봐요</h2>
+    const hero = `<section class="lns-hero">${ey}<h2>${N.length || C.length ? `노트 ${N.length}개와 복습 카드 ${C.length}장,` : '노트와 복습 카드를'}<br>내가 쓰는 앱에서도 이어 봐요</h2>
       <div class="lns-kpis"><div class="lns-kpi"><b>${on ? ok : '꺼짐'}</b><span>보낸 노트</span></div><div class="lns-kpi"><b>${dr || '초안 없음'}</b><span>확인 전 초안</span></div><div class="lns-kpi"><b>${on ? on + '곳' : '꺼짐'}</b><span>켜진 연결</span></div></div>${cta}</section>`;
     const auto = F('sync') ? `<section class="lns-grp"><div class="lns-gh"><b>자동으로 보내기</b><em>확인한 노트만</em></div>${syncRow('notion')}${syncRow('gdocs')}</section>` : `<p class="lns-off">${I('lock', 16)} 이 기관은 Notion · Google Docs 보내기를 쓰지 않아요. 파일로 내려받아 옮길 수 있어요.</p>`;
     const files = F('file') ? `<section class="lns-grp"><div class="lns-gh"><b>파일로 내려받기</b></div>

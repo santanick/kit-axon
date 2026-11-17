@@ -213,10 +213,11 @@ VIEWS.message = () => { cmEnsure(); const mc = cmMC(); const R = cmRecipients(mc
     <p class="cm26cnt" id="cmRcp">받는 사람 <b>${R.ids.length}명</b>${mc.par ? ` + 보호자 ${R.pars.length}명${R.noPar ? ` · 보호자 미연결 ${R.noPar}명은 본인에게만 보냅니다` : ''}` : ''}</p>
     ${R.ids.length ? '' : `<p class="cm26empty">${ic('info', 15)} 메시지를 보낼 대상을 추가해 주세요.</p>`}
     <div class="cm26who"><b>발송 대상 지정</b><label class="ckl"><input type="checkbox" checked disabled> ${esc(t('learner'))}</label>${(typeof mbGuardOn === 'function' ? mbGuardOn() : (k12 || S.parents)) ? `<label class="ckl"><input type="checkbox" data-chg="cm-mc-par" ${mc.par ? 'checked' : ''}> 연결된 보호자</label>` : ''}</div></div></div>` /* v43 F1 018: 짝 없는 </div>가 화면 틀을 닫아 발송 내역이 주 열 밖(전체 폭 아래)으로 밀리던 문제 */ + (S.me.role === 'teacher' ? '' : cmHistCard(H, qq, mhA)) /* v43 F1 018: 발송 내역을 주 열 안(작성 바 바로 아래)으로 */; })());
+};
+/* v43.7 Q3: 「새 메시지 쓰기」 · 닫기 동작은 VIEWS.message의 return 뒤에 있어 한 번도 등록되지 않았음(버튼이 안 눌림) — 파일 최상위로 옮김 */
 ACT['f1-cmp'] = () => { UI.msgCompose = true; render(); setTimeout(() => { const x = document.getElementById('msgT'); if (x) { x.scrollIntoView({ block: 'center' }); x.focus(); } }, 30); };
 ACT['f1-cmp-x'] = () => { cmKeepDraft(); UI.msgCompose = false; UI.msgDraft = UI.msgDraftT = ''; render(); };
 { const base = ACT['ai-msg']; if (base) ACT['ai-msg'] = (...a) => { const x = document.getElementById('msgT'); if (x && x.closest('[hidden]')) { UI.msgCompose = true; render(); } return base(...a); }; }
-};
 function cmAutoCards() { return `    <div class="card"><div class="ch"><b>알림톡 자동 발송</b><small>고정 템플릿 · 수정/수동 발송 불가</small></div>${(typeof AUTO_TALK !== 'undefined' ? AUTO_TALK : []).map(([a, b]) => { const pay = typeof mbPayOn !== 'function' || mbPayOn(); if (!pay && /결제/.test(a)) return ['수강신청 완료', '신청 직후']; return [a, b]; }).filter(([a]) => !/청구서/.test(a) || S.org.type === 'k12').filter(([a]) => !/배지/.test(a) || (typeof menuOn === 'function' && menuOn('badge'))).map(([a, b]) => `<div class="row"><span>${esc(a)}</span><small>${esc(b)}</small></div>`).join('')}<p class="mini">개별 알림톡 · SMS 수동 발송은 지원하지 않습니다. 운영자가 직접 만든 계정(국내 번호 없음)은 알림톡을 받지 못합니다. 반복 안내는 업무 자동화에서 조건별로 자동 발송하세요.</p><button class="btn sm" data-act="go" data-v="auto">업무 자동화 열기</button>
     ${cmNudgeCard()}`; }
 /* v26.7 메시지 발송 내역(피그마 Studio › 메시지 › 메시지 발송 내역): 총 N개 · 상세검색(유형 · 발송 일시) · 검색 · 발송 방식 칩 · 발송 건수 · 읽음 · 발송자 · 상세 › */
