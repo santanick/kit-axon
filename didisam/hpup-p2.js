@@ -71,7 +71,7 @@
       corp: [['user', '임직원', '사번으로 로그인 · 이어 듣기', [['로그인', L.my(), 1]]], ['flag', '필수 · 직무 과정', '이수 기한 · 학습 시간 확인', [['과정 목록', L.shop(), 1]]], ['cal', '교육 일정 · 공지', '집합 교육 일정 · 변경 안내', [['일정 보기', L.cal(), 1], ['공지', L.notice()]]]],
       public: [['user', '교육생', '로그인 · 이어 듣기 · 이수증', [['로그인', L.my(), 1]]], ['flag', '교육 과정', '법정 · 직무 과정과 학습 시간', [['과정 목록', L.shop(), 1]]], ['cal', '교육 일정 · 공지', '집합 교육 일정 · 변경 안내', [['일정 보기', L.cal(), 1], ['공지', L.notice()]]]],
       lifelong: [['search', '처음 오신 분', '이번 학기 강좌 · 수강료 확인', [['강좌 보기', L.shop(), 1], [d.cta2 || '전화 문의', L.ask()]]], ['book', '수강 중인 분', '내 강좌 · 출석 · 수료증', [['내 강좌 열기', L.my(), 1]]], ['cal', '강좌 일정 · 공지', '개강 · 휴강 · 접수 안내', [['일정 보기', L.cal(), 1], ['공지', L.notice()]]]],
-      voc: [['search', '훈련 과정 찾기', '과정 비교 · 지원 제도 상담', [['과정 보기', L.shop(), 1], [d.cta2 || '상담 신청', L.ask()]]], ['tool', '훈련생', '출결 · 진도 · 과제 확인', [['내 훈련 열기', L.my(), 1]]], ['cal', '훈련 일정 · 공지', '개강 · 시험 · 휴강 안내', [['일정 보기', L.cal(), 1], ['공지', L.notice()]]]]
+      voc: [['search', '국비 · 내일배움카드 과정', '과정 비교 · 카드 사용 · 자부담 상담', [['과정 보기', L.shop(), 1], [d.cta2 || '상담 신청', L.ask()]]], ['tool', '훈련생', '출결 · 진도 · 과제 확인', [['내 훈련 열기', L.my(), 1]]], ['cal', '훈련 일정 · 공지', '개강 · 시험 · 휴강 안내', [['일정 보기', L.cal(), 1], ['공지', L.notice()]]]]
     };
     return T[g] || T.adult; }
   const doors = (d, cls) => { const D = doorList(d);
@@ -87,7 +87,7 @@
   const HERO = {
     /* 브리핑 보드: 왼쪽 한 문장 + 오른쪽 큰 사진 위 「가장 먼저 시작하는 반」 카드, 아래 3갈래 카드 */
     briefboard: (s, d) => { const c = firstCls(); const l = c ? leftOf(c) : null;
-      const card = c ? `<a class="hu4-brief" ${aT(L.c(c))}><span class="hu4-bk">가장 먼저 시작하는 ${E(term('cls'))}</span><b>${E(c.name)}</b><span class="hu4-bm">${[c.start ? `${md(c.start)} 시작` : '', whenOf(c)].filter(Boolean).map(x => `<span>${E(x)}</span>`).join('')}${l != null ? `<span class="${l <= 3 ? 'hot' : ''}">남은 자리 ${l}석</span>` : ''}</span><i>${ic('arrow', 20)}</i></a>` : '';
+      const card = c ? `<a class="hu4-brief" ${aT(L.c(c))}><span class="hu4-bk">가장 먼저 시작하는 ${E(term('cls'))}</span><b>${E(c.name)}</b><span class="hu4-bm">${[c.start ? `${md(c.start)} 시작` : '', whenOf(c)].filter(Boolean).map(x => `<span>${E(x)}</span>`).join('')}${inHouse() ? (c.end ? `<span>이수 기한 ${md(c.end)}</span>` : '') : l != null ? `<span class="${l <= 3 ? 'hot' : ''}">남은 자리 ${l}석</span>` : ''}</span><i>${ic('arrow', 20)}</i></a>` : '';
       return `<section class="hpt hp-hero hps-hero hu4-h hu4-bb"><div class="hu4-w"><div class="hu4-bbg"><div class="hu4-bbt">${pill(d)}${h1(d)}${sub(d)}${heroBtns(d)}</div><div class="hu4-bbm">${fig(s, 'hero', 'hu4-bph', 1, d)}${card}</div></div>${doors(d, 'hu4-dr-bb')}</div></section>`; },
     /* 오늘 피드: 왼쪽 문구 + 3갈래 목록, 오른쪽 실제 데이터 피드(마감 · 개강 · 공지 · 후기) */
     todayfeed: (s, d) => { const C = pub(); const F = [];
@@ -115,8 +115,8 @@
         const per = [md(c.start), md(c.end)].filter(Boolean).join(' – ');
         return `<li><a class="hu4-pn" ${aT(L.c(c))}><b>${E(c.name)}</b><small>${E([c.cat, c.kind === 'live' ? '실시간' : c.kind === 'vod' ? '온라인' : ''].filter(Boolean).join(' · ') || term('cls'))}</small></a>
           <p class="hu4-pc"><span class="hu4-pk">일정</span><b>${E(whenOf(c) || '상시 수강')}</b><small>${E(per || '기간은 상세에서 안내')}</small></p>
-          <p class="hu4-pc"><span class="hu4-pk">정원</span>${cap ? `<b>${l === 0 ? '정원 마감' : `남은 자리 ${l}석`}</b><span class="hu4-bar" role="img" aria-label="정원 ${cap}명 중 ${n}명 신청"><i style="width:${pct}%"></i></span><small>정원 ${cap}명</small>` : '<b>제한 없음</b>'}</p>
-          <p class="hu4-pc"><span class="hu4-pk">${ih ? '학습 시간' : '수강료'}</span>${ih ? `<b>${c.hours ? `${E(c.hours)}시간` : '과정별 안내'}</b>` : free ? '<b>무료</b>' : `<b>${W(c.price)}원</b>`}<small>${ih ? (c.recruit && c.recruit.to ? `신청 마감 ${md(c.recruit.to)}` : '') : c.hours ? `총 ${E(c.hours)}시간` : ''}</small></p>
+          ${ih ? `<p class="hu4-pc"><span class="hu4-pk">이수 기한</span><b>${c.end ? `${md(c.end)}까지` : '과정별 안내'}</b><small>${c.recruit && c.recruit.to ? `신청 마감 ${md(c.recruit.to)}` : ''}</small></p>` : `<p class="hu4-pc"><span class="hu4-pk">정원</span>${cap ? `<b>${l === 0 ? '정원 마감' : `남은 자리 ${l}석`}</b><span class="hu4-bar" role="img" aria-label="정원 ${cap}명 중 ${n}명 신청"><i style="width:${pct}%"></i></span><small>정원 ${cap}명</small>` : '<b>제한 없음</b>'}</p>`}
+          <p class="hu4-pc"><span class="hu4-pk">${ih ? '학습 시간' : '수강료'}</span>${ih ? `<b>${c.hours ? `${E(c.hours)}시간` : '과정별 안내'}</b>` : free ? '<b>무료</b>' : `<b>${W(c.price)}원</b>`}<small>${ih ? (c.kind === 'live' ? '실시간 · 집합' : '온라인 · 이어 듣기') : c.hours ? `총 ${E(c.hours)}시간` : ''}</small></p>
           <a class="hu4-b${l === 0 ? '' : ' p'}" ${aT(L.c(c))}>${l === 0 ? '대기 신청' : ih ? '수강 신청' : '신청하기'}${ic('arrow', 18)}</a></li>`; };
       return `<section class="hpt hp-s hu4-s hu4-plan"><div class="hu4-w"><header class="hu4-sh">${d.eyebrow ? `<p class="hu4-ey">${E(d.eyebrow)}</p>` : ''}<h2>${br(d.title || '')}</h2>${d.sub ? `<p class="hu4-sd">${E(d.sub)}</p>` : ''}</header><ul class="hu4-pl">${C.map(row).join('')}</ul></div></section>`; }
   };
@@ -163,9 +163,9 @@
       st: ['이번 학기 강좌', '배움이 있는 저녁,\n우리 동네 강좌', '요일 · 시간 · 남은 자리를 보고 바로 신청해요. 처음이면 전화로 물어보세요.', '강좌 보기', '전화 문의'],
       plan: ['강좌 비교', '강좌별 일정 · 수강료를\n한눈에 비교하세요', '요일 · 시간 · 남은 자리를 보고 신청해요.'], cls: '이번 학기 강좌', rv: '수강생 이야기', nt: '학습관 소식',
       feat: ['처음이어도 괜찮아요', [['쉬운 신청', '강좌를 고르고 바로 신청해요'], ['출석 · 수료', '출석이 자동으로 기록되고 수료증을 받아요'], ['전화 안내', '신청이 어려우면 전화로 도와드려요']]], cta: ['수강 신청이 어려우신가요?', '전화로 신청 방법을 안내해 드려요.', '전화 문의'] },
-    voc: { bb: ['훈련 과정 브리핑', '자격증과 취업,\n훈련 과정으로 준비하세요', '과정별 훈련 일정 · 정원 · 수강료를 비교하고 상담을 신청해요.', '과정 보기', '상담 신청'],
-      tf: ['오늘의 훈련 소식', '모집 마감 · 개강을\n오늘 먼저 확인하세요', '마감이 가까운 과정과 새 공지를 먼저 보여 드려요. 훈련생은 출결과 진도를 바로 확인해요.', '과정 보기', '상담 신청'],
-      st: ['훈련 과정 모집', '실습장에서\n자격증까지', '과정별 훈련 시간 · 정원을 보고 상담을 신청해요. 출결과 진도는 자동으로 기록돼요.', '과정 보기', '상담 신청'],
+    voc: { bb: ['국비 · 내일배움카드 과정', '자격증과 취업,\n훈련 과정으로 준비하세요', '과정별 훈련 일정 · 정원 · 수강료를 비교하고, 내일배움카드 사용과 자부담은 상담에서 확인해요.', '과정 보기', '국비 상담'],
+      tf: ['국비 · 내일배움카드 과정 소식', '모집 마감 · 개강을\n오늘 먼저 확인하세요', '마감이 가까운 과정과 새 공지를 먼저 보여 드려요. 훈련생은 출결과 진도를 바로 확인해요.', '과정 보기', '상담 신청'],
+      st: ['국비 · 내일배움카드 과정 모집', '실습장에서\n자격증까지', '훈련 시간 · 정원을 보고 상담을 신청해요. 내일배움카드 사용과 자부담은 상담에서 확인해요.', '과정 보기', '국비 상담'],
       plan: ['과정 비교', '훈련 일정 · 수강료를\n한눈에 비교하세요', '훈련 기간 · 남은 자리 · 수강료를 비교하고 상담을 신청해요.'], cls: '모집 중인 훈련 과정', rv: '수료생 이야기', nt: '훈련 공지',
       feat: ['훈련 중에도 챙겨 드려요', [['출결 · 진도', '출결과 진도가 자동으로 기록돼요'], ['실습 · 평가', '실습 과제와 평가 결과를 한곳에서'], ['수료 · 취업', '수료 기준과 취업 지원을 안내해요']]], cta: ['어떤 과정이 맞을지 고민되세요?', '목표와 일정에 맞는 과정을 상담해 드려요.', '상담 신청'] }
   };
@@ -259,7 +259,7 @@
 @media(max-width:1000px){.hu4-tfg{grid-template-columns:1fr}}
 @media(max-width:640px){.hpt.hu4-tf{padding:24px 0 44px!important}.hu4-fph{aspect-ratio:16/7}.hu4-feed{padding:10px}.hu4-dr-tf{margin-top:28px}}
 `;
-    if (id === 'stage') { const dmu = fit('#D6DCD9', bd, 4.6, '#ffffff'); x += `
+    if (id === 'stage') { const dmu = fit('#D6DCD9', bd, 4.6, '#ffffff'); const muD = fit(th.mu, surf, 4.8, '#ffffff'); const atD = fit(mix(a, '#ffffff', .25), surf, 4.8, '#ffffff'); const warnD = fit(WARN, surf, 4.8, '#ffffff'); x += `
 .hpt.hu4-st{position:relative;background:${bd};color:#ffffff;padding:clamp(72px,8vw,120px) 0 clamp(48px,5vw,72px)!important;overflow:hidden;isolation:isolate}
 .hu4-sph{position:absolute!important;inset:0;z-index:-2}.hu4-scrim{position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,${al(bd, .94)} 0%,${al(bd, .84)} 45%,${al(bd, .55)} 100%),linear-gradient(0deg,${bg} 0%,${al(bg, 0)} 34%)}
 .hu4-stg{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:clamp(32px,5vw,72px);align-items:end}.hu4-stg.one{grid-template-columns:1fr}
@@ -270,6 +270,8 @@
 .hu4-ttd{font-size:15px;font-weight:800;color:${at}}.hu4-ttd small{display:block;font-size:13px;font-weight:700;color:${mu}}.hu4-ttn b{display:block;font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hu4-ttn small{display:block;font-size:13px;color:${mu}}.hu4-ttn small.hot{color:${warn}}
 .hu4-dr-st .hu4-dq{color:${dmu}}.hu4-dr-st .hu4-d{background:${surf}}.hu4-dr-st .hu4-dt b{color:#ffffff}
 .hpt.hu4-plan{background:${bg}}.hu4-plan .hu4-sh h2{color:${ink}}
+/* L 심사(11-17): 어두운 판 위 보조 글자 대비 2.2 → 판 색 기준 4.8:1 이상(공통 small 규칙보다 앞서게 !important) */
+.hpt.hu4-st :is(small,.hu4-pk,.hu4-dq),.hpt.hu4-st .hu4-tt li small,.hpt.hu4-plan :is(small,.hu4-pk),.hpt.hu4-plan .hu4-sd{color:${muD}!important}.hpt.hu4-st .hu4-ttn small.hot{color:${warnD}!important}.hpt.hu4-st .hu4-ttd,.hpt.hu4-st .hu4-tth a{color:${atD}!important}.hpt.hu4-plan .hu4-ey{color:${fit(a, bg, 4.8, '#ffffff')}!important}
 @media(max-width:1000px){.hu4-stg{grid-template-columns:1fr}}
 @media(max-width:640px){.hpt.hu4-st{padding:56px 0 40px!important}.hu4-scrim{background:linear-gradient(180deg,${al(bd, .72)} 0%,${al(bd, .9)} 40%,${bg} 100%)}.hu4-tt{padding:12px}.hu4-tt li a{grid-template-columns:56px minmax(0,1fr) auto;gap:10px}}
 `; }
