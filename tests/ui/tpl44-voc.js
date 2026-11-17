@@ -17,7 +17,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
   const browser = await chromium.launch(SHOT && process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: '127.0.0.1,localhost' } } : {});
   const NET = SHOT ? /^https?:\/\/(?!127\.0\.0\.1|cdn\.jsdelivr\.net)/ : /^https?:\/\/(?!127\.0\.0\.1)/;
   const fails = []; const ok = (c, m) => { console.log(`${c ? '✓' : '✗'} ${m}`); if (!c) fails.push(m); };
-  const make = (p, empty) => p.evaluate(([empty]) => { localStorage.setItem('didisam.emptyStart', '0'); const b = document.querySelector('#suEmpty'); if (b) b.checked = false; createOrg('voc', '한빛직업전문학교'); if (empty) { S.classes = []; S.reviews = []; S.notices = []; S.posts = []; } }, [!!empty]);
+  const make = (p, empty) => p.evaluate(([empty]) => { localStorage.setItem('didisam.emptyStart', '0'); const b = document.querySelector('#suEmpty'); if (b) b.checked = false; createOrg('voc', '한빛직업전문학교'); if (!empty) { const c = (S.classes || [])[0]; S.reviews = (S.reviews || []).concat([{ id: 'rq1', who: (S.members || [])[0] && S.members[0].id, cls: c && c.id, stars: 5, body: '영상이 자꾸 끊겨요 확인 부탁드립니다' }, { id: 'rq2', who: (S.members || [])[0] && S.members[0].id, cls: c && c.id, stars: 5, body: '퀴즈 3번 해설 해 주세요?' }]); } if (empty) { S.classes = []; S.reviews = []; S.notices = []; S.posts = []; } }, [!!empty]);
   try {
     const c0 = await browser.newContext(); const p0 = await c0.newPage(); await p0.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await p0.goto(`${base}/index.html`, { waitUntil: 'load' }); await make(p0);
     const reg = await p0.evaluate(() => { const ids = HP44_VOC.ids; return { ids, tpl: ids.map(id => TPL.find(t => t.id === 't44-' + id)).map(t => t && { g: t.g44, ty: t.types.join(','), sub: t.sub, th: HPT.has(t.theme) }), hero: ids.map(id => HP44_VOC.DEF[id].ph.hero), hk: ids.map(id => HP44_VOC.DEF[id].hk) }; });
@@ -46,15 +46,19 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
         ok(!m.t44.length, `${P} ${tag} 누르는 칸 44px ${m.t44.slice(0, 3).join(' | ')}`);
         ok(!m.wrap1.length, `${P} ${tag} 한 글자 꺾임 0 ${m.wrap1.slice(0, 3).join(' | ')}`);
         ok(!e2.length, `${P} ${tag} 게시본 오류 없음 ${e2.slice(0, 1).join('')}`);
-        ok(tag === 'pc' ? m.h1 >= 64 && m.h1 <= 160 : m.h1 >= 36 && m.h1 <= 64, `${P} ${tag} 첫 화면 제목 ${m.h1}px`);
+        ok(tag === 'pc' ? m.h1 >= 64 && m.h1 <= 160 : m.h1 >= 36 && m.h1 <= (ID === 'vocert' ? 64 : 48), `${P} ${tag} 첫 화면 제목 ${m.h1}px`);
         if (empty) ok(m.secs >= 3, `${P} ${tag} 데이터 없음: 과정 · 숫자 · 후기 덩어리는 숨김(남은 섹션 ${m.secs})`);
         if (SHOT && !empty) { await q.evaluate(async () => { await document.fonts.ready; document.documentElement.style.scrollBehavior = 'auto'; for (let y = 0; y < document.body.scrollHeight; y += 700) { scrollTo(0, y); await new Promise(r => setTimeout(r, 50)); } document.documentElement.style.scrollBehavior = 'auto'; scrollTo(0, 0); }); await q.waitForTimeout(500);
-          await q.screenshot({ path: path.join(SHOT, `${ID}-${tag}-hero.jpg`), type: 'jpeg', quality: 80 }); if (tag === 'pc') await q.screenshot({ path: path.join(SHOT, `${ID}-pc-full.jpg`), type: 'jpeg', quality: 60, fullPage: true }); }
+          await q.screenshot({ path: path.join(SHOT, `${ID}-${tag}-hero.jpg`), type: 'jpeg', quality: 80 }); await q.screenshot({ path: path.join(SHOT, `${ID}-${tag}-full.jpg`), type: 'jpeg', quality: 60, fullPage: true }); }
         await c2.close(); }
       const Hh = [...g.html.matchAll(/<section class="[^"]*\bv4\b[\s\S]*?<\/section>/g)].map(x => x[0]).join(''); const hrefs = [...Hh.matchAll(/href="([^"]*)"/g)].map(x => x[1]);
       const good = h => { const a = h.match(/^#p-c-(.+)$/); if (a) return g.classIds.includes(a[1]); return /^(#courses|#my|#cal|#notice|tel:[\d+]+|https:\/\/www\.work24\.go\.kr)$/.test(h); };
       const bad = hrefs.filter(h => !good(h)); ok(hrefs.length >= (empty ? 4 : 8) && !bad.length, `${P} 링크 ${hrefs.length}개 모두 실제 경로 ${bad.slice(0, 3).join(' ')}`);
-      if (!empty) { const n = (g.html.match(/<section class="[^"]*\bv4\b/g) || []).length; ok(n >= 6 && n <= 8, `${P} 첫 화면 + 섹션 ${n - 1}개(5~7)`); ok(!/78%|92%|4,812/.test(Hh), `${P} 가상 수치 없음`); }
+      if (!empty) { const n = (g.html.match(/<section class="[^"]*\bv4\b/g) || []).length; ok(n >= 6 && n <= 8, `${P} 첫 화면 + 섹션 ${n - 1}개(5~7)`); ok(!/78%|92%|4,812/.test(Hh), `${P} 가상 수치 없음`);
+        const big = await p.evaluate(() => { const L = S.classes.filter(c => (c.open === '전체' || c.open == null) && c.status !== '종료'); return { n: L.length, f: L.filter(c => !+c.price).length }; });
+        ok(big.n >= 10 || big.f >= 5 || !/class="v4-big"/.test(Hh), `${P} 큰 숫자: 과정 ${big.n}개 · 0원 ${big.f}개 → 기준 미만이면 숨김`);
+        ok(!/끊겨|부탁드립니다|해 주세요\?/.test(Hh), `${P} 후기 인용: 불만 · 요청 글 제외`);
+        const hasN = await p.evaluate(() => [...(S.notices || []), ...(S.classes || []).flatMap(c => c.notices || [])].some(x => x && x.title && !x.hidden)); ok(!hasN || /v4s-notice/.test(g.html), `${P} 공지가 있으면 템플릿 모양 공지(v4-notice)`); }
       await c.close(); }
   } catch (e) { fails.push('예외 ' + e.message); console.log(e); }
   await browser.close(); srv.close();

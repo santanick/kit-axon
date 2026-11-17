@@ -48,7 +48,7 @@
   const lines = d => String((d && d.title) || org()).split('\n').filter((x, k, A) => x || A.length === 1).map(E).join('<br>');
   const linesEm = d => { const L = String((d && d.title) || org()).split('\n').filter(Boolean); if (L.length < 2) return lines(d); return L.map((x, i) => i === 1 ? `<em>${E(x)}</em>` : E(x)).join('<br>'); };
   const rows = d => ((d && d.cols) || []).filter(r => r && r[0] && !isPh(r[0]) && r[0] !== '자동');
-  const review = () => { try { const R = (HPT.reviews && HPT.reviews()) || []; const G = R.filter(x => (!x.st || x.st >= 4) && x.b.length >= 12); const r = G.find(x => x.b.length <= 90) || G[0]; return r ? { b: r.b.length > 90 ? r.b.slice(0, 88) + '…' : r.b, w: [r.c, r.w].filter(Boolean).join(' · ') } : null; } catch (e) { return null; } };
+  const review = () => { try { const R = (HPT.reviews && HPT.reviews()) || []; const BAD = /끊겨|끊김|안 ?돼|안 ?되|부탁|해 ?주세요|해주세요|오류|에러|환불|불편|문제|느려|왜|언제|어떻게|\?\s*$/; const G = R.filter(x => x.st >= 4 && x.b.length >= 12 && !BAD.test(x.b)); const r = G.find(x => x.b.length <= 90) || G[0]; return r ? { b: r.b.length > 90 ? r.b.slice(0, 88) + '…' : r.b, w: [r.c, r.w].filter(Boolean).join(' · ') } : null; } catch (e) { return null; } };
   const notices = () => { try { return [...(S.notices || []), ...(S.classes || []).filter(c => c.open === '전체' || c.open == null).flatMap(c => c.notices || [])].filter(x => x && x.title && !x.hidden && !x.priv).slice().sort((a, b) => String(b.at || b.date || '').localeCompare(String(a.at || a.date || ''))); } catch (e) { return []; } };
   const head = d => `${d.eyebrow ? `<p class="v4-k">${E(d.eyebrow)}</p>` : ''}<h2>${lines(d)}</h2>`;
   const paths = d => { const a = ask(); return [['처음이에요', '국비 지원 자격 확인', W24], ['훈련생', (d && d.my) || '출결 · 진도 · 수료', MY], ['기업', '채용 연계 문의', a.h]]; };
@@ -84,11 +84,15 @@
       return hx('voclassic', 'formal', `<div class="v4-w v4-formal"><div class="v4-crest" aria-hidden="true"><svg viewBox="0 0 96 96" width="88" height="88"><circle cx="48" cy="48" r="45" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="48" cy="48" r="38" fill="none" stroke="currentColor" stroke-width=".8"/><path d="M48 14l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6-4.5-4 6-1z" fill="currentColor"/></svg><span>${E(ini)}</span></div>${ey(d)}<h1>${lines(d)}</h1><p class="v4-rule" aria-hidden="true"><i></i></p>${sub(d)}${heroBtns(d)}${fig('hero', ph(s, 'hero', d), 'v4-frame', true, '(max-width: 760px) 100vw, 1080px')}${pathNav(d, 'line formal')}</div>`); } };
 
   /* ════ 섹션 ════ */
-  function sNum(s, d) { const L = pubAll(); if (!L.length) return ''; const F = L.filter(c => !+c.price).length; const Hh = L.reduce((a, c) => a + (+c.hours || 0), 0);
-    let n, u, t; if (d.k === 'hours' && Hh >= 100) { n = Hh.toLocaleString('ko-KR'); u = '시간'; t = `지금 열린 ${L.length}개 과정의 실습 · 수업 시간을 모두 더했어요.`; }
-    else if (F) { n = '0'; u = '원'; t = `수강료 0원으로 들을 수 있는 과정이 ${F}개 있어요.`; }
-    else if (L.length >= 3) { n = String(L.length); u = '개'; t = '지금 모집 · 운영 중인 과정이에요.'; } else return '';
-    return `<div class="v4-w v4-numg"><p class="v4-big" aria-label="${E(n + u)}">${E(n)}<span>${u}</span></p><div>${d.title ? `${head(d)}<p class="v4-lead">${E(d.sub || t)}</p>${d.sub ? `<p class="v4-cap">${E(t)}</p>` : ''}` : `${d.eyebrow ? `<p class="v4-k">${E(d.eyebrow)}</p>` : ''}<h2>${E(t)}</h2>`}${lnk(F ? W24 : CL, F ? '고용24에서 지원 자격 확인' : '과정 모두 보기')}</div></div>`; }
+  /* 큰 숫자: 자랑할 만한 값일 때만(검수 11-18) — 0원 과정 5개 이상 · 과정 10개 이상 · 수료증 과정 10개 이상. 시간 합계는 쓰지 않음.
+     못 미치면 숫자 대신 사진 이야기(fb)로 그 자리를 채운다 — 템플릿마다 다른 사진 · 문장 */
+  function sNum(s, d) { const L = pubAll(); const F = L.filter(c => !+c.price).length; const C = L.filter(c => info(c).cert).length; let n = '', u = '', t = '';
+    if (d.k === 'free' && F >= 5) { n = '0'; u = '원'; t = `수강료 0원으로 들을 수 있는 과정이 ${F}개 있어요.`; }
+    else if (d.k === 'count' && L.length >= 10) { n = String(L.length); u = '개'; t = '지금 모집 · 운영 중인 과정이에요.'; }
+    else if (d.k === 'cert' && C >= 10) { n = String(C); u = '개'; t = '수료하면 수료증을 주는 과정이에요.'; }
+    if (n) return `<div class="v4-w v4-numg"><p class="v4-big" aria-label="${E(n + u)}">${E(n)}<span>${u}</span></p><div>${d.title ? `${head(d)}<p class="v4-lead">${E(d.sub || t)}</p>${d.sub ? `<p class="v4-cap">${E(t)}</p>` : ''}` : `${d.eyebrow ? `<p class="v4-k">${E(d.eyebrow)}</p>` : ''}<h2>${E(t)}</h2>`}${lnk(d.k === 'free' ? W24 : CL, d.k === 'free' ? '고용24에서 지원 자격 확인' : '과정 모두 보기')}</div></div>`;
+    const fb = d.fb || {}; if (!fb.title) return '';
+    return `<div class="v4-w v4-fbg${fb.flip ? ' flip' : ''}">${fig('fb', ph(s, 'fb'), 'v4-fbph', false, '(max-width: 760px) 100vw, 56vw')}<div class="v4-fbt">${fb.eyebrow ? `<p class="v4-k">${E(fb.eyebrow)}</p>` : ''}<h2>${lines(fb)}</h2>${fb.sub ? `<p class="v4-lead">${E(fb.sub)}</p>` : ''}${lnk(fb.w24 ? W24 : CL, fb.link || '과정 둘러보기')}</div></div>`; }
   function sCards(s, d) { const L = sorted(); if (!L.length) return ''; const k = d.k || 'clean'; const N = L.slice(0, k === 'rows' ? 5 : 3);
     const more = L.length > N.length ? lnk(CL, `전체 ${L.length}개 과정 보기`) : lnk(CL, '과정 자세히 보기');
     if (k === 'rows') return `<div class="v4-w"><div class="v4-top"><div>${head(d)}</div>${more}</div><ol class="v4-rows">${N.map((c, i) => { const x = info(c); return `<li><a href="${E(cH(c))}"><i>${String(i + 1).padStart(2, '0')}</i><span class="v4-rn"><b>${E(c.name)}</b><small>${E([x.when, x.meta].filter(Boolean).join(' · '))}</small></span><span class="v4-rp">${E(x.price)}</span>${AR}</a></li>`; }).join('')}</ol></div>`;
@@ -108,8 +112,13 @@
     return `<div class="v4-w">${head(d)}${d.sub ? `<p class="v4-lead">${E(d.sub)}</p>` : ''}</div><div class="v4-strip">${P.map(([k, p]) => fig(k, p, 'v4-sp', false, '34vw')).join('')}</div>`; }
   function sElig(s, d) { const a = ask();
     return `<div class="v4-w v4-elg"><div>${head(d)}${d.sub ? `<p class="v4-lead">${E(d.sub)}</p>` : ''}</div><div class="v4-elr"><ul>${['구직 중이거나 실업 상태인 분', '회사에 다니는 재직자', '자영업자 · 특수형태근로종사자', '졸업을 앞둔 졸업 예정자'].map(t => `<li>${E(t)}</li>`).join('')}</ul><p class="v4-cap">제도 일반 안내예요. 소득 · 기업 규모 기준이 있어 정확한 자격과 지원 범위는 고용24에서 확인돼요.</p><div class="v4-bs">${btn(W24, '고용24에서 자격 확인', 'p')}${btn(a.h, a.s, 'o')}</div></div></div>`; }
-  function sNotice(s, d) { const N = notices().slice(0, 4); if (!N.length) return '';
-    return `<div class="v4-w"><div class="v4-top"><div>${head(d)}</div>${lnk(NT, '공지 모두 보기')}</div><ul class="v4-nl">${N.map(n => `<li><a href="${NT}"><time>${E(dot(n.at || n.date || ''))}</time><b>${E(n.title)}</b>${AR}</a></li>`).join('')}</ul></div>`; }
+  /* 공지: 템플릿마다 다른 모양(rows 목록 · cards 날짜 카드 · split 왼쪽 제목 + 오른쪽 목록) — 하단이 색만 다른 같은 뼈대가 되지 않게 */
+  function sNotice(s, d) { const k = d.k || 'rows'; const N = notices().slice(0, k === 'cards' ? 3 : 4); if (!N.length) return '';
+    const dd = n => { const m = String(n.at || n.date || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? [m[3], `${+m[2]}월`] : ['', '']; };
+    if (k === 'cards') return `<div class="v4-w"><div class="v4-top"><div>${head(d)}</div>${lnk(NT, '공지 모두 보기')}</div><ul class="v4-nc n${N.length}">${N.map(n => { const [a, b] = dd(n); return `<li><a href="${NT}">${a ? `<span class="v4-ncd"><b>${E(a)}</b><small>${E(b)}</small></span>` : ''}<span class="v4-nct">${E(n.title)}</span><span class="v4-ncm">자세히 보기${AR}</span></a></li>`; }).join('')}</ul></div>`;
+    const list = `<ul class="v4-nl">${N.map(n => `<li><a href="${NT}"><time>${E(dot(n.at || n.date || ''))}</time><b>${E(n.title)}</b>${AR}</a></li>`).join('')}</ul>`;
+    if (k === 'split') return `<div class="v4-w v4-nsp"><div>${head(d)}${lnk(NT, '공지 모두 보기')}</div>${list}</div>`;
+    return `<div class="v4-w"><div class="v4-top"><div>${head(d)}</div>${lnk(NT, '공지 모두 보기')}</div>${list}</div>`; }
   function sCta(s, d) { const t = telOk(); const hrs = ft().hours && !isPh(ft().hours) ? ft().hours : '';
     const b2 = t ? btn(telH(t), `전화 ${t}`, 'o') : btn(NT, '공지 · 문의 보기', 'o');
     return `<div class="v4-w v4-ctag k-${d.k || 'center'}"><div>${d.eyebrow ? `<p class="v4-k">${E(d.eyebrow)}</p>` : ''}<h2>${lines(d)}</h2>${d.sub || hrs ? `<p class="v4-lead">${E(hrs ? `상담 시간 · ${hrs}` : d.sub)}</p>` : ''}</div><div class="v4-bs">${btn(CL, d.cta || '모집 중인 과정 보기', 'p')}${b2}</div></div>`; }
@@ -118,13 +127,13 @@
   /* ════ 10종 정의: 색 · 서체 · 사진 · 머리글 · 문구 · 섹션 ════ */
   /* a 기관 색 · bg 바탕 · alt 교차 바탕 · dk 짙은 띠 · pt 포인트 · serif 제목 명조 · dark 전체 어두운 테마 */
   const DEF = {
-    vofield: { name: '현장', sub: '국비 기술훈련원', hk: 'full', a: '#D9541A', bg: '#FFFFFF', alt: '#F4F2EE', dk: '#16212B', pt: '#D9541A', head: 'overlay', ph: { hero: 'wrk-08', about: 'hum-18', cta: 'aut-03' }, desc: '작업장 사진을 가득 채운 첫 화면 · 큰 숫자 · 세로형 과정 카드 · 시작 4단계(용접 · 정비 · 기계 등 기술훈련)' },
-    vokdt: { name: '전환', sub: 'KDT · IT 부트캠프', hk: 'center', a: '#1D4ED8', bg: '#FFFFFF', alt: '#F5F6F8', dk: '#0C0E13', pt: '#D7F25C', head: 'solid', ph: { hero: 'grp-03', about: 'hum-50' }, desc: '가운데 큰 제목과 넓은 사진 · 과정 3개 · 검은 큰 숫자 하나(K-디지털 트레이닝 · IT 부트캠프)' },
+    vofield: { name: '현장', sub: '국비 기술훈련원', hk: 'full', a: '#D9541A', bg: '#FFFFFF', alt: '#F4F2EE', dk: '#16212B', pt: '#D9541A', head: 'overlay', ph: { hero: 'wrk-08', about: 'hum-18', cta: 'aut-03', fb: 'voc-01' }, desc: '작업장 사진을 가득 채운 첫 화면 · 큰 숫자 · 세로형 과정 카드 · 시작 4단계(용접 · 정비 · 기계 등 기술훈련)' },
+    vokdt: { name: '전환', sub: 'KDT · IT 부트캠프', hk: 'center', a: '#1D4ED8', bg: '#FFFFFF', alt: '#F5F6F8', dk: '#0C0E13', pt: '#D7F25C', head: 'solid', ph: { hero: 'grp-03', about: 'hum-50', fb: 'hum-07' }, desc: '가운데 큰 제목과 넓은 사진 · 과정 3개 · 검은 큰 숫자 하나(K-디지털 트레이닝 · IT 부트캠프)' },
     voupskill: { name: '퇴근 후', sub: '재직자 향상 훈련', hk: 'split', a: '#0F766E', bg: '#FFFFFF', alt: '#F1F6F5', dk: '#0B2B28', pt: '#E8A33B', head: 'solid', ph: { hero: 'cor-06' }, desc: '왼쪽 글 · 오른쪽 사진 분할 첫 화면 · 요일 · 시간 중심 과정 목록 · 재직자 혜택 3가지' },
-    vocert: { name: '합격 포스터', sub: '자격증 · 기능사', hk: 'poster', a: '#F2B705', bg: '#FFFFFF', alt: '#FBF6E3', dk: '#141414', pt: '#141414', head: 'solid', ph: { hero: 'dsk-07' }, desc: '노란 색면 · 초대형 제목 · 원형 사진의 포스터 첫 화면 · 번호 목록 과정 · 필기에서 합격까지' },
+    vocert: { name: '합격 포스터', sub: '자격증 · 기능사', hk: 'poster', a: '#F2B705', bg: '#FFFFFF', alt: '#FBF6E3', dk: '#141414', pt: '#141414', head: 'solid', ph: { hero: 'dsk-07', fb: 'dsk-03' }, desc: '노란 색면 · 초대형 제목 · 원형 사진의 포스터 첫 화면 · 번호 목록 과정 · 필기에서 합격까지' },
     vocook: { name: '키친', sub: '조리 · 제과제빵', hk: 'collage', a: '#B4372B', bg: '#FBF6EF', alt: '#F3EADF', dk: '#2A1A14', pt: '#E9A23B', head: 'solid', ph: { hero: 'coo-02', about: 'bak-02', space: 'bar-01', g1: 'bak-03', g2: 'coo-01', g3: 'bak-05', cta: 'bak-01' }, desc: '사진 세 장 콜라주 첫 화면 · 실습 사진 띠 · 과정 카드 · 따뜻한 크림 바탕(조리 · 제과제빵 · 바리스타)' },
     vobeauty: { name: '살롱', sub: '미용 · 뷰티', hk: 'mag', a: '#9E4E5B', bg: '#FAF4F1', alt: '#F1E6E1', dk: '#2B1D20', pt: '#9E4E5B', serif: 1, head: 'center', ph: { hero: 'bea-02', about: 'bea-01' }, desc: '잡지 표지 같은 명조 제목과 세로 사진 · 잡지형 과정 목록 · 인용(헤어 · 메이크업 · 네일)' },
-    vodesign: { name: '스크린', sub: '디자인 · 영상', hk: 'cine', a: '#FF5A36', bg: '#0B0B0D', alt: '#141418', dk: '#000000', pt: '#FF5A36', dark: 1, head: 'overlay', ph: { hero: 'hum-41', about: 'pho-02' }, desc: '검은 바탕 시네마 첫 화면 · 넓은 사진 · 어두운 과정 카드 · 큰 숫자(디자인 · 영상 · 사진)' },
+    vodesign: { name: '스크린', sub: '디자인 · 영상', hk: 'cine', a: '#FF5A36', bg: '#0B0B0D', alt: '#141418', dk: '#000000', pt: '#FF5A36', dark: 1, head: 'overlay', ph: { hero: 'hum-41', about: 'pho-02', fb: 'pho-01' }, desc: '검은 바탕 시네마 첫 화면 · 넓은 사진 · 어두운 과정 카드 · 큰 숫자(디자인 · 영상 · 사진)' },
     vologi: { name: '로드', sub: '물류 · 운전 · 중장비', hk: 'band', a: '#F2C200', bg: '#FFFFFF', alt: '#F1F1EC', dk: '#1A1D21', pt: '#1A1D21', head: 'solid', ph: { hero: 'log-01', about: 'dro-01' }, desc: '넓은 사진 띠 위에 걸친 노란 판 · 면허 · 자격 3갈래 · 과정 카드(물류 · 운전 · 중장비 · 드론)' },
     vocare: { name: '돌봄', sub: '간호조무 · 요양', hk: 'soft', a: '#2F7D6D', bg: '#F6FAF8', alt: '#EAF3EF', dk: '#173A33', pt: '#E9875B', head: 'solid', big: 1, ph: { hero: 'sen-01', about: 'hum-04' }, desc: '둥근 사진과 큰 글자 · 큰 버튼 · 실습 과정 안내(간호조무 · 요양보호 · 사회복지)' },
     voclassic: { name: '전통 학교', sub: '전통 직업전문학교(격식)', hk: 'formal', a: '#1E3A5F', bg: '#FBFAF7', alt: '#F2EFE8', dk: '#14263D', pt: '#B08D57', serif: 1, head: 'center', ph: { hero: 'lec-03' }, desc: '문장 · 대칭 · 명조 제목 · 액자 사진의 격식 있는 첫 화면 · 교육 이념 · 공지 · 과정 목록' } };
@@ -135,14 +144,14 @@
   const B = (title, sub, extra) => S2('banner', Object.assign({ title, sub }, extra));
   const BUILD = {
     vofield: () => [B('손에 익힌 기술은\n평생 내 편이에요', `${org()}에서 실습 중심 과정으로 자격증과 취업까지 준비해요. 훈련비 지원 여부는 과정마다 확인할 수 있어요.`, { eyebrow: '국민내일배움카드 훈련기관', cta: '모집 중인 과정 보기', cta2: '상담 문의', hk: 'vofield' }),
-      X('v4-num', { eyebrow: '국비 지원', title: '배우는 동안\n돈 걱정은 덜어 드려요', sub: '국민내일배움카드가 있으면 훈련비를 지원받을 수 있어요. 카드가 없어도 괜찮아요. 신청부터 함께 도와 드려요.' }, 'stats'),
+      X('v4-num', { k: 'free', fb: { eyebrow: '국비 지원', title: '카드가 없어도\n시작할 수 있어요', sub: '국민내일배움카드는 상담 때 신청 방법부터 함께 확인해요. 훈련비 지원 여부는 고용24에서 바로 확인할 수 있어요.', w24: 1, link: '고용24에서 지원 자격 확인' }, eyebrow: '국비 지원', title: '배우는 동안\n돈 걱정은 덜어 드려요', sub: '국민내일배움카드가 있으면 훈련비를 지원받을 수 있어요. 카드가 없어도 괜찮아요. 신청부터 함께 도와 드려요.' }, 'stats'),
       X('v4-cards', { k: 'tall', eyebrow: '모집 · 개강 일정', title: '지금 모집 중인 과정' }),
       X('v4-steps', { eyebrow: '시작하는 방법', title: '상담부터 첫 출근까지,\n네 걸음이면 돼요', cols: stepsV }, 'timeline'),
       X('v4-quote', { k: 'photo', title: '오래 남는 기술은 손으로 익혀요.' }),
       X('v4-cta', { k: 'dark', title: '어떤 과정이 맞을지\n모르겠다면, 물어보세요', sub: '구직 · 재직 상황을 알려 주시면 들을 수 있는 과정을 안내해 드려요.' }, 'cta')],
     vokdt: () => [B('일을 바꾸는 시간,\n여기서 시작해요', `${org()}에서 현업에 바로 쓰는 디지털 기술을 배워요. 내일배움카드로 훈련비를 지원받을 수 있는지 먼저 확인해 보세요.`, { eyebrow: 'K-디지털 트레이닝 · 국비 지원', cta: '모집 중인 과정 보기', cta2: '국비 자격 확인', k2: 'w24', hk: 'vokdt' }),
       X('v4-cards', { k: 'clean', eyebrow: '모집 중인 과정', title: '나에게 맞는\n다음 걸음', sub: '전공이나 경력이 없어도 괜찮아요. 과정마다 기간 · 시간 · 수강료를 먼저 보여 드려요.' }),
-      X('v4-num', { k: 'hours', title: '' }, 'stats'),
+      X('v4-num', { k: 'count', title: '', fb: { eyebrow: '처음이어도 괜찮아요', title: '전공이 없어도\n시작할 수 있어요', sub: '첫 주는 모두 같은 기초 수업으로 시작해요. 따라오는 속도는 멘토와 함께 맞춰요.', flip: 1 } }, 'stats'),
       X('v4-steps', { eyebrow: '수업 방식', title: '강의만 듣고\n끝나지 않아요', cols: [['직접 만들며 배워요', '수업마다 실습 과제가 있어 배운 것을 바로 써 봐요.'], ['기록이 남아요', '출결과 진도가 자동으로 기록되고, 수료하면 수료증을 받아요.'], ['끝난 뒤에도 함께해요', '이력서 · 포트폴리오 상담과 채용 소식을 이어서 안내해요.']] }, 'timeline'),
       X('v4-quote', { title: '새로운 일은, 배우기로 마음먹은 날 시작돼요.' }),
       X('v4-cta', { k: 'center', title: '지원 자격,\n먼저 확인해 보세요', sub: '정확한 지원 범위는 고용24에서 확인돼요.' }, 'cta')],
@@ -155,7 +164,7 @@
     vocert: () => [B('한 번에\n합격까지', `${org()}에서 필기부터 실기까지 자격 시험을 준비해요. 시험 일정에 맞춘 과정으로 차근차근 따라오면 돼요.`, { eyebrow: '국가기술자격 · 기능사 준비', cta: '자격 과정 보기', cta2: '상담 문의', hk: 'vocert' }),
       X('v4-cards', { k: 'rows', eyebrow: '지금 모집 중', title: '자격 과정' }),
       X('v4-steps', { k: 'line', eyebrow: '합격까지', title: '시험 일정에 맞춰\n세 단계로 준비해요', cols: [['필기', '핵심 이론과 기출 문제로 필기를 먼저 준비해요.'], ['실기', '실제 장비로 시험 과제를 반복 연습해요.'], ['합격 · 취업', '수료증과 자격으로 다음 일을 준비해요.']] }, 'timeline'),
-      X('v4-num', { title: '' }, 'stats'),
+      X('v4-num', { k: 'cert', title: '', fb: { eyebrow: '시험 준비', title: '기출과 실기,\n둘 다 챙겨요', sub: '필기는 기출 문제로, 실기는 실제 장비로 시험 과제를 반복해요. 시험 일정에 맞춰 과정이 열려요.' } }, 'stats'),
       X('v4-quote', { title: '연습한 만큼, 시험장에서 손이 기억해요.' }),
       X('v4-cta', { k: 'dark', title: '다음 시험,\n함께 준비해요', sub: '목표 자격과 시험 일정을 알려 주시면 맞는 과정을 안내해 드려요.' }, 'cta')],
     vocook: () => [B('손끝에서\n시작되는 맛', `${org()}에서 조리 · 제과제빵을 실습실에서 직접 만들며 배워요. 자격증 준비부터 창업 준비까지 이어져요.`, { eyebrow: '조리 · 제과제빵 실습 과정', cta: '모집 중인 과정 보기', cta2: '상담 문의', hk: 'vocook' }),
@@ -172,7 +181,7 @@
       X('v4-cta', { k: 'center', eyebrow: '상담', title: '원하는 분야를\n알려 주세요', sub: '헤어 · 메이크업 · 네일 중 맞는 과정을 안내해 드려요.' }, 'cta')],
     vodesign: () => [B('보는 사람을\n움직이는 화면', `${org()}에서 디자인 · 영상 · 사진을 실제 작업으로 배워요. 포트폴리오를 만들며 다음 일을 준비해요.`, { eyebrow: '디자인 · 영상 제작 과정', cta: '모집 중인 과정 보기', cta2: '국비 자격 확인', k2: 'w24', hk: 'vodesign' }),
       X('v4-cards', { k: 'clean', eyebrow: '모집 중', title: '이번 기수 과정' }),
-      X('v4-num', { k: 'hours', title: '' }, 'stats'),
+      X('v4-num', { k: 'count', title: '', fb: { eyebrow: '작업실', title: '도구보다\n보는 눈을 먼저 길러요', sub: '좋은 작업을 많이 보고, 왜 좋은지 말로 설명하는 연습부터 해요. 그다음에 도구를 손에 익혀요.', flip: 1 } }, 'stats'),
       X('v4-steps', { k: 'line', eyebrow: '작업 방식', title: '수업이 곧\n포트폴리오예요', cols: [['기획', '무엇을 왜 만드는지부터 정리해요.'], ['제작', '실제 도구로 디자인 · 촬영 · 편집을 해요.'], ['발표', '완성한 작업을 모아 포트폴리오로 남겨요.']] }, 'timeline'),
       X('v4-quote', { title: '좋은 작업은 끝까지 만들어 본 경험에서 나와요.' }),
       X('v4-cta', { k: 'dark', title: '첫 작업,\n여기서 시작해요', sub: '관심 있는 분야를 알려 주시면 맞는 과정을 안내해 드려요.' }, 'cta')],
@@ -202,10 +211,12 @@
     const pb = dark ? fit(a, '#000000', 4.6, '#ffffff') : CR(a, '#ffffff') >= 4.5 ? a : (CR(a, '#141414') >= 7 ? a : fit(a, '#ffffff', 4.6, '#000000'));
     const on = CR(pb, '#ffffff') >= 4.5 ? '#ffffff' : '#141414'; const at = fit(a, bg, 4.6, dark ? '#ffffff' : '#000000'); const ata = fit(a, D.alt, 4.6, dark ? '#ffffff' : '#000000');
     const dk = D.dk; const atd = fit(mix(a, '#ffffff', .2), dk, 4.6, '#ffffff');
-    return `--v-a:${a};--v-p:${pb};--v-on:${on};--v-at:${at};--v-ata:${ata};--v-atd:${atd};--v-bg:${bg};--v-alt:${D.alt};--v-dk:${dk};--v-pt:${D.pt};--v-ink:${ink};--v-mu:${mu};--v-ln:${dark ? 'rgba(255,255,255,.14)' : 'rgba(20,23,26,.12)'};--v-hf:${D.serif ? SERIF : 'inherit'}`; }
+    return `--v-a:${a};--v-p:${pb};--v-on:${on};--v-at:${at};--v-ata:${ata};--v-atd:${atd};--v-bg:${bg};--v-alt:${D.alt};--v-dk:${dk};--v-pt:${D.pt};--v-ink:${ink};--v-mu:${mu};--v-ln:${dark ? 'rgba(255,255,255,.14)' : 'rgba(20,23,26,.12)'};--v-card:${dark ? '#16161A' : '#ffffff'};--v-hf:${D.serif ? SERIF : 'inherit'}`; }
   function css(s) { const id = s.theme; if (!DEF[id]) return ''; const D = DEF[id];
+    const fq = FAQ[id]; const fqBg = fq === 'dk' ? D.dk : fq === 'alt' ? D.alt : D.bg; const fqDark = fq === 'dk' || !!D.dark;
+    const faqCss = `section.hpt.hps-faq{background:${fqBg};${fqDark ? `--ink:#ffffff;--mu:rgba(255,255,255,.74);--ln:rgba(255,255,255,.16);color:#fff;` : ''}}section.hpt.hps-faq h2,section.hpt.hps-faq h3{font-family:${D.serif ? SERIF : 'inherit'}${fqDark ? ';color:#fff' : ''}}section.hpt.hps-faq div.hps-ask.hps-ask{background:${fqDark ? 'rgba(255,255,255,.08)' : fq === 'alt' ? '#ffffff' : D.alt};color:${fqDark ? '#fff' : '#14171A'};border-radius:${D.serif ? 4 : 18}px;box-shadow:inset 0 0 0 1px ${fqDark ? 'rgba(255,255,255,.16)' : 'rgba(20,23,26,.1)'}}section.hpt.hps-faq div.hps-ask.hps-ask h3{color:${fqDark ? '#fff' : '#14171A'}}`;
     return `
-/* v44 hp44-voc */.v4t-${id}{${vars(id, s)}}
+/* v44 hp44-voc */${faqCss}.v4t-${id}{${vars(id, s)}}
 ${D.head === 'center' || id === 'vocook' || id === 'vocare' || id === 'vobeauty' || id === 'voclassic' ? `div.hps-top header.gh.hps-h{background:${D.bg}}` : ''}
 section.v4.v4{background:var(--v-bg);color:var(--v-ink);font-variant-numeric:tabular-nums;word-break:keep-all}
 .v4 *{box-sizing:border-box}:where(.v4) :where(h1,h2,h3,p,ol,ul,dl,dd,blockquote,figure){margin:0;padding:0}:where(.v4) :where(ol,ul){list-style:none}
@@ -252,7 +263,7 @@ section.v4.v4h-poster{background:${D.a};padding:96px 0 0;--v-ink:#141414;--v-mu:
 .v4-posg{display:grid;grid-template-columns:1.25fr 1fr;gap:40px;align-items:center}
 .v4h-poster h1{font-size:150px;line-height:.96;letter-spacing:-.065em;font-weight:900}.v4h-poster .v4-ey{font-size:16px;text-transform:none}
 .v4-circle{width:min(520px,100%);aspect-ratio:1;border-radius:50%;justify-self:end;box-shadow:0 0 0 14px rgba(20,20,20,.08)}
-.v4-postk{display:flex;align-items:center;gap:28px;justify-content:center;font-size:54px;font-weight:900;letter-spacing:-.04em;color:rgba(20,20,20,.16);margin-top:64px;white-space:nowrap;overflow:hidden}.v4-postk i{width:72px;height:3px;background:rgba(20,20,20,.2)}
+.v4-postk{display:flex;align-items:center;gap:28px;justify-content:center;font-size:54px;font-weight:900;letter-spacing:-.04em;color:rgba(20,20,20,.66);margin-top:64px;white-space:nowrap;overflow:hidden}.v4-postk i{width:72px;height:3px;background:rgba(20,20,20,.5)}
 /* 5 콜라주 */
 section.v4.v4h-collage{padding:104px 0 0}.v4-colg{display:grid;grid-template-columns:1fr 1.1fr;gap:64px;align-items:center}
 .v4h-collage h1{font-size:86px;line-height:1.1;letter-spacing:-.05em;font-weight:800}
@@ -289,6 +300,7 @@ section.v4.v4h-formal{padding:96px 0 0;text-align:center}.v4-formal{display:flex
 .v4-numg{display:grid;grid-template-columns:1.1fr 1fr;gap:80px;align-items:center}
 .v4-big{font-size:280px;line-height:.82;font-weight:800;letter-spacing:-.07em;color:var(--v-ink);font-family:var(--v-hf)}.v4-big span{color:var(--v-at);font-size:.5em;letter-spacing:-.03em}
 .v4-numg h2{font-size:46px}
+.v4-fbg{display:grid;grid-template-columns:1.2fr 1fr;gap:80px;align-items:center}.v4-fbg.flip .v4-fbph{order:2}.v4-fbph{aspect-ratio:4/3.1;border-radius:var(--v-fr,20px)}.v4-fbt h2{font-size:52px}
 .v4-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px}.v4-cards.n1{grid-template-columns:minmax(0,420px)}.v4-cards.n2{grid-template-columns:repeat(2,minmax(0,520px))}
 .v4-card{display:flex;flex-direction:column}.v4-cph{aspect-ratio:4/3.2;border-radius:18px}.v4-cph img{transition:transform .5s}.v4-card:hover .v4-cph img{transform:scale(1.03)}
 .v4-tag{margin-top:24px;font-size:14px;font-weight:700;color:var(--v-at)}.v4-card b{font-size:27px;letter-spacing:-.035em;line-height:1.3;margin-top:8px;font-family:var(--v-hf)}
@@ -314,6 +326,11 @@ section.v4.v4-q{position:relative;padding:0;min-height:680px;display:flex;align-
 .v4-elg{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start}.v4-elr ul{border-top:1px solid var(--v-ln)}.v4-elr li{font-size:19px;padding:20px 0 20px 34px;border-bottom:1px solid var(--v-ln);position:relative}
 .v4-elr li::before{content:"";position:absolute;left:4px;top:28px;width:14px;height:8px;border-left:2.5px solid var(--v-at);border-bottom:2.5px solid var(--v-at);transform:rotate(-45deg)}.v4-elr .v4-bs{margin-top:28px}
 .v4-nl{border-top:2px solid var(--v-ink)}.v4-nl a{display:grid;grid-template-columns:120px 1fr 24px;gap:24px;align-items:center;min-height:76px;border-bottom:1px solid var(--v-ln);font-size:19px}.v4-nl time{font-size:16px;color:var(--v-mu);font-family:var(--v-hf)}
+.v4-nc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.v4-nc.n1{grid-template-columns:minmax(0,420px)}.v4-nc.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.v4-nc a{display:flex;flex-direction:column;gap:18px;height:100%;padding:30px;border-radius:var(--v-fr,18px);background:var(--v-card,#fff);box-shadow:inset 0 0 0 1px var(--v-ln);transition:transform .2s}.v4-nc a:hover{transform:translateY(-2px)}
+.v4-ncd{display:flex;align-items:baseline;gap:8px;color:var(--v-at)}.v4-ncd b{font-size:44px;line-height:1;letter-spacing:-.04em;font-family:var(--v-hf)}.v4-ncd small{font-size:15px;font-weight:700}
+.v4-nct{font-size:20px;font-weight:700;line-height:1.45;letter-spacing:-.02em;flex:1}.v4-ncm{display:flex;align-items:center;gap:6px;font-size:15px;color:var(--v-mu);font-weight:600}
+.v4-nsp{display:grid;grid-template-columns:.8fr 1.2fr;gap:80px;align-items:start}.v4-nsp .v4-ln{margin-top:28px}
 .v4-ctag{display:grid;grid-template-columns:1.3fr 1fr;gap:64px;align-items:end}.v4-ctag .v4-bs{flex-direction:column;margin:0}.v4-ctag .v4-b{justify-content:space-between;min-height:70px;font-size:19px}
 .v4-ctag h2{font-size:62px}.v4-ctag.k-center,.v4-ctag.k-formal{grid-template-columns:1fr;text-align:center;justify-items:center}.v4-ctag.k-center .v4-bs,.v4-ctag.k-formal .v4-bs{flex-direction:row;justify-content:center}.v4-ctag.k-center .v4-b,.v4-ctag.k-formal .v4-b{justify-content:center;min-height:60px;font-size:17px}
 .v4-ctag.k-formal{border-top:1px solid var(--v-pt);border-bottom:1px solid var(--v-pt);padding-top:72px;padding-bottom:72px}.v4-ctag.k-formal h2{font-size:48px}
@@ -334,7 +351,7 @@ section.v4.v4-q{position:relative;padding:0;min-height:680px;display:flex;align-
   .v4-bandph{height:300px}.v4-panel{margin-top:-60px;padding:36px 24px 32px}.v4h-band h1{font-size:40px;line-height:1.14}
   section.v4.v4h-soft{padding-top:52px}.v4-softg{grid-template-columns:1fr;gap:36px}.v4h-soft h1{font-size:42px;line-height:1.2}.v4h-soft .v4-sub{font-size:18px}
   section.v4.v4h-formal{padding-top:56px}.v4-crest{width:72px;height:72px;margin-bottom:20px}.v4h-formal h1{font-size:38px;line-height:1.26}.v4-frame{height:240px;margin-top:44px;outline-offset:6px}.v4-paths.formal{text-align:left}
-  .v4-numg{grid-template-columns:1fr;gap:32px}.v4-big{font-size:140px}
+  .v4-numg,.v4-fbg{grid-template-columns:1fr;gap:32px}.v4-fbg.flip .v4-fbph{order:0}.v4-fbt h2{font-size:32px}.v4-big{font-size:140px}
   .v4-cards,.v4-cards.n1,.v4-cards.n2{grid-template-columns:1fr;gap:44px}.v4-card b{font-size:23px}.v4-tall{aspect-ratio:4/4.4}.v4-tt{left:22px;right:22px;bottom:22px}.v4-tt b{font-size:24px}.v4-cards.k-tall{gap:16px}
   .v4-rows a{grid-template-columns:40px 1fr 20px;gap:12px;padding:22px 0}.v4-rp{grid-column:2;grid-row:2;font-size:15px}.v4-rows a>svg{grid-column:3;grid-row:1/3}.v4-rn b{font-size:20px}.v4-rn small{font-size:14px}
   .v4-stg{grid-template-columns:1fr;gap:40px}.v4-stph{position:static;aspect-ratio:4/3}.v4-st{margin-top:28px}.v4-st li{grid-template-columns:46px 1fr;padding:24px 0}.v4-st b{font-size:21px}.v4-st p{font-size:15.5px}
@@ -344,6 +361,7 @@ section.v4.v4-q{position:relative;padding:0;min-height:680px;display:flex;align-
   .v4-strip{grid-template-columns:1fr 1fr;margin-top:36px;padding:0 22px;gap:10px}.v4-sp{height:220px}.v4-strip .v4-sp:nth-child(2){margin-top:28px;height:192px}.v4-strip .v4-sp:nth-child(3){grid-column:1/3;height:200px}
   .v4-elg{grid-template-columns:1fr;gap:32px}.v4-elr li{font-size:16.5px;padding:16px 0 16px 30px}.v4-elr li::before{top:22px}
   .v4-nl a{grid-template-columns:1fr 20px;gap:4px 12px;padding:16px 0;font-size:16.5px}.v4-nl time{grid-column:1;font-size:14px}.v4-nl b{grid-column:1}.v4-nl a>svg{grid-column:2;grid-row:1/3}
+  .v4-nc,.v4-nc.n2{grid-template-columns:1fr;gap:12px}.v4-nc a{flex-direction:row;align-items:center;gap:18px;padding:20px}.v4-ncd{flex-direction:column;gap:2px;align-items:center;min-width:52px}.v4-ncd b{font-size:30px}.v4-nct{font-size:16.5px}.v4-ncm{display:none}.v4-nsp{grid-template-columns:1fr;gap:28px}
   .v4-ctag{grid-template-columns:1fr;gap:32px}.v4-ctag .v4-b{min-height:60px;font-size:17px}.v4-ctag.k-center .v4-bs,.v4-ctag.k-formal .v4-bs{flex-direction:column;width:100%}.v4-ctag.k-formal h2{font-size:32px}.v4-ctag.k-formal{padding-top:48px;padding-bottom:48px}
 }`; }
 
@@ -351,7 +369,9 @@ section.v4.v4-q{position:relative;padding:0;min-height:680px;display:flex;align-
   const TONE = { vofield: { 'v4-cards': 'alt', 'v4-quote': 'q', 'v4-cta': 'dk' }, vokdt: { 'v4-num': 'dk', 'v4-quote': 'alt' }, voupskill: { 'v4-pil': 'alt', 'v4-cta': 'dk' }, vocert: { 'v4-steps': 'alt', 'v4-cta': 'dk' },
     vocook: { 'v4-cards': 'alt', 'v4-quote': 'q' }, vobeauty: { 'v4-pil': 'alt', 'v4-cta': 'dk' }, vodesign: { 'v4-num': 'alt', 'v4-cta': 'alt' }, vologi: { 'v4-pil': 'alt', 'v4-cta': 'dk', 'v4-steps': 'alt2' },
     vocare: { 'v4-cards': 'alt', 'v4-elig': 'alt2', 'v4-cta': 'dk' }, voclassic: { 'v4-notice': 'alt', 'v4-cta': '' } };
-  const toneOf = (id, hpt, d) => { if (hpt === 'v4-quote' && d.k === 'photo') return 'v4-q'; const t = (TONE[id] || {})[hpt]; return t === 'alt' ? 'v4-alt' : t === 'dk' ? 'v4-dk' : ''; };
+  const NK = { vofield: ['cards', ''], vokdt: ['split', ''], voupskill: ['rows', 'alt'], vocert: ['cards', ''], vocook: ['split', 'alt'], vobeauty: ['rows', ''], vodesign: ['cards', ''], vologi: ['split', ''], vocare: ['cards', ''], voclassic: ['rows', 'alt'] };
+  const FAQ = { vofield: 'dk', vokdt: 'alt', voupskill: '', vocert: 'alt', vocook: '', vobeauty: 'alt', vodesign: 'alt', vologi: 'dk', vocare: 'alt', voclassic: '' };
+  const toneOf = (id, hpt, d) => { if (hpt === 'v4-quote' && d.k === 'photo') return 'v4-q'; const t = hpt === 'v4-notice' && d.auto ? (NK[id] || [])[1] : (TONE[id] || {})[hpt]; return t === 'alt' ? 'v4-alt' : t === 'dk' ? 'v4-dk' : ''; };
 
   /* ── 설치 ── */
   const HKS = H;
@@ -383,6 +403,6 @@ section.v4.v4-q{position:relative;padding:0;min-height:680px;display:flex;align-
   if (typeof HPT.thumb === 'function' && !HPT.thumb.h44v) { const tb = HPT.thumb; HPT.thumb = (s, id) => { if (!MYD(id) || typeof siteHTML !== 'function') return tb(s, id);
     try { const b = JSON.parse(JSON.stringify(s || (typeof site === 'function' ? site() : S.site))); HPT.apply(b, id, { keepColor: true }); delete b.layout; b.sections = BUILD[id](); b.photos = Object.assign({}, b.photos, DEF[id].ph); b.hps = Object.assign({}, b.hps, { head: DEF[id].head, ownH: 1, foot: 'min', ownF: 1 }); return siteHTML(b, false, 'ko'); } catch (e) { console.error('hp44-voc thumb', e); return tb(s, id); } }; HPT.thumb.h44v = 1; }
   /* 공지 · FAQ(유형 기본 자동 섹션): 첫 화면 바로 아래 대신 마지막 행동 앞으로 */
-  if (typeof HPT.enrich === 'function' && !HPT.enrich.h44v) { const e0 = HPT.enrich; HPT.enrich = s => { const r = e0(s); try { const L = s && s.sections; if (themeOf(s) && Array.isArray(L)) { for (let i = L.length - 1; i >= 0; i--) { const x = L[i]; if (x && x.type === 'text' && x.data && /^(facts|sched)$/.test(x.data.hpt || '')) L.splice(i, 1); } /* 숫자 띠 · 일정표 자동 추가는 대시보드형이 되므로 넣지 않는다 */ const k = L.findIndex(x => x && x.type === 'notices'); if (k >= 0) { const [n] = L.splice(k, 1); const c = L.findIndex(x => x && x.type === 'text' && x.data && (x.data.hpt === 'faq' || x.data.hpt === 'v4-cta')); L.splice(c >= 0 ? c : L.length, 0, n); } } } catch (e) { console.error('hp44-voc enrich', e); } return r; }; Object.keys(e0).forEach(k => { try { HPT.enrich[k] = e0[k]; } catch (e) { } }); HPT.enrich.h44v = 1; }
+  if (typeof HPT.enrich === 'function' && !HPT.enrich.h44v) { const e0 = HPT.enrich; HPT.enrich = s => { const r = e0(s); try { const L = s && s.sections; if (themeOf(s) && Array.isArray(L)) { for (let i = L.length - 1; i >= 0; i--) { const x = L[i]; if (x && x.type === 'text' && x.data && /^(facts|sched)$/.test(x.data.hpt || '')) L.splice(i, 1); } /* 숫자 띠 · 일정표 자동 추가는 대시보드형이 되므로 넣지 않는다 */ const k = L.findIndex(x => x && x.type === 'notices'); if (k >= 0) { const [n] = L.splice(k, 1); if (!L.some(x => x && x.data && x.data.hpt === 'v4-notice')) { const nk = (NK[s.theme] || ['rows'])[0]; const v = S2('text', { variant: 'features', hpt: 'v4-notice', k: nk, auto: 1, eyebrow: '알림', title: (n.data && n.data.title) || '공지사항', cols: AUTO }); if (n.hide) v.hide = n.hide; const c = L.findIndex(x => x && x.type === 'text' && x.data && (x.data.hpt === 'faq' || x.data.hpt === 'v4-cta')); L.splice(c >= 0 ? c : L.length, 0, v); } } /* 유형 기본 공지(작은 카드 2×2)를 템플릿 모양의 공지로 바꾼다 */ if (!L.some(x => x && x.data && x.data.hpt === 'v4-notice') && notices().length) { const nk = (NK[s.theme] || ['rows'])[0]; const c = L.findIndex(x => x && x.type === 'text' && x.data && (x.data.hpt === 'faq' || x.data.hpt === 'v4-cta')); L.splice(c >= 0 ? c : L.length, 0, S2('text', { variant: 'features', hpt: 'v4-notice', k: nk, auto: 1, eyebrow: '알림', title: '공지사항', cols: AUTO })); } /* 공지가 있으면 템플릿 모양의 공지를 마지막 행동 앞에 */ } } catch (e) { console.error('hp44-voc enrich', e); } return r; }; Object.keys(e0).forEach(k => { try { HPT.enrich[k] = e0[k]; } catch (e) { } }); HPT.enrich.h44v = 1; }
   window.HP44_VOC = { ids: Object.keys(DEF), DEF, css, reg: regAll };
 })();
