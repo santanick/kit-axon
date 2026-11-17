@@ -15,7 +15,7 @@
   const q = o => { const u = new URLSearchParams(Object.entries(o).filter(([, v]) => v != null && v !== '')); return u.toString() ? '?' + u : ''; };
   const G = (b, op, a = {}) => api('GET', `/api/lms/${b}/${op}${q(a)}`);
   const P = (b, op, a = {}) => api('POST', `/api/lms/${b}/${op}`, a);
-  try { if (!document.querySelector('link[data-lmsxl]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/bcd-learner.css?v=43.6'; l.dataset.lmsxl = '1'; document.head.appendChild(l); } } catch (e) { }
+  try { if (!document.querySelector('link[data-lmsxl]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/bcd-learner.css?v=43.7'; l.dataset.lmsxl = '1'; document.head.appendChild(l); } } catch (e) { }
 
   /* ── 데모(읽기 전용): 스튜디오 데모 저장소 S.lms.bcd ── */
   const droom = () => { try { const r = typeof demoRoom === 'function' ? demoRoom() : null; return r && r.lms && r.lms.bcd; } catch (e) { return null; } };

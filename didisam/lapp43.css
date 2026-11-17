@@ -115,7 +115,7 @@ body.lapp.tb-watch aside.l26side .lbtn.pri,body.lapp.tb-watch aside.l26side #lcN
 body.lapp.tb-watch aside.l26side :is(.mini,small){color:#A7B8AD}
 
 /* ── 앱 머리를 쓰는 학습자 화면(공지 · 메시지 · 결제 내역 · 배지 · 수료증 · 둘러보기 등) 공통: 12px 미만 글자 · 44px 미만 칩 정리 ── */
-body.lapp #lm :is(.tcat,.lcun,.new,.tg,.ap-tag){font-size:12px}
+/* v43.7 Q4: .new는 배지만(알림함의 안 읽은 줄 li.new 등 줄 전체에는 걸지 않음) · 캡션 바닥 13px */ body.lapp #lm :is(.tcat,.lcun,.tg,.ap-tag),body.lapp #lm :is(span,em,b,i,small).new{font-size:13px}
 body.lapp #lm :is(.tb-chip,.shp-chip,.ap-fch){min-height:44px}
 body.lapp #lm .lctabs :is(a,button){min-height:44px;display:inline-flex;align-items:center}
 body.lapp :is(.ap-mic,.ap-send){width:44px;height:44px}
@@ -138,7 +138,7 @@ body.lapp .n26 .nt summary .new{grid-area:nw;margin:0}
 body.lapp .n26 .nt+.nt{border-top:1px solid var(--hair)}
 /* 앱 머리 화면 공통 대비 · 색: 웹 빵부스러기(홈 › 강좌)는 앱의 뒤로 버튼과 겹치므로 숨김, 강좌 칩 · 안 읽음 · NEW는 그린 50 + 그린 800(4.5:1 이상) */
 body.lapp #lm .crumb{display:none}
-body.lapp #lm :is(.tcat,.lcun,.new){background:var(--gr50);color:var(--gr800)}
+body.lapp #lm :is(.tcat,.lcun),body.lapp #lm :is(span,em,b,i,small).new{background:var(--gr50);color:var(--gr800)}
 body.lapp .tb-sh a,body.lapp #lm .eb{color:var(--g800)}
 /* 강좌(#courses) 트랙 · 코스 머리: 기관 데이터 색(주황 · 파랑 --c) → 짙은 그린 평면, 10~11px 머리 글자 → 12px */
 body.lapp #lm .tkh,body.lapp #lm .cwh{--c:var(--gr800);background:var(--gr900)!important;background-image:none!important}
