@@ -23,7 +23,7 @@ body.lapp .sr{position:absolute!important;width:1px;height:1px;overflow:hidden;c
 
 /* 아래 탭 */
 .ap-nav{position:fixed;left:0;right:0;bottom:0;z-index:45;display:flex;justify-content:space-around;padding:6px 6px calc(6px + var(--ap-sb));background:rgba(255,255,255,.95);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-top:1px solid var(--ap-line)}
-.ap-nav a{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;min-height:48px;border-radius:12px;color:#736B5F;text-decoration:none;font:600 11px/1.1 var(--sg)}
+.ap-nav a{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;min-height:48px;border-radius:12px;color:#736B5F;text-decoration:none;font:600 13px/1.1 var(--sg)} /* v43.8 390 관문: 아래 탭 13px */
 .ap-nav a span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ap-nav a.on{color:var(--pri-tx,var(--pri))}.ap-nav a.on svg{stroke-width:2.3}
 @media (min-width:900px){body.ap-play .ap-nav{display:none}}

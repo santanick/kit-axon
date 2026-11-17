@@ -76,13 +76,13 @@ body.lapp .lq-sub{display:none}body.lapp .lc{padding-top:12px}
   .lq-dlg{width:100vw;max-width:100vw;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:88vh}}
 /* v37.4 앱 아래 탭 6칸(캘린더 추가): 칸마다 48px 이상, 긴 이름은 잘리지 않고 두 줄 */
 .ap-nav.lq-n6 a,.ap-nav.lq-n7 a{min-width:48px;padding:6px 0;gap:2px}
-.ap-nav.lq-n6 a span,.ap-nav.lq-n7 a span{white-space:normal;word-break:keep-all;overflow:visible;text-overflow:clip;text-align:center;line-height:1.15;font-size:12px;letter-spacing:-.02em}
+.ap-nav.lq-n6 a span,.ap-nav.lq-n7 a span{white-space:normal;word-break:keep-all;overflow:visible;text-overflow:clip;text-align:center;line-height:1.15;font-size:13px;letter-spacing:-.02em}
 /* v38 F5 디자인 크기: 아래 탭 글자 12px 이상(앱 6 · 7칸 · 웹 390 모두) — 아이콘을 조금 줄이고 자간을 좁혀 360 폭에서도 들어가게 */
-body.lapp .ap-nav a{font-size:12px;line-height:15px}
-.ap-nav.lq-n6 a span,.ap-nav.lq-n7 a span{font-size:12px;letter-spacing:-.04em;line-height:1.15}
+body.lapp .ap-nav a{font-size:13px;line-height:16px}
+.ap-nav.lq-n6 a span,.ap-nav.lq-n7 a span{font-size:13px;letter-spacing:-.04em;line-height:1.15}
 .ap-nav.lq-n6,.ap-nav.lq-n7{padding-left:2px;padding-right:2px}
 .ap-nav.lq-n6 a svg,.ap-nav.lq-n7 a svg{width:20px;height:20px}
-body .tabbar a,body .tabbar.lux-bn a,body .tabbar.lux-bn button{font-size:12px;letter-spacing:-.02em}
+body .tabbar a,body .tabbar.lux-bn a,body .tabbar.lux-bn button{font-size:13px;letter-spacing:-.02em} /* v43.8 390 관문: 아래 탭 글자 13px 이상 */
 /* v38 F5 U19: PC(1101px 이상) 머리의 긴 기관명은 자르지 않고 두 줄까지 보인다 */
 @media (min-width:1101px){header.lh .bn b{max-width:260px;white-space:normal;text-overflow:clip;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25;word-break:keep-all}}
 /* v38 F5 L4: 학습자 전체 글자 크게 */

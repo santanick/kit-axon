@@ -5,6 +5,16 @@ let PLAYER = null;
 const lUnitOf = c => { try { if (SITE().org.type === 'univ') return '주차'; } catch (e) { } return c && c.kind === 'episode' ? '회차' : '차시'; };
 const route = () => { const h = decodeURIComponent(location.hash.slice(1) || 'home').replace(/[)\]}>.,;:!?'"’”\s]+.*$/, '').replace(/[^\x00-\x7F].*$/, '') || 'home'; const [a, ...r] = h.split('/'); return { a, b: r[0], rest: r.join('/') }; };
 const pageOf = id => SITE().pages.find(p => p.id === id);
+/* v43.8 로그인 후 돌아갈 곳(#login/<경로>): 같은 사이트 안 해시 경로만 — 외부 주소 · //호스트 · javascript: · data: · 로그인/가입 화면 자체는 막는다 */
+function lSafeBack(v) { let s = String(v == null ? '' : v);
+  for (let i = 0; i < 3 && /%[0-9a-f]{2}/i.test(s); i++) { try { s = decodeURIComponent(s); } catch (e) { return ''; } }
+  s = s.trim().replace(/^#/, ''); if (!s || s.length > 200 || s.includes('%')) return '';
+  if (/[\s\\<>"'`]|\/\/|^\/|^[^/]*:|(java|vb)script|^data\b/i.test(s)) return '';
+  if (!/^[A-Za-z][\w-]*(\/[\w\-.~:=&?]*)*$/.test(s) || /^(login|join|pending|guardian|find)(\/|$)/.test(s)) return ''; return s; }
+const lLoginBack = () => { const m = String(location.hash).match(/^#login\/(.+)$/); return m ? lSafeBack(m[1]) : ''; };
+/* 가입처럼 화면을 건너가는 흐름은 세션에 잠깐 기억(lux.js 「가입 후 이어가기」와 같은 칸) */
+const lBackK = () => 'didisam.lux.back.' + (LR.tid || '');
+function lBackKeep(v) { const b = lSafeBack(v); try { if (b) sessionStorage.setItem(lBackK(), b); else sessionStorage.removeItem(lBackK()); } catch (e) { } return b; }
 const PG_DESC = { diag: ['DIAGNOSIS', '5분 진단으로 나에게 맞는 코스와 첫 결과물을 찾습니다.'], tutorials: ['TUTORIALS', '영상을 보고 3단계를 따라 하면 결과물이 남습니다.'], courses: ['COURSEWARE', '수준과 유형별 코스를 골라 영상 · 퀴즈 · 과제로 이어갑니다.'], badges: ['DIGITAL BADGES', "배지 하나가 '해 봤다'는 증거가 됩니다."], books: ['DIGITAL BOOK', '읽고 · 보고 · 풀고 · 쓰며 평가까지 한 권으로.'], notice: ['NOTICE', '학습 일정과 소식을 확인하세요.'] };
 const TAB_IC = { home: 'home', diag: 'target', tutorials: 'video', courses: 'grid', badges: 'award', books: 'book', notice: 'bell', my: 'user' };
 
@@ -172,10 +182,12 @@ function lrender() {
   if (PLAYER && PLAYER.stop) PLAYER.stop(); PLAYER = null; if (typeof bkStop === 'function') bkStop();
   const app = $('#lapp'); if (!SITE()) { app.innerHTML = `<div class="lerr"><b>학습자 사이트</b><p>${esc(LR.err || '불러오는 중…')}</p></div>`; return; }
   LPHOTO_USED = new Set(); LPHOTO_MEMO = new Map(); /* v43 Q2: 화면마다 사진 중복 금지 */
+  /* v43.8 이미 로그인한 상태로 #login/<경로>에 오면 그 경로로 바로(잘못된 경로는 내 학습) */
+  if (LR.me && route().a === 'login' && /^#login\/./.test(location.hash)) location.replace('#' + (lLoginBack() || 'my'));
   const { a, b } = route(); let inner, cur = a;
   if (a === 't') { inner = viewTut(b); cur = 'tutorials'; } else if (a === 'c') { inner = viewCourse(b, route().b && (decodeURIComponent(location.hash.slice(1)).split('/')[2] || '').split('?')[0]); /* v43.6 노트 시각 칩 #c/<cid>/<lid>?t=초 — 레슨 id 뒤 ?는 떼고 연다 */ cur = 'courses'; }
   else if (a === 'dg') { inner = viewDiag(b); cur = 'diag'; } else if (a === 'cert') { inner = viewCert(b); cur = 'my'; } else if (a === 'badge') { inner = viewBadgeCert(b); cur = 'my'; } else if (a === 'bk' && typeof viewBook === 'function') { const n = decodeURIComponent(location.hash.slice(1)).split('/')[2]; inner = viewBook(b, n ? Math.max(0, (parseInt(n, 10) || 1) - 1) : null); cur = 'books'; } else if (a === 'bkcert' && typeof viewBookCert === 'function') { inner = viewBookCert(b); cur = 'my'; }
-  else if (a === 'login') { inner = LR.me ? viewMy() : viewLogin(route().rest); } else inner = viewPage(a);
+  else if (a === 'login') { inner = LR.me ? viewMy() : viewLogin(lLoginBack()); } else inner = viewPage(a);
   document.body.className = 'look-' + (SITE().look || 'clean') + (LR.mode === 'preview' ? ' pv' : '');
   app.innerHTML = shell(inner, cur); document.title = `${SITE().org.name} · 학습`;
   try { const h1 = $('#lm>section.sub.lph h1'); const nx = h1 && $('#lm>section.sub.lph~section.sec .sh h2'); if (nx && nx.textContent.trim() === h1.textContent.trim()) nx.closest('.sh').classList.add('lph-dup'); } catch (e) { } /* v43 Q2: 머리 제목과 같은 첫 섹션 제목은 숨김(중복 금지) */
@@ -213,7 +225,7 @@ document.addEventListener('click', async e => { const el = e.target.closest('[da
 });
 document.addEventListener('change', e => { const el = e.target.closest('[data-lchg]'); if (!el || !LR.me) return; const id = route().b; const t = LR.lp.tut[id] = LR.lp.tut[id] || { w: 0, steps: [], mission: '' }; t.steps = t.steps || []; t.steps[+el.dataset.v] = el.checked; t.at = nowISO(); LR.api.save(); if (t.steps.filter(Boolean).length >= 3) toast('3단계를 모두 따라 했습니다. 미션을 제출하세요!', 'ok'); });
 document.addEventListener('submit', async e => { const f = e.target; e.preventDefault();
-  if (f.id === 'li') { const b = f.querySelector('button'); b.disabled = true; $('#liErr').textContent = ''; try { await LR.api.login(f.sid.value.trim(), f.code.value.trim()); location.hash = '#' + (decodeURIComponent(f.dataset.back || '') || 'my'); lrender(); } catch (x) { $('#liErr').textContent = x.message; b.disabled = false; } }
+  if (f.id === 'li') { const b = f.querySelector('button'); b.disabled = true; $('#liErr').textContent = ''; try { await LR.api.login(f.sid.value.trim(), f.code.value.trim()); location.hash = '#' + (lSafeBack(f.dataset.back) || 'my'); lrender(); } catch (x) { $('#liErr').textContent = x.message; b.disabled = false; } }
   if (f.id === 'dg') { const d = diagFirst(f.dataset.v); const get = k => (f.querySelector(`[name=q${k}]:checked`) || {}).value; let res;
     if (d.mode === 'type') { const s = {}; d.items.forEach((q, k) => { s[q.dim] = (s[q.dim] || 0) + (+get(k) || 0); }); res = { out: Object.entries(s).sort((a, b) => b[1] - a[1])[0]?.[0] || d.outs[0].k }; }
     else { let sc = 0, tot = 0; d.items.forEach((q, k) => { const p = +q.pts || Math.round(100 / d.items.length); tot += p; if (String(get(k)) === String(q.a)) sc += p; }); const score = Math.round(sc / Math.max(1, tot) * 100); res = { score, out: [...d.outs].sort((a, b) => (b.min || 0) - (a.min || 0)).find(o => score >= (o.min || 0))?.k || d.outs[0].k }; }

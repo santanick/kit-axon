@@ -155,7 +155,7 @@ const laPrivV = () => laSec('개인정보 처리방침 요약', laPolicyHTML(laU
   let out = h.replace(/<div class="lgr">[\s\S]*<\/div><\/div><\/div><\/section>\s*$/, lgr + '</div></div></section>');
   out = out.replace(/<small>[^<]*이름 · 연락처 · 이메일은 받지 않습니다\.<\/small>/, `<small>${U ? '학번 · 학과 · 닉네임만 저장합니다. 이름 · 연락처 · 이메일은 받지 않습니다.' : '가입 때는 로그인 수단과 닉네임만 받습니다. 실명 · 휴대폰 번호는 받지 않습니다.'}</small>`);
   return out; }; }
-async function laLogin(f) { laFresh(); const U = laUniv(); const id = String(f.elements.lid.value || '').trim().toLowerCase(); const back = decodeURIComponent(f.dataset.back || '');
+async function laLogin(f) { laFresh(); const U = laUniv(); const id = String(f.elements.lid.value || '').trim().toLowerCase(); const back = lSafeBack(f.dataset.back); /* v43.8 같은 사이트 경로만 */
   if (LR.mode === 'live') { const pe = f.elements.pw; let body;
     if (U) body = { via: 'univ', student_no: id, pw: pe ? pe.value : '' };
     else if (pe) body = { via: 'email', email: id, pw: pe.value };
@@ -173,7 +173,7 @@ function laAfterAuth(acc, back) {
   if (acc.status === 'guardian_pending') throw new Error('보호자 동의를 기다리고 있습니다. 보호자에게 보낸 동의 링크를 확인해 주세요.');
   if (acc.grade === '승인 대기') { LA.pend = acc.sid; laPendKeep(acc.sid); location.hash = '#pending'; return; }
   if (acc.grade === '거절') throw new Error('가입이 승인되지 않았습니다.' + (acc.reject ? ' 사유: ' + acc.reject : '') + ' 운영자에게 문의하세요.');
-  laSetMe(acc); toast(`${acc.nick || '회원'}님, 반갑습니다.`, 'ok'); location.hash = '#' + (acc.kind === 'parent' ? 'family' : (back || 'my')); lrender(); }
+  laSetMe(acc); toast(`${acc.nick || '회원'}님, 반갑습니다.`, 'ok'); location.hash = '#' + (acc.kind === 'parent' ? 'family' : (lSafeBack(back) || 'my')); lrender(); }
 /* SNS 간편가입 · 로그인(데모 동의 화면). 운영: 공급자 OAuth 창 → 서버가 토큰 검증 → 회원 식별자(sub)만 받음(이메일 · 이름 · 전화 · 생일 미요청) */
 function laSocDlg(prov, mode) { const n = LA_SN[prov] || prov; const J = LA.j || {};
   laDlg(`<h3>${esc(n)}로 ${mode === 'join' ? '간편가입' : '로그인'} <small class="la-tag">데모</small></h3>
@@ -543,9 +543,9 @@ document.addEventListener('submit', async e => { const f = e.target; if (!f || !
       if (f.dataset.mode === 'join') { if (acc) { er.textContent = `이미 가입한 ${LA_SN[prov]} 계정입니다. 로그인하세요.`; return; } const nick = f.elements.nick.value.trim().replace(/(.{2,})님$/, '$1'); if (!LA_NICK_RE.test(nick)) { er.textContent = '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'; return; }
         const J = LA.j; const fj = $('#laJoin'); laJoinKeep(fj); const c = laJoinCheck(fj, m => { er.textContent = m; return false; }); if (!c) return; const extra = laExtra(fj, m => { er.textContent = m; return false; }); if (!extra) return;
         laDlgX(); J.sns = { prov, sub, nick }; try { laCreate({ login: prov, sub, nick, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact }); } catch (x) { J.sns = null; toast(x.message, 'warn'); lrender(); } return; }
-      if (acc) { laDlgX(); try { laAfterAuth(acc, 'my'); } catch (x) { toast(x.message, 'warn'); } return; }
+      if (acc) { laDlgX(); try { laAfterAuth(acc, lLoginBack() || 'my'); /* v43.8 SNS 로그인도 #login/<경로>로 돌아감 */ } catch (x) { toast(x.message, 'warn'); } return; }
       laDlgX(); const cfg = laCfg(); if (cfg.mode !== 'open') { toast('가입된 계정이 없습니다. 초대받은 링크로 가입하세요.', 'warn'); return; }
-      LA.j = { tok: '', inv: null, kind: 'learner', sns: { prov, sub, nick: `${LA_SN[prov]}회원${laRand(3)}` }, done: null, keep: {} }; toast(`${LA_SN[prov]} 계정으로 처음 오셨습니다. 약관 동의 후 가입을 마칩니다.`); location.hash = '#join'; lrender(); return; }
+      lBackKeep(lLoginBack()); /* v43.8 처음 온 SNS: 가입을 마치면 원래 경로로(lux.js) */ LA.j = { tok: '', inv: null, kind: 'learner', sns: { prov, sub, nick: `${LA_SN[prov]}회원${laRand(3)}` }, done: null, keep: {} }; toast(`${LA_SN[prov]} 계정으로 처음 오셨습니다. 약관 동의 후 가입을 마칩니다.`); location.hash = '#join'; lrender(); return; }
     if (f.id === 'laJoin') { if (laPvJoin()) { const er = $('#laJErr'); const x = laExtra(f, m => { if (er) er.textContent = m; return false; }); if (x && er) er.textContent = ''; toast(x ? '미리보기입니다 — 입력 확인까지만 하고 가입하지 않습니다.' : '미리보기: 필수 질문 확인 메시지입니다.', x ? 'ok' : 'warn'); return; } return laJoinSubmit(f); }
     if (/^laF/.test(f.id) && f.id !== 'laFam') return laFindSubmit(f);
     if (f.id === 'laFam') { const code = f.elements.code.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); const er = $('#laFamErr'); const r = laRoom() || {}; const P = LR.me.kind === 'parent';

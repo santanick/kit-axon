@@ -111,7 +111,8 @@
         a.textContent = '수강 신청하기'; a.dataset.luxBack = back; a.setAttribute('href', canJoin ? '#join' : '#login/' + back);
         if (canJoin && !a.parentElement.querySelector('.lux-li')) a.insertAdjacentHTML('afterend', `<p class="lux-li">이미 회원이신가요? <a href="#login/${esc(back)}" data-lux-back="${esc(back)}">로그인</a></p>`); } }
     /* 가입 화면: 신청하던 강좌가 있으면 안내 + 가입 후 바로 이어가기 */
-    if (r.a === 'join') { const back = ss.get(BK());
+    if (LR.me && r.a !== 'join') ss.set(BK(), null); /* v43.8 로그인 · 가입을 마쳤으면 기억한 경로는 비운다 */
+    if (r.a === 'join') { const back = lSafeBack(ss.get(BK()));
       if (back && LR.me) { ss.set(BK(), null); toast('가입이 완료되었습니다. 이어서 진행합니다.', 'ok'); location.replace('#' + back); return 'redirect'; }
       if (back && !lm.querySelector('.lux-intent') && lm.querySelector('#laJoin')) { const id = back.split('/').pop(); const c = (SITE().classes || []).find(x => x.id === id) || (((typeof shInfo === 'function' && shInfo()) || { classes: [] }).classes || []).find(x => x.id === id);
         const f = lm.querySelector('#laJoin'); f.insertAdjacentHTML('beforebegin', `<p class="lux-intent">${ico('check', 16)} 가입을 마치면 ${c ? `「${esc(c.name)}」 ` : ''}${/^pay/.test(back) ? '결제 화면' : '강좌 화면'}으로 바로 이어집니다.</p>`);
@@ -165,7 +166,8 @@
 
   /* ── 이벤트 ── */
   document.addEventListener('click', e => { const t = e.target;
-    const bk = t.closest && t.closest('[data-lux-back]'); if (bk) ss.set(BK(), bk.dataset.luxBack);
+    const bk = t.closest && t.closest('[data-lux-back]'); if (bk) ss.set(BK(), lSafeBack(bk.dataset.luxBack) || null);
+    /* v43.8 #login/<경로> 화면의 「간편가입」 → 가입을 마치면 그 경로로 */ else if (t.closest && t.closest('a[href="#join"]') && route().a === 'login' && lLoginBack()) ss.set(BK(), lLoginBack());
     const mb = t.closest && t.closest('.lux-mb'); const more = document.querySelector('.lux-more.open');
     if (mb) { e.preventDefault(); const w = mb.parentElement; const o = !w.classList.contains('open'); w.classList.toggle('open', o); mb.setAttribute('aria-expanded', o); if (o) { const f = w.querySelector('.lux-dd a'); if (f) f.focus(); } return; }
     if (more && !t.closest('.lux-more')) { more.classList.remove('open'); const b = more.querySelector('.lux-mb'); if (b) b.setAttribute('aria-expanded', 'false'); }
