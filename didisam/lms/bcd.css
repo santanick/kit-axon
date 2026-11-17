@@ -84,3 +84,5 @@ details.lmsb-week:not([open]){box-shadow:none;background:transparent;border-colo
 @media (max-width:760px){.uxpop.lmsx-aspop{left:auto;right:0;min-width:0;width:min(300px,calc(100vw - 40px))}}
 /* v43.4 P1 · 049 휴대폰: 다크 브리핑 안 「강의실」 라벨 대비(흰색 82%) */
 @media (max-width:760px){.l43-k-hero .r7-ctx .lmsx-pick label,.l43-k-hero .r7-ctx label{color:rgba(255,255,255,.86)!important}}
+/* v43.7 Q2: 이번 주 주차 카드(class="cur")가 공통 목록 규칙 .cur{padding:0}에 덮여 펼친 내용이 카드 테두리에 붙던 것 */
+details.card.lmsb-week.cur[open]{padding:20px}

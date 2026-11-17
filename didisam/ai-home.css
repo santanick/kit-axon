@@ -173,3 +173,5 @@ body.aih-on .bview:has(.aih43){max-width:none}
   /* 001 홈: 카드 아래 두 버튼이 카드 밖으로 넘치거나 서로 겹치던 것 */
   .aih43-two{flex-wrap:wrap}.aih43-two .btn{flex:1 1 140px;min-width:0;white-space:normal;min-height:44px}
 }
+/* v43.7 Q2: 태블릿(768) 홈 — 두 열 카드가 좁아 「질문 열기 · 자동화 관리」가 카드 밖으로 23~43px 넘치던 것. 휴대폰 규칙을 모든 폭에 적용 */
+.aih43-two{flex-wrap:wrap}.aih43-two .btn{flex:1 1 120px;min-width:0;white-space:normal}
