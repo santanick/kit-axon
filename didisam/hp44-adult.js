@@ -71,13 +71,17 @@
     return `<nav class="a4-q" aria-label="바로 가기">${Q.map(([a, b, h]) => `<a ${aT(h)}><b>${E(a)}</b><span>${E(b)}</span>${AR}</a>`).join('')}</nav>`; };
   const head = d => `${d.eyebrow ? `<p class="a4-kick">${E(d.eyebrow)}</p>` : ''}<h1>${emph(d.title || org())}</h1>${d.sub ? `<p class="a4-sub">${E(d.sub)}</p>` : ''}`;
 
-  /* ── 큰 숫자: 계산 가능하고 내세울 만한 값만 ── */
+  /* ── 후기 인용: 별점 4 이상 · 불만 · 요청 · 질문으로 보이는 글은 제외(FIX 3) ── */
+  const BAD = /끊겨|끊기|끊김|안 ?돼|안 ?되|안 ?나와|부탁|해 ?주세요|해 ?주셨으면|주시면|오류|에러|버그|환불|불편|불만|아쉬|느려|느리|별로|문의|[?？]\s*$/;
+  const okRv = r => r && +r.st >= 4 && String(r.b || '').trim().length >= 8 && !BAD.test(String(r.b || '').trim()) && !/^(수강 ?)?후기 ?남깁니다/.test(String(r.b || '').trim());
+  window.HP44AQ = okRv;
+  /* ── 큰 숫자: 자랑할 만한 값만(후기 10건+ · 평점 4.5+, 과정 10개+, 소수 정원 1:8 이하는 ratio 연출에서만) — 못 미치면 블록 전체 숨김(FIX 2) ── */
   function bigNum(pref) { let R = []; try { R = (HPT.reviews() || []).filter(r => +r.st > 0); } catch (e) { }
     const C = pub(); const caps = C.map(capOf).filter(Boolean); const avg = R.length ? R.reduce((a, r) => a + Math.min(5, +r.st), 0) / R.length : 0;
-    const rv = R.length >= 2 && avg >= 4 ? { v: avg.toFixed(1), u: '/5', t: '수강생이 남긴\n실제 후기 평점이에요', n: `수강후기 ${R.length}건 평균` } : null;
+    const rv = R.length >= 10 && avg >= 4.5 ? { v: avg.toFixed(1), u: '/5', t: '수강생이 남긴\n실제 후기 평점이에요', n: `수강후기 ${R.length}건 평균` } : null;
     const cap = caps.length ? Math.max(...caps) : 0;
-    const cp = cap && cap <= 20 ? (pref === 'ratio' ? { v: `1:${cap}`, u: '', t: `강사 한 명이 보는 인원은\n최대 ${cap}명이에요`, n: '공개 반 정원 기준' } : { v: String(cap), u: '명', t: `한 반은\n최대 ${cap}명까지만 받아요`, n: `공개 반 ${C.length}개의 정원 기준` }) : null;
-    const nc = C.length >= 3 ? { v: String(C.length), u: '개 과정', t: '지금 신청할 수 있는\n과정이 열려 있어요', n: '공개 강좌 기준' } : null;
+    const cp = pref === 'ratio' && cap && cap <= 8 ? (pref === 'ratio' ? { v: `1:${cap}`, u: '', t: `강사 한 명이 보는 인원은\n최대 ${cap}명이에요`, n: '공개 반 정원 기준' } : { v: String(cap), u: '명', t: `한 반은\n최대 ${cap}명까지만 받아요`, n: `공개 반 ${C.length}개의 정원 기준` }) : null;
+    const nc = C.length >= 10 ? { v: String(C.length), u: '개 과정', t: '지금 신청할 수 있는\n과정이 열려 있어요', n: '공개 강좌 기준' } : null;
     const order = pref === 'ratio' ? [cp, rv, nc] : pref === 'count' ? [nc, rv, cp] : [rv, cp, nc];
     return order.find(Boolean) || null; }
 
@@ -143,7 +147,7 @@
       return sec('a4-band', `${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2>${C.map(band).join('')}`); },
     'a4-gal': (d, s) => { fresh(); const C = pub().slice(0, 4); const P = C.map((c, i) => [c, clsPh(c, s, i + 7)]).filter(x => x[1]); if (P.length < 3) return hint('a4-gal', '공개 강좌가 3개 이상이면 반별 장면 갤러리가 표시됩니다.');
       return sec('a4-gal', `${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2><div class="a4-gl n${P.length}">${P.map(([c, p]) => `<a ${aT(L.c(c))}>${img(p, '', 0)}<em>${E(c.name)}</em></a>`).join('')}</div>`); },
-    'a4-quote': (d, s) => { let R = []; try { R = HPT.reviews() || []; } catch (e) { } const r = R.slice().sort((a, b) => (b.st || 0) - (a.st || 0) || String(b.b).length - String(a.b).length)[0];
+    'a4-quote': (d, s) => { let R = []; try { R = (HPT.reviews() || []).filter(okRv); } catch (e) { } const r = R.slice().sort((a, b) => (b.st || 0) - (a.st || 0) || String(b.b).length - String(a.b).length)[0];
       if (!r) return hint('a4-quote', '실제 수강후기가 등록되면 이곳에 크게 보여 드려요(없으면 게시된 사이트에서 숨겨집니다).');
       const t2 = String(r.b).replace(/\s+/g, ' ').trim(); const q = t2.length > 120 ? t2.slice(0, 118).replace(/\s\S*$/, '') + '…' : t2;
       return sec('a4-quote', `${fig(s, 'quote', 'a4-qp', 0)}<div class="a4-qt"><blockquote>${E(q)}</blockquote><p class="a4-cite">${E([r.w, r.c].filter(Boolean).join(' · '))}</p></div>`); },
@@ -339,7 +343,7 @@
 .a4-notice{background:var(--alt)!important}
 .a4-fin{border-top:1px solid var(--ln)}.a4-fin .a4-fg{grid-template-columns:minmax(0,1fr);text-align:center;justify-items:center}.a4-fin .a4-cta{justify-content:center}.a4-fin .a4-lead{max-width:640px;margin:0 auto}.a4-info{text-align:left}
 @media(max-width:1000px){.a4-cfg{grid-template-columns:minmax(0,1fr)}.a4-cert .a4-hi{order:-1;min-height:0;height:360px;width:100%;max-width:560px;margin:10px auto 0;border-radius:280px 280px 0 0}}
-@media(max-width:760px){.a4-cfg{gap:32px;padding-bottom:40px}.a4-frm{padding:36px 20px 32px;outline-offset:-8px}.a4-cr svg{width:46px;height:56px}.a4-cert .a4-kick{letter-spacing:.12em}.a4-cert .a4-sub{font-size:16px}.a4-cert .a4-hi{height:240px;border-radius:170px 170px 0 0;outline-offset:6px}.a4-rule{margin:20px auto!important}.a4-fin .a4-fg{text-align:left;justify-items:stretch}}`,
+@media(max-width:760px){.a4-cfg{gap:32px;padding-bottom:40px}.a4-frm{padding:36px 20px 32px;outline-offset:-8px}.a4-cr svg{width:46px;height:56px}.a4-cert .a4-kick{letter-spacing:.12em}.a4-cert .a4-sub{font-size:16px}.a4-cert .a4-hi{order:0;height:220px;border-radius:160px 160px 0 0;outline-offset:6px}.a4-rule{margin:20px auto!important}.a4-fin .a4-fg{text-align:left;justify-items:stretch}}`,
     adcoach: v => `${HB('a4-sig', '52px 0 0', '24px 0 0')}${H1('a4-sig', 96, 40, 1.08, 'letter-spacing:-.055em!important;max-width:1120px;')}
 .a4-sgt{display:flex;align-items:center;gap:16px;margin-bottom:30px}.a4-av{flex:none;display:grid;place-items:center;width:60px;height:60px;border-radius:50%;background:var(--a);color:var(--on);font-size:24px;font-weight:800;box-shadow:0 0 0 4px var(--bg),0 0 0 6px var(--pt)}
 .a4-sig .a4-kick{font-size:17px;color:var(--ink);font-weight:600}
@@ -354,7 +358,7 @@
 .a4-fin .a4-fg{grid-template-columns:minmax(0,1fr);text-align:center;justify-items:center}.a4-fin .a4-cta{justify-content:center}.a4-fin .a4-lead{max-width:640px;margin:0 auto}.a4-info{text-align:left}
 @media(max-width:1000px){.a4-sgb{grid-template-columns:minmax(0,1fr);gap:36px;padding-bottom:44px}.a4-sig .a4-hi{height:420px}}
 @media(max-width:760px){.a4-sgt{margin-bottom:20px}.a4-av{width:48px;height:48px;font-size:20px}.a4-sig .a4-kick{font-size:15px}.a4-sgb{margin-top:24px;gap:28px}.a4-sig .a4-sub{font-size:17px;margin-bottom:26px!important}.a4-sig .a4-hi{height:300px;border-radius:18px}.a4-fin .a4-fg{text-align:left;justify-items:stretch}}`,
-    advocal: v => `.hpt.hp-hero.a4-h.a4-stage{padding:0;background:var(--bg);color:var(--ink);margin:0}${H1('a4-stage', 104, 48, 1.0, 'color:#fff!important;letter-spacing:-.06em!important;')}
+    advocal: v => `.hpt.hp-hero.a4-h.a4-stage{padding:0;background:var(--bg);color:var(--ink);margin:0}${H1('a4-stage', 104, 44, 1.0, 'color:#fff!important;letter-spacing:-.06em!important;')}
 .a4-stage>.a4-hi{height:470px}
 .a4-sb{position:relative;z-index:2;max-width:1280px;margin:-130px auto 0;background:#121014;color:#fff;padding:52px 0 52px}
 .a4-stage .a4-kick{display:flex;align-items:center;gap:12px;color:#fff;margin-bottom:22px!important}.a4-stage .a4-kick::before{content:"";flex:none;width:28px;height:3px;background:var(--pt)}
@@ -409,7 +413,7 @@
 .a4-quote{background:var(--ink)!important;color:#fff!important;--mu:rgba(255,255,255,.7);--pt:#7FD6A8}.a4-quote .a4-qp{border-radius:0}
 .a4-fin{background:var(--a)!important;color:#fff!important;--mu:rgba(255,255,255,.82);--ln:rgba(255,255,255,.25)}.a4-fin h2 em{color:#C9F2D9!important}.a4-fin .a4-b.p{background:#fff;color:var(--a)}.a4-fin .a4-b.o{color:#fff}
 @media(max-width:1000px){.a4-ncol{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.a4-nph{grid-column:1/-1;order:-1;padding:0!important;border:0!important;margin-bottom:28px}.a4-ncol>.a4-sub{padding-left:0;border-left:0}}
-@media(max-width:760px){.a4-mast{margin-bottom:26px}.a4-mast span+span{display:none}.a4-ncol{grid-template-columns:minmax(0,1fr);margin-top:28px;padding:24px 0 40px}.a4-ncol>*{padding:0!important;border-left:0!important}.a4-ncol>*+*{margin-top:24px}.a4-nph{margin-bottom:0}.a4-news .a4-hi{height:260px}.a4-news .a4-sub{font-size:17px}}`,
+@media(max-width:760px){.a4-mast{margin-bottom:26px}.a4-mast span+span{display:none}.a4-ncol{grid-template-columns:minmax(0,1fr);margin-top:28px;padding:24px 0 40px}.a4-ncol>*{padding:0!important;border-left:0!important}.a4-ncol>*+*{margin-top:24px}.a4-nph{margin-bottom:0;order:3}.a4-nct{order:2}.a4-news .a4-hi{height:260px}.a4-news .a4-sub{font-size:17px}}`,
     adit: v => `.hpt.hp-hero.a4-h.a4-cine{position:relative;height:880px;padding:0;overflow:hidden;background:var(--bg);color:#fff;margin:0}${H1('a4-cine', 104, 42, 1.06, 'color:#fff!important;letter-spacing:-.055em!important;max-width:1060px;')}
 .a4-cine>.a4-hi{position:absolute;inset:0;height:100%;background:#000}
 .a4-cine::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,9,10,.9) 0%,rgba(6,9,10,.55) 46%,rgba(6,9,10,.12) 80%),linear-gradient(0deg,rgba(6,9,10,.92) 0%,rgba(6,9,10,0) 36%),linear-gradient(180deg,rgba(6,9,10,.55) 0%,rgba(6,9,10,0) 22%);pointer-events:none}
@@ -428,7 +432,7 @@
 @media(max-width:760px){.hpt.hp-hero.a4-h.a4-cine{height:auto}.a4-cine::after{background:linear-gradient(0deg,rgba(6,9,10,.97) 0%,rgba(6,9,10,.7) 48%,rgba(6,9,10,.2) 100%)}
 .a4-hc{position:relative;bottom:auto;padding:300px 0 34px}.a4-cine .a4-sub{font-size:17px;margin:18px 0 26px!important}.a4-qb{position:relative}.a4-cine .a4-q a{min-height:62px}.a4-cls .a4-cp{height:420px}
 .a4-quote{min-height:0;display:block}.a4-quote::after{background:linear-gradient(0deg,rgba(6,9,10,.94) 35%,rgba(6,9,10,.3))}.a4-quote .a4-w{padding-top:250px;padding-bottom:60px}.a4-quote blockquote{font-size:27px}.a4-fin .a4-fg{text-align:left;justify-items:stretch}}`,
-    adcraft: v => `${HB('a4-collage', '24px 0 0', '10px 0 0')}${H1('a4-collage', 132, 62, .98, 'letter-spacing:-.065em!important;')}
+    adcraft: v => `${HB('a4-collage', '24px 0 0', '10px 0 0')}${H1('a4-collage', 132, 48, .98, 'letter-spacing:-.065em!important;')}
 .a4-pg{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;padding-bottom:90px}
 .a4-collage .a4-sub{font-size:20px;line-height:1.65;color:var(--mu);margin:34px 0 38px!important;max-width:500px}
 .a4-col{position:relative;height:690px}.a4-col .a4-ph{position:absolute}
@@ -439,7 +443,7 @@
 .a4-quote{background:var(--bg)!important;padding-top:0!important}.a4-quote .a4-w{grid-template-columns:auto minmax(0,1fr)}.a4-quote .a4-qp{order:0;width:420px;height:420px;border-radius:50%}.a4-quote blockquote{font-family:${F.sans};font-size:44px;letter-spacing:-.055em}.a4-quote blockquote::before{display:none}
 .a4-fin{background:var(--ink)!important;color:var(--bg)!important;--mu:#B5B0A8;--ln:#2E2E2E}.a4-fin h2 em{color:var(--pt)!important}.a4-fin .a4-b.o{color:#fff}
 @media(max-width:1000px){.a4-pg{grid-template-columns:minmax(0,1fr)}.a4-col{order:-1;max-width:640px}}
-@media(max-width:760px){.a4-pg{gap:24px;padding-bottom:44px}.a4-col{height:410px}.a4-s1{width:190px;height:290px;top:30px;border-radius:95px 95px 14px 14px}.a4-s2{width:170px;height:170px}.a4-s3{width:180px;height:200px;right:0}.a4-dot{left:160px;top:0;width:56px;height:56px}
+@media(max-width:760px){.a4-pg{gap:24px;padding-bottom:44px}.a4-col{height:290px}.a4-s1{width:140px;height:210px;top:24px;border-radius:70px 70px 12px 12px}.a4-s2{width:130px;height:130px}.a4-s3{width:150px;height:150px;right:0}.a4-dot{left:118px;top:0;width:44px;height:44px}
 .a4-collage .a4-sub{font-size:17px;margin:20px 0 26px!important}.a4-num .a4-big{font-size:150px}.a4-nt h2{font-size:28px}.a4-quote .a4-w{grid-template-columns:minmax(0,1fr)}.a4-quote .a4-qp{width:240px;height:240px}.a4-quote blockquote{font-size:28px}}`,
     admove: v => `.hpt.hp-hero.a4-h.a4-half{display:grid;grid-template-columns:1fr 1fr;min-height:860px;padding:0;background:var(--bg);color:var(--ink);margin:0}${H1('a4-half', 76, 40, 1.18, 'letter-spacing:-.035em!important;')}
 .a4-hl{position:relative;min-height:100%}.a4-hl .a4-hi{position:absolute;inset:0;height:100%}
@@ -453,7 +457,7 @@
 .a4-tt{background:var(--alt)!important}
 .a4-quote{background:var(--a)!important;color:#fff!important;--mu:rgba(255,255,255,.75);--pt:${v.pt}}.a4-quote .a4-qp{border-radius:4px}
 @media(max-width:1000px){.hpt.hp-hero.a4-h.a4-half{grid-template-columns:minmax(0,1fr);min-height:0}.a4-hl{height:460px}.a4-hr{padding:48px 40px 40px}}
-@media(max-width:760px){.a4-hl{height:330px}.a4-hr{padding:32px 20px 20px}.a4-half .a4-sub{font-size:17px;margin:18px 0 26px!important}.a4-half .a4-q{margin-top:32px}}`,
+@media(max-width:760px){.a4-hl{height:230px}.a4-hr{padding:32px 20px 20px}.a4-half .a4-sub{font-size:17px;margin:18px 0 26px!important}.a4-half .a4-q{margin-top:32px}}`,
     adcook: v => `${HB('a4-center', '56px 0 0', '36px 0 0')}${H1('a4-center', 88, 40, 1.15)}
 .a4-center{text-align:center}.a4-center .a4-sub{font-size:20px;line-height:1.7;color:var(--mu);max-width:740px;margin:26px auto 0!important}.a4-center h1{margin-top:20px!important}
 .a4-center .a4-cta{justify-content:center;margin-top:36px}.a4-center .a4-hi{height:660px;margin:64px -80px 0;border-radius:6px}.a4-center .a4-q{margin-top:52px;text-align:left}
@@ -487,9 +491,9 @@
   const KEEP = () => [['facts', 'stats', { title: '' }], ['people', 'profiles', { eyebrow: '강사', title: '함께하는 강사' }], ['faq', 'info', { eyebrow: 'FAQ', title: '자주 묻는 질문' }]].map(([h, v, x]) => { const o = TX(v, Object.assign({ hpt: h, cols: [] }, x)); o.hide = true; return o; });
   /* 사진(같은 유형 안에서 첫 화면 사진 중복 없음) */
   const PH = {
-    adtalk: { hero: 'hum-10', wk: 'lan-01', quote: 'hum-37' }, adexam: { hero: 'lib-08' }, adit: { hero: 'hum-41', wk: 'grp-06', quote: 'hum-42' },
+    adtalk: { hero: 'hum-10', wk: 'lan-01', quote: 'hum-37' }, adexam: { hero: 'hum-05', about: 'hum-14' }, adit: { hero: 'hum-41', wk: 'grp-06', quote: 'hum-42' },
     adcraft: { hero: 'hum-23', h2: 'kni-02', h3: 'wrk-06', quote: 'hum-21' }, admove: { hero: 'yog-03', about: 'yog-01', quote: 'yog-02' }, adcook: { hero: 'bak-02', about: 'coo-02', quote: 'bar-01' },
-    adcoach: { hero: 'hum-04', about: 'hum-36', quote: 'hum-05' }, advocal: { hero: 'hum-31', wk: 'hum-30' }, adphoto: { hero: 'pho-01', h2: 'vid-01', h3: 'pho-02', quote: 'sen-02' },
+    adcoach: { hero: 'hum-04', about: 'hum-36', quote: 'hum-06' }, advocal: { hero: 'hum-31', wk: 'hum-30' }, adphoto: { hero: 'pho-01', h2: 'vid-01', h3: 'pho-02', quote: 'sen-02' },
     admoney: { hero: 'dat-01', quote: 'cor-06' }
   };
   const HEAD = { adit: { head: 'overlay', foot: 'min' } };
@@ -508,7 +512,6 @@
     adexam: () => [BAN('국가기술자격 · 회계 · 컴퓨터 자격 대비', '합격까지,\n*한 걸음씩* 갑니다', '시험 일정에 맞춘 커리큘럼과 매주 모의고사로 빈틈을 확인합니다. 수강 기간 동안 질문은 언제든 남길 수 있어요.'),
       TX('features', { hpt: 'a4-steps', nst: 'roman', eyebrow: '합격 과정', title: '네 단계로 준비합니다', cols: [['진단', '첫 수업 전 진단 평가로 출발점을 확인해요.'], ['이론', '출제 기준 순서대로 핵심 이론을 정리해요.'], ['모의고사', '매주 실전 시간에 맞춰 풀고 해설을 들어요.'], ['마무리', '시험 직전 오답만 모아 다시 점검해요.']] }),
       TX('features', { hpt: 'a4-cls', lay: 'rows', eyebrow: '개설 과정', title: '지금 신청할 수 있는 과정', cols: AUTO }),
-      TX('features', { hpt: 'a4-num', pref: 'review', body: '수강생이 남긴 의견은 다음 기수 커리큘럼에 반영합니다.', cols: AUTO }),
       TX('features', { hpt: 'a4-notice', eyebrow: '알림', title: '시험 · 개강 소식', cols: AUTO }), ...FIN('다음 시험,\n*지금* 준비를 시작하세요', '상담에서 시험 일정과 지금 실력에 맞는 과정을 안내해 드립니다.')],
     adit: () => [BAN('직장인 직무 · IT 실무 저녁반', '퇴근 후 두 시간이\n다음 *커리어*가 돼요', '평일 저녁, 소수 정원 실습실에서. 내 업무 파일로 바로 따라 하고, 수업이 끝나면 녹화본으로 다시 봐요.'),
       TX('features', { hpt: 'a4-stm', body: '평일 저녁, 소수 정원. 수업은 짧게, *실습은 내 업무 파일*로 해요.', cols: AUTO }),
@@ -518,7 +521,6 @@
       TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('이번 주,\n*첫 실습*으로 시작해요', '상담이 끝나면 담당 강사가 지금 업무에 맞는 과정과 시작일을 알려 드려요.')],
     adcraft: () => [BAN('', '빚고,\n엮고,\n*만들어요.*', '퇴근 후와 주말, 손으로 만드는 클래스. 처음이어도 한 번에 작품 하나를 완성해 가져가요.'),
       TX('features', { hpt: 'a4-band', eyebrow: '클래스', title: '좋아하는 재료를 찾을 때까지,\n골고루 해 봐요', cols: AUTO }),
-      TX('features', { hpt: 'a4-num', pref: 'ratio', body: '그래서 손 모양 하나까지 한 명씩 봐 드릴 수 있어요.', cols: AUTO }),
       TX('features', { hpt: 'a4-gal', eyebrow: '작업 장면', title: '이번 시즌, 공방의 시간', cols: AUTO }),
       TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('한 번,\n*와 보세요.*', '원데이 클래스로 먼저 해 보고, 맞으면 정규반으로 이어 가요.')],
     admove: () => [BAN('요가 · 필라테스 · 소그룹 스튜디오', '숨을 고르고,\n*몸을 깨워요*', '정원이 작은 소그룹 수업이에요. 처음 오시면 자세 상담으로 내 몸에 맞는 수업부터 찾아 드려요.'),
@@ -543,7 +545,6 @@
     adphoto: () => [BAN('사진 · 영상 크리에이터 클래스', '찍는 법보다\n*보는 법*부터', '카메라가 없어도 괜찮아요. 휴대폰 한 대로 시작해 한 편의 사진 · 영상을 완성하고, 작업은 강사가 직접 피드백해요.', { cta2: '1:1 포트폴리오 상담' }),
       TX('features', { hpt: 'a4-gal', eyebrow: '수업 장면', title: '이번 시즌의 작업들', cols: AUTO }),
       TX('features', { hpt: 'a4-cls', eyebrow: '클래스', title: '지금 신청할 수 있는 클래스', cols: AUTO }),
-      TX('features', { hpt: 'a4-num', pref: 'ratio', body: '촬영 실습은 소수로 나가요. 한 컷마다 바로 피드백할 수 있게요.', cols: AUTO }),
       TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('첫 컷은\n*같이* 찍어요', '상담에서 지금 장비와 만들고 싶은 작업을 듣고, 맞는 클래스를 안내해 드려요.')],
     admoney: () => [BAN('재테크 · 커리어 클래스', '월급의 *다음 계획*,\n오늘 세워요', '내 지출과 목표부터 정리하고 시작해요. 강의는 소수 정원으로, 질문은 수업이 끝난 뒤에도 내 계정에서 이어 가요.', { note: '첫 상담에서 지금 상황과 목표를 먼저 정리해요.', cta2: '1:1 상담 예약' }),
       TX('features', { hpt: 'a4-stm', body: '어려운 용어보다, *내 숫자*로 시작해요.', cols: AUTO }),
