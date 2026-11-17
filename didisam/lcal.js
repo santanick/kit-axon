@@ -49,6 +49,10 @@
   window.lcalMerge = mergeOnce;
   function mine() { if (live()) { if (!Array.isArray(LR.lp.cal)) LR.lp.cal = []; mergeOnce(); LR.lp.cal = LR.lp.cal.filter(okU); return LR.lp.cal; }
     if (MEM && MEM.k === key()) return MEM.L; const L = local(); MEM = { k: key(), L }; return L; }
+  /* v43.6 셀프러닝 노트(lnote-sync.js) 시험 목표 → 「내 일정」에 넣기: [{id, date, title, memo, cls}] — 같은 id는 고치고, 300개를 넘기면 넣지 않는다. 넣은 개수를 돌려준다 */
+  window.lcalAdd = L0 => { try { if (!LR.me || !Array.isArray(L0)) return 0; const L = mine(); let n = 0; const at = new Date().toISOString();
+    L0.forEach(x => { const o = { id: String(x.id || ''), date: String(x.date || ''), title: String(x.title || '').slice(0, 80), memo: String(x.memo || '').slice(0, 300), cls: String(x.cls || ''), at }; if (!okU(o)) return; const i = L.findIndex(y => y.id === o.id); if (i >= 0) { L[i] = Object.assign(L[i], o); n++; } else if (L.length < 300) { L.push(o); n++; } });
+    return n && mineSave() ? n : 0; } catch (e) { console.error('lcalAdd', e); return 0; } };
   function mineSave() { if (LR.mode === 'preview') return true; if (live()) { LR.lp.cal = mine().slice(0, 300); LR.api.save(); return true; }
     try { localStorage.setItem(key(), JSON.stringify(mine().slice(0, 300))); return true; } catch (e) { toast('이 기기에 저장하지 못했어요. 브라우저 저장 공간을 확인해 주세요.', 'bad'); return false; } }
 
