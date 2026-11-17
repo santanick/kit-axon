@@ -209,7 +209,9 @@
   const VAR_L = { features: '특징', steps: '절차', stats: '숫자', info: '안내', cta: '문의', timeline: '일정', tiles: '바로가기', profiles: '사람', roadmap: '로드맵', modules: '구성', story: '이야기', logos: '로고' };
   const secL = x => x.type === 'text' ? (x.data && x.data.hpt === 'facts' ? '숫자' : x.data && x.data.hpt === 'faq' ? 'FAQ' : VAR_L[x.data && x.data.variant] || '글') : SEC_L[x.type] || x.type;
   const thName = id => { const L = window.HPT && A(HPT.list); const x = L && L.find(t => t.id === id); return x ? x.name : ''; };
-  const moodOf = tp => tp.theme && thName(tp.theme) ? tp.theme : 'base';
+  /* v43.8 대표님 11-17 「프리미엄 카테고리는 없애고 기존 카테고리에 배치」: 프리미엄 · 기관별 템플릿은 이어받은 기본 테마(HPT.base)의 분위기 칩에 넣는다 */
+  const baseOf = id => { const b = window.HPT && HPT.base ? HPT.base(id) : id; return b && b !== id && thName(b) ? b : ''; };
+  const moodOf = tp => !tp.theme || !thName(tp.theme) ? 'base' : tp.prem ? (baseOf(tp.theme) || 'base') : tp.theme;
   const moodName = k => k === 'base' ? '기본 디자인' : thName(k);
   const META = new Map();
   function meta(tp) { let m = META.get(tp.id); if (m) return m; let secs = []; try { secs = A(tp.build()); } catch (e) { secs = []; }
@@ -224,25 +226,25 @@
   const tyKey = () => S.org.type;
   /* v43 T1: 프리미엄 묶음 — 기관 유형에 맞는 테마 먼저(HPT.premFor) */
   const premL = () => { const O = window.HPT && typeof HPT.premFor === 'function' ? HPT.premFor() : []; return TPL.filter(t => t.prem).sort((a, b) => O.indexOf(a.theme) - O.indexOf(b.theme)); };
-  function listOf() { const k = UI.tpdK || 'mine'; if (k === 'prem') { const L = premL(); return { L0: L, L }; } const f = k === 'all' ? 'all' : 'mine'; const md = (k === 'mine' || k === 'all') ? 'all' : k, pu = 'all';
+  function listOf() { const k = UI.tpdK === 'prem' ? 'mine' : (UI.tpdK || 'mine'); /* v43.8 대표님 11-17 「프리미엄 카테고리는 없애고 기존 카테고리에 배치」: prem 칩 없음(예전 저장값은 추천으로) */ const f = k === 'all' ? 'all' : 'mine'; const md = (k === 'mine' || k === 'all') ? 'all' : k, pu = 'all';
     const L0 = f === 'mine' ? [...premL().filter(t => window.HPT && HPT.premFits && HPT.premFits(t.theme)), ...tplFor(tyKey()).filter(t => !t.prem)] : f === 'all' ? TPL : TPL.filter(t => A(t.types).includes(f));
     return { L0, L: L0.filter(t => (md === 'all' || moodOf(t) === md) && (pu === 'all' || meta(t).pur.includes(pu))) }; }
   function gallery() {
     const f = UI.tplF || 'mine'; const { L0, L } = listOf(); const q = String(UI.tpdQ || '').trim().toLowerCase();
-    const moods = [...new Set((UI.tpdK === 'all' ? TPL : tplFor(tyKey())).filter(t => !t.prem).map(moodOf))]; const hasPrem = TPL.some(t => t.prem); const pc = k => L0.filter(t => meta(t).pur.includes(k)).length;
+    const moods = [...new Set((UI.tpdK === 'all' ? TPL : [...premL().filter(t => window.HPT && HPT.premFits && HPT.premFits(t.theme)), ...tplFor(tyKey())]).map(moodOf))]; const pc = k => L0.filter(t => meta(t).pur.includes(k)).length;
     const right = S.site && S.site.tpl ? `<button type="button" class="btn ghost" data-act="tpl-back">편집으로 돌아가기</button>` : '';
     const card = tp => { const m = meta(tp); const hide = q && !m.q.includes(q);
       return `<article class="tpd-c" role="button" tabindex="0" data-act="tpd-open" data-v="${esc(tp.id)}" data-q="${esc(m.q)}"${hide ? ' hidden' : ''} aria-label="${esc(tp.name)} 미리 보기">
         <div class="tpd-th" data-tp="${esc(tp.id)}" style="--c:${esc(tp.color || '#5C74F6')}"><iframe tabindex="-1" aria-hidden="true" title="" sandbox=""></iframe>${S.site && S.site.tpl === tp.id ? '<span class="tpd-now">사용 중</span>' : ''}</div>
         <div class="tpd-cb"><b>${esc(tp.name)}</b><small>${esc(tp.scene || '')}</small>
-        ${tp.prem ? `<span class="tpd-pm"><span class="tpd-pmk">프리미엄</span>${A(tp.types).filter(k => k !== 'prem').map(k => `<em${window.HPT && HPT.premFits && HPT.premFits(tp.theme) && (k === tyKey() || (k === 'univ' && tyKey() === 'univ')) ? ' class="on"' : ''}>${esc(window.HPT && HPT.tagName ? HPT.tagName(k) : k)}</em>`).join('')}</span>` : ''}<span class="tpd-tg"><i style="background:${esc(tp.color || '#5C74F6')}"></i>${esc(moodName(moodOf(tp)))}${tp.hero ? ` · ${esc(HERO_L[tp.hero] || '')}` : ''} · 섹션 ${m.n}${A(tp.langs).length > 1 ? ' · 다국어' : ''}</span></div></article>`; };
+        ${tp.prem ? `<span class="tpd-pm">${A(tp.types).filter(k => k !== 'prem').map(k => `<em${window.HPT && HPT.premFits && HPT.premFits(tp.theme) && (k === tyKey() || (k === 'univ' && tyKey() === 'univ')) ? ' class="on"' : ''}>${esc(window.HPT && HPT.tagName ? HPT.tagName(k) : k)}</em>`).join('')}</span>` : ''}<span class="tpd-tg"><i style="background:${esc(tp.color || '#5C74F6')}"></i>${esc(moodName(moodOf(tp)))}${tp.hero ? ` · ${esc(HERO_L[tp.hero] || '')}` : ''} · 섹션 ${m.n}${A(tp.langs).length > 1 ? ' · 다국어' : ''}</span></div></article>`; };
     return SL.page('홈페이지 템플릿', right,
       /* v34.3 대표님 '유형별 메뉴 부분은 너무 복잡 — 더 심플하게': 칩은 한 줄(추천 · 전체 · 분위기)만, 다른 유형 · 목적 칩은 없애고 검색으로 찾는다 */
       /* v43 R9(J4 120): 분류 칩 9개가 한 줄을 넘침 → 앞 6개(추천 · 프리미엄 · 전체 · 분위기 3개 — 지금 고른 분위기는 늘 앞에)만 칩, 나머지 분위기는 「더 보기」 펼침 안에 */
-      (() => { const cur = UI.tpdK || 'mine'; const all = [['mine', '추천'], ...(hasPrem ? [['prem', '프리미엄']] : []), ['all', '전체'], ...moods.map(k => [k, moodName(k)])]; const head = all.slice(0, 6); const ci = all.findIndex(x => x[0] === cur); if (ci >= 6) head[5] = all[ci]; const rest = all.filter(x => !head.includes(x));
+      (() => { const cur = UI.tpdK || 'mine'; const all = [['mine', '추천'], ['all', '전체'], ...moods.map(k => [k, moodName(k)])]; const head = all.slice(0, 6); const ci = all.findIndex(x => x[0] === cur); if (ci >= 6) head[5] = all[ci]; const rest = all.filter(x => !head.includes(x));
         return `<div class="tpd-chw">${SL.chips('tpdK', head, cur)}${rest.length ? `<details class="tpd-more"><summary>분위기 더 보기 <small>${rest.length}</small></summary>${SL.chips('tpdK', rest, cur)}</details>` : ''}</div>`; })() +
       `<div class="sl-search tpd-q">${ic('search' in IC ? 'search' : 'spark', 16)}<input id="tpdQ" type="search" value="${esc(UI.tpdQ || '')}" placeholder="템플릿 이름 · 업종 · 분위기 검색" aria-label="템플릿 검색"></div>` +
-      `<p class="tpd-cnt mini" aria-live="polite">${(UI.tpdK || 'mine') === 'mine' ? `${esc((TYPES[tyKey()] || {}).name || '')} 추천 ` : UI.tpdK === 'prem' ? `프리미엄 · ${esc((TYPES[tyKey()] || {}).name || '')}에 맞는 순서 ` : ''}${L.length}종</p><div class="tpd-g">${L.map(card).join('') || '<div class="sl-empty">조건에 맞는 템플릿이 없습니다.</div>'}</div>`);
+      `<p class="tpd-cnt mini" aria-live="polite">${(UI.tpdK || 'mine') === 'mine' ? `${esc((TYPES[tyKey()] || {}).name || '')} 추천 ` : ''}${L.length}종</p><div class="tpd-g">${L.map(card).join('') || '<div class="sl-empty">조건에 맞는 템플릿이 없습니다.</div>'}</div>`);
   }
   /* 사이트 화면: 갤러리 모드면 공통 틀 갤러리(학습 페이지 탭은 그대로) */
   { const base = VIEWS.site; VIEWS.site = (...a) => { try { if (S && S.org && UI.smT !== 'learn' && (UI.siteGallery || !(S.site && S.site.tpl))) return gallery(); } catch (e) { console.error('tpl-d gallery', e); } return base(...a); }; }

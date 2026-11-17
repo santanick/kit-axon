@@ -59,9 +59,15 @@ const HERO = '.hp-hero.hxu-u'; /* 세 템플릿 공통 첫 화면 */
   { await p.evaluate(() => { UI.tpdK = 'mine'; ACT['tpl-gallery'](); }); await p.waitForTimeout(900);
     const mine = await p.evaluate(() => [...document.querySelectorAll('.tpd-c .tpg-th[data-tp]')].map(x => x.dataset.tp));
     ok(IDS.every(id => mine.includes('prem-' + id)) && mine.indexOf('prem-' + IDS[0]) === 0, `갤러리(추천): 첫 카드 prem-${IDS[0]} (${mine.slice(0, 3)})`);
-    await p.evaluate(() => { UI.tpdK = 'prem'; render(); }); await p.waitForTimeout(700);
+    /* v43.8 대표님 11-17 「프리미엄 카테고리는 없애고 기존 카테고리에 배치」: 분류 칩 · 카드에 「프리미엄」이 없고, 「전체」 · 분위기 칩에 섞여 나온다 */
+    const chips = await p.evaluate(() => [...document.querySelectorAll('[data-k="tpdK"]')].map(x => (x.dataset.v || '') + ':' + x.textContent.trim()));
+    ok(!chips.some(c => /^prem:|:프리미엄$/.test(c)), `갤러리 분류 칩에 「프리미엄」 없음 (${chips.slice(0, 6)})`);
+    { const pm = await p.evaluate(() => [...document.querySelectorAll('.tpd-c .tpd-cb')].map(x => x.innerText.replace(/\s+/g, ' ')).filter(t => /프리미엄/.test(t) && !/프리미엄 다크/.test(t))); ok(!pm.length, `갤러리 카드에 「프리미엄」 분류 표시 없음 ${pm.slice(0, 2)}`); }
+    await p.evaluate(() => { UI.tpdK = 'all'; render(); }); await p.waitForTimeout(700);
     const pr = await p.evaluate(() => [...document.querySelectorAll('.tpd-c .tpg-th[data-tp]')].map(x => x.dataset.tp));
-    ok(IDS.every(id => pr.includes('prem-' + id)), `갤러리(프리미엄 묶음)에 노출 (${pr.length}종)`);
+    ok(IDS.every(id => pr.includes('prem-' + id)), `갤러리(전체)에 노출 (${pr.length}종)`);
+    await p.evaluate(() => { UI.tpdK = 'prem'; render(); }); await p.waitForTimeout(500);
+    ok(await p.evaluate(() => document.querySelectorAll('.tpd-c').length > 0), '예전 저장값(prem)도 추천 목록으로 열림');
     const th = await p.evaluate(id => { const h = HPT.thumb(site(), id); return /hxu-uh/.test(h) && /hxu-who/.test(h); }, IDS[0]); ok(th, '테마 미리보기(HPT.thumb): 게시본과 같은 첫 화면 · 방문자 바로 가기'); }
 
   /* ── 3) 390 · 1440 관문(게시본 siteHTML) + 시나리오 내용 ── */
