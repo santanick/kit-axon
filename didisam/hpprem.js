@@ -82,7 +82,7 @@
   /* 기관 유형에 맞는 테마를 먼저(추천 태그가 맞는 것 → 나머지) */
   HPT.premFor = ty => { ty = ty || tyKey(); const t2 = ty === 'univ_lms' ? 'univ' : ty; const sc = id => { const g = DEF[id].tags; return g.indexOf(ty) >= 0 ? 0 : g.indexOf(t2) >= 0 ? 1 : 2; }; return PREM.slice().sort((a, b) => sc(a) - sc(b) || PREM.indexOf(a) - PREM.indexOf(b)); };
   HPT.premFits = (id, ty) => { ty = ty || tyKey(); const g = (DEF[id] || {}).tags || []; return g.includes(ty) || g.includes(ty === 'univ_lms' ? 'univ' : ty); };
-  const TY_N = { adult: '성인 · 학원', k12: '초중고 · 학원', univ: '대학', univ_lms: '대학 LMS', corp: '기업 HRD', public: '공공', lifelong: '평생교육', voc: '직업훈련' };
+  const TY_N = { adult: '학원(성인)', k12: '학원(초중고)', /* v44.1 기관 유형 이름 통일 */ univ: '대학', univ_lms: '대학 LMS', corp: '기업 HRD', public: '공공', lifelong: '평생교육', voc: '직업훈련' };
   HPT.tagName = k => TY_N[k] || k;
 
   /* ── 미리보기: 프리미엄은 실제 게시본(siteHTML)을 그대로 축소 — 첫 화면 사진 · 옆판까지 실제와 같다 ── */

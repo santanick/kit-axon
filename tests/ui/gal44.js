@@ -15,7 +15,7 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
 (async () => {
   const srv = http.createServer((q, r) => { const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end(); }
-    r.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); });
+    r.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream', 'cross-origin-resource-policy': 'same-origin', 'x-content-type-options': 'nosniff' }); fs.createReadStream(f).pipe(r); }); /* v44.1: 운영 서버(service/server/app.js)와 같은 보안 헤더 — 불투명 출처 썸네일이면 사진이 막힌다 */
   let port = 9861; await new Promise((res, rej) => { const tryL = () => { srv.once('error', e => { if (e.code === 'EADDRINUSE' && port < 9880) { port++; tryL(); } else rej(e); }); srv.listen(port, '127.0.0.1', res); }; tryL(); });
   const base = `http://127.0.0.1:${port}`;
   const browser = await chromium.launch();
@@ -38,7 +38,7 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
   try {
     /* A. g44가 없을 때(지금 저장소 상태): 유형 칩 · 기본 선택 · 예전 목록 대체 */
     { const { ctx, page, errs } = await open('k12', undefined, false, 1360, true); await gal(page); const s = await state(page);
-      ok('A 칩 9개(기관 유형 8 + 전체)', s.chips.length === 9 && s.chips.map(x => x[1]).join('|') === '대학|학원(초중고)|성인|1인 강사|기업 교육|공공 교육원|평생교육|직업훈련|전체', s.chips);
+      ok('A 칩 8개(기관 유형 7 + 전체, 1인 강사 칩 없음 · 학원(성인)으로 통합)', s.chips.length === 8 && s.chips.map(x => x[1]).join('|') === '대학|학원(초중고)|학원(성인)|기업 교육|공공 교육원|평생교육|직업훈련|전체', s.chips);
       ok('A 기본 선택 = 우리 기관 유형(학원 초중고)', (s.chips.find(x => x[2]) || [])[0] === 'k12', s.chips);
       ok('A g44 없음 → 예전 목록 대체 표시', s.cards.length >= 3 && s.cards.every(c => !/^t44-/.test(c.v)), s.cards.length);
       ok('A 새 기관 기본 사이트(예전 동작)', await page.evaluate(() => !!S.site.tpl && !/^t44-/.test(S.site.tpl) && siteHTML(S.site, false, 'ko').length > 1000));
@@ -55,8 +55,7 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
       ok('B g44만 노출(예전 숨김) · 세부 유형 표시', s.cards.length === D.adult.length && s.cards.every(c => D.adult.some(t => t.id === c.v) && c.sub), s.cards);
       ok('B 사용 중 표시(기본 사이트 템플릿)', s.cards.some(c => c.now && c.v === def.tpl), s.cards);
       if (SHOT) await page.screenshot({ path: path.join(SHOT, 'gal44-adult-pc.jpg'), type: 'jpeg', quality: 70 });
-      await chip(page, 'solo'); s = await state(page);
-      ok('B 1인 강사 칩 → 1인 강사 · 크리에이터 세부 유형', s.cards.length >= 1 && s.cards.length === D.solo.length && s.cards.every(c => D.solo.includes(c.v)) && s.cards.some(c => /1인/.test(c.sub)), s.cards);
+      ok('B 1인 강사 · 크리에이터 템플릿은 학원(성인) 안에', D.solo.length >= 1 && D.solo.every(id => s.cards.some(c => c.v === id)), [D.solo, s.cards.length]); /* v44.1: 1인 강사 칩 제거 */
       await chip(page, 'corp'); s = await state(page);
       ok('B 기업 교육 칩 → 기업 g44만', s.cards.length === D.corp.length && s.cards.every(c => D.corp.some(t => t.id === c.v)), s.cards);
       await chip(page, 'all'); s = await state(page);
@@ -104,6 +103,37 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
       ok('E 390 선택 칩(직업훈련)이 보임', v && v.v === 'voc' && v.in && v.sx > 0 && !v.over, v);
       if (SHOT) await page.screenshot({ path: path.join(SHOT, 'gal44-voc-m.jpg'), type: 'jpeg', quality: 70 });
       ok('E 스크립트 오류 0', !errs.length, errs); await ctx.close(); }
+    /* F. v44.1 대표님 캡처: 운영 서버와 같은 헤더에서 70종 썸네일 전부 사진이 실제로 나오는지(휴대폰 「템플릿 고르기」 · PC 갤러리 · 큰 미리보기) */
+    for (const w of [390, 1440]) { const { ctx, page, errs } = await open('adult', undefined, false, w); const blocked = [];
+      const done = new Set(); page.on('requestfinished', q => done.add(q.url()));
+      page.on('requestfailed', q => { if (/img\/stock|fonts\//.test(q.url())) blocked.push(q.url()); }); /* 다시 그리며 끊긴 요청은 나중에 받아지면 제외 */
+      await gal(page); await chip(page, 'all');
+      const ids = await page.evaluate(() => [...document.querySelectorAll('.tpd-c')].map(c => c.dataset.v));
+      for (const id of ids) { await page.evaluate(v => { const c = document.querySelector(`.tpd-c[data-v="${v}"]`); c && c.scrollIntoView({ block: 'center' }); }, id); await page.waitForTimeout(90); }
+      /* 썸네일은 한 장씩 차례로 그린다(hpgal 큐) — 다 그려지고 사진이 다 받아질 때까지 기다림 */
+      await page.waitForFunction(() => [...document.querySelectorAll('.tpd-c .tpd-th')].every(th => { const f = th.querySelector('iframe'); if (!f) return false; let d = null; try { d = f.contentDocument; } catch (e) { return true; } if (!d || !d.body || d.URL === 'about:blank') return false; return [...d.querySelectorAll('img')].every(i => i.complete); }), null, { timeout: 120000, polling: 500 }).catch(() => {});
+      await page.waitForTimeout(500);
+      const R = await page.evaluate(() => [...document.querySelectorAll('.tpd-c')].map(c => { const v = c.dataset.v; const tp = TPL.find(t => t.id === v); let want = 0; try { want = (siteHTML(TPD.fromTpl(tp), false, 'ko').match(/<img[^>]+img\/stock/g) || []).length; } catch (e) { }
+        const fr = [...c.querySelectorAll('.tpd-th iframe')]; let ok = 0, bad = 0, opaque = 0;
+        fr.forEach(f => { let d = null; try { d = f.contentDocument; } catch (e) { } if (!d) { opaque++; return; } [...d.querySelectorAll('img')].filter(i => /img\/stock/.test(i.currentSrc || i.src)).forEach(i => { if (i.complete && i.naturalWidth > 0) ok++; else if (i.complete) bad++; }); });
+        return { v, want, ok, bad, opaque, fr: fr.length }; }));
+      const g = R.filter(x => /^t44-/.test(x.v)); const noPic = g.filter(x => x.want && (x.ok === 0 || x.bad > 0));
+      ok(`F ${w} 썸네일 ${g.length}종 · 사진 있는 템플릿은 모두 사진이 보임`, g.length >= 70 && !noPic.length && R.every(x => !x.opaque), { n: g.length, noPic: noPic.slice(0, 8), opaque: R.filter(x => x.opaque).length });
+      /* 큰 미리보기 */
+      const pid = g.find(x => x.want).v; await page.evaluate(v => document.querySelector(`.tpd-c[data-v="${v}"]`).click(), pid); await page.waitForSelector('#slSheet iframe'); await page.waitForTimeout(1500);
+      const pv = await page.evaluate(() => { const f = document.querySelector('#slSheet iframe'); let d = null; try { d = f.contentDocument; } catch (e) { } if (!d) return { opaque: 1 }; const I = [...d.querySelectorAll('img')].filter(i => /img\/stock/.test(i.currentSrc || i.src)); return { n: I.length, ok: I.filter(i => i.naturalWidth > 0).length, sb: f.getAttribute('sandbox') }; });
+      ok(`F ${w} 큰 미리보기 사진`, pv.n > 0 && pv.ok > 0 && !pv.opaque, pv);
+      const bl = [...new Set(blocked)].filter(u => !done.has(u)).map(u => u.split('/').pop()); ok(`F ${w} 사진 · 글꼴 요청 막힘 0`, !bl.length, bl.slice(0, 6));
+      if (SHOT) await page.screenshot({ path: path.join(SHOT, `gal44-photo-${w}.jpg`), type: 'jpeg', quality: 70 });
+      ok(`F ${w} 스크립트 오류 0`, !errs.length, errs); await ctx.close(); }
+    /* G. v44.1 기관 정보 › 기관 유형: 세부 유형 설명(기업 CS · 대리점 · 가맹점, 공공 진흥원 · 민간 협회, 대학 학사 LMS, 학원(성인) 민간 자격증) */
+    { const { ctx, page, errs } = await open('corp', undefined, false, 390); await page.evaluate(() => { UI.settings = 'type'; go('settings'); render(); }); await page.waitForTimeout(600);
+      const T = await page.evaluate(() => [...document.querySelectorAll('[data-act="type-chg"]')].map(b => [b.dataset.v, b.textContent.replace(/\s+/g, ' ')]));
+      const tx = k => (T.find(x => x[0] === k) || [])[1] || '';
+      ok('G 기관 유형 설명에 세부 유형', /콜센터/.test(tx('corp')) && /가맹점/.test(tx('corp')) && /경제진흥원/.test(tx('public')) && /정보진흥원/.test(tx('public')) && /협회/.test(tx('public')) && /학사 LMS/.test(tx('univ')) && /민간 자격증/.test(tx('adult')) && /학원\(성인\)/.test(tx('adult')), T);
+      ok('G 390 가로 넘침 0', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+      if (SHOT) await page.screenshot({ path: path.join(SHOT, 'settings-type-m.jpg'), type: 'jpeg', quality: 70, fullPage: true });
+      ok('G 스크립트 오류 0', !errs.length, errs); await ctx.close(); }
   } catch (e) { console.error(e); fails.push('예외: ' + e.message); }
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건: ${fails.join(' / ')}` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);

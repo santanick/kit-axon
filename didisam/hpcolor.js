@@ -39,7 +39,7 @@
   const hueD = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
 
   /* ═════════ 분류 ═════════ */
-  const TYPES = { adult: '성인 · 1인 강사', k12: '학원 · 초중고', univ: '대학', lifelong: '평생교육 · 시니어', voc: '직업훈련', corp: '기업 교육', public: '공공 교육원' };
+  const TYPES = { adult: '학원(성인)', k12: '학원(초중고)', /* v44.1 「1인 강사」 → 학원(성인) 통합 */ univ: '대학', lifelong: '평생교육 · 시니어', voc: '직업훈련', corp: '기업 교육', public: '공공 교육원' };
   const MOODS = { trust: '신뢰', calm: '차분', warm: '따뜻함', vivid: '활기', playful: '경쾌', premium: '고급', natural: '자연', tech: '테크', classic: '전통' };
 
   /* ═════════ 팔레트 원본 ═════════

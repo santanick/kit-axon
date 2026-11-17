@@ -226,12 +226,12 @@
   const tyKey = () => S.org.type;
   /* v43 T1: 프리미엄 묶음 — 기관 유형에 맞는 테마 먼저(HPT.premFor) */
   const premL = () => { const O = window.HPT && typeof HPT.premFor === 'function' ? HPT.premFor() : []; return TPL.filter(t => t.prem).sort((a, b) => O.indexOf(a.theme) - O.indexOf(b.theme)); };
-  /* ═════════ v44 G(대표님 11-18 「종류도 지금 카테고리 말고 기관 유형별로」): 칩 = 기관 유형(+전체), 기본은 우리 기관 유형 ═════════
+  /* ═════════ v44 G(대표님 11-18 「종류도 지금 카테고리 말고 기관 유형별로」): 칩 = 기관 유형(+전체, v44.1부터 1인 강사 칩 없음), 기본은 우리 기관 유형 ═════════
      - 새 템플릿(g44: 1, hp44-*.js)만 보여 준다. 예전 템플릿(130여 종)은 게시된 사이트를 위해 코드에 남고 갤러리에서는 숨긴다.
      - 그 유형의 g44가 아직 없으면(요원 작업 중) 그 유형만 예전 목록으로 대신 보여 준다(모두 합쳐지면 자동으로 사라짐).
      - 지금 사이트가 예전 템플릿이면 우리 유형 · 전체 칩 맨 앞에 「사용 중」 카드로 둔다(계속 그대로 동작).
      - 카드에는 세부 유형(sub) 이름, 세부 유형이 4개 이상이면 작은 「세부 유형」 선택. 검색은 그대로. */
-  const GT = [['univ', '대학'], ['k12', '학원(초중고)'], ['adult', '성인'], ['solo', '1인 강사'], ['corp', '기업 교육'], ['public', '공공 교육원'], ['lifelong', '평생교육'], ['voc', '직업훈련'], ['all', '전체']];
+  const GT = [['univ', '대학'], ['k12', '학원(초중고)'], ['adult', '학원(성인)'], /* v44.1 대표님 「1인 강사 부분은 없애줘 → 학원(성인) 통합」: 1인 강사 · 크리에이터 템플릿은 학원(성인) 안에 */ ['corp', '기업 교육'], ['public', '공공 교육원'], ['lifelong', '평생교육'], ['voc', '직업훈련'], ['all', '전체']];
   const G4 = () => window.G44 || null;
   const ourT = () => { const k = G4() ? G4().key(tyKey()) : tyKey(); return GT.some(x => x[0] === k) ? k : 'all'; };
   const curT = () => GT.some(x => x[0] === UI.tpdT) ? UI.tpdT : ourT();
@@ -240,8 +240,7 @@
     return [...premL().filter(t => fit(t) && !t.g44 && !t.hidden), ...tplOld(k).filter(t => !t.prem && !t.g44)]; }; /* hp44 템플릿은 prem: 1이라 프리미엄 묶음에서도 뺀다 */
   function poolOf(k) {
     const g = G4(); const ed = k === ourT() ? S.org.ed : '';
-    if (k === 'solo') { const L = has44('adult') ? g.list('adult').filter(g.isSolo) : []; return L.length ? L : TPL.filter(t => !t.g44 && !t.hidden && g && g.isSolo(t)); }
-    if (k === 'all') { const seen = new Set(); return GT.filter(x => x[0] !== 'all' && x[0] !== 'solo').flatMap(x => poolOf(x[0])).filter(t => !seen.has(t.id) && seen.add(t.id)); }
+    if (k === 'all') { const seen = new Set(); return GT.filter(x => x[0] !== 'all').flatMap(x => poolOf(x[0])).filter(t => !seen.has(t.id) && seen.add(t.id)); }
     return has44(k) ? g.ordered(k, ed) : legacy(k); }
   const usedTp = () => { const id = S.site && S.site.tpl; return id ? TPL.find(t => t.id === id) : null; };
   function listOf() { const k = curT(); let L0 = poolOf(k); const u = usedTp();
@@ -252,9 +251,11 @@
     const { L, subs, sb, k } = listOf();
     const right = S.site && S.site.tpl ? `<button type="button" class="btn ghost" data-act="tpl-back">편집으로 돌아가기</button>` : '';
     const u = usedTp(); const q = String(UI.tpdQ || '').trim().toLowerCase();
+    /* v44.1 대표님 캡처(운영 서버 · 휴대폰 「템플릿 고르기」 사진 깨짐): 썸네일 iframe이 sandbox=""(불투명 출처)라 운영 서버의
+       cross-origin-resource-policy: same-origin 헤더에 샘플 사진 · 글꼴 요청이 막혔다 → sandbox="allow-same-origin"(스크립트는 여전히 막힘) */
     const card = tp => { const m = meta(tp); const now = u === tp; const old = now && !tp.g44 && L.some(t => t.g44); const hide = q && !m.q.includes(q);
       return `<article class="tpd-c${now ? ' tpd-cur' : ''}" role="button" tabindex="0" data-act="tpd-open" data-v="${esc(tp.id)}" data-q="${esc(m.q)}" ${hide ? ' hidden' : ''} aria-label="${esc(tp.name)} 미리 보기${now ? ' (사용 중)' : ''}">
-        <div class="tpd-th" data-tp="${esc(tp.id)}" style="--c:${esc(tp.color || '#5C74F6')}"><iframe tabindex="-1" aria-hidden="true" title="" sandbox=""></iframe>${now ? '<span class="tpd-now">사용 중</span>' : ''}</div>
+        <div class="tpd-th" data-tp="${esc(tp.id)}" style="--c:${esc(tp.color || '#5C74F6')}"><iframe tabindex="-1" aria-hidden="true" title="" sandbox="allow-same-origin"></iframe>${now ? '<span class="tpd-now">사용 중</span>' : ''}</div>
         <div class="tpd-cb">${tp.sub || old ? `<span class="tpd-sub">${esc(old ? '지금 쓰는 템플릿' : tp.sub)}</span>` : ''}<b>${esc(tp.name)}</b><small>${esc(tp.scene || '')}</small>
         <span class="tpd-tg"><i style="background:${esc(tp.color || '#5C74F6')}"></i>${esc(moodName(moodOf(tp)))}${tp.hero ? ` · ${esc(HERO_L[tp.hero] || '')}` : ''} · 섹션 ${m.n}${A(tp.langs).length > 1 ? ' · 다국어' : ''}</span></div></article>`; };
     const lab = (GT.find(x => x[0] === k) || [])[1] || '';
@@ -295,7 +296,7 @@
   ACT['tpd-open'] = el => { const tp = TPL.find(t => t.id === el.dataset.v); if (!tp) return; const m = meta(tp); const s = siteOf(tp);
     const live = A(s.sections).filter(x => !x.hide).map(secL);
     const w = SL.sheet(tp.name, `<div class="tpd-sh"><div class="sl-chips tpd-dev" role="tablist"><button type="button" role="tab" class="on" aria-selected="true" data-act="tpd-dev" data-v="pc">PC</button><button type="button" role="tab" aria-selected="false" data-act="tpd-dev" data-v="m">휴대폰</button></div>
-      <div class="tpd-pv"><iframe title="${esc(tp.name)} 미리 보기" sandbox=""></iframe></div>
+      <div class="tpd-pv"><iframe title="${esc(tp.name)} 미리 보기" sandbox="allow-same-origin"></iframe></div>
       <p class="tpd-sc">${esc(tp.scene || '')}</p>
       <dl class="tpd-dl"><div><dt>맞는 유형</dt><dd>${esc(m.tys.join(' · '))}</dd></div><div><dt>분위기</dt><dd><i style="background:${esc(tp.color || '#5C74F6')}"></i>${esc(moodName(moodOf(tp)))}${tp.hero ? ` · ${esc(HERO_L[tp.hero] || '')}` : ''}</dd></div>
       <div><dt>섹션 순서</dt><dd>${esc(live.join(' → '))}</dd></div>${tp.ref ? `<div><dt>구성 참고</dt><dd>${esc(tp.ref)}</dd></div>` : ''}${A(tp.langs).length > 1 ? `<div><dt>언어</dt><dd>${esc(tp.langs.map(l => (typeof langName === 'function' ? langName(l) : l)).join(' · '))}</dd></div>` : ''}</dl>
