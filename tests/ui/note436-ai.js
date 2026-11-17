@@ -85,7 +85,7 @@ const SHOT = process.env.SHOT_DIR || '';
     ok(await p.evaluate(() => !/윤서아|20269000/.test(document.querySelector('.ln-today').textContent)), '홈 카드에 이름 · 학번 없음');
     if (SHOT) await p.screenshot({ path: path.join(SHOT, 'ai-home-today.png') });
     ok(await p.evaluate(() => { ltOpen(); return (document.querySelector('.lt-panel .lt-chip.ln-mk') || {}).dataset?.v === '오늘 복습 시작'; }), 'S07 홈(복습 있음): 칩 「오늘 복습 시작」');
-    await p.click('.lt-panel .lt-chip.ln-mk'); await p.waitForTimeout(300); ok(await p.evaluate(() => /^#review/.test(location.hash)), '「오늘 복습 시작」 → #review');
+    await p.click('.lt-panel .lt-chip.ln-mk'); await p.waitForTimeout(300); ok(await p.evaluate(() => /^#notes\/review/.test(location.hash)), '「오늘 복습 시작」 → #review');
     await go(p, '#home');
 
     /* 보통 답변 아래 흰 칩 「노트로 남기기 · 카드 1장」 */
@@ -111,7 +111,7 @@ const SHOT = process.env.SHOT_DIR || '';
     /* 추가 지시 1: 주간 돌아보기 · 이번 주 정리 노트 · 질문 → 노트 */
     const W = await p.evaluate(() => LNOTE_AI.weekly()); ok(W && ['lessons', 'notes', 'cards', 'asks', 'days', 'from', 'to'].every(k => k in W) && W.notes >= 3 && W.from <= W.to, '주간 수치 ' + JSON.stringify({ l: W.lessons, n: W.notes, c: W.cards, a: W.asks }));
     ok(await p.evaluate(() => { const c = LNOTE.cards().find(x => x.src === 'quiz'); LNOTE.grade(c.id, 2); return LNOTE_AI.weekly().cards >= 1; }), '주간 복습 수 = 이번 주 채점한 카드');
-    await go(p, '#notes'); await p.waitForTimeout(300);
+    await go(p, '#notes?t=log'); await p.waitForTimeout(300); /* 통합: 주간 카드 자리 = 「기록」 탭(FINAL S24) */
     ok(await p.evaluate(() => !!document.querySelector('#lm .lna-week, #lm [data-ln-weekly]')), '#notes 허브에 주간 돌아보기(개발자 1 자리 없으면 감싸서)');
     ok(await p.evaluate(() => { const w = document.querySelector('#lm .ln-week'); return !!w && /이번 주 · \d+월 \d+일 ~ /.test(w.textContent) && w.querySelectorAll('.kp > div').length === 4 && w.querySelectorAll('.wk span').length === 7 && /이번 주 정리 노트 만들기/.test(w.textContent); }), 'S24 주간 카드: 눈썹 · 타일 4 · 7일 막대 · 「이번 주 정리 노트 만들기」');
     if (SHOT) { await p.evaluate(() => document.querySelector('#lm .ln-week').scrollIntoView({ block: 'start' })); await p.waitForTimeout(300); await p.screenshot({ path: path.join(SHOT, 'ai-weekly.png') }); }
@@ -129,7 +129,7 @@ const SHOT = process.env.SHOT_DIR || '';
     ok(fb.st === 'draft' && fb.src === 'me' && fb.tags[0] === '피드백' && /^\*\*받은 피드백\*\*\(교수자 · 점수 82\)/.test(fb.b) && /\*\*내가 고칠 점\*\*\n- \[ \] \n\*\*다음 과제에서 확인\*\*/.test(fb.b) && /원래 자리: /.test(fb.b) && fb.hash && fb.same && fb.none, '피드백 → 노트 초안(받은 피드백 · 빈 고칠 점 · 다음 과제에서 확인) · 중복 없음');
     ok(!/20269000/.test(fb.b) && fb.C.length >= 1 && fb.C.some(x => /부족|구체/.test(x)) && !fb.b.includes('- [ ] 피벗'), '피드백: 학번 지움 · 고칠 점 후보만 제안(본문에 넣지 않음)');
     ok(fb.ai, 'AI 피드백은 「AI 피드백」으로 구분');
-    ok(await p.evaluate(cid => { const W = LNOTE_AI.weakLessons(cid); return W.length >= 1 && W[0].wrong >= 2 && /^#review\?n=n/.test(W[0].href) && W[0].title && W.every((x, i) => !i || W[i - 1].wrong >= x.wrong); }, L.cid), '약한 단원: 틀린 수 순 · 「이 단원 카드로 복습」 링크(#review?n=)');
+    ok(await p.evaluate(cid => { const W = LNOTE_AI.weakLessons(cid); return W.length >= 1 && W[0].wrong >= 2 && /^#notes\/review\?n=n/.test(W[0].href) && W[0].title && W.every((x, i) => !i || W[i - 1].wrong >= x.wrong); }, L.cid), '약한 단원: 틀린 수 순 · 「이 단원 카드로 복습」 링크(#review?n=)');
     ok(await p.evaluate(() => !/20269000/.test(JSON.stringify(LR.lp.notes))), '노트 데이터에 학번 없음');
     ok(!errs.length, '앱 오류 없음 ' + errs.join(' | ')); await ctx.close(); }
 

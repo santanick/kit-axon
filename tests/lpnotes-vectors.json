@@ -82,7 +82,10 @@
     "bad key": {
      "pin": true
     },
-    "note:n1": "yes"
+    "note:n1": "yes",
+    "fb:po_1.cls": {
+     "seen": true
+    }
    }
   },
   "out": {
@@ -139,11 +142,18 @@
    "marks": {
     "ask:eq1": {
      "pin": true,
-     "hide": false
+     "hide": false,
+     "seen": false
     },
     "post:po_2": {
      "pin": false,
-     "hide": true
+     "hide": true,
+     "seen": false
+    },
+    "fb:po_1.cls": {
+     "pin": false,
+     "hide": false,
+     "seen": true
     }
    }
   }

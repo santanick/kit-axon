@@ -6,7 +6,7 @@
    conn: gcal{on, mode, at} · gh{on, url(https://github.com/아이디/저장소만), at} · push{on, at}(앱 알림). 비밀값(토큰 · 키)은 받지 않는다. */
 const N_MAX = 120, K_MAX = 300, M_MAX = 300, NOTES_BYTES = 360 * 1024;
 const NID = /^n[0-9a-z]{1,24}$/, KID = /^k[0-9a-z]{1,24}$/, LID = /^[\w-]{1,40}$/, DAY = /^\d{4}-\d{2}-\d{2}$/;
-const MKEY = /^(note|ask|cmt|post|log):[\w.-]{1,60}$/;
+const MKEY = /^(note|ask|cmt|post|log|eval|fb):[\w.-]{1,60}$/;
 const GH = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/, MODE = /^[a-z]{1,12}$/;
 const SRC = ['me', 'tutor', 'quiz', 'yt', 'file', 'exam'], CSRC = ['note', 'quiz'];
 const isObj = x => !!x && typeof x === 'object' && !Array.isArray(x);
@@ -40,8 +40,8 @@ function cleanNotes(N) {
   const S = isObj(N.sync) ? N.sync : {};
   if (isObj(S.notion)) o.sync.notion = { on: S.notion.on === true, at: line(S.notion.at, 30), page: line(S.notion.page, 60) };
   if (isObj(S.gdocs)) o.sync.gdocs = { on: S.gdocs.on === true, at: line(S.gdocs.at, 30) };
-  /* 모아보기 표시(추가 지시 1): marks = { '<출처>:<id>': { pin, hide } } ≤300 — 둘 다 꺼진 항목은 버린다 */
-  if (isObj(N.marks)) { let n = 0; for (const [k, v] of Object.entries(N.marks)) { if (n >= M_MAX) break; if (!MKEY.test(k) || !isObj(v)) continue; const pin = v.pin === true, hide = v.hide === true; if (!pin && !hide) continue; o.marks[k] = { pin, hide }; n++; } }
+  /* 모아보기 표시(추가 지시 1): marks = { '<출처>:<id>': { pin, hide, seen } } ≤300 — 셋 다 꺼진 항목은 버린다(seen = 새 피드백을 열어 봄, 추가 지시 2) */
+  if (isObj(N.marks)) { let n = 0; for (const [k, v] of Object.entries(N.marks)) { if (n >= M_MAX) break; if (!MKEY.test(k) || !isObj(v)) continue; const pin = v.pin === true, hide = v.hide === true, seen = v.seen === true; if (!pin && !hide && !seen) continue; o.marks[k] = { pin, hide, seen }; n++; } }
   /* 크기 안전장치: 오래된(뒤쪽) 노트부터 뺀다 */
   const size = () => Buffer.byteLength(JSON.stringify(o));
   while (o.items.length && size() > NOTES_BYTES) { const gone = o.items.pop(); o.cards.forEach(c => { if (c.nid === gone.id) c.nid = ''; }); }

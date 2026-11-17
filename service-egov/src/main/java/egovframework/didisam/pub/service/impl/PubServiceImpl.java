@@ -352,7 +352,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
 
     /* v43.6 셀프러닝 노트 lp.notes · 학습자 연결 lp.conn — Node service/server/lpnotes.js와 같은 규칙(tests/lpnotes-vectors.json으로 대조) */
     static final int N_MAX = 120, K_MAX = 300, M_MAX = 300, NOTES_BYTES = 360 * 1024;
-    static final Pattern MKEY = Pattern.compile("(note|ask|cmt|post|log):[\\w.-]{1,60}");
+    static final Pattern MKEY = Pattern.compile("(note|ask|cmt|post|log|eval|fb):[\\w.-]{1,60}");
     static final Pattern NID = Pattern.compile("n[0-9a-z]{1,24}"), KID = Pattern.compile("k[0-9a-z]{1,24}"),
         GH_URL = Pattern.compile("https://github\\.com/[\\w.-]+/[\\w.-]+"), CONN_MODE = Pattern.compile("[a-z]{1,12}");
     static final List<String> NOTE_SRC = List.of("me", "tutor", "quiz", "yt", "file", "exam"), CARD_SRC = List.of("note", "quiz");
@@ -401,7 +401,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             if (plainObj(gd)) { ObjectNode y = sy.putObject("gdocs"); y.put("on", isTrue(get(gd, "on"))); y.put("at", nLine(get(gd, "at"), 30)); }
         }
         ObjectNode mk = o.putObject("marks"); JsonNode M0 = get(N, "marks"); /* 모아보기 표시 { '<출처>:<id>': { pin, hide } } ≤300 */
-        if (plainObj(M0)) { int c = 0; for (var e : entries(M0)) { if (c >= M_MAX) break; JsonNode v = e.getValue(); if (!MKEY.matcher(e.getKey()).matches() || !plainObj(v)) continue; boolean pin = isTrue(get(v, "pin")), hide = isTrue(get(v, "hide")); if (!pin && !hide) continue; ObjectNode y = mk.putObject(e.getKey()); y.put("pin", pin); y.put("hide", hide); c++; } }
+        if (plainObj(M0)) { int c = 0; for (var e : entries(M0)) { if (c >= M_MAX) break; JsonNode v = e.getValue(); if (!MKEY.matcher(e.getKey()).matches() || !plainObj(v)) continue; boolean pin = isTrue(get(v, "pin")), hide = isTrue(get(v, "hide")), sn = isTrue(get(v, "seen")); if (!pin && !hide && !sn) continue; ObjectNode y = mk.putObject(e.getKey()); y.put("pin", pin); y.put("hide", hide); y.put("seen", sn); c++; } }
         /* 크기 안전장치: 오래된(뒤쪽) 노트부터 뺀다 */
         while (items.size() > 0 && stringify(o).getBytes(java.nio.charset.StandardCharsets.UTF_8).length > NOTES_BYTES) { String gone = items.remove(items.size() - 1).get("id").asText(); for (JsonNode c : cards) if (gone.equals(c.get("nid").asText())) ((ObjectNode) c).put("nid", ""); }
         while (cards.size() > 0 && stringify(o).getBytes(java.nio.charset.StandardCharsets.UTF_8).length > NOTES_BYTES) cards.remove(cards.size() - 1);
