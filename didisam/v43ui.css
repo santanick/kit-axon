@@ -141,7 +141,8 @@ html[data-theme="dark"]{--q1-in-bd:rgba(255,255,255,.14)}
 :is(#main,.modal,.sheet,.uxpop) :is(input,select,textarea):not([type=checkbox]):not([type=radio]):not(.aih-sam *):hover{border-color:color-mix(in srgb,var(--g900) 26%,transparent)}
 :is(#main,.modal,.sheet,.uxpop) :is(input,select,textarea):not([type=checkbox]):not([type=radio]):not(.aih-sam *):focus{outline:none;border-color:var(--gr600);box-shadow:var(--q1-ring)!important}
 :is(#main,.modal,.sheet,.uxpop) ::placeholder{color:color-mix(in srgb,var(--g700) 72%,transparent);font-weight:500}
-:is(#main,.modal,.sheet,.uxpop) input[type=search]:not(.aih-sam *){padding-left:42px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238A8F98' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center;background-size:18px}
+/* v43.7 Q1(Q2 몫 ⑥): 칸 앞에 자기 돋보기 아이콘(svg)을 둔 검색칸은 배경 돋보기 · 42px 여백을 주지 않는다 — 돋보기 두 개 · 이중 상자(콘텐츠 라이브러리 등) */
+:is(#main,.modal,.sheet,.uxpop) input[type=search]:not(.aih-sam *):not(:is(:not(.bar2 label,.sl2-bar label,label.l43-q):has(> svg)) > input){padding-left:42px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238A8F98' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center;background-size:18px}
 .bar2 label:has(input[type=search])>svg,.sl2-bar label:has(input[type=search])>svg,label.l43-q>svg{display:none}
 :is(#main,.modal,.sheet,.uxpop) :is(input[type=checkbox],input[type=radio]):not(.sw input){width:20px;height:20px;accent-color:var(--gr700);cursor:pointer;vertical-align:middle;margin:0 6px 0 0}
 :is(#main,.modal,.sheet,.uxpop) input[type=date]{font-variant-numeric:tabular-nums}
@@ -471,3 +472,83 @@ html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background
   #main .seg2::-webkit-scrollbar{display:none}
   #main .seg2>button{flex:0 0 auto;white-space:nowrap}
 }
+
+/* ═════════ v43.7 Q1 공통 셸 — 대표님 캡처(11-17, iPhone 393 · 닉 Univ) 보완. 휴대폰(≤760px) · 태블릿 세로(≤900px), PC는 왼쪽 메뉴 글자 크기만 ═════════
+   ① 머리 · 탭 줄 겹침: 스크롤하면 탭 줄(.brail)이 고정 머리 밑으로 반쯤 들어가 아이콘이 잘렸다 → 휴대폰 · 태블릿(≤900px)에서는 머리(기관 이름 · 찾기 · 계정)는 본문과 함께 올라가고,
+      탭 줄만 화면 맨 위에 붙는다(한 줄 79px). 두 줄이 겹치는 순간이 없다
+   ② 가로 넘침 안전망: 어떤 화면의 카드가 넓어도 페이지 전체가 옆으로 밀리지 않게(밀리면 떠 있는 AI 버튼이 화면 밖으로 반쯤 나간다) — 원인 카드는 각 화면에서 고친다
+   ③ 페이지 머리: 제목 줄은 한 줄 전체, 버튼(AI SAM에게 맡기기 · 화면 버튼)은 그 아래 한 줄에 왼쪽부터 같은 높이(44px)로 — 오른쪽에 혼자 떠 있거나 세로로 늘어난 상자가 없게
+   ④ 화면 가이드 [i]: 누르는 칸은 44px 그대로, 보이는 원은 30px(옅은 테두리)
+   ⑤ 카드 안의 카드: 브리핑 카드 속 할 일 목록(.l43-todo)은 구분선 목록으로, 메시지 「새 메시지」 줄(.f1-cbq)은 테두리 없는 글로 */
+@media (max-width:900px){ /* ①② 탭 줄이 위에 가로로 놓이는 폭(≤900px, 태블릿 세로 포함) */
+  html{overflow-x:clip}
+  body:has(nav.brail) header.top{position:relative}
+  nav.brail{position:sticky;top:0;z-index:21;background:var(--surface,#fff)}
+  .top .bprog{font-size:13px}
+  #main>.bhd.q1-ph .phr details.uxmore>summary{min-height:44px;min-width:44px}
+  #main .seg2.wtabs>button,#main .seg2.btabs>button{min-width:44px}
+  #main .slg-i,#main .sl-i,#main>.bhd.q1-ph .slg-i{width:44px;height:44px;min-width:44px;min-height:44px}
+  #main .slg-i,#main .sl-i{isolation:isolate;border:0!important;background:transparent!important;box-shadow:none!important;font-size:14px}
+  #main .slg-i::before,#main .sl-i::before{content:"";position:absolute;left:50%;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:1px solid var(--g300,#D6D3CC);background:var(--surface,#fff);z-index:-1}
+  #main .slg-i[aria-expanded=true]::before{border-color:var(--s400,#00A832);background:var(--s50,#ECFDF3)}
+}
+/* ⑥ 태블릿(761~900px)도 휴대폰과 같은 AI 버튼 — 48px 원 · 오른쪽 아래 12px · 스크롤하는 동안 숨김(fab.js). 큰 알약 버튼이 목록 오른쪽 「›」 버튼을 덮던 문제 */
+@media (min-width:761px) and (max-width:900px){
+  body.fab-on:not(.hps-dock):not(.fab-open) #fabBtn{right:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:48px;min-width:48px;height:48px;padding:0!important;border-radius:50%;gap:0;transition:opacity .18s ease,transform .18s ease}
+  body.fab-on:not(.hps-dock):not(.fab-open) #fabBtn>span:not(.fabn){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  body.fab-on.fab-scr:not(.fab-open) #fabBtn{opacity:0;transform:translateY(18px) scale(.86);pointer-events:none}
+  body.fab-on:not(.hps-dock) #main{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+}
+@media (max-width:760px){
+  #main>.bhd.q1-ph{align-items:flex-start;gap:12px 8px}
+  #main>.bhd.q1-ph>.bhdl{flex:1 1 100%;min-width:0}
+  #main>.bhd.q1-ph>.sp{display:none}
+  #main>.bhd.q1-ph>.btn{flex:none;min-height:44px;height:auto;align-self:flex-start}
+  #main>.bhd.q1-ph>.ph.q1-phmv{flex:1 1 auto;min-width:0;max-width:100%;justify-content:flex-start;gap:0}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr{flex:1 1 auto;justify-content:flex-start;padding-top:0}
+  #main>.bhd.q1-ph>.ph.q1-phmv .phr>.btn,#main>.bhd.q1-ph>.ph.q1-phmv .phr>a.btn{flex:0 1 auto}
+  #main :is(.l43-brief,.card,section) .l43-todo{padding:0;gap:0;background:transparent;box-shadow:none;border-radius:0}
+  #main :is(.l43-brief,.card,section) .l43-todo li{background:transparent;box-shadow:none;border-radius:0;padding:12px 0;border-top:1px solid var(--hair,#ECEAE4)}
+  #main :is(.l43-brief,.card,section) .l43-todo li:first-child{border-top:0;padding-top:4px}
+  #main .f1-cbar .f1-cbq{border:0;background:transparent;padding:0;min-height:44px;justify-content:center}
+}
+/* v43.7 Q1: 머리 줄 규칙(.top — app.css · dds.css · fab.css)이 같은 이름 「top」을 쓰는 다른 요소(성적 1~3등 칩 .k-rk.top, 홈페이지 AI 끌어놓기 .hpm-dz.top)에도 붙어
+   칩이 62px 높이 · 화면 위 고정(sticky) · z-index 58로 떠 있던 문제 — 머리(header)가 아닌 .top에서는 머리 전용 속성을 되돌린다 */
+.top:not(header){position:static;top:auto;height:auto;z-index:auto;-webkit-backdrop-filter:none;backdrop-filter:none}
+.top:not(header):not(.hpm-dz){border-bottom:0;box-shadow:none}
+/* v43.7 Q1: PC 왼쪽 메뉴(.brail) 이름 12px → 13px(글자 13px 이상 규칙). 76px 칸 안에서 「훈련과정」 · 「교육과정」도 한 줄 */
+@media (min-width:901px){body .brail .ri{font-size:13px;letter-spacing:-.03em}}
+/* v43.7 Q1: 타임라인 겹친 막대 — 줄(.v4-trk)을 칸 수만큼 높이고 막대를 칸마다 위 · 아래로(v43ui.js lanes) */
+.v4-trk[style*="--lns"]{height:calc(34px * var(--lns) + 4px)}
+.v4-trk[style*="--lns"] .v4-blk{top:calc(4px + 34px * var(--ln,0));bottom:auto;height:30px}
+/* v43.7 Q1(Q3 몫 9): 칩 · 태그 글자 13px(12px → 13px, 13px 이상 규칙) */
+body .l43-chip,body .da-chip,body .cmn-to{font-size:13px}
+/* v43.7 Q1(Q3 몫 5 · 6): 숫자 칸(.l43-kc) — 이름 · 값이 글이면(「수료 판정 전」) 줄바꿈해 잘리지 않게, 2열 격자에서 홀수 마지막 칸은 한 줄 전체.
+   표 진도 막대(.l43-pg · .lg43-pr)는 휴대폰 표 칸 안에서 최소 폭을 풀어 칸 밖으로 나가지 않게 */
+@media (max-width:900px){
+  .l43-kc{min-width:0}
+  .l43-kc dt{white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+  .l43-kc dd{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;min-width:0}
+  .l43-kc .l43-spk{grid-column:1/-1;width:100%;max-width:100%;height:22px;margin-top:8px}
+  .l43-kp:not(.n1)>.l43-kc:last-child:nth-child(odd){grid-column:1/-1}
+}
+@media (max-width:760px){
+  td .l43-pg,td .lg43-pr,#legalList .lg43-pr{min-width:0;width:100%;max-width:100%}
+  td .l43-pg .l43-pgt{min-width:32px}
+  td .l43-pg b{min-width:0}
+}
+.da-rg b.da-r0{font-size:14px;font-weight:700;color:var(--t-sub,var(--g600))} /* v43.7 Q1: 링 0% → 「아직 없음」 */
+/* v43.7 Q1(Q2 몫 21): 화면 가이드 [i] 글자 12px → 14px(모든 머리) */
+.slg-i,.sl-i{font-size:14px}
+.l43-pg.z0 b{font-weight:600;color:var(--t-sub,var(--g600));white-space:nowrap}
+/* v43.7 Q1(Q2 몫 16 · 23): 휴대폰 — 옆 패널 할 일(.da-todo)의 줄은 카드 안 카드 대신 구분선 줄, 수업 목록 도구줄의 빈 칸(.sp)이 버튼(「카테고리 이동」)을 오른쪽 끝으로 밀지 않게 */
+@media (max-width:760px){
+  #main .da-todo ol{gap:0!important}
+  #main .da-todo li a,#main .da-todo li .da-row{background:transparent;box-shadow:none;border-radius:0;padding:10px 0;border-top:1px solid var(--hair,#ECEAE4)}
+  #main .da-todo li:first-child a,#main .da-todo li:first-child .da-row{border-top:0}
+  #main .c2lbar>.sp{display:none}
+  #main .c2lbar>.c2selc{margin-left:0!important} /* 선택 수 글(인라인 margin-left:auto)이 버튼을 오른쪽으로 밀던 것 */
+  #main .c2lbar>.c2selc:empty{display:none}
+}
+/* v43.7 Q1(Q2 몫 15): 현황 달력 아래 회색 일정 상자 안 도구줄(.bar2)은 흰 카드가 아닌 글 줄로 — 카드 안 카드 */
+#main .d26-evl .bar2{background:transparent!important;box-shadow:none!important;border:0}

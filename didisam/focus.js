@@ -93,7 +93,10 @@
     for (const fx of [.2, .5, .8]) for (const fy of [.2, .5, .8]) { const x = r.left + r.width * fx, y = r.top + r.height * fy; const L = document.elementsFromPoint(x, y); const e = L.find(z => z !== f && !f.contains(z)); if (!e || e === document.body || e === document.documentElement) continue;
       if (e.closest(HIT) && !e.closest('nav.tabbar,.ap-nav,.lux-bn,.hps-rail')) return true; if ([...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true; }
     return false; };
-  const place = () => { fabs().forEach(f => { if (!MQ.matches || document.body.classList.contains('hps-dock')) { f.classList.remove('fab-edge'); return; } const was = f.classList.contains('fab-edge'); if (was) f.classList.remove('fab-edge'); const c = covers(f); f.classList.toggle('fab-edge', c); }); };
+  /* v43.7 Q1: 가장자리 손잡이(.fab-edge, 폭 30px · 오른쪽 끝)로 바꾸지 않는다 — 화면마다 버튼 자리 · 모양이 달라지고 반쯤 화면 밖으로 잘려 보였다(대표님 캡처 2 · 3 · 5).
+     버튼은 늘 같은 자리 48px 원이고, 스크롤하는 동안 숨으며(fab.css .fab-scr) 본문 끝에는 버튼 높이만큼 여백이 있다 */
+  const EDGE = false;
+  const place = () => { fabs().forEach(f => { if (!EDGE || !MQ.matches || document.body.classList.contains('hps-dock')) { f.classList.remove('fab-edge'); return; } const was = f.classList.contains('fab-edge'); if (was) f.classList.remove('fab-edge'); const c = covers(f); f.classList.toggle('fab-edge', c); }); };
   let t1 = 0, t2 = 0; const later = () => { clearTimeout(t1); t1 = setTimeout(() => { scan(); place(); }, 220); };
   addEventListener('scroll', ev => { const e = ev.target; if (e && e.classList && e.classList.contains('hx-fade')) end(e); clearTimeout(t2); t2 = setTimeout(place, 400); }, true);
   addEventListener('resize', later); addEventListener('hashchange', later); addEventListener('load', later);

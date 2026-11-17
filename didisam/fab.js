@@ -62,7 +62,7 @@ addEventListener('keydown', e => { if (!fabOn()) return;
 if (innerWidth <= 860 && FAB.get().open) { try { localStorage.setItem(FAB.K, JSON.stringify({ ...FAB.get(), open: false })); } catch (e) { } }
 new MutationObserver(() => { const B = document.body.classList; if (B.contains('fab-m') && !B.contains('b-pv') && fabOn()) B.add('b-pv'); }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 ACT['bld-pane'] && (() => { const base = ACT['bld-pane']; ACT['bld-pane'] = el => { if (fabOn() && !fabWide()) { el && el.dataset && el.dataset.v === 'chat' ? fabOpen() : fabClose(); return; } base(el); }; })();
-/* v43.4 GM 휴대폰(≤760px): 스크롤하는 동안 AI SAM 버튼을 숨겼다가 멈추면(0.45초) 다시 보인다 — 읽는 글 · 마지막 줄 버튼을 가리지 않게. #main 등 안쪽 스크롤도 잡도록 capture */
-{ let t = 0; addEventListener('scroll', e => { const B = document.body && document.body.classList; if (!B || innerWidth > 760 || !B.contains('fab-on') || B.contains('fab-open')) return;
+/* v43.4 GM 휴대폰(≤760px) · v43.7 Q1 태블릿(≤900px)까지: 스크롤하는 동안 AI SAM 버튼을 숨겼다가 멈추면(0.45초) 다시 보인다 — 읽는 글 · 마지막 줄 버튼을 가리지 않게. #main 등 안쪽 스크롤도 잡도록 capture */
+{ let t = 0; addEventListener('scroll', e => { const B = document.body && document.body.classList; if (!B || innerWidth > 900 || !B.contains('fab-on') || B.contains('fab-open')) return;
     const tg = e.target; if (tg && tg.nodeType === 1 && tg.closest && tg.closest('.bchat,#drawer,.modal,.mwrap')) return;
     B.add('fab-scr'); clearTimeout(t); t = setTimeout(() => B.remove('fab-scr'), 450); }, { capture: true, passive: true }); }
