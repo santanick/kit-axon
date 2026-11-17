@@ -412,7 +412,13 @@
   { let y0 = 0; const B = () => document.body; addEventListener('scroll', () => { const y = window.scrollY || 0; if (y > y0 + 4 && y > 40) B().classList.add('tb-fsm'); else if (y < y0 - 4 || y <= 40) B().classList.remove('tb-fsm'); y0 = y; }, { passive: true });
     addEventListener('hashchange', () => B().classList.remove('tb-fsm', 'tb-fscr'));
     /* v43.4 MC: 휴대폰에서는 스크롤하는 동안 튜터 단추를 숨기고, 멈추고 0.5초 뒤 다시 보인다(lapp43.css tb-fscr) */
-    let tq = 0; addEventListener('scroll', () => { if (innerWidth > 760) return; B().classList.add('tb-fscr'); clearTimeout(tq); tq = setTimeout(() => B().classList.remove('tb-fscr'), 500); }, { passive: true }); }
+    /* v43.7 Q4: 공통 셸이 가장자리 손잡이(fab-edge)를 끈 뒤로 단추는 늘 같은 자리 48px 원 — 멈춘 자리에서 본문 버튼 · 링크(「연결」 · 강의 카드 · 공지 카드)를 덮으면 그 자리에서는 숨겨(tb-fcov) 아래 버튼을 누를 수 있게 한다. 조금 밀면 다시 보인다 */
+    const fcov = () => { const b = document.getElementById('tbFab'); const Bd = B(); if (!b || !Bd) return; Bd.classList.remove('tb-fcov'); if (innerWidth > 760 || !Bd.classList.contains('lapp')) return; const F = b.getBoundingClientRect(); if (!F.width) return; const fx = e => { for (let a = e; a && a !== document.body; a = a.parentElement) if (getComputedStyle(a).position === 'fixed') return true; return false; };
+      const hit = [...document.querySelectorAll('#lm button, #lm a[href], #lm input, #lm select, #lm [data-lact]')].some(e => { const r = e.getBoundingClientRect(); if (!r.width || r.bottom < F.top || r.top > F.bottom || r.right < F.left || r.left > F.right) return false; const ix = Math.min(r.right, F.right) - Math.max(r.left, F.left), iy = Math.min(r.bottom, F.bottom) - Math.max(r.top, F.top); const A = r.width * r.height; return A < 20000 && ix * iy > 0.25 * A && !fx(e); }); /* 큰 카드 링크는 다른 곳을 눌러도 되므로 빼고, 작은 버튼 · 링크의 4분의 1 이상을 덮을 때만 */
+      Bd.classList.toggle('tb-fcov', hit); };
+    window.tbFcov = fcov;
+    let tq = 0; addEventListener('scroll', () => { if (innerWidth > 760) return; B().classList.add('tb-fscr'); clearTimeout(tq); tq = setTimeout(() => { B().classList.remove('tb-fscr'); fcov(); }, 500); }, { passive: true });
+    addEventListener('resize', () => { clearTimeout(tq); tq = setTimeout(fcov, 200); }); }
   function sheet(o) { TB.open = o; const t = document.getElementById('tbwTu'); if (t) { t.hidden = !o; t.classList.toggle('open', o); } document.body.classList.toggle('tb-sheet', o); fab(); if (o) { const ms = t && t.querySelector('.tbw-ms'); if (ms) ms.scrollTop = ms.scrollHeight; setTimeout(() => { const i = document.getElementById('tbwQ'); i && i.focus(); }, 30); } else { const b = document.getElementById('tbFab'); b && b.focus(); } }
   const WQ = { '이 장면 다시 설명': t => `지금 ${t != null ? mmss(t) + ' ' : ''}장면에서 설명한 내용을 쉬운 말로 다시 설명해줘`, '3줄 요약': () => '이 레슨 내용을 3줄로 요약해줘', '퀴즈 1문제': () => '이 장면 내용으로 확인 퀴즈 1문제 내줘(정답은 내가 답한 뒤에 알려줘)' };
   async function ask(q, label) { const k = cur(); if (!k || TB.busy) return; q = String(q || '').trim(); if (!q) return; const C = TCFG(); const t = nowT(); const M = thread(k.it.id);
@@ -519,7 +525,7 @@
     if ((a === 'my' || a === 'cal') && !route().b && !lm.querySelector('.tb-seg')) lm.insertAdjacentHTML('afterbegin', segHTML(a));
     if (a === 'c') { mountWatch(); try { const k = cur(); const ph = k ? photoOf(k.c) : ''; lm.style.setProperty('--tb-poster', ph ? `url("${ph}")` : 'none'); } catch (e) { } } /* Q3: 영상이 없거나 준비 중인 검은 상자 → 강좌 사진 포스터 */ if (!cur() && TB.open) { TB.open = false; B.classList.remove('tb-sheet'); }
     const nav = app.querySelector('.ap-nav'); if (nav) { nav.classList.add('tb-nav'); nav.classList.remove('lq-n6'); nav.setAttribute('aria-label', '아래 탭'); const h = navHTML(); if (nav.dataset.tbh !== h) { nav.innerHTML = h; nav.dataset.tbh = h; } } }
-  { const base = lrender; lrender = (...x) => { demoSeed(); /* v43 R5: 시드를 먼저 — 「내 강의」(#my)가 0%로 그려진 뒤에 시드가 들어가던 문제 */ const r = base(...x); try { apply(); fab(); fhome(); } catch (e) { console.error('ltube', e); } return r; }; }
+  { const base = lrender; lrender = (...x) => { demoSeed(); /* v43 R5: 시드를 먼저 — 「내 강의」(#my)가 0%로 그려진 뒤에 시드가 들어가던 문제 */ const r = base(...x); try { apply(); fab(); fhome(); setTimeout(() => { if (typeof window.tbFcov === 'function') window.tbFcov(); }, 400); } catch (e) { console.error('ltube', e); } return r; }; }
   /* 말로 묻기(기존 앱 첫 화면 마이크) — 대화 창 · 장면 튜터 입력칸 옆. 브라우저 음성 인식이 있을 때만 */
   const SRc = () => window.SpeechRecognition || window.webkitSpeechRecognition;
   const micBtn = id => SRc() ? `<button type="button" class="tb-mic" data-tb="mic" data-v="${id}" aria-label="말로 묻기">${SV('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>', 20)}</button>` : '';
