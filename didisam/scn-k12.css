@@ -125,3 +125,5 @@
 
 /* v43.4 MB 모바일: 046 기준일 칩 7개가 2줄로 꺾이던 것 → 한 줄 가로 넘김 */
 @media (max-width:760px){.k-days{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.k-days::-webkit-scrollbar{display:none}.k-days .k-day{flex:0 0 auto}#main .bview:has(.k-days) .grid .kpi .val{font-size:22px}}
+/* v43.7 Q2: 홈 「자동 운영」 켜기 스위치(42×24)의 누르는 칸이 44px보다 작던 것 — 모양은 그대로, 위아래로 누르는 칸만 넓힌다 */
+.k-sw::after{content:'';position:absolute;left:-1px;right:-1px;top:-10px;bottom:-10px}

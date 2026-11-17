@@ -324,6 +324,8 @@
         const up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); }; el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); }); }); }
   window.OPS36.ckEdit = ckEdit;
   /* 디자인 카드 축소 미리보기: 카드 너비에 맞춰 줄인다 */
-  const fitMini = () => document.querySelectorAll('.ck-mini').forEach(m => { const i = m.querySelector('.ck-mini-in'); if (!i) return; const w = m.clientWidth; if (!w) return; const sc = w / 760; i.style.transform = `scale(${sc})`; });
+  const fitMini = () => { document.querySelectorAll('.ck-mini').forEach(m => { const i = m.querySelector('.ck-mini-in'); if (!i) return; const w = m.clientWidth; if (!w) return; const sc = w / 760; i.style.transform = `scale(${sc})`; });
+    /* v43.7 Q2: 큰 미리보기(.ck-bigpv)는 0.6배 고정이라 휴대폰(카드 폭 456px 미만)에서 오른쪽이 잘렸다 — 같은 방식으로 폭에 맞춘다 */
+    document.querySelectorAll('.ck-bigpv').forEach(m => { const i = m.querySelector('.ck-big-in'); if (!i) return; const w = m.clientWidth; if (!w) return; i.style.transform = `scale(${w / 760})`; }); };
   AFTER.push(() => { fitMini(); setTimeout(fitMini, 60); }); addEventListener('resize', () => fitMini());
 })();
