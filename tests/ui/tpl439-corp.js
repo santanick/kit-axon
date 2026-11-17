@@ -81,7 +81,7 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join)$/
       await q.goto(`${base}/learner.html?t=${tid}#home`, { waitUntil: 'load' }); await q.waitForTimeout(1500);
       const r = await q.evaluate(() => { const R = [...document.querySelectorAll('.smhost')].map(h => h.shadowRoot).filter(Boolean); const one = sel => R.map(r => r.querySelector(sel)).find(Boolean);
         const h1 = one('section.cv-hero h1'); return { hero: !!h1, fs: h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0, stat: !!one('section.cv-stat'), cls: (R.map(r => [...r.querySelectorAll('a[href^="#class/"]')]).flat()).length, over: document.documentElement.scrollWidth - document.documentElement.clientWidth }; });
-      ok(r.hero && r.stat && r.cls >= 1 && r.over <= 0 && (w > 600 ? r.fs >= 64 : r.fs <= 46), `게시본 cvkeynote ${w}: 첫 화면 · 이수율 · 과정 상세(#class/) · 넘침 0(${JSON.stringify(r)})`);
+      ok(r.hero && !r.stat && r.cls >= 1 && r.over <= 0 && (w > 600 ? r.fs >= 64 : r.fs <= 46), `게시본 cvkeynote ${w}: 첫 화면 · (시연 이수율 11%는 60% 미만이라 큰 숫자 숨김) · 과정 상세(#class/) · 넘침 0(${JSON.stringify(r)})`);
       ok(!pe.length, `게시본 cvkeynote ${w} pageerror 0 ${pe.join('|')}`); await q.close(); }
     await a.ctx.close(); }
 

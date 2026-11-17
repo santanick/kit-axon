@@ -112,7 +112,7 @@ ${p ? `<figure class="cv-hf"><img src="${E(p.src)}" alt="${E(p.alt)}" loading="e
   /* ── 섹션 ── */
   const SEC = {};
   /* 큰 숫자 하나(키노트): 필수 교육 이수율(실제 계산) · 가장 이른 마감 */
-  SEC['cv-stat'] = (x, s) => { const d = x.data || {}; const L = live().filter(c => c.legal); const R = rateOf(L.length ? L : live()); if (!R) return empty(x);
+  SEC['cv-stat'] = (x, s) => { const d = x.data || {}; const L = live().filter(c => c.legal); const R = rateOf(L.length ? L : live()); if (!R || R.r < 60) return empty(x); /* 통합: 낮은 이수율(예: 11%)을 홈페이지 큰 숫자로 내세우지 않는다 — 60% 미만이면 섹션 숨김 */
     const next = L.filter(c => okD(c.end)).sort((a, b) => a.end.localeCompare(b.end))[0];
     const names = L.slice(0, 5).map(c => c.name.replace(/\s*\(.*\)$/, '')).join(' · ');
     return sec(x, s, 'stat', `<div class="cvw"><div class="cv-sg"><div class="cv-num">${R.r}<small>%</small></div><div><p class="cv-t">${E(d.title || (L.length ? `지금 ${staffW()} 필수 교육 이수율이에요. 마감 전에 함께 끝내요.` : '지금 수강 중인 과정의 이수율이에요.'))}</p><p class="cv-d">${E(d.sub || (names ? `${names}. ${L.length ? '법정 교육을 휴대폰으로 짧게 나눠 들을 수 있어요.' : ''}` : ''))}</p></div></div>
@@ -177,7 +177,7 @@ ${p ? `<figure class="cv-hf"><img src="${E(p.src)}" alt="${E(p.alt)}" loading="e
     return sec(x, s, 'rows', `<div class="cvw">${head(d)}<div class="cv-ls">${L.map(c => { const k = st(c); const sd = okD(c.start) && days(t, c.start) > 0 ? c.start : c.end; return `<a class="cv-rw" ${aA(cH(c))}><div class="cv-dt"><b>${okD(sd) ? E(dot(sd)) : '상시'}</b><small>${E(okD(sd) ? (sd === c.start ? '시작' : '마감') : '온라인')}${okD(sd) ? ' · ' + DOW[new Date(sd + 'T00:00:00').getDay()] : ''}</small></div><div><h3>${E(c.name)}</h3><p>${E([c.legal ? '법정 의무교육' : kindL(c), c.teacher].filter(Boolean).join(' · '))}</p></div><div class="cv-mt">${E([c.kind === 'episode' ? '집합 교육' : '사이버 교육', hrs(c)].filter(Boolean).join(' · '))}<br>${E(okD(c.end) ? `${md(c.end)}까지` : '상시')}</div><span class="cv-tag ${k[0]}">${k[1]}</span></a>`; }).join('')}</div><a class="cv-more" href="#courses">전체 교육과정 보기 ${ic('chev', 18, 2)}</a></div>`); };
   /* 숫자 띠(관공서 · 전통 기업): 실제 값만 */
   SEC['cv-figs'] = (x, s) => { const d = x.data || {}; const L = live(); if (!L.length) return empty(x); const lg = rateOf(L.filter(c => c.legal)); const n = learners(); const th = thOf(s);
-    const K = [[L.length, '개', '운영 중인 과정'], n ? [n, '명', '수강 중인 인원'] : null, lg ? [lg.r, '%', '법정 교육 이수율'] : (() => { const r = rateOf(L); return r ? [r.r, '%', '전체 과정 이수율'] : null; })()].filter(Boolean);
+    const K = [[L.length, '개', '운영 중인 과정'], n ? [n, '명', '수강 중인 인원'] : null, lg && lg.r >= 60 ? [lg.r, '%', '법정 교육 이수율'] : (() => { const r = rateOf(L); return r && r.r >= 60 ? [r.r, '%', '전체 과정 이수율'] : null; })()].filter(Boolean);
     return sec(x, s, 'figs', `<div class="cvw">${th === 'cvheritage' ? '' : `<p class="cv-ft">${E(d.eyebrow || '교육 운영 현황')}</p>`}<div class="cv-fg n${K.length}">${th === 'cvheritage' ? `<h2 class="cv-h2">${ttl(d, '숫자로 보는\n인재원')}</h2>` : ''}${K.map(k => `<div class="cv-k"><div class="cv-n">${k[0].toLocaleString('ko-KR')}<small>${k[1]}</small></div><p>${E(k[2])}</p></div>`).join('')}</div></div>`); };
   /* 관공서: 알림마당 + 문의 상자 */
   SEC['cv-help'] = (x, s) => { const d = x.data || {}; const N = notes(4); const tel = telOf();
