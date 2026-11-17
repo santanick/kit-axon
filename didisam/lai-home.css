@@ -62,3 +62,4 @@ button.lai-sw.lai-swb{border:0;padding:0;background:none;cursor:pointer}
 button.lai-sw.lai-swb:focus-visible span{outline:3px solid var(--pri);outline-offset:2px}
 /* v43.4 MC(108): 스위치는 모양은 그대로 두고 누르는 영역만 44px로 */
 @media (max-width:760px){.lai-sw input{inset:-10px -4px;width:auto;height:auto}}
+.lai-sw input{inset:-10px -4px;width:auto;height:auto} /* v43.7 Q4: 웹에서도 켜기 · 끄기 누르는 칸을 44px로(겉 모양 그대로) */

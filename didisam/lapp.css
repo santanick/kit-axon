@@ -252,3 +252,7 @@ body .ap-ssh9 .ap-srall{display:flex;align-items:center;justify-content:center;g
 html body.lapp #lm .cwc.ph .cwh{background-color:#0b1a12!important;background-image:linear-gradient(180deg,rgba(6,23,13,.05) 0,rgba(6,23,13,.78) 100%),var(--ph)!important;background-size:cover!important;background-position:center!important}
 body.lapp .cwc .cwh u,body.lapp .cwc.ph .cwh>i{display:none!important}
 body.lapp .cwc.ph .cwh span{background:rgba(255,255,255,.92);color:#0B3B1E}
+/* v43.7 Q4: 휴대폰 AI 튜터 대화 화면(.ap-home, 화면 높이 고정) — 다른 화면용 아래 여백(lsam.css #lm 140px · lhub.css #lapp)이 붙어 문서가 360px 더 길어지고, 끝까지 밀면 입력 칸이 화면 가운데로 올라가 칩을 가리던 것 */
+body.lapp.ap-homeon:has(#lm>.ap-home) #lm{padding-bottom:0!important}
+body.lapp.ap-homeon:has(#lm>.ap-home) #lapp{padding-bottom:0}
+body.lapp.ap-homeon:has(#lm>.ap-home){padding-bottom:0}

@@ -412,7 +412,13 @@
   { let y0 = 0; const B = () => document.body; addEventListener('scroll', () => { const y = window.scrollY || 0; if (y > y0 + 4 && y > 40) B().classList.add('tb-fsm'); else if (y < y0 - 4 || y <= 40) B().classList.remove('tb-fsm'); y0 = y; }, { passive: true });
     addEventListener('hashchange', () => B().classList.remove('tb-fsm', 'tb-fscr'));
     /* v43.4 MC: 휴대폰에서는 스크롤하는 동안 튜터 단추를 숨기고, 멈추고 0.5초 뒤 다시 보인다(lapp43.css tb-fscr) */
-    let tq = 0; addEventListener('scroll', () => { if (innerWidth > 760) return; B().classList.add('tb-fscr'); clearTimeout(tq); tq = setTimeout(() => B().classList.remove('tb-fscr'), 500); }, { passive: true }); }
+    /* v43.7 Q4: 공통 셸이 가장자리 손잡이(fab-edge)를 끈 뒤로 단추는 늘 같은 자리 48px 원 — 멈춘 자리에서 본문 버튼 · 링크(「연결」 · 강의 카드 · 공지 카드)를 덮으면 그 자리에서는 숨겨(tb-fcov) 아래 버튼을 누를 수 있게 한다. 조금 밀면 다시 보인다 */
+    const fcov = () => { const b = document.getElementById('tbFab'); const Bd = B(); if (!b || !Bd) return; Bd.classList.remove('tb-fcov'); if (innerWidth > 760 || !Bd.classList.contains('lapp')) return; const F = b.getBoundingClientRect(); if (!F.width) return; const fx = e => { for (let a = e; a && a !== document.body; a = a.parentElement) if (getComputedStyle(a).position === 'fixed') return true; return false; };
+      const hit = [...document.querySelectorAll('#lm button, #lm a[href], #lm input, #lm select, #lm [data-lact]')].some(e => { const r = e.getBoundingClientRect(); if (!r.width || r.bottom < F.top || r.top > F.bottom || r.right < F.left || r.left > F.right) return false; const ix = Math.min(r.right, F.right) - Math.max(r.left, F.left), iy = Math.min(r.bottom, F.bottom) - Math.max(r.top, F.top); const A = r.width * r.height; return A < 20000 && ix * iy > 0.25 * A && !fx(e); }); /* 큰 카드 링크는 다른 곳을 눌러도 되므로 빼고, 작은 버튼 · 링크의 4분의 1 이상을 덮을 때만 */
+      Bd.classList.toggle('tb-fcov', hit); };
+    window.tbFcov = fcov;
+    let tq = 0; addEventListener('scroll', () => { if (innerWidth > 760) return; B().classList.add('tb-fscr'); clearTimeout(tq); tq = setTimeout(() => { B().classList.remove('tb-fscr'); fcov(); }, 500); }, { passive: true });
+    addEventListener('resize', () => { clearTimeout(tq); tq = setTimeout(fcov, 200); }); }
   function sheet(o) { TB.open = o; const t = document.getElementById('tbwTu'); if (t) { t.hidden = !o; t.classList.toggle('open', o); } document.body.classList.toggle('tb-sheet', o); fab(); if (o) { const ms = t && t.querySelector('.tbw-ms'); if (ms) ms.scrollTop = ms.scrollHeight; setTimeout(() => { const i = document.getElementById('tbwQ'); i && i.focus(); }, 30); } else { const b = document.getElementById('tbFab'); b && b.focus(); } }
   const WQ = { '이 장면 다시 설명': t => `지금 ${t != null ? mmss(t) + ' ' : ''}장면에서 설명한 내용을 쉬운 말로 다시 설명해줘`, '3줄 요약': () => '이 레슨 내용을 3줄로 요약해줘', '퀴즈 1문제': () => '이 장면 내용으로 확인 퀴즈 1문제 내줘(정답은 내가 답한 뒤에 알려줘)' };
   async function ask(q, label) { const k = cur(); if (!k || TB.busy) return; q = String(q || '').trim(); if (!q) return; const C = TCFG(); const t = nowT(); const M = thread(k.it.id);
@@ -449,14 +455,16 @@
     if (a === 'badges' || a === 'cert' || a === 'bkcert') return { h: fin ? `수료 <em>${fin}개</em>를 마쳤어요` : run ? `<em>${run}개</em> 강좌가 수료를 향해 가고 있어요` : `수강을 시작하면 <em>수료증</em>이 여기 모여요`, k: [['수강 중', `${run}개`], ['수료', `${fin}개`], ['평균 진도', `${avg}%`]] };
     if (a === 'shop' || a === 'courses' || a === 'tb') { const n = cnt('.shp-grid .shp-card') || cnt('.cw,.tk'); const ok = [...document.querySelectorAll('#lm .shp-card')].filter(x => /신청 가능|무료/.test(x.textContent)).length;
       /* v43 R9(J4 117): 페이지 머리에 이미 수치 칸(코스 · 트랙 · 난이도)이 있으면 칸을 더하지 않는다(6칸 · 숫자 어긋남 · 「신청 가능 0개」) — 문장도 같은 코스 수로 */
-      const st = document.querySelector('#lm .lph-st'); if (st) { const c0 = +((st.querySelector('dd b') || {}).textContent || 0); const dt = ((st.querySelector('dt') || {}).textContent || '코스').trim(); return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : run ? `수강 중인 ${run}개를 이어 가고, <em>${c0 || n}개</em> ${dt}를 더 둘러봐요` : `<em>${c0 || n}개</em> ${dt}를 둘러볼 수 있어요`, k: [] }; }
-      return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : `<em>${n}개</em> 강좌를 둘러볼 수 있어요`, k: [['전체', `${n}개`], ok ? ['신청 가능', `${ok}개`] : null, ['수강 중', `${run}개`]].filter(Boolean) }; }
+      const st = document.querySelector('#lm .lph-st'); if (st) { const c0 = +((st.querySelector('dd b') || {}).textContent || 0); const dt = ((st.querySelector('dt') || {}).textContent || '코스').trim(); const m0 = c0 || n; /* v43.7 Q4: 둘러볼 수가 0이면 「0개 코스」 대신 문장 */ return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : !m0 ? (run ? `수강 중인 <em>${run}개</em>를 이어 가요` : `새 ${dt}가 열리면 여기에 보여요`) : run ? `수강 중인 ${run}개를 이어 가고, <em>${m0}개</em> ${dt}를 더 둘러봐요` : `<em>${m0}개</em> ${dt}를 둘러볼 수 있어요`, k: [] }; }
+      return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : n ? `<em>${n}개</em> 강좌를 둘러볼 수 있어요` : run ? `수강 중인 <em>${run}개</em>를 이어 가요` : `새 강좌가 열리면 여기에 보여요`, k: [['전체', `${n}개`], ok ? ['신청 가능', `${ok}개`] : null, ['수강 중', `${run}개`]].filter(Boolean) }; }
     if (a === 'class') { const id = decodeURIComponent(route().b || ''); const c = ((SITE().shop || {}).classes || []).find(x => x.id === id) || (SITE().classes || []).find(x => x.id === id) || {}; const full = (SITE().classes || []).find(x => x.id === id) || c; const n = seq(full).length; const pr = +(c.final != null ? c.final : c.price) || 0;
       const ph = photoOf({ thumb: c.thumb, name: c.name || full.name || '' }); return { photo: ph, k: [[unit() === '회차' ? '회차' : '강의', `${n}개`], ['수료 기준', `진도 ${(full.cpl && full.cpl.prog) || 80}%`], ['수강료', pr ? (pr >= 10000 ? `${+(pr / 10000).toFixed(1)}만원` : `${nf(pr)}원`) : '무료']] }; }
     if (a === 'acct') { const me = LR.me || {}; const nm = String(me.nick || me.name || me.sid || '').trim(); const wk = weekDays().filter(x => x.ok).length;
       return { me: nm, h: `${esc(nm)}님`, k: [['수강 중', `${run}개`], ['수료', `${fin}개`], ['이번 주 목표', `${wk}/7일`]] }; }
     return { k: [] }; }
-  const kHTML = K => K.length ? `<div class="tb-phk">${K.map(([l, v]) => `<span><small>${esc(l)}</small><b>${esc(v)}</b></span>`).join('')}</div>` : '';
+  /* v43.7 Q4: 수치 칸의 0(「0개」 · 「0건」 · 「0원」 · 「0%」 · 「0/7일」)은 숫자 대신 말로(디자인 규칙 — 0은 문장으로) */
+  const kZero = v => /^0\s?(개|건|원|명|장)$/.test(v) ? '없음' : v === '0%' ? '시작 전' : /^0\/\d+일$/.test(v) ? '시작 전' : v;
+  const kHTML = K => K.length ? `<div class="tb-phk">${K.map(([l, v]) => { const z = kZero(String(v)); return `<span${z !== v ? ' class="tb-phz"' : ''}><small>${esc(l)}</small><b>${esc(z)}</b></span>`; }).join('')}</div>` : '';
   function subHero(a) { const lm = $('#lm'); if (!lm || lm.querySelector('.tb-ph')) return; const org = (SITE().org || {}).name || '';
     if (a === 'acct') { const me = lm.querySelector('.ls-me'); if (!me || !LR.me) return; const D = phData(a); const ini = /^[\d\s-]*$/.test(D.me || '') ? '' : [...D.me.replace(/\s/g, '')].slice(0, /[가-힣]/.test(D.me) ? 1 : 2).join('').toUpperCase(); /* 숫자 계정(수강번호)은 사람 아이콘 */
       me.insertAdjacentHTML('afterbegin', `<section class="sub tb-ph tb-ph-me" aria-label="내 학습 요약"><div class="in"><div class="tb-phm"><span class="tb-pav" aria-hidden="true">${ini ? esc(ini) : I.me(28)}</span><span><small class="tb-pheb">${esc(org)}</small><b class="tb-phh">${D.h}</b></span></div>${kHTML(D.k)}</div></section>`); return; }
@@ -493,7 +501,8 @@
     }[tyKey()] || [];
     return S; });
   /* v43 R9(J4 113 · 205): 홈 첫 화면에서 떠 있는 AX 튜터 단추가 튜터 카드 · 사진을 가림 → 홈에서는 본문 튜터 바를 지나 내려간 뒤에만 단추를 보인다 */
-  const fhome = () => { const B = document.body; if (!B) return; const t = route().a === 'home' && B.classList.contains('tube') ? document.querySelector('#lm .tb-tut') : null; B.classList.toggle('tb-fhome', !!t && t.getBoundingClientRect().bottom > 0); };
+  /* v43.7 Q4: 휴대폰 「AI 튜터」 대화 화면(#ai)은 화면 자체가 튜터 — 떠 있는 단추가 입력 칸 오른쪽을 반쯤 가리던 것(가장자리 손잡이) → 이 화면에서는 단추를 숨긴다 */
+  const fhome = () => { const B = document.body; if (!B) return; if (route().a === 'ai' && B.classList.contains('lapp') && B.classList.contains('tube')) { B.classList.add('tb-fhome'); return; } const t = route().a === 'home' && B.classList.contains('tube') ? document.querySelector('#lm .tb-tut') : null; B.classList.toggle('tb-fhome', !!t && t.getBoundingClientRect().bottom > 0); };
   addEventListener('scroll', fhome, { passive: true }); addEventListener('resize', fhome);
   function demoSeed() { try { if (!on() || LR.mode !== 'demo' || LR.tid !== 'sample') return; const t = rec(); if (t.demoSeeded || Object.keys(t.sec).length) return; t.demoSeeded = 1;
     const o = SITE().org || {}; const key = (o.type || '') + (o.ed || '') + (LR.me.sid || ''); let h = 7; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
@@ -516,7 +525,7 @@
     if ((a === 'my' || a === 'cal') && !route().b && !lm.querySelector('.tb-seg')) lm.insertAdjacentHTML('afterbegin', segHTML(a));
     if (a === 'c') { mountWatch(); try { const k = cur(); const ph = k ? photoOf(k.c) : ''; lm.style.setProperty('--tb-poster', ph ? `url("${ph}")` : 'none'); } catch (e) { } } /* Q3: 영상이 없거나 준비 중인 검은 상자 → 강좌 사진 포스터 */ if (!cur() && TB.open) { TB.open = false; B.classList.remove('tb-sheet'); }
     const nav = app.querySelector('.ap-nav'); if (nav) { nav.classList.add('tb-nav'); nav.classList.remove('lq-n6'); nav.setAttribute('aria-label', '아래 탭'); const h = navHTML(); if (nav.dataset.tbh !== h) { nav.innerHTML = h; nav.dataset.tbh = h; } } }
-  { const base = lrender; lrender = (...x) => { demoSeed(); /* v43 R5: 시드를 먼저 — 「내 강의」(#my)가 0%로 그려진 뒤에 시드가 들어가던 문제 */ const r = base(...x); try { apply(); fab(); fhome(); } catch (e) { console.error('ltube', e); } return r; }; }
+  { const base = lrender; lrender = (...x) => { demoSeed(); /* v43 R5: 시드를 먼저 — 「내 강의」(#my)가 0%로 그려진 뒤에 시드가 들어가던 문제 */ const r = base(...x); try { apply(); fab(); fhome(); setTimeout(() => { if (typeof window.tbFcov === 'function') window.tbFcov(); }, 400); } catch (e) { console.error('ltube', e); } return r; }; }
   /* 말로 묻기(기존 앱 첫 화면 마이크) — 대화 창 · 장면 튜터 입력칸 옆. 브라우저 음성 인식이 있을 때만 */
   const SRc = () => window.SpeechRecognition || window.webkitSpeechRecognition;
   const micBtn = id => SRc() ? `<button type="button" class="tb-mic" data-tb="mic" data-v="${id}" aria-label="말로 묻기">${SV('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>', 20)}</button>` : '';

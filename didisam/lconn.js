@@ -36,7 +36,7 @@
     ['로그인', [!U && C.social && C.social.length && { id: C.social.includes('kakao') ? 'kakao' : C.social[0], n: '간편 로그인', d: `${C.social.map(k => ({ kakao: '카카오', naver: '네이버', google: 'Google', apple: 'Apple' })[k] || k).join(' · ')}로 한 번에 들어와요`, st: L.some(k => C.social.includes(k)), a: '<a class="lcx-go" href="#acct">연동</a>' }]]];
     return G.map(([t, R]) => [t, R.filter(Boolean)]).filter(([, R]) => R.length); }
   function html() { const G = rows(); if (!G.length) return ''; const U = /^univ/.test(ty());
-    return `<section class="lcx" aria-labelledby="lcxH"><div class="lcx-h"><h2 id="lcxH">앱 및 서비스 연결</h2><span class="lcx-n">${G.reduce((n, [, R]) => n + R.filter(r => r.st).length, 0)}개 켜짐</span></div>
+    return `<section class="lcx" aria-labelledby="lcxH"><div class="lcx-h"><h2 id="lcxH">앱 및 서비스 연결</h2>${(() => { const n = G.reduce((k, [, R]) => k + R.filter(r => r.st).length, 0); return `<span class="lcx-n">${n ? `${n}개 켜짐` : '아직 꺼져 있어요'}</span>`; })() /* v43.7 Q4: 0은 문장으로 */}</div>
       <p class="mini lcx-sub">${U ? '필요한 것만 직접 켜고 끌 수 있어요. 학번 · 학과 외의 정보는 받지 않아요.' : '필요한 것만 직접 켜고 끌 수 있어요. 기본은 모두 꺼져 있고, 켤 때 무엇을 왜 받는지 먼저 알려 드려요.'}</p>
       ${G.map(([t, R]) => `<div class="lcx-g"><h3>${t}</h3>${R.map(r => `<div class="lcx-r">${lg(r.id, r.n)}<span class="lcx-tx"><b>${esc(r.n)}${r.st === null ? '' : `<em class="${r.st ? 'on' : ''}">${r.st ? '켜짐' : '꺼짐'}</em>`}</b><small>${esc(r.d)}</small></span>${r.a}</div>`).join('')}</div>`).join('')}</section>`; }
   function deco() { try { if (!on()) return; const lm = document.getElementById('lm'); if (!lm) return; const h = html(); lm.querySelectorAll('.lcx-in, .lcx').forEach(x => x.remove()); if (!h) return;
