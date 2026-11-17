@@ -6,7 +6,7 @@
    - uvclassic(전통 대학): 교표 · 가운데 기관명 머리글 · 세리프 · 대칭 · 학사 공지 · 일정 · 행사 정돈 · 교육 이념
    원칙: 첫 화면은 큰 제목 + 부제 + 버튼 2개 + 사진 한 덩어리(판 · 칩 · D-day 없음). 수치 · 일정 · 공지 · 강좌는 실제 기관 데이터만, 없으면 그 덩어리를 숨긴다.
    대학 개인정보: 학번 · 학과만. 링크는 게시본 규칙(#p-m-<메뉴> · #p-c-<강좌>) + 학습자 경로(#login · #cal · #badges · #my · #shop · #notice) + tel: · mailto:.
-   CSS는 JS 문자열로 사이트 CSS에 넣는다(게시본 Shadow DOM). 범위: .uv9(부품) · body.hpt-<id>(머리글 · 바닥글). */
+   CSS는 JS 문자열로 사이트 CSS에 넣는다(게시본 Shadow DOM). 범위: .uv9(부품) · 페이지 루트 BR = :is(body.hpt-on, .smr)(게시본 Shadow DOM 포함). */
 'use strict';
 (() => {
   if (!window.HPT || typeof HPT.reg !== 'function' || typeof proSec !== 'function' || typeof siteHTML !== 'function') return;
@@ -25,6 +25,8 @@
   const mdS = s => `${+String(s).slice(5, 7)}.${String(s).slice(8, 10)}`;
   const AR = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   const IDS = ['uvivy', 'uvcine', 'uvcollage', 'uvclassic'];
+  /* 페이지 루트: 스튜디오 미리보기 · 썸네일(iframe)은 body, 학습자 게시본(Shadow DOM)은 .smr — body 선택자만 쓰면 게시본에서 테마가 통째로 빠진다(v44 QA) */
+  const BR = ':is(body.hpt-on,.smr.smr)';
   const mine = s => !!(s && IDS.includes(s.theme) && HPT.has && HPT.has(s.theme));
   const lnk = h => `href="${E(h)}"${/^https?:/.test(h) ? ' target="_blank" rel="noopener"' : ''}`;
   /* 제목: 줄바꿈 = 줄, [낱말] = 기관 색 강조(없으면 emLast일 때 마지막 줄) */
@@ -66,7 +68,9 @@
   const badgeN = () => badgeList().reduce((a, b) => a + (b.issued || []).filter(i => i && i.st !== '취소').length, 0);
   const certN = () => { try { return (S.certs || []).length; } catch (e) { return 0; } };
   /* 큰 숫자 하나: 실제로 셀 수 있는 값만 — 발급 배지 → 수료증 → 공개 강좌 수. 모두 0이면 null */
-  const bigFact = () => { const b = badgeN(); if (b) return { v: b, u: '개', l: '지금까지 발급한 디지털 배지', k: 'badge' }; const c = certN(); if (c) return { v: c, u: '건', l: '지금까지 발급한 이수증 · 수료증', k: 'cert' }; const n = pubAll().length; return n ? { v: n, u: '개', l: `지금 열려 있는 ${term('cls')}`, k: 'cls' } : null; };
+  /* 자랑할 만한 값만(v44 QA): 배지 · 이수증 100 이상, 강좌 10개 이상 — 아니면 블록 전체를 숨긴다 */
+  const MIN = { badge: 100, cert: 100, cls: 10 };
+  const bigFact = () => { const b = badgeN(); if (b >= MIN.badge) return { v: b, u: '개', l: '지금까지 발급한 디지털 배지', k: 'badge' }; const c = certN(); if (c >= MIN.cert) return { v: c, u: '건', l: '지금까지 발급한 이수증 · 수료증', k: 'cert' }; const n = pubAll().length; return n >= MIN.cls ? { v: n, u: '개', l: `지금 열려 있는 ${term('cls')}`, k: 'cls' } : null; };
   const num = v => (+v).toLocaleString('ko-KR');
 
   /* ── 사진: 기관이 올린 사진(site.img[slot] · 첫 화면 banner.img) → 시안의 스톡(HPSTOCK) ── */
@@ -123,7 +127,7 @@ ${fig(p, 'hero', 'uv9-ivy-ph', 1)}<p class="uv9-cap"><span>${E(d.cap || (p && !p
   /* ══ 섹션 부품(text 섹션 data.hpt) ══ */
   const sh = (d, def, cls) => `<div class="uv9-sh ${cls || ''}">${d.eyebrow !== '' ? `<p class="uv9-lab">${E(d.eyebrow || def.ey || '')}</p>` : ''}<h2>${lines(d.title || def.t)}</h2>${(d.sub || def.sub) ? `<p class="uv9-lead">${E(d.sub || def.sub)}</p>` : ''}</div>`;
   /* 이야기 2열(에디토리얼): 글 + 실제 수치 2개 + 사진 */
-  function story(s, d) { const C = pubAll(); const F = [C.length ? [num(C.length) + '개', `지금 열려 있는 ${term('cls')}`] : null, badgeN() ? [num(badgeN()) + '개', '발급한 디지털 배지'] : certN() ? [num(certN()) + '건', '발급한 이수증'] : events(9).length ? [events(9).length + '건', '앞으로 60일 학사 일정'] : null].filter(Boolean);
+  function story(s, d) { const C = pubAll(); const F = [C.length >= MIN.cls ? [num(C.length) + '개', `지금 열려 있는 ${term('cls')}`] : null, badgeN() >= MIN.badge ? [num(badgeN()) + '개', '발급한 디지털 배지'] : certN() >= MIN.cert ? [num(certN()) + '건', '발급한 이수증'] : null].filter(Boolean);
     const p = photo(s, 'about');
     return `<section class="hpt hp-s uv9 uv9-story"><div class="uv9-w uv9-g2"><div>${sh(d, { ey: '왜 비교과인가요', t: '졸업장에 적히지 않는\n네 해의 기록을 남겨요.', sub: '' })}${d.body ? `<p class="uv9-body">${E(d.body)}</p>` : ''}${F.length ? `<dl class="uv9-facts">${F.map(([v, l]) => `<div><dt>${E(l)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl>` : ''}</div>${fig(p, 'about', 'uv9-story-ph')}</div></section>`; }
   /* 강좌: index(목차 목록) · tall(세로 사진 카드) · card(사진 위 · 글 아래) · frame(테두리 카드, 가운데 정렬) */
@@ -163,10 +167,10 @@ ${fig(p, 'hero', 'uv9-ivy-ph', 1)}<p class="uv9-cap"><span>${E(d.cap || (p && !p
   function lms(s, d) { const p = photo(s, 'about'); const St = Array.isArray(d.cols) && d.cols.length ? d.cols : [['강의 듣기', '멈춘 곳부터 이어서, 휴대폰에서도 그대로'], ['과제 · 퀴즈 내기', '마감 전에 알림을 보내 드려요'], ['이수 확인', '기준을 채우면 이수증이 바로 나와요']];
     return `<section class="hpt hp-s uv9 uv9-lms"><div class="uv9-w uv9-g2${p ? '' : ' one'}"><div>${sh(d, { ey: '', t: '신청하고 나면,\n나머지는 한 화면에서.', sub: '온라인 강의실에서 듣고, 내고, 확인해요. 따로 찾아다닐 곳이 없어요.' })}<ol class="uv9-steps">${St.slice(0, 4).map((r, i) => `<li><span class="n">0${i + 1}</span><span><b>${E(r[0])}</b><small>${E(r[1] || '')}</small></span></li>`).join('')}</ol></div>${fig(p, 'about', 'uv9-lms-ph')}</div></section>`; }
   /* 배지 메달 + 큰 숫자(콜라주) — 배지가 정해져 있을 때만 */
-  function medal(s, d) { const B = badgeList(); if (!B.length) return ''; const b = B[0]; const n = badgeN();
+  function medal(s, d) { const B = badgeList(); if (!B.length) return ''; const b = B[0]; const n0 = badgeN(); const n = n0 >= MIN.badge ? n0 : 0;
     return `<section class="hpt hp-s uv9 uv9-medal"><div class="uv9-w uv9-g2"><div class="md" aria-hidden="true"><i class="ring"></i><span class="core"><small>${E(org())} 디지털 배지</small><b>${E(b.name)}</b><small>${E(semester())}</small></span><em class="tag">링크로 공유</em></div><div>${sh(d, { ey: '', t: '배운 만큼,\n배지로 남아요.' })}${n ? `<p class="uv9-num">${num(n)}<span>개</span></p><p class="uv9-lead">지금까지 발급한 디지털 배지예요. 링크 하나로 이력서와 포트폴리오에 붙일 수 있어요.</p>` : `<p class="uv9-lead">이수 기준을 채우면 디지털 배지가 발급돼요. 링크 하나로 이력서와 포트폴리오에 붙일 수 있어요.</p>`}<div class="uv9-btns">${btn('p', '#badges', '내 배지 확인하기')}</div></div></div></section>`; }
   /* 교육 이념 + 실제 수치(전통) */
-  function motto(s, d) { const q = String(d.quote || '').trim(); const C = pubAll().length; const F = [String(d.since || '').trim() ? [String(d.since).trim(), '개교'] : null, C ? [num(C), `이번 학기 ${term('cls')}`] : null, badgeN() ? [num(badgeN()), '발급한 배지'] : certN() ? [num(certN()), '발급한 이수증'] : null].filter(Boolean); if (!q && !F.length) return '';
+  function motto(s, d) { const q = String(d.quote || '').trim(); const C = pubAll().length; const F = [String(d.since || '').trim() ? [String(d.since).trim(), '개교'] : null, C >= MIN.cls ? [num(C), `이번 학기 ${term('cls')}`] : null, badgeN() >= MIN.badge ? [num(badgeN()), '발급한 배지'] : certN() >= MIN.cert ? [num(certN()), '발급한 이수증'] : null].filter(Boolean); if (!q && !F.length) return '';
     return `<section class="hpt hp-s uv9 uv9-motto">${CREST('bg')}<div class="uv9-w"><p class="uv9-rule">${E(d.eyebrow || '교육 이념')}</p>${q ? `<p class="big">“${E(q)}”</p>` : ''}${F.length ? `<dl class="since">${F.map(([v, l]) => `<div><dt>${E(l)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl>` : ''}</div></section>`; }
   /* 마지막 행동: photo(사진 위 · 에디토리얼) · navy(가운데 · 시네마틱) · center(가운데 + 연락처 · 콜라주) · split(사진 + 연락처 · 전통) */
   function close(s, d) { const v = d.view || 'center'; const K = contact(); const p1 = href.cls(s); const ask = href.ask(s);
@@ -366,7 +370,7 @@ body .hpt.uv9.hp-s.uv9-big.brand,body .hpt.uv9.hp-s.uv9-motto{padding:88px 0}bod
   /* 테마별 첫 화면 · 머리글 · 바닥글 */
   const HEROCSS = {
     uvivy: (c) => `
-body.hpt-uvivy{background:var(--u-bg)}
+${BR}{background:var(--u-bg)}
 .hp-hero.uv9-ivy-h{padding:104px 0 0;background:var(--u-bg)}
 .uv9-ivy-h .uv9-kick{font-size:15px;font-weight:650;letter-spacing:.04em;color:var(--u-acct);margin-bottom:26px}
 .uv9-ivy-h h1{font-size:86px;line-height:1.14;max-width:1000px}
@@ -417,17 +421,18 @@ body.hpt-uvivy{background:var(--u-bg)}
     const acct = fit(a, P.bg, 4.6, '#000000'); const ptt = fit(P.pt, P.bg, 4.6, '#000000'); const pton = U.CR && U.CR('#ffffff', P.pt) >= 4.5 ? '#ffffff' : fit(mix(P.pt, '#000000', .7), P.pt, 4.6, '#000000');
     const ptl = fit(mix(P.pt, '#ffffff', .25), adk, 4.6, '#ffffff');
     return Object.assign({}, P, { a, on, adk, acct, ptt, pton, ptl, a2: mix(a, '#ffffff', .4), onm: al(on, .78), onl: al(on, .16), ph: mix(a, P.bg, .85), ph2: mix(a, P.bg, .7), line2: P.line, scr: al(adk, .88), scr2: al(adk, .58), ash: al(a, .6) }); }
-  function themeCSS(s) { const k = tok(s); if (!k) return ''; const th = s.theme;
+  function themeCSS(s, partOnly) { const k = tok(s); if (!k) return ''; const th = s.theme;
     const v = `--u-a:${k.a};--u-on:${k.on};--u-adk:${k.adk};--u-acct:${k.acct};--u-pt:${k.pt};--u-ptt:${k.ptt};--u-pton:${k.pton};--u-ptl:${k.ptl};--u-a2:${k.a2};--u-onm:${k.onm};--u-onl:${k.onl};--u-bg:${k.bg};--u-bg2:${k.bg2};--u-ink:${k.ink};--u-mu:${k.mu};--u-line:${k.line};--u-line2:${k.line2};--u-ph:${k.ph};--u-ph2:${k.ph2};--u-hf:${k.hf};--u-hw:${k.hw};--u-hls:${k.hls};--u-qf:${k.qf};--u-qw:${k.qw};--u-br:${k.br};--u-nf:${k.nf};--u-scr:${k.scr};--u-scr2:${k.scr2};--u-ash:${k.ash};--u-bf:inherit;--u-sbg:${th === 'uvcollage' ? '#ffffff' : 'transparent'};--u-sbd:${th === 'uvcollage' || th === 'uvcine' ? k.line : th === 'uvclassic' ? k.acct : k.ink}`;
-    return `\n/* v43.9 hpv-univ ${th} */body.hpt-${th}{${v};background:${k.bg}}body.hpt-${th} .uv9{${v}}` + (HEROCSS[th] ? HEROCSS[th](k) : '') + chromeCSS(th, k); }
+    if (partOnly) return `\n/* v43.9 hpv-univ parts */.uv9{${v}}`;
+    return `\n/* v43.9 hpv-univ ${th} */${BR}{${v};background:${k.bg}}.uv9{${v}}` + (HEROCSS[th] ? HEROCSS[th](k) : '') + chromeCSS(th, k); }
   /* 머리글 · 바닥글 다듬기(공통 부품의 겉모습만, 구조는 그대로) */
-  function chromeCSS(th, k) { const B = `body.hpt-${th}`;
+  function chromeCSS(th, k) { const B = BR;
     const solid = `${B} .hps-h{background:${k.bg}!important;border-bottom:1px solid ${k.line};box-shadow:none!important}${B} .hps-h .hps-hw{max-width:1200px;min-height:84px}${B} .hps-h .s2-mi>a{color:${k.mu}!important;font-weight:550}${B} .hps-h .s2-mi>a:hover{color:${k.ink}!important}${B} .hps-h .hps-wmk b,${B} .hps-h .logo{color:${k.ink}!important}`;
     const foot = `${B} .hps-f{background:${k.bg}!important;color:${k.mu}!important;border-top:1px solid ${k.ink}}${B} .hps-f :is(p,dt,dd,li,a,span,small){color:${k.mu}!important}${B} .hps-f .hps-fn{color:${k.ink}!important}`;
     if (th === 'uvivy') return solid + `${B} .hps-h .hps-wmk b{font-family:${k.hf};font-weight:700;letter-spacing:-.02em}${B} .hps-h .hps-cta{background:transparent!important;color:${k.ink}!important;box-shadow:inset 0 0 0 1px ${k.ink}!important;border-radius:999px!important}` + foot + `${B} .hps-f .hps-fn{font-family:${k.hf}}`;
     if (th === 'uvcollage') return solid.replace(`border-bottom:1px solid ${k.line}`, 'border-bottom:0') + `${B} .hps-h .hps-wmk b{font-weight:800;letter-spacing:-.03em}${B} .hps-h .hps-cta{background:${k.ink}!important;color:#fff!important;border-radius:999px!important}` + foot.replace(`border-top:1px solid ${k.ink}`, `border-top:1px solid ${k.line}`);
     if (th === 'uvcine') return `${B} .hps-h.hps-h-overlay .hps-cta{background:rgba(255,255,255,.16)!important;color:#fff!important;border-radius:999px!important;backdrop-filter:blur(8px)}${B} .hps-f{background:${k.adk}!important;border-top:1px solid ${k.onl}}${B} .hps-f :is(p,dt,dd,li,a,span,small){color:rgba(255,255,255,.72)!important}${B} .hps-f .hps-fn{color:#fff!important}`;
-    if (th === 'uvclassic') return `${B} .hps-h{background:${k.adk}!important;box-shadow:none!important;border:0}${B} .hps-h :is(a,b,span,.s2-mi>a){color:#fff!important}${B} .hps-h .s2-mi>a{font-weight:550;opacity:.92}${B} .hps-h .hps-wmk b{font-family:${k.hf};font-weight:700;letter-spacing:.08em;font-size:28px}${B} .hps-h .hps-c1{min-height:150px!important}${B} .hps-h .hps-c2{border-top:1px solid rgba(255,255,255,.14)}@media(max-width:760px){${B} .hps-h .hps-c1{min-height:64px!important}${B} .hps-h .hps-wmk{flex-direction:row!important;gap:10px!important;padding:0!important}${B} .hps-h .hps-wmk::before{width:28px!important;height:32px!important}${B} .hps-h .hps-wmk b{font-size:20px!important;letter-spacing:.04em!important;white-space:nowrap}}${B} .hps-h .hps-cta{background:${k.pt}!important;color:${k.pton}!important;border-radius:2px!important}${B} .hps-h .hps-ut{background:${mix(k.adk, '#000000', .3)}!important}${B} .hps-h .hps-wmk{display:inline-flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0 6px}${B} .hps-h .hps-wmk::before{content:"";width:44px;height:50px;flex:0 0 auto;background:url("data:image/svg+xml,${encodeURIComponent(CREST('').replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ').replace(/currentColor/g, k.ptl))}") center/contain no-repeat}body.hpt-uvclassic .hpt.uv9.hp-s.uv9-motto{background:${k.adk}}${B} .hps-f{background:${mix(k.adk, '#000000', .25)}!important;text-align:center}${B} .hps-f :is(p,dt,dd,li,a,span,small){color:rgba(255,255,255,.7)!important}${B} .hps-f .hps-fn{color:#fff!important;font-family:${k.hf};letter-spacing:.08em}`;
+    if (th === 'uvclassic') return `${B} .hps-h{background:${k.adk}!important;box-shadow:none!important;border:0}${B} .hps-h :is(a,b,span,.s2-mi>a){color:#fff!important}${B} .hps-h .s2-mi>a{font-weight:550;opacity:.92}${B} .hps-h .hps-wmk b{font-family:${k.hf};font-weight:700;letter-spacing:.08em;font-size:28px}${B} .hps-h .hps-c1{min-height:150px!important}${B} .hps-h .hps-c2{border-top:1px solid rgba(255,255,255,.14)}@media(max-width:760px){${B} .hps-h .hps-c1{min-height:64px!important}${B} .hps-h .hps-wmk{flex-direction:row!important;gap:10px!important;padding:0!important}${B} .hps-h .hps-wmk::before{width:28px!important;height:32px!important}${B} .hps-h .hps-wmk b{font-size:20px!important;letter-spacing:.04em!important;white-space:nowrap}}${B} .hps-h .hps-cta{background:${k.pt}!important;color:${k.pton}!important;border-radius:2px!important}${B} .hps-h .hps-ut{background:${mix(k.adk, '#000000', .3)}!important}${B} .hps-h .hps-wmk{display:inline-flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0 6px}${B} .hps-h .hps-wmk::before{content:"";width:44px;height:50px;flex:0 0 auto;background:url("data:image/svg+xml,${encodeURIComponent(CREST('').replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ').replace(/currentColor/g, k.ptl))}") center/contain no-repeat}${BR} .hpt.uv9.hp-s.uv9-motto{background:${k.adk}}${B} .hps-f{background:${mix(k.adk, '#000000', .25)}!important;text-align:center}${B} .hps-f :is(p,dt,dd,li,a,span,small){color:rgba(255,255,255,.7)!important}${B} .hps-f .hps-fn{color:#fff!important;font-family:${k.hf};letter-spacing:.08em}`;
     return ''; }
 
   const FIX = `
@@ -437,7 +442,7 @@ body.hpt-uvivy{background:var(--u-bg)}
     let s2 = s; try { if (mine(s)) { const c = (s.hps && typeof s.hps === 'object') ? s.hps : {}; const [h, f] = CH[s.theme]; const o = Object.assign({}, c); if (!c.ownH) { o.head = h; o.ownH = 1; } if (!c.ownF) { o.foot = f; o.ownF = 1; } s2 = Object.assign({}, s, { hps: o }); } } catch (e) { s2 = s; }
     const out = base(s2, full, lang); if (!s || !Array.isArray(s.sections)) return out;
     try { const part = s.sections.some(x => x && x.type === 'text' && x.data && R[x.data.hpt]); const me = mine(s); if (!part && !me) return out;
-      const tv = me ? themeCSS(s) : themeCSS(Object.assign({}, s, { theme: 'uvivy' })).replace(/body\.hpt-uvivy\{[^}]*\}/, '').replace(/body\.hpt-uvivy /g, '');
+      const tv = me ? themeCSS(s) : themeCSS(Object.assign({}, s, { theme: 'uvivy' }), true);
       return out.replace('</style>', (FIX + CORE + tv).replace(/<\/?style/gi, '') + '</style>'); } catch (e) { console.error('hpv-univ css', e); return out; } }; window.siteHTML = siteHTML; }
 
   /* ── 공통 등록 도우미(갤러리 추천: 대학 기관에서 이 묶음을 앞에) ── */
