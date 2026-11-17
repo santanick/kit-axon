@@ -14,7 +14,7 @@ const NOT = { acparent: [], acresult: ['.hxa-wk', '.hxa-pf'], acstudio: ['.hxa-f
     /* ── 1) 배치 규칙: PASS 표에 없으면 등록하지 않는다 ── */
     { const p = await br.newPage(); await H.net(p); await p.goto(base + 'index.html'); await p.waitForFunction(() => typeof TPL !== 'undefined' && window.HPT);
       const r = await p.evaluate(ids => ({ th: ids.filter(id => HPT.has(id)), tp: ids.filter(id => TPL.some(t => t.id === 'prem-' + id)), pass: window.HPX && HPX.acad ? null : 'none' }), IDS);
-      ok(!r.th.length && !r.tp.length, `PASS 비어 있음 → 테마 · 템플릿 미등록(${JSON.stringify(r)})`); await p.close(); }
+      ok(r.th.length === 3 && r.tp.length === 3, `PASS 표(82점 이상) → 테마 · 템플릿 3종 등록(${JSON.stringify(r)})`); await p.close(); }
 
     /* ── 2) HPX_ALL로 강제 등록한 기관(k12 · adult) ── */
     for (const type of ['k12', 'adult']) {

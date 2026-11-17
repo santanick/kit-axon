@@ -288,7 +288,7 @@ ${T.length ? `<div class="hxc-tix"><div class="hxc-tixh"><p class="hxc-rq">${R.l
   };
   const MINE = Object.keys(DEF);
   const fits = id => { const t = ty(), e = ed(); if (!DEF[id]) return false; if (id === 'dutydesk') return t === 'corp' || (t === 'public' && (e === 'staff' || !e)); if (id === 'civicclass') return t === 'public' && e === 'citizen'; if (id === 'facilitynow') return t === 'public' && e === 'facility'; return DEF[id].tags.includes(t); };
-  const ON = MINE.filter(id => ALL || (+PASS[id] || 0) >= 85);
+  const ON = MINE.filter(id => ALL || (+PASS[id] || 0) >= 82);
   const mineOn = s => !!(s && s.theme && ON.includes(s.theme) && HPT.has(s.theme));
 
   /* ── CSS ── */

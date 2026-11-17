@@ -30,7 +30,7 @@
   const ic = (k, n) => `<svg viewBox="0 0 24 24" width="${n || 20}" height="${n || 20}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${IC[k] || IC.arrow}"/></svg>`;
   const ID = 'uvhub';
   const IDS = [ID, 'uvlms', 'uvopen']; /* uvhub(L1) · uvlms · uvopen(보조 A1) */
-  const on = id => !!(PASS[id] >= 85 || window.HPX_ALL);
+  const on = id => !!(PASS[id] >= 82 || window.HPX_ALL);
   const mine = s => !!(s && IDS.includes(s.theme) && HPT.has && HPT.has(s.theme));
 
   /* ── 실제 데이터 ── */

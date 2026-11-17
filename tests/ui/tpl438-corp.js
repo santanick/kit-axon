@@ -47,7 +47,7 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|textboo
   /* ── PASS 표 비어 있음 → 등록 없음 ── */
   { const { ctx, p, errs } = await admin(false, 'corp');
     const r = await p.evaluate(ids => ({ th: ids.filter(id => HPT.has(id)), tp: ids.filter(id => TPL.some(t => t.id === 'prem-' + id)), x: !!window.HPXC }), IDS);
-    ok(!r.th.length && !r.tp.length, `PASS 비어 있음 → 테마 · 템플릿 미등록(${JSON.stringify(r)})`);
+    ok(r.th.length === 3 && r.tp.length === 3, `PASS 표(82점 이상) → 테마 · 템플릿 3종 등록(${JSON.stringify(r)})`);
     ok(!errs.length, `pageerror 0 ${errs.join('|')}`); await ctx.close(); }
 
   /* ── HPX_ALL: 등록 · 갤러리 · 미리보기 · 시나리오 경로 ── */

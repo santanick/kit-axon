@@ -19,7 +19,7 @@ const IDS = Object.keys(T);
     { const c = await browser.newContext(); const p = await c.newPage(); await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
       await p.goto(`${base}/index.html`, { waitUntil: 'load' });
       for (const ID of IDS) { const r = await p.evaluate(id => ({ pass: HPX_LIFE.PASS[id] || 0, th: HPT.has(id), tp: TPL.some(t => t.id === 'prem-' + id), sec: typeof HPS.hero }), ID);
-        ok(r.pass >= 85 ? r.th && r.tp : !r.th && !r.tp, `[${ID}] PASS 표 규칙(점수 ${r.pass}) — 테마 ${r.th} · 템플릿 ${r.tp}`); } await c.close(); }
+        ok(r.pass >= 82 ? r.th && r.tp : !r.th && !r.tp, `[${ID}] PASS 표 규칙(점수 ${r.pass}) — 테마 ${r.th} · 템플릿 ${r.tp}`); } await c.close(); }
     /* 2) HPX_ALL로 강제 등록 → 기관 유형별 렌더 */
     for (const ID of IDS) for (const ty of T[ID].ty) {
       const c = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await c.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));

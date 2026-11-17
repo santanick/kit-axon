@@ -45,7 +45,7 @@ const HERO = '.hp-hero.hxu-u'; /* 세 템플릿 공통 첫 화면 */
   /* ── 1) 등록: PASS 표에 없으면 등록하지 않음 · HPX_ALL이면 강제 등록 ── */
   { const { ctx, p, errs } = await admin(false);
     const r = await p.evaluate(ids => ids.map(id => [HPT.has(id), TPL.some(t => t.id === 'prem-' + id)]), IDS);
-    ok(r.every(([a, b]) => !a && !b), `등록: 심사 전(PASS 비어 있음 · HPX_ALL 없음)에는 등록하지 않음 ${JSON.stringify(r)}`);
+    ok(r.every(([a, b]) => a && b), `등록: PASS 표(82점 이상 · 11-17 대표님 기준)에 있으면 등록 ${JSON.stringify(r)}`);
     ok(!errs.length, `등록 전 pageerror 0 ${errs.join('|')}`); await ctx.close(); }
 
   const { ctx, p, errs } = await admin(true); const T0 = await seed(p);

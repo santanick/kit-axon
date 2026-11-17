@@ -457,7 +457,7 @@ ${senior ? `/* 시니어 친화(learnhub): 본문 17px · 버튼 56px · 대비 
   if (typeof siteFromTpl === 'function' && !siteFromTpl.hpxl) { const base = siteFromTpl; const f = tp => { const s = base(tp); try { if (tp && tp.hpx === 'life') { s.photos = Object.assign({}, s.photos, (PH[tp.theme] || PH.careernav)[isVoc() ? 0 : 1]); s.blocks = Object.assign({}, s.blocks, { facts: 'row', notices: 'rows' }); } /* 심사: 숫자 판은 가로 띠 하나로(큰 숫자 판 · 끊긴 세로선 대신), 공지는 같은 글 반복 없는 목록형 */ } catch (e) { console.error('hpx-life photo', e); } return s; };
     Object.keys(base).forEach(k => { try { f[k] = base[k]; } catch (e) { } }); f.hpxl = 1; siteFromTpl = f; window.siteFromTpl = f; }
   function regAll() { if (regAll.done) return; regAll.done = 1;
-    Object.keys(DEF).forEach(id => { if (!(window.HPX_ALL || (PASS[id] || 0) >= 85)) return; if (!HPT.has(id)) HPT.reg(id, Object.assign({ prem: 1, cssX }, DEF[id])); try { if (window.HPD && typeof HPD.reg === 'function') HPD.reg(id, HD[id]); } catch (e) { console.error('hpx-life HPD', e); }
+    Object.keys(DEF).forEach(id => { if (!(window.HPX_ALL || (PASS[id] || 0) >= 82)) return; if (!HPT.has(id)) HPT.reg(id, Object.assign({ prem: 1, cssX }, DEF[id])); try { if (window.HPD && typeof HPD.reg === 'function') HPD.reg(id, HD[id]); } catch (e) { console.error('hpx-life HPD', e); }
       if (typeof TPL === 'undefined' || typeof S2 !== 'function' || TPL.some(t => t.id === 'prem-' + id)) return; const c = TPLS[id];
       TPL.push({ id: 'prem-' + id, name: DEF[id].name, types: ['prem', ...DEF[id].tags], scene: c.scene, color: DEF[id].acc, tone: '모던', look: DEF[id].look, theme: id, hero: '', purpose: c.purpose, prem: 1, hpx: 'life', build: c.build }); }); }
   regAll();
