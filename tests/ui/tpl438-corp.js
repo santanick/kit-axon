@@ -30,7 +30,7 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|textboo
         small: w < 600 ? [...document.querySelectorAll('section.hxc a')].filter(a => vis(a) && a.getBoundingClientRect().height < 44).map(a => a.textContent.trim().slice(0, 12)) : [],
         tiny: [...document.querySelectorAll('body *')].filter(el => vis(el) && inS(el) && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(el).fontSize) < 13).map(el => el.textContent.trim().slice(0, 10)),
         narrow: [...document.querySelectorAll('section.hxc :is(h1,h2,b,small,a,p,em,span)')].filter(el => { if (!vis(el) || el.textContent.trim().length < 3) return false; const r = el.getBoundingClientRect(); const fs = parseFloat(getComputedStyle(el).fontSize); return r.height > fs * 5 && r.width < fs * 2.2; }).length,
-        order: w < 600 ? (() => { const a = document.querySelector('.hxc-roles'), b = document.querySelector('.hxc-led'); return a && b ? a.getBoundingClientRect().top < b.getBoundingClientRect().top : false; })() : true }; }, w);
+        order: w < 600 ? (() => { const a = document.querySelector('.hxc-roles'), b = document.querySelector('.hxc-led'); return a && b ? a.getBoundingClientRect().top < b.getBoundingClientRect().top : true; })() : true }; }, w);
     ok(m.over <= 0 && !m.out, `${key} ${w}: 가로 넘침 0 · 화면 밖 요소 0(${m.over}/${m.out})`);
     ok(!m.small.length, `${key} ${w}: 누르는 칸 44px 이상 ${m.small.join(',')}`);
     ok(!m.tiny.length, `${key} ${w}: 글자 13px 이상 ${m.tiny.join(',')}`);
@@ -60,6 +60,9 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|textboo
   const th = await p.evaluate(() => HPT.thumb(null, 'dutydesk')); ok(/hxc-hero/.test(th) && /hxc-cal/.test(th) && /hxc-cert/.test(th), '게시 미리보기(HPT.thumb): 첫 화면 · 일정표 · 이수증 섹션');
   const html = await p.evaluate(() => { const s = siteFromTpl(TPL.find(t => t.id === 'prem-dutydesk')); S.site = s; return siteHTML(s); });
   ok(/hxc-led/.test(html) && /hxc-roles/.test(html) && /hxc-trk/.test(html), '게시본: 필수 교육 현황판 · 방문 목적 바로가기 · 직무 트랙');
+  ok(/마감 D-\d+/.test(html) && !/>D-\d+</.test(html), 'dutydesk: D-day에 「마감」 라벨(마감 D-n)');
+  { const h = await p.evaluate(() => { const s = siteFromTpl(TPL.find(t => t.id === 'prem-dutydesk')); return { live: s.sections.filter(x => !x.hide).map(x => (x.data && x.data.hpt) || x.type), hid: s.sections.filter(x => x.hide).map(x => x.data && x.data.hpt) }; });
+    ok(!h.live.includes('facts') && !h.live.includes('sched') && h.hid.includes('facts') && h.hid.includes('sched'), `dutydesk: 운영 현황 숫자 띠 · 모집 일정은 숨긴 자리(현황판 · 마감 막대표와 중복 없음 ${h.live.join(',')})`); }
   const links = await p.evaluate(h => { const d = new DOMParser().parseFromString(h, 'text/html'); return [...d.querySelectorAll('section.hxc a[href]')].map(a => a.getAttribute('href')); }, html);
   const ids = await p.evaluate(() => S.classes.map(c => c.id));
   const bad = links.filter(h => !(ROUTES.test(h) || (/^#p-c-/.test(h) && ids.includes(h.slice(5))) || /^(tel:|mailto:)/.test(h)));
@@ -87,7 +90,7 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|textboo
     const g = await a.p.evaluate(id => ({ fit: HPT.premFits(id), first: HPT.premFor()[0], other: ['dutydesk', 'civicclass', 'facilitynow'].filter(x => x !== id).map(x => HPT.premFits(x)), th: /hxc-hero/.test(HPT.thumb(null, id)) }), id);
     ok(g.fit && g.first === id && !g.other.some(Boolean) && g.th, `${id}: 공공 ${ed} 추천 · 프리미엄 첫 순서 · 다른 두 종은 추천 제외 · 미리보기(${JSON.stringify(g)})`);
     const r = await a.p.evaluate(id => { const s = siteFromTpl(TPL.find(t => t.id === 'prem-' + id)); S.site = s; return { html: siteHTML(s), hpts: s.sections.filter(x => !x.hide).map(x => x.data && x.data.hpt).filter(Boolean), hidden: s.sections.filter(x => x.hide).map(x => x.data && x.data.hpt) }; }, id);
-    ok(want.every(c => r.html.includes(c)) && /hxc-led/.test(r.html) && /hxc-roles/.test(r.html), `${id}: 게시본 섹션 ${want.join(' · ')} · 데이터 판 · 방문 목적`);
+    const rb = r.html.replace(/<style[\s\S]*?<\/style>/g, ''); ok(want.every(c => r.html.includes(c)) && (id === 'civicclass' ? /hxc-tix/.test(rb) && /hxc-pills/.test(rb) && !/hxc-roles/.test(rb) && !/hxc-led/.test(rb) : /hxc-led/.test(r.html) && /hxc-roles/.test(r.html)), `${id}: 게시본 섹션 ${want.join(' · ')} · 데이터 판 · 방문 목적${id === 'civicclass' ? '(티켓 줄 · 알약 줄 — dutydesk와 다른 뼈대)' : ''}`);
     ok(secs.every(k => r.hpts.includes(k)) && !r.hpts.includes('facts') && !r.hpts.includes('sched') && r.hidden.includes('facts') && r.hidden.includes('sched'), `${id}: 섹션 순서 · 자동 숫자 띠 · 모집 일정표는 숨김 자리(${r.hpts.join(',')})`);
     const { L, bad } = await linkOK(a.p, r.html);
     ok(L.length >= 10 && !bad.length && routes.every(h => L.includes(h)) && L.some(h => /^#p-c-/.test(h)), `${id}: 시나리오 버튼 ${L.length}개 실제 경로 · ${routes.join(' ')} · 강좌 상세(${bad.join(',')})`);
@@ -97,13 +100,30 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|textboo
       ok(f.names.every(n => r.html.includes(n)) && /휴관/.test(r.html) && /지역주민/.test(r.html) && /감면/.test(r.html), `facilitynow: 시설 ${f.n}곳 운영표 · 휴관 띠(실제 hours) · 요금 대상(일반 · 지역주민 · 감면)`);
       ok(!/남은 칸 \d|잔여 \d/.test(body), 'facilitynow: 정적 게시본에 실시간 남은 칸 숫자 없음(#fac로 안내)'); }
     await view(id, r.html);
+    if (id === 'civicclass') { const nl = await a.p.evaluate(() => { S.classes.forEach(c => { if (c.recruit) c.recruit.mode = 'first'; }); return siteHTML(siteFromTpl(TPL.find(t => t.id === 'prem-civicclass'))); });
+      ok(!/hxc-lane lot/.test(nl) && /hxc-lanes one/.test(nl) && !/선착순과 추첨/.test(nl), 'civicclass: 추첨 강좌가 없으면 선착순 흐름만(추첨 설명 숨김)');
+      const ph = ((nl.match(/<section[^>]*hxc-kl[\s\S]*?<\/section>/) || [''])[0].match(/<img[^>]*?src="[^"]*img\/stock\/[a-z]{3}-\d{2}/g) || []).map(x => x.slice(-6)); ok(ph.length >= 3 && new Set(ph).size === ph.length, `civicclass: 강좌 카드 사진 중복 없음(${ph.length}장)`); }
     if (id === 'civicclass') { /* 접수 · 추첨 · 전화가 있는 기관 */
       const r2 = await a.p.evaluate(() => { const t = today(); const add = n => { const d = new Date(t); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }; S.settings.footer.tel = '051-749-4000';
         const c = S.classes; c[0].recruit = { on: true, mode: 'lottery', cap: 20, from: t, to: add(6), early: { on: false } }; c[1].recruit = { on: true, mode: 'first', cap: (c[1].learners || []).length + 2, from: t, to: add(12), early: { on: false } };
         const s = siteFromTpl(TPL.find(t => t.id === 'prem-civicclass')); return siteHTML(s); });
-      ok(/이번 달 접수 중인 강좌/.test(r2) && /hxc-md lot/.test(r2) && /D-6/.test(r2) && /남은 자리 2/.test(r2) && /href="tel:0517494000"/.test(r2) && /추첨 강좌 1개를 접수/.test(r2), 'civicclass: 접수 중 판(D-day · 남은 자리 · 추첨 배지) · 첫 화면 전화 신청 · 추첨 안내 띠');
+      ok(/접수 마감이 가까운 강좌/.test(r2) && /hxc-stk/.test(r2) && /hxc-md lot/.test(r2) && /D-6/.test(r2) && /남은 자리 2/.test(r2) && /href="tel:0517494000"/.test(r2) && /추첨 강좌 1개를 접수/.test(r2), 'civicclass: 접수 중 판(D-day · 남은 자리 · 추첨 배지) · 첫 화면 전화 신청 · 추첨 안내 띠');
       const { bad: b2 } = await linkOK(a.p, r2); ok(!b2.length, `civicclass(접수): 경로 정상 ${b2.join(',')}`); await view('civic-rec', r2); }
     ok(!a.errs.length, `${id} pageerror 0 ${a.errs.join('|')}`); await a.ctx.close(); }
+
+  /* ── 게시본(learner.html Shadow DOM): 오늘의 시설 — 시설 있음 · 시설 0개 ── */
+  for (const emp of [false, true]) { const a = await admin(true, 'public', 'facility');
+    const tid = await a.p.evaluate(emp => { try { closeModal(); } catch (e) { } if (emp) S.fac.facilities = []; S.settings.toss = Object.assign(S.settings.toss || {}, { status: '승인', stage: 99, mid: 'qa_demo' });
+      const s = siteFromTpl(TPL.find(t => t.id === 'prem-facilitynow')); S.site = s; s.published = true; save(); smPublish(); try { closeModal(); } catch (e) { } return DREG.cur(); }, emp);
+    const n = await a.p.evaluate(() => ((S.fac || {}).facilities || []).filter(f => f.on !== false && f.kind === 'time').length);
+    for (const w of [1440, 390]) { const q = await a.ctx.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message)); await q.setViewportSize({ width: w, height: 900 });
+      await q.goto(`${base}/learner.html?t=${tid}#home`, { waitUntil: 'load' }); await q.waitForTimeout(1500);
+      const r = await q.evaluate(() => { const R = [...document.querySelectorAll('.smhost')].map(h => h.shadowRoot).filter(Boolean); const one = sel => R.map(r => r.querySelector(sel)).find(Boolean);
+        const led = one('.hxc-fn .hxc-led'); const hp = one('.hxc-fn .hxc-hph');
+        return { hero: !!one('section.hxc-fn'), rows: led ? led.querySelectorAll('ol li').length : 0, empty: !!one('.hxc-fe'), fac: !!(led && led.querySelector('a[href="#fac"]')), tt: !!one('.hxc-tt'), photoOnly: !!hp && !led, over: document.documentElement.scrollWidth - document.documentElement.clientWidth }; });
+      ok(r.hero && r.fac && !r.photoOnly && r.over <= 0 && (emp ? r.empty && !r.tt : !r.empty && r.tt && r.rows === Math.min(4, n + 0) || (!emp && r.rows >= Math.min(4, n))), `게시본 facilitynow ${emp ? '시설 0개' : `시설 ${n}곳`} ${w}: 첫 화면 판 · #fac 연결 · ${emp ? '빈 상태 안내 판(사진만 남지 않음)' : '운영표'}(${JSON.stringify(r)})`);
+      ok(!pe.length, `게시본 facilitynow ${w} pageerror 0 ${pe.join('|')}`); await q.close(); }
+    await a.ctx.close(); }
 
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);

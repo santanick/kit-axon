@@ -43,7 +43,7 @@
   const done = (c, id) => { if (typeof clsDone === 'function') { try { return !!clsDone(c, id); } catch (e) { } } const p = +(((c.prog || {})[id] || {}).p) || 0; return p >= (((c.criteria || {}).threshold) || 100); };
   const rate = c => { const L = c.learners || []; if (!L.length) return null; return Math.round(L.filter(id => done(c, id)).length * 100 / L.length); };
   const dleft = c => okD(c.end) ? days(tday(), c.end) : null;
-  const ddTag = n => n == null ? '' : n < 0 ? `<span class="hxc-dd end">마감</span>` : `<span class="hxc-dd${n <= 14 ? ' warn' : ''}">${n === 0 ? 'D-DAY' : 'D-' + n}</span>`;
+  const ddTag = n => n == null ? '' : n < 0 ? `<span class="hxc-dd end">마감</span>` : `<span class="hxc-dd${n <= 14 ? ' warn' : ''}">${n === 0 ? '오늘 마감' : '마감 D-' + n}</span>`;
   const onboard = () => live().find(c => /온보딩|신입|신규|입문 과정|임용/.test(c.name));
   const LV = () => { const J = ((typeof S !== 'undefined' && S && S.journey) || []).map(j => j && j.name).filter(Boolean); return J.length >= 3 ? J.slice(0, 3) : ['입문', '실무', '리더']; };
   const hrs = c => +c.hours ? `${+c.hours}시간` : '';
@@ -149,7 +149,7 @@
     return L.sort((a, b) => (a.k === b.k ? String(a.d || '').localeCompare(String(b.d || '')) : a.k === 'd' ? -1 : 1)).slice(0, 3); }
 
   /* 카드 사진: 장면에 맞는 밝은 스톡을 고정 순서로(키워드 추천이 코드 화면 · 어두운 사진을 고르던 문제). 운영자가 강좌 썸네일을 넣으면 그것이 우선 */
-  const POOL = { civic: ['sen-02', 'hum-34', 'lib-03', 'sen-04', 'cls-02', 'hum-37'], fac: ['spo-08', 'spo-04', 'spo-05', 'spo-03', 'spo-02', 'spo-06'] };
+  const POOL = { civic: ['art-02', 'mus-02', 'yog-02', 'coo-02', 'lan-02', 'gar-01', 'hum-34', 'sen-02'], fac: ['spo-08', 'spo-04', 'spo-05', 'spo-03', 'spo-02', 'spo-06'] };
   function poolPhoto(L, i) { const H = window.HPSTOCK; if (!H || typeof H.slotImg !== 'function') return null; try { const id = L[i % L.length]; const x = H.slotImg(id, 'card'); if (!x) return null; return { src: H.url(id, 'sm'), alt: x.alt || '', pos: x.pos || '50% 50%' }; } catch (e) { return null; } }
   const thumbOf = c => { const t = String(c.thumb || ''); return /^(https?:|data:image\/)/.test(t) ? { src: t, alt: '', pos: '50% 50%' } : null; };
   /* 공용 첫 화면 뼈대(dutydesk와 같은 3층 · 같은 클래스 — 휴대폰 순서 ①→③→② 그대로) */
@@ -170,12 +170,21 @@
       return `<li><a ${aAttr('#p-c-' + c.id)}><span class="hxc-ln"><b>${E(c.name)}</b><small>${E([when(c), feeL(c)].filter(Boolean).join(' · '))}</small></span><span class="hxc-cvr">${right}</span>${ddTag(n)}</a></li>`; }).join('');
     const t = telOf(); const foot = t ? `<a href="${E(telH(t))}">${ic('phone', 18)}<span>전화 신청 <b>${E(t)}</b></span>${ic('arrow', 18)}</a>` : `<a href="#courses">${ic('cal', 18)}<span><b>강좌 전체</b>를 요일 · 시간으로 보기</span>${ic('arrow', 18)}</a>`;
     return `<aside class="hxc-led" aria-label="${R.length ? '접수 중인 강좌' : '운영 중인 강좌'}"><header><span class="hxc-lic">${ic('cal', 20)}</span><span class="hxc-lht">${head}</span><span class="hxc-avg"><b>${T.length}<small>개</small></b><small>${R.length ? '접수 중' : '운영 중'}</small></span></header><ol>${rows}</ol><footer>${foot}</footer></aside>`; }
-  function civicHero(s, d) { const N = civic().length; const t = telOf(); const lot = civic().some(c => modeK(c) === 'lot' && c.recruit && c.recruit.on);
-    const R = [{ ic: 'compass', l: '강좌 찾기', sub: N ? `${N}개 강좌 · 요일 · 시간으로` : '배우고 싶은 강좌 고르기', h: '#courses' },
-      { ic: 'check', l: lot ? '추첨 결과 보기' : '내 신청 확인', sub: lot ? '접수 마감 후 내 신청에서' : '신청 · 대기 · 결과를 한곳에서', h: '#my' },
-      t ? { ic: 'phone', l: '전화로 신청', sub: t, h: telH(t) } : { ic: 'user', l: '처음 오셨나요?', sub: '간편가입하고 바로 신청해요', h: '#login' },
-      { ic: 'bell', l: '공지 · 휴강', sub: '휴강 · 장소 변경 소식', h: '#notice' }];
-    return heroX(s, d, { k: 'hxc-cv', h1: '#courses', h2: '#my', card: civicCard(), inv: telLine(), roles: rolesX(R) }); }
+  const lotAny = () => civic().some(c => modeK(c) === 'lot');
+  /* 시민 강좌 첫 화면 — dutydesk(사진 위 현황판 + 목적 칸 4개)와 다른 뼈대: ① 큰 글 + 전화 신청 | 사진 + 접수 중 스티커 ② 접수 마감이 가까운 강좌 티켓 줄 ③ 방문 목적 알약 줄 */
+  function civicHero(s, d) { d = d || {}; const p = heroPhoto(s, d); const N = civic().length; const t = telOf(); const lot = civic().some(c => modeK(c) === 'lot' && c.recruit && c.recruit.on);
+    const R = recruiting(); const T = (R.length ? R : civic()).slice(0, 4); const ttl = String(d.title || org()).split('\n').map(E).join('<br>');
+    const h1 = href(d.link) || '#courses', h2 = href(d.link2) || '#my';
+    const tix = T.map(c => { const n = R.length && okD(c.recruit.to) ? days(tday(), c.recruit.to) : null; const s1 = seats(c), k = capOf(c), m = (c.learners || []).length;
+      const ns = nextSes(c); const dl = n == null ? (ns ? md(ns) : '') : n < 0 ? '접수 마감' : n === 0 ? '오늘 마감' : `D-${n}`; const lb = n == null ? (ns ? '다음 수업' : '') : n > 0 ? '접수 마감까지' : '';
+      return `<li><a ${aAttr('#p-c-' + c.id)} class="hxc-tk2">${dl ? `<span class="hxc-tkt"><em class="hxc-tkd${n != null && n <= 3 ? ' warn' : ''}">${dl}</em>${lb ? `<small>${lb}</small>` : ''}</span>` : ''}<b>${E(c.name)}</b><small>${E([when(c), feeL(c)].filter(Boolean).join(' · '))}</small><span class="hxc-chips">${R.length ? `<em class="hxc-md ${modeK(c)}">${modeL(c)}</em>` : ''}${s1 != null ? `<em class="hxc-seat${s1 <= 3 ? ' warn' : ''}">${s1 ? `남은 자리 ${s1}` : '정원 마감'}</em>` : `<em class="hxc-seat">${m}명 수강</em>`}</span>${k ? `<span class="hxc-bar" role="img" aria-label="정원 ${k}명 중 ${m}명"><i style="width:${Math.min(100, Math.round(m * 100 / k))}%"></i></span>` : ''}</a></li>`; }).join('');
+    const P = [{ ic: 'compass', l: '강좌 찾기', sub: N ? `${N}개` : '', h: '#courses' }, { ic: 'check', l: lot ? '추첨 결과 보기' : '내 신청 확인', sub: '', h: '#my' },
+      t ? { ic: 'phone', l: '전화로 신청', sub: t, h: telH(t) } : { ic: 'user', l: '처음 오셨나요?', sub: '간편가입', h: '#login' }, { ic: 'bell', l: '공지 · 휴강', sub: '', h: '#notice' }];
+    const pills = `<nav class="hxc-pills" aria-label="방문 목적 바로가기"><ul>${P.map(r => `<li><a ${aAttr(r.h)}><i>${ic(r.ic, 20)}</i><b>${E(r.l)}</b>${r.sub ? `<small>${E(r.sub)}</small>` : ''}</a></li>`).join('')}</ul></nav>`;
+    return `<section class="hpt hp-hero hxc hxc-hero hxc-cv"><div class="hxc-w"><div class="hxc-cvg"><div class="hxc-tdt">${d.eyebrow ? `<p class="hxc-ey"><i aria-hidden="true"></i>${E(d.eyebrow)}</p>` : ''}<h1>${ttl}</h1>${d.sub ? `<p class="hxc-sub">${E(d.sub)}</p>` : ''}
+<div class="hxc-btns">${d.cta ? `<a class="hxc-btn p" ${aAttr(h1)}>${E(d.cta)}${ic('arrow', 18)}</a>` : ''}${d.cta2 ? `<a class="hxc-btn g" ${aAttr(h2)}>${E(d.cta2)}</a>` : ''}</div>${telLine()}</div>
+<div class="hxc-cvp">${fig(p, 'hxc-hph', 1)}${R.length ? `<p class="hxc-stk"><b>${R.length}</b><span>개 강좌<br>지금 접수 중</span></p>` : ''}</div></div>
+${T.length ? `<div class="hxc-tix"><div class="hxc-tixh"><p class="hxc-rq">${R.length ? '접수 마감이 가까운 강좌' : '지금 운영 중인 강좌'}</p><a class="hxc-more2" href="#courses">강좌 전체 보기${ic('arrow', 16)}</a></div><ol>${tix}</ol></div>` : ''}${pills}</div></section>`; }
 
   /* ── 시민 강좌: 이달의 강좌 달력(접수 기간 · 개강일 · 수업일) ── */
   function monthSec(x, s) { const d = x.data || {}; const C = civic().slice(0, 6); if (!C.length) return '';
@@ -198,33 +207,40 @@
 
   /* ── 시민 강좌: 강좌 카드(사진 · 요일 · 수강료 · 남은 자리) — 시설형 「강습 프로그램」도 같은 카드 ── */
   function civListSec(x, s) { const d = x.data || {}; const C = civic(); if (!C.length) return ''; const R = new Set(recruiting().map(c => c.id));
-    const pool = s && s.theme === 'facilitynow' || ed() === 'facility' ? POOL.fac : POOL.civic; let k0 = 0;
-    const card = c => { const p = thumbOf(c) || poolPhoto(pool, k0++) || stock(c.name, c.id); const s1 = seats(c), k = capOf(c), n = (c.learners || []).length; const ns = nextSes(c);
+    const pool = s && s.theme === 'facilitynow' || ed() === 'facility' ? POOL.fac : POOL.civic; const used = new Set(Object.values(((s && s.photos) || {})).map(String));
+    const pick = c => { const H = window.HPSTOCK; try { const x = H && typeof H.forCourse === 'function' ? H.forCourse(ty(), c.name, { exclude: [...used], seed: c.id }) : null; if (x && x.id && !used.has(x.id)) { used.add(x.id); return { src: H.url(x, 'sm'), alt: x.alt || '', pos: x.focus || '50% 50%' }; } } catch (e) { }
+      const id = pool.find(i => !used.has(i)); if (!id) return null; used.add(id); return poolPhoto([id], 0); };
+    const card = c => { const p = thumbOf(c) || pick(c) || stock(c.name, c.id); const s1 = seats(c), k = capOf(c), n = (c.learners || []).length; const ns = nextSes(c);
       const bar = k ? `<span class="hxc-cap"><span class="hxc-bar" role="img" aria-label="정원 ${k}명 중 ${n}명"><i style="width:${Math.min(100, Math.round(n * 100 / k))}%"></i></span><small>${s1 ? `남은 자리 <b>${s1}</b> / ${k}` : '정원이 찼어요 · 대기 신청'}</small></span>` : `<small class="hxc-cn">${n ? `${n}명이 함께 배우고 있어요` : '지금 신청할 수 있어요'}</small>`;
       return `<li><a ${aAttr('#p-c-' + c.id)} class="hxc-kc">${p ? fig(p, 'hxc-kt') : `<span class="hxc-kt hxc-cph">${ic('play', 26)}</span>`}<span class="hxc-kb"><span class="hxc-chips">${R.has(c.id) ? `<em class="hxc-md ${modeK(c)}">${modeL(c)}</em>` : ''}<em>${E(feeL(c))}</em>${c.sub ? `<em>${E(c.sub)}</em>` : ''}</span><b>${E(c.name)}</b><small>${E([when(c), ns ? `다음 수업 ${md(ns)}` : '', c.teacher || ''].filter(Boolean).join(' · '))}</small>${bar}</span></a></li>`; };
     return mark(`<section class="hpt hp-s hp-alt hxc hxc-kl"><div class="hxc-w"><div class="hxc-sh"><div>${d.eyebrow ? `<p class="hxc-ey"><i aria-hidden="true"></i>${E(d.eyebrow)}</p>` : ''}<h2>${E(d.title || '강좌 안내')}</h2>${d.sub ? `<p class="hxc-sd">${E(d.sub)}</p>` : ''}</div><a class="hxc-btn g sm" href="${E(d.more || '#courses')}">${E(d.moreL || '전체 강좌 보기')}${ic('arrow', 18)}</a></div>
 <ul class="hxc-kg">${C.slice(0, 6).map(card).join('')}</ul></div></section>`, x); }
 
   /* ── 시민 강좌: 신청 방법(선착순 · 추첨) + 추첨 결과 안내 띠 ── */
-  function howSec(x, s) { const d = x.data || {}; const C = civic(); if (!C.length) return ''; const lot = C.filter(c => modeK(c) === 'lot' && c.recruit && c.recruit.on).length; const t = telOf();
+  function howSec(x, s) { const d = x.data || {}; const C = civic(); if (!C.length) return ''; const lot = C.filter(c => modeK(c) === 'lot' && c.recruit && c.recruit.on).length; const t = telOf(); const any = lotAny();
     const lane = (k, h, L) => `<div class="hxc-lane ${k}"><p class="hxc-lh"><em class="hxc-md ${k}">${h}</em></p><ol>${L.map((r, i) => `<li><i>${i + 1}</i><span><b>${E(r[0])}</b><small>${E(r[1])}</small></span></li>`).join('')}</ol></div>`;
-    return mark(`<section class="hpt hp-s hxc hxc-how"><div class="hxc-w"><div class="hxc-sh"><div>${d.eyebrow ? `<p class="hxc-ey"><i aria-hidden="true"></i>${E(d.eyebrow)}</p>` : ''}<h2>${E(d.title || '신청 방법')}</h2>${d.sub ? `<p class="hxc-sd">${E(d.sub)}</p>` : ''}</div></div>
-<div class="hxc-lanes">${lane('fst', '선착순 강좌', [['강좌 고르기', '요일 · 시간 · 수강료를 보고 골라요'], ['바로 신청', '남은 자리가 있으면 신청이 바로 확정돼요'], ['수업 듣기', '첫 수업 전날 알림을 켜 둔 분께 알려 드려요']])}${lane('lot', '추첨 강좌', [['접수 기간에 신청', '마감 전까지 언제 신청해도 똑같아요'], ['공개 추첨', '접수 마감 후 정원만큼 뽑아요'], ['결과 확인', '내 신청에서 당첨 · 대기 순번을 확인해요']])}</div>
-<div class="hxc-band"><span class="hxc-bi">${ic('bell', 22)}</span><p><b>${lot ? `지금 추첨 강좌 ${lot}개를 접수하고 있어요` : '추첨 결과는 내 신청에서 확인해요'}</b><small>당첨되지 않으면 대기 순번이 생기고, 자리가 나면 순서대로 연락드려요.${t ? ` 전화 ${t}로도 확인할 수 있어요.` : ''}</small></p><a class="hxc-btn w" href="#my">내 신청 · 결과 보기${ic('arrow', 18)}</a></div></div></section>`, x); }
+    return mark(`<section class="hpt hp-s hxc hxc-how"><div class="hxc-w"><div class="hxc-sh"><div>${d.eyebrow ? `<p class="hxc-ey"><i aria-hidden="true"></i>${E(d.eyebrow)}</p>` : ''}<h2>${E(any || !/추첨/.test(d.title || '') ? d.title || '신청 방법' : '신청은 이렇게 해요')}</h2>${any && d.sub ? `<p class="hxc-sd">${E(d.sub)}</p>` : !any ? '<p class="hxc-sd">강좌를 고르고 남은 자리가 있으면 신청이 바로 확정돼요.</p>' : ''}</div></div>
+<div class="hxc-lanes${any ? '' : ' one'}">${lane('fst', '선착순 강좌', [['강좌 고르기', '요일 · 시간 · 수강료를 보고 골라요'], ['바로 신청', '남은 자리가 있으면 신청이 바로 확정돼요'], ['수업 듣기', '첫 수업 전날 알림을 켜 둔 분께 알려 드려요']])}${!any ? '' : lane('lot', '추첨 강좌', [['접수 기간에 신청', '마감 전까지 언제 신청해도 똑같아요'], ['공개 추첨', '접수 마감 후 정원만큼 뽑아요'], ['결과 확인', '내 신청에서 당첨 · 대기 순번을 확인해요']])}</div>
+<div class="hxc-band"><span class="hxc-bi">${ic('bell', 22)}</span><p><b>${lot ? `지금 추첨 강좌 ${lot}개를 접수하고 있어요` : any ? '추첨 결과는 내 신청에서 확인해요' : '신청 결과는 내 신청에서 확인해요'}</b><small>${any ? '당첨되지 않으면 대기 순번이 생기고, 자리가 나면 순서대로 연락드려요.' : '정원이 차면 대기 신청을 할 수 있고, 자리가 나면 순서대로 연락드려요.'}${t ? ` 전화 ${t}로도 확인할 수 있어요.` : ''}</small></p><a class="hxc-btn w" href="#my">내 신청 · 결과 보기${ic('arrow', 18)}</a></div></div></section>`, x); }
 
   /* ── 오늘의 시설: 첫 화면 ── */
   function facCard() { const F = tfac().concat(FAC().filter(f => f.kind !== 'time')).slice(0, 4); if (!F.length) return ''; const N = tfac().length;
     const rows = F.map(f => { const h = hrsOf(f, 1) || hrsOf(f, 6) || hrsOf(f, 0); const kind = f.kind === 'time' ? (f.approval ? '승인 후 확정' : '바로 예약') : f.kind === 'pass' ? '이용권' : '대여';
       return `<li><a href="${f.kind === 'time' ? '#fac' : '#shop'}"><span class="hxc-ln"><b>${E(f.name)}</b><small>${E([f.place, f.kind === 'time' ? `${unitL(f)} 단위 · ${capL(f)}` : ''].filter(Boolean).join(' · '))}</small></span><span class="hxc-cvr"><em class="hxc-hr">${E(h ? hrL(h) : '휴관')}</em><em class="hxc-md ${f.kind === 'time' && !f.approval ? 'fst' : 'apr'}">${kind}</em></span></a></li>`; }).join('');
     return `<aside class="hxc-led" aria-label="예약할 수 있는 시설"><header><span class="hxc-lic">${ic('clock', 20)}</span><span class="hxc-lht"><b>예약할 수 있는 시설</b><small>운영 시간 · 칸 · 정원</small></span><span class="hxc-avg"><b>${N}<small>곳</small></b><small>시간 예약</small></span></header><ol>${rows}</ol><footer><a href="#fac">${ic('cal', 18)}<span><b>오늘 빈 시간</b>은 예약 화면에서 바로 보여요</span>${ic('arrow', 18)}</a></footer></aside>`; }
+  /* 시설 0개(아직 등록 전)인 게시본: 사진만 남지 않게 예약 · 이용 안내 판(편집 중에는 등록 안내) */
+  function facEmpty() { const t = telOf();
+    return `<aside class="hxc-led hxc-fe" aria-label="시설 예약 안내"><header><span class="hxc-lic">${ic('cal', 20)}</span><span class="hxc-lht"><b>시설 예약 안내</b><small>${editing() ? '시설을 등록하면 운영 시간표 · 요금표가 그려져요' : '빈 시간은 예약 화면에서 바로 보여요'}</small></span></header>
+<ol><li><a href="#fac"><span class="hxc-ln"><b>시설 예약</b><small>시설 · 날짜 · 시간을 고르고 예약해요</small></span>${ic('arrow', 18)}</a></li><li><a href="#shop"><span class="hxc-ln"><b>강습 · 이용권</b><small>강습 신청과 이용권 구매</small></span>${ic('arrow', 18)}</a></li><li><a href="#my"><span class="hxc-ln"><b>내 예약</b><small>예약 확인 · 취소 · 입장 QR</small></span>${ic('arrow', 18)}</a></li></ol>
+<footer>${t ? `<a href="${E(telH(t))}">${ic('phone', 18)}<span>운영 시간 · 요금 문의 <b>${E(t)}</b></span>${ic('arrow', 18)}</a>` : `<a href="#notice">${ic('bell', 18)}<span><b>휴관 · 운영 시간</b>은 공지에서 안내해요</span>${ic('arrow', 18)}</a>`}</footer></aside>`; }
   function facBand() { const L = closures(); if (!L.length) return ''; return `<div class="hxc-off"><div class="hxc-w"><p><b>${ic('bell', 18)}휴관 안내</b><span>${L.map(c => E(c.t)).join('<i aria-hidden="true">·</i>')}</span><a href="#notice">공지 보기${ic('arrow', 16)}</a></p></div></div>`; }
   function facHero(s, d) { const f0 = tfac()[0] || FAC()[0]; const P = (S.fac && S.fac.products) || [];
     const R = [{ ic: 'cal', l: '시설 예약', sub: tfac().length ? tfac().slice(0, 3).map(f => f.name).join(' · ') : '빈 시간 보고 예약', h: '#fac' },
-      { ic: 'award', l: (S.fac.tpl === 'sports' ? '강습 · 이용권' : '이용권 · 대여'), sub: P.length ? `${P.length}가지 · 온라인 결제` : '강습 신청하기', h: '#shop' },
+      { ic: 'award', l: ((S.fac || {}).tpl === 'sports' ? '강습 · 이용권' : '이용권 · 대여'), sub: P.length ? `${P.length}가지 · 온라인 결제` : '강습 신청하기', h: '#shop' },
       { ic: 'user', l: '내 예약', sub: '예약 확인 · 취소 · 입장 QR', h: '#my' },
       { ic: 'bell', l: '휴관 · 공지', sub: closures().length ? `휴관 안내 ${closures().length}건` : '휴관 · 행사 소식', h: '#notice' }];
     const inv = f0 ? `<p class="hxc-hrs">${ic('clock', 20)}<span><small>운영 시간 · ${E(f0.name)}</small><b>${E(weekL(f0))}</b></span></p>` : '';
-    return heroX(s, d, { k: 'hxc-fn', h1: '#fac', h2: '#shop', card: facCard(), inv: inv + telLine().replace('전화로도 신청할 수 있어요', '전화 문의'), roles: rolesX(R), band: facBand() }); }
+    return heroX(s, d, { k: 'hxc-fn', h1: '#fac', h2: '#shop', card: facCard() || facEmpty(), inv: inv + telLine().replace('전화로도 신청할 수 있어요', '전화 문의'), roles: rolesX(R), band: facBand() }); }
 
   /* ── 오늘의 시설: 시설 × 시간 운영표(평일 · 토 · 일 3줄, 칸 단위 눈금) ── */
   function hoursSec(x, s) { const d = x.data || {}; const F = tfac().slice(0, 6); if (!F.length) return '';
@@ -325,7 +341,7 @@
 /* 간트 */
 .hxc-lg{display:flex;flex-wrap:wrap;gap:8px 18px;list-style:none;margin:0;padding:0;font-size:13px;color:var(--hxc-mu)}.hxc-lg li{display:flex;align-items:center;gap:8px}.hxc-lg i{width:18px;height:10px;border-radius:99px}.hxc-lg .a{background:var(--hxc-t2)}.hxc-lg .b{background:var(--hxc-a)}.hxc-lg .c{background:${al(WARN, .55)}}
 .hxc-gantt{border:1px solid var(--hxc-ln);border-radius:18px;background:#fff;box-shadow:0 1px 2px rgba(15,22,38,.04),0 20px 44px -34px rgba(15,22,38,.4);overflow:hidden}
-.hxc-gm,.hxc-gr{display:grid;grid-template-columns:minmax(200px,280px) minmax(0,1fr) 84px;gap:20px;align-items:center}
+.hxc-gm,.hxc-gr{display:grid;grid-template-columns:minmax(200px,280px) minmax(0,1fr) 104px;gap:20px;align-items:center}
 .hxc-gm{padding:14px 20px;background:#F7F9FB;border-bottom:1px solid var(--hxc-ln);font-size:13px;font-weight:700;color:var(--hxc-mu)}
 .hxc-gms{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr))}.hxc-gms span{display:flex;flex-direction:column;justify-content:flex-end;padding-left:8px;border-left:1px solid var(--hxc-ln);line-height:1.3}.hxc-gms small{font-size:13px;font-weight:600;color:var(--hxc-mu)}
 .hxc-gbody{position:relative;padding:6px 0}
@@ -374,6 +390,21 @@
 .hpt.hxc-hero.hxc-cv{background:linear-gradient(180deg,#F6F2E8 0%,#FBFAF7 78%)}
 .hxc-cv h1{font-size:clamp(34px,4.4vw,58px);line-height:1.2}.hxc-cv .hxc-sub{font-size:19px}.hxc-cv .hxc-btn{min-height:56px;font-size:17px;padding:0 26px;border-radius:14px}
 .hxc-cv .hxc-hph{border-radius:28px}.hxc-cv .hxc-led{border-radius:22px;width:min(520px,90%)}.hxc-cv .hxc-ln b{font-size:16px}.hxc-cv .hxc-ln small{font-size:14px}
+.hxc-cvg{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:56px;align-items:center}
+.hxc-cvp{position:relative}.hxc-cv .hxc-cvp .hxc-hph{position:relative;inset:auto;aspect-ratio:4/3;border-radius:28px;box-shadow:0 30px 60px -36px rgba(15,22,38,.45)}.hxc-cv .hxc-cvp .hxc-hph::after{display:none}
+.hxc-stk{position:absolute;left:-28px;bottom:32px;margin:0;display:flex;align-items:center;gap:12px;padding:14px 22px 14px 18px;border-radius:20px;background:var(--hxc-nv);color:#fff;box-shadow:0 22px 40px -22px rgba(15,22,38,.6)}.hxc-stk b{font-size:40px;font-weight:800;line-height:1;letter-spacing:-.03em}.hxc-stk span{font-size:14.5px;line-height:1.35;font-weight:650}
+.hxc-tix{margin-top:48px}.hxc-tixh{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.hxc-tixh .hxc-rq{margin:0}
+.hxc-more2{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:15px;font-weight:700;color:var(--hxc-at);text-decoration:none}
+.hxc-tix ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.hxc-tk2{display:flex;flex-direction:column;gap:6px;height:100%;padding:18px 20px;background:#fff;border-radius:20px;border:1px solid var(--hxc-ln);color:inherit;text-decoration:none;box-shadow:0 1px 2px rgba(15,22,38,.04);transition:transform .15s,box-shadow .15s,border-color .15s}
+.hxc-tk2:hover{transform:translateY(-2px);border-color:${al(a, .45)};box-shadow:0 18px 32px -22px rgba(15,22,38,.4)}
+.hxc-tkt{display:flex;align-items:baseline;gap:8px;padding-bottom:12px;margin-bottom:6px;border-bottom:1.5px dashed ${al(ink, .14)}}.hxc-tkd{font-style:normal;font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.1;color:var(--hxc-at)}.hxc-tkd.warn{color:var(--hxc-w)}.hxc-tkt small{font-size:13px;color:var(--hxc-mu)}
+.hxc-tk2>b{font-size:17px;font-weight:750;line-height:1.35}.hxc-tk2>small{font-size:14px;color:var(--hxc-mu)}.hxc-tk2 .hxc-chips{margin-top:auto;padding-top:6px}.hxc-tk2 .hxc-bar{margin-top:4px}
+.hxc-pills ul{list-style:none;margin:24px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
+.hxc-pills a{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 20px 0 14px;border-radius:999px;background:#fff;border:1.5px solid var(--hxc-ln);color:var(--hxc-ink);text-decoration:none;transition:border-color .15s}.hxc-pills a:hover{border-color:var(--hxc-a)}
+.hxc-pills i{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--hxc-t);color:var(--hxc-at)}.hxc-pills b{font-size:16px;font-weight:750}.hxc-pills small{font-size:14px;color:var(--hxc-mu)}
+.hxc-lanes.one{grid-template-columns:minmax(0,640px)}
+.hxc-fe ol li a{grid-template-columns:minmax(0,1fr) auto!important}
 .hxc-cv .hxc-roles a{border-radius:20px;min-height:92px;background:#fff}.hxc-cv .hxc-roles b{font-size:17.5px}.hxc-cv .hxc-roles small{font-size:14px}.hxc-cv .hxc-rq,.hxc-mon .hxc-rq{font-size:15px}
 .hpt.hxc.hxc-mon,.hpt.hxc.hxc-how{background:#FBFAF7}.hpt.hxc.hxc-kl.hp-alt{background:#F3F1EA}
 /* 달력 */
@@ -453,13 +484,16 @@ ${[0, 1, 2, 3, 4, 5].map(i => `.hxc .k${i}{--k:${[R[700], R[400], R[900], R[500]
 .hxc-led li a{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'n d' 'b p';row-gap:8px;column-gap:12px}.hxc-led .hxc-ln{grid-area:n}.hxc-led .hxc-dd{grid-area:d}.hxc-led .hxc-bar{grid-area:b}.hxc-led .hxc-pc{grid-area:p}
 .hxc-roles ul{grid-template-columns:1fr;gap:8px}.hxc-roles a{min-height:72px;padding:12px 14px}
 .hpt.hxc.hp-s{padding:60px 0}.hxc .hxc-sh{flex-direction:column;align-items:flex-start;margin-bottom:24px}
-.hxc-gm{display:none}.hxc-gr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'n d' 't t';row-gap:10px;padding:14px 16px}.hxc-gr .hxc-gn{grid-area:n}.hxc-gr .hxc-dd{grid-area:d}.hxc-gr .hxc-gt{grid-area:t}.hxc-tdl{display:none}
+.hxc-gm{display:none}.hxc-gr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'n d' 't t';row-gap:10px;padding:14px 16px}.hxc-gr .hxc-gn{grid-area:n}.hxc-gr .hxc-dd{grid-area:d}.hxc-gr .hxc-gt{display:none}.hxc-gr{grid-template-areas:'n d';row-gap:0}.hxc-tdl{display:none}
 .hxc-cc{grid-template-columns:96px minmax(0,1fr);gap:12px}.hxc-paper{padding:16px}.hxc-pp{padding:28px 20px 22px;transform:none}.hxc-pt{font-size:28px;letter-spacing:.3em}.hxc-pp dl>div{grid-template-columns:72px minmax(0,1fr)}}
-@media (max-width:1080px){.hxc-mg,.hxc-pg{grid-template-columns:1fr}.hxc-kg{grid-template-columns:repeat(2,minmax(0,1fr))}.hxc-cv .hxc-led{width:auto}}
+@media (max-width:1080px){.hxc-cvg{grid-template-columns:1fr;gap:28px}.hxc-stk{left:16px}.hxc-tix ol{grid-template-columns:repeat(2,minmax(0,1fr))}.hxc-mg,.hxc-pg{grid-template-columns:1fr}.hxc-kg{grid-template-columns:repeat(2,minmax(0,1fr))}.hxc-cv .hxc-led{width:auto}}
 @media (max-width:720px){.hxc-cv .hxc-led li a,.hxc-fn .hxc-led li a{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'n d' 'r r'}.hxc-led .hxc-cvr{grid-area:r;justify-content:flex-start}.hxc-fn .hxc-led li a{grid-template-areas:'n n' 'r r'}
 .hxc-cv .hxc-sub{font-size:17px}.hxc-tel a{width:100%;box-sizing:border-box}.hxc-cv .hxc-roles a{min-height:76px}
 .hxc-cal2{padding:14px 10px 10px;border-radius:18px}.hxc-days li{min-height:52px;padding:5px 4px;gap:4px;align-items:center}.hxc-mcs{display:none}.hxc-dots{display:flex;justify-content:center}.hxc-mn{font-size:14px;flex-direction:column;gap:0}.hxc-mn small{font-size:13px;padding:0 4px;border-radius:5px}.hxc-wd li{text-align:center;padding:6px 0}
-.hxc-kg{grid-template-columns:1fr;gap:14px}.hxc-lanes{grid-template-columns:1fr}.hxc-lane{padding:18px}.hxc-band{flex-direction:column;align-items:flex-start;padding:20px}.hxc-band .hxc-btn{width:100%}
+.hxc-kg{grid-template-columns:1fr;gap:12px}.hxc-kc{flex-direction:row;align-items:stretch;border-radius:16px}.hxc-kc .hxc-kt{flex:none;width:104px;aspect-ratio:auto;min-height:100%}.hxc-kb{padding:12px 14px;gap:5px}.hxc-kb>b{font-size:16.5px}
+.hxc-cvp{display:none}.hxc-tix{margin-top:28px}.hxc-tix ol{grid-template-columns:1fr;gap:10px}.hxc-tix li:nth-child(n+3){display:none}.hxc-tk2{padding:14px 16px}.hxc-tkt{padding-bottom:8px;margin-bottom:2px}.hxc-tkd{font-size:22px}
+.hxc-pills ul{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}.hxc-pills a{border-radius:14px;padding:0 12px;min-height:56px}.hxc-pills small{display:none}.hxc-pills b{font-size:15px}
+.hxc-mlg ul,.hxc-mlg .hxc-rq{display:none}.hxc-kg>li:nth-child(n+5){display:none}.hxc-lane li{padding:10px 0}.hxc-lanes{grid-template-columns:1fr}.hxc-lane{padding:18px}.hxc-band{flex-direction:column;align-items:flex-start;padding:20px}.hxc-band .hxc-btn{width:100%}
 .hxc-fn>.hxc-w{padding-top:28px}.hxc-off p{font-size:14px}.hxc-off span i{margin:0 4px}
 .hxc-tk{display:none}.hxc-fr{grid-template-columns:1fr;gap:10px;padding:14px 16px}
 .hxc-ph{display:none}.hxc-pr{grid-template-columns:repeat(var(--k),minmax(0,1fr));padding:12px 16px}.hxc-pn{grid-column:1/-1}.hxc-pv{text-align:left;display:flex;flex-direction:column;font-size:15px}.hxc-pv::before{content:attr(data-k);font-size:13px;font-weight:650;color:var(--hxc-mu)}}
@@ -495,7 +529,7 @@ ${[0, 1, 2, 3, 4, 5].map(i => `.hxc .k${i}{--k:${[R[700], R[400], R[900], R[500]
         TX('features', { hpt: 'cx-track', eyebrow: '직무 과정', title: '지금 업무에 맞는 과정을 골라요', sub: '입문부터 리더 과정까지 단계별로 정리했어요. 필수 교육과 함께 들어도 돼요.', cols: LV().map((v, k) => [v, `${k + 1}단계 과정`]) }),
         S2('notices', { eyebrow: '', title: '교육 공지', n: 4 }),
         TX('features', { hpt: 'cx-cert', eyebrow: '이수증', title: '이수증은 기준을 채우면 바로 받아요', sub: '인사 · 감사 제출용 이수증을 따로 신청하지 않아도 돼요.', cols: [['로그인', `${pubOrg() ? '기관' : '회사'} 초대로 만든 계정으로 들어가요`], ['기준 채우기', '영상 · 평가를 이수 기준까지 마쳐요'], ['이수증 받기', 'PDF로 내려받거나 바로 인쇄해요']] }),
-        TX('cta', { eyebrow: '', title: '교육 담당자에게 물어보세요', body: '배정 · 마감 연장 · 이수 기록 정정은 담당자가 확인해 드려요.', cta: '문의하기', cols: [] })] },
+        TX('cta', { eyebrow: '', title: '교육 담당자에게 물어보세요', body: '배정 · 마감 연장 · 이수 기록 정정은 담당자가 확인해 드려요.', cta: '문의하기', cols: [] }), ...quiet()] }, /* 자동 보강의 숫자 띠(운영 현황) · 모집 일정은 현황판 · 마감 막대표와 겹쳐 숨긴 자리로 둔다(운영자가 켤 수 있음) */
     civicclass: { scene: '공공 시민 강좌 · 평생학습관 — 이번 달 접수 중인 강좌(D-day · 남은 자리 · 선착순/추첨)와 강좌 달력, 큰 글씨 · 전화 신청', purpose: ['apply', 'info'],
       build: () => [S2('banner', { eyebrow: `${org()} 시민 강좌`, title: '배우고 싶은 강좌,\n이번 달에 신청해요', sub: '요일과 시간, 수강료를 보고 마음에 드는 강좌를 골라요. 추첨 강좌는 접수 기간 안에만 신청하면 돼요.', cta: '강좌 찾기', link: 'learn:courses', cta2: '내 신청 · 추첨 결과', link2: 'learn:my' }),
         S2('notices', { eyebrow: '', title: '공지 · 휴강 안내', n: 3 }),
