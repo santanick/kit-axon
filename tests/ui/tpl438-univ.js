@@ -28,6 +28,7 @@ const HERO = '.hp-hero.hxu-u'; /* 세 템플릿 공통 첫 화면 */
     const C = S.classes; const set = (i, o) => { if (C[i]) Object.assign(C[i], o); }; const T0 = today(); const add = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymdL(d); };
     set(5, { status: '운영중', recruit: { on: true, mode: 'first', cap: 30, from: add(-7), to: add(4) }, start: add(7), end: add(70) });
     set(4, { recruit: { on: true, mode: 'approve', cap: 40, from: add(-5), to: add(2) }, start: add(9), end: add(30) });
+    set(3, { recruit: { on: true, mode: 'lottery', cap: 20, from: add(1), to: add(40) }, start: add(45), end: add(90) });
     S.calx = S.calx || {}; S.calx.ev = [{ id: 'e1', title: '기말고사', date: add(27), kind: '학사', pub: true }, { id: 'e9', title: '교직원 회의', date: add(3), kind: '회의' }];
     S.notices = [{ id: 'n1', title: '비교과 프로그램 추가 모집 안내', at: T0, pin: true }]; save(); return T0; });
   const gate = p => p.evaluate(() => { const W = document.documentElement.clientWidth; const R = { ovf: document.documentElement.scrollWidth - W, out: [], small: [], tiny: [], wrap1: [] };
@@ -69,43 +70,55 @@ const HERO = '.hp-hero.hxu-u'; /* 세 템플릿 공통 첫 화면 */
       await q.goto(base + '/__t.html', { waitUntil: 'load' }); await q.evaluate(async () => { for (let y = 0; y < document.documentElement.scrollHeight; y += 700) { scrollTo(0, y); await new Promise(r => setTimeout(r, 40)); } scrollTo(0, 0); }); await q.waitForTimeout(400);
       const g = await gate(q); ok(!g.ovf && !g.out.length && !g.small.length && !g.tiny.length && !g.wrap1.length && !pe.length, `${id} @${w}: 넘침 ${g.ovf} · 잘림 ${g.out.length} · 44px 미만 ${g.small.length} · 13px 미만 ${g.tiny.length} · 한 글자 꺾임 ${g.wrap1.length} ${[...g.out, ...g.small, ...g.tiny, ...g.wrap1].slice(0, 4).join(' / ')}`);
       if (w === 1440 && id === 'uvhub') { const s = await q.evaluate(() => { const T = s => (document.querySelector(s) || {}).innerText || ''; const hero = T('.hxu-uh'); const ph = document.querySelector('.hxu-uh img');
-          return { hero, photo: !!(ph && ph.naturalWidth > 0), who: [...document.querySelectorAll('.hxu-pc h3')].map(x => x.innerText), due: document.querySelectorAll('.hxu-pn-l li').length, cal: T('.hxu-cal'), nt: T('.hxu-nt'), bd: document.querySelectorAll('.hxu-lad li').length,
+          return { hero, photo: !!(ph && ph.naturalWidth > 0), who: [...document.querySelectorAll('.hxu-pc h3')].map(x => x.innerText), due: document.querySelectorAll('.hxu-pn-l li').length, cal: T('.hxu-cal'), nt: T('.hxu-nt'), bd: document.querySelectorAll('.hxu-lad li').length, open1: [...document.querySelectorAll('.hxu-uh .hxu-pn-l:not(.hxu-pn-q) li')].map(x => x.innerText).join(' | '), soon: [...document.querySelectorAll('.hxu-uh .hxu-pn-q li')].map(x => x.innerText).join(' | '), cc: document.querySelectorAll('.hxu-ccg .hxu-cc').length, tile1: document.querySelectorAll('#p-home .hps-ty-n, #p-home .hp-cls').length, imgs: [...document.querySelectorAll('.hxu-cc img')].map(i => i.getAttribute('src')), map0: !!document.querySelector('#p-home .hps-mapv, #p-home .hp-map'), vs: !!document.querySelector('.hxu-vs'),
             order: [...document.querySelectorAll('main section, body > section, section.hpt')].slice(0, 3).map(x => x.className.match(/hxu-\w+|hp-\w+/g) || []).flat().join(' '), facts1: !!document.querySelector('.hxu-uh + section [class*=hps-fact], .hxu-uh + .hp-stats') }; });
         ok(/학번으로 로그인/.test(s.hero) && /비교과 신청하기/.test(s.hero) && /마감 임박/.test(s.hero) && s.due >= 2 && /D-2/.test(s.hero) && s.photo, `${id}: 첫 화면 — 학번 로그인 · 비교과 신청 · 마감 임박(D-day ${s.due}건) · 실사진`);
         ok(s.who.join('/') === '재학생/신입생/교수자/산학 · 지역', `${id}: 방문자별 바로 가기 4종 ${s.who}`);
+        ok(/곧 접수 시작/.test(s.hero) && /캡스톤디자인/.test(s.soon) && !/캡스톤디자인/.test(s.open1) && !/D-\d/.test(s.soon), `${id}: 「마감 임박」과 「곧 접수 시작」 분리(${s.soon.replace(/\s+/g, ' ').slice(0, 40)})`);
+        ok(s.cc >= 4 && !s.tile1 && new Set(s.imgs).size === s.imgs.length && s.imgs.length === s.cc, `${id}: 강좌 카드 ${s.cc}장 · 사진 중복 0 · 글자 한 자 타일 0`);
+        ok(s.vs && !s.map0, `${id}: 오시는 길 = 사진 + 연락처 판(큰 글자 지도 대체 판 없음)`);
         ok(/기말고사/.test(s.cal) && !/교직원 회의/.test(s.cal) && /접수 마감/.test(s.cal), `${id}: 학사 일정 — 학습자에게 보이는 일정 · 모집 마감만(내부 회의 제외)`);
         ok(/비교과 프로그램 추가 모집/.test(s.nt) && /중요/.test(s.nt), `${id}: 공지(중요 먼저)`); ok(s.bd >= 2, `${id}: 이수 · 배지 사다리 ${s.bd}단계(실제 배지)`); }
       if (w === 1440 && id !== 'uvhub') { const s = await q.evaluate(() => { const T = s => (document.querySelector(s) || {}).innerText || ''; const ph = document.querySelector('.hp-hero.hxu-u img');
           return { hero: T('.hp-hero.hxu-u'), photo: !!(ph && ph.naturalWidth > 0), who: [...document.querySelectorAll('.hxu-pc h3')].map(x => x.innerText), wk: document.querySelectorAll('.hxu-wk a').length, cur: (document.querySelector('.hxu-wk a[aria-current]') || {}).innerText || '', td: document.querySelectorAll('.hxu-td li').length,
-            chips: [...document.querySelectorAll('.hxu-op-ch li a')].map(a => a.innerText.replace(/\s+/g, ' ')), tel: !!document.querySelector('.hxu-op-if a[href^="tel:"]'), seats: [...document.querySelectorAll('.hxu-se-l li')].map(x => x.innerText.replace(/\s+/g, ' ')), cal: T('.hxu-cal'), nt: T('.hxu-nt'), list: !!document.querySelector('.hp-cls') }; });
+            chips: [...document.querySelectorAll('.hxu-op-ch li a')].map(a => a.innerText.replace(/\s+/g, ' ')), tel: !!document.querySelector('.hxu-vs a[href^="tel:"]'), seats: [...document.querySelectorAll('.hxu-cc-s')].map(x => x.innerText.replace(/\s+/g, ' ')), wl: document.querySelectorAll('.hxu-wl a').length, pc: document.querySelectorAll('.hxu-pc').length, secTxt: [...document.querySelectorAll('#p-home section')].map(x => x.innerText).join(' '), heroH: 0, order: [...document.querySelectorAll('#p-home section.hpt')].map(x => (String(x.className).match(/hxu-(op|cl|gd|vs|bo|wl|who|uh|lm|bd)\b/) || [''])[0]).filter(Boolean).join(' '), cal: T('.hxu-cal'), nt: T('.hxu-nt'), list: document.querySelectorAll('.hxu-crl li').length }; });
         if (id === 'uvlms') { ok(/학번으로 로그인/.test(s.hero) && /이번 주 할 일/.test(s.hero) && s.wk === 7 && /오늘/.test(s.cur) && s.td >= 2 && /D-2/.test(s.hero) && /학번 · 학과로만/.test(s.hero) && s.photo, `uvlms: 첫 화면 — 7일 띠(${s.wk}칸 · 오늘 표시) · 이번 주 할 일 ${s.td}건(D-2) · 학번 로그인 카드 · 실사진`);
-          ok(s.who.join('/') === '재학생/신입생/교수자/산학 · 지역' && /기말고사/.test(s.cal) && !/교직원 회의/.test(s.cal) && /중요/.test(s.nt) && s.list, `uvlms: 교과목 목록 · 학사 일정(내부 회의 제외) · 공지 · 방문자 바로 가기`);
+          ok(s.who.join('/') === '재학생/신입생/교수자/산학 · 지역' && /기말고사/.test(s.cal) && !/교직원 회의/.test(s.cal) && /중요/.test(s.nt) && s.list >= 4, `uvlms: 교과목 목록(${s.list}줄) · 학사 일정(내부 회의 제외) · 공지 · 방문자 바로 가기`);
           ok(!/교직원 회의/.test(s.hero), 'uvlms: 이번 주 할 일에 내부 일정(교직원 회의) 없음'); }
-        if (id === 'uvopen') { ok(/공개 강좌 둘러보기/.test(s.hero) && /수강 문의하기/.test(s.hero) && /^전체/.test(s.chips[0] || '') && s.chips.length >= 5 && /D-2 접수 중/.test(s.chips[1] || '') && s.tel && s.photo, `uvopen: 첫 화면 — 강좌 칩 ${s.chips.length}개(접수 중 먼저: ${s.chips[1]}) · 문의 전화 · 실사진`);
-          ok(s.seats.length >= 2 && s.seats.every(x => /자리 남음|정원이 찼어요|정원 \d+명/.test(x)) && /34 \/ 40명|\d+ \/ 40명/.test(s.seats.join(' ')), `uvopen: 남은 자리 막대 ${s.seats.length}건 (${s.seats[0]})`);
-          ok(s.who[0] === '시민 · 지역 주민' && s.who.length === 4, `uvopen: 방문자 바로 가기 — 시민 · 지역 주민 먼저 ${s.who}`);
+        if (id === 'uvopen') { ok(/강좌 둘러보기/.test(s.hero) && /수강 문의/.test(s.hero) && /^전체/.test(s.chips[0] || '') && s.chips.length >= 5 && /D-2 접수 중/.test(s.chips[1] || '') && s.tel && s.photo, `uvopen: 첫 화면 — 강좌 칩 ${s.chips.length}개(접수 중 먼저: ${s.chips[1]}) · 문의 전화 · 실사진`);
+          ok(s.seats.length >= 2 && s.seats.every(x => /자리 남음|정원이 찼어요/.test(x)) && /정원 40명/.test(s.seats.join(' ')), `uvopen: 강좌 카드 안 남은 자리 막대 ${s.seats.length}건 (${s.seats[0]})`);
+          ok(!s.pc && s.wl === 5, `uvopen: 재학생 · 교수자는 한 줄 띠로 접음(카드 ${s.pc} · 링크 ${s.wl})`);
+          ok(!/교과목/.test(s.secTxt), 'uvopen: 시민 화면 본문에 재학생 낱말 「교과목」 없음');
+          ok(s.order === 'hxu-op hxu-cl hxu-gd hxu-vs hxu-bo hxu-wl', `uvopen: uvhub와 다른 블록 · 순서(${s.order})`);
           ok(/기말고사/.test(s.cal) && !/교직원 회의/.test(s.cal) && /중요/.test(s.nt), 'uvopen: 행사 · 학사 일정 · 공지'); } }
+      if (w === 390) { const hh = await q.evaluate(() => { const h = document.querySelector('.hp-hero.hxu-u'); return h ? Math.round(h.getBoundingClientRect().height) : 0; }); const lim = id === 'uvopen' ? 900 : 1400;
+        ok(hh > 0 && hh <= lim, `${id} @390: 첫 화면 높이 ${hh}px(≤${lim})`); }
       if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await q.screenshot({ path: path.join(SHOT, `t-${id}-${w}.png`), fullPage: true }); }
       await c.close(); } }
 
   /* ── 4) 시나리오 버튼 → 실제 경로 · 대학 개인정보 ── */
   { const r = await p.evaluate(ids => ids.map(id => { const s = siteFromTpl(TPL.find(t => t.id === 'prem-' + id)); const h = siteHTML(s, true, 'ko'); const d = new DOMParser().parseFromString(h, 'text/html');
       const A = [...d.querySelectorAll('.hxu-u a[href]')].map(a => a.getAttribute('href')); const menus = (s.menus || []).map(m => m.id); const cls = (S.classes || []).map(c => c.id);
-      const bad = A.filter(h => !(/^#(login|cal|badges|my)$/.test(h) || /^tel:\+?\d+$/.test(h) || /^mailto:/.test(h) || (/^#p-m-/.test(h) && menus.includes(h.slice(5))) || (/^#p-c-/.test(h) && cls.includes(h.slice(5)))));
+      const bad = A.filter(h => !(/^#(login|cal|badges|my|shop|notice|comm)$/.test(h) || /^https:\/\/map\.(naver|kakao)\.com\//.test(h) || /^tel:\+?\d+$/.test(h) || /^mailto:/.test(h) || (/^#p-m-/.test(h) && menus.includes(h.slice(5))) || (/^#p-c-/.test(h) && cls.includes(h.slice(5)))));
       const txt = [...d.querySelectorAll('.hxu-u')].map(x => x.textContent).join(' ');
-      return { id, n: A.length, bad, inputs: d.querySelectorAll('.hxu-u input, .hxu-u select, .hxu-u textarea, form').length, phone: /휴대폰|핸드폰|전화번호를?\s*입력|주민(등록)?번호/.test(txt) /* 「지역 주민」은 방문자 이름이라 허용 */, sid: /학번/.test(txt) }; }), IDS);
+      return { id, n: A.length, bad, inputs: d.querySelectorAll('.hxu-u input, .hxu-u select, .hxu-u textarea, form').length, phone: /휴대폰|핸드폰|전화번호를?\s*입력|주민\s*(등록)?\s*번호|주민등록|생년월일/.test(txt) /* 「지역 주민」은 방문자 이름이라 허용 */, sid: /학번/.test(txt) }; }), IDS);
     r.forEach(x => { ok(x.n >= 15 && !x.bad.length, `${x.id}: 시나리오 링크 ${x.n}개 모두 실제 경로(죽은 링크 0) ${x.bad.join(' ')}`); ok(!x.inputs && !x.phone && x.sid, `${x.id}: 대학 개인정보 — 학번 · 학과만 안내, 입력칸 · 휴대폰 문구 없음`); }); }
+
+  /* ── 4-1) 강좌 · 공지 메뉴를 지운 기관: 고정 메뉴 id 대신 학습자 경로(#shop · #notice) ── */
+  { const r = await p.evaluate(ids => ids.map(id => { const s = siteFromTpl(TPL.find(t => t.id === 'prem-' + id)); s.menus = (s.menus || []).filter(m => !['class', 'notice', 'community', 'board'].includes(m.kind) && !/클래스|교과목|강좌|공지|커뮤니티|게시판/.test(m.l || '')); const h = siteHTML(s, true, 'ko'); const d = new DOMParser().parseFromString(h, 'text/html');
+      const A = [...d.querySelectorAll('.hxu-u a[href]')].map(a => a.getAttribute('href')); return { id, dead: A.filter(x => /^#p-m-/.test(x)), shop: A.includes('#shop'), nt: A.includes('#notice') }; }), IDS);
+    r.forEach(x => ok(!x.dead.length && x.shop && x.nt, `${x.id}: 메뉴가 없으면 #shop · #notice로(고정 메뉴 id ${x.dead.length}개)`)); }
 
   /* ── 5) 템플릿 사용 → 학습자 미리보기(Shadow DOM) · 링크 클릭 ── */
   const CLK = { uvhub: [['.hxu-pn-f', /^#cal/], ['.hxu-pn-l a', /^#class\//], ['.hxu-uh .hxu-btn.g', /^#shop|^#class\//]],
     uvlms: [['.hxu-wk a', /^#cal/], ['.hxu-td a', /^#class\//], ['.hxu-lm-bt .hxu-btn.p', /^#login/]],
-    uvopen: [['.hxu-op-ch a.all', /^#shop|^#class\//], ['.hxu-op-ch li:nth-child(2) a', /^#class\//], ['.hxu-se-l a', /^#class\//]] };
+    uvopen: [['.hxu-op-ch a.all', /^#shop|^#class\//], ['.hxu-op-ch li:nth-child(2) a', /^#class\//], ['.hxu-cc', /^#class\//]] };
   for (const id of IDS) { await p.evaluate(id => { const f = document.getElementById('pvF'); if (f) f.remove(); ACT['tpl-use']({ dataset: { v: 'prem-' + id } }); save(); }, id); await p.waitForTimeout(700);
     ok(await p.evaluate(id => S.site.theme === id && S.site.tpl === 'prem-' + id, id), `${id} 템플릿 사용: 사이트 테마 · 템플릿 반영`);
     await p.evaluate(() => { const f = document.createElement('iframe'); f.id = 'pvF'; f.src = 'learner.html?preview=1#home'; f.style.cssText = 'position:fixed;left:0;top:0;width:1280px;height:900px;z-index:99999;background:#fff'; document.body.appendChild(f); }); await p.waitForTimeout(3200);
     const L = await p.evaluate(H => { const d = document.getElementById('pvF').contentDocument; const h = [...d.querySelectorAll('.smhost')].find(x => x.shadowRoot && x.shadowRoot.querySelector(H)); return h ? [...h.shadowRoot.querySelectorAll('.hxu-u a[href]')].map(a => a.getAttribute('href')) : null; }, HERO);
     ok(!!L && L.length >= 15, `${id} 학습자 미리보기: 게시본(Shadow DOM)에 첫 화면 · 부품 (${L ? L.length : 0} 링크)`);
-    ok(!!L && L.every(h => /^#(login|cal|badges|my|shop|notice|home|comm|class\/[\w-]+)$/.test(h) || /^(tel|mailto):/.test(h)), `${id} 학습자 미리보기: 링크가 학습자 경로로 바뀜 ${L ? [...new Set(L)].join(' ') : ''}`);
+    ok(!!L && L.every(h => /^#(login|cal|badges|my|shop|notice|home|comm|class\/[\w-]+)$/.test(h) || /^(tel|mailto):/.test(h) || /^https:\/\/map\.(naver|kakao)\.com\//.test(h)), `${id} 학습자 미리보기: 링크가 학습자 경로로 바뀜 ${L ? [...new Set(L)].join(' ') : ''}`);
     for (const [sel, want] of CLK[id]) {
       const hh = await p.evaluate(([sel, H]) => { const d = document.getElementById('pvF').contentDocument; const h = [...d.querySelectorAll('.smhost')].find(x => x.shadowRoot && x.shadowRoot.querySelector(H)); const a = h && h.shadowRoot.querySelector(sel); if (!a) return ['(없음)', 0]; a.click(); return new Promise(r => setTimeout(() => r([d.defaultView.location.hash, (d.querySelector('#lm') || d.body).innerText.length]), 900)); }, [sel, HERO]);
       ok(want.test(hh[0]) && hh[1] > 40, `${id} 학습자 미리보기: ${sel} 누르면 ${hh[0]} 화면(내용 ${hh[1]}자)`);
@@ -120,13 +133,21 @@ const HERO = '.hp-hero.hxu-u'; /* 세 템플릿 공통 첫 화면 */
     ok(v('at') && cr(v('at'), '#ffffff') >= 4.5 && cr(v('at50'), v('50')) >= 4.5 && cr(v('wt'), v('wbg')) >= 4.5 && cr(v('on'), v('a')) >= 4.5, `${id} 부품 글자 대비(노랑 기관 색): 라벨 ${v('at') && cr(v('at'), '#ffffff').toFixed(2)} · 옅은 칸 ${v('at50') && cr(v('at50'), v('50')).toFixed(2)} · 마감 ${v('wt') && cr(v('wt'), v('wbg')).toFixed(2)} · 버튼 ${v('on') && cr(v('on'), v('a')).toFixed(2)}`); } }
   ok(!errs.length, `관리자 pageerror 0 ${errs.join('|')}`); await ctx.close();
 
+  /* ── 6-1) 학사 LMS(univ_lms): 수업 주차 · 시험 기간(기관 일정에 있을 때만) ── */
+  { const { ctx, p, errs } = await admin(true, { ed: 'lms' }); await seed(p);
+    const r = await p.evaluate(() => { const one = () => { const s = siteFromTpl(TPL.find(t => t.id === 'prem-uvlms')); return new DOMParser().parseFromString(siteHTML(s, true, 'ko'), 'text/html').querySelector('.hxu-lm-tm'); };
+      const a = one(); const t1 = a ? a.innerText.replace(/\s+/g, ' ') : ''; S.calx.ev = S.calx.ev.filter(e => !/고사|시험/.test(e.title)); const b = one(); const t2 = b ? b.innerText.replace(/\s+/g, ' ') : ''; S.org.ed = 'lite'; const c = one(); return { t1, t2, lite: !!c }; });
+    ok(/\d+주차/.test(r.t1) && /기말고사/.test(r.t1) && /D-\d+/.test(r.t1), `univ_lms: 강의실 카드에 수업 주차 · 시험 기간 (${r.t1})`);
+    ok(/\d+주차/.test(r.t2) && !/고사/.test(r.t2) && !r.lite, `univ_lms: 시험 일정이 없으면 그 칸 숨김 · 일반 대학(lite)에는 없음`);
+    ok(!errs.length, `univ_lms pageerror 0 ${errs.join('|')}`); await ctx.close(); }
+
   /* ── 7) 빈 기관: 사실 없는 판은 숨김 ── */
   { const { ctx, p, errs } = await admin(true, { empty: true });
     const r = await p.evaluate(id => { const s = siteFromTpl(TPL.find(t => t.id === 'prem-' + id)); const h = siteHTML(s, true, 'ko'); const d = new DOMParser().parseFromString(h, 'text/html');
       return { hero: !!d.querySelector('.hxu-uh'), pn: !!d.querySelector('.hxu-uh-pn'), bd: !!d.querySelector('.hxu-bd'), who: !!d.querySelector('.hxu-who'), dday: /D-\d/.test(h), nb: (S.badges || []).filter(b => b && b.name).length, zero: /첫 발급 전/.test(h) || !(S.badges || []).length }; }, IDS[0]);
     ok(r.hero && r.who && !r.pn && r.bd === r.nb > 0 && r.zero && !r.dday, `빈 기관: 마감 판 · D-day 숨김, 배지 판은 배지가 정해진 경우에만(발급 0건은 「첫 발급 전」) ${JSON.stringify(r)}`);
     const r2 = await p.evaluate(() => ['uvlms', 'uvopen'].map(id => { const s = siteFromTpl(TPL.find(t => t.id === 'prem-' + id)); const h = siteHTML(s, true, 'ko'); const d = new DOMParser().parseFromString(h, 'text/html');
-      return { id, hero: !!d.querySelector('.hp-hero.hxu-u'), dday: /D-\d/.test(h), seats: !!d.querySelector('.hxu-se'), wkItems: d.querySelectorAll('.hxu-td li').length, chips: d.querySelectorAll('.hxu-op-ch li').length, cls: (S.classes || []).length, login: /학번 · 학과로만/.test(h) }; }));
+      return { id, hero: !!d.querySelector('.hp-hero.hxu-u'), dday: /D-\d/.test(h), seats: !!d.querySelector('.hxu-cc-s'), wkItems: d.querySelectorAll('.hxu-td li').length, chips: d.querySelectorAll('.hxu-op-ch li').length, cls: (S.classes || []).length, login: /학번 · 학과로만/.test(h) }; }));
     r2.forEach(x => ok(x.hero && x.login && !x.dday && !x.seats && (x.cls ? true : !x.wkItems && !x.chips), `빈 기관 ${x.id}: 첫 화면은 남고 D-day · 남은 자리 · 칩은 사실이 없으면 숨김 ${JSON.stringify(x)}`));
     ok(!errs.length, `빈 기관 pageerror 0 ${errs.join('|')}`); await ctx.close(); }
 

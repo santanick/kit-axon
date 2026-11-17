@@ -36,9 +36,10 @@
   /* ── 실제 데이터 ── */
   const pubAll = () => { try { return (S.classes || []).filter(c => (c.open === '전체' || c.open == null) && c.status !== '종료' && c.status !== '삭제'); } catch (e) { return []; } };
   const menuOf = (s, k) => ((s && s.menus) || []).find(m => m && m.kind === k && m.on !== false && m.access !== '비공개');
-  const href = { cls: s => { const m = menuOf(s, 'class'); return m ? '#p-m-' + m.id : pubAll()[0] ? '#p-c-' + pubAll()[0].id : '#p-m-class'; },
-    notice: s => { const m = menuOf(s, 'notice'); return m ? '#p-m-' + m.id : '#p-m-notice'; },
-    ask: () => { try { const f = (S.settings && S.settings.footer) || {}; if (f.tel && !isPh(f.tel)) return 'tel:' + String(f.tel).replace(/[^\d+]/g, ''); const em = f.email || f.mail; if (em && /@/.test(em)) return 'mailto:' + em; } catch (e) { } return '#p-m-board'; } };
+  const href = { cls: s => { const m = menuOf(s, 'class'); return m ? '#p-m-' + m.id : '#shop'; }, /* 강좌 메뉴를 지운 기관: 학습자 사이트 강좌 목록(#shop) */
+    notice: s => { const m = menuOf(s, 'notice'); return m ? '#p-m-' + m.id : '#notice'; },
+    ask: () => { try { const f = (S.settings && S.settings.footer) || {}; if (f.tel && !isPh(f.tel)) return 'tel:' + String(f.tel).replace(/[^\d+]/g, ''); const em = f.email || f.mail; if (em && /@/.test(em)) return 'mailto:' + em; } catch (e) { } const b = menuOf(s0(), 'community') || menuOf(s0(), 'board'); return b ? '#p-m-' + b.id : '#comm'; } };
+  const s0 = () => { try { return (typeof site === 'function' ? site() : S.site) || {}; } catch (e) { return {}; } };
   /* 마감 · 예정: 공개 강좌의 모집(recruit) · 개강 — hpsec-trust 일정과 같은 규칙 */
   function dues(n) { const T0 = tday(); const L = [];
     pubAll().forEach(c => { const r = c.recruit && c.recruit.on ? c.recruit : null; const from = r && okD(r.from) ? r.from.slice(0, 10) : ''; const to = r && okD(r.to) ? r.to.slice(0, 10) : ''; const st = okD(c.start) ? c.start.slice(0, 10) : '';
@@ -72,10 +73,13 @@
   function hero(s, d) { const p = photo(s, d);
     const lines = String(d.title || (S.org && S.org.name) || '').split('\n').filter(Boolean).map(E).join('<br>');
     const p1 = linkHref(d.link) || '#login'; const p2 = linkHref(d.link2) || href.cls(s);
-    let R = dues(3); let k = '마감 임박'; if (!R.length) { R = running(3); k = `진행 중인 ${term('cls')}`; }
+    const D = dues(6); let R = D.filter(x => x.k === 'open').slice(0, 3); const Q = D.filter(x => x.k !== 'open').slice(0, R.length ? 1 : 3); /* 접수 시작 · 개강 예정은 마감과 섞지 않고 아래 「곧 시작」 줄로 */
+    let k = R.length ? '마감 임박' : Q.length ? '곧 접수 시작' : ''; if (!R.length && !Q.length) { R = running(3); k = `진행 중인 ${term('cls')}`; }
     const T0 = tday(); const ev = events(1)[0];
-    const row = r => `<li><a ${lnk('#p-c-' + r.id)}>${r.k === 'run' ? `<span class="hxu-dd run" aria-label="진행 중">진행</span>` : `<span class="hxu-dd${r.k === 'open' && r.d <= 3 ? ' hot' : r.k !== 'open' ? ' soon' : ''}">${r.d === 0 ? 'D-DAY' : 'D-' + r.d}</span>`}<span class="hxu-rt"><b>${E(r.l)}</b><small>${E(r.sub)}</small></span>${ic('arrow', 18)}</a></li>`;
-    const panel = R.length ? `<aside class="hxu-uh-pn" aria-label="${E(k)}"><div class="hxu-pn-h"><p class="hxu-pn-k">${ic(R[0].k === 'run' ? 'clock' : 'bell', 18)}<span>${E(k)}</span></p><span class="hxu-pn-c">${R.length}건</span></div><ul class="hxu-pn-l">${R.map(row).join('')}</ul>${ev ? `<a class="hxu-pn-f" href="#cal"><span class="hxu-pn-e"><small>다음 학사 일정</small><b>${E(md(ev.date))} ${E(ev.title)}</b></span><span class="hxu-pn-m">전체 일정${ic('arrow', 16)}</span></a>` : `<a class="hxu-pn-f" href="#cal"><span class="hxu-pn-m">학사 일정 보기${ic('arrow', 16)}</span></a>`}</aside>` : '';
+    const row = r => `<li><a ${lnk('#p-c-' + r.id)}>${r.k === 'run' ? `<span class="hxu-dd run" aria-label="진행 중">진행</span>` : r.k === 'open' ? `<span class="hxu-dd${r.d <= 3 ? ' hot' : ''}">${r.d === 0 ? 'D-DAY' : 'D-' + r.d}</span>` : `<span class="hxu-dd soon" aria-label="${E(r.k === 'soon' ? '접수 시작일' : '개강일')} ${E(md(r.at))}"><b>${E(md(r.at))}</b><small>${r.k === 'soon' ? '접수' : '개강'}</small></span>`}<span class="hxu-rt"><b>${E(r.l)}</b><small>${E(r.sub)}</small></span>${ic('arrow', 18)}</a></li>`;
+    const L0 = R.length ? R : Q; const soonL = R.length && Q.length ? `<p class="hxu-pn-s">${ic('clock', 16)}<span>곧 접수 시작</span></p><ul class="hxu-pn-l hxu-pn-q">${Q.map(row).join('')}</ul>` : '';
+    const cnt = L0[0] && L0[0].k === 'open' ? `${L0.length}건 접수 중` : `${L0.length}건`;
+    const panel = L0.length ? `<aside class="hxu-uh-pn" aria-label="${E(k)}"><div class="hxu-pn-h"><p class="hxu-pn-k">${ic(L0[0].k === 'run' ? 'clock' : L0[0].k === 'open' ? 'bell' : 'clock', 18)}<span>${E(k)}</span></p><span class="hxu-pn-c">${cnt}</span></div><ul class="hxu-pn-l">${L0.map(row).join('')}</ul>${soonL}${ev ? `<a class="hxu-pn-f" href="#cal"><span class="hxu-pn-e"><small>다음 학사 일정</small><b>${E(md(ev.date))} ${E(ev.title)}</b></span><span class="hxu-pn-m">전체 일정${ic('arrow', 16)}</span></a>` : `<a class="hxu-pn-f" href="#cal"><span class="hxu-pn-m">학사 일정 보기${ic('arrow', 16)}</span></a>`}</aside>` : '';
     void T0;
     return `<section class="hpt hp-hero hxu-u hxu-uh${panel ? '' : ' one'}">${fig(p, 'hxu-uh-ph')}<i class="hxu-uh-sc" aria-hidden="true"></i><div class="hxu-w hxu-uh-g"><div class="hxu-uh-tx">
 <p class="hxu-uh-ey"><span>${E(d.eyebrow || semester())}</span><em>${E(today2())}</em></p><h1>${lines}</h1>${d.sub ? `<p class="hxu-uh-sub">${E(d.sub)}</p>` : ''}
@@ -137,7 +141,7 @@
     const card = `<div class="hxu-lm-wk"><div class="hxu-pn-h"><p class="hxu-pn-k">${ic('cal', 18)}<span>이번 주 할 일</span></p><a class="hxu-lm-al" href="#cal">학사 일정${ic('arrow', 16)}</a></div>${strip}${todo}</div>`;
     const side = `<aside class="hxu-lm-sd" aria-label="로그인">${p ? fig(p, 'hxu-lm-ph') : '<div class="hxu-lm-ph0" aria-hidden="true"></div>'}<div class="hxu-lm-lg"><p class="hxu-lm-lt">${ic('cap', 20)}<span>내 강의실</span></p><p class="hxu-lm-ld">수강 중인 교과목 · 과제 · 출석을 한 화면에서 확인해요.</p>
 <div class="hxu-lm-bt">${d.cta ? `<a class="hxu-btn p" ${lnk(p1)}>${E(d.cta)}${ic('arrow', 18)}</a>` : ''}${d.cta2 ? `<a class="hxu-btn g" ${lnk(p2)}>${E(d.cta2)}</a>` : ''}</div><p class="hxu-lm-pv">${ic('shield', 16)}<span>로그인은 학번 · 학과로만 확인해요</span></p>
-${C.length ? `<dl class="hxu-lm-st"><div><dt>이번 학기 ${E(term('cls'))}</dt><dd>${C.length}<small>개</small></dd></div><div><dt>이번 주 일정</dt><dd>${W.L.length}<small>건</small></dd></div></dl>` : ''}</div></aside>`;
+${lmsInfo()}${C.length ? `<dl class="hxu-lm-st"><div><dt>이번 학기 ${E(term('cls'))}</dt><dd>${C.length}<small>개</small></dd></div><div><dt>이번 주 일정</dt><dd>${W.L.length}<small>건</small></dd></div></dl>` : ''}</div></aside>`;
     return `<section class="hpt hp-hero hxu-u hxu-lm"><div class="hxu-w hxu-lm-g"><div class="hxu-lm-tx"><p class="hxu-lm-ey"><span>${E(d.eyebrow || semester())}</span><em>${E(today2())}</em></p><h1>${lines}</h1>${d.sub ? `<p class="hxu-lm-sub">${E(d.sub)}</p>` : ''}${C.length || W.L.length ? card : ''}</div>${side}</div></section>`; }
 
   const rk = t => /오늘 마감|D-\d+ 접수/.test(t) ? 0 : /접수 예정/.test(t) ? 1 : /개강 예정/.test(t) ? 2 : 3;
@@ -147,10 +151,9 @@ ${C.length ? `<dl class="hxu-lm-st"><div><dt>이번 학기 ${E(term('cls'))}</dt
     const p1 = linkHref(d.link) || href.cls(s); const p2 = linkHref(d.link2) || href.ask();
     const open = C.filter(c => /접수 중|오늘 마감/.test(stOf(c).t)); const left = seatsOf().filter(x => x.st === 'open').reduce((a, x) => a + x.left, 0); const free = C.filter(c => !(+c.price)).length;
     const chips = C.length ? `<div class="hxu-op-ch"><p class="hxu-op-q">${ic('spark', 18)}<span>${E(d.ask || '어떤 강좌를 찾으세요?')}</span></p><ul>${[`<li><a class="all" ${lnk(href.cls(s))}><b>전체 ${E(term('cls'))}</b><small>${C.length}개</small></a></li>`, ...C.map(c => [c, stOf(c).t]).sort((a, b) => rk(a[1]) - rk(b[1])).slice(0, 7).map(([c]) => { const k = kw(c.name); const st = stOf(c); return `<li><a ${lnk('#p-c-' + c.id)}>${k.tag ? `<em>${E(k.tag)}</em>` : ''}<b>${E(k.l)}</b>${st.t ? `<small class="${st.hot ? 'hot' : ''}">${E(st.t)}</small>` : ''}</a></li>`; })].join('')}</ul>
-<dl class="hxu-op-st"><div><dt>공개 ${E(term('cls'))}</dt><dd>${C.length}<small>개</small></dd></div>${open.length ? `<div><dt>지금 접수 중</dt><dd>${open.length}<small>개</small></dd></div>` : ''}${left ? `<div><dt>남은 자리</dt><dd>${left}<small>석</small></dd></div>` : free ? `<div><dt>수강료 무료</dt><dd>${free}<small>개</small></dd></div>` : ''}</dl></div>` : '';
-    const K = contact(); const info = K.addr || K.tel || K.em ? `<ul class="hxu-op-if">${K.addr ? `<li><span class="hxu-op-ik" aria-hidden="true">${ic('pin', 18)}</span><span><small>오시는 길</small><b>${E(K.addr)}</b></span></li>` : ''}${K.tel ? `<li><a href="tel:${E(K.tel.replace(/[^\d+]/g, ''))}"><span class="hxu-op-ik" aria-hidden="true">${ic('phone', 18)}</span><span><small>수강 · 협력 문의</small><b>${E(K.tel)}</b></span></a></li>` : ''}${K.em ? `<li><a href="mailto:${E(K.em)}"><span class="hxu-op-ik" aria-hidden="true">${ic('mail', 18)}</span><span><small>메일 문의</small><b>${E(K.em)}</b></span></a></li>` : ''}</ul>` : '';
+<dl class="hxu-op-st"><div><dt>공개 ${E(term('cls'))}</dt><dd>${C.length}<small>개</small></dd></div>${open.length ? `<div><dt>지금 접수 중</dt><dd>${open.length}<small>개</small></dd></div>` : ''}${left ? `<div><dt>남은 자리</dt><dd>${left}<small>석</small></dd></div>` : free ? `<div><dt>수강료 무료</dt><dd>${free}<small>개</small></dd></div>` : ''}</dl>${left ? '<p class="hxu-op-nt">남은 자리는 정원이 정해진 접수 중 강좌를 더한 수예요.</p>' : ''}</div>` : '';
     return `<section class="hpt hp-hero hxu-u hxu-op${chips ? '' : ' nc'}">${fig(p, 'hxu-op-ph')}<i class="hxu-op-sc" aria-hidden="true"></i><div class="hxu-w"><div class="hxu-op-tx"><p class="hxu-op-ey">${E(d.eyebrow || '열린 캠퍼스 · 시민 누구나')}</p><h1>${lines}</h1>${d.sub ? `<p class="hxu-op-sub">${E(d.sub)}</p>` : ''}
-<div class="hxu-btns">${d.cta ? `<a class="hxu-btn p" ${lnk(p1)}>${E(d.cta)}${ic('arrow', 18)}</a>` : ''}${d.cta2 ? `<a class="hxu-btn g" ${lnk(p2)}>${E(d.cta2)}</a>` : ''}</div><p class="hxu-op-pv">${ic('shield', 16)}<span>둘러보기는 로그인 없이 · 재학생 로그인은 학번 · 학과로만 확인해요</span></p></div>${chips || info ? `<div class="hxu-op-pn">${chips}${info}</div>` : ''}</div></section>`; }
+<div class="hxu-btns">${d.cta ? `<a class="hxu-btn p" ${lnk(p1)}>${E(d.cta)}${ic('arrow', 18)}</a>` : ''}${d.cta2 ? `<a class="hxu-btn g" ${lnk(p2)}>${E(d.cta2)}</a>` : ''}</div><p class="hxu-op-pv">${ic('shield', 16)}<span>둘러보기는 로그인 없이 · 재학생은 학번 · 학과로만 확인해요</span></p></div>${chips ? `<div class="hxu-op-pn">${chips}</div>` : ''}</div></section>`; }
 
   /* ══ 정원 · 남은 자리(uvx-seats) — 모집 정원이 있는 공개 강좌만 ══ */
   function seats(s, d) { const L = seatsOf(); if (!L.length) return '';
@@ -158,17 +161,77 @@ ${C.length ? `<dl class="hxu-lm-st"><div><dt>이번 학기 ${E(term('cls'))}</dt
 <ul class="hxu-se-l${L.length === 3 ? ' c3' : ''}">${L.map(x => { const pct = Math.round(x.n / x.cap * 100); const full = x.left <= 0; return `<li><a ${lnk('#p-c-' + x.id)}><span class="hxu-se-h"><span class="hxu-dd${x.st === 'soon' ? ' soon' : x.d != null && x.d <= 3 ? ' hot' : ''}">${x.st === 'soon' ? '예정' : x.d === 0 ? 'D-DAY' : x.d == null ? '접수' : 'D-' + x.d}</span><span class="hxu-rt"><b>${E(x.l)}</b><small>${E([x.sub, x.mode, x.free ? '무료' : ''].filter(Boolean).join(' · '))}</small></span></span>
 ${x.st === 'soon' ? `<span class="hxu-se-b" role="img" aria-label="접수 전 · 정원 ${x.cap}명"><i style="width:0"></i></span><span class="hxu-se-n"><b>정원 ${x.cap}명</b><small>${x.d === 0 ? '오늘' : `${x.d}일 뒤`} 접수 시작</small></span>` : `<span class="hxu-se-b" role="img" aria-label="정원 ${x.cap}명 중 ${x.n}명 신청"><i style="width:${Math.max(4, pct)}%"></i></span><span class="hxu-se-n"><b class="${full ? 'full' : ''}">${full ? '정원이 찼어요 · 대기 신청' : `${x.left}자리 남음`}</b><small>${x.n} / ${x.cap}명</small></span>`}</a></li>`; }).join('')}</ul></div></section>`; }
 
-  const R = { 'uvx-who': who, 'uvx-badge': badge, 'uvx-board': board, 'uvx-seats': seats };
+
+  /* 학사 LMS(univ_lms) 전용: 수업 주차(이번 학기 가장 먼저 개강한 공개 강좌 기준) · 시험 기간(학습자에게 보이는 기관 일정 중 시험 · 고사) — 없으면 숨김 */
+  const isLms = () => { try { return S.org.type === 'univ' && S.org.ed === 'lms'; } catch (e) { return false; } };
+  function lmsInfo() { if (!isLms()) return ''; const T0 = tday(); const L = [];
+    const st = pubAll().map(c => okD(c.start) ? c.start.slice(0, 10) : '').filter(x => x && x <= T0 && days(x, T0) <= 190).sort()[0];
+    if (st) L.push(['수업 주차', `${Math.floor(days(st, T0) / 7) + 1}주차`, `${md(st)} 첫 개강 기준`]);
+    let ex = null; try { ex = (typeof cxPub === 'function' ? cxPub() : []).filter(e => /시험|고사/.test(e.title || '') && okD(e.date) && String(e.end || e.date).slice(0, 10) >= T0).sort((a, b) => String(a.date).localeCompare(b.date))[0]; } catch (e) { }
+    if (ex) { const d0 = ex.date.slice(0, 10); const n = days(T0, d0); L.push([String(ex.title).slice(0, 14), `${md(d0)}${okD(ex.end) && ex.end.slice(0, 10) !== d0 ? ' ~ ' + md(ex.end) : ''}`, n > 0 ? `D-${n}` : '진행 중']); }
+    return L.length ? `<ul class="hxu-lm-tm" aria-label="이번 학기">${L.map(([k, v, sub]) => `<li><a href="#cal"><small>${E(k)}</small><b>${E(v)}</b><em>${E(sub)}</em></a></li>`).join('')}</ul>` : ''; }
+
+  /* ── 강좌 사진: 강좌명에 맞는 사진(HPSTOCK.forCourse) → 없으면 장면 사진(겹치지 않게). 한 게시본 안에서 같은 사진을 두 번 쓰지 않는다 ── */
+  const USED = new Set(); const PHM = new Map(); const RKU = new Set();
+  const stockId = v => { const m = String((v && v.src) || v || '').match(/img\/stock\/([a-z]{3}-\d{2})(?:-800)?\.webp/); return (v && v.stock) || (m && m[1]) || ''; };
+  function phReset(s) { USED.clear(); PHM.clear(); RKU.clear(); try { Object.keys((s && s.img) || {}).forEach(k => { const id = stockId(s.img[k]); if (id) USED.add(id); }); } catch (e) { } }
+  const SCN = ['강의실 수업', '세미나 토론', '도서관 공부', '캠퍼스', '워크숍 실습', '발표'];
+  function clsPh(s, c, i) { const m = s && s.img && s.img['cls-' + c.id]; if (m && m.src) return { src: m.src, alt: m.alt || c.name, pos: m.pos || '50% 50%' };
+    if (c.thumb && /^(img\/|https?:|data:image)/.test(c.thumb)) return { src: c.thumb, alt: c.name, pos: '50% 50%' };
+    const H = window.HPSTOCK; if (!H) return null; if (PHM.has(c.id)) return PHM.get(c.id); let x = null; const ty = (S.org && S.org.type) || 'univ';
+    let rk0 = ''; try { const r0 = typeof H.courseRule === 'function' ? H.courseRule(c.name) : null; rk0 = r0 ? r0.k : ''; } catch (e) { }
+    /* 같은 장면 규칙(예: AI · 코드 화면)은 한 번만 — 두 번째부터는 강의실 · 세미나 등 다른 장면으로(사진 반복 방지) */
+    try { x = typeof H.forCourse === 'function' && !(rk0 && RKU.has(rk0)) ? H.forCourse(ty, c.name, { seed: String(c.id), exclude: [...USED] }) : null; } catch (e) { x = null; } if (x && rk0) RKU.add(rk0);
+    if (!x && typeof H.photo === 'function') { for (let k = 0; k < SCN.length && !x; k++) { try { const y = H.photo(`${c.name} ${SCN[(i + k) % SCN.length]}`, c.id + k, { id: true, scope: 'hxu' + Date.now() + k }); if (y && !USED.has(y.id)) x = y; } catch (e) { } } }
+    const r = x ? { src: H.url(x, 'sm'), alt: x.alt || '', pos: x.focus || '50% 50%' } : null; if (x) USED.add(x.id); PHM.set(c.id, r); return r; }
+  const priceTx = c => +c.price ? (typeof won === 'function' ? won(c.price) : (+c.price).toLocaleString('ko-KR') + '원') : (typeof mbPayOn === 'function' && !mbPayOn() ? '' : '무료');
+  const sortCls = L => L.map(c => [c, stOf(c)]).sort((a, b) => rk(a[1].t) - rk(b[1].t) || String(a[0].recruit && a[0].recruit.to || a[0].start || '9').localeCompare(String(b[0].recruit && b[0].recruit.to || b[0].start || '9'))).map(x => x[0]);
+  const seatOf = c => { const r = c.recruit && c.recruit.on ? c.recruit : null; const cap = r && +r.cap > 0 ? +r.cap : 0; if (!cap) return null; const n = Math.min(cap, (c.learners || []).length); return { cap, n, left: cap - n }; };
+
+  /* ══ 강좌 카드(uvx-cls): grid(사진 카드) · list(한 줄 목록) — 공통 강좌 카드의 글자 타일 · 빈 높이 대신 ══ */
+  function cls(s, d) { const L = sortCls(pubAll()).slice(0, Math.max(2, Math.min(9, +d.n || 6))); if (!L.length) return ''; const list = d.view === 'list';
+    const per = c => [okD(c.start) ? md(c.start) : '', okD(c.end) ? md(c.end) : ''].filter(Boolean).join(' ~ ');
+    const chip = st => st.t ? `<span class="hxu-chip${st.hot ? ' hot' : /접수 중/.test(st.t) ? ' on' : ''}">${E(st.t)}</span>` : '';
+    const bar = c => { const x = seatOf(c); if (!x || !d.seats) return ''; const pct = Math.round(x.n / x.cap * 100); return `<span class="hxu-cc-s"><span class="hxu-se-b" aria-hidden="true"><i style="width:${Math.max(3, pct)}%"></i></span><small>${x.left > 0 ? `<b>${x.left}자리</b> 남음 · 정원 ${x.cap}명` : '<b>정원이 찼어요</b> · 대기 신청'}</small></span>`; };
+    const teacher = c => c.teacher && !isPh(c.teacher) ? String(c.teacher) : '';
+    const fig2 = (c, i, cl) => { const p = clsPh(s, c, i); return p ? `<figure class="hps-img ${cl}" data-slot="cls-${E(c.id)}"><img src="${E(p.src)}" alt="${E(p.alt)}" loading="${i < 3 ? 'eager' : 'lazy'}" decoding="async" style="object-fit:cover;object-position:${E(p.pos)}"></figure>` : `<figure class="${cl} hxu-ph0" aria-hidden="true">${ic('cap', 28)}</figure>`; };
+    const card = (c, i) => { const st = stOf(c); const k = kw(c.name); const pr = priceTx(c);
+      return `<li><a class="hxu-cc" ${lnk('#p-c-' + c.id)}>${fig2(c, i, 'hxu-cc-ph')}<div class="hxu-cc-b"><div class="hxu-cc-tg">${chip(st)}${k.tag ? `<em>${E(k.tag)}</em>` : ''}</div><h3>${E(k.l)}</h3><p class="hxu-cc-m">${[per(c), teacher(c)].filter(Boolean).map(E).join(' · ')}</p>${bar(c)}<span class="hxu-cc-f"><span>${E(pr)}</span><span class="hxu-cc-go">자세히 보기${ic('arrow', 16)}</span></span></div></a></li>`; };
+    const row = (c, i) => { const st = stOf(c); const k = kw(c.name); const x = seatOf(c);
+      return `<li><a class="hxu-cr" ${lnk('#p-c-' + c.id)}>${fig2(c, i, 'hxu-cr-ph')}<span class="hxu-cr-n">${k.tag ? `<em>${E(k.tag)}</em>` : ''}<b>${E(k.l)}</b><small>${E(teacher(c) || ' ')}</small></span><span class="hxu-cr-p"><small>수업 기간</small><b>${E(per(c) || '상시')}</b></span><span class="hxu-cr-c"><small>${x ? '정원' : '차시'}</small><b>${x ? `${x.n} / ${x.cap}명` : `${(c.curriculum || []).length || '-'}${(c.curriculum || []).length ? '차시' : ''}`}</b></span><span class="hxu-cr-st">${chip(st)}</span>${ic('arrow', 18)}</a></li>`; };
+    return `<section class="hpt hp-s hxu-u hxu-cl${list ? ' is-list' : ''}"><div class="hxu-w"><div class="hxu-sh"><div>${d.eyebrow ? `<p class="hxu-ey">${E(d.eyebrow)}</p>` : ''}<h2>${E(d.title || `지금 신청할 수 있는 ${term('cls')}`)}</h2>${d.sub ? `<p>${E(d.sub)}</p>` : ''}</div><a class="hxu-se-al" ${lnk(href.cls(s))}>전체 보기${ic('arrow', 16)}</a></div>
+${list ? `<ul class="hxu-crl">${L.map(row).join('')}</ul>` : `<ul class="hxu-ccg">${L.map(card).join('')}</ul>`}</div></section>`; }
+
+  /* ══ 시민 수강 안내(uvx-guide): 로그인 없이 고르기 → 신청 방식(실제 모집 방식) → 내 학습 ══ */
+  function guide(s, d) { const C = pubAll(); if (!C.length) return ''; const M = { first: 0, lottery: 0, approve: 0 }; C.forEach(c => { if (c.recruit && c.recruit.on && M[c.recruit.mode] != null) M[c.recruit.mode]++; });
+    const mtx = [M.first ? `선착순 ${M.first}개` : '', M.lottery ? `추첨 ${M.lottery}개` : '', M.approve ? `승인 후 확정 ${M.approve}개` : ''].filter(Boolean).join(' · ');
+    const free = C.filter(c => !(+c.price)).length;
+    const S3 = [['spark', '강좌 고르기', '로그인하지 않아도 일정 · 남은 자리를 볼 수 있어요.', href.cls(s), '공개 강좌 보기'], ['check', '신청하기', mtx ? `강좌마다 방식이 달라요: ${mtx}.` : '강좌 화면에서 바로 신청해요.', '#login', '로그인 · 회원가입'], ['cal', '수업 듣기', '신청한 강좌와 수업 일정은 「내 학습」에서 확인해요.', '#my', '내 학습 열기']];
+    return `<section class="hpt hp-s hxu-u hxu-gd"><div class="hxu-w hxu-gd-g"><div class="hxu-gd-tx"><p class="hxu-ey">${E(d.eyebrow || '처음 오셨나요')}</p><h2>${E(d.title || '시민 누구나 세 걸음이면 수강해요')}</h2>${free ? `<p class="hxu-lead">공개 강좌 ${C.length}개 중 <b>${free}개는 수강료가 없어요</b>.</p>` : ''}</div>
+<ol class="hxu-gd-l">${S3.map(([icn, t, b, h, a], k) => `<li><span class="hxu-gd-n" aria-hidden="true">${k + 1}</span><div><h3>${E(t)}</h3><p>${E(b)}</p><a ${lnk(h)}>${E(a)}${ic('arrow', 16)}</a></div><i aria-hidden="true">${ic(icn === 'check' ? 'shield' : icn, 22)}</i></li>`).join('')}</ol></div></section>`; }
+
+  /* ══ 방문 안내(uvx-visit): 캠퍼스 사진 + 주소 · 전화 · 메일 · 지도 앱 — 큰 글자 지도 대체 판 대신 ══ */
+  function visit(s, d) { const K = contact(); if (!K.addr && !K.tel && !K.em) return ''; let p = null; try { p = window.HPS && HPS.photo ? HPS.photo(s, 'space', {}) : null; } catch (e) { p = null; }
+    const q = encodeURIComponent(K.addr || (S.org && S.org.name) || '');
+    const rows = [K.addr ? `<li><span class="hxu-op-ik" aria-hidden="true">${ic('pin', 18)}</span><span><small>주소</small><b>${E(K.addr)}</b></span></li>` : '', K.tel ? `<li><a href="tel:${E(K.tel.replace(/[^\d+]/g, ''))}"><span class="hxu-op-ik" aria-hidden="true">${ic('phone', 18)}</span><span><small>${E(d.telL || '전화 문의')}</small><b>${E(K.tel)}</b></span></a></li>` : '', K.em ? `<li><a href="mailto:${E(K.em)}"><span class="hxu-op-ik" aria-hidden="true">${ic('mail', 18)}</span><span><small>메일 문의</small><b>${E(K.em)}</b></span></a></li>` : ''].join('');
+    return `<section class="hpt hp-s hxu-u hxu-vs"><div class="hxu-w"><div class="hxu-vs-g${p ? '' : ' one'}">${p ? `<figure class="hps-img hxu-vs-ph" data-slot="space"><img src="${E(p.src)}" alt="${E(p.alt || '')}" loading="lazy" decoding="async" style="object-fit:cover;object-position:${E(p.pos || '50% 50%')}"></figure>` : ''}<div class="hxu-vs-c"><p class="hxu-ey">${E(d.eyebrow || '방문 안내')}</p><h2>${E(d.title || '오시는 길')}</h2><ul class="hxu-vs-l">${rows}</ul>${K.addr ? `<div class="hxu-btns"><a class="hxu-btn g" href="https://map.naver.com/p/search/${q}" target="_blank" rel="noopener">네이버 지도${ic('arrow', 16)}</a><a class="hxu-btn g" href="https://map.kakao.com/?q=${q}" target="_blank" rel="noopener">카카오맵${ic('arrow', 16)}</a></div>` : ''}</div></div></div></section>`; }
+
+  /* 방문자별 바로 가기 한 줄형(d.view = 'line'): 재학생 · 교수자 링크를 접어 띠 하나로(열린 캠퍼스) */
+  function whoLine(s, d) { const A = [['학번으로 로그인', '#login'], [`비교과 · ${term('cls')} 신청`, href.cls(s)], ['내 이수 · 배지', '#badges'], ['학사 일정', '#cal'], ['수업 공지', href.notice(s)]];
+    return `<section class="hpt hp-s hxu-u hxu-wl"><div class="hxu-w"><div class="hxu-wl-g"><p class="hxu-wl-t">${ic('cap', 20)}<span>${E(d.title || '재학생 · 교수자이신가요?')}</span></p><ul>${A.map(([l, h]) => `<li><a ${lnk(h)}>${E(l)}${ic('arrow', 16)}</a></li>`).join('')}</ul></div></div></section>`; }
+  const R = { 'uvx-who': (s, d) => d.view === 'line' ? whoLine(s, d) : who(s, d), 'uvx-badge': badge, 'uvx-board': board, 'uvx-seats': seats, 'uvx-cls': cls, 'uvx-guide': guide, 'uvx-visit': visit };
   HPT.hpxUniv = { dues, events, notices, badges, who, badge, board, hero, heroLms, heroOpen, seats, week, seatsOf }; /* 테스트 · 보조 템플릿 재사용 */
 
   const HERO = { uvhub: hero, uvlms: heroLms, uvopen: heroOpen };
   /* ── proSec 감싸기: 이 묶음 테마의 첫 화면 + 부품 섹션(테마와 무관하게 부품은 그린다) ── */
-  { const base = proSec; proSec = (x, i, s, lk) => {
+  /* 열린 캠퍼스(시민 화면): 재학생 낱말 「교과목」을 「강좌」로 — 섹션 본문만(머리글 메뉴 이름은 기관 설정 그대로) */
+  const civ = (s, h) => s && s.theme === 'uvopen' && typeof h === 'string' ? h.replace(/교과목/g, '강좌') : h;
+  { const b0 = proSec; const base = (x, i, s, lk) => civ(s, b0(x, i, s, lk)); proSec = (x, i, s, lk) => {
     const d = (x && x.data) || {}; const isPart = x && x.type === 'text' && R[d.hpt]; const isHero = x && x.type === 'banner' && mine(s) && !(+d.dstyle);
     if (!isPart && !isHero) return base(x, i, s, lk);
     if (x.hide && !editing()) return '';
     if (i === 0) { try { base(x, i, s, lk); } catch (e) { } }
-    let h = ''; try { h = isHero ? (HERO[s.theme] || hero)(s, d) : R[d.hpt](s, d); } catch (e) { console.error('hpx-univ', d.hpt || 'hero', e); return base(x, i, s, lk); }
+    let h = ''; try { h = civ(s, isHero ? (HERO[s.theme] || hero)(s, d) : R[d.hpt](s, d)); } catch (e) { console.error('hpx-univ', d.hpt || 'hero', e); return base(x, i, s, lk); }
     if (!h) return editing() ? base(x, i, s, lk) : '';
     const m = editing() ? HPE.map.get(x) : null;
     if (m) h = h.replace(/<section\b/, `<section data-hpe="${E(m.key)}|${m.i}"${x.hide ? ' data-hpe-hid="1"' : ''}`);
@@ -241,7 +304,51 @@ ${x.st === 'soon' ? `<span class="hxu-se-b" role="img" aria-label="접수 전 ·
 .hxu-se-h{display:flex;align-items:center;gap:14px;min-width:0}
 .hxu-se-b{display:block;height:10px;border-radius:999px;background:var(--x-100);overflow:hidden}.hxu-se-b i{display:block;height:100%;border-radius:inherit;background:var(--x-a)}
 .hxu-se-n{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.hxu-se-n b{font-size:16px;font-weight:800;color:var(--x-at);font-variant-numeric:tabular-nums}.hxu-se-n b.full{color:var(--x-wt)}.hxu-se-n small{color:var(--x-mu);font-variant-numeric:tabular-nums}
+/* 강좌 카드(uvx-cls) */
+.hpt.hxu-cl{padding:clamp(56px,7vw,96px) 0;background:var(--bg)}
+.hxu-se-al{display:inline-flex;align-items:center;gap:4px;min-height:44px;font-weight:700;font-size:15px;color:var(--x-at);flex:0 0 auto}
+.hxu-ccg{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.hxu-cc{display:flex;flex-direction:column;height:100%;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 0 0 1px var(--x-ln),0 20px 40px -32px rgba(15,23,42,.45);transition:transform .18s ease,box-shadow .18s ease}
+.hxu-cc:hover{transform:translateY(-2px);box-shadow:0 0 0 1px var(--x-200),0 26px 44px -30px rgba(15,23,42,.5)}
+.hxu-cc-ph{position:relative;margin:0;aspect-ratio:16/10;overflow:hidden;background:var(--x-50)}.hxu-cc-ph img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hxu-ph0{display:grid;place-items:center;color:var(--x-at50);background:linear-gradient(135deg,var(--x-50),var(--x-100))}
+.hxu-cc-b{display:flex;flex-direction:column;gap:8px;flex:1;padding:18px 20px 16px}
+.hxu-cc-tg{display:flex;flex-wrap:wrap;gap:6px;min-height:28px}.hxu-cc-tg em{font-style:normal;font-size:13px;font-weight:700;padding:4px 9px;border-radius:7px;background:#F1F3F6;color:#3B4352}
+.hxu-chip{display:inline-flex;align-items:center;font-size:13px;font-weight:750;padding:4px 10px;border-radius:999px;background:#F1F3F6;color:#3B4352;white-space:nowrap}.hxu-chip.on{background:var(--x-50);color:var(--x-at50)}.hxu-chip.hot{background:var(--x-wbg);color:var(--x-wt)}
+.hxu-cc h3{font-size:19px;line-height:1.38;letter-spacing:-.025em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hxu-cc-m{margin:0;font-size:14px;color:var(--x-mu);font-variant-numeric:tabular-nums}
+.hxu-cc-s{display:flex;flex-direction:column;gap:6px;margin-top:2px}.hxu-cc-s small{color:var(--x-mu)}.hxu-cc-s small b{color:var(--ink)}
+.hxu-cc-f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:12px;border-top:1px solid var(--x-ln);font-weight:750;font-size:15px}.hxu-cc-go{display:inline-flex;align-items:center;gap:4px;color:var(--x-at);font-size:14.5px}
+.hxu-crl{list-style:none;margin:0;padding:0;background:#fff;border-radius:20px;box-shadow:0 0 0 1px var(--x-ln),0 20px 40px -34px rgba(15,23,42,.45);overflow:hidden}.hxu-crl li+li{border-top:1px solid var(--x-ln)}
+.hxu-cr{display:grid;grid-template-columns:112px minmax(0,2.2fr) minmax(0,1.3fr) minmax(0,.9fr) 132px 20px;align-items:center;gap:20px;min-height:92px;padding:12px 22px 12px 12px;transition:background .15s}.hxu-cr:hover{background:var(--x-50)}.hxu-cr>svg{color:var(--x-at)}
+.hxu-cr-ph{position:relative;margin:0;width:112px;height:72px;border-radius:12px;overflow:hidden;background:var(--x-50)}.hxu-cr-ph img{position:absolute;inset:0;width:100%;height:100%}
+.hxu-cr-n,.hxu-cr-p,.hxu-cr-c{display:flex;flex-direction:column;min-width:0;gap:2px}.hxu-cr-n em{font-style:normal;font-size:13px;font-weight:700;color:var(--x-at)}.hxu-cr-n b{font-size:17px;font-weight:750;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hxu-cr small{font-size:13.5px;color:var(--x-mu)}.hxu-cr-p b,.hxu-cr-c b{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}.hxu-cr-st{display:flex;justify-content:flex-start}
+/* 시민 수강 안내(uvx-guide) */
+.hpt.hxu-gd{padding:clamp(56px,7vw,96px) 0;background:linear-gradient(180deg,var(--x-50),${mix(Rm[50], '#ffffff', .5)})}
+.hxu-gd-g{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:clamp(28px,4vw,64px);align-items:start}.hxu-gd .hxu-lead b{color:var(--ink)}
+.hxu-gd-l{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;counter-reset:g}
+.hxu-gd-l li{position:relative;background:#fff;border-radius:20px;padding:22px 20px 14px;box-shadow:0 0 0 1px var(--x-ln),0 18px 36px -30px rgba(15,23,42,.4);display:flex;flex-direction:column}
+.hxu-gd-n{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--x-a);color:var(--x-on);font-weight:800;font-size:16px;margin-bottom:14px}
+.hxu-gd-l li>i{position:absolute;right:18px;top:22px;color:var(--x-at50)}
+.hxu-gd-l h3{font-size:18px}.hxu-gd-l p{margin:6px 0 10px;font-size:15px;line-height:1.6;color:var(--x-mu)}.hxu-gd-l li a{display:inline-flex;align-items:center;gap:4px;min-height:44px;margin-top:auto;font-weight:750;font-size:14.5px;color:var(--x-at)}
+/* 방문 안내(uvx-visit) */
+.hpt.hxu-vs{padding:clamp(56px,7vw,96px) 0;background:var(--bg)}
+.hxu-vs-g{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:0;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 0 0 1px var(--x-ln),0 26px 50px -36px rgba(15,23,42,.45)}.hxu-vs-g.one{grid-template-columns:minmax(0,1fr)}
+.hxu-vs-ph{position:relative;margin:0;min-height:340px}.hxu-vs-ph img{position:absolute;inset:0;width:100%;height:100%}
+.hxu-vs-c{padding:clamp(24px,3vw,40px)}.hxu-vs-l{list-style:none;margin:18px 0 0;padding:0}.hxu-vs-l li+li{border-top:1px solid var(--x-ln)}
+.hxu-vs-l li,.hxu-vs-l li a{display:flex;align-items:center;gap:12px;min-height:60px;min-width:0}.hxu-vs-l li{padding:6px 0}.hxu-vs-l li a{flex:1;display:flex!important}
+.hxu-vs-l small{font-size:13px;color:var(--x-mu)}.hxu-vs-l b{font-size:15.5px;font-weight:700;line-height:1.45;word-break:keep-all}.hxu-vs-l li span:last-child{display:flex;flex-direction:column;min-width:0}
+.hxu-op-ik{flex:0 0 40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--x-50);color:var(--x-at50)}
+.hxu-vs .hxu-btns{margin-top:20px}.hxu-vs .hxu-btn{min-height:48px;padding:0 18px;font-size:15px}
+/* 재학생 · 교수자 한 줄(uvx-who view line) */
+.hpt.hxu-wl{padding:0 0 clamp(48px,6vw,80px);background:var(--bg)}
+.hxu-wl-g{display:flex;align-items:center;gap:16px 24px;flex-wrap:wrap;padding:18px 22px;border-radius:18px;background:#F5F7FA;box-shadow:inset 0 0 0 1px var(--x-ln)}
+.hxu-wl-t{display:flex;align-items:center;gap:8px;margin:0;font-weight:800;font-size:16px;color:var(--ink)}.hxu-wl-t svg{color:var(--x-at)}
+.hxu-wl ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}.hxu-wl li a{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 14px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--x-ln);font-weight:700;font-size:14.5px}.hxu-wl li a:hover{box-shadow:inset 0 0 0 1.5px var(--x-a)}.hxu-wl li a svg{color:var(--x-at)}
+@media(max-width:1080px){.hxu-ccg{grid-template-columns:repeat(2,minmax(0,1fr))}.hxu-cr{grid-template-columns:96px minmax(0,1fr) auto 20px}.hxu-cr-p,.hxu-cr-c{display:none}.hxu-cr-ph{width:96px}.hxu-gd-g{grid-template-columns:minmax(0,1fr)}.hxu-vs-g{grid-template-columns:minmax(0,1fr)}.hxu-vs-ph{min-height:240px}}
 @media(max-width:1080px){.hxu-se-l.c3{grid-template-columns:repeat(2,minmax(0,1fr))}.hxu-who-g{grid-template-columns:repeat(2,minmax(0,1fr))}.hxu-bd-g{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:640px){.hxu-ccg{grid-template-columns:minmax(0,1fr);gap:14px}.hxu-cc-ph{aspect-ratio:16/9}.hxu-cr{grid-template-columns:72px minmax(0,1fr) 18px;gap:12px;padding:10px 12px}.hxu-cr-ph{width:72px;height:56px}.hxu-cr-st{grid-column:2;grid-row:2;margin-top:-6px}.hxu-gd-l{grid-template-columns:minmax(0,1fr);gap:12px}.hxu-gd-l li{padding:18px 16px 10px}.hxu-vs-ph{min-height:200px}.hxu-vs .hxu-btn{flex:1 1 0}.hxu-wl-g{padding:16px}.hxu-wl ul{gap:6px}}
 @media(max-width:640px){.hxu-u .hxu-w{padding:0 20px}.hxu-u .hxu-sh{display:block}.hxu-u .hxu-sh p{margin-top:6px}.hxu-who-g{grid-template-columns:minmax(0,1fr);gap:12px}.hxu-pc{padding:18px 16px 6px}
 .hxu-bo-g{grid-template-columns:minmax(0,1fr)}.hxu-se-l,.hxu-se-l.c3{grid-template-columns:minmax(0,1fr);gap:12px}.hxu-se-l a{padding:16px}.hxu-card{padding:20px 18px 6px}.hxu-lad{grid-template-columns:minmax(0,1fr);gap:12px}.hxu-lad li{transform:none!important;flex-direction:row;text-align:left;padding:16px;gap:16px}.hxu-md{width:56px;height:56px;flex:0 0 56px}.hxu-md svg{width:24px;height:24px}.hxu-lad .hxu-lt{flex:1;min-width:0}
 .hxu-nt li a{flex-wrap:wrap;row-gap:4px;padding:12px 0}.hxu-nt li b{flex:1 1 100%;order:3;white-space:normal}.hxu-nt time{order:2;margin-left:auto}.hxu-bd-st{gap:18px}.hxu-bd-st dd{font-size:24px}.hxu-u .hxu-btn{flex:1 1 100%}}
@@ -275,7 +382,8 @@ ${x.st === 'soon' ? `<span class="hxu-se-b" role="img" aria-label="접수 전 ·
 .hxu-uh+.hxu-who,.hxu-uh+[data-hpe]+.hxu-who{margin-top:0}
 @media(min-width:1081px){.hpt.hxu-uh~.hxu-who .hxu-sh{padding-top:0;margin-top:-150px;position:relative;z-index:2}.hpt.hxu-uh~.hxu-who .hxu-sh h2{color:#fff;font-size:22px}.hpt.hxu-uh~.hxu-who .hxu-sh p{color:${al('#ffffff', .82)}}.hpt.hxu-uh~.hxu-who .hxu-who-g{position:relative;z-index:2}}
 @media(max-width:1080px){.hxu-uh-g{grid-template-columns:minmax(0,1fr)}.hpt.hxu-uh{padding-bottom:48px}}
-@media(max-width:640px){.hpt.hxu-uh{padding:36px 0 32px}.hxu-uh-sc{background:${al(hd, .86)}}.hxu-uh-ey{flex-wrap:wrap;font-size:13.5px}.hxu-uh-pn{padding:18px 16px 8px;border-radius:18px}.hxu-dd{flex-basis:56px}.hxu-pn-f{margin:6px -8px 0}}
+@media(max-width:640px){.hpt.hxu-uh{padding:36px 0 32px}.hxu-uh-sc{background:${al(hd, .86)}}.hxu-uh-ey{flex-wrap:wrap;font-size:13.5px}.hxu-uh-pn{padding:18px 16px 8px;border-radius:18px}.hxu-dd{flex-basis:56px}.hxu-pn-f{margin:6px -8px 0}.hxu-uh .hxu-pn-l:not(.hxu-pn-q) li:nth-child(n+3){display:none}.hxu-uh .hxu-btns{flex-wrap:nowrap;gap:8px;margin-top:22px}.hxu-uh .hxu-btn{flex:1 1 0;padding:0 10px;font-size:15px}.hxu-uh-sub{font-size:15.5px;margin-top:12px}.hxu-uh-pv{margin-top:12px}.hpt.hxu-uh{padding-top:28px}}
+.hxu-pn-s{display:flex;align-items:center;gap:6px;margin:8px 0 0;padding:10px 4px 2px;border-top:1px dashed var(--x-ln);font-size:13.5px;font-weight:750;color:var(--x-mu)}.hxu-dd.soon{display:flex;flex-direction:column;line-height:1.1}.hxu-dd.soon b{font-size:15px}.hxu-dd.soon small{font-size:13px;font-weight:650}
 `; }
 
   const FIX = `
@@ -312,6 +420,7 @@ ${x.st === 'soon' ? `<span class="hxu-se-b" role="img" aria-label="접수 전 ·
 .hxu-lm-ld{margin:6px 0 0;font-size:15px;line-height:1.6;color:var(--x-mu)}
 .hxu-lm-bt{display:flex;gap:10px;margin-top:16px}.hxu-lm-bt .hxu-btn{flex:1 1 0;padding:0 16px}
 .hxu-lm-pv{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:13.5px;color:var(--x-mu)}.hxu-lm-pv svg{color:var(--x-at);flex:0 0 auto}
+.hxu-lm-tm{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.hxu-lm-tm a{display:flex;flex-direction:column;gap:1px;min-height:44px;padding:10px 12px;border-radius:12px;background:var(--x-50)}.hxu-lm-tm small{font-size:13px;color:var(--x-mu)}.hxu-lm-tm b{font-size:16px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}.hxu-lm-tm em{font-style:normal;font-size:13px;font-weight:700;color:var(--x-at50)}
 .hxu-lm-st{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--x-ln)}
 .hxu-lm-st dt{font-size:13.5px;color:var(--x-mu)}.hxu-lm-st dd{margin:2px 0 0;font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--ink);font-variant-numeric:tabular-nums}.hxu-lm-st dd small{font-size:14px;font-weight:700;margin-left:2px;color:var(--x-mu)}
 @media(max-width:1080px){.hxu-lm-g{grid-template-columns:minmax(0,1fr)}.hxu-lm-sd{min-height:0}.hxu-lm-ph{position:relative;height:280px}.hxu-lm-ph0{display:none}.hxu-lm-lg{margin:-56px 16px 16px}}
@@ -343,15 +452,15 @@ ${x.st === 'soon' ? `<span class="hxu-se-b" role="img" aria-label="접수 전 ·
 .hxu-op-ch b{font-size:15.5px;font-weight:700;letter-spacing:-.01em}.hxu-op-ch em{font-style:normal;font-size:13px;font-weight:750;padding:3px 8px;border-radius:7px;background:var(--x-50);color:var(--x-at50)}
 .hxu-op-ch small{font-size:13px;font-weight:650;color:var(--x-mu)}.hxu-op-ch small.hot{color:var(--x-wt)}
 .hxu-op-st{display:flex;gap:36px;margin:20px 0 0;padding-top:16px;border-top:1px solid var(--x-ln)}
-.hxu-op-st dt{font-size:13.5px;color:var(--x-mu)}.hxu-op-st dd{margin:2px 0 0;font-size:28px;font-weight:800;letter-spacing:-.03em;color:var(--ink);font-variant-numeric:tabular-nums}.hxu-op-st dd small{font-size:14px;font-weight:700;margin-left:2px;color:var(--x-mu)}
+.hxu-op-st dt{font-size:13.5px;color:var(--x-mu)}.hxu-op-st dd{margin:2px 0 0;font-size:28px;font-weight:800;letter-spacing:-.03em;color:var(--ink);font-variant-numeric:tabular-nums}.hxu-op-st dd small{font-size:14px;font-weight:700;margin-left:2px;color:var(--x-mu)}.hxu-op-nt{margin:8px 0 0;font-size:13px;color:var(--x-mu)}
 .hxu-op-if{list-style:none;margin:0;padding:6px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px;background:#F5F7FA;border-top:1px solid var(--x-ln)}
 .hxu-op-if li{display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 12px;min-width:0}.hxu-op-if a{display:flex!important;align-items:center;gap:12px;flex:1;min-width:0;min-height:56px;border-radius:12px}.hxu-op-if a:hover b{color:var(--x-at)}
 .hxu-op-ik{flex:0 0 40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#fff;color:var(--x-at);box-shadow:0 0 0 1px var(--x-ln)}
 .hxu-op-if li>span:last-child,.hxu-op-if a>span:last-child{display:flex;flex-direction:column;min-width:0}.hxu-op-if small{font-size:13px;color:var(--x-mu)}.hxu-op-if b{font-size:15px;font-weight:700;line-height:1.45;word-break:keep-all}
-@media(max-width:640px){.hpt.hxu-op{padding:40px 0 28px}.hxu-op-sc{background:${al(hd, .88)}}.hxu-op-pn{border-radius:18px}.hxu-op-ch{padding:18px 16px 16px}.hxu-op-ch ul{gap:8px}.hxu-op-ch li:nth-child(n+6){display:none}.hxu-op-ch li a{padding:6px 12px;flex-wrap:wrap;row-gap:0}.hxu-op-st{gap:22px}.hxu-op-st dd{font-size:23px}.hxu-op-if{padding:4px 6px;grid-template-columns:minmax(0,1fr)}}
+@media(max-width:640px){.hpt.hxu-op{padding:40px 0 28px}.hxu-op-sc{background:${al(hd, .88)}}.hxu-op-pn{border-radius:18px}.hxu-op-ch{padding:18px 16px 16px}.hxu-op-ch ul{gap:8px;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;margin:0 -16px;padding:2px 16px 6px;scrollbar-width:none}.hxu-op-ch li{flex:0 0 auto;scroll-snap-align:start}.hxu-op-ch li a{padding:6px 12px;white-space:nowrap}.hxu-op-sub{font-size:15.5px;margin-top:12px}.hxu-op .hxu-btns{flex-wrap:nowrap;gap:8px;margin-top:22px}.hxu-op .hxu-btn{flex:1 1 0;padding:0 10px;font-size:15px}.hxu-op-pv{margin-top:12px;font-size:13.5px}.hxu-op-pn{margin-top:24px}.hxu-op-q{font-size:16px;margin-bottom:10px}.hxu-op-st{margin-top:14px;padding-top:12px}.hxu-op-st{gap:22px}.hxu-op-st dd{font-size:23px}.hxu-op-if{padding:4px 6px;grid-template-columns:minmax(0,1fr)}}
 `; }
   const heroCSS = s => FIX + (s.theme === 'uvlms' ? lmsCSS(s) : s.theme === 'uvopen' ? openCSS(s) : hubCSS(s));
-  { const base = siteHTML; siteHTML = (s, full, lang) => { const h = base(s, full, lang); if (!s || !Array.isArray(s.sections)) return h;
+  { const base = siteHTML; siteHTML = (s, full, lang) => { try { phReset(s); } catch (e) { } const h = base(s, full, lang); if (!s || !Array.isArray(s.sections)) return h;
     try { const part = s.sections.some(x => x && x.type === 'text' && x.data && R[x.data.hpt]); const me = mine(s); if (!part && !me) return h;
       return h.replace('</style>', ((part || me ? partCSS(s) : '') + (me ? heroCSS(s) : '')).replace(/<\/?style/gi, '') + '</style>'); } catch (e) { console.error('hpx-univ css', e); return h; } }; window.siteHTML = siteHTML; }
 
@@ -389,23 +498,27 @@ ${x.st === 'soon' ? `<span class="hxu-se-b" role="img" aria-label="접수 전 ·
   HPT.hpxPart = { who: (o = {}) => TX('features', { hpt: 'uvx-who', eyebrow: '', title: o.title || '무엇을 하러 오셨나요?', sub: o.sub || '', cols: (o.cols || WHO).map(r => r.slice()), ...(o.ord ? { ord: o.ord.slice() } : {}) }),
     badge: (o = {}) => TX('features', { hpt: 'uvx-badge', eyebrow: o.eyebrow || '', title: o.title || '', sub: o.sub || '', cols: [['이수', '이수 기준을 채우면'], ['배지', '디지털 배지 자동 발급'], ['확인', '내 학습에서 바로']] }),
     board: (o = {}) => TX('features', { hpt: 'uvx-board', eyebrow: '', title: o.title || '학사 일정', title2: o.title2 || '공지사항', cols: [['학사 일정', '시험 · 마감 · 개강'], ['공지사항', '학교 소식']] }),
+    cls: (o = {}) => TX('features', { hpt: 'uvx-cls', eyebrow: o.eyebrow || '', title: o.title || '', sub: o.sub || '', view: o.view || 'grid', seats: !!o.seats, n: o.n || 6, cols: [['강좌', '공개 강좌 자동 표시']] }),
+    guide: (o = {}) => TX('features', { hpt: 'uvx-guide', eyebrow: o.eyebrow || '', title: o.title || '', cols: [['강좌 고르기', '로그인 없이'], ['신청하기', '강좌별 방식'], ['수업 듣기', '내 학습']] }),
+    visit: (o = {}) => TX('features', { hpt: 'uvx-visit', eyebrow: o.eyebrow || '', title: o.title || '오시는 길', telL: o.telL || '', cols: [['주소', ''], ['전화', ''], ['메일', '']] }),
+    whoLine: (o = {}) => TX('features', { hpt: 'uvx-who', view: 'line', title: o.title || '재학생 · 교수자이신가요?', cols: WHO.map(r => r.slice()) }),
     seats: (o = {}) => TX('features', { hpt: 'uvx-seats', eyebrow: o.eyebrow || '접수 현황', title: o.title || '남은 자리를 확인하고 신청하세요', sub: '', cols: [['정원', '모집 정원'], ['신청', '신청 인원'], ['남은 자리', '바로 신청']] }) };
   const T = {
     uvhub: { scene: '대학 학습 포털 · 비교과 센터 — 재학생 · 신입생 · 교수자 · 산학 방문자가 첫 화면에서 할 일을 바로 찾는 구성', purpose: ['learn', 'apply', 'info'],
       build: () => [S2x('banner', { eyebrow: semester(), title: `${org()}\n학번 하나로 여는 배움`, sub: '비교과 · 교과 프로그램 신청부터 이수 · 배지 확인, 학사 일정까지 학번 하나로 이어져요.', cta: '학번으로 로그인', cta2: '비교과 신청하기' }),
-        HPT.hpxPart.who(), S2x('classes', { eyebrow: '', title: '이번 학기 비교과 · 교과 프로그램', sub: '마감이 가까운 순서로 확인하고 신청하세요.', ids: ids(6), layout: 'grid' }),
+        HPT.hpxPart.who(), HPT.hpxPart.cls({ title: '이번 학기 비교과 · 교과 프로그램', sub: '접수 중 · 마감이 가까운 순서로 보여 드려요.' }),
         HPT.hpxPart.badge(), HPT.hpxPart.board(),
         TX('cta', { eyebrow: '', title: '산학 협력 · 지역 연계 문의', body: '기업 · 기관 맞춤 교육과 공개 강좌 운영을 함께 논의해요.', cta: '협력 문의하기', cols: [] }),
-        S2x('map', { title: '오시는 길', addr: ft().addr || '', tel: ft().tel || '' })]  },
+        HPT.hpxPart.visit()]  },
     uvlms: { scene: '학사 LMS · 강의실 — 재학생이 매일 들어와 이번 주 마감 · 개강을 확인하고 학번으로 내 강의실에 들어가는 구성', purpose: ['learn', 'info'],
       build: () => [S2x('banner', { eyebrow: semester(), title: `${org()}\n오늘의 강의실`, sub: '이번 주 마감과 개강을 먼저 확인하고, 학번으로 내 강의실에 들어가세요.', cta: '학번으로 로그인', cta2: '내 학습 현황' }),
-        S2x('classes', { eyebrow: '', title: '이번 학기 교과목 · 비교과', sub: '담당 교수 · 수업 기간 · 진행 상태를 한 줄로 확인하세요.', ids: ids(6), layout: 'grid', card: 'list' }),
+        HPT.hpxPart.cls({ title: '이번 학기 교과목 · 비교과', sub: '담당 교수 · 수업 기간 · 정원 · 진행 상태를 한 줄로 확인하세요.', view: 'list' }),
         HPT.hpxPart.board(), HPT.hpxPart.badge({ title: '이수 기준을 채우면 배지가 쌓여요' }), HPT.hpxPart.who({ title: '처음이신가요? 내 자리에서 시작하세요' })] },
     uvopen: { scene: '열린 캠퍼스 · 평생 · 지역 개방 강좌 — 시민 · 지역 주민이 먼저 강좌를 찾고 남은 자리 · 문의 · 오시는 길을 확인하는 구성', purpose: ['apply', 'info'],
-      build: () => [S2x('banner', { eyebrow: '열린 캠퍼스 · 시민 누구나', title: `${org()}\n지역과 함께 여는 강좌`, sub: '시민 · 지역 주민 누구나 들을 수 있는 공개 강좌예요. 남은 자리를 확인하고 바로 신청하세요.', cta: '공개 강좌 둘러보기', cta2: '수강 문의하기' }),
-        HPT.hpxPart.seats(), HPT.hpxPart.who({ title: '누구신가요? 바로 가는 길', cols: [['재학생', '비교과 신청 · 이수 확인'], ['신입생', '처음 로그인 · 먼저 들을 과정'], ['교수자', '수업 운영 · 공지'], ['시민 · 지역 주민', '공개 강좌 · 수강 문의']], ord: [3, 0, 1, 2] }),
-        S2x('classes', { eyebrow: '', title: '지금 열려 있는 공개 강좌', sub: '접수 중인 강좌부터 확인하세요.', ids: ids(6), layout: 'grid', card: 'photo' }),
-        S2x('map', { title: '오시는 길', addr: ft().addr || '', tel: ft().tel || '' }), HPT.hpxPart.board({ title: '행사 · 학사 일정', title2: '공지사항' }),
+      build: () => [S2x('banner', { eyebrow: '열린 캠퍼스 · 시민 누구나', title: `${org()}\n지역과 함께 여는 강좌`, sub: '시민 · 지역 주민 누구나 들을 수 있는 공개 강좌예요. 남은 자리를 확인하고 바로 신청하세요.', cta: '강좌 둘러보기', cta2: '수강 문의' }),
+        HPT.hpxPart.cls({ eyebrow: '공개 강좌', title: '지금 신청할 수 있는 강좌', sub: '접수 중인 강좌부터 남은 자리와 함께 보여 드려요.', seats: true }),
+        HPT.hpxPart.guide(), HPT.hpxPart.visit({ eyebrow: '캠퍼스 방문', title: '오시는 길 · 수강 문의', telL: '수강 · 협력 문의' }),
+        HPT.hpxPart.board({ title: '행사 · 강좌 일정', title2: '공지사항' }), HPT.hpxPart.whoLine(),
         TX('cta', { eyebrow: '', title: '지역 기관 · 기업과 함께 강좌를 열어요', body: '지역 연계 · 산학 협력 강좌 운영을 함께 논의해요.', cta: '협력 문의하기', cols: [] })] } };
 
   /* 배치 보강(HPT.enrich): 이 부품이 있는 사이트는 공지 · 모집 일정 자동 섹션을 넣지 않는다(일정 · 공지 판과 겹침) */
