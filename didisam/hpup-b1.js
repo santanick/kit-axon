@@ -25,25 +25,31 @@
     chat: 'M4 5h16v11H9l-5 4z', home: 'M3 11l9-7 9 7v9H3zM9 20v-6h6v6', shield: 'M12 3l7 3v5c0 4.4-3 8.3-7 10-4-1.7-7-5.6-7-10V6z M9 12l2 2 4-4', book: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19V5' };
   const ic = (k, n) => `<svg viewBox="0 0 24 24" width="${n || 22}" height="${n || 22}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${IC[k] || IC.arrow}"/></svg>`;
 
-  /* ── 실제 데이터 ── */
-  const live = () => ((typeof S !== 'undefined' && S && S.classes) || []).filter(c => c && c.name && c.status !== '종료' && c.status !== '보관');
+  /* ── 실제 데이터: 공개 강좌만(hpth pubAll · global pubCls와 같은 조건 — 지정 회원 강좌는 게시본에 쓰지 않는다) ── */
+  const pubAll = () => ((typeof S !== 'undefined' && S && S.classes) || []).filter(c => c && c.name && (c.open === '전체' || c.open == null) && c.status !== '종료' && c.status !== '보관');
+  const live = () => { const L = pubAll(); const R = L.filter(c => c.status === '운영중'); return R.length ? R : L; }; /* 숫자 띠(HPT.facts)와 같은 집계 */
   const learners = () => new Set(live().flatMap(c => c.learners || [])).size;
   const won = n => +n > 0 ? `${(+n).toLocaleString('ko-KR')}원` : '무료';
+  const kd = d => { const x = new Date(String(d).slice(0, 10) + 'T00:00:00'); return `${x.getMonth() + 1}월 ${x.getDate()}일`; };
+  const fixed = c => (c.days || []).length > 0 || !!(c.time && c.time.from);
   const timeOf = c => { const D = (c.days || []).map(d => WD[d]).filter(Boolean); const tm = c.time && c.time.from ? `${c.time.from}${c.time.to ? '~' + c.time.to : ''}` : '';
-    if (D.length || tm) return [D.length ? D.join('·') : '', tm].filter(Boolean).join(' '); return c.kind === 'sub' ? '구독 · 언제든 수강' : '기간 내 자유 수강'; };
-  /* 일정 순서: 곧 시작하는 강좌 → 진행 중(마감 가까운 순) */
-  function agenda() { const T = tday(); const L = live().filter(c => okD(c.start) || okD(c.end)).map(c => { const st = okD(c.start) ? days(T, c.start) : null; const en = okD(c.end) ? days(T, c.end) : null;
-      const k = st != null && st > 0 ? { o: 0, v: st, tag: `D-${st} 시작`, cls: 'up', d: c.start } : en != null && en >= 0 ? { o: 1, v: en, tag: en <= 14 ? (en === 0 ? '오늘 마감' : `마감 D-${en}`) : '진행 중', cls: en <= 14 ? 'warn' : 'on', d: c.end } : null;
-      return k ? { c, ...k } : null; }).filter(Boolean);
-    return L.sort((a, b) => a.o - b.o || a.v - b.v).slice(0, 4); }
+    if (D.length || tm) return [D.length ? `매주 ${D.join('·')}` : '', tm].filter(Boolean).join(' '); return c.kind === 'sub' ? '구독 · 언제든 수강' : c.hours ? `온라인 · 총 ${c.hours}시간` : '온라인 자유 수강'; };
+  /* 일정: 아직 시작하지 않은 강좌(개강 · 모집)만 「다가오는 일정」. 없으면 직업훈련 외에는 진행 중인 강좌(정해진 요일 · 시간 먼저, 끝나는 날짜 순) */
+  const ongoing = () => { const T = tday(); return live().filter(c => okD(c.end) && days(T, c.end) >= 0 && !(okD(c.start) && days(T, c.start) > 0)); };
+  function agenda() { const T = tday();
+    const up = pubAll().filter(c => okD(c.start) && days(T, c.start) > 0).map(c => ({ c, o: 0, v: days(T, c.start), d: c.start, when: `${kd(c.start)} 개강`, tag: `D-${days(T, c.start)}`, cls: days(T, c.start) <= 7 ? 'warn' : 'up' })).sort((a, b) => a.v - b.v);
+    if (up.length || ty() === 'voc') return { t: '다가오는 일정', L: up.slice(0, 4) };
+    const on = ongoing().map(c => ({ c, o: 1, v: days(T, c.end), d: c.end, when: `${kd(c.end)}까지`, tag: days(T, c.end) <= 14 ? `종료 D-${days(T, c.end)}` : '수강 중', cls: days(T, c.end) <= 14 ? 'warn' : 'on' }))
+      .sort((a, b) => (fixed(b.c) - fixed(a.c)) || a.v - b.v);
+    return { t: `진행 중인 ${term('cls')}`, L: on.slice(0, 3) }; }
   const telOf = () => { try { const f = (S.settings && S.settings.footer) || {}; const v = String(f.tel || '').trim(); return /\d{2,}/.test(v) && !/입력/.test(v) ? v : ''; } catch (e) { return ''; } };
   const hasFac = () => { try { return Array.isArray(S.fac) ? S.fac.length > 0 : !!(S.fac && (S.fac.rooms || S.fac.items || []).length); } catch (e) { return false; } };
 
   /* ── 기관 유형별 갈래(누가 · 무엇을 하러 왔는지) ── */
-  function routes() { const n = live().length; const A = agenda(); const up = A.find(x => x.o === 0); const tel = telOf(); const cl = term('cls');
+  function routes() { const n = live().length; const A = agenda(); const up = A.L.find(x => x.o === 0); const og = ongoing().length; const tel = telOf(); const cl = term('cls');
     const ask = tel ? { h: 'tel:' + tel.replace(/[^\d+]/g, ''), d: tel } : { h: '#comm', d: '게시판에 남기면 답해 드려요' };
-    const next = up ? `다음 시작 ${md(up.d)}` : A.length ? `${A.length}개 ${cl} 진행 중` : '학습 일정을 한눈에 봐요';
-    const cnt = n ? `지금 열린 ${cl} ${n}개` : `${cl} 목록을 확인해요`; const ln = learners();
+    const next = up ? `다음 개강 ${kd(up.d)}` : og ? `${og}개 ${cl} 진행 중` : '학습 일정을 한눈에 봐요';
+    const cnt = n ? `공개 ${cl} ${n}개` : `로그인하면 배정된 ${cl} 목록이 보여요`; const ln = learners();
     const certN = live().filter(c => c.cert && c.cert !== 'none').length;
     const k = ty();
     if (k === 'univ' || k === 'univ_lms') return { t: '재학생 · 교직원 바로가기', q: '필요한 일을 골라 바로 시작하세요', L: [
@@ -63,19 +69,21 @@
 
   function desk(s) { const R = routes(); const A = agenda(); const th = s.theme; const cl = term('cls');
     const rt = R.L.map(([k, l, d, h], i) => `<a class="hu1-r" href="${E(h)}"><span class="hu1-ri">${ic(k)}</span><span class="hu1-rt"><b>${E(l)}</b><small>${E(d)}</small></span><i class="hu1-ra">${th === 'official' ? `<em>0${i + 1}</em>` : ''}${ic('arrow', 18)}</i></a>`).join('');
-    const ag = A.length ? `<div class="hu1-ag"><div class="hu1-agh"><b>다가오는 일정</b><a href="#cal">전체 일정 ${ic('arrow', 16)}</a></div><ol>${A.map(x => `<li><a href="#p-c-${E(x.c.id)}"><time>${x.o ? '~' : ''}${E(md(x.d))}</time><span class="hu1-an"><b>${E(x.c.name)}</b><small>${E(timeOf(x.c))}${priced() ? ' · ' + E(won(x.c.price)) : x.c.hours ? ' · ' + E(x.c.hours) + '시간' : ''}</small></span><em class="hu1-tg ${x.cls}">${E(x.tag)}</em></a></li>`).join('')}</ol></div>` : '';
+    const row = x => `<li><a href="#p-c-${E(x.c.id)}"><time><b>${E(kd(x.d))}</b><small>${x.o ? '까지' : '개강'} · ${E(WD[new Date(String(x.d).slice(0, 10) + 'T00:00:00').getDay()])}</small></time><span class="hu1-an"><b>${E(x.c.name)}</b><small>${E(timeOf(x.c))}${priced() ? ' · ' + E(won(x.c.price)) : ''}</small></span><em class="hu1-tg ${x.cls}">${E(x.tag)}</em></a></li>`;
+    const ag = A.L.length ? `<div class="hu1-ag"><div class="hu1-agh"><b>${E(A.t)}</b><a href="#cal">전체 일정 ${ic('arrow', 16)}</a></div><ol>${A.L.map(row).join('')}</ol></div>`
+      : !pubAll().length ? `<div class="hu1-ag hu1-lg"><div class="hu1-agh"><b>내 교육 일정</b></div><p>${E(cl)}${((cl.charCodeAt(cl.length - 1) - 0xAC00) % 28) ? '은' : '는'} 지정된 분께만 열려 있어요. 로그인하면 배정된 일정과 마감이 보여요.</p><a class="hu1-lgb" href="#login">로그인하고 내 교육 보기 ${ic('arrow', 18)}</a></div>` : '';
     return `<section class="hu1-desk hu1-${E(th)}${ag ? '' : ' one'}" aria-label="${E(R.t)}"><div class="hu1-w"><div class="hu1-dh"><p>${E(R.t)}</p><h2>${E(R.q)}</h2></div><div class="hu1-dg"><nav class="hu1-rs" aria-label="${E(R.t)}">${rt}</nav>${ag}</div></div></section>`; }
 
   /* ── CSS ── */
   function css(s) { const T = HPT.tokens(s); if (!T) return ''; const th = s.theme; const ramp = HPT.ramp ? HPT.ramp(T.a) : { 50: T.as, 100: T.as2 };
     const ink = T.ink, mu = fit(T.mu, '#ffffff', 4.8), at = T.at;
     let v = { bg: '#ffffff', card: '#ffffff', line: mix(ink, '#ffffff', .88), ink, mu, at, ib: ramp[50], ic: at, tg: ramp[50], tgc: at, sh: '0 1px 2px rgba(16,24,40,.05),0 8px 24px -12px rgba(16,24,40,.16)', r: 14 };
-    if (th === 'premium') { const bg = T.hd || '#0B1022'; const gold = fit(mix(T.a, '#ffffff', .25), bg, 5, '#ffffff'); const m2 = fit('#C9CDD8', mix(bg, '#ffffff', .06), 4.8, '#ffffff');
-      v = { bg, card: mix(bg, '#ffffff', .05), line: mix(bg, '#ffffff', .16), ink: '#ffffff', mu: m2, at: gold, ib: 'transparent', ic: gold, tg: 'transparent', tgc: gold, sh: 'none', r: 4 }; }
-    if (th === 'warm') { const bg = s && s.theme ? (HPT.meta('warm').alt || '#FFF1E2') : '#FFF1E2'; v = { ...v, bg, card: '#FFFDF9', line: mix(T.a, bg, .8), mu: fit(T.mu, bg, 4.8), at: fit(T.at, '#FFFDF9', 4.8), ib: ramp[100] || T.as2, ic: fit(T.at, ramp[100] || T.as2, 4.6), sh: '0 2px 0 ' + mix(T.a, bg, .75), r: 24 }; }
+    if (th === 'premium') { const bg = mix(T.hd || '#0B1022', '#ffffff', .94); const gold = fit(mix(T.a, '#ffffff', .35), T.hd || '#0B1022', 4.6, '#ffffff');
+      v = { ...v, bg, line: mix(T.hd || '#0B1022', '#ffffff', .84), mu: fit(T.mu, bg, 4.8), at: fit(T.at, bg, 4.8), ib: T.hd || '#0B1022', ic: gold, sh: '0 1px 0 ' + mix(T.hd || '#0B1022', '#ffffff', .8), r: 6 }; }
+    if (th === 'warm') { const bg = ramp[50]; v = { ...v, bg, line: ramp[200], mu: fit(T.mu, '#ffffff', 4.8), at: fit(T.at, '#ffffff', 4.8), ib: ramp[100], ic: fit(T.at, ramp[100], 4.6), sh: '0 2px 0 ' + ramp[200], r: 22 }; }
     if (th === 'clean') v = { ...v, bg: HPT.meta('clean').alt || '#F4F7F5', mu: fit(T.mu, '#ffffff', 4.8) };
     if (th === 'official') v = { ...v, bg: HPT.meta('official').alt || '#F3F5F9', mu: fit(T.mu, '#ffffff', 4.8), sh: 'none', r: 4 };
-    const tgW = fit(WARN, th === 'premium' ? v.card : '#ffffff', 4.6, th === 'premium' ? '#ffffff' : '#000000');
+    const tgW = fit(WARN, mix(WARN, '#ffffff', .9), 4.6, '#000000');
     const P = '.hu1-desk';
     return `
 ${P}{--b:${v.bg};--cd:${v.card};--ln:${v.line};--ik:${v.ink};--mu:${v.mu};--at:${v.at};--ib:${v.ib};--icc:${v.ic};--rr:${v.r}px;background:var(--b);color:var(--ik);padding:44px 0 52px;position:relative}
@@ -90,7 +98,7 @@ ${P} .hu1-rs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px
 ${P} .hu1-r{display:flex;align-items:center;gap:14px;min-height:88px;padding:16px 18px;background:var(--cd);border:1px solid var(--ln);border-radius:var(--rr);box-shadow:${v.sh};color:var(--ik);text-decoration:none;transition:border-color .15s,transform .15s}
 ${P} .hu1-r:hover{border-color:var(--at);transform:translateY(-1px)}
 ${P} .hu1-r:focus-visible,${P} .hu1-ag a:focus-visible{outline:3px solid var(--at);outline-offset:2px}
-${P} .hu1-ri{flex:none;width:44px;height:44px;border-radius:${th === 'warm' ? '999px' : th === 'official' ? '4px' : '12px'};display:grid;place-items:center;background:var(--ib);color:var(--icc)${th === 'premium' ? ';border:1px solid var(--ln)' : ''}}
+${P} .hu1-ri{flex:none;width:44px;height:44px;border-radius:${th === 'warm' ? '999px' : th === 'official' ? '4px' : '12px'};display:grid;place-items:center;background:var(--ib);color:var(--icc)}
 ${P} .hu1-rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 ${P} .hu1-rt b{font-size:16.5px;font-weight:800;line-height:1.35;word-break:keep-all}
 ${P} .hu1-rt small{font-size:14px;line-height:1.45;color:var(--mu);word-break:keep-all}
@@ -102,15 +110,16 @@ ${P} .hu1-agh b{font-size:16px;font-weight:800}
 ${P} .hu1-agh a{display:inline-flex;align-items:center;gap:4px;min-height:44px;font-size:14px;font-weight:700;color:var(--at);text-decoration:none}
 ${P} .hu1-ag ol{list-style:none;margin:0;padding:0}
 ${P} .hu1-ag li+li{border-top:1px solid var(--ln)}
-${P} .hu1-ag li a{display:grid;grid-template-columns:76px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:60px;padding:10px 0;color:var(--ik);text-decoration:none}
-${P} .hu1-ag time{white-space:nowrap;font-size:14px;font-weight:800;color:var(--at);font-variant-numeric:tabular-nums}
+${P} .hu1-ag li a{display:grid;grid-template-columns:84px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:60px;padding:10px 0;color:var(--ik);text-decoration:none}
+${P} .hu1-ag time{display:flex;flex-direction:column;gap:1px;white-space:nowrap;font-variant-numeric:tabular-nums}${P} .hu1-ag time b{font-size:15px;font-weight:800;color:var(--at)}${P} .hu1-ag time small{font-size:13px;color:var(--mu)}
+${P} .hu1-lg p{margin:14px 0 12px;font-size:15px;line-height:1.6;color:var(--mu);word-break:keep-all}${P} .hu1-lgb{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;margin-bottom:12px;border-radius:${th === 'warm' ? '999px' : '8px'};background:${T.a};color:${T.on};font-weight:800;font-size:15px;text-decoration:none}
 ${P} .hu1-an{min-width:0;display:flex;flex-direction:column;gap:2px}
 ${P} .hu1-an b{font-size:15px;font-weight:700;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 ${P} .hu1-an small{font-size:13px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-${P} .hu1-tg{font-style:normal;font-size:13px;font-weight:800;padding:4px 10px;border-radius:${th === 'warm' ? '999px' : '4px'};background:${v.tg};color:${v.tgc};white-space:nowrap${th === 'premium' ? ';border:1px solid var(--ln)' : ''}}
-${P} .hu1-tg.warn{color:${tgW};background:${th === 'premium' ? 'transparent' : mix(WARN, '#ffffff', .9)}}
+${P} .hu1-tg{font-style:normal;font-size:13px;font-weight:800;padding:4px 10px;border-radius:${th === 'warm' ? '999px' : '4px'};background:${v.tg};color:${v.tgc};white-space:nowrap}
+${P} .hu1-tg.warn{color:${tgW};background:${mix(WARN, '#ffffff', .9)}}
 ${P} .hu1-tg.on{background:transparent;color:var(--mu);border:1px solid var(--ln)}
-${th === 'premium' ? `${P}{border-top:1px solid var(--ln)}${P} .hu1-dh h2{font-family:inherit;font-weight:700}${P} .hu1-r{background:transparent}${P} .hu1-r:hover{background:var(--cd)}` : ''}
+${th === 'premium' ? `${P}{border-top:1px solid var(--ln);border-bottom:1px solid var(--ln)}${P} .hu1-r{border-top:2px solid ${T.hd || '#0B1022'}}${P} .hu1-ag{border-top:2px solid ${T.hd || '#0B1022'}}` : ''}
 ${th === 'official' ? `${P}{border-top:1px solid var(--ln);border-bottom:1px solid var(--ln)}${P} .hu1-rs{gap:0;border:1px solid var(--ln);border-top:3px solid ${T.a};background:var(--cd)}${P} .hu1-r{border:0;border-radius:0;box-shadow:none}${P} .hu1-rs .hu1-r:nth-child(odd){border-right:1px solid var(--ln)}${P} .hu1-rs .hu1-r:nth-child(n+3){border-top:1px solid var(--ln)}${P} .hu1-ag{border-top:3px solid ${T.a}}${P}.one .hu1-rs .hu1-r{border-right:1px solid var(--ln);border-top:0}` : ''}
 ${th === 'warm' ? `${P} .hu1-r{border-width:2px}${P} .hu1-ag{border-width:2px}` : ''}
 @media (max-width:860px){${P} .hu1-dg{grid-template-columns:1fr}${P}.one .hu1-rs{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -118,6 +127,8 @@ ${th === 'warm' ? `${P} .hu1-r{border-width:2px}${P} .hu1-ag{border-width:2px}` 
  ${P} .hu1-rs,${P}.one .hu1-rs{grid-template-columns:1fr;gap:8px}${P} .hu1-r{min-height:68px;padding:12px 14px}${P} .hu1-rt b{font-size:16px}
  ${th === 'official' ? `${P} .hu1-rs{gap:0}${P} .hu1-rs .hu1-r{border-right:0!important;border-top:1px solid var(--ln)!important}${P} .hu1-rs .hu1-r:first-child{border-top:0!important}` : ''}
  ${P} .hu1-ag{padding:14px 14px 4px}${P} .hu1-ag li a{grid-template-columns:84px minmax(0,1fr);row-gap:4px;column-gap:8px}${P} .hu1-ag li:nth-child(n+4){display:none}${P} .hu1-tg{grid-column:2;justify-self:start}}
+/* 휴대폰: 첫 화면의 장식 사진 · 데스크와 겹치는 숫자 카드 · 바로가기 칸은 접어 데스크가 첫 스크롤 바로 아래에 오게 한다 */
+@media (max-width:560px){.hpl-mo-x,.hpl-mo-s,.pt-hero .pt-qk{display:none!important}}
 /* 13px · 44px 관문 보정(기존 부품 · 이 테마에서만) */
 .hps-tag,.hps-chip,.hps-smp,.hp-tag,.hp-chip,.hp-ci small,.hp-s .hp-ey,.hp-ckd,.ey,.nt,.tg,.hey,.lsw,.s2nc .nt,.s2nc time,.s2cnote,.cb dl,.rh span,.mapi dt,.pc small,.fc .f small,.ctas small,.pt-dt small,.ph2 small,.ph3 small{font-size:13px!important}
 .hps-new{font-size:13px!important;width:20px!important;height:20px!important}
@@ -128,12 +139,31 @@ ${th === 'warm' ? `${P} .hu1-r{border-width:2px}${P} .hu1-ag{border-width:2px}` 
 `; }
   const EXTRA_MIN = (s, h) => h; /* 측정 후 보정 자리 */
 
+  /* ── 첫 화면 사진: 템플릿 샘플 사진이 기관 유형과 맞지 않으면 유형에 맞는 샘플 사진으로(기관이 직접 고른 사진은 그대로) ── */
+  const FIT = { univ: ['campus', 'lecture', 'library', 'seminar'], univ_lms: ['campus', 'lecture', 'library', 'seminar'], k12: ['classroom', 'kids', 'library', 'science'],
+    voc: ['vocational', 'classroom', 'laptop', 'coding', 'cooking', 'beauty'], corp: ['office', 'seminar', 'lecture'], public: ['civic', 'office', 'seminar', 'lecture'],
+    lifelong: ['senior', 'classroom', 'seminar', 'library', 'art', 'wellness', 'civic', 'music', 'cooking'],
+    adult: ['classroom', 'laptop', 'seminar', 'lecture', 'art', 'music', 'cooking', 'beauty', 'wellness', 'coding', 'library', 'workshop'] };
+  const PREF = { univ: ['campus', 'lecture', 'library'], univ_lms: ['campus', 'lecture', 'library'], k12: ['classroom', 'library', 'kids'], voc: ['classroom', 'laptop', 'vocational'], corp: ['seminar', 'office'], public: ['civic', 'seminar', 'office'], lifelong: ['seminar', 'senior', 'classroom'], adult: ['classroom', 'seminar'] };
+  const stockRe = /img\/stock\//;
+  function heroFix(s) { try { const H = window.HPSTOCK; const k = ty(); if (!H || !H.list || !FIT[k] || s.stockOff) return s;
+      const im = s.img && s.img.hero; const bn = ((s.sections || []).find(x => x && x.type === 'banner') || {}).data || {};
+      if (im && im.src && !(im.stock || stockRe.test(String(im.src)))) return s; /* 기관이 올린 사진 */
+      if (!im && bn.img && !stockRe.test(String(bn.img))) return s;
+      const cur = im && im.src ? H.list.find(y => String(im.src).indexOf(y.src.replace(/\.webp$/, '')) >= 0) : null;
+      if (cur && FIT[k].includes(cur.cat)) return s;
+      const okS = y => !y.slots || !y.slots.length || y.slots.includes('hero'); const okT = y => !y.types || !y.types.length || y.types.includes(k);
+      let pick = null; for (const c of PREF[k]) { pick = H.list.find(y => y.cat === c && okS(y) && okT(y) && y.tone !== 'dark') || H.list.find(y => y.cat === c && okS(y)); if (pick) break; }
+      if (!pick) return s;
+      const img = Object.assign({}, s.img || {}, { hero: { src: pick.src, alt: pick.alt || '', fit: 'cover', pos: pick.focus || '50% 50%', stock: pick.id } });
+      return Object.assign({}, s, { img, photos: Object.assign({}, s.photos || {}, { hero: pick.id }) }); } catch (e) { return s; } }
+
   /* ── 붙이기: 홈 첫 화면 바로 뒤에 데스크, 사이트 CSS 끝에 CSS ── */
   function inject(h, s) { const mi = h.search(/<main class="s2pg" id="p-home">/); const from = mi >= 0 ? mi : h.search(/<main\b/); if (from < 0) return h;
-    const end = h.indexOf('</section>', from); if (end < 0) return h; let at = end + '</section>'.length;
-    /* 첫 화면에 붙은 숫자 띠(facts)는 첫 화면의 일부로 보고 그 뒤에 넣는다 */
-    const nx = h.slice(at, at + 400).match(/^\s*(?:<!--[^>]*-->\s*)?<section\b[^>]*class="[^"]*(facts|hp-fl|stats)[^"]*"/); if (nx) { const e2 = h.indexOf('</section>', at); if (e2 > 0) at = e2 + '</section>'.length; } return h.slice(0, at) + desk(s) + h.slice(at); }
-  { const base = siteHTML; siteHTML = (s, ...a) => { const h = base(s, ...a);
+    const end = h.indexOf('</section>', from); if (end < 0) return h; const at = end + '</section>'.length;
+    /* 숫자 띠(facts)보다 앞 — 휴대폰 첫 스크롤 안에 갈래가 보이게 한다 */
+    return h.slice(0, at) + desk(s) + h.slice(at); }
+  { const base = siteHTML; siteHTML = (s, ...a) => { const mine = s && MINE.includes(s.theme); const h = base(mine ? heroFix(s) : s, ...a);
     try { if (!s || !MINE.includes(s.theme) || typeof h !== 'string' || !h.includes('</style>') || !HPT.tokens(s)) return h;
       let o = inject(h, s); o = o.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>'); return EXTRA_MIN(s, o); } catch (e) { console.error('hpup-b1', e); return h; } };
     window.siteHTML = siteHTML; }

@@ -28,7 +28,7 @@ const PV = new Map();
       await p.evaluate(ty => { localStorage.clear(); localStorage.setItem('didisam.emptyStart', '0'); const bx = document.querySelector('#suEmpty'); if (bx) bx.checked = false; createOrg(ty, '해운대 점검 기관'); }, ty); await p.waitForTimeout(1200);
       const r = await p.evaluate(id => { const tp = TPL.find(t => t.id === id); if (!tp) return { err: 'no tpl ' + id }; const s = siteFromTpl(tp); S.site = s;
         const html = siteHTML(s); let pub = ''; try { const h2 = siteHTML(JSON.parse(JSON.stringify(s)), true, 'ko'); pub = h2; } catch (e) { pub = 'ERR ' + e.message; }
-        return { theme: s.theme, html, pubDesk: /class="hu1-desk/.test(pub) }; }, id);
+        const pubIds = S.classes.filter(c => c.open === '전체' || c.open == null).map(c => c.id); return { theme: s.theme, html, pubIds, pubDesk: /class="hu1-desk/.test(pub) }; }, id);
       if (r.err) { fails.push(`${id}: ${r.err}`); await ctx.close(); continue; }
       if (r.theme !== theme) fails.push(`${id}: 테마 ${r.theme} ≠ ${theme}`);
       if (!r.pubDesk) fails.push(`${id}: 게시본(full)에 데스크 없음`);
@@ -42,16 +42,19 @@ const PV = new Map();
           const tiny = [...document.querySelectorAll('body *')].filter(el => vis(el) && !el.closest('[aria-hidden=true],footer,.hp-ft') && [...el.childNodes].some(x => x.nodeType === 3 && x.textContent.trim()) && parseFloat(getComputedStyle(el).fontSize) < 13).map(el => el.textContent.trim().slice(0, 12) + '<' + el.className + '>');
           const small = mob ? [...document.querySelectorAll('main a, main button, .hu1-desk a')].filter(el => vis(el) && el.offsetParent && el.getBoundingClientRect().height < 44 && !el.closest('nav.hp-nav,header,footer,.hp-ft')).map(el => el.textContent.trim().slice(0, 12) + '<' + el.className + '>') : [...D.querySelectorAll('a')].filter(el => el.getBoundingClientRect().height < 44).map(el => el.textContent.trim().slice(0, 12));
           const narrow = [...D.querySelectorAll('b,small,time,em,h2,p')].filter(el => { if (!vis(el)) return false; const fs = parseFloat(getComputedStyle(el).fontSize); const b = el.getBoundingClientRect(); return el.textContent.trim().length >= 3 && b.height > fs * 1.9 * 3 && b.width < fs * 2.2; }).map(el => el.textContent.trim().slice(0, 10));
-          const wrapT = [...D.querySelectorAll('time,.hu1-tg')].filter(el => vis(el) && (() => { const cs = getComputedStyle(el); return el.getBoundingClientRect().height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.borderTopWidth) - parseFloat(cs.borderBottomWidth) > parseFloat(cs.fontSize) * 1.9; })()).map(el => el.textContent);
+          const wrapT = [...D.querySelectorAll('time b,time small,.hu1-tg')].filter(el => vis(el) && (() => { const cs = getComputedStyle(el); return el.getBoundingClientRect().height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.borderTopWidth) - parseFloat(cs.borderBottomWidth) > parseFloat(cs.fontSize) * 1.9; })()).map(el => el.textContent);
           const dOut = [...D.querySelectorAll('*')].filter(el => vis(el) && el.getBoundingClientRect().right > de.clientWidth + 1).length;
-          return { over: de.scrollWidth - de.clientWidth, links, tiny: [...new Set(tiny)].slice(0, 6), small: [...new Set(small)].slice(0, 6), narrow, wrapT, dOut }; }, w < 600);
+          return { top: D.getBoundingClientRect().top + window.scrollY, over: de.scrollWidth - de.clientWidth, links, tiny: [...new Set(tiny)].slice(0, 6), small: [...new Set(small)].slice(0, 6), narrow, wrapT, dOut }; }, w < 600);
         const tag = `${id}(${theme})@${w}`;
         if (m.noDesk) { fails.push(`${tag}: 데스크 없음`); await c2.close(); continue; }
         if (m.over > 0 || m.dOut) fails.push(`${tag}: 가로 넘침 ${m.over} / 데스크 밖 ${m.dOut}`);
         if (m.tiny.length) fails.push(`${tag}: 13px 미만 ${m.tiny.join(', ')}`);
         if (m.small.length) fails.push(`${tag}: 44px 미만 ${m.small.join(', ')}`);
         if (m.narrow.length || m.wrapT.length) fails.push(`${tag}: 꺾임 ${[...m.narrow, ...m.wrapT].join(', ')}`);
-        const badL = m.links.filter(h => !ROUTE.test(h || '')); if (badL.length || m.links.length < 5) fails.push(`${tag}: 링크 ${badL.join(', ') || '부족 ' + m.links.length}`);
+        const badL = m.links.filter(h => !ROUTE.test(h || '')); if (badL.length || m.links.length < 4) fails.push(`${tag}: 링크 ${badL.join(', ') || '부족 ' + m.links.length}`);
+        const cl = m.links.filter(h => /^#p-c-/.test(h)).map(h => h.slice(5)).filter(x => !r.pubIds.includes(x)); if (cl.length) fails.push(`${tag}: 비공개 강좌 링크 ${cl.join(', ')}`);
+        if (!r.pubIds.length && !m.links.includes('#login')) fails.push(`${tag}: 공개 강좌 0인데 로그인 안내 없음`);
+        if (w < 600 && m.top > 1100) fails.push(`${tag}: 데스크 시작 ${Math.round(m.top)}px(1,100px 이후)`);
         if (e2.length) fails.push(`${tag}: pageerror ${e2[0]}`);
         await c2.close(); }
       if (errs.length) fails.push(`${id}: admin pageerror ${errs[0]}`);
