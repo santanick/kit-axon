@@ -62,13 +62,13 @@
     const when = p.mode === 'days' && p.days ? `신청 후 ${p.days}일 수강` : st ? `${md(st)} ~ ${md(en)}` : '';
     const nL = Array.isArray(c.learners) ? c.learners.length : 0;
     const meta = [when, [days, tm].filter(Boolean).join(' '), !when && nL ? `${nL}명 수강` : ''].filter(Boolean).join(' · ');
-    const tag = d != null && d > 0 ? `<i class="hu2-dd">개강 D-${d}</i>` : p.mode === 'days' ? '<i class="hu2-dd on">바로 수강</i>' : '<i class="hu2-dd on">진행 중 · 신청 가능</i>';
+    const tag = d != null && d > 0 ? `<i class="hu2-dd">개강 D-${d}</i>` : p.mode === 'days' ? '<i class="hu2-dd on">바로 수강</i>' : '<i class="hu2-dd on">신청 가능</i>';
     return `<li><a class="hu2-nr" href="#p-c-${E(c.id)}"><span class="hu2-nt"><b>${E(c.name)}</b>${meta ? `<span>${E(meta)}</span>` : ''}</span><span class="hu2-np">${tag}<em>${+c.price ? W(c.price) + '원' : '무료'}</em></span></a></li>`; }
 
   /* 공개 강좌가 없을 때(기업 · 직원 교육): 실제 운영 값 */
   function statRow() { let C = []; try { C = (S.classes || []).filter(c => c.status !== '종료'); } catch (e) { C = []; } if (!C.length) return '';
     const lg = C.filter(c => c.legal).length; const ends = C.map(enOf).filter(x => (dayN(x) || -1) >= 0).sort(); const e0 = ends[0];
-    const L2 = [[C.length + '개', '운영 중인 교육'], lg ? [lg + '개', '법정 · 필수 교육'] : null, e0 ? [md(e0), `가까운 마감(D-${dayN(e0)})`] : null].filter(Boolean);
+    const L2 = [[C.length + '개', '운영 중인 교육'], lg ? [lg + '개', '법정 · 필수 교육'] : null, e0 ? [md(e0).replace(/^(\d+)\.(\d+)$/, '$1월 $2일'), `가까운 마감(D-${dayN(e0)})`] : null].filter(Boolean);
     return `<dl class="hu2-st">${L2.map(([v, k]) => `<div><dt>${E(k)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl>`; }
   function whoHTML(s) { const R = roles(s); const N = nowList(); const c = term('cls'); const T = ty(); const uni = T === 'univ' || T === 'univ_lms';
     const head = T === 'k12' ? '어떤 일로 오셨어요?' : uni ? '무엇을 하러 오셨나요?' : '어떤 일로 오셨어요?';
