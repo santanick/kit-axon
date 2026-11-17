@@ -1001,7 +1001,7 @@ footer.gf.hx-f .hx-fbt{gap:6px 18px;padding:20px 0 28px}footer.gf.hx-f .hx-biz{f
 
   /* ── 템플릿 → 사이트: 빠진 신뢰 부품을 숨김 섹션으로 덧붙여 편집기에서 켜고 끌 수 있게 ── */
   const DEF = ['rev', 'fac', 'num', 'faq', 'loc'];
-  function sec(k, data, hide) { if (!R[k] || typeof S2 !== 'function') return null; const o = S2('text', Object.assign({ variant: k === 'faq' ? 'info' : k === 'num' ? 'stats' : k === 'fac' ? 'profiles' : 'features', hpt: 'hx-' + k, eyebrow: lbl(k, 0), title: lbl(k, 1), cols: [] }, data || {})); if (hide) o.hide = true; return o; }
+  function sec(k, data, hide) { if (!R[k] || typeof S2 !== 'function') return null; const o = S2('text', Object.assign({ variant: 'features', hpt: 'hx-' + k, eyebrow: lbl(k, 0), title: lbl(k, 1), cols: [] }, data || {})); if (hide) o.hide = true; return o; }
   function addParts(s) { if (!s || !Array.isArray(s.sections) || !on(s)) return s; const L = s.sections; const has = new Set(L.map(kindOf).filter(Boolean));
     const add = DEF.filter(k => !has.has(k)).map(k => sec(k, null, true)).filter(Boolean); if (!add.length) return s;
     let at = L.length; for (let i = L.length - 1; i > 0; i--) { const x = L[i]; const h = String((x && x.data && x.data.hpt) || ''); if (x && !x.hide && (/fin|cta|close/.test(h) || x.type === 'cta')) { at = i; break; } if (x && !x.hide) break; }
