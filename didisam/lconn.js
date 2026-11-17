@@ -23,7 +23,9 @@
   function rows() { const t = ty(), U = /^univ/.test(t), PH = ['public', 'lifelong'].includes(t); const C = cfg(); const L = links().filter(k => k && k !== 'email' && k !== 'code');
     const code = ['adult', 'voc', 'corp', 'lifelong'].includes(t); /* 대학은 학번 · 학과 외 식별자(GitHub 아이디)도 받지 않는다 */ const gh = (lp().conn || {}).gh;
     const G = [['학습 · AI 튜터', [
-      { id: 'notion', n: '노트 앱으로 내보내기', d: 'AI 튜터 학습 계획 · 진도 · 넘긴 질문을 Notion · Google Docs로 가져가요', st: null, a: '<button type="button" class="lcx-go" data-lcx="md">내보내기</button>' },
+      /* v43.6 셀프러닝 노트(FINAL S15): 이 줄은 「내보내기 · 연결」 허브(#notes/out, lnote-sync.js)로 — 허브에서 Notion · Google Docs 보내기와 .md 내려받기를 함께. 허브가 없는 화면(lnote-sync.js 미적재)은 예전 .md 내려받기 */
+      typeof window.LNOTE_SYNC === 'object' && window.LNOTE_SYNC.F('notes') && (window.LNOTE_SYNC.F('sync') || window.LNOTE_SYNC.F('file')) ? { id: 'notion', n: '노트 앱으로 내보내기', d: `확인한 노트를 Notion · Google Docs로 보내거나 .md 파일로 받아요${(() => { try { const S = window.LNOTE.sync() || {}; const n = ['notion', 'gdocs'].filter(k => (S[k] || {}).on).length; return n ? ` · ${n}곳 켜짐` : ''; } catch (e) { return ''; } })()}`, st: null, a: '<a class="lcx-go" href="#notes/out" data-lcx="out">열기</a>' }
+        : { id: 'notion', n: '노트 앱으로 내보내기', d: 'AI 튜터 학습 계획 · 진도 · 넘긴 질문을 Notion · Google Docs로 가져가요', st: null, a: '<button type="button" class="lcx-go" data-lcx="md">내보내기</button>' },
       { id: 'anki', n: '복습 카드 내보내기', d: '내 과정 퀴즈로 만든 복습 카드를 Anki · Quizlet에 넣어요', st: null, a: '<button type="button" class="lcx-go" data-lcx="csv">내보내기</button>' },
       code && { id: 'github', n: 'GitHub 저장소', d: gh && gh.url ? `${gh.url.replace(/^https:\/\/github\.com\//, '')} · AI 튜터가 코드에 맞춰 힌트를 줘요` : '코딩 과제 저장소를 이어 두면 AI 튜터가 코드에 맞춰 힌트를 줘요', st: !!(gh && gh.on), a: `<button type="button" class="lcx-go" data-lcx="gh">${gh && gh.on ? '관리' : '연결'}</button>` }]],
       ['알림 · 일정', [
