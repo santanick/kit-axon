@@ -21,6 +21,8 @@ const CHECK = () => { const out = { hov: 0, kids: [], occ: [], small: [] };
   [...document.querySelectorAll('#main button, #main [data-act], #main a[href]')].filter(vis).forEach(e => { const r = e.getBoundingClientRect(); const t = (e.getAttribute('aria-label') || e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 16);
     if (e.tagName === 'BUTTON' && r.height < 44 && r.width < 44) out.small.push(`${nm(e)} ${Math.round(r.width)}x${Math.round(r.height)} «${t}»`);
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2; if (cy < 0 || cy > innerHeight || cx < 0 || cx > innerWidth) return;
+    /* v43.7 Q1: 휴대폰에서 탭 줄(nav.brail)이 맨 위에 붙는다 — 그 아래로 스크롤되어 들어간 버튼은 스크롤하면 다시 나오므로 가림으로 세지 않는다(qa437-q1과 같은 기준) */
+    let top = 0; document.querySelectorAll('header.top, nav.brail').forEach(x => { const q = x.getBoundingClientRect(); if (q.top <= 0 && q.bottom > 0) top = Math.max(top, q.bottom); }); if (cy < top + 2) return;
     const h = document.elementFromPoint(cx, cy); if (!h || e === h || e.contains(h) || h.contains(e)) return;
     if (h.closest('header.top, .topr, .brand, #fabBtn, .fab, iframe')) return; if (e.matches('.v4-blk') && h.closest('.v4-blk')) return; /* 시간이 겹친 예약 막대 — 공통 타임라인(v43ui.js) 줄 나누기는 Q1 몫 */ /* 고정 머리 밑으로 스크롤된 것 · FAB(Q1) · 사이트 편집기 */
     out.occ.push(`${nm(e)} «${t}» ← ${nm(h)}`); });
