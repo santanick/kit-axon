@@ -233,7 +233,8 @@
   const chips = (key, list, cur, right) => `<div class="r1-chips" role="tablist">${list.map(([v, l, c]) => `<button type="button" role="tab" aria-selected="${v === cur}" class="r1-chip${v === cur ? ' on' : ''}" data-act="tab" data-key="${E(key)}" data-v="${E(v)}">${E(l)}${c != null ? `<em>${E(c)}</em>` : ''}</button>`).join('')}${right ? `<span class="sp"></span>${right}` : ''}</div>`;
   const demo = () => { try { return !!(W.S && S.org && !S.org.empty); } catch (e) { return false; } };
   W.R1 = { page, more, lim, dist, area, heat, tl, chips, demo, STEP };
-  if (W.ACT) {
+  /* v43.7 Q3: ACT는 core.js의 최상위 const라 window.ACT가 아님 — W.ACT 검사로는 「더 보기」가 한 번도 등록되지 않았음 */
+  if (typeof ACT !== 'undefined') {
     ACT['r1-more'] = el => { const k = el.dataset.k; UI.r1pg = UI.r1pg || {}; UI.r1pg[k] = lim(k) + STEP; render(); };
     ACT['r1-less'] = el => { const k = el.dataset.k; UI.r1pg = UI.r1pg || {}; UI.r1pg[k] = STEP; render(); };
   }
