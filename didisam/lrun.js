@@ -163,7 +163,7 @@ const SECR = {
   progress(d) {
     const B = SITE().badges; const M = meNow(); const N = SITE().notices[0];
     const tiles = SITE().levels.map((l, i) => { const b = B.find(x => x.level === i) || {}; const on = b.id && M.earned.has(b.id); const T = SITE().tuts.filter(t => t.level === i); const td = T.filter(tutDone).length; const cur = LR.me && i === M.level && !on;
-      const st = on ? '<em class="ok">획득 ✓</em>' : cur ? `<em class="go">진행 중 ${Math.round(td / Math.max(1, T.length) * 100)}%</em>` : `<em>${LR.me ? (i < M.level ? '진행 가능' : '잠김') : '진단 후 시작'}</em>`;
+      const st = on ? '<em class="ok">획득 ✓</em>' : cur ? `<em class="go">${td ? `진행 중 ${Math.round(td / Math.max(1, T.length) * 100)}%` : '지금 시작할 차례'}</em>` : `<em>${LR.me ? (i < M.level ? '진행 가능' : '잠김') : '진단 후 시작'}</em>`;
       return `<a class="rmt ${on ? 'on' : ''} ${cur ? 'cur' : ''}" href="${on ? '#badge/' + esc(b.id) : '#badges'}">${medal(i + 1, b.fill || l.color, b.ring, LR.me && !on && !cur)}<div><small>BADGE ${i + 1}${l.diff ? ' · ' + esc(l.diff) : ''}</small><b>${esc(b.name || l.name)}</b><span>${esc(l.goal || b.desc || '')}</span></div>${st}</a>`; }).join('');
     return `<section class="prog"><div class="in"><div class="pbox"><div class="pbh"><b>${LR.me ? `${esc(LR.me.nick || LR.me.sid)}님의 배지 로드맵` : esc(d.title || '나의 배지 로드맵')}</b><span class="mini">${ico('award', 16)} ${B.length}종 모두 받으면 ${esc(SITE().org.short || SITE().org.name)} 인증</span></div>
       <div class="rmts">${tiles}</div>${M.next ? `<a class="pnext ${M.next.warn ? 'warn' : ''}" href="${esc(M.next.href)}"><span class="pn">지금 할 일</span><span class="pt"><b>${esc(M.next.h)}</b><small>${esc(M.next.d)}</small></span><span class="lbtn pri sm">${esc(M.next.cta)}${ico('arrow', 14)}</span></a>` : ''}</div>

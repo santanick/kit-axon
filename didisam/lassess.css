@@ -18,7 +18,7 @@
 .a2lfiles b{margin-right:4px}.a2lfiles .mini{flex-basis:100%}
 .a2lchip{display:inline-flex;gap:4px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--surface,#fff)}
 .a2lqa{border:1px solid var(--line);border-radius:8px;padding:10px 14px;display:grid;gap:8px}
-.a2lqa summary{cursor:pointer;font-weight:700;display:flex;gap:6px;align-items:center}
+.a2lqa summary{cursor:pointer;font-weight:700;display:flex;gap:6px;align-items:center;min-height:44px;margin:-10px 0} /* v43.7 Q4: 누르는 칸 26px → 44px(겉 크기는 그대로) */
 .a2lqa textarea,.a2las textarea,.a2lsv textarea{width:100%;box-sizing:border-box}
 .a2lqi{border-top:1px solid var(--line2);padding-top:8px}.a2lqi p{margin:2px 0}.a2la{background:#E3F4EA;border-radius:6px;padding:6px 10px}
 .a2las{display:grid;gap:8px}

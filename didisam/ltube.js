@@ -449,14 +449,16 @@
     if (a === 'badges' || a === 'cert' || a === 'bkcert') return { h: fin ? `수료 <em>${fin}개</em>를 마쳤어요` : run ? `<em>${run}개</em> 강좌가 수료를 향해 가고 있어요` : `수강을 시작하면 <em>수료증</em>이 여기 모여요`, k: [['수강 중', `${run}개`], ['수료', `${fin}개`], ['평균 진도', `${avg}%`]] };
     if (a === 'shop' || a === 'courses' || a === 'tb') { const n = cnt('.shp-grid .shp-card') || cnt('.cw,.tk'); const ok = [...document.querySelectorAll('#lm .shp-card')].filter(x => /신청 가능|무료/.test(x.textContent)).length;
       /* v43 R9(J4 117): 페이지 머리에 이미 수치 칸(코스 · 트랙 · 난이도)이 있으면 칸을 더하지 않는다(6칸 · 숫자 어긋남 · 「신청 가능 0개」) — 문장도 같은 코스 수로 */
-      const st = document.querySelector('#lm .lph-st'); if (st) { const c0 = +((st.querySelector('dd b') || {}).textContent || 0); const dt = ((st.querySelector('dt') || {}).textContent || '코스').trim(); return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : run ? `수강 중인 ${run}개를 이어 가고, <em>${c0 || n}개</em> ${dt}를 더 둘러봐요` : `<em>${c0 || n}개</em> ${dt}를 둘러볼 수 있어요`, k: [] }; }
-      return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : `<em>${n}개</em> 강좌를 둘러볼 수 있어요`, k: [['전체', `${n}개`], ok ? ['신청 가능', `${ok}개`] : null, ['수강 중', `${run}개`]].filter(Boolean) }; }
+      const st = document.querySelector('#lm .lph-st'); if (st) { const c0 = +((st.querySelector('dd b') || {}).textContent || 0); const dt = ((st.querySelector('dt') || {}).textContent || '코스').trim(); const m0 = c0 || n; /* v43.7 Q4: 둘러볼 수가 0이면 「0개 코스」 대신 문장 */ return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : !m0 ? (run ? `수강 중인 <em>${run}개</em>를 이어 가요` : `새 ${dt}가 열리면 여기에 보여요`) : run ? `수강 중인 ${run}개를 이어 가고, <em>${m0}개</em> ${dt}를 더 둘러봐요` : `<em>${m0}개</em> ${dt}를 둘러볼 수 있어요`, k: [] }; }
+      return { h: ok ? `지금 신청할 수 있는 강좌 <em>${ok}개</em>` : n ? `<em>${n}개</em> 강좌를 둘러볼 수 있어요` : run ? `수강 중인 <em>${run}개</em>를 이어 가요` : `새 강좌가 열리면 여기에 보여요`, k: [['전체', `${n}개`], ok ? ['신청 가능', `${ok}개`] : null, ['수강 중', `${run}개`]].filter(Boolean) }; }
     if (a === 'class') { const id = decodeURIComponent(route().b || ''); const c = ((SITE().shop || {}).classes || []).find(x => x.id === id) || (SITE().classes || []).find(x => x.id === id) || {}; const full = (SITE().classes || []).find(x => x.id === id) || c; const n = seq(full).length; const pr = +(c.final != null ? c.final : c.price) || 0;
       const ph = photoOf({ thumb: c.thumb, name: c.name || full.name || '' }); return { photo: ph, k: [[unit() === '회차' ? '회차' : '강의', `${n}개`], ['수료 기준', `진도 ${(full.cpl && full.cpl.prog) || 80}%`], ['수강료', pr ? (pr >= 10000 ? `${+(pr / 10000).toFixed(1)}만원` : `${nf(pr)}원`) : '무료']] }; }
     if (a === 'acct') { const me = LR.me || {}; const nm = String(me.nick || me.name || me.sid || '').trim(); const wk = weekDays().filter(x => x.ok).length;
       return { me: nm, h: `${esc(nm)}님`, k: [['수강 중', `${run}개`], ['수료', `${fin}개`], ['이번 주 목표', `${wk}/7일`]] }; }
     return { k: [] }; }
-  const kHTML = K => K.length ? `<div class="tb-phk">${K.map(([l, v]) => `<span><small>${esc(l)}</small><b>${esc(v)}</b></span>`).join('')}</div>` : '';
+  /* v43.7 Q4: 수치 칸의 0(「0개」 · 「0건」 · 「0원」 · 「0%」 · 「0/7일」)은 숫자 대신 말로(디자인 규칙 — 0은 문장으로) */
+  const kZero = v => /^0\s?(개|건|원|명|장)$/.test(v) ? '없음' : v === '0%' ? '시작 전' : /^0\/\d+일$/.test(v) ? '시작 전' : v;
+  const kHTML = K => K.length ? `<div class="tb-phk">${K.map(([l, v]) => { const z = kZero(String(v)); return `<span${z !== v ? ' class="tb-phz"' : ''}><small>${esc(l)}</small><b>${esc(z)}</b></span>`; }).join('')}</div>` : '';
   function subHero(a) { const lm = $('#lm'); if (!lm || lm.querySelector('.tb-ph')) return; const org = (SITE().org || {}).name || '';
     if (a === 'acct') { const me = lm.querySelector('.ls-me'); if (!me || !LR.me) return; const D = phData(a); const ini = /^[\d\s-]*$/.test(D.me || '') ? '' : [...D.me.replace(/\s/g, '')].slice(0, /[가-힣]/.test(D.me) ? 1 : 2).join('').toUpperCase(); /* 숫자 계정(수강번호)은 사람 아이콘 */
       me.insertAdjacentHTML('afterbegin', `<section class="sub tb-ph tb-ph-me" aria-label="내 학습 요약"><div class="in"><div class="tb-phm"><span class="tb-pav" aria-hidden="true">${ini ? esc(ini) : I.me(28)}</span><span><small class="tb-pheb">${esc(org)}</small><b class="tb-phh">${D.h}</b></span></div>${kHTML(D.k)}</div></section>`); return; }
@@ -493,7 +495,8 @@
     }[tyKey()] || [];
     return S; });
   /* v43 R9(J4 113 · 205): 홈 첫 화면에서 떠 있는 AX 튜터 단추가 튜터 카드 · 사진을 가림 → 홈에서는 본문 튜터 바를 지나 내려간 뒤에만 단추를 보인다 */
-  const fhome = () => { const B = document.body; if (!B) return; const t = route().a === 'home' && B.classList.contains('tube') ? document.querySelector('#lm .tb-tut') : null; B.classList.toggle('tb-fhome', !!t && t.getBoundingClientRect().bottom > 0); };
+  /* v43.7 Q4: 휴대폰 「AI 튜터」 대화 화면(#ai)은 화면 자체가 튜터 — 떠 있는 단추가 입력 칸 오른쪽을 반쯤 가리던 것(가장자리 손잡이) → 이 화면에서는 단추를 숨긴다 */
+  const fhome = () => { const B = document.body; if (!B) return; if (route().a === 'ai' && B.classList.contains('lapp') && B.classList.contains('tube')) { B.classList.add('tb-fhome'); return; } const t = route().a === 'home' && B.classList.contains('tube') ? document.querySelector('#lm .tb-tut') : null; B.classList.toggle('tb-fhome', !!t && t.getBoundingClientRect().bottom > 0); };
   addEventListener('scroll', fhome, { passive: true }); addEventListener('resize', fhome);
   function demoSeed() { try { if (!on() || LR.mode !== 'demo' || LR.tid !== 'sample') return; const t = rec(); if (t.demoSeeded || Object.keys(t.sec).length) return; t.demoSeeded = 1;
     const o = SITE().org || {}; const key = (o.type || '') + (o.ed || '') + (LR.me.sid || ''); let h = 7; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;

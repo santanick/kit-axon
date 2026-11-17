@@ -89,7 +89,7 @@
         <p class="lc-cap" aria-label="자막"${it.ai.clang ? ` lang="${E(String(it.ai.clang))}"` : ''}>재생을 누르면 AI 강사가 읽어 줘요.</p></div>
       <div class="lc-ctl"><button type="button" class="lbtn ghost lc-c" data-lcp="prev" aria-label="이전 장면">${IC('arrow', 16)}<span>이전</span></button><button type="button" class="lbtn pri lc-play" data-lcp="play">▶ 재생</button><button type="button" class="lbtn ghost lc-c" data-lcp="next" aria-label="다음 장면"><span>다음</span>${IC('arrow', 16)}</button><button type="button" class="lbtn ghost lc-c" data-lcp="mute" aria-pressed="false">${'speechSynthesis' in window ? '소리 끄기' : '소리 없음'}</button></div>
       <p class="lc-q"><b>미리보기 품질</b> 브라우저의 음성으로 읽어 주는 AI 강의예요. 목소리가 기계처럼 들릴 수 있고, 자막과 슬라이드로도 내용을 볼 수 있어요.</p>
-      <div class="lc-bar"><i style="width:${Math.round((st.w || 0) * 100)}%"></i></div><small class="lc-bart">시청 ${Math.round((st.w || 0) * 100)}%${st.done ? ' · 완료했어요' : ' · 80% 넘게 보면 완료돼요'}</small>
+      <div class="lc-bar"><i style="width:${Math.round((st.w || 0) * 100)}%"></i></div><small class="lc-bart">${(st.w || 0) >= 0.005 ? `시청 ${Math.round(st.w * 100)}%` : '아직 시청 전'}${st.done ? ' · 완료했어요' : ' · 80% 넘게 보면 완료돼요'}</small>
       <details class="lc-script"><summary>강의 대본 전체 보기</summary>${S2.map((s, i) => `<p><b>${i + 1}. ${E(s.h)}</b><br>${E(s.say)}</p>`).join('')}</details>
     </div>`; }
   let AIP = null; /* 지금 화면의 AI 강의 플레이어 하나 */

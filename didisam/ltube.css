@@ -493,3 +493,7 @@ body.lapp #lm .track .lbtn.pri{background:var(--gr600,#00A33A)!important;border-
 .tb-tyfac .tb-fph{position:relative;height:112px;margin:12px 0 10px;border-radius:14px;background:#0b1a12 center/cover;overflow:hidden}
 .tb-tyfac .tb-fph::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(6,23,13,.6))}
 .tb-tyfac .tb-fpl{position:absolute;left:10px;bottom:10px;z-index:1;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.94);color:#0B3B1E;font-size:13px;font-weight:700}
+/* v43.7 Q4: 수치 칸의 0을 말로 바꾼 칸(없음 · 시작 전) — 숫자보다 한 단계 작고 옅게 */
+body.lapp #lm .tb-phk span.tb-phz b{font-size:15px;line-height:1.4;font-weight:700;color:#C6F6D5}
+body.lapp .thm-seg button{padding:0 6px;gap:4px} /* v43.7 Q4: 390에서 「기기 설정」 글자가 칸 밖으로 2px 넘치던 것 */
+.tb-links:has(>a:nth-child(3):last-child){grid-template-columns:repeat(3,minmax(0,1fr))} /* v43.7 Q4: 바로가기가 3개(대학 · 공단)면 4칸 격자에 빈 칸이 남던 것 → 3칸 */

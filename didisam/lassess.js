@@ -109,7 +109,7 @@ function a2lPlayer(c, it) { const dur = +it.dur || 180; const rec = a2lPeek(c.id
   return `<div class="a2vp" id="a2vp"><div class="a2vps"><button type="button" class="a2play" data-a2="vp" aria-label="재생 · 일시정지">${A2L.vp.play ? '❚❚' : '▶'}</button><span><b id="a2vpt">${a2lmmss(A2L.vp.t)}</b> / ${a2lmmss(dur)}</span><small>${it.src === 'library' || it.src === 'upload' ? '업로드 영상' : '영상'} · 데모 플레이어</small></div>
     <div class="a2vpb" aria-hidden="true"><i id="a2vpi" style="width:${A2L.vp.t / dur * 100}%"></i>${(it.vq || []).map(cu => `<em style="left:${Math.min(100, cu.at / dur * 100)}%"></em>`).join('')}</div>
     <div class="a2vpc"><button type="button" class="lbtn sm ghost" data-a2="vpre">처음부터</button><button type="button" class="lbtn sm ghost" data-a2="vpfast">${A2L.vp.rate > 1 ? '보통 속도' : '빠르게 ×8(데모)'}</button></div></div>
-    <div class="wbar"><i style="width:${Math.round((rec.w || 0) * 100)}%"></i></div><small class="mini" id="a2vpw">시청 ${Math.round((rec.w || 0) * 100)}% · 끝까지 보면 완료</small>`; }
+    <div class="wbar"><i style="width:${Math.round((rec.w || 0) * 100)}%"></i></div><small class="mini" id="a2vpw">${(rec.w || 0) >= 0.005 ? `시청 ${Math.round(rec.w * 100)}%` : '아직 시청 전'} · 끝까지 보면 완료</small>`; }
 function a2lVpTick() { const V = A2L.vp; if (!V || !V.play) return; const box = $('#a2vp'); if (!box) { V.play = false; return; } const ctx = A2L.cueCtx; const it = ctx && ctx.it; if (!it || it.id !== V.iid) { V.play = false; return; }
   const prev = V.t; V.t = Math.min(V.dur, V.t + 0.25 * V.rate); const rec = a2lRec(V.cid, V.iid);
   const ci = (it.vq || []).findIndex((cu, i) => !a2lCueDone(rec, cu, i) && cu.at <= V.t && cu.at >= Math.min(prev, cu.at));
@@ -117,7 +117,7 @@ function a2lVpTick() { const V = A2L.vp; if (!V || !V.play) return; const box = 
   rec.pos = Math.floor(V.t); const w = Math.round(V.t / V.dur * 100) / 100; if (w > (rec.w || 0)) rec.w = w;
   if (V.t >= V.dur) { V.play = false; rec.w = 1; if (!rec.done) { rec.done = true; toast('시청 완료로 기록했습니다.', 'ok'); } LR.api.save(); a2lVpPaint(); return; }
   if (Math.floor(V.t) % 5 === 0 && Math.floor(prev) % 5 !== 0) LR.api.save(); a2lVpPaint(); }
-function a2lVpPaint() { const V = A2L.vp; if (!V) return; const t = $('#a2vpt'), i = $('#a2vpi'), p = $('#a2vp .a2play'), w = $('#a2vpw'); if (t) t.textContent = a2lmmss(V.t); if (i) i.style.width = (V.t / V.dur * 100) + '%'; if (p) p.textContent = V.play ? '❚❚' : '▶'; const rec = a2lPeek(V.cid, V.iid); if (w) w.textContent = `시청 ${Math.round((rec.w || 0) * 100)}%${rec.done ? ' · 완료' : ' · 끝까지 보면 완료'}`; const b = $('.a2vp ~ .wbar i'); if (b) b.style.width = Math.round((rec.w || 0) * 100) + '%'; }
+function a2lVpPaint() { const V = A2L.vp; if (!V) return; const t = $('#a2vpt'), i = $('#a2vpi'), p = $('#a2vp .a2play'), w = $('#a2vpw'); if (t) t.textContent = a2lmmss(V.t); if (i) i.style.width = (V.t / V.dur * 100) + '%'; if (p) p.textContent = V.play ? '❚❚' : '▶'; const rec = a2lPeek(V.cid, V.iid); if (w) w.textContent = `${(rec.w || 0) >= 0.005 ? `시청 ${Math.round(rec.w * 100)}%` : '아직 시청 전'}${rec.done ? ' · 완료' : ' · 끝까지 보면 완료'}`; const b = $('.a2vp ~ .wbar i'); if (b) b.style.width = Math.round((rec.w || 0) * 100) + '%'; }
 /* YouTube 재생 중 구간 감시(재생바 자동 정지) */
 { const base = ytMount; ytMount = function (el) { const P = base(el); try { a2lYtWatch(el); } catch (e) { } return P; }; }
 function a2lYtWatch(el) { const ctx = A2L.cueCtx; if (!ctx || el.dataset.kind !== 'cls' || el.dataset.item !== ctx.it.id || !(ctx.it.vq || []).length) return; const it = ctx.it;
