@@ -31,12 +31,18 @@ const PATHS = { k12: ['#login/family', '#login/mypay', '#login/my'], adult: ['#s
               r.querySelectorAll('*').forEach(el => { if (!vis(el)) return; const t = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join(''); if (t && parseFloat(getComputedStyle(el).fontSize) < 13) small.push(`${el.className || el.tagName} ${t.slice(0, 10)}`); }); });
             const hero = q(hs)[0]; const doors = q('.hu4-dr .hu4-d').length; const hl = q(hs + ' a').map(a => a.getAttribute('href'));
             const h1 = hero && hero.querySelector('h1'); const lh = h1 ? Math.round(h1.getBoundingClientRect().height / parseFloat(getComputedStyle(h1).lineHeight)) : 0;
-            return { hero: !!hero, doors, plan: q('.hu4-plan .hu4-pl>li').length, hl, ov: document.documentElement.scrollWidth - innerWidth, small: [...new Set(small)].slice(0, 6), tgt: [...new Set(tgt)].slice(0, 6), lh, dead: hl.filter(h => !h || h === '#').length }; }, HERO[id]);
+            /* 새 첫 화면 · 비교 섹션 글자 대비(L 심사: 어두운 판 보조 글자 2.2) — 가장 가까운 불투명(α≥.8) 바탕과 비교 */
+            const rgb = c => (c.match(/[\d.]+/g) || []).map(Number); const lum = a => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(a[0]) + .7152 * f(a[1]) + .0722 * f(a[2]); };
+            const low = []; q(hs + ',.hu4-plan').forEach(root => root.querySelectorAll('*').forEach(el => { if (!vis(el)) return; const t = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join(''); if (!t) return;
+              let p = el, bg = null; while (p && p.nodeType === 1) { const c = rgb(getComputedStyle(p).backgroundColor); if (c.length >= 3 && (c[3] == null || c[3] >= .8)) { bg = c; break; } if (p.parentElement && (getComputedStyle(p.parentElement).backgroundImage !== 'none' || p.parentElement.querySelector(':scope>figure.hp-photo'))) break; /* 사진 위 글자(스크림)는 사진 대비 점검 몫 */ p = p.parentElement; }
+              if (!bg) return; const fg = rgb(getComputedStyle(el).color); const L1 = lum(fg), L2 = lum(bg); const cr = (Math.max(L1, L2) + .05) / (Math.min(L1, L2) + .05); if (cr < 4.5) low.push(`${t.slice(0, 10)} ${cr.toFixed(2)}`); }));
+            return { low: [...new Set(low)].slice(0, 6), hero: !!hero, doors, plan: q('.hu4-plan .hu4-pl>li').length, hl, ov: document.documentElement.scrollWidth - innerWidth, small: [...new Set(small)].slice(0, 6), tgt: [...new Set(tgt)].slice(0, 6), lh, dead: hl.filter(h => !h || h === '#').length }; }, HERO[id]);
           const tag = `[${type}] ${id} ${w}`;
           ok(m.hero && m.doors === 3, `${tag} 첫 화면(${HERO[id]}) · 3갈래 ${m.doors}`);
           ok(m.plan >= 3, `${tag} 과정 비교 ${m.plan}줄`);
           ok(PATHS[type].every(p => m.hl.includes(p)) && !m.dead, `${tag} 버튼 실제 경로(${PATHS[type].join(' ')}) · 빈 링크 ${m.dead}`);
           ok(m.lh >= 1 && m.lh <= 3, `${tag} 제목 ${m.lh}줄(3줄 이하)`);
+          ok(!m.low.length, `${tag} 새 화면 글자 대비 4.5 이상 ${JSON.stringify(m.low)}`);
           ok(m.ov <= 0, `${tag} 가로 넘침 ${m.ov}`);
           ok(!m.small.length, `${tag} 13px 미만 ${JSON.stringify(m.small)}`);
           ok(!m.tgt.length, `${tag} 44px 미만 ${JSON.stringify(m.tgt)}`);
