@@ -129,6 +129,8 @@ ${th === 'warm' ? `${P} .hu1-r{border-width:2px}${P} .hu1-ag{border-width:2px}` 
  ${P} .hu1-ag{padding:14px 14px 4px}${P} .hu1-ag li a{grid-template-columns:84px minmax(0,1fr);row-gap:4px;column-gap:8px}${P} .hu1-ag li:nth-child(n+4){display:none}${P} .hu1-tg{grid-column:2;justify-self:start}}
 /* 휴대폰: 첫 화면의 장식 사진 · 데스크와 겹치는 숫자 카드 · 바로가기 칸은 접어 데스크가 첫 스크롤 바로 아래에 오게 한다 */
 @media (max-width:560px){.hpl-mo-x,.hpl-mo-s,.pt-hero .pt-qk{display:none!important}}
+/* 첫 화면 제목: 한 단어만 다음 줄로 떨어지지 않게 줄 길이를 고르게 */
+h1,h1 em{text-wrap:balance}
 /* 13px · 44px 관문 보정(기존 부품 · 이 테마에서만) */
 .hps-tag,.hps-chip,.hps-smp,.hp-tag,.hp-chip,.hp-ci small,.hp-s .hp-ey,.hp-ckd,.ey,.nt,.tg,.hey,.lsw,.s2nc .nt,.s2nc time,.s2cnote,.cb dl,.rh span,.mapi dt,.pc small,.fc .f small,.ctas small,.pt-dt small,.ph2 small,.ph3 small{font-size:13px!important}
 .hps-new{font-size:13px!important;width:20px!important;height:20px!important}
@@ -145,6 +147,7 @@ ${th === 'warm' ? `${P} .hu1-r{border-width:2px}${P} .hu1-ag{border-width:2px}` 
     lifelong: ['senior', 'classroom', 'seminar', 'library', 'art', 'wellness', 'civic', 'music', 'cooking'],
     adult: ['classroom', 'laptop', 'seminar', 'lecture', 'art', 'music', 'cooking', 'beauty', 'wellness', 'coding', 'library', 'workshop'] };
   const PREF = { univ: ['campus', 'lecture', 'library'], univ_lms: ['campus', 'lecture', 'library'], k12: ['classroom', 'library', 'kids'], voc: ['classroom', 'laptop', 'vocational'], corp: ['seminar', 'office'], public: ['civic', 'seminar', 'office'], lifelong: ['seminar', 'senior', 'classroom'], adult: ['classroom', 'seminar'] };
+  const PICK = { voc: ['hum-07', 'cls-03'] }; /* 직업훈련: 컴퓨터 실습 장면 우선 */
   const stockRe = /img\/stock\//;
   function heroFix(s) { try { const H = window.HPSTOCK; const k = ty(); if (!H || !H.list || !FIT[k] || s.stockOff) return s;
       const im = s.img && s.img.hero; const bn = ((s.sections || []).find(x => x && x.type === 'banner') || {}).data || {};
@@ -153,11 +156,13 @@ ${th === 'warm' ? `${P} .hu1-r{border-width:2px}${P} .hu1-ag{border-width:2px}` 
       const cur = im && im.src ? H.list.find(y => String(im.src).indexOf(y.src.replace(/\.webp$/, '')) >= 0) : null;
       if (cur && FIT[k].includes(cur.cat)) return s;
       const okS = y => !y.slots || !y.slots.length || y.slots.includes('hero'); const okT = y => !y.types || !y.types.length || y.types.includes(k);
-      let pick = null; for (const c of PREF[k]) { pick = H.list.find(y => y.cat === c && okS(y) && okT(y) && y.tone !== 'dark') || H.list.find(y => y.cat === c && okS(y)); if (pick) break; }
+      let pick = (PICK[k] || []).map(id => H.list.find(y => y.id === id)).find(Boolean) || null; if (!pick) for (const c of PREF[k]) { pick = H.list.find(y => y.cat === c && okS(y) && okT(y) && y.tone !== 'dark') || H.list.find(y => y.cat === c && okS(y)); if (pick) break; }
       if (!pick) return s;
       const img = Object.assign({}, s.img || {}, { hero: { src: pick.src, alt: pick.alt || '', fit: 'cover', pos: pick.focus || '50% 50%', stock: pick.id } });
       return Object.assign({}, s, { img, photos: Object.assign({}, s.photos || {}, { hero: pick.id }) }); } catch (e) { return s; } }
 
+  /* 제목 줄의 마지막 두 낱말을 붙여 한 낱말만 다음 줄로 떨어지지 않게 한다(태그 없는 글자 조각만) */
+  const orphan = h => h.replace(/(<h1\b[^>]*>)([\s\S]*?)(<\/h1>)/g, (m, a, body, z) => a + body.split(/(<br\s*\/?>)/).map(seg => /<|&nbsp;/.test(seg) || seg.trim().split(/\s+/).length < 3 ? seg : seg.replace(/\s+(\S+)\s*$/, '&nbsp;$1')).join('') + z);
   /* ── 붙이기: 홈 첫 화면 바로 뒤에 데스크, 사이트 CSS 끝에 CSS ── */
   function inject(h, s) { const mi = h.search(/<main class="s2pg" id="p-home">/); const from = mi >= 0 ? mi : h.search(/<main\b/); if (from < 0) return h;
     const end = h.indexOf('</section>', from); if (end < 0) return h; const at = end + '</section>'.length;
@@ -165,7 +170,7 @@ ${th === 'warm' ? `${P} .hu1-r{border-width:2px}${P} .hu1-ag{border-width:2px}` 
     return h.slice(0, at) + desk(s) + h.slice(at); }
   { const base = siteHTML; siteHTML = (s, ...a) => { const mine = s && MINE.includes(s.theme); const h = base(mine ? heroFix(s) : s, ...a);
     try { if (!s || !MINE.includes(s.theme) || typeof h !== 'string' || !h.includes('</style>') || !HPT.tokens(s)) return h;
-      let o = inject(h, s); o = o.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>'); return EXTRA_MIN(s, o); } catch (e) { console.error('hpup-b1', e); return h; } };
+      let o = inject(h, s); o = orphan(o); o = o.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>'); return EXTRA_MIN(s, o); } catch (e) { console.error('hpup-b1', e); return h; } };
     window.siteHTML = siteHTML; }
   window.HPUP_B1 = { desk, routes, agenda, css };
 })();
