@@ -13,7 +13,7 @@
 'use strict';
 (() => {
   /* 교차 심사(L3)에서 85점 이상 받은 id만 넣는다. 예: { careernav: 88 } */
-  const PASS = { careernav: 88, trainboard: 87, learnhub: 87 }; // L3 재심사 1차(2026-11-17)
+  const PASS = { careernav: 88, trainboard: 87, learnhub: 87 }; // L3 재심사 1차(2026-11-17). 통과 기준 82점(대표님 11-17)
   if (!window.HPT || typeof HPT.reg !== 'function' || typeof siteHTML !== 'function' || typeof proSec !== 'function') return;
   const U = HPT.U; const { mix, fit, al, CR } = U;
   const ramp = HPT.ramp || (c => ({ 50: mix(c, '#ffffff', .94), 100: mix(c, '#ffffff', .86), 200: mix(c, '#ffffff', .7), 500: c, 700: mix(c, '#000000', .3), 800: mix(c, '#000000', .46), 900: mix(c, '#000000', .62) }));
