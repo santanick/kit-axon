@@ -358,8 +358,8 @@
 .k4-fin{background-color:var(--bg)!important;background-image:linear-gradient(${mix(v.ink, v.bg, .9)} 1px,transparent 1px),linear-gradient(90deg,${mix(v.ink, v.bg, .9)} 1px,transparent 1px)!important;background-size:32px 32px!important}
 @media(max-width:1000px){.k4-gg{grid-template-columns:minmax(0,1fr)}.k4-gc{order:-1;height:440px;max-width:620px}.k4-gc .k4-hi{height:340px}}
 @media(max-width:760px){.k4-gg{gap:24px;padding-bottom:40px}.k4-gc{height:330px}.k4-gc .k4-hi{height:250px;width:92%;box-shadow:8px 8px 0 var(--a)}.k4-g2{width:170px;height:120px}.k4-grid .k4-sub{font-size:17px;margin:18px 0 26px!important}.k4-grid .k4-q{padding:0 16px}.k4-b.p,.k4-b.o{box-shadow:3px 3px 0 var(--ink),inset 0 0 0 2px var(--ink)!important}}`,
-    kfart: v => `${HB('k4-collage', '24px 0 0', '10px 0 0')}${H1('k4-collage', 132, 62, .98, 'letter-spacing:-.065em!important;')}
-.k4-pg{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;padding-bottom:90px}
+    kfart: v => `${HB('k4-collage', '64px 0 0', '20px 0 0')}${H1('k4-collage', 120, 60, 1.02, 'letter-spacing:-.065em!important;')}
+.k4-pg{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;padding-bottom:90px}@media(max-width:1340px){.hpt.hp-hero.k4-h.k4-collage h1{font-size:108px!important}}
 .k4-collage .k4-sub{font-size:20px;line-height:1.65;color:var(--mu);margin:34px 0 38px!important;max-width:500px}
 .k4-col{position:relative;height:690px}.k4-col .k4-ph{position:absolute}
 .k4-s1{left:0;top:40px;width:330px;height:470px;border-radius:165px 165px 18px 18px}.k4-s2{right:0;top:0;width:290px;height:290px;border-radius:50%}.k4-s3{right:10px;bottom:0;width:340px;height:360px;border-radius:18px}
@@ -372,7 +372,7 @@
 @media(max-width:760px){.k4-pg{gap:24px;padding-bottom:44px}.k4-col{height:410px}.k4-s1{width:190px;height:290px;top:30px;border-radius:95px 95px 14px 14px}.k4-s2{width:170px;height:170px}.k4-s3{width:180px;height:200px;right:0}.k4-dot{left:160px;top:0;width:56px;height:56px}
 .k4-collage .k4-sub{font-size:17px;margin:20px 0 26px!important}.k4-num .k4-big{font-size:150px}.k4-nt h2{font-size:28px}.k4-quote .k4-w{grid-template-columns:minmax(0,1fr)}.k4-quote .k4-qp{width:240px;height:240px}.k4-quote blockquote{font-size:28px}}`,
     kfmusic: v => `.hpt.hp-hero.k4-h.k4-half{display:grid;grid-template-columns:1fr 1fr;min-height:860px;padding:0;background:var(--bg);color:var(--ink);margin:0}${H1('k4-half', 64, 38, 1.2, 'letter-spacing:-.035em!important;')}
-.k4-hl{position:relative;min-height:100%}.k4-hl .k4-hi{position:absolute;inset:0;height:100%}
+@media(max-width:1340px) and (min-width:1001px){.hpt.hp-hero.k4-h.k4-half{grid-template-columns:.85fr 1.15fr}.k4-hr{padding:72px 48px 56px}}.k4-hl{position:relative;min-height:100%}.k4-hl .k4-hi{position:absolute;inset:0;height:100%}
 .k4-hr{display:flex;align-items:center;padding:80px 72px 60px}.k4-hri{max-width:580px}
 .k4-half .k4-kick{font-family:${F.serif};font-style:italic;font-size:18px;color:var(--pt);margin-bottom:26px!important}
 .k4-half .k4-sub{font-size:19px;line-height:1.8;color:var(--mu);margin:28px 0 40px!important}
