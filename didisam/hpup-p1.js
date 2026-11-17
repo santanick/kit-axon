@@ -26,7 +26,7 @@
   const term = () => { const g = grp(); return g === 'k12' ? '반' : g === 'adult' ? '클래스' : g === 'univ' ? '강좌' : g === 'voc' ? '과정' : g === 'corp' ? '교육' : '강좌'; };
 
   /* ── 실제 데이터 ── */
-  const pubL = () => { try { const A = (S.classes || []).filter(c => c && c.name && c.status !== '종료' && c.status !== '삭제'); const P = A.filter(c => c.open === '전체' || c.open == null); const L = P.length ? P : grp() === 'corp' ? A : []; const R = L.filter(c => c.status === '운영중'); return R.length ? R : L; } catch (e) { return []; } };
+  const pubL = () => { try { const A = (S.classes || []).filter(c => c && c.name && c.status !== '종료' && c.status !== '삭제'); const P = A.filter(c => c.open === '전체' || c.open == null); const L = P; const R = L.filter(c => c.status === '운영중'); return R.length ? R : L; } catch (e) { return []; } };
   const isPublic = c => c.open === '전체' || c.open == null;
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
   const dot = d => String(d || '').slice(5, 10).replace('-', '.');
@@ -122,7 +122,7 @@
       { k: '수료 확인', t: '이수증 · 수료증을 내려받아요', m: cn ? `수료증 발급 과정 ${cn}개` : '이수한 교육의 증명서를 내려받아요', b: [['#badges', '이수증 보기'], ['#my', '내 학습']] },
       { k: '교육 담당자', t: '운영 · 일정을 문의해요', m: '공지로 교육 일정을 안내해요', b: [[ask.h, ask.l], [nt, '교육 공지']] }]; }
     if (g === 'pub') return [
-      { k: '시민', t: '시민 강좌를 신청해요', m: L.length ? `접수 중 ${L.length}개${nxt ? ' · ' + nxt.replace('가장 가까운 개강 · ', '개강 ') : ''}` : '접수 일정은 공지로 알려요', b: [[cl, '강좌 보기'], [ask.h, ask.l]] },
+      ...(L.length ? [{ k: '시민', t: '시민 강좌를 신청해요', m: L.length ? `접수 중 ${L.length}개${nxt ? ' · ' + nxt.replace('가장 가까운 개강 · ', '개강 ') : ''}` : '접수 일정은 공지로 알려요', b: [[cl, '강좌 보기'], [ask.h, ask.l]] }] : []),
       hasFac() ? { k: '시설 이용', t: '빈 시간을 보고 예약해요', m: '정원 · 운영 시간을 바로 확인해요', b: [['#p-l-fac', '시설 예약'], [nt, '이용 안내']] } : { k: '수강생', t: '수강 · 수료를 확인해요', m: '진도와 수료증을 한곳에서', b: [['#login', '로그인'], ['#badges', '수료증']] },
       { k: '직원', t: '직원 교육을 이수해요', m: '필수 교육은 로그인 후 보여요', b: [['#login', '직원 로그인'], ['#my', '내 교육']] },
       { k: '소식', t: '접수 일정 · 공지를 확인해요', m: '추첨 · 결과도 공지로 알려요', b: [[nt, '공지사항'], ['#cal', '교육 일정']] }];
@@ -140,19 +140,27 @@
   const figH = (p, cls) => p ? `<figure class="hps-img hp-photo hu3-ph ${cls || ''}" data-slot="hero"${p.stock ? ' data-stock="1"' : ''}><img src="${E(p.src)}"${p.srcset ? ` srcset="${E(p.srcset)}" sizes="(max-width: 900px) 100vw, 60vw"` : ''} alt="${E(p.alt)}" loading="eager" fetchpriority="high" decoding="async" style="object-fit:${p.fit || 'cover'};object-position:${E(p.pos || '50% 50%')}"></figure>` : '';
   const lines = d => String((d && d.title) || org()).split('\n').filter(Boolean);
   const head = (d, k) => `${d.eyebrow ? `<p class="hu3-ey">${E(d.eyebrow)}</p>` : ''}<h1>${lines(d).map(E).join('<br>')}</h1>${d.sub ? `<p class="hu3-sub">${E(d.sub)}</p>` : ''}`;
-  function heroBtns(s, d) { const ask = askOf(s); const g = grp(); const c1 = g === 'corp' ? '#login' : clsList(s);
-    const c2 = /학사 일정|개강 일정/.test(d.cta2 || '') ? '#cal' : /이수증/.test(d.cta2 || '') ? '#badges' : ask.h;
+  /* 기업 · 공공에서 공개 강좌가 0이면(직원형) 빈 상태 안내 — 「접수 중인 강좌」 제목 · 0개 목록 대신 로그인 · 시설 · 공지 · 문의 */
+  const emp = () => (grp() === 'corp' || grp() === 'pub') && !pubL().length;
+  const empD = (id, d) => { if (!emp() || id === 'cmdledger') return d; const c = copyOf(id); if (!c || d.eyebrow !== c.eyebrow) return d;
+    return grp() === 'corp' ? Object.assign({}, d, { eyebrow: '사내 교육', title: `${org()}\n내 교육은 로그인하면 바로 보여요`, sub: '배정된 필수 · 직무 교육과 기한을 확인하고, 이수증을 내려받아요.', cta: '내 교육 보기', cta2: '이수증 확인' })
+      : Object.assign({}, d, { eyebrow: '이용 안내', title: `${org()}\n직원 교육 · 시설 이용 안내`, sub: hasFac() ? '직원 교육은 로그인 후 내 교육에서, 시설은 빈 시간을 보고 예약해요.' : '직원 교육은 로그인 후 내 교육에서 확인하고, 강좌 접수는 공지로 알려요.', cta: '직원 로그인', cta2: hasFac() ? '시설 예약' : '공지사항' }); };
+  const guideR = s => { const g = grp(); const ask = askOf(s); const nt = noticeH(s); return [['#login', g === 'pub' ? '직원 교육 · 로그인' : '내 교육 · 기한 확인', '배정된 교육은 로그인 후 보여요'], hasFac() && g === 'pub' ? ['#p-l-fac', '시설 예약', '빈 시간과 정원을 바로 확인해요'] : ['#badges', '이수증 · 수료증', '이수한 교육의 증명서를 내려받아요'], [nt, '공지사항', '교육 일정 · 접수 소식을 알려요'], [ask.h, ask.l, '교육 담당자에게 물어봐요']]; };
+  function heroBtns(s, d) { const ask = askOf(s); const g = grp(); const c1 = g === 'corp' || d.cta === '직원 로그인' ? '#login' : clsList(s);
+    const c2 = /학사 일정|개강 일정/.test(d.cta2 || '') ? '#cal' : /이수증/.test(d.cta2 || '') ? '#badges' : /시설 예약/.test(d.cta2 || '') ? '#p-l-fac' : /^공지/.test(d.cta2 || '') ? noticeH(s) : ask.h;
     return `<div class="hu3-bs">${d.cta ? btn(c1, d.cta, 'p') : ''}${d.cta2 ? btn(c2, d.cta2, 'g') : ''}</div>`; }
 
   /* ── 첫 화면 3종 ── */
   function heroDesk(s, d, p) { const L = sortL(pubL()); const cl = clsList(s);
-    const side = L.length ? `<aside class="hu3-side" aria-label="지금 신청할 수 있는 ${E(term())}"><div class="hu3-sh"><p>지금 신청할 수 있는 ${E(term())}</p><span>${L.length}개</span></div>${rowsHTML(L, 5)}<a class="hu3-all" ${aA(cl)}><span>${E(term())} 전체 보기</span>${ic('arrow', 18)}</a></aside>` : '';
+    const side = L.length ? `<aside class="hu3-side" aria-label="지금 신청할 수 있는 ${E(term())}"><div class="hu3-sh"><p>지금 신청할 수 있는 ${E(term())}</p><span>${L.length}개</span></div>${rowsHTML(L, 5)}<a class="hu3-all" ${aA(cl)}><span>${E(term())} 전체 보기</span>${ic('arrow', 18)}</a></aside>` : emp() ? `<aside class="hu3-side" aria-label="이용 안내"><div class="hu3-sh"><p>${grp() === 'pub' ? '이용 안내' : '내 교육 안내'}</p></div><ul class="hu3-rows">${guideR(s).map(r => `<li><a ${aA(r[0])}><span class="hu3-rn"><b>${E(r[1])}</b><small>${E(r[2])}</small></span><span></span>${/^tel:/.test(r[0]) ? ic('phone', 18) : ic('arrow', 18)}</a></li>`).join('')}</ul></aside>` : '';
     return `<section class="hpt hp-hero hps-hero hu3 hu3-cd"><div class="hu3-w"><div class="hu3-top${side ? '' : ' one'}"><div class="hu3-card">${figH(p)}<i class="hu3-scrim" aria-hidden="true"></i><div class="hu3-tx">${head(d)}${heroBtns(s, d)}</div></div>${side}</div><div class="hu3-whoh"><h2>어떤 일로 오셨나요?</h2><p>방문 목적을 고르면 바로 갈 곳을 알려 드려요.</p></div>${whoHTML(s, d)}</div></section>`; }
   function steps(s) { const L = pubL(); const g = grp(); const ask = askOf(s); const cl = clsList(s); const cn = L.filter(c => info(c).cert).length;
     const nx = L.map(c => [c, dd(c.start)]).filter(x => x[1] != null && x[1] >= 0).sort((a, b) => a[1] - b[1])[0]; const nxt = nx ? ` · 다음 개강 ${dot(nx[0].start)}` : '';
     if (g === 'univ') return [['강좌 고르기', `모집 중 ${L.length}개${nxt}`, cl], ['학번으로 신청', '학번 · 학과로만 확인해요', '#login'], ['수강 · 출석', '출석 · 진도는 자동으로 기록돼요', '#my'], ['이수 확인', cn ? `이수증 발급 강좌 ${cn}개` : '이수 기록을 바로 확인해요', '#badges']];
     if (g === 'voc') return [['과정 비교', `모집 중 ${L.length}개${nxt}`, cl], ['내일배움카드', '발급 · 자격은 고용24에서 확인해요', W24], ['훈련 · 출결', '출결과 진도는 자동으로 기록돼요', '#my'], ['수료 · 취업 연계', cn ? `수료증 발급 과정 ${cn}개` : '수료 기준을 바로 확인해요', '#badges']];
     if (g === 'k12') return [['상담 · 레벨 테스트', '아이 수준에 맞춰 반을 정해요', ask.h], ['반 · 시간표', `운영 중인 반 ${L.length}개`, cl], ['수업 · 숙제', '숙제와 진도를 앱으로 확인해요', '#my'], ['출결 · 성적 알림', '학부모님께 바로 알려 드려요', '#login']];
+    if (emp()) { const nt = noticeH(s); return g === 'corp' ? [['필수 교육 확인', '로그인하면 내 교육과 기한이 보여요', '#login'], ['학습', 'PC · 휴대폰으로 이어서 들어요', '#my'], ['이수증 받기', cn ? `이수증 발급 과정 ${cn}개` : '이수 기록이 바로 남아요', '#badges'], ['교육 공지', '교육 일정 · 접수 소식을 알려요', nt]]
+      : [['직원 로그인', '배정된 교육은 로그인 후 보여요', '#login'], hasFac() ? ['시설 예약', '빈 시간과 정원을 바로 확인해요', '#p-l-fac'] : ['공지사항', '강좌 접수 일정을 알려요', nt], ['수강', 'PC · 휴대폰으로 이어서 들어요', '#my'], ['수료증', '이수한 교육의 증명서를 내려받아요', '#badges']]; }
     if (g === 'corp') return [['필수 교육 확인', '로그인하면 내 교육과 기한이 보여요', '#login'], ['학습', 'PC · 휴대폰으로 이어서 들어요', '#my'], ['이수증 받기', cn ? `이수증 발급 과정 ${cn}개` : '이수 기록이 바로 남아요', '#badges'], ['직무 과정', `운영 중 ${L.length}개`, cl]];
     return [[`${term()} 고르기`, `모집 중 ${L.length}개${nxt}`, cl], ['신청 · 결제', '온라인으로 신청하고 바로 수강해요', '#login'], ['수강', 'PC · 휴대폰으로 이어서 들어요', '#my'], ['수료증', cn ? `수료증 발급 ${term()} ${cn}개` : '수료 기준을 바로 확인해요', '#badges']]; }
   function heroPath(s, d, p) { const R = steps(s);
@@ -178,10 +186,10 @@
     const bt = (() => { const c1 = d.cta === '직원 로그인' ? '#login' : g === 'corp' ? '#login' : cl; const c2 = /시설 예약/.test(d.cta2 || '') ? '#p-l-fac' : /공지/.test(d.cta2 || '') ? nt : /학사 일정|개강 일정/.test(d.cta2 || '') ? '#cal' : /이수증/.test(d.cta2 || '') ? '#badges' : ask.h; return `<div class="hu3-bs">${d.cta ? btn(c1, d.cta, 'p') : ''}${d.cta2 ? btn(c2, d.cta2, 'g') : ''}</div>`; })();
     return `<section class="hpt hp-hero hps-hero hu3 hu3-cl"><div class="hu3-w"><div class="hu3-top"><div class="hu3-tx">${head(d)}${bt}${fx}</div><div class="hu3-rt">${figH(p)}${right}</div>${ledgerWho(s, d)}</div></div></section>`; }
   /* 공개 강좌가 없으면 아래 「운영 중인 과정 — 로그인 후 볼 수 있습니다」 빈 카드는 숨긴다(첫 화면 안내판이 그 역할) */
-  if (typeof proSec === 'function') { const base = proSec; proSec = (x, i, s, lk) => { try { if (x && x.type === 'classes' && s && s.theme === 'cmdledger' && !pubP().length && !(typeof HPE !== 'undefined' && HPE && HPE.map)) return ''; } catch (e) { } return base(x, i, s, lk); }; window.proSec = proSec; }
+  if (typeof proSec === 'function') { const base = proSec; proSec = (x, i, s, lk) => { try { if (x && x.type === 'classes' && s && (s.theme === 'cmdledger' ? !pubP().length : MINE.includes(s.theme) && emp()) && !(typeof HPE !== 'undefined' && HPE && HPE.map)) return ''; } catch (e) { } return base(x, i, s, lk); }; window.proSec = proSec; }
 
   { const h0 = HPS.hero; HPS.hero = (kind, s, d, th, T) => { try { const id = s && s.theme; if (MINE.includes(id) && !(d && +d.dstyle && +d.dstyle !== 2)) { const m = HPT.meta(id); const k = kind || (typeof HPS.heroKind === 'function' ? HPS.heroKind(s, d || {}) : m.hk);
-        if (k === m.hk && HPT.tokens(s)) { const dd2 = dataOf(id, d || {}); const p = typeof HPS.photo === 'function' ? HPS.photo(s, 'hero', d) : null;
+        if (k === m.hk && HPT.tokens(s)) { const dd2 = empD(id, dataOf(id, d || {})); const p = typeof HPS.photo === 'function' ? HPS.photo(s, 'hero', d) : null;
           return id === 'coursedesk' ? heroDesk(s, dd2, p) : id === 'learnpath' ? heroPath(s, dd2, p) : heroLedger(s, dd2, p); } } } catch (e) { console.error('hpup-p1 hero', e); } return h0(kind, s, d, th, T); }; }
 
   /* ── CSS(테마 cssX에 이어 붙인다) ── */
@@ -191,7 +199,7 @@
     return `
 /* v43.8 hpup-p1(${id}) */
 .hps-login,.hps-tel,.hps-utt,.hps-utr a{min-height:44px;display:inline-flex!important;align-items:center}.hps-cta,.hps-hr .hps-cta{min-height:48px!important}.s2-mi>a{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}.hps-lw,.hp-all{min-height:44px;min-width:44px;display:inline-flex!important;align-items:center}.hps-fl a,.hps-fc li a,.hps-fb a,.hps-lg a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}a[href^="tel:"],a[href^="mailto:"]{display:inline-flex;align-items:center;min-height:44px}.hps-f li>a{min-height:44px;display:flex;align-items:center}
-.hps-tag,.hps-new,.hps-wmk small,.hpt dd small,.hpt .hps-fv small,.hp-fl small,.hps-facts small{font-size:13px!important}.hpb-rsum small,.hpt .hps-p b small,.hpt .hps-amt small,.hpt b>small{font-size:13px!important}.s2esc{min-height:44px!important;display:inline-flex!important;align-items:center}.hps-new{min-width:22px;height:22px;display:inline-grid;place-items:center}
+.hps-tag,.hps-new,.hps-wmk small,.hpt dd small,.hpt .hps-fv small,.hp-fl small,.hps-facts small{font-size:13px!important}.hpb-rsum small,.hpt .hps-p b small,.hpt .hps-amt small,.hpt b>small{font-size:13px!important}.s2esc{min-height:44px!important;display:inline-flex!important;align-items:center}.hps-glk a{display:inline-flex;align-items:center;min-height:44px}.hps-new{min-width:22px;height:22px;display:inline-grid;place-items:center}
 .hu3{--u-a:${A};--u-a7:${A7};--u-50:${R[50]};--u-100:${R[100]};--u-on:${on(A)};--u-ink:${ink};--u-mu:${mu};--u-ln:${ln};--u-w:${wT};--u-k:${kT};color:var(--u-ink);padding:clamp(16px,2.6vw,32px) 0 clamp(40px,5vw,72px)!important}
 .hu3 *{box-sizing:border-box}.hu3 h1,.hu3 h2,.hu3 h3,.hu3 p{margin:0}.hu3 a{text-decoration:none}
 .hu3 .hu3-w{max-width:1240px;margin:0 auto;padding:0 clamp(16px,3vw,40px)}
@@ -279,7 +287,7 @@
 .hu3 .hu3-rows a{grid-template-columns:minmax(0,1fr) auto;gap:10px}.hu3 .hu3-rows a>svg{display:none}
 .hu3 .hu3-who{gap:10px}.hu3 .hu3-wc{padding:16px}.hu3 .hu3-whoh{margin-top:32px}
 .hu3-cl .hu3-lh{display:none}.hu3-cl .hu3-lr{grid-template-columns:minmax(0,1fr) auto;row-gap:4px}.hu3-cl .hu3-lp2{grid-column:1;grid-row:2;font-size:13.5px;color:var(--u-mu)}.hu3-cl .hu3-lr span:last-child{grid-column:2;grid-row:1 / span 2}
-.hu3-cl .hu3-lw li{grid-template-columns:1fr}.hu3-cl .hu3-lwb{grid-column:1;flex-wrap:wrap}.hu3-cl .hu3-lwb .hu3-b{flex:1 1 40%}.hu3-cl .hu3-fx div{padding-right:8px}.hu3-cl .hu3-fx div+div{padding-left:10px}.hu3-cl .hu3-fx dd{font-size:24px}
+.hu3-cl .hu3-gd{display:none}.hu3-cl .hu3-led .hu3-lr:nth-of-type(4){display:none}.hu3-cl .hu3-lwt small{display:none}.hu3-cl .hu3-lw li{grid-template-columns:auto minmax(0,1fr);padding:10px 0;gap:8px 10px}.hu3-cl .hu3-lwb{grid-column:1 / -1;flex-wrap:nowrap}.hu3-cl .hu3-lwb .hu3-b{flex:1 1 0;min-width:0}.hu3-cl .hu3-ph{height:150px}.hu3-cl .hu3-lr{min-height:52px;padding:8px 0}.hu3-cl .hu3-fx{margin-top:20px}.hu3-cl .hu3-bs{margin-top:18px}.hu3-cl .hu3-top{row-gap:20px}.hu3-cl .hu3-lwb .hu3-b{flex:1 1 40%}.hu3-cl .hu3-fx div{padding-right:8px}.hu3-cl .hu3-fx div+div{padding-left:10px}.hu3-cl .hu3-fx dd{font-size:24px}
 .hu3-lp ol a{grid-template-columns:36px minmax(0,1fr) 16px;gap:12px}.hu3-lp ol i{width:36px;height:36px}.hu3-lp ol::before{left:23px}}
 @media(prefers-reduced-motion:reduce){.hu3 .hu3-b{transition:none}}`; }
   MINE.forEach(id => { const th = HPT.meta(id); const c0 = th.cssX; th.cssX = (s, t, T, u) => { let x = ''; try { x = typeof c0 === 'function' ? c0(s, t, T, u) : ''; } catch (e) { console.error('hpup-p1 cssX0', e); } try { x += css(s, t, T); } catch (e) { console.error('hpup-p1 css', e); } return x; }; });
