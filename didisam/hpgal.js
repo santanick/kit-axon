@@ -60,7 +60,7 @@
   { const base = ACT['tpd-use']; if (base) ACT['tpd-use'] = (...a) => { HTML.clear(); return base(...a); }; }
 
   /* tpl-d 화면 문자열: 썸네일 iframe(sandbox="")을 빼고 이 파일이 지연으로 그린다(data-ok가 있으면 tpl-d의 지연 로더는 건너뛴다) */
-  const IFR0 = '<iframe tabindex="-1" aria-hidden="true" title="" sandbox=""></iframe>';
+  const IFR0 = '<iframe tabindex="-1" aria-hidden="true" title="" sandbox="allow-same-origin"></iframe>';
   function galFix(h) {
     return h.split('<div class="tpd-th"').join('<div class="tpd-th tpg-th" data-ok="g"').split(IFR0).join('<span class="tpg-sk" aria-hidden="true"><i></i><b></b><em></em><u></u></span><span class="tpg-hv" aria-hidden="true">미리 보기</span>')
       .replace('<div class="tpd-g">', `<div class="tpd-g tpg-g${narrow() ? ' tpg-gm' : ''}">`); }
