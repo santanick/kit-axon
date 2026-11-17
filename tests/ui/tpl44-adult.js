@@ -3,13 +3,14 @@
    사용: node tests/ui/tpl44-adult.js [--shots <폴더>]  (정적 서버를 띄웠다가 끈다. 브라우저 1개. index.html에 태그가 없으면 테스트가 주입한다) */
 const H = require('./hp-visual/lib.js');
 const A = H.args(process.argv.slice(2));
-const IDS = ['adtalk', 'adexam', 'adit', 'adcraft', 'admove', 'adcook', 'adcoach', 'advocal', 'adphoto', 'admoney'];
+const IDS = ['adtalk', 'adexam', 'adit', 'adcraft', 'admove', 'adcook', 'adcoach', 'advocal', 'adphoto', 'admoney', 'adcert'];
 const OPT = ['.a4-num', '.a4-quote']; /* FIX 2 · 3: 자랑할 만한 숫자 · 좋은 후기가 있을 때만 보인다 */
 const SECS = { adtalk: ['.a4-talk', '.a4-stm', '.a4-cls', '.a4-week', '.a4-quote', '.a4-fin'], adexam: ['.a4-cert', '.a4-steps', '.a4-rows', '.a4-notice', '.a4-fin'],
   adit: ['.a4-cine', '.a4-stm', '.a4-cls', '.a4-week', '.a4-num', '.a4-quote', '.a4-fin'], adcraft: ['.a4-collage', '.a4-band', '.a4-gal', '.a4-quote', '.a4-fin'],
   admove: ['.a4-half', '.a4-tt', '.a4-story', '.a4-quote', '.a4-fin'], adcook: ['.a4-center', '.a4-story', '.a4-cls', '.a4-gal', '.a4-quote', '.a4-fin'],
   adcoach: ['.a4-sig', '.a4-story', '.a4-steps', '.a4-pkg', '.a4-quote', '.a4-fin'], advocal: ['.a4-stage', '.a4-num', '.a4-band', '.a4-week', '.a4-gal', '.a4-fin'],
-  adphoto: ['.a4-film', '.a4-gal', '.a4-cls', '.a4-quote', '.a4-fin'], admoney: ['.a4-news', '.a4-stm', '.a4-steps', '.a4-pkg', '.a4-quote', '.a4-fin'] };
+  adphoto: ['.a4-film', '.a4-gal', '.a4-cls', '.a4-quote', '.a4-fin'], admoney: ['.a4-news', '.a4-stm', '.a4-steps', '.a4-pkg', '.a4-quote', '.a4-fin'],
+  adcert: ['.a4-badge', '.a4-steps', '.a4-cls', '.a4-cred', '.a4-notice', '.a4-quote', '.a4-fin'] };
 const H1MAX = Object.fromEntries(IDS.map(id => [id, id === 'adcraft' ? [3, 4] : [2, 4]]));
 const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { const res = await r.fetch(); let b = await res.text();
   if (!/hp44-adult\.js/.test(b)) b = b.replace(/(<script src="hpprem\.js[^"]*"><\/script>)/, '$1\n<script src="hp44-adult.js"></script>');
@@ -37,7 +38,7 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
     const secs = SEL.filter(s => q(s).some(vis)); const txt = R.map(r => r.textContent).join(' ');
     const numEl = q('.a4-num').filter(vis)[0]; const num = numEl ? { big: (numEl.querySelector('.a4-big') || {}).textContent || '', fine: (numEl.querySelector('.a4-fine') || {}).textContent || '' } : null;
     const qtEl = q('.a4-quote blockquote').filter(vis)[0]; const quote = qtEl ? qtEl.textContent : null;
-    return { over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, inputs: q('.a4-h input, .a4-s input, .a4-s form').length, num, quote, ctaB: Math.max(0, ...q('.a4-h .a4-cta .a4-b').filter(vis).map(b => b.getBoundingClientRect().bottom)), vh: innerHeight, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.a4-h h1, .a4-fin h2').map(x => x.textContent).join('')) }; }, sel);
+    return { over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, txt, inputs: q('.a4-h input, .a4-s input, .a4-s form').length, num, quote, ctaB: Math.max(0, ...q('.a4-h .a4-cta .a4-b').filter(vis).map(b => b.getBoundingClientRect().bottom)), vh: innerHeight, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.a4-h h1, .a4-fin h2').map(x => x.textContent).join('')) }; }, sel);
   const allowed = h => /^(#login\/(family|my|mypay)|#join|#p-c-[\w-]+|#p-m-[\w-]+|#class\/[\w-]+|#courses|#shop|#notice|tel:[\d+]+|mailto:.+)$/.test(h);
   try {
     for (const type of ['adult']) {
@@ -50,6 +51,14 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
         ok(r.fits, `[${type}] ${r.id} 유형 맞춤`);
         ok(r.thumb, `[${type}] ${r.id} 갤러리 미리보기 = 실제 게시본`);
         ok(!r.au.length, `[${type}] ${r.id} 대비 4.5:1 이상(${r.au.join(', ')})`); });
+      /* v44.1: 갤러리 썸네일(HPT.thumb → HPP.thumb → iframe srcdoc, 갤러리와 같은 방식)에서 첫 화면 사진이 실제로 뜨는지 */
+      for (const id of IDS) { const th = await o.op.evaluate(async id2 => { let h = HPT.thumb(S.site, id2); if (window.HPP && HPP.thumb) h = HPP.thumb(h);
+          const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-same-origin'); f.style.cssText = 'position:fixed;left:0;top:0;width:1440px;height:900px;z-index:99999;transform:scale(.25);transform-origin:0 0;background:#fff'; f.srcdoc = h; document.body.appendChild(f);
+          await new Promise(r => { f.onload = r; setTimeout(r, 6000); }); const d = f.contentDocument; const t0 = Date.now(); let res = null;
+          while (Date.now() - t0 < 6000) { const I = [...d.querySelectorAll('img')].filter(im => { const b = im.getBoundingClientRect(); return b.top < 900 && b.bottom > 0 && b.width > 80; });
+            res = { n: I.length, ok: I.filter(im => im.complete && im.naturalWidth > 0).length, bad: I.filter(im => im.complete && !im.naturalWidth).map(im => im.getAttribute('src')).slice(0, 2) }; if (res.n && res.ok === res.n) break; await new Promise(r => setTimeout(r, 200)); }
+          f.remove(); return res; }, id);
+        ok(th && th.n >= 1 && th.ok === th.n, `[${type}] ${id} 갤러리 썸네일 첫 화면 사진 표시(${th ? th.ok + '/' + th.n + ' ' + th.bad.join(',') : '-'})`); }
       const flt = await o.op.evaluate(() => { const f = window.HP44AQ; if (!f) return 'no filter'; const T = [['영상이 끊겨요', 5, 0], ['퀴즈 3번 해설 부탁드립니다', 5, 0], ['수업이 정말 좋아요. 업무에 바로 썼어요', 5, 1], ['좋은데 진도가 빠른가요?', 5, 0], ['강의 덕분에 업무가 빨라졌어요', 3, 0], ['수강 후기 남깁니다', 5, 0]];
         const bad = T.filter(([b, st, want]) => !!f({ b, st }) !== !!want).map(x => x[0]); return bad.join(','); });
       ok(!flt, `[${type}] 후기 필터(불만 · 요청 · 질문 · 별점 4 미만 제외) ${flt}`);
@@ -73,6 +82,7 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
           ok(!m.brk.length, `${tag} 한 글자 꺾임 0(${m.brk.join(',')})`);
           ok(m.links.length >= 8 && m.links.every(allowed), `${tag} 버튼 · 링크가 실제 학습자 경로(${[...new Set(m.links)].join(' ')})`);
           ok(['#login/my', '#login/mypay'].every(x => m.links.includes(x)), `${tag} 수강생 · 결제 바로 가기`);
+          ok(!/국가공인|국가 공인|국가자격증 취득/.test(m.txt || ''), `${tag} 국가공인 오인 표현 없음`);
           ok(!m.inputs && !m.phone && !m.star, `${tag} 개인정보 입력칸 · 수집 문구 · 강조 기호 노출 없음`);
           if (A.shots) { const fs = require('fs'); fs.mkdirSync(A.shots, { recursive: true }); const f = `${A.shots}/${id}_${type}_${w === 390 ? 'm' : 'pc'}`;
             await pg.screenshot({ path: f + '_top.jpg', type: 'jpeg', quality: 80 }); await pg.evaluate(async () => { for (let y = 0; y < document.documentElement.scrollHeight; y += 700) { scrollTo(0, y); await new Promise(r2 => setTimeout(r2, 60)); } scrollTo(0, 0); const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); await Promise.all(R.flatMap(r => [...r.querySelectorAll('img')]).map(i => i.complete ? (i.decode ? i.decode().catch(() => 0) : 0) : new Promise(ok2 => { i.onload = i.onerror = ok2; setTimeout(ok2, 4000); }))); }); await pg.waitForTimeout(800); await pg.screenshot({ path: f + '_full.jpg', type: 'jpeg', quality: 70, fullPage: true }); }
