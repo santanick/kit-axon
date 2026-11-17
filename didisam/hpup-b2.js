@@ -43,7 +43,7 @@
   function roles(s) { const c = term('cls'); const T = ty(); const ed = (() => { try { return S.org.ed || ''; } catch (e) { return ''; } })();
     const R = {
       corp: [['user', '임직원', '내 필수 교육 · 마감 확인', L.my(s)], ['badge', '신입 사원', `온보딩 ${c} 시작하기`, L.cls(s)], ['brief', '교육 담당자', '과정 요청 · 운영 문의', L.ask(s)], ['bell', '교육 공지', '법정 · 필수 교육 안내', L.notice(s)]],
-      public: ed === 'staff' ? [['user', '직원', '내 필수 교육 · 이수증', L.my(s)], ['book', '교육 신청', `${c} 둘러보고 신청`, L.cls(s)], ['chat', '담당자 문의', '교육 운영 문의', L.ask(s)], ['bell', '공지', '교육 일정 · 안내', L.notice(s)]]
+      public: ed === 'staff' ? [['user', '직원', '필수 교육 · 이수증', L.my(s)], ['book', '교육 신청', `${c} 둘러보고 신청`, L.cls(s)], ['chat', '담당자 문의', '교육 운영 문의', L.ask(s)], ['bell', '공지', '교육 일정 · 안내', L.notice(s)]]
         : [['book', '처음 오신 시민', `${c} 찾고 신청하기`, L.cls(s)], ['user', '수강 중인 분', '내 강의실 · 출석 확인', L.my(s)], ['door', '회원 가입', '가입하고 신청 알림 받기', L.join(s)], ['chat', '문의', '신청 · 이용 문의', L.ask(s)]],
       univ: [['user', '재학생', '학번 로그인 · 비교과 신청', L.my(s)], ['star', '신입생', '처음 오셨나요? 가입 안내', L.join(s)], ['book', '교수자', '자료 · 강의 운영', L.data(s)], ['brief', '산학 · 지역', '협력 · 프로그램 문의', L.ask(s)]],
       k12: [['users', '학부모', '출결 · 성적 알림 확인', L.fam(s)], ['user', '학생', '내 수업 · 과제 보기', L.my(s)], ['chat', '처음 오신 분', '상담 · 레벨 테스트 예약', L.ask(s)], ['card', '수강료 결제', '청구서 · 결제 내역', L.pay(s)]],
@@ -54,23 +54,31 @@
     return R[T === 'univ_lms' ? 'univ' : T] || R.adult; }
 
   /* 지금 신청할 수 있는 실제 강좌(개강 가까운 순) */
-  function nowList() { const C = pubAll().slice(); const key = c => (c.period && c.period.start) || (c.recruit && c.recruit.to) || '9999';
+  const stOf = c => (c.period && c.period.start) || c.start || ''; const enOf = c => (c.period && c.period.end) || c.end || '';
+  function nowList() { const C = pubAll().slice(); const key = c => stOf(c) || (c.recruit && c.recruit.to) || '9999';
     C.sort((a, b) => String(key(a)).localeCompare(String(key(b)))); return C.slice(0, 3); }
-  function nowRow(c) { const p = c.period || {}; const d = dayN(p.start); const days = (Array.isArray(c.days) ? c.days : []).map(Number).filter(x => x >= 0 && x <= 6).map(x => DN[x]).join('·');
+  function nowRow(c) { const p = c.period || {}; const st = stOf(c), en = enOf(c); const d = dayN(st); const days = (Array.isArray(c.days) ? c.days : []).map(Number).filter(x => x >= 0 && x <= 6).map(x => DN[x]).join('·');
     const tm = c.time && /^\d{1,2}:\d{2}$/.test(c.time.from || '') ? c.time.from : '';
-    const when = p.mode === 'range' && p.start ? `${md(p.start)} ~ ${md(p.end)}` : p.mode === 'days' && p.days ? `신청 후 ${p.days}일` : '';
-    const meta = [when, [days, tm].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
-    const tag = d != null && d > 0 && d <= 30 ? `<i class="hu2-dd">개강 D-${d}</i>` : (c.status === '운영중' ? '<i class="hu2-dd on">수강 중</i>' : '');
+    const when = p.mode === 'days' && p.days ? `신청 후 ${p.days}일 수강` : st ? `${md(st)} ~ ${md(en)}` : '';
+    const nL = Array.isArray(c.learners) ? c.learners.length : 0;
+    const meta = [when, [days, tm].filter(Boolean).join(' '), !when && nL ? `${nL}명 수강` : ''].filter(Boolean).join(' · ');
+    const tag = d != null && d > 0 ? `<i class="hu2-dd">개강 D-${d}</i>` : p.mode === 'days' ? '<i class="hu2-dd on">바로 수강</i>' : '<i class="hu2-dd on">진행 중 · 신청 가능</i>';
     return `<li><a class="hu2-nr" href="#p-c-${E(c.id)}"><span class="hu2-nt"><b>${E(c.name)}</b>${meta ? `<span>${E(meta)}</span>` : ''}</span><span class="hu2-np">${tag}<em>${+c.price ? W(c.price) + '원' : '무료'}</em></span></a></li>`; }
 
+  /* 공개 강좌가 없을 때(기업 · 직원 교육): 실제 운영 값 */
+  function statRow() { let C = []; try { C = (S.classes || []).filter(c => c.status !== '종료'); } catch (e) { C = []; } if (!C.length) return '';
+    const lg = C.filter(c => c.legal).length; const ends = C.map(enOf).filter(x => (dayN(x) || -1) >= 0).sort(); const e0 = ends[0];
+    const L2 = [[C.length + '개', '운영 중인 교육'], lg ? [lg + '개', '법정 · 필수 교육'] : null, e0 ? [md(e0), `가까운 마감(D-${dayN(e0)})`] : null].filter(Boolean);
+    return `<dl class="hu2-st">${L2.map(([v, k]) => `<div><dt>${E(k)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl>`; }
   function whoHTML(s) { const R = roles(s); const N = nowList(); const c = term('cls'); const T = ty(); const uni = T === 'univ' || T === 'univ_lms';
     const head = T === 'k12' ? '어떤 일로 오셨어요?' : uni ? '무엇을 하러 오셨나요?' : '어떤 일로 오셨어요?';
     const roleH = R.map(([k, a, b, h], i) => `<li><a class="hu2-role r${i}" href="${E(h)}"><span class="hu2-ri">${ic(k, 24)}</span><span class="hu2-rt"><b>${E(a)}</b><span>${E(b)}</span></span><span class="hu2-ra">${ic('arrow', 20)}</span></a></li>`).join('');
     const side = N.length
-      ? `<aside class="hu2-now" aria-label="지금 신청할 수 있는 ${E(c)}"><div class="hu2-nh"><h3>지금 신청할 수 있어요</h3><a class="hu2-all" href="${E(L.cls(s))}">전체 보기${ic('arrow', 16)}</a></div><ol>${N.map(nowRow).join('')}</ol></aside>`
-      : `<aside class="hu2-now hu2-in" aria-label="내 교육 확인"><div class="hu2-nh"><h3>${T === 'corp' ? '배정된 교육은 로그인 후 보여요' : `내 ${E(c)}은 로그인 후 보여요`}</h3></div><ol class="hu2-steps"><li><b>1</b><span>로그인</span></li><li><b>2</b><span>내 교육 · 마감 확인</span></li><li><b>3</b><span>이수증 저장</span></li></ol><a class="hu2-btn" href="${E(L.my(s))}">로그인하고 내 교육 보기${ic('arrow', 18)}</a></aside>`;
+      ? `<aside class="hu2-now" aria-label="지금 신청할 수 있는 ${E(c)}"><div class="hu2-nh"><h3>${N.some(x => (dayN(stOf(x)) || 0) > 0) ? '곧 시작하는' : '지금 신청할 수 있는'} ${E(c)}</h3><a class="hu2-all" href="${E(L.cls(s))}">전체 보기${ic('arrow', 16)}</a></div><ol>${N.map(nowRow).join('')}</ol></aside>`
+      : `<aside class="hu2-now hu2-in" aria-label="내 교육 확인"><div class="hu2-nh"><h3>${T === 'corp' ? '배정된 교육은 로그인 후 보여요' : `내 ${E(c)}은 로그인 후 보여요`}</h3></div>${statRow()}<ol class="hu2-steps"><li><b>1</b><span>로그인</span></li><li><b>2</b><span>내 교육 · 마감 확인</span></li><li><b>3</b><span>이수증 저장</span></li></ol><a class="hu2-btn" href="${E(L.my(s))}">로그인하고 내 교육 보기${ic('arrow', 18)}</a></aside>`;
     const note = uni ? '<p class="hu2-nt2">재학생은 학번 · 학과로 로그인해요.</p>' : '';
-    return `<section class="hu2-who" aria-label="방문 목적별 바로가기"><div class="hu2-w"><div class="hu2-hd"><p class="hu2-ey">바로가기</p><h2>${E(head)}</h2>${note}</div><div class="hu2-g"><ul class="hu2-roles">${roleH}</ul>${side}</div></div></section>`; }
+    const sub = uni ? `<div class="hu2-sl"><a href="#cal">${ic('cal', 18)}학사 일정 보기</a><a href="#badges">${ic('badge', 18)}이수 · 디지털 배지 확인</a></div>` : '';
+    return `<section class="hu2-who${N.length ? '' : ' hu2-nopub'}" aria-label="방문 목적별 바로가기"><div class="hu2-w"><div class="hu2-hd"><p class="hu2-ey">바로가기</p><h2>${E(head)}</h2>${note}</div><div class="hu2-g"><div class="hu2-lc"><ul class="hu2-roles">${roleH}</ul>${sub}</div>${side}</div></div></section>`; }
 
   /* ── CSS ── */
   function css(s) { const T = HPT.tokens(s); if (!T) return ''; const th = s.theme; const a = T.a, on = T.on; const ink = T.ink || '#111827';
@@ -82,14 +90,20 @@
 .hps-login,.hp-all,.pt-all{min-height:44px!important;display:inline-flex!important;align-items:center;box-sizing:border-box}.hps-hr .hps-cta{min-height:44px!important;display:inline-flex;align-items:center;box-sizing:border-box}
 .hps-facts dd small,.hpb-ft dd small,.pt-dt small{font-size:13px!important}.hp-ey{font-size:max(13px,1em)!important}.hpb-qc a{display:inline-flex;align-items:center;min-height:44px}
 .s2im figcaption:empty{display:none}.s2im.grid figure{margin:0;background:transparent;border:0;box-shadow:none}.s2im.grid figure img{aspect-ratio:4/3!important;width:100%;height:auto;object-fit:cover;border-radius:${Math.min(T.r || 12, 16)}px;display:block}
-@media (max-width:760px){.pt-hero .pt-g{display:flex!important;flex-direction:column;gap:20px}.pt-hero .pt-main,.pt-hero .pt-side{grid-column:auto!important;grid-row:auto!important;min-width:0;max-width:100%;box-sizing:border-box}.pt-srch{max-width:100%;min-width:0;box-sizing:border-box}.pt-srch>span:not(.pt-sb){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pt-sub{max-width:100%;overflow-wrap:anywhere}.pt-qk{margin-top:16px!important}footer a,.hps-ft a,.hps-gpv,.gf a{min-height:44px;display:inline-flex;align-items:center}.hp-cls a,.hps-sec a,.pt-tb a,.hp-tbl a{min-height:44px;display:inline-flex;align-items:center}}
+@media (max-width:760px){.pt-srch{flex-wrap:wrap}.pt-srch .pt-sb{flex:1 1 100%;text-align:center}.pt-qk a>:not(.pt-qi):not(b){display:none!important}.pt-qk a{padding:18px 8px!important}.pt-hero .pt-g{display:flex!important;flex-direction:column;gap:20px}.pt-hero .pt-main,.pt-hero .pt-side{grid-column:auto!important;grid-row:auto!important;min-width:0;max-width:100%;box-sizing:border-box}.pt-srch{max-width:100%;min-width:0;box-sizing:border-box}.pt-srch>span:not(.pt-sb){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pt-sub{max-width:100%;overflow-wrap:anywhere}.pt-qk{margin-top:16px!important}footer a,.hps-ft a,.hps-gpv,.gf a{min-height:44px;display:inline-flex;align-items:center}.hp-cls a,.hps-sec a,.pt-tb a,.hp-tbl a{min-height:44px;display:inline-flex;align-items:center}}
 /* hu2 방문자 갈래 */
 .hu2-who{--hu2-a:${a};--hu2-on:${on};--hu2-at:${at};--hu2-a50:${a50};--hu2-a100:${a100};--hu2-a7:${a700};padding:${big ? 64 : 56}px 0;background:${T.bg || '#fff'};color:${ink};border-bottom:1px solid ${al(ink, .08)}}
 .hu2-w{max-width:1200px;margin:0 auto;padding:0 32px;box-sizing:border-box}
 .hu2-hd{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:24px}.hu2-hd h2{margin:0;font-size:${big ? 34 : 28}px;line-height:1.3;letter-spacing:-.02em;color:${ink}}
 .hu2-ey{margin:0;font-size:${big ? 17 : 14}px;font-weight:700;letter-spacing:.06em;color:var(--hu2-at)}.hu2-nt2{margin:0;font-size:${big ? 17 : 15}px;color:${T.mu}}
-.hu2-g{display:grid;grid-template-columns:1.25fr 1fr;gap:24px;align-items:start}
-.hu2-roles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hu2-g{display:grid;grid-template-columns:1.25fr 1fr;gap:24px;align-items:stretch}.hu2-lc{display:flex;flex-direction:column;gap:12px;min-width:0}
+.hu2-roles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:12px;flex:1}.hu2-roles li{display:flex}.hu2-roles .hu2-role{flex:1}
+.hu2-sl{display:flex;flex-wrap:wrap;gap:8px 20px}.hu2-sl a{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-weight:700;font-size:${big ? 17 : 15}px;color:var(--hu2-at);text-decoration:none}.hu2-sl a:hover{text-decoration:underline}
+.hu2-st{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:4px 0 14px}.hu2-st div{background:#fff;border-radius:10px;padding:10px 12px;border:1px solid ${al(ink, .08)}}.hu2-st dt{font-size:13px;color:${T.mu}}.hu2-st dd{margin:2px 0 0;font-size:${big ? 24 : 21}px;font-weight:800;font-variant-numeric:tabular-nums;color:${ink}}
+body:has(.hu2-nopub) .hp-cls.hps-empty{display:none}
+.hpt.hps-t.hps-facts .hp-w{max-width:1200px!important;width:100%!important;box-sizing:border-box}.hpt.hps-t.hps-facts .hpb-ft{width:100%!important;max-width:none!important;box-sizing:border-box;grid-template-columns:minmax(0,180px) minmax(0,1fr)!important;align-items:center!important}
+.hpt.hps-t.hps-facts .hpb-ft dl{grid-template-columns:repeat(4,minmax(0,1fr))!important;column-gap:16px!important}.hpt.hps-t.hps-facts .hpb-ft dl div{flex-direction:column;align-items:flex-start;gap:4px;border-bottom:0!important;border-left:3px solid var(--hu2-a, ${a});padding:6px 0 6px 14px!important}.hpt.hps-t.hps-facts .hpb-ft dd{font-size:28px!important}
+@media (max-width:760px){.hpt.hps-t.hps-facts .hp-w{padding-left:20px!important;padding-right:20px!important}.hpt.hps-t.hps-facts .hpb-ft{grid-template-columns:1fr!important}.hpt.hps-t.hps-facts .hpb-ft dl{grid-template-columns:1fr 1fr!important;row-gap:12px}.hpt.hps-t.hps-facts .hpb-ft dd{font-size:22px!important}}
 .hu2-role{display:flex;align-items:center;gap:14px;min-height:${big ? 92 : 84}px;padding:16px 18px;box-sizing:border-box;border-radius:${Math.min(T.r || 12, 16)}px;border:1px solid ${al(ink, .12)};background:#fff;color:${ink};text-decoration:none;transition:border-color .15s,box-shadow .15s,transform .15s}
 .hu2-role:hover,.hu2-role:focus-visible{border-color:var(--hu2-a);box-shadow:0 6px 18px ${al(ink, .08)};transform:translateY(-1px)}.hu2-role:focus-visible{outline:3px solid var(--hu2-a);outline-offset:2px}
 .hu2-ri{flex:none;display:grid;place-items:center;width:${big ? 52 : 46}px;height:${big ? 52 : 46}px;border-radius:12px;background:var(--hu2-a50);color:var(--hu2-at)}
@@ -115,7 +129,14 @@
 .hu2-role{background:${al('#ffffff', .04)};border-color:${al('#ffffff', .14)};color:#fff;border-radius:10px}.hu2-role:hover,.hu2-role:focus-visible{border-color:${c2};box-shadow:0 0 0 1px ${c2} inset;background:${al('#ffffff', .07)}}
 .hu2-ri{background:${al(c2, .14)};color:${c2};border-radius:8px}.hu2-rt span{color:#B6C2D1}.hu2-ra{color:${c2}}
 .hu2-now{background:#fff;border-radius:10px;box-shadow:0 20px 40px ${al('#000000', .35)}}.hu2-nt span,.hu2-np em{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-.01em}
-.hp-s h2,.hps-sec h2{letter-spacing:-.025em}`; }
+.hp-s h2,.hps-sec h2{letter-spacing:-.025em}
+header.gh{background:${hd}!important;border-bottom:1px solid ${al('#ffffff', .1)}!important}header.gh :is(.hps-hw>a,.gn>.s2-mi>a,.gn>a,.hps-hr>a:not(.hps-cta),label.hps-bg,.logo,.logo b,.hps-wmk){color:#E6EDF5!important}header.gh .hps-cta{background:${c2}!important;color:${hd}!important}
+.hp-hero.hps-hero{background-color:${hd}!important;background-image:linear-gradient(${al('#ffffff', .045)} 1px,transparent 1px),linear-gradient(90deg,${al('#ffffff', .045)} 1px,transparent 1px)!important;background-size:48px 48px!important}
+.hp-hero .hps-box{background:${mix(hd, '#ffffff', .06)}!important;border:1px solid ${al(c2, .45)};box-shadow:0 24px 48px ${al('#000000', .4)}}.hp-hero .hps-box::before{background:${c2}!important}
+.hp-hero .hps-ey{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:${c2}!important;letter-spacing:.06em}.hp-hero .hps-ey::before{content:'// '}
+.hp-hero .hps-btn.p{background:${c2}!important;color:${hd}!important}.hp-hero h1,.hp-hero h1 em{color:#fff!important}.hp-hero .hps-sub,.hp-hero .hps-badges li,.hp-hero .hps-facts dt{color:#C5D0DC!important}.hp-hero .hps-facts dd{color:#fff!important}.hp-hero .hps-btn.g{color:#fff!important;border-color:${al('#ffffff', .45)}!important;background:transparent!important}
+.hp-hero .hps-quick{border-color:${al('#ffffff', .3)}!important}.hp-hero .hps-quick a{color:#E6EDF5!important;border-color:${al('#ffffff', .14)}!important}.hp-hero .hps-quick small{color:#B6C2D1!important}.hp-hero .hps-quick svg{color:${c2}}.hp-hero .hps-quick a:hover{background:${al('#ffffff', .05)}!important}
+.hu2-who{border-top:1px solid ${al('#ffffff', .08)}}.hu2-st div{background:#F5F8FB}.hu2-st dd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.hu2-sl a{color:${c2}}`; }
     if (th === 'kids') { const C = [['#F3E8FF', '#6D28D9'], ['#FEF3C7', '#92400E'], ['#D1FAE5', '#065F46'], ['#FCE7F3', '#9D174D']];
       x += `.hu2-who{background:#FFFDF7}.hu2-hd h2{font-weight:850}.hu2-ey{letter-spacing:0}
 ${C.map(([bg, fg], i) => `.hu2-role.r${i}{background:${bg};border-color:transparent;color:#1E1533}.hu2-role.r${i} .hu2-ri{background:#fff;color:${fg};border-radius:50%}.hu2-role.r${i} .hu2-ra,.hu2-role.r${i} .hu2-rt span{color:${fg}}`).join('\n')}
@@ -131,7 +152,8 @@ ${C.map(([bg, fg], i) => `.hu2-role.r${i}{background:${bg};border-color:transpar
     if (th === 'senior') {
       x += `.hu2-who{background:${T.alt || '#F1F5FF'}}.hu2-role{border-width:2px;border-color:${al(ink, .22)}}.hu2-role:hover,.hu2-role:focus-visible{border-color:var(--hu2-a7);border-width:2px}
 .hu2-ri{background:var(--hu2-a7);color:#fff}.hu2-ra{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--hu2-a50)}
-.hu2-now{background:#fff;border:2px solid ${al(ink, .22)}}.hu2-dd{font-size:15px;padding:3px 10px}`; }
+.hu2-now{background:#fff;border:2px solid ${al(ink, .22)}}.hu2-dd{font-size:15px;padding:3px 10px}
+@media (max-width:760px){.hu2-roles{grid-template-columns:1fr 1fr!important;gap:10px}.hu2-role{flex-direction:column;align-items:flex-start;gap:8px;min-height:132px;padding:14px}.hu2-ra{display:none}.hu2-ri{width:44px;height:44px}.hu2-rt b{font-size:19px}.hu2-rt span{font-size:15px}.hu2-who{padding:32px 0}}`; }
     return x; }
 
   /* ── 첫 화면 섹션 끝 찾기 ── */
@@ -140,10 +162,25 @@ ${C.map(([bg, fg], i) => `.hu2-role.r${i}{background:${bg};border-color:transpar
     for (let t2 = tag.exec(h); t2; t2 = tag.exec(h)) { d += t2[0][1] === '/' ? -1 : 1; if (!d) { const e = h.indexOf('>', t2.index); return e < 0 ? -1 : e + 1; } }
     return -1; }
 
+  /* ── 첫 화면 사진 · 문구: 템플릿 기본값일 때만 테마에 맞게 바꾼다(기관이 고른 사진 · 고친 문구는 그대로) ── */
+  const BAD = { kids: /^(brd-|cls-0[134]|cod-)/, campus: /^(cod-|hum-0?7$|hum-4[12]$)/ };
+  const GOOD = { kids: 'cls-02', campus: 'cam-03' };
+  function prep(s) { const th = s.theme; if (!BAD[th] || s.stockOff) return s; let tp = null; try { tp = TPL.find(x => x.id === s.tpl); } catch (e) { tp = null; }
+    let o = s; const H = window.HPSTOCK;
+    const cur = s.img && s.img.hero; const curId = cur ? (cur.stock || '') : ((s.photos && s.photos.hero) || (tp && tp.photos && tp.photos.hero) || '');
+    const tplId = (tp && tp.photos && tp.photos.hero) || '';
+    if (curId && BAD[th].test(curId) && (!cur || cur.stock === tplId || cur.stock === curId) && H && H.get) { const x = H.get(GOOD[th]);
+      if (x) o = Object.assign({}, o, { img: Object.assign({}, o.img || {}, { hero: { src: x.src, alt: x.alt || '', fit: 'cover', pos: x.focus || '50% 50%', stock: x.id } }), photos: Object.assign({}, o.photos || {}, { hero: x.id }) }); }
+    if (th === 'campus') { const i = (o.sections || []).findIndex(x => x && x.type === 'banner'); const d = i >= 0 && o.sections[i].data; const org = (() => { try { return S.org.name || ''; } catch (e) { return ''; } })();
+      if (d && /AI Training Center/.test(d.title || '') && /AI TRAINING CENTER/.test(d.eyebrow || '') && !/AI/i.test(org)) { const c = term('cls');
+        const nd = Object.assign({}, d, { eyebrow: '학습 포털 · 비교과 · ' + c, title: `${org}\n비교과 · ${c} 신청`, sub: `비교과 프로그램과 ${c}을 한곳에서 신청하고, 이수 기록과 디지털 배지까지 확인해요.`, cta: `${c} 둘러보기`, cta2: '문의하기' });
+        const secs = o.sections.slice(); secs[i] = Object.assign({}, o.sections[i], { data: nd }); o = Object.assign({}, o, { sections: secs }); } }
+    return o; }
+
   const base = siteHTML;
-  siteHTML = (s, full, lang) => { const h = base(s, full, lang);
+  siteHTML = (s, full, lang) => { try { if (s && MINE.includes(s.theme)) s = prep(s); } catch (e) { console.error('hpup-b2 prep', e); } const h = base(s, full, lang);
     try { if (typeof h !== 'string' || !s || !MINE.includes(s.theme) || !HPT.tokens(s)) return h; if (s.hu2Off) return h;
-      let out = h; const k = heroEnd(out); if (k > 0 && !/class="hu2-who"/.test(out)) out = out.slice(0, k) + whoHTML(s) + out.slice(k);
+      let out = h; const k = heroEnd(out); if (k > 0 && !/class="hu2-who/.test(out)) out = out.slice(0, k) + whoHTML(s) + out.slice(k);
       const c = css(s).replace(/<\/?style/gi, ''); const j = out.lastIndexOf('</style>'); if (j >= 0) out = out.slice(0, j) + c + out.slice(j);
       return out; } catch (e) { console.error('hpup-b2', e); return h; } };
   window.siteHTML = siteHTML;

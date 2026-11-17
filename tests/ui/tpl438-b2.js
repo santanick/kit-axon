@@ -28,11 +28,15 @@ const PV = new Map();
         const off = siteHTML(Object.assign({}, s, { theme: 'clean' }), true, 'ko');
         return { html, off: /hu2-who/.test(off), cls: S.classes.map(x => x.id), menus: (s.menus || []).map(m => m.id) }; }, th);
       ok(!errs.length, `${P} 스튜디오 오류 없음 ${errs.slice(0, 2).join(' | ')}`);
-      ok(/class="hu2-who"/.test(g.html) && (g.html.match(/class="hu2-who"/g) || []).length === 1, `${P} 「어떤 일로 오셨어요?」 판 1개 삽입`);
+      ok(/class="hu2-who[ "]/.test(g.html) && (g.html.match(/class="hu2-who[ "]/g) || []).length === 1, `${P} 「어떤 일로 오셨어요?」 판 1개 삽입`);
       ok(!g.off, `${P} 다른 테마(clean)에는 넣지 않음`);
-      const sec = (g.html.match(/<section class="hu2-who"[\s\S]*?<\/section>/) || [''])[0]; const hrefs = [...sec.matchAll(/href="([^"]*)"/g)].map(x => x[1].replace(/&amp;/g, '&'));
-      const bad = hrefs.filter(h => !(/^#login\/(my|family|mypay)$/.test(h) || h === '#join' || /^tel:|^mailto:/.test(h) || (h.startsWith('#p-m-') && g.menus.includes(h.slice(5))) || (h.startsWith('#p-c-') && g.cls.includes(h.slice(5)))));
+      const sec = (g.html.match(/<section class="hu2-who[^"]*"[\s\S]*?<\/section>/) || [''])[0]; const hrefs = [...sec.matchAll(/href="([^"]*)"/g)].map(x => x[1].replace(/&amp;/g, '&'));
+      const bad = hrefs.filter(h => !(/^#login\/(my|family|mypay)$/.test(h) || ['#join', '#cal', '#badges'].includes(h) || /^tel:|^mailto:/.test(h) || (h.startsWith('#p-m-') && g.menus.includes(h.slice(5))) || (h.startsWith('#p-c-') && g.cls.includes(h.slice(5)))));
       ok(hrefs.length >= 4 && !bad.length, `${P} 버튼 ${hrefs.length}개 모두 실제 경로 ${bad.join(' ')}`);
+      ok(!/>수강 중</.test(sec) && /(곧 시작하는|지금 신청할 수 있는|로그인 후 보여요)/.test(sec), `${P} 판 제목과 칩이 맞음(「수강 중」 칩 없음)`);
+      if (th === 'campus') { const top = g.html.split('<section class="hu2-who')[0]; ok(!/AI Training Center/.test(top) && !/stock\/cod-/.test(top) && /stock\/cam-/.test(top), `${P} [${(top.match(/(AI Training Center|stock\/[a-z]{3}-\d+)/g) || []).slice(0, 6).join(',')}] 대학 첫 화면: AI 센터 문구 · 코드 사진 대신 대학 문구 · 캠퍼스 사진`); }
+      if (th === 'kids') ok(!/stock\/cls-04/.test(g.html.split('<section class="hu2-who')[0]), `${P} 어두운 칠판 사진 대신 밝은 교실 사진`);
+      if (ty === 'corp') ok(/hu2-st/.test(sec), `${P} 공개 강좌가 없으면 실제 운영 값(교육 수 · 법정 교육 · 마감)`);
       if (ty === 'univ') ok(/학번 · 학과/.test(sec) && !/주민|생년월일|휴대폰 번호/.test(sec), `${P} 대학 로그인 안내는 학번 · 학과만`);
       PV.set(`${th}-${ty}.html`, g.html.replace('<head>', `<head><base href="${base}/">`));
       for (const [w, h, tag] of [[1440, 900, 'pc'], [390, 844, 'm']]) {
