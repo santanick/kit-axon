@@ -312,6 +312,27 @@
     return moveToNote({ kind: '질문', q: (A && A.q) || (Q && Q.q) || '', a: (Q && Q.a) || '', cid, where: (A && A.where) ? `AI 튜터 · ${A.where}` : 'AI 튜터' }, o); }
   /* 이미 옮긴 질문이면 그 노트(S23 「옮긴 노트 보기」) */
   function qaNote(askId) { const r = askOf(String(askId || '')); if (!r) return null; const q = (r.A && r.A.q) || (r.Q && r.Q.q) || ''; return N.all().find(n => n.src === 'me' && norm(part(n.b, '질문')) === norm(q)) || null; }
+
+  /* ── 추가 지시 2(11-17): 피드백 → 「다음에 고칠 점」 노트 · 약한 단원 ──
+     fbToNote(cid, kind, id, {open, text}) — kind: 'cls'(교수자 과제 피드백 LR.mine.cls[cid].fb) · 'bk'(성적부 LR.mine.bk[cid][id]) · 'ai'(AI 피드백 — 저장소가 없으므로 호출하는 화면이 text로 넘김).
+     본문 = 받은 피드백 원문 · 내가 고칠 점(빈 체크 목록 — 학습자가 직접 씀) · 다음 과제에서 확인. 튜터는 후보 문장만 fbCands로 제안한다(본문에 넣지 않음). */
+  const CANDS = {};
+  const scrub = t => { let x = String(t || ''); try { [LR.me && LR.me.name, LR.me && LR.me.nick, LR.me && LR.me.sid].filter(v => v && String(v).length >= 2).forEach(v => { x = x.split(String(v)).join('학습자'); }); } catch (e) { } return x; }; /* 피드백 안의 내 이름 · 학번은 노트에 옮기지 않는다 */
+  function fbCands(x) { if (x && CANDS[x]) return CANDS[x].slice(); const S = split(scrub(x), 12); const fix = S.filter(l => /보완|부족|개선|필요|아쉽|고치|고쳐|추가|빠졌|빠진|누락|더\s|다시|틀렸|오류|정확|명확|근거|구체/.test(l)); return (fix.length ? fix : S).slice(0, 5).map(l => l.slice(0, 120)); }
+  function fbOf(cid, kind, id, o) { const c = clsOf(cid); if (kind === 'cls') { const g = (LR.mine && LR.mine.cls && LR.mine.cls[cid]) || null; return g && g.fb ? { text: g.fb, score: g.score, who: '교수자', where: c ? `${c.name} › 과제` : '과제' } : null; }
+    if (kind === 'bk') { const g = (((LR.mine && LR.mine.bk) || {})[cid] || {})[id]; return g && g.fb ? { text: g.fb, score: g.score, who: '교수자', where: '성적부' } : null; }
+    if (kind === 'ai') { const it = itOf(c, id); const r = ((((LR.lp && LR.lp.cls) || {})[cid] || {}).items || {})[id] || {}; const t = (o && o.text) || r.aifb || ''; return t ? { text: t, score: r.score, who: 'AI', where: [c && c.name, it && it.title].filter(Boolean).join(' › ') } : null; } return null; }
+  function fbToNote(cid, kind, id, o) { if (!okMe()) return null; const F = fbOf(String(cid || ''), kind, String(id || ''), o); if (!F) return null; const text = scrub(F.text).trim().slice(0, 900);
+    const old = N.all().find(n => n.tags.includes('피드백') && norm(n.b).includes(norm(text).slice(0, 60))); if (old) { if (o && o.open) N.open(old.id); return old; }
+    const c = clsOf(cid), it = kind === 'ai' ? itOf(c, id) : null;
+    const b = [`**받은 피드백**(${F.who === 'AI' ? 'AI 피드백' : '교수자'}${F.score != null && F.score !== '' ? ` · 점수 ${F.score}` : ''})`, ...text.split('\n').map(l => l.trim()).filter(Boolean), '**내가 고칠 점**', '- [ ] ', '**다음 과제에서 확인**', '- ', `원래 자리: ${F.where}`].join('\n').slice(0, 1500);
+    const n = N.save({ src: 'me', st: 'draft', t: `${F.who === 'AI' ? 'AI 피드백' : '피드백'} · ${(c ? c.name : F.where).slice(0, 60)}`.slice(0, 80), b, cid: c ? cid : '', lid: it ? it.id : '', tags: ['피드백', ...(F.who === 'AI' ? ['AI피드백'] : [])] }); if (!n) return null;
+    ORIG[n.id] = b; CANDS[n.id] = fbCands(text); PRE[n.id] = [];
+    if (o && o.open) { say('피드백을 노트로 옮겼어요. 고칠 점은 내 말로 직접 적어 주세요'); N.open(n.id); } return n; }
+  /* 약한 단원: 틀린 문항(오답 노트 수 + 다시 틀림 횟수)이 많은 레슨 순. href = 그 단원 오답 카드 복습(#review?n=) */
+  function weakLessons(cid) { const c = clsOf(cid); const M = {}; N.all().filter(n => n.src === 'quiz' && (!cid || n.cid === cid)).forEach(n => { const k = `${n.cid}/${n.lid}`; const m = /\*\*다시 틀림\*\*\s*(\d+)회/.exec(n.b); const w = m ? +m[1] : 1; const K = N.cards().filter(x => x.nid === n.id).length; const o = M[k] = M[k] || { cid: n.cid, lid: n.lid, wrong: 0, notes: 0, cards: 0, nids: [] }; o.wrong += w; o.notes++; o.cards += K; o.nids.push(n.id); });
+    return Object.values(M).map(o => { const cc = clsOf(o.cid); const it = itOf(cc, o.lid); const best = o.nids.slice().sort((a, b) => N.cards().filter(x => x.nid === b).length - N.cards().filter(x => x.nid === a).length)[0]; return { ...o, title: it ? it.title : (cc ? cc.name : '레슨'), course: cc ? cc.name : '', href: `#review?n=${best}`, lesson: it ? `#c/${o.cid}/${o.lid}` : '' }; }).sort((a, b) => b.wrong - a.wrong || b.cards - a.cards); }
+
   /* 화면 자리가 아직 없을 때: #notes 허브(학습 기록 탭이 있으면 그 맨 위)에 주간 카드를 붙이고, 질문 줄에 「노트로 옮기기」를 붙인다 */
   function decoNotes() { if (rt().a !== 'notes' || rt().b || !okMe() || notesOff()) return; const lm = document.getElementById('lm'); if (!lm || lm.querySelector('.ln-week, .lna-week, [data-ln-weekly]')) return;
     const tab = lm.querySelector('[data-ln-tab="log"], .ln-log, .ln-tl'); const hub = lm.querySelector('.ln-hub .in'); if (tab) tab.insertAdjacentHTML('afterbegin', weeklyHTML()); else if (hub) { const at = hub.querySelector('.ln-drafts') || hub.querySelector('.ln-hero'); if (at) at.insertAdjacentHTML('afterend', weeklyHTML()); }
@@ -349,5 +370,5 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && (WQ || YS)) { e.preventDefault(); e.stopImmediatePropagation(); if (YS) { YS = null; paintYt(); } else { WQ = null; paintWrong(); } } }, true);
 
   /* 개발자 1 · 3 화면이 부르는 훅(FINAL S04 · S05 · S20) */
-  window.LNOTE_AI = { weekly, weeklyHTML, weeklyDraft, qaToNote, qaNote, moveToNote, diffLines, orig: origOf, hint, suggestCards, suggest, openYt, openWrong, openDraft, ruleDraft, recordWrong, lessonDraft, todayDraft, todayHTML, streak, norm, undoToast };
+  window.LNOTE_AI = { fbToNote, fbCands, weakLessons, weekly, weeklyHTML, weeklyDraft, qaToNote, qaNote, moveToNote, diffLines, orig: origOf, hint, suggestCards, suggest, openYt, openWrong, openDraft, ruleDraft, recordWrong, lessonDraft, todayDraft, todayHTML, streak, norm, undoToast };
 })();
