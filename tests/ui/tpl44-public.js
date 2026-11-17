@@ -34,6 +34,7 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
           tiny: [...document.querySelectorAll('section.p4 *')].filter(el => vis(el) && inS(el) && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(el).fontSize) < 13).map(el => el.textContent.trim().slice(0, 10)),
           narrow: [...document.querySelectorAll('section.p4 :is(h1,h2,h3,b,small,a,p,em,span,dd,dt)')].filter(el => { if (!vis(el) || el.textContent.trim().length < 3) return false; const r = el.getBoundingClientRect(); const fs = parseFloat(getComputedStyle(el).fontSize); return r.height > fs * 5 && r.width < fs * 2.2; }).map(el => el.textContent.trim().slice(0, 8)),
           bad: [...document.querySelectorAll('section.p4 img')].filter(i => i.complete && !i.naturalWidth).length,
+          cta: (() => { const b = document.querySelector('section.p4-hero .p4-cta a'); return b ? Math.round(b.getBoundingClientRect().bottom) : 9999; })(),
           h1: (() => { const h = document.querySelector('section.p4-hero h1'); return h ? parseFloat(getComputedStyle(h).fontSize) : 0; })() }; }, w);
       ok(m.n >= (minN || 5) && m.over <= 0 && !m.out.length, `${key} ${w}: 섹션 ${m.n}개 · 가로 넘침 0 · 화면 밖 요소 0(${m.over}/${m.out.join(',')})`);
       ok(!m.small.length, `${key} ${w}: 누르는 칸 44px 이상 ${m.small.join(',')}`);
@@ -41,6 +42,7 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
       ok(!m.narrow.length, `${key} ${w}: 한 글자 꺾임 0 ${m.narrow.join(',')}`);
       ok(!m.bad, `${key} ${w}: 깨진 사진 0(${m.bad})`);
       ok(w > 600 ? m.h1 >= 64 && m.h1 <= 96 : m.h1 >= 36 && m.h1 <= 46, `${key} ${w}: 첫 화면 제목 크기 ${m.h1}px(PC 64~96 · 휴대폰 36~44)`);
+      if (w < 600 && !/empty/.test(key)) ok(m.cta <= 844, `${key} 390: 첫 화면(844px) 안에 제목 · 첫 버튼(${m.cta}px)`);
       ok(!pe.length, `${key} ${w}: pageerror 0 ${pe.join('|')}`);
       if (cap) { await q.evaluate(() => document.fonts && document.fonts.ready); await q.waitForTimeout(300); await q.screenshot({ path: path.join(CAP, `${key}-${w > 600 ? 'pc' : 'm'}.jpg`), type: 'jpeg', quality: 80 });
         if (w > 600) { await q.evaluate(async () => { document.querySelectorAll('img[loading=lazy]').forEach(i => { i.loading = 'eager'; }); await new Promise(r => setTimeout(r, 800)); }); } if (w > 600) await q.screenshot({ path: path.join(CAP, `${key}-full.jpg`), type: 'jpeg', quality: 60, fullPage: true }); }
@@ -74,6 +76,12 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
     if (id === 'pbcivic') ok(/공식 누리집입니다/.test(r.html) && ['#my', '#courses', '#badges', '#cal', '#notice'].every(h => L.includes(h)), 'pbcivic: 공식 누리집 띠 · 자주 찾는 서비스');
     if (id === 'pbyouth' || id === 'pbsenior') ok(L.includes('#family'), `${id}: 보호자 · 가족 연결(#family)`);
     if (id === 'pbsenior') ok(/p4-call/.test(r.html) && /p4-big/.test(r.html), 'pbsenior: 전화 신청 띠 · 큰 글씨 강좌');
+    ok(!/p4-figs"/.test(r.html), `${id}: 시연 데이터(과정 8개 · 44명)는 큰 숫자 블록 숨김`);
+    if (id === 'pbjournal') { const q = await a.p.evaluate(() => { const s = S.site; const keep = S.reviews; const cid = (S.classes[0] || {}).id; s.sections = s.sections.filter(x => !(x.data && x.data.hpt === 'p4-quote')); s.sections.splice(2, 0, { id: 'qtest', type: 'text', data: { variant: 'features', hpt: 'p4-quote', title: '', cols: [] } });
+        S.reviews = [{ body: '퀴즈 3번 해설 부탁드립니다', stars: 5, cls: cid }, { body: '영상이 자꾸 끊겨요 확인해 주세요', stars: 4, cls: cid }]; const h1 = siteHTML(s);
+        S.reviews.push({ body: '동네에서 이렇게 알찬 강좌를 들을 수 있어 매주 기다려져요.', stars: 5, cls: cid }); const h2 = siteHTML(s); S.reviews = keep;
+        const qs = h => (h.match(/<section class="hpt p4 [a-z]+ p4-quote"[\s\S]*?<\/section>/) || [''])[0]; return { none: !qs(h1), good: /매주 기다려져요/.test(qs(h2)) && !/부탁드립니다|끊겨요/.test(qs(h2)) }; });
+      ok(q.none && q.good, `후기 인용: 요청 · 불만 글 제외, 칭찬 글만 큰 인용(${JSON.stringify(q)})`); }
     await view(id, r.html, 5, !!CAP);
     ok(!a.errs.length, `${id}: 관리자 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close(); }
   const imgs = Object.values(heroImg); if (!process.env.ONLY) ok(imgs.every(Boolean) && new Set(imgs).size === imgs.length, `첫 화면 사진 10종 모두 다름(${imgs.join(',')})`);
@@ -84,15 +92,19 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
     ok(r.n === 0 && /p4-hero/.test(r.html) && !/p4-(rows|figs|big|tracks|shelf|wide)"/.test(r.html) && !/NaN|undefined|object Object/.test(r.html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '')), `${id}: 빈 스튜디오 — 강좌 · 숫자 섹션 숨김 · 첫 화면 유지(${r.n} ${(r.html.match(/p4-(rows|figs|big|tracks|shelf|wide)"/g) || []).join(',')} ${(r.html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '').match(/.{30}(NaN|undefined|object Object).{10}/) || [''])[0]})`);
     await view(id + '-empty', r.html, 2, false); ok(!a.errs.length, `${id} 빈 상태 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close(); }
 
-  /* ── 실제 게시본(learner.html Shadow DOM): 시민 저널 ── */
-  { const a = await admin('citizen', false);
-    const tid = await a.p.evaluate(() => { try { closeModal(); } catch (e) { } const s = siteFromTpl(TPL.find(t => t.id === 't44-pbjournal')); S.site = s; s.published = true; save(); smPublish(); try { closeModal(); } catch (e) { } return DREG.cur(); });
-    for (const w of [1440, 390]) { const q = await a.ctx.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message)); await q.setViewportSize({ width: w, height: 900 });
-      await q.goto(`${base}/learner.html?t=${tid}#home`, { waitUntil: 'load' }); await q.waitForTimeout(1500);
-      const r = await q.evaluate(() => { const R = [...document.querySelectorAll('.smhost')].map(h => h.shadowRoot).filter(Boolean); const one = sel => R.map(r => r.querySelector(sel)).find(Boolean);
-        const h1 = one('section.p4-hero h1'); return { hero: !!h1, fs: h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0, cls: (R.map(r => [...r.querySelectorAll('a[href^="#class/"]')]).flat()).length, over: document.documentElement.scrollWidth - document.documentElement.clientWidth }; });
-      ok(r.hero && r.cls >= 1 && r.over <= 0 && (w > 600 ? r.fs >= 64 : r.fs <= 46), `게시본 pbjournal ${w}: 첫 화면 · 과정 상세(#class/) · 넘침 0(${JSON.stringify(r)})`);
-      ok(!pe.length, `게시본 pbjournal ${w} pageerror 0 ${pe.join('|')}`); await q.close(); }
+  /* ── 실제 게시본(learner.html Shadow DOM): 10종 모두 — 바탕색 · 제목 크기 · 세리프 · 과정 상세 · 넘침 ── */
+  for (const [id, ed] of CASES.filter(c => !process.env.ONLY || process.env.ONLY.split(',').includes(c[0]))) { const a = await admin(ed, false);
+    const info = await a.p.evaluate(id => { try { closeModal(); } catch (e) { } const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); S.site = s; s.published = true; save(); smPublish(); try { closeModal(); } catch (e) { } return { tid: DREG.cur(), bg: HP44P.DEF[id].bg }; }, id);
+    for (const w of [1440, 390]) { const q = await a.ctx.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message)); await q.setViewportSize({ width: w, height: w > 600 ? 900 : 844 });
+      await q.goto(`${base}/learner.html?t=${info.tid}#home`, { waitUntil: 'load' }); await q.waitForTimeout(1500);
+      const r = await q.evaluate(bg => { const R = [...document.querySelectorAll('.smhost')].map(h => h.shadowRoot).filter(Boolean); const one = sel => R.map(r => r.querySelector(sel)).find(Boolean);
+        const h1 = one('section.p4-hero h1'); const sec = R.map(r => [...r.querySelectorAll('section.p4:not(.p4-hero)')]).flat(); const rgb = h => 'rgb(' + [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ') + ')';
+        return { hero: !!h1, fs: h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0, ff: h1 ? getComputedStyle(h1).fontFamily.split(',')[0] : '', bgOk: sec.some(x => getComputedStyle(x).backgroundColor === rgb(bg)), cls: (R.map(r => [...r.querySelectorAll('a[href^="#class/"]')]).flat()).length, over: document.documentElement.scrollWidth - document.documentElement.clientWidth }; }, info.bg);
+      const serif = ['pbjournal', 'pbmuseum', 'pbheritage'].includes(id);
+      ok(r.hero && r.bgOk && r.over <= 0 && (w > 600 ? r.fs >= 64 : r.fs >= 36 && r.fs <= 48) && (!serif || /Serif/.test(r.ff)) && (id === 'pbposter' || r.cls >= 1), `게시본 ${id} ${w}: 첫 화면 · 테마 바탕색 · 제목 ${r.fs}px ${r.ff} · 과정 상세 ${r.cls} · 넘침 0`);
+      ok(!pe.length, `게시본 ${id} ${w} pageerror 0 ${pe.join('|')}`);
+      if (CAP) await q.screenshot({ path: path.join(CAP, `pub-${id}-${w > 600 ? 'pc' : 'm'}.jpg`), type: 'jpeg', quality: 78 });
+      await q.close(); }
     await a.ctx.close(); }
 
   await browser.close(); srv.close();

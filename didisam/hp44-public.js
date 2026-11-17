@@ -57,7 +57,9 @@
   const hrs = c => +c.hours ? `${+c.hours}시간` : '';
   const cH = c => '#p-c-' + c.id;
   const short = n => String(n || '').replace(/\s*\(.*\)$/, '');
-  const review = () => { try { const R = (S.reviews || []).filter(r => r && !r.hidden && String(r.body || '').trim().length >= 15 && (+r.stars || 5) >= 4); const r = R[0]; if (!r) return null; const c = (S.classes || []).find(x => x.id === r.cls); return { body: String(r.body).trim(), cls: c ? c.name : '' }; } catch (e) { return null; } };
+  /* 큰 인용에는 칭찬 · 경험담만 — 불만 · 요청 · 질문(끊겨요 · 안 돼요 · 부탁 · 해 주세요 · 물음표 · 오류 · 환불 …)은 뺀다(v44 검수) */
+  const ASK = /끊[겨기어]|안 ?[돼되됩]|[돼되]지 ?않|부탁|해 ?주[세시실]|주실 ?수|알려 ?주|[?？]\s*$|[?？]|오류|에러|버그|환불|불편|불만|아쉬|문의|왜 |언제|어떻게|느려|멈춰|튕[겨기]|로그인이 ?안/;
+  const review = () => { try { const R = (S.reviews || []).filter(r => r && !r.hidden && String(r.body || '').trim().length >= 15 && (+r.stars || 5) >= 4 && !ASK.test(String(r.body).trim())); const r = R[0]; if (!r) return null; const c = (S.classes || []).find(x => x.id === r.cls); return { body: String(r.body).trim(), cls: c ? c.name : '' }; } catch (e) { return null; } };
   const notes = n => { try { return [...(S.notices || []), ...(S.classes || []).flatMap(c => c.notices || [])].filter(x => x && x.title && !x.hidden && !x.draft).sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, n || 4); } catch (e) { return []; } };
   const facs = () => { try { return ((S.fac && S.fac.facilities) || []).filter(f => f && f.on !== false && f.name); } catch (e) { return []; } };
 
@@ -142,7 +144,7 @@
   /* ── 섹션 ── */
   const SEC = {};
   /* 2열 이야기 + 3단계 */
-  SEC['p4-story'] = (x, s) => { const d = x.data || {}; const th = thOf(s); const cols = (d.cols || []).filter(c => c && c[0]).slice(0, 4); const FB = { pbjournal: 'hum-05', pbcivic: 'lec-01', pblibrary: 'hum-12', pbyouth: 'grp-06', pbsenior: 'kni-03', pbmuseum: 'hum-28' };
+  SEC['p4-story'] = (x, s) => { const d = x.data || {}; const th = thOf(s); const cols = (d.cols || []).filter(c => c && c[0]).slice(0, 4); const FB = { pbjournal: 'hum-05', pbcivic: 'lec-01', pblibrary: 'hum-12', pbyouth: 'grp-06', pbsenior: 'kni-03', pbmuseum: 'hum-28', pbheritage: 'lib-06' };
     const p = slotP(s, th === 'pbjournal' ? 'cta' : 'about', null, FB[th] || 'hum-10'); const noImg = th === 'pbyouth';
     return sec(x, s, 'story', `<div class="p4w${noImg ? '' : ' p4-sg2'}">${noImg ? '' : img(p)}<div>${head(d)}<ol class="p4-steps n${cols.length}">${cols.map((c, i) => `<li><span class="p4-n">${String(i + 1).padStart(2, '0')}</span><div><h3>${E(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}</div></li>`).join('')}</ol></div></div>`); };
   /* 인용 후기 하나(실제 후기만) */
@@ -196,8 +198,11 @@
     const st = c => { const n = okD(c.end) ? days(t, c.end) : null; return n != null && n <= 14 ? ['n', '마감 임박'] : okD(c.start) && days(t, c.start) > 0 ? ['', '접수 중'] : ['', '수강 중']; };
     return sec(x, s, 'rows', `<div class="p4w">${head(d)}<div class="p4-ls">${L.map(c => { const k = st(c); const sd = okD(c.start) && days(t, c.start) > 0 ? c.start : c.end; return `<a class="p4-rw" ${aA(cH(c))}><div class="p4-dt"><b>${okD(sd) ? E(dot(sd)) : '상시'}</b><small>${E(okD(sd) ? (sd === c.start ? '시작' : '마감') : '온라인')}${okD(sd) ? ' · ' + DOW[new Date(sd + 'T00:00:00').getDay()] : ''}</small></div><div><h3>${E(c.name)}</h3><p>${E([c.legal ? '법정 의무교육' : kindL(c), c.teacher].filter(Boolean).join(' · '))}</p></div><div class="p4-mt">${E([c.kind === 'episode' ? (stf ? '집합 교육' : '현장 강좌') : (stf ? '사이버 교육' : '온라인 강좌'), hrs(c)].filter(Boolean).join(' · '))}<br>${E(stf ? (okD(c.end) ? `${md(c.end)}까지` : '상시') : priceL(c))}</div><span class="p4-tag ${k[0]}">${k[1]}</span></a>`; }).join('')}</div><a class="p4-more" href="#courses">${E(stf ? '전체 교육과정 보기' : '전체 강좌 보기')} ${ic('chev', 18, 2)}</a></div>`); };
   /* 숫자 띠: 실제 값만 */
-  SEC['p4-figs'] = (x, s) => { const d = x.data || {}; const L = live(); if (!L.length) return empty(x); const lg = rateOf(L.filter(c => c.legal)); const n = learners(); const stf = staffOrg();
-    const K = [[L.length, '개', stf ? '운영 중인 과정' : '운영 중인 교육'], n ? [n, '명', '수강 중인 인원'] : null, lg && lg.r >= 60 ? [lg.r, '%', '법정 교육 이수율'] : (() => { const r = rateOf(L); return r && r.r >= 60 ? [r.r, '%', '전체 과정 이수율'] : null; })()].filter(Boolean);
+  /* 숫자 띠: 자랑할 만한 실제 값만(v44 검수) — 과정 10개 이상 · 수강 인원 100명 이상 · 이수율 60% 이상(인원 100명 이상일 때). 두 개 미만이면 섹션을 숨긴다 */
+  const FIG = { course: 10, people: 100, rate: 60 };
+  const figsK = () => { const L = live(); const n = learners(); const stf = staffOrg(); const lg = rateOf(L.filter(c => c.legal)); const ra = lg && lg.n >= FIG.people ? lg : rateOf(L);
+    return [L.length >= FIG.course ? [L.length, '개', stf ? '운영 중인 과정' : '운영 중인 교육'] : null, n >= FIG.people ? [n, '명', '수강 중인 인원'] : null, n >= FIG.people && ra && ra.n >= FIG.people && ra.r >= FIG.rate ? [ra.r, '%', lg && ra === lg ? '법정 교육 이수율' : '전체 과정 이수율'] : null].filter(Boolean); };
+  SEC['p4-figs'] = (x, s) => { const d = x.data || {}; const K = figsK(); if (K.length < 2) return empty(x, '과정 10개 · 수강 인원 100명 이상처럼 내세울 만한 실제 숫자가 2개 이상 생기면 게시본에 보여요.');
     return sec(x, s, 'figs', `<div class="p4w">${d.eyebrow ? `<p class="p4-ft">${E(d.eyebrow)}</p>` : ''}<div class="p4-fg n${K.length}">${d.title ? `<h2 class="p4-h2">${ttl(d)}</h2>` : ''}${K.map(k => `<div class="p4-fk"><div class="p4-n">${k[0].toLocaleString('ko-KR')}<small>${k[1]}</small></div><p>${E(k[2])}</p></div>`).join('')}</div></div>`); };
   /* 알림마당 + 문의 상자 */
   SEC['p4-help'] = (x, s) => { const d = x.data || {}; const N = notes(4); const tel = telOf();
@@ -235,6 +240,9 @@
   /* 일자리센터: 넓은 과정 카드(실제 과정) */
   SEC['p4-wide'] = (x, s) => { const d = x.data || {}; const L = list(4); if (!L.length) return empty(x);
     return sec(x, s, 'wide', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">교육 전체 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-wg n${L.length}">${L.map((c, i) => `<a class="p4-wc" ${aA(cH(c))}>${img(clsP(c, i, ['cor-06', 'lap-03', 'doc-01', 'log-01']))}<div class="p4-wb"><p class="p4-k">${E(c.kind === 'episode' ? '집합 교육' : '온라인 교육')}${hrs(c) ? ' · ' + E(hrs(c)) : ''}</p><h3>${E(c.name)}</h3><p>${E([whenL(c), priceL(c)].join(' · '))}</p><span class="p4-go">과정 보기${ic('arrow', 18, 2)}</span></div></a>`).join('')}</div></div>`); };
+  /* 일자리센터: 큰 사진 위 한 문장 + 상담 버튼(숫자 없음) */
+  SEC['p4-pull'] = (x, s) => { const d = x.data || {}; const p = slotP(s, 'about', null, 'shk-01'); const tel = telOf();
+    return sec(x, s, 'pull', `${img(p, 'p4-bg')}<div class="p4-in"><div class="p4w"><h2>${ttl(d, '상담부터\n시작해요.')}</h2>${d.sub ? `<p>${E(d.sub)}</p>` : ''}<div class="p4-cta">${btn('wh', d.cta || '상담 문의하기', href(d.link, '#comm'), 1)}${tel ? `<a class="p4-b ol" href="tel:${E(tel)}">${ic('phone', 20, 2)}${E(tel)}</a>` : ''}</div></div></div>`); };
   /* 박물관: 전시 명판형 프로그램(실제 강좌) */
   SEC['p4-exhibit'] = (x, s) => { const d = x.data || {}; const L = list(3); if (!L.length) return empty(x);
     return sec(x, s, 'exhibit', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">프로그램 전체 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-ex n${L.length}">${L.map((c, i) => `<a class="p4-xi${i ? '' : ' p4-lg'}" ${aA(cH(c))}>${img(clsP(c, i, ['art-06', 'pho-02', 'lib-06']))}<div class="p4-lb"><p class="p4-no">No. ${String(i + 1).padStart(2, '0')}</p><h3>${E(c.name)}</h3><dl><div><dt>방식</dt><dd>${E(c.kind === 'episode' ? '교육실 현장' : '온라인')}</dd></div><div><dt>일정</dt><dd>${E(whenL(c))}</dd></div><div><dt>참가비</dt><dd>${E(priceL(c))}</dd></div></dl></div></a>`).join('')}</div></div>`); };
@@ -497,12 +505,14 @@
 .pbjobs .p4-wc{display:grid;grid-template-columns:42% 1fr;background:#fff;border-radius:20px;overflow:hidden;min-height:260px;transition:box-shadow .2s}.pbjobs .p4-wc:hover{box-shadow:0 20px 40px -24px ${al(a, .5)}}.pbjobs .p4-wc figure{height:100%}
 .pbjobs .p4-wb{padding:30px 30px 26px;display:flex;flex-direction:column}.pbjobs .p4-wb .p4-k{font-size:14px;font-weight:800;color:var(--at)}.pbjobs .p4-wb h3{font-size:24px;line-height:1.3;font-weight:800;letter-spacing:-.035em;margin-top:10px;flex:1}.pbjobs .p4-wb p:not(.p4-k){font-size:15px;color:var(--mu);margin-top:12px}.pbjobs .p4-go{display:inline-flex;align-items:center;gap:6px;margin-top:16px;font-weight:800;color:var(--at)}
 .pbjobs.p4-figs{background:${D.ink};color:#fff;padding:120px 0}.pbjobs .p4-fk{border-color:rgba(255,255,255,.16)}.pbjobs .p4-fk .p4-n{color:#fff}.pbjobs .p4-fk small{color:${pt}}.pbjobs .p4-fk p{color:#B9BDD0}.pbjobs .p4-ft{color:${pt}}
+.pbjobs.p4-pull{height:600px;padding:0;overflow:hidden;background:${D.ink};color:#fff}.pbjobs.p4-pull .p4-bg{position:absolute;inset:0;height:100%}.pbjobs.p4-pull:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,${al(D.ink, .9)} 0%,${al(D.ink, .6)} 45%,${al(D.ink, 0)} 80%)}
+.pbjobs.p4-pull .p4-in{position:absolute;inset:0;z-index:2;display:flex;align-items:center}.pbjobs.p4-pull .p4w{width:100%}.pbjobs.p4-pull h2{font-size:56px;line-height:1.2;font-weight:800;letter-spacing:-.05em;max-width:640px}.pbjobs.p4-pull p{font-size:19px;color:#D9DCEA;margin-top:20px;max-width:520px}.pbjobs.p4-pull .p4-cta{margin-top:36px}
 .pbjobs.p4-quote blockquote{font-size:48px}.pbjobs.p4-quote blockquote:before{content:"";display:block;width:64px;height:8px;background:${pt};margin-bottom:40px}.pbjobs .p4-who i{background:${a};color:${onA}}
 .pbjobs.p4-help{background:${D.alt}}.pbjobs .p4-call{background:${a};color:${onA};border:0;border-radius:24px}.pbjobs .p4-call h3{color:${onA}}.pbjobs .p4-call .p4-tel{color:${onA}}.pbjobs .p4-call p{color:${onA};opacity:.85}.pbjobs .p4-call .p4-b.sec{background:#fff;color:${D.ink};box-shadow:none}
 @media (max-width:720px){.pbjobs.p4-hero{grid-template-columns:1fr;min-height:0}.pbjobs .p4-blk{justify-content:flex-start;order:2}.pbjobs .p4-blk .p4-tx{padding:48px 20px 64px}.pbjobs .p4-blk:after{width:160px;height:160px;border-width:30px;right:-60px;bottom:-60px}.pbjobs .p4-side{order:1;min-height:0;height:300px}
 .pbjobs.p4-hero h1{font-size:42px;line-height:1.16}.pbjobs .p4-lead{font-size:17px;margin-top:20px}.pbjobs.p4-hero .p4-cta{margin-top:30px}
 .pbjobs .p4-h2{font-size:34px}.pbjobs .p4-fl,.pbjobs .p4-fl.n3{grid-template-columns:1fr;gap:28px;margin-top:40px}.pbjobs .p4-fl:before{left:27px;right:auto;top:0;bottom:0;width:2px;height:auto}.pbjobs .p4-fl li{display:grid;grid-template-columns:56px 1fr;column-gap:20px;padding:0}.pbjobs .p4-fl .p4-n{width:56px;height:56px;font-size:22px;grid-row:span 2}.pbjobs .p4-fl h3{margin-top:12px;font-size:21px}
-.pbjobs .p4-wg{grid-template-columns:1fr}.pbjobs .p4-wc{grid-template-columns:1fr}.pbjobs .p4-wc figure{aspect-ratio:16/9}.pbjobs .p4-wb{padding:22px 22px 20px}.pbjobs .p4-wb h3{font-size:21px}.pbjobs.p4-figs{padding:80px 0}.pbjobs.p4-quote blockquote{font-size:28px}}
+.pbjobs .p4-wg{grid-template-columns:1fr}.pbjobs .p4-wc{grid-template-columns:1fr}.pbjobs .p4-wc figure{aspect-ratio:16/9}.pbjobs .p4-wb{padding:22px 22px 20px}.pbjobs .p4-wb h3{font-size:21px}.pbjobs.p4-quote blockquote{font-size:28px}.pbjobs.p4-pull{height:560px}.pbjobs.p4-pull:after{background:linear-gradient(0deg,${al(D.ink, .92)} 30%,${al(D.ink, .3)} 100%)}.pbjobs.p4-pull .p4-in{align-items:flex-end;padding-bottom:48px}.pbjobs.p4-pull h2{font-size:32px}.pbjobs.p4-pull p{font-size:16px}}
 `,
     /* 박물관: 흰 벽 · 액자 · 명판 */
     pbmuseum: ({ D, a, at, onA }) => `
@@ -545,6 +555,7 @@
 .pbheritage.p4-svc{background-color:${D.alt}}.pbheritage .p4-sv{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}.pbheritage .p4-sv a{display:flex;justify-content:space-between;align-items:center;gap:16px;background:${D.bg};padding:28px 28px;${dbl.replace('4px', '3px')}}
 .pbheritage .p4-sv i{display:block;font-style:normal;font-size:14px;color:${fit(pt, D.bg, 4.6)};font-weight:700;letter-spacing:.1em;margin-bottom:8px}.pbheritage .p4-sv b{display:block;font-family:${SERIF};font-size:22px;letter-spacing:-.03em}.pbheritage .p4-sv span{display:block;font-size:15px;color:var(--mu);margin-top:4px}.pbheritage .p4-sv svg{color:${pt}}
 .pbheritage.p4-figs{background:${a};color:${onA}}.pbheritage .p4-fg h2{color:${onA};font-size:40px}.pbheritage .p4-fk{border-color:${al(onA, .25)}}.pbheritage .p4-fk .p4-n{font-family:${SERIF};font-weight:700;color:${onA}}.pbheritage .p4-fk small{color:${gd}}.pbheritage .p4-fk p{color:${al(onA, .8)}}.pbheritage .p4-ft{color:${gd};letter-spacing:.16em}
+.pbheritage.p4-story .p4-sg2>figure{border:4px double ${al(D.ink, .55)};padding:8px;background:${D.bg};aspect-ratio:4/4.4;border-radius:0}.pbheritage.p4-story .p4-sg2>figure img{filter:sepia(.15)}.pbheritage .p4-steps .p4-n{font-family:${SERIF};color:${fit(pt, D.bg, 4.6)};font-size:18px}.pbheritage .p4-steps li{border-color:${al(D.ink, .25)}}.pbheritage .p4-steps h3{font-family:${SERIF};font-size:22px}
 .pbheritage .p4-call{background:${D.bg};${dbl};border-top:4px double ${al(D.ink, .55)}}.pbheritage .p4-tel{font-family:${SERIF};color:${a}}.pbheritage .p4-nt li:first-child{border-top:3px double ${D.ink}}
 @media (max-width:720px){.pbheritage.p4-hero{padding:48px 0 72px}.pbheritage .p4-seal{width:60px;height:60px;font-size:28px;margin-bottom:26px}.pbheritage .p4-ey{font-size:13px;gap:12px;letter-spacing:.12em}.pbheritage .p4-ey:before,.pbheritage .p4-ey:after{width:28px}.pbheritage.p4-hero h1{font-size:38px;line-height:1.32}.pbheritage .p4-lead{font-size:17px;margin-top:20px}.pbheritage.p4-hero .p4-cta{margin-top:30px}
 .pbheritage .p4-pano{margin-top:48px;padding:6px}.pbheritage .p4-pano figure{aspect-ratio:4/3}.pbheritage .p4-h2{font-size:30px}.pbheritage .p4-vg{grid-template-columns:1fr;margin-top:40px}.pbheritage .p4-vg>div{padding:32px 8px;border-left:0;border-top:1px solid ${al(gd, .5)}}.pbheritage .p4-vg>div:first-child{border-top:0}.pbheritage .p4-hn{font-size:34px}
@@ -559,7 +570,7 @@
       if (x.type === 'banner' && mine(s) && HPT.has(s.theme) && !+d.dstyle && !s.layout) { if (x.hide && !editing()) return ''; return mark(HERO[s.theme](s, d), x); } }
     } catch (e) { console.error('hp44-public', e); }
     return base(x, i, s, lk); }; window.proSec = proSec; }
-  try { if (window.HPW && typeof HPW.emptyOf === 'function') { const e0 = HPW.emptyOf; HPW.emptyOf = x => { const d = (x && x.data) || {}; if (x && x.type === 'text' && SEC[d.hpt]) { try { return /^p4-(mag|rows|figs|band|tracks|shelf|tiles|words|big|wide|exhibit)$/.test(d.hpt) ? !live().length : /^p4-(hours|stay)$/.test(d.hpt) ? !facs().length : d.hpt === 'p4-quote' ? !review() : false; } catch (e) { return false; } } return e0(x); }; } } catch (e) { }
+  try { if (window.HPW && typeof HPW.emptyOf === 'function') { const e0 = HPW.emptyOf; HPW.emptyOf = x => { const d = (x && x.data) || {}; if (x && x.type === 'text' && SEC[d.hpt]) { try { return d.hpt === 'p4-figs' ? figsK().length < 2 : /^p4-(mag|rows|band|tracks|shelf|tiles|words|big|wide|exhibit)$/.test(d.hpt) ? !live().length : /^p4-(hours|stay)$/.test(d.hpt) ? !facs().length : d.hpt === 'p4-quote' ? !review() : false; } catch (e) { return false; } } return e0(x); }; } } catch (e) { }
   const needCSS = s => !!(s && (mine(s) || (s.sections || []).some(x => x && x.data && SEC[x.data.hpt])));
   const SERIF_CSS = 'fonts/noto-serif-kr/font.css?v=ea0bde31';
   { const base = siteHTML; siteHTML = (s, ...a) => { let h = base(s, ...a); try { if (needCSS(s) && HPT.tokens(s)) { h = h.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>'); h = h.replace(/<section class="([^"]*\bp4\b[^"]*)"/g, (m, c) => `<section class="${c.replace(/\bhps-(flowb?|short)\b\s*/g, '').trim()}"`); /* 같은 바탕 섹션 간격 압축(hps-flow)은 섹션 리듬을 깨므로 뺀다 */ if (SERIFS.includes(thOf(s)) && h.indexOf(SERIF_CSS) < 0) h = h.replace('</head>', `<link rel="stylesheet" href="${SERIF_CSS}"></head>`); } } catch (e) { console.error('hp44-public css', e); } return h; }; window.siteHTML = siteHTML; }
@@ -567,7 +578,7 @@
   /* ── 등록 ── */
   MINE.forEach(id => { HPT.reg(id, Object.assign({ prem: 1, cssX: () => '', tags: ['public'] }, DEF[id])); try { if (window.HPD && typeof HPD.reg === 'function') HPD.reg(id, HD[id]); } catch (e) { console.error('hp44-public HPD', e); } });
   const PH = { pbcivic: { hero: 'hum-51', about: 'lec-01' }, pbjournal: { hero: 'sen-01', about: 'hum-26', space: 'hum-13', cta: 'hum-05' }, pbposter: { hero: 'spo-08', about: 'lec-02' }, pbcampus: { hero: 'grp-01' },
-    pblibrary: { hero: 'lib-08', about: 'hum-12' }, pbyouth: { hero: 'spo-03', about: 'hum-30', space: 'cam-07' }, pbsenior: { hero: 'sen-02', about: 'kni-03' }, pbjobs: { hero: 'hum-50' }, pbmuseum: { hero: 'hum-22', about: 'hum-28' }, pbheritage: { hero: 'nat-01' } };
+    pblibrary: { hero: 'lib-08', about: 'hum-12' }, pbyouth: { hero: 'spo-03', about: 'hum-30', space: 'cam-07' }, pbsenior: { hero: 'sen-02', about: 'kni-03' }, pbjobs: { hero: 'hum-50', about: 'shk-01' }, pbmuseum: { hero: 'hum-22', about: 'hum-28' }, pbheritage: { hero: 'nat-01', about: 'lib-06' } };
   { const tb = HPT.thumb; if (typeof tb === 'function') HPT.thumb = (s, id) => { if (!MINE.includes(id)) return tb(s, id);
     try { const b = JSON.parse(JSON.stringify(s || (typeof site === 'function' ? site() : S.site))); HPT.apply(b, id, { keepColor: true }); delete b.layout; const tp = typeof TPL !== 'undefined' && TPL.find(t => t.id === 't44-' + id); if (tp) b.sections = tp.build(); b.photos = Object.assign({}, PH[id]); b.img = {}; try { Object.keys(b.photos).forEach(sl => { const v = HPSTOCK.slotImg(b.photos[sl], sl); if (v) b.img[sl] = v; }); } catch (e) { } return siteHTML(b, false, 'ko'); } catch (e) { console.error('hp44-public thumb', e); return tb(s, id); } }; }
   if (typeof TPL === 'undefined' || typeof S2 !== 'function') { window.HP44P = { DEF, fits, css, SEC, PH }; return; }
@@ -602,7 +613,6 @@
         TX('features', { hpt: 'p4-intro', eyebrow: '연수 원칙', title: '현장에서 쓰는 역량을,\n현장의 언어로 가르쳐요.', cols: [['직무 중심', '실제 업무 사례로 배우고 바로 적용해요.'], ['단계별 이수', '직급과 경력에 맞춰 들어야 할 연수가 정해져 있어요.'], ['기록이 남는 연수', '이수 현황과 이수증이 내 기록으로 쌓여요.']] }),
         TX('features', { hpt: 'p4-tracks', eyebrow: '연수 과정', title: '지금 열려 있는\n연수 과정', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-stay', eyebrow: '연수 시설', title: '배움에 집중하는\n공간', sub: '강의실과 세미나실은 부서 연수 · 워크숍 용도로도 예약할 수 있어요.', cols: [] }),
-        TX('features', { hpt: 'p4-figs', eyebrow: '연수 운영 현황', title: '', cols: [] }),
         TX('features', { hpt: 'p4-quote', title: '', cols: [] }),
         TX('features', { hpt: 'p4-duo', title: '', cols: [['내 연수 일정을\n먼저 확인해요.', '로그인하면 이번 분기 필수 연수와 신청한 과정이 먼저 보여요.', 'learn:my', '연수생이라면', '나의 연수로'], ['부서 연수를\n함께 계획해요.', '교육 담당자는 과정 신청 현황과 이수 결과를 한 화면에서 확인해요.', 'learn:login', '교육 담당자라면', '담당자 로그인']] }), ...quiet()] },
     pblibrary: { scene: '공공도서관 강좌 — 주민이 독서 · 인문 · 디지털 강좌를 찾아 신청하러 와요. 아치형 열람실 사진, 대출 카드 같은 강좌 카드, 이번 달 일정', purpose: ['apply', 'brand'],
@@ -630,7 +640,7 @@
       build: () => [S2('banner', { eyebrow: `${org()}`, title: '다음 일,\n혼자 찾지 않게.', sub: '취업 상담부터 직무 교육, 일자리 연계까지 한곳에서 이어져요. 처음이라면 교육부터 둘러보세요.', cta: '취업 연계 교육 보기', link: 'learn:courses', cta2: '내 신청 확인', link2: 'learn:my' }),
         TX('features', { hpt: 'p4-flow', eyebrow: '이렇게 도와드려요', title: '상담에서 취업까지,\n네 단계로 이어져요.', sub: '', cols: [['상담 신청', '희망 직무와 경력을 듣고 방향을 함께 정해요.'], ['맞춤 교육', '필요한 직무 · 자격 교육을 골라 들어요.'], ['일자리 연계', '교육을 마치면 채용 정보와 면접을 안내해요.'], ['취업 후 관리', '일을 시작한 뒤에도 적응을 함께 살펴요.']] }),
         TX('features', { hpt: 'p4-wide', eyebrow: '취업 연계 교육', title: '지금 신청할 수 있는\n교육', sub: '', cols: [] }),
-        TX('features', { hpt: 'p4-figs', eyebrow: '교육 운영 현황', title: '', cols: [] }),
+        TX('features', { hpt: 'p4-pull', title: '혼자 고민하지 말고,\n상담부터 시작해요.', sub: '경력이 끊긴 지 오래되었어도, 처음 일을 찾는 중이어도 괜찮아요. 지금 상황에 맞는 길을 함께 찾아요.', cta: '상담 문의하기', link: '#comm', cols: [] }),
         TX('features', { hpt: 'p4-quote', title: '', cols: [] }),
         TX('features', { hpt: 'p4-help', title: '알림마당', sub: '상담이 필요하신가요?', cols: [] }), ...quiet()] },
     pbmuseum: { scene: '박물관 · 미술관 · 문화재단 교육 — 시민 · 가족이 전시 연계 교육과 체험 프로그램을 신청하러 와요. 초대형 세리프 제목, 흰 벽 액자와 명판, 전시 명판형 프로그램', purpose: ['apply', 'brand'],
@@ -645,7 +655,7 @@
         TX('features', { hpt: 'p4-vals', eyebrow: '교육 이념', title: '세 가지 마음으로\n가르치고 배워요.', cols: [['청렴', '공정하고 깨끗한 행정의 기본을 익혀요.'], ['전문', '맡은 직무를 깊이 있게 다루는 역량을 길러요.'], ['봉사', '주민의 자리에서 생각하는 태도를 배워요.']] }),
         TX('features', { hpt: 'p4-rows', eyebrow: '교육과정', title: '운영 중인 교육과정', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-svc', eyebrow: '민원 · 서비스', title: '자주 찾는 서비스', cols: [] }),
-        TX('features', { hpt: 'p4-figs', eyebrow: '교육 운영 현황', title: '', cols: [] }),
+        TX('features', { hpt: 'p4-story', eyebrow: '이수 절차', title: '교육 이수는\n세 단계로 진행해요.', sub: '', cols: [['교육 신청', '소속 부서 승인을 거쳐 교육을 신청해요.'], ['수강 · 평가', '정해진 기간 안에 수강하고 평가를 마쳐요.'], ['이수 기록', '이수 결과가 개인 교육 이력에 바르게 남아요.']] }),
         TX('features', { hpt: 'p4-help', title: '알림마당', sub: '교육 문의', cols: [] }), ...quiet()] }
   };
   MINE.forEach(id => { if (TPL.some(t => t.id === 't44-' + id)) return; const c = B[id];
@@ -661,5 +671,5 @@
         if (L.some(x => x && x.data && x.data.hpt === 'p4-help')) mv.forEach(x => { if (x.type === 'notices') x.hide = true; });
         let at = -1; L.forEach((x, k) => { if (x && x.data && /^p4-(duo|fin|help)$/.test(x.data.hpt)) at = k; }); if (at < 0) at = L.length; L.splice(at, 0, ...mv); } } } catch (e) { console.error('hp44-public enrich', e); } return r; };
     Object.keys(e0).forEach(k => { try { f[k] = e0[k]; } catch (e) { } }); f.hp44p = 1; HPT.enrich = f; }
-  window.HP44P = { DEF, fits, css, SEC, B, PH };
+  window.HP44P = { DEF, fits, css, SEC, B, PH, review, figsK };
 })();
