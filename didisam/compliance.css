@@ -55,3 +55,10 @@
   #main .cpl-todo li>small{grid-column:2;text-align:left;font-size:13px;color:var(--t-sub,var(--g700))}
   #main .cpl-todo li>small:empty{display:none}
 }
+/* v43.7 Q3: 법정교육 체크리스트 — 5칸 격자(22 · 1fr · auto · 160 · 74px)가 휴대폰에서 교육 이름 칸을 0px로 눌러
+   「직장 내 성희롱…」이 한 글자씩 세로로 서고 %가 카드 밖으로 나가던 것. 640px 이하는 이름 · 구분 한 줄, 진행 막대 · % 한 줄 */
+@media (max-width:640px){
+  .cpl-ck{grid-template-columns:22px minmax(0,1fr) auto;row-gap:8px;column-gap:10px}
+  .cpl-ck>.cpl-ckp{grid-column:2/3}
+  .cpl-ck>.cpl-ckn{grid-column:3;flex-direction:row;align-items:baseline;gap:6px}
+}
