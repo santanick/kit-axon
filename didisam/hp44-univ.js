@@ -25,7 +25,7 @@
   const md = s => `${+String(s).slice(5, 7)}월 ${+String(s).slice(8, 10)}일`;
   const mdS = s => `${+String(s).slice(5, 7)}.${String(s).slice(8, 10)}`;
   const AR = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
-  const IDS = ['uncine', 'unsplit', 'uncollage', 'unclassic', 'univy', 'unposter', 'undark', 'unmag', 'unblock', 'unoverlap'];
+  const IDS = ['uncine', 'unsplit', 'uncollage', 'unclassic', 'univy', 'unposter', 'undark', 'unmag', 'unblock', 'unoverlap', 'unportal', 'unfind'];
   /* 페이지 루트: 스튜디오 미리보기 · 썸네일(iframe)은 body, 학습자 게시본(Shadow DOM)은 .smr — body 선택자만 쓰면 게시본에서 테마가 통째로 빠진다(v44 QA) */
   const BR = ':is(body.hpt-on,.smr.smr)';
   const mine = s => !!(s && IDS.includes(s.theme) && HPT.has && HPT.has(s.theme));
@@ -76,7 +76,7 @@
 
   /* ── 사진: 기관이 올린 사진(site.img[slot] · 첫 화면 banner.img) → 시안의 스톡(HPSTOCK) ── */
   const stockRe = /(^|\/)img\/stock\/[a-z]{3}-\d{2}(-800)?\.webp/;
-  const DEFPH = { univy: { hero: 'hum-12', about: 'hum-13', cta: 'lib-03', quote: 'grp-02' }, unsplit: { hero: 'hum-50', about: 'lap-07' }, unposter: { hero: 'lec-01', about: 'sem-01' }, undark: { hero: 'hum-41', about: 'grp-03', space: 'rob-01' },
+  const DEFPH = { unportal: { hero: 'cam-03', ga: 'lib-02', gb: 'lec-03', gc: 'hum-36' }, unfind: { g1: 'cam-05', hero: 'lib-01', g2: 'hum-13', about: 'hum-14' }, univy: { hero: 'hum-12', about: 'hum-13', cta: 'lib-03', quote: 'grp-02' }, unsplit: { hero: 'hum-50', about: 'lap-07' }, unposter: { hero: 'lec-01', about: 'sem-01' }, undark: { hero: 'hum-41', about: 'grp-03', space: 'rob-01' },
     unmag: { hero: 'hum-16', g1: 'cam-08', about: 'hum-10', quote: 'cam-07' }, unblock: { hero: 'hum-46', about: 'hum-51' }, unoverlap: { hero: 'hum-18', about: 'hum-20', cta: 'wrk-01' }, uncine: { hero: 'hum-15', space: 'lib-01', about: 'hum-36' },
     uncollage: { hero: 'stu-02', g1: 'cam-09', g2: 'grp-02', g3: 'hum-38', g4: 'grp-06', about: 'hum-10', quote: 'grp-01' }, unclassic: { hero: 'lib-08', space: 'lec-02', cta: 'lib-02' } };
   const USED = new Set();
@@ -137,6 +137,23 @@ ${fig(p, 'hero', 'u4-ivy-ph', 1)}<p class="u4-cap"><span>${E(d.cap || (p && !p.o
   function heroOverlap(s, d) { const p = photo(s, 'hero', d); const p1 = linkHref(d.link) || href.cls(s); const p2 = linkHref(d.link2) || '#login';
     return `<section class="hpt hp-hero u4 u4-over-h${p ? '' : ' np'}">${fig(p, 'hero', 'u4-ov-ph', 1)}<div class="u4-w"><div class="u4-ov-card"><p class="u4-pre">${E(d.eyebrow || '현장 실무 · ' + semester())}</p><h1>${lines(d.title || org(), true)}</h1>${d.sub ? `<p class="u4-lead">${E(d.sub)}</p>` : ''}<div class="u4-btns">${btn('p', p1, d.cta, 1)}${btn('s', p2, d.cta2)}</div></div></div></section>`; }
 
+  /* ── v44.1 학사용 2종(대학 본부 홈페이지 벤치마크: REFERENCES-v441.md) ── */
+  const QI = { book: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19V5M8 7h7', cal: 'M4 6h16v14H4zM4 10h16M8 3v5M16 3v5', bell: 'M6 16V11a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0', screen: 'M3 4h18v12H3zM8 20h8M12 16v4', user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21v-1a7 7 0 0114 0v1', award: 'M12 15a6 6 0 100-12 6 6 0 000 12zM8.5 14L7 21l5-3 5 3-1.5-7' };
+  const qi = k => `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${QI[k] || QI.book}"/></svg>`;
+  const QUICK = s => [['book', `${term('cls') === '강좌' ? '수강' : term('cls')} 신청`, href.cls(s)], ['cal', '학사 일정', '#cal'], ['bell', '공지사항', href.notice(s)], ['screen', '내 강의실', '#my'], ['user', '학번 로그인', '#login'], ['award', '이수 · 배지', '#badges']];
+  /* 본부 포털: 왼쪽 넓은 캠퍼스 사진 · 오른쪽 기관 색 패널 + 사진 아래 아이콘 빠른 메뉴 한 줄 */
+  function heroPortal(s, d) { const p = photo(s, 'hero', d); const p1 = linkHref(d.link) || href.cls(s); const p2 = linkHref(d.link2) || '#login';
+    return `<section class="hpt hp-hero u4 u4-portal-h${p ? '' : ' np'}"><div class="u4-pt-g">${fig(p, 'hero', 'u4-pt-ph', 1)}<div class="u4-pt-pn"><p class="u4-pre">${E(d.eyebrow || yearSem())}</p><h1>${lines(d.title || org())}</h1>${d.sub ? `<p class="u4-lead">${E(d.sub)}</p>` : ''}<div class="u4-btns">${btn('w', p1, d.cta, 1)}${btn('g', p2, d.cta2)}</div><p class="u4-safe">${PRIV}</p></div></div>
+<nav class="u4-quickm" aria-label="자주 찾는 학사 메뉴"><div class="u4-w">${QUICK(s).map(([k, l, h]) => `<a ${lnk(h)}><i>${qi(k)}</i><span>${E(l)}</span></a>`).join('')}</div></nav></section>`; }
+  /* 학사 길잡이: 가운데 질문형 큰 제목 · 큰 링크 4개 · 넓은 사진 3분할 */
+  function heroFind(s, d) { const p1 = linkHref(d.link) || '#login'; const p2 = linkHref(d.link2) || '#cal'; const Q = QUICK(s); const L = [Q[0], Q[1], Q[2], Q[3]];
+    const G = [['g1', photo(s, 'g1')], ['hero', photo(s, 'hero', d)], ['g2', photo(s, 'g2')]].filter(x => x[1]);
+    return `<section class="hpt hp-hero u4 u4-find-h"><div class="u4-w"><p class="u4-pre">${E(d.eyebrow || yearSem() + ' 학사 안내')}</p><h1>${lines(d.title || org(), true)}</h1>${d.sub ? `<p class="u4-lead">${E(d.sub)}</p>` : ''}<div class="u4-btns c">${btn('p', p1, d.cta)}${btn('s', p2, d.cta2)}</div>
+<nav class="u4-findl" aria-label="학사 바로 가기">${L.map(([k, l, h]) => `<a ${lnk(h)}><i>${qi(k)}</i><b>${E(l)}</b><em aria-hidden="true">→</em></a>`).join('')}</nav><p class="u4-safe">${PRIV}</p></div>${G.length ? `<div class="u4-tri n${G.length}">${G.map(([k, p]) => fig(p, k, '', 1)).join('')}</div>` : ''}</section>`; }
+  /* 캠퍼스 사진 3장(설명 한 줄) */
+  function gallery(s, d) { const C = Array.isArray(d.cols) && d.cols.length ? d.cols : [['도서관', '시험 기간에도 자리가 넉넉해요'], ['강의실', '토론과 발표가 쉬운 모둠 강의실'], ['라운지', '수업 사이에 쉬어 가는 곳']]; const G = ['ga', 'gb', 'gc'].map((k, i) => [k, photo(s, k), C[i] || ['', '']]).filter(x => x[1]); if (!G.length) return '';
+    return `<section class="hpt hp-s u4 u4-gallery"><div class="u4-w">${sh(d, { ey: '', t: '캠퍼스 생활' })}<ul class="u4-gal n${G.length}">${G.map(([k, p, c]) => `<li>${fig(p, k, '')}<b>${E(c[0])}</b><small>${E(c[1] || '')}</small></li>`).join('')}</ul></div></section>`; }
+
   /* ── 방문자별 바로 가기(첫 화면 아래 한 줄) ── */
   const WHO = [['재학생', '비교과 신청하기', '비교과 신청 · 이수 확인'], ['신입생', '처음 로그인하기', '처음 로그인 · 먼저 들을 과정'], ['교수자', '수업 공지 보기', '수업 운영 · 공지'], ['산학 · 지역', '열린 강좌 보기', '열린 강좌 · 협력 문의']];
   function paths(s, d, view) { const W = (Array.isArray(d.who) && d.who.length === 4 ? d.who : WHO).map((r, k) => [0, 1, 2].map(j => String((r && r[j]) || WHO[k][j])));
@@ -154,7 +171,7 @@ ${fig(p, 'hero', 'u4-ivy-ph', 1)}<p class="u4-cap"><span>${E(d.cap || (p && !p.o
     const p = photo(s, 'about');
     return `<section class="hpt hp-s u4 u4-story"><div class="u4-w u4-g2"><div>${sh(d, { ey: '왜 비교과인가요', t: '졸업장에 적히지 않는\n네 해의 기록을 남겨요.', sub: '' })}${d.body ? `<p class="u4-body">${E(d.body)}</p>` : ''}${F.length ? `<dl class="u4-facts">${F.map(([v, l]) => `<div><dt>${E(l)}</dt><dd>${E(v)}</dd></div>`).join('')}</dl>` : ''}</div>${fig(p, 'about', 'u4-story-ph')}</div></section>`; }
   /* 단계(취업 · 창업 · 교수학습 · 실무): 큰 번호 4단계 + 선 — 운영자가 바꾸는 문구 */
-  function steps(s, d) { const St = (Array.isArray(d.cols) && d.cols.length ? d.cols : [['신청', ''], ['참여', ''], ['이수', ''], ['확인', '']]).slice(0, 4); const go = d.cta ? `<div class="u4-btns">${btn('p', linkHref(d.link) || href.cls(s), d.cta)}</div>` : '';
+  function steps(s, d) { const St = (Array.isArray(d.cols) && d.cols.length ? d.cols : [['신청', ''], ['참여', ''], ['이수', ''], ['확인', '']]).slice(0, 4); const go = d.cta ? `<div class="u4-btns">${btn('p', (/^#(cal|notice|login|my)$/.test(d.go || '') ? d.go : '') || linkHref(d.link) || href.cls(s), d.cta)}</div>` : '';
     return `<section class="hpt hp-s u4 u4-steps v-${E(d.view || 'line')}"><div class="u4-w"><div class="u4-hrow">${sh(d, { ey: '', t: '이렇게 진행돼요' })}${go}</div><ol class="u4-st n${St.length}">${St.map((r, i) => `<li><span class="n">${String(i + 1).padStart(2, '0')}</span><b>${E(r[0])}</b>${r[1] ? `<small>${E(r[1])}</small>` : ''}</li>`).join('')}</ol></div></section>`; }
 
   /* 강좌: index(목차 목록) · tall(세로 사진 카드) · card(사진 위 · 글 아래) · frame(테두리 카드, 가운데 정렬) */
@@ -183,7 +200,7 @@ ${fig(p, 'hero', 'u4-ivy-ph', 1)}<p class="u4-cap"><span>${E(d.cap || (p && !p.o
     const cal = V.length ? `<div class="bcol bcal"><h3>${E(d.title || '학사 일정')}<a href="#cal">전체 일정${AR}</a></h3><ul>${V.map(x => `<li><a href="#cal"><time datetime="${E(x.date)}">${v === 'cols3' ? `<small>${+x.date.slice(5, 7)}월</small><b>${+x.date.slice(8, 10)}</b>` : `<b>${E(mdS(x.date))}</b>`}</time><span><b>${E(x.title)}</b><small>${E(x.kind)} · ${days(T0, x.date) === 0 ? '오늘' : `${WD[dd(x.date).getDay()]}요일`}</small></span></a></li>`).join('')}</ul></div>` : '';
     const nt = N.length ? `<div class="bcol bnt"><h3>${E(d.title2 || '공지사항')}<a ${lnk(href.notice(s))}>전체 보기${AR}</a></h3><ul>${N.map(x => `<li><a ${lnk(href.notice(s))}><span><b>${x.top ? '<em>중요</em>' : ''}${E(x.title)}</b>${x.at ? `<small>${E(date(x))}</small>` : ''}</span></a></li>`).join('')}</ul></div>` : '';
     const ev = nxt ? `<div class="bcol bev"><h3>${E(d.title3 || '다가오는 프로그램')}<a ${lnk(href.cls(s))}>더 보기${AR}</a></h3><a class="evc" ${lnk('#p-c-' + nxt.id)}>${clsFig(s, nxt, 7, 'evp')}<b>${E(nxt.name)}</b><small>${E([stOf(nxt).t, metaOf(nxt)].filter(Boolean).join(' · '))}</small></a></div>` : '';
-    const cols = v === 'cols3' ? [nt, cal, ev] : [cal, nt]; const n = cols.filter(Boolean).length;
+    const cols = v === 'cols3' ? [nt, cal, ev] : v === 'portal' ? [nt, cal] : [cal, nt]; const n = cols.filter(Boolean).length;
     return `<section class="hpt hp-s u4 u4-board v-${E(v)}"><div class="u4-w">${v === 'cols3' ? sh(d.sh || {}, { ey: 'NEWS & CALENDAR', t: '학사 소식' }, 'c') : ''}<div class="u4-bg n${n}">${cols.join('')}</div></div></section>`; }
   /* 사진 띠(시네마틱): 온라인 강의실 소개 — 제품 기능 문구(숫자 아님) */
   function band(s, d) { const p = photo(s, 'space'); const F = Array.isArray(d.cols) && d.cols.length ? d.cols : [['24시간', '언제든 수강'], ['이어 보기', '멈춘 곳부터'], ['바로 발급', '이수증 · 배지']];
@@ -212,8 +229,8 @@ ${fig(p, 'hero', 'u4-ivy-ph', 1)}<p class="u4-cap"><span>${E(d.cap || (p && !p.o
     return `<section class="hpt hp-s u4 u4-close v-center"><div class="u4-w">${ttl}<div class="u4-btns c">${b1}${b2}</div>${rows.length ? `<dl class="ct">${rows.map(([l, v2, h]) => `<div><dt>${E(l)}</dt><dd>${h ? `<a ${lnk(h)}>${E(v2)}</a>` : E(v2)}</dd></div>`).join('')}</dl>` : ''}</div></section>`; }
   const CREST = cls => `<svg class="u4-crest ${cls || ''}" viewBox="0 0 58 66" aria-hidden="true" focusable="false"><path d="M29 2 L55 10 V32 C55 48 43 59 29 64 C15 59 3 48 3 32 V10 Z" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M29 8 L49 14 V32 C49 44 40 53 29 57 C18 53 9 44 9 32 V14 Z" fill="currentColor" opacity=".16"/><path d="M15 36 c5-4 9-4 14 0 s9 4 14 0 M15 43 c5-4 9-4 14 0 s9 4 14 0" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 28 V19 l7-3 7 3 v9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="29" cy="23" r="2" fill="currentColor"/></svg>`;
 
-  const R = { 'u4-steps': steps, 'u4-who': who, 'u4-story': story, 'u4-cls': cls, 'u4-big': big, 'u4-quote': quote, 'u4-board': board, 'u4-band': band, 'u4-open': open, 'u4-lms': lms, 'u4-medal': medal, 'u4-motto': motto, 'u4-close': close };
-  const HERO = { univy: heroIvy, uncine: heroCine, uncollage: heroCollage, unclassic: heroClassic, unsplit: heroSplit, unposter: heroPoster, undark: heroDark, unmag: heroMag, unblock: heroBlock, unoverlap: heroOverlap };
+  const R = { 'u4-gallery': gallery, 'u4-steps': steps, 'u4-who': who, 'u4-story': story, 'u4-cls': cls, 'u4-big': big, 'u4-quote': quote, 'u4-board': board, 'u4-band': band, 'u4-open': open, 'u4-lms': lms, 'u4-medal': medal, 'u4-motto': motto, 'u4-close': close };
+  const HERO = { unportal: heroPortal, unfind: heroFind, univy: heroIvy, uncine: heroCine, uncollage: heroCollage, unclassic: heroClassic, unsplit: heroSplit, unposter: heroPoster, undark: heroDark, unmag: heroMag, unblock: heroBlock, unoverlap: heroOverlap };
   HPT.hp44Univ = { R, HERO, bigFact, events, notices, stOf }; /* 테스트용 */
 
   { const b0 = proSec; proSec = (x, i, s, lk) => {
@@ -228,7 +245,7 @@ ${fig(p, 'hero', 'u4-ivy-ph', 1)}<p class="u4-cap"><span>${E(d.cap || (p && !p.o
     return h; }; window.proSec = proSec; }
 
   /* ── 머리글 · 바닥글 종류: 운영자가 직접 고르지 않았으면 시안의 구성 ── */
-  const CH = { univy: ['solid', 'min'], uncine: ['overlay', 'min'], uncollage: ['solid', 'min'], unclassic: ['center', 'campus'], unsplit: ['solid', 'min'], unposter: ['solid', 'min'], undark: ['solid', 'min'], unmag: ['solid', 'min'], unblock: ['solid', 'min'], unoverlap: ['solid', 'min'] };
+  const CH = { unportal: ['util', 'biz'], unfind: ['solid', 'min'], univy: ['solid', 'min'], uncine: ['overlay', 'min'], uncollage: ['solid', 'min'], unclassic: ['center', 'campus'], unsplit: ['solid', 'min'], unposter: ['solid', 'min'], undark: ['solid', 'min'], unmag: ['solid', 'min'], unblock: ['solid', 'min'], unoverlap: ['solid', 'min'] };
 
   /* ══ CSS ══ */
   const CORE = `
@@ -467,6 +484,35 @@ ${BR}{color:var(--u-ink)}
 .u4 .u4-bk-ph{height:600px;margin-top:96px;margin-bottom:-96px;border-radius:220px 220px 24px 24px;box-shadow:0 30px 60px -30px rgba(0,0,0,.35)}
 .u4-block-h.np .u4-bk-g{grid-template-columns:minmax(0,1fr)}
 @media(max-width:760px){.hp-hero.u4-block-h{padding:0 0 56px}.u4-bk-g{grid-template-columns:minmax(0,1fr);gap:0}.u4-bk-tx{padding:52px 0 40px}.u4-block-h h1{font-size:42px;line-height:1.14}.u4-block-h .u4-lead{font-size:16.5px;margin:18px 0 28px}.u4-block-h .u4-btns{flex-wrap:nowrap}.u4 .u4-bk-ph{height:320px;margin:0 0 -56px;border-radius:160px 160px 20px 20px}}`,
+    unportal: (c) => `
+.hp-hero.u4-portal-h{background:var(--u-bg);padding:0}
+.u4-pt-g{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);min-height:560px}
+.u4 .u4-pt-ph{height:100%;min-height:560px}.u4-portal-h.np .u4-pt-g{grid-template-columns:minmax(0,1fr)}
+.u4-pt-pn{background:var(--u-a);color:var(--u-on);display:flex;flex-direction:column;justify-content:center;padding:64px max(40px,calc((100vw - 1200px) / 2 + 40px)) 64px 64px}
+.u4-portal-h .u4-pre{font-size:15px;font-weight:700;color:var(--u-onm);margin-bottom:22px}.u4-portal-h h1{font-size:64px;line-height:1.14;color:var(--u-on)}
+.u4-portal-h .u4-lead{color:var(--u-on);opacity:.88;margin:24px 0 36px;font-size:18px}.u4-portal-h .u4-btn.w{background:var(--u-on);color:var(--u-a)}.u4-portal-h .u4-btn.g{color:var(--u-on);box-shadow:inset 0 0 0 1.5px var(--u-onm)}
+.u4-portal-h .u4-safe{font-size:14px;color:var(--u-onm);margin-top:18px}
+.u4-quickm{background:var(--u-bg);border-bottom:1px solid var(--u-line);box-shadow:0 1px 0 var(--u-line)}.u4-quickm .u4-w{display:grid;grid-template-columns:repeat(6,1fr)}
+.u4-quickm a{display:flex;flex-direction:column;align-items:center;gap:12px;padding:34px 8px 30px;border-left:1px solid var(--u-line);font-size:16.5px;font-weight:650;color:var(--u-ink);transition:background .2s}.u4-quickm a:first-child{border-left:0}.u4-quickm a:hover{background:var(--u-bg2)}
+.u4-quickm i{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--u-bg2);color:var(--u-acct)}
+.hpt.u4.hp-s.u4-board.v-portal .bnt{background:#fff;border-top:4px solid var(--u-a);padding:8px 32px 20px;box-shadow:0 1px 0 var(--u-line)}.u4-board.v-portal .bcal{background:var(--u-bg2);padding:8px 32px 20px}.u4-board.v-portal .u4-bg{grid-template-columns:1.35fr 1fr;gap:32px}.u4-board.v-portal h3{border-bottom-width:1px;font-size:24px}
+body .hpt.u4.hp-s.u4-board.v-portal{background:var(--u-bg2)}
+.u4-gal{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}.u4-gal li{display:flex;flex-direction:column;gap:4px}.u4-gal .u4-ph{height:300px;border-radius:12px;margin-bottom:14px}.u4-gal b{font-size:20px;font-weight:750;color:var(--u-ink)}.u4-gal small{font-size:15px;color:var(--u-mu)}
+@media(max-width:760px){.u4-pt-g{grid-template-columns:minmax(0,1fr);min-height:0}.u4 .u4-pt-ph{min-height:0;height:240px}.u4-pt-pn{padding:36px 20px 40px}.u4-portal-h h1{font-size:38px;line-height:1.18}.u4-portal-h .u4-lead{font-size:16px;margin:16px 0 26px}.u4-portal-h .u4-btns{flex-wrap:nowrap}
+.u4-quickm .u4-w{grid-template-columns:repeat(3,1fr);padding:0}.u4-quickm a{padding:20px 4px 18px;font-size:14px;gap:8px;border-top:1px solid var(--u-line)}.u4-quickm a:nth-child(3n+1){border-left:0}.u4-quickm i{width:48px;height:48px}.u4-quickm svg{width:24px;height:24px}
+.u4-board.v-portal .u4-bg{grid-template-columns:minmax(0,1fr)}.hpt.u4.hp-s.u4-board.v-portal .bnt,.u4-board.v-portal .bcal{padding:4px 18px 14px}.u4-gal{grid-template-columns:minmax(0,1fr);gap:28px}.u4-gal .u4-ph{height:220px}}`,
+    unfind: (c) => `
+.hp-hero.u4-find-h{background:var(--u-bg);text-align:center;padding:64px 0 0;display:flex;flex-direction:column}
+.u4-find-h .u4-pre{font-size:15px;font-weight:700;color:var(--u-acct);margin-bottom:24px}.u4-find-h h1{font-size:76px;line-height:1.1}
+.u4-find-h .u4-lead{max-width:620px;margin:22px auto 30px;font-size:19px}
+.u4-findl{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:1000px;margin:40px auto 0;text-align:left}
+.u4-findl a{display:flex;align-items:center;gap:14px;min-height:76px;padding:0 20px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--u-line);transition:box-shadow .2s,transform .2s}.u4-findl a:hover{box-shadow:inset 0 0 0 2px var(--u-acct);transform:translateY(-2px)}
+.u4-findl i{color:var(--u-acct);display:grid}.u4-findl svg{width:26px;height:26px}.u4-findl b{flex:1;font-size:17px;font-weight:700;color:var(--u-ink)}.u4-findl em{font-style:normal;color:var(--u-acct)}
+.u4-find-h .u4-safe{font-size:14px;color:var(--u-mu);margin-top:18px}
+.u4-tri{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:16px;width:100%;max-width:1360px;margin:40px auto 0;padding:0 40px;box-sizing:border-box}.u4-tri .u4-ph{height:380px;border-radius:20px 20px 0 0}.u4-tri.n1{grid-template-columns:minmax(0,1fr)}
+@media(max-width:760px){.hp-hero.u4-find-h{padding:0 0 40px}.u4-tri{order:-1;margin:0 0 36px!important}.u4-tri .u4-ph{border-radius:0!important}.u4-find-h h1{font-size:40px;line-height:1.18}.u4-find-h .u4-lead{font-size:16px;margin:16px auto 26px}.u4-find-h .u4-btns{flex-wrap:nowrap}
+.u4-findl{grid-template-columns:1fr 1fr;gap:10px;margin-top:30px}.u4-findl a{min-height:60px;padding:0 14px;gap:10px}.u4-findl b{font-size:15px}.u4-findl em{display:none}.u4-tri{grid-template-columns:1fr 1.4fr 1fr;gap:8px;margin-top:40px;padding:0}.u4-tri .u4-ph{height:200px;border-radius:14px 14px 0 0}}`,
+
     unoverlap: (c) => `
 .hp-hero.u4-over-h{background:var(--u-bg);padding:0 0 40px}
 .u4 .u4-ov-ph{height:620px}.u4-over-h .u4-w{position:relative;z-index:2}
@@ -509,6 +555,8 @@ ${BR}{color:var(--u-ink)}
 
   function tok(s) { const T = HPT.tokens(s); if (!T) return null; const th = s.theme; const a = T.a; const Rm = ramp(a);
     const P = {
+      unportal: { bg: '#FFFFFF', bg2: '#F3F6FA', ink: '#0F1B2D', mu: '#4F5B6E', line: '#E1E6EE', pt: '#F2B400', hf: 'inherit', hw: 800, hls: '-.04em', qf: 'inherit', qw: 700, br: '8px', nf: 'inherit', r: '12px' },
+      unfind: { bg: '#F9F6F2', bg2: '#FFFFFF', ink: '#2E2D29', mu: '#5F5B54', line: '#E5DED4', pt: '#175E54', hf: 'inherit', hw: 800, hls: '-.05em', qf: 'inherit', qw: 700, br: '999px', nf: 'inherit', r: '16px' },
       unsplit: { bg: '#FFFFFF', bg2: '#F1F6F3', ink: '#0F1A14', mu: '#4F5D55', line: '#E1E8E3', pt: '#E89B23', hf: 'inherit', hw: 800, hls: '-.045em', qf: 'inherit', qw: 700, br: '12px', nf: 'inherit', r: '16px' },
       unposter: { bg: '#FFFDF7', bg2: '#F7F1E3', ink: '#17150F', mu: '#5C5648', line: '#E6DFCD', pt: '#1F3A8A', hf: 'inherit', hw: 900, hls: '-.055em', qf: 'inherit', qw: 800, br: '0px', nf: 'inherit', r: '0px' },
       undark: { bg: '#0A0B10', bg2: '#14161F', ink: '#F3F4F8', mu: '#A6ABBB', line: '#272B38', pt: '#22D3EE', hf: 'inherit', hw: 800, hls: '-.045em', qf: 'inherit', qw: 700, br: '999px', nf: 'inherit', r: '20px', dark: 1 },
@@ -540,7 +588,8 @@ ${BR}{color:var(--u-ink)}
     if (th === 'unposter') return solid.replace(`border-bottom:1px solid ${k.line}`, `border-bottom:2px solid ${k.ink}`) + `${B} .hps-h .hps-wmk b{font-weight:900;letter-spacing:-.04em}${B} .hps-h .hps-cta{background:${k.ink}!important;color:${k.bg}!important;border-radius:0!important}` + foot.replace(`border-top:1px solid ${k.ink}`, `border-top:2px solid ${k.ink}`);
     if (th === 'unblock') return `${B} .hps-h{background:${k.a}!important;border:0;box-shadow:none!important}${B} .hps-h .hps-hw{max-width:1200px;min-height:84px}${B} .hps-h :is(a,b,span,.s2-mi>a,.hps-bg){color:${k.on}!important}${B} .hps-h .s2-mi>a{opacity:.82;font-weight:600}${B} .hps-h .hps-wmk b{font-weight:800;letter-spacing:-.03em}${B} .hps-h a.hps-cta.hps-cta{background:${k.on}!important;color:${k.a}!important;border-radius:999px!important}${B} .hps-h a.hps-cta.hps-cta *{color:${k.a}!important}` + foot.replace(`border-top:1px solid ${k.ink}`, `border-top:1px solid ${k.line}`);
     if (th === 'unblockOLD') return solid.replace(`border-bottom:1px solid ${k.line}`, 'border-bottom:0').replace(`background:${k.bg}!important`, `background:${k.a}!important`).replace(`color:${k.mu}!important;font-weight:550`, `color:${k.onm}!important;font-weight:600`).replace(`color:${k.ink}!important}`, `color:${k.on}!important}`) + `${B} .hps-h :is(.hps-login,.hps-bg){color:${k.on}!important}${B} .hps-h .hps-cta{background:${k.on}!important;color:${k.a}!important;border-radius:999px!important}` + foot;
-    if (th === 'unsplit' || th === 'unmag' || th === 'unoverlap') return solid + `${B} .hps-h .hps-wmk b{font-weight:800;letter-spacing:-.03em}${B} .hps-h .hps-cta{background:${k.a}!important;color:${k.on}!important;border-radius:${k.br}!important}` + foot.replace(`border-top:1px solid ${k.ink}`, `border-top:1px solid ${k.line}`);
+    if (th === 'unportal') return solid + `${B} .hps-h .hps-ut{background:${k.a}!important}${B} .hps-h .hps-ut :is(a,span,em,b){color:${k.on}!important}${B} .hps-h .hps-wmk b{font-weight:800;letter-spacing:-.03em}${B} .hps-h .hps-cta{background:${k.a}!important;color:${k.on}!important;border-radius:8px!important}` + foot.replace(`border-top:1px solid ${k.ink}`, `border-top:4px solid ${k.a}`);
+    if (th === 'unsplit' || th === 'unmag' || th === 'unoverlap' || th === 'unfind') return solid + `${B} .hps-h .hps-wmk b{font-weight:800;letter-spacing:-.03em}${B} .hps-h .hps-cta{background:${k.a}!important;color:${k.on}!important;border-radius:${k.br}!important}` + foot.replace(`border-top:1px solid ${k.ink}`, `border-top:1px solid ${k.line}`);
     return ''; }
 
   const FIX = `
@@ -564,6 +613,10 @@ ${BR}{color:var(--u-ink)}
   /* 세부 유형(sub) · 첫 화면 구성(form) — 10종이 서로 다른 첫 화면을 갖는다 */
   const D0 = (o) => Object.assign({ tags: ['univ', 'univ_lms'], tone: 'light', dens: '여유', illu: 'campus', card: 'flat', vis: 'photo', look: 'clean', base: 'clean', ck: 'photo', sh: 'none', r: 16, br: 999 }, o);
   const DEF = {
+    unportal: D0({ name: '본부 학사 포털', sub: '대학 본부 · 학사 포털', form: '사진 + 기관 색 패널 · 아이콘 빠른 메뉴', desc: '넓은 캠퍼스 사진과 기관 색 패널 · 아이콘 빠른 메뉴 6개(수강 · 학사 일정 · 공지 · 강의실 · 로그인 · 이수) · 공지와 학사 일정 2단 — 국내 대학 본부 홈페이지 구성을 참고한 학사 포털', dens: '보통',
+      acc: '#1D4E89', bg: '#FFFFFF', alt: '#F3F6FA', ink: '#0F1B2D', mu: '#4F5B6E', hero: 'split', look: 'campus', base: 'campus', sw2: '#F2B400', hk: 'unportal', r: 12, br: 8 }),
+    unfind: D0({ name: '학사 길잡이', sub: '학사 안내 · 학기 흐름', form: '질문형 가운데 제목 + 사진 3분할', desc: '「무엇을 찾나요」식 가운데 큰 제목 · 큰 바로 가기 4개 · 넓은 사진 3분할 · 학기 흐름 4단계 · 학사 일정 — 해외 대학 학사 안내(Registrar) 구성을 참고한 학사용',
+      acc: '#8C1515', bg: '#F9F6F2', alt: '#FFFFFF', ink: '#2E2D29', mu: '#5F5B54', hero: 'split', sw2: '#175E54', hk: 'unfind', r: 16 }),
     uncine: D0({ name: '시네마틱 캠퍼스', sub: '비교과 센터', form: '전면 사진', desc: '화면을 가득 채운 캠퍼스 사진 · 큰 한 문장 · 기관 색 바로 가기 띠 · 세로 사진 카드 · 사진 띠 — 재학생이 비교과를 고르고 신청하는 첫 화면',
       acc: '#0B3A66', bg: '#FFFFFF', alt: '#F3F4F6', ink: '#0E1621', mu: '#5A6472', hero: 'full', look: 'campus', base: 'campus', sw2: '#072845', hk: 'uncine', r: 20 }),
     unsplit: D0({ name: '오늘의 강의실', sub: '학사 LMS 강의실', form: '좌우 분할', desc: '왼쪽 큰 글 · 오른쪽 밝은 사진 분할 · 학사 일정과 공지 먼저 · 한 줄 목록형 교과목 — 재학생이 매일 들어와 수업을 이어 듣는 학사 LMS',
@@ -585,7 +638,7 @@ ${BR}{color:var(--u-ink)}
     unoverlap: D0({ name: '현장 실무 캠퍼스', sub: '전문대 · 실무', form: '사진 + 겹친 카드', desc: '넓은 현장 사진 위로 걸친 흰 카드 · 실습 4단계 · 가로 과정 카드 · 학사 일정 — 실습 · 현장 실무 중심 전문대학', dens: '보통',
       acc: '#292524', bg: '#F4F3F1', alt: '#FFFFFF', ink: '#1C1917', mu: '#57534E', hero: 'split', sw2: '#EA580C', hk: 'unoverlap', r: 6, br: 6 }) };
   const HD0 = (o) => Object.assign({ hf: 'sans', hw: 800, hls: -0.045, h1: 84, h1m: 40, lh1: 1.1, h2: 52, h2m: 32, h3: 20, body: 17, blh: 1.65, lead: 19, ey: { fs: 15, ls: 0, fw: 650, tt: 'none' }, sec: 140, secm: 84, w: 1200, gut: 40, r: 16, rs: 10, br: 999, bh: 58, bpx: 30, bfw: 700, bls: -0.01, bd: '1px solid rgba(0,0,0,.08)', sh: 'none', shh: 'none', hov: 'lift', em: 'accent', link: 'hover' }, o);
-  const HD = { uncine: HD0({ h1: 90, h1m: 42, lh1: 1.08, h2: 58, h2m: 34, r: 20, em: 'plain' }), unsplit: HD0({ h1: 64, br: 12 }), uncollage: HD0({ hls: -0.05, r: 24, br: 16 }),
+  const HD = { unportal: HD0({ h1: 64, h1m: 38, lh1: 1.14, r: 12, br: 8, em: 'plain' }), unfind: HD0({ hls: -0.05, h1: 76, h1m: 40, r: 16 }), uncine: HD0({ h1: 90, h1m: 42, lh1: 1.08, h2: 58, h2m: 34, r: 20, em: 'plain' }), unsplit: HD0({ h1: 64, br: 12 }), uncollage: HD0({ hls: -0.05, r: 24, br: 16 }),
     unclassic: HD0({ hf: 'serif', hw: 700, hls: -0.02, h1: 70, h1m: 36, lh1: 1.26, h2: 46, h2m: 30, ey: { fs: 14, ls: 0.16, fw: 600, tt: 'uppercase' }, r: 0, rs: 0, br: 2, bh: 56, hov: 'border', em: 'plain', link: 'underline' }),
     univy: HD0({ hf: 'serif', hw: 700, hls: -0.03, h1: 86, lh1: 1.14, ey: { fs: 15, ls: 0.04, fw: 650, tt: 'none' }, r: 4, rs: 3, hov: 'line', link: 'underline' }),
     unposter: HD0({ hw: 900, hls: -0.055, h1: 112, h1m: 46, lh1: 1.02, r: 0, rs: 0, br: 0, hov: 'border', em: 'plain' }), undark: HD0({ h1: 92, h1m: 42, lh1: 1.06, r: 20 }),
@@ -595,6 +648,19 @@ ${BR}{color:var(--u-ink)}
   const P = (hpt, o) => S2x('text', Object.assign({ variant: 'features', hpt, eyebrow: '', title: '', sub: '', cols: [] }, o || {}));
   const WHO_OPEN = [['지역 주민', '열린 강좌 보기', '열린 강좌 · 수강 신청'], ['재학생', '학번으로 로그인', '비교과 · 교과목'], ['교수자', '공지 보기', '수업 운영 · 공지'], ['협력 기관', '함께 강좌 열기', '산학 · 지역 협력']];
   const T = {
+    unportal: { scene: '대학 본부 학사 포털 — 학생 · 교직원이 첫 화면 아래 빠른 메뉴로 수강 · 학사 일정 · 공지 · 강의실에 바로 가는 구성', purpose: ['info', 'learn'],
+      build: () => [S2x('banner', { eyebrow: '', title: '배움과 연구가\n만나는 캠퍼스', sub: '수강 신청부터 학사 일정, 공지, 온라인 강의실까지. 학생과 교직원이 자주 찾는 학사 메뉴를 한곳에 모았어요.', cta: '수강 신청하기', cta2: '학번으로 로그인' }),
+        P('u4-board', { view: 'portal', title: '학사 일정', title2: '공지사항', cols: [['공지', ''], ['학사 일정', '']] }),
+        P('u4-cls', { view: 'card', eyebrow: '이번 학기', title: '비교과 · 특강 신청', n: 3, cols: [['강좌', '공개 강좌 자동 표시']] }),
+        P('u4-gallery', { title: '캠퍼스 생활', cols: [['도서관', '시험 기간에도 자리가 넉넉해요'], ['강의실', '토론과 발표가 쉬운 모둠 강의실'], ['라운지', '수업 사이에 쉬어 가는 곳']] }),
+        P('u4-close', { view: 'center', title: '필요한 학사 업무,\n여기서 시작해요.', sub: '학번으로 로그인하면 내 수강 · 이수 현황을 바로 볼 수 있어요.', cta: '수강 신청하기', cta2: '학번으로 로그인', cols: [['신청', ''], ['연락처', '']] })] },
+    unfind: { scene: '학사 안내 · 학기 흐름 — 학생이 가운데 질문형 첫 화면에서 수강 · 일정 · 공지 · 강의실로 바로 가고, 학기 흐름을 확인하는 구성', purpose: ['info', 'learn'],
+      build: () => [S2x('banner', { eyebrow: '', title: '학사, 어디서부터\n[찾으세요?]', sub: '수강 신청 · 학사 일정 · 공지 · 강의실. 이번 학기에 필요한 것을 한 번에 찾아 드려요.', cta: '학번으로 로그인', cta2: '학사 일정 보기' }),
+        P('u4-steps', { title: '한 학기는\n이렇게 흘러가요', cta: '학사 일정 전체 보기', go: '#cal', cols: [['수강 신청', '개강 전 과목을 고르고 신청해요'], ['수업 · 과제', '온라인 강의실에서 듣고 과제를 내요'], ['시험', '중간 · 기말고사 일정을 확인해요'], ['이수 · 성적', '이수증과 배지를 바로 확인해요']] }),
+        P('u4-board', { view: 'text', title: '다가오는 학사 일정', title2: '학사 공지', cols: [['학사 일정', ''], ['공지', '']] }),
+        P('u4-cls', { view: 'row', eyebrow: '이번 학기 개설 과목', title: '지금 신청할 수 있어요', n: 5, cols: [['강좌', '공개 강좌 자동 표시']] }),
+        P('u4-open', { title: '학사 문의는\n이렇게 해요', sub: '수강 · 학적 · 이수 관련 문의는 전화나 메일로 받아요.', l1: '개설 과목 보기', cols: [['열린 강좌', ''], ['문의', ''], ['오시는 길', '']] }),
+        P('u4-close', { view: 'navy', title: '이번 학기도,\n차근차근 함께해요.', sub: '학번으로 로그인하면 내 학사 정보가 한 화면에 모여요.', cta: '개설 과목 보기', cta2: '학번으로 로그인', cols: [['신청', ''], ['로그인', '']] })] },
     uncine: { scene: '비교과 센터 — 재학생이 전면 사진 첫 화면에서 비교과를 고르고 신청 · 이수까지 이어 가는 구성', purpose: ['learn', 'apply', 'info'],
       build: () => [S2x('banner', { eyebrow: '', title: '다음 학기의 나를,\n지금 만들어요.', sub: '비교과부터 온라인 강의실, 디지털 배지까지. 모든 배움이 학번 하나로 이어져요.', cta: '비교과 신청하기', cta2: '학번으로 로그인' }),
         P('u4-cls', { view: 'tall', title: '이번 학기,\n이런 걸 배워요.', n: 3, cols: [['강좌', '공개 강좌 자동 표시']] }),

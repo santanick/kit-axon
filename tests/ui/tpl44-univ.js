@@ -9,7 +9,7 @@ const http = require('node:http'); const fs = require('node:fs'); const path = r
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../../didisam'); const SHOT = process.env.SHOT || '';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/json' };
-const IDS = ['uncine', 'unsplit', 'uncollage', 'unclassic', 'univy', 'unposter', 'undark', 'unmag', 'unblock', 'unoverlap'];
+const IDS = ['uncine', 'unsplit', 'uncollage', 'unclassic', 'univy', 'unposter', 'undark', 'unmag', 'unblock', 'unoverlap', 'unportal', 'unfind'];
 const inject = h => /hp44-univ\.js/.test(h) ? h : /hpv-univ\.js/.test(h) ? h.replace(/(<script src="hpv-univ\.js[^"]*"><\/script>)/, '$1<script src="hp44-univ.js"></script>') : h.replace(/(<script src="hpprem\.js[^"]*"><\/script>)/, '$1<script src="hp44-univ.js"></script>');
 
 (async () => {
@@ -48,21 +48,21 @@ const inject = h => /hp44-univ\.js/.test(h) ? h : /hpv-univ\.js/.test(h) ? h.rep
   { const r = await p.evaluate(ids => ids.map(id => { const tp = TPL.find(t => t.id === 't44-' + id) || {};
       return { id, has: HPT.has(id), tp: !!tp.build, g44: tp.g44, sub: tp.sub, form: tp.form, types: tp.types || [], hd: !!(window.HPD && HPD.list().includes(id)) }; }), IDS);
     ok(r.every(x => x.has && x.tp && x.g44 === 1 && x.sub && x.hd && x.types.includes('univ') && x.types.includes('univ_lms')), `등록: HPT.reg · HPD.reg · TPL(t44-*, g44, 세부 유형) · 대학 유형 ${JSON.stringify(r.filter(x => !(x.has && x.tp && x.g44 && x.hd)))}`);
-    ok(new Set(r.map(x => x.sub)).size === 10, `세부 유형 10가지 (${r.map(x => x.sub).join(' · ')})`);
+    ok(new Set(r.map(x => x.sub)).size === IDS.length, `세부 유형 ${IDS.length}가지 (${r.map(x => x.sub).join(' · ')})`);
     ok(new Set(r.map(x => x.form)).size >= 6, `첫 화면 구성 ${new Set(r.map(x => x.form)).size}가지 (${r.map(x => x.form).join(' · ')})`);
     ok(r.some(x => /전통|격식/.test(x.sub + x.form)), '전통 · 격식형 1종 이상'); }
   /* ── 2) 테마 미리보기(HPT.thumb) — 갤러리 화면은 G 담당 ── */
   { ok(await p.evaluate(() => /u4-ivy-h/.test(HPT.thumb(site(), 'univy')) && /u4-cls-h/.test(HPT.thumb(site(), 'unclassic')) && /u4-dark-h/.test(HPT.thumb(site(), 'undark'))), '테마 미리보기(HPT.thumb): 게시본과 같은 첫 화면'); }
 
   /* ── 3) 게시본 390 · 1440 관문 + 구성 ── */
-  const HSEL = { univy: '.u4-ivy-h', uncine: '.u4-cine-h', uncollage: '.u4-col-h', unclassic: '.u4-cls-h', unsplit: '.u4-split-h', unposter: '.u4-poster-h', undark: '.u4-dark-h', unmag: '.u4-mag-h', unblock: '.u4-block-h', unoverlap: '.u4-over-h' };
+  const HSEL = { univy: '.u4-ivy-h', uncine: '.u4-cine-h', uncollage: '.u4-col-h', unclassic: '.u4-cls-h', unsplit: '.u4-split-h', unposter: '.u4-poster-h', undark: '.u4-dark-h', unmag: '.u4-mag-h', unblock: '.u4-block-h', unoverlap: '.u4-over-h', unportal: '.u4-portal-h', unfind: '.u4-find-h' };
   for (const id of IDS) { const h = await p.evaluate(id => siteHTML(siteFromTpl(TPL.find(t => t.id === 't44-' + id)), true, 'ko'), id); pages['/__t.html'] = h;
     for (const w of [1440, 390]) { const c = await browser.newContext({ viewport: { width: w, height: w < 600 ? 844 : 900 } }); await c.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); const q = await c.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message));
       await q.goto(base + '/__t.html', { waitUntil: 'load' }); await q.evaluate(async () => { for (let y = 0; y < document.documentElement.scrollHeight; y += 600) { scrollTo(0, y); await new Promise(r => setTimeout(r, 50)); } scrollTo(0, 0); }); await q.waitForTimeout(500);
       const g = await gate(q); ok(!g.ovf && !g.out.length && !g.small.length && !g.tiny.length && !g.wrap1.length && !pe.length, `${id} @${w}: 넘침 ${g.ovf} · 잘림 ${g.out.length} · 44px 미만 ${g.small.length} · 13px 미만 ${g.tiny.length} · 한 글자 꺾임 ${g.wrap1.length} · 오류 ${pe.length} ${[...g.out, ...g.small, ...g.tiny, ...g.wrap1, ...pe].slice(0, 4).join(' / ')}`);
       const s = await q.evaluate(sel => { const H = document.querySelector(sel); const h1 = H && H.querySelector('h1'); const im = H && [...H.querySelectorAll('img')].find(i => i.offsetWidth > 0); const r = H ? H.getBoundingClientRect() : { height: 0 };
         return { hero: !!H, h1: h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0, btn: H ? H.querySelectorAll('.u4-btn').length : 0, photo: !!(im && im.naturalWidth > 0), dday: H ? /D-\d|마감 임박/.test(H.innerText) : true, panel: H ? H.querySelectorAll('aside, .hxu-uh-pn').length : 1, hh: Math.round(r.height),
-          first: (document.querySelector('#p-home section') || {}).className || '', secs: [...document.querySelectorAll('#p-home section.u4')].map(x => (String(x.className).match(/u4-(story|cls|big|quote|board|band|open|lms|medal|motto|close|whos|steps)\b/) || [''])[0]).filter(Boolean),
+          first: (document.querySelector('#p-home section') || {}).className || '', secs: [...document.querySelectorAll('#p-home section.u4')].map(x => (String(x.className).match(/u4-(story|cls|big|quote|board|band|open|lms|medal|motto|close|whos|steps|gallery)\b/) || [''])[0]).filter(Boolean),
           cls: document.querySelectorAll('#p-home .u4-cls li a').length, imgs: [...document.querySelectorAll('#p-home .u4-cls img')].map(i => i.getAttribute('src')), cal: (document.querySelector('.u4-board .bcal') || {}).innerText || '', nt: (document.querySelector('.u4-board .bnt') || {}).innerText || '' }; }, HSEL[id]);
       const big = w === 1440 ? 64 : 34; ok(s.hero && s.h1 >= big && s.btn === 2 && s.photo && !s.dday && !s.panel, `${id} @${w}: 첫 화면 — 큰 제목 ${s.h1}px · 버튼 ${s.btn}개 · 사진 · 판/D-day 없음`);
       if (w === 1440) { ok(s.secs.length >= 4 && s.secs.length <= 8, `${id}: 섹션 구성 ${s.secs.join(' ')}`); ok(s.cls >= 3 && new Set(s.imgs).size === s.imgs.length, `${id}: 공개 강좌 ${s.cls}개(실제 강좌 · 사진 중복 ${s.imgs.length - new Set(s.imgs).size})`);
@@ -89,7 +89,7 @@ const inject = h => /hp44-univ\.js/.test(h) ? h : /hpv-univ\.js/.test(h) ? h.rep
   /* ── 6) 템플릿 사용 → 학습자 미리보기(Shadow DOM) ── */
   const CLK = { univy: [['.u4-idx a', /^#class\//], ['.u4-paths a:nth-child(2)', /^#login/]], uncine: [['.u4-tall a', /^#class\//], ['.u4-bar a:nth-child(2)', /^#login/]],
     uncollage: [['.u4-card a', /^#class\//], ['.u4-who a:nth-of-type(2)', /^#login/]], unclassic: [['.u4-frame a', /^#class\//], ['.u4-board .bcal li a', /^#cal/]],
-    unsplit: [['.u4-row a', /^#class\//], ['.u4-split-h .u4-btn.p', /^#login/]], unposter: [['.u4-card a', /^#class\//]], undark: [['.u4-tall a', /^#class\//]], unmag: [['.u4-wide a', /^#class\//]], unblock: [['.u4-wide a', /^#class\//]], unoverlap: [['.u4-wide a', /^#class\//], ['.u4-over-h .u4-btn.s', /^#login/]] };
+    unsplit: [['.u4-row a', /^#class\//], ['.u4-split-h .u4-btn.p', /^#login/]], unposter: [['.u4-card a', /^#class\//]], undark: [['.u4-tall a', /^#class\//]], unmag: [['.u4-wide a', /^#class\//]], unblock: [['.u4-wide a', /^#class\//]], unoverlap: [['.u4-wide a', /^#class\//], ['.u4-over-h .u4-btn.s', /^#login/]], unportal: [['.u4-quickm a:nth-child(2)', /^#cal/], ['.u4-card a', /^#class\//]], unfind: [['.u4-findl a:nth-child(2)', /^#cal/], ['.u4-row a', /^#class\//]] };
   for (const id of IDS) { await p.evaluate(id => { const f = document.getElementById('pvF'); if (f) f.remove(); ACT['tpl-use']({ dataset: { v: 't44-' + id } }); save(); }, id); await p.waitForTimeout(700);
     ok(await p.evaluate(id => S.site.theme === id && S.site.tpl === 't44-' + id, id), `${id} 템플릿 사용: 테마 · 템플릿 반영`);
     await p.evaluate(() => { const f = document.createElement('iframe'); f.id = 'pvF'; f.src = 'learner.html?preview=1#home'; f.style.cssText = 'position:fixed;left:0;top:0;width:1280px;height:900px;z-index:99999;background:#fff'; document.body.appendChild(f); }); await p.waitForFunction(() => { const f = document.getElementById('pvF'); const d = f && f.contentDocument; return !!(d && [...d.querySelectorAll('.smhost')].some(x => x.shadowRoot && x.shadowRoot.querySelector('.hp-hero.u4'))); }, null, { timeout: 15000 }).catch(() => 0); await p.waitForTimeout(400);
