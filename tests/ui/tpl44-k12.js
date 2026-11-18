@@ -4,9 +4,10 @@
 const H = require('./hp-visual/lib.js');
 const A = H.args(process.argv.slice(2));
 const IDS = ['kfmath', 'kfeng', 'kfessay', 'kfprep', 'kfsci', 'kfkids', 'kfcode', 'kfart', 'kfmusic', 'kfsport'];
-const SECS = { kfmath: ['.k4-split', '.k4-story', '.k4-tt', '.k4-cls', '.k4-quote', '.k4-fin'], kfeng: ['.k4-frame', '.k4-stm', '.k4-cls', '.k4-week', '.k4-quote', '.k4-fin'], kfessay: ['.k4-center', '.k4-story', '.k4-cls', '.k4-quote', '.k4-fin'],
-  kfprep: ['.k4-formal', '.k4-steps', '.k4-rows', '.k4-notice', '.k4-fin'], kfsci: ['.k4-cine', '.k4-stm', '.k4-cls', '.k4-week', '.k4-quote', '.k4-fin'], kfkids: ['.k4-bubble', '.k4-steps', '.k4-gal', '.k4-cls', '.k4-quote', '.k4-fin'],
-  kfcode: ['.k4-grid', '.k4-band', '.k4-steps', '.k4-fin'], kfart: ['.k4-collage', '.k4-band', '.k4-gal', '.k4-quote', '.k4-fin'], kfmusic: ['.k4-half', '.k4-story', '.k4-tt', '.k4-quote', '.k4-fin'], kfsport: ['.k4-slab', '.k4-band', '.k4-week', '.k4-gal', '.k4-fin'] };
+const SECS = { kfmath: ['.k4-split', '.k4-story', '.k4-ttg', '.k4-cls', '.k4-fin'], kfeng: ['.k4-frame', '.k4-stm', '.k4-cls', '.k4-week', '.k4-quote', '.k4-fin'], kfessay: ['.k4-center', '.k4-story', '.k4-cls', '.k4-quote', '.k4-fin'],
+  kfprep: ['.k4-formal', '.k4-steps', '.k4-rows', '.k4-ttg', '.k4-fin'], kfsci: ['.k4-cine', '.k4-stm', '.k4-cls', '.k4-week', '.k4-quote', '.k4-fin'], kfkids: ['.k4-bubble', '.k4-steps', '.k4-gal', '.k4-cls', '.k4-fin'],
+  kfcode: ['.k4-grid', '.k4-band', '.k4-steps', '.k4-fin'], kfart: ['.k4-collage', '.k4-band', '.k4-gal', '.k4-quote', '.k4-fin'], kfmusic: ['.k4-half', '.k4-story', '.k4-ttg', '.k4-quote', '.k4-fin'], kfsport: ['.k4-slab', '.k4-band', '.k4-week', '.k4-gal', '.k4-fin'] };
+const CARDS = {}; /* 템플릿별 강좌 · 사진 띠 · 갤러리 사진(유형 안 템플릿끼리 겹치지 않아야 함) */
 const H1MAX = Object.fromEntries(IDS.map(id => [id, id === 'kfart' ? [3, 4] : [2, 4]]));
 const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { const res = await r.fetch(); let b = await res.text();
   if (!/hp44-k12\.js/.test(b)) b = b.replace(/(<script src="hpprem\.js[^"]*"><\/script>)/, '$1\n<script src="hp44-k12.js"></script>');
@@ -36,13 +37,18 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
       xs.forEach(x => { const y = b.top + Math.min(24, b.height / 4); const top = document.elementFromPoint(x, y); if (top !== host && !(host && host.contains(top))) bad.push(`${Math.round(x)},${Math.round(y)} ${top && top.tagName}.${top && top.className}`); else { const inn = sr.elementFromPoint ? sr.elementFromPoint(x, y) : null; if (inn && !inn.closest('h1') && !inn.closest('.k4-h')) bad.push(`inner ${inn.tagName}.${inn.className}`); } });
       return bad.join(' | '); })();
     const sy0 = scrollY;
+    const sidOf = u => { const m = String(u || '').match(/([a-z]{3}-\d{2})(?:-800)?\.webp/); return m ? m[1] : String(u || ''); };
+    const pics = q('.k4-h img, .k4-s img, section[data-hx] img').filter(vis).map(i => sidOf(i.currentSrc || i.src)); const dup = pics.filter((x, i) => pics.indexOf(x) !== i);
+    const cards = q('.k4-cls img, .k4-band img, .k4-gal img').map(i => sidOf(i.getAttribute('src')));
+    const both = q('.k4-quote').some(vis) && q('section[data-hx="rev"]').some(vis);
+    const cd = q('.k4-cds .k4-cd').filter(vis).slice(0, 2).map(x => Math.round(x.getBoundingClientRect().top)); const horiz = cd.length < 2 || cd[0] === cd[1];
     const cta = q('.k4-h .k4-b.p').filter(vis)[0]; const ctaB = cta ? Math.round(cta.getBoundingClientRect().bottom) : 9999;
     const h1B = h1 ? Math.round(h1.getBoundingClientRect().bottom) : 9999;
     const rv = (() => { try { return (HPT.reviews ? HPT.reviews() : []).length; } catch (e) { return -1; } })();
     const quoteTx = q('.k4-quote blockquote').map(x => x.textContent).join('|'); const bigTx = q('.k4-num .k4-big').map(x => x.textContent).join('|');
     const topImg = q('.k4-h img').filter(vis).some(im => { const b = im.getBoundingClientRect(); return b.top < innerHeight && b.bottom > 0 && b.height >= 100 && im.complete && im.naturalWidth > 0; });
     const secs = SEL.filter(s => q(s).some(vis)); const txt = R.map(r => r.textContent).join(' ');
-    return { ctaB, h1B, quoteTx, bigTx, cover, sy0, over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, inputs: q('.k4-h input, .k4-s input, .k4-s form').length, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.k4-h h1, .k4-fin h2').map(x => x.textContent).join('')) }; }, sel);
+    return { dup, cards, both, horiz, ctaB, h1B, quoteTx, bigTx, cover, sy0, over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, inputs: q('.k4-h input, .k4-s input, .k4-s form').length, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.k4-h h1, .k4-fin h2').map(x => x.textContent).join('')) }; }, sel);
   const allowed = h => /^(#login\/(family|my|mypay)|#join|#p-c-[\w-]+|#p-m-[\w-]+|#class\/[\w-]+|#courses|#shop|#notice|tel:[\d+]+|mailto:.+)$/.test(h);
   try {
     for (const type of ['k12']) {
@@ -69,6 +75,10 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
           ok(!/끊겨|부탁|해 ?주세요|환불|오류|[?？]$/.test(m.quoteTx), `${tag} 후기 인용에 불만 · 요청 · 질문 없음(${m.quoteTx.slice(0, 30)})`);
           ok(!m.bigTx || !/^\d개 반$|^\d\.\d\/5$/.test(m.bigTx), `${tag} 큰 숫자는 자랑할 만한 값만(${m.bigTx || '숨김'})`);
           ok(m.topImg, `${tag} 첫 화면 안에 실사진`);
+          ok(!m.dup.length, `${tag} 한 페이지 안 사진 중복 0(${m.dup.join(',')})`);
+          ok(!m.both, `${tag} 자체 후기 인용과 공통 후기(hx-rev) 중 하나만`);
+          ok(m.horiz, `${tag} 반 카드: ${w === 390 ? '휴대폰 가로 넘김' : 'PC 가로 배열'}`);
+          if (w === 1440) CARDS[id] = m.cards;
           ok(!m.cover && m.sy0 === 0, `${tag} 첫 화면 제목 위쪽이 머리글에 가려지지 않음(${m.cover || 'ok'} · scrollY ${m.sy0})`);
           ok(!m.small.length, `${tag} 13px 미만 글자 0(${m.small.join(',')})`);
           ok(!m.tap.length, `${tag} 누르는 칸 44px 이상(${m.tap.join(',')})`);
@@ -83,6 +93,8 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
         }
         ok(!perr.length, `[${type}] ${id} 학습자 pageerror 0 ${perr.join('|')}`); await pg.close();
       }
+      { const ov = []; IDS.forEach((a2, i) => IDS.slice(i + 1).forEach(b2 => { const x = (CARDS[a2] || []).filter(v => (CARDS[b2] || []).includes(v)); if (x.length) ov.push(`${a2}·${b2}:${x.join('/')}`); }));
+        ok(!ov.length && Object.keys(CARDS).length === IDS.length, `[${type}] 템플릿끼리 강좌 · 갤러리 사진이 겹치지 않음(${ov.join(' ')})`); }
       ok(!errs.length, `[${type}] 운영 pageerror 0 ${errs.slice(0, 3).join('|')}`); await o.ctx.close();
     }
     /* 큰 숫자: 시연 데이터(후기 3건 · 반 6개 · 정원 12~32명)에서는 숨김(위 점검), 자랑할 만한 값이면 템플릿마다 정한 지표로 보임 */
