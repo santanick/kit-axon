@@ -74,7 +74,8 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
       ok(!['lfhall', 'lfuniv', 'lfcredit', 'lflibrary'].includes(id) || P.fields >= 2, `${id}: 분야 아이콘 그리드(${P.fields}개 분야)`);
       ok(!/l4-(cards|rows)"/.test(r.html) || P.chips > 0, `${id}: 요일 · 시간대 칩 ${P.chips}개`); }
     await view(id, r.html); }
-  { const all = Object.values(CARD).flat(); const dup = all.filter((x, k) => all.indexOf(x) !== k); ok(all.length >= 20 && !dup.length, `강좌 카드 사진: 10종 사이 겹침 0(${all.length}장 ${dup.join(',')})`); }
+  /* v44.1 FIX3 B: 강좌 이름 규칙 사진은 관련성 우선(템플릿끼리 같을 수 있음) → 세트 사진(규칙 없는 강좌)만 템플릿 사이 겹침 0 */
+  { const RU = new Set(await a.p.evaluate(() => (S.classes || []).flatMap(c => { const r0 = window.G44PH && G44PH.rule(c.name); return r0 ? r0.ids : []; }))); const allC = Object.values(CARD).flat(); const all = allC.filter(x => !RU.has(x)); const dup = all.filter((x, k) => all.indexOf(x) !== k); ok(allC.length >= 20 && !dup.length, `강좌 카드 사진: 세트 사진 10종 사이 겹침 0(${allC.length}장 중 세트 ${all.length}장 ${dup.join(',')})`); }
   /* ── 공통 부품 기본 켜기 · 자체 인용과 후기 중복 없음 ── */
   { const r = await a.p.evaluate(ids => ids.map(id => { const L = TPL.find(t => t.id === 't44-' + id).build(); const on = L.filter(x => x && x.data && /^hx-/.test(x.data.hpt) && !x.hide).map(x => x.data.hpt); const q = L.find(x => x && x.data && x.data.hpt === 'l4-quote'); return { id, on, dupRev: !!(on.includes('hx-rev') && q && !q.data.say) }; }), IDS);
     r.forEach(x => ok(x.on.length >= 2 && !x.dupRev, `${x.id}: 공통 부품 기본 켜기 ${x.on.join(' · ')} · 자체 인용은 후기 없이`)); }
@@ -115,6 +116,8 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
       ok(!pe.length, `게시본 ${w} pageerror 0 ${pe.join('|')}`); await q.close(); }
     await g.ctx.close(); }
 
+  /* v44.1 FIX3 B: 규칙이 있는 강좌 사진은 규칙 사진만 — 모든 강좌 사진 레이아웃(카드 · 갤러리 · 사진 띠 · 목록 썸네일), 기관 강좌 이름 그대로 · qaCls 두 번 */
+  try { await require('./hp-visual/photorule.js')(browser, base + '/', 'lifelong', ok, '[life]'); } catch (e) { ok(false, '사진 규칙 점검 예외 ' + (e && e.message || e)); }
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);
 })();

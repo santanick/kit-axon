@@ -74,9 +74,10 @@ const inject = h => /hp44-univ\.js/.test(h) ? h : /hpv-univ\.js/.test(h) ? h.rep
 
   /* ── 3-1) 강좌 카드 사진이 템플릿마다 다름(같은 유형 12종 사이 중복 0) ── */
   { const r = await p.evaluate(ids => ids.map(id => { const d = new DOMParser().parseFromString(siteHTML(siteFromTpl(TPL.find(t => t.id === 't44-' + id)), true, 'ko'), 'text/html');
-      return [id, [...d.querySelectorAll('.u4-cls figure img')].map(i => (String(i.getAttribute('src')).match(/stock\/([a-z]{3}-\d{2})/) || [])[1]).filter(Boolean)]; }), IDS);
-    const all = r.flatMap(([, L]) => L); const dup = all.filter((x, k) => all.indexOf(x) !== k);
-    ok(!dup.length && r.every(([, L]) => L.length === 0 || new Set(L).size === L.length), `강좌 카드 사진: 템플릿 사이 중복 ${dup.length} (${[...new Set(dup)].join(' ')})`); }
+      const R0 = new Set((S.classes || []).flatMap(c => { const r0 = window.G44PH && G44PH.rule(c.name); return r0 ? r0.ids : []; })); /* v44.1 FIX3 B: 강좌 이름 규칙 사진은 관련성 우선(템플릿끼리 같을 수 있음) → 세트 사진만 겹침 0 */
+      return [id, [...d.querySelectorAll('.u4-cls figure img')].map(i => (String(i.getAttribute('src')).match(/stock\/([a-z]{3}-\d{2})/) || [])[1]).filter(Boolean), [...R0]]; }), IDS);
+    const RU = new Set(r.flatMap(x => x[2])); const all = r.flatMap(([, L]) => L.filter(k => !RU.has(k))); const dup = all.filter((x, k) => all.indexOf(x) !== k);
+    ok(!dup.length && r.every(([, L]) => L.length === 0 || new Set(L).size === L.length), `강좌 카드 사진: 한 템플릿 안 중복 0 · 세트 사진(규칙 없는 강좌) 템플릿 사이 중복 ${dup.length} (${[...new Set(dup)].join(' ')})`); }
 
   /* ── 4) 링크 · 개인정보 ── */
   { const r = await p.evaluate(ids => ids.map(id => { const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); const h = siteHTML(s, true, 'ko'); const d = new DOMParser().parseFromString(h, 'text/html');
@@ -135,6 +136,8 @@ const inject = h => /hp44-univ\.js/.test(h) ? h : /hpv-univ\.js/.test(h) ? h.rep
         if (w === 1440 && r) ok(!r.big, `${id} 게시본: 시연 데이터(강좌 10개 미만 · 배지 100개 미만)에서는 큰 숫자 블록 숨김`);
         await q.close(); } }
     ok(!errs.length, `게시본 점검 관리자 pageerror 0 ${errs.join('|')}`); await ctx.close(); }
+  /* v44.1 FIX3 B: 규칙이 있는 강좌 사진은 규칙 사진만 — 모든 강좌 사진 레이아웃(카드 · 갤러리 · 사진 띠 · 목록 썸네일), 기관 강좌 이름 그대로 · qaCls 두 번 */
+  try { await require('./hp-visual/photorule.js')(browser, base + '/', 'univ', ok, '[univ]'); } catch (e) { ok(false, '사진 규칙 점검 예외 ' + (e && e.message || e)); }
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

@@ -99,13 +99,9 @@
   function clsPh(s, c, i) { const m = s && s.img && s.img['cls-' + c.id]; if (m && m.src) return { src: m.src, alt: m.alt || c.name, pos: m.pos || '50% 50%' };
     if (c.thumb && /^(img\/|https?:|data:image)/.test(c.thumb)) return { src: c.thumb, alt: c.name, pos: '50% 50%' };
     const H = window.HPSTOCK; if (!H || (s && s.stockOff)) return null; if (PHM.has(c.id)) return PHM.get(c.id); let x = null; const ty = (S.org && S.org.type) || 'univ';
-    const set = CSET[s && s.theme]; if (set && H.get) { let rule = []; try { const r0 = H.courseRule ? H.courseRule(c.name) : null; rule = (r0 && r0.ids) || []; } catch (e) { }
-      const id = set.find(k => rule.includes(k) && !USED.has(k)) || set.find(k => !USED.has(k)); x = id ? H.get(id) : null;
-      if (x) { const r = { src: H.url(x, 'sm'), alt: '', pos: x.focus || '50% 50%' }; USED.add(x.id); PHM.set(c.id, r); return r; } }
-    try { x = typeof H.forCourse === 'function' ? H.forCourse(ty, c.name, { seed: String(c.id), exclude: [...USED] }) : null; } catch (e) { x = null; }
-    if (!x && typeof H.forScene === 'function') { try { x = H.forScene(ty, `${c.name} ${['세미나 토론', '강의실 수업', '도서관 공부', '워크숍 실습'][i % 4]}`, 'card', { seed: c.id + i, exclude: [...USED] }); } catch (e) { x = null; } }
-    if (!x && typeof H.pick === 'function') { try { const L = H.pick(['univ', 'card', 'seminar', 'lecture', 'library'], 30, c.id) || []; x = L.find(y => y && !USED.has(y.id)) || null; } catch (e) { x = null; } }
-    const r = x ? { src: H.url(x, 'sm'), alt: '', pos: x.focus || '50% 50%' } : null; if (x) USED.add(x.id); PHM.set(c.id, r); return r; }
+    /* 공통 고르기(global.js G44PH): ② 강좌 이름 규칙 ③ 템플릿 세트 — 규칙이 있는데 남은 사진이 없으면 사진 없는 카드 */
+    const G = window.G44PH; let p = null; try { p = G ? G.pick(c, s, { used: USED, set: CSET[s && s.theme] || [], salt: Math.max(0, IDS.indexOf(s && s.theme)), noOp: 1 }) : null; } catch (e) { p = null; }
+    const r = p ? { src: p.src, alt: '', pos: p.pos || '50% 50%' } : null; PHM.set(c.id, r); return r; }
   const clsFig = (s, c, i, cls) => { const p = clsPh(s, c, i); return p ? `<figure class="hps-img u4-ph ${cls}" data-slot="cls-${E(c.id)}"><img src="${E(p.src)}" alt="${E(p.alt)}" loading="lazy" decoding="async" style="object-fit:cover;object-position:${E(p.pos)}"></figure>` : `<figure class="u4-ph u4-ph0 ${cls}" aria-hidden="true"></figure>`; };
 
   /* ══ 첫 화면 4종 ══ */

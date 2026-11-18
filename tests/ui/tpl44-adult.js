@@ -115,6 +115,8 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
         ok(ed.ok, `[빈 기관] ${id} 스튜디오 미리보기 렌더(${ed.err})`); await pg.close(); }
       await o.ctx.close(); }
   } catch (e) { ok(false, '예외 ' + (e && e.stack || e)); }
+  /* v44.1 FIX3 B: 규칙이 있는 강좌 사진은 규칙 사진만 — 모든 강좌 사진 레이아웃(카드 · 갤러리 · 사진 띠 · 목록 썸네일), 기관 강좌 이름 그대로 · qaCls 두 번 */
+  try { await require('./hp-visual/photorule.js')(br, base, 'adult', ok, '[adult]'); } catch (e) { ok(false, '사진 규칙 점검 예외 ' + (e && e.message || e)); }
   await br.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);
 })();

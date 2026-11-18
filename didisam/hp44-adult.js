@@ -65,16 +65,8 @@
   };
   const keyOf = v => String(v || '').replace(/^.*\/img\/stock\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, '');
   const pageStart = s => { USED = new Set(); try { Object.values((s && s.photos) || {}).forEach(v => USED.add(keyOf(v))); Object.values((s && s.img) || {}).forEach(v => { if (v) USED.add(keyOf(v.stock || v.src)); }); } catch (e) { } };
-  const clsPh = (c, s, i) => { let m = null; try { m = HPS.cardImg ? HPS.cardImg(c, s) : null; } catch (e) { m = null; }
-    if (m && !m.stock && !USED.has(m.src)) { USED.add(m.src); return { src: m.big || m.src, alt: m.alt || c.name, pos: m.pos, stock: false }; }
-    const H = window.HPSTOCK; if (!H) return null;
-    /* ② 강좌 이름 · 분야로 확실히 맞는 사진(HPSTOCK.courseRule) — 페이지 안 중복 제외, 템플릿마다 후보 시작점을 달리해 템플릿끼리 겹침을 줄인다(관련성 우선) */
-    try { const r = typeof H.courseRule === 'function' ? H.courseRule(c.name) : null; const ids = r ? r.ids.filter(id => !USED.has(id) && H.get(id)) : [];
-      if (ids.length) { const t = Math.max(0, IDS.indexOf(s && s.theme)); const id = ids[t % ids.length]; const x = H.get(id); USED.add(id); return { src: H.url(x, 'sm'), alt: x.alt || c.name, pos: x.focus, stock: true }; } } catch (e) { }
-    /* ③ 맞는 사진이 없을 때만 템플릿 × 분야 세트 */
-    for (const id of (CARD[s && s.theme] || [])) { if (USED.has(id)) continue; const x = H.get(id); if (!x) continue; USED.add(id); return { src: H.url(x, 'sm'), alt: x.alt || c.name, pos: x.focus, stock: true }; }
-    try { let x = null; for (let k = 0; k < 8 && (!x || USED.has(x.id)); k++) x = H.photo(c.name, c.id + '|' + i + '|' + k, { id: true, slot: 'card', scope: 'a4-' + c.id + k }); if (x && !USED.has(x.id)) { USED.add(x.id); return { src: H.url(x, 'sm'), alt: x.alt, pos: x.focus, stock: true }; } } catch (e) { }
-    return null; };
+  const clsPh = (c, s, i) => { const G = window.G44PH; if (!G) return null; /* 공통 고르기(global.js G44PH): ① 운영자 ② 강좌 이름 규칙 ③ 템플릿 세트 */
+    const p = G.pick(c, s, { used: USED, set: CARD[s && s.theme] || [], salt: Math.max(0, IDS.indexOf(s && s.theme)) }); return p ? { src: p.src, alt: p.alt, pos: p.pos, stock: !!p.stock } : null; };
 
   /* ── 공통 조각 ── */
   const sec = (cls, inner, pre) => `<section class="hpt hp-s a4-s ${cls}">${pre || ''}<div class="a4-w">${inner}</div></section>`;
@@ -171,7 +163,7 @@
         return `<article class="a4-bd${i % 2 ? ' rev' : ''}">${p ? img(p, 'a4-bp', 0) : ''}<div><p class="a4-bi"><span>${String(i + 1).padStart(2, '0')}</span>${E(c.cat || (c.hours ? `총 ${c.hours}시간` : '정규 과정'))}</p><h3>${E(c.name)}</h3>${desc ? `<p class="a4-bx">${E(desc)}</p>` : ''}
           <dl><dt>시간</dt><dd>${E(whenOf(c) || '상담으로 안내해요')}</dd><dt>수강료</dt><dd>${E(priceOf(c))}</dd>${seatOf(c) ? `<dt>정원</dt><dd>${E(seatOf(c))}${capOf(c) ? ` / ${capOf(c)}명` : ''}</dd>` : ''}</dl><a class="a4-lk" ${aT(L.c(c))}>과정 자세히 보기${AR}</a></div></article>`; };
       return sec('a4-band', `${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2><div class="a4-bds">${C.map(band).join('')}</div>`); },
-    'a4-gal': (d, s) => { const C = pub().slice(0, 4); const P = C.map((c, i) => [c, clsPh(c, s, i + 7)]).filter(x => x[1]); if (P.length < 3) return hint('a4-gal', '공개 강좌가 3개 이상이면 반별 장면 갤러리가 표시됩니다.');
+    'a4-gal': (d, s) => { const C = pub().slice(0, 10); const P = []; for (let i = 0; i < C.length && P.length < 4; i++) { const p = clsPh(C[i], s, i + 7); if (p) P.push([C[i], p]); } /* 규칙 사진이 남지 않은 강좌는 빼고 다음 강좌로 */ if (P.length < 3) return hint('a4-gal', '공개 강좌가 3개 이상이면 반별 장면 갤러리가 표시됩니다.');
       return sec('a4-gal', `${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2><div class="a4-gl n${P.length}">${P.map(([c, p]) => `<a ${aT(L.c(c))}>${img(p, '', 0)}<em>${E(c.name)}</em></a>`).join('')}</div>`); },
     'a4-quote': (d, s) => { let R = []; try { R = (HPT.reviews() || []).filter(okRv); } catch (e) { } const r = R.slice().sort((a, b) => (b.st || 0) - (a.st || 0) || String(b.b).length - String(a.b).length)[0];
       if (!r) return hint('a4-quote', '실제 수강후기가 등록되면 이곳에 크게 보여 드려요(없으면 게시된 사이트에서 숨겨집니다).');
