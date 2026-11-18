@@ -58,6 +58,8 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
         const big = await p.evaluate(() => { const L = S.classes.filter(c => (c.open === '전체' || c.open == null) && c.status !== '종료'); return { n: L.length, f: L.filter(c => !+c.price).length }; });
         ok(big.n >= 10 || big.f >= 5 || !/class="v4-big"/.test(Hh), `${P} 큰 숫자: 과정 ${big.n}개 · 0원 ${big.f}개 → 기준 미만이면 숨김`);
         ok(!/끊겨|부탁드립니다|해 주세요\?/.test(Hh), `${P} 후기 인용: 불만 · 요청 글 제외`);
+        const fitC = await p.evaluate(html => { const L = []; const re = /<a class="v4-(?:card|tall)" href="#p-c-([^"]+)">[\s\S]*?img\/stock\/([a-z]{3}-\d{2})/g; let m; while ((m = re.exec(html))) { const c = S.classes.find(x => x.id === m[1]); const r = c && HPSTOCK.courseRule(c.name); L.push({ n: c && c.name, id: m[2], ok: !r || !r.ids.length || r.ids.includes(m[2]) || r.ids.every(x => html.split('stock/' + x).length > 2), cook: /^(coo|bak|bar)-/.test(m[2]) && !/조리|요리|제과|제빵|빵|바리스타|커피|한식|양식|베이커리/.test(c ? c.name : '') }); } return L; }, g.html);
+        ok(fitC.every(x => x.ok && !x.cook), `${P} 강좌 카드 사진이 강좌 이름과 맞음(AI · 전기 과정에 조리 사진 없음) ${fitC.filter(x => !x.ok || x.cook).map(x => x.n + ':' + x.id).join(' ')}`);
         const hasN = await p.evaluate(() => [...(S.notices || []), ...(S.classes || []).flatMap(c => c.notices || [])].some(x => x && x.title && !x.hidden)); ok(!hasN || /data-hx="ntc"/.test(g.html), `${P} 공지가 있으면 hx-ntc 공지`); ok(/v4s-sched|국비/.test(g.html) || !['vofield', 'vokdt', 'voupskill', 'vocert', 'vologi', 'vocare', 'voclassic'].includes(ID), `${P} 훈련 일정 표 · 국비 배지`); }
       await c.close(); }
   } catch (e) { fails.push('예외 ' + e.message); console.log(e); }

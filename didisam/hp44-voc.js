@@ -43,7 +43,7 @@
   const lnk = (h, l) => `<a class="v4-ln" ${aA(h)}><span>${E(l)}</span>${/^https?:/.test(h) ? EXT : AR}</a>`;
   const ph = (s, slot, d) => typeof HS.photo === 'function' ? HS.photo(s, slot, d) : null;
   const fig = (slot, p, cls, eager, sizes) => p ? `<figure class="hps-img${slot === 'hero' ? ' hp-photo' : ''} ${cls}" data-slot="${E(slot)}"${p.stock ? ' data-stock="1"' : ''}><img src="${E(p.src)}"${p.srcset ? ` srcset="${E(p.srcset)}" sizes="${E(sizes || '100vw')}"` : ''} alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-fit:${p.fit || 'cover'};object-position:${E(p.pos || '50% 50%')}"></figure>` : `<div class="${cls} v4-ph0" aria-hidden="true"></div>`;
-  /* 강좌 카드 사진(검수 A1): 기관 사진 → 템플릿 분야 사진 세트 → 강좌 이름 규칙(HPSTOCK.courseRule). 한 페이지 안 중복 0(첫 화면 · 이야기 사진 포함) */
+  /* 강좌 카드 사진(검수 A1 · 통합 지시 11-18): 기관 사진 → 강좌 이름 · 분야 규칙(HPSTOCK.courseRule)에 맞는 사진 → 템플릿 분야 사진 세트. 한 페이지 안 중복 0(첫 화면 · 이야기 사진 포함) */
   const POOL = { vofield: ['wrk-04', 'wrk-05', 'hum-19', 'hum-20', 'wrk-03', 'aut-02'], vokdt: ['hum-08', 'cod-03', 'lap-03', 'hum-09', 'dat-01', 'hum-39'], voupskill: ['cor-01', 'off-05', 'doc-01', 'hum-06', 'cor-07', 'off-12'],
     vocert: ['dsk-06', 'dsk-09', 'dsk-08', 'hum-05', 'dsk-01', 'lap-04'], vocook: ['bak-01', 'bak-04', 'bar-02', 'bar-03', 'coo-03', 'bak-05'], vobeauty: ['hum-28', 'art-02', 'dsn-01', 'hum-27', 'art-03', 'hum-26'],
     vodesign: ['vid-01', 'hum-42', 'hum-31', 'cod-02', 'pho-01', 'hum-40'], vologi: ['log-02', 'dro-02', 'wrk-01', 'aut-01', 'aut-03', 'hum-49'], vocare: ['hum-33', 'sci-01', 'sen-03', 'hum-34', 'sen-07', 'fam-02'],
@@ -52,8 +52,8 @@
   const hsh = v => { let h = 2166136261; v = String(v); for (let i = 0; i < v.length; i++) { h ^= v.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
   const cphoto = c => { if (c.thumb && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(c.thumb)) return { src: c.thumb, alt: c.name, stock: '' };
     const H = window.HPSTOCK; if (!H || typeof H.get !== 'function') return null; const ok = id => id && H.get(id) && !USED.has(id);
-    let id = (POOL[CUR] || []).find(ok) || ''; /* 템플릿 분야 사진 세트가 먼저 — 같은 유형 안 템플릿끼리 카드 사진이 겹치지 않게(검수 A1) */
-    if (!id) { try { const r = H.courseRule && H.courseRule(c.name); const R = r ? r.ids.filter(ok) : []; if (R.length) id = R[hsh(CUR + c.id) % Math.min(R.length, 3)]; } catch (e) { } } if (!id) { try { const x = H.photo(c.name, CUR + c.id, { id: true, scope: 'v4' + CUR }); if (x && !USED.has(x.id)) id = x.id; } catch (e) { } }
+    let id = ''; try { const r = H.courseRule && H.courseRule(c.name); const R = r ? r.ids.filter(ok) : []; if (R.length) id = R[hsh(CUR + c.id) % R.length]; } catch (e) { } /* 강좌 이름 · 분야 키워드로 확실히 맞는 사진이 먼저(템플릿마다 다른 순번) */
+    if (!id) id = (POOL[CUR] || []).find(ok) || ''; /* 맞는 사진이 없을 때만 템플릿 분야 세트 */ if (!id) { try { const x = H.photo(c.name, CUR + c.id, { id: true, scope: 'v4' + CUR }); if (x && !USED.has(x.id)) id = x.id; } catch (e) { } }
     if (!id) return null; USED.add(id); const x = H.get(id); return { src: H.url(x, 'sm'), srcset: H.srcset ? H.srcset(x) : '', alt: x.alt || '', pos: x.focus || '50% 50%', stock: id }; };
   /* 국비 과정 표시(GAP B): 이름 · 훈련 구분 · HRD-Net 과정 ID로 판단 */
   const isGov = c => /내일배움|국비|K-?디지털|KDT|국민내일/i.test(c.name || '') || ['3', '4'].includes(String(c.emp || '')) || !!(c.hrd && (c.hrd.tracse || c.hrd.simsa));
