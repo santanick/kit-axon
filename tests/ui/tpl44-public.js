@@ -120,6 +120,36 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
       await q.close(); }
     await a.ctx.close(); }
 
+  /* ── R3: 데이터가 있으면 공통 부품(hx-*)이 게시본에 보인다 — 품질 자동 보정(hpwFix · hideAuto)을 거쳐도, 과정이 「지정 회원」이어도(강사진) ── */
+  for (const [id, ed] of CASES.filter(c => !process.env.ONLY || process.env.ONLY.split(',').includes(c[0]))) { const a = await admin(ed, false);
+    const info = await a.p.evaluate(id => { try { closeModal(); } catch (e) { } const day = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+      (S.classes || []).forEach((c, i) => { c.open = i < 3 ? '전체' : '지정 회원'; c.status = '운영중'; c.price = i === 1 ? 0 : 50000 + i * 10000; c.intro = [{ name: ['김서윤', '박도현', '이하은'][i % 3], bio: '현직 강사 · 10년 경력' }]; });
+      const hid = (S.classes || []).find(c => c.open !== '전체'); const who = (S.members || [])[0] ? S.members[0].id : 'm0';
+      S.posts = [...(S.posts || []).filter(p => p.board !== '수강후기'), ...['설명이 차근차근해서 처음 배우는 사람도 따라가기 좋았습니다.', '실습 위주라 바로 업무에 써먹을 수 있었어요.', '수업 자료가 잘 정리되어 있어서 복습할 때 큰 도움이 됩니다.'].map((b, i) => ({ id: 'qr' + i, kind: '이야기', board: '수강후기', who, title: b.slice(0, 16), body: b, stars: 5, at: day(-2 - i), replies: 0, views: 9, hidden: false }))];
+      S.reviews = hid ? [{ id: 'qhid', cls: hid.id, who, body: '지정회원과정만의후기입니다 아주 좋았어요', stars: 5, at: day(-1) }] : [];
+      S.notices = [{ id: 'qn0', title: '겨울 학기 수강 신청 안내', at: day(-1), pin: true }, { id: 'qn1', title: '시설 점검 안내', at: day(-3) }];
+      S.settings.footer = Object.assign({}, S.settings.footer, { tel: '051-555-0123', addr: '부산광역시 해운대구 센텀중앙로 00', hours: '평일 09:00~18:00', email: 'edu@example.com' });
+      const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); S.site = s; s.published = true; try { if (typeof hpwFix === 'function') hpwFix(s); } catch (e) { }
+      const want = [...new Set((s.sections || []).filter(x => x && !x.hide && x.type === 'text' && /^hx-/.test((x.data || {}).hpt || '')).map(x => x.data.hpt.slice(3)))];
+      const stuck = (s.sections || []).filter(x => x && x.hide && x.hideAuto && /^hx-/.test(((x.data || {}).hpt) || '')).map(x => x.data.hpt);
+      save(); smPublish(); try { closeModal(); } catch (e) { } return { tid: DREG.cur(), want, stuck }; }, id);
+    ok(!info.stuck.length, `${id}: 공통 부품이 자동 숨김(hideAuto)으로 굳지 않음 ${info.stuck.join(',')}`);
+    const q = await a.ctx.newPage(); await q.setViewportSize({ width: 390, height: 844 }); await q.goto(`${base}/learner.html?t=${info.tid}#home`, { waitUntil: 'load' }); await q.waitForTimeout(1600);
+    const r = await q.evaluate(() => { const R = [...document.querySelectorAll('.smhost')].map(h => h.shadowRoot).filter(Boolean); const on = R.flatMap(r => [...r.querySelectorAll('[data-hx]')]).map(e => e.getAttribute('data-hx')).filter(k => k !== '1');
+      const txt = R.map(r => r.textContent).join(' '); const b = R.map(r => r.querySelector('section.p4-hero .p4-b, section.p4-hero a.p4-b')).find(Boolean); const act = document.querySelector('#lhsAct, nav.tabbar');
+      const bar = [...document.querySelectorAll('#lhsAct, nav.tabbar')].map(x => x.getBoundingClientRect()).filter(x => x.height > 0).reduce((m, x) => Math.min(m, x.top), innerHeight);
+      return { on, hidRev: /지정회원과정만의후기/.test(txt), btn: b ? Math.round(b.getBoundingClientRect().bottom) : 0, bar: Math.round(bar) }; });
+    const miss = info.want.filter(k => k !== 'num' && !r.on.includes(k));
+    ok(info.want.length && !miss.length, `${id}: 데이터가 있으면 켜 둔 공통 부품이 게시본에 보임(켬 ${info.want.join(',')} · 보임 ${[...new Set(r.on)].join(',')}${miss.length ? ' · 빠짐 ' + miss.join(',') : ''})`);
+    if (info.want.includes('fac')) ok(r.on.includes('fac'), `${id}: 강사진은 과정 공개 범위(지정 회원)와 무관하게 보임`);
+    ok(!r.hidRev, `${id}: 지정 회원 과정의 후기는 홈페이지에 내보내지 않음`);
+    if (id === 'pblibrary') ok(r.btn > 0 && r.btn <= r.bar, `pblibrary 390 게시본: 첫 버튼이 아래 탭바 위에 완전히 보임(버튼 ${r.btn}px · 탭바 ${r.bar}px)`);
+    await q.close(); ok(!a.errs.length, `${id}: 공통 부품 점검 관리자 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close(); }
+
+  /* 빈 기관 pbcivic: 공지가 없으면 빈 알림 칸을 남기지 않음 */
+  { const a = await admin('staff', true); const r = await a.p.evaluate(() => { try { closeModal(); } catch (e) { } S.notices = []; (S.classes || []).forEach(c => { c.notices = []; }); const s = siteFromTpl(TPL.find(t => t.id === 't44-pbcivic')); S.site = s; const h = siteHTML(s, true, 'ko'); return { none: /새 공지가 올라오면/.test(h), help: /p4-hg1/.test(h) || !/p4-help/.test(h) }; });
+    ok(!r.none && r.help, `pbcivic 빈 기관: 빈 알림 칸 숨김(${JSON.stringify(r)})`); await a.ctx.close(); }
+
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);
 })();
