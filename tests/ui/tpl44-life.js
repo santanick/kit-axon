@@ -115,6 +115,8 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
       ok(!pe.length, `게시본 ${w} pageerror 0 ${pe.join('|')}`); await q.close(); }
     await g.ctx.close(); }
 
+  /* v44.1 FIX3 B: 규칙이 있는 강좌 사진은 규칙 사진만 — 모든 강좌 사진 레이아웃(카드 · 갤러리 · 사진 띠 · 목록 썸네일), 기관 강좌 이름 그대로 · qaCls 두 번 */
+  try { await require('./hp-visual/photorule.js')(browser, base + '/', 'lifelong', ok, '[life]'); } catch (e) { ok(false, '사진 규칙 점검 예외 ' + (e && e.message || e)); }
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);
 })();

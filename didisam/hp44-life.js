@@ -63,9 +63,9 @@
   const slotP = (s, slot, d, fb) => { try { if (window.HPS && typeof HPS.photo === 'function') { const p = HPS.photo(s, slot, d); if (p) return { src: p.src, alt: p.alt, pos: p.pos }; } } catch (e) { } return fb ? stk(fb, 'lg') : null; };
   const img = (p, cls, eager) => p ? `<figure class="${cls || 'l4-ph'}"><img src="${E(p.src)}" alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos)}"></figure>` : '';
   /* 강좌 사진: 기관이 올린 썸네일 → 강좌 이름에 맞는 샘플 → 테마 예비 사진 */
-  const cphoto = (c, i, th) => { if (c.thumb && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(c.thumb)) return { src: c.thumb, alt: c.name, pos: '50% 50%' };
-    /* v44.1(GAP A1): 템플릿마다 다른 강좌 카드 사진 세트(10종 사이 겹침 0) — 같은 페이지의 첫 화면 · 이야기 · 띠 사진과도 겹치지 않게 */
-    const ex = [...Object.values(DEF[th].ph), ...USED]; const pool = (DEF[th].pool || []).filter(id => !ex.includes(id)); const id = pool[0]; if (!id) return null; USED.push(id); return stk(id); };
+  /* 강좌 사진 — 공통 고르기(global.js G44PH): ① 운영자(썸네일 · 사이트 강좌 사진) ② 강좌 이름 규칙 ③ 템플릿 세트(10종 사이 겹침 0), 같은 페이지 첫 화면 · 이야기 · 띠 사진과도 겹치지 않게 */
+  const cphoto = (c, i, th, s) => { const G = window.G44PH; if (!G) return null; const U = new Set([...Object.values(DEF[th].ph || {}), ...USED]);
+    const p = G.pick(c, s, { used: U, set: DEF[th].pool || [], salt: Math.max(0, MINE.indexOf(th)) }); if (!p) return null; USED.push(p.id || p.src); return { src: p.op ? p.src : abs(p.src), alt: p.alt || c.name, pos: p.pos || '50% 50%' }; };
   let USED = [];
 
   /* ── 테마 10종: 세부 유형 · 색 · 서체 · 첫 화면 ── */
@@ -151,7 +151,7 @@ ${C.length ? `<dl class="l4-deg n${C.length}">${C.map(c => `<div><dt>${E(c[0])}<
   const SEC = {};
   /* 강좌 카드 3장(실제 공개 강좌) */
   SEC['l4-cards'] = (x, s) => { const d = x.data || {}; const th = thOf(s); const re = d.re ? new RegExp(d.re) : null; const A = sorted(); const L = (re ? [...A.filter(c => re.test(c.name)), ...A.filter(c => !re.test(c.name))] : A).slice(0, 3); if (!L.length) return empty(x); USED = [];
-    const card = (c, i) => { const p = cphoto(c, i, th); return `<li><a class="l4-card" href="${cH(c)}">${img(p, 'l4-cph')}<div class="l4-cb"><p class="l4-tg">${E(whenL(c))}</p><h3>${E(c.name)}</h3>${chips(c)}${c.desc && !isPh(c.desc) ? `<p class="l4-cd">${E(String(c.desc).slice(0, 64))}</p>` : ''}<p class="l4-cm"><span>${E((chipsOf(c).length ? metaN(c) : meta(c)) || '자세한 안내는 강좌 페이지에서')}</span><b>${E(price(c))}</b></p></div></a></li>`; };
+    const card = (c, i) => { const p = cphoto(c, i, th, s); return `<li><a class="l4-card" href="${cH(c)}">${img(p, 'l4-cph')}<div class="l4-cb"><p class="l4-tg">${E(whenL(c))}</p><h3>${E(c.name)}</h3>${chips(c)}${c.desc && !isPh(c.desc) ? `<p class="l4-cd">${E(String(c.desc).slice(0, 64))}</p>` : ''}<p class="l4-cm"><span>${E((chipsOf(c).length ? metaN(c) : meta(c)) || '자세한 안내는 강좌 페이지에서')}</span><b>${E(price(c))}</b></p></div></a></li>`; };
     return sec(x, s, 'cards', `<div class="l4w"><div class="l4-head"><div>${head(d)}</div><a class="l4-more" href="#courses">강좌 ${live().length}개 모두 보기 ${ic('arrow', 18, 2)}</a></div><ul class="l4-cg n${L.length} c-${DEF[th].card}">${L.map(card).join('')}</ul></div>`); };
   /* 시간표 · 일정 목록(날짜 열) */
   SEC['l4-rows'] = (x, s) => { const d = x.data || {}; const L = sorted().slice(0, d.n || 5); if (!L.length) return empty(x); const t = tday(); const th = thOf(s);
@@ -185,7 +185,8 @@ ${C.length ? `<dl class="l4-deg n${C.length}">${C.map(c => `<div><dt>${E(c[0])}<
   /* 공지 + 문의 */
   SEC['l4-help'] = (x, s) => { const d = x.data || {}; const N = notes(3); const tel = telOf(); const hr = hoursOf(); const nw = n => okD(n.at) && days(n.at, tday()) <= 7;
     /* 공지 모양은 공통 hx-ntc와 맞춘다: 날짜 열 · 고정 배지 · 7일 이내 N · 3건 + 더 보기 */
-    return sec(x, s, 'help', `<div class="l4w l4-hg"><div><div class="l4-nh"><h2 class="l4-h2">${E(d.title || '알림')}</h2>${N.length ? `<a class="l4-more" href="#notice">더 보기 ${ic('arrow', 18, 2)}</a>` : ''}</div>${N.length ? `<ul class="l4-nl">${N.map(n => `<li><a href="#notice"><time><b>${E(okD(n.at) ? dot(n.at) : '')}</b><small>${E(okD(n.at) ? n.at.slice(0, 4) : '')}</small></time><span>${n.pin ? '<em class="pin">고정</em>' : ''}${nw(n) ? '<em class="nw">N</em>' : ''}${E(n.title)}</span></a></li>`).join('')}</ul>` : `<p class="l4-none">새 공지가 올라오면 여기에 차례로 보여요. <a href="#notice">공지 보기</a></p>`}</div>
+    const none = !N.length && !editing();
+    return sec(x, s, 'help', `<div class="l4w l4-hg${none ? ' l4-one' : ''}">${none ? '' : `<div><div class="l4-nh"><h2 class="l4-h2">${E(d.title || '알림')}</h2>${N.length ? `<a class="l4-more" href="#notice">더 보기 ${ic('arrow', 18, 2)}</a>` : ''}</div>${N.length ? `<ul class="l4-nl">${N.map(n => `<li><a href="#notice"><time><b>${E(okD(n.at) ? dot(n.at) : '')}</b><small>${E(okD(n.at) ? n.at.slice(0, 4) : '')}</small></time><span>${n.pin ? '<em class="l4-pin">고정</em>' : ''}${nw(n) ? '<em class="l4-nw">N</em>' : ''}${E(n.title)}</span></a></li>`).join('')}</ul>` : `<p class="l4-none">새 공지가 올라오면 여기에 차례로 보여요. <a href="#notice">공지 보기</a></p>`}</div>`}
 <div class="l4-call"><h3>${E(d.sub || '궁금한 점은 편하게 물어보세요')}</h3>${tel ? `<a class="l4-tel" href="tel:${E(tel)}">${ic('phone', 30, 2)}<span>${E(tel)}</span></a>${hr ? `<p>${E(hr)}</p>` : ''}` : '<p>수강 신청 · 수료증 · 수강료는 담당자가 확인해 드려요.</p>'}<a class="l4-b line" href="#comm"><span>온라인으로 문의하기</span>${ic('arrow', 20, 2)}</a></div></div>`); };
   /* v44.1(GAP B 평생): 분야 아이콘 그리드 — 실제 공개 강좌 이름으로 분야를 나눠 개수와 함께(분야 2개 이상일 때만) */
   const FLD = [[/^(senior|ai|code|data)$/, '디지털 · AI', 'M8 3h8a1 1 0 011 1v16a1 1 0 01-1 1H8a1 1 0 01-1-1V4a1 1 0 011-1zM11 18h2'], [/^(barista|cook|bake)$/, '요리 · 커피', 'M5 9h11v5a5 5 0 01-5 5h-1a5 5 0 01-5-5zM16 10h2a2 2 0 010 4h-2M8 3v3M12 3v3'],
@@ -277,7 +278,7 @@ font-family:${SANS};color:var(--ink);background:var(--bg);font-size:${B ? 19 : 1
 /* 공지 + 문의 */
 .l4.l4-help{background:var(--alt);padding:130px 0}.l4 .l4-hg{display:grid;grid-template-columns:1.2fr 1fr;gap:72px}.l4 .l4-nl{margin-top:30px;border-top:2px solid var(--ink)}.l4 .l4-nh{display:flex;justify-content:space-between;align-items:end;gap:20px}.l4 .l4-nl a{display:grid;grid-template-columns:${B ? 96 : 84}px 1fr;gap:20px;align-items:center;padding:${B ? 24 : 20}px 0;border-bottom:1px solid var(--ln);font-size:${B ? 20 : 17}px;font-weight:600}
 .l4 .l4-nl time{display:flex;flex-direction:column;line-height:1.2;color:var(--mu)}.l4 .l4-nl time b{font-size:${B ? 24 : 21}px;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em}.l4 .l4-nl time small{font-size:${B ? 18 : 13}px}
-.l4 .l4-nl em{display:inline-block;font-style:normal;font-size:${B ? 16 : 13}px;font-weight:800;padding:2px 9px;border-radius:999px;margin-right:8px;vertical-align:2px}.l4 .l4-nl em.pin{background:var(--a);color:var(--on)}.l4 .l4-nl em.nw{background:${al(D.pt, .22)};color:var(--ink)}
+.l4 .l4-hg.l4-one{grid-template-columns:minmax(0,1fr);max-width:760px}.l4 .l4-nl em{position:static;width:auto;height:auto;display:inline-block;font-style:normal;font-size:${B ? 16 : 13}px;font-weight:800;padding:2px 9px;border-radius:999px;margin-right:8px;vertical-align:2px}.l4 .l4-nl em.l4-pin{background:var(--a);color:var(--on)}.l4 .l4-nl em.l4-nw{background:${al(D.pt, .22)};color:var(--ink)}
 .l4 .l4-none{margin-top:30px;padding:28px 0;border-top:2px solid var(--ink);color:var(--mu)}.l4 .l4-none a{color:var(--at);font-weight:700;text-decoration:underline}
 .l4 .l4-call{background:var(--bg);padding:44px;border-top:6px solid var(--a);border-radius:${Math.min(D.r, 14)}px}.l4 .l4-call h3{font-size:${B ? 28 : 25}px;font-weight:800;letter-spacing:-.03em}.l4 .l4-tel{display:flex;align-items:center;gap:12px;font-size:${B ? 46 : 38}px;font-weight:800;letter-spacing:-.03em;color:var(--at);margin-top:18px}.l4 .l4-call p{color:var(--mu);margin-top:8px}.l4 .l4-call .l4-b{margin-top:28px}
 /* 요일 · 시간대 칩 */

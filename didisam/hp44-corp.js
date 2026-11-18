@@ -58,11 +58,8 @@
   let USED = new Set();
   const keyOf = v => String(v || '').replace(/^.*\/img\/stock\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, '');
   const pageStart = s => { USED = new Set(); try { const th = DEF[s && s.theme]; Object.values((th && th.ph) || {}).forEach(v => USED.add(v)); Object.values((s && s.photos) || {}).forEach(v => USED.add(keyOf(v))); Object.values((s && s.img) || {}).forEach(v => { if (v) USED.add(keyOf(v.stock || v.src)); }); } catch (e) { } };
-  const clsP = (c, s, i) => { const h = H(); let m = null; try { m = window.HPS && HPS.cardImg ? HPS.cardImg(c, s) : null; } catch (e) { m = null; }
-    if (m && !m.stock && m.src && !USED.has(m.src)) { USED.add(m.src); return { src: m.big || m.src, alt: m.alt || c.name, pos: m.pos || '50% 50%' }; }
-    if (!h) return null; const pick = id => { const x = h.get(id); if (!x) return null; USED.add(id); return { src: abs(h.url(x, 'sm')), alt: x.alt || c.name, pos: x.focus || '50% 50%' }; };
-    try { const r = typeof h.courseRule === 'function' ? h.courseRule(c.name) : null; const ids = r ? r.ids.filter(id => !USED.has(id) && h.get(id)) : []; if (ids.length) return pick(ids[Math.max(0, MINE.indexOf(s && s.theme)) % ids.length]); } catch (e) { }
-    const pool = (DEF[s && s.theme] || {}).pool || []; for (let k = 0; k < pool.length; k++) { const id = pool[(i + k) % pool.length]; if (!USED.has(id)) return pick(id); } return null; };
+  const clsP = (c, s, i) => { const G = window.G44PH; if (!G) return null; /* 공통 고르기(global.js G44PH): ① 운영자 ② 강좌 이름 규칙 ③ 템플릿 세트 */
+    const p = G.pick(c, s, { used: USED, set: (DEF[s && s.theme] || {}).pool || [], salt: Math.max(0, MINE.indexOf(s && s.theme)) }); return p ? { src: p.op ? p.src : abs(p.src), alt: p.alt || c.name, pos: p.pos || '50% 50%' } : null; };
   const img = (p, cls, eager) => p ? `<figure class="${cls || 'c4-ph'}"><img src="${E(p.src)}" alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos)}"></figure>` : '';
 
   /* ── 테마 10종: 세부 유형 · 색 · 서체 · 첫 화면 ── */
