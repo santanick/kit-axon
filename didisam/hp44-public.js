@@ -78,9 +78,18 @@
   const abs = u => { try { return new URL(u, (H() && H().base) || location.href).href; } catch (e) { return u; } };
   const stk = (id, sz) => { const h = H(); if (!h || typeof h.get !== 'function') return null; const x = h.get(id); if (!x) return null; return { src: abs(h.url(x, sz === 'lg' ? '' : 'sm')), alt: x.alt || '', pos: x.focus || '50% 50%' }; };
   const slotP = (s, slot, d, fb) => { try { if (window.HPS && typeof HPS.photo === 'function') { const p = HPS.photo(s, slot, d); if (p) return { src: p.src, alt: p.alt, pos: p.pos }; } } catch (e) { } return fb ? stk(fb, 'lg') : null; };
-  const clsP = (c, i, pool) => { const id = pool && pool[i % pool.length]; return (id && stk(id)) || (() => { try { const x = H() && H().photo(c.name, c.id, { id: true, scope: 'p4' }); return x ? { src: abs(H().url(x, 'sm')), alt: x.alt || '', pos: x.focus || '50% 50%' } : null; } catch (e) { return null; } })(); };
-  const facP = (f, i, pool) => (f.photo && { src: abs(f.photo), alt: f.name, pos: '50% 50%' }) || stk(pool[i % pool.length]);
-  const img = (p, cls, eager) => p ? `<figure class="${cls || 'p4-ph'}"><img src="${E(p.src)}" alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos)}"></figure>` : '';
+  /* 강좌 · 시설 카드 사진(통합 지시 11-18): ① 운영자 사진 ② 강좌 · 시설 이름 · 분야 규칙(HPSTOCK.courseRule)에 맞는 스톡(페이지 안 중복 제외, 템플릿마다 시작 후보 다르게) ③ 템플릿 사진 세트. 한 페이지 안 중복 0 */
+  let USED = new Set(), CUR = 'pbcivic';
+  const hsh = v => { let h = 2166136261; v = String(v); for (let i = 0; i < v.length; i++) { h ^= v.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const sidOf = src => { const m = /\/img\/stock\/([a-z]{3}-\d{2})(?:-800)?\.webp/.exec(String(src || '')); return m ? m[1] : ''; };
+  const ruleP = (name, key, pool, own) => { if (own) { const o = typeof own === 'string' && (/^data:image\/(png|jpe?g|webp|gif);base64,/.test(own) || !/^data:/.test(own)) ? own : ''; if (o) return { src: /^data:/.test(o) ? o : abs(o), alt: name || '', pos: '50% 50%' }; }
+    const h = H(); if (!h || typeof h.get !== 'function') return null; const ok = id => id && h.get(id) && !USED.has(id); let id = '';
+    try { const r = typeof h.courseRule === 'function' ? h.courseRule(name) : null; const R = r ? r.ids.filter(ok) : []; if (R.length) id = R[hsh(CUR + key) % R.length]; } catch (e) { }
+    if (!id) id = (pool || []).find(ok) || ''; if (!id) return null; USED.add(id); return stk(id); };
+  const clsP = (c, i, pool) => ruleP(c.name, c.id || i, pool, c.thumb);
+  const facP = (f, i, pool) => ruleP(f.name, f.id || f.name || i, pool, f.photo);
+  const img = (p, cls, eager) => { if (p) { const k = sidOf(p.src); if (k) USED.add(k); } return img0(p, cls, eager); };
+  const img0 = (p, cls, eager) => p ? `<figure class="${cls || 'p4-ph'}"><img src="${E(p.src)}" alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos)}"></figure>` : '';
 
   /* ── 테마 10종 ── */
   const L0 = { vis: 'mock', illu: 'doc', card: 'line', look: 'corpPortal', hk: 'desk', hp: 'ledger', ck: 'photo', sh: 'none', hero: 'split', dens: '여유' };
@@ -780,15 +789,15 @@
   /* ── 렌더러 연결 ── */
   { const base = proSec; proSec = (x, i, s, lk) => {
     try { if (x && s) { const d = x.data || {};
-      if (x.type === 'text' && SEC[d.hpt]) { if (x.hide && !editing()) return ''; const h = SEC[d.hpt](x, s); return h || ''; }
-      if (x.type === 'banner' && mine(s) && HPT.has(s.theme) && !+d.dstyle && !s.layout) { if (x.hide && !editing()) return ''; return mark(HERO[s.theme](s, d), x); } }
+      if (x.type === 'text' && SEC[d.hpt]) { if (mine(s)) CUR = s.theme; if (x.hide && !editing()) return ''; const h = SEC[d.hpt](x, s); return h || ''; }
+      if (x.type === 'banner' && mine(s) && HPT.has(s.theme) && !+d.dstyle && !s.layout) { USED = new Set(); CUR = s.theme; if (x.hide && !editing()) return ''; return mark(HERO[s.theme](s, d), x); } }
     } catch (e) { console.error('hp44-public', e); }
     return base(x, i, s, lk); }; window.proSec = proSec; }
   try { if (window.HPW && typeof HPW.emptyOf === 'function') { const e0 = HPW.emptyOf; HPW.emptyOf = x => { const d = (x && x.data) || {}; if (x && x.type === 'text' && SEC[d.hpt]) { try { return d.hpt === 'p4-figs' ? figsK().length < 2 : /^p4-(mag|rows|band|tracks|shelf|tiles|words|big|wide|exhibit|code|ticket|recruit|mode)$/.test(d.hpt) ? !live().length : /^p4-(hours|stay)$/.test(d.hpt) ? !facs().length : d.hpt === 'p4-dept' ? !(((d.cols || []).some(c => c && c[0] && c[2])) || telOf()) : d.hpt === 'p4-quote' ? !review() : d.hpt === 'p4-ann' ? !notes(1).length : false; } catch (e) { return false; } } return e0(x); }; } } catch (e) { }
   /* 공공 B: 보기 설정(글자 크게 · 고대비) — 게시본은 Shadow DOM이라 스크립트 없이 details 열림 상태(:has)로 전환한다 */
   const needCSS = s => !!(s && (mine(s) || (s.sections || []).some(x => x && x.data && SEC[x.data.hpt])));
   const SERIF_CSS = 'fonts/noto-serif-kr/font.css?v=ea0bde31';
-  { const base = siteHTML; siteHTML = (s, ...a) => { let h = base(s, ...a); try { if (needCSS(s) && HPT.tokens(s)) { h = h.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>'); 
+  { const base = siteHTML; siteHTML = (s, ...a) => { USED = new Set(); let h = base(s, ...a); try { if (needCSS(s) && HPT.tokens(s)) { h = h.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>'); 
         h = h.replace(/<section class="([^"]*\bp4\b[^"]*)"/g, (m, c) => `<section class="${c.replace(/\bhps-(flowb?|short)\b\s*/g, '').trim()}"`); /* 같은 바탕 섹션 간격 압축(hps-flow)은 섹션 리듬을 깨므로 뺀다 */ if (SERIFS.includes(thOf(s)) && h.indexOf(SERIF_CSS) < 0) h = h.replace('</head>', `<link rel="stylesheet" href="${SERIF_CSS}"></head>`); } } catch (e) { console.error('hp44-public css', e); } return h; }; window.siteHTML = siteHTML; }
 
   /* ── 등록 ── */

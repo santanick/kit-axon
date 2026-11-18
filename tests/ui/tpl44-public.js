@@ -85,6 +85,11 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
     if (id === 'pbyouth' || id === 'pbsenior') ok(L.includes('#family'), `${id}: 보호자 · 가족 연결(#family)`);
     if (id === 'pbsenior') ok(/p4-call/.test(r.html) && /p4-big/.test(r.html), 'pbsenior: 전화 신청 띠 · 큰 글씨 강좌');
     ok(!/p4-figs"/.test(r.html), `${id}: 시연 데이터(과정 8개 · 44명)는 큰 숫자 블록 숨김`);
+    const rel = await a.p.evaluate(h => { const d = new DOMParser().parseFromString(h, 'text/html'); const bad = [], seen = []; const H = window.HPSTOCK;
+      d.querySelectorAll('section.p4 a[href^="#p-c-"]').forEach(a => { const im = a.querySelector('img'); if (!im) return; const c = S.classes.find(x => x.id === a.getAttribute('href').slice(5)); if (!c) return; const m = /\/img\/stock\/([a-z]{3}-\d{2})/.exec(im.getAttribute('src') || ''); if (!m) return;
+        const r = H.courseRule(c.name); seen.push(c.name); if (r && r.ids.length && !H.fitsCourse(m[1], c.name)) bad.push(c.name + '→' + m[1]); });
+      return { n: seen.length, bad }; }, r.html);
+    ok(!rel.bad.length, `${id}: 강좌 카드 사진 관련성 — 이름 · 분야 규칙에 맞는 사진(${rel.n}장, 어긋남 ${rel.bad.join(', ')})`);
     if (id === 'pbjournal') { const q = await a.p.evaluate(() => { const s = S.site; const keep = S.reviews; const cid = (S.classes[0] || {}).id; s.sections = s.sections.filter(x => !(x.data && x.data.hpt === 'p4-quote')); s.sections.splice(2, 0, { id: 'qtest', type: 'text', data: { variant: 'features', hpt: 'p4-quote', title: '', cols: [] } });
         S.reviews = [{ body: '퀴즈 3번 해설 부탁드립니다', stars: 5, cls: cid }, { body: '영상이 자꾸 끊겨요 확인해 주세요', stars: 4, cls: cid }]; const h1 = siteHTML(s);
         S.reviews.push({ body: '동네에서 이렇게 알찬 강좌를 들을 수 있어 매주 기다려져요.', stars: 5, cls: cid }); const h2 = siteHTML(s); S.reviews = keep;
