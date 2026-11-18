@@ -54,7 +54,7 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
   ok(new Set(reg.map(r => r.k)).size === IDS.length, `첫 화면 종류 ${IDS.length}가지 모두 다름(${reg.map(r => r.k).join(' · ')})`);
   const heroes = reg.map(r => r.hero).filter(Boolean); ok(new Set(heroes).size === heroes.length, `첫 화면 사진 중복 없음(${heroes.join(',')})`);
   ok(reg.some(r => /전통/.test(r.sub)), '전통 · 격식형 1종 이상');
-  const cid = await a.p.evaluate(() => S.classes.map(c => c.id));
+  const cid = await a.p.evaluate(() => S.classes.map(c => c.id)); const CARD = [];
   for (const id of IDS) {
     const r = await a.p.evaluate(id => { const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); S.site = s; return { html: siteHTML(s), color: s.color, theme: s.theme, first: (s.sections.find(x => !x.hide) || {}).type }; }, id);
     ok(r.theme === id && r.first === 'banner' && new RegExp(`class="hpt c4 ${id} c4-hero`).test(r.html) && /^#[0-9a-f]{6}$/i.test(r.color), `${id}: 테마 적용 · 첫 화면 = 시안 첫 화면 · 기관 색(${r.color}, 흰 글자 대비 보정 허용)`);
@@ -63,17 +63,29 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
     ok(L.length >= 6 && !bad.length && L.some(h => /^#p-c-/.test(h)), `${id}: 링크 ${L.length}개 실제 경로 · 과정 상세 포함 ${bad.join(',')}`);
     ok(!/hps-flow|hps-short/.test((r.html.match(/<section class="[^"]*\bc4\b[^"]*"/g) || []).join(' ')), `${id}: 섹션 간격 압축 클래스 제거`);
     ok(!/NaN|undefined|object Object|<input|<form|주민등록|휴대폰 번호/.test((r.html.match(/<section class="hpt c4[\s\S]*?<\/section>/g) || []).join('')), `${id}: 이상 값 · 입력 칸 · 개인정보 문구 없음`);
+    { const home = (r.html.match(/<section class="hpt c4 [\s\S]*?<\/section>|<section[^>]*data-hx=[\s\S]*?<\/section>/g) || []).join(''); const st = (home.match(/ src="[^"]*img\/stock\/[a-z]{3}-\d{2}/g) || []).map(x => x.slice(-6)); const uniq = new Set(st); ok((st.length >= 1 || id === 'cplegal') && uniq.size === st.length, `${id}: 한 페이지 안 사진 중복 0(${st.length}장)`);
+      ((r.html.match(/<section class="hpt c4 [a-z]+ c4-(cards|prog)"[\s\S]*?<\/section>/g) || []).join('').match(/img\/stock\/[a-z]{3}-\d{2}/g) || []).forEach(x => CARD.push([id, x.slice(10)])); }
     await view(id, r.html); }
+  { const by = {}; CARD.forEach(([id, p]) => { (by[p] = by[p] || new Set()).add(id); }); const dup = Object.keys(by).filter(p => by[p].size > 1); ok(!dup.length, `강좌 카드 사진이 템플릿마다 다름(${CARD.length}장, 겹침 ${dup.join(',')})`); }
+  /* GAP B 기업: 로고 띠(운영자 입력) · 마감 D-day + 이수 현황 미리보기 · 직급별 경로 도식 */
+  { const b = await a.p.evaluate(() => { const t = today(); const add = n => { const d = new Date(t); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+      const s = siteFromTpl(TPL.find(x => x.id === 't44-cphrd')); const h0 = siteHTML(s); const lg = s.sections.find(x => x.data && x.data.hpt === 'c4-logos'); lg.data.cols = [['한빛전자'], ['한빛물산'], ['한빛증권']]; const h1 = siteHTML(s);
+      const L = S.classes.filter(c => c.legal); const keep = L.map(c => c.end); L.forEach((c, i) => { c.end = add(5 + i * 20); }); const h2 = siteHTML(siteFromTpl(TPL.find(x => x.id === 't44-cplegal'))); L.forEach((c, i) => { c.end = keep[i]; });
+      const h3 = siteHTML(siteFromTpl(TPL.find(x => x.id === 't44-cplead')));
+      return { logo0: /c4-logos"/.test(h0), logo1: /c4-logos"/.test(h1) && /한빛증권/.test(h1), dday: /c4-dday"/.test(h2) && /D-5</.test(h2) && /c4-mock/.test(h2) && /class="c4-dn w"/.test(h2), path: /c4-lv n\d/.test(h3) }; });
+    ok(!b.logo0 && b.logo1, `로고 띠: 비면 숨김 · 이름을 넣으면 보임(${JSON.stringify(b)})`);
+    ok(b.dday, '법정교육 마감 D-day(D-5 경고) · 이수 현황 미리보기 카드');
+    ok(b.path, '직급별 학습 경로 도식(c4-lv)'); }
   /* QA 11-18: 낮은 숫자 블록 숨김 · 후기 필터 */
   { const q = await a.p.evaluate(() => { const out = {}; const ids = ['cplegal', 'cpdx', 'cpheritage', 'cpuniv']; const h = id => siteHTML(siteFromTpl(TPL.find(t => t.id === 't44-' + id)));
       out.n = S.classes.filter(c => c.status !== '종료').length; out.figs = ids.filter(id => /class="hpt c4 [a-z]+ c4-figs"/.test(h(id)));
       out.nums = /운영 중인 과정<\/p>|함께 배우는 인원<\/p>/.test(h('cpdx'));
       const keep = S.reviews; S.reviews = [{ id: 'r1', cls: S.classes[0].id, stars: 5, body: '영상이 자꾸 끊겨요 확인 부탁드립니다', at: '2026-11-10' }, { id: 'r2', cls: S.classes[0].id, stars: 5, body: '퀴즈 3번 해설도 올려 주실 수 있나요?', at: '2026-11-11' }];
-      out.bad = /c4-quote"/.test(h('cphrd'));
+      out.bad = /data-hx="rev"/.test(h('cphrd')) || /c4-quote"/.test(h('cphrd'));
       S.reviews.push({ id: 'r3', cls: S.classes[0].id, stars: 5, body: '팀장이 되고 처음 6주가 막막했는데 리더 과정이 지도가 돼 줬어요', at: '2026-11-12' });
-      const g = h('cphrd'); out.good = /c4-quote"/.test(g) && /지도가 돼 줬어요/.test(g) && !/끊겨요|해설도/.test(g); S.reviews = keep; return out; });
+      S.reviews.push({ id: 'r4', cls: S.classes[1].id, stars: 5, body: '짧은 강의라 출퇴근길에 끝까지 들을 수 있어서 좋았어요', at: '2026-11-13' }); const g = h('cphrd'); const rv = (g.match(/<section[^>]*data-hx="rev"[\s\S]*?<\/section>/) || [''])[0]; out.good = /지도가 돼 줬어요/.test(rv) && !/끊겨요|해설도/.test(g) && !/c4-quote"/.test(g); S.reviews = keep; return out; });
     ok(q.n < 10 && !q.figs.length && !q.nums, `숫자 블록: 과정 ${q.n}개 · 인원 100명 미만 시연 데이터에서 4종 모두 숨김(${q.figs.join(',')})`);
-    ok(!q.bad && q.good, `후기 인용: 불만 · 요청 · 질문 글 제외, 긍정 글만 크게(${JSON.stringify(q)})`); }
+    ok(!q.bad && q.good, `후기(hx-rev 하나로): 불만 · 요청 · 질문 글 제외, 긍정 글만(${JSON.stringify(q)})`); }
   ok(!a.errs.length, `관리자 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close();
 
   /* ── 빈 기관 ── */
