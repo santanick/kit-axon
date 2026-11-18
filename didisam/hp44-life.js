@@ -64,7 +64,7 @@
   const img = (p, cls, eager) => p ? `<figure class="${cls || 'l4-ph'}"><img src="${E(p.src)}" alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos)}"></figure>` : '';
   /* 강좌 사진: 기관이 올린 썸네일 → 강좌 이름에 맞는 샘플 → 테마 예비 사진 */
   /* 강좌 사진 — 공통 고르기(global.js G44PH): ① 운영자(썸네일 · 사이트 강좌 사진) ② 강좌 이름 규칙 ③ 템플릿 세트(10종 사이 겹침 0), 같은 페이지 첫 화면 · 이야기 · 띠 사진과도 겹치지 않게 */
-  const cphoto = (c, i, th, s) => { const G = window.G44PH; if (!G) return null; const U = new Set([...Object.values(DEF[th].ph || {}), ...USED]);
+  const cphoto = (c, i, th, s) => { const G = window.G44PH; if (!G) return null; const U = new Set([...Object.values(DEF[th].ph || {}), ...USED]); try { [...Object.values((s && s.photos) || {}), ...Object.values((s && s.img) || {})].forEach(v => { (Array.isArray(v) ? v : [v]).forEach(x => { const k = x && G.key(x); if (k) U.add(k); }); }); } catch (e) { } /* 같은 페이지 슬롯 사진(첫 화면 · 이야기 · 띠)과 겹치지 않게 */
     const p = G.pick(c, s, { used: U, set: DEF[th].pool || [], salt: Math.max(0, MINE.indexOf(th)) }); if (!p) return null; USED.push(p.id || p.src); return { src: p.op ? p.src : abs(p.src), alt: p.alt || c.name, pos: p.pos || '50% 50%' }; };
   let USED = [];
 

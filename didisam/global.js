@@ -409,10 +409,12 @@ window.G44PH = (() => {
   const rule = name => { try { const H = window.HPSTOCK; const r = H && typeof H.courseRule === 'function' ? H.courseRule(String(name || '')) : null; return r && Array.isArray(r.ids) && r.ids.length ? r : null; } catch (e) { return null; } };
   const own = (c, s) => { const m = s && s.img && s.img['cls-' + c.id]; if (m && m.src) return { src: m.src, alt: m.alt || c.name || '', pos: m.pos || '50% 50%', op: 1 };
     if (c.thumb && /^(img\/|https?:|data:image\/(png|jpe?g|webp|gif);base64,)/.test(String(c.thumb))) return { src: c.thumb, alt: c.name || '', pos: '50% 50%', op: 1 }; return null; };
+  const hps = () => (window.HPS && typeof HPS.cardUsed === 'function' ? HPS : null);
   function pick(c, s, o) { o = o || {}; const U = o.used || new Set(); const H = window.HPSTOCK; if (!c) return null;
+    try { const P = hps(); if (P) P.cardUsed().forEach(id => U.add(id)); } catch (e) { } /* 같은 페이지의 공통 강좌 목록(hpsec-card)이 이미 쓴 사진도 뺀다 */
     if (!o.noOp) { const m = own(c, s); if (m && !U.has(m.src)) { U.add(m.src); return m; } }
     if (!H || typeof H.get !== 'function') return null;
-    const mk = (x, r) => { U.add(x.id); return { src: H.url(x, o.size === 'lg' ? '' : 'sm'), alt: x.alt || c.name || '', pos: x.focus || '50% 50%', id: x.id, stock: true, rule: !!r }; };
+    const mk = (x, r) => { U.add(x.id); try { const P = hps(); if (P) P.cardUse(x.id); } catch (e) { } return { src: H.url(x, o.size === 'lg' ? '' : 'sm'), alt: x.alt || c.name || '', pos: x.focus || '50% 50%', id: x.id, stock: true, rule: !!r }; };
     const r = rule(c.name);
     if (r) { const ids = r.ids.filter(id => !U.has(id) && H.get(id)); return ids.length ? mk(H.get(ids[(+o.salt || 0) % ids.length]), r) : null; }
     for (const id of (o.set || [])) { if (U.has(id)) continue; const x = H.get(id); if (x) return mk(x, null); }
