@@ -243,7 +243,9 @@ ${fams ? `- 계열(layout): ${fams}\n` : ''}${pals ? `- 팔레트(palette): ${pa
   /* 게시 뒤 고친 내용이 있는지: 지금 보이는 섹션 제목 · 메뉴 이름이 게시본 글에 모두 있어야 '같음' */
   function sameAsPub(s, hp) {
     const tx = plainTxt(hp.home); if (!tx) return false;
-    const T = A(s.sections).filter(x => x && !x.hide && x.data).map(x => String(x.data.title || '').replace(/[​\s]+/g, '')).filter(t => t.length >= 2);
+    /* v44.1: 그릴 때 데이터가 없어 스스로 숨는 섹션(HPW.emptyOf, g44 사이트의 후기 부품 hx-rev — 공개 과정 · 기준 통과 후기 0건)은 게시본에도 없으므로 비교에서 뺀다 */
+    const emp = x => { try { if (window.HPW && typeof HPW.emptyOf === 'function' && HPW.emptyOf(x)) return true; return !!(x.type === 'reviews' && window.HPX && HPX.on(s) && HPX.data && typeof HPX.data.reviews === 'function' && !HPX.data.reviews().length); } catch (e) { return false; } };
+    const T = A(s.sections).filter(x => x && !x.hide && x.data && !emp(x)).map(x => String(x.data.title || '').replace(/[​\s]+/g, '')).filter(t => t.length >= 2);
     if (T.some(t => !tx.includes(plainTxt(E(t))))) return false;
     const M = A(s.menus).filter(m => m && m.on !== false).map(m => String(m.l || '')); const PM = A(hp.menus).map(m => String(m.l || ''));
     /* v34.5 FZ: 게시본 메뉴 이름은 유형별 이름(HPS.menuName — 예: 평생 '커뮤니티' → '학습 동아리')으로 바뀌어 저장되므로 같은 규칙으로 맞춰 비교한다(없으면 고친 것으로 잘못 보고 이전을 건너뛰었다) */
