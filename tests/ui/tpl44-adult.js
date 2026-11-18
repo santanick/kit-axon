@@ -4,13 +4,14 @@
 const H = require('./hp-visual/lib.js');
 const A = H.args(process.argv.slice(2));
 const IDS = ['adtalk', 'adexam', 'adit', 'adcraft', 'admove', 'adcook', 'adcoach', 'advocal', 'adphoto', 'admoney', 'adcert'];
+const CARDS = {};
 const OPT = ['.a4-num', '.a4-quote']; /* FIX 2 · 3: 자랑할 만한 숫자 · 좋은 후기가 있을 때만 보인다 */
-const SECS = { adtalk: ['.a4-talk', '.a4-stm', '.a4-cls', '.a4-week', '.a4-quote', '.a4-fin'], adexam: ['.a4-cert', '.a4-steps', '.a4-rows', '.a4-notice', '.a4-fin'],
-  adit: ['.a4-cine', '.a4-stm', '.a4-cls', '.a4-week', '.a4-num', '.a4-quote', '.a4-fin'], adcraft: ['.a4-collage', '.a4-band', '.a4-gal', '.a4-quote', '.a4-fin'],
-  admove: ['.a4-half', '.a4-tt', '.a4-story', '.a4-quote', '.a4-fin'], adcook: ['.a4-center', '.a4-story', '.a4-cls', '.a4-gal', '.a4-quote', '.a4-fin'],
-  adcoach: ['.a4-sig', '.a4-story', '.a4-steps', '.a4-pkg', '.a4-quote', '.a4-fin'], advocal: ['.a4-stage', '.a4-num', '.a4-band', '.a4-week', '.a4-gal', '.a4-fin'],
-  adphoto: ['.a4-film', '.a4-gal', '.a4-cls', '.a4-quote', '.a4-fin'], admoney: ['.a4-news', '.a4-stm', '.a4-steps', '.a4-pkg', '.a4-quote', '.a4-fin'],
-  adcert: ['.a4-badge', '.a4-steps', '.a4-cls', '.a4-cred', '.a4-notice', '.a4-quote', '.a4-fin'] };
+const SECS = { adtalk: ['.a4-talk', '.a4-stm', '.a4-cls', '.a4-week', '.a4-fin'], adexam: ['.a4-cert', '.a4-steps', '.a4-rows', '.hx-price', '.a4-fin'],
+  adit: ['.a4-cine', '.a4-stm', '.a4-cls', '.a4-week', '.a4-fin'], adcraft: ['.a4-collage', '.a4-band', '.a4-gal', '.hx-loc', '.a4-fin'],
+  admove: ['.a4-half', '.a4-tt', '.a4-story', '.hx-price', '.hx-loc', '.a4-fin'], adcook: ['.a4-center', '.a4-story', '.a4-cls', '.a4-gal', '.hx-loc', '.a4-fin'],
+  adcoach: ['.a4-sig', '.a4-story', '.a4-steps', '.hx-price', '.a4-fin'], advocal: ['.a4-stage', '.a4-band', '.a4-week', '.a4-gal', '.a4-fin'],
+  adphoto: ['.a4-film', '.a4-gal', '.a4-cls', '.a4-fin'], admoney: ['.a4-news', '.a4-stm', '.a4-steps', '.hx-price', '.a4-fin'],
+  adcert: ['.a4-badge', '.a4-steps', '.a4-cls', '.a4-cred', '.a4-fin'] };
 const H1MAX = Object.fromEntries(IDS.map(id => [id, id === 'adcraft' ? [3, 4] : [2, 4]]));
 const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { const res = await r.fetch(); let b = await res.text();
   if (!/hp44-adult\.js/.test(b)) b = b.replace(/(<script src="hpprem\.js[^"]*"><\/script>)/, '$1\n<script src="hp44-adult.js"></script>');
@@ -37,8 +38,10 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
     const topImg = q('.a4-h img').filter(vis).some(im => { const b = im.getBoundingClientRect(); return b.top < innerHeight && b.bottom > 0 && b.height >= 100 && im.complete && im.naturalWidth > 0; });
     const secs = SEL.filter(s => q(s).some(vis)); const txt = R.map(r => r.textContent).join(' ');
     const numEl = q('.a4-num').filter(vis)[0]; const num = numEl ? { big: (numEl.querySelector('.a4-big') || {}).textContent || '', fine: (numEl.querySelector('.a4-fine') || {}).textContent || '' } : null;
+    const IMK = R.flatMap(r => [...r.querySelectorAll('img')]).map(im => String(im.getAttribute('src') || '').replace(/^.*\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, '')).filter(Boolean);
+    const dup = IMK.filter((k, i) => IMK.indexOf(k) !== i); const cardK = q('.a4-cp img, .a4-bp img, .a4-gl img').map(im => String(im.getAttribute('src') || '').replace(/^.*\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, ''));
     const qtEl = q('.a4-quote blockquote').filter(vis)[0]; const quote = qtEl ? qtEl.textContent : null;
-    return { over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, txt, inputs: q('.a4-h input, .a4-s input, .a4-s form').length, num, quote, ctaB: Math.max(0, ...q('.a4-h .a4-cta .a4-b').filter(vis).map(b => b.getBoundingClientRect().bottom)), vh: innerHeight, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.a4-h h1, .a4-fin h2').map(x => x.textContent).join('')) }; }, sel);
+    return { over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, dup, cardK, txt, inputs: q('.a4-h input, .a4-s input, .a4-s form').length, num, quote, ctaB: Math.max(0, ...q('.a4-h .a4-cta .a4-b').filter(vis).map(b => b.getBoundingClientRect().bottom)), vh: innerHeight, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.a4-h h1, .a4-fin h2').map(x => x.textContent).join('')) }; }, sel);
   const allowed = h => /^(#login\/(family|my|mypay)|#join|#p-c-[\w-]+|#p-m-[\w-]+|#class\/[\w-]+|#courses|#shop|#notice|tel:[\d+]+|mailto:.+)$/.test(h);
   try {
     for (const type of ['adult']) {
@@ -76,6 +79,7 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
           ok(m.over <= 0 && !m.wide.length, `${tag} 가로 넘침 0(${m.over} ${m.wide.join(',')})`);
           ok(m.h1n >= 1 && m.h1n <= H1MAX[id][w === 390 ? 1 : 0] && m.h1fs >= (w === 390 ? 36 : 64) && (w !== 390 || m.h1fs <= 48), `${tag} 첫 화면 제목 ${m.h1fs}px · ${m.h1n}줄`);
           ok(m.topImg, `${tag} 첫 화면 안에 실사진`);
+          ok(!m.dup.length, `${tag} 한 페이지 안 사진 중복 0(${m.dup.join(',')})`); if (w === 1440) CARDS[id] = m.cardK;
           ok(m.ctaB > 0 && m.ctaB <= m.vh - 72, `${tag} 첫 화면 안에 제목 · 버튼이 모두 보임(하단 바 위, 버튼 아래끝 ${Math.round(m.ctaB)} / ${m.vh})`);
           ok(!m.small.length, `${tag} 13px 미만 글자 0(${m.small.join(',')})`);
           ok(!m.tap.length, `${tag} 누르는 칸 44px 이상(${m.tap.join(',')})`);
@@ -91,13 +95,15 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
         }
         ok(!perr.length, `[${type}] ${id} 학습자 pageerror 0 ${perr.join('|')}`); await pg.close();
       }
+      { const all = Object.entries(CARDS).flatMap(([id, L]) => L.map(k => [k, id])); const by = {}; all.forEach(([k, id]) => { (by[k] = by[k] || new Set()).add(id); }); const rep = Object.entries(by).filter(([k, v]) => v.size > 1).map(([k, v]) => k + ':' + [...v].join('/'));
+        ok(!rep.length && all.length >= 20, `[${type}] 강좌 카드 · 사진 띠 · 갤러리 사진이 템플릿끼리 겹치지 않음(${all.length}장 ${rep.join(' ')})`); }
       ok(!errs.length, `[${type}] 운영 pageerror 0 ${errs.slice(0, 3).join('|')}`); await o.ctx.close();
     }
     /* 데이터 없음: 공개 강좌 · 후기 0 → 반 · 숫자 · 인용 덩어리 숨김(게시본), 넘침 0 */
     { const errs = []; const o = await H.mkOrg(br, base, 'adult', errs, 'empty'); await inject(o.ctx); await o.op.reload(); await o.op.waitForFunction(() => window.S && S.org && typeof TPL !== 'undefined'); await o.op.waitForTimeout(500); await H.dismiss(o.op);
       for (const id of IDS) { await o.op.evaluate(() => { S.classes = []; S.posts = (S.posts || []).filter(p => p.board !== '수강후기'); S.reviews = []; S.notices = []; save(); });
         const r = await H.applyTpl(o.op, 't44-' + id); const pg = await o.ctx.newPage(); const perr = []; pg.on('pageerror', e => perr.push(e.message));
-        await learner(pg, o.tid, 390, 844); const m = await measure(pg, ['.a4-cls', '.a4-band', '.a4-gal', '.a4-num', '.a4-quote', '.a4-stm', '.a4-tt', '.a4-notice', '.a4-pkg', '.a4-hint']);
+        await learner(pg, o.tid, 390, 844); const m = await measure(pg, ['.a4-cls', '.a4-band', '.a4-gal', '.a4-num', '.a4-quote', '.a4-stm', '.a4-tt', '.a4-notice', '.a4-pkg', '.a4-vid', '.a4-hint', '.hx-price', '.hx-rev', '.hx-fac', '.hx-ntc']);
         ok(!r.err && !m.secs.length && m.over <= 0 && !perr.length && m.secs.length === 0, `[빈 기관 390] ${id} 데이터 없는 덩어리 숨김 · 안내 문구 비노출 · 넘침 0(${m.secs.join(' ')} ${m.over} ${perr.join('|')})`);
         const ed = await o.op.evaluate(id2 => { try { HPE = HPE || null; } catch (e) { } let h = ''; try { const b = JSON.parse(JSON.stringify(S.site)); h = siteHTML(b, false, 'ko'); } catch (e) { h = 'ERR ' + e.message; } return { ok: /a4-h/.test(h), err: /^ERR/.test(h) ? h : '' }; }, id);
         ok(ed.ok, `[빈 기관] ${id} 스튜디오 미리보기 렌더(${ed.err})`); await pg.close(); }
