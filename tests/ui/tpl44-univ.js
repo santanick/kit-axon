@@ -62,14 +62,21 @@ const inject = h => /hp44-univ\.js/.test(h) ? h : /hpv-univ\.js/.test(h) ? h.rep
       const g = await gate(q); ok(!g.ovf && !g.out.length && !g.small.length && !g.tiny.length && !g.wrap1.length && !pe.length, `${id} @${w}: 넘침 ${g.ovf} · 잘림 ${g.out.length} · 44px 미만 ${g.small.length} · 13px 미만 ${g.tiny.length} · 한 글자 꺾임 ${g.wrap1.length} · 오류 ${pe.length} ${[...g.out, ...g.small, ...g.tiny, ...g.wrap1, ...pe].slice(0, 4).join(' / ')}`);
       const s = await q.evaluate(sel => { const H = document.querySelector(sel); const h1 = H && H.querySelector('h1'); const im = H && [...H.querySelectorAll('img')].find(i => i.offsetWidth > 0); const r = H ? H.getBoundingClientRect() : { height: 0 };
         return { hero: !!H, h1: h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0, btn: H ? H.querySelectorAll('.u4-btn').length : 0, photo: !!(im && im.naturalWidth > 0), dday: H ? /D-\d|마감 임박/.test(H.innerText) : true, panel: H ? H.querySelectorAll('aside, .hxu-uh-pn').length : 1, hh: Math.round(r.height),
-          first: (document.querySelector('#p-home section') || {}).className || '', secs: [...document.querySelectorAll('#p-home section.u4')].map(x => (String(x.className).match(/u4-(story|cls|big|quote|board|band|open|lms|medal|motto|close|whos|steps|gallery)\b/) || [''])[0]).filter(Boolean),
+          first: (document.querySelector('#p-home section') || {}).className || '', secs: [...document.querySelectorAll('#p-home section.u4, #p-home nav.u4-quick, #p-home section[data-hx]')].map(x => x.dataset.hx ? 'hx-' + x.dataset.hx : (String(x.className).match(/u4-(story|cls|big|quote|board|band|open|lms|medal|motto|close|whos|steps|gallery|quick|calband|news)\b/) || [''])[0]).filter(Boolean),
+          dup: (() => { const ids = [...document.querySelectorAll('#p-home img')].filter(i => i.offsetWidth > 0 || i.closest('.u4-tall, .u4-card, .u4-frame')).map(i => (String(i.getAttribute('src')).match(/stock\/([a-z]{3}-\d{2})/) || [])[1]).filter(Boolean); return ids.filter((x, k) => ids.indexOf(x) !== k); })(),
           cls: document.querySelectorAll('#p-home .u4-cls li a').length, imgs: [...document.querySelectorAll('#p-home .u4-cls img')].map(i => i.getAttribute('src')), cal: (document.querySelector('.u4-board .bcal') || {}).innerText || '', nt: (document.querySelector('.u4-board .bnt') || {}).innerText || '' }; }, HSEL[id]);
       const big = w === 1440 ? 64 : 34; ok(s.hero && s.h1 >= big && s.btn === 2 && s.photo && !s.dday && !s.panel, `${id} @${w}: 첫 화면 — 큰 제목 ${s.h1}px · 버튼 ${s.btn}개 · 사진 · 판/D-day 없음`);
-      if (w === 1440) { ok(s.secs.length >= 4 && s.secs.length <= 8, `${id}: 섹션 구성 ${s.secs.join(' ')}`); ok(s.cls >= 3 && new Set(s.imgs).size === s.imgs.length, `${id}: 공개 강좌 ${s.cls}개(실제 강좌 · 사진 중복 ${s.imgs.length - new Set(s.imgs).size})`);
+      if (w === 1440) { ok(s.secs.length >= 4 && s.secs.length <= 10, `${id}: 섹션 구성 ${s.secs.join(' ')}`); ok(!s.dup.length, `${id}: 한 페이지 안 사진 중복 0 ${s.dup.join(' ')}`); ok(s.cls >= 3 && new Set(s.imgs).size === s.imgs.length, `${id}: 공개 강좌 ${s.cls}개(실제 강좌 · 사진 중복 ${s.imgs.length - new Set(s.imgs).size})`);
         if (s.cal) ok(/기말고사/.test(s.cal) && !/교직원 회의/.test(s.cal), `${id}: 학사 일정 — 학습자에게 보이는 일정만(내부 회의 제외)`); if (s.nt) ok(/중요/.test(s.nt) && /추가 모집/.test(s.nt), `${id}: 공지(중요 먼저)`); }
       if (w === 390) ok(s.hh > 0 && s.hh <= 1500, `${id} @390: 첫 화면 높이 ${s.hh}px`);
       if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await q.screenshot({ path: path.join(SHOT, `t-${id}-${w}.jpg`), type: 'jpeg', quality: 70 }); }
       await c.close(); } }
+
+  /* ── 3-1) 강좌 카드 사진이 템플릿마다 다름(같은 유형 12종 사이 중복 0) ── */
+  { const r = await p.evaluate(ids => ids.map(id => { const d = new DOMParser().parseFromString(siteHTML(siteFromTpl(TPL.find(t => t.id === 't44-' + id)), true, 'ko'), 'text/html');
+      return [id, [...d.querySelectorAll('.u4-cls figure img')].map(i => (String(i.getAttribute('src')).match(/stock\/([a-z]{3}-\d{2})/) || [])[1]).filter(Boolean)]; }), IDS);
+    const all = r.flatMap(([, L]) => L); const dup = all.filter((x, k) => all.indexOf(x) !== k);
+    ok(!dup.length && r.every(([, L]) => L.length === 0 || new Set(L).size === L.length), `강좌 카드 사진: 템플릿 사이 중복 ${dup.length} (${[...new Set(dup)].join(' ')})`); }
 
   /* ── 4) 링크 · 개인정보 ── */
   { const r = await p.evaluate(ids => ids.map(id => { const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); const h = siteHTML(s, true, 'ko'); const d = new DOMParser().parseFromString(h, 'text/html');
