@@ -177,8 +177,12 @@ const SHOT = process.env.SHOT_DIR || '';
     await page.fill('#hpsPan [data-hx="mo-q"]', '약관'); await wait(200);
     ok('세부 설정 검색 → 맞는 묶음만', await ev(() => { const v = [...document.querySelectorAll('#hpsPan .hps-mc')].filter(x => !x.hidden).map(x => x.dataset.mc); return v.length === 1 && v[0] === 'terms'; }));
     await page.fill('#hpsPan [data-hx="tm-tos"]', '제1조(목적) 센텀 배움 아카데미 이용약관입니다.'); await page.fill('#hpsPan [data-hx="mo-q"]', ''); await wait(250);
-    await page.fill('#hpsPan [data-hx="ft"][data-k="company"]', '센텀배움(주)'); await wait(1000);
-    ok('바닥글 회사명 → 캔버스 바닥글에 바로', await ev(() => /센텀배움\(주\)/.test(document.getElementById('hpeF').contentDocument.body.textContent)));
+    /* v44.1 불안정 정리: 입력 → 0.5초 묶음(deb) → 캔버스 srcdoc 다시 그리기. 대학 템플릿(hp44-univ)처럼 무거운 캔버스는 반영까지 0.45~1.0초라 고정 1초에 걸렸다 → 캔버스 글자 조건 대기(최대 5초) */
+    await page.fill('#hpsPan [data-hx="ft"][data-k="company"]', '센텀배움(주)');
+    const ftCanvas = () => { try { const d = document.getElementById('hpeF').contentDocument; return !!(d && d.body && /센텀배움\(주\)/.test(d.body.textContent)); } catch (e) { return false; } };
+    const ftOk = await page.waitForFunction(ftCanvas, null, { timeout: 5000 }).then(() => true).catch(() => false); /* 기다린 결과를 그대로 판정(다시 읽으면 그 사이 다시 그려지는 캔버스를 읽을 수 있음) */
+    ok('바닥글 회사명 → 캔버스 바닥글에 바로', ftOk, await ev(() => { const d = document.getElementById('hpeF').contentDocument; const inp = document.querySelector('#hpsPan [data-hx="ft"][data-k="company"]');
+      return { state: (S.settings.footer || {}).company, input: inp ? inp.value : null, key: HPE.key, foot: d && d.body ? (d.querySelector('footer') || d.body).textContent.replace(/\s+/g, ' ').slice(0, 160) : null }; }));
     const hideId = await ev(() => (site().menus.find(x => x.kind !== 'home' && x.on !== false && x.kind === 'custom') || site().menus.find(x => x.kind !== 'home' && x.on !== false)).id);
     await page.uncheck(`#hpsPan [data-hx="pl-on"][data-m="${hideId}"][data-s=""]`); await wait(500);
     ok('페이지 목록에서 숨기면 위 탭에서도 빠짐', await ev(id => site().menus.find(m => m.id === id).on === false && !document.querySelector(`#hpe .hps-tab[data-m="${id}"]`), hideId));

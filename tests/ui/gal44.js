@@ -109,8 +109,8 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
       await gal(page); await chip(page, 'all');
       const ids = await page.evaluate(() => [...document.querySelectorAll('.tpd-c')].map(c => c.dataset.v));
       for (const id of ids) { await page.evaluate(v => { const c = document.querySelector(`.tpd-c[data-v="${v}"]`); c && c.scrollIntoView({ block: 'center' }); }, id); await page.waitForTimeout(90); }
-      /* 썸네일은 한 장씩 차례로 그린다(hpgal 큐) — 다 그려지고 사진이 다 받아질 때까지 기다림 */
-      await page.waitForFunction(() => [...document.querySelectorAll('.tpd-c .tpd-th')].every(th => { const f = th.querySelector('iframe'); if (!f) return false; let d = null; try { d = f.contentDocument; } catch (e) { return true; } if (!d || !d.body || d.URL === 'about:blank') return false; return [...d.querySelectorAll('img')].every(i => i.complete); }), null, { timeout: 120000, polling: 500 }).catch(() => {});
+      /* 썸네일은 한 장씩 차례로 그린다(hpgal 큐 · 문서가 interactive이면 먼저 보여 줌) — 다 그려지고(문서 load) 사진이 다 받아질 때까지 기다림 */
+      await page.waitForFunction(() => [...document.querySelectorAll('.tpd-c .tpd-th')].every(th => { const f = th.querySelector('iframe'); if (!f) return false; let d = null; try { d = f.contentDocument; } catch (e) { return true; } if (!d || !d.body || d.URL === 'about:blank' || d.readyState !== 'complete') return false; return [...d.querySelectorAll('img')].every(i => i.complete); }), null, { timeout: 120000, polling: 500 }).catch(() => {}); /* v44.1 불안정 정리: 문서를 다 읽기 전(readyState loading · interactive)에는 img가 아직 없거나 일부라 「모두 complete」가 거짓으로 참이 됐다 → 문서 load 끝까지 */
       await page.waitForTimeout(500);
       const R = await page.evaluate(() => [...document.querySelectorAll('.tpd-c')].map(c => { const v = c.dataset.v; const tp = TPL.find(t => t.id === v); let want = 0; try { want = (siteHTML(TPD.fromTpl(tp), false, 'ko').match(/<img[^>]+img\/stock/g) || []).length; } catch (e) { }
         const fr = [...c.querySelectorAll('.tpd-th iframe')]; let ok = 0, bad = 0, opaque = 0;
@@ -151,13 +151,18 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
       await page.click('.tpd-lk'); await page.waitForTimeout(400); s = await state(page); ok('H 분야 해제', (s.fd.find(x => x[3]) || [])[0] === '', s.fd.filter(x => x[3]));
       /* hover 자동 스크롤 미리보기 */
       await chip(page, 'k12'); await page.waitForFunction(() => [...document.querySelectorAll('.tpd-c .tpd-th iframe')].some(f => { try { return f.contentDocument && f.contentDocument.body && f.contentDocument.documentElement.scrollHeight > 1500; } catch (e) { return false; } }), null, { timeout: 30000 });
-      const hi = await page.evaluate(() => [...document.querySelectorAll('.tpd-c')].findIndex(c => { const f = [...c.querySelectorAll('.tpd-th iframe')].pop(); try { return f && f.contentDocument && f.contentDocument.documentElement.scrollHeight > 1500; } catch (e) { return false; } }));
-      const TH = `.tpd-c:nth-of-type(${hi + 1}) .tpd-th`; const fy = () => page.evaluate(sel => { const f = [...document.querySelector(sel).querySelectorAll('iframe')].pop(); return f.contentWindow.scrollY; }, TH);
-      await page.hover(TH); await page.waitForTimeout(1300); const y1 = await fy();
-      const mt = await page.evaluate(sel => document.querySelector(sel).parentElement.querySelector('.tpd-mt').textContent, TH);
-      await page.mouse.move(5, 5); await page.waitForTimeout(1200);
+      /* v44.1 불안정 정리: ① 카드를 :nth-of-type 위치로 다시 찾지 않고 고른 카드에 표시(data-qa-hv)를 붙여 같은 요소를 쓴다(다시 그려져도 엉뚱한 카드 · 빈 iframe에서 예외가 나지 않음)
+         ② 자동 스크롤(rAF · 900px/초)과 떠날 때 처음으로(behavior:smooth)는 바쁠 때 고정 1.3초 · 1.2초를 넘긴다 → 스크롤 위치 조건 대기(최대 8초) */
+      const hv = await page.evaluate(() => { const c = [...document.querySelectorAll('.tpd-c')].find(c => { const f = [...c.querySelectorAll('.tpd-th iframe')].pop(); try { return f && f.contentDocument && f.contentDocument.documentElement.scrollHeight > 1500; } catch (e) { return false; } }); if (c) c.dataset.qaHv = '1'; return !!c; });
+      const TH = '.tpd-c[data-qa-hv] .tpd-th'; await page.evaluate(() => { window.__qaY = sel => { const t = document.querySelector(sel); const f = t && [...t.querySelectorAll('iframe')].pop(); try { return f && f.contentWindow ? f.contentWindow.scrollY : -1; } catch (e) { return -1; } }; });
+      const fy = () => page.evaluate(sel => window.__qaY(sel), TH);
+      if (hv) await page.hover(TH);
+      await page.waitForFunction(sel => window.__qaY(sel) > 300, TH, { timeout: 8000 }).catch(() => {}); const y1 = await fy();
+      const mt = await page.evaluate(sel => { const t = document.querySelector(sel); const m = t && t.parentElement.querySelector('.tpd-mt'); return m ? m.textContent : ''; }, TH);
+      await page.mouse.move(5, 5);
+      await page.waitForFunction(sel => { const y = window.__qaY(sel); return y >= 0 && y < 5; }, TH, { timeout: 8000 }).catch(() => {});
       const y2 = await fy();
-      ok('H hover → 자동 스크롤 미리보기 · 떠나면 처음으로 · 「섹션 n · 약 m화면」', y1 > 300 && y2 < 5 && /섹션 \d+ · 약 \d+화면/.test(mt), { y1, y2, mt });
+      ok('H hover → 자동 스크롤 미리보기 · 떠나면 처음으로 · 「섹션 n · 약 m화면」', hv && y1 > 300 && y2 >= 0 && y2 < 5 && /섹션 \d+ · 약 \d+화면/.test(mt), { y1, y2, mt });
       ok('H 스크립트 오류 0', !errs.length, errs); await ctx.close(); }
     { const { ctx, page, errs } = await open('k12', undefined, false, 390); await gal(page); const s = await state(page);
       const v = await page.evaluate(() => { const w = [...document.querySelectorAll('.tpd-fd')].find(x => x.offsetParent); const r = w.getBoundingClientRect(); const B = [...w.querySelectorAll('button')]; return { row: B.every(b => Math.abs(b.getBoundingClientRect().top - B[0].getBoundingClientRect().top) < 2), h: Math.round(r.height), over: document.documentElement.scrollWidth > innerWidth + 1 }; });
