@@ -164,12 +164,21 @@ const MEASURE = () => {
   return { fonts: ld, hfont, hosts: hosts.length, top: h0 ? Math.round(h0.top + sy) : 0, docH: document.documentElement.scrollHeight, nVis, numSec, clsVis, emptyCls, over: document.documentElement.scrollWidth - innerWidth, wide, texts, photos, empty, txt: txtAll.replace(/\s+/g, ' ').trim().slice(0, 20000) };
 };
 
+/* 조건 대기(v44.1 불안정 정리): 스크롤 위치가 멈추고 · 진행 중인 CSS 전환(머리글 높이 등, Shadow DOM 포함)이 없고 · 그다음 rAF 2회. 최대 ms */
+const QUIET_INIT = () => { window.__hvQuiet = async (ms, y) => { const t0 = Date.now(); const raf = () => new Promise(r => requestAnimationFrame(() => r()));
+  const busy = () => { let L = []; try { L = document.getAnimations(); } catch (e) { } return L.some(a => a.playState === 'running' && typeof CSSTransition !== 'undefined' && a instanceof CSSTransition); };
+  let last = -1; for (;;) { await raf(); const sy = Math.round(scrollY); const at = y == null || Math.abs(sy - y) <= 1; if (at && sy === last && !busy()) break; last = sy; if (Date.now() - t0 > (ms || 3000)) break; }
+  await raf(); await raf(); return Math.round(scrollY); }; };
+async function quiet(pg, ms, y) { await pg.evaluate(QUIET_INIT); return pg.evaluate(([ms, y]) => window.__hvQuiet(ms, y), [ms || 3000, y == null ? null : y]); }
 /* 촬영 전 대기(FIXLIST 16): 페이지를 끝까지 내려 지연 불러오기를 깨우고, 모든 사진을 eager로 바꿔 다 뜨고(decode) 나면 맨 위로. 반환: 아직 안 뜬 사진 수 */
 async function settle(pg, ms) {
-  return pg.evaluate(async lim => { const t0 = Date.now(); const imgs = () => [...document.querySelectorAll('.smhost')].flatMap(h => h.shadowRoot ? [...h.shadowRoot.querySelectorAll('img')] : []);
+  await pg.evaluate(QUIET_INIT).catch(() => {});
+  return pg.evaluate(async lim => { const t0 = Date.now(); const quietIn = window.__hvQuiet; const imgs = () => [...document.querySelectorAll('.smhost')].flatMap(h => h.shadowRoot ? [...h.shadowRoot.querySelectorAll('img')] : []);
     imgs().forEach(i => { if (i.loading === 'lazy') i.loading = 'eager'; i.decoding = 'sync'; }); /* 전체 화면 촬영(captureBeyondViewport)은 decoding=async 사진을 빈 칸으로 찍을 때가 있다 */
-    const H = document.documentElement.scrollHeight; for (let y = 0; y < H; y += Math.round(innerHeight * .8)) { scrollTo(0, y); await new Promise(r => setTimeout(r, 60)); }
-    scrollTo(0, 0); await new Promise(r => setTimeout(r, 450)); /* 머리글 숨김 · 보임 전환(스크롤 방향)이 끝날 때까지 */
+    /* v44.1 불안정 정리: 학습자 화면은 html{scroll-behavior:smooth}라 scrollTo(0, y)가 부드럽게 움직인다 → 바쁠 때 고정 대기 뒤에도 맨 위에 못 돌아와
+       DOM 서명(첫 요소 = 숨은 건너뛰기 링크 위치) · 머리글 높이가 달라졌다. 즉시 이동 + 「맨 위 · 진행 중 전환 없음」 조건 대기 */
+    const H = document.documentElement.scrollHeight; for (let y = 0; y < H; y += Math.round(innerHeight * .8)) { scrollTo({ top: y, behavior: 'instant' }); await new Promise(r => setTimeout(r, 60)); }
+    scrollTo({ top: 0, behavior: 'instant' }); await quietIn(3000, 0); /* 머리글 숨김 · 보임 전환(스크롤 방향)이 끝날 때까지 */
     const L = imgs(); const all = Promise.all(L.map(i => (i.complete ? Promise.resolve() : new Promise(ok => { i.addEventListener('load', ok, { once: true }); i.addEventListener('error', ok, { once: true }); })).then(() => (i.decode ? i.decode().catch(() => {}) : 0))));
     await Promise.race([all, new Promise(r => setTimeout(r, Math.max(300, lim - (Date.now() - t0))))]);
     try { await document.fonts.ready; } catch (e) { }
@@ -235,4 +244,4 @@ const TYPES = ['adult', 'k12', 'univ', 'lifelong', 'voc', 'corp', 'public'];
 const typesOf = r => (Array.isArray(r.types) && r.types.length ? r.types : [r.type]).filter(Boolean);
 const byType = rows => { const m = {}; rows.forEach(r => typesOf(r).forEach(t => { (m[t] = m[t] || []).push(r); })); Object.values(m).forEach(L => L.sort((a, b) => a.id.localeCompare(b.id))); return m; };
 
-module.exports = { blankRun, net, cdnStat, STATES, settle, ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };
+module.exports = { blankRun, net, cdnStat, STATES, settle, quiet, ROOT, need, serve, args, mkOrg, applyTpl, MEASURE, textChecks, dhash, hamming, pixelContrast, csv, esc, loadRows, TYPES, byType, typesOf, kinds, MIN_N, dismiss };

@@ -30,7 +30,7 @@ function serve(port, old) { const srv = http.createServer((q, r) => { const u = 
   Object.entries(CUT).forEach(([f, fn]) => { const s = fs.readFileSync(path.join(ROOT, f), 'utf8'); ok(fn(s) !== s, `「이전」 판 만들기: ${f}에서 CM 블록을 찾음`); });
   const open = async (ctx, base, tid, w) => { const pg = await ctx.newPage(); const pe = []; pg.on('pageerror', e => pe.push(e.message)); await pg.setViewportSize({ width: w, height: w > 600 ? 900 : 844 });
     await pg.goto(base + 'learner.html?t=' + tid + '&r=' + Date.now() + '#home'); await pg.waitForFunction(() => document.querySelector('.smhost') && document.querySelector('.smhost').shadowRoot, null, { timeout: 9000 }).catch(() => {});
-    await pg.waitForTimeout(600); await H.settle(pg); await pg.waitForTimeout(400); return { pg, pe }; };
+    await pg.waitForTimeout(600); await H.settle(pg); await H.quiet(pg, 3000, 0); return { pg, pe }; }; /* v44.1: 고정 400ms 대신 맨 위 · 전환 끝 조건 대기 */
   /* 학습자 DOM · 스타일 서명(셸 + 홈페이지 Shadow) */
   const sig = pg => pg.evaluate(() => { const K = ['display', 'position', 'color', 'background-color', 'font-size', 'font-weight', 'padding-top', 'padding-bottom', 'height', 'width', 'opacity', 'transform'];
     const out = []; const walk = (el, d) => { if (d > 40) return; [...el.children].forEach(c => { if (/^(SCRIPT|STYLE)$/.test(c.tagName)) return; const cs = getComputedStyle(c); const b = c.getBoundingClientRect();
@@ -116,7 +116,12 @@ function serve(port, old) { const srv = http.createServer((q, r) => { const u = 
         const a = await pg.evaluate(async () => { const hh = document.querySelector('.lhs-head'); const hw = hh && hh.shadowRoot && hh.shadowRoot.querySelector('header.gh .hps-hw'); const h0 = hw ? Math.round(hw.getBoundingClientRect().height) : 0;
           const inHead = !!document.querySelector('header.lh .lt-fab'); const fab = document.querySelector('#ltut .lt-fab'); const fb = fab ? fab.getBoundingClientRect() : null; const fcs = fab ? getComputedStyle(fab) : null;
           const login = !!(hh && hh.shadowRoot && hh.shadowRoot.querySelector('header.gh a[href="#login"]'));
-          scrollTo(0, 1400); await new Promise(r => setTimeout(r, 450)); const h1 = hw ? Math.round(hw.getBoundingClientRect().height) : 0; const sc = hh && hh.classList.contains('hx-sc');
+          /* v44.1 불안정 정리: html{scroll-behavior:smooth}라 scrollTo(0, 1400)는 부드럽게 움직이고, 머리글 높이는 .2s 전환 · 스크롤 등장은 IntersectionObserver(다음 프레임 뒤 콜백)다.
+             고정 450ms 대신 즉시 이동 → 「목표 위치 · 진행 중 CSS 전환 없음 · rAF 2회」 → 화면 안 섹션의 hx-in(관찰자 콜백) 조건 대기(최대 3초) */
+          scrollTo({ top: 1400, behavior: 'instant' }); await window.__hvQuiet(3000, Math.min(1400, document.documentElement.scrollHeight - innerHeight));
+          const hidN = () => { const R0 = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); const m0 = R0.map(r => r.querySelector('.smr.hx-js')).find(Boolean); return m0 ? [...m0.querySelectorAll(':scope > section')].slice(1).filter(x => !x.classList.contains('hx-in') && x.getBoundingClientRect().top < innerHeight * .8).length : -1; };
+          for (const t0 = Date.now(); hidN() > 0 && Date.now() - t0 < 3000;) await new Promise(r => requestAnimationFrame(() => r()));
+          await window.__hvQuiet(3000); const h1 = hw ? Math.round(hw.getBoundingClientRect().height) : 0; const sc = hh && hh.classList.contains('hx-sc');
           const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); const smr = R.map(r => r.querySelector('.smr.hx-js')).find(Boolean); const hid = smr ? [...smr.querySelectorAll(':scope > section')].slice(1).filter(x => !x.classList.contains('hx-in') && x.getBoundingClientRect().top < innerHeight * .8).length : -1;
           return { h0, h1, sc, inHead, login, fab: fb ? { r: Math.round(innerWidth - fb.right), b: Math.round(innerHeight - fb.bottom), op: fcs.opacity, vis: fcs.visibility } : null, js: !!smr, hid, body: document.body.className }; });
         ok(/lhs-g44/.test(a.body), `[${type}] PC body.lhs-g44`);
@@ -129,7 +134,8 @@ function serve(port, old) { const srv = http.createServer((q, r) => { const u = 
       { const ctx2 = await br.newContext({ reducedMotion: 'reduce', viewport: { width: 1440, height: 900 } }); await ctx2.addInitScript(() => {}); const pg = await ctx2.newPage();
         await pg.goto(baseN + 'index.html'); /* 같은 기관 데이터를 쓰려면 같은 컨텍스트가 필요 — 여기서는 o.ctx의 저장소를 복사 */
         const stor = await o.op.evaluate(() => JSON.stringify(Object.assign({}, localStorage))); await pg.evaluate(s => { const o2 = JSON.parse(s); Object.keys(o2).forEach(k => localStorage.setItem(k, o2[k])); }, stor);
-        await pg.goto(baseN + 'learner.html?t=' + o.tid + '#home'); await pg.waitForTimeout(1800);
+        await pg.goto(baseN + 'learner.html?t=' + o.tid + '#home'); /* v44.1: 고정 1.8초 대신 게시본이 그려지고 g44 셸이 붙을 때까지 */
+        await pg.waitForFunction(() => document.body.classList.contains('lhs-g44') && [...document.querySelectorAll('.smhost')].some(h => h.shadowRoot && h.shadowRoot.querySelector('.smr > section')), null, { timeout: 9000 }).catch(() => {}); await H.quiet(pg, 2000);
         const rm = await pg.evaluate(() => { const R = [...document.querySelectorAll('.smhost')].map(x => x.shadowRoot).filter(Boolean); return { js: R.some(r => r.querySelector('.smr.hx-js')), op: R.flatMap(r => [...r.querySelectorAll('.smr > section')]).filter(x => getComputedStyle(x).opacity !== '1').length, g: document.body.classList.contains('lhs-g44') }; });
         ok(rm.g && !rm.js && rm.op === 0, `[${type}] prefers-reduced-motion이면 등장 움직임 없음(${JSON.stringify(rm)})`); await ctx2.close(); }
       ok(!errs.length, `[${type}] 관리자 오류 0 ${errs.slice(0, 2).join(' | ')}`); await o.ctx.close();
