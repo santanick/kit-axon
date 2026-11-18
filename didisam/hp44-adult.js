@@ -53,7 +53,7 @@
   const img = (p, cls, eager, slot) => p ? `<figure class="a4-ph${cls ? ' ' + cls : ''}"${slot ? ` data-slot="${E(slot)}"` : ''}${slot === 'hero' ? ' data-hero="1"' : ''}${p.stock ? ' data-stock="1"' : ''}><img src="${E(p.src)}"${p.srcset ? ` srcset="${E(p.srcset)}" sizes="(max-width: 760px) 100vw, 60vw"` : ''} alt="${E(p.alt || '')}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos || '50% 50%')}"></figure>` : '';
   const fig = (s, slot, cls, eager, d) => img(ph(s, slot, d), cls, eager, slot);
   let USED = new Set(); const fresh = () => { USED = new Set(); };
-  /* v44.1 A1: 강좌 카드 사진 — 운영자 사진(강좌 썸네일 · 사이트 사진)이 있으면 그것, 없으면 템플릿 × 분야 사진 세트에서 차례로.
+  /* v44.1 A1: 강좌 카드 사진 — ① 운영자 사진(강좌 썸네일 · 사이트 사진) ② 강좌 이름으로 확실히 맞는 스톡 사진 ③ 템플릿 × 분야 사진 세트.
      한 페이지 안 중복 0(첫 화면 때 USED를 비우고 그 페이지 슬롯 사진을 먼저 담는다), 같은 유형 안 템플릿끼리 세트가 겹치지 않는다. */
   const CARD = {
     adtalk: ['lan-02', 'hum-38', 'lib-05', 'cam-09', 'lib-01', 'hum-16'], adexam: ['dsk-03', 'dsk-08', 'lib-07', 'hum-45', 'dsk-09', 'lap-04'],
@@ -68,6 +68,10 @@
   const clsPh = (c, s, i) => { let m = null; try { m = HPS.cardImg ? HPS.cardImg(c, s) : null; } catch (e) { m = null; }
     if (m && !m.stock && !USED.has(m.src)) { USED.add(m.src); return { src: m.big || m.src, alt: m.alt || c.name, pos: m.pos, stock: false }; }
     const H = window.HPSTOCK; if (!H) return null;
+    /* ② 강좌 이름 · 분야로 확실히 맞는 사진(HPSTOCK.courseRule) — 페이지 안 중복 제외, 템플릿마다 후보 시작점을 달리해 템플릿끼리 겹침을 줄인다(관련성 우선) */
+    try { const r = typeof H.courseRule === 'function' ? H.courseRule(c.name) : null; const ids = r ? r.ids.filter(id => !USED.has(id) && H.get(id)) : [];
+      if (ids.length) { const t = Math.max(0, IDS.indexOf(s && s.theme)); const id = ids[t % ids.length]; const x = H.get(id); USED.add(id); return { src: H.url(x, 'sm'), alt: x.alt || c.name, pos: x.focus, stock: true }; } } catch (e) { }
+    /* ③ 맞는 사진이 없을 때만 템플릿 × 분야 세트 */
     for (const id of (CARD[s && s.theme] || [])) { if (USED.has(id)) continue; const x = H.get(id); if (!x) continue; USED.add(id); return { src: H.url(x, 'sm'), alt: x.alt || c.name, pos: x.focus, stock: true }; }
     try { let x = null; for (let k = 0; k < 8 && (!x || USED.has(x.id)); k++) x = H.photo(c.name, c.id + '|' + i + '|' + k, { id: true, slot: 'card', scope: 'a4-' + c.id + k }); if (x && !USED.has(x.id)) { USED.add(x.id); return { src: H.url(x, 'sm'), alt: x.alt, pos: x.focus, stock: true }; } } catch (e) { }
     return null; };

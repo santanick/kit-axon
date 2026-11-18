@@ -4,7 +4,7 @@
 const H = require('./hp-visual/lib.js');
 const A = H.args(process.argv.slice(2));
 const IDS = ['adtalk', 'adexam', 'adit', 'adcraft', 'admove', 'adcook', 'adcoach', 'advocal', 'adphoto', 'admoney', 'adcert'];
-const CARDS = {};
+const CARDS = {}; const RULEK = {};
 const OPT = ['.a4-num', '.a4-quote']; /* FIX 2 · 3: 자랑할 만한 숫자 · 좋은 후기가 있을 때만 보인다 */
 const SECS = { adtalk: ['.a4-talk', '.a4-stm', '.a4-cls', '.a4-week', '.a4-fin'], adexam: ['.a4-cert', '.a4-steps', '.a4-rows', '.hx-price', '.a4-fin'],
   adit: ['.a4-cine', '.a4-stm', '.a4-cls', '.a4-week', '.a4-fin'], adcraft: ['.a4-collage', '.a4-band', '.a4-gal', '.hx-loc', '.a4-fin'],
@@ -40,8 +40,10 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
     const numEl = q('.a4-num').filter(vis)[0]; const num = numEl ? { big: (numEl.querySelector('.a4-big') || {}).textContent || '', fine: (numEl.querySelector('.a4-fine') || {}).textContent || '' } : null;
     const IMK = R.flatMap(r => [...r.querySelectorAll('img')]).map(im => String(im.getAttribute('src') || '').replace(/^.*\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, '')).filter(Boolean);
     const dup = IMK.filter((k, i) => IMK.indexOf(k) !== i); const cardK = q('.a4-cp img, .a4-bp img, .a4-gl img').map(im => String(im.getAttribute('src') || '').replace(/^.*\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, ''));
+    const kOf = im => im ? String(im.getAttribute('src') || '').replace(/^.*\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, '') : '';
+    const pairs = [...q('.a4-cd').map(el => [(el.querySelector('.a4-cn') || {}).textContent || '', kOf(el.querySelector('img'))]), ...q('.a4-bd').map(el => [(el.querySelector('h3') || {}).textContent || '', kOf(el.querySelector('img'))]), ...q('.a4-gl a').map(el => [(el.querySelector('em') || {}).textContent || '', kOf(el.querySelector('img'))])].filter(p => p[1]);
     const qtEl = q('.a4-quote blockquote').filter(vis)[0]; const quote = qtEl ? qtEl.textContent : null;
-    return { over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, dup, cardK, txt, inputs: q('.a4-h input, .a4-s input, .a4-s form').length, num, quote, ctaB: Math.max(0, ...q('.a4-h .a4-cta .a4-b').filter(vis).map(b => b.getBoundingClientRect().bottom)), vh: innerHeight, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.a4-h h1, .a4-fin h2').map(x => x.textContent).join('')) }; }, sel);
+    return { over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, dup, cardK, pairs, IMK, txt, inputs: q('.a4-h input, .a4-s input, .a4-s form').length, num, quote, ctaB: Math.max(0, ...q('.a4-h .a4-cta .a4-b').filter(vis).map(b => b.getBoundingClientRect().bottom)), vh: innerHeight, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.a4-h h1, .a4-fin h2').map(x => x.textContent).join('')) }; }, sel);
   const allowed = h => /^(#login\/(family|my|mypay)|#join|#p-c-[\w-]+|#p-m-[\w-]+|#class\/[\w-]+|#courses|#shop|#notice|tel:[\d+]+|mailto:.+|https:\/\/map\.naver\.com\/.+)$/.test(h);
   try {
     for (const type of ['adult']) {
@@ -79,7 +81,10 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
           ok(m.over <= 0 && !m.wide.length, `${tag} 가로 넘침 0(${m.over} ${m.wide.join(',')})`);
           ok(m.h1n >= 1 && m.h1n <= H1MAX[id][w === 390 ? 1 : 0] && m.h1fs >= (w === 390 ? 36 : 64) && (w !== 390 || m.h1fs <= 48), `${tag} 첫 화면 제목 ${m.h1fs}px · ${m.h1n}줄`);
           ok(m.topImg, `${tag} 첫 화면 안에 실사진`);
-          ok(!m.dup.length, `${tag} 한 페이지 안 사진 중복 0(${m.dup.join(',')})`); if (w === 1440) CARDS[id] = m.cardK;
+          ok(!m.dup.length, `${tag} 한 페이지 안 사진 중복 0(${m.dup.join(',')})`); if (w === 1440) { const rel = await o.op.evaluate(([P, K]) => { const H = window.HPSTOCK; const bad = [], rule = [];
+              P.forEach(([n, k]) => { const r = H && H.courseRule ? H.courseRule(n) : null; if (!r) return; if (r.ids.includes(k)) { rule.push(k); return; } if (r.ids.some(x => !K.includes(x) && H.get(x))) bad.push(n + '→' + k); }); return { bad, rule }; }, [m.pairs, m.IMK]);
+            ok(!rel.bad.length, `${tag} 강좌 사진이 강좌 이름과 맞음(맞는 사진이 있으면 그것 우선, 규칙 일치 ${rel.rule.length}/${m.pairs.length} ${rel.bad.join(', ')})`);
+            CARDS[id] = m.cardK.filter(k => !rel.rule.includes(k)); RULEK[id] = rel.rule; }
           ok(m.ctaB > 0 && m.ctaB <= m.vh - 72, `${tag} 첫 화면 안에 제목 · 버튼이 모두 보임(하단 바 위, 버튼 아래끝 ${Math.round(m.ctaB)} / ${m.vh})`);
           ok(!m.small.length, `${tag} 13px 미만 글자 0(${m.small.join(',')})`);
           ok(!m.tap.length, `${tag} 누르는 칸 44px 이상(${m.tap.join(',')})`);
@@ -96,7 +101,8 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
         ok(!perr.length, `[${type}] ${id} 학습자 pageerror 0 ${perr.join('|')}`); await pg.close();
       }
       { const all = Object.entries(CARDS).flatMap(([id, L]) => L.map(k => [k, id])); const by = {}; all.forEach(([k, id]) => { (by[k] = by[k] || new Set()).add(id); }); const rep = Object.entries(by).filter(([k, v]) => v.size > 1).map(([k, v]) => k + ':' + [...v].join('/'));
-        ok(!rep.length && all.length >= 20, `[${type}] 강좌 카드 · 사진 띠 · 갤러리 사진이 템플릿끼리 겹치지 않음(${all.length}장 ${rep.join(' ')})`); }
+        ok(!rep.length, `[${type}] 템플릿 세트 사진(이름과 맞는 사진이 없을 때)이 템플릿끼리 겹치지 않음(${all.length}장 ${rep.join(' ')})`);
+        const rk = Object.values(RULEK).flat(); console.log(`  참고: 이름과 맞는 사진 ${rk.length}장 · 서로 다른 사진 ${new Set(rk).size}장`); }
       ok(!errs.length, `[${type}] 운영 pageerror 0 ${errs.slice(0, 3).join('|')}`); await o.ctx.close();
     }
     /* 데이터 없음: 공개 강좌 · 후기 0 → 반 · 숫자 · 인용 덩어리 숨김(게시본), 넘침 0 */
