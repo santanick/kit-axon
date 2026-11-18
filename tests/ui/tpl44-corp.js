@@ -55,6 +55,8 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
   const heroes = reg.map(r => r.hero).filter(Boolean); ok(new Set(heroes).size === heroes.length, `첫 화면 사진 중복 없음(${heroes.join(',')})`);
   ok(reg.some(r => /전통/.test(r.sub)), '전통 · 격식형 1종 이상');
   const cid = await a.p.evaluate(() => S.classes.map(c => c.id)); const CARD = [];
+  /* 규칙 사진이 이미 페이지에서 다 쓰였으면(첫 화면 · 다른 카드) 템플릿 세트로 넘어가는 것이 맞다 */
+  const RULEUSED = (rel, x) => { const same = rel.filter(y => y.rule === x.rule && y.fit); return same.length >= x.left; };
   for (const id of IDS) {
     const r = await a.p.evaluate(id => { const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); S.site = s; return { html: siteHTML(s), color: s.color, theme: s.theme, first: (s.sections.find(x => !x.hide) || {}).type }; }, id);
     ok(r.theme === id && r.first === 'banner' && new RegExp(`class="hpt c4 ${id} c4-hero`).test(r.html) && /^#[0-9a-f]{6}$/i.test(r.color), `${id}: 테마 적용 · 첫 화면 = 시안 첫 화면 · 기관 색(${r.color}, 흰 글자 대비 보정 허용)`);
@@ -64,9 +66,13 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
     ok(!/hps-flow|hps-short/.test((r.html.match(/<section class="[^"]*\bc4\b[^"]*"/g) || []).join(' ')), `${id}: 섹션 간격 압축 클래스 제거`);
     ok(!/NaN|undefined|object Object|<input|<form|주민등록|휴대폰 번호/.test((r.html.match(/<section class="hpt c4[\s\S]*?<\/section>/g) || []).join('')), `${id}: 이상 값 · 입력 칸 · 개인정보 문구 없음`);
     { const home = (r.html.match(/<section class="hpt c4 [\s\S]*?<\/section>|<section[^>]*data-hx=[\s\S]*?<\/section>/g) || []).join(''); const st = (home.match(/ src="[^"]*img\/stock\/[a-z]{3}-\d{2}/g) || []).map(x => x.slice(-6)); const uniq = new Set(st); ok((st.length >= 1 || id === 'cplegal') && uniq.size === st.length, `${id}: 한 페이지 안 사진 중복 0(${st.length}장)`);
-      ((r.html.match(/<section class="hpt c4 [a-z]+ c4-(cards|prog)"[\s\S]*?<\/section>/g) || []).join('').match(/img\/stock\/[a-z]{3}-\d{2}/g) || []).forEach(x => CARD.push([id, x.slice(10)])); }
+      const cards = [...((r.html.match(/<section class="hpt c4 [a-z]+ c4-(cards|prog)"[\s\S]*?<\/section>/g) || []).join('')).matchAll(/<a class="c4-(?:card|pc)[^"]*" href="#p-c-([^"]+)">(?:<figure[^>]*><img src="[^"]*img\/stock\/([a-z]{3}-\d{2}))?/g)].map(m => [m[1], m[2] || '']);
+      const rel = await a.p.evaluate(C => C.map(([cid, ph]) => { const c = S.classes.find(x => x.id === cid) || {}; const r = HPSTOCK.courseRule(c.name); return { n: c.name, ph, rule: r ? r.k : '', fit: r ? HPSTOCK.fitsCourse(ph, c.name) : null, left: r ? r.ids.length : 0 }; }), cards);
+      rel.forEach(x => CARD.push([id, x.ph, x.rule]));
+      const bad = rel.filter(x => x.ph && x.fit === false && x.left > 0 && !RULEUSED(rel, x));
+      ok(!bad.length, `${id}: 강좌 카드 사진이 강좌 이름 · 분야에 맞음(규칙 있는 ${rel.filter(x => x.rule).length}장 · 어긋남 ${bad.map(x => x.n + '→' + x.ph).join(',')})`); }
     await view(id, r.html); }
-  { const by = {}; CARD.forEach(([id, p]) => { (by[p] = by[p] || new Set()).add(id); }); const dup = Object.keys(by).filter(p => by[p].size > 1); ok(!dup.length, `강좌 카드 사진이 템플릿마다 다름(${CARD.length}장, 겹침 ${dup.join(',')})`); }
+  { const by = {}; CARD.filter(x => x[1] && !x[2]).forEach(([id, p]) => { (by[p] = by[p] || new Set()).add(id); }); const dup = Object.keys(by).filter(p => by[p].size > 1); ok(!dup.length, `규칙 밖 강좌 카드 사진(템플릿 세트)이 템플릿마다 다름(${CARD.length}장, 겹침 ${dup.join(',')})`); }
   /* GAP B 기업: 로고 띠(운영자 입력) · 마감 D-day + 이수 현황 미리보기 · 직급별 경로 도식 */
   { const b = await a.p.evaluate(() => { const t = today(); const add = n => { const d = new Date(t); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
       const s = siteFromTpl(TPL.find(x => x.id === 't44-cphrd')); const h0 = siteHTML(s); const lg = s.sections.find(x => x.data && x.data.hpt === 'c4-logos'); lg.data.cols = [['한빛전자'], ['한빛물산'], ['한빛증권']]; const h1 = siteHTML(s);

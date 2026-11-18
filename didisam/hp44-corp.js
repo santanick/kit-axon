@@ -54,6 +54,15 @@
   const abs = u => { try { return new URL(u, (H() && H().base) || location.href).href; } catch (e) { return u; } };
   const stk = (id, sz) => { const h = H(); if (!h || typeof h.get !== 'function') return null; const x = h.get(id); if (!x) return null; return { src: abs(h.url(x, sz === 'lg' ? '' : 'sm')), alt: x.alt || '', pos: x.focus || '50% 50%' }; };
   const slotP = (s, slot, d, fb) => { try { if (window.HPS && typeof HPS.photo === 'function') { const p = HPS.photo(s, slot, d); if (p) return { src: p.src, alt: p.alt, pos: p.pos }; } } catch (e) { } return fb ? stk(fb, 'lg') : null; };
+  /* 강좌 카드 사진(통합 11-18 공통 규칙): ① 기관이 올린 강좌 사진 ② 강좌 이름 · 분야 규칙(HPSTOCK.courseRule)에 맞는 스톡 — 페이지 안 중복 제외, 템플릿마다 시작 후보를 달리 ③ 템플릿 사진 세트 */
+  let USED = new Set();
+  const keyOf = v => String(v || '').replace(/^.*\/img\/stock\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, '');
+  const pageStart = s => { USED = new Set(); try { const th = DEF[s && s.theme]; Object.values((th && th.ph) || {}).forEach(v => USED.add(v)); Object.values((s && s.photos) || {}).forEach(v => USED.add(keyOf(v))); Object.values((s && s.img) || {}).forEach(v => { if (v) USED.add(keyOf(v.stock || v.src)); }); } catch (e) { } };
+  const clsP = (c, s, i) => { const h = H(); let m = null; try { m = window.HPS && HPS.cardImg ? HPS.cardImg(c, s) : null; } catch (e) { m = null; }
+    if (m && !m.stock && m.src && !USED.has(m.src)) { USED.add(m.src); return { src: m.big || m.src, alt: m.alt || c.name, pos: m.pos || '50% 50%' }; }
+    if (!h) return null; const pick = id => { const x = h.get(id); if (!x) return null; USED.add(id); return { src: abs(h.url(x, 'sm')), alt: x.alt || c.name, pos: x.focus || '50% 50%' }; };
+    try { const r = typeof h.courseRule === 'function' ? h.courseRule(c.name) : null; const ids = r ? r.ids.filter(id => !USED.has(id) && h.get(id)) : []; if (ids.length) return pick(ids[Math.max(0, MINE.indexOf(s && s.theme)) % ids.length]); } catch (e) { }
+    const pool = (DEF[s && s.theme] || {}).pool || []; for (let k = 0; k < pool.length; k++) { const id = pool[(i + k) % pool.length]; if (!USED.has(id)) return pick(id); } return null; };
   const img = (p, cls, eager) => p ? `<figure class="${cls || 'c4-ph'}"><img src="${E(p.src)}" alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos)}"></figure>` : '';
 
   /* ── 테마 10종: 세부 유형 · 색 · 서체 · 첫 화면 ── */
@@ -126,7 +135,7 @@ ${L2.length ? `<div class="c4-list"><p class="c4-lh">${E(L.length ? '올해 들�
 <div class="c4-line"><span>${nx ? `가장 가까운 마감 · ${E(short(nx.name))} ${E(md(nx.end))}` : (learners() >= 100 ? `수강 인원 ${learners().toLocaleString('ko-KR')}명 기준` : '마감 전에 함께 끝내요')}</span><a href="#my">내 교육 확인하기 ${ic('arrow', 18, 2)}</a></div></div>`); };
   /* 과정 카드 3장(사진) */
   SEC['c4-cards'] = (x, s) => { const d = x.data || {}; const th = thOf(s); const re = d.re ? new RegExp(d.re) : null; const L = pick(re, 3); if (!L.length) return empty(x); const pool = DEF[th].pool;
-    return sec(x, s, 'cards', `<div class="c4w"><div class="c4-head"><div>${head(d)}</div><a class="c4-more" href="#courses">전체 과정${live().length >= 10 ? ` ${live().length}개` : ''} 보기 ${ic('chev', 18, 2)}</a></div><div class="c4-cg">${L.map((c, i) => `<a class="c4-card" href="${cH(c)}">${pool.length ? img(stk(pool[i % pool.length])) : ''}<div class="c4-bd"><p class="c4-tg">${E(kindL(c))}</p><h3>${E(c.name)}</h3><p>${E([c.teacher, hrs(c)].filter(Boolean).join(' · ') || '자세한 안내는 과정 페이지에서 확인해요.')}</p><div class="c4-m"><span>${E(c.kind === 'episode' ? '집합' : '온라인')}</span><b>${E(whenL(c))}</b></div></div></a>`).join('')}</div></div>`); };
+    return sec(x, s, 'cards', `<div class="c4w"><div class="c4-head"><div>${head(d)}</div><a class="c4-more" href="#courses">전체 과정${live().length >= 10 ? ` ${live().length}개` : ''} 보기 ${ic('chev', 18, 2)}</a></div><div class="c4-cg">${L.map((c, i) => `<a class="c4-card" href="${cH(c)}">${img(clsP(c, s, i))}<div class="c4-bd"><p class="c4-tg">${E(kindL(c))}</p><h3>${E(c.name)}</h3><p>${E([c.teacher, hrs(c)].filter(Boolean).join(' · ') || '자세한 안내는 과정 페이지에서 확인해요.')}</p><div class="c4-m"><span>${E(c.kind === 'episode' ? '집합' : '온라인')}</span><b>${E(whenL(c))}</b></div></div></a>`).join('')}</div></div>`); };
   /* 2열 이야기 + 단계 */
   SEC['c4-story'] = (x, s) => { const d = x.data || {}; const cols = (d.cols || []).filter(c => c && c[0]).slice(0, 3); const p = slotP(s, 'about', null, DEF[thOf(s)].ph.about || DEF[thOf(s)].pool[0]);
     return sec(x, s, 'story', `<div class="c4w c4-sg2">${img(p)}<div>${head(d)}<ol class="c4-steps">${cols.map((c, i) => `<li><span class="c4-n">${String(i + 1).padStart(2, '0')}</span><div><h3>${E(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}</div></li>`).join('')}</ol></div></div>`); };
@@ -143,7 +152,7 @@ ${L2.length ? `<div class="c4-list"><p class="c4-lh">${E(L.length ? '올해 들�
     return sec(x, s, 'vals', `<div class="c4w">${ey(d)}<h2 class="c4-h2">${T2(d.title, 'b')}</h2><div class="c4-vg">${C.map((c, i) => `<div class="v${i}"><p class="c4-no">${String(i + 1).padStart(2, '0')}</p><h3>${E(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}</div>`).join('')}</div></div>`); };
   /* 대표 프로그램 2개(큰 사진) */
   SEC['c4-prog'] = (x, s) => { const d = x.data || {}; const th = thOf(s); const re = d.re ? new RegExp(d.re) : null; const L = pick(re, 2); if (!L.length) return empty(x); const pool = DEF[th].pool;
-    return sec(x, s, 'prog', `<div class="c4w"><div class="c4-head"><div>${head(d, 'b')}</div><a class="c4-more" href="#courses">전체 과정 보기 ${ic('arrow', 20, 1.6)}</a></div><div class="c4-pg n${L.length}">${L.map((c, i) => `<a class="c4-pc${i ? ' s' : ''}" href="${cH(c)}">${pool.length ? img(stk(pool[i % pool.length])) : ''}<p class="c4-m"><span>${E(c.legal ? '필수' : (LV()[+c.level || 0] || '과정'))}</span><span>${E([hrs(c), c.kind === 'episode' ? '집합' : '온라인'].filter(Boolean).join(' · '))}</span></p><h3>${E(c.name)}</h3><p>${E(whenL(c))}${c.teacher ? ` · ${E(c.teacher)}` : ''}</p></a>`).join('')}</div></div>`); };
+    return sec(x, s, 'prog', `<div class="c4w"><div class="c4-head"><div>${head(d, 'b')}</div><a class="c4-more" href="#courses">전체 과정 보기 ${ic('arrow', 20, 1.6)}</a></div><div class="c4-pg n${L.length}">${L.map((c, i) => `<a class="c4-pc${i ? ' s' : ''}" href="${cH(c)}">${img(clsP(c, s, i))}<p class="c4-m"><span>${E(c.legal ? '필수' : (LV()[+c.level || 0] || '과정'))}</span><span>${E([hrs(c), c.kind === 'episode' ? '집합' : '온라인'].filter(Boolean).join(' · '))}</span></p><h3>${E(c.name)}</h3><p>${E(whenL(c))}${c.teacher ? ` · ${E(c.teacher)}` : ''}</p></a>`).join('')}</div></div>`); };
   /* 날짜 열 목록 */
   SEC['c4-rows'] = (x, s) => { const d = x.data || {}; const L = pick(null, 5); if (!L.length) return empty(x); const t = tday();
     return sec(x, s, 'rows', `<div class="c4w">${head(d)}<div class="c4-ls">${L.map(c => { const sd = okD(c.start) && days(t, c.start) > 0 ? c.start : c.end; const n = okD(c.end) ? days(t, c.end) : null; const tg = n != null && n <= 14 ? ['n', '마감 임박'] : okD(c.start) && days(t, c.start) > 0 ? ['', '신청 가능'] : ['', '수강 중'];
@@ -369,7 +378,7 @@ font-family:${SANS};color:var(--ink);background:var(--bg);font-size:17px;line-he
       if (x && x.type === 'text' && SEC[d.hpt]) { try { return /^c4-(cards|rows|prog|levels|figs|stat)$/.test(d.hpt) ? !live().length : d.hpt === 'c4-quote' ? !review() : false; } catch (e) { return false; } } return e0(x); }; } } catch (e) { }
   const needCSS = s => !!(s && (mine(s) || (s.sections || []).some(x => x && x.data && SEC[x.data.hpt])));
   const SERIF_CSS = 'fonts/noto-serif-kr/font.css?v=ea0bde31';
-  { const base = siteHTML; siteHTML = (s, ...a) => { let h = base(s, ...a); try { if (needCSS(s) && HPT.tokens(s)) { h = h.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>');
+  { const base = siteHTML; siteHTML = (s, ...a) => { if (mine(s)) pageStart(s); let h = base(s, ...a); try { if (needCSS(s) && HPT.tokens(s)) { h = h.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>');
       h = h.replace(/<section class="([^"]*\bc4\b[^"]*)"/g, (m, c) => `<section class="${c.replace(/\bhps-(flowb?|short)\b\s*/g, '').trim()}"`); /* 같은 바탕 섹션 간격 압축은 시안 리듬을 깨므로 뺀다 */
       if (DEF[thOf(s)].hf === SERIF && h.indexOf(SERIF_CSS) < 0) h = h.replace('</head>', `<link rel="stylesheet" href="${SERIF_CSS}"></head>`); } } catch (e) { console.error('hp44-corp css', e); } return h; }; window.siteHTML = siteHTML; }
 
