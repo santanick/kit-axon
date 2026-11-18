@@ -450,6 +450,11 @@
     try { const b = JSON.parse(JSON.stringify(s || (typeof site === 'function' ? site() : S.site))); HPT.apply(b, id, { keepColor: true }); delete b.layout; const tp = typeof TPL !== 'undefined' && TPL.find(x => x.id === 't44-' + id); if (tp && typeof tp.build === 'function') { b.sections = tp.build(); setPhotos(b, id); }
       return siteHTML(b, false, 'ko'); } catch (e) { console.error('hp44-k12 thumb', e); return tb(s, id); } }; }
 
+  /* 품질 자동 보정(hpwFix)이 cols가 빈 공통 부품(hx-*) · 차량(k4-bus)을 「빈 섹션」으로 숨기면, 그릴 때 되살림(hpwiz2 revive)이 W.emptyOf로 다시 판정한다.
+     이 부품들은 렌더러가 실제 데이터로 보일지 정하므로(없으면 게시본에서 숨김) 우리 테마 사이트에서는 비어 있지 않은 것으로 본다. */
+  if (window.HPW && typeof HPW.emptyOf === 'function' && !HPW.emptyOf.k4) { const e0 = HPW.emptyOf; const f = x => { try { const d = x && x.data; const s = typeof site === 'function' ? site() : (window.S && S.site);
+      if (x && x.type === 'text' && d && /^(hx-|k4-bus$)/.test(String(d.hpt || '')) && mine(s)) return false; } catch (e) { } return e0(x); }; f.k4 = 1; HPW.emptyOf = f; }
+
   /* ── 템플릿(기본 섹션 · 문구 — 운영자가 편집) ── */
   if (typeof TPL === 'undefined' || typeof S2 !== 'function') return;
   const TX = (variant, data) => S2('text', { variant, ...data });
