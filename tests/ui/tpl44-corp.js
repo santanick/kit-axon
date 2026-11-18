@@ -88,8 +88,9 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
       out.nums = /운영 중인 과정<\/p>|함께 배우는 인원<\/p>/.test(h('cpdx'));
       const keep = S.reviews; S.reviews = [{ id: 'r1', cls: S.classes[0].id, stars: 5, body: '영상이 자꾸 끊겨요 확인 부탁드립니다', at: '2026-11-10' }, { id: 'r2', cls: S.classes[0].id, stars: 5, body: '퀴즈 3번 해설도 올려 주실 수 있나요?', at: '2026-11-11' }];
       out.bad = /data-hx="rev"/.test(h('cphrd')) || /c4-quote"/.test(h('cphrd'));
+      const op0 = S.classes.slice(0, 2).map(c => c.open); S.classes.slice(0, 2).forEach(c => { c.open = '전체'; }); /* R3: 후기는 공개(전체) 과정 것만 홈페이지에 — 칭찬 글은 공개 과정에 단다 */
       S.reviews.push({ id: 'r3', cls: S.classes[0].id, stars: 5, body: '팀장이 되고 처음 6주가 막막했는데 리더 과정이 지도가 돼 줬어요', at: '2026-11-12' });
-      S.reviews.push({ id: 'r4', cls: S.classes[1].id, stars: 5, body: '짧은 강의라 출퇴근길에 끝까지 들을 수 있어서 좋았어요', at: '2026-11-13' }); const g = h('cphrd'); const rv = (g.match(/<section[^>]*data-hx="rev"[\s\S]*?<\/section>/) || [''])[0]; out.good = /지도가 돼 줬어요/.test(rv) && !/끊겨요|해설도/.test(g) && !/c4-quote"/.test(g); S.reviews = keep; return out; });
+      S.reviews.push({ id: 'r4', cls: S.classes[1].id, stars: 5, body: '짧은 강의라 출퇴근길에 끝까지 들을 수 있어서 좋았어요', at: '2026-11-13' }); const g = h('cphrd'); const rv = (g.match(/<section[^>]*data-hx="rev"[\s\S]*?<\/section>/) || [''])[0]; out.good = /지도가 돼 줬어요/.test(rv) && !/끊겨요|해설도/.test(g) && !/c4-quote"/.test(g); S.classes.slice(0, 2).forEach((c, i) => { c.open = op0[i]; }); S.reviews = keep; return out; });
     ok(q.n < 10 && !q.figs.length && !q.nums, `숫자 블록: 과정 ${q.n}개 · 인원 100명 미만 시연 데이터에서 4종 모두 숨김(${q.figs.join(',')})`);
     ok(!q.bad && q.good, `후기(hx-rev 하나로): 불만 · 요청 · 질문 글 제외, 긍정 글만(${JSON.stringify(q)})`); }
   ok(!a.errs.length, `관리자 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close();
@@ -112,6 +113,29 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
       ok(r.hero && r.cls >= 1 && r.over <= 0 && (w > 600 ? r.fs >= 64 : r.fs <= 46), `게시본 cplead ${w}: 첫 화면 · 과정 상세(#class/) · 넘침 0(${JSON.stringify(r)})`);
       ok(!pe.length, `게시본 ${w} pageerror 0 ${pe.join('|')}`); await q.close(); }
     await g.ctx.close(); }
+
+  /* ── R3: 데이터가 있으면 공통 부품(hx-*)이 게시본에 보인다 — 기업 시연 과정은 공개 범위 「지정 회원」 그대로(강사진은 공개 범위와 무관 · 가격 · 강좌 목록은 공개 과정만) ── */
+  for (const id of IDS.filter(x => !process.env.ONLY || process.env.ONLY.split(',').includes(x))) { const a = await admin(false);
+    const info = await a.p.evaluate(id => { try { closeModal(); } catch (e) { } const day = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); const who = (S.members || [])[0] ? S.members[0].id : 'm0';
+      (S.classes || []).forEach((c, i) => { c.intro = [{ name: ['김서윤', '박도현', '이하은'][i % 3], bio: '사내 강사 · 실무 15년' }]; });
+      const hid = (S.classes || []).find(c => c.open !== '전체');
+      S.posts = [...(S.posts || []).filter(p => p.board !== '수강후기'), ...['설명이 차근차근해서 처음 배우는 사람도 따라가기 좋았습니다.', '실습 위주라 바로 업무에 써먹을 수 있었어요.', '자료가 잘 정리되어 있어서 복습할 때 큰 도움이 됩니다.'].map((b, i) => ({ id: 'qr' + i, kind: '이야기', board: '수강후기', who, title: b.slice(0, 16), body: b, stars: 5, at: day(-2 - i), replies: 0, views: 9, hidden: false }))];
+      S.reviews = hid ? [{ id: 'qhid', cls: hid.id, who, body: '지정회원과정만의후기입니다 아주 좋았어요', stars: 5, at: day(-1) }] : [];
+      S.notices = [{ id: 'qn0', title: '하반기 법정교육 안내', at: day(-1), pin: true }];
+      S.settings.footer = Object.assign({}, S.settings.footer, { tel: '051-555-0123', addr: '부산광역시 해운대구 센텀중앙로 00', hours: '평일 09:00~18:00' });
+      const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); S.site = s; s.published = true; try { if (typeof hpwFix === 'function') hpwFix(s); } catch (e) { }
+      const want = [...new Set((s.sections || []).filter(x => x && !x.hide && x.type === 'text' && /^hx-/.test((x.data || {}).hpt || '')).map(x => x.data.hpt.slice(3)))];
+      const stuck = (s.sections || []).filter(x => x && x.hide && x.hideAuto && /^hx-/.test(((x.data || {}).hpt) || '')).map(x => x.data.hpt);
+      const pubN = (S.classes || []).filter(c => c.open === '전체' && c.status !== '종료').length;
+      save(); smPublish(); try { closeModal(); } catch (e) { } return { tid: DREG.cur(), want, stuck, pubN, hidN: (S.classes || []).length - pubN }; }, id);
+    ok(!info.stuck.length, `${id}: 공통 부품이 자동 숨김(hideAuto)으로 굳지 않음 ${info.stuck.join(',')}`);
+    const q = await a.ctx.newPage(); await q.setViewportSize({ width: 1440, height: 900 }); await q.goto(`${base}/learner.html?t=${info.tid}#home`, { waitUntil: 'load' }); await q.waitForTimeout(1600);
+    const r = await q.evaluate(() => { const R = [...document.querySelectorAll('.smhost')].map(h => h.shadowRoot).filter(Boolean); return { on: R.flatMap(r => [...r.querySelectorAll('[data-hx]')]).map(e => e.getAttribute('data-hx')).filter(k => k !== '1'), hidRev: /지정회원과정만의후기/.test(R.map(r => r.textContent).join(' ')) }; });
+    const need = info.want.filter(k => !['num', 'price', 'cls'].includes(k) || info.pubN > 0); const miss = need.filter(k => !r.on.includes(k));
+    ok(!miss.length, `${id}: 데이터가 있으면 켜 둔 공통 부품이 게시본에 보임(켬 ${info.want.join(',') || '-'} · 보임 ${[...new Set(r.on)].join(',')}${miss.length ? ' · 빠짐 ' + miss.join(',') : ''} · 공개 과정 ${info.pubN} · 지정 ${info.hidN})`);
+    if (info.want.includes('fac')) ok(r.on.includes('fac'), `${id}: 강사진은 과정 공개 범위와 무관하게 보임`);
+    ok(!r.hidRev, `${id}: 지정 회원 과정의 후기는 홈페이지에 내보내지 않음`);
+    await q.close(); ok(!a.errs.length, `${id}: 공통 부품 점검 관리자 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close(); }
 
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);
