@@ -571,9 +571,10 @@
     s.photos = Object.assign({}, P); s.img = s.img || {};
     if (window.HPSTOCK && typeof HPSTOCK.slotImg === 'function') ['hero', 'about'].forEach(sl => { if (!P[sl]) return; const v = HPSTOCK.slotImg(P[sl], sl); if (v) s.img[sl] = v; });
     s.hps = Object.assign({}, s.hps || {}, HEAD[id] || { head: 'solid', foot: 'min' }); return s; }
-  const HX = (k, data, hide) => { try { return window.HPX && typeof HPX.sec === 'function' ? HPX.sec(k, Object.assign({ cols: [] }, data || {}), hide) : null; } catch (e) { return null; } };
-  const KIND = { facts: 'num', people: 'fac', faq: 'faq' };
-  const tidy = L => { const vis = new Set(L.filter(x => x && !x.hide && x.data && /^hx-/.test(x.data.hpt || '')).map(x => x.data.hpt.slice(3))); return L.filter(x => x && !(x.hide && x.data && KIND[x.data.hpt] && vis.has(KIND[x.data.hpt]))); };
+  /* 공통 부품(HPX). cols를 비우면 hpwFix가 「빈 섹션」으로 자동 숨김 → 빈 자리 한 줄을 둔다(부품은 빈 줄을 무시) */
+  const HX = (k, data, hide) => { try { return window.HPX && typeof HPX.sec === 'function' ? HPX.sec(k, Object.assign({}, data || {}, { cols: [['', '']] }), hide) : null; } catch (e) { return null; } };
+  /* 숨긴 자리(facts · people · faq)는 남겨 둔다 — 빼면 자동 보강이 같은 종류 섹션을 보이게 다시 넣는다 */
+  const tidy = L => L.filter(Boolean);
   const BAN = (eyebrow, title, sub, x) => S2('banner', Object.assign({ eyebrow, title, sub, cta: '', cta2: '' }, x || {}));
   const FIN = (title, body) => [...KEEP(), TX('cta', { hpt: 'a4-fin', title, body, cta: '', cols: AUTO })];
   const BUILD = {

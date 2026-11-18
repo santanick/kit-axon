@@ -32,7 +32,7 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
       if (el.matches('a[href]') && (b.height < 44 || b.width < 44)) tap.push(`${(el.textContent || '').trim().slice(0, 12)} ${Math.round(b.width)}x${Math.round(b.height)}`);
       if (b.right > innerWidth + 1 || b.left < -1) { let a = el.parentElement, clip = false; while (a) { if (/(hidden|clip|auto|scroll)/.test(getComputedStyle(a).overflowX)) { clip = true; break; } a = a.parentElement; } if (!clip) wide.push(`${el.tagName}.${el.className}`); }
       if (own.replace(/\s/g, '').length >= 2 && el.children.length === 0 && b.width < fs * 1.6 && b.height > fs * 2.2) brk.push(own.slice(0, 10)); });
-    const links = q('.a4-h a[href], .a4-s a[href]').map(a => a.getAttribute('href'));
+    const links = q('.a4-h a[href], .a4-s a[href], section[data-hx] a[href]').map(a => a.getAttribute('href'));
     const h1 = q('.a4-h h1').filter(vis)[0]; const h1n = h1 ? Math.round(h1.getBoundingClientRect().height / parseFloat(getComputedStyle(h1).lineHeight)) : 0;
     const h1fs = h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0;
     const topImg = q('.a4-h img').filter(vis).some(im => { const b = im.getBoundingClientRect(); return b.top < innerHeight && b.bottom > 0 && b.height >= 100 && im.complete && im.naturalWidth > 0; });
@@ -42,7 +42,7 @@ const inject = async ctx => ctx.route(/\/index\.html(\?.*)?$/, async r => { cons
     const dup = IMK.filter((k, i) => IMK.indexOf(k) !== i); const cardK = q('.a4-cp img, .a4-bp img, .a4-gl img').map(im => String(im.getAttribute('src') || '').replace(/^.*\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, ''));
     const qtEl = q('.a4-quote blockquote').filter(vis)[0]; const quote = qtEl ? qtEl.textContent : null;
     return { over: document.documentElement.scrollWidth - innerWidth, small: small.slice(0, 5), tap: tap.slice(0, 5), wide: wide.slice(0, 5), brk: brk.slice(0, 5), links, secs, h1n, h1fs, topImg, dup, cardK, txt, inputs: q('.a4-h input, .a4-s input, .a4-s form').length, num, quote, ctaB: Math.max(0, ...q('.a4-h .a4-cta .a4-b').filter(vis).map(b => b.getBoundingClientRect().bottom)), vh: innerHeight, phone: /휴대폰 번호|주민|생년월일/.test(txt), star: /\*/.test(q('.a4-h h1, .a4-fin h2').map(x => x.textContent).join('')) }; }, sel);
-  const allowed = h => /^(#login\/(family|my|mypay)|#join|#p-c-[\w-]+|#p-m-[\w-]+|#class\/[\w-]+|#courses|#shop|#notice|tel:[\d+]+|mailto:.+)$/.test(h);
+  const allowed = h => /^(#login\/(family|my|mypay)|#join|#p-c-[\w-]+|#p-m-[\w-]+|#class\/[\w-]+|#courses|#shop|#notice|tel:[\d+]+|mailto:.+|https:\/\/map\.naver\.com\/.+)$/.test(h);
   try {
     for (const type of ['adult']) {
       const errs = []; const o = await H.mkOrg(br, base, type, errs, 'filled'); await inject(o.ctx); await o.op.reload(); await o.op.waitForFunction(() => window.S && S.org && typeof TPL !== 'undefined'); await o.op.waitForTimeout(500); await H.dismiss(o.op);
