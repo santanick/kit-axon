@@ -221,7 +221,7 @@ ${fig(p, 'hero', 'u4-ivy-ph', 1)}<p class="u4-cap"><span>${E(d.cap || (p && !p.o
     const T0 = tday(); const date = x => String(x.at || '').slice(0, 10).replace(/-/g, '. ') + (x.at ? '.' : '');
     const cal = V.length ? `<div class="bcol bcal"><h3>${E(d.title || '학사 일정')}<a href="#cal">전체 일정${AR}</a></h3><ul>${V.map(x => `<li><a href="#cal"><time datetime="${E(x.date)}">${v === 'cols3' ? `<small>${+x.date.slice(5, 7)}월</small><b>${+x.date.slice(8, 10)}</b>` : `<b>${E(mdS(x.date))}</b>`}</time><span><b>${E(x.title)}</b><small>${E(x.kind)} · ${days(T0, x.date) === 0 ? '오늘' : `${WD[dd(x.date).getDay()]}요일`}</small></span></a></li>`).join('')}</ul></div>` : '';
     const nt = N.length ? `<div class="bcol bnt"><h3>${E(d.title2 || '공지사항')}<a ${lnk(href.notice(s))}>전체 보기${AR}</a></h3><ul>${N.map(x => `<li><a ${lnk(href.notice(s))}><span><b>${x.top ? '<em>중요</em>' : ''}${E(x.title)}</b>${x.at ? `<small>${E(date(x))}</small>` : ''}</span></a></li>`).join('')}</ul></div>` : '';
-    const ev = nxt ? `<div class="bcol bev"><h3>${E(d.title3 || '다가오는 프로그램')}<a ${lnk(href.cls(s))}>더 보기${AR}</a></h3><a class="evc" ${lnk('#p-c-' + nxt.id)}>${clsFig(s, nxt, 7, 'evp')}<b>${E(nxt.name)}</b><small>${E([stOf(nxt).t, metaOf(nxt)].filter(Boolean).join(' · '))}</small></a></div>` : '';
+    const ev = nxt ? `<div class="bcol bev"><h3>${E(d.title3 || '다가오는 프로그램')}<a ${lnk(href.cls(s))}>더 보기${AR}</a></h3><a class="evc" ${lnk('#p-c-' + nxt.id)}>${fig(photo(s, 'space'), 'space', 'evp')}<b>${E(nxt.name)}</b><small>${E([stOf(nxt).t, metaOf(nxt)].filter(Boolean).join(' · '))}</small></a></div>` : '';
     const cols = v === 'cols3' ? [nt, cal, ev] : v === 'portal' ? [nt, cal] : [cal, nt]; const n = cols.filter(Boolean).length;
     return `<section class="hpt hp-s u4 u4-board v-${E(v)}"><div class="u4-w">${v === 'cols3' ? sh(d.sh || {}, { ey: 'NEWS & CALENDAR', t: '학사 소식' }, 'c') : ''}<div class="u4-bg n${n}">${cols.join('')}</div></div></section>`; }
   /* 사진 띠(시네마틱): 온라인 강의실 소개 — 제품 기능 문구(숫자 아님) */
@@ -631,7 +631,8 @@ body .hpt.u4.hp-s.u4-board.v-portal{background:var(--u-bg2)}
     return ''; }
 
   const FIX = `
-.hps-login,.hps-tel,.hps-utt,.hps-utr a{min-height:44px;display:inline-flex!important;align-items:center}.hps-cta,.hps-hr .hps-cta{min-height:48px!important}.s2-mi>a{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}.hps-lw,.hp-all{min-height:44px;display:inline-flex!important;align-items:center}.hps-fl a,.hps-fc li a,.hps-fb a,.hps-lg a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}a[href^="tel:"],a[href^="mailto:"]{display:inline-flex;align-items:center;min-height:44px}.hps-f li>a{min-height:44px;display:flex;align-items:center}.hps-tag,.hps-new{font-size:13px!important}.hpt dd small,.hpt .hps-fv small{font-size:13px!important}`;
+.hps-login,.hps-tel,.hps-utt,.hps-utr a{min-height:44px;display:inline-flex!important;align-items:center}.hps-cta,.hps-hr .hps-cta{min-height:48px!important}.s2-mi>a{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}.hps-lw,.hp-all{min-height:44px;display:inline-flex!important;align-items:center}.hps-fl a,.hps-fc li a,.hps-fb a,.hps-lg a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}a[href^="tel:"],a[href^="mailto:"]{display:inline-flex;align-items:center;min-height:44px}.hps-f li>a{min-height:44px;display:flex;align-items:center}.hps-tag,.hps-new{font-size:13px!important}.hpt dd small,.hpt .hps-fv small{font-size:13px!important}
+/* v44.1: 공통 바닥글(CM) 사업자 정보 · 저작권 줄도 13px 이상, 머리글 메뉴 누르는 칸 44px(대학 관문) */footer.gf.hx-f :is(.hx-biz,.hps-cp),footer.gf.hx-f :is(.hx-biz,.hps-cp) *{font-size:13px!important}header .s2-mi>a,header .gn .s2-mi>a{min-height:44px!important}footer.gf.hx-f .hx-fc li a{min-height:44px!important;min-width:44px!important}`;
 
   { const base = siteHTML; siteHTML = (s, full, lang) => { try { USED.clear(); PHM.clear(); if (mine(s) && !s.stockOff) Object.values(DEFPH[s.theme] || {}).forEach(id => USED.add(id)); } catch (e) { }
     let s2 = s; try { if (mine(s)) { const c = (s.hps && typeof s.hps === 'object') ? s.hps : {}; const [h, f] = CH[s.theme]; const o = Object.assign({}, c); if (!c.ownH) { o.head = h; o.ownH = 1; } if (!c.ownF && !c.foot) o.foot = f; /* v44.1: ownF를 붙이지 않는다 — 공통 바닥글(PC 4열 · 휴대폰 아코디언 + 전화, hpsec-trust CM)이 적용되도록 */ s2 = Object.assign({}, s, { hps: o }); } } catch (e) { s2 = s; }
@@ -683,9 +684,11 @@ body .hpt.u4.hp-s.u4-board.v-portal{background:var(--u-bg2)}
     unmag: HD0({ hw: 850, hls: -0.05, h1: 80, h1m: 42, lh1: 1.08, r: 4, br: 4 }), unblock: HD0({ h1: 88, h1m: 42, lh1: 1.06, r: 24, em: 'plain' }), unoverlap: HD0({ h1: 72, h1m: 38, r: 6, br: 6 }) };
   const cssX = () => '';
   const S2x = (type, data) => (typeof S2 === 'function' ? S2(type, data) : { id: 'x' + Math.random().toString(36).slice(2, 9), type, data });
-  const P = (hpt, o) => S2x('text', Object.assign({ variant: 'features', hpt, eyebrow: '', title: '', sub: '', cols: [] }, o || {}));
+  /* cols가 비면 hpwiz가 「빈 섹션」으로 자동 숨김 → 자동 데이터 부품은 자리표시 한 줄(값 없음)을 둔다 */
+  const AUTO = () => [['자동 표시', '']];
+  const P = (hpt, o) => S2x('text', Object.assign({ variant: 'features', hpt, eyebrow: '', title: '', sub: '', cols: AUTO() }, o || {}));
   /* 공통 신뢰 부품(hpsec-trust CM: hx-rev · fac · num · faq · loc) — 데이터가 없으면 게시본에서 자동으로 숨는다 */
-  const HX = (k, d, hide) => { try { return window.HPX && typeof HPX.sec === 'function' ? HPX.sec(k, d, hide) : null; } catch (e) { return null; } };
+  const HX = (k, d, hide) => { try { return window.HPX && typeof HPX.sec === 'function' ? HPX.sec(k, Object.assign({ cols: [['자동 표시', '']] }, d || {}), hide) : null; } catch (e) { return null; } };
   const L0 = a => a.filter(Boolean);
   const WHO_OPEN = [['지역 주민', '열린 강좌 보기', '열린 강좌 · 수강 신청'], ['재학생', '학번으로 로그인', '비교과 · 교과목'], ['교수자', '공지 보기', '수업 운영 · 공지'], ['협력 기관', '함께 강좌 열기', '산학 · 지역 협력']];
   const T = {
