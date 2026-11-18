@@ -764,9 +764,17 @@ ${P} .hpb-st td,${P} .hpb-st tbody th{display:block;padding:0;border:0;white-spa
 
   /* ── 데이터(실제 값만) ── */
   const BAD = /끊겨|끊김|끊어|안\s*돼|안\s*되|안\s*나와|오류|에러|환불|불편|별로|실망|부탁|해\s*주세요|주실\s*수|느려|느립|고쳐|문제가|불만|아쉬|최악|짜증/;
-  function goodReviews() { let R = []; try { R = (window.HPT && HPT.reviews && HPT.reviews()) || []; } catch (e) { R = []; }
+  /* 후기는 공개(전체) 과정 것만(R3 결정: 지정 회원 과정 학습자의 후기는 홈페이지에 내보내지 않음). 과정과 묶이지 않은 수강후기 게시글은 그대로 */
+  const pubIds = () => new Set(pubAll().map(c => c.id));
+  const revCls = r => { try { const a = (S.reviews || []).find(x => x && x.id === r.id) || (S.posts || []).find(x => x && x.id === r.id); return a ? a.cls || a.classId || '' : ''; } catch (e) { return ''; } };
+  function goodReviews() { let R = []; try { R = (window.HPT && HPT.reviews && HPT.reviews()) || []; } catch (e) { R = []; } const P = pubIds(); R = R.filter(r => { const c = revCls(r); return !c || P.has(c); });
     return R.filter(r => r && clean(r.b).length >= 8 && !(+r.st && +r.st < 4) && !BAD.test(String(r.b)) && !/[?？]\s*$/.test(clean(r.b))); }
-  const teachers = () => { try { return (HPS.trustData && HPS.trustData('teachers')) || []; } catch (e) { return []; } };
+  /* 강사진(R3 결정): 운영자가 입력한 강사 프로필이므로 과정 공개 범위와 무관하게 — 운영 중 · 예정 과정(종료 제외)의 강사 소개. 강사 항목에 홈페이지 비공개 표시(hp === false · hpHide · hide)가 있으면 뺀다 */
+  function teachers() { const map = new Map(); const okP = v => /^(data:image\/|https?:|\/|img\/|api\/)/.test(String(v || ''));
+    try { (S.classes || []).filter(c => c && c.status !== '종료').forEach(c => (Array.isArray(c.intro) ? c.intro : []).forEach(x => { if (!x || x.hp === false || x.hpHide || x.hide) return; const n = clean(x.name); if (!n || isPh(n)) return;
+      const m = map.get(n) || { n, bio: '', photo: '', cls: [] }; const b = clean(x.bio); if (b && !isPh(b) && b.length > m.bio.length) m.bio = b; if (!m.photo && okP(x.photo)) m.photo = String(x.photo);
+      if ((c.open === '전체' || c.open == null) && !m.cls.includes(c.name)) m.cls.push(c.name); map.set(n, m); })); } catch (e) { }
+    return [...map.values()].slice(0, 8); }
   const isSample = row => { try { return !!(HPS._isSample && HPS._isSample(row)); } catch (e) { return false; } };
   function numbers(d) { const C = pubAll(); const out = []; const cl = term();
     (d && Array.isArray(d.cols) ? d.cols : []).filter(r => r && val(r[0]) && val(r[1]) && !isSample(r) && /\d/.test(String(r[0]))).slice(0, 4).forEach(r => { const m = String(r[0]).trim().match(/^([\d.,]+)\s*(.*)$/); out.push(m ? { v: m[1], u: m[2], l: clean(r[1]), own: 1 } : { v: clean(r[0]), u: '', l: clean(r[1]), own: 1 }); });

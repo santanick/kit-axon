@@ -155,7 +155,8 @@
     const d = x.data || {}; const cols = A(d.cols);
     switch (x.type) {
       case 'banner': return !String(d.title || '').trim();
-      case 'text': if ((d.hpt === 'sched' || d.hpt === 'cert') && window.HPS && typeof HPS.trustData === 'function') { try { const v = HPS.trustData(d.hpt === 'sched' ? 'schedule' : 'certs'); return !(Array.isArray(v) ? v.length : v && (v.rows || v.list || []).length); } catch (e) { return false; } } /* v34.5 S4 신뢰 부품은 그릴 때 실제 데이터로 셈 */
+      case 'text': if (/^hx-/.test(String(d.hpt || ''))) return false; /* v44.1 R3: 공통 부품(hx-*)은 그릴 때마다 데이터로 스스로 보이고 숨는다 → 빈 섹션으로 굳히지 않음 */
+        if ((d.hpt === 'sched' || d.hpt === 'cert') && window.HPS && typeof HPS.trustData === 'function') { try { const v = HPS.trustData(d.hpt === 'sched' ? 'schedule' : 'certs'); return !(Array.isArray(v) ? v.length : v && (v.rows || v.list || []).length); } catch (e) { return false; } } /* v34.5 S4 신뢰 부품은 그릴 때 실제 데이터로 셈 */
         if (d.hpt === 'facts') return !(window.HPT && typeof HPT.facts === 'function' && HPT.facts().length >= 2); /* 그릴 때마다 실제 데이터로 셈 */
         return d.variant && d.variant !== 'cta' && d.variant !== 'plain' ? !cols.length : (!String(d.title || '').trim() && !String(typeof d.body === 'string' ? d.body : '').trim() && !cols.length);
       case 'classes': return !pubList().length && !(A(d.ids).length && !d.auto) && !(window.HPS && HPS.clsEmpty); /* v34.5 FB: 강좌 0개는 숨기지 않고 '개설 준비 중'으로 그림(hpsec-card) */
