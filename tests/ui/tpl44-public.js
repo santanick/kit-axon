@@ -11,7 +11,7 @@ const http = require('node:http'); const fs = require('node:fs'); const path = r
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../../didisam'); const CAP = process.env.CAP || '';
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.webp': 'image/webp', '.woff2': 'font/woff2', '.jpg': 'image/jpeg' };
-const CASES = [['pbcivic', 'staff'], ['pbjournal', 'citizen'], ['pbposter', 'facility'], ['pbcampus', 'staff'], ['pblibrary', 'citizen'], ['pbyouth', 'citizen'], ['pbsenior', 'citizen'], ['pbjobs', 'citizen'], ['pbmuseum', 'citizen'], ['pbheritage', 'staff']];
+const CASES = [['pbcivic', 'staff'], ['pbjournal', 'citizen'], ['pbposter', 'facility'], ['pbcampus', 'staff'], ['pblibrary', 'citizen'], ['pbyouth', 'citizen'], ['pbsenior', 'citizen'], ['pbjobs', 'citizen'], ['pbmuseum', 'citizen'], ['pbheritage', 'staff'], ['pbecon', 'citizen'], ['pbdigital', 'citizen'], ['pbassoc', 'citizen'], ['pbcontract', 'citizen'], ['pbcampaign', 'citizen']];
 const NAME = { staff: '해운대구 인재개발원', citizen: '해운대구 시민대학', facility: '좌동 스포츠문화센터' };
 const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|family)$/;
 
@@ -28,12 +28,14 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
     for (const w of [1440, 390]) { const c2 = await browser.newContext({ viewport: { width: w, height: w > 600 ? 900 : 844 } }); const q = await c2.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message)); await q.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
       await q.goto(`${base}/__pv/${key}.html`, { waitUntil: 'load' }); await q.waitForTimeout(500);
       const m = await q.evaluate(w => { const de = document.documentElement; const vw = de.clientWidth; const vis = el => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
-        const C = [...document.querySelectorAll('section.p4')]; const inS = el => C.some(s => s.contains(el));
-        return { n: C.length, over: de.scrollWidth - vw, out: [...document.querySelectorAll('section.p4 *')].filter(el => vis(el) && el.getBoundingClientRect().right > vw + 1).map(el => el.className).slice(0, 4),
+        const C = [...document.querySelectorAll('section.p4')]; const inS = el => C.some(s => s.contains(el)); const inScr = el => { for (let p = el.parentElement; p; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll') return true; } return false; };
+        const ids = [...document.querySelectorAll('section.p4 img, section.hx img, section[data-hx] img')].map(i => (i.getAttribute('src') || '').split('/').pop().replace(/(-800)?\.(webp|jpe?g|png).*$/, '')).filter(Boolean);
+        return { n: C.length, over: de.scrollWidth - vw, out: [...document.querySelectorAll('section.p4 *')].filter(el => vis(el) && el.getBoundingClientRect().right > vw + 1 && !inScr(el)).map(el => el.className).slice(0, 4),
           small: w < 600 ? [...document.querySelectorAll('section.p4 a')].filter(a => vis(a) && a.getBoundingClientRect().height < 44).map(a => a.textContent.trim().slice(0, 12)) : [],
           tiny: [...document.querySelectorAll('section.p4 *')].filter(el => vis(el) && inS(el) && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(el).fontSize) < 13).map(el => el.textContent.trim().slice(0, 10)),
           narrow: [...document.querySelectorAll('section.p4 :is(h1,h2,h3,b,small,a,p,em,span,dd,dt)')].filter(el => { if (!vis(el) || el.textContent.trim().length < 3) return false; const r = el.getBoundingClientRect(); const fs = parseFloat(getComputedStyle(el).fontSize); return r.height > fs * 5 && r.width < fs * 2.2; }).map(el => el.textContent.trim().slice(0, 8)),
           bad: [...document.querySelectorAll('section.p4 img')].filter(i => i.complete && !i.naturalWidth).length,
+          dup: ids.filter((v, i) => ids.indexOf(v) !== i),
           cta: (() => { const b = document.querySelector('section.p4-hero .p4-cta a'); return b ? Math.round(b.getBoundingClientRect().bottom) : 9999; })(),
           h1: (() => { const h = document.querySelector('section.p4-hero h1'); return h ? parseFloat(getComputedStyle(h).fontSize) : 0; })() }; }, w);
       ok(m.n >= (minN || 5) && m.over <= 0 && !m.out.length, `${key} ${w}: 섹션 ${m.n}개 · 가로 넘침 0 · 화면 밖 요소 0(${m.over}/${m.out.join(',')})`);
@@ -41,6 +43,9 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
       ok(!m.tiny.length, `${key} ${w}: 글자 13px 이상 ${m.tiny.join(',')}`);
       ok(!m.narrow.length, `${key} ${w}: 한 글자 꺾임 0 ${m.narrow.join(',')}`);
       ok(!m.bad, `${key} ${w}: 깨진 사진 0(${m.bad})`);
+      ok(!m.dup.length, `${key} ${w}: 한 페이지 안 사진 중복 0 ${m.dup.join(',')}`);
+      if (w > 600 && !/empty/.test(key)) { const ax = await q.evaluate(async () => { const r = {}; const lg = document.querySelector('.p4-ax-lg summary'), hc = document.querySelector('.p4-ax-hc summary'); if (!lg || !hc) return { none: 1 }; const sec = document.querySelector('section.p4:not(.p4-hero)'); lg.click(); await new Promise(z => setTimeout(z, 60)); r.zoom = getComputedStyle(sec).zoom; lg.click(); hc.click(); await new Promise(z => setTimeout(z, 60)); r.bg = getComputedStyle(sec).backgroundColor; r.a = (() => { const a = sec.querySelector('a'); return a ? getComputedStyle(a).color : 'rgb(255, 230, 0)'; })(); hc.click(); return r; });
+        ok(String(ax.zoom) === '1.15' && ax.bg === 'rgb(0, 0, 0)' && ax.a === 'rgb(255, 230, 0)', `${key}: 보기 설정 — 글자 크게(zoom ${ax.zoom}) · 고대비(${ax.bg} · 링크 ${ax.a})`); }
       ok(w > 600 ? m.h1 >= 64 && m.h1 <= 96 : m.h1 >= 36 && m.h1 <= 46, `${key} ${w}: 첫 화면 제목 크기 ${m.h1}px(PC 64~96 · 휴대폰 36~44)`);
       if (w < 600 && !/empty/.test(key)) ok(m.cta <= 844, `${key} 390: 첫 화면(844px) 안에 제목 · 첫 버튼(${m.cta}px)`);
       ok(!pe.length, `${key} ${w}: pageerror 0 ${pe.join('|')}`);
@@ -72,11 +77,19 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
     ok(!/학번|주민등록|주민번호|<input|<form/.test((r.html.match(/<section class="hpt p4[\s\S]*?<\/section>/g) || []).join('')), `${id}: 개인정보 — 입력 칸 · 번호 수집 문구 없음`);
     ok(!/NaN|undefined|object Object/.test(r.html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '')), `${id}: NaN · undefined 없음`);
     if (['pbjournal', 'pbmuseum', 'pbheritage'].includes(id)) ok(/noto-serif-kr\/font\.css/.test(r.html), `${id}: 세리프 글꼴`);
+    if (id === 'pbcivic' || id === 'pbcontract') { const dp = await a.p.evaluate(id => { const s = S.site; const f = S.settings.footer || (S.settings.footer = {}); const keep = f.tel; f.tel = ''; const h0 = siteHTML(s); f.tel = '051-123-4567'; const h1 = siteHTML(s); f.tel = keep; return { off: !/p4-dept"/.test(h0), on: /<table class="p4-tbl">[\s\S]*href="tel:051-123-4567"/.test(h1) }; }, id);
+      ok(dp.off && dp.on, `${id}: 담당 부서 연락처 표 — 대표번호 없으면 숨김 · 있으면 표(${JSON.stringify(dp)})`); }
+    ok(/class="p4-sb s[a-z]"|class="p4-tag[^"]*">(접수|마감|진행|상시|오늘)/.test(r.html) || id === 'pbposter' || id === 'pbcampus' && false, `${id}: 접수 상태 배지(D-day)`);
     if (id === 'pbposter') { const f = await a.p.evaluate(() => S.fac.facilities.filter(f => f.on !== false).slice(0, 5).map(f => f.name)); ok(f.every(n => r.html.includes(n)) && /p4-hours/.test(r.html) && L.includes('#fac') && L.includes('#shop'), `pbposter: 실제 시설 ${f.length}곳 · 운영 시간 · #fac · #shop`); }
     if (id === 'pbcivic') ok(/공식 누리집입니다/.test(r.html) && ['#my', '#courses', '#badges', '#cal', '#notice'].every(h => L.includes(h)), 'pbcivic: 공식 누리집 띠 · 자주 찾는 서비스');
     if (id === 'pbyouth' || id === 'pbsenior') ok(L.includes('#family'), `${id}: 보호자 · 가족 연결(#family)`);
     if (id === 'pbsenior') ok(/p4-call/.test(r.html) && /p4-big/.test(r.html), 'pbsenior: 전화 신청 띠 · 큰 글씨 강좌');
     ok(!/p4-figs"/.test(r.html), `${id}: 시연 데이터(과정 8개 · 44명)는 큰 숫자 블록 숨김`);
+    const rel = await a.p.evaluate(h => { const d = new DOMParser().parseFromString(h, 'text/html'); const bad = [], seen = []; const H = window.HPSTOCK;
+      d.querySelectorAll('section.p4 a[href^="#p-c-"]').forEach(a => { const im = a.querySelector('img'); if (!im) return; const c = S.classes.find(x => x.id === a.getAttribute('href').slice(5)); if (!c) return; const m = /\/img\/stock\/([a-z]{3}-\d{2})/.exec(im.getAttribute('src') || ''); if (!m) return;
+        const r = H.courseRule(c.name); seen.push(c.name); if (r && r.ids.length && !H.fitsCourse(m[1], c.name)) bad.push(c.name + '→' + m[1]); });
+      return { n: seen.length, bad }; }, r.html);
+    ok(!rel.bad.length, `${id}: 강좌 카드 사진 관련성 — 이름 · 분야 규칙에 맞는 사진(${rel.n}장, 어긋남 ${rel.bad.join(', ')})`);
     if (id === 'pbjournal') { const q = await a.p.evaluate(() => { const s = S.site; const keep = S.reviews; const cid = (S.classes[0] || {}).id; s.sections = s.sections.filter(x => !(x.data && x.data.hpt === 'p4-quote')); s.sections.splice(2, 0, { id: 'qtest', type: 'text', data: { variant: 'features', hpt: 'p4-quote', title: '', cols: [] } });
         S.reviews = [{ body: '퀴즈 3번 해설 부탁드립니다', stars: 5, cls: cid }, { body: '영상이 자꾸 끊겨요 확인해 주세요', stars: 4, cls: cid }]; const h1 = siteHTML(s);
         S.reviews.push({ body: '동네에서 이렇게 알찬 강좌를 들을 수 있어 매주 기다려져요.', stars: 5, cls: cid }); const h2 = siteHTML(s); S.reviews = keep;
@@ -84,7 +97,7 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
       ok(q.none && q.good, `후기 인용: 요청 · 불만 글 제외, 칭찬 글만 큰 인용(${JSON.stringify(q)})`); }
     await view(id, r.html, 5, !!CAP);
     ok(!a.errs.length, `${id}: 관리자 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close(); }
-  const imgs = Object.values(heroImg); if (!process.env.ONLY) ok(imgs.every(Boolean) && new Set(imgs).size === imgs.length, `첫 화면 사진 10종 모두 다름(${imgs.join(',')})`);
+  const imgs = Object.values(heroImg); if (!process.env.ONLY) ok(imgs.every(Boolean) && new Set(imgs).size === imgs.length, `첫 화면 사진 15종 모두 다름(${imgs.join(',')})`);
 
   /* ── 데이터 없음(빈 스튜디오) ── */
   for (const [id, ed] of [['pbcivic', 'staff'], ['pbsenior', 'citizen'], ['pbcampus', 'staff']].filter(c => !process.env.ONLY || process.env.ONLY.split(',').includes(c[0]))) { const a = await admin(ed, true);
@@ -92,7 +105,7 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
     ok(r.n === 0 && /p4-hero/.test(r.html) && !/p4-(rows|figs|big|tracks|shelf|wide)"/.test(r.html) && !/NaN|undefined|object Object/.test(r.html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '')), `${id}: 빈 스튜디오 — 강좌 · 숫자 섹션 숨김 · 첫 화면 유지(${r.n} ${(r.html.match(/p4-(rows|figs|big|tracks|shelf|wide)"/g) || []).join(',')} ${(r.html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '').match(/.{30}(NaN|undefined|object Object).{10}/) || [''])[0]})`);
     await view(id + '-empty', r.html, 2, false); ok(!a.errs.length, `${id} 빈 상태 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close(); }
 
-  /* ── 실제 게시본(learner.html Shadow DOM): 10종 모두 — 바탕색 · 제목 크기 · 세리프 · 과정 상세 · 넘침 ── */
+  /* ── 실제 게시본(learner.html Shadow DOM): 15종 모두 — 바탕색 · 제목 크기 · 세리프 · 과정 상세 · 넘침 ── */
   for (const [id, ed] of CASES.filter(c => !process.env.ONLY || process.env.ONLY.split(',').includes(c[0]))) { const a = await admin(ed, false);
     const info = await a.p.evaluate(id => { try { closeModal(); } catch (e) { } const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); S.site = s; s.published = true; save(); smPublish(); try { closeModal(); } catch (e) { } return { tid: DREG.cur(), bg: HP44P.DEF[id].bg }; }, id);
     for (const w of [1440, 390]) { const q = await a.ctx.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message)); await q.setViewportSize({ width: w, height: w > 600 ? 900 : 844 });
@@ -106,6 +119,36 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
       if (CAP) await q.screenshot({ path: path.join(CAP, `pub-${id}-${w > 600 ? 'pc' : 'm'}.jpg`), type: 'jpeg', quality: 78 });
       await q.close(); }
     await a.ctx.close(); }
+
+  /* ── R3: 데이터가 있으면 공통 부품(hx-*)이 게시본에 보인다 — 품질 자동 보정(hpwFix · hideAuto)을 거쳐도, 과정이 「지정 회원」이어도(강사진) ── */
+  for (const [id, ed] of CASES.filter(c => !process.env.ONLY || process.env.ONLY.split(',').includes(c[0]))) { const a = await admin(ed, false);
+    const info = await a.p.evaluate(id => { try { closeModal(); } catch (e) { } const day = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+      (S.classes || []).forEach((c, i) => { c.open = i < 3 ? '전체' : '지정 회원'; c.status = '운영중'; c.price = i === 1 ? 0 : 50000 + i * 10000; c.intro = [{ name: ['김서윤', '박도현', '이하은'][i % 3], bio: '현직 강사 · 10년 경력' }]; });
+      const hid = (S.classes || []).find(c => c.open !== '전체'); const who = (S.members || [])[0] ? S.members[0].id : 'm0';
+      S.posts = [...(S.posts || []).filter(p => p.board !== '수강후기'), ...['설명이 차근차근해서 처음 배우는 사람도 따라가기 좋았습니다.', '실습 위주라 바로 업무에 써먹을 수 있었어요.', '수업 자료가 잘 정리되어 있어서 복습할 때 큰 도움이 됩니다.'].map((b, i) => ({ id: 'qr' + i, kind: '이야기', board: '수강후기', who, title: b.slice(0, 16), body: b, stars: 5, at: day(-2 - i), replies: 0, views: 9, hidden: false }))];
+      S.reviews = hid ? [{ id: 'qhid', cls: hid.id, who, body: '지정회원과정만의후기입니다 아주 좋았어요', stars: 5, at: day(-1) }] : [];
+      S.notices = [{ id: 'qn0', title: '겨울 학기 수강 신청 안내', at: day(-1), pin: true }, { id: 'qn1', title: '시설 점검 안내', at: day(-3) }];
+      S.settings.footer = Object.assign({}, S.settings.footer, { tel: '051-555-0123', addr: '부산광역시 해운대구 센텀중앙로 00', hours: '평일 09:00~18:00', email: 'edu@example.com' });
+      const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); S.site = s; s.published = true; try { if (typeof hpwFix === 'function') hpwFix(s); } catch (e) { }
+      const want = [...new Set((s.sections || []).filter(x => x && !x.hide && x.type === 'text' && /^hx-/.test((x.data || {}).hpt || '')).map(x => x.data.hpt.slice(3)))];
+      const stuck = (s.sections || []).filter(x => x && x.hide && x.hideAuto && /^hx-/.test(((x.data || {}).hpt) || '')).map(x => x.data.hpt);
+      save(); smPublish(); try { closeModal(); } catch (e) { } return { tid: DREG.cur(), want, stuck }; }, id);
+    ok(!info.stuck.length, `${id}: 공통 부품이 자동 숨김(hideAuto)으로 굳지 않음 ${info.stuck.join(',')}`);
+    const q = await a.ctx.newPage(); await q.setViewportSize({ width: 390, height: 844 }); await q.goto(`${base}/learner.html?t=${info.tid}#home`, { waitUntil: 'load' }); await q.waitForTimeout(1600);
+    const r = await q.evaluate(() => { const R = [...document.querySelectorAll('.smhost')].map(h => h.shadowRoot).filter(Boolean); const on = R.flatMap(r => [...r.querySelectorAll('[data-hx]')]).map(e => e.getAttribute('data-hx')).filter(k => k !== '1');
+      const txt = R.map(r => r.textContent).join(' '); const b = R.map(r => r.querySelector('section.p4-hero .p4-b, section.p4-hero a.p4-b')).find(Boolean); const act = document.querySelector('#lhsAct, nav.tabbar');
+      const bar = [...document.querySelectorAll('#lhsAct, nav.tabbar')].map(x => x.getBoundingClientRect()).filter(x => x.height > 0).reduce((m, x) => Math.min(m, x.top), innerHeight);
+      return { on, hidRev: /지정회원과정만의후기/.test(txt), btn: b ? Math.round(b.getBoundingClientRect().bottom) : 0, bar: Math.round(bar) }; });
+    const miss = info.want.filter(k => k !== 'num' && !r.on.includes(k));
+    ok(info.want.length && !miss.length, `${id}: 데이터가 있으면 켜 둔 공통 부품이 게시본에 보임(켬 ${info.want.join(',')} · 보임 ${[...new Set(r.on)].join(',')}${miss.length ? ' · 빠짐 ' + miss.join(',') : ''})`);
+    if (info.want.includes('fac')) ok(r.on.includes('fac'), `${id}: 강사진은 과정 공개 범위(지정 회원)와 무관하게 보임`);
+    ok(!r.hidRev, `${id}: 지정 회원 과정의 후기는 홈페이지에 내보내지 않음`);
+    if (id === 'pblibrary') ok(r.btn > 0 && r.btn <= r.bar, `pblibrary 390 게시본: 첫 버튼이 아래 탭바 위에 완전히 보임(버튼 ${r.btn}px · 탭바 ${r.bar}px)`);
+    await q.close(); ok(!a.errs.length, `${id}: 공통 부품 점검 관리자 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close(); }
+
+  /* 빈 기관 pbcivic: 공지가 없으면 빈 알림 칸을 남기지 않음 */
+  { const a = await admin('staff', true); const r = await a.p.evaluate(() => { try { closeModal(); } catch (e) { } S.notices = []; (S.classes || []).forEach(c => { c.notices = []; }); const s = siteFromTpl(TPL.find(t => t.id === 't44-pbcivic')); S.site = s; const h = siteHTML(s, true, 'ko'); return { none: /새 공지가 올라오면/.test(h), help: /p4-hg1/.test(h) || !/p4-help/.test(h) }; });
+    ok(!r.none && r.help, `pbcivic 빈 기관: 빈 알림 칸 숨김(${JSON.stringify(r)})`); await a.ctx.close(); }
 
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);

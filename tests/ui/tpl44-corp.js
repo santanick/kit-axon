@@ -1,5 +1,5 @@
 'use strict';
-/* v44 기업 교육 홈페이지 템플릿 10종(hp44-corp.js) 점검
+/* v44 기업 교육 홈페이지 템플릿 12종(v44.1: CS · 콜센터, 대리점 · 가맹점 추가)(hp44-corp.js) 점검
    - 10종 등록(HPT · HPD · TPL t44- · g44 · types corp · sub) · 첫 화면 종류 10가지 모두 다름 · 첫 화면 사진 중복 없음
    - 게시본 PC 1440 · 390: 가로 넘침 0 · 화면 밖 요소 0 · 누르는 칸 44px(390) · 글자 13px 이상 · 한 글자 꺾임 0 · 제목 크기 · pageerror 0
    - 버튼 · 링크가 학습자 실제 경로(#my · #courses · #cert · #notice · #comm · #login · #join · tel: · #p-c-<id>)인지
@@ -11,7 +11,7 @@ const http = require('node:http'); const fs = require('node:fs'); const path = r
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../../didisam');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.webp': 'image/webp', '.woff2': 'font/woff2' };
-const IDS = ['cphrd', 'cplegal', 'cponboard', 'cplead', 'cpdx', 'cpsales', 'cpheritage', 'cpstartup', 'cppartner', 'cpuniv'];
+const IDS = ['cphrd', 'cplegal', 'cponboard', 'cplead', 'cpdx', 'cpsales', 'cpheritage', 'cpstartup', 'cppartner', 'cpuniv', 'cpcs', 'cpstore'];
 const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
 
 (async () => {
@@ -32,13 +32,14 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
           small: w < 600 ? [...document.querySelectorAll('section.c4 a')].filter(a => vis(a) && a.getBoundingClientRect().height < 44).map(a => a.textContent.trim().slice(0, 12)) : [],
           tiny: [...document.querySelectorAll('section.c4 *')].filter(el => vis(el) && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(el).fontSize) < 13).map(el => el.textContent.trim().slice(0, 10)),
           narrow: [...document.querySelectorAll('section.c4 :is(h1,h2,h3,b,small,a,p,em,span)')].filter(el => { if (!vis(el) || el.textContent.trim().length < 3) return false; const r = el.getBoundingClientRect(); const fs = parseFloat(getComputedStyle(el).fontSize); return r.height > fs * 5 && r.width < fs * 2.2; }).length,
-          h1: (() => { const h = document.querySelector('section.c4-hero h1'); return h ? parseFloat(getComputedStyle(h).fontSize) : 0; })(), cta: (() => { const b = [...document.querySelectorAll('section.c4-hero .c4-cta a')].pop(); return b ? Math.round(b.getBoundingClientRect().bottom) : 0; })() }; }, w);
+          h1: (() => { const h = document.querySelector('section.c4-hero h1'); return h ? parseFloat(getComputedStyle(h).fontSize) : 0; })(), cta: (() => { const b = [...document.querySelectorAll('section.c4-hero .c4-cta a')].pop(); return b ? Math.round(b.getBoundingClientRect().bottom) : 0; })(), heroImg: [...document.querySelectorAll('section.c4-hero img')].filter(i => i.getBoundingClientRect().width > 0).map(i => i.complete && i.naturalWidth > 0), badImg: [...document.querySelectorAll('section.c4 img')].filter(i => i.complete && !i.naturalWidth).length }; }, w);
       ok(m.n >= (minN || 4) && m.over <= 0 && !m.out, `${key} ${w}: 섹션 ${m.n}개 · 가로 넘침 0 · 화면 밖 요소 0(${m.over}/${m.out})`);
       ok(!m.small.length, `${key} ${w}: 누르는 칸 44px 이상 ${m.small.join(',')}`);
       ok(!m.tiny.length, `${key} ${w}: 글자 13px 이상 ${m.tiny.join(',')}`);
       ok(!m.narrow, `${key} ${w}: 한 글자 꺾임 0(${m.narrow})`);
       ok(w > 600 ? m.h1 >= 64 && m.h1 <= 104 : m.h1 >= 36 && m.h1 <= 48, `${key} ${w}: 첫 화면 제목 ${m.h1}px(PC 64~104 · 휴대폰 36~48)`);
       if (w < 600) ok(m.cta > 0 && m.cta <= 844, `${key} 390: 첫 화면 안에 제목 · 버튼(마지막 버튼 아래 ${m.cta}px ≤ 844)`);
+      ok(!m.badImg && (!m.heroImg.length || m.heroImg.every(Boolean)), `${key} ${w}: 사진이 실제로 나옴(첫 화면 ${m.heroImg.length}장 · 깨진 사진 ${m.badImg})`);
       ok(!pe.length, `${key} ${w}: pageerror 0 ${pe.join('|')}`);
       await c2.close(); } };
   const admin = async empty => { const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
@@ -48,12 +49,14 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
     return { ctx, p, errs }; };
 
   const a = await admin(false);
-  const reg = await a.p.evaluate(ids => ids.map(id => { const t = TPL.find(x => x.id === 't44-' + id) || {}; return { id, th: HPT.has(id), hd: !!(window.HPD && HPD.list().includes(id)), g44: t.g44 === 1, types: (t.types || []).join(), sub: t.sub || '', k: HP44C.DEF[id].k, hero: HP44C.DEF[id].ph.hero || '', fit: HPT.premFits(id, 'corp'), thumb: /c4-hero/.test(HPT.thumb(null, id)) }; }), IDS);
+  const reg = await a.p.evaluate(ids => ids.map(id => { const t = TPL.find(x => x.id === 't44-' + id) || {}; return { id, th: HPT.has(id), hd: !!(window.HPD && HPD.list().includes(id)), g44: t.g44 === 1, types: (t.types || []).join(), sub: t.sub || '', k: HP44C.DEF[id].k, hero: HP44C.DEF[id].ph.hero || '', fit: HPT.premFits(id, 'corp'), thumb: /c4-hero/.test(HPT.thumb(null, id)) && (HP44C.DEF[id].k === 'list' || /c4-hero[\s\S]*?<img[^>]+src="[^"]*img\/stock\/[a-z]{3}-\d{2}/.test(HPT.thumb(null, id))) }; }), IDS);
   reg.forEach(r => ok(r.th && r.hd && r.g44 && r.types === 'corp' && r.sub && r.fit && r.thumb, `${r.id}: 등록 · g44 · types corp · 세부 유형 「${r.sub}」 · 미리보기(${JSON.stringify(r)})`));
-  ok(new Set(reg.map(r => r.k)).size === 10, `첫 화면 종류 10가지 모두 다름(${reg.map(r => r.k).join(' · ')})`);
+  ok(new Set(reg.map(r => r.k)).size === IDS.length, `첫 화면 종류 ${IDS.length}가지 모두 다름(${reg.map(r => r.k).join(' · ')})`);
   const heroes = reg.map(r => r.hero).filter(Boolean); ok(new Set(heroes).size === heroes.length, `첫 화면 사진 중복 없음(${heroes.join(',')})`);
   ok(reg.some(r => /전통/.test(r.sub)), '전통 · 격식형 1종 이상');
-  const cid = await a.p.evaluate(() => S.classes.map(c => c.id));
+  const cid = await a.p.evaluate(() => S.classes.map(c => c.id)); const CARD = [];
+  /* 규칙 사진이 이미 페이지에서 다 쓰였으면(첫 화면 · 다른 카드) 템플릿 세트로 넘어가는 것이 맞다 */
+  const RULEUSED = (rel, x) => { const same = rel.filter(y => y.rule === x.rule && y.fit); return same.length >= x.left; };
   for (const id of IDS) {
     const r = await a.p.evaluate(id => { const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); S.site = s; return { html: siteHTML(s), color: s.color, theme: s.theme, first: (s.sections.find(x => !x.hide) || {}).type }; }, id);
     ok(r.theme === id && r.first === 'banner' && new RegExp(`class="hpt c4 ${id} c4-hero`).test(r.html) && /^#[0-9a-f]{6}$/i.test(r.color), `${id}: 테마 적용 · 첫 화면 = 시안 첫 화면 · 기관 색(${r.color}, 흰 글자 대비 보정 허용)`);
@@ -62,17 +65,34 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
     ok(L.length >= 6 && !bad.length && L.some(h => /^#p-c-/.test(h)), `${id}: 링크 ${L.length}개 실제 경로 · 과정 상세 포함 ${bad.join(',')}`);
     ok(!/hps-flow|hps-short/.test((r.html.match(/<section class="[^"]*\bc4\b[^"]*"/g) || []).join(' ')), `${id}: 섹션 간격 압축 클래스 제거`);
     ok(!/NaN|undefined|object Object|<input|<form|주민등록|휴대폰 번호/.test((r.html.match(/<section class="hpt c4[\s\S]*?<\/section>/g) || []).join('')), `${id}: 이상 값 · 입력 칸 · 개인정보 문구 없음`);
+    { const home = (r.html.match(/<section class="hpt c4 [\s\S]*?<\/section>|<section[^>]*data-hx=[\s\S]*?<\/section>/g) || []).join(''); const st = (home.match(/ src="[^"]*img\/stock\/[a-z]{3}-\d{2}/g) || []).map(x => x.slice(-6)); const uniq = new Set(st); ok((st.length >= 1 || id === 'cplegal') && uniq.size === st.length, `${id}: 한 페이지 안 사진 중복 0(${st.length}장)`);
+      const cards = [...((r.html.match(/<section class="hpt c4 [a-z]+ c4-(cards|prog)"[\s\S]*?<\/section>/g) || []).join('')).matchAll(/<a class="c4-(?:card|pc)[^"]*" href="#p-c-([^"]+)">(?:<figure[^>]*><img src="[^"]*img\/stock\/([a-z]{3}-\d{2}))?/g)].map(m => [m[1], m[2] || '']);
+      const rel = await a.p.evaluate(C => C.map(([cid, ph]) => { const c = S.classes.find(x => x.id === cid) || {}; const r = HPSTOCK.courseRule(c.name); return { n: c.name, ph, rule: r ? r.k : '', fit: r ? HPSTOCK.fitsCourse(ph, c.name) : null, left: r ? r.ids.length : 0 }; }), cards);
+      rel.forEach(x => CARD.push([id, x.ph, x.rule]));
+      const bad = rel.filter(x => x.ph && x.fit === false && x.left > 0 && !RULEUSED(rel, x));
+      ok(!bad.length, `${id}: 강좌 카드 사진이 강좌 이름 · 분야에 맞음(규칙 있는 ${rel.filter(x => x.rule).length}장 · 어긋남 ${bad.map(x => x.n + '→' + x.ph).join(',')})`); }
     await view(id, r.html); }
+  { const by = {}; CARD.filter(x => x[1] && !x[2]).forEach(([id, p]) => { (by[p] = by[p] || new Set()).add(id); }); const dup = Object.keys(by).filter(p => by[p].size > 1); ok(!dup.length, `규칙 밖 강좌 카드 사진(템플릿 세트)이 템플릿마다 다름(${CARD.length}장, 겹침 ${dup.join(',')})`); }
+  /* GAP B 기업: 로고 띠(운영자 입력) · 마감 D-day + 이수 현황 미리보기 · 직급별 경로 도식 */
+  { const b = await a.p.evaluate(() => { const t = today(); const add = n => { const d = new Date(t); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+      const s = siteFromTpl(TPL.find(x => x.id === 't44-cphrd')); const h0 = siteHTML(s); const lg = s.sections.find(x => x.data && x.data.hpt === 'c4-logos'); lg.data.cols = [['한빛전자'], ['한빛물산'], ['한빛증권']]; const h1 = siteHTML(s);
+      const L = S.classes.filter(c => c.legal); const keep = L.map(c => c.end); L.forEach((c, i) => { c.end = add(5 + i * 20); }); const h2 = siteHTML(siteFromTpl(TPL.find(x => x.id === 't44-cplegal'))); L.forEach((c, i) => { c.end = keep[i]; });
+      const h3 = siteHTML(siteFromTpl(TPL.find(x => x.id === 't44-cplead')));
+      return { logo0: /c4-logos"/.test(h0), logo1: /c4-logos"/.test(h1) && /한빛증권/.test(h1), dday: /c4-dday"/.test(h2) && /D-5</.test(h2) && /c4-mock/.test(h2) && /class="c4-dn w"/.test(h2), path: /c4-lv n\d/.test(h3) }; });
+    ok(!b.logo0 && b.logo1, `로고 띠: 비면 숨김 · 이름을 넣으면 보임(${JSON.stringify(b)})`);
+    ok(b.dday, '법정교육 마감 D-day(D-5 경고) · 이수 현황 미리보기 카드');
+    ok(b.path, '직급별 학습 경로 도식(c4-lv)'); }
   /* QA 11-18: 낮은 숫자 블록 숨김 · 후기 필터 */
   { const q = await a.p.evaluate(() => { const out = {}; const ids = ['cplegal', 'cpdx', 'cpheritage', 'cpuniv']; const h = id => siteHTML(siteFromTpl(TPL.find(t => t.id === 't44-' + id)));
       out.n = S.classes.filter(c => c.status !== '종료').length; out.figs = ids.filter(id => /class="hpt c4 [a-z]+ c4-figs"/.test(h(id)));
       out.nums = /운영 중인 과정<\/p>|함께 배우는 인원<\/p>/.test(h('cpdx'));
       const keep = S.reviews; S.reviews = [{ id: 'r1', cls: S.classes[0].id, stars: 5, body: '영상이 자꾸 끊겨요 확인 부탁드립니다', at: '2026-11-10' }, { id: 'r2', cls: S.classes[0].id, stars: 5, body: '퀴즈 3번 해설도 올려 주실 수 있나요?', at: '2026-11-11' }];
-      out.bad = /c4-quote"/.test(h('cphrd'));
+      out.bad = /data-hx="rev"/.test(h('cphrd')) || /c4-quote"/.test(h('cphrd'));
+      const op0 = S.classes.slice(0, 2).map(c => c.open); S.classes.slice(0, 2).forEach(c => { c.open = '전체'; }); /* R3: 후기는 공개(전체) 과정 것만 홈페이지에 — 칭찬 글은 공개 과정에 단다 */
       S.reviews.push({ id: 'r3', cls: S.classes[0].id, stars: 5, body: '팀장이 되고 처음 6주가 막막했는데 리더 과정이 지도가 돼 줬어요', at: '2026-11-12' });
-      const g = h('cphrd'); out.good = /c4-quote"/.test(g) && /지도가 돼 줬어요/.test(g) && !/끊겨요|해설도/.test(g); S.reviews = keep; return out; });
+      S.reviews.push({ id: 'r4', cls: S.classes[1].id, stars: 5, body: '짧은 강의라 출퇴근길에 끝까지 들을 수 있어서 좋았어요', at: '2026-11-13' }); const g = h('cphrd'); const rv = (g.match(/<section[^>]*data-hx="rev"[\s\S]*?<\/section>/) || [''])[0]; out.good = /지도가 돼 줬어요/.test(rv) && !/끊겨요|해설도/.test(g) && !/c4-quote"/.test(g); S.classes.slice(0, 2).forEach((c, i) => { c.open = op0[i]; }); S.reviews = keep; return out; });
     ok(q.n < 10 && !q.figs.length && !q.nums, `숫자 블록: 과정 ${q.n}개 · 인원 100명 미만 시연 데이터에서 4종 모두 숨김(${q.figs.join(',')})`);
-    ok(!q.bad && q.good, `후기 인용: 불만 · 요청 · 질문 글 제외, 긍정 글만 크게(${JSON.stringify(q)})`); }
+    ok(!q.bad && q.good, `후기(hx-rev 하나로): 불만 · 요청 · 질문 글 제외, 긍정 글만(${JSON.stringify(q)})`); }
   ok(!a.errs.length, `관리자 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close();
 
   /* ── 빈 기관 ── */
@@ -94,6 +114,31 @@ const ROUTES = /^#(my|courses|cert|notice|comm|login|join|home|shop)$/;
       ok(!pe.length, `게시본 ${w} pageerror 0 ${pe.join('|')}`); await q.close(); }
     await g.ctx.close(); }
 
+  /* ── R3: 데이터가 있으면 공통 부품(hx-*)이 게시본에 보인다 — 기업 시연 과정은 공개 범위 「지정 회원」 그대로(강사진은 공개 범위와 무관 · 가격 · 강좌 목록은 공개 과정만) ── */
+  for (const id of IDS.filter(x => !process.env.ONLY || process.env.ONLY.split(',').includes(x))) { const a = await admin(false);
+    const info = await a.p.evaluate(id => { try { closeModal(); } catch (e) { } const day = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); const who = (S.members || [])[0] ? S.members[0].id : 'm0';
+      (S.classes || []).forEach((c, i) => { c.intro = [{ name: ['김서윤', '박도현', '이하은'][i % 3], bio: '사내 강사 · 실무 15년' }]; });
+      const hid = (S.classes || []).find(c => c.open !== '전체');
+      S.posts = [...(S.posts || []).filter(p => p.board !== '수강후기'), ...['설명이 차근차근해서 처음 배우는 사람도 따라가기 좋았습니다.', '실습 위주라 바로 업무에 써먹을 수 있었어요.', '자료가 잘 정리되어 있어서 복습할 때 큰 도움이 됩니다.'].map((b, i) => ({ id: 'qr' + i, kind: '이야기', board: '수강후기', who, title: b.slice(0, 16), body: b, stars: 5, at: day(-2 - i), replies: 0, views: 9, hidden: false }))];
+      S.reviews = hid ? [{ id: 'qhid', cls: hid.id, who, body: '지정회원과정만의후기입니다 아주 좋았어요', stars: 5, at: day(-1) }] : [];
+      S.notices = [{ id: 'qn0', title: '하반기 법정교육 안내', at: day(-1), pin: true }];
+      S.settings.footer = Object.assign({}, S.settings.footer, { tel: '051-555-0123', addr: '부산광역시 해운대구 센텀중앙로 00', hours: '평일 09:00~18:00' });
+      const s = siteFromTpl(TPL.find(t => t.id === 't44-' + id)); S.site = s; s.published = true; try { if (typeof hpwFix === 'function') hpwFix(s); } catch (e) { }
+      const want = [...new Set((s.sections || []).filter(x => x && !x.hide && x.type === 'text' && /^hx-/.test((x.data || {}).hpt || '')).map(x => x.data.hpt.slice(3)))];
+      const stuck = (s.sections || []).filter(x => x && x.hide && x.hideAuto && /^hx-/.test(((x.data || {}).hpt) || '')).map(x => x.data.hpt);
+      const pubN = (S.classes || []).filter(c => c.open === '전체' && c.status !== '종료').length;
+      save(); smPublish(); try { closeModal(); } catch (e) { } return { tid: DREG.cur(), want, stuck, pubN, hidN: (S.classes || []).length - pubN }; }, id);
+    ok(!info.stuck.length, `${id}: 공통 부품이 자동 숨김(hideAuto)으로 굳지 않음 ${info.stuck.join(',')}`);
+    const q = await a.ctx.newPage(); await q.setViewportSize({ width: 1440, height: 900 }); await q.goto(`${base}/learner.html?t=${info.tid}#home`, { waitUntil: 'load' }); await q.waitForTimeout(1600);
+    const r = await q.evaluate(() => { const R = [...document.querySelectorAll('.smhost')].map(h => h.shadowRoot).filter(Boolean); return { on: R.flatMap(r => [...r.querySelectorAll('[data-hx]')]).map(e => e.getAttribute('data-hx')).filter(k => k !== '1'), hidRev: /지정회원과정만의후기/.test(R.map(r => r.textContent).join(' ')) }; });
+    const need = info.want.filter(k => !['num', 'price', 'cls'].includes(k) || info.pubN > 0); const miss = need.filter(k => !r.on.includes(k));
+    ok(!miss.length, `${id}: 데이터가 있으면 켜 둔 공통 부품이 게시본에 보임(켬 ${info.want.join(',') || '-'} · 보임 ${[...new Set(r.on)].join(',')}${miss.length ? ' · 빠짐 ' + miss.join(',') : ''} · 공개 과정 ${info.pubN} · 지정 ${info.hidN})`);
+    if (info.want.includes('fac')) ok(r.on.includes('fac'), `${id}: 강사진은 과정 공개 범위와 무관하게 보임`);
+    ok(!r.hidRev, `${id}: 지정 회원 과정의 후기는 홈페이지에 내보내지 않음`);
+    await q.close(); ok(!a.errs.length, `${id}: 공통 부품 점검 관리자 pageerror 0 ${a.errs.join('|')}`); await a.ctx.close(); }
+
+  /* v44.1 FIX3 B: 규칙이 있는 강좌 사진은 규칙 사진만 — 모든 강좌 사진 레이아웃(카드 · 갤러리 · 사진 띠 · 목록 썸네일), 기관 강좌 이름 그대로 · qaCls 두 번 */
+  try { await require('./hp-visual/photorule.js')(browser, base + '/', 'corp', ok, '[corp]'); } catch (e) { ok(false, '사진 규칙 점검 예외 ' + (e && e.message || e)); }
   await browser.close(); srv.close();
   console.log(fails.length ? `\n실패 ${fails.length}건` : '\n모두 통과'); process.exit(fails.length ? 1 : 0);
 })();

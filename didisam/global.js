@@ -399,3 +399,25 @@ FILL.push(
   if (!Object.values(S.nav.tabs).some(a => a.some(x => x.id === 'calendar'))) { (S.nav.tabs.learn = S.nav.tabs.learn || []).push({ id: 'calendar', on: true }); ch = true; }
   if (S.site && !S.site.tpl) { S.site.legacy = true; } if (ch || !S.v5) { S.v5 = 1; save(); } }; }
 { const base = postSeed; postSeed = type => { base(type); S.settings.i18n = { ui: 'ko', site: ['ko', 'en'], subs: ['en', 'ja', 'zh-CN'], auto: true }; CAL(); seedCal(); S.site = siteFromTpl(tplFor(type)[0]); S.v5 = 1; }; }
+
+/* v44.1 FIX3 B: 홈페이지 템플릿(g44) 강좌 사진 공통 고르기 — 모든 유형 파일의 강좌 카드 · 갤러리 · 사진 띠가 이 함수를 거친다.
+   순서: ① 운영자 사진(사이트 강좌 사진 s.img['cls-<id>'] · 강좌 썸네일 c.thumb) ② 강좌 이름 · 분야 규칙(HPSTOCK.courseRule) 사진 — 페이지 안 중복 제외,
+   salt(템플릿 순번)로 시작 후보를 달리 ③ 규칙이 없는 강좌만 템플릿 세트. 규칙이 있는데 남은 규칙 사진이 없으면 null(엉뚱한 사진 대신 사진 없는 카드 · 갤러리에서 빼기).
+   G44PH.pick(c, s, { used: Set, set: [id], salt: n, size: 'sm'|'lg', noOp: 1 }) → { src, alt, pos, id?, rule, op } | null · G44PH.ruled(name) → 규칙 여부 · G44PH.key(src) → 스톡 id */
+window.G44PH = (() => {
+  const key = v => { const m = String((v && typeof v === 'object' ? (v.stock || v.src) : v) || '').match(/([a-z]{3}-\d{2})(?:-800)?(?:\.webp)?(?:[?#].*)?$/); return m ? m[1] : String(v || ''); };
+  const rule = name => { try { const H = window.HPSTOCK; const r = H && typeof H.courseRule === 'function' ? H.courseRule(String(name || '')) : null; return r && Array.isArray(r.ids) && r.ids.length ? r : null; } catch (e) { return null; } };
+  const own = (c, s) => { const m = s && s.img && s.img['cls-' + c.id]; if (m && m.src) return { src: m.src, alt: m.alt || c.name || '', pos: m.pos || '50% 50%', op: 1 };
+    if (c.thumb && /^(img\/|https?:|data:image\/(png|jpe?g|webp|gif);base64,)/.test(String(c.thumb))) return { src: c.thumb, alt: c.name || '', pos: '50% 50%', op: 1 }; return null; };
+  const hps = () => (window.HPS && typeof HPS.cardUsed === 'function' ? HPS : null);
+  function pick(c, s, o) { o = o || {}; const U = o.used || new Set(); const H = window.HPSTOCK; if (!c) return null;
+    try { const P = hps(); if (P) P.cardUsed().forEach(id => U.add(id)); } catch (e) { } /* 같은 페이지의 공통 강좌 목록(hpsec-card)이 이미 쓴 사진도 뺀다 */
+    if (!o.noOp) { const m = own(c, s); if (m && !U.has(m.src)) { U.add(m.src); return m; } }
+    if (!H || typeof H.get !== 'function') return null;
+    const mk = (x, r) => { U.add(x.id); try { const P = hps(); if (P) P.cardUse(x.id); } catch (e) { } return { src: H.url(x, o.size === 'lg' ? '' : 'sm'), alt: x.alt || c.name || '', pos: x.focus || '50% 50%', id: x.id, stock: true, rule: !!r }; };
+    const r = rule(c.name);
+    if (r) { const ids = r.ids.filter(id => !U.has(id) && H.get(id)); return ids.length ? mk(H.get(ids[(+o.salt || 0) % ids.length]), r) : null; }
+    for (const id of (o.set || [])) { if (U.has(id)) continue; const x = H.get(id); if (x) return mk(x, null); }
+    return null; }
+  return { pick, own, ruled: n => !!rule(n), rule, key };
+})();

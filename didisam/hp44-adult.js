@@ -1,4 +1,4 @@
-/* v44 hp44-adult — 성인 · 1인 강사(adult) 홈페이지 템플릿 10종(세부 유형별)
+/* v44 hp44-adult — 학원(성인)(adult) 홈페이지 템플릿 11종(세부 유형별, v44.1 민간 자격증 추가)
    대표님(2026-11-18): 「기관 유형별로 … 세부 유형별로 시나리오에 맞게 높은 퀄리티의 템플릿만 … 각 10개씩」 「다른 유형의 템플릿도 아주 잘 디자인되어 있는 고퀄리티」
    기준선: v43.9 hpv-acad의 「시네마틱 다크(accine)」 · 「포스터 컬러 블록(acposter)」 · 「에디토리얼(acpaper)」 성인 버전을 흡수 · 발전(같은 id는 다시 쓰지 않는다).
    id: HPT.reg · HPD.reg가 /^[a-z]{2,16}$/만 받으므로 성인 접두어는 「ad」. 템플릿 id는 't44-' + id. 클래스 접두어 a4-.
@@ -6,6 +6,7 @@
      adtalk 어학 회화(말풍선 분할) · adexam 자격증 · 시험(전통 · 격식 증서 액자 + 아치) · adit 직무 · IT(시네마틱 다크) · adcraft 취미 · 공예(포스터 콜라주)
      admove 운동 · 요가 · 필라테스(반반 분할) · adcook 요리 · 베이킹(가운데 에디토리얼) · adcoach 1인 강사 코칭(시그니처 인사) · advocal 음악 · 보컬(무대 검은 띠)
      adphoto 사진 · 영상 크리에이터(필름 띠) · admoney 재테크 · 커리어(신문 1면)
+     adcert 민간 자격증(v44.1 · 기관 색 바탕 + 사진 카드 · 자격 카드 겹침) — 등록 번호 · 자격명 · 관리 기관은 운영자가 a4-cred 섹션에 입력한 값만 표시(없으면 숨김), 「국가자격이 아닌 민간자격」 문구 고정, 「국가공인」 표현 금지
      1인 강사용(solo: 1): adcoach · advocal · adphoto · admoney — 갤러리 「1인 강사」 칩에 나온다.
    원칙: 첫 화면 = 큰 제목 + 짧은 부제 + 버튼 2개 + 크고 밝은 사진. 수강생 · 결제 · 상담은 첫 화면 아래 한 줄 바로 가기(#login/my · #login/mypay · tel:/전체 수업).
    사실: 과정 · 요일 · 시간 · 정원 · 수강료는 공개 강좌(S.classes), 큰 숫자는 계산 가능한 값(후기 평점 4.0 이상 · 소수 정원 · 과정 수 3개 이상), 후기는 실제 후기(HPT.reviews), 소식은 S.notices — 없으면 숨김(편집 중에는 안내).
@@ -52,11 +53,20 @@
   const img = (p, cls, eager, slot) => p ? `<figure class="a4-ph${cls ? ' ' + cls : ''}"${slot ? ` data-slot="${E(slot)}"` : ''}${slot === 'hero' ? ' data-hero="1"' : ''}${p.stock ? ' data-stock="1"' : ''}><img src="${E(p.src)}"${p.srcset ? ` srcset="${E(p.srcset)}" sizes="(max-width: 760px) 100vw, 60vw"` : ''} alt="${E(p.alt || '')}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos || '50% 50%')}"></figure>` : '';
   const fig = (s, slot, cls, eager, d) => img(ph(s, slot, d), cls, eager, slot);
   let USED = new Set(); const fresh = () => { USED = new Set(); };
-  const clsPh = (c, s, i) => { let m = null; try { m = HPS.cardImg ? HPS.cardImg(c, s) : null; } catch (e) { m = null; }
-    const key = m ? String(m.stock || m.big || m.src).replace(/-800(?=\.webp)/, '').replace(/^.*\/img\/stock\//, '').replace(/\.webp.*$/, '') : '';
-    if (m && !USED.has(key)) { USED.add(key); return { src: m.big || m.src, alt: m.alt || c.name, pos: m.pos, stock: !!m.stock }; }
-    try { let x = null; for (let k = 0; k < 8 && (!x || USED.has(x.id)); k++) x = HPSTOCK.photo(c.name, c.id + '|' + i + '|' + k, { id: true, slot: 'card', scope: 'a4-' + c.id + k }); if (x) { USED.add(x.id); return { src: HPSTOCK.url(x), alt: x.alt, pos: x.focus, stock: true }; } } catch (e) { }
-    return null; };
+  /* v44.1 A1: 강좌 카드 사진 — ① 운영자 사진(강좌 썸네일 · 사이트 사진) ② 강좌 이름으로 확실히 맞는 스톡 사진 ③ 템플릿 × 분야 사진 세트.
+     한 페이지 안 중복 0(첫 화면 때 USED를 비우고 그 페이지 슬롯 사진을 먼저 담는다), 같은 유형 안 템플릿끼리 세트가 겹치지 않는다. */
+  const CARD = {
+    adtalk: ['lan-02', 'hum-38', 'lib-05', 'cam-09', 'lib-01', 'hum-16'], adexam: ['dsk-03', 'dsk-08', 'lib-07', 'hum-45', 'dsk-09', 'lap-04'],
+    adit: ['cod-03', 'hum-07', 'hum-50', 'lap-03', 'cod-01', 'hum-08'], adcraft: ['hum-24', 'kni-01', 'hum-17', 'hum-20', 'hum-22', 'kni-03', 'sen-04', 'wrk-02'],
+    admove: ['nat-02', 'spo-08', 'yog-01'], adcook: ['bak-01', 'coo-01', 'bar-02', 'bak-04', 'bak-03', 'coo-03', 'bak-05'],
+    adcoach: ['grp-03', 'hum-10', 'off-02'], advocal: ['mus-02', 'mus-05', 'hum-29', 'mus-08', 'mus-06', 'mus-04', 'mus-01'],
+    adphoto: ['fam-04', 'sen-03', 'nat-01', 'cam-05', 'arc-05', 'fam-02', 'dsn-01'], admoney: ['dsk-02', 'off-11', 'lap-09'],
+    adcert: ['stu-02', 'grp-02', 'hum-28', 'bar-03', 'cor-07', 'kid-02']
+  };
+  const keyOf = v => String(v || '').replace(/^.*\/img\/stock\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, '');
+  const pageStart = s => { USED = new Set(); try { Object.values((s && s.photos) || {}).forEach(v => USED.add(keyOf(v))); Object.values((s && s.img) || {}).forEach(v => { if (v) USED.add(keyOf(v.stock || v.src)); }); } catch (e) { } };
+  const clsPh = (c, s, i) => { const G = window.G44PH; if (!G) return null; /* 공통 고르기(global.js G44PH): ① 운영자 ② 강좌 이름 규칙 ③ 템플릿 세트 */
+    const p = G.pick(c, s, { used: USED, set: CARD[s && s.theme] || [], salt: Math.max(0, IDS.indexOf(s && s.theme)) }); return p ? { src: p.src, alt: p.alt, pos: p.pos, stock: !!p.stock } : null; };
 
   /* ── 공통 조각 ── */
   const sec = (cls, inner, pre) => `<section class="hpt hp-s a4-s ${cls}">${pre || ''}<div class="a4-w">${inner}</div></section>`;
@@ -91,6 +101,9 @@
   const kick = d => d.eyebrow ? `<p class="a4-kick">${E(d.eyebrow)}</p>` : '';
   const ttl = d => `<h1>${emph(d.title || org())}</h1>`;
   const subt = d => d.sub ? `<p class="a4-sub">${E(d.sub)}</p>` : '';
+  /* 민간자격 표기(자격명 · 등록 번호 · 관리 기관) — 운영자가 a4-cred 섹션에 입력한 값만, 없으면 숨김 */
+  const credOf = s => { const x = ((s && s.sections) || []).find(y => y && y.data && y.data.hpt === 'a4-cred'); const C = (x && x.data.cols) || []; const g = re => { const r = C.find(r2 => r2 && re.test(String(r2[0] || ''))); return r ? val(r[1]) : ''; };
+    return { name: g(/자격명/), reg: g(/등록/), mgr: g(/관리|운영/) }; };
   const HERO = {
     /* 어학 회화: 왼쪽 큰 제목 · 오른쪽 세로 사진 + 말풍선 두 개 */
     adtalk: (s, d) => H0(s, 'a4-talk', `<div class="a4-w"><div class="a4-tg"><div class="a4-ht">${head(d)}${ctas(s, d)}</div><div class="a4-tp">${fig(s, 'hero', 'a4-hi', 1, d)}${val(d.b1) ? `<p class="a4-bb a4-bb1" aria-hidden="true">${E(d.b1)}</p>` : ''}${val(d.b2) ? `<p class="a4-bb a4-bb2" aria-hidden="true">${E(d.b2)}</p>` : ''}</div></div>${quick(s)}</div>`),
@@ -112,6 +125,11 @@
     /* 사진 · 영상: 큰 제목 + 필름 띠처럼 이어지는 사진 세 장 */
     adphoto: (s, d) => H0(s, 'a4-film', `<div class="a4-w"><div class="a4-fh"><div>${d.eyebrow ? `<p class="a4-kick"><i class="a4-rec" aria-hidden="true"></i>${E(d.eyebrow)}</p>` : ''}${ttl(d)}</div><div class="a4-fx">${subt(d)}${ctas(s, d)}</div></div></div>
       <div class="a4-strip"><div class="a4-sw">${fig(s, 'hero', 'a4-f1', 1, d)}${fig(s, 'h2', 'a4-f2', 1)}${fig(s, 'h3', 'a4-f3', 1)}</div></div><div class="a4-w">${quick(s)}</div>`),
+    /* 민간 자격증: 기관 색 바탕 + 겹친 두 장(사진 카드 · 자격 카드) — 등록 번호는 운영자가 입력한 값만 */
+    adcert: (s, d) => { const cr = credOf(s); const nm = cr.name || (pub()[0] ? pub()[0].name : '');
+      return H0(s, 'a4-badge', `<div class="a4-w"><div class="a4-bdg"><div class="a4-bdt">${head(d)}${ctas(s, d)}</div><div class="a4-stack">${fig(s, 'hero', 'a4-hi', 1, d)}
+        <div class="a4-cc" aria-hidden="true"><p class="a4-cct"><span class="a4-seal">${E((String(org()).replace(/\s/g, '')[0]) || '資')}</span><span>${E(org())}</span></p><p class="a4-ccl">민간자격</p>${nm ? `<p class="a4-ccn">${E(nm)}</p>` : ''}
+        <p class="a4-ccr">${cr.reg ? `<span>등록 번호</span><b>${E(cr.reg)}</b>` : `<span>발급</span><b>${E(org())}</b>`}</p></div></div></div>${quick(s)}</div>`); },
     /* 재테크 · 커리어: 신문 1면 — 제호 줄 · 큰 헤드라인 · 세 단(부제 · 사진 · 버튼) */
     admoney: (s, d) => H0(s, 'a4-news', `<div class="a4-w"><div class="a4-mast"><span>${E(val(d.eyebrow) || '재테크 · 커리어 클래스')}</span><span>${E(org())}</span></div>${ttl(d)}<div class="a4-ncol">${subt(d)}<div class="a4-nph">${fig(s, 'hero', 'a4-hi', 1, d)}</div><div class="a4-nct">${ctas(s, d)}${val(d.note) ? `<p class="a4-nnote">${E(d.note)}</p>` : ''}</div></div>${quick(s)}</div>`)
   };
@@ -125,7 +143,7 @@
       return sec('a4-steps', `<header class="a4-hd"><div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2></div></header><ol class="a4-sp4 n${P.length}">${P.map((r, i) => `<li><span class="a4-sn">${num(i)}</span><b>${E(r[0])}</b>${r[1] ? `<p>${E(r[1])}</p>` : ''}</li>`).join('')}</ol>`); },
     'a4-num': (d, s) => { const n = bigNum(d.pref); if (!n) return hint('a4-num', '공개 강좌나 실제 후기가 생기면 큰 숫자(후기 평점 · 소수 정원 · 반 수)가 자동으로 표시됩니다.');
       return sec('a4-num', `<p class="a4-big">${E(n.v)}${n.u ? `<small>${E(n.u)}</small>` : ''}</p><div class="a4-nt"><h2>${br(n.t)}</h2>${val(d.body) ? `<p>${br(d.body)}</p>` : ''}<p class="a4-fine">${E(n.n)}</p></div>`); },
-    'a4-cls': (d, s) => { fresh(); const C = pub().slice(0, d.lay === 'rows' ? 5 : 3); if (!C.length) return hint('a4-cls', '공개 강좌가 생기면 반 카드가 자동으로 채워집니다.');
+    'a4-cls': (d, s) => { const C = pub().slice(0, d.lay === 'rows' ? 5 : 3); if (!C.length) return hint('a4-cls', '공개 강좌가 생기면 반 카드가 자동으로 채워집니다.');
       const more = `<a class="a4-lk" ${aT(L.cls(s))}>전체 수업 보기${AR}</a>`;
       if (d.lay === 'rows') return sec('a4-cls a4-rows', `<header class="a4-hd"><div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2></div>${more}</header><ul class="a4-rl">${C.map((c, i) => `<li><a ${aT(L.c(c))}><span class="a4-ri">${['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][i]}</span><span class="a4-rn"><b>${E(c.name)}</b><small>${E(whenOf(c) || '일정은 상담으로 안내해요')}</small></span><span class="a4-rp">${E(priceOf(c))}<small>${E(seatOf(c))}</small></span>${AR}</a></li>`).join('')}</ul>`);
       const card = (c, i) => { const p = clsPh(c, s, i); const desc = val(c.sub) || val(c.desc) || '';
@@ -140,12 +158,12 @@
       return sec('a4-stm', `<p class="a4-sm">${j}.${tl ? ' ' + tl : ''}</p>`); },
     'a4-week': (d, s) => { const R = (d.cols || []).filter(r => r && r[1] && !isPh(r[1])).slice(0, 5); if (!R.length) return hint('a4-week', '한 주의 흐름(때 · 할 일 · 설명)을 입력하면 표시됩니다.');
       return sec('a4-week', `${fig(s, 'wk', 'a4-wp', 0)}<div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2>${val(d.body) ? `<p class="a4-lead">${br(d.body)}</p>` : ''}<ul class="a4-tl">${R.map(r => `<li><span>${E(r[0] || '')}</span><div><b>${E(r[1])}</b>${r[2] ? `<p>${E(r[2])}</p>` : ''}</div></li>`).join('')}</ul></div>`); },
-    'a4-band': (d, s) => { fresh(); const C = pub().slice(0, 3); if (!C.length) return hint('a4-band', '공개 강좌가 생기면 반별 큰 사진 띠가 자동으로 채워집니다.');
+    'a4-band': (d, s) => { const C = pub().slice(0, 3); if (!C.length) return hint('a4-band', '공개 강좌가 생기면 반별 큰 사진 띠가 자동으로 채워집니다.');
       const band = (c, i) => { const p = clsPh(c, s, i); const desc = val(c.sub) || val(c.desc) || '';
         return `<article class="a4-bd${i % 2 ? ' rev' : ''}">${p ? img(p, 'a4-bp', 0) : ''}<div><p class="a4-bi"><span>${String(i + 1).padStart(2, '0')}</span>${E(c.cat || (c.hours ? `총 ${c.hours}시간` : '정규 과정'))}</p><h3>${E(c.name)}</h3>${desc ? `<p class="a4-bx">${E(desc)}</p>` : ''}
           <dl><dt>시간</dt><dd>${E(whenOf(c) || '상담으로 안내해요')}</dd><dt>수강료</dt><dd>${E(priceOf(c))}</dd>${seatOf(c) ? `<dt>정원</dt><dd>${E(seatOf(c))}${capOf(c) ? ` / ${capOf(c)}명` : ''}</dd>` : ''}</dl><a class="a4-lk" ${aT(L.c(c))}>과정 자세히 보기${AR}</a></div></article>`; };
-      return sec('a4-band', `${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2>${C.map(band).join('')}`); },
-    'a4-gal': (d, s) => { fresh(); const C = pub().slice(0, 4); const P = C.map((c, i) => [c, clsPh(c, s, i + 7)]).filter(x => x[1]); if (P.length < 3) return hint('a4-gal', '공개 강좌가 3개 이상이면 반별 장면 갤러리가 표시됩니다.');
+      return sec('a4-band', `${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2><div class="a4-bds">${C.map(band).join('')}</div>`); },
+    'a4-gal': (d, s) => { const C = pub().slice(0, 10); const P = []; for (let i = 0; i < C.length && P.length < 4; i++) { const p = clsPh(C[i], s, i + 7); if (p) P.push([C[i], p]); } /* 규칙 사진이 남지 않은 강좌는 빼고 다음 강좌로 */ if (P.length < 3) return hint('a4-gal', '공개 강좌가 3개 이상이면 반별 장면 갤러리가 표시됩니다.');
       return sec('a4-gal', `${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2><div class="a4-gl n${P.length}">${P.map(([c, p]) => `<a ${aT(L.c(c))}>${img(p, '', 0)}<em>${E(c.name)}</em></a>`).join('')}</div>`); },
     'a4-quote': (d, s) => { let R = []; try { R = (HPT.reviews() || []).filter(okRv); } catch (e) { } const r = R.slice().sort((a, b) => (b.st || 0) - (a.st || 0) || String(b.b).length - String(a.b).length)[0];
       if (!r) return hint('a4-quote', '실제 수강후기가 등록되면 이곳에 크게 보여 드려요(없으면 게시된 사이트에서 숨겨집니다).');
@@ -158,6 +176,15 @@
     'a4-fin': (d, s) => { const f = ft(); const I = [['찾아오시는 길', val(f.addr)], ['전화', val(f.tel)], ['상담 시간', val(f.hours)], ['메일', val(f.email || f.mail)]].filter(x => x[1]).slice(0, 3); const tel = val(f.tel);
       return sec('a4-fin', `<div class="a4-fg"><h2>${emph(d.title || '')}</h2><div>${val(d.body) ? `<p class="a4-lead">${br(d.body)}</p>` : ''}<div class="a4-cta">${btn(GEN.test(d.cta || '') ? (pub().some(c => !+c.price) ? '무료 체험 신청' : '수강 신청하기') : d.cta, L.trial(s), 'p')}${tel ? btn(`${tel} 전화 상담`, telH(tel), 'o') : btn('상담 예약', L.ask(s), 'o')}</div></div></div>
         ${I.length ? `<dl class="a4-info n${I.length}">${I.map(([a, b]) => `<div><dt>${E(a)}</dt><dd>${br(b)}</dd></div>`).join('')}</dl>` : ''}`); },
+    /* 맛보기 영상: 운영자가 넣은 주소(유튜브 · mp4)만 — 없으면 게시본에서 숨김 */
+    'a4-vid': (d, s) => { const u = val(d.url); const yt = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/); const mp4 = /^(https:\/\/|\/|[\w-]+\/)[^\s"'<>]+\.mp4(\?[^\s"'<>]*)?$/i.test(u);
+      if (!yt && !mp4) return hint('a4-vid', '맛보기 영상 주소(유튜브 또는 mp4)를 넣으면 16:9 영상이 보입니다. 비어 있으면 게시본에서 숨겨집니다.');
+      const v = yt ? `<iframe src="https://www.youtube-nocookie.com/embed/${E(yt[1])}" title="${E(d.title || '맛보기 영상')}" loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>` : `<video src="${E(u)}" controls preload="none" playsinline></video>`;
+      return sec('a4-vid', `<header class="a4-hd"><div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2></div></header>${val(d.body) ? `<p class="a4-lead">${br(d.body)}</p>` : ''}<div class="a4-vf">${v}</div>`); },
+    /* 자격증 발급 · 조회 + 민간자격 등록 정보(운영자 입력값만) + 국가자격 오인 방지 문구 */
+    'a4-cred': (d, s) => { const cr = credOf(s); const I = [['자격명', cr.name], ['등록 번호', cr.reg], ['자격 관리 · 운영 기관', cr.mgr], ['발급 기관', org()]].filter(x => x[1]);
+      return sec('a4-cred', `<div class="a4-cdg"><div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2>${val(d.body) ? `<p class="a4-lead">${br(d.body)}</p>` : ''}<div class="a4-cta">${btn('내 자격증 확인', '#login/my', 'p')}${btn('응시 · 수강 신청', L.cls(s), 'o')}</div></div>
+        <div class="a4-regb">${I.length ? `<dl class="a4-reg">${I.map(([a, b]) => `<div><dt>${E(a)}</dt><dd>${E(b)}</dd></div>`).join('')}</dl>` : ''}<p class="a4-rnote">이 자격은 국가자격이 아닌 민간자격이에요.${cr.reg ? ' 등록 번호는 민간자격정보서비스에서 조회할 수 있어요.' : ''}</p></div></div>`); },
     /* 과정 · 패키지 카드(1인 강사): 공개 강좌의 이름 · 수강료 · 일정 · 남은 자리 */
     'a4-pkg': (d, s) => { const C = pub().slice(0, 3); if (!C.length) return hint('a4-pkg', '공개 강좌가 생기면 과정 · 수강료 카드가 자동으로 채워집니다.');
       return sec('a4-pkg', `<header class="a4-hd"><div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2></div><a class="a4-lk" ${aT(L.cls(s))}>전체 과정 보기${AR}</a></header><div class="a4-pk n${C.length}">${C.map(c => `<a class="a4-pc" ${aT(L.c(c))}><span class="a4-pn">${E(c.cat || (c.hours ? `총 ${c.hours}시간` : '정규 과정'))}</span><b>${E(c.name)}</b><span class="a4-pp">${E(priceOf(c))}</span><span class="a4-pw">${E(whenOf(c) || '일정은 상담으로 정해요')}</span>${seatOf(c) ? `<span class="a4-pw">${E(seatOf(c))}</span>` : ''}<span class="a4-pl">자세히 보기${AR}</span></a>`).join('')}</div>`); }
@@ -176,6 +203,7 @@
     adcoach: ['1인 코칭 · 시그니처', '1인 강사 · 코칭', '작은 원형 사진과 인사 · 아주 큰 제목 · 넓은 사진 — 1인 강사 · 코치의 개인 홈페이지', '#5B2A86', '#FFF9F4', '#F6ECE3', '#1E1328', '#5A4E63', '#FF8A65', 'sans', 800, 0, 24, 1],
     advocal: ['음악 · 보컬 · 무대', '음악 · 보컬 레슨', '넓은 무대 사진 위 검은 띠에 큰 흰 제목 — 1인 보컬 · 악기 레슨실', '#C2185B', '#FFFFFF', '#F4F2F3', '#121014', '#4E4A4D', '#FF4D8D', 'sans', 800, 0, 0, 1],
     adphoto: ['사진 · 영상 · 필름 띠', '사진 · 영상 크리에이터', '큰 제목 아래 필름 띠처럼 이어지는 사진 세 장 — 사진 · 영상 크리에이터 클래스', '#1A1A1A', '#F2F0EB', '#E7E4DC', '#111111', '#4B4944', '#E8352A', 'sans', 800, 0, 2, 1],
+    adcert: ['민간 자격증 · 자격 카드', '민간 자격증', '기관 색 바탕 · 겹친 사진 카드와 자격 카드 — 심리상담사 · 바리스타 · 지도사 같은 민간자격 과정 · 검정 · 발급', '#0F766E', '#F3F7F6', '#E3EEEB', '#0E1F1C', '#4B5B57', '#F5B83D', 'sans', 800, 0, 20, 0],
     admoney: ['재테크 · 커리어 · 신문 1면', '재테크 · 커리어', '신문 1면처럼 제호 줄 · 큰 헤드라인 · 세 단 구성 — 재테크 · 커리어 1인 코칭 클래스', '#0F6B46', '#FAFAF6', '#EFEFE8', '#111512', '#4A504C', '#0F6B46', 'sans', 900, 0, 0, 1]
   };
   const IDS = Object.keys(T10);
@@ -232,7 +260,7 @@
 /* 반 카드 */
 .a4-cds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px}
 .a4-cd>a{display:block;position:relative;color:inherit;text-decoration:none;border-radius:var(--r);overflow:hidden}
-.a4-cp{display:block;height:400px;border-radius:var(--r)}.a4-c0{background:var(--alt)}
+.a4-cp{display:block;aspect-ratio:4/3;height:auto;border-radius:var(--r)}.a4-c0{background:var(--alt)}
 .a4-cg{display:block;font-size:13px;font-weight:600;color:var(--lab);margin-top:24px}.a4-cn{display:block;font-family:var(--hf);font-size:28px;font-weight:${v.hw};letter-spacing:-.04em;line-height:1.3;margin-top:8px}
 .a4-cm{display:flex;justify-content:space-between;gap:12px;font-size:15px;padding-top:18px!important;margin-top:18px!important;border-top:1px solid var(--ln)}.a4-cm b{font-weight:700}.a4-cm span{color:var(--mu);text-align:right}
 .a4-cdx{font-size:16px;line-height:1.7;color:var(--mu);margin-top:12px!important}
@@ -287,7 +315,7 @@
 .a4-hd{display:block;margin-bottom:34px}.a4-hd .a4-lk{margin-top:12px}.a4-hd h2,.a4-band>.a4-w>h2,.a4-gal>.a4-w>h2,.a4-story h2,.a4-week h2{font-size:32px;margin-bottom:16px}
 .a4-sp,.a4-wp{height:340px}.a4-pr{margin-top:30px!important}.a4-pr li{grid-template-columns:48px minmax(0,1fr);padding:20px 0}.a4-pr span{font-size:22px}.a4-pr b{font-size:18px}
 .a4-sp4,.a4-sp4.n4,.a4-sp4.n2{grid-template-columns:minmax(0,1fr)}.a4-sp4 li,.a4-sp4 li+li{padding:26px 0;border-left:0}.a4-sp4 li+li{border-top:1px solid var(--ln)}.a4-sn{font-size:34px;margin-bottom:16px}
-.a4-big{font-size:132px}.a4-nt h2{font-size:26px}.a4-cp{height:280px}.a4-cn{font-size:24px}
+.a4-big{font-size:132px}.a4-nt h2{font-size:26px}.a4-cn{font-size:24px}
 .a4-rl a{grid-template-columns:40px minmax(0,1fr) 18px;gap:14px;padding:18px 0}.a4-rp{grid-column:2;text-align:left;font-size:15px}.a4-rl .a4-ar{grid-row:1;grid-column:3}.a4-ri{font-size:22px}.a4-rn b{font-size:21px}
 .a4-tl2 a{grid-template-columns:minmax(0,1fr) 18px;gap:4px 12px;padding:18px 0;min-height:0}.a4-tl2 a>*{grid-column:1}.a4-tl2 .a4-ar{grid-column:2;grid-row:1/span 4}.a4-tx{text-align:left}.a4-td,.a4-tm{display:inline}
 .a4-stm .a4-sm{font-size:31px;line-height:1.4}.a4-tl li{grid-template-columns:80px minmax(0,1fr)}
@@ -307,6 +335,15 @@
 .a4-pl{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:16px;padding-top:18px;border-top:1px solid var(--ln);font-size:15px;font-weight:700}
 @media(max-width:1000px){.a4-pk,.a4-pk.n2{grid-template-columns:minmax(0,1fr)}.a4-pc{min-height:0}}
 @media(max-width:760px){.a4-pc{padding:28px 24px 24px}.a4-pc b{font-size:23px}.a4-pp{font-size:32px;padding-top:18px}}
+/* v44.1 A5: 휴대폰 강좌 목록 · 사진 띠는 가로 넘김 카드(화면 78~84%, 다음 카드가 보임) */
+.a4-bds{display:block}
+@media(max-width:760px){.a4-cds{display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;margin:0 -20px;padding:0 20px 6px;scrollbar-width:none}.a4-cds::-webkit-scrollbar{display:none}.a4-cd{flex:0 0 78%;scroll-snap-align:start;min-width:0}
+.a4-cls .a4-co{left:18px;right:18px;bottom:18px}.a4-cls .a4-cn{font-size:21px}.a4-cm{flex-direction:column;gap:4px}.a4-cm span{text-align:left}
+.a4-bds{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;margin:28px -20px 0;padding:0 20px 6px;scrollbar-width:none}.a4-bds::-webkit-scrollbar{display:none}
+.a4-bd,.a4-bd.rev{flex:0 0 84%;scroll-snap-align:start;display:block;margin-top:0!important;min-width:0}.a4-bp{aspect-ratio:4/3;height:auto!important;margin-bottom:18px}.a4-bd h3{font-size:30px!important}.a4-bx{font-size:15.5px;margin-top:14px!important}.a4-bd dl{margin-top:18px!important}}
+/* 맛보기 영상 16:9(운영자가 주소를 넣었을 때만) */
+.a4-vid .a4-vf{position:relative;aspect-ratio:16/9;border-radius:var(--r);overflow:hidden;background:#000;margin-top:48px}.a4-vid iframe,.a4-vid video{position:absolute;inset:0;width:100%;height:100%;border:0}
+@media(max-width:760px){.a4-vid .a4-vf{margin:28px -20px 0;border-radius:0}}
 @media(prefers-reduced-motion:reduce){.a4-b{transition:none}}`;
 
   const H1 = (cls, pc, m, lh, extra) => `.hpt.hp-hero.a4-h.${cls} h1{font-size:${pc}px!important;line-height:${lh}!important;letter-spacing:-.045em!important;${extra || ''}}@media(max-width:760px){.hpt.hp-hero.a4-h.${cls} h1{font-size:${m}px!important}}`;
@@ -395,6 +432,35 @@
 @media(max-width:1000px){.a4-fh{grid-template-columns:minmax(0,1fr);gap:28px}.a4-film .a4-cta{flex-direction:row}}
 @media(max-width:760px){.a4-fh{padding-bottom:32px;gap:18px}.a4-film .a4-sub{font-size:16px;margin-bottom:22px!important}.a4-film .a4-cta{flex-direction:column}
 .a4-strip{padding:30px 0}.a4-strip::before{top:9px}.a4-strip::after{bottom:9px}.a4-sw{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding:0 20px;gap:10px;scrollbar-width:none}.a4-sw .a4-ph{flex:0 0 80%;height:250px;scroll-snap-align:start}.a4-num .a4-big{font-size:140px}}`,
+    adcert: v => `.hpt.hp-hero.a4-h.a4-badge{padding:72px 0 0;background:${mix(v.a, '#000000', .28)};color:#fff;margin:0;position:relative;overflow:hidden}${H1('a4-badge', 80, 40, 1.12, 'color:#fff!important;letter-spacing:-.05em!important;')}
+.a4-badge::before{content:"";position:absolute;right:-180px;top:-220px;width:620px;height:620px;border-radius:50%;border:80px solid rgba(255,255,255,.05);pointer-events:none}
+.a4-bdg{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:64px;align-items:center;padding-bottom:88px}
+.a4-badge .a4-kick{display:inline-block;color:#fff;background:rgba(255,255,255,.12);padding:8px 14px;border-radius:999px;margin-bottom:26px!important}
+.a4-badge h1 em{color:var(--pt)!important}
+.a4-badge .a4-sub{font-size:20px;line-height:1.7;color:rgba(255,255,255,.82);margin:28px 0 40px!important;max-width:520px}
+.a4-badge .a4-b.p{background:var(--pt);color:${onC(v.pt)}}.a4-badge .a4-b.o{color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
+.a4-stack{position:relative;height:560px}
+.a4-stack .a4-hi{position:absolute;right:0;top:0;width:88%;height:460px;border-radius:24px;transform:rotate(2.5deg);box-shadow:0 30px 60px rgba(0,0,0,.28)}
+.a4-cc{position:absolute;left:0;bottom:0;width:360px;padding:26px 28px 24px;border-radius:20px;background:#fff;color:var(--ink);transform:rotate(-3deg);box-shadow:0 24px 50px rgba(0,0,0,.3);border-top:8px solid var(--pt)}
+.a4-cct{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:700}
+.a4-seal{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--a);color:#fff;font-size:17px;font-weight:800;box-shadow:0 0 0 3px #fff,0 0 0 5px var(--a)}
+.a4-ccl{margin-top:22px!important;font-size:13px;font-weight:700;letter-spacing:.14em;color:var(--lab)}
+.a4-ccn{margin-top:6px!important;font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1.3}
+.a4-ccr{display:flex;justify-content:space-between;gap:12px;margin-top:20px!important;padding-top:14px;border-top:1px dashed var(--ln);font-size:14px}.a4-ccr span{color:var(--mu)}.a4-ccr b{font-variant-numeric:tabular-nums}
+.a4-badge .a4-q{border-color:rgba(255,255,255,.18)}.a4-badge .a4-q a{color:#fff}.a4-badge .a4-q a+a{border-left-color:rgba(255,255,255,.18)}.a4-badge .a4-q span{color:rgba(255,255,255,.66)}
+.a4-steps .a4-sn{display:inline-grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--a);color:#fff;font-size:24px}
+.a4-cls .a4-cp{border-radius:20px}
+.a4-cred{background:var(--alt)!important}.a4-cdg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:80px;align-items:center}
+.a4-cred h2{font-size:48px;line-height:1.2;letter-spacing:-.04em;margin-bottom:22px}.a4-cred .a4-cta{margin-top:34px}
+.a4-regb{background:#fff;border-radius:20px;padding:36px 36px 30px;border-top:6px solid var(--a)}
+.a4-reg div{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;padding:16px 0;border-bottom:1px solid var(--ln)}.a4-reg dt{font-size:15px;color:var(--mu)}.a4-reg dd{font-size:17px;font-weight:700}
+.a4-rnote{margin-top:20px!important;font-size:15px;line-height:1.7;color:var(--mu)}
+.a4-notice{background:var(--bg)!important}
+.a4-fin{background:${mix(v.a, '#000000', .28)}!important;color:#fff!important;--mu:rgba(255,255,255,.78);--ln:rgba(255,255,255,.2)}.a4-fin h2 em{color:var(--pt)!important}.a4-fin .a4-b.p{background:var(--pt);color:${onC(v.pt)}}.a4-fin .a4-b.o{color:#fff}
+@media(max-width:1000px){.a4-bdg{grid-template-columns:minmax(0,1fr);gap:40px;padding-bottom:48px}.a4-stack{height:480px;max-width:620px}.a4-cdg{grid-template-columns:minmax(0,1fr);gap:40px}}
+@media(max-width:760px){.hpt.hp-hero.a4-h.a4-badge{padding:28px 0 0}.a4-badge .a4-kick{margin-bottom:18px!important}.a4-badge .a4-sub{font-size:17px;margin:18px 0 26px!important}
+.a4-stack{height:330px}.a4-stack .a4-hi{height:250px;width:90%}.a4-cc{width:250px;padding:18px 18px 16px}.a4-seal{width:32px;height:32px;font-size:14px}.a4-cct{font-size:13px}.a4-ccn{font-size:19px}.a4-ccl{margin-top:14px!important}.a4-ccr{margin-top:12px!important;padding-top:10px;font-size:13px}
+.a4-cred h2{font-size:32px}.a4-regb{padding:24px 20px 22px}.a4-reg div{grid-template-columns:minmax(0,1fr);gap:4px}}`,
     admoney: v => `${HB('a4-news', '40px 0 0', '20px 0 0')}${H1('a4-news', 100, 42, 1.04, 'letter-spacing:-.06em!important;')}
 .a4-mast{display:flex;justify-content:space-between;gap:20px;border-top:3px solid var(--ink);border-bottom:1px solid var(--ink);padding:14px 0;font-size:14px;font-weight:700;letter-spacing:.08em;margin-bottom:44px}
 .a4-mast span+span{color:var(--mu);font-weight:600;letter-spacing:.02em}
@@ -422,7 +488,7 @@
 .a4-qb{position:absolute;z-index:2;left:0;right:0;bottom:0;border-top:1px solid rgba(255,255,255,.16)}.a4-cine .a4-q{border:0}.a4-cine .a4-q a{color:#fff;min-height:88px}.a4-cine .a4-q span{color:rgba(255,255,255,.62)}
 .a4-stm{padding-bottom:0!important}
 .a4-cls .a4-cd>a::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.82) 0%,rgba(0,0,0,0) 58%);pointer-events:none}
-.a4-cls .a4-cp{height:520px}.a4-cls .a4-co{position:absolute;z-index:2;left:28px;right:28px;bottom:28px;color:#fff}.a4-cls .a4-cg{margin:0;color:rgba(255,255,255,.8)}.a4-cls .a4-cn{color:#fff;font-size:30px}.a4-cls .a4-cm{border-top:0;margin-top:0!important;padding:18px 4px 0!important}
+.a4-cls .a4-cp{aspect-ratio:4/3;height:auto}.a4-cls .a4-co{position:absolute;z-index:2;left:28px;right:28px;bottom:28px;color:#fff}.a4-cls .a4-cg{margin:0;color:rgba(255,255,255,.8)}.a4-cls .a4-cn{color:#fff;font-size:30px}.a4-cls .a4-cm{border-top:0;margin-top:0!important;padding:18px 4px 0!important}
 .a4-week{background:#EEF2EF!important;color:#121615!important;--ink:#121615;--mu:#525B57;--ln:#D3DAD6;--lab:${fit(mix(v.a, '#000000', .45), '#EEF2EF', 4.6)}}
 .a4-num{background:var(--bg)!important;color:var(--ink)!important}.a4-num .a4-big{font-family:${F.sans}}.a4-num .a4-big small{color:var(--a)}
 .a4-quote{position:relative;padding:0!important;min-height:720px;overflow:hidden;display:flex;align-items:center;background:var(--bg)!important}.a4-quote .a4-qp{position:absolute;inset:0;height:100%;order:0}
@@ -430,7 +496,7 @@
 .a4-quote .a4-w{position:static;width:100%;display:flex;justify-content:flex-end;padding-top:120px;padding-bottom:120px}.a4-qt{position:relative;z-index:2;max-width:620px}.a4-quote blockquote{font-family:${F.sans};font-size:44px;color:#fff}.a4-quote blockquote::before{display:none}.a4-quote .a4-cite{color:rgba(255,255,255,.7)}
 .a4-fin .a4-fg{grid-template-columns:minmax(0,1fr);text-align:center;justify-items:center}.a4-fin .a4-cta{justify-content:center}.a4-fin .a4-lead{max-width:640px;margin:20px auto 0}.a4-fin .a4-b.o{color:#fff}.a4-info{text-align:left}
 @media(max-width:760px){.hpt.hp-hero.a4-h.a4-cine{height:auto}.a4-cine::after{background:linear-gradient(0deg,rgba(6,9,10,.97) 0%,rgba(6,9,10,.7) 48%,rgba(6,9,10,.2) 100%)}
-.a4-hc{position:relative;bottom:auto;padding:300px 0 34px}.a4-cine .a4-sub{font-size:17px;margin:18px 0 26px!important}.a4-qb{position:relative}.a4-cine .a4-q a{min-height:62px}.a4-cls .a4-cp{height:420px}
+.a4-hc{position:relative;bottom:auto;padding:300px 0 34px}.a4-cine .a4-sub{font-size:17px;margin:18px 0 26px!important}.a4-qb{position:relative}.a4-cine .a4-q a{min-height:62px}
 .a4-quote{min-height:0;display:block}.a4-quote::after{background:linear-gradient(0deg,rgba(6,9,10,.94) 35%,rgba(6,9,10,.3))}.a4-quote .a4-w{padding-top:250px;padding-bottom:60px}.a4-quote blockquote{font-size:27px}.a4-fin .a4-fg{text-align:left;justify-items:stretch}}`,
     adcraft: v => `${HB('a4-collage', '24px 0 0', '10px 0 0')}${H1('a4-collage', 132, 48, .98, 'letter-spacing:-.065em!important;')}
 .a4-pg{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;padding-bottom:90px}
@@ -471,7 +537,7 @@
   IDS.forEach(id => { const d = Object.assign({ prem: 1, cssX }, DEF[id]); if (!d.hb) delete d.hb; HPT.reg(id, d); try { if (window.HPD && typeof HPD.reg === 'function') HPD.reg(id, HD[id]); } catch (e) { console.error('hp44-adult HPD', e); } });
   const mine = s => { try { return !!(s && s.theme && IDS.includes(s.theme)); } catch (e) { return false; } };
   if (typeof HPT.premFits === 'function') { const f0 = HPT.premFits; HPT.premFits = (id, t2) => DEF[id] ? DEF[id].tags.includes(t2 || (S && S.org && S.org.type)) : f0(id, t2); }
-  if (window.HPS && typeof HPS.hero === 'function') { const h0 = HPS.hero; HPS.hero = (kind, s, d, th, T) => { try { if (mine(s) && (!d || !d.hk)) return HERO[s.theme](s, d || {}); } catch (e) { console.error('hp44-adult hero', e); } return h0(kind, s, d, th, T); }; }
+  if (window.HPS && typeof HPS.hero === 'function') { const h0 = HPS.hero; HPS.hero = (kind, s, d, th, T) => { try { if (mine(s) && (!d || !d.hk)) { pageStart(s); return HERO[s.theme](s, d || {}); } } catch (e) { console.error('hp44-adult hero', e); } return h0(kind, s, d, th, T); }; }
   { const base = proSec; proSec = (x, i, s, lk) => { const d = x && x.data; const r = d && x.type === 'text' && SECR[d.hpt];
     if (!r || !s || !mine(s)) return base(x, i, s, lk);
     if (x.hide && !editing()) return '';
@@ -494,13 +560,17 @@
     adtalk: { hero: 'hum-10', wk: 'lan-01', quote: 'hum-37' }, adexam: { hero: 'hum-05', about: 'hum-14' }, adit: { hero: 'hum-41', wk: 'grp-06', quote: 'hum-42' },
     adcraft: { hero: 'hum-23', h2: 'kni-02', h3: 'wrk-06', quote: 'hum-21' }, admove: { hero: 'yog-03', about: 'yog-01', quote: 'yog-02' }, adcook: { hero: 'bak-02', about: 'coo-02', quote: 'bar-01' },
     adcoach: { hero: 'hum-04', about: 'hum-36', quote: 'hum-06' }, advocal: { hero: 'hum-31', wk: 'hum-30' }, adphoto: { hero: 'pho-01', h2: 'vid-01', h3: 'pho-02', quote: 'sen-02' },
-    admoney: { hero: 'dat-01', quote: 'cor-06' }
+    admoney: { hero: 'dat-01', quote: 'cor-06' }, adcert: { hero: 'cor-01', quote: 'hum-01' }
   };
   const HEAD = { adit: { head: 'overlay', foot: 'min' } };
   function setPhotos(s, id) { const P = PH[id]; if (!P) return s;
     s.photos = Object.assign({}, P); s.img = s.img || {};
     if (window.HPSTOCK && typeof HPSTOCK.slotImg === 'function') ['hero', 'about'].forEach(sl => { if (!P[sl]) return; const v = HPSTOCK.slotImg(P[sl], sl); if (v) s.img[sl] = v; });
     s.hps = Object.assign({}, s.hps || {}, HEAD[id] || { head: 'solid', foot: 'min' }); return s; }
+  /* 공통 부품(HPX). cols를 비우면 hpwFix가 「빈 섹션」으로 자동 숨김 → 빈 자리 한 줄을 둔다(부품은 빈 줄을 무시) */
+  const HX = (k, data, hide) => { try { return window.HPX && typeof HPX.sec === 'function' ? HPX.sec(k, Object.assign({}, data || {}, { cols: [['', '']] }), hide) : null; } catch (e) { return null; } };
+  /* 숨긴 자리(facts · people · faq)는 남겨 둔다 — 빼면 자동 보강이 같은 종류 섹션을 보이게 다시 넣는다 */
+  const tidy = L => L.filter(Boolean);
   const BAN = (eyebrow, title, sub, x) => S2('banner', Object.assign({ eyebrow, title, sub, cta: '', cta2: '' }, x || {}));
   const FIN = (title, body) => [...KEEP(), TX('cta', { hpt: 'a4-fin', title, body, cta: '', cols: AUTO })];
   const BUILD = {
@@ -508,50 +578,56 @@
       TX('features', { hpt: 'a4-stm', body: '수업 시간의 절반은 *직접 말하는 시간*이에요.', cols: AUTO }),
       TX('features', { hpt: 'a4-cls', eyebrow: '지금 모집 중', title: '레벨과 언어로 골라 보세요', cols: AUTO }),
       TX('features', { hpt: 'a4-week', eyebrow: '한 주의 흐름', title: '수업은 강의실에서,\n연습은 생활 속에서', body: '바쁜 주에도 끊기지 않게, 한 주를 이렇게 나눠 두었어요.', cols: [['수업일', '짝을 바꿔 가며 말하기', '오늘의 상황 표현을 직접 써 봐요'], ['다음 날', '출근길 복습 10분', '수업에서 쓴 표현만 휴대폰으로 다시'], ['주중', '한 문장 녹음 과제', '강사가 발음과 표현에 의견을 달아요'], ['주말', '주간 리포트', '출석 · 과제 · 다음 주 목표를 한 장으로']] }),
-      TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('먼저 레벨 상담으로\n*출발점*을 찾아요', '상담이 끝나면 담당 강사가 맞는 반과 시작일을 안내해 드려요.')],
+      TX('features', { hpt: 'a4-vid', eyebrow: '맛보기 영상', title: '수업은 이렇게 진행돼요', body: '실제 수업의 한 장면을 미리 보고 오세요.', url: '' }), HX('rev', { tone: 'alt' }), HX('faq'), ...FIN('먼저 레벨 상담으로\n*출발점*을 찾아요', '상담이 끝나면 담당 강사가 맞는 반과 시작일을 안내해 드려요.')],
     adexam: () => [BAN('국가기술자격 · 회계 · 컴퓨터 자격 대비', '합격까지,\n*한 걸음씩* 갑니다', '시험 일정에 맞춘 커리큘럼과 매주 모의고사로 빈틈을 확인합니다. 수강 기간 동안 질문은 언제든 남길 수 있어요.'),
       TX('features', { hpt: 'a4-steps', nst: 'roman', eyebrow: '합격 과정', title: '네 단계로 준비합니다', cols: [['진단', '첫 수업 전 진단 평가로 출발점을 확인해요.'], ['이론', '출제 기준 순서대로 핵심 이론을 정리해요.'], ['모의고사', '매주 실전 시간에 맞춰 풀고 해설을 들어요.'], ['마무리', '시험 직전 오답만 모아 다시 점검해요.']] }),
       TX('features', { hpt: 'a4-cls', lay: 'rows', eyebrow: '개설 과정', title: '지금 신청할 수 있는 과정', cols: AUTO }),
-      TX('features', { hpt: 'a4-notice', eyebrow: '알림', title: '시험 · 개강 소식', cols: AUTO }), ...FIN('다음 시험,\n*지금* 준비를 시작하세요', '상담에서 시험 일정과 지금 실력에 맞는 과정을 안내해 드립니다.')],
+      HX('price', { eyebrow: '수강료', title: '과정별 수강료' }), HX('ntc', { eyebrow: '알림', title: '시험 · 개강 소식', tone: 'alt' }), HX('faq'), ...FIN('다음 시험,\n*지금* 준비를 시작하세요', '상담에서 시험 일정과 지금 실력에 맞는 과정을 안내해 드립니다.')],
     adit: () => [BAN('직장인 직무 · IT 실무 저녁반', '퇴근 후 두 시간이\n다음 *커리어*가 돼요', '평일 저녁, 소수 정원 실습실에서. 내 업무 파일로 바로 따라 하고, 수업이 끝나면 녹화본으로 다시 봐요.'),
       TX('features', { hpt: 'a4-stm', body: '평일 저녁, 소수 정원. 수업은 짧게, *실습은 내 업무 파일*로 해요.', cols: AUTO }),
       TX('features', { hpt: 'a4-cls', eyebrow: '지금 모집', title: '지금 신청할 수 있는 과정', cols: AUTO }),
       TX('features', { hpt: 'a4-week', eyebrow: '한 주의 흐름', title: '수업은 실습실에서,\n복습은 출근길에', body: '바쁜 주에도 끊기지 않게, 한 주를 이렇게 나눠 두었어요.', cols: [['수업일', '실습 수업', '강사 화면을 보며 내 파일로 따라 해요'], ['다음 날', '녹화본 10분 복습', '막힌 부분만 다시 돌려 봐요'], ['주중', '실무 과제', '강사가 과제에 직접 의견을 달아요'], ['주말', '주간 리포트', '출석 · 과제 · 다음 주 목표를 한 장으로']] }),
       TX('features', { hpt: 'a4-num', pref: 'review', body: '', cols: AUTO }),
-      TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('이번 주,\n*첫 실습*으로 시작해요', '상담이 끝나면 담당 강사가 지금 업무에 맞는 과정과 시작일을 알려 드려요.')],
+      TX('features', { hpt: 'a4-vid', eyebrow: '맛보기 영상', title: '강의 맛보기', body: '실습 화면을 미리 보고 내 업무에 맞는지 확인해 보세요.', url: '' }), HX('fac', { eyebrow: '강사', title: '현업에서 일하는 강사가 가르쳐요' }), TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('이번 주,\n*첫 실습*으로 시작해요', '상담이 끝나면 담당 강사가 지금 업무에 맞는 과정과 시작일을 알려 드려요.')],
     adcraft: () => [BAN('', '빚고,\n엮고,\n*만들어요.*', '퇴근 후와 주말, 손으로 만드는 클래스. 처음이어도 한 번에 작품 하나를 완성해 가져가요.'),
       TX('features', { hpt: 'a4-band', eyebrow: '클래스', title: '좋아하는 재료를 찾을 때까지,\n골고루 해 봐요', cols: AUTO }),
       TX('features', { hpt: 'a4-gal', eyebrow: '작업 장면', title: '이번 시즌, 공방의 시간', cols: AUTO }),
-      TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('한 번,\n*와 보세요.*', '원데이 클래스로 먼저 해 보고, 맞으면 정규반으로 이어 가요.')],
+      HX('rev', { tone: 'alt' }), HX('loc', { eyebrow: '공방 오시는 길', tone: 'bg' }), ...FIN('한 번,\n*와 보세요.*', '원데이 클래스로 먼저 해 보고, 맞으면 정규반으로 이어 가요.')],
     admove: () => [BAN('요가 · 필라테스 · 소그룹 스튜디오', '숨을 고르고,\n*몸을 깨워요*', '정원이 작은 소그룹 수업이에요. 처음 오시면 자세 상담으로 내 몸에 맞는 수업부터 찾아 드려요.'),
       TX('features', { hpt: 'a4-tt', eyebrow: '시간표', title: '이번 달 수업 시간표', cols: AUTO }),
       TX('features', { hpt: 'a4-story', eyebrow: '수업 방식', title: '오래 버티기보다\n바르게 움직이기', body: '동작을 많이 하기보다, 한 동작을 바르게 하는 데 시간을 써요. 소그룹이라 자세를 한 명씩 봐 드려요.', cols: [['첫 수업 전 자세 상담', '불편한 곳과 목표를 먼저 들어요.'], ['소그룹 정원', '강사가 한 명씩 자세를 잡아 드려요.'], ['예약 · 출석은 휴대폰으로', '수업 예약과 남은 횟수를 내 계정에서 확인해요.']] }),
-      TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('첫 수업은\n*체험*으로 시작해요', '체험 수업이 끝나면 내 몸에 맞는 수업과 시간을 안내해 드려요.')],
+      HX('price', { eyebrow: '수강권', title: '나에게 맞는 수강권', tone: 'alt' }), HX('rev'), HX('loc', { eyebrow: '스튜디오 오시는 길', tone: 'alt' }), ...FIN('첫 수업은\n*체험*으로 시작해요', '체험 수업이 끝나면 내 몸에 맞는 수업과 시간을 안내해 드려요.')],
     adcook: () => [BAN('홈베이킹 · 집밥 · 홈카페 클래스', '오늘 배운 한 접시를\n*집에서도* 만들어요', '한 테이블 소수 정원. 재료 손질부터 마무리까지 내 손으로 하고, 레시피 카드는 수업이 끝나면 내 계정에 남아요.'),
       TX('features', { hpt: 'a4-story', eyebrow: '수업 방식', title: '보기만 하는 시연 대신\n내 손으로 끝까지', body: '강사가 먼저 보여 주고, 모두 같은 순서로 직접 만들어요. 다 만든 요리는 포장해 가져가요.', cols: [['1인 1조리대', '재료 계량부터 혼자 해 봐요.'], ['레시피 카드', '수업이 끝나면 내 계정에 남아요.'], ['다 만든 요리는 포장', '집에 가져가 가족과 나눠요.']] }),
       TX('features', { hpt: 'a4-cls', eyebrow: '이번 달 클래스', title: '지금 신청할 수 있는 클래스', cols: AUTO }),
       TX('features', { hpt: 'a4-gal', eyebrow: '클래스 장면', title: '이번 달, 주방의 시간', cols: AUTO }),
-      TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('한 접시부터,\n*같이 만들어요*', '원데이 클래스로 먼저 만들어 보고, 맞으면 정규 과정으로 이어 가요.')],
+      HX('fac', { eyebrow: '강사', title: '오늘의 셰프' }), TX('features', { hpt: 'a4-quote', cols: AUTO }), HX('loc', { eyebrow: '쿠킹 스튜디오 오시는 길', tone: 'bg' }), ...FIN('한 접시부터,\n*같이 만들어요*', '원데이 클래스로 먼저 만들어 보고, 맞으면 정규 과정으로 이어 가요.')],
     adcoach: () => [BAN('1:1 커리어 · 리더십 코칭', '당신의 다음 한 걸음을\n*함께* 정해요', '한 번에 한 사람만 만나요. 지금 고민을 듣고, 다음 만남까지 해 볼 작은 행동 하나를 같이 정해요.', { cta: '첫 상담 신청', cta2: '코칭 과정 보기' }),
       TX('features', { hpt: 'a4-story', eyebrow: '코칭 방식', title: '정답을 주기보다\n스스로 찾게 도와요', body: '코칭은 이야기를 듣는 데서 시작해요. 만날 때마다 다음 행동 하나를 정하고, 다음 만남에서 어떻게 됐는지 함께 돌아봐요.', cols: [['첫 상담으로 시작', '지금 고민과 바라는 모습을 먼저 들어요.'], ['만날 때마다 행동 하나', '다음 만남까지 해 볼 일을 같이 정해요.'], ['기록은 내 계정에', '코칭 메모와 과제를 언제든 다시 봐요.']] }),
       TX('features', { hpt: 'a4-steps', eyebrow: '진행 순서', title: '이렇게 함께해요', cols: [['첫 상담', '고민과 목표를 듣고 맞는 과정을 정해요.'], ['코칭 세션', '정해진 횟수만큼 1:1로 만나요.'], ['실행 과제', '세션 사이에 작은 행동을 해 봐요.'], ['돌아보기', '마지막 세션에서 달라진 점을 정리해요.']] }),
-      TX('features', { hpt: 'a4-pkg', eyebrow: '코칭 과정', title: '맞는 과정을 골라 보세요', cols: AUTO }),
-      TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('먼저,\n*이야기*부터 들려주세요', '첫 상담에서 지금 상황을 듣고, 맞는 코칭 과정을 함께 정해요.')],
+      HX('price', { eyebrow: '코칭 과정', title: '맞는 과정을 골라 보세요', tone: 'bg' }),
+      HX('rev', { tone: 'alt' }), HX('faq', { tone: 'bg' }), ...FIN('먼저,\n*이야기*부터 들려주세요', '첫 상담에서 지금 상황을 듣고, 맞는 코칭 과정을 함께 정해요.')],
     advocal: () => [BAN('1:1 보컬 · 기타 레슨', '내 목소리로\n*한 곡*을 끝까지', '호흡과 발성부터 한 곡 완성까지. 레슨이 끝나면 녹음 파일로 달라진 소리를 들려 드려요.', { cta2: '보컬 진단 예약' }),
       TX('features', { hpt: 'a4-num', pref: 'ratio', body: '그래서 숨 쉬는 자리 하나까지 한 명씩 봐 드릴 수 있어요.', cols: AUTO }),
       TX('features', { hpt: 'a4-band', eyebrow: '레슨', title: '목표에 맞게 골라요', cols: AUTO }),
       TX('features', { hpt: 'a4-week', eyebrow: '한 달의 흐름', title: '발성에서\n녹음까지', body: '한 달에 한 곡, 녹음으로 마무리해요.', cols: [['1주', '호흡 · 발성', '내 목소리의 편한 음역을 찾아요'], ['2주', '곡 고르기 · 가사', '음역에 맞는 곡을 함께 골라요'], ['3주', '부분 연습', '어려운 구간만 집중해서 다듬어요'], ['4주', '녹음', '완성한 한 곡을 녹음해 드려요']] }),
-      TX('features', { hpt: 'a4-gal', eyebrow: '레슨 장면', title: '레슨실의 시간', cols: AUTO }), ...FIN('첫 레슨은\n*진단*으로 시작해요', '진단 레슨에서 지금 목소리를 듣고, 맞는 레슨 방향을 안내해 드려요.')],
+      TX('features', { hpt: 'a4-gal', eyebrow: '레슨 장면', title: '레슨실의 시간', cols: AUTO }), TX('features', { hpt: 'a4-vid', eyebrow: '맛보기 영상', title: '레슨 맛보기', body: '레슨이 어떻게 진행되는지 미리 들어 보세요.', url: '' }), HX('fac', { eyebrow: '강사', title: '레슨을 맡는 사람' }), ...FIN('첫 레슨은\n*진단*으로 시작해요', '진단 레슨에서 지금 목소리를 듣고, 맞는 레슨 방향을 안내해 드려요.')],
     adphoto: () => [BAN('사진 · 영상 크리에이터 클래스', '찍는 법보다\n*보는 법*부터', '카메라가 없어도 괜찮아요. 휴대폰 한 대로 시작해 한 편의 사진 · 영상을 완성하고, 작업은 강사가 직접 피드백해요.', { cta2: '1:1 포트폴리오 상담' }),
       TX('features', { hpt: 'a4-gal', eyebrow: '수업 장면', title: '이번 시즌의 작업들', cols: AUTO }),
       TX('features', { hpt: 'a4-cls', eyebrow: '클래스', title: '지금 신청할 수 있는 클래스', cols: AUTO }),
-      TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('첫 컷은\n*같이* 찍어요', '상담에서 지금 장비와 만들고 싶은 작업을 듣고, 맞는 클래스를 안내해 드려요.')],
+      TX('features', { hpt: 'a4-vid', eyebrow: '맛보기 영상', title: '작업 맛보기', body: '수업에서 만든 영상 한 편을 먼저 보세요.', url: '' }), HX('fac', { eyebrow: '강사', title: '함께 찍는 크리에이터' }), TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('첫 컷은\n*같이* 찍어요', '상담에서 지금 장비와 만들고 싶은 작업을 듣고, 맞는 클래스를 안내해 드려요.')],
     admoney: () => [BAN('재테크 · 커리어 클래스', '월급의 *다음 계획*,\n오늘 세워요', '내 지출과 목표부터 정리하고 시작해요. 강의는 소수 정원으로, 질문은 수업이 끝난 뒤에도 내 계정에서 이어 가요.', { note: '첫 상담에서 지금 상황과 목표를 먼저 정리해요.', cta2: '1:1 상담 예약' }),
       TX('features', { hpt: 'a4-stm', body: '어려운 용어보다, *내 숫자*로 시작해요.', cols: AUTO }),
       TX('features', { hpt: 'a4-steps', eyebrow: '수업 순서', title: '네 번이면 계획이 생겨요', cols: [['내 숫자 정리', '수입 · 지출 · 목표를 한 장으로 적어요.'], ['기본 개념', '예금 · 투자 · 세금의 기본을 익혀요.'], ['내 계획 세우기', '목표에 맞는 비율과 순서를 정해요.'], ['점검', '한 달 뒤 계획대로 됐는지 함께 봐요.']] }),
-      TX('features', { hpt: 'a4-pkg', eyebrow: '클래스 · 코칭', title: '목표에 맞게 골라 보세요', cols: AUTO }),
-      TX('features', { hpt: 'a4-quote', cols: AUTO }), ...FIN('이번 달부터,\n*계획대로*', '상담에서 지금 상황과 목표를 듣고, 맞는 클래스나 코칭을 안내해 드려요.')]
+      HX('price', { eyebrow: '클래스 · 코칭', title: '목표에 맞게 골라 보세요', tone: 'bg' }),
+      TX('features', { hpt: 'a4-quote', cols: AUTO }), HX('faq', { tone: 'alt' }), ...FIN('이번 달부터,\n*계획대로*', '상담에서 지금 상황과 목표를 듣고, 맞는 클래스나 코칭을 안내해 드려요.')]
   };
+  BUILD.adcert = () => [BAN('민간자격 과정 · 검정 · 자격증 발급', '배운 만큼,\n*자격*으로 남겨요', '과정을 마치면 검정에 응시하고, 합격하면 자격증을 발급해 드려요. 발급한 자격증은 내 계정에서 언제든 확인할 수 있어요.', { cta: '응시 · 수강 신청', cta2: '상담 예약' }),
+    TX('features', { hpt: 'a4-steps', eyebrow: '취득 과정', title: '네 단계면 자격증이 나와요', cols: [['과정 수강', '정해진 시간만큼 이론 · 실습 수업을 들어요.'], ['검정 응시', '검정 일정에 맞춰 필기 · 실기 시험을 봐요.'], ['합격 확인', '결과는 내 계정과 문자로 알려 드려요.'], ['자격증 발급', '발급한 자격증은 내 계정에서 확인해요.']] }),
+    TX('features', { hpt: 'a4-cls', eyebrow: '자격 과정', title: '지금 신청할 수 있는 과정', cols: AUTO }),
+    TX('features', { hpt: 'a4-cred', eyebrow: '자격증 발급 · 조회', title: '발급한 자격증은\n내 계정에서 확인해요', body: '합격하면 자격증을 발급해 드려요. 자격 정보와 발급 내역은 로그인 후 내 계정에서 언제든 다시 볼 수 있어요.', cols: [['자격명', ''], ['등록 번호', ''], ['자격 관리 · 운영 기관', '']] }),
+    HX('ntc', { eyebrow: '알림', title: '검정 일정 · 발급 소식', tone: 'bg' }),
+    HX('rev', { tone: 'alt' }), HX('faq'), ...FIN('다음 검정,\n*지금* 준비해요', '상담에서 지금 경력과 목표에 맞는 자격 과정과 검정 일정을 안내해 드려요.')];
   /* 점검 · 시연용 강좌 이름(채운 기관의 qc0~5를 업종에 맞게 — tests/ui/hp-visual/lib.js applyTpl) */
   const QA = {
     adtalk: ['비즈니스 영어 회화', '일본어 첫걸음 회화', '중국어 HSK 4급 회화', '영어 프레젠테이션', '스페인어 여행 회화', '무료 레벨 상담 수업'],
@@ -563,11 +639,12 @@
     adcoach: ['1:1 커리어 코칭 4회', '이직 준비 집중 코칭', '리더십 1:1 코칭', '퍼스널 브랜딩 워크숍', '면접 실전 코칭', '무료 30분 첫 상담'],
     advocal: ['보컬 1:1 기초 레슨', '취미 보컬 소그룹', '오디션 준비 보컬', '어쿠스틱 기타 입문', '홈레코딩 입문', '무료 보컬 진단 레슨'],
     adphoto: ['스마트폰 사진 기초', '미러리스 카메라 입문', '유튜브 영상 편집', '여행 사진 출사', '브이로그 촬영 실전', '무료 포트폴리오 상담'],
+    adcert: ['심리상담사 2급 과정', '바리스타 2급 자격 과정', '코딩 지도사 과정', '방과후 지도사 과정', '미술심리 지도사 과정', '무료 자격 과정 설명회'],
     admoney: ['사회초년생 재테크 첫걸음', '연말정산 · 절세 실전', '커리어 전환 코칭', 'ETF 장기 투자 기초', '연봉 협상 클래스', '무료 재무 상담']
   };
   if (typeof siteFromTpl === 'function' && !siteFromTpl.hp44a) { const b0 = siteFromTpl; const f = tp => { const s = b0(tp); try { const id = tp && /^t44-/.test(tp.id) ? tp.id.slice(4) : ''; if (IDS.includes(id)) setPhotos(s, id); } catch (e) { console.error('hp44-adult photos', e); } return s; };
     Object.keys(b0).forEach(k => { try { f[k] = b0[k]; } catch (e) { } }); f.hp44a = 1; siteFromTpl = f; window.siteFromTpl = f; }
   IDS.forEach(id => { if (TPL.some(x => x.id === 't44-' + id)) return;
-    TPL.push({ id: 't44-' + id, name: DEF[id].name, types: ['adult'], g44: 1, sub: DEF[id].sub, solo: DEF[id].solo ? 1 : 0, scene: `성인 · 1인 강사 · ${DEF[id].sub} — ${DEF[id].desc}`, color: DEF[id].acc, tone: id === 'adexam' ? '신뢰' : '모던', look: DEF[id].look, theme: id, hero: '', purpose: ['apply', 'info'], prem: 1, hp44: 'adult', build: BUILD[id], noPalette: true, qaCls: QA[id] }); });
+    TPL.push({ id: 't44-' + id, name: DEF[id].name, types: ['adult'], g44: 1, sub: DEF[id].sub, solo: DEF[id].solo ? 1 : 0, scene: `학원(성인) · ${DEF[id].sub} — ${DEF[id].desc}`, color: DEF[id].acc, tone: id === 'adexam' ? '신뢰' : '모던', look: DEF[id].look, theme: id, hero: '', purpose: ['apply', 'info'], prem: 1, hp44: 'adult', build: () => tidy(BUILD[id]()), noPalette: true, qaCls: QA[id] }); });
   window.HP44 = Object.assign(window.HP44 || {}, { adult: { ids: IDS.slice(), subs: IDS.map(id => [id, DEF[id].sub]), solo: IDS.filter(id => DEF[id].solo) } });
 })();

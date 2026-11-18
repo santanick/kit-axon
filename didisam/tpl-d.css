@@ -53,3 +53,34 @@
 .tpd-sub{display:block;font-size:13px;font-weight:700;color:var(--gr700,#00862D);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tpd-cur{box-shadow:0 0 0 2px var(--g900,#111827)}
 @media(max-width:560px){.tpd-sbf{width:100%}.tpd-sbf select{flex:1;max-width:none}}
+
+/* v44.2 G: 2차 교육 분야(벤치마크 A안) — 넓은 칸(900px 이상)은 왼쪽 목록, 좁으면 가로로 미는 작은 칩 한 줄 */
+.tpd-fdh{margin:0 2px 6px;font-size:12.5px;font-weight:700;color:var(--g600,#4B5563)}
+.tpd-lay{container-type:inline-size;min-width:0}
+.tpd-lin{display:block;min-width:0}
+.tpd-main{min-width:0}
+.tpd-fdw{margin:0 0 12px;min-width:0}
+.tpd-fd{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.tpd-fd::-webkit-scrollbar{display:none}
+.tpd-fd button{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--g200,#E5E7EB);background:#fff;font:inherit;font-size:14px;font-weight:600;color:var(--g800,#1F2937);cursor:pointer;white-space:nowrap}
+.tpd-fd button em{font-style:normal;font-size:12.5px;font-weight:700;color:var(--g500,#6B7280)}
+.tpd-fd button.on{border-color:var(--gr700,#00862D);background:color-mix(in srgb,var(--gr700,#00862D) 9%,#fff);color:var(--gr800,#006B24)}
+.tpd-fd button.on em{color:inherit}
+.tpd-fd button:focus-visible{outline:3px solid var(--p500,#5C74F6);outline-offset:2px}
+@container (min-width:900px){
+  .tpd-lin{display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px;align-items:start}
+  .tpd-fdw{position:sticky;top:12px;margin:0}
+  .tpd-fd{flex-direction:column;overflow:visible;gap:6px}
+  .tpd-fd button{justify-content:space-between;border-radius:12px;width:100%}
+}
+.tpd-cnt b{font-weight:700;color:var(--g900,#111827)}
+.tpd-lk,.tpd-lk2{border:0;background:none;padding:6px 2px;margin:0 0 0 6px;font:inherit;font-size:13px;font-weight:700;color:var(--gr700,#00862D);cursor:pointer;text-decoration:underline;text-underline-offset:3px;min-height:32px}
+.tpd-lk2{margin:0;text-decoration:none;color:var(--g700,#374151);font-weight:600}
+.tpd-lk2:hover{color:var(--gr700,#00862D)}
+.tpd-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+.tpd-tags em{font-style:normal;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--g100,#F3F4F6);color:var(--g700,#374151);white-space:nowrap}
+.tpd-tags em.tpd-fd1{background:color-mix(in srgb,var(--gr700,#00862D) 10%,#fff);color:var(--gr800,#006B24)}
+.tpd-tags .tpd-sub{font-size:12.5px}
+.tpd-mt{font-size:12px;color:var(--g500,#6B7280);font-weight:600}
+.tpd-alt{opacity:.72}
+.tpd-alt:hover,.tpd-alt:focus-visible{opacity:1}

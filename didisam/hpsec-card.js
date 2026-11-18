@@ -326,6 +326,8 @@
   Object.assign(HPS, {
     card: (kind, c, o) => { o = o || {}; const s = o.s || (typeof site === 'function' ? site() : {}); if (!c) return ''; if (kind === 'table') return table([c], { s }); return (CARD[kind] || CARD.photo)(c, { s, n: o.n || 1, i: o.i || 0, span: o.span || 1 }); },
     list, cardCSS, cardKind, cardImg: (c, s) => cardImg(c, s || (typeof site === 'function' ? site() : {})),
+    /* v44.1 FIX3 B: 한 페이지(siteHTML 한 번) 안 사진 사용 기록을 g44 강좌 사진 고르기(global.js G44PH)와 함께 쓴다 → 공통 강좌 목록과 템플릿 카드가 같은 사진을 겹쳐 쓰지 않게 */
+    cardUse: id => { if (id) P.used.add(id); }, cardUsed: () => [...P.used],
     cardKinds: KINDS.map(([id, name]) => ({ id, name })), resetPhotos
   });
 })();

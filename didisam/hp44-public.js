@@ -59,8 +59,18 @@
   const short = n => String(n || '').replace(/\s*\(.*\)$/, '');
   /* 큰 인용에는 칭찬 · 경험담만 — 불만 · 요청 · 질문(끊겨요 · 안 돼요 · 부탁 · 해 주세요 · 물음표 · 오류 · 환불 …)은 뺀다(v44 검수) */
   const ASK = /끊[겨기어]|안 ?[돼되됩]|[돼되]지 ?않|부탁|해 ?주[세시실]|주실 ?수|알려 ?주|[?？]\s*$|[?？]|오류|에러|버그|환불|불편|불만|아쉬|문의|왜 |언제|어떻게|느려|멈춰|튕[겨기]|로그인이 ?안/;
-  const review = () => { try { const R = (S.reviews || []).filter(r => r && !r.hidden && String(r.body || '').trim().length >= 15 && (+r.stars || 5) >= 4 && !ASK.test(String(r.body).trim())); const r = R[0]; if (!r) return null; const c = (S.classes || []).find(x => x.id === r.cls); return { body: String(r.body).trim(), cls: c ? c.name : '' }; } catch (e) { return null; } };
+  const review = () => { try { const PUB = new Set((S.classes || []).filter(c => c && (c.open === '전체' || c.open == null)).map(c => c.id)); /* R3: 공개 과정 후기만 */ const R = (S.reviews || []).filter(r => r && !r.hidden && (!r.cls || PUB.has(r.cls)) && String(r.body || '').trim().length >= 15 && (+r.stars || 5) >= 4 && !ASK.test(String(r.body).trim())); const r = R[0]; if (!r) return null; const c = (S.classes || []).find(x => x.id === r.cls); return { body: String(r.body).trim(), cls: c ? c.name : '' }; } catch (e) { return null; } };
   const notes = n => { try { return [...(S.notices || []), ...(S.classes || []).flatMap(c => c.notices || [])].filter(x => x && x.title && !x.hidden && !x.draft).sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, n || 4); } catch (e) { return []; } };
+  /* 접수 상태 배지(공공 B): 모집 기간(c.recruit) 우선, 없으면 시작 · 종료일로 */
+  const stOf = c => { const t = tday(); const R = c.recruit || {};
+    if (R.on && okD(R.to)) { const f = okD(R.from) ? days(t, R.from) : -1; const n = days(t, R.to); if (f > 0) return ['w', `접수 예정 · D-${f}`]; if (n < 0) return ['x', '접수 마감']; return n <= 7 ? ['n', n ? `마감 D-${n}` : '오늘 마감'] : ['o', `접수 중 · D-${n}`]; }
+    if (okD(c.start) && days(t, c.start) > 0) { const n = days(t, c.start); return ['o', n <= 30 ? `접수 중 · 시작 D-${n}` : '접수 중']; }
+    if (okD(c.end) && days(t, c.end) <= 14) return ['n', '마감 임박'];
+    return c.kind === 'episode' ? ['p', '진행 중'] : ['o', '상시 접수']; };
+  const bdg = c => { const k = stOf(c); return `<span class="p4-sb s${k[0]}">${E(k[1])}</span>`; };
+  /* 공지(hx-ntc 모양): 날짜 열 · 고정 배지 · 새 글 · 3건 */
+  const NT = n => { try { if (window.HPX && HPX.data && typeof HPX.data.notices === 'function') { const L = HPX.data.notices(); if (L && L.length) return L.slice(0, n); } } catch (e) { } return notes(n).map(x => ({ title: x.title, at: x.at, pin: !!x.pin })); };
+  const ntcList = (L, h) => `<ol class="p4-nl">${L.map(x => { const a = String(x.at || '').slice(0, 10); return `<li><a href="${E(h)}"><time>${E(okD(a) ? dot(a) : '')}<small>${E(a.slice(0, 4))}</small></time><span>${x.pin ? '<em class="p4-pin">고정</em>' : ''}${E(x.title)}${x.isNew ? '<i class="p4-new" aria-label="새 글">N</i>' : ''}</span>${ic('chev', 18, 2)}</a></li>`; }).join('')}</ol>`;
   const facs = () => { try { return ((S.fac && S.fac.facilities) || []).filter(f => f && f.on !== false && f.name); } catch (e) { return []; } };
 
   /* ── 사진: 기관 사진(site.img) → 템플릿 지정 → 스톡 ── */
@@ -68,9 +78,20 @@
   const abs = u => { try { return new URL(u, (H() && H().base) || location.href).href; } catch (e) { return u; } };
   const stk = (id, sz) => { const h = H(); if (!h || typeof h.get !== 'function') return null; const x = h.get(id); if (!x) return null; return { src: abs(h.url(x, sz === 'lg' ? '' : 'sm')), alt: x.alt || '', pos: x.focus || '50% 50%' }; };
   const slotP = (s, slot, d, fb) => { try { if (window.HPS && typeof HPS.photo === 'function') { const p = HPS.photo(s, slot, d); if (p) return { src: p.src, alt: p.alt, pos: p.pos }; } } catch (e) { } return fb ? stk(fb, 'lg') : null; };
-  const clsP = (c, i, pool) => { const id = pool && pool[i % pool.length]; return (id && stk(id)) || (() => { try { const x = H() && H().photo(c.name, c.id, { id: true, scope: 'p4' }); return x ? { src: abs(H().url(x, 'sm')), alt: x.alt || '', pos: x.focus || '50% 50%' } : null; } catch (e) { return null; } })(); };
-  const facP = (f, i, pool) => (f.photo && { src: abs(f.photo), alt: f.name, pos: '50% 50%' }) || stk(pool[i % pool.length]);
-  const img = (p, cls, eager) => p ? `<figure class="${cls || 'p4-ph'}"><img src="${E(p.src)}" alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos)}"></figure>` : '';
+  /* 강좌 · 시설 카드 사진(통합 지시 11-18): ① 운영자 사진 ② 강좌 · 시설 이름 · 분야 규칙(HPSTOCK.courseRule)에 맞는 스톡(페이지 안 중복 제외, 템플릿마다 시작 후보 다르게) ③ 템플릿 사진 세트. 한 페이지 안 중복 0 */
+  let USED = new Set(), CUR = 'pbcivic';
+  const hsh = v => { let h = 2166136261; v = String(v); for (let i = 0; i < v.length; i++) { h ^= v.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const sidOf = src => { const m = /\/img\/stock\/([a-z]{3}-\d{2})(?:-800)?\.webp/.exec(String(src || '')); return m ? m[1] : ''; };
+  const ruleP = (name, key, pool, own) => { if (own) { const o = typeof own === 'string' && (/^data:image\/(png|jpe?g|webp|gif);base64,/.test(own) || !/^data:/.test(own)) ? own : ''; if (o) return { src: /^data:/.test(o) ? o : abs(o), alt: name || '', pos: '50% 50%' }; }
+    const h = H(); if (!h || typeof h.get !== 'function') return null; const ok = id => id && h.get(id) && !USED.has(id); let id = '';
+    try { const r = typeof h.courseRule === 'function' ? h.courseRule(name) : null; const R = r ? r.ids.filter(ok) : []; if (R.length) id = R[hsh(CUR + key) % R.length]; } catch (e) { }
+    if (!id) id = (pool || []).find(ok) || ''; if (!id) return null; USED.add(id); return stk(id); };
+  /* R3: 강좌 카드는 ① 운영자 사진 ② 강좌 이름 규칙(courseRule) ③ 규칙이 없으면 템플릿 장면 세트가 아니라 강의 · 연수 장면(중립) — 「신규 임용자 교육」에 피아노 · 농구장 같은 엉뚱한 사진 방지 */
+  const NEUTRAL = ['sem-01', 'lec-01', 'cls-03', 'grp-03', 'grp-06', 'lec-03', 'cls-02', 'hum-04', 'grp-01', 'cls-01'];
+  const clsP = (c, i, pool) => ruleP(c.name, c.id || i, NEUTRAL.slice(hsh(CUR) % 4).concat(NEUTRAL.slice(0, hsh(CUR) % 4)), c.thumb);
+  const facP = (f, i, pool) => ruleP(f.name, f.id || f.name || i, pool, f.photo);
+  const img = (p, cls, eager) => { if (p) { const k = sidOf(p.src); if (k) USED.add(k); } return img0(p, cls, eager); };
+  const img0 = (p, cls, eager) => p ? `<figure class="${cls || 'p4-ph'}"><img src="${E(p.src)}" alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos)}"></figure>` : '';
 
   /* ── 테마 10종 ── */
   const L0 = { vis: 'mock', illu: 'doc', card: 'line', look: 'corpPortal', hk: 'desk', hp: 'ledger', ck: 'photo', sh: 'none', hero: 'split', dens: '여유' };
@@ -84,12 +105,19 @@
     pbsenior: Object.assign({}, L0, { name: '큰 글씨 사랑방', sub: '복지관 · 시니어', ed: 'citizen', desc: '큰 사진 위로 겹친 큰 글씨 카드 · 큰 버튼 · 전화 신청 띠 — 종합사회복지관 · 노인복지관 · 시니어 강좌', tone: 'light', acc: '#B4531B', bg: '#FFF9F2', alt: '#F6EBDD', ink: '#2A1E14', mu: '#5A4A3C', pt: '#2F7D5B', r: 20, br: 16, sw2: '#F6EBDD', base: 'warm' }),
     pbjobs: Object.assign({}, L0, { name: '컬러 블록', sub: '지자체 일자리센터', ed: 'citizen', desc: '반은 파란 색면 · 반은 사진인 첫 화면, 상담부터 취업까지 4단계 · 취업 연계 교육 — 일자리센터 · 고용복지 교육', tone: 'light', acc: '#1E3FD8', bg: '#FFFFFF', alt: '#F2F4FA', ink: '#0B1233', mu: '#454B63', pt: '#FF7A1A', r: 12, br: 12, sw2: '#1E3FD8', base: 'clean', hk: 'cover' }),
     pbmuseum: Object.assign({}, L0, { name: '전시실', sub: '박물관 · 문화 교육', ed: 'citizen', desc: '흰 벽에 건 액자 사진과 작품 설명 명판 · 세리프 제목 — 박물관 · 미술관 · 문화재단 교육 프로그램', tone: 'light', acc: '#C8402A', bg: '#F3F1EC', alt: '#FFFFFF', ink: '#111111', mu: '#4D4B47', pt: '#111111', r: 0, br: 0, illu: 'book', sw2: '#F3F1EC', base: 'clean' }),
-    pbheritage: Object.assign({}, L0, { name: '전통 관공서', sub: '전통 관공서(격식)', ed: 'staff', desc: '한지색 바탕 · 가운데 대칭 · 낙관 도장 · 두 줄 테두리 — 오래된 행정기관 · 공무원 교육원의 격식', tone: 'light', acc: '#1C2B4B', bg: '#F6F1E6', alt: '#EFE7D6', ink: '#1A1A1A', mu: '#4A4740', pt: '#9E2B25', r: 0, br: 0, sw2: '#F6F1E6', base: 'official' })
+    pbheritage: Object.assign({}, L0, { name: '전통 관공서', sub: '전통 관공서(격식)', ed: 'staff', desc: '한지색 바탕 · 가운데 대칭 · 낙관 도장 · 두 줄 테두리 — 오래된 행정기관 · 공무원 교육원의 격식', tone: 'light', acc: '#1C2B4B', bg: '#F6F1E6', alt: '#EFE7D6', ink: '#1A1A1A', mu: '#4A4740', pt: '#9E2B25', r: 0, br: 0, sw2: '#F6F1E6', base: 'official' }),
+    pbecon: Object.assign({}, L0, { name: '지역 상생', sub: '경제진흥원(기업 · 소상공인 지원)', ed: 'citizen', desc: '가게 · 공방 · 작은 회사 사진 세 장을 나란히 건 첫 화면, 사업 공고 목록 · 지원 대상별 갈래 — 경제진흥원 · 소상공인 지원센터 교육', tone: 'light', acc: '#0E6B4F', bg: '#FFFFFF', alt: '#F1F6F3', ink: '#0F1F19', mu: '#46564F', pt: '#F2B807', r: 14, br: 10, sw2: '#F1F6F3', base: 'clean', hk: 'cover' }),
+    pbdigital: Object.assign({}, L0, { name: '디지털 그리드', sub: '정보 · 산업진흥원(디지털 · SW 인재)', ed: 'citizen', desc: '모눈 바탕 · 브라우저 창 속 사진 · 고정폭 글자 번호 — 정보 · 산업진흥원의 SW 인재 양성과 기업 재직자 교육', tone: 'light', acc: '#3A3FE8', bg: '#F6F7FB', alt: '#FFFFFF', ink: '#0B0D2A', mu: '#4A4E6A', pt: '#14C8B4', r: 12, br: 8, sw2: '#3A3FE8', base: 'clean', hk: 'cover' }),
+    pbassoc: Object.assign({}, L0, { name: '회원 라운지', sub: '민간 협회(회원사 교육 · 세미나)', ed: 'citizen', desc: '세미나 사진 위로 기울어진 회원증 카드 · 버건디와 샴페인 금색 · 입장권 같은 세미나 일정 — 산업 협회 · 학회 · 단체의 회원사 교육', tone: 'light', acc: '#7A1F3D', bg: '#FBF8F4', alt: '#F3ECE4', ink: '#1E1215', mu: '#544449', pt: '#C9A86A', r: 18, br: 999, sw2: '#7A1F3D', base: 'warm' }),
+    pbcontract: Object.assign({}, L0, { name: '사업 운영 공식', sub: '위탁운영 · AI 재직자 교육 사업', ed: 'citizen', desc: '남색 띠 위 사업명과 큰 제목, 아래 넓은 사진과 주최 · 주관 · 운영 표기 줄 — 지자체 · 진흥원이 발주한 재직자 AI 교육 사업의 공식 운영 사이트', tone: 'light', acc: '#14326B', bg: '#FFFFFF', alt: '#F2F5FA', ink: '#0D1526', mu: '#46506A', pt: '#2F8CFF', r: 8, br: 6, sw2: '#14326B', base: 'official', hk: 'cover' }),
+    pbcampaign: Object.assign({}, L0, { name: '모두의 배움 캠페인', sub: '위탁운영 · 시민 · 청년 디지털/AI 교육', ed: 'citizen', desc: '밝은 색 번짐 위 가운데 큰 제목과 동그란 사진 네 장 — 시민 · 청년 대상 디지털 · AI 교육 사업을 참여형 캠페인처럼', tone: 'light', acc: '#F0532D', bg: '#FFFBF5', alt: '#FFF1E6', ink: '#1F1410', mu: '#5A4A42', pt: '#2EC4B6', r: 28, br: 999, sw2: '#F0532D', base: 'warm', hk: 'cover' })
   };
   const tok = (hf, hw, h1, h1m, sec, secm, w) => ({ hf, hw, hls: -0.04, h1, h1m, lh1: 1.12, h2: 52, h2m: 32, h3: 22, body: 17, blh: 1.65, lead: 20, ey: { fs: 15, ls: 0, fw: 700, tt: 'none' }, sec, secm, w, gut: 40,
     r: 24, rs: 12, br: 999, bh: 52, bpx: 26, bfw: 700, bls: -0.01, bd: '0', sh: 'none', shh: 'none', hov: 'lift', em: 'accent', link: 'hover' });
   const HD = { pbcivic: tok('sans', 800, 72, 40, 140, 80, 1200), pbjournal: tok('serif', 700, 70, 42, 150, 88, 1240), pbposter: tok('sans', 900, 88, 44, 150, 88, 1280), pbcampus: tok('sans', 800, 84, 42, 150, 88, 1240),
-    pblibrary: tok('sans', 800, 76, 42, 150, 88, 1200), pbyouth: tok('sans', 900, 96, 44, 140, 88, 1240), pbsenior: tok('sans', 800, 72, 42, 140, 88, 1160), pbjobs: tok('sans', 800, 80, 42, 140, 88, 1240), pbmuseum: tok('serif', 600, 92, 44, 150, 96, 1280), pbheritage: tok('serif', 700, 66, 40, 140, 88, 1200) };
+    pblibrary: tok('sans', 800, 76, 42, 150, 88, 1200), pbyouth: tok('sans', 900, 96, 44, 140, 88, 1240), pbsenior: tok('sans', 800, 72, 42, 140, 88, 1160), pbjobs: tok('sans', 800, 80, 42, 140, 88, 1240), pbmuseum: tok('serif', 600, 92, 44, 150, 96, 1280), pbheritage: tok('serif', 700, 66, 40, 140, 88, 1200),
+    pbecon: tok('sans', 800, 80, 42, 140, 88, 1240), pbdigital: tok('sans', 800, 84, 42, 140, 88, 1240), pbassoc: tok('sans', 700, 76, 42, 150, 88, 1200),
+    pbcontract: tok('sans', 800, 76, 42, 140, 88, 1200), pbcampaign: tok('sans', 900, 88, 44, 140, 88, 1200) };
   const MINE = Object.keys(DEF);
   const mine = s => !!(s && s.theme && DEF[s.theme]);
   const thOf = s => (s && DEF[s.theme]) ? s.theme : 'pbcivic';
@@ -102,7 +130,8 @@
   const ttl = (d, def) => NL(d.title || def || '');
   const head = (d, extra) => `${d.eyebrow ? `<p class="p4-ey">${E(d.eyebrow)}</p>` : ''}<h2 class="p4-h2">${ttl(d)}</h2>${d.sub ? `<p class="p4-sd">${E(d.sub)}</p>` : ''}${extra || ''}`;
   const sec = (x, s, kind, inner, cls) => mark(`<section class="hpt p4 ${thOf(s)} p4-${kind}${cls ? ' ' + cls : ''}">${inner}</section>`, x);
-  const hsec = (th, inner, cls) => `<section class="hpt p4 ${th} p4-hero${cls ? ' ' + cls : ''}">${inner}</section>`;
+  const AXBAR = '<div class="p4-ax" role="group" aria-label="보기 설정"><span>보기 설정</span><details class="p4-ax-lg"><summary aria-label="글자 크기 바꾸기"><b class="off">가+ 글자 크게</b><b class="on">가 글자 보통</b></summary></details><details class="p4-ax-hc"><summary aria-label="고대비 바꾸기"><b class="off">고대비</b><b class="on">기본 색</b></summary></details></div>';
+  const hsec = (th, inner, cls) => `<section class="hpt p4 ${th} p4-hero${cls ? ' ' + cls : ''}">${AXBAR}${inner}</section>`;
 
   /* ── 첫 화면 10종 ── */
   const HERO = {
@@ -138,13 +167,28 @@
 <div class="p4-wall"><div class="p4w">${p ? `<div class="p4-frame">${img(p, 'p4-ph', 1)}</div>` : ''}${d.note ? `<div class="p4-plq"><b>${E(String(d.note).split('\n')[0])}</b>${String(d.note).split('\n')[1] ? `<span>${E(String(d.note).split('\n').slice(1).join(' '))}</span>` : ''}</div>` : ''}</div></div>`); },
     /* 전통 관공서: 가운데 대칭 · 낙관 도장 · 두 줄 테두리 파노라마 */
     pbheritage: (s, d) => { const p = slotP(s, 'hero', d, 'nat-01'); const ch = String(org() || '교').replace(/\s/g, '').slice(0, 1);
-      return hsec('pbheritage', `<div class="p4w p4-c"><div class="p4-seal" aria-hidden="true"><span>${E(ch)}</span></div>${d.eyebrow ? `<p class="p4-ey"><span>${E(d.eyebrow)}</span></p>` : ''}<h1>${NL(d.title)}</h1>${d.sub ? `<p class="p4-lead">${E(d.sub)}</p>` : ''}${heroBtns(d, 'pri', 'line', 0, 0)}</div>${p ? `<div class="p4w"><div class="p4-pano">${img(p, 'p4-ph', 1)}</div></div>` : ''}`); }
+      return hsec('pbheritage', `<div class="p4w p4-c"><div class="p4-seal" aria-hidden="true"><span>${E(ch)}</span></div>${d.eyebrow ? `<p class="p4-ey"><span>${E(d.eyebrow)}</span></p>` : ''}<h1>${NL(d.title)}</h1>${d.sub ? `<p class="p4-lead">${E(d.sub)}</p>` : ''}${heroBtns(d, 'pri', 'line', 0, 0)}</div>${p ? `<div class="p4w"><div class="p4-pano">${img(p, 'p4-ph', 1)}</div></div>` : ''}`); },
+    /* 경제진흥원: 위 큰 제목 · 아래 가게 · 공방 · 회사 사진 세 장(트립틱) */
+    pbecon: (s, d) => { const P = [slotP(s, 'hero', d, 'bar-03'), slotP(s, 'about', null, 'bak-03'), slotP(s, 'space', null, 'hum-49')].filter(Boolean);
+      return hsec('pbecon', `<div class="p4w p4-top"><div>${d.eyebrow ? `<p class="p4-ey">${E(d.eyebrow)}</p>` : ''}<h1>${two(d.title, 'em')}</h1></div><div class="p4-side">${d.sub ? `<p class="p4-lead">${E(d.sub)}</p>` : ''}${heroBtns(d, 'pri', 'line', 1, 0)}</div></div>${P.length ? `<div class="p4w"><div class="p4-tri n${P.length}">${P.map((p, i) => img(p, 'p4-t' + i, !i)).join('')}${d.note ? `<p class="p4-badge">${NL(d.note)}</p>` : ''}</div></div>` : ''}`); },
+    /* 정보 · 산업진흥원: 모눈 바탕 · 큰 제목 · 브라우저 창 속 사진 */
+    pbdigital: (s, d) => { const p = slotP(s, 'hero', d, 'hum-41');
+      return hsec('pbdigital', `<div class="p4w p4-g"><div class="p4-tx">${d.eyebrow ? `<p class="p4-ey"><span>&gt;_</span>${E(d.eyebrow)}</p>` : ''}<h1>${two(d.title, 'mark')}</h1>${d.sub ? `<p class="p4-lead">${E(d.sub)}</p>` : ''}${heroBtns(d, 'pri', 'line', 1, 0)}</div>${p ? `<div class="p4-win"><div class="p4-bar" aria-hidden="true"><i></i><i></i><i></i><span>${E(d.note || 'learn.' + (String(org()).replace(/\s/g, '').slice(0, 8) || 'org'))}</span></div>${img(p, 'p4-ph', 1)}</div>` : ''}</div>`); },
+    /* 민간 협회: 세미나 사진 위로 기울어진 회원증 카드 */
+    pbassoc: (s, d) => { const p = slotP(s, 'hero', d, 'hum-11'); const nm = org() || '협회';
+      return hsec('pbassoc', `<div class="p4w p4-g"><div class="p4-tx">${d.eyebrow ? `<p class="p4-ey">${E(d.eyebrow)}</p>` : ''}<h1>${two(d.title, 'em')}</h1>${d.sub ? `<p class="p4-lead">${E(d.sub)}</p>` : ''}${heroBtns(d, 'pri', 'line', 1, 0)}</div><div class="p4-stage">${img(p, 'p4-ph', 1)}<div class="p4-card" aria-hidden="true"><p class="p4-k">MEMBERSHIP</p><b>${E(nm)}</b><p class="p4-cl">${E(d.note || '회원사 교육 · 세미나')}</p><span class="p4-chip"></span></div></div></div>`); },
+    /* 위탁운영 · 재직자: 남색 띠 위 사업명 · 큰 제목, 아래 넓은 사진 + 주최 · 주관 · 운영 줄 */
+    pbcontract: (s, d) => { const p = slotP(s, 'hero', d, 'hum-07'); const cr = String(d.note || '').split('\n').filter(Boolean);
+      return hsec('pbcontract', `<div class="p4-band"><div class="p4w">${d.eyebrow ? `<p class="p4-ey"><span>사업 안내</span>${E(d.eyebrow)}</p>` : ''}<h1>${NL(d.title)}</h1><div class="p4-row">${d.sub ? `<p class="p4-lead">${E(d.sub)}</p>` : '<span></span>'}${heroBtns(d, 'wh', 'ol', 1, 0)}</div></div></div>${p ? `<div class="p4w p4-picw">${img(p, 'p4-pic', 1)}${cr.length ? `<ul class="p4-credit">${cr.map(c => { const m = c.split(/\s*[:：]\s*/); return m.length > 1 ? `<li><span>${E(m[0])}</span><b>${E(m.slice(1).join(' '))}</b></li>` : `<li><b>${E(c)}</b></li>`; }).join('')}</ul>` : ''}</div>` : ''}`); },
+    /* 위탁운영 · 시민 · 청년: 색 번짐 위 가운데 큰 제목 + 동그란 사진 4장 */
+    pbcampaign: (s, d) => { const P = [slotP(s, 'hero', d, 'stu-02'), slotP(s, 'about', null, 'grp-06'), slotP(s, 'space', null, 'sen-07'), slotP(s, 'cta', null, 'cam-08')].filter(Boolean);
+      return hsec('pbcampaign', `<div class="p4w p4-c">${d.eyebrow ? `<p class="p4-ey">${E(d.eyebrow)}</p>` : ''}<h1>${two(d.title, 'mark')}</h1>${d.sub ? `<p class="p4-lead">${E(d.sub)}</p>` : ''}${heroBtns(d, 'pri', 'line', 1, 0)}${P.length ? `<div class="p4-dots n${P.length}">${P.map((p, i) => img(p, 'p4-o' + i, !i)).join('')}</div>` : ''}${d.note ? `<p class="p4-note">${E(d.note)}</p>` : ''}</div>`); }
   };
 
   /* ── 섹션 ── */
   const SEC = {};
   /* 2열 이야기 + 3단계 */
-  SEC['p4-story'] = (x, s) => { const d = x.data || {}; const th = thOf(s); const cols = (d.cols || []).filter(c => c && c[0]).slice(0, 4); const FB = { pbjournal: 'hum-05', pbcivic: 'lec-01', pblibrary: 'hum-12', pbyouth: 'grp-06', pbsenior: 'kni-03', pbmuseum: 'hum-28', pbheritage: 'lib-06' };
+  SEC['p4-story'] = (x, s) => { const d = x.data || {}; const th = thOf(s); const cols = (d.cols || []).filter(c => c && c[0]).slice(0, 4); const FB = { pbjournal: 'hum-05', pbcivic: 'lec-01', pblibrary: 'hum-12', pbyouth: 'grp-06', pbsenior: 'kni-03', pbmuseum: 'hum-28', pbheritage: 'lib-06', pbassoc: 'grp-03' };
     const p = slotP(s, th === 'pbjournal' ? 'cta' : 'about', null, FB[th] || 'hum-10'); const noImg = th === 'pbyouth';
     return sec(x, s, 'story', `<div class="p4w${noImg ? '' : ' p4-sg2'}">${noImg ? '' : img(p)}<div>${head(d)}<ol class="p4-steps n${cols.length}">${cols.map((c, i) => `<li><span class="p4-n">${String(i + 1).padStart(2, '0')}</span><div><h3>${E(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}</div></li>`).join('')}</ol></div></div>`); };
   /* 인용 후기 하나(실제 후기만) */
@@ -159,7 +203,7 @@
     return sec(x, s, 'rail', `<div class="p4w"><b class="p4-d">${E(big)}</b><p>${E(d.sub || `${org()} 주민이라면 누구나 신청할 수 있어요.`)}${tel ? ` · 전화 신청 <a href="tel:${E(tel)}">${E(tel)}</a>` : ''}</p><a class="p4-go" href="#courses">강좌 신청하기 ${ic('chev', 18, 2)}</a></div>`); };
   /* 시민 저널: 잡지형 강좌 3개 */
   SEC['p4-mag'] = (x, s) => { const d = x.data || {}; const L = list(3); if (!L.length) return empty(x);
-    return sec(x, s, 'mag', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">강좌 ${list(40).length}개 전체 보기 →</a></div><div class="p4-ml">${L.map((c, i) => `<a class="p4-art${i ? '' : ' p4-lg'}" ${aA(cH(c))}>${img(clsP(c, i, ['cam-07', 'hum-24', 'pho-01']))}<div class="p4-ab"><p class="p4-cat">${E(kindL(c))} <span>${E(hrs(c) || whenL(c))}</span></p><h3>${E(c.name)}</h3>${!i && c.teacher ? `<p class="p4-ad">${E(c.teacher)}와 함께해요. 자세한 일정은 강좌 안내에서 확인해요.</p>` : ''}<p class="p4-meta"><span>${E(whenL(c))}</span><b>${E(priceL(c))}</b></p></div></a>`).join('')}</div></div>`); };
+    return sec(x, s, 'mag', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">강좌 ${list(40).length}개 전체 보기 →</a></div><div class="p4-ml">${L.map((c, i) => `<a class="p4-art${i ? '' : ' p4-lg'}" ${aA(cH(c))}>${img(clsP(c, i, ['hum-24', 'pho-01', 'hum-21']))}<div class="p4-ab"><p class="p4-cat">${E(kindL(c))} <span>${E(hrs(c) || whenL(c))}</span></p><h3>${E(c.name)}</h3>${!i && c.teacher ? `<p class="p4-ad">${E(c.teacher)}와 함께해요. 자세한 일정은 강좌 안내에서 확인해요.</p>` : ''}<p class="p4-meta"><span>${bdg(c)} ${E(whenL(c))}</span><b>${E(priceL(c))}</b></p></div></a>`).join('')}</div></div>`); };
   /* 시민 저널: 사진 띠(무료 강좌 수 — 실제 계산) */
   SEC['p4-band'] = (x, s) => { const d = x.data || {}; const L = list(40); if (!L.length) return empty(x); const fr = L.filter(c => !+c.price).length; const p = slotP(s, 'space', null, 'hum-13');
     const t = d.title || (fr && fr < L.length ? `강좌 ${L.length}개 중 ${fr}개는\n무료로 열려요.` : fr ? `지금 열린 강좌 ${L.length}개,\n모두 무료예요.` : `지금 열린 강좌\n${L.length}개를 만나 보세요.`);
@@ -178,7 +222,7 @@
     return sec(x, s, 'hours', `<div class="p4w p4-hg"><div class="p4-num">${E(hh(wk[0]))}<em>—</em>${E(hh(wk[1]))}</div><div class="p4-tx"><p class="p4-idx">운영 시간</p><h3>${E(d.title || '출근 전에도, 퇴근 후에도 열려 있어요.')}</h3><p>${E(d.sub || `${f0.name} 기준이에요. 시설마다 운영 시간이 조금씩 달라요.`)}</p></div>
 <div class="p4-tb">${row('평일', `${wk[0]} – ${wk[1]}`)}${row('토요일', h(6) ? `${h(6)[0]} – ${h(6)[1]}` : '휴관')}${row('일요일 · 공휴일', h(0) ? `${h(0)[0]} – ${h(0)[1]}` : '휴관')}${row(cl ? '휴관 안내' : '문의', cl ? `${dot(cl.from)} ${cl.reason || '휴관'}` : tel || '프런트 문의', cl ? '공지에서 자세히 안내해요' : '')}</div></div>`); };
   /* 시티 포스터: 시설 그리드(실제 시설 · 없으면 강좌) */
-  SEC['p4-places'] = (x, s) => { const d = x.data || {}; const F = facs().slice(0, 5); const POOL = ['spo-07', 'spo-04', 'yog-03', 'mus-06', 'sem-01'];
+  SEC['p4-places'] = (x, s) => { const d = x.data || {}; const F = facs().slice(0, 5); const POOL = ['spo-07', 'yog-03', 'mus-06', 'spo-05', 'spo-06'];
     const items = F.length ? F.map((f, i) => ({ n: f.name, sub: [f.place, f.kind === 'time' ? (f.approval ? '승인 후 확정' : '바로 예약') : f.kind === 'pass' ? '이용권' : '대여', +f.capacity > 0 ? `최대 ${+f.capacity}명` : ''].filter(Boolean).join(' · '), h: '#fac', p: facP(f, i, POOL) }))
       : list(5).map((c, i) => ({ n: c.name, sub: [kindL(c), whenL(c)].join(' · '), h: cH(c), p: stk(POOL[i % POOL.length]) }));
     if (!items.length) return empty(x);
@@ -195,7 +239,7 @@
     return sec(x, s, 'svc', `<div class="p4w">${d.eyebrow ? `<p class="p4-ey">${E(d.eyebrow)}</p>` : ''}<h2 class="p4-h2">${ttl(d, '자주 찾는 서비스')}</h2><div class="p4-sv">${F.map((q, i) => `<a href="${q[2]}"><div>${thOf(s) === 'pbheritage' ? `<i>${String(i + 1).padStart(2, '0')}</i>` : ''}<b>${E(q[0])}</b><span>${E(q[1])}</span></div>${ic('chev', 20, 2)}</a>`).join('')}</div></div>`); };
   /* 날짜 열 교육 목록(관공서 · 도서관 · 박물관 · 전통 관공서) */
   SEC['p4-rows'] = (x, s) => { const d = x.data || {}; const L = list(5); if (!L.length) return empty(x); const t = tday(); const stf = staffOrg();
-    const st = c => { const n = okD(c.end) ? days(t, c.end) : null; return n != null && n <= 14 ? ['n', '마감 임박'] : okD(c.start) && days(t, c.start) > 0 ? ['', '접수 중'] : ['', '수강 중']; };
+    const st = c => { const k = stOf(c); return [k[0] === 'n' ? 'n' : k[0] === 'x' ? 'x' : '', k[1]]; };
     return sec(x, s, 'rows', `<div class="p4w">${head(d)}<div class="p4-ls">${L.map(c => { const k = st(c); const sd = okD(c.start) && days(t, c.start) > 0 ? c.start : c.end; return `<a class="p4-rw" ${aA(cH(c))}><div class="p4-dt"><b>${okD(sd) ? E(dot(sd)) : '상시'}</b><small>${E(okD(sd) ? (sd === c.start ? '시작' : '마감') : '온라인')}${okD(sd) ? ' · ' + DOW[new Date(sd + 'T00:00:00').getDay()] : ''}</small></div><div><h3>${E(c.name)}</h3><p>${E([c.legal ? '법정 의무교육' : kindL(c), c.teacher].filter(Boolean).join(' · '))}</p></div><div class="p4-mt">${E([c.kind === 'episode' ? (stf ? '집합 교육' : '현장 강좌') : (stf ? '사이버 교육' : '온라인 강좌'), hrs(c)].filter(Boolean).join(' · '))}<br>${E(stf ? (okD(c.end) ? `${md(c.end)}까지` : '상시') : priceL(c))}</div><span class="p4-tag ${k[0]}">${k[1]}</span></a>`; }).join('')}</div><a class="p4-more" href="#courses">${E(stf ? '전체 교육과정 보기' : '전체 강좌 보기')} ${ic('chev', 18, 2)}</a></div>`); };
   /* 숫자 띠: 실제 값만 */
   /* 숫자 띠: 자랑할 만한 실제 값만(v44 검수) — 과정 10개 이상 · 수강 인원 100명 이상 · 이수율 60% 이상(인원 100명 이상일 때). 두 개 미만이면 섹션을 숨긴다 */
@@ -205,8 +249,9 @@
   SEC['p4-figs'] = (x, s) => { const d = x.data || {}; const K = figsK(); if (K.length < 2) return empty(x, '과정 10개 · 수강 인원 100명 이상처럼 내세울 만한 실제 숫자가 2개 이상 생기면 게시본에 보여요.');
     return sec(x, s, 'figs', `<div class="p4w">${d.eyebrow ? `<p class="p4-ft">${E(d.eyebrow)}</p>` : ''}<div class="p4-fg n${K.length}">${d.title ? `<h2 class="p4-h2">${ttl(d)}</h2>` : ''}${K.map(k => `<div class="p4-fk"><div class="p4-n">${k[0].toLocaleString('ko-KR')}<small>${k[1]}</small></div><p>${E(k[2])}</p></div>`).join('')}</div></div>`); };
   /* 알림마당 + 문의 상자 */
-  SEC['p4-help'] = (x, s) => { const d = x.data || {}; const N = notes(4); const tel = telOf();
-    return sec(x, s, 'help', `<div class="p4w p4-hg2"><div><h2 class="p4-h2">${ttl(d, '알림마당')}</h2>${N.length ? `<ul class="p4-nt">${N.map(n => `<li><a href="#notice">${E(n.title)}</a><time>${E(String(n.at || '').slice(0, 10).replace(/-/g, '.'))}</time></li>`).join('')}</ul>` : `<p class="p4-none">새 공지가 올라오면 여기에 차례로 보여요. <a href="#notice">알림마당 가기</a></p>`}</div>
+  SEC['p4-help'] = (x, s) => { const d = x.data || {}; const N = NT(3); const tel = telOf();
+    const left = N.length || editing() ? `<div><div class="p4-nh"><h2 class="p4-h2">${ttl(d, '알림마당')}</h2><a class="p4-more" href="#notice">더 보기 ${ic('chev', 18, 2)}</a></div>${N.length ? ntcList(N, '#notice') : `<p class="p4-none">새 공지가 올라오면 여기에 차례로 보여요(게시본에서는 공지가 없으면 이 칸을 숨겨요). <a href="#notice">알림마당 가기</a></p>`}</div>` : ''; /* R3: 빈 기관 게시본에 빈 알림 칸을 남기지 않음 */
+    return sec(x, s, 'help', `<div class="p4w p4-hg2${left ? '' : ' p4-hg1'}">${left}
 <div class="p4-call"><h3>${E(d.sub || '교육 신청이 어려우신가요?')}</h3>${tel ? `<a class="p4-tel" href="tel:${E(tel)}">${E(tel)}</a><p>${E(d.hours || '평일 09:00 – 18:00')}</p>` : '<p>담당자에게 온라인으로 문의를 남겨 주세요.</p>'}<a class="p4-b sec" href="#comm">온라인 문의 남기기</a></div></div>`); };
 
   /* ── 새 섹션 ── */
@@ -215,16 +260,16 @@
     return sec(x, s, 'intro', `<div class="p4w">${d.eyebrow ? `<p class="p4-ey">${E(d.eyebrow)}</p>` : ''}<h2 class="p4-mani">${two(d.title, 'b')}</h2>${C.length ? `<div class="p4-cols n${C.length}">${C.map((c, i) => `<div><p class="p4-no">${String(i + 1).padStart(2, '0')}</p><h3>${E(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}</div>`).join('')}</div>` : ''}</div>`); };
   /* 연수원: 번호 붙은 과정 줄(실제 과정) */
   SEC['p4-tracks'] = (x, s) => { const d = x.data || {}; const L = list(5); if (!L.length) return empty(x);
-    return sec(x, s, 'tracks', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">전체 과정 ${live().length}개 ${ic('arrow', 20, 2)}</a></div><div class="p4-tl">${L.map((c, i) => `<a class="p4-tr" ${aA(cH(c))}><span class="p4-no">${String(i + 1).padStart(2, '0')}</span><div class="p4-tn"><h3>${E(c.name)}</h3><p>${E([c.legal ? '법정 의무교육' : kindL(c), c.teacher, hrs(c)].filter(Boolean).join(' · '))}</p></div><span class="p4-when">${E(whenL(c))}</span>${img(clsP(c, i, ['lec-03', 'cor-07', 'hum-11', 'cor-14', 'sem-01']), 'p4-th')}</a>`).join('')}</div></div>`); };
+    return sec(x, s, 'tracks', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">전체 과정 ${live().length}개 ${ic('arrow', 20, 2)}</a></div><div class="p4-tl">${L.map((c, i) => `<a class="p4-tr" ${aA(cH(c))}><span class="p4-no">${String(i + 1).padStart(2, '0')}</span><div class="p4-tn"><h3>${E(c.name)}</h3><p>${E([c.legal ? '법정 의무교육' : kindL(c), c.teacher, hrs(c)].filter(Boolean).join(' · '))}</p></div><span class="p4-when">${bdg(c)}<br>${E(whenL(c))}</span>${img(clsP(c, i, ['cor-07', 'cor-14', 'off-01', 'cor-12', 'cor-16']), 'p4-th')}</a>`).join('')}</div></div>`); };
   /* 연수원: 연수 시설(실제 시설) */
   SEC['p4-stay'] = (x, s) => { const d = x.data || {}; const F = facs().slice(0, 4); if (!F.length) return empty(x); const POOL = ['lec-03', 'sem-01', 'off-03', 'cor-09'];
-    return sec(x, s, 'stay', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#fac">시설 예약하기 ${ic('arrow', 20, 2)}</a></div><div class="p4-mo n${F.length}">${F.map((f, i) => `<a class="p4-st${i ? '' : ' p4-lg'}" href="#fac">${img(facP(f, i, POOL))}<div class="p4-cap"><h3>${E(f.name)}</h3><p>${E([f.place, +f.capacity > 0 ? `최대 ${+f.capacity}명` : '', f.approval ? '승인 후 확정' : '바로 예약'].filter(Boolean).join(' · '))}</p></div></a>`).join('')}</div></div>`); };
+    return sec(x, s, 'stay', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#fac">시설 예약하기 ${ic('arrow', 20, 2)}</a></div><div class="p4-mo p4-scr n${F.length}">${F.map((f, i) => `<a class="p4-st${i ? '' : ' p4-lg'}" href="#fac">${img(facP(f, i, POOL))}<div class="p4-cap"><h3>${E(f.name)}</h3><p>${E([f.place, +f.capacity > 0 ? `최대 ${+f.capacity}명` : '', f.approval ? '승인 후 확정' : '바로 예약'].filter(Boolean).join(' · '))}</p></div></a>`).join('')}</div></div>`); };
   /* 도서관: 대출 카드 같은 강좌 카드(실제 강좌) */
   SEC['p4-shelf'] = (x, s) => { const d = x.data || {}; const L = list(4); if (!L.length) return empty(x);
-    return sec(x, s, 'shelf', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">강좌 전체 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-cards n${L.length}">${L.map((c, i) => `<a class="p4-lc" ${aA(cH(c))}><p class="p4-no"><span>강좌 카드</span><b>No. ${String(i + 1).padStart(3, '0')}</b></p><h3>${E(c.name)}</h3><dl><div><dt>일정</dt><dd>${E(whenL(c))}</dd></div><div><dt>방식</dt><dd>${E(c.kind === 'episode' ? '도서관 현장' : '온라인')}${hrs(c) ? ' · ' + E(hrs(c)) : ''}</dd></div><div><dt>수강료</dt><dd>${E(priceL(c))}</dd></div></dl><span class="p4-go">자세히 보기 ${ic('arrow', 18, 2)}</span></a>`).join('')}</div></div>`); };
+    return sec(x, s, 'shelf', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">강좌 전체 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-cards p4-scr n${L.length}">${L.map((c, i) => `<a class="p4-lc" ${aA(cH(c))}><p class="p4-no"><span>강좌 카드</span><b>No. ${String(i + 1).padStart(3, '0')}</b></p><h3>${E(c.name)}</h3><dl><div><dt>일정</dt><dd>${E(whenL(c))}</dd></div><div><dt>방식</dt><dd>${E(c.kind === 'episode' ? '도서관 현장' : '온라인')}${hrs(c) ? ' · ' + E(hrs(c)) : ''}</dd></div><div><dt>수강료</dt><dd>${E(priceL(c))}</dd></div></dl><p class="p4-bd">${bdg(c)}</p><span class="p4-go">자세히 보기 ${ic('arrow', 18, 2)}</span></a>`).join('')}</div></div>`); };
   /* 청소년: 기울어진 색 카드(실제 프로그램) */
   SEC['p4-tiles'] = (x, s) => { const d = x.data || {}; const L = list(4); if (!L.length) return empty(x);
-    return sec(x, s, 'tiles', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">프로그램 전체 ${ic('arrow', 20, 2)}</a></div><div class="p4-tg n${L.length}">${L.map((c, i) => `<a class="p4-tile t${i % 4}" ${aA(cH(c))}>${img(clsP(c, i, ['spo-04', 'cod-03', 'hum-40', 'mus-05']))}<p class="p4-k">${E(priceL(c))} · ${E(c.kind === 'episode' ? '수련관에서' : '온라인')}</p><h3>${E(c.name)}</h3><p class="p4-w2">${E(whenL(c))}</p></a>`).join('')}</div></div>`); };
+    return sec(x, s, 'tiles', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">프로그램 전체 ${ic('arrow', 20, 2)}</a></div><div class="p4-tg n${L.length}">${L.map((c, i) => `<a class="p4-tile t${i % 4}" ${aA(cH(c))}>${img(clsP(c, i, ['spo-04', 'cod-03', 'hum-40', 'mus-05']))}<p class="p4-k">${E(priceL(c))} · ${E(c.kind === 'episode' ? '수련관에서' : '온라인')}</p><h3>${E(c.name)}</h3><p class="p4-w2">${E(whenL(c))}</p><p class="p4-bd">${bdg(c)}</p></a>`).join('')}</div></div>`); };
   /* 청소년: 큰 글자 벽(실제 프로그램 이름) */
   SEC['p4-words'] = (x, s) => { const d = x.data || {}; const L = list(8); if (L.length < 2) return empty(x);
     return sec(x, s, 'words', `<div class="p4w">${d.eyebrow ? `<p class="p4-ey">${E(d.eyebrow)}</p>` : ''}<p class="p4-wall">${L.map((c, i) => `<a ${aA(cH(c))} class="${i % 2 ? 'o' : 'f'}">${E(short(c.name))}</a>`).join('<i aria-hidden="true">✦</i>')}</p></div>`); };
@@ -233,19 +278,54 @@
     return sec(x, s, 'call', `<div class="p4w p4-cg"><div><h2>${ttl(d, '인터넷이 어려우면\n전화로 신청하세요.')}</h2>${d.sub ? `<p>${E(d.sub)}</p>` : ''}</div>${tel ? `<a class="p4-tel" href="tel:${E(tel)}">${ic('phone', 40, 2)}<span><small>${E(d.hours || '평일 09:00 – 18:00')}</small>${E(tel)}</span></a>` : `<a class="p4-b wh" href="#comm">온라인으로 문의하기${ic('arrow', 22, 2)}</a>`}</div>`); };
   /* 시니어: 큰 글씨 강좌 목록(실제 강좌) */
   SEC['p4-big'] = (x, s) => { const d = x.data || {}; const L = list(4); if (!L.length) return empty(x);
-    return sec(x, s, 'big', `<div class="p4w">${head(d)}<div class="p4-bl">${L.map((c, i) => `<a class="p4-br" ${aA(cH(c))}>${img(clsP(c, i, ['mus-03', 'sen-04', 'hum-28', 'sen-07']))}<div><h3>${E(c.name)}</h3><p>${E([whenL(c), c.kind === 'episode' ? '복지관에서' : '집에서 온라인'].join(' · '))}</p><p class="p4-pr">${E(priceL(c))}</p></div><span class="p4-go">자세히 보기${ic('arrow', 22, 2)}</span></a>`).join('')}</div><a class="p4-b line p4-all" href="#courses">강좌 전체 보기${ic('arrow', 22, 2)}</a></div>`); };
+    return sec(x, s, 'big', `<div class="p4w">${head(d)}<div class="p4-bl">${L.map((c, i) => `<a class="p4-br" ${aA(cH(c))}>${img(clsP(c, i, ['mus-03', 'sen-04', 'kni-01', 'sen-03']))}<div><h3>${E(c.name)}</h3><p>${E([whenL(c), c.kind === 'episode' ? '복지관에서' : '집에서 온라인'].join(' · '))}</p><p class="p4-pr">${E(priceL(c))} ${bdg(c)}</p></div><span class="p4-go">자세히 보기${ic('arrow', 22, 2)}</span></a>`).join('')}</div><a class="p4-b line p4-all" href="#courses">강좌 전체 보기${ic('arrow', 22, 2)}</a></div>`); };
   /* 일자리센터: 상담부터 취업까지 단계 */
   SEC['p4-flow'] = (x, s) => { const d = x.data || {}; const C = (d.cols || []).filter(c => c && c[0]).slice(0, 4); if (!C.length) return empty(x);
     return sec(x, s, 'flow', `<div class="p4w">${head(d)}<ol class="p4-fl n${C.length}">${C.map((c, i) => `<li><span class="p4-n">${i + 1}</span><h3>${E(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}</li>`).join('')}</ol></div>`); };
   /* 일자리센터: 넓은 과정 카드(실제 과정) */
   SEC['p4-wide'] = (x, s) => { const d = x.data || {}; const L = list(4); if (!L.length) return empty(x);
-    return sec(x, s, 'wide', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">교육 전체 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-wg n${L.length}">${L.map((c, i) => `<a class="p4-wc" ${aA(cH(c))}>${img(clsP(c, i, ['cor-06', 'lap-03', 'doc-01', 'log-01']))}<div class="p4-wb"><p class="p4-k">${E(c.kind === 'episode' ? '집합 교육' : '온라인 교육')}${hrs(c) ? ' · ' + E(hrs(c)) : ''}</p><h3>${E(c.name)}</h3><p>${E([whenL(c), priceL(c)].join(' · '))}</p><span class="p4-go">과정 보기${ic('arrow', 18, 2)}</span></div></a>`).join('')}</div></div>`); };
+    return sec(x, s, 'wide', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">교육 전체 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-wg p4-scr n${L.length}">${L.map((c, i) => `<a class="p4-wc" ${aA(cH(c))}>${img(clsP(c, i, ['cor-06', 'lap-03', 'doc-01', 'log-01']))}<div class="p4-wb"><p class="p4-k">${E(c.kind === 'episode' ? '집합 교육' : '온라인 교육')}${hrs(c) ? ' · ' + E(hrs(c)) : ''}</p><h3>${E(c.name)}</h3><p>${bdg(c)} ${E([whenL(c), priceL(c)].join(' · '))}</p><span class="p4-go">과정 보기${ic('arrow', 18, 2)}</span></div></a>`).join('')}</div></div>`); };
   /* 일자리센터: 큰 사진 위 한 문장 + 상담 버튼(숫자 없음) */
   SEC['p4-pull'] = (x, s) => { const d = x.data || {}; const p = slotP(s, 'about', null, 'shk-01'); const tel = telOf();
     return sec(x, s, 'pull', `${img(p, 'p4-bg')}<div class="p4-in"><div class="p4w"><h2>${ttl(d, '상담부터\n시작해요.')}</h2>${d.sub ? `<p>${E(d.sub)}</p>` : ''}<div class="p4-cta">${btn('wh', d.cta || '상담 문의하기', href(d.link, '#comm'), 1)}${tel ? `<a class="p4-b ol" href="tel:${E(tel)}">${ic('phone', 20, 2)}${E(tel)}</a>` : ''}</div></div></div>`); };
   /* 박물관: 전시 명판형 프로그램(실제 강좌) */
   SEC['p4-exhibit'] = (x, s) => { const d = x.data || {}; const L = list(3); if (!L.length) return empty(x);
-    return sec(x, s, 'exhibit', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">프로그램 전체 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-ex n${L.length}">${L.map((c, i) => `<a class="p4-xi${i ? '' : ' p4-lg'}" ${aA(cH(c))}>${img(clsP(c, i, ['art-06', 'pho-02', 'lib-06']))}<div class="p4-lb"><p class="p4-no">No. ${String(i + 1).padStart(2, '0')}</p><h3>${E(c.name)}</h3><dl><div><dt>방식</dt><dd>${E(c.kind === 'episode' ? '교육실 현장' : '온라인')}</dd></div><div><dt>일정</dt><dd>${E(whenL(c))}</dd></div><div><dt>참가비</dt><dd>${E(priceL(c))}</dd></div></dl></div></a>`).join('')}</div></div>`); };
+    return sec(x, s, 'exhibit', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">프로그램 전체 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-ex p4-scr n${L.length}">${L.map((c, i) => `<a class="p4-xi${i ? '' : ' p4-lg'}" ${aA(cH(c))}>${img(clsP(c, i, ['art-06', 'pho-02', 'art-02']))}<div class="p4-lb"><p class="p4-no">No. ${String(i + 1).padStart(2, '0')} ${bdg(c)}</p><h3>${E(c.name)}</h3><dl><div><dt>방식</dt><dd>${E(c.kind === 'episode' ? '교육실 현장' : '온라인')}</dd></div><div><dt>일정</dt><dd>${E(whenL(c))}</dd></div><div><dt>참가비</dt><dd>${E(priceL(c))}</dd></div></dl></div></a>`).join('')}</div></div>`); };
+  /* 경제진흥원: 사업 공고(실제 공지) */
+  SEC['p4-ann'] = (x, s) => { const d = x.data || {}; const N = NT(3); if (!N.length) return empty(x, '공지에 사업 공고를 올리면 최근 3건이 여기에 보여요.');
+    return sec(x, s, 'ann', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#notice">공고 전체 보기 ${ic('arrow', 20, 2)}</a></div>${ntcList(N, '#notice')}</div>`); };
+  /* 경제진흥원: 지원 대상별 갈래(편집 문구) — cols = [대상, 설명, 링크] */
+  SEC['p4-tiers'] = (x, s) => { const d = x.data || {}; const C = (d.cols || []).filter(c => c && c[0]).slice(0, 3); if (!C.length) return empty(x);
+    return sec(x, s, 'tiers', `<div class="p4w">${head(d)}<div class="p4-tz n${C.length}">${C.map((c, i) => `<a class="p4-ti t${i}" ${aA(href(c[2], '#courses'))}><span class="p4-no">${String(i + 1).padStart(2, '0')}</span><h3>${E(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}<span class="p4-go">교육 보기 ${ic('arrow', 18, 2)}</span></a>`).join('')}</div></div>`); };
+  /* 정보 · 산업진흥원: 고정폭 번호 과정 카드(실제 과정) */
+  SEC['p4-code'] = (x, s) => { const d = x.data || {}; const L = list(6); if (!L.length) return empty(x);
+    return sec(x, s, 'code', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">과정 전체 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-cg n${Math.min(L.length, 3)}">${L.map((c, i) => `<a class="p4-cc" ${aA(cH(c))}><p class="p4-id">#${String(i + 1).padStart(2, '0')}<span>${E(c.kind === 'episode' ? 'OFFLINE' : 'ONLINE')}</span></p><h3>${E(c.name)}</h3><p>${E([hrs(c), whenL(c)].filter(Boolean).join(' · '))}</p><p class="p4-pr">${E(priceL(c))} ${bdg(c)}</p></a>`).join('')}</div></div>`); };
+  /* 정보 · 산업진흥원: 두 대상(청년 인재 · 재직자) — cols = [대상, 설명, 링크, 버튼] */
+  SEC['p4-dual'] = (x, s) => { const d = x.data || {}; const C = (d.cols || []).filter(c => c && c[0]).slice(0, 2); if (!C.length) return empty(x);
+    return sec(x, s, 'dual', `<div class="p4w">${head(d)}<div class="p4-du">${C.map((c, i) => `<a class="p4-dc d${i}" ${aA(href(c[2], '#courses'))}><p class="p4-id">${i ? 'FOR_WORKERS' : 'FOR_TALENT'}</p><h3>${NL(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}<span class="p4-go">${E(c[3] || '과정 보기')}${ic('arrow', 18, 2)}</span></a>`).join('')}</div></div>`); };
+  /* 민간 협회: 회원 혜택(편집 문구) — cols = [혜택, 설명] */
+  SEC['p4-member'] = (x, s) => { const d = x.data || {}; const C = (d.cols || []).filter(c => c && c[0]).slice(0, 3); if (!C.length) return empty(x);
+    return sec(x, s, 'member', `<div class="p4w p4-mg"><div>${head(d)}<div class="p4-cta">${btn('pri', d.cta || '회원 로그인', href(d.link, '#login'), 1)}${btn('line', d.cta2 || '회원 가입', href(d.link2, '#join'), 0)}</div></div><ul class="p4-bn">${C.map((c, i) => `<li><span class="p4-no">${String(i + 1).padStart(2, '0')}</span><div><h3>${E(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}</div></li>`).join('')}</ul></div>`); };
+  /* 민간 협회: 입장권 같은 세미나 · 교육 일정(실제 과정) */
+  SEC['p4-ticket'] = (x, s) => { const d = x.data || {}; const L = list(4); if (!L.length) return empty(x); const t = tday();
+    return sec(x, s, 'ticket', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#cal">교육 일정 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-tk">${L.map(c => { const sd = okD(c.start) && days(t, c.start) > 0 ? c.start : okD(c.end) ? c.end : ''; return `<a class="p4-tc" ${aA(cH(c))}><div class="p4-stub">${sd ? `<b>${E(String(+sd.slice(8, 10)))}</b><span>${E(+sd.slice(5, 7) + '월')} · ${E(sd === c.start ? '시작' : '마감')}</span>` : '<b>상시</b><span>온라인</span>'}</div><div class="p4-tb"><p class="p4-k">${E(c.kind === 'episode' ? '세미나 · 집합 교육' : '온라인 교육')} ${bdg(c)}</p><h3>${E(c.name)}</h3><p>${E([hrs(c), priceL(c)].filter(Boolean).join(' · '))}</p></div><span class="p4-go">${ic('arrow', 22, 2)}</span></a>`; }).join('')}</div></div>`); };
+  /* 위탁운영: 사업 개요(운영자 입력) — cols = [항목, 내용] */
+  SEC['p4-overview'] = (x, s) => { const d = x.data || {}; const C = (d.cols || []).filter(c => c && c[0] && c[1]).slice(0, 6); if (!C.length) return empty(x);
+    return sec(x, s, 'overview', `<div class="p4w p4-ovg"><div>${head(d)}</div><dl class="p4-ov n${C.length}">${C.map(c => `<div><dt>${E(c[0])}</dt><dd>${NL(c[1])}</dd></div>`).join('')}</dl></div>`); };
+  /* 위탁운영: 모집 공고 띠(실제 개강일 · 열린 과정 수) */
+  SEC['p4-recruit'] = (x, s) => { const d = x.data || {}; const L = list(20); if (!L.length) return empty(x); const nx = L.filter(c => okD(c.start) && days(tday(), c.start) >= 0).sort((a, b) => a.start.localeCompare(b.start))[0];
+    return sec(x, s, 'recruit', `<div class="p4w p4-rg"><p class="p4-st"><i aria-hidden="true"></i>${E(d.eyebrow || '모집 중')}</p><div><b>${E(d.title || (nx ? `${mdd(nx.start)} 첫 교육 시작` : `지금 신청할 수 있는 과정 ${L.length}개`))}</b><p>${E(d.sub || '모집 인원이 차면 일찍 마감될 수 있어요.')}</p></div><a class="p4-b pri" href="#courses">${E(d.cta || '수강 신청하기')}${ic('arrow', 20, 2)}</a></div>`); };
+  /* 위탁운영: 운영 방식별 과정(실제 과정 — 온라인 · 오프라인) */
+  SEC['p4-mode'] = (x, s) => { const d = x.data || {}; const L = list(12); if (!L.length) return empty(x); const on = L.filter(c => c.kind !== 'episode'), off = L.filter(c => c.kind === 'episode');
+    const G = [['온라인', '언제 어디서나 영상으로 들어요.', on], ['오프라인', '교육장에서 강사와 함께 실습해요.', off]].filter(g => g[2].length);
+    return sec(x, s, 'mode', `<div class="p4w"><div class="p4-sh"><div>${head(d)}</div><a class="p4-more" href="#courses">과정 전체 보기 ${ic('arrow', 20, 2)}</a></div><div class="p4-mg2 n${G.length}">${G.map((g, k) => `<div class="p4-mc m${k}"><div class="p4-mh"><h3>${E(g[0])}</h3><p>${E(g[1])}</p><span class="p4-cnt">${g[2].length}개 과정</span></div><ul>${g[2].slice(0, 4).map(c => `<li><a ${aA(cH(c))}><b>${E(c.name)}</b><span>${bdg(c)} ${E([hrs(c), whenL(c)].filter(Boolean).join(' · '))}</span>${ic('chev', 18, 2)}</a></li>`).join('')}</ul></div>`).join('')}</div></div>`); };
+  /* 위탁운영: 출결 · 수료 기준(운영자 입력) — cols = [기준, 값, 설명] */
+  SEC['p4-rule'] = (x, s) => { const d = x.data || {}; const C = (d.cols || []).filter(c => c && c[0]).slice(0, 4); if (!C.length) return empty(x);
+    return sec(x, s, 'rule', `<div class="p4w">${head(d)}<div class="p4-rl n${C.length}">${C.map(c => `<div><p class="p4-k">${E(c[0])}</p>${c[1] ? `<b>${E(c[1])}</b>` : ''}${c[2] ? `<p>${E(c[2])}</p>` : ''}</div>`).join('')}</div></div>`); };
+  /* 공공 B: 담당 부서 연락처 표 — cols = [부서, 담당 업무, 전화]. 없으면 설정 › 바닥글 대표번호 한 줄, 그것도 없으면 숨김 */
+  SEC['p4-dept'] = (x, s) => { const d = x.data || {}; let R = (d.cols || []).filter(c => c && c[0] && c[2]).slice(0, 8); const tel = telOf(); if (!R.length && tel) R = [[d.unit || '교육 운영 담당', d.task || '교육 신청 · 수강 · 수료 문의', tel]];
+    if (!R.length) return empty(x, '설정 › 바닥글에 대표번호를 넣거나 부서 · 담당 업무 · 전화를 적으면 연락처 표가 보여요.'); const hr = String(ft().hours || '').trim();
+    return sec(x, s, 'dept', `<div class="p4w p4-dg2"><div>${head(d)}${hr ? `<p class="p4-hr">운영 시간 ${E(hr)}</p>` : ''}</div><table class="p4-tbl"><caption>담당 부서 연락처</caption><thead><tr><th scope="col">부서</th><th scope="col">담당 업무</th><th scope="col">전화</th></tr></thead><tbody>${R.map(r => { const t = String(r[2]).replace(/[^\d-]/g, ''); return `<tr><th scope="row">${E(r[0])}</th><td>${E(r[1] || '')}</td><td>${t ? `<a href="tel:${E(t)}">${E(r[2])}</a>` : E(r[2])}</td></tr>`; }).join('')}</tbody></table></div>`); };
   /* 전통 관공서: 교육 이념 3 */
   SEC['p4-vals'] = (x, s) => { const d = x.data || {}; const C = (d.cols || []).filter(c => c && c[0]).slice(0, 3); const HN = ['一', '二', '三'];
     return sec(x, s, 'vals', `<div class="p4w p4-c">${d.eyebrow ? `<p class="p4-ey"><span>${E(d.eyebrow)}</span></p>` : ''}<h2 class="p4-h2">${ttl(d)}</h2><div class="p4-vg n${C.length}">${C.map((c, i) => `<div><p class="p4-hn" aria-hidden="true">${HN[i]}</p><h3>${E(c[0])}</h3>${c[1] ? `<p>${E(c[1])}</p>` : ''}</div>`).join('')}</div></div>`); };
@@ -276,16 +356,40 @@
 .p4-emp{padding:32px 0!important}.p4-emp p{font-size:14px;color:#6B7280}
 @media (max-width:720px){.p4{padding:88px 0;font-size:16px}.p4 .p4w{padding:0 20px}.p4 .p4-h2{font-size:32px;line-height:1.22}.p4 .p4-sd{font-size:16px}.p4 .p4-cta{flex-direction:column}.p4 .p4-cta .p4-b{width:100%}.p4 a{min-height:44px}.p4 .p4-more{min-height:44px}.p4 p a{display:inline-flex;align-items:center}.p4 .p4-sg2{grid-template-columns:1fr;gap:40px}.p4 .p4-sh{flex-direction:column;align-items:flex-start;gap:16px;margin-bottom:36px}.p4.p4-quote blockquote{font-size:28px}}
 `;
+    /* 공공 B 공통: 접수 상태 배지 · 공지(날짜 열) · 담당 부서 연락처 표 · 보기 설정(글자 크게 · 고대비) · 휴대폰 가로 넘김 */
+    x += `
+.p4 .p4-sb{display:inline-flex;align-items:center;font-size:13px;font-weight:800;line-height:1.3;padding:3px 9px;border-radius:${Math.min(D.br, 999)}px;white-space:nowrap;vertical-align:1px;letter-spacing:-.01em;font-family:Pretendard,'Pretendard Variable',sans-serif;font-style:normal}
+.p4 .p4-sb.so{background:${al(a, .12)};color:${fit(a, '#ffffff', 4.6)}}.p4 .p4-sb.sn{background:#C2410C;color:#fff}.p4 .p4-sb.sw{background:#E6EEFB;color:#1E3A8A}.p4 .p4-sb.sx{background:#E5E7EB;color:#374151}.p4 .p4-sb.sp{background:${al(D.ink, .08)};color:${fit(D.ink, '#ffffff', 4.6)}}
+.p4 .p4-bd{margin-top:10px}.p4 .p4-tag.x{background:#E5E7EB;color:#374151}
+.p4 .p4-nh{display:flex;justify-content:space-between;align-items:end;gap:16px}
+.p4 .p4-nl{margin-top:24px;border-top:1.5px solid var(--ink)}.p4 .p4-nl a{display:grid;grid-template-columns:88px minmax(0,1fr) 20px;align-items:center;gap:18px;min-height:72px;padding:12px 4px;border-bottom:1px solid var(--ln)}
+.p4 .p4-nl time{display:flex;flex-direction:column;font-size:19px;font-weight:800;line-height:1.2;color:var(--at);font-variant-numeric:tabular-nums}.p4 .p4-nl time small{font-size:13px;font-weight:600;color:var(--mu)}.p4 .p4-nl span{font-size:17px;font-weight:600;line-height:1.5}.p4 .p4-nl a:hover span{text-decoration:underline;text-underline-offset:4px}
+.p4 .p4-pin{display:inline-block;margin-right:8px;padding:2px 8px;border-radius:6px;background:var(--a);color:var(--on);font-style:normal;font-size:13px;font-weight:800;vertical-align:2px}.p4 .p4-new{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:8px;border-radius:50%;background:#C2410C;color:#fff;font-style:normal;font-size:13px;font-weight:800;vertical-align:2px}
+.p4.p4-dept{background:var(--alt)}.p4 .p4-dg2{display:grid;grid-template-columns:.8fr 1.4fr;gap:64px;align-items:start}.p4 .p4-hr{margin-top:20px;font-size:16px;color:var(--mu)}
+.p4 .p4-tbl{width:100%;border-collapse:collapse;background:${dark ? D.bg : '#fff'};border-top:2px solid var(--ink);font-size:16px}.p4 .p4-tbl caption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.p4 .p4-tbl :is(th,td){padding:18px 20px;text-align:left;border-bottom:1px solid var(--ln);vertical-align:middle}.p4 .p4-tbl thead th{font-size:14px;font-weight:800;color:var(--mu);background:${al(D.ink, .04)}}.p4 .p4-tbl tbody th{font-weight:800}.p4 .p4-tbl a{font-weight:800;color:var(--at);font-variant-numeric:tabular-nums;white-space:nowrap}
+.p4-ax{position:absolute;top:14px;right:max(24px,calc((100% - 1200px)/2 + 40px));z-index:6;display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0;padding:0;font-family:Pretendard,'Pretendard Variable','Apple SD Gothic Neo',sans-serif;font-size:14px;color:#3F4756;word-break:keep-all}.p4-ax>span{font-weight:700;margin-right:4px;background:rgba(255,255,255,.85);padding:2px 8px;border-radius:6px}
+.p4-ax details{display:inline-block}.p4-ax summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border:1px solid rgba(0,0,0,.2);border-radius:999px;font-weight:700;background:#fff;color:#111}.p4-ax summary::-webkit-details-marker{display:none}.p4-ax summary:focus-visible{outline:3px solid #2563EB;outline-offset:2px}
+.p4-ax .on{display:none}.p4-ax details[open] .on{display:inline}.p4-ax details[open] .off{display:none}.p4-ax details[open] summary{background:#111;color:#fff;border-color:#111}
+:is(body,.smr):has(.p4-ax-lg[open]) section.p4{zoom:1.15}
+:is(body,.smr):has(.p4-ax-hc[open]) :is(section.p4,.gh,.gf,.p4-ax),:is(body,.smr):has(.p4-ax-hc[open]) :is(section.p4,.gh,.gf) *:not(img):not(svg):not(path):not(a):not(a *){background-color:#000!important;background-image:none!important;color:#fff!important;border-color:#fff!important;box-shadow:none!important;text-shadow:none!important;-webkit-text-stroke:0!important}
+:is(body,.smr):has(.p4-ax-hc[open]) :is(section.p4,.gh,.gf) a{color:#FFE600!important;background-color:#000!important;background-image:none!important;border-color:#FFE600!important;box-shadow:none!important;text-decoration:underline!important}:is(body,.smr):has(.p4-ax-hc[open]) :is(section.p4,.gh,.gf) a *:not(img){color:#FFE600!important;background-color:transparent!important;background-image:none!important;border-color:#FFE600!important}:is(body,.smr):has(.p4-ax-hc[open]) section.p4 :is(.p4-b,.p4-sb,.p4-tag){outline:2px solid #FFE600;outline-offset:2px}
+:is(body,.smr):has(.p4-ax-hc[open]) section.p4::after,:is(body,.smr):has(.p4-ax-hc[open]) section.p4 ::before,:is(body,.smr):has(.p4-ax-hc[open]) section.p4 ::after{background:none!important;opacity:1}:is(body,.smr):has(.p4-ax-hc[open]) section.p4 svg{color:#FFE600!important;stroke:currentColor}
+@media (max-width:720px){.p4 .p4-nl a{grid-template-columns:64px minmax(0,1fr) 18px;gap:14px;min-height:64px}.p4 .p4-nl time{font-size:16px}.p4 .p4-nl span{font-size:16px}
+.p4 .p4-dg2{grid-template-columns:1fr;gap:28px}.p4 .p4-tbl,.p4 .p4-tbl tbody,.p4 .p4-tbl tr{display:block}.p4 .p4-tbl thead{display:none}.p4 .p4-tbl tr{padding:16px 4px;border-bottom:1px solid var(--ln)}.p4 .p4-tbl :is(th,td){display:block;padding:2px 0;border:0}.p4 .p4-tbl tbody th{font-size:17px}.p4 .p4-tbl td{font-size:15px;color:var(--mu)}.p4 .p4-tbl td a{display:inline-flex;align-items:center;min-height:44px;font-size:18px}
+.p4-ax{position:relative;top:auto;right:auto;order:-1;padding:8px 20px 0;gap:6px;font-size:13px}.p4-ax>span{display:none}.p4-ax summary{min-height:44px;padding:0 14px;font-size:14px}
+.p4 .p4-scr{display:grid!important;grid-auto-flow:column;grid-auto-columns:78%;grid-template-columns:none!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px!important;margin:0 -20px;padding:0 20px 8px;scrollbar-width:none}.p4 .p4-scr::-webkit-scrollbar{display:none}.p4 .p4-scr>*{scroll-snap-align:start;grid-row:auto!important;grid-column:auto!important;min-width:0}}
+`;
     /* 공통(새 7종): 숫자 · 날짜 목록 · 문의 · 두 갈래 · 마지막 띠 기본형 — 테마 블록이 덮어쓴다 */
     if (!['pbcivic', 'pbjournal', 'pbposter'].includes(th)) x += `
-.p4 .p4-ls{margin-top:48px;border-top:2px solid var(--ink)}.p4 .p4-rw{display:grid;grid-template-columns:140px 1fr 200px 110px;gap:32px;align-items:center;padding:30px 0;border-bottom:1px solid var(--ln)}
+.p4 .p4-ls{margin-top:48px;border-top:2px solid var(--ink)}.p4 .p4-rw{display:grid;grid-template-columns:140px 1fr 200px auto;gap:32px;align-items:center;padding:30px 0;border-bottom:1px solid var(--ln)}
 .p4 .p4-dt b{display:block;font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}.p4 .p4-dt small{font-size:14px;color:var(--mu)}
 .p4 .p4-rw h3{font-size:23px;font-weight:700;letter-spacing:-.03em;line-height:1.35}.p4 .p4-rw p{font-size:15px;color:var(--mu);margin-top:6px}.p4 .p4-mt{font-size:15px;color:var(--mu)}
 .p4 .p4-tag{justify-self:end;font-size:14px;font-weight:800;padding:6px 12px;border-radius:${Math.min(D.br, 999)}px;background:${al(a, .12)};color:var(--at);white-space:nowrap}.p4 .p4-tag.n{background:var(--a);color:var(--on)}
 .p4.p4-rows .p4-more{margin-top:36px}
 .p4 .p4-ft{font-size:15px;font-weight:700;margin-bottom:48px;opacity:.85}.p4 .p4-fg{display:grid;grid-template-columns:repeat(3,1fr);align-items:end}.p4 .p4-fg.n2{grid-template-columns:repeat(2,1fr)}.p4 .p4-fg.n1{grid-template-columns:1fr}
 .p4 .p4-fk{padding:0 40px;border-left:1px solid var(--ln)}.p4 .p4-fk:first-child{padding-left:0;border-left:0}.p4 .p4-fk .p4-n{font-size:88px;font-weight:800;letter-spacing:-.05em;line-height:1;font-variant-numeric:tabular-nums}.p4 .p4-fk small{font-size:30px;margin-left:4px;color:var(--at)}.p4 .p4-fk p{margin-top:16px;font-size:17px;color:var(--mu)}
-.p4 .p4-hg2{display:grid;grid-template-columns:1.2fr 1fr;gap:72px}.p4 .p4-nt{margin-top:28px}.p4 .p4-nt li{display:flex;justify-content:space-between;gap:24px;padding:20px 0;border-bottom:1px solid var(--ln);font-size:17px}.p4 .p4-nt li:first-child{border-top:2px solid var(--ink)}.p4 .p4-nt a{font-weight:600}.p4 .p4-nt time{color:var(--mu);font-size:15px;white-space:nowrap}
+.p4 .p4-hg2{display:grid;grid-template-columns:1.2fr 1fr;gap:72px}.p4 .p4-hg2.p4-hg1{grid-template-columns:minmax(0,760px);justify-content:center}.p4 .p4-nt{margin-top:28px}.p4 .p4-nt li{display:flex;justify-content:space-between;gap:24px;padding:20px 0;border-bottom:1px solid var(--ln);font-size:17px}.p4 .p4-nt li:first-child{border-top:2px solid var(--ink)}.p4 .p4-nt a{font-weight:600}.p4 .p4-nt time{color:var(--mu);font-size:15px;white-space:nowrap}
 .p4 .p4-none{margin-top:28px;padding:28px 0;border-top:2px solid var(--ink);color:var(--mu)}.p4 .p4-none a{color:var(--at);font-weight:700;text-decoration:underline}
 .p4 .p4-call{background:var(--alt);padding:44px;border-top:6px solid var(--a)}.p4 .p4-call h3{font-size:26px;font-weight:800;letter-spacing:-.03em}.p4 .p4-tel{display:block;font-size:40px;font-weight:800;letter-spacing:-.03em;color:var(--at);margin-top:18px}.p4 .p4-call p{color:var(--mu);font-size:16px;margin-top:8px}.p4 .p4-call .p4-b{margin-top:28px}.p4 .p4-b.sec{box-shadow:inset 0 0 0 2px var(--at);color:var(--at)}
 .p4 .p4-dg{display:grid;grid-template-columns:1fr 1fr;gap:24px}.p4 .p4-pn{display:flex;flex-direction:column;justify-content:space-between;gap:48px;min-height:340px;padding:52px;border-radius:${D.r}px;background:var(--alt)}.p4 .p4-pn.p1{background:var(--a);color:var(--on)}
@@ -313,14 +417,14 @@
 .pbcivic .p4-phw{position:relative;padding:0 0 32px 32px}.pbcivic .p4-phw:before{content:"";position:absolute;left:0;bottom:0;width:62%;height:72%;background:var(--a)}.pbcivic .p4-phw figure{position:relative;aspect-ratio:4/4.7}
 .pbcivic.p4-svc{background:#F3F5F8;padding:110px 0}.pbcivic .p4-h2{font-size:44px;line-height:1.2}.pbcivic .p4-sv{margin-top:44px;display:grid;grid-template-columns:repeat(3,1fr);column-gap:48px}
 .pbcivic .p4-sv a{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:26px 0;border-top:1px solid #C6CDD7}.pbcivic .p4-sv b{font-size:21px;font-weight:700;letter-spacing:-.03em;color:var(--at);text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px;display:block}.pbcivic .p4-sv span{display:block;font-size:15px;color:var(--mu);margin-top:6px}.pbcivic .p4-sv svg{color:var(--at)}
-.pbcivic .p4-ls{margin-top:48px;border-top:2px solid ${D.ink}}.pbcivic .p4-rw{display:grid;grid-template-columns:150px 1fr 200px 120px;gap:32px;align-items:center;padding:32px 0;border-bottom:1px solid #D5DAE1}
+.pbcivic .p4-ls{margin-top:48px;border-top:2px solid ${D.ink}}.pbcivic .p4-rw{display:grid;grid-template-columns:150px 1fr 200px auto;gap:32px;align-items:center;padding:32px 0;border-bottom:1px solid #D5DAE1}
 .pbcivic .p4-dt b{display:block;font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}.pbcivic .p4-dt small{font-size:14px;color:#646C7A}
 .pbcivic .p4-rw h3{font-size:23px;font-weight:700;letter-spacing:-.03em;line-height:1.35}.pbcivic .p4-rw p{font-size:15px;color:var(--mu);margin-top:6px}.pbcivic .p4-mt{font-size:15px;color:var(--mu)}
 .pbcivic .p4-tag{justify-self:end;font-size:14px;font-weight:800;padding:6px 12px;border-radius:4px;background:#FFF1C9;color:#6E4C00;white-space:nowrap}.pbcivic .p4-tag.n{background:${mix(a, '#ffffff', .9)};color:var(--at)}
 .pbcivic.p4-rows .p4-more{margin-top:36px;text-decoration:underline;text-underline-offset:4px}
 .pbcivic.p4-figs{background:var(--a);color:var(--on);padding:120px 0}.pbcivic .p4-ft{font-size:15px;font-weight:700;color:${onA === '#FFFFFF' ? pt : D.ink};margin-bottom:56px}.pbcivic .p4-fg{display:grid;grid-template-columns:repeat(3,1fr)}.pbcivic .p4-fg.n2{grid-template-columns:repeat(2,1fr)}.pbcivic .p4-fg.n1{grid-template-columns:1fr}
 .pbcivic .p4-fk{padding:0 40px;border-left:1px solid ${al(onA, .22)}}.pbcivic .p4-fk:first-child{padding-left:0;border-left:0}.pbcivic .p4-fk .p4-n{font-size:84px;font-weight:800;letter-spacing:-.05em;line-height:1;font-variant-numeric:tabular-nums}.pbcivic .p4-fk small{font-size:30px;margin-left:4px;color:${onA === '#FFFFFF' ? pt : D.ink}}.pbcivic .p4-fk p{margin-top:16px;font-size:17px;opacity:.82}
-.pbcivic.p4-help{background:#F3F5F8;padding:110px 0}.pbcivic .p4-hg2{display:grid;grid-template-columns:1.2fr 1fr;gap:72px}.pbcivic .p4-nt{margin-top:28px}.pbcivic .p4-nt li{display:flex;justify-content:space-between;gap:24px;padding:20px 0;border-bottom:1px solid #C6CDD7;font-size:17px}.pbcivic .p4-nt li:first-child{border-top:2px solid ${D.ink}}.pbcivic .p4-nt a{font-weight:600}.pbcivic .p4-nt time{color:#646C7A;font-size:15px;white-space:nowrap}
+.pbcivic.p4-help{background:#F3F5F8;padding:110px 0}.pbcivic .p4-hg2{display:grid;grid-template-columns:1.2fr 1fr;gap:72px}.pbcivic .p4-hg2.p4-hg1{grid-template-columns:minmax(0,760px);justify-content:center}.pbcivic .p4-nt{margin-top:28px}.pbcivic .p4-nt li{display:flex;justify-content:space-between;gap:24px;padding:20px 0;border-bottom:1px solid #C6CDD7;font-size:17px}.pbcivic .p4-nt li:first-child{border-top:2px solid ${D.ink}}.pbcivic .p4-nt a{font-weight:600}.pbcivic .p4-nt time{color:#646C7A;font-size:15px;white-space:nowrap}
 .pbcivic .p4-none{margin-top:28px;padding:28px 0;border-top:2px solid ${D.ink};color:var(--mu)}.pbcivic .p4-none a{color:var(--at);font-weight:700;text-decoration:underline}
 .pbcivic .p4-call{background:#fff;padding:44px;border-top:6px solid var(--a)}.pbcivic .p4-call h3{font-size:26px;font-weight:800;letter-spacing:-.03em}.pbcivic .p4-tel{display:block;font-size:40px;font-weight:800;letter-spacing:-.03em;color:var(--at);margin-top:18px}.pbcivic .p4-call p{color:var(--mu);font-size:16px;margin-top:8px}.pbcivic .p4-call .p4-b{margin-top:28px}
 @media (max-width:720px){.gh.hps-h:before{font-size:13px;line-height:36px;padding:0 20px}.pbcivic.p4-hero{padding:48px 0 72px}.pbcivic .p4-g{grid-template-columns:1fr;gap:48px}.pbcivic.p4-hero h1{font-size:40px;line-height:1.22}.pbcivic .p4-lead{font-size:17px;margin-top:20px}.pbcivic.p4-hero .p4-cta{margin-top:32px}.pbcivic .p4-b{height:56px}
@@ -432,11 +536,11 @@
 .pblibrary .p4-lc h3{font-size:24px;line-height:1.35;font-weight:800;letter-spacing:-.04em;margin:20px 0 22px;flex:1}
 .pblibrary .p4-lc dl div{display:grid;grid-template-columns:64px 1fr;gap:8px;padding:10px 0;border-top:1px dashed ${al(D.ink, .22)};font-size:15px}.pblibrary .p4-lc dt{color:var(--mu)}.pblibrary .p4-lc dd{font-weight:600}
 .pblibrary .p4-go{display:inline-flex;align-items:center;gap:6px;margin-top:18px;font-weight:700;color:var(--at);font-size:15px}
-.pblibrary .p4-rw{grid-template-columns:120px 1fr 180px 110px}.pblibrary .p4-dt b{color:var(--at)}.pblibrary .p4-tag{background:${al(pt, .2)};color:${fit('#7A5800', D.bg, 4.6)}}.pblibrary .p4-tag.n{background:${a};color:${onA}}
+.pblibrary .p4-rw{grid-template-columns:120px 1fr 180px auto}.pblibrary .p4-dt b{color:var(--at)}.pblibrary .p4-tag{background:${al(pt, .2)};color:${fit('#7A5800', D.bg, 4.6)}}.pblibrary .p4-tag.n{background:${a};color:${onA}}
 .pblibrary.p4-story{background:${D.alt}}.pblibrary .p4-sg2>figure{aspect-ratio:4/4.6;border-radius:24px}.pblibrary .p4-steps .p4-n{font-size:15px}
 .pblibrary.p4-quote{text-align:center}.pblibrary.p4-quote blockquote{margin:0 auto;font-weight:700;font-size:44px}.pblibrary .p4-who i{background:${a};color:${onA}}
 .pblibrary.p4-fin{border-radius:40px 40px 0 0}
-@media (max-width:720px){.pblibrary.p4-hero{padding:32px 0 72px}.pblibrary .p4-g{grid-template-columns:1fr;gap:44px}.pblibrary .p4-arch{margin:0 12px 0 24px}.pblibrary .p4-arch figure{aspect-ratio:4/4.2}.pblibrary.p4-hero h1{font-size:42px;line-height:1.18}.pblibrary .p4-lead{font-size:17px;margin-top:20px}.pblibrary.p4-hero .p4-cta{margin-top:32px}
+@media (max-width:720px){.pblibrary.p4-hero{padding:32px 0 72px}.pblibrary .p4-g{grid-template-columns:1fr;gap:44px}.pblibrary .p4-arch{margin:0 12px 0 24px}.pblibrary .p4-arch figure{aspect-ratio:4/2.9}.pblibrary.p4-hero h1{font-size:42px;line-height:1.18}.pblibrary .p4-lead{font-size:17px;margin-top:20px}.pblibrary.p4-hero .p4-cta{margin-top:32px}
 .pblibrary .p4-cards,.pblibrary .p4-cards.n3,.pblibrary .p4-cards.n2{grid-template-columns:1fr;gap:16px}.pblibrary .p4-lc{min-height:0}.pblibrary .p4-lc h3{font-size:21px;margin:16px 0}.pblibrary .p4-rw{grid-template-columns:72px 1fr}.pblibrary.p4-quote blockquote{font-size:26px}.pblibrary.p4-fin{border-radius:28px 28px 0 0}}
 `,
     /* 청소년: 보라 색면 · 스티커 */
@@ -560,29 +664,158 @@
 @media (max-width:720px){.pbheritage.p4-hero{padding:48px 0 72px}.pbheritage .p4-seal{width:60px;height:60px;font-size:28px;margin-bottom:26px}.pbheritage .p4-ey{font-size:13px;gap:12px;letter-spacing:.12em}.pbheritage .p4-ey:before,.pbheritage .p4-ey:after{width:28px}.pbheritage.p4-hero h1{font-size:38px;line-height:1.32}.pbheritage .p4-lead{font-size:17px;margin-top:20px}.pbheritage.p4-hero .p4-cta{margin-top:30px}
 .pbheritage .p4-pano{margin-top:48px;padding:6px}.pbheritage .p4-pano figure{aspect-ratio:4/3}.pbheritage .p4-h2{font-size:30px}.pbheritage .p4-vg{grid-template-columns:1fr;margin-top:40px}.pbheritage .p4-vg>div{padding:32px 8px;border-left:0;border-top:1px solid ${al(gd, .5)}}.pbheritage .p4-vg>div:first-child{border-top:0}.pbheritage .p4-hn{font-size:34px}
 .pbheritage .p4-sv{grid-template-columns:1fr;gap:10px;margin-top:28px}.pbheritage .p4-sv a{padding:20px}.pbheritage .p4-sv b{font-size:19px}.pbheritage .p4-fg h2{font-size:30px}}
+`; },
+    /* 경제진흥원: 트립틱 · 공고 목록 · 지원 대상 */
+    pbecon: ({ D, a, at, onA, pt }) => `
+.gh.hps-h{background:#fff!important;border-bottom:1px solid ${al(D.ink, .1)}!important;box-shadow:none!important}.gh .hps-cta{background:${a}!important;color:${onA}!important;border-radius:10px!important}
+.pbecon .p4-b{border-radius:10px;height:58px}.pbecon .p4-ey{color:var(--at);font-weight:800;display:inline-flex;align-items:center;gap:10px}.pbecon .p4-ey:before{content:"";width:18px;height:18px;border-radius:5px;background:${pt}}
+.pbecon.p4-hero{padding:80px 0 110px}.pbecon .p4-top{display:grid;grid-template-columns:1.25fr .85fr;gap:64px;align-items:end;margin-bottom:56px}
+.pbecon.p4-hero h1{font-size:80px;line-height:1.1;font-weight:800;letter-spacing:-.055em}.pbecon.p4-hero h1 em{font-style:normal;color:var(--at)}.pbecon .p4-lead{font-size:19px;color:var(--mu);margin-bottom:30px}
+.pbecon .p4-tri{position:relative;display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:16px;height:440px}.pbecon .p4-tri.n2{grid-template-columns:1.4fr 1fr}.pbecon .p4-tri.n1{grid-template-columns:1fr}.pbecon .p4-tri figure{height:100%;border-radius:18px}.pbecon .p4-t1{margin-top:48px}.pbecon .p4-t2{margin-bottom:48px}
+.pbecon .p4-badge{position:absolute;left:28px;bottom:-28px;background:${pt};color:${D.ink};font-weight:800;font-size:18px;line-height:1.35;padding:18px 24px;border-radius:14px;box-shadow:0 16px 30px -18px ${al(D.ink, .5)}}
+.pbecon .p4-h2{font-size:50px}.pbecon .p4-al{border-top:2px solid ${D.ink}}.pbecon .p4-al a{display:grid;grid-template-columns:96px 1fr auto 24px;gap:24px;align-items:center;padding:26px 8px;border-bottom:1px solid var(--ln);transition:background .2s}.pbecon .p4-al a:hover{background:var(--alt)}
+.pbecon .p4-al .p4-tg{font-size:14px;font-weight:800;text-align:center;padding:6px 0;border-radius:8px;background:${al(a, .1)};color:var(--at)}.pbecon .p4-al li:first-child .p4-tg{background:${pt};color:${D.ink}}.pbecon .p4-al b{font-size:21px;font-weight:700;letter-spacing:-.03em}.pbecon .p4-al time{font-size:15px;color:var(--mu);font-variant-numeric:tabular-nums}
+.pbecon.p4-tiers{background:var(--alt)}.pbecon .p4-tz{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:56px}.pbecon .p4-tz.n2{grid-template-columns:1fr 1fr}
+.pbecon .p4-ti{display:flex;flex-direction:column;background:#fff;border-radius:22px;padding:36px 32px 30px;min-height:300px;border-top:8px solid var(--a)}.pbecon .p4-ti.t1{border-top-color:${pt}}.pbecon .p4-ti.t2{border-top-color:${D.ink}}
+.pbecon .p4-ti .p4-no{font-size:15px;font-weight:800;color:var(--at)}.pbecon .p4-ti h3{font-size:28px;font-weight:800;letter-spacing:-.04em;margin-top:18px}.pbecon .p4-ti p{font-size:16px;color:var(--mu);margin-top:10px;flex:1}.pbecon .p4-go{display:inline-flex;align-items:center;gap:6px;margin-top:22px;font-weight:800;color:var(--at)}
+.pbecon .p4-rw{grid-template-columns:120px 1fr 190px auto}.pbecon .p4-dt b{color:var(--at)}.pbecon .p4-tag.n{background:${pt};color:${D.ink}}
+.pbecon.p4-quote blockquote{font-size:46px}.pbecon.p4-quote blockquote:after{content:"";display:block;width:56px;height:56px;border-radius:14px;background:${pt};margin-top:36px}.pbecon .p4-who i{background:${a};color:${onA}}
+.pbecon.p4-help{background:var(--alt)}.pbecon .p4-call{background:${a};color:${onA};border:0;border-radius:22px}.pbecon .p4-call :is(h3,.p4-tel,p){color:${onA}}.pbecon .p4-call .p4-b.sec{background:${pt};color:${D.ink};box-shadow:none}
+@media (max-width:720px){.pbecon.p4-hero{padding:40px 0 72px}.pbecon .p4-top{grid-template-columns:1fr;gap:20px;margin-bottom:36px}.pbecon.p4-hero h1{font-size:42px;line-height:1.16}.pbecon .p4-lead{font-size:17px;margin-bottom:24px}
+.pbecon .p4-tri{height:260px;gap:8px;grid-template-columns:1.3fr 1fr}.pbecon .p4-tri figure{border-radius:12px}.pbecon .p4-t2{display:none}.pbecon .p4-t1{margin-top:28px}.pbecon .p4-badge{left:12px;bottom:-22px;font-size:15px;padding:12px 16px}
+.pbecon .p4-h2{font-size:32px}.pbecon .p4-al a{grid-template-columns:72px 1fr;gap:6px 14px;padding:20px 0}.pbecon .p4-al b{font-size:17px}.pbecon .p4-al time{grid-column:2;font-size:14px}.pbecon .p4-al svg{display:none}
+.pbecon .p4-tz,.pbecon .p4-tz.n2{grid-template-columns:1fr;gap:14px;margin-top:32px}.pbecon .p4-ti{min-height:0;padding:28px 24px}.pbecon .p4-ti h3{font-size:23px}.pbecon .p4-rw{grid-template-columns:72px 1fr}.pbecon.p4-quote blockquote{font-size:28px}}
+`,
+    /* 정보 · 산업진흥원: 모눈 · 창 · 고정폭 */
+    pbdigital: ({ D, a, at, onA, pt }) => { const MONO = "'JetBrains Mono','SFMono-Regular',Menlo,Consolas,'Liberation Mono',monospace"; const grid = `background-image:linear-gradient(${al(a, .07)} 1px,transparent 1px),linear-gradient(90deg,${al(a, .07)} 1px,transparent 1px);background-size:40px 40px`; return `
+.gh.hps-h{background:${D.bg}!important;border-bottom:1px solid ${al(a, .15)}!important;box-shadow:none!important}.gh .hps-cta{background:${a}!important;color:${onA}!important;border-radius:8px!important}
+.pbdigital .p4-b{border-radius:8px;height:58px}.pbdigital .p4-b.line{box-shadow:inset 0 0 0 1.5px ${D.ink}}
+.pbdigital .p4-ey{font-family:${MONO};font-size:15px;color:var(--at);font-weight:700;display:flex;gap:10px;align-items:center}.pbdigital .p4-ey span{color:${fit(pt, D.bg, 3)}}
+.pbdigital.p4-hero{padding:96px 0 120px;${grid}}.pbdigital .p4-g{display:grid;grid-template-columns:1.1fr .9fr;gap:64px;align-items:center}
+.pbdigital.p4-hero h1{font-size:78px;line-height:1.08;font-weight:800;letter-spacing:-.06em}.pbdigital.p4-hero h1 mark{background:linear-gradient(transparent 62%,${al(pt, .55)} 62%);color:inherit;padding:0 .04em}
+.pbdigital .p4-lead{margin-top:30px;font-size:20px;color:var(--mu);max-width:520px}.pbdigital.p4-hero .p4-cta{margin-top:44px}
+.pbdigital .p4-win{background:#fff;border-radius:16px;box-shadow:0 2px 0 ${al(D.ink, .06)},0 40px 80px -36px ${al(a, .55)};overflow:hidden;transform:rotate(1.5deg);border:1px solid ${al(D.ink, .08)}}
+.pbdigital .p4-bar{display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;background:${D.ink};color:#C9CCE8;font-family:${MONO};font-size:13px}.pbdigital .p4-bar i{width:11px;height:11px;border-radius:50%;background:#FF5F57}.pbdigital .p4-bar i:nth-child(2){background:#FEBC2E}.pbdigital .p4-bar i:nth-child(3){background:#28C840}.pbdigital .p4-bar span{margin-left:10px;opacity:.8}
+.pbdigital .p4-win figure{aspect-ratio:4/3.4}
+.pbdigital .p4-h2{font-size:52px;letter-spacing:-.05em}
+.pbdigital.p4-dual{background:#fff}.pbdigital .p4-du{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:56px}.pbdigital .p4-dc{display:flex;flex-direction:column;min-height:340px;padding:40px;border-radius:20px;background:${D.bg};${grid}}.pbdigital .p4-dc.d1{background:${D.ink};color:#fff;background-image:none}
+.pbdigital .p4-id{font-family:${MONO};font-size:14px;font-weight:700;color:var(--at);display:flex;justify-content:space-between;gap:12px}.pbdigital .p4-dc.d1 .p4-id{color:${pt}}.pbdigital .p4-dc h3{font-size:38px;line-height:1.2;font-weight:800;letter-spacing:-.045em;margin-top:22px}.pbdigital .p4-dc p:not(.p4-id){font-size:17px;opacity:.8;margin-top:14px;flex:1}
+.pbdigital .p4-go{display:inline-flex;align-items:center;gap:8px;margin-top:24px;font-weight:800}
+.pbdigital .p4-cg{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.pbdigital .p4-cg.n2{grid-template-columns:1fr 1fr}.pbdigital .p4-cg.n1{grid-template-columns:1fr}
+.pbdigital .p4-cc{display:flex;flex-direction:column;background:#fff;border:1px solid ${al(D.ink, .1)};border-radius:16px;padding:28px 28px 24px;min-height:230px;transition:border-color .2s,transform .2s}.pbdigital .p4-cc:hover{border-color:${a};transform:translateY(-4px)}
+.pbdigital .p4-cc .p4-id span{color:var(--mu);font-weight:600}.pbdigital .p4-cc h3{font-size:22px;line-height:1.35;font-weight:800;letter-spacing:-.035em;margin-top:18px;flex:1}.pbdigital .p4-cc p:not(.p4-id){font-size:15px;color:var(--mu);margin-top:10px}.pbdigital .p4-pr{font-family:${MONO};font-weight:700;color:var(--at)!important}
+.pbdigital.p4-flow{background:${D.ink};color:#fff}.pbdigital.p4-flow .p4-ey{color:${pt}}.pbdigital.p4-flow .p4-sd{color:#B9BCD8}.pbdigital .p4-fl{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:56px}.pbdigital .p4-fl.n3{grid-template-columns:repeat(3,1fr)}.pbdigital .p4-fl.n2{grid-template-columns:1fr 1fr}
+.pbdigital .p4-fl li{border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:28px}.pbdigital .p4-fl .p4-n{font-family:${MONO};font-size:15px;font-weight:700;color:${pt}}.pbdigital .p4-fl .p4-n:before{content:"STEP_0"}.pbdigital .p4-fl h3{font-size:23px;font-weight:800;margin-top:16px}.pbdigital .p4-fl p{font-size:15px;color:#B9BCD8;margin-top:8px}
+.pbdigital.p4-quote blockquote{font-size:44px}.pbdigital.p4-quote blockquote:before{content:"// 수강생 한마디";display:block;font-family:${MONO};font-size:15px;color:var(--at);letter-spacing:0;font-weight:700;margin-bottom:24px}.pbdigital .p4-who i{background:${a};color:${onA}}
+.pbdigital.p4-fin{background:${a};${grid.split(al(a, .07)).join('rgba(255,255,255,.08)')}}.pbdigital.p4-fin .p4-b.wh{color:${D.ink}}
+@media (max-width:720px){.pbdigital.p4-hero{padding:44px 0 72px}.pbdigital .p4-g{grid-template-columns:1fr;gap:40px}.pbdigital.p4-hero h1{font-size:44px;line-height:1.14}.pbdigital .p4-lead{font-size:17px;margin-top:20px}.pbdigital.p4-hero .p4-cta{margin-top:30px}.pbdigital .p4-win{transform:none}
+.pbdigital .p4-h2{font-size:32px}.pbdigital .p4-du{grid-template-columns:1fr;gap:14px;margin-top:32px}.pbdigital .p4-dc{min-height:0;padding:28px 24px}.pbdigital .p4-dc h3{font-size:28px}
+.pbdigital .p4-cg,.pbdigital .p4-cg.n2{grid-template-columns:1fr;gap:12px}.pbdigital .p4-cc{min-height:0;padding:22px}.pbdigital .p4-cc h3{font-size:19px}.pbdigital .p4-fl,.pbdigital .p4-fl.n3{grid-template-columns:1fr;gap:12px;margin-top:32px}.pbdigital .p4-fl li{padding:22px}.pbdigital.p4-quote blockquote{font-size:28px}}
+`; },
+    /* 민간 협회: 회원증 · 버건디 · 입장권 */
+    pbassoc: ({ D, a, at, onA, pt }) => `
+.gh.hps-h{background:${D.bg}!important;border-bottom:1px solid ${al(D.ink, .1)}!important;box-shadow:none!important}.gh .hps-cta{background:${a}!important;color:${onA}!important;border-radius:999px!important}
+.pbassoc .p4-b{border-radius:999px;height:58px;padding:0 30px}.pbassoc .p4-ey{color:var(--at);letter-spacing:.06em;font-weight:800}
+.pbassoc.p4-hero{padding:88px 0 120px;overflow:hidden}.pbassoc .p4-g{display:grid;grid-template-columns:1.05fr .95fr;gap:64px;align-items:center}
+.pbassoc.p4-hero h1{font-size:72px;line-height:1.12;font-weight:700;letter-spacing:-.05em}.pbassoc.p4-hero h1 em{font-style:normal;color:var(--at)}.pbassoc .p4-lead{margin-top:28px;font-size:20px;color:var(--mu);max-width:500px}.pbassoc.p4-hero .p4-cta{margin-top:44px}
+.pbassoc .p4-stage{position:relative;padding:0 0 72px 0}.pbassoc .p4-stage>figure{aspect-ratio:4/4.3;border-radius:28px}.pbassoc .p4-stage>figure img{filter:saturate(.85)}
+.pbassoc .p4-card{position:absolute;left:-56px;bottom:0;width:340px;height:210px;border-radius:20px;padding:26px 28px;background:linear-gradient(135deg,${a} 0%,${mix(a, '#000000', .35)} 100%);color:#fff;transform:rotate(-6deg);box-shadow:0 30px 50px -20px ${al(a, .6)};display:flex;flex-direction:column}
+.pbassoc .p4-card .p4-k{font-size:13px;letter-spacing:.24em;color:${pt};font-weight:800}.pbassoc .p4-card b{font-size:26px;font-weight:800;letter-spacing:-.03em;margin-top:auto}.pbassoc .p4-cl{font-size:14px;color:#EBD9DF;margin-top:4px}.pbassoc .p4-chip{position:absolute;right:28px;top:26px;width:44px;height:34px;border-radius:7px;background:linear-gradient(135deg,${pt},${mix(pt, '#ffffff', .4)})}
+.pbassoc .p4-h2{font-size:50px;font-weight:700}
+.pbassoc.p4-member{background:var(--alt)}.pbassoc .p4-mg{display:grid;grid-template-columns:.9fr 1.1fr;gap:80px;align-items:start}.pbassoc.p4-member .p4-cta{margin-top:36px}
+.pbassoc .p4-bn li{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:30px 0;border-top:1px solid ${al(D.ink, .14)}}.pbassoc .p4-bn li:last-child{border-bottom:1px solid ${al(D.ink, .14)}}.pbassoc .p4-bn .p4-no{width:44px;height:44px;border-radius:50%;background:${a};color:#fff;display:grid;place-items:center;font-size:15px;font-weight:800}
+.pbassoc .p4-bn h3{font-size:24px;font-weight:700;letter-spacing:-.035em}.pbassoc .p4-bn p{font-size:16px;color:var(--mu);margin-top:6px}
+.pbassoc .p4-tk{display:grid;gap:16px}.pbassoc .p4-tc{display:grid;grid-template-columns:150px 1fr 64px;align-items:stretch;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 1px 0 ${al(D.ink, .06)};position:relative}
+.pbassoc .p4-stub{background:${a};color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px 10px;border-right:2px dashed ${al('#ffffff', .5)}}.pbassoc .p4-stub b{font-size:44px;line-height:1;font-weight:800;font-variant-numeric:tabular-nums}.pbassoc .p4-stub span{font-size:14px;margin-top:8px;color:#F1DDE3}
+.pbassoc .p4-tb{padding:26px 32px}.pbassoc .p4-tb .p4-k{font-size:14px;font-weight:800;color:${fit(pt, '#ffffff', 3.2)}}.pbassoc .p4-tb h3{font-size:23px;font-weight:700;letter-spacing:-.035em;margin-top:6px}.pbassoc .p4-tb p:not(.p4-k){font-size:15px;color:var(--mu);margin-top:6px}
+.pbassoc .p4-tc .p4-go{display:grid;place-items:center;color:var(--at);border-left:1px solid ${al(D.ink, .08)}}
+.pbassoc.p4-story{background:var(--alt)}.pbassoc .p4-sg2>figure{border-radius:28px}.pbassoc .p4-steps .p4-n{color:var(--at)}
+.pbassoc.p4-quote{text-align:center}.pbassoc.p4-quote blockquote{margin:0 auto;font-weight:700;font-size:44px}.pbassoc .p4-who i{background:${pt};color:${D.ink}}
+.pbassoc .p4-pn{border-radius:28px;background:#fff;box-shadow:inset 0 0 0 1px ${al(D.ink, .1)}}.pbassoc .p4-pn.p1{background:${a};box-shadow:none}.pbassoc .p4-pb{height:52px;padding:0 24px;border-radius:999px;background:${a};color:#fff;align-self:flex-start}.pbassoc .p4-pn.p1 .p4-pb{background:${pt};color:${D.ink}}
+@media (max-width:720px){.pbassoc.p4-hero{padding:44px 0 72px}.pbassoc .p4-g{grid-template-columns:1fr;gap:40px}.pbassoc.p4-hero h1{font-size:42px;line-height:1.18}.pbassoc .p4-lead{font-size:17px;margin-top:20px}.pbassoc.p4-hero .p4-cta{margin-top:30px}
+.pbassoc .p4-stage{padding:0 0 56px 0;margin-left:20px}.pbassoc .p4-stage>figure{aspect-ratio:4/3.4;border-radius:20px}.pbassoc .p4-card{left:-20px;width:240px;height:150px;padding:18px 20px}.pbassoc .p4-card b{font-size:19px}.pbassoc .p4-chip{width:34px;height:26px;right:20px;top:18px}.pbassoc .p4-card .p4-k{font-size:13px}.pbassoc .p4-cl{font-size:13px}
+.pbassoc .p4-h2{font-size:32px}.pbassoc .p4-mg{grid-template-columns:1fr;gap:32px}.pbassoc .p4-bn h3{font-size:20px}.pbassoc .p4-tc{grid-template-columns:92px 1fr}.pbassoc .p4-stub b{font-size:32px}.pbassoc .p4-stub span{font-size:13px}.pbassoc .p4-tb{padding:18px 18px}.pbassoc .p4-tb h3{font-size:18px}.pbassoc .p4-tc .p4-go{display:none}.pbassoc.p4-quote blockquote{font-size:27px}}
+`,
+    /* 위탁운영 · 재직자: 정부 사업 공식 */
+    pbcontract: ({ D, a, at, onA, pt }) => `
+.gh.hps-h{background:#fff!important;border-bottom:1px solid ${al(D.ink, .12)}!important;box-shadow:none!important}.gh .hps-cta{background:${a}!important;color:${onA}!important;border-radius:6px!important}
+.pbcontract .p4-b{border-radius:6px;height:58px}.pbcontract .p4-b.wh{background:#fff;color:${a}}.pbcontract .p4-b.ol{color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7)}
+.pbcontract.p4-hero{padding:0 0 110px;background:linear-gradient(${a} 0,${a} 520px,${D.bg} 520px)}.pbcontract .p4-band{color:#fff;padding:84px 0 64px}
+.pbcontract.p4-hero .p4-ey{display:flex;gap:12px;align-items:center;color:#D6E2FA;font-size:16px}.pbcontract.p4-hero .p4-ey span{background:${pt};color:#fff;font-size:14px;padding:5px 10px;border-radius:4px}
+.pbcontract.p4-hero h1{font-size:76px;line-height:1.14;font-weight:800;letter-spacing:-.05em;max-width:1000px;margin-top:6px}.pbcontract .p4-row{display:flex;justify-content:space-between;align-items:end;gap:40px;margin-top:32px}.pbcontract .p4-lead{font-size:19px;color:#D6E2FA;max-width:560px}
+.pbcontract .p4-picw{position:relative}.pbcontract .p4-pic{aspect-ratio:21/8;border-radius:8px;box-shadow:0 30px 60px -36px ${al(D.ink, .6)}}
+.pbcontract .p4-credit{position:absolute;left:72px;right:72px;bottom:-34px;background:#fff;border-radius:8px;display:flex;flex-wrap:wrap;box-shadow:0 18px 40px -20px ${al(D.ink, .35)};border-top:4px solid ${pt}}.pbcontract .p4-credit li{flex:1;min-width:180px;padding:20px 28px;border-left:1px solid ${al(D.ink, .1)}}.pbcontract .p4-credit li:first-child{border-left:0}.pbcontract .p4-credit span{display:block;font-size:14px;color:var(--mu)}.pbcontract .p4-credit b{display:block;font-size:18px;font-weight:800;margin-top:2px}
+.pbcontract .p4-h2{font-size:46px}.pbcontract .p4-ey{color:var(--at)}
+.pbcontract .p4-ovg{display:grid;grid-template-columns:.8fr 1.2fr;gap:72px}.pbcontract .p4-ov{border-top:2px solid ${D.ink}}.pbcontract .p4-ov div{display:grid;grid-template-columns:160px 1fr;gap:24px;padding:22px 0;border-bottom:1px solid var(--ln)}.pbcontract .p4-ov dt{font-weight:800;color:var(--at);font-size:16px}.pbcontract .p4-ov dd{font-size:18px;margin:0}
+.pbcontract.p4-recruit{background:var(--alt);padding:56px 0}.pbcontract .p4-rg{display:grid;grid-template-columns:auto 1fr auto;gap:40px;align-items:center}.pbcontract .p4-st{display:flex;gap:10px;align-items:center;font-weight:800;color:var(--at);font-size:16px}.pbcontract .p4-st i{width:12px;height:12px;border-radius:50%;background:${pt};box-shadow:0 0 0 6px ${al(pt, .2)}}.pbcontract .p4-rg b{font-size:28px;font-weight:800;letter-spacing:-.03em}.pbcontract .p4-rg p:not(.p4-st){font-size:16px;color:var(--mu);margin-top:4px}
+.pbcontract .p4-mg2{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}.pbcontract .p4-mg2.n1{grid-template-columns:1fr}.pbcontract .p4-mc{border:1px solid var(--ln);border-radius:8px;overflow:hidden}.pbcontract .p4-mh{padding:30px 32px;background:var(--alt);position:relative}.pbcontract .p4-mc.m1 .p4-mh{background:${a};color:#fff}.pbcontract .p4-mh h3{font-size:26px;font-weight:800}.pbcontract .p4-mh p{font-size:15px;opacity:.8;margin-top:4px}.pbcontract .p4-cnt{position:absolute;right:28px;top:30px;font-size:14px;font-weight:800;padding:5px 10px;border-radius:4px;background:#fff;color:${a}}
+.pbcontract .p4-mc ul{padding:4px 32px 12px}.pbcontract .p4-mc li a{display:grid;grid-template-columns:1fr auto 18px;gap:16px;align-items:center;padding:18px 0;border-bottom:1px solid var(--ln)}.pbcontract .p4-mc li:last-child a{border-bottom:0}.pbcontract .p4-mc b{font-size:18px;font-weight:700}.pbcontract .p4-mc li span{font-size:14px;color:var(--mu);white-space:nowrap}
+.pbcontract.p4-flow{background:var(--alt)}.pbcontract .p4-fl{display:grid;grid-template-columns:repeat(4,1fr);margin-top:56px;counter-reset:f}.pbcontract .p4-fl.n3{grid-template-columns:repeat(3,1fr)}.pbcontract .p4-fl li{position:relative;background:#fff;padding:32px 28px;border-top:4px solid ${a};margin-right:14px}.pbcontract .p4-fl li:not(:last-child):after{content:"";position:absolute;right:-14px;top:50%;border:8px solid transparent;border-left-color:${al(a, .4)};transform:translateY(-50%)}
+.pbcontract .p4-fl .p4-n{font-size:14px;font-weight:800;color:var(--at)}.pbcontract .p4-fl .p4-n:before{content:"STEP "}.pbcontract .p4-fl h3{font-size:22px;font-weight:800;margin-top:12px}.pbcontract .p4-fl p{font-size:15px;color:var(--mu);margin-top:6px}
+.pbcontract .p4-rl{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:48px;border:1px solid var(--ln);border-radius:8px}.pbcontract .p4-rl.n3{grid-template-columns:repeat(3,1fr)}.pbcontract .p4-rl.n2{grid-template-columns:1fr 1fr}.pbcontract .p4-rl>div{padding:32px 28px;border-left:1px solid var(--ln)}.pbcontract .p4-rl>div:first-child{border-left:0}
+.pbcontract .p4-rl .p4-k{font-size:15px;font-weight:800;color:var(--mu)}.pbcontract .p4-rl b{display:block;font-size:44px;font-weight:800;letter-spacing:-.04em;color:var(--at);margin-top:10px;line-height:1.1}.pbcontract .p4-rl p:not(.p4-k){font-size:15px;color:var(--mu);margin-top:10px}
+.pbcontract.p4-figs{background:${a};color:#fff}.pbcontract .p4-fk{border-color:rgba(255,255,255,.2)}.pbcontract .p4-fk .p4-n{color:#fff}.pbcontract .p4-fk small{color:${pt}}.pbcontract .p4-fk p{color:#C9D6EF}.pbcontract .p4-ft{color:#C9D6EF}
+.pbcontract .p4-call{border-radius:8px}
+@media (max-width:720px){.pbcontract.p4-hero{padding-bottom:88px;background:linear-gradient(${a} 0,${a} 560px,${D.bg} 560px)}.pbcontract .p4-band{padding:44px 0 40px}.pbcontract.p4-hero h1{font-size:40px;line-height:1.2}.pbcontract .p4-row{flex-direction:column;align-items:stretch;gap:26px;margin-top:20px}.pbcontract .p4-lead{font-size:17px}.pbcontract.p4-hero .p4-ey{font-size:14px}
+.pbcontract .p4-pic{aspect-ratio:4/3}.pbcontract .p4-credit{position:relative;left:auto;right:auto;bottom:auto;margin-top:-24px;margin-left:12px;margin-right:12px;flex-direction:column}.pbcontract .p4-credit li{border-left:0;border-top:1px solid ${al(D.ink, .1)};padding:14px 18px}.pbcontract .p4-credit li:first-child{border-top:0}
+.pbcontract .p4-h2{font-size:30px}.pbcontract .p4-ovg{grid-template-columns:1fr;gap:28px}.pbcontract .p4-ov div{grid-template-columns:96px 1fr;gap:14px;padding:16px 0}.pbcontract .p4-ov dd{font-size:16px}
+.pbcontract .p4-rg{grid-template-columns:1fr;gap:16px}.pbcontract .p4-rg b{font-size:22px}.pbcontract .p4-mg2{grid-template-columns:1fr;gap:16px}.pbcontract .p4-mh{padding:24px 20px}.pbcontract .p4-cnt{right:16px;top:24px}.pbcontract .p4-mc ul{padding:4px 20px 8px}.pbcontract .p4-mc li a{grid-template-columns:1fr;gap:2px}.pbcontract .p4-mc li svg{display:none}.pbcontract .p4-mc b{font-size:16px}
+.pbcontract .p4-fl,.pbcontract .p4-fl.n3{grid-template-columns:1fr;gap:12px;margin-top:32px}.pbcontract .p4-fl li{margin:0}.pbcontract .p4-fl li:after{display:none}.pbcontract .p4-rl,.pbcontract .p4-rl.n3{grid-template-columns:1fr 1fr}.pbcontract .p4-rl>div{padding:22px 18px;border-left:0;border-top:1px solid var(--ln)}.pbcontract .p4-rl>div:nth-child(-n+2){border-top:0}.pbcontract .p4-rl>div:nth-child(even){border-left:1px solid var(--ln)}.pbcontract .p4-rl b{font-size:32px}}
+`,
+    /* 위탁운영 · 시민 · 청년: 밝은 캠페인 */
+    pbcampaign: ({ D, a, at, onA, pt }) => { const ye = '#FFC93C'; return `
+.gh.hps-h{background:${D.bg}!important;border-bottom:0!important;box-shadow:none!important}.gh .hps-cta{background:${a}!important;color:${onA}!important;border-radius:999px!important}
+.pbcampaign .p4-b{border-radius:999px;height:60px;padding:0 32px;font-weight:800;font-size:18px}.pbcampaign .p4-b.line{box-shadow:inset 0 0 0 2px ${D.ink}}.pbcampaign .p4-ey{color:var(--at);font-weight:800}
+.pbcampaign.p4-hero{padding:96px 0 110px;overflow:hidden;background:radial-gradient(520px 420px at 12% 18%,${al(ye, .55)},transparent 70%),radial-gradient(560px 460px at 88% 30%,${al(pt, .35)},transparent 70%),radial-gradient(640px 420px at 50% 100%,${al(a, .22)},transparent 70%),${D.bg}}
+.pbcampaign .p4-c{text-align:center}.pbcampaign.p4-hero .p4-ey{display:inline-block;background:#fff;padding:8px 18px;border-radius:999px;box-shadow:0 6px 16px -10px ${al(D.ink, .4)};font-size:16px;margin-bottom:28px}
+.pbcampaign.p4-hero h1{font-size:88px;line-height:1.08;font-weight:900;letter-spacing:-.06em}.pbcampaign.p4-hero h1 mark{background:none;color:var(--at)}.pbcampaign .p4-lead{margin:28px auto 0;font-size:20px;color:var(--mu);max-width:640px}.pbcampaign.p4-hero .p4-cta{margin-top:40px;justify-content:center}
+.pbcampaign .p4-dots{display:flex;justify-content:center;margin-top:64px}.pbcampaign .p4-dots figure{width:168px;height:168px;border-radius:50%;border:8px solid ${D.bg};margin:0 -14px;box-shadow:0 18px 30px -18px ${al(D.ink, .5)}}.pbcampaign .p4-o1{transform:translateY(-22px)}.pbcampaign .p4-o3{transform:translateY(-14px)}.pbcampaign .p4-o0{outline:4px solid ${ye};outline-offset:-4px}.pbcampaign .p4-o2{outline:4px solid ${pt};outline-offset:-4px}
+.pbcampaign .p4-note{margin-top:28px;font-size:15px;color:var(--mu)}
+.pbcampaign .p4-h2{font-size:54px;font-weight:900;letter-spacing:-.05em}
+.pbcampaign.p4-recruit{background:${a};color:${onA};padding:48px 0}.pbcampaign .p4-rg{display:grid;grid-template-columns:auto 1fr auto;gap:36px;align-items:center}.pbcampaign .p4-st{display:flex;gap:10px;align-items:center;font-weight:900;background:${ye};color:${D.ink};padding:8px 16px;border-radius:999px;font-size:16px}.pbcampaign .p4-st i{width:9px;height:9px;border-radius:50%;background:${D.ink}}
+.pbcampaign .p4-rg b{font-size:30px;font-weight:900;letter-spacing:-.04em}.pbcampaign .p4-rg p:not(.p4-st){opacity:.9;font-size:16px;margin-top:2px}.pbcampaign.p4-recruit .p4-b.pri{background:#fff;color:${D.ink}}
+.pbcampaign .p4-mg2{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}.pbcampaign .p4-mg2.n1{grid-template-columns:1fr}.pbcampaign .p4-mc{border-radius:32px;padding:12px;background:${al(ye, .3)}}.pbcampaign .p4-mc.m1{background:${al(pt, .22)}}
+.pbcampaign .p4-mh{position:relative;padding:28px 28px 22px}.pbcampaign .p4-mh h3{font-size:34px;font-weight:900;letter-spacing:-.04em}.pbcampaign .p4-mh p{font-size:16px;color:var(--mu);margin-top:4px}.pbcampaign .p4-cnt{position:absolute;right:24px;top:30px;background:${D.ink};color:#fff;font-weight:800;font-size:14px;padding:6px 12px;border-radius:999px}
+.pbcampaign .p4-mc ul{display:grid;gap:8px}.pbcampaign .p4-mc li a{display:grid;grid-template-columns:1fr 18px;gap:4px 12px;align-items:center;background:#fff;border-radius:20px;padding:18px 22px}.pbcampaign .p4-mc b{font-size:18px;font-weight:800;letter-spacing:-.03em}.pbcampaign .p4-mc li span{grid-column:1;font-size:14px;color:var(--mu)}.pbcampaign .p4-mc li svg{grid-row:1/3;grid-column:2}
+.pbcampaign.p4-flow{background:var(--alt)}.pbcampaign .p4-fl{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:56px}.pbcampaign .p4-fl.n3{grid-template-columns:repeat(3,1fr)}.pbcampaign .p4-fl li{background:#fff;border-radius:28px;padding:30px 26px;text-align:center}
+.pbcampaign .p4-fl .p4-n{display:grid;place-items:center;width:64px;height:64px;margin:0 auto;border-radius:50%;background:${ye};font-size:26px;font-weight:900;color:${D.ink}}.pbcampaign .p4-fl li:nth-child(2) .p4-n{background:${al(pt, .5)}}.pbcampaign .p4-fl li:nth-child(3) .p4-n{background:${al(a, .3)}}.pbcampaign .p4-fl li:nth-child(4) .p4-n{background:${a};color:#fff}
+.pbcampaign .p4-fl h3{font-size:22px;font-weight:900;margin-top:20px}.pbcampaign .p4-fl p{font-size:15px;color:var(--mu);margin-top:6px}
+.pbcampaign .p4-rl{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}.pbcampaign .p4-rl.n4{grid-template-columns:repeat(4,1fr)}.pbcampaign .p4-rl.n2{grid-template-columns:1fr 1fr}.pbcampaign .p4-rl>div{border:2px solid ${D.ink};border-radius:28px;padding:30px 28px;background:#fff}.pbcampaign .p4-rl .p4-k{font-weight:800;font-size:15px;color:var(--mu)}.pbcampaign .p4-rl b{display:block;font-size:46px;font-weight:900;letter-spacing:-.05em;color:var(--at);margin-top:6px;line-height:1.1}.pbcampaign .p4-rl p:not(.p4-k){font-size:15px;color:var(--mu);margin-top:8px}
+.pbcampaign.p4-quote{text-align:center;background:${al(ye, .35)}}.pbcampaign.p4-quote blockquote{margin:0 auto;font-weight:900;font-size:46px}.pbcampaign .p4-who i{background:${a};color:#fff}
+.pbcampaign.p4-fin{border-radius:48px 48px 0 0;background:${D.ink};color:#fff}.pbcampaign.p4-fin .p4-b.wh{background:${ye};color:${D.ink}}
+@media (max-width:720px){.pbcampaign.p4-hero{padding:48px 0 72px}.pbcampaign.p4-hero .p4-ey{font-size:14px;margin-bottom:20px}.pbcampaign.p4-hero h1{font-size:44px;line-height:1.14}.pbcampaign .p4-lead{font-size:17px;margin-top:20px}.pbcampaign.p4-hero .p4-cta{margin-top:30px}.pbcampaign .p4-dots{margin-top:40px}.pbcampaign .p4-dots figure{width:92px;height:92px;border-width:5px;margin:0 -10px}.pbcampaign .p4-o1{transform:translateY(-12px)}.pbcampaign .p4-o3{transform:translateY(-8px)}
+.pbcampaign .p4-h2{font-size:32px}.pbcampaign .p4-rg{grid-template-columns:1fr;gap:14px}.pbcampaign .p4-st{justify-self:start}.pbcampaign .p4-rg b{font-size:23px}.pbcampaign .p4-mg2{grid-template-columns:1fr;gap:16px}.pbcampaign .p4-mh h3{font-size:26px}.pbcampaign .p4-mh{padding:22px 18px 16px}.pbcampaign .p4-cnt{right:16px;top:22px}
+.pbcampaign .p4-fl,.pbcampaign .p4-fl.n3{grid-template-columns:1fr 1fr;gap:10px;margin-top:32px}.pbcampaign .p4-fl li{padding:22px 14px}.pbcampaign .p4-fl .p4-n{width:48px;height:48px;font-size:20px}.pbcampaign .p4-fl h3{font-size:18px}.pbcampaign .p4-rl,.pbcampaign .p4-rl.n4{grid-template-columns:1fr;gap:12px}.pbcampaign .p4-rl b{font-size:34px}.pbcampaign.p4-quote blockquote{font-size:28px}.pbcampaign.p4-fin{border-radius:28px 28px 0 0}}
 `; }
   };
 
   /* ── 렌더러 연결 ── */
   { const base = proSec; proSec = (x, i, s, lk) => {
     try { if (x && s) { const d = x.data || {};
-      if (x.type === 'text' && SEC[d.hpt]) { if (x.hide && !editing()) return ''; const h = SEC[d.hpt](x, s); return h || ''; }
-      if (x.type === 'banner' && mine(s) && HPT.has(s.theme) && !+d.dstyle && !s.layout) { if (x.hide && !editing()) return ''; return mark(HERO[s.theme](s, d), x); } }
+      if (x.type === 'text' && SEC[d.hpt]) { if (mine(s)) CUR = s.theme; if (x.hide && !editing()) return ''; const h = SEC[d.hpt](x, s); return h || ''; }
+      if (x.type === 'banner' && mine(s) && HPT.has(s.theme) && !+d.dstyle && !s.layout) { USED = new Set(); CUR = s.theme; if (x.hide && !editing()) return ''; return mark(HERO[s.theme](s, d), x); } }
     } catch (e) { console.error('hp44-public', e); }
     return base(x, i, s, lk); }; window.proSec = proSec; }
-  try { if (window.HPW && typeof HPW.emptyOf === 'function') { const e0 = HPW.emptyOf; HPW.emptyOf = x => { const d = (x && x.data) || {}; if (x && x.type === 'text' && SEC[d.hpt]) { try { return d.hpt === 'p4-figs' ? figsK().length < 2 : /^p4-(mag|rows|band|tracks|shelf|tiles|words|big|wide|exhibit)$/.test(d.hpt) ? !live().length : /^p4-(hours|stay)$/.test(d.hpt) ? !facs().length : d.hpt === 'p4-quote' ? !review() : false; } catch (e) { return false; } } return e0(x); }; } } catch (e) { }
+  try { if (window.HPW && typeof HPW.emptyOf === 'function') { const e0 = HPW.emptyOf; HPW.emptyOf = x => { const d = (x && x.data) || {}; if (x && x.type === 'text' && SEC[d.hpt]) { try { return d.hpt === 'p4-figs' ? figsK().length < 2 : /^p4-(mag|rows|band|tracks|shelf|tiles|words|big|wide|exhibit|code|ticket|recruit|mode)$/.test(d.hpt) ? !live().length : /^p4-(hours|stay)$/.test(d.hpt) ? !facs().length : d.hpt === 'p4-dept' ? !(((d.cols || []).some(c => c && c[0] && c[2])) || telOf()) : d.hpt === 'p4-quote' ? !review() : d.hpt === 'p4-ann' ? !notes(1).length : false; } catch (e) { return false; } } return e0(x); }; } } catch (e) { }
+  /* 공공 B: 보기 설정(글자 크게 · 고대비) — 게시본은 Shadow DOM이라 스크립트 없이 details 열림 상태(:has)로 전환한다 */
   const needCSS = s => !!(s && (mine(s) || (s.sections || []).some(x => x && x.data && SEC[x.data.hpt])));
   const SERIF_CSS = 'fonts/noto-serif-kr/font.css?v=ea0bde31';
-  { const base = siteHTML; siteHTML = (s, ...a) => { let h = base(s, ...a); try { if (needCSS(s) && HPT.tokens(s)) { h = h.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>'); h = h.replace(/<section class="([^"]*\bp4\b[^"]*)"/g, (m, c) => `<section class="${c.replace(/\bhps-(flowb?|short)\b\s*/g, '').trim()}"`); /* 같은 바탕 섹션 간격 압축(hps-flow)은 섹션 리듬을 깨므로 뺀다 */ if (SERIFS.includes(thOf(s)) && h.indexOf(SERIF_CSS) < 0) h = h.replace('</head>', `<link rel="stylesheet" href="${SERIF_CSS}"></head>`); } } catch (e) { console.error('hp44-public css', e); } return h; }; window.siteHTML = siteHTML; }
+  { const base = siteHTML; siteHTML = (s, ...a) => { USED = new Set(); let h = base(s, ...a); try { if (needCSS(s) && HPT.tokens(s)) { h = h.replace('</style>', css(s).replace(/<\/?style/gi, '') + '</style>'); 
+        h = h.replace(/<section class="([^"]*\bp4\b[^"]*)"/g, (m, c) => `<section class="${c.replace(/\bhps-(flowb?|short)\b\s*/g, '').trim()}"`); /* 같은 바탕 섹션 간격 압축(hps-flow)은 섹션 리듬을 깨므로 뺀다 */ if (SERIFS.includes(thOf(s)) && h.indexOf(SERIF_CSS) < 0) h = h.replace('</head>', `<link rel="stylesheet" href="${SERIF_CSS}"></head>`); } } catch (e) { console.error('hp44-public css', e); } return h; }; window.siteHTML = siteHTML; }
 
   /* ── 등록 ── */
   MINE.forEach(id => { HPT.reg(id, Object.assign({ prem: 1, cssX: () => '', tags: ['public'] }, DEF[id])); try { if (window.HPD && typeof HPD.reg === 'function') HPD.reg(id, HD[id]); } catch (e) { console.error('hp44-public HPD', e); } });
   const PH = { pbcivic: { hero: 'hum-51', about: 'lec-01' }, pbjournal: { hero: 'sen-01', about: 'hum-26', space: 'hum-13', cta: 'hum-05' }, pbposter: { hero: 'spo-08', about: 'lec-02' }, pbcampus: { hero: 'grp-01' },
-    pblibrary: { hero: 'lib-08', about: 'hum-12' }, pbyouth: { hero: 'spo-03', about: 'hum-30', space: 'cam-07' }, pbsenior: { hero: 'sen-02', about: 'kni-03' }, pbjobs: { hero: 'hum-50', about: 'shk-01' }, pbmuseum: { hero: 'hum-22', about: 'hum-28' }, pbheritage: { hero: 'nat-01', about: 'lib-06' } };
+    pblibrary: { hero: 'lib-08', about: 'hum-12' }, pbyouth: { hero: 'spo-03', about: 'hum-30', space: 'cam-07' }, pbsenior: { hero: 'sen-02', about: 'kni-03' }, pbjobs: { hero: 'hum-50', about: 'shk-01' }, pbmuseum: { hero: 'hum-22', about: 'hum-28' }, pbheritage: { hero: 'nat-01', about: 'lib-06' },
+    pbecon: { hero: 'bar-03', about: 'bak-03', space: 'hum-49' }, pbdigital: { hero: 'hum-41' }, pbassoc: { hero: 'hum-11', about: 'grp-03' },
+    pbcontract: { hero: 'hum-07' }, pbcampaign: { hero: 'stu-02', about: 'grp-06', space: 'sen-07', cta: 'cam-08' } };
   { const tb = HPT.thumb; if (typeof tb === 'function') HPT.thumb = (s, id) => { if (!MINE.includes(id)) return tb(s, id);
     try { const b = JSON.parse(JSON.stringify(s || (typeof site === 'function' ? site() : S.site))); HPT.apply(b, id, { keepColor: true }); delete b.layout; const tp = typeof TPL !== 'undefined' && TPL.find(t => t.id === 't44-' + id); if (tp) b.sections = tp.build(); b.photos = Object.assign({}, PH[id]); b.img = {}; try { Object.keys(b.photos).forEach(sl => { const v = HPSTOCK.slotImg(b.photos[sl], sl); if (v) b.img[sl] = v; }); } catch (e) { } return siteHTML(b, false, 'ko'); } catch (e) { console.error('hp44-public thumb', e); return tb(s, id); } }; }
   if (typeof TPL === 'undefined' || typeof S2 !== 'function') { window.HP44P = { DEF, fits, css, SEC, PH }; return; }
   const TX = (variant, data) => S2('text', { variant, ...data });
+  /* 공통 신뢰 부품(hpsec-trust v44.1 CM) — 데이터가 없으면 게시본에서 저절로 숨는다 */
+  const HX = (k, o) => { try { return window.HPX && typeof HPX.sec === 'function' ? HPX.sec(k, o || {}) : null; } catch (e) { return null; } };
+  const DEPT = (o) => TX('features', Object.assign({ hpt: 'p4-dept', eyebrow: '담당 부서', title: '문의는 담당 부서로\n바로 연결돼요.', sub: '', cols: [] }, o || {}));
   const quiet = () => [TX('stats', { hpt: 'facts', title: '', cols: [] }), TX('timeline', { hpt: 'sched', eyebrow: '', title: '모집 일정', cols: [] })].map(x => Object.assign(x, { hide: true }));
   const B = {
     pbcivic: { scene: '지자체 · 정부 기관 직원 교육원 — 직원이 법정 의무교육을 이수하고 교육을 신청 · 이수증을 받으러 와요. 공식 누리집 띠, 자주 찾는 서비스, 날짜 열 교육 목록, 알림마당', purpose: ['learn', 'info'],
@@ -591,7 +824,8 @@
         TX('features', { hpt: 'p4-rows', eyebrow: '교육과정', title: '지금 운영 중인 교육', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-figs', eyebrow: '교육 운영 현황', title: '', cols: [] }),
         TX('features', { hpt: 'p4-story', eyebrow: '교육 이수 안내', title: '신청부터 이수증까지,\n세 단계면 돼요.', sub: '', cols: [['로그인', '기관에서 받은 초대 계정으로 들어가요.'], ['교육 신청 · 수강', '집합 교육은 승인 후 확정, 사이버 교육은 바로 들어요.'], ['이수증 발급', '기준을 채우면 이수증을 PDF로 내려받아요.']] }),
-        TX('features', { hpt: 'p4-help', title: '알림마당', sub: '교육 신청이 어려우신가요?', cols: [] }), ...quiet()] },
+        HX('faq'), DEPT(), 
+        TX('features', { hpt: 'p4-help', title: '알림마당', sub: '교육 신청이 어려우신가요?', cols: [] }), ...quiet()].filter(Boolean) },
     pbjournal: { scene: '구민대학 · 시민 강좌 — 주민이 이번 학기 강좌를 둘러보고 신청하러 와요. 세리프 잡지형, 접수 띠, 무료 강좌 사진 띠, 전화 신청', purpose: ['apply', 'brand'],
       build: () => [S2('banner', { eyebrow: `${org()} 이번 학기 강좌`, title: `다시 배우는 ${season()},\n우리 동네에서.`, sub: '주민이라면 누구나 들을 수 있는 강좌예요. 집에서 걸어갈 수 있는 배움터에서 이웃과 함께 배워요.', cta: '강좌 보기', link: 'learn:courses', cta2: '내 신청 확인', link2: 'learn:my', note: '' }),
         TX('features', { hpt: 'p4-rail', title: '', sub: '', cols: [] }),
@@ -599,64 +833,115 @@
         TX('features', { hpt: 'p4-band', title: '', sub: '수강료가 있는 강좌도 재료비 위주로 받아요. 감면 대상은 신청할 때 함께 확인해요.', cols: [] }),
         TX('features', { hpt: 'p4-story', eyebrow: '처음이라면', title: '신청은 세 번이면\n끝나요.', sub: '', cols: [['간편 가입', '간편 가입 뒤 주소지만 확인하면 돼요.'], ['듣고 싶은 강좌 담기', '정원이 넘는 강좌는 접수 마감 뒤 추첨해요.'], ['문자로 결과 받기', '인터넷이 어려우면 전화로 신청을 도와드려요.']] }),
         TX('features', { hpt: 'p4-quote', title: '', cols: [] }),
-        TX('cta', { hpt: 'p4-fin', title: '배우고 싶은 강좌를\n지금 찾아보세요.', sub: '궁금한 점은 담당 부서로 편하게 물어보세요.', cta: '강좌 찾아보기', cols: [] }), ...quiet()] },
+        HX('loc'), 
+        TX('cta', { hpt: 'p4-fin', title: '배우고 싶은 강좌를\n지금 찾아보세요.', sub: '궁금한 점은 담당 부서로 편하게 물어보세요.', cta: '강좌 찾아보기', cols: [] }), ...quiet()].filter(Boolean) },
     pbposter: { scene: '공공 체육 · 문화센터 — 주민이 강습을 등록하고 시설을 예약 · 대관하러 와요. 전면 사진 포스터, 운영 시간 · 시설 그리드 · 단체 대관', purpose: ['apply', 'info'],
       build: () => [S2('banner', { eyebrow: '강습 등록 · 시설 예약', title: '운동도 배움도,\n집 앞 센터에서.', sub: `${facs().slice(0, 3).map(f => f.name).join(' · ') || '체육 · 문화 시설'}을 예약하고 강습을 신청해요. 단체는 공간을 빌려 쓸 수 있어요.`, cta: '강습 · 이용권', link: 'learn:shop', cta2: '시설 예약', link2: 'learn:fac' }),
         TX('features', { hpt: 'p4-quick', title: '', cols: [] }),
         TX('features', { hpt: 'p4-hours', title: '', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-places', eyebrow: '시설과 프로그램', title: '한 건물에서\n여러 가지 하루를.', cols: [] }),
         TX('features', { hpt: 'p4-rent', eyebrow: '단체 대관', title: '단체라면,\n공간을 빌려 쓰세요.', sub: '동호회 · 학교 · 기업 누구나 시간 단위로 빌릴 수 있어요.', cols: [['빈 시간 고르기', '달력에서 시설과 시간을 골라요.'], ['단체 정보 · 인원 입력', '단체 증빙은 사진으로 올려요.'], ['승인 후 결제', '담당자가 확인하면 문자로 알려드려요.']] }),
-        TX('features', { hpt: 'p4-quote', title: '', cols: [] }),
-        TX('features', { hpt: 'p4-duo', title: '', cols: [['강습 등록,\n미리 담아 두세요.', '강습과 이용권은 온라인으로 등록하고 결제해요. 감면 대상은 첫 방문 때 확인해요.', 'learn:shop', '개인 회원이라면'], ['대관 일정을\n바로 확인하세요.', '빈 시간을 보고 신청하면 담당자가 확인해 확정해 드려요.', 'learn:fac', '단체 · 기관이라면']] }), ...quiet()] },
+        HX('rev'),
+        HX('price'), HX('loc'), 
+        TX('features', { hpt: 'p4-duo', title: '', cols: [['강습 등록,\n미리 담아 두세요.', '강습과 이용권은 온라인으로 등록하고 결제해요. 감면 대상은 첫 방문 때 확인해요.', 'learn:shop', '개인 회원이라면'], ['대관 일정을\n바로 확인하세요.', '빈 시간을 보고 신청하면 담당자가 확인해 확정해 드려요.', 'learn:fac', '단체 · 기관이라면']] }), ...quiet()].filter(Boolean) },
     pbcampus: { scene: '공단 · 공사 · 공공기관 연수원 — 직원이 직급 · 직무 연수 과정을 확인하고 입교 전 준비하러 와요. 다크 시네마틱 첫 화면, 연수 원칙, 번호 붙은 과정, 연수 시설', purpose: ['learn', 'brand'],
       build: () => [S2('banner', { eyebrow: `${org()} 연수원`, title: '공공의 내일을,\n여기서 함께 길러요.', sub: `${org()} 직원이 입사부터 관리자까지 단계마다 거치는 연수를 한곳에서 신청하고 이어 들어요.`, cta: '내 연수 확인하기', link: 'learn:my', cta2: '연수 과정 보기', link2: 'learn:courses', note: '' }),
         TX('features', { hpt: 'p4-intro', eyebrow: '연수 원칙', title: '현장에서 쓰는 역량을,\n현장의 언어로 가르쳐요.', cols: [['직무 중심', '실제 업무 사례로 배우고 바로 적용해요.'], ['단계별 이수', '직급과 경력에 맞춰 들어야 할 연수가 정해져 있어요.'], ['기록이 남는 연수', '이수 현황과 이수증이 내 기록으로 쌓여요.']] }),
         TX('features', { hpt: 'p4-tracks', eyebrow: '연수 과정', title: '지금 열려 있는\n연수 과정', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-stay', eyebrow: '연수 시설', title: '배움에 집중하는\n공간', sub: '강의실과 세미나실은 부서 연수 · 워크숍 용도로도 예약할 수 있어요.', cols: [] }),
-        TX('features', { hpt: 'p4-quote', title: '', cols: [] }),
-        TX('features', { hpt: 'p4-duo', title: '', cols: [['내 연수 일정을\n먼저 확인해요.', '로그인하면 이번 분기 필수 연수와 신청한 과정이 먼저 보여요.', 'learn:my', '연수생이라면', '나의 연수로'], ['부서 연수를\n함께 계획해요.', '교육 담당자는 과정 신청 현황과 이수 결과를 한 화면에서 확인해요.', 'learn:login', '교육 담당자라면', '담당자 로그인']] }), ...quiet()] },
+        HX('fac'), HX('rev'),
+        DEPT(), 
+        TX('features', { hpt: 'p4-duo', title: '', cols: [['내 연수 일정을\n먼저 확인해요.', '로그인하면 이번 분기 필수 연수와 신청한 과정이 먼저 보여요.', 'learn:my', '연수생이라면', '나의 연수로'], ['부서 연수를\n함께 계획해요.', '교육 담당자는 과정 신청 현황과 이수 결과를 한 화면에서 확인해요.', 'learn:login', '교육 담당자라면', '담당자 로그인']] }), ...quiet()].filter(Boolean) },
     pblibrary: { scene: '공공도서관 강좌 — 주민이 독서 · 인문 · 디지털 강좌를 찾아 신청하러 와요. 아치형 열람실 사진, 대출 카드 같은 강좌 카드, 이번 달 일정', purpose: ['apply', 'brand'],
       build: () => [S2('banner', { eyebrow: `${org()} 도서관 강좌`, title: '책 옆에서 배우는\n이번 달의 수업', sub: '읽고, 쓰고, 이야기하는 강좌가 도서관에서 열려요. 회원이라면 누구나 신청할 수 있어요.', cta: '이달의 강좌 보기', link: 'learn:courses', cta2: '내 신청 확인', link2: 'learn:my', note: '강좌 자료는 신청 뒤 내 강의실에서 미리 볼 수 있어요.' }),
         TX('features', { hpt: 'p4-shelf', eyebrow: '이달의 강좌', title: '서가에서 고르듯,\n강좌를 골라 보세요.', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-rows', eyebrow: '강좌 일정', title: '다가오는 강좌 일정', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-story', eyebrow: '처음이라면', title: '도서관 회원이면\n바로 신청돼요.', sub: '', cols: [['간편 가입', '휴대폰으로 간편하게 가입해요.'], ['강좌 신청', '정원이 차면 대기 순서대로 안내해요.'], ['강좌 참여', '현장 강좌는 도서관에서, 온라인 강좌는 내 강의실에서 들어요.']] }),
-        TX('features', { hpt: 'p4-quote', title: '', cols: [] }),
-        TX('cta', { hpt: 'p4-fin', title: '다음 강좌에서\n만나요.', sub: '강좌 문의는 도서관 안내 데스크로 편하게 해 주세요.', cta: '강좌 찾아보기', cols: [] }), ...quiet()] },
+        HX('rev'),
+        HX('loc'), 
+        TX('cta', { hpt: 'p4-fin', title: '다음 강좌에서\n만나요.', sub: '강좌 문의는 도서관 안내 데스크로 편하게 해 주세요.', cta: '강좌 찾아보기', cols: [] }), ...quiet()].filter(Boolean) },
     pbyouth: { scene: '청소년 수련관 · 문화의집 — 청소년이 동아리 · 체험 프로그램을 찾고 보호자가 신청을 확인하러 와요. 보라 색면 스티커 콜라주, 색 카드, 큰 글자 벽', purpose: ['apply', 'brand'],
       build: () => [S2('banner', { eyebrow: `${org()}`, title: '하고 싶은 거,\n여기서 다 해 봐.', sub: '운동 · 음악 · 코딩 · 동아리까지, 방과 후와 주말에 친구들과 함께하는 프로그램이 열려요.', cta: '프로그램 보기', link: 'learn:courses', cta2: '간편 가입', link2: 'learn:join', note: '9~24세\n누구나' }),
         TX('features', { hpt: 'p4-tiles', eyebrow: '지금 모집 중', title: '이번 시즌\n뭐 할래?', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-words', eyebrow: '수련관에서 열리는 프로그램', title: '', cols: [] }),
         TX('features', { hpt: 'p4-story', eyebrow: '신청 방법', title: '세 단계면\n시작할 수 있어요.', sub: '', cols: [['간편 가입', '휴대폰으로 1분이면 가입해요.'], ['프로그램 신청', '만 14세 미만은 보호자 동의를 함께 받아요.'], ['수련관에서 만나기', '시작 전날 알림으로 시간과 장소를 알려 줘요.']] }),
-        TX('features', { hpt: 'p4-quote', title: '', cols: [] }),
-        TX('features', { hpt: 'p4-duo', title: '', cols: [['내 프로그램,\n바로 이어서.', '신청한 프로그램과 출석을 한 화면에서 봐요.', 'learn:my', '청소년이라면', '내 프로그램'], ['보호자 계정으로\n함께 확인해요.', '자녀의 신청 · 출석 · 안내 문자를 보호자도 함께 받아요.', '#family', '보호자라면', '보호자 연결']] }), ...quiet()] },
+        HX('rev'),
+        HX('faq'), 
+        TX('features', { hpt: 'p4-duo', title: '', cols: [['내 프로그램,\n바로 이어서.', '신청한 프로그램과 출석을 한 화면에서 봐요.', 'learn:my', '청소년이라면', '내 프로그램'], ['보호자 계정으로\n함께 확인해요.', '자녀의 신청 · 출석 · 안내 문자를 보호자도 함께 받아요.', '#family', '보호자라면', '보호자 연결']] }), ...quiet()].filter(Boolean) },
     pbsenior: { scene: '종합사회복지관 · 노인복지관 — 어르신이 강좌를 고르고 전화나 가족 도움으로 신청하러 와요. 큰 사진 위 큰 글씨 카드, 전화 신청 띠, 큰 글씨 강좌 목록', purpose: ['apply', 'info'],
       build: () => [S2('banner', { eyebrow: `${org()}`, title: '오늘도 배우는 즐거움,\n복지관에서 함께해요.', sub: '노래 · 운동 · 스마트폰 · 공예 강좌가 열려요. 글씨는 크게, 신청은 쉽게 만들었어요.', cta: '강좌 보기', link: 'learn:courses', cta2: '전화로 신청', link2: '' }),
         TX('features', { hpt: 'p4-call', title: '인터넷이 어려우면\n전화로 신청하세요.', sub: '담당 선생님이 원하시는 강좌를 함께 찾아 신청해 드려요.', cols: [] }),
         TX('features', { hpt: 'p4-big', eyebrow: '지금 신청할 수 있는 강좌', title: '배우고 싶은 강좌를\n골라 보세요.', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-story', eyebrow: '처음 오셨나요?', title: '신청은\n이렇게 해요.', sub: '', cols: [['강좌 고르기', '보고 싶은 강좌의 「자세히 보기」를 눌러요.'], ['신청하기', '이름과 연락처만 확인하면 돼요.'], ['문자로 안내받기', '시작하는 날과 장소를 문자로 알려 드려요.']] }),
-        TX('features', { hpt: 'p4-quote', title: '', cols: [] }),
-        TX('features', { hpt: 'p4-duo', title: '', cols: [['신청한 강좌를\n확인해요.', '내 강좌에서 시간표와 출석을 볼 수 있어요.', 'learn:my', '수강생이라면', '내 강좌 보기'], ['부모님 신청을\n대신 도와드려요.', '가족 계정을 연결하면 신청과 안내를 함께 볼 수 있어요.', '#family', '가족이라면', '가족 연결하기']] }), ...quiet()] },
+        HX('rev'),
+        HX('loc'), 
+        TX('features', { hpt: 'p4-duo', title: '', cols: [['신청한 강좌를\n확인해요.', '내 강좌에서 시간표와 출석을 볼 수 있어요.', 'learn:my', '수강생이라면', '내 강좌 보기'], ['부모님 신청을\n대신 도와드려요.', '가족 계정을 연결하면 신청과 안내를 함께 볼 수 있어요.', '#family', '가족이라면', '가족 연결하기']] }), ...quiet()].filter(Boolean) },
     pbjobs: { scene: '지자체 일자리센터 · 고용복지 교육 — 구직자가 취업 상담을 받고 취업 연계 교육을 신청하러 와요. 50:50 색면 분할, 상담부터 취업까지 4단계, 넓은 과정 카드', purpose: ['apply', 'info'],
       build: () => [S2('banner', { eyebrow: `${org()}`, title: '다음 일,\n혼자 찾지 않게.', sub: '취업 상담부터 직무 교육, 일자리 연계까지 한곳에서 이어져요. 처음이라면 교육부터 둘러보세요.', cta: '취업 연계 교육 보기', link: 'learn:courses', cta2: '내 신청 확인', link2: 'learn:my' }),
         TX('features', { hpt: 'p4-flow', eyebrow: '이렇게 도와드려요', title: '상담에서 취업까지,\n네 단계로 이어져요.', sub: '', cols: [['상담 신청', '희망 직무와 경력을 듣고 방향을 함께 정해요.'], ['맞춤 교육', '필요한 직무 · 자격 교육을 골라 들어요.'], ['일자리 연계', '교육을 마치면 채용 정보와 면접을 안내해요.'], ['취업 후 관리', '일을 시작한 뒤에도 적응을 함께 살펴요.']] }),
         TX('features', { hpt: 'p4-wide', eyebrow: '취업 연계 교육', title: '지금 신청할 수 있는\n교육', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-pull', title: '혼자 고민하지 말고,\n상담부터 시작해요.', sub: '경력이 끊긴 지 오래되었어도, 처음 일을 찾는 중이어도 괜찮아요. 지금 상황에 맞는 길을 함께 찾아요.', cta: '상담 문의하기', link: '#comm', cols: [] }),
-        TX('features', { hpt: 'p4-quote', title: '', cols: [] }),
-        TX('features', { hpt: 'p4-help', title: '알림마당', sub: '상담이 필요하신가요?', cols: [] }), ...quiet()] },
+        HX('rev'),
+        DEPT({ title: '상담 창구를\n바로 찾아요.' }), 
+        TX('features', { hpt: 'p4-help', title: '알림마당', sub: '상담이 필요하신가요?', cols: [] }), ...quiet()].filter(Boolean) },
     pbmuseum: { scene: '박물관 · 미술관 · 문화재단 교육 — 시민 · 가족이 전시 연계 교육과 체험 프로그램을 신청하러 와요. 초대형 세리프 제목, 흰 벽 액자와 명판, 전시 명판형 프로그램', purpose: ['apply', 'brand'],
       build: () => [S2('banner', { eyebrow: `${org()} 교육 프로그램`, title: '보는 것에서\n만드는 것으로.', sub: '전시를 보고 끝내지 않도록, 손으로 만들고 이야기 나누는 교육 프로그램이 열려요.', cta: '교육 프로그램 보기', link: 'learn:courses', cta2: '교육 일정', link2: 'learn:cal', note: '배움의 장면\n교육실에서 열리는 만들기 수업' }),
         TX('features', { hpt: 'p4-exhibit', eyebrow: '지금 열린 프로그램', title: '이번 시즌의\n교육 프로그램', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-rows', eyebrow: '교육 일정', title: '다가오는 일정', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-story', eyebrow: '참여 방법', title: '처음 오셔도\n어렵지 않아요.', sub: '', cols: [['프로그램 고르기', '대상과 일정을 보고 골라요.'], ['온라인 신청', '가족 프로그램은 함께할 인원을 적어 주세요.'], ['교육실에서 만나기', '시작 10분 전까지 안내 데스크로 와 주세요.']] }),
         TX('features', { hpt: 'p4-quote', title: '', cols: [] }),
-        TX('cta', { hpt: 'p4-fin', title: '다음 프로그램을\n미리 살펴보세요.', sub: '단체 · 학교 교육은 담당자에게 따로 문의해 주세요.', cta: '프로그램 찾아보기', cols: [] }), ...quiet()] },
+        HX('loc'), 
+        TX('cta', { hpt: 'p4-fin', title: '다음 프로그램을\n미리 살펴보세요.', sub: '단체 · 학교 교육은 담당자에게 따로 문의해 주세요.', cta: '프로그램 찾아보기', cols: [] }), ...quiet()].filter(Boolean) },
     pbheritage: { scene: '전통 관공서(격식) — 오래된 행정기관 · 공무원 교육원 직원이 교육 이념과 교육과정을 확인하고 이수하러 와요. 가운데 대칭, 낙관 도장, 두 줄 테두리, 격식 있는 목록', purpose: ['learn', 'info'],
       build: () => [S2('banner', { eyebrow: `${org()}`, title: '바른 행정은\n바른 배움에서 시작해요.', sub: `${org()} 공직자가 갖춰야 할 소양과 직무 역량을 단계에 맞춰 배우고, 이수 기록을 바르게 남겨요.`, cta: '교육과정 안내', link: 'learn:courses', cta2: '나의 이수 현황', link2: 'learn:my' }),
         TX('features', { hpt: 'p4-vals', eyebrow: '교육 이념', title: '세 가지 마음으로\n가르치고 배워요.', cols: [['청렴', '공정하고 깨끗한 행정의 기본을 익혀요.'], ['전문', '맡은 직무를 깊이 있게 다루는 역량을 길러요.'], ['봉사', '주민의 자리에서 생각하는 태도를 배워요.']] }),
         TX('features', { hpt: 'p4-rows', eyebrow: '교육과정', title: '운영 중인 교육과정', sub: '', cols: [] }),
         TX('features', { hpt: 'p4-svc', eyebrow: '민원 · 서비스', title: '자주 찾는 서비스', cols: [] }),
         TX('features', { hpt: 'p4-story', eyebrow: '이수 절차', title: '교육 이수는\n세 단계로 진행해요.', sub: '', cols: [['교육 신청', '소속 부서 승인을 거쳐 교육을 신청해요.'], ['수강 · 평가', '정해진 기간 안에 수강하고 평가를 마쳐요.'], ['이수 기록', '이수 결과가 개인 교육 이력에 바르게 남아요.']] }),
-        TX('features', { hpt: 'p4-help', title: '알림마당', sub: '교육 문의', cols: [] }), ...quiet()] }
+        HX('faq'), DEPT({ eyebrow: '부서 안내', title: '담당 부서 안내' }), 
+        TX('features', { hpt: 'p4-help', title: '알림마당', sub: '교육 문의', cols: [] }), ...quiet()].filter(Boolean) },
+    pbecon: { scene: '경제진흥원 · 소상공인 지원센터 — 지역 기업 대표 · 소상공인이 지원 사업 공고를 확인하고 창업 · 경영 · 디지털 전환 교육을 신청하러 와요. 가게 · 공방 · 회사 사진 세 장, 사업 공고, 지원 대상별 갈래', purpose: ['apply', 'info'],
+      build: () => [S2('banner', { eyebrow: `${org()} 기업 지원 교육`, title: '작은 가게도,\n오래 가도록.', sub: '창업 준비부터 매장 운영 · 온라인 판매 · 디지털 전환까지, 지역 기업과 소상공인을 위한 교육을 열어요. 지원 사업과 함께 신청할 수 있어요.', cta: '교육 과정 보기', link: 'learn:courses', cta2: '사업 공고', link2: 'learn:notice', note: '' }),
+        TX('features', { hpt: 'p4-ann', eyebrow: '사업 공고', title: '지금 확인할\n지원 사업 · 교육 공고', sub: '', cols: [] }),
+        TX('features', { hpt: 'p4-tiers', eyebrow: '지원 대상', title: '내 상황에 맞는\n교육부터 골라요.', sub: '', cols: [['예비 창업자', '사업 계획 · 상권 분석 · 자금 준비를 차근차근 배워요.', 'learn:courses'], ['소상공인', '매장 운영 · 온라인 판매 · 홍보 실무를 바로 써먹어요.', 'learn:courses'], ['지역 중소기업', '재직자 직무 · 디지털 전환 교육을 회사 단위로 신청해요.', 'learn:courses']] }),
+        TX('features', { hpt: 'p4-rows', eyebrow: '교육 일정', title: '다가오는 교육 일정', sub: '', cols: [] }),
+        HX('rev'),
+        HX('faq'), DEPT({ title: '지원 사업별\n담당 부서' }), 
+        TX('features', { hpt: 'p4-help', title: '알림마당', sub: '어떤 지원을 받을 수 있는지 궁금하신가요?', cols: [] }), ...quiet()].filter(Boolean) },
+    pbdigital: { scene: '정보 · 산업진흥원 — 청년 구직자는 SW · AI 인재 양성 과정을, 지역 기업 재직자는 직무 향상 교육을 찾으러 와요. 모눈 바탕 · 브라우저 창 사진 · 고정폭 번호 과정 카드 · 선발부터 수료까지 단계', purpose: ['apply', 'brand'],
+      build: () => [S2('banner', { eyebrow: `${org()} 디지털 인재 아카데미`, title: '코드 한 줄로\n지역의 내일을.', sub: 'SW · AI 인재 양성 과정과 기업 재직자 교육이 한곳에 모여 있어요. 지금 모집 중인 과정을 확인해 보세요.', cta: '모집 중인 과정', link: 'learn:courses', cta2: '내 학습', link2: 'learn:my', note: '' }),
+        TX('features', { hpt: 'p4-dual', eyebrow: '누구를 위한 교육인가요', title: '배우려는 사람과\n키우려는 회사 모두에게', sub: '', cols: [['SW · AI 인재\n양성 과정', '프로젝트 중심 과정으로 실무 포트폴리오를 만들어요.', 'learn:courses', '과정 보기'], ['기업 재직자\n향상 교육', '회사에서 필요한 기술을 짧고 깊게 배워요. 회사 단위 신청도 돼요.', 'learn:login', '기업 담당자 로그인']] }),
+        TX('features', { hpt: 'p4-code', eyebrow: '모집 중', title: '지금 열린 과정', sub: '', cols: [] }),
+        TX('features', { hpt: 'p4-flow', eyebrow: '진행 방식', title: '선발부터 수료까지,\n이렇게 진행해요.', sub: '', cols: [['신청 · 선발', '지원서를 내면 과정 기준에 따라 선발해요.'], ['핵심 교육', '현업 강사와 기초부터 실무까지 배워요.'], ['팀 프로젝트', '실제 과제로 결과물을 만들어요.'], ['수료 · 연계', '수료 후 채용 · 후속 과정을 안내해요.']] }),
+        HX('fac'), HX('rev'),
+        HX('faq'), 
+        TX('cta', { hpt: 'p4-fin', title: '다음 기수 모집을\n놓치지 마세요.', sub: '모집 일정은 공지와 알림으로 먼저 알려 드려요.', cta: '과정 찾아보기', cols: [] }), ...quiet()].filter(Boolean) },
+    pbassoc: { scene: '민간 협회 · 학회 · 산업 단체 — 회원사 담당자가 회원 전용 교육 · 세미나를 신청하고 자격 과정을 확인하러 와요. 기울어진 회원증 카드, 회원 혜택, 입장권 같은 세미나 일정', purpose: ['learn', 'brand'],
+      build: () => [S2('banner', { eyebrow: `${org()} 교육 · 세미나`, title: '회원이라\n더 가까운 배움.', sub: '회원사 임직원을 위한 정기 교육과 세미나, 자격 과정을 한곳에서 신청하고 이력으로 남겨요.', cta: '교육 · 세미나 보기', link: 'learn:courses', cta2: '회원 로그인', link2: 'learn:login', note: '회원사 교육 · 세미나' }),
+        TX('features', { hpt: 'p4-member', eyebrow: '회원 혜택', title: '회원사라면\n이렇게 달라요.', sub: '회원 로그인 뒤 신청하면 혜택이 자동으로 적용돼요.', cta: '회원 로그인', link: 'learn:login', cta2: '회원 가입 안내', link2: 'learn:join', cols: [['회원 전용 교육', '회원사 임직원만 들을 수 있는 과정이 따로 열려요.'], ['세미나 우선 신청', '정원이 있는 세미나는 회원에게 먼저 열어요.'], ['교육 이력 관리', '수료 이력과 수료증을 회사 단위로 모아 볼 수 있어요.']] }),
+        TX('features', { hpt: 'p4-ticket', eyebrow: '교육 · 세미나 일정', title: '다가오는 일정', sub: '', cols: [] }),
+        TX('features', { hpt: 'p4-story', eyebrow: '자격 과정', title: '자격 과정은\n세 단계로 이어져요.', sub: '', cols: [['과정 이수', '정해진 교육 시간을 채워요.'], ['평가 응시', '과정을 마치면 평가에 응시해요.'], ['수료 · 자격 기록', '결과는 내 이력에 남고 증서를 내려받아요.']] }),
+        HX('price'), HX('rev'),
+        TX('features', { hpt: 'p4-duo', title: '', cols: [['회원사 담당자라면', '임직원 신청 현황과 수료 이력을 한 화면에서 확인해요.', 'learn:login', '회원사', '담당자 로그인'], ['아직 회원이\n아니라면', '공개 교육은 누구나 신청할 수 있어요. 가입하면 회원 혜택이 열려요.', 'learn:join', '처음 오셨다면', '가입 안내']] }), ...quiet()].filter(Boolean) },
+    pbcontract: { scene: '위탁운영 · AI 재직자 교육 사업 — 지자체 · 진흥원이 발주한 재직자 AI 역량강화 교육을 운영사가 맡아 운영해요. 기업 재직자가 사업 개요와 모집 공고를 보고 과정을 신청하러 와요. 남색 띠 · 넓은 사진 · 주최 · 주관 · 운영 표기, 사업 개요, 운영 방식별 과정, 수료 기준', purpose: ['apply', 'info'],
+      build: () => [S2('banner', { eyebrow: 'AI 재직자 역량강화 교육', title: '일하는 사람의 AI,\n현장에서 바로 쓰도록.', sub: '관내 기업 재직자라면 누구나 신청할 수 있는 AI 실무 교육이에요. 업무 자동화부터 데이터 활용까지 직무에 맞춰 골라 들어요.', cta: '수강 신청하기', link: 'learn:courses', cta2: '사업 공고 보기', link2: 'learn:notice', note: `운영: ${org()}` /* 주최 · 주관은 운영자가 첫 화면 메모에 「주최: OO」처럼 한 줄씩 더해요(지어낸 기관명 없음) */ }),
+        TX('features', { hpt: 'p4-recruit', eyebrow: '모집 중', title: '', sub: '', cta: '수강 신청하기', cols: [] }),
+        TX('features', { hpt: 'p4-overview', eyebrow: '사업 개요', title: '교육 사업을\n한눈에 확인해요.', sub: '세부 내용은 사업 공고를 기준으로 해요.', cols: [['교육 대상', '관내 기업 재직자'], ['교육 방식', '온라인 · 오프라인 · 혼합'], ['신청 방법', '온라인 신청 후 자격 확인 · 선발'], ['수강료', '사업 공고에서 확인해요'], ['문의', '교육 운영 사무국']] }),
+        TX('features', { hpt: 'p4-mode', eyebrow: '교육 과정', title: '운영 방식별 과정', sub: '', cols: [] }),
+        TX('features', { hpt: 'p4-flow', eyebrow: '참여 절차', title: '신청부터 수료까지', sub: '', cols: [['수강 신청', '희망 과정을 골라 온라인으로 신청해요.'], ['자격 확인 · 선발', '재직 여부를 확인하고 선발 결과를 알려 드려요.'], ['교육 참여', '온라인은 영상으로, 오프라인은 교육장에서 들어요.'], ['수료', '기준을 채우면 수료증을 내려받아요.']] }),
+        TX('features', { hpt: 'p4-rule', eyebrow: '출결 · 수료 기준', title: '수료는 이렇게 판단해요.', sub: '과정마다 기준이 다를 수 있어 과정 안내를 함께 확인해요.', cols: [['출석', '80%', '전체 교육 시간 대비 출석률'], ['과제 · 실습', '제출', '과정별 실습 과제를 제출해요'], ['만족도 조사', '참여', '교육을 마치면 설문에 참여해요']] }),
+        TX('features', { hpt: 'p4-figs', eyebrow: '사업 성과', title: '', cols: [] }),
+        HX('faq'), DEPT({ eyebrow: '운영 사무국', title: '사업 운영 사무국\n연락처' }), 
+        TX('features', { hpt: 'p4-help', title: '공지사항', sub: '교육 운영 사무국에 문의하세요', cols: [] }), ...quiet()].filter(Boolean) },
+    pbcampaign: { scene: '위탁운영 · 시민 · 청년 디지털/AI 교육 — 지자체 디지털 배움터 · 청년 AI 인재 양성 사업을 운영사가 맡아 운영해요. 시민 · 청년이 가볍게 둘러보고 신청하러 와요. 색 번짐 위 가운데 큰 제목과 동그란 사진, 모집 띠, 온라인 · 오프라인 과정, 참여 4단계', purpose: ['apply', 'brand'],
+      build: () => [S2('banner', { eyebrow: '모두의 디지털 · AI 배움 사업', title: '누구나 AI,\n오늘 처음이어도 괜찮아요.', sub: '스마트폰 기초부터 생성형 AI 활용까지, 시민과 청년 누구나 무료로 참여할 수 있는 교육이 열려요.', cta: '교육 신청하기', link: 'learn:courses', cta2: '교육 일정 보기', link2: 'learn:cal', note: `운영 ${org()}` }),
+        TX('features', { hpt: 'p4-recruit', eyebrow: '지금 모집 중', title: '', sub: '', cta: '바로 신청하기', cols: [] }),
+        TX('features', { hpt: 'p4-mode', eyebrow: '어떻게 배우나요', title: '편한 방식으로\n골라서 배워요.', sub: '', cols: [] }),
+        TX('features', { hpt: 'p4-flow', eyebrow: '참여 방법', title: '네 걸음이면\n충분해요.', sub: '', cols: [['신청', '휴대폰으로 간편하게 신청해요.'], ['안내 받기', '교육 장소와 시간을 문자로 알려 드려요.'], ['함께 배우기', '강사와 보조 강사가 옆에서 도와요.'], ['수료', '끝까지 들으면 수료증을 받아요.']] }),
+        TX('features', { hpt: 'p4-rule', eyebrow: '수료 기준', title: '이만큼 참여하면\n수료예요.', sub: '', cols: [['출석', '80%', '전체 교육 시간 중'], ['실습', '1개', '배운 내용으로 결과물 하나'], ['설문', '참여', '더 나은 교육을 위해']] }),
+        HX('rev'),
+        HX('faq'), HX('loc'), 
+        TX('cta', { hpt: 'p4-fin', title: '처음 한 걸음,\n같이 시작해요.', sub: '궁금한 점은 운영 사무국으로 편하게 물어보세요.', cta: '교육 찾아보기', cols: [] }), ...quiet()].filter(Boolean) }
   };
   MINE.forEach(id => { if (TPL.some(t => t.id === 't44-' + id)) return; const c = B[id];
     TPL.push({ id: 't44-' + id, name: DEF[id].name, types: ['public'], g44: 1, sub: DEF[id].sub, ed: DEF[id].ed, scene: c.scene, color: DEF[id].acc, tone: '신뢰', look: DEF[id].look, theme: id, hero: '', purpose: c.purpose, prem: 1, noPalette: true, build: c.build }); });

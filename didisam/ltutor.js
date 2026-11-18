@@ -233,7 +233,7 @@ function ltRender() {
   /* 작은 안내는 잠깐만(버튼 위, 누를 수 없음 · 창은 열지 않음) — v25: 로그인 후 '오늘 할 일' 말풍선도 같은 방식 */
   /* v43 G2: PC 웹은 말풍선을 머리 줄 안(계정 앞)에 작게 — 본문 위에 뜨지 않음 */
   /* v43 G2: PC 웹은 AX 튜터 단추도 머리 줄 안(계정 앞)으로 — 떠 있는 단추가 카드 · 사진 · 버튼을 가리지 않게(휴대폰 · 앱은 그대로) */
-  try { document.querySelectorAll('header.lh .lt-hint, header.lh .lt-fab').forEach(x => x.remove()); const hd = document.querySelector('header.lh > .in'); if (hd && !document.body.classList.contains('lapp') && matchMedia('(min-width:901px)').matches) { const at = hd.querySelector(':scope > .acct') || null;
+  try { document.querySelectorAll('header.lh .lt-hint, header.lh .lt-fab').forEach(x => x.remove()); const hd = document.querySelector('header.lh > .in'); if (hd && !document.body.classList.contains('lapp') && matchMedia('(min-width:901px)').matches && !(window.lhsG44 && lhsG44())) { /* v44.1 CM: 새 템플릿(g44) 방문자 화면은 머리글에 넣지 않고 오른쪽 아래 떠 있는 버튼 */ const at = hd.querySelector(':scope > .acct') || null;
       const f = R.querySelector('.lt-fab'); if (f) { f.classList.add('lt-hfab'); hd.insertBefore(f, at); } const h = R.querySelector('.lt-hint'); if (h) { h.classList.add('lt-hh'); hd.insertBefore(h, f && f.parentNode === hd ? f : at); } } } catch (e) { }
   if (LT.hint || LT.nudge) { clearTimeout(LT.ht); LT.ht = setTimeout(() => { LT.hint = ''; LT.nudge = ''; document.querySelectorAll('.lt-hint').forEach(h => h.remove()); }, 4500); }
   ltPlace();

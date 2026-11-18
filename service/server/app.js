@@ -35,7 +35,7 @@ function aiCache(b) {
   const tools = Array.isArray(b.tools) && b.tools.length ? b.tools.slice(0, 16).map((t, i, a) => i === a.length - 1 ? { ...t, cache_control: { type: 'ephemeral' } } : t) : undefined;
   return { ...(sys ? { system: sys } : {}), messages: b.messages, ...(tools ? { tools } : {}) };
 }
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.yaml': 'text/plain; charset=utf-8', '.yml': 'text/plain; charset=utf-8', '.tf': 'text/plain; charset=utf-8', '.example': 'text/plain; charset=utf-8', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.mjs': 'text/javascript; charset=utf-8' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.yaml': 'text/plain; charset=utf-8', '.yml': 'text/plain; charset=utf-8', '.tf': 'text/plain; charset=utf-8', '.example': 'text/plain; charset=utf-8', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', /* v44.1: 샘플 사진(img/stock/*.webp)이 application/octet-stream + nosniff로 나가던 것 */ '.mjs': 'text/javascript; charset=utf-8' };
 const SESSION_DAYS = 14;
 const STATE_MAX = 8 * 1024 * 1024;      // 기관 상태 최대 8MB(JSON)
 const M = require('./modules');
