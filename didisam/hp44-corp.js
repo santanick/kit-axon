@@ -59,7 +59,7 @@
   const keyOf = v => String(v || '').replace(/^.*\/img\/stock\//, '').replace(/-800(?=\.webp)/, '').replace(/\.webp.*$/, '');
   const pageStart = s => { USED = new Set(); try { const th = DEF[s && s.theme]; Object.values((th && th.ph) || {}).forEach(v => USED.add(v)); Object.values((s && s.photos) || {}).forEach(v => USED.add(keyOf(v))); Object.values((s && s.img) || {}).forEach(v => { if (v) USED.add(keyOf(v.stock || v.src)); }); } catch (e) { } };
   const clsP = (c, s, i) => { const G = window.G44PH; if (!G) return null; /* 공통 고르기(global.js G44PH): ① 운영자 ② 강좌 이름 규칙 ③ 템플릿 세트 */
-    const p = G.pick(c, s, { used: USED, set: (DEF[s && s.theme] || {}).pool || [], salt: Math.max(0, MINE.indexOf(s && s.theme)) }); return p ? { src: p.op ? p.src : abs(p.src), alt: p.alt || c.name, pos: p.pos || '50% 50%' } : null; };
+    const p = G.pick(c, s, { used: USED, set: (s && s.theme === 'cpstore' ? ['sem-01', 'lec-01', 'grp-03', 'cls-03'] : []).concat((DEF[s && s.theme] || {}).pool || []), /* R3: 대리점 세트(빵 · 매장)는 규칙 없는 일반 교육 강좌에 엉뚱하므로 강의 장면 먼저 */ salt: Math.max(0, MINE.indexOf(s && s.theme)) }); return p ? { src: p.op ? p.src : abs(p.src), alt: p.alt || c.name, pos: p.pos || '50% 50%' } : null; };
   const img = (p, cls, eager) => p ? `<figure class="${cls || 'c4-ph'}"><img src="${E(p.src)}" alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos)}"></figure>` : '';
 
   /* ── 테마 10종: 세부 유형 · 색 · 서체 · 첫 화면 ── */
