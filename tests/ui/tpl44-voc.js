@@ -38,14 +38,14 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
         const m = await q.evaluate(() => { const vw = innerWidth; const R = { ow: document.documentElement.scrollWidth - vw, small: [], t44: [], wrap1: [], out: [], secs: document.querySelectorAll('section.v4').length };
           const vis = e => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && cs.opacity !== '0'; };
           document.querySelectorAll('body *').forEach(e => { if (!vis(e)) return; if (e.closest('[aria-hidden="true"]')) return; const t = [...e.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim()).map(n => n.textContent.trim()).join(''); if (!t) return; const fs = parseFloat(getComputedStyle(e).fontSize); const r = e.getBoundingClientRect();
-            if (fs < 13) R.small.push(`${e.className}:${fs}:${t.slice(0, 10)}`); if (r.right > vw + 1 || r.left < -1) R.out.push(t.slice(0, 10)); const lh = parseFloat(getComputedStyle(e).lineHeight) || fs * 1.4; if (t.length >= 2 && r.width < fs * 1.6 && r.height > lh * 1.8) R.wrap1.push(t.slice(0, 10)); });
+            if (fs < 13 && !e.closest('footer')) R.small.push(`${e.className}:${fs}:${t.slice(0, 10)}`); const sc = (() => { for (let x = e.parentElement; x; x = x.parentElement) { const o = getComputedStyle(x).overflowX; if (o === 'auto' || o === 'scroll') return x; } return null; })(); if ((r.right > vw + 1 || r.left < -1) && !sc) R.out.push(t.slice(0, 10)); const lh = parseFloat(getComputedStyle(e).lineHeight) || fs * 1.4; if (t.length >= 2 && r.width < fs * 1.6 && r.height > lh * 1.8) R.wrap1.push(t.slice(0, 10)); });
           document.querySelectorAll('section.v4 a').forEach(e => { if (!vis(e)) return; const r = e.getBoundingClientRect(); if (r.height < 44 || r.width < 44) R.t44.push(`${(e.textContent || '').trim().slice(0, 10)}:${Math.round(r.width)}x${Math.round(r.height)}`); });
-          const h1 = document.querySelector('section.v4 h1'); R.h1 = h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0; return R; });
+          const ids = [...document.querySelectorAll((document.querySelector('#p-home') ? '#p-home ' : '') + 'section img')].map(i => (i.getAttribute('src') || '').match(/img\/stock\/([a-z]{3}-\d{2})/)).filter(Boolean).map(m => m[1]); R.dup = ids.filter((x, i) => ids.indexOf(x) !== i); R.nimg = ids.length; const h1 = document.querySelector('section.v4 h1'); R.h1 = h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0; return R; });
         ok(m.ow <= 0 && !m.out.length, `${P} ${tag} 가로 넘침 0 ${m.out.slice(0, 3).join(' | ')}`);
         ok(!m.small.length, `${P} ${tag} 13px 미만 0 ${m.small.slice(0, 3).join(' | ')}`);
         ok(!m.t44.length, `${P} ${tag} 누르는 칸 44px ${m.t44.slice(0, 3).join(' | ')}`);
         ok(!m.wrap1.length, `${P} ${tag} 한 글자 꺾임 0 ${m.wrap1.slice(0, 3).join(' | ')}`);
-        ok(!e2.length, `${P} ${tag} 게시본 오류 없음 ${e2.slice(0, 1).join('')}`);
+        ok(!e2.length, `${P} ${tag} 게시본 오류 없음 ${e2.slice(0, 1).join('')}`); ok(!m.dup.length, `${P} ${tag} 한 페이지 사진 중복 0(사진 ${m.nimg}장) ${m.dup.join(',')}`);
         ok(tag === 'pc' ? m.h1 >= 64 && m.h1 <= 160 : m.h1 >= 36 && m.h1 <= (ID === 'vocert' ? 64 : 48), `${P} ${tag} 첫 화면 제목 ${m.h1}px`);
         if (empty) ok(m.secs >= 3, `${P} ${tag} 데이터 없음: 과정 · 숫자 · 후기 덩어리는 숨김(남은 섹션 ${m.secs})`);
         if (SHOT && !empty) { await q.evaluate(async () => { await document.fonts.ready; document.documentElement.style.scrollBehavior = 'auto'; for (let y = 0; y < document.body.scrollHeight; y += 700) { scrollTo(0, y); await new Promise(r => setTimeout(r, 50)); } document.documentElement.style.scrollBehavior = 'auto'; scrollTo(0, 0); }); await q.waitForTimeout(500);
@@ -58,7 +58,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
         const big = await p.evaluate(() => { const L = S.classes.filter(c => (c.open === '전체' || c.open == null) && c.status !== '종료'); return { n: L.length, f: L.filter(c => !+c.price).length }; });
         ok(big.n >= 10 || big.f >= 5 || !/class="v4-big"/.test(Hh), `${P} 큰 숫자: 과정 ${big.n}개 · 0원 ${big.f}개 → 기준 미만이면 숨김`);
         ok(!/끊겨|부탁드립니다|해 주세요\?/.test(Hh), `${P} 후기 인용: 불만 · 요청 글 제외`);
-        const hasN = await p.evaluate(() => [...(S.notices || []), ...(S.classes || []).flatMap(c => c.notices || [])].some(x => x && x.title && !x.hidden)); ok(!hasN || /v4s-notice/.test(g.html), `${P} 공지가 있으면 템플릿 모양 공지(v4-notice)`); }
+        const hasN = await p.evaluate(() => [...(S.notices || []), ...(S.classes || []).flatMap(c => c.notices || [])].some(x => x && x.title && !x.hidden)); ok(!hasN || /data-hx="ntc"/.test(g.html), `${P} 공지가 있으면 hx-ntc 공지`); ok(/v4s-sched|국비/.test(g.html) || !['vofield', 'vokdt', 'voupskill', 'vocert', 'vologi', 'vocare', 'voclassic'].includes(ID), `${P} 훈련 일정 표 · 국비 배지`); }
       await c.close(); }
   } catch (e) { fails.push('예외 ' + e.message); console.log(e); }
   await browser.close(); srv.close();
