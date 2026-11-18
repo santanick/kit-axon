@@ -9,7 +9,7 @@
 'use strict';
 /* ── ① 공공기관 유형 ── */
 IC.public = '<path d="M3 21h18M5 21V11M19 21V11M9.5 21v-6M14.5 21v-6M2 11l10-6 10 6z"/>';
-TYPES.public = { name: '공공기관', icon: 'public', desc: '공무원 · 직원 법정의무 · 직무교육, 진흥원 · 협회 교육, 기수 운영 · 실적 보고', ex: '지자체 · 인재개발원 · 진흥원 · 협회', sub: '지자체 · 인재개발원 · 시민 강좌 · 시설 · 경제진흥원 · 정보진흥원 · 민간 협회(소프트웨어산업협회 · 탄소나노협회 등)' }; /* v44.1 대표님 11-18: 진흥원 · 민간 협회까지 */
+TYPES.public = { name: '공공기관', icon: 'public', desc: '공무원 · 직원 법정의무 · 직무교육, 진흥원 · 협회 교육, 위탁운영 사업, 기수 운영 · 실적 보고', ex: '지자체 · 인재개발원 · 진흥원 · 협회', sub: '지자체 · 인재개발원 · 시민 강좌 · 시설 · 경제진흥원 · 정보진흥원 · 민간 협회(소프트웨어산업협회 · 탄소나노협회 등) · 위탁운영(AI 재직자 교육 등 사업 위탁)' }; /* v44.1 R3: 위탁운영 */ /* v44.1 대표님 11-18: 진흥원 · 민간 협회까지 */
 TERMS.public = { learner: '교육생', cls: '교육과정', group: '소속', teacher: '강사', done: '수료', site: '교육포털', fee: '교육비' };
 PRESET.public = JSON.parse(JSON.stringify(PRESET.corp));
 PRESET.public.off = PRESET.public.off.filter(x => x !== 'attend'); if (!PRESET.public.on.includes('attend')) PRESET.public.on.splice(1, 0, 'attend');

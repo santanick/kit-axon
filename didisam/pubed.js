@@ -12,7 +12,7 @@
   const PUB_ED = {
     citizen: { n: '시민 교육형', s: '주민 강좌 신청 · 출석 · 수료', ex: '평생학습관 · 시민대학 · 디지털 배움터' },
     facility: { n: '시설형', s: '시설 예약 · 강습 신청 · 회원 · 수납', ex: '시설관리공단 · 체육센터 · 문화센터' },
-    staff: { n: '직원 교육형', s: '직원 법정의무 · 직무교육, 진흥원 · 협회 회원 교육 · 실적 보고', ex: '인재개발원 · 지자체 · 경제진흥원 · 정보진흥원 · 민간 협회' }
+    staff: { n: '직원 교육형', s: '직원 법정의무 · 직무교육, 진흥원 · 협회 회원 교육, 위탁운영(AI 재직자 교육 등 사업 위탁) · 실적 보고', ex: '인재개발원 · 지자체 · 경제진흥원 · 정보진흥원 · 민간 협회 · 위탁운영 기관' }
   };
   window.PUB_ED = PUB_ED;
   const pubEd = () => { try { if (S && S.org && S.org.type === 'public') return EDS.includes(S.org.ed) ? S.org.ed : 'staff'; if (typeof SU !== 'undefined' && SU.type === 'public' && EDS.includes(SU.ed)) return SU.ed; } catch (e) { } return 'staff'; };

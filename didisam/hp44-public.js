@@ -86,7 +86,9 @@
     const h = H(); if (!h || typeof h.get !== 'function') return null; const ok = id => id && h.get(id) && !USED.has(id); let id = '';
     try { const r = typeof h.courseRule === 'function' ? h.courseRule(name) : null; const R = r ? r.ids.filter(ok) : []; if (R.length) id = R[hsh(CUR + key) % R.length]; } catch (e) { }
     if (!id) id = (pool || []).find(ok) || ''; if (!id) return null; USED.add(id); return stk(id); };
-  const clsP = (c, i, pool) => ruleP(c.name, c.id || i, pool, c.thumb);
+  /* R3: 강좌 카드는 ① 운영자 사진 ② 강좌 이름 규칙(courseRule) ③ 규칙이 없으면 템플릿 장면 세트가 아니라 강의 · 연수 장면(중립) — 「신규 임용자 교육」에 피아노 · 농구장 같은 엉뚱한 사진 방지 */
+  const NEUTRAL = ['sem-01', 'lec-01', 'cls-03', 'grp-03', 'grp-06', 'lec-03', 'cls-02', 'hum-04', 'grp-01', 'cls-01'];
+  const clsP = (c, i, pool) => ruleP(c.name, c.id || i, NEUTRAL.slice(hsh(CUR) % 4).concat(NEUTRAL.slice(0, hsh(CUR) % 4)), c.thumb);
   const facP = (f, i, pool) => ruleP(f.name, f.id || f.name || i, pool, f.photo);
   const img = (p, cls, eager) => { if (p) { const k = sidOf(p.src); if (k) USED.add(k); } return img0(p, cls, eager); };
   const img0 = (p, cls, eager) => p ? `<figure class="${cls || 'p4-ph'}"><img src="${E(p.src)}" alt="${E(p.alt)}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos)}"></figure>` : '';
@@ -248,7 +250,8 @@
     return sec(x, s, 'figs', `<div class="p4w">${d.eyebrow ? `<p class="p4-ft">${E(d.eyebrow)}</p>` : ''}<div class="p4-fg n${K.length}">${d.title ? `<h2 class="p4-h2">${ttl(d)}</h2>` : ''}${K.map(k => `<div class="p4-fk"><div class="p4-n">${k[0].toLocaleString('ko-KR')}<small>${k[1]}</small></div><p>${E(k[2])}</p></div>`).join('')}</div></div>`); };
   /* 알림마당 + 문의 상자 */
   SEC['p4-help'] = (x, s) => { const d = x.data || {}; const N = NT(3); const tel = telOf();
-    return sec(x, s, 'help', `<div class="p4w p4-hg2"><div><div class="p4-nh"><h2 class="p4-h2">${ttl(d, '알림마당')}</h2><a class="p4-more" href="#notice">더 보기 ${ic('chev', 18, 2)}</a></div>${N.length ? ntcList(N, '#notice') : `<p class="p4-none">새 공지가 올라오면 여기에 차례로 보여요. <a href="#notice">알림마당 가기</a></p>`}</div>
+    const left = N.length || editing() ? `<div><div class="p4-nh"><h2 class="p4-h2">${ttl(d, '알림마당')}</h2><a class="p4-more" href="#notice">더 보기 ${ic('chev', 18, 2)}</a></div>${N.length ? ntcList(N, '#notice') : `<p class="p4-none">새 공지가 올라오면 여기에 차례로 보여요(게시본에서는 공지가 없으면 이 칸을 숨겨요). <a href="#notice">알림마당 가기</a></p>`}</div>` : ''; /* R3: 빈 기관 게시본에 빈 알림 칸을 남기지 않음 */
+    return sec(x, s, 'help', `<div class="p4w p4-hg2${left ? '' : ' p4-hg1'}">${left}
 <div class="p4-call"><h3>${E(d.sub || '교육 신청이 어려우신가요?')}</h3>${tel ? `<a class="p4-tel" href="tel:${E(tel)}">${E(tel)}</a><p>${E(d.hours || '평일 09:00 – 18:00')}</p>` : '<p>담당자에게 온라인으로 문의를 남겨 주세요.</p>'}<a class="p4-b sec" href="#comm">온라인 문의 남기기</a></div></div>`); };
 
   /* ── 새 섹션 ── */
@@ -386,7 +389,7 @@
 .p4.p4-rows .p4-more{margin-top:36px}
 .p4 .p4-ft{font-size:15px;font-weight:700;margin-bottom:48px;opacity:.85}.p4 .p4-fg{display:grid;grid-template-columns:repeat(3,1fr);align-items:end}.p4 .p4-fg.n2{grid-template-columns:repeat(2,1fr)}.p4 .p4-fg.n1{grid-template-columns:1fr}
 .p4 .p4-fk{padding:0 40px;border-left:1px solid var(--ln)}.p4 .p4-fk:first-child{padding-left:0;border-left:0}.p4 .p4-fk .p4-n{font-size:88px;font-weight:800;letter-spacing:-.05em;line-height:1;font-variant-numeric:tabular-nums}.p4 .p4-fk small{font-size:30px;margin-left:4px;color:var(--at)}.p4 .p4-fk p{margin-top:16px;font-size:17px;color:var(--mu)}
-.p4 .p4-hg2{display:grid;grid-template-columns:1.2fr 1fr;gap:72px}.p4 .p4-nt{margin-top:28px}.p4 .p4-nt li{display:flex;justify-content:space-between;gap:24px;padding:20px 0;border-bottom:1px solid var(--ln);font-size:17px}.p4 .p4-nt li:first-child{border-top:2px solid var(--ink)}.p4 .p4-nt a{font-weight:600}.p4 .p4-nt time{color:var(--mu);font-size:15px;white-space:nowrap}
+.p4 .p4-hg2{display:grid;grid-template-columns:1.2fr 1fr;gap:72px}.p4 .p4-hg2.p4-hg1{grid-template-columns:minmax(0,760px);justify-content:center}.p4 .p4-nt{margin-top:28px}.p4 .p4-nt li{display:flex;justify-content:space-between;gap:24px;padding:20px 0;border-bottom:1px solid var(--ln);font-size:17px}.p4 .p4-nt li:first-child{border-top:2px solid var(--ink)}.p4 .p4-nt a{font-weight:600}.p4 .p4-nt time{color:var(--mu);font-size:15px;white-space:nowrap}
 .p4 .p4-none{margin-top:28px;padding:28px 0;border-top:2px solid var(--ink);color:var(--mu)}.p4 .p4-none a{color:var(--at);font-weight:700;text-decoration:underline}
 .p4 .p4-call{background:var(--alt);padding:44px;border-top:6px solid var(--a)}.p4 .p4-call h3{font-size:26px;font-weight:800;letter-spacing:-.03em}.p4 .p4-tel{display:block;font-size:40px;font-weight:800;letter-spacing:-.03em;color:var(--at);margin-top:18px}.p4 .p4-call p{color:var(--mu);font-size:16px;margin-top:8px}.p4 .p4-call .p4-b{margin-top:28px}.p4 .p4-b.sec{box-shadow:inset 0 0 0 2px var(--at);color:var(--at)}
 .p4 .p4-dg{display:grid;grid-template-columns:1fr 1fr;gap:24px}.p4 .p4-pn{display:flex;flex-direction:column;justify-content:space-between;gap:48px;min-height:340px;padding:52px;border-radius:${D.r}px;background:var(--alt)}.p4 .p4-pn.p1{background:var(--a);color:var(--on)}
@@ -421,7 +424,7 @@
 .pbcivic.p4-rows .p4-more{margin-top:36px;text-decoration:underline;text-underline-offset:4px}
 .pbcivic.p4-figs{background:var(--a);color:var(--on);padding:120px 0}.pbcivic .p4-ft{font-size:15px;font-weight:700;color:${onA === '#FFFFFF' ? pt : D.ink};margin-bottom:56px}.pbcivic .p4-fg{display:grid;grid-template-columns:repeat(3,1fr)}.pbcivic .p4-fg.n2{grid-template-columns:repeat(2,1fr)}.pbcivic .p4-fg.n1{grid-template-columns:1fr}
 .pbcivic .p4-fk{padding:0 40px;border-left:1px solid ${al(onA, .22)}}.pbcivic .p4-fk:first-child{padding-left:0;border-left:0}.pbcivic .p4-fk .p4-n{font-size:84px;font-weight:800;letter-spacing:-.05em;line-height:1;font-variant-numeric:tabular-nums}.pbcivic .p4-fk small{font-size:30px;margin-left:4px;color:${onA === '#FFFFFF' ? pt : D.ink}}.pbcivic .p4-fk p{margin-top:16px;font-size:17px;opacity:.82}
-.pbcivic.p4-help{background:#F3F5F8;padding:110px 0}.pbcivic .p4-hg2{display:grid;grid-template-columns:1.2fr 1fr;gap:72px}.pbcivic .p4-nt{margin-top:28px}.pbcivic .p4-nt li{display:flex;justify-content:space-between;gap:24px;padding:20px 0;border-bottom:1px solid #C6CDD7;font-size:17px}.pbcivic .p4-nt li:first-child{border-top:2px solid ${D.ink}}.pbcivic .p4-nt a{font-weight:600}.pbcivic .p4-nt time{color:#646C7A;font-size:15px;white-space:nowrap}
+.pbcivic.p4-help{background:#F3F5F8;padding:110px 0}.pbcivic .p4-hg2{display:grid;grid-template-columns:1.2fr 1fr;gap:72px}.pbcivic .p4-hg2.p4-hg1{grid-template-columns:minmax(0,760px);justify-content:center}.pbcivic .p4-nt{margin-top:28px}.pbcivic .p4-nt li{display:flex;justify-content:space-between;gap:24px;padding:20px 0;border-bottom:1px solid #C6CDD7;font-size:17px}.pbcivic .p4-nt li:first-child{border-top:2px solid ${D.ink}}.pbcivic .p4-nt a{font-weight:600}.pbcivic .p4-nt time{color:#646C7A;font-size:15px;white-space:nowrap}
 .pbcivic .p4-none{margin-top:28px;padding:28px 0;border-top:2px solid ${D.ink};color:var(--mu)}.pbcivic .p4-none a{color:var(--at);font-weight:700;text-decoration:underline}
 .pbcivic .p4-call{background:#fff;padding:44px;border-top:6px solid var(--a)}.pbcivic .p4-call h3{font-size:26px;font-weight:800;letter-spacing:-.03em}.pbcivic .p4-tel{display:block;font-size:40px;font-weight:800;letter-spacing:-.03em;color:var(--at);margin-top:18px}.pbcivic .p4-call p{color:var(--mu);font-size:16px;margin-top:8px}.pbcivic .p4-call .p4-b{margin-top:28px}
 @media (max-width:720px){.gh.hps-h:before{font-size:13px;line-height:36px;padding:0 20px}.pbcivic.p4-hero{padding:48px 0 72px}.pbcivic .p4-g{grid-template-columns:1fr;gap:48px}.pbcivic.p4-hero h1{font-size:40px;line-height:1.22}.pbcivic .p4-lead{font-size:17px;margin-top:20px}.pbcivic.p4-hero .p4-cta{margin-top:32px}.pbcivic .p4-b{height:56px}
@@ -537,7 +540,7 @@
 .pblibrary.p4-story{background:${D.alt}}.pblibrary .p4-sg2>figure{aspect-ratio:4/4.6;border-radius:24px}.pblibrary .p4-steps .p4-n{font-size:15px}
 .pblibrary.p4-quote{text-align:center}.pblibrary.p4-quote blockquote{margin:0 auto;font-weight:700;font-size:44px}.pblibrary .p4-who i{background:${a};color:${onA}}
 .pblibrary.p4-fin{border-radius:40px 40px 0 0}
-@media (max-width:720px){.pblibrary.p4-hero{padding:32px 0 72px}.pblibrary .p4-g{grid-template-columns:1fr;gap:44px}.pblibrary .p4-arch{margin:0 12px 0 24px}.pblibrary .p4-arch figure{aspect-ratio:4/4.2}.pblibrary.p4-hero h1{font-size:42px;line-height:1.18}.pblibrary .p4-lead{font-size:17px;margin-top:20px}.pblibrary.p4-hero .p4-cta{margin-top:32px}
+@media (max-width:720px){.pblibrary.p4-hero{padding:32px 0 72px}.pblibrary .p4-g{grid-template-columns:1fr;gap:44px}.pblibrary .p4-arch{margin:0 12px 0 24px}.pblibrary .p4-arch figure{aspect-ratio:4/2.9}.pblibrary.p4-hero h1{font-size:42px;line-height:1.18}.pblibrary .p4-lead{font-size:17px;margin-top:20px}.pblibrary.p4-hero .p4-cta{margin-top:32px}
 .pblibrary .p4-cards,.pblibrary .p4-cards.n3,.pblibrary .p4-cards.n2{grid-template-columns:1fr;gap:16px}.pblibrary .p4-lc{min-height:0}.pblibrary .p4-lc h3{font-size:21px;margin:16px 0}.pblibrary .p4-rw{grid-template-columns:72px 1fr}.pblibrary.p4-quote blockquote{font-size:26px}.pblibrary.p4-fin{border-radius:28px 28px 0 0}}
 `,
     /* 청소년: 보라 색면 · 스티커 */
