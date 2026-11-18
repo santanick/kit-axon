@@ -65,7 +65,10 @@
   const fresh = () => { };
   const clsPh = (c, s, i) => { const U = page(s); let m = null; try { m = HPS.cardImg ? HPS.cardImg(c, s) : null; } catch (e) { m = null; }
     if (m && !m.stock && m.src) return { src: m.big || m.src, alt: m.alt || c.name, pos: m.pos, stock: false };
-    const H = window.HPSTOCK; const set = (CARD[s && s.theme] || []).filter(id => !U.has(id) && H && H.get && H.get(id));
+    const H = window.HPSTOCK;
+    /* 순서: 운영자 사진 → 강좌 이름 · 분야로 확실히 맞는 스톡(HPSTOCK.forCourse, 페이지 안 중복 제외) → 템플릿 분야 세트 */
+    try { if (H && typeof H.forCourse === 'function') { const x = H.forCourse('k12', c.name, { exclude: [...U], seed: (s && s.theme) + '|' + c.id }); if (x && !U.has(x.id)) { U.add(x.id); return { src: H.url(x), alt: x.alt, pos: x.focus, stock: true }; } } } catch (e) { }
+    const set = (CARD[s && s.theme] || []).filter(id => !U.has(id) && H && H.get && H.get(id));
     if (set.length) { const x = H.get(set[0]); U.add(x.id); return { src: H.url(x), alt: x.alt, pos: x.focus, stock: true }; }
     try { let x = null; for (let k = 0; k < 10 && (!x || U.has(x.id)); k++) x = H.photo(c.name, c.id + '|' + i + '|' + k, { id: true, slot: 'card', scope: 'k4-' + c.id + k }); if (x && !U.has(x.id)) { U.add(x.id); return { src: H.url(x), alt: x.alt, pos: x.focus, stock: true }; } } catch (e) { }
     return null; };
