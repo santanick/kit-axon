@@ -1017,5 +1017,7 @@ footer.gf.hx-f .hx-fbt{gap:6px 18px;padding:20px 0 28px}footer.gf.hx-f .hx-biz{f
   if (typeof siteFromTpl === 'function' && !siteFromTpl.hx44) { const b0 = siteFromTpl; const f = tp => { const s = b0(tp); try { if (tp && tp.g44 === 1) addParts(s); } catch (e) { console.error('hx parts', e); } return s; };
     Object.keys(b0).forEach(k => { try { f[k] = b0[k]; } catch (e) { } }); f.hx44 = 1; siteFromTpl = f; window.siteFromTpl = f; }
 
+  /* R3: g44 사이트에서는 템플릿 자체 후기 인용(HPT.reviews를 쓰는 a4 · k4 · l4 · v4 등)도 공개(전체) 과정 후기만 — 예전 템플릿 사이트는 그대로 */
+  if (window.HPT && typeof HPT.reviews === 'function' && !HPT.reviews.hx) { const r0 = HPT.reviews; const f = (...a) => { const R = r0(...a); try { const s = typeof site === 'function' ? site() : (S && S.site); if (Array.isArray(R) && on(s)) { const P = pubIds(); return R.filter(r => { const c = revCls(r); return !c || P.has(c); }); } } catch (e) { } return R; }; f.hx = 1; HPT.reviews = f; }
   window.HPX = { on, kinds: KINDS.slice(), sec, addParts, css, data: { reviews: goodReviews, numbers, faqs, teachers, notices, contact } };
 })();

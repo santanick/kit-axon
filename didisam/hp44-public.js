@@ -59,7 +59,7 @@
   const short = n => String(n || '').replace(/\s*\(.*\)$/, '');
   /* 큰 인용에는 칭찬 · 경험담만 — 불만 · 요청 · 질문(끊겨요 · 안 돼요 · 부탁 · 해 주세요 · 물음표 · 오류 · 환불 …)은 뺀다(v44 검수) */
   const ASK = /끊[겨기어]|안 ?[돼되됩]|[돼되]지 ?않|부탁|해 ?주[세시실]|주실 ?수|알려 ?주|[?？]\s*$|[?？]|오류|에러|버그|환불|불편|불만|아쉬|문의|왜 |언제|어떻게|느려|멈춰|튕[겨기]|로그인이 ?안/;
-  const review = () => { try { const R = (S.reviews || []).filter(r => r && !r.hidden && String(r.body || '').trim().length >= 15 && (+r.stars || 5) >= 4 && !ASK.test(String(r.body).trim())); const r = R[0]; if (!r) return null; const c = (S.classes || []).find(x => x.id === r.cls); return { body: String(r.body).trim(), cls: c ? c.name : '' }; } catch (e) { return null; } };
+  const review = () => { try { const PUB = new Set((S.classes || []).filter(c => c && (c.open === '전체' || c.open == null)).map(c => c.id)); /* R3: 공개 과정 후기만 */ const R = (S.reviews || []).filter(r => r && !r.hidden && (!r.cls || PUB.has(r.cls)) && String(r.body || '').trim().length >= 15 && (+r.stars || 5) >= 4 && !ASK.test(String(r.body).trim())); const r = R[0]; if (!r) return null; const c = (S.classes || []).find(x => x.id === r.cls); return { body: String(r.body).trim(), cls: c ? c.name : '' }; } catch (e) { return null; } };
   const notes = n => { try { return [...(S.notices || []), ...(S.classes || []).flatMap(c => c.notices || [])].filter(x => x && x.title && !x.hidden && !x.draft).sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, n || 4); } catch (e) { return []; } };
   /* 접수 상태 배지(공공 B): 모집 기간(c.recruit) 우선, 없으면 시작 · 종료일로 */
   const stOf = c => { const t = tday(); const R = c.recruit || {};
