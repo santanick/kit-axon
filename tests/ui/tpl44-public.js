@@ -28,12 +28,14 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
     for (const w of [1440, 390]) { const c2 = await browser.newContext({ viewport: { width: w, height: w > 600 ? 900 : 844 } }); const q = await c2.newPage(); const pe = []; q.on('pageerror', e => pe.push(e.message)); await q.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
       await q.goto(`${base}/__pv/${key}.html`, { waitUntil: 'load' }); await q.waitForTimeout(500);
       const m = await q.evaluate(w => { const de = document.documentElement; const vw = de.clientWidth; const vis = el => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
-        const C = [...document.querySelectorAll('section.p4')]; const inS = el => C.some(s => s.contains(el));
-        return { n: C.length, over: de.scrollWidth - vw, out: [...document.querySelectorAll('section.p4 *')].filter(el => vis(el) && el.getBoundingClientRect().right > vw + 1).map(el => el.className).slice(0, 4),
+        const C = [...document.querySelectorAll('section.p4')]; const inS = el => C.some(s => s.contains(el)); const inScr = el => { for (let p = el.parentElement; p; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll') return true; } return false; };
+        const ids = [...document.querySelectorAll('section.p4 img, section.hx img, section[data-hx] img')].map(i => (i.getAttribute('src') || '').split('/').pop().replace(/(-800)?\.(webp|jpe?g|png).*$/, '')).filter(Boolean);
+        return { n: C.length, over: de.scrollWidth - vw, out: [...document.querySelectorAll('section.p4 *')].filter(el => vis(el) && el.getBoundingClientRect().right > vw + 1 && !inScr(el)).map(el => el.className).slice(0, 4),
           small: w < 600 ? [...document.querySelectorAll('section.p4 a')].filter(a => vis(a) && a.getBoundingClientRect().height < 44).map(a => a.textContent.trim().slice(0, 12)) : [],
           tiny: [...document.querySelectorAll('section.p4 *')].filter(el => vis(el) && inS(el) && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(el).fontSize) < 13).map(el => el.textContent.trim().slice(0, 10)),
           narrow: [...document.querySelectorAll('section.p4 :is(h1,h2,h3,b,small,a,p,em,span,dd,dt)')].filter(el => { if (!vis(el) || el.textContent.trim().length < 3) return false; const r = el.getBoundingClientRect(); const fs = parseFloat(getComputedStyle(el).fontSize); return r.height > fs * 5 && r.width < fs * 2.2; }).map(el => el.textContent.trim().slice(0, 8)),
           bad: [...document.querySelectorAll('section.p4 img')].filter(i => i.complete && !i.naturalWidth).length,
+          dup: ids.filter((v, i) => ids.indexOf(v) !== i),
           cta: (() => { const b = document.querySelector('section.p4-hero .p4-cta a'); return b ? Math.round(b.getBoundingClientRect().bottom) : 9999; })(),
           h1: (() => { const h = document.querySelector('section.p4-hero h1'); return h ? parseFloat(getComputedStyle(h).fontSize) : 0; })() }; }, w);
       ok(m.n >= (minN || 5) && m.over <= 0 && !m.out.length, `${key} ${w}: 섹션 ${m.n}개 · 가로 넘침 0 · 화면 밖 요소 0(${m.over}/${m.out.join(',')})`);
@@ -41,6 +43,9 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
       ok(!m.tiny.length, `${key} ${w}: 글자 13px 이상 ${m.tiny.join(',')}`);
       ok(!m.narrow.length, `${key} ${w}: 한 글자 꺾임 0 ${m.narrow.join(',')}`);
       ok(!m.bad, `${key} ${w}: 깨진 사진 0(${m.bad})`);
+      ok(!m.dup.length, `${key} ${w}: 한 페이지 안 사진 중복 0 ${m.dup.join(',')}`);
+      if (w > 600 && !/empty/.test(key)) { const ax = await q.evaluate(async () => { const r = {}; const lg = document.querySelector('.p4-ax-lg summary'), hc = document.querySelector('.p4-ax-hc summary'); if (!lg || !hc) return { none: 1 }; const sec = document.querySelector('section.p4:not(.p4-hero)'); lg.click(); await new Promise(z => setTimeout(z, 60)); r.zoom = getComputedStyle(sec).zoom; lg.click(); hc.click(); await new Promise(z => setTimeout(z, 60)); r.bg = getComputedStyle(sec).backgroundColor; r.a = (() => { const a = sec.querySelector('a'); return a ? getComputedStyle(a).color : 'rgb(255, 230, 0)'; })(); hc.click(); return r; });
+        ok(String(ax.zoom) === '1.15' && ax.bg === 'rgb(0, 0, 0)' && ax.a === 'rgb(255, 230, 0)', `${key}: 보기 설정 — 글자 크게(zoom ${ax.zoom}) · 고대비(${ax.bg} · 링크 ${ax.a})`); }
       ok(w > 600 ? m.h1 >= 64 && m.h1 <= 96 : m.h1 >= 36 && m.h1 <= 46, `${key} ${w}: 첫 화면 제목 크기 ${m.h1}px(PC 64~96 · 휴대폰 36~44)`);
       if (w < 600 && !/empty/.test(key)) ok(m.cta <= 844, `${key} 390: 첫 화면(844px) 안에 제목 · 첫 버튼(${m.cta}px)`);
       ok(!pe.length, `${key} ${w}: pageerror 0 ${pe.join('|')}`);
@@ -72,6 +77,9 @@ const ROUTES = /^#(my|courses|badges|notice|login|home|shop|comm|cal|fac|join|fa
     ok(!/학번|주민등록|주민번호|<input|<form/.test((r.html.match(/<section class="hpt p4[\s\S]*?<\/section>/g) || []).join('')), `${id}: 개인정보 — 입력 칸 · 번호 수집 문구 없음`);
     ok(!/NaN|undefined|object Object/.test(r.html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '')), `${id}: NaN · undefined 없음`);
     if (['pbjournal', 'pbmuseum', 'pbheritage'].includes(id)) ok(/noto-serif-kr\/font\.css/.test(r.html), `${id}: 세리프 글꼴`);
+    if (id === 'pbcivic' || id === 'pbcontract') { const dp = await a.p.evaluate(id => { const s = S.site; const f = S.settings.footer || (S.settings.footer = {}); const keep = f.tel; f.tel = ''; const h0 = siteHTML(s); f.tel = '051-123-4567'; const h1 = siteHTML(s); f.tel = keep; return { off: !/p4-dept"/.test(h0), on: /<table class="p4-tbl">[\s\S]*href="tel:051-123-4567"/.test(h1) }; }, id);
+      ok(dp.off && dp.on, `${id}: 담당 부서 연락처 표 — 대표번호 없으면 숨김 · 있으면 표(${JSON.stringify(dp)})`); }
+    ok(/class="p4-sb s[a-z]"|class="p4-tag[^"]*">(접수|마감|진행|상시|오늘)/.test(r.html) || id === 'pbposter' || id === 'pbcampus' && false, `${id}: 접수 상태 배지(D-day)`);
     if (id === 'pbposter') { const f = await a.p.evaluate(() => S.fac.facilities.filter(f => f.on !== false).slice(0, 5).map(f => f.name)); ok(f.every(n => r.html.includes(n)) && /p4-hours/.test(r.html) && L.includes('#fac') && L.includes('#shop'), `pbposter: 실제 시설 ${f.length}곳 · 운영 시간 · #fac · #shop`); }
     if (id === 'pbcivic') ok(/공식 누리집입니다/.test(r.html) && ['#my', '#courses', '#badges', '#cal', '#notice'].every(h => L.includes(h)), 'pbcivic: 공식 누리집 띠 · 자주 찾는 서비스');
     if (id === 'pbyouth' || id === 'pbsenior') ok(L.includes('#family'), `${id}: 보호자 · 가족 연결(#family)`);
