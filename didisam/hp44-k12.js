@@ -49,11 +49,25 @@
   const ph = (s, slot, d) => { try { return window.HPS && HPS.photo ? HPS.photo(s, slot, d) : null; } catch (e) { return null; } };
   const img = (p, cls, eager, slot) => p ? `<figure class="k4-ph${cls ? ' ' + cls : ''}"${slot ? ` data-slot="${E(slot)}"` : ''}${slot === 'hero' ? ' data-hero="1"' : ''}${p.stock ? ' data-stock="1"' : ''}><img src="${E(p.src)}"${p.srcset ? ` srcset="${E(p.srcset)}" sizes="(max-width: 760px) 100vw, 60vw"` : ''} alt="${E(p.alt || '')}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"'} decoding="async" style="object-position:${E(p.pos || '50% 50%')}"></figure>` : '';
   const fig = (s, slot, cls, eager, d) => img(ph(s, slot, d), cls, eager, slot);
-  let USED = new Set(); const fresh = () => { USED = new Set(); };
-  const clsPh = (c, s, i) => { let m = null; try { m = HPS.cardImg ? HPS.cardImg(c, s) : null; } catch (e) { m = null; }
-    const key = m ? String(m.stock || m.big || m.src).replace(/-800(?=\.webp)/, '').replace(/^.*\/img\/stock\//, '').replace(/\.webp.*$/, '') : '';
-    if (m && !USED.has(key)) { USED.add(key); return { src: m.big || m.src, alt: m.alt || c.name, pos: m.pos, stock: !!m.stock }; }
-    try { let x = null; for (let k = 0; k < 8 && (!x || USED.has(x.id)); k++) x = HPSTOCK.photo(c.name, c.id + '|' + i + '|' + k, { id: true, slot: 'card', scope: 'k4-' + c.id + k }); if (x) { USED.add(x.id); return { src: HPSTOCK.url(x), alt: x.alt, pos: x.focus, stock: true }; } } catch (e) { }
+  /* 사진 중복 없애기(cat44 A1): 한 페이지 안 중복 0 — 첫 화면에서 새로 시작하고 템플릿 지정 사진(s.photos · s.img)을 먼저 「사용함」으로 둔다.
+     강좌 사진은 템플릿마다 다른 분야 사진 세트(CARD)에서 차례로 — 같은 유형 안 템플릿끼리 겹치지 않게. 기관이 올린 강좌 사진이 있으면 그것을 쓴다. */
+  const CARD = {
+    kfmath: ['dsk-03', 'dat-01', 'lap-04', 'dsk-09', 'hum-05', 'hum-01'], kfeng: ['lan-01', 'hum-10', 'lib-05', 'hum-04', 'cam-09', 'lib-03'],
+    kfessay: ['lib-06', 'hum-28', 'hum-03', 'dsk-08', 'lib-02', 'hum-02'], kfprep: ['hum-13', 'hum-14', 'dsk-06', 'stu-01', 'cls-01', 'cam-07'],
+    kfsci: ['cls-03', 'nat-03', 'sen-04', 'dro-01', 'dro-02', 'cls-04'], kfkids: ['kid-03', 'kid-04', 'lib-04', 'kid-05', 'kid-08', 'kid-07', 'fam-02', 'fam-03'],
+    kfcode: ['hum-08', 'hum-09', 'dsn-01', 'lap-08', 'wrk-03', 'hum-18'], kfart: ['art-01', 'art-02', 'art-06', 'hum-26', 'hum-24', 'hum-23', 'hum-22', 'kni-02'],
+    kfmusic: ['mus-01', 'mus-08', 'hum-30', 'hum-29', 'mus-05', 'hum-32'], kfsport: ['spo-03', 'spo-07', 'spo-02', 'spo-04', 'spo-05', 'spo-06', 'yog-03', 'spo-08']
+  };
+  let USED = new Set(), CUR = null;
+  const sid = v => { const m = String((v && typeof v === 'object' ? (v.stock || v.src) : v) || '').match(/([a-z]{3}-\d{2})(?:-800)?(?:\.webp)?$/); return m ? m[1] : ''; };
+  const page = s => { if (CUR === s) return USED; CUR = s; USED = new Set(); try { Object.values((s && s.photos) || {}).forEach(v => (Array.isArray(v) ? v : [v]).forEach(x => { const k = sid(x); if (k) USED.add(k); })); Object.keys((s && s.img) || {}).forEach(k => { if (!/^cls-/.test(k)) { const x = sid(s.img[k]); if (x) USED.add(x); } }); } catch (e) { } return USED; };
+  const newPage = () => { CUR = null; };
+  const fresh = () => { };
+  const clsPh = (c, s, i) => { const U = page(s); let m = null; try { m = HPS.cardImg ? HPS.cardImg(c, s) : null; } catch (e) { m = null; }
+    if (m && !m.stock && m.src) return { src: m.big || m.src, alt: m.alt || c.name, pos: m.pos, stock: false };
+    const H = window.HPSTOCK; const set = (CARD[s && s.theme] || []).filter(id => !U.has(id) && H && H.get && H.get(id));
+    if (set.length) { const x = H.get(set[0]); U.add(x.id); return { src: H.url(x), alt: x.alt, pos: x.focus, stock: true }; }
+    try { let x = null; for (let k = 0; k < 10 && (!x || U.has(x.id)); k++) x = H.photo(c.name, c.id + '|' + i + '|' + k, { id: true, slot: 'card', scope: 'k4-' + c.id + k }); if (x && !U.has(x.id)) { U.add(x.id); return { src: H.url(x), alt: x.alt, pos: x.focus, stock: true }; } } catch (e) { }
     return null; };
 
   /* ── 공통 조각 ── */
@@ -81,7 +95,7 @@
     return null; }
 
   /* ══ 첫 화면 10종 ══ */
-  const H0 = (s, cls, inner, dark) => `<section class="hpt hp-hero hps-hero k4-h ${cls}"${dark ? ' data-hps-dark="1"' : ''}>${inner}</section>`;
+  const H0 = (s, cls, inner, dark) => { newPage(); page(s); return `<section class="hpt hp-hero hps-hero k4-h ${cls}"${dark ? ' data-hps-dark="1"' : ''}>${inner}</section>`; };
   const crest = n => { const c = (String(n || '').replace(/\s/g, '')[0] || '學'); return `<svg class="k4-crest" viewBox="0 0 64 76" width="64" height="76" aria-hidden="true" focusable="false"><path d="M32 2 60 12v24c0 18-12 31-28 38C16 67 4 54 4 36V12z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 8 54 16v20c0 14-9 25-22 31C19 61 10 50 10 36V16z" fill="none" stroke="currentColor" stroke-width="1"/><text x="32" y="45" text-anchor="middle" font-size="22" font-weight="700" fill="currentColor">${E(c)}</text></svg>`; };
   const HERO = {
     kfmath: (s, d) => H0(s, 'k4-split', `<div class="k4-w"><div class="k4-sg"><div class="k4-st">${head(d)}${ctas(s, d)}</div>${fig(s, 'hero', 'k4-hi', 1, d)}</div>${quick()}</div>`),
@@ -115,7 +129,11 @@
       return sec('k4-cls', `<header class="k4-hd"><div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2></div>${more}</header><div class="k4-cds n${C.length}">${C.map(card).join('')}</div>`); },
     'k4-tt': (d, s) => { const C = pub().filter(c => daysOf(c).length || timeOf(c)).slice(0, 6); if (!C.length) return hint('k4-tt', '공개 강좌에 요일 · 시간을 넣으면 시간표가 자동으로 그려집니다.');
       const k = c => (daysOf(c)[0] == null ? 9 : (daysOf(c)[0] + 6) % 7) * 10000 + (+String(timeOf(c)).replace(':', '') || 0); C.sort((a, b) => k(a) - k(b));
-      return sec('k4-tt', `<header class="k4-hd"><div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2></div><a class="k4-lk" ${aT(L.cls(s))}>전체 시간표${AR}</a></header><ul class="k4-tl2">${C.map(c => `<li><a ${aT(L.c(c))}><span class="k4-td">${E(dayTx(c) || '상담')}</span><span class="k4-tm">${E(timeOf(c) || '—')}</span><b>${E(c.name)}</b><span class="k4-tx">${E([priceOf(c), seatOf(c)].filter(Boolean).join(' · '))}</span>${AR}</a></li>`).join('')}</ul>`); },
+      let grid = ''; if (d.lay === 'grid') { const DY = [1, 2, 3, 4, 5, 6, 0].filter(k => C.some(c => daysOf(c).includes(k))); const TM = [...new Set(C.map(timeOf).filter(Boolean))].sort();
+        if (DY.length >= 2 && TM.length) grid = `<table class="k4-tg"><thead><tr><th scope="col"><span class="k4-sr">시간</span></th>${DY.map(k => `<th scope="col">${DN[k]}</th>`).join('')}</tr></thead><tbody>${TM.map(t2 => `<tr><th scope="row">${E(t2)}</th>${DY.map(k => { const X = C.filter(c => timeOf(c) === t2 && daysOf(c).includes(k)); return `<td>${X.map(c => `<a ${aT(L.c(c))}><b>${E(c.name)}</b><small>${E(seatOf(c) || priceOf(c))}</small></a>`).join('')}</td>`; }).join('')}</tr>`).join('')}</tbody></table>`; }
+      return sec('k4-tt' + (grid ? ' k4-ttg' : ''), `<header class="k4-hd"><div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2></div><a class="k4-lk" ${aT(L.cls(s))}>전체 시간표${AR}</a></header>${grid}<ul class="k4-tl2">${C.map(c => `<li><a ${aT(L.c(c))}><span class="k4-td">${E(dayTx(c) || '상담')}</span><span class="k4-tm">${E(timeOf(c) || '—')}</span><b>${E(c.name)}</b><span class="k4-tx">${E([priceOf(c), seatOf(c)].filter(Boolean).join(' · '))}</span>${AR}</a></li>`).join('')}</ul>`); },
+    'k4-bus': (d, s) => { const R = (d.cols || []).filter(r => r && r[0] && !isPh(r[0]) && r[0] !== '자동').slice(0, 6); if (!R.length) return hint('k4-bus', '차량 운행 노선(구간 · 시간)을 입력하면 「차량 운행」이 표시됩니다. 비어 있으면 게시된 사이트에서 숨겨집니다.');
+      return sec('k4-bus', `<header class="k4-hd"><div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2></div></header><ul class="k4-bl">${R.map((r, i) => `<li><span class="k4-bn">${i + 1}</span><b>${E(r[0])}</b>${r[1] ? `<p>${E(r[1])}</p>` : ''}</li>`).join('')}</ul>${val(d.body) ? `<p class="k4-bnote">${br(d.body)}</p>` : ''}`); },
     'k4-stm': (d, s) => { const N = pub().slice(0, 3).map(c => c.name); if (!N.length) return hint('k4-stm', '공개 강좌가 생기면 반 이름으로 큰 문장이 자동으로 만들어집니다.');
       const j = N.length === 1 ? `<b>${E(N[0])}</b>` : N.length === 2 ? `<b>${E(N[0])}</b>와 <b>${E(N[1])}</b>` : `<b>${E(N[0])}</b>부터 <b>${E(N[1])}</b>, <b>${E(N[2])}</b>까지`;
       const tl = E(String(d.body || '').replace(/\*([^*]+)\*/g, '\u0001$1\u0002')).replace(/\u0001/g, '<b>').replace(/\u0002/g, '</b>');
@@ -139,7 +157,7 @@
       return sec('k4-notice', `<header class="k4-hd"><div>${lab(d.eyebrow)}<h2>${br(d.title || '')}</h2></div><a class="k4-lk" ${aT(L.notice(s))}>소식 전체 보기${AR}</a></header><ul class="k4-nl">${N.map(n => `<li><a ${aT(L.notice(s))}><time>${E(dt(n.at))}</time><b>${E(n.title)}</b>${AR}</a></li>`).join('')}</ul>`); },
     'k4-fin': (d, s) => { const f = ft(); const I = [['찾아오시는 길', val(f.addr)], ['전화', val(f.tel)], ['상담 시간', val(f.hours)], ['메일', val(f.email || f.mail)]].filter(x => x[1]).slice(0, 3); const tel = val(f.tel);
       return sec('k4-fin', `<div class="k4-fg"><h2>${emph(d.title || '')}</h2><div>${val(d.body) ? `<p class="k4-lead">${br(d.body)}</p>` : ''}<div class="k4-cta">${btn(GEN.test(d.cta || '') ? '체험 수업 신청' : d.cta, L.trial(s), 'p')}${tel ? btn(`${tel} 전화 상담`, telH(tel), 'o') : btn('상담 예약', L.ask(s), 'o')}</div></div></div>
-        ${I.length ? `<dl class="k4-info n${I.length}">${I.map(([a, b]) => `<div><dt>${E(a)}</dt><dd>${br(b)}</dd></div>`).join('')}</dl>` : ''}`); }
+        ${I.length && !d.noinfo ? `<dl class="k4-info n${I.length}">${I.map(([a, b]) => `<div><dt>${E(a)}</dt><dd>${br(b)}</dd></div>`).join('')}</dl>` : ''}`); }
   };
 
   /* ══ 테마 10종 ══ */
@@ -275,7 +293,23 @@
 .k4-quote .k4-qp{height:300px}.k4-quote blockquote{font-size:27px}.k4-quote blockquote::before{font-size:76px;margin-bottom:10px}
 .k4-nl a{grid-template-columns:minmax(0,1fr) 18px;gap:4px 12px;padding:16px 0}.k4-nl time{grid-column:1}.k4-nl b{grid-column:1;white-space:normal}.k4-nl .k4-ar{grid-column:2;grid-row:1/span 2}
 .k4-fin h2{font-size:40px}.k4-info{grid-template-columns:minmax(0,1fr);margin-top:52px!important}.k4-info div,.k4-info div+div{padding:20px 0;border-left:0}.k4-info div+div{border-top:1px solid var(--ln)}}
-@media(prefers-reduced-motion:reduce){.k4-b{transition:none}}`;
+/* v44.1: 강좌 카드 4:3 · 휴대폰 가로 넘김 · 사진 띠 휴대폰 썸네일 목록 · 시간표 표 · 차량 */
+.k4-cls .k4-cp,.k4-cls .k4-c0{height:auto!important;aspect-ratio:4/3}
+.k4-cd>a .k4-ph img{transition:transform .35s}.k4-cd>a:hover .k4-ph img{transform:scale(1.04)}
+.k4-tg{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:8px;border-top:2px solid var(--ink)}.k4-tg th,.k4-tg td{border-bottom:1px solid var(--ln);padding:14px 10px;text-align:left;vertical-align:top;font-size:15px}
+.k4-tg thead th{font-size:15px;font-weight:700;color:var(--lab)}.k4-tg tbody th{font-variant-numeric:tabular-nums;font-weight:700;width:90px}.k4-tg td+td,.k4-tg th+td{border-left:1px solid var(--ln)}
+.k4-tg a{display:block;min-height:44px;padding:10px 12px;margin:2px 0;border-radius:10px;background:var(--alt);color:var(--ink);text-decoration:none}.k4-tg a b{display:block;font-size:15px;font-weight:700;line-height:1.35}.k4-tg a small{display:block;font-size:13px;color:var(--mu);margin-top:2px}
+.k4-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.k4-ttg .k4-tl2{display:none}
+.k4-bl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.k4-bl li{position:relative;padding:26px 26px 24px 70px;border-radius:var(--r);background:var(--alt)}
+.k4-bn{position:absolute;left:24px;top:24px;width:32px;height:32px;border-radius:50%;background:var(--a);color:var(--on);display:grid;place-items:center;font-weight:700;font-size:15px}.k4-bl b{display:block;font-size:18px;font-weight:700}.k4-bl p{font-size:15px;color:var(--mu);margin-top:6px!important;line-height:1.6}.k4-bnote{font-size:15px;color:var(--mu);margin-top:20px!important}
+@media(max-width:1000px){.k4-bl{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){
+.k4-cds{display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;margin:0 -20px;padding:0 20px 8px;scrollbar-width:none}.k4-cds::-webkit-scrollbar{display:none}.k4-cd{flex:0 0 78%;scroll-snap-align:start;min-width:0}
+.k4-cls .k4-cm{flex-direction:column;gap:2px}.k4-cls .k4-cm span{text-align:left}.k4-cn{font-size:21px!important}
+.k4-bd,.k4-bd.rev{grid-template-columns:96px minmax(0,1fr)!important;gap:16px!important;margin-top:28px!important;align-items:start}.k4-bd .k4-bp,.k4-bd.rev .k4-bp{order:0!important;height:96px!important;border-radius:14px}
+.k4-bd h3{font-size:22px!important;margin-top:6px!important}.k4-bd .k4-bx{display:none}.k4-bd dl{margin-top:12px!important;border-top-width:1px}.k4-bd dt,.k4-bd dd{padding:8px 0;font-size:14px}.k4-bd .k4-lk{margin-top:6px;font-size:15px}.k4-bi{font-size:14px}
+.k4-ttg .k4-tg{display:none}.k4-ttg .k4-tl2{display:block}.k4-bl li{padding:20px 20px 20px 64px}}
+@media(prefers-reduced-motion:reduce){.k4-b,.k4-cd>a .k4-ph img{transition:none}}`;
 
   const H1 = (cls, pc, m, lh, extra) => `.hpt.hp-hero.k4-h.${cls} h1{font-size:${pc}px!important;line-height:${lh}!important;letter-spacing:-.045em!important;${extra || ''}}@media(max-width:760px){.hpt.hp-hero.k4-h.${cls} h1{font-size:${m}px!important}}`;
   const HB = (cls, pad, padm) => `.hpt.hp-hero.k4-h.${cls}{padding:${pad};background:var(--bg);color:var(--ink);margin:0}@media(max-width:760px){.hpt.hp-hero.k4-h.${cls}{padding:${padm}}}`;
@@ -416,6 +450,11 @@
     try { const b = JSON.parse(JSON.stringify(s || (typeof site === 'function' ? site() : S.site))); HPT.apply(b, id, { keepColor: true }); delete b.layout; const tp = typeof TPL !== 'undefined' && TPL.find(x => x.id === 't44-' + id); if (tp && typeof tp.build === 'function') { b.sections = tp.build(); setPhotos(b, id); }
       return siteHTML(b, false, 'ko'); } catch (e) { console.error('hp44-k12 thumb', e); return tb(s, id); } }; }
 
+  /* 품질 자동 보정(hpwFix)이 cols가 빈 공통 부품(hx-*) · 차량(k4-bus)을 「빈 섹션」으로 숨기면, 그릴 때 되살림(hpwiz2 revive)이 W.emptyOf로 다시 판정한다.
+     이 부품들은 렌더러가 실제 데이터로 보일지 정하므로(없으면 게시본에서 숨김) 우리 테마 사이트에서는 비어 있지 않은 것으로 본다. */
+  if (window.HPW && typeof HPW.emptyOf === 'function' && !HPW.emptyOf.k4) { const e0 = HPW.emptyOf; const f = x => { try { const d = x && x.data; const s = typeof site === 'function' ? site() : (window.S && S.site);
+      if (x && x.type === 'text' && d && /^(hx-|k4-bus$)/.test(String(d.hpt || '')) && mine(s)) return false; } catch (e) { } return e0(x); }; f.k4 = 1; HPW.emptyOf = f; }
+
   /* ── 템플릿(기본 섹션 · 문구 — 운영자가 편집) ── */
   if (typeof TPL === 'undefined' || typeof S2 !== 'function') return;
   const TX = (variant, data) => S2('text', { variant, ...data });
@@ -432,57 +471,63 @@
     if (window.HPSTOCK && typeof HPSTOCK.slotImg === 'function') ['hero', 'about'].forEach(sl => { if (!P[sl]) return; const v = HPSTOCK.slotImg(P[sl], sl); if (v) s.img[sl] = v; });
     s.hps = Object.assign({}, s.hps || {}, HEAD[id] || { head: 'solid', foot: 'min' }); return s; }
   const BAN = (eyebrow, title, sub) => S2('banner', { eyebrow, title, sub, cta: '', cta2: '' });
-  const FIN = (title, body) => [...KEEP(), TX('cta', { hpt: 'k4-fin', title, body, cta: '', cols: AUTO })];
+  const FIN = (title, body, noinfo) => [...KEEP(), TX('cta', { hpt: 'k4-fin', title, body, cta: '', noinfo: noinfo ? 1 : 0, cols: AUTO })];
+  /* 공통 신뢰 부품(hpsec-trust v44.1 CM, window.HPX) — 데이터가 없으면 게시본에서 저절로 숨김 */
+  const X = (k, data) => { try { return window.HPX && typeof HPX.sec === 'function' ? HPX.sec(k, data) : null; } catch (e) { return null; } };
+  const BUS = () => TX('features', { hpt: 'k4-bus', eyebrow: '차량 운행', title: '학원 차량이 데리러 가요', body: '', cols: [] });
+  const REV = () => X('rev', { eyebrow: '학부모 후기', title: '학부모님이 남긴 이야기' });
+  const FAC = t2 => X('fac', { eyebrow: '선생님', title: t2 || '함께하는 선생님' });
+  const NUM = () => X('num', { eyebrow: '성적 · 합격 실적', title: '숫자로 보는 결과', cols: [] });
   const BUILD = {
     kfmath: () => [BAN('초등 · 중등 · 고등 수학', '개념이 보이면,\n*문제가 풀려요*', '한 단원을 스스로 설명할 수 있을 때 다음으로 넘어가요. 수업이 끝나면 학부모님께 오늘 배운 것을 알려 드려요.'),
       TX('features', { hpt: 'k4-story', eyebrow: '수업 방식', title: '빨리 가는 것보다\n제대로 아는 것', body: '진도를 앞서 나가기보다 오늘 배운 개념을 내 말로 설명하게 해요. 틀린 문제는 다음 수업 첫 10분에 다시 풀어요.', cols: [['레벨 테스트로 반 배정', '입학 전 진단으로 맞는 반부터 찾아요.'], ['오답은 다음 수업 첫 10분에', '모르는 채로 지나가지 않아요.'], ['수업마다 학부모 알림', '출결 · 진도 · 숙제를 바로 보내 드려요.']] }),
-      TX('features', { hpt: 'k4-tt', eyebrow: '시간표', title: '이번 학기 시간표', cols: AUTO }),
+      TX('features', { hpt: 'k4-tt', lay: 'grid', eyebrow: '시간표', title: '이번 학기 시간표', cols: AUTO }),
       TX('features', { hpt: 'k4-cls', eyebrow: '모집 중인 반', title: '학년별로 골라 보세요', cols: AUTO }),
-      TX('features', { hpt: 'k4-quote', cols: AUTO }), ...FIN('첫 수업은\n*체험*으로 시작해요', '체험 수업이 끝나면 담당 선생님이 아이에게 맞는 반을 말씀드려요.')],
+      FAC(), REV(), BUS(), X('loc'), ...FIN('첫 수업은\n*체험*으로 시작해요', '체험 수업이 끝나면 담당 선생님이 아이에게 맞는 반을 말씀드려요.', 1)],
     kfeng: () => [BAN('초등 · 중등 영어 · 원어민 회화', '영어로 생각하고,\n*영어로 말해요*', '읽고 듣고 말하는 수업을 한 반 소수 정원으로. 매달 말하기 녹음으로 달라진 걸 들려 드려요.'),
       TX('features', { hpt: 'k4-stm', body: '소수 정원, *매일 15분 말하기*로 이어 가요.', cols: AUTO }),
       TX('features', { hpt: 'k4-cls', eyebrow: '모집 중인 반', title: '레벨에 맞는 반', cols: AUTO }),
       TX('features', { hpt: 'k4-week', eyebrow: '한 주의 흐름', title: '수업은 교실에서,\n연습은 매일 조금씩', body: '바쁜 주에도 끊기지 않게, 한 주를 이렇게 나눠 두었어요.', cols: [['수업일', '리딩 · 말하기 수업', '원서 한 장과 짝 말하기'], ['다음 날', '듣기 10분', '어제 표현을 귀로 다시'], ['주말', '말하기 녹음', '1분 녹음에 선생님 코멘트'], ['월말', '레벨 리포트', '단어 · 독해 · 말하기 변화를 한 장으로']] }),
-      TX('features', { hpt: 'k4-quote', cols: AUTO }), ...FIN('먼저 레벨 테스트로\n*출발점*을 알아봐요', '테스트가 끝나면 담당 선생님이 맞는 반과 교재를 안내해 드려요.')],
+      FAC('원어민 · 한국인 선생님'), TX('features', { hpt: 'k4-quote', cols: AUTO }), X('faq'), ...FIN('먼저 레벨 테스트로\n*출발점*을 알아봐요', '테스트가 끝나면 담당 선생님이 맞는 반과 교재를 안내해 드려요.')],
     kfessay: () => [BAN('국어 · 독서 · 논술', '읽은 만큼,\n*쓸 수 있게* 돼요', '한 권을 끝까지 읽고 내 생각을 한 장으로 써요. 첨삭은 매주 학부모님께도 보내 드려요.'),
       TX('features', { hpt: 'k4-story', eyebrow: '수업 방식', title: '빨리 읽기보다\n깊이 읽기', body: '한 학기에 여섯 권. 읽고, 말하고, 쓰는 순서로 한 권을 오래 붙잡아요.', cols: [['함께 읽기', '같은 책을 읽고 질문을 나눠요.'], ['생각 말하기', '토론으로 내 생각의 근거를 찾아요.'], ['한 장 쓰기 · 첨삭', '글마다 선생님이 직접 첨삭해요.']] }),
       TX('features', { hpt: 'k4-num', pref: 'review', body: '학기마다 보내 드리는 글쓰기 리포트로 다음 학기를 함께 정해요.', cols: AUTO }),
       TX('features', { hpt: 'k4-cls', eyebrow: '모집 중인 반', title: '이번 학기 읽는 반', cols: AUTO }),
-      TX('features', { hpt: 'k4-quote', cols: AUTO }), ...FIN('먼저 한 번,\n*수업으로* 만나요', '체험 수업이 끝나면 아이의 글을 보고 맞는 반을 말씀드려요.')],
+      FAC(), TX('features', { hpt: 'k4-quote', cols: AUTO }), X('ntc', { eyebrow: '학원 소식', title: '이번 달 소식' }), ...FIN('먼저 한 번,\n*수업으로* 만나요', '체험 수업이 끝나면 아이의 글을 보고 맞는 반을 말씀드려요.')],
     kfprep: () => [BAN('종합 입시 · 내신 · 수능', '한 해의 공부를\n*끝까지* 책임집니다', '진단에서 반 배정, 주간 테스트와 입시 상담까지. 한 학생의 한 해를 담임이 함께 걷습니다.'),
       TX('features', { hpt: 'k4-steps', nst: 'roman', eyebrow: '교육 원칙', title: '세 가지 원칙을 지킵니다', cols: [['진단으로 시작합니다', '입학 전 과목별 진단으로 출발점을 정합니다.'], ['매주 확인합니다', '주간 테스트와 클리닉으로 약한 단원을 바로 메웁니다.'], ['끝까지 상담합니다', '학기마다 학부모 상담으로 다음 계획을 함께 정합니다.']] }),
       TX('features', { hpt: 'k4-cls', lay: 'rows', eyebrow: '개설 강좌', title: '이번 학기 개설 강좌', cols: AUTO }),
-      TX('features', { hpt: 'k4-num', pref: 'count', body: '', cols: AUTO }),
-      TX('features', { hpt: 'k4-notice', eyebrow: '학원 소식', title: '알려 드립니다', cols: AUTO }), ...FIN('입학 상담으로\n*시작하십시오*', '진단 결과와 목표를 듣고 맞는 반과 한 해의 계획을 안내해 드립니다.')],
+      TX('features', { hpt: 'k4-tt', lay: 'grid', eyebrow: '강의 시간표', title: '요일별 강의 시간표', cols: AUTO }),
+      NUM(), FAC('담임 · 과목 선생님'), REV(), X('ntc', { eyebrow: '학원 소식', title: '알려 드립니다' }), X('loc'), ...FIN('입학 상담으로\n*시작하십시오*', '진단 결과와 목표를 듣고 맞는 반과 한 해의 계획을 안내해 드립니다.', 1)],
     kfsci: () => [BAN('중 · 고등 과학 · 탐구 실험반', '교과서 속 원리를\n*직접* 확인해요', '매주 실험 한 가지, 보고서 한 장. 왜 그런지 끝까지 묻는 과학 수업이에요.'),
       TX('features', { hpt: 'k4-stm', body: '매주 *실험 한 가지*와 보고서 한 장으로 이어 가요.', cols: AUTO }),
       TX('features', { hpt: 'k4-cls', eyebrow: '모집 중인 반', title: '지금 신청할 수 있는 반', cols: AUTO }),
       TX('features', { hpt: 'k4-week', eyebrow: '한 주의 흐름', title: '가설에서 보고서까지,\n한 주에 한 바퀴', body: '실험이 끝나면 결과와 보고서를 학부모님께도 보내 드려요.', cols: [['수업 1', '개념 · 가설 세우기', '오늘 확인할 질문을 정해요'], ['수업 2', '실험', '조를 나눠 직접 측정해요'], ['주말', '보고서 쓰기', '결과와 이유를 한 장으로'], ['월말', '탐구 발표', '한 달의 실험을 발표해요']] }),
       TX('features', { hpt: 'k4-num', pref: 'learners', body: '', cols: AUTO }),
-      TX('features', { hpt: 'k4-quote', cols: AUTO }), ...FIN('이번 주 실험 수업에\n*함께해요*', '체험 수업이 끝나면 담당 선생님이 맞는 반과 시작 시점을 알려 드려요.')],
+      TX('features', { hpt: 'k4-quote', cols: AUTO }), FAC('실험을 이끄는 선생님'), ...FIN('이번 주 실험 수업에\n*함께해요*', '체험 수업이 끝나면 담당 선생님이 맞는 반과 시작 시점을 알려 드려요.')],
     kfkids: () => [BAN('5~9살 · 놀이로 배우는 첫 공부', '처음 배우는 날이\n*즐거운 날*이 돼요', '한글 · 수 · 그림책 수업을 놀이로. 수업이 끝나면 오늘 한 것을 사진으로 보내 드려요.'),
       TX('features', { hpt: 'k4-steps', eyebrow: '첫 등원까지', title: '이렇게 시작해요', cols: [['상담 예약', '아이의 나이와 좋아하는 것을 알려 주세요.'], ['체험 수업', '선생님과 친구들을 먼저 만나 봐요.'], ['반 정하기', '아이에게 맞는 반과 시간을 함께 정해요.']] }),
       TX('features', { hpt: 'k4-gal', eyebrow: '우리 반 이야기', title: '이번 달, 아이들의 시간', cols: AUTO }),
       TX('features', { hpt: 'k4-cls', eyebrow: '모집 중인 반', title: '나이별 반', cols: AUTO }),
-      TX('features', { hpt: 'k4-quote', cols: AUTO }), ...FIN('아이와 함께\n*놀러* 오세요', '체험 수업이 끝나면 선생님이 아이가 가장 즐거워한 순간을 말씀드려요.')],
+      REV(), X('faq', { eyebrow: '처음 보내는 부모님께', title: '자주 묻는 질문' }), BUS(), X('loc'), ...FIN('아이와 함께\n*놀러* 오세요', '체험 수업이 끝나면 선생님이 아이가 가장 즐거워한 순간을 말씀드려요.', 1)],
     kfcode: () => [BAN('코딩 · 로봇 · STEAM', '상상한 걸\n*직접 만들어요*', '블록 코딩에서 로봇까지. 한 학기에 작품 하나를 끝까지 완성하고 발표해요.'),
       TX('features', { hpt: 'k4-band', eyebrow: '수업', title: '만들고, 고치고,\n다시 만들어요', cols: AUTO }),
       TX('features', { hpt: 'k4-steps', eyebrow: '한 학기 흐름', title: '아이디어에서 발표까지', cols: [['아이디어', '만들고 싶은 것을 그림으로 그려요.'], ['만들기', '코딩 · 조립으로 첫 버전을 완성해요.'], ['고치기', '친구들과 테스트하고 고쳐요.'], ['발표', '학기 말 작품 발표회를 열어요.']] }),
-      TX('features', { hpt: 'k4-num', pref: 'ratio', body: '', cols: AUTO }), ...FIN('첫 작품은\n*체험 수업*에서', '체험 수업이 끝나면 아이의 수준에 맞는 반과 교구를 안내해 드려요.')],
+      TX('features', { hpt: 'k4-num', pref: 'ratio', body: '', cols: AUTO }), FAC('메이커 선생님'), REV(), ...FIN('첫 작품은\n*체험 수업*에서', '체험 수업이 끝나면 아이의 수준에 맞는 반과 교구를 안내해 드려요.')],
     kfart: () => [BAN('', '그리고,\n만들고,\n*빚어요.*', '수채화 · 드로잉 · 소조까지. 소수 정원 반에서 한 학기 열두 가지 재료를 만져 봐요.'),
       TX('features', { hpt: 'k4-band', eyebrow: '수업', title: '좋아하는 걸 찾을 때까지,\n골고루 해 봐요', cols: AUTO }),
       TX('features', { hpt: 'k4-num', pref: 'review', body: '그래서 붓 잡는 손 하나까지 한 명씩 봐 줄 수 있어요.', cols: AUTO }),
       TX('features', { hpt: 'k4-gal', eyebrow: '갤러리', title: '이번 학기, 아이들의 작업', cols: AUTO }),
-      TX('features', { hpt: 'k4-quote', cols: AUTO }), ...FIN('한 번,\n*와 보세요.*', '체험 수업이 끝나면 아이가 어떤 재료에서 가장 즐거워했는지 말씀드려요.')],
+      TX('features', { hpt: 'k4-quote', cols: AUTO }), BUS(), ...FIN('한 번,\n*와 보세요.*', '체험 수업이 끝나면 아이가 어떤 재료에서 가장 즐거워했는지 말씀드려요.')],
     kfmusic: () => [BAN('피아노 · 바이올린 · 첼로', '매일 십 분이\n한 곡의 *무대*가 돼요', '1:1 레슨에 소리 듣기 수업을 더했어요. 학기 말에는 작은 무대에서 직접 연주해요.'),
       TX('features', { hpt: 'k4-story', eyebrow: '레슨 방식', title: '손보다 먼저\n귀를 키워요', body: '정확한 손 모양과 함께, 좋은 소리를 알아듣는 귀를 함께 길러요.', cols: [['1:1 레슨', '아이의 속도에 맞춰 곡을 골라요.'], ['소리 듣기 수업', '박자 · 음정 · 화음을 귀로 익혀요.'], ['학기 말 연주회', '작은 무대에서 직접 연주해요.']] }),
-      TX('features', { hpt: 'k4-tt', eyebrow: '레슨 시간', title: '이번 학기 레슨 시간', cols: AUTO }),
-      TX('features', { hpt: 'k4-quote', cols: AUTO }), ...FIN('첫 레슨은\n*체험*으로 시작해요', '체험 레슨이 끝나면 아이에게 맞는 악기와 교재를 안내해 드려요.')],
+      FAC('레슨 선생님'), TX('features', { hpt: 'k4-tt', lay: 'grid', eyebrow: '레슨 시간', title: '이번 학기 레슨 시간', cols: AUTO }),
+      TX('features', { hpt: 'k4-quote', cols: AUTO }), X('loc'), ...FIN('첫 레슨은\n*체험*으로 시작해요', '체험 레슨이 끝나면 아이에게 맞는 악기와 교재를 안내해 드려요.', 1)],
     kfsport: () => [BAN('태권도 · 줄넘기 · 체육', '끝까지,\n*한 번 더.*', '기본기부터 단계별 승급까지. 땀 흘린 만큼 자라는 체육 수업이에요.'),
       TX('features', { hpt: 'k4-num', pref: 'learners', body: '', cols: AUTO }),
       TX('features', { hpt: 'k4-band', eyebrow: '수업', title: '나이와 단계에 맞게', cols: AUTO }),
       TX('features', { hpt: 'k4-week', eyebrow: '한 달의 흐름', title: '기본기에서\n승급 심사까지', body: '한 달에 한 번, 배운 것을 심사로 확인해요.', cols: [['1주', '기본기', '자세 · 발차기 · 줄넘기 기본'], ['2~3주', '단계 연습', '품새 · 기술을 단계별로'], ['4주', '승급 심사', '배운 것을 심사로 확인해요'], ['방학', '캠프 · 대회', '야외 활동과 대회 참가']] }),
-      TX('features', { hpt: 'k4-gal', eyebrow: '수업 장면', title: '땀 흘린 시간들', cols: AUTO }), ...FIN('오늘 바로\n*체험* 와요', '체험 수업이 끝나면 아이에게 맞는 반과 시간을 안내해 드려요.')]
+      TX('features', { hpt: 'k4-gal', eyebrow: '수업 장면', title: '땀 흘린 시간들', cols: AUTO }), REV(), BUS(), X('loc'), ...FIN('오늘 바로\n*체험* 와요', '체험 수업이 끝나면 아이에게 맞는 반과 시간을 안내해 드려요.', 1)]
   };
   const QA = {
     kfmath: ['초등 사고력 수학', '중1 수학 개념 완성', '중3 수학 내신 대비', '고1 수학 기본', '고2 수학Ⅱ 심화', '무료 수학 진단 수업'],
@@ -499,6 +544,6 @@
   if (typeof siteFromTpl === 'function' && !siteFromTpl.hp44k) { const b0 = siteFromTpl; const f = tp => { const s = b0(tp); try { const id = tp && /^t44-/.test(tp.id) ? tp.id.slice(4) : ''; if (IDS.includes(id)) setPhotos(s, id); } catch (e) { console.error('hp44-k12 photos', e); } return s; };
     Object.keys(b0).forEach(k => { try { f[k] = b0[k]; } catch (e) { } }); f.hp44k = 1; siteFromTpl = f; window.siteFromTpl = f; }
   IDS.forEach(id => { if (TPL.some(x => x.id === 't44-' + id)) return;
-    TPL.push({ id: 't44-' + id, name: DEF[id].name, types: ['k12'], g44: 1, sub: DEF[id].sub, scene: `학원 · 초중고 · ${DEF[id].sub} — ${DEF[id].desc}`, color: DEF[id].acc, tone: id === 'kfprep' ? '신뢰' : '모던', look: DEF[id].look, theme: id, hero: '', purpose: ['apply', 'info'], prem: 1, hp44: 'k12', build: BUILD[id], noPalette: true, qaCls: QA[id] }); });
+    TPL.push({ id: 't44-' + id, name: DEF[id].name, types: ['k12'], g44: 1, sub: DEF[id].sub, scene: `학원 · 초중고 · ${DEF[id].sub} — ${DEF[id].desc}`, color: DEF[id].acc, tone: id === 'kfprep' ? '신뢰' : '모던', look: DEF[id].look, theme: id, hero: '', purpose: ['apply', 'info'], prem: 1, hp44: 'k12', build: () => BUILD[id]().filter(Boolean), noPalette: true, qaCls: QA[id] }); });
   window.HP44 = Object.assign(window.HP44 || {}, { k12: { ids: IDS.slice(), subs: IDS.map(id => [id, DEF[id].sub]) } });
 })();
