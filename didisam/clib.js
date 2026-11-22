@@ -285,7 +285,7 @@
     return { n, p, done, ch, wk, demo: true }; }
   function bkCover(e, big) { const b = e.ref || {}; const LV = ((typeof LSV === 'function' && LSV().levels) || [])[b.level] || {}; const u = window.V4 && V4.photo ? V4.photo(`${e.title} 도서 책`, e.ref.id) : '';
     const acts = (b.chs || []).reduce((a, c) => a + (c.blocks || []).filter(x => typeof BK_TRACK === 'object' && BK_TRACK.has(x.type)).length, 0);
-    return `<span class="bks-cov${big ? ' big' : ''}" style="--bk:${esc(String(b.color || '#00862D').replace(/[^#\w(),.% ]/g, ''))}" aria-hidden="true">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : ''}<i class="bks-spine"></i>${LV.name ? `<em class="bks-lv">${esc(LV.name)}</em>` : ''}<span class="bks-ct"><small>DIGITAL BOOK</small><b>${esc(String(e.title).replace(/\s*디지털북$/, ''))}</b><span>${(b.chs || []).length}단원 · 활동 ${acts}개</span></span></span>`; }
+    return `<span class="bks-cov${big ? ' big' : ''}" style="--bk:${esc(String(b.color || '#3A6A4F').replace(/[^#\w(),.% ]/g, ''))}" aria-hidden="true">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : ''}<i class="bks-spine"></i>${LV.name ? `<em class="bks-lv">${esc(LV.name)}</em>` : ''}<span class="bks-ct"><small>DIGITAL BOOK</small><b>${esc(String(e.title).replace(/\s*디지털북$/, ''))}</b><span>${(b.chs || []).length}단원 · 활동 ${acts}개</span></span></span>`; }
   function shelfHTML(L) { const ST = L.map(e => ({ e, s: bkStat(e.ref || {}) })); const tot = ST.reduce((a, x) => a + x.s.n, 0); const dn = ST.reduce((a, x) => a + x.s.done, 0);
     const avg = ST.length ? Math.round(ST.reduce((a, x) => a + x.s.p, 0) / ST.length) : 0; const wk = [...Array(7)].map((_, i) => ST.reduce((a, x) => a + (x.s.wk[i] || 0), 0)); const wmax = Math.max(1, ...wk);
     const top = ST.slice().sort((a, b) => b.s.n - a.s.n)[0]; const WDN = ['일', '월', '화', '수', '목', '금', '토']; const d0 = new Date(Date.now() + 9 * 3600e3).getUTCDay();
@@ -317,7 +317,7 @@
 
   /* 오른쪽 미리보기 패널 */
   function pvBody(e) { const r = e.ref; const T = e.title; const id = ytOfE(e);
-    if (e.origin === 'book') { const ch = r.chs || []; return `<div class="clb-pbk" style="--bk:${esc(String(r.color || '#00862D').replace(/[^#\w(),.% ]/g, ''))}"><b>${esc(T)}</b><small>${ch.length}단원</small></div>${ch.length ? `<ol class="clb-pch">${ch.slice(0, 8).map(c => `<li>${esc(c.title || '')}</li>`).join('')}${ch.length > 8 ? `<li class="mini">외 ${ch.length - 8}단원</li>` : ''}</ol>` : ''}`; }
+    if (e.origin === 'book') { const ch = r.chs || []; return `<div class="clb-pbk" style="--bk:${esc(String(r.color || '#3A6A4F').replace(/[^#\w(),.% ]/g, ''))}"><b>${esc(T)}</b><small>${ch.length}단원</small></div>${ch.length ? `<ol class="clb-pch">${ch.slice(0, 8).map(c => `<li>${esc(c.title || '')}</li>`).join('')}${ch.length > 8 ? `<li class="mini">외 ${ch.length - 8}단원</li>` : ''}</ol>` : ''}`; }
     if (id) return `<a class="clb-yt" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener"><span class="clb-pth">${thumb(e)}</span><span>YouTube에서 보기 ›</span></a>`;
     if (e.origin === 'lib' && r.kind !== '평가') { const cv = r.kind === '동영상' && typeof a2ConvOf === 'function' ? a2ConvOf(r) : ''; return `<span class="clb-pth">${thumb(e)}</span>${cv ? `<p class="clb-conv">재생 준비 상태: <b>${esc(cv)}</b>${cv === '최적화 실패' ? ' — Handbrake로 다시 인코딩한 뒤 올려 주세요.' : ''}</p>` : ''}<p class="mini">데모에서는 파일 이름 · 크기만 기록합니다. 실제 운영에서는 여기서 바로 재생 · 열기가 됩니다.</p>`; }
     const it = e.origin === 'lib' ? (r.item || {}) : r;

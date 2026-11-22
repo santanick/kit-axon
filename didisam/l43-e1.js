@@ -39,7 +39,7 @@
     const SC = ['IT', '경영', '독서', '외국어', '돌봄', '요리']; /* v43 R6: 이름으로 장면을 못 고르면(교실) 카드마다 다른 장면 */
     main.querySelectorAll('.clb-th:not([data-e1])').forEach((th, ix) => { th.dataset.e1 = 1; if (th.querySelector('img') || th.classList.contains('k-b') || /url\(/.test(th.style.backgroundImage || '')) return;
       const box = th.parentElement; const nm = ((box && box.querySelector('b, h3, h4, strong')) || {}).textContent || ''; const w0 = L43.wordsOf(nm); const u = L43.photo(w0.length === 1 && w0[0] === '교실' ? [SC[ix % SC.length]] : w0, nm + ix); if (!u) return;
-      th.style.backgroundImage = `linear-gradient(rgba(4,20,10,.28),rgba(4,20,10,.28)),url("${u}")`; th.style.backgroundSize = 'cover'; th.style.backgroundPosition = 'center'; th.classList.add('e1-ph'); });
+      th.style.backgroundImage = `linear-gradient(rgba(24,29,26,.28),rgba(24,29,26,.28)),url("${u}")`; th.style.backgroundSize = 'cover'; th.style.backgroundPosition = 'center'; th.classList.add('e1-ph'); });
   }, brief: main => {
     if (empty(main) || UI.clbId) return null; const n = num(main, /전체\s*([\d,]+)/); if (!n) return null; const v = num(main, /영상\s*([\d,]+)/);
     return { eye: '콘텐츠 라이브러리', title: `콘텐츠 <em>${n}개</em>를 한곳에서 관리합니다`, sub: `영상 ${v}개를 포함해 문서 · 퀴즈 · 디지털북을 만들고, [${E(L('cls'))}에 넣기]로 원하는 차시에 붙입니다.` };
