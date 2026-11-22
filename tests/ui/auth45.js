@@ -28,7 +28,9 @@ async function org(pg, type, name, ed) {
   const card = ['k12', 'adult'].includes(type) ? 'academy' : type;
   await pg.click(`#suForm [data-act=su-type][data-v=${card}]`); if (card === 'academy') await pg.click(`#suForm [data-act=su-type][data-v=${type}]`);
   if (ed) await pg.click(`#suForm [data-act=su-ed][data-v=${ed}]`);
-  await pg.fill('#suForm input[name=name]', name); await pg.click('#suForm button[type=submit]'); await pg.waitForTimeout(1100); await settle(pg);
+  await pg.fill('#suForm input[name=name]', name); await pg.click('#suForm button[type=submit]'); await pg.waitForTimeout(400);
+  /* slim.js가 먼저 대시보드를 그리고 0.8초 뒤 ②로 바뀐다 */
+  await pg.waitForFunction(() => document.querySelector('#onbTpl, #entry') || (document.querySelector('#main') && !document.querySelector('.gen') && !(typeof S !== 'undefined' && S && S.onb && S.onb.tpl === 'pending')), null, { timeout: 5000 }).catch(() => {}); await settle(pg);
 }
 /* ②: 카드를 고르고(미리 보기 시트가 열리면 그 버튼, 아니면 하단 「이 템플릿으로 시작」) / 나중에 */
 async function pick(pg) {
@@ -38,7 +40,7 @@ async function pick(pg) {
   else { id = await pg.getAttribute('#onbTpl [data-act=onb-use]', 'data-v'); await pg.click('#onbTpl [data-act=onb-use]'); }
   await pg.waitForTimeout(500); await settle(pg); return id;
 }
-const later = async pg => { await pg.click('#onbTpl [data-act=onb-later] >> nth=0'); await pg.waitForTimeout(500); await settle(pg); };
+const later = async pg => { await pg.click('#onbTpl [data-act=onb-later]:visible >> nth=0'); await pg.waitForTimeout(500); await settle(pg); };
 async function logout(pg, tag) {
   await pg.evaluate(() => go('settings')); await pg.waitForTimeout(250);
   const b = pg.locator('button:has-text("이 브라우저에서 로그아웃")');

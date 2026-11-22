@@ -178,7 +178,7 @@ function lvEntry() {
   let err = $('#entryErr'); if (!err) { mail.insertAdjacentHTML('afterend', '<p class="lverr" id="entryErr" role="alert"></p>'); err = $('#entryErr'); }
   const open = LV.mailOpen || !lvProv().length;
   soc.innerHTML = lvSocBtns();
-  mail.innerHTML = `<button type="button" class="lvsb mail" data-act="lv-mail" aria-expanded="${open}" aria-controls="lvMail">${MAIL_IC}<span>이메일로 계속하기</span></button>${open ? lvMailFields() : ''}`;
+  mail.innerHTML = `<div class="lvsoc"><button type="button" class="lvsb mail" data-act="lv-mail" aria-expanded="${open}" aria-controls="lvMail">${MAIL_IC}<span>이메일로 계속하기</span></button></div>${open ? lvMailFields() : ''}`;
   err.textContent = LV.oerr || LIVE.err || ''; LV.oerr = '';
   soc.querySelectorAll('a[data-lvp]').forEach(a => a.addEventListener('click', () => { try { sessionStorage.setItem(LV_K.view, LV.view); } catch (x) { } }));
   const box = $('#lvMail');
@@ -227,7 +227,7 @@ function lvOrg() {
   lvSave();
 }
 { const base = renderSignup; renderSignup = (...a) => {
-    if (LIVE.cfg && LIVE.cfg.module) return LIVE.user ? base(...a) : renderLogin(); /* 교강사 화면(tutor.html)은 로그인만 */
+    if (LIVE.cfg && LIVE.cfg.module && LIVE.cfg.module !== 'admin') return LIVE.user ? base(...a) : renderLogin(); /* 교강사 화면(MODULE=tutor)은 로그인만 */
     const org = !!LIVE.user || !!LIVE.oauth || (LV.step === 'org' && !!LV.mail);
     LV.step = org ? 'org' : 'entry';
     if (org) {

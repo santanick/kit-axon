@@ -79,13 +79,15 @@ async function org(pg, type, name, { ed, empty, code } = {}) {
   if (code != null && await pg.$('#suForm [name=code]')) await pg.fill('#suForm [name=code]', code);
   await pg.click('#suForm button[type=submit]');
   await pg.waitForFunction(() => (typeof S !== 'undefined' && S && S.org && !document.querySelector('.gen')) || ((document.querySelector('#suErr') || {}).textContent || '').trim() || document.querySelector('#entry'), null, { timeout: 12000 }).catch(() => {});
-  await pg.waitForTimeout(300); await settle(pg);
+  await pg.waitForTimeout(300); await stable(pg);
 }
+/* createOrg 안쪽 감싸기(slim.js)가 먼저 대시보드를 한 번 그리고, 0.8초 뒤 core의 render가 ②(onb45)로 바꾼다 — 그 전환을 기다린다 */
+const stable = pg => pg.waitForFunction(() => document.querySelector('#onbTpl, #entry') || (document.querySelector('#suForm') && ((document.querySelector('#suErr') || {}).textContent || '').trim()) || (document.querySelector('#main') && !document.querySelector('.gen') && !(typeof S !== 'undefined' && S && S.onb && S.onb.tpl === 'pending')), null, { timeout: 5000 }).catch(() => {}).then(() => settle(pg));
 /* ② — onb45.js가 없으면(통합 전) 건너뜀으로 센다 */
 async function tpl(pg, how, tag) {
   if ((await scr(pg)) !== 'tpl') { if (!STRICT && !(await onbOn(pg))) { skip++; console.log(`- ${tag}: ② 화면 건너뜀(onb45.js 미통합)`); return null; } ok(false, `${tag}: ② 홈페이지 화면 (${await scr(pg)})`); return null; }
   ok(true, `${tag}: ② 홈페이지 화면`); if (SHOT && !tpl.shot) { tpl.shot = 1; await shot(pg, 'tpl'); await a11y(pg, `${tag} ②`, '#onbTpl'); }
-  if (how === 'later') { await pg.click('#onbTpl [data-act=onb-later] >> nth=0'); await pg.waitForTimeout(500); await settle(pg); return 'later'; }
+  if (how === 'later') { await pg.click('#onbTpl [data-act=onb-later]:visible >> nth=0'); await pg.waitForTimeout(500); await settle(pg); return 'later'; }
   /* onb45.js: 카드를 고르면 선택 표시(또는 미리 보기 시트) → 시트의 tpd-use 또는 하단 onb-use */
   await pg.click('#onbTpl .tpd-c:not([hidden])'); await pg.waitForTimeout(400); let id;
   if (await pg.$('[data-act=tpd-use]:visible')) { id = await pg.getAttribute('[data-act=tpd-use]:visible', 'data-v'); await pg.click('[data-act=tpd-use]:visible'); }
@@ -268,7 +270,7 @@ async function groupC(sv) {
     for (const w of (process.env.ONLY_W ? [+process.env.ONLY_W] : [1440, 390])) {
       W = w; tpl.shot = 0; console.log(`── ${W === 390 ? '휴대폰 390' : 'PC 1440'}`);
       for (const [fn, env, tag] of [[groupA, {}, 'A'], [groupA2, {}, 'A2'], [groupB, { SIGNUP_CODE: 'C0DE' }, 'B'], [groupC, { SIGNUP: 'off', OAUTH_KAKAO_ID: null }, 'C']]) {
-        const sv = await server(env, tag); try { await fn(sv, db); } catch (e) { ok(false, `묶음 ${tag} ${W}: ${e.message.split('\n')[0]}`); } finally { await sv.stop(); }
+        const sv = await server(env, tag); try { await fn(sv, db); } catch (e) { ok(false, `묶음 ${tag} ${W}: ${e.message.split('\n').slice(0, 4).join(' ')}`); } finally { await sv.stop(); }
       }
     }
   } finally { await BR.close(); await db.end(); mock.close(); }
