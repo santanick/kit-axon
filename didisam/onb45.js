@@ -16,12 +16,15 @@
   const recName = () => { const t = tpOf(S.site && S.site.tpl) || rec(); return t ? t.name : ''; };
 
   /* ── S.onb 기록 ── */
+  const ONB = { sig: '', inR: 0 };
   function onbStart() {
     if (typeof S === 'undefined' || !S || !S.org) { if (typeof UI !== 'undefined') UI.onbNew = 1; return false; } /* 운영: 서버 응답 전이면 createOrg 감싸기에서 다시 */
     if (S.onb) return false;
     S.onb = { v: 45, tpl: 'pending', at: today() };
     if (typeof UI !== 'undefined') { delete UI.onbNew; delete UI.tpdT; delete UI.tpdF; delete UI.tpdQ; delete UI.onbSel; UI.siteGallery = false; }
     try { save(); } catch (e) { console.error('onb45 save', e); }
+    /* v45 보완: createOrg 안에서 slim.js가 대시보드를 먼저 그리므로 바로 ②로 다시 그린다(깜빡임 0) */
+    if (!ONB.inR && !document.getElementById('onbTpl')) { try { render(); } catch (e) { console.error('onb45 render', e); } }
     return true;
   }
   window.onbStart = onbStart;
@@ -66,7 +69,7 @@
 .ob45-fi .btn{white-space:nowrap}
 .ob45-empty{border:1px solid var(--line,#E4E8E6);border-radius:16px;padding:32px;text-align:center;color:var(--t-sub,#4D5551)}
 @media (max-width:700px){.ob45-tr{padding:12px 16px}.ob45-st,.ob45-ac span{display:none}
-.ob45-m{padding:20px 16px 150px}.ob45-hd{padding:0}.ob45-hd h1{font-size:26px}.ob45-hd p.ob45-sub{font-size:15px}.ob45-eb,.ob45-later{display:none}
+.ob45-m{padding:20px 16px 150px}.ob45-hd{padding:0}.ob45-hd h1{font-size:26px}.ob45-hd p.ob45-sub{font-size:15px}.ob45-eb{display:none}.ob45-hd{flex-direction:column;align-items:flex-start;gap:12px}.ob45-later{font-size:14px;padding:8px 12px}
 .ob45-ms{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--n500,#636D68);margin:0 0 16px}
 .ob45-ms b{flex:1;height:6px;border-radius:6px;background:var(--n100,#F2F4F3);overflow:hidden}.ob45-ms b i{display:block;width:100%;height:100%;background:var(--accent,#4E7D62)}
 .ob45-fi{padding:12px 16px calc(8px + env(safe-area-inset-bottom));flex-wrap:wrap;gap:4px}.ob45-sel{display:none}
@@ -148,6 +151,11 @@
   /* 시작 가이드 「홈페이지 만들기」 설명: hpai.js(ux.js 뒤에 로드)가 d를 「AI로 홈페이지 만들기…」로 덮으므로 v45 문구를 마지막에 다시 둔다(이름은 ux.js) */
   try { const st = A(typeof BLD_STEPS !== 'undefined' ? BLD_STEPS : []).find(x => x.id === 'site'); if (st) { try { delete st.d; } catch (e) { } st.d = '템플릿 적용(가입 때) · 꾸미고 게시는 홈페이지 메뉴'; } } catch (e) { console.error('onb45 step', e); }
   /* ── 재방문 · 새로고침: pending이면 어드민 대신 ② ── */
-  { const base = render; render = (...a) => { if (pending()) { try { return renderTplStep(); } catch (e) { console.error('onb45 render', e); } } return base(...a); }; }
+  /* ① [다음](UI.onbNew)으로 만든 기관은 createOrg 안의 첫 render(slim.js)부터 ②로 그린다 */
+  const sigOf = () => JSON.stringify([UI.tpdT || '', UI.tpdF || '', S.site && S.site.tpl, S.org.type, S.org.ed || '', innerWidth < 700]);
+  { const base = render; render = (...a) => {
+    try { if (typeof UI !== 'undefined' && UI.onbNew && S && S.org && !S.onb) { ONB.inR = 1; try { onbStart(); } finally { ONB.inR = 0; } } } catch (e) { console.error('onb45 start', e); }
+    if (pending()) { try { const sg = sigOf(); if (document.getElementById('onbTpl') && sg === ONB.sig) return; /* createOrg의 0.8초 뒤 render 등 같은 상태 다시 그리기는 건너뛴다(썸네일 깜빡임 방지) */ ONB.sig = sg; return renderTplStep(); } catch (e) { console.error('onb45 render', e); } }
+    ONB.sig = ''; return base(...a); }; }
   if (typeof COVER !== 'undefined') COVER.push(['[신규] 가입 ② 홈페이지 템플릿 선택 · 나중에 고르기 · 재방문 이어가기', 'home', '']);
 })();

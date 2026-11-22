@@ -64,7 +64,7 @@
 .tpd-fd::-webkit-scrollbar{display:none}
 .tpd-fd button{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--g200,#E5E7EB);background:var(--surface,#fff);font:inherit;font-size:14px;font-weight:600;color:var(--g800,#1F2937);cursor:pointer;white-space:nowrap}
 .tpd-fd button em{font-style:normal;font-size:12.5px;font-weight:700;color:var(--g600,#636D68)}
-.tpd-fd button.on{border-color:var(--gr700,#00862D);background:color-mix(in srgb,var(--gr700,#00862D) 9%,var(--surface,#fff));color:var(--gr800,#006B24)}
+.tpd-fd button.on{border-color:var(--gr700,#3A7B44);background:var(--gr50,#F3F9F4);color:var(--gr800,#2F6336)} /* v45: color-mix 대신 토큰 단색 바탕(대비 계산 · 구형 브라우저 일관) */
 .tpd-fd button.on em{color:inherit}
 .tpd-fd button:focus-visible{outline:3px solid var(--p500,#5C74F6);outline-offset:2px}
 @container (min-width:900px){
@@ -79,7 +79,7 @@
 .tpd-lk2:hover{color:var(--gr700,#00862D)}
 .tpd-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
 .tpd-tags em{font-style:normal;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--g100,#F3F4F6);color:var(--g700,#374151);white-space:nowrap}
-.tpd-tags em.tpd-fd1{background:color-mix(in srgb,var(--gr700,#00862D) 10%,var(--surface,#fff));color:var(--gr800,#006B24)}
+.tpd-tags em.tpd-fd1{background:var(--gr50,#F3F9F4);color:var(--gr800,#2F6336)}
 .tpd-tags .tpd-sub{font-size:12.5px}
 .tpd-mt{font-size:12px;color:var(--g600,#636D68);font-weight:600}
 .tpd-alt{opacity:.72}
