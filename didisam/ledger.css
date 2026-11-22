@@ -144,21 +144,21 @@
 #main .lg .lg-hero .l43-hl{font-size:38px}
 #main .lg .lg-hero .lg-ai{background:transparent;box-shadow:none;border:0;padding:0;margin-top:14px;gap:14px;align-items:center}
 #main .lg .lg-hero .lg-ai-b{display:none}
-#main .lg .lg-hero .lg-ai p{color:rgba(255,255,255,.86);font-size:15.5px;font-weight:500;line-height:1.6;flex:1 1 100%}
-#main .lg .lg-hero .lg-ai .btn{background:#fff;color:#053D1E;border:0;min-height:44px;padding:0 18px;font-weight:700}
+#main .lg .lg-hero .lg-ai p{color:var(--g700);font-size:15.5px;font-weight:500;line-height:1.6;flex:1 1 100%}
+#main .lg .lg-hero .lg-ai .btn{background:var(--surface);color:var(--g900);border:0;box-shadow:inset 0 0 0 1px var(--g400);min-height:44px;padding:0 18px;font-weight:700}
 #main .lg .lg-hero .lg-kpis{position:relative;z-index:1;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:center}
-#main .lg .lg-hero .lg-kpi{padding:14px 16px 10px;border-radius:16px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);border:0;min-height:0;color:#fff}
-#main .lg .lg-hero .lg-kpi span{font-size:13px;font-weight:600;color:rgba(255,255,255,.8)}
-#main .lg .lg-hero .lg-kpi b{display:block;font-size:26px;font-weight:800;letter-spacing:-.02em;color:#fff;font-variant-numeric:tabular-nums;margin:2px 0 2px;white-space:nowrap}
-#main .lg .lg-hero .lg-kpi.warn b,#main .lg .lg-hero .lg-kpi.bad b{color:#FFB08F}
-#main .lg .lg-hero .lg-kpi small{font-size:12px;color:rgba(255,255,255,.74);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
-#main .lg .lg-hero .lg-kpi .l43-spk{display:block;width:100%;height:26px;margin-top:6px;color:#7CF2A2}
-#main .lg .lg-hero .lg-kpi.warn .l43-spk,#main .lg .lg-hero .lg-kpi.bad .l43-spk{color:#FFB08F}
+#main .lg .lg-hero .lg-kpi{padding:14px 16px 10px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);border:0;min-height:0;color:var(--g900)}
+#main .lg .lg-hero .lg-kpi span{font-size:13px;font-weight:600;color:var(--t-sub)}
+#main .lg .lg-hero .lg-kpi b{display:block;font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--g900);font-variant-numeric:tabular-nums;margin:2px 0 2px;white-space:nowrap}
+#main .lg .lg-hero .lg-kpi.warn b,#main .lg .lg-hero .lg-kpi.bad b{color:var(--co700)}
+#main .lg .lg-hero .lg-kpi small{font-size:12px;color:var(--t-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+#main .lg .lg-hero .lg-kpi .l43-spk{display:block;width:100%;height:26px;margin-top:6px;color:var(--c-data)}
+#main .lg .lg-hero .lg-kpi.warn .l43-spk,#main .lg .lg-hero .lg-kpi.bad .l43-spk{color:var(--co500)}
 #main .bview .lg>.seg2:not(.wtabs)>button,#main .lg>.seg2 button,#main .lg .lg-per .lg-chip,#main .lg .lg-seg button{min-height:44px}
 @media (max-width:1180px){#main .lg .lg-hero{grid-template-columns:minmax(0,1fr)}#main .lg .lg-hero .l43-hl{font-size:30px}}
 @media (max-width:640px){#main .lg .lg-hero .lg-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#main .lg .lg-hero .lg-kpi b{font-size:20px}#main .lg .lg-hero .l43-hl{font-size:24px}}
 @media (min-width:861px){#main:has(.lg) .sl-i{position:relative}#main:has(.lg) .sl-i::after{content:'';position:absolute;inset:-12px}}
-html[data-theme=dark] #main .lg .lg-hero .lg-ai .btn{background:#fff!important;color:#053D1E!important}
+html[data-theme=dark] #main .lg .lg-hero .lg-ai .btn{background:var(--surface)!important;color:var(--g900)!important}
 /* v43 R6: 단위 세그먼트(기본 드롭다운 대체) · 히어로 주 · 보조 버튼 */
 .lg-useg{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.lg-useg>span{font-weight:700;font-size:13px;color:var(--muted);margin-right:2px}
 .lg-hero .l43-acts{margin-top:14px}

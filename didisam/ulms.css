@@ -240,9 +240,9 @@
 #main [data-lmsv-root] .kpis .kpi .val{font-size:30px}
 #main [data-lmsv-root] .kpis{margin-bottom:12px}
 /* v43 S3A 049: 짙은 머리 안 선택 칸 — 흰 기본 드롭다운 대신 반투명 칩 */
-#main.l43[data-l43=lmsc] .l43-k-hero select{appearance:none;-webkit-appearance:none;min-height:40px;padding:0 36px 0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;color:#fff;font-weight:700;font-size:14px}
+#main.l43[data-l43=lmsc] .l43-k-hero select{appearance:none;-webkit-appearance:none;min-height:40px;padding:0 36px 0 16px;border-radius:999px;border:1px solid var(--g400);background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23636D68' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;color:var(--g900);font-weight:700;font-size:14px}
 #main.l43[data-l43=lmsc] .l43-k-hero select option{color:#1a1a1a}
-#main.l43[data-l43=lmsc] .l43-k-hero select:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#main.l43[data-l43=lmsc] .l43-k-hero select:focus-visible{outline:2px solid var(--pr);outline-offset:2px}
 /* v43 F2 036: 타임라인 주인공 · 접는 설정 패널 · 기간계 칩 */
 .ul-tl .ch{display:flex;align-items:center;gap:10px}.ul-tl .ch .btn{margin-left:auto}
 .ul-tl .ul-flow{margin:4px 0 14px}

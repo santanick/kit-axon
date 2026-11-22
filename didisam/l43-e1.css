@@ -115,15 +115,16 @@ html[data-theme=dark] .bks-pb,html[data-theme=dark] .bks-cb,html[data-theme=dark
 /* v43 F2 036: 브리핑 머리 안 하위 칩 */
 #main .l43-brief .lmsnav-sub.l43-insub{margin:0 0 10px;gap:6px}
 #main .l43-brief .lmsnav-sub.l43-insub .lnd{display:none}
-#main .l43-brief .lmsnav-sub.l43-insub button{min-height:44px;padding:0 14px;font-size:13px;background:rgba(255,255,255,.7)}
-#main .l43-brief .lmsnav-sub.l43-insub button.on{background:var(--gr700,#00862D);color:var(--on-pr,#fff)}
+#main .l43-brief .lmsnav-sub.l43-insub button{min-height:44px;padding:0 14px;font-size:13px;background:var(--surface)}
+/* v45: 선택 상태(지금 있는 곳)는 중립 — 초록은 주 버튼(누를 것)에만 */
+#main .l43-brief .lmsnav-sub.l43-insub button.on{background:var(--surface);color:var(--g900);box-shadow:inset 0 0 0 1.5px var(--g800)}
 /* v43 H1(M1 036) 학사 연동: 화면 칩 묶음 + 하위 탭을 한 줄로, 페이지 머리 동기화 단추 중복 감춤 */
 #main .h1-subrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 4px}
 #main .h1-subrow>.seg2{margin:0;flex:1 1 auto;min-width:0}
-#main .h1-subrow>.lmsnav-sub.h1-sub{display:inline-flex;align-items:center;gap:2px;margin:0;padding:4px;border-radius:999px;background:var(--gr50,#EAF7EE);flex:none}
+#main .h1-subrow>.lmsnav-sub.h1-sub{display:inline-flex;align-items:center;gap:2px;margin:0;padding:4px;border-radius:999px;background:var(--g200,#F2F4F3);flex:none}
 #main .h1-subrow>.lmsnav-sub.h1-sub .lnd{display:none}
-#main .h1-subrow>.lmsnav-sub.h1-sub button{min-height:40px;padding:0 14px;border:0;border-radius:999px;background:transparent;font-size:13.5px;font-weight:700;color:var(--gr800,#0B5A2A);white-space:nowrap}
-#main .h1-subrow>.lmsnav-sub.h1-sub button.on{background:var(--gr700,#00862D);color:var(--on-pr,#fff)}
+#main .h1-subrow>.lmsnav-sub.h1-sub button{min-height:40px;padding:0 14px;border:0;border-radius:999px;background:transparent;font-size:13.5px;font-weight:700;color:var(--g700,#4D5551);white-space:nowrap}
+#main .h1-subrow>.lmsnav-sub.h1-sub button.on{background:var(--surface);color:var(--g900);box-shadow:inset 0 0 0 1.5px var(--g800),var(--sh1)}
 #main .h1-subrow>.lmsnav-sub.h1-sub::after{content:none}
 #main .h1-dupact{display:none!important}
 /* v43.4 P1 · 034 · 069 휴대폰: 표지에는 배지 · 단원 수만(제목은 표지 아래에서 2줄), 통계 3칸 고르게 */
