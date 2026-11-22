@@ -128,7 +128,7 @@
       return pg('billing', `${more('billing')}<button type="button" class="btn pri" data-act="bill-new" ${ok ? '' : 'disabled title="토스페이먼츠 승인 필요"'}>+ 청구서</button>`,
         (ok ? '' : status('chart', '청구서는 토스페이먼츠 연결 후 보낼 수 있습니다', '연결에서 토스페이먼츠를 연결하세요', 'w')) +
         (un.length ? SL.sum(`<span>미납</span><span class="sl-n sl-w">${un.length}건 · ${won0(un.reduce((a, b) => a + (typeof billTotal === 'function' ? billTotal(b) : 0), 0))}</span>`) : '') +
-        (G.length ? SL.list(G.map(([k, L]) => { const u = L.filter(b => b.status === '미납').length; return SL.row({ act: 'sl2-bill', v: k, name: L[0].title || '청구서', sub: `${L.length}명 · 마감 ${L[0].due || '—'}${u ? ` · 미납 ${u}` : ' · 모두 납부'}`, icon: I('book', 20), col: u ? '#FF9800' : '#00A224' }); })) + SL.search('sbBlQ', '청구서 검색')
+        (G.length ? SL.list(G.map(([k, L]) => { const u = L.filter(b => b.status === '미납').length; return SL.row({ act: 'sl2-bill', v: k, name: L[0].title || '청구서', sub: `${L.length}명 · 마감 ${L[0].due || '—'}${u ? ` · 미납 ${u}` : ' · 모두 납부'}`, icon: I('book', 20), col: u ? '#FF9800' : 'var(--t-ok)' }); })) + SL.search('sbBlQ', '청구서 검색')
           : empty('book', md('billing')[0] || '청구서를 보냅니다', ok ? `<button type="button" class="btn pri" data-act="bill-new">첫 청구서 만들기</button>` : `<button type="button" class="btn pri" data-act="sl-goconn">결제 연결하기</button>`, ['미납 청구서 보여줘', '다음 달 청구서 만들어줘']))); }
   });
 
@@ -151,7 +151,7 @@
 
   front('crmstat', {
     key: 'crmST', title: () => lb('crmstat'),
-    build: () => pg('crmstat', '', SL.list([tabRow('crmST', 'day', '일일 현황', '오늘 출결 · 수납 요약', 'chart', '#5C74F6'), tabRow('crmST', 'mon', '월별 현황', '원생 수 · 매출 · 퇴원 사유', 'chart', '#109BF1'), tabRow('crmST', 'tch', '강사별', '담당 수업 · 원생', 'users', '#00A224')]) + cmds(['이번 달 통계 보여줘', '오늘 출결 요약해줘']))
+    build: () => pg('crmstat', '', SL.list([tabRow('crmST', 'day', '일일 현황', '오늘 출결 · 수납 요약', 'chart', '#5C74F6'), tabRow('crmST', 'mon', '월별 현황', '원생 수 · 매출 · 퇴원 사유', 'chart', '#109BF1'), tabRow('crmST', 'tch', '강사별', '담당 수업 · 원생', 'users', 'var(--t-ok)')]) + cmds(['이번 달 통계 보여줘', '오늘 출결 요약해줘']))
   });
 
   /* 자동 운영: 이름 + 한 줄 + 스위치(휴대폰 설정처럼) */
@@ -175,7 +175,7 @@
       const miss = L.reduce((a, c) => a + A(c.learners).length - dn(c), 0);
       return pg('compliance', `${more('compliance')}<button type="button" class="btn pri" data-act="legal-nudge">${I('spark', 14)} 미이수자 독려</button>`,
         (L.length ? SL.sum(`<span>미이수</span><span class="sl-n ${miss ? 'sl-w' : ''}">${miss}명</span>`) + SL.list(L.map(c => { const n = A(c.learners).length, d = dn(c), r = Math.round(d / Math.max(1, n) * 100);
-          return SL.row({ act: 'sb-old', v: 'compliance', name: c.name, sub: `이수 ${d}/${n}명${c.end ? ' · 마감 ' + c.end : ''}`, icon: I('check', 20), col: r >= 90 ? '#00A224' : '#FF9800', right: `<span class="sb-n ${r < 70 ? 'w' : ''}">${r}%</span>` }); })) +
+          return SL.row({ act: 'sb-old', v: 'compliance', name: c.name, sub: `이수 ${d}/${n}명${c.end ? ' · 마감 ' + c.end : ''}`, icon: I('check', 20), col: r >= 90 ? 'var(--t-ok)' : '#FF9800', right: `<span class="sb-n ${r < 70 ? 'w' : ''}">${r}%</span>` }); })) +
           SL.list([SL.row({ act: 'comp-report', v: '', name: '이수 증빙 보고서', sub: '이수 현황 CSV 내려받기', icon: I('download', 20), col: '#808181' })])
           : empty('check', '법정의무교육 이수를 관리합니다', `<button type="button" class="btn pri" data-act="chat-q" data-v="법정의무교육 과정 만들어줘">법정교육 과정 만들기</button>`, ['미이수자 보여줘', '성희롱 예방교육 과정 만들어줘']))); }
   });
@@ -187,7 +187,7 @@
       return pg('academic', `${more('academic')}<button type="button" class="btn pri" data-act="acad-xls">성적 내보내기</button>`,
         SL.sum(`<span>학습 위험군</span><span class="sl-n ${risk.length ? 'sl-w' : ''}">${risk.length}건</span>`) +
         (risk.length ? SL.list(risk.slice(0, 8).map(r => SL.row({ name: (M(r.id) || {}).name || r.id, sub: `${r.c.name} · 진도 ${Math.round(r.p)}%`, col: '#FF9800' }))) + `<div class="sb-row1"><button type="button" class="btn ai" data-act="auto-run-id" data-v="univ-risk">${I('spark', 14)} 지도교수 알림 + 학생 독려</button></div>` : '') +
-        SL.list([SL.row({ act: 'sb-old', v: 'academic', name: t('group') + '별 학습 현황', sub: '학생 수 · 평균 진도 · 이수 · 배지', icon: I('chart', 20), col: '#109BF1' }), SL.row({ act: 'sb-old', v: 'academic', name: '비교과 포인트', sub: '배지 · 비교과 이수 적립', icon: I('check', 20), col: '#00A224' })]) +
+        SL.list([SL.row({ act: 'sb-old', v: 'academic', name: t('group') + '별 학습 현황', sub: '학생 수 · 평균 진도 · 이수 · 배지', icon: I('chart', 20), col: '#109BF1' }), SL.row({ act: 'sb-old', v: 'academic', name: '비교과 포인트', sub: '배지 · 비교과 이수 적립', icon: I('check', 20), col: 'var(--t-ok)' })]) +
         (risk.length ? '' : cmds(['비교과 현황 보여줘', '학습 위험군 알려줘']))); }
   });
 
@@ -198,7 +198,7 @@
       const ok = chk.filter(Boolean).length; const rf = window.DDStat ? DDStat.refunds() : A(S.pays).filter(p => p.status === '환불 신청'); /* v43 DDStat */ const short = A(S.classes).filter(c => c.hours < 30 && c.price).length;
       return pg('lifelong', `${more('lifelong')}<button type="button" class="btn pri" data-act="ll-check">점검 완료로 표시</button>`,
         status(ok === chk.length ? 'check' : 'book', `운영 요건 ${ok}/${chk.length} 충족`, ok === chk.length ? '모두 충족했습니다' : '자세히에서 빠진 항목을 확인하세요', ok === chk.length ? '' : 'w') +
-        SL.list([SL.row({ act: 'sb-old', v: 'lifelong', name: '운영 요건 체크리스트', sub: '평생교육법 요건 7가지', icon: I('check', 20), col: '#00A224', right: cnt(`${ok}/${chk.length}`, ok < chk.length) }),
+        SL.list([SL.row({ act: 'sb-old', v: 'lifelong', name: '운영 요건 체크리스트', sub: '평생교육법 요건 7가지', icon: I('check', 20), col: 'var(--t-ok)', right: cnt(`${ok}/${chk.length}`, ok < chk.length) }),
           SL.row({ act: 'sb-old', v: 'lifelong', name: '학습비 반환 요청', sub: '신청일로부터 5일 이내 처리', icon: I('refresh', 20), col: '#E5487A', right: cnt(rf.length + '건', rf.length) }),
           SL.row({ act: 'sb-old', v: 'lifelong', name: '강좌별 운영 시간', sub: short ? `30시간 미만 유료 강좌 ${short}개` : '모든 강좌 기준 충족', icon: I('book', 20), col: '#109BF1', right: short ? cnt(short + '개', 1) : undefined }),
           SL.row({ act: 'll-ins', v: '', name: '배상책임보험', sub: S.llIns ? '가입됨' : '가입하면 표시하세요', icon: I('gear', 20), col: '#808181', right: sw(!!S.llIns, 'll-ins', '', '배상책임보험 가입') })]) +
@@ -214,7 +214,7 @@
         SL.list([SL.row({ act: 'sb-old', v: 'hrd', name: '보고 내역', sub: R.length ? `최근 ${R[0].at} · ${R[0].kind}` : '아직 만든 보고가 없습니다', icon: I('book', 20), col: '#5C74F6', right: cnt(wait ? `대기 ${wait}` : R.length + '건', wait) }),
           SL.row({ act: 'sb-old', v: 'hrd', name: '출석률 80% 미만', sub: '수료 요건 미달 위험', icon: I('users', 20), col: '#FF9800', right: cnt(low + '명', low) }),
           SL.row({ act: 'sb-old', v: 'hrd', name: '부정훈련 의심', sub: '규칙 기반 탐지 · 확인 후 조치', icon: I('x', 20), col: '#E5487A' }),
-          ...(MENU.cpl ? [SL.row({ act: 'go', v: 'cpl', name: lb('cpl'), sub: '원격훈련 요건 점검표', icon: I('check', 20), col: '#00A224' })] : [])]) +
+          ...(MENU.cpl ? [SL.row({ act: 'go', v: 'cpl', name: lb('cpl'), sub: '원격훈련 요건 점검표', icon: I('check', 20), col: 'var(--t-ok)' })] : [])]) +
         cmds(['HRD 보고 준비해줘', '출석률 낮은 훈련생 보여줘'])); }
   });
 
@@ -248,7 +248,7 @@
         : [['check', '점검표', '요건별 상태 · 증빙', 'check'], ['rule', '적용 규칙', '프로필 · 학습 규칙', 'gear'], ['item', '차시 · 평가', '차시 시간 · 문제은행', 'book'], ['mon', '모니터링', '부정 의심 · 소명', 'users'], ['fb', '첨삭 · 베낀 답안', '첨삭 기한 · 유사도', 'chat'], ['att', '출결', 'QR 출결 · 지각 환산', 'check'], ['rep', '보고', '수료 · 실시 보고', 'send'], ['feed', '데이터 연계', '연계 파일 점검', 'grid'], ['acct', '계정 · 모듈', '운영 계정 · 본인확인', 'users'], ['ev', '증빙 · 조치', '기관 준비 문서', 'book']];
       return pg('cpl', '',
         (L.length ? status(need ? 'book' : 'check', `요건 ${L.length}개 중 ${ok}개 충족 · 증빙`, `${P.on ? '규정 적용 중' : '규정 꺼짐'}${need ? ` · 설정 필요 ${need}개` : ''}`, need ? 'w' : '') : '') +
-        SL.list(TB.map(([k, n, s, icn]) => tabRow('cpl', k, n, s, icn, k === 'check' ? '#00A224' : '#5C74F6', k === 'check' && need ? cnt(need, 1) : undefined))) +
+        SL.list(TB.map(([k, n, s, icn]) => tabRow('cpl', k, n, s, icn, k === 'check' ? 'var(--t-ok)' : '#5C74F6', k === 'check' && need ? cnt(need, 1) : undefined))) +
         cmds(['규정 점검해줘', '심사 준비 보고서 만들어줘'])); }
   });
 

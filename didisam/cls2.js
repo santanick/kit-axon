@@ -496,7 +496,7 @@ function c2Dash() {
     <div class="card"><div class="ch"><b>많이 방문한 요일과 시간</b>${demo}</div><div class="c2heat" role="img" aria-label="요일별 시간대 방문 히트맵">${['일', '월', '화', '수', '목', '금', '토'].map((d, i) => `<span class="c2hl">${d}</span>${heat[i].map((v, hr) => `<i style="opacity:${v ? (.15 + v / hm * .85).toFixed(2) : .05}" title="${d} ${hr}시 ${v}회"></i>`).join('')}`).join('')}</div><small class="mini">0시 → 23시</small></div>
   </section>
   <section class="g2c c2dash">
-    <div class="card"><div class="ch"><b>방문자 · 페이지뷰</b>${segb('dVis', [['w', '주간'], ['m', '월간']], UI.dVis || 'w')}</div>${typeof lineChart === 'function' ? lineChart(vl.map(x => x[0]), [{ n: '방문자', c: '#00862D', v: vl.map(x => x[1]) }, { n: '페이지뷰', c: '#00862D', v: vl.map(x => x[2]) }]) : ''}${demo}</div>
+    <div class="card"><div class="ch"><b>방문자 · 페이지뷰</b>${segb('dVis', [['w', '주간'], ['m', '월간']], UI.dVis || 'w')}</div>${typeof lineChart === 'function' ? lineChart(vl.map(x => x[0]), [{ n: '방문자', c: 'var(--acc2)', v: vl.map(x => x[1]) }, { n: '페이지뷰', c: 'var(--acc2)', v: vl.map(x => x[2]) }]) : ''}${demo}</div>
     <div class="card"><div class="ch"><b>평균 ${esc(t('done'))}율 추이</b>${segb('dTr', [['3', '3개월'], ['6', '6개월']], UI.dTr || '3')}</div>${c2Bars(tr, '%', 'g')}</div>
   </section>
   <section class="grid g3 c2dash">
