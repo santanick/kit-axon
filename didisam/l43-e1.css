@@ -20,7 +20,7 @@ html[data-theme=dark] #main.l43 :is(.cmn-pb,.cm26k,.cx-month,.cx-wcol,.clb-c,.cl
 html[data-theme=dark] #main.l43 .cm26k{color:var(--g800);border-color:var(--line)}
 /* 성적 분포 막대 · 디지털북 썸네일 파랑 → 그린 */
 #main.l43[data-l43=grade] .efh-hist div i{background:var(--c-data)}
-#main.l43 .clb-th.k-b{background:var(--gr700)!important;color:#fff}
+#main.l43 .clb-th.k-b{background:var(--gr700)!important;color:var(--on-pr)}
 /* 평생교육 운영 요건 체크(이모지 대신 체크 표시) */
 .ll-ck{display:inline-flex;align-items:center;gap:8px}
 .ll-ck>i{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;box-shadow:inset 0 0 0 1.5px var(--g400,var(--line));color:var(--on-pr,#fff)}
@@ -52,11 +52,11 @@ html[data-theme=dark] #main.l43 .clb-th.k-b,html[data-theme=dark] #main.l43 .clb
 .bks{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
 .bks-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
 .bks-card{display:flex;flex-direction:column;gap:12px;padding:12px;border-radius:20px;background:var(--surface,#fff);box-shadow:var(--sh1,0 1px 2px rgba(0,0,0,.06)),inset 0 0 0 1px var(--line,rgba(0,0,0,.06));cursor:pointer;transition:box-shadow .15s,transform .15s}
-.bks-card:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(5,40,20,.12)}
+.bks-card:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(24,29,26,0.06)}
 .bks-card.on{box-shadow:0 0 0 2px var(--gr600,#00862D)}
-.bks-cov{position:relative;display:block;aspect-ratio:4/3;border-radius:12px 14px 14px 12px;overflow:hidden;background:var(--bk,#00862D);color:#fff}
+.bks-cov{position:relative;display:block;aspect-ratio:4/3;border-radius:12px 14px 14px 12px;overflow:hidden;background:var(--bk,var(--pr));color:#fff}
 .bks-cov img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.bks-cov::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,16,10,.1) 0,rgba(4,16,10,.2) 40%,color-mix(in srgb,var(--bk,#053D1E) 70%,#04100A) 100%)}
+.bks-cov::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(24,29,26,.1) 0,rgba(24,29,26,.2) 40%,color-mix(in srgb,var(--bk,var(--s800)) 70%,#04100A) 100%)}
 .bks-spine{position:absolute;left:0;top:0;bottom:0;width:10px;z-index:1;background:linear-gradient(90deg,rgba(0,0,0,.35),rgba(255,255,255,.12) 60%,rgba(0,0,0,.1))}
 .bks-lv{position:absolute;z-index:2;top:12px;left:20px;height:24px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;font-style:normal;font-size:12px;font-weight:800;background:rgba(255,255,255,.92);color:var(--gr800,#03271A)}
 .bks-ct{position:absolute;z-index:2;left:20px;right:16px;bottom:14px;display:flex;flex-direction:column;gap:4px}
@@ -67,7 +67,7 @@ html[data-theme=dark] #main.l43 .clb-th.k-b,html[data-theme=dark] #main.l43 .clb
 .bks-tx>b{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bks-tx>small{font-size:12px;color:var(--mute,#6B6F6C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bks-pb{display:block;height:6px;border-radius:99px;background:var(--gr50,#E8F7EC);overflow:hidden;margin-top:4px}
-.bks-pb i{display:block;height:100%;border-radius:99px;background:var(--gr600,#00862D)}
+.bks-pb i{display:block;height:100%;border-radius:99px;background:var(--bar,var(--pr))}
 .bks-nums{display:flex;gap:12px;font-size:12px;color:var(--mute,#6B6F6C)}
 .bks-nums b{font-size:14px;color:var(--ink,#14171A);font-variant-numeric:tabular-nums;margin-right:1px}
 .bks-side{display:flex;flex-direction:column;gap:16px;position:sticky;top:12px}
@@ -115,15 +115,16 @@ html[data-theme=dark] .bks-pb,html[data-theme=dark] .bks-cb,html[data-theme=dark
 /* v43 F2 036: 브리핑 머리 안 하위 칩 */
 #main .l43-brief .lmsnav-sub.l43-insub{margin:0 0 10px;gap:6px}
 #main .l43-brief .lmsnav-sub.l43-insub .lnd{display:none}
-#main .l43-brief .lmsnav-sub.l43-insub button{min-height:44px;padding:0 14px;font-size:13px;background:rgba(255,255,255,.7)}
-#main .l43-brief .lmsnav-sub.l43-insub button.on{background:var(--gr700,#00862D);color:var(--on-pr,#fff)}
+#main .l43-brief .lmsnav-sub.l43-insub button{min-height:44px;padding:0 14px;font-size:13px;background:var(--surface)}
+/* v45: 선택 상태(지금 있는 곳)는 중립 — 초록은 주 버튼(누를 것)에만 */
+#main .l43-brief .lmsnav-sub.l43-insub button.on{background:var(--surface);color:var(--g900);box-shadow:inset 0 0 0 1.5px var(--g800)}
 /* v43 H1(M1 036) 학사 연동: 화면 칩 묶음 + 하위 탭을 한 줄로, 페이지 머리 동기화 단추 중복 감춤 */
 #main .h1-subrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 4px}
 #main .h1-subrow>.seg2{margin:0;flex:1 1 auto;min-width:0}
-#main .h1-subrow>.lmsnav-sub.h1-sub{display:inline-flex;align-items:center;gap:2px;margin:0;padding:4px;border-radius:999px;background:var(--gr50,#EAF7EE);flex:none}
+#main .h1-subrow>.lmsnav-sub.h1-sub{display:inline-flex;align-items:center;gap:2px;margin:0;padding:4px;border-radius:999px;background:var(--g200,#F2F4F3);flex:none}
 #main .h1-subrow>.lmsnav-sub.h1-sub .lnd{display:none}
-#main .h1-subrow>.lmsnav-sub.h1-sub button{min-height:40px;padding:0 14px;border:0;border-radius:999px;background:transparent;font-size:13.5px;font-weight:700;color:var(--gr800,#0B5A2A);white-space:nowrap}
-#main .h1-subrow>.lmsnav-sub.h1-sub button.on{background:var(--gr700,#00862D);color:var(--on-pr,#fff)}
+#main .h1-subrow>.lmsnav-sub.h1-sub button{min-height:40px;padding:0 14px;border:0;border-radius:999px;background:transparent;font-size:13.5px;font-weight:700;color:var(--g700,#4D5551);white-space:nowrap}
+#main .h1-subrow>.lmsnav-sub.h1-sub button.on{background:var(--surface);color:var(--g900);box-shadow:inset 0 0 0 1.5px var(--g800),var(--sh1)}
 #main .h1-subrow>.lmsnav-sub.h1-sub::after{content:none}
 #main .h1-dupact{display:none!important}
 /* v43.4 P1 · 034 · 069 휴대폰: 표지에는 배지 · 단원 수만(제목은 표지 아래에서 2줄), 통계 3칸 고르게 */

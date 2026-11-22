@@ -16,7 +16,7 @@
 .k-st button.on{background:var(--ink,#222);color:#fff;border-color:var(--ink,#222)}
 .k-st button.on.r{background:#d92d20;border-color:#d92d20}
 .k-st button.on.y{background:#b54708;border-color:#b54708}
-.k-st button.on.g{background:#067647;border-color:#067647}
+.k-st button.on.g{background:var(--pr);border-color:var(--pr)}
 .k-calh{display:flex;align-items:center;gap:6px;margin-bottom:8px}.k-calh b{flex:1;text-align:center;font-size:14px}
 .k-calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center}
 .k-calg em{font-style:normal;font-size:12px;color:var(--muted)}
@@ -64,8 +64,8 @@
 .k-gh{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}.k-gh b{font-size:15px}.k-gh small{color:var(--muted);font-size:12.5px}
 .k-gb{display:flex;align-items:flex-end;gap:8px;height:96px}
 .k-gc{flex:1;min-width:34px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;border:0;background:transparent;cursor:pointer;font:inherit;padding:0;color:var(--ink)}
-.k-gc i{display:block;width:100%;max-width:44px;border-radius:7px 7px 3px 3px;background:color-mix(in srgb,var(--g,#16a34a) 30%,transparent);min-height:4px}
-.k-gc.on i,.k-gc:hover i{background:var(--g,#16a34a)}.k-gc b{font-size:12px;font-variant-numeric:tabular-nums}.k-gc span{font-size:12px;color:var(--muted)}
+.k-gc i{display:block;width:100%;max-width:44px;border-radius:7px 7px 3px 3px;background:color-mix(in srgb,var(--pr) 30%,transparent);min-height:4px}
+.k-gc.on i,.k-gc:hover i{background:var(--pr)}.k-gc b{font-size:12px;font-variant-numeric:tabular-nums}.k-gc span{font-size:12px;color:var(--muted)}
 .k-fbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 .k-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.k-chips2{margin-bottom:12px}
 .k-chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:0;box-shadow:inset 0 0 0 1px var(--line);background:var(--card,#fff);font:inherit;font-size:13.5px;cursor:pointer;color:var(--ink);white-space:nowrap}
@@ -76,13 +76,13 @@
 .k-who span:last-child{display:flex;flex-direction:column}.k-who b{font-size:14px;color:var(--ink)}.k-who small{font-size:12px;color:var(--muted);font-weight:400}
 .k-av.l43-av{width:32px;height:32px;flex:none;margin:0}
 .k-gy{display:inline-block;padding:3px 9px;border-radius:7px;background:var(--soft,#f1f3f5);font-size:12.5px;font-weight:600}
-.k-cc{display:inline-block;margin:2px 4px 2px 0;padding:3px 9px;border-radius:999px;font-size:12.5px;background:color-mix(in srgb,var(--g,#16a34a) 10%,transparent);color:var(--g-ink,#15803d);white-space:nowrap}
+.k-cc{display:inline-block;margin:2px 4px 2px 0;padding:3px 9px;border-radius:999px;font-size:12.5px;background:color-mix(in srgb,var(--pr) 10%,transparent);color:var(--g-ink,#15803d);white-space:nowrap}
 .k-more{display:flex;align-items:center;justify-content:space-between;padding:12px 2px 0}
 .k-ccs{display:flex;gap:4px;flex-wrap:wrap;align-items:center}.k-ccs .k-cc{margin:0}
 .k-gb{justify-content:flex-start;gap:18px}.k-gc{flex:0 0 56px}
 /* v43 R2 — 출석부: 요약 막대 + 원생 칩 격자 */
 .k-asum{display:flex;height:10px;border-radius:9px;overflow:hidden;gap:2px;background:var(--soft,#eef0f2);margin:2px 0 8px}
-.k-asum i,.k-alg i{display:block}.t-ok{background:var(--g,#16a34a)}.t-warn{background:#e0a325}.t-bad{background:var(--bad,#c0262d)}.t-none{background:var(--line2,#d5dae0)}.t-etc{background:#7c8a99}
+.k-asum i,.k-alg i{display:block}.t-ok{background:var(--pr)}.t-warn{background:#e0a325}.t-bad{background:var(--bad,#c0262d)}.t-none{background:var(--line2,#d5dae0)}.t-etc{background:#7c8a99}
 .k-alg{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:12px}.k-alg span{display:inline-flex;align-items:center;gap:5px}.k-alg i{width:9px;height:9px;border-radius:3px}.k-alg b{color:var(--ink)}
 .k-roll{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
 .k-rc{border-radius:12px;padding:10px;box-shadow:inset 0 0 0 1px var(--line);background:var(--card,#fff);display:flex;flex-direction:column;gap:8px}
@@ -97,11 +97,11 @@
 .k-exd{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:14px;align-items:end;padding:6px 0 14px;margin-bottom:10px;border-bottom:1px solid var(--line)}
 .k-exb{display:flex;gap:10px;height:110px;align-items:flex-end}
 .k-exb>div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
-.k-exb i{display:block;width:100%;max-width:60px;min-height:4px;border-radius:7px 7px 3px 3px;background:color-mix(in srgb,var(--g,#16a34a) 45%,transparent)}.k-exb i.lo{background:color-mix(in srgb,var(--bad,#c0262d) 55%,transparent)}.k-exb i.hi{background:var(--g,#16a34a)}
+.k-exb i{display:block;width:100%;max-width:60px;min-height:4px;border-radius:7px 7px 3px 3px;background:color-mix(in srgb,var(--pr) 45%,transparent)}.k-exb i.lo{background:color-mix(in srgb,var(--bad,#c0262d) 55%,transparent)}.k-exb i.hi{background:var(--pr)}
 .k-exb b{font-size:12.5px;font-variant-numeric:tabular-nums}.k-exb span{font-size:11.5px;color:var(--muted)}
 .k-exs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.k-exs div{padding:10px;border-radius:10px;background:var(--soft,#f4f5f7);display:flex;flex-direction:column}.k-exs small{font-size:12px;color:var(--muted)}.k-exs b{font-size:20px;font-variant-numeric:tabular-nums}
-.k-sb{display:block;width:140px;height:8px;border-radius:9px;background:var(--soft,#eef0f2);overflow:hidden}.k-sb i{display:block;height:100%;background:var(--g,#16a34a);opacity:.7}.k-sb i.lo{background:var(--bad,#c0262d)}.k-sb i.hi{opacity:1}
-.k-rk{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--soft,#f1f3f5);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}.k-rk.top{background:color-mix(in srgb,var(--g,#16a34a) 14%,transparent);color:var(--g-ink,#15803d)}
+.k-sb{display:block;width:140px;height:8px;border-radius:9px;background:var(--soft,#eef0f2);overflow:hidden}.k-sb i{display:block;height:100%;background:var(--pr);opacity:.7}.k-sb i.lo{background:var(--bad,#c0262d)}.k-sb i.hi{opacity:1}
+.k-rk{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--soft,#f1f3f5);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}.k-rk.top{background:color-mix(in srgb,var(--pr) 14%,transparent);color:var(--g-ink,#15803d)}
 @media (max-width:900px){.k-exd{grid-template-columns:1fr}}
 /* v43 R2 — 학원 현황: 날짜 칩 · 자동 운영 2열 */
 .k-days{margin:0 0 12px}.k-day{flex-direction:row;gap:6px}.k-day small{font-size:11.5px;opacity:.7}

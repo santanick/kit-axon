@@ -177,7 +177,7 @@
   ACT['d26-cat'] = () => { const c = C(UI.cls); if (!c) return; try { c2EnsureAll(); } catch (e) { }
     const T = typeof c2CatTree === 'function' ? c2CatTree() : [];
     const w = SL.sheet('카테고리', `<p class="ops-one">고른 카테고리는 학습자 사이트 ${esc(t('cls'))} 목록의 카테고리 탭이 됩니다.</p>` + SL.list([SL.row({ act: 'ops-catset', v: '', name: '카테고리 없음', icon: I('grid', 18), col: '#AAABAB', right: !c.cat ? '<span class="sl-ok">✓</span>' : '' }),
-      ...T.map(([k, d]) => SL.row({ act: 'ops-catset', v: k.id, name: (d ? '└ ' : '') + k.name, sub: `${S.classes.filter(x => x.cat === k.id).length}개`, icon: I('grid', 18), col: d ? '#00A832' : '#00862D', right: c.cat === k.id ? '<span class="sl-ok">✓</span>' : '' }))]) +
+      ...T.map(([k, d]) => SL.row({ act: 'ops-catset', v: k.id, name: (d ? '└ ' : '') + k.name, sub: `${S.classes.filter(x => x.cat === k.id).length}개`, icon: I('grid', 18), col: d ? 'var(--accent)' : 'var(--pr)', right: c.cat === k.id ? '<span class="sl-ok">✓</span>' : '' }))]) +
       `<div class="ops-catadd"><input id="opsCatN" maxlength="30" placeholder="새 카테고리 이름" aria-label="새 카테고리 이름"><button type="button" class="btn pri" data-act="ops-catadd">만들고 넣기</button></div>` +
       (!T.length ? `<div class="ops-sug"><small>추천</small>${A(SUGGEST[S.org.type] || SUGGEST.adult).map(n => `<button type="button" class="chip" data-act="ops-catadd" data-v="${esc(n)}">+ ${esc(n)}</button>`).join('')}</div>` : ''),
       `<button type="button" class="btn ghost" data-act="ops-catmgr">카테고리 관리</button>`); w.dataset.ops = 'cat'; };
