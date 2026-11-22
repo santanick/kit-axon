@@ -373,7 +373,7 @@ function renderOrgStep() {
       <aside class="au-aside"><div class="pv au-pv" aria-live="polite"><h4>준비되는 스튜디오</h4><div class="au-nm">${esc((SU.name || '').trim() || '기관명')}</div><div class="au-ty">${ready ? esc(pvName) : '유형을 고르면 메뉴가 보입니다'}</div>
         ${ready && PRESET[pk] ? `<div class="au-mn">${WSN.map(w => `<div>${ic(WS[w].icon, 18)}<span>${esc(w === 'people' ? TERMS[SU.type].learner : lab(WS[w]))}</span><em>${PRESET[pk].on.filter(i => MENU[i] && MENU[i].ws === w).length}개</em></div>`).join('')}<div>${ic('globe', 18)}<span>홈페이지</span><em>다음 단계</em></div></div><p class="au-note">${SOC_IC.spark}<span>${esc(TERMS[SU.type].learner)} · ${esc(TERMS[SU.type].cls)} · ${esc(TERMS[SU.type].group)} 용어로 표시됩니다.</span></p>` : ''}</div></aside>
     </div>
-    <div class="au-foot"><div class="au-fin"><span class="au-msg su-hint" id="suHint">${hint}</span><button type="button" class="btn au-prev" id="suBack" data-act="en-back">이전</button><button class="btn pri au-go" type="submit" ${ready && named ? '' : 'disabled'}>다음: 홈페이지 고르기${SOC_IC.right}</button></div></div>
+    <div class="au-foot"><div class="au-fin"><span class="au-msg su-hint" id="suHint">${hint}</span><button type="button" class="btn au-prev" id="suBack" data-act="su-back">이전</button><button class="btn pri au-go" type="submit" ${ready && named ? '' : 'disabled'}>다음: 홈페이지 고르기${SOC_IC.right}</button></div></div>
   </form>`;
   const f = $('#suForm');
   f.addEventListener('input', e => { if (e.target.name !== 'name') return; SU.name = f.name.value; suKeep(); const b = f.querySelector('button[type=submit]'); const ok = ready && !!SU.name.trim(); if (b) b.disabled = !ok; const h = $('#suHint'); if (h && ready) h.textContent = ok ? '언제든 설정 › 기관 정보에서 바꿀 수 있습니다.' : '기관명을 입력하면 다음으로 갈 수 있습니다.'; const nm = $('.au-nm'); if (nm) nm.textContent = SU.name.trim() || '기관명'; });
@@ -479,7 +479,7 @@ ACT['en-view'] = el => { const v = el.dataset.v === 'login' ? 'login' : 'signup'
 ACT['en-go'] = el => SUV.go(el.dataset.v);
 ACT['en-mail'] = () => { SUV.mail = !SUV.mail; SUV.err = ''; SUV.focus = SUV.mail ? '#entryMail [name=email]' : '#entryMailBtn'; renderSignup(); };
 ACT['en-eye'] = el => { const i = el.parentElement.querySelector('input'); if (!i) return; const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.setAttribute('aria-pressed', String(show)); el.setAttribute('aria-label', show ? '비밀번호 숨기기' : '비밀번호 보기'); };
-ACT['en-back'] = () => { SUV.step = 'entry'; SUV.view = 'signup'; SUV.mail = SUV.via === 'email'; SUV.err = ''; SUV.focus = SUV.mail ? '#entryMail [name=password]' : '#entryH'; renderSignup(); };
+ACT['su-back'] = ACT['en-back'] = () => { SUV.step = 'entry'; SUV.view = 'signup'; SUV.mail = SUV.via === 'email'; SUV.err = ''; SUV.focus = SUV.mail ? '#entryMail [name=password]' : '#entryH'; renderSignup(); };
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; const f = ACT[el.dataset.act]; if (f) { if (el.tagName !== 'SUMMARY') e.preventDefault(); f(el, e); } }); /* v32.8 summary는 기본 접기 · 펼치기를 살린다 */
 document.addEventListener('change', e => {
   if (e.target.id === 'roleSel') { S.me.role = e.target.value; save(); toast(`${roleName(S.me.role)} 권한으로 보는 화면입니다.`); go(CUR.tab || CUR.ws); return; }
