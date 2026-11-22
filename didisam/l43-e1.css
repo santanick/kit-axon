@@ -20,7 +20,7 @@ html[data-theme=dark] #main.l43 :is(.cmn-pb,.cm26k,.cx-month,.cx-wcol,.clb-c,.cl
 html[data-theme=dark] #main.l43 .cm26k{color:var(--g800);border-color:var(--line)}
 /* 성적 분포 막대 · 디지털북 썸네일 파랑 → 그린 */
 #main.l43[data-l43=grade] .efh-hist div i{background:var(--c-data)}
-#main.l43 .clb-th.k-b{background:var(--gr700)!important;color:#fff}
+#main.l43 .clb-th.k-b{background:var(--gr700)!important;color:var(--on-pr)}
 /* 평생교육 운영 요건 체크(이모지 대신 체크 표시) */
 .ll-ck{display:inline-flex;align-items:center;gap:8px}
 .ll-ck>i{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;box-shadow:inset 0 0 0 1.5px var(--g400,var(--line));color:var(--on-pr,#fff)}

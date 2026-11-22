@@ -76,8 +76,8 @@
 .cx-steps{display:flex;gap:6px;list-style:none;margin:0;padding:0}
 .cx-steps li{flex:1;min-width:0;border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:13px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:6px}
 .cx-steps li i{font-style:normal;width:20px;height:20px;border-radius:50%;background:var(--g100,#F1EDE6);display:grid;place-items:center;font-size:12px;flex:none}
-.cx-steps li.done{background:var(--gr50,#EAF8EF);border-color:var(--gr100,#CFEFDA);color:var(--gr700,#00862D)}.cx-steps li.done i{background:var(--gr600,#00862D);color:#fff}
-.cx-steps li.cur{border:2px solid var(--gr600,#00862D);color:var(--ink)}.cx-steps li.cur i{background:var(--gr600,#00862D);color:#fff}
+.cx-steps li.done{background:var(--gr50,#EAF8EF);border-color:var(--gr100,#CFEFDA);color:var(--gr700,#00862D)}.cx-steps li.done i{background:var(--gr600,#00862D);color:var(--on-pr)}
+.cx-steps li.cur{border:2px solid var(--gr600,#00862D);color:var(--ink)}.cx-steps li.cur i{background:var(--gr600,#00862D);color:var(--on-pr)}
 .cx-ch{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .cx-ch label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13.5px;font-weight:700;cursor:pointer;min-height:44px}
 .cx-ch label:has(input:checked){border:2px solid var(--gr600,#00862D);background:var(--gr50,#EAF8EF)}

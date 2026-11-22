@@ -38,7 +38,7 @@ code{font-family:var(--num);background:var(--soft);padding:2px 7px;border-radius
 .rgrp{display:flex;flex-direction:column;gap:4px}
 .ri{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;padding:12px 14px;border-radius:8px;cursor:pointer;text-align:left;color:var(--muted);font-weight:700;font-size:15px}
 .ri:hover{background:var(--paper);color:var(--ink)}.ri.on{background:var(--ink);color:#fff}
-.ri em{margin-left:auto;font:700 12px var(--num);font-style:normal;background:var(--mag);color:#fff;border-radius:99px;padding:1px 8px}.ri em.mg{background:var(--magl);color:var(--t-mag,var(--mag))}.ri.on em.mg{background:var(--mag);color:#fff}
+.ri em{margin-left:auto;font:700 12px var(--num);font-style:normal;background:var(--mag);color:var(--on-pr);border-radius:99px;padding:1px 8px}.ri em.mg{background:var(--magl);color:var(--t-mag,var(--mag))}.ri.on em.mg{background:var(--mag);color:var(--on-pr)}
 .rfoot{display:flex;flex-direction:column;gap:10px}
 .orgcard{display:flex;gap:10px;align-items:center;background:var(--paper);border-radius:8px;padding:12px;color:var(--ink)}.orgcard b{display:block;font-size:13.5px}.orgcard small{font-size:11.5px;color:var(--muted)}
 .scrim{display:none}
@@ -50,7 +50,7 @@ main{flex:1;min-width:0;padding:28px 34px 80px;outline:none;background:var(--sur
 /* segmented tabs (KIT) */
 .seg2{display:inline-flex;gap:2px;background:var(--soft);border-radius:8px;padding:4px;flex-wrap:wrap;margin-bottom:16px}.wh .seg2{margin:0}
 .seg2 button{border:0;background:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:700;color:var(--muted);font-size:14px;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
-.seg2 button.on{background:var(--surface,#fff);color:var(--ink);box-shadow:0 1px 3px rgba(42,43,43,.12)}.seg2 button em{font:700 12px var(--num);font-style:normal;background:var(--mag);color:#fff;border-radius:99px;padding:0 6px}
+.seg2 button.on{background:var(--surface,#fff);color:var(--ink);box-shadow:0 1px 3px rgba(42,43,43,.12)}.seg2 button em{font:700 12px var(--num);font-style:normal;background:var(--mag);color:var(--on-pr);border-radius:99px;padding:0 6px}
 .seg2.full{display:flex}.seg2.full button{flex:1;justify-content:center}
 
 /* cards · KPI */
@@ -116,7 +116,7 @@ main.ws-home{background:linear-gradient(180deg,var(--paper) 0,#fff 420px)}
 .tempty{text-align:center;padding:26px 12px;color:var(--muted)}.tempty .ic{color:var(--t-mag,var(--mag))}.tempty b{display:block;color:var(--ink);font-size:17px;margin:8px 0 4px}.tempty p{margin:0 auto;max-width:520px;font-size:14px}
 .msg{display:flex;gap:10px;align-items:flex-start}.msg.u{justify-content:flex-end}
 .msg .bub{max-width:min(640px,86%);border-radius:12px;padding:12px 15px;font-size:14.5px;line-height:1.65}.msg.u .bub{background:var(--ink);color:#fff;border-bottom-right-radius:6px}.msg.a .bub{background:var(--paper);border-top-left-radius:6px;min-width:0}
-.msg .bub p{margin:0}.av{width:30px;height:30px;border-radius:6px;background:var(--mag);color:#fff;display:grid;place-items:center;flex:none}
+.msg .bub p{margin:0}.av{width:30px;height:30px;border-radius:6px;background:var(--mag);color:var(--on-pr);display:grid;place-items:center;flex:none}
 .mcard{margin-top:10px;background:var(--surface,#fff);border-radius:8px;padding:10px 12px;overflow-x:auto}.mcard table{font-size:13px}.mcard th,.mcard td{padding:8px 8px}
 .msteps{margin:10px 0 0;padding-left:20px;font-size:14px}.msteps li{margin:3px 0}
 .mact{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
@@ -134,7 +134,7 @@ main.ws-home{background:linear-gradient(180deg,var(--paper) 0,#fff 420px)}
 .toolsbox{background:var(--surface,#fff);border-radius:var(--r);box-shadow:0 0 0 1px var(--line);padding:4px 18px}.toolsbox summary{cursor:pointer;padding:14px 0;font-weight:700;display:flex;gap:8px;align-items:center;list-style:none}.toolsbox summary small{font-weight:500;color:var(--muted);font-size:13px}.toolsbox[open]{padding-bottom:18px}
 .tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}.tool{text-align:left;border:0;box-shadow:inset 0 0 0 1px var(--line);background:var(--surface,#fff);border-radius:8px;padding:13px;cursor:pointer;display:flex;flex-direction:column;gap:4px}.tool:hover{box-shadow:inset 0 0 0 1.5px var(--mag)}.tool small{color:var(--muted);font-size:12.5px}
 /* floating AI button + drawer */
-.aifab{position:fixed;right:24px;bottom:24px;z-index:40;display:flex;align-items:center;gap:8px;border:0;background:var(--mag);color:#fff;border-radius:99px;padding:14px 22px;font-weight:800;font-size:15px;cursor:pointer;box-shadow:var(--sh2,0 8px 24px rgba(24,29,26,.12))}.aifab:hover{background:var(--magd)}
+.aifab{position:fixed;right:24px;bottom:24px;z-index:40;display:flex;align-items:center;gap:8px;border:0;background:var(--mag);color:var(--on-pr);border-radius:99px;padding:14px 22px;font-weight:800;font-size:15px;cursor:pointer;box-shadow:var(--sh2,0 8px 24px rgba(24,29,26,.12))}.aifab:hover{background:var(--magd)}
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--surface,#fff);z-index:55;box-shadow:-20px 0 60px rgba(31,32,32,.18);display:flex;flex-direction:column}
 .drawer .dh{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}.drawer .dh b{display:block}.drawer .dh small{color:var(--muted);font-size:12.5px}.drawer .dh .x{margin-left:auto}
 .drawer .thread{flex:1;max-height:none}.drawer .composer{padding:10px 14px 16px;border-top:1px solid var(--soft)}
@@ -333,7 +333,7 @@ button[aria-disabled=true],button:disabled{opacity:.35;cursor:not-allowed}
 .tref{font-size:12px;color:var(--t-mag,var(--mag));font-weight:600}
 .tplc{transition:transform .2s,box-shadow .2s}.tplc:hover{transform:translateY(-3px);box-shadow:0 0 0 1px var(--line),0 18px 40px -20px rgba(42,43,43,.35)}
 /* ═════ v7 AI SAM 대화창 ═════ */
-.orb{width:38px;height:38px;flex:none;border-radius:8px;display:grid;place-items:center;color:#fff;background:var(--pr,#3A7B44);color:var(--on-pr,#fff);box-shadow:none}
+.orb{width:38px;height:38px;flex:none;border-radius:8px;display:grid;place-items:center;color:var(--on-pr);background:var(--pr,#3A7B44);color:var(--on-pr,#fff);box-shadow:none}
 .orb.sm{width:28px;height:28px;border-radius:6px}.orb.lg{width:64px;height:64px;border-radius:12px;box-shadow:var(--sh2);animation:orb 4s ease-in-out infinite}
 @keyframes orb{50%{transform:translateY(-4px) rotate(-3deg)}}
 .chatwrap{padding:0;border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px var(--line),0 24px 60px -30px rgba(42,43,43,.28)}

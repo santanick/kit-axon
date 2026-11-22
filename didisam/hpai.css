@@ -3,7 +3,7 @@
 .hpai-bar.fresh{background:linear-gradient(120deg,var(--magl),var(--gr50));box-shadow:inset 0 0 0 1.5px #f4c4d8}
 .hpai-bt{flex:1 1 320px;min-width:0}.hpai-bt b{font-size:16px;display:block}.hpai-bt p{margin:4px 0 0;font-size:13.5px;color:var(--muted)}
 .hpai-bb{display:flex;gap:8px;flex-wrap:wrap}
-.hpai-bar .btn.ai.pri2{background:var(--mag);color:#fff;box-shadow:none}.hpai-bar .btn.ai.pri2:hover{background:var(--magd)}
+.hpai-bar .btn.ai.pri2{background:var(--mag);color:var(--on-pr);box-shadow:none}.hpai-bar .btn.ai.pri2:hover{background:var(--magd)}
 .hpai-m .modal{width:min(720px,100%)}.hpai-m.hpai-wide .modal{width:min(1080px,100%)}
 .hpai-lead{margin:0 0 10px;color:var(--muted);font-size:14px}
 .hpai-note{display:flex;gap:6px;align-items:flex-start;margin:8px 0 0;padding:9px 12px;border-radius:6px;background:var(--okl);color:var(--t-ok,var(--ok));font-size:13px;font-weight:600}.hpai-note .ic{flex:none;margin-top:3px}

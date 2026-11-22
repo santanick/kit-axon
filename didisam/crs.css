@@ -21,7 +21,7 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
 .cf-prog button::before{content:"";display:block;width:100%;height:4px;border-radius:2px;background:var(--g300,#EAEBEB)}
 .cf-prog li.done button::before,.cf-prog li.on button::before{background:var(--s400,#00862D)}
 .cf-dot{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--g200,#F1F2F2);font-size:14px;font-weight:800;flex:none}
-.cf-prog li.on .cf-dot{background:var(--s400,#00862D);color:#fff}.cf-prog li.done .cf-dot{background:var(--s50,#ECFDF3);color:var(--t-mag,#066B2A)}
+.cf-prog li.on .cf-dot{background:var(--s400,#00862D);color:var(--on-pr)}.cf-prog li.done .cf-dot{background:var(--s50,#ECFDF3);color:var(--t-mag,#066B2A)}
 .cf-prog button{flex-direction:row;flex-wrap:wrap;align-items:center}
 .cf-prog button::before{flex-basis:100%}
 .cf-sl{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
@@ -61,7 +61,7 @@ body.cf-on #toasts .toast:not(:last-child){display:none}
 .cf-choice button:hover,.cf-tplg button:hover,.cf-auto button:hover{border-color:var(--s300,#00C53B)}
 .cf-days{display:flex;gap:6px;flex-wrap:wrap}
 .cf-days button{width:48px;height:48px;border:1.5px solid var(--g300,#EAEBEB);border-radius:50%;background:#fff;font:inherit;font-weight:800;cursor:pointer}
-.cf-days button.on{background:var(--s400,#00862D);border-color:var(--s400,#00862D);color:#fff}
+.cf-days button.on{background:var(--s400,#00862D);border-color:var(--s400,#00862D);color:var(--on-pr)}
 .cf-tog{display:inline-flex;align-items:center;gap:10px;min-height:48px;font-weight:700;cursor:pointer}.cf-tog input{width:22px;height:22px}
 /* 템플릿 */
 .cf-tpl{margin:0 0 22px}

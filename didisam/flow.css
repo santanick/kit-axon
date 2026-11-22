@@ -68,7 +68,7 @@ body.mode-bld:not(.drawer-open) #main{padding-right:22px}
   .bmseg{display:flex;position:sticky;top:62px;z-index:19;background:#fff;padding:8px 12px;gap:4px;border-bottom:1px solid var(--line)}
   .bmseg button{flex:1;height:38px;border:0;border-radius:6px;background:var(--soft);font-weight:700;color:var(--muted);cursor:pointer}
   .bmseg button[aria-selected=true]{background:var(--ink);color:#fff}
-  .bmseg em{margin-left:6px;font:700 11px var(--num);font-style:normal;background:var(--mag);color:#fff;border-radius:99px;padding:0 6px}
+  .bmseg em{margin-left:6px;font:700 11px var(--num);font-style:normal;background:var(--mag);color:var(--on-pr);border-radius:99px;padding:0 6px}
   .brail{display:none}
   .bchat{height:calc(100vh - 62px - 55px);height:calc(100dvh - 62px - 55px);border-right:0}
   .bcanvas{display:none;padding:14px 14px 80px;overflow:visible}

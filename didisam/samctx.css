@@ -16,7 +16,7 @@
 #fabBtn .scxbt small{font-size:12px;font-weight:700;opacity:.85;margin-top:2px;letter-spacing:0}
 .scxc{max-height:76px;overflow-y:auto}
 .obd.on+.scx .scxc{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none;scrollbar-width:thin}.obd.on+.scx .scxchip{flex:none;max-width:none}
-#fabBtn .scxbt small{color:#fff;opacity:.9;white-space:nowrap}
+#fabBtn .scxbt small{color:var(--on-pr);opacity:.9;white-space:nowrap}
 body:not(.fab-open) #fabBtn:has(.scxbt){padding-right:20px}
 /* 낮은 화면: 이 화면 칩이 있으면 입력창 위 예시 줄은 숨겨 대화 칸을 확보 */
 @media (max-height:760px){.bchat:has(.scx:not(.off)) .bcomp .chips{display:none}.scxh{padding:5px 10px}.scxt small{display:none}.scx{margin-top:6px}}

@@ -10,12 +10,12 @@
 .sl-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 14px;scrollbar-width:none;margin:0}
 .sl-chips::-webkit-scrollbar{display:none}
 .sl-chips button{flex:none;min-height:40px;padding:0 18px;border-radius:999px;border:0;background:var(--g100);color:var(--g800);font:inherit;font-size:15px;font-weight:600;cursor:pointer}
-.sl-chips button.on{background:var(--g900);color:#fff}
+.sl-chips button.on{background:var(--g900);color:var(--surface)}
 .sl-sum{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:12px 4px;font:inherit;font-size:16px;font-weight:700;color:var(--g900);text-align:left;cursor:default}
 button.sl-sum{cursor:pointer}
 .sl-sum .sl-n{margin-left:auto;color:var(--t-sub);font-weight:600}
 .sl-sum .sl-n.sl-w{color:var(--t-warn)}
-.sl-sum .sl-go{color:var(--g500);font-size:22px;line-height:1}
+.sl-sum .sl-go{color:var(--g600);font-size:22px;line-height:1}
 .sl-logos{display:flex;gap:6px}
 .sl-logos i{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font-style:normal;font-size:12px;font-weight:800}
 .sl-list{display:flex;flex-direction:column;gap:2px;margin:4px 0 12px}
@@ -28,7 +28,7 @@ button.sl-sum{cursor:pointer}
 .sl-tx b{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sl-tx small{font-size:14px;color:var(--t-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sl-r{flex:none;display:flex;align-items:center;gap:6px}
-.sl-go{color:var(--g500);font-size:24px;line-height:1;padding:0 4px}
+.sl-go{color:var(--g600);font-size:24px;line-height:1;padding:0 4px}
 .sl-plus{width:36px;height:36px;display:grid;place-items:center;font-size:26px;font-weight:300;color:var(--g700)}
 .sl-ok{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--b50);color:var(--t-ok);font-weight:800}
 .sl-dot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--warnl);color:var(--t-warn);font-weight:800}
@@ -191,7 +191,7 @@ body:has(#slSheet) .mwrap{z-index:96}
 /* v43 R7 2차: 요금제 카드(금액 위계 · 추천 배지 · 기능 3줄) · 부가 옵션 2열 */
 #main .r7-plans .card.plan{position:relative;display:flex;flex-direction:column;gap:6px;padding:22px 20px}
 #main .r7-plans .card.plan.rec{border:2px solid var(--gr600,#16A34A)}
-#main .r7-plans .r7-rec{position:absolute;top:-12px;left:20px;font-style:normal;font-size:12px;font-weight:800;color:#fff;background:var(--gr700,#00862D);border-radius:999px;padding:4px 12px}
+#main .r7-plans .r7-rec{position:absolute;top:-12px;left:20px;font-style:normal;font-size:12px;font-weight:800;color:var(--on-pr);background:var(--gr700,#00862D);border-radius:999px;padding:4px 12px}
 #main .r7-plans .card.plan>b{font-size:16px;font-weight:800}#main .r7-plans .r7-who{font-size:13px;color:var(--t-sub,#5C554B)}
 #main .r7-plans .card.plan strong.r7-pr{font-size:28px;font-weight:800;letter-spacing:-.02em;color:var(--g900,#1F1B16);margin:6px 0 2px}#main .r7-pr span{font-size:14px;font-weight:600;color:var(--t-sub,#5C554B);margin-left:4px}
 #main .r7-pf{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:6px}#main .r7-pf li{font-size:14px;padding-left:22px;position:relative}#main .r7-pf li:before{content:"";position:absolute;left:2px;top:5px;width:10px;height:6px;border-left:2px solid var(--gr600,#16A34A);border-bottom:2px solid var(--gr600,#16A34A);transform:rotate(-45deg)}
@@ -215,7 +215,7 @@ body:has(#slSheet) .mwrap{z-index:96}
 #main .r7-lgrid .r7-lo{display:flex!important;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--hair,#E5DFD3);border-radius:14px;background:var(--surface,#fff);min-height:64px;cursor:pointer}
 #main .r7-lo i{font-style:normal;font-size:12px;font-weight:800;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--g50,#F4F1EA);color:var(--g800,#3A352E);flex:0 0 auto}
 #main .r7-lo b{display:block;font-size:15px;font-weight:800}#main .r7-lo small{display:block;font-size:13px;color:var(--t-sub,#5C554B)}
-#main .r7-lo.on{border:2px solid var(--gr600,#16A34A);background:var(--gr50,#F1F8F3)}#main .r7-lo.on i{background:var(--gr700,#00862D);color:#fff}
+#main .r7-lo.on{border:2px solid var(--gr600,#16A34A);background:var(--gr50,#F1F8F3)}#main .r7-lo.on i{background:var(--gr700,#00862D);color:var(--on-pr)}
 #main .r7-lo input[type=radio]{position:absolute;opacity:0;width:1px;height:1px}
 /* v43 R7 2차: 팝업 — 사용량 칸 막대 · 미리보기 썸네일 카드 */
 #main .r7-pph{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
