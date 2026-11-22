@@ -14,7 +14,7 @@
 .obd.fin .obi{background:var(--ok)}
 .obt{flex:1;min-width:0}.obt b{display:block;font-size:13.5px}.obt small{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .obp{flex:none;font:700 12.5px var(--num,inherit);color:var(--ink)}
-.obbar{flex:none;width:56px;height:6px;border-radius:99px;background:var(--c-track,#E3EFE7);overflow:hidden}.obbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--gr600,#00A832),var(--gr700,#00862D))}
+.obbar{flex:none;width:56px;height:6px;border-radius:99px;background:var(--c-track,#E3EFE7);overflow:hidden}.obbar i{display:block;height:100%;border-radius:99px;background:var(--bar,var(--pr))}
 .obd.fin .obbar i{background:var(--ok)}
 .obs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 0}
 .ob1{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:99px;padding:4px 10px 4px 4px;font-size:12px;font-weight:700;background:var(--soft);color:var(--muted);cursor:pointer}

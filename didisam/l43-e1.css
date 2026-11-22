@@ -67,7 +67,7 @@ html[data-theme=dark] #main.l43 .clb-th.k-b,html[data-theme=dark] #main.l43 .clb
 .bks-tx>b{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bks-tx>small{font-size:12px;color:var(--mute,#6B6F6C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bks-pb{display:block;height:6px;border-radius:99px;background:var(--gr50,#E8F7EC);overflow:hidden;margin-top:4px}
-.bks-pb i{display:block;height:100%;border-radius:99px;background:var(--gr600,#00862D)}
+.bks-pb i{display:block;height:100%;border-radius:99px;background:var(--bar,var(--pr))}
 .bks-nums{display:flex;gap:12px;font-size:12px;color:var(--mute,#6B6F6C)}
 .bks-nums b{font-size:14px;color:var(--ink,#14171A);font-variant-numeric:tabular-nums;margin-right:1px}
 .bks-side{display:flex;flex-direction:column;gap:16px;position:sticky;top:12px}

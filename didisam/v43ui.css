@@ -79,7 +79,7 @@
 .v4-tip{position:absolute;transform:translate(-50%,calc(-100% - 16px));background:#181D1A;color:#fff;border-radius:12px;padding:7px 11px;font-size:12px;line-height:1.35;white-space:nowrap;pointer-events:none;box-shadow:0 10px 24px rgba(0,0,0,.25);font-variant-numeric:tabular-nums;z-index:2}
 .v4-tip.r{transform:translate(calc(-100% + 18px),calc(-100% - 16px))}.v4-tip.l{transform:translate(-18px,calc(-100% - 16px))}
 .v4-tip span{display:block;color:var(--g300,#E4E8E6);font-weight:600}.v4-tip b{display:block;font-size:15px;font-weight:800}.v4-tip small{display:block;color:#CFDBD2;font-size:12px}
-html[data-theme="dark"] .v4-tip{background:#E9EEEB;color:#0D100F}html[data-theme="dark"] .v4-tip span{color:var(--s700,#2D5640)}html[data-theme="dark"] .v4-tip small{color:#343B37}
+html[data-theme="dark"] .v4-tip{background:#E9EEEB;color:#0D100F}html[data-theme="dark"] .v4-tip span{color:var(--s700,#2F6336)}html[data-theme="dark"] .v4-tip small{color:#343B37}
 .v4-alg{display:flex;gap:14px;font-size:12px;color:var(--t-sub);font-weight:600}.v4-alg i{display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--c-data);vertical-align:middle;margin-right:5px}.v4-alg i.p{background:none;border-top:2px dashed var(--c-prev);height:0}
 /* 도넛 · 범례 */
 .v4-donut{position:relative;flex:none}.v4-donut svg{display:block}
@@ -304,7 +304,7 @@ html[data-theme="dark"] :is(#main,.modal) input:is([type=date],[type=time],[type
 :root[data-theme="dark"] :is(.uxpop,.slg-pop,.slg-ask:hover){background:var(--surface)!important;color:var(--g900)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) :is(.uxpop,.slg-pop){background:var(--surface)!important}}
 .lg-x{margin:0 0 12px;font-size:14px;color:var(--t-sub,var(--g700))}
-.lg-x .lnk,.lnk{border:0;background:none;padding:0 2px;min-height:auto;color:var(--t-mag,#2D5640);font-weight:700;text-decoration:underline;cursor:pointer}
+.lg-x .lnk,.lnk{border:0;background:none;padding:0 2px;min-height:auto;color:var(--link,#26606D);font-weight:700;text-decoration:underline;cursor:pointer}
 .su .su-pub{display:grid!important;grid-template-columns:1fr!important;gap:6px}
 .su .su-pub>button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-height:56px;padding:8px 14px;text-align:left;white-space:normal;width:100%}
 .su-pub>button small{font-weight:500;font-size:12.5px;color:var(--t-sub,var(--g600));line-height:1.35}
@@ -312,7 +312,7 @@ html[data-theme="dark"] :is(#main,.modal) input:is([type=date],[type=time],[type
 /* ═════════ v43 G1 — 기본 폼 요소 0(관리자 · 학습자 · 앱 · 빌더 공통, 범위 제한 없음) ═════════
    원인: Q1 규칙이 :is(#main,.modal,.sheet,.uxpop) 안에만 걸려 빌더 패널(#hpe) · 머리 계정 메뉴 · 학습자 화면(v43ui.css 미로드)에 닿지 않았고,
    date · time 은 테두리만 바뀌고 기본 달력 단추가 남았으며, 라벨 안 파일 입력은 :not(label *) 로 빠져 「Choose File」이 그대로였다. */
-:root{--f43-acc:var(--gr600,var(--pri,#3A6A4F));--f43-fg:var(--g900,var(--ink,#1A1814));--f43-bg:var(--surface,#fff);--f43-bd:color-mix(in srgb,var(--f43-fg) 22%,transparent);--f43-ring:0 0 0 3px color-mix(in srgb,var(--f43-acc) 28%,transparent);
+:root{--f43-acc:var(--gr600,var(--pri,#3A7B44));--f43-fg:var(--g900,var(--ink,#1A1814));--f43-bg:var(--surface,#fff);--f43-bd:color-mix(in srgb,var(--f43-fg) 22%,transparent);--f43-ring:0 0 0 3px color-mix(in srgb,var(--f43-acc) 28%,transparent);
   --f43-chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238A8F98' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   --f43-cal:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238A8F98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15' rx='3'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4'/%3E%3C/svg%3E");
   --f43-clk:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238A8F98' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E")}
@@ -349,9 +349,9 @@ input[type=file][hidden]{display:none!important} /* 라벨 단추(.btn) 안 숨�
 @media (min-width:901px) and (max-width:1180px){body:has(.brail){--g2-rail:68px}}
 /* v43 G2 2차: 임시 주소 · 시작 가이드 → 머리 줄 작은 칩 1개(누르면 아래로 펼침, 본문을 가리지 않는 짧은 팝오버) */
 .top .g2-dom{position:relative;flex:none;min-width:0}
-.top .g2-domchip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px 0 10px;border-radius:999px;border:1px solid color-mix(in srgb,var(--gr600,#3A6A4F) 24%,transparent);background:color-mix(in srgb,var(--gr600,#3A6A4F) 7%,var(--surface,#fff));color:var(--g800,#2A2B2B);font:600 13px/1 inherit;white-space:nowrap;cursor:pointer}
-.top .g2-domchip svg{flex:none;color:var(--t-mag,#2D5640)}
-.top .g2-domchip b{font-weight:800;font-variant-numeric:tabular-nums;color:var(--t-mag,#2D5640)}
+.top .g2-domchip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px 0 10px;border-radius:999px;border:1px solid color-mix(in srgb,var(--gr600,#3A7B44) 24%,transparent);background:color-mix(in srgb,var(--gr600,#3A7B44) 7%,var(--surface,#fff));color:var(--g800,#2A2B2B);font:600 13px/1 inherit;white-space:nowrap;cursor:pointer}
+.top .g2-domchip svg{flex:none;color:var(--t-mag,#2F6336)}
+.top .g2-domchip b{font-weight:800;font-variant-numeric:tabular-nums;color:var(--t-mag,#2F6336)}
 .top .g2-domchip::after{content:"";width:6px;height:6px;margin-left:2px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:translateY(-2px) rotate(45deg);opacity:.6}
 .top .g2-dom.open .g2-domchip::after{transform:translateY(1px) rotate(-135deg)}
 .top .g2-dompop{position:absolute;top:calc(100% + 8px);left:0;z-index:60;width:340px;padding:14px;border-radius:16px;background:var(--surface,#fff);border:1px solid var(--line,#E7E5E0);box-shadow:var(--sh3,0 12px 32px rgba(0,0,0,.14));color:var(--g800,#2A2B2B);font-size:13px;line-height:1.5;white-space:normal}
@@ -361,7 +361,7 @@ input[type=file][hidden]{display:none!important} /* 라벨 단추(.btn) 안 숨�
 .top .g2-dompop .bprog.g2-inpop .bpbar{flex:1;width:auto}
 .top .g2-dpa{display:flex;gap:8px;flex-wrap:wrap}
 .top .g2-dpa button{min-height:40px;padding:0 14px;border-radius:999px;font:700 13px inherit;cursor:pointer}
-.top .g2-dpa .g2-domgo{border:0;background:var(--pr,#3A6A4F);color:var(--on-pr,#fff)}
+.top .g2-dpa .g2-domgo{border:0;background:var(--pr,#3A7B44);color:var(--on-pr,#fff)}
 .top .g2-dpa .g2-domx{border:1px solid var(--line,#E7E5E0);background:none;color:inherit}
 .top .uxfind{flex:none;white-space:nowrap}.top .uxfind span{white-space:nowrap}
 @media (max-width:1180px){.top .g2-domchip>span{display:none}.top .g2-domchip{padding:0 10px}}
@@ -416,8 +416,8 @@ html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background
 .modal.m1 .mb .fl{font-size:14px}
 .modal.m1 .mb .fl input{min-height:48px;font-size:16px}
 .modal.m1 .m1help{margin:8px 0 0;font-size:13px;color:var(--t-sub,var(--g600));line-height:1.5}
-.modal.m1 .m1pv{display:flex;align-items:center;gap:14px;margin-top:16px;padding:14px 16px;border-radius:16px;background:color-mix(in srgb,var(--gr600,#3A6A4F) 7%,var(--surface,#fff));border:1px solid color-mix(in srgb,var(--gr600,#3A6A4F) 18%,transparent)}
-.modal.m1 .m1ic{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface,#fff);color:var(--t-mag,#2D5640);box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.modal.m1 .m1pv{display:flex;align-items:center;gap:14px;margin-top:16px;padding:14px 16px;border-radius:16px;background:color-mix(in srgb,var(--gr600,#3A7B44) 7%,var(--surface,#fff));border:1px solid color-mix(in srgb,var(--gr600,#3A7B44) 18%,transparent)}
+.modal.m1 .m1ic{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface,#fff);color:var(--t-mag,#2F6336);box-shadow:0 1px 2px rgba(16,24,40,.08)}
 .modal.m1 .m1pv small{display:block;font-size:12px;font-weight:700;color:var(--t-sub,var(--g600));margin-bottom:2px}
 .modal.m1 .m1pv p{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:15px}
 .modal.m1 .m1pv s{color:var(--t-sub,var(--g600))}.modal.m1 .m1pv p>span{color:var(--t-sub,var(--g600))}
@@ -493,7 +493,7 @@ html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background
   #main .slg-i,#main .sl-i,#main>.bhd.q1-ph .slg-i{width:44px;height:44px;min-width:44px;min-height:44px}
   #main .slg-i,#main .sl-i{isolation:isolate;border:0!important;background:transparent!important;box-shadow:none!important;font-size:14px}
   #main .slg-i::before,#main .sl-i::before{content:"";position:absolute;left:50%;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:1px solid var(--g300,#D6D3CC);background:var(--surface,#fff);z-index:-1}
-  #main .slg-i[aria-expanded=true]::before{border-color:var(--s400,#3A6A4F);background:var(--s50,#F2F6F3)}
+  #main .slg-i[aria-expanded=true]::before{border-color:var(--s400,#3A7B44);background:var(--s50,#F3F9F4)}
 }
 /* ⑥ 태블릿(761~900px)도 휴대폰과 같은 AI 버튼 — 48px 원 · 오른쪽 아래 12px · 스크롤하는 동안 숨김(fab.js). 큰 알약 버튼이 목록 오른쪽 「›」 버튼을 덮던 문제 */
 @media (min-width:761px) and (max-width:900px){
