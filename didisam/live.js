@@ -107,7 +107,8 @@ AFTER.push(cur => {
    - 공용 상태는 window.SUV(= LV): view 'login'|'signup', step 'entry'|'org'. core.js가 SUV를 만들지 않았으면 여기서 만든다.
    - B안(FLOW §4): 이메일 가입은 이메일 · 비밀번호를 ① [다음]까지 메모리에만 두고 /api/signup을 한 번 호출한다(비밀번호는 저장하지 않음).
      소셜 가입은 서버 보류 쿠키(15분)로 ①까지 이어 가고 /api/oauth/signup을 호출한다. /api · DB는 바꾸지 않는다.
-   - createOrg는 성공하면 true, 실패 · 취소면 false를 돌려주는 Promise다. core.js는 await한 뒤 true일 때만 window.onbStart()를 부른다. */
+   - createOrg는 성공하면 true, 실패 · 취소면 false를 돌려주는 Promise다. ② 진입은 UI.onbNew=1 → onb45.js의 createOrg 감싸기(base 안쪽)가 서버 응답 뒤 onbStart를 부른다.
+     실패하면 base를 부르지 않으므로 S.onb도 생기지 않는다. core.js가 createOrg 직후 onbStart()를 불러도(S 없음 → UI.onbNew=1) 같은 결과다. */
 const LV = (typeof SUV !== 'undefined' && SUV) || window.SUV || (window.SUV = {});
 Object.assign(LV, { view: LV.view || 'signup', step: LV.step || 'entry', oerr: '', sample: false, mail: null, email: '', mailOpen: false, focus: '' });
 let lvPw = ''; /* 이메일 가입 비밀번호 — 변수에만 둔다(저장소 · sessionStorage 금지), 가입 호출 뒤 지운다 */
@@ -145,7 +146,7 @@ const lvProv = () => ((LIVE.cfg && LIVE.cfg.oauth) || []).filter(p => OAUTH_P[p]
 function lvSocBtns() {
   const P = lvProv();
   const kakao = P.includes('kakao') ? `<a class="lvsb kakao" href="/api/oauth/kakao/start" rel="nofollow" data-lvp="kakao">${OAUTH_P.kakao[1]}<span>카카오로 계속하기</span></a>`
-    : `<button type="button" class="lvsb kakao" data-act="lv-kakao-off" aria-disabled="true">${OAUTH_P.kakao[1]}<span>카카오로 계속하기</span></button>`;
+    : `<button type="button" class="lvsb kakao" data-act="lv-kakao-off" aria-describedby="entryErr">${OAUTH_P.kakao[1]}<span>카카오로 계속하기</span></button>`;
   const google = P.includes('google') ? `<a class="lvsb google" href="/api/oauth/google/start" rel="nofollow" data-lvp="google">${OAUTH_P.google[1]}<span>Google로 계속하기</span></a>` : '';
   return `<div class="lvsoc">${kakao}${google}</div>`;
 }
@@ -213,14 +214,16 @@ function lvOrg() {
     : LIVE.user ? `<span><b>${esc(LIVE.user.email)}</b> 계정의 기관 준비를 이어서 합니다</span>` : `${MAIL_IC}<span><b>${esc((LV.mail && LV.mail.email) || '')}</b></span>`;
   const h = f.querySelector('h1, h2'); (h || f.firstElementChild || f).insertAdjacentHTML(h ? 'afterend' : 'beforebegin', `<p class="lvpend lvacc">${who}</p>`);
   const btn = f.querySelector('button[type=submit]');
-  if (btn) btn.insertAdjacentHTML('beforebegin', `${o && cfg.signupCode ? '<label class="fl lvf">초대 코드<input name="code" autocomplete="off" maxlength="60" required placeholder="디디쌤에서 받은 코드"></label>' : ''}<p class="lverr" id="suErr" role="alert"></p>`);
+  if (btn) btn.insertAdjacentHTML('beforebegin', `${o && cfg.signupCode ? '<label class="fl lvf">초대 코드<input name="code" autocomplete="off" maxlength="60" placeholder="디디쌤에서 받은 코드"></label>' : ''}<p class="lverr" id="suErr" role="alert"></p>`);
   /* 이전: 이메일 → 진입(이메일 유지) · 소셜 보류 → 다른 방법으로 가입(보류 취소) · 이어가기 → 다른 계정으로 로그인 */
   const act = o ? 'lv-ocancel' : LIVE.user ? 'live-logout' : 'lv-back'; const lab = o ? '다른 방법으로 가입' : LIVE.user ? '다른 계정으로 로그인' : '← 이전';
   const bk = document.querySelector('[data-act="su-back"]');
   if (bk) { bk.dataset.act = act; if (o || LIVE.user) bk.textContent = lab; }
   else f.insertAdjacentHTML('afterbegin', `<button type="button" class="linkb lvback" data-act="${act}">${lab}</button>`);
   if (LIVE.user && LIVE.tenant && f.name && !f.name.value) f.name.value = SU.name = LIVE.tenant.name;
-  if (!f.dataset.lv) { f.dataset.lv = '1'; f.addEventListener('input', () => { SU.name = f.name ? f.name.value : SU.name; lvSave(); }); }
+  if (!f.dataset.lv) { f.dataset.lv = '1'; f.addEventListener('input', () => { SU.name = f.name ? f.name.value : SU.name; lvSave(); });
+    /* ② 훅(onb45.js): 화면의 ① [다음]으로 만든 기관만 ②로 보낸다(시험 · 코드의 createOrg 직접 호출은 그대로 대시보드) — 운영 createOrg는 서버 응답 뒤 base를 부르고, onb45 감싸기가 그때 onbStart를 실행 */
+    f.addEventListener('submit', () => { if (typeof UI !== 'undefined') UI.onbNew = 1; }, true); }
   lvSave();
 }
 { const base = renderSignup; renderSignup = (...a) => {
@@ -271,11 +274,12 @@ function lvSignupErr(x) {
     const f = $('#suForm'); const btn = f && f.querySelector('button[type=submit]'); const err = $('#suErr');
     lvSave({ type, ed, name });
     const code = LIVE.oauth ? ((f && f.code && f.code.value.trim()) || '') : LV.mail.code || '';
-    if (LIVE.oauth && LIVE.cfg && LIVE.cfg.signupCode && !code) { if (err) err.textContent = LVMSG.codeNeed; if (f && f.code) f.code.focus(); return false; }
+    if (LIVE.oauth && LIVE.cfg && LIVE.cfg.signupCode && !code) { if (typeof UI !== 'undefined') delete UI.onbNew; if (err) err.textContent = LVMSG.codeNeed; if (f && f.code) f.code.focus(); return false; }
     if (btn) btn.disabled = true; if (err) err.textContent = '';
     const via = LIVE.oauth ? LIVE.oauth.provider : 'email'; let r;
     try { r = LIVE.oauth ? await api('POST', '/api/oauth/signup', { code, orgName: name, type }) : await api('POST', '/api/signup', { email: LV.mail.email, password: lvPw, code, orgName: name, type }); }
-    catch (x) { if (btn) btn.disabled = false; if (x && ['exists', 'oauth_pending', 'email', 'password'].includes(x.code) || (x && x.code === 'code' && !LIVE.oauth)) lvPw = ''; lvSignupErr(x); return false; }
+    catch (x) { if (typeof UI !== 'undefined') delete UI.onbNew; if (btn) btn.disabled = false; if (x && ['exists', 'oauth_pending', 'email', 'password'].includes(x.code) || (x && x.code === 'code' && !LIVE.oauth)) lvPw = ''; lvSignupErr(x); return false; }
+    if (typeof UI !== 'undefined') UI.onbNew = 1; /* 새 동선 가입(이메일 · 소셜)은 언제나 ②로 */
     lvPw = ''; LIVE.oauth = null; LV.mail = null; LIVE.user = r.user; LIVE.tenant = r.tenant; LIVE.rev = 0; LIVE.doc = null; lvSeen(); lvDrop();
     const box = $('#suEmpty'); LV.sample = !!box && !box.checked; /* D7: 「샘플 데이터로 둘러보기」 대신 ①의 「빈 스튜디오로 시작」(empty.js) 하나로 */
     base(type, name, ed);
