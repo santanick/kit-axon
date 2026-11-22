@@ -79,7 +79,7 @@
 .v4-tip{position:absolute;transform:translate(-50%,calc(-100% - 16px));background:#181D1A;color:#fff;border-radius:12px;padding:7px 11px;font-size:12px;line-height:1.35;white-space:nowrap;pointer-events:none;box-shadow:0 10px 24px rgba(0,0,0,.25);font-variant-numeric:tabular-nums;z-index:2}
 .v4-tip.r{transform:translate(calc(-100% + 18px),calc(-100% - 16px))}.v4-tip.l{transform:translate(-18px,calc(-100% - 16px))}
 .v4-tip span{display:block;color:var(--g300,#E4E8E6);font-weight:600}.v4-tip b{display:block;font-size:15px;font-weight:800}.v4-tip small{display:block;color:#CFDBD2;font-size:12px}
-html[data-theme="dark"] .v4-tip{background:#E9EEEB;color:#0D100F}html[data-theme="dark"] .v4-tip span{color:#2D5640}html[data-theme="dark"] .v4-tip small{color:#343B37}
+html[data-theme="dark"] .v4-tip{background:#E9EEEB;color:#0D100F}html[data-theme="dark"] .v4-tip span{color:var(--s700,#2D5640)}html[data-theme="dark"] .v4-tip small{color:#343B37}
 .v4-alg{display:flex;gap:14px;font-size:12px;color:var(--t-sub);font-weight:600}.v4-alg i{display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--c-data);vertical-align:middle;margin-right:5px}.v4-alg i.p{background:none;border-top:2px dashed var(--c-prev);height:0}
 /* 도넛 · 범례 */
 .v4-donut{position:relative;flex:none}.v4-donut svg{display:block}
@@ -240,7 +240,7 @@ html[data-theme="dark"]{--q1-in-bd:rgba(255,255,255,.14)}
 .modal .mf{padding:14px 24px 20px;gap:8px;border-top:1px solid var(--hair);background:var(--surface2);border-radius:0 0 24px 24px}
 .mwrap{backdrop-filter:blur(4px);background:var(--scrim)!important}
 #toasts .toast,.toast{border-radius:14px!important;padding:12px 16px 12px 44px!important;position:relative;font-weight:600;line-height:1.5;box-shadow:0 2px 6px rgba(16,24,40,.12),0 18px 40px -12px rgba(16,24,40,.35)!important;max-width:min(520px,calc(100vw - 32px))}
-#toasts .toast::before,.toast::before{content:"";position:absolute;left:14px;top:13px;width:20px;height:20px;border-radius:50%;background:#86CFA0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23162B20' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12l4 4 8-8'/%3E%3C/svg%3E") center/14px no-repeat}
+#toasts .toast::before,.toast::before{content:"";position:absolute;left:14px;top:13px;width:20px;height:20px;border-radius:50%;background:var(--s200) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23162B20' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12l4 4 8-8'/%3E%3C/svg%3E") center/14px no-repeat}
 
 /* 9. 빈 상태 · 안내 띠 */
 #main .empty:not(.l43-emptyp){border-radius:20px;border:1px dashed color-mix(in srgb,var(--gr600) 35%,transparent);background:linear-gradient(180deg,var(--gr50),var(--surface) 70%);color:var(--t-sub,var(--g700));font-size:15px;padding:28px}

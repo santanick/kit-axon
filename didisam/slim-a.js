@@ -101,7 +101,7 @@
     const U = S.org.type === 'univ'; const wait = S.members.filter(m => m.grade === '승인 대기');
     const R = [U ? row({ act: 'sla-codes', name: '학번으로 접근코드 발급', sub: `학번 · 학과만 받습니다 · 발급 ${S.codes.length}건`, icon: I('users'), col: 'var(--s400)' })
       : row({ act: 'mem-bulk', name: '엑셀 일괄 등록', sub: '한 번에 5,000명까지', icon: I('doc'), col: 'var(--s400)' }),
-      row({ act: 'mem-invite', name: '초대 보내기', sub: '알림톡 · 링크 · 이메일', icon: I('send'), col: '#2B6A43' }),
+      row({ act: 'mem-invite', name: '초대 보내기', sub: '알림톡 · 링크 · 이메일', icon: I('send'), col: 'var(--t-ok)' }),
       row({ act: 'mem-q', name: '가입 추가 질문', sub: '가입할 때 받을 항목', icon: I('chat'), col: '#FF9800' }),
       U ? (S.codes.length ? row({ act: 'en-csv', name: '접근코드 내려받기', sub: 'CSV로 학과에 배포', icon: I('download'), col: 'var(--g700)' }) : '')
         : row({ act: 'bulk-tpl', name: '등록 양식 받기', sub: 'CSV 양식 내려받기', icon: I('download'), col: 'var(--g700)' })];
@@ -148,7 +148,7 @@
       SL.chips('slCertF', [['all', '전체'], ['auto', '자동'], ['manual', '수동']], f) +
       (warn ? SL.sum(`<span>수료 기준 합계 확인</span><span class="sl-n sl-w">${warn}개</span>`, 'sla-t', 'cert:1') : '') +
       SL.sum(`<span>${tj('learner', '이')} 아직 안 받음</span><span class="sl-n">${nd}건</span>`) +
-      list(L.slice(0, 200).map(x => row({ act: 'a2-cert-view', v: x.id, name: nm(x.who), sub: [(C(x.cls) || {}).name || '—', x.at, x.dl ? '받음' : '안 받음'].join(' · '), icon: I('check'), col: x.dl ? '#2B6A43' : 'var(--g500)' }))) + cap(L) +
+      list(L.slice(0, 200).map(x => row({ act: 'a2-cert-view', v: x.id, name: nm(x.who), sub: [(C(x.cls) || {}).name || '—', x.at, x.dl ? '받음' : '안 받음'].join(' · '), icon: I('check'), col: x.dl ? 'var(--t-ok)' : 'var(--g500)' }))) + cap(L) +
       SL.search('slCertQ', '이름 · 과정 · 발급번호 검색'));
   });
 
@@ -189,7 +189,7 @@
     const stat = e => { const V = Object.values(e.scores || {}).filter(s => !s.absent && s.v != null).map(s => +s.v); return { n: V.length, avg: V.length ? Math.round(V.reduce((a, b) => a + b, 0) / V.length * 10) / 10 : null }; };
     return page('성적', pri('crm-ex-new', '+ 시험 등록'),
       chipsA('sla-crmec', L.map(x => [x.id, x.name.replace(/^\[샘플\]\s*/, '')]), c.id) +
-      (E.length ? list(E.map(e => { const s = stat(e); return row({ act: 'sla-crmexo', v: e.id, name: e.name, sub: [e.date, e.kind, `응시 ${s.n}명`, s.avg != null ? `평균 ${s.avg}` : ''].filter(Boolean).join(' · '), icon: I('chart'), col: e.sent ? '#2B6A43' : 'var(--s400)', right: e.sent ? '<span class="sl-ok" aria-label="알림 보냄">✓</span>' : undefined }); }))
+      (E.length ? list(E.map(e => { const s = stat(e); return row({ act: 'sla-crmexo', v: e.id, name: e.name, sub: [e.date, e.kind, `응시 ${s.n}명`, s.avg != null ? `평균 ${s.avg}` : ''].filter(Boolean).join(' · '), icon: I('chart'), col: e.sent ? 'var(--t-ok)' : 'var(--s400)', right: e.sent ? '<span class="sl-ok" aria-label="알림 보냄">✓</span>' : undefined }); }))
         : empty('chart', '시험을 등록하고 점수를 넣으면 평균 · 석차를 계산합니다', pri('crm-ex-new', '+ 시험 등록'), ['이번 달 시험 등록해줘', '성적 알림 보내줘'])));
   });
   ACT['sla-crmec'] = el => { UI.crmEC = el.dataset.v; UI.crmE = null; render(); };
@@ -204,7 +204,7 @@
     const P = { lead: pri('crm-lead-new', '+ 신규 문의'), list: pri('crm-cs-new', '+ 상담 기록') }[tb] || '';
     let body = '';
     if (tb === 'lead') { const R = LD.slice().sort((a, b) => a.at < b.at ? 1 : -1).filter(l => has('slaCsQ', l.name, l.school || '', l.memo || ''));
-      body = R.length ? list(R.map(l => row({ act: 'crm-lead-edit', v: l.id, name: l.name, sub: [l.at, l.gy, l.route, l.st].filter(Boolean).join(' · '), col: l.st === '등록' ? '#2B6A43' : l.st === '보류' ? 'var(--g500)' : '#FF9800' })))
+      body = R.length ? list(R.map(l => row({ act: 'crm-lead-edit', v: l.id, name: l.name, sub: [l.at, l.gy, l.route, l.st].filter(Boolean).join(' · '), col: l.st === '등록' ? 'var(--t-ok)' : l.st === '보류' ? 'var(--g500)' : '#FF9800' })))
         : empty('chat', '전화 · 방문 문의를 기록하고 원생으로 전환합니다', pri('crm-lead-new', '+ 신규 문의'), ['상담 필요한 원생 보여줘', '문의 응대 문구 써줘']); }
     else if (tb === 'list') { const R = CS.slice().sort((a, b) => a.at < b.at ? 1 : -1).filter(c => has('slaCsQ', nm(c.who), c.text || '', c.summary || '', c.cat || ''));
       body = R.length ? list(R.slice(0, 200).map(c => row({ act: 'sla-cs', v: c.id, name: nm(c.who), sub: [String(c.at).slice(0, 10), c.cat, String(c.summary || c.title || '').slice(0, 40)].filter(Boolean).join(' · ') }))) + cap(R)
@@ -358,7 +358,7 @@
     return page(`보호자 ${P.length}명`, tblBtn('parents') + R,
       SL.chips('parF', [['all', '전체'], ['연결 완료', '연결 완료'], ['연결 요청', `대기${wait ? ' ' + wait : ''}`], ['거절', '거절']], f) +
       ((S.pacct || []).length ? SL.sum(`<span>보호자 계정</span><span class="sl-n">${S.pacct.length}명</span>`, 'sla-t', 'parents:1') : '') +
-      (L.length ? list(L.map(p => row({ act: 'mb-parchip', v: p.id, name: p.name, sub: [`${nm(p.child)} ${p.rel || '보호자'}`, p.status === '연결 요청' ? '연결 대기 중' : p.status].join(' · '), col: p.status === '연결 완료' ? '#2B6A43' : p.status === '거절' ? 'var(--g500)' : '#FF9800',
+      (L.length ? list(L.map(p => row({ act: 'mb-parchip', v: p.id, name: p.name, sub: [`${nm(p.child)} ${p.rel || '보호자'}`, p.status === '연결 요청' ? '연결 대기 중' : p.status].join(' · '), col: p.status === '연결 완료' ? 'var(--t-ok)' : p.status === '거절' ? 'var(--g500)' : '#FF9800',
         right: p.status === '연결 요청' ? `<button type="button" class="btn sm" data-act="par-resend" data-v="${esc(p.id)}">재발송</button>` : undefined }))) : none('조건에 맞는 보호자가 없습니다.')) +
       SL.search('slParQ', '보호자 · 자녀 이름 검색'));
   });
@@ -369,7 +369,7 @@
     const A = S.admins || []; const own = S.me.role === 'owner';
     const scope = a => a.role === 'teacher' ? ((a.classes || []).map(id => (C(id) || {}).name).filter(Boolean).join(', ') || `담당 ${t('cls')} 미지정`) : a.role === 'orgmgr' ? ((S.orgs || []).filter(o => o.mgrId === a.id).map(o => o.name).join(', ') || '담당 기관 미지정') : '전체';
     return page('운영자 · 권한', tblBtn('admins', '권한표') + (own ? pri('adm-new', '+ 운영자') : ''),
-      list(A.map(a => row({ act: 'sla-adm', v: a.id, name: a.name, sub: `${RL(a.role)} · ${scope(a)}`, icon: I(a.role === 'owner' ? 'gear' : 'users'), col: a.role === 'owner' ? 'var(--s400)' : a.role === 'teacher' ? '#2B6A43' : 'var(--g700)' }))) +
+      list(A.map(a => row({ act: 'sla-adm', v: a.id, name: a.name, sub: `${RL(a.role)} · ${scope(a)}`, icon: I(a.role === 'owner' ? 'gear' : 'users'), col: a.role === 'owner' ? 'var(--s400)' : a.role === 'teacher' ? 'var(--t-ok)' : 'var(--g700)' }))) +
       SL.sum(`<span>기록 · 메뉴별 권한</span>`, 'sla-t', 'admins:1'));
   });
   ACT['sla-adm'] = el => { const a = (S.admins || []).find(x => x.id === el.dataset.v); if (!a) return; const own = S.me.role === 'owner'; const v = esc(a.id);

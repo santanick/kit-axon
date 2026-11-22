@@ -108,7 +108,7 @@
   window.slimMD = mdOf;
 
   /* ───────── 2. 공통 틀(휴대폰 설정형): 제목 · 칩 · 요약 · 목록 · 검색 ───────── */
-  const AV = ['#5C74F6', '#3F8F5B', '#FF9800', '#109BF1', '#E5487A', '#7C5CF2', '#14A3A3', '#6C6C6C'];
+  const AV = ['#5C74F6', 'var(--ok)', '#FF9800', '#109BF1', '#E5487A', '#7C5CF2', '#14A3A3', '#6C6C6C'];
   const avCol = s => AV[[...String(s || '')].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
   window.SL = {
     row: o => `<div class="sl-row ${o.cls || ''}" ${o.act ? `role="button" tabindex="0" data-act="${o.act}" data-v="${esc(o.v || '')}"` : ''} ${o.attr || ''}>

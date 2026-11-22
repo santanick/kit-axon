@@ -246,6 +246,8 @@
     st.classList.add('hps-lvon'); fit(); }
 
   /* ═════════ 4. 캔버스 안: 한 번 = 고르기, 두 번 = 고치기 · 섹션 도구 막대 · [+ 섹션] 갤러리 ═════════ */
+  /* v45: 편집기 iframe에는 부모 CSS 변수가 닿지 않는다 — 스튜디오 주 색 토큰(라이트 값)을 읽어 :root 변수로 넣는다 */
+  window.hpeTokCss = window.hpeTokCss || (() => { let pr = '', prh = '', prl = '', pr2 = ''; try { const p = document.createElement('i'); p.setAttribute('data-light', ''); p.hidden = true; document.body.appendChild(p); const cs = getComputedStyle(p); const g = k => cs.getPropertyValue(k).trim(); pr = g('--pr'); prh = g('--pr-h'); prl = g('--s50'); pr2 = g('--s200'); p.remove(); } catch (e) {} const v = (k, x) => x && /^[#\w(),.% -]+$/.test(x) ? `${k}:${x};` : ''; return `:root{${v('--hpe-pr', pr)}${v('--hpe-prh', prh)}${v('--hpe-prl', prl)}${v('--hpe-pr2', pr2)}}`; });
   const ICSS = `.hpe-tb{gap:0!important;padding:3px!important;border-radius:10px!important;top:8px!important;right:8px!important;align-items:center}
 .hpe-tb>button,.hps-dd>button,.hps-ddw>button{display:inline-flex;align-items:center;gap:5px;min-height:34px;white-space:nowrap}
 .hps-ddw>button{border:0;background:transparent;color:#fff;padding:7px 9px;border-radius:8px;cursor:pointer;font:inherit}.hps-ddw>button:hover,.hps-ddw>button:focus-visible{background:rgba(255,255,255,.18);outline:none}
@@ -253,16 +255,16 @@
 .hpe-tb .hps-sep{width:1px;height:20px;background:rgba(255,255,255,.22);margin:0 3px}
 .hps-ddw{position:relative;display:inline-flex}.hps-dd{display:none;position:absolute;right:0;top:calc(100% + 6px);background:#2A2B2B;border-radius:10px;padding:4px;min-width:150px;flex-direction:column;box-shadow:0 10px 28px rgba(0,0,0,.3);z-index:50}
 .hps-ddw.open .hps-dd{display:flex}.hps-dd>button{width:100%;text-align:left;justify-content:flex-start;border:0;background:transparent;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit}.hps-dd>button:hover,.hps-dd>button:focus-visible{background:rgba(255,255,255,.16);outline:none}
-.hpe-add{padding:0!important;height:0;overflow:visible}.hpe-add button{transform:translateY(-50%);opacity:0!important;transition:opacity .12s;background:#3A6A4F!important;color:#fff!important;border:0!important;box-shadow:0 4px 14px rgba(58,106,79,.4);padding:0 16px!important;min-height:34px;line-height:34px}
+.hpe-add{padding:0!important;height:0;overflow:visible}.hpe-add button{transform:translateY(-50%);opacity:0!important;transition:opacity .12s;background:var(--hpe-pr,#3A6A4F)!important;color:#fff!important;border:0!important;box-shadow:0 4px 14px color-mix(in srgb,var(--hpe-pr,var(--hpe-pr,#3A6A4F)) 40%,transparent);padding:0 16px!important;min-height:34px;line-height:34px}
 .hpe-add:hover button,.hpe-add button:focus-visible,[data-hpe]:hover+.hpe-add button,.hpe-add:last-child button{opacity:1!important} /* v43 R9(J4 025): 맨 위 「+ 섹션 추가」가 첫 화면 히어로 위에 늘 떠 있던 것 → 섹션 사이에 마우스를 올릴 때만 */
-.hpe-add::before{content:'';position:absolute;left:0;right:0;top:0;border-top:2px dashed transparent}.hpe-add:first-child button{transform:translateY(8px)} /* v38 F5 A20: 맨 위 '+ 섹션 추가'가 미리보기 머리 바에 반쯤 가려지지 않게 */.hpe-add:hover::before{border-top-color:#3A6A4F}
+.hpe-add::before{content:'';position:absolute;left:0;right:0;top:0;border-top:2px dashed transparent}.hpe-add:first-child button{transform:translateY(8px)} /* v38 F5 A20: 맨 위 '+ 섹션 추가'가 미리보기 머리 바에 반쯤 가려지지 않게 */.hpe-add:hover::before{border-top-color:var(--hpe-pr,#3A6A4F)}
 /* v36 R4 맨 위 '+ 섹션 추가'(늘 보임)가 첫 섹션 사진의 '샘플' 표시와 겹치던 것(휴대폰) — 첫 섹션의 샘플 표시를 버튼 아래로 */
 .hpe-add:first-child+[data-hpi-stock]::before,.hpe-add:first-child+* [data-hpi-stock]::before,.hpe-add:first-child+*>[data-hpi-stock]::before{top:auto!important} /* v43 R9: 샘플 칩은 왼쪽 아래 모서리(위 여백 보정 불필요) */
-[data-hpe-f].hps-pick,[data-hpi-img].hps-pick{outline:2px solid #3A6A4F!important;outline-offset:3px;background-color:rgba(58,106,79,.06)}`;
+[data-hpe-f].hps-pick,[data-hpi-img].hps-pick{outline:2px solid var(--hpe-pr,#3A6A4F)!important;outline-offset:3px;background-color:color-mix(in srgb,var(--hpe-pr,var(--hpe-pr,#3A6A4F)) 6%,transparent)}`;
   const bound = new WeakSet();
   function bindCanvas(f) {
     let doc; try { doc = f.contentDocument; } catch (e) { return; } if (!doc || bound.has(doc)) return; bound.add(doc); const win = doc.defaultView; if (!win) return;
-    const st = doc.createElement('style'); st.textContent = ICSS; (doc.head || doc.documentElement).appendChild(st);
+    const st = doc.createElement('style'); st.textContent = hpeTokCss() + ICSS; (doc.head || doc.documentElement).appendChild(st);
     /* v38 F5 L16: '전화로 신청하기 · 전화 상담' 버튼은 기본 정보의 대표 전화로 전화를 건다 — 번호가 없으면 미리보기에서만 '대표 전화를 넣어 주세요' */
     try { const tel = String(((S.settings || {}).footer || {}).tel || '').replace(/[^\d+]/g, ''); doc.querySelectorAll('a').forEach(a => { if (!/전화로 (신청|문의)|전화 (상담|신청)/.test(a.textContent) || a.dataset.f5tel) return; a.dataset.f5tel = 1; if (tel.length >= 7) a.setAttribute('href', 'tel:' + tel); else a.insertAdjacentHTML('beforeend', '<small style="display:block;font-size:12px;opacity:.85;font-weight:600">대표 전화를 넣어 주세요(기본 정보)</small>'); }); } catch (e) { }
     let pass = false;
@@ -512,15 +514,15 @@
 
   /* ═════════ 7. 학습 페이지 머리글(v36 R3 · 4-2): 두 번 눌러 고치기 · 머리글 도구 · 말로 고치기 · 게시본 hp.lhead ═════════ */
   const LH_CSS = `.sub.llh h1,.sub.llh .llh-d{cursor:text;border-radius:4px}
-.sub.llh h1:hover,.sub.llh .llh-d:hover,.sub.llh .hps-pick{outline:2px dashed #3A6A4F;outline-offset:4px}
-.sub.llh [contenteditable]{outline:2px solid #3A6A4F!important;outline-offset:4px;background:#fff!important;color:#14161F!important;-webkit-text-fill-color:#14161F}
+.sub.llh h1:hover,.sub.llh .llh-d:hover,.sub.llh .hps-pick{outline:2px dashed var(--hpe-pr,#3A6A4F);outline-offset:4px}
+.sub.llh [contenteditable]{outline:2px solid var(--hpe-pr,#3A6A4F)!important;outline-offset:4px;background:#fff!important;color:#14161F!important;-webkit-text-fill-color:#14161F}
 .sub.llh .llh-ph{opacity:.6;border:1.5px dashed currentColor;padding:4px 12px;display:inline-block;border-radius:8px;font-size:15px}
-.sub.llh:hover{box-shadow:inset 0 0 0 2px rgba(58,106,79,.55)}
+.sub.llh:hover{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--hpe-pr,var(--hpe-pr,#3A6A4F)) 55%,transparent)}
 .llh-tb{position:absolute;bottom:10px;right:12px;z-index:5;display:none;gap:2px;background:#2A2B2B;padding:4px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);font:600 12.5px/1 Pretendard,system-ui,sans-serif;flex-wrap:wrap;max-width:calc(100% - 24px);color:#fff}
 .sub.llh:hover .llh-tb,.sub.llh.llh-sel .llh-tb,.llh-tb:focus-within{display:flex}
-.llh-tb button{border:0;background:transparent;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit;white-space:nowrap;min-height:34px}.llh-tb button:hover,.llh-tb button:focus-visible{background:rgba(255,255,255,.18);outline:none}.llh-tb button[aria-pressed=true]{background:#3A6A4F}
+.llh-tb button{border:0;background:transparent;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit;white-space:nowrap;min-height:34px}.llh-tb button:hover,.llh-tb button:focus-visible{background:rgba(255,255,255,.18);outline:none}.llh-tb button[aria-pressed=true]{background:var(--hpe-pr,#3A6A4F)}
 .llh-tb i{width:1px;background:rgba(255,255,255,.22);margin:4px 3px}
-.llh-tag{position:absolute;left:12px;top:10px;z-index:5;background:#3A6A4F;color:#fff;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:6px 10px;border-radius:99px;display:none}.sub.llh:hover .llh-tag,.sub.llh.llh-sel .llh-tag{display:block}`;
+.llh-tag{position:absolute;left:12px;top:10px;z-index:5;background:var(--hpe-pr,#3A6A4F);color:#fff;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:6px 10px;border-radius:99px;display:none}.sub.llh:hover .llh-tag,.sub.llh.llh-sel .llh-tag{display:block}`;
   const lhFrame = () => $1('#hpsLvF');
   const lhKeyNow = () => { const lp = curLearn(); if (lp) return { k: lp, top: true }; /* v37: 학습 페이지는 같은 캔버스(#hpeF)에서 고친다 */
     const f = lhFrame(); try { const w = f && f.contentWindow; if (w && typeof w.lhKey === 'function') return w.lhKey(); } catch (e) { } return HS.lv && HS.lv.hash ? { k: decodeURIComponent(HS.lv.hash.slice(1)), top: true } : null; };
@@ -541,7 +543,7 @@
   const lhSeen = new WeakSet();
   function lhWatch(f) { if (f.dataset.hpsL) return; f.dataset.hpsL = 1; f.addEventListener('load', () => lhBindDoc(f)); lhBindDoc(f); }
   function lhBindDoc(f) { let doc; try { doc = f.contentDocument; } catch (e) { return; } if (!doc || !doc.body || lhSeen.has(doc) || !/learner\.html/.test(String(doc.URL || ''))) return; lhSeen.add(doc); const win = doc.defaultView;
-    const st = doc.createElement('style'); st.textContent = LH_CSS; doc.head.appendChild(st);
+    const st = doc.createElement('style'); st.textContent = hpeTokCss() + LH_CSS; doc.head.appendChild(st);
     let q = 0; new MutationObserver(() => { if (q) return; q = win.requestAnimationFrame(() => { q = 0; lhDeco(doc, f); }); }).observe(doc.body, { childList: true, subtree: true }); lhDeco(doc, f);
     win.addEventListener('click', e => { const t = e.target; const b = t.closest && t.closest('[data-llh]'); if (b) { e.preventDefault(); e.stopPropagation(); lhTool(b.dataset.llh, b.dataset.v); return; }
       const el = t.closest && t.closest('.sub.llh h1, .sub.llh .llh-d'); if (el && !el.isContentEditable) { e.preventDefault(); doc.querySelectorAll('.hps-pick').forEach(x => x !== el && x.classList.remove('hps-pick')); el.classList.add('hps-pick'); const sub = el.closest('.sub'); if (sub) sub.classList.add('llh-sel'); hint(el, f, '두 번 눌러 글 고치기'); } }, true);
@@ -725,7 +727,7 @@
 .hpx-lsh.lt-plain{background:#fff;border-bottom:1px solid rgba(20,22,31,.08)}.hpx-lsh.lt-brand{background:var(--lsh-a);color:var(--lsh-on)}
 .hpx-lsh.lt-img{color:#fff;background:#1B1C22 var(--lsh-img) center/cover no-repeat}.hpx-lsh.lt-img::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(10,12,20,.72),rgba(10,12,20,.3))}
 .hpx-lsh.al-c .hpx-lsw{text-align:center}.hpx-lsh.al-c p{margin-left:auto;margin-right:auto}.hpx-lsh.h-s{padding:26px 0 20px}.hpx-lsh.h-l{padding:96px 0 80px}.hpx-lsh.h-l h1{font-size:clamp(34px,5vw,56px)}
-.hpx-lsl{position:relative;display:block;padding:8px 0}.hpx-lsl>section:not(.hpx-lsmy):not(.hpx-bd){padding-top:20px!important;padding-bottom:48px!important}.hpx-lsb{position:absolute;left:12px;top:10px;z-index:5;display:inline-flex;align-items:center;gap:6px;background:#F2F6F3;color:#3A6A4F;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:7px 11px;border-radius:99px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.hpx-lsl{position:relative;display:block;padding:8px 0}.hpx-lsl>section:not(.hpx-lsmy):not(.hpx-bd){padding-top:20px!important;padding-bottom:48px!important}.hpx-lsb{position:absolute;left:12px;top:10px;z-index:5;display:inline-flex;align-items:center;gap:6px;background:#ECFDF3;color:#00862D;font:700 12px/1 Pretendard,system-ui,sans-serif;padding:7px 11px;border-radius:99px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
 .hpx-lse{display:none}
 .hpx-lsf{display:flex;align-items:center;gap:8px;margin:36px 0 0;max-width:420px;border:1px solid rgba(20,22,31,.18);border-radius:10px;padding:12px 14px;color:rgba(20,22,31,.55);font-size:15px;background:#fff}
 .hpx-lsmy{padding:48px 0}.hpx-lsmy .hpx-lsw>div{border:1.5px dashed rgba(20,22,31,.2);border-radius:14px;padding:36px;text-align:center}.hpx-lsmy b{font-size:18px}.hpx-lsmy p{margin:6px 0 0;opacity:.7}

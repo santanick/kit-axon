@@ -255,7 +255,7 @@ body.gd-on .toasts,body.gd-on #toasts{bottom:190px}
 .gdc p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.5;flex:1}
 .gdc small{font-size:11.5px;color:var(--muted)}
 .gdp{display:block;height:5px;border-radius:99px;background:var(--soft);overflow:hidden}
-.gdp i{display:block;height:100%;background:var(--pr)}
+.gdp i{display:block;height:100%;background:var(--acc2)}
 .gdcb{display:flex;justify-content:flex-end;margin-top:4px}
 .gdbtn{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;border:0;border-radius:99px;background:var(--magl);color:var(--magd);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;flex:none}
 .gdpill{background:var(--magl)!important;color:var(--magd)!important}
@@ -341,7 +341,7 @@ body.fab-on .top{z-index:58}
 .obt small{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .obp{flex:none;font:700 12.5px var(--num,inherit);color:var(--ink)}
 .obbar{flex:none;width:56px;height:6px;border-radius:99px;background:#E7E2D9;overflow:hidden}
-.obbar i{display:block;height:100%;border-radius:99px;background:var(--pr)}
+.obbar i{display:block;height:100%;border-radius:99px;background:var(--acc2)}
 .obd.fin .obbar i{background:var(--ok)}
 .obs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 0}
 .obc{padding:10px 12px 12px}
