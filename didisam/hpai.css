@@ -80,5 +80,5 @@ body.hpe-open{overflow:hidden}
 /* 빌더 패널: 「+ 하위 메뉴」 줄은 행을 펼쳤을 때만(마우스를 올릴 때 높이가 바뀌면 끌어 놓기 위치가 어긋나므로 hover로 열지 않음). 하위로 넣기는 행 오른쪽으로 끌어 놓기 */
 .hps-panw #hpmBox .hpm-i:not(.ed)>.hpm-s>.hpm-dz{display:none}
 .hpm-dz{transition:opacity .12s}
-html[data-theme="dark"] .hpm-chip{background:rgba(61,220,132,.12);color:#9EF0B8}
+html[data-theme="dark"] .hpm-chip{background:var(--s100);color:var(--t-mag)}
 #hpmBox .hpm-i:not(.ed)>.hpm-r .hpm-bt .btn:not(.hpm-eye):not([data-hpm="more"]){display:none!important}

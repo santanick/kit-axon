@@ -131,15 +131,15 @@
 .aih43-c.fac .v4-tl{gap:12px}
 .aih43-c.fac .v4-tl .v4-tr{min-height:52px}
 .aih43-c.fac .v4-tl img,.aih43-c.fac .v4-tl .v4-ph{width:40px!important;height:40px!important;border-radius:10px}
-:root[data-theme="dark"] .aih43-au li .ck{background:var(--gr600);color:#04140A}
+:root[data-theme="dark"] .aih43-au li .ck{background:var(--gr600);color:var(--on-pr)}
 
 @media (max-width:1280px){.da-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.da-kpis,.da-kpis.n3{grid-template-columns:1fr 1fr}#main[data-da="class"].da43 .d26-cg{grid-template-columns:1fr!important}#main[data-da="sales"] .da-g3{grid-template-columns:1fr}.da-kv{font-size:22px}}
 
 /* 다크 */
 :root[data-theme="dark"] .da-av.c1,:root[data-theme="dark"] .da-av.c2,:root[data-theme="dark"] .da-av.c3,:root[data-theme="dark"] .da-av.c4,:root[data-theme="dark"] .da-av.c5{filter:brightness(.9)}
-:root[data-theme="dark"] .da-steps li span{color:#04140A;background:var(--gr600)}
-:root[data-theme="dark"] .da-newc span{color:#04140A;background:var(--gr600)}
+:root[data-theme="dark"] .da-steps li span{color:var(--on-pr);background:var(--gr600)}
+:root[data-theme="dark"] .da-newc span{color:var(--on-pr);background:var(--gr600)}
 
 /* 강좌 필터 줄: 보기 전환이 다음 줄로 밀리지 않게 */
 #main[data-da="class"].da43 .c2lbar{flex-wrap:nowrap}
@@ -167,7 +167,7 @@
 /* 메시지 보내기 버튼: 검정 → 그린 주 버튼(dds.css .cm26send 덮어씀 — 공통 변경 요청) */
 #main .cm26send{background:var(--pr)!important;border-color:var(--pr)!important;color:var(--on-pr)!important;border-radius:12px}
 #main .cm26send:hover{background:var(--pr-h)!important}
-:root[data-theme="dark"] #main .cm26send{background:var(--gr600)!important;border-color:var(--gr600)!important;color:#04140A!important}
+:root[data-theme="dark"] #main .cm26send{background:var(--gr600)!important;border-color:var(--gr600)!important;color:var(--on-pr)!important}
 /* 운영자 권한 행렬: O · × 글자 → 아이콘 */
 .da-ok,.da-no{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%}
 .da-ok{background:var(--gr100);color:var(--gr800)}
@@ -184,9 +184,9 @@
 #main .v4-tl .v4-trk{height:44px}#main .v4-tl .v4-blk{position:absolute;top:0;bottom:0} /* 간트 막대는 트랙 기준 절대 위치(relative면 막대가 흐름으로 밀려 카드 밖으로 흩어짐) */
 #main .v4-blk::after{content:""!important;position:absolute!important;left:0;right:0;top:-10px!important;bottom:-10px!important}
 #main button[data-act="chat-q"],#main button[data-act="go"],#main button[data-act="ux-find"]{min-height:44px}
-#main .clb-thk,#main .clb-thl{background:rgba(4,20,10,.92)!important;color:#fff!important}
+#main .clb-thk,#main .clb-thl{background:rgba(24,29,26,.92)!important;color:#fff!important}
 #main [data-act="cs-tr"]{min-height:44px!important;height:auto!important}
-:root[data-theme="dark"] .da-av{background:#0B5A2A}
+:root[data-theme="dark"] .da-av{background:var(--pr-h)}
 :root[data-theme="dark"] .da-av.c1{background:#0E5C4C}:root[data-theme="dark"] .da-av.c2{background:#7A3E12}:root[data-theme="dark"] .da-av.c3{background:#2F5020}:root[data-theme="dark"] .da-av.c4{background:#5C450C}:root[data-theme="dark"] .da-av.c5{background:#3F3A33}
 /* 다크: 머리 「더 보기」 메뉴(흰 면 하드코딩) — 공통 변경 요청 */
 :root[data-theme="dark"] #main .uxpop{background:var(--surface)!important;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 12px 32px -8px rgba(0,0,0,.6)}
@@ -233,7 +233,7 @@
 .r1-chip em{font-style:normal;font-size:12.5px;font-weight:700;color:var(--g600);background:var(--n100);border-radius:99px;padding:1px 8px}
 .r1-chip.on{background:var(--g900);color:#fff;box-shadow:none}
 .r1-chip.on em{background:rgba(255,255,255,.18);color:#fff}
-:root[data-theme="dark"] .r1-chip.on{background:var(--gr600);color:#04140A}
+:root[data-theme="dark"] .r1-chip.on{background:var(--gr600);color:var(--on-pr)}
 .r1-more{display:flex;align-items:center;gap:12px;padding:12px 16px;margin-top:-4px;border-radius:0 0 18px 18px;background:var(--surface2,var(--n50));box-shadow:inset 0 0 0 1px var(--hair);font-size:13.5px;color:var(--g600)}
 .r1-more .r1-mc b{color:var(--g900);font-variant-numeric:tabular-nums}
 .r1-mbar{flex:1;max-width:180px;height:6px;border-radius:99px;background:var(--n200);overflow:hidden}
@@ -247,7 +247,7 @@
 .r1-grp{border-radius:20px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair),0 8px 24px -14px rgba(16,24,40,.10);overflow:hidden;display:flex;flex-direction:column}
 .r1-grpi{position:relative;aspect-ratio:16/8;background:var(--gr50)}
 .r1-grpi img{width:100%;height:100%;object-fit:cover;display:block}
-.r1-grpn{position:absolute;left:12px;bottom:12px;padding:4px 12px;border-radius:99px;background:rgba(4,20,10,.94);color:#fff;font-weight:800;font-size:14px}
+.r1-grpn{position:absolute;left:12px;bottom:12px;padding:4px 12px;border-radius:99px;background:rgba(24,29,26,.94);color:#fff;font-weight:800;font-size:14px}
 .r1-grpb{padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px;flex:1}
 .r1-grpt{font-size:18px;font-weight:800;color:var(--g900);text-decoration:none}
 .r1-grpb>small{color:var(--g600);font-size:13px}
@@ -290,7 +290,7 @@
 .r1-dgi{position:relative;aspect-ratio:16/6;background:var(--gr50)}
 .r1-dgi img{width:100%;height:100%;object-fit:cover;display:block}
 .r1-dgi .tag{position:absolute;right:12px;top:12px}
-.r1-dgm{position:absolute;left:12px;bottom:12px;padding:4px 12px;border-radius:99px;background:rgba(4,20,10,.94);color:#fff;font-weight:700;font-size:13px}
+.r1-dgm{position:absolute;left:12px;bottom:12px;padding:4px 12px;border-radius:99px;background:rgba(24,29,26,.94);color:#fff;font-weight:700;font-size:13px}
 .r1-dgb{padding:16px 18px 18px}
 .r1-dgb .ch{margin:0 0 4px}
 .r1-dgr{display:flex;align-items:center;gap:10px;margin:10px 0 2px}.r1-dgr .r1-dt{flex:1}.r1-dgr b{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
@@ -304,7 +304,7 @@
 .r1-ppl time{font-size:12.5px;color:var(--g600);font-variant-numeric:tabular-nums;min-width:40px;text-align:right}
 /* R1 009 라이브러리: 영상 · 교안 사진 표지 */
 #main .clb-th.k-v:has(.clb-cov) .clb-thi,#main .clb-th.k-d:has(.clb-cov) .clb-thi{display:none}
-#main .clb-th.k-v .clb-cov::after,#main .clb-th.k-d .clb-cov::after{background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(3,28,13,.55) 100%)}
+#main .clb-th.k-v .clb-cov::after,#main .clb-th.k-d .clb-cov::after{background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(24,29,26,.55) 100%)}
 #main .clb-th .clb-thimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #main .clb-th .r1-play{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:2}
 #main .clb-th .r1-play::after{content:"";position:absolute;left:19px;top:15px;border-left:14px solid var(--gr700);border-top:9px solid transparent;border-bottom:9px solid transparent}

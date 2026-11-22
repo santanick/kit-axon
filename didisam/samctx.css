@@ -2,7 +2,7 @@
 .scx{flex:none;margin:8px 12px 0;border-radius:8px;background:var(--surface,#fff);box-shadow:0 0 0 1px var(--gr100,#D9F5E3);overflow:hidden}
 .scxh{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border:0;background:var(--gr50,#ECFDF3);cursor:pointer;text-align:left;color:var(--ink)}
 .scxh:hover{background:var(--gr100,#D9F5E3)}.scxh:focus-visible{outline:2px solid var(--s500,#00862D);outline-offset:-2px}
-.scxi{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;color:#fff;background:radial-gradient(circle at 30% 30%,#7CF2A2,#00C53B 55%,#05612A)}
+.scxi{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;color:var(--on-pr);background:var(--pr)}
 .scxt{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.scxt b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.scxt small{font-size:12px;color:var(--muted);white-space:nowrap}
 .scxv{flex:none;color:var(--muted);transition:transform .2s;transform:rotate(180deg)}.scx.off .scxv{transform:none}
 .scxc{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px 10px}

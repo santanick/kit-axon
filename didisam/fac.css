@@ -1,10 +1,10 @@
 /* v40 시설 · 장비 예약 — 스튜디오 화면(fac.js). 디디쌤 Design System 토큰(dds.css)을 그대로 쓴다. 상태는 색 + 글자. */
-.fc{--fc-g:var(--b500,#00C53B);--fc-gt:var(--b900,#007200);--fc-gl:var(--b50,#E7F8E8);--fc-gm:var(--b100,#C5EEC7);display:flex;flex-direction:column;gap:14px;min-width:0}
+.fc{--fc-g:var(--b500,var(--pr));--fc-gt:var(--b900,var(--pr));--fc-gl:var(--b50,var(--s50));--fc-gm:var(--b100,var(--s100));display:flex;flex-direction:column;gap:14px;min-width:0}
 .fc *{box-sizing:border-box}
 .fc .btn{min-height:44px}
 .fc .btn.sm{min-height:36px;padding:6px 12px;font-size:13px}
 .fc .btn.pri{background:var(--fc-gt);color:#fff}
-.fc .btn.pri:hover{background:#005c00}
+.fc .btn.pri:hover{background:var(--pr-h)}
 .fc small{font-size:12px;color:var(--muted)}
 .fc .bad{color:var(--bad)}
 .fc-todos{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -174,12 +174,12 @@
 /* 통계 */
 .fc-lgd{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .fc-lgd i{display:inline-block;width:12px;height:12px;border-radius:3px}
-.fc-lgd i.off{background:var(--fc-gt)}.fc-lgd i.on{background:#9FE0A3}
+.fc-lgd i.off{background:var(--fc-gt)}.fc-lgd i.on{background:var(--s200)}
 .fc-bars{display:flex;align-items:flex-end;gap:6px;height:220px;padding:16px 16px 28px;overflow-x:auto}
 .fc-bc{flex:1 0 18px;height:100%;display:flex;flex-direction:column-reverse;position:relative}
 .fc-bc i{display:block;width:100%}
 .fc-bc i.off{background:var(--fc-gt)}
-.fc-bc i.on{background:#9FE0A3;border-radius:3px 3px 0 0}
+.fc-bc i.on{background:var(--s200);border-radius:3px 3px 0 0}
 .fc-bc span{position:absolute;bottom:-22px;left:0;right:0;text-align:center;font-size:12px;color:var(--muted)}
 .fc-bc em{font-style:normal;font-size:12px;color:var(--bad);text-align:center}
 .fc-heat{width:100%;border-collapse:separate;border-spacing:4px;font-size:12px}
@@ -188,7 +188,7 @@
 .fc-heat td{text-align:center;border-radius:4px;padding:8px 4px;min-width:56px}
 .fc-heat .na,.fc-lgd .hm.na{background:#EEEFEF;color:var(--muted)}
 .fc-heat .h1,.fc-lgd .hm.h1{background:var(--fc-gl,#E7F8E8);color:var(--ink)}
-.fc-heat .h2,.fc-lgd .hm.h2{background:#9FE0A3;color:var(--ink)}
+.fc-heat .h2,.fc-lgd .hm.h2{background:var(--s200);color:var(--ink)}
 .fc-heat .h3,.fc-lgd .hm.h3{background:var(--b500,#00C53B);color:#fff}
 .fc-heat .h4,.fc-lgd .hm.h4{background:var(--b900,#007200);color:#fff}
 @media (max-width:1180px){.fc-split,.fc-split.tl,.fc-split.ck,.fc-split.st{grid-template-columns:minmax(0,1fr)}.fc-edb{max-height:none}.fc-kpis.st{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -213,12 +213,12 @@
 #main .fc-st.info{background:var(--gr50,#EAF8EF);color:var(--gr800,#066B2A)}
 #main .fc-todo.warn,#main .fc-todo.warn b{color:#A8380A}
 @media (min-width:861px){#main:has(.fc) .sl-i{position:relative}#main:has(.fc) .sl-i::after{content:'';position:absolute;inset:-12px}}
-html[data-theme=dark] #main .fc-st.ok,html[data-theme=dark] #main .fc-st.info{background:rgba(0,197,59,.16);color:#7CF2A2}
+html[data-theme=dark] #main .fc-st.ok,html[data-theme=dark] #main .fc-st.info{background:var(--okl);color:var(--t-ok)}
 html[data-theme=dark] #main .fc-st.wait,html[data-theme=dark] #main .fc-st.warn{background:rgba(255,154,110,.16);color:#FFB08F}
 html[data-theme=dark] #main .fc-st.bad{background:rgba(255,120,120,.16);color:#FFA3A3}
 html[data-theme=dark] #main .fc-todo.warn,html[data-theme=dark] #main .fc-todo.warn b{color:#FFB08F}
 html[data-theme=dark] #main:has(.fc) .sl-i,html[data-theme=dark] #main:has(.lg) .sl-i,html[data-theme=dark] #main:has(.mil) .sl-i{background:var(--surface,#0E1A14);color:#EAF2EC;border-color:#5C6E63}
-html[data-theme=dark] #main .fc-opt{background:var(--surface,#0E1A14);color:#EAF2EC}html[data-theme=dark] #main .fc-opt.on{background:#13231B;color:#7CF2A2;border-color:#00C53B}
+html[data-theme=dark] #main .fc-opt{background:var(--surface);color:var(--g900)}html[data-theme=dark] #main .fc-opt.on{background:var(--surface2);color:var(--t-mag);border-color:var(--pr)}
 /* v43.4 P1 · 070 휴대폰: 간트 트랙은 카드 안에서만, 시설 행 라벨 한 줄, 하단 요약 줄은 버튼 전폭 */
 @media (max-width:760px){
   #main .fc43 .v4-trk{overflow:hidden}
@@ -232,7 +232,7 @@ html[data-theme=dark] #main .fc-opt{background:var(--surface,#0E1A14);color:#EAF
 }
 /* v43.4 P1 · 070: 시설 화면 AI 제안 카드 — 어두운 바탕에 어두운 글자(판독 불가)와 i.warn에 붙는 경고 상자 모양을 바로잡음 */
 #main .q1-aside:has(.fc-ac) .q1-ac.ai li>span:not([class]),#main .q1-aside:has(.fc-ac) .q1-ac.ai li a{color:#fff}
-#main .q1-aside:has(.fc-ac) .q1-ac.ai li i{width:8px;height:8px;min-height:0;padding:0;margin:0;border:0;border-radius:50%;box-shadow:none;background:#7CF2A2}
+#main .q1-aside:has(.fc-ac) .q1-ac.ai li i{width:8px;height:8px;min-height:0;padding:0;margin:0;border:0;border-radius:50%;box-shadow:none;background:var(--gr300)}
 #main .q1-aside:has(.fc-ac) .q1-ac.ai li i.warn{background:#FF9A6E}
 /* v43.4 Q1 · 070 휴대폰: 하위 탭은 한 줄 가로 넘김(회색 판 안에서 3줄로 흩어지던 문제) · 간트는 행 전체가 누르는 칸(v43ui.js rowAct, 가는 막대 대신) */
 @media (max-width:760px){

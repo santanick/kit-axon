@@ -103,11 +103,11 @@
 .hpw-m .mf .btn{min-height:44px;min-width:88px;border-radius:12px;font-weight:800}
 .hpw-sp li{min-height:36px;padding:4px 14px 4px 4px;background:var(--surface2,#FAF8F5);color:var(--t-sub,#5C554B)}
 .hpw-sp li.on{background:var(--gr900,#053D1E);color:#fff}
-.hpw-sp li.on span{background:var(--gr500,#00C53B);color:#04140A}
+.hpw-sp li.on span{background:var(--gr500,#00C53B);color:var(--on-pr)}
 .hpw-sp li.done span{background:var(--gr50,#ECFDF3);color:var(--gr800,#066B2A)}
 .hpw-th{border-radius:18px;background:var(--surface,#fff);box-shadow:0 0 0 1px var(--hair,rgba(26,24,20,.06)),0 1px 2px rgba(16,24,20,.05)}
 .hpw-th:hover{transform:translateY(-2px);box-shadow:0 0 0 1px var(--hair,rgba(26,24,20,.06)),0 12px 28px rgba(16,24,20,.10)}
-.hpw-th.on{box-shadow:0 0 0 2px var(--gr600,#00A832),0 12px 28px rgba(0,122,41,.14)}
+.hpw-th.on{box-shadow:0 0 0 2px var(--gr600,var(--pr)),0 12px 28px rgba(24,29,26,0.07)}
 .hpw-th.on .hpw-tn{background:var(--gr50,#ECFDF3)}
 .hpw-rec{background:var(--gr700,#007A29);color:#fff}
 /* ═════════ v43 R9(J4 119 · 127) — 빌더 안에서는 오른쪽 패널 · 단계 진행 바 · 큰 썸네일 · 품질 점수 링 ═════════ */

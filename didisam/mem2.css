@@ -159,7 +159,7 @@
 .mb-ocards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 16px}
 .mb-oc{display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;padding:16px;border:0;border-radius:16px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--hair),0 1px 2px rgba(16,24,40,.04);font:inherit;color:var(--ink);cursor:pointer}
 .mb-oc:hover{box-shadow:inset 0 0 0 1.5px var(--pr,#00c53b)}
-.mb-oclogo{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;font-weight:800;font-size:15px;color:#fff;background:#1F5F3F;object-fit:cover}
+.mb-oclogo{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;font-weight:800;font-size:15px;color:var(--on-pr);background:var(--pr-h);object-fit:cover}
 .mb-oclogo.c1{background:#0E7C66}.mb-oclogo.c2{background:#B05A1B}.mb-oclogo.c3{background:#3F6B2A}.mb-oclogo.c4{background:#7A5C12}.mb-oclogo.c5{background:#5C554B}
 .mb-oct{display:flex;flex-direction:column;gap:2px;min-width:0}.mb-oct b{font-size:15px}.mb-oct small{font-size:12px;color:var(--muted)}
 .mb-ocn{display:flex;flex-direction:column;gap:6px;width:100%}.mb-ocn em{font-style:normal;font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}

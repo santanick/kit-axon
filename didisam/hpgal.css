@@ -179,7 +179,7 @@ body.tpg-dz-on .hpe-stage{padding-right:374px}
 
 /* v43 Q3 템플릿 갤러리(수석 3): 검색은 공통 입력(48 · 반경 14 · 1px 선 · 포커스 그린 링), 분류 칩은 선택만 짙은 그린, 카드는 흰 면 + 2층 그림자 · 썸네일 16:10 고정 */
 .tpg-page .tpd-q{min-height:48px;border-radius:14px;border:1px solid var(--g300,#E4DED3);background:var(--surface,#fff);box-shadow:var(--sh1,0 1px 2px rgba(26,24,20,.05))}
-.tpg-page .tpd-q:focus-within{border-color:var(--gr600,#00A832);box-shadow:0 0 0 3px rgba(0,197,59,.18)}
+.tpg-page .tpd-q:focus-within{border-color:var(--gr600,#00A832);box-shadow:0 0 0 3px rgba(24,29,26,0.09)}
 .tpg-page .tpd-q input{border:0!important;box-shadow:none!important;outline:0;background:transparent}
 .tpg-page .sl-chips button{min-height:44px;border-radius:999px;font-weight:700}
 .tpg-page .sl-chips button:is(.on,[aria-selected=true],[aria-pressed=true]){background:var(--gr900,#053D1E);color:#fff;box-shadow:none}

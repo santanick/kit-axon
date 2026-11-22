@@ -107,7 +107,7 @@ th.l43-sort:hover,th.l43-sort:focus-visible{color:var(--g900)}
 #main.l43 .d26-cc:has(.c2ck:checked){box-shadow:0 0 0 2px var(--gr600),var(--sh2)}
 #main.l43 .d26-th{position:relative;aspect-ratio:16/10;background:var(--gr900)}
 #main.l43 .d26-th img,#main.l43 .d26-th .l43-ph{width:100%;height:100%;object-fit:cover;display:block}
-#main.l43 .d26-th::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(3,39,26,.55));pointer-events:none}
+#main.l43 .d26-th::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(24,29,26,.55));pointer-events:none}
 #main.l43 .d26-kind{z-index:1;background:var(--glass);color:var(--g900);font-weight:700;border-radius:99px}
 #main.l43 .d26-ck{z-index:2}
 #main.l43 .d26-cb{padding:14px 18px 18px}

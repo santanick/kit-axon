@@ -1,5 +1,5 @@
 /* v41 통합 수납 원장 — 스튜디오 「매출 · 수납」(ledger.js). 디디쌤 Design System 토큰(dds.css) 사용. 상태는 색 + 글자, 버튼 44px+, 글자 12px+. */
-.lg{--lg-g:var(--b500,#00C53B);--lg-gt:var(--b900,#007200);--lg-gl:var(--b50,#E7F8E8);display:flex;flex-direction:column;gap:14px;min-width:0;color:var(--ink,#212121)}
+.lg{--lg-g:var(--b500,var(--pr));--lg-gt:var(--b900,var(--pr));--lg-gl:var(--b50,var(--s50));display:flex;flex-direction:column;gap:14px;min-width:0;color:var(--ink,#212121)}
 .lg *{box-sizing:border-box}
 .lg .btn,#modal .lg-acts .btn{min-height:44px}
 .lg .btn.sm{min-height:44px;padding:6px 12px;font-size:13px}
@@ -95,7 +95,7 @@
 .lg{--lg-g:var(--gr500);--lg-gt:var(--t-mag);--lg-gl:var(--gr50)}
 .lg .btn.pri,#modal .btn.pri{background:var(--pr);color:var(--on-pr)}
 .lg-unit select,.lg-q,.lg-fl input,.lg-fl select,.lg-fl textarea,.lg-url{border:0;border-radius:var(--r-in);box-shadow:inset 0 0 0 1px var(--g300);background:var(--surface);color:var(--g900)}
-.lg-fl input:focus,.lg-fl select:focus,.lg-fl textarea:focus,.lg-q:focus,.lg-unit select:focus{outline:0;box-shadow:inset 0 0 0 1.5px var(--pr),0 0 0 4px rgba(0,197,59,.14)}
+.lg-fl input:focus,.lg-fl select:focus,.lg-fl textarea:focus,.lg-q:focus,.lg-unit select:focus{outline:0;box-shadow:inset 0 0 0 1.5px var(--pr),0 0 0 4px rgba(24,29,26,0.07)}
 .lg-seg{border:0;background:var(--surface);box-shadow:var(--sh1);border-radius:14px}
 .lg-seg button.on,.lg-chip.on{background:var(--g900);color:var(--surface)}
 .lg-chip{border-radius:12px;background:var(--surface);box-shadow:var(--sh1)}

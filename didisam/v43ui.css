@@ -117,7 +117,7 @@ html[data-theme="dark"] .v4-blk.b{color:var(--gr800)}html[data-theme="dark"] .v4
 .v4-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:28px 20px;gap:6px;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--sh1)}
 .v4-art{width:180px;height:135px}
 .v4-art .a0{fill:var(--g200)}.v4-art .a1{fill:var(--gr50);stroke:var(--gr200);stroke-width:1.5}.v4-art .a2{fill:var(--gr100)}.v4-art .a3{fill:var(--gr300)}.v4-art .a4{fill:var(--gr600)}.v4-art .a5{fill:#fff}.v4-art .ln{fill:none;stroke:var(--gr600);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-html[data-theme="dark"] .v4-art .a1{fill:var(--gr50);stroke:var(--gr100)}html[data-theme="dark"] .v4-art .a3{fill:#1E7A43}
+html[data-theme="dark"] .v4-art .a1{fill:var(--gr50);stroke:var(--gr100)}html[data-theme="dark"] .v4-art .a3{fill:var(--t-mag)}
 .v4-et{margin:4px 0 0;font-size:17px;font-weight:800;color:var(--g900)}
 .v4-ed{margin:0 0 8px;font-size:14px;color:var(--t-sub);max-width:440px;line-height:1.55}
 /* 반응형 */

@@ -16,7 +16,7 @@
 .k-st button.on{background:var(--ink,#222);color:#fff;border-color:var(--ink,#222)}
 .k-st button.on.r{background:#d92d20;border-color:#d92d20}
 .k-st button.on.y{background:#b54708;border-color:#b54708}
-.k-st button.on.g{background:#067647;border-color:#067647}
+.k-st button.on.g{background:var(--pr);border-color:var(--pr)}
 .k-calh{display:flex;align-items:center;gap:6px;margin-bottom:8px}.k-calh b{flex:1;text-align:center;font-size:14px}
 .k-calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center}
 .k-calg em{font-style:normal;font-size:12px;color:var(--muted)}
