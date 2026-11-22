@@ -232,43 +232,159 @@ function safeView() {
 }
 const AFTER = []; function afterRender() { AFTER.forEach(f => { try { f(CUR); } catch (e) { console.error(e); } }); }
 
-/* ───────── 가입 · 유형 선택 ───────── */
+/* ───────── v45 진입(로그인/가입 한 카드) · ① 기관 선택 ─────────
+   대표님(2026-11-23): 첫 화면 = 관리자 가입 or 로그인, 3초 간편 가입(카카오 · Google · 이메일) → 기관 선택 → 홈페이지 템플릿 → 어드민.
+   화면은 renderSignup()이 SUV.step으로 나눈다: 'entry' = renderEntry(#entry, 빈 자리 #entrySoc · #entryMail) · 'org' = renderOrgStep(#suForm).
+   다시 그릴 때는 늘 renderSignup()을 부른다(empty.js · dataroom.js · live.js가 renderSignup을 감싼다).
+   훅(window.SUV): dflt() 첫 탭 판정 · live() 운영 여부 · mailSubmit(form) 이메일 칸 제출 · go(p) 소셜 버튼 · onbStart()는 ② 담당(onb45.js). */
 let SU = { type: '', name: '', email: '' };
-function renderSignup() {
-  document.body.className = document.body.className.replace(/\bmode-\w+/g, '') + ' mode-signup';
-  const cards = ['univ', 'public', 'corp', 'academy', 'lifelong', 'voc'].map(k => {
-    const ty = k === 'academy' ? { name: '학원', icon: 'academy', desc: '초중고 보습 · 입시 / 성인 자격증 · 실무', ex: '선택 후 세부 유형을 고릅니다' } : TYPES[k];
+const SUV = window.SUV = { view: '', step: 'entry', mail: false, via: '', email: '', rooms: false, err: '', focus: '',
+  live: () => document.documentElement.classList.contains('live'), dflt: () => 'signup' };
+const SU_K = 'didisam.su45'; /* ① 값(유형 · ed · 기관명)만 보관 — 이메일 · 비밀번호는 보관하지 않음 */
+const suKeep = () => { try { sessionStorage.setItem(SU_K, JSON.stringify({ type: SU.type || '', ed: SU.ed || '', name: SU.name || '' })); } catch (e) { } };
+(() => { try { const v = JSON.parse(sessionStorage.getItem(SU_K) || 'null'); if (v && typeof v === 'object') { SU.type = String(v.type || ''); SU.ed = String(v.ed || ''); SU.name = String(v.name || '').slice(0, 30); } } catch (e) { } })();
+const SU_EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]{2,}$/; /* 서버 emailOk · pwOk(service/server/app.js)와 같은 규칙 */
+const suEmailOk = e => typeof e === 'string' && e.length <= 120 && SU_EMAIL.test(e);
+const suPwOk = p => typeof p === 'string' && p.length >= 10 && p.length <= 200 && /[a-zA-Z]/.test(p) && /\d/.test(p);
+const SOC_IC = window.SOC_IC = {
+  kakao: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="#000" d="M12 3C6.5 3 2 6.5 2 10.8c0 2.8 1.9 5.2 4.7 6.6l-1 3.6c-.1.3.3.6.6.4l4.2-2.8c.5.1 1 .1 1.5.1 5.5 0 10-3.5 10-7.8S17.5 3 12 3z"/></svg>',
+  google: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.3c0-.8-.1-1.5-.2-2.3H12v4.3h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.2-4.8 3.2-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1-3.7 1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>',
+  mail: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>'
+};
+const SOC_N = { kakao: '카카오', google: 'Google', email: '이메일' };
+const suMode = m => { document.body.className = document.body.className.replace(/\bmode-\w+/g, '').trim() + ' ' + m; };
+const suSv = d => `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+Object.assign(SOC_IC, { lock: suSv('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'), eye: suSv('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'), check: suSv('<path d="M5 12.5l4.2 4.2L19 7"/>'), right: suSv('<path d="M5 12h14M13 6l6 6-6 6"/>'), down: suSv('<path d="M6 9l6 6 6-6"/>'), spark: suSv('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18"/>') });
+const suLogo = () => `<span class="au-logo"><span class="logo" aria-hidden="true">D</span><b>디디쌤 스튜디오</b></span>`;
+/* 시안(plan/v45/design/mock/login.html): 왼쪽 밝은 패널 + 오른쪽 카드 · 가입 탭은 이메일 칸이 펼쳐진 상태 · 로그인 탭은 「마지막 기관」 카드(#entryLast, 데모는 dataroom.js가 채움) */
+function renderEntry() {
+  suMode('mode-signup');
+  if (!SUV.view) { const h = location.hash; SUV.view = /^#signup\b/.test(h) ? 'signup' : /^#login\b/.test(h) ? 'login' : (SUV.dflt() === 'login' ? 'login' : 'signup'); }
+  const sg = SUV.view === 'signup'; const demo = !SUV.live(); const open = sg || SUV.mail; const code = typeof SUV.codeOn === 'function' && SUV.codeOn();
+  $('#app').innerHTML = `
+  <div class="su au45 au-entry" data-view="${sg ? 'signup' : 'login'}">
+    <aside class="au-side" aria-hidden="true">
+      ${suLogo()}
+      <h2 class="au-hero">교육 운영,<br>이제 <em>말로</em> 하세요</h2>
+      <p class="au-lead">기관 유형만 고르면 필요한 메뉴와 홈페이지가 준비됩니다. 반복 업무는 AI SAM이 맡습니다.</p>
+      <ul class="au-pts"><li><span>${SOC_IC.check}</span>3초 간편 가입 · 카드 등록 없음</li><li><span>${SOC_IC.check}</span>대학 · 공공 · 기업 · 학원 · 평생 · 직훈 맞춤 구성</li><li><span>${SOC_IC.check}</span>이메일만 저장합니다 · 이름 · 전화번호를 묻지 않습니다</li></ul>
+      <div class="au-shot"><img src="img/stock/cls-02-800.webp" alt="" loading="lazy">
+        <div class="au-t2"><span>수강 진도 평균</span><span class="au-pb"><i></i></span><span class="num">72%</span></div>
+        <div class="au-t1"><span class="au-ai">${SOC_IC.spark}</span><span><b>결석 보호자 알림 12건을 보냈습니다</b><small>AI SAM · 오늘 09:00 자동 실행</small></span></div>
+      </div>
+    </aside>
+    <main class="au-main" id="main" tabindex="-1">
+      <div class="au-mtop">${suLogo()}</div>
+      <div class="au-card">
+        <div class="au-tabs" role="tablist" aria-label="로그인 또는 회원가입" id="entryTabs">
+          <button type="button" role="tab" id="enTabL" aria-controls="entry" aria-selected="${!sg}" tabindex="${sg ? -1 : 0}" class="${sg ? '' : 'on'}" data-act="en-view" data-v="login">로그인</button>
+          <button type="button" role="tab" id="enTabS" aria-controls="entry" aria-selected="${sg}" tabindex="${sg ? 0 : -1}" class="${sg ? 'on' : ''}" data-act="en-view" data-v="signup">회원가입</button>
+        </div>
+        <section id="entry" role="tabpanel" aria-labelledby="${sg ? 'enTabS' : 'enTabL'}" data-view="${sg ? 'signup' : 'login'}">
+          <h1 id="entryH" tabindex="-1">${sg ? '3초 만에 시작하세요' : '다시 오셨네요'}</h1>
+          <p class="au-sub">${sg ? '가입 후 기관과 홈페이지만 고르면 바로 운영을 시작합니다.' : '지난번에 쓰던 기관 대시보드로 바로 이어집니다.'}</p>
+          ${sg ? '' : '<div id="entryLast"></div>'}
+          <div id="entrySoc" class="au-soc">
+            <button type="button" class="au-btn kakao" data-act="en-go" data-v="kakao">${SOC_IC.kakao}<span>카카오로 계속하기</span></button>
+            <button type="button" class="au-btn google" data-act="en-go" data-v="google">${SOC_IC.google}<span>Google로 계속하기</span></button>
+          </div>
+          ${sg ? '' : `<button type="button" class="au-btn mail${SUV.mail ? ' on' : ''}" id="entryMailBtn" data-act="en-mail" aria-expanded="${SUV.mail}" aria-controls="entryMail">${SOC_IC.mail}<span>이메일로 계속하기</span></button>`}
+          <form id="entryMail" class="au-mail" novalidate ${open ? '' : 'hidden'} aria-label="이메일로 ${sg ? '가입' : '로그인'}">
+            <label class="au-field"><span>이메일</span><span class="au-inp">${SOC_IC.mail}<input name="email" type="email" inputmode="email" autocomplete="${sg ? 'email' : 'username'}" maxlength="120" required placeholder="admin@기관.ac.kr" value="${esc(SUV.email)}"></span></label>
+            <label class="au-field"><span>비밀번호</span><span class="au-inp">${SOC_IC.lock}<input name="password" type="password" autocomplete="${sg ? 'new-password' : 'current-password'}" maxlength="200" required placeholder="${sg ? '10자 이상 · 영문과 숫자 · 한 번만 입력' : '비밀번호'}" ${sg ? 'aria-describedby="entryPwHint"' : ''}><button type="button" class="au-eye" data-act="en-eye" aria-label="비밀번호 보기" aria-pressed="false">${SOC_IC.eye}</button></span></label>
+            ${sg ? '<p class="au-hint" id="entryPwHint">10자 이상, 영문과 숫자를 함께 씁니다.</p>' : ''}
+            ${sg && code ? `<details class="au-code" id="entryCode"><summary>${SOC_IC.down}초대 코드가 있나요?</summary><label class="au-field"><span>초대 코드</span><span class="au-inp"><input name="code" autocomplete="off" maxlength="60" placeholder="디디쌤에서 받은 코드"></span></label></details>` : ''}
+            <button class="btn pri lg au-go" type="submit">${sg ? `가입하고 시작하기${SOC_IC.right}` : '로그인'}</button>
+            ${sg ? `<p class="au-privacy">${SOC_IC.lock}<span>이메일만 저장합니다. 이름 · 전화번호는 묻지 않습니다.</span></p>` : ''}
+          </form>
+          <p class="au-err" id="entryErr" role="alert">${esc(SUV.err || '')}</p>
+          <div id="entryRooms"></div>
+          <p class="au-sw">${sg ? '이미 계정이 있나요? <button type="button" class="linkb" data-act="en-view" data-v="login">로그인</button>' : '처음이신가요? <button type="button" class="linkb" data-act="en-view" data-v="signup">3초 만에 시작 →</button>'}</p>
+          <p class="au-who">강사 · 직원은 받은 초대 링크로, 수강생은 기관 홈페이지에서 로그인합니다.</p>
+          ${demo ? '<p class="au-demo" id="entryDemo">데모입니다. 실제 계정 연결 없이 이 브라우저에만 저장됩니다.</p>' : ''}
+        </section>
+      </div>
+    </main>
+  </div>`;
+  const f = $('#entryMail');
+  f.addEventListener('submit', e => { e.preventDefault(); SUV.mailSubmit(f); });
+  f.email.addEventListener('input', () => { SUV.email = f.email.value; });
+  $('#entryTabs').addEventListener('keydown', e => { if (!/^Arrow(Left|Right)$|^Home$|^End$/.test(e.key)) return; e.preventDefault(); const v = SUV.view === 'signup' ? 'login' : 'signup'; suView(v); setTimeout(() => { const t = $(v === 'signup' ? '#enTabS' : '#enTabL'); t && t.focus(); }, 0); });
+  suFocus();
+}
+function renderSignup() { return SUV.step === 'org' ? renderOrgStep() : renderEntry(); }
+const suFocus = () => { const k = SUV.focus; SUV.focus = ''; if (!k) return; const el = $(k); if (el) try { el.focus({ preventScroll: false }); } catch (e) { } };
+const suErr = (msg, sel) => { SUV.err = msg || ''; const p = $('#entryErr') || $('#suErr'); if (p) p.textContent = SUV.err; if (sel) { const el = $(sel); el && el.focus(); } };
+const suView = v => { if (SUV.view === v) return; SUV.view = v; SUV.err = ''; SUV.rooms = false; try { sessionStorage.setItem('didisam.lvview', v); } catch (e) { } renderSignup(); };
+const suToOrg = via => { SUV.via = via; SUV.step = 'org'; SUV.err = ''; SUV.rooms = false; SUV.focus = '#orgH'; renderSignup(); window.scrollTo(0, 0); };
+/* 이메일 칸 제출 — 데모 기본 동작(운영은 live.js가 SUV.mailSubmit을 바꿔 끼운다). 데모는 비밀번호를 어디에도 저장하지 않는다. */
+SUV.mailSubmit = f => {
+  const email = f.email.value.trim(); const pw = f.password.value; f.password.value = '';
+  SUV.email = email;
+  if (SUV.view === 'login') { SUV.rooms = true; SUV.err = ''; SUV.focus = '#entryRooms button, #entryRooms'; renderSignup(); return; }
+  if (!suEmailOk(email)) { suErr('이메일 형식을 확인해 주십시오.', '#entryMail [name=email]'); return; }
+  if (!suPwOk(pw)) { suErr('비밀번호는 10자 이상, 영문과 숫자를 함께 씁니다.', '#entryMail [name=password]'); return; }
+  suToOrg('email');
+};
+/* 카카오 · Google — 데모는 서버가 없으므로 가입 탭은 바로 ①, 로그인 탭은 이 브라우저의 기관 목록 */
+SUV.go = p => { if (SUV.view === 'login') { SUV.rooms = true; SUV.err = ''; SUV.focus = '#entryRooms button, #entryRooms'; renderSignup(); return; } SUV.email = ''; suToOrg(p); };
+const suType = () => SU.type === 'univ' || SU.type === 'public' ? SU.ed : undefined;
+/* 시안(plan/v45/design/mock/org.html): 위 진행 표시 · 왼쪽 유형 카드 + 세부 · 기관명 · 빈 스튜디오, 오른쪽 「준비되는 스튜디오」 미리보기, 아래 고정 바(이전 · 다음) */
+function renderOrgStep() {
+  suMode('mode-onb');
+  const TY = k => k === 'academy' ? { name: '학원', icon: 'academy', desc: '초중고 보습 · 입시 · 성인 자격증 · 실무' } : TYPES[k];
+  const cards = ['univ', 'public', 'corp', 'academy', 'lifelong', 'voc'].map(k => { const ty = TY(k);
     const sel = SU.type === k || (k === 'academy' && TYPES[SU.type]?.group === 'academy');
-    return `<button type="button" class="tcard ${sel ? 'on' : ''}" data-act="su-type" data-v="${k}" aria-pressed="${sel}"><span class="ti">${ticon(ty.icon)}</span><b>${esc(ty.name)}</b><p>${esc(ty.desc)}</p></button>`;
+    return `<button type="button" class="tcard au-t ${sel ? 'on' : ''}" data-act="su-type" data-v="${k}" aria-pressed="${sel}"><span class="au-tick">${sel ? SOC_IC.check : ''}</span><span class="ti">${ticon(ty.icon)}</span><b>${esc(ty.name)}</b><p>${esc(ty.desc)}</p></button>`;
   }).join('');
   const isAcad = SU.type === 'academy' || TYPES[SU.type]?.group === 'academy';
   const isUni = SU.type === 'univ'; const isPub = SU.type === 'public'; const PE = window.PUB_ED || null;
+  if (SU.type && SU.type !== 'academy' && !TYPES[SU.type]) SU.type = '';
+  if (isPub && PE && SU.ed && !PE[SU.ed]) SU.ed = '';
+  if (isUni && !['lite', 'lms'].includes(SU.ed)) SU.ed = 'lite';
   const ready = SU.type && SU.type !== 'academy' && (!isUni || !!SU.ed) && (!isPub || !PE || !!SU.ed);
   const pk = isUni && SU.ed === 'lms' && PRESET.univ_lms ? 'univ_lms' : isPub && SU.ed && PRESET['public_' + SU.ed] ? 'public_' + SU.ed : SU.type;
+  const named = !!(SU.name || '').trim();
+  const who = SUV.via === 'email' && SUV.email ? SUV.email : SUV.via && SOC_N[SUV.via] ? `${SOC_N[SUV.via]} 계정${SUV.email ? ' · ' + SUV.email : ''}` : '';
+  const acct = SUV.via === 'email' && SUV.email ? `<b>${esc(SUV.email)}</b>(으)로 가입합니다` : SUV.via && SUV.via !== 'email' && SOC_N[SUV.via] ? `<b>${esc(SOC_N[SUV.via])} 계정</b>${SUV.email ? ' ' + esc(SUV.email) : ''}으로 가입합니다` : '';
+  const pvName = !ready ? '' : isUni ? '대학 · ' + (SU.ed === 'lms' ? '학사 LMS' : '사업단 · 센터') : isPub && PE && PE[SU.ed] ? '공공기관 · ' + PE[SU.ed].n : TYPES[SU.type].name;
+  const hint = !ready ? `${isAcad ? '학원 종류(초중고 · 성인)를 고르면' : isUni ? '도입 형태(사업단 · 센터 / 학사 LMS)를 고르면' : isPub ? '공공기관 세부 유형(시민 교육형 · 시설형 · 직원 교육형)을 고르면' : '기관 유형을 고르면'} 다음으로 갈 수 있습니다.` : !named ? '기관명을 입력하면 다음으로 갈 수 있습니다.' : '언제든 설정 › 기관 정보에서 바꿀 수 있습니다.';
+  const sub = (title, badge, items) => `<section class="au-sec"><h3>${title} <span class="au-badge">${badge}</span></h3><div class="au-subs${items.length > 2 ? ' su-pub' : ''}">${items.map(([act, v, on, b, s]) => `<button type="button" class="au-sb ${on ? 'on' : ''}" data-act="${act}" data-v="${v}" aria-pressed="${on}"><span class="au-rd" aria-hidden="true"></span><span><b>${esc(b)}</b><small>${esc(s)}</small></span></button>`).join('')}</div></section>`;
+  const WSN = ['learn', 'people', 'talk', 'ops'].filter(w => WS[w]);
   $('#app').innerHTML = `
-  <div class="su">
-    <div class="su-l">
-      <div class="brand big"><span class="logo">D</span><b>디디쌤 스튜디오</b></div>
-      <h1>교육 운영,<br>이제 <em>말로 하세요</em></h1>
-      <p class="lead">기관 유형을 고르면 필요한 메뉴만 남긴 어드민이 준비됩니다. 반복 업무는 AI SAM에게 맡기고, 승인만 하세요.</p>
-      <div class="su-demo"><div class="bub u">진도 30% 미만 학생에게 독려 메시지 보내줘</div><div class="bub a"><b>대상 42명을 찾았습니다.</b> 메시지 초안을 확인하고 승인하면 바로 발송합니다.<span class="mini-btn">승인하고 실행</span></div></div>
-      <p class="note">데모입니다. 입력한 정보는 이 브라우저에만 저장되며 서버로 전송되지 않습니다. 대학 유형 실제 구축 사례: <a href="https://santanick.github.io/kit-axon/admin.html" target="_blank" rel="noopener">KIT AX ON</a></p>
+  <form class="su au45 au-onb" id="suForm" autocomplete="off" novalidate>
+    <header class="au-bartop">${suLogo()}
+      <nav class="au-steps" aria-label="가입 진행"><span class="on" aria-current="step"><i>1</i>기관</span><span class="ln" aria-hidden="true"></span><span><i>2</i>홈페이지</span></nav>
+      <span class="au-who2">${who ? `<span>${esc(who)}</span>` : ''}</span></header>
+    <div class="au-page">
+      <div class="au-col">
+        <div class="au-msteps" aria-hidden="true"><span>1/2 기관</span><span class="au-pb"><i style="width:50%"></i></span><span>2/2 홈페이지</span></div>
+        <p class="au-eyebrow">1 / 2 · 기관</p>
+        <h1 id="orgH" tabindex="-1">어떤 기관을 운영하시나요?</h1>
+        <p class="au-lead2">고른 유형에 맞춰 메뉴와 홈페이지 템플릿을 준비합니다. 나중에 바꿀 수 있습니다.</p>
+        ${acct ? `<p class="au-acct" id="suAcct">${acct}</p>` : ''}
+        <div class="tgrid au-types">${cards}</div>
+        ${isAcad ? sub('학원 세부 유형', '학원만 묻습니다', [['su-type', 'k12', SU.type === 'k12', '초중고', '보습 · 입시 · 반 · 보호자 · 청구서'], ['su-type', 'adult', SU.type === 'adult', '성인', '자격증 · 실무 · 강좌 판매 · 매출']]) : ''}
+        ${isUni ? sub('도입 형태', '대학만 묻습니다', [['su-ed', 'lite', SU.ed === 'lite', '사업단 · 센터 · 비교과', '빠른 도입'], ['su-ed', 'lms', SU.ed === 'lms', '학사 LMS · 전교생 교과', '학사 연동']]) : ''}
+        ${isPub && PE ? sub('공공기관 세부 유형', '공공만 묻습니다', ['citizen', 'facility', 'staff'].map(k => ['su-ed', k, SU.ed === k, PE[k].n, PE[k].s])) : ''}
+        <section class="au-sec"><h3><label for="suName">기관명</label></h3><span class="au-inp"><input id="suName" name="name" maxlength="30" required placeholder="예: 산타 아카데미" value="${esc(SU.name)}" aria-describedby="suNameHint"></span><p class="au-hint" id="suNameHint">홈페이지 제목과 알림 발신 이름에 쓰입니다.</p>
+          <p class="au-err" id="suErr" role="alert"></p><span class="au-emptyslot"></span></section>
+      </div>
+      <aside class="au-aside"><div class="pv au-pv" aria-live="polite"><h4>준비되는 스튜디오</h4><div class="au-nm">${esc((SU.name || '').trim() || '기관명')}</div><div class="au-ty">${ready ? esc(pvName) : '유형을 고르면 메뉴가 보입니다'}</div>
+        ${ready && PRESET[pk] ? `<div class="au-mn">${WSN.map(w => `<div>${ic(WS[w].icon, 18)}<span>${esc(w === 'people' ? TERMS[SU.type].learner : lab(WS[w]))}</span><em>${PRESET[pk].on.filter(i => MENU[i] && MENU[i].ws === w).length}개</em></div>`).join('')}<div>${ic('globe', 18)}<span>홈페이지</span><em>다음 단계</em></div></div><p class="au-note">${SOC_IC.spark}<span>${esc(TERMS[SU.type].learner)} · ${esc(TERMS[SU.type].cls)} · ${esc(TERMS[SU.type].group)} 용어로 표시됩니다.</span></p>` : ''}</div></aside>
     </div>
-    <form class="su-r" id="suForm" autocomplete="off">
-      <h2>어떤 기관인가요?</h2>
-      <div class="tgrid">${cards}</div>
-      ${isAcad ? `<p class="su-q">어떤 학원인가요? <small>고르면 메뉴와 용어가 맞춰집니다</small></p><div class="seg2 full"><button type="button" class="${SU.type === 'k12' ? 'on' : ''}" data-act="su-type" data-v="k12">초중고 · 반 · 보호자 · 청구서</button><button type="button" class="${SU.type === 'adult' ? 'on' : ''}" data-act="su-type" data-v="adult">성인 · 강좌 판매 · 매출</button></div>` : ''}
-      ${isUni ? `<p class="su-q">어떻게 도입하나요? <small>도입 형태에 따라 메뉴 · 연동 범위가 달라집니다</small></p><div class="seg2 full"><button type="button" class="${SU.ed === 'lite' ? 'on' : ''}" data-act="su-ed" data-v="lite">사업단 · 센터 · 비교과(빠른 도입)</button><button type="button" class="${SU.ed === 'lms' ? 'on' : ''}" data-act="su-ed" data-v="lms">학사 LMS · 전교생 교과(학사 연동)</button></div>` : ''}
-      ${isPub && PE ? `<p class="su-q">어떤 공공기관인가요? <small>고르면 메뉴 · 홈 · 용어가 맞춰집니다</small></p><div class="seg2 full su-pub">${['citizen', 'facility', 'staff'].map(k => `<button type="button" class="${SU.ed === k ? 'on' : ''}" data-act="su-ed" data-v="${k}" aria-pressed="${SU.ed === k}"><b>${esc(PE[k].n)}</b><small>${esc(PE[k].s)}</small></button>`).join('')}</div>` : ''}
-      <label class="fl">기관명<input name="name" maxlength="30" required placeholder="예: 산타 아카데미" value="${esc(SU.name)}"></label>
-      ${ready ? `<div class="pv"><b>${esc(isUni ? '대학 · ' + (SU.ed === 'lms' ? '학사 LMS' : '사업단 · 센터') : isPub && PE && PE[SU.ed] ? '공공기관 · ' + PE[SU.ed].n : TYPES[SU.type].name)} 맞춤 구성</b><p>${['learn', 'people', 'talk', 'ops'].map(w => `<span>${esc(w === 'people' ? TERMS[SU.type].learner : lab(WS[w]))} <small>${PRESET[pk].on.filter(i => MENU[i].ws === w).length}</small></span>`).join('')}</p><small>${esc(TERMS[SU.type].learner)} · ${esc(TERMS[SU.type].cls)} · ${esc(TERMS[SU.type].group)} 용어로 표시됩니다.</small></div>` : ''}
-      <button class="btn pri lg" type="submit" ${ready ? '' : 'disabled'}>시작하기</button>${ready ? '' : `<p class="su-hint">${isAcad ? '학원 종류(초중고 · 성인)를 고르면' : isUni ? '도입 형태(사업단 · 센터 / 학사 LMS)를 고르면' : isPub ? '공공기관 세부 유형(시민 교육형 · 시설형 · 직원 교육형)을 고르면' : '기관 유형을 고르면'} 시작할 수 있습니다.</p>`}<p class="su-who">강사 · 직원이신가요? 운영자에게 받은 초대 링크로 들어오세요. 수강생이신가요? 다니는 기관의 홈페이지에서 로그인하세요.</p>
-    </form>
-  </div>`;
+    <div class="au-foot"><div class="au-fin"><span class="au-msg su-hint" id="suHint">${hint}</span><button type="button" class="btn au-prev" id="suBack" data-act="en-back">이전</button><button class="btn pri au-go" type="submit" ${ready && named ? '' : 'disabled'}>다음: 홈페이지 고르기${SOC_IC.right}</button></div></div>
+  </form>`;
   const f = $('#suForm');
-  f.addEventListener('input', () => { SU.name = f.name.value; });
-  f.addEventListener('submit', e => { e.preventDefault(); SU.name = f.name.value.trim(); if (!SU.name) { f.name.focus(); return; } createOrg(SU.type, SU.name, SU.type === 'univ' || SU.type === 'public' ? SU.ed : undefined); });
+  f.addEventListener('input', e => { if (e.target.name !== 'name') return; SU.name = f.name.value; suKeep(); const b = f.querySelector('button[type=submit]'); const ok = ready && !!SU.name.trim(); if (b) b.disabled = !ok; const h = $('#suHint'); if (h && ready) h.textContent = ok ? '언제든 설정 › 기관 정보에서 바꿀 수 있습니다.' : '기관명을 입력하면 다음으로 갈 수 있습니다.'; const nm = $('.au-nm'); if (nm) nm.textContent = SU.name.trim() || '기관명'; });
+  f.addEventListener('submit', async e => { e.preventDefault(); SU.name = f.name.value.trim(); if (!SU.name) { f.name.focus(); return; }
+    const type = SU.type, name = SU.name, ed = suType(); UI.onbNew = 1;
+    try { await createOrg(type, name, ed); } catch (x) { console.error(x); }
+    if (S && S.org && S.org.name === name && S.org.type === type) { try { if (typeof window.onbStart === 'function') { window.onbStart(); } } catch (x) { console.error(x); } suDone(); }
+  });
+  suFocus();
 }
+const suDone = () => { SU = { type: '', name: '', email: '' }; Object.assign(SUV, { view: 'login', step: 'entry', mail: false, via: '', email: '', rooms: false, err: '' }); try { sessionStorage.removeItem(SU_K); } catch (e) { } };
 function createOrg(type, name, ed) {
   RNG = 7 + Object.keys(TYPES).indexOf(type) * 13;
   S = { v: 2, org: { name, type, created: today(), domain: ((a => a.length >= 3 ? a : 'org-' + Math.random().toString(36).slice(2, 8))(name.replace(/[^a-z0-9]/gi, '').toLowerCase())) + '.didisam.com', /* v38 한글 이름(영문 3자 미만)은 'e.didisam.com' 대신 기관별 기본 주소 — 홈페이지 › 도메인에서 바꿈 */ plan: 'premium', ...(type === 'univ' ? { ed: ed === 'lms' ? 'lms' : 'lite' } : type === 'public' ? { ed: ['citizen', 'facility', 'staff'].includes(ed) ? ed : 'staff' } : {}) }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type, type === 'univ' ? (ed === 'lms' ? 'lms' : 'lite') : type === 'public' ? (['citizen', 'facility', 'staff'].includes(ed) ? ed : 'staff') : undefined), /* v43 공공 세부 유형(시민 교육형 · 시설형 · 직원 교육형) — 없으면 직원 교육형(하위 호환) */ audit: [], runs: [], ai: { usage: 0 }, chat: [] };
@@ -356,8 +472,14 @@ ACT.go = el => go(el.dataset.v);
 ACT.nav = () => document.body.classList.toggle('nav-open');
 ACT['modal-close'] = () => closeModal();
 ACT.tab = el => { UI[el.dataset.key] = el.dataset.v; render(); };
-ACT['su-ed'] = el => { SU.ed = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; renderSignup(); };
-ACT['su-type'] = el => { if (el.dataset.v !== SU.type) SU.ed = el.dataset.v === 'univ' ? 'lite' : ''; SU.type = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; renderSignup(); };
+ACT['su-ed'] = el => { SU.ed = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; suKeep(); renderSignup(); };
+ACT['su-type'] = el => { if (el.dataset.v !== SU.type) SU.ed = el.dataset.v === 'univ' ? 'lite' : ''; SU.type = el.dataset.v; const n = $('#suForm [name=name]'); if (n) SU.name = n.value; suKeep(); renderSignup(); };
+/* v45 진입 화면 동작 */
+ACT['en-view'] = el => { const v = el.dataset.v === 'login' ? 'login' : 'signup'; SUV.focus = el.getAttribute('role') === 'tab' ? (v === 'signup' ? '#enTabS' : '#enTabL') : '#entryH'; suView(v); SUV.focus = ''; };
+ACT['en-go'] = el => SUV.go(el.dataset.v);
+ACT['en-mail'] = () => { SUV.mail = !SUV.mail; SUV.err = ''; SUV.focus = SUV.mail ? '#entryMail [name=email]' : '#entryMailBtn'; renderSignup(); };
+ACT['en-eye'] = el => { const i = el.parentElement.querySelector('input'); if (!i) return; const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.setAttribute('aria-pressed', String(show)); el.setAttribute('aria-label', show ? '비밀번호 숨기기' : '비밀번호 보기'); };
+ACT['en-back'] = () => { SUV.step = 'entry'; SUV.view = 'signup'; SUV.mail = SUV.via === 'email'; SUV.err = ''; SUV.focus = SUV.mail ? '#entryMail [name=password]' : '#entryH'; renderSignup(); };
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; const f = ACT[el.dataset.act]; if (f) { if (el.tagName !== 'SUMMARY') e.preventDefault(); f(el, e); } }); /* v32.8 summary는 기본 접기 · 펼치기를 살린다 */
 document.addEventListener('change', e => {
   if (e.target.id === 'roleSel') { S.me.role = e.target.value; save(); toast(`${roleName(S.me.role)} 권한으로 보는 화면입니다.`); go(CUR.tab || CUR.ws); return; }

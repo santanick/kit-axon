@@ -27,7 +27,9 @@ function emptyOut() {
   logAudit('빈 스튜디오로 시작(샘플 데이터 없음)'); save();
 }
 { const base = renderSignup; renderSignup = (...a) => { base(...a); const f = $('#suForm'); const btn = f && f.querySelector('button[type=submit]'); if (!btn || $('#suEmpty')) return;
-  btn.insertAdjacentHTML('beforebegin', `<label class="suempty"><input type="checkbox" id="suEmpty" ${emptyPref() ? 'checked' : ''}><span><b>빈 스튜디오로 시작</b><small>샘플 데이터 없이, AI SAM 시작 가이드를 따라 처음부터 채웁니다. 끄면 예시 데이터가 들어간 상태로 둘러볼 수 있습니다.</small></span></label>`);
+  /* v45: ① 기관 선택 아래 작은 선택지(기본 켜짐 = 지금과 같음) — 운영의 「샘플 데이터로 둘러보기」도 이 체크 하나로 합친다(live.js: LV.sample = !suEmpty.checked) */
+  const slot = $('.au-emptyslot'); const at = slot || $('#suErr') || btn;
+  at.insertAdjacentHTML(slot ? 'afterend' : 'beforebegin', `<label class="suempty au-empty"><input type="checkbox" id="suEmpty" ${emptyPref() ? 'checked' : ''}><span><b>빈 스튜디오로 시작</b><small>샘플 데이터 없이 시작합니다. 끄면 예시 데이터가 들어간 상태로 둘러볼 수 있습니다.</small></span></label>`);
   $('#suEmpty').addEventListener('change', e => { try { localStorage.setItem(EMPTY_K, e.target.checked ? '1' : '0'); } catch (x) { } }); }; }
 { const base = createOrg; createOrg = (type, name, ed) => {
   const box = $('#suEmpty'); const empty = box ? box.checked : emptyPref();
