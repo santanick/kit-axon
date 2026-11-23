@@ -43,6 +43,7 @@ const OG = require('./ogmeta'); /* v37 L2 링크 공유 미리보기 */
 const commlive = require('./commlive'); /* v38 C#17 학습자 글 · 댓글 즉시 게시 */
 const { createStateCrypto } = require('./statecrypt');
 const AG = require('./aigw'); /* v46 Ver2 AI 게이트웨이 */
+const PF = require('./planfeat'); /* v47 요금제 기능 묶음(plan 없는 · 정책 off 기관은 판정 없음) */
 const AP = require('./aiprice'); /* v47 AI 월 포함량 · 추가 충전 요금표 */
 const { createPay } = require('./fac/pay');
 const LEV = require('./lev'); /* v46 Ver2 학습 이벤트 */
@@ -337,7 +338,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (inj) { await inTenant(pool, tid, c => audit(c, tid, guest ? 'guest' : 'learner:' + sid, 'ai.injection_suspect', { n: inj, route: 'tutor' })).catch(() => {});
       try { limit(`inj:${tid}:${who}`, 5, 864e5); } catch (e) { throw new HttpErr(429, '안전 정책에 맞지 않는 요청이 반복되어 오늘은 AI 튜터 이용이 제한되었습니다. 학습 질문은 선생님께 질문 넘기기를 이용해 주세요.', 'ai_guard'); } }
     const ctx = await inTenant(pool, tid, async c => {
-      const d = (await c.query("select doc->'settings'->'tutor' tu, doc->'org'->'room' room, doc->'org'->>'type' type, doc->'lsite'->'pub' pub, doc->'members' members, doc->'classes' classes, doc->'badges' badges, doc->'tq' tq, doc->'bkgrades' bkgrades, doc->'aipol' aipol, doc->'aiplan' aiplan from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
+      const d = (await c.query("select doc->'settings'->'tutor' tu, doc->'org'->'room' room, doc->'org'->>'type' type, doc->'lsite'->'pub' pub, doc->'members' members, doc->'classes' classes, doc->'badges' badges, doc->'tq' tq, doc->'bkgrades' bkgrades, doc->'aipol' aipol, doc->'aiplan' aiplan, doc->'plan' plan from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
       const tu = d.tu || {}; if (tu.enabled === false) throw new HttpErr(403, 'AI 튜터가 꺼져 있습니다.', 'tutor_off');
       const room = d.room || {}; if ((room.ai && room.ai !== 'anthropic') || (room.egress && room.egress.ai === false)) throw new HttpErr(403, '이 기관의 데이터룸 정책에서 AI 외부 연결이 꺼져 있습니다.', 'policy');
       if (guest) { if (tu.loginOnly === true) throw new HttpErr(401, '로그인한 학습자만 AI 튜터를 쓸 수 있습니다.', 'auth'); const gd = Math.min(50, Math.max(0, tu.guestDaily == null ? 10 : +tu.guestDaily)); if (!gd) throw new HttpErr(401, '로그인한 뒤 AI 튜터를 쓸 수 있습니다.', 'auth'); limit(`ltg:${tid}:${gip}`, gd, 864e5); }
@@ -349,6 +350,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
       const pol = AG.polOf(d.aipol); const ik = b.item && typeof b.item === 'object' ? b.item.key : b.cls && b.item ? `${b.cls}/${b.item}` : ''; const F = pol.on && ik ? AG.findItem(d.classes, ik) : null;
       const lvl = F ? AG.levelOf(pol, F.it) : pol.on ? pol.lvl : ''; const v2 = { pol, F, lvl, key: F ? `${F.cls}/${F.item}` : '', feature: b.mode === 'vision' && pol.on ? 'vision' : 'tutor' };
       if (pol.on && lvl === 'L0') throw new HttpErr(403, '이 과제는 AI 도움 없이 혼자 푸는 과제입니다(AI 끄기). 막히면 선생님께 질문 넘기기를 이용하세요.', 'ai_level_off');
+      PF.guard(HttpErr, d.plan, pol, { lvl, feature: v2.feature }, today(), true); /* v47 요금제 밖 레벨(L2 · L3) · 기능(vision) → 403 plan_feature */
       await gw.count(c, tid, v2.feature, pol);
       if (guest) return { tu, type: d.type, pub: d.pub || {}, lp: {}, mine: { cls: {}, badges: [] }, v2 };
       const lp = ((await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0] || {}).lp || {};
@@ -538,11 +540,12 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (!Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40) throw new HttpErr(400, '메시지 형식이 올바르지 않습니다.', 'messages');
       // 데이터룸 정책: 이 기관의 AI 경로 · 외부 연결 허용을 서버에서도 확인
       const pol = await inTenant(pool, a.tid, async c => {
-        const st = await c.query("select doc->'org'->'room' room, doc->'aipol' aipol, doc->'aiplan' aiplan from tenant_state where tenant_id = $1", [a.tid]);
+        const st = await c.query("select doc->'org'->'room' room, doc->'aipol' aipol, doc->'aiplan' aiplan, doc->'plan' plan from tenant_state where tenant_id = $1", [a.tid]);
         const room = st.rows[0] && st.rows[0].room || {};
         if ((room.ai && room.ai !== 'anthropic') || (room.egress && room.egress.ai === false)) throw new HttpErr(403, '이 기관의 데이터룸 정책에서 AI 외부 연결이 꺼져 있습니다.', 'policy');
         const u = await c.query('insert into ai_usage (tenant_id, day, calls) values ($1, $2, 1) on conflict (tenant_id, day) do update set calls = ai_usage.calls + 1 returning calls', [a.tid, today()]);
         if (u.rows[0].calls > aiDaily) throw new HttpErr(429, `오늘 AI 사용 한도(${aiDaily}회)를 넘었습니다.`, 'quota');
+        PF.guard(HttpErr, st.rows[0] && st.rows[0].plan, AG.polOf(st.rows[0] && st.rows[0].aipol), { feature }, today(), false); /* v47 요금제 밖 기능(grade 채점 초안) → 403 plan_feature */
         await monthGuard(c, a.tid, st.rows[0] && st.rows[0].aiplan, false);
         await gw.count(c, a.tid, feature, AG.polOf(st.rows[0] && st.rows[0].aipol)); /* v46 기능별 집계(studio · grade) */
         return room;

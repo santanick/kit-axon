@@ -39,7 +39,7 @@
   </insert>
   <select id="selectTutorCtx" resultType="java.util.LinkedHashMap">
     select (doc->'settings'->'tutor')::text tu, (doc->'org'->'room')::text room, doc->'org'->>'type' type, (doc->'lsite'->'pub')::text pub,
-           (doc->'members')::text members, (doc->'classes')::text classes, (doc->'badges')::text badges, (doc->'tq')::text tq, (doc->'bkgrades')::text bkgrades, (doc->'aipol')::text aipol, (doc->'aiplan')::text aiplan
+           (doc->'members')::text members, (doc->'classes')::text classes, (doc->'badges')::text badges, (doc->'tq')::text tq, (doc->'bkgrades')::text bkgrades, (doc->'aipol')::text aipol, (doc->'aiplan')::text aiplan, (doc->'plan')::text plan
       from tenant_state where tenant_id = #{tid}
   </select>
   <select id="incUsage" resultType="int" flushCache="true" useCache="false">
