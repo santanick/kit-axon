@@ -144,6 +144,6 @@ public final class DdAiGateway {
     /** 공개 사이트 데이터용 정책 요약 — on일 때만 {on, lvl, retain, evalNotice} */
     public static ObjectNode pubPolicy(JsonNode raw) {
         if (!on(raw)) return null; ObjectNode p = polOf(raw);
-        ObjectNode o = F.objectNode(); o.put("on", true); o.set("lvl", p.get("lvl")); o.set("retain", p.get("retain")); o.set("evalNotice", p.get("evalNotice")); return o;
+        ObjectNode o = F.objectNode(); o.put("on", true); o.set("lvl", p.get("lvl")); o.set("retain", p.get("retain")); o.set("evalNotice", p.get("evalNotice")); o.set("preset", p.get("preset")); return o;
     }
 }

@@ -39,7 +39,7 @@ function polOf(raw) {
   };
 }
 /* 공개 사이트 데이터에 내보내는 값(계약: {on, lvl, retain, evalNotice}만) */
-const pubPol = raw => { const p = polOf(raw); return { on: p.on, lvl: p.lvl, retain: p.retain, evalNotice: p.evalNotice }; };
+const pubPol = raw => { const p = polOf(raw); return { on: p.on, lvl: p.lvl, retain: p.retain, evalNotice: p.evalNotice, preset: p.preset }; }; /* preset: 학습자 화면이 항목 레벨 미지정 시 기관 프리셋으로 판정 */
 
 /* 항목 종류: 시험이면 exam, 그 밖(과제 · 레슨)은 assign */
 const kindOf = it => (it && /^(exam|test)$/.test(String(it.type || '')) ? 'exam' : 'assign');

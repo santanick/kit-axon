@@ -57,7 +57,7 @@
     if (lvl === 'L0') return '이 과제는 AI 없이 풀어요';
     if (k <= st.step) return ''; if (k !== st.step + 1) return '앞 단계를 먼저 열어 주세요.';
     if (it && it.ai && it.ai.reveal) return '';
-    if (k === 5) { if (!solOk(it)) return '풀이는 선생님이 허용한 과제에서만 볼 수 있어요.'; if (lvl !== 'L3' && !st.selfExp) return '풀이를 보기 전에, 지금까지 어떻게 풀었는지 적어 주세요.'; return ''; }
+    if (k === 5) { if (!solOk(it)) return '풀이는 선생님이 허용한 과제에서만 볼 수 있어요.'; if (!st.selfExp) return '풀이를 보기 전에, 지금까지 어떻게 풀었는지 적어 주세요.'; return ''; }
     if (lvl === 'L3' || k === 1) return '';
     const need = k === 2 ? 0 : k - 1; return st.tries.some(x => (+x.s || 0) >= need) ? '' : '먼저 내 생각을 적어 주세요. 그래야 다음 힌트가 열려요.';
   }
@@ -114,7 +114,7 @@
       const body = open ? (C[k] ? `<div class="v2-box">${nl(C[k].t)}</div>${C[k].fb ? '<p class="v2-fb">지금은 기본 힌트를 보여 드려요</p>' : ''}<button type="button" class="v2-lk" data-v2="again" data-k="${k}">다른 표현으로 다시 보기</button>` : `<button type="button" class="v2-lk" data-v2="open" data-k="${k}">이 단계 다시 보기</button>`)
         : nx ? (why ? `<p>${esc(why)}</p>` : `<button type="button" class="v2-open" data-v2="open" data-k="${k}">${k === 1 ? '힌트 받기' : '다음 힌트 열기'}</button>`) : k === 5 ? '<p>선생님이 허용한 과제만</p>' : '';
       return `<li class="v2-st ${cls}"><span class="v2-s" aria-hidden="true">${open && !cur ? ico('check', 15) : open ? k : ico('lock', 14)}</span><div class="v2-t"><b>${k} · ${STEPN[k]}${cur ? ' <em>지금</em>' : ''}${!open ? '<span class="sr">(잠김)</span>' : ''}</b>${body}</div></li>`; }).join('');
-    const sx = st.step >= 4 && sol && !st.selfExp && lvl !== 'L3';
+    const sx = st.step >= 4 && sol && !st.selfExp; /* 결정 3: 모든 레벨에서 풀이 전 자기 설명 */
     return `<section class="v2-lad" aria-label="힌트 사다리"><div class="v2-lh"><b>힌트 사다리</b><small>${st.step ? `${st.step}단계까지 열렸어요` : '어디서 막혔나요? 먼저 내 생각을 적어 주세요.'}</small><span class="v2-cnt">${st.step} / 5</span></div>
       <ol class="v2-steps">${rows}</ol>
       <p class="v2-log">${ico('clock', 15)} 지금까지 시도 ${st.tries.length}번 · 힌트 ${st.step}단계. 이 기록은 내 학습 과정으로 선생님께 보여요.</p>

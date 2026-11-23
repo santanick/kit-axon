@@ -145,7 +145,7 @@
 
   /* ── 학습자 게시본: 켜진 기관만 정책 요약 · 항목 레벨을 싣는다(꺼짐은 게시본 그대로) ── */
   if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const pub = base(...a); try { if (!on() || !pub) return pub; const V = val();
-      pub.aipol = { on: true, lvl: V.lvl, retain: V.retain, evalNotice: !!V.evalNotice };
+      pub.aipol = { on: true, lvl: V.lvl, retain: V.retain, evalNotice: !!V.evalNotice, preset: V.preset };
       (pub.classes || []).forEach(c => { const src = (S.classes || []).find(x => x.id === c.id); if (!src) return; (c.items || []).forEach(x => { if (!KINDS.includes(x.type)) return; const it = (src.curriculum || []).find(y => y.id === x.id); if (!it) return; const l = levelOf(it); x.ai = { lvl: l, why: String((it.ai && it.ai.why) || '').slice(0, 80), sol: !!(it.ai && it.ai.sol) }; }); });
     } catch (e) { console.error(e); } return pub; }; } /* eslint-disable-line no-global-assign */
 })();
