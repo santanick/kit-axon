@@ -18,6 +18,8 @@ public class AiController {
         return aiService.messages(authService.need(req), body);
     }
     @GetMapping("/ai/usage") public Map<String, Object> usage(HttpServletRequest req) throws Exception { return aiService.usage(authService.need(req)); }
+    @PostMapping("/ai/topup") public Map<String, Object> topup(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return aiService.topup(authService.needOwner(req), body); }
+    @PostMapping("/ai/topup/confirm") public Map<String, Object> topupConfirm(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return aiService.topupConfirm(authService.needOwner(req), body); }
     @PostMapping("/site/benchmark") public Map<String, Object> benchmark(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception {
         return benchService.benchmark(authService.needStaff(req), body);
     }

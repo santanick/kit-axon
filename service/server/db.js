@@ -403,6 +403,29 @@ const MIGRATIONS = [
      end loop; end $$;
    grant select, insert, update, delete on ai_usage_f, ai_turn, learning_event to didisam_tenant;
    grant usage on sequence ai_turn_id_seq, learning_event_id_seq to didisam_tenant;`,
+  /* v47 AI 추가 충전(ai_credit): 정운영자가 토스로 산 토큰 묶음. ready(결제 창 열림) → paid(서버가 토스 승인 확인) 뒤에만 한도에 더한다.
+     month(YYYY-MM, KST)는 산 달 — 그 달 한도에만 더한다(다음 달 1일 소멸). 금액은 공급가 + 부가세(aiprice.js) */
+  `create table if not exists ai_credit (
+     id text primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     month text not null check (month ~ '^\\d{4}-\\d{2}$'),
+     pack text not null check (pack ~ '^[a-z0-9]{2,12}$'),
+     tokens bigint not null check (tokens > 0),
+     amount integer not null check (amount >= 0),
+     order_id text not null unique,
+     payment_key text,
+     status text not null default 'ready' check (status in ('ready','paid','failed')),
+     demo boolean not null default false,
+     by_email text not null default '',
+     at timestamptz not null default now(),
+     paid_at timestamptz
+   );
+   create index if not exists ai_credit_t on ai_credit (tenant_id, month, status);
+   alter table ai_credit enable row level security;
+   alter table ai_credit force row level security;
+   drop policy if exists tenant_iso on ai_credit;
+   create policy tenant_iso on ai_credit using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert, update on ai_credit to didisam_tenant;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).

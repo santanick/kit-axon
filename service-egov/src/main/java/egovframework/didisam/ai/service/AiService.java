@@ -6,4 +6,7 @@ import java.util.Map;
 public interface AiService {
     Object messages(Map<String, Object> a, byte[] body) throws Exception;
     Map<String, Object> usage(Map<String, Object> a) throws Exception;
+    /** v47 AI 추가 충전(정운영자) — Node POST /api/ai/topup · /api/ai/topup/confirm */
+    Map<String, Object> topup(Map<String, Object> a, byte[] body) throws Exception;
+    Map<String, Object> topupConfirm(Map<String, Object> a, byte[] body) throws Exception;
 }

@@ -26,7 +26,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "GET /api/health", "GET /api/config", "POST /api/signup", "POST /api/login", "POST /api/logout",
         "GET /api/me", "GET /api/state", "PUT /api/state",
         "GET /api/keys", "POST /api/keys", "POST /api/keys/revoke",
-        "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage", "GET /api/lev",
+        "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage", "GET /api/lev", "POST /api/ai/topup", "POST /api/ai/topup/confirm",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log", "POST /api/learners/sync",
         "GET /api/audit", "POST /api/tenant/delete", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion",
         "POST /api/password", "GET /api/staff", "POST /api/media", "GET /api/media", "POST /api/media/f", "POST /api/staff", "POST /api/staff/remove",
@@ -59,7 +59,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "cross-origin-resource-policy", "same-origin",
         "x-permitted-cross-domain-policies", "none",
         "origin-agent-cluster", "?1");
-    static final String CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'";
+    static final String CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com https://js.tosspayments.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com https://*.tosspayments.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://*.tosspayments.com; base-uri 'none'; form-action 'self' https://*.tosspayments.com; object-src 'none'; frame-ancestors 'none'";
     static final String LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com https://js.tosspayments.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://*.tosspayments.com; media-src 'self' blob:; connect-src 'self' https://*.tosspayments.com; base-uri 'none'; form-action 'self' https://*.tosspayments.com; object-src 'none'; frame-ancestors 'self'";
 
     private final DdProps props; private final DdWeb web;

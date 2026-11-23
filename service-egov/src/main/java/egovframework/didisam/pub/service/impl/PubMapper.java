@@ -27,6 +27,8 @@ public interface PubMapper {
     void upsertProgress(@Param("tid") String tid, @Param("sid") String sid, @Param("lp") String lp, @Param("bytes") int bytes);
     Map<String, Object> selectTutorCtx(@Param("tid") String tid);
     int incUsage(@Param("tid") String tid, @Param("day") String day);
+    long monthUsed(@Param("tid") String tid, @Param("from") String from); /* v47 이달 AI 한도 */
+    long monthCredit(@Param("tid") String tid, @Param("month") String month);
     int addTokens(@Param("tid") String tid, @Param("day") String day, @Param("tin") long tin, @Param("tout") long tout);
     void insertLearnerSession(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
     Map<String, Object> selectLearnerSession(@Param("id") String id);

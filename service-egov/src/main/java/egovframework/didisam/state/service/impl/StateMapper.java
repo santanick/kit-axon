@@ -17,4 +17,5 @@ public interface StateMapper {
     void updateTenantMode(@Param("tid") String tid, @Param("mode") String mode, @Param("name") String name);
     /** v46 기관 AI 정책(평문 최상위 키) */
     String selectAipol(@org.apache.ibatis.annotations.Param("tid") String tid);
+    String selectAiplan(@org.apache.ibatis.annotations.Param("tid") String tid);
 }
