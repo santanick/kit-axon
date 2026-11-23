@@ -7,7 +7,7 @@
 .s2tree>li{cursor:grab}
 .s2tree li.cur{box-shadow:0 0 0 2px var(--brand,#00C53B)}
 .s2tree li.drag{opacity:.45}
-.s2tree li.over{background:rgba(0,197,59,.06)}
+.s2tree li.over{background:var(--s50)}
 .s2tree a{text-decoration:none;color:inherit}
 .s2h{color:var(--muted);cursor:grab;user-select:none}
 .s2eye{min-width:30px}
@@ -42,7 +42,7 @@
 .s2hint p{margin:4px 0}
 .s2steps{display:flex;gap:6px;list-style:none;padding:0;margin:10px 0;flex-wrap:wrap}
 .s2steps li{font-size:12px;padding:5px 10px;border-radius:99px;box-shadow:inset 0 0 0 1px var(--line);color:var(--muted)}
-.s2steps li.done{background:#E7F8EC;color:#00762A;box-shadow:none}
+.s2steps li.done{background:var(--s50);color:var(--t-mag);box-shadow:none}
 .s2steps li.on{background:#FFF3D6;color:#8A5A00;box-shadow:none;font-weight:700}
 .s2dom{display:flex;align-items:center;gap:4px}
 .s2dom input{flex:1;min-width:0}

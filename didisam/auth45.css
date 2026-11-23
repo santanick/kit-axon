@@ -1,0 +1,191 @@
+/* 디디쌤 스튜디오 v45 — 진입(로그인/가입) · ① 기관 선택 레이아웃
+   시안: plan/v45/design/mock/login.html · org.html(추천 A · 진입은 흰 바탕). 색은 dds.css 토큰 이름으로만 쓴다(값은 디자인 담당이 dds.css에서 교체).
+   예외: 카카오(#FEE500 · 글자 rgba(0,0,0,.85)) · Google(흰 바탕 · #747775 테두리 · #1F1F1F 글자)은 제공자 공식 가이드 고정값. */
+body.mode-signup,body.mode-onb{background:var(--n0)!important;color:var(--n900)}
+body.mode-signup .gen,body.mode-onb .gen{background:var(--n0)}
+.au45{color:var(--n900)}
+.au45 .au-logo{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--n900)}
+.au45 .au-logo .logo{width:34px;height:34px;border-radius:10px;background:var(--pr);color:var(--on-pr);display:grid;place-items:center;font-weight:800;font-size:17px}
+.au45 svg{flex:none}
+.au45 :focus-visible{outline:2px solid var(--s500);outline-offset:2px}
+
+/* ── ⓪ 진입: 왼쪽 밝은 패널 + 오른쪽 카드 ── */
+.su.au45.au-entry{display:grid;grid-template-columns:1fr 1fr;gap:0;max-width:none;min-height:100vh;margin:0;padding:0;align-items:stretch;background:var(--n0)}
+.au-entry .au-side{position:relative;overflow:hidden;display:flex;flex-direction:column;padding:40px 64px;background:linear-gradient(180deg,var(--n50),var(--n0) 70%);border-right:1px solid var(--n200)}
+.au-entry .au-side::before{content:"";position:absolute;right:-180px;top:-160px;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,var(--s50),transparent 68%)}
+.au-entry .au-hero{position:relative;margin:72px 0 0;font-size:clamp(38px,3.6vw,52px);line-height:1.14;font-weight:800;letter-spacing:-.035em;color:var(--n900)}
+.au-entry .au-hero em{font-style:normal;color:var(--s700);background:linear-gradient(transparent 68%,var(--s100) 68%)}
+.au-entry .au-lead{position:relative;margin:18px 0 0;max-width:460px;font-size:18px;line-height:1.55;color:var(--n600)}
+.au-entry .au-pts{position:relative;list-style:none;margin:28px 0 0;padding:0;display:grid;gap:12px}
+.au-entry .au-pts li{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:600;color:var(--n700)}
+.au-entry .au-pts li>span{width:28px;height:28px;border-radius:8px;background:var(--n0);box-shadow:var(--sh1);display:grid;place-items:center;color:var(--s600)}
+.au-entry .au-pts svg{width:16px;height:16px}
+.au-entry .au-shot{position:relative;margin-top:auto;height:300px;border-radius:24px;overflow:hidden;box-shadow:var(--sh3);background:var(--n100)}
+.au-entry .au-shot img{width:100%;height:100%;object-fit:cover;filter:saturate(.85) brightness(1.04)}
+.au-entry .au-t1{position:absolute;left:24px;bottom:24px;width:330px;max-width:calc(100% - 48px);display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:16px;background:var(--n0);box-shadow:var(--sh3)}
+.au-entry .au-t1 .au-ai{width:36px;height:36px;border-radius:10px;background:var(--s50);color:var(--s600);display:grid;place-items:center}
+.au-entry .au-t1 b{display:block;font-size:14px}.au-entry .au-t1 small{display:block;font-size:13px;color:var(--n500)}
+.au-entry .au-t2{position:absolute;right:24px;top:24px;display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--n0);box-shadow:var(--sh3);font-size:13px;font-weight:600}
+.au-entry .au-t2 .au-pb{width:120px}
+.au45 .au-pb{display:block;height:6px;border-radius:6px;background:var(--n100);overflow:hidden}
+.au45 .au-pb i{display:block;height:100%;width:72%;border-radius:6px;background:var(--s500)}
+.au-entry .au-main{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;outline:none}
+.au-entry .au-mtop{display:none}
+.au-entry .au-card{width:100%;max-width:440px}
+.au45 .au-tabs{display:grid;grid-template-columns:1fr 1fr;padding:4px;margin-bottom:36px;border-radius:12px;background:var(--n100)}
+.au45 .au-tabs button{height:44px;border:0;border-radius:9px;background:none;font:inherit;font-size:15px;font-weight:600;color:var(--n600);cursor:pointer}
+.au45 .au-tabs button.on{background:var(--n0);color:var(--n900);box-shadow:var(--sh1)}
+.au-entry h1{margin:0;font-size:32px;font-weight:800;line-height:1.25;letter-spacing:-.03em;color:var(--n900);outline:none}
+.au-entry .au-sub{margin:10px 0 32px;font-size:16px;color:var(--n600)}
+/* 3버튼 */
+.au45 .au-soc{display:grid;gap:12px}
+.au45 .au-btn{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:52px;margin:0;border-radius:12px;border:1px solid transparent;font:inherit;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none}
+.au45 .au-btn.kakao{background:#FEE500;color:rgba(0,0,0,.85)}
+.au45 .au-btn.google{background:#FFFFFF;border-color:#747775;color:#1F1F1F}
+.au45 .au-btn.mail{margin-top:12px;background:var(--n0);border-color:var(--n300);color:var(--n900)}
+.au45 .au-btn.mail:hover,.au45 .au-btn.mail.on{border-color:var(--s300);background:var(--s50)}
+.au45 .au-btn:hover{filter:brightness(.98)}
+/* 이메일 칸(가입 탭은 처음부터 펼침) */
+.au45 .au-mail{display:grid;gap:16px;margin-top:12px;padding:20px;border:1px solid var(--n200);border-radius:16px;background:var(--n50)}
+.au45 .au-mail[hidden]{display:none}
+.au45 .au-mail>*,.au45 .au-field,.au45 .au-inp{min-width:0}.au45 .au-inp input{width:100%}.au-entry .au-main,.au-entry .au-card{min-width:0}
+.au45 .au-field{display:block}
+.au45 .au-field>span:first-child{display:block;margin-bottom:8px;font-size:14px;font-weight:600;color:var(--n700)}
+.au45 .au-inp{display:flex;align-items:center;gap:10px;height:52px;padding:0 6px 0 16px;border-radius:12px;border:1px solid var(--n300);background:var(--n0);color:var(--n500)}
+.au45 .au-inp:focus-within{border-color:var(--s600);box-shadow:0 0 0 4px var(--s100)}
+.au45 .au-inp input{flex:1;min-width:0;height:100%;border:0;outline:none;background:none;font:inherit;font-size:16px;color:var(--n900);padding:0}
+.au45 .au-inp input::placeholder{color:var(--n500)}
+.au45 .au-eye{width:40px;height:40px;border:0;border-radius:10px;background:none;color:var(--n500);display:grid;place-items:center;cursor:pointer}
+.au45 .au-eye[aria-pressed="true"]{color:var(--s700);background:var(--s50)}
+.au45 .au-hint{margin:-8px 0 0;font-size:13px;color:var(--n600)}
+.au45 .au-code summary{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--n600);cursor:pointer;list-style:none}
+.au45 .au-code summary::-webkit-details-marker{display:none}
+.au45 .au-code[open] summary svg{transform:rotate(180deg)}
+.au45 .au-code .au-field{margin-top:12px}
+.au45 .au-go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:52px;border-radius:12px;font-size:16px;font-weight:600;background:var(--pr);color:var(--on-pr);border:0}
+.au45 .au-go:hover:not(:disabled){background:var(--pr-h)}
+.au45 .au-go:disabled{background:var(--n200);color:var(--n500);box-shadow:none;cursor:not-allowed;opacity:1}
+.au45 .au-privacy{display:flex;gap:8px;align-items:flex-start;margin:0;font-size:13px;line-height:1.5;color:var(--n600)}
+.au45 .au-privacy svg{width:16px;height:16px;margin-top:2px;color:var(--s600)}
+.au45 .au-err{margin:10px 0 0;font-size:14px;font-weight:600;color:var(--t-bad)}
+.au45 .au-err:empty{display:none}
+.au45 .au-sw{margin:24px 0 0;text-align:center;font-size:15px;color:var(--n600)}
+.au45 .linkb{margin-left:6px;padding:2px 0;border:0;background:none;font:inherit;font-weight:700;color:var(--s700);cursor:pointer}
+.au45 .linkb:hover{text-decoration:underline;text-underline-offset:3px}
+.au45 .au-who{margin:20px 0 0;font-size:13px;line-height:1.6;text-align:center;color:var(--n600)}
+.au45 .au-demo{margin:8px 0 0;font-size:12.5px;text-align:center;color:var(--n500)}
+.au45 .au-badge{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:99px;font-size:12px;font-weight:700;background:var(--s100);color:var(--s700);white-space:nowrap}
+/* 로그인 탭: 마지막 기관 · 이 브라우저의 기관(데모) */
+.au45 .au-last{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 20px;padding:14px 16px;border:1px solid var(--n200);border-radius:14px;background:var(--n0);font:inherit;text-align:left;color:var(--n900);cursor:pointer}
+.au45 .au-last:hover{border-color:var(--s300)}
+.au45 .au-av{width:40px;height:40px;border-radius:12px;background:var(--s50);color:var(--s700);display:grid;place-items:center;font-weight:800;flex:none}
+.au45 .au-last b{display:block;font-size:15px}.au45 .au-last small{display:block;font-size:13px;color:var(--n500)}
+.au45 .au-last .au-badge{margin-left:auto}
+.au45 .au-rooms{max-width:none;margin:16px 0 0;padding:14px;border:1px solid var(--n200);border-radius:14px;background:var(--n50);box-shadow:none;font-size:14px}
+.au45 .au-rooms>b{display:block;margin-bottom:8px;font-size:14px}
+.au45 .au-rooms ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.au45 .au-room{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 12px;border:1px solid var(--n200);border-radius:12px;background:var(--n0);font:inherit;text-align:left;color:var(--n900);cursor:pointer}
+.au45 .au-room:hover{border-color:var(--s300)}
+.au45 .au-room .ti{width:36px;height:36px;border-radius:10px;background:var(--s50);color:var(--s700);display:grid;place-items:center;flex:none}
+.au45 .au-room .ti svg{width:20px;height:20px}
+.au45 .au-room b{display:block;font-size:15px}.au45 .au-room small{display:block;font-size:12.5px;color:var(--n600)}
+.au45 .au-rooms.empty{text-align:center}.au45 .au-rooms.empty p{margin:0 0 10px;color:var(--n600)}
+
+/* ── ① 기관 선택 ── */
+.su.au45.au-onb{display:block;max-width:none;min-height:100vh;margin:0;padding:0 0 120px;background:var(--n0)}
+.au-onb .au-bartop{display:flex;align-items:center;gap:16px;height:68px;padding:0 40px;border-bottom:1px solid var(--n200);background:var(--n0)}
+.au-onb .au-steps{display:flex;align-items:center;gap:10px;margin:0 auto;font-size:14px;font-weight:600;color:var(--n500)}
+.au-onb .au-steps span{display:flex;align-items:center;gap:8px}
+.au-onb .au-steps i{width:24px;height:24px;border-radius:99px;border:1.5px solid var(--n300);display:grid;place-items:center;font-style:normal;font-size:12px}
+.au-onb .au-steps .on{color:var(--n900)}.au-onb .au-steps .on i{background:var(--s600);border-color:var(--s600);color:var(--on-pr)}
+.au-onb .au-steps .ln{width:48px;height:2px;background:var(--n200)}
+.au-onb .au-who2{min-width:120px;text-align:right;font-size:14px;color:var(--n500)}
+.au-onb .au-page{max-width:1180px;margin:0 auto;padding:48px 40px 0;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:48px}
+.au-onb .au-msteps{display:none}
+.au-onb .au-eyebrow{margin:0;font-size:14px;font-weight:700;letter-spacing:.02em;color:var(--s700)}
+.au-onb h1{margin:8px 0 0;font-size:40px;font-weight:800;line-height:1.2;letter-spacing:-.035em;color:var(--n900);outline:none}
+.au-onb .au-lead2{margin:10px 0 0;font-size:17px;color:var(--n600)}
+.au-onb .au-acct{margin:10px 0 0;font-size:14px;color:var(--n600)}.au-onb .au-acct b{color:var(--n900)}
+.au-onb .tgrid.au-types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:32px 0 0}
+.au-onb .au-t{position:relative;display:block;min-height:150px;padding:20px;border:1px solid var(--n200);border-radius:18px;background:var(--n0);box-shadow:var(--sh1);text-align:left;font:inherit;color:var(--n900);cursor:pointer}
+.au-onb .au-t:hover{border-color:var(--s300)}
+.au-onb .au-t .ti{width:44px;height:44px;border-radius:12px;background:var(--n100);color:var(--n700);display:grid;place-items:center}
+.au-onb .au-t .ti svg{width:22px;height:22px}
+.au-onb .au-t b{display:block;margin-top:14px;font-size:18px;font-weight:700}
+.au-onb .au-t p{margin:4px 0 0;font-size:13px;line-height:1.5;color:var(--n600)}
+.au-onb .au-tick{position:absolute;right:16px;top:16px;width:24px;height:24px;border-radius:99px;border:1.5px solid var(--n300);display:grid;place-items:center}
+.au-onb .au-t.on{border-color:var(--s600);box-shadow:0 0 0 1px var(--s600),var(--sh2);background:linear-gradient(180deg,var(--s50),var(--n0) 70%)}
+.au-onb .au-t.on .ti{background:var(--s600);color:var(--on-pr)}
+.au-onb .au-t.on .au-tick{background:var(--s600);border-color:var(--s600);color:var(--on-pr)}
+.au-onb .au-tick svg{width:14px;height:14px;stroke-width:2.4}
+.au-onb .au-sec{margin-top:36px}
+.au-onb .au-sec h3{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:18px;font-weight:700}
+.au-onb .au-sec h3 .au-badge{background:var(--n100);color:var(--n600)}
+.au-onb .au-subs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.au-onb .au-subs.su-pub{grid-template-columns:repeat(3,minmax(0,1fr))}
+.au-onb .au-sb{display:flex;align-items:center;gap:12px;padding:16px 18px;border:1px solid var(--n200);border-radius:14px;background:var(--n0);font:inherit;text-align:left;color:var(--n900);cursor:pointer}
+.au-onb .au-sb:hover{border-color:var(--s300)}
+.au-onb .au-rd{width:20px;height:20px;border-radius:99px;border:1.5px solid var(--n300);flex:none;box-sizing:border-box}
+.au-onb .au-sb.on{border-color:var(--s600);background:var(--s50)}.au-onb .au-sb.on .au-rd{border:6px solid var(--s600)}
+.au-onb .au-sb b{display:block;font-size:16px}.au-onb .au-sb small{display:block;font-size:13px;color:var(--n600)}
+.au-onb .au-sec .au-inp{max-width:560px;padding-right:16px}
+.au-onb .au-sec .au-hint{margin:8px 0 0}
+.au-onb .au-empty{display:flex;gap:12px;align-items:flex-start;margin:20px 0 0;padding:0;background:none;box-shadow:none;font-size:14px;color:var(--n600)}
+.au-onb .au-empty input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--s600);flex:none}
+.au-onb .au-empty b{display:inline;font-size:14px;font-weight:600;color:var(--n900)}
+.au-onb .au-empty small{display:inline;font-size:14px;color:var(--n600)}.au-onb .au-empty small::before{content:" · "}
+.au-onb .au-pv{position:sticky;top:24px;margin:0;padding:24px;border:1px solid var(--n200);border-radius:20px;background:var(--n50);box-shadow:none}
+.au-onb .au-pv h4{margin:0;font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--n500)}
+.au-onb .au-nm{margin-top:8px;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--n900);word-break:keep-all}
+.au-onb .au-ty{margin-top:2px;font-size:14px;color:var(--n600)}
+.au-onb .au-mn{margin-top:20px;display:grid;gap:8px}
+.au-onb .au-mn div{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--n0);box-shadow:var(--sh1);font-size:14px;font-weight:600}
+.au-onb .au-mn svg{width:18px;height:18px;color:var(--n500)}
+.au-onb .au-mn em{margin-left:auto;font-style:normal;font-size:12px;font-weight:500;color:var(--n500)}
+.au-onb .au-note{display:flex;gap:8px;margin:18px 0 0;font-size:13px;color:var(--n600)}
+.au-onb .au-note svg{width:16px;height:16px;color:var(--s600)}
+.au-onb .au-foot{position:fixed;z-index:20;left:0;right:0;bottom:0;background:var(--n0);border-top:1px solid var(--n200);box-shadow:0 -6px 20px var(--hair)}
+.au-onb .au-fin{max-width:1180px;margin:0 auto;padding:16px 40px;display:flex;align-items:center;gap:12px}
+.au-onb .au-msg{margin:0 auto 0 0;font-size:14px;color:var(--n600);text-align:left}
+.au-onb .au-prev{height:44px;padding:0 18px;border-radius:12px;border:1px solid var(--n300);background:var(--n0);color:var(--n900);font-weight:600}
+.au-onb .au-go{width:auto;height:44px;padding:0 24px}
+
+@media (max-width:900px){
+  .su.au45.au-entry{grid-template-columns:1fr}
+  .au-entry .au-side{display:none}
+  .au-entry .au-main{justify-content:flex-start;padding:0 16px 32px}
+  .au-entry .au-mtop{display:flex;width:100%;max-width:440px;height:60px;align-items:center;margin-bottom:20px}
+  .au-onb .au-page{grid-template-columns:1fr;gap:28px}
+}
+@media (max-width:600px){
+  .au-entry h1{font-size:28px}.au-entry .au-sub{font-size:15px;margin-bottom:24px}.au45 .au-tabs{margin-bottom:28px}
+  .au45 .au-mail{padding:16px}
+  .au-onb .au-bartop{padding:0 16px;height:60px}
+  .au-onb .au-steps,.au-onb .au-who2{display:none}
+  .au-onb .au-page{padding:20px 16px 0}
+  .au-onb .au-eyebrow{display:none}
+  .au-onb .au-msteps{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:13px;font-weight:700;color:var(--n500)}
+  .au-onb .au-msteps .au-pb{flex:1}
+  .au-onb h1{font-size:28px}.au-onb .au-lead2{font-size:15px}
+  .au-onb .tgrid.au-types{grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
+  .au-onb .au-t{min-height:0;padding:16px}.au-onb .au-t b{margin-top:10px;font-size:16px}.au-onb .au-t p{font-size:12px}.au-onb .au-t .ti{width:38px;height:38px}
+  .au-onb .au-subs,.au-onb .au-subs.su-pub{grid-template-columns:1fr}
+  .au-onb .au-fin{padding:12px 16px}.au-onb .au-msg{display:none}
+  .au-onb .au-go{flex:1}
+}
+/* 공통 컴포넌트(app.css · dds.css · v43ui.css)의 입력 · 버튼 · .pv · .su-pub 규칙을 진입 화면에서만 덮는다 */
+.au45 .au-inp input,.au45 .au-inp input:focus{border:0!important;box-shadow:none!important;background:transparent!important;height:100%!important;padding:0!important;margin:0!important;border-radius:0!important;outline:none!important}
+.au45 .au-go{display:inline-flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;white-space:nowrap}
+.au45 .au-go svg{width:18px;height:18px}
+.au-onb .au-subs>.au-sb{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;min-height:0;white-space:normal}
+.au-onb .au-subs>.au-sb small{color:var(--n600)}
+.au-onb .au-aside{align-self:start;position:sticky;top:24px}
+.au-onb .au-pv{position:static}
+.au-onb .au-pv .au-note span,.au-onb .au-pv .au-mn span{display:inline;padding:0;margin:0;border:0;border-radius:0;background:none;box-shadow:none;font-size:inherit;font-weight:inherit;color:inherit}
+.au-onb .au-pv .au-note span{font-weight:500}
+body.mode-signup #fabBtn{display:none!important} /* 로그아웃 직후 남은 AI SAM 버튼 */
+.au-onb .au-subs>.au-sb{gap:12px!important;padding:16px 18px!important}
+
+/* v45 검수 보완 */
+#suEmpty[hidden]{display:none!important}
+.au-terms{margin:10px 0 0;font-size:12.5px;color:var(--muted);text-align:center}.au-terms a{color:var(--link,var(--pr));font-weight:600;text-decoration:none}

@@ -26,12 +26,12 @@
 .ops-t b{display:block;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.25}
 .ops-t b i{font-style:normal;font-size:12px;font-weight:500;margin-left:2px;color:var(--g600,#6C6C6C)}
 .ops-t span{display:block;font-size:11px;color:var(--g600,#6C6C6C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ops-t.g b{color:#00873D}.ops-t.w b{color:#C26A00}.ops-t.p b{color:#B53C0A}
+.ops-t.g b{color:var(--t-mag)}.ops-t.w b{color:#C26A00}.ops-t.p b{color:#B53C0A}
 .ops-bar{display:flex;height:10px;border-radius:99px;background:var(--g100,#EBEBEC);overflow:hidden}
-.ops-bar i{display:block;height:100%}.ops-bar .g{background:#00A651}.ops-bar .b{background:#00862D}
+.ops-bar i{display:block;height:100%}.ops-bar .g{background:var(--acc2)}.ops-bar .b{background:var(--pr)}
 .ops-lg{display:flex;gap:14px;margin:-6px 0 0;font-size:12px;color:var(--g600,#6C6C6C)}
 .ops-lg span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--g200,#D5D6D8);margin-right:5px}
-.ops-lg .g::before{background:#00A651}.ops-lg .b::before{background:#00862D}
+.ops-lg .g::before{background:var(--acc2)}.ops-lg .b::before{background:var(--pr)}
 .ops .sl-gh{margin:6px 0 -4px}
 .ops-todo,.ops-low,.ops-crl{display:flex;flex-direction:column;gap:2px}
 .ops-tr,.ops-cr{display:flex;align-items:center;gap:12px;min-height:56px;padding:6px 4px;border-radius:12px}
@@ -48,7 +48,7 @@
 .ops-lr small{color:var(--g600,#6C6C6C);font-size:12px;text-align:right}
 .ops-pb{display:inline-block;width:72px;height:6px;background:var(--g100,#EBEBEC);border-radius:9px;overflow:hidden;vertical-align:middle}
 .ops-lr .ops-pb{width:100%}
-.ops-pb i{display:block;height:100%;background:#00862D;border-radius:9px}
+.ops-pb i{display:block;height:100%;background:var(--bar,var(--pr));border-radius:9px}
 .ops-pb i.r{background:#E5484D}
 @media (max-width:560px){.ops-ts{grid-template-columns:repeat(3,minmax(0,1fr))}.ops-lr{grid-template-columns:minmax(0,1fr) 54px 44px}.ops-lr small{display:none}}
 /* 진도율 카드(출결) */
@@ -79,7 +79,7 @@
 .ck-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 .ck-card{display:flex;flex-direction:column;gap:4px;align-items:stretch;text-align:left;padding:8px 8px 10px;border:1.5px solid var(--g100,#EBEBEC);border-radius:14px;background:#fff;cursor:pointer;min-width:0}
 .ck-card:hover{border-color:var(--g300,#AAABAB)}
-.ck-card.on{border-color:var(--s400,#00862D);box-shadow:0 0 0 3px rgba(0,134,45,.16)}
+.ck-card.on{border-color:var(--s400,#00862D);box-shadow:0 0 0 3px rgba(24,29,26,0.08)}
 .ck-card b{font-size:14px;padding:0 2px}.ck-card small{font-size:12px;color:var(--g600,#6C6C6C);padding:0 2px}
 .ck-mini{display:block;position:relative;width:100%;aspect-ratio:1.414;overflow:hidden;border-radius:8px;background:#F4F2EC;container-type:inline-size}
 .ck-mini-in{position:absolute;left:0;top:0;width:760px;transform-origin:0 0;transform:scale(.2);pointer-events:none}
@@ -142,7 +142,7 @@
 /* v38 F5 R3 U14 · C13: 사이트 편집기 아래 레일 · 시안 카드 · 단계 표시의 작은 글자 12px 이상(PC · 390) */
 body .hps-ri{font-size:12px}body .hps-steps li,body .hps-cnt,body .hps-og small,body .hpw-rec,body .hpw-db em,body .hpw-qi,body .hpai-via,body .hpe-bar #hpeUndo em,body .hps-tab i,body .hps-lsxh summary b::after{font-size:12px!important}
 @media (max-width:860px){body .hps-ri{font-size:13px;min-height:56px}}
-.hps-flow .hps-fok{display:inline-flex;align-items:center;margin-left:2px;color:#16A34A}.hps-flow li.done button i{background:#16A34A;color:#fff}
+.hps-flow .hps-fok{display:inline-flex;align-items:center;margin-left:2px;color:var(--t-ok)}.hps-flow li.done button i{background:var(--ok);color:#fff}
 /* v38 F5 R3 K14: 390 초대 창 등 창 안 명단의 이름 링크는 줄 전체 높이 44px로 누른다 */
 @media (max-width:860px){#modal td a,#modal li a,#modal .row a,#modal a[data-act=mem-open],#main td a[data-act=mem-open]{display:inline-flex;align-items:center;min-height:44px}}
 @media (max-width:860px){body .cbox button,body .rg-att,body .hpi-att,body .aih-comp button{min-width:44px;min-height:44px}}

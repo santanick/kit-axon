@@ -33,7 +33,7 @@ const DREG = {
   get() { try { const r = JSON.parse(localStorage.getItem(this.K) || 'null'); return r && Array.isArray(r.list) ? r : { cur: null, list: [] }; } catch (e) { return { cur: null, list: [] }; } },
   put(r) { try { localStorage.setItem(this.K, JSON.stringify(r)); } catch (e) { } },
   cur() { return this.get().cur; },
-  use(tid) { const r = this.get(); r.cur = tid; this.put(r); },
+  use(tid) { const r = this.get(); r.cur = tid; if (tid) r.last = tid; this.put(r); }, /* v45 last: 로그아웃(cur=null) 뒤에도 「마지막 기관」을 안다 */
   upsert(e) { const r = this.get(); const i = r.list.findIndex(x => x.tid === e.tid); if (i < 0) r.list.push(e); else r.list[i] = { ...r.list[i], ...e }; this.put(r); },
   drop(tid) { const r = this.get(); r.list = r.list.filter(x => x.tid !== tid); if (r.cur === tid) r.cur = null; this.put(r); [roomKey(tid), roomKey(tid) + '.claude'].forEach(k => { try { localStorage.removeItem(k); } catch (e) { } }); }
 };
@@ -136,13 +136,13 @@ ACT['dr-set'] = el => { const r = S.org.room; const k = el.dataset.k; r[k] = el.
 ACT['dr-eg'] = el => { S.org.room.egress[el.dataset.k] = el.checked; logAudit(`외부 연결 ${el.checked ? '허용' : '차단'} — ${el.dataset.k}`); save(); render(); toast(el.checked ? '외부 연결을 허용했습니다.' : '외부 연결을 차단했습니다.', 'ok'); };
 const drSwitch = tid => { closeModal && closeModal(); $('#drawer') && $('#drawer').remove(); document.body.classList.remove('drawer-open'); DREG.use(tid); S = Store.get(); if (S && typeof upgradeState === 'function') upgradeState(); CUR = { ws: 'home', tab: '' }; history.replaceState(null, '', location.pathname); render(); };
 ACT['dr-switch'] = el => { const tid = el.dataset.v; const e = DREG.get().list.find(x => x.tid === tid); if (!e) return; drSwitch(tid); toast(`「${e.name}」 데이터룸으로 전환했습니다.`, 'ok'); };
-ACT['dr-new'] = () => { $('#drawer') && $('#drawer').remove(); document.body.classList.remove('drawer-open'); DREG.use(null); S = null; SU = { step: 1, type: '', name: '', email: '' }; history.replaceState(null, '', location.pathname); render(); };
+ACT['dr-new'] = () => { $('#drawer') && $('#drawer').remove(); document.body.classList.remove('drawer-open'); DREG.use(null); S = null; SU = { type: '', name: '', email: '' }; Object.assign(SUV, { view: 'signup', step: 'org', via: '', email: '', err: '', rooms: false, focus: '#orgH' }); /* v45: 이미 이 브라우저를 쓰는 운영자 — 진입을 건너뛰고 ① 기관 선택으로 */ history.replaceState(null, '', location.pathname); render(); };
 ACT['dr-drop'] = el => { const tid = el.dataset.v; const e = DREG.get().list.find(x => x.tid === tid); if (!e) return;
   modal('데이터룸 파기', `<p><b>${esc(e.name)}</b>(<code>${esc(tid)}</code>)의 데이터 · AI 키 · 사용량을 이 브라우저에서 모두 지웁니다. 되돌릴 수 없습니다.</p><p class="mini">운영에서는 기관 암호화 키를 폐기해 백업까지 복구할 수 없게 하는 방식(암호화 삭제)으로 파기하고 파기 확인서를 남깁니다.</p>`,
     [{ id: 'c', label: '취소' }, { id: 'ok', label: '파기', kind: 'red', run: () => { DREG.drop(tid); logAudit(`다른 데이터룸 파기 — ${e.name}(${tid})`); save(); render(); toast('파기했습니다.', 'ok'); } }]); };
 ACT['reset-all'] = () => { const tid = DREG.cur();
   modal('이 데이터룸 파기', `<p><b>${esc(S.org.name)}</b>(<code>${esc(tid)}</code>)의 데이터 · AI 키 · 사용량을 이 브라우저에서 모두 지우고 가입 화면으로 돌아갑니다. 다른 기관의 데이터룸은 그대로입니다.</p>`,
-    [{ id: 'c', label: '취소' }, { id: 'ok', label: '파기', kind: 'red', run: () => { Store.clear(); S = null; SU = { step: 1, type: '', name: '', email: '' }; history.replaceState(null, '', location.pathname); render(); } }]); };
+    [{ id: 'c', label: '취소' }, { id: 'ok', label: '파기', kind: 'red', run: () => { Store.clear(); S = null; SU = { type: '', name: '', email: '' }; Object.assign(SUV, { view: '', step: 'entry', mailOpen: false, via: '', email: '', err: '', rooms: false }); history.replaceState(null, '', location.pathname); render(); } }]); };
 ACT['data-export'] = () => { const r = R(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ format: 'didisam-dataroom/1', tenant: r.tid, exportedAt: new Date().toISOString(), data: S }, null, 1)], { type: 'application/json' })); a.download = `didisam_${r.tid}_${today()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); logAudit('데이터룸 내보내기'); save(); };
 
 /* 설치 구성 파일(tenant.yaml) — deploy/ 참조 키트가 읽는 형식 */
@@ -170,8 +170,20 @@ function tenantYAML() {
 ACT['dr-yaml'] = () => { const r = R(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([tenantYAML()], { type: 'text/yaml' })); a.download = `didisam-tenant-${r.tid}.yaml`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); logAudit('설치 구성 파일 내려받기'); save(); toast('설치 구성 파일을 내려받았습니다.', 'ok'); };
 
 /* 사이드바 기관 카드에 데이터룸 표시 · 가입 화면에 기존 데이터룸 */
-AFTER.push(() => { const c = $('.orgcard small'); if (c && S?.org?.room) c.textContent = `${DRM[S.org.room.mode].n} · 데이터룸 분리`; });
-{ const base = renderSignup; renderSignup = (...a) => { base(...a); const L = DREG.get().list; if (!L.length) return; const f = $('#suForm'); f && f.insertAdjacentHTML('afterend', `<div class="drback"><b>이 브라우저의 다른 기관 데이터룸</b><div>${L.map(x => `<button type="button" class="btn sm" data-act="dr-switch" data-v="${esc(x.tid)}">${esc(x.name)} <small>${esc(DRM[x.mode]?.n || '')}</small></button>`).join('')}</div></div>`); }; }
+AFTER.push(() => { const c = $('.orgcard small'); if (/\bmode-(signup|onb)\b/.test(document.body.className)) return; /* v45 진입 화면 기관 목록에 배포 모델 용어를 보이지 않는다 */ if (c && S?.org?.room) c.textContent = `${DRM[S.org.room.mode].n} · 데이터룸 분리`; });
+/* v45 진입: 첫 탭 판정(D4) — 이 브라우저에 기관이 있으면 로그인, 없으면 가입. 로그인 탭에서 어떤 방식이든 누르면 「이 브라우저의 기관」 목록 */
+SUV.dflt = () => DREG.get().list.length ? 'login' : 'signup';
+const drRooms = () => { const L = DREG.get().list.slice().sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+  if (!L.length) return `<div class="drback au-rooms empty"><p>이 브라우저에 저장된 기관이 없습니다. 3초 만에 시작해 보십시오.</p><button type="button" class="btn" data-act="en-view" data-v="signup">가입으로</button></div>`;
+  return `<div class="drback au-rooms"><b id="drRoomsH">이 브라우저의 기관</b><ul aria-labelledby="drRoomsH">${L.map(x => `<li><button type="button" class="au-room" data-act="dr-switch" data-v="${esc(x.tid)}"><span class="ti">${typeof ticon === 'function' && TYPES[x.type] ? ticon(TYPES[x.type].icon) : ''}</span><span><b>${esc(x.name || '')}</b><small>${esc(TYPES[x.type]?.name || '')} · ${esc(DRM[x.mode]?.n || '')}</small></span></button></li>`).join('')}</ul></div>`; };
+const drLast = () => { const r = DREG.get(); const L = r.list; if (!L.length) return ''; const y = L.find(x => x.tid === r.last) || L[L.length - 1];
+  return `<button type="button" class="au-last" data-act="dr-last" data-v="${esc(y.tid)}"><span class="au-av" aria-hidden="true">${esc(String(y.name || '?').trim().slice(0, 1))}</span><span><b>${esc(y.name || '')}</b><small>${esc(TYPES[y.type]?.name || '')} · 이 브라우저</small></span><span class="au-badge">마지막 기관</span></button>`; };
+{ const base = renderSignup; renderSignup = (...a) => { base(...a); const last = $('#entryLast'); if (last && !SUV.live()) last.innerHTML = drLast(); const box = $('#entryRooms'); if (!box || SUV.live()) return; if (SUV.rooms && SUV.view === 'login') { box.innerHTML = drRooms(); const fb = box.querySelector('button'); if (fb) try { fb.focus(); } catch (e) { } } }; }
+/* v45 데모 로그아웃 — 데이터는 이 브라우저에 남기고 진입(로그인 탭)으로 */
+ACT['demo-logout'] = () => { closeModal && closeModal(); $('#drawer') && $('#drawer').remove(); document.body.classList.remove('drawer-open'); DREG.use(null); S = null; SU = { type: '', name: '', email: '' }; Object.assign(SUV, { view: 'login', step: 'entry', mailOpen: false, via: '', email: '', err: '', rooms: false, focus: '#entryH' }); history.replaceState(null, '', location.pathname); render(); };
+AFTER.push(cur => { if (SUV.live() || !S || !S.org) return;
+  const side = cur.ws === 'settings' && $('.sx3-side'); if (side && !side.querySelector('.sx3-acc')) side.insertAdjacentHTML('beforeend', `<section class="sx3-box sx3-acc au-acc"><h3>계정</h3><p class="mini">데모 계정 · 이 브라우저에만 저장됩니다.</p><div class="sx-acts"><button type="button" class="btn sm ghost" data-act="demo-logout">이 브라우저에서 로그아웃</button></div></section>`);
+  const p = $('.acp'); if (p && !p.querySelector('[data-act=demo-logout]')) p.insertAdjacentHTML('beforeend', `<button type="button" role="menuitem" data-act="demo-logout">${ic('arrow', 14)} 이 브라우저에서 로그아웃</button>`); });
 
 /* 대화 · 이동 */
 Object.assign(DICT, { '데이터룸 · 배포': 'Data room · Deployment|データルーム · 配備|数据室 · 部署|資料室 · 部署|Phòng dữ liệu · Triển khai|ห้องข้อมูล · การติดตั้ง|Ruang data · Penerapan|Sala de datos · Despliegue|Salle de données · Déploiement' });
@@ -179,3 +191,4 @@ if (typeof COVER !== 'undefined' && Array.isArray(COVER)) COVER.push(['[신규] 
 { const base = answer; answer = q => { if (/데이터\s*룸|배포\s*(모델|방식)|설치형|온프레미스|프라이빗\s*클라우드|폐쇄망|고객\s*클라우드/i.test(q) && !/만들|생성|발송|보내/.test(q)) { UI.settings = 'room'; const r = R();
       return { text: `이 기관의 데이터룸은 ${DRM[r.mode].n} 모델(${DRC[r.cloud]?.[0] || ''} · ${(DRC[r.cloud]?.[1] || {})[r.region] || r.region})로 구성되어 있습니다. 기관마다 데이터 · 파일 · 암호화 키 · AI 사용량 · 로그가 분리되며, 공유 SaaS · 전용 클라우드 · 고객 클라우드 · 설치형 중에서 바꿀 수 있습니다.`, go: 'settings' }; }
     return base(q); }; }
+ACT['dr-last'] = el => ACT['dr-switch'](el); /* v45 로그인 탭 「마지막 기관」 카드 */

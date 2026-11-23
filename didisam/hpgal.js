@@ -100,7 +100,7 @@
     /* 정보 칸은 오른쪽(넓은 화면) — 미리보기가 주인공 */
     const sh = w.querySelector('.tpd-sh'); if (sh) { const pv = sh.querySelector('.tpg-pv'); const info = document.createElement('div'); info.className = 'tpg-info';
       [...sh.children].filter(x => x !== pv && !x.classList.contains('tpg-tool')).forEach(x => info.appendChild(x)); sh.appendChild(info); }
-    const go = w.querySelector('[data-act=tpd-use]'); if (go && S.site && S.site.tpl === id) go.textContent = '이 템플릿으로 다시 시작';
+    const go = w.querySelector('[data-act=tpd-use]'); if (go && S.site && S.site.tpl === id && !(S.onb && S.onb.tpl === 'pending')) go.textContent = '이 템플릿으로 다시 시작'; /* v45: 가입 ② 단계에서는 「이 템플릿으로 시작」 그대로 */
     requestAnimationFrame(fitPv); }
   { const base = ACT['tpd-open']; if (base) ACT['tpd-open'] = (el, ...r) => { const inst = !!(el && el.dataset && el.dataset.tpgInst); const res = base(el, ...r); try { sheetUp(el.dataset.v, inst); } catch (e) { console.error('hpgal sheet', e); } return res; }; }
   { const base = ACT['tpd-dev']; ACT['tpd-dev'] = (el, ...r) => { const b = $1('#slSheet .tpg-pv'); if (!b) return base && base(el, ...r); UI.tpgDev = el.dataset.v; b.classList.toggle('m', el.dataset.v === 'm');

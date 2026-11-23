@@ -58,7 +58,7 @@ const UX_MIN = { org: 1, course: 5, site: 3, people: 2, pg: 3 };
   const set = (id, o) => { const s = BLD_STEPS.find(x => x.id === id); if (!s) return; Object.keys(o).forEach(k => { try { delete s[k]; } catch (e) { } Object.defineProperty(s, k, { value: o[k], writable: true, enumerable: true, configurable: true }); }); };
   set('org', { n: '기관 정보', d: '기관 이름 · 유형(가입할 때 입력)', req: true });
   set('course', { n: () => `${t('cls')} 만들기`, d: '커리큘럼 · 영상 · 퀴즈 · 과제', req: true });
-  set('site', { n: '사이트 게시', d: '홈페이지 · 학습 사이트를 꾸미고 게시', def: () => true });
+  set('site', { n: '홈페이지 만들기', d: '템플릿 적용(가입 때) · 꾸미고 게시는 홈페이지 메뉴', def: () => true }); /* v45: 가입 ② 템플릿 선택(onb45.js onbFinish)이 steps.site.done — 게시하면 bAuto로도 완료 */
   set('people', { n: () => `${t('learner')} 초대`, d: '초대 링크 · 명단 한 번에 등록', req: true });
   set('pg', { n: '결제 연결', d: '토스페이먼츠 가입 신청(심사 중에도 강좌 준비 가능)', def: ty => UX_PAID.includes(ty) });
   BLD_STEPS.forEach(s => { if (!UX_ESS.includes(s.id)) { try { delete s.def; } catch (e) { } s.def = () => false; } });
