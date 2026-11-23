@@ -20,7 +20,7 @@ test('aigw 단위: 레벨 판정 · 힌트 검증', () => {
   assert.equal(AG.hintCheck('L1', sol, { step: 4 }, { step: 5, attempt: '짧음' }).err.code, 'hint_locked'); /* 자기 설명 없음 */
   assert.equal(AG.hintCheck('L1', sol, { step: 4 }, { step: 5, attempt: '자기 설명을 충분히 적었습니다', selfExp: true }).next.step, 5);
   assert.equal(AG.hintCheck('L1', it, null, { step: 9 }).err.status, 400);
-  assert.deepEqual(Object.keys(AG.pubPol({ on: true, train: true, preset: {} })).sort(), ['evalNotice', 'lvl', 'on', 'retain']);
+  assert.deepEqual(Object.keys(AG.pubPol({ on: true, train: true, preset: {} })).sort(), ['evalNotice', 'lvl', 'on', 'preset', 'retain']); /* 통합 v46: preset은 학습자 레벨 판정용으로 공개(train · quota는 비공개 유지) */
 });
 
 test('lev 단위: 글 거부 · diffLp', () => {
@@ -74,7 +74,7 @@ test('게이트웨이 · 이벤트 API', async t => {
     const x = await call('L', 'POST', `/api/pub/${A.tid}/tutor`, { q: '답 알려줘', item: { key: 'c1/x1', lvl: 'L3' } }); assert.equal(x.status, 403); assert.equal(x.j.error, 'ai_level_off');
     const n = seen.length; const r = await call('L', 'POST', `/api/pub/${A.tid}/tutor`, { q: '실무 정리 부탁', item: { key: 'c1/i3' } });
     assert.equal(r.status, 200); assert.equal(r.j.lvl, 'L2'); assert.match(seen[n].system, /파트너\(L2\)/);
-    const site = await call('X', 'GET', `/api/pub/${A.tid}/site`); assert.deepEqual(site.j.site.aipol, { on: true, lvl: 'L1', retain: 'term', evalNotice: true });
+    const site = await call('X', 'GET', `/api/pub/${A.tid}/site`); assert.deepEqual(site.j.site.aipol, { on: true, lvl: 'L1', retain: 'term', evalNotice: true, preset: { exam: 'L0', assign: 'L1' } });
     const me = await call('L', 'GET', `/api/pub/${A.tid}/me`); assert.ok(JSON.stringify(me.j).includes('AI초안피드백')); /* 승인 발송 뒤 보임 */
   });
   await t.test('정책 on: 힌트 사다리 서버 검증 · lp.hint 서버 소유 · 이벤트(신뢰 A)', async () => {
