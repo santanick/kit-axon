@@ -213,7 +213,7 @@
   });
 
   /* 새로 가입한 기관만 체험(TRIAL) 기본 포함량으로 켠다(기존 기관은 aiplan 없음 → 동작 불변). 서버는 aiplan 없는 기관의 체험 기본값만 받는다 */
-  { const base = createOrg; createOrg = (...a) => { const set = () => { try { if (S && S.org) { S.aiplan = { monthTokens: TRIAL, overage: 'pack' }; S.plan = { code: 'TRIAL', tier: '체험', contract: 'sub', aiMonthTokens: TRIAL, since: kst() }; save(); } } catch (e) { console.error(e); } };
+  { const base = createOrg; createOrg = (...a) => { const set = () => { try { if (S && S.org) { S.aiplan = { monthTokens: TRIAL, overage: 'pack' }; S.plan = { code: 'TRIAL', tier: 'pro', contract: 'sub', aiMonthTokens: TRIAL, since: kst() }; save(); } } catch (e) { console.error(e); } };
     const r = base(...a); if (r && typeof r.then === 'function') return r.then(ok => { if (ok) set(); return ok; }); set(); return r; }; } /* 운영 모드 createOrg는 Promise(성공 true) */ /* eslint-disable-line no-global-assign */
   window.AIUSE = { data, planOf, quote, simCredits, reload: () => { U.d = null; U.at = 0; load(true); } };
 })();

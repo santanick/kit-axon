@@ -43,16 +43,16 @@ function siteOn() { const j = JSON.parse(RAW); j.aipol = { on: true, lvl: 'L1', 
   { const { ctx, p, errs } = await open({ on: true, h: `#c/c2/${A1}` }); await p.evaluate(() => { const x = document.querySelector('[data-vis="later"]'); if (x) x.click(); }); await p.waitForTimeout(200);
     await go(p, `#c/c2/${A1}`);
     const b = await T(p, '.v2-aib'); ok(/이 과제의 AI: 코치/.test(b) && /개념을 스스로 익히는 과제라/.test(b), `L1 띠 + 이유(${b.slice(0, 50)})`); ok(/평가에 참고될 수 있어요/.test(b), '평가 참고 사전 고지');
-    ok(await p.evaluate(() => { const a = document.querySelector('.imain .v2-aib'); const h = document.querySelector('.imain h2'); return !!(a && h && (h.compareDocumentPosition(a) & 4)); }), '띠 위치: 항목 제목 바로 아래');
+    ok(await p.evaluate(() => { const a = document.querySelector('.imain .l47-ail') || document.querySelector('.imain .v2-aib'); const h = document.querySelector('.imain h2'); return !!(a && h && (h.compareDocumentPosition(a) & 4)); }), '띠 위치: 항목 제목 바로 아래(v47: 웹은 한 줄 요약 .l47-ail, 전체 띠는 「질문 · 도움」 시트)');
     await go(p, `#c/c2/${QZ}`); ok(/기관 기본: 코치/.test(await T(p, '.v2-aib')), '레벨 미지정 퀴즈: 「기관 기본: 코치」');
     await go(p, `#c/c2/${EX}`); const ex = await T(p, '.v2-aib'); ok(/이 과제는 AI 없이 풀어요/.test(ex) && !(await p.$('.v2-aib button')), '시험(프리셋 L0): AI 없이 · 질문 넘기기도 없음');
     ok(await p.evaluate(() => document.getElementById('ltut').hidden), '시험 L0: 튜터 버튼 숨김');
     await p.evaluate(() => ltAsk('정답 알려줘')); await p.waitForTimeout(200); ok(!(await p.evaluate(() => LT.msgs.some(m => m.me && /정답 알려줘/.test(m.t)))), '시험 L0: 튜터 질문 차단');
     await go(p, `#c/c2/${A0}`); ok(/이 과제는 AI 없이 풀어요/.test(await T(p, '.v2-aib')) && await p.evaluate(() => document.getElementById('ltut').hidden), '과제 L0: 띠 · 튜터 숨김');
-    const n0 = await p.evaluate(() => (LR.lp.tutor && LR.lp.tutor.ask || []).length); await p.click('[data-v2="esc0"]'); await p.fill('.v2-esc0 textarea', '요구사항 2번이 무슨 뜻인지 모르겠어요'); await p.click('.v2-esc0 button[type=submit]'); await p.waitForTimeout(250);
+    const n0 = await p.evaluate(() => (LR.lp.tutor && LR.lp.tutor.ask || []).length); if (!(await p.locator('[data-v2="esc0"]').first().isVisible().catch(() => false)) && await p.$('#l47Fab')) { await p.click('#l47Fab'); await p.waitForTimeout(300); } /* v47: 웹은 「질문 · 도움」 시트 안 */ await p.locator('[data-v2="esc0"] >> visible=true').first().click(); await p.fill('.v2-esc0 textarea', '요구사항 2번이 무슨 뜻인지 모르겠어요'); await p.click('.v2-esc0 button[type=submit]'); await p.waitForTimeout(250);
     ok(await p.evaluate(n => (LR.lp.tutor.ask || []).length === n + 1, n0), '과제 L0: 「선생님께 질문 넘기기」 전송');
     /* 사다리 */
-    await go(p, `#c/c2/${A1}`); ok(await p.evaluate(() => !document.getElementById('ltut').hidden), 'L1: 튜터 보임'); await p.click('[data-v2="ladder"]'); await p.waitForTimeout(300);
+    await go(p, `#c/c2/${A1}`); ok(await p.evaluate(() => !document.getElementById('ltut').hidden), 'L1: 튜터 보임'); if (!(await p.locator('[data-v2="ladder"]').first().isVisible().catch(() => false)) && await p.$('#l47Fab')) { await p.click('#l47Fab'); await p.waitForTimeout(300); } await p.locator('[data-v2="ladder"] >> visible=true').first().click(); await p.waitForTimeout(300);
     const L = await p.evaluate(() => ({ lm: !!document.querySelector('.lt-panel.v2-lmode'), st: document.querySelectorAll('.v2-st').length, pill: (document.querySelector('.v2-pill') || {}).textContent, note: document.querySelector('.lt-note').textContent, lh: document.querySelector('.v2-lh').textContent }));
     ok(L.lm && L.st === 5, `힌트 받기 → 사다리 5단계(${L.st})`); ok(/이 과제의 AI: 코치/.test(L.pill || ''), '튜터 머리: 레벨 표시'); ok(/이번 학기 동안 보관해요/.test(L.note), '보존 정책 문구(term)'); ok(/먼저 내 생각을 적어 주세요/.test(L.lh), '빈 상태 문구');
     const click = async s => { await p.click(s); await p.waitForTimeout(250); };
@@ -86,7 +86,7 @@ function siteOn() { const j = JSON.parse(RAW); j.aipol = { on: true, lvl: 'L1', 
 
   /* ── C. 데모 aiguard 레벨 판정 · 단계 지시문(브라우저 키) ── */
   { const AI = []; const { ctx, p, errs } = await open({ on: true, ai: AI, h: `#c/c2/${A1}` }); await p.evaluate(() => { const x = document.querySelector('[data-vis="later"]'); if (x) x.click(); }); await go(p, `#c/c2/${A1}`);
-    await p.click('[data-v2="ladder"]'); await p.waitForTimeout(250); await p.click('.v2-st.nx [data-v2="open"]'); await p.waitForTimeout(500);
+    if (!(await p.locator('[data-v2="ladder"]').first().isVisible().catch(() => false)) && await p.$('#l47Fab')) { await p.click('#l47Fab'); await p.waitForTimeout(300); } await p.locator('[data-v2="ladder"] >> visible=true').first().click(); await p.waitForTimeout(250); await p.click('.v2-st.nx [data-v2="open"]'); await p.waitForTimeout(500);
     const sys = AI[0] ? JSON.stringify(AI[0].system) : ''; ok(/힌트 1단계 · 개념 질문/.test(sys) && /AI 레벨 L1 코치/.test(sys), '데모: 단계 · 레벨 지시문을 system에 덧붙임');
     ok(/Claude 힌트 1번/.test(await T(p, '.v2-st.cur .v2-box')), '데모: Claude 응답을 1단계 힌트로 표시');
     const g = await p.evaluate(async () => { const keep = window.LV2; const call = async c => { window.LV2 = { on: () => true, ctx: () => c }; try { const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: 'x', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] }) }); return [r.status, (await r.json()).error.type]; } finally { window.LV2 = keep; } };
@@ -96,8 +96,8 @@ function siteOn() { const j = JSON.parse(RAW); j.aipol = { on: true, lvl: 'L1', 
 
   /* ── D. 휴대폰 390 ── */
   { const { ctx, p, errs } = await open({ on: true, w: 390, h: `#c/c2/${A1}` }); await p.evaluate(() => { const x = document.querySelector('[data-vis="later"]'); if (x) x.click(); }); await go(p, `#c/c2/${A1}`);
-    ok(await p.evaluate(() => { const a = document.querySelector('.v2-aib'); return !!(a && a.getBoundingClientRect().width > 0); }), '390: 레벨 띠 보임');
-    await p.click('[data-v2="ladder"]'); await p.waitForTimeout(300);
+    ok(await p.evaluate(() => { const a = [...document.querySelectorAll('.l47-ail, .v2-aib')].find(x => x.getBoundingClientRect().width > 0); return !!a; }), '390: 레벨 띠(또는 v47 한 줄 요약) 보임');
+    if (!(await p.locator('[data-v2="ladder"]').first().isVisible().catch(() => false)) && await p.$('#l47Fab')) { await p.click('#l47Fab'); await p.waitForTimeout(300); } await p.locator('[data-v2="ladder"] >> visible=true').first().click(); await p.waitForTimeout(300);
     const m = await p.evaluate(() => ({ ov: document.documentElement.scrollWidth - innerWidth, lad: !!document.querySelector('.v2-lad'), small: [...document.querySelectorAll('.v2-lad button, .v2-tabs button')].filter(b => b.getBoundingClientRect().height && b.getBoundingClientRect().height < 44).map(b => b.textContent.trim()) }));
     ok(m.lad && m.ov <= 0, `390: 사다리 · 가로 넘침 없음(${m.ov})`); ok(!m.small.length, `390: 누르는 곳 44px(${m.small.join('/')})`);
     ok(!errs.length, `390: pageerror 0 ${errs.slice(0, 2).join(' / ')}`); await ctx.close(); }

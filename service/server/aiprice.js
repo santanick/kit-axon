@@ -44,7 +44,7 @@ function keepPlan(doc, cur, today) {
   if (sp) out.aiplan = { monthTokens: +sp.monthTokens, overage: ov || (sp.overage === 'block' ? 'block' : 'pack') };
   else if (doc.aiplan && +doc.aiplan.monthTokens === TRIAL_TOKENS) out.aiplan = { monthTokens: TRIAL_TOKENS, overage: ov || 'pack' };
   if (cur && cur.plan && typeof cur.plan === 'object') out.plan = cur.plan;
-  else if (out.aiplan && !sp) out.plan = { code: 'TRIAL', tier: '체험', contract: 'sub', aiMonthTokens: TRIAL_TOKENS, since: today };
+  else if (out.aiplan && !sp) out.plan = { code: 'TRIAL', tier: 'pro', contract: 'sub', aiMonthTokens: TRIAL_TOKENS, since: today };
   return out;
 }
 /* 산타 관리자 입력 검증 → { plan, memo } 또는 오류 문구 */

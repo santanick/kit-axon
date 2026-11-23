@@ -63,7 +63,7 @@ public final class DdAiPrice {
         if (sp != null) { ObjectNode o = doc.putObject("aiplan"); o.put("monthTokens", (long) DdAiGateway.jsNum(sp.get("monthTokens"))); o.put("overage", ov != null ? ov : "block".equals(DdAiGateway.s(sp.get("overage"))) ? "block" : "pack"); }
         else if (na != null && na.isObject() && na.get("monthTokens") != null && DdAiGateway.jsNum(na.get("monthTokens")) == TRIAL_TOKENS) { ObjectNode o = doc.putObject("aiplan"); o.put("monthTokens", TRIAL_TOKENS); o.put("overage", ov != null ? ov : "pack"); trial = true; }
         if (curPlan != null && curPlan.isObject()) doc.set("plan", curPlan);
-        else if (trial) { ObjectNode o = doc.putObject("plan"); o.put("code", "TRIAL"); o.put("tier", "체험"); o.put("contract", "sub"); o.put("aiMonthTokens", TRIAL_TOKENS); o.put("since", today); }
+        else if (trial) { ObjectNode o = doc.putObject("plan"); o.put("code", "TRIAL"); o.put("tier", "pro"); o.put("contract", "sub"); o.put("aiMonthTokens", TRIAL_TOKENS); o.put("since", today); }
     }
     /** 산타 관리자 입력 → plan(ObjectNode). 잘못되면 400 */
     public static ObjectNode santaInput(JsonNode b, String today) {

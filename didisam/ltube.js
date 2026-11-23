@@ -157,7 +157,7 @@
     return `<section class="tb-hl${one ? ' tb-top' : ''}" aria-label="오늘 한 줄"><div class="tb-hlx"><small class="tb-eb">${eb}</small><h1>${nm ? `${esc(nm)}님,${one ? ' ' : '<br>'}` : ''}${q}</h1></div>${one || ''}</section>`; }
   /* v47 D2: 인사 + 오늘 목표(작은 링 48px)를 한 줄로. 링을 누르면 기존 목표 시트(data-tb="goal") 그대로. 시설 기관은 월 이용 카드라 링 없음 */
   function topHTML() { if (tyKey() === 'public_facility') return hlHTML(' '); const g = goal(), m = Math.min(minToday(), 999), p = Math.min(100, Math.round(m / g * 100)); const S = strict(); const st = streakN();
-    return hlHTML(`<button type="button" class="tb-gm${m >= g ? ' done' : ''}" data-tb="goal" aria-label="오늘 목표 ${g}분 중 ${m}분${st ? ` · ${st}일 연속` : ''}${S ? ' · 참고용, 진도 · 출석에는 반영되지 않음' : ''} · 목표 바꾸기">${ringSVG(p, 48, 6)}<b>${m}<small>/${g}분</small></b></button>`); }
+    return hlHTML(`<button type="button" class="tb-gm${m >= g ? ' done' : ''}" data-tb="goal" aria-label="오늘 목표 ${gLabel(g)} 중 ${m}분${st ? ` · ${st}일 연속` : ''}${S ? ' · 참고용, 진도 · 출석에는 반영되지 않음' : ''} · 목표 바꾸기">${ringSVG(p, 48, 6)}<b>${m}<small>/${g}분</small></b></button>`); }
   /* 이번 주 7칸(월~일): 목표 달성일 · 오늘 · 앞날 — 홈 히어로와 완료 화면이 같이 쓴다 */
   function weekDays() { const d = day(); const now = new Date(Date.now() + 9 * 3600e3); const dow = (now.getUTCDay() + 6) % 7; const mon = new Date(now.getTime() - dow * 864e5);
     return [...Array(7)].map((_, i) => { const di = new Date(mon.getTime() + i * 864e5).toISOString().slice(0, 10); return { di, l: '월화수목금토일'[i], ok: reached(di), today: di === d, fut: di > d }; }); }

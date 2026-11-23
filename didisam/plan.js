@@ -16,7 +16,7 @@
     name: { standard: 'Standard', pro: 'Pro', enterprise: 'Enterprise' },
     maxLevel: { standard: 'L1', pro: 'L2', enterprise: 'L3' },
     trialDays: 14,
-    contact: '', /* 산타 문의 메일 주소(비어 있으면 담당 매니저 · 고객센터로 보낼 문구만 만든다) */
+    contact: 'support@didisam.com', channel: 'https://newdidisam.channel.io/home', /* 산타 문의: 채널톡 상담(어카운트 매니저) + 메일 — 대표님 확정 2026-11-24 */
     codes: { E1: 'standard', A1: 'standard', U0: 'standard', G1: 'standard', E2: 'pro', A2: 'pro', U1: 'pro', U2: 'pro', G2: 'pro', E3: 'enterprise', E4: 'enterprise', A3: 'enterprise', A4: 'enterprise', U3: 'enterprise', U4: 'enterprise', G3: 'enterprise', G4: 'enterprise', TRIAL: 'pro' },
     /* min: 이 단계부터 포함 · menus: 잠그는 메뉴 · conns: 잠그는 외부 연결 */
     features: [
@@ -155,8 +155,9 @@
   ACT['pl-ask'] = el => { const I = info(); const what = (el && el.dataset && el.dataset.v) || ''; const min = (el && el.dataset && el.dataset.min) || 'pro'; const c = TB().contact;
     const txt = `[디디쌤 요금제 문의] 기관: ${(S.org && S.org.name) || ''} · 지금 요금제: ${chipTxt()} · 필요한 기능: ${what || '요금제 변경'}(${nm(min)} 요금제부터)`;
     if (typeof modal !== 'function') return;
-    modal('산타에 문의', `<p>요금제 변경은 산타가 계약에 맞춰 반영합니다. 아래 내용을 ${c ? `<b>${E(c)}</b>로` : '담당 매니저 또는 산타 고객센터로'} 보내 주십시오.</p><textarea name="pl" rows="3" readonly style="width:100%">${E(txt)}</textarea>`,
-      [{ id: 'c', label: '닫기' }, { id: 'cp', label: '내용 복사', kind: 'pri', run: () => { try { navigator.clipboard && navigator.clipboard.writeText(txt); } catch (e) { } if (typeof logAudit === 'function') { logAudit(`요금제 문의 — ${what || '요금제 변경'}`); if (typeof save === 'function') save(); } if (typeof toast === 'function') toast('문의 내용을 복사했습니다.', 'ok'); if (c) try { location.href = `mailto:${c}?subject=${encodeURIComponent('디디쌤 요금제 문의')}&body=${encodeURIComponent(txt)}`; } catch (e) { } } }]); };
+    const ch = TB().channel; const cp = () => { try { navigator.clipboard && navigator.clipboard.writeText(txt); } catch (e) { } if (typeof logAudit === 'function') { logAudit(`요금제 문의 — ${what || '요금제 변경'}`); if (typeof save === 'function') save(); } };
+    modal('산타에 문의', `<p>요금제 변경은 산타 어카운트 매니저가 계약에 맞춰 반영합니다. <b>채널톡 상담</b>으로 바로 연결하거나 ${c ? `<b>${E(c)}</b>로 메일을` : '메일을'} 보내 주십시오. 아래 내용은 자동으로 복사됩니다.</p><textarea name="pl" rows="3" readonly style="width:100%">${E(txt)}</textarea>`,
+      [{ id: 'c', label: '닫기' }, ...(ch ? [{ id: 'ch', label: '채널톡 상담', kind: 'pri', run: () => { cp(); try { window.open(ch, '_blank', 'noopener'); } catch (e) { } if (typeof toast === 'function') toast('문의 내용을 복사했습니다. 채널톡 창에 붙여 넣어 주십시오.', 'ok'); } }] : []), { id: 'cp', label: c ? '메일 보내기' : '내용 복사', kind: ch ? '' : 'pri', run: () => { try { navigator.clipboard && navigator.clipboard.writeText(txt); } catch (e) { } if (typeof logAudit === 'function') { logAudit(`요금제 문의 — ${what || '요금제 변경'}`); if (typeof save === 'function') save(); } if (typeof toast === 'function') toast('문의 내용을 복사했습니다.', 'ok'); if (c) try { location.href = `mailto:${c}?subject=${encodeURIComponent('디디쌤 요금제 문의')}&body=${encodeURIComponent(txt)}`; } catch (e) { } } }]); };
   document.addEventListener('change', e => { if (!e.target || e.target.id !== 'plDemo' || live() || role() !== 'owner') return; const c = e.target.value;
     if (!c) delete S.plan; else S.plan = { code: c, tier: TB().codes[c], contract: c === 'TRIAL' ? 'trial' : 'annual', aiMonthTokens: (S.plan && S.plan.aiMonthTokens) || (S.aiplan && +S.aiplan.monthTokens) || 0, since: today() };
     if (typeof logAudit === 'function') logAudit(`요금제(시연) — ${c || '기존 계약'}`); save(); render(); });

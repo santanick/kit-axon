@@ -52,8 +52,8 @@ const LP = { tube: { goal: 20, sec: { [today]: 720 } } };
       ok(/오늘 300회 남/.test(note), `학습자 튜터: 「오늘 300회 남음」 — ${note}`);
       await p.evaluate(() => { const x = document.querySelector('[data-tact="close"]'); x && x.click(); }); await p.waitForTimeout(150);
       /* 3) 하루 목표 */
-      const g0 = await p.evaluate(() => (document.querySelector('.tb-gb') || {}).textContent || ''); ok(/오늘 목표 20분/.test(g0), `기존 저장값 20분 그대로 — ${g0.replace(/\s+/g, ' ').slice(0, 60)}`);
-      await p.click('.tb-gb'); await p.waitForTimeout(150);
+      const g0 = await p.evaluate(() => (e => e ? (e.getAttribute('aria-label') + ' ' + e.textContent) : '')([...document.querySelectorAll('[data-tb="goal"]')].find(x => x.offsetParent)) /* v47 통합: 홈 목표는 한 줄 링(.tb-gm), 카드(.tb-gb)는 더 보기 안 */ || ''); ok(/오늘 목표 20분/.test(g0), `기존 저장값 20분 그대로 — ${g0.replace(/\s+/g, ' ').slice(0, 60)}`);
+      await p.locator('[data-tb="goal"] >> visible=true').first().click(); await p.waitForTimeout(150);
       const sh = await p.evaluate(() => ({ chips: [...document.querySelectorAll('.tb-gopt button')].map(b => b.textContent.trim()), on: (document.querySelector('.tb-gopt .on') || {}).textContent, inp: (document.querySelector('#tbGIn') || {}).value, max: (document.querySelector('#tbGIn') || {}).max, over: document.documentElement.scrollWidth > innerWidth + 1,
         tap: [...document.querySelectorAll('#apSheet button')].filter(b => { const r = b.getBoundingClientRect(); return r.width && r.height < 44; }).map(b => b.textContent.trim()) }));
       ok(sh.chips.join() === '10분,20분,30분,1시간,1시간 30분,2시간,3시간,4시간' && sh.on === '20분' && sh.inp === '20' && sh.max === '480', `목표 시트: 칩 8개(최대 4시간) + 직접 입력(최대 480분) — ${JSON.stringify(sh)}`);
@@ -61,15 +61,15 @@ const LP = { tube: { goal: 20, sec: { [today]: 720 } } };
       await p.click('[data-tb=goal-step][data-v="30"]'); ok(await p.inputValue('#tbGIn') === '30', '+30분: 20 → 30(30분 단위로 맞춤)');
       await p.click('[data-tb=goal-step][data-v="30"]'); await p.click('[data-tb=goal-step][data-v="-30"]'); ok(await p.inputValue('#tbGIn') === '30', '+30 · −30 → 30');
       await p.fill('#tbGIn', '180'); await p.click('[data-tb=goal-in]'); await p.waitForTimeout(800);
-      let t = await p.evaluate(() => ({ goal: LR.lp.tube.goal, gb: (document.querySelector('.tb-gb') || {}).textContent.replace(/\s+/g, ' '), saved: (JSON.parse(localStorage.getItem('didisam.room.sample.lp') || '{}')['20269000'] || { tube: {} }).tube.goal, sheet: !!document.querySelector('#apSheet') }));
-      ok(t.goal === 180 && /오늘 목표 3시간/.test(t.gb) && /12\/180분/.test(t.gb) && /2시간 48분 더/.test(t.gb) && !t.sheet, `목표 3시간(180분) 저장 · 홈 표시 — ${JSON.stringify(t)}`);
+      let t = await p.evaluate(() => ({ goal: LR.lp.tube.goal, gb: (e => e ? (e.getAttribute('aria-label') + ' ' + e.textContent) : '')([...document.querySelectorAll('[data-tb="goal"]')].find(x => x.offsetParent)) /* v47 통합: 홈 목표는 한 줄 링(.tb-gm), 카드(.tb-gb)는 더 보기 안 */.replace(/\s+/g, ' '), saved: (JSON.parse(localStorage.getItem('didisam.room.sample.lp') || '{}')['20269000'] || { tube: {} }).tube.goal, sheet: !!document.querySelector('#apSheet') }));
+      ok(t.goal === 180 && /오늘 목표 3시간/.test(t.gb) && /12\/180분/.test(t.gb) /* v47 통합: 남은 시간 문구는 「더 보기」 목표 카드에만 */ && !t.sheet, `목표 3시간(180분) 저장 · 홈 표시 — ${JSON.stringify(t)}`);
       ok(t.saved === 180, `기기 저장(데모 lp)에도 180 — ${t.saved}`);
       await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(900);
       ok(await p.evaluate(() => LR.lp.tube.goal === 180 && /오늘 목표 3시간/.test(document.querySelector('.tb-gb').textContent)), '다시 열어도 3시간 유지');
-      await p.click('.tb-gb'); await p.waitForTimeout(120); ok(await p.inputValue('#tbGIn') === '180' && /3시간/.test(await p.textContent('.tb-gopt .on')), '시트를 다시 열면 3시간 선택');
+      await p.locator('[data-tb="goal"] >> visible=true').first().click(); await p.waitForTimeout(120); ok(await p.inputValue('#tbGIn') === '180' && /3시간/.test(await p.textContent('.tb-gopt .on')), '시트를 다시 열면 3시간 선택');
       await p.fill('#tbGIn', '999'); await p.press('#tbGIn', 'Enter'); await p.waitForTimeout(250);
       t = await p.evaluate(() => ({ goal: LR.lp.tube.goal, toast: document.body.innerText })); ok(t.goal === 480 && /8시간으로 맞췄어요/.test(t.toast), `999분 → 8시간(480)으로 보정 + 안내 — ${t.goal}`);
-      await p.click('.tb-gb'); await p.waitForTimeout(120); await p.fill('#tbGIn', ''); await p.click('[data-tb=goal-in]'); await p.waitForTimeout(120);
+      await p.locator('[data-tb="goal"] >> visible=true').first().click(); await p.waitForTimeout(120); await p.fill('#tbGIn', ''); await p.click('[data-tb=goal-in]'); await p.waitForTimeout(120);
       ok(await p.evaluate(() => !!document.querySelector('#apSheet') && /5분에서 8시간 사이/.test(document.querySelector('#apSheet .tb-gerr').textContent) && LR.lp.tube.goal === 480), '빈 값 → 저장하지 않고 시트 안 안내');
       await p.click('.tb-gopt button[data-v="90"]'); await p.waitForTimeout(200); ok(await p.evaluate(() => LR.lp.tube.goal === 90 && /1시간 30분/.test(document.querySelector('.tb-gb').textContent)), '칩 1시간 30분 → 90 저장');
       ok(!errs.length, `학습자 오류 없음 ${errs.join(' | ')}`); await ctx.close(); }
