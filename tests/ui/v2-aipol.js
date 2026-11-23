@@ -78,7 +78,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     const vid = S.classes.flatMap(k => k.curriculum).find(i => i.type === 'video'); ok('영상 항목은 레벨 없음', !vid || AIPOL.levelOf(vid) === 'L1');
     /* ⑦ 게시본 */
     const pub = lsSnapshot(); const pc = pub.classes.find(k => k.id === c.id); const px = pc && pc.items.find(x => x.id === it0.id);
-    ok('게시본 aipol 공개 필드만', pub.aipol && JSON.stringify(Object.keys(pub.aipol).sort()) === JSON.stringify(['evalNotice', 'lvl', 'on', 'retain']), pub.aipol);
+    ok('게시본 aipol 공개 필드만(preset: 학습자 레벨 판정용, 통합 v46)', pub.aipol && JSON.stringify(Object.keys(pub.aipol).sort()) === JSON.stringify(['evalNotice', 'lvl', 'on', 'preset', 'retain']), pub.aipol);
     ok('게시본 item.ai', px && px.ai && px.ai.lvl === 'L0' && px.ai.why === '스스로 푸는 과제', px && px.ai);
     /* 끄면 다시 원래대로 */
     S.aipol.on = false; openEditor(c, ai); await wait(30); ok('다시 끄면 편집기 원래대로', !document.querySelector('#apEd') && Math.abs(document.querySelector('#edBody').innerHTML.length - offEd) < 400); closeModal();
