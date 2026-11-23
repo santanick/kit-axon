@@ -124,28 +124,35 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
     private final java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder().proxy(java.net.http.HttpClient.Builder.NO_PROXY).connectTimeout(java.time.Duration.ofSeconds(10)).build();
     boolean payOn() { return tossKey != null && !tossKey.trim().isEmpty() && tossClient != null && !tossClient.trim().isEmpty(); }
     Map<String, Object> planOf(String tid) { String s = mapper.selectAiplan(tid); return DdAiPrice.planOf(s == null ? null : parse(s)); }
+    @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:}") private String santaEnv = "";
+    /** 충전 차감 계산(충전량 1년 이월) — 기관 범위 트랜잭션 안에서 부른다 */
+    DdAiPrice.Sim simOf(String tid, Map<String, Object> plan, String today) {
+        List<Map<String, Object>> cr = mapper.selectCreditRows(tid, DdAiPrice.creditFrom(today));
+        return DdAiPrice.sim(cr, cr.isEmpty() ? List.of() : mapper.selectUsageFrom(tid, DdAiPrice.usageFrom(cr, today)), ((Number) plan.get("monthTokens")).longValue(), today);
+    }
     /** 이달 한도: 기관 범위 트랜잭션 안에서 부른다 */
-    void monthGuard(String tid, boolean learner) { Map<String, Object> plan = planOf(tid); if (!Boolean.TRUE.equals(plan.get("on"))) return; String m = DdAiPrice.monthOf(kstToday());
-        DdAiPrice.guard(plan, mapper.monthUsed(tid, m + "-01"), mapper.monthCredit(tid, m), learner); }
+    void monthGuard(String tid, boolean learner) { Map<String, Object> plan = planOf(tid); if (!Boolean.TRUE.equals(plan.get("on"))) return; String td = kstToday(); String m = DdAiPrice.monthOf(td);
+        DdAiPrice.guard(plan, mapper.monthUsed(tid, m + "-01"), simOf(tid, plan, td).credit(), learner); }
     Map<String, Object> aiMonth(String tid) {
-        Map<String, Object> plan = planOf(tid); String m = DdAiPrice.monthOf(kstToday());
-        Map<String, Object> o = new LinkedHashMap<>(DdAiPrice.stateOf(plan, m, mapper.monthUsed(tid, m + "-01"), mapper.monthCredit(tid, m)));
-        o.put("plan", plan); o.put("monthFeature", feat(mapper.selectMonthFeature(m + "-01")));
-        List<Map<String, Object>> cr = new ArrayList<>(); for (Map<String, Object> r : mapper.selectCredits(tid, m)) { Map<String, Object> x = new LinkedHashMap<>(); x.put("pack", r.get("pack")); x.put("tokens", ((Number) r.get("tokens")).longValue()); x.put("amount", ((Number) r.get("amount")).longValue()); x.put("at", r.get("at")); cr.add(x); }
-        o.put("credits", cr); o.put("packs", DdAiPrice.packs()); o.put("tiers", DdAiPrice.TIERS); o.put("payOnline", payOn()); return o;
+        Map<String, Object> plan = planOf(tid); String td = kstToday(); String m = DdAiPrice.monthOf(td); DdAiPrice.Sim sm = simOf(tid, plan, td);
+        Map<String, Object> o = new LinkedHashMap<>(DdAiPrice.stateOf(plan, m, mapper.monthUsed(tid, m + "-01"), sm.credit()));
+        String pl = mapper.selectPlan(tid); JsonNode pn = pl == null ? null : parse(pl);
+        o.put("plan", plan); o.put("contractPlan", pn != null && pn.isObject() ? pn : null); o.put("monthFeature", feat(mapper.selectMonthFeature(m + "-01")));
+        o.put("credits", sm.live()); o.put("price", DdAiPrice.priceInfo()); o.put("payOnline", payOn()); return o;
     }
     static DdException err(int st, String code, String msg) { return new DdException(st, msg, code); }
     static String hex(int n) { byte[] b = new byte[n]; DdCrypto.RND.nextBytes(b); return java.util.HexFormat.of().formatHex(b); }
 
     @Override public Map<String, Object> topup(Map<String, Object> a, byte[] body) throws Exception {
         String tid = (String) a.get("tid"); rl.limit("aitop:" + tid, 20, 600000L); JsonNode b = DdWeb.readBody(body, 1024);
-        DdAiPrice.Pack P = DdAiPrice.packOf(get(b, "pack")); if (P == null) throw err(400, "pack", "충전 상품을 골라 주십시오.");
+        Map<String, Object> P = DdAiPrice.quote(get(b, "won")); if (P == null) throw err(400, "won", "충전 금액은 10만 원 단위(10만 ~ 1억 원)로 골라 주십시오.");
         if (!payOn()) throw err(503, "pay_off", "결제 연결 준비 중 — 산타에 문의하십시오.");
         Map<String, Object> plan = tx.inTenant(tid, () -> planOf(tid));
         if (Boolean.TRUE.equals(plan.get("on")) && "block".equals(plan.get("overage"))) throw err(409, "overage_block", "초과 처리가 「차단」으로 설정되어 있습니다. 「추가 충전 허용」으로 바꾼 뒤 충전하십시오.");
-        String id = "ac_" + hex(9), orderId = "aitop-" + hex(12); long[] pr = DdAiPrice.price(P.tokens());
-        tx.inTenant(tid, () -> mapper.insertCredit(id, tid, DdAiPrice.monthOf(kstToday()), P.id(), P.tokens(), pr[2], orderId, String.valueOf(a.get("email"))));
-        Map<String, Object> o = new LinkedHashMap<>(); o.put("orderId", orderId); o.put("amount", pr[2]); o.put("supply", pr[0]); o.put("vat", pr[1]); o.put("orderName", "디디쌤 AI 추가 충전 " + P.name()); o.put("clientKey", tossClient.trim()); return o;
+        String id = "ac_" + hex(9), orderId = "aitop-" + hex(12); long won = (Long) P.get("won"), tokens = (Long) P.get("tokens"), total = (Long) P.get("total");
+        tx.inTenant(tid, () -> mapper.insertCredit(id, tid, DdAiPrice.monthOf(kstToday()), DdAiPrice.packId(won), tokens, total, orderId, String.valueOf(a.get("email"))));
+        Map<String, Object> o = new LinkedHashMap<>(); o.put("orderId", orderId); o.put("amount", total); o.put("supply", P.get("supply")); o.put("vat", P.get("vat")); o.put("tokens", tokens); o.put("discount", P.get("discount"));
+        o.put("orderName", "디디쌤 AI 충전 " + String.format("%,d", won / 10000) + "만 원(" + String.format("%,d", tokens) + " 토큰)"); o.put("clientKey", tossClient.trim()); return o;
     }
     /** 토스 승인(Node fac/pay.js confirm과 같은 요청) — {승인 여부, 승인 금액} */
     long[] tossConfirm(String paymentKey, String orderId, long amount) {
@@ -169,8 +176,48 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
         if (!DdAiPrice.monthOf(kstToday()).equals(row.get("month"))) throw err(409, "expired", "지난달 주문입니다. 다시 충전해 주십시오.");
         long[] r = payOn() ? tossConfirm(paymentKey, orderId, amount) : new long[]{ 0, 0 }; String rid = (String) row.get("id");
         if (r[0] != 1 || r[1] != amount) { tx.inTenant(tid, () -> mapper.failCredit(tid, rid)); throw err(402, payOn() ? "pg" : "pay_off", "결제 승인을 받지 못했습니다. 다시 시도하십시오."); }
-        Map<String, Object> o = tx.inTenant(tid, () -> { int n = mapper.payCredit(tid, rid, paymentKey); Map<String, Object> x = new LinkedHashMap<>(); x.put("ok", true); x.putAll(aiMonth(tid)); x.put("_n", n); return x; });
+        Map<String, Object> o = tx.inTenant(tid, () -> { int n = mapper.payCredit(tid, rid, paymentKey, DdAiPrice.CREDIT_DAYS); Map<String, Object> x = new LinkedHashMap<>(); x.put("ok", true); x.putAll(aiMonth(tid)); x.put("_n", n); return x; });
         if (((Integer) o.remove("_n")) > 0) { com.fasterxml.jackson.databind.node.ObjectNode d = F.objectNode(); d.put("pack", String.valueOf(row.get("pack"))); d.put("tokens", ((Number) row.get("tokens")).longValue()); d.put("amount", amount); try { tx.audit(tid, email, "ai.topup", stringify(d)); } catch (Exception ignore) { } }
         return o;
+    }
+
+    /* ── v47 산타 관리(Node GET /api/santa/orgs · PUT /api/santa/orgs/:tid/plan과 같은 규격) ── */
+    @Override public boolean isSanta(Map<String, Object> a) { return a != null && DdAiPrice.santaSet(santaEnv).contains(String.valueOf(a.get("email")).toLowerCase(Locale.ROOT)); }
+    void needSanta(Map<String, Object> a) throws Exception { if (!isSanta(a)) throw err(403, "santa", "산타 관리자만 쓸 수 있습니다."); rl.limit("santa:" + a.get("email"), 120, 60000L); }
+    JsonNode js(Object s) { return s == null ? null : parse(String.valueOf(s)); }
+    @Override public Map<String, Object> santaOrgs(Map<String, Object> a, String q0) throws Exception {
+        needSanta(a); String q = q0 == null ? "" : q0.trim(); if (q.length() > 60) q = q.substring(0, 60); final String fq = q;
+        List<Map<String, Object>> rows = tx.plain(() -> mapper.searchTenants(fq)); List<Map<String, Object>> orgs = new ArrayList<>(); String td = kstToday();
+        for (Map<String, Object> t : rows) {
+            String tid = (String) t.get("tid");
+            Map<String, Object> st = tx.inTenant(tid, () -> { Map<String, Object> r = mapper.selectPlanRow(tid); Map<String, Object> o = new HashMap<>(); if (r == null) return o;
+                JsonNode ap = js(r.get("aiplan")); Map<String, Object> plan = DdAiPrice.planOf(ap); String m = DdAiPrice.monthOf(td);
+                o.put("r", true); o.put("plan", js(r.get("plan"))); o.put("aiplan", ap); o.put("used", mapper.monthUsed(tid, m + "-01")); return o; });
+            List<Map<String, Object>> log = new ArrayList<>();
+            for (Map<String, Object> l : tx.plain(() -> mapper.selectSantaLog(tid))) { Map<String, Object> x = new LinkedHashMap<>(); x.put("at", l.get("at")); x.put("actor", l.get("actor")); x.put("before", js(l.get("before"))); x.put("after", js(l.get("after"))); x.put("memo", l.get("memo")); log.add(x); }
+            Map<String, Object> o = new LinkedHashMap<>(t); boolean ready = st.containsKey("r"); o.put("ready", ready);
+            JsonNode pn = (JsonNode) st.get("plan"), an = (JsonNode) st.get("aiplan");
+            o.put("plan", pn != null && !pn.isNull() ? pn : null); o.put("aiplan", an != null && !an.isNull() ? an : null); o.put("used", ready ? st.get("used") : 0L);
+            o.put("memo", log.isEmpty() ? "" : log.get(0).get("memo")); o.put("log", log); orgs.add(o);
+        }
+        Map<String, Object> out = new LinkedHashMap<>(); out.put("orgs", orgs); return out;
+    }
+    @Override public Map<String, Object> santaPlan(Map<String, Object> a, String tid, byte[] body) throws Exception {
+        needSanta(a); JsonNode b = DdWeb.readBody(body, 4096); String td = kstToday();
+        com.fasterxml.jackson.databind.node.ObjectNode plan = DdAiPrice.santaInput(b, td); String memo = DdAiPrice.santaMemo(b); String email = String.valueOf(a.get("email"));
+        if (tx.plain(() -> mapper.tenantExists(tid)) == 0) throw err(404, "not_found", "기관을 찾지 못했습니다.");
+        long t = plan.get("aiMonthTokens").asLong();
+        Object[] res = tx.inTenant(tid, () -> {
+            Map<String, Object> r = mapper.selectPlanRow(tid); if (r == null) throw err(409, "no_state", "기관 데이터가 아직 없습니다. 기관이 스튜디오를 한 번 연 뒤 넣으십시오.");
+            JsonNode ap = js(r.get("aiplan")); com.fasterxml.jackson.databind.node.ObjectNode nap = null;
+            if (t > 0) { nap = F.objectNode(); nap.put("monthTokens", t); nap.put("overage", ap != null && "block".equals(DdAiPrice.ovKey(ap)) ? "block" : "pack"); }
+            mapper.updatePlan(tid, plan.toString(), nap == null ? null : nap.toString());
+            com.fasterxml.jackson.databind.node.ObjectNode d = F.objectNode(); d.put("code", plan.get("code").asText()); d.put("aiMonthTokens", t); d.put("contract", plan.get("contract").asText());
+            tx.audit(tid, email, "santa.plan", d.toString());
+            return new Object[]{ r.get("plan"), nap };
+        });
+        String before = res[0] == null ? null : String.valueOf(res[0]); JsonNode bn = js(before);
+        tx.plain(() -> mapper.insertSantaLog(tid, email, bn == null || bn.isNull() ? null : before, plan.toString(), memo));
+        Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); o.put("tid", tid); o.put("plan", plan); o.put("aiplan", res[1]); o.put("memo", memo); return o;
     }
 }

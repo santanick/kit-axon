@@ -57,15 +57,15 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
             boolean nt = nap.path("train").isBoolean() && nap.path("train").asBoolean(), ct = cap != null && cap.path("train").isBoolean() && cap.path("train").asBoolean();
             if (nt != ct) throw processException("dd.403.aipol_train");
         }
-        /* v47 AI 월 포함량(aiplan)은 정운영자만 바꾼다 · 요금표 밖 값은 받지 않는다 — Node PUT /api/state와 같음(400 aiplan · 403 aiplan_role) */
+        /* v47 요금제(plan) · 월 포함량(aiplan.monthTokens)은 산타가 넣은 저장값이 원천(기관이 보낸 값은 버림), 초과 처리(overage)만 정운영자 — Node PUT /api/state와 같음(400 aiplan · 403 aiplan_role) */
         if (!egovframework.didisam.cmm.DdAiPrice.validPlan(doc.get("aiplan"))) throw new egovframework.didisam.cmm.DdException(400, "AI 월 포함량 값이 올바르지 않습니다.", "aiplan");
-        if (!"owner".equals(a.get("role"))) {
-            String cs = tx.inTenant(tid, () -> mapper.selectAiplan(tid)); JsonNode cur = cs == null ? null : DdWeb.JSON.readTree(cs);
-            if (!egovframework.didisam.cmm.DdAiPrice.planKey(cur).equals(egovframework.didisam.cmm.DdAiPrice.planKey(doc.get("aiplan")))) throw new egovframework.didisam.cmm.DdException(403, "AI 월 포함량은 정운영자만 바꿀 수 있습니다.", "aiplan_role");
-        }
-        String s = crypt.seal(doc, tid).toString();
-        List<String> gone = new ArrayList<>();
+        List<String> gone = new ArrayList<>(); boolean owner = "owner".equals(a.get("role"));
         Map<String, Object> out = tx.inTenant(tid, () -> {
+            Map<String, Object> pc = mapper.selectPlanCur(tid);
+            JsonNode cap = pc == null || pc.get("aiplan") == null ? null : DdWeb.JSON.readTree(String.valueOf(pc.get("aiplan"))), cpl = pc == null || pc.get("plan") == null ? null : DdWeb.JSON.readTree(String.valueOf(pc.get("plan")));
+            if (!owner && !egovframework.didisam.cmm.DdAiPrice.ovKey(cap).equals(egovframework.didisam.cmm.DdAiPrice.ovKey(doc.get("aiplan")))) throw new egovframework.didisam.cmm.DdException(403, "AI 초과 처리는 정운영자만 바꿀 수 있습니다.", "aiplan_role");
+            egovframework.didisam.cmm.DdAiPrice.keepPlan(doc, cap, cpl, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).toString());
+            String s = crypt.seal(doc, tid).toString();
             Integer r;
             if (rev == 0) {
                 r = mapper.insertState(tid, s, s.length());

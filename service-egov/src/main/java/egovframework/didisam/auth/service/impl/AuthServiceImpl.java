@@ -25,6 +25,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     @Resource(name = "propertiesService") private EgovPropertyService props;
     private final AuthMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final DdOAuth oa;
     @org.springframework.beans.factory.annotation.Value("${TOSS_SECRET_KEY:}") private String tossKey = "";
+    @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:}") private String santaEnv = ""; /* v47 산타 관리자 표시(user.santa) */
     public AuthServiceImpl(AuthMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, DdOAuth oa) { this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.oa = oa; }
 
     static boolean emailOk(String e) { return e.length() <= 120 && EMAIL.matcher(e).matches(); }
@@ -141,6 +142,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     }
     @Override public Map<String, Object> meOut(Map<String, Object> a) {
         Map<String, Object> u = new LinkedHashMap<>(); u.put("email", a.get("email")); u.put("role", a.get("role")); if (Boolean.TRUE.equals(a.get("pw_temp"))) u.put("pwTemp", true);
+        if (egovframework.didisam.cmm.DdAiPrice.santaSet(santaEnv).contains(String.valueOf(a.get("email")).toLowerCase(java.util.Locale.ROOT))) u.put("santa", true);
         Map<String, Object> t = new LinkedHashMap<>(); t.put("tid", a.get("tid")); t.put("name", a.get("name")); t.put("type", a.get("type")); t.put("mode", a.get("mode"));
         Map<String, Object> o = new LinkedHashMap<>(); o.put("user", u); o.put("tenant", t); return o;
     }

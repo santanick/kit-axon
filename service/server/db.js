@@ -404,7 +404,7 @@ const MIGRATIONS = [
    grant select, insert, update, delete on ai_usage_f, ai_turn, learning_event to didisam_tenant;
    grant usage on sequence ai_turn_id_seq, learning_event_id_seq to didisam_tenant;`,
   /* v47 AI 추가 충전(ai_credit): 정운영자가 토스로 산 토큰 묶음. ready(결제 창 열림) → paid(서버가 토스 승인 확인) 뒤에만 한도에 더한다.
-     month(YYYY-MM, KST)는 산 달 — 그 달 한도에만 더한다(다음 달 1일 소멸). 금액은 공급가 + 부가세(aiprice.js) */
+     month(YYYY-MM, KST)는 주문한 달. 사용 기간은 expires_at(뒤 이전, 충전일 + 365일)까지 — 남은 양은 다음 달로 이어진다. 금액은 공급가 + 부가세(aiprice.js) */
   `create table if not exists ai_credit (
      id text primary key,
      tenant_id text not null references tenants(id) on delete cascade,
@@ -426,6 +426,23 @@ const MIGRATIONS = [
    drop policy if exists tenant_iso on ai_credit;
    create policy tenant_iso on ai_credit using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
    grant select, insert, update on ai_credit to didisam_tenant;`,
+  /* v47 산타 관리 변경 이력(santa_plan_log): 산타 관리자가 넣은 요금제 · 월 포함 토큰 · 메모. 기관 역할(didisam_tenant)에는 권한을 주지 않는다 — 산타 내부 메모는 기관에 보이지 않음.
+     기관 쪽에는 audit_log 'santa.plan'(코드 · 포함 토큰만)이 함께 남는다 */
+  `create table if not exists santa_plan_log (
+     id bigserial primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     at timestamptz not null default now(),
+     actor text not null,
+     before jsonb,
+     after jsonb not null,
+     memo text not null default ''
+   );
+   create index if not exists santa_plan_log_t on santa_plan_log (tenant_id, id desc);
+   revoke all on santa_plan_log from didisam_tenant;`,
+  /* v47 충전량 1년 사용(이월): 만료일(이 날까지 사용) = 충전일(KST) + 365일. 이미 승인된 충전은 같은 규칙으로 채운다 */
+  `alter table ai_credit add column if not exists expires_at date;
+   update ai_credit set expires_at = (paid_at at time zone 'Asia/Seoul')::date + 365 where status = 'paid' and expires_at is null and paid_at is not null;
+   create index if not exists ai_credit_exp on ai_credit (tenant_id, status, expires_at);`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).

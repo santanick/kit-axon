@@ -28,7 +28,8 @@ public interface PubMapper {
     Map<String, Object> selectTutorCtx(@Param("tid") String tid);
     int incUsage(@Param("tid") String tid, @Param("day") String day);
     long monthUsed(@Param("tid") String tid, @Param("from") String from); /* v47 이달 AI 한도 */
-    long monthCredit(@Param("tid") String tid, @Param("month") String month);
+    java.util.List<java.util.Map<String, Object>> selectCreditRows(@Param("tid") String tid, @Param("from") String from); /* v47 충전량 1년 이월(DdAiPrice.sim) */
+    java.util.List<java.util.Map<String, Object>> selectUsageFrom(@Param("tid") String tid, @Param("from") String from);
     int addTokens(@Param("tid") String tid, @Param("day") String day, @Param("tin") long tin, @Param("tout") long tout);
     void insertLearnerSession(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
     Map<String, Object> selectLearnerSession(@Param("id") String id);

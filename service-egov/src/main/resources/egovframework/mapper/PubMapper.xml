@@ -31,7 +31,8 @@
   </insert>
   <delete id="purgeTurn">delete from ai_turn where tenant_id = #{tid} and purge_at &lt; now()</delete>
   <select id="monthUsed" resultType="long" flushCache="true" useCache="false">select coalesce(sum(tin + tout), 0)::bigint n from ai_usage where tenant_id = #{tid} and day &gt;= cast(#{from} as date)</select>
-  <select id="monthCredit" resultType="long" flushCache="true" useCache="false">select coalesce(sum(tokens), 0)::bigint n from ai_credit where tenant_id = #{tid} and month = #{month} and status = 'paid'</select>
+  <select id="selectCreditRows" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select id, pack, tokens::bigint tokens, amount::bigint amount, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD') pday, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') at, expires_at::text expires from ai_credit where tenant_id = #{tid} and status = 'paid' and expires_at &gt;= cast(#{from} as date) order by paid_at</select>
+  <select id="selectUsageFrom" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select day::text, (tin + tout)::bigint n from ai_usage where tenant_id = #{tid} and day &gt;= cast(#{from} as date) order by day</select>
   <select id="selectAipol" resultType="string">select (doc->'aipol')::text from tenant_state where tenant_id = #{tid}</select>
   <insert id="upsertProgress">
     insert into learner_progress (tenant_id, sid, lp, bytes) values (#{tid}, #{sid}, cast(#{lp} as jsonb), #{bytes})

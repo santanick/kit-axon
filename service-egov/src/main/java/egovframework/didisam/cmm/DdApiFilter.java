@@ -26,7 +26,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "GET /api/health", "GET /api/config", "POST /api/signup", "POST /api/login", "POST /api/logout",
         "GET /api/me", "GET /api/state", "PUT /api/state",
         "GET /api/keys", "POST /api/keys", "POST /api/keys/revoke",
-        "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage", "GET /api/lev", "POST /api/ai/topup", "POST /api/ai/topup/confirm",
+        "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage", "GET /api/lev", "POST /api/ai/topup", "POST /api/ai/topup/confirm", "GET /api/santa/orgs",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log", "POST /api/learners/sync",
         "GET /api/audit", "POST /api/tenant/delete", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion",
         "POST /api/password", "GET /api/staff", "POST /api/media", "GET /api/media", "POST /api/media/f", "POST /api/staff", "POST /api/staff/remove",
@@ -45,6 +45,8 @@ public class DdApiFilter extends OncePerRequestFilter {
     public static final java.util.regex.Pattern FAC = java.util.regex.Pattern.compile("^/api/fac/(?:overview|bookings|bookings/[\\w-]{1,80}(?:/(?:approve|reject|cancel))?|closures|checkin|kiosk/start|payments|refunds|rentals|rentals/[\\w-]{1,80}/(?:lend|return|approve)|passes|passes/[\\w-]{1,80}/adjust|noshow|noshow/[\\w-]{1,80}/restore|stats|export)\\z");
     /** v34.5 홈페이지 이미지: GET /api/media/{id}(공개) · DELETE /api/media/{id}(운영자) — Node media.match와 같음 */
     public static final java.util.regex.Pattern MEDIA = java.util.regex.Pattern.compile("^/api/media/(?:f/)?[^/]+\\z"); /* v35: 강의 파일 /api/media/f/{id} 포함 */
+    /** v47 산타 관리: PUT /api/santa/orgs/{tid}/plan — Node santaPlan 경로와 같음 */
+    public static final java.util.regex.Pattern SANTA = java.util.regex.Pattern.compile("^/api/santa/orgs/tn_[a-z0-9]{8,16}/plan\\z");
     static boolean mediaRoute(String m, String path) {
         return (("GET".equals(m) || "DELETE".equals(m)) && MEDIA.matcher(path).matches())
             || ("PUT".equals(m) && egovframework.didisam.media.service.impl.DdMediaFile.FILE_PATH.matcher(path).matches())
@@ -74,7 +76,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         if ("admin".equals(props.module) && !("GET".equals(m) && "/api/health".equals(path)) && !DdModule.ipAllowed(props.adminIps, web.ip(req))) { res.setHeader("cache-control", "no-store"); json(res, 403, "ip", "허용되지 않은 접속 위치입니다."); return; }
         if (path.startsWith("/api/")) {
             res.setHeader("cache-control", "no-store");
-            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !MILEAGE.matcher(path).matches() && !mediaRoute(m, path)) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
+            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !MILEAGE.matcher(path).matches() && !mediaRoute(m, path) && !("PUT".equals(m) && SANTA.matcher(path).matches())) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
             if (!"GET".equals(m)) {
                 if (!"1".equals(req.getHeader("x-didisam"))) { json(res, 403, "csrf", "허용되지 않은 요청입니다."); return; }
                 String o = req.getHeader("origin");
