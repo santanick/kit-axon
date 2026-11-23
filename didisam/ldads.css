@@ -16,7 +16,7 @@ body.lapp{
   /* v43: 값만 최종 시안으로 교체(그린 · 따뜻한 회색 · 코랄). Secondary 하늘 · Link 파랑은 그린 700으로 */
   --d-p50:#ECFDF3;--d-p100:#D1FADF;--d-p400:#2FD266;--d-p:#00C53B;--d-p700:#00862D;--d-p800:#066B2A;
   --d-s50:#ECFDF3;--d-s:#00A832;--d-s800:#066B2A;--d-err:#FF1A2D;--d-warn:#FF6B2C;--d-warn50:#FFF3EC;--d-warnD:#B53C0A;--d-badge:#FF6B2C;--d-link:#00862D;
-  --d-g900:#1A1814;--d-g800:#3F3A33;--d-g700:#5C554B;--d-g600:#736B5F;--d-g500:#A39B8E;--d-g400:#D6CFC2;--d-g300:#E7E2D9;--d-g200:#F3F0EA;--d-g100:#F6F3EE;--d-g50:#FAF8F5;
+  --d-g900:#1A1814;--d-g800:#3F3A33;--d-on800:#fff;--d-g700:#5C554B;--d-g600:#736B5F;--d-g500:#A39B8E;--d-g400:#D6CFC2;--d-g300:#E7E2D9;--d-g200:#F3F0EA;--d-g100:#F6F3EE;--d-g50:#FAF8F5;
   --d-ol:#E7E2D9;--d-ol2:#F3F0EA;--d-bgb:#FAF8F5;
   /* v33 글자 전용 토큰(QA #71, WCAG 4.5:1) — 채움 · 테두리는 위 브랜드 값 그대로, 글자만 아래 값을 쓴다.
      tx2 #666767: 흰 5.67 · Grey100 5.29 · Grey200 5.06 · Primary50 5.13 / tp #007A29: 흰 5.50 · Primary50 4.98 · Grey200 4.91
@@ -103,7 +103,7 @@ body.lapp .ap-nm input,body.lapp .ap-fl input,body.lapp .ap-oadd input{border:1p
 body.lapp .ap-nm input:focus,body.lapp .ap-fl input:focus,body.lapp .ap-oadd input:focus{outline:0;border-color:var(--d-g900)}
 
 /* 버튼: Submit = Grey 800 · 높이 48 · 모서리 4 / 보조 = Grey 100 / 텍스트 버튼 */
-body.lapp .ap-go,body.lapp .ap-go[style]{background:var(--d-g800);color:#fff;border-radius:4px;min-height:48px;font:600 16px/24px var(--sg)}
+body.lapp .ap-go,body.lapp .ap-go[style]{background:var(--d-g800);color:var(--d-on800);border-radius:4px;min-height:48px;font:600 16px/24px var(--sg)}
 body.lapp .ap-go:disabled{background:var(--d-g400)}
 body.lapp .ap-go.sm{min-height:40px;border-radius:4px;font:600 14px/20px var(--sg)}
 body.lapp .ap-go.ghost{background:var(--d-g100);color:var(--d-g900);border:0}
@@ -165,7 +165,7 @@ body.lapp .lux-cc{background:var(--d-g900)}
 
 /* 기존 화면(내 학습 · 계정 · 강의) 안 요소도 DADS로 */
 body.lapp .mycard{border:0!important;background:var(--d-g100)!important;border-radius:var(--ap-r)!important;box-shadow:none!important}
-body.lapp #lm :is(.btn.pri,.lbtn.pri,button.pri){background:var(--d-g800)!important;border-color:var(--d-g800)!important;color:#fff!important;border-radius:4px!important}
+body.lapp #lm :is(.btn.pri,.lbtn.pri,button.pri){background:var(--d-g800)!important;border-color:var(--d-g800)!important;color:var(--d-on800,#fff)!important;border-radius:4px!important}
 body.lapp #lm :is(input[type=text],input[type=email],input[type=tel],input[type=password],input:not([type]),textarea,select){border-color:var(--d-g400);border-radius:4px}
 body.lapp #lm a:not([class]){color:var(--d-link)}
 body.lapp #lm input[type=checkbox],body.lapp #lm input[type=radio]{accent-color:var(--d-p)}
@@ -211,7 +211,7 @@ body.lapp .ap-mf .ap-fch{padding:0 10px}
 
 /* v32.8 전수 QA(D1 · U5 · V4) — 앱 안 기존 화면 잔여 색 · 버튼 정리 */
 body.lapp{--pri2:var(--d-p)}
-body.lapp #lm .lbtn:not(.ghost):not(.out):not(.line):not(.red):not(.warn):not(.sec){background:var(--d-g800);color:#fff;border-radius:4px}
+body.lapp #lm .lbtn:not(.ghost):not(.out):not(.line):not(.red):not(.warn):not(.sec){background:var(--d-g800);color:var(--d-on800,#fff);border-radius:4px}
 body.lapp #lm .lbtn{border-radius:4px;min-height:44px}
 body.lapp #lm .lbtn.sm{min-height:36px}
 body.lapp #lm .st.submitted{background:var(--d-s50);color:var(--d-s800)}
@@ -298,7 +298,7 @@ html[data-theme="dark"]{color-scheme:dark;
 }
 html[data-theme="dark"] body{background:var(--canvas);color:var(--ink)}
 html[data-theme="dark"] body.lapp{--d-p50:#0F2A1B;--d-p100:#16402A;--d-s50:#0F2A1B;--d-warn50:#2A1710;--d-tx2:#A7B8AD;--d-tp:#5FE08A;--d-tw:#FF9A6E;--d-ts:#5FE08A;--d-link:#5FE08A;
-  --d-g900:#EAF2EC;--d-g800:#CFDBD2;--d-g700:#B4C4B9;--d-g600:#A7B8AD;--d-g500:#71867A;--d-g400:#2F4438;--d-g300:#21332A;--d-g200:#13231B;--d-g100:#13231B;--d-g50:#0E1A14;
+  --d-g900:#EAF2EC;--d-g800:#CFDBD2;--d-on800:#0C1410;--d-g700:#B4C4B9;--d-g600:#A7B8AD;--d-g500:#71867A;--d-g400:#2F4438;--d-g300:#21332A;--d-g200:#13231B;--d-g100:#13231B;--d-g50:#0E1A14;
   --d-ol:#21332A;--d-ol2:#13231B;--d-bgb:#0E1A14;--ap-bg:var(--canvas);--ap-ink:var(--ink);--ap-mute:#A7B8AD;--ap-line:#21332A;background:var(--canvas);color:var(--ink)}
 html[data-theme="dark"] body.lapp #lm{background:var(--canvas)}
 html[data-theme="dark"] body.tube{--tb-bg:var(--canvas);--tb-ink:#EAF2EC;--tb-mute:#A7B8AD;--tb-gl:#0F2A1B;--tb-line:#21332A;--tb-chip:rgba(255,255,255,.1)}
