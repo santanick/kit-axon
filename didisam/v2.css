@@ -198,7 +198,7 @@
 .g2-st.s-edit{background:var(--warnl,var(--co50));color:var(--t-warn)}
 .g2-st.s-ok{color:var(--t-mag,var(--gr800))}
 /* m2 힌트 사다리: 기존 튜터 패널 바탕이 #FBFAF7 고정이라 다크에서 밝은 바탕 + 밝은 글자(대비 부족) → 정책 켜짐(v2-lmode)일 때만 토큰 바탕 */
-html[data-theme="dark"] .lt-panel.v2-lmode{background:var(--surface);color:var(--g900)}
+html[data-theme="dark"] #ltut .lt-panel.v2-lmode,html[data-theme="dark"] .lt-panel.v2-lmode{background:var(--surface);color:var(--g900)}
 /* m7 비전 대화: 아직 정하지 않은 목표는 회색 번호 · 점선 느낌 테두리(채워진 목표와 구분) */
 .v2-g.ph{box-shadow:inset 0 0 0 1.5px var(--g400)}
 .v2-g.ph em{background:var(--g200);color:var(--g700)}
