@@ -1,0 +1,54 @@
+/* v46 D6 학습자 — 오늘 익힐 것(m4) · 나의 여정(m8) 배치. 칩 · 칸 · 정거장 · 점 부품은 v2.css(v2-ms · v2-cpt · v2-pips · v2-sum · v2-jl · v2-node · v2-vis · v2-ach)를 쓰고,
+   여기서는 이 화면의 배치만 둡니다. 색은 토큰 변수만(다크 모드 자동). 정책 꺼진 기관에서는 이 클래스가 화면에 나오지 않습니다. */
+.mj-home{display:flex;flex-direction:column;gap:10px;margin:12px 0 14px}
+.mj-card{position:relative;border-radius:var(--r-card,20px);background:var(--surface);box-shadow:var(--sh2),inset 0 0 0 1px var(--gr100,var(--g200));padding:14px 14px 12px;color:var(--g900)}
+.mj-card.is-done{box-shadow:var(--sh2),inset 0 0 0 2px var(--gr700,var(--pri))}
+.mj-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.mj-h h2{font-size:17px;font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.3}
+.mj-h small{display:block;font-size:12.5px;font-weight:700;color:var(--g700)}
+.mj-ic{width:38px;height:38px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--gr50,var(--g100));color:var(--t-mag,var(--gr800,var(--pri)))}
+.mj-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.mj-row{flex-wrap:wrap}
+.mj-row .v2-cpt__tx small{white-space:normal}
+.mj-st{font-weight:800}
+.mj-act{display:flex;align-items:center;gap:6px;flex:none}
+.mj-act .lbtn{white-space:nowrap}
+.mj-sw{border:0;background:transparent;color:var(--g700);font-size:12.5px;font-weight:700;text-decoration:underline;text-underline-offset:2px;cursor:pointer;padding:6px 2px;min-height:32px}
+.mj-sw:hover{color:var(--g900)}
+.mj-done{display:flex;align-items:center;gap:7px;margin:0 0 9px;padding:9px 12px;border-radius:12px;background:var(--gr50,var(--g100));color:var(--t-mag,var(--gr800,var(--pri)));font-size:14.5px;font-weight:800}
+.mj-empty{margin:4px 0 10px;font-size:14px;font-weight:600;color:var(--g700);line-height:1.5}
+.mj-sum>a{text-align:center;padding:2px 0;color:inherit;text-decoration:none;display:block}
+.mj-sum>a+a{border-left:1px solid var(--g200)}
+.mj-sum>a.is-p b{color:var(--t-mag,var(--gr800,var(--pri)))}
+.mj-mylink{display:flex;align-items:center;gap:10px;margin:10px 0;padding:12px 14px;border-radius:16px;background:var(--surface);box-shadow:var(--sh1,var(--sh2));color:var(--g900);text-decoration:none}
+.mj-mylink span{flex:1;min-width:0}.mj-mylink b{display:block;font-size:15px;font-weight:800}.mj-mylink small{font-size:12.5px;color:var(--g700);font-weight:600}
+/* 나의 여정 */
+.mj-jr .in{max-width:640px}
+.mj-jh h1{font-size:24px;font-weight:800;letter-spacing:-.03em;margin:0}
+.mj-jh p{margin:2px 0 12px;color:var(--g700);font-weight:700}
+.mj-dest{flex-wrap:wrap}.mj-dest>div{flex:1;min-width:0}
+.mj-dest.is-lit{box-shadow:var(--sh2),0 0 0 3px var(--gr600,var(--pri))}
+.mj-dest.is-ph .v2-vis__fl{background:var(--g200);color:var(--g700)}
+.mj-mi{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.mj-mi>span{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:99px;background:var(--surface);box-shadow:var(--sh1,var(--sh2));font-size:13.5px;font-weight:700;color:var(--g800)}
+.mj-mi b{color:var(--g900)}
+.mj-left{margin:8px 0 0;font-size:14px;font-weight:800;color:var(--t-mag,var(--gr800,var(--pri)))}
+.mj-road{list-style:none;margin:14px 0 6px;padding:0 0 0 6px;position:relative}
+.mj-road::before{content:"";position:absolute;left:17px;top:14px;bottom:14px;width:5px;border-radius:9px;background:var(--gr600,var(--pri))}
+.mj-stop{position:relative;display:flex;align-items:center;gap:12px;padding:6px 0}
+.mj-stop>.v2-node{flex:none;margin-left:0;position:relative;z-index:1}
+.mj-stop>.v2-jl{flex:1;min-width:0}
+.mj-stop:nth-child(even)>.v2-jl{margin-left:18px}
+.mj-stop.is-fut>.v2-node{margin-left:0}
+.mj-stop>.v2-node.is-cur{margin-left:-3px}
+.mj-first .v2-jl{flex-wrap:wrap}
+.mj-week{margin-top:16px}
+.mj-week h3{font-size:16px;font-weight:800;margin:0 0 8px}
+.mj-week ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.mj-week .v2-ach{display:flex}
+.mj-mile{display:flex;align-items:center;gap:6px;margin:10px 0 0;font-size:13.5px;font-weight:700;color:var(--g700)}
+@media (max-width:640px){
+  .mj-act{width:100%;justify-content:flex-end}
+  .mj-stop:nth-child(even)>.v2-jl{margin-left:8px}
+  .mj-jh h1{font-size:21px}
+}

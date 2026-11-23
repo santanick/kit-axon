@@ -1,0 +1,210 @@
+/* v2.css — Ver2 공통 부품 기준 스타일 (v46, 디자인 담당)
+   · 목업 design/src/m1~m8 값 기준, 클래스는 모두 v2- 접두사
+   · 색은 dds.css 토큰 변수만 사용 → html[data-theme="dark"]에서 자동 전환
+   · 초록 바탕 위 글자는 #fff 대신 var(--on-pr,var(--surface))(다크에서 밝은 초록 위 어두운 글자)
+   · 「익히는 중 · 승인 대기」 노랑(목업 amber)은 dds에 없어 --warnl / --t-warn 으로 대응
+   · 학습자 앱(ldds.css)에는 --on-pr · --warnl 이 없어 토큰 대체값(--surface · --co50)을 둠
+   · 개발자 css(v2-admin · v2-learner · loop2 · grade2)보다 뒤에 로드하면 화면 보정이 우선함 */
+
+/* ───────── 0. 공통 칩 바탕 ───────── */
+.v2-chip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px;border-radius:var(--r-chip,99px);font-size:13px;font-weight:700;line-height:1;white-space:nowrap;background:var(--g200);color:var(--g800)}
+.v2-chip--sm{height:22px;padding:0 8px;font-size:12px}
+.v2-chip--g{background:var(--gr50);color:var(--t-mag,var(--gr800))}
+.v2-chip--gs{background:var(--gr700);color:var(--on-pr,var(--surface))}
+.v2-chip--a{background:var(--warnl,var(--co50));color:var(--t-warn)}
+.v2-chip--k{background:var(--g900);color:var(--surface)}
+.v2-chip--n{background:var(--surface);color:var(--g800);box-shadow:inset 0 0 0 1px var(--g400)}
+
+/* ───────── 1. AI 레벨 칩 L0~L3 ───────── */
+.v2-lv{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:var(--r-chip,99px);font-size:12.5px;font-weight:800;white-space:nowrap;line-height:1}
+.v2-lv>em{font-style:normal;font-weight:800;opacity:.9}
+.v2-lv--l0{background:var(--g200);color:var(--g700)}
+.v2-lv--l1{background:var(--gr50);color:var(--t-mag,var(--gr800))}
+.v2-lv--l2{background:var(--gr700);color:var(--on-pr,var(--surface))}
+.v2-lv--l3{background:var(--g900);color:var(--surface)}
+
+/* 레벨 선택 카드(m1 .lvc) */
+.v2-lvgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.v2-lvcard{position:relative;display:flex;gap:14px;align-items:flex-start;padding:16px 18px 15px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--g300);cursor:pointer;text-align:left;color:var(--g900)}
+.v2-lvcard__ico{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex:none;background:var(--g200);color:var(--g800)}
+.v2-lvcard h3,.v2-lvcard__t{font-size:17px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;margin:0;padding-right:28px}
+.v2-lvcard h3 em,.v2-lvcard__t em{font-style:normal;font-size:13px;font-weight:800;color:var(--g700);background:var(--g200);border-radius:6px;padding:2px 6px}
+.v2-lvcard p{font-size:14px;color:var(--g700);margin:4px 0 0;font-weight:500;line-height:1.4}
+.v2-lvcard::after{content:"";position:absolute;right:16px;top:16px;width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--g400)}
+.v2-lvcard.is-on{background:var(--gr50);box-shadow:inset 0 0 0 2px var(--gr700)}
+.v2-lvcard.is-on .v2-lvcard__ico{background:var(--gr700);color:var(--on-pr,var(--surface))}
+.v2-lvcard.is-on h3 em,.v2-lvcard.is-on .v2-lvcard__t em{background:var(--gr700);color:var(--on-pr,var(--surface))}
+.v2-lvcard.is-on::after{box-shadow:inset 0 0 0 7px var(--gr700)}
+.v2-lvcard:focus-visible{outline:2px solid var(--pr);outline-offset:2px}
+
+/* 정책 센터 4단 세그먼트(m6 .seg) */
+.v2-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:14px;background:var(--g200);margin-top:14px}
+.v2-seg>*{height:54px;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:14.5px;font-weight:800;color:var(--g800);background:transparent;border:0;cursor:pointer}
+.v2-seg small{font-size:12px;font-weight:700;color:var(--g700)}
+.v2-seg .is-on{background:var(--surface);color:var(--t-mag,var(--gr800));box-shadow:var(--sh2)}
+.v2-seg .is-on small{color:var(--t-mag,var(--gr800))}
+
+/* ───────── 2. AI 배지(m1 .aib · m2 .aib) ───────── */
+.v2-aibg{display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--gr50);color:var(--t-mag,var(--gr800));font-size:13px;font-weight:800}
+.v2-aibg__ico{width:30px;height:30px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--gr700);color:var(--on-pr,var(--surface))}
+.v2-aibg b{font-size:15px;font-weight:800;display:block}
+.v2-aibg span{font-size:13px;font-weight:600;color:var(--g800);display:block}
+.v2-aibg--sm{gap:7px;padding:8px 10px;border-radius:12px}
+.v2-aibg--sm .v2-aibg__ico{width:24px;height:24px;border-radius:7px}
+.v2-aibg--off{background:var(--g100);color:var(--g700)}
+.v2-aibg--off .v2-aibg__ico{background:var(--g300);color:var(--g700)}
+.v2-why{font-size:12.5px;color:var(--g700);margin-top:7px;font-weight:600;line-height:1.4}
+
+/* ───────── 3. 힌트 사다리(m2) ───────── */
+.v2-hl{position:relative;padding:4px 0 0;list-style:none;margin:0}
+.v2-hl::before{content:"";position:absolute;left:15px;top:20px;bottom:24px;width:2px;background:var(--g300)}
+.v2-hs{position:relative;display:flex;gap:12px;align-items:flex-start;padding:3px 0}
+.v2-hs__n{position:relative;z-index:1;width:32px;height:32px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:var(--gr700);color:var(--on-pr,var(--surface));box-shadow:0 0 0 4px var(--surface)}
+.v2-hs__t{flex:1;min-width:0;padding-top:5px}
+.v2-hs__t b{font-size:15px;font-weight:800;display:flex;align-items:center;gap:6px;color:var(--g900)}
+.v2-hs__t p{font-size:13.5px;color:var(--g700);font-weight:500;margin:2px 0 0;line-height:1.4}
+.v2-hs__box{margin-top:7px;background:var(--gr50);border-radius:14px 14px 14px 4px;padding:10px 12px;font-size:14px;line-height:1.45;font-weight:500;color:var(--g900)}
+.v2-hs.is-lock .v2-hs__n{background:var(--g200);color:var(--g700)}
+.v2-hs.is-lock .v2-hs__t b{color:var(--g800)}
+.v2-hs.is-next .v2-hs__t{background:var(--warnl,var(--co50));border-radius:12px;padding:8px 11px;margin-top:-1px}
+.v2-hs.is-next .v2-hs__t b,.v2-hs.is-next .v2-hs__t p{color:var(--t-warn);font-weight:700}
+.v2-hs.is-next .v2-hs__t b{font-weight:800}
+/* 작은 사다리(미리보기 · 카드 안, m1 .lad) */
+.v2-hl--mini{background:var(--surface);border-radius:14px;padding:10px 12px;box-shadow:var(--sh1)}
+.v2-hl--mini::before{display:none}
+.v2-hl--mini .v2-hs{align-items:center;gap:8px;padding:5px 0;font-size:13px;font-weight:700}
+.v2-hl--mini .v2-hs__n{width:20px;height:20px;font-size:12px;box-shadow:none}
+.v2-hl--mini .v2-hs.is-lock{color:var(--g700)}
+/* 「선생님께 질문 넘기기」(항상 열림) */
+.v2-hand{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:var(--t-mag,var(--gr800))}
+
+/* ───────── 4. 숙달 칩 3상태 · 칸(m4) ───────── */
+.v2-ms{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:var(--r-chip,99px);font-size:12.5px;font-weight:800;white-space:nowrap;line-height:1}
+.v2-ms--done{background:var(--gr700);color:var(--on-pr,var(--surface))}            /* 숙달 */
+.v2-ms--prog{background:var(--warnl,var(--co50));color:var(--t-warn)}           /* 익히는 중 */
+.v2-ms--new{background:var(--surface);color:var(--g800);box-shadow:inset 0 0 0 1px var(--g400)} /* 미도달 */
+.v2-pips{display:flex;gap:4px;margin-top:7px}
+.v2-pips>i{width:26px;height:6px;border-radius:9px;background:var(--g300);display:block}
+.v2-pips>i.f{background:var(--gr600)}
+.v2-pips>i.a{background:var(--warn,var(--co500))}
+/* 개념 행(m4 .c) */
+.v2-cpt{display:flex;align-items:center;gap:10px;border-radius:15px;padding:12px 12px 12px 14px;background:var(--g50);box-shadow:inset 0 0 0 1px var(--g300)}
+.v2-cpt__tx{flex:1;min-width:0}
+.v2-cpt__tx b{font-size:15.5px;font-weight:800;display:block;letter-spacing:-.02em;color:var(--g900)}
+.v2-cpt__tx small{font-size:12.5px;font-weight:600;color:var(--g700);display:block;margin-top:2px}
+.v2-cpt.is-done{background:var(--surface)}
+.v2-cpt.is-cur{background:var(--surface);box-shadow:inset 0 0 0 2px var(--gr700)}
+
+/* ───────── 5. 학습 루프 4단계(m3) ───────── */
+.v2-loop{display:grid;grid-template-columns:1fr 14px 1fr 14px 1fr 14px 1fr;align-items:stretch}
+.v2-loop__ar{color:var(--g500);display:flex;align-items:center;justify-content:center}
+.v2-sg{border-radius:14px;padding:10px 11px;height:100%;box-sizing:border-box}
+.v2-sg h5{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800;margin:0;color:var(--g900)}
+.v2-sg h5 small{margin-left:auto;font-size:12px;font-weight:700;color:var(--g700)}
+.v2-sg p{font-size:12.5px;font-weight:600;color:var(--g800);margin:4px 0 0;line-height:1.35}
+.v2-sg--struggle{background:var(--surface);box-shadow:inset 0 0 0 1px var(--g300)}
+.v2-sg--expand{background:var(--gr50)}
+.v2-sg--expand h5{color:var(--t-mag,var(--gr800))}
+.v2-sg--reflect{background:var(--co50)}
+.v2-sg--reflect h5{color:var(--t-warn,var(--co700))}
+.v2-sg--check{background:var(--surface);box-shadow:inset 0 0 0 2px var(--gr600)}
+.v2-sg--check h5{color:var(--t-mag,var(--gr800))}
+/* 범례 점 */
+.v2-lg{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;font-weight:700;color:var(--g700)}
+.v2-lg span{display:flex;align-items:center;gap:5px}
+.v2-lg i{width:10px;height:10px;border-radius:3px;display:block}
+/* 템플릿 선택 카드(m3 .tp) */
+.v2-tpl{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.v2-tp{position:relative;border-radius:16px;padding:13px 14px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--g300);cursor:pointer;text-align:left;color:var(--g900)}
+.v2-tp b{font-size:16px;font-weight:800;display:flex;align-items:center;gap:7px}
+.v2-tp p{font-size:13px;color:var(--g700);font-weight:600;margin:5px 0 0}
+.v2-tp.is-on{background:var(--gr50);box-shadow:inset 0 0 0 2px var(--gr700)}
+.v2-tp.is-on b{color:var(--t-mag,var(--gr800))}
+
+/* ───────── 6. 비전 카드(m7 .vc · m8 .vis) ───────── */
+.v2-vsn{border-radius:24px;background:linear-gradient(160deg,var(--surface) 40%,var(--gr50));box-shadow:var(--sh3),inset 0 0 0 1px var(--gr100);padding:16px 16px 14px;color:var(--g900)}
+.v2-vsn__lb{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--t-mag,var(--gr800))}
+.v2-vsn h2{font-size:21px;font-weight:800;letter-spacing:-.03em;margin:6px 0 0;line-height:1.3}
+.v2-vsn__gl{margin-top:11px;display:flex;flex-direction:column;gap:6px}
+.v2-vsn__g{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:13px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--g300);font-size:14px;font-weight:700}
+.v2-vsn__g>em{font-style:normal;width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:var(--gr700);color:var(--on-pr,var(--surface))}
+.v2-vsn__g.is-ph{background:transparent;box-shadow:inset 0 0 0 1.5px var(--g400);color:var(--g700);font-weight:600}
+.v2-vsn__g.is-ph>em{background:var(--g200);color:var(--g700)}
+.v2-vsn__own{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--g700);margin-top:9px}
+/* 홈 상단 한 줄 비전(m8 .vis) */
+.v2-vline{display:flex;gap:12px;align-items:center;padding:13px 14px;border-radius:var(--r-card,20px);background:linear-gradient(150deg,var(--surface) 45%,var(--gr50));box-shadow:var(--sh2);color:var(--g900)}
+.v2-vline__fl{width:44px;height:44px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--g900);color:var(--surface)}
+.v2-vline small{font-size:12px;font-weight:800;color:var(--t-mag,var(--gr800))}
+.v2-vline b{display:block;font-size:16.5px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin-top:1px}
+/* 비전 대화 진행 칸(m7 .segs) */
+.v2-segs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:7px}
+.v2-segs>i{height:6px;border-radius:9px;background:var(--g300);display:block}
+.v2-segs>i.f{background:var(--gr600)}
+.v2-segs>i.c{background:linear-gradient(90deg,var(--gr600) 50%,var(--g300) 50%)}
+
+/* ───────── 7. 작은 성취 · 여정(m4 .sum · m8) ───────── */
+.v2-sum{display:grid;grid-template-columns:repeat(3,1fr);padding:12px 14px;border-radius:var(--r-card,20px);background:var(--surface);box-shadow:var(--sh2)}
+.v2-sum>div{text-align:center;padding:2px 0}
+.v2-sum>div+div{border-left:1px solid var(--g200)}
+.v2-sum b{font-size:18px;font-weight:800;display:block;letter-spacing:-.02em;color:var(--g900)}
+.v2-sum small{font-size:12px;font-weight:700;color:var(--g700)}
+.v2-sum .is-p b{color:var(--t-mag,var(--gr800))}
+/* 여정 정거장 카드(m8 .lb) */
+.v2-jl{display:flex;align-items:center;gap:9px;min-height:50px;padding:8px 11px;border-radius:14px;background:var(--surface);box-shadow:var(--sh2);color:var(--g900)}
+.v2-jl__k{width:30px;height:30px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--gr50);color:var(--t-mag,var(--gr800))}
+.v2-jl b{display:block;font-size:13.5px;font-weight:800;line-height:1.3}
+.v2-jl small{display:block;font-size:12px;font-weight:700;color:var(--g700)}
+.v2-jl__pt{margin-left:auto;flex:none;font-size:12.5px;font-weight:800;color:var(--t-mag,var(--gr800));background:var(--gr50);border-radius:99px;padding:3px 7px}
+.v2-jl.is-cur{box-shadow:0 0 0 2px var(--gr700),var(--sh2)}
+.v2-jl.is-cur .v2-jl__k{background:var(--gr700);color:var(--on-pr,var(--surface))}
+.v2-jl.is-fut{background:var(--surface2);box-shadow:inset 0 0 0 1.5px var(--g400)}
+.v2-jl.is-fut .v2-jl__k{background:var(--g200);color:var(--g700)}
+/* 여정 길 위의 점 */
+.v2-node{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--gr600);color:var(--on-pr,var(--surface));box-shadow:0 0 0 4px var(--surface),var(--sh1)}
+.v2-node.is-cur{width:30px;height:30px;background:var(--gr700);box-shadow:0 0 0 5px var(--surface),0 0 0 11px var(--gr100)}
+.v2-node.is-fut{background:var(--surface);box-shadow:0 0 0 3px var(--g400)}
+.v2-node.is-start{background:var(--g900);color:var(--surface)}
+/* 작은 성취 알림(토스트 한 줄) */
+.v2-ach{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border-radius:14px;background:var(--surface);box-shadow:var(--sh2);font-size:13.5px;font-weight:700;color:var(--g900)}
+.v2-ach__ico{width:26px;height:26px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--gr50);color:var(--t-mag,var(--gr800))}
+.v2-ach .v2-jl__pt{margin-left:4px}
+
+/* ───────── 8. 승인 대기(m5) ───────── */
+.v2-pend{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:var(--r-chip,99px);font-size:12.5px;font-weight:800;white-space:nowrap;line-height:1;background:var(--warnl,var(--co50));color:var(--t-warn)}
+.v2-pend--draft{background:var(--gr50);color:var(--t-mag,var(--gr800))}   /* 초안 */
+.v2-pend--sent{background:var(--g200);color:var(--g800)}                  /* 보냄 */
+.v2-warnbar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:12px;background:var(--warnl,var(--co50));font-size:13.5px;font-weight:700;color:var(--g800)}
+.v2-warnbar>svg,.v2-warnbar>i{color:var(--t-warn);flex:none}
+
+/* ───────── 휴대폰(390) ───────── */
+@media (max-width:640px){
+  .v2-lvgrid{grid-template-columns:1fr}
+  .v2-tpl{grid-template-columns:1fr 1fr}
+  .v2-loop{grid-template-columns:1fr;gap:6px}
+  .v2-loop__ar{transform:rotate(90deg);height:14px}
+  .v2-seg>*{height:48px;font-size:13.5px}
+  .v2-lvcard{padding:14px 14px 13px;gap:12px}
+  .v2-lvcard__ico{width:38px;height:38px;border-radius:11px}
+}
+
+/* ═════════ 화면 보정(개발자 css 위에 덮음 · 목업 m1~m8 기준) — v46 디자인 점검 1회차 ═════════ */
+/* m5 채점: 루브릭 수준 선택 — app.css .lvs의 「선택 = 흰 글자」가 초록50 바탕 위에서 안 보임(대비 1.1:1) → 초록 진한 글자 */
+.g2-cr .lvs label span{flex-direction:row;gap:5px;min-width:0;color:var(--g900)}
+.g2-cr .lvs label span small{font-size:12px;font-weight:700;color:var(--g700)}
+.g2-cr .lvs input:checked+span{color:var(--t-mag,var(--gr800))}
+.g2-cr .lvs input:checked+span small{color:var(--t-mag,var(--gr800))}
+/* m5 채점 상태 칩: 「보냄」 --ok(#00A832) 글자 대비 2.9:1 → 글자 전용 토큰, 승인 대기(초안 수정)는 v2-pend 색 */
+.g2-st.s-sent{background:var(--g200);color:var(--g800)}
+.g2-st.s-edit{background:var(--warnl,var(--co50));color:var(--t-warn)}
+.g2-st.s-ok{color:var(--t-mag,var(--gr800))}
+/* m2 힌트 사다리: 기존 튜터 패널 바탕이 #FBFAF7 고정이라 다크에서 밝은 바탕 + 밝은 글자(대비 부족) → 정책 켜짐(v2-lmode)일 때만 토큰 바탕 */
+html[data-theme="dark"] #ltut .lt-panel.v2-lmode,html[data-theme="dark"] .lt-panel.v2-lmode{background:var(--surface);color:var(--g900)}
+/* m7 비전 대화: 아직 정하지 않은 목표는 회색 번호 · 점선 느낌 테두리(채워진 목표와 구분) */
+.v2-g.ph{box-shadow:inset 0 0 0 1.5px var(--g400)}
+.v2-g.ph em{background:var(--g200);color:var(--g700)}
+/* m7: AI 말풍선은 흰 바탕 + 그림자, 휴대폰 전체 화면 바탕은 g50 → 말풍선 · 카드가 떠 보이게 */
+.v2-vai p{background:var(--surface);box-shadow:var(--sh1,0 0 0 1px var(--line));border-radius:18px 18px 18px 5px}
+@media (max-width:600px){.v2-vw{background:var(--g50)}}
+.v2-vc{border-radius:24px}
+/* m7 「건너뛰기」: 흐린 글자 링크 → 테두리 알약(위계는 낮게, 찾기는 쉽게) */
+.v2-skip{border-radius:99px;padding:0 14px;background:var(--surface);color:var(--g800);box-shadow:inset 0 0 0 1px var(--g300)}

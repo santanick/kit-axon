@@ -26,7 +26,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "GET /api/health", "GET /api/config", "POST /api/signup", "POST /api/login", "POST /api/logout",
         "GET /api/me", "GET /api/state", "PUT /api/state",
         "GET /api/keys", "POST /api/keys", "POST /api/keys/revoke",
-        "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage",
+        "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage", "GET /api/lev",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log", "POST /api/learners/sync",
         "GET /api/audit", "POST /api/tenant/delete", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion",
         "POST /api/password", "GET /api/staff", "POST /api/media", "GET /api/media", "POST /api/media/f", "POST /api/staff", "POST /api/staff/remove",
@@ -36,7 +36,7 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** v30 학사 LMS 묶음 경로(/api/lms/**) — 기동 때 DdLmsRoutes가 @RequestMapping에서 자동 수집한다(묶음별 등록 불필요) */
     public static final Set<String> LMS = ConcurrentHashMap.newKeySet();
     /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */
-    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel)|ledger-(?:my|order|confirm|bill|bill-order|bill-confirm)|mile-(?:my|list|rewards|redeem|redeem-cancel|proof|guardian|streak-repair|notice-read))\\z");
+    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel)|ledger-(?:my|order|confirm|bill|bill-order|bill-confirm)|mile-(?:my|list|rewards|redeem|redeem-cancel|proof|guardian|streak-repair|notice-read))\\z");
     /** v41 통합 수납 원장 운영자 경로(/api/ledger/*, :id 포함) — Node ledger/mod-admin과 같은 목록(09 규격 3절) */
     public static final java.util.regex.Pattern LEDGER = java.util.regex.Pattern.compile("^/api/ledger/(?:units|summary|entries|charges|charges/generate|receipts|receipts/[\\w-]{1,80}/correct|refunds|refunds/[\\w-]{1,80}/confirm|links|import|share|close|today|export|devices|device-push)\\z");
     /** v42 학습 마일리지 운영자 경로(/api/mileage/*, :id 포함) — Node mileage/mod-admin과 같은 목록(04-data-api 5.1) */

@@ -50,6 +50,13 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
         ObjectNode nroom = room != null && room.isObject() ? (ObjectNode) room : DdWeb.JSON.createObjectNode();
         nroom.put("tid", tid); org.set("room", nroom);
         if (doc.toString().length() > props.getInt("state.maxBytes")) throw processException("dd.413.too_large");
+        /* v46 모델 학습 허용(aipol.train)은 정운영자만 바꾼다 — Node PUT /api/state와 같음(403 aipol_train) */
+        JsonNode nap = doc.get("aipol");
+        if (nap != null && nap.isObject() && !"owner".equals(a.get("role"))) {
+            String cs = tx.inTenant(tid, () -> mapper.selectAipol(tid)); JsonNode cap = cs == null ? null : DdWeb.JSON.readTree(cs);
+            boolean nt = nap.path("train").isBoolean() && nap.path("train").asBoolean(), ct = cap != null && cap.path("train").isBoolean() && cap.path("train").asBoolean();
+            if (nt != ct) throw processException("dd.403.aipol_train");
+        }
         String s = crypt.seal(doc, tid).toString();
         List<String> gone = new ArrayList<>();
         Map<String, Object> out = tx.inTenant(tid, () -> {

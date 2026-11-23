@@ -57,11 +57,14 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
         JsonNode msgs = get(b, "messages");
         if (msgs == null || !msgs.isArray() || msgs.isEmpty() || msgs.size() > 40) throw processException("dd.400.messages");
         String tid = (String) a.get("tid"); String email = (String) a.get("email");
+        String feature = strictEq(get(b, "feature"), "grade") ? "grade" : "studio"; /* v46 게이트웨이 집계용(외부 본문에는 넣지 않음) */
         tx.inTenant(tid, () -> {
             String rs = mapper.selectRoom(tid); JsonNode room = rs == null ? null : parse(rs);
             if (aiBlocked(room)) throw processException("dd.403.policy");
             int calls = mapper.incUsage(tid, kstToday());
             if (calls > p.aiDaily) throw processException("dd.429.quota", new String[]{ String.valueOf(p.aiDaily) });
+            { String ps = mapper.selectAipol(tid); JsonNode pol = DdAiGateway.polOf(ps == null ? null : parse(ps)); /* v46 기능별 집계(studio · grade) · 정책 on 기관 기능 한도 */
+              int fc = mapper.incUsageF(tid, kstToday(), feature); long cap = DdAiGateway.cap(pol, feature); if (cap > 0 && fc > cap) throw processException(DdAiGateway.E_QUOTA); }
             return room;
         });
         LinkedHashMap<String, Integer> redacted = new LinkedHashMap<>();
@@ -90,7 +93,7 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
         }
         JsonNode u = or(get(j, "usage"), F.objectNode());
         long tin = tok(get(u, "input_tokens")), tout = tok(get(u, "output_tokens"));
-        tx.inTenant(tid, () -> mapper.addTokens(tid, kstToday(), tin, tout));
+        tx.inTenant(tid, () -> { mapper.addTokens(tid, kstToday(), tin, tout); mapper.addTokensF(tid, kstToday(), feature, tin, tout); return null; });
         ArrayNode content = F.arrayNode();
         for (JsonNode x : arr(or(get(j, "content"), F.arrayNode()))) {
             if (truthy(x) && strictEq(get(x, "type"), "text") && get(x, "text") != null && get(x, "text").isTextual() && DdAiGuard.KEY_LEAK.matcher(x.get("text").textValue()).find() && x.isObject()) {
@@ -107,6 +110,8 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
 
     @Override public Map<String, Object> usage(Map<String, Object> a) throws Exception {
         String tid = (String) a.get("tid");
-        return tx.inTenant(tid, () -> { Map<String, Object> o = new LinkedHashMap<>(); o.put("daily", p.aiDaily); o.put("days", mapper.selectUsage(tid)); return o; });
+        return tx.inTenant(tid, () -> { Map<String, Object> o = new LinkedHashMap<>(); o.put("daily", p.aiDaily); o.put("days", mapper.selectUsage(tid));
+            Map<String, Object> bf = new LinkedHashMap<>(); for (Map<String, Object> r : mapper.selectByFeature()) { Map<String, Object> v = new LinkedHashMap<>(); v.put("calls", ((Number) r.get("calls")).intValue()); v.put("tin", ((Number) r.get("tin")).longValue()); v.put("tout", ((Number) r.get("tout")).longValue()); bf.put(String.valueOf(r.get("feature")), v); }
+            o.put("byFeature", bf); return o; }); /* v46 기능별 사용량(최근 31일) */
     }
 }

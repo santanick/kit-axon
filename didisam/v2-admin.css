@@ -1,0 +1,66 @@
+/* v46 Ver2 1차 D3 — AI 사용 정책 센터(m6) · 과제별 AI 레벨 편집(m1). dds.css 토큰만 사용(다크 모드는 토큰으로 자동) */
+.ap-wrap{display:flex;flex-direction:column;gap:14px}
+.ap-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ap-head p{margin:0;font-size:14px;color:var(--g700);font-weight:500;flex:1 1 280px}
+.ap-ro{flex-basis:100%}
+.ap-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ap-card{padding:18px 20px;margin:0}
+.ap-card h3{display:flex;align-items:center;gap:9px;margin:0 0 6px;font-size:17px;font-weight:800;letter-spacing:-.02em}
+.ap-n{width:26px;height:26px;border-radius:8px;background:var(--g100);color:var(--g800);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:none}
+.ap-l{margin:14px 0 0;font-size:14px;font-weight:800;color:var(--g800)}
+.ap-l small{font-weight:600;color:var(--g600);margin-left:6px}
+.ap-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:14px;background:var(--g200);margin-top:8px}
+.ap-seg button{min-height:44px;border:0;border-radius:11px;background:transparent;color:var(--g800);font:inherit;font-size:14px;font-weight:800;cursor:pointer}
+.ap-seg button.on{background:var(--surface);color:var(--s700);box-shadow:var(--sh2)}
+.ap-seg button:disabled{cursor:not-allowed;opacity:.6}
+.ap-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ap-chips button{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--g300);background:var(--surface);color:var(--g800);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.ap-chips button.on{background:var(--s50);border-color:var(--s500);color:var(--s700)}
+.ap-tb{margin-top:12px;border-radius:14px;box-shadow:inset 0 0 0 1px var(--g300);overflow:hidden}
+.ap-tb div{display:grid;grid-template-columns:1fr auto;align-items:center;padding:10px 14px;border-bottom:1px solid var(--g200);font-size:14.5px}
+.ap-tb div:last-child{border-bottom:0}
+.ap-tb span{color:var(--g700);font-weight:600}
+.ap-acts{display:flex;gap:8px;margin-top:10px}
+.ap-row{display:flex;align-items:center;gap:14px;padding:10px 0}
+.ap-t{flex:1;margin:0}
+.ap-t b{display:block;font-size:15px;font-weight:800}
+.ap-t span{display:block;margin-top:2px;font-size:13.5px;color:var(--g700);font-weight:500;line-height:1.45}
+.ap-desc{margin-top:10px}
+.ap-dist{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--g50)}
+.ap-dist small{font-size:12.5px;color:var(--g700);font-weight:700}
+.ap-dist div{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.ap-dist span{display:flex;justify-content:space-between;padding:6px 10px;border-radius:9px;background:var(--surface);font-size:14px;font-weight:700}
+.ap-bub{margin-top:6px;border-radius:14px 14px 14px 4px;background:var(--s50);padding:10px 12px;font-size:13.5px;font-weight:600;color:var(--s800)}
+.ap-pi{display:flex;gap:6px;margin-top:8px}
+.ap-pi span{padding:4px 12px;border-radius:999px;background:var(--g100);font-size:13.5px;font-weight:700}
+.ap-log{list-style:none;margin:6px 0 0;padding:0}
+.ap-log li{display:flex;flex-direction:column;padding:8px 0;border-bottom:1px solid var(--g200)}
+.ap-log li:last-child{border-bottom:0}
+.ap-log b{font-size:14px;font-weight:700}
+.ap-log small{font-size:12.5px;color:var(--g600)}
+.ap-ul{margin:8px 0 0;padding-left:18px;font-size:14px}
+/* 편집기(m1): 왼쪽 레벨 카드 · 오른쪽 학습자 미리보기 */
+.ap-ed{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+.ap-lvs{margin:8px 0}
+/* m1 레벨 카드: 구조 · 색은 v2.css .v2-lvcard(아이콘 상자 + 오른쪽 선택 동그라미). 여기서는 button 기본값만 정리 */
+.ap-lv.v2-lvcard{border:0;font:inherit;width:100%;min-height:76px}
+.ap-lvx{flex:1;min-width:0}
+.ap-lv.v2-lvcard h3{flex-wrap:wrap;row-gap:4px}
+.ap-lv.v2-lvcard h3 .v2-chip{font-size:12px}
+.ap-lv.v2-lvcard:disabled{cursor:not-allowed;opacity:.55}
+.ap-ed .v2-lvgrid{grid-template-columns:1fr;gap:8px} /* 편집기 왼쪽 칸(약 420px)에 2열이면 카드 글자 폭이 80px 남짓 → 1열 */
+.ap-max{margin:0 0 6px}
+.ap-pv{border-radius:14px;background:var(--g50);padding:12px}
+.ap-pvh{display:block;font-size:12.5px;font-weight:800;color:var(--g700);margin-bottom:8px}
+.ap-ban{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;background:var(--s50);box-shadow:inset 0 0 0 1px var(--s200)}
+.ap-ban b{font-size:14px;font-weight:800;color:var(--s800)}
+.ap-ban span{font-size:13px;color:var(--g800);font-weight:500}
+.ap-ban small{font-size:12px;color:var(--g700)}
+.ap-ban.l0{background:var(--g100);box-shadow:inset 0 0 0 1px var(--g300)}
+.ap-ban.l0 b{color:var(--g900)}
+.ap-steps{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.ap-steps li{font-size:13px;font-weight:700;padding:6px 10px;border-radius:9px;background:var(--surface)}
+.ap-steps li.off{color:var(--g600)} /* g500 대비 2.75 → g600 */
+@media (max-width:760px){.ap-grid,.ap-ed{grid-template-columns:1fr}.ap-dist div{grid-template-columns:repeat(2,1fr)}}
+/* 다크: 편집기 a2sec 바탕이 assess2.css에서 #fff 고정 → 밝은 글자가 안 보임(1.1:1). 레벨 편집 상자만 토큰 바탕 */
+html[data-theme="dark"] #apEd.a2sec{background:var(--surface)}

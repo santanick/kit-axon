@@ -1,0 +1,97 @@
+/* v46 Ver2 학습자(lv2.js) — AI 레벨 띠 · 힌트 사다리 · 나의 비전. 목업 m2 · m7 기준, 토큰 변수만 사용(다크 모드는 토큰으로 따라감) */
+.v2-aib{position:relative;display:flex;align-items:center;gap:10px;margin:12px 0 14px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--pri) 9%,var(--surface,var(--paper)));color:var(--ink)}
+.v2-aib[data-lvl=L0]{background:var(--g100,var(--paper));box-shadow:inset 0 0 0 1px var(--line)}
+.v2-i2{width:32px;height:32px;border-radius:9px;background:var(--pri);color:var(--on-pri,#fff);display:flex;align-items:center;justify-content:center;flex:none}
+.v2-aib[data-lvl=L0] .v2-i2{background:var(--ink2)}
+.v2-aib-t{flex:1;min-width:0}.v2-aib-t b{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:15px;font-weight:800;line-height:1.35}
+.v2-aib-t span{display:block;font-size:13px;font-weight:600;color:var(--ink2);line-height:1.45}.v2-aib-t small{display:block;font-size:12px;color:var(--mute);margin-top:2px}
+.v2-dflt{font-style:normal;font-size:12px;font-weight:700;color:var(--mute);padding:1px 8px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line)}
+.v2-aib-b{flex:none;min-height:44px;padding:0 14px;border-radius:12px;border:0;font:inherit;font-size:14px;font-weight:800;cursor:pointer;background:var(--surface,var(--paper));color:var(--pri-tx,var(--pri));box-shadow:inset 0 0 0 1.5px var(--pri)}
+.v2-aib-b.pri{background:var(--pri);color:var(--on-pri,#fff);box-shadow:none}
+.v2-esc0{display:flex;gap:8px;align-items:flex-end;margin:-6px 0 14px}.v2-esc0[hidden]{display:none}
+.v2-esc0 textarea{flex:1;min-width:0;font:inherit;font-size:14px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface,var(--paper));color:var(--ink);resize:vertical}
+@media (max-width:600px){.v2-aib{flex-wrap:wrap}.v2-aib-b{width:100%}}
+
+/* 튜터 패널 — 머리 칩 · 탭 · 사다리 */
+.v2-pill{display:inline-block;margin-left:4px;font-size:12px;font-weight:800;color:var(--pri-tx,var(--pri));padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--pri) 10%,transparent)}
+.v2-tabs{display:flex;gap:4px;padding:6px 14px 0}
+.v2-tabs button{flex:1;min-height:44px;border:0;border-radius:10px;background:transparent;font:inherit;font-size:14px;font-weight:700;color:var(--mute);cursor:pointer}
+.v2-tabs button[aria-selected=true]{background:color-mix(in srgb,var(--pri) 10%,transparent);color:var(--pri-tx,var(--pri))}
+.lt-panel.v2-lmode .lt-sc,.lt-panel.v2-lmode .lt-th,.lt-panel.v2-lmode #ltf{display:none}
+.v2-lad{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 14px;display:flex;flex-direction:column;gap:8px}
+.v2-lh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.v2-lh b{font-size:15px;font-weight:800}.v2-lh small{flex:1;font-size:12.5px;font-weight:700;color:var(--mute)}
+.v2-cnt{font-size:12px;font-weight:800;padding:2px 10px;border-radius:999px;background:color-mix(in srgb,var(--pri) 10%,transparent);color:var(--pri-tx,var(--pri))}
+.v2-steps{list-style:none;margin:0;padding:0;position:relative}
+.v2-steps::before{content:"";position:absolute;left:15px;top:18px;bottom:18px;width:2px;background:var(--line)}
+.v2-st{position:relative;display:flex;gap:12px;align-items:flex-start;padding:4px 0}
+.v2-s{position:relative;z-index:1;width:32px;height:32px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:var(--pri);color:var(--on-pri,#fff);box-shadow:0 0 0 4px var(--surface,var(--paper))}
+.v2-st.lk .v2-s{background:var(--g200,var(--line));color:var(--ink2)}
+.v2-t{flex:1;min-width:0;padding-top:5px}.v2-t b{font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.v2-t b em{font-style:normal;font-size:12px;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--pri) 12%,transparent);color:var(--pri-tx,var(--pri))}
+.v2-t p{margin:2px 0 0;font-size:13px;color:var(--mute);font-weight:600;line-height:1.45}
+.v2-st.lk .v2-t b{color:var(--ink2)}
+.v2-st.nx .v2-t{background:color-mix(in srgb,var(--t-warn) 9%,transparent);border-radius:12px;padding:8px 11px;margin-top:-1px}
+.v2-st.nx .v2-t b,.v2-st.nx .v2-t p{color:var(--t-warn)}
+.v2-box{margin-top:7px;background:color-mix(in srgb,var(--pri) 8%,var(--surface,var(--paper)));border-radius:14px 14px 14px 4px;padding:10px 12px;font-size:14px;line-height:1.55;color:var(--ink)}
+.v2-fb{font-size:12px!important;color:var(--mute)!important}
+.v2-lk,.v2-open{min-height:44px;margin-top:4px;padding:0 12px;border-radius:10px;border:0;font:inherit;font-size:13px;font-weight:800;cursor:pointer;background:transparent;color:var(--pri-tx,var(--pri))}
+.v2-open{background:var(--pri);color:var(--on-pri,#fff);padding:0 16px}
+.v2-log{display:flex;gap:8px;align-items:center;margin:0;padding:9px 12px;border-radius:12px;background:var(--g100,var(--paper));box-shadow:inset 0 0 0 1px var(--line);font-size:12.5px;font-weight:600;color:var(--ink2);line-height:1.45}
+.v2-log svg{flex:none}
+.v2-msg{margin:0;padding:8px 12px;border-radius:10px;font-size:13px;font-weight:700;color:var(--t-warn);background:color-mix(in srgb,var(--t-warn) 9%,transparent)}
+.v2-try{border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+.v2-try label{display:block;font-size:13px;font-weight:800;color:var(--ink2);margin-bottom:6px}
+.v2-tb{display:flex;align-items:flex-end;gap:8px;border-radius:14px;box-shadow:inset 0 0 0 2px var(--pri);padding:8px 8px 8px 12px;background:var(--surface,var(--paper))}
+.v2-tb textarea{flex:1;min-width:0;border:0;outline:0;resize:none;background:transparent;font:inherit;font-size:14.5px;line-height:1.45;color:var(--ink)}
+.v2-tb button{width:44px;height:44px;border-radius:12px;border:0;background:var(--pri);color:var(--on-pri,#fff);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.v2-tb button[disabled]{opacity:.5}
+.v2-ft{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;font-size:12.5px;font-weight:700;color:var(--mute);flex-wrap:wrap}
+.v2-esc{min-height:44px;border:0;background:transparent;font:inherit;font-size:13px;font-weight:800;color:var(--pri-tx,var(--pri));cursor:pointer;padding:0 4px}
+.v2-busy{margin:0;font-size:13px;color:var(--mute);display:flex;gap:8px;align-items:center}
+
+/* 나의 비전 · 목표 */
+#v2vis .v2-vis{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ink) 45%,transparent);padding:16px}
+.v2-vw{width:min(560px,100%);max-height:calc(100dvh - 32px);overflow-y:auto;background:var(--surface,var(--paper));color:var(--ink);border-radius:20px;padding:16px 18px 18px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--sh)}
+.v2-vh1{display:flex;align-items:center;justify-content:space-between;gap:8px}.v2-vh1 h2{margin:0;font-size:20px;font-weight:800}
+.v2-skip,.v2-vx,.v2-vlink{min-height:44px;min-width:44px;border:0;background:transparent;font:inherit;font-size:14px;font-weight:800;color:var(--mute);cursor:pointer}
+.v2-prog div{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--mute)}.v2-prog b{color:var(--pri-tx,var(--pri))}
+.v2-prog p{display:flex;gap:4px;margin:6px 0 0}.v2-prog i{flex:1;height:6px;border-radius:3px;background:var(--line)}.v2-prog i.f{background:var(--pri)}.v2-prog i.c{background:color-mix(in srgb,var(--pri) 45%,var(--line))}
+.v2-vchat{display:flex;flex-direction:column;gap:8px;max-height:34vh;overflow-y:auto}
+.v2-vai{display:flex;gap:8px;align-items:flex-start}.v2-vai p{margin:0;background:color-mix(in srgb,var(--pri) 8%,var(--surface,var(--paper)));border-radius:4px 14px 14px 14px;padding:9px 12px;font-size:14px;line-height:1.5}
+.v2-av{width:28px;height:28px;border-radius:50%;background:var(--pri);color:var(--on-pri,#fff);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+.v2-vme{align-self:flex-end;max-width:85%;background:var(--ink);color:var(--surface,var(--paper));border-radius:14px 4px 14px 14px;padding:9px 12px;font-size:14px;line-height:1.5}
+.v2-vc{border-radius:20px;background:linear-gradient(160deg,var(--surface,var(--paper)) 40%,color-mix(in srgb,var(--pri) 8%,var(--surface,var(--paper))));box-shadow:var(--sh),inset 0 0 0 1px color-mix(in srgb,var(--pri) 18%,transparent);padding:14px 16px}
+.v2-vlb{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--pri-tx,var(--pri))}
+.v2-vc h3{margin:6px 0 0;font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.35}.v2-vc h3 .ph{color:var(--mute);font-weight:600;font-size:15px}
+.v2-gl{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.v2-g{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:12px;background:var(--surface,var(--paper));box-shadow:inset 0 0 0 1px var(--line);font-size:14px;font-weight:700}
+.v2-g span{flex:1;min-width:0}.v2-g em{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--pri);color:var(--on-pri,#fff);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+.v2-g.ph{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);color:var(--mute);font-weight:600}.v2-g.done span{text-decoration:line-through;color:var(--mute)}
+.v2-g button{min-height:44px;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:800;color:var(--pri-tx,var(--pri));cursor:pointer}
+.v2-own{display:flex;align-items:center;gap:6px;margin:10px 0 0;font-size:12px;font-weight:700;color:var(--mute)}
+.v2-verr{margin:0;padding:8px 12px;border-radius:10px;font-size:13px;font-weight:700;color:var(--t-warn);background:color-mix(in srgb,var(--t-warn) 9%,transparent)}
+.v2-vin{display:flex;align-items:flex-end;gap:8px;border-radius:14px;box-shadow:inset 0 0 0 2px var(--pri);padding:8px 8px 8px 12px}.v2-vin[hidden]{display:none}
+.v2-vin textarea{flex:1;min-width:0;border:0;outline:0;resize:none;background:transparent;font:inherit;font-size:15px;line-height:1.45;color:var(--ink)}
+.v2-vin button{width:44px;height:44px;border-radius:12px;border:0;background:var(--pri);color:var(--on-pri,#fff);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.v2-vh{margin:0;font-size:12.5px;font-weight:700;color:var(--mute)}
+.v2-share{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:700}.v2-share input{width:20px;height:20px;accent-color:var(--pri)}
+.v2-vrow{display:flex;gap:8px;justify-content:flex-start}.v2-vrow.end{justify-content:flex-end}
+.v2-vb{min-height:44px;padding:0 18px;border-radius:12px;border:0;font:inherit;font-size:14.5px;font-weight:800;cursor:pointer;background:var(--g100,var(--paper));color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.v2-vb.pri{background:var(--pri);color:var(--on-pri,#fff);box-shadow:none}.v2-vb[disabled]{opacity:.5;cursor:default}
+.v2-vcard{display:flex;align-items:center;gap:12px;margin:16px auto;max-width:var(--max,1200px);padding:14px 16px;border-radius:16px;background:color-mix(in srgb,var(--pri) 7%,var(--surface,var(--paper)));box-shadow:inset 0 0 0 1px var(--line)}
+.v2-vcard div{flex:1;min-width:0}.v2-vcard b{display:block;font-size:15px;font-weight:800}.v2-vcard small{display:block;font-size:13px;color:var(--mute)}
+body.v2-vison{overflow:hidden}
+@media (max-width:600px){#v2vis .v2-vis{padding:0;align-items:stretch}.v2-vw{border-radius:0;max-height:100dvh;height:100dvh;padding:14px 16px}.v2-vcard{margin:12px 16px}}
+
+/* ── 디자인 2회차(m2) ── */
+/* 「힌트 받기」 주 버튼: 기관 테마(--pri) · 앱 공통 .pri(ldads --d-g800) 대신 디디쌤 원안 초록. 라이트 #007A29 위 흰 글자 5.3:1, 다크 #2EE06A 위 어두운 바탕색 글자 */
+.v2-aib-b.pri[data-v2=ladder],.v2-open{background:var(--gr700,var(--pri));color:var(--on-pr,var(--surface,#fff));box-shadow:none}
+body.lapp #lm .v2-aib-b.pri[data-v2=ladder]{background:var(--gr700,var(--pri))!important;border-color:var(--gr700,var(--pri))!important;color:var(--on-pr,var(--surface,#fff))!important} /* ldads 168 !important 덮기 */
+/* 머리 칩: 말줄임 small 밖 별도 줄 · 어두운 머리 바탕 위라 머리 글자색(currentColor) 기준 */
+.lt-hd .v2-pill{display:inline-flex;align-items:center;max-width:100%;margin:4px 0 0;white-space:normal;line-height:1.35;color:inherit;background:color-mix(in srgb,currentColor 18%,transparent)}
+/* 잠긴 단계: 자물쇠 대신 번호(회색) + 「내 시도를 적으면 열려요」 */
+.v2-st.lk:not(.nx) .v2-t p{color:var(--ink2)}
+/* 다음 단계 안내(주황 글자) 바탕을 옅게: 9% → 6%(대비 4.49 → 4.5 이상) */
+.v2-st.nx .v2-t{background:color-mix(in srgb,var(--t-warn) 6%,transparent)}
+/* 다크: 앱 공통 .pri 버튼(ldads --d-g800 = 밝은 회색) 위 흰 글자 대비 1.4:1 → Ver2 화면만 어두운 글자 */
+html[data-theme="dark"] body.lapp #lm :is(.mj-home,.mj-jr,.mj-card,.v2-aib,.v2-vcard) :is(.lbtn.pri,button.pri):not([data-v2=ladder]){color:var(--surface)!important}

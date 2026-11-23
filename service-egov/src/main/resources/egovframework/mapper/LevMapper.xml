@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- v46 학습 이벤트 표준(learning_event) — 표 · RLS는 Node 마이그레이션 소유(service/server/db.js). 기관 범위(inTenant)에서만 호출 -->
+<mapper namespace="egovframework.didisam.lev.service.impl.LevMapper">
+  <insert id="insertEv">
+    insert into learning_event (tenant_id, sid, verb, obj, lvl, val, src, trust, at)
+    values (#{tid}, #{sid}, #{verb}, #{obj}, #{lvl}, cast(#{val} as jsonb), #{src}, #{trust}, coalesce(cast(#{at} as timestamptz), now()))
+  </insert>
+  <select id="list" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">
+    select id, sid, verb, obj, lvl, val::text val, src, trust, to_char(at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at
+      from learning_event where tenant_id = #{tid}
+      <if test="clsLike != null"> and (obj like #{clsLike})</if>
+      <if test="sid != null"> and sid = #{sid}</if>
+      <if test="verb != null"> and verb = #{verb}</if>
+      <if test="after > 0"> and id &gt; #{after}</if>
+     order by id limit 500
+  </select>
+</mapper>

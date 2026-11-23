@@ -446,7 +446,7 @@
     cr.items = items.filter(x => x.w > 0); cr.by = 'eval'; cr.video = clamp(Math.round(+d.ewP || 0), 0, 100); cr.exam = clamp(wE, 0, 100 - cr.video); cr.assign = 100 - cr.video - cr.exam; cr.att = wT; }
 
   /* ───────── 단계 목록(cfg.steps 순서) ───────── */
-  const stepIds = () => { const c = cfgOf(); const ids = (c && Array.isArray(c.steps) && c.steps.length ? c.steps : steps.map(s => s.id)).filter(id => steps.some(s => s.id === id)); return ids.length ? ids.slice(0, 5) : ['basic', 'open']; };
+  const stepIds = () => { const c = cfgOf(); const ids = (c && Array.isArray(c.steps) && c.steps.length ? c.steps : steps.map(s => s.id)).filter(id => steps.some(s => s.id === id)); const L = ids.length ? ids.filter(x => x !== 'loop').slice(0, 5) : ['basic', 'open']; return L; }; /* v46 통합: 학습 루프는 마법사 단계로 넣지 않는다(5단계 이내 원칙) — 과정 상세 「학습 루프 적용」(ACT.loop2)으로 */
   const stepOf = id => steps.find(s => s.id === id);
   const nowOf = (id, d) => { const c = cfgOf(); const x = c && c.stepNow && c.stepNow[id]; if (x) return typeof x === 'function' ? x(d || {}) : x; return stepOf(id).now(d || {}); };
   const titleOf = (id, d) => { const c = cfgOf(); const x = c && c.stepTitle && c.stepTitle[id]; if (x) return typeof x === 'function' ? x(d || {}) : x; return stepOf(id).title(d || {}); };
