@@ -238,7 +238,7 @@ const AFTER = []; function afterRender() { AFTER.forEach(f => { try { f(CUR); } 
    다시 그릴 때는 늘 renderSignup()을 부른다(empty.js · dataroom.js · live.js가 renderSignup을 감싼다).
    훅(window.SUV): dflt() 첫 탭 판정 · live() 운영 여부 · mailSubmit(form) 이메일 칸 제출 · go(p) 소셜 버튼 · onbStart()는 ② 담당(onb45.js). */
 let SU = { type: '', name: '', email: '' };
-const SUV = window.SUV = { view: '', step: 'entry', mail: false, via: '', email: '', rooms: false, err: '', focus: '',
+const SUV = window.SUV = { view: '', step: 'entry', mailOpen: false, via: '', email: '', rooms: false, err: '', focus: '',
   live: () => document.documentElement.classList.contains('live'), dflt: () => 'signup' };
 const SU_K = 'didisam.su45'; /* ① 값(유형 · ed · 기관명)만 보관 — 이메일 · 비밀번호는 보관하지 않음 */
 const suKeep = () => { try { sessionStorage.setItem(SU_K, JSON.stringify({ type: SU.type || '', ed: SU.ed || '', name: SU.name || '' })); } catch (e) { } };
@@ -257,10 +257,19 @@ const suSv = d => `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="
 Object.assign(SOC_IC, { lock: suSv('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'), eye: suSv('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'), check: suSv('<path d="M5 12.5l4.2 4.2L19 7"/>'), right: suSv('<path d="M5 12h14M13 6l6 6-6 6"/>'), down: suSv('<path d="M6 9l6 6 6-6"/>'), spark: suSv('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18"/>') });
 const suLogo = () => `<span class="au-logo"><span class="logo" aria-hidden="true">D</span><b>디디쌤 스튜디오</b></span>`;
 /* 시안(plan/v45/design/mock/login.html): 왼쪽 밝은 패널 + 오른쪽 카드 · 가입 탭은 이메일 칸이 펼쳐진 상태 · 로그인 탭은 「마지막 기관」 카드(#entryLast, 데모는 dataroom.js가 채움) */
+const suMailDemo = (sg, open, code) => `          <button type="button" class="au-btn mail${open ? ' on' : ''}" id="entryMailBtn" data-act="en-mail" aria-expanded="${open}" aria-controls="entryMail">${SOC_IC.mail}<span>이메일로 계속하기</span></button>
+          <form id="entryMail" class="au-mail" novalidate ${open ? '' : 'hidden'} aria-label="이메일로 ${sg ? '가입' : '로그인'}">
+            <label class="au-field"><span>이메일</span><span class="au-inp">${SOC_IC.mail}<input name="email" type="email" inputmode="email" autocomplete="${sg ? 'email' : 'username'}" maxlength="120" required placeholder="admin@기관.ac.kr" value="${esc(SUV.email)}"></span></label>
+            <label class="au-field"><span>비밀번호</span><span class="au-inp">${SOC_IC.lock}<input name="password" type="password" autocomplete="${sg ? 'new-password' : 'current-password'}" maxlength="200" required placeholder="${sg ? '10자 이상 · 영문과 숫자 · 한 번만 입력' : '비밀번호'}" ${sg ? 'aria-describedby="entryPwHint"' : ''}><button type="button" class="au-eye" data-act="en-eye" aria-label="비밀번호 보기" aria-pressed="false">${SOC_IC.eye}</button></span></label>
+            ${sg ? '<p class="au-hint" id="entryPwHint">10자 이상, 영문과 숫자를 함께 씁니다.</p>' : ''}
+            ${sg && code ? `<details class="au-code" id="entryCode"><summary>${SOC_IC.down}초대 코드가 있나요?</summary><label class="au-field"><span>초대 코드</span><span class="au-inp"><input name="code" autocomplete="off" maxlength="60" placeholder="디디쌤에서 받은 코드"></span></label></details>` : ''}
+            <button class="btn pri lg au-go" type="submit">${sg ? `가입하고 시작하기${SOC_IC.right}` : '로그인'}</button>
+            ${sg ? `<p class="au-privacy">${SOC_IC.lock}<span>이메일만 저장합니다. 이름 · 전화번호는 묻지 않습니다.</span></p>` : ''}
+          </form>`;
 function renderEntry() {
   suMode('mode-signup');
   if (!SUV.view) { const h = location.hash; SUV.view = /^#signup\b/.test(h) ? 'signup' : /^#login\b/.test(h) ? 'login' : (SUV.dflt() === 'login' ? 'login' : 'signup'); }
-  const sg = SUV.view === 'signup'; const demo = !SUV.live(); const open = sg || SUV.mail; const code = typeof SUV.codeOn === 'function' && SUV.codeOn();
+  const sg = SUV.view === 'signup'; const demo = !SUV.live(); const open = sg ? SUV.suMailShut !== true : !!SUV.mailOpen; /* 가입 탭은 시안대로 이메일 칸을 펼친 채 시작(버튼으로 접기) */ const code = typeof SUV.codeOn === 'function' && SUV.codeOn();
   $('#app').innerHTML = `
   <div class="su au45 au-entry" data-view="${sg ? 'signup' : 'login'}">
     <aside class="au-side" aria-hidden="true">
@@ -275,12 +284,12 @@ function renderEntry() {
     </aside>
     <main class="au-main" id="main" tabindex="-1">
       <div class="au-mtop">${suLogo()}</div>
-      <div class="au-card">
+      <div class="au-card" id="entry" data-view="${sg ? 'signup' : 'login'}">
         <div class="au-tabs" role="tablist" aria-label="로그인 또는 회원가입" id="entryTabs">
-          <button type="button" role="tab" id="enTabL" aria-controls="entry" aria-selected="${!sg}" tabindex="${sg ? -1 : 0}" class="${sg ? '' : 'on'}" data-act="en-view" data-v="login">로그인</button>
-          <button type="button" role="tab" id="enTabS" aria-controls="entry" aria-selected="${sg}" tabindex="${sg ? 0 : -1}" class="${sg ? 'on' : ''}" data-act="en-view" data-v="signup">회원가입</button>
+          <button type="button" role="tab" id="enTabL" aria-controls="entryPanel" aria-selected="${!sg}" tabindex="${sg ? -1 : 0}" class="${sg ? '' : 'on'}" data-act="en-view" data-v="login">로그인</button>
+          <button type="button" role="tab" id="enTabS" aria-controls="entryPanel" aria-selected="${sg}" tabindex="${sg ? 0 : -1}" class="${sg ? 'on' : ''}" data-act="en-view" data-v="signup">회원가입</button>
         </div>
-        <section id="entry" role="tabpanel" aria-labelledby="${sg ? 'enTabS' : 'enTabL'}" data-view="${sg ? 'signup' : 'login'}">
+        <section id="entryPanel" role="tabpanel" aria-labelledby="${sg ? 'enTabS' : 'enTabL'}">
           <h1 id="entryH" tabindex="-1">${sg ? '3초 만에 시작하세요' : '다시 오셨네요'}</h1>
           <p class="au-sub">${sg ? '가입 후 기관과 홈페이지만 고르면 바로 운영을 시작합니다.' : '지난번에 쓰던 기관 대시보드로 바로 이어집니다.'}</p>
           ${sg ? '' : '<div id="entryLast"></div>'}
@@ -288,15 +297,7 @@ function renderEntry() {
             <button type="button" class="au-btn kakao" data-act="en-go" data-v="kakao">${SOC_IC.kakao}<span>카카오로 계속하기</span></button>
             <button type="button" class="au-btn google" data-act="en-go" data-v="google">${SOC_IC.google}<span>Google로 계속하기</span></button>
           </div>
-          ${sg ? '' : `<button type="button" class="au-btn mail${SUV.mail ? ' on' : ''}" id="entryMailBtn" data-act="en-mail" aria-expanded="${SUV.mail}" aria-controls="entryMail">${SOC_IC.mail}<span>이메일로 계속하기</span></button>`}
-          <form id="entryMail" class="au-mail" novalidate ${open ? '' : 'hidden'} aria-label="이메일로 ${sg ? '가입' : '로그인'}">
-            <label class="au-field"><span>이메일</span><span class="au-inp">${SOC_IC.mail}<input name="email" type="email" inputmode="email" autocomplete="${sg ? 'email' : 'username'}" maxlength="120" required placeholder="admin@기관.ac.kr" value="${esc(SUV.email)}"></span></label>
-            <label class="au-field"><span>비밀번호</span><span class="au-inp">${SOC_IC.lock}<input name="password" type="password" autocomplete="${sg ? 'new-password' : 'current-password'}" maxlength="200" required placeholder="${sg ? '10자 이상 · 영문과 숫자 · 한 번만 입력' : '비밀번호'}" ${sg ? 'aria-describedby="entryPwHint"' : ''}><button type="button" class="au-eye" data-act="en-eye" aria-label="비밀번호 보기" aria-pressed="false">${SOC_IC.eye}</button></span></label>
-            ${sg ? '<p class="au-hint" id="entryPwHint">10자 이상, 영문과 숫자를 함께 씁니다.</p>' : ''}
-            ${sg && code ? `<details class="au-code" id="entryCode"><summary>${SOC_IC.down}초대 코드가 있나요?</summary><label class="au-field"><span>초대 코드</span><span class="au-inp"><input name="code" autocomplete="off" maxlength="60" placeholder="디디쌤에서 받은 코드"></span></label></details>` : ''}
-            <button class="btn pri lg au-go" type="submit">${sg ? `가입하고 시작하기${SOC_IC.right}` : '로그인'}</button>
-            ${sg ? `<p class="au-privacy">${SOC_IC.lock}<span>이메일만 저장합니다. 이름 · 전화번호는 묻지 않습니다.</span></p>` : ''}
-          </form>
+          ${demo ? suMailDemo(sg, open, code) : '<div id="entryMail" class="au-lvmail"></div>'}
           <p class="au-err" id="entryErr" role="alert">${esc(SUV.err || '')}</p>
           <div id="entryRooms"></div>
           <p class="au-sw">${sg ? '이미 계정이 있나요? <button type="button" class="linkb" data-act="en-view" data-v="login">로그인</button>' : '처음이신가요? <button type="button" class="linkb" data-act="en-view" data-v="signup">3초 만에 시작 →</button>'}</p>
@@ -307,13 +308,12 @@ function renderEntry() {
     </main>
   </div>`;
   const f = $('#entryMail');
-  f.addEventListener('submit', e => { e.preventDefault(); SUV.mailSubmit(f); });
-  f.email.addEventListener('input', () => { SUV.email = f.email.value; });
+  if (f && f.tagName === 'FORM') { f.addEventListener('submit', e => { e.preventDefault(); SUV.mailSubmit(f); }); f.email.addEventListener('input', () => { SUV.email = f.email.value; }); } /* 운영은 live.js가 빈 칸(#entrySoc · #entryMail)을 채운다 */
   $('#entryTabs').addEventListener('keydown', e => { if (!/^Arrow(Left|Right)$|^Home$|^End$/.test(e.key)) return; e.preventDefault(); const v = SUV.view === 'signup' ? 'login' : 'signup'; suView(v); setTimeout(() => { const t = $(v === 'signup' ? '#enTabS' : '#enTabL'); t && t.focus(); }, 0); });
   suFocus();
 }
 function renderSignup() { return SUV.step === 'org' ? renderOrgStep() : renderEntry(); }
-const suFocus = () => { const k = SUV.focus; SUV.focus = ''; if (!k) return; const el = $(k); if (el) try { el.focus({ preventScroll: false }); } catch (e) { } };
+const suFocus = () => { const k = SUV.focus; if (!k || !/^#/.test(k)) return; SUV.focus = ''; /* '#…' 선택자만 — 운영 live.js는 같은 SUV.focus에 입력칸 이름('code' 등)을 쓴다 */ const el = $(k); if (el) try { el.focus({ preventScroll: false }); } catch (e) { } };
 const suErr = (msg, sel) => { SUV.err = msg || ''; const p = $('#entryErr') || $('#suErr'); if (p) p.textContent = SUV.err; if (sel) { const el = $(sel); el && el.focus(); } };
 const suView = v => { if (SUV.view === v) return; SUV.view = v; SUV.err = ''; SUV.rooms = false; try { sessionStorage.setItem('didisam.lvview', v); } catch (e) { } renderSignup(); };
 const suToOrg = via => { SUV.via = via; SUV.step = 'org'; SUV.err = ''; SUV.rooms = false; SUV.focus = '#orgH'; renderSignup(); window.scrollTo(0, 0); };
@@ -384,7 +384,7 @@ function renderOrgStep() {
   });
   suFocus();
 }
-const suDone = () => { SU = { type: '', name: '', email: '' }; Object.assign(SUV, { view: 'login', step: 'entry', mail: false, via: '', email: '', rooms: false, err: '' }); try { sessionStorage.removeItem(SU_K); } catch (e) { } };
+const suDone = () => { SU = { type: '', name: '', email: '' }; Object.assign(SUV, { view: 'login', step: 'entry', mailOpen: false, via: '', email: '', rooms: false, err: '' }); try { sessionStorage.removeItem(SU_K); } catch (e) { } };
 function createOrg(type, name, ed) {
   RNG = 7 + Object.keys(TYPES).indexOf(type) * 13;
   S = { v: 2, org: { name, type, created: today(), domain: ((a => a.length >= 3 ? a : 'org-' + Math.random().toString(36).slice(2, 8))(name.replace(/[^a-z0-9]/gi, '').toLowerCase())) + '.didisam.com', /* v38 한글 이름(영문 3자 미만)은 'e.didisam.com' 대신 기관별 기본 주소 — 홈페이지 › 도메인에서 바꿈 */ plan: 'premium', ...(type === 'univ' ? { ed: ed === 'lms' ? 'lms' : 'lite' } : type === 'public' ? { ed: ['citizen', 'facility', 'staff'].includes(ed) ? ed : 'staff' } : {}) }, me: { name: '관리자', role: 'owner' }, nav: presetNav(type, type === 'univ' ? (ed === 'lms' ? 'lms' : 'lite') : type === 'public' ? (['citizen', 'facility', 'staff'].includes(ed) ? ed : 'staff') : undefined), /* v43 공공 세부 유형(시민 교육형 · 시설형 · 직원 교육형) — 없으면 직원 교육형(하위 호환) */ audit: [], runs: [], ai: { usage: 0 }, chat: [] };
@@ -477,9 +477,9 @@ ACT['su-type'] = el => { if (el.dataset.v !== SU.type) SU.ed = el.dataset.v === 
 /* v45 진입 화면 동작 */
 ACT['en-view'] = el => { const v = el.dataset.v === 'login' ? 'login' : 'signup'; SUV.focus = el.getAttribute('role') === 'tab' ? (v === 'signup' ? '#enTabS' : '#enTabL') : '#entryH'; suView(v); SUV.focus = ''; };
 ACT['en-go'] = el => SUV.go(el.dataset.v);
-ACT['en-mail'] = () => { SUV.mail = !SUV.mail; SUV.err = ''; SUV.focus = SUV.mail ? '#entryMail [name=email]' : '#entryMailBtn'; renderSignup(); };
+ACT['en-mail'] = () => { if (SUV.view === 'signup') SUV.suMailShut = SUV.suMailShut !== true; else SUV.mailOpen = !SUV.mailOpen; const op = SUV.view === 'signup' ? SUV.suMailShut !== true : SUV.mailOpen; SUV.err = ''; SUV.focus = op ? '#entryMail [name=email]' : '#entryMailBtn'; renderSignup(); };
 ACT['en-eye'] = el => { const i = el.parentElement.querySelector('input'); if (!i) return; const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.setAttribute('aria-pressed', String(show)); el.setAttribute('aria-label', show ? '비밀번호 숨기기' : '비밀번호 보기'); };
-ACT['su-back'] = ACT['en-back'] = () => { SUV.step = 'entry'; SUV.view = 'signup'; SUV.mail = SUV.via === 'email'; SUV.err = ''; SUV.focus = SUV.mail ? '#entryMail [name=password]' : '#entryH'; renderSignup(); };
+ACT['su-back'] = ACT['en-back'] = () => { SUV.step = 'entry'; SUV.view = 'signup'; SUV.mailOpen = SUV.via === 'email'; SUV.err = ''; SUV.focus = SUV.mailOpen ? '#entryMail [name=password]' : '#entryH'; renderSignup(); };
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; const f = ACT[el.dataset.act]; if (f) { if (el.tagName !== 'SUMMARY') e.preventDefault(); f(el, e); } }); /* v32.8 summary는 기본 접기 · 펼치기를 살린다 */
 document.addEventListener('change', e => {
   if (e.target.id === 'roleSel') { S.me.role = e.target.value; save(); toast(`${roleName(S.me.role)} 권한으로 보는 화면입니다.`); go(CUR.tab || CUR.ws); return; }
