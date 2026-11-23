@@ -13,7 +13,7 @@
   function val(v) { const o = {}; if (!v || typeof v !== 'object') return o; Object.keys(v).slice(0, 8).forEach(k => { const x = v[k]; if (!KEY.test(k)) return; if (typeof x === 'number' && isFinite(x)) o[k] = x; else if (typeof x === 'boolean') o[k] = x; else if (typeof x === 'string' && CODE.test(x)) o[k] = x; }); return o; }
   function demoSave(ev) { try { const a = JSON.parse(localStorage.getItem(KEYLS) || '[]'); a.push(...ev); localStorage.setItem(KEYLS, JSON.stringify(a.slice(-500))); } catch (e) { /* 저장 불가(사생활 보호 창 등) */ } }
   function emit(verb, obj, v) {
-    if (!VERBS.includes(verb)) return false; const o = obj == null ? '' : String(obj); if (o && !OBJ.test(o)) return false;
+    if (!VERBS.includes(verb)) return false; const o = obj == null ? '' : typeof obj === 'object' ? (obj.key || [obj.cls, obj.item != null ? obj.item : obj.wk != null ? 'w' + obj.wk : obj.k].filter(x => x != null && x !== '').join('/')) : String(obj); /* 호출부가 {cls,item|wk} 객체를 넘겨도 'cls/item' 형식으로 */ if (o && !OBJ.test(o)) return false;
     const ev = { verb, obj: o, val: val(v), at: new Date().toISOString() }; const l = (v && /^L[0-3]$/.test(v.lvl)) ? v.lvl : ''; /* 레벨은 호출부가 val.lvl로(LV2.levelOf(item)) */ if (l) ev.lvl = l; delete ev.val.lvl;
     if (!live()) { demoSave([ev]); return true; }
     if (Q.length >= QMAX) Q.shift(); Q.push(ev);

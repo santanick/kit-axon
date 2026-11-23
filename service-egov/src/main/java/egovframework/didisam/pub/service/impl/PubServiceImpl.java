@@ -314,6 +314,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             for (var e : slice(es, -370, es.size())) out.add(Map.entry(e.getKey(), numNode(Math.min(999, Math.max(0, round(num(e.getValue())))))));
             o.set("days", fromEntries(out));
         }
+        for (String k : List.of("mtoday", "mgoal", "mlast", "mach")) { JsonNode v = get(lp, k); if (v != null && (v.isObject() || v.isArray()) && v.toString().length() <= 8000) o.set(k, v.deepCopy()); } /* v46 기능 4 · 10 숙달 · 작은 성취(Node cleanLP 같은 규칙, 8KB 상한) */
         JsonNode T = get(lp, "tutor");
         if (truthy(T) && isObj(T)) {
             ObjectNode tu = F.objectNode(); ArrayNode plan = tu.putArray("plan"), ask = tu.putArray("ask");
