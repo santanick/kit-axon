@@ -52,7 +52,7 @@
     if (!c) return 0; let n = 0; const uidf = typeof uid === 'function' ? uid : (p => p + Math.random().toString(36).slice(2, 9));
     (c.weekPlan || []).forEach((w, i) => { const L = w.loop; const wk = +w.w || i + 1; if (!L || L.off || L.st === 'ok' || (onlyWk && +onlyWk !== wk)) return; const ck = (L.steps || []).find(s => s.k === 'check'); const cp = L.cpt || [];
       if (ck && ck.item) { const it = (c.curriculum || []).find(x => x.id === ck.item); if (it) { it.loop = 'check'; it.cpt = cp[0] || ''; it.concepts = cp.slice(); } }
-      else if (ck && ck.add && !isVoc(c)) { const nm = (CONCEPT.ofWeek(c, wk)[0] || {}).name || w.title || ''; const qs = (typeof AI !== 'undefined' && AI.fromText ? (AI.fromText(`${w.title || ''}. ${w.goal || nm}. ${nm}은 이 차시의 핵심 개념이다.`, 3) || []) : []).slice(0, 5);
+      else if (ck && ck.add && !isVoc(c)) { const nm = (CONCEPT.ofWeek(c, wk)[0] || {}).name || w.title || ''; const qs = (typeof AI !== 'undefined' && AI.fromText ? ((AI.fromText(`${w.title || ''}. ${w.goal || nm}. ${nm}은 이 차시의 핵심 개념이다.`, 3) || {}).qs || []) : []).slice(0, 5);
         if (qs.length) { const it = { id: uidf('it'), type: 'quiz', title: `${wk}${isUnivU() ? '주차' : '차시'} 숙달 확인`, week: wk, qs, loop: 'check', cpt: cp[0] || '', concepts: cp.slice(), ai: { lvl: 'L0' }, loopAdd: 1 }; c.curriculum = c.curriculum || []; const at = c.curriculum.map(x => +x.week || 0).lastIndexOf(wk); c.curriculum.splice(at < 0 ? c.curriculum.length : at + 1, 0, it); ck.item = it.id; } delete ck.add; }
       L.st = 'ok'; L.at = Date.now(); n++; });
     return n;
@@ -153,8 +153,9 @@
       let h = base.apply(this, arguments); try { if (!siteOn() || !LR.me) return h; const c = (SITE().classes || []).find(x => x.id === id); if (!c || !Array.isArray(c.loop) || !c.loop.length) return h;
         const r0 = (LR.lp.cls[c.id] || { items: {} }); const its = c.items || []; const it = its.find(x => x.id === itemId) || its.find(x => x.type !== 'chapter' && !((r0.items || {})[x.id] || {}).done) || its.find(x => x.type !== 'chapter');
         const L = it && c.loop.find(x => +x.w === +(it.week || 0)); if (!L) return h;
-        if (it.loop === 'check' && c.loopLock !== false && !ready(peek(c.id, L.w))) h = h.replace(/<form id="qz"[\s\S]*?<\/form>/, `<p class="lp2-lock" role="note">${icl('lock', 16)} 숙달 확인은 앞 단계를 마치면 열려요.</p>`);
-        const pn = panelL(c, L, it); const k = h.indexOf('class="imain"'); if (k < 0) return h; const e2 = h.indexOf('</h2>', k); const at = e2 > 0 ? e2 + 5 : h.indexOf('>', k) + 1; h = h.slice(0, at) + pn + h.slice(at);
+        const k = h.indexOf('class="imain"'); if (k < 0) return h; const e2 = h.indexOf('</h2>', k); const at = e2 > 0 ? e2 + 5 : h.indexOf('>', k) + 1;
+        let tail = h.slice(at); if (it.loop === 'check' && c.loopLock !== false && !ready(peek(c.id, L.w))) { const E = ['<div class="pl43nx"', '<div class="inav"'].map(x => tail.indexOf(x)).filter(x => x >= 0); tail = `<p class="lp2-lock" role="note">${icl('lock', 16)} 숙달 확인은 앞 단계를 마치면 열려요.</p>` + (E.length ? tail.slice(Math.min(...E)) : ''); } /* 퀴즈 본문(기본 · lassess 화면 모두)을 잠금 안내로 */
+        h = h.slice(0, at) + panelL(c, L, it) + tail;
       } catch (e) { console.error('loop2 learner', e); } return h; }; }
     document.addEventListener('click', e => { const el = e.target && e.target.closest && e.target.closest('[data-lp2l]'); if (!el) return; e.preventDefault(); const k = el.dataset.lp2l, cid = el.dataset.c, wk = +el.dataset.w; const r = recOf(cid, wk); const say = (m, t) => typeof toast === 'function' && toast(m, t);
       if (k === 's') { const v = (document.getElementById('lp2s') || {}).value || ''; if (v.replace(/\s/g, '').length < MIN.struggle) { say(`내 시도를 ${MIN.struggle}자 이상 적어 주세요.`, 'warn'); return; } r.s = v.slice(0, 2000); window.LEV && LEV.emit('attempt', { cls: cid, wk, loop: 'struggle' }, { len: v.length }); }

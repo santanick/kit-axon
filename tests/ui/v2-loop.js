@@ -19,6 +19,11 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
     const r = await A.p.evaluate(async () => {
       const out = {}; const wait = ms => new Promise(o => setTimeout(o, ms));
       createOrg('univ', '루프 점검 대학', 'lite'); await wait(60); render();
+      /* 채점 대기 3건 준비(루브릭 연결 과제) */
+      { const g = CF.create({ name: '채점 점검 과정', weekPlan: [{ title: '보고서', goal: '' }], fillEmpty: true }); let it = g.curriculum.find(x => x.type === 'assign'); if (!it) { it = { id: 'asg1', type: 'assign', title: '보고서', week: 1 }; g.curriculum.push(it); } it.rubric = S.rubrics[0].id;
+        for (let i = 1; i <= 3; i++) S.members.push({ id: 'mt' + i, name: '학습자' + i, sid: '2026000' + i, group: '', grade: '정회원', joined: today(), last: today(), extra: {} });
+        S.members.slice(-3).forEach((m, i) => { g.prog[m.id] = { p: 50, assign: 'submitted', subAt: today(), sub: '문제 정의와 목표를 세우고 방법과 과정을 정리했습니다. 결과와 개선점, 근거 사례를 함께 적었습니다. '.repeat(i + 2) }; }); }
+
       /* 꺼짐: 기존과 같음 */
       out.offOn = LOOP2.on(); out.offIds = CF.stepIds().join(','); out.offIds0 = CF.steps.filter(s => s.id !== 'loop').map(s => s.id).slice(0, 5).join(',');
       const c0 = S.classes.find(c => Object.values(c.prog || {}).some(p => p.assign === 'submitted'));
@@ -28,7 +33,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
       /* 켜짐 */
       S.aipol = { on: true, v: 1, lvl: 'L1', preset: { exam: 'L0', assign: 'L1' }, retain: 'term', evalNotice: true, train: false };
       out.onIds = CF.stepIds().join(',');
-      const c = S.classes.find(x => (x.weekPlan || []).length >= 3); const nW = c.weekPlan.length, nI = c.curriculum.length, ids0 = c.curriculum.map(x => x.id).join();
+      const c = CF.create({ name: '데이터분석 기초', weekPlan: [{ title: '데이터와 변수', goal: '변수와 자료형을 이해한다. 자료를 표로 정리한다.' }, { title: '평균과 중앙값', goal: '' }, { title: '시각화 고르기', goal: '' }], fillEmpty: true }); c.open = '전체'; c.status = '운영중'; const nW = c.weekPlan.length, nI = c.curriculum.length, ids0 = c.curriculum.map(x => x.id).join();
       out.tpl = {}; for (const k of LOOP2.ORD) { LOOP2.apply(c, k); out.tpl[k] = c.weekPlan.every(w => w.loop && w.loop.steps.length === 4 && w.loop.st === 'draft') && c.weekPlan[0].loop.steps.map(s => s.k).join() === 'struggle,expand,reflect,check'; }
       out.concepts = (c.concepts || []).length >= nW && c.concepts.every(k => k.id && k.name && k.wk);
       S.aipol.max = 'L2'; LOOP2.apply(c, 'project'); out.capped = c.weekPlan.every(w => w.loop.steps.every(s => ['L0', 'L1', 'L2'].includes(s.lvl))); delete S.aipol.max;
@@ -97,8 +102,8 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
       LR.mine = { badges: [], cls: { lp2c: { p: 0, st: 'submitted', fb: '초안 비밀 피드백', score: 77 } } };
       const chk = pc.items.find(x => x.loop === 'check'); const w1 = pc.items.find(x => +x.week === +chk.week && x.loop !== 'check') || chk;
       let h = viewCourse('lp2c', w1.id); o.panel = /1 씨름 → 2 AI 확장 → 3 성찰 → 4 숙달 확인/.test(h); o.hidden = !/초안 비밀 피드백/.test(h) && LR.mine.cls.lp2c.score == null;
-      h = viewCourse('lp2c', chk.id); o.lock = /숙달 확인은 앞 단계를 마치면 열려요/.test(h) && !/<form id="qz"/.test(h);
-      LR.lp.cls.lp2c.refl = { [chk.week]: { s: 'x'.repeat(25), x: 1, r: 'y'.repeat(35) } }; h = viewCourse('lp2c', chk.id); o.open = !/앞 단계를 마치면 열려요/.test(h);
+      h = viewCourse('lp2c', chk.id); o.lock = /숙달 확인은 앞 단계를 마치면 열려요/.test(h) && !/<form id="qz"|data-a2/.test(h.slice(h.indexOf('lp2-lock')));
+      LR.lp.cls.lp2c = LR.lp.cls.lp2c || { items: {} }; LR.lp.cls.lp2c.refl = { [chk.week]: { s: 'x'.repeat(25), x: 1, r: 'y'.repeat(35) } }; h = viewCourse('lp2c', chk.id); o.open = !/앞 단계를 마치면 열려요/.test(h);
       LR.mine.cls.lp2c = { p: 0, st: 'graded', fb: '잘했습니다', score: 90 }; h = viewCourse('lp2c', w1.id); o.arrived = /선생님 피드백이 도착했어요/.test(h);
       st.aipol = { on: false }; LR.lp.cls.lp2c.refl = {}; h = viewCourse('lp2c', chk.id); o.offSame = !/lp2l|lp2-lock|g2l/.test(h);
       return o; }, r.pubC);
