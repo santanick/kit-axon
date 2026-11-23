@@ -123,4 +123,7 @@ function createGateway({ pool, inTenant, aiUrl, aiKey, today, keys, HttpErr }) {
   return { count, post, tokens, saveTurn, purge, openTurn, byFeature };
 }
 
-module.exports = { createGateway, polOf, pubPol, levelOf, findItem, kindOf, hintCheck, directive, LV, LABEL, FEATURES, HINT_NAME, RETAIN_DAYS };
+/* 기능 9 비전 대화(mode:'vision', 정책 on 기관): 6단계 질문 지시문 — 학습 맥락 대신 비전 카드만 돕는다 */
+const VISION_Q = ['관심 있는 것', '잘하고 싶은 것', '그 이유', '1년 뒤 나의 모습', '이번 학기 목표 3개', '비전 카드 확인'];
+const VISION_DIR = st => { const i = Math.max(1, Math.min(6, Math.round(+st || 1))); return `[비전 대화 ${i}/6단계 · ${VISION_Q[i - 1]}] 학습자의 비전 카드(누구 · 왜 · 어떻게)와 목표를 함께 만듭니다. 이번 단계 질문 하나만 짧게 하고, 학습자 답을 한 문장으로 정리해 돌려줍니다. 이름 · 연락처 · 학교 밖 개인정보는 묻지 않습니다.`; };
+module.exports = { VISION_DIR, createGateway, polOf, pubPol, levelOf, findItem, kindOf, hintCheck, directive, LV, LABEL, FEATURES, HINT_NAME, RETAIN_DAYS };

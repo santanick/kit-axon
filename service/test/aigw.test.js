@@ -112,6 +112,12 @@ test('게이트웨이 · 이벤트 API', async t => {
     const s = await call('A', 'GET', '/api/lev?verb=submit'); assert.equal(s.j.rows[0].obj, 'c1/i1'); assert.equal(s.j.rows[0].trust, 'C');
     const me = await call('L', 'GET', `/api/pub/${A.tid}/me`); const v = me.j.lp && me.j.lp.vision; if (v) { assert.equal(v.card.who, '데이터 분석가'); assert.ok(!v.card.why.includes('1234-5678')); }
   });
+  await t.test('AI 고지 확인(consent ai) · 비전 대화 모드(feature vision)', async () => {
+    const c = await call('L', 'POST', `/api/pub/${A.tid}/consent`, { ai: true }); assert.equal(c.status, 200); assert.ok(c.j.aiAt);
+    const n = seen.length; const v = await call('L', 'POST', `/api/pub/${A.tid}/tutor`, { q: '저는 데이터에 관심 있어요', mode: 'vision', step: 1 });
+    assert.equal(v.status, 200); assert.match(seen[n].system, /비전 대화 1\/6단계/);
+    const u = await call('A', 'GET', '/api/ai/usage'); assert.equal(u.j.byFeature.vision.calls, 1);
+  });
   await t.test('aipol.train은 정운영자만(운영자 본인은 변경 가능)', async () => {
     const d = doc({ on: true, v: 1, lvl: 'L1', retain: 'none', train: true }); const r = await call('A', 'PUT', '/api/state', { doc: d, rev }); assert.equal(r.status, 200); rev = r.j.rev;
   });
