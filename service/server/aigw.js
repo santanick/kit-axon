@@ -46,7 +46,7 @@ const kindOf = it => (it && /^(exam|test)$/.test(String(it.type || '')) ? 'exam'
 /* 레벨 판정: item.ai.lvl → 기관 프리셋[종류] → 기관 lvl → L1. 정책 off면 ''(판정 없음) */
 function levelOf(pol, it, kind) {
   if (!pol || !pol.on) return '';
-  const a = it && it.ai; if (a && LV.includes(a.lvl)) return a.lvl;
+  const a = it && /^(quiz|exam|test|assign)$/.test(String(it.type || '')) && it.ai; if (a && LV.includes(a.lvl)) return a.lvl; /* 영상 항목의 it.ai(장면)는 레벨이 아님 */
   const k = kind || kindOf(it); if (pol.preset && LV.includes(pol.preset[k])) return pol.preset[k];
   return LV.includes(pol.lvl) ? pol.lvl : 'L1';
 }

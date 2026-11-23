@@ -66,7 +66,7 @@ public final class DdAiGateway {
     /** 항목 레벨(정규화된 정책): item.ai.lvl → preset[종류] → lvl → 'L1'. 정책 off면 "" */
     public static String levelOf(JsonNode pol, JsonNode item) {
         if (!on(pol)) return "";
-        JsonNode ai = item == null ? null : item.get("ai");
+        JsonNode ai = item == null || !s(item.get("type")).matches("quiz|exam|test|assign") ? null : item.get("ai"); /* 영상 항목 ai(장면)는 레벨 아님 */
         String l = ai != null && ai.isObject() ? s(ai.get("lvl")) : ""; if (LV.contains(l)) return l;
         JsonNode pre = pol.get("preset"); l = pre == null ? "" : s(pre.get(kindOf(item))); if (LV.contains(l)) return l;
         l = s(pol.get("lvl")); return LV.contains(l) ? l : "L1";
