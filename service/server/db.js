@@ -352,6 +352,57 @@ const MIGRATIONS = [
   /* v38 계정 연결: 14세 미만 가입의 초대 토큰(보호자 동의 뒤 요청함에 실음, 개인정보 아님) · 동의한 보호자의 1회용 보호자 계정 연결 토큰(해시) */
   `alter table learner_accounts add column if not exists invite_token text;
    alter table pii.guardian add column if not exists parent_tok_hash text;`,
+  /* v46 Ver2: AI 게이트웨이 기능별 사용량(ai_usage_f — 기존 ai_usage(tenant_id, day) 합계 행은 그대로 둬 한도 · LMS · Java 쿼리 불변) ·
+     대화 기록(ai_turn, 가림 뒤 AES-GCM 암호화, purge_at 지나면 삭제) · 학습 이벤트(learning_event, 자유 글 없음 — 숫자 · 짧은 코드만) */
+  `create table if not exists ai_usage_f (
+     tenant_id text not null references tenants(id) on delete cascade,
+     day date not null,
+     feature text not null check (feature ~ '^[a-z]{2,12}$'),
+     calls integer not null default 0,
+     tin bigint not null default 0,
+     tout bigint not null default 0,
+     primary key (tenant_id, day, feature)
+   );
+   create table if not exists ai_turn (
+     id bigserial primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null default '',
+     feature text not null,
+     cls text not null default '',
+     item text not null default '',
+     level text not null default '',
+     q_enc text not null,
+     a_enc text not null,
+     tin integer not null default 0,
+     tout integer not null default 0,
+     at timestamptz not null default now(),
+     purge_at timestamptz not null
+   );
+   create index if not exists ai_turn_t on ai_turn (tenant_id, sid, at);
+   create index if not exists ai_turn_purge on ai_turn (purge_at);
+   create table if not exists learning_event (
+     id bigserial primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     sid text not null,
+     verb text not null check (verb in ('attempt','hint','submit','revise','reflect','mastery','ai.ask','vision','goal')),
+     obj text not null default '' check (length(obj) <= 120),
+     lvl text not null default '' check (lvl in ('','L0','L1','L2','L3')),
+     val jsonb not null default '{}'::jsonb check (octet_length(val::text) <= 512),
+     src text not null check (src in ('client','server')),
+     trust text not null check (trust in ('A','C')),
+     at timestamptz not null default now()
+   );
+   create index if not exists learning_event_sid on learning_event (tenant_id, sid, at);
+   create index if not exists learning_event_obj on learning_event (tenant_id, obj);
+   do $$ declare t text; begin
+     foreach t in array array['ai_usage_f','ai_turn','learning_event'] loop
+       execute format('alter table %I enable row level security', t);
+       execute format('alter table %I force row level security', t);
+       execute format('drop policy if exists tenant_iso on %I', t);
+       execute format($p$create policy tenant_iso on %I using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true))$p$, t);
+     end loop; end $$;
+   grant select, insert, update, delete on ai_usage_f, ai_turn, learning_event to didisam_tenant;
+   grant usage on sequence ai_turn_id_seq, learning_event_id_seq to didisam_tenant;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).
