@@ -377,3 +377,6 @@ html[data-theme="dark"] :is(.uxfind,.acp,.cbox,.chip,.slg-empty,.mcard,.tcard,.d
 html[data-theme="dark"] .top .av,html[data-theme="dark"] .acp .av{background:var(--pr);color:var(--on-pr)}
 html[data-theme="dark"] #toasts .toast,html[data-theme="dark"] .toast{background:var(--g200);color:var(--g900);box-shadow:var(--sh3)}
 html[data-theme="dark"] .top :is(summary,details,.acp){background:var(--surface);color:var(--g900)}
+
+/* v45 디디쌤 로고 마크(대표님 11-23: 로고 색 기준) — 「D」 타일 대신 실제 로고 */
+.logo{background:url(img/brand/didisam-mark.png) center/contain no-repeat transparent!important;color:transparent!important;font-size:0!important;border-radius:0!important;box-shadow:none!important}

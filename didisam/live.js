@@ -133,7 +133,7 @@ const LVMSG = {
   net: '서버에 연결하지 못했습니다. 다시 시도해 주십시오.', email: '이메일 형식을 확인해 주십시오.', password: '비밀번호는 10자 이상, 영문과 숫자를 함께 씁니다.',
   exists: '이미 가입된 이메일입니다. 로그인해 주십시오.', oauth_pending: '가입 시간이 지났습니다. 카카오 또는 Google로 다시 계속해 주십시오.', code: '초대 코드가 올바르지 않습니다.', codeNeed: '초대 코드를 입력해 주십시오.',
   name: '기관명을 30자 이내로 입력해 주십시오.', type: '기관 유형을 골라 주십시오.', signup_off: '지금은 새 기관 가입을 받지 않습니다.',
-  kakaoOff: '카카오 로그인 준비 중입니다. Google 또는 이메일로 시작해 주세요.', need: '이메일과 비밀번호를 입력해 주십시오.',
+  kakaoOff: '카카오 로그인은 준비 중입니다. Google 또는 이메일로 시작해 주십시오.', need: '이메일과 비밀번호를 입력해 주십시오.',
 };
 const lvMsg = x => (x && x.status && LVMSG[x.code]) || (x && !x.status ? LVMSG.net : (x && x.message) || LVMSG.net);
 /* v32.4 운영자 소셜 로그인(구글 · 카카오) — 서버가 /api/oauth/<제공자>/start → 콜백을 처리하고 #oauth=… 로 돌려보낸다 */

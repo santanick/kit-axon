@@ -170,7 +170,7 @@ function tenantYAML() {
 ACT['dr-yaml'] = () => { const r = R(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([tenantYAML()], { type: 'text/yaml' })); a.download = `didisam-tenant-${r.tid}.yaml`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); logAudit('설치 구성 파일 내려받기'); save(); toast('설치 구성 파일을 내려받았습니다.', 'ok'); };
 
 /* 사이드바 기관 카드에 데이터룸 표시 · 가입 화면에 기존 데이터룸 */
-AFTER.push(() => { const c = $('.orgcard small'); if (c && S?.org?.room) c.textContent = `${DRM[S.org.room.mode].n} · 데이터룸 분리`; });
+AFTER.push(() => { const c = $('.orgcard small'); if (/\bmode-(signup|onb)\b/.test(document.body.className)) return; /* v45 진입 화면 기관 목록에 배포 모델 용어를 보이지 않는다 */ if (c && S?.org?.room) c.textContent = `${DRM[S.org.room.mode].n} · 데이터룸 분리`; });
 /* v45 진입: 첫 탭 판정(D4) — 이 브라우저에 기관이 있으면 로그인, 없으면 가입. 로그인 탭에서 어떤 방식이든 누르면 「이 브라우저의 기관」 목록 */
 SUV.dflt = () => DREG.get().list.length ? 'login' : 'signup';
 const drRooms = () => { const L = DREG.get().list.slice().sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));

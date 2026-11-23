@@ -264,7 +264,7 @@ const suMailDemo = (sg, open, code) => `          <button type="button" class="a
             ${sg ? '<p class="au-hint" id="entryPwHint">10자 이상, 영문과 숫자를 함께 씁니다.</p>' : ''}
             ${sg && code ? `<details class="au-code" id="entryCode"><summary>${SOC_IC.down}초대 코드가 있나요?</summary><label class="au-field"><span>초대 코드</span><span class="au-inp"><input name="code" autocomplete="off" maxlength="60" placeholder="디디쌤에서 받은 코드"></span></label></details>` : ''}
             <button class="btn pri lg au-go" type="submit">${sg ? `가입하고 시작하기${SOC_IC.right}` : '로그인'}</button>
-            ${sg ? `<p class="au-privacy">${SOC_IC.lock}<span>이메일만 저장합니다. 이름 · 전화번호는 묻지 않습니다.</span></p>` : ''}
+            ${sg ? `<p class="au-privacy">${SOC_IC.lock}<span>이메일만 저장합니다. 이름 · 전화번호는 묻지 않습니다.</span></p><p class="au-terms">계속하면 디디쌤 이용약관 · 개인정보 처리방침에 동의합니다.</p>` : ''}
           </form>`;
 function renderEntry() {
   suMode('mode-signup');
