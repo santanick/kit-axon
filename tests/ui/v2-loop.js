@@ -24,7 +24,8 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
         for (let i = 1; i <= 3; i++) S.members.push({ id: 'mt' + i, name: '학습자' + i, sid: '2026000' + i, group: '', grade: '정회원', joined: today(), last: today(), extra: {} });
         S.members.slice(-3).forEach((m, i) => { g.prog[m.id] = { p: 50, assign: 'submitted', subAt: today(), sub: '문제 정의와 목표를 세우고 방법과 과정을 정리했습니다. 결과와 개선점, 근거 사례를 함께 적었습니다. '.repeat(i + 2) }; }); }
 
-      /* 꺼짐: 기존과 같음 */
+      /* 꺼짐: 기존과 같음 — 통합 v46: 새 기관은 켜짐으로 시작하므로 기존 기관 상태(꺼짐)를 명시 */
+      S.aipol = { on: false, v: 1 };
       out.offOn = LOOP2.on(); out.offIds = CF.stepIds().join(','); out.offIds0 = CF.steps.filter(s => s.id !== 'loop').map(s => s.id).slice(0, 5).join(',');
       const c0 = S.classes.find(c => Object.values(c.prog || {}).some(p => p.assign === 'submitted'));
       out.hasPend = !!c0; if (c0) { const id = Object.keys(c0.prog).find(k => c0.prog[k].assign === 'submitted'); ACT.grade({ dataset: { c: c0.id, v: id } }); out.offModal = !!document.querySelector('#modal .rg') && !document.querySelector('#modal .g2'); closeModal(); }
@@ -75,7 +76,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
     ok(!r.offOn && r.offIds === r.offIds0 && !/loop/.test(r.offIds), `꺼짐: 과정 만들기 단계 그대로(${r.offIds})`);
     ok(r.hasPend && r.offModal, '꺼짐: 기존 채점 모달 그대로');
     ok(r.offAssess && r.offSnap, '꺼짐: 채점 화면 · 게시본 변화 없음');
-    ok(/loop,open$/.test(r.onIds), `켜짐: 「학습 루프 템플릿」 단계(개설 앞) ${r.onIds}`);
+    ok(!/loop/.test(r.onIds), `켜짐: 마법사 단계 그대로(통합 v46: 루프는 과정 상세에서) ${r.onIds}`);
     ok(Object.values(r.tpl).every(Boolean) && Object.keys(r.tpl).length === 4, '4종 템플릿 모든 차시 4단계 배치');
     ok(r.concepts, '개념 자동 생성(차시 목표 → 개념, 차시당 1~3)');
     ok(r.capped, '단계 레벨이 정책 최대 레벨을 넘지 않음');
@@ -85,7 +86,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
     ok(r.accepted && r.kept && r.weeks && r.checkMark, `모두 수락 · 기존 항목 삭제 0 · 차시 수 불변 · 숙달 확인 연결(추가 ${r.added})`);
     ok(r.pub, '수락 후 게시본에 루프 · aipol · 숙달 확인 표시');
     ok(r.voc, '직훈: 항목 추가 없음 · 차시 수 · 진도 불변 · 기존 퀴즈에 표시만');
-    ok(/loop,open$/.test(r.flowIds), `마법사 단계 노출 ${r.flowIds}`);
+    ok(!/loop/.test(r.flowIds) && r.flowIds.split(',').length <= 5, `마법사는 5단계 이내 · 루프 단계 없음(통합 v46: 과정 상세 「학습 루프 적용」으로) ${r.flowIds}`);
     ok(r.box && r.pendN > 0, `채점 대기 초안 안내(${r.pendN}건)`);
     ok(r.draft && r.noSendUnchecked, '초안은 p.ai에만 · 확인 안 한 건은 발송 안 됨');
     ok(r.g2modal && r.sent, '확인 후 보내기 → 점수 · 피드백 · AI 총점 · 발송 기록');
