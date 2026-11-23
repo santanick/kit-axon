@@ -26,14 +26,13 @@ function emptyOut() {
   S.audit = (S.audit || []).filter(a => !/^표준 문서 생성/.test(String(a && a.what || ''))); /* v38 비운 샘플 문서의 생성 기록도 남기지 않는다 */
   logAudit('빈 스튜디오로 시작(샘플 데이터 없음)'); save();
 }
-let EMPTY_SNAP = null; /* v45 호환: v44까지 첫 화면(가입)에 #suEmpty가 있어 그 화면에서 createOrg()를 바로 부르면 그때 체크값을 썼다 — 진입 화면에서는 그 값을 기억해 같은 결과를 낸다(시험 · 자동화 호환) */
-{ const base = renderSignup; renderSignup = (...a) => { base(...a); if ($('#entry')) EMPTY_SNAP = emptyPref(); const f = $('#suForm'); const btn = f && f.querySelector('button[type=submit]'); if (!btn || $('#suEmpty')) return;
+{ const base = renderSignup; renderSignup = (...a) => { base(...a); const en = $('#entry'); if (en && !$('#suEmpty')) en.insertAdjacentHTML('beforeend', `<input type="checkbox" id="suEmpty" hidden aria-hidden="true" tabindex="-1" ${emptyPref() ? 'checked' : ''}>`); /* v45 호환: v44까지 첫 화면에 있던 체크(보이지 않음) — 첫 화면에서 createOrg()를 바로 부르는 시험 · 자동화가 같은 결과를 내도록. 사람은 ① 화면의 보이는 체크를 쓴다 */ const f = $('#suForm'); const btn = f && f.querySelector('button[type=submit]'); if (!btn || $('#suEmpty')) return;
   /* v45: ① 기관 선택 아래 작은 선택지(기본 켜짐 = 지금과 같음) — 운영의 「샘플 데이터로 둘러보기」도 이 체크 하나로 합친다(live.js: LV.sample = !suEmpty.checked) */
   const slot = $('.au-emptyslot'); const at = slot || $('#suErr') || btn;
   at.insertAdjacentHTML(slot ? 'afterend' : 'beforebegin', `<label class="suempty au-empty"><input type="checkbox" id="suEmpty" ${emptyPref() ? 'checked' : ''}><span><b>빈 스튜디오로 시작</b><small>샘플 데이터 없이 시작합니다. 끄면 예시 데이터가 들어간 상태로 둘러볼 수 있습니다.</small></span></label>`);
   $('#suEmpty').addEventListener('change', e => { try { localStorage.setItem(EMPTY_K, e.target.checked ? '1' : '0'); } catch (x) { } }); }; }
 { const base = createOrg; createOrg = (type, name, ed) => {
-  const box = $('#suEmpty'); const empty = box ? box.checked : $('#entry') && EMPTY_SNAP !== null ? EMPTY_SNAP : emptyPref();
+  const box = $('#suEmpty'); const empty = box ? box.checked : emptyPref();
   let prev = null; try { prev = CL.get(); } catch (e) { }
   base(type, name, ed);
   try { if (empty) emptyOut(); } catch (e) { console.error(e); }
