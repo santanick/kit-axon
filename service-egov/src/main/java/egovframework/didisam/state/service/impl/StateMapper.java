@@ -15,4 +15,6 @@ public interface StateMapper {
     void deleteLearners(@Param("tid") String tid, @Param("sids") List<String> sids);
     void deleteLearnerSessions(@Param("tid") String tid, @Param("sids") List<String> sids);
     void updateTenantMode(@Param("tid") String tid, @Param("mode") String mode, @Param("name") String name);
+    /** v46 기관 AI 정책(평문 최상위 키) */
+    String selectAipol(@org.apache.ibatis.annotations.Param("tid") String tid);
 }

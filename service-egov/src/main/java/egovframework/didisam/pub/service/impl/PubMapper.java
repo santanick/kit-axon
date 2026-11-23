@@ -18,6 +18,8 @@ public interface PubMapper {
     Map<String, Object> selectLp(@Param("tid") String tid, @Param("sid") String sid);
     Map<String, Object> selectDoc(@Param("tid") String tid);
     Map<String, Object> selectMeExtra(@Param("tid") String tid, @Param("sid") String sid);
+    void setHint(@Param("tid") String tid, @Param("sid") String sid, @Param("key") String key, @Param("h") String h);
+    String selectAipol(@Param("tid") String tid);
     void upsertProgress(@Param("tid") String tid, @Param("sid") String sid, @Param("lp") String lp, @Param("bytes") int bytes);
     Map<String, Object> selectTutorCtx(@Param("tid") String tid);
     int incUsage(@Param("tid") String tid, @Param("day") String day);
