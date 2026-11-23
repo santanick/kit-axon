@@ -118,6 +118,9 @@
     return `<div class="lq-week">${Array.from({ length: 7 }, (_, i) => { const d = addD(s0, i); const L = B[d] || [];
       return `<div class="lq-wc${d === td() ? ' td' : ''}" data-lcday="${d}"><button type="button" class="lq-wh" data-lcal="day" data-v="${d}"><b>${WD[i]}</b><span>${+d.slice(5, 7)}/${+d.slice(8)}${d === td() ? ' · 오늘' : ''}</span></button>${L.map(e => row(e, 0)).join('') || '<small class="lq-none">일정 없음</small>'}</div>`; }).join('')}</div>`; }
   function listHTML(E) { const from = LC.d && LC.d < td() ? LC.d : td(); const L = E.filter(e => e.date >= from && e.date <= addD(from, 60)); const B = byDate(L);
+    /* v47 D6: 앱은 기본 「이번 주」(7일)만 펼치고 나머지 60일은 접기 — 6.9화면 → 2화면 안팎 */
+    if (appOn() && !isPar() && Object.keys(B).length) { const lim = addD(from, 6); const K = Object.keys(B).sort(); const A = K.filter(d => d <= lim), Z = K.filter(d => d > lim); const grp = d => `<div class="lq-lg"><button type="button" class="lq-lh${d === td() ? ' t' : ''}" data-lcal="day" data-v="${d}">${fmt(d)} <small>${dday(d)}</small></button>${B[d].map(e => row(e, 0)).join('')}</div>`;
+      return `<div class="lq-list">${A.length ? A.map(grp).join('') : '<p class="lq-none">이번 주에는 일정이 없어요.</p>'}${Z.length ? `<details class="lq-later"><summary>다음 일정 ${Z.reduce((n, d) => n + B[d].length, 0)}개 더 보기</summary>${Z.map(grp).join('')}</details>` : ''}</div>`; }
     return Object.keys(B).length ? `<div class="lq-list">${Object.keys(B).sort().map(d => `<div class="lq-lg"><button type="button" class="lq-lh${d === td() ? ' t' : ''}" data-lcal="day" data-v="${d}">${fmt(d)} <small>${dday(d)}</small></button>${B[d].map(e => row(e, 0)).join('')}</div>`).join('')}</div>`
       : `<p class="lq-none big">앞으로 60일 동안 일정이 없어요.</p>`; }
   function calHTML() { const v = LC.v || (innerWidth <= 640 ? 'list' : 'month'); const cur = LC.d || td(); const E = events(); const P = isPar(); const K = kids();
@@ -134,8 +137,8 @@
       <div class="lq-bar"><div class="lq-seg" role="tablist" aria-label="보기">${[['month', '월'], ['week', '주'], ['list', '목록']].map(([k, l]) => `<button type="button" role="tab" aria-selected="${v === k}" class="${v === k ? 'on' : ''}" data-lcal="view" data-v="${k}">${l}</button>`).join('')}</div>
         <span class="lq-nav">${v === 'list' ? '' : `<button type="button" class="lq-ib" data-lcal="mv" data-v="-1" aria-label="이전">‹</button>`}<b class="lq-ttl">${title}</b>${v === 'list' ? '' : `<button type="button" class="lq-ib" data-lcal="mv" data-v="1" aria-label="다음">›</button>`}</span><button type="button" class="lq-tb" data-lcal="mv" data-v="0">오늘</button></div>
       ${v === 'month' ? monthHTML(E) : v === 'week' ? weekHTML(E) : listHTML(E)}
-      <div class="lq-leg" aria-label="일정 종류"><b class="lq-legh">일정 종류</b>${ks.map(k => `<span><i style="background:${COL[k]}"></i>${esc(LBL[k])}<small>${E.filter(e => e.k === k).length || ''}</small></span>`).join('')}</div>
-      <p class="lq-help">날짜를 누르면 그날 일정을 보고${P ? '' : ' 내 일정을 넣을 수 있어요'}. 일정을 누르면 ${esc(T('cls'))} · 차시로 바로 갈 수 있어요. ${P ? '' : live() ? '내 일정은 내 계정에 저장돼 다른 기기에서도 보여요.' : '내 일정은 이 기기에만 저장돼요.'}</p>
+      ${appOn() ? '<details class="lq-legd"><summary>일정 종류 · 도움말</summary>' : ''}<div class="lq-leg" aria-label="일정 종류"><b class="lq-legh">일정 종류</b>${ks.map(k => `<span><i style="background:${COL[k]}"></i>${esc(LBL[k])}<small>${E.filter(e => e.k === k).length || ''}</small></span>`).join('')}</div>
+      <p class="lq-help">날짜를 누르면 그날 일정을 보고${P ? '' : ' 내 일정을 넣을 수 있어요'}. 일정을 누르면 ${esc(T('cls'))} · 차시로 바로 갈 수 있어요. ${P ? '' : live() ? '내 일정은 내 계정에 저장돼 다른 기기에서도 보여요.' : '내 일정은 이 기기에만 저장돼요.'}</p>${appOn() ? '</details>' : ''}
     </div></section>`; }
   window.lcalHTML = calHTML;
 

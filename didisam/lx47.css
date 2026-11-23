@@ -1,0 +1,115 @@
+/* v47 학습자 앱 동선 단순화(LX-SPEC D1 · D2 · D4 · D6 · D9 · D11 · D12 · D13) — 새 블록만. 배색 토큰은 ltube.css · ldds.css 그대로 */
+
+/* D2: 인사 + 오늘 목표(작은 링) 한 줄 */
+.tb-hl.tb-top{display:flex;align-items:center;gap:12px;padding:6px 2px 0}
+.tb-hl.tb-top .tb-hlx{flex:1;min-width:0}
+.tb-hl.tb-top{padding-top:2px}.tb-hl.tb-top .tb-eb{font-size:12px}
+.tb-hl.tb-top h1{font-size:19px;line-height:1.3;letter-spacing:-.025em}
+.tb-gm{flex:none;position:relative;width:56px;height:56px;display:grid;place-items:center;border:0;padding:0;background:none;color:var(--g900);cursor:pointer;border-radius:50%}
+.tb-gm svg{position:absolute;inset:4px}
+.tb-gm b{position:relative;font-size:14px;font-weight:800;line-height:1;text-align:center}
+.tb-gm b small{display:block;font-size:10px;font-weight:600;color:var(--g700)}
+.tb-gm:focus-visible{outline:3px solid var(--gr300);outline-offset:2px}
+
+/* D1: 지금 할 일 */
+.tb-now{display:flex;flex-direction:column;gap:10px}
+.tb-nh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.tb-nh h2{margin:0;font-size:18px;font-weight:800;color:var(--g900)}
+.tb-nh small{font-size:13px;color:var(--g700)}
+.tb-now .tb-cont .tb-ct{aspect-ratio:16/7;height:auto}
+.tb-due{display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:var(--r-block,16px);background:var(--surface,#fff);box-shadow:var(--sh2,0 1px 3px #0000001f);color:var(--g900);text-decoration:none}
+.tb-dtag{align-self:flex-start;font-style:normal;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--gr50);color:var(--gr800,#00632a)}
+.tb-due b{font-size:17px;line-height:1.35}
+.tb-due small{font-size:13px;color:var(--g700)}
+.tb-dgo{margin-top:6px;min-height:48px;display:grid;place-items:center;border-radius:var(--r-btn,12px);background:var(--pri,var(--gr700));color:var(--pri-ink,#fff);font-weight:700}
+.tb-req{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;min-height:44px;padding:0 14px;border-radius:12px;background:var(--gr50);color:var(--g900);font-size:14px;font-weight:600;text-decoration:none}
+.tb-req.hot{background:var(--surface);box-shadow:inset 0 0 0 1px var(--gr200)}
+.tb-req b{color:var(--gr800,#00632a)}
+.tb-req svg{flex:none;color:var(--g700)}
+.tb-now .tb-pin{margin:0}
+
+/* D4: 오늘 익힐 것 — 첫 줄만 펼침 */
+.tb-main .mj-row.is-mini .v2-pips,.tb-main .mj-row.is-mini .mj-sw,.tb-main .mj-row.is-mini .v2-ms{display:none}
+.tb-main .mj-row.is-mini{flex-wrap:nowrap;padding:8px 10px 8px 14px}
+.tb-main .mj-row.is-mini .v2-cpt__tx{flex:1;min-width:0}
+.tb-main .mj-row.is-mini .v2-cpt__tx b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-main .mj-row.is-mini .mj-act{width:auto;flex:none}
+.tb-main .mj-row.is-mini small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* D1: 이번 주 — 가로 한 줄 */
+.tb-main>.tb-week .tb-grid{display:flex;overflow-x:auto;scrollbar-width:none;gap:10px;margin:0 -16px;padding:0 16px 2px;scroll-snap-type:x proximity}
+.tb-main>.tb-week .tb-grid::-webkit-scrollbar{display:none}
+.tb-main>.tb-week .tb-tile{flex:0 0 34%;scroll-snap-align:start}
+.tb-main>.tb-askr{flex-wrap:nowrap}
+
+/* 더 보기(홈 · 내 학습) */
+.tb-more{border-radius:var(--r-card,14px);background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--hair,#eaebeb)}
+.tb-more>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:56px;padding:0 16px;cursor:pointer;color:var(--g900)}
+.tb-more>summary::-webkit-details-marker{display:none}
+.tb-more>summary span{display:flex;flex-direction:column;gap:2px}
+.tb-more>summary b{font-size:15px;font-weight:700}
+.tb-more>summary small{font-size:12px;color:var(--g700)}
+.tb-more>summary svg{transform:rotate(90deg);transition:transform .15s;color:var(--g700)}
+.tb-more[open]>summary svg{transform:rotate(-90deg)}
+.tb-more>summary:focus-visible{outline:3px solid var(--gr300);outline-offset:-3px;border-radius:inherit}
+.tb-more-in{display:flex;flex-direction:column;gap:14px;padding:4px 12px 16px}
+.tb-more-in>.tb-mch{margin:0}
+.tb-mymore{margin:12px 16px 24px}
+
+/* D11: 아래 탭 「나」 안 읽음 */
+.tb-nav>a{position:relative}
+.tb-nb{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#d92d20;color:#fff;font-size:12px;font-style:normal;font-weight:700;line-height:18px;text-align:center}
+.tb-nb::after{content:attr(data-n)}
+
+/* D9: 세그먼트 3칸 · 기록 */
+.tb-seg{grid-template-columns:repeat(3,1fr)}
+.tb-rec .in{display:flex;flex-direction:column;gap:14px;padding-bottom:24px}
+.tb-rt{padding:16px;border-radius:var(--r-card,14px);background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--hair,#eaebeb)}
+.tb-rth{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tb-rth h2{margin:0;font-size:17px;color:var(--g900)}
+.tb-rkv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 0}
+.tb-rkv div{padding:10px;border-radius:10px;background:var(--gr50)}
+.tb-rkv dt{font-size:12px;color:var(--g700)}
+.tb-rkv dd{margin:2px 0 0;font-size:13px;color:var(--g900)}
+.tb-rkv dd b{font-size:20px;font-weight:800}
+.tb-rx{margin:10px 0 0;font-size:12px;color:var(--g700)}
+.tb-rl{display:flex;flex-direction:column;border-radius:var(--r-card,14px);background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--hair,#eaebeb);overflow:hidden}
+.tb-rl a{display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 16px;color:var(--g900);text-decoration:none}
+.tb-rl a+a{box-shadow:inset 0 1px 0 var(--hair,#eaebeb)}
+.tb-rl a>span:nth-child(2){flex:1;display:flex;flex-direction:column}
+.tb-rl b{font-size:15px}.tb-rl small{font-size:12px;color:var(--g700)}
+.tb-rli{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--gr50);color:var(--gr700)}
+
+/* D6: 캘린더 — 이번 주만 펼침 */
+.lq-later,.lq-legd{margin-top:12px}
+.lq-later>summary,.lq-legd>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700;color:var(--g800,var(--g900))}
+
+/* D12: 「나」 5묶음 */
+body.lapp .ls-me .ls-gt{margin:18px 4px 6px;font-size:13px;font-weight:700;color:var(--g700)}
+body.lapp .ls-acd{margin-top:8px}
+body.lapp .ls-acd>summary{list-style:none;cursor:pointer;border-radius:var(--r-card,14px);background:var(--surface,#fff)}
+body.lapp .ls-acd>summary::-webkit-details-marker{display:none}
+body.lapp .ls-acd[open]>summary .ls-go{transform:rotate(90deg)}
+body.lapp .ls-out{margin-top:16px}
+
+/* D13: 메시지(앱 한 열) — 아래 탭에 가리지 않게 여백 */
+.lc47 .in{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.lc47n{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
+.lc47n span{display:flex;flex-direction:column;align-items:center;padding:10px 4px;border-radius:12px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--hair,#eaebeb);font-size:12px;color:var(--g700)}
+.lc47n b{font-size:18px;font-weight:800;color:var(--g900)}
+.lc47a{margin:14px 0}
+.lc47m{margin-top:14px}
+.lc47m>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700;color:var(--g900)}
+
+/* 접힌 「더 보기」는 높이도 0(일부 브라우저는 닫힌 details 내용 크기를 문서 높이에 넣음) */
+.tb-more:not([open])>.tb-more-in,body.lapp .ls-acd:not([open])>.ls-acin{display:none}
+
+body.tube .tb-home .tb-main{gap:12px}
+.lc47m:not([open])>:not(summary),.tb-mymore:not([open])>.tb-more-in{display:none}
+/* 홈 1.6화면 안: 오늘 익힐 것 요약 줄 · 이번 주 썸네일 · 이어 보기 사진 높이 */
+.tb-main .mj-row.is-mini .v2-cpt__tx small{display:none}
+.tb-main>.tb-week .tb-tt{aspect-ratio:16/10;height:auto}
+.tb-now .tb-cont .tb-ct{aspect-ratio:16/6}
+body.tube .tb-home .tb-main{gap:10px}
+.tb-now{gap:8px}
+.tb-req{min-height:40px}

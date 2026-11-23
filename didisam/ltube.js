@@ -144,15 +144,20 @@
     const org = (SITE().org || {}).name || '';
     return `<header class="tb-head"><div class="tb-hr"><button type="button" class="tb-brand" data-ap="orgs" aria-label="기관 바꾸기 — 지금 ${esc(org)}"><span class="tb-logo">${I.play(12)}</span><b>${esc(org || '디디쌤')}</b></button>
       <a class="tb-ib" href="#inbox" aria-label="알림${n ? ` · 새 알림 ${n}개` : ''}">${I.bell(24)}${n ? `<i>${n > 99 ? '99+' : n}</i>` : ''}</a><button type="button" class="tb-ib" data-ap="srch" aria-label="검색">${I.search(24)}</button><button type="button" class="tb-ib" data-lux="menu" aria-haspopup="dialog" aria-expanded="false" aria-label="전체 메뉴 — 공지 · 둘러보기 · 기관 메뉴">${I.menu(24)}</button></div>
-      <div class="tb-chips" role="tablist" aria-label="보기">${CH().map(([k, l]) => `<button type="button" role="tab" class="tb-chip${TB.f === k ? ' on' : ''}" aria-selected="${TB.f === k}" data-tb="f" data-v="${k}">${esc(l)}</button>`).join('')}</div></header>`; }
+      ${TB.f !== 'all' ? chipsHTML() : ''}</header>`; }
+  /* v47 D1: 보기 칩(전체 · 이어 보기 · 내 과정 · 라이브 · 자격증)은 홈 「더 보기」 안으로 — 칩을 고른 동안만 머리에 */
+  function chipsHTML(cls) { const C = CH(); if (C.length < 2) return ''; return `<div class="tb-chips${cls ? ' ' + cls : ''}" role="tablist" aria-label="보기">${C.map(([k, l]) => `<button type="button" role="tab" class="tb-chip${TB.f === k ? ' on' : ''}" aria-selected="${TB.f === k}" data-tb="f" data-v="${k}">${esc(l)}</button>`).join('')}</div>`; }
   /* 관리자가 상단 고정한 공지(내 과정 · 기관 전체) — 요원 2 */
   function pinHTML() { try { const mine = new Set(stats().courses.map(x => x.c.id)); const N = (SITE().notices || []).filter(n => n && n.pin && (!n.clsId || mine.has(n.clsId))).sort((a, b) => (a.ord || 0) - (b.ord || 0)); if (!N.length) return '';
     const n = N[0]; return `<a class="tb-pin" href="#notice"><em>공지</em><b>${esc(n.title)}</b>${N.length > 1 ? `<small>외 ${N.length - 1}건</small>` : ''}</a>`; } catch (e) { return ''; } }
   /* v43 질문형 헤드라인: 「서아님, 오늘 8분만 더 해 볼까요?」 — 화면 첫 줄 한 문장(디스플레이 28~32px/800). 이름이 없으면 인사 없이 질문만 */
-  function hlHTML() { const g = goal(), m = Math.min(minToday(), 999), left = Math.max(0, g - m); const me = LR.me || {}; const nm = String(me.nick || me.name || (LR.tid === 'sample' && LR.sample && LR.sample.nick) || '').trim();
+  function hlHTML(one) { const g = goal(), m = Math.min(minToday(), 999), left = Math.max(0, g - m); const me = LR.me || {}; const nm = String(me.nick || me.name || (LR.tid === 'sample' && LR.sample && LR.sample.nick) || '').trim();
     const q = m >= g ? `오늘 목표를 <em>다 채웠어요</em>` : m === 0 ? `오늘 <em>${gLabel(g)}</em>, 시작해 볼까요?` : `오늘 <em>${gLabel(left)}</em>만 더 해 볼까요?`;
     const dt = new Date(Date.now() + 9 * 3600e3); const eb = `${dt.getUTCMonth() + 1}월 ${dt.getUTCDate()}일 ${WD[dt.getUTCDay()]}요일`;
-    return `<section class="tb-hl" aria-label="오늘 한 줄"><small class="tb-eb">${eb}</small><h1>${nm ? `${esc(nm)}님,<br>` : ''}${q}</h1></section>`; }
+    return `<section class="tb-hl${one ? ' tb-top' : ''}" aria-label="오늘 한 줄"><div class="tb-hlx"><small class="tb-eb">${eb}</small><h1>${nm ? `${esc(nm)}님,${one ? ' ' : '<br>'}` : ''}${q}</h1></div>${one || ''}</section>`; }
+  /* v47 D2: 인사 + 오늘 목표(작은 링 48px)를 한 줄로. 링을 누르면 기존 목표 시트(data-tb="goal") 그대로. 시설 기관은 월 이용 카드라 링 없음 */
+  function topHTML() { if (tyKey() === 'public_facility') return hlHTML(' '); const g = goal(), m = Math.min(minToday(), 999), p = Math.min(100, Math.round(m / g * 100)); const S = strict(); const st = streakN();
+    return hlHTML(`<button type="button" class="tb-gm${m >= g ? ' done' : ''}" data-tb="goal" aria-label="오늘 목표 ${g}분 중 ${m}분${st ? ` · ${st}일 연속` : ''}${S ? ' · 참고용, 진도 · 출석에는 반영되지 않음' : ''} · 목표 바꾸기">${ringSVG(p, 48, 6)}<b>${m}<small>/${g}분</small></b></button>`); }
   /* 이번 주 7칸(월~일): 목표 달성일 · 오늘 · 앞날 — 홈 히어로와 완료 화면이 같이 쓴다 */
   function weekDays() { const d = day(); const now = new Date(Date.now() + 9 * 3600e3); const dow = (now.getUTCDay() + 6) % 7; const mon = new Date(now.getTime() - dow * 864e5);
     return [...Array(7)].map((_, i) => { const di = new Date(mon.getTime() + i * 864e5).toISOString().slice(0, 10); return { di, l: '월화수목금토일'[i], ok: reached(di), today: di === d, fut: di > d }; }); }
@@ -228,7 +233,7 @@
   const tyKey = () => { const t = ty(), e = ed(); return t === 'univ' && e === 'lms' ? 'univ_lms' : t === 'public' && ['citizen', 'facility'].includes(e) ? 'public_' + e : t; };
   const evs = () => { try { return typeof window.lcalEvents === 'function' ? window.lcalEvents().filter(e => !e.done && e.k !== '시작') : []; } catch (e) { return []; } };
   const ddL = d => { const n = Math.round((Date.parse(d) - Date.parse(day())) / 864e5); return isNaN(n) ? '' : n < 0 ? '지남' : n === 0 ? '오늘' : 'D-' + n; };
-  const tyCard = (o) => `<section class="tb-tyc${o.cls ? ' ' + o.cls : ''}" aria-label="${esc(o.t)}"><div class="tb-tyh"><span class="tb-tyi" aria-hidden="true">${I[o.ic || 'cal'](20)}</span><span><small>${esc(o.eb || '')}</small><b>${esc(o.t)}</b></span>${o.big != null ? `<em class="tb-tyn">${esc(o.big)}</em>` : ''}</div>${o.kv && o.kv.length ? `<dl class="tb-tykv">${o.kv.map(([a, b, w]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd>${w != null ? `<span class="tb-tyb" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, +w || 0))}%"></i></span>` : ''}</div>`).join('')}</dl>` : ''}${o.rows && o.rows.length ? `<ul class="tb-tyl">${o.rows.slice(0, 3).map(([a, b, tone]) => `<li class="${tone || ''}"><b>${esc(a)}</b>${b ? `<small>${esc(b)}</small>` : ''}</li>`).join('')}</ul>` : `<p class="tb-tye">${esc(o.none || '')}</p>`}${o.note ? `<p class="tb-tyx">${esc(o.note)}</p>` : ''}${o.go ? `<a class="tb-tya" href="${esc(o.go[0])}">${esc(o.go[1])}${I.next(14)}</a>` : ''}</section>`;
+  const tyCard = (o) => TB.line ? (o.go ? `<a class="tb-req${o.cls === 'hot' ? ' hot' : ''}" href="${esc(o.go[0])}"><span>${esc(o.t)}${o.big != null ? ` · <b>${esc(o.big)}</b>` : ''}</span>${I.next(14)}</a>` : `<p class="tb-req"><span>${esc(o.t)}</span></p>`) : `<section class="tb-tyc${o.cls ? ' ' + o.cls : ''}" aria-label="${esc(o.t)}"><div class="tb-tyh"><span class="tb-tyi" aria-hidden="true">${I[o.ic || 'cal'](20)}</span><span><small>${esc(o.eb || '')}</small><b>${esc(o.t)}</b></span>${o.big != null ? `<em class="tb-tyn">${esc(o.big)}</em>` : ''}</div>${o.kv && o.kv.length ? `<dl class="tb-tykv">${o.kv.map(([a, b, w]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd>${w != null ? `<span class="tb-tyb" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, +w || 0))}%"></i></span>` : ''}</div>`).join('')}</dl>` : ''}${o.rows && o.rows.length ? `<ul class="tb-tyl">${o.rows.slice(0, 3).map(([a, b, tone]) => `<li class="${tone || ''}"><b>${esc(a)}</b>${b ? `<small>${esc(b)}</small>` : ''}</li>`).join('')}</ul>` : `<p class="tb-tye">${esc(o.none || '')}</p>`}${o.note ? `<p class="tb-tyx">${esc(o.note)}</p>` : ''}${o.go ? `<a class="tb-tya" href="${esc(o.go[0])}">${esc(o.go[1])}${I.next(14)}</a>` : ''}</section>`;
   function typeHTML(pos) { const k = tyKey(); const top = ['corp', 'public'].includes(k); if ((pos === 'top') !== top) return ''; const t0 = day(); const E = evs(); const wk = (() => { const d = new Date(Date.parse(t0) + 6 * 864e5); return d.toISOString().slice(0, 10); })(); const me = LR.me || {};
     try {
       if (k === 'k12') { const T = E.filter(e => e.date === t0 && ['회차', '라이브', '오프라인', '주차', '차시', '기관'].includes(e.k)); const H = E.filter(e => e.k === '과제' && e.date >= t0 && e.date <= wk);
@@ -262,8 +267,49 @@
     } catch (e) { console.error('typeHTML', e); }
     return ''; }
   function homeHTML() { const f = CH().some(x => x[0] === TB.f) ? TB.f : (TB.f = 'all');
-    const body = f === 'all' ? hlHTML() + typeHTML('top') + instHTML() + pinHTML() + goalHTML() + sugHTML() + contHTML() + typeHTML() + tutHTML() + askHTML() + weekHTML() + linksHTML() : f === 'cont' ? hlHTML() + goalHTML() + contHTML() + sugHTML() : listHTML(f);
+    /* v47 D1(LX-SPEC 3-1): 한 화면 한 목적 — 인사 · 목표 한 줄 → 지금 할 일 1개 → (오늘 익힐 것: ljourney) → 바로 묻기 → 이번 주 → 더 보기(접힘).
+       예전 블록(목표 카드 · 유형 카드 · 추천 · 튜터 소개 · 바로가기 · 설치 안내 · 학습 캘린더 · 비전 · 노트)은 지우지 않고 「더 보기」 안에 그대로 — 정책 꺼진 기관도 같은 순서 */
+    const body = f === 'all' ? topHTML() + nowHTML() + askHTML() + weekHTML() + moreHTML() : f === 'cont' ? hlHTML() + goalHTML() + contHTML() + sugHTML() : listHTML(f);
     return `<div class="tb-home">${headHTML()}<div class="tb-main">${body}</div></div>`; }
+
+  /* v47 D1: 「지금 할 일」 — 출석이 필요한 유형(직훈 · 학사)의 오늘 첫 학습 → 하루 안 마감(과제 · 시험 · 퀴즈) → 이어 보기 중 하나만, 주 버튼 1개.
+     아래에 유형별 요건 숫자 한 줄(typeHTML 한 줄 모드) · 고정 공지 한 줄 */
+  function dueNow() { try { const t0 = day(), t1 = day(new Date(Date.now() + 864e5)); const E = evs().filter(e => ['과제', '시험', '퀴즈'].includes(e.k) && e.date >= t0 && e.date <= t1 && e.cls && e.iid).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+      for (const e of E) { const c = (SITE().classes || []).find(x => x.id === e.cls); const it = c && (c.items || []).find(y => y.id === e.iid); if (c && it && !lpItem(c.id, it.id).done && !locked(c, it)) return { e, c, it }; } } catch (e) { } return null; }
+  function typeLine() { TB.line = 1; try { return typeHTML('top') || typeHTML(); } finally { TB.line = 0; } }
+  function nowHTML() { const k = cont(); const d = dueNow(); const att = ['voc', 'univ_lms'].includes(tyKey()) && !!k && !secToday(); let sub = '', body;
+    if (!att && d) { sub = `마감 ${ddL(d.e.date)} · 먼저 끝내요`; body = `<a class="tb-due" href="${esc(hrefOf(d.c, d.it))}"><em class="tb-dtag">${esc(d.e.k)} · ${esc(ddL(d.e.date))}${d.e.time && d.e.time !== '23:59' ? ' ' + esc(d.e.time) : ''}</em><b>${esc(d.it.title || '')}</b><small>${esc(d.c.name || '')}</small><span class="tb-dgo">지금 하기</span></a>`; }
+    else { sub = att ? '오늘 출석하려면 이어서 들어요' : k ? '보던 곳부터 이어서 봐요' : ''; body = contHTML(); }
+    return `<section class="tb-now" aria-labelledby="tbNow"><div class="tb-nh"><h2 id="tbNow">지금 할 일</h2>${sub ? `<small>${esc(sub)}</small>` : ''}</div>${body}${typeLine()}${pinHTML()}</section>`; }
+  /* v47 D1 · D3 · D5 · D6: 「더 보기」(처음엔 접힘, 이번 접속 동안 펼침 상태 기억) — 기존 블록을 지우지 않고 모아 둔다. 비전(lv2) · 노트(lnote-ai) · 학습 캘린더(lcal)도 여기로 */
+  function moreHTML(calH) { return `<details class="tb-more"${TB.moreOpen ? ' open' : ''}><summary><span><b>더 보기</b><small>오늘 목표 · 추천 · 바로가기 · 일정</small></span>${I.next(16)}</summary><div class="tb-more-in">${chipsHTML('tb-mch')}${goalHTML()}${typeHTML('top')}${typeHTML()}${sugHTML()}${tutHTML()}${linksHTML()}${instHTML()}${calH || ''}</div></details>`; }
+  /* 홈 블록 정리: 다른 모듈이 나중에 끼운 카드를 제자리로(오늘 익힐 것 → 지금 할 일 아래, 비전 · 노트 · 캘린더 → 더 보기). 몇 번을 불러도 같은 결과 */
+  function tidyHome() { const lm = $('#lm'); const mn = lm && lm.querySelector('.tb-home .tb-main'); if (!mn) return; const now = mn.querySelector(':scope > .tb-now'); const mi = mn.querySelector('.tb-more-in'); if (!mi) return;
+    const mj = lm.querySelector('.mj-home'); if (mj && now && now.nextElementSibling !== mj) now.insertAdjacentElement('afterend', mj);
+    lm.querySelectorAll('.v2-vcard, .lna-hubw, a.lq-hc').forEach(x => { if (!mi.contains(x)) mi.appendChild(x); });
+    lm.querySelectorAll('.mj-home .mj-sum').forEach(x => x.remove()); /* D4: 작은 성취 요약은 「내 학습 › 기록」으로 */ }
+  { const mo = new MutationObserver(() => { const a = route().a; if ((a === 'home' || (a === 'my' && !route().b)) && document.body.classList.contains('tube')) { mo.disconnect(); try { if (a === 'home') tidyHome(); else tidyMy(); } catch (e) { } watch(); } });
+    const watch = () => { const r = document.getElementById('lapp') || document.body; if (r) mo.observe(r, { childList: true, subtree: true }); }; /* #lm은 다시 그릴 때마다 새로 생겨서 #lapp을 본다 */
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch); else watch();
+    window.tbTidyRe = watch; }
+  document.addEventListener('toggle', e => { if (e.target && e.target.classList && e.target.classList.contains('tb-more')) { if (e.target.classList.contains('tb-mymore')) TB.myOpen = e.target.open; else TB.moreOpen = e.target.open; } }, true);
+
+  /* v47 D9: 「내 학습 › 기록」(#rec) — 학습 시간 · 시간 목표 · 작은 성취 · 여정 · 노트 · 배지 · 마일리지 · 출석을 한곳에. 새 저장 없음(읽기 + 기존 목표 시트) */
+  function recHTML() { const g = goal(), m = Math.min(minToday(), 999); const S = rec().sec || {}; let wk = 0; for (let k = 0; k < 7; k++) wk += +S[day(new Date(Date.now() - k * 864e5))] || 0; wk = Math.floor(wk / 60); const st = streakN();
+    const pg = id => (SITE().pages || []).find(p => p.id === id); const mj = (() => { try { return !!(window.MJ && MJ.on()); } catch (e) { return false; } })(); const mo = (() => { try { return typeof mileOn === 'function' && !!mileOn(); } catch (e) { return false; } })();
+    const R = [mj && ['#journey', 'map', '나의 여정', '작은 성취 · 정거장 · 나의 비전'], ['#notes', 'notep', '내 노트', '노트 · 복습 카드'], pg('badges') && ['#badges', 'award', pg('badges').name || '배지', '받은 배지 · 수료증'], mo && ['#mile', 'coin', '마일리지', '적립 · 사용 내역'], strict() && ['#attend', 'att', '출석 · 학습 시간', '수료 출결 기준 · 오늘 인정 시간']].filter(Boolean);
+    const ic = (n, z) => (I[n] ? I[n](z) : typeof ico === 'function' ? ico(n, z) : '');
+    return `<section class="sec tb-rec"><div class="in narrow"><h1 class="sr">기록</h1>
+      <section class="tb-rt" aria-labelledby="tbRt"><div class="tb-rth"><h2 id="tbRt">학습 시간</h2>${on() && tyKey() !== 'public_facility' ? '<button type="button" class="lbtn ghost sm" data-tb="goal">시간 목표 바꾸기</button>' : ''}</div>
+        <dl class="tb-rkv"><div><dt>오늘</dt><dd><b>${m}</b>분 / 목표 ${g}분</dd></div><div><dt>최근 7일</dt><dd><b>${wk}</b>분</dd></div><div><dt>연속</dt><dd><b>${st}</b>일</dd></div></dl>${strict() ? '<p class="tb-rx">참고용이에요. 진도 · 출석 인정 시간과는 따로 세요.</p>' : ''}</section>
+      ${mj && MJ.sumHTML ? MJ.sumHTML() : ''}
+      <nav class="tb-rl" aria-label="기록 바로가기">${R.map(([h, i, b, sm]) => `<a href="${h}"><span class="tb-rli" aria-hidden="true">${ic(i, 20)}</span><span><b>${esc(b)}</b><small>${esc(sm)}</small></span>${I.next(16)}</a>`).join('')}</nav></div></section>`; }
+  if (typeof viewPage === 'function') { const base = viewPage; viewPage = (id, ...x) => { /* eslint-disable-line no-global-assign */ if (id === 'rec' && LR.me && !isPar()) { try { return recHTML(); } catch (e) { console.error('ltube rec', e); } } return base(id, ...x); }; } /* 웹(classic)에서도 #rec이 랜딩으로 떨어지지 않게 */
+  /* v47 D9 · D6: 앱 「내 학습」 목록 = 수강 중 과정 카드만. 캘린더 · 노트 카드 · 학습 현황 표는 지우지 않고 「더 보기」로(같은 내용이 「일정」 · 「기록」에 있음) */
+  function tidyMy() { const lm = $('#lm'); if (!lm || route().a !== 'my' || route().b) return; const my = lm.querySelector(':scope > .ap-my'); if (!my) return; let d = lm.querySelector(':scope > details.tb-mymore');
+    const L = [...lm.children].filter(x => x !== my && x !== d && !x.classList.contains('tb-seg') && !x.matches('script, style') && (my.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING));
+    if (!L.length) return; if (!d) { d = document.createElement('details'); d.className = 'tb-more tb-mymore'; if (TB.myOpen) d.open = true; d.innerHTML = `<summary><span><b>더 보기</b><small>학습 캘린더 · 노트 · 학습 현황 전체</small></span>${I.next(16)}</summary><div class="tb-more-in"></div>`; lm.appendChild(d); }
+    const mi = d.querySelector('.tb-more-in'); L.forEach(x => mi.appendChild(x)); }
 
   /* ── 하단 탭 ── */
   /* v43 대표님 지시(11-16 05:01 「학습자 입장에서 가장 유용한 방향으로, 교육기관별 시나리오를 살펴보고」, plan/APP-TABS.md):
@@ -275,20 +321,24 @@
     T = (Array.isArray(T) && T.length ? T : DEF_TABS).slice(0, 2).map(([k, h, l]) => [String(k), String(h), String(l)]);
     T = T.map(([k, h, l]) => { if (k === 'find') { const b = info().browse; if (b && b !== '#home') h = b; } if (k === 'my') l = info().learn || l; return [k, h, l]; }); /* 찾기 칸은 그 기관에서 실제로 열리는 목록(#shop · #courses) */
     const all = [['home', '#home', '홈'], ...T]; if (facOK() && !T.some(x => x[0] === 'fac')) all.push(['fac', '#fac', '시설']); all.push(['me', '#acct', '나']); return all; }
-  const RT = { att: ['attend', 'att'], home: ['home', 'review', 'ai', 'done'], my: ['my', 'c', 'cert', 'badge', 'lms', 'knq'], cal: ['cal'], fac: ['fac'], me: ['acct', 'inbox', 'msg', 'mypay', 'connect', 'payd', 'mile', 'ledger'] };
+  /* v47 D11: 아래 탭 4칸 = 홈 · 내 학습 · 찾기 · 나. 일정 · 출석 · 여정 · 노트 · 기록은 「내 학습」 안, 목록 · 커뮤니티 · 공지는 「찾기」 안(칸이 따로 있으면 그 칸이 먼저) */
+  const RT = { att: ['attend', 'att'], home: ['home', 'review', 'ai', 'done'], my: ['my', 'c', 'cert', 'badge', 'lms', 'knq', 'cal', 'attend', 'journey', 'notes', 'rec'], find: ['courses', 'shop', 'class', 'tutorials', 'dg', 'comm', 'notice'], cal: ['cal'], fac: ['fac'], me: ['acct', 'inbox', 'msg', 'mypay', 'connect', 'payd', 'mile', 'ledger'] };
   function curTab(T) { const a = route().a; T = T || tabsOf(); const keys = T.map(x => x[0]);
     const hit = T.find(([k, h]) => k === 'find' && h.slice(1).split('/')[0] === a); if (hit) return 'find';
-    for (const k of keys) if ((RT[k] || []).includes(a)) return k;
+    for (const k of keys.filter(x => x !== 'my').concat(keys.includes('my') ? ['my'] : [])) if ((RT[k] || []).includes(a)) return k; /* 「내 학습」은 맨 나중(직훈 출석 칸 · 학사 일정 칸이 먼저) */
     if (a === 'cal' || a === 'courses' || a === 'shop') return keys.includes('my') ? 'my' : ''; /* 일정 · 목록이 탭에 없으면 「내 ○○」에 속한다 */
     return ''; }
   const ICO = { home: null, my: 'course', cal: 'cal', find: 'compass', fac: 'fac', att: 'att', me: 'me' };
   function navHTML() { const T = tabsOf(); const cur = curTab(T);
     return T.map(([k, h, l]) => { const i = k === 'home' ? (cur === 'home' ? I.home(24) : I.homeO(24)) : I[ICO[k] || 'course'](24);
       const sl = k === 'my' && l.length > 6 && !l.startsWith('내 ') ? '내 ' + l.split(' ').pop() : l; /* v43.4 P2(109): 아래 탭 라벨은 짧게(예: 이번 학기 강의 → 내 강의) — 두 줄로 꺾여 다른 칸과 높이가 어긋나지 않게. 전체 이름은 title로 */
-      return `<a href="${esc(h)}" class="tb-n-${esc(k)}${cur === k ? ' on' : ''}"${cur === k ? ' aria-current="page"' : ''}${sl !== l ? ` title="${esc(l)}"` : ''}>${i}<span>${esc(sl)}</span></a>`; }).join(''); }
+      const nb = k === 'me' ? unread() : 0; /* v47 D11: 메시지 + 알림 안 읽음 수를 「나」 칸에 */
+      return `<a href="${esc(h)}" class="tb-n-${esc(k)}${cur === k ? ' on' : ''}"${cur === k ? ' aria-current="page"' : ''}${sl !== l ? ` title="${esc(l)}"` : ''}${nb ? ` aria-label="${esc(sl)} · 안 읽음 ${nb}개"` : ''}>${i}<span>${esc(sl)}</span>${nb ? `<i class="tb-nb" aria-hidden="true" data-n="${nb > 99 ? '99+' : nb}"></i>` : ''}</a>`; }).join(''); }
+  function unread() { let m = 0, n = 0; try { m = typeof lcInbox === 'function' ? lcInbox().filter(x => !x.read).length : 0; } catch (e) { } try { n = typeof laItems === 'function' ? laItems().L.filter(x => !x.read).length : 0; } catch (e) { } return m + n; }
   /* 「내 ○○」 위 세그먼트: 목록(#my) | 일정(#cal) — 두 화면 맨 위(하위 경로 없을 때) */
-  function segHTML(a) { const k = a === 'cal' ? 'cal' : 'my';
-    return `<nav class="tb-seg" aria-label="${esc(info().learn || '내 과정')}">${[['my', '#my', '목록'], ['cal', '#cal', '일정']].map(([x, h, l]) => `<a href="${h}" class="tb-sg-${x}${x === k ? ' on' : ''}"${x === k ? ' aria-current="page"' : ''}>${l}</a>`).join('')}</nav>`; }
+  /* v47 D9: 목록 | 일정 | 기록(학습 시간 · 시간 목표 · 작은 성취 · 여정 · 노트 · 배지) */
+  function segHTML(a) { const k = a === 'cal' || a === 'rec' ? a : 'my';
+    return `<nav class="tb-seg" aria-label="${esc(info().learn || '내 과정')}">${[['my', '#my', '목록'], ['cal', '#cal', '일정'], ['rec', '#rec', '기록']].map(([x, h, l]) => `<a href="${h}" class="tb-sg-${x}${x === k ? ' on' : ''}"${x === k ? ' aria-current="page"' : ''}>${l}</a>`).join('')}</nav>`; }
 
   /* ── v43 직업훈련 「출석」 탭(#attend, plan/APP-TABS.md) — 읽기 전용. 새 /api · 저장 없음.
      출결: lcls.js lwCls · lwStat(운영자 화면과 같은 attcalc.js DDAtt 식), 학습 시간: lcompliance.js CPLL.todaySec · 게시된 규정(SITE().cpl.dayMax · dayChasi).
@@ -521,13 +571,15 @@
     if (!on()) return; if (a0 === 'ai' && !tOn()) { location.replace('#home'); return; } /* 튜터를 끄면 대화 화면 주소도 닫음(요원 2) */ const a = route().a; const lm = $('#lm'), app = $('#lapp'); if (!lm || !app) return;
     if (B.classList.contains('ap-pickon')) return; /* 선생님 고르기 화면은 그대로 */
     B.classList.add('tube'); TB.used = new Set(); /* 그리기 한 번 = 한 화면: 사진 중복 막기 */
-    if (a === 'home') { const cal = lm.querySelector('a.lq-hc'); const calH = cal ? cal.outerHTML : ''; lm.innerHTML = homeHTML(); if (calH && TB.f === 'all') { const mn = lm.querySelector('.tb-main'); mn && mn.insertAdjacentHTML('beforeend', calH); } /* 학습 캘린더(lcal.js) 카드는 피드 끝에 그대로 */ B.classList.remove('ap-homeon'); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
+    if (a === 'home') { const cal = lm.querySelector('a.lq-hc'); const calH = cal ? cal.outerHTML : ''; lm.innerHTML = homeHTML(); if (calH && TB.f === 'all') { const mn = lm.querySelector('.tb-more-in') || lm.querySelector('.tb-main'); mn && mn.insertAdjacentHTML('beforeend', calH); } /* 학습 캘린더(lcal.js) 카드는 「더 보기」 안에(v47 D6) */ try { tidyHome(); } catch (e) { } B.classList.remove('ap-homeon'); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     else if (a === 'review') { lm.innerHTML = shortsHTML(); if (!tOn()) lm.querySelectorAll('[data-tb="sh-ask"]').forEach(x => x.remove()); B.classList.add('tb-full', 'tb-dark'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     else if (a === 'attend') { lm.innerHTML = attHTML(); const tt = app.querySelector('.ap-bar .ap-tt'); if (tt) tt.textContent = '출석'; document.title = `출석 · ${(SITE().org || {}).name || ''}`; }
     else if (a === 'done') { lm.innerHTML = doneHTML(); B.classList.add('tb-full'); const bar = app.querySelector('.ap-bar'); if (bar) bar.remove(); }
     if (a !== 'review') B.classList.remove('tb-dark');
     if (!['home', 'review', 'done', 'attend', 'c'].includes(a)) { try { photoUp(); subHero(a); emptyUp(a); } catch (e) { console.error('ltube ph', e); } }
-    if ((a === 'my' || a === 'cal') && !route().b && !lm.querySelector('.tb-seg')) lm.insertAdjacentHTML('afterbegin', segHTML(a));
+    if (a === 'rec') { lm.innerHTML = recHTML(); const tt = app.querySelector('.ap-bar .ap-tt'); if (tt) tt.textContent = '기록'; document.title = `기록 · ${(SITE().org || {}).name || ''}`; }
+    if ((a === 'my' || a === 'cal' || a === 'rec') && !route().b && !lm.querySelector('.tb-seg')) lm.insertAdjacentHTML('afterbegin', segHTML(a));
+    if (a === 'my' && !route().b) tidyMy();
     if (a === 'c') { mountWatch(); try { const k = cur(); const ph = k ? photoOf(k.c) : ''; lm.style.setProperty('--tb-poster', ph ? `url("${ph}")` : 'none'); } catch (e) { } } /* Q3: 영상이 없거나 준비 중인 검은 상자 → 강좌 사진 포스터 */ if (!cur() && TB.open) { TB.open = false; B.classList.remove('tb-sheet'); }
     const nav = app.querySelector('.ap-nav'); if (nav) { nav.classList.add('tb-nav'); nav.classList.remove('lq-n6'); nav.setAttribute('aria-label', '아래 탭'); const h = navHTML(); if (nav.dataset.tbh !== h) { nav.innerHTML = h; nav.dataset.tbh = h; } } }
   { const base = lrender; lrender = (...x) => { demoSeed(); /* v43 R5: 시드를 먼저 — 「내 강의」(#my)가 0%로 그려진 뒤에 시드가 들어가던 문제 */ const r = base(...x); try { apply(); fab(); fhome(); setTimeout(() => { if (typeof window.tbFcov === 'function') window.tbFcov(); }, 400); } catch (e) { console.error('ltube', e); } return r; }; }

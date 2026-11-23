@@ -54,7 +54,8 @@ const ago = d => new Date(Date.now() - d * 864e5).toISOString();
     ok(!rows.some(r => r.k === 'c2/w1'), '숙달한 1주차 개념은 새로 고르지 않음');
     ok(await p.evaluate(() => (LR.lp.mtoday || {}).ids && LR.lp.mtoday.ids.length > 0), '오늘 고른 개념을 lp.mtoday에 저장(같은 날 유지)');
     ok(await p.evaluate(() => window.__ev.some(e => e[0] === 'mastery' && e[1] === 'c2/w1' && e[2].st === 'done')), '숙달 변화 → mastery 이벤트(글 원문 없음)');
-    ok(/이번 주 작은 성취/.test(await T(p, '.mj-sum')) && /연속 학습/.test(await T(p, '.mj-sum')), '요약 줄: 이번 주 작은 성취 · 연속 학습');
+    ok(!(await p.$('.mj-home .mj-sum')), 'v47 D4: 홈 카드에 작은 성취 요약 줄 없음(「내 학습」으로 옮김)');
+    await go(p, '#my', 500); ok(/이번 주 작은 성취/.test(await T(p, '.mj-sum')) && /연속 학습/.test(await T(p, '.mj-sum')), '요약 줄(v47 D4: 홈 → 마이페이지): 이번 주 작은 성취 · 연속 학습'); await go(p, '#home', 600);
     /* 바로 학습 이동 */
     const h0 = rows[0].go; await p.click('.mj-row .mj-go'); await p.waitForTimeout(500); ok(decodeURIComponent(await p.evaluate(() => location.hash)) === decodeURIComponent(h0), '[바로 학습] 누르면 그 항목으로 이동');
     ok(await p.evaluate(() => !!document.querySelector('.lp2l, #lm h2')), '항목 화면 표시'); await go(p, '#home', 600);
@@ -98,7 +99,8 @@ const ago = d => new Date(Date.now() - d * 864e5).toISOString();
   { const { ctx, p, errs } = await open({ on: true, w: 390 }); await seed(p); await p.waitForTimeout(400);
     await p.waitForSelector('.mj-card', { timeout: 4000 }).catch(() => { });
     ok(await p.evaluate(() => { const c = document.querySelector('.mj-card'); return !!(c && c.offsetParent); }), `390: 앱 홈에 「오늘 익힐 것」 카드(${await p.evaluate(() => { const c = document.querySelector('.mj-card'); if (!c) return 'none:' + location.hash + ':' + document.body.className + ':' + ((document.querySelector('h1,h2') || {}).textContent || '').slice(0, 40); let e = c; while (e && getComputedStyle(e).display !== 'none') e = e.parentElement; return e ? (e.id || e.className) : 'visible?'; })})`);
-    ok(await p.evaluate(() => { const h = document.querySelector('.ap-hero'); const c = document.querySelector('.mj-home'); const t = document.querySelector('#lm .tb-hero') || document.querySelector('#lm .tb-tut'); const a = h || t; /* v46.2 튜브 홈: 오늘 목표 아래 */ return !!c && (!a || a.nextElementSibling === c); }), '390: 내 AI 학습 비서(히어로) 바로 아래 첫 카드');
+    ok(await p.evaluate(() => { const c = document.querySelector('.mj-home'); const a = document.querySelector('#lm .tb-main > .tb-now'); /* v47 D1: 튜브 홈은 「지금 할 일」 바로 아래(오늘 목표 카드는 「더 보기」로 접힘) */ return !!c && !!a && a.nextElementSibling === c; }), '390: 「지금 할 일」 바로 아래 「오늘 익힐 것」');
+    ok(await p.evaluate(() => [...document.querySelectorAll('.mj-row .mj-go')].every(a => !a.classList.contains('pri'))), 'v47 D4: 「바로 학습」은 보조 버튼(첫 화면 주 버튼은 「지금 할 일」 1개)');
     ok((await overflow(p)) <= 0, '390: 홈 가로 넘침 0'); await go(p, '#journey', 600); ok(!!(await p.$('.mj-jr')) && (await overflow(p)) <= 0, '390: 여정 가로 넘침 0');
     ok(!errs.length, `390: pageerror 0 ${errs.slice(0, 2).join(' / ')}`); await ctx.close(); }
 
