@@ -64,11 +64,28 @@
     return { body: { ...b, messages: msgs, ...(system != null ? { system } : {}) }, injN, red, learner };
   }
 
+  /* v46 레벨 판정(데모): L0 → 403 ai_level_off · 단계 건너뛰기 · 새 시도 없음 · 풀이 미허용 → 409 hint_locked. 통과하면 단계 지시문 */
+  const STEP_DIR = ['', '[힌트 1단계 · 개념 질문] 답이나 풀이 방향을 말하지 말고, 이 과제의 핵심 개념을 묻는 질문 1~2개만 하세요.', '[힌트 2단계 · 방향 힌트] 학습자의 시도를 보고 어디부터 보면 좋을지 방향만 2~3문장으로 알려 주세요. 정답이나 완성 문장은 쓰지 마세요.', '[힌트 3단계 · 부분 예시] 비슷한 다른 문제의 앞부분만 예시로 보여 주고, 이 과제의 답은 쓰지 마세요.', '[힌트 4단계 · 반례] 학습자의 시도가 틀리는 경우(반례) 1~2개를 보여 주고 왜 그런지 생각하게 하세요. 정답은 쓰지 마세요.', '[힌트 5단계 · 풀이] 전체 풀이를 단계별로 보여 주고, 학습자의 자기 설명과 비교해 다른 점을 짚어 주세요.'];
+  const LVL_DIR = { L1: '[AI 레벨 L1 코치] 질문과 힌트로만 돕고 정답이나 결과물을 대신 쓰지 않습니다.', L2: '[AI 레벨 L2 파트너] 힌트와 초안 피드백 · 대안 제시까지 합니다. 대신 써 주지 않습니다.', L3: '[AI 레벨 L3 에이전트] 실행을 도울 수 있지만, 학습자가 결과를 검증하고 수정 설명을 쓰도록 안내합니다.' };
+  function levelGate() {
+    let c = null; try { c = window.LV2 && LV2.on() ? LV2.ctx() : null; } catch (e) { c = null; } if (!c) return null;
+    if (c.lvl === 'L0') return { err: 'ai_level_off', status: 403, msg: '이 과제는 AI 없이 풀어요.' };
+    const h = c.hint; if (!h) return { dir: LVL_DIR[c.lvl] || '' };
+    const k = +h.step || 0, cur = +h.cur || 0, T = Array.isArray(h.tries) ? h.tries : []; const lock = { err: 'hint_locked', status: 409, msg: '먼저 내 생각을 적어 주세요. 그래야 다음 힌트가 열려요.' };
+    if (k < 1 || k > 5) return lock;
+    if (k > cur && !c.reveal) { if (k > cur + 1) return lock;
+      if (k === 5) { if (!c.sol || (c.lvl !== 'L3' && !c.selfExp)) return lock; }
+      else if (c.lvl !== 'L3' && k >= 2 && !T.some(s => s >= (k === 2 ? 0 : k - 1))) return lock; }
+    return { dir: (LVL_DIR[c.lvl] || '') + '\n' + STEP_DIR[k] };
+  }
   const _fetch = window.fetch.bind(window);
   window.fetch = async function (input, init) {
     const url = typeof input === 'string' ? input : (input && input.url) || '';
     if (!/^https:\/\/api\.anthropic\.com\//.test(url) || !init || typeof init.body !== 'string') return _fetch(input, init);
     let b; try { b = JSON.parse(init.body); } catch (e) { return _fetch(input, init); }
+    /* v46 Ver2 AI 레벨 · 힌트 잠금 — 서버 게이트웨이(aigw)와 같은 판정의 데모 사본. 정책 켜진 기관의 과제 맥락(LV2.ctx)일 때만 */
+    const lg = levelGate(); if (lg && lg.err) return new Response(JSON.stringify({ type: 'error', error: { type: lg.err, message: lg.msg } }), { status: lg.status, headers: { 'content-type': 'application/json' } });
+    if (lg && lg.dir) { if (typeof b.system === 'string') b.system += '\n' + lg.dir; else if (Array.isArray(b.system)) b.system = [...b.system, { type: 'text', text: lg.dir }]; else b.system = lg.dir; }
     const g = guardBody(b);
     if (g.injN && g.learner && injCount(1) > 5) {
       return new Response(JSON.stringify({ type: 'error', error: { type: 'ai_guard', message: '안전 정책에 맞지 않는 요청이 반복되어 오늘은 AI 튜터 이용이 제한되었습니다. 학습 질문은 선생님께 질문 넘기기를 이용해 주세요.' } }), { status: 429, headers: { 'content-type': 'application/json' } });
