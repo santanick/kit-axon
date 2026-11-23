@@ -227,3 +227,15 @@ body:not(.lapp) .pl43 .l26side .lcnt label{display:flex;align-items:center;gap:8
 body:not(.lapp) .pl43 .inav{position:static;padding:16px 0 0;margin-top:24px;background:none;border-top:1px solid rgba(255,255,255,.08)}
 body:not(.lapp) .pl43 .inav .lbtn.ghost{border-color:transparent!important;background:transparent!important;color:#9DB8A8!important;padding-left:4px}
 body:not(.lapp) .pl43 .inav .lbtn:last-child:not(:first-child){background:var(--pri)!important;color:#fff!important;border-color:var(--pri)!important;padding:0 26px}
+
+/* v47 보조 디자인: 강의 · 퀴즈 · 과제 플레이어(.pl43)는 라이트 모드에서도 어두운 무대라서, 안쪽 흰 카드(퀴즈 문항 · 응시 정보)에 밝은 글자가 얹혀 거의 안 보였다.
+   무대 안에서는 다크 토큰을 쓰도록 바꿔 카드 · 선 · 글자색이 같이 어두운 무대에 맞게 그려지게 한다. */
+.cw2.l26.pl43>.imain{--surface:#13231B;--surface2:#172A20;--sf:#13231B;--paper:#0F1A15;--line:#2A3F33;--line2:#172A20;--ink:#EAF2EC;--ink2:#CFDBD2;--mute:#A7B8AD;--hair:rgba(255,255,255,.1);--g50:#13231B;--g100:#0E1A14;--g200:#13231B;--g300:#2A3F33;--g600:#A7B8AD;--g700:#B4C4B9;--g800:#CFDBD2;--g900:#EAF2EC;--gr50:#0F2A1B;--gr700:#6EE7A0;--gr800:#8BF0B4;--pri-tx:#6EE7A0;--t-mag:#8BF0B4;--t-ok:#6EE7A0;--t-sub:#A7B8AD;--d-link:#8BF0B4;--d-tp:#8BF0B4}
+.pl43 .imain :is(.q,.a2linfo){color:#EAF2EC}
+.pl43 .imain .q .mini,.pl43 .imain .a2linfo dt{color:#A7B8AD}
+.pl43 .imain .ln-lbtn{background:rgba(255,255,255,.06);color:#8BF0B4;border-color:rgba(110,231,160,.45)}
+.cw2.l26.pl43 .wk>p small{color:#9DB8A8}
+/* 오른쪽 학습노트 · 질문 패널: 흰 배경을 고정값 대신 화면 테마 면 색으로(다크에서 흰 판 위 밝은 글자 방지) */
+.cw2.l26>.l26side,.l26side .lctabs{background:var(--surface,#fff)}
+.cw2.l26.pl43>.imain .lbtn.ghost:not(.inav .lbtn){color:#EAF3EE!important}
+html body .cw2.l26.pl43>.imain .a2lask .lbtn,html body.lapp #lm .cw2.l26.pl43>.imain .a2lask .lbtn{color:#EAF3EE!important;background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.22)!important}
