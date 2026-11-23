@@ -224,11 +224,11 @@
     else { V.card[k] = t; V.step = Math.max(V.step, VQ.findIndex(x => x.k === k) + 1); }
     save(); visRender(); });
   document.addEventListener('keydown', e => { if (e.target && e.target.id === 'v2v' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); e.target.form.requestSubmit(); } if (e.key === 'Escape' && VS.open) { save(); VS.open = false; visRender(); } });
-  /* 첫 로그인(선생님 고르기 다음) 홈에서 자동 시작, 건너뛰면 홈 아래 작은 카드 */
+  /* 첫 로그인 뒤 홈에 「나의 비전 만들기」 카드(누르면 6단계 대화), 건너뛰면 작은 카드 */
   if (typeof lrender === 'function') { const base = lrender; lrender = function () { /* eslint-disable-line no-global-assign */
     const r = base.apply(this, arguments); try { if (!on() || !LR.me || LR.me.kind === 'parent' || !LR.lp) return r; const V = vis(); const a = route().a;
       if (a === 'home' && !visDone(V)) { const lm = document.getElementById('lm'); if (lm && !lm.querySelector('.v2-vcard') && !document.body.classList.contains('ap-pickon')) lm.insertAdjacentHTML('beforeend', `<section class="v2-vcard"><div><b>${V.skip || !V.step ? '1분이면 나만의 비전을 만들 수 있어요' : '비전 만들기 이어서'}</b><small>${V.step ? `${Math.min(6, V.step + 1)} / 6단계부터 이어서 해요` : 'AI 선생님과 6단계로 이야기해요'}</small></div><button type="button" class="v2-vb pri" data-v2="vis">${V.step && !V.skip ? '이어서 하기' : '시작하기'}</button></section>`);
-        if (!V.skip && !VS.seen && !document.body.classList.contains('ap-pickon')) visOpen(); }
+        /* 통합 v46: 자동으로 창을 띄우지 않는다(다른 동선 · 계정 전환을 막음) — 홈 카드 「나의 비전 만들기」로 시작 */ }
     } catch (e) { console.error('lv2 vision', e); } return r; }; }
 
   window.LV2 = Object.freeze({ on, levelOf, hintState, label, ctx: () => CTX, canOpen, checkTry, sim, openVision: () => visOpen(true) });

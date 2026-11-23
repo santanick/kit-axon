@@ -16,7 +16,7 @@ const ON = (() => { const j = JSON.parse(RAW); j.aipol = { on: true, lvl: 'L1', 
   const browser = await chromium.launch(); const fails = []; const ok = (c, m) => { console.log(`${c ? '✓' : '✗'} ${m}`); if (!c) fails.push(m); };
   const T = (p, s) => p.evaluate(s => (document.querySelector(s) || {}).textContent || '', s);
   const ctxOf = async w => { const ctx = await browser.newContext({ viewport: { width: w, height: 860 } }); await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
-    await ctx.addInitScript(() => { try { sessionStorage.setItem('didisam.learner.sample', JSON.stringify({ sid: '20260001', dept: '', id: '20260001' })); localStorage.setItem('didisam.app.instx', '1'); localStorage.setItem('didisam.app.classic', '1'); } catch (e) { } window.__ev = []; window.LEV = { emit: (v, o, x) => window.__ev.push([v, o, x]), flush() { } }; }); return ctx; };
+    await ctx.addInitScript(() => { try { sessionStorage.setItem('didisam.learner.sample', JSON.stringify({ sid: '20260001', dept: '', id: '20260001' })); localStorage.setItem('didisam.app.instx', '1'); localStorage.setItem('didisam.app.classic', '1'); } catch (e) { } window.__ev = []; window.LEV = { __test: true, emit: (v, o, x) => window.__ev.push([v, o, x]), flush() { } }; }); return ctx; };
   const page = async (ctx, on) => { const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); if (on) await p.route(/learner-demo\.json/, x => x.fulfill({ status: 200, contentType: 'application/json', body: ON })); await p.goto(`${base}/learner.html?demo=1#home`, { waitUntil: 'load' }); await p.waitForTimeout(900); return { p, errs }; };
 
   { const ctx = await ctxOf(1280); const { p, errs } = await page(ctx, false);
@@ -25,7 +25,8 @@ const ON = (() => { const j = JSON.parse(RAW); j.aipol = { on: true, lvl: 'L1', 
 
   { const ctx = await ctxOf(1280); const { p, errs } = await page(ctx, true); const click = async s => { await p.click(s); await p.waitForTimeout(200); };
     const send = async t => { await p.fill('#v2v', t); await click('.v2-vin button[type=submit]'); };
-    ok(!!(await p.$('#v2vis .v2-vis')), '첫 로그인 홈: 비전 대화 자동 시작'); const v0 = await T(p, '.v2-vis');
+    ok(!(await p.$('#v2vis .v2-vis')) && !!(await p.$('.v2-vcard')), '첫 로그인 홈: 자동 창 없이 「나의 비전」 카드(통합 v46: 다른 동선을 막지 않게)'); await click('.v2-vcard [data-v2="vis"]'); await p.waitForTimeout(300);
+    ok(!!(await p.$('#v2vis .v2-vis')), '카드를 누르면 비전 대화 시작'); const v0 = await T(p, '.v2-vis');
     ok(/반가워요! 이번 학기를 시작하기 전에, 함께 나만의 비전을 만들어 볼까요\?/.test(v0) && /1 \/ 6단계/.test(v0) && /건너뛰기/.test(v0) && /나중에 이어서 할게요/.test(v0), '1단계 인사 · 진행 표시 · 건너뛰기 · 나중에');
     await click('[data-vis="next"]'); ok(/2 \/ 6단계/.test(await T(p, '.v2-prog')), '2단계로');
     await send('제 이름은 김민수입니다. 사람들 이야기를 정리하는 걸 좋아해요 010-1234-5678');
@@ -49,6 +50,7 @@ const ON = (() => { const j = JSON.parse(RAW); j.aipol = { on: true, lvl: 'L1', 
 
   /* 건너뛰기 · 나중에 이어서 · 390 */
   { const ctx = await ctxOf(390); let { p, errs } = await page(ctx, true); const click = async s => { await p.click(s); await p.waitForTimeout(200); };
+    await click('.v2-vcard [data-v2="vis"]'); /* 통합 v46: 홈 카드로 시작 */
     ok(await p.evaluate(() => document.documentElement.scrollWidth - innerWidth <= 0), '390: 비전 창 가로 넘침 없음');
     await click('[data-vis="next"]'); await p.fill('#v2v', '그림 그리기를 좋아해요'); await click('.v2-vin button[type=submit]'); await click('[data-vis="later"]');
     ok(/비전 만들기 이어서/.test(await T(p, '.v2-vcard')), '나중에 → 홈 「비전 만들기 이어서」');
