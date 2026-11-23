@@ -16,11 +16,20 @@
   <select id="selectMeExtra" resultType="java.util.LinkedHashMap">
     select kind, login, nickname, student_no, dept, status, minor, idv_ok from learner_accounts where tenant_id = #{tid} and learner_id = cast(#{sid} as uuid)
   </select>
-  <!-- v46 힌트 사다리 단계(서버만 올림) — Node aigw.js setHint와 같음 -->
+  <!-- v46 힌트 사다리 단계(서버만 올림) · 기능별 사용량 · 대화 기록 — Node app.js v2After · aigw.js와 같은 문장 -->
   <insert id="setHint">
-    insert into learner_progress (tenant_id, sid, lp, bytes) values (#{tid}, #{sid}, jsonb_build_object('hint', jsonb_build_object(#{key}, cast(#{h} as jsonb))), 0)
-    on conflict (tenant_id, sid) do update set lp = jsonb_set(case when jsonb_typeof(learner_progress.lp->'hint') = 'object' then learner_progress.lp else jsonb_set(learner_progress.lp, '{hint}', '{}'::jsonb) end, array['hint', #{key}], cast(#{h} as jsonb)), updated_at = now()
+    insert into learner_progress (tenant_id, sid, lp, bytes) values (#{tid}, #{sid}, jsonb_build_object('hint', cast(#{h} as jsonb)), 0)
+    on conflict (tenant_id, sid) do update set lp = learner_progress.lp || jsonb_build_object('hint', coalesce(learner_progress.lp->'hint', '{}'::jsonb) || cast(#{h} as jsonb)), updated_at = now()
   </insert>
+  <select id="incUsageF" resultType="int" flushCache="true" useCache="false">
+    insert into ai_usage_f (tenant_id, day, feature, calls) values (#{tid}, cast(#{day} as date), #{f}, 1) on conflict (tenant_id, day, feature) do update set calls = ai_usage_f.calls + 1 returning calls
+  </select>
+  <update id="addTokensF">update ai_usage_f set tin = tin + #{tin}, tout = tout + #{tout} where tenant_id = #{tid} and day = cast(#{day} as date) and feature = #{f}</update>
+  <insert id="insertTurn">
+    insert into ai_turn (tenant_id, sid, feature, cls, item, level, q_enc, a_enc, tin, tout, purge_at)
+    values (#{tid}, #{sid}, #{f}, #{cls}, #{item}, #{lvl}, #{q}, #{a}, #{tin}, #{tout}, now() + make_interval(days => #{days}))
+  </insert>
+  <delete id="purgeTurn">delete from ai_turn where tenant_id = #{tid} and purge_at &lt; now()</delete>
   <select id="selectAipol" resultType="string">select (doc->'aipol')::text from tenant_state where tenant_id = #{tid}</select>
   <insert id="upsertProgress">
     insert into learner_progress (tenant_id, sid, lp, bytes) values (#{tid}, #{sid}, cast(#{lp} as jsonb), #{bytes})

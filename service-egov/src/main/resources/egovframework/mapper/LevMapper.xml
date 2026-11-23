@@ -9,10 +9,10 @@
   <select id="list" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">
     select id, sid, verb, obj, lvl, val::text val, src, trust, to_char(at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at
       from learning_event where tenant_id = #{tid}
-      <if test="cls != null"> and (obj = #{cls} or obj like #{clsLike})</if>
+      <if test="clsLike != null"> and (obj like #{clsLike})</if>
       <if test="sid != null"> and sid = #{sid}</if>
       <if test="verb != null"> and verb = #{verb}</if>
-      <if test="after != null"> and at &gt; cast(#{after} as timestamptz)</if>
-     order by at desc, id desc limit 500
+      <if test="after > 0"> and id &gt; #{after}</if>
+     order by id limit 500
   </select>
 </mapper>

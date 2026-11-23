@@ -10,5 +10,5 @@ import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 public interface LevMapper {
     int insertEv(@Param("tid") String tid, @Param("sid") String sid, @Param("verb") String verb, @Param("obj") String obj, @Param("lvl") String lvl,
                  @Param("val") String val, @Param("src") String src, @Param("trust") String trust, @Param("at") String at);
-    List<Map<String, Object>> list(@Param("tid") String tid, @Param("cls") String cls, @Param("clsLike") String clsLike, @Param("sid") String sid, @Param("verb") String verb, @Param("after") String after);
+    List<Map<String, Object>> list(@Param("tid") String tid, @Param("clsLike") String clsLike, @Param("sid") String sid, @Param("verb") String verb, @Param("after") long after);
 }

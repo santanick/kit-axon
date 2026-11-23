@@ -18,8 +18,12 @@ public interface PubMapper {
     Map<String, Object> selectLp(@Param("tid") String tid, @Param("sid") String sid);
     Map<String, Object> selectDoc(@Param("tid") String tid);
     Map<String, Object> selectMeExtra(@Param("tid") String tid, @Param("sid") String sid);
-    void setHint(@Param("tid") String tid, @Param("sid") String sid, @Param("key") String key, @Param("h") String h);
-    String selectAipol(@Param("tid") String tid);
+    void setHint(@Param("tid") String tid, @Param("sid") String sid, @Param("h") String h);
+    int incUsageF(@Param("tid") String tid, @Param("day") String day, @Param("f") String f);
+    void addTokensF(@Param("tid") String tid, @Param("day") String day, @Param("f") String f, @Param("tin") long tin, @Param("tout") long tout);
+    void insertTurn(@Param("tid") String tid, @Param("sid") String sid, @Param("f") String f, @Param("cls") String cls, @Param("item") String item, @Param("lvl") String lvl,
+                    @Param("q") String q, @Param("a") String a, @Param("tin") long tin, @Param("tout") long tout, @Param("days") int days);
+    int purgeTurn(@Param("tid") String tid);
     void upsertProgress(@Param("tid") String tid, @Param("sid") String sid, @Param("lp") String lp, @Param("bytes") int bytes);
     Map<String, Object> selectTutorCtx(@Param("tid") String tid);
     int incUsage(@Param("tid") String tid, @Param("day") String day);

@@ -50,13 +50,12 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
         ObjectNode nroom = room != null && room.isObject() ? (ObjectNode) room : DdWeb.JSON.createObjectNode();
         nroom.put("tid", tid); org.set("room", nroom);
         if (doc.toString().length() > props.getInt("state.maxBytes")) throw processException("dd.413.too_large");
-        /* v46 기관 AI 정책: 모델 학습 사용(aipol.train)은 정운영자만 바꿈 · 정책 변경은 감사 기록(aipol.change) — Node PUT /api/state와 같음 */
-        JsonNode nap = doc.get("aipol"); boolean apAudit = false;
-        if (nap != null && nap.isObject()) {
+        /* v46 모델 학습 허용(aipol.train)은 정운영자만 바꾼다 — Node PUT /api/state와 같음(403 aipol_train) */
+        JsonNode nap = doc.get("aipol");
+        if (nap != null && nap.isObject() && !"owner".equals(a.get("role"))) {
             String cs = tx.inTenant(tid, () -> mapper.selectAipol(tid)); JsonNode cap = cs == null ? null : DdWeb.JSON.readTree(cs);
-            boolean nt = nap.path("train").asBoolean(false) && nap.path("train").isBoolean(), ct = cap != null && cap.path("train").isBoolean() && cap.path("train").asBoolean();
-            if (nt != ct && !"owner".equals(a.get("role"))) throw processException("dd.403.role.aipol");
-            apAudit = cap != null ? !cap.equals(nap) : nap.path("on").asBoolean(false);
+            boolean nt = nap.path("train").isBoolean() && nap.path("train").asBoolean(), ct = cap != null && cap.path("train").isBoolean() && cap.path("train").asBoolean();
+            if (nt != ct) throw processException("dd.403.aipol_train");
         }
         String s = crypt.seal(doc, tid).toString();
         List<String> gone = new ArrayList<>();
@@ -72,8 +71,6 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
             int pending = syncLearners(tid, doc.get("codes"), gone, props.getInt("learner.syncMax"));
             Map<String, Object> o = new LinkedHashMap<>(Map.of("rev", r)); if (pending > 0) o.put("pending", pending); return o;
         });
-        if (apAudit) { com.fasterxml.jackson.databind.node.ObjectNode d = DdWeb.JSON.createObjectNode(); d.put("on", nap.path("on").asBoolean(false)); d.put("lvl", nap.path("lvl").asText("")); d.put("retain", nap.path("retain").asText("")); d.put("train", nap.path("train").asBoolean(false));
-            tx.audit(tid, String.valueOf(a.get("email")), "aipol.change", d.toString()); }
         /* 기관 역할 밖(plain): 학습자 세션 정리, 운영 모드 · 기관명 반영 — Node 서버는 같은 시점에 pool로 직접 실행 */
         if (!gone.isEmpty()) tx.plain(() -> { mapper.deleteLearnerSessions(tid, gone); return null; });
         String mode = DdWeb.str(nroom, "mode");
