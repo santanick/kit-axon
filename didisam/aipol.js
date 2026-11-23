@@ -7,6 +7,9 @@
   'use strict';
   const LV = ['L0', 'L1', 'L2', 'L3'];
   const NM = { L0: '끄기', L1: '코치', L2: '파트너', L3: '에이전트' };
+  /* m1 레벨 카드 아이콘(끄기 · 코치 · 파트너 · 에이전트) */
+  const LVI = { L0: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', L1: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>', L2: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 5a3 3 0 0 1 0 6M21 20a6 6 0 0 0-4-5.7"/>', L3: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>' };
+  const lvIco = l => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${LVI[l] || ''}</svg>`;
   const ED_D = { L0: 'AI 튜터를 쓰지 않습니다', L1: '힌트와 질문만 줍니다', L2: '초안에 의견 · 대안을 줍니다', L3: '실행을 맡기고 검증을 기록합니다' };
   const LBAN = { L0: '이 과제는 AI 없이 풀어요', L1: '이 과제의 AI: 코치 · 힌트와 질문으로 도와줘요', L2: '이 과제의 AI: 파트너 · 내 초안에 의견을 줘요', L3: '이 과제의 AI: 에이전트 · 맡기고, 꼭 검증해요' };
   const WHY0 = { L0: '스스로 실력을 확인하는 항목이라 AI를 쓰지 않습니다.', L1: '개념을 스스로 익히는 과제라 힌트와 질문만 열어 둡니다.', L2: '초안을 직접 쓰고 AI 의견으로 다듬는 과제입니다.', L3: 'AI에게 실행을 맡기되 결과를 검증하고 설명하는 과제입니다.' };
@@ -118,11 +121,11 @@
   function edBox(it) {
     const V = val(); const own = it.ai && okL(it.ai.lvl) ? it.ai.lvl : ''; const cur = levelOf(it); const k = kindOf(it); const why = (it.ai && it.ai.why) || ''; const sol = !!(it.ai && it.ai.sol);
     const tyN = TYN[S.org.type] || ''; const cards = LV.map(l => { const off = idx(l) > idx(V.max); const def = l === V.preset[k];
-      return `<button type="button" role="radio" aria-checked="${l === cur}" class="ap-lv ${l === cur ? 'on' : ''}" data-act="ap-lv" data-v="${l}" ${off ? 'disabled aria-disabled="true"' : ''}><b>${l} ${esc(NM[l])}${def ? ' <em>기본</em>' : ''}</b><small>${esc(ED_D[l])}</small></button>`; }).join('');
+      return `<button type="button" role="radio" aria-checked="${l === cur}" class="ap-lv v2-lvcard ${l === cur ? 'on is-on' : ''}" data-act="ap-lv" data-v="${l}" ${off ? 'disabled aria-disabled="true"' : ''}><span class="v2-lvcard__ico" aria-hidden="true">${lvIco(l)}</span><div class="ap-lvx"><h3><em>${l}</em>${esc(NM[l])}${def ? ' <span class="v2-chip v2-chip--g v2-chip--sm">기본</span>' : ''}</h3><p>${esc(ED_D[l])}</p></div></button>`; }).join('');
     const nWhy = why || WHY0[cur];
     return `<div class="a2sec ap-ed" id="apEd"><div class="ap-edl"><div class="a2h">이 과제의 AI 사용 수준 ${own ? '' : `<span class="tag">기관 기본: ${esc(NM[cur])}</span>`}</div>
       <p class="mini">${esc(tyN)} 프리셋 · ${k === 'exam' ? '시험' : '과제'} 기본 ${esc(V.preset[k])} · L1 코치 — 힌트와 질문만 줍니다(기본)</p>
-      <div class="ap-lvs" role="radiogroup" aria-label="이 과제의 AI 사용 수준">${cards}</div>
+      <div class="ap-lvs v2-lvgrid" role="radiogroup" aria-label="이 과제의 AI 사용 수준">${cards}</div>
       ${idx(V.max) < 3 ? `<p class="mini ap-max">기관 정책상 ${esc(V.max)}까지 선택할 수 있습니다.</p>` : ''}
       ${k === 'exam' && idx(cur) > 0 ? '<p class="warn ap-exw">시험에서 AI를 허용합니다. 시험 중에도 AI 튜터를 쓸 수 있게 됩니다.</p>' : ''}
       <label class="fl">레벨 이유(학습자에게 보입니다)<input data-aipol="why" maxlength="80" value="${esc(why)}" placeholder="예: 개념을 스스로 익히는 과제라 힌트만 열어 둡니다"></label>

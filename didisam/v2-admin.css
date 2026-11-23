@@ -41,14 +41,14 @@
 .ap-ul{margin:8px 0 0;padding-left:18px;font-size:14px}
 /* 편집기(m1): 왼쪽 레벨 카드 · 오른쪽 학습자 미리보기 */
 .ap-ed{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
-.ap-lvs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0}
-.ap-lv{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:60px;padding:10px 12px;border-radius:12px;border:1px solid var(--g300);background:var(--surface);color:var(--g900);font:inherit;text-align:left;cursor:pointer}
-.ap-lv b{font-size:14.5px;font-weight:800}
-.ap-lv b em{font-style:normal;font-size:11.5px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--g100);color:var(--g700);margin-left:4px}
-.ap-lv small{font-size:12.5px;color:var(--g700);font-weight:500}
-.ap-lv.on{border-color:var(--s500);background:var(--s50);box-shadow:inset 0 0 0 1px var(--s500)}
-.ap-lv.on b{color:var(--s700)}
-.ap-lv:disabled{opacity:.5;cursor:not-allowed}
+.ap-lvs{margin:8px 0}
+/* m1 레벨 카드: 구조 · 색은 v2.css .v2-lvcard(아이콘 상자 + 오른쪽 선택 동그라미). 여기서는 button 기본값만 정리 */
+.ap-lv.v2-lvcard{border:0;font:inherit;width:100%;min-height:76px}
+.ap-lvx{flex:1;min-width:0}
+.ap-lv.v2-lvcard h3{flex-wrap:wrap;row-gap:4px}
+.ap-lv.v2-lvcard h3 .v2-chip{font-size:12px}
+.ap-lv.v2-lvcard:disabled{cursor:not-allowed;opacity:.55}
+.ap-ed .v2-lvgrid{grid-template-columns:1fr;gap:8px} /* 편집기 왼쪽 칸(약 420px)에 2열이면 카드 글자 폭이 80px 남짓 → 1열 */
 .ap-max{margin:0 0 6px}
 .ap-pv{border-radius:14px;background:var(--g50);padding:12px}
 .ap-pvh{display:block;font-size:12.5px;font-weight:800;color:var(--g700);margin-bottom:8px}
@@ -60,5 +60,7 @@
 .ap-ban.l0 b{color:var(--g900)}
 .ap-steps{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
 .ap-steps li{font-size:13px;font-weight:700;padding:6px 10px;border-radius:9px;background:var(--surface)}
-.ap-steps li.off{color:var(--g500)}
-@media (max-width:760px){.ap-grid,.ap-ed{grid-template-columns:1fr}.ap-lvs{grid-template-columns:1fr}.ap-dist div{grid-template-columns:repeat(2,1fr)}}
+.ap-steps li.off{color:var(--g600)} /* g500 대비 2.75 → g600 */
+@media (max-width:760px){.ap-grid,.ap-ed{grid-template-columns:1fr}.ap-dist div{grid-template-columns:repeat(2,1fr)}}
+/* 다크: 편집기 a2sec 바탕이 assess2.css에서 #fff 고정 → 밝은 글자가 안 보임(1.1:1). 레벨 편집 상자만 토큰 바탕 */
+html[data-theme="dark"] #apEd.a2sec{background:var(--surface)}

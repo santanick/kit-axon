@@ -112,8 +112,8 @@
     const rows = [1, 2, 3, 4, 5].map(k => { const open = k <= st.step; const cur = k === st.step; const why = open ? '' : canOpen(st, k, lvl, h.it); const nx = k === st.step + 1;
       const cls = open ? (cur ? 'cur' : 'done') : 'lk' + (nx ? ' nx' : '');
       const body = open ? (C[k] ? `<div class="v2-box">${nl(C[k].t)}</div>${C[k].fb ? '<p class="v2-fb">지금은 기본 힌트를 보여 드려요</p>' : ''}<button type="button" class="v2-lk" data-v2="again" data-k="${k}">다른 표현으로 다시 보기</button>` : `<button type="button" class="v2-lk" data-v2="open" data-k="${k}">이 단계 다시 보기</button>`)
-        : nx ? (why ? `<p>${esc(why)}</p>` : `<button type="button" class="v2-open" data-v2="open" data-k="${k}">${k === 1 ? '힌트 받기' : '다음 힌트 열기'}</button>`) : k === 5 ? '<p>선생님이 허용한 과제만</p>' : '';
-      return `<li class="v2-st ${cls}"><span class="v2-s" aria-hidden="true">${open && !cur ? ico('check', 15) : open ? k : ico('lock', 14)}</span><div class="v2-t"><b>${k} · ${STEPN[k]}${cur ? ' <em>지금</em>' : ''}${!open ? '<span class="sr">(잠김)</span>' : ''}</b>${body}</div></li>`; }).join('');
+        : nx ? (why ? `<p>${esc(why)}</p>` : `<button type="button" class="v2-open" data-v2="open" data-k="${k}">${k === 1 ? '힌트 받기' : '다음 힌트 열기'}</button>`) : k === 5 && !sol ? '<p>선생님이 허용한 과제만</p>' : '<p>내 시도를 적으면 열려요</p>';
+      return `<li class="v2-st ${cls}"><span class="v2-s" aria-hidden="true">${open && !cur ? ico('check', 15) : k}</span><div class="v2-t"><b>${k} · ${STEPN[k]}${cur ? ' <em>지금</em>' : ''}${!open ? '<span class="sr">(잠김)</span>' : ''}</b>${body}</div></li>`; }).join('');
     const sx = st.step >= 4 && sol && !st.selfExp; /* 결정 3: 모든 레벨에서 풀이 전 자기 설명 */
     return `<section class="v2-lad" aria-label="힌트 사다리"><div class="v2-lh"><b>힌트 사다리</b><small>${st.step ? `${st.step}단계까지 열렸어요` : '어디서 막혔나요? 먼저 내 생각을 적어 주세요.'}</small><span class="v2-cnt">${st.step} / 5</span></div>
       <ol class="v2-steps">${rows}</ol>
@@ -130,7 +130,7 @@
       const h = LR.me ? here() : null; R.hidden = !!(h && h.lvl === 'L0'); if (R.hidden && LT.open) { LT.open = false; document.body.classList.remove('lt-on', 'lt-dock'); }
       const pan = R.querySelector('.lt-panel'); if (!pan || !h || h.lvl === 'L0') { UI.mode = ''; return r; }
       if (UI.key !== h.key) { UI.key = h.key; UI.mode = 'lad'; UI.msg = ''; }
-      const hd = pan.querySelector('.lt-hd small'); if (hd) hd.insertAdjacentHTML('beforeend', ` <span class="v2-pill" data-lvl="${h.lvl}">이 과제의 AI: ${esc(label(h.lvl))}</span>`);
+      const hd = pan.querySelector('.lt-hd small'); if (hd) hd.insertAdjacentHTML('afterend', `<span class="v2-pill" data-lvl="${h.lvl}">이 과제의 AI: ${esc(label(h.lvl))}</span>`); /* 디자인 2회차: small(한 줄 말줄임) 밖으로 — 390px에서 칩 잘림 방지 */
       pan.querySelector('.lt-hd').insertAdjacentHTML('afterend', `<div class="v2-tabs" role="tablist"><button type="button" role="tab" data-v2="mode" data-v="lad" aria-selected="${UI.mode === 'lad'}">힌트 사다리</button><button type="button" role="tab" data-v2="mode" data-v="chat" aria-selected="${UI.mode !== 'lad'}">대화</button></div>`);
       if (UI.mode === 'lad') { pan.classList.add('v2-lmode'); pan.querySelector('.v2-tabs').insertAdjacentHTML('afterend', ladderHTML(h)); const ta = pan.querySelector('#v2t'); if (ta && UI.focus) { ta.focus(); UI.focus = 0; } }
     } catch (e) { console.error('lv2 ladder', e); } return r; }; }
