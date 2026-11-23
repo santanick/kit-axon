@@ -27,7 +27,7 @@ function siteOn() { const j = JSON.parse(RAW); j.aipol = { on: true, lvl: 'L1', 
     if (o.ai) await p.route(/^https:\/\/api\.anthropic\.com\//, async x => { const b = JSON.parse(x.request().postData() || '{}'); o.ai.push(b); await x.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ model: 'claude-haiku-5-5', content: [{ type: 'text', text: `Claude 힌트 ${o.ai.length}번: 어떤 비교가 필요한지 먼저 생각해 볼까요?` }] }) }); });
     if (o.on) await p.route(/learner-demo\.json/, x => x.fulfill({ status: 200, contentType: 'application/json', body: siteOn() }));
     await p.addInitScript(([sid, key]) => { try { sessionStorage.setItem('didisam.learner.sample', JSON.stringify({ sid, dept: '', id: sid })); localStorage.setItem('didisam.app.instx', '1'); localStorage.setItem('didisam.app.classic', '1'); if (key) localStorage.setItem('didisam.app.claude.sample', JSON.stringify({ key: 'sk-ant-test-000000000000', model: 'claude-haiku-5-5' })); } catch (e) { }
-      window.__ev = []; window.LEV = { emit: (v, o, x) => window.__ev.push([v, o, x]), flush() { } }; }, [SID, !!o.ai]);
+      window.__ev = []; window.LEV = { __test: true, emit: (v, o, x) => window.__ev.push([v, o, x]), flush() { } }; }, [SID, !!o.ai]);
     await p.goto(`${base}/learner.html?demo=1${o.h || '#home'}`, { waitUntil: 'load' }); await p.waitForTimeout(900); return { ctx, p, errs }; };
 
   /* ── A. 꺼짐 ── */

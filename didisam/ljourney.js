@@ -61,7 +61,8 @@
     return { just, html: `<section class="mj-card${T.done ? ' is-done' : ''}" data-mj="today" aria-labelledby="mjT"><header class="mj-h"><span class="mj-ic" aria-hidden="true">${I('target', 20)}</span><div><h2 id="mjT">오늘 익힐 것</h2><small>${n ? `${n}개 중 ${d}개 숙달` : '숙달을 향해 한 걸음씩'}</small></div></header>${body}</section>${sumHTML(D)}` }; }
   function mountHome() { const lm = document.getElementById('lm'); if (!lm || lm.querySelector('.mj-card')) return; const R = cardHTML(); const box = document.createElement('div'); box.className = 'mj-home'; box.innerHTML = R.html;
     const hero = lm.querySelector('#apScroll .ap-hero'); const hub = lm.querySelector('.lhb-home .lhb-in');
-    if (hero) hero.insertAdjacentElement('afterend', box); else if (hub) hub.insertAdjacentElement('afterbegin', box); else lm.insertAdjacentElement('afterbegin', box);
+    const tut = lm.querySelector('.tb-tut'); /* 통합 v46: 디디쌤 튜브 홈(ltube)은 AI 입력 줄 바로 아래 */
+    if (hero) hero.insertAdjacentElement('afterend', box); else if (tut) tut.insertAdjacentElement('afterend', box); else if (hub) hub.insertAdjacentElement('afterbegin', box); else lm.insertAdjacentElement('afterbegin', box);
     if (R.just && typeof toast === 'function') toast('오늘 목표를 모두 해냈어요! 작은 성취 +1', 'ok'); }
 
   /* ── ⑩ 나의 여정(#journey) ── */
@@ -90,7 +91,7 @@
     try { return journeyHTML(); } catch (e) { console.error('ljourney', e); return '<section class="sec"><div class="in"><p class="empty">여정 화면을 그리지 못했어요. 새로 고침해 주세요.</p></div></section>'; } }; }
   if (typeof lrender === 'function') { const base = lrender; lrender = function () { /* eslint-disable-line no-global-assign */
     const r = base.apply(this, arguments); try { if (!on() || !me() || !LR.lp) return r; const a = typeof route === 'function' ? route().a : '';
-      if (a === 'home' && !document.body.classList.contains('ap-pickon')) mountHome();
+      if (a === 'home' && !document.body.classList.contains('ap-pickon')) { mountHome(); setTimeout(mountHome, 0); /* ltube가 홈을 다시 그린 뒤에도 */ }
       if (a === 'my') { const lm = document.getElementById('lm'); if (lm && !lm.querySelector('.mj-mylink')) { const t = lm.querySelector('.ap-my') || lm.querySelector('section'); const h = `<a class="mj-mylink" href="#journey">${I('map', 18)}<span><b>나의 여정</b><small>작은 성취 · 정거장 · 나의 비전</small></span>${I('arrow', 16)}</a>`; if (t) t.insertAdjacentHTML('afterend', h); else lm.insertAdjacentHTML('afterbegin', h); } }
     } catch (e) { console.error('ljourney render', e); } return r; }; }
   document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-mj]'); if (!el || !on() || !me()) return; const k = el.dataset.mj;

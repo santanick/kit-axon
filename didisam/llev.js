@@ -4,6 +4,7 @@
    시연: 이 기기(localStorage 'dd-lev')에만 최대 500건 저장. 호출부는 `window.LEV && LEV.emit(...)`로 방어.
    서버 판정 이벤트(튜터 ai.ask · hint · attempt, lp 차이분 submit · vision · goal)는 서버가 직접 기록하므로 여기서 다시 보내지 않아도 된다. */
 (function () {
+  if (window.LEV && window.LEV.__test) return; /* 시험이 미리 심은 기록용 LEV는 그대로 둔다 */
   const VERBS = ['attempt', 'hint', 'submit', 'revise', 'reflect', 'mastery', 'ai.ask', 'vision', 'goal'];
   const OBJ = /^[\w-]{1,60}(\/[\w-]{1,60})?$/, KEY = /^[a-zA-Z]\w{0,15}$/, CODE = /^[\w.:-]{1,24}$/;
   const MAX = 50, QMAX = 300, KEYLS = 'dd-lev';
