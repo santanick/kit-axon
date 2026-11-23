@@ -281,6 +281,7 @@
         sum: `${esc(({ standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' })[S.org.plan] || '체험')}${sxPay() ? ` · 결제 ${pgOn ? '연결됨' : '미연결'}` : ''}`,
         q: () => sxRow('요금제', esc(({ standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' })[S.org.plan] || '체험')) + (sxPay() ? sxRow(`${t('fee')} 온라인 결제`, pgOn ? '토스페이먼츠 연결됨' : '연결 전') : '') +
           `<div class="sx-acts">${O ? sxBtn('요금제 보기', 'sx-sub', 'pay|plan') : ''}${sxPay() && MENU.sales ? sxBtn('매출 · 결제 열기', 'go', 'sales') : ''}${sxPay() && O && !pgOn ? sxBtn('결제 연결', 'sl-cn', 'toss') : ''}</div>` }] : []),
+      ...(typeof window.SXC_X === 'function' ? window.SXC_X(SXN) : []), /* v46 D3: 다른 파일이 설정 카드를 덧붙이는 훅(aipol.js 「AI 사용 정책」) */
       { k: 'learn', n: '학습 규칙 · AI 튜터', i: 'book', subs: ['rules'], kw: '진도 수료 이수 기준 배속 건너뛰기 ai 튜터 학습 규칙', sum: '진도 · 수료 기준 · AI 튜터',
         q: () => { const p = st.progress || {}, tu = st.tutor || {}; /* v43 R7: 지금 값은 핵심 3개를 큰 값으로(J2 082) */ return `<div class="r7-nv">${[[`${+p.watchThr || 0}%`, '완료 기준 시청률'], [p.seq ? '켜짐' : '꺼짐', '순차 학습'], [tu.enabled ? `하루 ${+tu.daily || 0}회` : '꺼짐', 'AI 튜터']].map(([v, l]) => `<div><b>${esc(v)}</b><small>${esc(l)}</small></div>`).join('')}</div><div class="sx-acts">${sxBtn('학습 규칙 열기', 'sx-sub', 'learn|rules')}</div>`; } },
       { k: 'site', n: '홈페이지 · 약관', i: 'globe', subs: ['home', 'consult', 'terms'], kw: '홈페이지 검색 노출 seo 상담 약관 개인정보 처리방침 카카오 채널톡',
