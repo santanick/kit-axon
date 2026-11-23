@@ -12,7 +12,7 @@
   const STEPN = ['', '개념 질문', '방향 힌트', '부분 예시', '반례', '풀이'];
   const ASSESS = ['assign', 'quiz', 'exam', 'practice', 'prac', 'lab', 'reflect', 'project'];
   const site = () => { try { return typeof SITE === 'function' ? SITE() : null; } catch (e) { return null; } };
-  const pol = () => { const s = site(); return (s && s.aipol) || null; };
+  const pol = () => { try { const s = typeof LR === 'object' && LR ? LR.site : null; return (s && s.aipol) || null; } catch (e) { return null; } }; /* 꺼짐 판정은 게시본 원본만 본다(정규화 호출 없음) */
   const on = () => { const p = pol(); return !!(p && p.on === true); };
   const okL = v => Object.prototype.hasOwnProperty.call(LV, v);
   function levelOf(it) {
@@ -100,7 +100,7 @@
   }
   if (typeof viewCourse === 'function') { const base = viewCourse; viewCourse = function (id, itemId) { /* eslint-disable-line no-global-assign */
     const h = base.apply(this, arguments); try { if (!on() || !LR.me) return h; const c = (site().classes || []).find(x => x.id === id); if (!c) return h;
-      const m = /<div class="imain">[\s\S]*?<\/h2>/.exec(h); if (!m) return h; const r = (LR.lp.cls[c.id] || { items: {} }).items || {};
+      const m = /<div class="imain">[\s\S]*?<\/h2>/.exec(h); if (!m) return h; const r = ((LR.lp.cls || {})[c.id] || { items: {} }).items || {};
       const isL = x => x && x.type !== 'chapter'; let it = c.items.find(x => x.id === itemId) || c.items.find(x => isL(x) && !(r[x.id] || {}).done) || c.items.find(isL); if (it && !isL(it)) it = c.items.slice(c.items.indexOf(it) + 1).find(isL) || it;
       if (!it || !(ASSESS.includes(it.type) || it.ai)) return h; const at = m.index + m[0].length; return h.slice(0, at) + bannerHTML(it) + h.slice(at);
     } catch (e) { console.error('lv2 banner', e); return h; } }; }
@@ -213,7 +213,7 @@
     if (k === 'later') { save(); VS.open = false; }
     if (k === 'close') { VS.open = false; VS.edit = false; }
     if (k === 'edit') { VS.edit = true; V.step = 1; }
-    if (k === 'save') { if (!V.goals.length) return; V.step = 6; V.at = nowISO(); V.skip = false; VS.edit = false; save(); visEmit(V); toast('비전 카드를 저장했어요.', 'ok'); }
+    if (k === 'save') { if (!V.goals.length) return; V.step = 6; V.at = nowISO(); V.skip = false; VS.edit = false; VS.open = false; save(); visEmit(V); toast('비전 카드를 저장했어요.', 'ok'); }
     if (k === 'gdone') { const g = V.goals[+el.dataset.i]; if (g) { g.done = !g.done; save(); if (g.done) emit('goal', { k: 'goal', i: +el.dataset.i }, { done: 1 }); } }
     VS.err = ''; visRender(); if (!VS.open && typeof lrender === 'function') lrender(); });
   document.addEventListener('change', e => { const el = e.target; if (!el || el.dataset.vis !== 'share' || !on()) return; vis().share = !!el.checked; save(); });
