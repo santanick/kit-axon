@@ -45,36 +45,36 @@
 .v2-seg .is-on small{color:var(--t-mag,var(--gr800))}
 
 /* ───────── 2. AI 배지(m1 .aib · m2 .aib) ───────── */
-.v2-aib{display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--gr50);color:var(--t-mag,var(--gr800));font-size:13px;font-weight:800}
-.v2-aib__ico{width:30px;height:30px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--gr700);color:var(--on-pr,var(--surface))}
-.v2-aib b{font-size:15px;font-weight:800;display:block}
-.v2-aib span{font-size:13px;font-weight:600;color:var(--g800);display:block}
-.v2-aib--sm{gap:7px;padding:8px 10px;border-radius:12px}
-.v2-aib--sm .v2-aib__ico{width:24px;height:24px;border-radius:7px}
-.v2-aib--off{background:var(--g100);color:var(--g700)}
-.v2-aib--off .v2-aib__ico{background:var(--g300);color:var(--g700)}
+.v2-aibg{display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--gr50);color:var(--t-mag,var(--gr800));font-size:13px;font-weight:800}
+.v2-aibg__ico{width:30px;height:30px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--gr700);color:var(--on-pr,var(--surface))}
+.v2-aibg b{font-size:15px;font-weight:800;display:block}
+.v2-aibg span{font-size:13px;font-weight:600;color:var(--g800);display:block}
+.v2-aibg--sm{gap:7px;padding:8px 10px;border-radius:12px}
+.v2-aibg--sm .v2-aibg__ico{width:24px;height:24px;border-radius:7px}
+.v2-aibg--off{background:var(--g100);color:var(--g700)}
+.v2-aibg--off .v2-aibg__ico{background:var(--g300);color:var(--g700)}
 .v2-why{font-size:12.5px;color:var(--g700);margin-top:7px;font-weight:600;line-height:1.4}
 
 /* ───────── 3. 힌트 사다리(m2) ───────── */
-.v2-lad{position:relative;padding:4px 0 0;list-style:none;margin:0}
-.v2-lad::before{content:"";position:absolute;left:15px;top:20px;bottom:24px;width:2px;background:var(--g300)}
-.v2-st{position:relative;display:flex;gap:12px;align-items:flex-start;padding:3px 0}
-.v2-st__n{position:relative;z-index:1;width:32px;height:32px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:var(--gr700);color:var(--on-pr,var(--surface));box-shadow:0 0 0 4px var(--surface)}
-.v2-st__t{flex:1;min-width:0;padding-top:5px}
-.v2-st__t b{font-size:15px;font-weight:800;display:flex;align-items:center;gap:6px;color:var(--g900)}
-.v2-st__t p{font-size:13.5px;color:var(--g700);font-weight:500;margin:2px 0 0;line-height:1.4}
-.v2-st__box{margin-top:7px;background:var(--gr50);border-radius:14px 14px 14px 4px;padding:10px 12px;font-size:14px;line-height:1.45;font-weight:500;color:var(--g900)}
-.v2-st.is-lock .v2-st__n{background:var(--g200);color:var(--g700)}
-.v2-st.is-lock .v2-st__t b{color:var(--g800)}
-.v2-st.is-next .v2-st__t{background:var(--warnl,var(--co50));border-radius:12px;padding:8px 11px;margin-top:-1px}
-.v2-st.is-next .v2-st__t b,.v2-st.is-next .v2-st__t p{color:var(--t-warn);font-weight:700}
-.v2-st.is-next .v2-st__t b{font-weight:800}
+.v2-hl{position:relative;padding:4px 0 0;list-style:none;margin:0}
+.v2-hl::before{content:"";position:absolute;left:15px;top:20px;bottom:24px;width:2px;background:var(--g300)}
+.v2-hs{position:relative;display:flex;gap:12px;align-items:flex-start;padding:3px 0}
+.v2-hs__n{position:relative;z-index:1;width:32px;height:32px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:var(--gr700);color:var(--on-pr,var(--surface));box-shadow:0 0 0 4px var(--surface)}
+.v2-hs__t{flex:1;min-width:0;padding-top:5px}
+.v2-hs__t b{font-size:15px;font-weight:800;display:flex;align-items:center;gap:6px;color:var(--g900)}
+.v2-hs__t p{font-size:13.5px;color:var(--g700);font-weight:500;margin:2px 0 0;line-height:1.4}
+.v2-hs__box{margin-top:7px;background:var(--gr50);border-radius:14px 14px 14px 4px;padding:10px 12px;font-size:14px;line-height:1.45;font-weight:500;color:var(--g900)}
+.v2-hs.is-lock .v2-hs__n{background:var(--g200);color:var(--g700)}
+.v2-hs.is-lock .v2-hs__t b{color:var(--g800)}
+.v2-hs.is-next .v2-hs__t{background:var(--warnl,var(--co50));border-radius:12px;padding:8px 11px;margin-top:-1px}
+.v2-hs.is-next .v2-hs__t b,.v2-hs.is-next .v2-hs__t p{color:var(--t-warn);font-weight:700}
+.v2-hs.is-next .v2-hs__t b{font-weight:800}
 /* 작은 사다리(미리보기 · 카드 안, m1 .lad) */
-.v2-lad--mini{background:var(--surface);border-radius:14px;padding:10px 12px;box-shadow:var(--sh1)}
-.v2-lad--mini::before{display:none}
-.v2-lad--mini .v2-st{align-items:center;gap:8px;padding:5px 0;font-size:13px;font-weight:700}
-.v2-lad--mini .v2-st__n{width:20px;height:20px;font-size:12px;box-shadow:none}
-.v2-lad--mini .v2-st.is-lock{color:var(--g700)}
+.v2-hl--mini{background:var(--surface);border-radius:14px;padding:10px 12px;box-shadow:var(--sh1)}
+.v2-hl--mini::before{display:none}
+.v2-hl--mini .v2-hs{align-items:center;gap:8px;padding:5px 0;font-size:13px;font-weight:700}
+.v2-hl--mini .v2-hs__n{width:20px;height:20px;font-size:12px;box-shadow:none}
+.v2-hl--mini .v2-hs.is-lock{color:var(--g700)}
 /* 「선생님께 질문 넘기기」(항상 열림) */
 .v2-hand{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:var(--t-mag,var(--gr800))}
 
@@ -122,20 +122,20 @@
 .v2-tp.is-on b{color:var(--t-mag,var(--gr800))}
 
 /* ───────── 6. 비전 카드(m7 .vc · m8 .vis) ───────── */
-.v2-vc{border-radius:24px;background:linear-gradient(160deg,var(--surface) 40%,var(--gr50));box-shadow:var(--sh3),inset 0 0 0 1px var(--gr100);padding:16px 16px 14px;color:var(--g900)}
-.v2-vc__lb{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--t-mag,var(--gr800))}
-.v2-vc h2{font-size:21px;font-weight:800;letter-spacing:-.03em;margin:6px 0 0;line-height:1.3}
-.v2-vc__gl{margin-top:11px;display:flex;flex-direction:column;gap:6px}
-.v2-vc__g{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:13px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--g300);font-size:14px;font-weight:700}
-.v2-vc__g>em{font-style:normal;width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:var(--gr700);color:var(--on-pr,var(--surface))}
-.v2-vc__g.is-ph{background:transparent;box-shadow:inset 0 0 0 1.5px var(--g400);color:var(--g700);font-weight:600}
-.v2-vc__g.is-ph>em{background:var(--g200);color:var(--g700)}
-.v2-vc__own{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--g700);margin-top:9px}
+.v2-vsn{border-radius:24px;background:linear-gradient(160deg,var(--surface) 40%,var(--gr50));box-shadow:var(--sh3),inset 0 0 0 1px var(--gr100);padding:16px 16px 14px;color:var(--g900)}
+.v2-vsn__lb{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--t-mag,var(--gr800))}
+.v2-vsn h2{font-size:21px;font-weight:800;letter-spacing:-.03em;margin:6px 0 0;line-height:1.3}
+.v2-vsn__gl{margin-top:11px;display:flex;flex-direction:column;gap:6px}
+.v2-vsn__g{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:13px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--g300);font-size:14px;font-weight:700}
+.v2-vsn__g>em{font-style:normal;width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:var(--gr700);color:var(--on-pr,var(--surface))}
+.v2-vsn__g.is-ph{background:transparent;box-shadow:inset 0 0 0 1.5px var(--g400);color:var(--g700);font-weight:600}
+.v2-vsn__g.is-ph>em{background:var(--g200);color:var(--g700)}
+.v2-vsn__own{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--g700);margin-top:9px}
 /* 홈 상단 한 줄 비전(m8 .vis) */
-.v2-vis{display:flex;gap:12px;align-items:center;padding:13px 14px;border-radius:var(--r-card,20px);background:linear-gradient(150deg,var(--surface) 45%,var(--gr50));box-shadow:var(--sh2);color:var(--g900)}
-.v2-vis__fl{width:44px;height:44px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--g900);color:var(--surface)}
-.v2-vis small{font-size:12px;font-weight:800;color:var(--t-mag,var(--gr800))}
-.v2-vis b{display:block;font-size:16.5px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin-top:1px}
+.v2-vline{display:flex;gap:12px;align-items:center;padding:13px 14px;border-radius:var(--r-card,20px);background:linear-gradient(150deg,var(--surface) 45%,var(--gr50));box-shadow:var(--sh2);color:var(--g900)}
+.v2-vline__fl{width:44px;height:44px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--g900);color:var(--surface)}
+.v2-vline small{font-size:12px;font-weight:800;color:var(--t-mag,var(--gr800))}
+.v2-vline b{display:block;font-size:16.5px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin-top:1px}
 /* 비전 대화 진행 칸(m7 .segs) */
 .v2-segs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:7px}
 .v2-segs>i{height:6px;border-radius:9px;background:var(--g300);display:block}
@@ -186,3 +186,25 @@
   .v2-lvcard{padding:14px 14px 13px;gap:12px}
   .v2-lvcard__ico{width:38px;height:38px;border-radius:11px}
 }
+
+/* ═════════ 화면 보정(개발자 css 위에 덮음 · 목업 m1~m8 기준) — v46 디자인 점검 1회차 ═════════ */
+/* m5 채점: 루브릭 수준 선택 — app.css .lvs의 「선택 = 흰 글자」가 초록50 바탕 위에서 안 보임(대비 1.1:1) → 초록 진한 글자 */
+.g2-cr .lvs label span{flex-direction:row;gap:5px;min-width:0;color:var(--g900)}
+.g2-cr .lvs label span small{font-size:12px;font-weight:700;color:var(--g700)}
+.g2-cr .lvs input:checked+span{color:var(--t-mag,var(--gr800))}
+.g2-cr .lvs input:checked+span small{color:var(--t-mag,var(--gr800))}
+/* m5 채점 상태 칩: 「보냄」 --ok(#00A832) 글자 대비 2.9:1 → 글자 전용 토큰, 승인 대기(초안 수정)는 v2-pend 색 */
+.g2-st.s-sent{background:var(--g200);color:var(--g800)}
+.g2-st.s-edit{background:var(--warnl,var(--co50));color:var(--t-warn)}
+.g2-st.s-ok{color:var(--t-mag,var(--gr800))}
+/* m2 힌트 사다리: 기존 튜터 패널 바탕이 #FBFAF7 고정이라 다크에서 밝은 바탕 + 밝은 글자(대비 부족) → 정책 켜짐(v2-lmode)일 때만 토큰 바탕 */
+html[data-theme="dark"] #ltut .lt-panel.v2-lmode,html[data-theme="dark"] .lt-panel.v2-lmode{background:var(--surface);color:var(--g900)}
+/* m7 비전 대화: 아직 정하지 않은 목표는 회색 번호 · 점선 느낌 테두리(채워진 목표와 구분) */
+.v2-g.ph{box-shadow:inset 0 0 0 1.5px var(--g400)}
+.v2-g.ph em{background:var(--g200);color:var(--g700)}
+/* m7: AI 말풍선은 흰 바탕 + 그림자, 휴대폰 전체 화면 바탕은 g50 → 말풍선 · 카드가 떠 보이게 */
+.v2-vai p{background:var(--surface);box-shadow:var(--sh1,0 0 0 1px var(--line));border-radius:18px 18px 18px 5px}
+@media (max-width:600px){.v2-vw{background:var(--g50)}}
+.v2-vc{border-radius:24px}
+/* m7 「건너뛰기」: 흐린 글자 링크 → 테두리 알약(위계는 낮게, 찾기는 쉽게) */
+.v2-skip{border-radius:99px;padding:0 14px;background:var(--surface);color:var(--g800);box-shadow:inset 0 0 0 1px var(--g300)}
