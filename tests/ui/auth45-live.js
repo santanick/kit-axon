@@ -257,7 +257,7 @@ async function groupC(sv) {
   ok(await p.evaluate(() => !document.querySelector('#entry [role=tab][data-v=signup], #entry [data-act=lv-signup]') && !/3초 만에 시작/.test(document.querySelector('#entry').innerText)), `${T}: 가입 탭 · 전환 링크 숨김`);
   NEXT.google = googleP(`e6_${UID()}@gmail.com`); await social(p, 'google'); ok((await errTxt(p)).includes('지금은 새 기관 가입을 받지 않습니다'), `${T}: 소셜 신규 → signup_off 문구 (${await errTxt(p)})`);
   ok(!!(await p.$('#entrySoc [data-act=lv-kakao-off]')), `카카오 키 없음 ${W}: 버튼은 남김`);
-  await p.click('#entrySoc [data-act=lv-kakao-off]'); ok((await errTxt(p)).includes('카카오 로그인 준비 중입니다'), `카카오 키 없음 ${W}: 준비 중 안내`);
+  await p.click('#entrySoc [data-act=lv-kakao-off]'); ok((await errTxt(p)).includes('카카오 로그인은 준비 중입니다'), `카카오 키 없음 ${W}: 준비 중 안내`);
   await c.close(); ok(!errs.length, `묶음 C ${W}: 페이지 오류 없음 ${errs.slice(0, 3).join(' | ')}`);
 }
 
