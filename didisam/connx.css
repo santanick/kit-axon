@@ -1,22 +1,22 @@
-/* v45.1: 히어로 = v44.1 진한 면 + 로고 톤(--hero-*). v43.5 외부 연결 카탈로그(connx.js) — 시안 v2. 토큰만 쓴다(dds.css). 다크 모드는 토큰이 따라간다. */
+/* v43.5 외부 연결 카탈로그(connx.js) — 시안 v2. 토큰만 쓴다(dds.css). 다크 모드는 토큰이 따라간다. */
 .cx{display:flex;flex-direction:column;gap:16px;min-width:0}
 .cx-hero{position:relative;overflow:hidden;border-radius:20px;padding:24px 26px;color:#fff;display:flex;gap:24px;align-items:center;
-  background:var(--hero-mesh);box-shadow:var(--hero-shadow)}
+  background:radial-gradient(520px 240px at 92% 0%,rgba(0,197,59,.5),transparent 62%),linear-gradient(135deg,var(--gr950,#062A13) 0%,var(--gr800,#0A4A22) 55%,var(--gr600,#00862D) 100%)}
 .cx-hero::after{content:'';position:absolute;right:-70px;bottom:-90px;width:300px;height:300px;border-radius:50%;border:38px solid rgba(255,255,255,.05);pointer-events:none}
 .cx-hl{flex:1;min-width:0;position:relative;z-index:1}
 .cx-ey{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;font-weight:700;opacity:.88}
-.cx-ey i{width:8px;height:8px;border-radius:50%;background:var(--hero-em);box-shadow:0 0 0 4px rgba(168,224,182,.2)}
+.cx-ey i{width:8px;height:8px;border-radius:50%;background:#57F287;box-shadow:0 0 0 4px rgba(87,242,135,.2)}
 .cx-hero h2{margin:8px 0 6px;font-size:24px;line-height:1.3;font-weight:800;letter-spacing:-.03em;color:#fff}
 .cx-hero p{margin:0;font-size:14px;line-height:1.6;opacity:.85}
 .cx-ha{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .cx-ha .btn{min-height:44px;border-radius:12px;font-weight:800}
-#main .cx-ha .cx-w{background:#fff;color:var(--hero-solid);border-color:#fff}
+#main .cx-ha .cx-w{background:#fff;color:var(--gr900,#062A13);border-color:#fff}
 #main .cx-ha .cx-gh,#main .cx-ha .cx-gh:hover{background:rgba(255,255,255,.12)!important;color:#fff!important;border:1px solid rgba(255,255,255,.32)!important}
 .cx-kp{display:grid;grid-template-columns:repeat(3,128px);gap:10px;position:relative;z-index:1;flex:none}
 .cx-k{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:12px 14px 10px;min-width:0}
 .cx-k b{display:block;font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
 .cx-k span{display:block;font-size:13px;opacity:.85;margin-top:2px}
-.cx-sp{display:block;margin-top:6px;color:var(--hero-em);max-width:100%}
+.cx-sp{display:block;margin-top:6px;color:#57F287;max-width:100%}
 .cx-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .cx-seg{display:flex;gap:4px;background:var(--canvas,#fff);border:1px solid var(--line);border-radius:14px;padding:4px}
 .cx-seg button{border:0;background:none;font:inherit;font-size:14px;font-weight:700;padding:10px 14px;border-radius:10px;color:var(--g700);cursor:pointer;min-height:44px;white-space:nowrap}
@@ -46,7 +46,7 @@
 .cx-tx b .tag{font-size:12px}
 .cx-tx small{display:block;font-size:13px;color:var(--muted);line-height:1.45;margin-top:2px}
 .cx-go{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--g400,#D6CFC2);display:grid;place-items:center;font-size:20px;color:var(--g700);flex:none;transition:.15s}
-.cx-go.on{background:var(--gr600,#3A7B44);border-color:var(--gr600,#3A7B44);color:var(--on-pr);font-size:16px;font-weight:800;box-shadow:0 4px 10px rgba(31,70,40,.2)}
+.cx-go.on{background:var(--gr600,#00862D);border-color:var(--gr600,#00862D);color:#fff;font-size:16px;font-weight:800;box-shadow:0 4px 10px rgba(0,134,45,.22)}
 .cx-row .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .cx-more{display:block;width:100%;border:0;border-top:1px solid var(--g100,#F1EDE6);background:none;font:inherit;font-size:13px;font-weight:700;color:var(--muted);padding:12px 0;text-align:left;cursor:pointer;min-height:44px}
 .cx-lr{cursor:default}.cx-lr.off{opacity:.55}
@@ -94,10 +94,10 @@
 /* v43.6 셀프러닝 노트(시안 A3 ⑧) — 「학습자가 쓰는 연결」 맨 위 · 개수만 */
 .cx-ln{display:flex;flex-direction:column;gap:14px;margin:0 0 18px}
 .cx-ln-hero{position:relative;overflow:hidden;border-radius:20px;padding:22px 24px;color:#fff;display:flex;gap:24px;align-items:center;justify-content:space-between;
-  background:var(--hero-mesh);box-shadow:var(--hero-shadow)}
+  background:radial-gradient(520px 240px at 92% 0%,rgba(0,197,59,.5),transparent 62%),linear-gradient(135deg,var(--gr950,#062A13) 0%,var(--gr800,#0A4A22) 55%,var(--gr600,#00862D) 100%)}
 .cx-ln-hero::after{content:'';position:absolute;right:-70px;bottom:-90px;width:300px;height:300px;border-radius:50%;border:38px solid rgba(255,255,255,.05);pointer-events:none}
 .cx-ln-hero h2{margin:8px 0 6px;font-size:22px;line-height:1.3;font-weight:800;letter-spacing:-.03em;color:#fff}.cx-ln-hero p{margin:0;font-size:13.5px;line-height:1.6;opacity:.85}
-.cx-ln-hero .cx-k{color:#fff}.cx-ln-hero .cx-sp{color:var(--hero-em);margin-top:4px}
+.cx-ln-hero .cx-k{color:#fff}.cx-ln-hero .cx-sp{color:#57F287;margin-top:4px}
 .cx-ln-g{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;align-items:start}.cx-ln-r{display:flex;flex-direction:column;gap:14px}
 .cx-ln-c{padding:16px 18px;border-radius:20px}.cx-ln-c .cx-sh .mini{margin-left:auto}
 .cx-ln-sw{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--g200,#F3F0EA);min-height:56px}.cx-sh+.cx-ln-sw{border-top:0}

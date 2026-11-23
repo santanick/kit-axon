@@ -19,7 +19,7 @@ body.mode-door{background:var(--paper)}
 .dgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .dcard{background:#fff;border-radius:12px;box-shadow:0 0 0 1px var(--line);padding:22px;display:flex;flex-direction:column;gap:6px}
 .dcard .dic{width:44px;height:44px;border-radius:8px;display:grid;place-items:center;background:var(--soft);color:var(--ink);margin-bottom:6px}
-.d-teacher .dic{background:var(--magl);color:var(--t-mag,var(--mag))}.d-learner .dic{background:var(--gr700,#00862D);color:var(--on-pr)}
+.d-teacher .dic{background:var(--magl);color:var(--t-mag,var(--mag))}.d-learner .dic{background:var(--gr700,#00862D);color:#fff}
 .dcard small{font-size:12px;color:var(--muted);font-weight:700}.dcard>b{font-size:20px}
 .dcard ol{margin:6px 0 14px;padding-left:18px;font-size:13.5px;color:var(--ink);display:flex;flex-direction:column;gap:4px;flex:1}
 .dcard .btn.blk{width:100%;justify-content:center}.dcard .mini{margin:8px 0 0}

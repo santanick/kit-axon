@@ -64,7 +64,7 @@ mark{background:#ffe58a;border-radius:3px;padding:0 2px}
 .cmn-m{flex:1;min-width:0;display:grid;gap:3px;text-align:left;background:none;border:0;padding:10px 6px;cursor:text;font:inherit;color:inherit;border-radius:8px;min-height:48px}
 .cmn-m:hover{background:var(--paper)}.cmn-m:focus-visible{outline:2px solid var(--mag);outline-offset:1px}
 .cmn-t{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}.cmn-t b{font-size:15px;overflow-wrap:anywhere}
-.cmn-pin{font-size:12px;font-weight:700;color:var(--on-pr);background:var(--mag);border-radius:4px;padding:1px 6px}
+.cmn-pin{font-size:12px;font-weight:700;color:#fff;background:var(--mag);border-radius:4px;padding:1px 6px}
 .cmn-to{font-size:12px;color:var(--muted);background:var(--soft);border-radius:4px;padding:1px 6px;white-space:nowrap}
 .cmn-x{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cmn-meta{color:var(--muted);font-size:12px}
 .cmn-o{display:flex;align-items:center;gap:4px;flex:none}

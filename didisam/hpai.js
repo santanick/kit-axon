@@ -292,13 +292,13 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     const keep = UI.sitePage; UI.sitePage = key; HPE.map = map; let h = '';
     try { h = siteHTML(s, false, 'ko'); } finally { HPE.map = null; UI.sitePage = keep; }
     const css = `[data-hpe]{position:relative}[data-hpe]:hover,[data-hpe].hpe-sel{outline:2px dashed rgba(92,116,246,.55);outline-offset:-3px}[data-hpe-hid]{opacity:.38}[data-hpe-hid]::before{content:'숨긴 섹션 — 게시된 사이트에는 보이지 않습니다';position:absolute;left:12px;top:12px;z-index:30;background:#8A5A00;color:#fff;font:700 12px/1.4 Pretendard,system-ui,sans-serif;padding:4px 10px;border-radius:99px}
-[data-hpe-f]{cursor:text;border-radius:4px;transition:background .12s}[data-hpe-f]:hover{outline:2px solid var(--hpe-pr,#3A7B44);outline-offset:2px;background:color-mix(in srgb,var(--hpe-pr,var(--hpe-pr,#3A7B44)) 7%,transparent)}[data-hpe-f][contenteditable]{outline:2px solid var(--hpe-pr,#3A7B44);outline-offset:2px;background:#fff!important;color:#14161F!important;-webkit-text-fill-color:#14161F;cursor:text}
-[data-hpe-img]{cursor:pointer}[data-hpe-img]:hover{outline:3px solid var(--hpe-pr,#3A7B44);outline-offset:2px}
+[data-hpe-f]{cursor:text;border-radius:4px;transition:background .12s}[data-hpe-f]:hover{outline:2px solid #00A832;outline-offset:2px;background:rgba(0,168,50,.07)}[data-hpe-f][contenteditable]{outline:2px solid #00A832;outline-offset:2px;background:#fff!important;color:#14161F!important;-webkit-text-fill-color:#14161F;cursor:text}
+[data-hpe-img]{cursor:pointer}[data-hpe-img]:hover{outline:3px solid #00A832;outline-offset:2px}
 .hpe-tb{position:absolute;top:10px;right:10px;z-index:40;display:none;gap:2px;background:#2A2B2B;padding:4px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);font:600 12px/1 Pretendard,system-ui,sans-serif;flex-wrap:wrap;max-width:calc(100% - 20px)}[data-hpe]:hover>.hpe-tb,[data-hpe].hpe-sel>.hpe-tb,.hpe-tb:focus-within{display:flex}
 .hpe-tb button{border:0;background:transparent;color:#fff;padding:7px 9px;border-radius:8px;cursor:pointer;font:inherit;white-space:nowrap}.hpe-tb button:hover,.hpe-tb button:focus-visible{background:rgba(255,255,255,.18);outline:none}.hpe-tb .ai{color:#C9C2FF}
-.hpe-add{display:flex;justify-content:center;padding:6px 0;position:relative;z-index:35}.hpe-add button{border:1.5px dashed var(--hpe-pr2,#A1CEA8);background:#fff;color:var(--hpe-prh,#2F6336);border-radius:99px;padding:6px 16px;font:700 13px Pretendard,system-ui,sans-serif;cursor:pointer;opacity:.55}.hpe-add button:hover,.hpe-add button:focus-visible{opacity:1}
+.hpe-add{display:flex;justify-content:center;padding:6px 0;position:relative;z-index:35}.hpe-add button{border:1.5px dashed #5FE08A;background:#fff;color:#007A29;border-radius:99px;padding:6px 16px;font:700 13px Pretendard,system-ui,sans-serif;cursor:pointer;opacity:.55}.hpe-add button:hover,.hpe-add button:focus-visible{opacity:1}
 a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
-    return h.replace('</style>', (typeof hpeTokCss === 'function' ? hpeTokCss() : '') + css + '</style>');
+    return h.replace('</style>', css + '</style>');
   }
   function hpEdit(key) {
     if (!S || !S.site) { toast('홈페이지가 아직 없습니다. 「AI로 홈페이지 만들기」로 먼저 만들어 주세요.', 'warn'); return; }

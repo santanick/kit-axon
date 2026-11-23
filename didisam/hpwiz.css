@@ -6,7 +6,7 @@
 .hpw-sp{display:flex;gap:6px;list-style:none;margin:0 0 14px;padding:0;flex-wrap:wrap}
 .hpw-sp li{display:flex;align-items:center;gap:6px;padding:6px 12px 6px 6px;border-radius:999px;background:var(--g100,#f3f3f3);color:var(--g700,#555);font-size:13px;font-weight:600}
 .hpw-sp li span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#fff;font:700 12px var(--num,inherit)}
-.hpw-sp li.on{background:var(--s50,var(--gr50));color:var(--s700,var(--gr700))}.hpw-sp li.on span{background:var(--s400,var(--gr700));color:var(--on-pr)}
+.hpw-sp li.on{background:var(--s50,var(--gr50));color:var(--s700,var(--gr700))}.hpw-sp li.on span{background:var(--s400,var(--gr700));color:#fff}
 .hpw-sp li.done span{background:var(--g900,#222);color:#fff}
 /* ① 테마 */
 .hpw-tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
@@ -20,7 +20,7 @@
 .hpw-tn{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px}
 .hpw-tn b{font-size:14.5px;display:flex;align-items:center;gap:6px}
 .hpw-tn small{color:var(--t-sub,var(--muted));font-size:12.5px}
-.hpw-rec{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--s400,var(--gr700));color:var(--on-pr)}
+.hpw-rec{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--s400,var(--gr700));color:#fff}
 .hpw-sw{display:flex;gap:4px;margin-top:4px}.hpw-sw i{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
 /* 룩 대체 썸네일(CSS로 그림) */
 .hpw-mini{position:absolute;inset:10px;border-radius:10px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.08);overflow:hidden;display:flex;flex-direction:column}
@@ -85,7 +85,7 @@
 /* 사이트 첫 화면 카드 */
 .hpw-cta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 18px;margin:0 0 16px;border-radius:20px;background:var(--s50,var(--gr50))}
 .hpw-cta.fresh{background:linear-gradient(120deg,var(--s50,var(--gr50)),#fff);box-shadow:inset 0 0 0 1.5px var(--s200,var(--gr300))}
-.hpw-ci{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--s400,var(--gr700));color:var(--on-pr);flex:none}
+.hpw-ci{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--s400,var(--gr700));color:#fff;flex:none}
 .hpw-ct2{flex:1 1 220px;min-width:0}.hpw-ct2 b{display:block;font-size:16px}.hpw-ct2 small{display:block;font-size:13px;color:var(--t-sub,var(--muted));margin-top:2px}
 .hpw-cb2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 @media (max-width:900px){.hpw-dg{grid-template-columns:1fr}.hpw-d figure{height:200px}.hpw-ql{grid-template-columns:1fr}}
@@ -103,13 +103,13 @@
 .hpw-m .mf .btn{min-height:44px;min-width:88px;border-radius:12px;font-weight:800}
 .hpw-sp li{min-height:36px;padding:4px 14px 4px 4px;background:var(--surface2,#FAF8F5);color:var(--t-sub,#5C554B)}
 .hpw-sp li.on{background:var(--gr900,#053D1E);color:#fff}
-.hpw-sp li.on span{background:var(--gr500,#00C53B);color:var(--on-pr)}
+.hpw-sp li.on span{background:var(--gr500,#00C53B);color:#04140A}
 .hpw-sp li.done span{background:var(--gr50,#ECFDF3);color:var(--gr800,#066B2A)}
 .hpw-th{border-radius:18px;background:var(--surface,#fff);box-shadow:0 0 0 1px var(--hair,rgba(26,24,20,.06)),0 1px 2px rgba(16,24,20,.05)}
 .hpw-th:hover{transform:translateY(-2px);box-shadow:0 0 0 1px var(--hair,rgba(26,24,20,.06)),0 12px 28px rgba(16,24,20,.10)}
-.hpw-th.on{box-shadow:0 0 0 2px var(--gr600,var(--pr)),0 12px 28px rgba(24,29,26,0.07)}
+.hpw-th.on{box-shadow:0 0 0 2px var(--gr600,#00A832),0 12px 28px rgba(0,122,41,.14)}
 .hpw-th.on .hpw-tn{background:var(--gr50,#ECFDF3)}
-.hpw-rec{background:var(--gr700,#007A29);color:var(--on-pr)}
+.hpw-rec{background:var(--gr700,#007A29);color:#fff}
 /* ═════════ v43 R9(J4 119 · 127) — 빌더 안에서는 오른쪽 패널 · 단계 진행 바 · 큰 썸네일 · 품질 점수 링 ═════════ */
 #modal.hpw-dock{background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;justify-content:flex-end!important;align-items:stretch!important;padding:0!important;pointer-events:none}
 #modal.hpw-dock>.modal{pointer-events:auto;width:min(600px,46vw)!important;max-width:none!important;height:100vh!important;max-height:none!important;margin:0!important;border-radius:20px 0 0 20px!important;box-shadow:-24px 0 48px -24px rgba(26,24,20,.35)!important;display:flex;flex-direction:column;animation:none}
@@ -124,7 +124,7 @@
 .hpw-sp9 li.on{color:var(--g900,#1A1814);font-weight:800}
 .hpw-sp9 li.done{color:var(--gr700,#00862D)}
 .hpw-sp9 li span{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:var(--surface2,#F3F0EA);color:inherit}
-.hpw-sp9 li.on span{background:var(--gr600,#00A33A);color:var(--on-pr)}
+.hpw-sp9 li.on span{background:var(--gr600,#00A33A);color:#fff}
 .hpw-sp9 li.done span{background:var(--gr100,#D1FADF)}
 .hpw-q9 .hpw-qs{display:flex;align-items:center;gap:16px;position:relative}
 .hpw-q9 .hpw-ring{position:relative;flex:none;width:88px;height:88px}
