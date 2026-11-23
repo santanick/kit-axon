@@ -61,8 +61,9 @@
     return { just, html: `<section class="mj-card${T.done ? ' is-done' : ''}" data-mj="today" aria-labelledby="mjT"><header class="mj-h"><span class="mj-ic" aria-hidden="true">${I('target', 20)}</span><div><h2 id="mjT">오늘 익힐 것</h2><small>${n ? `${n}개 중 ${d}개 숙달` : '숙달을 향해 한 걸음씩'}</small></div></header>${body}</section>${sumHTML(D)}` }; }
   function mountHome() { const lm = document.getElementById('lm'); if (!lm || lm.querySelector('.mj-card')) return; const R = cardHTML(); const box = document.createElement('div'); box.className = 'mj-home'; box.innerHTML = R.html;
     const hero = lm.querySelector('#apScroll .ap-hero'); const hub = lm.querySelector('.lhb-home .lhb-in');
-    const tut = lm.querySelector('.tb-tut'); /* 통합 v46: 디디쌤 튜브 홈(ltube)은 AI 입력 줄 바로 아래 */
+    const tut = lm.querySelector('.tb-hero') || lm.querySelector('.tb-tut'); /* v46.2: 튜브 홈은 「오늘 목표」 바로 아래(첫 화면에 보이게) */ /* 통합 v46: 디디쌤 튜브 홈(ltube)은 AI 입력 줄 바로 아래 */
     if (hero) hero.insertAdjacentElement('afterend', box); else if (tut) tut.insertAdjacentElement('afterend', box); else if (hub) hub.insertAdjacentElement('afterbegin', box); else lm.insertAdjacentElement('afterbegin', box);
+    { const vc = lm.querySelector('.v2-vcard'); if (vc && box.isConnected) box.insertAdjacentElement('afterend', vc); } /* v46.2: 「나의 비전 만들기」는 「오늘 익힐 것」 바로 아래 */
     if (R.just && typeof toast === 'function') toast('오늘 목표를 모두 해냈어요! 작은 성취 +1', 'ok'); }
 
   /* ── ⑩ 나의 여정(#journey) ── */

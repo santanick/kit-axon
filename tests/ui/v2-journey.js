@@ -98,7 +98,7 @@ const ago = d => new Date(Date.now() - d * 864e5).toISOString();
   { const { ctx, p, errs } = await open({ on: true, w: 390 }); await seed(p); await p.waitForTimeout(400);
     await p.waitForSelector('.mj-card', { timeout: 4000 }).catch(() => { });
     ok(await p.evaluate(() => { const c = document.querySelector('.mj-card'); return !!(c && c.offsetParent); }), `390: 앱 홈에 「오늘 익힐 것」 카드(${await p.evaluate(() => { const c = document.querySelector('.mj-card'); if (!c) return 'none:' + location.hash + ':' + document.body.className + ':' + ((document.querySelector('h1,h2') || {}).textContent || '').slice(0, 40); let e = c; while (e && getComputedStyle(e).display !== 'none') e = e.parentElement; return e ? (e.id || e.className) : 'visible?'; })})`);
-    ok(await p.evaluate(() => { const h = document.querySelector('.ap-hero'); const c = document.querySelector('.mj-home'); const t = document.querySelector('#lm .tb-tut'); const a = h || t; return !!c && (!a || a.nextElementSibling === c); }), '390: 내 AI 학습 비서(히어로) 바로 아래 첫 카드');
+    ok(await p.evaluate(() => { const h = document.querySelector('.ap-hero'); const c = document.querySelector('.mj-home'); const t = document.querySelector('#lm .tb-hero') || document.querySelector('#lm .tb-tut'); const a = h || t; /* v46.2 튜브 홈: 오늘 목표 아래 */ return !!c && (!a || a.nextElementSibling === c); }), '390: 내 AI 학습 비서(히어로) 바로 아래 첫 카드');
     ok((await overflow(p)) <= 0, '390: 홈 가로 넘침 0'); await go(p, '#journey', 600); ok(!!(await p.$('.mj-jr')) && (await overflow(p)) <= 0, '390: 여정 가로 넘침 0');
     ok(!errs.length, `390: pageerror 0 ${errs.slice(0, 2).join(' / ')}`); await ctx.close(); }
 
