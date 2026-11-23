@@ -446,7 +446,7 @@
     cr.items = items.filter(x => x.w > 0); cr.by = 'eval'; cr.video = clamp(Math.round(+d.ewP || 0), 0, 100); cr.exam = clamp(wE, 0, 100 - cr.video); cr.assign = 100 - cr.video - cr.exam; cr.att = wT; }
 
   /* ───────── 단계 목록(cfg.steps 순서) ───────── */
-  const stepIds = () => { const c = cfgOf(); const ids = (c && Array.isArray(c.steps) && c.steps.length ? c.steps : steps.map(s => s.id)).filter(id => steps.some(s => s.id === id)); return ids.length ? ids.slice(0, 5) : ['basic', 'open']; };
+  const stepIds = () => { const c = cfgOf(); const ids = (c && Array.isArray(c.steps) && c.steps.length ? c.steps : steps.map(s => s.id)).filter(id => steps.some(s => s.id === id)); const L = ids.length ? ids.filter(x => x !== 'loop').slice(0, 5) : ['basic', 'open']; try { if (window.LOOP2 && LOOP2.inFlow() && steps.some(s => s.id === 'loop')) { const k = L.indexOf('open'); L.splice(k < 0 ? L.length : k, 0, 'loop'); } } catch (e) { } return L; }; /* v46 D5: Ver2 켜짐 기관만 「학습 루프 템플릿」 단계(꺼짐이면 그대로) */
   const stepOf = id => steps.find(s => s.id === id);
   const nowOf = (id, d) => { const c = cfgOf(); const x = c && c.stepNow && c.stepNow[id]; if (x) return typeof x === 'function' ? x(d || {}) : x; return stepOf(id).now(d || {}); };
   const titleOf = (id, d) => { const c = cfgOf(); const x = c && c.stepTitle && c.stepTitle[id]; if (x) return typeof x === 'function' ? x(d || {}) : x; return stepOf(id).title(d || {}); };
