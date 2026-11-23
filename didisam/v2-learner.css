@@ -82,3 +82,16 @@
 .v2-vcard div{flex:1;min-width:0}.v2-vcard b{display:block;font-size:15px;font-weight:800}.v2-vcard small{display:block;font-size:13px;color:var(--mute)}
 body.v2-vison{overflow:hidden}
 @media (max-width:600px){#v2vis .v2-vis{padding:0;align-items:stretch}.v2-vw{border-radius:0;max-height:100dvh;height:100dvh;padding:14px 16px}.v2-vcard{margin:12px 16px}}
+
+/* ── 디자인 2회차(m2) ── */
+/* 「힌트 받기」 주 버튼: 기관 테마(--pri) · 앱 공통 .pri(ldads --d-g800) 대신 디디쌤 원안 초록. 라이트 #007A29 위 흰 글자 5.3:1, 다크 #2EE06A 위 어두운 바탕색 글자 */
+.v2-aib-b.pri[data-v2=ladder],.v2-open{background:var(--gr700,var(--pri));color:var(--on-pr,var(--surface,#fff));box-shadow:none}
+body.lapp #lm .v2-aib-b.pri[data-v2=ladder]{background:var(--gr700,var(--pri))!important;border-color:var(--gr700,var(--pri))!important;color:var(--on-pr,var(--surface,#fff))!important} /* ldads 168 !important 덮기 */
+/* 머리 칩: 말줄임 small 밖 별도 줄 · 어두운 머리 바탕 위라 머리 글자색(currentColor) 기준 */
+.lt-hd .v2-pill{display:inline-flex;align-items:center;max-width:100%;margin:4px 0 0;white-space:normal;line-height:1.35;color:inherit;background:color-mix(in srgb,currentColor 18%,transparent)}
+/* 잠긴 단계: 자물쇠 대신 번호(회색) + 「내 시도를 적으면 열려요」 */
+.v2-st.lk:not(.nx) .v2-t p{color:var(--ink2)}
+/* 다음 단계 안내(주황 글자) 바탕을 옅게: 9% → 6%(대비 4.49 → 4.5 이상) */
+.v2-st.nx .v2-t{background:color-mix(in srgb,var(--t-warn) 6%,transparent)}
+/* 다크: 앱 공통 .pri 버튼(ldads --d-g800 = 밝은 회색) 위 흰 글자 대비 1.4:1 → Ver2 화면만 어두운 글자 */
+html[data-theme="dark"] body.lapp #lm :is(.mj-home,.mj-jr,.mj-card,.v2-aib,.v2-vcard) :is(.lbtn.pri,button.pri):not([data-v2=ladder]){color:var(--surface)!important}
