@@ -96,6 +96,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             case "GET me": return tx.inTenant(tid, () -> learnerOut(tid, sid));
             case "PUT progress": {
                 JsonNode b = DdWeb.readBody(body, LP_MAX); ObjectNode lp = cleanLP(get(b, "lp"));
+                { JsonNode cl = lp.get("cls"); if (cl != null && cl.isObject()) for (var e : entries(cl)) { JsonNode c = e.getValue(); if (c != null && c.isObject() && c.get("refl") != null && c.get("refl").isObject()) ((ObjectNode) c).set("refl", pii.redactDeep(c.get("refl"))); } } /* v46 기능 3 루프 글 가림(Node cleanLP 같은 규칙) */
                 { JsonNode l0 = get(b, "lp"); ObjectNode vs = truthy(l0) && isObj(l0) ? DdAiGateway.cleanVision(get(l0, "vision"), x -> pii.redactDeep(t(x)).asText()) : null; if (vs != null) lp.set("vision", vs); } /* v46 기능 9 비전 · 목표(Node cleanVision) */
                 { JsonNode hk = tx.inTenant(tid, () -> { Map<String, Object> r = mapper.selectLp(tid, sid); JsonNode l = r == null || r.get("lp") == null ? null : parse((String) r.get("lp")); return l == null ? null : get(l, "hint"); });
                   if (truthy(hk)) lp.set("hint", hk); } /* v46 힌트 단계는 서버 소유(튜터 경로만 갱신) */
