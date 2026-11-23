@@ -57,9 +57,9 @@ async function scenario(base, tag, pol) {
   await T('quota', { q: '한도' });
   R.trainSelf = await call(base, 'GET', '/api/state', { cookie: ck });
   R.usage = await call(base, 'GET', '/api/ai/usage', { cookie: ck });
-  /* v47 AI 월 포함량 · 추가 충전: 토스 키 없는 환경 → 503 pay_off, 잘못된 상품 400(키 · 결제 없이 규격만 대조) */
-  R.topupBad = await call(base, 'POST', '/api/ai/topup', { cookie: ck, body: { pack: 'zz' } });
-  R.topupOff = await call(base, 'POST', '/api/ai/topup', { cookie: ck, body: { pack: 'p1m' } });
+  /* v47 AI 충전(금액 선택): 토스 키 없는 환경 → 503 pay_off, 10만 원 단위가 아니면 400 won(키 · 결제 없이 규격만 대조) */
+  R.topupBad = await call(base, 'POST', '/api/ai/topup', { cookie: ck, body: { won: 150000 } });
+  R.topupOff = await call(base, 'POST', '/api/ai/topup', { cookie: ck, body: { won: 500000 } });
   R.topupCf = await call(base, 'POST', '/api/ai/topup/confirm', { cookie: ck, body: { orderId: 'bad', paymentKey: '', amount: 1 } });
   R.lev = await call(base, 'GET', '/api/lev', { cookie: ck });
   R.levC = await call(base, 'GET', '/api/lev?cls=c1&verb=hint', { cookie: ck });
@@ -77,6 +77,21 @@ async function scenario(base, tag, pol) {
   R.me2 = await call(base, 'GET', `/api/pub/${tid}/me`, { cookie: lck });
   R.lev2 = await call(base, 'GET', '/api/lev?after=0', { cookie: ck });
   R.putTrain = await call(base, 'PUT', '/api/state', { cookie: ck, body: { doc: { ...DOC(pol ? { ...pol, train: true } : null) }, rev: 1 } });
+  /* v47 산타 관리(putTrain 뒤 — rev를 올리므로): 기관 정운영자 403 · 산타 관리자(SANTA_ADMIN_EMAILS 중 ctsanta_<tag>_…) 검색 · 입력 · 정운영자 변경 거부 */
+  R.santaNo = await call(base, 'GET', '/api/santa/orgs?q=x', { cookie: ck });
+  const sm = String(process.env.SANTA_ADMIN_EMAILS || '').split(',').map(x => x.trim()).find(x => x.startsWith(`ctsanta_${tag}_`));
+  if (sm) {
+    const ss = await call(base, 'POST', '/api/signup', { body: { email: sm, password: pw, orgName: '산타 본사', type: 'corp' } }); const sck = ss.ck;
+    R.santaMe = await call(base, 'GET', '/api/me', { cookie: sck });
+    R.santaBad = await call(base, 'PUT', `/api/santa/orgs/${tid}/plan`, { cookie: sck, body: { code: 'Q', aiMonthTokens: 1 } });
+    R.santaOwner = await call(base, 'PUT', `/api/santa/orgs/${tid}/plan`, { cookie: ck, body: { code: 'E1', aiMonthTokens: 1 } });
+    R.santaPut = await call(base, 'PUT', `/api/santa/orgs/${tid}/plan`, { cookie: sck, body: { code: 'e1', tier: 'Enterprise', contract: 'sub', aiMonthTokens: 3000000, since: '2026-11-01', memo: '1차 계약' } });
+    R.santaFind = await call(base, 'GET', `/api/santa/orgs?q=${tid}`, { cookie: sck });
+    R.usage2 = await call(base, 'GET', '/api/ai/usage', { cookie: ck });
+    const st = await call(base, 'GET', '/api/state', { cookie: ck });
+    R.ownerPut = await call(base, 'PUT', '/api/state', { cookie: ck, body: { doc: { ...st.j.doc, aiplan: { monthTokens: 9000000, overage: 'block' }, plan: { code: 'U0' } }, rev: st.j.rev } });
+    R.usage3 = await call(base, 'GET', '/api/ai/usage', { cookie: ck });
+  }
   return R;
 }
 const pick = R => ({
@@ -87,10 +102,13 @@ const pick = R => ({
   hint: R.me2.j && R.me2.j.lp && R.me2.j.lp.hint && Object.fromEntries(Object.entries(R.me2.j.lp.hint).map(([k, v]) => [k, { step: v.step, selfExp: v.selfExp, tries: (v.tries || []).map(t => [t.n, t.len]) }])),
   vision: R.me2.j && R.me2.j.lp && R.me2.j.lp.vision,
   byF: R.usage.j && R.usage.j.byFeature,
-  month: R.usage.j && (({ used, included, credit, creditLeft, remaining, pct, state, plan, packs, tiers, payOnline, credits }) => ({ used, included, credit, creditLeft, remaining, pct, state, plan, packs, tiers, payOnline, credits }))(R.usage.j),
+  month: R.usage.j && (({ used, included, credit, creditLeft, remaining, pct, state, plan, contractPlan, price, payOnline, credits }) => ({ used, included, credit, creditLeft, remaining, pct, state, plan, contractPlan, price, payOnline, credits }))(R.usage.j),
+  topupOff: R.topupOff.j, santaPut: R.santaPut && R.santaPut.j && { ...R.santaPut.j, tid: !!R.santaPut.j.tid },
+  santaFind: R.santaFind && R.santaFind.j && R.santaFind.j.orgs && R.santaFind.j.orgs.map(o => ({ n: o.name, ready: o.ready, plan: o.plan, aiplan: o.aiplan, used: o.used, memo: o.memo, log: o.log.map(l => [l.actor === undefined, l.before, l.after, l.memo]) })),
+  usage2: R.usage2 && R.usage2.j && [R.usage2.j.included, R.usage2.j.plan, R.usage2.j.contractPlan], usage3: R.usage3 && R.usage3.j && [R.usage3.j.included, R.usage3.j.plan, R.usage3.j.contractPlan],
   monthFeature: R.usage.j && R.usage.j.monthFeature,
 });
-const KEYS = ['put', 'site', 'login', 'me', 'plain', 'exam', 'h1', 'h3skip', 'h2noatt', 'h2', 'hbad', 'l2', 'l2b', 'a3', 'quota', 'usage', 'lev', 'levC', 'levBad', 'post', 'postText', 'postValText', 'postVerb', 'postMany', 'postEmpty', 'postNo', 'prog', 'me2', 'lev2', 'putTrain', 'topupBad', 'topupOff', 'topupCf'];
+const KEYS = ['put', 'site', 'login', 'me', 'plain', 'exam', 'h1', 'h3skip', 'h2noatt', 'h2', 'hbad', 'l2', 'l2b', 'a3', 'quota', 'usage', 'lev', 'levC', 'levBad', 'post', 'postText', 'postValText', 'postVerb', 'postMany', 'postEmpty', 'postNo', 'prog', 'me2', 'lev2', 'putTrain', 'topupBad', 'topupOff', 'topupCf', 'santaNo', 'santaMe', 'santaBad', 'santaOwner', 'santaPut', 'santaFind', 'ownerPut'];
 
 (async () => {
   const srv = await startMock();
@@ -117,8 +135,14 @@ const KEYS = ['put', 'site', 'login', 'me', 'plain', 'exam', 'h1', 'h3skip', 'h2
     ok(RA.post.st === 200 && RA.post.j.n === 2, `${P} lev post ${RA.post.st} ${JSON.stringify(RA.post.j)}`);
     ok(RA.postText.j && RA.postText.j.error === 'lev_free_text' && RA.postValText.j.error === 'lev_free_text', `${P} free text`);
     ok(RA.postMany.j && RA.postMany.j.error === 'lev_batch' && RA.postVerb.j.error === 'lev_verb' && RA.postEmpty.j.error === 'lev_form' && RA.postNo.st === 401, `${P} lev errors`);
-    ok(RA.usage.j && typeof RA.usage.j.month === 'string' && RA.usage.j.state === 'off' && RA.usage.j.packs.length === 3 && 'remaining' in RA.usage.j, `${P} usage month ${JSON.stringify(RA.usage.j && RA.usage.j.state)}`);
-    ok(RA.topupBad.st === 400 && RA.topupBad.j.error === 'pack' && RA.topupOff.st === 503 && RA.topupOff.j.error === 'pay_off' && RA.topupCf.st === 400 && RA.topupCf.j.error === 'bad_pay', `${P} topup ${RA.topupOff.st} ${RA.topupOff.j && RA.topupOff.j.error}`);
+    ok(RA.usage.j && typeof RA.usage.j.month === 'string' && RA.usage.j.state === 'off' && RA.usage.j.price.perM === 20000 && RA.usage.j.price.discounts.length === 7 && RA.usage.j.contractPlan === null && 'remaining' in RA.usage.j, `${P} usage month ${JSON.stringify(RA.usage.j && RA.usage.j.state)}`);
+    ok(RA.santaNo.st === 403 && RA.santaNo.j.error === 'santa', `${P} santa 403 ${RA.santaNo.st}`);
+    if (RA.santaPut) {
+      ok(RA.santaMe.j.user.santa === true && RA.santaBad.j.error === 'plan_code' && RA.santaOwner.st === 403 && RA.santaPut.st === 200 && RA.santaPut.j.plan.code === 'E1', `${P} santa put ${RA.santaPut.st} ${JSON.stringify(RA.santaPut.j)}`);
+      ok(RA.santaFind.j.orgs.length === 1 && RA.santaFind.j.orgs[0].memo === '1차 계약' && RA.santaFind.j.orgs[0].log.length === 1, `${P} santa find`);
+      ok(RA.usage2.j.included === 3000000 && RA.usage2.j.contractPlan.code === 'E1' && RA.ownerPut.st === 200 && RA.usage3.j.included === 3000000 && RA.usage3.j.plan.overage === 'block' && RA.usage3.j.contractPlan.code === 'E1', `${P} owner cannot change ${JSON.stringify(RA.usage3.j && RA.usage3.j.plan)}`);
+    }
+    ok(RA.topupBad.st === 400 && RA.topupBad.j.error === 'won' && RA.topupOff.st === 503 && RA.topupOff.j.error === 'pay_off' && RA.topupCf.st === 400 && RA.topupCf.j.error === 'bad_pay', `${P} topup ${RA.topupOff.st} ${RA.topupOff.j && RA.topupOff.j.error}`);
     ok(RA.putTrain.st === 200, `${P} owner train ${RA.putTrain.st} ${JSON.stringify(RA.putTrain.j)}`);
     if (!RB) continue;
     for (const k of KEYS) {

@@ -18,4 +18,5 @@ public interface StateMapper {
     /** v46 기관 AI 정책(평문 최상위 키) */
     String selectAipol(@org.apache.ibatis.annotations.Param("tid") String tid);
     String selectAiplan(@org.apache.ibatis.annotations.Param("tid") String tid);
+    java.util.Map<String, Object> selectPlanCur(@org.apache.ibatis.annotations.Param("tid") String tid); /* v47 plan · aiplan(저장 트랜잭션 안, for update) */
 }
