@@ -501,6 +501,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             String lvl = item != null ? DdAiGateway.levelOf(pol, item) : pon ? pol.get("lvl").asText() : "";
             String feature = strictEq(get(b, "mode"), "vision") && pon ? "vision" : "tutor";
             if (pon && "L0".equals(lvl)) throw processException(DdAiGateway.E_LEVEL);
+            if (egovframework.didisam.cmm.DdPlanFeature.check(col.apply("plan"), pon, lvl, feature, kstToday()) != null) throw processException(egovframework.didisam.cmm.DdPlanFeature.E_PLAN_LEARNER); /* v47 요금제 밖 레벨 · 기능(Node PF.guard) */
             countFeature(tid, feature, pol);
             gw[0] = item != null ? ik : ""; gw[1] = lvl; gw[4] = pol; gw[5] = feature; gw[6] = item;
             JsonNode pub = or(col.apply("pub"), F.objectNode());

@@ -16,6 +16,7 @@
     select day::text, calls, tin::int, tout::int from ai_usage where tenant_id = #{tid} and day &gt; current_date - 31 order by day desc
   </select>
   <!-- v47 AI 월 포함량 · 추가 충전(ai_credit, Node aiprice.js · app.js와 같은 문장) -->
+  <select id="selectPlan" resultType="string">select (doc->'plan')::text from tenant_state where tenant_id = #{tid}</select>
   <select id="selectAiplan" resultType="string">select (doc->'aiplan')::text from tenant_state where tenant_id = #{tid}</select>
   <select id="monthUsed" resultType="long" flushCache="true" useCache="false">select coalesce(sum(tin + tout), 0)::bigint n from ai_usage where tenant_id = #{tid} and day &gt;= cast(#{from} as date)</select>
   <select id="selectCreditRows" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select id, pack, tokens::bigint tokens, amount::bigint amount, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD') pday, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') at, expires_at::text expires from ai_credit where tenant_id = #{tid} and status = 'paid' and expires_at &gt;= cast(#{from} as date) order by paid_at</select>

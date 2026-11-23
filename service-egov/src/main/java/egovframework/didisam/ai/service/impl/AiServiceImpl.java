@@ -63,6 +63,8 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
             if (aiBlocked(room)) throw processException("dd.403.policy");
             int calls = mapper.incUsage(tid, kstToday());
             if (calls > p.aiDaily) throw processException("dd.429.quota", new String[]{ String.valueOf(p.aiDaily) });
+            { String ps0 = mapper.selectAipol(tid), pl0 = mapper.selectPlan(tid); String need = egovframework.didisam.cmm.DdPlanFeature.check(pl0 == null ? null : parse(pl0), DdAiGateway.on(DdAiGateway.polOf(ps0 == null ? null : parse(ps0))), null, feature, kstToday());
+              if (need != null) throw processException(egovframework.didisam.cmm.DdPlanFeature.E_PLAN, new String[]{ need }); } /* v47 요금제 밖 기능(grade) → 403 plan_feature(Node PF.guard와 같은 순서) */
             monthGuard(tid, false); /* v47 이달 AI 한도(aiplan 있는 기관만) — Node monthGuard와 같은 순서 */
             { String ps = mapper.selectAipol(tid); JsonNode pol = DdAiGateway.polOf(ps == null ? null : parse(ps)); /* v46 기능별 집계(studio · grade) · 정책 on 기관 기능 한도 */
               int fc = mapper.incUsageF(tid, kstToday(), feature); long cap = DdAiGateway.cap(pol, feature); if (cap > 0 && fc > cap) throw processException(DdAiGateway.E_QUOTA); }
