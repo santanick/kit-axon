@@ -44,7 +44,7 @@ const FAC = { on: true, payOnline: false, facilities: [court('f_ta', '테니스 
   async function flow(tag, o) { const { ctx, p, errs } = await open(o); const app = !o.web;
     if (app) { const r = await p.evaluate(() => ({ chip: !!document.querySelector('.tb-chips a.fx-chip-go[href="#fac"]'), tabs: [...document.querySelectorAll('#lapp .ap-nav > a')].map(a => a.textContent.trim()), card: !!document.querySelector('.fx-today') }));
       ok(r.chip, `${tag} 홈 칩 「예약」`); ok(r.tabs.length === 5 && r.tabs[3] === '시설', `${tag} 하단 탭(v43 대표님 지시: 학습자 입장 유형별 탭 — 시설 켠 기관은 시설을 나 앞에 더해 5칸, ${r.tabs.join('·')})`); ok(!r.card, `${tag} 예약 없으면 오늘 예약 카드 없음`);
-      await p.click('a.fx-chip-go'); await p.waitForTimeout(400); }
+      await p.click('#lapp .ap-nav a[href="#fac"]'); /* v47 LX-SPEC D1: 보기 칩(「예약」 포함)은 홈 「더 보기」(처음 접힘) 안으로 — 시설은 아래 탭 「시설」 칸으로 들어간다 */ await p.waitForTimeout(400); }
     else { ok(await p.evaluate(() => !!document.querySelector('header.lh nav.ln a[href="#fac"]')), `${tag} 웹 머리 메뉴 「시설 예약」`); await go(p, '#fac'); }
     const h = await p.evaluate(() => ({ rows: [...document.querySelectorAll('.fx-home .fx-row b')].map(x => x.textContent), chips: [...document.querySelectorAll('.fx-home .fx-chip')].map(x => x.textContent), tag: (document.querySelector('.fx-row[href="#fac/f_room"] .fx-b') || {}).textContent }));
     ok(h.rows.length === 5 && h.chips.includes('테니스') && h.chips.includes('이용권'), `${tag} 예약 홈: 시설 5 · 칩(${h.chips.join('·')})`); ok(h.tag === '승인제', `${tag} 승인제 표시`);

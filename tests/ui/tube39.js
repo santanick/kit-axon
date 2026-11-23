@@ -62,7 +62,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
       return bad.concat(document.documentElement.scrollWidth > 390 ? ['가로 넘침 ' + document.documentElement.scrollWidth] : []); });
     ok(!small.length, `홈: 누르는 곳 44px(칩 36px) · 글자 12px · 넘침 없음 ${small.slice(0, 5).join(' | ')}`);
     /* 칩: 내 과정 */
-    await p.click('.tb-chip[data-v="mine"]'); await p.waitForTimeout(150);
+    await p.evaluate(() => { const d = document.querySelector('#lm .tb-more'); if (d) d.open = true; }); /* v47 D1: 보기 칩은 홈 「더 보기」(처음 접힘) 안 — 칩을 고르면 머리에 다시 보임 */ await p.click('.tb-chip[data-v="mine"]'); await p.waitForTimeout(150);
     const rows = await p.$$eval('.tb-row', R => R.map(x => x.textContent.replace(/\s+/g, ' ').trim()));
     ok(rows.length >= 1 && /엑셀/.test(rows.join()), `칩 내 과정: 목록 ${rows.length}개`);
     await p.click('.tb-chip[data-v="all"]'); await p.waitForTimeout(100);
@@ -134,7 +134,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
       ok(!went.includes('✗'), `${tag}: 탭마다 실제 클릭 → 이동 · 선택 표시 — ${went.join(' ')}`);
       await p.evaluate(() => { location.hash = '#cal'; }); await p.waitForTimeout(400);
       const c = await p.evaluate(() => ({ seg: [...document.querySelectorAll('.tb-seg a')].map(a => a.getAttribute('href') + (a.classList.contains('on') ? '*' : '')).join(), cal: !!document.querySelector('#lm .lq-sn, #lm .lq-top, #lm .lq-seg'), on: ((document.querySelector('.ap-nav.tb-nav a.on') || {}).textContent || '').trim() }));
-      ok(c.cal && c.seg === '#my,#cal*' && !!c.on, `${tag}: #cal 딥링크 열림 · 「목록 | 일정」 세그먼트 · 선택 탭 ${c.on}`);
+      ok(c.cal && c.seg === '#my,#cal*,#rec' && !!c.on, /* v47 D9: 세그먼트에 「기록」(#rec) 추가 */ `${tag}: #cal 딥링크 열림 · 「목록 | 일정 | 기록」 세그먼트 · 선택 탭 ${c.on}`);
       ok(!errs.length, `${tag}: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); } }
 
   /* v43 3단계: 직업훈련 「출석」 탭(#attend) — 읽기 전용(새 /api · 저장 없음). 오늘 출석 상태 · 이번 달 출석률 · 오늘 학습 시간과 한도(게시 규정 dayMax · dayChasi) · 훈련일지 바로가기 */
@@ -199,7 +199,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     await p.click('.tb-head [data-lux="menu"]'); await p.waitForTimeout(200);
     const m = await p.evaluate(() => [...document.querySelectorAll('#luxSheet a, #luxSheet button')].map(a => a.textContent.trim()).filter(Boolean));
     ok(m.some(x => /공지/.test(x)) && m.some(x => /진단|배지|강좌|둘러보기/.test(x)), `성인: 전체 메뉴 = 관리자 사이트 메뉴 — ${m.slice(0, 8).join(' · ')}`);
-    await p.keyboard.press('Escape'); await p.click('.tb-inst [data-ap="inst-x"]'); await p.waitForTimeout(150); ok(!(await p.$('.tb-inst')), '성인: 설치 안내 닫기');
+    await p.keyboard.press('Escape'); await p.evaluate(() => { const d = document.querySelector('#lm .tb-more'); if (d) d.open = true; }); /* v47 D1: 설치 안내는 홈 「더 보기」 안 */ await p.click('.tb-inst [data-ap="inst-x"]'); await p.waitForTimeout(150); ok(!(await p.$('.tb-inst')), '성인: 설치 안내 닫기');
     await p.click('.tb-askr button'); await p.waitForTimeout(400); ok(await p.evaluate(() => document.body.classList.contains('lt-on') && /이번 주 학습 계획/.test(document.body.textContent)), '성인: AI 바로 묻기 → 대화 창에서 질문');
     ok(!errs.length, `관리자 설정: 오류 없음 ${errs.slice(0, 2).join(' | ')}`); await ctx.close(); }
   { const { ctx, p } = await open('#home', { type: 'voc' }); const a = await p.$$eval('.tb-askr button', B => B.map(b => b.textContent.trim())); ok(a.join() === '출석 확인,수료 기준,오늘 학습 한도', `직업훈련: AI 바로 묻기 — ${a.join(' · ')}`); await ctx.close(); }
