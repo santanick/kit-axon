@@ -10,7 +10,7 @@ function medal(b, w = 56) {
 function lineChart(labels, series, h = 200) {
   const W = 560, P = 34, max = Math.max(1, ...series.flatMap(s => s.v)) * 1.15; const x = i => P + i * (W - P - 30) / Math.max(1, labels.length - 1), y = v => h - 24 - v / max * (h - 44);
   const grid = [0, .5, 1].map(f => `<line x1="${P}" x2="${W - 30}" y1="${y(max * f / 1.15)}" y2="${y(max * f / 1.15)}" class="gl"/><text x="${P - 6}" y="${y(max * f / 1.15) + 4}" text-anchor="end" class="gt">${Math.round(max * f / 1.15)}</text>`).join('');
-  return `<svg viewBox="0 0 ${W} ${h}" class="chart" role="img" aria-label="${esc(series.map(s => s.n).join(' · '))} 추이">${grid}${labels.map((l, i) => `<text x="${x(i)}" y="${h - 6}" text-anchor="middle" class="gt">${esc(l)}</text>`).join('')}${series.map(s => `<polyline fill="none" style="stroke:${s.c}" stroke-width="2.4" points="${s.v.map((v, i) => `${x(i)},${y(v)}`).join(' ')}"/>${s.v.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="${i === s.v.length - 1 ? 4 : 2.5}" style="fill:${s.c}"><title>${esc(labels[i])} ${esc(s.n)} ${v}</title></circle>`).join('')}`).join('')}</svg>
+  return `<svg viewBox="0 0 ${W} ${h}" class="chart" role="img" aria-label="${esc(series.map(s => s.n).join(' · '))} 추이">${grid}${labels.map((l, i) => `<text x="${x(i)}" y="${h - 6}" text-anchor="middle" class="gt">${esc(l)}</text>`).join('')}${series.map(s => `<polyline fill="none" stroke="${s.c}" stroke-width="2.4" points="${s.v.map((v, i) => `${x(i)},${y(v)}`).join(' ')}"/>${s.v.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="${i === s.v.length - 1 ? 4 : 2.5}" fill="${s.c}"><title>${esc(labels[i])} ${esc(s.n)} ${v}</title></circle>`).join('')}`).join('')}</svg>
   <div class="legend">${series.map(s => `<span><i style="background:${s.c}"></i>${esc(s.n)}</span>`).join('')}</div>`;
 }
 const funnel = rows => { const m = Math.max(1, ...rows.map(r => r[1])); return `<div class="funnel">${rows.map(([l, v]) => `<div class="fr"><span>${esc(l)}</span><i><b style="width:${v / m * 100}%"></b></i><em>${num(v)}</em></div>`).join('')}</div>`; };
@@ -47,7 +47,7 @@ VIEWS.dash = () => {
   </section>`;
 };
 /* v43 F1: PRISM 유형 색 = 그린 · 중성 팔레트(lsite.js LS_TYPES.univ · sitepro.js SPZ와 같은 값, 흰 글자 4.5:1 이상) */
-const PRISM = { EYE: ['var(--pr)', '관찰형'], PEN: ['#3F3A33', '기록형'], LENS: ['#0F766E', '분석형'], STORY: ['var(--pr-h)', '표현형'], MAP: ['#5C554B', '설계형'] };
+const PRISM = { EYE: ['#00862D', '관찰형'], PEN: ['#3F3A33', '기록형'], LENS: ['#0F766E', '분석형'], STORY: ['#05612A', '표현형'], MAP: ['#5C554B', '설계형'] };
 function prismBars() { const c = {}; S.members.forEach(m => m.diag && (c[m.diag] = (c[m.diag] || 0) + 1)); const tot = Object.values(c).reduce((a, b) => a + b, 0) || 1; return `<div class="funnel">${Object.entries(PRISM).map(([k, [col, l]]) => `<div class="fr"><span>${k} <small>${l}</small></span><i><b style="width:${(c[k] || 0) / tot * 100}%;background:${col}"></b></i><em>${c[k] || 0}</em></div>`).join('')}</div>`; }
 ACT['kpi-csv'] = () => { const L = S.members; downloadCSV(`KPI_${today()}.csv`, ['지표', '값'], [['등록', L.length], ['가입률(%)', Math.round(L.filter(m => m.grade === '정회원').length / L.length * 100)], ['주간 활성', L.filter(m => daysAgo(m.last) <= 7).length], ['평균 진도(%)', Math.round(avgOf(S.classes.flatMap(c => Object.values(c.prog).map(p => p.p))))], ['배지 보유', L.filter(m => hasBadge(m.id)).length], ['검수 대기', pend().length], ['14일 미접속', L.filter(m => daysAgo(m.last) >= 14).length]]); };
 

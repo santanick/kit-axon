@@ -119,8 +119,8 @@
   if (!document.querySelector('style[data-lmsv]')) { const st = document.createElement('style'); st.dataset.lmsv = '1'; st.textContent = `
 .lmsv-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
 @media (max-width:900px){.lmsv-grid{grid-template-columns:minmax(0,1fr)}}
-.lmsv-vid{position:relative;background:#141716 var(--ph,none) center/cover no-repeat;border-radius:16px;overflow:hidden;aspect-ratio:16/9;display:flex;align-items:flex-end;justify-content:flex-start;color:#fff;font-size:13px;text-align:left;padding:0}
-.lmsv-vid::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,18,17,.05) 30%,rgba(16,18,17,.78))}
+.lmsv-vid{position:relative;background:#0E1A14 var(--ph,none) center/cover no-repeat;border-radius:16px;overflow:hidden;aspect-ratio:16/9;display:flex;align-items:flex-end;justify-content:flex-start;color:#fff;font-size:13px;text-align:left;padding:0}
+.lmsv-vid::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,20,10,.05) 30%,rgba(4,20,10,.78))}
 .lmsv-vid::after{content:'';position:absolute;left:50%;top:44%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.92) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 7l9 5-9 5z' fill='%2300862D'/%3E%3C/svg%3E") center/26px no-repeat;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .lmsv-vid:has(video)::before,.lmsv-vid:has(video)::after{display:none}
 .lmsv-vid>span{position:relative;z-index:1;margin:14px 16px;font-size:13px;font-weight:600;line-height:1.5;text-shadow:0 1px 2px rgba(0,0,0,.4)}
@@ -400,13 +400,13 @@
   if (!document.querySelector('style[data-ddlms]')) { const st = document.createElement('style'); st.dataset.ddlms = '1'; st.textContent = `
 #main.dd-lms .dd-lmc{display:flex;flex-direction:column;gap:16px;min-width:0}
 #main.dd-lms .dd-lmc>.grid.g2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-#main.dd-lms .dd-ph{margin:0;position:relative;border-radius:20px;overflow:hidden;aspect-ratio:16/10;background:#141716;box-shadow:0 1px 2px rgba(16,24,40,.06),0 12px 28px -16px rgba(24,29,26,.4)}
+#main.dd-lms .dd-ph{margin:0;position:relative;border-radius:20px;overflow:hidden;aspect-ratio:16/10;background:#0E1A14;box-shadow:0 1px 2px rgba(16,24,40,.06),0 12px 28px -16px rgba(5,61,30,.4)}
 #main.dd-lms .dd-ph img{width:100%;height:100%;object-fit:cover;display:block}
-#main.dd-lms .dd-ph figcaption{position:absolute;inset:auto 0 0 0;padding:40px 16px 14px;background:linear-gradient(180deg,transparent,rgba(16,18,17,.82));color:#fff;display:flex;flex-direction:column;gap:2px}
+#main.dd-lms .dd-ph figcaption{position:absolute;inset:auto 0 0 0;padding:40px 16px 14px;background:linear-gradient(180deg,transparent,rgba(4,20,10,.82));color:#fff;display:flex;flex-direction:column;gap:2px}
 #main.dd-lms .dd-ph b{font-size:16px;font-weight:800}#main.dd-lms .dd-ph small{font-size:13px;opacity:.88}
 #main.dd-lms .dd-zero{margin:12px 0 0;padding:14px 16px;border-radius:14px;background:var(--gr50,#EEF9F1);color:var(--gr800,#066B2A);font-size:14px;font-weight:600;line-height:1.55}
-#main.dd-lms .dd-phone{max-width:none!important;border-radius:32px;box-shadow:inset 0 0 0 8px #1E2421,0 18px 40px -20px rgba(24,29,26,.22);padding:26px 24px 22px}
-#main.dd-lms .dd-phone::before{content:'';display:block;width:84px;height:6px;border-radius:6px;background:#1E2421;margin:-10px auto 14px;opacity:.85}
+#main.dd-lms .dd-phone{max-width:none!important;border-radius:32px;box-shadow:inset 0 0 0 8px #13231B,0 18px 40px -20px rgba(5,61,30,.45);padding:26px 24px 22px}
+#main.dd-lms .dd-phone::before{content:'';display:block;width:84px;height:6px;border-radius:6px;background:#13231B;margin:-10px auto 14px;opacity:.85}
 #main.dd-lms .q1-ac li i{all:unset;flex:none;width:8px;height:8px;border-radius:50%;background:var(--gr500)}#main.dd-lms .q1-ac li i.warn{background:var(--co500,#F0643C)}
 @media (max-width:1280px){#main.dd-lms .dd-lmc>.grid.g2{grid-template-columns:1fr}}`; document.head.appendChild(st); }
 })();

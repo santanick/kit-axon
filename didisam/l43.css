@@ -83,7 +83,7 @@ th.l43-sort:hover,th.l43-sort:focus-visible{color:var(--g900)}
 #main.l43 .l43-bulk>b:first-child,.l43-bn{font-size:16px;font-weight:800;color:inherit}
 #main.l43 .l43-bulk .sp{flex:1}
 #main.l43 .l43-bulk .btn{min-height:44px;background:transparent;color:inherit;border:1px solid color-mix(in srgb,currentColor 28%,transparent);box-shadow:none}
-#main.l43 .l43-bulk .btn.pri{background:var(--pr);border-color:var(--pr);color:var(--on-pr)}
+#main.l43 .l43-bulk .btn.pri{background:var(--gr500);border-color:var(--gr500);color:#04140A}
 #main.l43 .l43-bulk .btn.red{color:var(--co500);border-color:color-mix(in srgb,var(--co500) 50%,transparent)}
 
 /* ── 5. 빈 상태(L43.empty · .slg-empty · .empty 개조) ── */
@@ -107,7 +107,7 @@ th.l43-sort:hover,th.l43-sort:focus-visible{color:var(--g900)}
 #main.l43 .d26-cc:has(.c2ck:checked){box-shadow:0 0 0 2px var(--gr600),var(--sh2)}
 #main.l43 .d26-th{position:relative;aspect-ratio:16/10;background:var(--gr900)}
 #main.l43 .d26-th img,#main.l43 .d26-th .l43-ph{width:100%;height:100%;object-fit:cover;display:block}
-#main.l43 .d26-th::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(24,29,26,.55));pointer-events:none}
+#main.l43 .d26-th::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(3,39,26,.55));pointer-events:none}
 #main.l43 .d26-kind{z-index:1;background:var(--glass);color:var(--g900);font-weight:700;border-radius:99px}
 #main.l43 .d26-ck{z-index:2}
 #main.l43 .d26-cb{padding:14px 18px 18px}
@@ -143,19 +143,19 @@ th.l43-sort:hover,th.l43-sort:focus-visible{color:var(--g900)}
   #main.l43 .l43-bulk{bottom:84px}}
 
 /* ── v43 Q1 요약 카드 4종(L43.brief kind) ── */
-.l43-spk{display:block;color:var(--gr600);margin-top:10px}.l43-spk.co{color:var(--co500)}.l43-spk.on{color:var(--c-data)}
-/* hero: v45 밝은 히어로(흰 + 옅은 세이지 틴트) — 진녹 메시 중단, 글자는 진한 중립 */
-.l43-brief.l43-k-hero{position:relative;overflow:hidden;align-items:stretch;padding:32px 34px;border:0;color:var(--g900);background:var(--hero-mesh);box-shadow:inset 0 0 0 1px var(--line),var(--sh1)}
-.l43-k-hero::after{content:"";display:none;position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.07) 1px,transparent 1px);background-size:18px 18px;mask-image:linear-gradient(90deg,transparent 30%,#000)}
+.l43-spk{display:block;color:var(--gr600);margin-top:10px}.l43-spk.co{color:var(--co500)}.l43-spk.on{color:#7CF2A2}
+/* hero: 짙은 그린 메시 */
+.l43-brief.l43-k-hero{position:relative;overflow:hidden;align-items:stretch;padding:32px 34px;border:0;color:#fff;background:radial-gradient(90% 120% at 100% 0%,rgba(46,224,106,.38) 0%,transparent 55%),radial-gradient(70% 90% at 0% 100%,rgba(0,197,59,.22) 0%,transparent 60%),linear-gradient(135deg,#0B5A2A 0%,#053D1E 62%,#042B16 100%);box-shadow:0 1px 2px rgba(16,24,40,.08),0 18px 40px -12px rgba(5,61,30,.45)}
+.l43-k-hero::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.07) 1px,transparent 1px);background-size:18px 18px;mask-image:linear-gradient(90deg,transparent 30%,#000)}
 .l43-k-hero .l43-bl{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center}
-.l43-k-hero .l43-eye{color:var(--t-sub)}.l43-k-hero .l43-ai{background:var(--s100);color:var(--s700);box-shadow:none}
-.l43-k-hero .l43-hl{color:var(--g900);font-size:40px;line-height:1.18}.l43-k-hero .l43-hl em{color:var(--t-mag)}.l43-k-hero .l43-hl em.co{color:var(--co700)}
-.l43-k-hero .l43-sub{color:var(--g700)}
+.l43-k-hero .l43-eye{color:rgba(255,255,255,.82)}.l43-k-hero .l43-ai{background:rgba(255,255,255,.14);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+.l43-k-hero .l43-hl{color:#fff;font-size:40px;line-height:1.18}.l43-k-hero .l43-hl em{color:#7CF2A2}.l43-k-hero .l43-hl em.co{color:#FF9A6E}
+.l43-k-hero .l43-sub{color:rgba(255,255,255,.84)}
 .l43-gl{position:relative;z-index:1;display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:10px;margin:0;flex:0 1 400px;align-content:center}
-.l43-g{padding:14px 16px 12px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
-.l43-g dt{font-size:13px;font-weight:600;color:var(--t-sub);margin:0 0 2px;white-space:nowrap}
-.l43-g dd{margin:0;font-size:28px;font-weight:800;letter-spacing:-.02em;color:var(--g900);font-variant-numeric:tabular-nums;white-space:nowrap}
-.l43-g.warn dd{color:var(--co700)}.l43-g .l43-spk{width:100%;height:28px;margin-top:6px}
+.l43-g{padding:14px 16px 12px;border-radius:16px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);backdrop-filter:blur(6px)}
+.l43-g dt{font-size:13px;font-weight:600;color:rgba(255,255,255,.78);margin:0 0 2px;white-space:nowrap}
+.l43-g dd{margin:0;font-size:28px;font-weight:800;letter-spacing:-.02em;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.l43-g.warn dd{color:#FFB08F}.l43-g .l43-spk{width:100%;height:28px;margin-top:6px}
 /* kpi: 한 문장 + 4칸 */
 .l43-brief.l43-k-kpi{display:block;padding:28px 28px 24px}
 .l43-k-kpi .l43-hl{font-size:32px}
@@ -168,7 +168,7 @@ th.l43-sort:hover,th.l43-sort:focus-visible{color:var(--g900)}
 /* photo: 사진 + 한 문장 */
 .l43-brief.l43-k-photo{display:grid;grid-template-columns:minmax(260px,38%) 1fr;gap:0;padding:0;overflow:hidden;align-items:stretch}
 .l43-pimg{min-height:220px;background-size:cover;background-position:center;position:relative}
-.l43-pimg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 60%,rgba(24,29,26,.08))}
+.l43-pimg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 60%,rgba(5,61,30,.10))}
 .l43-pbody{padding:28px 30px;display:flex;flex-direction:column;justify-content:center;gap:18px}
 .l43-k-photo .l43-hl{font-size:30px}
 /* list: 할 일 3줄 */
@@ -181,7 +181,7 @@ th.l43-sort:hover,th.l43-sort:focus-visible{color:var(--g900)}
 .l43-tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.l43-tt b{font-size:15px;font-weight:700;color:var(--g900)}.l43-tt small{font-size:13px;color:var(--t-sub,var(--g600));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:900px){.l43-brief.l43-k-list,.l43-brief.l43-k-photo{grid-template-columns:1fr}.l43-kp{grid-template-columns:repeat(2,minmax(0,1fr))}.l43-gl{grid-template-columns:repeat(2,minmax(0,1fr));flex-basis:100%}.l43-pimg{min-height:160px}}
 @media (max-width:640px){.l43-k-hero .l43-hl,.l43-k-kpi .l43-hl,.l43-k-list .l43-hl,.l43-k-photo .l43-hl{font-size:26px}.l43-brief.l43-k-hero{padding:22px 18px}.l43-kc dd{font-size:24px}.l43-kc .l43-spk{width:64px}}
-html[data-theme="dark"] .l43-brief.l43-k-hero{background:var(--hero-mesh)}
+html[data-theme="dark"] .l43-brief.l43-k-hero{background:radial-gradient(90% 120% at 100% 0%,rgba(46,224,106,.22) 0%,transparent 55%),linear-gradient(135deg,#0E4A27 0%,#07301A 62%,#04200F 100%)}
 /* Q1 · DIRECTION §2 맞춤: N 링 + KPI 3칸, P 사진 2~3장 겹침, L 아이콘 행 */
 .l43-brief.l43-k-kpi{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px 32px;align-items:center}
 .l43-k-kpi:not(:has(.l43-kr)){grid-template-columns:1fr}
@@ -213,12 +213,12 @@ html[data-theme="dark"] .l43-brief.l43-k-hero{background:var(--hero-mesh)}
 /* ── v43 G2: 머리 버튼(L43.brief acts) · 0 문장 ── */
 .l43-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .l43-acts .l43-act{min-height:44px;padding:0 18px;border-radius:999px;font-weight:700}
-.l43-k-hero .l43-acts .l43-act.pri{background:var(--pr);color:var(--on-pr);border-color:var(--pr)}
-.l43-k-hero .l43-acts .l43-act.ghost{background:var(--surface);color:var(--g900);border:1px solid var(--g400)}
-.l43-k-hero .l43-acts .l43-act.ghost:hover{background:var(--g50)}
+.l43-k-hero .l43-acts .l43-act.pri{background:#fff;color:var(--gr800,#00602A);border-color:#fff}
+.l43-k-hero .l43-acts .l43-act.ghost{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.4)}
+.l43-k-hero .l43-acts .l43-act.ghost:hover{background:rgba(255,255,255,.18)}
 .v4-head .l43-acts{margin-top:14px}
 dd .l43-z,.l43-z{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--g700);white-space:nowrap}
-.l43-k-hero .l43-z{color:var(--g700)}
+.l43-k-hero .l43-z{color:rgba(255,255,255,.86)}
 .l43-st.warn .l43-z,.l43-kc.warn .l43-z{color:var(--g700)}
 .v4-acts .l43-acts{margin-top:0}
 /* v43 G2 2차: 시연 문구 칩 · 설정 화면 머리 낮추기 */

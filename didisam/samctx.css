@@ -2,7 +2,7 @@
 .scx{flex:none;margin:8px 12px 0;border-radius:8px;background:var(--surface,#fff);box-shadow:0 0 0 1px var(--gr100,#D9F5E3);overflow:hidden}
 .scxh{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border:0;background:var(--gr50,#ECFDF3);cursor:pointer;text-align:left;color:var(--ink)}
 .scxh:hover{background:var(--gr100,#D9F5E3)}.scxh:focus-visible{outline:2px solid var(--s500,#00862D);outline-offset:-2px}
-.scxi{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;color:var(--on-pr);background:var(--pr)}
+.scxi{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;color:#fff;background:radial-gradient(circle at 30% 30%,#7CF2A2,#00C53B 55%,#05612A)}
 .scxt{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.scxt b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.scxt small{font-size:12px;color:var(--muted);white-space:nowrap}
 .scxv{flex:none;color:var(--muted);transition:transform .2s;transform:rotate(180deg)}.scx.off .scxv{transform:none}
 .scxc{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px 10px}
@@ -16,7 +16,7 @@
 #fabBtn .scxbt small{font-size:12px;font-weight:700;opacity:.85;margin-top:2px;letter-spacing:0}
 .scxc{max-height:76px;overflow-y:auto}
 .obd.on+.scx .scxc{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none;scrollbar-width:thin}.obd.on+.scx .scxchip{flex:none;max-width:none}
-#fabBtn .scxbt small{color:var(--on-pr);opacity:.9;white-space:nowrap}
+#fabBtn .scxbt small{color:#fff;opacity:.9;white-space:nowrap}
 body:not(.fab-open) #fabBtn:has(.scxbt){padding-right:20px}
 /* 낮은 화면: 이 화면 칩이 있으면 입력창 위 예시 줄은 숨겨 대화 칸을 확보 */
 @media (max-height:760px){.bchat:has(.scx:not(.off)) .bcomp .chips{display:none}.scxh{padding:5px 10px}.scxt small{display:none}.scx{margin-top:6px}}
