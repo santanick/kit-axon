@@ -465,6 +465,18 @@
     if (!app.querySelector('.ap-nav') && !needPick) app.insertAdjacentHTML('beforeend', navHTML());
   }
   { const base = lrender; lrender = (...x) => { base(...x); try { apply(); if (document.body.classList.contains('ap-homeon')) ltRender(); } catch (e) { console.error('lapp', e); } }; }
+  /* v47 ds1: 상태 표시줄 색(theme-color) — 파란 고정값(#5C74F6) 대신 지금 화면 맨 위 색(라이트 · 다크 · 기관 테마를 그대로 따름).
+     맨 위 요소부터 부모로 올라가며 반쯤 이상 불투명한 배경색을 찾고, 없으면 body 배경. 앱 화면(body.lapp)에서만 바꾼다. */
+  const tcSync = () => { try { const m = document.querySelector('meta[name="theme-color"]'); if (!m || !document.body || !document.body.classList.contains('lapp')) return;
+    const rgb = v => { const x = /rgba?\(([^)]+)\)/.exec(v || ''); if (!x) return null; const a = x[1].split(/[\s,/]+/).filter(Boolean).map(Number); return (a[3] == null ? 1 : a[3]) >= 0.5 ? '#' + a.slice(0, 3).map(n => Math.round(n).toString(16).padStart(2, '0')).join('') : null; };
+    let e = document.elementFromPoint(Math.round(innerWidth / 2), 1), c = null; while (e && e.nodeType === 1 && !c) { c = rgb(getComputedStyle(e).backgroundColor); e = e.parentElement; }
+    c = c || rgb(getComputedStyle(document.body).backgroundColor) || (document.documentElement.getAttribute('data-theme') === 'dark' ? '#07110c' : '#f3f0ea');
+    if (m.getAttribute('content') !== c) m.setAttribute('content', c); } catch (e) { } };
+  const tcLater = () => { try { requestAnimationFrame(() => requestAnimationFrame(tcSync)); } catch (e) { tcSync(); } };
+  window.addEventListener('hashchange', tcLater); window.addEventListener('scroll', (() => { let t = 0; return () => { clearTimeout(t); t = setTimeout(tcSync, 120); }; })(), { passive: true });
+  try { new MutationObserver(tcLater).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'style'] }); } catch (e) { }
+  { const base = lrender; lrender = (...x) => { base(...x); tcLater(); }; }
+  window.lappThemeColor = tcSync;
   { const base = ltRender; ltRender = (...x) => { const r = base(...x); try { sync(); } catch (e) { } return r; }; }
 
   /* ── 이벤트 ── */
