@@ -57,7 +57,7 @@
 .lmsnav-sub .lnd{flex:1 1 100%;margin:0 0 2px;color:var(--t-sub,#5C554B);font-size:13px}
 .lmsnav-sub button{border:1px solid var(--hair,var(--line,#e2e8f0));background:var(--surface,var(--card,#fff));color:var(--g800,inherit);border-radius:999px;min-height:44px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer}
 @media (max-width:600px){.lmsnav-sub button{min-height:44px;padding:10px 14px}} /* v38 390 하위 탭 44px */
-.lmsnav-sub button.on{background:var(--surface,#fff);border-color:var(--g800,#343B37);color:var(--g900,#181D1A);box-shadow:inset 0 0 0 .5px var(--g800,#343B37)} /* v45: 선택(지금 있는 곳)은 중립, 초록은 주 버튼에만 */
+.lmsnav-sub button.on{background:var(--pr,#3A7B44);border-color:var(--pr,#3A7B44);color:var(--on-pr,#fff)}
 .lmsnav-sub button.more{border-style:dashed}
 .side .ri .nvn{display:none}`; document.head.appendChild(st); }
 

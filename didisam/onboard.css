@@ -10,7 +10,7 @@
 .obh{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;background:var(--gr50,#ECFDF3);cursor:pointer;text-align:left;color:var(--ink)}
 .obd.fin .obh{background:#EEFAF2}
 .obh>svg:last-child{flex:none;transition:transform .2s;color:var(--muted)}.obd.on .obh>svg:last-child{transform:rotate(180deg)}
-.obi{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:6px;color:var(--on-pr);background:var(--pr)}
+.obi{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:6px;color:#fff;background:var(--orb-bg)}
 .obd.fin .obi{background:var(--ok)}
 .obt{flex:1;min-width:0}.obt b{display:block;font-size:13.5px}.obt small{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .obp{flex:none;font:700 12.5px var(--num,inherit);color:var(--ink)}

@@ -136,7 +136,7 @@ body:has(#slSheet) .mwrap{z-index:96}
 #main .sx3 .sx3-subs button.on{color:var(--gr800,#066B2A);font-weight:800;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--gr200,#BDEBC9)}
 #main .sx3 .sx3-main{grid-column:auto;margin:0;padding:26px 28px 28px;border-radius:24px;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--hair,#ECEAE4),0 1px 2px rgba(16,24,40,.05),0 18px 40px -24px rgba(24,29,26,.18)}
 #main .sx3 .sx3-mh{display:flex;gap:16px;align-items:center;padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--hair,#ECEAE4)}
-#main .sx3 .sx3-mic{flex:none;display:grid;place-items:center;width:56px;height:56px;border-radius:18px;background:var(--s100);color:var(--s700);box-shadow:none}
+#main .sx3 .sx3-mic{flex:none;display:grid;place-items:center;width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#3A7B44,var(--hero-solid));color:#fff;box-shadow:0 10px 22px -12px rgba(22,48,25,.6)}
 #main .sx3 .sx3-mt small{display:block;font-size:12px;font-weight:700;color:var(--gr800,#066B2A);letter-spacing:.02em}
 #main .sx3 .sx3-mt h2{margin:2px 0 2px;font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--g900,#17191C)}
 #main .sx3 .sx3-mt p{margin:0;font-size:14px;color:var(--t-sub,#6B7076)}
@@ -149,13 +149,13 @@ body:has(#slSheet) .mwrap{z-index:96}
 #main .sx3 .sx3-now .sx-kv{font-size:13px;padding:8px 0}
 #main .sx3 .sx3-now .sx-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 #main .sx3 .sx3-now .sx-chips{display:flex;flex-wrap:wrap;gap:6px}
-/* v45: AI SAM 제안 상자 = 옅은 세이지 바탕 + 진한 글자 */
-#main .sx3 .sx3-ai{background:var(--s50);color:var(--g800);box-shadow:inset 0 0 0 1px var(--s200)}
-#main .sx3 .sx3-ai h3{color:var(--g900)}
-#main .sx3 .sx3-ai .l43-ai{background:var(--pr);color:var(--on-pr)}
+/* v45.1: AI SAM 제안 상자 = v44.1 진한 면 + 로고 톤 */
+#main .sx3 .sx3-ai{background:var(--hero-mesh);color:var(--hero-sub);box-shadow:var(--hero-shadow)}
+#main .sx3 .sx3-ai h3{color:var(--hero-ink)}
+#main .sx3 .sx3-ai .l43-ai{background:#fff;color:var(--hero-solid)}
 #main .sx3 .sx3-ai ol{margin:0;padding:0;list-style:none;counter-reset:ai;display:grid;gap:10px}
 #main .sx3 .sx3-ai li{counter-increment:ai;display:grid;grid-template-columns:22px 1fr;gap:8px;font-size:13px;line-height:1.5}
-#main .sx3 .sx3-ai li::before{content:counter(ai);display:grid;place-items:center;width:22px;height:22px;border-radius:8px;background:var(--s100);color:var(--s700);font-size:12px;font-weight:800}
+#main .sx3 .sx3-ai li::before{content:counter(ai);display:grid;place-items:center;width:22px;height:22px;border-radius:8px;background:rgba(255,255,255,.14);color:var(--hero-ink);font-size:12px;font-weight:800}
 #main .sx3 .sx3-log ul{list-style:none;margin:0;padding:0;display:grid;gap:0}
 #main .sx3 .sx3-log li{display:grid;grid-template-columns:14px 1fr;gap:10px;padding:8px 0;position:relative}
 #main .sx3 .sx3-log li i{width:10px;height:10px;border-radius:50%;margin-top:5px;background:var(--gr600,#0A8A3A);box-shadow:0 0 0 3px var(--gr50,#EEFBF1)}

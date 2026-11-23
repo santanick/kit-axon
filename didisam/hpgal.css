@@ -182,7 +182,7 @@ body.tpg-dz-on .hpe-stage{padding-right:374px}
 .tpg-page .tpd-q:focus-within{border-color:var(--gr600,#00A832);box-shadow:0 0 0 3px rgba(24,29,26,0.09)}
 .tpg-page .tpd-q input{border:0!important;box-shadow:none!important;outline:0;background:transparent}
 .tpg-page .sl-chips button{min-height:44px;border-radius:999px;font-weight:700}
-.tpg-page .sl-chips button:is(.on,[aria-selected=true],[aria-pressed=true]){background:var(--g900,#181D1A);color:var(--surface,#fff);box-shadow:none}
+.tpg-page .sl-chips button:is(.on,[aria-selected=true],[aria-pressed=true]){background:var(--hero-solid,#1F4628);color:#fff;box-shadow:none}
 .tpg-g .tpd-c{border-radius:18px;background:var(--surface,#fff);box-shadow:0 1px 2px rgba(16,24,20,.05),0 8px 24px rgba(16,24,20,.07);overflow:hidden}
 .tpg-g .tpd-c .tpg-th{aspect-ratio:16/10;height:auto}
 .tpg-g .tpd-cb{padding:14px 16px 16px}

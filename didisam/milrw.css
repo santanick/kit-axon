@@ -1,6 +1,6 @@
 /* v42 학습 마일리지 — 스튜디오 「보상 · 신청 승인 · 부정 의심」(milrw.js). 시안 kit.css mx-* 를 mrw-* 로 옮겨 정리.
    상태색 역할: 황색 = 권장 벗어남 · 대기 / 파랑 = 정보 / 슬레이트 = 제품 고정 잠금 / 빨강 = 오류 · 반려 · 정정 / 보라 = AI 제안.
-   v45: 초록은 스튜디오 토큰(--pr 딥 세이지, 흰 글자 6.3:1)을 따른다. 버튼 44px+, 글자 12px+. */
+   v45: 초록은 스튜디오 토큰(--pr 로고 톤, 흰 글자 5.1:1)을 따른다. 버튼 44px+, 글자 12px+. */
 .mrw{--mrw-act:var(--pr);--mrw-gd:var(--pr);--mrw-g:var(--pr);--mrw-gl:var(--s50);--mrw-slate:#3D4A5C;--mrw-slatel:#EEF1F5;--mrw-wait:#A84A00;--mrw-waitl:#FFF3E0;--mrw-info:#0B6FB0;--mrw-infol:#E3F3FC;--mrw-bad:#C4001D;--mrw-badl:#FFEAEE;--mrw-ai:#5B3FC4;--mrw-ail:#F0ECFF;
   display:flex;flex-direction:column;gap:16px;min-width:0;color:var(--ink,#2A2B2B);font-variant-numeric:tabular-nums}
 .mrw *,.mrw-m *{box-sizing:border-box}

@@ -1,5 +1,5 @@
 /* 디디쌤 스튜디오 v19 — AI SAM 플로팅 위젯(채널톡형) */
-#fabBtn{position:fixed;right:24px;bottom:24px;z-index:57;height:56px;min-width:56px;padding:0 22px 0 16px;border:0;border-radius:99px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--on-pr);font-weight:800;font-size:14.5px;letter-spacing:-.01em;background:var(--pr);box-shadow:0 14px 34px -8px rgba(24,29,26,0.28);cursor:pointer;transition:transform .15s,box-shadow .15s}
+#fabBtn{position:fixed;right:24px;bottom:24px;z-index:57;height:56px;min-width:56px;padding:0 22px 0 16px;border:0;border-radius:99px;display:flex;align-items:center;justify-content:center;gap:8px;color:#fff;font-weight:800;font-size:14.5px;letter-spacing:-.01em;background:var(--fab-lin);box-shadow:0 14px 34px -8px rgba(24,29,26,0.28);cursor:pointer;transition:transform .15s,box-shadow .15s}
 #fabBtn:hover{transform:translateY(-2px);box-shadow:0 18px 40px -8px rgba(24,29,26,0.3)}
 #fabBtn:focus-visible{outline:3px solid var(--pr);outline-offset:3px}
 body.fab-open #fabBtn{width:56px;padding:0}
@@ -22,7 +22,7 @@ body.fab-open #fabBtn{width:56px;padding:0}
 .fbi{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer}
 .fbi:hover{background:var(--soft);color:var(--ink)}
 .fbi:focus-visible{outline:2px solid var(--mag);outline-offset:1px}
-.drawer .dh .fbi{color:var(--g700)}.drawer .dh .fbi:hover{background:var(--g200);color:var(--g900)}
+.drawer .dh .fbi{color:rgba(255,255,255,.8)}.drawer .dh .fbi:hover{background:rgba(255,255,255,.12);color:#fff}
 /* 클래식 화면: 오른쪽 서랍도 같은 위젯 모양 */
 .fab-on .drawer{top:auto;bottom:92px;right:24px;width:410px;height:min(680px,calc(100vh - 170px));border-radius:12px;border:1px solid var(--line);box-shadow:0 30px 70px -18px rgba(31,32,32,.35);overflow:hidden;animation:fabIn .18s ease-out}
 .fab-on.fab-l .drawer{width:min(780px,calc(100vw - 140px));height:calc(100vh - 62px - 112px)}

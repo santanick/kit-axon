@@ -31,7 +31,12 @@
   --c-data:#509B5B;--c-data2:#92C7D3;--c-track:#F2F4F3;--c-grid:#ECEFED;--c-axis:#636D68;--c-prev:#CFD5D2;--c-warn:#D9901F;
   --r-card:20px;--r-block:24px;--r-btn:14px;--r-in:12px;--r-chip:99px;
   --fs-display:48px;--fs-title:24px;--fs-sub:18px;--fs-body:15px;--fs-cap:13px;--fs-min:12px;
-  --hero-mesh:radial-gradient(70% 120% at 100% 0%,#F3F9F4,transparent 60%),linear-gradient(180deg,#FFFFFF,#FFFFFF);
+  --hero-mesh:radial-gradient(110% 90% at 88% 6%,rgba(122,201,218,.16),transparent 56%),radial-gradient(80% 90% at 6% 104%,rgba(90,200,106,.16),transparent 60%),linear-gradient(140deg,#1F4628,#163019 62%,#183528);
+  /* v45.1(대표님 11-23 14:12): 어드민은 v44.1 면 구성(진한 초록 히어로 · 제안 상자 · FAB · 위젯 머리) 그대로, 초록만 로고 톤(C안)으로 낮춘다.
+     히어로 위 글자: --hero-ink(흰 7.8:1↑) · --hero-sub(4.6:1↑) · --hero-em(로고 민트 톤다운 5.2:1↑). 원색 형광 초록 금지. */
+  --hero-ink:#FFFFFF;--hero-sub:#D3E6D8;--hero-em:#A8E0B6;--hero-glass:rgba(255,255,255,.08);--hero-glass2:rgba(255,255,255,.13);--hero-line:rgba(255,255,255,.16);
+  --hero-cta:#9ED7A8;--hero-cta-h:#B4E2BC;--hero-cta-ink:#0D1B10;--hero-shadow:0 18px 40px -16px rgba(22,48,25,.45);--hero-solid:#1F4628;
+  --orb-bg:radial-gradient(circle at 30% 25%,#A8E0B6,#509B5B 45%,#244C2A);--fab-bg:radial-gradient(circle at 25% 20%,#44824C,#3A7B44 55%,#1F4628);--sam-head:linear-gradient(135deg,#1A1D1B,#1F4628);--fab-lin:linear-gradient(135deg,#1F4628 0%,#2F6336 55%,#3A7B44 100%);--pr-grad:linear-gradient(135deg,#3A7B44,#2F6336);
   --sky50:#F3F8FA;--sky100:#E2F0F3;--sky200:#C2DFE5;--sky300:#92C7D3;--sky400:#68ACBB;--sky500:#4391A3;--sky600:#307888;--sky700:#26606D;--bar:linear-gradient(90deg,#509B5B,#4391A3);--logo-green:#5AC86A;--logo-sky:#7AC9DA;--logo-mint:#7AE0B0;
 }
 body{font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;letter-spacing:-.01em;color:var(--g900);font-variant-numeric:tabular-nums}
@@ -328,12 +333,12 @@ input[type=checkbox],input[type=radio]{accent-color:var(--pr)}
 #toasts .toast,.toast{border-radius:var(--r-btn);background:var(--n900);color:#fff;box-shadow:var(--sh3);font-size:14px}
 /* 아이콘 박스 · 진행 막대 */
 .tcard .ti,.tsug i{border-radius:12px;background:var(--gr50);color:var(--t-mag)}
-.aih-orb{background:var(--pr);color:var(--on-pr);border-radius:12px;box-shadow:none}
+.aih-orb{background:var(--orb-bg);color:#fff;border-radius:12px;box-shadow:0 6px 16px rgba(58,123,68,.28)}
 .bar{background:var(--g200)}
 .bar>i,.bar>span,.bar>b{background:var(--bar,var(--pr))}
-.d26-th{background:var(--s100);color:var(--s700)}
-/* AI SAM 떠 있는 버튼(chat-legacy) — v45: 주 색 단색 + 중립 그림자, 작은 줄 12px */
-html #fabBtn{background:var(--pr);color:var(--on-pr);box-shadow:var(--sh2),0 10px 24px -8px rgba(24,29,26,.28)}
+.d26-th{background:linear-gradient(135deg,var(--gr600),var(--gr900))}
+/* AI SAM 떠 있는 버튼(chat-legacy) — v45.1: 로고 톤 그라데이션(--fab-bg), 작은 줄 12px */
+html #fabBtn{background:var(--fab-bg);color:#fff;box-shadow:0 10px 28px -6px rgba(31,70,40,.45)}
 html #fabBtn:hover{background:var(--pr-h);box-shadow:var(--sh3)}
 html #fabBtn:focus-visible{outline-color:var(--gr300)}
 html #fabBtn .scxbt small{font-size:12px}
@@ -356,7 +361,7 @@ html[data-theme="dark"]{color-scheme:dark;
   --surface:#121614;--surface2:#181D1A;--canvas:#0D100F;--scrim:rgba(0,0,0,.6);
   --acc2:var(--sky500);--acc2l:var(--sky50);--c-data:#6DBA79;--c-data2:#75B8C7;--c-track:#1E2421;--c-grid:rgba(255,255,255,.06);--c-axis:#A2ACA7;--c-prev:#343D38;--c-warn:#EBB766;
   --sh1:0 0 0 1px rgba(255,255,255,.08);--sh2:0 0 0 1px rgba(255,255,255,.08),0 12px 28px rgba(0,0,0,.32);--sh3:0 0 0 1px rgba(255,255,255,.1),0 24px 56px rgba(0,0,0,.5);
-  --okl:#15241B;--line:#262D29;--hero-mesh:radial-gradient(70% 120% at 100% 0%,#1C2C1E,transparent 60%),linear-gradient(180deg,#121614,#121614);--gr200:#263B29;--gr300:#509B5B;--gr400:#74B47D;--gr500:#6DBA79;--b500:#6DBA79;--b700:#80C68B;--b900:#9BD4A4;
+  --okl:#15241B;--line:#262D29;--hero-mesh:radial-gradient(110% 90% at 88% 6%,rgba(122,201,218,.12),transparent 56%),radial-gradient(80% 90% at 6% 104%,rgba(90,200,106,.12),transparent 60%),linear-gradient(140deg,#1C3F24,#132A17 62%,#153024);--hero-shadow:0 0 0 1px rgba(255,255,255,.08);--sam-head:linear-gradient(135deg,#161A18,#1C3F24);--gr200:#263B29;--gr300:#509B5B;--gr400:#74B47D;--gr500:#6DBA79;--b500:#6DBA79;--b700:#80C68B;--b900:#9BD4A4;
   --sky50:#1B292D;--sky100:#1B292D;--sky500:#75B8C7;--sky600:#90C8D5;--sky700:#90C8D5;--bar:linear-gradient(90deg,#6DBA79,#75B8C7);
 }
 html[data-theme="dark"] body{background:var(--canvas);color:var(--g900)}

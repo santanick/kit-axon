@@ -232,7 +232,7 @@ html[data-theme=dark] #main .fc-opt{background:var(--surface);color:var(--g900)}
 }
 /* v43.4 P1 · 070: 시설 화면 AI 제안 카드 — 어두운 바탕에 어두운 글자(판독 불가)와 i.warn에 붙는 경고 상자 모양을 바로잡음 */
 #main .q1-aside:has(.fc-ac) .q1-ac.ai li>span:not([class]),#main .q1-aside:has(.fc-ac) .q1-ac.ai li a{color:#fff}
-#main .q1-aside:has(.fc-ac) .q1-ac.ai li i{width:8px;height:8px;min-height:0;padding:0;margin:0;border:0;border-radius:50%;box-shadow:none;background:var(--gr300)}
+#main .q1-aside:has(.fc-ac) .q1-ac.ai li i{width:8px;height:8px;min-height:0;padding:0;margin:0;border:0;border-radius:50%;box-shadow:none;background:var(--hero-em)}
 #main .q1-aside:has(.fc-ac) .q1-ac.ai li i.warn{background:#FF9A6E}
 /* v43.4 Q1 · 070 휴대폰: 하위 탭은 한 줄 가로 넘김(회색 판 안에서 3줄로 흩어지던 문제) · 간트는 행 전체가 누르는 칸(v43ui.js rowAct, 가는 막대 대신) */
 @media (max-width:760px){
