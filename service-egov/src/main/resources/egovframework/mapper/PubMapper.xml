@@ -30,6 +30,8 @@
     values (#{tid}, #{sid}, #{f}, #{cls}, #{item}, #{lvl}, #{q}, #{a}, #{tin}, #{tout}, now() + make_interval(days => #{days}))
   </insert>
   <delete id="purgeTurn">delete from ai_turn where tenant_id = #{tid} and purge_at &lt; now()</delete>
+  <select id="monthUsed" resultType="long" flushCache="true" useCache="false">select coalesce(sum(tin + tout), 0)::bigint n from ai_usage where tenant_id = #{tid} and day &gt;= cast(#{from} as date)</select>
+  <select id="monthCredit" resultType="long" flushCache="true" useCache="false">select coalesce(sum(tokens), 0)::bigint n from ai_credit where tenant_id = #{tid} and month = #{month} and status = 'paid'</select>
   <select id="selectAipol" resultType="string">select (doc->'aipol')::text from tenant_state where tenant_id = #{tid}</select>
   <insert id="upsertProgress">
     insert into learner_progress (tenant_id, sid, lp, bytes) values (#{tid}, #{sid}, cast(#{lp} as jsonb), #{bytes})
@@ -37,7 +39,7 @@
   </insert>
   <select id="selectTutorCtx" resultType="java.util.LinkedHashMap">
     select (doc->'settings'->'tutor')::text tu, (doc->'org'->'room')::text room, doc->'org'->>'type' type, (doc->'lsite'->'pub')::text pub,
-           (doc->'members')::text members, (doc->'classes')::text classes, (doc->'badges')::text badges, (doc->'tq')::text tq, (doc->'bkgrades')::text bkgrades, (doc->'aipol')::text aipol
+           (doc->'members')::text members, (doc->'classes')::text classes, (doc->'badges')::text badges, (doc->'tq')::text tq, (doc->'bkgrades')::text bkgrades, (doc->'aipol')::text aipol, (doc->'aiplan')::text aiplan
       from tenant_state where tenant_id = #{tid}
   </select>
   <select id="incUsage" resultType="int" flushCache="true" useCache="false">

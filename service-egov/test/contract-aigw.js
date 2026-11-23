@@ -57,6 +57,10 @@ async function scenario(base, tag, pol) {
   await T('quota', { q: '한도' });
   R.trainSelf = await call(base, 'GET', '/api/state', { cookie: ck });
   R.usage = await call(base, 'GET', '/api/ai/usage', { cookie: ck });
+  /* v47 AI 월 포함량 · 추가 충전: 토스 키 없는 환경 → 503 pay_off, 잘못된 상품 400(키 · 결제 없이 규격만 대조) */
+  R.topupBad = await call(base, 'POST', '/api/ai/topup', { cookie: ck, body: { pack: 'zz' } });
+  R.topupOff = await call(base, 'POST', '/api/ai/topup', { cookie: ck, body: { pack: 'p1m' } });
+  R.topupCf = await call(base, 'POST', '/api/ai/topup/confirm', { cookie: ck, body: { orderId: 'bad', paymentKey: '', amount: 1 } });
   R.lev = await call(base, 'GET', '/api/lev', { cookie: ck });
   R.levC = await call(base, 'GET', '/api/lev?cls=c1&verb=hint', { cookie: ck });
   R.levBad = await call(base, 'GET', '/api/lev?verb=nope', { cookie: ck });
@@ -83,8 +87,10 @@ const pick = R => ({
   hint: R.me2.j && R.me2.j.lp && R.me2.j.lp.hint && Object.fromEntries(Object.entries(R.me2.j.lp.hint).map(([k, v]) => [k, { step: v.step, selfExp: v.selfExp, tries: (v.tries || []).map(t => [t.n, t.len]) }])),
   vision: R.me2.j && R.me2.j.lp && R.me2.j.lp.vision,
   byF: R.usage.j && R.usage.j.byFeature,
+  month: R.usage.j && (({ used, included, credit, creditLeft, remaining, pct, state, plan, packs, tiers, payOnline, credits }) => ({ used, included, credit, creditLeft, remaining, pct, state, plan, packs, tiers, payOnline, credits }))(R.usage.j),
+  monthFeature: R.usage.j && R.usage.j.monthFeature,
 });
-const KEYS = ['put', 'site', 'login', 'me', 'plain', 'exam', 'h1', 'h3skip', 'h2noatt', 'h2', 'hbad', 'l2', 'l2b', 'a3', 'quota', 'usage', 'lev', 'levC', 'levBad', 'post', 'postText', 'postValText', 'postVerb', 'postMany', 'postEmpty', 'postNo', 'prog', 'me2', 'lev2', 'putTrain'];
+const KEYS = ['put', 'site', 'login', 'me', 'plain', 'exam', 'h1', 'h3skip', 'h2noatt', 'h2', 'hbad', 'l2', 'l2b', 'a3', 'quota', 'usage', 'lev', 'levC', 'levBad', 'post', 'postText', 'postValText', 'postVerb', 'postMany', 'postEmpty', 'postNo', 'prog', 'me2', 'lev2', 'putTrain', 'topupBad', 'topupOff', 'topupCf'];
 
 (async () => {
   const srv = await startMock();
@@ -111,6 +117,8 @@ const KEYS = ['put', 'site', 'login', 'me', 'plain', 'exam', 'h1', 'h3skip', 'h2
     ok(RA.post.st === 200 && RA.post.j.n === 2, `${P} lev post ${RA.post.st} ${JSON.stringify(RA.post.j)}`);
     ok(RA.postText.j && RA.postText.j.error === 'lev_free_text' && RA.postValText.j.error === 'lev_free_text', `${P} free text`);
     ok(RA.postMany.j && RA.postMany.j.error === 'lev_batch' && RA.postVerb.j.error === 'lev_verb' && RA.postEmpty.j.error === 'lev_form' && RA.postNo.st === 401, `${P} lev errors`);
+    ok(RA.usage.j && typeof RA.usage.j.month === 'string' && RA.usage.j.state === 'off' && RA.usage.j.packs.length === 3 && 'remaining' in RA.usage.j, `${P} usage month ${JSON.stringify(RA.usage.j && RA.usage.j.state)}`);
+    ok(RA.topupBad.st === 400 && RA.topupBad.j.error === 'pack' && RA.topupOff.st === 503 && RA.topupOff.j.error === 'pay_off' && RA.topupCf.st === 400 && RA.topupCf.j.error === 'bad_pay', `${P} topup ${RA.topupOff.st} ${RA.topupOff.j && RA.topupOff.j.error}`);
     ok(RA.putTrain.st === 200, `${P} owner train ${RA.putTrain.st} ${JSON.stringify(RA.putTrain.j)}`);
     if (!RB) continue;
     for (const k of KEYS) {

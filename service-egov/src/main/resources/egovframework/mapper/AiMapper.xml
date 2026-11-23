@@ -15,4 +15,14 @@
   <select id="selectUsage" resultType="java.util.LinkedHashMap">
     select day::text, calls, tin::int, tout::int from ai_usage where tenant_id = #{tid} and day &gt; current_date - 31 order by day desc
   </select>
+  <!-- v47 AI 월 포함량 · 추가 충전(ai_credit, Node aiprice.js · app.js와 같은 문장) -->
+  <select id="selectAiplan" resultType="string">select (doc->'aiplan')::text from tenant_state where tenant_id = #{tid}</select>
+  <select id="monthUsed" resultType="long" flushCache="true" useCache="false">select coalesce(sum(tin + tout), 0)::bigint n from ai_usage where tenant_id = #{tid} and day &gt;= cast(#{from} as date)</select>
+  <select id="monthCredit" resultType="long" flushCache="true" useCache="false">select coalesce(sum(tokens), 0)::bigint n from ai_credit where tenant_id = #{tid} and month = #{month} and status = 'paid'</select>
+  <select id="selectMonthFeature" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select feature, sum(calls)::int calls, sum(tin)::bigint tin, sum(tout)::bigint tout from ai_usage_f where day &gt;= cast(#{from} as date) group by feature order by feature</select>
+  <select id="selectCredits" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select pack, tokens::bigint tokens, amount, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') at from ai_credit where tenant_id = #{tid} and month = #{month} and status = 'paid' order by paid_at</select>
+  <insert id="insertCredit">insert into ai_credit (id, tenant_id, month, pack, tokens, amount, order_id, by_email) values (#{id}, #{tid}, #{month}, #{pack}, #{tokens}, #{amount}, #{orderId}, #{by})</insert>
+  <select id="selectCredit" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select id, month, pack, tokens::bigint tokens, amount, status from ai_credit where tenant_id = #{tid} and order_id = #{orderId}</select>
+  <update id="failCredit">update ai_credit set status = 'failed' where tenant_id = #{tid} and id = #{id} and status = 'ready'</update>
+  <update id="payCredit">update ai_credit set status = 'paid', payment_key = #{pk}, paid_at = now() where tenant_id = #{tid} and id = #{id} and status &lt;&gt; 'paid'</update>
 </mapper>

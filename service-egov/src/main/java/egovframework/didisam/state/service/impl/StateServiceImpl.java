@@ -57,6 +57,12 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
             boolean nt = nap.path("train").isBoolean() && nap.path("train").asBoolean(), ct = cap != null && cap.path("train").isBoolean() && cap.path("train").asBoolean();
             if (nt != ct) throw processException("dd.403.aipol_train");
         }
+        /* v47 AI 월 포함량(aiplan)은 정운영자만 바꾼다 · 요금표 밖 값은 받지 않는다 — Node PUT /api/state와 같음(400 aiplan · 403 aiplan_role) */
+        if (!egovframework.didisam.cmm.DdAiPrice.validPlan(doc.get("aiplan"))) throw new egovframework.didisam.cmm.DdException(400, "AI 월 포함량 값이 올바르지 않습니다.", "aiplan");
+        if (!"owner".equals(a.get("role"))) {
+            String cs = tx.inTenant(tid, () -> mapper.selectAiplan(tid)); JsonNode cur = cs == null ? null : DdWeb.JSON.readTree(cs);
+            if (!egovframework.didisam.cmm.DdAiPrice.planKey(cur).equals(egovframework.didisam.cmm.DdAiPrice.planKey(doc.get("aiplan")))) throw new egovframework.didisam.cmm.DdException(403, "AI 월 포함량은 정운영자만 바꿀 수 있습니다.", "aiplan_role");
+        }
         String s = crypt.seal(doc, tid).toString();
         List<String> gone = new ArrayList<>();
         Map<String, Object> out = tx.inTenant(tid, () -> {

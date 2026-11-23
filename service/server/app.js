@@ -43,6 +43,8 @@ const OG = require('./ogmeta'); /* v37 L2 링크 공유 미리보기 */
 const commlive = require('./commlive'); /* v38 C#17 학습자 글 · 댓글 즉시 게시 */
 const { createStateCrypto } = require('./statecrypt');
 const AG = require('./aigw'); /* v46 Ver2 AI 게이트웨이 */
+const AP = require('./aiprice'); /* v47 AI 월 포함량 · 추가 충전 요금표 */
+const { createPay } = require('./fac/pay');
 const LEV = require('./lev'); /* v46 Ver2 학습 이벤트 */
 const { createOAuth } = require('./oauth');
 const COOKIE = '__Host-dd_sid';
@@ -95,7 +97,7 @@ const SEC_HEADERS = {
   'x-permitted-cross-domain-policies': 'none',
   'origin-agent-cluster': '?1'
 };
-const CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'";
+const CSP = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com https://js.tosspayments.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; frame-src 'self' blob: https://accounts.google.com https://*.tosspayments.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://*.tosspayments.com; base-uri 'none'; form-action 'self' https://*.tosspayments.com; object-src 'none'; frame-ancestors 'none'";
 
 const LCOOKIE = '__Host-dd_lsid';
 const LCSP = "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://cdnjs.cloudflare.com https://js.tosspayments.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://*.tosspayments.com; media-src 'self' blob:; connect-src 'self' https://*.tosspayments.com; base-uri 'none'; form-action 'self' https://*.tosspayments.com; object-src 'none'; frame-ancestors 'self'";
@@ -114,6 +116,14 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   const aiKey = /^sk-ant-/.test(env.ANTHROPIC_API_KEY || '') ? env.ANTHROPIC_API_KEY.trim() : ''; // 'none' 등 자리표시는 꺼짐
   const aiUrl = env.ANTHROPIC_URL || 'https://api.anthropic.com/v1/messages';
   const aiDaily = Number(env.AI_DAILY_CALLS || 400);
+  const aiPay = createPay(env); const aiClientKey = String(env.TOSS_CLIENT_KEY || '').trim(); /* v47 AI 추가 충전: 두 키가 모두 있을 때만 결제 창 */
+  const aiPayOn = () => aiPay.online() && !!aiClientKey;
+  /* v47 이달 AI 한도: aiplan이 있는 기관만(없으면 동작 불변). 포함량 + 이달 충전량을 다 쓰면 429 ai_month_quota */
+  const monthGuard = async (c, tid, planRaw, learner) => { const plan = AP.planOf(planRaw); if (!plan.on) return; const m = await AP.monthState(c, tid, plan, today()); if (m.used >= m.included + m.credit) throw new HttpErr(429, learner ? AP.MSG_LEARNER : AP.MSG_STAFF, 'ai_month_quota'); };
+  const aiMonth = async (c, tid) => { const raw = ((await c.query("select doc->'aiplan' p from tenant_state where tenant_id = $1", [tid])).rows[0] || {}).p; const plan = AP.planOf(raw); const m = await AP.monthState(c, tid, plan, today());
+    const monthFeature = Object.fromEntries((await c.query('select feature, sum(calls)::int calls, sum(tin)::bigint tin, sum(tout)::bigint tout from ai_usage_f where day >= $1::date group by feature order by feature', [m.month + '-01'])).rows.map(r => [r.feature, { calls: r.calls, tin: +r.tin, tout: +r.tout }]));
+    const credits = (await c.query("select pack, tokens::bigint tokens, amount, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') at from ai_credit where tenant_id = $1 and month = $2 and status = 'paid' order by paid_at", [tid, m.month])).rows.map(r => ({ pack: r.pack, tokens: +r.tokens, amount: r.amount, at: r.at }));
+    return { month: m.month, used: m.used, included: m.included, credit: m.credit, creditLeft: m.creditLeft, remaining: m.remaining, pct: m.pct, state: m.state, plan, monthFeature, credits, packs: AP.packs(), tiers: AP.TIERS, payOnline: aiPayOn() }; };
   const gw = AG.createGateway({ pool, inTenant, aiUrl, aiKey, today: () => today(), keys: piiKeys(env), HttpErr });
   const signupCode = (env.SIGNUP_CODE || '').trim();
   const allowSignup = env.SIGNUP !== 'off';
@@ -327,13 +337,14 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (inj) { await inTenant(pool, tid, c => audit(c, tid, guest ? 'guest' : 'learner:' + sid, 'ai.injection_suspect', { n: inj, route: 'tutor' })).catch(() => {});
       try { limit(`inj:${tid}:${who}`, 5, 864e5); } catch (e) { throw new HttpErr(429, '안전 정책에 맞지 않는 요청이 반복되어 오늘은 AI 튜터 이용이 제한되었습니다. 학습 질문은 선생님께 질문 넘기기를 이용해 주세요.', 'ai_guard'); } }
     const ctx = await inTenant(pool, tid, async c => {
-      const d = (await c.query("select doc->'settings'->'tutor' tu, doc->'org'->'room' room, doc->'org'->>'type' type, doc->'lsite'->'pub' pub, doc->'members' members, doc->'classes' classes, doc->'badges' badges, doc->'tq' tq, doc->'bkgrades' bkgrades, doc->'aipol' aipol from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
+      const d = (await c.query("select doc->'settings'->'tutor' tu, doc->'org'->'room' room, doc->'org'->>'type' type, doc->'lsite'->'pub' pub, doc->'members' members, doc->'classes' classes, doc->'badges' badges, doc->'tq' tq, doc->'bkgrades' bkgrades, doc->'aipol' aipol, doc->'aiplan' aiplan from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
       const tu = d.tu || {}; if (tu.enabled === false) throw new HttpErr(403, 'AI 튜터가 꺼져 있습니다.', 'tutor_off');
       const room = d.room || {}; if ((room.ai && room.ai !== 'anthropic') || (room.egress && room.egress.ai === false)) throw new HttpErr(403, '이 기관의 데이터룸 정책에서 AI 외부 연결이 꺼져 있습니다.', 'policy');
       if (guest) { if (tu.loginOnly === true) throw new HttpErr(401, '로그인한 학습자만 AI 튜터를 쓸 수 있습니다.', 'auth'); const gd = Math.min(50, Math.max(0, tu.guestDaily == null ? 10 : +tu.guestDaily)); if (!gd) throw new HttpErr(401, '로그인한 뒤 AI 튜터를 쓸 수 있습니다.', 'auth'); limit(`ltg:${tid}:${gip}`, gd, 864e5); }
       else limit(`lt:${tid}:${sid}`, Math.min(200, Math.max(1, +tu.daily || 20)), 864e5);
       const u = await c.query('insert into ai_usage (tenant_id, day, calls) values ($1, $2, 1) on conflict (tenant_id, day) do update set calls = ai_usage.calls + 1 returning calls', [tid, today()]);
       if (u.rows[0].calls > aiDaily) throw new HttpErr(429, `오늘 기관 AI 사용 한도(${aiDaily}회)를 넘었습니다.`, 'quota');
+      await monthGuard(c, tid, d.aiplan, true);
       /* v46 Ver2(정책 on 기관만): 과제 레벨은 서버가 기관 문서에서 직접 찾음(클라이언트 lvl 불신) · L0 차단 · 힌트 단계 검증 · 기능별 집계 */
       const pol = AG.polOf(d.aipol); const ik = b.item && typeof b.item === 'object' ? b.item.key : b.cls && b.item ? `${b.cls}/${b.item}` : ''; const F = pol.on && ik ? AG.findItem(d.classes, ik) : null;
       const lvl = F ? AG.levelOf(pol, F.it) : pol.on ? pol.lvl : ''; const v2 = { pol, F, lvl, key: F ? `${F.cls}/${F.item}` : '', feature: b.mode === 'vision' && pol.on ? 'vision' : 'tutor' };
@@ -496,6 +507,10 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (doc.aipol && typeof doc.aipol === 'object' && a.role !== 'owner') { /* v46 모델 학습 허용(aipol.train)은 정운영자만 바꾼다 */
         const cur = await inTenant(pool, a.tid, async c => ((await c.query("select doc->'aipol'->'train' t from tenant_state where tenant_id = $1", [a.tid])).rows[0] || {}).t);
         if ((doc.aipol.train === true) !== (cur === true)) throw new HttpErr(403, '모델 학습 허용은 정운영자만 바꿀 수 있습니다.', 'aipol_train'); }
+      if (!AP.validPlan(doc.aiplan)) throw new HttpErr(400, 'AI 월 포함량 값이 올바르지 않습니다.', 'aiplan');
+      if (a.role !== 'owner') { /* v47 AI 월 포함량 · 초과 처리(aiplan)는 정운영자만 바꾼다 — 다른 역할은 저장된 값을 그대로 둔다 */
+        const cur = await inTenant(pool, a.tid, async c => ((await c.query("select doc->'aiplan' p from tenant_state where tenant_id = $1", [a.tid])).rows[0] || {}).p);
+        if (AP.planKey(cur) !== AP.planKey(doc.aiplan)) throw new HttpErr(403, 'AI 월 포함량은 정운영자만 바꿀 수 있습니다.', 'aiplan_role'); }
       if (JSON.stringify(doc).length > STATE_MAX) throw new HttpErr(413, '데이터가 8MB를 넘었습니다. 오래된 기록을 정리하세요.', 'too_large'); const s = JSON.stringify(crypt.seal(doc, a.tid));
       return inTenant(pool, a.tid, async c => {
         if (rev === 0) {
@@ -523,11 +538,12 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (!Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40) throw new HttpErr(400, '메시지 형식이 올바르지 않습니다.', 'messages');
       // 데이터룸 정책: 이 기관의 AI 경로 · 외부 연결 허용을 서버에서도 확인
       const pol = await inTenant(pool, a.tid, async c => {
-        const st = await c.query("select doc->'org'->'room' room, doc->'aipol' aipol from tenant_state where tenant_id = $1", [a.tid]);
+        const st = await c.query("select doc->'org'->'room' room, doc->'aipol' aipol, doc->'aiplan' aiplan from tenant_state where tenant_id = $1", [a.tid]);
         const room = st.rows[0] && st.rows[0].room || {};
         if ((room.ai && room.ai !== 'anthropic') || (room.egress && room.egress.ai === false)) throw new HttpErr(403, '이 기관의 데이터룸 정책에서 AI 외부 연결이 꺼져 있습니다.', 'policy');
         const u = await c.query('insert into ai_usage (tenant_id, day, calls) values ($1, $2, 1) on conflict (tenant_id, day) do update set calls = ai_usage.calls + 1 returning calls', [a.tid, today()]);
         if (u.rows[0].calls > aiDaily) throw new HttpErr(429, `오늘 AI 사용 한도(${aiDaily}회)를 넘었습니다.`, 'quota');
+        await monthGuard(c, a.tid, st.rows[0] && st.rows[0].aiplan, false);
         await gw.count(c, a.tid, feature, AG.polOf(st.rows[0] && st.rows[0].aipol)); /* v46 기능별 집계(studio · grade) */
         return room;
       });
@@ -554,7 +570,36 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     },
     'GET /api/ai/usage': async req => {
       const a = await need(req);
-      return inTenant(pool, a.tid, async c => { const { rows } = await c.query("select day::text, calls, tin::int, tout::int from ai_usage where tenant_id = $1 and day > current_date - 31 order by day desc", [a.tid]); return { daily: aiDaily, days: rows, byFeature: await gw.byFeature(c) }; });
+      return inTenant(pool, a.tid, async c => { const { rows } = await c.query("select day::text, calls, tin::int, tout::int from ai_usage where tenant_id = $1 and day > current_date - 31 order by day desc", [a.tid]);
+        return { daily: aiDaily, days: rows, byFeature: await gw.byFeature(c), ...await aiMonth(c, a.tid) }; });
+    },
+    /* v47 AI 추가 충전: 정운영자만. ① 주문(ready) → 토스 결제 창 → ② 승인(서버가 토스 승인 확인 뒤 paid · 즉시 한도 반영) */
+    'POST /api/ai/topup': async req => {
+      const a = await needOwner(req); limit(`aitop:${a.tid}`, 20, 600e3); const b = await readBody(req, 1024);
+      const P = AP.packOf(b.pack); if (!P) throw new HttpErr(400, '충전 상품을 골라 주십시오.', 'pack');
+      if (!aiPayOn()) throw new HttpErr(503, '결제 연결 준비 중 — 산타에 문의하십시오.', 'pay_off');
+      const plan = await inTenant(pool, a.tid, async c => AP.planOf(((await c.query("select doc->'aiplan' p from tenant_state where tenant_id = $1", [a.tid])).rows[0] || {}).p));
+      if (plan.on && plan.overage === 'block') throw new HttpErr(409, '초과 처리가 「차단」으로 설정되어 있습니다. 「추가 충전 허용」으로 바꾼 뒤 충전하십시오.', 'overage_block');
+      const id = 'ac_' + crypto.randomBytes(9).toString('hex'); const orderId = 'aitop-' + crypto.randomBytes(12).toString('hex');
+      await inTenant(pool, a.tid, c => c.query('insert into ai_credit (id, tenant_id, month, pack, tokens, amount, order_id, by_email) values ($1,$2,$3,$4,$5,$6,$7,$8)', [id, a.tid, AP.monthOf(today()), P.id, P.tokens, P.total, orderId, a.email]));
+      return { orderId, amount: P.total, supply: P.supply, vat: P.vat, orderName: `디디쌤 AI 추가 충전 ${P.name}`, clientKey: aiClientKey };
+    },
+    'POST /api/ai/topup/confirm': async req => {
+      const a = await needOwner(req); limit(`aitopc:${a.tid}`, 30, 600e3); const b = await readBody(req, 2048);
+      const orderId = String(b.orderId || '').slice(0, 64), paymentKey = String(b.paymentKey || '').slice(0, 200), amount = Math.round(+b.amount);
+      if (!/^aitop-[0-9a-f]{24}$/.test(orderId) || !paymentKey) throw new HttpErr(400, '결제 정보가 올바르지 않습니다.', 'bad_pay');
+      const row = await inTenant(pool, a.tid, async c => (await c.query('select * from ai_credit where tenant_id = $1 and order_id = $2', [a.tid, orderId])).rows[0]);
+      if (!row) throw new HttpErr(404, '충전 주문을 찾지 못했습니다.', 'not_found');
+      if (row.status === 'paid') return { ok: true, already: true, ...await inTenant(pool, a.tid, c => aiMonth(c, a.tid)) };
+      if (row.amount !== amount) throw new HttpErr(409, '결제 금액이 주문과 다릅니다.', 'amount_mismatch');
+      if (row.month !== AP.monthOf(today())) throw new HttpErr(409, '지난달 주문입니다. 다시 충전해 주십시오.', 'expired');
+      const r = await aiPay.confirm({ paymentKey, orderId, amount });
+      if (!r.ok || r.amount !== amount) { await inTenant(pool, a.tid, c => c.query("update ai_credit set status = 'failed' where tenant_id = $1 and id = $2 and status = 'ready'", [a.tid, row.id])); throw new HttpErr(402, '결제 승인을 받지 못했습니다. 다시 시도하십시오.', r.code === 'onsite_only' ? 'pay_off' : 'pg'); }
+      return inTenant(pool, a.tid, async c => {
+        const u = await c.query("update ai_credit set status = 'paid', payment_key = $3, paid_at = now() where tenant_id = $1 and id = $2 and status <> 'paid' returning tokens", [a.tid, row.id, paymentKey]);
+        if (u.rowCount) await audit(c, a.tid, a.email, 'ai.topup', { pack: row.pack, tokens: +row.tokens, amount });
+        return { ok: true, ...await aiMonth(c, a.tid) };
+      });
     },
     /* v46 학습 이벤트 조회: 운영자 전체, 교수자는 담당 반 · 학생만 */
     'GET /api/lev': async req => {
