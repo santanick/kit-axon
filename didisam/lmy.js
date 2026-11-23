@@ -99,3 +99,50 @@ document.addEventListener('click', e => { const el = e.target.closest('[data-lac
   const st = myStats(); const W = (typeof lcTerm === 'function' && lcTerm('cls')) || '과정';
   const li = st.courses.map(x => `<li class="lcert-li"><div><b>${esc(x.c.name)}</b><small>${x.done ? '수료' : `진도 ${x.p || 0}% · 수료 기준을 채우면 발급돼요`}</small></div>${x.done ? `<a class="lbtn pri sm" href="#cert/${esc(x.c.id)}">수료증 보기</a>` : `<a class="lbtn ghost sm" href="#c/${esc(x.c.id)}">이어서 학습</a>`}</li>`).join('');
   return `${lPageHead({ key: 'cert', title: '수료증', desc: `수료한 ${W}의 수료증을 보고 인쇄할 수 있어요.` })}<section class="sec"><div class="in narrow">${li ? `<ul class="shp-list lcert-l">${li}</ul>` : `<p class="empty">아직 수강 중인 ${esc(W)}${lJ(W, '이', '가')} 없어요.</p>`}</div></section>`; } } catch (e) { console.error(e); } return base(id); }; }
+
+/* v47 D9(웹) · D10(LX-SPEC 3-3): 웹 내 학습(#my) = 앱과 같은 세그먼트 「목록 · 일정 · 기록」(+ 결제가 있는 기관은 「결제」).
+   목록: 내 ○○(이어서) / 일정: 할 일 · 마감(LHB.todoHTML) + 학습 캘린더 카드 / 기록: 배지 · 학습 달력 · 노트 · 나의 여정 + 「더 보기」(접힘)
+   「더 보기」에는 내 과정 · 피드백(목록과 같은 차시 링크 중복), 지금 할 일(홈 「지금 할 일」과 중복) · 수준 로드맵 · 튜토리얼 · 진단 · 공지 · 디지털북 · 내 기록 내려받기 · 계정 · 내 활동이 그대로 들어간다(삭제 없음).
+   lux.js가 만든 탭(학습 · 결제 · 계정)을 바꿔 쓴다 — 탭 클릭 · 저장은 lux setTab(data-lux-tab) 그대로. 앱 화면(body.lapp)은 손대지 않는다(앱 세그먼트는 ltube). #my/plan · #my/rec로 바로 열린다. */
+(() => {
+  const TABS = [['learn', '목록'], ['plan', '일정'], ['rec', '기록']];
+  const REC = ['m-badges', 'm-streak']; const MORE = ['m-courses', 'm-next', 'm-road', 'm-tuts', 'm-diag', 'm-notice', 'm-data', 'm-books'];
+  function css() { if (document.getElementById('l47myCss')) return; const st = document.createElement('style'); st.id = 'l47myCss';
+    st.textContent = `#lm[data-luxtab=plan] [data-lux-g]:not([data-lux-g=plan]),#lm[data-luxtab=rec] [data-lux-g]:not([data-lux-g=rec]){display:none!important}
+#lm[data-luxtab] .myh nav.mytab{display:none}#lm .l47-pl,#lm .l47-rc{display:flex;flex-direction:column;gap:16px;grid-column:1/-1}
+#lm .l47-more{border:1px solid var(--line);border-radius:16px;background:var(--surface)}#lm .l47-more>summary{cursor:pointer;min-height:52px;display:flex;align-items:center;gap:8px;padding:0 18px;font-weight:700;list-style:none}
+#lm .l47-more>summary::-webkit-details-marker{display:none}#lm .l47-more>summary small{color:var(--mute);font-weight:500}#lm .l47-more>summary::after{content:'';width:8px;height:8px;margin-left:auto;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg)}
+#lm .l47-more[open]>summary::after{transform:rotate(-135deg)}#lm .l47-more>.mygrid{padding:0 16px 16px}#lm .l47-pl .lhb-cd{position:relative}`; document.head.appendChild(st); }
+  function fix() {
+    const b = document.body; if (!b || b.classList.contains('lapp') || !LR.me) return; if (route().a !== 'my') return; const lm = document.getElementById('lm'); if (!lm) return;
+    const tabs = lm.querySelector('.mypage .lux-tabs'); if (!tabs) return; const mp = lm.querySelector('.mypage'); const grid = mp.querySelector('.mygrid'); if (!grid) return; css();
+    if (!tabs.dataset.l47) { tabs.dataset.l47 = '1'; const pay = !!tabs.querySelector('[data-lux-tab="pay"]');
+      const T = [...TABS, ...(pay ? [['pay', '결제']] : [])];
+      tabs.innerHTML = T.map(([k, l]) => `<button type="button" role="tab" data-lux-tab="${k}" aria-selected="false">${l}</button>`).join('');
+      const want = String(location.hash.split('/')[1] || '').replace(/\?.*$/, ''); let cur = lm.dataset.luxtab || 'learn'; if (['learn', 'plan', 'rec', 'pay'].includes(want)) cur = want; if (cur === 'acct' || !T.some(([k]) => k === cur)) cur = cur === 'acct' ? 'rec' : 'learn';
+      const bt = tabs.querySelector(`[data-lux-tab="${cur}"]`); if (bt) bt.click(); else lm.dataset.luxtab = cur;
+      /* 일정 */
+      const pl = document.createElement('div'); pl.className = 'l47-pl'; pl.dataset.luxG = 'plan';
+      let td = ''; try { td = window.LHB && LHB.todoHTML ? LHB.todoHTML() : ''; } catch (e) { td = ''; } pl.innerHTML = td; grid.insertAdjacentElement('beforebegin', pl);
+      /* 기록 + 더 보기 */
+      const rc = document.createElement('div'); rc.className = 'l47-rc'; rc.dataset.luxG = 'rec';
+      rc.innerHTML = `<details class="l47-more" data-l47="mymore"><summary>더 보기<small>내 과정 · 피드백 · 지금 할 일 · 수준 로드맵 · 튜토리얼 · 진단 · 공지 · 계정</small></summary><div class="mygrid"></div></details>`; grid.insertAdjacentElement('afterend', rc); }
+    const pl = lm.querySelector('.l47-pl'), rc = lm.querySelector('.l47-rc'); if (!pl || !rc) return; const mg = rc.querySelector('.l47-more > .mygrid'); const det = rc.querySelector('.l47-more');
+    /* 나중에 꽂히는 카드도 제자리로(여러 모듈이 비동기로 붙임) — 이미 옮긴 것은 그대로 */
+    mp.querySelectorAll('.lq-hc, .lq-myw').forEach(el => { if (!pl.contains(el)) pl.appendChild(el); });
+    mp.querySelectorAll(':scope .in > .ln-hc, :scope .in > .ln-hcw').forEach(el => rc.insertBefore(el, det));
+    lm.querySelectorAll('.mj-mylink').forEach(el => { if (!rc.contains(el)) rc.insertBefore(el, det); });
+    [...grid.children].forEach(c => { if (c.dataset.luxG === 'pay') return; const id = (c.querySelector('.mh[id]') || {}).id || '';
+      if (c.classList.contains('lux-wide')) { c.dataset.luxG = 'learn'; return; }
+      if (REC.includes(id)) { c.dataset.luxG = 'rec'; rc.insertBefore(c, det); return; }
+      if (MORE.includes(id) || c.dataset.luxG === 'acct' || c.classList.contains('lux-acct')) { delete c.dataset.luxG; mg.appendChild(c); return; }
+      c.dataset.luxG = 'learn'; /* 다른 모듈 카드(학사 수강 분반 · 출석 등)는 목록에 그대로 */ });
+    lm.querySelectorAll(':scope > section.sec.lcsec').forEach(s => { /* 내 활동(커뮤니티) */ if (s.dataset.luxG === 'pay' || s.closest('.l47-more')) return; delete s.dataset.luxG; mg.appendChild(s); });
+    /* 주 버튼 1개: 맨 위 「이어 보기」 한 줄(lhub)이 있으면 목록 안 주 버튼은 외곽선으로 */
+    if (lm.querySelector('.lhb-my1 .lbtn.pri')) mp.querySelectorAll('.lbtn.pri').forEach(x => { x.classList.remove('pri'); x.classList.add('ghost'); });
+  }
+  window.l47MyFix = fix;
+  let q = 0; const tick = () => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { fix(); } catch (e) { console.error('lmy l47', e); } }); };
+  const go = () => new MutationObserver(tick).observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go();
+})();

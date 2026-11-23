@@ -184,6 +184,9 @@ function lrender() {
   LPHOTO_USED = new Set(); LPHOTO_MEMO = new Map(); /* v43 Q2: 화면마다 사진 중복 금지 */
   /* v43.8 이미 로그인한 상태로 #login/<경로>에 오면 그 경로로 바로(잘못된 경로는 내 학습) */
   if (LR.me && route().a === 'login' && /^#login\/./.test(location.hash)) location.replace('#' + (lLoginBack() || 'my'));
+  /* v47 D16: 웹(앱 화면이 아닐 때) #ai · #attend는 앱 전용 경로 — 기관 홍보 랜딩으로 떨어지지 않게 #ai → 홈 + AI 튜터 창, #attend → 내 학습 › 일정 */
+  { const a0 = route().a; if ((a0 === 'ai' || a0 === 'attend') && !(typeof window.lappOn === 'function' && window.lappOn()) && !document.body.classList.contains('lapp')) {
+    if (a0 === 'ai') { location.replace('#home'); setTimeout(() => { try { if (typeof ltOpen === 'function' && LR.me) ltOpen(); } catch (e) { } }, 60); } else location.replace(LR.me ? '#my/plan' : '#login/my/plan'); return; } }
   const { a, b } = route(); let inner, cur = a;
   if (a === 't') { inner = viewTut(b); cur = 'tutorials'; } else if (a === 'c') { inner = viewCourse(b, route().b && (decodeURIComponent(location.hash.slice(1)).split('/')[2] || '').split('?')[0]); /* v43.6 노트 시각 칩 #c/<cid>/<lid>?t=초 — 레슨 id 뒤 ?는 떼고 연다 */ cur = 'courses'; }
   else if (a === 'dg') { inner = viewDiag(b); cur = 'diag'; } else if (a === 'cert') { inner = viewCert(b); cur = 'my'; } else if (a === 'badge') { inner = viewBadgeCert(b); cur = 'my'; } else if (a === 'bk' && typeof viewBook === 'function') { const n = decodeURIComponent(location.hash.slice(1)).split('/')[2]; inner = viewBook(b, n ? Math.max(0, (parseInt(n, 10) || 1) - 1) : null); cur = 'books'; } else if (a === 'bkcert' && typeof viewBookCert === 'function') { inner = viewBookCert(b); cur = 'my'; }

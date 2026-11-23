@@ -58,22 +58,22 @@
       <div class="nodes" role="img" aria-label="${m.L.length}차시 중 ${m.doneN}차시 완료">${nodes.join('')}</div>
       <div class="lhb-lb"><span>${E(short(L[0].title))}</span><span>${E(short((nx || L[L.length - 1]).title))}</span><span>수료</span></div>
       ${nx ? `<a class="lhb-nx" href="#c/${E(m.c.id)}/${E(nx.id)}"><span class="ph" style="background-image:url('${E(th)}')"><i style="width:${m.pct(nx)}%"></i></span><span class="tx"><small class="num">이어 볼 차시 · ${m.ni + 1}차시${m.pct(nx) ? ` · ${m.pct(nx)}% 들었어요` : ''}</small><b>${E(nx.title)}</b></span><span class="go">${I('play', 18)}</span></a>` : `<a class="lhb-nx" href="#cert/${E(m.c.id)}"><span class="tx"><small>모든 차시를 마쳤어요</small><b>수료증 보기</b></span><span class="go">${I('chev', 18)}</span></a>`}</div>`; }
-  function hero(G) { const m = G.main; const st = G.st; const name = nm();
+  function hero(G, slim) { const m = G.main; const st = G.st; const name = nm(); /* v47 D7: slim = 웹 홈 「지금 할 일」(지표 칩 · 튜터 버튼은 「더 보기」, 튜터는 머리 1곳) */
     const eb = st.streak > 0 ? `${E(name)}님의 이번 주 · ${st.streak}일 연속 학습 중` : `${E(name)}님, 다시 만나 반가워요`;
     const tut = `<div class="tut"><span class="cap">${m ? '방금 본 차시를 알고 있어요' : '무엇부터 배울지 함께 골라요'}</span><a class="lhb-btn sc dk" href="#ai"><span class="ai-lb">AI</span>AI 튜터에게 묻기</a></div>`;
     if (!m) return `<section class="lhb-hero" style="--ph:url('${photo('시작', 0, 1)}')"><div class="lhb-hg"><div>
       <span class="lhb-eb"><i></i>${eb}</span><h1>첫 강좌를 고르면<br><em>학습 경로</em>가 여기에 그려져요.</h1>
       <p class="lead">강좌를 신청하면 이어 볼 차시 · 할 일 · 마감이 이 화면에 모여요.</p>
       <div class="ac"><a class="lhb-btn pr" href="#courses">${I('book', 20)}강좌 둘러보기</a></div></div>
-      <div><div class="lhb-pc em">${ILL.path}<b>아직 시작한 강좌가 없어요</b><small>첫 차시를 들으면 경로가 채워져요.</small></div>${tut}</div></div></section>`;
+      <div><div class="lhb-pc em">${ILL.path}<b>아직 시작한 강좌가 없어요</b><small>첫 차시를 들으면 경로가 채워져요.</small></div>${slim ? '' : tut}</div></div></section>`;
     const nx = m.next; const left = m.L.length - m.doneN;
     const h1 = nx ? `${E(short(m.c.name))}, ${m.doneN ? `${m.doneN}차시까지 왔어요.` : '오늘 시작해요.'}<br>오늘은 <em>${E(nx.title)}</em> 차례예요.` : `${E(short(m.c.name))}, 모든 차시를 마쳤어요.<br><em>수료증</em>을 받아 보세요.`;
     const lead = nx ? `남은 차시 ${left}개${m.c.end ? ` · ${E(String(m.c.end).slice(5).replace('-', '월 ').replace(/^0/, ''))}일까지 들을 수 있어요` : ''}. 수료 기준은 진도 ${m.c.thr || 80}%예요.` : '수료 기준을 채웠어요. 다음 강좌도 이어서 배울 수 있어요.';
     const stats = [`평균 진도 <b>${st.avg}%</b>`, G.qavg != null ? `퀴즈 평균 <b>${G.qavg}점</b>` : '', `수강 중 <b>${G.rows.length}개</b>`].filter(Boolean).map(x => `<span>${x}</span>`).join('');
     return `<section class="lhb-hero" style="--ph:url('${E(photo(m.c.name, 0, 1))}')"><div class="lhb-hg"><div>
       <span class="lhb-eb"><i></i>${eb}</span><h1>${h1}</h1><p class="lead num">${lead}</p>
-      <div class="ac">${nx ? `<a class="lhb-btn pr" href="#c/${E(m.c.id)}/${E(nx.id)}">${I('play', 20)}${m.pct(nx) ? '이어 보기' : '바로 시작하기'}</a>` : `<a class="lhb-btn pr" href="#cert/${E(m.c.id)}">수료증 보기</a>`}<div class="sts num">${stats}</div></div></div>
-      <div>${path(m)}${tut}</div></div></section>`; }
+      <div class="ac">${nx ? `<a class="lhb-btn pr" href="#c/${E(m.c.id)}/${E(nx.id)}">${I('play', 20)}${m.pct(nx) ? '이어 보기' : '바로 시작하기'}</a>` : `<a class="lhb-btn pr" href="#cert/${E(m.c.id)}">수료증 보기</a>`}${slim ? '' : `<div class="sts num">${stats}</div>`}</div></div>
+      <div>${path(m)}${slim ? '' : tut}</div></div></section>`; }
   function shelf(G) { const head = (t, tags) => `<div class="lhb-sh"><h2>${t}</h2>${tags || ''}<a class="lhb-btn tx" href="#courses">전체 보기${I('chev', 16)}</a></div>`;
     if (!G.shelf.length) { const R = G.rec.slice(0, 4); if (!R.length) return `<section class="lhb-shelf">${head('이어 볼 강의')}${empty('shelf', '이어 볼 강의가 아직 없어요. 강좌를 고르면 여기에 모여요.', '<a class="lhb-btn pr sm" href="#courses">강좌 둘러보기</a>')}</section>`;
       return `<section class="lhb-shelf">${head('이런 강좌로 시작해요', '<span class="lhb-tg">추천</span>')}<div class="lhb-rw">${R.map((c, i) => { const s = shopCls(c.id); return `<a class="lhb-v" href="#${s ? 'class' : 'c'}/${E(c.id)}"><span class="lhb-th" style="background-image:url('${E(thumbOf(c, null, i))}')"><span class="k">${E(c.ctype || '온라인')}</span>${c.hours ? `<span class="du num">${c.hours}시간</span>` : ''}</span><b>${E(c.name)}</b><small class="num">${(c.items || []).filter(x => x.type !== 'chapter').length}차시${s && s.price ? ` · ${Number(s.price).toLocaleString('ko-KR')}원` : ''}</small></a>`; }).join('')}</div></section>`; }
@@ -113,9 +113,41 @@
     const ntH = N.length ? `<section class="lhb-cd lhb-hmn"><div class="hd"><h3>기관 소식</h3><span class="lhb-tg num">${(G.S2.notices || []).length}건</span><a class="lhb-btn tx" href="#notice">전체${I('chev', 16)}</a></div><div class="lhb-its">${N.map(n => { const d = String(n.at || '').slice(5, 10).replace('-', '/');
       return `<a class="it" href="#notice"><span class="dd n num">${E(d || '공지')}${n.pin ? '<small>고정</small>' : ''}</span><span class="tx"><b>${E(n.title)}</b><small>${E(n.cls || '전체 공지')}${n.views ? ` · 조회 ${n.views}` : ''}</small></span>${I('chev', 16)}</a>`; }).join('')}</div></section>` : '';
     return `<div class="lhb-hm ${recH && ntH ? '' : 'one'}">${recH}${ntH}</div>`; }
-  function homeHub() { const G = gather(); return `<div class="lhb lhb-home" data-lhb="${G.main ? 'on' : 'empty'}">${hero(G)}<div class="lhb-in">${shelf(G)}<div class="lhb-r1">${todo(G)}${mileCard(G)}${recCard(G)}</div>${homeMore(G)}${facBand(G)}</div></div>`; }
+  /* v47 D7(LX-SPEC 3-2): 웹 홈 = 「지금 할 일」(히어로) → 오늘 익힐 것(ljourney가 .lhb-in 맨 앞에 꽂음) → 이어 볼 강의(히어로 차시 제외) → 할 일 · 기관 소식(3건)
+     → 「더 보기」(접힘: 지표 · 튜터 · 학습 기록/마일리지 · 추천 강좌 · 시설 · 비전 · 노트 — 삭제하지 않고 그대로 열림). 정책 꺼진 기관도 같은 순서 */
+  function noticeCard(G) { const N = ((G.S2.notices || []).slice().sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || String(b.at || '').localeCompare(String(a.at || '')))).slice(0, 3); if (!N.length) return '';
+    return `<section class="lhb-cd lhb-hmn"><div class="hd"><h3>기관 소식</h3><span class="lhb-tg num">${(G.S2.notices || []).length}건</span><a class="lhb-btn tx" href="#notice">전체${I('chev', 16)}</a></div><div class="lhb-its">${N.map(n => { const d = String(n.at || '').slice(5, 10).replace('-', '/');
+      return `<div class="it"><span class="dd n num">${E(d || '공지')}${n.pin ? '<small>고정</small>' : ''}</span><span class="tx"><b>${E(n.title)}</b><small>${E(n.cls || '전체 공지')}${n.views ? ` · 조회 ${n.views}` : ''}</small></span></div>`; }).join('')}</div></section>`; } /* 같은 목적지(#notice)는 머리 「전체」 1곳 */
+  function homeHub() { const G = gather(); const m = G.main;
+    const G2 = Object.assign({}, G, { shelf: G.shelf.filter(s => !(m && s.x === m && s.it === m.next)) }); /* 히어로 [이어 보기]와 같은 차시는 선반에서 뺀다(같은 목적지 1곳) */
+    const sh = G2.shelf.length || !G.shelf.length ? shelf(G2) : '';
+    const st = G.st; const stats = m ? [`평균 진도 <b>${st.avg}%</b>`, G.qavg != null ? `퀴즈 평균 <b>${G.qavg}점</b>` : '', `수강 중 <b>${G.rows.length}개</b>`].filter(Boolean).map(x => `<span>${x}</span>`).join('') : '';
+    const tut = `<div class="tut"><span class="cap">${m ? '방금 본 차시를 알고 있어요' : '무엇부터 배울지 함께 골라요'}</span><a class="lhb-btn sc dk" href="#ai"><span class="ai-lb">AI</span>AI 튜터에게 묻기</a></div>`;
+    const R = G.rec.slice(G.rec.length > 3 ? 1 : 0, 4); const recH = R.length ? homeMore(Object.assign({}, G, { S2: Object.assign({}, G.S2, { notices: [] }) })) : '';
+    const more = `<details class="lhb-more" data-l47="more"><summary><span>더 보기</span><small>학습 기록 · 추천 강좌 · 노트 · AI 튜터</small></summary><div class="lhb-mb">${stats ? `<div class="sts num l47-sts">${stats}</div>` : ''}<div class="lhb-mt">${tut}</div><div class="lhb-r1">${mileCard(G)}${recCard(G)}</div>${recH}${facBand(G)}</div></details>`;
+    return `<div class="lhb lhb-home" data-lhb="${m ? 'on' : 'empty'}">${hero(G, 1)}<div class="lhb-in">${sh}<div class="lhb-r1 l47-r1">${todo(G)}${noticeCard(G)}</div>${more}</div></div>`; }
+  window.LHB.todoHTML = () => todo(gather());
+  if (!document.getElementById('l47hubCss')) { const st = document.createElement('style'); st.id = 'l47hubCss'; st.textContent = `.lhb-r1.l47-r1{grid-template-columns:1fr 1fr}.lhb-r1.l47-r1>:only-child{grid-column:1/-1}
+.lhb-more{border:1px solid var(--line);border-radius:20px;background:var(--surface);color:var(--ink,inherit)}.lhb-more>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:56px;padding:0 20px;font-weight:700}
+.lhb-more>summary::-webkit-details-marker{display:none}.lhb-more>summary::after{content:'';width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin-left:auto;transition:transform .15s}
+.lhb-more[open]>summary::after{transform:rotate(-135deg)}.lhb-more>summary small{font-weight:500;color:var(--mute)}.lhb-more>summary:focus-visible{outline:2px solid var(--pri);outline-offset:2px;border-radius:20px}
+.lhb-mb{display:flex;flex-direction:column;gap:16px;padding:0 16px 18px}.lhb-mb .l47-sts{display:flex;flex-wrap:wrap;gap:8px}.lhb-mb .l47-sts span{padding:6px 12px;border-radius:999px;background:var(--c-track,rgba(0,0,0,.05))}
+.lhb-mb .lhb-mt .tut{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.lhb-mb .lhb-mt .cap{color:var(--mute)}
+.lhb-my1{padding:16px 0 0}.lhb-my1 .in{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:12px 16px}
+.lhb-my1 .ic{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--pri) 14%,transparent);color:var(--pri);flex:none}
+.lhb-my1 .tx{display:flex;flex-direction:column;min-width:0;flex:1}.lhb-my1 .tx small{color:var(--mute)}.lhb-my1 .tx b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:760px){.lhb-r1.l47-r1{grid-template-columns:1fr}.lhb-more>summary small{display:none}}`; (document.head || document.documentElement).appendChild(st); }
+  /* v47 D7: 다른 모듈이 웹 홈에 나중에 꽂는 카드(비전 · 노트 · 「앱 화면으로 보기」)는 「더 보기」 안으로 옮긴다(꽂는 쪽은 그대로) */
+  function tidyHome() { const lm = document.getElementById('lm'); const hm = lm && lm.querySelector('.lhb-home'); if (!hm) return; const mb = hm.querySelector('.lhb-more .lhb-mb'); if (!mb) return;
+    hm.querySelectorAll('.lhb-in > .v2-vcard, .lhb-in > .lna-hubw, .lhb-in > .mj-home > .mj-sum').forEach(el => mb.appendChild(el)); /* 성취 3칸(#journey 3회)은 웹 홈 「더 보기」로(LX-SPEC 3-2 「합침 → 기록」, 앱 D4와 별개) */
+    const ab = lm.querySelector(':scope > .ap-back'); const mt = mb.querySelector('.lhb-mt .tut'); if (ab && mt) { ab.classList.add('lhb-apb'); mt.appendChild(ab); } }
+  { let q = 0; const tick = () => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { tidyHome(); } catch (e) { console.error('lhub tidy', e); } }); };
+    const go = () => new MutationObserver(tick).observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go(); }
   if (typeof viewPage === 'function') { const bp = viewPage; viewPage = (id, ...a) => { if ((id === 'home' || !id) && lhbHome()) { try { return homeHub(); } catch (e) { console.error('lhub home', e); } } return bp(id, ...a); }; } /* eslint-disable-line no-global-assign */
   /* 강의 수강(#c): 영상이 없을 때 회색 상자 대신 강좌 사진 포스터(LHB.photo) */
   if (typeof viewCourse === 'function') { const bc = viewCourse; viewCourse = (...a) => { const h = bc(...a); try { const c = (SITE().classes || []).find(x => x.id === a[0]); if (!c || typeof h !== 'string') return h; return h.replace(/<div class="novid">/g, `<div class="novid" style="--ph:url('${E(photo(c.name, 0, 1))}')">`); } catch (e) { return h; } }; }
-  const base = viewMy; viewMy = (...a) => { const h = base(...a); try { if (!LR.me || LR.me.kind === 'parent' || document.body.classList.contains('lapp')) return h; return hub() + h; } catch (e) { console.error('lhub', e); return h; } };
+  /* v47 D8: 웹 #my 맨 위에 홈 허브 전체를 다시 붙이던 것(5.3화면) → 이어 볼 차시 한 줄(버튼 1개). 허브는 홈(#home)에만. LHB.hub는 다른 화면용으로 남김 */
+  function myLine() { const G = gather(); const m = G.main; if (!m) return ''; const nx = m.next;
+    return `<section class="lhb-my1" data-l47="myline"><div class="in"><span class="ic">${I(nx ? 'play' : 'check', 20)}</span><span class="tx"><small class="num">${E(short(m.c.name))} · ${m.L.length}차시 중 ${m.doneN}차시 · ${m.p}%</small><b>${nx ? `${m.ni + 1}차시 · ${E(nx.title)}` : '모든 차시를 마쳤어요'}</b></span>${nx ? `<a class="lbtn pri sm" href="#c/${E(m.c.id)}/${E(nx.id)}">${m.pct(nx) ? '이어 보기' : '시작하기'}</a>` : `<a class="lbtn pri sm" href="#cert/${E(m.c.id)}">수료증 보기</a>`}</div></section>`; }
+  const base = viewMy; viewMy = (...a) => { const h = base(...a); try { if (!LR.me || LR.me.kind === 'parent' || document.body.classList.contains('lapp')) return h; return myLine() + h; } catch (e) { console.error('lhub', e); return h; } };
 })();
