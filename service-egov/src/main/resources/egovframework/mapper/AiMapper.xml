@@ -6,6 +6,11 @@
   <select id="incUsage" resultType="int" flushCache="true" useCache="false">
     insert into ai_usage (tenant_id, day, calls) values (#{tid}, cast(#{day} as date), 1) on conflict (tenant_id, day) do update set calls = ai_usage.calls + 1 returning calls
   </select>
+  <!-- v46 기능별 사용량(ai_usage_f, Node aigw.js count · tokens · byFeature와 같은 문장) -->
+  <select id="selectAipol" resultType="string">select (doc->'aipol')::text from tenant_state where tenant_id = #{tid}</select>
+  <select id="incUsageF" resultType="int" flushCache="true" useCache="false">insert into ai_usage_f (tenant_id, day, feature, calls) values (#{tid}, cast(#{day} as date), #{f}, 1) on conflict (tenant_id, day, feature) do update set calls = ai_usage_f.calls + 1 returning calls</select>
+  <update id="addTokensF">update ai_usage_f set tin = tin + #{tin}, tout = tout + #{tout} where tenant_id = #{tid} and day = cast(#{day} as date) and feature = #{f}</update>
+  <select id="selectByFeature" resultType="java.util.LinkedHashMap">select feature, sum(calls)::int calls, sum(tin)::bigint tin, sum(tout)::bigint tout from ai_usage_f where day &gt; current_date - 31 group by feature order by feature</select>
   <update id="addTokens">update ai_usage set tin = tin + #{tin}, tout = tout + #{tout} where tenant_id = #{tid} and day = cast(#{day} as date)</update>
   <select id="selectUsage" resultType="java.util.LinkedHashMap">
     select day::text, calls, tin::int, tout::int from ai_usage where tenant_id = #{tid} and day &gt; current_date - 31 order by day desc
