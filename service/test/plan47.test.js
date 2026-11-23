@@ -43,7 +43,7 @@ test('API: 403 plan_feature · 기존 기관 · 정책 off · 공개 데이터',
   const pub = { org: { name: '산타' }, pages: [], classes: [{ id: 'c1', name: '실무', items }] };
   const doc = (x = {}) => ({ org: { name: 'A', type: 'corp', room: { mode: 'saas' } }, settings: { tutor: { enabled: true, daily: 200 } }, lsite: { pub }, codes: [{ sid: '20260001', dept: '영업', code: 'ABC234' }], members: [{ id: 'm1', sid: '20260001', name: '20260001' }], classes: [{ id: 'c1', name: '실무', items }], ...x });
   let rev = (await call('A', 'PUT', '/api/state', { doc: doc(), rev: 0 })).j.rev;
-  const put = async x => { const g = await call('A', 'GET', '/api/state'); rev = g.j.rev; const r = await call('A', 'PUT', '/api/state', { doc: doc(x), rev }); assert.equal(r.status, 200, JSON.stringify(r.j)); rev = r.j.rev; };
+  const put = async x => { const g = await call('A', 'GET', '/api/state'); rev = g.j.rev; const r = await call('A', 'PUT', '/api/state', { doc: doc(x), rev }); assert.equal(r.status, 200, JSON.stringify(r.j)); rev = r.j.rev; if (x.plan) await pool.query("update tenant_state set doc = jsonb_set(doc, '{plan}', $2::jsonb) where tenant_id = $1", [A.tid, JSON.stringify(x.plan)]); /* v47 통합: 요금제는 산타 관리(또는 서버)만 저장 — 기관 PUT으로 보낸 plan은 서버가 버림(keepPlan) */ };
   assert.equal((await call('L', 'POST', `/api/pub/${A.tid}/login`, { sid: '20260001', code: 'abc234' })).status, 200);
   const tutor = key => call('L', 'POST', `/api/pub/${A.tid}/tutor`, { q: '어떻게 시작해요?', item: { key } });
   const grade = () => call('A', 'POST', '/api/ai/messages', { feature: 'grade', messages: [{ role: 'user', content: '채점' }] });
