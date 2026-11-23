@@ -31,12 +31,12 @@
   --c-data:#509B5B;--c-data2:#92C7D3;--c-track:#F2F4F3;--c-grid:#ECEFED;--c-axis:#636D68;--c-prev:#CFD5D2;--c-warn:#D9901F;
   --r-card:20px;--r-block:24px;--r-btn:14px;--r-in:12px;--r-chip:99px;
   --fs-display:48px;--fs-title:24px;--fs-sub:18px;--fs-body:15px;--fs-cap:13px;--fs-min:12px;
-  --hero-mesh:radial-gradient(110% 90% at 88% 6%,rgba(122,201,218,.16),transparent 56%),radial-gradient(80% 90% at 6% 104%,rgba(90,200,106,.16),transparent 60%),linear-gradient(140deg,#1F4628,#163019 62%,#183528);
+  --hero-mesh:radial-gradient(110% 90% at 88% 6%,rgba(122,201,218,.16),transparent 56%),radial-gradient(80% 90% at 6% 104%,rgba(90,200,106,.16),transparent 60%),linear-gradient(140deg,#2E6A3A,#245530 62%,#27593A);
   /* v45.1(대표님 11-23 14:12): 어드민은 v44.1 면 구성(진한 초록 히어로 · 제안 상자 · FAB · 위젯 머리) 그대로, 초록만 로고 톤(C안)으로 낮춘다.
      히어로 위 글자: --hero-ink(흰 7.8:1↑) · --hero-sub(4.6:1↑) · --hero-em(로고 민트 톤다운 5.2:1↑). 원색 형광 초록 금지. */
   --hero-ink:#FFFFFF;--hero-sub:#D3E6D8;--hero-em:#A8E0B6;--hero-glass:rgba(255,255,255,.08);--hero-glass2:rgba(255,255,255,.13);--hero-line:rgba(255,255,255,.16);
-  --hero-cta:#9ED7A8;--hero-cta-h:#B4E2BC;--hero-cta-ink:#0D1B10;--hero-shadow:0 18px 40px -16px rgba(22,48,25,.45);--hero-solid:#1F4628;
-  --orb-bg:radial-gradient(circle at 30% 25%,#A8E0B6,#509B5B 45%,#244C2A);--fab-bg:radial-gradient(circle at 25% 20%,#44824C,#3A7B44 55%,#1F4628);--sam-head:linear-gradient(135deg,#1A1D1B,#1F4628);--fab-lin:linear-gradient(135deg,#1F4628 0%,#2F6336 55%,#3A7B44 100%);--pr-grad:linear-gradient(135deg,#3A7B44,#2F6336);
+  --hero-cta:#9ED7A8;--hero-cta-h:#B4E2BC;--hero-cta-ink:#0D1B10;--hero-shadow:0 18px 40px -16px rgba(36,85,48,.40);--hero-solid:#2E6A3A;
+  --orb-bg:radial-gradient(circle at 30% 25%,#A8E0B6,#509B5B 45%,#2E6A3A);--fab-bg:radial-gradient(circle at 25% 20%,#44824C,#3A7B44 55%,#2E6A3A);--sam-head:linear-gradient(135deg,#1A1D1B,#2E6A3A);--fab-lin:linear-gradient(135deg,#2E6A3A 0%,#2F6336 55%,#3A7B44 100%);--pr-grad:linear-gradient(135deg,#3A7B44,#2F6336);
   --sky50:#F3F8FA;--sky100:#E2F0F3;--sky200:#C2DFE5;--sky300:#92C7D3;--sky400:#68ACBB;--sky500:#4391A3;--sky600:#307888;--sky700:#26606D;--bar:linear-gradient(90deg,#509B5B,#4391A3);--logo-green:#5AC86A;--logo-sky:#7AC9DA;--logo-mint:#7AE0B0;
 }
 body{font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;letter-spacing:-.01em;color:var(--g900);font-variant-numeric:tabular-nums}
@@ -338,7 +338,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--pr)}
 .bar>i,.bar>span,.bar>b{background:var(--bar,var(--pr))}
 .d26-th{background:linear-gradient(135deg,var(--gr600),var(--gr900))}
 /* AI SAM 떠 있는 버튼(chat-legacy) — v45.1: 로고 톤 그라데이션(--fab-bg), 작은 줄 12px */
-html #fabBtn{background:var(--fab-bg);color:#fff;box-shadow:0 10px 28px -6px rgba(31,70,40,.45)}
+html #fabBtn{background:var(--fab-bg);color:#fff;box-shadow:0 10px 28px -6px rgba(46,106,58,.40)}
 html #fabBtn:hover{background:var(--pr-h);box-shadow:var(--sh3)}
 html #fabBtn:focus-visible{outline-color:var(--gr300)}
 html #fabBtn .scxbt small{font-size:12px}
