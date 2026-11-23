@@ -273,3 +273,12 @@ body:has(#slSheet) .mwrap{z-index:96}
   /* 084 데이터룸: 4칸 요약이 2열로 눌려 한 글자씩 꺾이던 것 → 1열 */
   #main .r7-drid{grid-template-columns:minmax(0,1fr)}
 }
+/* v47 1인 하루 질문 수: 자주 쓰는 값 칩 + 숫자 직접 입력(1~500, kit.js VIEWS.progress) */
+#main .r7-rules .v47-dq{flex-wrap:wrap}
+#main .v47-dqv{display:flex;align-items:center;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+#main .v47-dqc{display:flex;gap:6px;flex-wrap:wrap}
+#main .v47-dqc .btn.on{background:var(--gr50,#E8F5EC);border-color:var(--gr700,#00862D);color:var(--gr700,#00862D);font-weight:800}
+#main .v47-dqn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#DDD6CA);border-radius:8px;padding:0 10px;min-height:40px;background:var(--surface,#fff)}
+#main .v47-dqn input{width:72px;border:0;outline:0;background:none;font-size:15px;font-weight:800;text-align:right;color:inherit}
+#main .v47-dqn:focus-within{border-color:var(--ink,#2A2B2B)}
+#main .v47-dqn em{font-style:normal;font-size:14px;font-weight:700}

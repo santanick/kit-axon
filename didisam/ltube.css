@@ -498,3 +498,13 @@ body.lapp #lm .tb-phk span.tb-phz b{font-size:15px;line-height:1.4;font-weight:7
 body.lapp .thm-seg button{padding:0 6px;gap:4px} /* v43.7 Q4: 390에서 「기기 설정」 글자가 칸 밖으로 2px 넘치던 것 */
 .tb-links:has(>a:nth-child(3):last-child){grid-template-columns:repeat(3,minmax(0,1fr))} /* v43.7 Q4: 바로가기가 3개(대학 · 공단)면 4칸 격자에 빈 칸이 남던 것 → 3칸 */
 body.lapp.tb-fcov #tbFab.tb-fab{opacity:0;pointer-events:none} /* v43.7 Q4: 멈춘 자리에서 본문 버튼을 덮으면 숨김(ltube.js fcov) */
+/* v47 하루 목표 최대 8시간: 칩 8개(4칸 2줄) + 30분 단위 −/+ · 직접 입력(ltube.js goalSheet) */
+.tb-gopt button{font-size:15px;line-height:1.25;padding:0 4px;word-break:keep-all}
+.tb-gin{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin:0 0 4px}
+.tb-gin .tb-gst{min-height:48px;padding:0 12px;border-radius:8px;border:1px solid #d9d9d9;background:var(--surface,#fff);font-size:15px;font-weight:700;color:var(--tb-ink);cursor:pointer}
+.tb-gin label{display:flex;align-items:center;gap:6px;min-height:48px;border:1px solid #d9d9d9;border-radius:8px;padding:0 12px;background:var(--surface,#fff)}
+.tb-gin input{flex:1;min-width:0;width:100%;border:0;outline:0;background:none;font-size:17px;font-weight:700;text-align:right;color:var(--tb-ink)}
+.tb-gin label:focus-within{border-color:var(--tb-gd);box-shadow:0 0 0 3px var(--tb-gl)}
+.tb-gin label span{font-size:15px;color:var(--tb-mute)}
+.tb-gsh .tb-gerr{margin:4px 0 8px;min-height:1em;font-size:13px;color:#C62828}
+.tb-gok{width:100%;min-height:52px;border:0;border-radius:8px;background:var(--tb-gd);color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:8px}

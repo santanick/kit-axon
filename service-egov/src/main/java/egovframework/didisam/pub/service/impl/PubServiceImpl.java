@@ -284,11 +284,11 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     static void setIf(ObjectNode o, String k, JsonNode v) { if (!undef(v)) o.set(k, v); }
 
     /** 학습 기록 정리(허용한 키 · 크기만) */
-    /** v39 lp.tube: goal(5~180분) · sec · sh · qr · qn(날짜→정수, 최근 40일) — Node app.js cleanTube와 같은 규칙 */
+    /** v39 lp.tube: goal(5~480분, v47 최대 8시간) · sec · sh · qr · qn(날짜→정수, 최근 40일) — Node app.js cleanTube와 같은 규칙 */
     static ObjectNode cleanTube(JsonNode t) {
         if (t == null || !t.isObject()) return null;
         ObjectNode o = F.objectNode(); JsonNode gn = t.get("goal");
-        if (gn != null && (gn.isNumber() || gn.isTextual())) { double g = Math.round(gn.asDouble(Double.NaN)); if (!Double.isNaN(g) && g >= 5 && g <= 180) o.put("goal", (long) g); }
+        if (gn != null && (gn.isNumber() || gn.isTextual())) { double g = Math.round(gn.asDouble(Double.NaN)); if (!Double.isNaN(g) && g >= 5 && g <= 480) o.put("goal", (long) g); }
         String[][] ks = { { "sec", "86400" }, { "sh", "999" }, { "qr", "999" }, { "qn", "999" } };
         for (String[] k : ks) {
             JsonNode m = t.get(k[0]); TreeMap<String, Long> tm = new TreeMap<>(); long max = Long.parseLong(k[1]);
@@ -323,7 +323,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             for (JsonNode x : head(pl != null && pl.isArray() ? arr(pl) : List.of(), 14)) {
                 if (!truthy(x) || !isObj(x)) continue;
                 ObjectNode y = plan.addObject(); y.put("d", cut(S(get(x, "d")), 20)); y.put("t", cut(S(get(x, "t")), 80));
-                double mm = num(get(x, "m")); if (Double.isNaN(mm) || mm == 0) mm = 0; y.set("m", numNode(Math.min(240, Math.max(0, round(mm)))));
+                double mm = num(get(x, "m")); if (Double.isNaN(mm) || mm == 0) mm = 0; y.set("m", numNode(Math.min(480, Math.max(0, round(mm)))));
                 y.put("h", HREF.matcher(sOr(get(x, "h"))).matches() ? sOr(get(x, "h")) : "");
             }
             JsonNode ak = get(T, "ask");
@@ -484,8 +484,8 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
                 if (Double.isNaN(gd) || gd == 0) throw processException("dd.401.auth.guestoff");
                 rl.limit("ltg:" + tid + ":" + gip, gd, props.getLong("rate.day.winMs"));
             } else {
-                double dl = num(get(tu, "daily")); if (Double.isNaN(dl) || dl == 0) dl = 20;
-                rl.limit("lt:" + tid + ":" + sid, Math.min(200, Math.max(1, dl)), props.getLong("rate.day.winMs"));
+                double dl0 = num(get(tu, "daily")); long dl = Double.isNaN(dl0) ? 0 : Math.round(dl0); if (dl == 0) dl = 20;
+                rl.limit("lt:" + tid + ":" + sid, Math.min(500, Math.max(1, dl)), props.getLong("rate.day.winMs")); /* v47 1인 하루 질문 수 상한 500(Node tutorRoute와 같음) */
             }
             int calls = mapper.incUsage(tid, kstToday());
             if (calls > p.aiDaily) throw processException("dd.429.quota.tutor", new String[]{ String.valueOf(p.aiDaily) });

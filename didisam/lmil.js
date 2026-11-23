@@ -149,7 +149,7 @@
     let repair = null; if (n === 0) { let last = ''; for (let i = 1; i < 10; i++) { const x = addD(t, -i); if (D[x]) { last = x; break; } } const ym = t.slice(0, 7); const usedM = Math.max(Object.keys(o.repair || {}).filter(k => k.slice(0, 7) === ym).length, docRep.filter(r => r.ym === ym).length);
       if (last) { const until = Date.parse(addD(last, 1) + 'T00:00:00+09:00') + (cfg.repair.withinH || 48) * 3600e3; let prev = 0; for (let x = last; D[x] && prev < 400; x = addD(x, -1)) prev++; if (until > nowD().getTime() && usedM < (cfg.repair.perMonth ?? 1) && prev >= 2) repair = { until, need: goalMin() * (cfg.repair.factor || 2), from: last, prev }; } }
     return { n, freeze: left, week, repair, best: n }; }
-  const goalMin = () => { const g = +((LR.lp || {}).tube || {}).goal; return g >= 5 && g <= 180 ? g : 20; };
+  const goalMin = () => { const g = +((LR.lp || {}).tube || {}).goal; return g >= 5 && g <= 480 ? g : 20; };
   const minToday = () => Math.floor((+((((LR.lp || {}).tube || {}).sec || {})[today()]) || 0) / 60);
 
   /* ═════ 운영 ═════ */

@@ -67,7 +67,10 @@
 
   /* ── 학습 기록(lp.tube) ── */
   const rec = () => { const L = LR.lp || (LR.lp = {}); const t = L.tube && typeof L.tube === 'object' ? L.tube : (L.tube = {}); ['sec', 'sh', 'qr', 'qn'].forEach(k => { if (!t[k] || typeof t[k] !== 'object') t[k] = {}; }); return t; };
-  const goal = () => { const g = +rec().goal; return g >= 5 && g <= 180 ? g : 20; };
+  const GOAL_MAX = 480; /* v47 하루 목표 최대 8시간(서버 cleanTube 5~480과 같음) — 기존 저장값(10 · 20 · 30 · 60분)은 그대로 */
+  const goal = () => { const g = +rec().goal; return g >= 5 && g <= GOAL_MAX ? g : 20; };
+  const gFix = v => { const t = String(v == null ? '' : v).trim(); const n = Math.round(+t); return t && Number.isFinite(n) && n > 0 ? Math.max(5, Math.min(GOAL_MAX, n)) : null; };
+  const gLabel = m => m < 60 ? m + '분' : m % 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m / 60}시간`;
   const secToday = () => +rec().sec[day()] || 0;
   const minToday = () => Math.floor(secToday() / 60);
   const reached = d => (+rec().sec[d] || 0) >= goal() * 60;
@@ -77,7 +80,7 @@
     if (!before && reached(d)) onGoal(); }
   function onGoal() { try { LR.api.save(); } catch (e) { } if (TB.doneShown === day()) return; TB.doneShown = day(); const a = route().a;
     if (a === 'home' || a === 'review') { location.hash = '#done'; return; }
-    toast(`오늘 목표 ${goal()}분을 채웠어요. 오늘은 여기서 쉬어도 좋아요.`, 'ok'); }
+    toast(`오늘 목표 ${gLabel(goal())}을 채웠어요. 오늘은 여기서 쉬어도 좋아요.`, 'ok'); }
 
   /* 재생 중인지(YouTube LW.yp · 업로드 영상 · 짧게 복습) — 화면이 보일 때만 5초마다 센다 */
   function playing() { try { if (document.visibilityState !== 'visible') return false; const p = typeof LW === 'object' && LW && LW.yp;
@@ -147,7 +150,7 @@
     const n = N[0]; return `<a class="tb-pin" href="#notice"><em>공지</em><b>${esc(n.title)}</b>${N.length > 1 ? `<small>외 ${N.length - 1}건</small>` : ''}</a>`; } catch (e) { return ''; } }
   /* v43 질문형 헤드라인: 「서아님, 오늘 8분만 더 해 볼까요?」 — 화면 첫 줄 한 문장(디스플레이 28~32px/800). 이름이 없으면 인사 없이 질문만 */
   function hlHTML() { const g = goal(), m = Math.min(minToday(), 999), left = Math.max(0, g - m); const me = LR.me || {}; const nm = String(me.nick || me.name || (LR.tid === 'sample' && LR.sample && LR.sample.nick) || '').trim();
-    const q = m >= g ? `오늘 목표를 <em>다 채웠어요</em>` : m === 0 ? `오늘 <em>${g}분</em>, 시작해 볼까요?` : `오늘 <em>${left}분</em>만 더 해 볼까요?`;
+    const q = m >= g ? `오늘 목표를 <em>다 채웠어요</em>` : m === 0 ? `오늘 <em>${gLabel(g)}</em>, 시작해 볼까요?` : `오늘 <em>${gLabel(left)}</em>만 더 해 볼까요?`;
     const dt = new Date(Date.now() + 9 * 3600e3); const eb = `${dt.getUTCMonth() + 1}월 ${dt.getUTCDate()}일 ${WD[dt.getUTCDay()]}요일`;
     return `<section class="tb-hl" aria-label="오늘 한 줄"><small class="tb-eb">${eb}</small><h1>${nm ? `${esc(nm)}님,<br>` : ''}${q}</h1></section>`; }
   /* 이번 주 7칸(월~일): 목표 달성일 · 오늘 · 앞날 — 홈 히어로와 완료 화면이 같이 쓴다 */
@@ -167,9 +170,9 @@
   function goalHTML() { const g = goal(), m = Math.min(minToday(), 999), p = Math.min(100, Math.round(m / g * 100)); const done = m >= g; const st = streakN();
     if (tyKey() === 'public_facility') return facGoalHTML();
     /* v43 R9(J4 204 · 206): 「참고용」 안내를 굵은 문장으로 쓰면 두 줄로 꺾여 헤드라인을 밀어냄 → 굵은 문장은 남은 분, 「참고용」은 작은 칩 */
-    const S = strict(); const t = done ? '오늘은 여기서 쉬어도 좋아요' : m ? `${g - m}분 더 보면 오늘 목표 달성이에요` : '영상을 보면 자동으로 채워져요';
-    return `<section class="tb-goal tb-hero${done ? ' done' : ''}" aria-label="오늘 목표"><button type="button" class="tb-gb" data-tb="goal" aria-label="오늘 목표 ${g}분 중 ${m}분${S ? ' · 참고용, 진도 · 출석에는 반영되지 않음' : ''} · 목표 바꾸기"><span class="tb-rg">${ringSVG(p)}<b class="tb-rn">${m}<small>/${g}분</small></b></span>
-      <span class="tb-gl"><small>오늘 목표 ${g}분${st ? ` · ${st}일 연속` : ''}${S ? '<em class="tb-gchip" title="진도 · 출석과 별개">참고용</em>' : ''}</small><strong>${esc(t)}</strong><span class="tb-wd" aria-hidden="true">${weekDays().map(x => `<i class="${x.ok ? 'ok' : ''}${x.today ? ' td' : ''}">${x.l}</i>`).join('')}</span></span></button>${done ? `<a class="tb-gd" href="#done">완료 보기</a>` : ''}</section>`; }
+    const S = strict(); const t = done ? '오늘은 여기서 쉬어도 좋아요' : m ? `${gLabel(g - m)} 더 보면 오늘 목표 달성이에요` : '영상을 보면 자동으로 채워져요';
+    return `<section class="tb-goal tb-hero${done ? ' done' : ''}" aria-label="오늘 목표"><button type="button" class="tb-gb" data-tb="goal" aria-label="오늘 목표 ${gLabel(g)} 중 ${m}분${S ? ' · 참고용, 진도 · 출석에는 반영되지 않음' : ''} · 목표 바꾸기"><span class="tb-rg">${ringSVG(p)}<b class="tb-rn">${m}<small>/${g}분</small></b></span>
+      <span class="tb-gl"><small>오늘 목표 ${gLabel(g)}${st ? ` · ${st}일 연속` : ''}${S ? '<em class="tb-gchip" title="진도 · 출석과 별개">참고용</em>' : ''}</small><strong>${esc(t)}</strong><span class="tb-wd" aria-hidden="true">${weekDays().map(x => `<i class="${x.ok ? 'ok' : ''}${x.today ? ' td' : ''}">${x.l}</i>`).join('')}</span></span></button>${done ? `<a class="tb-gd" href="#done">완료 보기</a>` : ''}</section>`; }
   /* 빈 상태 공통: 그린 톤 SVG 일러스트 + 한 문장 + 주 버튼 1개 */
   const emptyArt = () => `<svg class="tb-ea" width="120" height="88" viewBox="0 0 120 88" aria-hidden="true"><rect x="14" y="14" width="92" height="60" rx="12" fill="var(--gr50)" stroke="var(--gr200)" stroke-width="2"/><rect x="24" y="24" width="72" height="40" rx="8" fill="var(--surface)" stroke="var(--gr200)" stroke-width="2"/><path d="M54 36l14 8-14 8z" fill="var(--gr700)"/><circle cx="98" cy="18" r="9" fill="var(--gr500)"/><path d="M94 18l3 3 5-6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 80h60" stroke="var(--gr200)" stroke-width="4" stroke-linecap="round"/></svg>`;
   function contHTML() { const k = cont(); if (!k) { const lms = ty() === 'univ' && ed() === 'lms'; const f = info(); const h = lms ? '#lms' : (f.browse && f.browse !== '#home' ? f.browse : '#my'); const lb = lms ? '수강 분반 보기' : (f.find && f.browse !== '#home' ? f.find : `${f.learn || '내 과정'} 보기`);
@@ -325,8 +328,10 @@
 
   /* ── 오늘 목표 설정 시트 ── */
   function goalSheet() { const g = goal(); const w = document.createElement('div'); w.className = 'ap-sheet'; w.id = 'apSheet';
-    w.innerHTML = `<div class="ap-sh tb-gsh" role="dialog" aria-modal="true" aria-labelledby="tbGT"><h2 id="tbGT">하루 목표</h2><p>하루에 몇 분 공부할까요? 채우면 오늘은 쉬어도 좋다고 알려 드려요.</p>
-      <div class="tb-gopt" role="radiogroup" aria-label="하루 목표 분">${[10, 20, 30, 60].map(m => `<button type="button" role="radio" aria-checked="${m === g}" class="${m === g ? 'on' : ''}" data-tb="goal-set" data-v="${m}">${m}분</button>`).join('')}</div>
+    w.innerHTML = `<div class="ap-sh tb-gsh" role="dialog" aria-modal="true" aria-labelledby="tbGT"><h2 id="tbGT">하루 목표</h2><p>하루에 얼마나 공부할까요? 최대 8시간까지 정할 수 있어요. 채우면 오늘은 쉬어도 좋다고 알려 드려요.</p>
+      <div class="tb-gopt" role="radiogroup" aria-label="하루 목표 시간">${[10, 20, 30, 60, 90, 120, 180, 240].map(m => `<button type="button" role="radio" aria-checked="${m === g}" class="${m === g ? 'on' : ''}" data-tb="goal-set" data-v="${m}">${gLabel(m)}</button>`).join('')}</div>
+      <div class="tb-gin" role="group" aria-label="직접 정하기"><button type="button" class="tb-gst" data-tb="goal-step" data-v="-30" aria-label="30분 줄이기">−30분</button><label><input id="tbGIn" type="number" min="5" max="${GOAL_MAX}" step="5" inputmode="numeric" value="${g}" aria-label="하루 목표(분, 5~${GOAL_MAX})"><span>분</span></label><button type="button" class="tb-gst" data-tb="goal-step" data-v="30" aria-label="30분 늘리기">+30분</button></div>
+      <p class="tb-gerr" role="alert"></p><button type="button" class="tb-gok" data-tb="goal-in">이 시간으로 정하기</button>
       <nav><button type="button" data-ap="sheet-x">닫기</button></nav></div>`;
     document.body.appendChild(w); const b = w.querySelector('.tb-gopt .on') || w.querySelector('.tb-gopt button'); b && b.focus(); }
 
@@ -543,7 +548,10 @@
   document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-tb]'); if (!el || !on()) return; const k = el.dataset.tb; e.preventDefault();
     if (k === 'f') { TB.f = el.dataset.v; lrender(); return; }
     if (k === 'goal') return goalSheet();
-    if (k === 'goal-set') { const g = Math.max(5, Math.min(180, +el.dataset.v || 20)); rec().goal = g; try { LR.api.save(); } catch (x) { } const w = $('#apSheet'); w && w.remove(); toast(`하루 목표를 ${g}분으로 정했어요.`, 'ok'); lrender(); return; }
+    if (k === 'goal-step') { const i = $('#tbGIn'); if (!i) return; const v = gFix(i.value) || goal(), d = +el.dataset.v; i.value = Math.max(5, Math.min(GOAL_MAX, d > 0 ? Math.floor(v / 30) * 30 + 30 : Math.ceil(v / 30) * 30 - 30)); return; } /* 30분 단위로 맞춰 늘리고 줄인다 */
+    if (k === 'goal-in') { const i = $('#tbGIn'); const raw = i ? i.value : ''; const g = gFix(raw); const er = $('#apSheet .tb-gerr'); if (g == null) { if (er) er.textContent = `5분에서 ${gLabel(GOAL_MAX)} 사이 숫자로 넣어 주세요.`; i && i.focus(); return; }
+      rec().goal = g; try { LR.api.save(); } catch (x) { } const w = $('#apSheet'); w && w.remove(); toast(String(g) !== String(raw).trim() ? `하루 목표는 5분~${gLabel(GOAL_MAX)}로 정할 수 있어 ${gLabel(g)}으로 맞췄어요.` : `하루 목표를 ${gLabel(g)}으로 정했어요.`, 'ok'); lrender(); return; }
+    if (k === 'goal-set') { const g = gFix(el.dataset.v) || 20; rec().goal = g; try { LR.api.save(); } catch (x) { } const w = $('#apSheet'); w && w.remove(); toast(`하루 목표를 ${gLabel(g)}으로 정했어요.`, 'ok'); lrender(); return; }
     if (k === 'ask') { try { ltAsk(el.dataset.v); } catch (x) { } return; }
     if (k === 'tutor') { if (typeof ltOpen === 'function') ltOpen(); return; } /* 대화 창(아이콘과 같은 창)에서 바로 묻는다 */
     if (k === 'fab') { if (cur()) return sheet(!TB.open); if (typeof LT === 'object' && LT.open) { const x = document.querySelector('[data-tact="close"]'); if (x) x.click(); return; } if (route().a === 'ai') { const q = document.getElementById('apQ'); if (q) { q.focus(); return; } } if (typeof ltOpen === 'function') ltOpen(); return; }
@@ -554,7 +562,7 @@
     if (k === 'sh-q') return shAnswer(el);
     if (k === 'seek') return seek(+el.dataset.v);
     if (k === 'wq') { const f = WQ[el.dataset.v]; return ask(f ? f(nowT()) : el.dataset.v, el.dataset.v); } });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && TB.open && on()) sheet(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && TB.open && on()) sheet(false); if (e.key === 'Enter' && e.target && e.target.id === 'tbGIn') { e.preventDefault(); const b = document.querySelector('#apSheet [data-tb="goal-in"]'); b && b.click(); } });
   /* 전체 메뉴(lux.js) 다듬기 — 유형 학습 이름 · 학사 LMS에서 꺼진 기능(진단 · 배지 · 디지털북 · 튜토리얼 · 결제 · 교재) 숨김(요원 1 · 3) */
   document.addEventListener('click', e => { if (!on() || !(e.target.closest && e.target.closest('[data-lux="menu"]'))) return; setTimeout(() => { const w = document.getElementById('luxSheet'); if (!w) return; const lr = info().learn;
     w.querySelectorAll('.lux-shg').forEach(g => { if (g.textContent.trim() === '내 학습' && lr) g.textContent = lr; });
