@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="egovframework.didisam.state.service.impl.StateMapper">
+  <select id="selectMfaPolicy" resultType="string">select doc->'org'->'sec'->>'mfa' from tenant_state where tenant_id = #{tid}</select>
   <select id="selectAipol" resultType="string">select (doc->'aipol')::text from tenant_state where tenant_id = #{tid}</select>
   <select id="selectPlanCur" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select (doc->'aiplan')::text aiplan, (doc->'plan')::text plan from tenant_state where tenant_id = #{tid} for update</select>
   <select id="selectAiplan" resultType="string">select (doc->'aiplan')::text from tenant_state where tenant_id = #{tid}</select>

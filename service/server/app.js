@@ -53,6 +53,7 @@ const { createPay } = require('./fac/pay');
 const LEV = require('./lev'); /* v46 Ver2 학습 이벤트 */
 const { createOAuth } = require('./oauth');
 const REC = require('./records'); /* 가디언 4차 기록 · 데이터(접근권한 검토 · 내려받기 통제 · 국외 차단 · 보관 파기) */
+const { createMfa } = require('./mfa'); /* 보안 4차 #1 관리자 추가 인증 */
 const { createDevices } = require('./devices'); /* 보안 2차: 새 환경 로그인 알림(2단계 인증 대신) */
 const COOKIE = '__Host-dd_sid';
 
@@ -176,6 +177,17 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
 
   /* ── 학습자(v10) ── */
   const pepper = env.SESSION_PEPPER || env.SIGNUP_CODE || 'didisam-learner';
+  const mfa = createMfa({ pool, env, inTenant, audit, HttpErr, readBody, limit, ip, sha, cookies, secure, checkPw, pepper, log });
+  /* 보안 4차 #1: 2단계까지 끝난 운영자 로그인의 공통 마무리(세션 발급 · audit · 응답). newSession이 { others }를 돌려주면 그대로 붙인다(d2) */
+  async function finishLogin(res, uid, tid, email, detail, extra) {
+    if (res.req) await rec.geoCheck(res.req, tid, email); /* 가디언 4차 #15(2단계 완료 · 소셜 로그인 공통) */
+    await pool.query('update users set last_login = now() where id = $1', [uid]);
+    await pool.query('delete from sessions where user_id = $1 and expires_at < now()', [uid]);
+    const s = await newSession(res, uid, tid);
+    await inTenant(pool, tid, c => audit(c, tid, email, 'login', detail));
+    const a = await pool.query('select t.id tid, t.name, t.type, t.mode, u.email, u.role, u.pw_temp from tenants t join users u on u.tenant_id = t.id where u.id = $1', [uid]);
+    return { ...meOut(a.rows[0]), ...(s && s.others ? { others: s.others } : {}), ...(extra || {}) };
+  }
   const codeFp = (tid, sid, code) => crypto.createHmac('sha256', pepper).update(`${tid}|${sid}|${String(code).toUpperCase()}`).digest('hex');
   const lcookieName = secure ? LCOOKIE : 'dd_lsid';
   /* 어드민이 발급한 접근코드(S.codes)를 학습자 로그인 표로 동기화 — 바뀐 코드만 scrypt로 다시 해시.
@@ -430,7 +442,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   }
 
   /* ── 운영자 소셜 로그인(v32.4) ── */
-  const oauth = createOAuth({ env, pool, HttpErr, readBody, limit, ip, cookies, secure, newSession, inTenant, audit, hashPw, newTid, sha, safeEq, pepper, mod, M, TYPES, emailOk, allowSignup, signupCode });
+  const oauth = createOAuth({ geoCheck: (...a) => rec.geoCheck(...a), mfa, env, pool, HttpErr, readBody, limit, ip, cookies, secure, newSession, inTenant, audit, hashPw, newTid, sha, safeEq, pepper, mod, M, TYPES, emailOk, allowSignup, signupCode });
 
   /* ── 외부 AI 연결(MCP) · API 키(v16) ── */
   const mcp = createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, blocked: sec.keyBlocked, onDrift: d => { log.error && log.error('mcp tools hash drift', d.want, d.got); sec.signal('feature_off', 'mcp:' + d.id, { reason: 'mcp_tools_changed', want: d.want, got: d.got }); } }); /* 가디언 키 비활성 · egress 차단이면 키 인증 실패(401) */
@@ -486,15 +498,15 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       const ok = await checkPw(String(b.password || ''), u ? u.pw : DUMMY);
       if (!u || !ok) { if (!u) { try { limit('lf:' + email, 1e9, 900e3); } catch (e) { } } if (u) await inTenant(pool, u.tenant_id, c => audit(c, u.tenant_id, email, 'login.fail', { ip: ip(req).replace(/[\d]+$/, 'x') })).catch(() => {}); throw new HttpErr(401, '이메일 또는 비밀번호가 올바르지 않습니다.', 'login'); }
       if (mod && !M.roleAllowed(mod, u.role)) throw new HttpErr(403, '이 주소로 로그인할 수 없는 계정입니다.', 'module');
-      await pool.query('update users set last_login = now() where id = $1', [u.id]);
-      await pool.query('delete from sessions where user_id = $1 and expires_at < now()', [u.id]);
-      await newSession(res, u.id, u.tenant_id);
-      await inTenant(pool, u.tenant_id, c => audit(c, u.tenant_id, email, 'login', null));
-      const a = await pool.query('select t.id tid, t.name, t.type, t.mode, $2::text email, u.role, u.pw_temp from tenants t join users u on u.tenant_id = t.id where u.id = $1', [u.id, email]);
-      return meOut(a.rows[0]);
+      await rec.geoCheck(req, u.tenant_id, email); /* 가디언 4차 #15: 기관이 국내 전용을 켰으면 해외 IP 운영자 로그인 차단(2단계 메일 발송 전) */
+      if (!mfa.off) return mfa.start(res, { id: u.id, tenant_id: u.tenant_id, email }, ''); /* 보안 4차 #1: 비밀번호 성공 → 세션 대신 2단계 티켓 */
+      return finishLogin(res, u.id, u.tenant_id, email, null);
     },
+    'POST /api/login/mfa': async (req, res) => { const v = await mfa.verify(req, res); return finishLogin(res, v.uid, v.tid, v.email, { mfa: v.kind, ...(v.via ? { via: v.via } : {}) }, v.totpSetup ? { totpSetup: true } : null); },
+    'POST /api/login/mfa/resend': async req => mfa.resend(req),
     'POST /api/logout': async (req, res) => { const t = cookies(req)[cookieName]; if (t) await pool.query('delete from sessions where id = $1', [sha(t)]); clearSid(res); return { ok: true }; },
     'GET /api/me': async req => meOut(await need(req)),
+    ...mfa.routes(need),
     'GET /api/me/devices': async req => devices.list(await need(req), req), /* 보안 2차: 본인 최근 로그인 기기 */
     'POST /api/password': async req => {
       const a = await need(req); limit('pw:' + a.uid, 8, 600e3); const b = await readBody(req, 4096);
@@ -543,7 +555,12 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
         /* v47 요금제(plan) · 월 포함량(aiplan.monthTokens)은 산타가 넣은 저장값이 원천(기관이 보낸 값은 버림). 초과 처리(overage)는 정운영자만 바꾼다 */
         const cur = (await c.query("select doc->'aiplan' aiplan, doc->'plan' plan from tenant_state where tenant_id = $1 for update", [a.tid])).rows[0] || null;
         if (a.role !== 'owner' && AP.ovKey(cur && cur.aiplan) !== AP.ovKey(doc.aiplan)) throw new HttpErr(403, 'AI 초과 처리는 정운영자만 바꿀 수 있습니다.', 'aiplan_role');
-        doc = AP.keepPlan(doc, cur, today()); const s = JSON.stringify(crypt.seal(doc, a.tid));
+        doc = AP.keepPlan(doc, cur, today());
+        /* 보안 4차 #1: 기관 2단계 인증 정책 org.sec.mfa('email' | 'totp')는 정운영자만 바꾸고 audit */
+        { const nm = doc.org.sec && typeof doc.org.sec === 'object' ? doc.org.sec.mfa : undefined; if (nm !== undefined && nm !== null && !['email', 'totp'].includes(nm)) throw new HttpErr(400, '2단계 인증 정책 값이 올바르지 않습니다.', 'mfa_policy');
+          const was = ((await c.query("select doc->'org'->'sec'->>'mfa' m from tenant_state where tenant_id = $1", [a.tid])).rows[0] || {}).m === 'totp' ? 'totp' : 'email'; const now = nm === 'totp' ? 'totp' : 'email';
+          if (was !== now) { if (a.role !== 'owner') throw new HttpErr(403, '2단계 인증 정책은 정운영자만 바꿀 수 있습니다.', 'mfa_policy'); await audit(c, a.tid, a.email, 'org.mfa', { from: was, to: now }); } }
+        const s = JSON.stringify(crypt.seal(doc, a.tid));
         if (rev === 0) {
           const r = await c.query('insert into tenant_state (tenant_id, doc, rev, bytes) values ($1, $2, 1, $3) on conflict (tenant_id) do nothing returning rev', [a.tid, s, s.length]);
           if (!r.rowCount) throw new HttpErr(409, '다른 곳에서 먼저 저장했습니다.', 'conflict');

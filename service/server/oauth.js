@@ -32,7 +32,7 @@ function profileOf(p, j) {
   return { sub: j.id == null ? '' : String(j.id), email: a.is_email_valid !== false && a.is_email_verified === true ? String(a.email || '').toLowerCase() : '' };
 }
 
-function createOAuth({ env, pool, HttpErr, readBody, limit, ip, cookies, secure, newSession, inTenant, audit, hashPw, newTid, sha, safeEq, pepper, mod, M, TYPES, emailOk, allowSignup, signupCode }) {
+function createOAuth({ geoCheck, mfa, env, pool, HttpErr, readBody, limit, ip, cookies, secure, newSession, inTenant, audit, hashPw, newTid, sha, safeEq, pepper, mod, M, TYPES, emailOk, allowSignup, signupCode }) {
   const P = oauthConfig(env);
   const base = req => String(env.PUBLIC_URL || '').replace(/\/+$/, '') || `${secure ? 'https' : 'http'}://${req.headers.host}`;
   const cb = (req, p) => `${base(req)}/api/oauth/${p}/callback`;
@@ -93,6 +93,11 @@ function createOAuth({ env, pool, HttpErr, readBody, limit, ip, cookies, secure,
       return go(res, 'signup');
     }
     if (mod && !M.roleAllowed(mod, u.role)) { res.setHeader('set-cookie', clear); return go(res, 'err:module'); }
+    if (geoCheck) { try { await geoCheck(req, u.tenant_id, u.email); } catch (e) { res.setHeader('set-cookie', clear); return go(res, 'err:geo_blocked'); } } /* 가디언 4차 #15 */
+    if (mfa && !mfa.off) { /* 보안 4차 #1: 소셜 로그인 뒤에도 같은 2단계(티켓은 쿠키로) */
+      res.setHeader('set-cookie', clear); let r; try { r = await mfa.start(res, { id: u.id, tenant_id: u.tenant_id, email: u.email }, p); } catch (e) { return go(res, 'err:' + (e.code === 'mfa_mail' ? 'mfa_mail' : 'provider')); }
+      return go(res, 'mfa-' + r.mfa);
+    }
     await pool.query('update users set last_login = now() where id = $1', [u.id]);
     await pool.query('delete from sessions where user_id = $1 and expires_at < now()', [u.id]);
     await newSession(res, u.id, u.tenant_id); addCookie(res, clear);

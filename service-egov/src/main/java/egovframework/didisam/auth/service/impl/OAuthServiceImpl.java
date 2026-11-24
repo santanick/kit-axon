@@ -34,7 +34,9 @@ import org.springframework.stereotype.Service;
 public class OAuthServiceImpl extends EgovAbstractServiceImpl implements OAuthService {
     static final int PEND_MIN = 15;
     @Resource(name = "propertiesService") private EgovPropertyService props;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.records.RecordsService rec; /* 가디언 4차 #15 국내 전용 로그인 */
     @org.springframework.beans.factory.annotation.Autowired private LoginDevices devices; /* 보안 2차 */
+    @org.springframework.beans.factory.annotation.Autowired private LoginMfa mfa; /* 보안 4차 #1 */
     private final AuthMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final DdOAuth oa;
     private final HttpClient http = HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(10)).build();
     public OAuthServiceImpl(AuthMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, DdOAuth oa) { this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.oa = oa; }
@@ -122,6 +124,13 @@ public class OAuthServiceImpl extends EgovAbstractServiceImpl implements OAuthSe
         }
         if (!p.module.isEmpty() && !DdModule.roleAllowed(p.module, u.get("role"))) { res.setHeader("set-cookie", clear); go(res, "err:module"); return; }
         String uid = (String) u.get("id"), tid = (String) u.get("tenant_id");
+        try { rec.geoCheck(req, tid, (String) u.get("email")); } catch (DdException e) { res.setHeader("set-cookie", clear); go(res, "err:geo_blocked"); return; } /* 가디언 4차 #15 */
+        if (!mfa.off) { /* 보안 4차 #1: 소셜 로그인 뒤에도 같은 2단계(티켓은 쿠키로) — Node oauth.js와 같음 */
+            res.setHeader("set-cookie", clear); Map<String, Object> r;
+            try { r = mfa.start(res, uid, tid, (String) u.get("email"), n); }
+            catch (org.egovframe.rte.fdl.cmmn.exception.EgovBizException e) { go(res, "err:" + (String.valueOf(e.getMessageKey()).startsWith("dd.503.mfa_mail") ? "mfa_mail" : "provider")); return; }
+            go(res, "mfa-" + r.get("mfa")); return;
+        }
         mapper.updateLastLogin(uid); mapper.deleteExpiredSessions(uid);
         newSession(res, uid, tid); res.addHeader("set-cookie", clear);
         try { tx.audit(tid, (String) u.get("email"), "login", DdWeb.JSON.createObjectNode().put("via", n).toString()); } catch (Exception ignore) { }

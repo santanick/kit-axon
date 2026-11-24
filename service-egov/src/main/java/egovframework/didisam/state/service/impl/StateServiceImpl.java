@@ -59,12 +59,17 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
         }
         /* v47 요금제(plan) · 월 포함량(aiplan.monthTokens)은 산타가 넣은 저장값이 원천(기관이 보낸 값은 버림), 초과 처리(overage)만 정운영자 — Node PUT /api/state와 같음(400 aiplan · 403 aiplan_role) */
         if (!egovframework.didisam.cmm.DdAiPrice.validPlan(doc.get("aiplan"))) throw new egovframework.didisam.cmm.DdException(400, "AI 월 포함량 값이 올바르지 않습니다.", "aiplan");
-        List<String> gone = new ArrayList<>(); boolean owner = "owner".equals(a.get("role"));
+        List<String> gone = new ArrayList<>(); boolean owner = "owner".equals(a.get("role")); final String[] mfaChg = new String[2];
         Map<String, Object> out = tx.inTenant(tid, () -> {
             Map<String, Object> pc = mapper.selectPlanCur(tid);
             JsonNode cap = pc == null || pc.get("aiplan") == null ? null : DdWeb.JSON.readTree(String.valueOf(pc.get("aiplan"))), cpl = pc == null || pc.get("plan") == null ? null : DdWeb.JSON.readTree(String.valueOf(pc.get("plan")));
             if (!owner && !egovframework.didisam.cmm.DdAiPrice.ovKey(cap).equals(egovframework.didisam.cmm.DdAiPrice.ovKey(doc.get("aiplan")))) throw new egovframework.didisam.cmm.DdException(403, "AI 초과 처리는 정운영자만 바꿀 수 있습니다.", "aiplan_role");
             egovframework.didisam.cmm.DdAiPrice.keepPlan(doc, cap, cpl, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).toString());
+            /* 보안 4차 #1: 기관 2단계 인증 정책 org.sec.mfa('email' | 'totp')는 정운영자만 바꾸고 audit — Node PUT /api/state와 같음(400 · 403 mfa_policy) */
+            { JsonNode sec = doc.path("org").path("sec"); JsonNode nm = sec.isObject() ? sec.get("mfa") : null;
+              if (nm != null && !nm.isNull() && !(nm.isTextual() && ("email".equals(nm.asText()) || "totp".equals(nm.asText())))) throw processException("dd.400.mfa_policy");
+              String was = "totp".equals(mapper.selectMfaPolicy(tid)) ? "totp" : "email", now = nm != null && "totp".equals(nm.asText()) ? "totp" : "email";
+              if (!was.equals(now)) { if (!owner) throw processException("dd.403.mfa_policy.role"); mfaChg[0] = was; mfaChg[1] = now; } }
             String s = crypt.seal(doc, tid).toString();
             Integer r;
             if (rev == 0) {
@@ -77,6 +82,7 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
             int pending = syncLearners(tid, doc.get("codes"), gone, props.getInt("learner.syncMax"));
             Map<String, Object> o = new LinkedHashMap<>(Map.of("rev", r)); if (pending > 0) o.put("pending", pending); return o;
         });
+        if (mfaChg[0] != null) tx.audit(tid, (String) a.get("email"), "org.mfa", DdWeb.JSON.createObjectNode().put("from", mfaChg[0]).put("to", mfaChg[1]).toString());
         /* 기관 역할 밖(plain): 학습자 세션 정리, 운영 모드 · 기관명 반영 — Node 서버는 같은 시점에 pool로 직접 실행 */
         if (!gone.isEmpty()) tx.plain(() -> { mapper.deleteLearnerSessions(tid, gone); return null; });
         String mode = DdWeb.str(nroom, "mode");
