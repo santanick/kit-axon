@@ -24,6 +24,7 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
     @Resource(name = "propertiesService") private EgovPropertyService props;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.sec.service.SecService sec; /* 가디언 긴급 차단 실행 지점 */
     private final AiMapper mapper; private final TenantTx tx; private final DdProps p; private final DdRateLimiter rl; private final DdAiClient ai;
+    @org.springframework.beans.factory.annotation.Autowired private egovframework.didisam.auth.service.impl.AuthMapper authMapper; /* 3등급 도구 확인의 비밀번호 재확인 */
     public AiServiceImpl(AiMapper mapper, TenantTx tx, DdProps p, DdRateLimiter rl, DdAiClient ai) { this.mapper = mapper; this.tx = tx; this.p = p; this.rl = rl; this.ai = ai; }
 
     /** 데이터룸 정책: (room.ai && room.ai !== 'anthropic') || (room.egress && room.egress.ai === false) */
@@ -66,6 +67,8 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
         if (msgs == null || !msgs.isArray() || msgs.isEmpty() || msgs.size() > 40) throw processException("dd.400.messages");
         String tid = (String) a.get("tid"); String email = (String) a.get("email");
         String feature = strictEq(get(b, "feature"), "grade") ? "grade" : "studio"; /* v46 게이트웨이 집계용(외부 본문에는 넣지 않음) */
+        { Object[] v = DdAiTools.checkRequest(b, p.pepper, tid, String.valueOf(a.get("uid"))); /* 체크리스트 09 · 11(Node AT.checkRequest와 같은 순서 · 코드) */
+          if (v != null) { String code = (String) v[1]; try { tx.audit(tid, email, "ai.tool_" + ("tool_confirm_required".equals(code) ? "blocked" : code), (String) v[3]); } catch (Exception ignore) { } throw new DdException((Integer) v[0], (String) v[2], code); } }
         egovframework.didisam.sec.service.SecService.Kill SK = sec.gate(tid); sec.preAi(SK); /* 가디언 긴급 차단 */
         tx.inTenant(tid, () -> {
             String rs = mapper.selectRoom(tid); JsonNode room = rs == null ? null : parse(rs);
@@ -117,7 +120,20 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
         JsonNode jm = get(j, "model"); if (truthy(jm)) out.set("model", jm); else out.put("model", model);
         JsonNode sr = get(j, "stop_reason"); if (!undef(sr)) out.set("stop_reason", sr);
         if (DdAiGuard.hitN(redacted) > 0) out.set("redacted", DdWeb.JSON.valueToTree(redacted));
+        ArrayNode confirm = DdAiTools.checkResponse(rm, content); /* 체크리스트 09: 사람 확인이 필요한 도구 호출 */
+        if (!confirm.isEmpty()) { ArrayNode tl = F.arrayNode(); for (JsonNode x : confirm) tl.add(x.get("name").asText() + ":" + x.get("tier").asInt()); ObjectNode d = F.objectNode(); d.set("tools", tl);
+            try { tx.audit(tid, email, "ai.tool_hitl", stringify(d)); } catch (Exception ignore) { } out.putObject("toolGuard").set("confirm", confirm); }
         return out;
+    }
+    /** 체크리스트 09: 사람 확인 → 세션 · 기관 · 도구 호출 id에 묶인 토큰. 3등급은 비밀번호 재확인(Node POST /api/ai/tool-confirm) */
+    @Override public Map<String, Object> toolConfirm(Map<String, Object> a, byte[] body) throws Exception {
+        rl.limit("aitc:" + a.get("uid"), 30, 60000L);
+        JsonNode b = DdWeb.readBody(body, 4096); String id = sOr(get(b, "id")), name = sOr(get(b, "name")); int tier = DdAiTools.tierOf(name);
+        if (!id.matches("[\\w-]{1,80}") || tier < 0) throw new DdException(400, "확인할 도구 호출이 올바르지 않습니다.", "tool");
+        if (tier >= 3) { String st = authMapper.selectPw(String.valueOf(a.get("uid"))); String pw = sOr(get(b, "password")); if (st == null || !DdCrypto.checkPw(pw, st)) throw new DdException(401, "비밀번호가 올바르지 않습니다.", "login"); }
+        String tid = (String) a.get("tid"); ObjectNode d = F.objectNode(); d.put("id", id); d.put("name", name); d.put("tier", tier);
+        tx.audit(tid, (String) a.get("email"), "ai.tool_confirm", stringify(d));
+        Map<String, Object> o = new LinkedHashMap<>(); o.put("token", DdAiTools.confirmToken(p.pepper, tid, String.valueOf(a.get("uid")), id, name)); o.put("tier", tier); return o;
     }
     static long tok(JsonNode v) { if (!truthy(v)) return 0; double d = num(v); return Double.isNaN(d) ? 0 : (long) d; }
 

@@ -320,7 +320,9 @@ function createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, ch
     for (const [m, re, fn] of P) { if (m !== method) continue; const x = p.match(re); if (x) return req => fn(req, x[1]); }
     return null;
   }
-  return { match, gate, preAi, postAi, keyBlocked, egressBlocked, tick: expire, verifyChain };
+  /* 체크리스트 11: 코드가 낸 보안 신호(예: MCP 도구 목록 해시 변경 → '기능 끄기' 범주)를 가디언 감사(해시 체인)에 남긴다. 실제 차단은 호출부가 이미 했고, 사람이 재검토한다 */
+  const signal = async (action, target, detail) => { try { await tx(c => audit(c, 'agent:guardian', 'signal.' + action, target, detail, null)); } catch (e) { log.error && log.error('sec signal', action, e.message); } };
+  return { match, gate, preAi, postAi, keyBlocked, egressBlocked, tick: expire, verifyChain, signal };
 }
 
 module.exports = { createSecurity, chainHash, maskIp, GENESIS, KILL_DAY_MAX, FEATURE_TTL_MAX };

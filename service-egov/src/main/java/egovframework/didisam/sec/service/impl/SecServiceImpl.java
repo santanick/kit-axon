@@ -96,6 +96,9 @@ public class SecServiceImpl implements SecService {
     }
 
     /* ── 감사 해시 체인(같은 트랜잭션 안에서 호출) ── */
+    @Override public void signal(String action, String target, JsonNode detail) {
+        try { tx.plain(() -> { audit("agent:guardian", "signal." + action, target, detail, null); return null; }); } catch (Exception e) { org.slf4j.LoggerFactory.getLogger(SecServiceImpl.class).error("sec signal {} {}", action, e.getMessage()); }
+    }
     void audit(String actor, String action, String target, JsonNode detail, HttpServletRequest req) {
         mapper.lock(820821L);
         String prev = mapper.lastHash(); if (prev == null) prev = GENESIS;

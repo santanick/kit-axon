@@ -36,9 +36,11 @@ public class McpServiceImpl extends EgovAbstractServiceImpl implements McpServic
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.sec.service.SecService sec; /* 가디언 긴급 차단 실행 지점 */
     private final McpMapper mapper; private final TenantTx tx; private final TenantTxMapper txm; private final DdProps p; private final DdRateLimiter rl;
     private final List<ObjectNode> tools = new ArrayList<>();
+    private final String pinGot; private final boolean pinOk; private volatile boolean drift = false;
     public McpServiceImpl(McpMapper mapper, TenantTx tx, TenantTxMapper txm, DdProps p, DdRateLimiter rl, DdStateCrypto crypt) throws Exception {
         this.crypt = crypt; this.mapper = mapper; this.tx = tx; this.txm = txm; this.p = p; this.rl = rl;
         try (InputStream in = getClass().getResourceAsStream("/egovframework/mcp/tools.json")) { for (JsonNode t : DdWeb.JSON.readTree(in)) tools.add((ObjectNode) t); }
+        pinGot = DdAiTools.toolsHash(tools); pinOk = DdAiTools.MCP_TOOLS_HASH.equals(pinGot);
     }
     private String msg(String k, Object... a) { return ms.getMessage(k, a.length == 0 ? null : a, k, Locale.ROOT); }
     private String fp(String key) { return DdCrypto.hmacHex("mcp|" + p.pepper, key); }
@@ -96,6 +98,11 @@ public class McpServiceImpl extends EgovAbstractServiceImpl implements McpServic
             return new Out(405, Map.of("allow", "POST"), e);
         }
         if (!"POST".equals(method)) return out(405, "method");
+        if (!pinOk) { /* 체크리스트 11: 도구 목록 해시가 허용목록 고정값과 다르면 연결 정지 + '기능 끄기' 신호 1회(Node mcp.js와 같음) */
+            if (!drift) { drift = true; egovLogger.error("mcp tools hash drift want={} got={}", DdAiTools.MCP_TOOLS_HASH, pinGot);
+                try { ObjectNode d = F.objectNode(); d.put("reason", "mcp_tools_changed"); d.put("want", DdAiTools.MCP_TOOLS_HASH); d.put("got", pinGot); sec.signal("feature_off", "mcp:" + DdAiTools.MCP_ID, d); } catch (Exception ignore) { } }
+            return out(503, rpcErr(null, -32003, "도구 목록이 허용목록 해시와 달라 연결을 멈췄습니다. 보안 재검토 후 다시 열립니다."));
+        }
         Map<String, Object> a = keyAuth(req);
         if (a == null) return new Out(401, Map.of("www-authenticate", "Bearer realm=\"didisam\""), rpcErr(null, -32001, msg("mcp.unauth")));
         rl.limit("mcp:" + a.get("id"), props.getInt("rate.mcp.max"), props.getLong("rate.mcp.winMs"));
