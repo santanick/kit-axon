@@ -8,6 +8,7 @@ import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 @EgovMapper
 public interface TenantMapper {
     List<Map<String, Object>> selectAudit(@Param("tid") String tid);
+    String selectAuditVerify(@Param("tid") String tid);
     List<Map<String, Object>> selectProgress(@Param("tid") String tid);
     String selectPw(@Param("uid") String uid);
     int deleteTenant(@Param("tid") String tid);

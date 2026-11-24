@@ -660,6 +660,12 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       const a = await needStaff(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 볼 수 있습니다.', 'role');
       return inTenant(pool, a.tid, async c => ({ rows: (await c.query('select at, actor, action, detail from audit_log where tenant_id = $1 order by at desc limit 200', [a.tid])).rows }));
     },
+    /* 가디언 2차(SEC-0006): 감사 기록 해시 체인 검증 — DB 함수 audit_verify 결과 그대로 { ok, n, legacy, head | brokenAt, reason } (Java 동일) */
+    'GET /api/audit/verify': async req => {
+      const a = await needStaff(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 볼 수 있습니다.', 'role');
+      limit('auditv:' + a.tid, 30, 3600e3);
+      return inTenant(pool, a.tid, async c => (await c.query('select audit_verify($1) v', [a.tid])).rows[0].v);
+    },
     'POST /api/tenant/delete': async (req, res) => {
       const a = await need(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 파기할 수 있습니다.', 'role');
       const b = await readBody(req, 4096);

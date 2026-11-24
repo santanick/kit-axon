@@ -35,8 +35,14 @@ say "3/8 Cloud SQL PostgreSQL 16 — 처음이면 10분 정도 걸립니다"
 if ! exists gcloud sql instances describe "$SQL"; then
   gcloud sql instances create "$SQL" --database-version POSTGRES_16 --region "$REGION" --tier "$SQL_TIER" --edition enterprise \
     --storage-auto-increase --backup-start-time 18:00 --enable-point-in-time-recovery --retained-backups-count 30 \
-    --deletion-protection
+    --deletion-protection --ssl-mode=ENCRYPTED_ONLY
 fi
+# 보안 점검 IAC-04(가디언 2차): 암호화된 연결만 허용(Cloud Run은 Cloud SQL 커넥터 경유라 그대로 동작). 승인된 네트워크는 비워 둔다.
+#   이미 만든 인스턴스도 맞춘다. 공인 IP 자체를 없애려면(--no-assign-ip) 사설 IP · Serverless VPC 커넥터가 먼저 필요 — docs/security/secrets.md 참고
+[ "$(gcloud sql instances describe "$SQL" --format='value(settings.ipConfiguration.sslMode)')" = ENCRYPTED_ONLY ] || \
+  gcloud sql instances patch "$SQL" --ssl-mode=ENCRYPTED_ONLY --quiet
+[ -z "$(gcloud sql instances describe "$SQL" --format='value(settings.ipConfiguration.authorizedNetworks)')" ] || \
+  echo "※ Cloud SQL 승인된 네트워크가 설정되어 있습니다. 커넥터만 쓰므로 비워 두는 것을 권장합니다: gcloud sql instances patch $SQL --clear-authorized-networks"
 exists gcloud sql databases describe didisam --instance "$SQL" || gcloud sql databases create didisam --instance "$SQL"
 CONN=$(gcloud sql instances describe "$SQL" --format='value(connectionName)')
 if ! exists gcloud secrets describe didisam-db-url; then

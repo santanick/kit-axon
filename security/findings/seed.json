@@ -81,8 +81,8 @@
       "line": 55,
       "evidence": "audit_log(id, tenant_id, at, actor, action, detail)만 있고 prev_hash · hash 없음, didisam_tenant에 update · delete 권한(db.js:80). 공백 05, 개인정보위 점검 접속기록 항목.",
       "fix": "개발자 2(sec-d2) 범위의 security 스키마 감사 해시 체인 적용 후 audit_log에도 확장, didisam_tenant의 audit_log update · delete 권한 회수. 보관 기간 정책 명문화.",
-      "status": "partial",
-      "note": "가디언 보안 기록(security 스키마)은 해시 체인 적용(core/sec-d2). 기존 일반 audit_log는 Phase 1."
+      "status": "fixed",
+      "note": "가디언 2차(core/sec2-d2): 일반 audit_log도 기관별 해시 체인(DB 트리거 audit_log_chain, 기관 advisory lock) · UPDATE 거부 · didisam_tenant update/delete 회수 · 기존 행은 audit.chain.start(건수 · 다이제스트)로 고정. 검증 GET /api/audit/verify(정운영자, Node · Java 동일 DB 함수 audit_verify). 시험 service/test/audit-chain.test.js, service-egov/test/contract-audit.js. 보관 기간 정책은 docs/security(수석 기획자) 몫."
     },
     {
       "id": "SEC-0007",

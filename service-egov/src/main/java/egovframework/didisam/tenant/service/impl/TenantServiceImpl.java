@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 @Service("tenantService")
 public class TenantServiceImpl extends EgovAbstractServiceImpl implements TenantService {
     @Resource(name = "propertiesService") private EgovPropertyService props;
+    @Resource(name = "rateLimitService") private DdRateLimiter rate;
     private final TenantMapper mapper; private final TenantTx tx; private final DdWeb web;
     public TenantServiceImpl(TenantMapper mapper, TenantTx tx, DdWeb web) { this.mapper = mapper; this.tx = tx; this.web = web; }
 
@@ -24,6 +25,12 @@ public class TenantServiceImpl extends EgovAbstractServiceImpl implements Tenant
             for (Map<String, Object> r : rows) r.put("detail", r.get("detail") == null ? null : Js.parse((String) r.get("detail")));
             Map<String, Object> o = new LinkedHashMap<>(); o.put("rows", rows); return o;
         });
+    }
+    /** 가디언 2차(SEC-0006): 감사 기록 해시 체인 검증 — DB 함수 audit_verify 결과 그대로(Node GET /api/audit/verify 동일) */
+    @Override public Object auditVerify(Map<String, Object> a) throws Exception {
+        if (!"owner".equals(a.get("role"))) throw processException("dd.403.role");
+        String tid = (String) a.get("tid"); rate.limit("auditv:" + tid, 30, 3600_000L);
+        return tx.inTenant(tid, () -> Js.parse(mapper.selectAuditVerify(tid)));
     }
     /** 학습자 진도 모아 보기 — { lp: { 학번: 기록 } } (JS 객체 키 순서: 정수 모양 키 먼저) */
     @Override public Map<String, Object> progress(Map<String, Object> a) throws Exception {
