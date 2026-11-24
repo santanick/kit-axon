@@ -5,10 +5,10 @@
 .tb-hl.tb-top .tb-hlx{flex:1;min-width:0}
 .tb-hl.tb-top{padding-top:2px}.tb-hl.tb-top .tb-eb{font-size:12px}
 .tb-hl.tb-top h1{font-size:19px;line-height:1.3;letter-spacing:-.025em}
-.tb-gm{flex:none;position:relative;width:56px;height:56px;display:grid;place-items:center;border:0;padding:0;background:none;color:var(--g900);cursor:pointer;border-radius:50%}
-.tb-gm svg{position:absolute;inset:4px}
-.tb-gm b{position:relative;font-size:14px;font-weight:800;line-height:1;text-align:center}
-.tb-gm b small{display:block;font-size:10px;font-weight:600;color:var(--g700)}
+.tb-gm{flex:none;position:relative;width:64px;height:64px;display:grid;place-items:center;border:0;padding:0;background:none;color:var(--g900);cursor:pointer;border-radius:50%}
+.tb-gm svg{position:absolute;inset:2px;width:60px;height:60px} /* v47-fix: 링 안 「14 /20분」이 선과 겹쳐 지름 48→60, 글자 줄임 */
+.tb-gm b{position:relative;max-width:40px;font-size:14px;font-weight:800;line-height:1;text-align:center}
+.tb-gm b small{display:block;margin-top:1px;font-size:9px;letter-spacing:-.03em;white-space:nowrap;font-weight:600;color:var(--g700)}
 .tb-gm:focus-visible{outline:3px solid var(--gr300);outline-offset:2px}
 
 /* D1: 지금 할 일 */
