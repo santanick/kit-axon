@@ -58,7 +58,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
       /* 마법사 단계 */
       CF.open({ from: 'test' }); await wait(80); out.flowIds = CF.stepIds().join(','); CF.close(false);
       /* 채점 */
-      go('assess'); render(); out.box = /AI 초안 — 확인 전에는 학습자에게 보이지 않습니다/.test(document.querySelector('#main').textContent);
+      go('assess'); render(); out.box = /AI (채점 )?초안[^]{0,8}확인 전에는 학습자에게 보이지 않습니다/.test( /* 가디언 2차(01): 공통 AI 생성물 배지 「✦ AI 채점 초안」 */document.querySelector('#main').textContent);
       const P = pend(); out.pendN = P.length;
       if (P.length) { const { c: gc, id } = P[0]; const p = gc.prog[id]; const fb0 = p.fb, sc0 = p.score;
         out.draft = !!p.ai && p.fb === fb0 && p.score === sc0 && !p.fbSent;
