@@ -157,7 +157,39 @@
 
   /* ═════════ AI 관리(SFR-073 · 077 · 087 · AI기본법) ═════════ */
   const FN = [['tutor', 'AI 튜터 · Q&A'], ['quiz', '퀴즈 · 문제 출제 · 추천'], ['sum', '요약 · 번역 · 문서뷰어'], ['grade', '과제 · 서술형 채점 보조'], ['risk', '학습위기 예측'], ['sub', '자동 자막 · 실시간 번역']];
-  const LAW = [['notice', 'AI 이용 사실을 화면에 미리 알림(튜터 · 채점 · 추천)'], ['mark', 'AI가 만든 결과물에 “AI 생성” 표시'], ['log', 'AI 이용 기록 보관(건수 · 기능 · 모델, 대화 원문 미저장)'], ['human', '성적 · 평가에 쓰이는 AI 결과는 교수가 최종 확정'], ['appeal', '이용자 이의 제기 창구 운영'], ['risk', '고영향 AI 해당 여부 검토 · 위험관리 문서화']];
+  const LAW = [['notice', 'AI 이용 사실을 화면에 미리 알림(튜터 · 채점 · 추천)'], ['mark', 'AI가 만든 결과물에 “AI 생성” 표시'], ['log', 'AI 이용 기록 보관(건수 · 기능 · 모델, 대화 원문 미저장)'], ['human', '성적 · 평가에 쓰이는 AI 결과는 교수가 최종 확정'], ['appeal', '이용자 이의 제기 창구 운영'], ['risk', '고영향 AI 해당 여부 검토 · 위험관리 문서화'], ['hia', '기능별 고영향 자가판정 · 사람 최종 판단 기록(전 기능 · 아래 표에서 자동 체크)']];
+  /* 보안 2차(체크리스트 02, 2026-11-24): 고영향 AI 자가판정 — 기능마다 질문 4개로 자가판정하고, 정운영자 · 관리자가 최종 판단(해당 · 조건부 비해당 · 비해당)과 사유를 남긴다.
+     근거 · 판정 기준은 docs/security/ai-impact-assessment.md. 판단은 A.hia[기능]에, 이력은 A.hiaLog(최근 100건)와 감사 기록에 남는다. 질문 답이 바뀌면 「재판단 필요」로 표시한다. */
+  const HIA_FN = [...FN, ['interview', 'AI 모의면접 · 면접 평가'], ['sam', '운영 AI SAM(에이전트 · 자동화)']];
+  const HIA_Q = [['eval', '학생 평가 · 성적 · 수료 판정에 결과가 쓰입니까?'], ['hire', '채용 · 선발 · 자격 부여 판단에 결과가 쓰입니까?'], ['k12', '초 · 중 · 고(유아 포함) 학생에게 쓰입니까?'], ['auto', '사람 확인 없이 결과가 그대로 확정 · 발송됩니까?']];
+  const HIA_FINAL = { yes: ['해당(고영향)', 'r'], cond: ['조건부 비해당(사람 최종 확정 유지)', 'y'], no: ['비해당', 'g'] };
+  const hiaSelf = q => { const { eval: e, hire: h, k12: k, auto: a } = q || {};
+    if ((h && a) || (e && k && a)) return ['high', '해당 가능성 높음', 'r'];
+    if (h || (e && k) || (e && a)) return ['review', '검토 필요', 'y'];
+    return ['low', '해당 가능성 낮음', 'g']; };
+  const hiaDef = k => ({ eval: k === 'grade', hire: false, k12: !!(S && S.org && S.org.type === 'k12'), auto: false });
+  const hiaS = () => { const A = ens().ai; A.hia = A.hia || {}; A.hiaLog = A.hiaLog || []; HIA_FN.forEach(([k]) => { if (!A.hia[k]) A.hia[k] = { q: hiaDef(k) }; }); return A; };
+  const hiaAll = A => HIA_FN.every(([k]) => { const r = A.hia[k]; return r && r.final && r.basis === hiaSelf(r.q)[0]; });
+  window.HIA = { fn: HIA_FN, q: HIA_Q, self: hiaSelf, state: () => hiaS() };
+  const hiaCard = edit => { const A = hiaS(); const done = HIA_FN.filter(([k]) => { const r = A.hia[k]; return r.final && r.basis === hiaSelf(r.q)[0]; }).length;
+    const rows = HIA_FN.map(([k, l]) => { const r = A.hia[k]; const [sk, sl, st] = hiaSelf(r.q); const stale = r.final && r.basis !== sk;
+      const qs = HIA_Q.map(([qk, ql]) => `<label class="ul-ck in" title="${esc(ql)}"><input type="checkbox" ${r.q[qk] ? 'checked' : ''} data-chg="hia-q" data-k="${k}" data-q="${qk}" ${edit ? '' : 'disabled'}> ${esc(({ eval: '평가', hire: '채용', k12: '초중고', auto: '자동 확정' })[qk])}</label>`).join('');
+      const fin = r.final ? `${tag(HIA_FINAL[r.final][0], HIA_FINAL[r.final][1])}${stale ? tag('재판단 필요', 'y') : ''}<br><small>${esc(r.by || '')} · ${esc(r.at || '')}</small>` : tag('미판단', 'y');
+      return [`<b>${esc(l)}</b>`, `<div class="ul-langs hia-q">${qs}</div>`, tag(sl, st), fin, edit ? `<button class="btn sm" data-act="hia-final" data-k="${k}">판단 기록</button>` : ''];
+    });
+    return `<div class="card" id="hiaCard"><div class="ch"><b>고영향 AI 자가판정</b><small>인공지능기본법 제33조 · 제34조 — 기능별 자가판정 뒤 사람이 최종 판단합니다 · 완료 ${done}/${HIA_FN.length}</small>${A.hiaLog.length ? '<button class="btn sm ghost" data-act="hia-csv">판단 기록 내보내기</button>' : ''}</div>
+      ${table(['기능', '질문(평가 · 채용 · 초중고 · 자동 확정)', '자가판정', '최종 판단', ''], rows)}
+      <p class="mini">자가판정은 참고용입니다. 최종 판단은 정운영자 · 관리자가 사유와 함께 기록하며, 판단 이력은 지우지 않고 감사 기록에 남습니다. 「해당」이면 위험관리 방안 · 설명 방안 · 이용자 보호 · 사람 관리감독 · 문서 보관(제34조)을 준비합니다.</p>
+      ${A.hiaLog.length ? `<details class="ul-cfg"><summary>판단 이력 ${A.hiaLog.length}건</summary>${table(['일시', '기능', '자가판정', '최종 판단', '판단자', '사유'], A.hiaLog.slice(0, 20).map(x => [esc(x.at), esc((HIA_FN.find(([k]) => k === x.k) || [, x.k])[1]), esc(x.selfL || ''), esc((HIA_FINAL[x.final] || [x.final])[0]), esc(x.by || ''), esc(x.note || '')]))}</details>` : ''}</div>`; };
+  ACT['hia-q'] = el => { if (!SIS_EDIT()) return; const A = hiaS(); const r = A.hia[el.dataset.k]; if (!r) return; r.q[el.dataset.q] = !!el.checked; A.law.hia = hiaAll(A); logAudit(`고영향 자가판정 질문 — ${el.dataset.k}.${el.dataset.q}=${el.checked ? '예' : '아니오'}`); save(); render(); };
+  ACT['hia-final'] = el => { if (!SIS_EDIT()) return toast('정운영자 · 관리자만 최종 판단을 기록할 수 있습니다.', 'warn'); const k = el.dataset.k; const A = hiaS(); const r = A.hia[k]; if (!r) return; const [sk, sl] = hiaSelf(r.q); const l = (HIA_FN.find(([x]) => x === k) || [, k])[1];
+    const pre = r.final || (sk === 'high' ? 'yes' : sk === 'review' ? 'cond' : 'no');
+    modal('고영향 AI 최종 판단', `<p><b>${esc(l)}</b> · 자가판정 <b>${esc(sl)}</b></p><label class="fl">최종 판단<select name="final">${Object.entries(HIA_FINAL).map(([v, [n]]) => `<option value="${v}" ${pre === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label><label class="fl">판단 사유(필수)<textarea name="note" maxlength="300" rows="3" placeholder="예: 채점 초안만 만들고 교수가 점수를 확정하므로 조건부 비해당">${esc(r.note || '')}</textarea></label><p class="mini">저장하면 판단자 · 일시와 함께 이력에 남고 감사 기록에 기록됩니다.</p>`,
+      [{ id: 'c', label: '취소' }, { id: 'ok', label: '판단 저장', kind: 'pri', run: w => { const final = fv(w, 'final'); const note = fv(w, 'note'); if (!HIA_FINAL[final]) return false; if (!note) { toast('판단 사유를 적어 주십시오.', 'warn'); return false; }
+        const at = nowStr(); const by = (S.me && (S.me.name || S.me.role)) || '운영자'; Object.assign(r, { final, note, by, at, basis: sk });
+        A.hiaLog.unshift({ at, k, self: sk, selfL: sl, final, by, note, q: { ...r.q } }); A.hiaLog.length = Math.min(A.hiaLog.length, 100); A.law.hia = hiaAll(A);
+        logAudit(`고영향 AI 최종 판단 — ${l}: ${HIA_FINAL[final][0]}(자가판정 ${sl})`); save(); render(); toast('최종 판단을 기록했습니다.', 'ok'); } }]); };
+  ACT['hia-csv'] = () => { const A = hiaS(); downloadCSV(`고영향AI_판단기록_${today()}.csv`, ['일시', '기능', '평가', '채용', '초중고', '자동 확정', '자가판정', '최종 판단', '판단자', '사유'], A.hiaLog.map(x => [x.at, (HIA_FN.find(([k]) => k === x.k) || [, x.k])[1], ...['eval', 'hire', 'k12', 'auto'].map(q => x.q && x.q[q] ? '예' : '아니오'), x.selfL, (HIA_FINAL[x.final] || [x.final])[0], x.by, x.note])); };
   VIEWS.aigov = () => {
     const A = ens().ai; const tb = UI.aiT || 'model'; const edit = SIS_EDIT();
     const gd = typeof AIG === 'object' ? AIG.stats : { redacted: 0, inj: 0, leak: 0 };
@@ -171,15 +203,16 @@
       <div class="card"><div class="ch"><b>기능별 모델 지정</b><small>칩을 누르면 바로 바뀝니다</small></div><div class="ai-rt">${FN.map(([k, l]) => `<div class="ai-rr"><span>${esc(l)}</span><div class="ai-rc">${ON.map(m => `<button type="button" class="${A.route[k] === m.id ? 'on' : ''}" data-act="ai-route" data-k="${k}" value="${esc(m.id)}" ${edit ? '' : 'disabled'}>${esc(m.n)}</button>`).join('')}</div></div>`).join('')}</div><p class="mini">데모에서는 Claude만 실제로 호출합니다. 다른 모델은 연결 규격(OpenAI 호환 엔드포인트 · 공급사 API)만 저장합니다.</p></div>`; })();
     if (tb === 'rag') b = `<div class="card"><div class="ch"><b>학습 자료(RAG) 소스</b>${edit ? '<button class="btn sm" data-act="rag-add">소스 추가</button><button class="btn sm" data-act="rag-idx">다시 색인</button>' : ''}</div>${table(['소스', '방식', '마지막 색인'], A.rag.map(r => [esc(r.n), esc(r.k), esc(r.at || '—')]))}<p class="mini">소스 속 지시문은 데이터로만 다루고(보안 원칙), 학생별 개인정보는 색인하지 않습니다.</p></div>`;
     if (tb === 'perf') b = `<div class="card"><div class="ch"><b>모델 성능 지표</b><small>최근 30일 · 데모 수치</small></div>${table(['모델', '호출', '평균 응답', '만족도', '오류율'], A.models.filter(m => m.on).map((m, i) => [esc(m.n), (1200 - i * 300).toLocaleString() + '건', (1.4 + i * .3).toFixed(1) + '초', (91 - i * 2) + '%', (0.6 + i * .2).toFixed(1) + '%']))}</div>`;
-    if (tb === 'law') b = `<div class="card"><div class="ch"><b>AI기본법 · 거버넌스 체크</b><small>「인공지능 발전과 신뢰 기반 조성 등에 관한 법률」 — 적용 범위는 발주기관과 협의해 확정</small></div>${LAW.map(([k, l]) => `<label class="ul-ck"><input type="checkbox" ${A.law[k] ? 'checked' : ''} data-chg="ai-law" data-k="${k}" ${edit ? '' : 'disabled'}> ${esc(l)}</label>`).join('')}
-      <div class="row"><span>AI로 가는 개인정보 가림(서버 강제)</span>${tag('적용')}</div><div class="row"><span>프롬프트 인젝션 감지 · 반복 차단</span>${tag('적용')}</div><div class="row"><span>AI 답변 속 지시문 · 키 유출 차단</span>${tag('적용')}</div></div>`;
+    if (tb === 'law') { const H = hiaS(); H.law.hia = hiaAll(H); }
+    if (tb === 'law') b = `<div class="card"><div class="ch"><b>AI기본법 · 거버넌스 체크</b><small>「인공지능 발전과 신뢰 기반 조성 등에 관한 법률」 — 적용 범위는 발주기관과 협의해 확정</small></div>${LAW.map(([k, l]) => `<label class="ul-ck"><input type="checkbox" ${A.law[k] ? 'checked' : ''} data-chg="ai-law" data-k="${k}" ${edit && k !== 'hia' ? '' : 'disabled'}> ${esc(l)}</label>`).join('')}
+      <div class="row"><span>AI로 가는 개인정보 가림(서버 강제)</span>${tag('적용')}</div><div class="row"><span>프롬프트 인젝션 감지 · 반복 차단</span>${tag('적용')}</div><div class="row"><span>AI 답변 속 지시문 · 키 유출 차단</span>${tag('적용')}</div></div>` + hiaCard(edit);
     if (tb === 'lang') b = `<div class="card"><div class="ch"><b>동영상 자동 자막</b><small>${A.vod.length}개 언어 · 12개 이상 권장</small></div><div class="ul-langs">${LANGS.map(([k, l]) => `<label class="ul-ck in"><input type="checkbox" ${A.vod.includes(k) ? 'checked' : ''} data-chg="ai-lang" data-g="vod" data-k="${k}" ${edit ? '' : 'disabled'}> ${l}</label>`).join('')}</div></div>
       <div class="card"><div class="ch"><b>대면 수업 실시간 자막 · 번역</b><small>동시 ${A.live.length}/4개 언어 · 학생은 QR로 접속</small></div><div class="ul-langs">${LANGS.map(([k, l]) => `<label class="ul-ck in"><input type="checkbox" ${A.live.includes(k) ? 'checked' : ''} data-chg="ai-lang" data-g="live" data-k="${k}" ${edit ? '' : 'disabled'}> ${l}</label>`).join('')}</div><p class="mini">음성 인식 · 번역 엔진은 외부 API 연계가 필요합니다(데이터룸 외부 연결 설정을 따름). 화면 메뉴 다국어는 한국어 · 영어 · 일본어 · 중국어를 기본 제공합니다.</p></div>`;
     return top + b;
   };
   ACT['ai-tg'] = el => { const A = ens().ai; const m = A.models[+el.dataset.i]; if (!m) return; if (m.on && A.models.filter(x => x.on).length === 1) return toast('최소 1개 모델은 켜 두어야 합니다.', 'warn'); m.on = !m.on; Object.keys(A.route).forEach(k => { if (!A.models.find(x => x.id === A.route[k] && x.on)) A.route[k] = A.models.find(x => x.on).id; }); logAudit(`LLM ${m.on ? '켬' : '끔'} — ${m.n}`); save(); render(); };
   ACT['ai-route'] = el => { ens().ai.route[el.dataset.k] = el.value; logAudit('기능별 모델 지정 — ' + el.dataset.k); save(); if (el.tagName === 'BUTTON') render(); };
-  ACT['ai-law'] = el => { ens().ai.law[el.dataset.k] = el.checked; logAudit('AI 거버넌스 항목 — ' + el.dataset.k); save(); render(); };
+  ACT['ai-law'] = el => { if (el.dataset.k === 'hia') return; ens().ai.law[el.dataset.k] = el.checked; logAudit('AI 거버넌스 항목 — ' + el.dataset.k); save(); render(); };
   ACT['ai-lang'] = el => { const A = ens().ai; const g = el.dataset.g; const k = el.dataset.k; const L = A[g]; if (el.checked) { if (g === 'live' && L.length >= 4) { el.checked = false; return toast('실시간 번역은 동시 4개 언어까지입니다.', 'warn'); } if (!L.includes(k)) L.push(k); } else A[g] = L.filter(x => x !== k); save(); render(); };
   ACT['rag-add'] = () => modal('RAG 소스 추가', `<label class="fl">이름<input name="n" maxlength="40" placeholder="예: 2026 학사 운영 규정"></label><label class="fl">방식<select name="k"><option>파일</option><option>게시판 연동</option><option>웹 주소</option></select></label>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '추가', kind: 'pri', run: w => { const n = fv(w, 'n'); if (!n) return false; ens().ai.rag.push({ n, k: fv(w, 'k'), at: null }); logAudit('RAG 소스 추가 — ' + n); save(); render(); } }]);
   ACT['rag-idx'] = () => { const at = nowStr(); ens().ai.rag.forEach(r => r.at = at); save(); render(); toast('색인을 갱신했습니다(데모).', 'ok'); };
