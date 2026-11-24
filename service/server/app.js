@@ -52,6 +52,7 @@ const AP = require('./aiprice'); /* v47 AI 월 포함량 · 추가 충전 요금
 const { createPay } = require('./fac/pay');
 const LEV = require('./lev'); /* v46 Ver2 학습 이벤트 */
 const { createOAuth } = require('./oauth');
+const REC = require('./records'); /* 가디언 4차 기록 · 데이터(접근권한 검토 · 내려받기 통제 · 국외 차단 · 보관 파기) */
 const { createDevices } = require('./devices'); /* 보안 2차: 새 환경 로그인 알림(2단계 인증 대신) */
 const COOKIE = '__Host-dd_sid';
 
@@ -698,7 +699,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       const { rows } = await pool.query('select pw from users where id = $1', [a.uid]);
       if (!rows[0] || !(await checkPw(String(b.password || ''), rows[0].pw))) throw new HttpErr(401, '비밀번호가 올바르지 않습니다.', 'login');
       if (String(b.confirm || '') !== a.name) throw new HttpErr(400, '기관명을 정확히 입력하세요.', 'confirm');
-      await pool.query('delete from tenants where id = $1', [a.tid]); // 상태 · 사용자 · 세션 · 로그 모두 cascade
+      await pool.query('delete from tenants where id = $1', [a.tid]); // 상태 · 사용자 · 세션은 cascade, 접속기록 · 감사기록은 보관 기간까지 남는다(가디언 4차 #10, tenant_gone)
       log.info && log.info('tenant deleted', a.tid);
       clearSid(res); return { ok: true };
     }
@@ -706,9 +707,10 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   /* v30 학사 LMS 묶음 라우트(lms/mod-*.js) — 핵심 라우트와 이름이 겹치면 기동을 멈춘다 */
   for (const [k, fn] of Object.entries(require('./lms').loadRoutes({ pool, inTenant, need, readBody, HttpErr, audit, today, limit, log }))) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
   /* v40 시설 · 장비 예약(fac/): 공개 fac-* 와 운영자 /api/fac/* */
-  const fac = require('./fac').createFac({ mail: pii.mailTo, pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
+  const fac = require('./fac').createFac({ exportGate: (...x) => rec.exportGate(...x), mail: pii.mailTo, pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
   /* v41 통합 수납 원장(ledger/): 공개 ledger-* 와 운영자 /api/ledger/* */
-  const ledger = require('./ledger').createLedger({ pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log, mileage });
+  const ledger = require('./ledger').createLedger({ exportGate: (...x) => rec.exportGate(...x), pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log, mileage });
+  const rec = REC.createRecords({ pool, inTenant, need, needOwner, readBody, HttpErr, audit, ip, env }); for (const [k, fn] of Object.entries(rec.routes)) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
 
   /* ── 정적 파일 ── */
   function serveStatic(req, res, pathname) {
@@ -769,7 +771,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
           if (req.headers['x-didisam'] !== '1') throw new HttpErr(403, '허용되지 않은 요청입니다.', 'csrf');
           const o = req.headers.origin; if (o && new URL(o).host !== req.headers.host) throw new HttpErr(403, '허용되지 않은 출처입니다.', 'origin');
         }
-        const out = await fn(req, res);
+        const out = await REC.als.run({ ip: ip(req) }, () => fn(req, res)); /* 가디언 4차 #5: 접속기록 ip */
         if (res.headersSent) return; /* v32 스트리밍 경로(GET /api/lms/v/hls)는 직접 응답한다 */
         return send(res, 200, out);
       }
@@ -781,7 +783,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       return send(res, 500, { error: 'server', message: '서버 오류가 발생했습니다.' });
     }
   });
-  srv.piiPurge = pii.purge; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; srv.secTick = sec.tick; /* 가디언 기능 끄기 TTL 자동 복구 기록 */ /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
+  srv.piiPurge = pii.purge; srv.recTick = rec.tick; srv.geoCheck = rec.geoCheck; srv.exportGate = rec.exportGate; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; srv.secTick = sec.tick; /* 가디언 기능 끄기 TTL 자동 복구 기록 */ /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
   return srv;
 }
 

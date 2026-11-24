@@ -574,11 +574,12 @@ public class FacServiceImpl extends EgovAbstractServiceImpl implements FacServic
             }
             case "GET export": {
                 if (!"owner".equals(role)) throw processException("dd.403.role");
+                egovframework.didisam.records.Records.Gate X = egovframework.didisam.records.Records.gate(req, role); int[] cnt = {0}; /* 가디언 4차 #14 사유 필수 · 학번은 끝자리만 */
                 String from = dayOr(qp(req, "from"), LocalDate.parse(today()).withDayOfMonth(1).toString()), to = dayOr(qp(req, "to"), today());
                 StringBuilder sb = new StringBuilder("﻿예약번호,시설,자원,날짜,시작,종료,구분,학번끝,상태,금액,결제\n");
-                for (Map<String, Object> r : tx.inTenant(tid, () -> m.selectBookings(tid, from, to, null, null, null, null))) { Map<String, Object> x = decorate(c, r, true);
+                for (Map<String, Object> r : tx.inTenant(tid, () -> m.selectBookings(tid, from, to, null, null, null, null))) { Map<String, Object> x = decorate(c, r, true); cnt[0]++;
                     sb.append(String.join(",", List.of(csv(x.get("id")), csv(x.get("facName")), csv(x.get("resName")), csv(x.get("day")), csv(x.get("from")), csv(x.get("to")), csv(x.get("aud")), csv(x.get("sidTail")), csv(x.get("status")), csv(x.get("amount")), csv(x.get("payStatus"))))).append('\n'); }
-                tx.audit(tid, email, "fac.export", DdWeb.JSON.createObjectNode().put("from", from).put("to", to).toString());
+                tx.audit(tid, email, "fac.export", DdWeb.JSON.createObjectNode().put("from", from).put("to", to).toString()); X.done(tx, tid, email, "fac", cnt[0]);
                 res.setContentType("text/csv; charset=utf-8"); res.setHeader("content-disposition", "attachment; filename=\"fac-" + from + "_" + to + ".csv\""); res.getOutputStream().write(sb.toString().getBytes(StandardCharsets.UTF_8)); return null;
             }
             default: throw err(404, "not_found", "없는 주소입니다.");

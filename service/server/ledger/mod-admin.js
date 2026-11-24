@@ -144,8 +144,8 @@ module.exports = (ctx, S) => {
         const over = (await c.query("select count(*)::int n from led_receipt where tenant_id = $1 and diff_reason = 'over_paid' and status = 'paid'", [a.tid])).rows[0].n;
         return { ok: true, today, unpaid: { people: stages, amount: amounts }, unmatched: um, refundsPending: pr.n, refundsPendingAmount: pr.amt, unclosed: uc, overPaid: over }; }); },
 
-    'GET /api/ledger/export': async (req, res) => { const a = await needStaff(req); const Q = q(req); const { from, to } = S.range(Q);
-      const out = { entries: await entries(a, Q) };
+    'GET /api/ledger/export': async (req, res) => { const a = await needStaff(req); const X = ctx.exportGate ? ctx.exportGate(req, a) : null; /* 가디언 4차 #14 사유 필수 · 학번 기본 가림 · 원본은 정운영자 */ const Q = q(req); const { from, to } = S.range(Q);
+      const out = { entries: await entries(a, Q) }; if (X && !X.raw) { const { mask } = require('../records'); for (const e of out.entries) e.sid = mask(e.sid); } if (X) await X.done('ledger', out.entries.length);
       const esc = v => { const s = v == null ? '' : v instanceof Date ? v.toISOString() : String(v); return /[",\n\r]/.test(s) || /^[=+\-@]/.test(s) ? `"${(/^[=+\-@]/.test(s) && !/^-?\d+$/.test(s) ? "'" : '') + s.replace(/"/g, '""')}"` : s; };
       const H = ['type', 'id', 'at', 'unit', 'sid', 'itemType', 'title', 'method', 'channel', 'amount', 'status', 'approvalNo', 'receipt', 'ruleType', 'diffReason'];
       const body = '﻿' + [H.join(',')].concat(out.entries.map(e => H.map(h => esc(e[h])).join(','))).join('\r\n') + '\r\n';

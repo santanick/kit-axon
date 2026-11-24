@@ -6,7 +6,11 @@ const { Pool } = require('pg');
 
 function poolFrom(env) {
   const cfg = { connectionString: env.DATABASE_URL, max: Number(env.DB_POOL || 8), idleTimeoutMillis: 30000, connectionTimeoutMillis: 10000 };
-  if (env.DB_SSL === 'require') cfg.ssl = { rejectUnauthorized: false };
+  /* 가디언 4차 #13: DB_SSL_CA(PEM 내용 또는 파일 경로, Secret 권장)가 있으면 서버 인증서를 검증한다(rejectUnauthorized: true).
+     DB_SSL=require만 있으면 암호화만(검증 없음 — 이전 동작, 운영은 DB_SSL_CA 권장). Cloud SQL 커넥터(unix 소켓)는 커넥터가 암호화한다. */
+  const ca = String(env.DB_SSL_CA || '').trim();
+  if (ca) cfg.ssl = { rejectUnauthorized: true, ca: /-----BEGIN CERTIFICATE-----/.test(ca) ? ca.replace(/\\n/g, '\n') : require('node:fs').readFileSync(ca, 'utf8'), ...(env.DB_SSL_SERVERNAME ? { servername: env.DB_SSL_SERVERNAME } : {}) };
+  else if (env.DB_SSL === 'require') cfg.ssl = { rejectUnauthorized: false };
   return new Pool(cfg);
 }
 
@@ -547,7 +551,7 @@ const MIGRATIONS = [
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).
    기본 MIGRATIONS 배열 끝에 새 항목을 더해도 LMS 파일 적용 기록이 밀리지 않는다. */
-const LMS_SQL = [...require('./lms').sqlMigrations(), ...require('./fac').sqlMigrations(), ...require('./ledger').sqlMigrations(), ...require('./mileage').sqlMigrations(), ...require('./devices').sqlMigrations()]; /* 보안 2차 로그인 기기(이름 기록 — 번호 배열과 충돌 없음) */ /* v42 마일리지(mileage/sql) — 원장 뒤(차감 줄 · 환불 훅) */ /* v41 원장 표(ledger/sql) — fac 뒤(시설 이중 기록 트리거) */ /* v40 시설 예약 표(fac/sql) */
+const LMS_SQL = [...require('./lms').sqlMigrations(), ...require('./fac').sqlMigrations(), ...require('./ledger').sqlMigrations(), ...require('./mileage').sqlMigrations(), ...require('./devices').sqlMigrations(), ...require('./records').sqlMigrations()]; /* 가디언 4차 기록 보관(접속기록 ip · FK cascade 제거 · 파기) */ /* 보안 2차 로그인 기기(이름 기록 — 번호 배열과 충돌 없음) */ /* v42 마일리지(mileage/sql) — 원장 뒤(차감 줄 · 환불 훅) */ /* v41 원장 표(ledger/sql) — fac 뒤(시설 이중 기록 트리거) */ /* v40 시설 예약 표(fac/sql) */
 
 async function migrate(pool) {
   const c = await pool.connect();
