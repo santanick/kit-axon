@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 보안 4차 #1 관리자 추가 인증(Node service/server/mfa.js와 같은 SQL). 표는 Node 마이그레이션(core/mfa_v1)이 만든다 -->
+<mapper namespace="egovframework.didisam.auth.service.impl.MfaMapper">
+  <delete id="deleteOld">delete from mfa_tickets where user_id = cast(#{uid} as uuid) and (expires_at &lt; now() or created_at &lt; now() - interval '1 hour')</delete>
+  <insert id="insertTicket">insert into mfa_tickets (id, user_id, tenant_id, kind, via, expires_at) values (#{id}, cast(#{uid} as uuid), #{tid}, #{kind}, #{via}, now() + interval '5 minutes')</insert>
+  <update id="setCode">update mfa_tickets set code_hash = #{h}, code_exp = now() + interval '10 minutes', sent_at = now(), sends = sends + 1, expires_at = greatest(expires_at, now() + interval '5 minutes') where id = #{id}</update>
+  <select id="selectTicket" resultType="map">select t.user_id::text as user_id, t.tenant_id, t.kind, t.via, t.code_hash, t.tries, (t.code_exp &gt; now()) as live, u.email from mfa_tickets t join users u on u.id = t.user_id where t.id = #{id} and t.expires_at &gt; now() and t.tries &lt; 5</select>
+  <select id="selectResend" resultType="map">select t.kind, t.sends, t.tenant_id, (t.sent_at &gt; now() - interval '30 seconds') as soon, u.email from mfa_tickets t join users u on u.id = t.user_id where t.id = #{id} and t.expires_at &gt; now() and t.tries &lt; 5</select>
+  <select id="incTries" resultType="java.lang.Integer">update mfa_tickets set tries = tries + 1 where id = #{id} returning tries</select>
+  <delete id="deleteTicket">delete from mfa_tickets where id = #{id}</delete>
+  <select id="selectTotp" resultType="map">select secret, pend, last_step from user_totp where user_id = cast(#{uid} as uuid)</select>
+  <update id="updateStep">update user_totp set last_step = #{st}, updated_at = now() where user_id = cast(#{uid} as uuid) and last_step &lt; #{st}</update>
+  <insert id="upsertPend">insert into user_totp (user_id, pend) values (cast(#{uid} as uuid), #{pend}) on conflict (user_id) do update set pend = excluded.pend, updated_at = now()</insert>
+  <update id="activate">update user_totp set secret = pend, pend = '', last_step = #{st}, on_at = now(), updated_at = now() where user_id = cast(#{uid} as uuid)</update>
+  <select id="deleteTotp" resultType="string">delete from user_totp where user_id = cast(#{uid} as uuid) returning secret</select>
+  <select id="selectPolicy" resultType="string">select doc->'org'->'sec'->>'mfa' from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectTenantName" resultType="string">select name from tenants where id = #{tid}</select>
+  <select id="selectPw" resultType="string">select pw from users where id = cast(#{uid} as uuid)</select>
+</mapper>

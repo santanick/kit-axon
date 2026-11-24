@@ -24,7 +24,7 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** 등록된 /api 경로(Node app.js routes와 같음 — 1단계 + 2단계) */
     public static final Set<String> ROUTES = Set.of(
         "GET /api/health", "GET /api/config", "POST /api/signup", "POST /api/login", "POST /api/logout",
-        "GET /api/me", "GET /api/me/devices", "GET /api/state", "PUT /api/state",
+        "GET /api/me", "GET /api/me/devices", "POST /api/login/mfa", "POST /api/login/mfa/resend", "GET /api/me/mfa", "POST /api/me/mfa", "DELETE /api/me/mfa", "GET /api/state", "PUT /api/state",
         "GET /api/keys", "POST /api/keys", "POST /api/keys/revoke",
         "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage", "GET /api/lev", "POST /api/ai/topup", "POST /api/ai/topup/confirm", "GET /api/santa/orgs",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log", "POST /api/learners/sync",

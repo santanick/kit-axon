@@ -23,6 +23,7 @@ window.__preboot = (async () => {
   if (m) { /* v32.4 소셜 로그인 결과(서버 콜백이 넘겨 줌) */
     history.replaceState(null, '', location.pathname + location.search);
     if (m[1] === 'signup') { try { LIVE.oauth = await api('GET', '/api/oauth/pending'); LV.view = 'signup'; LV.step = 'org'; } catch (e) { LV.oerr = LVMSG.oauth_pending; LV.view = 'signup'; } }
+    else if (m[1].startsWith('mfa-')) LIVE.mfa = { mfa: m[1].slice(4), ticket: '' }; /* 보안 4차 #1: 소셜 로그인 뒤 2단계(티켓은 쿠키) → mfa.js가 입력 화면을 띄운다 */
     else if (m[1].startsWith('err:')) LV.oerr = OAUTH_ERR[m[1].slice(4)] || '소셜 로그인에 실패했습니다. 다시 시도해 주십시오.';
   }
   if (!(LIVE.cfg && LIVE.cfg.signup)) LV.view = 'login';
@@ -137,7 +138,7 @@ const LVMSG = {
 };
 const lvMsg = x => (x && x.status && LVMSG[x.code]) || (x && !x.status ? LVMSG.net : (x && x.message) || LVMSG.net);
 /* v32.4 운영자 소셜 로그인(구글 · 카카오) — 서버가 /api/oauth/<제공자>/start → 콜백을 처리하고 #oauth=… 로 돌려보낸다 */
-const OAUTH_ERR = { state: '로그인 요청이 만료되었습니다. 다시 시도해 주십시오.', denied: '로그인을 취소했습니다. 다른 방법으로 계속할 수 있습니다.', provider: '제공자와 연결하지 못했습니다. 잠시 후 다시 시도해 주십시오.', email: '확인된 이메일이 있어야 합니다. 이메일 제공에 동의한 뒤 다시 시도해 주십시오.', module: '이 주소로 로그인할 수 없는 계정입니다.', signup_off: '지금은 새 기관 가입을 받지 않습니다.' };
+const OAUTH_ERR = { state: '로그인 요청이 만료되었습니다. 다시 시도해 주십시오.', denied: '로그인을 취소했습니다. 다른 방법으로 계속할 수 있습니다.', provider: '제공자와 연결하지 못했습니다. 잠시 후 다시 시도해 주십시오.', email: '확인된 이메일이 있어야 합니다. 이메일 제공에 동의한 뒤 다시 시도해 주십시오.', module: '이 주소로 로그인할 수 없는 계정입니다.', signup_off: '지금은 새 기관 가입을 받지 않습니다.', mfa_mail: '인증번호 메일을 보낼 수 없습니다. 관리자에게 문의하십시오.' };
 const OAUTH_P = { google: ['Google', '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.3c0-.8-.1-1.5-.2-2.3H12v4.3h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.2-4.8 3.2-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1-3.7 1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>'],
   kakao: ['카카오', '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#000" d="M12 3C6.5 3 2 6.5 2 10.8c0 2.8 1.9 5.2 4.7 6.6l-1 3.6c-.1.3.3.6.6.4l4.2-2.8c.5.1 1 .1 1.5.1 5.5 0 10-3.5 10-7.8S17.5 3 12 3z"/></svg>'] };
 const MAIL_IC = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg>';
@@ -196,8 +197,8 @@ async function lvMailGo() {
   if (LV.view !== 'signup') {
     if (!email || !pw) return say(LVMSG.need, email ? fp : fe);
     btn.disabled = true; say('');
-    try { await api('POST', '/api/login', { email, password: pw }); lvSeen(); location.replace(location.pathname); }
-    catch (x) { btn.disabled = false; say(lvMsg(x)); if (x.status === 401) { fp.value = ''; fp.focus(); } }
+    try { const r = await api('POST', '/api/login', { email, password: pw }); const go = () => { lvSeen(); location.replace(location.pathname); }; if (r && r.mfa && window.mfaPrompt) { btn.disabled = false; return window.mfaPrompt(r, go); } go(); } /* 보안 4차 #1 2단계 */
+    catch (x) { btn.disabled = false; say(window.errMsg ? errMsg(x, lvMsg(x)) : lvMsg(x)); if (x.status === 401) { fp.value = ''; fp.focus(); } }
     return;
   }
   if (!emailOk(email)) return say(LVMSG.email, fe);
@@ -247,7 +248,7 @@ function renderLogin() {
   <button class="btn pri lg" type="submit">로그인</button></form></div>`;
   const f = $('#liForm');
   f.addEventListener('submit', async e => { e.preventDefault(); const b = f.querySelector('button[type=submit]'); b.disabled = true; $('#liErr').textContent = '';
-    try { await api('POST', '/api/login', { email: f.email.value.trim(), password: f.password.value }); location.replace(location.pathname); } catch (x) { $('#liErr').textContent = lvMsg(x); b.disabled = false; } });
+    try { const r = await api('POST', '/api/login', { email: f.email.value.trim(), password: f.password.value }); const go = () => location.replace(location.pathname); if (r && r.mfa && window.mfaPrompt) { b.disabled = false; return window.mfaPrompt(r, go); } go(); } catch (x) { $('#liErr').textContent = window.errMsg ? errMsg(x, lvMsg(x)) : lvMsg(x); b.disabled = false; } }); /* 보안 4차 #1 2단계 */
 }
 const lvTo = (view, o) => { Object.assign(LV, { view, step: 'entry', mail: null }, o || {}); lvPw = ''; const fx = !!LV.focus; render(); const h = $('#entry h1, #entry h2'); if (h && !fx) { h.setAttribute('tabindex', '-1'); h.focus(); } };
 ACT['lv-login'] = () => lvTo('login');

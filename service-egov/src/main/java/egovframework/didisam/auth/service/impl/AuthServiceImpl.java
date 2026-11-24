@@ -24,7 +24,8 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     static final Pattern HAS_ALPHA = Pattern.compile("[a-zA-Z]"), HAS_DIGIT = Pattern.compile("\\d");
 
     @Resource(name = "propertiesService") private EgovPropertyService props;
-    @org.springframework.beans.factory.annotation.Autowired private LoginDevices devices; /* 보안 2차 새 환경 로그인 알림 */
+    @org.springframework.beans.factory.annotation.Autowired private LoginDevices devices;
+    @org.springframework.beans.factory.annotation.Autowired private LoginMfa mfa; /* 보안 4차 #1 관리자 추가 인증 */ /* 보안 2차 새 환경 로그인 알림 */
     private final AuthMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final DdOAuth oa;
     @org.springframework.beans.factory.annotation.Value("${TOSS_SECRET_KEY:}") private String tossKey = "";
     @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:}") private String santaEnv = ""; /* v47 산타 관리자 표시(user.santa) */
@@ -101,11 +102,26 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         }
         String uid = (String) u.get("id"), tid = (String) u.get("tenant_id");
         if (!p.module.isEmpty() && !DdModule.roleAllowed(p.module, u.get("role"))) throw processException("dd.403.module");
+        if (!mfa.off) return mfa.start(res, uid, tid, email, ""); /* 보안 4차 #1: 비밀번호 성공 → 세션 대신 2단계 티켓 */
+        return finishLogin(res, uid, tid, email, null, false);
+    }
+
+    /** 보안 4차 #1: 2단계까지 끝난 운영자 로그인의 공통 마무리(Node finishLogin과 같음) */
+    Map<String, Object> finishLogin(HttpServletResponse res, String uid, String tid, String email, String detail, boolean totpSetup) throws Exception {
         mapper.updateLastLogin(uid); mapper.deleteExpiredSessions(uid);
         newSession(res, uid, tid);
-        tx.audit(tid, email, "login", null);
-        return meOut(mapper.selectMe(uid, email));
+        tx.audit(tid, email, "login", detail);
+        Map<String, Object> o = meOut(mapper.selectMe(uid, email)); if (totpSetup) o.put("totpSetup", true); return o;
     }
+    @Override public Map<String, Object> loginMfa(JsonNode b, HttpServletRequest req, HttpServletResponse res) throws Exception {
+        Map<String, Object> v = mfa.verify(b, req, res);
+        com.fasterxml.jackson.databind.node.ObjectNode d = DdWeb.JSON.createObjectNode().put("mfa", (String) v.get("kind")); String via = (String) v.get("via"); if (!via.isEmpty()) d.put("via", via);
+        return finishLogin(res, (String) v.get("uid"), (String) v.get("tid"), (String) v.get("email"), d.toString(), Boolean.TRUE.equals(v.get("totpSetup")));
+    }
+    @Override public Map<String, Object> loginMfaResend(JsonNode b, HttpServletRequest req) throws Exception { return mfa.resend(b, req); }
+    @Override public Map<String, Object> mfaGet(Map<String, Object> a) throws Exception { return mfa.get(a); }
+    @Override public Map<String, Object> mfaPost(Map<String, Object> a, JsonNode b) throws Exception { return mfa.post(a, b); }
+    @Override public Map<String, Object> mfaDelete(Map<String, Object> a, JsonNode b) throws Exception { return mfa.delete(a, b); }
 
     @Override public Map<String, Object> logout(HttpServletRequest req, HttpServletResponse res) throws Exception {
         String t = web.sidToken(req); if (t != null) mapper.deleteSession(DdCrypto.sha(t));
