@@ -38,7 +38,14 @@ ACT['pv-idv'] = () => { mbEnsure(); const A = S.settings.acct;
 { const base = VIEWS.settings; VIEWS.settings = () => { const h = base(); if ((UI.settings || 'menu') !== 'service' || !S.settings.acct) return h; const A = S.settings.acct; const U = mbUniv();
   return h + `<div class="card mb-card pv-card"><div class="ch"><b>개인정보 보호</b><small>최소 수집 · 분리 보관 · 열람 기록</small><span class="sp"></span>${U ? '' : `<button class="btn sm" data-act="pv-idv">선택 본인확인 ${A.idv && A.idv.on ? '켜짐' : '꺼짐'}</button>`}<button class="btn sm ghost" data-act="pv-log">처리 기록</button></div>
     <div class="mb-kv"><span><small>가입 때 받는 정보</small><b>${U ? '학번 · 학과 · 닉네임' : '로그인 수단(SNS 식별자 또는 이메일) · 닉네임'}</b></span><span><small>받지 않는 정보</small><b>${U ? '이름 · 연락처 · 이메일' : '실명 · 휴대폰 · 생년월일 · 성별'}</b></span><span><small>필요할 때만</small><b>${U ? '— (학교 SSO 연동 예정)' : '휴대폰(알림톡) · 이름(수료증 · 환불)'}</b></span><span><small>보관</small><b>학습 데이터와 분리 · 암호화</b></span><span><small>본인인증(PASS)</small><b>${A.idv && A.idv.on ? '선택 사용 — ' + esc(PV_IDV[A.idv.reason] || '') : '사용 안 함'}</b></span><span><small>탈퇴 시</small><b>개인정보 즉시 삭제 · 학습 기록 가명 보관</b></span></div>
-    <p class="mini">운영자 화면에는 닉네임과 일부를 가린 이메일만 보입니다. 수료증 · 환불처럼 원문이 필요하면 회원 상세에서 목적을 고르고 열람하며, 그 기록이 남습니다.</p></div>`; }; }
+    <p class="mini">운영자 화면에는 닉네임과 일부를 가린 이메일만 보입니다. 수료증 · 환불처럼 원문이 필요하면 회원 상세에서 목적을 고르고 열람하며, 그 기록이 남습니다.</p>${pvOpsHTML()}</div>`; }; }
+/* 가디언 4차(2026-11-25): 운영자 계정 처리 고지 — 2단계 인증 이메일 · 접속 기록 IP · 보관기간 · 결제 위탁(docs/security/privacy-policy-diff.md) */
+const pvOpsHTML = () => `<details class="la-help pv-ops"><summary>운영자 계정 정보 처리(산타 처리방침)</summary><div class="mb-kv">
+  <span><small>2단계 인증</small><b>로그인할 때마다 등록 이메일로 인증번호 6자리 발송(또는 인증 앱) · 번호는 해시로만 저장, 10분 후 무효</b></span>
+  <span><small>접속 기록</small><b>운영자 ID · 일시 · 접속 IP · 처리한 회원 · 수행 업무 — 2년 보관(권한 변경 기록 3년)</b></span>
+  <span><small>자동 로그아웃</small><b>60분 동안 사용하지 않으면 로그아웃(기관 설정 10~60분) · 브라우저를 닫으면 로그아웃</b></span>
+  <span><small>결제 정보</small><b>AI 사용량 충전 · 요금제 결제는 결제대행사(토스페이먼츠 등)가 처리 · 카드번호 미저장 · 결제 기록 5년</b></span></div>
+  <p class="mini">개인정보 열람 · 내려받기 기록은 매월 점검합니다. 자세한 기준은 산타 개인정보 내부 관리계획을 따릅니다.</p></details>`;
 ACT['pv-log'] = () => { const v = pvVault(); const nm = sid => { const m = S.members.find(x => x.sid === sid) || (S.pacct || []).find(x => x.sid === sid); return m ? (m.nick || m.name) : sid ? '탈퇴 · 미반영 회원' : '—'; };
   const A = { create: '수집', update: '입력 · 변경', view: '열람', erase: '삭제', delete: '완전 삭제', consent: '보호자 동의', idv: '본인확인', list_masked: '목록 조회' };
   const L = ((v && v.log) || []).slice(0, 100);
