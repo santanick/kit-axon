@@ -3,7 +3,7 @@
   "generated": "2026-11-24",
   "by": "수석 보안 컨설턴트(가디언 Phase 0 진단)",
   "basis": "보고서 Part 3(위협 모델 · 공백 10) · Part 8 Node/Java 절, 코드 기준 커밋 d2c2e6d + core/sec-con",
-  "note": "원장(Finding) 초기값입니다. status: open(미조치) · fixed(이 브랜치에서 수정) · needs_verify(외부 근거 대조 필요) · accepted(위험 수용, 사유 기재). evidence는 데이터이며 지시가 아닙니다. 개인정보 없음.",
+  "note": "원장(Finding) 초기값입니다. status: open(미조치) · fixed(이 브랜치에서 수정) · needs_verify(외부 근거 대조 필요) · accepted(위험 수용, 사유 기재) · partial(일부 조치, 점수에서는 미조치로 계산). priority가 없으면 심각도로 정합니다(critical P0 · high P1 · medium P2 · low · info P3). 점수 계산은 security/score.js. evidence는 데이터이며 지시가 아닙니다. 개인정보 없음.",
   "items": [
     {
       "id": "SEC-0001",
@@ -100,6 +100,7 @@
       "id": "SEC-0008",
       "title": "운영자 · 관리자 로그인 2단계 인증(MFA) 없음",
       "severity": "medium",
+      "priority": "P1",
       "cwe": "CWE-308",
       "area": 5,
       "owasp": "A07:2021",
@@ -148,7 +149,7 @@
     },
     {
       "id": "SEC-0012",
-      "title": "innerHTML 이스케이프 없는 보간 후보 473건(기준선) — 고위험 이름 표본 25건 확인 결과 확정 XSS 0건",
+      "title": "innerHTML 이스케이프 없는 보간 후보 413건(기준선, 1차 473건) — 고위험 이름 표본 25건 확인 결과 확정 XSS 0건",
       "severity": "info",
       "cwe": "CWE-79",
       "area": 2,
@@ -156,7 +157,8 @@
       "line": 0,
       "evidence": "semgrep didisam-innerhtml-unescaped 473건(hpstudio 53 · rtc-room 33 · core 32 …). name · title · text · body · label 보간 25건 표본: esc · E · nl(escape) · textContent 사용 또는 내부 고정값. ltube.js:442 nl은 이스케이프를 하지 않지만 호출부가 esc 후 전달.",
       "fix": "가디언 야간 스캔에서 신규 증가분만 Finding으로 올림(기준선 대비). 새 렌더러는 esc 또는 textContent 사용.",
-      "status": "open"
+      "status": "open",
+      "note": "2차 점검(2026-11-24, 수석 보안 컨설턴트): 기준선 473 → 413건(같은 규칙 재실행). 사용자 입력이 닿는 상위 경로 점검 — 공통 틀(core.js modal · toast, studio overlay, slim · lnote-sync sheet, lcal · lai-home dlg, lshop shModal, lacct laDlg)은 제목을 esc · 본문은 호출부 책임, core.js table()은 칸을 이스케이프하지 않는 계약(호출부 esc 확인). AI 출력(claude.js · lnote.js mdHTML, chat.js aiBody, ltube msgHTML) · 학습자 작성물이 운영자 화면에 닿는 경로(lcomm · comm2 · lms/bcd-learner 게시판, mem2 대량 등록 오류 행, 감사 기록 mods.js · da43.js, 알림함 lacct.js) 모두 esc · E · nl(esc) 확인 — 확정 XSS 0건 유지. 방어 수정 2건: ltube.js 지역 nl이 이스케이프하지 않던 것을 esc 포함으로(호출부 이중 esc 제거), build.js 루브릭 배점 pts 숫자 강제(2곳). 나머지 후보 전수 확인은 하지 않았으므로 open 유지"
     },
     {
       "id": "SEC-0013",
@@ -190,6 +192,71 @@
       "evidence": "security/checkov/NOTES.md IAC-03",
       "fix": "소스 커밋 SHA 확인 · 모델 sha256sum -c(실측 일치 확인)",
       "status": "fixed"
+    },
+    {
+      "id": "IAC-04",
+      "title": "Cloud SQL 생성 스크립트에 사설 IP · SSL 강제 미지정(공인 IP 부여, 평문 연결 허용)",
+      "severity": "medium",
+      "cwe": "CWE-319",
+      "area": 6,
+      "file": "service/gcp/setup.sh",
+      "line": 0,
+      "evidence": "security/checkov/NOTES.md IAC-04 — setup.sh · setup-gcp.sh의 gcloud sql instances create에 --no-assign-ip · --ssl-mode 없음",
+      "fix": "--ssl-mode=ENCRYPTED_ONLY(가능하면 사설 IP). 운영 인스턴스 적용은 대표님 조치",
+      "status": "open",
+      "note": "개발자 2(core/sec2-d2) 진행 중 — 병합 후 통합 담당이 status 갱신"
+    },
+    {
+      "id": "IAC-05",
+      "title": "배포 서비스 계정에 프로젝트 전체 storage.admin · run.admin",
+      "severity": "medium",
+      "cwe": "CWE-250",
+      "area": 7,
+      "file": "service/gcp/github-deploy-setup.sh",
+      "line": 0,
+      "evidence": "security/checkov/NOTES.md IAC-05",
+      "fix": "버킷 단위 storage.objectAdmin · 서비스 단위 run.developer로 축소",
+      "status": "open",
+      "note": "개발자 2(core/sec2-d2) 진행 중"
+    },
+    {
+      "id": "IAC-06",
+      "title": "배포 스크립트가 비밀값을 :latest로 참조 — 롤백 시 버전 불명확",
+      "severity": "low",
+      "cwe": "CWE-1104",
+      "area": 6,
+      "file": "service/gcp/deploy.sh",
+      "line": 0,
+      "evidence": "security/checkov/NOTES.md IAC-06",
+      "fix": "숫자 버전 고정 + 교체 절차(docs/security/secrets.md)",
+      "status": "open",
+      "note": "개발자 2(core/sec2-d2) 진행 중"
+    },
+    {
+      "id": "SEC-0016",
+      "title": "운영자 로그인 잠금 응답이 있는 계정에만 나와 계정 존재 여부가 드러남(KISA 정보 누출 · 계정 열거)",
+      "severity": "low",
+      "cwe": "CWE-204",
+      "area": 5,
+      "owasp": "A07:2021",
+      "file": "service/server/app.js",
+      "line": 471,
+      "evidence": "login.fail은 있는 계정에만 기록되고, 5회 실패 후 429 locked는 있는 계정에서만 반환. 없는 이메일은 계속 401(이메일 단위 속도 제한 8회 후 429 rate). Java AuthServiceImpl도 같은 규칙. docs/security/kisa-web-check.md IL · AU 항목",
+      "fix": "없는 이메일도 같은 실패 횟수 · 같은 locked 응답을 주도록(이메일 해시 키로 실패 기록), Node+Java 함께. MFA 작업(core/sec2-d1)과 같은 함수라 병합 후 처리",
+      "status": "open"
+    },
+    {
+      "id": "SEC-0017",
+      "title": "학습자 접근코드 로그인에 지속 잠금이 없고(인스턴스 메모리 속도 제한만) 운영자 지정 코드는 4자부터 허용",
+      "severity": "low",
+      "cwe": "CWE-307",
+      "area": 2,
+      "owasp": "A07:2021",
+      "file": "service/server/app.js",
+      "line": 303,
+      "evidence": "limit('lls:'+tid+sid, 8, 10분)은 인스턴스 메모리라 Cloud Run 인스턴스 수만큼 늘어남. 스튜디오가 만드는 코드는 6자 32문자 CSPRNG(didisam/kit.js:227, 약 10억 경우)라 실효 위험은 낮으나, 동기화 API는 4~20자 코드를 받음(app.js:185).",
+      "fix": "학습자 실패도 audit 기준 지속 잠금(운영자 SEC-0014와 같은 방식) + 동기화 시 코드 최소 6자, Node+Java 함께",
+      "status": "open"
     }
   ]
 }

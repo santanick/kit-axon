@@ -334,7 +334,7 @@ function edSave() {
   if (it.type === 'video' && it.src === 'library' && it.lib) { const l = S.lib.find(x => x.id === it.lib); if (l) { l.cls = [...new Set([...(l.cls || []), ED.c.id])]; l.used = l.cls.length; it.url = 'lib:' + l.id; } }
   if (it.type === 'video' && it.src === 'ai') { if (!(it.ai?.scenes || []).length) { toast('AI 대본 · 슬라이드를 먼저 만드세요.', 'warn'); return false; } it.url = 'ai:' + it.id; }
   delete it.t; ED.c.curriculum[ED.i] = it; logAudit(`${ED.c.name} 항목 편집 — ${it.title}`); save(); ED = null; setTimeout(render); }
-function rubricTable(rb) { if (!rb) return ''; return `<div class="rubt">${table(['기준', '배점', '우수', '보통', '미흡'], rb.criteria.map(c => [`<b>${esc(c.n)}</b>`, c.pts, esc(c.lv[0]), esc(c.lv[1]), esc(c.lv[2])]))}</div>`; }
+function rubricTable(rb) { if (!rb) return ''; return `<div class="rubt">${table(['기준', '배점', '우수', '보통', '미흡'], rb.criteria.map(c => [`<b>${esc(c.n)}</b>`, +c.pts || 0, esc(c.lv[0]), esc(c.lv[1]), esc(c.lv[2])]))}</div>`; }
 
 /* ═════════ AI 과정 설계 마법사 ═════════ */
 let DS = null;
@@ -379,7 +379,7 @@ ACT.grade = el => {
   const c = C(el.dataset.c), id = el.dataset.v, p = c.prog[id]; const rb = S.rubrics.find(r => r.id === p.ai?.rb) || rubricOf(c); const ai = p.ai;
   const w = modal(`채점 — ${M(id).name} · ${c.name}`, `<div class="subm"><small>제출물 · ${esc(p.subAt)}</small><p>${esc(p.sub || '(제출 파일 · 링크)').replace(/\n/g, '<br>')}</p></div>
     <div class="bar2"><b>${esc(rb.name)}</b><span class="sp"></span><button class="btn sm ink" data-act="g-ai" data-c="${c.id}" data-v="${id}">${ic('spark', 14)} ${ai ? 'AI 다시 평가' : 'AI 평가'}</button></div>
-    <div class="rg">${rb.criteria.map((cr, k) => `<div class="rgr"><div><b>${esc(cr.n)}</b> <small>/${cr.pts}</small>${ai ? `<p class="why">${ic('spark', 12)} ${esc(ai.crit[k].why)}</p>` : ''}</div><div class="lvs">${cr.lv.map((d, j) => `<label title="${esc(d)}"><input type="radio" name="g${k}" value="${j}" ${ai && ai.crit[k].li === j ? 'checked' : ''} data-pts="${Math.round(cr.pts * [1, .7, .4][j])}"><span>${['우수', '보통', '미흡'][j]}<small>${Math.round(cr.pts * [1, .7, .4][j])}</small></span></label>`).join('')}</div></div>`).join('')}</div>
+    <div class="rg">${rb.criteria.map((cr, k) => `<div class="rgr"><div><b>${esc(cr.n)}</b> <small>/${+cr.pts || 0}</small>${ai ? `<p class="why">${ic('spark', 12)} ${esc(ai.crit[k].why)}</p>` : ''}</div><div class="lvs">${cr.lv.map((d, j) => `<label title="${esc(d)}"><input type="radio" name="g${k}" value="${j}" ${ai && ai.crit[k].li === j ? 'checked' : ''} data-pts="${Math.round(cr.pts * [1, .7, .4][j])}"><span>${['우수', '보통', '미흡'][j]}<small>${Math.round(cr.pts * [1, .7, .4][j])}</small></span></label>`).join('')}</div></div>`).join('')}</div>
     <div class="gsum">합계 <b id="gTot">${ai ? ai.total : 0}</b>점 ${ai ? `<small class="mini">AI 제안 ${ai.total}점</small>` : ''}</div>
     <label class="fl">피드백<textarea name="f" rows="3">${esc(ai?.fb || '')}</textarea></label><p class="mini">AI 평가는 루브릭 기준의 초안입니다. 최종 판정은 운영자가 합니다. 통과 기준 70점.</p>`,
     [{ id: 'c', label: '취소' }, { id: 'fail', label: '미통과', kind: 'red', run: w => fin(w, 'failed') }, { id: 'ret', label: '재제출 요청', run: w => fin(w, 'returned') }, { id: 'ok', label: '통과', kind: 'pri', run: w => fin(w, 'graded') }], true);
