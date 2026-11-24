@@ -25,6 +25,7 @@ MAILENV=""
 if has smtp-url; then SEC="$SEC,SMTP_URL=didisam-mail-smtp-url:latest"; MAILENV=",MAIL_PROVIDER=smtp"
 elif has webhook-url; then SEC="$SEC,MAIL_WEBHOOK_URL=didisam-mail-webhook-url:latest"; MAILENV=",MAIL_PROVIDER=webhook"; has webhook-token && SEC="$SEC,MAIL_WEBHOOK_TOKEN=didisam-mail-webhook-token:latest"; fi
 [ -n "$MAILENV" ] && has from && SEC="$SEC,MAIL_FROM=didisam-mail-from:latest"
+gcloud secrets describe GUARD_TOKEN --project "$PROJECT" >/dev/null 2>&1 && SEC="$SEC,GUARD_TOKEN=GUARD_TOKEN:latest" # 가디언 서비스 토큰(guardian-setup.sh) — 있으면 함께 고정
 # 보안 점검 IAC-06(가디언 2차): 비밀값은 :latest가 아니라 배포 시점의 숫자 버전으로 고정한다 — 리비전마다 어떤 값을 썼는지 남고,
 #   이전 리비전으로 되돌리면 그때의 비밀값 버전으로 정확히 돌아간다. 값은 출력하지 않고 이름:버전만 보여 준다.
 #   교체 절차(docs/security/secrets.md): ① gcloud secrets versions add <이름> --data-file=- → ② 이 스크립트로 재배포(새 번호 고정)
