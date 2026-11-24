@@ -17,6 +17,7 @@ public class AiController {
     @PostMapping("/ai/messages") public Object messages(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception {
         return aiService.messages(authService.need(req), body);
     }
+    @PostMapping("/ai/tool-confirm") public Map<String, Object> toolConfirm(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return aiService.toolConfirm(authService.needStaff(req), body); }
     @GetMapping("/ai/usage") public Map<String, Object> usage(HttpServletRequest req) throws Exception { return aiService.usage(authService.need(req)); }
     @PostMapping("/ai/topup") public Map<String, Object> topup(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return aiService.topup(authService.needOwner(req), body); }
     @PostMapping("/ai/topup/confirm") public Map<String, Object> topupConfirm(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return aiService.topupConfirm(authService.needOwner(req), body); }

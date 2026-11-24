@@ -15,4 +15,6 @@ public interface SecService {
     boolean keyBlocked(String tid);
     boolean egressBlocked(String tid);
     int tick() throws Exception;
+    /** 체크리스트 11: 코드가 낸 보안 신호(MCP 도구 목록 해시 변경 → '기능 끄기' 범주)를 가디언 감사(해시 체인)에 남긴다(Node sec.signal) */
+    void signal(String action, String target, com.fasterxml.jackson.databind.JsonNode detail);
 }

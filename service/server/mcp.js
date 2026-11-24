@@ -6,12 +6,13 @@
    · 쓰기 도구는 기관 상태를 낙관적 잠금(rev)으로 갱신하고 감사 기록을 남긴다. 데이터룸 정책 room.egress.mcp === false면 거부 */
 const crypto = require('node:crypto');
 const { inTenant } = require('./db');
+const { mcpPin } = require('./aitools');
 
 const PROTO = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const KEY_RE = /^dds_[A-Za-z0-9_-]{40}$/;
 const MAX_KEYS = 20;
 
-function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, version = '16.0', blocked = null }) {
+function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, version = '16.0', blocked = null, onDrift = null, pinHash = '' }) {
   const fp = key => crypto.createHmac('sha256', 'mcp|' + pepper).update(key).digest('hex');
 
   /* ── 키 관리(스튜디오 세션 · 정운영자) ── */
@@ -90,7 +91,11 @@ function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, versi
   ];
 
   const rpcErr = (id, code, message) => ({ jsonrpc: '2.0', id: id ?? null, error: { code, message } });
+  /* 체크리스트 11: 도구 목록 해시가 허용목록 고정값과 다르면 연결을 멈추고 '기능 끄기' 신호를 한 번 남긴다(aitools.MCP_ALLOW) */
+  const PIN = mcpPin('didisam-studio', TOOLS, pinHash); let drift = false;
   async function handle(req, res, send) {
+    if (!PIN.ok) { if (!drift) { drift = true; try { onDrift && onDrift({ id: 'didisam-studio', want: PIN.want, got: PIN.got }); } catch (e) { /* 신호 실패는 차단에 영향 없음 */ } }
+      return send(res, 503, rpcErr(null, -32003, '도구 목록이 허용목록 해시와 달라 연결을 멈췄습니다. 보안 재검토 후 다시 열립니다.')); }
     if (req.method === 'GET' || req.method === 'DELETE') return send(res, 405, { error: 'method', message: '이 서버는 POST(JSON 응답)만 지원합니다.' }, { allow: 'POST' });
     if (req.method !== 'POST') return send(res, 405, 'method');
     const a = await keyAuth(req);
