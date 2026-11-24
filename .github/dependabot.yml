@@ -1,0 +1,63 @@
+# 디디쌤 보안 업데이트(Dependabot) — 그룹화 · 열린 PR 상한 2 · 쿨다운. 병합은 PR 점검 통과 + 사람 승인.
+# 가디언 GitHub 상한(자동 PR 하루 2건)과 맞추기 위해 생태계마다 PR 상한을 낮게 둡니다.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /service/server
+    schedule: { interval: weekly, day: tuesday, time: "10:00", timezone: Asia/Seoul }
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      npm-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+        patterns: ["*"]
+    labels: [security, dependencies]
+    commit-message: { prefix: "deps(npm)" }
+
+  - package-ecosystem: maven
+    directory: /service-egov
+    schedule: { interval: weekly, day: tuesday, time: "10:00", timezone: Asia/Seoul }
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    groups:
+      maven-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      maven-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+        patterns: ["*"]
+    labels: [security, dependencies]
+    commit-message: { prefix: "deps(maven)" }
+
+  - package-ecosystem: docker
+    directories: [/service, /service/gcp]
+    schedule: { interval: monthly, timezone: Asia/Seoul }
+    open-pull-requests-limit: 2
+    cooldown: { default-days: 14 }
+    groups:
+      base-images:
+        patterns: ["*"]
+    labels: [security, dependencies]
+    commit-message: { prefix: "deps(docker)" }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly, timezone: Asia/Seoul }
+    open-pull-requests-limit: 2
+    cooldown: { default-days: 14 }
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: [security, dependencies]
+    commit-message: { prefix: "deps(actions)" }
