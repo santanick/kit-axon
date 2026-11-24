@@ -73,7 +73,7 @@ jobs:
       - name: 가디언 시험(네트워크 없음)
         run: GUARD_OFFLINE=1 node --test service/security/test/*.test.js
       - name: AI 레드팀(인젝션 · 경계 · 가림 · 유출, 키 불필요)
-        run: node security/redteam/run.js
+        run: node security/redteam/run.js && node --test security/redteam/test/*.test.js
       - name: AIBOM 잠금 대조(모델 · MCP 도구 · 플러그인 · 프롬프트 해시) — 바뀌면 같은 PR에서 --update-lock
         run: node service/security/guard.js aibom --check --out aibom.cdx.json
       - name: SBOM × OSV scan(P0이면 실패)
