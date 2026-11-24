@@ -1,5 +1,5 @@
 'use strict';
-/* 가디언 4차(d3) 대조: 접속기록 ip(#5) · 분기 접근권한 검토(#7) · 내려받기 통제(#14) · 국외 로그인 차단 설정(#15)
+/* 가디언 4차(d3) 대조: 접속기록 ip(#5) · 분기 접근권한 검토(#7) · 내려받기 통제(#14) · 국외 로그인 차단 설정(#15) · 화면 CSV 기록 POST /api/export/log(d6)
    Node와 Java에 같은 시나리오를 돌려 상태코드 · 오류 코드 · 응답 키 · audit 내용을 비교한다(보관 파기 #10 · #11은 같은 DB 함수 records_purge — service/test/records.test.js).
    사용: DATABASE_URL=… node service-egov/test/contract-records.js http://127.0.0.1:9831 http://127.0.0.1:9832
    두 서버 환경: test/env.sh + SIGNUP_CODE=C0DE · TRUST_PROXY_HOPS=1 · MFA_OFF=1 */
@@ -30,7 +30,11 @@ async function run(U, tag) {
   R.geoOn = await call('A', 'POST', '/api/org/sec/geo', { krOnly: true }); R.geoGet = await call('S', 'GET', '/api/org/sec/geo');
   R.facNo = await call('A', 'GET', '/api/fac/export'); R.facOk = await call('A', 'GET', '/api/fac/export?reason=%EC%A0%95%EC%82%B0');
   R.ledNo = await call('S', 'GET', '/api/ledger/export'); R.ledRaw = await call('S', 'GET', '/api/ledger/export?reason=%EC%A0%95%EC%82%B0&raw=1');
-  R.expAudit = (await q1("select detail from audit_log where tenant_id = $1 and action = 'export'", [tid], tid)).map(r => r.detail);
+  /* d6 화면 CSV 기록 */
+  R.logAnon = await call('X', 'POST', '/api/export/log', { kind: 'lms_a_roster', n: 1, reason: '점검' }); R.logNo = await call('A', 'POST', '/api/export/log', { kind: 'lms_a_roster', n: 3 });
+  R.logRaw = await call('S', 'POST', '/api/export/log', { kind: 'lms_a_roster', n: 3, reason: '점검', raw: true }); R.logKind = await call('A', 'POST', '/api/export/log', { kind: '<x>', n: 3, reason: '점검' });
+  R.logSub = await call('S', 'POST', '/api/export/log', { kind: 'mods_grades', n: 4, reason: '학사 점검' }); R.logOw = await call('A', 'POST', '/api/export/log', { kind: 'milrw_payout', n: '2', reason: '급여 정산', raw: true });
+  R.expAudit = (await q1("select detail from audit_log where tenant_id = $1 and action = 'export' order by id", [tid], tid)).map(r => r.detail);
   return R;
 }
 
@@ -49,7 +53,11 @@ async function run(U, tag) {
     ok(R.geoSub.st === 403 && R.geoBad.st === 400 && R.geoBad.err === 'krOnly' && JSON.stringify(R.geoOn.j) === '{"ok":true,"krOnly":true}' && R.geoGet.j.krOnly === true, `${T} krOnly 설정`);
     ok(R.facNo.st === 400 && R.facNo.err === 'export_reason' && R.facOk.st === 200 && /csv/.test(R.facOk.ct), `${T} 시설 내려받기 ${R.facNo.st}/${R.facOk.st}`);
     ok(R.ledNo.err === 'export_reason' && R.ledRaw.st === 403 && R.ledRaw.err === 'export_raw', `${T} 원장 내려받기 ${R.ledNo.err}/${R.ledRaw.err}`);
-    ok(R.expAudit.length === 1 && JSON.stringify(R.expAudit[0]) === '{"n":0,"raw":false,"kind":"fac","reason":"정산"}', `${T} audit export ${JSON.stringify(R.expAudit)}`);
+    ok(R.expAudit.length === 3 && JSON.stringify(R.expAudit[0]) === '{"n":0,"raw":false,"kind":"fac","reason":"정산"}', `${T} audit export ${JSON.stringify(R.expAudit)}`);
+    ok(R.logAnon.st === 401 && R.logNo.st === 400 && R.logNo.err === 'export_reason' && R.logNo.j.message === '개인정보가 포함된 파일을 내려받으려면 사유를 입력하십시오.', `${T} 화면 CSV 사유 ${R.logNo.st}/${R.logNo.err}`);
+    ok(R.logRaw.st === 403 && R.logRaw.err === 'export_raw' && R.logRaw.j.message === '원본(가리지 않은) 내려받기는 정운영자만 할 수 있습니다.' && R.logKind.st === 400 && R.logKind.err === 'export_kind' && R.logKind.j.message === '내려받기 종류가 올바르지 않습니다.', `${T} 화면 CSV 원본 · 종류`);
+    ok(JSON.stringify(R.logSub.j) === '{"ok":true,"raw":false}' && JSON.stringify(R.logOw.j) === '{"ok":true,"raw":true}', `${T} 화면 CSV 응답 ${JSON.stringify(R.logSub.j)} ${JSON.stringify(R.logOw.j)}`);
+    ok(JSON.stringify(R.expAudit.slice(1)) === JSON.stringify([{ n: 4, raw: false, via: 'client', kind: 'mods_grades', reason: '학사 점검' }, { n: 2, raw: true, via: 'client', kind: 'milrw_payout', reason: '급여 정산' }]), `${T} 화면 CSV audit ${JSON.stringify(R.expAudit.slice(1))}`);
   }
   const [n, j] = out; for (const k of Object.keys(n)) if (n[k] && typeof n[k].st === 'number') ok(n[k].st === j[k].st && n[k].err === j[k].err, `대조 ${k}: Node ${n[k].st}/${n[k].err} · Java ${j[k].st}/${j[k].err}`);
   console.log(`contract-records: ${pass} 통과 · ${fail} 실패`); await pool.end(); process.exit(fail ? 1 : 0);
