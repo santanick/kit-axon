@@ -29,6 +29,8 @@ FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d
 ENV NODE_ENV=production PORT=8080 PUBLIC_DIR=/app/public
 # v32 미디어 파이프라인: ffmpeg(HLS 변환 · 음성 추출) + whisper.cpp(STT). 저장소는 MEDIA_STORE(db 기본 · disk · gcs)
 RUN apk add --no-cache ffmpeg libstdc++ libgomp
+# 가디언(보고서 8-4): Node 11-11 보안 릴리스 22.23.5 이상 확인용 — 빌드 기록에 버전을 남긴다(가디언 주간 점검이 대조)
+RUN echo "node $(node -v)"
 COPY --from=whisper /opt/whisper /opt/whisper
 ENV PATH=/opt/whisper:$PATH MEDIA_STT_CMD=/app/server/lms/media/stt-whispercpp.sh MEDIA_STT_ENGINE=whisper.cpp-base WHISPER_MODEL=/opt/whisper/ggml-base.bin MEDIA_TMP=/tmp
 WORKDIR /app
