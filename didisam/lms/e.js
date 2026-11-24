@@ -238,7 +238,7 @@
         answers[q.q_id] = q.kind === 'numeric' ? (ok ? q.answer.value : 50) : q.kind === 'short' ? (ok ? q.answer[0] : '모름') : q.kind === 'tf' ? (ok ? q.answer : [q.answer[0] === 't' ? 'f' : 't']) : (ok ? q.answer : [q.choices[q.choices.length - 1].id]);
         marks[q.q_id] = { score: ok ? q.points : 0, ok, auto: true }; if (ok) s += q.points; q.attempts_n++; if (ok) q.correct_n++; });
       const ip = `10.20.${30 + h % 8}.${h % 200 + 10}`; const t = { attempt_id: rid(), exam_id: ex1.exam_id, person_id: p.person_id, no: 1, status: pend ? 'submitted' : 'graded', started_at: iso(t0), deadline_at: iso(t0 + 20 * 6e4), submitted_at: iso(t0 + (12 + h % 7) * 6e4), auto_closed: false,
-        auto_score: s, score: pend ? null : s, max_score: mx, ip_start: ip, ip_last: j === 2 ? '10.99.1.7' : ip, ip_changed: j === 2, ip_log: [{ ip, at: iso(t0), ev: 'start' }], items, answers, marks };
+        auto_score: s, score: pend ? null : s, max_score: mx, ip_start: ip, ip_last: j === 2 ? '203.0.113.7' : ip, ip_changed: j === 2, ip_log: [{ ip, at: iso(t0), ev: 'start' }], items, answers, marks };
       X.atts.push(t); if (!pend) gradePut(sec, it1, p.person_id, r2(100 * s / mx)); });
     /* 성적: 수업계획서 비율(중간 30 · 기말 30 · 과제 20 · 퀴즈 10 · 출석 10) — 과제 · 퀴즈는 위 자동 항목에 비율을 준다 */
     X.items.filter(i => i.section_id === sec).forEach(i => { i.weight_pct = i.source_ref === 'asg:' + a1.asg_id ? 20 : i.source_ref === 'exam:' + ex1.exam_id ? 10 : 0; i.sort = i.weight_pct ? 20 : 60; });

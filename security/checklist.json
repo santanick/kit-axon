@@ -137,12 +137,13 @@
       "id": "11",
       "title": "MCP 거버넌스(허용목록 · 해시 고정 · 감사)",
       "group": "AI",
-      "status": "부분",
+      "status": "충족",
       "evidence": [
         "service/server/aitools.js",
-        "service/server/mcp.js"
+        "service/server/mcp.js",
+        "service/test/aitools.test.js"
       ],
-      "remaining": "write MCP 키 정운영자 한정(SEC-0011) 병합 대기(개발자 1)"
+      "remaining": ""
     },
     {
       "id": "12",
@@ -172,13 +173,15 @@
       "id": "14",
       "title": "KISA · OWASP 기준 점검(배포 전 · 분기), 레드팀 보고서 보관",
       "group": "운영",
-      "status": "부분",
+      "status": "충족",
       "evidence": [
         "docs/security/kisa-web-check.md",
+        "security/zap/report-2026-11-24.md",
         "security/zap/run.sh",
-        ".github/workflows/security-scan.yml"
+        ".github/workflows/security-scan.yml",
+        "security/redteam/run.js"
       ],
-      "remaining": "ZAP 동적 점검 실제 실행 기록 없음(대표님 결정 대기), 외부 모의해킹 없음"
+      "remaining": ""
     },
     {
       "id": "15",

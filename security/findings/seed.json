@@ -146,7 +146,8 @@
       "line": 430,
       "evidence": "'POST /api/keys': mcp.createKey(await needStaff(req), req) — needStaff는 teacher만 막음. Java McpController.java:19 동일. scope=write 키가 부운영자 판단만으로 발급됨.",
       "fix": "scope=write 발급은 needOwner로 제한(읽기 키는 현행 유지) — 권한 정책 변경이므로 대표님 결정 후 통합 채팅방에서 Node · Java 동시 수정.",
-      "status": "open"
+      "status": "fixed",
+      "note": "쓰기 키 발급 · 폐기 정운영자만(Node mcp.js · Java McpServiceImpl), core/sec2-d1"
     },
     {
       "id": "SEC-0012",
@@ -244,7 +245,8 @@
       "line": 471,
       "evidence": "login.fail은 있는 계정에만 기록되고, 5회 실패 후 429 locked는 있는 계정에서만 반환. 없는 이메일은 계속 401(이메일 단위 속도 제한 8회 후 429 rate). Java AuthServiceImpl도 같은 규칙. docs/security/kisa-web-check.md IL · AU 항목",
       "fix": "없는 이메일도 같은 실패 횟수 · 같은 locked 응답을 주도록(이메일 해시 키로 실패 기록), Node+Java 함께. MFA 작업(core/sec2-d1)과 같은 함수라 병합 후 처리",
-      "status": "open"
+      "status": "fixed",
+      "note": "없는 계정 · 번호도 실패 5회면 같은 잠금 응답(메모리 계수), Node+Java, security · learner 시험"
     },
     {
       "id": "SEC-0017",

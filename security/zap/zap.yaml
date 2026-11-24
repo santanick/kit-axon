@@ -1,0 +1,143 @@
+env:
+  contexts:
+  - excludePaths: []
+    name: baseline
+    urls:
+    - https://didisam-studio-44050212708.asia-northeast3.run.app
+  parameters:
+    failOnError: true
+    progressToStdout: false
+jobs:
+- parameters:
+    enableTags: false
+    maxAlertsPerRule: 10
+  type: passiveScan-config
+- parameters:
+    maxDuration: 2
+    url: https://didisam-studio-44050212708.asia-northeast3.run.app
+  type: spider
+- parameters:
+    maxDuration: 0
+  type: passiveScan-wait
+- parameters:
+    format: Long
+    summaryFile: /home/zap/zap_out.json
+  rules:
+  - action: FAIL
+    customMessage: ''
+    id: 10010
+  - action: FAIL
+    customMessage: ''
+    id: 10011
+  - action: FAIL
+    customMessage: ''
+    id: 10054
+  - action: WARN
+    customMessage: ''
+    id: 90033
+  - action: FAIL
+    customMessage: ''
+    id: 10020
+  - action: FAIL
+    customMessage: ''
+    id: 10021
+  - action: FAIL
+    customMessage: ''
+    id: 10035
+  - action: FAIL
+    customMessage: ''
+    id: 10038
+  - action: WARN
+    customMessage: ''
+    id: 10055
+  - action: WARN
+    customMessage: ''
+    id: 10063
+  - action: WARN
+    customMessage: ''
+    id: 90004
+  - action: FAIL
+    customMessage: ''
+    id: 10098
+  - action: WARN
+    customMessage: ''
+    id: 10017
+  - action: FAIL
+    customMessage: ''
+    id: 10003
+  - action: WARN
+    customMessage: ''
+    id: 10036
+  - action: FAIL
+    customMessage: ''
+    id: 10037
+  - action: FAIL
+    customMessage: ''
+    id: 90022
+  - action: FAIL
+    customMessage: ''
+    id: 10023
+  - action: FAIL
+    customMessage: ''
+    id: 10024
+  - action: FAIL
+    customMessage: ''
+    id: 10062
+  - action: IGNORE
+    customMessage: ''
+    id: 10027
+  - action: IGNORE
+    customMessage: ''
+    id: 10096
+  - action: IGNORE
+    customMessage: ''
+    id: 10109
+  - action: IGNORE
+    customMessage: ''
+    id: 10049
+  - action: WARN
+    customMessage: ''
+    id: 10015
+  - action: WARN
+    customMessage: ''
+    id: 10110
+  - action: WARN
+    customMessage: ''
+    id: 10202
+  - action: IGNORE
+    customMessage: ''
+    id: 10112
+  - action: FAIL
+    customMessage: ''
+    id: 10105
+  - action: FAIL
+    customMessage: ''
+    id: 10040
+  - action: FAIL
+    customMessage: ''
+    id: 10043
+  - action: WARN
+    customMessage: ''
+    id: 10031
+  type: outputSummary
+- parameters:
+    reportDescription: ''
+    reportDir: /zap/wrk/
+    reportFile: out/zap-api.html
+    reportTitle: ZAP Scanning Report
+    template: traditional-html
+  type: report
+- parameters:
+    reportDescription: ''
+    reportDir: /zap/wrk/
+    reportFile: out/zap-api.md
+    reportTitle: ZAP Scanning Report
+    template: traditional-md
+  type: report
+- parameters:
+    reportDescription: ''
+    reportDir: /zap/wrk/
+    reportFile: out/zap-api.json
+    reportTitle: ZAP Scanning Report
+    template: traditional-json
+  type: report

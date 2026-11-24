@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 @Service("authService")
 public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthService {
+    private static final java.util.concurrent.ConcurrentHashMap<String, long[]> LF = new java.util.concurrent.ConcurrentHashMap<>(); /* 없는 계정 실패 계수(SEC-0016) */
     static final List<String> TYPES = List.of("corp", "univ", "public", "k12", "adult", "lifelong", "voc");
     static final List<String> MODELS = List.of("claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5");
     static final Pattern EMAIL = Pattern.compile("^[^\\s@<>]+@[^\\s@<>]+\\.[^\\s@<>]{2,}$");
@@ -88,8 +89,10 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
             try { Integer n = tx.inTenant(ltid, () -> mapper.countLoginFails(ltid, email)); fails = n == null ? 0 : n; } catch (Exception ignore) {}
             if (fails >= 5) throw processException("dd.429.locked");
         }
+        else { long[] e = LF.get(email); if (e != null && e[1] > System.currentTimeMillis() && e[0] >= 5) throw processException("dd.429.locked"); } /* SEC-0016: 없는 계정도 같은 잠금 응답 */
         boolean ok = DdCrypto.checkPw(DdWeb.str(b, "password"), u != null ? (String) u.get("pw") : DdCrypto.DUMMY);
         if (u == null || !ok) {
+            if (u == null) { long now = System.currentTimeMillis(); LF.compute(email, (k, v) -> v == null || v[1] < now ? new long[]{1, now + 900_000L} : new long[]{v[0] + 1, v[1]}); }
             if (u != null) {
                 String masked = web.ip(req).replaceAll("\\d+$", "x");
                 try { tx.audit((String) u.get("tenant_id"), email, "login.fail", DdWeb.JSON.createObjectNode().put("ip", masked).toString()); } catch (Exception ignore) {}

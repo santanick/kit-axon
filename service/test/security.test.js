@@ -71,7 +71,9 @@ test('서버 보안', async t => {
   await t.test('계정 잠금: 15분 안 실패 5회면 맞는 비밀번호도 429 locked, 성공 기록 이후로는 다시 셈', async () => {
     const em = `sa${sfx}@a.kr`; for (let i = 0; i < 5; i++) await call('z', 'POST', '/api/login', { email: em, password: 'wrong-pass-' + i });
     const r = await call('z', 'POST', '/api/login', { email: em, password: 'Passw0rd-aaa' }); assert.equal(r.status, 429, JSON.stringify(r.j)); assert.equal(r.j.error, 'locked', JSON.stringify(r.j));
-    await tq(A.tid, "insert into audit_log (tenant_id, actor, action) values ($1, $2, 'login')", [A.tid, em]); /* 잠금 해제 상당(운영에서는 15분 경과 · 비밀번호 재설정) */
+    await tq(A.tid, "insert into audit_log (tenant_id, actor, action) values ($1, $2, 'login')", [A.tid, em]);
+    const ghost = `ghost${sfx}@a.kr`; for (let i = 0; i < 5; i++) await call('z2', 'POST', '/api/login', { email: ghost, password: 'wrong-pass-' + i });
+    const g = await call('z2', 'POST', '/api/login', { email: ghost, password: 'x' }); assert.equal(g.status, 429); assert.equal(g.j.error, 'locked'); /* SEC-0016 없는 계정도 같은 응답 */ /* 잠금 해제 상당(운영에서는 15분 경과 · 비밀번호 재설정) */
   });
   await t.test('유휴 만료: 마지막 사용 후 SESSION_IDLE_H 지나면 다시 로그인', async () => {
     await pool.query("update sessions set expires_at = now() - interval '1 minute' where tenant_id = $1", [A.tid]); // sessions는 RLS 대상 아님
