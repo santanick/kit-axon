@@ -101,8 +101,10 @@ function createRecords({ pool, inTenant, need, needOwner, readBody, HttpErr, aud
   }
 
   /* #14 내려받기 통제 — 사유 필수, 원본은 정운영자. 반환 { raw, reason, done(kind, n) } */
-  function exportGate(req, a) {
-    const Q = new URL(req.url, 'http://x').searchParams; const reason = String(Q.get('reason') || '').trim().slice(0, 200); const raw = Q.get('raw') === '1';
+  function exportGate(req, a) { const Q = new URL(req.url, 'http://x').searchParams; return exportGateOf({ reason: Q.get('reason'), raw: Q.get('raw') }, a); }
+  /* 본문(POST)으로 받는 경로(마일리지 지급 내역 메일 등): { reason, raw: '1' | true } — 규칙 · 문구는 exportGate와 같다(d5) */
+  function exportGateOf(src, a) {
+    const reason = String((src && src.reason) || '').trim().slice(0, 200); const raw = !!src && (src.raw === '1' || src.raw === true);
     if (reason.length < 2) throw new HttpErr(400, '개인정보가 포함된 파일을 내려받으려면 사유를 입력하십시오.', 'export_reason');
     if (raw && a.role !== 'owner') throw new HttpErr(403, '원본(가리지 않은) 내려받기는 정운영자만 할 수 있습니다.', 'export_raw');
     return { raw, reason, done: (kind, n) => inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'export', { kind, n, raw, reason })) };
@@ -130,7 +132,7 @@ function createRecords({ pool, inTenant, need, needOwner, readBody, HttpErr, aud
   let last = 0;
   async function tick(force) { if (!force && Date.now() - last < 23 * 3600e3) return null; last = Date.now(); return (await pool.query('select records_purge() r')).rows[0].r; }
 
-  return { routes, geoCheck, exportGate, tick };
+  return { routes, geoCheck, exportGate, exportGateOf, tick };
 }
 
 module.exports = { createRecords, sqlMigrations, als, reqIp, mask };

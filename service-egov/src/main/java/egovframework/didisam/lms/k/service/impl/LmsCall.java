@@ -22,6 +22,8 @@ public class LmsCall {
     public static Route r(String m, String n, String op, String roles) { return new Route(m, n, op, roles, false); }
     public static Route w(String m, String n, String op, String roles) { return new Route(m, n, op, roles, true); }
     private static final Map<Character, String> ROLE = Map.of('o', "owner", 's', "sub", 't', "teacher");
+    /** 가디언 4차 #14(d5): 학번이 든 내려받기(Node mod-k.js EXPORTS와 같다) — 사유 필수 · 학번 기본 가림(DB 함수가 actor.raw로) · 원본은 정운영자 · audit 'export' */
+    public static final Map<String, String> EXPORTS = Map.of("k.export", "lms_k_survey", "q.applicants_export", "lms_q_applicants", "q.survey_results", "lms_q_survey");
     private static final Pattern DD = Pattern.compile("^DD\\|(\\d{3})\\|([a-z_]+)\\|([\\s\\S]*)$");
 
     private final LmsCallMapper mapper; private final TenantTx tx; private final DdWeb web;
@@ -64,6 +66,8 @@ public class LmsCall {
         String email = a != null ? String.valueOf(a.get("email")) : "learner:" + sid;
         ObjectNode actor = DdWeb.JSON.createObjectNode(); actor.put("role", role); actor.put("email", email); if (sid != null) actor.put("member_no", sid);
         if (sid != null) { ObjectNode o = (ObjectNode) args; o.put("member_no", sid); o.remove("by_operator"); o.remove("all"); }
+        final String xk = EXPORTS.get(pfx + "." + rt.op()); final egovframework.didisam.records.Records.Gate X;
+        if (xk != null) { if (a == null) throw new DdException(403, "이 작업을 할 권한이 없습니다.", "role"); X = egovframework.didisam.records.Records.gate(req, role); actor.put("raw", X.raw()); ((ObjectNode) args).remove("reason"); ((ObjectNode) args).remove("raw"); } else X = null;
         final JsonNode fargs = args;
         try {
             return tx.inTenant(tid, () -> {
@@ -74,6 +78,7 @@ public class LmsCall {
                     ObjectNode d = DdWeb.JSON.createObjectNode(); if (id == null) d.putNull("id"); else d.set("id", id);
                     mapper.insertAudit(tid, email, "lms." + pfx + "." + rt.op(), d.toString());
                 }
+                if (X != null) mapper.insertAudit(tid, email, "export", DdWeb.JSON.createObjectNode().put("kind", xk).put("n", j.path("n").asInt(0)).put("raw", X.raw()).put("reason", X.reason()).toString());
                 return j;
             });
         } catch (Exception e) {

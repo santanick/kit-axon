@@ -39,6 +39,8 @@ const MNO = /^[A-Za-z0-9_-]{4,20}$/;
 const TS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
 const INT = /^-?\d{1,9}$/; const NUM = /^-?\d{1,9}(\.\d{1,9})?$/;
 
+/* 학번이 든 내려받기 경로(Java LmsEngine.EXPORTS와 같다) */
+const EXPORTS = { '/api/lms/g/export': 'lms_g_attendance' };
 function engine(ctx, SPEC, SQL) {
   const { pool, inTenant, need, readBody, HttpErr, audit, limit } = ctx;
   const bad = (code, extra) => { const e = ERR[code] || [400, '요청을 처리할 수 없습니다.']; return new HttpErr(e[0], e[1] + (extra ? ` (${extra})` : ''), code); };
@@ -88,6 +90,8 @@ function engine(ctx, SPEC, SQL) {
       const P = { _actor: a.email, _role: a.role, _me: me, _ip: ipOf(req), _ua: String(req.headers['user-agent'] || '').slice(0, 200) || null };
       for (const d of r.params || []) P[d[0]] = param(src, isQ, d);
       if (r.limit) limit(`${r.limit[0]}:${a.uid}`, r.limit[1], r.limit[2]);
+      const xk = EXPORTS[r.p]; let X = null; /* 가디언 4차 #14(d5) 출석부 내려받기: 사유 필수 · 학번 기본 가림 · 원본은 정운영자 · audit 'export'(Java LmsEngine과 같음) */
+      if (xk) { if (a.role === 'learner' || !ctx.exportGate) throw bad('role'); X = ctx.exportGate(req, a); }
       return inTenant(pool, a.tid, async c => {
         let out = null;
         for (const st of r.stmts) {
@@ -102,6 +106,9 @@ function engine(ctx, SPEC, SQL) {
           if (out && typeof out === 'object' && !Array.isArray(out)) for (const [k, v] of Object.entries(out)) if (typeof v === 'string' && P['$' + k] === undefined) P['$' + k] = v;
         }
         if (r.audit) await audit(c, a.tid, a.email, r.audit, Object.fromEntries((r.params || []).filter(d => d[1] === 'uuid' || d[1] === 'mno' || d[1] === 'enum').map(d => [d[0], P[d[0]]])));
+        if (X) { const rows = (out && Array.isArray(out.rows)) ? out.rows : []; const i = out && Array.isArray(out.columns) ? out.columns.indexOf('학번') : -1;
+          if (!X.raw && i >= 0) { const { mask } = require('../records'); for (const row of rows) if (Array.isArray(row)) row[i] = mask(row[i]); }
+          await audit(c, a.tid, a.email, 'export', { kind: xk, n: rows.length, raw: X.raw, reason: X.reason }); }
         return out;
       });
     };
