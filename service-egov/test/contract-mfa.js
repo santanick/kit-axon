@@ -44,7 +44,7 @@ async function run(U, tag) {
   const lt = await call('F', 'POST', '/api/login', { email: OW, password: PW }); R.tlogin = { keys: lt.keys, mfa: lt.j.mfa };
   R.tresend = (await call('F', 'POST', '/api/login/mfa/resend', { ticket: lt.j.ticket })).err;
   R.treuse = (await call('F', 'POST', '/api/login/mfa', { ticket: lt.j.ticket, code: hotp(key, stp - 1) })).err;
-  R.tgood = (await call('F', 'POST', '/api/login/mfa', { ticket: lt.j.ticket, code: hotp(key, stp) })).keys;
+  { const g = await call('F', 'POST', '/api/login/mfa', { ticket: lt.j.ticket, code: hotp(key, stp) }); R.tgood = g.keys.split(',').filter(k => k !== 'others').join(','); R.tothers = g.j.others; } /* 통합: 다른 활성 세션이 있으면 others(가디언 4차 #4) */
   /* 기관 정책 */
   const s = await call('A', 'POST', '/api/staff', { email: SUB, role: 'sub' });
   const sl = await call('S', 'POST', '/api/login', { email: SUB, password: s.j.password }); await call('S', 'POST', '/api/login/mfa', { ticket: sl.j.ticket, code: sl.j.devCode });
