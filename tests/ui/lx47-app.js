@@ -37,7 +37,7 @@ const PRI = '#lapp .lbtn.pri, #lapp .ap-pri, #lapp button.pri, #lapp a.tb-pri, #
         moreOpen: more ? more.open : null, inMore: more ? ['tb-goal', 'tb-links', 'tb-tyc', 'lq-hc', 'v2-vcard', 'lna-hubw'].filter(c => more.querySelector('.' + c)) : [], ow: document.documentElement.scrollWidth - innerWidth }; }, PRI);
     /* v47-fix: 비전을 아직 안 만든 학습자는 「나의 비전 만들기」 카드가 「오늘 익힐 것」 아래(더 보기 밖)에 1개 더 나오므로 그때만 7까지 허용 */
     const vMax = M.blocks.includes('v2-vcard') ? 7 : 6; ok(M.blocks.length <= vMax, `${tag}: 홈 블록 ${M.blocks.length} ≤ ${vMax} (${M.blocks.join(', ')})`);
-    ok(M.h - M.vcH <= M.vh * 1.6, `${tag}: 홈 높이 ${(M.h / M.vh).toFixed(2)}화면(비전 카드 ${Math.round(M.vcH)}px 제외 ${((M.h - M.vcH) / M.vh).toFixed(2)}) ≤ 1.6`); /* v47-fix: 비전 카드가 더 보기 밖에 있을 때는 그 높이만큼 더 허용 */
+    ok(M.h - M.vcH - 8 <= M.vh * 1.6, /* v47-fix: 목표 링 글자 겹침을 풀려고 링을 8px 키운 만큼 허용 */ `${tag}: 홈 높이 ${(M.h / M.vh).toFixed(2)}화면(비전 카드 ${Math.round(M.vcH)}px 제외 ${((M.h - M.vcH) / M.vh).toFixed(2)}) ≤ 1.6`); /* v47-fix: 비전 카드가 더 보기 밖에 있을 때는 그 높이만큼 더 허용 */
     ok(M.pri.length === 1, `${tag}: 첫 화면 주 버튼 1개(${M.pri.length}: ${M.pri.join(' / ')})`);
     if (pol) ok(M.mj >= 0 && M.mj < M.fold, `${tag}: 「오늘 익힐 것」 첫 화면(y ${M.mj} < ${Math.round(M.fold)})`);
     else ok(M.mj === -1, `${tag}: 꺼짐 — 「오늘 익힐 것」 없음`);
